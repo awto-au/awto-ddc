@@ -12,4 +12,4 @@ Tools and notes for controlling monitors over DDC/CI and for Realtek RTD scaler 
 
 ## Not in this repo
 - Vendor binaries, flash dumps, Ghidra projects: `~/vendors/realtek/` (analysis helpers in its `scripts/`)
-- Origin: awto-dan issue #86
+- Origin: moved from awto-dan (issue #86 is now awto-ddc#1)

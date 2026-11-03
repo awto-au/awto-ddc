@@ -1,6 +1,6 @@
 # Monitors with Realtek scaler boards (AliExpress-class 4K)
 
-Tracking issue: https://github.com/awto-au/awto-dan/issues/86
+Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 
 ## Files
 - `jxc-4k-edid.bin`: raw EDID read from `card0-DP-1` on 2026-11-04
