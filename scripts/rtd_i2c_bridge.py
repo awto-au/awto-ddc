@@ -28,6 +28,7 @@ class Emu:
     def __init__(self, dump: bytes):
         self.flash = bytearray(dump)
         self.regs = bytearray(256)
+        self.regs[0x23] = 0x6E   # read from two real units (ISP mode), 2026-11-04; the tool reads this first
         self.isp = False
         self.fifo = 0
         self.prog = bytearray()

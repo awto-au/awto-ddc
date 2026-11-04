@@ -42,7 +42,19 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - DDC caps string is plain text in flash, two copies at 0x52D72 and 0x52DD9: `(prot(monitor)type(LCD)model(RTK)cmds(01 02 03 07 0C E3 F3)vcp(02)mswhql(1)asset_eep(40)mccs_ver(2.2))`
   - `vcp(02)` lists only one feature; whether the firmware has handlers for 0x10/0x60/0xD6 is untested [?]
 - Bus 10 dump (Intel DP, 256 B reads, ~3.5 min) matches the other two the same way: all three units run the same firmware build; only 0xFB001-0xFCFFF (+ 0xFBFFB-0xFCFFF) differs
-- All three monitors were left in ISP mode by the dumps: power-cycle each before using DDC/CI
+- The dumps leave each monitor in ISP mode (scaler MCU halted, DDC/CI silent, `ddcutil` shows "Invalid display")
+
+## ISP exit without power-cycle (2026-11-04)
+- `rtd_isp_probe.py <bus> --resume` writes 0x02 to ISP reg 0xEE (from naorunaoru/rtdflash [oss]); the write times out (errno 110) as the scaler resets, and DDC/CI answers again within seconds [fw+measured]
+- Worked on all three units (buses 10, 16, 20)
+- ISP reg 0x23 reads 0x6E on the units tested (buses 16, 20): rtdflash uses reg 0x23 to detect the ISP address family
+
+## DDC/CI actually works despite the caps string (2026-11-04, bus 20, read-only unless stated)
+- Caps string lists only `vcp(02)`, but the firmware answers: 0x10 brightness (max 100), 0x12 contrast (max 100), 0x14 colour preset (7500 K), 0x16/0x18/0x1A RGB gain (max 100), 0x6C/0x6E/0x70 black levels, 0x87 sharpness (max 4), 0x62 volume, 0xCC OSD language, 0xD6 power mode (DPM On), 0xAC/0xAE sync freqs, 0xC8/0xC9/0xDF identity
+- 0x60 input source reads `VGA-2 (sl=0x02)` on the DP-connected unit, and "Invalid value" in one `getvcp known` pass: do not rely on it yet
+- 0xCA `sh=0x00` is the power-button field, not 0xD6 (see issue #1 for the research)
+- Write test: `setvcp 0x10 80` read back 80; restored to 100. Brightness on buses 10 and 16 was 80 before this session's tests
+- Not tested: 0xD6 set (power-down), 0x60 set
 
 ## I2C read throughput (2026-11-04, `scripts/i2c_bench.py`, 3 s per cell, read-only)
 

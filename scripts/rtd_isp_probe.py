@@ -3,6 +3,7 @@
 
 usage: rtd_isp_probe.py <bus> [--enter-isp [--dump out.bin [--block N]]]   (dump = SPI READ only; N divides 1024)
   default      : reads only (reg 0x6F, 0x60, 0x67-0x69). No writes.
+  --resume     : writes 0x02 to reg 0xEE (resume/reset scaler after ISP; from rtdflash, untested on RTD27xx)
   --enter-isp  : writes 0x80 to reg 0x6F, then reads SPI flash JEDEC ID (op 0x9F).
                  Scaler MCU stops while in ISP mode: power-cycle the monitor after.
 Protocol + tags: docs/reversing/realtek-rtd/README.md
@@ -112,6 +113,10 @@ def main() -> int:
     log(f"bus=/dev/i2c-{bus} addr=0x{ISP_ADDR:02x} enter_isp={enter}")
     for reg in (0x6F, 0x60, 0x67, 0x68, 0x69):
         log(f"read reg 0x{reg:02x} = 0x{isp.read(reg):02x}")
+    if "--resume" in sys.argv:
+        isp.write(0xEE, 0x02)   # naorunaoru/rtdflash: ISP:EE <- 02 resets/resumes the scaler after ISP work
+        log("wrote 0x02 to reg 0xEE (resume scaler MCU)")
+        return 0
     if not enter:
         log("read-only phase done; no writes sent")
         return 0
