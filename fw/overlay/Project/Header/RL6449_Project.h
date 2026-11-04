@@ -23,6 +23,15 @@
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
 #define _AWTO_DEMO_LOGO                                         _OFF    // awto: cut (Dan 2026-11-04, #8)
+// Diag: count main-loop passes / EXINT1 entries in D2 EDID RAM bytes 0xFE/0xFF (i2c 0x50; breaks EDID checksum)
+#define _AWTO_DIAG                                              _OFF
+#if(_AWTO_DIAG == _ON)
+#define AWTO_DIAG_TICK(off)                                     (((volatile unsigned char __xdata *)0xE480)[off]++)
+#define AWTO_DIAG_SET(off, v)                                   (((volatile unsigned char __xdata *)0xE480)[off] = (v))
+#else
+#define AWTO_DIAG_TICK(off)
+#define AWTO_DIAG_SET(off, v)
+#endif
 #define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 

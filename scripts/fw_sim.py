@@ -57,6 +57,8 @@ def main() -> int:
     ap.add_argument("--budget", type=int, default=3_000_000, help="instructions without a bank switch = stall")
     ap.add_argument("--max-switches", type=int, default=20000)
     ap.add_argument("--samples", type=int, default=300, help="interrupts sampled (main-context PC) before report")
+    ap.add_argument("--ex1-at", type=int, help="after N switches fake a DDC-CI request (IIC regs + IE1); "
+                    "report whether EXINT1 takes the DDC-CI or the debug path")
     a = ap.parse_args()
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
@@ -82,9 +84,23 @@ def main() -> int:
         s.send(f"break 0x{v:x}")
     s.send(f"step {a.budget}")
     bank, trail, samples = 0, [], Counter()
+    # EXINT1 outcome stubs (common area): DDC-CI receive path vs debug-tool path
+    probes = {sym[k]: k for k in ("__bs_UserCommonInterfaceDdcciInt", "__bs_ScalerDebugIntProc_EXINT1") if k in sym}
     for n in range(a.max_switches):
         out = s.read_until(rb"Simulated \d+ ticks[^\n]*\n", 120)
         stop = re.search(r"Stop at 0x([0-9a-f]+)", out or "")
+        if stop and int(stop.group(1), 16) in probes and a.ex1_at is not None and n > a.ex1_at:
+            print(f"EXINT1 -> {probes[int(stop.group(1), 16)]} after {n} switches (bank {bank})")
+            print("last switches:", " -> ".join(trail[-12:]))
+            break
+        if a.ex1_at is not None and n == a.ex1_at:
+            # IIC_STATUS: SUB_I | D_IN_I; SUB_IN = 0x51 (host source addr); STATUS2 bit1 = rx buffer empty
+            for cmd in ("set memory xram 0xff27 0x06", "set memory xram 0xff24 0x51",
+                        "set memory xram 0xff29 0x02", "set bit 0x8b 1"):
+                s.send(cmd)
+            for p in probes:
+                s.send(f"break 0x{p:x}")
+            print(f"injected EXINT1 at switch {n}")
         if stop and int(stop.group(1), 16) in VECTORS:
             sp = re.search(r"SP 0x[0-9a-f]+ -> ([0-9a-f]{2}) ([0-9a-f]{2})", out)   # @SP = PCH, @SP-1 = PCL
             if sp:

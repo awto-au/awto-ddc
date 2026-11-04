@@ -118,15 +118,58 @@ INSERTS = [
      "#define _RL6449_AWTO_JXC4K                                          0x4F"),
     ("Pcb/User_Pcb_Include.h", r'^#include "\./RL6449/LQFP_216/RL6449_QA_B_',
      '#include "./RL6449/LQFP_216/RL6449_AWTO_JXC4K.h"'),
+    # liveness counters, host-readable over DDC 0x50 (AWTO_DIAG_TICK in RL6449_Project.h; no-op when off)
+    ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_TICK(0xFF);"),
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AWTO_DIAG_TICK(0xFE);"),
+] + [   # main-loop stage marker (D2 EDID RAM 0xFD = index of the last handler entered)
+    ("Kernel/System/Code/SysMain.c", rf"^\s*{h}\(\);", f"            AWTO_DIAG_SET(0xFD, {i + 1});")
+    for i, h in enumerate(("UserInterfaceKeyHandler", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler",
+                           "SysSourceHandler", "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler",
+                           "UserCommonInterfaceOsdHandler", "UserCommonDdcciHandler", "SysColorHandler",
+                           "ScalerDebug"))
+] + [   # sub-stage marker in the OSD flow / panel power-up (D2 EDID RAM 0xFC)
+    (OSD + "RTD2014Osd.c", r"^\s*UserCommonInterfacePanelPowerAction\(_BACKLIGHT_ON\);",
+     "    AWTO_DIAG_SET(0xFC, 0x10);"),
+    (OSD + "RTD2014Osd.c", r"^\s*RTDOsdEventMsgProc\(\);", "    AWTO_DIAG_SET(0xFC, 0x20);"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*SysModeClrModeStateChange\(\);",
+     "    AWTO_DIAG_SET(0xFC, 0x30);"),
+] + [   # _BACKLIGHT_ON case of UserCommonInterfacePanelPowerAction, eDP (DPTX) path, in call order
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, f"    AWTO_DIAG_SET(0xFC, 0x{v:02X});",
+     r"^\s*case _BACKLIGHT_ON:") for rx, v in (
+        (r"^\s*ScalerTimerWaitForActiveTimerEvent\(_USER_TIMER_EVENT_PANEL_POWER_OFF\);", 0x01),
+        (r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", 0x02),
+        (r"^\s*UserInterfaceAdjustWaitPanelT1\(\);", 0x03),
+        (r"^\s*ScalerDisplayDPTxPhyInitial\(\);", 0x04),
+        (r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", 0x05),
+        (r"^\s*ScalerDisplayDPTxStreamHanlder\(_ENABLE\);", 0x06),
+        (r"^\s*ScalerDisplayDPTxPowerSequenceProc\(_DPTX_POWER_SEQUENCE_VIDEO_PATTERN\);", 0x07),
+        (r"^\s*SET_FORCESETPWMDUTY_FLAG\(_FALSE\);", 0x08),
+    )
+] + [   # inside ScalerDisplayDPTx2VideoStreamOutput (panel = DPTX port 2; enable path), in call order
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c", rx, f"        AWTO_DIAG_SET(0xFC, 0x{v:02X});",
+     r"^void ScalerDisplayDPTx2VideoStreamOutput\(bit bOutput\)$") for rx, v in (
+        (r"^\s*ScalerDisplayDPTx2MeasureInputInfo\(\);", 0x41),
+        (r"^\s*PDATA_DWORD\(0\) = 0;", 0x42),
+        (r"^\s*if\(bMvidHWMode == _TRUE\)", 0x43),
+        (r"^\s*ScalerDisplayDPTx2DisplayMSASetting\(\);", 0x44),
+        (r"^\s*ScalerDisplayDPTx2DisplayFormatSetting\(\);", 0x45),
+        (r"^\s*ScalerSetByte\(P9E_A4_PG_FIFO_CTRL, 0xFF\);", 0x46),
+    )
 ]
 
 
 def apply_inserts(rel: str, text: str, stats) -> str:
-    for f, anchor, add in INSERTS:
+    for rule in INSERTS:
+        f, anchor, add = rule[:3]
         if f != rel:
             continue
         lines = text.split("\n")
-        i = next((k for k, l in enumerate(lines) if re.search(anchor, l)), None)
+        start = 0
+        if len(rule) > 3:      # optional: first anchor match after the first line matching rule[3]
+            start = next((k for k, l in enumerate(lines) if re.search(rule[3], l)), None)
+            if start is None:
+                sys.exit(f"insert rule did not match: {f} after {rule[3]!r}")
+        i = next((k for k in range(start, len(lines)) if re.search(anchor, lines[k])), None)
         if i is None:
             sys.exit(f"insert rule did not match: {f} {anchor!r}")
         lines.insert(i, add + "  // [keil2sdcc] insert")

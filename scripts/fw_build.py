@@ -193,8 +193,11 @@ def main() -> int:
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
+    # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
+    run("bank", ["sdcc-sdcc", "-mmcs51", "--model-large", "-S", "-o", bank_dir / "crt_mod0.asm",
+                 ROOT / "fw/sdcc/crt_mod0.c"])
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
-                  ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
+                  bank_dir / "crt_mod0.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", ["sdcc-sdas8051", "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
