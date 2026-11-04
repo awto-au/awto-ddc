@@ -200,12 +200,12 @@
 
 #define _OGC_TOTAL_GAMMA                                        5 // 1/2/3/4/5/6
 #define _OGC_TOTAL_CT                                           6
-#define _OGC_FLASH_BANK                                         26
+#define _OGC_FLASH_BANK                                         14 // awto: old fw gamma data at bank 14 pages 0-2 (1 MiB flash)
 
 //-------------------------------------------------
 // FreesyncII Option
 //-------------------------------------------------
-#define _FREESYNC_II_FLASH_BANK                                 28
+#define _FREESYNC_II_FLASH_BANK                                 13 // awto: unused (FreeSync II off); kept inside 1 MiB
 #define _FREESYNC_II_FLASH_PAGE                                 0
 
 //-------------------------------------------------
@@ -257,8 +257,8 @@
 //-------------------------------------------------
 // Flash Access Function Option
 //-------------------------------------------------
-#define _FLASH_WRITE_FUNCTION_SUPPORT                           _OFF
-#define _FLASH_READ_FUNCTION_SUPPORT                            _OFF
+#define _FLASH_WRITE_FUNCTION_SUPPORT                           _ON  // awto: needed by EEPROM emulation
+#define _FLASH_READ_FUNCTION_SUPPORT                            _ON  // awto: needed by EEPROM emulation
 
 #define _FLASH_TYPE_W25X20A_OR_W25X21CL                         _FLASH_W25X20A
 #define _FLASH_TYPE_W25X40CL_OR_W25X41CL                        _FLASH_W25X40CL
@@ -276,9 +276,9 @@
 //-------------------------------------------------
 // EEPROM Emulation Option
 //-------------------------------------------------
-#define _SYSTEM_EEPROM_EMULATION_SUPPORT                        _OFF
+#define _SYSTEM_EEPROM_EMULATION_SUPPORT                        _ON  // awto: no EEPROM (EEIIC pins GPIO); old fw records at bank 15 p11-12
 
-#define _SYSTEM_EEPROM_EMULATION_FLASH_BANK                     11
+#define _SYSTEM_EEPROM_EMULATION_FLASH_BANK                     15
 #define _SYSTEM_EEPROM_EMULATION_START_PAGE                     11
 #define _SYSTEM_EEPROM_EMULATION_END_PAGE                       12
 #define _START_OF_PAGEID                                        _PAGEID_0
