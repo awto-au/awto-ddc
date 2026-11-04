@@ -15,6 +15,9 @@ Log: tmp/logs/sim_test.log; scratch: tmp/simtest/<name>/{A,B}.  Exit 0 only if e
 import json, os, re, shutil, subprocess, sys, time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sdcc_link  # noqa: E402
+
 
 def repo_root():
     env = os.environ.get("AWTO_DDC_REPO")
@@ -31,7 +34,7 @@ ROOT = repo_root()
 TESTS = ROOT / "fw/simtests"
 RT = TESTS / "_rt"
 WORK = ROOT / "tmp/simtest"
-CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size"]
+CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant"]   # = keil2sdcc
 STEP_CAP = 20_000_000
 BUILD_TMO, SIM_TMO = 60, 30
 SENTINEL = "SIM-DONE"
@@ -73,8 +76,8 @@ def assemble_link(asm_dir, obj_dir, ihx):
         if r.returncode:
             return f"assemble {a.name}"
         rels.append(str(obj_dir / (a.stem + ".rel")))
-    r = run(["sdcc-sdcc", "-mmcs51", "--model-large", "-o", str(ihx)] + rels)
-    return None if r.returncode == 0 and ihx.exists() else "link"
+    r, _ = sdcc_link.link(["sdcc-sdcc", "-mmcs51", "--model-large", "-o", str(ihx)] + rels, ihx, rels)
+    return None if r.returncode == 0 and ihx.exists() else f"link {r.stdout[-300:]}"
 
 
 def simulate(ihx, outdir):
@@ -84,7 +87,7 @@ def simulate(ihx, outdir):
     ser = outdir / "serial.txt"
     ser.unlink(missing_ok=True)
     cmds = f"break 0x{m.group(1)}\nstep {STEP_CAP}\nquit\n"
-    r = subprocess.run(["sdcc-ucsim_51", "-t", "51", "-S", f"uart=0,out={ser}", str(ihx)],
+    r = subprocess.run(["sdcc-ucsim_51", "-t", "52", "-S", f"uart=0,out={ser}", str(ihx)],
                        input=cmds, capture_output=True, text=True, timeout=SIM_TMO)
     (outdir / "sim.log").write_text(r.stdout + r.stderr)
     ticks = re.search(r"Simulated (\d+) ticks", r.stdout)

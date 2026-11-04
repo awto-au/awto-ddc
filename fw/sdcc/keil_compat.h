@@ -5,7 +5,7 @@
 #define KEIL_COMPAT_H
 
 #define xdata  __xdata
-#define idata  __idata
+#define idata  __xdata   /* stack needs all of 0x80-0xFF (awto-ddc#8) */
 #define pdata  __pdata
 #define bdata  __data          /* SDCC has no bit-addressable qualifier; see #8 if bit access is needed */
 #define bit    __bit

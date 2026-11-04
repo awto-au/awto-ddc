@@ -325,18 +325,31 @@ def main():
                 if n not in keep_static:          # non-cyclic SCC = single node
                     place[n] = (name, off[c])
 
+    # dead fns (no root, ISR or address-taken fn reaches them: callers configured out) never run -> offset 0
+    dead = [n for n in nodes if n not in region_of and n not in place and any(frame[n].values())]
+    if mainn:
+        for n in dead:
+            place[n] = ("main", ZERO())
+    # XDATA/BIT: one block, regions back to back. DATA: one area per region (+ one for static frames) so
+    # sdld can fit each into a hole around the bit-addressable bytes (0x20-0x2F), #8
     base, cursor = {}, ZERO()
-    for name, _ in roots:
-        base[name] = dict(cursor)
-        for mem in MEMS:
+    dblock, dsize = {}, {}
+    for i, (name, _) in enumerate(roots):
+        base[name] = dict(cursor); base[name]["d"] = 0
+        dblock[name] = f"__dovl{i}"; dsize[dblock[name]] = region_size[name]["d"]
+        for mem in ("x", "b"):
             cursor[mem] += region_size[name][mem]
-    # static frames (shared/cyclic/unreached) get their own slots after all regions
+    dsize["__dovls"] = 0
+    # static frames (shared/cyclic) get their own slots after all regions
     for n in nodes:
         if n not in place and any(frame[n][mem] for mem in MEMS):
             place[n] = ("static", {mem: 0 for mem in MEMS})
-            base.setdefault(("static", n), dict(cursor))
-            for mem in MEMS:
+            base.setdefault(("static", n), dict(cursor)); base[("static", n)]["d"] = dsize["__dovls"]
+            dsize["__dovls"] += frame[n]["d"]
+            for mem in ("x", "b"):
                 cursor[mem] += frame[n][mem]
+    cursor["d"] = sum(dsize.values())
+    dsize = {k: v for k, v in dsize.items() if v}
 
     # ---- rewrite
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -346,7 +359,8 @@ def main():
         region, off = place[n]
         b = base[("static", n)] if region == "static" else base[region]
         for mi, label, mem, size, rel in entries:
-            expr = f"({BLOCK[mem]} + 0x{b[mem] + off[mem] + rel:X})"
+            blk = BLOCK[mem] if mem != "d" else ("__dovls" if region == "static" else dblock[region])
+            expr = f"({blk} + 0x{b[mem] + off[mem] + rel:X})"
             sub[mi][label] = expr
             if "_PARM_" in label:
                 gsub[label] = expr
@@ -371,14 +385,14 @@ def main():
                 line = line2
             new.append(line)
         if used:
-            new.insert(1, "\n".join(f"\t.globl {b}" for b in BLOCK.values()))
+            new.insert(1, "\n".join(f"\t.globl {b}" for b in [BLOCK["x"], BLOCK["b"], *dsize]))
         dst = out_dir / m.path.relative_to(asm_dir)
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text("\n".join(new))
     (out_dir / "__ovl.asm").write_text(
-        "\t.module __ovl\n" + "".join(f"\t.globl {b}\n" for b in BLOCK.values()) +
-        f"\t.area XSEG (XDATA)\n__xovl::\n\t.ds 0x{max(cursor['x'], 1):X}\n"
-        f"\t.area DSEG (DATA)\n__dovl::\n\t.ds 0x{max(cursor['d'], 1):X}\n"
+        "\t.module __ovl\n" + "".join(f"\t.globl {b}\n" for b in [BLOCK["x"], BLOCK["b"], *dsize]) +
+        f"\t.area XSEG (XDATA)\n__xovl::\n\t.ds 0x{max(cursor['x'], 1):X}\n" +
+        "".join(f"\t.area D{k[2:].upper()} (DATA)\n{k}::\n\t.ds 0x{v:X}\n" for k, v in dsize.items()) +
         f"\t.area BSEG (BIT)\n__bovl::\n\t.ds 0x{max(cursor['b'], 1):X}\n")
 
     before = {mem: sum(f[mem] for f in frame.values()) for mem in MEMS}
@@ -391,6 +405,8 @@ def main():
                                      if place.get(n, ("",))[0] == "static" and any(frame[n].values())),
                                     key=lambda kv: -kv[1]["d"]),
            "unowned_storage": static_bytes["unowned"],
+           "dead_frames": sorted(((n[1], dict(frame[n])) for n in dead), key=lambda kv: -kv[1]["d"]),
+           "data_blocks": dsize,
            "main_region": region_size.get("main"),
            "largest_regions": sorted(((k, v) for k, v in region_size.items()), key=lambda kv: -kv[1]["x"])[:8]}
     (ROOT / "tmp/sdcc-port").mkdir(parents=True, exist_ok=True)
@@ -399,7 +415,8 @@ def main():
     log(f"functions {len(nodes)}, roots {len(roots)} (isr {rep['isr']}, address-taken {len(addr_taken)}), "
         f"kept static {len(keep_static)} (shared {len(shared)}, cyclic {len(cyc)})")
     log(f"frames before: XDATA {before['x']} B, DATA {before['d']} B, BIT {before['b']} bits (PARMs included)")
-    log(f"overlay blocks: __xovl {cursor['x']} B, __dovl {cursor['d']} B, __bovl {cursor['b']} bits; "
+    log(f"DATA blocks {dsize}; dead fns at offset 0: {len(dead)}")
+    log(f"overlay blocks: __xovl {cursor['x']} B, __dovl* {cursor['d']} B, __bovl {cursor['b']} bits; "
         f"main region {region_size.get('main')}")
     for k, v in rep["largest_regions"]:
         log(f"  region {k}: {v}")

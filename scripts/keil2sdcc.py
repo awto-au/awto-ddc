@@ -51,11 +51,11 @@ def log(s):
 
 # ---------------- rewrite rules ----------------
 SRC_EXT = {".c", ".h"}
-# Direct IRAM (0x00-0x7F) is the binding limit (#8): drop ISR register banks 1-3 (SDCC ISRs then push regs;
-# +~1-2 us/IRQ) and move the pData scratch arrays to idata (indirect, +flash). Both free direct RAM.
+# IRAM is the binding limit (#8): drop ISR register banks 1-3 (SDCC ISRs then push regs; +~1-2 us/IRQ);
+# pData scratch arrays and all Keil `idata` go to XDATA (keil_compat.h) so 0x80-0xFF is left to the stack.
 DROP_USING = True
 RULES = [
-    (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"idata\1"),
+    (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"xdata\1"),
     # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
     # and puts t in RAM (and `xdata BYTE *p` would become a 2-byte xdata pointer). Move the qualifier next
     # to the name. Variables only (name followed by [ = ; ,); functions returning pointers untouched.
@@ -104,7 +104,7 @@ WRAPS = [
     # DDC RAM arrays: address differs per chip/DDC channel, so the header extern can't get a single __at;
     # hide it from the defining file (SDCC rejects extern-without-__at + __at definition in one TU)
     ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",
-     r"^#if\(_D0_EMBEDDED_DDCRAM_MAX_SIZE", r"^extern BYTE xdata MCU_DDCRAM_D2\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
+     r"^#if\(_D0_EMBEDDED_DDCRAM_MAX_SIZE", r"^extern BYTE xdata MCU_DDCRAM_D5\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
     ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",
      r"^#if\(_D0_MHL_EMBEDDED_DDCRAM_SIZE", r"^extern BYTE xdata MCU_DDCRAM_MHL_D2\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
 ]
@@ -277,7 +277,9 @@ def cmd_port():
     # 7 chips share names: a name defined differently across files is NOT auto-propagated (wrong-chip risk)
     using = {k: next(iter(v)) for k, v in using_all.items() if len(v) == 1}
     AT_ADDR.clear()
-    AT_ADDR.update({k: next(iter(v)) for k, v in at_all.items() if len(v) == 1})
+    # numeric addresses only: a macro address (e.g. _EMBEDDED_DDCRAM_DDC3_ADDRESS) may be defined in one .c only
+    AT_ADDR.update({k: next(iter(v)) for k, v in at_all.items()
+                    if len(v) == 1 and re.fullmatch(r"0[xX][0-9A-Fa-f]+|\d+", next(iter(v)))})
     for kind, d in (("using/interrupt", using_all), ("_at_", at_all)):
         conflicts = sorted(k for k, v in d.items() if len(v) > 1)
         if conflicts:
@@ -362,6 +364,8 @@ def norm_err(line):
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
            "--std-sdcc11", "--opt-code-size",                 # flash is the constraint (Dan: smallest)
+           "--nooverlay",                                     # `data` locals -> DSEG for sdcc_overlay (call-graph aware), not OSEG
+           "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
            f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
     cmd += [f"-I{c.parent}"]
