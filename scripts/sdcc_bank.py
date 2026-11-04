@@ -126,6 +126,34 @@ def assemble(asm: Path) -> dict:
     return sizes
 
 
+def drop_dead(mods, funcs, consts):
+    """Remove fn/CONST chunks unreachable from main, ISRs and non-chunk lines (XINIT/GSINIT); like LX51
+    REMOVEUNUSED. Their .globl lines go too, so nothing references a dropped symbol."""
+    allc = {**funcs, **consts}
+    roots = {"_main"} | {c.name for c in funcs.values() if c.isr}
+    for m in mods:
+        for l in m.head + m.tail:
+            s = l.split(";", 1)[0]
+            if s.strip() and not re.match(r"^\s*\.(globl|area|module|optsdcc)\b", s) and not LABEL.match(s):
+                roots.update(SYM.findall(s))
+    seen, st = set(), [n for n in roots if n in allc]
+    while st:
+        n = st.pop()
+        if n in seen:
+            continue
+        seen.add(n)
+        st.extend(t for t in allc[n].calls | allc[n].refs if t in allc and t not in seen)
+    dead = {n for n in allc if n not in seen}
+    nb = {"CSEG": 0, "CONST": 0}
+    for n in dead:
+        nb[allc[n].area] += allc[n].size
+        (funcs if allc[n].area == "CSEG" else consts).pop(n)
+    for m in mods:
+        m.chunks = [c for c in m.chunks if c.name not in dead]
+        m.head = [l for l in m.head if not (re.match(r"^\s+\.globl\s+(\w+)", l) and l.split()[1] in dead)]
+    log(f"dead chunks dropped: {len(dead)} ({nb['CSEG']} B code, {nb['CONST']} B const); kept {len(seen)}")
+
+
 def render(mod, area_of, stubs_needed, extra_globl):
     """Module text with each chunk in the area area_of(chunk) gives; calls/refs to stubbed fns rewritten."""
     out = list(mod.head)
@@ -166,6 +194,7 @@ def main() -> int:
                     help="common bytes for hot helpers moved out of banks")
     ap.add_argument("--pack-margin", type=lambda x: int(x, 0), default=0x600,
                     help="bytes kept free per bank at packing for CONST moved in afterwards")
+    ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/sdcc_bank.log").open("a")
@@ -200,6 +229,8 @@ def main() -> int:
         sz = assemble(p)
         for c in m.chunks:
             c.size = sz.get(f"S{idx[id(c)]}", 0)
+    if not a.keep_dead:
+        drop_dead(mods, funcs, consts)
     cap = BANK_SIZE - a.common_max
     # packing units: a module's banked chunks together; a module over a bank splits into its chunks
     # module order = DFS preorder of the call graph from main and the ISRs (callees right after callers), so
