@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build the awto-identity EDIDs (256 B = base + CTA-861 ext) for the JXC 28in 4K panel.
 
-usage: make_edid.py [--out DIR] [--no-decode]
+usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
   writes DIR/awto-dp.bin and DIR/awto-hdmi.bin (default DIR: $VENDORS/realtek/analysis/edid)
   then runs `edid-decode -c` on each if installed and prints the result.
+  --serial sets the per-unit serial text in the 0xFF descriptor (default AWT26110001).
 Design + per-port rationale: docs/edid-fix.md.  Log: ./tmp/logs/make_edid.log
 """
 import shutil, subprocess, sys
@@ -50,18 +51,19 @@ DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
 # CVT-RB 2560x1440: 241.7 MHz, htotal 2720 (48/32/80), vtotal 1481 (3/5/33), +H -V... as in original (+/+)
 DTD_1440 = dtd(24170, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 1)
 
-# Chromaticity: Samsung VA 4K panel (LSC-series, as in U28R55/UR550), ~99% sRGB / ~72% NTSC.
-# Representative Samsung VA primaries [guess] (slightly deeper red + more saturated green than bare
-# sRGB, blue near sRGB, D65 white) — replaces the Realtek demo bytes (which were plain sRGB at 10-bit).
-#   R 0.651,0.332  G 0.300,0.610  B 0.148,0.055  W 0.3127,0.3290 (D65).  Encoding: docs/edid-fix.md.
-CHROMA = bytes.fromhex("cd01a6554c9c260e5054")
+# Chromaticity: standard sRGB / BT.709 primaries. Panel is IPS/PLS (Dan visual confirm 2026-11-04:
+# stable off-axis, corner glow), ~99% sRGB; no measured panel primaries, so the honest choice is the
+# sRGB standard, not a VA-gamut guess.
+#   R 0.640,0.330  G 0.300,0.600  B 0.150,0.060  W 0.3127,0.3290 (D65).  Encoding: docs/edid-fix.md.
+# These are exactly edid-decode's sRGB reference bytes, so the sRGB-default feature bit (0x04) is set.
+CHROMA = bytes.fromhex("ee91a3544c99260f5054")
 
 
 def std_timing(x, ratio, hz):
     return bytes([(x // 8) - 31, (ratio << 6) | (hz - 60)])
 
 
-def base_block(port):
+def base_block(port, serial=SERIAL_TXT):
     b = bytearray(128)
     b[0:8] = bytes.fromhex("00ffffffffffff00")
     b[8:10] = pnp(MFR)
@@ -73,12 +75,11 @@ def base_block(port):
     b[20] = (0x80 | (3 << 4) | 5) if port == "dp" else 0x81   # 1.4 DP: 10 bpc + DP; 1.3: digital, DFP 1.x
     b[21], b[22] = W_MM // 10, H_MM // 10
     b[23] = 0x78                                   # gamma 2.20
-    # Feature byte. sRGB-default bit (0x04) CLEARED: the Samsung VA primaries are wider than the sRGB
-    # standard, so signalling "default colour space = sRGB" would be a conformity failure (edid-decode
-    # checks the chromaticities match). Colorimetry is instead described in the CTA Colorimetry block.
+    # Feature byte. sRGB-default bit (0x04) SET: chromaticities are exactly sRGB, so "default colour
+    # space = sRGB" is legitimate (edid-decode only complains when the bit is set but primaries differ).
     # 1.4: preferred=DTD1, continuous freq, RGB+YCbCr444/422; 1.3: RGB, preferred, GTF.
-    b[24] = 0x3B if port == "dp" else 0x23
-    b[25:35] = CHROMA                              # Samsung VA 4K primaries (see CHROMA note)
+    b[24] = 0x3F if port == "dp" else 0x27
+    b[25:35] = CHROMA                              # standard sRGB primaries (see CHROMA note)
     b[35:38] = bytes.fromhex("210800")             # est. timings 640x480, 800x600, 1024x768
     # ratio codes: 0=16:10 1=4:3 2=5:4 3=16:9; unused slots = 0x0101
     std = [(1920, 3), (1440, 0), (1400, 1), (1280, 2), (1280, 1), (1280, 3)]
@@ -86,7 +87,7 @@ def base_block(port):
     b[38:54] = sb.ljust(16, b"\x01")
     b[54:72] = DTD_4K
     b[72:90] = text_desc(0xFC, MODEL_TXT)
-    b[90:108] = text_desc(0xFF, SERIAL_TXT)
+    b[90:108] = text_desc(0xFF, serial)
     # range limits (type 0x01 = range limits only; GTF is deprecated in 1.4): 24-60 Hz V (24p modes), 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
     b[108:126] = bytes([0, 0, 0, 0xFD, 0, 24, 60, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
     b[126] = 1
@@ -130,18 +131,22 @@ def cta_block(port):
     return bytes(b)
 
 
-def build(port):
-    return base_block(port) + cta_block(port)
+def build(port, serial=SERIAL_TXT):
+    return base_block(port, serial) + cta_block(port)
 
 
 def main():
     out = OUT_DEFAULT
     if "--out" in sys.argv:
         out = Path(sys.argv[sys.argv.index("--out") + 1])
+    serial = SERIAL_TXT
+    if "--serial" in sys.argv:
+        serial = sys.argv[sys.argv.index("--serial") + 1]
+    assert len(serial) <= 13, "serial text must fit the 13-byte 0xFF descriptor"
     out.mkdir(parents=True, exist_ok=True)
     rc = 0
     for port in ("dp", "hdmi"):
-        e = build(port)
+        e = build(port, serial)
         assert len(e) == 256 and sum(e[:128]) % 256 == 0 and sum(e[128:]) % 256 == 0
         p = out / f"awto-{port}.bin"
         p.write_bytes(e)

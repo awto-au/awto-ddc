@@ -20,7 +20,7 @@ Status: authored + validated offline; NOTHING written to the device. Write is ga
 |---|---|---|
 | EDID version | 1.4 (DP spec requires >= 1.4) | 1.3 |
 | Video input byte | `0xB5`: digital, 10 bpc, DisplayPort | `0x81`: digital, DFP 1.x |
-| Feature byte | `0x3F` (sRGB, preferred, continuous freq, RGB+YCC444/422) | `0x27` (sRGB, preferred, GTF) |
+| Feature byte | `0x3F` (sRGB-default SET, preferred, continuous freq, RGB+YCC444/422) | `0x27` (sRGB-default SET, preferred, GTF) |
 | Range limits type | `0x01` range-limits-only (GTF deprecated in 1.4) | `0x00` default GTF |
 | CTA ext | no VSDBs | + HDMI VSDB, HF-VSDB, AMD VSDB |
 - HDMI copy is 1.3 because edid-decode 1.32 FAILS an HDMI VSDB inside an EDID 1.4 base ("HDMI Specification requires EDID 1.3"). This is why the original HDMI copies were 1.3.
@@ -45,8 +45,8 @@ Status: authored + validated offline; NOTHING written to the device. Write is ga
 | 0x14 | `b5` / `81` | video input (see table) |
 | 0x15 | `3e 23` | 62 x 35 cm |
 | 0x17 | `78` | gamma 2.20 |
-| 0x18 | `3b` / `23` | features (sRGB-default bit 0x04 CLEARED: VA gamut wider than sRGB standard, else conformity fails) |
-| 0x19 | `cd 01 a6 55 4c 9c 26 0e 50 54` | chromaticity: Samsung VA 4K [guess] R 0.651,0.332 G 0.300,0.610 B 0.148,0.055 W 0.3127,0.3290 (D65) |
+| 0x18 | `3f` / `27` | features (sRGB-default bit 0x04 SET: chromaticities are exactly sRGB, so legitimate) |
+| 0x19 | `ee 91 a3 54 4c 99 26 0f 50 54` | chromaticity: standard sRGB/BT.709 R 0.640,0.330 G 0.300,0.600 B 0.150,0.060 W 0.3127,0.3290 (D65) |
 | 0x23 | `21 08 00` | est. timings 640x480, 800x600, 1024x768 |
 | 0x26 | `d1c0 9500 9040 8180 8140 81c0 0101 0101` | std: 1080p, 1440x900, 1400x1050, 1280x1024, 1280x960, 1280x720, 2 unused (`0101`) |
 | 0x36 | DTD1 | 3840x2160 533.12 MHz, 620x350 mm, htotal 4000 vtotal 2222, +H -V |
@@ -59,8 +59,8 @@ CTA-861 rev 3 extension:
 - header flags `0xB1`: underscan, YCC444+422, 1 native DTD (base DTD1). **Basic-audio bit CLEARED** (was `0xF1`) — see audio note.
 - VDB (18 VICs): 97 96 95 94 93 (4K 60/50/30/25/24), 16 31 32 33 34 (1080p), 4 19 60 61 62 (720p), 1 2 3 (SD). Deduped: removed second VIC 16 and VIC 76. No native flag (VIC 97 cannot carry one; native = base DTD1).
 - **NO Audio / Speaker-Allocation block** — units have no speakers (Dan 2026-11-04). Removed the LPCM-2ch ADB and FL/FR SADB; header basic-audio bit cleared so the OS doesn't route sound to a dead endpoint.
-- Colorimetry Data Block (ext tag `0x05`, bytes `E3 05 06 20`): xvYCC709 + sYCC601 + sRGB colorimetry bit (CTA-861-H). No BT.2020 (panel is ~99% sRGB VA, not wide-gamut). sRGB bit set on edid-decode's recommendation (clears the "set the sRGB bit" interop warning).
-- HDR Static Metadata Data Block (ext tag `0x06`, bytes `E3 06 01 01`): EOTF = Traditional-gamma SDR only; Static Metadata Type 1. **NO PQ/HLG** — ~300 cd/m2 SDR VA panel, not real HDR10; advertising HDR10 would be a false claim.
+- Colorimetry Data Block (ext tag `0x05`, bytes `E3 05 06 20`): xvYCC709 + sYCC601 + sRGB colorimetry bit (CTA-861-H). No BT.2020 (panel is ~99% sRGB IPS/PLS, not wide-gamut). sRGB bit set on edid-decode's recommendation (clears the "set the sRGB bit" interop warning).
+- HDR Static Metadata Data Block (ext tag `0x06`, bytes `E3 06 01 01`): EOTF = Traditional-gamma SDR only; Static Metadata Type 1. **NO PQ/HLG** — ~300 cd/m2 SDR panel, not real HDR10; advertising HDR10 would be a false claim.
 - VCDB `0xCA`: YCC + RGB quantization selectable; IT/CE always underscanned (matches header underscan bit).
 - HDMI slots only:
   - HDMI VSDB: PA 1.0.0.0, DC_30bit + DC_Y444, legacy max TMDS 340 MHz (`0x44`).
@@ -77,11 +77,14 @@ After (both `awto-dp.bin` and `awto-hdmi.bin`): `EDID conformity: PASS`, zero fa
 - Remaining warning (both): "VIC 97 and the first DTD are not identical". Intended: DTD1 is the panel's real 533.12 MHz reduced-blanking timing, VIC 97 is the standard 594 MHz CTA timing.
 
 ## Colour + colorimetry revision (2026-11-04, flashed)
-- Chromaticity: Realtek demo bytes (which decode to plain sRGB at 10-bit) replaced with representative Samsung VA 4K primaries (LSC-series, U28R55/UR550 class, ~99% sRGB / ~72% NTSC) [guess]: R 0.651,0.332 G 0.300,0.610 B 0.148,0.055 W 0.3127,0.3290 (D65). Bytes `cd01a6554c9c260e5054`. Gamma 2.20 (`0x17=0x78`), 10bpc kept (DP).
-- sRGB-default feature bit cleared (`0x18`: `0x3b` DP / `0x23` HDMI): VA gamut is wider than the sRGB standard, so "default colour space = sRGB" is a conformity failure. Colorimetry is described in the CTA block instead.
-- Added CTA Colorimetry DB (sRGB + xvYCC709 + sYCC601; no BT.2020) and HDR Static Metadata DB (SDR EOTF only, no PQ/HLG — not a real HDR panel). Removed Audio + Speaker-Allocation blocks and cleared the basic-audio header bit (no speakers).
-- Flashed to card1-DP-4 (`/dev/i2c-20`) 2026-11-04T13:01+1100: SR started `0x00` (unprotected), VERIFY OK (0 mismatches), re-protected to `0x9c`. Read-back dry-run: flash == patched, SR `0x9c`. Live `/sys/class/drm/card1-DP-4/edid` decodes with the new primaries, Colorimetry+HDR blocks, no audio, conformity PASS (benign VIC 97 warning).
-- Backups: `~/vendors/realtek/analysis/edid/live_sector_13000_before_colourfix.bin` (pre-write live sector) + timestamped copies in `tmp/flash-backups/`.
+- Panel is **IPS/PLS**, not VA — Dan visual confirm 2026-11-04 (stable off-axis, corner/edge glow). Earlier VA assumption was wrong.
+- Chromaticity: **standard sRGB / BT.709** primaries — the honest choice for a ~99%-sRGB IPS panel with no measured panel primaries: R 0.640,0.330 G 0.300,0.600 B 0.150,0.060 W 0.3127,0.3290 (D65). Bytes `ee91a3544c99260f5054` (edid-decode's exact sRGB reference encoding). Gamma 2.20 (`0x17=0x78`), 10bpc kept (DP). Replaces the prior Samsung-VA guess (`cd01a6554c9c260e5054`, R 0.651/0.332 G 0.300/0.610 B 0.148/0.055).
+- sRGB-default feature bit RE-SET (`0x18`: `0x3f` DP / `0x27` HDMI): chromaticities now equal the sRGB standard, so "default colour space = sRGB" is legitimate. edid-decode does NOT emit the "sRGB signalled but chromaticities don't match" warning (it only fires when the bit is set but primaries differ).
+- Kept CTA Colorimetry DB (sRGB + xvYCC709 + sYCC601; no BT.2020) and HDR Static Metadata DB (SDR EOTF only, no PQ/HLG). Audio still REMOVED (no speakers): no Audio/Speaker-Allocation block, basic-audio header bit cleared.
+- Identity/size/timings unchanged: AWT / awto-mon / AWT26110001, 597x336 mm, native DTD 3840x2160@60 533.12 MHz, deduped mode list.
+- Both variants `edid-decode -c` PASS (zero failures; only the benign "VIC 97 and first DTD not identical" warning).
+- Re-flashed to card1-DP-4 (`/dev/i2c-20`) 2026-11-04T13:13+1100: live sector (prior VA EDID) vs new patched = 24 bytes differ (all in-slot: feature byte + changed chroma bytes + base checksum, x3 slots), `--expect-current` matched (0 differ). SR started `0x9c`, WP# released, unprotect -> SR `0x00`, erase + 16 pages programmed, VERIFY OK (0 mismatches), re-protected to `0x9c` with WP# re-asserted. Live `/sys/class/drm/card1-DP-4/edid` decodes with sRGB primaries (Red 0.6396/0.3300), sRGB-default bit set, Colorimetry+HDR blocks, no audio, conformity PASS.
+- Backups: `~/vendors/realtek/analysis/edid/live_sector_13000_before_colourfix.bin` (pre-VA-write live sector) + timestamped copies in `tmp/flash-backups/` (pre-sRGB-write: `sector_013000_20261104-131310.bin`).
 
 ## Checksum finding: NO image or EDID-region checksum validated
 - EDID load path (above) is a plain 256 B copy; nothing sums or compares it [fw]. Only the per-block EDID checksums matter to sources; both blocks of each new EDID sum to 0.
@@ -91,9 +94,9 @@ After (both `awto-dp.bin` and `awto-hdmi.bin`): `EDID conformity: PASS`, zero fa
 - Confidence: not exhaustive (banks 2-6 and the 0xE0000/0xF0000 blocks not traced); if the monitor misbehaves after the write, revert (below) and trace further. No checksum is included in the patch.
 
 ## The patch (current, after the 2026-11-04 colour revision)
-- Sector `0x13000-0x13FFF` (4096 B). Only EDID bytes differ, all inside the 3 EDID slots `0x138D8/0x139D8/0x13AD8`. vs the pre-colour live sector: 54 bytes differ, all in-slot; non-slot bytes byte-identical.
+- Sector `0x13000-0x13FFF` (4096 B). Only EDID bytes differ, all inside the 3 EDID slots `0x138D8/0x139D8/0x13AD8`. vs the factory-demo sector: 394 bytes differ, all in-slot; non-slot bytes byte-identical. vs the prior VA-colour flash: 24 bytes differ (feature byte + changed chroma + base checksum, x3 slots).
 - sha256 orig (factory demo) sector `70cb3052910dc2ae388c6829df3cfd99a51ffab2af4574d7848b09a3667eee52`
-- sha256 patched sector (colour revision) `14bc5fadd1d237b00ab000a64f947799a8d5d3422acc934e6f7ecfe265dbe99b`
+- sha256 patched sector (sRGB/IPS revision) `feeff814de5ea113d7fc6ba97963bef3bb32653dc064f2e114e09149013c383d`
 - Flash chip: Macronix `C2 20 14` (1 MiB); 4 KiB sector erase op `0x20`. Sector `0x13000` also holds non-EDID data (before `0x138D8` and after `0x13BD8`); it is rewritten byte-identical.
 - Offline simulation of the writer (dry-run and write paths against a mock register file) reproduced the expected result; it has not been exercised against real hardware.
 
@@ -102,7 +105,7 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
 1. Confirm bus and a healthy read: `python3 scripts/rtd_isp_probe.py <bus>` (read-only).
 2. Dry run (enters ISP, reads, backs up, compares, resets; no erase/program):
    `python3 scripts/rtd_flash_sector.py <bus> 0x13000 ~/vendors/realtek/analysis/edid/patched_sector_13000.bin --expect-current ~/vendors/realtek/analysis/edid/orig_sector_13000.bin`
-   - Expect: `JEDEC c22014`, `current vs new file: 372 bytes differ`, `current vs --expect-current: 0 bytes differ`, a backup file in `tmp/flash-backups/`.
+   - Expect: `JEDEC c22014`, `current vs new file: 394 bytes differ` (vs factory demo), `current vs --expect-current: 0 bytes differ`, a backup file in `tmp/flash-backups/`.
    - If the second number is non-zero the sector differs from the 2026-11-04 dump: stop and inspect.
 3. Keep the backup (`tmp/flash-backups/sector_013000_<timestamp>.bin`) and `orig_sector_13000.bin` (identical content expected). Copy the backup somewhere durable before step 4.
 4. Write (main session gate): same command plus `--write`.
@@ -121,7 +124,7 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
 ## Size measurement + which unit is flashed (2026-11-04)
 - Active-area height measured on the glass = 336 mm, ±2-3 mm (actual lit pixels). 333-339 all = 27.0" real 16:9
   (not 28.0"=350, not 23.8"=296). EDID size field is cm-granular (59x33 cm) so ±3mm doesn't change it. 597x336 stands.
-  Closest catalogued panel by size: Samsung LTM270FL01 596.16x335.34 mm (but PLS/eDP, not the VA match) — within tolerance.
+  Closest catalogued panel by size: Samsung LTM270FL01 596.16x335.34 mm (PLS/eDP) — within tolerance, and now consistent with the IPS/PLS visual confirm.
 - ONLY the i2c-20 / card1-DP-4 unit is flashed (AWT:awto-mon). The other two monitors (i2c-10 card0-DP-3,
   i2c-16 card1-HDMI-A-3) are still factory JXC:4K MONITOR:demoset-1 — flash them separately when wanted.
 - Flash ceremony: a standalone no-op dry-run is pointless. `--write` already does backup -> blank-check ->
