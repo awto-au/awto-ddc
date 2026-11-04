@@ -17,6 +17,7 @@ options:
   --reset     end by resetting the scaler (monitor reboots, OSD gone). Default: leave OSD up, MCU halted.
   --no-isp-info   skip the scaler/flash ISP read in the info-gather phase (EDID+DDC only; faster, no pre-reset)
   --json      print the gathered info as JSON too
+  --scale N   1 = 12x18 px cells (default), 2 = firmware's doubled OSD (0x3A0A[1:0])
 
 Facts: docs/reversing/realtek-rtd/tech-osd.md (draw sequence, char-word format, button map).
 SDK-confirmed char word: byte0=0x4C (1bpp, width=12px), byte1=glyph index, byte2=colour [sdk-rl64xx-reference.md].
@@ -52,15 +53,12 @@ COL = {                         # 24-bit RRGGBB for each palette slot
 }
 
 # ---- layout ------------------------------------------------------------------------------------
-# Each text line is one font-select "row": a row-command word then one char-word per column, then a
-# zero row-command terminates the row list. We lay lines out as consecutive rows in the font-select
-# SRAM starting at FS_BASE; glyph bitmaps live from FONT_BASE.
-FS_BASE   = 0x000                                # font-select (text map) region; grows with rows*cols
-FONT_BASE = 0x600                                # glyph bitmaps; must clear the whole text map
-                                                 # (map ~= sum(1+cols) per row + 1; 0x600=1536 words headroom)
+# Font SRAM: row commands at word 0..n-1 = (0x80 valid, height-1, cols), word n = terminator (B0=0);
+# char words at fs_base = n+1, row-major, fixed stride COLS; glyphs at FONT_BASE. [sdk-rl64xx-reference.md]
+ROWCMD_BASE = 0x000
+FONT_BASE = 0x600                                # glyph bitmaps; must clear n+1 + n*COLS words
 CELL_W, CELL_H = FNT.CELL_W, FNT.CELL_H          # 12 x 18
-# OSD runs at 2x (firmware boot state db_width/db_height) -> on-screen cell is 24x36 px.
-COLS = 44                                        # chars per line (44*12 = 528 cell px = 1056 on-screen)
+COLS = 44                                        # chars per line (44*12 = 528 px at --scale 1)
 X_ORG, Y_ORG = 0x20, 0x08                        # OSD origin regs 0x3A01/0x3A00 (approx (128px,64ln))
 
 # Button band -> name. From docs/reversing/realtek-rtd/buttons.md. [user-pending] = NOT hw-confirmed.
@@ -222,31 +220,42 @@ class TechOsd:
         return self.idx
 
     def write_rows(self, rows):
-        """Write the font-select map: each display row = a row-command word + one char-word per column.
-        A zero row-command terminates. Row command [oss/osd.md]: (CELL_H, CELL_W, n_chars)."""
+        """Row commands at ROWCMD_BASE, terminator, then char words at fs_base (stride COLS)."""
         o = self.o
         o.set_opt(SRAM_FONT)
-        a = FS_BASE
-        for row in rows:
-            o.write_word(a, CELL_H, CELL_W, len(row)); a += 1       # row command
-            for ch, colour in row:
-                gi = self.idx.get(ch, self.idx.get(" ", 0))
-                o.write_word(a, CW_BYTE0, gi, colour); a += 1       # char word: 0x4C | glyph | colour
-        o.write_word(a, 0, 0, 0)                                    # terminator (notStop=0)
         self.n_rows = len(rows)
+        for r in range(self.n_rows):
+            o.write_word(ROWCMD_BASE + r, 0x80, CELL_H - 1, COLS)
+        o.write_word(ROWCMD_BASE + self.n_rows, 0, 0, 0)            # end of row list
+        for r, row in enumerate(rows):
+            self.write_row_chars(r, row)
 
-    def setup(self, rows):
+    def fs_base(self):
+        return ROWCMD_BASE + self.n_rows + 1
+
+    def write_row_chars(self, r, row):
+        a = self.fs_base() + r * COLS
+        for ch, colour in row:
+            gi = self.idx.get(ch, self.idx.get(" ", 0))
+            self.o.write_word(a, CW_BYTE0, gi, colour); a += 1      # char word: 0x4C | glyph | colour
+
+    def setup(self, rows, scale=1):
         o = self.o
+        o.rmw(FRAME_BASE + 0x0A, 0x03, 0x03 if scale == 2 else 0x00)   # db_width|db_height (fw boot = 2x)
         for idx, rgb in COL.items():
             o.set_color(idx, rgb >> 16, (rgb >> 8) & 0xFF, rgb & 0xFF)
         o.wr(0x0093, 0x00)                                   # db_enable off: writes latch immediately
         o.rmw(0x01DC, 0x08, 0x08)                            # osd_clken
+        o.rmw(0x006C, 0x01, 0x01)                            # OVERLAY_CTRL.overlay_port_en (fw leaves 0 when no menu)
         # upload glyphs for everything we will draw
         allchars = FNT.charset("".join(ch for r in rows for ch, _ in r))
         self.upload_charset(allchars)
+        self.n_rows = len(rows)
+        fs = self.fs_base()
+        assert fs + self.n_rows * COLS <= FONT_BASE, "text map overruns FONT_BASE"
         # font/fs base pointers (0x3A0C-0E), units = words
-        o.wr(FRAME_BASE + 0x0C, FS_BASE & 0xFF)
-        o.rmw(FRAME_BASE + 0x0D, 0xF0, ((FS_BASE >> 8) & 0xF) << 4)
+        o.wr(FRAME_BASE + 0x0C, fs & 0xFF)
+        o.rmw(FRAME_BASE + 0x0D, 0xF0, ((fs >> 8) & 0xF) << 4)
         o.rmw(FRAME_BASE + 0x0D, 0x0F, FONT_BASE & 0xF)
         o.wr(FRAME_BASE + 0x0E, FONT_BASE >> 4)
         self.write_rows(rows)
@@ -284,14 +293,7 @@ class TechOsd:
                 self.idx[ch] = base + j
                 for k, (b0, b1, b2) in enumerate(FNT.glyph_words(ch)):
                     o.write_word(FONT_BASE + (base + j) * WORDS_PER_GLYPH + k, b0, b1, b2)
-        # The blank key row is the LAST row already written by write_rows (rows[n_rows-1]).
-        # Rewrite it in place: skip the n_rows-1 info rows (each 1 cmd + COLS chars), land on the
-        # key row's command word, overwrite command + char words, then re-terminate.
-        a = FS_BASE + (self.n_rows - 1) * (1 + COLS)
-        o.write_word(a, CELL_H, CELL_W, len(row)); a += 1
-        for ch, c in row:
-            o.write_word(a, CW_BYTE0, self.idx[ch], c); a += 1
-        o.write_word(a, 0, 0, 0)
+        self.write_row_chars(self.n_rows - 1, row)          # key row = last row
 
     def read_keys(self):
         """Raw ADC key regs (0xFF09/0xFF0A) + P3.0 snapshot, via the running-MCU F4/F5 path.
@@ -325,7 +327,8 @@ def main():
     do_reset = "--reset" in args
     isp_info = "--no-isp-info" not in args
     as_json = "--json" in args
-    cmd = next((a for a in args if not a.startswith("--") and a not in (str(secs),)), "draw")
+    scale = int(args[args.index("--scale") + 1]) if "--scale" in args else 1
+    cmd = next((a for a in args if not a.startswith("--") and a not in (str(secs), str(scale))), "draw")
 
     P.log(f"=== tech-osd bus={bus} cmd={cmd} secs={secs} reset={do_reset} isp_info={isp_info} ===")
     if cmd == "selftest":
@@ -356,7 +359,7 @@ def main():
         rows = render_rows(lines)
         rows.append([(" ", (PAL_KEY << 4) | PAL_BG)] * COLS)       # trailing key row (blank initially)
         P.log(f"panel: {len(rows)} rows x {COLS} cols")
-        t.setup(rows)
+        t.setup(rows, scale)
         rb = t.readback()
         for r, v in rb.items():
             P.log(f"readback 0x{r:04x} = 0x{v:02x}")
@@ -409,10 +412,11 @@ def selftest():
                     "flash": {"jedec": "ef4017", "db": {"name": "W25Q64"}}}}
     rows = render_rows(fmt_lines(info))
     assert all(len(r) == COLS for r in rows), [len(r) for r in rows]
-    total_words = sum(1 + len(r) for r in rows) + 1
-    print(f"selftest OK: {len(FNT.F)} glyphs, {len(rows)} rows x {COLS} cols, "
-          f"{total_words} font-select words, {total_words} <= font_base gap {FONT_BASE - FS_BASE}")
-    assert total_words <= FONT_BASE - FS_BASE, "font-select map overruns FONT_BASE"
+    n = len(rows) + 1                                   # + key row
+    total_words = (n + 1) + n * COLS
+    print(f"selftest OK: {len(FNT.F)} glyphs, {n} rows x {COLS} cols, "
+          f"{total_words} map words <= FONT_BASE {FONT_BASE}")
+    assert total_words <= FONT_BASE - ROWCMD_BASE, "text map overruns FONT_BASE"
     return 0
 
 
