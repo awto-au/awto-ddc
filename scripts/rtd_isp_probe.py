@@ -133,8 +133,11 @@ def main() -> int:
             log("resumed scaler MCU (0xEE <- 0x02)")
         return 0
     if "--resume" in sys.argv:
-        isp.write(0xEE, 0x02)   # naorunaoru/rtdflash: ISP:EE <- 02 resets/resumes the scaler after ISP work
-        log("wrote 0x02 to reg 0xEE (resume scaler MCU)")
+        try:
+            isp.write(0xEE, 0x02)   # naorunaoru/rtdflash: ISP:EE <- 02 resets the scaler MCU (monitor reboots)
+        except OSError:
+            pass   # expected: the scaler resets mid-transfer (errno 110)
+        log("wrote 0x02 to reg 0xEE (reset scaler MCU; monitor reboots)")
         return 0
     if not enter:
         log("read-only phase done; no writes sent")
