@@ -1,3 +1,8 @@
 # ghidra_names_bank1.tsv - JXC 4K monitor firmware, bank 1 (flash 0x10000-0x1FFFF), 8051:BE:16:default
 # Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
 # No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
+CODE:b0f4	osd_compose_glyph_grid_map	func	Splash/menu composer: writes a glyph-index grid (e.g. 23x27 cells) into font-select SRAM (3-byte OSD word writer bank6:0x65d1 via port 0x92; row cmd bank6:0x6530), computes font_base, calls osd_set_font_bases (bank6:0x504d), sets window words + OSD scale 0x3A0A. docs/boot-logo.md.	[fw]
+CODE:97a5	osd_fontdl_orient_enable	func	Font-download orient/rotation (0x3A0B), writes 0x3A18, enables OSD via 0x3A02[0] (osd_enable_set bank6:0x5e35). Paired with osd_compose_glyph_grid_map. docs/boot-logo.md.	[fw]
+CODE:4bd0	osd_screen_builder_1	func	Splash/menu composer call site (caller of thunk 0x106b -> bank6:0x4272); pairs b0f4 map (23x27). Which site is the power-on splash not isolated statically.	[fw]
+CODE:8f33	osd_screen_builder_2	func	Splash/menu composer call site (caller of thunk 0x106b); pairs b0f4 map (24x18).	[fw]
+CODE:3837	glyph_set_descriptor_table	data	Glyph-set descriptors seeding the banked far pointer (bank=SFR 0xFFFF, offset E1E8:E1E9) that bank6:0x4272 reads glyph data from. 00 08 00 00 ... c0 ff 00 09 11 98 f1 60. docs/boot-logo.md.	[fw]

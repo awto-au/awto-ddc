@@ -1,3 +1,5 @@
 # ghidra_names_bank2.tsv - JXC 4K monitor firmware, bank 2 (flash 0x20000-0x2FFFF), 8051:BE:16:default
 # Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
 # No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
+CODE:f070	osd_screen_builder_3	func	Splash/menu composer call site (caller of thunk 0x106b -> bank6:0x4272); loads source pointer near 0x3B49 with segment R3=0xFF. docs/boot-logo.md.	[fw]
+CODE:f269	osd_screen_builder_4	func	Splash/menu composer call site (caller of thunk 0x106b). docs/boot-logo.md.	[fw]
