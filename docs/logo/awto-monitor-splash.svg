@@ -11,7 +11,7 @@
      id="defs3" />
   <title
      id="title1">awto monitor splash</title>
-  <!-- boot splash: two colours only (OSD path, docs/boot-logo.md); black on white, mark + wordmark -->
+  <!-- boot splash, two-colour fallback (black on white) if the splash path turns out colour-limited -->
   <rect
      width="640"
      height="360"

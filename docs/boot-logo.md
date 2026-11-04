@@ -59,8 +59,9 @@ Renders (not in git): `~/vendors/realtek/analysis/logo/` (`contig_20.png` = whol
 
 ## Splash confirmed by Dan (2026-11-04)
 - The boot splash IS a two-colour BLACK Dahua logo on a WHITE background [user].
-- Two colours => drawable by the OSD engine (low-colour tile/font path), NOT a separate colour boot image.
-  So it IS produced by this scaler firmware, consistent with the agent finding no colour bitmap.
+- Two colours used ≠ two colours available: Dan suspects the splash path is NOT colour-limited [user].
+  Do not narrow the search to 1-2 bpp data; OSD palette/LUT (`osd_lut_write` 0x65B7) may give more colours.
+- No colour bitmap found so far in banks 0-6; data location still open [fw].
 - Prime suspect for the logo data: bank 14 (0xE0000-0xE2863), which is VLC-font/data shaped and undecoded,
   drawn via the OSD VLC value-map (regs 0x3A0F-0x3A16, writes not yet located). Bank 0 tile font is only the
   small menu glyphs (no logo).

@@ -39,7 +39,7 @@ Realtek RTD scaler monitors (the JXC/Dahua 28" 4K units, RTD2795-class). Private
 ## Docs
 - `docs/firmware-proposal.md` — issues + fix routes (settings-patch vs firmware-patch), priority order, OSD design.
 - `docs/edid-fix.md` — the EDID rebuild (identity/size/conformance), patch plan, flash procedure + revert.
-- `docs/logo/` — awto monitor mark (red, house style) + two-colour boot-splash replacement (640x360).
+- `docs/logo/` — awto monitor mark (red, house style) + boot-splash replacement (640x360): `-colour` (primary), plain = black/white fallback.
 - `docs/boot-logo.md`, `docs/reversing/realtek-rtd/{buttons,osd,db-bin-format}.md`, `docs/rtdtool-*.md`, `docs/monitors/`.
 
 ## Not in this repo
