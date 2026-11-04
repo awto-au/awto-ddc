@@ -22,7 +22,7 @@
 //--------------------------------------------------
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
-#define _AWTO_DEMO_LOGO                                         _ON     // Realtek demo boot logo; kept for now (Dan)
+#define _AWTO_DEMO_LOGO                                         _OFF    // awto: cut (Dan 2026-11-04, #8)
 
 
 /////////////
@@ -93,12 +93,12 @@
 //-------------------------------------------------
 // OD Option
 //-------------------------------------------------
-#define _OD_SUPPORT                                             _ON
+#define _OD_SUPPORT                                             _OFF    // awto: cut (Dan 2026-11-04, #8)
 
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-#define _FRC_SUPPORT                                            _ON
+#define _FRC_SUPPORT                                            _OFF    // awto: cut (Dan 2026-11-04, #8)
 
 //-------------------------------------------------
 // Display Rotation Option
@@ -142,24 +142,24 @@
 #define _COLOR_FORMAT_CONVERT                                   _ON
 #define _RGB_QUANTIZATION_RANGE_SUPPORT                         _ON
 #define _YCC_QUANTIZATION_RANGE_SUPPORT                         _ON
-#define _ULTRA_VIVID_SUPPORT                                    _ON
+#define _ULTRA_VIVID_SUPPORT                                    _OFF    // awto: cut (Dan 2026-11-04, #8)
 #define _DCR_SUPPORT                                            _OFF
-#define _DCC_FUNCTION                                           _ON
+#define _DCC_FUNCTION                                           _OFF    // awto: cut (Dan 2026-11-04, #8)
 #define _DCC_HISTOGRM_INFO                                      _OFF
-#define _ICM_SUPPORT                                            _ON
+#define _ICM_SUPPORT                                            _OFF    // awto: cut (Dan 2026-11-04, #8)
 #define _ICM_BRI_SUPPORT                                        _OFF
 #define _SCM_SUPPORT                                            _OFF
-#define _SIX_COLOR_SUPPORT                                      _ON
+#define _SIX_COLOR_SUPPORT                                      _OFF    // awto: cut (Dan 2026-11-04, #8)
 #define _HIGHLIGHT_WINDOW_SUPPORT                               _OFF    // awto: unused on this board (#7)
-#define _RINGING_FILTER_SUPPORT                                 _ON
-#define _SHARPNESS_SUPPORT                                      _ON
+#define _RINGING_FILTER_SUPPORT                                 _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _SHARPNESS_SUPPORT                                      _OFF    // awto: cut (Dan 2026-11-04, #8)
 #define _CONTRAST_SUPPORT                                       _ON
 #define _BRIGHTNESS_SUPPORT                                     _ON
 
 //-------------------------------------------------
 // Hue and Saturation Option
 //-------------------------------------------------
-#define _GLOBAL_HUE_SATURATION                                  _ON
+#define _GLOBAL_HUE_SATURATION                                  _OFF    // awto: cut (Dan 2026-11-04, #8)
 
 #define _HUE_MAX                                                230
 #define _HUE_MIN                                                30
