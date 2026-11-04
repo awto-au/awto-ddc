@@ -44,8 +44,11 @@ def dtd(clk10k, ha, hb, hfp, hsw, va, vb, vfp, vsw, hpol, vpol):
         0, 0, f])
 
 
-# 3840x2160 533.12 MHz: htotal 4000 (fp48 sw32 bp80), vtotal 2222 (fp3 sw5 bp54), +H -V
-DTD_4K = dtd(53312, 3840, 160, 48, 32, 2160, 62, 3, 5, 1, 0)
+# 3840x2160 @60.000 Hz EXACTLY VIC 97 (CTA standard): 594.00 MHz, htotal 4400 (fp176 sw88 bp296),
+# vtotal 2250 (fp8 sw10 bp72), +H +V. Identical to VIC 97 so edid-decode emits no "VIC/DTD differ"
+# warning; 594 MHz < 600 MHz range limit, standard 4K60 every GPU/panel link supports. (Was a 533.12 MHz
+# reduced-blanking DTD @59.98 Hz — our own choice, not a factory constraint; dropped for 100% clean decode.)
+DTD_4K = dtd(59400, 3840, 560, 176, 88, 2160, 90, 8, 10, 1, 1)
 # VIC 16 exact: 148.5 MHz, htotal 2200 (88/44/148), vtotal 1125 (4/5/36), +H +V
 DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
 # CVT-RB 2560x1440: 241.7 MHz, htotal 2720 (48/32/80), vtotal 1481 (3/5/33), +H -V... as in original (+/+)
