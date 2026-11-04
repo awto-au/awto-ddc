@@ -23,7 +23,7 @@ Facts: docs/reversing/realtek-rtd/tech-osd.md (draw sequence, char-word format, 
 SDK-confirmed char word: byte0=0x4C (1bpp, width=12px), byte1=glyph index, byte2=colour [sdk-rl64xx-reference.md].
 Log: ./tmp/logs/rtd_tech_osd.log
 """
-import sys, time
+import re, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -56,10 +56,12 @@ COL = {                         # 24-bit RRGGBB for each palette slot
 # Font SRAM: row commands at word 0..n-1 = (0x80 valid, height-1, cols), word n = terminator (B0=0);
 # char words at fs_base = n+1, row-major, fixed stride COLS; glyphs at FONT_BASE. [sdk-rl64xx-reference.md]
 ROWCMD_BASE = 0x000
-FONT_BASE = 0x600                                # glyph bitmaps; must clear n+1 + n*COLS words
+FONT_BASE = 0xC00                                # glyphs; above the map, below the 12-bit pointer max 0xFFF
+                                                 # (RL6449 OSD SRAM = 12288 words [SDK RL6449_OSD_Gen_Option.h])
 CELL_W, CELL_H = FNT.CELL_W, FNT.CELL_H          # 12 x 18
-COLS = 44                                        # chars per line (44*12 = 528 px at --scale 1)
-X_ORG, Y_ORG = 0x20, 0x08                        # OSD origin regs 0x3A01/0x3A00 (approx (128px,64ln))
+COLS = 80                                        # chars per line (80*12 = 960 px at --scale 1)
+COL_W = 39                                       # two section columns of 39 + 2-char gutter
+SCREEN_W, SCREEN_H = 3840, 2160                  # fallback when EDID has no preferred timing
 
 # Button band -> name. From docs/reversing/realtek-rtd/buttons.md. [user-pending] = NOT hw-confirmed.
 # (mask, source reg, lo, hi, name, confirmed)
@@ -100,7 +102,7 @@ def fmt_lines(info: dict) -> list:
     L.append(("h", "SIGNAL"))
     res = t.get("preferred", "?")
     rr = t.get("refresh_hz")
-    L.append(("kv", f"RESOLUTION|{res} @ {rr} HZ" if rr else f"RESOLUTION|{res}"))
+    L.append(("kv", f"NATIVE (EDID)|{res} @ {rr:g} HZ" if rr else f"NATIVE (EDID)|{res}"))
     pc = t.get("pixel_clock_mhz")
     ht, vt = t.get("h_total"), t.get("v_total")
     if pc and ht and vt:
@@ -109,22 +111,24 @@ def fmt_lines(info: dict) -> list:
         L.append(("kv", f"PIXEL CLOCK|{pc} MHZ"))
         L.append(("kv", f"H / V FREQ|{hf:.1f} KHZ / {vf:.1f} HZ"))
         L.append(("kv", f"TOTALS|{ht} x {vt}"))
-    sig = "PRESENT" if res not in (None, "?") else "NONE"
-    L.append(("kv", f"SIGNAL|{sig}"))
+    L.append(("h", "INPUT"))
+    host = info.get("host", {})
+    conn = host.get("connector") or "?"                     # e.g. card2-DP-4
+    kind = conn.split("-")[1] if conn.count("-") >= 2 else "?"
+    L.append(("kv", f"DRIVEN BY|{kind} <- HOST {conn}"))
+    v60 = host.get("vcp60")
+    # fw answers a constant 0x02 on DP and HDMI units alike -> not an input indicator
+    L.append(("kv", f"VCP 60 (FW)|{v60 if v60 else '?'} (NOT RELIABLE)"))
 
-    L.append(("h", "INPUTS"))
-    # VCP 0x60 = input source; mark active. Known RTD/MCCS codes.
-    INP = {0x01: "VGA-1", 0x03: "DVI-1", 0x0F: "DP-1", 0x11: "HDMI-1", 0x12: "HDMI-2", 0x13: "DP-2"}
-    active = vcp("input_source") if False else None   # input_source not gathered by identify; derive from caps
-    cur_in = None
-    if "60" in feats:
-        cur_in = feats.get("60")
-    L.append(("kv", "AVAILABLE|VGA DVI HDMI DP"))
-    L.append(("kv", f"ACTIVE|{cur_in or 'SEE VCP 60'}"))
+    modes = host.get("modes") or []
+    if modes:
+        L.append(("h", "MODES (EDID)"))
+        for res_, rates in modes:
+            L.append(("kv", f"{res_}|{' '.join(rates)} HZ"))
 
     L.append(("h", "LINK"))
     L.append(("kv", "INTERFACE|eDP 4-LANE (PANEL)"))     # panel-side; host link not exposed over DDC
-    L.append(("kv", "HDR|SDR (NO HDR BLOCK)"))
+    L.append(("kv", "HDR|SDR ONLY (EOTF GAMMA)"))   # EDID HDR block lists traditional gamma only
 
     L.append(("h", "SYSTEM"))
     fw = d.get("firmware_level", {}) if isinstance(d, dict) else {}
@@ -155,28 +159,44 @@ def fmt_lines(info: dict) -> list:
     return L
 
 
-def render_rows(lines):
-    """Turn (kind,text) lines into fixed-width display rows (padded to COLS) with per-char colour.
-    Returns list of rows; each row = list of (char, colour_byte)."""
+def render_block(lines, width, lab_w=13):
+    """(kind,text) lines -> rows of exactly `width` (char, colour_byte)."""
     rows = []
     for kind, text in lines:
         if kind == "h":
-            s = ("== " + text + " ").ljust(COLS, "=")[:COLS]
+            s = ("== " + text + " ").ljust(width, "=")[:width]
             rows.append([(c, (PAL_HDR << 4) | PAL_BG) for c in s])
         elif kind == "kv":
             label, _, val = text.partition("|")
-            label = label[:18].ljust(18)
-            val = val[:COLS - 20]
-            s_lab = [(c, (PAL_LABEL << 4) | PAL_BG) for c in label]
-            s_sep = [(" ", (PAL_LABEL << 4) | PAL_BG), (" ", (PAL_LABEL << 4) | PAL_BG)]
+            s_lab = [(c, (PAL_LABEL << 4) | PAL_BG) for c in label[:lab_w].ljust(lab_w + 1)]
             s_val = [(c, (PAL_VALUE << 4) | PAL_BG) for c in val]
-            row = (s_lab + s_sep + s_val)[:COLS]
-            row += [(" ", (PAL_VALUE << 4) | PAL_BG)] * (COLS - len(row))
-            rows.append(row)
+            row = (s_lab + s_val)[:width]
+            rows.append(row + [(" ", (PAL_VALUE << 4) | PAL_BG)] * (width - len(row)))
         else:
-            s = text[:COLS].ljust(COLS)
-            rows.append([(c, (PAL_VALUE << 4) | PAL_BG) for c in s])
+            rows.append([(c, (PAL_VALUE << 4) | PAL_BG) for c in text[:width].ljust(width)])
     return rows
+
+
+def render_rows(lines):
+    """Split lines into sections (at each header), fill left column then right, balanced by height.
+    Returns full-width rows of COLS (char, colour_byte)."""
+    secs = []
+    for ln in lines:
+        if ln[0] == "h" or not secs:
+            secs.append([])
+        secs[-1].append(ln)
+    total = sum(len(s) for s in secs)
+    left, right, n = [], [], 0
+    for s in secs:                                   # keep section order; switch once half is used
+        (left if n + len(s) / 2 <= total / 2 else right).append(s)
+        n += len(s)
+    L = render_block([ln for s in left for ln in s], COL_W)
+    R = render_block([ln for s in right for ln in s], COL_W)
+    blank = [(" ", (PAL_VALUE << 4) | PAL_BG)]
+    gut = blank * (COLS - 2 * COL_W)
+    h = max(len(L), len(R))
+    L += [blank * COL_W] * (h - len(L)); R += [blank * COL_W] * (h - len(R))
+    return [l + gut + r for l, r in zip(L, R)]
 
 
 # ---- drawing -----------------------------------------------------------------------------------
@@ -239,7 +259,17 @@ class TechOsd:
             gi = self.idx.get(ch, self.idx.get(" ", 0))
             self.o.write_word(a, CW_BYTE0, gi, colour); a += 1      # char word: 0x4C | glyph | colour
 
-    def setup(self, rows, scale=1):
+    def set_origin(self, x_px, y_ln):
+        """hori_delay1 = 10 bit, 4 px steps (0x3A01=[9:2], 0x3A02[7:6]=[1:0]);
+        vert_delay1 = 11 bit, 1 line (0x3A00=[10:3], 0x3A02[5:3]=[2:0]). [spec from regdb]"""
+        hx = max(2, min(0x3FF, x_px // 4)); vy = max(0, min(0x7FF, y_ln))
+        o = self.o
+        o.wr(FRAME_BASE + 1, hx >> 2)
+        o.wr(FRAME_BASE + 0, vy >> 3)
+        o.rmw(FRAME_BASE + 2, 0xF8, ((hx & 3) << 6) | ((vy & 7) << 3))
+        P.log(f"origin {hx * 4} px, {vy} lines")
+
+    def setup(self, rows, scale=1, screen=(SCREEN_W, SCREEN_H)):
         o = self.o
         o.rmw(FRAME_BASE + 0x0A, 0x03, 0x03 if scale == 2 else 0x00)   # db_width|db_height (fw boot = 2x)
         for idx, rgb in COL.items():
@@ -264,8 +294,8 @@ class TechOsd:
         w = COLS * CELL_W
         h = (self.n_rows + 1) * CELL_H
         o.win_set(0, 0, 0, w, h, color=PAL_PANEL)
-        o.wr(FRAME_BASE + 0, Y_ORG)                          # vert_delay1
-        o.wr(FRAME_BASE + 1, X_ORG)                          # hori_delay1
+        sw, sh = screen
+        self.set_origin((sw - w * scale) // 2, (sh - h * scale) // 2)
         o.set_opt(SRAM_WIN)
         o.osd_enable(True)
 
@@ -309,8 +339,29 @@ def gather(bus, isp_info=True, as_json=False):
     """Gather live info BEFORE our OSD session. rtd_identify's ISP phase resets the monitor, so this
     must run first (its reset is harmless; we then open a fresh session to draw)."""
     info = ID.identify(bus, isp=isp_info)
+    info["host"] = host_info(bus)
     P.log("gathered: " + ID.human(info).replace("\n", " | ")[:400])
+    P.log(f"host: {info['host']}")
     return info
+
+
+def host_info(bus):
+    """Host-side facts: DRM connector driving this bus, EDID mode list, raw VCP 0x60."""
+    out = {}
+    p = ID.edid_path(bus)
+    if p:
+        out["connector"] = p.parent.name
+        if p.exists():
+            rc, txt = ID.run(["edid-decode"], ID.EDID_TIMEOUT, p.read_bytes())
+            by_res = {}
+            for w, h, hz in re.findall(r"(\d{3,4})x(\d{3,4})\s+([\d.]+) Hz", txt):
+                by_res.setdefault((int(w), int(h)), set()).add(round(float(hz)))
+            out["modes"] = [(f"{w}x{h}", [str(r) for r in sorted(rs, reverse=True)])
+                            for (w, h), rs in sorted(by_res.items(), key=lambda kv: -kv[0][0] * kv[0][1])]
+    rc, txt = ID.run(["ddcutil", "--bus", str(bus), "getvcp", "60"], ID.DDC_TIMEOUT)
+    m = re.search(r"sl=(0x[0-9a-f]{2})", txt)
+    out["vcp60"] = m.group(1) if m else None
+    return out
 
 
 def main():
@@ -359,7 +410,12 @@ def main():
         rows = render_rows(lines)
         rows.append([(" ", (PAL_KEY << 4) | PAL_BG)] * COLS)       # trailing key row (blank initially)
         P.log(f"panel: {len(rows)} rows x {COLS} cols")
-        t.setup(rows, scale)
+        res = info.get("edid", {}).get("timing", {}).get("preferred", "")
+        try:
+            screen = tuple(int(v) for v in res.split("x"))
+        except ValueError:
+            screen = (SCREEN_W, SCREEN_H)
+        t.setup(rows, scale, screen)
         rb = t.readback()
         for r, v in rb.items():
             P.log(f"readback 0x{r:04x} = 0x{v:02x}")
@@ -409,9 +465,14 @@ def selftest():
             "ddc": {"firmware_level": {"current": 0x0101}, "controller_type": {"current": 0x0b05},
                     "capabilities": {"features": {"60": "DP-1"}}},
             "isp": {"scaler": {"name": "RTD2795T-family", "product_code": "0xcf2", "version_nibble": 1},
-                    "flash": {"jedec": "ef4017", "db": {"name": "W25Q64"}}}}
+                    "flash": {"jedec": "ef4017", "db": {"name": "W25Q64"}}},
+            "host": {"connector": "card2-DP-4", "vcp60": "0x02",
+                     "modes": [("3840x2160", ["60", "50", "30", "25", "24"]), ("2560x1440", ["60"]),
+                               ("1920x1080", ["60", "50", "30", "25", "24"]), ("640x480", ["60"])]}}
     rows = render_rows(fmt_lines(info))
     assert all(len(r) == COLS for r in rows), [len(r) for r in rows]
+    for r in rows:                                      # text preview of the panel
+        print("|" + "".join(c for c, _ in r) + "|")
     n = len(rows) + 1                                   # + key row
     total_words = (n + 1) + n * COLS
     print(f"selftest OK: {len(FNT.F)} glyphs, {n} rows x {COLS} cols, "
