@@ -19,6 +19,11 @@
 
 #if(_PROJECT == _RL6449_PROJECT)
 
+//--------------------------------------------------
+// awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
+//--------------------------------------------------
+#define _AWTO_DEMO_LOGO                                         _OFF    // Realtek demo boot logo (ours replaces it)
+
 
 /////////////
 // General //
@@ -395,7 +400,7 @@
 //--------------------------------------------------
 #define _YPBPR_SUPPORT                                          _ON
 #define _SOG_SUPPORT                                            _ON
-#define _VGA_COMPOSITE_SUPPORT                                  _ON
+#define _VGA_COMPOSITE_SUPPORT                                  _OFF    // awto: no VGA port (A0 none); demo default was _ON
 
 //--------------------------------------------------
 // VGA Mode Search condition reference by picture width Option

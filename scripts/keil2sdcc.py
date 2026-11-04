@@ -68,6 +68,42 @@ RULES = [
                 r"LARGE|SMALL|COMPACT|ROM|CODE|DEBUG|OBJECTEXTEND|SYMBOLS|NOINTVECTOR|INTVECTOR)\b.*$",
                 re.M | re.I), r"// [keil2sdcc] dropped pragma"),
 ]
+# Compile-out rules for SDK code we don't use: (SDK-relative file, start-line regex, end-line regex, switch).
+# Lines start..end (first end match after start) get wrapped in #if(switch == _ON). Switches default _OFF
+# in fw/overlay/Project/Header/RL6449_Project.h. SDCC's linker keeps unreferenced code, so this saves flash.
+OSD = "User/RTD Series/RTD2014Osd/Code/"
+WRAPS = [
+    # Realtek demo boot logo (call, draw fn, char maps, VLC glyph blobs + loader cases); ours replaces it
+    # two single-line wraps: the backlight-on call between them must stay
+    (OSD + "RTD2014Osd.c", r"^\s*OsdDispShowLogo\(\);", r"^\s*OsdDispShowLogo\(\);", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014Osd.c", r"ActiveTimerEvent\(SEC\(3\), _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO\);",
+     r"_USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO\);", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispShowLogo\(void\)$", r"^\}", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014OsdFontTable.c", r"^BYTE __code tiOSD_REALTEK_1BIT_LOGO0\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014OsdFontTable.c", r"^BYTE __code tiOSD_REALTEK_1BIT_LOGO1\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO0\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO1\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
+    (OSD + "RTD2014OsdFontVLC.c", r"^\s*case _REALTEK_1BIT_LOGO0:", r"^\s*default:", "_AWTO_DEMO_LOGO", "before-end"),
+]
+
+
+def apply_wraps(rel: str, text: str, stats) -> str:
+    lines = text.split("\n")
+    for w in WRAPS:
+        f, start, end, sw = w[:4]
+        if f != rel:
+            continue
+        before_end = len(w) > 4 and w[4] == "before-end"      # end line itself stays outside the #if
+        s = next((i for i, l in enumerate(lines) if re.search(start, l)), None)
+        e = None if s is None else next((i for i in range(s, len(lines)) if re.search(end, lines[i])), None)
+        if s is None or e is None:
+            sys.exit(f"wrap rule did not match: {f} {start!r}..{end!r} (SDK changed? fix the rule)")
+        e = e - 1 if before_end else e
+        lines[s:e + 1] = [f"#if({sw} == _ON)  // [keil2sdcc] wrap"] + lines[s:e + 1] + ["#endif"]
+        stats[f"wrap {sw}"] += 1
+    return "\n".join(lines)
+
+
 SBIT = re.compile(r"\bsbit\s+(\w+)\s*=\s*([\w]+)\s*\^\s*(\d)\s*;")
 INCLUDE = re.compile(r'^(\s*#\s*include\s*[<"])([^>"]+)([>"])', re.M)
 
@@ -152,7 +188,9 @@ def cmd_port():
         dst.parent.mkdir(parents=True, exist_ok=True)
         if p.suffix.lower() in SRC_EXT:
             raw = p.read_bytes().decode("latin-1")           # byte-preserving; comments are GBK/Big5
-            dst.write_bytes(rewrite(raw, p.parent, idx, sfr_addr, using, stats).encode("latin-1"))
+            out = rewrite(raw, p.parent, idx, sfr_addr, using, stats)
+            out = apply_wraps(str(rel), out, stats)
+            dst.write_bytes(out.encode("latin-1"))
             n += 1
         elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:
             shutil.copy2(p, dst)
@@ -219,7 +257,8 @@ def norm_err(line):
 
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
-           "--std-sdcc11", f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
+           "--std-sdcc11", "--opt-code-size",                 # flash is the constraint (Dan: smallest)
+           f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
