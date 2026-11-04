@@ -1,0 +1,320 @@
+{
+ "header": {
+  "tool_version": "3.8",
+  "source_dir": "RTDScaler",
+  "scaler_count": 10,
+  "duplicate_ids": {
+   "47": [
+    "RTD2775TM-CG",
+    "RTD2785TM-CG"
+   ],
+   "45": [
+    "RTD2797PM-VDL-CG",
+    "RTD2797UPM-CG"
+   ]
+  },
+  "note": "tool ignores scalers sharing a name or ID ('More then one scaler has same ID. Ignore it!')"
+ },
+ "scalers": [
+  {
+   "dir": "RTD2172",
+   "scaler_name": "RTD2172",
+   "scaler_id": 54,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "20182101250",
+     "SVNRevision": "5563"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 2762192,
+     "sha256": "d582acebe2dc14cb5bb83799eed0762de6b4f201d7894b57cd04cb6c1c974350"
+    },
+    "DPCDDB.bin": {
+     "size": 85589,
+     "sha256": "fe9e980beb66fcb113da0524967c0917ee6e14afb9ea2534f26fba42a63061cb"
+    },
+    "IPDB.bin": {
+     "size": 42659,
+     "sha256": "d8698e367ebf484ce9960ad119a2b392bca96f69c353cb1109ccea6f298088ce"
+    },
+    "ReadAll.txt": {
+     "size": 75483,
+     "sha256": "471de505a98de84ff234d71d4f26d8de8adc8ee880858646c737dd0329813250"
+    },
+    "Version.txt": {
+     "size": 55,
+     "sha256": "69b67f2a21e5ad0b26c1a09de34f64d2505ebeea78924b47bee77e93d3cc4c82"
+    }
+   }
+  },
+  {
+   "dir": "RTD2186",
+   "scaler_name": "RTD2186",
+   "scaler_id": 56,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "201822704",
+     "SVNRevision": "5571"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 2316109,
+     "sha256": "220a0c876c28d4c0855a3b29b93ca79db317017a106522b1f4bc8b51ffaf237b"
+    },
+    "DPCDDB.bin": {
+     "size": 85589,
+     "sha256": "fe9e980beb66fcb113da0524967c0917ee6e14afb9ea2534f26fba42a63061cb"
+    },
+    "IPDB.bin": {
+     "size": 34681,
+     "sha256": "83efa5535139c2d4de2b24976076759e55e0bbef4ca2015805c8d4f0ab15edab"
+    },
+    "ReadAll.txt": {
+     "size": 64455,
+     "sha256": "56e047144db79cd66f5627005eba2762b7bb2e77073dc15b04d0e2cf18ec00ae"
+    },
+    "Version.txt": {
+     "size": 53,
+     "sha256": "9d0fccb195439506df5688ac1f068227f66d3e3a1e27c4fe71124e85aef34295"
+    }
+   }
+  },
+  {
+   "dir": "RTD2525AR-CG",
+   "scaler_name": "RTD2525AR-CG",
+   "scaler_id": 50,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {},
+   "files": {
+    "DB.bin": {
+     "size": 1216064,
+     "sha256": "b31f34dc228fd714599567986c27fd9382dd6c6b7015d31194981410172c82e5"
+    },
+    "GPIO.bin": {
+     "size": 26456,
+     "sha256": "74aded0b17c7b9f21f5083bbd58ea8e80b3afacf88963312f029afd622256187"
+    },
+    "ReadAll.txt": {
+     "size": 53837,
+     "sha256": "64d788fa4c277049019f0cd44d5b11f91130c03e01c78d2374e749a2e0c729a0"
+    }
+   }
+  },
+  {
+   "dir": "RTD2537T-CG",
+   "scaler_name": "RTD2537T-CG",
+   "scaler_id": 44,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "5379",
+     "StatusFileRevision": "202"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 1885769,
+     "sha256": "ad17bde03f51c96b684ae5019b2981390d2d11d4f5c499dbeb98ae1e716ba614"
+    },
+    "GPIO.bin": {
+     "size": 26172,
+     "sha256": "353dd8ad25dfda1b56436718c68f8e9d62f4f50bcc97b27b54cf3912b2d86686"
+    },
+    "ReadAll.txt": {
+     "size": 70033,
+     "sha256": "eae6584f822f9aebf8b261d774871a318077774a4413aa77e99b93b38092b682"
+    },
+    "version.txt": {
+     "size": 52,
+     "sha256": "1fa325d5cbd77736196b19da0ff55f105355d09f05b41e8664a4441bef815ed7"
+    }
+   }
+  },
+  {
+   "dir": "RTD2775TM-CG",
+   "scaler_name": "RTD2775TM-CG",
+   "scaler_id": 47,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "3183",
+     "StatusFileRevision": "412"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 3098026,
+     "sha256": "fecf5c83af6f427b46e9b95bf20897f71055f63509a49c22e89f1a2c898739b1"
+    },
+    "GPIO.bin": {
+     "size": 40516,
+     "sha256": "8d99c085ef026a2979837d417aa78c1fde09fd3107a76396b840c50d6e4893ac"
+    },
+    "ReadAll.txt": {
+     "size": 91102,
+     "sha256": "c948981e0858a4f1f280cfe482e7cc2bb2a3b75d9a27dc937a8d485f32f1827d"
+    },
+    "version.txt": {
+     "size": 54,
+     "sha256": "77141cb16f3f840307750d441c6060203f2e0dc1bcce759b1372932eb3bd8973"
+    }
+   }
+  },
+  {
+   "dir": "RTD2776B-CG",
+   "scaler_name": "RTD2776B-CG",
+   "scaler_id": 42,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "11994",
+     "StatusFileRevision": "136"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 4391801,
+     "sha256": "3ea4f555fe17d3b54cc701ef3ae10e3d43d264347e2d0f55df6cfe4091d370ef"
+    },
+    "GPIO.bin": {
+     "size": 48856,
+     "sha256": "10a36e54887abc8d32d671c068d92d2a20457bf3426a2b22bf72163d26f996d4"
+    },
+    "ReadAll.txt": {
+     "size": 127726,
+     "sha256": "ba924eeb86a07bc957de60d701c73ecfeef9231b3a033ccdac33e4e7cc41cd3d"
+    },
+    "version.txt": {
+     "size": 53,
+     "sha256": "2df87ddb519f7727f0f46c2de15bc0512ead3755211e79526b669fe4ac32891a"
+    }
+   }
+  },
+  {
+   "dir": "RTD2785TM-CG",
+   "scaler_name": "RTD2785TM-CG",
+   "scaler_id": 47,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "3183",
+     "StatusFileRevision": "412"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 3052579,
+     "sha256": "2c259f90bbfe2c14dee6a4b87ead6537d1ca1dc76feda90e1ab367745bbcd25d"
+    },
+    "GPIO.bin": {
+     "size": 40516,
+     "sha256": "8d99c085ef026a2979837d417aa78c1fde09fd3107a76396b840c50d6e4893ac"
+    },
+    "ReadAll.txt": {
+     "size": 92649,
+     "sha256": "3f4804cff76af1464bfd2c8f3e8e532327318106796d1265638f632437507fd4"
+    },
+    "version.txt": {
+     "size": 54,
+     "sha256": "77141cb16f3f840307750d441c6060203f2e0dc1bcce759b1372932eb3bd8973"
+    }
+   }
+  },
+  {
+   "dir": "RTD2795T-CG",
+   "scaler_name": "RTD2795T-CG",
+   "scaler_id": 49,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "1092",
+     "StatusFileRevision": "409"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 4105637,
+     "sha256": "da4c07b26f071a7efc06f9c8ff3035a857eddf4b272649194e337300f2c78955"
+    },
+    "GPIO.bin": {
+     "size": 35586,
+     "sha256": "dd8f9c774242c4dfe2253b908698a60a669258826deede7183f1465547b26eb4"
+    },
+    "ReadAll.txt": {
+     "size": 116435,
+     "sha256": "6a1beb04c6064f076760b0cb4fb9a3709d4f93d939c4882467364296ce51252c"
+    },
+    "version.txt": {
+     "size": 54,
+     "sha256": "4188cf39665007f41799d25c0f6a202c222603a3ae677edd7227039e82cd1b7c"
+    }
+   }
+  },
+  {
+   "dir": "RTD2797PM-VDL-CG",
+   "scaler_name": "RTD2797PM-VDL-CG",
+   "scaler_id": 45,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {
+    "SVNInfo": {
+     "SpecRevision": "8653",
+     "StatusFileRevision": "384"
+    }
+   },
+   "files": {
+    "DB.bin": {
+     "size": 6081761,
+     "sha256": "e90e2cdda8d5de1b1d84fe92c234ce1cb3c3fb602bfd2685923efbca00a61a4d"
+    },
+    "GPIO.bin": {
+     "size": 46948,
+     "sha256": "e5e0ed105e506bd6cbdf969a1ab00ab5a32629d9a829c340847dac50d78291ce"
+    },
+    "ReadAll.txt": {
+     "size": 163167,
+     "sha256": "15e3fc8c98e51e12fa73f5834eb3a65edbd9721f0d989d4d69bc2afd5973e46d"
+    },
+    "version.txt": {
+     "size": 54,
+     "sha256": "dbf283e7aa4a50e10e746487c297dbba133c0c46bf33b68b3eb191d89d919f22"
+    }
+   }
+  },
+  {
+   "dir": "RTD2797UPM-CG",
+   "scaler_name": "RTD2797UPM-CG",
+   "scaler_id": 45,
+   "scaler_file_version": "0",
+   "ic_type": "1",
+   "version_txt": {},
+   "files": {
+    "DB.bin": {
+     "size": 6085768,
+     "sha256": "99cd73df493f26c47ae31055e8a017b7597f6347de525c82e50622be8305558b"
+    },
+    "GPIO.bin": {
+     "size": 46948,
+     "sha256": "e5e0ed105e506bd6cbdf969a1ab00ab5a32629d9a829c340847dac50d78291ce"
+    },
+    "ReadAll.txt": {
+     "size": 163188,
+     "sha256": "ef4caf9f7797f3369840db6e377d2e5dab1e7c7e9bbbed3af6a7fdeed21cb0d2"
+    }
+   }
+  }
+ ]
+}

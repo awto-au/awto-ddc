@@ -208,3 +208,85 @@
 - Pair list meaning (which of the four is which function) and record `id` semantics.
 - Pin record: flag bits 1-7 beyond the three direction bits, the u16 bitmap at +21, slot meaning at +44..+53, the 9-byte one-hot at +8.
 - `01 00`, `00 01`, `08 00 01..06` filler words in sections 2, 3, 9, 11.
+
+# `PlugIn/FlashSet.dat` flash-parameter table
+
+- Source: RTDCustomerTool V3.7 / V3.8 `PlugIn/FlashSet.dat` (loaded by `PlugIn_ISP.dll`). Parser: `scripts/rtd_flashdb_parse.py <FlashSet.dat> <out.json>`; derived JSON in `re/flashdb/` (`FlashSet_v3.8.json`, `Flash_v3.8.json`, `scalers_v3.8.json`).
+- Diff two tool versions: `rtd_flashdb_parse.py --diff a.json b.json` (V3.7 -> V3.8: +4 chips P25Q32H, XM25QH16B/40B/80B; 0 changed). Static only.
+- Evidence: `PlugIn_ISP.dll` V3.7 (decompile `~/vendors/realtek/analysis/PlugIn_ISP.c`): dialog loader `FUN_10009630`, ID match `FUN_1001c750`, WRSR `FUN_10018f30`, WP set/clear `FUN_10038310`, erase `FUN_1001d4d0`/`FUN_1001d650`, file writer near `0x1000d9xx` (also writes `FlashSet_dos.dat`).
+
+## File layout [fw]
+
+| Offset | Size | Content |
+|---|---|---|
+| 0 | u32 | magic `0x07020509` |
+| 4 | u16 | format version (2) |
+| 6 | u16 | chip count (V3.8: 84, V3.7: 80) |
+| 8 | u16 | SWREN script count (6) |
+| 10 | 72 x N | chip records, sorted by name |
+| 10+72N | to EOF | SWREN scripts: `u32 len` + `len` bytes, back to back (V3.8: 500 B) |
+
+- The writer emits a 10 B header, then 0x48 B per chip, then per script a `u32` length + body. [fw]
+- Name field sits at +0x0C of a record = file offset 0x16 for record 0, 0x5E for record 1, ... (stride 0x48).
+
+## Chip record (72 B, little-endian) [fw unless tagged]
+
+| Off | Size | Field | Notes |
+|---|---|---|---|
+| 0x00 | u32 | `id_type` | Must equal the tool's ID-type setting for an auto-detect match; 0 for 83 chips, 1 for XT25F04B. Two ID-read sequences exist (`FUN_1001c340`): 0 = `9F` + `AB`, 1 = `9F` + `90`. Dialog "ID Type". |
+| 0x04 | 8 B | `id` | JEDEC `9F` mfr/type/capacity, then 4th byte = device id from RES `AB` / REMS `90`, then 4 zero bytes. Dialog "ID Code". E.g. `c2 20 14 13`. |
+| 0x0C | 24 B | `name` | NUL-padded ASCII. Dialog "Flash Name". |
+| 0x24 | u16 | `bank_count` | 64 KiB banks; size = x 65536. Dialog "Bank Count". C2 20 14 = 16 = 1 MiB. |
+| 0x26 | u8 | `sr_byte_count` | Number of status registers (1..4). Dialog "SR Byte Count"; selects how many SRs are read/compared/written. |
+| 0x27 | u8 | pad | `0xCC` in 70 records, else junk (MSVC uninitialised-stack fill). Ignored. [guess] |
+| 0x28 | u32 | `autodetect` | 0 = never matched by ID read (select by name only), 1 or 2 = matched. Match in `FUN_1001c750` requires `1 or 2`. Difference 1 vs 2 [?]. |
+| 0x2C | u8 | `sr2_read_op` | "Read High SR OP" (0x35); read when `sr_byte_count==2`. |
+| 0x2D | u8 | `sr3_read_op` | 0x15 |
+| 0x2E | u8 | `sr3_write_op` | 0x11 |
+| 0x2F | u8 | `sr4_read_op` | 0x45 |
+| 0x30 | u8 | `sr4_write_op` | 0x41 |
+| 0x31 | 4 B | reserved | always 0; written to `FlashSet_dos.dat` [?] |
+| 0x35 | u8 | pad | `0xCC`/junk [guess] |
+| 0x36 | u16 | `swren_offset` | Byte offset of the length prefix of a SWREN script in the blob; `0xFFFF` = None. 15 chips use one. [fw: offsets 0/73/97/225/334/462 = the six script starts = `SWREN.dat` ids] |
+| 0x38 | u8[4] | `enable_wp_sr` | SR1..SR4 values that turn write-protect ON (e.g. MX `0xFF`, W25Q128 `0x9C`). Dialog "Enable WP SR Value". `FUN_10038310(0)` compares/writes these. Which of the two arrays is "enable" is [guess] (value 0x00 = unprotected fits "disable"). |
+| 0x3C | u16 | reserved | always 0 [?] |
+| 0x3E | u8[4] | `disable_wp_sr` | SR1..SR4 values that turn write-protect OFF (0x00 on nearly all). Used as the WRSR payload before erase/program (`FUN_1001d650` passes `rec+0x3E` to the WRSR routine). |
+| 0x42 | u16 | reserved | always 0 [?] |
+| 0x44 | u8 | `swren_every_page` | Dialog "Send SWREN Every Page"; set on BY25D40_Special, Default, MX25L2026_C, MX25L4026_D. |
+| 0x45 | 3 B | pad | 0 |
+
+- SR1 read opcode (`0x05`) and write opcode (`0x01`) are NOT in the record; they are hard-coded in the plugin. SR2 write is hard-coded `0x31`. [fw]
+- Erase, read and page-program opcodes are NOT in the table either (see below). A record only carries: ID, size, SR layout, protect values, optional SWREN script.
+- Cross-check: `Flash.dat` (below) is an independent encoding of the same fields; all decoded fields agree for 84/84 chips except `sr2_read_op` (Flash.dat keeps `0x35` on 26 single-SR chips, FlashSet.dat zeroes it). [fw]
+
+## SWREN scripts [fw / ?]
+
+- `SWREN.dat` (300 B) = 6 x 50 B: `u16 offset` (into the blob above) + `wchar_t name[24]` (rest = MSVC fill). Names: A25L020, DWPAagain, GD25M21_B, MX25L2026CM1, Pm25LD020, W25X21CLA.
+- A script is bytecode driving the scaler's SPI engine regs (same engine as `scripts/rtd_flash_sector.py`): `06 rr vv` = write reg, `0d rr mm vv aa aa bb bb` = poll `reg & mm == vv` (args `00 64 00 64`, meaning [?]). Anything else is left in `unparsed` in the JSON (2 scripts end with `00 04 00` [?]).
+- Example (offset 73, 20 B): `60<-68, 61<-01, 64<-02, 60<-69, poll 60 bit0` = WRSR with data 0x02 (type 3, nw=1). Scripts 0/2/4/5 are `AA/55`-style unlock sequences for SST-like parts [guess].
+- 15 of 84 chips reference a script. None of the Macronix MX25L8006/8073 (`c2 20 14`) records do.
+
+## Decoded record: `c2 20 14 13` "MX/KH25L800X" (record 39, V3.8) [fw]
+
+- `id_type` 0, id `c2 20 14 13 00 00 00 00`, `bank_count` 16 (1 MiB), `sr_byte_count` 1, `autodetect` 1.
+- `swren_offset` 0xFFFF (None), `swren_every_page` 0.
+- `enable_wp_sr` = `ff 00 00 00`, `disable_wp_sr` = `00 00 00 00`, high-SR ops unused (SR count 1).
+- Unprotect = WRSR with SR1 = 0x00: `60<-68 (type 3, nw=1), 61<-01, 64<-00, 60<-69`, poll `60` bit0 (`FUN_10018f30`, `sr_byte_count==1` path). Engine adds WREN. Matches `docs/flash-unprotect.md` step 3.
+- Erase / program are plugin constants, not table fields:
+  - 64 KiB bank erase (`FUN_1001d4d0`): `64<-bank`, `65<-0`, `66<-0`, `60<-B8` (type 5, nw=3), `61<-D8`, `60<-B9`, poll. If `swren_offset != 0xFFFF` it first runs the WRSR routine with `rec+0x3E` (disable-WP values); otherwise it relies on the earlier WP-clear step (`FUN_10038310`). V3.8 `IspDebugLog.txt` (P25Q80H board): bank 0 boot-flag clear first, then banks 12 down to 1.
+  - 4 KiB sector erase (`FUN_1001d650`): `65<-n<<4`, `66<-0`, `60<-B8`, `61<-20`, `60<-B9`, poll (same `rec+0x3E` pre-step).
+  - Engine opcode setup (`FUN_10019630`): `62<-06` WREN, `63<-50` EWSR, `6A<-03` READ, `6B<-0B` FAST_READ, `6C<-00`; page program via `6F<-A0` after `71`/`70` data writes. Same values as `rtd_flash_sector.py` `ENGINE_OPS`.
+- Write protect release (GPIO `0x1036`/`0xFE26`) is separate from this table (`docs/flash-unprotect.md`).
+
+## `PlugIn/Flash.dat` (legacy, 12575 B) [fw / guess]
+
+- Same magic/version, then `u16` count (84) at +6 and records from +8. Not loaded by `PlugIn_ISP.dll` (V3.7 ships no `Flash.dat`); referenced as `PlugIn\Flash.dat` / "Flash.dat Not Exist!" by another component. Predecessor of FlashSet.dat: same 84 chips, same ID/size/SR/protect values.
+- Record: `u32 id_type`, `8 B id`, `name\0` (variable), `u16 bank_count`, `u8 sr_byte_count`, `u32 autodetect`, `5 B` SR ops, `4 B enable_wp`, `4 B disable_wp`, then 2 slots `{u32 present, u32 flag, ASCII-hex script "06,60,20,..." \0}` and a terminator `0x06`. [fw for the fixed part; slot meaning [?]]
+- 6 chips (IS25LQ040, PM25LD020, PM25LQ016/020/080, PM25LX040) carry a second script in slot 2 that the FlashSet.dat blob does not have. Slot-1 scripts equal the FlashSet.dat blob bytes. [fw]
+- Treat FlashSet.dat as authoritative; Flash.dat is parsed only so a future version can be diffed.
+
+## Scaler list (`re/flashdb/scalers_v3.8.json`)
+
+- Source: `RTDScaler/<dir>/ReadAll.txt` `[ScalerInfor]` (`ScalerID`, `ScalerName`, `ScalerFileVersion`, `IcType`) plus file sizes/SHA-256 per dir.
+- V3.8: 10 scalers; duplicate IDs 47 (RTD2775TM-CG / RTD2785TM-CG) and 45 (RTD2797PM-VDL-CG / RTD2797UPM-CG). The tool logs "More then one scaler has same ID. Ignore it!" for such cases. [fw: string present; runtime behaviour not tested]
+- `--diff` works on scaler JSONs too (file hashes per dir).

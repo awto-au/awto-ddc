@@ -26,7 +26,7 @@ Script: `scripts/rtd_flash_sector.py`. Datasheet: `~/vendors/macronix/MX25L8006E
 ## Flash-parameter reconciliation (P25Q80H vs Macronix)
 - RTDTool `IspDebugLog.txt` "Get Flash Type: P25Q80H" is from third-party boards (JEDEC 85 60 14 per rtdflash); our unit is C2 20 14 [fw]
 - RTDTool keys `FlashSet.dat` by JEDEC; the ID decides opcode set, not the scaler. Both are 1 MiB, 4K sector (0x20), 256 B page (0x02), WREN 06, RDSR 05, WRSR 01 [spec / oss]
-- Decompiled ISP plugin has no flash-chip-specific WRSR path; the protection control is the ISP_WP GPIO. FlashSet.dat per-chip binary fields not decoded [?]
+- Decompiled ISP plugin has no flash-chip-specific WRSR path; the protection control is the ISP_WP GPIO. FlashSet.dat per-chip fields now decoded: `docs/reversing/realtek-rtd/db-bin-format.md` (record `c2 20 14`: SR count 1, disable-WP SR1 = 0x00, no SWREN script; erase/program opcodes are plugin constants) [fw]
 - Which WP GPIO pair applies to this exact scaler (0x1036/0xFE26 vs 0x1029/0xFE19 also present in the plugin) is [guess] 1036/FE26: it is the RTD2795T profile in rtdflash. If SR stays 0x9C after the fix, try the other pair (FUN_1001bd10)
 
 ## Test status
