@@ -37,8 +37,9 @@ SRC = WORK / "src"
 SHIM = ROOT / "fw" / "sdcc"                    # keil_compat.h, intrins.h (committed)
 OVERLAY = ROOT / "fw" / "overlay"              # our board/project files, SDK-relative paths, replace SDK copies
 SDCC = "sdcc-sdcc"                             # Fedora package name
-# One file is a few seconds; 60 s without completion = hung (stall rule, awto-dan#53). Expiry -> logged fail.
-COMPILE_TIMEOUT = 60
+# Per-file backstop (sdcc prints nothing while working, so no stall guard). Worst measured: RL6449_Series_DPRx0.c
+# 64 s under full parallel load (#8). 3x worst-case rule (awto-dan#53). Expiry -> logged TIMEOUT fail.
+COMPILE_TIMEOUT = 200
 LOG = None
 
 
@@ -62,7 +63,7 @@ RULES = [
     (re.compile(r"\)\s*interrupt\s+(\w+)(?=\s*[{;\n])"), r") __interrupt(\1)"),
     (re.compile(r"\)\s*using\s+(\d)(?=\s*[{;\n])"), r") __using(\1)"),
     # TYPE QUAL NAME _at_ ADDR;  ->  __at(ADDR) TYPE QUAL NAME;
-    (re.compile(r"^(\s*)([^;\n]*?)\b(\w+)\s+_at_\s+([^;]+);", re.M), r"\1__at(\4) \2\3;"),
+    (re.compile(r"^(\s*)([^;\n]*?)\b(\w+(?:\s*\[[^\]\n]*\])?)\s+_at_\s+([^;]+);", re.M), r"\1__at(\4) \2\3;"),
     # Keil-only pragmas (optimiser level, register banks) -> dropped; save/restore are kept (SDCC has them)
     (re.compile(r"^\s*#\s*pragma\s+(OT|OPTIMIZE|NOAREGS|AREGS|REGPARMS|NOREGPARMS|SRC|ASM|ENDASM|"
                 r"LARGE|SMALL|COMPACT|ROM|CODE|DEBUG|OBJECTEXTEND|SYMBOLS|NOINTVECTOR|INTVECTOR)\b.*$",
@@ -84,7 +85,31 @@ WRAPS = [
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO0\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO1\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
     (OSD + "RTD2014OsdFontVLC.c", r"^\s*case _REALTEK_1BIT_LOGO0:", r"^\s*default:", "_AWTO_DEMO_LOGO", "before-end"),
+    # DDC RAM arrays: address differs per chip/DDC channel, so the header extern can't get a single __at;
+    # hide it from the defining file (SDCC rejects extern-without-__at + __at definition in one TU)
+    ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",
+     r"^#if\(_D0_EMBEDDED_DDCRAM_MAX_SIZE", r"^extern BYTE xdata MCU_DDCRAM_D2\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
+    ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",
+     r"^#if\(_D0_MHL_EMBEDDED_DDCRAM_SIZE", r"^extern BYTE xdata MCU_DDCRAM_MHL_D2\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
 ]
+# Lines inserted before the first line matching anchor: (SDK-relative file, anchor regex, text)
+INSERTS = [
+    ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c", r"^#include", "#define _AWTO_DDCRAM_DEFINER"),
+]
+
+
+def apply_inserts(rel: str, text: str, stats) -> str:
+    for f, anchor, add in INSERTS:
+        if f != rel:
+            continue
+        lines = text.split("\n")
+        i = next((k for k, l in enumerate(lines) if re.search(anchor, l)), None)
+        if i is None:
+            sys.exit(f"insert rule did not match: {f} {anchor!r}")
+        lines.insert(i, add + "  // [keil2sdcc] insert")
+        text = "\n".join(lines)
+        stats["insert"] += 1
+    return text
 
 
 def apply_wraps(rel: str, text: str, stats) -> str:
@@ -99,7 +124,8 @@ def apply_wraps(rel: str, text: str, stats) -> str:
         if s is None or e is None:
             sys.exit(f"wrap rule did not match: {f} {start!r}..{end!r} (SDK changed? fix the rule)")
         e = e - 1 if before_end else e
-        lines[s:e + 1] = [f"#if({sw} == _ON)  // [keil2sdcc] wrap"] + lines[s:e + 1] + ["#endif"]
+        cond = sw if re.search(r"[()!=<> ]", sw) else f"{sw} == _ON"     # switch name or raw condition
+        lines[s:e + 1] = [f"#if({cond})  // [keil2sdcc] wrap"] + lines[s:e + 1] + ["#endif"]
         stats[f"wrap {sw}"] += 1
     return "\n".join(lines)
 
@@ -117,12 +143,35 @@ def build_name_index():
     return idx
 
 
+def ci_resolve(base: Path, rel: str):
+    """Resolve `rel` under `base` matching each path component case-insensitively (Windows semantics)."""
+    p = base
+    for part in rel.split("/"):
+        if part in (".", ""):
+            continue
+        if part == "..":
+            p = p.parent
+            continue
+        if (p / part).exists():
+            p = p / part
+            continue
+        hit = next((c for c in p.iterdir() if c.name.lower() == part.lower()), None) if p.is_dir() else None
+        if hit is None:
+            return None
+        p = hit
+    return p
+
+
 def fix_includes(text, here: Path, idx):
     def sub(m):
         inc = m.group(2).replace("\\", "/")
         cand = (here / inc)
         if cand.exists():
             return m.group(1) + inc + m.group(3)
+        hit = ci_resolve(here, inc)                          # same path, wrong case in some component
+        if hit is not None:
+            fixed = os.path.relpath(hit, here).replace(os.sep, "/")
+            return m.group(1) + fixed + m.group(3)
         hits = idx.get(Path(inc).name.lower())
         if hits and len(hits) == 1:                         # basename unique -> correct the case
             fixed = str(Path(inc).parent / hits[0].name) if "/" in inc else hits[0].name
@@ -132,25 +181,43 @@ def fix_includes(text, here: Path, idx):
 
 
 USING_DEF = re.compile(r"\b(\w+)\s*\([^;{)]*\)\s*using\s+(\d)\s*\n?\s*\{")
+INT_DEF = re.compile(r"\b(\w+)\s*\([^;{)]*\)\s*interrupt\s+(\w+)(?:\s+using\s+(\d))?\s*\n?\s*\{")
 
 
 def add_using_to_protos(text, using, stats):
-    """SDCC needs the prototype's __using(N) to match the definition (Keil does not).
-    Dropping it is unsafe: the fn runs on an ISR register bank."""
+    """SDCC needs the prototype's __interrupt/__using to match the definition (Keil does not).
+    Dropping __using is unsafe: the fn runs on an ISR register bank. `using` maps name -> attr string."""
     def sub(m):
-        bank = using.get(m.group(2))
-        if bank is None or "__using" in m.group(0) or re.search(r"\breturn\b", m.group(1)):
+        attrs = using.get(m.group(2))
+        if attrs is None or "__using" in m.group(0) or "__interrupt" in m.group(0) \
+                or re.search(r"\breturn\b", m.group(1)):
             return m.group(0)
-        stats["proto __using added"] += 1
-        return f"{m.group(1)}{m.group(2)}({m.group(3)}) __using({bank});"
+        stats["proto attrs added"] += 1
+        return f"{m.group(1)}{m.group(2)}({m.group(3)}){attrs};"
     # declaration line: [extern] <type words> [*] name(params);  (a call has no type words before it)
     return re.sub(r"^(\s*(?:extern\s+)?(?:\w+\s+)+\**\s*)(\w+)\s*\(([^;{()]*)\)\s*;", sub, text, flags=re.M)
+
+
+AT_DEF = re.compile(r"\b(\w+)(?:\s*\[[^\]\n]*\])?\s+_at_\s+([^;]+);")
+AT_ADDR = {}                                   # name -> address expr, filled in port pass 1
+
+
+def add_at_to_externs(text, stats):
+    """SDCC needs `extern` decls to carry the definition's __at(addr) (Keil does not)."""
+    def sub(m):
+        addr = AT_ADDR.get(m.group(2))
+        if addr is None or "__at" in m.group(0):
+            return m.group(0)
+        stats["extern __at added"] += 1
+        return f"__at({addr}) {m.group(0)}"
+    return re.sub(r"\bextern\b[^;\n(]*?\b(?:\w+\s+)+\**\s*()(\w+)\s*(?:\[[^\]\n]*\])?\s*;", sub, text)
 
 
 def rewrite(text, here, idx, sfr_addr, using, stats):
     text = text.replace("\r\n", "\n")
     text = fix_includes(text, here, idx)
     text = add_using_to_protos(text, using, stats)
+    text = add_at_to_externs(text, stats)
     for rx, rep in RULES:
         text, n = rx.subn(rep, text)
         if n:
@@ -171,15 +238,29 @@ def cmd_port():
     if SRC.exists():
         shutil.rmtree(SRC)
     idx = build_name_index()
-    sfr_addr, using = {}, {}
+    sfr_addr, using_all, at_all = {}, {}, {}
     files = [p for p in SDK.rglob("*") if p.is_file() and ".git" not in p.parts]
-    for p in files:                                          # pass 1: sfr addresses, `using` definitions
+    for p in files:                                          # pass 1: sfr addresses, `using`/`_at_` defs
         if p.suffix.lower() in SRC_EXT:
             t = p.read_text(errors="replace")
             for m in re.finditer(r"\bsfr\s+(\w+)\s*=\s*(0[xX][0-9A-Fa-f]+|\d+)\s*;", t):
                 sfr_addr[m.group(1)] = int(m.group(2), 0)
             for m in USING_DEF.finditer(t):
-                using[m.group(1)] = m.group(2)
+                using_all.setdefault(m.group(1), set()).add(f" __using({m.group(2)})")
+            for m in AT_DEF.finditer(t):
+                at_all.setdefault(m.group(1), set()).add(m.group(2).strip())
+            for m in INT_DEF.finditer(t):
+                using_all.setdefault(m.group(1), set()).add(
+                    f" __interrupt({m.group(2)})" + (f" __using({m.group(3)})" if m.group(3) else ""))
+    # 7 chips share names: a name defined differently across files is NOT auto-propagated (wrong-chip risk)
+    using = {k: next(iter(v)) for k, v in using_all.items() if len(v) == 1}
+    AT_ADDR.clear()
+    AT_ADDR.update({k: next(iter(v)) for k, v in at_all.items() if len(v) == 1})
+    for kind, d in (("using/interrupt", using_all), ("_at_", at_all)):
+        conflicts = sorted(k for k, v in d.items() if len(v) > 1)
+        if conflicts:
+            log(f"{kind}: {len(conflicts)} names with conflicting definitions not propagated: "
+                f"{', '.join(conflicts[:12])}{' ...' if len(conflicts) > 12 else ''}")
     stats = Counter()
     n = 0
     for p in files:
@@ -190,6 +271,7 @@ def cmd_port():
             raw = p.read_bytes().decode("latin-1")           # byte-preserving; comments are GBK/Big5
             out = rewrite(raw, p.parent, idx, sfr_addr, using, stats)
             out = apply_wraps(str(rel), out, stats)
+            out = apply_inserts(str(rel), out, stats)
             dst.write_bytes(out.encode("latin-1"))
             n += 1
         elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:
@@ -349,8 +431,10 @@ def main():
         jobs = int(a[a.index("--jobs") + 1]) if "--jobs" in a else os.cpu_count()
         only = a[a.index("--only") + 1] if "--only" in a else None
         target = a[a.index("--target") + 1] if "--target" in a else None
-        global ASM_MODE
+        global ASM_MODE, COMPILE_TIMEOUT
         ASM_MODE = "--asm" in a
+        if "--timeout" in a:                                 # for measuring a slow file once
+            COMPILE_TIMEOUT = int(a[a.index("--timeout") + 1])
         return cmd_compile(a[1], jobs, only, target)
     if a[0] == "pp":                                         # preprocess one file with a target's flags
         target = a[a.index("--target") + 1] if "--target" in a else None

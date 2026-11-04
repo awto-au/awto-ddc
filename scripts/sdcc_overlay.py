@@ -50,15 +50,29 @@ class Module:
         self.funcs = {}          # asm label -> {'global': bool, 'calls': set, 'isr': bool}
         self.storage = []        # (line_idx_label, line_idx_ds, label, area, size)
         self.refs = set()        # symbols used outside call position (address-taken candidates)
+        self.alloc = {}          # storage label -> (fn asm label, C var name), from SDCC allocation comments
+        self.src = None          # C source path (from SDCC line comments)
         self.parse()
 
     def parse(self):
-        area, cur, pending = None, None, None
+        area, cur, pending, alloc_fn = None, None, None, None
         globl = set(re.findall(r"^\s+\.globl\s+(\w+)", "\n".join(self.lines), re.M))   # SDCC fns: `_f:` + .globl
         for i, line in enumerate(self.lines):
             if line.startswith("\t.area"):
                 area = line.split()[1]
                 continue
+            am = re.match(r"^;Allocation info for local variables in function '(\w+)'", line)
+            if am:
+                alloc_fn = "_" + am.group(1)
+                continue
+            am = re.match(r"^;(\w+)\s+Allocated with name '(\w+)'", line)
+            if am and alloc_fn:
+                self.alloc[am.group(2)] = (alloc_fn, am.group(1))
+                continue
+            if self.src is None:
+                sm = re.match(r"^;\s+(/\S+\.c):\d+:", line)
+                if sm:
+                    self.src = sm.group(1)
             m = FUNC_HDR.match(line)
             if m:
                 pending = "_" + m.group(1)
@@ -75,10 +89,14 @@ class Module:
                 continue
             if area == "CSEG" and cur:
                 c = CALL.match(line)
+                if c and c.group(1) == "sdcc_atomic_maybe_rollback":
+                    self.funcs[cur]["isr"] = True                   # ISR epilogue, not a call
+                    continue
                 if c:
                     self.funcs[cur]["calls"].add(c.group(1))
                     continue
-                if re.match(r"^\s+reti\b", line):
+                # SDCC 4.5 ISRs may end with `ljmp sdcc_atomic_maybe_rollback` instead of reti
+                if re.match(r"^\s+(reti\b|ljmp\s+sdcc_atomic_maybe_rollback\b)", line):
                     self.funcs[cur]["isr"] = True
             if not line.lstrip().startswith(";"):
                 for s in re.findall(r"#\(?[<>]?\(?(_\w+)", line):   # #_f, #(_f + 1), #<_f, #>_f
@@ -87,12 +105,35 @@ class Module:
                     self.refs.update(re.findall(r"\b(_\w+)\b", line))
 
     def owner(self, label):
-        """Function whose frame this storage label belongs to (longest matching `_fn_` prefix)."""
-        best = None
-        for f in self.funcs:
-            if label.startswith(f + "_") and (best is None or len(f) > len(best)):
-                best = f
-        return best
+        """(fn, var) owning this storage label, from SDCC's allocation comments; None = not a fn local
+        (file-scope statics are never listed, so never overlaid)."""
+        return self.alloc.get(label)
+
+    _bodies = None
+
+    def is_local_static(self, fn, var):
+        """True if `var` is declared `static` inside fn's C body (persists across calls: never overlay).
+        Unknown source -> True (safe)."""
+        if self._bodies is None:
+            self._bodies = {}
+            try:
+                self._csrc = Path(self.src).read_text(errors="replace") if self.src else None
+            except OSError:
+                self._csrc = None
+        if self._csrc is None:
+            return True
+        if fn not in self._bodies:
+            m = re.search(r"\b" + re.escape(fn[1:]) + r"\s*\([^;{]*\)[^;{]*\{", self._csrc)
+            body = ""
+            if m:
+                depth, j = 0, m.end() - 1
+                for j in range(m.end() - 1, len(self._csrc)):
+                    depth += {"{": 1, "}": -1}.get(self._csrc[j], 0)
+                    if depth == 0:
+                        break
+                body = self._csrc[m.end():j]
+            self._bodies[fn] = body
+        return re.search(r"\bstatic\b[^;{}]*\b" + re.escape(var) + r"\b", self._bodies[fn]) is not None
 
 
 def main():
@@ -136,16 +177,20 @@ def main():
     # ---- frames
     frame = defaultdict(lambda: {"x": 0, "d": 0})
     syms = defaultdict(list)       # node -> [(mi, label, mem, size, rel_off)]
-    static_bytes = {"x": 0, "d": 0, "parm_x": 0, "unowned": 0}
+    static_bytes = {"x": 0, "d": 0, "parm_x": 0, "unowned": 0, "local_static": 0}
     for mi, m in enumerate(mods):
         for li, ld, label, area, size in m.storage:
             mem = MEM[area]
-            fn = m.owner(label)
-            if fn is None:
+            own = m.owner(label)
+            if own is None or own[0] not in m.funcs:
                 static_bytes["unowned"] += size
                 continue
+            fn, var = own
             if "_PARM_" in label:
                 static_bytes["parm_x" if mem == "x" else mem] += size
+                continue
+            if "sloc" not in label and m.is_local_static(fn, var):
+                static_bytes["local_static"] += size
                 continue
             n = (mi, fn)
             syms[n].append((mi, label, mem, size, frame[n][mem]))
@@ -178,55 +223,75 @@ def main():
             region_of[n].add(name)
     shared = {n for n, rs in region_of.items() if len(rs) > 1}
 
-    # cycles (Tarjan) -> static
-    idx, low, st, onst, cyc, counter = {}, {}, [], set(), set(), [0]
-    sys.setrecursionlimit(100000)
-
-    def strong(v):
-        idx[v] = low[v] = counter[0]; counter[0] += 1; st.append(v); onst.add(v)
-        for w in calls.get(v, ()):
-            if w not in idx:
-                strong(w); low[v] = min(low[v], low[w])
-            elif w in onst:
-                low[v] = min(low[v], idx[w])
-        if low[v] == idx[v]:
-            comp = []
-            while True:
-                w = st.pop(); onst.discard(w); comp.append(w)
-                if w == v:
-                    break
-            if len(comp) > 1 or v in calls.get(v, ()):
-                cyc.update(comp)
-    for v in nodes:
-        if v not in idx:
-            strong(v)
+    # cycles (Tarjan, iterative) -> SCC ids; cyclic fns keep private storage
+    comp_of, cyc = {}, set()
+    idx, low, onst, st, counter = {}, {}, set(), [], 0
+    for v0 in nodes:
+        if v0 in idx:
+            continue
+        work = [(v0, iter(sorted(calls.get(v0, ()))))]
+        idx[v0] = low[v0] = counter; counter += 1; st.append(v0); onst.add(v0)
+        while work:
+            v, it = work[-1]
+            w = next(it, None)
+            if w is not None:
+                if w not in idx:
+                    idx[w] = low[w] = counter; counter += 1; st.append(w); onst.add(w)
+                    work.append((w, iter(sorted(calls.get(w, ())))))
+                elif w in onst:
+                    low[v] = min(low[v], idx[w])
+                continue
+            work.pop()
+            if work:
+                low[work[-1][0]] = min(low[work[-1][0]], low[v])
+            if low[v] == idx[v]:
+                comp = []
+                while True:
+                    w = st.pop(); onst.discard(w); comp.append(w)
+                    if w == v:
+                        break
+                for w in comp:
+                    comp_of[w] = v
+                if len(comp) > 1 or v in calls.get(v, ()):
+                    cyc.update(comp)
     keep_static = shared | cyc
 
-    # offsets per region (longest path DAG, static nodes excluded from sharing)
+    # offsets per region on the SCC-condensed DAG. Private-storage nodes (cyclic/shared) still pass
+    # offsets through with frame 0, so callees reached via them never land on a live caller's frame.
     place = {}                         # node -> (region, {'x': off, 'd': off})
     region_size = {}
     for name, r in roots:
-        members = [n for n in reaches[name] if n not in keep_static]
-        mset = set(members)
-        off = {n: {"x": 0, "d": 0} for n in members}
+        reach_set = reaches[name]
+        cnodes = {comp_of[n] for n in reach_set}
+        cmembers = defaultdict(list)
+        for n in reach_set:
+            cmembers[comp_of[n]].append(n)
+        cedges = defaultdict(set)
+        for n in reach_set:
+            for t in calls.get(n, ()):
+                if t in reach_set and comp_of[t] != comp_of[n]:
+                    cedges[comp_of[n]].add(comp_of[t])
+        cframe = {c: {mem: (0 if any(n in keep_static for n in cmembers[c]) else
+                            sum(frame[n][mem] for n in cmembers[c])) for mem in ("x", "d")} for c in cnodes}
+        off = {c: {"x": 0, "d": 0} for c in cnodes}
         indeg = defaultdict(int)
-        for n in members:
-            for t in calls.get(n, ()):
-                if t in mset:
-                    indeg[t] += 1
-        q = [n for n in members if indeg[n] == 0]
+        for c in cnodes:
+            for t in cedges[c]:
+                indeg[t] += 1
+        q = [c for c in cnodes if indeg[c] == 0]
         while q:
-            n = q.pop()
-            for t in calls.get(n, ()):
-                if t in mset:
-                    for mem in ("x", "d"):
-                        off[t][mem] = max(off[t][mem], off[n][mem] + frame[n][mem])
-                    indeg[t] -= 1
-                    if indeg[t] == 0:
-                        q.append(t)
-        region_size[name] = {mem: max([off[n][mem] + frame[n][mem] for n in members] or [0]) for mem in ("x", "d")}
-        for n in members:
-            place[n] = (name, off[n])
+            c = q.pop()
+            for t in cedges[c]:
+                for mem in ("x", "d"):
+                    off[t][mem] = max(off[t][mem], off[c][mem] + cframe[c][mem])
+                indeg[t] -= 1
+                if indeg[t] == 0:
+                    q.append(t)
+        region_size[name] = {mem: max([off[c][mem] + cframe[c][mem] for c in cnodes] or [0]) for mem in ("x", "d")}
+        for c in cnodes:
+            for n in cmembers[c]:
+                if n not in keep_static:          # non-cyclic SCC = single node
+                    place[n] = (name, off[c])
 
     base, cursor = {}, {"x": 0, "d": 0}
     for name, _ in roots:
@@ -279,9 +344,11 @@ def main():
            "isr": sum(1 for _, n in roots if nodes[n]["isr"]), "addr_taken": len(addr_taken),
            "kept_static_fns": len(keep_static), "cyclic_fns": len(cyc), "shared_fns": len(shared),
            "frames_before": before, "overlay_block": cursor, "static_parm_x": static_bytes["parm_x"],
+           "local_static": static_bytes["local_static"],
            "unowned_storage": static_bytes["unowned"],
            "main_region": region_size.get("main"),
            "largest_regions": sorted(((k, v) for k, v in region_size.items()), key=lambda kv: -kv[1]["x"])[:8]}
+    (ROOT / "tmp/sdcc-port").mkdir(parents=True, exist_ok=True)
     (ROOT / "tmp/sdcc-port/overlay.json").write_text(json.dumps(rep, indent=1, default=str))
     log(f"indirect call sites {len(indirect_sites)}")
     log(f"functions {len(nodes)}, roots {len(roots)} (isr {rep['isr']}, address-taken {len(addr_taken)}), "
