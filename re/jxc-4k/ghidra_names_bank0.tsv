@@ -1,0 +1,4 @@
+# ghidra_names_bank0.tsv - JXC 4K monitor firmware, bank 0 (common code, flash 0x00000-0x0FFFF), 8051:BE:16:default
+# Format: address<TAB>name<TAB>type<TAB>comment<TAB>status
+CODE:0000	reset_vector	func	LJMP 0x23F4 (reset).	[fw]
+CODE:0db9	osd_button_ctrl_apply	func	Called from the VCP 0xCA case (bank 5) with DD29 (value low byte). Purpose unconfirmed.	[guess]

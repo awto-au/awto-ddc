@@ -3,6 +3,7 @@
 
 usage: rtd_isp_probe.py <bus> [--enter-isp [--dump out.bin [--block N]]]   (dump = SPI READ only; N divides 1024)
   default      : reads only (reg 0x6F, 0x60, 0x67-0x69). No writes.
+  --scaler-regs 0x00,0x0f,0x9f : enter ISP, read those scaler registers via ISP F4/F5, then resume (screen may blink)
   --resume     : writes 0x02 to reg 0xEE (resume/reset scaler after ISP; from rtdflash, untested on RTD27xx)
   --enter-isp  : writes 0x80 to reg 0x6F, then reads SPI flash JEDEC ID (op 0x9F).
                  Scaler MCU stops while in ISP mode: power-cycle the monitor after.
@@ -113,6 +114,24 @@ def main() -> int:
     log(f"bus=/dev/i2c-{bus} addr=0x{ISP_ADDR:02x} enter_isp={enter}")
     for reg in (0x6F, 0x60, 0x67, 0x68, 0x69):
         log(f"read reg 0x{reg:02x} = 0x{isp.read(reg):02x}")
+    if "--scaler-regs" in sys.argv:
+        # naorunaoru/rtdflash: with the MCU stopped, ISP:F4 <- reg then read ISP:F5 gives scaler register `reg`
+        # in the page selected by scaler reg 0x9F. Reads only (F4 is just an index); monitor is resumed after.
+        regs = [int(x, 0) for x in sys.argv[sys.argv.index("--scaler-regs") + 1].split(",")]
+        isp.write(0x6F, 0x80)
+        if not isp.read(0x6F) & 0x80:
+            log("ISP mode not enabled; aborting"); return 3
+        try:
+            for r in regs:
+                isp.write(0xF4, r)
+                log(f"scaler reg 0x{r:02x} = 0x{isp.read(0xF5):02x}")
+        finally:
+            try:
+                isp.write(0xEE, 0x02)
+            except OSError:
+                pass   # expected: the scaler resets and drops the transfer
+            log("resumed scaler MCU (0xEE <- 0x02)")
+        return 0
     if "--resume" in sys.argv:
         isp.write(0xEE, 0x02)   # naorunaoru/rtdflash: ISP:EE <- 02 resets/resumes the scaler after ISP work
         log("wrote 0x02 to reg 0xEE (resume scaler MCU)")
