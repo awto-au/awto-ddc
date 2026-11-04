@@ -101,6 +101,8 @@ WRAPS = [
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO0\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO1\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
     (OSD + "RTD2014OsdFontVLC.c", r"^\s*case _REALTEK_1BIT_LOGO0:", r"^\s*default:", "_AWTO_DEMO_LOGO", "before-end"),
+    # NVRAM checksum: ours (RL6449_Project.h) so data left by the old fw / older builds reloads defaults (#8)
+    (OSD + "RTD2014NVRamOsd.c", r"^#define _CHECKSUM\s", r"^#define _CHECKSUM\s", "!defined(_CHECKSUM)"),
     # DDC RAM arrays: address differs per chip/DDC channel, so the header extern can't get a single __at;
     # hide it from the defining file (SDCC rejects extern-without-__at + __at definition in one TU)
     ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",

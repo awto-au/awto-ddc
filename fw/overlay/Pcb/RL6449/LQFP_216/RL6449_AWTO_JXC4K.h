@@ -39,6 +39,9 @@
 #define _A0_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_NONE
 #define _A0_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
 
+// Boot / debug-mode DDC-CI channel: old fw ScalerMcuDdcciInitial sets IIC_CH_SEL = 3 (DDC2); default _VGA_DDC is unwired (#8)
+#define _PCB_DEBUG_DDC                          _DDC2
+
 //--------------------------------------------------
 // D0 Input Port
 //--------------------------------------------------
@@ -94,11 +97,12 @@
 //--------------------------------------------------
 // Input Port Search Priority Define (Must Start From Valid Port)
 //--------------------------------------------------
-#define _INPUT_PORT_SEARCH_PRI_0                _A0_INPUT_PORT
-#define _INPUT_PORT_SEARCH_PRI_1                _D0_INPUT_PORT
-#define _INPUT_PORT_SEARCH_PRI_2                _D1_INPUT_PORT
-#define _INPUT_PORT_SEARCH_PRI_3                _D2_INPUT_PORT
-#define _INPUT_PORT_SEARCH_PRI_4                _D3_INPUT_PORT
+// awto: A0/D0 are not wired; PRI_0 is also the NVRAM default port, i.e. the boot DDC-CI channel (#8)
+#define _INPUT_PORT_SEARCH_PRI_0                _D1_INPUT_PORT
+#define _INPUT_PORT_SEARCH_PRI_1                _D2_INPUT_PORT
+#define _INPUT_PORT_SEARCH_PRI_2                _D3_INPUT_PORT
+#define _INPUT_PORT_SEARCH_PRI_3                _NO_INPUT_PORT
+#define _INPUT_PORT_SEARCH_PRI_4                _NO_INPUT_PORT
 
 
 /////////////////////////
