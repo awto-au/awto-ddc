@@ -9,6 +9,7 @@ usage: fw_sim.py --serial AWT26110003 [--budget 3000000] [--max-switches 2000]
 Log: tmp/logs/fw_sim.log; per-bank ihx in tmp/fwsim/<serial>/
 """
 import argparse, bisect, os, re, select, subprocess, sys, time
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -16,6 +17,7 @@ from sdcc_overlay import repo_root  # noqa: E402
 
 ROOT = repo_root()
 BANK = 0x10000
+VECTORS = (0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x43)   # break here: stack top = interrupted PC
 
 
 def write_ihx(data: bytes, path: Path):
@@ -53,7 +55,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", required=True)
     ap.add_argument("--budget", type=int, default=3_000_000, help="instructions without a bank switch = stall")
-    ap.add_argument("--max-switches", type=int, default=2000)
+    ap.add_argument("--max-switches", type=int, default=20000)
+    ap.add_argument("--samples", type=int, default=300, help="interrupts sampled (main-context PC) before report")
     a = ap.parse_args()
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
@@ -61,23 +64,40 @@ def main() -> int:
     sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
     funcs = sorted((v, k) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_"))
     keys = [v for v, _ in funcs]
-    where = lambda bank, pc: next((k for v, k in reversed(funcs[:bisect.bisect_right(keys, bank * BANK + pc)])
-                                   if v >> 16 in (bank, 0)), "?")
+    common_end = int(re.search(r'"common_end":\s*(\d+)', (fw / "build.json").read_text()).group(1))
+    where = lambda bank, pc: next((k for v, k in reversed(funcs[:bisect.bisect_right(
+        keys, pc if pc < common_end else bank * BANK + pc)])), "?")
     d = ROOT / "tmp/fwsim" / a.serial
     d.mkdir(parents=True, exist_ok=True)
     nb = len(img) // BANK
     for k in range(nb):
         write_ihx(img[k * BANK:(k + 1) * BANK], d / f"bank{k}.ihx")
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (ROOT / "tmp/logs/fw_sim.log").open("w")
+    log = (ROOT / "tmp/logs/fw_sim.log").open("w", buffering=1)
     call, ret = sym["__bs_call"], sym["__bs_ret"]
     s = Sim(d / "bank0.ihx", log)
     s.read_until(rb"words read", 10)
     s.send(f"break 0x{call:x}"); s.send(f"break 0x{ret:x}")
+    for v in VECTORS:
+        s.send(f"break 0x{v:x}")
     s.send(f"step {a.budget}")
-    bank, trail = 0, []
+    bank, trail, samples = 0, [], Counter()
     for n in range(a.max_switches):
         out = s.read_until(rb"Simulated \d+ ticks[^\n]*\n", 120)
+        stop = re.search(r"Stop at 0x([0-9a-f]+)", out or "")
+        if stop and int(stop.group(1), 16) in VECTORS:
+            sp = re.search(r"SP 0x[0-9a-f]+ -> ([0-9a-f]{2}) ([0-9a-f]{2})", out)   # @SP = PCH, @SP-1 = PCL
+            if sp:
+                ipc = int(sp.group(1) + sp.group(2), 16)
+                samples[f"{where(bank, ipc)} @{bank}:0x{ipc:04x}"] += 1
+            if sum(samples.values()) >= a.samples:
+                print(f"interrupted-PC histogram ({a.samples} interrupts), bank {bank}:")
+                for f, k in samples.most_common(8):
+                    print(f"  {k:5d}  {f}")
+                print("last switches:", " -> ".join(trail[-12:]))
+                break
+            s.send(f"step {a.budget}")
+            continue
         if out is None or "Breakpoint" not in out:
             pcs = re.findall(r"^0x([0-9a-f]{4,6}) ", out or "", re.M)
             pc = int(pcs[-1], 16) if pcs else -1

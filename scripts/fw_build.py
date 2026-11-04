@@ -65,14 +65,28 @@ def area_sizes(rel: Path) -> dict:
     return s
 
 
+LIB_XSEG_MARGIN = 64      # SDCC lib XSEG (e.g. _mullong/_divulong params); post-link check catches overrun
+
+
+def check_xdata(mp: str, hs):
+    """Every XDATA area must lie inside one hole (EDID DDC RAM between holes is hardware-owned)."""
+    bad = []
+    for m in re.finditer(r"^(X\w*SEG\d*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
+        a, n = int(m.group(2), 16), int(m.group(3), 16)
+        if n and not any(lo <= a and a + n <= hi for lo, hi in hs):
+            bad.append(f"{m.group(1)} 0x{a:04x}+{n}")
+    if bad:
+        sys.exit(f"XDATA outside holes {[(hex(a), hex(b)) for a, b in hs]}: {sorted(set(bad))}")
+
+
 def split_xseg(asm_dir: Path):
     """Rename each module's XSEG to XSEG<k> so each hole gets a set of modules (first fit, largest first)."""
-    hs = holes()
+    hs = sorted(holes(), key=lambda h: h[0] - h[1])           # largest hole first = default XSEG/XISEG
     free = [b - a for a, b in hs]
     rels = sorted(asm_dir.glob("*.rel"))
     sizes = {r: area_sizes(r).get("XSEG", 0) for r in rels}
-    # XISEG + bank.asm DSEG etc. go in hole 0 after XSEG0; reserve the initialised-xdata size there
-    free[0] -= sum(area_sizes(r).get("XISEG", 0) for r in rels)
+    # hole 0 also takes XISEG and SDCC library XSEG (helper params, not in these rels): reserve both
+    free[0] -= sum(area_sizes(r).get("XISEG", 0) for r in rels) + LIB_XSEG_MARGIN
     assign = {}
     for r in sorted(rels, key=lambda r: -sizes[r]):
         if not sizes[r]:
@@ -179,7 +193,7 @@ def main() -> int:
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
-    for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
+    for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", ["sdcc-sdas8051", "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
@@ -194,7 +208,7 @@ def main() -> int:
     wl += [f"-Wl-bXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs))]
     wl += [f"-Wl-bHOME=0x{VEC_END:x}"]
     cmd = ["sdcc-sdcc", "-mmcs51", "--model-large", "--code-loc", "0", "--code-size", "0x100000",
-           "--xram-loc", hex(hs[0][0]), "--xram-size", hex(XRAM[1] - XRAM[0]), "--iram-size", "256",
+           "--xram-loc", hex(hs[0][0]), "--xram-size", hex(hs[0][1] - hs[0][0]), "--iram-size", "256",
            *wl, "-o", out / "fw.ihx", *rels]
     log(f"[link] {' '.join(map(str, cmd[:20]))} ... ({len(rels)} rels)")
     r, iram = sdcc_link.link(cmd, out / "fw.ihx", rels)
@@ -203,6 +217,7 @@ def main() -> int:
         print((r.stdout + r.stderr)[-3000:])
         sys.exit("[link] failed")
     log(f"IRAM: {iram}")
+    check_xdata((out / "fw.map").read_text(errors="replace"), hs)
     mem = parse_ihx(out / "fw.ihx")
     common_end = max((x for x in mem if x < a.common), default=0) + 1
     nb = max(used) + 1
