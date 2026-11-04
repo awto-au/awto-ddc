@@ -79,7 +79,9 @@ EXP DWORD I2CWriteByte(DWORD dev, DWORD sub, DWORD v) {
     return xfer(2, dev & 0xFE, sub & 0xFF, 1, &b, 1, NULL);
 }
 
-EXP DWORD GetCommID(void) { tr("GetCommID"); return 0xAB0BB; }
+/* 5 = GFXI2C (graphics-card DDC): RTDTool switch(GetCommID()) handles 1-6 only, ISP plugin 1-10; stock
+ * Comm_GFXI2C.dll must be moved out of Comm\ (docs/rtdtool-headless-feasibility.md). */
+EXP DWORD GetCommID(void) { tr("GetCommID"); return 5; }
 EXP DWORD GetCommName(wchar_t *s, DWORD max) { tr("GetCommName max=%lu", max); wcsncpy(s, L"LinuxI2C", max); return 0; }
 EXP DWORD GetDeviceCount(void) { tr("GetDeviceCount"); return 0; }
 EXP DWORD GetDeviceHandler(void) { tr("GetDeviceHandler"); return 0; }
