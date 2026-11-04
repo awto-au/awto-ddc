@@ -35,6 +35,7 @@ SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scal
 WORK = ROOT / "tmp" / "sdcc-port"
 SRC = WORK / "src"
 SHIM = ROOT / "fw" / "sdcc"                    # keil_compat.h, intrins.h (committed)
+OVERLAY = ROOT / "fw" / "overlay"              # our board/project files, SDK-relative paths, replace SDK copies
 SDCC = "sdcc-sdcc"                             # Fedora package name
 # One file is a few seconds; 60 s without completion = hung (stall rule, awto-dan#53). Expiry -> logged fail.
 COMPILE_TIMEOUT = 60
@@ -155,8 +156,16 @@ def cmd_port():
             n += 1
         elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:
             shutil.copy2(p, dst)
+    ov = [p for p in OVERLAY.rglob("*") if p.is_file()] if OVERLAY.exists() else []
+    for p in ov:                                             # our files win over the SDK's
+        dst = SRC / p.relative_to(OVERLAY)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        raw = p.read_bytes().decode("latin-1")
+        dst.write_bytes(rewrite(raw, (SDK / p.relative_to(OVERLAY)).parent, idx, sfr_addr, using, stats)
+                        .encode("latin-1"))
+        log(f"overlay: {p.relative_to(OVERLAY)}")
     log(f"port: {n} C/H files rewritten into {SRC}; sfr map {len(sfr_addr)} names; "
-        f"{len(using)} fns with `using`")
+        f"{len(using)} fns with `using`; {len(ov)} overlay files")
     for k, v in stats.most_common():
         log(f"  rule {v:6d}  {k}")
     return 0
@@ -208,16 +217,20 @@ def norm_err(line):
     return s.strip()[:120]
 
 
+def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
+    cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
+           "--std-sdcc11", f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
+    cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
+    cmd += [f"-I{c.parent}"]
+    cmd += [f"-D{d}" for d in defines]
+    return cmd
+
+
 def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     rel_dir = uv2dir.relative_to(SRC)
     out = WORK / "obj" / rel_dir / (c.stem + ".rel")
     out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
-           "-c", "--std-sdcc11", f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
-    cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
-    cmd += [f"-I{c.parent}"]
-    cmd += [f"-D{d}" for d in defines]
-    cmd += ["-o", str(out), str(c)]
+    cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + ["-c", "-o", str(out), str(c)]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT)
         msg, rc = r.stdout + r.stderr, r.returncode
@@ -282,6 +295,18 @@ def main():
         only = a[a.index("--only") + 1] if "--only" in a else None
         target = a[a.index("--target") + 1] if "--target" in a else None
         return cmd_compile(a[1], jobs, only, target)
+    if a[0] == "pp":                                         # preprocess one file with a target's flags
+        target = a[a.index("--target") + 1] if "--target" in a else None
+        uv2 = SRC / a[1]
+        files, defines, incs, model = parse_uv2(uv2, target)
+        c = next((uv2.parent / f).resolve() for f in files if a[a.index("--only") + 1].lower() in f.lower())
+        out = WORK / "pp" / (c.stem + ".i")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        extra = ["-Wp-dM"] if "--macros" in a else []           # --macros: dump #defines instead
+        r = subprocess.run(sdcc_cmd(c, uv2.parent, defines, incs, model) + extra + ["-E", str(c)],
+                           capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT)
+        out.write_text(r.stdout)
+        log(f"pp {c.name} -> {out} ({len(r.stdout)} chars) {r.stderr[-300:]}"); return r.returncode
     if a[0] == "report":
         print_hist(json.loads((WORK / "report.json").read_text()), 60); return 0
     print(__doc__); return 2
