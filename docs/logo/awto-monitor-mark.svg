@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>awto monitor</title>
+  <!-- awto house style: #E30613 square, thin white line art; primary-logo circle breaks the screen's top edge -->
+  <rect width="256" height="256" fill="#E30613"/>
+  <rect x="36" y="72" width="184" height="120" fill="none" stroke="#fff" stroke-width="7"/>
+  <circle cx="128" cy="72" r="22" fill="#E30613" stroke="#fff" stroke-width="7"/>
+  <!-- stand: neck + foot -->
+  <path d="M128 195.5V218M90 218H166" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="square"/>
+</svg>
