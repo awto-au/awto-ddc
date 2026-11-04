@@ -111,6 +111,11 @@ WRAPS = [
 # Lines inserted before the first line matching anchor: (SDK-relative file, anchor regex, text)
 INSERTS = [
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c", r"^#include", "#define _AWTO_DDCRAM_DEFINER"),
+    # our board (fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h); id 0x4F is unused in Pcb_List.h
+    ("Kernel/Common/Pcb_List.h", r"^#define _RL6449_QA_B_1A2MHL1DP1mDP_DPTX_eDP\s",
+     "#define _RL6449_AWTO_JXC4K                                          0x4F"),
+    ("Pcb/User_Pcb_Include.h", r'^#include "\./RL6449/LQFP_216/RL6449_QA_B_',
+     '#include "./RL6449/LQFP_216/RL6449_AWTO_JXC4K.h"'),
 ]
 
 

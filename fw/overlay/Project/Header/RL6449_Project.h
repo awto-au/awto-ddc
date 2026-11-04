@@ -33,7 +33,7 @@
 // Pcb Option
 //--------------------------------------------------
 // awto: board = 1 DP + 2 HDMI + eDP panel (Dan, awto-ddc#7). Placeholder until our own PCB header.
-#define _PCB_TYPE                                               _RL6449_QA_A_156PIN_2H1DP_eDP
+#define _PCB_TYPE                                               _RL6449_AWTO_JXC4K  // 216-pin; live pinshare (#7)
 
 //--------------------------------------------------
 // Panel Option
@@ -525,17 +525,17 @@
 //-------------------------------------------------
 // Audio Option
 //-------------------------------------------------
-#define _AUDIO_SUPPORT                                          _ON
+#define _AUDIO_SUPPORT                                          _OFF // awto: no audio jacks (Dan, 2026-11-04)
 
 //-------------------------------------------------
 // Audio DAC Option
 //-------------------------------------------------
-#define _EMBEDDED_DAC_SUPPORT                                   _ON
+#define _EMBEDDED_DAC_SUPPORT                                   _OFF
 
 //-------------------------------------------------
 // Audio Line In Option
 //-------------------------------------------------
-#define _LINE_IN_SUPPORT                                        _ON
+#define _LINE_IN_SUPPORT                                        _OFF
 
 #define _LINE_IN_DAC_AOUT_GAIN_DB                               _AUDIO_DAC_OUTPUT_GAIN_0_DB // 0dB, 1.5dB for each step, Max Gain: 'b111(10.5dB)
 #define _LINE_IN_DAC_HPOUT_GAIN_DB                              _AUDIO_DAC_OUTPUT_GAIN_0_DB // 0dB, 1.5dB for each step, Max Gain: 'b111(10.5dB)
