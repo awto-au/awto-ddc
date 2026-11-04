@@ -265,11 +265,14 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     return cmd
 
 
+ASM_MODE = False                               # compile --asm: emit .asm (-S) for the XDATA overlay pass
+
+
 def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     rel_dir = uv2dir.relative_to(SRC)
-    out = WORK / "obj" / rel_dir / (c.stem + ".rel")
+    out = WORK / ("asm" if ASM_MODE else "obj") / rel_dir / (c.stem + (".asm" if ASM_MODE else ".rel"))
     out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + ["-c", "-o", str(out), str(c)]
+    cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + ["-S" if ASM_MODE else "-c", "-o", str(out), str(c)]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT)
         msg, rc = r.stdout + r.stderr, r.returncode
@@ -299,8 +302,20 @@ def cmd_compile(uv2_rel, jobs, only, target):
         for e in set(norm_err(l) for l in errs):
             hist[e] += 1
     (WORK / "logs").mkdir(parents=True, exist_ok=True)
-    seg = Counter()                                          # .rel area sizes (hex) summed over ok files
+    seg = Counter()                                          # area sizes summed over ok files
     for f, _, _ in ok:
+        if ASM_MODE:                                         # XSEG split: globals vs fn locals/params
+            asm = WORK / "asm" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".asm")
+            area, label = None, None
+            for line in asm.read_text(errors="replace").splitlines():
+                if line.startswith("\t.area"):
+                    area = line.split()[1]
+                elif area == "XSEG" and re.match(r"^\w+::?$", line):
+                    label = line
+                elif area == "XSEG" and line.strip().startswith(".ds") and label:
+                    kind = "XSEG_global" if label.endswith("::") else "XSEG_local"
+                    seg[kind] += int(line.split()[1], 0)
+            continue
         rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".rel")
         for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
             seg[m.group(1)] += int(m.group(2), 16)
@@ -333,6 +348,8 @@ def main():
         jobs = int(a[a.index("--jobs") + 1]) if "--jobs" in a else os.cpu_count()
         only = a[a.index("--only") + 1] if "--only" in a else None
         target = a[a.index("--target") + 1] if "--target" in a else None
+        global ASM_MODE
+        ASM_MODE = "--asm" in a
         return cmd_compile(a[1], jobs, only, target)
     if a[0] == "pp":                                         # preprocess one file with a target's flags
         target = a[a.index("--target") + 1] if "--target" in a else None

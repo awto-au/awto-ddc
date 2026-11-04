@@ -22,7 +22,7 @@
 //--------------------------------------------------
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
-#define _AWTO_DEMO_LOGO                                         _OFF    // Realtek demo boot logo (ours replaces it)
+#define _AWTO_DEMO_LOGO                                         _ON     // Realtek demo boot logo; kept for now (Dan)
 
 
 /////////////
