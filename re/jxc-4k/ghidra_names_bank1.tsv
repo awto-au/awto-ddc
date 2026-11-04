@@ -3,6 +3,9 @@
 # No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
 CODE:b0f4	osd_compose_glyph_grid_map	func	Splash/menu composer: writes a glyph-index grid (e.g. 23x27 cells) into font-select SRAM (3-byte OSD word writer bank6:0x65d1 via port 0x92; row cmd bank6:0x6530), computes font_base, calls osd_set_font_bases (bank6:0x504d), sets window words + OSD scale 0x3A0A. docs/boot-logo.md.	[fw]
 CODE:97a5	osd_fontdl_orient_enable	func	Font-download orient/rotation (0x3A0B), writes 0x3A18, enables OSD via 0x3A02[0] (osd_enable_set bank6:0x5e35). Paired with osd_compose_glyph_grid_map. docs/boot-logo.md.	[fw]
-CODE:4bd0	osd_screen_builder_1	func	Splash/menu composer call site (caller of thunk 0x106b -> bank6:0x4272); pairs b0f4 map (23x27). Which site is the power-on splash not isolated statically.	[fw]
-CODE:8f33	osd_screen_builder_2	func	Splash/menu composer call site (caller of thunk 0x106b); pairs b0f4 map (24x18).	[fw]
-CODE:3837	glyph_set_descriptor_table	data	Glyph-set descriptors seeding the banked far pointer (bank=SFR 0xFFFF, offset E1E8:E1E9) that bank6:0x4272 reads glyph data from. 00 08 00 00 ... c0 ff 00 09 11 98 f1 60. docs/boot-logo.md.	[fw]
+CODE:8ecc	osd_builder_splash	func	POWER-ON SPLASH builder (entry; 0x8f33 is its font-dl tail). Composes glyph grid (b0f4, R3=0x10,R5=0x18,R7=0x12), passes far ptr FF:38:2F (flash 0x1382F) + DBB7=SFR 0xFFFF (PBANK) to 0x4272. Reached only via bank0 FUN_CODE_d986 (thunk 0x0FAB) with timed delays. docs/boot-logo.md.	[fw]
+CODE:4abc	osd_builder_menu_vcp	func	VCP MENU builder (entry; 0x4bd0 is its font-dl tail). Reads contrast/brightness e010/e034/e03e, 23x27 grid. Not the splash.	[fw]
+CODE:4bd0	osd_screen_builder_1	func	Font-dl tail of osd_builder_menu_vcp (caller of thunk 0x106b -> bank6:0x4272); far ptr FF:38:2F, descriptor 0x3837. Menu, not splash.	[fw]
+CODE:8f33	osd_screen_builder_2	func	Font-dl tail of osd_builder_splash (caller of thunk 0x106b); far ptr FF:38:2F -> flash 0x1382F, bank=SFR 0xFFFF. THE SPLASH path.	[fw]
+CODE:b15e	osd_fontbase_write	label	Writes E1E8:E1E9 = font_base = DBB2(cell_w)*DBB3(rows)+(DBB3+1). E1E8:E1E9 is OSD-SRAM font_base, NOT a flash address. docs/boot-logo.md.	[fw]
+CODE:3837	glyph_set_descriptor_table	data	Glyph-set descriptor table. Preceded by 8-byte signature header at 0x382F (0f 12 34 56 78 9a bc de) read first by 0x4272. Descriptor 0x3837 = 00 08 00 00 00 00 00 00 c0 ff 00 09 11 98 f1 60 (len + far-ptr/len fields). Far ptr seg=0xFF=current bank; bank byte = SFR 0xFFFF at runtime. docs/boot-logo.md.	[fw]

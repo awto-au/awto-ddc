@@ -51,8 +51,10 @@ expected-content check, read back, keep backups (see rtdflash). Backups: ~/vendo
 - **What to show (consumer status pages):** ASUS PG27AQDM "status" section, MSI/Dell factory menus (hours,
   version, timing) [oss, titles only — re-fetch for field lists].
 - **Vendor-style menu structure:** danyaPostfactum/RTD2660, Mcsiv/OpenDisplayController (OSD + Factory dirs) [oss].
-- **CAUTION — do NOT copy:** Kingdomwhisky/RTD-Scaler-TEST is leaked proprietary Realtek SDK. Reference for
-  understanding the 0x90/0x91/0x92 `ScalerOsdAddrSet` + double-buffer only; no code reuse (licensing).
+- **Realtek RL64xx SDK:** Kingdomwhisky/RTD-Scaler-TEST = Realtek RL64xx Keil-C51 SDK (RL6449 = our RTD2795T family).
+  At `/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST/`. Use freely (build, name funcs, reference the
+  `ScalerOsd*` OSD + font-download path). Carries a Realtek confidential header → fine in this private repo;
+  revisit only if awto-ddc is ever made public. See `docs/rtd2795t-sdk-hunt.md`.
 
 ## Priority order (Dan, 2026-11-04)
 1. Boot logo → awto (first flash write; proves the write+verify+revert flow). docs/boot-logo.md (agent).
