@@ -29,6 +29,11 @@ expected-content check, read back, keep backups (see rtdflash). Backups: ~/vendo
 - Content wanted (from Dan): every input with the active one marked; firmware version; current settings
   (brightness/contrast/colour/input/power); detected timing (res/refresh/H+V freq/pixel clock); link/lanes;
   HDR; signal-present; (temps if any sensor exists).
+- **Panel identity on the tech-info page:** panel model Samsung LTM270FL01; size 597x336 mm / 27.0"; type PLS (IPS-class);
+  native timing 3840x2160@60, eDP 4-lane. Specs: docs/monitors/panel-samsung-ltm270fl01.md.
+  - Source = static string embedded in our OSD page. Panel model is NOT in the EDID (EDID describes the monitor, no panel PN).
+  - Authoritative source is the scaler firmware's panel-config table (timing/lanes/link rate). Decoding it to confirm the
+    exact Samsung part is a separate RE task [?] — until done, the string is unverified (size + measured active area only).
 - Buttons: ADC key ladder on ADC_A0..A3 (regs 0xFF09-0xFF0C) [fw] — map the keys so a dedicated
   "tech info" page can be opened/paged. (button RE in progress → docs/reversing/realtek-rtd/buttons.md)
 - Two build routes for the OSD: (host-driven) push glyphs into OSD RAM over ISP while firmware runs — no
