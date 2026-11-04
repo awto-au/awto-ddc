@@ -32,6 +32,7 @@ Realtek RTD scaler monitors (the JXC/Dahua 28" 4K units, RTD2795-class). Private
   - `scripts/pe_resources.py <root> <out.tsv>` — GUI dialog/menu/control-ID map from the tool's PE resources.
   - `scripts/regdb_query.py <chip> regs|fields|port ...` — query the decoded register tables in `re/regdb/`.
   - `scripts/regdb_pack.py` — pack `~/vendors/.../regdb/*.tsv` into `re/regdb/*.tsv.gz`.
+- `scripts/rtd_identify.py <bus>|--all [--json] [--no-isp]` — read-only full ID report (EDID, DDC VCP C8/C9/DF + caps, scaler product code, SPI flash JEDEC/status + FlashSet programming params); one ISP session, monitor reboots.
 - Decoders: `scripts/logo_decode.py` (OSD tile sheet), `scripts/vlc_probe.py` (VLC font data).
 - OSD (clean-room, from hardware facts): `scripts/rtd_osd.py` — draw text via OSD windows/font over ISP.
 - Headless tool host: `scripts/rtd_headless/` — C host for the ISP plugin's version reads (see `docs/rtdtool-headless-feasibility.md`).
