@@ -2,7 +2,7 @@
 
 Scaler: RTD2795-class. Splash = two-colour black "Dahua" logo on white, drawn by THIS firmware's OSD
 engine (user-confirmed; no logo plugin in RTDCustomerTool, no separate boot-image chip).
-Nothing has been written to the monitor or flash.
+No splash bytes written to flash yet (EDID sectors only — `edid-fix.md`). Open work: awto-ddc#5.
 
 Tags: `[fw]` from our dump/decompile, `[spec]` regdb RTD2795T-CG (`re/regdb/`), `[tool]` RTDCustomerTool
 data, `[measured]` bus-20 test, `[guess]`, `[?]` unknown.
@@ -14,7 +14,7 @@ Code: `scripts/make_logo.py` (awto encoder + pattern-gen), `scripts/rtd_osd.py` 
 - Bank 14 (0xE0000) is NOT the logo — it is three 14-bit gamma LUTs + a config blob [fw, this session]. Corrects the earlier "prime candidate" note.
 - Whole 1 MiB flash has only 3 used regions: `0x00000-0x67000` (code + bank 0-6 overlays), `0xE0000-0xE3000` (gamma), `0xFB000-0xFD000` (settings). So any logo data is in `0x00000-0x67000` [fw].
 - The logo is drawn by the SAME table-driven OSD glyph composer as the menus, and its glyph bitmaps are **VLC-compressed, downloaded from flash at run time via a banked pointer computed at run time** — not a fixed byte-slot [fw]. No raw uncompressed logo bitmap exists in range [fw, forensic sweep].
-- Consequence: a blind flash byte-patch of the Dahua logo is NOT safely possible yet (no identified slot; brick risk). Controllable, reversible routes that prove display control first: **volatile OSD RAM** (`rtd_osd.py`) and the **hardware pattern generator**.
+- Logo glyph atlas located + decoded: blob D `0x23B41` (586 tiles). Placement char-map is built at run time and not yet pinned → persistent patch still gated on it (awto-ddc#5). Reversible routes meanwhile: **volatile OSD RAM** (`rtd_osd.py`) and the **hardware pattern generator**.
 
 ## Splash hardware capability [spec from regdb / tool]
 What the OSD + display hardware supports for a boot image:
@@ -48,8 +48,8 @@ OSD glyph composer draws menus and splash; invoked from 4 screen-builder sites.
 - `bank6:0x4272` `osd_font_download_from_flash` (thunk 0x106b) — streams glyph bitmaps from SPI flash via `bank6:0x4445` `spi_flash_read_engine` (page reg 0x9F + SPI ctrl 0xFFF3). Toggles **VLC decode ON** (`0x3A17 |= 1`) around the stream, then OFF (`&= 0xFC`) → the downloaded glyph font IS VLC-compressed.
 - Source address = a **banked far pointer built at run time**: bank byte = SFR `0xFFFF` (PBANK_SWITCH, current bank) via `DBB7→DC3C→SCA_INF_BWR_ADRH`; 16-bit offset = caller far-pointer `R2:R1` → `ADRM:ADRL`. Seeded from glyph-set descriptor table `bank1:0x3837`. NOT from `E1E8:E1E9` (that is OSD-SRAM `font_base`) nor `DBB8:DBB9` (OSD-SRAM dest word) — see STATUS section. Not a hardcoded constant.
 - Composer call sites (callers of thunk 0x106b): `bank1:0x4bd0` (VCP menu), `bank1:0x8f33` (**power-on splash**, via `bank0:FUN_CODE_d986` + timed delays), `bank2:0xf070`/`0xf269` (menu/source/no-signal, variant from `E057 & 3`). Dispatch: bank0 thunks `0x0FAB`(→splash) / `0x0FDB`(→menu). See STATUS section.
-- VLC value-map `0x3A0F-0x3A16`: **never written by firmware** (exhaustive `MOV DPTR,#0x3A0x` scan = 0 hits) → runs on the hardware reset map (regdb reset of those fields = 0x00) [fw + spec].
-- Candidate logo glyph data (VLC): both earlier guesses DEBUNKED (bank3 `0x328C6` = gamma LUT ramp; bank2 `0x228C6` = noise/code mix). Smallest remaining candidate: bank6 `0x628C6-0x62FB2` (nine 197-B blobs, ent≈7.0, `ptr_table_lookup bank6:0x661d`). Final offset is data-driven from the `0x1382F` header FIFO read — pin with one live read of `0xFFF6/7/8`+`0x9F` at splash `bank6:0x4445`. See STATUS.
+- VLC value-map `0x3A0F-0x3A16`: burst-written (auto-increment from `0x3A0F`) from each blob's 8-byte header — no `MOV DPTR,#0x3A10..16` exists, which is why a DPTR scan finds nothing [SDK, `sdk-rl64xx-reference.md`].
+- Logo glyph data: blob D `0x23B41` (below). Open: how the splash's first read at `0x1382F` (bank1) leads to blob D (bank2) — awto-ddc#5.
 
 ### VLC decode — CONFIRMED format, 2026-11-04T16:00+10:00 [static, `scripts/glyph_decode.py`]
 Tile/glyph format fully confirmed by rendering: blobs A/C decode to crisp, recognisable icons and
@@ -57,8 +57,7 @@ Tile/glyph format fully confirmed by rendering: blobs A/C decode to crisp, recog
 - Blobs: `0x228C6` (53 glyphs, menu icons), `0x22BED` (98), `0x231AB` (189, FPS/RTS + crosshairs),
   `0x23B41` (586, **Dahua logo set**). Format = `[8-byte VLC value map][2-byte BE len][stream, END=0xFF]`.
 - Confirmed params:
-  - **Value map = the blob's own 8 header bytes** (16 nibbles vlc_0..vlc_f), NOT the all-zero hardware
-    reset map. The earlier "map must be all-zero / degenerate" conclusion is WRONG — supersedes it.
+  - **Value map = the blob's own 8 header bytes** (16 nibbles vlc_0..vlc_f).
   - **Stream bit order = LSB-first** within each byte; decoded nibbles pair high-nibble-first into bytes.
   - **Cell = 1bpp 12×18 = 9 words×24bit = 27 bytes.** Word w → image rows (2w, 2w+1). The 3 stored
     bytes of a word read **B2, B1, B0** (reverse); within a byte **MSB = leftmost**. Pixel 1 = fg.
@@ -75,9 +74,9 @@ Tile/glyph format fully confirmed by rendering: blobs A/C decode to crisp, recog
   mixed data+code tail.
 - Renders: `~/vendors/realtek/analysis/logo/glyphdec/atlas_<A|B|C|D>_clean.png` (clean tile atlases);
   `atlas_023b41.png`, `grid_023b41_54x9_s100.png` (grid guess). Decoder: `scripts/glyph_decode.py`.
-- **Still needed for a legible assembled logo:** the runtime glyph-index char-map. Pin it by a live
-  capture of OSD data-port `0x92` writes during splash, or by finishing the Ghidra trace of
-  `osd_compose_glyph_grid_map bank1:0xb0f4`. The glyph-tile format needs no further work.
+- **Still needed for a legible assembled logo:** the runtime glyph-index char-map. Cheapest: reboot,
+  enter ISP while the splash is up (MCU halts, OSD SRAM persists), read font-select SRAM back with
+  `rtd_osd.Osd.read_word`. Fallback: finish the Ghidra trace of `bank1:0xb0f4`. Tile format is done.
 
 Font-base note [spec]: `font_base` is **15-bit** (0x3A0D[3:0], 0x3A0E[7:0], 0x3A17[5:3]); earlier "12-bit" was wrong.
 
@@ -105,9 +104,8 @@ python scripts/rtd_osd.py <bus> --keep <ops from awto_osd_plan.txt>
 Writes only OSD RAM/regs; a power-cycle reverts it. Use it to confirm geometry, colours and that the
 logo appears, before any flash change. Pair with a boot capture to copy the real Dahua window geometry.
 
-## Flash-patch plan — STATUS: address FORMULA pinned, final offset needs a 1-byte runtime read
-Static RE pass 2026-11-04T15:00+10:00 (Ghidra decomp of `bank6:0x4272`/`0x4445`, regdb reg names,
-caller traces). The source-pointer mechanism is fully resolved; residual unknown is one runtime value.
+## Flash-patch plan — STATUS: atlas known, char-map + bank link open (awto-ddc#5)
+Static RE pass 2026-11-04 (Ghidra decomp of `bank6:0x4272`/`0x4445`, regdb reg names, caller traces).
 
 ### Flash source address formula [fw, decisive]
 `spi_flash_read_engine bank6:0x4445` drives the SPI reader with a 24-bit byte address in SFR
@@ -129,20 +127,9 @@ Neither feeds the flash source; both are OSD-SRAM side:
 - The old "offset from E1E8:E1E9" and "DBB8:DBB9 src ptr" notes both mislabelled SRAM-side vars. True
   flash offset = caller far-pointer `R2:R1` → ADRM:ADRL; bank = `PBANK_SWITCH` via DBB7→DC3C→ADRH.
 
-### VLC: compression IS on; value-map NOT written [fw+spec]
-- `bank6:0x4272` decomp: `0x3A17 = 0x3A17 & 0xfc | 1` before the stream, `& 0xfc` after ⇒
-  `osd_compression_en` unconditionally set on the splash path. Glyph stream IS VLC-decoded.
-- Scan of ALL 7 banks for `MOV DPTR,#0x3A0F..0x3A16` (VLC value map): **0 hits**. Only `0x3A17` touched
-  (0x42FF,0x433E,0x5058,0x6767). `FUN_CODE_64bb` (2nd flash-read setup) programs DC3C/DC3F + OSD port
-  0x92, not the map. No computed-DPTR/table-copy write to 0x3A0F-0x3A16 found.
-- ⇒ decode runs on the **hardware reset map (all 0x00)** [spec regdb]. The "map must be written"
-  expectation does not hold; confirm by decoding the pinned region with the all-zero map.
-
-### Debunked glyph-region candidates [fw, this + coordinator pass]
-- bank3 `0x328C6`/`0x33000-0x39000`: u16-BE monotonic ramp = gamma LUTs (class of 0xE0000). NOT glyphs.
-- bank2 `0x228C6-0x26900`: noise under every map/cell combo, tail = 8051 code = mixed. NOT a clean body.
-- Entropy sweep of used flash (`0x00000-0x67000`): no max-entropy VLC blob; highest structured blob is
-  **bank6 `0x628C6` (ent 6.96, 197 B)**.
+### VLC on the splash path [fw]
+- `bank6:0x4272`: `0x3A17 = 0x3A17 & 0xfc | 1` before the stream, `& 0xfc` after ⇒ compression on.
+- Value map = per-blob 8-byte header, burst-written (see VLC decode section).
 
 ### Which call site is the power-on splash [fw]
 4 composer call sites (callers of thunk `0x106b`→`bank6:0x4272`), bank0-dispatched:
@@ -154,27 +141,16 @@ Neither feeds the flash source; both are OSD-SRAM side:
 - `bank2:0xf070`/`0xf269` (entry `0xF049`, thunk `0x0FDB`) — generic **menu/source/no-signal** renderer,
   called from ~8 bank0 states; `0xf269` picks variant from `E057 & 3` (= INPUT SOURCE). Not the splash.
 
-### Concrete target + remaining ambiguity
-- Splash first flash read (header) = **`0x1382F`** (PBANK=1 at bank1 splash builder, offset 0x382F).
-  Bytes = `0f 12 34 56 78 9a bc de` = 8-byte glyph-set SIGNATURE/header (sibling at bank2 `0x231AB` =
-  `0f 18 c3 7e 62 49 db a5`). Descriptor record follows 8 B later (`bank1:0x13837` =
-  `00 08 00 00 … c0 ff 00 09 11 98 f1 60`).
-- **Residual unknown:** the glyph BITMAP base is reconstructed from the header bytes the SPI FIFO
-  returns (`FUN_CODE_64bb`: ADRH←`DC35`, a flash-read byte) + the FIFO drain — the final glyph
-  `ADRH:ADRM:ADRL` is data-driven and not constant-foldable in this static pass. Smallest candidate set
-  for the VLC glyph body: **bank6 `0x628C6-0x62FB2`** (nine 197-B blobs, ent≈7.0, indexed by
-  `ptr_table_lookup bank6:0x661d` from table `0x62FB3`; parallel download path `bank6:0x4E55`).
-- **To pin the single offset (ONE read, no write):** on hardware break/poll at the splash `bank6:0x4445`
-  glyph-stream read (the 2nd `0x4445`, after the header) and read `SCA_INF_BWR_ADRH/ADRM/ADRL`
-  (`0xFFF6/7/8`) + `PAGE_SEL 0x9F`. That is the authoritative absolute address `A`.
-- **Sector(s) to patch** once `A` known: `A & ~0xFFF` (glyph body) + the descriptor sector `0x13000`
-  (covers `0x13837`) if glyph sizes/indices change.
-
-What unblocks it (next step, read-only):
-1. Live read of `0xFFF6/7/8` + `0x9F` at the splash `bank6:0x4445` glyph-stream read. One read → the
-   absolute bitmap address; everything else above is static-confirmed.
-2. Decode that region with the all-zero hardware VLC map to confirm it is the logo + learn the layout.
-3. Patch target = `addr & ~0xFFF` (+ descriptor sector `0x13000`).
+### Concrete target + what is open
+- Splash first flash read = **`0x1382F`** (bank1): `0f 12 34 56 78 9a bc de` (8-byte header). Descriptor
+  8 B later (`0x13837` = `00 08 00 00 … c0 ff 00 09 11 98 f1 60`). The body address after it is
+  data-driven (`FUN_CODE_64bb`: ADRH←`DC35`, a flash-read byte).
+- Logo atlas = blob D **`0x23B41`** (bank2, 586 tiles; sector `0x23000`, may span into `0x24000`+).
+- Open (awto-ddc#5):
+  1. Link `0x1382F` → `0x23B41` (or find which blob the splash really streams).
+  2. Char-map: OSD SRAM read-back during splash, or trace `bank1:0xb0f4`.
+- Patch = our atlas (blob D header map, ≤ original length) + char-map, in every sector touched. Minimal
+  safe step: same-length blank atlas removes the Dahua logo without the char-map.
 
 ### Write procedure once the sector(s) are known (same flow as the EDID writer)
 `scripts/rtd_flash_sector.py <bus> <sector_addr> <file4k> --write --expect-current <orig4k>`:
@@ -184,11 +160,10 @@ What unblocks it (next step, read-only):
 - One 4 KB sector at a time; note whether the glyph data + its offset table are in one sector or span
   several (patch every sector touched, and the offset table too if glyph sizes change).
 - Revert: rerun with the saved backup as `<file4k>` and `--expect-current <the-new-data>`.
-- Prereq: confirm the EDID writer's program path works on this unit first (same engine).
+- Same engine as the EDID writer, already proven on all 3 units (1f5eb2f).
 
 ### Risk / recommendation
 - Volatile OSD + pattern generator = safe, reversible, enough to prove control and preview the awto
   splash. Do these first.
-- Persistent flash patch of a compressed, pointer-indexed glyph set = brick risk until the source
-  offset + glyph layout are pinned. Do not flash the logo until steps 1-2 are done and a fresh dump +
-  diff confirms exactly which bytes change.
+- Do not flash the logo until open items 1-2 are done and a fresh dump + diff confirms exactly which
+  bytes change. Code runs from the same flash: a patch that strays outside the blob can brick the unit.
