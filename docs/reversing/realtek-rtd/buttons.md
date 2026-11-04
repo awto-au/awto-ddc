@@ -14,16 +14,24 @@ Bank 6 needed new seeds (0x3902-0x392c, 0x3944, 0x5f70, 0x6217, 0x5942, 0x5255);
 ## 2. ADC to key decode (hard-coded immediates, no table)
 Compares at CODE:39e9-3a60. Raw value R = register byte; band is `lo <= R < hi`. Mask bits accumulate in XDATA dbad.
 
-| mask | source | raw band | 5-bit code (R>>3) | label [guess] |
-|---|---|---|---|---|
-| 0x01 | P3.0 low | n/a | n/a | POWER |
-| 0x02 | ADC_A0 | 0xC0..0xDF | 24..27 | ? (top of A0 ladder) |
-| 0x04 | ADC_A0 | 0x28..0x47 | 5..8 | adjust key (- / DOWN / LEFT) |
-| 0x08 | ADC_A1 | 0x28..0x47 | 5..8 | adjust key (+ / UP / RIGHT) |
-| 0x10 | ADC_A0 | 0x70..0x8F | 14..17 | MENU / ENTER |
-| 0x20 | ADC_A1 | 0x68..0x87 | 13..16 | SOURCE / EXIT |
+Physical buttons, left-to-right per Dan (2026-11-04): **SOURCE, MENU, DOWN, UP, AUTO, POWER** (6 keys) [user].
+POWER = the digital P3.0 key [fw+user]. The other 5 are the A0/A1 ADC bands below. The exact band->label
+pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A (see confirm note); the
+`[user-pending]` tags are my best mapping from dispatch order, not yet hardware-verified.
 
-- 6 distinct single keys: 1 digital + 3 on A0 + 2 on A1 [fw]
+| mask | source | raw band | 5-bit code (R>>3) | label |
+|---|---|---|---|---|
+| 0x01 | P3.0 low | n/a | n/a | POWER [fw+user] |
+| 0x02 | ADC_A0 | 0xC0..0xDF | 24..27 | [user-pending] — top of A0 ladder; likely SOURCE or AUTO |
+| 0x04 | ADC_A0 | 0x28..0x47 | 5..8 | [user-pending] DOWN (adjust-) |
+| 0x08 | ADC_A1 | 0x28..0x47 | 5..8 | [user-pending] UP (adjust+) |
+| 0x10 | ADC_A0 | 0x70..0x8F | 14..17 | [user-pending] MENU (only key with long-press timer) |
+| 0x20 | ADC_A1 | 0x68..0x87 | 13..16 | [user-pending] SOURCE or AUTO |
+
+- 6 distinct single keys: 1 digital (POWER) + 3 on A0 + 2 on A1 [fw]
+- Dan's order is SOURCE,MENU,DOWN,UP,AUTO,POWER. 5 analog keys for {SOURCE,MENU,DOWN,UP,AUTO}: MENU is almost
+  certainly 0x10 (sole long-press key); DOWN/UP are the symmetric adjust pair 0x04/0x08; that leaves SOURCE
+  and AUTO as 0x02 and 0x20 (order unconfirmed). Confirm by press-test. [guess+user]
 - Idle (no key) = no band hit = R near 0xF8 (pull-up) [guess]
 - Bands are 32 raw counts wide (4 codes) around nominal centres; centre voltage fraction of full-scale = R/256 [guess]; absolute volts depend on ADC ref, not checked [?]
 - Combos: masks OR together (e.g. 0x18 = 0x10 + 0x08). Only 0x18 and 0x03 have special handling; others fall through to "no key" [fw]
