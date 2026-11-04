@@ -10,7 +10,7 @@ Memory (SDK + board, awto-ddc#8):
 - Code: common [0, COMMON) copied into every bank; BANK<n> linked at n*0x10000 + COMMON.
 Log: ./tmp/logs/fw_build.log
 """
-import argparse, json, re, subprocess, sys, time
+import argparse, json, os, re, subprocess, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,7 +38,8 @@ def log(s):
 
 def run(step, cmd):
     log(f"[{step}] {' '.join(map(str, cmd))}")
-    r = subprocess.run(list(map(str, cmd)), capture_output=True, text=True, timeout=TIMEOUT[step], cwd=ROOT)
+    env = dict(os.environ, PYTHONHASHSEED="0")              # set iteration order -> reproducible bank packing
+    r = subprocess.run(list(map(str, cmd)), capture_output=True, text=True, timeout=TIMEOUT[step], cwd=ROOT, env=env)
     LOG.write(r.stdout + r.stderr); LOG.flush()
     if r.returncode:
         print((r.stdout + r.stderr)[-3000:])
@@ -124,6 +125,26 @@ def select_lib():
     log(f"lib: {len(take)}/{len(lib)} modules selected: {', '.join(q.stem for q in take)}")
 
 
+VEC_END = 0x53                                                # vectors 0..9 (0x03 + 8n, 3 B each)
+
+
+def write_vectors(bank_dir: Path):
+    """SDCC emits ISR vectors only in main's file when the ISR prototypes are visible there; SysMain.c does not
+    see them, so the first image had no vectors (hardware died at the first interrupt, #8). Generate them:
+    reset + ljmp per ISR found in the banked asm, reti elsewhere; HOME is based after the table."""
+    isr = {}
+    for asm in bank_dir.glob("*.asm"):
+        for name, n in re.findall(r"^;\s+\S+:\d+: void (\w+)\s*\(void\)\s*__interrupt\s*\(\s*(\d+)\s*\)", asm.read_text(errors="replace"), re.M):
+            isr[int(n)] = "_" + name
+    lines = ["\t.module awto_vectors", "\t.globl __sdcc_gsinit_startup"] + [f"\t.globl {v}" for v in isr.values()]
+    lines += ["\t.area VECTORS (ABS,CODE)", "\t.org 0x0000", "\tljmp __sdcc_gsinit_startup"]
+    for n in range((VEC_END - 3) // 8):
+        lines += [f"\t.org 0x{3 + 8 * n:04x}", f"\tljmp {isr[n]}" if n in isr else "\treti"]
+    (bank_dir / "awto_vectors.asm").write_text("\n".join(lines) + "\n")
+    run("bank", ["sdcc-sdas8051", "-plosgffw", bank_dir / "awto_vectors.rel", bank_dir / "awto_vectors.asm"])
+    log(f"vectors: { {hex(3 + 8 * n): v for n, v in sorted(isr.items())} }")
+
+
 def parse_ihx(p: Path) -> dict:
     mem, base = {}, 0
     for line in p.read_text().split():
@@ -161,6 +182,7 @@ def main() -> int:
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", ["sdcc-sdas8051", "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
+    write_vectors(bank_dir)
     hs, moved = split_xseg(bank_dir)
     for asm in moved:                                        # re-assemble modules whose XSEG was renamed
         run("bank", ["sdcc-sdas8051", "-plosgffw", asm.with_suffix(".rel"), asm])
@@ -170,6 +192,7 @@ def main() -> int:
     used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.M)})
     wl = [f"-Wl-bBANK{n}=0x{n * BANK + a.common:x}" for n in used]
     wl += [f"-Wl-bXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs))]
+    wl += [f"-Wl-bHOME=0x{VEC_END:x}"]
     cmd = ["sdcc-sdcc", "-mmcs51", "--model-large", "--code-loc", "0", "--code-size", "0x100000",
            "--xram-loc", hex(hs[0][0]), "--xram-size", hex(XRAM[1] - XRAM[0]), "--iram-size", "256",
            *wl, "-o", out / "fw.ihx", *rels]

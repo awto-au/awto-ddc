@@ -164,7 +164,7 @@ def main() -> int:
     ap.add_argument("--common-max", type=lambda x: int(x, 0), default=0x6000)
     ap.add_argument("--hot-budget", type=lambda x: int(x, 0), default=0xC00,
                     help="common bytes for hot helpers moved out of banks")
-    ap.add_argument("--pack-margin", type=lambda x: int(x, 0), default=0x400,
+    ap.add_argument("--pack-margin", type=lambda x: int(x, 0), default=0x600,
                     help="bytes kept free per bank at packing for CONST moved in afterwards")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)

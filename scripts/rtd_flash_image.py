@@ -28,7 +28,23 @@ def log(s):
     F.log(s)
 
 
+SECTOR_TRIES = 3            # sporadic single-sector verify failures seen 2x in ~80 sectors (#8)
+
+
 def write_sector(isp, addr, new):
+    """erase+program+verify; on mismatch re-read once (read-path glitch), else redo, up to SECTOR_TRIES."""
+    for n in range(1, SECTOR_TRIES + 1):
+        try:
+            return _write_sector(isp, addr, new)
+        except RuntimeError as e:
+            if isp.read_flash(addr, SECTOR) == new:
+                log(f"0x{addr:06x}: {e}; re-read matches (read glitch), accepted"); return
+            log(f"0x{addr:06x}: {e}; try {n}/{SECTOR_TRIES}")
+            if n == SECTOR_TRIES:
+                raise
+
+
+def _write_sector(isp, addr, new):
     for ops in ENGINE_OPS:
         isp.write(*ops)
     isp.write_enable()

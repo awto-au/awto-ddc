@@ -5,6 +5,7 @@
 	.module	awto_bank
 	.globl	__bs_call
 	.globl	__bs_cur
+	.globl	__bs_ret		; for scripts/fw_sim.py breakpoints
 	ar0 = 0x00
 	ar1 = 0x01
 	ar3 = 0x03
