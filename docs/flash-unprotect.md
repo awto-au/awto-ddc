@@ -21,7 +21,13 @@ Script: `scripts/rtd_flash_sector.py`. Datasheet: `~/vendors/macronix/MX25L8006E
 4. Poll RDSR WIP clear (limit 50 ms = 1.25 x tW max 40 ms [spec: Table 13]); then require `SR & 0x9C == 0`, retry up to 3x, else abort naming the WP# cause
 5. Erase 4K (`60<-B8, 61<-20, 64..66<-addr, 60<-B9` (type 5, nw=3; matches rtdflash); engine adds WREN), limit 250 ms = 1.25 x tSE max 200 ms [spec]
 6. Blank check, page program (`6F<-A0`, per-page WREN done by engine [oss: rtdflash comment]), limit tPP 3 ms x1.25 (checked between I2C polls), read-back compare
-7. Restore original SR (`WRSR sr0 & 0x9C`, same WREN path) in `finally`, then reset scaler (`EE<-02`; WP# GPIO returns to default on reset)
+7. Re-protect, only after `VERIFY OK` (also when the sector already equals the new data), regardless of the starting SR:
+   - `--reprotect VALUE` (default `0x9C` = factory SRWD|BP2..0; `--reprotect none` skips)
+   - order: release WP# (if not already) -> engine opcodes -> WREN+WRSR(VALUE) (same path as unprotect) -> RDSR must match VALUE & 0x9C -> restore sys 0x1036/0xFE26 to their pre-release values (WP# asserted, as factory) -> RDSR again
+   - WRSR is done while WP# is released: SRWD=1 + WP# low locks the SR; re-assert only after
+   - any failure before VERIFY OK (erase, blank check, program, verify): no re-protect attempted, SR left as is, rc != 0
+   - re-protect failure: rc 8
+   - then reset scaler (`EE<-02`; WP# GPIO also returns to default on reset)
 
 ## Flash-parameter reconciliation (P25Q80H vs Macronix)
 - RTDTool `IspDebugLog.txt` "Get Flash Type: P25Q80H" is from third-party boards (JEDEC 85 60 14 per rtdflash); our unit is C2 20 14 [fw]
@@ -30,19 +36,19 @@ Script: `scripts/rtd_flash_sector.py`. Datasheet: `~/vendors/macronix/MX25L8006E
 - Which WP GPIO pair applies to this exact scaler (0x1036/0xFE26 vs 0x1029/0xFE19 also present in the plugin) is [guess] 1036/FE26: it is the RTD2795T profile in rtdflash. If SR stays 0x9C after the fix, try the other pair (FUN_1001bd10)
 
 ## Test status
-- `rtd_flash_sector.py --selftest`: simulated chip; unprotect succeeds only with WP# released; without it fails loudly. Prints the exact reg writes
+- `rtd_flash_sector.py --selftest`: simulated chip; unprotect succeeds only with WP# released; without it fails loudly. Also: write from SR 0x00 -> ends 0x9C; from 0x9C -> ends 0x9C; forced verify failure -> rc 7, SR untouched; `--reprotect none` leaves SR
 - Dry run on bus 20 (2026-11-04): JEDEC c22014, SR 0x9c, backup written. Not run with --write.
 
 ## State after the awto EDID flash (2026-11-04) — DEVIATION recorded, Dan's call
 - bus /dev/i2c-20 (card1-DP-4) flash is left UNPROTECTED: status reg = 0x00 (factory was 0x9C = SRWD|BP2..0).
 - Reason: the first write aborted mid-erase before the finally-block re-protect took; the recovery write was
   guarded with an all-FF --expect-current (sector already blank) and entered unprotected, so it skipped re-protect.
-- Decision (Dan): LEAVE IT UNPROTECTED. Block-protect only guards against stray SPI writes; nothing on the board
+- Superseded by the always-re-protect change: the next successful `--write` on this unit (a no-op re-run with the same file also re-protects) leaves it at 0x9C. Earlier decision (Dan): LEAVE IT UNPROTECTED. Block-protect only guards against stray SPI writes; nothing on the board
   writes the flash except our deliberate ISP sessions. Re-protecting would mean another WRSR on the working unit.
-- Consequence: future sector writes (e.g. the splash) can skip release_wp()/unprotect() on THIS unit — it's writable.
+- While it is 0x00, a write skips release_wp()/unprotect(); re-protect still releases WP# for the final WRSR.
   The OTHER two units are still factory-protected (0x9C) and will need the WP# release path.
 
 ## Known script fix still to apply
 - The ORIGINAL abort was a too-tight engine-busy poll (POLL_MAX=20) on the 4K erase (tSE up to 200ms). The committed
-  rtd_flash_sector.py already moved to TIME-BASED waits (1.25x MX25L8006E maxima), which fixes this. Verify the erase
-  wait limit is >= 0.25s on the next write so a successful erase never exits via traceback again.
+  rtd_flash_sector.py already moved to TIME-BASED waits (1.25x MX25L8006E maxima), which fixes this. Confirmed: erase
+  engine wait and WIP wait both use `T_ERASE_LIMIT = 0.25 s` (time-based, 1.25 x tSE max).

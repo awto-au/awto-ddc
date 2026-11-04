@@ -2,7 +2,7 @@
 """Erase + reprogram ONE 4 KiB sector of a Realtek RTD scaler's SPI flash over DDC ISP (I2C 0x4A).
 
 usage: rtd_flash_sector.py <bus> <sector_addr> <file4k> [--write] [--expect-current FILE]
-                           [--backup-dir DIR] [--no-reset]
+                           [--backup-dir DIR] [--no-reset] [--reprotect VALUE|none]
        rtd_flash_sector.py --selftest
   default (no --write) = DRY RUN: enter ISP, read JEDEC + status, read the sector, save a timestamped
                          backup, compare current vs <file4k> (and vs --expect-current). No erase, no program,
@@ -12,7 +12,14 @@ usage: rtd_flash_sector.py <bus> <sector_addr> <file4k> [--write] [--expect-curr
   --expect-current F   : abort unless the sector currently equals F (guards against overwriting unknown data).
 Sequence (--write): backup -> (if protected) release flash WP# (scaler GPIO: sys 0x1036/0xFE26) + WRSR=0x00
   -> engine program opcode setup (0x6D=0x02, 0x71=0xFF, 0x66=0x00) -> standalone WREN -> sector erase (op 0x20)
-  -> blank check -> program 16 x 256 B pages (op 0x02) -> read back + compare -> restore status reg -> reset.
+  -> blank check -> program 16 x 256 B pages (op 0x02) -> read back + compare -> "VERIFY OK" ->
+  RE-PROTECT (see below) -> reset.
+  --reprotect VALUE    : (default 0x9C = factory SRWD|BP2..0 on Macronix C2 20 14; 'none' = skip) After VERIFY OK
+                         ONLY: WP# released (if not already) -> WREN+WRSR(VALUE) via the same engine path as unprotect
+                         -> RDSR must equal VALUE (masked 0x9C) -> WP# GPIO restored to its pre-release values
+                         (asserted, as factory). Runs even if the sector started unprotected. On ANY earlier failure
+                         re-protect is NOT attempted (no locking of a bad image). WRSR happens while WP# is released
+                         because SRWD=1 + WP# low locks the SR; WP# is re-asserted only afterwards.
   --selftest : no hardware; prints the register writes the unprotect + program would do (simulated chip).
 PROGRAM PATH — faithfully transcribed from naorunaoru/rtdflash flash_write_sector() (RTD2795-family, same
   DP-AUX ISP slave 0x4A and WP# release as this unit), cross-checked against ghent360/RTD-2660-Programmer
@@ -125,14 +132,48 @@ class Rtd(Isp):
         self.write(0xF4, 0x9F); self.write(0xF5, addr >> 8)
         self.write(0xF4, addr & 0xFF); self.write(0xF5, val)
 
+    wp_saved = None        # {sys addr: original value} while WP# is released; None = asserted/untouched
+
     def release_wp(self):
+        if self.wp_saved is None:
+            self.wp_saved = {}
         for addr, and_mask, or_val in WP_RELEASE:
-            v = (self.sys_read(addr) & and_mask) | or_val
+            cur = self.sys_read(addr)
+            self.wp_saved.setdefault(addr, cur)
+            v = (cur & and_mask) | or_val
             self.sys_write(addr, v)
             got = self.sys_read(addr)
             log(f"WP# release: sys[0x{addr:04x}] <- 0x{v:02x}, readback 0x{got:02x}")
             if got != v:
                 raise RuntimeError(f"sys[0x{addr:04x}] readback 0x{got:02x} != 0x{v:02x}; WP# GPIO not released")
+
+    def assert_wp(self):
+        # Put the WP# GPIO regs back to their pre-release values (factory: asserted). No-op if never released.
+        if self.wp_saved is None:
+            return
+        for addr, orig in reversed(list(self.wp_saved.items())):
+            self.sys_write(addr, orig)
+            log(f"WP# restore: sys[0x{addr:04x}] <- 0x{orig:02x}, readback 0x{self.sys_read(addr):02x}")
+        self.wp_saved = None
+
+    def reprotect(self, value):
+        """WREN+WRSR(value) with WP# released, verify RDSR, then re-assert WP#. Raises on mismatch."""
+        for ops in ENGINE_OPS:
+            self.write(*ops)
+        if self.wp_saved is None:
+            self.release_wp()
+        try:
+            self.wrsr(value, f"WRSR reprotect 0x{value:02x}")
+            sr = self.status()
+            log(f"status reg after reprotect = 0x{sr:02x} (wanted 0x{value:02x})")
+            if sr & SR_PROT != value & SR_PROT:
+                raise RuntimeError(f"reprotect: status 0x{sr:02x} != wanted 0x{value:02x}")
+        finally:
+            self.assert_wp()
+        sr = self.status()
+        log(f"status reg after WP# re-assert = 0x{sr:02x}")
+        if sr & SR_PROT != value & SR_PROT:
+            raise RuntimeError(f"reprotect: status 0x{sr:02x} != wanted 0x{value:02x} after WP# re-assert")
 
     def wrsr(self, val, what):
         """WRSR as write-after-WREN: the engine emits WREN (reg 0x62) then 0x01 + val; then wait tW."""
@@ -204,6 +245,46 @@ class Rtd(Isp):
         self.poll_reg(0x6F, PROG_BUSY, 0x00, f"page 0x{addr:06x} program", T_PROG_LIMIT)
 
 
+def do_write(isp, addr, new, sr0, reprotect, nd, bk):
+    """Unprotect (if started protected) -> erase -> program -> verify -> re-protect. Returns rc.
+    Re-protect runs ONLY after a passing verify (or when the sector already equals the new data)."""
+    if nd == 0:
+        log("sector already equals new data; skipping erase/program")
+    else:
+        if sr0 & SR_PROT:
+            isp.release_wp()
+            isp.unprotect(sr0)
+        else:
+            log("status already unprotected (SRWD+BP = 0); skipping WP# release + WRSR")
+        for ops in ENGINE_OPS:                               # WREN/EWSR/READ/FAST_READ/PP/RDSR opcodes
+            isp.write(*ops)
+        isp.write_enable()
+        log("WREN issued; erasing 4K sector"); isp.erase_sector(addr)
+        isp.wait_wip("sector erase", T_ERASE_LIMIT)
+        blank = isp.read_flash(addr, SECTOR)
+        if blank != b"\xff" * SECTOR:
+            log("ABORT: sector not blank after erase; restore with the backup file"); return 6
+        isp.program_setup()
+        prog_pages = 0
+        for off in range(0, SECTOR, PAGE):
+            pg = new[off:off + PAGE]
+            if pg != b"\xff" * PAGE:
+                isp.program_page(addr + off, pg); prog_pages += 1
+        log(f"programmed {prog_pages} non-blank pages")
+        back = isp.read_flash(addr, SECTOR)
+        bad = [i for i in range(SECTOR) if back[i] != new[i]]
+        if bad:
+            log(f"VERIFY FAILED: {len(bad)} bytes differ, first at +0x{bad[0]:03x}. NOT re-protecting. Revert: rerun with {bk} as file4k"); return 7
+        log("VERIFY OK: readback == new data")
+    if reprotect is None:
+        log("--reprotect none: leaving status reg as is"); return 0
+    try:
+        isp.reprotect(reprotect)
+    except Exception as e:
+        log(f"ERROR: re-protect to 0x{reprotect:02x} failed: {e}"); return 8
+    return 0
+
+
 class FakeRtd(Rtd):
     """Hardware-free model for --selftest: simulates the SPI engine, flash SR, WREN latch, a 4 KiB flash
     array, erase and the 0x6F page-program handshake, so the new program path is exercised offline."""
@@ -213,6 +294,8 @@ class FakeRtd(Rtd):
         self.base = base
         self.flash = bytearray(b"\xff" * SECTOR)   # one simulated sector starting at `base`
         self.wel = False                           # write-enable latch (WREN sets, any write clears)
+        self.programmed = False
+        self.bad_verify = False                    # corrupt read-back after programming (selftest)
         self.pend = None                           # staged page buffer: (addr, bytearray)
         self.regs[0x6F] = 0x80                      # ISP mode bit set, program bits clear
 
@@ -252,7 +335,7 @@ class FakeRtd(Rtd):
         # and leaves WEL set for the following erase; WRSR via common() frames 1 write byte (0x60<-0x69).
         if typ == T_WRITE_WREN and nw == 2 and self.regs.get(0x64) == OP_WREN:
             self.wel = True
-        if typ == T_WRITE_WREN and nw == 1 and op == OP_WRSR and self.regs.get(0x62) == 0x06 and not self.wp_low:
+        if typ == T_WRITE_WREN and nw == 1 and op == OP_WRSR and self.regs.get(0x62) == 0x06 and not (self.wp_low and self.sr & 0x80):
             self.sr = (self.sr & ~SR_PROT) | (self.regs[0x64] & SR_PROT)
         if typ == T_READ and op == OP_RDSR:
             self.regs[0x67] = self.sr
@@ -276,6 +359,7 @@ class FakeRtd(Rtd):
         for i in range(PAGE):                       # NOR: program only clears bits (AND)
             self.flash[a + i] &= buf[i]
         self.pend = None
+        self.programmed = True
 
     def read(self, reg):
         if reg == 0x60:
@@ -291,7 +375,10 @@ class FakeRtd(Rtd):
 
     def read_flash(self, addr, n):
         a = addr - self.base
-        return bytes(self.flash[a:a + n])
+        out = bytearray(self.flash[a:a + n])
+        if self.bad_verify and self.programmed:
+            out[0] ^= 0xFF
+        return bytes(out)
 
 
 def selftest():
@@ -344,6 +431,22 @@ def selftest():
         print("  expected failure:", e)
     else:
         raise SystemExit("selftest: program with no staged buffer should not succeed")
+    print("== full write + re-protect (do_write) from three starting states")
+    new = bytearray(os.urandom(SECTOR))
+    for name, sr0, bad in (("start SR 0x00 (unprotected)", 0x00, False), ("start SR 0x9C (protected)", 0x9C, False),
+                           ("forced verify failure from 0x00", 0x00, True)):
+        f = FakeRtd(sr=sr0, wp_low=True, base=0x13000)
+        f.flash[:] = os.urandom(SECTOR)
+        f.bad_verify = bad
+        rc = do_write(f, 0x13000, bytes(new), sr0, 0x9C, 1, "bk")
+        print(f"  {name}: rc={rc} final SR=0x{f.sr:02x} wp_low={f.wp_low}")
+        if bad:
+            assert rc == 7 and f.sr == sr0, "failed verify must error and leave protection untouched"
+        else:
+            assert rc == 0 and f.sr == 0x9C and f.wp_low, "success must end SR=0x9C with WP# re-asserted"
+            assert bytes(f.flash) == bytes(new)
+    f = FakeRtd(sr=0x00, wp_low=True)
+    assert do_write(f, 0x13000, bytes(f.flash), 0x00, None, 0, "bk") == 0 and f.sr == 0x00, "--reprotect none must not touch SR"
     print("selftest OK")
     return 0
 
@@ -359,7 +462,9 @@ def main():
     ap.add_argument("--expect-current", type=Path)
     ap.add_argument("--backup-dir", type=Path)
     ap.add_argument("--no-reset", action="store_true")
+    ap.add_argument("--reprotect", default="0x9C", help="SR value to leave after VERIFY OK (default 0x9C factory); 'none' skips")
     a = ap.parse_args()
+    a.reprotect = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     if a.selftest:
         return selftest()
     if a.bus is None or a.sector_addr is None or a.file4k is None:
@@ -385,7 +490,6 @@ def main():
     if not isp.read(0x6F) & 0x80:
         log("ISP mode not enabled; aborting"); return 3
     rc = 1
-    unprot = False
     try:
         jid = isp.common(T_READ, 0x9F, nr=3).to_bytes(3, "big")
         log(f"JEDEC {jid.hex()}")
@@ -407,44 +511,9 @@ def main():
                 log("refuse: sector is not what --expect-current says; nothing written"); return 5
         if not a.write:
             log("DRY-RUN complete: nothing erased or programmed"); rc = 0; return 0
-        if nd == 0:
-            log("sector already equals new data; nothing to do"); rc = 0; return 0
 
-        # --- WRITE path --- (rtdflash flash_write_sector order: WREN, erase, program setup, page loop)
-        unprot = False
-        if sr0 & SR_PROT:
-            unprot = True
-            isp.release_wp()
-            isp.unprotect(sr0)
-        else:
-            log("status already unprotected (SRWD+BP = 0); skipping WP# release + WRSR")
-        for ops in ENGINE_OPS:                               # WREN/EWSR/READ/FAST_READ/PP/RDSR opcodes
-            isp.write(*ops)
-        isp.write_enable()
-        log("WREN issued; erasing 4K sector"); isp.erase_sector(a.sector_addr)
-        isp.wait_wip("sector erase", T_ERASE_LIMIT)
-        blank = isp.read_flash(a.sector_addr, SECTOR)
-        if blank != b"\xff" * SECTOR:
-            log("ABORT: sector not blank after erase; restore with the backup file"); return 6
-        isp.program_setup()
-        prog_pages = 0
-        for off in range(0, SECTOR, PAGE):
-            pg = new[off:off + PAGE]
-            if pg != b"\xff" * PAGE:
-                isp.program_page(a.sector_addr + off, pg); prog_pages += 1
-        log(f"programmed {prog_pages} non-blank pages")
-        back = isp.read_flash(a.sector_addr, SECTOR)
-        bad = [i for i in range(SECTOR) if back[i] != new[i]]
-        if bad:
-            log(f"VERIFY FAILED: {len(bad)} bytes differ, first at +0x{bad[0]:03x}. Revert: rerun with {bk} as file4k"); return 7
-        log("VERIFY OK: readback == new data"); rc = 0
+        rc = do_write(isp, a.sector_addr, new, sr0, a.reprotect, nd, bk)
     finally:
-        if unprot:
-            try:
-                isp.wrsr(sr0 & SR_PROT, "WRSR restore")
-                log(f"status reg restored: 0x{isp.status():02x} (wanted 0x{sr0:02x})")
-            except Exception as e:
-                log(f"WARNING: could not restore status reg 0x{sr0:02x}: {e}")
         if not a.no_reset:
             try:
                 isp.write(0xEE, 0x02)    # reset scaler MCU; transfer drop (errno 110) is expected
