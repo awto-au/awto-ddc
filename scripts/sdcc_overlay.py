@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Keil-BL51-style RAM overlay for SDCC mcs51 asm: functions that are never live together share local storage.
 
-usage: sdcc_overlay.py [--asm DIR] [--out DIR] [--xlimit N] [--dlimit N]
+usage: sdcc_overlay.py [--asm DIR] [--out DIR] [--xdata] [--xlimit N] [--dlimit N]
+  --xdata overlay XDATA locals too (default: DATA spill slots only)
   --asm   SDCC -S output tree (default tmp/sdcc-port/asm)
   --out   rewritten tree + __ovl.asm (default tmp/sdcc-port/asm_ovl)
   --xlimit / --dlimit  fail if total XDATA / DATA after overlay exceeds this (bytes; default 8192 / 0 = no check)
@@ -33,7 +34,15 @@ def repo_root():
 
 ROOT = repo_root()
 LOG = None
-MEM = {"XSEG": "x", "DSEG": "d"}                    # overlaid areas -> block (x = __xovl, d = __dovl)
+MEM = {"XSEG": "x", "DSEG": "d", "BSEG": "b"}       # overlaid areas -> block (__xovl / __dovl / __bovl bits)
+BLOCK = {"x": "__xovl", "d": "__dovl", "b": "__bovl"}
+MEMS = tuple(BLOCK)
+ZERO = lambda: {m: 0 for m in MEMS}
+# PARMs share the callee frame: SDCC evaluates all nested-call args into caller temps first, then writes the
+# callee's PARMs back-to-back right before its lcall (verified in fw/simtests/siblings_args asm, #10).
+# Default: overlay only DATA spill slots (952 B can never fit 256 B IRAM). XDATA fits without it after the
+# storage-first + MST/TX fixes (5.7 KB vs ~6.5 KB free), so XDATA overlay is opt-in (--xdata), #8.
+OVERLAY_XDATA = "--xdata" in sys.argv
 CALL = re.compile(r"^\s+(?:lcall|ljmp|acall|ajmp)\s+(\w+)\s*$")
 FUNC_HDR = re.compile(r"^;\s+function (\w+)\s*$")
 
@@ -105,9 +114,31 @@ class Module:
                     self.refs.update(re.findall(r"\b(_\w+)\b", line))
 
     def owner(self, label):
-        """(fn, var) owning this storage label, from SDCC's allocation comments; None = not a fn local
-        (file-scope statics are never listed, so never overlaid)."""
-        return self.alloc.get(label)
+        """(fn, var) owning this storage label. SDCC allocation comments first; bit vars are not listed there,
+        so fall back to strict SDCC naming (`_fn_PARM_n` / `_fn_var_L_N`) disambiguated by the C body.
+        None = not a fn local (file-scope statics) or ambiguous -> never overlaid."""
+        if label in self.alloc:
+            return self.alloc[label]
+        cands = []
+        for f in self.funcs:
+            if not label.startswith(f + "_"):
+                continue
+            rest = label[len(f) + 1:]
+            if re.fullmatch(r"PARM_\d+", rest):
+                cands.append((f, rest, True))
+            else:
+                m = re.fullmatch(r"(\w+?)_\d+_\d+", rest)
+                if m:
+                    cands.append((f, m.group(1), False))
+        exact = [c for c in cands if c[2]]
+        if len(exact) == 1:
+            return exact[0][:2]
+        if len(cands) > 1:
+            for c in cands:
+                self.is_local_static(c[0], c[1])            # side effect: loads that fn's C body
+            cands = [c for c in cands if self._csrc and
+                     re.search(r"\b" + re.escape(c[1]) + r"\b", self._bodies.get(c[0], ""))]
+        return cands[0][:2] if len(cands) == 1 else None
 
     _bodies = None
 
@@ -175,21 +206,22 @@ def main():
         calls[n] |= addr_taken
 
     # ---- frames
-    frame = defaultdict(lambda: {"x": 0, "d": 0})
+    frame = defaultdict(ZERO)
     syms = defaultdict(list)       # node -> [(mi, label, mem, size, rel_off)]
-    static_bytes = {"x": 0, "d": 0, "parm_x": 0, "unowned": 0, "local_static": 0}
+    static_bytes = {"x": 0, "d": 0, "b": 0, "parm_x": 0, "unowned": 0, "local_static": 0}
     for mi, m in enumerate(mods):
         for li, ld, label, area, size in m.storage:
             mem = MEM[area]
+            if mem == "x" and not OVERLAY_XDATA:
+                continue                                    # XDATA locals stay where SDCC put them
             own = m.owner(label)
             if own is None or own[0] not in m.funcs:
                 static_bytes["unowned"] += size
                 continue
             fn, var = own
             if "_PARM_" in label:
-                static_bytes["parm_x" if mem == "x" else mem] += size
-                continue
-            if "sloc" not in label and m.is_local_static(fn, var):
+                static_bytes["parm_x" if mem == "x" else mem] += size   # counted, and overlaid with the frame
+            if "_PARM_" not in label and "sloc" not in label and m.is_local_static(fn, var):
                 static_bytes["local_static"] += size
                 continue
             n = (mi, fn)
@@ -272,8 +304,8 @@ def main():
                 if t in reach_set and comp_of[t] != comp_of[n]:
                     cedges[comp_of[n]].add(comp_of[t])
         cframe = {c: {mem: (0 if any(n in keep_static for n in cmembers[c]) else
-                            sum(frame[n][mem] for n in cmembers[c])) for mem in ("x", "d")} for c in cnodes}
-        off = {c: {"x": 0, "d": 0} for c in cnodes}
+                            sum(frame[n][mem] for n in cmembers[c])) for mem in MEMS} for c in cnodes}
+        off = {c: ZERO() for c in cnodes}
         indeg = defaultdict(int)
         for c in cnodes:
             for t in cedges[c]:
@@ -282,64 +314,74 @@ def main():
         while q:
             c = q.pop()
             for t in cedges[c]:
-                for mem in ("x", "d"):
+                for mem in MEMS:
                     off[t][mem] = max(off[t][mem], off[c][mem] + cframe[c][mem])
                 indeg[t] -= 1
                 if indeg[t] == 0:
                     q.append(t)
-        region_size[name] = {mem: max([off[c][mem] + cframe[c][mem] for c in cnodes] or [0]) for mem in ("x", "d")}
+        region_size[name] = {mem: max([off[c][mem] + cframe[c][mem] for c in cnodes] or [0]) for mem in MEMS}
         for c in cnodes:
             for n in cmembers[c]:
                 if n not in keep_static:          # non-cyclic SCC = single node
                     place[n] = (name, off[c])
 
-    base, cursor = {}, {"x": 0, "d": 0}
+    base, cursor = {}, ZERO()
     for name, _ in roots:
         base[name] = dict(cursor)
-        for mem in ("x", "d"):
+        for mem in MEMS:
             cursor[mem] += region_size[name][mem]
     # static frames (shared/cyclic/unreached) get their own slots after all regions
     for n in nodes:
-        if n not in place and (frame[n]["x"] or frame[n]["d"]):
-            place[n] = ("static", {mem: 0 for mem in ("x", "d")})
+        if n not in place and any(frame[n][mem] for mem in MEMS):
+            place[n] = ("static", {mem: 0 for mem in MEMS})
             base.setdefault(("static", n), dict(cursor))
-            for mem in ("x", "d"):
+            for mem in MEMS:
                 cursor[mem] += frame[n][mem]
 
     # ---- rewrite
     out_dir.mkdir(parents=True, exist_ok=True)
-    sub = defaultdict(dict)            # mi -> {label: expr}
+    sub = defaultdict(dict)            # mi -> {label: expr} (module-local symbols)
+    gsub = {}                          # global overlaid symbols (PARMs: callers in other modules write them)
     for n, entries in syms.items():
         region, off = place[n]
         b = base[("static", n)] if region == "static" else base[region]
         for mi, label, mem, size, rel in entries:
-            blk = "__xovl" if mem == "x" else "__dovl"
-            sub[mi][label] = f"({blk} + 0x{b[mem] + off[mem] + rel:X})"
+            expr = f"({BLOCK[mem]} + 0x{b[mem] + off[mem] + rel:X})"
+            sub[mi][label] = expr
+            if "_PARM_" in label:
+                gsub[label] = expr
     for mi, m in enumerate(mods):
         lines = list(m.lines)
         drop = set()
         for li, ld, label, area, size in m.storage:
             if label in sub[mi]:
                 drop.update((li, ld))
-        rx = re.compile(r"\b(" + "|".join(map(re.escape, sub[mi])) + r")\b") if sub[mi] else None
-        new = []
+        table = dict(gsub); table.update(sub[mi])
+        rx = re.compile(r"\b(" + "|".join(map(re.escape, table)) + r")\b") if table else None
+        new, used = [], False
         for i, line in enumerate(lines):
             if i in drop:
                 continue
+            g = re.match(r"^\s+\.globl\s+(\w+)\s*$", line)
+            if g and g.group(1) in gsub:
+                continue                                    # symbol no longer exists
             if rx and not line.lstrip().startswith(";"):
-                line = rx.sub(lambda mm: sub[mi][mm.group(1)], line)
+                line2 = rx.sub(lambda mm: table[mm.group(1)], line)
+                used |= line2 != line
+                line = line2
             new.append(line)
-        if sub[mi]:
-            new.insert(1, "\t.globl __xovl\n\t.globl __dovl")
+        if used:
+            new.insert(1, "\n".join(f"\t.globl {b}" for b in BLOCK.values()))
         dst = out_dir / m.path.relative_to(asm_dir)
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text("\n".join(new))
     (out_dir / "__ovl.asm").write_text(
-        "\t.module __ovl\n\t.globl __xovl\n\t.globl __dovl\n"
+        "\t.module __ovl\n" + "".join(f"\t.globl {b}\n" for b in BLOCK.values()) +
         f"\t.area XSEG (XDATA)\n__xovl::\n\t.ds 0x{max(cursor['x'], 1):X}\n"
-        f"\t.area DSEG (DATA)\n__dovl::\n\t.ds 0x{max(cursor['d'], 1):X}\n")
+        f"\t.area DSEG (DATA)\n__dovl::\n\t.ds 0x{max(cursor['d'], 1):X}\n"
+        f"\t.area BSEG (BIT)\n__bovl::\n\t.ds 0x{max(cursor['b'], 1):X}\n")
 
-    before = {mem: sum(f[mem] for f in frame.values()) for mem in ("x", "d")}
+    before = {mem: sum(f[mem] for f in frame.values()) for mem in MEMS}
     rep = {"modules": len(mods), "functions": len(nodes), "roots": len(roots),
            "isr": sum(1 for _, n in roots if nodes[n]["isr"]), "addr_taken": len(addr_taken),
            "kept_static_fns": len(keep_static), "cyclic_fns": len(cyc), "shared_fns": len(shared),
@@ -353,8 +395,9 @@ def main():
     log(f"indirect call sites {len(indirect_sites)}")
     log(f"functions {len(nodes)}, roots {len(roots)} (isr {rep['isr']}, address-taken {len(addr_taken)}), "
         f"kept static {len(keep_static)} (shared {len(shared)}, cyclic {len(cyc)})")
-    log(f"frames before: XDATA {before['x']} B, DATA {before['d']} B; PARM (static) XDATA {static_bytes['parm_x']} B")
-    log(f"overlay blocks: __xovl {cursor['x']} B, __dovl {cursor['d']} B; main region {region_size.get('main')}")
+    log(f"frames before: XDATA {before['x']} B, DATA {before['d']} B, BIT {before['b']} bits (PARMs included)")
+    log(f"overlay blocks: __xovl {cursor['x']} B, __dovl {cursor['d']} B, __bovl {cursor['b']} bits; "
+        f"main region {region_size.get('main')}")
     for k, v in rep["largest_regions"]:
         log(f"  region {k}: {v}")
     bad = (xlimit and cursor["x"] > xlimit) or (dlimit and cursor["d"] > dlimit)

@@ -495,8 +495,8 @@
 //-------------------------------------------------
 // DP Capability Option
 //-------------------------------------------------
-#define _DP_MST_SUPPORT                                         _ON
-#define _DP_TX_SUPPORT                                          _ON
+#define _DP_MST_SUPPORT                                         _OFF    // awto: no DP-out/daisy chain (demo _ON; ~0.9 KB XDATA)
+#define _DP_TX_SUPPORT                                          _OFF    // awto: DP-out port only; eDP panel uses ScalerDisplayDPTx (independent)
 #define _DP_FREESYNC_SUPPORT                                    _OFF
 #define _DP_FREESYNC_II_SUPPORT                                 _OFF
 #define _DP_HDR10_SUPPORT                                       _OFF

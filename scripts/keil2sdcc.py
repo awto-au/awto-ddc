@@ -52,6 +52,17 @@ def log(s):
 # ---------------- rewrite rules ----------------
 SRC_EXT = {".c", ".h"}
 RULES = [
+    # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
+    # and puts t in RAM (and `xdata BYTE *p` would become a 2-byte xdata pointer). Move the qualifier next
+    # to the name. Variables only (name followed by [ = ; ,); functions returning pointers untouched.
+    # Pointee keeps the same space unless the type names one (SDCC's old reading + Keil's storage).
+    (re.compile(r"^(\s*(?:extern\s+|static\s+)*)(code|xdata|idata|data|pdata)\s+([A-Za-z_][\w ]*?)\s*(\*+)\s*"
+                r"([A-Za-z_]\w*)(?=\s*[\[=;,])", re.M),
+     lambda m: (f"{m.group(1)}{m.group(3)} {m.group(4)} {m.group(2)} {m.group(5)}"
+                if re.search(r"\b(code|xdata|idata|data|pdata)\b", m.group(3)) else
+                f"{m.group(1)}{m.group(3)} {m.group(2)} {m.group(4)} {m.group(2)} {m.group(5)}")),
+    (re.compile(r"^(\s*(?:extern\s+|static\s+)*)(code|xdata|idata|data|pdata)\s+([A-Za-z_][\w ]*?)\s*\(\s*\*\s*"
+                r"([A-Za-z_]\w*)", re.M), r"\1\3 (* \2 \4"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position
     (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
     (re.compile(r"\bdata(?=\s+[\*A-Za-z_])"), "__data"),
