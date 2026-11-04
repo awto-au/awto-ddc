@@ -310,11 +310,12 @@ def cmd_compile(uv2_rel, jobs, only, target):
             for line in asm.read_text(errors="replace").splitlines():
                 if line.startswith("\t.area"):
                     area = line.split()[1]
-                elif area == "XSEG" and re.match(r"^\w+::?$", line):
+                elif area in ("XSEG", "DSEG", "OSEG", "ISEG") and re.match(r"^\w+::?$", line):
                     label = line
-                elif area == "XSEG" and line.strip().startswith(".ds") and label:
-                    kind = "XSEG_global" if label.endswith("::") else "XSEG_local"
-                    seg[kind] += int(line.split()[1], 0)
+                elif area in ("XSEG", "DSEG", "OSEG", "ISEG") and line.strip().startswith(".ds") and label:
+                    kind = ("global" if label.endswith("::") else
+                            "sloc" if "sloc" in label else "local")
+                    seg[f"{area}_{kind}"] += int(line.split()[1], 0)
             continue
         rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".rel")
         for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
