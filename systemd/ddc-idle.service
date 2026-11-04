@@ -1,0 +1,14 @@
+[Unit]
+Description=Sleep/wake DDC monitors on GNOME ScreenSaver ActiveChanged
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=AWTO_DDC_REPO=/mnt/2tb/git/awto-ddc
+ExecStart=/usr/bin/python3 /mnt/2tb/git/awto-ddc/scripts/ddc_idle.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
