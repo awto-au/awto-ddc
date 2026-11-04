@@ -8,3 +8,8 @@ Global rules apply (`~/.claude/CLAUDE.md`). Repo specifics:
 - Repo root in scripts: `$AWTO_DDC_REPO` → file-relative. Logs: `./tmp/logs/`.
 - Findings and open questions: GitHub issues (this repo; tracking issue #1), not chat.
 - Reversing conventions (confidence tags): awto-dan `docs/embedded/reversing/README.md`.
+- **Clean-room for OSD/firmware code:** our OSD and firmware code is written from scratch from HARDWARE FACTS
+  only (register addresses, bit fields, access sequences from our regdb + measurements). Reference sources
+  are read for understanding, never copied: the leaked Realtek SDK (Kingdomwhisky/RTD-Scaler-TEST) is
+  reference-only, no code reuse (proprietary); GPL projects (ORTD2662 etc.) are understood not pasted.
+  Cite which hardware fact each routine rests on, not which project it came from.
