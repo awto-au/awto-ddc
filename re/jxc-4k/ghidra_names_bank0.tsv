@@ -2,3 +2,9 @@
 # Format: address<TAB>name<TAB>type<TAB>comment<TAB>status
 CODE:0000	reset_vector	func	LJMP 0x23F4 (reset).	[fw]
 CODE:0db9	osd_button_ctrl_apply	func	Called from the VCP 0xCA case (bank 5) with DD29 (value low byte). Purpose unconfirmed.	[guess]
+EXTMEM:e151	osd_key_event_idx	var	Key event index from bank6 key_post_event (0..4); OSD handlers switch on it.	[fw]
+CODE:fd66	osd_keyevt_handler_fd66	func	Switch on e151: 1->ee33(6), 2->ee33(2), 3->fcfe, 6->c3ea.	[guess]
+CODE:fd87	osd_keyevt_handler_fd87	func	Switch on e151: 1->ee33(1), 2->ee33(3), 3->fcfe, 6->c3ea. Sibling copies at fda8,fdc9,fdea,fe0b.	[guess]
+CODE:eee4	osd_keyevt_handler_eee4	func	Switch on e151: 1/2 adjust value; 3/6 fcfe+0dc5, e150=0x10.	[guess]
+CODE:f184	osd_keyevt_handler_f184	func	Switch on e151: 1/2 value change; 3/6 fcfe.	[guess]
+CODE:f97a	osd_keyevt_handler_f97a	func	Switch on e151 (1,2,3,6).	[guess]

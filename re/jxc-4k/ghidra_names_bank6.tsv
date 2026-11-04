@@ -1,3 +1,20 @@
 # ghidra_names_bank6.tsv - JXC 4K monitor firmware, bank 6 (flash 0x60000-0x6FFFF), 8051:BE:16:default
 # Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
 # No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
+CODE:3944	key_scan_adc	func	Front-panel key scan. Reads ADC_A0/A1 (0xFF09/0xFF0A) with 3-try settle loop, bands -> key mask in XDATA dbad (scratch), P3.0 low -> bit0. Returns debounced mask (2 identical scans, e205). See docs/reversing/realtek-rtd/buttons.md.	[fw]
+CODE:3ab6	adc_a0_settled_cmp	func	|prev - new| < 5 style compare of two ADC_A0 samples (via 0x002e abs helper); CY set = stable.	[guess]
+CODE:3acc	adc_a1_settled_cmp	func	Same as 3ab6 for the ADC_A1 sample.	[guess]
+CODE:5f70	key_poll	func	Key poll tick: skip if e207!=0; e208->e209 (prev), key_scan_adc -> e208, key_power_edge, else key_event_dispatch.	[fw]
+CODE:5255	key_event_dispatch	func	Switch on key mask e208: 02->idx0, 04->idx1, 08->idx2, 10->idx3, 18->idx3, 20->idx4 (only if e14e/e14f==0); calls key_post_event(R5=idx,R7=mask).	[fw]
+CODE:5b45	key_post_event	func	Writes key index to e151 (OSD key event); on key change checks long-press (641e); else auto-repeat via timer 1 (500 units).	[fw]
+CODE:5942	key_power_edge	func	Power key (P3.0 low, mask bit0) press edge (e208 vs e209): banked call 0x0f39(1|2) toggles power; CY=1 = handled.	[guess]
+CODE:641e	key_longpress_arm	func	For mask 0x10/0x18 arms timer id 0xd with 0x0BB8 (3000 units) = long press; returns CY=1.	[fw]
+CODE:6567	key_cancel_timers	func	Clears e152 bit4, cancels timers 0xb,0xd,0xe.	[guess]
+CODE:63fe	key_power_combo	func	Sets e067 bits 0/1 and banked-calls 0x0dc5 when e208 == 0x03 (0x18/0x14 compares unreachable from 5942).	[guess]
+CODE:5154	key_alt_source_poll	func	Called when ADC/pin read no key: copies 8 bytes from code 0xFF:3067 to dbb4, 57f3 check; returns dbbe. Role unknown (non-ADC key source?).	[?]
+CODE:6217	key_scan_gate	func	Returns CY=1 when key scan allowed (e152 bit1 handling, arms timer 2 = 10 units).	[guess]
+EXTMEM:e151	osd_key_event_idx	var	Key event index written by key_post_event (0..4); consumed by bank0 OSD handlers (cases 1,2,3,6 via DEC chain); 7/8 used as idle markers by key_poll.	[fw]
+EXTMEM:e152	key_flags	var	Key scan flags: bit0/1 scan busy, bit2 repeat, bit3 held, bit4 longpress armed.	[guess]
+EXTMEM:e205	key_last_debounced	var	Last debounced key mask; same value twice = accepted.	[fw]
+EXTMEM:e208	key_cur	var	Current key mask (bit0 P3.0 power, 1/2/4/8/0x10/0x20).	[fw]
+EXTMEM:e209	key_prev	var	Previous key mask.	[fw]
