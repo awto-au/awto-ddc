@@ -21,6 +21,9 @@ import struct
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
+import rtd_gate  # noqa: E402
+
 MAGIC = 0x99552277
 FIELD_LEN = 36
 TAIL_LEN = 36
@@ -159,14 +162,19 @@ def main():
     ap.add_argument("db")
     ap.add_argument("out")
     ap.add_argument("--readall", help="ReadAll.txt (default: sibling of DB.bin)")
+    ap.add_argument("--gate-warn-only", action="store_true", help="downgrade gate refusals to warnings")
     a = ap.parse_args()
     setup_log()
+    rtd_gate.gate_or_exit(a.db, "DB.bin", warn_only=a.gate_warn_only or None, log=logging.info)
     logging.info("parse %s -> %s", a.db, a.out)
     db = Db(open(a.db, "rb").read())
     regs = db.parse()
     d = db.d
 
     ra_path = a.readall or os.path.join(os.path.dirname(os.path.abspath(a.db)), "ReadAll.txt")
+    if os.path.exists(ra_path):
+        rtd_gate.gate_or_exit(ra_path, "ReadAll.txt", warn_only=a.gate_warn_only or None,
+                              log=logging.info)
     readall = read_readall(ra_path)
 
     # ---- resolve names / consistency checks --------------------------------

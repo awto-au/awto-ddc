@@ -2,13 +2,16 @@
 """Static PE resource extractor: dialogs, menus, string tables, accelerators, DLGINIT, version strings.
 
 Pure stdlib; parses the PE resource directory directly (no execution of the binaries).
-Usage: pe_resources.py <root-dir> <out.tsv>
+Usage: pe_resources.py <root-dir> <out.tsv> [--gate-warn-only]
 Output TSV columns: source, restype, id, control_class, text
 Log: ./tmp/logs/pe_resources.log (workspace-relative)
 """
 import struct
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # -I drops script dir
+import rtd_gate  # noqa: E402
 
 TYPES = {1: "CURSOR", 2: "BITMAP", 3: "ICON", 4: "MENU", 5: "DIALOG", 6: "STRING", 9: "ACCEL",
          14: "GROUP_ICON", 16: "VERSION", 240: "DLGINIT"}
@@ -267,8 +270,10 @@ def process(path, root, out, log):
 
 
 def main():
-    root = Path(sys.argv[1])
-    outp = Path(sys.argv[2])
+    warn_only = "--gate-warn-only" in sys.argv
+    args = [x for x in sys.argv[1:] if x != "--gate-warn-only"]
+    root = Path(args[0])
+    outp = Path(args[1])
     logf = Path("tmp/logs/pe_resources.log")
     logf.parent.mkdir(parents=True, exist_ok=True)
     lf = logf.open("w")
@@ -279,6 +284,7 @@ def main():
     files = [p for p in sorted(root.rglob("*")) if p.suffix.lower() in (".dll", ".exe", ".ocx")]
     out = []
     for p in files:
+        rtd_gate.gate_or_exit(str(p), "PE-resources", warn_only=warn_only or None, log=log)
         c = process(p, root, out, log)
         log("%s: %s" % (p.relative_to(root), c))
     outp.parent.mkdir(parents=True, exist_ok=True)

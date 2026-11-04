@@ -1,0 +1,333 @@
+{
+  "schema": 1,
+  "doc": "docs/reversing/realtek-rtd/extraction.md",
+  "tool_versions_seen": [
+    "V3.7_20190114",
+    "V3.8_20221101"
+  ],
+  "kinds": {
+    "DB.bin": {
+      "match": [
+        "DB.bin"
+      ],
+      "container": "rtd-magic",
+      "magic": "0x99552277",
+      "parser": "rtd_db_parse.py",
+      "versions": {
+        "1": {
+          "status": "supported",
+          "expect": {
+            "hdr_size": 1024,
+            "preamble_len": 20,
+            "tail_len": 36,
+            "field_len": 36,
+            "regs": {
+              "min": 1000
+            },
+            "fields": {
+              "min": 1000
+            },
+            "nf_mismatch": 0,
+            "field_bitrange_bad": 0,
+            "pool_base_le_size": 1,
+            "post_pool_le_size": 1
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "header": "u32 magic, u32 version=1, u32 hdr_size=0x400, offset table to hdr_size",
+            "stream": "at hdr_size+0x14: 36 B tail, N x 36 B field, repeat; chain end = pool_base",
+            "pool": "NUL strings, ptr = pool_base+value",
+            "tags": "per-chip filler words learned from first tail/field"
+          },
+          "reference": {
+            "path": "RTD2795T-CG/DB.bin",
+            "size": 4105637,
+            "sha256": "da4c07b26f071a7efc06f9c8ff3035a857eddf4b272649194e337300f2c78955",
+            "tool_version": "V3.8_20221101"
+          }
+        },
+        "3": {
+          "status": "known-unsupported",
+          "note": "RTD2172/RTD2186: 4-byte tags, different record layout, not decoded",
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "header": "u32 magic, u32 version=3, u32 hdr_size (0x238 RTD2172, 0x1e0 RTD2186), offset table"
+          }
+        }
+      }
+    },
+    "GPIO.bin": {
+      "match": [
+        "GPIO.bin"
+      ],
+      "container": "rtd-magic",
+      "magic": "0x99552277",
+      "parser": "rtd_gpio_parse.py",
+      "versions": {
+        "2": {
+          "status": "supported",
+          "expect": {
+            "chip_tag": {
+              "regex": "RL\\d+"
+            },
+            "pin_rec_len": 376,
+            "pin_count": {
+              "min": 1,
+              "max": 400
+            },
+            "pins_end_le_size": 1,
+            "pin0_name_utf16_ok": 1
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "header": "u32 magic, u32 version=2, 100 B UTF-16 chip tag at 0x08, u16 pin count at 0x7C, pin records (376 B) from 0x7E",
+            "sections": "pins(u16) spi_drive(u16) spi_slew(u16) 4 x pairs(u8) adc(u8) ports(u8) timers(u8) pwm(u16) schmitt(u8); parser requires EOF with 0 trailing bytes"
+          },
+          "reference": {
+            "path": "RTD2795T-CG/GPIO.bin",
+            "size": 35586,
+            "sha256": "dd8f9c774242c4dfe2253b908698a60a669258826deede7183f1465547b26eb4",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    },
+    "DPCDDB.bin": {
+      "match": [
+        "DPCDDB.bin"
+      ],
+      "container": "rtd-magic",
+      "magic": "0x99552277",
+      "versions": {
+        "1": {
+          "status": "known-unsupported",
+          "note": "DPCD register DB (RTD2172/2186), not looked at",
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "header": "u32 magic, u32 version=1, u32 off1, u32 off2 (both < size), then text records"
+          }
+        }
+      }
+    },
+    "IPDB.bin": {
+      "match": [
+        "IPDB.bin"
+      ],
+      "container": "rtd-magic",
+      "magic": "0x99552277",
+      "versions": {
+        "2": {
+          "status": "known-unsupported",
+          "note": "IP DB (RTD2172/2186), not looked at",
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "header": "u32 magic, u32 version=2, u32 hdr_size-ish (0x2fe8 RTD2172, 0x2530 RTD2186)"
+          }
+        }
+      }
+    },
+    "FlashSet.dat": {
+      "match": [
+        "FlashSet.dat"
+      ],
+      "container": "ident",
+      "ident_len": 6,
+      "name_off": 22,
+      "parser": "rtd_flashdb_parse.py",
+      "versions": {
+        "090502070200": {
+          "status": "supported",
+          "expect": {
+            "hdr_len": 6,
+            "stride": 72,
+            "size_remainder": 0,
+            "records_minus_count": 7
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101",
+            "V3.7_20190114"
+          ],
+          "expect_warn": {
+            "name_nonascii_records": {
+              "max": 5
+            }
+          },
+          "layout": {
+            "header": "6 B ident 09 05 02 07 02 00, u16 count at 6 (records = count + 7)",
+            "records": "0x48 B each from file offset 6; ASCII flash name at record+0x10 (file 0x16 for record 0)"
+          },
+          "reference": {
+            "path": "PlugIn/FlashSet.dat",
+            "size": 6558,
+            "sha256": "660e2084d1e6885b0060405c599b12e7f6d1801d14396768ea3134bb616854c3",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    },
+    "Flash.dat": {
+      "match": [
+        "Flash.dat"
+      ],
+      "container": "ident",
+      "ident_len": 6,
+      "name_off": 20,
+      "parser": "rtd_flashdb_parse.py",
+      "versions": {
+        "090502070200": {
+          "status": "supported",
+          "expect": {
+            "name0_ascii": 1,
+            "name0": "A25L020"
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "header": "6 B ident 09 05 02 07 02 00, u16 count at 6",
+            "body": "flash-chip records (name at 0x14) followed by ASCII hex command text; no fixed stride confirmed"
+          },
+          "reference": {
+            "path": "PlugIn/Flash.dat",
+            "size": 12575,
+            "sha256": "c5a08abd3fe293a0ca6d714cd8f8efa06eb8bcff125a4935f8ed0ac2176e9baf",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    },
+    "SWREN.dat": {
+      "match": [
+        "SWREN.dat"
+      ],
+      "container": "none",
+      "versions": {
+        "-": {
+          "status": "supported",
+          "expect": {
+            "size": 300
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101",
+            "V3.7_20190114"
+          ],
+          "layout": {
+            "body": "300 B fixed; UTF-16 flash name at 0x02, 0xFD/0xAB fill bytes"
+          },
+          "reference": {
+            "path": "PlugIn/SWREN.dat",
+            "size": 300,
+            "sha256": "7c0c65a047801a0120dba9e97b4296adeda637feadab5eb4ae4bd668c151a314",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    },
+    "PE-resources": {
+      "match": [],
+      "match_ext": [
+        ".dll",
+        ".exe",
+        ".ocx"
+      ],
+      "container": "pe",
+      "parser": "pe_resources.py",
+      "versions": {
+        "-": {
+          "status": "supported",
+          "expect": {
+            "mz": 1,
+            "pe_sig": 1,
+            "machine": "0x014c",
+            "opt_magic": "0x10b",
+            "rsrc_present": 1
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101",
+            "V3.7_20190114"
+          ],
+          "layout": {
+            "body": "32-bit x86 PE with a resource directory (data dir 2)"
+          },
+          "reference": {
+            "path": "RTDCustomerTool_V3.8_20221101/RTDTool.exe",
+            "size": 2523648,
+            "sha256": "5ba3639fa469b7f1c0df72b284f8dae09c6ffd6410faf1fc506d941fce7d70d3",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    },
+    "ReadAll.txt": {
+      "match": [
+        "ReadAll.txt"
+      ],
+      "container": "text",
+      "parser": "rtd_db_parse.py (--readall)",
+      "versions": {
+        "-": {
+          "status": "supported",
+          "expect": {
+            "has_ScalerInfor": 1,
+            "has_PageInfor": 1,
+            "PageCount": "256",
+            "PageSelect": "159",
+            "page_sections": 256,
+            "page_name_lines": 256,
+            "ScalerName": {
+              "regex": "RTD\\d+.*"
+            }
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "layout": {
+            "body": "INI text; [ScalerInfor], [PageInfor], [PGxx] with PGxx_Name = ' / ' separated group list, 256 pages"
+          },
+          "reference": {
+            "path": "RTD2795T-CG/ReadAll.txt",
+            "size": 116435,
+            "sha256": "6a1beb04c6064f076760b0cb4fb9a3709d4f93d939c4882467364296ce51252c",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    },
+    "version.txt": {
+      "match": [
+        "version.txt"
+      ],
+      "container": "text",
+      "versions": {
+        "-": {
+          "status": "supported",
+          "expect": {
+            "has_SVNInfo": 1,
+            "SpecRevision": {
+              "min": 1
+            }
+          },
+          "validated_tool_versions": [
+            "V3.8_20221101"
+          ],
+          "reference": {
+            "path": "RTD2795T-CG/version.txt",
+            "size": 54,
+            "sha256": "4188cf39665007f41799d25c0f6a202c222603a3ae677edd7227039e82cd1b7c",
+            "tool_version": "V3.8_20221101"
+          }
+        }
+      }
+    }
+  }
+}

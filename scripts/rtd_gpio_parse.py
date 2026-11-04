@@ -21,6 +21,9 @@ import struct
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
+import rtd_gate  # noqa: E402
+
 MAGIC = 0x99552277
 PIN_REC = 376
 PAD = 0xCD
@@ -355,8 +358,10 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--regdb", help="DB.bin TSV for the same chip (names/descriptions, "
                     "default: <out dir>/<chip>.tsv, chip = GPIO.bin parent dir name)")
+    ap.add_argument("--gate-warn-only", action="store_true", help="downgrade gate refusals to warnings")
     a = ap.parse_args()
     setup_log()
+    rtd_gate.gate_or_exit(a.gpio, "GPIO.bin", warn_only=a.gate_warn_only or None, log=logging.info)
     logging.info("parse %s -> %s", a.gpio, a.out)
     chip = os.path.basename(os.path.dirname(os.path.abspath(a.gpio)))
     rdb = a.regdb or os.path.join(os.path.dirname(os.path.abspath(a.out)), chip + ".tsv")
