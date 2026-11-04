@@ -32,3 +32,17 @@ Script: `scripts/rtd_flash_sector.py`. Datasheet: `~/vendors/macronix/MX25L8006E
 ## Test status
 - `rtd_flash_sector.py --selftest`: simulated chip; unprotect succeeds only with WP# released; without it fails loudly. Prints the exact reg writes
 - Dry run on bus 20 (2026-11-04): JEDEC c22014, SR 0x9c, backup written. Not run with --write.
+
+## State after the awto EDID flash (2026-11-04) — DEVIATION recorded, Dan's call
+- bus /dev/i2c-20 (card1-DP-4) flash is left UNPROTECTED: status reg = 0x00 (factory was 0x9C = SRWD|BP2..0).
+- Reason: the first write aborted mid-erase before the finally-block re-protect took; the recovery write was
+  guarded with an all-FF --expect-current (sector already blank) and entered unprotected, so it skipped re-protect.
+- Decision (Dan): LEAVE IT UNPROTECTED. Block-protect only guards against stray SPI writes; nothing on the board
+  writes the flash except our deliberate ISP sessions. Re-protecting would mean another WRSR on the working unit.
+- Consequence: future sector writes (e.g. the splash) can skip release_wp()/unprotect() on THIS unit — it's writable.
+  The OTHER two units are still factory-protected (0x9C) and will need the WP# release path.
+
+## Known script fix still to apply
+- The ORIGINAL abort was a too-tight engine-busy poll (POLL_MAX=20) on the 4K erase (tSE up to 200ms). The committed
+  rtd_flash_sector.py already moved to TIME-BASED waits (1.25x MX25L8006E maxima), which fixes this. Verify the erase
+  wait limit is >= 0.25s on the next write so a successful erase never exits via traceback again.
