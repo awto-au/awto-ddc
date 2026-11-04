@@ -3,6 +3,29 @@
 Tools and notes for controlling monitors over DDC/CI and for reverse-engineering + reflashing
 Realtek RTD scaler monitors (the JXC/Dahua 28" 4K units, RTD2795-class). Private repo.
 
+## The monitors (what we found and fixed)
+Dahua DHI-LM28-class 28"-marketed 4K monitors (ODM EDID vendor "JXC"). 27.0"-real panel (active 597x336 mm,
+IPS/PLS — confirmed by off-angle eye test, despite Dahua's datasheet saying "VA"). Scaler: Realtek RTD2795T
+(product code 0xCF2), 8051 core, 1 MiB Macronix flash (JEDEC C2 20 14), ISP over DDC at I2C 0x4A.
+
+Problems in the factory firmware and what we did:
+- **Broken EDID → mis-detection + slow detection.** Factory EDID was the unedited Realtek demo (vendor JXC,
+  name "4K MONITOR", serial "demoset-1") and FAILED edid-decode conformance (malformed serial, duplicate VIC,
+  HDMI TMDS>340, image-size mismatch, missing VCDB, ambiguous native mode). **Fixed:** authored a clean,
+  conformant awto EDID (vendor AWT, "awto-mon"), correct 597x336 size, sRGB primaries for the IPS panel,
+  CTA Colorimetry + SDR HDR-metadata blocks, phantom audio removed (no speakers), single native 4K60 mode.
+  Flashed into all 3 EDID slots (DP + 2x HDMI). See `docs/edid-fix.md`, `scripts/make_edid.py`.
+- **DDC/CI controls hidden.** Caps string advertised only 1 VCP though the firmware answers brightness/
+  contrast/input/power. Documented; control works today via `scripts/ddc_ctl.py`.
+- **Power-save shows a colour test pattern instead of sleeping; no host power-down.** Characterised; DPMS /
+  VCP 0xD6 behaviour documented (`docs/firmware-proposal.md`). Firmware-fix route noted, not yet applied.
+- **Dahua boot splash.** 2-colour OSD-drawn logo; awto replacement built (`scripts/make_logo.py`), volatile
+  OSD preview works; persistent flash deliberately BLOCKED until the glyph sector is located (brick risk).
+- **Flashing recovered + made safe.** Flash WP# is a scaler GPIO; writer releases WP#, erases, programs
+  (rtdflash RTD2795 handshake), read-back verifies, re-protects to 0x9C — datasheet-timed, offline selftest.
+
+Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction tooling below.
+
 ## Controlling monitors over DDC/CI
 - `scripts/ddc_ctl.py` — list / sleep / wake / brightness / get, over `ddcutil`; bus resolved per-run from the
   DRM connector. `scripts/ddc_idle.py` + `systemd/ddc-idle.service` — sleep/wake on GNOME idle. See `docs/ddc-control.md`.
