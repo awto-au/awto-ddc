@@ -103,7 +103,7 @@
 //-------------------------------------------------
 // Display Rotation Option
 //-------------------------------------------------
-#define _DISPLAY_ROTATION_SUPPORT                               _ON
+#define _DISPLAY_ROTATION_SUPPORT                               _OFF    // awto: unused on this board (#7)
 
 //--------------------------------------------------
 // Aspect Ratio Option
@@ -114,7 +114,7 @@
 //--------------------------------------------------
 // Overscan Option
 //--------------------------------------------------
-#define _OVERSCAN_VGA_SUPPORT                                   _ON
+#define _OVERSCAN_VGA_SUPPORT                                   _OFF    // awto: unused on this board (#7)
 #define _OVERSCAN_DVI_SUPPORT                                   _ON
 #define _OVERSCAN_HDMI_SUPPORT                                  _ON
 #define _OVERSCAN_DP_SUPPORT                                    _ON
@@ -150,7 +150,7 @@
 #define _ICM_BRI_SUPPORT                                        _OFF
 #define _SCM_SUPPORT                                            _OFF
 #define _SIX_COLOR_SUPPORT                                      _ON
-#define _HIGHLIGHT_WINDOW_SUPPORT                               _ON
+#define _HIGHLIGHT_WINDOW_SUPPORT                               _OFF    // awto: unused on this board (#7)
 #define _RINGING_FILTER_SUPPORT                                 _ON
 #define _SHARPNESS_SUPPORT                                      _ON
 #define _CONTRAST_SUPPORT                                       _ON
@@ -296,7 +296,7 @@
 #define _EDID_ADDRESS_EEPROM                                    (_EEPROM_PAGE7_BANK0)
 #define _EDID_ADDRESS_FLASH                                     0
 #define _EDID_FLASH_BANK                                        9
-#define _EDID_HDR10_AUTO_SWITCH                                 _ON
+#define _EDID_HDR10_AUTO_SWITCH                                 _OFF    // awto: unused on this board (#7)
 
 
 //////////////
@@ -398,8 +398,8 @@
 //--------------------------------------------------
 // VGA YPBPR Option
 //--------------------------------------------------
-#define _YPBPR_SUPPORT                                          _ON
-#define _SOG_SUPPORT                                            _ON
+#define _YPBPR_SUPPORT                                          _OFF    // awto: unused on this board (#7)
+#define _SOG_SUPPORT                                            _OFF    // awto: unused on this board (#7)
 #define _VGA_COMPOSITE_SUPPORT                                  _OFF    // awto: no VGA port (A0 none); demo default was _ON
 
 //--------------------------------------------------
@@ -435,7 +435,7 @@
 //--------------------------------------------------
 // VGA Self-Calibration Option
 //--------------------------------------------------
-#define _ADC_SELF_CALIBRATION                                   _ON
+#define _ADC_SELF_CALIBRATION                                   _OFF    // awto: unused on this board (#7)
 
 #define _CALIBRATION_R_GAIN_BIAS                                (0)  // Needs modification for EVERY single source
 #define _CALIBRATION_G_GAIN_BIAS                                (0)  // Needs modification for EVERY single source
@@ -474,12 +474,12 @@
 //--------------------------------------------------
 // DVI & HDMI Option
 //--------------------------------------------------
-#define _DVI_DE_ONLY_SUPPORT                                    _ON
+#define _DVI_DE_ONLY_SUPPORT                                    _OFF    // awto: unused on this board (#7)
 #define _HDMI_FROM_DVI_CONNECT                                  _ON
 #define _HDMI_FREESYNC_SUPPORT                                  _OFF
 #define _HDMI_HDR10_SUPPORT                                     _OFF
 #define _HDMI_FREESYNC_II_SUPPORT                               _OFF
-#define _TMDS_HDCP_2_2_SUPPORT                                  _ON
+#define _TMDS_HDCP_2_2_SUPPORT                                  _OFF    // awto: unused on this board (#7)
 
 //--------------------------------------------------
 // HDMI CTS Option
@@ -500,7 +500,7 @@
 #define _DP_FREESYNC_SUPPORT                                    _OFF
 #define _DP_FREESYNC_II_SUPPORT                                 _OFF
 #define _DP_HDR10_SUPPORT                                       _OFF
-#define _DP_HDCP_2_2_SUPPORT                                    _ON
+#define _DP_HDCP_2_2_SUPPORT                                    _OFF    // awto: unused on this board (#7)
 
 
 /////////
@@ -515,7 +515,7 @@
 #define _MHL2_AUD_CHANNEL                                       _MHL_AUD_2CH
 #define _MHL2_ADOPTER_ID                                        0x0000
 #define _MHL2_DEVICE_ID                                         0x0000
-#define _MHL2_PP_MODE_SUPPORT                                   _ON
+#define _MHL2_PP_MODE_SUPPORT                                   _OFF    // awto: unused on this board (#7)
 
 
 ///////////
