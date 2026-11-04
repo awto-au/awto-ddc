@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Ghidra RE driver for the JXC 4K monitor firmware (8051, one program per 64 KB bank).
 
-usage: re.py import <bank>   create/refresh the program from banks/bank<N>.bin, seed, analyse, apply names, export
-       re.py regen  <bank>   apply names TSV to the existing program and re-export (daily use)
+usage: ghidra_re.py import <bank>   create/refresh the program from banks/bank<N>.bin, seed, analyse, apply names, export
+       ghidra_re.py regen  <bank>   apply names TSV to the existing program and re-export (daily use)
 Per-bank data in re/jxc-4k/: ghidra_names_bank<N>.tsv (source of truth), seeds_bank<N>.txt.
 Shared scripts (ApplyNames.java, ExportAll.java) are used from awto-2000 by path ($AWTO_2000), not copied.
 Project + firmware bytes stay out of git: ~/vendors/realtek/analysis/. Log: ./tmp/logs/re_<cmd>_<bank>.log
