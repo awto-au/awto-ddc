@@ -387,6 +387,9 @@ def main():
            "kept_static_fns": len(keep_static), "cyclic_fns": len(cyc), "shared_fns": len(shared),
            "frames_before": before, "overlay_block": cursor, "static_parm_x": static_bytes["parm_x"],
            "local_static": static_bytes["local_static"],
+           "private_frames": sorted(((n[1], dict(frame[n])) for n in nodes
+                                     if place.get(n, ("",))[0] == "static" and any(frame[n].values())),
+                                    key=lambda kv: -kv[1]["d"]),
            "unowned_storage": static_bytes["unowned"],
            "main_region": region_size.get("main"),
            "largest_regions": sorted(((k, v) for k, v in region_size.items()), key=lambda kv: -kv[1]["x"])[:8]}

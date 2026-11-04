@@ -51,7 +51,11 @@ def log(s):
 
 # ---------------- rewrite rules ----------------
 SRC_EXT = {".c", ".h"}
+# Direct IRAM (0x00-0x7F) is the binding limit (#8): drop ISR register banks 1-3 (SDCC ISRs then push regs;
+# +~1-2 us/IRQ) and move the pData scratch arrays to idata (indirect, +flash). Both free direct RAM.
+DROP_USING = True
 RULES = [
+    (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"idata\1"),
     # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
     # and puts t in RAM (and `xdata BYTE *p` would become a 2-byte xdata pointer). Move the qualifier next
     # to the name. Variables only (name followed by [ = ; ,); functions returning pointers untouched.
@@ -70,9 +74,10 @@ RULES = [
     (re.compile(r"\bsfr\s+(\w+)\s*=\s*([0-9A-Fa-fxX]+)\s*;"), r"__sfr __at(\2) \1;"),
     (re.compile(r"\bsfr16\s+(\w+)\s*=\s*([0-9A-Fa-fxX]+)\s*;"), r"__sfr16 __at(\2) \1;"),
     # ISR / register bank, only right after a parameter list: `) interrupt N [using M]`, `) using M`
-    (re.compile(r"\)\s*interrupt\s+(\w+)\s+using\s+(\w+)"), r") __interrupt(\1) __using(\2)"),
+    (re.compile(r"\)\s*interrupt\s+(\w+)\s+using\s+(\w+)"),
+     r") __interrupt(\1)" if DROP_USING else r") __interrupt(\1) __using(\2)"),
     (re.compile(r"\)\s*interrupt\s+(\w+)(?=\s*[{;\n])"), r") __interrupt(\1)"),
-    (re.compile(r"\)\s*using\s+(\d)(?=\s*[{;\n])"), r") __using(\1)"),
+    (re.compile(r"\)\s*using\s+(\d)(?=\s*[{;\n])"), r")" if DROP_USING else r") __using(\1)"),
     # TYPE QUAL NAME _at_ ADDR;  ->  __at(ADDR) TYPE QUAL NAME;
     (re.compile(r"^(\s*)([^;\n]*?)\b(\w+(?:\s*\[[^\]\n]*\])?)\s+_at_\s+([^;]+);", re.M), r"\1__at(\4) \2\3;"),
     # Keil-only pragmas (optimiser level, register banks) -> dropped; save/restore are kept (SDCC has them)
@@ -256,13 +261,14 @@ def cmd_port():
             t = p.read_text(errors="replace")
             for m in re.finditer(r"\bsfr\s+(\w+)\s*=\s*(0[xX][0-9A-Fa-f]+|\d+)\s*;", t):
                 sfr_addr[m.group(1)] = int(m.group(2), 0)
-            for m in USING_DEF.finditer(t):
-                using_all.setdefault(m.group(1), set()).add(f" __using({m.group(2)})")
+            if not DROP_USING:
+                for m in USING_DEF.finditer(t):
+                    using_all.setdefault(m.group(1), set()).add(f" __using({m.group(2)})")
             for m in AT_DEF.finditer(t):
                 at_all.setdefault(m.group(1), set()).add(m.group(2).strip())
             for m in INT_DEF.finditer(t):
                 using_all.setdefault(m.group(1), set()).add(
-                    f" __interrupt({m.group(2)})" + (f" __using({m.group(3)})" if m.group(3) else ""))
+                    f" __interrupt({m.group(2)})" + (f" __using({m.group(3)})" if m.group(3) and not DROP_USING else ""))
     # 7 chips share names: a name defined differently across files is NOT auto-propagated (wrong-chip risk)
     using = {k: next(iter(v)) for k, v in using_all.items() if len(v) == 1}
     AT_ADDR.clear()
@@ -355,6 +361,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
+    cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
 
 
