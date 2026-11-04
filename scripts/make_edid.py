@@ -50,6 +50,13 @@ DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
 # CVT-RB 2560x1440: 241.7 MHz, htotal 2720 (48/32/80), vtotal 1481 (3/5/33), +H -V... as in original (+/+)
 DTD_1440 = dtd(24170, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 1)
 
+# Chromaticity: Samsung VA 4K panel (LSC-series, as in U28R55/UR550), ~99% sRGB / ~72% NTSC.
+# Representative Samsung VA primaries [guess] (slightly deeper red + more saturated green than bare
+# sRGB, blue near sRGB, D65 white) — replaces the Realtek demo bytes (which were plain sRGB at 10-bit).
+#   R 0.651,0.332  G 0.300,0.610  B 0.148,0.055  W 0.3127,0.3290 (D65).  Encoding: docs/edid-fix.md.
+CHROMA = bytes.fromhex("cd01a6554c9c260e5054")
+
+
 def std_timing(x, ratio, hz):
     return bytes([(x // 8) - 31, (ratio << 6) | (hz - 60)])
 
@@ -66,9 +73,12 @@ def base_block(port):
     b[20] = (0x80 | (3 << 4) | 5) if port == "dp" else 0x81   # 1.4 DP: 10 bpc + DP; 1.3: digital, DFP 1.x
     b[21], b[22] = W_MM // 10, H_MM // 10
     b[23] = 0x78                                   # gamma 2.20
-    # 1.4: sRGB, preferred=DTD1, continuous freq, RGB+YCbCr444/422; 1.3: RGB, sRGB, preferred, GTF
-    b[24] = 0x3F if port == "dp" else 0x27
-    b[25:35] = bytes.fromhex("ee91a3544c99260f5054")  # chromaticity (unchanged)
+    # Feature byte. sRGB-default bit (0x04) CLEARED: the Samsung VA primaries are wider than the sRGB
+    # standard, so signalling "default colour space = sRGB" would be a conformity failure (edid-decode
+    # checks the chromaticities match). Colorimetry is instead described in the CTA Colorimetry block.
+    # 1.4: preferred=DTD1, continuous freq, RGB+YCbCr444/422; 1.3: RGB, preferred, GTF.
+    b[24] = 0x3B if port == "dp" else 0x23
+    b[25:35] = CHROMA                              # Samsung VA 4K primaries (see CHROMA note)
     b[35:38] = bytes.fromhex("210800")             # est. timings 640x480, 800x600, 1024x768
     # ratio codes: 0=16:10 1=4:3 2=5:4 3=16:9; unused slots = 0x0101
     std = [(1920, 3), (1440, 0), (1400, 1), (1280, 2), (1280, 1), (1280, 3)]
@@ -91,8 +101,15 @@ def cta_block(port):
     d = bytearray()
     vdb = bytes(v for v in VICS)
     d += bytes([(2 << 5) | len(vdb)]) + vdb
-    d += bytes([(1 << 5) | 3, 0x09, 0x7F, 0x07])           # LPCM 2ch, 32-192 kHz, 16/20/24 bit
-    d += bytes([(4 << 5) | 3, 0x01, 0x00, 0x00])           # speakers FL/FR
+    # NO Audio Data Block / Speaker Allocation Block: these units have no speakers (Dan 2026-11-04).
+    # The CTA header "basic audio" bit is also cleared so the OS does not route sound to a dead endpoint.
+    # Colorimetry Data Block (ext tag 0x05): byte1 0x06 = xvYCC709 + sYCC601 extended-gamut YCC;
+    # byte2 0x20 = sRGB colorimetry (CTA-861-H) — the panel covers sRGB, and setting it is what
+    # edid-decode recommends to avoid interop issues. BT.2020 is NOT advertised (~99% sRGB VA panel).
+    d += bytes([(7 << 5) | 3, 0x05, 0x06, 0x20])
+    # HDR Static Metadata Data Block (ext tag 0x06): EOTF = Traditional gamma SDR only (bit0); Static
+    # Metadata Type 1 supported. NO PQ(SMPTE2084)/HLG — this is a ~300 cd/m2 SDR VA panel, not HDR10.
+    d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
     d += bytes([(7 << 5) | 2, 0x00, 0xCA])                 # VCDB: QY+QS (YCC/RGB quant selectable), IT/CE underscan
     if port == "hdmi":
         # HDMI 1.4 VSDB: PA 1.0.0.0, DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
@@ -105,7 +122,7 @@ def cta_block(port):
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
     b[2] = 4 + len(d)
-    b[3] = 0x80 | 0x40 | 0x20 | 0x10 | 1                   # underscan, audio, YCbCr444/422, 1 native DTD (base DTD1)
+    b[3] = 0x80 | 0x20 | 0x10 | 1                          # underscan, YCbCr444/422, 1 native DTD (base DTD1); basic-audio bit CLEARED (no speakers)
     b[4:4 + len(d)] = d
     o = 4 + len(d)
     b[o:o + len(dtds)] = dtds
