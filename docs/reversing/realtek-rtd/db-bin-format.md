@@ -213,7 +213,7 @@
 
 - Source: RTDCustomerTool V3.7 / V3.8 `PlugIn/FlashSet.dat` (loaded by `PlugIn_ISP.dll`). Parser: `scripts/rtd_flashdb_parse.py <FlashSet.dat> <out.json>`; derived JSON in `re/flashdb/` (`FlashSet_v3.8.json`, `Flash_v3.8.json`, `scalers_v3.8.json`).
 - Diff two tool versions: `rtd_flashdb_parse.py --diff a.json b.json` (V3.7 -> V3.8: +4 chips P25Q32H, XM25QH16B/40B/80B; 0 changed). Static only.
-- Evidence: `PlugIn_ISP.dll` V3.7 (decompile `~/vendors/realtek/analysis/PlugIn_ISP.c`): dialog loader `FUN_10009630`, ID match `FUN_1001c750`, WRSR `FUN_10018f30`, WP set/clear `FUN_10038310`, erase `FUN_1001d4d0`/`FUN_1001d650`, file writer near `0x1000d9xx` (also writes `FlashSet_dos.dat`).
+- Evidence: `PlugIn_ISP.dll` V3.7 (decompile `tmp/rtdtool/PlugIn_ISP.c`): dialog loader `FUN_10009630`, ID match `FUN_1001c750`, WRSR `FUN_10018f30`, WP set/clear `FUN_10038310`, erase `FUN_1001d4d0`/`FUN_1001d650`, file writer near `0x1000d9xx` (also writes `FlashSet_dos.dat`).
 
 ## File layout [fw]
 

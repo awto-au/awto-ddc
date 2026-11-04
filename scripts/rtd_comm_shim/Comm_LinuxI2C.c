@@ -63,6 +63,7 @@ static DWORD xfer(uint8_t op, uint8_t dev8, uint8_t sub, uint16_t nb, const BYTE
 
 EXP DWORD I2CRead(DWORD dev, DWORD sub, DWORD bytes, BYTE *ptr) {
     DWORD done = 0;
+    if (!bytes || !ptr) return 0x2202;           /* stock GFXI2C: bad arg */
     while (done < bytes) {                       /* bridge reply buffer is 4096 */
         DWORD c = bytes - done > 1024 ? 1024 : bytes - done;
         if (xfer(1, dev & 0xFE, sub & 0xFF, (uint16_t)c, NULL, 0, ptr + done)) return ERR;
@@ -92,19 +93,14 @@ EXP DWORD GetNativePageLength(void) { tr("GetNativePageLength"); return 0; }
 EXP DWORD GetSMBUSDataType(void) { tr("GetSMBUSDataType"); return 0; }
 EXP ULONGLONG GetWaitingMode(void) { tr("GetWaitingMode"); return 0; }
 EXP DWORD InitialDev(void) { tr("InitialDev"); return 0; }
-EXP DWORD ReleaseDev(void) { tr("ReleaseDev"); return conn() ? 0 : ERR; }
+EXP DWORD ReleaseDev(void) { tr("ReleaseDev"); return 0; }   /* stock GFXI2C always 0 */
 EXP DWORD SetCmdLine(void) { tr("SetCmdLine"); return 0; }
 EXP DWORD SetSettingFilePath(void) { tr("SetSettingFilePath"); return 0; }
 EXP DWORD AdjustOption(void) { MessageBoxA(NULL, "Comm_LinuxI2C: forwards I2C to 127.0.0.1 bridge (RTD_BRIDGE_PORT)", "Comm_LinuxI2C", MB_OK); return 0; }
-EXP DWORD I2C2SubRead(void) { return 0; }
-EXP DWORD I2C2SubWrite(void) { return 0; }
-EXP DWORD I2CCurrentRead(void) { return 0; }
-EXP DWORD I2CReadSegment(void) { return 0; }
-EXP DWORD I2CWordRead(void) { return 0; }
-EXP DWORD I2CWordWrite(void) { return 0; }
-EXP DWORD I2CWriteSegment(void) { return 0; }
-
+/* Unimplemented: logged + error (a silent 0 was a false success, hid which call precedes RTDTool's exit) */
 #define STUB(n) EXP DWORD n(void) { tr("stub " #n); return ERR; }
+STUB(I2C2SubRead) STUB(I2C2SubWrite) STUB(I2CCurrentRead) STUB(I2CReadSegment) STUB(I2CWordRead)
+STUB(I2CWordWrite) STUB(I2CWriteSegment)
 STUB(BankErase) STUB(DebugMessageEnd) STUB(DebugMessageEventFinish) STUB(DebugMessageEventStart)
 STUB(DebugMessageGetString) STUB(DebugMessageGetValue) STUB(DebugMessageStart) STUB(GetFTDIGetAckStatus)
 STUB(GetUsbDevicePath) STUB(IspEnable) STUB(ReadFlashData) STUB(RemoveDevice) STUB(ResetFirmware)

@@ -2,8 +2,8 @@
 
 Static analysis only (Ghidra headless decompile, PE export parse). Nothing was run, installed or wine-run.
 Tags: [fw] read in decompiled code, [str] from strings, [guess] inference, [?] unknown.
-Tool tree: `~/vendors/realtek/analysis/rtdtool-3.8/RTDCustomerTool_V3.8_20221101/`.
-Decompiles (not in git): `~/vendors/realtek/analysis/{PlugIn_ISP.c,tmp_dbg/RTDTool.c,tmp_hdl/*.c}`; layout dump `tmp_hdl/commobj_layout.txt`.
+Tool tree: `tmp/rtdtool/rtdtool-3.8/RTDCustomerTool_V3.8_20221101/`.
+Decompiles (not in git): `tmp/rtdtool/{PlugIn_ISP.c,tmp_dbg/RTDTool.c,tmp_hdl/*.c}` (gitignored); layout dump `tmp/rtdtool/tmp_hdl/commobj_layout.txt`.
 Related: `rtdtool-debug-notes.md` (debug slave, stream), `rtdtool-gui-map.md` (control IDs).
 
 ## Verdict

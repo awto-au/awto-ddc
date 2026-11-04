@@ -2,7 +2,7 @@
 
 - Mined: 2026-11-04T14:00+10:00. Method: static only (unzip into a fresh dir, `file`/`strings`/`wrestool`/byte scans). Nothing run.
 - Packages: V3.8_20221101 (26 MB zip, 72 MB extracted), V3.7_20190114 (16 MB zip, 31 MB extracted).
-- Scratch extract (vendor data, outside git): `~/vendors/realtek/analysis/rtdtool-mine/{v38,v37}/`.
+- Scratch extract (vendor data, outside git): `tmp/rtdtool/rtdtool-mine/{v38,v37}/`.
 - Related: [db-bin-format](reversing/realtek-rtd/db-bin-format.md), [rtdtool-gui-map](rtdtool-gui-map.md), [rtdtool-headless-feasibility](rtdtool-headless-feasibility.md), [rtdtool-debug-notes](rtdtool-debug-notes.md).
 
 ## Verdict
@@ -17,7 +17,7 @@
 |---|---|---|
 | `RTDTool.exe`, `Comm.dll`, `Comm/*.dll`, `PlugIn/*.dll`, `RSGrid.ocx` | MFC PC code (x86). Resources = cursors/icons/dialogs/strings/PNG skins/toolbar defs | none |
 | `PlugIn/PlugIn_NewEDID.dll` | EDID/CEA/DisplayID editor dialogs only (class names, no embedded EDID blobs; custom resources are 129-915 B toolbar defs) | none; editor UI only |
-| `PlugIn/PlugIn_ISP.dll` | ISP engine (bank erase/write, boot flag). Already decompiled: `~/vendors/realtek/analysis/PlugIn_ISP.c` | protocol only |
+| `PlugIn/PlugIn_ISP.dll` | ISP engine (bank erase/write, boot flag). Already decompiled: `tmp/rtdtool/PlugIn_ISP.c` | protocol only |
 | `RTDScaler/<chip>/DB.bin` | register database (names, fields, reset values, DPCD text) | register map, not image |
 | `RTDScaler/<chip>/GPIO.bin` | pin database | pin map |
 | `RTDScaler/<chip>/ReadAll.txt`, `version.txt` | page list, per-page type arrays, DB spec revision | register map |

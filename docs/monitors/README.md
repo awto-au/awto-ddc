@@ -16,7 +16,7 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 ## Flashing options (RTD27xx class)
 - Realtek RTDCustomerTool V3.7 back-ends: DP AUX (`Comm_Aux`), GPU I2C (`Comm_GFXI2C`), Realtek USB, Type-C USB, FTDI, CH341A (via third-party DLL)
 - Whether the monitor's firmware accepts ISP over DP AUX / DDC is untested
-- Static read of `Comm_Aux.dll` / `Comm_GFXI2C.dll` (strings, nothing executed; extracted to `~/vendors/realtek/analysis/rtdtool-3.7/`):
+- Static read of `Comm_Aux.dll` / `Comm_GFXI2C.dll` (strings, nothing executed; extracted to `tmp/rtdtool/rtdtool-3.7/`):
   - They reach the monitor through GPU-vendor Windows driver APIs: AMD ADL (`ADL_Display_NativeAUXChannel_Access`, `ADL_Display_DDCBlockAccess_Get`) and NVIDIA `nvapi.dll`; Intel device struct present too
   - Wine cannot map those to Linux DRM/i2c-dev, so the AUX and GPU-I2C back-ends will not work under Wine
   - USB back-ends (RealtekUSB, FTDI, CH341A) need vendor kernel drivers; not worth a Wine attempt

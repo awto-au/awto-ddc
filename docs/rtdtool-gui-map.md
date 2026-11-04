@@ -1,7 +1,7 @@
 # RTDCustomerTool 3.8 GUI map (static, from PE resources)
 
-- Source: `~/vendors/realtek/analysis/rtdtool-3.8/RTDCustomerTool_V3.8_20221101/` (read-only, never executed)
-- Full table: `~/vendors/realtek/analysis/rtdtool-res/gui_resources.tsv` (not in git; 7631 rows; `source<TAB>restype<TAB>id<TAB>class<TAB>text`)
+- Source: `tmp/rtdtool/rtdtool-3.8/RTDCustomerTool_V3.8_20221101/` (read-only, never executed)
+- Full table: `tmp/rtdtool/rtdtool-res/gui_resources.tsv` (not in git; 7631 rows; `source<TAB>restype<TAB>id<TAB>class<TAB>text`)
 - Generator: `scripts/pe_resources.py <root> <out.tsv>` (stdlib PE resource-tree parser; dialogs, DLGTEMPLATEEX, menus, string tables, accelerators, DLGINIT, version)
 - Tags: [res] resource, [str] strings, [guess]
 - ID format in TSV: `dlg:<dlgid>/<ctrlid>` (ctrlid -1 = static label with no ID), `menu:<id>/<cmdid>`, bare number = string-table id

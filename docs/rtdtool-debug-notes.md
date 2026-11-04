@@ -2,8 +2,8 @@
 
 Static analysis only (Ghidra headless decompile + strings). Nothing was run.
 Tags: [fw] read in decompiled code, [str] from strings, [oss] open source, [guess] inference, [?] unknown.
-Tool tree: `~/vendors/realtek/analysis/rtdtool-3.8/RTDCustomerTool_V3.8_20221101/`.
-Decompile dumps (not in git): `~/vendors/realtek/analysis/tmp_dbg/{RTDTool.c,DebugMessage.c}`, throwaway project `tmp_dbg/proj`.
+Tool tree: `tmp/rtdtool/rtdtool-3.8/RTDCustomerTool_V3.8_20221101/`.
+Decompile dumps (not in git): `tmp/rtdtool/tmp_dbg/{RTDTool.c,DebugMessage.c}`, throwaway project `tmp_dbg/proj`.
 
 ## 1. Command-line arguments of RTDTool.exe
 - None. [fw] `InitInstance` (0x00408xxx) calls `InitCommonControlsEx`, `CWinApp::InitInstance`, `SetRegistryKey`, creates mutex `NewRTDCustomerTool`, `AfxSocketInit`, then runs the main dialog modally. It never calls `ParseCommandLine` / `ProcessShellCommand`.
