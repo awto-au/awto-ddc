@@ -1,0 +1,25 @@
+# ghidra_names_bank5.tsv - JXC 4K monitor firmware, bank 5 (flash 0x50000-0x5FFFF), 8051:BE:16:default
+# Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
+# Source image: ISP dump of the bus-20 unit (see docs/monitors/README.md). One program per bank.
+#
+# Conventions: CODE:xxxx = bank-5 code address, EXTMEM:xxxx = XDATA.
+# Open: VCP dispatcher body, VCP table, no-signal / power-save handler.
+CODE:b840	ddcci_caps_reply	func	ddcci_caps_reply(): builds the DDC/CI Capabilities reply (cmd 0xE3). Copies the caps string byte-by-byte into the reply buffer at XDATA 0xDDA9+index; picks the string by (source_class & 0xF).	[fw]
+CODE:b87d	ddcci_caps_reply_loop_a	func	Loop body of ddcci_caps_reply entered after string A copy; same logic.	[fw]
+CODE:b894	ddcci_caps_reply_loop_b	func	Loop body of ddcci_caps_reply entered after string B copy; same logic.	[fw]
+CODE:2d72	caps_string_a	var	DDC/CI capabilities string A, used when source_class low nibble is 3, 5 or 6. This unit: (prot(monitor)type(LCD)model(RTK)cmds(01 02 03 07 0C E3 F3)vcp(02)mswhql(1)asset_eep(40)mccs_ver(2.2))	[fw]
+CODE:2dd9	caps_string_b	var	DDC/CI capabilities string B, used when source_class low nibble is 4. Identical text on this unit.	[fw]
+EXTMEM:dbae	ddcci_cmd_byte	var	Command byte of the current DDC/CI message. Compared in CODE:5fc2 against 0xCD,0xDF,0xD2,0xD0,0xBB,0xDD,0xAB,0xAC,0xD3,0xD4,'H','P' (mostly NOT standard MCCS opcodes: likely Realtek private commands) and in the epilogue against 0x00/0x01/0x03 (reply-length class). Read via helper CODE:efd7. Earlier name ddcci_vcp_opcode was wrong.	[fw]
+CODE:5fc2	ddcci_private_cmd_dispatch	func	Dispatches on ddcci_cmd_byte: 0xCD,0xDF,0xD2,0xD0 call small handlers (0c99, fc2c, fc3f, fc52); 0xDD, 0xBB, 0xAB/0xAC, 'H'/'P', 0xD3, 0xD4 other paths. Role (private/factory vs standard) unconfirmed.	[guess]
+CODE:6b2e	vcp_set_switch_table	var	Keil C51 switch table (value, case address) pairs, 3-byte entries [vcp_code][addr_hi][addr_lo], used after LCALL 0x1617 (case helper) with the value from EXTMEM:dd27. Terminated by 0xFC 00 00. Codes: 02 04 05 06 08 0C 0E 10 12 14 16 18 1A 20 30 52 60 62 6C 6E 70 87 CA CC D6. Entries: 10->6CD8, 12->6CF3, 14->6D45, 60->6DDE, CA->6E38, CC->6E0F, D6->6E5B. Table purpose (set vs get) inferred from the set test (D6/60/CC accepted).	[guess]
+CODE:6e5b	case_vcp_d6_power_mode	var	Switch case label for VCP 0xD6 inside the big switch (not a function entry; decompiling from here gives unrelated setup code). Observed: value 4 -> reads back standby (2); value 2 ignored; 1 -> on.	[guess]
+CODE:6dde	case_vcp_60_input_source	var	Switch case label for VCP 0x60 (writes value DD29 to E05E).	[guess]
+CODE:6e38	case_vcp_ca_osd_button_ctrl	var	Switch case label for VCP 0xCA.	[guess]
+CODE:6e0f	case_vcp_cc_osd_language	var	Switch case label for VCP 0xCC: compares DD29 to 5/4/1.	[guess]
+CODE:6cd8	case_vcp_10_brightness	var	Switch case label for VCP 0x10.	[guess]
+EXTMEM:dd27	ddcci_vcp_code_in	var	Switch value loaded just before the Keil case helper (LCALL 0x1617) at CODE:6b1a: the VCP feature code of the request. DD28/DD29 are the value bytes (DD29 = low byte, used by the case bodies).	[fw]
+CODE:8330	vcp_get_table	var	Table of 3-byte entries [handler_hi][handler_lo][vcp_code], starting near CODE:832F. Codes include 04 05 06 08 0B 0C 10 12 14 16 18 1A 1E 20 30 52 60 62 6C 6E 70 7E 87 AC AE B2 B6 ... (the codes ddcutil getvcp known returned). Handler addresses 83AE..85xx.	[guess]
+EXTMEM:dbaf	ddcci_caps_len	var	Number of caps-string bytes to send in this reply chunk.	[fw]
+EXTMEM:dbb0	ddcci_caps_index	var	Loop index while copying the caps string.	[fw]
+EXTMEM:dbb1	ddcci_source_class	var	Low nibble selects caps string (3/5/6 -> A, 4 -> B). Probably the active input type; meaning unconfirmed.	[guess]
+EXTMEM:dda9	ddcci_reply_buf	var	Reply buffer base (index added to 0xDDA9).	[fw]

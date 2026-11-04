@@ -1,0 +1,8 @@
+# entry points to disassemble + create functions, one hex address per line (CODE space)
+0xB840
+0xB87D
+0xB894
+# private-command dispatcher: first compare of XDATA 0xDBAE vs command constants
+0x5FC2
+# NOT seeded: 0x6E5B 0x6DDE 0x6E38 0x6E0F 0x6CD8 are switch case labels (vcp_set_switch_table), not function entries.
+# TODO seed the function containing the switch (LCALL 0x1617 near 0x6B1A) once its start is known.
