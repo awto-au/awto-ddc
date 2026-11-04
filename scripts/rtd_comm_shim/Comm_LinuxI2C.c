@@ -20,7 +20,7 @@ static FILE *lg;
 
 static void tr(const char *fmt, ...) {
     va_list ap;
-    if (!lg) lg = fopen("Comm_LinuxI2C.log", "a");
+    if (!lg) { const char *p = getenv("RTD_SHIM_LOG"); lg = fopen(p ? p : "Comm_LinuxI2C.log", "a"); }
     if (!lg) return;
     va_start(ap, fmt); vfprintf(lg, fmt, ap); va_end(ap); fputc('\n', lg); fflush(lg);
 }
@@ -79,20 +79,20 @@ EXP DWORD I2CWriteByte(DWORD dev, DWORD sub, DWORD v) {
     return xfer(2, dev & 0xFE, sub & 0xFF, 1, &b, 1, NULL);
 }
 
-EXP DWORD GetCommID(void) { return 0xAB0BB; }
-EXP DWORD GetCommName(wchar_t *s, DWORD max) { wcsncpy(s, L"LinuxI2C", max); return 0; }
-EXP DWORD GetDeviceCount(void) { return 0; }
-EXP DWORD GetDeviceHandler(void) { return 0; }
-EXP DWORD GetI2CPageLength(void) { return 0x80; }
-EXP DWORD GetI2CSpeed(void) { return i2c_khz; }
-EXP DWORD SetI2CSpeed(DWORD k) { i2c_khz = k; return 0; }
-EXP DWORD GetNativePageLength(void) { return 0; }
-EXP DWORD GetSMBUSDataType(void) { return 0; }
-EXP ULONGLONG GetWaitingMode(void) { return 0; }
-EXP DWORD InitialDev(void) { return 0; }
-EXP DWORD ReleaseDev(void) { return conn() ? 0 : ERR; }
-EXP DWORD SetCmdLine(void) { return 0; }
-EXP DWORD SetSettingFilePath(void) { return 0; }
+EXP DWORD GetCommID(void) { tr("GetCommID"); return 0xAB0BB; }
+EXP DWORD GetCommName(wchar_t *s, DWORD max) { tr("GetCommName max=%lu", max); wcsncpy(s, L"LinuxI2C", max); return 0; }
+EXP DWORD GetDeviceCount(void) { tr("GetDeviceCount"); return 0; }
+EXP DWORD GetDeviceHandler(void) { tr("GetDeviceHandler"); return 0; }
+EXP DWORD GetI2CPageLength(void) { tr("GetI2CPageLength"); return 0x80; }
+EXP DWORD GetI2CSpeed(void) { tr("GetI2CSpeed -> %lu", i2c_khz); return i2c_khz; }
+EXP DWORD SetI2CSpeed(DWORD k) { tr("SetI2CSpeed %lu", k); i2c_khz = k; return 0; }
+EXP DWORD GetNativePageLength(void) { tr("GetNativePageLength"); return 0; }
+EXP DWORD GetSMBUSDataType(void) { tr("GetSMBUSDataType"); return 0; }
+EXP ULONGLONG GetWaitingMode(void) { tr("GetWaitingMode"); return 0; }
+EXP DWORD InitialDev(void) { tr("InitialDev"); return 0; }
+EXP DWORD ReleaseDev(void) { tr("ReleaseDev"); return conn() ? 0 : ERR; }
+EXP DWORD SetCmdLine(void) { tr("SetCmdLine"); return 0; }
+EXP DWORD SetSettingFilePath(void) { tr("SetSettingFilePath"); return 0; }
 EXP DWORD AdjustOption(void) { MessageBoxA(NULL, "Comm_LinuxI2C: forwards I2C to 127.0.0.1 bridge (RTD_BRIDGE_PORT)", "Comm_LinuxI2C", MB_OK); return 0; }
 EXP DWORD I2C2SubRead(void) { return 0; }
 EXP DWORD I2C2SubWrite(void) { return 0; }
