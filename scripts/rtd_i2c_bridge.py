@@ -2,11 +2,12 @@
 """Native I2C bridge for the Wine comm shim (scripts/rtd_comm_shim/).
 
 usage: rtd_i2c_bridge.py emu  <flash_dump.bin> [--port N]
-       rtd_i2c_bridge.py real <bus> [--allow-write] [--port N]
+       rtd_i2c_bridge.py real <bus> [--allow-write | --regread] [--port N]
 
 emu : software model of an RTD scaler ISP port (slave 0x4A) backed by an in-memory copy
       of a flash dump. Writes/erases touch only the copy. Every access is logged.
 real: forwards to /dev/i2c-<bus>. Writes are BLOCKED unless --allow-write.
+      --regread: allow only ISP 0xF4 (index) and 0xF5 page select (index 0x9F) so register READS work in ISP mode.
 Wire format (shim -> bridge): <BBBHH> op(1=read,2=write) dev8 sub nbytes datalen + data;
 reply: <BH> status(0 ok, 1 fail) len + data. dev8 = 8-bit address incl. R/W bit.
 Protocol/regs: docs/reversing/realtek-rtd/README.md. Log: ./tmp/logs/rtd_i2c_bridge.log
@@ -118,9 +119,20 @@ class Real:
     class RdWr(ctypes.Structure):
         _fields_ = [("msgs", ctypes.c_void_p), ("nmsgs", ctypes.c_uint32)]
 
-    def __init__(self, bus: int, allow_write: bool):
+    def __init__(self, bus: int, allow_write: bool, regread: bool = False):
         self.fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
         self.allow_write = allow_write
+        self.regread = regread
+        self.f4 = None          # last scaler index written to ISP 0xF4
+
+    def regread_ok(self, dev8, sub, data) -> bool:
+        """--regread: only writes that select a scaler register for reading (ISP 0xF4 index, 0xF5 when
+        index = 0x9F page select). Flash engine 0x60-0x70, 0x6F ISP, 0xEE reset, other F5 data: blocked."""
+        if dev8 >> 1 != 0x4A or len(data) != 1:
+            return False
+        if sub == 0xF4:
+            self.f4 = data[0]; return True
+        return sub == 0xF5 and self.f4 == 0x9F
 
     def _x(self, msgs):
         arr = (self.Msg * len(msgs))(*msgs)
@@ -137,7 +149,7 @@ class Real:
         return r.raw
 
     def write(self, dev8, sub, data):
-        if not self.allow_write:
+        if not self.allow_write and not (self.regread and self.regread_ok(dev8, sub, data)):
             log(f"REAL write BLOCKED dev=0x{dev8>>1:02x} reg 0x{sub:02x} {data[:16].hex()}"); return False
         w = ctypes.create_string_buffer(bytes([sub]) + data, 1 + len(data))
         try:
@@ -188,7 +200,7 @@ def main() -> int:
     if sys.argv[1] == "emu":
         be = Emu(Path(sys.argv[2]).read_bytes())
     else:
-        be = Real(int(sys.argv[2]), "--allow-write" in sys.argv)
+        be = Real(int(sys.argv[2]), "--allow-write" in sys.argv, "--regread" in sys.argv)
     serve(be, port)
     return 0
 
