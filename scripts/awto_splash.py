@@ -182,7 +182,8 @@ def draw(bus, glyphs, cells, cols, rows, scale):
     o.wr(FRAME_BASE + 0x03, 0)                           # vert_delay2 = 0
     o.wr(FRAME_BASE + 0x04, 0)                           # hori_delay2[9:2]
     o.rmw(FRAME_BASE + 0x05, 0xF8, 0x02 << 6)            # hori_delay2 = 2 (regdb minimum), vert[2:0]=0
-    t.set_origin((SCREEN[0] - cols * CELL_W * scale) // 2, (SCREEN[1] - rows * CELL_H * scale) // 2)
+    # origin regs count pre-scale OSD px (hw-confirmed bus 20 at 2x, 2026-11-04)
+    t.set_origin((SCREEN[0] // scale - cols * CELL_W) // 2, (SCREEN[1] // scale - rows * CELL_H) // 2)
     o.set_opt(SRAM_WIN)
     o.osd_enable(True)
     P.log(f"splash drawn: {cols}x{rows} cells, {len(glyphs)} glyphs, font_base 0x{font_base:x}, scale {scale}")

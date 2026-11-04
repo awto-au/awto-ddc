@@ -295,7 +295,7 @@ class TechOsd:
         h = (self.n_rows + 1) * CELL_H
         o.win_set(0, 0, 0, w, h, color=PAL_PANEL)
         sw, sh = screen
-        self.set_origin((sw - w * scale) // 2, (sh - h * scale) // 2)
+        self.set_origin((sw // scale - w) // 2, (sh // scale - h) // 2)   # origin = pre-scale OSD px
         o.set_opt(SRAM_WIN)
         o.osd_enable(True)
 
