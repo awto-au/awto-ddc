@@ -97,10 +97,11 @@ class Rtd(Isp):
         fcntl.ioctl(self.fd, I2C_RETRIES, n)
 
     def write_block(self, reg, data):
-        # One message. Splitting select + data (to dodge i915 "NAK on first message, retry") did not stop the
-        # duplicated-chunk failures (#12); don't repeat the reg byte after a repeated start: it lands in the FIFO.
-        w = ctypes.create_string_buffer(bytes([reg]) + bytes(data), 1 + len(data))
-        self._xfer([Msg(ISP_ADDR, 0, 1 + len(data), ctypes.addressof(w))])
+        # One data byte per message: the scaler NAKs mid-message when busy and i915 resends the whole message
+        # ("NAK on first message, retry", dmesg drm.debug=0x4), duplicating the accepted prefix in the 0x70 FIFO.
+        # A NAKed single byte was not taken, so the resend is harmless (#12).
+        for b in data:
+            self.write(reg, b)
 
     def wait_engine(self, what, limit=0.3):
         # Engine clears reg0x60 bit0 when the SPI transaction completes. Erase (op 0x20) can take up to
