@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""Port the Realtek RL64xx Keil C51 SDK to SDCC: mechanical source rewrite + per-file compile harness.
+
+usage: keil2sdcc.py port                     SDK -> tmp/sdcc-port/src (rewritten; regenerable)
+       keil2sdcc.py compile <uv2> [--target T] [--jobs N] [--only SUBSTR]
+                                             compile ONE target's C files (multi-target projects need
+                                             --target, e.g. RL6449_Project), bucket errors
+       keil2sdcc.py report                   print the last compile's error histogram
+
+- Source of truth = SDK mirror (read-only) + the rules here + fw/sdcc/*.h. Never hand-edit tmp/sdcc-port/src:
+  fix a rule or the compat header and re-run `port` (the tree is a derived artifact).
+- <uv2> is SDK-relative, e.g. Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2
+- Output: tmp/sdcc-port/{src,obj,logs}, tmp/sdcc-port/report.json. Log: tmp/logs/keil2sdcc.log
+- Repo is private (Realtek code), see CLAUDE.md. Tracking: awto-ddc#8.
+"""
+import json, os, re, shutil, subprocess, sys, time
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+
+def repo_root():
+    env = os.environ.get("AWTO_DDC_REPO")
+    if env:
+        return Path(env)
+    try:
+        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"],
+                                            cwd=Path(__file__).parent, text=True).strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return Path(__file__).resolve().parent.parent
+
+
+ROOT = repo_root()
+SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))
+WORK = ROOT / "tmp" / "sdcc-port"
+SRC = WORK / "src"
+SHIM = ROOT / "fw" / "sdcc"                    # keil_compat.h, intrins.h (committed)
+SDCC = "sdcc-sdcc"                             # Fedora package name
+# One file is a few seconds; 60 s without completion = hung (stall rule, awto-dan#53). Expiry -> logged fail.
+COMPILE_TIMEOUT = 60
+LOG = None
+
+
+def log(s):
+    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    print(line)
+    LOG.write(line + "\n"); LOG.flush()
+
+
+# ---------------- rewrite rules ----------------
+SRC_EXT = {".c", ".h"}
+RULES = [
+    # Keil memory qualifiers that can also be identifiers: only in declarator position
+    (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
+    (re.compile(r"\bdata(?=\s+[\*A-Za-z_])"), "__data"),
+    # sfr NAME = 0xNN;  ->  __sfr __at(0xNN) NAME;
+    (re.compile(r"\bsfr\s+(\w+)\s*=\s*([0-9A-Fa-fxX]+)\s*;"), r"__sfr __at(\2) \1;"),
+    (re.compile(r"\bsfr16\s+(\w+)\s*=\s*([0-9A-Fa-fxX]+)\s*;"), r"__sfr16 __at(\2) \1;"),
+    # ISR / register bank, only right after a parameter list: `) interrupt N [using M]`, `) using M`
+    (re.compile(r"\)\s*interrupt\s+(\w+)\s+using\s+(\w+)"), r") __interrupt(\1) __using(\2)"),
+    (re.compile(r"\)\s*interrupt\s+(\w+)(?=\s*[{;\n])"), r") __interrupt(\1)"),
+    (re.compile(r"\)\s*using\s+(\d)(?=\s*[{;\n])"), r") __using(\1)"),
+    # TYPE QUAL NAME _at_ ADDR;  ->  __at(ADDR) TYPE QUAL NAME;
+    (re.compile(r"^(\s*)([^;\n]*?)\b(\w+)\s+_at_\s+([^;]+);", re.M), r"\1__at(\4) \2\3;"),
+    # Keil-only pragmas (optimiser level, register banks) -> dropped; save/restore are kept (SDCC has them)
+    (re.compile(r"^\s*#\s*pragma\s+(OT|OPTIMIZE|NOAREGS|AREGS|REGPARMS|NOREGPARMS|SRC|ASM|ENDASM|"
+                r"LARGE|SMALL|COMPACT|ROM|CODE|DEBUG|OBJECTEXTEND|SYMBOLS|NOINTVECTOR|INTVECTOR)\b.*$",
+                re.M | re.I), r"// [keil2sdcc] dropped pragma"),
+]
+SBIT = re.compile(r"\bsbit\s+(\w+)\s*=\s*([\w]+)\s*\^\s*(\d)\s*;")
+INCLUDE = re.compile(r'^(\s*#\s*include\s*[<"])([^>"]+)([>"])', re.M)
+
+
+def build_name_index():
+    """lower-case basename -> list of SDK-relative paths (Windows includes are case-insensitive)."""
+    idx = {}
+    for p in SDK.rglob("*"):
+        if p.is_file() and ".git" not in p.parts:
+            idx.setdefault(p.name.lower(), []).append(p.relative_to(SDK))
+    return idx
+
+
+def fix_includes(text, here: Path, idx):
+    def sub(m):
+        inc = m.group(2).replace("\\", "/")
+        cand = (here / inc)
+        if cand.exists():
+            return m.group(1) + inc + m.group(3)
+        hits = idx.get(Path(inc).name.lower())
+        if hits and len(hits) == 1:                         # basename unique -> correct the case
+            fixed = str(Path(inc).parent / hits[0].name) if "/" in inc else hits[0].name
+            return m.group(1) + fixed + m.group(3)
+        return m.group(1) + inc + m.group(3)
+    return INCLUDE.sub(sub, text)
+
+
+USING_DEF = re.compile(r"\b(\w+)\s*\([^;{)]*\)\s*using\s+(\d)\s*\n?\s*\{")
+
+
+def add_using_to_protos(text, using, stats):
+    """SDCC needs the prototype's __using(N) to match the definition (Keil does not).
+    Dropping it is unsafe: the fn runs on an ISR register bank."""
+    def sub(m):
+        bank = using.get(m.group(2))
+        if bank is None or "__using" in m.group(0) or re.search(r"\breturn\b", m.group(1)):
+            return m.group(0)
+        stats["proto __using added"] += 1
+        return f"{m.group(1)}{m.group(2)}({m.group(3)}) __using({bank});"
+    # declaration line: [extern] <type words> [*] name(params);  (a call has no type words before it)
+    return re.sub(r"^(\s*(?:extern\s+)?(?:\w+\s+)+\**\s*)(\w+)\s*\(([^;{()]*)\)\s*;", sub, text, flags=re.M)
+
+
+def rewrite(text, here, idx, sfr_addr, using, stats):
+    text = text.replace("\r\n", "\n")
+    text = fix_includes(text, here, idx)
+    text = add_using_to_protos(text, using, stats)
+    for rx, rep in RULES:
+        text, n = rx.subn(rep, text)
+        if n:
+            stats[rx.pattern[:40]] += n
+
+    def sbit(m):
+        name, reg, bitn = m.group(1), m.group(2), int(m.group(3))
+        base = int(reg, 0) if re.fullmatch(r"0[xX][0-9A-Fa-f]+|\d+", reg) else sfr_addr.get(reg)
+        if base is None:
+            stats["sbit unresolved"] += 1
+            return m.group(0)
+        stats["sbit"] += 1
+        return f"__sbit __at(0x{base + bitn:02X}) {name};"
+    return SBIT.sub(sbit, text)
+
+
+def cmd_port():
+    if SRC.exists():
+        shutil.rmtree(SRC)
+    idx = build_name_index()
+    sfr_addr, using = {}, {}
+    files = [p for p in SDK.rglob("*") if p.is_file() and ".git" not in p.parts]
+    for p in files:                                          # pass 1: sfr addresses, `using` definitions
+        if p.suffix.lower() in SRC_EXT:
+            t = p.read_text(errors="replace")
+            for m in re.finditer(r"\bsfr\s+(\w+)\s*=\s*(0[xX][0-9A-Fa-f]+|\d+)\s*;", t):
+                sfr_addr[m.group(1)] = int(m.group(2), 0)
+            for m in USING_DEF.finditer(t):
+                using[m.group(1)] = m.group(2)
+    stats = Counter()
+    n = 0
+    for p in files:
+        rel = p.relative_to(SDK)
+        dst = SRC / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if p.suffix.lower() in SRC_EXT:
+            raw = p.read_bytes().decode("latin-1")           # byte-preserving; comments are GBK/Big5
+            dst.write_bytes(rewrite(raw, p.parent, idx, sfr_addr, using, stats).encode("latin-1"))
+            n += 1
+        elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:
+            shutil.copy2(p, dst)
+    log(f"port: {n} C/H files rewritten into {SRC}; sfr map {len(sfr_addr)} names; "
+        f"{len(using)} fns with `using`")
+    for k, v in stats.most_common():
+        log(f"  rule {v:6d}  {k}")
+    return 0
+
+
+# ---------------- uVision2 project ----------------
+def parse_uv2(uv2: Path, target=None):
+    """C files + C51DEF + INCC5 + memory model of ONE target. Multi-target projects: groups/files whose
+    `Options T,G,F` block has IncBld=0 are excluded for target T (only that target is ever built)."""
+    txt = uv2.read_bytes().decode("latin-1")
+    blocks = {(int(m.group(1)), int(m.group(2)), int(m.group(3))): m.group(5)
+              for m in re.finditer(r"^Options (\d+),(\d+),(\d+)\s*// (Target|Group|File)[^\n]*\n(.*?)^EndOpt",
+                                   txt, re.M | re.S)}
+    tnames = {int(m.group(1)): m.group(2) for m in re.finditer(r"^Options (\d+),0,0\s*// Target '([^']+)'", txt, re.M)}
+    if target is None:
+        if len(tnames) > 1:
+            sys.exit(f"{uv2.name} has targets {sorted(tnames.values())}: pass --target")
+        t = next(iter(tnames), 1)
+    else:
+        t = next((k for k, v in tnames.items() if v == target), None)
+        if t is None:
+            sys.exit(f"target {target!r} not in {sorted(tnames.values())}")
+    tb = blocks.get((t, 0, 0), txt)
+
+    def excluded(g, f):
+        for key in ((t, g, 0), (t, g, f)):
+            b = blocks.get(key)
+            if b and re.search(r"^\s*IncBld=0", b, re.M):
+                return True
+        return False
+    files, nth = [], Counter()
+    for m in re.finditer(r"^File (\d+),(\d+),<([^>]+)>", txt, re.M):
+        g = int(m.group(1)); nth[g] += 1
+        if m.group(2) == "1" and not excluded(g, nth[g]):
+            files.append(m.group(3).replace("\\", "/"))
+    defs = re.search(r"C51DEF \((.*)\)", tb)
+    incs = re.search(r"INCC5 \((.*)\)", tb)
+    defines = [d.replace(" ", "") for d in defs.group(1).split(",")] if defs and defs.group(1) else []
+    inc = [i.replace("\\", "/") for i in incs.group(1).split(";")] if incs and incs.group(1) else []
+    model = re.search(r"MODEL5=(\d)", tb)
+    return files, defines, inc, int(model.group(1)) if model else 2
+
+
+def norm_err(line):
+    """Strip location/identifiers so equal problems bucket together."""
+    s = re.sub(r"^.*?:\d+:\s*", "", line)
+    s = re.sub(r"'[^']*'", "'X'", s)
+    s = re.sub(r"\b0x[0-9a-fA-F]+\b|\b\d+\b", "N", s)
+    return s.strip()[:120]
+
+
+def compile_one(c: Path, uv2dir: Path, defines, incs, model):
+    rel_dir = uv2dir.relative_to(SRC)
+    out = WORK / "obj" / rel_dir / (c.stem + ".rel")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
+           "-c", "--std-sdcc11", f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
+    cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
+    cmd += [f"-I{c.parent}"]
+    cmd += [f"-D{d}" for d in defines]
+    cmd += ["-o", str(out), str(c)]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT)
+        msg, rc = r.stdout + r.stderr, r.returncode
+    except subprocess.TimeoutExpired:
+        msg, rc = f"TIMEOUT after {COMPILE_TIMEOUT}s", 124
+    return str(c.relative_to(SRC)), rc, msg
+
+
+def cmd_compile(uv2_rel, jobs, only, target):
+    uv2 = SRC / uv2_rel
+    files, defines, incs, model = parse_uv2(uv2, target)
+    cs = [(uv2.parent / f).resolve() for f in files]
+    if only:
+        cs = [c for c in cs if only.lower() in str(c).lower()]
+    missing = [c for c in cs if not c.exists()]
+    cs = [c for c in cs if c.exists()]
+    log(f"compile {uv2_rel}: {len(cs)} C files ({len(missing)} missing), defines {defines}, model {model}")
+    t0 = time.time()
+    with ThreadPoolExecutor(jobs) as ex:
+        res = list(ex.map(lambda c: compile_one(c, uv2.parent, defines, incs, model), cs))
+    ok = [r for r in res if r[1] == 0]
+    bad = [r for r in res if r[1] != 0]
+    hist, per_file = Counter(), {}
+    for f, rc, msg in bad:
+        errs = [l for l in msg.splitlines() if "error" in l.lower() or "TIMEOUT" in l]
+        per_file[f] = errs[:20]
+        for e in set(norm_err(l) for l in errs):
+            hist[e] += 1
+    (WORK / "logs").mkdir(parents=True, exist_ok=True)
+    seg = Counter()                                          # .rel area sizes (hex) summed over ok files
+    for f, _, _ in ok:
+        rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".rel")
+        for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
+            seg[m.group(1)] += int(m.group(2), 16)
+    rep = {"uv2": uv2_rel, "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "ok": len(ok), "fail": len(bad),
+           "missing": [str(m) for m in missing], "segments": dict(seg), "hist": hist.most_common(),
+           "per_file": per_file}
+    log("segment bytes: " + ", ".join(f"{k}={v}" for k, v in seg.most_common() if v))
+    (WORK / "report.json").write_text(json.dumps(rep, indent=1))
+    log(f"compiled in {time.time() - t0:.0f}s: ok {len(ok)} fail {len(bad)}")
+    print_hist(rep)
+    return 0 if not bad else 1
+
+
+def print_hist(rep, n=25):
+    log(f"top errors (files affected) for {rep['uv2']}: ok {rep['ok']} fail {rep['fail']}")
+    for e, k in rep["hist"][:n]:
+        log(f"  {k:5d}  {e}")
+
+
+def main():
+    global LOG
+    (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
+    LOG = (ROOT / "tmp" / "logs" / "keil2sdcc.log").open("a")
+    a = sys.argv[1:]
+    if not a or a[0] in ("-h", "--help"):
+        print(__doc__); return 2
+    if a[0] == "port":
+        return cmd_port()
+    if a[0] == "compile":
+        jobs = int(a[a.index("--jobs") + 1]) if "--jobs" in a else os.cpu_count()
+        only = a[a.index("--only") + 1] if "--only" in a else None
+        target = a[a.index("--target") + 1] if "--target" in a else None
+        return cmd_compile(a[1], jobs, only, target)
+    if a[0] == "report":
+        print_hist(json.loads((WORK / "report.json").read_text()), 60); return 0
+    print(__doc__); return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
