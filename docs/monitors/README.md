@@ -40,7 +40,7 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - Bus 16 vs bus 20 dumps: code, EDIDs and caps strings identical; only 0xFB001-0xFCFFF differs (settings area) [fw]: same board + firmware build
 - EDID: three 256 B-spaced copies at 0x138D8 / 0x139D8 / 0x13AD8 (one per input port); each reads `JXC` / `4K MONITOR` / `demoset-1`
 - DDC caps string is plain text in flash, two copies at 0x52D72 and 0x52DD9: `(prot(monitor)type(LCD)model(RTK)cmds(01 02 03 07 0C E3 F3)vcp(02)mswhql(1)asset_eep(40)mccs_ver(2.2))`
-  - `vcp(02)` lists only one feature; whether the firmware has handlers for 0x10/0x60/0xD6 is untested [?]
+  - `vcp(02)` lists only one feature; the firmware answers many more (see DDC/CI section below)
 - Bus 10 dump (Intel DP, 256 B reads, ~3.5 min) matches the other two the same way: all three units run the same firmware build; only 0xFB001-0xFCFFF (+ 0xFBFFB-0xFCFFF) differs
 - The dumps leave each monitor in ISP mode (scaler MCU halted, DDC/CI silent, `ddcutil` shows "Invalid display")
 
@@ -54,7 +54,12 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - 0x60 input source reads `VGA-2 (sl=0x02)` on the DP-connected unit, and "Invalid value" in one `getvcp known` pass: do not rely on it yet
 - 0xCA `sh=0x00` is the power-button field, not 0xD6 (see issue #1 for the research)
 - Write test: `setvcp 0x10 80` read back 80; restored to 100. Brightness on buses 10 and 16 was 80 before this session's tests
-- Not tested: 0xD6 set (power-down), 0x60 set
+- Power (bus 20, `ddcutil --noverify setvcp 0xd6 N`, each value sent alone, 2026-11-04):
+  - `4` -> reads back `DPM: Off, DPMS: Standby (sl=0x02)`; user confirmed the monitor went to standby; DDC/CI keeps answering (brightness read OK)
+  - `2` -> no change (still On)
+  - `1` -> back to On, reads `sl=0x01`
+  - Without `--noverify`, ddcutil reports `DDCRC_VERIFY` because the read-back value differs from the value sent (4 reads back as 2)
+- Not tested: 0x60 set (input select), `0xD6` values 3 and 5
 
 ## I2C read throughput (2026-11-04, `scripts/i2c_bench.py`, 3 s per cell, read-only)
 
