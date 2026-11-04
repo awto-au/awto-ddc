@@ -49,6 +49,39 @@ expected-content check, read back, keep backups (see rtdflash). Backups: ~/vendo
 - **CAUTION — do NOT copy:** Kingdomwhisky/RTD-Scaler-TEST is leaked proprietary Realtek SDK. Reference for
   understanding the 0x90/0x91/0x92 `ScalerOsdAddrSet` + double-buffer only; no code reuse (licensing).
 
+## Priority order (Dan, 2026-11-04)
+1. Boot logo → awto (first flash write; proves the write+verify+revert flow). docs/boot-logo.md (agent).
+2. **Fix the EDID / identity + detection** — the high-value one. Dan reports GPUs frequently mis-detect
+   these monitors and are slow to. Goals:
+   - Replace demo identity (JXC / "4K MONITOR" / demoset-1) with a proper vendor/model/serial. Option:
+     emulate a well-known, widely-supported monitor's EDID so GPU drivers have a known-good profile
+     (decide: clean new identity vs clone a standard 28" 4K). [decision needed]
+   - Fix range limits / descriptors: base block is EDID 1.3 GTF (DP showed 1.4 w/ continuous-freq, HDMI
+     showed 1.3 GTF 15-222kHz) — inconsistent per port. Make both ports sane, CTA-861 correct, add proper
+     DisplayID/HDR/FreeSync blocks so modes negotiate cleanly.
+   - **Faster detection:** investigate WHY detection is slow. Candidates: DDC/EDID read latency (the scaler
+     is slow on the wire — we measured bus speeds), HPD timing, or a malformed block the GPU retries on.
+     Measure EDID read time per port; check for retries. A clean EDID + correct checksums usually fixes the
+     "GPU keeps re-reading / takes seconds to detect" problem.
+   - EDID lives in flash (3 copies ~0x138D8, per-port). Editing it is a DATA patch (route A), low risk;
+     recompute the EDID checksum(s) and the Realtek image checksum if validated.
+   - **Measured EDID conformance FAILs (HDMI port, edid-decode -c, 2026-11-04)** — the likely detection cause:
+     - Serial "demoset-1": "Non-space after newline" in the serial descriptor (malformed string).
+     - CTA Video Data Block: **Duplicate VIC 16** (1080p60 listed twice).
+     - HDMI VSDB Max TMDS rate > 340 MHz flagged (declares 600 but format/DC bits inconsistent).
+     - DTD #2/#3 image size 527x296 mm vs display size 620x350 mm mismatch.
+     - **Missing VCDB** (Video Capability Data Block) — needed for RGB quantization range; a known interop
+       problem (black-crush / wrong levels, and some drivers dislike its absence).
+     - "Native progressive timings are a mix of several resolutions" (ambiguous native mode).
+     - Warnings: timings out of the declared Monitor Range (24 Hz vs min 48 Hz); VIC16 vs first DTD differ.
+     - DP port vs HDMI port differ (base block 1.4 continuous-freq on DP, 1.3 GTF on HDMI) — inconsistent.
+   - Fix = author a clean, conformant EDID per port (or clone a known-good 28" 4K), correct checksums, add
+     VCDB, single native mode, consistent range limits. This should both fix mis-detection AND speed it up
+     (fewer driver retries on a malformed block).
+3. Capabilities string → advertise the VCPs the firmware actually handles (so OS tools stop hiding them).
+4. Technical OSD (PC-driven first via rtd_osd.py; firmware-resident later).
+5. No-signal / power-save behaviour (code patch).
+
 ## Open / feeding this proposal
 - [ ] button map + thresholds (agent)
 - [ ] OSD UX references from modern/open projects (agent)

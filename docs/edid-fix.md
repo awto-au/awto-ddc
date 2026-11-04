@@ -1,0 +1,110 @@
+# EDID rewrite: JXC 28in 4K, "awto" identity
+
+Status: authored + validated offline; NOTHING written to the device. Write is gated by the main session.
+
+## Files
+- Builder: `scripts/make_edid.py` (stdlib; runs `edid-decode -c` on its output)
+- EDIDs: `~/vendors/realtek/analysis/edid/awto-dp.bin`, `awto-hdmi.bin` (256 B each)
+- Sectors: `.../edid/orig_sector_13000.bin` (from `dumps/jxc-4k-flash-bus20.bin`), `patched_sector_13000.bin`, `sector_13000.diff.txt` (all 372 changed offsets)
+- Writer: `scripts/rtd_flash_sector.py` (dry-run default; `--write` required to modify)
+
+## Where the EDIDs live and how the firmware loads them
+- Flash `0x138D8`, `0x139D8`, `0x13AD8`, 256 B each, inside 4 KiB sector `0x13000-0x13FFF` (bank 1 offset `0x38D8/39D8/3AD8`) [measured: dump].
+- Loader: bank1 `FUN_CODE_d2a3` (`~/vendors/realtek/analysis/jxc-4k/bank1/disassembly.asm`, ~line 16251) [fw]:
+  - input index R7 = 4 -> flash `0x38D8` -> XDATA `0xE280`; R7 = 5 -> `0x39D8` -> `0xE480`; R7 = 6 -> `0x3AD8` -> `0xE680`
+  - memset 256 B (`0x181a`), then 256 B memcpy code->xdata (`0x11b3`). No checksum or compare in the path.
+- Slot 0 holds the DP EDID (1.4, DP interface bit); slots 1 and 2 held byte-identical HDMI EDIDs (1.3, HDMI VSDB). Slot-to-physical-connector mapping beyond "slot 0 = DP" is inferred from content, not probed [?].
+
+## Per-port decision: DIFFERENT EDIDs (DP vs HDMI), the two HDMI slots identical
+| | DP slot (0x138D8) | HDMI slots (0x139D8, 0x13AD8) |
+|---|---|---|
+| EDID version | 1.4 (DP spec requires >= 1.4) | 1.3 |
+| Video input byte | `0xB5`: digital, 10 bpc, DisplayPort | `0x81`: digital, DFP 1.x |
+| Feature byte | `0x3F` (sRGB, preferred, continuous freq, RGB+YCC444/422) | `0x27` (sRGB, preferred, GTF) |
+| Range limits type | `0x01` range-limits-only (GTF deprecated in 1.4) | `0x00` default GTF |
+| CTA ext | no VSDBs | + HDMI VSDB, HF-VSDB, AMD VSDB |
+- HDMI copy is 1.3 because edid-decode 1.32 FAILS an HDMI VSDB inside an EDID 1.4 base ("HDMI Specification requires EDID 1.3"). This is why the original HDMI copies were 1.3.
+- DP copy carries no HDMI/HF VSDB (meaningless on DP); everything else (identity, DTD, VICs, audio, VCDB) is shared.
+- Both HDMI slots share physical address 1.0.0.0 as before; a source-side CEC address is not meaningful on this panel.
+
+## Identity
+- PnP vendor `AWT`: `((A-64)<<10)|((W-64)<<5)|(T-64)` = `0x06F4`, bytes `06 F4`. Not a registered PnP ID (3-letter limit); edid-decode did not warn.
+- Product code `0x0001`; 32-bit serial field 0 (edid-decode warns if both it and the text serial are set).
+- 0xFC name `awto-mon`; 0xFF serial text `AWT26110001` (newline then space padding, no stray bytes).
+- Made week 44 of 2026 (`0x2C`, `0x24`).
+
+## Annotated layout (base block, same for both ports except bytes 0x12-0x14, 0x18, 0x6E-0x71 region)
+| Offset | Bytes | Meaning |
+|---|---|---|
+| 0x00 | `00 ff*6 00` | header |
+| 0x08 | `06 f4` | vendor AWT |
+| 0x0A | `01 00` | product 1 |
+| 0x0C | `00 00 00 00` | serial32 = 0 |
+| 0x10 | `2c 24` | week 44, year 2026 |
+| 0x12 | `01 04` / `01 03` | EDID 1.4 (DP) / 1.3 (HDMI) |
+| 0x14 | `b5` / `81` | video input (see table) |
+| 0x15 | `3e 23` | 62 x 35 cm |
+| 0x17 | `78` | gamma 2.20 |
+| 0x18 | `3f` / `27` | features |
+| 0x19 | `ee 91 a3 54 4c 99 26 0f 50 54` | chromaticity, unchanged (sRGB-like) |
+| 0x23 | `21 08 00` | est. timings 640x480, 800x600, 1024x768 |
+| 0x26 | `d1c0 9500 9040 8180 8140 81c0 0101 0101` | std: 1080p, 1440x900, 1400x1050, 1280x1024, 1280x960, 1280x720, 2 unused (`0101`) |
+| 0x36 | DTD1 | 3840x2160 533.12 MHz, 620x350 mm, htotal 4000 vtotal 2222, +H -V |
+| 0x48 | `fc` | name `awto-mon` |
+| 0x5A | `ff` | serial `AWT26110001` |
+| 0x6C | `fd 00 18 3c 0f 87 3c {01\|00} 0a ...` | V 24-60 Hz, H 15-135 kHz, <= 600 MHz |
+| 0x7E | `01`, checksum | 1 extension |
+
+CTA-861 rev 3 extension:
+- header flags `0xF1`: underscan, basic audio, YCC444+422, 1 native DTD (the base DTD1)
+- VDB (18 VICs): 97 96 95 94 93 (4K 60/50/30/25/24), 16 31 32 33 34 (1080p), 4 19 60 61 62 (720p), 1 2 3 (SD). Deduped: removed second VIC 16 and VIC 76. No native flag (VIC 97 cannot carry one; native = base DTD1).
+- Audio: LPCM 2ch 32-192 kHz, 16/20/24 bit (unchanged). Speakers FL/FR.
+- VCDB `0xCA`: YCC + RGB quantization selectable; IT/CE always underscanned (matches header underscan bit).
+- HDMI slots only:
+  - HDMI VSDB: PA 1.0.0.0, DC_30bit + DC_Y444, legacy max TMDS 340 MHz (`0x44`).
+  - HF-VSDB: v1, max TMDS char rate 600 MHz (`0x78`), SCDC present, scrambling for <= 340 Mcsc. 4K60 4:4:4 8 bpc (VIC 97, 594 MHz) fits; 10-bit 4K60 is not claimed (needs 742 MHz). Dropped the old `DC_30bit_420` bit (no Y420 map declared).
+  - AMD VSDB carried over unchanged (48-60 Hz FreeSync range) [fw: original bytes].
+- DTD2 1920x1080 148.5 MHz: now exactly VIC 16 timing (88/44/148, 4/5/36). DTD3 2560x1440 241.7 MHz (CVT-RB) unchanged. Both image size 620x350 mm.
+
+## Conformance (`edid-decode -c`, edid-decode 1.32.0)
+Before (live HDMI copy; DP copy equivalent, `FAIL`):
+- serial "Non-space after newline"; image size 527x296 vs 620x350 (DTD2, DTD3); missing VCDB; native progressive timings mix of several resolutions
+- also (HDMI copy): duplicate VIC 16, HF-VSDB / legacy max TMDS 600 > 340 inconsistency; timings out of Monitor Range (24 Hz modes vs 48-60 Hz); base 1.4 vs 1.3 mismatch between ports
+
+After (both `awto-dp.bin` and `awto-hdmi.bin`): `EDID conformity: PASS`, zero failures.
+- Remaining warning (both): "VIC 97 and the first DTD are not identical". Intended: DTD1 is the panel's real 533.12 MHz reduced-blanking timing, VIC 97 is the standard 594 MHz CTA timing.
+
+## Checksum finding: NO image or EDID-region checksum validated
+- EDID load path (above) is a plain 256 B copy; nothing sums or compares it [fw]. Only the per-block EDID checksums matter to sources; both blocks of each new EDID sum to 0.
+- Searched bank0/bank1 disassembly (common area `0x0000-0x28C6` shared by both): no MOVC loop that accumulates over code space (only switch-table/compare helpers), no `0x55AA`/`0xAA55` compare in code. Whole-image sum over banks 0-12 = `0xFCDC` (not zero) and the only `55 AA` / `AA 55` byte pairs in the dump are at `0xE076C`, `0xE0831`, `0x3978` (none near the boot path).
+- The ISP `0x55AA` boot flag at `0x7000` is a write the vendor tool does, not a validated flash checksum.
+- RTDTool's "Total CheckSum / File CRC" fields are host-side display values, not image content.
+- Confidence: not exhaustive (banks 2-6 and the 0xE0000/0xF0000 blocks not traced); if the monitor misbehaves after the write, revert (below) and trace further. No checksum is included in the patch.
+
+## The patch
+- Sector `0x13000-0x13FFF` (4096 B). Only EDID bytes differ: 372 bytes, all inside `0x138D8-0x139D7`, `0x139D8-0x13AD7`, `0x13AD8-0x13BD7` (full list: `sector_13000.diff.txt`).
+- sha256 orig sector `70cb3052910dc2ae388c6829df3cfd99a51ffab2af4574d7848b09a3667eee52`
+- sha256 patched sector `0c31fc440233ea54d830faa08f4058f2b9a52e4a6db8b4c7c6d0fbac0f002699`
+- Flash chip: Macronix `C2 20 14` (1 MiB); 4 KiB sector erase op `0x20`. Sector `0x13000` also holds non-EDID data (before `0x138D8` and after `0x13BD8`); it is rewritten byte-identical.
+- Offline simulation of the writer (dry-run and write paths against a mock register file) reproduced the expected result; it has not been exercised against real hardware.
+
+## Flash procedure
+Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect --brief`. Do all of this on the same bus the dumps used (bus 20 last time). Use dir `/mnt/2tb/git/awto-ddc`.
+1. Confirm bus and a healthy read: `python3 scripts/rtd_isp_probe.py <bus>` (read-only).
+2. Dry run (enters ISP, reads, backs up, compares, resets; no erase/program):
+   `python3 scripts/rtd_flash_sector.py <bus> 0x13000 ~/vendors/realtek/analysis/edid/patched_sector_13000.bin --expect-current ~/vendors/realtek/analysis/edid/orig_sector_13000.bin`
+   - Expect: `JEDEC c22014`, `current vs new file: 372 bytes differ`, `current vs --expect-current: 0 bytes differ`, a backup file in `tmp/flash-backups/`.
+   - If the second number is non-zero the sector differs from the 2026-11-04 dump: stop and inspect.
+3. Keep the backup (`tmp/flash-backups/sector_013000_<timestamp>.bin`) and `orig_sector_13000.bin` (identical content expected). Copy the backup somewhere durable before step 4.
+4. Write (main session gate): same command plus `--write`.
+   - Sequence: backup -> unprotect status reg if BP bits set (restored afterwards) -> erase 4 KiB -> blank check -> 16 x 256 B page programs -> read back -> compare -> scaler reset.
+   - Expect `VERIFY OK: readback == new data`. Any other result: do not power-cycle yet; go to Revert.
+5. Power-cycle the monitor (ISP stops the scaler MCU; the `0xEE` reset normally restarts it).
+6. Verify on the host: re-read EDID via `/sys/class/drm/*/edid` per connector (`edid-decode`), expect `AWT` / `awto-mon` / `AWT26110001`, PASS. Replug or reboot if the kernel cached the old EDID. Check each input (DP and both HDMI).
+7. Also confirm DDC/CI still works (`ddcutil detect`, capabilities) and the picture comes up at 3840x2160@60.
+
+## Revert
+- Same writer, backup as the data file, new data as the expected-current:
+  `python3 scripts/rtd_flash_sector.py <bus> 0x13000 <backup.bin> --expect-current ~/vendors/realtek/analysis/edid/patched_sector_13000.bin --write`
+- If the monitor does not respond on DDC (EDID corrupt but ISP port is independent of the EDID): ISP is still reachable on I2C 0x4A; use the same command. If `--expect-current` aborts because the sector is partially written, drop that flag (backup is the known-good source).
+- Last resort: full 1 MiB re-flash from `dumps/jxc-4k-flash-bus20.bin` with RTDTool / `rtd-2660` flow.
