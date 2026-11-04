@@ -29,9 +29,14 @@ class Emu:
         self.flash = bytearray(dump)
         self.regs = bytearray(256)
         self.regs[0x23] = 0x6E   # read from two real units (ISP mode), 2026-11-04; the tool reads this first
+        self.regs[0x00] = 0xCF   # ID_REG via direct MCU-subaddress path (tool probes this too)
+        self.regs[0x0F] = 0x23
         self.isp = False
         self.fifo = 0
         self.prog = bytearray()
+        # Scaler registers read via the F4/F5 indirect window (F4 = index, F5 = data).
+        # Seeded from the live RTD2795T unit (ID_REG 0xCF, 0x0F 0x23) so the tool identifies the chip.
+        self.scaler = {0x00: 0xCF, 0x0F: 0x23, 0x9F: 0x00, 0x90: 0x00, 0x91: 0x40, 0x93: 0x00, 0x94: 0x80}
 
     def addr24(self) -> int:
         return (self.regs[0x64] << 16) | (self.regs[0x65] << 8) | self.regs[0x66]
@@ -48,6 +53,8 @@ class Emu:
                 out.append(0x92 if self.isp else 0x00)
             elif r == 0x60:
                 out.append(self.regs[0x60] & ~1)
+            elif r == 0xF5:
+                out.append(self.scaler.get(self.regs[0xF4], 0x00))   # indirect scaler-register read
             else:
                 out.append(self.regs[r])
         log(f"EMU read  reg 0x{sub:02x} n={n} -> {bytes(out[:16]).hex()}{'..' if n > 16 else ''}")
