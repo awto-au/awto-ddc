@@ -23,7 +23,7 @@
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
 #define _AWTO_DEMO_LOGO                                         _OFF    // awto: cut (Dan 2026-11-04, #8)
-#define _CHECKSUM                                               0xA1    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
+#define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 
 /////////////

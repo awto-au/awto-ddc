@@ -98,8 +98,8 @@
 // Input Port Search Priority Define (Must Start From Valid Port)
 //--------------------------------------------------
 // awto: A0/D0 are not wired; PRI_0 is also the NVRAM default port, i.e. the boot DDC-CI channel (#8)
-#define _INPUT_PORT_SEARCH_PRI_0                _D1_INPUT_PORT
-#define _INPUT_PORT_SEARCH_PRI_1                _D2_INPUT_PORT
+#define _INPUT_PORT_SEARCH_PRI_0                _D2_INPUT_PORT
+#define _INPUT_PORT_SEARCH_PRI_1                _D1_INPUT_PORT
 #define _INPUT_PORT_SEARCH_PRI_2                _D3_INPUT_PORT
 #define _INPUT_PORT_SEARCH_PRI_3                _NO_INPUT_PORT
 #define _INPUT_PORT_SEARCH_PRI_4                _NO_INPUT_PORT
