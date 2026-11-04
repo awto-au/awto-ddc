@@ -28,7 +28,7 @@ def log(s):
     F.log(s)
 
 
-SECTOR_TRIES = 3            # sporadic single-sector verify failures seen 2x in ~80 sectors (#8)
+SECTOR_TRIES = 5            # failures cluster (i915 stays bit-bang after a GMBUS timeout); 3 aborted once (#12)
 
 
 def write_sector(isp, addr, new):
@@ -59,8 +59,10 @@ def _write_sector(isp, addr, new):
             isp.program_page(addr + off, pg)
     back = isp.read_flash(addr, SECTOR)
     if back != new:
-        bad = next(i for i in range(SECTOR) if back[i] != new[i])
-        raise RuntimeError(f"VERIFY FAILED at 0x{addr + bad:06x}")
+        bad = [i for i in range(SECTOR) if back[i] != new[i]]
+        detail = " ".join(f"+{i:03x}:{new[i]:02x}->{back[i]:02x}(x{new[i] ^ back[i]:02x})" for i in bad[:12])
+        log(f"0x{addr:06x}: {len(bad)} bad byte(s), off%4={sorted({i % 4 for i in bad})}: {detail}")
+        raise RuntimeError(f"VERIFY FAILED at 0x{addr + bad[0]:06x}")
 
 
 def main() -> int:

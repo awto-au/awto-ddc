@@ -45,7 +45,7 @@ Protocol: docs/reversing/realtek-rtd/README.md; SPI-engine common cmd after ghen
 Monitor MCU is stopped while in ISP; the final 0xEE=0x02 resets the scaler (as rtd_isp_probe --resume).
 Log: ./tmp/logs/rtd_flash_sector.log
 """
-import argparse, ctypes, os, sys, time
+import argparse, ctypes, fcntl, os, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -88,8 +88,17 @@ def log(s):
     LOG.write(line + "\n"); LOG.flush()
 
 
+I2C_RETRIES = 0x0701        # linux/i2c-dev.h: set adapter retry count (adapter-wide, not per fd)
+I2C_RETRIES_DEFAULT = 1     # i915 gmbus sets adapter.retries = 1 (intel_gmbus.c); restored after each page
+
+
 class Rtd(Isp):
+    def set_retries(self, n):
+        fcntl.ioctl(self.fd, I2C_RETRIES, n)
+
     def write_block(self, reg, data):
+        # One message. Splitting select + data (to dodge i915 "NAK on first message, retry") did not stop the
+        # duplicated-chunk failures (#12); don't repeat the reg byte after a repeated start: it lands in the FIFO.
         w = ctypes.create_string_buffer(bytes([reg]) + bytes(data), 1 + len(data))
         self._xfer([Msg(ISP_ADDR, 0, 1 + len(data), ctypes.addressof(w))])
 
@@ -285,8 +294,16 @@ class Rtd(Isp):
         assert len(data) == PAGE
         self.write(0x64, (addr >> 16) & 0xFF); self.write(0x65, (addr >> 8) & 0xFF)
         self.poll_reg(0x6F, PROG_BUF_RDY, PROG_BUF_RDY, f"page 0x{addr:06x} buffer-ready", T_BUFRDY_LIMIT)
-        for i in range(0, PAGE, 64):                         # 64 B chunks: matches read_block granularity
-            self.write_block(0x70, data[i:i + 64])
+        # 0x70 is a FIFO: a resent chunk duplicates bytes (#12). Block the i2c-core resend on GMBUS timeout
+        # (-EAGAIN, adapter retries = 1); other resends still happen -> caller verifies and redoes the sector.
+        self.set_retries(0)
+        try:
+            for i in range(0, PAGE, 64):                     # 64 B chunks: matches read_block granularity
+                self.write_block(0x70, data[i:i + 64])
+        except OSError as e:
+            raise RuntimeError(f"page 0x{addr:06x} buffer write failed at chunk +0x{i:02x}: {e}") from e
+        finally:
+            self.set_retries(I2C_RETRIES_DEFAULT)
         v = self.read(0x6F)
         self.write(0x6F, (v & 0xFF) | PROG_BUSY)             # update_bits(0x6F, 0xFF, 0x20): set start bit
         self.poll_reg(0x6F, PROG_BUSY, 0x00, f"page 0x{addr:06x} program", T_PROG_LIMIT)
@@ -372,6 +389,9 @@ class FakeRtd(Rtd):
         elif reg == 0x6F:
             if val & PROG_BUSY:                     # start page program
                 self._program(val)
+
+    def set_retries(self, n):
+        pass
 
     def write_block(self, reg, data):
         for b in data:
