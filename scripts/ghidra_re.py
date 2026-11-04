@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """Ghidra RE driver for the JXC 4K monitor firmware (8051, one program per 64 KB bank).
 
-usage: ghidra_re.py import <bank>   create/refresh the program from banks/bank<N>.bin, seed, analyse, apply names, export
-       ghidra_re.py regen  <bank>   apply names TSV to the existing program and re-export (daily use)
-Per-bank data in re/jxc-4k/: ghidra_names_bank<N>.tsv (source of truth), seeds_bank<N>.txt.
+usage: ghidra_re.py import <bank|all>   create/refresh the program from banks/bank<N>.bin, seed, analyse, apply names, export
+       ghidra_re.py regen  <bank|all>   apply names TSV to the existing program and re-export (daily use)
+Per-bank data in re/jxc-4k/: ghidra_names_bank<N>.tsv (source of truth), seeds_bank<N>.txt (new banks: scripts/ghidra_seeds.py).
+Register labels (EXTMEM 0xFD00-0xFFFF) are generated from re/regdb by scripts/regdb_ghidra_labels.py (consensus of all
+chips; hand names win) into ./tmp/regs_bank<N>.tsv and applied before the hand names.
 Shared scripts (ApplyNames.java, ExportAll.java) are used from awto-2000 by path ($AWTO_2000), not copied.
 Project + firmware bytes stay out of git: ~/vendors/realtek/analysis/. Log: ./tmp/logs/re_<cmd>_<bank>.log
 Process: awto-dan docs/embedded/reversing/README.md
 """
 import os, subprocess, sys, threading, time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import regdb_ghidra_labels
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
@@ -43,7 +48,13 @@ def run(cmd, log_path: Path) -> int:
 
 
 def main() -> int:
-    cmd, bank = sys.argv[1], int(sys.argv[2])
+    cmd = sys.argv[1]
+    if sys.argv[2] == "all":
+        return max(one(cmd, b) for b in range(7))
+    return one(cmd, int(sys.argv[2]))
+
+
+def one(cmd, bank) -> int:
     name = f"bank{bank}.bin"
     tsv, seeds = DATA / f"ghidra_names_bank{bank}.tsv", DATA / f"seeds_bank{bank}.txt"
     out = VEND / "jxc-4k" / f"bank{bank}"
@@ -51,7 +62,9 @@ def main() -> int:
     PROJ_DIR.mkdir(parents=True, exist_ok=True)
     base = ["analyzeHeadless", str(PROJ_DIR), PROJ]
     paths = ["-scriptPath", f"{HERE.parent / 're' / 'ghidra'};{A2000}"]   # Ghidra separates with ';' on all OSes
-    tail = ["-postScript", "ApplyNames.java", str(tsv), "-postScript", "ExportAll.java", str(out), str(tsv)]
+    regs = ROOT / "tmp" / f"regs_bank{bank}.tsv"
+    regdb_ghidra_labels.write("consensus", [tsv], regs)
+    tail = ["-postScript", "ApplyRegLabels.java", str(regs), "-postScript", "ApplyNames.java", str(tsv), "-postScript", "ExportAll.java", str(out), str(tsv)]
     if cmd == "import":
         c = base + ["-import", str(VEND / "banks" / name), "-overwrite", "-loader", "BinaryLoader",
                     "-loader-baseAddr", "0", "-processor", LANG] + paths + \

@@ -1,0 +1,3 @@
+# ghidra_names_bank2.tsv - JXC 4K monitor firmware, bank 2 (flash 0x20000-0x2FFFF), 8051:BE:16:default
+# Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
+# No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
