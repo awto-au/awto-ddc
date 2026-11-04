@@ -13,6 +13,7 @@ Vendor-tool analysis (Ghidra projects, decompile dumps) lives in `~/vendors/real
 | SPI addr / write data | regs 0x64-0x66 | [oss] |
 | SPI read data | regs 0x67-0x69 | [oss] |
 | JEDEC ID | opcode 0x9F, 3 reads | [oss] |
+| Flash identity | `rtd_flash_sector.py <bus> --read-id`: JEDEC + RDUID(0x4B) + 128-bit secured-OTP ESN (ENSO 0xB1 -> READ -> EXSO 0xC1). MX25L8006E has no 0x4B and a blank (all-FF) ESN, so no readable per-chip UID. Read-only. | [fw] 2026-11-04 |
 | Bulk read | regs 0x60=0x46, 0x61=0x03, addr 0x64-66, 0x60=0x47, data from reg 0x70 (64 B chunks) | [oss] |
 | Page program | reg 0x71 = len-1, addr 0x64-66, data to reg 0x70, reg 0x6F = 0xA0 | [oss] |
 | CRC | start 0x64-66, end 0x72-74, reg 0x6F = 0x84, wait bit1, result reg 0x75 | [oss] |

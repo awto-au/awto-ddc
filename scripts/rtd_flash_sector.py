@@ -3,10 +3,15 @@
 
 usage: rtd_flash_sector.py <bus> <sector_addr> <file4k> [--write] [--expect-current FILE]
                            [--backup-dir DIR] [--no-reset] [--reprotect VALUE|none]
+       rtd_flash_sector.py <bus> --read-id          (alias --read-uid)
        rtd_flash_sector.py --selftest
   default (no --write) = DRY RUN: enter ISP, read JEDEC + status, read the sector, save a timestamped
                          backup, compare current vs <file4k> (and vs --expect-current). No erase, no program,
                          no status-register write, no SPI-engine config writes.
+  --read-id            : READ ONLY. Enter ISP, print JEDEC (0x9F) + RDUID (0x4B, not on MX25L8006E) +
+                         the Macronix 128-bit secured-OTP ESN (unique per chip; ENSO 0xB1 -> READ -> EXSO
+                         0xC1), reset the scaler. No erase/program. read_uid() is the shared implementation;
+                         the UID-derived EDID serial path calls it too.
   --write              : the only way to modify flash. Requires JEDEC C2 20 14, 4 KiB-aligned addr, exactly
                          4096-byte file, and (if --expect-current given) current sector == that file.
   --expect-current F   : abort unless the sector currently equals F (guards against overwriting unknown data).
@@ -210,6 +215,48 @@ class Rtd(Isp):
             for _ in range(1024 // 64):
                 out += self.read_block(0x70, 64)
         return bytes(out[:n])
+
+    def cmd(self, op, limit=0.3):
+        # Bare opcode, no address/data (ENSO/EXSO). Engine WRITE type, nw=0: 60<-type, 61<-op, 60<-type|1.
+        self.common(T_WRITE_WREN, op, nr=0, nw=0, limit=limit)
+
+    def read_uid(self):
+        """Read flash identity: JEDEC (0x9F), attempt RDUID 0x4B, and the Macronix 128-bit secured-OTP ESN.
+        Returns dict {jedec, rduid, esn, uid}. READ ONLY. `uid` = the chosen per-unit fingerprint hex
+        (ESN if it looks programmed, else RDUID, else None). No erase/program.
+        - MX25L8006E has NO 0x4B opcode; 0x4B is attempted anyway (reported) then ESN is the real UID.
+        - ESN = first 16 B of the 512-bit secured OTP (datasheet Table 3, addr xxxx00-xxxx0F), reached via
+          ENSO(0xB1) -> READ(0x03)@0 -> EXSO(0xC1). docs/reversing/realtek-rtd/README.md (RE section)."""
+        jedec = self.common(T_READ, 0x9F, nr=3).to_bytes(3, "big")
+        # 0x4B RDUID: not on this part; the engine 0x67-0x69 path gives at most 3 bytes. Report what comes back.
+        try:
+            rduid = self.common(T_READ, 0x4B, nr=3).to_bytes(3, "big")
+        except Exception as e:
+            rduid = None
+            log(f"RDUID 0x4B: no response ({e})")
+        # Secured-OTP ESN via ENSO -> READ@0 (16 B) -> EXSO. Array access is blocked while in OTP mode,
+        # so EXSO must always run (finally) before any other flash use.
+        self.cmd(0xB1)                                   # ENSO
+        try:
+            esn = bytearray()
+            self.write(0x60, 0x46); self.write(0x61, 0x03)
+            self.write(0x64, 0); self.write(0x65, 0); self.write(0x66, 0)
+            self.write(0x60, 0x47)
+            self.wait_engine("ESN read")
+            esn += self.read_block(0x70, 16)
+            esn = bytes(esn)
+        finally:
+            self.cmd(0xC1)                               # EXSO (restore normal array access)
+        # Pick the fingerprint: ESN if programmed (not all-00 / all-FF), else RDUID if usable, else None.
+        esn_blank = esn in (b"\x00" * 16, b"\xff" * 16)
+        uid = None
+        if not esn_blank:
+            uid = esn.hex()
+        elif rduid and rduid not in (b"\x00\x00\x00", b"\xff\xff\xff"):
+            uid = rduid.hex()
+        log(f"JEDEC {jedec.hex()}  RDUID {rduid.hex() if rduid else 'none'}  "
+            f"ESN {esn.hex()}{' (blank)' if esn_blank else ''}  UID {uid or 'none'}")
+        return {"jedec": jedec, "rduid": rduid, "esn": esn, "uid": uid, "esn_blank": esn_blank}
 
     def write_enable(self):
         # Standalone WREN via the raw engine, before sector erase. rtdflash flash_write_enable_p25q80h_prepared:
@@ -458,6 +505,8 @@ def main():
     ap.add_argument("sector_addr", type=lambda x: int(x, 0), nargs="?")
     ap.add_argument("file4k", type=Path, nargs="?")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--read-id", "--read-uid", dest="read_id", action="store_true",
+                    help="READ-ONLY: enter ISP, print JEDEC + RDUID(0x4B) + Macronix secured-OTP ESN (UID), reset; no erase/program")
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--expect-current", type=Path)
     ap.add_argument("--backup-dir", type=Path)
@@ -467,12 +516,36 @@ def main():
     a.reprotect = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     if a.selftest:
         return selftest()
-    if a.bus is None or a.sector_addr is None or a.file4k is None:
-        ap.error("bus, sector_addr, file4k required")
 
     root = repo_root()
     (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
     LOG = (root / "tmp" / "logs" / "rtd_flash_sector.log").open("a")
+
+    if a.read_id:
+        if a.bus is None:
+            ap.error("bus required for --read-id")
+        log(f"mode=READ-ID bus=/dev/i2c-{a.bus}")
+        isp = Rtd(a.bus)
+        isp.write(0x6F, 0x80)
+        if not isp.read(0x6F) & 0x80:
+            log("ISP mode not enabled; aborting"); return 3
+        try:
+            info = isp.read_uid()
+        finally:
+            if not a.no_reset:
+                try:
+                    isp.write(0xEE, 0x02)
+                except OSError:
+                    pass
+                log("scaler reset sent (0xEE <- 0x02)")
+        print(f"JEDEC={info['jedec'].hex()} "
+              f"RDUID={info['rduid'].hex() if info['rduid'] else 'none'} "
+              f"ESN={info['esn'].hex()} UID={info['uid'] or 'none'}")
+        return 0
+
+    if a.bus is None or a.sector_addr is None or a.file4k is None:
+        ap.error("bus, sector_addr, file4k required")
+
     bdir = a.backup_dir or (root / "tmp" / "flash-backups")
     bdir.mkdir(parents=True, exist_ok=True)
 

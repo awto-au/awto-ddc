@@ -125,7 +125,17 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
 - Active-area height measured on the glass = 336 mm, ±2-3 mm (actual lit pixels). 333-339 all = 27.0" real 16:9
   (not 28.0"=350, not 23.8"=296). EDID size field is cm-granular (59x33 cm) so ±3mm doesn't change it. 597x336 stands.
   Closest catalogued panel by size: Samsung LTM270FL01 596.16x335.34 mm (PLS/eDP) — within tolerance, and now consistent with the IPS/PLS visual confirm.
-- ONLY the i2c-20 / card1-DP-4 unit is flashed (AWT:awto-mon). The other two monitors (i2c-10 card0-DP-3,
-  i2c-16 card1-HDMI-A-3) are still factory JXC:4K MONITOR:demoset-1 — flash them separately when wanted.
+- All three units flashed to AWT:awto-mon (IPS/sRGB build), each a distinct serial. Bus numbers shift on
+  re-enumeration — map by DRM connector, not bus. Mapping at 2026-11-04T13:18+1100:
+
+  | DRM connector    | serial (0xFF) | when flashed            |
+  |------------------|---------------|-------------------------|
+  | card1-DP-4       | AWT26110001   | 2026-11-04T13:01 (IPS)  |
+  | card0-DP-3       | AWT26110002   | 2026-11-04T13:18        |
+  | card1-HDMI-A-3   | AWT26110003   | 2026-11-04T13:18        |
+
+- Serials are a fixed per-unit sequence AWT2611000N, NOT a hardware fingerprint: MX25L8006E (JEDEC c22014)
+  has no readable factory unique ID — RDUID 0x4B returns 0xFFFFFF (opcode absent) and the 128-bit secured-OTP
+  ESN reads all-0xFF (unprogrammed) on both factory units. Confirmed via `rtd_flash_sector.py <bus> --read-id`.
 - Flash ceremony: a standalone no-op dry-run is pointless. `--write` already does backup -> blank-check ->
   program -> read-back verify -> abort-on-mismatch -> re-protect. One --write is the safe path; skip the separate dry-run.
