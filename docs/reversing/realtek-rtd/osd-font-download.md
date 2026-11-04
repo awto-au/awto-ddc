@@ -82,10 +82,18 @@ Prefix code, 16 symbols + END. Codes are read first-bit-first.
 - Ours [fw-measured]: 4 blobs contiguous: `0x228C6` (+0x327) -> `0x22BED` (+0x5BE) -> `0x231AB` (+0x996) -> `0x23B41` (+0x2695) -> ends `0x261D6`. `0x228C6` preceded by `FF` fill. Next data after `0x261D6` is not a blob header (not a nibble permutation).
 - No offset table found for them: the earlier "offset-table font" at `0x328C6` was gamma LUT (refuted in boot-logo.md). Blob index, if any, lives in code/descriptor, not in the blob.
 - Code refs [fw-measured]: `90 28 C6` (MOV DPTR,#0x28C6) at flash `0x15E6D` (bank1), `0x4B02B`, `0x4B09F`, `0x4CB10`, `0x4F185`, `0x4FD43` (bank4). Blobs B/C/D have no absolute `MOV DPTR` hit: addressed through a computed pointer/table [?] (matches boot-logo.md "runtime-computed banked pointer").
-- Contents [fw-measured, rendered `~/vendors/realtek/analysis/logo/glyphdec/hdr_<off>.png`, 12x18 1bpp MSB-left, 20 cols]:
-  - `0x228C6` 53 glyphs: menu icons (home, power, gamepad, ECO, frame, bar-graph segments). Coherent.
-  - `0x23B41` 586 glyphs: first ~100 glyphs look like noise/other-format cells, then large coherent swoosh + "...TECHNOLOGY" letterforms (the vendor logo, cut in 12x18 cells). Grid width/order in the map not recovered (edge-continuity search over 8-39 cols inconclusive).
-  - `0x22BED` (98) and `0x231AB` (189): not yet viewed in detail.
+- Contents [fw-measured 2026-11-04T16:00+10:00, clean tile atlas `~/vendors/realtek/analysis/logo/glyphdec/atlas_<X>_clean.png`; `scripts/glyph_decode.py`]:
+  - `0x228C6` 53 glyphs: menu icons — render as **crisp recognisable glyphs**: "F", home, power ⏻, diamond, "E", gamepad, "ECO", PIP/frame, 2nd power. Confirms tile format exactly.
+  - `0x231AB` 189 glyphs: "FPS"/"RTS" text labels + crosshair/aim-reticle + circle glyphs (game-mode OSD). Clean.
+  - `0x23B41` 586 glyphs: the **Dahua logo** set. Every individual tile is a clean stroke/curve/letter fragment; swoosh + "TECHNOLOGY" wordmark clearly present when read in reference order. It is a de-dup atlas (566/586 unique, no blank/solid tile) — NOT a raster, so no rectangular reshape de-shears it (see §4a).
+  - `0x22BED` 98 glyphs: not catalogued in detail (same clean format).
+
+### 4a. The blob is a de-dup atlas; placement needs a runtime char-map [fw-measured, decisive]
+- Rendering blob D as a gap-less W×H grid shears diagonally at EVERY width 48-72 (per-row best-shift non-constant, mismatch 0.35-0.42). A true raster would de-shear at exactly one width; it never does ⇒ tiles are NOT in image-raster order.
+- Objective edge-continuity picks cols=56 at every skip (a self-similarity artefact, not the grid); column-major is worse. Within-tile order (B2,B1,B0 MSB, word w→rows 2w,2w+1) is confirmed optimal; the shear is in tile ORDER, not cell packing.
+- Matches the SDK model (`sdk-rl64xx-reference.md` §2-3): the font tool emits UNIQUE tiles in reference-scan order; the per-cell glyph-index grid (the placement) lives in a separate char-map array, applied at run time by `osd_compose_glyph_grid_map bank1:0xb0f4`. Blobs A/C confirm this directly — their "FPS"/"RTS"/icon runs are locally continuous because those cells are referenced consecutively.
+- Char-map NOT found as a plain flash index array: no run of u16 in [0,586) of map length; the SDK 0x4C/0x4E char-word triples (with 0xFE/0xFF/0xFC/0xFD controls) do not appear as a dense run in our dump → our firmware uses a different (likely more compact / descriptor-driven) encoding. Descriptor region after the splash header (`0x13877+`) holds a `ff 12 0e 17 13 NN`-type record list (glyph-set descriptors, incrementing index), not the per-cell logo map.
+- Consequence for re-encoding our own logo: we must also author the char-map/grid, not just the glyph atlas. Its exact source is still open (runtime-built by `bank1:0xb0f4`; pin via a live capture of the OSD data-port 0x92 word stream during splash, or finish the Ghidra trace of `0xb0f4`).
 
 ## 5. Glyph cell geometry
 - 1 bpp cell = 12 x 18 px = 216 bits = 9 words x 24 bit = 27 bytes [oss + fw-measured].

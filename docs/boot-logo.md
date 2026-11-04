@@ -51,13 +51,33 @@ OSD glyph composer draws menus and splash; invoked from 4 screen-builder sites.
 - VLC value-map `0x3A0F-0x3A16`: **never written by firmware** (exhaustive `MOV DPTR,#0x3A0x` scan = 0 hits) → runs on the hardware reset map (regdb reset of those fields = 0x00) [fw + spec].
 - Candidate logo glyph data (VLC): both earlier guesses DEBUNKED (bank3 `0x328C6` = gamma LUT ramp; bank2 `0x228C6` = noise/code mix). Smallest remaining candidate: bank6 `0x628C6-0x62FB2` (nine 197-B blobs, ent≈7.0, `ptr_table_lookup bank6:0x661d`). Final offset is data-driven from the `0x1382F` header FIFO read — pin with one live read of `0xFFF6/7/8`+`0x9F` at splash `bank6:0x4445`. See STATUS.
 
-### VLC decode of candidates, 2026-11-04T13:30+10:00 [static, `scripts/glyph_decode.py`] — NOT CONFIRMED
-- Value map: regdb RTD2795T `0x3A0F-0x3A16` (vlc_0..vlc_f) reset = 0x00 for every field → hardware-default map is all-zero (every symbol → 0). Decodes to blank; degenerate, so the real map must be written by something (fw scan found no writes) or VLC is not used for this data [?].
-- bank3 `0x328C6`: NOT an offset table. 1024× u16-BE monotonic 0 → 0x3FF0, followed by a second ramp starting 0,3,0xb,0x17 = gamma LUTs, same class as the `0xE0F30` tables. Refuted as glyph index.
-- bank2 `0x228C6-0x26900` (VLC-decoded as END-split stream, zero/identity/freq-rank maps × 1/2/4 bpp × 12x18/16x16/8x16): 117 segments, no constant length (top lens 13,5,32,14,19), renders as noise at every combo. Tail of range is 8051 code (`90 db ae e0`…), so extent is mixed data+code, not a font body.
-- Raw view of start (3-byte words, repeating `66 60 06`, `ba a1 1b` patterns) hints a non-VLC 24-bit-word structure; not resolved.
-- Sheets: `~/vendors/realtek/analysis/logo/glyphdec/glyph_0228c6_<map>_<bpp>bpp_<WxH>.png`.
-- Conclusion: no sector can be named from this; fall back to live capture (break at `bank6:0x4445`, read SPI addr).
+### VLC decode — CONFIRMED format, 2026-11-04T16:00+10:00 [static, `scripts/glyph_decode.py`]
+Tile/glyph format fully confirmed by rendering: blobs A/C decode to crisp, recognisable icons and
+"FPS"/"RTS" text; blob D (the logo) decodes to clean swoosh + "TECHNOLOGY" wordmark fragments.
+- Blobs: `0x228C6` (53 glyphs, menu icons), `0x22BED` (98), `0x231AB` (189, FPS/RTS + crosshairs),
+  `0x23B41` (586, **Dahua logo set**). Format = `[8-byte VLC value map][2-byte BE len][stream, END=0xFF]`.
+- Confirmed params:
+  - **Value map = the blob's own 8 header bytes** (16 nibbles vlc_0..vlc_f), NOT the all-zero hardware
+    reset map. The earlier "map must be all-zero / degenerate" conclusion is WRONG — supersedes it.
+  - **Stream bit order = LSB-first** within each byte; decoded nibbles pair high-nibble-first into bytes.
+  - **Cell = 1bpp 12×18 = 9 words×24bit = 27 bytes.** Word w → image rows (2w, 2w+1). The 3 stored
+    bytes of a word read **B2, B1, B0** (reverse); within a byte **MSB = leftmost**. Pixel 1 = fg.
+  - All four blobs: END lands exactly at the header length; decoded bytes = exact multiple of 27.
+- **blob=atlas-needing-grid, NOT a full raster image.** 566/586 tiles unique, zero blank/solid tiles;
+  gap-less grid render shears diagonally at every width 48-72 (per-row shift non-constant) ⇒ tiles are
+  de-duplicated and stored in font-tool reference-scan order, not raster order. The logo IMAGE =
+  the atlas placed by a separate runtime glyph-index char-map (built by `osd_compose_glyph_grid_map
+  bank1:0xb0f4`), which is NOT a plain index array in flash (no u16-in-[0,586) run; SDK 0x4C/0x4E
+  char-words absent as a dense run → compact/descriptor-driven encoding in our fw). Full analysis:
+  `docs/reversing/realtek-rtd/osd-font-download.md` §4-4a. Composer grid params from bank1:0x8EFE
+  (R3=0x10/16, R5=0x18/24, R7=0x12/18) are passed to `bank1:0xb0f4` = cell/grid geometry, not tile order.
+- Debunked earlier candidates (unchanged): bank3 `0x328C6` = gamma LUT ramp (u16-BE monotonic); bank2
+  mixed data+code tail.
+- Renders: `~/vendors/realtek/analysis/logo/glyphdec/atlas_<A|B|C|D>_clean.png` (clean tile atlases);
+  `atlas_023b41.png`, `grid_023b41_54x9_s100.png` (grid guess). Decoder: `scripts/glyph_decode.py`.
+- **Still needed for a legible assembled logo:** the runtime glyph-index char-map. Pin it by a live
+  capture of OSD data-port `0x92` writes during splash, or by finishing the Ghidra trace of
+  `osd_compose_glyph_grid_map bank1:0xb0f4`. The glyph-tile format needs no further work.
 
 Font-base note [spec]: `font_base` is **15-bit** (0x3A0D[3:0], 0x3A0E[7:0], 0x3A17[5:3]); earlier "12-bit" was wrong.
 
