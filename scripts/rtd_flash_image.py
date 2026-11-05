@@ -65,6 +65,22 @@ def _write_sector(isp, addr, new):
         raise RuntimeError(f"VERIFY FAILED at 0x{addr + bad[0]:06x}")
 
 
+def program(isp, a, img, diff, bk, reprot) -> int:
+    sr0 = isp.status()
+    log(f"status reg = 0x{sr0:02x}")
+    if sr0 & SR_PROT:
+        isp.release_wp(); isp.unprotect(sr0)
+    t0 = time.monotonic()
+    for i, s in enumerate(diff):
+        write_sector(isp, s, img[s:s + SECTOR])
+        if i % 16 == 15 or i == len(diff) - 1:
+            log(f"written+verified {i + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
+    log(f"VERIFY OK: all {len(diff)} sectors; revert = rerun with {bk}")
+    if reprot is not None:
+        isp.reprotect(reprot)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bus", type=int)
@@ -73,6 +89,8 @@ def main() -> int:
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--backup-dir", type=Path, default=DUMPS)
     ap.add_argument("--reprotect", default="0x9C")
+    ap.add_argument("--no-backup", action="store_true",
+                    help="skip the dump reads; write+verify every image sector (unit already runs our own build)")
     a = ap.parse_args()
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
@@ -91,6 +109,11 @@ def main() -> int:
         log(f"JEDEC {jid.hex()}")
         if jid != JEDEC_OK:
             log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
+        if a.no_backup and a.write:
+            # Dan 2026-11-05: re-dumping our own builds is wasted time; the vendor backup per unit is kept once
+            diff, bk = list(range(0, len(img), SECTOR)), "the unit's vendor backup in ~/vendors/realtek/analysis/dumps"
+            log(f"--no-backup: writing all {len(diff)} image sectors, no dump")
+            return program(isp, a, img, diff, bk, reprot)
         t0 = time.monotonic()
         d1 = isp.read_flash(0, FLASH)
         log(f"dump 1 read in {time.monotonic() - t0:.1f}s")
@@ -107,19 +130,7 @@ def main() -> int:
             + ", ".join(f"0x{s:05x}" for s in diff[:12]) + (" ..." if len(diff) > 12 else ""))
         if not a.write:
             log("DRY-RUN complete: nothing erased or programmed"); return 0
-        sr0 = isp.status()
-        log(f"status reg = 0x{sr0:02x}")
-        if sr0 & SR_PROT:
-            isp.release_wp(); isp.unprotect(sr0)
-        t0 = time.monotonic()
-        for i, s in enumerate(diff):
-            write_sector(isp, s, img[s:s + SECTOR])
-            if i % 16 == 15 or i == len(diff) - 1:
-                log(f"written+verified {i + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
-        log(f"VERIFY OK: all {len(diff)} sectors; revert = rerun with {bk}")
-        if reprot is not None:
-            isp.reprotect(reprot)
-        return 0
+        return program(isp, a, img, diff, bk, reprot)
     except Exception as e:
         log(f"ERROR: {e}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
         return 7
