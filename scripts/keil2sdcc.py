@@ -11,7 +11,8 @@ usage: keil2sdcc.py port                     SDK -> tmp/sdcc-port/src (rewritten
   fix a rule or the compat header and re-run `port` (the tree is a derived artifact).
 - <uv2> is SDK-relative, e.g. Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2
 - Output: tmp/sdcc-port/{src,obj,logs}, tmp/sdcc-port/report.json. Log: tmp/logs/keil2sdcc.log
-- `port` also tokenises DebugMessage<Cat>("text", v) -> AWTO_MSG(id) and writes fw/msgids.tsv (awto-ddc#25).
+- `port` also tokenises DebugMessage<Cat>("text", v) -> AwtoMsg0(id)/AwtoMsgV(id, v), drops sites not in
+  fw/msg_enable.txt, and writes fw/msgids.tsv (awto-ddc#25, #26).
 - Repo is private (Realtek code), see CLAUDE.md. Tracking: awto-ddc#8.
 """
 import json, os, re, shutil, subprocess, sys, time
@@ -129,6 +130,9 @@ INSERTS = [
     ("Panel/User_Panel_List.h", r"^#define _AUO_EDP_27_UHD_LOCAL_DIMMING\s",
      "#define _AWTO_LTM270FL01                        0x3D    // 3840 x 2160"),
     ("Panel/User_Panel_Include.h", r'^#include "30_AUO_eDP_27_UHD\.h"', '#include "AWTO_LTM270FL01.h"'),
+    # awto-ddc#26: AwtoMsg0/AwtoMsgV (overlay AwtoMsg.h) live in the debug module, beside ScalerDebugMessage
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c",
+     r"^void ScalerDebugSelectDDCCIDebugMode\(EnumDDCCIDebugMode enumMode\)$", '#include "AwtoMsg.h"'),
     # liveness counters, host-readable over DDC 0x50 (AWTO_DIAG_TICK in RL6449_Project.h; no-op when off)
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_TICK(0xFF);"),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AWTO_DIAG_TICK(0xFE);"),
@@ -290,17 +294,23 @@ def add_at_to_externs(text, stats):
     return re.sub(r"\bextern\b[^;\n(]*?\b(?:\w+\s+)+\**\s*()(\w+)\s*(?:\[[^\]\n]*\])?\s*;", sub, text)
 
 
-# ---------------- tokenised debug messages (#25) ----------------
-# DebugMessage<Cat>("text", v) -> DebugMessage<Cat>(AWTO_MSG(0xHHLL), v); wire bytes {0x01, HH, LL, 0} (Debug.h overlay),
+# ---------------- tokenised debug messages (#25, #26) ----------------
+# DebugMessage<Cat>("text", v) -> AwtoMsg0(0xHHLL) / AwtoMsgV(0xHHLL, v) (overlay AwtoMsg.h); wire bytes {0x01, HH, LL, 0},
 # HH/LL in 1..255 so the NUL-terminated protocol never sees a 0. Text lives in fw/msgids.tsv.
+# Sites not matched by fw/msg_enable.txt (or whose category flag is _OFF in Debug.h) are dropped.
 MSG_TSV = ROOT / "fw" / "msgids.tsv"
-MSG_CATS = None                                # category names, read from the overlay Debug.h
+MSG_ENABLE = ROOT / "fw" / "msg_enable.txt"
+MSG_CATS = None                                # category -> Debug.h flag name, read from the overlay Debug.h
+MSG_FLAG_ON = {}                               # flag name -> bool
+MSG_RULES = []                                 # (kind, value) from msg_enable.txt
 MSG_IDS = {}                                   # (category, text) -> id, filled by collect_messages
 _STR = r'"(?:[^"\\\n]|\\.)*"'
 MSG_CALL = re.compile(r"\bDebugMessage(\w+)\s*\(")
 MSG_LIT = re.compile(rf"\s*((?:{_STR}\s*)+),")
 COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.S)
 ESC = {"n": 10, "t": 9, "r": 13, "a": 7, "b": 8, "f": 12, "v": 11, "\\": 92, '"': 34, "'": 39, "?": 63}
+# side effects: a call to a mixed-case function, ++/--, assignment (ALL-CAPS macros are the SDK's GET_*/PDATA_* reads)
+SIDE_EFFECT = re.compile(r"\b\w*[a-z]\w*\s*\(|\+\+|--|(?<![=!<>])=(?!=)")
 
 
 def c_unescape(lit: str) -> str:
@@ -321,9 +331,26 @@ def mask_comments(text: str) -> str:
     return COMMENT.sub(lambda m: m.group(0) if m.group(0)[0] == '"' else re.sub(r"[^\n]", " ", m.group(0)), text)
 
 
-def msg_sites(text: str):
+def call_end(masked: str, i: int) -> int:
+    """Index of the ')' closing the call whose '(' precedes i (strings and char literals skipped), or -1."""
+    depth = 1
+    while i < len(masked):
+        c = masked[i]
+        if c in "\"'":
+            m = re.compile(rf"{c}(?:[^{c}\\\n]|\\.)*{c}").match(masked, i)
+            i = m.end() if m else i + 1
+            continue
+        depth += (c == "(") - (c == ")")
+        if depth == 0:
+            return i
+        i += 1
+    return -1
+
+
+def msg_sites(text: str, full=False):
     """Yield (start, end, category, text) per DebugMessage<Cat>(<literals>, ...) call; text[start:end] is the
-    literal run. A call whose first argument is not purely string literals yields (None, None, category, head)."""
+    literal run. A call whose first argument is not purely string literals yields (None, None, category, head).
+    full=True: literal calls only, yields (call_start, call_end, category, text, value_expr)."""
     masked = mask_comments(text)
     for m in MSG_CALL.finditer(masked):
         if m.group(1) not in MSG_CATS:
@@ -333,10 +360,16 @@ def msg_sites(text: str):
             continue
         lit = MSG_LIT.match(masked, m.end())
         if lit is None:
-            yield None, None, m.group(1), masked[m.end():m.end() + 60].split("\n")[0]
+            if not full:
+                yield None, None, m.group(1), masked[m.end():m.end() + 60].split("\n")[0]
             continue
         val = "".join(c_unescape(x[1:-1]) for x in re.findall(_STR, lit.group(1)))
-        yield m.end(), lit.end() - 1, m.group(1), val
+        if full:
+            e = call_end(masked, lit.end())
+            if e >= 0:
+                yield m.start(), e + 1, m.group(1), val, text[lit.end():e].strip()
+        else:
+            yield m.end(), lit.end() - 1, m.group(1), val
 
 
 def assign_msg_ids(keys):
@@ -357,11 +390,36 @@ def assign_msg_ids(keys):
     return ids, collisions
 
 
+def load_msg_rules():
+    MSG_RULES.clear()
+    for n, line in enumerate(MSG_ENABLE.read_text().splitlines(), 1):
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        kind, _, val = line.partition(":")
+        if kind not in ("cat", "file", "id") or not val.strip():
+            sys.exit(f"{MSG_ENABLE}:{n}: bad rule {line!r}")
+        MSG_RULES.append((kind, int(val, 16) if kind == "id" else val.strip()))
+
+
+def msg_enabled(cat: str, rel: str, mid: int) -> bool:
+    """Category flag ON in Debug.h (else the SDK already dropped the call) and some allowlist rule matches (cat / file glob / id)."""
+    import fnmatch
+    if not MSG_FLAG_ON.get(MSG_CATS[cat], False):
+        return False
+    return any((k == "cat" and v == cat) or (k == "id" and v == mid) or (k == "file" and fnmatch.fnmatch(rel, v))
+               for k, v in MSG_RULES)
+
+
 def collect_messages(files, overlay):
     """Pre-pass over SDK + overlay sources: assign ids, write fw/msgids.tsv. Returns stats."""
     global MSG_CATS
     dbg = (OVERLAY / "Kernel/Common/Debug.h").read_text(errors="replace")
-    MSG_CATS = set(re.findall(r"#define\s+DebugMessage(\w+)\(x,\s*y\)", dbg))
+    MSG_CATS = {c: f for f, c in re.findall(
+        r"#if\(\s*(\w+)\s*==\s*_ON\)\s*\n#define\s+DebugMessage(\w+)\(x,\s*y\)", dbg)}
+    MSG_FLAG_ON.clear()
+    MSG_FLAG_ON.update({f: v == "_ON" for f, v in re.findall(r"#define\s+(_DEBUG_MESSAGE_\w+)\s+(_ON|_OFF)\b", dbg)})
+    load_msg_rules()
     srcs = {}
     for p in files:
         if p.suffix.lower() in SRC_EXT:
@@ -380,30 +438,40 @@ def collect_messages(files, overlay):
     MSG_IDS.clear()
     ids, coll = assign_msg_ids(keys)
     MSG_IDS.update(ids)
-    rows = sorted((ids[(c, x)], c, f"{r}:{ln}", x) for c, r, ln, x in sites)
+    rows = sorted((ids[(c, x)], c, f"{r}:{ln}", x, int(msg_enabled(c, r, ids[(c, x)]))) for c, r, ln, x in sites)
     esc = lambda s: s.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
-    MSG_TSV.write_text("".join(f"{i:04x}\t{c}\t{f}\t{esc(x)}\n" for i, c, f, x in rows), encoding="utf-8", errors="replace")
+    MSG_TSV.write_text("".join(f"{i:04x}\t{c}\t{f}\t{esc(x)}\t{en}\n" for i, c, f, x, en in rows),
+                       encoding="utf-8", errors="replace")
     log(f"msgids: {len(sites)} call sites, {len(keys)} unique ids, {coll} collisions re-salted, "
-        f"{skipped} skipped (not a single literal) -> {MSG_TSV}")
+        f"{skipped} skipped (not a single literal), {sum(r[4] for r in rows)} enabled -> {MSG_TSV}")
     for s_ in skip_sample[:8]:
         log(f"  msg skipped: {s_}")
     return len(sites), skipped
 
 
-def tokenise_messages(text: str, stats) -> str:
+def tokenise_messages(text: str, stats, rel: str) -> str:
     out, last = [], 0
-    for a, b, cat, txt in msg_sites(text):
-        if a is None:
-            continue
-        out.append(text[last:a]); out.append(f"AWTO_MSG(0x{MSG_IDS[(cat, txt)]:04X})"); last = b
-        stats["msg tokenised"] += 1
+    for a, b, cat, txt, val in msg_sites(text, full=True):
+        mid = MSG_IDS[(cat, txt)]
+        if msg_enabled(cat, rel, mid):
+            zero = re.fullmatch(r"0[xX]?0*[uUlL]*", val) is not None
+            new = f"AwtoMsg0(0x{mid:04X})" if zero else f"AwtoMsgV(0x{mid:04X}, {val})"
+            stats["msg enabled"] += 1
+        elif MSG_FLAG_ON.get(MSG_CATS[cat], False) and SIDE_EFFECT.search(val):
+            new = f"(void)({val})"                           # may have side effects: keep it evaluated
+            stats["msg dropped, value kept"] += 1
+            log(f"  msg dropped, value expr kept: {rel}:{text.count(chr(10), 0, a) + 1} DebugMessage{cat}: {val}")
+        else:
+            new = "((void)0)"
+            stats["msg dropped"] += 1
+        out.append(text[last:a]); out.append(new); last = b
     out.append(text[last:])
     return "".join(out)
 
 
-def rewrite(text, here, idx, sfr_addr, using, stats):
+def rewrite(text, here, idx, sfr_addr, using, stats, rel):
     text = text.replace("\r\n", "\n")
-    text = tokenise_messages(text, stats)
+    text = tokenise_messages(text, stats, rel)
     text = fix_includes(text, here, idx)
     text = add_using_to_protos(text, using, stats)
     text = add_at_to_externs(text, stats)
@@ -463,7 +531,7 @@ def cmd_port():
         dst.parent.mkdir(parents=True, exist_ok=True)
         if p.suffix.lower() in SRC_EXT:
             raw = p.read_bytes().decode("latin-1")           # byte-preserving; comments are GBK/Big5
-            out = rewrite(raw, p.parent, idx, sfr_addr, using, stats)
+            out = rewrite(raw, p.parent, idx, sfr_addr, using, stats, str(rel))
             out = apply_wraps(str(rel), out, stats)
             out = apply_inserts(str(rel), out, stats)
             dst.write_bytes(out.encode("latin-1"))
@@ -474,7 +542,8 @@ def cmd_port():
         dst = SRC / p.relative_to(OVERLAY)
         dst.parent.mkdir(parents=True, exist_ok=True)
         raw = p.read_bytes().decode("latin-1")
-        dst.write_bytes(rewrite(raw, (SDK / p.relative_to(OVERLAY)).parent, idx, sfr_addr, using, stats)
+        dst.write_bytes(rewrite(raw, (SDK / p.relative_to(OVERLAY)).parent, idx, sfr_addr, using, stats,
+                                str(p.relative_to(OVERLAY)))
                         .encode("latin-1"))
         log(f"overlay: {p.relative_to(OVERLAY)}")
     log(f"port: {n} C/H files rewritten into {SRC}; sfr map {len(sfr_addr)} names; "

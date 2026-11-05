@@ -305,6 +305,12 @@
 #define _DEBUG_MESSAGE_SUPPORT                      _OFF
 #endif
 
+// awto #26: keil2sdcc rewrites enabled DebugMessage<Cat>("text", v) to these (id from fw/msgids.tsv); disabled sites vanish
+#if(_DEBUG_MESSAGE_SUPPORT == _ON)
+extern void AwtoMsg0(unsigned int usId);
+extern void AwtoMsgV(unsigned int usId, unsigned long ulValue);
+#endif
+
 //--------------------------------------------------
 // Debug clipping Support
 //--------------------------------------------------
