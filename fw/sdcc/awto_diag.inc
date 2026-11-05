@@ -36,10 +36,9 @@ void AwtoDiagInit(void)
         g_stAwtoSafe.usPrevMaxPassMs = g_stAwtoSafe.usMaxPassMs;
         g_stAwtoSafe.ucFlags = _AWTO_SAFE_F_WARM;
     }
-    else
-    {
-        g_stAwtoSafe.usHold = 0;                // power-on: RAM is random
-    }
+    // never carry a hold across a reset: the front-panel power key is a warm reset (RAM kept), and a held
+    // window left unit 3 with a dead DDC bus on every boot (#26, 2026-11-06). Host re-arms it per boot.
+    g_stAwtoSafe.usHold = 0;
     g_stAwtoSafe.usMarker = _AWTO_SAFE_MARKER;
     g_stAwtoSafe.usLastPassMs = g_usTimerCounter;
     g_stAwtoSafe.usMaxPassMs = 0;

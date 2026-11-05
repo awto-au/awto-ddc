@@ -59,7 +59,7 @@ extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 // warm reset: WDT or ISP 0xEE). FFEB[7] is the SDK's WD-event flag here, not a reset cause -> RAM marker instead.
 typedef struct
 {
-    unsigned int usHold;                        // == _AWTO_SAFE_HOLD_MAGIC: stay in the safe window (host sets)
+    unsigned int usHold;                        // == _AWTO_SAFE_HOLD_MAGIC: stay in the safe window; cleared every boot
     unsigned int usMarker;                      // _AWTO_SAFE_MARKER while running; seen at boot = warm reset
     unsigned char ucFlags;                      // _AWTO_SAFE_F_*
     unsigned char ucPrevTraceSeq;               // previous boot's trace ring (valid when _AWTO_SAFE_F_WARM)
