@@ -9,12 +9,12 @@ Open work lives in GitHub issues (tracking #1, firmware #7). This file points to
 | AWT26110002 | DP | i2c-21 | original |
 | AWT26110003 | HDMI | i2c-11 | ours; new image being flashed at handover (see "In flight") |
 
-## In flight at handover
-- **Flash of the new image onto AWT26110003** was running (`scripts/rtd_flash_image.py 11 tmp/fw/AWT26110003/fw.bin --serial AWT26110003 --write`): 112/184 sectors verified at 14:38. Log: `tmp/logs/rtd_flash_image.log`.
-  - Backup before write: `~/vendors/realtek/analysis/dumps/jxc-4k-flash-AWT26110003-20261105-142704.bin` (two identical reads). Revert = rerun with that file as the image.
-  - If the log ends without "re-protect" the flash is left unprotected: rerun the same command (only differing sectors are rewritten).
-  - First thing to check after it finishes: does the panel light (backlight, picture)? Then DDC (debug slave 0x35, DDC/CI is off in this build).
-- Not pushed: all local commits (latest `50f2486`).
+## Flashed at 2026-11-05T14:41+11:00
+- **New image is on AWT26110003** (`scripts/rtd_flash_image.py 11 tmp/fw/AWT26110003/fw.bin --serial AWT26110003 --write`): 184/184 sectors verified, reprotected (SR 0x9c), WP# re-asserted, scaler reset. Log: `tmp/logs/rtd_flash_image.log`.
+  - Backups of the previous flash (identical reads): `~/vendors/realtek/analysis/dumps/jxc-4k-flash-AWT26110003-20261105-142704.bin` and `...-143339.bin`. Revert = rerun with either as the image.
+  - Not yet checked by eye: does the panel light (backlight, picture)? DDC/CI is off in this build; debug slave 0x35 is on.
+  - If dark: vary one thing at a time (backlight PWM polarity, P7.2 vs rail, backlight delay T3) and reflash.
+- Not pushed: all local commits.
 
 ## What changed this session
 - **Panel identity (#3)**
