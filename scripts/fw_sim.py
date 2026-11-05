@@ -32,7 +32,7 @@ def write_ihx(data: bytes, path: Path):
 
 class Sim:
     def __init__(self, ihx, log):
-        self.p = subprocess.Popen([T.tool("ucsim_51"), "-t", "52", str(ihx)], stdin=subprocess.PIPE,
+        self.p = subprocess.Popen([T.tool("ucsim_51"), "-t", "52", *([str(ihx)] if ihx else [])], stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
         self.log, self.buf = log, b""
 
@@ -52,6 +52,57 @@ class Sim:
         return None
 
 
+def native(a, sym, d, nb, where, log) -> int:
+    """ucsim's own banker: XDATA 0xFFFF selects which 64 KiB slice of a flash chip is code memory, as on
+    the RL6449. Free run; stops only at ISR vectors (PC samples) and at startup re-entry (restart = crash)."""
+    s = Sim(None, log)
+    s.send(f"memory create chip flash 0x{nb * BANK:x} 8")
+    s.send("memory create banker xram 0xffff 0x0f rom 0x0000 0xffff")
+    for k in range(nb):
+        s.send(f"memory create bank rom 0x0000 {k} flash 0x{k * BANK:x}")
+    for k in range(nb):                                      # loads go through the decoder into bank k
+        s.send(f"set memory xram 0xffff {k}"); s.send(f'file "{d / f"bank{k}.ihx"}"')
+        # "N words read" is only flushed with the next command; commands run in order, so this suffices
+        if not s.read_until(rb"Loading from[^\n]*bank%d\.ihx" % k, 30):
+            print(f"load of bank {k} failed (see tmp/logs/fw_sim.log)"); return 1
+    s.send("set memory xram 0xffff 0"); s.send("reset")
+    gsinit = sym.get("__sdcc_gsinit_startup")
+    for v in (*VECTORS, *([gsinit] if gsinit is not None else [])):
+        s.send(f"break 0x{v:x}")
+    samples, starts, done = Counter(), 0, 0
+    chunk = 5_000_000                                        # instructions per step command; ISR stops end it early
+    while done < a.instr:
+        s.send(f"step {chunk}")
+        out = s.read_until(rb"Simulated \d+ ticks[^\n]*\n", 300)
+        if out is None:
+            print("ucsim did not answer within 300 s (see tmp/logs/fw_sim.log)"); return 1
+        stop = re.search(r"Stop at 0x([0-9a-f]+)", out)
+        done += chunk if not stop else 1000                  # stop count is unknown; progress estimate only
+        if not stop:
+            continue
+        pc = int(stop.group(1), 16)
+        s.send("dump xram 0xffff 0xffff")
+        bk = s.read_until(rb"0xffff\s+([0-9a-f]{2})", 10)
+        bank = int(re.search(r"0xffff\s+([0-9a-f]{2})", bk).group(1), 16) & 0x0F if bk else -1
+        if gsinit is not None and pc == gsinit:
+            starts += 1
+            if starts > 1:
+                print(f"RESTART #{starts - 1} (bank {bank}) after ~{done} instr")
+                print(out[-700:]); break
+            continue
+        sp = re.search(r"SP 0x[0-9a-f]+ -> ([0-9a-f]{2}) ([0-9a-f]{2})", out)
+        if sp:
+            ipc = int(sp.group(1) + sp.group(2), 16)
+            samples[f"{where(bank, ipc)} @{bank}:0x{ipc:04x}"] += 1
+        if sum(samples.values()) >= a.samples:
+            break
+    print(f"interrupted-PC histogram ({sum(samples.values())} interrupts, ~{done} instr, restarts {max(starts - 1, 0)}):")
+    for f, k in samples.most_common(10):
+        print(f"  {k:5d}  {f}")
+    s.send("quit")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", required=True)
@@ -60,6 +111,9 @@ def main() -> int:
     ap.add_argument("--samples", type=int, default=300, help="interrupts sampled (main-context PC) before report")
     ap.add_argument("--ex1-at", type=int, help="after N switches fake a DDC-CI request (IIC regs + IE1); "
                     "report whether EXINT1 takes the DDC-CI or the debug path")
+    ap.add_argument("--legacy-banking", action="store_true",
+                    help="breakpoint + ihx-reload bank model (slow; keeps the banked-call trail)")
+    ap.add_argument("--instr", type=int, default=200_000_000, help="native mode: total instructions to run")
     a = ap.parse_args()
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
@@ -78,9 +132,20 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (ROOT / "tmp/logs/fw_sim.log").open("w", buffering=1)
     call, ret = sym["__bs_call"], sym["__bs_ret"]
+    if not a.legacy_banking:
+        return native(a, sym, d, nb, where, log)
     s = Sim(d / "bank0.ihx", log)
     s.read_until(rb"words read", 10)
     s.send(f"break 0x{call:x}"); s.send(f"break 0x{ret:x}")
+    # switch the image where the hardware does: right after the 0xFFFF write (A = bank). Switching at
+    # __bs_call entry went wrong when an ISR's __bs_ret ran in between (false restart, #23)
+    sw = {sym[k] for k in ("__bs_call_sw", "__bs_ret_sw") if k in sym}
+    for v in sw:
+        s.send(f"break 0x{v:x}")
+    gsinit = sym.get("__sdcc_gsinit_startup")              # 2nd entry = restart (jump/ret to 0): crash
+    if gsinit is not None:
+        s.send(f"break 0x{gsinit:x}")
+    starts = 0
     for v in VECTORS:
         s.send(f"break 0x{v:x}")
     s.send(f"step {a.budget}")
@@ -102,6 +167,14 @@ def main() -> int:
             for p in probes:
                 s.send(f"break 0x{p:x}")
             print(f"injected EXINT1 at switch {n}")
+        if stop and gsinit is not None and int(stop.group(1), 16) == gsinit:
+            starts += 1
+            if starts > 1:
+                print(f"RESTART #{starts - 1} after {n} switches (bank {bank}); last switches: {' -> '.join(trail[-12:])}")
+                print(out[-700:])
+                break
+            s.send(f"step {a.budget}")
+            continue
         if stop and int(stop.group(1), 16) in VECTORS:
             sp = re.search(r"SP 0x[0-9a-f]+ -> ([0-9a-f]{2}) ([0-9a-f]{2})", out)   # @SP = PCH, @SP-1 = PCL
             if sp:
@@ -126,10 +199,16 @@ def main() -> int:
         pc = int(re.search(r"Stop at 0x([0-9a-f]+)", out).group(1), 16)
         r = re.search(r"R0 R1 R2 R3 R4 R5 R6 R7\s*\n\s*((?:[0-9a-f]{2} ){7}[0-9a-f]{2})", out)
         rv = [int(x, 16) for x in r.group(1).split()] if r else [0] * 8
-        nbank = rv[2] if pc == call else rv[1]
         if pc == call:
             tgt = rv[1] << 8 | rv[0]
-            trail.append(f"{where(nbank, tgt)}@{nbank}")
+            trail.append(f"{where(rv[2], tgt)}@{rv[2]}")
+        if sw:
+            if pc not in sw:                                 # entry stops only record the trail
+                s.send(f"step {a.budget}"); continue
+            acc = re.search(r"ACC= 0x([0-9a-f]{2})", out)
+            nbank = int(acc.group(1), 16) if acc else bank
+        else:
+            nbank = rv[2] if pc == call else rv[1]
         if nbank >= nb:
             print(f"bank {nbank} out of range at switch {n} (pc 0x{pc:x}); trail {trail[-8:]}"); break
         if nbank != bank:

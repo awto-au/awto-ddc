@@ -6,6 +6,7 @@
 	.globl	__bs_call
 	.globl	__bs_cur
 	.globl	__bs_ret		; for scripts/fw_sim.py breakpoints
+	.globl	__bs_call_sw, __bs_ret_sw	; just after the 0xFFFF write (A = new bank): fw_sim switches here
 	ar0 = 0x00
 	ar1 = 0x01
 	ar3 = 0x03
@@ -33,6 +34,7 @@ __bs_call:
 	mov	dptr,#0xFFFF
 	mov	a,r2
 	movx	@dptr,a			; bank switched; this code is identical in every bank
+__bs_call_sw:
 	mov	dpl,r5
 	mov	dph,r6
 	mov	a,r4
@@ -79,6 +81,7 @@ __bs_ret:
 	mov	dptr,#0xFFFF
 	mov	a,r1
 	movx	@dptr,a
+__bs_ret_sw:
 	mov	dpl,r2
 	mov	dph,r3
 	mov	a,r0
