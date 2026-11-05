@@ -27,19 +27,20 @@
 #define _PANEL_DH_TOTAL_MAX                     7040
 #define _PANEL_DH_TOTAL_MIN                     4000
 
-#define _PANEL_DV_START                         8
+// DV start/total/min/max: old fw compiled constants (bank1 CE2A struct init, bank2 ACDF clamp), #26
+#define _PANEL_DV_START                         6
 #define _PANEL_DV_HEIGHT                        2160
-#define _PANEL_DV_END                           2168
+#define _PANEL_DV_END                           2166
 
-#define _PANEL_DV_TOTAL                         2251                       // MSA Vtotal, frame-synced at 60 Hz
-#define _PANEL_DV_TOTAL_MAX                     2311                       // old fw DV total register
-#define _PANEL_DV_TOTAL_MIN                     2180
+#define _PANEL_DV_TOTAL                         2222
+#define _PANEL_DV_TOTAL_MAX                     3520
+#define _PANEL_DV_TOTAL_MIN                     2200
 
 #define _PANEL_DH_SYNC_WIDTH                    8
 #define _PANEL_DV_SYNC_HEIGHT                   2
 
-// MHz: 4000 x 2251 x 60 Hz = 540.2
-#define _PANEL_PIXEL_CLOCK                      540
+// MHz: 4000 x 2222 x 60 Hz = 533.3
+#define _PANEL_PIXEL_CLOCK                      533
 #define _PANEL_PIXEL_CLOCK_MAX                  600
 #define _PANEL_PIXEL_CLOCK_MIN                  160
 

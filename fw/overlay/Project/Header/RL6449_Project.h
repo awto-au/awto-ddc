@@ -149,7 +149,7 @@ extern void AwtoDiagSelfTest(void);
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-#define _FRC_SUPPORT                                            _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _FRC_SUPPORT                                            _OFF    // awto: cut (#8); ON build wedged unit 3 incl. DDC hw slaves (#26)
 
 //-------------------------------------------------
 // Display Rotation Option

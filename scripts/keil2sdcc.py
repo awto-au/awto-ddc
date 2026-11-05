@@ -15,7 +15,7 @@ usage: keil2sdcc.py port                     SDK -> tmp/sdcc-port/src (rewritten
   fw/msg_enable.txt, and writes fw/msgids.tsv (awto-ddc#25, #26).
 - Repo is private (Realtek code), see CLAUDE.md. Tracking: awto-ddc#8.
 """
-import json, os, re, shutil, subprocess, sys, time
+import fnmatch, json, os, re, shutil, subprocess, sys, time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -72,6 +72,8 @@ RULES = [
                 f"{m.group(1)}{m.group(3)} {m.group(2)} {m.group(4)} {m.group(2)} {m.group(5)}")),
     (re.compile(r"^(\s*(?:extern\s+|static\s+)*)(code|xdata|idata|data|pdata)\s+([A-Za-z_][\w ]*?)\s*\(\s*\*\s*"
                 r"([A-Za-z_]\w*)", re.M), r"\1\3 (* \2 \4"),
+    # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
+    (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position
     (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
     (re.compile(r"\bdata(?=\s+[\*A-Za-z_])"), "__data"),
@@ -644,6 +646,15 @@ def cmd_compile(uv2_rel, jobs, only, target):
         for e in set(norm_err(l) for l in errs):
             hist[e] += 1
     (WORK / "logs").mkdir(parents=True, exist_ok=True)
+    whist, wfile = Counter(), {}                             # warnings of every file, ok or not (#26)
+    for f, _, msg in res:
+        ws = [l for l in msg.splitlines() if "warning" in l.lower()]
+        if ws:
+            wfile[f] = ws
+            for w in set(norm_err(l) for l in ws):
+                whist[w] += 1
+    (WORK / "warnings.txt").write_text("".join(f"== {f}\n" + "\n".join(ws) + "\n" for f, ws in sorted(wfile.items())))
+    unreviewed = warn_gate(res)
     seg = Counter()                                          # area sizes summed over ok files
     for f, _, _ in ok:
         if ASM_MODE:                                         # XSEG split: globals vs fn locals/params
@@ -664,17 +675,50 @@ def cmd_compile(uv2_rel, jobs, only, target):
             seg[m.group(1)] += int(m.group(2), 16)
     rep = {"uv2": uv2_rel, "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "ok": len(ok), "fail": len(bad),
            "missing": [str(m) for m in missing], "segments": dict(seg), "hist": hist.most_common(),
-           "per_file": per_file}
+           "per_file": per_file, "warn_hist": whist.most_common(), "warn_files": len(wfile),
+           "warn_unreviewed": unreviewed}
     log("segment bytes: " + ", ".join(f"{k}={v}" for k, v in seg.most_common() if v))
     (WORK / "report.json").write_text(json.dumps(rep, indent=1))
     log(f"compiled in {time.time() - t0:.0f}s: ok {len(ok)} fail {len(bad)}")
     print_hist(rep)
-    return 0 if not bad else 1
+    for u in unreviewed:
+        log(f"WARN-GATE unreviewed: {u}")
+    if unreviewed:
+        log(f"WARN-GATE: {len(unreviewed)} warning site(s) not in fw/warn_policy.tsv -> build fails (#26)")
+    return 0 if not bad and not unreviewed else 1
+
+
+WARN_RE = re.compile(r"^(.+?):(\d+)(?::\d+)?: warning(?: (\d+))?: (.*)$")
+
+
+def warn_gate(res):
+    """Every compiler/cpp warning must match a fw/warn_policy.tsv rule; returns the unmatched ones.
+    Rule columns: pattern (regex on text) | file glob (src-relative) | line (* or N) | verdict | reason."""
+    rules = []
+    for ln in (ROOT / "fw" / "warn_policy.tsv").read_text().splitlines():
+        if ln.strip() and not ln.startswith("#"):
+            pat, glob, line, verdict, _reason = (ln.split("\t") + [""] * 5)[:5]
+            if verdict == "ok":
+                rules.append((re.compile(pat), glob, line))
+    out = set()
+    for _f, _rc, msg in res:
+        for l in msg.splitlines():
+            m = WARN_RE.match(l)
+            if not m:
+                continue
+            path, line, text = m.group(1), m.group(2), m.group(4)
+            rel = os.path.relpath(path, SRC) if path.startswith(str(SRC)) else path
+            if not any(p.search(text) and fnmatch.fnmatch(rel, g) and lr in ("*", line) for p, g, lr in rules):
+                out.add(f"{rel}:{line}: {text}")
+    return sorted(out)
 
 
 def print_hist(rep, n=25):
     log(f"top errors (files affected) for {rep['uv2']}: ok {rep['ok']} fail {rep['fail']}")
     for e, k in rep["hist"][:n]:
+        log(f"  {k:5d}  {e}")
+    log(f"warnings (files affected) in {rep.get('warn_files', 0)} files; full list tmp/sdcc-port/warnings.txt")
+    for e, k in rep.get("warn_hist", [])[:n]:
         log(f"  {k:5d}  {e}")
 
 
