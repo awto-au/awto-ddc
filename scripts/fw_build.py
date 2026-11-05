@@ -196,11 +196,11 @@ def main() -> int:
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    for c in ("crt_mod0", "crt_divulong"):
+    for c in ("crt_mod0", "crt_divulong", "crt_memcpy"):
         run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
-                  bank_dir / "crt_mod0.asm", bank_dir / "crt_divulong.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
+                  bank_dir / "crt_mod0.asm", bank_dir / "crt_divulong.asm", bank_dir / "crt_memcpy.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr.asm"))):
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
