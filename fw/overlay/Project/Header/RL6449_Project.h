@@ -140,6 +140,7 @@ extern void AwtoDiagSelfTest(void);
 // Embedded Memory Size Option
 //-------------------------------------------------
 #define _EMBEDDED_MEMORY_SIZE_CONFIG                            _16M_16BIT_DDR2_2PCS
+#define _DDR2_MEMORY_CLK_1200M_SUPPORT                          _ON     // vendor fw: DDR PLL 1200000 kHz (bank2 F9B7) + 1200M PHY timings (#26)
 
 //-------------------------------------------------
 // OD Option
