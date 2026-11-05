@@ -15,8 +15,8 @@ from sdcc_overlay import repo_root  # noqa: E402
 sys.path.insert(0, "/mnt/2tb/git/awto-unvr/scripts")
 from _power import power_set_verified  # noqa: E402
 
-# Off time: PSU holds the scaler up ~6-9 s after the relay opens (measured, #27); 1.25x worst case
-OFF_S = 12
+# Off time: PSU holds the scaler up ~6 s after the relay opens (measured, #27); 1.25x
+OFF_S = 8
 
 
 def main() -> int:
