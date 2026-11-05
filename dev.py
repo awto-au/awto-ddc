@@ -284,7 +284,7 @@ def cmd_selftest(_extra: list[str]) -> int:
 # --------------------------------------------------------------------------
 SDCC_BE_BIN = "/mnt/2tb/git/awto-sdcc-be/tmp/be-install/bin"     # awto-sdcc big-endian install
 FW = TMP / "fw"
-BOOT_PORTS = {"DP": "_D1_INPUT_PORT", "HDMI": None}               # debug port before first ACTIVE (#28)
+BOOT_PORTS = {"DP": "_D1_INPUT_PORT", "HDMI": "_D2_INPUT_PORT"}               # debug port before first ACTIVE (#28)
 MODES = {"1080p50": "1920x1080@50.000", "1080p60": "1920x1080@60.000", "4k30": "3840x2160@30.000",
          "4k60": "3840x2160@60.000"}
 
@@ -318,10 +318,41 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
     return n, u
 
 
+def _edid_serial(bus: int) -> str | None:
+    """Text serial (descriptor 0xFF) of the EDID at 0x50 on a bus, or None (no EDID / not readable)."""
+    import fcntl
+    try:
+        fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
+    except OSError:
+        return None
+    try:
+        fcntl.ioctl(fd, 0x0703, 0x50)               # I2C_SLAVE
+        os.write(fd, b"\x00")
+        e = os.read(fd, 128)
+    except OSError:
+        return None
+    finally:
+        os.close(fd)
+    for i in range(54, 126, 18):
+        if e[i:i + 3] == b"\0\0\0" and e[i + 3] == 0xFF:
+            return e[i + 5:i + 18].split(b"\n")[0].decode("latin-1").strip()
+    return None
+
+
 def _bus(u: dict) -> int:
-    """Bus numbers change on reboot: follow the DRM connector's ddc link (DP AUX one with --dp)."""
-    link = Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc"
-    return int(link.resolve().name.split("-")[1])
+    """The bus whose EDID serial is the unit's: the connector's i2c link first, else every display bus
+    (NVIDIA has no link). A recable moved units between ports on 2026-11-06 and a flash hit the wrong one."""
+    link = (Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc").resolve()
+    cands = [int(link.name.split("-")[1])] if link.name.startswith("i2c-") else []
+    for d in sorted(Path("/sys/class/i2c-dev").iterdir(), key=lambda p: int(p.name.split("-")[1])):
+        n = (d / "name").read_text()
+        if ("i915 gmbus" in n or "NVIDIA" in n or "AUX" in n) and int(d.name.split("-")[1]) not in cands:
+            cands.append(int(d.name.split("-")[1]))
+    for b in cands:
+        if _edid_serial(b) == u["serial"]:
+            return b
+    raise SystemExit(f"{u['serial']}: no bus with that EDID serial (unit off, wedged, or cabled elsewhere); "
+                     f"use --bus N only after checking which monitor it is")
 
 
 def _py(script: str, *args, env: dict | None = None) -> int:

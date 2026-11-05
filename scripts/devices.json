@@ -1,15 +1,15 @@
 {
-  "_doc": "Test units (awto-ddc). Bus numbers change on reboot: resolve via the DRM connector's ddc link. relay = mains outlet (scripts/power_cycle.py). dev.py reads this. test=false: Dan's working screens; dev.py refuses them unless --unit N --force.",
+  "_doc": "Test units (awto-ddc). Bus numbers change on reboot; NVIDIA connectors have no i2c link: dev.py finds the bus whose EDID (0x50) carries the unit serial and refuses to flash a bus that doesn't. relay = mains outlet (scripts/power_cycle.py). test=false: Dan's working screens; dev.py refuses them unless --force.",
   "units": {
     "1": {
       "serial": "AWT26110001",
-      "input": "DP",
-      "connector": null,
-      "gdctl": null,
+      "input": "HDMI",
+      "connector": "card1-HDMI-A-2",
+      "gdctl": "HDMI-2",
       "be": true,
       "relay": null,
       "test": false,
-      "note": "unplugged 2026-11-06: its Intel DP-1 cable moved to unit 3"
+      "note": "recabled 2026-11-06 ~09:55: now on Intel HDMI-A-2 (unit 3's old port)"
     },
     "2": {
       "serial": "AWT26110002",
@@ -23,14 +23,14 @@
     "3": {
       "serial": "AWT26110003",
       "input": "HDMI",
-      "connector": "card1-HDMI-A-2",
-      "gdctl": "HDMI-2",
+      "connector": "card2-HDMI-A-3",
+      "gdctl": "HDMI-3",
       "be": true,
       "relay": "so-th-1",
       "test": true,
       "connector_dp": "card1-DP-1",
       "gdctl_dp": "DP-1",
-      "note": "HDMI (default link) + DP via Intel DP-1 Type-C (2026-11-06); --dp selects DP in dev.py"
+      "note": "recabled 2026-11-06 ~09:55: NVIDIA HDMI-A-3 + Intel DP-1 (unit 1's old DP cable)"
     }
   }
 }
