@@ -309,6 +309,8 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
     u = _units().get(n)
     if u is None:
         raise SystemExit(f"unknown unit {n!r}: see scripts/devices.json")
+    if not u.get("test") and not _opt(extra, "--force"):
+        raise SystemExit(f"unit {n} is a working screen (devices.json test=false): add --force to touch it")
     return n, u
 
 
@@ -428,6 +430,13 @@ def cmd_mode(extra: list[str]) -> int:
         log(f"mode: one of {', '.join(MODES)}", "ERROR")
         return 2
     show = subprocess.run(["gdctl", "show"], capture_output=True, text=True).stdout
+    cur, mon = {}, None
+    for line in show.split("Logical monitors:")[0].splitlines():
+        s = line.strip("│├└─ ")
+        if s.startswith("Monitor "):
+            mon = s.split(" ")[1]
+        elif mon and "@" in s and "x" in s and mon not in cur and s[0].isdigit():
+            cur[mon] = s.split(" ")[0]
     args, prim, pos = [], False, None
     for line in show.split("Logical monitors:")[1].splitlines():
         s = line.strip("│├└─ ")
@@ -438,7 +447,7 @@ def cmd_mode(extra: list[str]) -> int:
         elif pos and s.split(" ")[0] in {v["gdctl"] for v in _units().values()} | {"DP-2"}:
             mon = s.split(" ")[0]
             args += ["--logical-monitor", *(["--primary"] if prim else []), "--monitor", mon,
-                     *(["--mode", MODES[extra[0]]] if mon == u["gdctl"] else []), "--x", pos[0], "--y", pos[1]]
+                     "--mode", MODES[extra[0]] if mon == u["gdctl"] else cur[mon], "--x", pos[0], "--y", pos[1]]
             pos = None
     log("run: gdctl set " + " ".join(args))
     return subprocess.call(["gdctl", "set", *args])
