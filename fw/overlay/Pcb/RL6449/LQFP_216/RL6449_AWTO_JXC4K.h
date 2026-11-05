@@ -327,6 +327,13 @@
                                                     PCB_BACKLIGHT_POWER_PIN(x)\
                                                 }
 
+// Brightness: SDK default PCB_BACKLIGHT_PWM is empty (RL6449_Pcb_Default.h) -> duty stayed 0, dark (#7)
+#define PCB_BACKLIGHT_PWM(x)                    {\
+                                                    MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM, (x));\
+                                                }
+
+#define PCB_GET_BACKLIGHT_PWM()                 (MCU_GET_8BIT_PWM_DUTY(_BACKLIGHT_PWM))
+
 //-----------------------------------------------
 // Macro of 12V to 5V Regulator for MyDP or MHL
 //-----------------------------------------------
