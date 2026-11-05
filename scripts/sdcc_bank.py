@@ -14,6 +14,7 @@ Method (awto-ddc#8):
 - Rest: module granularity, area BANK<n>; modules packed into banks in input order (first fit).
 - Calls/jumps to a fn in another bank, from common to banked, and every address-taken banked fn go through
   a stub `__bs_<fn>` emitted in the fn's own module (common): mov r0/r1/r2,#fn24; ljmp __bs_call (fw/sdcc/bank.asm).
+- CONST moves to a user bank only if every ref is `mov dptr,#_t` in a chunk with no cross-bank call (#16).
 - Fails on: CONST referenced from a bank it is not in (after the common rule), a module larger than a bank.
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
 """
@@ -31,6 +32,10 @@ FUNC_HDR = re.compile(r"^;\s+function (\w+)\s*$")
 LABEL = re.compile(r"^(\w+)(::?)\s*$")
 CALL = re.compile(r"^(\s+)(lcall|ljmp)(\s+)(\w+)\s*$")
 SYM = re.compile(r"(?<![\w$])(_\w+)")
+MOVC = re.compile(r"^\s+movc\s+a,\s*@a\+dptr")
+SAVE = re.compile(r"^\s+(push\b|movx\s+@|mov\s+(a?r[0-7]|@r[01]),\s*(a|dpl|dph|b)\b)")
+CALLJ = re.compile(r"^\s+(lcall|ljmp|acall)\s+(\w+)")
+SCAN_MAX = 30             # lines from an address load to its consumer; longer = give up (stays common)
 AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
 BANK_SIZE = 0x10000
 HOT_BANKS = 3             # helper called from at least this many other banks
@@ -41,6 +46,29 @@ ASM_TIMEOUT = 30          # one sdas8051 run: largest module assembles in < 2 s;
 def log(s):
     line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
+
+
+def addr_stays_in_bank(code, i, c, funcs):
+    """True if a CONST address loaded at code[i] is consumed by movc, or passed to a callee that reads
+    in this bank (same-bank / library / common leaf). Saves to variables or registers escape (#16)."""
+    if re.match(r"^\s+(mov\s+(a?r[0-7]|@r[01]),\s*#|\.(db|dw|byte|word)\b)", code[i]):
+        return False
+    for l in code[i + 1:i + 1 + SCAN_MAX]:
+        if MOVC.match(l):
+            return True
+        m = CALLJ.match(l)
+        if m:
+            t = funcs.get(m.group(2))
+            if t is None or t.bank == c.bank:
+                return True
+            if t.bank is None:                               # common callee: ok unless it calls a banked fn
+                return not any(x in funcs and funcs[x].bank is not None for x in t.calls)
+            return False
+        if SAVE.match(l):
+            return False
+        if re.match(r"^\s+(ret|reti|sjmp|jmp)\b", l):
+            return False
+    return False
 
 
 class Chunk:
@@ -352,13 +380,21 @@ def main() -> int:
     # CONST used from more than one bank (or from common / data initialisers) -> common;
     # used from exactly one other bank -> placed in that bank
     users = defaultdict(set)
+    escaping = set()                                         # address may reach another bank (#16)
     for m in mods:
         for c in m.chunks:
             if c.area != "CSEG":
                 continue
+            code = [l.split(";", 1)[0] for l in c.lines]
+            for i, l in enumerate(code):
+                rs = [r for r in SYM.findall(l) if r in consts]
+                if rs and not addr_stays_in_bank(code, i, c, funcs):
+                    escaping.update(rs)
             for r in c.refs:
                 if r in consts:
                     users[r].add(c.bank)
+    for t in consts.values():                                # pointer tables hand out their targets
+        escaping.update(r for r in t.refs if r in consts)
     for m in mods:                                           # pointer in an xdata initialiser: any bank
         for l in m.head + m.tail:
             if re.match(r"^\s+\.(db|dw|byte|word)\b", l):
@@ -372,7 +408,7 @@ def main() -> int:
             for r in t.refs:
                 if r in consts and not users[t.name] <= users[r]:
                     users[r] |= users[t.name]; changed = True
-    moved = 0
+    moved, stopped, stay_escape = 0, [], []
     for r, u in users.items():
         c = consts[r]
         if not u:
@@ -380,8 +416,15 @@ def main() -> int:
         if len(u) > 1 or None in u:
             c.common, c.bank = True, None
         elif u != {c.bank}:
-            c.bank = next(iter(u)); moved += 1
-    log(f"common consts: {sum(c.common for c in consts.values())}; consts moved to user bank: {moved}")
+            if r in escaping:
+                c.common, c.bank = True, None; stopped.append(r)
+            else:
+                c.bank = next(iter(u)); moved += 1
+        elif r in escaping:
+            stay_escape.append(r)
+    log(f"common consts: {sum(c.common for c in consts.values())}; consts moved to user bank: {moved}; "
+        f"kept common (address escapes, #16): {len(stopped)}: {', '.join(sorted(stopped))}")
+    log(f"in own bank, address escapes (not moved, unchanged): {len(stay_escape)}: {', '.join(sorted(stay_escape))}")
 
     # stubs: cross-bank / common->banked calls and every address-taken banked fn. fn -> (module, bank)
     stubs = {}
