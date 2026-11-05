@@ -24,3 +24,11 @@
 - Timing equals the M280DCA-E3B datasheet typical (533.28 MHz, 4000 x 2222), so timing does not separate the candidates.
 - `MST` / `AGERA` is not a panel-maker ID; no model string in the EDID.
 - Use for firmware panel header: DTD above, 10 bpc, 4-lane HBR2.
+
+## Candidate: Innolux M270DCA-E5B (panelook overview, pasted by Dan 2026-11-05)
+- 27.0" LCM, a-Si TFT, AAS (IPS family), 3840x2160, active 596.736 x 335.664 mm (EDID: 597 x 336), 350 cd/m2, 1000:1, 10-bit (1.07B), 99% sRGB.
+- eDP 4 lanes HBR2 (5.4G/lane), 51-pin 0.5 mm, 12 V, 60 Hz, WLED without driver, 21.63 W typ.
+- Dates: customer sample 2022-Q3, mass production 2023-Q4 (EDID says week 51/2018: unexplained; template date or earlier revision).
+- Family: M270DCA-D5B (cell, discontinued), D7B (cell, 16.7M colours), E5B (LCM). No E3B in the 27" family.
+- Datasheet: panelook `M270DCA-E5B.pdf` Ver3.0, 2022-09-23, 42 pages, 6.1 MB. NOT fetched (panelook CAPTCHA / bad cert on the huasun mirror). Store in `~/vendors/innolux/M270DCA-E5B/`.
+- To confirm: its timing table (Fc / Htotal / Vtotal) against the EDID DTD (533.25 MHz, 4000 x 2222).
