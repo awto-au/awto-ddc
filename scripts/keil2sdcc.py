@@ -11,6 +11,7 @@ usage: keil2sdcc.py port                     SDK -> tmp/sdcc-port/src (rewritten
   fix a rule or the compat header and re-run `port` (the tree is a derived artifact).
 - <uv2> is SDK-relative, e.g. Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2
 - Output: tmp/sdcc-port/{src,obj,logs}, tmp/sdcc-port/report.json. Log: tmp/logs/keil2sdcc.log
+- `port` also tokenises DebugMessage<Cat>("text", v) -> AWTO_MSG(id) and writes fw/msgids.tsv (awto-ddc#25).
 - Repo is private (Realtek code), see CLAUDE.md. Tracking: awto-ddc#8.
 """
 import json, os, re, shutil, subprocess, sys, time
@@ -289,8 +290,120 @@ def add_at_to_externs(text, stats):
     return re.sub(r"\bextern\b[^;\n(]*?\b(?:\w+\s+)+\**\s*()(\w+)\s*(?:\[[^\]\n]*\])?\s*;", sub, text)
 
 
+# ---------------- tokenised debug messages (#25) ----------------
+# DebugMessage<Cat>("text", v) -> DebugMessage<Cat>(AWTO_MSG(0xHHLL), v); wire bytes {0x01, HH, LL, 0} (Debug.h overlay),
+# HH/LL in 1..255 so the NUL-terminated protocol never sees a 0. Text lives in fw/msgids.tsv.
+MSG_TSV = ROOT / "fw" / "msgids.tsv"
+MSG_CATS = None                                # category names, read from the overlay Debug.h
+MSG_IDS = {}                                   # (category, text) -> id, filled by collect_messages
+_STR = r'"(?:[^"\\\n]|\\.)*"'
+MSG_CALL = re.compile(r"\bDebugMessage(\w+)\s*\(")
+MSG_LIT = re.compile(rf"\s*((?:{_STR}\s*)+),")
+COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.S)
+ESC = {"n": 10, "t": 9, "r": 13, "a": 7, "b": 8, "f": 12, "v": 11, "\\": 92, '"': 34, "'": 39, "?": 63}
+
+
+def c_unescape(lit: str) -> str:
+    out, i = [], 0
+    while i < len(lit):
+        c = lit[i]
+        if c != "\\":
+            out.append(c); i += 1; continue
+        m = re.match(r"\\(x[0-9A-Fa-f]+|[0-7]{1,3}|.)", lit[i:], re.S)
+        e = m.group(1)
+        out.append(chr((int(e[1:], 16) if e[0] == "x" else int(e, 8) if e[0] in "01234567" else ESC.get(e, ord(e))) & 0xFF))
+        i += len(m.group(0))
+    return "".join(out)
+
+
+def mask_comments(text: str) -> str:
+    """Blank out comments (same length, newlines kept) so offsets match the original; strings stay."""
+    return COMMENT.sub(lambda m: m.group(0) if m.group(0)[0] == '"' else re.sub(r"[^\n]", " ", m.group(0)), text)
+
+
+def msg_sites(text: str):
+    """Yield (start, end, category, text) per DebugMessage<Cat>(<literals>, ...) call; text[start:end] is the
+    literal run. A call whose first argument is not purely string literals yields (None, None, category, head)."""
+    masked = mask_comments(text)
+    for m in MSG_CALL.finditer(masked):
+        if m.group(1) not in MSG_CATS:
+            continue
+        ls = masked.rfind("\n", 0, m.start()) + 1
+        if re.match(r"\s*#\s*define", masked[ls:m.start()]):
+            continue
+        lit = MSG_LIT.match(masked, m.end())
+        if lit is None:
+            yield None, None, m.group(1), masked[m.end():m.end() + 60].split("\n")[0]
+            continue
+        val = "".join(c_unescape(x[1:-1]) for x in re.findall(_STR, lit.group(1)))
+        yield m.end(), lit.end() - 1, m.group(1), val
+
+
+def assign_msg_ids(keys):
+    """Stable 16-bit id per (category, text): sha1 of category+text, each byte folded into 1..255; collisions
+    re-salted deterministically, keys processed in sorted order."""
+    import hashlib
+    ids, used, collisions = {}, {}, 0
+    for key in sorted(keys):
+        for salt in range(1000):
+            d = hashlib.sha1(f"{key[0]}\0{key[1]}\0{salt}".encode("latin-1")).digest()
+            v = ((d[0] % 255 + 1) << 8) | (d[1] % 255 + 1)
+            if v not in used:
+                break
+            collisions += 1
+        else:
+            sys.exit(f"msg id: no free id for {key!r}")
+        used[v] = key; ids[key] = v
+    return ids, collisions
+
+
+def collect_messages(files, overlay):
+    """Pre-pass over SDK + overlay sources: assign ids, write fw/msgids.tsv. Returns stats."""
+    global MSG_CATS
+    dbg = (OVERLAY / "Kernel/Common/Debug.h").read_text(errors="replace")
+    MSG_CATS = set(re.findall(r"#define\s+DebugMessage(\w+)\(x,\s*y\)", dbg))
+    srcs = {}
+    for p in files:
+        if p.suffix.lower() in SRC_EXT:
+            srcs[str(p.relative_to(SDK))] = p
+    for p in overlay:
+        if p.suffix.lower() in SRC_EXT:
+            srcs[str(p.relative_to(OVERLAY))] = p      # overlay replaces the SDK file
+    sites, skipped, skip_sample = [], 0, []
+    for rel, p in srcs.items():
+        t = p.read_bytes().decode("latin-1").replace("\r\n", "\n")
+        for a, b, cat, txt in msg_sites(t):
+            if a is None:
+                skipped += 1; skip_sample.append(f"{rel}: DebugMessage{cat}({txt}"); continue
+            sites.append((cat, rel, t.count("\n", 0, a) + 1, txt))
+    keys = {(c, x) for c, _, _, x in sites}
+    MSG_IDS.clear()
+    ids, coll = assign_msg_ids(keys)
+    MSG_IDS.update(ids)
+    rows = sorted((ids[(c, x)], c, f"{r}:{ln}", x) for c, r, ln, x in sites)
+    esc = lambda s: s.replace("\\", "\\\\").replace("\t", "\\t").replace("\n", "\\n").replace("\r", "\\r")
+    MSG_TSV.write_text("".join(f"{i:04x}\t{c}\t{f}\t{esc(x)}\n" for i, c, f, x in rows), encoding="utf-8", errors="replace")
+    log(f"msgids: {len(sites)} call sites, {len(keys)} unique ids, {coll} collisions re-salted, "
+        f"{skipped} skipped (not a single literal) -> {MSG_TSV}")
+    for s_ in skip_sample[:8]:
+        log(f"  msg skipped: {s_}")
+    return len(sites), skipped
+
+
+def tokenise_messages(text: str, stats) -> str:
+    out, last = [], 0
+    for a, b, cat, txt in msg_sites(text):
+        if a is None:
+            continue
+        out.append(text[last:a]); out.append(f"AWTO_MSG(0x{MSG_IDS[(cat, txt)]:04X})"); last = b
+        stats["msg tokenised"] += 1
+    out.append(text[last:])
+    return "".join(out)
+
+
 def rewrite(text, here, idx, sfr_addr, using, stats):
     text = text.replace("\r\n", "\n")
+    text = tokenise_messages(text, stats)
     text = fix_includes(text, here, idx)
     text = add_using_to_protos(text, using, stats)
     text = add_at_to_externs(text, stats)
@@ -342,6 +455,8 @@ def cmd_port():
                 f"{', '.join(conflicts[:12])}{' ...' if len(conflicts) > 12 else ''}")
     stats = Counter()
     n = 0
+    ov = [p for p in OVERLAY.rglob("*") if p.is_file()] if OVERLAY.exists() else []
+    collect_messages(files, ov)
     for p in files:
         rel = p.relative_to(SDK)
         dst = SRC / rel
@@ -355,7 +470,6 @@ def cmd_port():
             n += 1
         elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:
             shutil.copy2(p, dst)
-    ov = [p for p in OVERLAY.rglob("*") if p.is_file()] if OVERLAY.exists() else []
     for p in ov:                                             # our files win over the SDK's
         dst = SRC / p.relative_to(OVERLAY)
         dst.parent.mkdir(parents=True, exist_ok=True)

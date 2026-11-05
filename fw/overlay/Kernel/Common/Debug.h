@@ -67,6 +67,11 @@
 #define _DEBUG_MESSAGE_CHECK_DISP_SETTING           _ON 
 #define _DEBUG_MESSAGE_CHECK_MDOMAIN                _ON 
 
+//--------------------------------------------------
+// Tokenised message (awto, #25): {0x01, id_hi, id_lo, 0} in code; text is in fw/msgids.tsv. Bytes are 1..255 (no NUL).
+//--------------------------------------------------
+#define AWTO_MSG(id)                                ((BYTE *)(__code BYTE[]){0x01, (id) >> 8, (id) & 0xFF, 0})
+
 #ifndef _DEBUG_MESSAGE_AUTOTEST
 #define _DEBUG_MESSAGE_AUTOTEST                     _OFF
 #endif
