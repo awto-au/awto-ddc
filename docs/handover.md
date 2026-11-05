@@ -1,32 +1,49 @@
-# Handover — 2026-11-04T14:20+11:00
+# Handover — 2026-11-05T14:40+11:00
 
-State after the 2026-11-04 session (host rebooted mid-work, so no agents are running). The open work lives in issues. This file only points to it.
+Open work lives in GitHub issues (tracking #1, firmware #7). This file points to it and records state.
 
-## Done
-- **EDID**: all 3 units flashed with the awto IPS/sRGB EDID, verified, reprotected (SR 0x9C), factory backups kept (`docs/edid-fix.md`).
-  - Units are i2c-20 / i2c-10 / i2c-16 with serials AWT26110001 / 0002 / 0003. The bus → serial map is in `docs/edid-fix.md`.
-  - Bus numbers can change: re-resolve with `ddcutil detect` before any write.
-- **Flasher**: `scripts/rtd_flash_sector.py`
-  - Writes a 4 KB sector with backup, `--expect-current`, verify and reprotect.
-  - `--read-id` is read-only and prints JEDEC + RDUID + ESN.
-  - The MX25L8006E has no factory UID.
-- **Per-unit EDID**: `scripts/make_edid.py --serial`, `scripts/build_edid_sector.py`.
-- **SDK**: the Realtek RL64xx SDK in git_mirror covers our chip (RL6449 = RTD2795T). Use it as reference only (`docs/reversing/realtek-rtd/sdk-rl64xx-reference.md`).
-- **Splash glyph format**: confirmed and decoded (`scripts/glyph_decode.py`). Dahua logo atlas = blob D `0x23B41` (`docs/boot-logo.md`).
-- **Panel**: Samsung LTM270FL01, PLS, 60 Hz ceiling (`docs/monitors/panel-samsung-ltm270fl01.md`).
+## Units (serial → bus, resolve with `ddcutil detect --brief` before any write; numbers change on reboot)
+| Serial | Input | Bus now | Firmware |
+|---|---|---|---|
+| AWT26110001 | DP | i2c-15 | original (reference for register/GPIO reads) |
+| AWT26110002 | DP | i2c-21 | original |
+| AWT26110003 | HDMI | i2c-11 | ours; new image being flashed at handover (see "In flight") |
 
-## Open work
+## In flight at handover
+- **Flash of the new image onto AWT26110003** was running (`scripts/rtd_flash_image.py 11 tmp/fw/AWT26110003/fw.bin --serial AWT26110003 --write`): 112/184 sectors verified at 14:38. Log: `tmp/logs/rtd_flash_image.log`.
+  - Backup before write: `~/vendors/realtek/analysis/dumps/jxc-4k-flash-AWT26110003-20261105-142704.bin` (two identical reads). Revert = rerun with that file as the image.
+  - If the log ends without "re-protect" the flash is left unprotected: rerun the same command (only differing sectors are rewritten).
+  - First thing to check after it finishes: does the panel light (backlight, picture)? Then DDC (debug slave 0x35, DDC/CI is off in this build).
+- Not pushed: all local commits (latest `50f2486`).
+
+## What changed this session
+- **Panel identity (#3)**
+  - Panel's own EDID read over eDP AUX (`scripts/rtd_panel_aux.py`): mfr `MST`, name `AGERA`, week 51/2018, 597 x 336 mm, DTD 533.25 MHz, 4000 x 2222. `Agera` is a template string (also in an unrelated MediaTek EDID); no maker is named. DPCD: rev 1.4, HBR2, 4 lanes, sink OUI zero. Doc: `docs/monitors/panel-edid.md`.
+  - Best candidate: **BOE MV270QUM-N20** (colours R/B/W match to EDID resolution, 2017-18 spec history, same size/timing). Others ruled in/out in the doc. Not confirmed by label.
+  - Service menu says Innolux M280DCA-E3B (28", 620.9 x 341.3 mm): does not match the panel's 597 x 336 mm.
+  - Datasheets in `~/vendors/boe/` (N10, N20, N50) and `~/vendors/innolux/` (M280DCA-E3B). Innolux M270DCA-E5B datasheet (panelook) not fetched.
+- **GPIO roles (#7)**, `docs/monitors/gpio-roles.md`, script `scripts/rtd_gpio_live.py` (live pin levels, monitor on vs DPMS standby) + 3 read-only code-reversing agents:
+  - P7.2 panel power (rail) high-on; P8.5 backlight enable high-on; P8.4 power LED (LED1); P9.2 standby LED (probable); P9.1 = PWM4 backlight pin.
+  - Unknown: P3.5/P3.6, P4.2, P8.6 (maybe WP#/CS), P7.3/P7.4; P8.1 (VCCK_OFF) never written by old firmware.
+- **Firmware board header** (`fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`): panel power and backlight enable now defined (SDK defaults were no-ops, the likely cause of the earlier blank unit); backlight PWM = PWM4, polarity untested (`_BACKLIGHT_PWM_INVERSE _OFF`); MHL/VCCK/DDR macros are no-ops. Panel header T3 = 550 ms (datasheets ask >= 500 ms backlight delay). Debug-message categories on via `fw/overlay/Kernel/Common/Debug.h`. FreeSync VSDB removed from the EDID generator.
+- **Flasher**: second read now limited to the image region.
+- **Removed / deferred on purpose**: FreeSync + MHL (#21), audio (#22).
+
+## Open work (issues)
 | issue | what | next step |
 |---|---|---|
-| #5 | Persistent awto boot splash | Read OSD font-select SRAM back while the splash is up to get the char-map. Link the `0x1382F` header to blob D. |
-| #2 | Tech-info OSD (volatile) | `rtd_tech_osd.py 20 draw` on hardware. It has never completed a draw. `tech-osd.md` is not written. |
-| #6 `needs-dan` | Windows flasher | Dan picks NVIDIA, AMD, Intel or a CH341A dongle. |
-| #3 | OEM / panel identity | Get the Samsung spec PDF (LCDPanels email, Panelook CAPTCHA). Decode the firmware panel-config table. |
-| #4 | EDID mode list | Add 4K30 / 1440p60 / 1080p60 if wanted. Nothing above 60 Hz. |
-| #1 | Firmware status umbrella | — |
+| #7 | Own firmware on RL6449 SDK | Verify the flash lights the panel; if dark, vary one thing at a time (PWM polarity, P7.2 vs rail, backlight delay) and reflash |
+| #3 | OEM / panel identity | Rear label photo or Innolux E5B / BOE N20 power sequence; update `_PANEL_*` names once settled |
+| #11 `needs-dan` | Toolchain: Keil PK51 (~A$284/month via MDK) vs SDCC | Dan decides; SDCC image is 12 banks, common 0x3f27/0x5000 |
+| #6 `needs-dan` | Windows flasher: which GPU / I2C path | Dan picks NVIDIA / AMD / Intel / CH341A |
+| #15, #16, #19, #20 | SDCC port bugs (word views, CONST banking, ISR helpers, port risks) | open |
+| #2, #5 | Tech OSD, persistent boot splash | not started |
+| #21, #22 | FreeSync/MHL re-add; audio hardware check | deferred |
+| #9, #10, #13 | USB port, emulator tests, CLI for RTDCustomerTool | open |
 
 ## Gotchas
-- Entering ISP (`0x6F=0x80`) halts the MCU. Exiting via `0xEE=0x02` reboots the monitor.
-- i2c-20's kernel `/sys` EDID showed the old VA primaries until that unit re-enumerated. Flash content is correct.
-- `docs/boot-logo.md` was pruned of superseded conclusions on 2026-11-04 (all-zero VLC map, bank6 `0x628C6` candidate).
-  - `git log -p docs/boot-logo.md` has them if needed.
+- Entering ISP (`0x6F=0x80`) halts the MCU; exiting via `0xEE=0x02` reboots the monitor. Every register/GPIO read script ends with that reboot.
+- DRM connector and i2c bus numbers change after a reboot; identify units by the serial in the EDID.
+- Pin-level reads in standby are unreliable for inputs (always-off domain reads 0); use output pins the firmware writes.
+- Flash rules: dump twice and compare first; never write without a backup in `~/vendors/realtek/analysis/dumps/`; unit 3 is the test unit.
+- Repo stays PRIVATE (Realtek SDK code, `re/regdb/`).
