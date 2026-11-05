@@ -551,6 +551,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
     cmd += FILE_FLAGS.get(c.name, [])
+    cmd += T.CFLAGS_EXTRA                                      # --big-endian when AWTO_SDCC_BE=1
     cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
 

@@ -1,7 +1,17 @@
 /* Replaces SDCC mcs51 _divulong: same restoring shift-subtract (x / 0 = 0xFFFFFFFF, reste kept 32 bit like the
  * library), hand asm in R0-R7/B only. The compiled C needed a 4 B direct-RAM temporary, and the ISR clone
- * (sdcc_isr_libs.py) a second copy of it (#24). ABI: x in DPL,DPH,B,ACC; y in __divulong_PARM_2 (XDATA, LE).
+ * (sdcc_isr_libs.py) a second copy of it (#24). ABI: x in DPL,DPH,B,ACC; y in __divulong_PARM_2 (XDATA, LE or BE).
  * x = R4..R7, reste = R0..R3. */
+
+/* PARM_2 bytes are read LSB first. LE: LSB at the lowest address. --big-endian: MSB lowest (reload dptr). */
+#define HASH #                  /* a bare # in a function-like macro body is stringify */
+#ifdef __SDCC_BIG_ENDIAN
+#define PARM_LO(s, n)      mov dptr,HASH(s + n - 1)
+#define PARM_NEXT(s, n, k) mov dptr,HASH(s + n - 1 - k)
+#else
+#define PARM_LO(s, n)      mov dptr,HASH(s)
+#define PARM_NEXT(s, n, k) inc dptr
+#endif
 
 unsigned long _divulong(unsigned long x, unsigned long y) __naked
 {
@@ -43,41 +53,41 @@ unsigned long _divulong(unsigned long x, unsigned long y) __naked
         mov     a,r3
         rlc     a
         mov     r3,a
-        mov     dptr,#__divulong_PARM_2
+        PARM_LO(__divulong_PARM_2,4)
         clr     c                       ; reste -= y
         movx    a,@dptr
         xch     a,r0
         subb    a,r0
         mov     r0,a
-        inc     dptr
+        PARM_NEXT(__divulong_PARM_2,4,1)
         movx    a,@dptr
         xch     a,r1
         subb    a,r1
         mov     r1,a
-        inc     dptr
+        PARM_NEXT(__divulong_PARM_2,4,2)
         movx    a,@dptr
         xch     a,r2
         subb    a,r2
         mov     r2,a
-        inc     dptr
+        PARM_NEXT(__divulong_PARM_2,4,3)
         movx    a,@dptr
         xch     a,r3
         subb    a,r3
         mov     r3,a
         jnc     2$                      ; reste >= y: keep, quotient bit 1
-        mov     dptr,#__divulong_PARM_2 ; undo
+        PARM_LO(__divulong_PARM_2,4) ; undo
         movx    a,@dptr
         add     a,r0
         mov     r0,a
-        inc     dptr
+        PARM_NEXT(__divulong_PARM_2,4,1)
         movx    a,@dptr
         addc    a,r1
         mov     r1,a
-        inc     dptr
+        PARM_NEXT(__divulong_PARM_2,4,2)
         movx    a,@dptr
         addc    a,r2
         mov     r2,a
-        inc     dptr
+        PARM_NEXT(__divulong_PARM_2,4,3)
         movx    a,@dptr
         addc    a,r3
         mov     r3,a
