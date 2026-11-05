@@ -101,6 +101,9 @@ WRAPS = [
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO0\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO1\[\]", r"^\};", "_AWTO_DEMO_LOGO"),
     (OSD + "RTD2014OsdFontVLC.c", r"^\s*case _REALTEK_1BIT_LOGO0:", r"^\s*default:", "_AWTO_DEMO_LOGO", "before-end"),
+    # _AWTO_DEBUG_PORT: RL6449_Project.h forces GET_OSD_DDCCI_STATUS() off -> DDC port in Realtek debug mode (#13)
+    ("User/RTD Series/RTD2014Osd/Header/RTD2014Include.h", r"^#define GET_OSD_DDCCI_STATUS\(\)",
+     r"^#define GET_OSD_DDCCI_STATUS\(\)", "_AWTO_DEBUG_PORT == _OFF"),
     # NVRAM checksum: ours (RL6449_Project.h) so data left by the old fw / older builds reloads defaults (#8)
     (OSD + "RTD2014NVRamOsd.c", r"^#define _CHECKSUM\s", r"^#define _CHECKSUM\s", "!defined(_CHECKSUM)"),
     # DDC RAM arrays: address differs per chip/DDC channel, so the header extern can't get a single __at;

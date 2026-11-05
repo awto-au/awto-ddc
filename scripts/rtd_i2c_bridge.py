@@ -7,7 +7,8 @@ usage: rtd_i2c_bridge.py emu  <flash_dump.bin> [--port N]
 emu : software model of an RTD scaler ISP port (slave 0x4A) backed by an in-memory copy
       of a flash dump. Writes/erases touch only the copy. Every access is logged.
 real: forwards to /dev/i2c-<bus>. Writes are BLOCKED unless --allow-write.
-      --regread: allow only ISP 0xF4 (index) and 0xF5 page select (index 0x9F) so register READS work in ISP mode.
+      --regread: allow only register-select/read writes: ISP 0xF4/0xF5(page) and debug-slave 0x35 read
+                 commands + page select (see Real.regread_ok). All other writes stay blocked.
 Wire format (shim -> bridge): <BBBHH> op(1=read,2=write) dev8 sub nbytes datalen + data;
 reply: <BH> status(0 ok, 1 fail) len + data. dev8 = 8-bit address incl. R/W bit.
 Protocol/regs: docs/reversing/realtek-rtd/README.md. Log: ./tmp/logs/rtd_i2c_bridge.log
@@ -125,14 +126,26 @@ class Real:
         self.regread = regread
         self.f4 = None          # last scaler index written to ISP 0xF4
 
+    # Firmware debug slave 0x35 (SDK ScalerCommonDebug.c ScalerDebug): first byte = command.
+    DBG_READ = {0x80, 0x41, 0x44, 0x45, 0x3A, 0xBB, 0x55, 0x20, 0x25, 0x2A, 0x2F}   # run ctl, reads, msg
+    DBG_STAGE = {0x1, 0x2, 0x3, 0x5, 0x6}       # low nibble: parameter staging only
+
     def regread_ok(self, dev8, sub, data) -> bool:
-        """--regread: only writes that select a scaler register for reading (ISP 0xF4 index, 0xF5 when
-        index = 0x9F page select). Flash engine 0x60-0x70, 0x6F ISP, 0xEE reset, other F5 data: blocked."""
-        if dev8 >> 1 != 0x4A or len(data) != 1:
-            return False
-        if sub == 0xF4:
-            self.f4 = data[0]; return True
-        return sub == 0xF5 and self.f4 == 0x9F
+        """--regread: only writes that select/read registers. ISP 0x4A: 0xF4 index, 0xF5 when index = 0x9F.
+        Debug 0x35: read cmds, staging, and register-write cmd only for page select 0x9F (data = [val, reg]).
+        Blocked: flash engine, ISP 0x6F/0xEE, 0x3B XDATA write, 0xBA, EEPROM writes (nibble 4/F), 0x71."""
+        dev = dev8 >> 1
+        if dev == 0x4A and len(data) == 1:
+            if sub == 0xF4:
+                self.f4 = data[0]; return True
+            return sub == 0xF5 and self.f4 == 0x9F
+        if dev == 0x35:
+            if sub in self.DBG_READ or (sub & 0x0F) in self.DBG_STAGE:
+                return True
+            if sub == 0x3B:                      # ScalerSetByte((staged hi << 8) | data[0], staged): page select only
+                return len(data) >= 1 and data[0] == 0x9F
+            return (sub & 0x0F) == 0 and sub != 0xBA and len(data) >= 2 and data[1] == 0x9F
+        return False
 
     def _x(self, msgs):
         arr = (self.Msg * len(msgs))(*msgs)

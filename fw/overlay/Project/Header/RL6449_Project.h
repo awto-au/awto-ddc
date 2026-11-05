@@ -32,6 +32,12 @@
 #define AWTO_DIAG_TICK(off)
 #define AWTO_DIAG_SET(off, v)
 #endif
+// Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
+// so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
+#define _AWTO_DEBUG_PORT                                        _ON
+#if(_AWTO_DEBUG_PORT == _ON)
+#define GET_OSD_DDCCI_STATUS()                                  (_OFF)
+#endif
 #define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 
