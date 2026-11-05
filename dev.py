@@ -309,14 +309,18 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
     u = _units().get(n)
     if u is None:
         raise SystemExit(f"unknown unit {n!r}: see scripts/devices.json")
+    if _opt(extra, "--dp"):
+        if not u.get("connector_dp"):
+            raise SystemExit(f"unit {n} has no DP link in scripts/devices.json")
+        u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
     if not u.get("test") and not _opt(extra, "--force"):
         raise SystemExit(f"unit {n} is a working screen (devices.json test=false): add --force to touch it")
     return n, u
 
 
 def _bus(u: dict) -> int:
-    """Bus numbers change on reboot: follow the DRM connector's ddc link."""
-    link = Path("/sys/class/drm") / u["connector"] / "ddc"
+    """Bus numbers change on reboot: follow the DRM connector's ddc link (DP AUX one with --dp)."""
+    link = Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc"
     return int(link.resolve().name.split("-")[1])
 
 
