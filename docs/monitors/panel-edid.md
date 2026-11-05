@@ -32,3 +32,12 @@
 - Family: M270DCA-D5B (cell, discontinued), D7B (cell, 16.7M colours), E5B (LCM). No E3B in the 27" family.
 - Datasheet: panelook `M270DCA-E5B.pdf` Ver3.0, 2022-09-23, 42 pages, 6.1 MB. NOT fetched (panelook CAPTCHA / bad cert on the huasun mirror). Store in `~/vendors/innolux/M270DCA-E5B/`.
 - To confirm: its timing table (Fc / Htotal / Vtotal) against the EDID DTD (533.25 MHz, 4000 x 2222).
+
+## Datasheet in hand: BOE MV270QUM-N50 (same 27" 4K family, not Innolux)
+- `~/vendors/boe/MV270QUM-N50/MV270QUM-N50_spec_ver0_20210111.pdf` (Ver 0, 2021-01-11).
+- 27", 3840x2160, active 596.736 x 335.664 mm (identical to Innolux M270DCA-E5B), 4-lane eDP 5.4 Gbps, 10-bit, sRGB 100% typ.
+- Timing (min/typ/max): DCLK 444/533/551 MHz; tHP 3950/4000/4088; tHB 110/160/248; tVP 2213/2222/2290; tVB 53/62/130; fV 50/60/62 Hz (adaptive 40-60).
+- EDID DTD (533.25 MHz, 4000 x 2222, hblank 160, vblank 62) equals the typical column exactly.
+- So the 597 x 336 mm / 4000 x 2222 timing is the generic 27" 4K eDP panel standard, shared by BOE and Innolux. Neither the timing nor the size names the maker.
+- BOE MV270QUM-N20 (earlier sibling, 350 nits) fits the EDID date (week 51/2018) better than N50 (2021) or Innolux E5B (2023).
+- Power sequence (section 8.0): T1 0.5-10 ms, T2 0-200 ms, T3 link training, T4 >=500 ms, T5 >=100 ms, T6 0-50 ms (recommend 0), T7 0-10 ms, T8 >=1000 ms. Use for the firmware panel header.
