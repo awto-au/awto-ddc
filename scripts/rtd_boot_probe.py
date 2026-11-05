@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wait for a scaler to appear on an I2C bus after power-on, then record which slaves ACK, every POLL_S, for WINDOW_S.
 
-usage: rtd_boot_probe.py <bus> [--window S]
+usage: rtd_boot_probe.py <bus>|all [--window S]   (all = every i915/NVIDIA/AUX display bus)
   Probes 0x35 (debug), 0x4A (ISP), 0x50 (EDID), 0x54 (SCDC) with zero-length-safe 1-byte reads (no writes).
   Shows whether the slaves stay up through the firmware's safe-boot window (#26).
 Log: ./tmp/logs/rtd_boot_probe.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
@@ -16,7 +16,7 @@ I2C_SLAVE = 0x0703
 ADDRS = (0x35, 0x4A, 0x50, 0x54)
 POLL_S = 0.05            # 20 samples/s: resolves the 2 s safe window (_AWTO_SAFE_BOOT_MS) into 40 rows
 WAIT_S = 1800            # waiting for a human power cycle
-WINDOW_S = 6.0           # 2 s window + ~0.6 s init + margin to see the main loop take over
+WINDOW_S = 6.0           # default watch length; use --window 60 to cover a power cycle
 
 
 def acks(fd) -> str:
@@ -33,7 +33,7 @@ def acks(fd) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("bus", type=int)
+    ap.add_argument("bus")
     ap.add_argument("--window", type=float, default=WINDOW_S)
     a = ap.parse_args()
     root = repo_root()
@@ -43,22 +43,22 @@ def main() -> int:
     def out(s):
         line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
         print(line, flush=True); log.write(line + "\n"); log.flush()
-    fd = os.open(f"/dev/i2c-{a.bus}", os.O_RDWR)
+    if a.bus == "all":
+        buses = sorted(int(d.name.split("-")[1]) for d in Path("/sys/class/i2c-dev").iterdir()
+                       if any(k in (d / "name").read_text() for k in ("i915 gmbus", "NVIDIA", "AUX")))
+    else:
+        buses = [int(a.bus)]
+    fds = {b: os.open(f"/dev/i2c-{b}", os.O_RDWR) for b in buses}
     t0 = time.monotonic()
-    out(f"bus {a.bus}: waiting for any of {' '.join(f'{x:02x}' for x in ADDRS)} (power-cycle the unit)")
-    while "".join(acks(fd).split()).strip("-") == "":
-        if time.monotonic() - t0 > WAIT_S:
-            out("timeout: nothing answered"); return 1
+    out(f"buses {buses}: logging every change of {' '.join(f'{x:02x}' for x in ADDRS)} for {a.window:.0f} s")
+    prev = {}
+    while time.monotonic() - t0 < a.window:
+        for b, fd in fds.items():
+            s = acks(fd)
+            if s != prev.get(b):
+                out(f"+{time.monotonic() - t0:6.2f} s  bus {b:2d}: {s}")
+                prev[b] = s
         time.sleep(POLL_S)
-    t1 = time.monotonic()
-    prev = None
-    while time.monotonic() - t1 < a.window:
-        s = acks(fd)
-        if s != prev:
-            out(f"+{time.monotonic() - t1:5.2f} s  {' '.join(f'{x:02x}' for x in ADDRS)}: {s}")
-            prev = s
-        time.sleep(POLL_S)
-    out(f"+{a.window:.2f} s  end: {prev}")
     return 0
 
 
