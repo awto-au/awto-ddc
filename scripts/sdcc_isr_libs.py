@@ -12,7 +12,8 @@ Method:
   are compiled with the library flags; every global they define gets `_isr` (`__mullong_isr_PARM_2`).
 - In ISR-reachable chunks only, those symbols are renamed. Chunks reachable from ISR AND main/address-taken
   are NOT rewritten and are reported (tmp/sdcc-port/isr_libs.json). Log: tmp/logs/sdcc_isr_libs.log
-Caveat: one copy serves all ISRs; a high-priority ISR (IP) preempting a low-priority one still shares it.
+Priority: EXINT0 (IP=0x81) and Timer2 (IP=0xA0) are each high in one IP state, so they get `_isr1` / `_isr2` copies
+where another class reaches the same helper; all other ISRs share `_isr`.
 """
 import argparse, json, os, re, subprocess, sys, time
 from collections import defaultdict
@@ -40,9 +41,13 @@ def log(s):
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 
-def isr_name(n: str) -> str:
+# IP state: 0xA0 -> Timer2 high, 0x81 -> EXINT0 high (SDK writes both; EIP never written). Class "" = always low.
+PRIO_CLASS = {0: "1", 5: "2"}
+
+
+def isr_name(n: str, sfx: str = "_isr") -> str:
     m = re.match(r"^(.*)_PARM_(\d+)$", n)
-    return f"{m.group(1)}_isr_PARM_{m.group(2)}" if m else n + "_isr"
+    return f"{m.group(1)}{sfx}_PARM_{m.group(2)}" if m else n + sfx
 
 
 def src_of(sym: str):
@@ -111,49 +116,78 @@ def main() -> int:
     shared = sorted(set(isr_reach) & set(main_reach))
     log(f"ISR roots {len(isr_roots)}, ISR-reachable chunks {len(isr_reach)}, main-side {len(main_reach)}, both {len(shared)}")
 
-    # helpers (undefined in the project) called from ISR-reachable chunks
-    called = {t for c in isr_reach.values() for t in c.calls if t not in funcs}
-    done, pending = {}, sorted(called)
-    while pending:                                          # + helpers the clones call (e.g. divslong -> divulong)
-        src = src_of(pending.pop())
-        if src is None or src.stem in done:
-            continue
-        done[src.stem] = compile_lib(src, out / f"{src.stem}.asm")
-        pending += sorted(set(re.findall(r"^\s+(?:lcall|ljmp)\s+(\w+)", done[src.stem], re.M)))
-    stems = sorted(done)
-    mapping, keep = {}, []
-    for stem in stems:
-        p = out / f"{stem}.asm"
-        txt = p.read_text()
-        if not stateful(txt):
-            p.unlink(); keep.append(stem); continue         # register-only helper: reentrant already
-        for g in defined_globals(txt):
-            mapping[g] = isr_name(g)
-    live = sorted(set(stems) - set(keep))
-    for stem in live:                                       # rename every global the clone set defines
-        p = out / f"{stem}.asm"
-        txt = p.read_text()
-        txt = TOKEN.sub(lambda x: mapping.get(x.group(0), x.group(0)), txt)
-        txt = re.sub(r"\.area\s+OSEG\s+\(OVR,DATA\)", ".area DSEG    (DATA)", txt)   # OVR would share IRAM with the original
-        txt = re.sub(r"\.area XSEG \(XDATA\)", ".area XSEG    (XDATA)", txt)   # inline-asm spelling; fw_build.split_xseg
-        txt = re.sub(r"^(\s+\.module\s+)(\S+)", lambda x: f"{x.group(1)}{x.group(2)}_isr", txt, flags=re.M)
-        p.with_name(f"{stem}_isr.asm").write_text(txt)
-        p.unlink()
+    # priority class per ISR: "" = low in every IP state; EXINT0 / Timer2 are high in one IP state each
+    vec = {}
+    for m in mods:
+        for n, v in re.findall(r"void (\w+)\s*\(void\)\s*__interrupt\s*\(\s*(\d+)\s*\)", "\n".join(l for c in m.chunks for l in c.lines)):
+            vec["_" + n] = int(v)
+    cls_of = lambda r: PRIO_CLASS.get(vec.get(r.name, -1), "")
+    reach_c = {r.name: reach([r], funcs) for r in isr_roots}
+    classes = sorted({cls_of(r) for r in isr_roots})
+    chunk_cls = defaultdict(set)                            # chunk -> priority classes reaching it
+    for r in isr_roots:
+        for n in reach_c[r.name]:
+            chunk_cls[n].add(cls_of(r))
+
+    # helpers (undefined in the project) called per class, + helpers the clones call (e.g. divslong -> divulong)
+    done, deps = {}, {}
+
+    def stems_for(called):
+        got, pending = set(), sorted(called)
+        while pending:
+            src = src_of(pending.pop())
+            if src is None or src.stem in got:
+                continue
+            got.add(src.stem)
+            if src.stem not in done:
+                done[src.stem] = compile_lib(src, out / f"{src.stem}.asm")
+                deps[src.stem] = set(re.findall(r"^\s+(?:lcall|ljmp)\s+(\w+)", done[src.stem], re.M))
+            pending += sorted(deps[src.stem])
+        return got
+    need = {k: stems_for({t for r in isr_roots if cls_of(r) == k for c in reach_c[r.name].values()
+                          for t in c.calls if t not in funcs}) for k in classes}
+    keep = sorted(st for st in done if not stateful(done[st]))
+    live = sorted(set(done) - set(keep))
+    owners = {st: [k for k in classes if st in need[k]] for st in live}
+
+    def suffix(st, k):                                      # second copy only where two priority levels reach it
+        return "_isr" if len(owners[st]) < 2 or k == "" else f"_isr{k}"
+    owner_of = {g: st for st in live for g in defined_globals(done[st])}
+    maps = {k: {g: isr_name(g, suffix(st, k)) for g, st in owner_of.items()} for k in classes}
+    for st in done:
+        (out / f"{st}.asm").unlink(missing_ok=True)
+    for st in live:
+        for k in owners[st]:
+            sfx = suffix(st, k)
+            if (out / f"{st}{sfx}.asm").exists():
+                continue                                    # one-owner stems share the plain name
+            txt = TOKEN.sub(lambda x: maps[k].get(x.group(0), x.group(0)), done[st])
+            txt = re.sub(r"\.area\s+OSEG\s+\(OVR,DATA\)", ".area DSEG    (DATA)", txt)   # OVR would share IRAM with the original
+            txt = re.sub(r"\.area XSEG \(XDATA\)", ".area XSEG    (XDATA)", txt)   # inline-asm spelling; fw_build.split_xseg
+            txt = re.sub(r"^(\s+\.module\s+)(\S+)", lambda x: f"{x.group(1)}{x.group(2)}{sfx}", txt, flags=re.M)
+            (out / f"{st}{sfx}.asm").write_text(txt)
+            log(f"clone {st}{sfx}.asm (priority class '{k or 'low'}'; reached by {[o or 'low' for o in owners[st]]})")
     log(f"cloned helper files: {live}; skipped (no state): {keep}")
-    log(f"renamed globals: {len(mapping)}; e.g. {sorted(k for k in mapping if 'PARM' in k)[:6]}")
+    dup = {st: [o or "low" for o in owners[st]] for st in live if len(owners[st]) > 1}
+    log(f"helpers with >1 copy (reached from several priority classes): {dup}")
 
     # rewrite ISR-only chunks; chunks shared with main stay original and are reported
-    changed, used, shared_hits = defaultdict(set), defaultdict(set), []
+    changed, used, shared_hits, multi_hits = defaultdict(set), defaultdict(set), [], []
     for m in mods:
         for c in m.chunks:
             if c.name not in isr_reach or c.area != "CSEG":
                 continue
-            hit = (c.calls | c.refs) & set(mapping)
+            hit = (c.calls | c.refs) & set(owner_of)
             if not hit:
                 continue
             if c.name in main_reach:
                 shared_hits.append((c.name, sorted(hit)))
                 continue
+            ks = sorted(chunk_cls[c.name])
+            if len(ks) > 1 and any(len({maps[x][h] for x in ks}) > 1 for h in hit):
+                multi_hits.append((c.name, sorted(hit)))    # one body cannot pick a copy per priority level
+                continue
+            mapping = maps[ks[0]]
             new = []
             for l in c.lines:
                 code, sep, cmt = l.partition(";")
@@ -168,9 +202,14 @@ def main() -> int:
 
     by_root = {}
     for r in isr_roots:
-        by_root[r.name] = sorted({mapping[t] for c in reach([r], funcs).values() for t in c.calls if t in mapping})
+        mp = maps[cls_of(r)]
+        by_root[r.name] = sorted({mp[t] for c in reach_c[r.name].values() for t in c.calls if t in mp})
     for name, h in shared_hits:
         log(f"WARNING shared ISR+main chunk calls non-reentrant helper, NOT rewritten: {name} {h}")
+    for name, h in multi_hits:
+        log(f"ERROR chunk reached from several priority classes calls a per-class helper: {name} {h}")
+    if multi_hits:
+        return 1
     rep = {"cloned": live, "isr_helpers": by_root, "shared_not_rewritten": shared_hits,
            "chunks_rewritten": {k: sorted(v) for k, v in changed.items()}}
     (Path(a.out).parent / "isr_libs.json").write_text(json.dumps(rep, indent=1))
