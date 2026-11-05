@@ -26,7 +26,7 @@ BANK = 0x10000
 NBANKS = 14                                                   # banks 14-15 = data (#8)
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
 # bank 5 s, link 20 s (first runs 2026-11-04). 3x cold worst case per awto-dan#53.
-TIMEOUT = {"port": 60, "edid": 60, "asm": 240, "overlay": 60, "bank": 60, "link": 120}
+TIMEOUT = {"port": 60, "edid": 60, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
 LIB_UV2 = "Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2"   # Realtek ships it as a .LIB
 ASM = ROOT / "tmp/sdcc-port/asm"
 SEL = ROOT / "tmp/sdcc-port/asm_sel"
@@ -192,13 +192,15 @@ def main() -> int:
         run("asm", [py, "scripts/keil2sdcc.py", "compile", LIB_UV2, "--asm"])
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
+    run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", "-S", "-o", bank_dir / "crt_mod0.asm",
                  ROOT / "fw/sdcc/crt_mod0.c"])
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
-                  bank_dir / "crt_mod0.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
+                  bank_dir / "crt_mod0.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
+                  *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr.asm"))):
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
