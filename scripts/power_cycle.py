@@ -15,9 +15,8 @@ from sdcc_overlay import repo_root  # noqa: E402
 sys.path.insert(0, "/mnt/2tb/git/awto-unvr/scripts")
 from _power import power_set_verified  # noqa: E402
 
-# 10 s: PSU bulk caps keep the 5 V standby rail up for seconds after mains cut; not measured yet (check with
-# rtd_diag.py --safe: "last reset: power-on" = RAM decayed). Raise if a cycle still reports WARM.
-OFF_S = 10
+# Off time: PSU holds the scaler up ~6-9 s after the relay opens (measured, #27); 1.25x worst case
+OFF_S = 12
 
 
 def main() -> int:
