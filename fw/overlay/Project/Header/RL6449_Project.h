@@ -69,7 +69,13 @@ typedef struct
     unsigned int usMaxPassMs;                   // longest main-loop pass this boot: sizes _AWTO_WD_STALE_MS
     unsigned int usPrevMaxPassMs;               // previous boot's longest pass
     unsigned char ucWdtTest;                    // MCU_FFEB_WDT_TEST at boot
-    unsigned char ucSpare[11];
+    unsigned char ucForceReset;                 // 1: power key held -> WDT clears suppressed, chip resets
+    unsigned char ucPrevForceReset;             // previous boot ended by the power-key reset
+    unsigned int usKeyStartMs;                  // uptime when the power key went down; 0xFFFF = up
+    unsigned int usBusStuckMs;                  // uptime when an unserviced IIC event / forced SCL began; 0xFFFF = none
+    unsigned char ucBusResets;                  // bus-watchdog releases this boot
+    unsigned char ucPrevBusResets;
+    unsigned char ucSpare[3];
 } StAwtoSafe;
 typedef char AwtoSafeSizeCheck[(sizeof(StAwtoSafe) == 32) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -86,6 +92,20 @@ extern volatile __xdata __at(0xF6B0) StAwtoSafe g_stAwtoSafe;
 // Main loop silent this long -> ISR stops kicking -> WDT reset. Placeholder until usMaxPassMs is measured (#26)
 #define _AWTO_WD_STALE_MS                                       3000
 #define AWTO_MAIN_ALIVE()                                       ((unsigned int)(g_usTimerCounter - g_stAwtoSafe.usLastPassMs) < _AWTO_WD_STALE_MS)
+// Power key held this long = hardware reset from any state the Timer2 ISR still runs in (held safe window,
+// hung main loop). 3 s: well above a normal press, short enough to hold by hand (#26)
+#define _AWTO_KEY_RESET_MS                                      3000
+#define AWTO_KEY_DOWN()                                         (PCB_ADKEY1() < 0x20)   // PCB_KEY_STATE: V1 < 0x20 = power
+// every SDK WDT clear goes through here (keil2sdcc rule); no clears once a key reset is armed
+#define AWTO_WDT_CLEAR()                                        ((g_stAwtoSafe.ucForceReset == 0) ? (MCU_FFEA_WATCHDOG_TIMER = MCU_FFEA_WATCHDOG_TIMER | _BIT6) : 0)
+// DDC bus watchdog: an IIC slave event left unserviced, or a DDC port forcing SCL low, holds the shared wire
+// (0x35 stretch kills 0x4A/0x50/0x54 too). EXINT1 services in us; 100 ms = beyond any legit stretch (#26)
+#define _AWTO_BUS_STUCK_MS                                      100
+#define AWTO_BUS_HELD()                                         ((MCU_FF27_IIC_STATUS & (_BIT2 | _BIT1 | _BIT0)) || (MCU_FF20_DDC0_DDC_CONTROL_2 & _BIT0) || (MCU_FF2E_DDC1_DDC_CONTROL_2 & _BIT0) || (MCU_FE66_DDC2_DDC_CONTROL_2 & _BIT0) || (MCU_FE6F_DDC3_DDC_CONTROL_2 & _BIT0))
+// release: SCL force bits off, IIC buffer + event flags cleared, DDC circuits reset (bit1 auto-clears)
+#define AWTO_BUS_RELEASE()                                      do { MCU_FF20_DDC0_DDC_CONTROL_2 &= ~_BIT0; MCU_FF2E_DDC1_DDC_CONTROL_2 &= ~_BIT0; MCU_FE66_DDC2_DDC_CONTROL_2 &= ~_BIT0; MCU_FE6F_DDC3_DDC_CONTROL_2 &= ~_BIT0; MCU_FF2A_IIC_IRQ_CONTROL2 |= _BIT6; MCU_FF27_IIC_STATUS = 0x00; g_stAwtoSafe.ucSpare[0] = MCU_FF25_IIC_DATA_IN; MCU_FF26_IIC_DATA_OUT = 0x00; MCU_FF1F_DDC0_DDC_CONTROL_1 |= _BIT1; MCU_FF2D_DDC1_DDC_CONTROL_1 |= _BIT1; MCU_FE65_DDC2_DDC_CONTROL_1 |= _BIT1; MCU_FE6E_DDC3_DDC_CONTROL_1 |= _BIT1; } while(0)
+#define AWTO_BUS_WD_ISR()                                       do { if(AWTO_BUS_HELD()) { if(g_stAwtoSafe.usBusStuckMs == 0xFFFF) { g_stAwtoSafe.usBusStuckMs = g_usTimerCounter; } else if((unsigned int)(g_usTimerCounter - g_stAwtoSafe.usBusStuckMs) >= _AWTO_BUS_STUCK_MS) { AWTO_BUS_RELEASE(); g_stAwtoSafe.ucBusResets++; g_stAwtoSafe.usBusStuckMs = 0xFFFF; } } else { g_stAwtoSafe.usBusStuckMs = 0xFFFF; } } while(0)
+#define AWTO_KEY_RESET_ISR()                                    do { if(AWTO_KEY_DOWN()) { if(g_stAwtoSafe.usKeyStartMs == 0xFFFF) { g_stAwtoSafe.usKeyStartMs = g_usTimerCounter; } else if((unsigned int)(g_usTimerCounter - g_stAwtoSafe.usKeyStartMs) >= _AWTO_KEY_RESET_MS) { g_stAwtoSafe.ucForceReset = 1; MCU_FFEA_WATCHDOG_TIMER = MCU_FFEA_WATCHDOG_TIMER & ~(_BIT2 | _BIT1 | _BIT0); } } else { g_stAwtoSafe.usKeyStartMs = 0xFFFF; } } while(0)
 extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
@@ -103,6 +123,9 @@ extern void AwtoSafeBoot(void);
 #define AwtoDiagSelfTest()
 #define AwtoSafeBoot()
 #define AWTO_MAIN_ALIVE()                                       (1)
+#define AWTO_WDT_CLEAR()                                        (MCU_FFEA_WATCHDOG_TIMER = MCU_FFEA_WATCHDOG_TIMER | _BIT6)
+#define AWTO_KEY_RESET_ISR()
+#define AWTO_BUS_WD_ISR()
 #define AWTO_DIAG_T2ISR()
 #define AWTO_DIAG_EX1ISR()
 #endif

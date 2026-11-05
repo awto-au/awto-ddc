@@ -34,8 +34,14 @@ void AwtoDiagInit(void)
         }
         g_stAwtoSafe.usPrevLastPassMs = g_stAwtoSafe.usLastPassMs;
         g_stAwtoSafe.usPrevMaxPassMs = g_stAwtoSafe.usMaxPassMs;
+        g_stAwtoSafe.ucPrevForceReset = g_stAwtoSafe.ucForceReset;
+        g_stAwtoSafe.ucPrevBusResets = g_stAwtoSafe.ucBusResets;
         g_stAwtoSafe.ucFlags = _AWTO_SAFE_F_WARM;
     }
+    g_stAwtoSafe.ucForceReset = 0;
+    g_stAwtoSafe.usKeyStartMs = 0xFFFF;
+    g_stAwtoSafe.usBusStuckMs = 0xFFFF;
+    g_stAwtoSafe.ucBusResets = 0;
     // never carry a hold across a reset: the front-panel power key is a warm reset (RAM kept), and a held
     // window left unit 3 with a dead DDC bus on every boot (#26, 2026-11-06). Host re-arms it per boot.
     g_stAwtoSafe.usHold = 0;
@@ -86,6 +92,8 @@ void AwtoSafeBoot(void)
 {
     unsigned int usStart = g_usTimerCounter;
 
+    // warm reset (WDT / key / ISP) leaves the DDC + IIC slave state of the dead run: clear it before the window
+    AWTO_BUS_RELEASE();
     g_stAwtoSafe.ucFlags |= _AWTO_SAFE_F_ACTIVE;
     while(((unsigned int)(g_usTimerCounter - usStart) < _AWTO_SAFE_BOOT_MS) || (g_stAwtoSafe.usHold == _AWTO_SAFE_HOLD_MAGIC))
     {

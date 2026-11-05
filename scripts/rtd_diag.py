@@ -220,7 +220,8 @@ def read_safe(io, be: bool) -> dict | None:
     return {"hold": hold, "marker": marker, "flags": b[4], "prev_seq": b[5],
             "prev_trace": struct.unpack_from(e + "3H", b, 6), "prev_last": struct.unpack_from(e + "H", b, 12)[0],
             "last": struct.unpack_from(e + "H", b, 14)[0], "max": struct.unpack_from(e + "H", b, 16)[0],
-            "prev_max": struct.unpack_from(e + "H", b, 18)[0], "wdt": b[20]}
+            "prev_max": struct.unpack_from(e + "H", b, 18)[0], "wdt": b[20], "key_rst": b[21], "prev_key_rst": b[22],
+            "bus_resets": b[27], "prev_bus_resets": b[28]}
 
 
 def safe_report(s: dict, names: dict) -> str:
@@ -228,9 +229,11 @@ def safe_report(s: dict, names: dict) -> str:
     L = [f"hold 0x{s['hold']:04x}{' (HELD in safe mode)' if s['hold'] == SAFE_HOLD else ''}  "
          f"in safe window: {'yes' if s['flags'] & 1 else 'no'}  marker {'ok' if s['marker'] == SAFE_MARKER else 'BAD'}",
          f"this boot: longest main-loop pass {s['max']} ms, last pass at {s['last']} ms; WDT_TEST at boot 0x{s['wdt']:02x}",
-         f"last reset: {'WARM (WDT or ISP 0xEE)' if warm else 'power-on'}"]
+         f"bus-watchdog releases this boot: {s['bus_resets']}",
+         f"last reset: {'WARM (WDT, power-key hold or ISP 0xEE)' if warm else 'power-on'}"]
     if warm:
-        L.append(f"previous boot: last pass at {s['prev_last']} ms, longest pass {s['prev_max']} ms, trace seq {s['prev_seq']}: "
+        L.append(f"previous boot: {'ENDED BY POWER-KEY RESET, ' if s['prev_key_rst'] else ''}bus releases {s['prev_bus_resets']}, "
+                 f"last pass at {s['prev_last']} ms, longest pass {s['prev_max']} ms, trace seq {s['prev_seq']}: "
                  + " > ".join(names.get(i, f"#{i:04X}") for i in s["prev_trace"]))
     return "\n".join(L)
 

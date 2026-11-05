@@ -63,6 +63,8 @@ RULES = [
     # boot debug/DDC-CI port: NVRAM search port unless the build sets AWTO_DEBUG_PORT_INIT (RL6449_Project.h, #26)
     (re.compile(r"UserCommonInterfaceDdcciSwitch\(GET_OSD_DDCCI_STATUS\(\), UserCommonNVRamGetSystemData\(_SEARCH_PORT\)\);"),
      "UserCommonInterfaceDdcciSwitch(GET_OSD_DDCCI_STATUS(), AWTO_DEBUG_PORT_INIT(UserCommonNVRamGetSystemData(_SEARCH_PORT)));"),
+    # every WDT clear via AWTO_WDT_CLEAR (RL6449_Project.h): suppressed once the power-key reset is armed (#26)
+    (re.compile(r"\bMCU_FFEA_WATCHDOG_TIMER \|= _BIT6(?=\s*[;)])"), "AWTO_WDT_CLEAR()"),
     (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"xdata\1"),
     # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
     # and puts t in RAM (and `xdata BYTE *p` would become a 2-byte xdata pointer). Move the qualifier next
@@ -148,6 +150,8 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
+    ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_KEY_RESET_ISR();"),
+    ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_BUS_WD_ISR();"),
     # safe window before inputs/display start; WDT kick in the Timer2 ISR gated on the main-loop canary (#26)
     ("Kernel/System/Code/SysMain.c", r"^\s*SysSourceInitial\(\);", "    AwtoSafeBoot();"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*CLR_MCU_WATCH_DOG\(\);", "        if(AWTO_MAIN_ALIVE())",
