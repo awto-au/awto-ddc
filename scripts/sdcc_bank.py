@@ -17,7 +17,7 @@ Method (awto-ddc#8):
 - Fails on: CONST referenced from a bank it is not in (after the common rule), a module larger than a bank.
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
 """
-import argparse, json, os, re, subprocess, sys, time
+import argparse, json, os, re, shutil, subprocess, sys, time
 from collections import defaultdict
 from pathlib import Path
 
@@ -31,6 +31,7 @@ FUNC_HDR = re.compile(r"^;\s+function (\w+)\s*$")
 LABEL = re.compile(r"^(\w+)(::?)\s*$")
 CALL = re.compile(r"^(\s+)(lcall|ljmp)(\s+)(\w+)\s*$")
 SYM = re.compile(r"(?<![\w$])(_\w+)")
+AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
 BANK_SIZE = 0x10000
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
@@ -75,6 +76,10 @@ class Module:
     def parse(self, lines):
         """Split CSEG at function starts (incl. their preceding comment block) and CONST at labels."""
         out, area, cur, pending_cmt = self.head, None, None, []
+        # SDCC emits `arN = rbank0+N` inside the first fn using it; drop_dead must not take it along (#17)
+        equ = list(dict.fromkeys(l for l in lines if AR_EQU.match(l)))
+        lines = [l for l in lines if not AR_EQU.match(l)]
+        self.head.extend(equ)
         for line in lines:
             if line.startswith("\t.area"):
                 area = line.split()[1]
@@ -200,6 +205,8 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/sdcc_bank.log").open("a")
     src, out = Path(a.asm), Path(a.out)
+    if out.exists() and out.resolve() != src.resolve():
+        shutil.rmtree(out)                                   # derived; stale rels were linked (#18)
     out.mkdir(parents=True, exist_ok=True)
     mods = [Module(p) for p in sorted(src.glob("*.asm")) if not p.name.startswith("__")]
     log(f"bank: {len(mods)} modules from {src}")

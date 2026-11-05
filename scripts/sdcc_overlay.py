@@ -16,7 +16,7 @@ Method (awto-ddc#8):
 - Rewrite: storage lines removed; every use becomes `(__xovl + off)` / `(__dovl + off)`; __ovl.asm reserves blocks.
 Log: tmp/logs/sdcc_overlay.log, report tmp/sdcc-port/overlay.json
 """
-import json, os, re, subprocess, sys, time
+import json, os, re, shutil, subprocess, sys, time
 from collections import defaultdict
 from pathlib import Path
 
@@ -353,6 +353,8 @@ def main():
     dsize = {k: v for k, v in dsize.items() if v}
 
     # ---- rewrite
+    if out_dir.exists() and out_dir.resolve() != asm_dir.resolve():
+        shutil.rmtree(out_dir)          # derived; stale modules from earlier selections got linked (#18)
     out_dir.mkdir(parents=True, exist_ok=True)
     sub = defaultdict(dict)            # mi -> {label: expr} (module-local symbols)
     gsub = {}                          # global overlaid symbols (PARMs: callers in other modules write them)

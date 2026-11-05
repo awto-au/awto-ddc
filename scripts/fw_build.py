@@ -220,9 +220,10 @@ def main() -> int:
     log(f"[link] {' '.join(map(str, cmd[:20]))} ... ({len(rels)} rels)")
     r, iram = sdcc_link.link(cmd, out / "fw.ihx", rels)
     LOG.write(r.stdout + r.stderr)
-    if r.returncode:
+    undef = sorted(set(re.findall(r"Undefined Global '?(\w+)'?", r.stdout + r.stderr)))
+    if r.returncode or undef:                                # undefined = resolves to 0 (#17 ar7, #18 lcall 0)
         print((r.stdout + r.stderr)[-3000:])
-        sys.exit("[link] failed")
+        sys.exit(f"[link] failed{' (undefined: ' + ', '.join(undef) + ')' if undef else ''}")
     log(f"IRAM: {iram}")
     check_xdata((out / "fw.map").read_text(errors="replace"), hs)
     mem = parse_ihx(out / "fw.ihx")
