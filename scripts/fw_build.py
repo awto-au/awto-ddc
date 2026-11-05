@@ -185,6 +185,7 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/fw_build.log").open("a")
     py = sys.executable
+    log(f"byte order: {'BIG-endian (--big-endian, Keil order)' if T.BIG_ENDIAN else 'little-endian (default)'}, lib {T.LIB}")
     if not a.skip_compile:
         run("port", [py, "scripts/keil2sdcc.py", "port"])
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
@@ -197,7 +198,7 @@ def main() -> int:
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     for c in ("crt_mod0", "crt_divulong"):
-        run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", "-S", "-o", bank_dir / f"{c}.asm",
+        run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
                   bank_dir / "crt_mod0.asm", bank_dir / "crt_divulong.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
@@ -219,7 +220,7 @@ def main() -> int:
     wl = [f"-Wl-aBANK{n}=0x{n * BANK + a.common:x}" for n in used]
     wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
-    cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", "--code-loc", "0", "--code-size", "0x100000",
+    cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",
            "--xram-loc", hex(hs[0][0]), "--xram-size", hex(hs[0][1] - hs[0][0]), "--iram-size", "256",
            f"-L{T.LIB}", *wl, "-o", out / "fw.ihx", *rels]
     log(f"[link] {' '.join(map(str, cmd[:20]))} ... ({len(rels)} rels)")

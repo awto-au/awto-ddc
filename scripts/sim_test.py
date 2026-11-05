@@ -35,7 +35,7 @@ ROOT = repo_root()
 TESTS = ROOT / "fw/simtests"
 RT = TESTS / "_rt"
 WORK = ROOT / "tmp/simtest"
-CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant"]   # = keil2sdcc
+CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant", *T.CFLAGS_EXTRA]   # = keil2sdcc
 STEP_CAP = 20_000_000
 BUILD_TMO, SIM_TMO = 60, 30
 SENTINEL = "SIM-DONE"
@@ -77,7 +77,7 @@ def assemble_link(asm_dir, obj_dir, ihx):
         if r.returncode:
             return f"assemble {a.name}"
         rels.append(str(obj_dir / (a.stem + ".rel")))
-    r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", f"-L{T.LIB}", "-o", str(ihx)] + rels, ihx, rels)
+    r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, f"-L{T.LIB}", "-o", str(ihx)] + rels, ihx, rels)
     return None if r.returncode == 0 and ihx.exists() else f"link {r.stdout[-300:]}"
 
 
