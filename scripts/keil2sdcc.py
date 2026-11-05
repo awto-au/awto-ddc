@@ -419,7 +419,7 @@ def norm_err(line):
 # Per-file compiler workarounds (basename -> extra flags); each one names its awto-sdcc issue
 FILE_FLAGS = {
     "ScalerCommonIOSC.c": ["--noinduction"],   # trunk r17139 ICE validateOpType @ SDCCopt.c (awto-sdcc#3)
-    # sdcc >= 4.6: GCSE temps of the WD-ISR handlers spill to DATA (sloc, 23 B); direct RAM was 6 B short (#8)
+    # GCSE temps of the WD-ISR handlers spill to DATA (sloc, 23 B); direct RAM is the binding limit (#8)
     "ScalerCommonTimerFunction.c": ["--nogcse"],
 }
 
@@ -431,6 +431,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
            "--norestartseqatomics",                           # trunk: else every ISR exits via sdcc_atomic_maybe_rollback
            "--nooverlay",                                     # `data` locals -> DSEG for sdcc_overlay (call-graph aware), not OSEG
            "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
+           "--nogenconstprop",                                # SDK polls ISR-set non-volatile flags; trunk folded the delay loop away (#23)
            f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
     cmd += [f"-I{c.parent}"]
