@@ -2,7 +2,7 @@
 
 - Name source: service menu reads `M280DCA-E3B` (Dan, 2026-11-05).
 - Datasheet: `~/vendors/innolux/M280DCA-E3B/M280DCA-E3B_spec_v0.0_20190311.pdf` (Innolux tentative spec Ver0.0, 2019-03-11).
-- Status: best candidate; supersedes [panel-samsung-ltm270fl01.md](panel-samsung-ltm270fl01.md). Not yet confirmed by panel EDID/DPCD or rear label (#3).
+- Status: name from the service menu only. Panel EDID (read 2026-11-05, #3) says 597 x 336 mm (27"), which does not match this 28" part; see [panel-edid.md](panel-edid.md). Samsung LTM270FL01 is the size match.
 
 ## Spec (datasheet)
 | Item | Value |
