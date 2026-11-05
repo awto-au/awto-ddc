@@ -1,0 +1,8 @@
+{
+  "_doc": "Test units (awto-ddc). Bus numbers change on reboot: resolve via the DRM connector's ddc link. relay = mains outlet (scripts/power_cycle.py). dev.py reads this.",
+  "units": {
+    "1": {"serial": "AWT26110001", "input": "DP",   "connector": "card1-DP-1",     "gdctl": "DP-1",   "be": true, "relay": null},
+    "2": {"serial": "AWT26110002", "input": "DP",   "connector": "card2-DP-4",     "gdctl": "DP-4",   "be": true, "relay": null},
+    "3": {"serial": "AWT26110003", "input": "HDMI", "connector": "card1-HDMI-A-2", "gdctl": "HDMI-2", "be": true, "relay": "so-th-1"}
+  }
+}

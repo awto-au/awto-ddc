@@ -65,14 +65,42 @@ def _write_sector(isp, addr, new):
         raise RuntimeError(f"VERIFY FAILED at 0x{addr + bad[0]:06x}")
 
 
+NUDGE_ADDR = 0x08          # reserved I2C address: nothing answers, so the transfer NAKs
+NUDGE_COUNT = 20           # one NAK did not take on 2026-11-06; 20 did (#26)
+# normal sector (erase + 16 pages + verify) ~2.5 s on i915 GMBUS; bit-bang ~25 s. 3x normal = slow
+SLOW_SECTOR_S = 7.5
+
+
+def gmbus_nudge(bus: int) -> None:
+    """i915 falls back to bit-banging after a GMBUS timeout and returns to GMBUS only after a bit-banged
+    transfer fails: NAK a few transfers to an empty address (#26, 2026-11-06: 25 s -> 2.5 s per sector)."""
+    import fcntl, os
+    fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
+    try:
+        fcntl.ioctl(fd, 0x0703, NUDGE_ADDR)          # I2C_SLAVE
+        for _ in range(NUDGE_COUNT):
+            try:
+                os.read(fd, 1)
+            except OSError:
+                pass
+    finally:
+        os.close(fd)
+
+
 def program(isp, a, img, diff, bk, reprot) -> int:
     sr0 = isp.status()
     log(f"status reg = 0x{sr0:02x}")
     if sr0 & SR_PROT:
         isp.release_wp(); isp.unprotect(sr0)
+    gmbus_nudge(a.bus)
     t0 = time.monotonic()
     for i, s in enumerate(diff):
+        ts = time.monotonic()
         write_sector(isp, s, img[s:s + SECTOR])
+        dt = time.monotonic() - ts
+        if dt > SLOW_SECTOR_S:
+            log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
+            gmbus_nudge(a.bus)
         if i % 16 == 15 or i == len(diff) - 1:
             log(f"written+verified {i + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
     log(f"VERIFY OK: all {len(diff)} sectors; revert = rerun with {bk}")

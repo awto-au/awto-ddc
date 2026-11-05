@@ -92,8 +92,7 @@ void AwtoSafeBoot(void)
 {
     unsigned int usStart = g_usTimerCounter;
 
-    // warm reset (WDT / key / ISP) leaves the DDC + IIC slave state of the dead run: clear it before the window
-    AWTO_BUS_RELEASE();
+    // no AWTO_BUS_RELEASE here: run after the SDK's DDC/IIC setup it left 0x35 reads at 0 (#26, 2026-11-06)
     g_stAwtoSafe.ucFlags |= _AWTO_SAFE_F_ACTIVE;
     while(((unsigned int)(g_usTimerCounter - usStart) < _AWTO_SAFE_BOOT_MS) || (g_stAwtoSafe.usHold == _AWTO_SAFE_HOLD_MAGIC))
     {

@@ -98,10 +98,11 @@ extern volatile __xdata __at(0xF6B0) StAwtoSafe g_stAwtoSafe;
 #define AWTO_KEY_DOWN()                                         (PCB_ADKEY1() < 0x20)   // PCB_KEY_STATE: V1 < 0x20 = power
 // every SDK WDT clear goes through here (keil2sdcc rule); no clears once a key reset is armed
 #define AWTO_WDT_CLEAR()                                        ((g_stAwtoSafe.ucForceReset == 0) ? (MCU_FFEA_WATCHDOG_TIMER = MCU_FFEA_WATCHDOG_TIMER | _BIT6) : 0)
-// DDC bus watchdog: an IIC slave event left unserviced, or a DDC port forcing SCL low, holds the shared wire
-// (0x35 stretch kills 0x4A/0x50/0x54 too). EXINT1 services in us; 100 ms = beyond any legit stretch (#26)
+// DDC bus watchdog: the IIC slave stretches SCL (FF29 iic_force_scl_l) until EXINT1 services it; unserviced, the
+// shared wire dies (0x4A/0x50/0x54 too). Stuck = EXINT1 request (IE1, level) or a DDC force-SCL bit held 100 ms;
+// EXINT1 services in us. FF27 flags are NOT a stuck sign: they stay set between transactions (#26, 2026-11-06)
 #define _AWTO_BUS_STUCK_MS                                      100
-#define AWTO_BUS_HELD()                                         ((MCU_FF27_IIC_STATUS & (_BIT2 | _BIT1 | _BIT0)) || (MCU_FF20_DDC0_DDC_CONTROL_2 & _BIT0) || (MCU_FF2E_DDC1_DDC_CONTROL_2 & _BIT0) || (MCU_FE66_DDC2_DDC_CONTROL_2 & _BIT0) || (MCU_FE6F_DDC3_DDC_CONTROL_2 & _BIT0))
+#define AWTO_BUS_HELD()                                         (IE1 || (MCU_FF20_DDC0_DDC_CONTROL_2 & _BIT0) || (MCU_FF2E_DDC1_DDC_CONTROL_2 & _BIT0) || (MCU_FE66_DDC2_DDC_CONTROL_2 & _BIT0) || (MCU_FE6F_DDC3_DDC_CONTROL_2 & _BIT0))
 // release: SCL force bits off, IIC buffer + event flags cleared, DDC circuits reset (bit1 auto-clears)
 #define AWTO_BUS_RELEASE()                                      do { MCU_FF20_DDC0_DDC_CONTROL_2 &= ~_BIT0; MCU_FF2E_DDC1_DDC_CONTROL_2 &= ~_BIT0; MCU_FE66_DDC2_DDC_CONTROL_2 &= ~_BIT0; MCU_FE6F_DDC3_DDC_CONTROL_2 &= ~_BIT0; MCU_FF2A_IIC_IRQ_CONTROL2 |= _BIT6; MCU_FF27_IIC_STATUS = 0x00; g_stAwtoSafe.ucSpare[0] = MCU_FF25_IIC_DATA_IN; MCU_FF26_IIC_DATA_OUT = 0x00; MCU_FF1F_DDC0_DDC_CONTROL_1 |= _BIT1; MCU_FF2D_DDC1_DDC_CONTROL_1 |= _BIT1; MCU_FE65_DDC2_DDC_CONTROL_1 |= _BIT1; MCU_FE6E_DDC3_DDC_CONTROL_1 |= _BIT1; } while(0)
 #define AWTO_BUS_WD_ISR()                                       do { if(AWTO_BUS_HELD()) { if(g_stAwtoSafe.usBusStuckMs == 0xFFFF) { g_stAwtoSafe.usBusStuckMs = g_usTimerCounter; } else if((unsigned int)(g_usTimerCounter - g_stAwtoSafe.usBusStuckMs) >= _AWTO_BUS_STUCK_MS) { AWTO_BUS_RELEASE(); g_stAwtoSafe.ucBusResets++; g_stAwtoSafe.usBusStuckMs = 0xFFFF; } } else { g_stAwtoSafe.usBusStuckMs = 0xFFFF; } } while(0)
@@ -219,7 +220,12 @@ extern void AwtoSafeBoot(void);
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-#define _FRC_SUPPORT                                            _OFF    // awto: cut (#8); ON build wedged unit 3 incl. DDC hw slaves (#26)
+// FRC: off by default (#8); dev.py build --frc passes -D_AWTO_FRC (4K60 work, #26)
+#ifdef _AWTO_FRC
+#define _FRC_SUPPORT                                            _ON
+#else
+#define _FRC_SUPPORT                                            _OFF
+#endif
 
 //-------------------------------------------------
 // Display Rotation Option
