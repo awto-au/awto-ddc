@@ -51,13 +51,26 @@ def _sdld(cmd, ihx: Path):
 MAP_AREA = re.compile(r"^(REG_BANK_\d|DSEG|OSEG|BSEG_BYTES|BIT_BANK)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", re.M)
 
 
-def holes_from_map(map_text):
+def dseg_extent(map_text, rels):
+    """Real DSEG (lo, hi): sdld reports a synthetic total from 0x00; real = lowest DSEG symbol + .rel size sum."""
+    dsec = re.search(r"^DSEG\s+[0-9A-F]{8}[^\n]*\n(.*?)(?=^Area|\Z)", map_text, re.M | re.S)
+    dsyms = [int(a, 16) for a in re.findall(r"^\s+([0-9A-F]{8})\s+\w+", dsec.group(1), re.M)] if dsec else []
+    dtot = rel_sizes(rels)[0].get("DSEG", 0)
+    return (min(dsyms), min(dsyms) + dtot) if dsyms and dtot else None
+
+
+def holes_from_map(map_text, rels):
     """Direct-RAM holes left by the areas sdld places itself (it ignores -b for OSEG)."""
     used = []
     for m in MAP_AREA.finditer(map_text):
         lo, n = int(m.group(2), 16), int(m.group(3), 16)
+        if m.group(1) == "DSEG":
+            continue
         if n and lo < DIRECT_END:
             used.append((lo, lo + n))
+    d = dseg_extent(map_text, rels)
+    if d:
+        used.append(d)
     holes, cur = [], 0
     for lo, hi in sorted(used):
         if lo > cur:
@@ -79,7 +92,7 @@ def link(cmd, ihx: Path, rels):
     mapf = ihx.with_suffix(".map")
     if r.returncode or not mapf.exists():
         return r, {}
-    holes, used = holes_from_map(mapf.read_text(errors="replace"))
+    holes, used = holes_from_map(mapf.read_text(errors="replace"), rels)
     base = {}
     for name, size in sorted(ddovl.items(), key=lambda kv: -kv[1]):
         h = next((h for h in holes if h[1] - h[0] >= size), None)
@@ -99,13 +112,10 @@ def link(cmd, ihx: Path, rels):
     iram = [(int(a, 16), int(a, 16) + int(n, 16), k) for k, a, n in
             re.findall(r"^(REG_BANK_\d|DSEG|OSEG|ISEG|BSEG_BYTES|BIT_BANK|DDOVL\w*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mt, re.M)
             if int(n, 16)]
-    # sdld reports DSEG from 0x00 (over REG_BANK_0); real extent = first DSEG symbol + .rel total
     iram = [x for x in iram if x[2] != "DSEG"]
-    dsec = re.search(r"^DSEG\s+[0-9A-F]{8}.*?\n(?=\S)(.*?)(?=^Area|\Z)", mt, re.M | re.S)
-    dsyms = [int(a, 16) for a in re.findall(r"^\s+([0-9A-F]{8})\s+\w+", dsec.group(1), re.M)] if dsec else []
-    dtot = rel_sizes(rels)[0].get("DSEG", 0)
-    if dsyms and dtot:
-        iram.append((min(dsyms), min(dsyms) + dtot, "DSEG"))
+    d = dseg_extent(mt, rels)
+    if d:
+        iram.append((*d, "DSEG"))
     iram = sorted(set(iram))
     clash = [(x[2], y[2]) for x, y in zip(iram, iram[1:]) if y[0] < x[1] and not (x[2] == y[2])]
     top = max((hi for _, hi, _ in iram), default=0)

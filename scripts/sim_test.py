@@ -77,7 +77,7 @@ def assemble_link(asm_dir, obj_dir, ihx):
         if r.returncode:
             return f"assemble {a.name}"
         rels.append(str(obj_dir / (a.stem + ".rel")))
-    r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", "-o", str(ihx)] + rels, ihx, rels)
+    r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", f"-L{T.LIB}", "-o", str(ihx)] + rels, ihx, rels)
     return None if r.returncode == 0 and ihx.exists() else f"link {r.stdout[-300:]}"
 
 

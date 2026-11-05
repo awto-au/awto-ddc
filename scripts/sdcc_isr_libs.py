@@ -25,7 +25,8 @@ import sdcc_tools as T  # noqa: E402
 
 ROOT = repo_root()
 LIBSRC = Path(os.environ.get("AWTO_SDCC_SRC") or "/mnt/2tb/git/awto-sdcc") / "device/lib"
-OURS = {"__modulong": "fw/sdcc/crt_mod0.c", "__moduint": "fw/sdcc/crt_mod0.c"}   # our overrides of lib symbols
+OURS = {"__modulong": "fw/sdcc/crt_mod0.c", "__moduint": "fw/sdcc/crt_mod0.c",
+        "__divulong": "fw/sdcc/crt_divulong.c"}   # our overrides of lib symbols
 # mcs51-large Makefile: CFLAGS + MODELFLAGS + --opt-code-speed
 LIBFLAGS = ["-mmcs51", "--model-large", "--std-c23", "--opt-code-speed"]
 CC_TIMEOUT = 60           # one tiny lib file compiles in < 2 s; stall = broken input
