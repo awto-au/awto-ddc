@@ -41,3 +41,10 @@
 - So the 597 x 336 mm / 4000 x 2222 timing is the generic 27" 4K eDP panel standard, shared by BOE and Innolux. Neither the timing nor the size names the maker.
 - BOE MV270QUM-N20 (earlier sibling, 350 nits) fits the EDID date (week 51/2018) better than N50 (2021) or Innolux E5B (2023).
 - Power sequence (section 8.0): T1 0.5-10 ms, T2 0-200 ms, T3 link training, T4 >=500 ms, T5 >=100 ms, T6 0-50 ms (recommend 0), T7 0-10 ms, T8 >=1000 ms. Use for the firmware panel header.
+
+## Related EDID: "Agera" panel string in the linuxhw database
+- https://github.com/linuxhw/EDID/blob/master/Digital/Others/MTK0640/0C8084B2826B (a laptop eDP panel, week 16/2019).
+- Manufacturer `MTK`, product 1600, EDID 1.4, 8 bpc, DisplayPort, image 31 x 17 cm, 2560x1440 @60.01 Hz 241.74 MHz (+ a 48 Hz DTD); two `Agera` strings (descriptor 0xFE).
+- Same string as our panel's `AGERA` product name, and the same blanking pattern (HFP 48 / sync 32 / BP 80, VFP 3 / sync 5) as our DTD.
+- Reading: `Agera` is a name in the panel/TCON-side EDID template, not a panel maker. `MST` (ours) and `MTK` (this one) are controller-IC vendor IDs (MStar / MediaTek), not Innolux/BOE/Samsung.
+- So the panel EDID carries no maker information; identity needs the datasheet timing/size match, the rear label, or the service-menu string.
