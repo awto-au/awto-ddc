@@ -63,7 +63,7 @@ def print_diag(s):
     if len(blk) != 48:
         print("diag block: not read from sim XRAM"); return
     print("diag block (sim XRAM 0xf6d0):", blk.hex())
-    print(rtd_diag.report(rtd_diag.decode(blk), None, None))
+    print(rtd_diag.report(rtd_diag.decode(blk, T.BIG_ENDIAN), None, None))
 
 
 def native(a, sym, d, nb, where, log) -> int:

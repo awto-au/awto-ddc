@@ -21,7 +21,7 @@ Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, M
   -> reload 0xFB56, 1194 counts per tick. RCAP2H in the block selects the row.
 Log: ./tmp/logs/rtd_diag.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, struct, sys, time
+import argparse, os, struct, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -64,12 +64,12 @@ def read_block(io) -> bytes | None:
     return bytes(out)
 
 
-def decode(b: bytes) -> dict:
+def decode(b: bytes, be: bool = False) -> dict:
     m0, m1, ver, stage = b[0], b[1], b[2], b[3]
-    ts = list(struct.unpack_from("<8H", b, 4))
-    hb, t2, ex1 = struct.unpack_from("<3H", b, 20)
-    d5, xms, busy = b[26], *struct.unpack_from("<2H", b, 27)
-    bench = list(struct.unpack_from("<4H", b, 32)) if len(b) >= 40 else None
+    ts = list(struct.unpack_from(("> " if be else "<")[0] + "8H", b, 4))
+    hb, t2, ex1 = struct.unpack_from(("> " if be else "<")[0] + "3H", b, 20)
+    d5, xms, busy = b[26], *struct.unpack_from(("> " if be else "<")[0] + "2H", b, 27)
+    bench = list(struct.unpack_from(("> " if be else "<")[0] + "4H", b, 32)) if len(b) >= 40 else None
     return {"bench": bench, "magic_ok": (m0, m1) == (0x41, 0x44), "ver": ver, "stage": stage, "ts": ts, "hb": hb, "t2": t2,
             "ex1": ex1, "d5": d5, "xms4": xms, "busy4": busy, "rcap2h": b[31]}
 
@@ -201,6 +201,8 @@ def main() -> int:
     # 1 s: block read is ~65 short transfers (tens of ms); 1 s keeps rates well above one read's noise
     ap.add_argument("--watch", type=float, metavar="N", help="re-read every N seconds (Ctrl-C to stop)")
     ap.add_argument("--messages", action="store_true", help="poll the debug-message channel")
+    ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
+                    help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
     a = ap.parse_args()
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -217,7 +219,7 @@ def main() -> int:
             print("read failed (no ACK from 0x35: debug slave off, or ISP mode); see tmp/logs/rtd_diag.log")
             return 1
         log(f"bus {a.bus} block {blk.hex()}")
-        d = decode(blk)
+        d = decode(blk, a.be)
         txt = report(d, prev, (t - tprev) if tprev else None)
         print(f"--- {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n{txt}", flush=True)
         log(txt)
