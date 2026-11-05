@@ -45,7 +45,7 @@
 
 #define _PANEL_POWER_ON_T1                      10
 #define _PANEL_POWER_ON_T2                      250
-#define _PANEL_POWER_ON_T3                      250
+#define _PANEL_POWER_ON_T3                      550                        // video valid -> backlight on: >= 500 ms (27" 4K eDP datasheets, docs/monitors/panel-edid.md)
 
 #define _PANEL_POWER_OFF_T4                     250
 #define _PANEL_POWER_OFF_T5                     20

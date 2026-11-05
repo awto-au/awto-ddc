@@ -2,7 +2,7 @@
 """Write a multi-bank firmware image to a Realtek RTD scaler's SPI flash in ONE ISP session.
 
 usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--backup-dir DIR] [--reprotect V|none]
-  default = DRY RUN: enter ISP, JEDEC check, read the whole 1 MiB flash TWICE and require identical reads,
+  default = DRY RUN: enter ISP, JEDEC check, read the whole 1 MiB flash once (backup) and the image region again, require identical reads,
             save the backup, list the 4 KiB sectors inside the image length that differ. Nothing written.
   --write : then erase + program + verify each differing sector (rtd_flash_sector.py routines), stop at the
             first verify failure (flash left unprotected, no reprotect of a bad image), else re-protect.
@@ -94,14 +94,14 @@ def main() -> int:
         t0 = time.monotonic()
         d1 = isp.read_flash(0, FLASH)
         log(f"dump 1 read in {time.monotonic() - t0:.1f}s")
-        d2 = isp.read_flash(0, FLASH)
-        if d1 != d2:
+        d2 = isp.read_flash(0, len(img))                  # 2nd read only where we write; the rest is never touched (Dan 2026-11-05)
+        if d1[:len(img)] != d2:
             nd = sum(x != y for x, y in zip(d1, d2))
-            log(f"refuse: two full reads differ in {nd} bytes (unstable read path)"); return 5
+            log(f"refuse: two reads differ in {nd} bytes of the image region (unstable read path)"); return 5
         a.backup_dir.mkdir(parents=True, exist_ok=True)
         bk = a.backup_dir / f"jxc-4k-flash-{a.serial}-{time.strftime('%Y%m%d-%H%M%S')}.bin"
         bk.write_bytes(d1)
-        log(f"two reads identical; backup {bk}")
+        log(f"two reads identical over the image region ({len(img)} B); backup {bk}")
         diff = [s for s in range(0, len(img), SECTOR) if d1[s:s + SECTOR] != img[s:s + SECTOR]]
         log(f"{len(diff)}/{len(img) // SECTOR} sectors differ: "
             + ", ".join(f"0x{s:05x}" for s in diff[:12]) + (" ..." if len(diff) > 12 else ""))

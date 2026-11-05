@@ -159,14 +159,15 @@
 //--------------------------------------------------
 #define _PWM_DUT_RESOLUTION                     _PWM_8BIT
 
-#define _BACKLIGHT_PWM                          _PWM1
-#define _BACKLIGHT_PWM_INVERSE                  _ON
+// Backlight PWM = PWM4 on pin 195 (P9.1, live pin-share mode 3), docs/monitors/gpio-roles.md; polarity untested
+#define _BACKLIGHT_PWM                          _PWM4
+#define _BACKLIGHT_PWM_INVERSE                  _OFF
 
 #define _PWM0_EN                                _OFF
-#define _PWM1_EN                                _ON
+#define _PWM1_EN                                _OFF
 #define _PWM2_EN                                _OFF
 #define _PWM3_EN                                _OFF
-#define _PWM4_EN                                _OFF
+#define _PWM4_EN                                _ON
 #define _PWM5_EN                                _OFF
 
 #define _PWM0_PSAV_EN                           _OFF
@@ -184,10 +185,10 @@
 #define _PWM5_PDOW_EN                           _OFF
 
 #define _PWM0_RST_EN                            _OFF
-#define _PWM1_RST_EN                            _ON
+#define _PWM1_RST_EN                            _OFF
 #define _PWM2_RST_EN                            _OFF
 #define _PWM3_RST_EN                            _OFF
-#define _PWM4_RST_EN                            _OFF
+#define _PWM4_RST_EN                            _ON
 #define _PWM5_RST_EN                            _OFF
 #define _PWM_RST_SIGNAL_SEL                     _DVS
 
@@ -270,13 +271,13 @@
 //-----------------------------------------------
 // Macro of VCCK_OFF Power Control
 //-----------------------------------------------
+// Old fw never writes P8.1 (VCCK_OFF) or P9.6 (DDR): macros are no-ops (docs/monitors/gpio-roles.md)
 #define bVCCKOFFPOWER                           (MCU_FE21_PORT81_PIN_REG) // Pin_179, P8.1
 
 #define _VCCK_OFF_POWER_ON                      1
 #define _VCCK_OFF_POWER_OFF                     0
 
 #define PCB_VCCK_OFF_POWER(x)                   {\
-                                                    bVCCKOFFPOWER = (x);\
                                                 }
 
 //-----------------------------------------------
@@ -288,7 +289,42 @@
 #define _DDR_POWER_OFF                          0
 
 #define PCB_DDR_POWER(x)                        {\
-                                                    bDDRPOWER = (x);\
+                                                }
+
+//-----------------------------------------------
+// Panel power and backlight enable, from the live GPIO read (docs/monitors/gpio-roles.md)
+//-----------------------------------------------
+#define bPANELPOWER                             (MCU_FE1A_PORT72_PIN_REG) // Pin_159, P7.2
+
+#define _PANEL_CONTROL_ON                       1
+#define _PANEL_CONTROL_OFF                      0
+
+#define PCB_PANEL_POWER(x)                      {\
+                                                    bPANELPOWER = (x);\
+                                                }
+
+#define PCB_PANEL_POWER_DETECT()                (bPANELPOWER)
+
+#define bBACKLIGHTPOWER                         (MCU_FE25_PORT85_PIN_REG) // Pin_185, P8.5
+
+#define _LIGHT_CONTROL_ON                       1
+#define _LIGHT_CONTROL_OFF                      0
+
+#define PCB_BACKLIGHT_POWER_PIN(x)              {\
+                                                    bBACKLIGHTPOWER = (x);\
+                                                }
+
+#define PCB_BACKLIGHT_POWER(x)                  {\
+                                                    if((x) == _LIGHT_CONTROL_ON)\
+                                                    {\
+                                                        ScalerTimerActiveTimerEvent(SEC(60), _USER_TIMER_EVENT_PANEL_USED_TIMER);\
+                                                        ScalerMcuPwmAdjustFrequency(_BACKLIGHT_PWM, (((DWORD)_PANEL_TYP_FRAME_RATE * 60) / 100));\
+                                                    }\
+                                                    else\
+                                                    {\
+                                                        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_PANEL_USED_TIMER);\
+                                                    }\
+                                                    PCB_BACKLIGHT_POWER_PIN(x)\
                                                 }
 
 //-----------------------------------------------
@@ -456,12 +492,11 @@
 #define _TMDS_SWITCH_MHL_CBUS                   0
 #define _TMDS_SWITCH_HDMI_HPD                   1
 
+// No MHL on this board: P9.1/P9.2/P9.3 are backlight PWM4 / standby LED / unknown (gpio-roles.md); never driven here
 #define PCB_D2_HDMI_MHL_SWITCH(x)               {\
-                                                    bD2_TMDS_SWITCH = (x);\
                                                 }
 
 #define PCB_D3_HDMI_MHL_SWITCH(x)               {\
-                                                    bD3_TMDS_SWITCH = (x);\
                                                 }
 
 //-----------------------------------------------
@@ -474,15 +509,13 @@
 #define _MHL_VBUS_OFF                           0
 
 #define PCB_D2_MHL_VBUS_SWITCH(x)               {\
-                                                    bD2_MHL_VBUS_SWITCH = (x);\
                                                 }
 
 #define PCB_D3_MHL_VBUS_SWITCH(x)               {\
-                                                    bD3_MHL_VBUS_SWITCH = (x);\
                                                 }
 
-#define PCB_GET_D2_MHL_VBUS_SWITCH()            (bD2_MHL_VBUS_SWITCH)
-#define PCB_GET_D3_MHL_VBUS_SWITCH()            (bD3_MHL_VBUS_SWITCH)
+#define PCB_GET_D2_MHL_VBUS_SWITCH()            (_MHL_VBUS_OFF)
+#define PCB_GET_D3_MHL_VBUS_SWITCH()            (_MHL_VBUS_OFF)
 
 
 ///////////////

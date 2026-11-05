@@ -120,8 +120,7 @@ def cta_block(port):
         d += bytes([(3 << 5) | 7, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x18, 0x44])
         # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5), SCDC present + LTE_340Mcsc scrambling
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
-        # AMD FreeSync VSDB (carried over): v1, caps 01, 48-60 Hz
-        d += bytes([(3 << 5) | 8, 0x1A, 0x00, 0x00, 0x01, 0x01, 0x30, 0x3C, 0xE6])
+        # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue
     dtds = DTD_1080 + DTD_1440
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
