@@ -157,6 +157,35 @@ INSERTS = [
 ]
 
 
+# Function-entry trace (#26): every fn defined in a file matching fw/trace_files.txt gets AWTO_TRACE(id) first.
+# ISR-context fns skipped (shared ring, not reentrant). Ids -> tmp/sdcc-port/trace_ids.tsv (rtd_diag.py --trace).
+TRACE_FILES = ROOT / "fw" / "trace_files.txt"
+TRACE_TSV = WORK / "trace_ids.tsv"
+FN_DEF = re.compile(r"^(?![#\s/])[A-Za-z_][\w \t*]*?\b(\w+)\s*\(([^;{}()]*)\)[ \t]*\n\{(?=[ \t]*\n)", re.M)
+TRACE_SKIP = re.compile(r"_EXINT\d|_WDINT|_T2INT|^main$")
+TRACE_IDS = {}                                 # (rel, fn) -> id
+
+
+def trace_globs():
+    if not TRACE_FILES.exists():
+        return []
+    return [l.split("#")[0].strip() for l in TRACE_FILES.read_text().splitlines() if l.split("#")[0].strip()]
+
+
+def apply_trace(rel: str, text: str, globs, stats) -> str:
+    if not any(fnmatch.fnmatch(rel, g) for g in globs):
+        return text
+
+    def ins(m):
+        name = m.group(1)
+        if name in ("if", "while", "for", "switch") or TRACE_SKIP.search(name):
+            return m.group(0)
+        tid = TRACE_IDS.setdefault((rel, name), len(TRACE_IDS) + 1)
+        stats["trace fn"] += 1
+        return f"{m.group(0)} AWTO_TRACE(0x{tid:04X});"         # same line as `{`: warn_policy line numbers hold
+    return FN_DEF.sub(ins, text)
+
+
 def apply_inserts(rel: str, text: str, stats) -> str:
     for rule in INSERTS:
         f, anchor, add = rule[:3]
@@ -480,7 +509,9 @@ def cmd_port():
         shutil.rmtree(SRC)
     idx = build_name_index()
     sfr_addr, using_all, at_all = {}, {}, {}
-    files = [p for p in SDK.rglob("*") if p.is_file() and ".git" not in p.parts]
+    files = sorted(p for p in SDK.rglob("*") if p.is_file() and ".git" not in p.parts)   # sorted: stable trace ids
+    tglobs = trace_globs()
+    TRACE_IDS.clear()
     for p in files:                                          # pass 1: sfr addresses, `using`/`_at_` defs
         if p.suffix.lower() in SRC_EXT:
             t = p.read_text(errors="replace")
@@ -518,6 +549,7 @@ def cmd_port():
             out = rewrite(raw, p.parent, idx, sfr_addr, using, stats, str(rel))
             out = apply_wraps(str(rel), out, stats)
             out = apply_inserts(str(rel), out, stats)
+            out = apply_trace(str(rel), out, tglobs, stats)
             dst.write_bytes(out.encode("latin-1"))
             n += 1
         elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:
@@ -530,6 +562,8 @@ def cmd_port():
                                 str(p.relative_to(OVERLAY)))
                         .encode("latin-1"))
         log(f"overlay: {p.relative_to(OVERLAY)}")
+    TRACE_TSV.write_text("".join(f"{i:04X}\t{f}\t{fn}\n" for (f, fn), i in sorted(TRACE_IDS.items(), key=lambda x: x[1])))
+    log(f"trace: {len(TRACE_IDS)} fns from {len(tglobs)} globs -> {TRACE_TSV}")
     log(f"port: {n} C/H files rewritten into {SRC}; sfr map {len(sfr_addr)} names; "
         f"{len(using)} fns with `using`; {len(ov)} overlay files")
     for k, v in stats.most_common():

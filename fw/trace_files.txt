@@ -1,0 +1,16 @@
+# Function-entry trace (#26): SDK-relative globs; each fn defined there records its id in the diag block.
+# Read live with rtd_diag.py --trace. Empty list = no trace code. Cost ~40 B code per traced fn.
+
+# 4K60 FRC mode-set wedge (#26): mode state machine, M-domain, FRC, memory, DPLL, display, scaling
+Kernel/System/Code/SysMode.c
+Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c
+Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c
+Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c
+Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c
+Kernel/Scaler/ScalerFunction/Code/ScalerDisplay.c
+Kernel/Scaler/ScalerFunction/Code/ScalerScaling.c
+Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c
+Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MDomain.c
+Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c
+Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c
+Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DDR2.c

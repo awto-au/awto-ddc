@@ -45,7 +45,9 @@ typedef struct
     unsigned int usBenchXdata;                  // 1000 x movx a,@dptr (diag block byte)
     unsigned int usBenchIdata;                  // 1000 x mov a,@r0 (R0 = 0xFF)
     unsigned int usBenchEmpty;                  // 1000 x empty loop (djnz overhead)
-    unsigned char ucSpare[8];
+    unsigned char ucTraceSeq;                   // ++ per traced function entry (fw/trace_files.txt)
+    unsigned char ucSpare;
+    unsigned int usTrace[3];                    // last 3 traced function ids, [2] newest (tmp/sdcc-port/trace_ids.tsv)
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -59,7 +61,10 @@ extern void AwtoDiagMainPass(void);
 extern void AwtoDiagSelfTest(void);
 #define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
+// function-entry trace, inserted by keil2sdcc into fns of fw/trace_files.txt; inline: no bank call (#26)
+#define AWTO_TRACE(id)                                          do { g_stAwtoDiag.usTrace[0] = g_stAwtoDiag.usTrace[1]; g_stAwtoDiag.usTrace[1] = g_stAwtoDiag.usTrace[2]; g_stAwtoDiag.usTrace[2] = (id); g_stAwtoDiag.ucTraceSeq++; } while(0)
 #else
+#define AWTO_TRACE(id)
 #define AwtoDiagInit()
 #define AwtoDiagStage(n)
 #define AwtoDiagMainPass()

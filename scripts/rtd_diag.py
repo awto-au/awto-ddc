@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read and decode the firmware boot-stage / timing diag block (48 B at XDATA 0xF6D0) over debug slave 0x35.
 
-usage: rtd_diag.py <bus> [--watch N | --messages | --release]
+usage: rtd_diag.py <bus> [--watch N | --messages | --release | --trace]
   Reads only: stage hi byte (cmd 0x01), then per byte cmd 0x3A [lo] + 1-byte read (SDK ScalerCommonDebug.c
   ScalerDebug: 0x01 -> data[2] = hi, 0x3A -> ScalerGetByte(hi << 8 | lo) into IIC data-out). Writes pass
   rtd_i2c_bridge.Real.regread_ok (staging + read cmds only). 65 transfers per block.
@@ -15,7 +15,8 @@ usage: rtd_diag.py <bus> [--watch N | --messages | --release]
 Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Header/RL6449_Project.h StAwtoDiag:
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
   | 1A ucDelay5usN | 1B u16 DelayXms(10) counts/4 | 1D u16 200x5us counts/4 | 1F RCAP2H
-  | 20 u16 x1000 mov a,dir | 22 u16 x1000 movx | 24 u16 x1000 mov a,@r0 | 26 u16 x1000 empty djnz loop | 28 spare[8]
+  | 20 u16 x1000 mov a,dir | 22 u16 x1000 movx | 24 u16 x1000 mov a,@r0 | 26 u16 x1000 empty djnz loop
+  | 28 trace seq | 29 spare | 2A u16 trace id[3], [2] newest (--trace; ids in tmp/sdcc-port/trace_ids.tsv)
   Bench counts are raw Timer2 counts (1000 iterations, EA off); (x - empty) / 1000 = counts per instruction.
 Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, MCU div 1, 14.318 MHz xtal):
   M2PLL: 701582 / 96 = 7308 -> reload 0xE373, 7309 counts per 1 ms tick; xtal (initial mode): 14318 / 12 = 1193
@@ -52,17 +53,7 @@ def log(s: str) -> None:
 
 
 def read_block(io) -> bytes | None:
-    if not io.write(DEV8, CMD_HI, bytes([BASE >> 8])):
-        return None
-    out = bytearray()
-    for i in range(SIZE):
-        if not io.write(DEV8, CMD_READ, bytes([(BASE + i) & 0xFF])):
-            return None
-        r = io.read(DEV8, READ_SUB, 1)
-        if r is None:
-            return None
-        out.append(r[0])
-    return bytes(out)
+    return read_bytes(io, 0, SIZE)
 
 
 def decode(b: bytes, be: bool = False) -> dict:
@@ -195,6 +186,55 @@ def messages(io, root: Path) -> int:
         io.write(DEV8, MSG_END, b""); io.write(DEV8, MSG_DONE, b"")   # 0x2A too: killed mid-message leaves fw halted
 
 
+TRACE_OFF = 0x28                    # ucTraceSeq, ucSpare, usTrace[3] (RL6449_Project.h StAwtoDiag)
+TRACE_DEAD = 20                     # consecutive failed reads = chip gone (~20 x 2 transfers, well past any ISR latency)
+
+
+def read_bytes(io, off: int, n: int) -> bytes | None:
+    if not io.write(DEV8, CMD_HI, bytes([(BASE + off) >> 8])):
+        return None
+    out = bytearray()
+    for i in range(n):
+        if not io.write(DEV8, CMD_READ, bytes([(BASE + off + i) & 0xFF])):
+            return None
+        r = io.read(DEV8, READ_SUB, 1)
+        if r is None:
+            return None
+        out.append(r[0])
+    return bytes(out)
+
+
+def trace(io, root: Path, be: bool) -> int:
+    """Poll the function-entry trace ring until Ctrl-C or TRACE_DEAD failed reads; print each new entry."""
+    names = {}
+    f = root / "tmp/sdcc-port/trace_ids.tsv"
+    if f.exists():
+        for line in f.read_text().splitlines():
+            i, path, fn = line.split("\t")
+            names[int(i, 16)] = f"{fn} ({Path(path).name})"
+    last, fails, n = None, 0, 0
+    try:
+        while True:
+            b = read_bytes(io, TRACE_OFF, 8)
+            if b is None:
+                fails += 1
+                if fails == 1:
+                    log(f"trace read failed after {n} reads; last ring {last}")
+                if fails >= TRACE_DEAD:
+                    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} chip stopped answering ({fails} failed reads); last ring: {last}"
+                    print(line, flush=True); log(line); return 1
+                continue
+            fails, n = 0, n + 1
+            seq, ids = b[0], struct.unpack_from((">" if be else "<") + "3H", b, 2)
+            ring = (seq, tuple(names.get(i, f"#{i:04X}") for i in ids))
+            if ring != last:
+                line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} seq {seq:3d}  " + " > ".join(ring[1])
+                print(line, flush=True); log(line)
+                last = ring
+    except KeyboardInterrupt:
+        return 0
+
+
 def main() -> int:
     global LOG
     ap = argparse.ArgumentParser()
@@ -203,6 +243,7 @@ def main() -> int:
     ap.add_argument("--watch", type=float, metavar="N", help="re-read every N seconds (Ctrl-C to stop)")
     ap.add_argument("--messages", action="store_true", help="poll the debug-message channel")
     ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F) to un-halt the firmware")
+    ap.add_argument("--trace", action="store_true", help="poll the function-entry trace ring (fw/trace_files.txt)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
     a = ap.parse_args()
@@ -217,6 +258,8 @@ def main() -> int:
     if a.messages:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # run the finally (0x2F) when killed
         return messages(io, root)
+    if a.trace:
+        return trace(io, root, a.be)
     prev, tprev = None, None
     while True:
         t = time.monotonic()
