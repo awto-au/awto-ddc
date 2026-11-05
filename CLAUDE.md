@@ -11,7 +11,7 @@ Global rules apply (`~/.claude/CLAUDE.md`). Repo specifics:
 - Findings and open questions: GitHub issues (this repo; tracking issue #1), not chat.
 - Reversing conventions (confidence tags): awto-dan `docs/embedded/reversing/README.md`.
 - **Firmware = build on the Realtek RL6449 SDK (Dan, 2026-11-04):** we write board/panel/project/OSD/DDC layers;
-  Realtek Kernel source + precompiled `.LIB`s are linked as-is. Board facts come from the old firmware (RE)
+  Realtek Kernel source and the FunctionLib *sources* are compiled with SDCC (Keil `.LIB`s can't be linked; AdvancedLib unused) (#11). Board facts come from the old firmware (RE)
   and RTDCustomerTool data. Consequence: this repo stays **PRIVATE permanently** (Realtek confidential code).
   - Host-side tools (`scripts/`) stay clean-room: from hardware facts (regdb + measurements), cite the fact.
   - GPL projects (ORTD2662 etc.) are understood, not pasted.
