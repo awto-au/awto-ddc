@@ -205,14 +205,59 @@ def read_bytes(io, off: int, n: int) -> bytes | None:
     return bytes(out)
 
 
-def trace(io, root: Path, be: bool, ids: str | None) -> int:
-    """Poll the function-entry trace ring until Ctrl-C or TRACE_DEAD failed reads; print each new entry."""
+SAFE = 0xF6B0                       # StAwtoSafe, 32 B (RL6449_Project.h): survives a warm reset
+SAFE_HOLD, SAFE_MARKER = 0xA55A, 0x5AFE
+HOLD_WAIT_S = 1800                  # --hold waits for a human power cycle (minutes); each try is a few I2C NAKs
+HOLD_POLL_S = 0.05                  # 40 tries inside the 2 s safe window (_AWTO_SAFE_BOOT_MS)
+
+
+def read_safe(io, be: bool) -> dict | None:
+    b = read_bytes(io, SAFE - BASE, 32)
+    if b is None:
+        return None
+    e = ">" if be else "<"
+    hold, marker = struct.unpack_from(e + "2H", b, 0)
+    return {"hold": hold, "marker": marker, "flags": b[4], "prev_seq": b[5],
+            "prev_trace": struct.unpack_from(e + "3H", b, 6), "prev_last": struct.unpack_from(e + "H", b, 12)[0],
+            "last": struct.unpack_from(e + "H", b, 14)[0], "max": struct.unpack_from(e + "H", b, 16)[0],
+            "prev_max": struct.unpack_from(e + "H", b, 18)[0], "wdt": b[20]}
+
+
+def safe_report(s: dict, names: dict) -> str:
+    warm = s["flags"] & 2
+    L = [f"hold 0x{s['hold']:04x}{' (HELD in safe mode)' if s['hold'] == SAFE_HOLD else ''}  "
+         f"in safe window: {'yes' if s['flags'] & 1 else 'no'}  marker {'ok' if s['marker'] == SAFE_MARKER else 'BAD'}",
+         f"this boot: longest main-loop pass {s['max']} ms, last pass at {s['last']} ms; WDT_TEST at boot 0x{s['wdt']:02x}",
+         f"last reset: {'WARM (WDT or ISP 0xEE)' if warm else 'power-on'}"]
+    if warm:
+        L.append(f"previous boot: last pass at {s['prev_last']} ms, longest pass {s['prev_max']} ms, trace seq {s['prev_seq']}: "
+                 + " > ".join(names.get(i, f"#{i:04X}") for i in s["prev_trace"]))
+    return "\n".join(L)
+
+
+def set_hold(bus: int, value: int, be: bool) -> bool:
+    """usHold at SAFE via debug cmds 0x01 [hi] (stage), 0x03 [val] (stage), 0x3B [lo] -> ScalerSetByte. Only this write."""
+    w = B.Real(bus, allow_write=True)
+    for off, val in ((0, value >> 8), (1, value & 0xFF)) if be else ((0, value & 0xFF), (1, value >> 8)):
+        if not (w.write(DEV8, 0x01, bytes([SAFE >> 8])) and w.write(DEV8, 0x03, bytes([val]))
+                and w.write(DEV8, 0x3B, bytes([(SAFE + off) & 0xFF]))):
+            return False
+    return True
+
+
+def load_trace_names(root: Path, ids: str | None) -> dict:
     names = {}
     f = Path(ids) if ids else root / "tmp/sdcc-port/trace_ids.tsv"
     if f.exists():
         for line in f.read_text().splitlines():
             i, path, fn = line.split("\t")
             names[int(i, 16)] = f"{fn} ({Path(path).name})"
+    return names
+
+
+def trace(io, root: Path, be: bool, ids: str | None) -> int:
+    """Poll the function-entry trace ring until Ctrl-C or TRACE_DEAD failed reads; print each new entry."""
+    names = load_trace_names(root, ids)
     last, fails, n = None, 0, 0
     try:
         while True:
@@ -248,6 +293,10 @@ def main() -> int:
     ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F) to un-halt the firmware")
     ap.add_argument("--trace", action="store_true", help="poll the function-entry trace ring (fw/trace_files.txt)")
     ap.add_argument("--ids", help="trace id TSV of the flashed image (default tmp/sdcc-port/trace_ids.tsv)")
+    ap.add_argument("--safe", action="store_true", help="read the safe-boot/WDT-canary block (0xF6B0)")
+    ap.add_argument("--hold", action="store_true",
+                    help="poll until the fw answers, then hold it in the safe window (no inputs/display)")
+    ap.add_argument("--unhold", action="store_true", help="release the safe-window hold (fw continues booting)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
     a = ap.parse_args()
@@ -264,6 +313,23 @@ def main() -> int:
         return messages(io, root)
     if a.trace:
         return trace(io, root, a.be, a.ids)
+    if a.hold or a.unhold:
+        val = SAFE_HOLD if a.hold else 0
+        t0 = time.monotonic()
+        # --hold races the 2 s safe window after power-on: retry every write attempt until it lands
+        while not set_hold(a.bus, val, a.be):
+            if not a.hold or time.monotonic() - t0 > HOLD_WAIT_S:
+                print(f"{'hold' if a.hold else 'unhold'}: no ACK from 0x35"); return 1
+            time.sleep(HOLD_POLL_S)
+        line = f"{'hold set' if a.hold else 'hold released'} after {time.monotonic() - t0:.1f} s"
+        print(line); log(line)
+    if a.safe or a.hold or a.unhold:
+        s = read_safe(io, a.be)
+        if s is None:
+            print("safe block read failed (no ACK from 0x35)"); return 1
+        txt = safe_report(s, load_trace_names(root, a.ids))
+        print(txt); log(txt)
+        return 0
     prev, tprev = None, None
     while True:
         t = time.monotonic()

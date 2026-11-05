@@ -148,6 +148,10 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
+    # safe window before inputs/display start; WDT kick in the Timer2 ISR gated on the main-loop canary (#26)
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysSourceInitial\(\);", "    AwtoSafeBoot();"),
+    ("Kernel/System/Code/SysTimer.c", r"^\s*CLR_MCU_WATCH_DOG\(\);", "        if(AWTO_MAIN_ALIVE())",
+     r"^\s*if\(\(MCU_FFAD_WATCHDOG_CNT1_VALUE & 0x07\) > 0x04\)"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
 ] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
     ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")

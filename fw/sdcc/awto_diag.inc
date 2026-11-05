@@ -19,6 +19,30 @@ void AwtoDiagStage(unsigned char ucStage)
 void AwtoDiagInit(void)
 {
     unsigned char ucI;
+    unsigned char ucWdt = MCU_FFEB_WDT_TEST;
+
+    MCU_FFEB_WDT_TEST |= _BIT7;                  // write 1 to clear
+    // warm reset: keep the previous boot's trace + pass times before the diag block is wiped
+    g_stAwtoSafe.ucFlags = 0;
+    g_stAwtoSafe.ucWdtTest = ucWdt;
+    if(g_stAwtoSafe.usMarker == _AWTO_SAFE_MARKER)
+    {
+        g_stAwtoSafe.ucPrevTraceSeq = g_stAwtoDiag.ucTraceSeq;
+        for(ucI = 0; ucI < 3; ucI++)
+        {
+            g_stAwtoSafe.usPrevTrace[ucI] = g_stAwtoDiag.usTrace[ucI];
+        }
+        g_stAwtoSafe.usPrevLastPassMs = g_stAwtoSafe.usLastPassMs;
+        g_stAwtoSafe.usPrevMaxPassMs = g_stAwtoSafe.usMaxPassMs;
+        g_stAwtoSafe.ucFlags = _AWTO_SAFE_F_WARM;
+    }
+    else
+    {
+        g_stAwtoSafe.usHold = 0;                // power-on: RAM is random
+    }
+    g_stAwtoSafe.usMarker = _AWTO_SAFE_MARKER;
+    g_stAwtoSafe.usLastPassMs = g_usTimerCounter;
+    g_stAwtoSafe.usMaxPassMs = 0;
 
     for(ucI = 0; ucI < sizeof(StAwtoDiag); ucI++)
     {
@@ -27,15 +51,49 @@ void AwtoDiagInit(void)
     g_stAwtoDiag.ucMagic0 = 'A';
     g_stAwtoDiag.ucMagic1 = 'D';
     g_stAwtoDiag.ucVersion = 1;
-    g_stAwtoDiag.ucSpare = MCU_FFEB_WDT_TEST;   // bit7 = WDT overflow: last reset was the watchdog (#26)
-    MCU_FFEB_WDT_TEST |= _BIT7;                  // write 1 to clear
+    g_stAwtoDiag.ucSpare = ucWdt;               // bit7 = WDT overflow: last reset was the watchdog (#26)
     AwtoDiagStage(1);
+}
+
+// main-loop canary: the Timer2 ISR kicks the WDT only while this ran within _AWTO_WD_STALE_MS (AWTO_MAIN_ALIVE)
+static void AwtoCanary(void)
+{
+    unsigned int usNow;
+    unsigned int usPass;
+
+    do
+    {
+        usNow = g_usTimerCounter;
+    }
+    while(usNow != g_usTimerCounter);
+    usPass = usNow - g_stAwtoSafe.usLastPassMs;
+    if(usPass > g_stAwtoSafe.usMaxPassMs)
+    {
+        g_stAwtoSafe.usMaxPassMs = usPass;
+    }
+    g_stAwtoSafe.usLastPassMs = usNow;
 }
 
 void AwtoDiagMainPass(void)
 {
     g_stAwtoDiag.usHeartbeat++;
+    AwtoCanary();
     AwtoDiagStage(5);
+}
+
+// Safe window before inputs + display start: ISP, EDID and debug 0x35 are up. Stays while usHold == magic
+// (host: rtd_diag.py --hold; fw: after a WDT reset). Recovery path for an image that wedges on an input (#26).
+void AwtoSafeBoot(void)
+{
+    unsigned int usStart = g_usTimerCounter;
+
+    g_stAwtoSafe.ucFlags |= _AWTO_SAFE_F_ACTIVE;
+    while(((unsigned int)(g_usTimerCounter - usStart) < _AWTO_SAFE_BOOT_MS) || (g_stAwtoSafe.usHold == _AWTO_SAFE_HOLD_MAGIC))
+    {
+        AwtoCanary();
+    }
+    g_stAwtoSafe.ucFlags &= ~_AWTO_SAFE_F_ACTIVE;
+    g_stAwtoSafe.usMaxPassMs = 0;               // the window is not a main-loop pass
 }
 
 // Timer2 counts since an arbitrary origin: whole 1 ms ticks x reload period + TH2:TL2 offset.

@@ -55,10 +55,42 @@ volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #else
 extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #endif
+// Safe boot + WDT canary (#26): 32 B at 0xF6B0, outside the linker range; not cleared on boot (XDATA survives a
+// warm reset: WDT or ISP 0xEE). FFEB[7] is the SDK's WD-event flag here, not a reset cause -> RAM marker instead.
+typedef struct
+{
+    unsigned int usHold;                        // == _AWTO_SAFE_HOLD_MAGIC: stay in the safe window (host sets)
+    unsigned int usMarker;                      // _AWTO_SAFE_MARKER while running; seen at boot = warm reset
+    unsigned char ucFlags;                      // _AWTO_SAFE_F_*
+    unsigned char ucPrevTraceSeq;               // previous boot's trace ring (valid when _AWTO_SAFE_F_WARM)
+    unsigned int usPrevTrace[3];
+    unsigned int usPrevLastPassMs;              // previous boot: uptime at its last main-loop pass
+    unsigned int usLastPassMs;                  // uptime at the last main-loop pass (canary)
+    unsigned int usMaxPassMs;                   // longest main-loop pass this boot: sizes _AWTO_WD_STALE_MS
+    unsigned int usPrevMaxPassMs;               // previous boot's longest pass
+    unsigned char ucWdtTest;                    // MCU_FFEB_WDT_TEST at boot
+    unsigned char ucSpare[11];
+} StAwtoSafe;
+typedef char AwtoSafeSizeCheck[(sizeof(StAwtoSafe) == 32) ? 1 : -1];
+#ifdef _AWTO_DIAG_DEFINER
+volatile __xdata __at(0xF6B0) StAwtoSafe g_stAwtoSafe;
+#else
+extern volatile __xdata __at(0xF6B0) StAwtoSafe g_stAwtoSafe;
+#endif
+#define _AWTO_SAFE_HOLD_MAGIC                                   0xA55A
+#define _AWTO_SAFE_MARKER                                       0x5AFE
+#define _AWTO_SAFE_F_ACTIVE                                     0x01    // in the safe window now
+#define _AWTO_SAFE_F_WARM                                       0x02    // warm reset (WDT or ISP 0xEE): usPrev* valid
+// Safe window: host must reach ISP 0x4A or set the hold within it after power-on; 2 s = human power cycle + 1 s poll
+#define _AWTO_SAFE_BOOT_MS                                      2000
+// Main loop silent this long -> ISR stops kicking -> WDT reset. Placeholder until usMaxPassMs is measured (#26)
+#define _AWTO_WD_STALE_MS                                       3000
+#define AWTO_MAIN_ALIVE()                                       ((unsigned int)(g_usTimerCounter - g_stAwtoSafe.usLastPassMs) < _AWTO_WD_STALE_MS)
 extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagSelfTest(void);
+extern void AwtoSafeBoot(void);
 #define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 // function-entry trace, inserted by keil2sdcc into fns of fw/trace_files.txt; inline: no bank call (#26)
@@ -69,6 +101,8 @@ extern void AwtoDiagSelfTest(void);
 #define AwtoDiagStage(n)
 #define AwtoDiagMainPass()
 #define AwtoDiagSelfTest()
+#define AwtoSafeBoot()
+#define AWTO_MAIN_ALIVE()                                       (1)
 #define AWTO_DIAG_T2ISR()
 #define AWTO_DIAG_EX1ISR()
 #endif
