@@ -5,7 +5,7 @@ usage: fw_build.py --serial AWT26110003 [--skip-compile] [--common 0x5000]
   output: tmp/fw/<serial>/fw.ihx, fw.map, fw.bin (bank k at file offset k*64 KiB), build.json
   --skip-compile  reuse tmp/sdcc-port/asm (skip port/EDID/compile)
 Memory (SDK + board, awto-ddc#8):
-- XDATA window 0xD700-0xF6FF; fixed EDID DDC RAM for D1/D2/D3 at E280/E480/E680 (+256 B each) splits it
+- XDATA window 0xD700-0xF6FF; fixed DDC RAM for D0-D3 at E080/E280/E480/E680 (+256 B each) splits it
   into holes; module XSEG areas are distributed over the holes (sdld cannot split one area).
 - Code: common [0, COMMON) copied into every bank; BANK<n> linked at n*0x10000 + COMMON.
 Log: ./tmp/logs/fw_build.log
@@ -21,7 +21,7 @@ import sdcc_tools as T  # noqa: E402
 ROOT = repo_root()
 LOG = None
 XRAM = (0xD700, 0xF700)                                       # SDK reserved XDATA, end exclusive
-EDID_RAM = [(0xE280, 0xE380), (0xE480, 0xE580), (0xE680, 0xE780)]   # Mcu.c DDC1..DDC3, 256 B (board header)
+EDID_RAM = [(0xE080, 0xE180), (0xE280, 0xE380), (0xE480, 0xE580), (0xE680, 0xE780)]   # Mcu.c MCU_DDCRAM_D0..D3, 256 B each
 BANK = 0x10000
 NBANKS = 14                                                   # banks 14-15 = data (#8)
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
@@ -203,6 +203,8 @@ def main() -> int:
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
     hs, moved = split_xseg(bank_dir)
+    if len(hs) - 1 > 4:                                      # crt_xinit.asm declares/clears XSEG1..4 only
+        sys.exit(f"{len(hs)} XDATA holes: extend XSEG1..4 in fw/sdcc/crt_xinit.asm")
     for asm in moved:                                        # re-assemble modules whose XSEG was renamed
         run("bank", [T.tool("sdas8051"), "-plosgffw", asm.with_suffix(".rel"), asm])
     out = ROOT / "tmp/fw" / a.serial
