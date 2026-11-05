@@ -1,0 +1,23 @@
+# SDK debug messages kept in the firmware (awto-ddc#26). A call site matching no rule is compiled out.
+# Rules: cat:<Category> | file:<glob on SDK-relative path> | id:<hex>. Also needs the category flag ON in Debug.h.
+# Messages stay listed (enabled column) in fw/msgids.tsv.
+
+# eDP Tx1/Tx2 LT1/LT2/LTend pass/fail (category Check, _DEBUG_MESSAGE_CHECK_DISP_SETTING)
+cat:Check
+# panel link-training files
+file:Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c
+file:Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c
+# power / source / mode state machine
+cat:System
+
+# input Measure fail messages (RL6449_Series_Measure.c, ScalerMeasure.c)
+id:3c14  # Digital check V height fail
+id:3c15  # Digital off-line measure fail
+id:6ab4  # Digital auto-function fail
+id:baad  # Digital check H width fail
+id:c478  # Final setting in measure fail
+id:e549  # Digital format conversion fail
+id:b327  # VGA off-line double check fail
+id:ba6b  # VGA active count difference fail
+id:bb1d  # VGA auto-function fail
+id:ccf2  # VGA off-line measure fail
