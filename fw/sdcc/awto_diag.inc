@@ -27,6 +27,8 @@ void AwtoDiagInit(void)
     g_stAwtoDiag.ucMagic0 = 'A';
     g_stAwtoDiag.ucMagic1 = 'D';
     g_stAwtoDiag.ucVersion = 1;
+    g_stAwtoDiag.ucSpare = MCU_FFEB_WDT_TEST;   // bit7 = WDT overflow: last reset was the watchdog (#26)
+    MCU_FFEB_WDT_TEST |= _BIT7;                  // write 1 to clear
     AwtoDiagStage(1);
 }
 

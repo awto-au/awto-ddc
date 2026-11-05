@@ -16,7 +16,7 @@ Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Head
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
   | 1A ucDelay5usN | 1B u16 DelayXms(10) counts/4 | 1D u16 200x5us counts/4 | 1F RCAP2H
   | 20 u16 x1000 mov a,dir | 22 u16 x1000 movx | 24 u16 x1000 mov a,@r0 | 26 u16 x1000 empty djnz loop
-  | 28 trace seq | 29 spare | 2A u16 trace id[3], [2] newest (--trace; ids in tmp/sdcc-port/trace_ids.tsv)
+  | 28 trace seq | 29 WDT_TEST (FFEB) at boot, bit7 = watchdog reset | 2A u16 trace id[3], [2] newest (--trace; ids in tmp/sdcc-port/trace_ids.tsv)
   Bench counts are raw Timer2 counts (1000 iterations, EA off); (x - empty) / 1000 = counts per instruction.
 Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, MCU div 1, 14.318 MHz xtal):
   M2PLL: 701582 / 96 = 7308 -> reload 0xE373, 7309 counts per 1 ms tick; xtal (initial mode): 14318 / 12 = 1193
@@ -63,7 +63,7 @@ def decode(b: bytes, be: bool = False) -> dict:
     d5, xms, busy = b[26], *struct.unpack_from(("> " if be else "<")[0] + "2H", b, 27)
     bench = list(struct.unpack_from(("> " if be else "<")[0] + "4H", b, 32)) if len(b) >= 40 else None
     return {"bench": bench, "magic_ok": (m0, m1) == (0x41, 0x44), "ver": ver, "stage": stage, "ts": ts, "hb": hb, "t2": t2,
-            "ex1": ex1, "d5": d5, "xms4": xms, "busy4": busy, "rcap2h": b[31]}
+            "ex1": ex1, "d5": d5, "xms4": xms, "busy4": busy, "rcap2h": b[31], "wdt": b[0x29]}
 
 
 def report(d: dict, prev: dict | None, dt: float | None) -> str:
@@ -71,7 +71,8 @@ def report(d: dict, prev: dict | None, dt: float | None) -> str:
     if not d["magic_ok"]:
         return f"magic not 'AD' (version {d['ver']}): firmware without the diag block, or read path failed"
     st = d["stage"]
-    L.append(f"version {d['ver']}  stage {st}: {STAGES[st] if st < len(STAGES) else '?'}")
+    L.append(f"version {d['ver']}  stage {st}: {STAGES[st] if st < len(STAGES) else '?'}"
+             f"  WDT_TEST at boot 0x{d['wdt']:02x}{' (WATCHDOG RESET)' if d['wdt'] & 0x80 else ''}")
     for n in range(1, 9):
         reached = n <= st or d["ts"][n - 1]
         L.append(f"  stage {n} {STAGES[n]:32s} " + (f"{d['ts'][n - 1]:6d} ms" if reached else "   not reached"))
@@ -204,10 +205,10 @@ def read_bytes(io, off: int, n: int) -> bytes | None:
     return bytes(out)
 
 
-def trace(io, root: Path, be: bool) -> int:
+def trace(io, root: Path, be: bool, ids: str | None) -> int:
     """Poll the function-entry trace ring until Ctrl-C or TRACE_DEAD failed reads; print each new entry."""
     names = {}
-    f = root / "tmp/sdcc-port/trace_ids.tsv"
+    f = Path(ids) if ids else root / "tmp/sdcc-port/trace_ids.tsv"
     if f.exists():
         for line in f.read_text().splitlines():
             i, path, fn = line.split("\t")
@@ -217,6 +218,8 @@ def trace(io, root: Path, be: bool) -> int:
         while True:
             b = read_bytes(io, TRACE_OFF, 8)
             if b is None:
+                if n == 0:
+                    continue                    # not up yet (rebooting / ISP): only count fails after a good read
                 fails += 1
                 if fails == 1:
                     log(f"trace read failed after {n} reads; last ring {last}")
@@ -244,6 +247,7 @@ def main() -> int:
     ap.add_argument("--messages", action="store_true", help="poll the debug-message channel")
     ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F) to un-halt the firmware")
     ap.add_argument("--trace", action="store_true", help="poll the function-entry trace ring (fw/trace_files.txt)")
+    ap.add_argument("--ids", help="trace id TSV of the flashed image (default tmp/sdcc-port/trace_ids.tsv)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
     a = ap.parse_args()
@@ -259,7 +263,7 @@ def main() -> int:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # run the finally (0x2F) when killed
         return messages(io, root)
     if a.trace:
-        return trace(io, root, a.be)
+        return trace(io, root, a.be, a.ids)
     prev, tprev = None, None
     while True:
         t = time.monotonic()

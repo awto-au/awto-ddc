@@ -737,14 +737,25 @@ def warn_gate(res):
     out = set()
     for _f, _rc, msg in res:
         for l in msg.splitlines():
-            m = WARN_RE.match(l)
-            if not m:
-                continue
-            path, line, text = m.group(1), m.group(2), m.group(4)
-            rel = os.path.relpath(path, SRC) if path.startswith(str(SRC)) else path
-            if not any(p.search(text) and fnmatch.fnmatch(rel, g) and lr in ("*", line) for p, g, lr in rules):
-                out.add(f"{rel}:{line}: {text}")
+            # sdcpp and sdcc share stderr: a cpp warning can cut into a compiler one mid-text; split them apart
+            parts = WARN_SPLIT.split(l)
+            for k, part in enumerate(parts):
+                m = WARN_RE.match(part)
+                if not m:
+                    continue
+                path, line, text = m.group(1), m.group(2), m.group(4)
+                cut = k < len(parts) - 1                   # text truncated by the next warning
+                rel = os.path.relpath(path, SRC) if path.startswith(str(SRC)) else path
+
+                def hit(p):                                # truncated text: must be a prefix of the rule's literal
+                    return p.search(text) or (cut and len(text) >= 8
+                                              and p.pattern.lstrip("^").replace("\\", "").startswith(text))
+                if not any(hit(p) and fnmatch.fnmatch(rel, g) and lr in ("*", line) for p, g, lr in rules):
+                    out.add(f"{rel}:{line}: {text}")
     return sorted(out)
+
+
+WARN_SPLIT = re.compile(rf"(?<=.)(?={re.escape(str(SRC))}/[^:]+:\d+(?::\d+)?: warning)")   # SDK paths have spaces
 
 
 def print_hist(rep, n=25):

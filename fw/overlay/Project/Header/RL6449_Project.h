@@ -46,7 +46,7 @@ typedef struct
     unsigned int usBenchIdata;                  // 1000 x mov a,@r0 (R0 = 0xFF)
     unsigned int usBenchEmpty;                  // 1000 x empty loop (djnz overhead)
     unsigned char ucTraceSeq;                   // ++ per traced function entry (fw/trace_files.txt)
-    unsigned char ucSpare;
+    unsigned char ucSpare;                      // MCU_FFEB_WDT_TEST at boot: bit7 = watchdog reset (#26)
     unsigned int usTrace[3];                    // last 3 traced function ids, [2] newest (tmp/sdcc-port/trace_ids.tsv)
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
