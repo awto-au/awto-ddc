@@ -4,12 +4,12 @@
     "1": {
       "serial": "AWT26110001",
       "input": "HDMI",
-      "connector": "card1-HDMI-A-2",
-      "gdctl": "HDMI-2",
+      "connector": "card2-HDMI-A-3",
+      "gdctl": "HDMI-3",
       "be": true,
       "relay": null,
       "test": false,
-      "note": "recabled 2026-11-06 ~09:55: now on Intel HDMI-A-2 (unit 3's old port)"
+      "note": "2026-11-06 10:41: NVIDIA HDMI-A-3 (I2C bus via EDID scan, e.g. 18)"
     },
     "2": {
       "serial": "AWT26110002",
@@ -23,14 +23,14 @@
     "3": {
       "serial": "AWT26110003",
       "input": "HDMI",
-      "connector": "card2-HDMI-A-3",
-      "gdctl": "HDMI-3",
+      "connector": "card1-HDMI-A-2",
+      "gdctl": "HDMI-2",
       "be": true,
       "relay": "so-th-1",
       "test": true,
       "connector_dp": "card1-DP-1",
       "gdctl_dp": "DP-1",
-      "note": "recabled 2026-11-06 ~09:55: NVIDIA HDMI-A-3 + Intel DP-1 (unit 1's old DP cable)"
+      "note": "2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
     }
   }
 }
