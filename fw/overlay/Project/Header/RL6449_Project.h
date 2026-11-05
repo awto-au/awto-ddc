@@ -78,6 +78,13 @@ extern void AwtoDiagSelfTest(void);
 #if(_AWTO_DEBUG_PORT == _ON)
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
 #endif
+// Debug port before the first ACTIVE mode (later it follows the active input): -D_AWTO_BOOT_PORT=_D1_INPUT_PORT
+// (K2S_SDCC_EXTRA) for a DP-only unit; default = NVRAM search port (#26)
+#ifdef _AWTO_BOOT_PORT
+#define AWTO_DEBUG_PORT_INIT(nvram)                             (_AWTO_BOOT_PORT)
+#else
+#define AWTO_DEBUG_PORT_INIT(nvram)                             (nvram)
+#endif
 #define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 

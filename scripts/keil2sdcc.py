@@ -60,6 +60,9 @@ SRC_EXT = {".c", ".h"}
 # pData scratch arrays and all Keil `idata` go to XDATA (keil_compat.h) so 0x80-0xFF is left to the stack.
 DROP_USING = True
 RULES = [
+    # boot debug/DDC-CI port: NVRAM search port unless the build sets AWTO_DEBUG_PORT_INIT (RL6449_Project.h, #26)
+    (re.compile(r"UserCommonInterfaceDdcciSwitch\(GET_OSD_DDCCI_STATUS\(\), UserCommonNVRamGetSystemData\(_SEARCH_PORT\)\);"),
+     "UserCommonInterfaceDdcciSwitch(GET_OSD_DDCCI_STATUS(), AWTO_DEBUG_PORT_INIT(UserCommonNVRamGetSystemData(_SEARCH_PORT)));"),
     (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"xdata\1"),
     # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
     # and puts t in RAM (and `xdata BYTE *p` would become a 2-byte xdata pointer). Move the qualifier next
