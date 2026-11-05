@@ -48,3 +48,20 @@
 - Same string as our panel's `AGERA` product name, and the same blanking pattern (HFP 48 / sync 32 / BP 80, VFP 3 / sync 5) as our DTD.
 - Reading: `Agera` is a name in the panel/TCON-side EDID template, not a panel maker. `MST` (ours) and `MTK` (this one) are controller-IC vendor IDs (MStar / MediaTek), not Innolux/BOE/Samsung.
 - So the panel EDID carries no maker information; identity needs the datasheet timing/size match, the rear label, or the service-menu string.
+
+## BOE MV270QUM-N20 matches the EDID best (datasheets in `~/vendors/boe/`)
+- Files: `MV270QUM-N20/MV270QUM-N20_spec_verA_20190717.pdf` (spec history from 2017-07; Ver.B header 2018-07-26), `MV270QUM-N10/MV270QUM-N10_spec_revO_20170222.pdf`.
+- Colour coordinates, typical (EDID read from the panel in brackets):
+
+| | N20 | N10 | N50 | EDID |
+|---|---|---|---|---|
+| Red xy | 0.652 / 0.333 | 0.642 / 0.340 | n/a (wide gamut) | 0.6523 / 0.3339 |
+| Green xy | 0.288 / 0.633 | 0.302 / 0.621 | n/a | 0.3066 / 0.6367 |
+| Blue xy | 0.150 / 0.060 | 0.153 / 0.055 | n/a | 0.1503 / 0.0595 |
+| White xy | 0.313 / 0.329 | 0.313 / 0.329 | n/a | 0.3125 / 0.3291 |
+
+- Red, blue and white match N20 to the EDID's resolution; green x is off (0.307 vs 0.288) but inside N20's tolerance (0.258..0.318). N10's red (0.642/0.340) does not match.
+- N20: 350 cd/m2 typ, CR 1000, sRGB 99%/100%, 8-bit + A-FRC, 4-lane eDP 5.4 Gbps, active 596.736 x 335.664 mm; timing fCLK 444/533/551 MHz, tHP 3950/4000/4088, tHB 110/160/248, tVP 2213/2222/2290, tVB 53/62/130 (same as N50 and N10).
+- N20 dates from the 2017-2018 spec history, which fits the EDID's week 51 / 2018; N50 (2021) and Innolux E5B (2023) do not.
+- Status: BOE MV270QUM-N20 is the best candidate (colour + date + size + timing); N10 is ruled out by colour; not confirmed by label or marking.
+- Not found: any MST7554 controller datasheet / register manual.
