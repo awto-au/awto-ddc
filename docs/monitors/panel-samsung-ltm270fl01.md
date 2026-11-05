@@ -1,5 +1,7 @@
 # Panel: Samsung LTM270FL01 (JXC/Dahua 27" 4K, RTD2795T)
 
+Superseded as best candidate by [panel-innolux-m280dca-e3b.md](panel-innolux-m280dca-e3b.md) (service menu name + datasheet timing match).
+
 Status: 2026-11-04T14:00+10:00. Panel identity settled by Dan (size + measured active area match).
 **Datasheet NOT obtained.** Only reseller/database listings read. Panelook is behind a slider CAPTCHA
 (playwrong fetch fails; alt host `huasun.panelook.com` has a bad cert). alldatasheet.com has a "LTM270FL01"
