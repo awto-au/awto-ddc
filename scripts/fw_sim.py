@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
+import sdcc_tools as T  # noqa: E402
 
 ROOT = repo_root()
 BANK = 0x10000
@@ -31,7 +32,7 @@ def write_ihx(data: bytes, path: Path):
 
 class Sim:
     def __init__(self, ihx, log):
-        self.p = subprocess.Popen(["sdcc-ucsim_51", "-t", "52", str(ihx)], stdin=subprocess.PIPE,
+        self.p = subprocess.Popen([T.tool("ucsim_51"), "-t", "52", str(ihx)], stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
         self.log, self.buf = log, b""
 

@@ -144,9 +144,10 @@
 //--------------------------------------------------
 // eDPTx 1.2 HBR2 FB/Lane Config
 //--------------------------------------------------
+// old fw (rip, #7): P38_80 PN swap = 0x0F (all 4 lanes); P38_81..84 lane mux = reset (no lane swap)
 #define _PANEL_DPTX_1_2_FB_SWAP                 _DISABLE
 #define _PANEL_DPTX_1_2_LANE_SWAP               _DISABLE
-#define _PANEL_DPTX_1_2_LANE_PN_SWAP            _DISABLE
+#define _PANEL_DPTX_1_2_LANE_PN_SWAP            _ENABLE
 
 
 /////////

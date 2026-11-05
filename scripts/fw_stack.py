@@ -46,7 +46,7 @@ def main() -> int:
                 t = c.group(2)
                 if t.startswith("__bs_") and t not in ("__bs_call", "__bs_ret"):
                     calls[cur].append((t[4:], TRAMP + (2 if c.group(1) == "lcall" else 0)))
-                elif t == "__sdcc_call_dptr":
+                elif t in ("__sdcc_call_dptr", "sdcc_call_dptr"):          # <= 4.6 / trunk name
                     calls[cur].append(("*indirect*", 2 + TRAMP))
                 elif t == "sdcc_atomic_maybe_rollback":
                     isr.add(cur)

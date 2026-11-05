@@ -54,8 +54,8 @@
 //--------------------------------------------------
 // Panel Option
 //--------------------------------------------------
-// awto: 27" UHD eDP HBR2 x4 placeholder; real panel = Samsung LTM270FL01 (own header TODO, #7)
-#define _PANEL_TYPE                                             _AUO_EDP_27_UHD_LOCAL_DIMMING
+// awto: Samsung LTM270FL01, eDP HBR2 x4 on TX1 (fw/overlay/Panel/AWTO_LTM270FL01.h, #7)
+#define _PANEL_TYPE                                             _AWTO_LTM270FL01
 #define _PANEL_POW_SEQ_FAST_MODE                                _ON
 
 //--------------------------------------------------

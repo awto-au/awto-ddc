@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 import sdcc_link  # noqa: E402
+import sdcc_tools as T  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -155,7 +156,7 @@ def write_vectors(bank_dir: Path):
     for n in range((VEC_END - 3) // 8):
         lines += [f"\t.org 0x{3 + 8 * n:04x}", f"\tljmp {isr[n]}" if n in isr else "\treti"]
     (bank_dir / "awto_vectors.asm").write_text("\n".join(lines) + "\n")
-    run("bank", ["sdcc-sdas8051", "-plosgffw", bank_dir / "awto_vectors.rel", bank_dir / "awto_vectors.asm"])
+    run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / "awto_vectors.rel", bank_dir / "awto_vectors.asm"])
     log(f"vectors: { {hex(3 + 8 * n): v for n, v in sorted(isr.items())} }")
 
 
@@ -194,26 +195,28 @@ def main() -> int:
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    run("bank", ["sdcc-sdcc", "-mmcs51", "--model-large", "-S", "-o", bank_dir / "crt_mod0.asm",
+    run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", "-S", "-o", bank_dir / "crt_mod0.asm",
                  ROOT / "fw/sdcc/crt_mod0.c"])
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
                   bank_dir / "crt_mod0.asm", ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm"):
         (bank_dir / extra.name).write_text(extra.read_text())
-        run("bank", ["sdcc-sdas8051", "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
+        run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
     hs, moved = split_xseg(bank_dir)
     for asm in moved:                                        # re-assemble modules whose XSEG was renamed
-        run("bank", ["sdcc-sdas8051", "-plosgffw", asm.with_suffix(".rel"), asm])
+        run("bank", [T.tool("sdas8051"), "-plosgffw", asm.with_suffix(".rel"), asm])
     out = ROOT / "tmp/fw" / a.serial
     out.mkdir(parents=True, exist_ok=True)
     rels = sorted(bank_dir.glob("*.rel"))
     used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.M)})
-    wl = [f"-Wl-bBANK{n}=0x{n * BANK + a.common:x}" for n in used]
-    wl += [f"-Wl-bXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs))]
-    wl += [f"-Wl-bHOME=0x{VEC_END:x}"]
-    cmd = ["sdcc-sdcc", "-mmcs51", "--model-large", "--code-loc", "0", "--code-size", "0x100000",
+    xsegs = {int(m) for r in rels for m in re.findall(r"^A XSEG(\d+) ", r.read_text(errors="replace"), re.M)}
+    # trunk sdld: area base = -a (asxxxx 5.50; -b gone); a base for an undefined area is an error
+    wl = [f"-Wl-aBANK{n}=0x{n * BANK + a.common:x}" for n in used]
+    wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
+    wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
+    cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", "--code-loc", "0", "--code-size", "0x100000",
            "--xram-loc", hex(hs[0][0]), "--xram-size", hex(hs[0][1] - hs[0][0]), "--iram-size", "256",
-           *wl, "-o", out / "fw.ihx", *rels]
+           f"-L{T.LIB}", *wl, "-o", out / "fw.ihx", *rels]
     log(f"[link] {' '.join(map(str, cmd[:20]))} ... ({len(rels)} rels)")
     r, iram = sdcc_link.link(cmd, out / "fw.ihx", rels)
     LOG.write(r.stdout + r.stderr)

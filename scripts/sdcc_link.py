@@ -11,6 +11,9 @@ usage (library): link(cmd, ihx, rels) -> (CompletedProcess, layout dict)
 import re, subprocess, sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sdcc_tools as T  # noqa: E402
+
 LINK_TIMEOUT = 120          # full firmware link ~20 s (2026-11-04); stall guard, awto-dan#53
 DIRECT_END = 0x80           # direct addressing above 0x7F hits SFRs
 ISEG_BASE = 0x80
@@ -39,7 +42,7 @@ def _sdld(cmd, ihx: Path):
         lk = ihx.with_suffix(".lk")
         nolk = ihx.with_name(ihx.stem + "_nom.lk")
         nolk.write_text("\n".join(l for l in lk.read_text().splitlines() if l.strip() != "-M") + "\n")
-        r = subprocess.run(["sdcc-sdld", "-nf", str(nolk)], capture_output=True, text=True, timeout=LINK_TIMEOUT)
+        r = subprocess.run([T.tool("sdld"), "-nf", str(nolk)], capture_output=True, text=True, timeout=LINK_TIMEOUT)
         if r.returncode == 2 and "Error" not in r.stdout + r.stderr:      # rc 2 = warnings only
             r.returncode = 0
     return r
@@ -71,8 +74,8 @@ def link(cmd, ihx: Path, rels):
     run = lambda wl: _sdld(list(map(str, cmd)) + wl, ihx)
     park, cur = [], ISEG_BASE
     for k, v in ddovl.items():
-        park.append(f"-Wl-b{k}=0x{cur:x}"); cur += v
-    r = run(park + [f"-Wl-bISEG=0x{cur:x}"])
+        park.append(f"-Wl-a{k}=0x{cur:x}"); cur += v
+    r = run(park + [f"-Wl-aISEG=0x{cur:x}"])
     mapf = ihx.with_suffix(".map")
     if r.returncode or not mapf.exists():
         return r, {}
@@ -86,7 +89,7 @@ def link(cmd, ihx: Path, rels):
             return r, {"used": used}
         base[name] = h[0]; h[0] += size
     base["ISEG"] = ISEG_BASE
-    r = run([f"-Wl-b{k}=0x{v:x}" for k, v in base.items()])
+    r = run([f"-Wl-a{k}=0x{v:x}" for k, v in base.items()])
     if r.returncode:
         return r, {}
     mt = mapf.read_text(errors="replace")

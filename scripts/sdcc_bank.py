@@ -23,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
+import sdcc_tools as T  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -116,7 +117,7 @@ class Module:
 
 def assemble(asm: Path) -> dict:
     rel = asm.with_suffix(".rel")
-    r = subprocess.run(["sdcc-sdas8051", "-plosgffw", str(rel), str(asm)],
+    r = subprocess.run([T.tool("sdas8051"), "-plosgffw", str(rel), str(asm)],
                        capture_output=True, text=True, timeout=ASM_TIMEOUT)
     if r.returncode:
         sys.exit(f"sdas8051 failed on {asm}:\n{r.stdout}{r.stderr}")

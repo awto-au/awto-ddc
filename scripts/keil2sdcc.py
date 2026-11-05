@@ -18,6 +18,9 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sdcc_tools as T  # noqa: E402
+
 
 def repo_root():
     env = os.environ.get("AWTO_DDC_REPO")
@@ -36,7 +39,7 @@ WORK = ROOT / "tmp" / "sdcc-port"
 SRC = WORK / "src"
 SHIM = ROOT / "fw" / "sdcc"                    # keil_compat.h, intrins.h (committed)
 OVERLAY = ROOT / "fw" / "overlay"              # our board/project files, SDK-relative paths, replace SDK copies
-SDCC = "sdcc-sdcc"                             # Fedora package name
+SDCC = str(T.BIN / "sdcc")                     # awto-sdcc (scripts/sdcc_tools.py)
 # Per-file backstop (sdcc prints nothing while working, so no stall guard). Worst measured: RL6449_Series_DPRx0.c
 # 64 s under full parallel load (#8). 3x worst-case rule (awto-dan#53). Expiry -> logged TIMEOUT fail.
 COMPILE_TIMEOUT = 200
@@ -121,6 +124,10 @@ INSERTS = [
      "#define _RL6449_AWTO_JXC4K                                          0x4F"),
     ("Pcb/User_Pcb_Include.h", r'^#include "\./RL6449/LQFP_216/RL6449_QA_B_',
      '#include "./RL6449/LQFP_216/RL6449_AWTO_JXC4K.h"'),
+    # our panel (fw/overlay/Panel/AWTO_LTM270FL01.h); id 0x3D is unused in User_Panel_List.h (#7)
+    ("Panel/User_Panel_List.h", r"^#define _AUO_EDP_27_UHD_LOCAL_DIMMING\s",
+     "#define _AWTO_LTM270FL01                        0x3D    // 3840 x 2160"),
+    ("Panel/User_Panel_Include.h", r'^#include "30_AUO_eDP_27_UHD\.h"', '#include "AWTO_LTM270FL01.h"'),
     # liveness counters, host-readable over DDC 0x50 (AWTO_DIAG_TICK in RL6449_Project.h; no-op when off)
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_TICK(0xFF);"),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AWTO_DIAG_TICK(0xFE);"),
@@ -409,15 +416,26 @@ def norm_err(line):
     return s.strip()[:120]
 
 
+# Per-file compiler workarounds (basename -> extra flags); each one names its awto-sdcc issue
+FILE_FLAGS = {
+    "ScalerCommonIOSC.c": ["--noinduction"],   # trunk r17139 ICE validateOpType @ SDCCopt.c (awto-sdcc#3)
+    # sdcc >= 4.6: GCSE temps of the WD-ISR handlers spill to DATA (sloc, 23 B); direct RAM was 6 B short (#8)
+    "ScalerCommonTimerFunction.c": ["--nogcse"],
+}
+
+
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
            "--std-sdcc11", "--opt-code-size",                 # flash is the constraint (Dan: smallest)
+           "--fsigned-char",                                  # Keil: plain char signed; SDK SBYTE = char (awto-sdcc#3)
+           "--norestartseqatomics",                           # trunk: else every ISR exits via sdcc_atomic_maybe_rollback
            "--nooverlay",                                     # `data` locals -> DSEG for sdcc_overlay (call-graph aware), not OSEG
            "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
            f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
+    cmd += FILE_FLAGS.get(c.name, [])
     cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
 

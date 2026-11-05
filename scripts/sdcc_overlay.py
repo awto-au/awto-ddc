@@ -201,7 +201,8 @@ def main():
                 addr_taken.add(t)
     # an indirect call site (SDCC helper) may reach any address-taken fn: conservative edges, like a
     # BL51 OVERLAY directive covering all pointer targets
-    indirect_sites = [n for n, info in nodes.items() if "__sdcc_call_dptr" in info["calls"]]
+    # helper name: __sdcc_call_dptr (<= 4.6) / sdcc_call_dptr (trunk); missing it makes every target a root
+    indirect_sites = [n for n, info in nodes.items() if info["calls"] & {"__sdcc_call_dptr", "sdcc_call_dptr"}]
     for n in indirect_sites:
         calls[n] |= addr_taken
 

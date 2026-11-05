@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_link  # noqa: E402
+import sdcc_tools as T  # noqa: E402
 
 
 def repo_root():
@@ -72,11 +73,11 @@ def assemble_link(asm_dir, obj_dir, ihx):
     obj_dir.mkdir(parents=True, exist_ok=True)
     rels = []
     for a in sorted(asm_dir.glob("*.asm")):
-        r = run(["sdcc-sdas8051", "-plosgff", "-o", str(obj_dir / (a.stem + ".rel")), str(a)])
+        r = run([T.tool("sdas8051"), "-plosgff", "-o", str(obj_dir / (a.stem + ".rel")), str(a)])
         if r.returncode:
             return f"assemble {a.name}"
         rels.append(str(obj_dir / (a.stem + ".rel")))
-    r, _ = sdcc_link.link(["sdcc-sdcc", "-mmcs51", "--model-large", "-o", str(ihx)] + rels, ihx, rels)
+    r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", "-o", str(ihx)] + rels, ihx, rels)
     return None if r.returncode == 0 and ihx.exists() else f"link {r.stdout[-300:]}"
 
 
@@ -87,7 +88,7 @@ def simulate(ihx, outdir):
     ser = outdir / "serial.txt"
     ser.unlink(missing_ok=True)
     cmds = f"break 0x{m.group(1)}\nstep {STEP_CAP}\nquit\n"
-    r = subprocess.run(["sdcc-ucsim_51", "-t", "52", "-S", f"uart=0,out={ser}", str(ihx)],
+    r = subprocess.run([T.tool("ucsim_51"), "-t", "52", "-S", f"uart=0,out={ser}", str(ihx)],
                        input=cmds, capture_output=True, text=True, timeout=SIM_TMO)
     (outdir / "sim.log").write_text(r.stdout + r.stderr)
     ticks = re.search(r"Simulated (\d+) ticks", r.stdout)
@@ -102,7 +103,7 @@ def one(name, srcs):
     asmA.mkdir(parents=True)
     inc = ["-I", str(RT)] + (["-I", str(srcs[0].parent)] if srcs[0].parent != TESTS else [])
     for s in srcs + [RT / "sim_rt.c"]:
-        if run(["sdcc-sdcc", *CFLAGS, *inc, "-S", "-o", str(asmA / (s.stem + ".asm")), str(s)]).returncode:
+        if run([T.tool("sdcc"), *CFLAGS, *inc, "-S", "-o", str(asmA / (s.stem + ".asm")), str(s)]).returncode:
             return "BUILD-FAIL", f"compile {s.name}", {}
     sloc = any("sloc" in (asmA / (s.stem + ".asm")).read_text() for s in srcs)
     ovlroot = w / "ovlroot"
