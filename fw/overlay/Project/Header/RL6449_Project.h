@@ -23,14 +23,49 @@
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
 #define _AWTO_DEMO_LOGO                                         _OFF    // awto: cut (Dan 2026-11-04, #8)
-// Diag: count main-loop passes / EXINT1 entries in D2 EDID RAM bytes 0xFE/0xFF (i2c 0x50; breaks EDID checksum)
-#define _AWTO_DIAG                                              _OFF
+// Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
+// Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
+#define _AWTO_DIAG                                              _ON
 #if(_AWTO_DIAG == _ON)
-#define AWTO_DIAG_TICK(off)                                     (((volatile unsigned char __xdata *)0xE480)[off]++)
-#define AWTO_DIAG_SET(off, v)                                   (((volatile unsigned char __xdata *)0xE480)[off] = (v))
+typedef struct
+{
+    unsigned char ucMagic0;                     // 'A'
+    unsigned char ucMagic1;                     // 'D'
+    unsigned char ucVersion;                    // 1
+    unsigned char ucStage;                      // last stage reached (1..8, monotonic)
+    unsigned int usStageMs[8];                  // g_usTimerCounter (1 ms) at first entry of stage n
+    unsigned int usHeartbeat;                   // main-loop passes
+    unsigned int usT2Isr;                       // Timer2 ISR entries
+    unsigned int usEx1Isr;                      // EXINT1 (DDC-CI/debug) ISR entries
+    unsigned char ucDelay5usN;                  // g_ucDelay5usN_Base seen by the self-test
+    unsigned int usDelayXms10;                  // ScalerTimerDelayXms(10), Timer2 counts / 4
+    unsigned int usBusy1ms;                     // 200 x ScalerDelay5us(), Timer2 counts / 4
+    unsigned char ucRcap2h;                     // RCAP2H at self-test: tells XTAL from M2PLL reload
+    unsigned int usBenchDirect;                 // 1000 x mov a,0x7f, raw Timer2 counts
+    unsigned int usBenchXdata;                  // 1000 x movx a,@dptr (diag block byte)
+    unsigned int usBenchIdata;                  // 1000 x mov a,@r0 (R0 = 0xFF)
+    unsigned int usBenchEmpty;                  // 1000 x empty loop (djnz overhead)
+    unsigned char ucSpare[8];
+} StAwtoDiag;
+typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
+#ifdef _AWTO_DIAG_DEFINER
+volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #else
-#define AWTO_DIAG_TICK(off)
-#define AWTO_DIAG_SET(off, v)
+extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
+#endif
+extern void AwtoDiagInit(void);
+extern void AwtoDiagStage(unsigned char ucStage);
+extern void AwtoDiagMainPass(void);
+extern void AwtoDiagSelfTest(void);
+#define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
+#define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
+#else
+#define AwtoDiagInit()
+#define AwtoDiagStage(n)
+#define AwtoDiagMainPass()
+#define AwtoDiagSelfTest()
+#define AWTO_DIAG_T2ISR()
+#define AWTO_DIAG_EX1ISR()
 #endif
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.

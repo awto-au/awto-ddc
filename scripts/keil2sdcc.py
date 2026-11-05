@@ -133,43 +133,25 @@ INSERTS = [
     # awto-ddc#26: AwtoMsg0/AwtoMsgV (overlay AwtoMsg.h) live in the debug module, beside ScalerDebugMessage
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c",
      r"^void ScalerDebugSelectDDCCIDebugMode\(EnumDDCCIDebugMode enumMode\)$", '#include "AwtoMsg.h"'),
-    # liveness counters, host-readable over DDC 0x50 (AWTO_DIAG_TICK in RL6449_Project.h; no-op when off)
-    ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_TICK(0xFF);"),
-    ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AWTO_DIAG_TICK(0xFE);"),
-] + [   # main-loop stage marker (D2 EDID RAM 0xFD = index of the last handler entered)
-    ("Kernel/System/Code/SysMain.c", rf"^\s*{h}\(\);", f"            AWTO_DIAG_SET(0xFD, {i + 1});")
-    for i, h in enumerate(("UserInterfaceKeyHandler", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler",
-                           "SysSourceHandler", "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler",
-                           "UserCommonInterfaceOsdHandler", "UserCommonDdcciHandler", "SysColorHandler",
-                           "ScalerDebug"))
-] + [   # sub-stage marker in the OSD flow / panel power-up (D2 EDID RAM 0xFC)
-    (OSD + "RTD2014Osd.c", r"^\s*UserCommonInterfacePanelPowerAction\(_BACKLIGHT_ON\);",
-     "    AWTO_DIAG_SET(0xFC, 0x10);"),
-    (OSD + "RTD2014Osd.c", r"^\s*RTDOsdEventMsgProc\(\);", "    AWTO_DIAG_SET(0xFC, 0x20);"),
-    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*SysModeClrModeStateChange\(\);",
-     "    AWTO_DIAG_SET(0xFC, 0x30);"),
-] + [   # _BACKLIGHT_ON case of UserCommonInterfacePanelPowerAction, eDP (DPTX) path, in call order
-    ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, f"    AWTO_DIAG_SET(0xFC, 0x{v:02X});",
-     r"^\s*case _BACKLIGHT_ON:") for rx, v in (
-        (r"^\s*ScalerTimerWaitForActiveTimerEvent\(_USER_TIMER_EVENT_PANEL_POWER_OFF\);", 0x01),
-        (r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", 0x02),
-        (r"^\s*UserInterfaceAdjustWaitPanelT1\(\);", 0x03),
-        (r"^\s*ScalerDisplayDPTxPhyInitial\(\);", 0x04),
-        (r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", 0x05),
-        (r"^\s*ScalerDisplayDPTxStreamHanlder\(_ENABLE\);", 0x06),
-        (r"^\s*ScalerDisplayDPTxPowerSequenceProc\(_DPTX_POWER_SEQUENCE_VIDEO_PATTERN\);", 0x07),
-        (r"^\s*SET_FORCESETPWMDUTY_FLAG\(_FALSE\);", 0x08),
-    )
-] + [   # inside ScalerDisplayDPTx2VideoStreamOutput (panel = DPTX port 2; enable path), in call order
-    ("Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c", rx, f"        AWTO_DIAG_SET(0xFC, 0x{v:02X});",
-     r"^void ScalerDisplayDPTx2VideoStreamOutput\(bit bOutput\)$") for rx, v in (
-        (r"^\s*ScalerDisplayDPTx2MeasureInputInfo\(\);", 0x41),
-        (r"^\s*PDATA_DWORD\(0\) = 0;", 0x42),
-        (r"^\s*if\(bMvidHWMode == _TRUE\)", 0x43),
-        (r"^\s*ScalerDisplayDPTx2DisplayMSASetting\(\);", 0x44),
-        (r"^\s*ScalerDisplayDPTx2DisplayFormatSetting\(\);", 0x45),
-        (r"^\s*ScalerSetByte\(P9E_A4_PG_FIFO_CTRL, 0xFF\);", 0x46),
-    )
+    # boot-stage / timing diag block (RL6449_Project.h StAwtoDiag; functions in fw/sdcc/awto_diag.inc; no-op when off)
+    ("Kernel/System/Code/SysMain.c", r"^#include", "#define _AWTO_DIAG_DEFINER"),
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoDiagInit();"),                 # stage 1
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"^\s*ScalerMcuIspInitial\(\);", "    AwtoDiagStage(2);",
+     r"^\s*ScalerMcuGpioInitial\(\);"),                                                                   # after GPIO init
+    ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
+    ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
+    ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
+    ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
+] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")
+    for case, tail in (("_PANEL_ON", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)"),
+                       ("_BACKLIGHT_ON", r"^\s*// Set Video Stream parameter"))
+    for rx, txt in ((r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagSelfTest();"),
+                    (r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagStage(6);"),
+                    (r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "    AwtoDiagStage(7);"),
+                    (tail, "    AwtoDiagStage(8);"))
 ]
 
 

@@ -52,6 +52,20 @@ class Sim:
         return None
 
 
+def print_diag(s):
+    """Diag block (rtd_diag.py layout) from sim XRAM: stage reached + stage timestamps; none if the fw has no block."""
+    import rtd_diag
+    s.send("dump xram 0xf6d0 0xf6ff")
+    out = s.read_until(rb"0xf6f8 [^\n]*\n", 120)
+    rows = {int(m.group(1), 16): bytes.fromhex(m.group(2).replace(" ", ""))
+            for m in re.finditer(r"^0x([0-9a-f]{4})\s+((?:[0-9a-f]{2} ){8})", out or "", re.M)}
+    blk = b"".join(rows.get(a, b"") for a in range(0xF6D0, 0xF700, 8))
+    if len(blk) != 48:
+        print("diag block: not read from sim XRAM"); return
+    print("diag block (sim XRAM 0xf6d0):", blk.hex())
+    print(rtd_diag.report(rtd_diag.decode(blk), None, None))
+
+
 def native(a, sym, d, nb, where, log) -> int:
     """ucsim's own banker: XDATA 0xFFFF selects which 64 KiB slice of a flash chip is code memory, as on
     the RL6449. Free run; stops only at ISR vectors (PC samples) and at startup re-entry (restart = crash)."""
@@ -99,6 +113,7 @@ def native(a, sym, d, nb, where, log) -> int:
     print(f"interrupted-PC histogram ({sum(samples.values())} interrupts, ~{done} instr, restarts {max(starts - 1, 0)}):")
     for f, k in samples.most_common(10):
         print(f"  {k:5d}  {f}")
+    print_diag(s)
     s.send("quit")
     return 0
 
@@ -216,6 +231,7 @@ def main() -> int:
         s.send(f"step {a.budget}")
     else:
         print(f"{a.max_switches} switches without a stall; last: {' -> '.join(trail[-12:])}")
+    print_diag(s)
     s.send("quit")
     return 0
 
