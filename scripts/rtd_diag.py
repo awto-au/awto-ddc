@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read and decode the firmware boot-stage / timing diag block (48 B at XDATA 0xF6D0) over debug slave 0x35.
 
-usage: rtd_diag.py <bus> [--watch N | --messages]
+usage: rtd_diag.py <bus> [--watch N | --messages | --release]
   Reads only: stage hi byte (cmd 0x01), then per byte cmd 0x3A [lo] + 1-byte read (SDK ScalerCommonDebug.c
   ScalerDebug: 0x01 -> data[2] = hi, 0x3A -> ScalerGetByte(hi << 8 | lo) into IIC data-out). Writes pass
   rtd_i2c_bridge.Real.regread_ok (staging + read cmds only). 65 transfers per block.
@@ -10,6 +10,7 @@ usage: rtd_diag.py <bus> [--watch N | --messages]
   Host sequence: write 0x55 [0x5A] (enable, reply 0xE7); status read: 0xFC none, 0xF1 message pending (fw halted until
   0x2A); write 0x25 [0x00] + read 9 = FA F5 len v3 v2 v1 v0 c1 c2; per 15-char chunk k write 0x25 [k] + read n+1 (text
   + checksum k+0x0F+sum); write 0x2A (end, reply 0xF7, releases fw); on exit write 0x2F. Only these staging/read cmds.
+  --release: send 0x2A + 0x2F only; frees a firmware left halted by a killed --messages run (reads then echo one byte).
   Text starting 0x01 = token: bytes 1-2 big-endian id -> fw/msgids.tsv (id, category, file:line, text).
 Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Header/RL6449_Project.h StAwtoDiag:
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
@@ -21,7 +22,7 @@ Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, M
   -> reload 0xFB56, 1194 counts per tick. RCAP2H in the block selects the row.
 Log: ./tmp/logs/rtd_diag.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, os, struct, sys, time
+import argparse, os, signal, struct, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -191,7 +192,7 @@ def messages(io, root: Path) -> int:
     except KeyboardInterrupt:
         return 0
     finally:
-        io.write(DEV8, MSG_DONE, b"")
+        io.write(DEV8, MSG_END, b""); io.write(DEV8, MSG_DONE, b"")   # 0x2A too: killed mid-message leaves fw halted
 
 
 def main() -> int:
@@ -201,6 +202,7 @@ def main() -> int:
     # 1 s: block read is ~65 short transfers (tens of ms); 1 s keeps rates well above one read's noise
     ap.add_argument("--watch", type=float, metavar="N", help="re-read every N seconds (Ctrl-C to stop)")
     ap.add_argument("--messages", action="store_true", help="poll the debug-message channel")
+    ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F) to un-halt the firmware")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
     a = ap.parse_args()
@@ -209,7 +211,11 @@ def main() -> int:
     LOG = (root / "tmp/logs/rtd_diag.log").open("a")
     B.log = lambda s: LOG.write(f"{time.strftime('%H:%M:%S')} {s}\n")      # bridge logs to file only
     io = B.Real(a.bus, allow_write=False, regread=True)
+    if a.release:
+        ok = io.write(DEV8, MSG_END, b"") and io.write(DEV8, MSG_DONE, b"")
+        print("released" if ok else "release: no ACK from 0x35"); return 0 if ok else 1
     if a.messages:
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # run the finally (0x2F) when killed
         return messages(io, root)
     prev, tprev = None, None
     while True:
