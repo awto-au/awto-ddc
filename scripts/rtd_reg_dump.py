@@ -6,7 +6,9 @@ usage: rtd_reg_dump.py <bus> --serial AWT2611000N [--pages 00,01,38,39,9C,9E] [-
   --pages all  every page with a REG row in the regdb (RTD2795T-CG)
   --ports all  every regdb indexed port in PORT_ADDR, at the regdb-defined indices only (no sweeps)
   --port   ADDR:DATA:N on page 0 (index -> ADDR, read DATA), e.g. display-format port 2A:2B:0x40
-  Out: tmp/regs/<serial>-<YYYYMMDD-HHMMSS>.json ({"pages": {"9C": [256 ints]}, "ports": {"2A:2B": [...]}}).
+  --resume FILE  continue an interrupted run into FILE; pages/ports already in it are skipped
+  Out: tmp/regs/<serial>-<YYYYMMDD-HHMMSS>.json ({"pages": {"9C": [256 ints]}, "ports": {"2A:2B": [...]}}),
+  rewritten after every page/port.
   Purpose: capture the old firmware's live panel/eDP/DPLL setup as hardware facts (#7). Writes only the
   page-select (0x9F), index registers of the ports read, and the final reset (0xEE).
 Log: ./tmp/logs/rtd_reg_dump.log
@@ -37,6 +39,7 @@ def main() -> int:
     ap.add_argument("--pages", default="00,01,38,39,9C,9E")
     ap.add_argument("--port", action="append", default=None)
     ap.add_argument("--ports")
+    ap.add_argument("--resume", help="JSON from an interrupted run; pages/ports already in it are skipped")
     a = ap.parse_args()
     ports = [] if a.ports else a.port or ["2A:2B:0x40"]
     root = P.repo_root()
@@ -53,11 +56,25 @@ def main() -> int:
                 a.ports.setdefault(int(r["address"], 0), set()).add(int(r["port_idx"], 0))
     o = Osd(a.bus)
     P.log(f"=== reg dump bus={a.bus} serial={a.serial} pages={a.pages} ports={ports} ===")
-    out = {"serial": a.serial, "bus": a.bus, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "pages": {}, "ports": {}}
+    if a.resume:
+        f = Path(a.resume)
+        out = json.loads(f.read_text())
+    else:
+        f = root / "tmp/regs" / f"{a.serial}-{time.strftime('%Y%m%d-%H%M%S')}.json"
+        out = {"serial": a.serial, "bus": a.bus, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "pages": {}, "ports": {}}
+
+    def save() -> None:   # after every page/port: an interrupted run keeps what it read
+        tmp = f.with_suffix(".part")
+        tmp.write_text(json.dumps(out))
+        tmp.replace(f)
+
     o.enter()
     try:
         for p in pages:
+            if f"{p:02X}" in out["pages"]:
+                continue
             out["pages"][f"{p:02X}"] = [o.rd((p << 8) | r) for r in range(256)]
+            save()
             P.log(f"page {p:02X} read")
         for spec in ports:
             ai, di, n = spec.split(":")
@@ -67,19 +84,21 @@ def main() -> int:
                 o.wr(ai, idx)
                 vals.append(o.rd(di))
             out["ports"][f"{ai:02X}:{di:02X}"] = vals
+            save()
             P.log(f"port {ai:02X}:{di:02X} x{n}: {bytes(vals).hex(' ')}")
         for data, idxs in sorted(a.ports.items() if allp else []):
+            if f"{data:04X}" in out["ports"]:
+                continue
             vals = {}
             for idx in sorted(idxs):
                 for reg, b in zip(PORT_ADDR[data], idx.to_bytes(len(PORT_ADDR[data]), "big")):
                     o.wr(reg, b)
                 vals[idx] = o.rd(data)
             out["ports"][f"{data:04X}"] = vals
+            save()
             P.log(f"port {data:04X} x{len(vals)} read")
     finally:
         o.reset()
-    f = root / "tmp/regs" / f"{a.serial}-{time.strftime('%Y%m%d-%H%M%S')}.json"
-    f.write_text(json.dumps(out))
     P.log(f"saved {f}")
     print(f)
     return 0
