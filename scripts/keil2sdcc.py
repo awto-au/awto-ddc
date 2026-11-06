@@ -123,6 +123,7 @@ WRAPS = [
     ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",
      r"^#if\(_D0_MHL_EMBEDDED_DDCRAM_SIZE", r"^extern BYTE xdata MCU_DDCRAM_MHL_D2\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
 ]
+FW_TAG = subprocess.run(["git", "describe", "--always", "--dirty"], cwd=ROOT, capture_output=True, text=True).stdout.strip() or "nogit"
 # Lines inserted before the first line matching anchor: (SDK-relative file, anchor regex, text)
 INSERTS = [
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c", r"^#include", "#define _AWTO_DDCRAM_DEFINER"),
@@ -149,6 +150,10 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
     ("Kernel/System/Code/SysMain.c", r"^\s*SysPowerHandler\(\);", "            AwtoDiagTestCmd();"),  # after key scan (#33)
     (OSD + "RTD2014Key.c", r"^void UserInterfaceKeyHandler\(void\)$", (SHIM / "awto_testcmd.inc").read_text().rstrip("\n")),
+    (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
+     '#define AWTO_FW_TAG "%s"\n' % FW_TAG + (SHIM / "awto_dbgpop.inc").read_text().rstrip("\n")),
+    (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
+     "            if(g_stAwtoDiag.ucDbgPopup == 1)\n            {\n                AwtoOsdDebugLines();\n                break;\n            }"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
 ] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path

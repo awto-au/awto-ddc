@@ -32,7 +32,22 @@ void AwtoDiagInit(void)
 
 void AwtoDiagMainPass(void)
 {
+    static unsigned int usLastMs;
+    static unsigned int usLastHb;
+    unsigned int usNow;
+
     g_stAwtoDiag.usHeartbeat++;
+    do
+    {
+        usNow = g_usTimerCounter;
+    }
+    while(usNow != g_usTimerCounter);
+    if((unsigned int)(usNow - usLastMs) >= 1000)
+    {
+        g_stAwtoDiag.usLoopRate = g_stAwtoDiag.usHeartbeat - usLastHb;
+        usLastHb = g_stAwtoDiag.usHeartbeat;
+        usLastMs = usNow;
+    }
     AwtoDiagStage(5);
 }
 

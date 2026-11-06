@@ -46,7 +46,9 @@ typedef struct
     unsigned int usBenchIdata;                  // 1000 x mov a,@r0 (R0 = 0xFF)
     unsigned int usBenchEmpty;                  // 1000 x empty loop (djnz overhead)
     unsigned char ucTestCmd;                    // OSD test command, written over I2C, applied + cleared in main loop (#33)
-    unsigned char ucSpare[7];
+    unsigned char ucDbgPopup;                   // 1 = next input-info pop-up shows the debug lines (#34), cleared when drawn
+    unsigned int usLoopRate;                    // main-loop passes in the last ~1 s (#34)
+    unsigned char ucSpare[4];
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -58,6 +60,7 @@ extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
+extern void AwtoOsdDebugLines(void);
 extern void AwtoDiagSelfTest(void);
 #define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
