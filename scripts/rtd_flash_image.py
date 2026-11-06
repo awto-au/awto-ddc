@@ -65,20 +65,50 @@ def phase(name: str):
         PH[name] = PH.get(name, 0.0) + time.monotonic() - t
 
 
-def write_sector(isp, addr, new, crc_ok=False):
-    """erase+program+verify; on mismatch re-read once (read-path glitch), else redo, up to SECTOR_TRIES."""
+IO_ERRORS = (RuntimeError, TimeoutError, OSError)   # TimeoutError: engine/CRC/WIP poll limits; OSError: ENXIO when i915 drops to bit-bang
+
+
+def _nudge_safe(nudge) -> None:
+    try:
+        nudge()
+    except OSError as e:
+        log(f"GMBUS nudge failed: {e}")
+
+
+def write_sector(isp, addr, new, crc_ok=False, nudge=lambda: None):
+    """erase+program+verify; on mismatch re-read once (read-path glitch), else redo, up to SECTOR_TRIES.
+    Timeout/OSError (bus dropped to bit-bang) nudge GMBUS first, then retry like a verify failure (#50.1)."""
     for n in range(1, SECTOR_TRIES + 1):
         try:
             return _write_sector(isp, addr, new, crc_ok)
-        except RuntimeError as e:
+        except IO_ERRORS as e:
             PH["retries"] = PH.get("retries", 0) + 1
-            with phase("verify"):
-                same = isp.read_flash(addr, SECTOR) == new
+            if not isinstance(e, RuntimeError):
+                _nudge_safe(nudge)
+            try:
+                with phase("verify"):
+                    same = isp.read_flash(addr, SECTOR) == new
+            except IO_ERRORS as e2:
+                log(f"0x{addr:06x}: re-read failed: {e2!r}")
+                same = False
             if same:
-                log(f"0x{addr:06x}: {e}; re-read matches (read glitch), accepted"); return
-            log(f"0x{addr:06x}: {e}; try {n}/{SECTOR_TRIES}")
+                log(f"0x{addr:06x}: {e!r}; re-read matches (read glitch), accepted"); return
+            log(f"0x{addr:06x}: {e!r}; try {n}/{SECTOR_TRIES}")
             if n == SECTOR_TRIES:
                 raise
+
+
+def erase_with_retry(isp, addr, nudge=lambda: None):
+    """One erase, SECTOR_TRIES attempts; nudge GMBUS between tries (#50.1/#50.4). Erase is idempotent."""
+    for n in range(1, SECTOR_TRIES + 1):
+        try:
+            return erase_sector(isp, addr)
+        except IO_ERRORS as e:
+            PH["retries"] = PH.get("retries", 0) + 1
+            log(f"0x{addr:06x}: erase {e!r}; try {n}/{SECTOR_TRIES}")
+            if n == SECTOR_TRIES:
+                raise
+            _nudge_safe(nudge)
 
 
 def erase_sector(isp, addr):
@@ -167,8 +197,10 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
         # Dan 2026-11-06: erase every changed sector up front, then program; no per-sector blank check
         # (a bad erase fails the verify, and that sector is redone alone by write_sector)
         with phase("erase"):
-            for i in diff:
-                erase_sector(isp, i * SECTOR)
+            for k, i in enumerate(diff):
+                erase_with_retry(isp, i * SECTOR, nudge)
+                if k % S.SAVE_EVERY == S.SAVE_EVERY - 1:
+                    log(f"erased {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
         log(f"erased {len(diff)} sectors ({time.monotonic() - t0:.1f}s)")
         for k, i in enumerate(diff):
             s = i * SECTOR
@@ -178,9 +210,11 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                     program_verify(isp, s, img[s:s + SECTOR], crc_ok)
                 else:                                   # but check it, ~10 ms CRC (Dan: else a failed erase reads as good)
                     _verify(isp, s, BLANK, crc_ok)
-            except RuntimeError as e:
-                log(f"0x{s:06x}: {e}; redo sector alone (erase+program+verify)")
-                write_sector(isp, s, img[s:s + SECTOR], crc_ok)
+            except IO_ERRORS as e:
+                log(f"0x{s:06x}: {e!r}; redo sector alone (erase+program+verify)")
+                if not isinstance(e, RuntimeError):
+                    _nudge_safe(nudge)
+                write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
@@ -358,24 +392,28 @@ def main() -> int:
     log(f"unit guard: EDID serial {seen!r} on bus {a.bus}" + (f"; EDID silent, identity per caller: {a.identity}" if seen is None else ""))
     isp = Rtd(a.bus)
     isp.write_mode, isp.burst_chunk = a.write_mode, a.burst_chunk
-    isp.write(0x6F, 0x80)
-    if not isp.read(0x6F) & 0x80:
-        log("ISP mode not enabled; aborting"); return 3
+    entered = False                                   # 0xEE reset only once the ISP-enable write was attempted
     try:
+        entered = True
+        isp.write(0x6F, 0x80)
+        if not isp.read(0x6F) & 0x80:
+            entered = False                           # MCU never halted: nothing to reset
+            log("ISP mode not enabled; aborting"); return 3
         jid = isp.common(T_READ, 0x9F, nr=3).to_bytes(3, "big")
         log(f"JEDEC {jid.hex()}")
         if jid != JEDEC_OK:
             log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
         return flash(isp, img, o, nudge=lambda: i2cbus.gmbus_nudge(a.bus))
     except Exception as e:
-        log(f"ERROR: {e}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
+        log(f"ERROR: {e!r}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
         return 7
     finally:
-        try:
-            isp.write(0xEE, 0x02)
-        except OSError:
-            pass
-        log("scaler reset sent (0xEE <- 0x02)")
+        if entered:
+            try:
+                isp.write(0xEE, 0x02)
+            except OSError:
+                pass
+            log("scaler reset sent (0xEE <- 0x02)")
         log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)")
             + f", bus {i2cbus.rate_khz()} kHz")
 

@@ -248,3 +248,74 @@ def test_manifest_written_after_readback_backup(tmp_path):
     assert st.source == "readback" and st.sectors[0] == S.sha(bytes(isp.flash[:SECTOR]))
     assert all(s is not None for s in st.sectors)
     assert isp.erased == []                         # dry run
+
+
+# --- #50.1 / #50.4: Timeout/OSError mid-sector is retried, not fatal ----------------------------------------
+
+class FlakyIsp(FakeIsp):
+    """Raises exc on the Nth call (1-based) of the named method, once."""
+    def __init__(self, method, nth, exc, **kw):
+        super().__init__(**kw)
+        self.method, self.nth, self.exc, self.count = method, nth, exc, 0
+        orig = getattr(self, method)
+
+        def wrapped(*a, **k):
+            self.count += 1
+            if self.count == self.nth:
+                raise self.exc
+            return orig(*a, **k)
+        setattr(self, method, wrapped)
+
+
+@pytest.mark.parametrize("method,nth,exc", [
+    ("erase_sector", 3, TimeoutError("erase poll")),            # up-front erase loop
+    ("erase_sector", 1, OSError(6, "ENXIO")),
+    ("program_page", 20, OSError(6, "ENXIO")),                  # mid-sector, sector 1 page 4
+    ("program_page", 5, TimeoutError("engine busy")),
+    ("flash_crc", 12, TimeoutError("crc_done")),                # verify of a sector (after calibration/drift CRCs)
+])
+def test_timeout_and_oserror_mid_sector_are_retried(tmp_path, method, nth, exc):
+    img = image()
+    isp = FlakyIsp(method, nth, exc)
+    nudges = []
+    assert I.flash(isp, img, opts(tmp_path), nudge=lambda: nudges.append(1)) == 0
+    assert bytes(isp.flash[:len(img)]) == img
+    assert nudges, "GMBUS must be nudged after a bus-level error"
+    st = S.FlashState.load(tmp_path / "AWT0-flash-state.json", "AWT0")
+    assert st.sectors[:NIMG] == S.sector_hashes(img)
+
+
+def test_persistent_oserror_still_fails_after_tries(tmp_path):
+    class Dead(FakeIsp):
+        def erase_sector(self, addr):
+            raise OSError(6, "ENXIO")
+    with pytest.raises(OSError):
+        I.flash(Dead(), image(), opts(tmp_path), nudge=lambda: None)
+
+
+def test_erase_loop_logs_progress(tmp_path):
+    lines = []
+    F.LOG = type("L", (), {"write": lambda s, x: lines.append(x), "flush": lambda s: None})()
+    I.flash(FakeIsp(), image(), opts(tmp_path))
+    assert any("erased 16/24" in x for x in lines)
+
+
+# --- #50.6 enter-ISP inside try/finally -----------------------------------------------------------------------
+
+def test_enter_isp_failure_still_sends_reset(monkeypatch, tmp_path):
+    img = tmp_path / "AWT0-x.bin"
+    img.write_bytes(b"\xff" * SECTOR)
+    monkeypatch.setattr(sys, "argv", ["rtd_flash_image.py", "7", str(img), "--serial", "AWT0", "--write"])
+    monkeypatch.setattr(I.F, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(I.i2cbus, "require_unit", lambda *a, **k: "AWT0")
+    writes = []
+
+    class Bad:
+        def __init__(self, bus): pass
+        def write(self, reg, val):
+            writes.append((reg, val))
+        def read(self, reg):
+            raise OSError(6, "ENXIO")
+    monkeypatch.setattr(I, "Rtd", Bad)
+    assert I.main() == 7
+    assert writes[-1] == (0xEE, 0x02)
