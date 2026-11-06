@@ -5,3 +5,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-06T18:17:36+11:00	8eec011	AWT26110003-wb-dbgisr-be	#11 A/B baseline	12	47516	8712	58.6	4256	24724	205.2			
 2026-11-06T18:17:59+11:00	8eec011	AWT26110003-wb-clu3-be	#11 A/B baseline	12	43861	6674	31.4	2289	22658	118.5			
 2026-11-06T18:24:26+11:00	a3ef79b	AWT26110003-wb-clu3-be	#11 wb-clu3 old compiler	12	43861	6674	31.4	2289	22658	118.5	cc43212f04	1	594662
+2026-11-06T20:02:15+11:00	9cdf2c6	AWT26110003-wb-rc0-be	#11 working-base tree, ABI 0, new compiler	12	43861	6663	31.3	2284	22657	118.2	41a2b7643e	0	630426
+2026-11-06T20:02:29+11:00	9cdf2c6	AWT26110003-wb-rcfix-be	#11 working-base tree, ABI 1, compiler fixes	12	43861	6452	31.4	2289	22636	118.5	41a2b7643e	1	584526
