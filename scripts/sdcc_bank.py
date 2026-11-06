@@ -13,7 +13,8 @@ Method (awto-ddc#8):
   code or by more than one bank. Library code (not in any module) is common.
 - Rest: module granularity, area BANK<n>; modules packed into banks in input order (first fit).
 - Calls/jumps to a fn in another bank, from common to banked, and every address-taken banked fn go through
-  a stub `__bs_<fn>` emitted in the fn's own module (common): mov r0/r1/r2,#fn24; ljmp __bs_call (fw/sdcc/bank.asm).
+  a stub `__bs_<fn>` emitted in the fn's own module (common): lcall __bs_call + .db fn24 (6 B; touches only R0-R3,
+  so register arguments survive; fw/sdcc/bank.asm).
 - CONST moves to a user bank only if every ref is `mov dptr,#_t` in a chunk with no cross-bank call (#16).
 - Fails on: CONST referenced from a bank it is not in (after the common rule), a module larger than a bank.
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
@@ -41,7 +42,7 @@ AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
 BANK_SIZE = 0x10000
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
-STUB_SIZE = 9             # mov r0/r1/r2,#imm (2 B each) + ljmp __bs_call (3 B)
+STUB_SIZE = 6             # lcall __bs_call (3 B) + .db target lo/hi/bank (3 B)
 ASM_TIMEOUT = 30          # one sdas8051 run: largest module assembles in < 2 s; stall = broken input
 
 
@@ -211,8 +212,8 @@ def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
         out.extend(lines)
     stubs = [f for f in sorted(stubs_needed) if stubs_needed[f][0] == mod.name]
     for f in stubs:
-        out += [f"\t.area {stub_area(f)}    (CODE)", f"\t.globl __bs{f}", f"__bs{f}:", f"\tmov\tr0,#{f}",
-                f"\tmov\tr1,#({f} >> 8)", f"\tmov\tr2,#({f} >> 16)", "\tljmp\t__bs_call"]
+        out += [f"\t.area {stub_area(f)}    (CODE)", f"\t.globl __bs{f}", f"__bs{f}:", "\tlcall\t__bs_call",
+                f"\t.db\t{f}, ({f} >> 8), ({f} >> 16)"]       # data read by __bs_call via movc
     out.extend(mod.tail)
     return "\n".join(out)
 
