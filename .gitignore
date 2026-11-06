@@ -3,3 +3,10 @@ __pycache__/
 *.dll
 *.exe
 *.bin.bak
+tools/gmbus_rate/*.ko
+tools/gmbus_rate/*.o
+tools/gmbus_rate/*.mod
+tools/gmbus_rate/*.mod.c
+tools/gmbus_rate/.*.cmd
+tools/gmbus_rate/Module.symvers
+tools/gmbus_rate/modules.order
