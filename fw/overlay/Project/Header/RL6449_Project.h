@@ -81,6 +81,58 @@ extern void AwtoDiagSelfTest(void);
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC data FIFO fill, as the SDK 0xBB reply
+// 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every 20 ms from the first M-domain setup; layout in scripts/meas4k_dump.py.
+// Re-arm: write state byte (g_stAwtoMeas+3) = 0 over the debug slave, then change mode.
+#define _AWTO_MEAS4K                                            _ON
+#if(_AWTO_MEAS4K == _ON)
+#define AWTO_MEAS_PERIOD_MS                                     20
+#define AWTO_MEAS_WINDOW_MS                                     1000
+#define AWTO_MEAS_SAMPLES                                       52      // 1000 / 20 + 1 + 1 spare
+#define AWTO_MEAS_EVENTS                                        40
+typedef struct
+{
+    unsigned int usMs;
+    unsigned char ucMode;
+    unsigned char ucP0_02, ucP0_0C, ucP5_B0, ucP45_B0, ucP5_2B, ucP45_2B;
+    unsigned char ucP0_3D, ucP0_3E, ucP0_40, ucP0_41, ucP0_45, ucP1_C4, ucP1_C5, ucP0_28;
+} StAwtoMeasRec;                                // 17 B
+typedef struct
+{
+    unsigned int usMs;
+    unsigned char ucId;
+    unsigned char ucArg;
+    unsigned int usVal;
+} StAwtoMeasEv;                                 // 6 B
+typedef struct
+{
+    unsigned char ucMagic0;                     // 'M'
+    unsigned char ucMagic1;                     // 'K'
+    unsigned char ucVersion;                    // 1
+    unsigned char ucState;                      // 0 idle (armable), 1 sampling, 2 done
+    unsigned char ucArms;
+    unsigned char ucNSamp;
+    unsigned char ucNEv;
+    unsigned char ucSpare;
+    unsigned int usStartMs;
+    unsigned int usNextMs;
+    unsigned int usEndMs;
+    __xdata StAwtoMeasRec *pSampWr;
+    StAwtoMeasRec stSamp[AWTO_MEAS_SAMPLES];
+    StAwtoMeasEv stEv[AWTO_MEAS_EVENTS];
+} StAwtoMeas;
+extern __xdata StAwtoMeas g_stAwtoMeas;
+extern void AwtoMeasInit(void);
+extern void AwtoMeasEvent(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
+extern void AwtoMeasT2Sample(void);
+#define AWTO_MEAS_RD(a)                                         (*((volatile __xdata unsigned char *)(a)))
+#define AWTO_MEAS_T2ISR()                                       do { if(g_stAwtoMeas.ucState == 1) { AwtoMeasT2Sample(); } } while(0)
+#define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(0x000C) << 8) | AWTO_MEAS_RD(0x0002))
+#else
+#define AwtoMeasInit()
+#define AwtoMeasEvent(a, b, c)
+#define AWTO_MEAS_T2ISR()
+#define AWTO_MEAS_P0_02_0C()                                    0
+#endif
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON
