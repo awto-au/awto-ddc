@@ -5,7 +5,7 @@ usage: rtd_dbg_write.py <bus> --serial AWT2611000N ADDR=VAL [ADDR=VAL ...]
   ADDR/VAL hex. SDK ScalerDebug cmds: 0x01 [hi] (stage), 0x03 [val] (stage), 0x3B [lo] -> ScalerSetByte.
   --serial must equal the EDID serial at 0x50 on that bus (rtd_reg_poke.edid_serial).
   Example: raise the input-info pop-up: OSD event byte g_stOsdInfo+5 (map) = _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG (10).
-Log: ./tmp/logs/rtd_dbg_write.log (one readable line per write; --label says what it means)
+Log: ./tmp/logs/rtd_dbg_write.log (decoded I2C lines + one --label line per write)
      ./tmp/logs/rtd_dbg_write.raw.log (I2C byte trace)
 """
 import argparse, sys, time
@@ -24,16 +24,15 @@ def main() -> int:
     ap.add_argument("bus", type=int)
     ap.add_argument("--serial", required=True)
     ap.add_argument("writes", nargs="+")
+    ap.add_argument("--map", default=None, help="image .map: names XDATA addresses in the decoded log")
     ap.add_argument("--label", default="", help="meaning of the write(s), logged instead of decoding bytes later")
     a = ap.parse_args()
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (root / "tmp/logs/rtd_dbg_write.log").open("a")
+    log = B.setup_logs("rtd_dbg_write", map=a.map).main   # decoded I2C + label lines; byte trace in .raw.log
     s = edid_serial(a.bus)
     if s != a.serial:
         sys.exit(f"bus {a.bus}: EDID serial {s!r} != {a.serial!r}; refusing")
-    raw = (root / "tmp/logs/rtd_dbg_write.raw.log").open("a")
-    B.log = lambda m: raw.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {m}\n")
     w = B.Real(a.bus, allow_write=True)
     for item in a.writes:
         ad, v = (int(x, 16) for x in item.split("="))

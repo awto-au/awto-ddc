@@ -17,9 +17,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 EVENT_OFF, KEY_OFF = 5, 6
 TESTCMD_OFF = 0x28
-EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
-          "source-menu": 7}
-KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
+sys.path.insert(0, str(HERE))
+from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS  # noqa: E402  (one table, also decodes the log)
 CMD_ONLY = {"debug": 0x20}                  # --cmd only
 
 
@@ -61,7 +60,7 @@ def main() -> int:
     rc = 0
     for w, label in writes:                # one call per action: the firmware consumes each before the next
         rc |= subprocess.call([sys.executable, str(HERE / "rtd_dbg_write.py"), str(a.bus), "--serial", a.serial,
-                               "--label", label, w])
+                               "--map", str(a.map), "--label", label, w])
     return rc
 
 

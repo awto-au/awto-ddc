@@ -305,9 +305,7 @@ def main() -> int:
     a = ap.parse_args()
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    LOG = (root / "tmp/logs/rtd_diag.log").open("a")
-    RAW = (root / "tmp/logs/rtd_diag.raw.log").open("a")                 # I2C byte trace; rtd_diag.log = decoded only
-    B.log = lambda s: RAW.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+    LOG = B.setup_logs("rtd_diag").main          # decoded I2C + this tool's lines; byte trace in rtd_diag.raw.log
     io = B.Real(a.bus, allow_write=False, regread=True)
     if a.release:
         ok = io.write(DEV8, MSG_END, b"") and io.write(DEV8, MSG_DONE, b"")

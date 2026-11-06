@@ -27,11 +27,12 @@ Log: ./tmp/logs/rtd_flash_image.log
 """
 from __future__ import annotations
 
-import argparse, random, sys, time
+import argparse, os, random, sys, time
 from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rtd_proto  # noqa: E402
 import rtd_flash_sector as F  # noqa: E402
 import flash_state as S  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
@@ -265,7 +266,7 @@ def main() -> int:
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    F.LOG = (root / "tmp/logs/rtd_flash_image.log").open("a")
+    F.LOG = rtd_proto.setup_logs("rtd_flash_image", raw=os.environ.get("AWTO_RAW_TRACE") == "1", merge_pages=True).main
     img = a.image.read_bytes()
     if len(img) % SECTOR or len(img) > FLASH:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2

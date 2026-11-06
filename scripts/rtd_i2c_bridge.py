@@ -11,19 +11,34 @@ real: forwards to /dev/i2c-<bus>. Writes are BLOCKED unless --allow-write.
                  commands + page select (see Real.regread_ok). All other writes stay blocked.
 Wire format (shim -> bridge): <BBBHH> op(1=read,2=write) dev8 sub nbytes datalen + data;
 reply: <BH> status(0 ok, 1 fail) len + data. dev8 = 8-bit address incl. R/W bit.
-Protocol/regs: docs/reversing/realtek-rtd/README.md. Log: ./tmp/logs/rtd_i2c_bridge.log
+Protocol/regs: docs/reversing/realtek-rtd/README.md.
+Logs: ./tmp/logs/rtd_i2c_bridge.log (decoded by rtd_proto.py), ./tmp/logs/rtd_i2c_bridge.raw.log (byte trace).
+Tools using Real get the same split with `B.setup_logs("<tool>", map=None)` (= rtd_proto.setup_logs).
 """
 import ctypes, fcntl, os, socket, struct, sys, time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rtd_proto  # noqa: E402
+from rtd_proto import setup_logs  # noqa: E402,F401  (re-export: B.setup_logs)
+
 PORT = 17420
 JEDEC = bytes([0xC2, 0x20, 0x14])
 LOG = None
+RAW = None
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%H:%M:%S')} {s}"
+    line = f"{rtd_proto.now()} {s}"
     print(line, flush=True); LOG.write(line + "\n"); LOG.flush()
+
+
+def raw(s: str) -> None:
+    """Per-access trace line of the Emu model -> raw log when set up (rtd_proto taps carry the Real traffic)."""
+    if RAW:
+        RAW.write(f"{rtd_proto.now()} {s}\n")
+    else:
+        log(s)
 
 
 class Emu:
@@ -45,7 +60,7 @@ class Emu:
 
     def read(self, dev8: int, sub: int, n: int) -> bytes | None:
         if dev8 >> 1 != 0x4A:
-            log(f"EMU read  dev=0x{dev8>>1:02x} NACK"); return None
+            raw(f"EMU read  dev=0x{dev8>>1:02x} NACK"); return None
         out = bytearray()
         for i in range(n):
             r = sub if sub == 0x70 else (sub + i) & 0xFF
@@ -59,13 +74,15 @@ class Emu:
                 out.append(self.scaler.get(self.regs[0xF4], 0x00))   # indirect scaler-register read
             else:
                 out.append(self.regs[r])
-        log(f"EMU read  reg 0x{sub:02x} n={n} -> {bytes(out[:16]).hex()}{'..' if n > 16 else ''}")
+        raw(f"EMU read  reg 0x{sub:02x} n={n} -> {bytes(out[:16]).hex()}{'..' if n > 16 else ''}")
+        rtd_proto.trace(0x4A, "r", sub, bytes(out), n)
         return bytes(out)
 
     def write(self, dev8: int, sub: int, data: bytes) -> bool:
         if dev8 >> 1 != 0x4A:
-            log(f"EMU write dev=0x{dev8>>1:02x} NACK"); return False
-        log(f"EMU write reg 0x{sub:02x} {data[:16].hex()}{'..' if len(data) > 16 else ''}")
+            raw(f"EMU write dev=0x{dev8>>1:02x} NACK"); return False
+        raw(f"EMU write reg 0x{sub:02x} {data[:16].hex()}{'..' if len(data) > 16 else ''}")
+        rtd_proto.trace(0x4A, "w", sub, data)
         for i, v in enumerate(data):
             r = sub if sub == 0x70 else (sub + i) & 0xFF
             if r == 0x70:
@@ -107,7 +124,7 @@ class Emu:
             a = 0 if op in (0xC7, 0x60) else a
             self.flash[a:a + span] = b"\xff" * span
             log(f"EMU erase op 0x{op:02x} @0x{a:06x} {span} B (copy only)")
-        log(f"EMU spi ctl=0x{ctl:02x} type={typ} nw={nw} nr={nr} op=0x{op:02x}")
+        raw(f"EMU spi ctl=0x{ctl:02x} type={typ} nw={nw} nr={nr} op=0x{op:02x}")
 
 
 class Real:
@@ -157,20 +174,27 @@ class Real:
             self._x([self.Msg(dev8 >> 1, 0, 1, ctypes.addressof(w)),
                      self.Msg(dev8 >> 1, self.I2C_M_RD, n, ctypes.addressof(r))])
         except OSError as e:
-            log(f"REAL read dev=0x{dev8>>1:02x} reg 0x{sub:02x} FAIL {e}"); return None
-        log(f"REAL read dev=0x{dev8>>1:02x} reg 0x{sub:02x} n={n} -> {r.raw[:16].hex()}")
+            self._tap(dev8, "r", sub, None, n, str(e)); return None
+        self._tap(dev8, "r", sub, r.raw, n)
         return r.raw
 
     def write(self, dev8, sub, data):
         if not self.allow_write and not (self.regread and self.regread_ok(dev8, sub, data)):
-            log(f"REAL write BLOCKED dev=0x{dev8>>1:02x} reg 0x{sub:02x} {data[:16].hex()}"); return False
+            self._tap(dev8, "w", sub, data, blocked=True); return False
         w = ctypes.create_string_buffer(bytes([sub]) + data, 1 + len(data))
         try:
             self._x([self.Msg(dev8 >> 1, 0, 1 + len(data), ctypes.addressof(w))])
         except OSError as e:
-            log(f"REAL write FAIL {e}"); return False
-        log(f"REAL write dev=0x{dev8>>1:02x} reg 0x{sub:02x} {data[:16].hex()}")
+            self._tap(dev8, "w", sub, data, err=str(e)); return False
+        self._tap(dev8, "w", sub, data)
         return True
+
+    @staticmethod
+    def _tap(dev8, kind, sub, data, n=0, err=None, blocked=False):
+        if rtd_proto.TAPS:
+            rtd_proto.trace(dev8 >> 1, kind, sub, data, n, err, blocked)
+        else:                                            # no setup_logs(): raw line only (old behaviour)
+            log(rtd_proto.raw_line(rtd_proto.Txn("", dev8 >> 1, kind, sub, data, n or len(data or b""), err, blocked)))
 
 
 def recvn(c: socket.socket, n: int) -> bytes:
@@ -205,10 +229,9 @@ def serve(be, port: int) -> None:
 
 
 def main() -> int:
-    global LOG
-    root = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
-    (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    LOG = (root / "tmp" / "logs" / "rtd_i2c_bridge.log").open("a")
+    global LOG, RAW
+    lg = setup_logs("rtd_i2c_bridge")
+    LOG, RAW = lg.main, lg.raw
     port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else PORT
     if sys.argv[1] == "emu":
         be = Emu(Path(sys.argv[2]).read_bytes())

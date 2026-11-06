@@ -49,6 +49,7 @@ import argparse, ctypes, fcntl, os, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rtd_proto  # noqa: E402
 from rtd_isp_probe import Isp, Msg, ISP_ADDR, I2C_M_RD, repo_root  # noqa: E402
 
 SECTOR = 4096
@@ -320,9 +321,14 @@ class Rtd(Isp):
         sel = ctypes.create_string_buffer(bytes([0x6F]), 1)
         rd = ctypes.create_string_buffer(1)
         w = ctypes.create_string_buffer(bytes([reg]) + bytes(data), 1 + len(data))
-        self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(sel)),
-                    Msg(ISP_ADDR, I2C_M_RD, 1, ctypes.addressof(rd)),
-                    Msg(ISP_ADDR, 0, 1 + len(data), ctypes.addressof(w))])
+        try:
+            self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(sel)),
+                        Msg(ISP_ADDR, I2C_M_RD, 1, ctypes.addressof(rd)),
+                        Msg(ISP_ADDR, 0, 1 + len(data), ctypes.addressof(w))])
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR, "w", reg, bytes(data), 0, str(e)); raise
+        rtd_proto.trace(ISP_ADDR, "r", 0x6F, rd.raw, 1)
+        rtd_proto.trace(ISP_ADDR, "w", reg, bytes(data))
         return rd.raw[0]
 
     def _stage_page(self, addr):
@@ -617,7 +623,7 @@ def main():
 
     root = repo_root()
     (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    LOG = (root / "tmp" / "logs" / "rtd_flash_sector.log").open("a")
+    LOG = rtd_proto.setup_logs("rtd_flash_sector", raw=os.environ.get("AWTO_RAW_TRACE") == "1", merge_pages=True).main
 
     if a.read_id:
         if a.bus is None:

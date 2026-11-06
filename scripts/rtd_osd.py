@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
+import rtd_proto
 
 # --- hardware facts [spec from regdb RTD2795T-CG] -------------------------------------------------
 PAGE_SEL = 0x9F                                  # per-page select register
@@ -214,7 +215,7 @@ def draw_test(o: Osd, text="HELLO", pack=0, fs_base=0x000, font_base=0x100, x=0x
 def main() -> int:
     root = P.repo_root()
     (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    P.LOG = (root / "tmp" / "logs" / "rtd_osd.log").open("a")
+    P.LOG = rtd_proto.setup_logs("rtd_osd").main
     args = sys.argv[1:]
     bus = int(args.pop(0))
     keep = "--keep" in args or "--no-reset" in args

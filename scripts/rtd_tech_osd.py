@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
+import rtd_proto
 import rtd_font5x7 as FNT
 from rtd_osd import Osd, PAGE_SEL, OSD_WOPT, FRAME_BASE, SRAM_WIN, SRAM_FONT, WIN_BASE, WORDS_PER_GLYPH
 import rtd_identify as ID
@@ -367,7 +368,7 @@ def host_info(bus):
 def main():
     root = P.repo_root()
     (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    P.LOG = (root / "tmp" / "logs" / "rtd_tech_osd.log").open("a")
+    P.LOG = rtd_proto.setup_logs("rtd_tech_osd").main
     args = sys.argv[1:]
     if not args or args[0] in ("-h", "--help"):
         print(__doc__); return 2

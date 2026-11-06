@@ -13,6 +13,9 @@ Log: ./tmp/logs/rtd_isp_probe.log
 import ctypes, fcntl, os, sys, time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rtd_proto  # noqa: E402  (trace tap: decoded + raw logs, see rtd_proto.setup_logs)
+
 ISP_ADDR = 0x4A
 I2C_RDWR = 0x0707
 I2C_M_RD = 1
@@ -54,22 +57,26 @@ class Isp:
         fcntl.ioctl(self.fd, I2C_RDWR, d)
 
     def read(self, reg: int) -> int:
-        w = ctypes.create_string_buffer(bytes([reg]), 1)
-        r = ctypes.create_string_buffer(1)
-        self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(w)),
-                    Msg(ISP_ADDR, I2C_M_RD, 1, ctypes.addressof(r))])
-        return r.raw[0]
+        return self.read_block(reg, 1)[0]
 
     def read_block(self, reg: int, n: int) -> bytes:
         w = ctypes.create_string_buffer(bytes([reg]), 1)
         r = ctypes.create_string_buffer(n)
-        self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(w)),
-                    Msg(ISP_ADDR, I2C_M_RD, n, ctypes.addressof(r))])
+        try:
+            self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(w)),
+                        Msg(ISP_ADDR, I2C_M_RD, n, ctypes.addressof(r))])
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR, "r", reg, None, n, str(e)); raise
+        rtd_proto.trace(ISP_ADDR, "r", reg, r.raw, n)
         return r.raw
 
     def write(self, reg: int, val: int) -> None:
         w = ctypes.create_string_buffer(bytes([reg, val]), 2)
-        self._xfer([Msg(ISP_ADDR, 0, 2, ctypes.addressof(w))])
+        try:
+            self._xfer([Msg(ISP_ADDR, 0, 2, ctypes.addressof(w))])
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR, "w", reg, bytes([val]), 0, str(e)); raise
+        rtd_proto.trace(ISP_ADDR, "w", reg, bytes([val]))
 
     def spi_jedec(self) -> bytes:
         self.write(0x60, 0x46)   # type=read, nr=3
@@ -107,7 +114,7 @@ def main() -> int:
     global LOG
     logdir = repo_root() / "tmp" / "logs"
     logdir.mkdir(parents=True, exist_ok=True)
-    LOG = (logdir / "rtd_isp_probe.log").open("a")
+    LOG = rtd_proto.setup_logs("rtd_isp_probe").main
     bus = int(sys.argv[1])
     enter = "--enter-isp" in sys.argv
     isp = Isp(bus)

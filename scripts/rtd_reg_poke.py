@@ -13,6 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P  # noqa: E402
+import rtd_proto  # noqa: E402
 from rtd_osd import Osd  # noqa: E402
 
 
@@ -22,7 +23,10 @@ def edid_serial(bus: int) -> str | None:
         fcntl.ioctl(fd, 0x0703, 0x50)
         os.write(fd, b"\x00")
         e = os.read(fd, 128)
-    except OSError:
+        rtd_proto.trace(0x50, "w", 0, b"")
+        rtd_proto.trace(0x50, "r", 0, e, 128)
+    except OSError as ex:
+        rtd_proto.trace(0x50, "r", 0, None, 128, str(ex))
         return None
     finally:
         os.close(fd)
@@ -42,7 +46,7 @@ def main() -> int:
     a = ap.parse_args()
     root = P.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    P.LOG = (root / "tmp/logs/rtd_reg_poke.log").open("a")
+    P.LOG = rtd_proto.setup_logs("rtd_reg_poke").main
     s = edid_serial(a.bus)
     if s != a.serial and not (s is None and a.identity):
         sys.exit(f"bus {a.bus}: EDID serial {s!r} != {a.serial!r}; refusing (EDID silent: pass --identity)")
