@@ -325,6 +325,11 @@ def summary(diff: list[int], nimg: int, t_write: float, t_total: float) -> None:
     other = t_total - sum(PH.get(k, 0.0) for k in named)
     log(f"SUMMARY: time split (s): {split}, other (ISP enter/JEDEC/protect/reset) {other:.1f}; "
         f"sector retries {int(PH.get('retries', 0))}")
+    global DONE
+    DONE = f"{len(diff)}/{nimg} sectors changed, {wb / 1e6:.3f} MB at {rate * 1024 / 1e6:.4f} MB/s"
+
+
+DONE = ""                                             # one-line result, logged last by main()
 
 
 def main() -> int:
@@ -339,11 +344,12 @@ def main() -> int:
                     help="skip the dump reads (unit already runs our own build); incremental by the flash-state manifest")
     ap.add_argument("--full", action="store_true", help="ignore the manifest: write every image sector")
     ap.add_argument("--verify", choices=("crc", "readback"), default="crc")
-    ap.add_argument("--write-mode", choices=F.WRITE_MODES, default="byte")
+    ap.add_argument("--write-mode", choices=F.WRITE_MODES, default="burst")
     ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
+    t_main = time.monotonic()
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -378,6 +384,7 @@ def main() -> int:
         except OSError:
             pass
         log("scaler reset sent (0xEE <- 0x02)")
+        log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)"))
 
 
 if __name__ == "__main__":
