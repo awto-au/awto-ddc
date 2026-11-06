@@ -3,7 +3,7 @@
 
 usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no-backup] [--full] [--verify crc|readback]
                           [--write-mode byte|burst] [--burst-chunk N]
-                          [--manifest PATH] [--tag TAG] [--backup-dir DIR] [--reprotect V|none]
+                          [--manifest PATH] [--tag TAG] [--backup-dir DIR] [--reprotect V|none] [--identity HOW]
   default = DRY RUN: enter ISP, JEDEC check, read the whole 1 MiB flash once (backup) and the image region again, require identical reads,
             save the backup + flash-state manifest, list the 4 KiB sectors inside the image length that differ. Nothing written.
   --write : then erase + program + verify each differing sector (rtd_flash_sector.py routines), stop at the
@@ -18,7 +18,8 @@ usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no
   --write-mode: byte (default) = 1 data byte per I2C message; burst = one I2C write of --burst-chunk bytes (default 256) per
             page to the 0x70 FIFO, ~3x faster per sector; unvalidated on hardware, verify/retry unchanged (#12).
             A burst error redoes that sector in byte mode.
-  --serial: label for the backup/manifest; must match `ddcutil detect` for this bus (checked by the caller).
+  --serial: must equal the EDID serial on <bus> (i2cbus.require_unit, checked here before ISP is entered, #50.28).
+  --identity HOW: only when the EDID is silent (unit held in the safe window): how the caller proved the bus; logged.
   Revert: rerun with the backup (1 MiB) as <image.bin>: only sectors that differ are rewritten.
   Image sectors beyond its length are never touched (banks 14-15 = settings/gamma data, #8).
 Single session = the MCU stays halted throughout, so a half-written image never runs.
@@ -332,6 +333,7 @@ def main() -> int:
     ap.add_argument("--write-mode", choices=F.WRITE_MODES, default="burst")
     ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
+    ap.add_argument("--identity", help="EDID silent (unit held): how the bus was proven to be this unit")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
     i2cbus.dev_hint("flash", "rtd_flash_image.py")
@@ -352,6 +354,8 @@ def main() -> int:
              tag=a.tag or a.image.stem, commit=S.git_commit(root))
     if not 1 <= a.burst_chunk <= PAGE:
         log(f"refuse: --burst-chunk {a.burst_chunk} outside 1..{PAGE}"); return 2
+    seen = i2cbus.require_unit(a.bus, a.serial, a.identity)        # before any ISP traffic (#50.28)
+    log(f"unit guard: EDID serial {seen!r} on bus {a.bus}" + (f"; EDID silent, identity per caller: {a.identity}" if seen is None else ""))
     isp = Rtd(a.bus)
     isp.write_mode, isp.burst_chunk = a.write_mode, a.burst_chunk
     isp.write(0x6F, 0x80)

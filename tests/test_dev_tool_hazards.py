@@ -149,3 +149,89 @@ def test_mode_keeps_nondefault_scale_and_transform(dev):
     show = SHOW.replace("Scale: 1.0", "Scale: 2.0", 1).replace("Transform: normal", "Transform: 90", 1)
     g = " ".join(dev.gdctl_set_args(show, "HDMI-2", dev.MODES["4k30"]))
     assert "--x 0 --y 0 --scale 2.0 --transform 90" in g
+
+
+# --- #50.28 / #52.10-11 flasher identity --------------------------------------
+
+sys.path.insert(0, str(REPO / "scripts"))
+
+
+def _flash_main(monkeypatch, tmp_path, extra, require):
+    import rtd_flash_image as I
+    img = tmp_path / "AWT26110003-x-be.bin"
+    img.write_bytes(b"\xff" * 4096)
+    monkeypatch.setattr(sys, "argv", ["rtd_flash_image.py", "7", str(img), "--serial", "AWT26110003", *extra])
+    monkeypatch.setattr(I.F, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(I.i2cbus, "require_unit", require)
+    opened = []
+
+    def no_rtd(bus):
+        opened.append(bus)
+        raise AssertionError("ISP session opened")
+    monkeypatch.setattr(I, "Rtd", no_rtd)
+    return I, opened
+
+
+def test_flasher_refuses_wrong_unit_before_isp(monkeypatch, tmp_path):
+    def require(bus, serial, identity=None):
+        raise SystemExit("EDID serial mismatch")
+    I, opened = _flash_main(monkeypatch, tmp_path, ["--write"], require)
+    with pytest.raises(SystemExit):
+        I.main()
+    assert opened == []
+
+
+def test_flasher_passes_identity_to_guard(monkeypatch, tmp_path):
+    seen = []
+
+    def require(bus, serial, identity=None):
+        seen.append((bus, serial, identity))
+        return None
+    I, opened = _flash_main(monkeypatch, tmp_path, ["--identity", "relay cycle"], require)
+    with pytest.raises(AssertionError):             # guard passed, reached Rtd()
+        I.main()
+    assert seen == [(7, "AWT26110003", "relay cycle")] and opened == [7]
+
+
+def _img(tmp_path, name, body):
+    p = tmp_path / name
+    p.write_bytes(body)
+    return p
+
+
+def test_image_identity_accepts_matching(dev, tmp_path):
+    u = {"serial": "AWT26110003"}
+    dev.check_image_identity(u, _img(tmp_path, "AWT26110003-abc-be.bin", b"xx AWT26110003 yy"))
+
+
+@pytest.mark.parametrize("name,body", [
+    ("AWT26110002-abc-be.bin", b"AWT26110003"),             # tag says unit 2
+    ("AWT26110003-abc-be.bin", b"AWT26110002\0AWT26110003"),  # embedded foreign serial
+    ("AWT26110003-abc-be.bin", b"AWT26110002"),             # only foreign serial
+    ("anything-be.bin", b"no serial here"),                 # unknown provenance
+])
+def test_image_identity_refuses(dev, tmp_path, name, body):
+    with pytest.raises(SystemExit):
+        dev.check_image_identity({"serial": "AWT26110003"}, _img(tmp_path, name, body))
+
+
+def test_dev_flash_refuses_other_unit_image_before_bus(dev, tmp_path, monkeypatch):
+    img = _img(tmp_path, "AWT26110002-abc-be.bin", b"AWT26110002")
+    monkeypatch.setattr(dev, "_bus", lambda u: pytest.fail("bus touched"))
+    with pytest.raises(SystemExit):
+        dev.cmd_flash(["--unit", "3", str(img)])
+
+
+def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
+    img = _img(tmp_path, "AWT26110003-abc-be.bin", b"AWT26110003")
+    seen = []
+    dev.FW.mkdir(parents=True)
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None: seen.append(a) or 0)
+
+    class FB:
+        def __init__(s, bus): pass
+        def __enter__(s): return 1000
+        def __exit__(s, *a): return False
+    monkeypatch.setattr(dev.i2cbus, "fast_bus", FB)
+    assert dev.cmd_flash(["--unit", "3", "--bus", "11", str(img)]) == 0
+    assert "--identity" in seen[0]

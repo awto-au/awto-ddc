@@ -360,6 +360,22 @@ def _bus(u: dict) -> int:
                      f"use --bus N only after checking which monitor it is")
 
 
+def check_image_identity(u: dict, img: Path) -> None:
+    """Refuse an image built for another unit (a unit-2 image on unit 3 left the wrong EDID serial, #52.11):
+    its file-name tag and every AWT<8 digits> string inside it must be this unit's serial."""
+    me = u["serial"]
+    m = re.match(r"(AWT\d{8})", img.name)
+    if m and m.group(1) != me:
+        raise SystemExit(f"image {img.name} is tagged for {m.group(1)}, unit is {me}; nothing done")
+    found = set(re.findall(rb"AWT\d{8}", img.read_bytes()))
+    other = sorted(x.decode() for x in found if x.decode() != me)
+    if other:
+        raise SystemExit(f"image {img.name} embeds serial(s) {other}, unit is {me}; nothing done")
+    if me.encode() not in found:
+        raise SystemExit(f"image {img.name} does not embed serial {me} (not built by `dev.py build --unit`?); "
+                         f"--any-image to flash it anyway")
+
+
 def _py(script: str, *args, env: dict | None = None) -> int:
     cmd = [sys.executable, str(REPO / "scripts" / script), *map(str, args)]
     log("run: " + " ".join(cmd[1:]))
@@ -397,13 +413,14 @@ def cmd_build(extra: list[str]) -> int:
 
 
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
-         args="[--unit N] [--full] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
+         args="[--unit N] [--full] [--any-image] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     n, u = _unit(extra)
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     bus = _opt(extra, "--bus")              # recover: bus proven by its own relay cycle (EDID silent while held)
+    any_image = _flag(extra, "--any-image")
     extra = _image_arg(extra)
     if extra:
         img = Path(extra[0])
@@ -411,13 +428,18 @@ def cmd_flash(extra: list[str]) -> int:
     else:
         tag = (FW / f"{u['serial']}-last.txt").read_text().strip()
         img = FW / f"{tag}.bin"
+    if not any_image:
+        check_image_identity(u, img)
+    identity = None
     if bus:
-        log(f"flash: bus {bus} given by caller (identity proven by relay cycle), EDID check skipped")
+        identity = "dev.py recover: bus resolved right after this unit's own relay cycle"
+        log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
     with i2cbus.fast_bus(bus) as khz:       # 1 MHz only around the ISP write (0x35 NAKs at 1 MHz); unloaded in finally
         log(f"flash: bus {bus} at {khz} kHz")
         rc = _py("rtd_flash_image.py", bus, img, "--serial", u["serial"], "--write", "--no-backup",
-                 "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []))
+                 "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
+                 *(["--identity", identity] if identity else []))
     if rc == 0:
         (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
     return rc
