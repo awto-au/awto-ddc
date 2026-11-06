@@ -154,6 +154,13 @@ INSERTS = [
     ("Panel/User_Panel_List.h", r"^#define _AUO_EDP_27_UHD_LOCAL_DIMMING\s",
      "#define _AWTO_LTM270FL01                        0x3D    // 3840 x 2160"),
     ("Panel/User_Panel_Include.h", r'^#include "30_AUO_eDP_27_UHD\.h"', '#include "AWTO_LTM270FL01.h"'),
+    # awto-ddc#26: vendor FineTuneFrameSyncLineBuffer has no DHtotal debounce loop: one pass
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^\s*while\(ucDebounceCnt > 0\)", "    ucDebounceCnt = 1;"),
+    # ... and no last-line block (no IVS2DVS rewrite after FrameSyncSetDt): off for this function only
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^#if\(_LAST_LINE_FINETUNE_ENABLE == _ENABLE\)",
+     "#undef _LAST_LINE_FINETUNE_ENABLE\n#define _LAST_LINE_FINETUNE_ENABLE _DISABLE", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r'^\s*// Switch to "input active region"',
+     "#undef _LAST_LINE_FINETUNE_ENABLE\n#define _LAST_LINE_FINETUNE_ENABLE _ENABLE", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
     # awto-ddc#26: AwtoMsg0/AwtoMsgV (overlay AwtoMsg.h) live in the debug module, beside ScalerDebugMessage
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c",
      r"^void ScalerDebugSelectDDCCIDebugMode\(EnumDDCCIDebugMode enumMode\)$", '#include "AwtoMsg.h"'),
