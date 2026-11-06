@@ -7,7 +7,8 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
   Offsets/values: RTD2014Include.h (EnumOsdEvent order, _*_KEY_MESSAGE); address from the image's map.
   Writes via rtd_dbg_write.py (debug slave 0x35, EDID-serial guarded). Struct layout assumes _DP_DEBUG_MSG off.
   --cmd: write the firmware test byte (g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
-    injected after the key scan, 0x10+n = event n. Works for keys (the direct key write is overwritten).
+    injected after the key scan, 0x10+n = event n, `debug` = 0x20 = debug pop-up (awto-ddc#34).
+    Works for keys (the direct key write is overwritten).
 Log: ./tmp/logs/rtd_dbg_write.log
 """
 import argparse, re, subprocess, sys
@@ -19,6 +20,7 @@ TESTCMD_OFF = 0x28
 EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
           "source-menu": 7}
 KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
+CMD_ONLY = {"debug": 0x20}                  # --cmd only
 
 
 def osdinfo_addr(map_path: Path) -> int:
@@ -41,7 +43,7 @@ def main() -> int:
     ap.add_argument("--serial", required=True)
     ap.add_argument("--map", required=True, type=Path)
     ap.add_argument("--cmd", action="store_true", help="use the firmware test-command byte (needs an image with #33)")
-    ap.add_argument("actions", nargs="+", choices=sorted(EVENTS) + sorted(KEYS))
+    ap.add_argument("actions", nargs="+", choices=sorted(EVENTS) + sorted(KEYS) + sorted(CMD_ONLY))
     a = ap.parse_args()
     base = diag_addr(a.map) if a.cmd else osdinfo_addr(a.map)
     writes = []
