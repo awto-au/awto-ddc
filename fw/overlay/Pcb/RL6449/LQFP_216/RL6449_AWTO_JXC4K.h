@@ -310,7 +310,11 @@
 #define _LIGHT_CONTROL_ON                       1
 #define _LIGHT_CONTROL_OFF                      0
 
+// P9.2 = backlight enable, active LOW (proven live, #7)
+#define bBACKLIGHT_EN_N                         (MCU_FE2A_PORT92_PIN_REG) // Pin_196, P9.2
+
 #define PCB_BACKLIGHT_POWER_PIN(x)              {\
+                                                    bBACKLIGHT_EN_N = !(x);\
                                                     bBACKLIGHTPOWER = (x);\
                                                 }
 
@@ -494,7 +498,6 @@
 // Macro of HDMI/MHL Switch
 //-----------------------------------------------
 #define bD2_TMDS_SWITCH                         (MCU_FE2B_PORT93_PIN_REG) // Pin_197, P9.3
-#define bD3_TMDS_SWITCH                         (MCU_FE2A_PORT92_PIN_REG) // Pin_196, P9.2
 
 #define _TMDS_SWITCH_MHL_CBUS                   0
 #define _TMDS_SWITCH_HDMI_HPD                   1
