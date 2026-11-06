@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -52,6 +53,8 @@ def _repo_root() -> Path:
 
 
 REPO = _repo_root()
+sys.path.insert(0, str(REPO / "scripts"))
+import i2cbus  # noqa: E402  (the only module that touches /dev/i2c-N, #48)
 TMP = REPO / "tmp"           # scratch, pidfiles
 LOGS = TMP / "logs"          # logs, per the ./tmp/logs/ rule
 LOG = LOGS / "dev.log"
@@ -339,38 +342,16 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
     return n, u
 
 
-def _edid_serial(bus: int) -> str | None:
-    """Text serial (descriptor 0xFF) of the EDID at 0x50 on a bus, or None (no EDID / not readable)."""
-    import fcntl
-    try:
-        fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
-    except OSError:
-        return None
-    try:
-        fcntl.ioctl(fd, 0x0703, 0x50)               # I2C_SLAVE
-        os.write(fd, b"\x00")
-        e = os.read(fd, 128)
-    except OSError:
-        return None
-    finally:
-        os.close(fd)
-    for i in range(54, 126, 18):
-        if e[i:i + 3] == b"\0\0\0" and e[i + 3] == 0xFF:
-            return e[i + 5:i + 18].split(b"\n")[0].decode("latin-1").strip()
-    return None
-
-
 def _bus(u: dict) -> int:
     """The bus whose EDID serial is the unit's: the connector's i2c link first, else every display bus
     (NVIDIA has no link). A recable moved units between ports on 2026-11-06 and a flash hit the wrong one."""
     link = (Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc").resolve()
     cands = [int(link.name.split("-")[1])] if link.name.startswith("i2c-") else []
-    for d in sorted(Path("/sys/class/i2c-dev").iterdir(), key=lambda p: int(p.name.split("-")[1])):
-        n = (d / "name").read_text()
-        if ("i915 gmbus" in n or "NVIDIA" in n or "AUX" in n) and int(d.name.split("-")[1]) not in cands:
-            cands.append(int(d.name.split("-")[1]))
+    cands += [b for b in i2cbus.list_buses(display_only=True) if b not in cands]
+    if i2cbus.reset_rate():
+        log("bus rate: gmbus_rate module was left loaded; unloaded (100 kHz)", "WARN")
     for b in cands:
-        if _edid_serial(b) == u["serial"]:
+        if i2cbus.edid_serial(b) == u["serial"]:
             return b
     raise SystemExit(f"{u['serial']}: no bus with that EDID serial (unit off, wedged, or cabled elsewhere); "
                      f"use --bus N only after checking which monitor it is")
@@ -379,7 +360,7 @@ def _bus(u: dict) -> int:
 def _py(script: str, *args, env: dict | None = None) -> int:
     cmd = [sys.executable, str(REPO / "scripts" / script), *map(str, args)]
     log("run: " + " ".join(cmd[1:]))
-    rc = subprocess.call(cmd, cwd=REPO, env={**os.environ, **(env or {})})
+    rc = subprocess.call(cmd, cwd=REPO, env={**os.environ, "AWTO_VIA_DEV": "1", **(env or {})})
     log(f"rc={rc}: {script}", "INFO" if rc == 0 else "ERROR")
     return rc
 
@@ -429,8 +410,11 @@ def cmd_flash(extra: list[str]) -> int:
         img = FW / f"{tag}.bin"
     if bus:
         log(f"flash: bus {bus} given by caller (identity proven by relay cycle), EDID check skipped")
-    rc = _py("rtd_flash_image.py", bus or _bus(u), img, "--serial", u["serial"], "--write", "--no-backup",
-             "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []))
+    bus = int(bus or _bus(u))
+    with i2cbus.fast_bus(bus) as khz:       # 1 MHz only around the ISP write (0x35 NAKs at 1 MHz); unloaded in finally
+        log(f"flash: bus {bus} at {khz} kHz")
+        rc = _py("rtd_flash_image.py", bus, img, "--serial", u["serial"], "--write", "--no-backup",
+                 "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []))
     if rc == 0:
         (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
     return rc
@@ -472,6 +456,133 @@ def cmd_trace(extra: list[str]) -> int:
 def cmd_probe(extra: list[str]) -> int:
     _n, u = _unit(extra)
     return _py("rtd_boot_probe.py", _bus(u), *extra)
+
+
+def _done(extra: list[str], what: str) -> None:
+    """Refuse anything left in extra (typos, --help, stray options) before hardware is touched."""
+    if extra:
+        raise SystemExit(f"{what}: unknown/extra argument(s) {extra}; nothing done")
+
+
+def _pairs(items: list[str], what: str) -> list[str]:
+    """ADDR=VAL hex pairs, at least one; anything else is refused."""
+    bad = [x for x in items if not re.fullmatch(r"[0-9a-fA-F]+=[0-9a-fA-F]+", x)]
+    if bad or not items:
+        raise SystemExit(f"{what}: need ADDR=VAL hex pairs (e.g. FE34=1), got {bad or 'none'}; nothing done")
+    return items
+
+
+def _fwmap(u: dict, given) -> str:
+    """Link map of the image on the unit (the flashed tag); addresses from another image would poke the wrong bytes."""
+    if given:
+        m = Path(str(given))
+    else:
+        m = FW / f"{_flashed(u).get('tag', '')}.map"
+    if not m.is_file():
+        raise SystemExit(f"map {m} not found (flash an image first, or --map PATH); nothing done")
+    return str(m.resolve())
+
+
+@command("OSD test events/keys/popup in the running firmware (debug slave 0x35, EDID-guarded)",
+         args="[--unit N] [--cmd] [--map F] ACTION...", kind="action")
+def cmd_osd(extra: list[str]) -> int:
+    import osd_test
+    n, u = _unit(extra)
+    cmdmode, given = _flag(extra, "--cmd"), _opt(extra, "--map")
+    ok = set(osd_test.EVENTS) | set(osd_test.KEYS) | set(osd_test.CMD_ONLY)
+    bad = [x for x in extra if x not in ok]
+    if bad or not extra:
+        raise SystemExit(f"osd: actions are {sorted(ok)}; got {bad or 'none'}; nothing done")
+    cmdmode = cmdmode or any(x in osd_test.CMD_ONLY for x in extra)       # popup-only actions imply --cmd
+    mp = _fwmap(u, given)
+    return _py("osd_test.py", _bus(u), "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
+
+
+@command("write scaler registers over ISP (MCU halted), read back; --reset reboots", args="[--unit N] [--reset] ADDR=VAL...",
+         kind="action")
+def cmd_poke(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    reset = _flag(extra, "--reset")
+    pokes = _pairs(extra, "poke")
+    return _py("rtd_reg_poke.py", _bus(u), "--serial", u["serial"], *pokes, *(["--reset"] if reset else []))
+
+
+@command("read scaler register pages / ports over ISP into tmp/regs/ (halts the MCU, resets after)",
+         args="[--unit N] [--pages 00,01|all] [--port A:D:N] [--ports all] [--resume F]", kind="action")
+def cmd_dump(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    opts = []
+    for flag in ("--pages", "--ports", "--resume"):
+        v = _opt(extra, flag)
+        if v is not None:
+            if v is True:
+                raise SystemExit(f"dump: {flag} needs a value; nothing done")
+            opts += [flag, v]
+    while "--port" in extra:
+        v = _opt(extra, "--port")
+        if v is True:
+            raise SystemExit("dump: --port needs a value; nothing done")
+        opts += ["--port", v]
+    _done(extra, "dump")
+    return _py("rtd_reg_dump.py", _bus(u), "--serial", u["serial"], *opts)
+
+
+@command("write XDATA bytes in the running firmware over debug slave 0x35", args="[--unit N] [--map F] [--label L] ADDR=VAL...",
+         kind="action")
+def cmd_dbg_write(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given, label = _opt(extra, "--map"), _opt(extra, "--label", "")
+    if label is True:
+        raise SystemExit("dbg-write: --label needs a value; nothing done")
+    writes = _pairs(extra, "dbg-write")
+    return _py("rtd_dbg_write.py", _bus(u), "--serial", u["serial"], "--map", _fwmap(u, given), "--label", label, *writes)
+
+
+@command("read live XDATA via debug slave 0x35 (addr|symbol[:len])", args="[--unit N] [--map F] [--halt] ITEM...",
+         kind="action")
+def cmd_dbg_read(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given, halt = _opt(extra, "--map"), _flag(extra, "--halt")
+    bad = [x for x in extra if x.startswith("-")]
+    if bad or not extra:
+        raise SystemExit(f"dbg-read: need ITEMs (addr|symbol[:len]); bad {bad or 'none'}; nothing done")
+    return _py("rtd_dbg_read.py", _bus(u), "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
+
+
+@command("read the sink's HDMI SCDC registers (0x54), read-only", args="[--unit N]", kind="action")
+def cmd_scdc(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    _done(extra, "scdc")
+    return _py("hdmi_scdc.py", _bus(u))
+
+
+DDC_SUBS = {"list": 0, "get": 1, "sleep": 0, "wake": 0, "brightness": 1}
+
+
+@command("DDC/CI via ddcutil on the unit's own bus: list | get CODE | sleep | wake | brightness N",
+         args="[--unit N] list|get CODE|sleep|wake|brightness N", kind="action")
+def cmd_ddc(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    if not extra or extra[0] not in DDC_SUBS or len(extra) != 1 + DDC_SUBS[extra[0]] \
+            or any(x.startswith("-") for x in extra):
+        raise SystemExit(f"ddc: one of {DDC_SUBS} (arg counts {list(DDC_SUBS.values())}); got {extra}; nothing done")
+    return _py("ddc_ctl.py", "--bus", _bus(u), *extra)
+
+
+@command("identify the unit: EDID, DDC caps, scaler chip, flash params (ISP session halts the MCU, reboots after)",
+         args="[--unit N] [--no-isp] [--json]", kind="action")
+def cmd_identify(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    flags = [f for f in ("--no-isp", "--json") if _flag(extra, f)]
+    _done(extra, "identify")
+    return _py("rtd_identify.py", _bus(u), *flags)
+
+
+@command("read-throughput benchmark of the unit's bus (EDID 0x50 + ISP 0x4A reads)", args="[--unit N]", kind="action")
+def cmd_bench(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    _done(extra, "bench")
+    return _py("i2c_bench.py", _bus(u))
 
 
 @command("recover a wedged unit: mains cycle, hold it in the safe window, reflash (default: last flashed)",
