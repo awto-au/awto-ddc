@@ -217,6 +217,7 @@ def main() -> int:
     ap.add_argument("--skip-compile", action="store_true")
     ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
     ap.add_argument("--layout", default="")
+    ap.add_argument("--cluster", choices=["module", "fn"], default="", help="call-graph bank placement at layout creation (sdcc_bank.py)")
     ap.add_argument("--src-patch", default="")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -234,7 +235,8 @@ def main() -> int:
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
-                 *(["--layout", a.layout] if a.layout else [])])
+                 *(["--layout", a.layout] if a.layout else []),
+                 *(["--cluster", a.cluster] if a.cluster else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_memcpy reads its PARMs little-endian: BE builds keep the library's BE memcpy (#24, #15)

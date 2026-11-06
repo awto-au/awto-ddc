@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 import sdcc_tools as T  # noqa: E402
 import sdcc_layout as L  # noqa: E402
+import sdcc_cluster as SC  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -74,6 +75,34 @@ def addr_stays_in_bank(code, i, c, funcs):
     return False
 
 
+JMP = re.compile(r"^\s+(?:sjmp|ljmp|ajmp|djnz|jnz|jz|jc|jnc|jb|jnb|jbc|cjne)\b[^;]*?,?\s*(\d+\$)\s*(?:;.*)?$|"
+                 r"^\s+(?:sjmp|ljmp|ajmp)\s+(\d+\$)\s*(?:;.*)?$")
+
+
+def call_sites(lines):
+    """(callee, loop depth) per lcall/ljmp-to-function in a chunk. Loop = span from a local label (`00101$`) to a later
+    jump back to it; depth at a site = number of spans containing it (asm has no loop info; this is the static proxy)."""
+    lab, spans = {}, []
+    for i, l in enumerate(lines):
+        m = re.match(r"^(\d+\$):", l)
+        if m:
+            lab[m.group(1)] = i
+        j = JMP.match(l.split(";", 1)[0])
+        if j:
+            t = j.group(1) or j.group(2)
+            if t in lab:
+                spans.append((lab[t], i))
+    out = []
+    for i, l in enumerate(lines):
+        c = CALL.match(l.split(";", 1)[0]) if not l.startswith(";") else None
+        if c:
+            out.append((c.group(4), sum(a <= i <= b for a, b in spans)))
+    return out
+
+
+STACKREAD = re.compile(r"^\s+mov\s+(a|ar[0-7]|r[0-7]|dpl|dph|b),\s*sp\b|^\s+mov\s+_bp,\s*sp\b|\b_bp\b")
+
+
 class Chunk:
     def __init__(self, area, name, lines, module):
         self.area, self.name, self.lines, self.module = area, name, lines, module
@@ -85,6 +114,9 @@ class Chunk:
         """Derive ISR flag, call targets and symbol refs once the body is complete."""
         lines = self.lines
         self.isr = any(re.match(r"^\s+(reti\b|ljmp\s+sdcc_atomic_maybe_rollback\b)", l) for l in lines)
+        # reads its stack-passed args via SP/_bp: a banked call goes through a stub that leaves 4 more bytes
+        # between args and callee (caller ret + restore entry), so the offsets are wrong (#11)
+        self.stack_args = any(STACKREAD.search(l.split(";", 1)[0]) for l in lines)
         self.calls, self.refs = set(), set()
         for l in lines:
             s = l.split(";", 1)[0]
@@ -96,6 +128,7 @@ class Chunk:
             else:
                 self.refs.update(SYM.findall(s))
         self.refs.discard(self.name)
+        self.sites = call_sites(lines)                       # [(target, loop depth)], for --cluster
 
 
 class Module:
@@ -229,6 +262,9 @@ def main() -> int:
                     help="common bytes for hot helpers moved out of banks")
     ap.add_argument("--pack-margin", type=lambda x: int(x, 0), default=0x600,
                     help="bytes kept free per bank at packing for CONST moved in afterwards")
+    ap.add_argument("--cluster", choices=["module", "fn"], default="",
+                    help="call-graph-aware placement (sdcc_cluster.py): merge units with heavy call edges into one bank so "
+                         "calls need no stub; module = module granularity, fn = per function. Default: DFS first fit")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     ap.add_argument("--layout", default="", help="sticky layout file (fw/bank_layout.tsv): fixed slot per chunk, reused "
                     "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
@@ -254,7 +290,7 @@ def main() -> int:
     # common = ISR entry fns + main only; what they call is reached through stubs (bank saved/restored),
     # like Keil's ?B_SWITCH from interrupt code (old fw common is only 0x28C6 B)
     for c in funcs.values():
-        if c.isr or c.name == "_main":
+        if c.isr or c.name == "_main" or c.stack_args:       # stack_args: callable only by direct lcall (#11)
             c.common = True
     for c in funcs.values():
         if c.common:
@@ -355,6 +391,7 @@ def main() -> int:
             fl[b] += n
         return fl, None
 
+    allc = [c for m in mods for c in m.chunks if c.area == "CSEG"]
     if reuse:
         slot_fill = defaultdict(int)
         for (k, nm), (rg, off, sl) in lay.rows.items():
@@ -385,6 +422,20 @@ def main() -> int:
         f = a.fill_target
         while True:
             fill, fail = first_fit(int(cap * f), lambda c: L.pad_slot(c.size))
+            if fill is not None and a.cluster:               # clustered at creation only; reuse keeps the sticky rows
+                log(f"cross-bank calls, first-fit packing: {SC.stats(allc, funcs)}")
+                keep = {id(c): c.bank for m in mods for c in m.chunks}
+                cu = units if a.cluster == "module" else [[c] for u in units for c in u]
+                f2 = SC.assign(cu, funcs, a.banks, int(cap * f), lambda c: L.pad_slot(c.size), consts)
+                if f2 is None:
+                    log(f"cluster: does not fit at fill {f:.2f}")
+                    for m in mods:
+                        for c in m.chunks:
+                            c.bank = keep[id(c)]
+                    fill = None
+                else:
+                    fill = f2
+                    log(f"cluster[{a.cluster}]: {SC.stats(allc, funcs)}")
             if fill is not None:
                 break
             f += 0.01
@@ -465,6 +516,7 @@ def main() -> int:
             for x in cl:
                 fill[x.bank] -= x.size; x.common, x.bank = True, None; moved.append(x.name)
             budget -= n; changed = True
+    log(f"cross-bank calls after hot helpers: {SC.stats(allc, funcs)}")
     log(f"hot helpers -> common: {len(moved)} ({a.hot_budget - budget} B): {', '.join(moved[:30])}")
 
     # CONST used from more than one bank (or from common / data initialisers) -> common;
