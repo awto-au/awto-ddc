@@ -875,6 +875,7 @@ stub	_UserCommonFlashSaveItem	C	0x36b5	9
 stub	_UserCommonFlashSaveSystemData	C	0x36be	9
 stub	_UserCommonNVRamGetSystemData	C	0x36c7	9
 stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
+stub	_AwtoPutGlyph	C	0x36d9	9
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1140,6 +1141,7 @@ fn	_UserCommonInterfaceDpVersionSwitch	1	0x9d74	64
 fn	_UserCommonInterfaceGetDpMstCapablePort	1	0x9db4	64
 fn	_UserCommonInterfacePanelPowerAction	1	0x9df4	700
 fn	_UserCommonNVRamSetSystemData	1	0xa0b0	692
+fn	_AwtoPutGlyph	1	0xa364	48
 fn	_ScalerDpRx1ChangeDpcdVersion	2	0x0000	1420
 fn	_ScalerDpRx1HdcpCheck	2	0x058c	264
 fn	_ScalerDpRx1PhyCTS	2	0x0694	3688

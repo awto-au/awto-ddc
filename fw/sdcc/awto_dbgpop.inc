@@ -4,6 +4,14 @@ extern BYTE *g_pucShowNumberAddress;
 static BYTE s_pucAwtoDbg[28];
 static BYTE s_ucAwtoLen;
 
+static void AwtoPutGlyph(BYTE ucG)
+{
+    if(s_ucAwtoLen < 26)      // awto: #53.2 clamp counts glyphs, the buffer holds 28 with the terminator
+    {
+        s_pucAwtoDbg[s_ucAwtoLen++] = ucG;
+    }
+}
+
 static void AwtoPutChar(char c)
 {
     BYTE ucG = _QUERY_;
@@ -14,7 +22,7 @@ static void AwtoPutChar(char c)
     }
     else if((c >= 'A') && (c <= 'Z'))
     {
-        ucG = _A_ + (c - 'A') + ((c > 'W') ? 1 : 0);      // W is two glyphs: skipped, X..Z shift by one
+        ucG = _A_ + (c - 'A') + ((c > 'W') ? 1 : 0);      // W is two glyphs (_W_0,_W_1): X..Z shift by one
     }
     else if((c >= 'a') && (c <= 'z'))
     {
@@ -36,9 +44,10 @@ static void AwtoPutChar(char c)
     {
         ucG = _SLINE_;
     }
-    if(s_ucAwtoLen < 26)
+    AwtoPutGlyph(ucG);
+    if((c == 'W') || (c == 'w'))
     {
-        s_pucAwtoDbg[s_ucAwtoLen++] = ucG;
+        AwtoPutGlyph(ucG + 1);      // awto: #53.2 second half (_W_1 / _w_1)
     }
 }
 
