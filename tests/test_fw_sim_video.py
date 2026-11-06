@@ -48,24 +48,20 @@ def vbus():
 
 @needs_img
 @pytest.mark.slow
-def test_video_source_found_and_display_setting_reached(vbus):
+def test_video_source_found_and_mode_active(vbus):
     import unit_health as H
-    for _ in range(40):                                  # SEARCH -> DISPLAY_SETTING takes ~21 M instr after reset
-        if vbus.mode_state() >= 2:
-            break
-        vbus.m.run(1_000_000)
-    assert vbus.mode_state() >= 2, f"mode state {vbus.mode_state()}"
+    assert vbus.run_until_mode(H.MODE_ACTIVE), f"mode state {vbus.mode_state()}"
     t = H.decode_timing(vbus.xdata(vbus.addr("g_stMDomainInputData"), 17))
     assert (t["hwidth"], t["vheight"], t["vfreq"], t["hfreq"]) == (1920, 1080, 600, 675)
 
 
 @needs_img
 @pytest.mark.slow
-def test_health_checks_that_pass_in_the_sim(vbus):
+def test_all_ten_health_checks_pass_in_the_sim(vbus):
     import unit_health as H
+    vbus.run_until_mode(H.MODE_ACTIVE)
     maps = {n: H.sym_addr(IMG.with_suffix(".map").read_text(errors="replace"), n) for n in H.MAP_SYMS}
     rep = H.Report()
+    rep.add("bus rate", True, "sim")
     H.run(H.Dbg(vbus, wait=vbus.wait, now=vbus.now), maps, (1920, 1080, 60.0), rep, wait=vbus.wait)
-    r = {n: ok for n, ok, _ in rep.rows}
-    for name in ("diag stage", "main loop", "power status", "input timing", "panel power", "osd event", "osd test cmd"):
-        assert r[name], rep.rows
+    assert len(rep.rows) == 10 and all(ok for _, ok, _ in rep.rows), rep.rows

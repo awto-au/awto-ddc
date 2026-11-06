@@ -359,6 +359,13 @@ class HdmiInput(Dev):
         c[0x007D] = 0x40                                                # auto-function finished
         c[0x007C] = c[0x0078] = 0
         c[0x3106] = 0x10                                                # F-to-P off until the firmware enables it
+        # active-region clock counts (P30_41..44 input, P30_46..49 display): ScalerDPLLFineTuneFrameSyncLineBuffer scales Dclk
+        # by their ratio; equal counts = already in sync (zeros gave Dclk 0x830B6229 -> NOSUPPORT)
+        n = round(self.VACT * self.HTOT / self.PCLK * 1e-1 * self.MEAS_KHZ * 1e3 / self.HTOT * self.HACT / 1e3)
+        c[0x0044], c[0x0045], c[0x0046] = 0x08, 0xCA, 0x00               # LAST_LINE = display DVtotal read-back (2250 in line-buffer mode)
+        for base in (0x3041, 0x3046):
+            c[base] = 0
+            c[base + 1], c[base + 2], c[base + 3] = (n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF
         return c
 
     def auto(self, ftop: bool) -> dict[int, int]:
@@ -380,6 +387,7 @@ class HdmiInput(Dev):
 
 
 MODE_NAMES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNAL", "POWER_SAVING", "POWER_OFF", "FACTORY"]
+T2_SCALE = 3
 D2_INPUT_PORT, SOURCE_HDMI, SOURCE_NONE = 5, 3, 5          # Kernel/Common/Global.h
 
 
@@ -388,7 +396,7 @@ def video_devs(img: bytes, mode: str = "1080p60"):
     D3 cable, DPCD access port (DP Rx1), the HDMI measure/auto-function results. Returns (devs, hdmi)."""
     hdmi = HdmiInput(mode)
     return [regdb_cells(), FlashDev(img), IicSlave(), Cells({0xFE2C: 1, 0xFE32: 0}),
-            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4), hdmi], hdmi
+            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4), W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70}), hdmi], hdmi
 
 
 def video_stubs(m: "Machine", hdmi: HdmiInput):
@@ -396,6 +404,7 @@ def video_stubs(m: "Machine", hdmi: HdmiInput):
     pre-detect and scan on D2 succeed, stability check passes, scan sets the input pixel clock like the SDK does."""
     m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["dptr"] & 255) == D2_INPUT_PORT})
     m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
+    m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})   # no DP source: pending HPD events never end
 
     def scan(m, r):
         if (r["dptr"] & 255) != D2_INPUT_PORT:
@@ -403,6 +412,18 @@ def video_stubs(m: "Machine", hdmi: HdmiInput):
         m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
         return {"dpl": SOURCE_HDMI}
     m.stub("ScalerTMDSScanInputPort", scan)
+
+
+class W1C(Dev):
+    """Write-1-to-clear flag bits (mask per address): after a write the flag bits read 0 (no new error/event arrives in the
+    sim). Plain XRAM keeps the written 1s, so status checks like ScalerMDomainMemoryCheck failed forever."""
+
+    def __init__(self, masks: dict[int, int]):
+        self.masks = masks
+        self.writes = tuple(masks)
+
+    def on_write(self, m, a):
+        m.put(f"set memory xram 0x{a:x} 0x{m.rd(a)[0] & ~self.masks[a] & 0xFF:x}")
 
 
 class IndPort(Dev):
@@ -442,6 +463,7 @@ class Machine:
         self.s.send("fill xram 0x0 0xfffe 0x0")            # ucsim starts XRAM random: registers read the same every run
         self.ticks, self.instr, self._n, self._q, self._stop, self.last_out = 0, 0, 0, [], False, ""
         self.stubs, self.stub_hits = {}, {}
+        self.t2_scale, self._t2_set, self._t2_at = 1, -1, -10**9
         self.ret_pc = self.sym["__bs_call_sw"] + 5            # the RET that ends __bs_call (mov dpl,r5 / mov dph,r6 / mov a,r4 / ret)
         self.hook = {}
         for d in self.devs:
@@ -483,7 +505,13 @@ class Machine:
         self.flush()
         out = self.cmd(f"dump {space} 0x{a:x} 0x{a + n - 1:x} 16")
         got = {}
-        for m in re.finditer(r"0x([0-9a-f]{4})\s{2,}((?:[0-9a-f]{2} )+)", out):
+        if space == "sfr":                           # one line per register: 0xca RCAP2L: 0b00000000 0x00 '.' 0
+            for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b[01]{8} 0x([0-9a-f]{2})", out, re.M):
+                got[int(m.group(1), 16)] = int(m.group(2), 16)
+            if len(got) < n:
+                raise SimError(f"dump sfr 0x{a:x}+{n} returned {len(got)} bytes")
+            return bytes(got[a + i] for i in range(n))
+        for m in re.finditer(r"0x([0-9a-f]{2,6})\s{2,}((?:[0-9a-f]{2} )+)", out):
             base = int(m.group(1), 16)
             for i, h in enumerate(m.group(2).split()[:min(16, a + n - base)]):
                 got[base + i] = int(h, 16)
@@ -539,8 +567,22 @@ class Machine:
     def watch(self, name: str):
         self.stub(name, lambda m, r: None)
 
+    def _scale_t2(self):
+        """Time dilation: the sim CPU runs ~3x fewer instructions per Timer2 tick than the 87.7 MHz DW8051 (SDK reload
+        0xE373 = 7309 counts/ms), so software division loops in display setup overrun the firmware's 2 s NOSUPPORT timer.
+        RCAP2 is rewritten to t2_scale x the firmware's count (auto-reload), keeping fw time = instr / (4.2 k x scale)."""
+        lo, hi = self.rd(0xCA, 2, "sfr")
+        cnt = 0x10000 - (hi << 8 | lo)
+        if 0 < cnt < 0x10000 // self.t2_scale and (hi << 8 | lo) != self._t2_set:
+            new = 0x10000 - cnt * self.t2_scale
+            self._t2_set = new
+            self.wr(0xCA, bytes([new & 0xFF, new >> 8]), "sfr")
+
     def run(self, n: int) -> str:
         rem, self._stop = n, False
+        if self.t2_scale > 1 and self.instr - self._t2_at >= 100_000:
+            self._t2_at = self.instr
+            self._scale_t2()
         while True:
             out = self.cmd(f"step {max(rem, 1)}")
             t = re.search(r"Simulated (\d+) ticks", out)
@@ -596,6 +638,7 @@ class SimBus:
         self.m = Machine(self.img, Path(mapp), tag or Path(binp).stem, log, [*all_devs, *devs])
         if video:
             video_stubs(self.m, self.hdmi)
+            self.m.t2_scale = T2_SCALE
         self.diag_base = self.m.sym.get("_g_stAwtoDiag", 0xF6D0)
         self.t2_abs, self._t2_last = 0, None
         self.naks = 0
@@ -607,6 +650,15 @@ class SimBus:
 
     def mode_state(self) -> int:
         return self.m.rd(self.addr("g_stModeInfo"))[0] & 0x1F
+
+    def run_until_mode(self, mode: int = 3, max_instr: int = 150_000_000, chunk: int = 1_000_000) -> bool:
+        """Let the firmware run (no host traffic) until g_stModeInfo reaches `mode` (3 = ACTIVE); False when the budget is out."""
+        used = 0
+        while used < max_instr:
+            if self.mode_state() == mode:
+                return True
+            self.m.run(chunk); used += chunk
+        return self.mode_state() == mode
 
     def xdata(self, a: int, n: int = 1) -> bytes:
         return self.m.rd(a, n)
@@ -768,6 +820,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> int:
     msgs: Counter = Counter()
     m = Machine(img, mapp, binp.stem + "-video", log, devs)
     video_stubs(m, hdmi)
+    m.t2_scale = T2_SCALE
 
     def am(m_, r):
         msgs[r["dptr"] & 0xFFFF] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
