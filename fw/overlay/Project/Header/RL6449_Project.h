@@ -73,6 +73,7 @@ extern void AwtoDiagSelfTest(void);
 #if(_AWTO_DEBUG_PORT == _ON)
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
 #endif
+#define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)
 #define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 
