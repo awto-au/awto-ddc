@@ -372,6 +372,8 @@ def main() -> int:
     sticky = bool(a.layout)
     lay = L.Layout.load(a.layout) if sticky else L.Layout()
     reuse = sticky and bool(lay.rows)                        # existing layout: placement comes from it
+    if reuse:
+        lay.check_header(a.common_max, a.resid_end, a.layout)   # #51.3
     fill = [0] * a.banks
 
     def first_fit(limit, sizeof, split=False):

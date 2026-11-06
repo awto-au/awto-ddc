@@ -49,6 +49,14 @@ class Layout:
                 lay.rows[(kind, name)] = (reg, int(off, 0), int(slot, 0))
         return lay
 
+    def check_header(self, common, resid_end, path="layout"):
+        """SystemExit if the file's recorded common / resid_end differ from this build's (every slot offset would shift)."""
+        for key, want in (("common", common), ("resid_end", resid_end)):
+            have = self.header.get(key)
+            if have is not None and int(have, 0) != want:
+                raise SystemExit(f"layout: {path} was made with {key}={have}, this build has {key}={hex(want)}; "
+                                 f"refusing (slots would shift). Rebuild with the matching args or delete the layout.")
+
     def text(self):
         out = [f"#{k} {v}" for k, v in sorted(self.header.items())]
         out.append("# kind\tname\tregion\toffset\tslot    (scripts/sdcc_layout.py; region C = common)")
