@@ -397,7 +397,7 @@ def cmd_flash(extra: list[str]) -> int:
     n, u = _unit(extra)
     full = bool(_opt(extra, "--full"))
     verify = _opt(extra, "--verify", "crc")
-    wmode = _opt(extra, "--write-mode", "byte")
+    wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     bus = _opt(extra, "--bus")              # recover: bus proven by its own relay cycle (EDID silent while held)
     if extra:
         img = Path(extra[0])
@@ -456,7 +456,7 @@ def cmd_probe(extra: list[str]) -> int:
          args="[--unit N] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
     n, u = _unit(extra)
-    wmode = _opt(extra, "--write-mode", "byte")
+    wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     img = extra or [_flashed(u).get("image", "")]
     rc = cmd_power_cycle(["--unit", n])
     if rc:
