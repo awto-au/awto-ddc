@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import rtd_flash_image as I  # noqa: E402
 import rtd_flash_sector as F  # noqa: E402
-from rtd_isp_probe import I2C_M_RD  # noqa: E402
+from i2cbus import I2C_M_RD, I2C_RETRIES_DEFAULT, Msg  # noqa: E402
 
 SECTOR, PAGE = F.SECTOR, F.PAGE
 BASE = 0x13000
@@ -159,7 +159,7 @@ def test_retries_zero_during_burst_restored_after():
     r = BusRtd()
     r.write_mode = "burst"
     prog(r, BASE, page())
-    assert r.retries_set == [0, F.I2C_RETRIES_DEFAULT]
+    assert r.retries_set == [0, I2C_RETRIES_DEFAULT]
 
 
 def test_default_mode_is_byte_and_unchanged():
@@ -178,7 +178,7 @@ def test_midburst_nak_surfaces_not_resent_and_flushes_buffer():
     assert r.fifo_resends == 0                      # NAK on message 2 is NOT resent by the (modelled) i915
     assert r.burst_fails == 1
     assert r.m.pend is None                         # partial page flushed: FIFO pointer restarts at 0
-    assert r.retries_set[-1] == F.I2C_RETRIES_DEFAULT
+    assert r.retries_set[-1] == I2C_RETRIES_DEFAULT
 
 
 def test_single_message_burst_would_duplicate_prefix():
@@ -188,7 +188,7 @@ def test_single_message_burst_would_duplicate_prefix():
     buf = ctypes.create_string_buffer(bytes([0x70]) + page(), 257)
     r.m.regs[0x6F] = 0x80
     r.m.write(0x64, 0); r.m.write(0x6D, F.OP_PROG); r.m.write(0x65, 0x30)
-    r._xfer([F.Msg(F.ISP_ADDR, 0, 257, ctypes.addressof(buf))])
+    r._xfer([Msg(F.ISP_ADDR, 0, 257, ctypes.addressof(buf))])
     assert r.fifo_resends == 1
     assert len(r.m.pend[1]) == 40 + 256              # 40-byte prefix twice -> shifted page
 

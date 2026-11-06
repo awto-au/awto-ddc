@@ -15,11 +15,12 @@ Protocol/regs: docs/reversing/realtek-rtd/README.md.
 Logs: ./tmp/logs/rtd_i2c_bridge.log (decoded by rtd_proto.py), ./tmp/logs/rtd_i2c_bridge.raw.log (byte trace).
 Tools using Real get the same split with `B.setup_logs("<tool>", map=None)` (= rtd_proto.setup_logs).
 """
-import ctypes, fcntl, os, socket, struct, sys, time
+import socket, struct, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_proto  # noqa: E402
+import i2cbus  # noqa: E402
 from rtd_proto import setup_logs  # noqa: E402,F401  (re-export: B.setup_logs)
 
 PORT = 17420
@@ -128,17 +129,8 @@ class Emu:
 
 
 class Real:
-    I2C_RDWR, I2C_M_RD = 0x0707, 1
-
-    class Msg(ctypes.Structure):
-        _fields_ = [("addr", ctypes.c_uint16), ("flags", ctypes.c_uint16),
-                    ("len", ctypes.c_uint16), ("buf", ctypes.c_void_p)]
-
-    class RdWr(ctypes.Structure):
-        _fields_ = [("msgs", ctypes.c_void_p), ("nmsgs", ctypes.c_uint32)]
-
     def __init__(self, bus: int, allow_write: bool, regread: bool = False):
-        self.fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
+        self.bus = i2cbus.Bus(bus)
         self.allow_write = allow_write
         self.regread = regread
         self.f4 = None          # last scaler index written to ISP 0xF4
@@ -164,37 +156,21 @@ class Real:
             return (sub & 0x0F) == 0 and sub != 0xBA and len(data) >= 2 and data[1] == 0x9F
         return False
 
-    def _x(self, msgs):
-        arr = (self.Msg * len(msgs))(*msgs)
-        fcntl.ioctl(self.fd, self.I2C_RDWR, self.RdWr(ctypes.addressof(arr), len(msgs)))
-
     def read(self, dev8, sub, n):
-        w = ctypes.create_string_buffer(bytes([sub]), 1); r = ctypes.create_string_buffer(n)
         try:
-            self._x([self.Msg(dev8 >> 1, 0, 1, ctypes.addressof(w)),
-                     self.Msg(dev8 >> 1, self.I2C_M_RD, n, ctypes.addressof(r))])
-        except OSError as e:
-            self._tap(dev8, "r", sub, None, n, str(e)); return None
-        self._tap(dev8, "r", sub, r.raw, n)
-        return r.raw
+            return self.bus.read(dev8 >> 1, sub, n)         # Bus traces success and error
+        except OSError:
+            return None
 
     def write(self, dev8, sub, data):
         if not self.allow_write and not (self.regread and self.regread_ok(dev8, sub, data)):
-            self._tap(dev8, "w", sub, data, blocked=True); return False
-        w = ctypes.create_string_buffer(bytes([sub]) + data, 1 + len(data))
+            rtd_proto.trace(dev8 >> 1, "w", sub, data, 0, None, True)
+            return False
         try:
-            self._x([self.Msg(dev8 >> 1, 0, 1 + len(data), ctypes.addressof(w))])
-        except OSError as e:
-            self._tap(dev8, "w", sub, data, err=str(e)); return False
-        self._tap(dev8, "w", sub, data)
+            self.bus.write(dev8 >> 1, sub, data)
+        except OSError:
+            return False
         return True
-
-    @staticmethod
-    def _tap(dev8, kind, sub, data, n=0, err=None, blocked=False):
-        if rtd_proto.TAPS:
-            rtd_proto.trace(dev8 >> 1, kind, sub, data, n, err, blocked)
-        else:                                            # no setup_logs(): raw line only (old behaviour)
-            log(rtd_proto.raw_line(rtd_proto.Txn("", dev8 >> 1, kind, sub, data, n or len(data or b""), err, blocked)))
 
 
 def recvn(c: socket.socket, n: int) -> bytes:

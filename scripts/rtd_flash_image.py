@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_proto  # noqa: E402
 import rtd_flash_sector as F  # noqa: E402
 import flash_state as S  # noqa: E402
+import i2cbus  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
 
 FLASH = 1 << 20
@@ -127,26 +128,8 @@ def _verify(isp, addr, new, crc_ok):
         raise RuntimeError(f"0x{addr:06x}: hw CRC != crc8(new) but readback matches: CRC engine untrustworthy")
 
 
-NUDGE_ADDR = 0x08          # reserved I2C address: nothing answers, so the transfer NAKs
-NUDGE_COUNT = 20           # one NAK did not take on 2026-11-06; 20 did (#26)
 # normal sector (erase + 16 pages + verify) ~2.5 s on i915 GMBUS; bit-bang ~25 s. 3x normal = slow
 SLOW_SECTOR_S = 7.5
-
-
-def gmbus_nudge(bus: int) -> None:
-    """i915 falls back to bit-banging after a GMBUS timeout and returns to GMBUS only after a bit-banged
-    transfer fails: NAK a few transfers to an empty address (#26, 2026-11-06: 25 s -> 2.5 s per sector)."""
-    import fcntl, os
-    fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
-    try:
-        fcntl.ioctl(fd, 0x0703, NUDGE_ADDR)          # I2C_SLAVE
-        for _ in range(NUDGE_COUNT):
-            try:
-                os.read(fd, 1)
-            except OSError:
-                pass
-    finally:
-        os.close(fd)
 
 
 def crc_calibrate(isp) -> bool:
@@ -349,6 +332,7 @@ def main() -> int:
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
+    i2cbus.dev_hint("flash", "rtd_flash_image.py")
     t_main = time.monotonic()
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
@@ -376,7 +360,7 @@ def main() -> int:
         log(f"JEDEC {jid.hex()}")
         if jid != JEDEC_OK:
             log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
-        return flash(isp, img, o, nudge=lambda: gmbus_nudge(a.bus))
+        return flash(isp, img, o, nudge=lambda: i2cbus.gmbus_nudge(a.bus))
     except Exception as e:
         log(f"ERROR: {e}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
         return 7
@@ -386,7 +370,8 @@ def main() -> int:
         except OSError:
             pass
         log("scaler reset sent (0xEE <- 0x02)")
-        log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)"))
+        log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)")
+            + f", bus {i2cbus.rate_khz()} kHz")
 
 
 if __name__ == "__main__":

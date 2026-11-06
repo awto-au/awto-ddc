@@ -7,20 +7,13 @@ usage: hdmi_scdc.py <bus>
   0x40 status flags 0 (b0 clock detected, b1-3 ch0-2 locked) | 0x50-0x55 ch0-2 char error count (15 bit, b15 valid)
 Log: ./tmp/logs/hdmi_scdc.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, ctypes, fcntl, os, subprocess, time
+import argparse, os, subprocess, sys, time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i2cbus  # noqa: E402
+
 SCDC = 0x54
-I2C_RDWR, I2C_M_RD = 0x0707, 0x0001
-
-
-class Msg(ctypes.Structure):
-    _fields_ = [("addr", ctypes.c_uint16), ("flags", ctypes.c_uint16), ("len", ctypes.c_uint16),
-                ("buf", ctypes.POINTER(ctypes.c_uint8))]
-
-
-class RdWr(ctypes.Structure):
-    _fields_ = [("msgs", ctypes.POINTER(Msg)), ("nmsgs", ctypes.c_uint32)]
 
 
 def repo_root() -> Path:
@@ -33,11 +26,8 @@ def repo_root() -> Path:
         return Path(__file__).resolve().parent.parent
 
 
-def read(fd: int, off: int, n: int) -> bytes:
-    wbuf, rbuf = (ctypes.c_uint8 * 1)(off), (ctypes.c_uint8 * n)()
-    msgs = (Msg * 2)(Msg(SCDC, 0, 1, wbuf), Msg(SCDC, I2C_M_RD, n, rbuf))
-    fcntl.ioctl(fd, I2C_RDWR, RdWr(msgs, 2))
-    return bytes(rbuf)
+def read(bus: i2cbus.Bus, off: int, n: int) -> bytes:
+    return bus.read(SCDC, off, n)
 
 
 def main() -> int:
@@ -46,7 +36,8 @@ def main() -> int:
     a = ap.parse_args()
     logd = repo_root() / "tmp/logs"
     logd.mkdir(parents=True, exist_ok=True)
-    fd = os.open(f"/dev/i2c-{a.bus}", os.O_RDWR)
+    i2cbus.dev_hint("scdc", "hdmi_scdc.py")
+    fd = i2cbus.Bus(a.bus)
     try:
         ver, cfg, scr = read(fd, 0x01, 1)[0], read(fd, 0x20, 1)[0], read(fd, 0x21, 1)[0]
         st, err = read(fd, 0x40, 1)[0], read(fd, 0x50, 7)
@@ -59,7 +50,7 @@ def main() -> int:
                 f"  scrambler status {scr & 1}  flags 0x{st:02x} (clock {st & 1}, lock ch0-2 "
                 f"{(st >> 1) & 1}{(st >> 2) & 1}{(st >> 3) & 1})  errors {cnt}")
     finally:
-        os.close(fd)
+        fd.close()
     line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}"
     print(line)
     with open(logd / "hdmi_scdc.log", "a") as f:

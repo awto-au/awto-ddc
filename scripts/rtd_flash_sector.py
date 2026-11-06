@@ -45,12 +45,13 @@ Protocol: docs/reversing/realtek-rtd/README.md; SPI-engine common cmd after ghen
 Monitor MCU is stopped while in ISP; the final 0xEE=0x02 resets the scaler (as rtd_isp_probe --resume).
 Log: ./tmp/logs/rtd_flash_sector.log
 """
-import argparse, ctypes, fcntl, os, sys, time
+import argparse, os, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_proto  # noqa: E402
-from rtd_isp_probe import Isp, Msg, ISP_ADDR, I2C_M_RD, repo_root  # noqa: E402
+import i2cbus  # noqa: E402
+from rtd_isp_probe import Isp, ISP_ADDR, repo_root  # noqa: E402
 
 SECTOR = 4096
 PAGE = 256
@@ -102,13 +103,9 @@ def dlog(s):
     DETAIL.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
 
 
-I2C_RETRIES = 0x0701        # linux/i2c-dev.h: set adapter retry count (adapter-wide, not per fd)
-I2C_RETRIES_DEFAULT = 1     # i915 gmbus sets adapter.retries = 1 (intel_gmbus.c); restored after each page
-
-
 class Rtd(Isp):
     def set_retries(self, n):
-        fcntl.ioctl(self.fd, I2C_RETRIES, n)
+        self.bus.set_retries(n)
 
     def write_block(self, reg, data):
         # One data byte per message: the scaler NAKs mid-message when busy and i915 resends the whole message
@@ -321,22 +318,17 @@ class Rtd(Isp):
     _byte_sector = None            # sector base forced to byte mode after a burst failure
 
     def burst_write(self, reg, data):
-        """One I2C_RDWR: [select 0x6F][read 1 byte][reg + data...]. The select/read pair is an i915 GMBUS
+        """One transfer of 3 messages: [select 0x6F][read 1 byte][reg + data...]. The select/read pair is an i915 GMBUS
         index cycle that absorbs the "NAK on first message, retry" resend (intel_gmbus.c, do_gmbus_xfer: only i == 0
         is resent). A mid-data NAK then surfaces as ENXIO instead of resending the whole message and duplicating
         its accepted prefix in the 0x70 FIFO (#12). Returns the 0x6F byte read in front of the data."""
-        sel = ctypes.create_string_buffer(bytes([0x6F]), 1)
-        rd = ctypes.create_string_buffer(1)
-        w = ctypes.create_string_buffer(bytes([reg]) + bytes(data), 1 + len(data))
         try:
-            self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(sel)),
-                        Msg(ISP_ADDR, I2C_M_RD, 1, ctypes.addressof(rd)),
-                        Msg(ISP_ADDR, 0, 1 + len(data), ctypes.addressof(w))])
+            rd = i2cbus.run_ops(self._xfer, ISP_ADDR, [bytes([0x6F]), 1, bytes([reg]) + bytes(data)])[0]
         except OSError as e:
             rtd_proto.trace(ISP_ADDR, "w", reg, bytes(data), 0, str(e)); raise
-        rtd_proto.trace(ISP_ADDR, "r", 0x6F, rd.raw, 1)
+        rtd_proto.trace(ISP_ADDR, "r", 0x6F, rd, 1)
         rtd_proto.trace(ISP_ADDR, "w", reg, bytes(data))
-        return rd.raw[0]
+        return rd[0]
 
     def _stage_page(self, addr):
         self.write(0x64, (addr >> 16) & 0xFF); self.write(0x65, (addr >> 8) & 0xFF)
@@ -363,7 +355,7 @@ class Rtd(Isp):
         except OSError as e:
             raise RuntimeError(f"page 0x{addr:06x} buffer write failed at chunk +0x{i:02x}: {e}") from e
         finally:
-            self.set_retries(I2C_RETRIES_DEFAULT)
+            self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
         self._start_page(addr)
 
     def program_page_burst(self, addr, data):
@@ -382,13 +374,13 @@ class Rtd(Isp):
             self.burst_fails += 1
             self._byte_sector = addr & ~(SECTOR - 1)
             try:
-                self.set_retries(I2C_RETRIES_DEFAULT)
+                self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
                 self._start_page(addr)
             except Exception as e2:
                 log(f"page 0x{addr:06x}: flush after burst failure also failed: {e2}")
             raise RuntimeError(f"page 0x{addr:06x} burst failed at +0x{i:02x}: {e}") from e
         finally:
-            self.set_retries(I2C_RETRIES_DEFAULT)
+            self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
         self._start_page(addr)
 
 
@@ -630,6 +622,7 @@ def main():
 
     root = repo_root()
     (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
+    i2cbus.dev_hint("flash", "rtd_flash_sector.py")
     LOG = rtd_proto.setup_logs("rtd_flash_sector", raw=os.environ.get("AWTO_RAW_TRACE") == "1", merge_pages=True).main
 
     if a.read_id:

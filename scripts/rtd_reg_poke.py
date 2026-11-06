@@ -8,32 +8,14 @@ usage: rtd_reg_poke.py <bus> --serial AWT2611000N ADDR=VAL [ADDR=VAL ...] [--res
   --reset: ISP reset (0xEE) at the end = monitor reboots and the pokes are lost.
 Log: ./tmp/logs/rtd_reg_poke.log
 """
-import argparse, fcntl, os, sys
+import argparse, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i2cbus  # noqa: E402
 import rtd_isp_probe as P  # noqa: E402
 import rtd_proto  # noqa: E402
 from rtd_osd import Osd  # noqa: E402
-
-
-def edid_serial(bus: int) -> str | None:
-    fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
-    try:
-        fcntl.ioctl(fd, 0x0703, 0x50)
-        os.write(fd, b"\x00")
-        e = os.read(fd, 128)
-        rtd_proto.trace(0x50, "w", 0, b"")
-        rtd_proto.trace(0x50, "r", 0, e, 128)
-    except OSError as ex:
-        rtd_proto.trace(0x50, "r", 0, None, 128, str(ex))
-        return None
-    finally:
-        os.close(fd)
-    for i in range(54, 126, 18):
-        if e[i:i + 3] == b"\0\0\0" and e[i + 3] == 0xFF:
-            return e[i + 5:i + 18].split(b"\n")[0].decode("latin-1").strip()
-    return None
 
 
 def main() -> int:
@@ -47,9 +29,8 @@ def main() -> int:
     root = P.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     P.LOG = rtd_proto.setup_logs("rtd_reg_poke").main
-    s = edid_serial(a.bus)
-    if s != a.serial and not (s is None and a.identity):
-        sys.exit(f"bus {a.bus}: EDID serial {s!r} != {a.serial!r}; refusing (EDID silent: pass --identity)")
+    i2cbus.dev_hint("poke", "rtd_reg_poke.py")
+    s = i2cbus.require_unit(a.bus, a.serial, a.identity)
     if s is None:
         P.log(f"EDID silent; identity per caller: {a.identity}")
     o = Osd(a.bus)

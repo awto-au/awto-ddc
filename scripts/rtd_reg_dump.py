@@ -17,6 +17,7 @@ import argparse, json, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i2cbus
 import rtd_isp_probe as P
 import rtd_proto
 import regdb_query as Q
@@ -42,6 +43,8 @@ def main() -> int:
     ap.add_argument("--ports")
     ap.add_argument("--resume", help="JSON from an interrupted run; pages/ports already in it are skipped")
     a = ap.parse_args()
+    i2cbus.dev_hint("dump", "rtd_reg_dump.py")
+    i2cbus.require_unit(a.bus, a.serial)
     ports = [] if a.ports else a.port or ["2A:2B:0x40"]
     root = P.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
