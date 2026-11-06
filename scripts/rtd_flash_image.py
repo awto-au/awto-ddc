@@ -78,13 +78,29 @@ def write_sector(isp, addr, new, crc_ok=False):
                 raise
 
 
+def erase_sector(isp, addr):
+    for ops in ENGINE_OPS:
+        isp.write(*ops)
+    isp.write_enable()
+    isp.erase_sector(addr)
+    isp.wait_wip(f"erase 0x{addr:06x}", T_ERASE_LIMIT)
+
+
+def program_verify(isp, addr, new, crc_ok):
+    """Program an erased sector and verify it; RuntimeError on mismatch."""
+    with phase("program"):
+        isp.program_setup()
+        for off in range(0, SECTOR, PAGE):
+            pg = new[off:off + PAGE]
+            if pg != b"\xff" * PAGE:
+                isp.program_page(addr + off, pg)
+    _verify(isp, addr, new, crc_ok)
+
+
 def _write_sector(isp, addr, new, crc_ok):
+    """Retry path: erase + blank check + program + verify one sector."""
     with phase("erase"):
-        for ops in ENGINE_OPS:
-            isp.write(*ops)
-        isp.write_enable()
-        isp.erase_sector(addr)
-        isp.wait_wip(f"erase 0x{addr:06x}", T_ERASE_LIMIT)
+        erase_sector(isp, addr)
     # blank check: CRC when validated (~10 ms) else readback (~0.4 s); a missed erase also fails the verify below
     with phase("blank"):
         if crc_ok:
@@ -93,12 +109,10 @@ def _write_sector(isp, addr, new, crc_ok):
             not_blank = isp.read_flash(addr, SECTOR) != b"\xff" * SECTOR
     if not_blank:
         raise RuntimeError(f"sector 0x{addr:06x} not blank after erase")
-    with phase("program"):
-        isp.program_setup()
-        for off in range(0, SECTOR, PAGE):
-            pg = new[off:off + PAGE]
-            if pg != b"\xff" * PAGE:
-                isp.program_page(addr + off, pg)
+    program_verify(isp, addr, new, crc_ok)
+
+
+def _verify(isp, addr, new, crc_ok):
     with phase("verify"):
         if crc_ok and isp.flash_crc(addr, SECTOR) == S.crc8(new):
             return                                       # CRC8 miss chance 1/256 per corrupted sector (docs/flash-crc.md)
@@ -165,10 +179,20 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
     t0 = time.monotonic()
     try:
+        # Dan 2026-11-06: erase every changed sector up front, then program; no per-sector blank check
+        # (a bad erase fails the verify, and that sector is redone alone by write_sector)
+        with phase("erase"):
+            for i in diff:
+                erase_sector(isp, i * SECTOR)
+        log(f"erased {len(diff)} sectors ({time.monotonic() - t0:.1f}s)")
         for k, i in enumerate(diff):
             s = i * SECTOR
             ts = time.monotonic()
-            write_sector(isp, s, img[s:s + SECTOR], crc_ok)
+            try:
+                program_verify(isp, s, img[s:s + SECTOR], crc_ok)
+            except RuntimeError as e:
+                log(f"0x{s:06x}: {e}; redo sector alone (erase+program+verify)")
+                write_sector(isp, s, img[s:s + SECTOR], crc_ok)
             state.sectors[i] = hashes[i]
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
