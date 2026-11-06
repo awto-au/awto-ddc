@@ -226,6 +226,18 @@ class Rtd(Isp):
                 out += self.read_block(0x70, 64)
         return bytes(out[:n])
 
+    def flash_crc(self, addr, n):
+        """On-chip CRC8 over flash [addr, addr+n-1] (end inclusive), result reg 0x75. docs/flash-crc.md.
+        Limit: worst-case flash clock 1 MHz (reads at >=5 MHz expected) -> n*8 us x1.25 + 20 ms for the poll
+        granularity; on expiry TimeoutError names op/limit/elapsed (poll_reg)."""
+        end = addr + n - 1
+        for r, v in zip((0x64, 0x65, 0x66, 0x72, 0x73, 0x74),
+                        (addr >> 16, addr >> 8, addr, end >> 16, end >> 8, end)):
+            self.write(r, v & 0xFF)
+        self.write(0x6F, 0x84)                        # isp_en | crc_start; crc_done (bit1) drops, then rises
+        self.poll_reg(0x6F, 0x02, 0x02, f"crc 0x{addr:06x}+{n}", n * 8e-6 * 1.25 + 0.02)
+        return self.read(0x75)
+
     def cmd(self, op, limit=0.3):
         # Bare opcode, no address/data (ENSO/EXSO). Engine WRITE type, nw=0: 60<-type, 61<-op, 60<-type|1.
         self.common(T_WRITE_WREN, op, nr=0, nw=0, limit=limit)

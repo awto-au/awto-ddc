@@ -1,23 +1,35 @@
 #!/usr/bin/env python3
 """Write a multi-bank firmware image to a Realtek RTD scaler's SPI flash in ONE ISP session.
 
-usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--backup-dir DIR] [--reprotect V|none]
+usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no-backup] [--full] [--verify crc|readback]
+                          [--manifest PATH] [--tag TAG] [--backup-dir DIR] [--reprotect V|none]
   default = DRY RUN: enter ISP, JEDEC check, read the whole 1 MiB flash once (backup) and the image region again, require identical reads,
-            save the backup, list the 4 KiB sectors inside the image length that differ. Nothing written.
+            save the backup + flash-state manifest, list the 4 KiB sectors inside the image length that differ. Nothing written.
   --write : then erase + program + verify each differing sector (rtd_flash_sector.py routines), stop at the
             first verify failure (flash left unprotected, no reprotect of a bad image), else re-protect.
-  --serial: label for the backup file; must match `ddcutil detect` for this bus (checked by the caller).
+  --no-backup (own builds, no dump): INCREMENTAL by the per-unit manifest tmp/fw/<serial>-flash-state.json (scripts/flash_state.py):
+            only sectors whose SHA-256 differs from the manifest are written; a drift guard (readback sample + CRC sweep
+            of the skipped sectors) runs first and a mismatch falls back to a full readback diff.
+            No manifest = write every image sector (then the manifest is created).
+  --full  : ignore the manifest, write every image sector.
+  --verify: crc (default) = on-chip CRC8 per sector, auto-falls back to readback if the engine fails its
+            in-session calibration (docs/flash-crc.md); readback = compare all 4 KiB back (old behaviour).
+  --serial: label for the backup/manifest; must match `ddcutil detect` for this bus (checked by the caller).
   Revert: rerun with the backup (1 MiB) as <image.bin>: only sectors that differ are rewritten.
   Image sectors beyond its length are never touched (banks 14-15 = settings/gamma data, #8).
 Single session = the MCU stays halted throughout, so a half-written image never runs.
 Backups: ~/vendors/realtek/analysis/dumps/ (flash contents = vendor binary store, repo CLAUDE.md).
 Log: ./tmp/logs/rtd_flash_image.log
 """
-import argparse, sys, time
+from __future__ import annotations
+
+import argparse, random, sys, time
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_flash_sector as F  # noqa: E402
+import flash_state as S  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
 
 FLASH = 1 << 20
@@ -29,13 +41,14 @@ def log(s):
 
 
 SECTOR_TRIES = 5            # failures cluster (i915 stays bit-bang after a GMBUS timeout); 3 aborted once (#12)
+BLANK_CRC = S.crc8(b"\xff" * SECTOR)
 
 
-def write_sector(isp, addr, new):
+def write_sector(isp, addr, new, crc_ok=False):
     """erase+program+verify; on mismatch re-read once (read-path glitch), else redo, up to SECTOR_TRIES."""
     for n in range(1, SECTOR_TRIES + 1):
         try:
-            return _write_sector(isp, addr, new)
+            return _write_sector(isp, addr, new, crc_ok)
         except RuntimeError as e:
             if isp.read_flash(addr, SECTOR) == new:
                 log(f"0x{addr:06x}: {e}; re-read matches (read glitch), accepted"); return
@@ -44,25 +57,34 @@ def write_sector(isp, addr, new):
                 raise
 
 
-def _write_sector(isp, addr, new):
+def _write_sector(isp, addr, new, crc_ok):
     for ops in ENGINE_OPS:
         isp.write(*ops)
     isp.write_enable()
     isp.erase_sector(addr)
     isp.wait_wip(f"erase 0x{addr:06x}", T_ERASE_LIMIT)
-    if isp.read_flash(addr, SECTOR) != b"\xff" * SECTOR:
+    # blank check: CRC when validated (~10 ms) else readback (~0.4 s); a missed erase also fails the verify below
+    if crc_ok:
+        not_blank = isp.flash_crc(addr, SECTOR) != BLANK_CRC
+    else:
+        not_blank = isp.read_flash(addr, SECTOR) != b"\xff" * SECTOR
+    if not_blank:
         raise RuntimeError(f"sector 0x{addr:06x} not blank after erase")
     isp.program_setup()
     for off in range(0, SECTOR, PAGE):
         pg = new[off:off + PAGE]
         if pg != b"\xff" * PAGE:
             isp.program_page(addr + off, pg)
-    back = isp.read_flash(addr, SECTOR)
+    if crc_ok and isp.flash_crc(addr, SECTOR) == S.crc8(new):
+        return                                           # CRC8 miss chance 1/256 per corrupted sector (docs/flash-crc.md)
+    back = isp.read_flash(addr, SECTOR)                  # CRC mismatch (or crc off): readback names the bad bytes
     if back != new:
         bad = [i for i in range(SECTOR) if back[i] != new[i]]
         detail = " ".join(f"+{i:03x}:{new[i]:02x}->{back[i]:02x}(x{new[i] ^ back[i]:02x})" for i in bad[:12])
         log(f"0x{addr:06x}: {len(bad)} bad byte(s), off%4={sorted({i % 4 for i in bad})}: {detail}")
         raise RuntimeError(f"VERIFY FAILED at 0x{addr + bad[0]:06x}")
+    if crc_ok:
+        raise RuntimeError(f"0x{addr:06x}: hw CRC != crc8(new) but readback matches: CRC engine untrustworthy")
 
 
 NUDGE_ADDR = 0x08          # reserved I2C address: nothing answers, so the transfer NAKs
@@ -87,26 +109,135 @@ def gmbus_nudge(bus: int) -> None:
         os.close(fd)
 
 
-def program(isp, a, img, diff, bk, reprot) -> int:
+def crc_calibrate(isp) -> bool:
+    """Is the on-chip CRC the CRC8 we reproduce? Compare against crc8 of a readback of sector 0 (real code,
+    non-trivial) and of its first 1 KiB (a second range, catches a stale crc_done/result). False -> readback verify."""
+    try:
+        for n in (SECTOR, 1024):
+            data = isp.read_flash(0, n)
+            hw, py = isp.flash_crc(0, n), S.crc8(data)
+            if hw != py:
+                log(f"CRC calibration FAILED 0x0+{n}: hw 0x{hw:02x} != py 0x{py:02x} "
+                    f"(py excl-end 0x{S.crc8(data[:-1]):02x}, py skip-first 0x{S.crc8(data[1:]):02x}); verifying by readback")
+                return False
+    except Exception as e:
+        log(f"CRC calibration error ({e}); verifying by readback")
+        return False
+    log("CRC calibration OK: hw CRC == crc8(readback) over 0x0+4096 and 0x0+1024")
+    return True
+
+
+def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's vendor backup", tag="", commit="") -> int:
+    """Write+verify the sectors in `diff`; the manifest follows: a sector is unknown (null) from its erase until
+    its verify passes, so a kill or failure never leaves a stale hash."""
     sr0 = isp.status()
     log(f"status reg = 0x{sr0:02x}")
     if sr0 & SR_PROT:
         isp.release_wp(); isp.unprotect(sr0)
-    gmbus_nudge(a.bus)
+    nudge()
+    for i in diff:
+        state.sectors[i] = None
+    state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
     t0 = time.monotonic()
-    for i, s in enumerate(diff):
-        ts = time.monotonic()
-        write_sector(isp, s, img[s:s + SECTOR])
-        dt = time.monotonic() - ts
-        if dt > SLOW_SECTOR_S:
-            log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
-            gmbus_nudge(a.bus)
-        if i % 16 == 15 or i == len(diff) - 1:
-            log(f"written+verified {i + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
-    log(f"VERIFY OK: all {len(diff)} sectors; revert = rerun with {bk}")
+    try:
+        for k, i in enumerate(diff):
+            s = i * SECTOR
+            ts = time.monotonic()
+            write_sector(isp, s, img[s:s + SECTOR], crc_ok)
+            state.sectors[i] = hashes[i]
+            dt = time.monotonic() - ts
+            if dt > SLOW_SECTOR_S:
+                log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
+                nudge()
+            if k % S.SAVE_EVERY == S.SAVE_EVERY - 1 or k == len(diff) - 1:
+                state.save()
+                log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
+        if crc_ok:                                      # end-to-end over the image region, written or skipped
+            hw, py = isp.flash_crc(0, len(img)), S.crc8(img)
+            if hw != py:
+                for i in range(len(img) // SECTOR):
+                    state.sectors[i] = None             # unlocalised: next run reads back
+                raise RuntimeError(f"whole-image CRC mismatch hw 0x{hw:02x} != 0x{py:02x}")
+            log(f"whole-image CRC OK 0x{hw:02x} over {len(img)} B")
+    except BaseException:
+        state.save(source="write-failed")
+        raise
+    state.save(image=tag, image_size=len(img), source="write", commit=commit)
+    log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
     if reprot is not None:
         isp.reprotect(reprot)
     return 0
+
+
+@dataclass
+class Opts:
+    serial: str
+    write: bool = False
+    no_backup: bool = False
+    full: bool = False
+    verify: str = "crc"
+    reprot: int | None = 0x9C
+    backup_dir: Path = DUMPS
+    manifest: Path | None = None
+    tag: str = ""
+    commit: str = ""
+    seed: int | None = None
+
+
+def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
+    """Everything after the JEDEC check. Returns rc."""
+    t_all = time.monotonic()
+    hashes = S.sector_hashes(img)
+    nimg = len(hashes)
+    rng = random.Random(o.seed)
+    state = None if o.full else S.FlashState.load(o.manifest, o.serial, log)
+    have_manifest = state is not None
+    if state is None:
+        state = S.FlashState.empty(o.manifest, o.serial)
+        if not o.full:
+            log(f"no usable flash-state manifest {o.manifest}: full path")
+    else:
+        log(f"flash-state manifest: {o.manifest} ({state.image or '?'}, {state.source}, {state.time}, {state.commit})")
+    crc_ok = o.write and o.verify == "crc" and crc_calibrate(isp)
+    if o.no_backup and o.write:
+        # Dan 2026-11-05: re-dumping our own builds is wasted time; the vendor backup per unit is kept once
+        bk = "the unit's vendor backup in ~/vendors/realtek/analysis/dumps"
+        p = S.plan(hashes, state if have_manifest else None, o.full)
+        diff, skipped = list(p.write), len(p.unchanged)
+        if p.unknown:
+            diff = sorted(set(diff) | set(S.resolve_unknown(isp, img, state, p.unknown, log)))
+        if p.unchanged:
+            bad = S.drift_check(isp, img, state, p.unchanged, rng, crc_ok, log)
+            if bad:
+                log(f"!!! DRIFT: manifest does not match the flash ({len(bad)} sector(s) {bad[:8]}); "
+                    f"manifest untrusted -> full readback diff of the image region (authoritative, ~1/5 of a full write)")
+                diff = S.readback_diff(isp, img, state, log)
+                skipped = nimg - len(diff)
+        mode = "full" if (o.full or not have_manifest) else "incremental"
+        log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
+        rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit)
+        log(f"flash done: {len(diff)} written, {nimg - len(diff)} skipped, {time.monotonic() - t_all:.0f}s total")
+        return rc
+    t0 = time.monotonic()
+    d1 = isp.read_flash(0, FLASH)
+    log(f"dump 1 read in {time.monotonic() - t0:.1f}s")
+    d2 = isp.read_flash(0, len(img))                  # 2nd read only where we write; the rest is never touched (Dan 2026-11-05)
+    if d1[:len(img)] != d2:
+        nd = sum(x != y for x, y in zip(d1, d2))
+        log(f"refuse: two reads differ in {nd} bytes of the image region (unstable read path)"); return 5
+    o.backup_dir.mkdir(parents=True, exist_ok=True)
+    bk = o.backup_dir / f"jxc-4k-flash-{o.serial}-{time.strftime('%Y%m%d-%H%M%S')}.bin"
+    bk.write_bytes(d1)
+    log(f"two reads identical over the image region ({len(img)} B); backup {bk}")
+    for i in range(S.FLASH_SECTORS):                  # a full read is the best manifest source there is
+        state.sectors[i] = S.sha(d1[i * SECTOR:(i + 1) * SECTOR])
+    state.save(image=f"flash-readback {bk.name}", image_size=FLASH, source="readback", commit=o.commit)
+    diff = list(range(nimg)) if o.full else [i for i in range(nimg) if d1[i * SECTOR:(i + 1) * SECTOR] != img[i * SECTOR:(i + 1) * SECTOR]]
+    log(f"{len(diff)}/{nimg} sectors differ: "
+        + ", ".join(f"0x{i * SECTOR:05x}" for i in diff[:12]) + (" ..." if len(diff) > 12 else ""))
+    if not o.write:
+        log("DRY-RUN complete: nothing erased or programmed"); return 0
+    return program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit)
 
 
 def main() -> int:
@@ -118,7 +249,11 @@ def main() -> int:
     ap.add_argument("--backup-dir", type=Path, default=DUMPS)
     ap.add_argument("--reprotect", default="0x9C")
     ap.add_argument("--no-backup", action="store_true",
-                    help="skip the dump reads; write+verify every image sector (unit already runs our own build)")
+                    help="skip the dump reads (unit already runs our own build); incremental by the flash-state manifest")
+    ap.add_argument("--full", action="store_true", help="ignore the manifest: write every image sector")
+    ap.add_argument("--verify", choices=("crc", "readback"), default="crc")
+    ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
+    ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
@@ -127,7 +262,11 @@ def main() -> int:
     img = a.image.read_bytes()
     if len(img) % SECTOR or len(img) > FLASH:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2
-    log(f"mode={'WRITE' if a.write else 'DRY-RUN'} bus=/dev/i2c-{a.bus} image={a.image} ({len(img)} B) serial={a.serial}")
+    log(f"mode={'WRITE' if a.write else 'DRY-RUN'} bus=/dev/i2c-{a.bus} image={a.image} ({len(img)} B) serial={a.serial} "
+        f"no_backup={a.no_backup} full={a.full} verify={a.verify}")
+    o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot,
+             backup_dir=a.backup_dir, manifest=a.manifest or root / "tmp/fw" / f"{a.serial}-flash-state.json",
+             tag=a.tag or a.image.stem, commit=S.git_commit(root))
     isp = Rtd(a.bus)
     isp.write(0x6F, 0x80)
     if not isp.read(0x6F) & 0x80:
@@ -137,28 +276,7 @@ def main() -> int:
         log(f"JEDEC {jid.hex()}")
         if jid != JEDEC_OK:
             log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
-        if a.no_backup and a.write:
-            # Dan 2026-11-05: re-dumping our own builds is wasted time; the vendor backup per unit is kept once
-            diff, bk = list(range(0, len(img), SECTOR)), "the unit's vendor backup in ~/vendors/realtek/analysis/dumps"
-            log(f"--no-backup: writing all {len(diff)} image sectors, no dump")
-            return program(isp, a, img, diff, bk, reprot)
-        t0 = time.monotonic()
-        d1 = isp.read_flash(0, FLASH)
-        log(f"dump 1 read in {time.monotonic() - t0:.1f}s")
-        d2 = isp.read_flash(0, len(img))                  # 2nd read only where we write; the rest is never touched (Dan 2026-11-05)
-        if d1[:len(img)] != d2:
-            nd = sum(x != y for x, y in zip(d1, d2))
-            log(f"refuse: two reads differ in {nd} bytes of the image region (unstable read path)"); return 5
-        a.backup_dir.mkdir(parents=True, exist_ok=True)
-        bk = a.backup_dir / f"jxc-4k-flash-{a.serial}-{time.strftime('%Y%m%d-%H%M%S')}.bin"
-        bk.write_bytes(d1)
-        log(f"two reads identical over the image region ({len(img)} B); backup {bk}")
-        diff = [s for s in range(0, len(img), SECTOR) if d1[s:s + SECTOR] != img[s:s + SECTOR]]
-        log(f"{len(diff)}/{len(img) // SECTOR} sectors differ: "
-            + ", ".join(f"0x{s:05x}" for s in diff[:12]) + (" ..." if len(diff) > 12 else ""))
-        if not a.write:
-            log("DRY-RUN complete: nothing erased or programmed"); return 0
-        return program(isp, a, img, diff, bk, reprot)
+        return flash(isp, img, o, nudge=lambda: gmbus_nudge(a.bus))
     except Exception as e:
         log(f"ERROR: {e}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
         return 7
