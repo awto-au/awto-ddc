@@ -100,5 +100,68 @@
   ],
   "obfuscation": "encrypted payload",
   "notes": "unpack_fw handles xar+cpio via 7z"
+ },
+ {
+  "id": "lg-osc-zipcrypto-images",
+  "vendor": "lg",
+  "container": "zip (ZipCrypto, per-model password string embedded in OSC macOS binary) -> images/{Scaler,PD,NXP,Hub}/*.bin + images.txt",
+  "image": "images/Scaler/<MODEL>_<RTD25xx|RTD27xx|MSTAR_MST9800>_V<ver>_<crc>_rev<N>_<date>.bin (raw SPI image; chip named in filename)",
+  "package_files_all": [
+   "images.txt"
+  ],
+  "obfuscation": "ZipCrypto only; scaler payload plain (RTD2595LT/2583UT/2785T images match RL6449 libs)",
+  "notes": "Fetch: lmu.lge.com/ExternalService/onscreencontrol/fw/<MODEL>/FWLatestVersion.txt -> same dir zip. Extract: scripts/fw_lg_unzip.py. NotAllowedPage = no fw for model."
+ },
+ {
+  "id": "asus-onekey-sop",
+  "vendor": "asus",
+  "container": "zip -> {OneKeyUpdate/*.exe (7z SFX) -> Scaler/ISPTool/*.bin, Hub/RTS54xx*.bin, PD/RTS5450M*.bin, MCU/} | USBFlashDriveUpdate/<MODEL>.bin | legacy V0xx: *.bin + SOP pdf",
+  "image": "Scaler/ISPTool/ASUS_<MODEL>_MCMnnn.bin; legacy ASUS_<MODEL>_Vnnn.bin (Novatek FALCON)",
+  "package_files_all": [
+   "ASUSFirmwareOneKeyUpdate.exe"
+  ],
+  "notes": "Source: rog.asus.com/support/webapi/ProductV2/GetPDBIOS?model=<slug>&m1id=<productGroupID from page JSON-LD> (only m1id needed); file host dlcdnets.asus.com/pub/ASUS/LCD Monitors/. Scalers seen: RTD2738/2739 (non-8051), Novatek, MStar; no RL6449."
+ },
+ {
+  "id": "samsung-fm-zip",
+  "vendor": "samsung",
+  "container": "zip -> single M-<code>-<ver>[<crc>].{bin,Bin,img} (MStar/Novatek) | Update_File.zip -> 2 bins | T-PTM*.zip = Tizen smart-monitor OS image (GB-sized, not scaler)",
+  "image": "the .bin/.img",
+  "package_files_all": [],
+  "notes": "Source: samsung.com/us/api/support/product/detail/<MODELCODE>.json (CDCttType=FM entries) -> org.downloadcenter.samsung.com/downloadfile/ContentsFile.aspx?CttFileID=..&CDCttType=FM. Unknown model code = 403."
+ },
+ {
+  "id": "benq-display-quickit",
+  "vendor": "benq",
+  "container": "zip -> BenQDisplayQuickit/{BenQDisplayQuickit.exe (.NET), Lib/BenQHubInfo*.sys (VLI/Realtek hub drivers), RhHubAPI.dll} | macOS dmg",
+  "image": "none bundled: scaler firmware downloaded per device (qotaapi.benq.com /api/v2/model/latestVersion, /api/external/v2/checkVerInfo; needs MAC+serial)",
+  "package_files_all": [
+   "BenQDisplayQuickit.exe"
+  ],
+  "notes": "Source: benq.com/api/esupport-tm/getFiles/<lang>/<model>/<langs> (type=Firmware)"
+ },
+ {
+  "id": "msi-firmware-update-utility",
+  "vendor": "msi",
+  "container": "zip -> MSI Firmware Update Utility (monitor firmware tool, no images)",
+  "image": "none bundled",
+  "package_files_all": [],
+  "notes": "Source: msi.com/api/v1/product/support/panel?product=<slug>&type=firmware&os=Win11 64; only 1 of 183 monitor slugs lists firmware (MAG-274QRF-QD-E2)."
+ },
+ {
+  "id": "viewsonic-display-portal",
+  "vendor": "viewsonic",
+  "container": "Display_Portal_win.zip (setup.exe) / Display_Portal_macOS.zip (pkg, Qt app)",
+  "image": "none bundled",
+  "package_files_all": [],
+  "notes": "App catalog + firmware update tool; backend displayportalcms.pmsdsolutions.com/api, monitorcontrolportal.pmsdsolutions.com"
+ },
+ {
+  "id": "aoc-g-menu",
+  "vendor": "aoc",
+  "container": "G-Menu Setup exe (host app, DDC/CI settings; no firmware)",
+  "image": "none",
+  "package_files_all": [],
+  "notes": "aoc.com/us product page #driversAndManuals -> /api/asset/<piId>?ext=..; no firmware category on U32G4ZMN."
  }
 ]

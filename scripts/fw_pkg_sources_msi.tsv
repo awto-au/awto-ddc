@@ -1,0 +1,2 @@
+vendor	package	url	notes
+msi	msi_firmware_update_utility_v1_2_0_1	https://download.msi.com/archive/frm_exe/monitor/MSI-Firmware-Update-Utility-V1.2.0.1.zip	msi.com /api/v1/product/support/panel type=firmware (MAG-274QRF-QD-E2)
