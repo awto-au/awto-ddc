@@ -563,8 +563,14 @@ def cmd_osd(extra: list[str]) -> int:
 
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
          "input timing vs host, backlight/panel pins, OSD round-trips; PASS/FAIL + exit code",
-         args="[--unit N] [--map F] [--host-mode WxH@HZ]", kind="action")
+         args="[--unit N] [--map F] [--host-mode WxH@HZ] | --sim BIN", kind="action")
 def cmd_health(extra: list[str]) -> int:
+    sim = _opt(extra, "--sim")
+    if sim:                                                  # firmware simulator, no hardware (#38); map = BIN with .map
+        if sim is True or not Path(str(sim)).is_file() or not Path(str(sim)).with_suffix(".map").is_file():
+            raise SystemExit("health --sim BIN: needs an image path with BIN's .map beside it; nothing done")
+        _done(extra, "health --sim")
+        return _py("unit_health.py", "--sim", Path(str(sim)).resolve(), Path(str(sim)).resolve().with_suffix(".map"))
     n, u = _unit(extra)
     given, hm = _opt(extra, "--map"), _opt(extra, "--host-mode")
     if given is True or hm is True:
