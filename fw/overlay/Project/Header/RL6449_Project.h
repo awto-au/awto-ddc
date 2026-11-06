@@ -165,7 +165,12 @@ extern void AwtoDiagSelfTest(void);
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-#define _FRC_SUPPORT                                            _OFF    // awto: cut (#8); ON build wedged unit 3 incl. DDC hw slaves (#26)
+// FRC: off by default (#8); K2S_SDCC_EXTRA=-D_AWTO_FRC turns it on (4K60 work, #26)
+#ifdef _AWTO_FRC
+#define _FRC_SUPPORT                                            _ON
+#else
+#define _FRC_SUPPORT                                            _OFF
+#endif
 
 //-------------------------------------------------
 // Display Rotation Option
