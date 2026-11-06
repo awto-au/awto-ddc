@@ -304,16 +304,37 @@ def _opt(extra: list[str], flag: str, default=None):
     return True
 
 
+def _flag(extra: list[str], flag: str) -> bool:
+    """Boolean --flag (removed); never consumes the next argument (--full once swallowed the image path)."""
+    if flag in extra:
+        extra.remove(flag)
+        return True
+    return False
+
+
+def _image_arg(extra: list[str]) -> list[str]:
+    """What is left after options: at most one existing .bin; anything else (--help, typos) is refused."""
+    bad = [x for x in extra if x.startswith("-")] + extra[1:]
+    if bad:
+        raise SystemExit(f"unknown/extra argument(s) {bad}; nothing done")
+    if extra:
+        p = Path(extra[0]) if Path(extra[0]).is_absolute() else (Path.cwd() / extra[0])
+        if p.suffix != ".bin" or not p.is_file():
+            raise SystemExit(f"image {extra[0]!r} is not an existing .bin; nothing done")
+        return [str(p.resolve())]
+    return []
+
+
 def _unit(extra: list[str]) -> tuple[str, dict]:
     n = str(_opt(extra, "--unit", "3"))
     u = _units().get(n)
     if u is None:
         raise SystemExit(f"unknown unit {n!r}: see scripts/devices.json")
-    if _opt(extra, "--dp"):
+    if _flag(extra, "--dp"):
         if not u.get("connector_dp"):
             raise SystemExit(f"unit {n} has no DP link in scripts/devices.json")
         u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
-    if not u.get("test") and not _opt(extra, "--force"):
+    if not u.get("test") and not _flag(extra, "--force"):
         raise SystemExit(f"unit {n} is a working screen (devices.json test=false): add --force to touch it")
     return n, u
 
@@ -372,7 +393,7 @@ def _flashed(u: dict) -> dict:
          args="[--unit N] [--frc]", kind="action")
 def cmd_build(extra: list[str]) -> int:
     n, u = _unit(extra)
-    frc = bool(_opt(extra, "--frc"))
+    frc = _flag(extra, "--frc")
     defs = ["-D_AWTO_FRC"] if frc else []
     if BOOT_PORTS.get(u["input"]):
         defs.append(f"-D_AWTO_BOOT_PORT={BOOT_PORTS[u['input']]}")
@@ -395,10 +416,11 @@ def cmd_build(extra: list[str]) -> int:
          args="[--unit N] [--full] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     n, u = _unit(extra)
-    full = bool(_opt(extra, "--full"))
+    full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     bus = _opt(extra, "--bus")              # recover: bus proven by its own relay cycle (EDID silent while held)
+    extra = _image_arg(extra)
     if extra:
         img = Path(extra[0])
         tag = img.name.removesuffix(".bin")
@@ -457,7 +479,7 @@ def cmd_probe(extra: list[str]) -> int:
 def cmd_recover(extra: list[str]) -> int:
     n, u = _unit(extra)
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
-    img = extra or [_flashed(u).get("image", "")]
+    img = _image_arg(extra) or [_flashed(u).get("image", "")]   # validated before the relay is touched
     rc = cmd_power_cycle(["--unit", n])
     if rc:
         return rc
