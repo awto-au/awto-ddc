@@ -435,6 +435,9 @@ def cmd_flash(extra: list[str]) -> int:
         identity = "dev.py recover: bus resolved right after this unit's own relay cycle"
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
+    # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
+    # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
+    (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": "", "image": str(img), "attempted": tag}))
     with i2cbus.fast_bus(bus) as khz:       # 1 MHz only around the ISP write (0x35 NAKs at 1 MHz); unloaded in finally
         log(f"flash: bus {bus} at {khz} kHz")
         rc = _py("rtd_flash_image.py", bus, img, "--serial", u["serial"], "--write", "--no-backup",

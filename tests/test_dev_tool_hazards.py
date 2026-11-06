@@ -235,3 +235,52 @@ def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
     monkeypatch.setattr(dev.i2cbus, "fast_bus", FB)
     assert dev.cmd_flash(["--unit", "3", "--bus", "11", str(img)]) == 0
     assert "--identity" in seen[0]
+
+
+# --- #52.12 flashed.json invalidated before the write ---------------------------
+
+class _FB:
+    def __init__(s, bus): pass
+    def __enter__(s): return 1000
+    def __exit__(s, *a): return False
+
+
+def _flash_setup(dev, tmp_path, monkeypatch):
+    img = _img(tmp_path, "AWT26110003-new-be.bin", b"AWT26110003")
+    dev.FW.mkdir(parents=True)
+    fj = dev.FW / "AWT26110003-flashed.json"
+    fj.write_text('{"tag": "AWT26110003-old-be", "image": "old.bin"}')
+    monkeypatch.setattr(dev, "_bus", lambda u: 11)
+    monkeypatch.setattr(dev.i2cbus, "fast_bus", _FB)
+    return img, fj
+
+
+def test_failed_flash_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
+    import json
+    img, fj = _flash_setup(dev, tmp_path, monkeypatch)
+    monkeypatch.setattr(dev, "_py", lambda *a, env=None: 7)
+    assert dev.cmd_flash(["--unit", "3", str(img)]) == 7
+    d = json.loads(fj.read_text())
+    assert d["tag"] == "" and d["image"] == str(img)
+    with pytest.raises(SystemExit):                 # dbg/osd/health map lookup refuses
+        dev._fwmap(dev._units()["3"], None)
+
+
+def test_flash_exception_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
+    import json
+    img, fj = _flash_setup(dev, tmp_path, monkeypatch)
+
+    def boom(*a, env=None):
+        raise KeyboardInterrupt
+    monkeypatch.setattr(dev, "_py", boom)
+    with pytest.raises(KeyboardInterrupt):
+        dev.cmd_flash(["--unit", "3", str(img)])
+    assert json.loads(fj.read_text())["tag"] == ""
+
+
+def test_successful_flash_records_new_tag(dev, tmp_path, monkeypatch):
+    import json
+    img, fj = _flash_setup(dev, tmp_path, monkeypatch)
+    monkeypatch.setattr(dev, "_py", lambda *a, env=None: 0)
+    assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
+    assert json.loads(fj.read_text()) == {"tag": "AWT26110003-new-be", "image": str(img)}
