@@ -346,9 +346,7 @@
 #define _REGULATOR_5V_ON                        0
 #define _REGULATOR_5V_OFF                       1
 
-#define PCB_REGULATOR_5V_OUT(x)                 {\
-                                                    bREGULATOR_5V = (x);\
-                                                }
+#define PCB_REGULATOR_5V_OUT(x)                 {}      // awto: P8.2 role unproven, not driven (#53.4)
 
 
 /////////////////////////
@@ -533,6 +531,7 @@
 // Macro of LED On/Off
 //--------------------------------------------------
 #define bLED1                                   (MCU_FE24_PORT84_PIN_REG) // Pin_184, P8.4
+// awto: LED2..5 (P9.0, P9.5, P6.3, P7.0) are unproven: their macros are no-ops, only LED1 (P8.4) is driven (#53.4)
 #define bLED2                                   (MCU_FE28_PORT90_PIN_REG) // Pin_194, P9.0
 #define bLED3                                   (MCU_FE2D_PORT95_PIN_REG) // Pin_199, P9.5
 #define bLED4                                   (MCU_FE13_PORT63_PIN_REG) // Pin_152, P6.3
@@ -543,50 +542,26 @@
 
 #define PCB_LED_AC_ON_INITIAL()                 {\
                                                     bLED1 = _LED_OFF;\
-                                                    bLED2 = _LED_OFF;\
-                                                    bLED3 = _LED_OFF;\
-                                                    bLED4 = _LED_OFF;\
-                                                    bLED5 = _LED_OFF;\
                                                 }
 
 #define PCB_LED_ACTIVE()                        {\
                                                     bLED1 = _LED_ON;\
-                                                    bLED2 = _LED_OFF;\
-                                                    bLED3 = _LED_OFF;\
-                                                    bLED4 = _LED_OFF;\
-                                                    bLED5 = _LED_OFF;\
                                                 }
 
 #define PCB_LED_IDLE()                          {\
                                                     bLED1 = _LED_OFF;\
-                                                    bLED2 = _LED_ON;\
-                                                    bLED3 = _LED_OFF;\
-                                                    bLED4 = _LED_OFF;\
-                                                    bLED5 = _LED_OFF;\
                                                 }
 
 #define PCB_LED_POWER_SAVING()                  {\
                                                     bLED1 = _LED_OFF;\
-                                                    bLED2 = _LED_ON;\
-                                                    bLED3 = _LED_OFF;\
-                                                    bLED4 = _LED_OFF;\
-                                                    bLED5 = _LED_OFF;\
                                                 }
 
 #define PCB_LED_ON()                            {\
                                                     bLED1 = _LED_ON;\
-                                                    bLED2 = _LED_ON;\
-                                                    bLED3 = _LED_ON;\
-                                                    bLED4 = _LED_ON;\
-                                                    bLED5 = _LED_ON;\
                                                 }
 
 #define PCB_LED_OFF()                           {\
                                                     bLED1 = _LED_OFF;\
-                                                    bLED2 = _LED_OFF;\
-                                                    bLED3 = _LED_OFF;\
-                                                    bLED4 = _LED_OFF;\
-                                                    bLED5 = _LED_OFF;\
                                                 }
 
 #define PCB_LED_TYPE1()                         {\
@@ -594,19 +569,15 @@
                                                 }
 
 #define PCB_LED_TYPE2()                         {\
-                                                    bLED2 = _LED_ON;\
                                                 }
 
 #define PCB_LED_TYPE3()                         {\
-                                                    bLED3 = _LED_ON;\
                                                 }
 
 #define PCB_LED_TYPE4()                         {\
-                                                    bLED4 = _LED_ON;\
                                                 }
 
 #define PCB_LED_TYPE5()                         {\
-                                                    bLED5 = _LED_ON;\
                                                 }
 
 #define PCB_LED_TYPE_FLASH()                    {\
