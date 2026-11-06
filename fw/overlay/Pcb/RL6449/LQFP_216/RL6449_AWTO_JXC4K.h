@@ -132,8 +132,9 @@
 //--------------------------------------------------
 // eDPTx 1.2 HBR2 Main Link Config
 //--------------------------------------------------
-#define _PANEL_DPTX_1_2_SWING_LEVEL             _DP_SWING_800_MV
-#define _PANEL_DPTX_1_2_PREEMPHASIS_LEVEL       _DP_PREEMPHASIS_3_5_DB
+// Vendor PHY regs P38_AE-BF = SDK HBR2 table row swing 3 (deemp 00, DAT f, POST0 d, POST1 2), any pre-emphasis (#7)
+#define _PANEL_DPTX_1_2_SWING_LEVEL             _DP_SWING_1200_MV
+#define _PANEL_DPTX_1_2_PREEMPHASIS_LEVEL       _DP_PREEMPHASIS_0_DB
 
 //--------------------------------------------------
 // eDPTx 1.2 HBR2 SSC Config
@@ -188,7 +189,7 @@
 #define _PWM1_RST_EN                            _OFF
 #define _PWM2_RST_EN                            _OFF
 #define _PWM3_RST_EN                            _OFF
-#define _PWM4_RST_EN                            _ON
+#define _PWM4_RST_EN                            _OFF // vendor FF47=0x00 (bank0 e896)
 #define _PWM5_RST_EN                            _OFF
 #define _PWM_RST_SIGNAL_SEL                     _DVS
 
@@ -310,7 +311,11 @@
 #define _LIGHT_CONTROL_ON                       1
 #define _LIGHT_CONTROL_OFF                      0
 
+// P9.2 = backlight enable, active LOW (proven live, #7); P8.5 follows, high = on
+#define bBACKLIGHT_EN_N                         (MCU_FE2A_PORT92_PIN_REG) // Pin_196, P9.2
+
 #define PCB_BACKLIGHT_POWER_PIN(x)              {\
+                                                    bBACKLIGHT_EN_N = !(x);\
                                                     bBACKLIGHTPOWER = (x);\
                                                 }
 
@@ -494,12 +499,11 @@
 // Macro of HDMI/MHL Switch
 //-----------------------------------------------
 #define bD2_TMDS_SWITCH                         (MCU_FE2B_PORT93_PIN_REG) // Pin_197, P9.3
-#define bD3_TMDS_SWITCH                         (MCU_FE2A_PORT92_PIN_REG) // Pin_196, P9.2
 
 #define _TMDS_SWITCH_MHL_CBUS                   0
 #define _TMDS_SWITCH_HDMI_HPD                   1
 
-// No MHL on this board: P9.1/P9.2/P9.3 are backlight PWM4 / standby LED / unknown (gpio-roles.md); never driven here
+// No MHL on this board: P9.1 = backlight PWM4, P9.2 = backlight enable (bBACKLIGHT_EN_N), P9.3 unknown (gpio-roles.md)
 #define PCB_D2_HDMI_MHL_SWITCH(x)               {\
                                                 }
 
