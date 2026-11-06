@@ -232,7 +232,7 @@ def load_msgids(root: Path) -> dict:
 # ---- tables ----------------------------------------------------------------------------------------------------
 DBG_CMDS = {0x01: "stage hi", 0x02: "stage hi", 0x03: "stage value", 0x05: "stage b4", 0x06: "stage value",
             0x04: "EEPROM write", 0x0F: "EEPROM write", 0x20: "handshake", 0x25: "message fetch", 0x2A: "message end",
-            0x2F: "message stop", 0x3A: "XDATA read", 0x3B: "XDATA write", 0x41: "scaler read", 0x44: "EEPROM read",
+            0x2F: "message stop", 0x3A: "XDATA read", 0x3B: "XDATA write", 0x3C: "XDATA block read", 0x41: "scaler read", 0x44: "EEPROM read",
             0x45: "EEPROM read", 0x55: "message enable", 0x71: "DDC/CI mode switch", 0x80: "halt main"}
 ISP_REGS = {0x60: "SPI_CTL", 0x61: "SPI_OP", 0x62: "OP_WREN", 0x63: "OP_EWSR", 0x6A: "OP_READ", 0x6B: "OP_FAST_READ", 0x6E: "OP_RDSR", 0x64: "ADDR_H", 0x65: "ADDR_M", 0x66: "ADDR_L",
             0x67: "RDATA0", 0x68: "RDATA1", 0x69: "RDATA2", 0x6D: "OP_PP", 0x6F: "ISP_CTL", 0x70: "FIFO",
@@ -283,6 +283,7 @@ class Decoder:
         self.ev = None
         self.d_hi = self.d_val = self.d_rd = None
         self.d_kind = "x"
+        self.d_blk = None
         self.msg_mode = False
         self.reg: dict[int, int] = {}
         self.f4 = self.page = None
@@ -449,6 +450,8 @@ class Decoder:
             return
         if s == 0x3A and d:
             self.d_rd, self.d_kind = (self.d_hi or 0) << 8 | d[0], "x"; return
+        if s == 0x3C and len(d) == 4:                          # block read: lo, hi, len, seq; read of len data + checksum follows
+            self.d_rd, self.d_kind, self.d_blk = d[1] << 8 | d[0], "x", d[2]; return
         if s == 0x41 and d:
             self.d_rd, self.d_kind = d[0], "s"; return
         if s in (0x44, 0x45) and d:
@@ -499,10 +502,12 @@ class Decoder:
             return self._msg_data(t, e)
         if t.sub == 0x08 and self.d_rd is not None and len(d) >= 1:
             a, kind, self.d_rd = self.d_rd, self.d_kind, None
+            n = self.d_blk if self.d_blk else 1                # block read: len data bytes (the checksum byte is dropped)
+            self.d_blk = None
             if e and e.kind == "dr" and e.what == kind and a == e.start + len(e.vals):
-                e.vals.append(d[0])
+                e.vals.extend(d[:n])
             else:
-                self.open(t, "dbg", "dr", what=kind, start=a, vals=[d[0]])
+                self.open(t, "dbg", "dr", what=kind, start=a, vals=list(d[:n]))
             return
         if t.sub == 0x08 and len(d) == 1 and d[0] in (0xFC, 0xF1) and (self.msg_mode or d[0] == 0xF1):
             if e and e.kind == "mpoll" and e.st == d[0]:

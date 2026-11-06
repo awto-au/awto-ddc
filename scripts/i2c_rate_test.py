@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Failure rate of the firmware debug slave 0x35 per DDC bus rate (#12). Read-only: same 48 B diag-block reads as rtd_diag.
 
-usage: i2c_rate_test.py [--bus 11] [--unit AWT26110003] [--n 300] [--rates 100,1000,50] [--gap-us 0]
-  A read = cmd 0x01 [hi], then 48 x (cmd 0x3A [lo] write, cmd 0x08 read 1) = 97 transfers (rtd_diag.read_bytes).
+usage: i2c_rate_test.py [--bus 11] [--unit AWT26110003] [--n 300] [--rates 100,1000,50] [--gap-us 0] [--paths byte,block]
+  byte path: cmd 0x01 [hi], then 48 x (cmd 0x3A [lo] write, cmd 0x08 read 1) = 97 transfers (every firmware).
+  block path: 2 x (cmd 0x3C [lo hi 24 seq] write, cmd 0x08 read 25 = data + checksum, no retry here) = 4 transfers (diag version 2, docs/diag-block.md).
   Rates other than 100 load tools/gmbus_rate around the batch (i2cbus.fast_bus, unloaded in finally).
   Failure classes: nak-addr (ENXIO on the first transfer), nak-mid (ENXIO later; phase + byte index kept),
   timeout (EAGAIN/ETIMEDOUT), garbled (bytes differ from the stable bytes of a reference block; positions kept,
@@ -15,6 +16,7 @@ import argparse, errno, os, statistics, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dbg_xdata as X  # noqa: E402
 import i2cbus  # noqa: E402
 
 ROOT = i2cbus.ROOT
@@ -25,6 +27,7 @@ OTHERS = ("rtd_flash_image", "osd_test", "rtd_diag", "dev.py", "rtd_dbg_write")
 VOLATILE = set(range(0x14, 0x1A)) | set(range(0x28, 0x30))
 SETTLE_S = 0.2      # after a failed read: firmware bus watchdog is 100 ms (_AWTO_BUS_STUCK_MS), 2x for margin
 LOGS = ROOT / "tmp" / "logs"
+PATH = "byte"          # set per run from --paths
 
 
 def others_running() -> list[str]:
@@ -48,8 +51,35 @@ class ReadFail(Exception):
         self.cls, self.detail = cls, detail
 
 
+def read_block_chunks(bus: i2cbus.Bus) -> bytes:
+    """One 48 B block as 0x3C chunks; raises ReadFail(class, detail) at the first failing transfer."""
+    out = bytearray()
+    for k, off in enumerate(range(0, SIZE, X.BLK_MAX)):
+        n = min(X.BLK_MAX, SIZE - off)
+        a = BASE + off
+        X._seq = (X._seq + 1) & 0xFF
+        seq, rep = X._seq, []
+        for what, fn in (("write", lambda: bus.write(SLAVE, X.CMD_BLOCK, X.chunk_cmd(a, n, seq))),
+                         ("read", lambda: rep.append(bus.read(SLAVE, READ_SUB, n + 1)))):
+            try:
+                fn()
+            except OSError as e:
+                where = f"chunk {k} ({what})"
+                if e.errno == errno.ENXIO:
+                    raise ReadFail("nak-addr" if (k == 0 and what == "write") else "nak-mid", where) from None
+                if e.errno in (errno.EAGAIN, errno.ETIMEDOUT):
+                    raise ReadFail("timeout", f"{where} {e}") from None
+                raise ReadFail("other", f"{where} {e}") from None
+        if not X.chunk_ok(a, n, seq, rep[0]):
+            raise ReadFail("checksum", f"chunk {k} reply {rep[0].hex()}")
+        out += rep[0][:n]
+    return bytes(out)
+
+
 def read_block(bus: i2cbus.Bus, gap_s: float) -> bytes:
-    """One 48 B block; raises ReadFail(class, detail) at the first failing transfer."""
+    """One 48 B block (module PATH); raises ReadFail(class, detail) at the first failing transfer."""
+    if PATH == "block":
+        return read_block_chunks(bus)
     n_tx = 0
     out = bytearray()
     steps = [("hi", None, bytes([BASE >> 8]), CMD_HI)]
@@ -128,6 +158,7 @@ def main() -> int:
     ap.add_argument("--n", type=int, default=300)
     ap.add_argument("--rates", default="100,1000,50")
     ap.add_argument("--gap-us", type=int, default=0)
+    ap.add_argument("--paths", default="byte", help="byte,block")
     a = ap.parse_args()
     LOGS.mkdir(parents=True, exist_ok=True)
     log, raw = open(LOGS / "i2c_rate_test.log", "a"), open(LOGS / "i2c_rate_test.raw.log", "a")
@@ -145,11 +176,16 @@ def main() -> int:
     try:
         for khz in (int(r) for r in a.rates.split(",")):
             def run(rate):
+                global PATH
+                for PATH in a.paths.split(","):
+                    run_path(rate)
+
+            def run_path(rate):
                 with i2cbus.Bus(a.bus) as bus:
                     ref, vol = stable_reference(bus)           # reference at the active rate; mismatch = garble
                     r = batch(bus, rate, a.n, ref, vol, gap_s, raw)
                 cls = " ".join(f"{k}={v}" for k, v in sorted(r["classes"].items())) or "none"
-                say(f"bus {a.bus} unit {a.unit} {rate} kHz gap {a.gap_us} us: {r['ok']}/{r['n']} ok "
+                say(f"bus {a.bus} unit {a.unit} {rate} kHz {PATH} path gap {a.gap_us} us: {r['ok']}/{r['n']} ok "
                     f"({100 * (r['n'] - r['ok']) / r['n']:.1f}% fail), failures: {cls}, {r['ms']:.1f} ms per good read")
             if khz == 100:
                 run(100)

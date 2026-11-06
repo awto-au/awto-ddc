@@ -27,6 +27,7 @@ import argparse, os, signal, struct, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dbg_xdata as X  # noqa: E402
 import rtd_i2c_bridge as B  # noqa: E402
 from sdcc_overlay import repo_root  # noqa: E402
 
@@ -191,18 +192,16 @@ TRACE_OFF = 0x28                    # ucTraceSeq, ucSpare, usTrace[3] (RL6449_Pr
 TRACE_DEAD = 20                     # consecutive failed reads = chip gone (~20 x 2 transfers, well past any ISR latency)
 
 
+_BLOCK = None                       # firmware answers the 0x3C block read (diag version >= 2), probed once per run
+
+
 def read_bytes(io, off: int, n: int) -> bytes | None:
-    if not io.write(DEV8, CMD_HI, bytes([(BASE + off) >> 8])):
-        return None
-    out = bytearray()
-    for i in range(n):
-        if not io.write(DEV8, CMD_READ, bytes([(BASE + off + i) & 0xFF])):
+    global _BLOCK
+    if _BLOCK is None:
+        _BLOCK = X.probe(io, BASE)
+        if _BLOCK is None:
             return None
-        r = io.read(DEV8, READ_SUB, 1)
-        if r is None:
-            return None
-        out.append(r[0])
-    return bytes(out)
+    return X.read(io, BASE + off, n, _BLOCK)
 
 
 SAFE = 0xF6B0                       # StAwtoSafe, 32 B (RL6449_Project.h): survives a warm reset

@@ -19,6 +19,7 @@ class FakeIo:
     def __init__(self, mem, consume_after=1, fail_first=0):
         self.mem, self.hi, self.lo, self.val = mem, 0, 0, 0
         self.consume_after, self.pending, self.fail_first = consume_after, {}, fail_first
+        self.blk, self.blk_reads = None, 0
 
     def write(self, dev8, sub, data):
         if self.fail_first:
@@ -30,6 +31,9 @@ class FakeIo:
             self.val = data[0]
         elif sub == 0x3A:
             self.lo = data[0]
+        elif sub == 0x3C:
+            self.blk = ((data[1] << 8) | data[0], min(data[2], 24), data[3], data[0], data[1])
+            self.blk_reads += 1
         elif sub == 0x3B:
             a = (self.hi << 8) | data[0]
             self.mem[a] = self.val
@@ -39,15 +43,19 @@ class FakeIo:
                     self.mem[MAPS["g_stOsdInfo"] + 4] = self.mem.get(MAPS["g_stOsdInfo"] + 4, 0) ^ 0x01   # osd state moves
         return True
 
-    def read(self, dev8, sub, n):
-        a = (self.hi << 8) | self.lo
+    def _byte(self, a):
         if a in self.pending and self.pending[a] is not None:
             self.pending[a] -= 1
             if self.pending[a] < 0:
                 self.mem[a] = 0
-        if a == MAPS["g_stAwtoDiag"] + 0x14:                           # hb/t2 advance per read of hb high byte
-            pass
-        return bytes([self.mem.get(a, 0)])
+        return self.mem.get(a, 0)
+
+    def read(self, dev8, sub, n):
+        if self.blk is not None:                                       # 0x3C block: n bytes in one transaction
+            (a, _, seq, lo, hi), self.blk = self.blk, None
+            d = bytes(self._byte(a + i) for i in range(n - 1))
+            return d + bytes([(seq + lo + hi + sum(d)) & 0xFF])
+        return bytes([self._byte((self.hi << 8) | self.lo)])
 
 
 def healthy_mem():
@@ -145,3 +153,22 @@ def test_diag_retry_once():
 
 def test_slow_loop_fails():
     assert not names(run_all(healthy_mem(), rate=10))["main loop"]
+
+
+def test_block_path_used_when_version_2():
+    mem = healthy_mem()
+    mem[MAPS["g_stAwtoDiag"] + 2] = 2
+    clk = Clock(mem)
+    io, rep = FakeIo(mem), H.Report()
+    H.run(H.Dbg(io), MAPS, (3840, 2160, 60.0), rep, wait=clk.wait)
+    assert all(names(rep).values()), rep.rows
+    assert io.blk_reads > 10
+    assert "block reads" in dict((n, d) for n, _, d in rep.rows)["diag stage"]
+
+
+def test_byte_path_when_version_1():
+    mem = healthy_mem()
+    mem[MAPS["g_stAwtoDiag"] + 2] = 1
+    io, rep = FakeIo(mem), H.Report()
+    H.run(H.Dbg(io), MAPS, (3840, 2160, 60.0), rep, wait=Clock(mem).wait)
+    assert all(names(rep).values()) and io.blk_reads == 0

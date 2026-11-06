@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dbg_xdata as X  # noqa: E402
 
 DEV8 = 0x6A                                   # 7-bit 0x35
 DIAG_OFF = {"magic": 0, "stage": 3, "hb": 0x14, "t2": 0x16, "testcmd": 0x28}
@@ -84,10 +85,11 @@ def gdctl_mode(show: str, monitor: str) -> str | None:
 
 
 class Dbg:
-    """XDATA reads/writes through the firmware debug slave: 0x01 [hi] stage, 0x3A [lo] + read sub 0x08."""
+    """XDATA reads/writes through the firmware debug slave. Reads use the block path (0x3C, docs/diag-block.md) once
+    check_diag saw diag version >= 2, else the byte path (0x01 [hi], 0x3A [lo], read 0x08)."""
 
     def __init__(self, io, wait=time.sleep):
-        self.io, self.wait, self.retries = io, wait, 0
+        self.io, self.wait, self.retries, self.block = io, wait, 0, False
 
     def _try(self, what: str, fn):
         """0x35 NAKs intermittently at 100 kHz (seen 2026-11-06): one retry per transfer group after 5 ms
@@ -102,14 +104,14 @@ class Dbg:
 
     def read(self, addr: int, n: int = 1) -> bytes:
         out = bytearray()
+        if self.block:
+            for off in range(0, n, X.BLK_MAX):
+                a, k = (addr + off) & 0xFFFF, min(X.BLK_MAX, n - off)
+                out += self._try(f"no ACK/data block-reading 0x{a:04X} x{k}", lambda a=a, k=k: X.read_chunk(self.io, a, k))
+            return bytes(out)
         for k in range(n):
             x = (addr + k) & 0xFFFF
-
-            def one(x=x):
-                if not (self.io.write(DEV8, 0x01, bytes([x >> 8])) and self.io.write(DEV8, 0x3A, bytes([x & 0xFF]))):
-                    return None
-                return self.io.read(DEV8, 0x08, 1)
-            out.append(self._try(f"no ACK/data reading 0x{x:04X}", one)[0])
+            out += self._try(f"no ACK/data reading 0x{x:04X}", lambda x=x: X.read_byte(self.io, x))
         return bytes(out)
 
     def write(self, addr: int, v: int) -> None:
@@ -153,10 +155,12 @@ def check_diag(rep, d: Dbg, base: int, wait=time.sleep) -> bool:
     last = ""
     for attempt in range(2):                   # first read right after a reset can NAK (2026-11-06): retry once
         try:
+            d.block = False
             b = d.read(base, 4)
+            d.block = X.block_supported(b)
             ok = b[:2] == b"AD" and b[3] == HDIAG_STAGE
-            return rep.add("diag stage", ok, f"magic {b[:2]!r} stage {b[3]} (want {HDIAG_STAGE})"
-                           + (" after retry" if attempt else ""))
+            return rep.add("diag stage", ok, f"magic {b[:2]!r} version {b[2]} stage {b[3]} (want {HDIAG_STAGE}); "
+                           f"{'block' if d.block else 'byte'} reads" + (" after retry" if attempt else ""))
         except DbgError as e:
             last = str(e)
             wait(0.1)                          # one retry: ~15 main-loop passes for the debug ISR to settle
