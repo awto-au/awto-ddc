@@ -13,8 +13,8 @@ Method (awto-ddc#8):
   code or by more than one bank. Library code (not in any module) is common.
 - Rest: module granularity, area BANK<n>; modules packed into banks in input order (first fit).
 - Calls/jumps to a fn in another bank, from common to banked, and every address-taken banked fn go through
-  a stub `__bs_<fn>` emitted in the fn's own module (common): mov r0..r2 = bank/lo/hi + ljmp __bs_call (9 B; touches only R0-R3,
-  so register arguments survive; fw/sdcc/bank.asm).
+  a stub `__bs_<fn>` emitted in the fn's own module (common): mov r0,#bank; mov dptr,#fn; ljmp __bs_call (8 B; R1-R7 and
+  C untouched = Keil arguments/returns survive; scratch R0, A, B, DPTR; fw/sdcc/bank.asm).
 - CONST moves to a user bank only if every ref is `mov dptr,#_t` in a chunk with no cross-bank call (#16).
 - Fails on: CONST referenced from a bank it is not in (after the common rule), a module larger than a bank.
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
@@ -45,7 +45,7 @@ BANK_SIZE = 0x10000
 MSG_RESERVE = {MT.MSG_BANK: MT.MSG_SIZE}   # top of one bank = fixed debug-message block (#56), never code
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
-STUB_SIZE = 9             # mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp __bs_call (2+2+2+3 B)
+STUB_SIZE = 8             # mov r0,#bank; mov dptr,#target; ljmp __bs_call (2+3+3 B); R1-R7 untouched (Keil args)
 ASM_TIMEOUT = 30          # one sdas8051 run: largest module assembles in < 2 s; stall = broken input
 
 
@@ -262,7 +262,7 @@ def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
     stubs = [f for f in sorted(stubs_needed) if stubs_needed[f][0] == mod.name]
     for f in stubs:
         out += [f"\t.area {stub_area(f)}    (CODE)", f"\t.globl __bs{f}", f"__bs{f}:", f"\tmov\tr0,#({f} >> 16)",
-                f"\tmov\tr1,#{f}", f"\tmov\tr2,#({f} >> 8)", "\tljmp\t__bs_call"]
+                f"\tmov\tdptr,#{f}", "\tljmp\t__bs_call"]
     out.extend(mod.tail)
     return "\n".join(out)
 
@@ -697,6 +697,7 @@ def main() -> int:
     rep = {"banks": {i: f for i, f in enumerate(fill) if f}, "bank_of": bank_of, "stubs": len(stubs),
            "common_fns": sorted(n for n, c in funcs.items() if c.common), "common_bytes_modules": common_size,
            "common_consts": sorted(n for n, c in consts.items() if c.common)}
+    (ROOT / "tmp/sdcc-port").mkdir(parents=True, exist_ok=True)
     (ROOT / "tmp/sdcc-port/bank.json").write_text(json.dumps(rep, indent=1))
     return 0
 
