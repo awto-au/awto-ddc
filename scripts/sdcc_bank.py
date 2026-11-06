@@ -13,7 +13,8 @@ Method (awto-ddc#8):
   code or by more than one bank. Library code (not in any module) is common.
 - Rest: module granularity, area BANK<n>; modules packed into banks in input order (first fit).
 - Calls/jumps to a fn in another bank, from common to banked, and every address-taken banked fn go through
-  a stub `__bs_<fn>` emitted in the fn's own module (common): mov r0/r1/r2,#fn24; ljmp __bs_call (fw/sdcc/bank.asm).
+  a stub `__bs_<fn>` emitted in the fn's own module (common): lcall __bs_call + .db fn24 (6 B; touches only R0-R3,
+  so register arguments survive; fw/sdcc/bank.asm).
 - CONST moves to a user bank only if every ref is `mov dptr,#_t` in a chunk with no cross-bank call (#16).
 - Fails on: CONST referenced from a bank it is not in (after the common rule), a module larger than a bank.
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
@@ -211,8 +212,8 @@ def render(mod, area_of, stubs_needed, extra_globl):
     if stubs:
         out.append("\t.area CSEG    (CODE)")
         for f in stubs:
-            out += [f"\t.globl __bs{f}", f"__bs{f}:", f"\tmov\tr0,#{f}", f"\tmov\tr1,#({f} >> 8)",
-                    f"\tmov\tr2,#({f} >> 16)", "\tljmp\t__bs_call"]
+            out += [f"\t.globl __bs{f}", f"__bs{f}:", "\tlcall\t__bs_call",
+                    f"\t.db\t{f}, ({f} >> 8), ({f} >> 16)"]       # data read by __bs_call via movc
     out.extend(mod.tail)
     return "\n".join(out)
 
@@ -334,11 +335,11 @@ def main() -> int:
         for c in u:
             c.bank = b
         fill[b] += n
-    log("bank fill: " + ", ".join(f"{i}:{f}" for i, f in enumerate(fill) if f))
     for m in mods:
         for c in m.chunks:
             if c.common:
                 c.bank = None
+    log("bank fill: " + ", ".join(f"{i}:{f}" for i, f in enumerate(fill) if f))
     # hot small helpers -> common with their banked callees: called from >= HOT_BANKS banks, closure <= HOT_SIZE B.
     # Saves 3 stack bytes + a bank switch per call level (fw_stack.py), and stubs. Budget --hot-budget.
     callers = defaultdict(set)
