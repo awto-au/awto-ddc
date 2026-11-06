@@ -221,8 +221,9 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
                 skipped = nimg - len(diff)
         mode = "full" if (o.full or not have_manifest) else "incremental"
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
+        t_prog = time.monotonic()
         rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit)
-        log(f"flash done: {len(diff)} written, {nimg - len(diff)} skipped, {time.monotonic() - t_all:.0f}s total")
+        summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
         return rc
     t0 = time.monotonic()
     d1 = isp.read_flash(0, FLASH)
@@ -235,6 +236,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     bk = o.backup_dir / f"jxc-4k-flash-{o.serial}-{time.strftime('%Y%m%d-%H%M%S')}.bin"
     bk.write_bytes(d1)
     log(f"two reads identical over the image region ({len(img)} B); backup {bk}")
+    t_prog = time.monotonic()
     for i in range(S.FLASH_SECTORS):                  # a full read is the best manifest source there is
         state.sectors[i] = S.sha(d1[i * SECTOR:(i + 1) * SECTOR])
     state.save(image=f"flash-readback {bk.name}", image_size=FLASH, source="readback", commit=o.commit)
@@ -243,7 +245,28 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         + ", ".join(f"0x{i * SECTOR:05x}" for i in diff[:12]) + (" ..." if len(diff) > 12 else ""))
     if not o.write:
         log("DRY-RUN complete: nothing erased or programmed"); return 0
-    return program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit)
+    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit)
+    summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+    return rc
+
+
+BANK = 0x10000                                        # 8051 code bank = 64 KiB of flash
+
+
+def summary(diff: list[int], nimg: int, t_write: float, t_total: float) -> None:
+    """End-of-run summary: sectors changed/unchanged, which banks, bytes, speed."""
+    per = BANK // SECTOR
+    nb = -(-nimg // per)
+    by_bank: dict[int, int] = {}
+    for i in diff:
+        by_bank[i // per] = by_bank.get(i // per, 0) + 1
+    wb = len(diff) * SECTOR
+    rate = wb / t_write / 1024 if t_write > 0 and wb else 0.0
+    log(f"SUMMARY: {nimg} sectors (4 KiB) in {nb} banks (64 KiB): {len(diff)} changed, {nimg - len(diff)} unchanged")
+    log("SUMMARY: changed per bank: " + (", ".join(f"bank {b} {n}/{per}" for b, n in sorted(by_bank.items()))
+                                        or "none") + f"; {nb - len(by_bank)} banks untouched")
+    log(f"SUMMARY: wrote {wb // 1024} KiB in {t_write:.1f} s = {rate:.1f} KiB/s ({rate / 1024:.3f} MB/s); "
+        f"{t_total:.1f} s total incl. checks")
 
 
 def main() -> int:
