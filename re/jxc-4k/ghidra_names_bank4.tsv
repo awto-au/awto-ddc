@@ -23,3 +23,84 @@ CODE:f830	ScalerDpRx1CheckHdcpCpirqStatus	func	auto: matched SDK ScalerDpRx1Chec
 CODE:9c0e	ScalerComputeDwordMulDiv	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONCOMPUTEDWORDMULDIV, exact masked match.	[lib]
 CODE:d3ca	ScalerComputeDwordPowDiv	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONCOMPUTEDWORDMULDIV, exact masked match.	[lib]
 CODE:e073	ScalerWrite	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONMULTIBYTEWRITE, exact masked match.	[lib]
+# Finding: existing [auto-sdk] row CODE:f830 ScalerDpRx1CheckHdcpCpirqStatus is wrong: body tests HDCP_DEBUG & 0xe0 / bit4 + VRF_ANS 0x53/0x1f = SDK ScalerDpRx1HdcpCheckValid (SeptPhy.c:4396); the real CheckHdcpCpirqStatus is f228. [re-agent] high
+# Finding: existing [auto-sdk] row CODE:efbc ScalerDpRx1CpIRQ is only the LINK_INTEGRITY_FAIL tail (sets BStatus); the BStatus switch body is c3f7. [re-agent] med
+CODE:3a5a	ScalerDpRx1RebuildPhy	func	(linkrate,lane): called by NormalPreDetect fe86 and vendor link scan b0bb; calls SetDFEInitial a4f1 + AdjustLaneFLDBand cc40; RL6449_Series_DPRx1.c:780	[re-agent]	high
+CODE:5bd2	ScalerDpRx1PhyCtsTp2SetPhy	func	called by PhyCTS 3210; calls SetDFEInitial(rate) a4f1 + FLD band; larger of the two PhyCtsTpxSetPhy (SDK Tp2 ~650 vs Tp1 ~395 lines)	[re-agent]	med
+CODE:8f08	ScalerDpRx1PhyCtsTp1SetPhy	func	called by PhyCTS 3210; calls SetDFEInitial(rate) a4f1; smaller of the two PhyCtsTpxSetPhy	[re-agent]	med
+CODE:a4f1	ScalerDpRx1SetDFEInitial	func	takes link rate (0x14=HBR2); DFE_EN/GAIN/LIMIT/LOOP_DIV writes; ScalerDPRx1_SeptPhy.c:5561	[re-agent]	high
+CODE:a690	ScalerDpRx1SetDFEInitial_EXINT0	func	no args, reads link rate from e00b; same DFE regs; called by Tp1/Tp2SetPhy_EXINT0; ScalerDPRx1_INT_SeptPhy.c:2259	[re-agent]	high
+CODE:81bb	ScalerDpRx1Tp1SetPhy_EXINT0	func	calls SetDFEInitial_EXINT0 a690; called by TrainingPattern1_EXINT0 e4fc; RL6449_Series_DPRx1_INT.c:64	[re-agent]	high
+CODE:88d7	ScalerDpRx1Tp2SetPhy_EXINT0	func	calls SetDFEInitial_EXINT0 + AdjustLaneFLDBand_EXINT0 c7de; called by TrainingPattern2_EXINT0 f932; DPRx1_INT.c:649	[re-agent]	high
+CODE:48a9	ScalerDpRx1Tp1Check_EXINT0	func	called after Tp1SetPhy in TrainingPattern1 e4fc; ~570 lines of per-lane DFE/CDR readback (COEF_*); ScalerDPRx1_INT_SeptPhy.c:441	[re-agent]	high
+CODE:4183	ScalerDpRx1Tp2Check_EXINT0	func	called after Tp2SetPhy in TrainingPattern2 f932; per-lane readback; ScalerDPRx1_INT_SeptPhy.c:1140. 4190 is an inner entry of the same body	[re-agent]	high
+CODE:e4fc	ScalerDpRx1TrainingPattern1_EXINT0	func	Tp1SetPhy(81bb) then Tp1Check(48a9), error counter via f964; called by IntHandler 611e; INT_SeptPhy.c:185	[re-agent]	high
+CODE:f932	ScalerDpRx1TrainingPattern2_EXINT0	func	Tp2SetPhy(88d7) then Tp2Check(4183); called by IntHandler 611e; INT_SeptPhy.c:259	[re-agent]	high
+CODE:611e	ScalerDpRx1IntHandler_EXINT0	func	AUX FIFO/aux manual mode, DPCD addr backup dfe5, calls TrainingPatternEnd_EXINT0; DP_IRQ_CTRL0 fifo and VB-ID handling; INT_SeptPhy.c:2030	[re-agent]	high
+CODE:c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	func	(lane,diff); called by Tp2SetPhy_EXINT0; fingerprint 0.74; INT_SeptPhy.c:1773	[re-agent]	high
+CODE:cc40	ScalerDpRx1AdjustLaneFLDBand	func	(lane,diff); called by RebuildPhy 3a5a; fingerprint 0.70; ScalerDPRx1_SeptPhy.c:3372	[re-agent]	high
+CODE:7dd5	ScalerDpRx1RebuildPhy_WDINT	func	called from rebuild-phy branches e481/e490 of the WD timer proc; L0..L3 INIT/DFE regs; fingerprint 0.32; RL6449_Series_DPRx1_INT.c:974	[re-agent]	med
+CODE:8c34	dprx1_dfe_select_lane	func	COEF_3 lane<<6 select, COEF_1 &= 0xc0: lane select helper used by Tp1Check/Tp2Check/DFECheck	[re-agent]	med
+CODE:6646	dprx1_dfe_read_vth_tap0	func	COEF_1 select Vth/Tap0, read COEF_2 into 29/2a (DFECheck compare 0x15)	[re-agent]	med
+CODE:b5f9	ScalerDpRx1DecodeCheck	func	3-try loop, DECODE_10B8B_ERROR flags vs lane count and PCB lane mapping; ScalerDPRx1_SeptPhy.c:3859	[re-agent]	high
+CODE:e74d	ScalerDpRx1FifoCheck	func	PG_CTRL_1 fifo flags (0x14), re-arm via SetNoVideoStreamIRQ; ScanInputPort calls it twice with 0	[re-agent]	high
+CODE:fb96	ScalerDpRx1SetNoVideoStreamIRQ	func	DP_GLB_STATUS=0x40 flag clear; DP_IRQ_CTRL1 bit4 = bEn; SeptPhy.c:748	[re-agent]	high
+CODE:faa7	ScalerDpRx1HSActiveTrackingMode	func	MN_SCLKG_SDM_TEST bit7; VBID_MAN_MADE=0x22 in FW mode; SeptPhy.c:722	[re-agent]	high
+CODE:f406	ScalerDpRx1CheckVgipVsBypass	func	reads MN_DPF_HST/VST, compares against capture-min constants; SeptPhy.c:563	[re-agent]	high
+CODE:f964	ScalerDpRx1ErrorCounterDisable_EXINT0	func	DUMMY_1, BIST_PATTERN_SEL; DPCD 0x210-0x217 cleared (8 writes); SeptPhy.c:1474	[re-agent]	high
+CODE:fe86	ScalerDpRx1NormalPreDetect	func	PHY CTS branch -> PhyCTS(); link-status 10/11 handling; calls RebuildPhy; ScalerDPRx1_SeptPhy.c:4778	[re-agent]	high
+CODE:fe70	ScalerDpRx1ScanInputPort	func	LT status (de1e)==9; calls MSACheck, GetVideoInfo, SetColorInfo, DisplayFormatSetting, AdjustVsyncDelay, FifoCheck; SeptPhy.c:5363	[re-agent]	high
+CODE:daf0	ScalerDpRx1GetVideoInfo	func	MN_STRM_ATTR_MISC/MISC1 colour/depth decode; called after MSACheck in ScanInputPort; fingerprint 0.67	[re-agent]	high
+CODE:a81e	ScalerDpRx1SetColorInfo	func	MN_DPF_BG_* background colour regs; called after GetVideoInfo in ScanInputPort	[re-agent]	med
+CODE:55b9	ScalerDpRx1DisplayFormatSetting	func	27 regs (MN_DPF_*); called after SetColorInfo in ScanInputPort; fingerprint 0.36 vs 0.12	[re-agent]	high
+CODE:28d0	dprx1_phy_cdr_relock_nop_delay	func	fingerprint hint StreamClkRegenerate (0.42) but body is L0-L3 INIT/ANA_CDR_01/COEF_3 with NOP delays and no PB8 PLL regs; sits in StreamClkRegenerate slot of ScanInputPort	[re-agent]	low
+CODE:d1af	ScalerDpRx1InfoFrameRSV0Initial	func	DP_INFO_FM_RSV0=1, MSA_NAUD reads; last step of ScanInputPort	[re-agent]	med
+CODE:9fb9	ScalerDpRx1HdcpMeasureCheck	func	MSA Vtotal, DP_SIG_DET link clk measure, defaults 0x4E20/0x2710/0x1770 per link rate; SeptPhy.c:4459	[re-agent]	high
+CODE:d876	ScalerDpRx1HdcpCheck	func	HDCP_INTGT_VRF_ANS 0x53/0x1f compare, DPCD 0x68007.. Aksv, calls HdcpMeasureCheck; RL6449_Series_DPRx1.c:2520	[re-agent]	high
+CODE:f228	dprx1_check_hdcp_cpirq_status	func	SDK ScalerDpRx1CheckHdcpCpirqStatus (name taken by f830 row): VRF_ANS 0x53/0x1f then DPCD 0x202 bit2 clear (0x68029 / 0x69493); SeptPhy.c:528	[re-agent]	high
+CODE:c3f7	dprx1_cpirq_bstatus_switch	func	body of SDK ScalerDpRx1CpIRQ (switch on BStatus bits 1,2,4,8,0x10..0x80); ScanInputPort/fe70 calls it with 4 (LINK_INTEGRITY_FAIL). [auto-sdk] row efbc is only a tail	[re-agent]	high
+CODE:e200	ScalerDpRx1AuxIntInitial	func	AUX_IRQ_ADDR0/1/3 = 0x3022 00 / 0x0692df / 0x022010, DPCD_IRQ_EN=0xe5; RL6449_Series_DPRx1.c:211	[re-agent]	high
+CODE:cd13	ScalerDpRx1MeasureLaneCDRClk	func	(rate,lane,..) DP_SIG_DET_0/1 measure with 0x0a/0x14 rate thresholds; SeptPhy.c:4633	[re-agent]	med
+CODE:c9b3	ScalerDpRx1Hdcp2GetMessageID_EXINT0	func	AUX_RESERVE3/4/5 + DUMMY_1 flag arbitration returns msg id; ScalerCommonDPRx1HDCP2.c:95	[re-agent]	high
+CODE:79aa	ScalerDpRx1Hdcp2Handler_EXINT0	func	AUX_IRQ_STATUS bit7, saves DPCD addr to dfe5, msg id switch (AKE init=4,5..); ScalerDPRx1HDCP2_SeptPhy.c:324	[re-agent]	high
+CODE:fd28	ScalerHdcp2IntHandler_EXINT0	func	calls DpRx1 Hdcp2Handler_EXINT0 then TMDS Rx2/Rx3 Hdcp2IntHandler_EXINT0; ScalerCommonHDCP2.c:388	[re-agent]	high
+CODE:f6e3	dprx1_dpcd_addr_save	func	DPCD_ADDR_PORT H/M/L -> dfe5..dfe7 (g_pucDpRx1Backup)	[re-agent]	high
+CODE:f6fc	dprx1_dpcd_addr_restore	func	dfe5..dfe7 (g_pucDpRx1Backup) -> DPCD_ADDR_PORT H/M/L	[re-agent]	high
+CODE:67d7	dprx1_dpcd_release_aux_set_addr	func	DPCD_CTRL &=0x7f then ADDR_PORT H/M/L: head of ScalerDpRx1GetDpcdInfo (data read is in caller)	[re-agent]	med
+CODE:8d3f	dprx1_dpcd_set_addr_hml	func	ADDR_PORT H/M/L only: head of GetDpcdInfo_WDINT/EXINT0 (fingerprint 1.0)	[re-agent]	med
+CODE:b0bb	dprx1_vbios_link_rate_scan	func	vendor-only: loops link rate 4->2->1, RebuildPhy(rate|0x80), VBIOSMSACheck; LT status 11 on success; called by NormalPreDetect	[re-agent]	med
+CODE:ec59	ScalerTMDSRx2Hdcp2Enable_EXINT0	func	DDC_EDID_IRQ bit2 poll (50 x 40us delay), HDCP_I2C_CTRL_0 bit7 set, HDCP_CR bit0 clear; ScalerTMDSRx2HDCP2_SeptPhy.c:128	[re-agent]	high
+CODE:6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	func	saves MSGWAP/MSGRAP/HDCP_AP, switch on HDCP2 msg id (AKE init/km/H'/L'/SKE); called from fd28	[re-agent]	high
+CODE:dee2	ScalerTMDSRx2Hdcp2SetRdMsgValue_EXINT0	func	MSGRAP_H/L addr then MSGRDP byte loop; called from IntHandler	[re-agent]	high
+CODE:eea5	ScalerTMDSRx2Hdcp2DownLoadWriteSRAMValue_EXINT0	func	MSGWAP=subaddr then MSGWDP read loop into array	[re-agent]	high
+CODE:f27c	ScalerTMDSRx2Hdcp2ResetProc	func	HDCP_AP 0x70/0x71 status clear, final HDCP_I2C_CTRL_0 bit7 clear + HDCP_CR bit0 set (non-INT only)	[re-agent]	high
+CODE:f864	ScalerTMDSRx2Hdcp2ResetProc_EXINT0	func	same status clears as ResetProc without the final HDCP_CR/CTRL_0 writes	[re-agent]	high
+CODE:f75a	ScalerTMDSRx2Hdcp2RxRsaCalculate_EXINT0	func	loads 128B Ekpub[km] via MSGWAP=1/MSGWDP then calls d47b (Hdcp2RxRsaCalculate_EXINT0); called from IntHandler	[re-agent]	med
+CODE:ecbd	ScalerTMDSRx3Hdcp2Enable_EXINT0	func	DDC_EDID_IRQ bit2 poll (50 x 40us delay), HDCP_I2C_CTRL_0 bit7 set, HDCP_CR bit0 clear; ScalerTMDSRx3HDCP2_SeptPhy.c:128	[re-agent]	high
+CODE:6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	func	saves MSGWAP/MSGRAP/HDCP_AP, switch on HDCP2 msg id (AKE init/km/H'/L'/SKE); called from fd28	[re-agent]	high
+CODE:df68	ScalerTMDSRx3Hdcp2SetRdMsgValue_EXINT0	func	MSGRAP_H/L addr then MSGRDP byte loop; called from IntHandler	[re-agent]	high
+CODE:ef02	ScalerTMDSRx3Hdcp2DownLoadWriteSRAMValue_EXINT0	func	MSGWAP=subaddr then MSGWDP read loop into array	[re-agent]	high
+CODE:f2cd	ScalerTMDSRx3Hdcp2ResetProc	func	HDCP_AP 0x70/0x71 status clear, final HDCP_I2C_CTRL_0 bit7 clear + HDCP_CR bit0 set (non-INT only)	[re-agent]	high
+CODE:f898	ScalerTMDSRx3Hdcp2ResetProc_EXINT0	func	same status clears as ResetProc without the final HDCP_CR/CTRL_0 writes	[re-agent]	high
+CODE:f791	ScalerTMDSRx3Hdcp2RxRsaCalculate_EXINT0	func	loads 128B Ekpub[km] via MSGWAP=1/MSGWDP then calls d47b (Hdcp2RxRsaCalculate_EXINT0); called from IntHandler	[re-agent]	med
+CODE:d47b	ScalerHdcp2RxRsaCalculate_EXINT0	func	RSA load: 4x16 words at 0x00/0x30/0x90/0xC0+15-i, HDCP_RSA_CTRL0 bit7 clr on done; pData_EXINT; ScalerCommonHDCP2.c:1557	[re-agent]	high
+CODE:d7d0	ScalerHdcp2RxRsaCalculate	func	same as d47b with pData and 100 ms poll; ScalerCommonHDCP2.c:1230	[re-agent]	high
+CODE:d9b6	ScalerHdcp2RxSha256Calculate_EXINT0	func	SHA reset, 16 x HDCP_SHA_DATA2..4, poll bit4; EXINT variant (pData_EXINT); ScalerCommonHDCP2.c:716	[re-agent]	high
+CODE:dc1d	ScalerHdcp2RxSha256Calculate	func	same as d9b6 with 10 ms poll (non-INT); ScalerCommonHDCP2.c:667	[re-agent]	high
+CODE:cf7c	ScalerHdcp2RxHmacSha256Calculate_EXINT0	func	key XOR 0x36 / 0x6a(0x36^0x5c) over 64B, two Sha256_EXINT0 passes; ScalerCommonHDCP2.c:581	[re-agent]	high
+CODE:c1ec	ScalerHdcp2RxHmacSha256Calculate	func	calls Sha256Calculate dc1d; non-INT twin of cf7c; ScalerCommonHDCP2.c:1095	[re-agent]	med
+CODE:cb6a	ScalerHdcp2HPrimeCalculate_EXINT0	func	builds dkey0|dkey1, Rtx, RxCaps, TxCaps, pad 0x80, len 0x0270, calls HMAC cf7c; ScalerCommonHDCP2.c:250	[re-agent]	high
+CODE:cde4	ScalerHdcp2LPrimeCalculate_EXINT0	func	Rn x8 then zeros, key^Rrx, len 0x0240, calls HMAC cf7c; ScalerCommonHDCP2.c:425	[re-agent]	high
+CODE:b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	func	variable-length HMAC input (k*2+..) with 0x80 pad, calls cf7c; only caller is DP Hdcp2Handler; ScalerCommonDPRx1HDCP2.c:215	[re-agent]	med
+CODE:bd6c	ScalerHdcp2RxRsaOaepCalculate_EXINT0	func	Sha256 MGF counters 0/1 over Km buffer, called from TMDS Rx2/Rx3 IntHandler with Km ptr; ScalerCommonHDCP2.c:1637	[re-agent]	med
+CODE:e386	SysSourceHandler	func	CableDetection, then SwitchPort/ScanPortInitial/SearchTimeInitial by flag bits of e0f4, DetectPort(g_ucSearchIndex), Judge; SysSource.c:254	[re-agent]	high
+CODE:a33c	SysSourceCableDetection	func	reads PORT94/A2/A3/A4/A5 cable pins into per-port flags; first call of SysSourceHandler; SysSource.c:3686	[re-agent]	med
+CODE:ca92	SysSourceDetectPort	func	(search index) switch on port type -> NormalPreDetect fe86 / ScanInputPort fe70 per DP port; SysSource.c:386	[re-agent]	med
+CODE:b884	SysSourceSwitchPort	func	called when GET_SOURCE_DETECTING false (e0f4 bit2 clear); SysSource.c:1496	[re-agent]	med
+CODE:f17c	SysSourceScanPortInitial	func	(g_ucSearchIndex) when SEARCH_PORT_INITIAL flag (e0f4 bit1); SysSource.c:3027	[re-agent]	med
+CODE:e283	SysSourceSearchTimeInitial	func	(g_ucSearchIndex) when SEARCH_TIME_INITIAL flag (e0f4 bit0); SysSource.c:649	[re-agent]	med
+CODE:dfee	SysSourceJudge	func	called right after DetectPort in SysSourceHandler; SysSource.c:1229	[re-agent]	med
+EXTMEM:e00b	g_ucDpRx1LinkRate	var:u8	compared with 0x14 (HBR2) in SetDFEInitial_EXINT0/DFECheck; SDK extern BYTE	[re-agent]	high
+EXTMEM:de1e	g_ucDpRx1LTStatus	var:u8	ScanInputPort needs ==9 (_DP_NORMAL_LINK_TRAINING_PASS); 10/11 = fake LT; set 9 after RebuildPhy_WDINT	[re-agent]	high
+EXTMEM:dfe5	g_pucDpRx1Backup	var:u8[3]	DPCD addr H/M/L saved/restored around Hdcp2Handler/IntHandler (f6e3/f6fc)	[re-agent]	high
+EXTMEM:e227	g_stDpRx1LanesMapping	var:StructDpLanesMapping	LSB-first: lane0 = e227&3, lane1 = e227>>2&3 (DecodeCheck, DP_SIG_DET lane select, BIST lane)	[re-agent]	med
