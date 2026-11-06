@@ -50,8 +50,8 @@ Status 2026-11-06. Issues: #11 (toolchain, audit), #30 (library signature DB).
 3. Vendor match (#30), done 2026-11-06 (commit 622f97e):
     - Tools: `scripts/omf51_lib.py` (Keil extended OMF-51 parser); `scripts/rtk_libsig.py build|match|srccheck|list` (masked signatures per library version in `~/vendors/realtek/analysis/libsigs/`).
     - Verdict: vendor JXC image uses the **same FunctionLib build** as our SDK copy. Of 370 lib functions: 111 EXACT (110 vendor addresses), 2 NEAR (95.8%), 48 too short to judge, 209 ABSENT (163 not linked by the vendor; AdvancedLib MBR/TCON not present).
-    - Real variants (60-90%): `ScalerGetDataPortSingleByte`, `ScalerColorRGBOutputGammaAdjust`, two DCR local-dimming functions.
-    - Sources vs `.LIB`: all 186 functions in the C sources exist in the `.LIB`; the `.LIB` has 169 more with no source. Byte-equality of a Keil compile of the sources not tested.
+    - Line-by-line review (#31, `re/lib-review/README.md`): of the 'variants', only `ScalerColorRGBOutputGammaAdjust` (gamma-on test reads GAMMA_CTRL_SETA bit 6 in the vendor vs RGB_GAMMA_CTRL_M1 bit 0 in the .LIB) and the DCR local-dimming THD read are real source-revision differences; the rest were matcher artefacts (now class SIBLING). No sign of a patched library.
+    - Sources vs `.LIB`: 160 `.LIB` functions lack source in the two Lib trees (169 was a regex bug); 145 of those have source in `Kernel/Scaler/ScalerFunction`. Only 15 have no source anywhere: 11 `ScalerMbr*`, 3 advanced-TCON helpers, 1 stub; vendor uses none; all behind MBR options that are off.
     - 110 vendor function names -> `~/vendors/realtek/analysis/lib_match_names_bank0..6.tsv` (status `[lib]`), fed to the Ghidra naming pass.
 4. More versions: firmware-package hunt and RTDCustomerTool version hunt feed the signature DB; finds indexed in `~/vendors/realtek/analysis/found_images.tsv`, `found_symbols.tsv`, `found_hostapps.tsv`.
 
