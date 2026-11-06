@@ -48,9 +48,11 @@ def main() -> int:
     base = diag_addr(a.map) if a.cmd else osdinfo_addr(a.map)
     writes = []
     for act in a.actions:
-        kind = "event" if act in EVENTS else "key"
+        if act in CMD_ONLY and not a.cmd:
+            sys.exit(f"{act}: needs --cmd")
+        kind = "event" if act in EVENTS else "key" if act in KEYS else "popup"
         if a.cmd:
-            val = (0x10 + EVENTS[act]) if act in EVENTS else (1 + KEYS[act])
+            val = CMD_ONLY.get(act) or ((0x10 + EVENTS[act]) if act in EVENTS else (1 + KEYS[act]))
             writes.append((f"{base + TESTCMD_OFF:04X}={val:02X}", f"osd_test {act.upper()} {kind} via ucTestCmd (cmd 0x{val:02X})"))
             continue
         off, val = (EVENT_OFF, EVENTS[act]) if act in EVENTS else (KEY_OFF, KEYS[act])
