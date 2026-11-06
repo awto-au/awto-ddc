@@ -115,6 +115,14 @@ def check_layout(mp: str, pins: dict, layout: str):
         sys.exit(f"layout: residual areas end 0x{end:x} > resid_end 0x{resid:x}: raise --resid-end (relayout)")
 
 
+def promote_layout(new: Path, tracked: Path):
+    """Copy the layout sdcc_bank wrote onto the tracked file, only called after link + check_layout passed (#51.4)."""
+    t = new.read_text()
+    if not tracked.exists() or tracked.read_text() != t:
+        tracked.write_text(t)
+        log(f"layout promoted: {tracked}")
+
+
 def split_xseg(asm_dir: Path):
     """Rename each module's XSEG to XSEG<k> so each hole gets a set of modules (first fit, largest first)."""
     hs = sorted(holes(), key=lambda h: h[0] - h[1])           # largest hole first = default XSEG/XISEG
@@ -234,8 +242,10 @@ def main() -> int:
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
+    new_layout = ROOT / "tmp/sdcc-port/bank_layout.new.tsv"
+    new_layout.unlink(missing_ok=True)                        # only this run's output may be promoted
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
-                 *(["--layout", a.layout] if a.layout else []),
+                 *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
                  *(["--cluster", a.cluster] if a.cluster else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
@@ -283,7 +293,8 @@ def main() -> int:
     log(f"IRAM: {iram}")
     check_xdata((out / "fw.map").read_text(errors="replace"), hs)
     if pins:
-        check_layout((out / "fw.map").read_text(errors="replace"), pins, a.layout)
+        check_layout((out / "fw.map").read_text(errors="replace"), pins, new_layout)
+        promote_layout(new_layout, ROOT / a.layout)   # absolute a.layout wins in the join
     mem = parse_ihx(out / "fw.ihx")
     common_end = max((x for x in mem if x < a.common), default=0) + 1
     nb = max(used) + 1

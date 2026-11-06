@@ -268,6 +268,9 @@ def main() -> int:
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     ap.add_argument("--layout", default="", help="sticky layout file (fw/bank_layout.tsv): fixed slot per chunk, reused "
                     "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
+    ap.add_argument("--layout-out", default=str(ROOT / "tmp/sdcc-port/bank_layout.new.tsv"),
+                    help="where the (possibly updated) layout is written; the caller promotes it onto --layout only after "
+                         "link + layout check pass (#51.4). --layout itself is never written here")
     ap.add_argument("--fill-target", type=float, default=0.80,
                     help="layout creation: per-bank fill limit (fraction of the bank, slot pads included); "
                          "raised in 1%% steps only until everything fits")
@@ -636,8 +639,9 @@ def main() -> int:
     if common_size > a.common_max:
         sys.exit("common area overflow")
     if sticky:
-        lay.save(a.layout)
-        log(f"layout written: {a.layout} ({len(lay.rows)} rows)")
+        Path(a.layout_out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.layout_out).write_text(lay.text())
+        log(f"layout written: {a.layout_out} ({len(lay.rows)} rows; not yet promoted onto {a.layout})")
     bank_of = {m.name: sorted({c.bank for c in m.chunks if c.bank is not None}) for m in mods}
     rep = {"banks": {i: f for i, f in enumerate(fill) if f}, "bank_of": bank_of, "stubs": len(stubs),
            "common_fns": sorted(n for n, c in funcs.items() if c.common), "common_bytes_modules": common_size,
