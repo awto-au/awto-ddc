@@ -18,6 +18,8 @@ Finding kinds (key = kind|src|detail, address-free so two images can be diffed):
   fnptr_banked           address of a banked function taken in code / data without a stub
   vector_banked          interrupt vector jumps to a banked address
   bank_reg_access        movx on 0xFFFF outside the bank-switch routines
+  const_ptr_gptr_xbank   asm (post-bank pass, --asm): address of a banked const passed to a function that reads generic pointers
+                         (__gptrget) and sits in another bank: it reads its OWN bank at that address (#46: boot logo tile map)
   stack_arg_via_stub     function reads stack-passed args via SP/_bp but is reached through a bank stub (+4 B between args and
                          callee, #11): must be common or share its callers' bank
   isr_reach_stub         info: stub called from ISR-reachable common code
@@ -415,6 +417,55 @@ def equiv(good, bad):
     return F
 
 
+def asm_const_ptr(im, asm_dir):
+    """const_ptr_gptr_xbank from the post-bank asm: `mov a|dptr|rN,#_tK` (K a banked const) followed within 30 lines by the call that
+    consumes it; the callee reads generic pointers (calls __gptrget) and lives in another bank than K (and is not common)."""
+    F = []
+    d = Path(asm_dir)
+    if not d.is_dir():
+        return F
+    where = {c["name"]: c for c in im.chunks if c["kind"] in ("fn", "const")}
+    texts = {f: f.read_text(errors="replace").splitlines() for f in sorted(d.glob("*.asm"))}
+    reader, bodies = set(), {}
+    for f, ls in texts.items():
+        cur = None
+        for l in ls:
+            m = re.match(r"^(_\w+):\s*$", l)
+            if m:
+                cur = m.group(1)
+            elif cur and re.match(r"^\s+[la]call\s+__gptrget", l):
+                reader.add(cur)
+    imm = re.compile(r"^\s+mov\s+(?:a|dptr|r[0-7]|ar[0-7]),\s*#\(?(_\w+)")
+    call = re.compile(r"^\s+[lj]call\s+(?:__bs)?(_\w+)|^\s+ljmp\s+(?:__bs)?(_\w+)")
+    for f, ls in texts.items():
+        cur = None
+        for i, l in enumerate(ls):
+            m = re.match(r"^(_\w+):\s*$", l)
+            if m:
+                cur = m.group(1)
+                continue
+            m = imm.match(l)
+            if not m or cur is None or m.group(1) not in where or where[m.group(1)]["kind"] != "const":
+                continue
+            k = where[m.group(1)]
+            for l2 in ls[i + 1:i + 31]:
+                c2 = re.match(r"^\s+lcall\s+(?:__bs)?(_\w+)", l2)
+                if c2:
+                    cal = c2.group(1)
+                    fc = where.get(cal)
+                    if cal in reader and fc and fc["reg"] != "C" and k["reg"] != "C" and fc["reg"] != k["reg"]:
+                        F.append(dict(kind="const_ptr_gptr_xbank", src=cur, addr=k["addr"],
+                                      det=f"{m.group(1)} (bank {k['reg']}) passed to gptr reader {cal} (bank {fc['reg']})"))
+                    break
+                if re.match(r"^\s+(ret|reti)\b", l2):
+                    break
+    seen, out = set(), []
+    for f in F:                                              # lo and hi byte loads both match
+        if (f["src"], f["det"]) not in seen:
+            seen.add((f["src"], f["det"])); out.append(f)
+    return out
+
+
 def isr_reach(im):
     """names of stubs called (directly, through common code) from the interrupt vectors."""
     fn_at = {c["addr"]: c for c in im.chunks if c["reg"] == "C"}
@@ -440,13 +491,15 @@ def xdata_ranges(areas):
     return [(a["addr"], a["addr"] + a["size"]) for a in areas.values() if "XDATA" in a["attr"] and a["size"]]
 
 
-def run(bin_path, map_path, layout, common, log=print):
+def run(bin_path, map_path, layout, common, log=print, asm_dir=None):
     im = Image(bin_path, map_path, layout, common)
     xd = xdata_ranges(im.areas)
     log(f"{bin_path}: {len(im.img)} B, {len(im.chunks)} chunks "
         f"({sum(c['kind'] == 'fn' for c in im.chunks)} fn, {sum(c['kind'] == 'const' for c in im.chunks)} const, "
         f"{sum(c['kind'] == 'stub' for c in im.chunks)} stub), xdata {[(hex(a), hex(b)) for a, b in xd]}")
     F = check(im, xd, d8051.load_regnames())
+    if asm_dir:
+        F += asm_const_ptr(im, asm_dir)
     for s in sorted(isr_reach(im)):
         F.append(dict(kind="isr_reach_stub", src="ISR", det=s, addr=0))
     return im, F
@@ -466,6 +519,8 @@ def main():
     ap.add_argument("--equiv-bin", default="", help="good image of the same source: compare chunk by chunk")
     ap.add_argument("--equiv-map", default="")
     ap.add_argument("--equiv-layout", default="")
+    ap.add_argument("--asm", default=str(REPO / "tmp/sdcc-port/asm_bank"),
+                    help="post-bank asm dir of THIS image's build (const_ptr_gptr_xbank; skipped when absent)")
     ap.add_argument("--save", default="", help="write finding keys here")
     a = ap.parse_args()
     (REPO / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -473,7 +528,7 @@ def main():
 
     def log(s):
         print(s); lf.write(s + "\n"); lf.flush()
-    im, F = run(a.bin, a.map, a.layout, a.common, log)
+    im, F = run(a.bin, a.map, a.layout, a.common, log, a.asm)
     if a.equiv_bin:
         gim = Image(a.equiv_bin, a.equiv_map, a.equiv_layout, a.common)
         F += equiv(gim, im)
