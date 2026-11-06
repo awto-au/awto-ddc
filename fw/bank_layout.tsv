@@ -945,8 +945,7 @@ fn	_ScalerPinshareAdjustFlashDrive	0	0x13c8	236
 fn	_ScalerPinshareAdjustFlashSlewRate	0	0x14b4	24
 fn	_ScalerPinshareGpioDdcPinSwitch	0	0x14cc	120
 fn	_ScalerPinshareInitial	0	0x1544	292
-fn	_ScalerScalingSetScalingDown	0	0x1668	2092
-fn	_ScalerScalingSetScalingUp	0	0x1e94	1240
+fn	_ScalerScalingSetScalingUp	0	0x1668	1348
 fn	_ScalerSyncHdcpDownLoadBKsv	0	0x236c	416
 fn	_ScalerSyncHdcpDownLoadKey	0	0x250c	180
 fn	_ScalerSyncHdcpEnableDownLoadKey	0	0x25c0	256
@@ -1080,6 +1079,7 @@ fn	_SysSourceStableCheck	0	0xa128	96
 fn	_UserCommonInterfaceGetHDCPKey	0	0xa188	116
 fn	_UserCommonInterfaceLoadEmbeddedEdidData	0	0xa1fc	48
 fn	_UserCommonInterfaceLoadEmbeddedEdidDataByPort	0	0xa22c	224
+fn	_ScalerScalingSetScalingDown	0	0xa30c	2628
 const	_tSTRING_RESOLUTION_TABLE	1	0x0000	104
 const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1230	1	0x0068	92
 fn	_ScalerColor420To422D2D3Enable	1	0x00c4	68
@@ -1238,7 +1238,6 @@ fn	_RTDKeyScanReady	2	0x031c	52
 fn	_UserInterfaceKeyHandler	2	0x0350	68
 fn	_MenuAdvance	2	0x0394	200
 fn	_MenuAdvanceAspectAdjust	2	0x045c	408
-fn	_MenuAdvanceDPEdidAdjust	2	0x05f4	196
 fn	_MenuAdvanceDdcciAdjust	2	0x06b8	140
 fn	_MenuAdvanceDpD0VersionAdjust	2	0x0744	448
 fn	_MenuAdvanceDpD1VersionAdjust	2	0x0904	480
@@ -1246,7 +1245,7 @@ fn	_MenuAdvanceDpD2VersionAdjust	2	0x0ae4	284
 fn	_MenuAdvanceDpD6VersionAdjust	2	0x0c00	460
 fn	_MenuAdvanceEdidAdjust	2	0x0dcc	512
 fn	_MenuAdvanceEdidDXAdjust	2	0x0fcc	460
-fn	_MenuAudio	2	0x1198	236
+fn	_MenuAdvanceDPEdidAdjust	2	0x1198	208
 fn	_MenuColorColorEffcUserG	2	0x1284	260
 fn	_MenuColorColorEffcUserR	2	0x1388	240
 fn	_MenuColorColorEffcUserY	2	0x1478	260
@@ -1272,7 +1271,7 @@ fn	_MenuInputD5Port	2	0x313c	304
 fn	_MenuInputD6Port	2	0x326c	272
 fn	_MenuNone	2	0x337c	244
 fn	_MenuOther	2	0x3470	144
-fn	_MenuOtherLanguage	2	0x3500	252
+fn	_MenuAudio	2	0x3500	248
 fn	_RTDOsdEventMsgProc	2	0x35fc	488
 fn	_RTDOsdSystemFlowProc	2	0x37e4	612
 fn	_OsdDispAdvanceMenuReDraw	2	0x3a48	96
@@ -1287,7 +1286,7 @@ fn	_OsdDispMainMenuArrow	2	0x4324	252
 fn	_OsdDispMainMenuCursor	2	0x4420	688
 fn	_OsdDispMainMenuIconPage	2	0x46d0	7220
 fn	_OsdDispMainMenuIconString	2	0x6304	684
-fn	_OsdDispMainMenuOptionSetting	2	0x65b0	2912
+fn	_MenuOtherLanguage	2	0x65b0	272
 fn	_OsdDispMainMenuSubSelect	2	0x7110	144
 fn	_OsdDispMainOptionIcon	2	0x71a0	172
 fn	_OsdDispOsdMessage	2	0x724c	1484
@@ -1363,6 +1362,7 @@ fn	_UserCommonInterfacePanelPowerAction	2	0x9bc4	700
 fn	_UserCommonInterfaceTimerEventProc	2	0x9e80	32
 fn	_UserCommonNVRamGetSystemData	2	0x9ea0	416
 fn	_UserCommonNVRamSetSystemData	2	0xa040	692
+fn	_OsdDispMainMenuOptionSetting	2	0xa2f4	3104
 fn	_ScalerDpSecDataReset	3	0x0000	24
 fn	_ScalerDpRx1ChangeDpcdVersion	3	0x0018	1420
 fn	_ScalerDpRx1PhyCTS	3	0x05a4	3688
@@ -1381,7 +1381,6 @@ fn	_ScalerDpRx1ChangeSrambleSeed	3	0x543c	8
 fn	_ScalerDpRx1DecodeErrorCountReset	3	0x5444	20
 fn	_ScalerDpRx1HDCPUnplugReset	3	0x5458	48
 fn	_ScalerDpRx1HpdIrqAssert	3	0x5488	68
-fn	_ScalerDpRx1InterlaceCheck	3	0x54cc	2996
 fn	_ScalerDpRx1LinkRateDetect	3	0x6080	140
 fn	_ScalerDpRx1MSACheck	3	0x610c	732
 fn	_ScalerDpRx1SetHotPlugEvent	3	0x63e8	52
@@ -1434,6 +1433,7 @@ fn	_SysModeHandler	3	0x9bcc	800
 fn	_SysSourceCableDetection	3	0x9eec	800
 fn	_SysSourceCableResetProc	3	0xa20c	8
 fn	_SysSourceFirstActiveProc	3	0xa214	8
+fn	_ScalerDpRx1InterlaceCheck	3	0xa21c	3380
 const	_OSD_ADVANCE_ITEM_PRI	4	0x0000	12
 const	_tOSD_TABLE_LANGUAGE_FONT_WIDTH	4	0x000c	12
 const	_tsFontWidth0	4	0x0018	96
@@ -1710,7 +1710,8 @@ fn	_RTDFlashRestoreOSDData	6	0x1f3c	104
 fn	_RTDFlashRestoreSixColorData	6	0x1fa4	84
 fn	_RTDFlashRestoreUserColorSetting	6	0x1ff8	188
 fn	_RTDFlashSaveBriCon	6	0x20b4	48
-fn	_RTDFlashSaveChecksumVersionCode	6	0x20e4	668
+fn	_MenuOtherRotate	6	0x20e4	212
+fn	_MenuOtherTransparency	6	0x21b8	256
 fn	_RTDFlashSaveColorSetting	6	0x2380	48
 fn	_RTDFlashSaveOSDData	6	0x23b0	152
 fn	_RTDFlashSaveSixColorData	6	0x2448	36
@@ -1720,14 +1721,14 @@ fn	_RTDFlashWholeRestore	6	0x2600	24
 fn	_MenuAdvanceCloneAdjust	6	0x2618	148
 fn	_MenuAdvanceDPMstAdjust	6	0x26ac	236
 fn	_MenuAdvanceODGainAdjust	6	0x2798	468
-fn	_MenuAdvanceOverDriveGain	6	0x296c	152
+fn	_MenuOtherReset	6	0x296c	124
 fn	_MenuAdvanceOverDriveOnOff	6	0x2a04	284
 fn	_MenuAdvanceOverScanAdjust	6	0x2b20	180
 fn	_MenuAdvanceUltraVividAdjust	6	0x2bd4	184
 fn	_MenuAudioAudioSourceSelect	6	0x2c8c	224
 fn	_MenuAudioMute	6	0x2d6c	272
 fn	_MenuAudioMuteOnOff	6	0x2e7c	228
-fn	_MenuAudioVolume	6	0x2f60	188
+fn	_MenuAdvanceOverDriveGain	6	0x2f60	164
 fn	_MenuAudioVolumeAdjust	6	0x301c	316
 fn	_MenuColorColorDemoAdjust	6	0x3158	304
 fn	_MenuColorColorHueAdjust	6	0x3288	344
@@ -1749,16 +1750,14 @@ fn	_MenuDisplayPhaseAdjust	6	0x44c8	80
 fn	_MenuDisplayVPos	6	0x4518	272
 fn	_MenuDisplayVPosAdjust	6	0x4628	296
 fn	_MenuOtherLanguageAdjust	6	0x4750	312
-fn	_MenuOtherMenuTime	6	0x4888	192
 fn	_MenuOtherMenuTimeAdjust	6	0x4948	396
-fn	_MenuOtherOsdHPos	6	0x4ad4	208
+fn	_MenuAudioVolume	6	0x4ad4	200
 fn	_MenuOtherOsdHPosAdjust	6	0x4ba4	408
-fn	_MenuOtherOsdVPos	6	0x4d3c	232
+fn	_MenuOtherMenuTime	6	0x4d3c	216
 fn	_MenuOtherOsdVPosAdjust	6	0x4e24	400
-fn	_MenuOtherReset	6	0x4fb4	112
-fn	_MenuOtherRotate	6	0x5024	196
+fn	_MenuOtherOsdVPos	6	0x4fb4	248
 fn	_MenuOtherRotateAdjust	6	0x50e8	308
-fn	_MenuOtherTransparency	6	0x521c	240
+fn	_MenuOtherOsdHPos	6	0x521c	228
 fn	_MenuOtherTransparencyAdjust	6	0x530c	332
 fn	_MenuPicture	6	0x5458	212
 fn	_MenuPictureBacklight	6	0x552c	196
@@ -1818,9 +1817,10 @@ fn	_UserCommonFlashLoadItem	6	0x9a28	408
 fn	_UserCommonFlashLoadSystemData	6	0x9bc0	120
 fn	_UserCommonFlashRead	6	0x9c38	108
 fn	_UserCommonFlashRestoreSystemData	6	0x9ca4	84
-fn	_UserCommonFlashSaveItem	6	0x9cf8	1572
+fn	_RTDFlashSaveChecksumVersionCode	6	0x9cf8	696
 fn	_UserCommonFlashSaveSystemData	6	0xa31c	36
 fn	_UserCommonFlashWrite	6	0xa340	108
+fn	_UserCommonFlashSaveItem	6	0xa3ac	1636
 const	_tFONT1_ICON_0_DEGREE	7	0x0000	356
 const	_tFONT1_ICON_180_DEGREE	7	0x0164	404
 const	_tFONT1_ICON_1_DOT_1	7	0x02f8	388
@@ -2377,9 +2377,9 @@ fn	_ScalerPLLDDR2PLLOutputCtrl	10	0x9360	876
 fn	_ScalerPLLSetDDR2PLLFreq	10	0x96cc	948
 fn	_ScalerPLLSetDDR2PLLWritePhase	10	0x9a80	552
 fn	_ScalerPLLSetDPLLReset	10	0x9ca8	128
-fn	_ScalerPLLSetMPLLFreq	10	0x9d28	1480
 fn	_ScalerPLLSetMPLLOffset	10	0xa2f0	60
 fn	_SysPowerRecoverIsolationAreaData	10	0xa32c	104
+fn	_ScalerPLLSetMPLLFreq	10	0xa394	1576
 const	___str_0	11	0x0000	8
 const	___str_1	11	0x0008	8
 const	___str_10	11	0x0010	12
