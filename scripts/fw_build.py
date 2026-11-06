@@ -245,6 +245,8 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/fw_build.log").open("a")
     py = sys.executable
+    st = T.check_install()
+    log(f"compiler: {st}")
     log(f"byte order: {'BIG-endian (--big-endian, Keil order)' if T.BIG_ENDIAN else 'little-endian (default)'}, lib {T.LIB}")
     if not a.skip_compile:
         run("port", [py, "scripts/keil2sdcc.py", "port"])
@@ -324,7 +326,7 @@ def main() -> int:
             img[x] = v
     (out / "fw.bin").write_bytes(img)
     rep = {"serial": a.serial, "common_end": common_end, "common_max": a.common, "banks": used,
-           "bin_bytes": len(img), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram}
+           "compiler": st, "sdcccall": T.SDCCCALL, "bin_bytes": len(img), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram}
     (out / "build.json").write_text(json.dumps(rep, indent=1))
     log(f"image {out / 'fw.bin'}: {nb} banks, common 0x{common_end:x}/0x{a.common:x}")
     return 0
