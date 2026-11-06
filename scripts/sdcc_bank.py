@@ -251,6 +251,22 @@ def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
     return "\n".join(out)
 
 
+def load_weights(path, funcs):
+    """{(caller, callee): calls/pass}; names cut at 32 chars by the map resolve by unique prefix."""
+    def full(n):
+        if n in funcs:
+            return n
+        m = [f for f in funcs if f.startswith(n)]
+        return m[0] if len(m) == 1 else None
+    out = {}
+    for k, v in json.loads(Path(path).read_text())["edges"].items():
+        a, b = (full(x) for x in k.split())
+        if a and b:
+            out[(a, b)] = out.get((a, b), 0) + v
+    log(f"cluster weights {path}: {len(out)} edges, {sum(out.values()):.1f} calls/pass")
+    return out
+
+
 def main() -> int:
     global LOG
     ap = argparse.ArgumentParser()
@@ -265,6 +281,10 @@ def main() -> int:
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
                     help="call-graph-aware placement (sdcc_cluster.py): merge units with heavy call edges into one bank so "
                          "calls need no stub; module = module granularity, fn = per function. Default: DFS first fit")
+    ap.add_argument("--cluster-weights", default="", help="JSON {edges: {'caller callee': calls/pass}} from fw_profile: "
+                    "measured call counts added to the --cluster edge weights (sdcc_cluster.DYN_W each)")
+    ap.add_argument("--pin-common", default="", help="comma list of fns forced into common (small ISR-called handlers: "
+                    "the ISR -> banked call needs a stub otherwise); counted against nothing, common must fit")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
     ap.add_argument("--layout", default="", help="sticky layout file (fw/bank_layout.tsv): fixed slot per chunk, reused "
                     "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
@@ -295,6 +315,10 @@ def main() -> int:
     for c in funcs.values():
         if c.isr or c.name == "_main" or c.stack_args:       # stack_args: callable only by direct lcall (#11)
             c.common = True
+    for n in filter(None, a.pin_common.split(",")):
+        if n not in funcs:
+            sys.exit(f"--pin-common: no function {n}")
+        funcs[n].common = True
     for c in funcs.values():
         if c.common:
             for r in c.refs:
@@ -399,6 +423,7 @@ def main() -> int:
         return fl, None
 
     allc = [c for m in mods for c in m.chunks if c.area == "CSEG"]
+    dyn = load_weights(a.cluster_weights, funcs) if a.cluster_weights else None
     if reuse:
         slot_fill = defaultdict(int)
         for (k, nm), (rg, off, sl) in lay.rows.items():
@@ -433,7 +458,7 @@ def main() -> int:
                 log(f"cross-bank calls, first-fit packing: {SC.stats(allc, funcs)}")
                 keep = {id(c): c.bank for m in mods for c in m.chunks}
                 cu = units if a.cluster == "module" else [[c] for u in units for c in u]
-                f2 = SC.assign(cu, funcs, a.banks, int(cap * f), lambda c: L.pad_slot(c.size), consts)
+                f2 = SC.assign(cu, funcs, a.banks, int(cap * f), lambda c: L.pad_slot(c.size), consts, dyn)
                 if f2 is None:
                     log(f"cluster: does not fit at fill {f:.2f}")
                     for m in mods:

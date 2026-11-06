@@ -227,6 +227,8 @@ def parse_args(argv=None):
                     help="sticky layout (default: the tracked, proven one); '' = no layout, first-fit packing")
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
                     help="call-graph bank placement; only valid while a layout is being created (missing/empty --layout file)")
+    ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
+    ap.add_argument("--pin-common", default="", help="passed to sdcc_bank (comma list of fns forced into common)")
     ap.add_argument("--src-patch", default="")
     a = ap.parse_args(argv)
     if a.cluster:
@@ -258,7 +260,9 @@ def main() -> int:
     new_layout.unlink(missing_ok=True)                        # only this run's output may be promoted
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
                  *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
-                 *(["--cluster", a.cluster] if a.cluster else [])])
+                 *(["--cluster", a.cluster] if a.cluster else []),
+                 *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
+                 *(["--pin-common", a.pin_common] if a.pin_common else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_memcpy reads its PARMs little-endian, ABI 0: BE and --sdcccall>=1 builds keep the library memcpy (#24, #15, #51.1)

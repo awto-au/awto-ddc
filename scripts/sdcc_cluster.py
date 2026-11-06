@@ -12,16 +12,23 @@ from collections import defaultdict
 CONST_W = 64         # fn -> CONST ref: a CONST used from several banks goes to common, so keep users together
 WEIGHT = 8           # one loop level = 8x as hot as straight-line code; depth capped at MAX_DEPTH
 MAX_DEPTH = 3
+DYN_W = 256          # one measured call per main-loop pass (fw_profile edges) = 256 = half a static loop-depth-3 site
 
 
 def site_weight(depth):
     return WEIGHT ** min(depth, MAX_DEPTH)
 
 
-def edges_of(units, funcs, consts=None):
-    """{(i, j): weight} between units i < j, from call sites of banked chunks into other banked units."""
+def edges_of(units, funcs, consts=None, dyn=None):
+    """{(i, j): weight} between units i < j, from call sites of banked chunks into other banked units.
+    dyn: {(caller fn, callee fn): calls per pass} measured, added at DYN_W each."""
     owner = {id(c): i for i, u in enumerate(units) for c in u}
     e = defaultdict(int)
+    by_name = {c.name: i for i, u in enumerate(units) for c in u}
+    for (a, b), n in (dyn or {}).items():
+        i, j = by_name.get(a), by_name.get(b)
+        if i is not None and j is not None and i != j:
+            e[(min(i, j), max(i, j))] += int(n * DYN_W)
     for i, u in enumerate(units):
         for c in u:
             for t, depth in getattr(c, "sites", ()):
@@ -63,10 +70,10 @@ def agglomerate(sizes, edges, limit):
             return list(cl.values())
 
 
-def assign(units, funcs, nbanks, limit, sizeof, consts=None):
+def assign(units, funcs, nbanks, limit, sizeof, consts=None, dyn=None):
     """Sets c.bank for every chunk of `units`; returns per-bank fill list or None when it does not fit."""
     sizes = [sum(sizeof(c) for c in u) for u in units]
-    clusters = agglomerate(sizes, edges_of(units, funcs, consts), limit)
+    clusters = agglomerate(sizes, edges_of(units, funcs, consts, dyn), limit)
     fill = [0] * nbanks
     placed = {}
     for cl in sorted(clusters, key=lambda cl: -sum(sizes[i] for i in cl)):
