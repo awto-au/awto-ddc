@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 
+import json
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
@@ -305,7 +306,17 @@ def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
     monkeypatch.setattr(dev, "cmd_power_cycle", lambda e: events.append(("relay",)) or 0)
     monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: events.append(("diag", a, bus)) or 0)
     monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash", e)) or 0)
+    _flashed_map(dev, "AWT26110003-r-be", with_safe=True)      # default: the flashed image has the safe block
     return img, events
+
+
+def _flashed_map(dev, tag, with_safe):
+    """flashed.json + map fixture for unit 3; with_safe adds the _g_stAwtoSafe symbol line."""
+    dev.FW.mkdir(parents=True, exist_ok=True)
+    (dev.FW / "AWT26110003-flashed.json").write_text(json.dumps({"tag": tag, "image": ""}))
+    safe = "     0000F6B0  _g_stAwtoSafe                      SysMain\n" if with_safe else ""
+    (dev.FW / f"{tag}.map").write_text("     0000EA89  _g_stOsdInfo                       RTD2014Osd\n" + safe
+                                       + "     0000F6D0  _g_stAwtoDiag                      SysMain\n")
 
 
 def test_recover_bad_image_refused_before_relay(dev, tmp_path, monkeypatch):
@@ -338,6 +349,21 @@ def test_recover_hold_failure_still_flashes(dev, tmp_path, monkeypatch):
     monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash",)) or 0)
     assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
     assert ("flash",) in events
+
+
+def test_recover_skips_hold_without_safe_block_in_map(dev, tmp_path, monkeypatch):
+    """#52: hold writes 0xF6B0, live XDATA on images without _g_stAwtoSafe (working-base line)."""
+    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
+    _flashed_map(dev, "AWT26110003-r-be", with_safe=False)
+    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
+    assert [e[0] for e in events] == ["bus", "relay", "flash"]
+
+
+def test_recover_skips_hold_when_flashed_map_missing(dev, tmp_path, monkeypatch):
+    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
+    (dev.FW / "AWT26110003-r-be.map").unlink()
+    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
+    assert "diag" not in [e[0] for e in events]
 
 
 def test_bus_wait_rescans_until_edid_appears(dev, monkeypatch):

@@ -667,6 +667,15 @@ def cmd_bench(extra: list[str]) -> int:
     return _py("i2c_bench.py", _bus(u))
 
 
+def _flashed_has_safe_block(u: dict) -> bool:
+    """True only if the map of the image on the unit (flashed tag) defines _g_stAwtoSafe; no map = no hold (#52)."""
+    m = FW / f"{_flashed(u).get('tag', '')}.map"
+    try:
+        return re.search(r"^\s+[0-9A-Fa-f]{8}\s+_g_stAwtoSafe\b", m.read_text(errors="replace"), re.M) is not None
+    except OSError:
+        return False
+
+
 RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2.5x; expiry: SystemExit, unit left powered
 
 
@@ -692,9 +701,12 @@ def cmd_recover(extra: list[str]) -> int:
         return rc
     if bus is None:                         # wedged: EDID silent before, so find it once after power-on
         bus = _bus(u, wait_s=RECOVER_BUS_WAIT_S)
-    hrc = _diag(u, "--hold", bus=bus)       # best effort: an image without the safe window still flashes over ISP
-    if hrc:
-        log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
+    if _flashed_has_safe_block(u):          # --hold writes the marker at 0xF6B0: ordinary XDATA on images without the block (#52)
+        hrc = _diag(u, "--hold", bus=bus)   # best effort: a failed hold still flashes over ISP
+        if hrc:
+            log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
+    else:
+        log("recover: flashed image has no _g_stAwtoSafe in its map; hold skipped, flashing over ISP", "WARN")
     return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *(["--any-image"] if any_image else []), *img])
 
 
