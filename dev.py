@@ -748,10 +748,26 @@ def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
             blk["mons"].append(s_.split(" ")[0])
     if not any(target in b_["mons"] for b_ in blocks):
         raise SystemExit(f"mode: {target} is not an active logical monitor in gdctl show; nothing done")
-    args = []
     for b_ in blocks:
         if not b_["mons"] or b_["pos"] is None or any(m not in cur for m in b_["mons"]):
             raise SystemExit(f"mode: cannot read position/mode of logical monitor {b_['mons']}; nothing done")
+
+    def rect(b_, m_):                                   # logical rectangle of a block showing mode string m_
+        w, h = (int(v) for v in m_.split("@")[0].split("x"))
+        s = float(b_["scale"])
+        return int(b_["pos"][0]), int(b_["pos"][1]), w / s, h / s
+
+    tb = next(b_ for b_ in blocks if target in b_["mons"])
+    x, y, w, h = rect(tb, mode)
+    for b_ in blocks:                                   # new size would overlap a neighbour: keep the old footprint
+        if b_ is not tb:
+            ox, oy, ow, oh = rect(b_, cur[b_["mons"][0]])
+            if x < ox + ow and ox < x + w and y < oy + oh and oy < y + h:
+                old_w = rect(tb, cur[target])[2]
+                tb["scale"] = f"{int(mode.split('x')[0]) / old_w:g}"
+                break
+    args = []
+    for b_ in blocks:
         args += ["--logical-monitor", *(["--primary"] if b_["prim"] else [])]
         for m in b_["mons"]:
             args += ["--monitor", m, "--mode", mode if m == target else cur[m]]
