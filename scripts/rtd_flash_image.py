@@ -175,6 +175,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
             try:
                 if img[s:s + SECTOR] != BLANK:          # blank in the new image: erase was the whole job
                     program_verify(isp, s, img[s:s + SECTOR], crc_ok)
+                else:                                   # but check it, ~10 ms CRC (Dan: else a failed erase reads as good)
+                    _verify(isp, s, BLANK, crc_ok)
             except RuntimeError as e:
                 log(f"0x{s:06x}: {e}; redo sector alone (erase+program+verify)")
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok)
