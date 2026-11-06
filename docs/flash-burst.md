@@ -28,3 +28,12 @@
 - Byte mode: 4096 msgs x ~340 us (3 bytes on the wire + driver) = 1.4 s/sector (matches the measured ~1.4 s)
 - Burst: 16 pages x 258 wire bytes x 90 us = 0.37 s, + per page ~7 small transfers (addr x2, poll, preface read, 6F r/w, done poll) ~4 ms = 0.07 s -> ~0.45 s/sector
 - Sector 2.5 s -> ~1.55 s (erase, CRC ops, setup unchanged); 152-sector image ~380 s -> ~235 s. Assumes all 16 pages non-blank, no NAK redo (each redo costs ~1.5 s)
+
+## Bus rate: rated max | board allows | we run | why the gap (#12)
+| link | rated max | board allows | we run | why |
+|---|---|---|---|---|
+| ISP slave 0x4A (flash) | not documented | 1 MHz measured clean (4 flashes of 34 sectors + 1 full image, 0 retries/redos) | 100 kHz default; 1 MHz with `tools/gmbus_rate` loaded | i915 hardcodes `GMBUS_RATE_100KHZ`; rate set by `scripts/gmbus_rate.py load 1000` |
+| firmware debug slave 0x35 (rtd_diag, osd_test) | not documented | 1 MHz NAKs intermittently (diag read failed 2 of 4 runs) | 100 kHz | measured failure: unload the module for diag/OSD work |
+- GMBUS0 rate bits 10:8: code 1 = 50 kHz, 0 = 100 kHz measured; code 2 ("400 kHz") measures 100 kHz on Raptor Lake UHD 770; code 3 = 1 MHz. No 400 kHz step exists on this host
+- Module: `tools/gmbus_rate/` sets `bus->reg0` (offset 1100 in `struct intel_gmbus`, from i915 BTF via pahole); unload restores. Numbers and EDID timing proof: #12
+- Proposal (not implemented): `dev.py flash` loads 1 MHz around the ISP write only (`gmbus_rate.py load 1000` before `rtd_flash_image.py`, `unload` in a finally and before the post-flash diag); needs `sudo -n`
