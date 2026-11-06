@@ -180,10 +180,9 @@ def loop_rate(d: Dbg, base: int, wait=time.sleep) -> tuple[float, list[float], f
 
 
 def check_rate(rep, d, base, wait=time.sleep, min_rate=50.0) -> bool:
-    mean, rates, cum = loop_rate(d, base, wait)
+    mean, rates, _cum = loop_rate(d, base, wait)
     return rep.add("main loop", mean >= min_rate,
-                   f"{mean:.1f}/s mean of {len(rates)} x {RATE_WINDOW_S:.0f} s windows ({', '.join(f'{r:.1f}' for r in rates)}); "
-                   f"cumulative since boot {cum:.1f}/s")
+                   f"{mean:.1f}/s mean of {len(rates)} x {RATE_WINDOW_S:.0f} s windows ({', '.join(f'{r:.1f}' for r in rates)})")
 
 
 def check_state(rep, d, mode_addr, power_addr) -> bool:
