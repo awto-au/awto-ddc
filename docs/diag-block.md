@@ -23,7 +23,8 @@
 | 0x22 | 2 | 1000 x `movx a,@dptr` (DPTR = block base) |
 | 0x24 | 2 | 1000 x `mov a,@r0` (R0 = 0xFF) |
 | 0x26 | 2 | 1000 x empty `djnz` loop (baseline) |
-| 0x28 | 8 | spare |
+| 0x28 | 1 | test command (#33): 0x01-0x04 key MENU/RIGHT/LEFT/EXIT, 0x10+n OSD event n; cleared when applied |
+| 0x29 | 7 | spare |
 
 ## Stages (temporal order; timestamp 0 before Timer2 runs)
 1 BOOT start of main | 2 GPIO init done (inside `ScalerMcuInitial`) | 3 `ScalerMcuInitial` done | 4 pin-share done | 5 main loop first pass | 6 panel power on | 7 DPTx link start | 8 DPTx link done.

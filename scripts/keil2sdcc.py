@@ -147,6 +147,8 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysPowerHandler\(\);", "            AwtoDiagTestCmd();"),  # after key scan (#33)
+    (OSD + "RTD2014Key.c", r"^void UserInterfaceKeyHandler\(void\)$", (SHIM / "awto_testcmd.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
 ] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
