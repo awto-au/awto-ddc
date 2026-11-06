@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 import sdcc_tools as T  # noqa: E402
+import sdcc_layout as L  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -40,6 +41,7 @@ AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
 BANK_SIZE = 0x10000
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
+STUB_SIZE = 9             # mov r0/r1/r2,#imm (2 B each) + ljmp __bs_call (3 B)
 ASM_TIMEOUT = 30          # one sdas8051 run: largest module assembles in < 2 s; stall = broken input
 
 
@@ -188,7 +190,7 @@ def drop_dead(mods, funcs, consts):
     log(f"dead chunks dropped: {len(dead)} ({nb['CSEG']} B code, {nb['CONST']} B const); kept {len(seen)}")
 
 
-def render(mod, area_of, stubs_needed, extra_globl):
+def render(mod, area_of, stubs_needed, extra_globl, stub_area=lambda f: "CSEG"):
     """Module text with each chunk in the area area_of(chunk) gives; calls/refs to stubbed fns rewritten."""
     out = list(mod.head)
     for g in sorted(extra_globl.get(mod.name, ())):
@@ -208,11 +210,9 @@ def render(mod, area_of, stubs_needed, extra_globl):
         out.append(f"\t.area {area}    (CODE)")
         out.extend(lines)
     stubs = [f for f in sorted(stubs_needed) if stubs_needed[f][0] == mod.name]
-    if stubs:
-        out.append("\t.area CSEG    (CODE)")
-        for f in stubs:
-            out += [f"\t.globl __bs{f}", f"__bs{f}:", f"\tmov\tr0,#{f}", f"\tmov\tr1,#({f} >> 8)",
-                    f"\tmov\tr2,#({f} >> 16)", "\tljmp\t__bs_call"]
+    for f in stubs:
+        out += [f"\t.area {stub_area(f)}    (CODE)", f"\t.globl __bs{f}", f"__bs{f}:", f"\tmov\tr0,#{f}",
+                f"\tmov\tr1,#({f} >> 8)", f"\tmov\tr2,#({f} >> 16)", "\tljmp\t__bs_call"]
     out.extend(mod.tail)
     return "\n".join(out)
 
@@ -229,6 +229,13 @@ def main() -> int:
     ap.add_argument("--pack-margin", type=lambda x: int(x, 0), default=0x600,
                     help="bytes kept free per bank at packing for CONST moved in afterwards")
     ap.add_argument("--keep-dead", action="store_true", help="keep chunks unreachable from main/ISRs")
+    ap.add_argument("--layout", default="", help="sticky layout file (fw/bank_layout.tsv): fixed slot per chunk, reused "
+                    "between builds; missing/empty file = create from the packing below (sdcc_layout.py)")
+    ap.add_argument("--fill-target", type=float, default=0.80,
+                    help="layout creation: per-bank fill limit (fraction of the bank, slot pads included); "
+                         "raised in 1%% steps only until everything fits")
+    ap.add_argument("--resid-end", type=lambda x: int(x, 0), default=0x0C00,
+                    help="layout: common bytes [0, this) kept for vectors/HOME/GSINIT/library/XINIT; chunk slots follow")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/sdcc_bank.log").open("a")
@@ -325,20 +332,102 @@ def main() -> int:
             units += [[c] for c in cs]
         elif cs:
             units.append(cs)
+    sticky = bool(a.layout)
+    lay = L.Layout.load(a.layout) if sticky else L.Layout()
+    reuse = sticky and bool(lay.rows)                        # existing layout: placement comes from it
     fill = [0] * a.banks
-    for u in units:                                          # first fit in call-graph order
-        n = sum(c.size for c in u)
-        b = next((i for i in range(a.banks) if fill[i] + n <= cap - a.pack_margin), None)
-        if b is None:
-            sys.exit(f"out of banks placing {u[0].module.name}:{u[0].name} ({n} B); fill={fill}")
-        for c in u:
-            c.bank = b
-        fill[b] += n
+
+    def first_fit(limit, sizeof, split=False):
+        fl = [0] * a.banks
+        todo = list(units)
+        while todo:                                          # first fit in call-graph order
+            u = todo.pop(0)
+            n = sum(sizeof(c) for c in u)
+            b = next((i for i in range(a.banks) if fl[i] + n <= limit), None)
+            if b is None and split and len(u) > 1:           # layout creation: a unit that fits nowhere is split per fn
+                todo = [[c] for c in u] + todo
+                continue
+            if b is None:
+                return None, (u, n, fl)
+            for c in u:
+                c.bank = b
+            fl[b] += n
+        return fl, None
+
+    if reuse:
+        slot_fill = defaultdict(int)
+        for (k, nm), (rg, off, sl) in lay.rows.items():
+            slot_fill[rg] += sl
+        by_mod = defaultdict(lambda: defaultdict(int))       # module -> bank -> bytes already placed there
+        for m in mods:
+            for c in m.chunks:
+                row = lay.rows.get(("fn" if c.area == "CSEG" else "const", c.name))
+                if row and row[0] != "C" and c.size:
+                    by_mod[m.name][row[0]] += c.size
+        newc = []
+        for m in mods:
+            for c in m.chunks:
+                if c.common or not c.size:
+                    continue
+                row = lay.rows.get(("fn" if c.area == "CSEG" else "const", c.name))
+                if row and row[0] == "C":
+                    c.common = True
+                elif row:
+                    c.bank = row[0]
+                else:                                        # new chunk: bank where its module already lives
+                    mb = by_mod[m.name]
+                    c.bank = max(mb, key=lambda b: (mb[b], -b)) if mb else min(range(a.banks), key=lambda b: slot_fill[b])
+                    slot_fill[c.bank] += L.pad_slot(c.size)
+                    newc.append(c.name)
+        log(f"sticky layout {a.layout}: {len(lay.rows)} rows, {len(newc)} new chunks: {', '.join(sorted(newc)[:20])}")
+    elif sticky:
+        f = a.fill_target
+        while True:
+            fill, fail = first_fit(int(cap * f), lambda c: L.pad_slot(c.size))
+            if fill is not None:
+                break
+            f += 0.01
+            if f > 1.0:
+                u, n, fl = fail
+                sys.exit(f"out of banks placing {u[0].module.name}:{u[0].name} ({n} B); fill={fl}")
+        log(f"layout creation: per-bank fill limit {f:.2f} of {cap} B (slot pads included; target {a.fill_target})")
+    else:
+        fill, fail = first_fit(cap - a.pack_margin, lambda c: c.size)
+        if fill is None:
+            u, n, fl = fail
+            sys.exit(f"out of banks placing {u[0].module.name}:{u[0].name} ({n} B); fill={fl}")
     log("bank fill: " + ", ".join(f"{i}:{f}" for i, f in enumerate(fill) if f))
     for m in mods:
         for c in m.chunks:
             if c.common:
                 c.bank = None
+    def slot_items(fixed_consts):
+        its = []
+        for m in mods:
+            for c in m.chunks:
+                if c.size:
+                    kind = "fn" if c.area == "CSEG" else "const"
+                    it = L.Item(kind, c.name, c.size, "C" if c.bank is None else c.bank, m.name)
+                    it.fixed = fixed_consts and kind == "const"
+                    its.append(it)
+        return its
+
+    def apply_placed(placed):
+        lay.rows = {k: v for k, v in placed.items()}
+
+    if reuse:                                                # pass A: re-home fns whose bank has no room left
+        its = slot_items(True)
+        for (kind, nm) in [k for k in lay.rows if k[0] == "stub"]:        # keep stub slots reserved
+            st = L.Item("stub", nm, STUB_SIZE, "C", "", slot=STUB_SIZE)
+            st.fixed = True
+            its.append(st)
+        placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log)
+        for (kind, name), rid in rehomed.items():
+            if kind == "fn" and rid != "C":
+                funcs[name].bank = rid
+        log(f"pass A: fns re-homed to another bank: {sorted(n for (k, n) in rehomed if k == 'fn')}")
+        apply_placed(placed)                                 # stub rows stay: their slots are what keeps common stable
+    # (a sticky layout already holds this decision: hot helpers are its common fn rows)
     # hot small helpers -> common with their banked callees: called from >= HOT_BANKS banks, closure <= HOT_SIZE B.
     # Saves 3 stack bytes + a bank switch per call level (fw_stack.py), and stubs. Budget --hot-budget.
     callers = defaultdict(set)
@@ -348,7 +437,7 @@ def main() -> int:
                 if t in funcs:
                     callers[t].add(c.bank)
     budget, moved = a.hot_budget, []
-    changed = True
+    changed = not reuse
     while changed:
         changed = False
         def banked_closure(c):
@@ -444,15 +533,46 @@ def main() -> int:
                     extra[m.name].add(f"__bs{x}")
     log(f"stubs: {len(stubs)}")
 
+    aname, bases, stub_slot = {}, {}, {}
+    if sticky:                                               # pass B: every slot (chunks, consts, stubs), no re-homing
+        its = slot_items(True)
+        for it in its:
+            it.fixed = True
+        for f_, (mn, bk) in sorted(stubs.items()):
+            st = L.Item("stub", f_, STUB_SIZE, "C", mn, slot=STUB_SIZE)
+            st.fixed = True
+            its.append(st)
+        placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log)
+        apply_placed(placed)
+        placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
+        lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "slot_pad": "size+4+size/32,4B"})
+        for (kind, name), (rid, off, sl) in placed.items():
+            an = ("ST" if kind == "stub" else "CH") + name
+            aname[(kind, name)] = an
+            bases[an] = off if rid == "C" else rid * BANK_SIZE + a.common_max + off
+        st_ = L.stats(placed, a.banks, a.resid_end, a.common_max, cap)
+        log("slot fill (used/capacity): " + ", ".join(f"{k}:{u}/{c}" for k, (u, c) in st_.items() if u))
+        (ROOT / "tmp/sdcc-port/area_bases.json").write_text(json.dumps(
+            {"areas": bases, "banks": sorted({r for r, _, _ in placed.values() if r != "C"}),
+             "slots": {an: placed[k][2] for k, an in aname.items()}}, indent=0))
+
+    def area_of(c):
+        if sticky and c.size:
+            return aname[("fn" if c.area == "CSEG" else "const", c.name)]
+        return c.area if c.bank is None else f"BANK{c.bank}"
+
     common_size, final = 0, [0] * a.banks
     for m in mods:
         p = out / f"{m.name}.asm"
-        p.write_text(render(m, lambda c: c.area if c.bank is None else f"BANK{c.bank}", stubs, extra))
+        p.write_text(render(m, area_of, stubs, extra, (lambda f_: aname[("stub", f_)]) if sticky else (lambda f_: "CSEG")))
         sz = assemble(p)
         common_size += sz.get("CSEG", 0) + sz.get("CONST", 0)
         for k, v in sz.items():
             if k.startswith("BANK"):
                 final[int(k[4:])] += v
+            elif sticky and (k.startswith("CH") or k.startswith("ST")):
+                if v > (STUB_SIZE if k.startswith("ST") else placed_slot[k]):
+                    sys.exit(f"slot overflow: area {k} is {v} B")
     log("final bank sizes: " + ", ".join(f"{i}:{v}" for i, v in enumerate(final) if v))
     over = {i: v for i, v in enumerate(final) if v > cap}
     if over:
@@ -460,6 +580,9 @@ def main() -> int:
     log(f"common CSEG+CONST from modules: {common_size} B (limit {a.common_max})")
     if common_size > a.common_max:
         sys.exit("common area overflow")
+    if sticky:
+        lay.save(a.layout)
+        log(f"layout written: {a.layout} ({len(lay.rows)} rows)")
     bank_of = {m.name: sorted({c.bank for c in m.chunks if c.bank is not None}) for m in mods}
     rep = {"banks": {i: f for i, f in enumerate(fill) if f}, "bank_of": bank_of, "stubs": len(stubs),
            "common_fns": sorted(n for n, c in funcs.items() if c.common), "common_bytes_modules": common_size,
