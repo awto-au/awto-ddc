@@ -1,0 +1,19 @@
+2026-11-06T12:00:00+1100 isp  enter ISP: 0x6F <- 0x80 (0x6F reads back enabled)
+2026-11-06T12:00:00+1100 isp  select scaler page 0x10
+2026-11-06T12:00:00+1100 isp  scaler read 0x1036 = 0x00  PIN_SHARE_CTRL86__TOPON
+2026-11-06T12:00:00+1100 isp  scaler write 0x1036 <- 0x01  PIN_SHARE_CTRL86__TOPON
+2026-11-06T12:00:00+1100 isp  scaler read 0x1036 = 0x01  PIN_SHARE_CTRL86__TOPON
+2026-11-06T12:00:00+1100 isp  select scaler page 0xFE
+2026-11-06T12:00:00+1100 isp  scaler read 0xFE26 = 0x00  PORT86_PIN_REG
+2026-11-06T12:00:00+1100 isp  scaler write 0xFE26 <- 0x01  PORT86_PIN_REG
+2026-11-06T12:00:00+1100 isp  scaler read 0xFE26 = 0x01  PORT86_PIN_REG
+2026-11-06T12:00:00+1100 isp  SPI WREN
+2026-11-06T12:00:00+1100 isp  erase sector 0x13000 (4 KiB)
+2026-11-06T12:00:00+1100 isp  program setup: PP opcode 0x02
+2026-11-06T12:00:00+1100 isp  read ISP 0x6F ISP_CTL = 0x90 (x2 polls)
+2026-11-06T12:00:00+1100 isp  program 0x13000..0x132FF (3 pages, 768 B)
+2026-11-06T12:00:00+1100 isp  program page 0x13800 (256 B)
+2026-11-06T12:00:00+1100 isp  read flash 0x13000..0x137FF (2048 B)
+2026-11-06T12:00:00+1100 isp  CRC 0x13000-0x13FFF result not read
+2026-11-06T12:00:00+1100 isp  SPI RDSR = 0x00
+2026-11-06T12:00:00+1100 isp  reset 0xEE <- 0x02 (scaler MCU reboots)

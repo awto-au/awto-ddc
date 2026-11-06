@@ -1,0 +1,5 @@
+16:27:22 dbg  read reg 0x08 (17 B): 5a 00 02 00 10 00 00 64 00 50 90 00 00 00 00 00 00
+16:27:22 dbg  message channel status: message pending
+16:27:22 dbg  message "\x05\x0e\xbd\x05" = 150
+2026-11-05T16:27:22+1100 2026-11-05T16:27:22+1100 ½ = 150
+16:27:22 dbg  read reg 0x08 (4 B): 00 96 7e 27

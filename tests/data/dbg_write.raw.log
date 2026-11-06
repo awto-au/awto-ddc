@@ -1,0 +1,3 @@
+2026-11-06T14:22:01+1100 REAL write dev=0x35 reg 0x01 f6
+2026-11-06T14:22:01+1100 REAL write dev=0x35 reg 0x03 1a
+2026-11-06T14:22:01+1100 REAL write dev=0x35 reg 0x3b f8

@@ -1,0 +1,20 @@
+10:49:08 listening 127.0.0.1:17420
+10:50:54 shim connected
+10:50:54 isp  read ISP 0x23 = 0x00
+10:50:54 dbg  BLOCKED (not sent) write reg 0x80 00
+10:50:54 isp  read ISP 0x23 = 0x00
+10:50:54 dbg  BLOCKED (not sent) write reg 0x80 00
+10:52:06 listening 127.0.0.1:17420
+10:52:36 shim connected
+10:52:36 isp  read ISP 0x23 = 0x6E
+10:52:36 dbg  BLOCKED (not sent) write reg 0x80 00
+10:52:36 isp  read ISP 0x23 = 0x6E
+10:52:36 dbg  BLOCKED (not sent) write reg 0x80 00
+10:53:22 isp  read ISP 0x23 = 0x6E
+10:53:22 dbg  BLOCKED (not sent) write reg 0x80 01
+11:12:27 listening 127.0.0.1:17420
+11:12:43 shim connected
+11:12:43 isp  read ISP 0x23 = 0x00
+11:12:43 dbg  halt main loop (0x80 <- 1)
+11:12:43 dbg  read XDATA 0x009F = 0x00  PAGE_SEL
+11:12:43 dbg  read XDATA 0x0000 = 0xCF  ID_REG

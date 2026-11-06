@@ -1,0 +1,23 @@
+16:22:13 REAL write dev=0x35 reg 0x01 00
+16:22:13 REAL write dev=0x35 reg 0x3a 00
+16:22:13 REAL read dev=0x35 reg 0x08 n=1 -> cf
+2026-11-05T16:22:13+1100 0x0000 @0x0000: cf
+16:22:13 REAL write dev=0x35 reg 0x01 00
+16:22:13 REAL write dev=0x35 reg 0x3a 0f
+16:22:13 REAL read dev=0x35 reg 0x08 n=1 -> 23
+2026-11-05T16:22:13+1100 0x000f @0x000f: 23
+16:22:25 REAL write dev=0x35 reg 0x01 00
+16:22:25 REAL write dev=0x35 reg 0x3a 10
+16:22:25 REAL read dev=0x35 reg 0x08 n=1 -> 0f
+16:22:25 REAL write dev=0x35 reg 0x01 00
+16:27:41 REAL write dev=0x35 reg 0x3a 6a
+16:27:41 REAL read dev=0x35 reg 0x08 n=1 -> 6a
+2026-11-05T16:27:41+1100 _g_stPowerInfo @0xf26a: 6a
+16:27:41 REAL write dev=0x35 reg 0x01 f2
+16:27:41 REAL write dev=0x35 reg 0x3a 5f
+16:27:41 REAL read dev=0x35 reg 0x08 n=1 -> 5f
+2026-11-05T16:27:41+1100 _g_stModeInfo @0xf25f: 5f
+16:27:57 REAL write dev=0x35 reg 0x2f 
+16:27:57 REAL write dev=0x35 reg 0x01 f2
+16:27:57 REAL write dev=0x35 reg 0x3a 5f
+16:27:57 REAL read dev=0x35 reg 0x08 n=1 -> 5f

@@ -1,0 +1,25 @@
+10:49:08 listening 127.0.0.1:17420
+10:50:54 shim connected
+10:50:54 REAL read dev=0x4a reg 0x23 n=1 -> 00
+10:50:54 REAL write BLOCKED dev=0x35 reg 0x80 00
+10:50:54 REAL read dev=0x4a reg 0x23 n=1 -> 00
+10:50:54 REAL write BLOCKED dev=0x35 reg 0x80 00
+10:52:06 listening 127.0.0.1:17420
+10:52:36 shim connected
+10:52:36 REAL read dev=0x4a reg 0x23 n=1 -> 6e
+10:52:36 REAL write BLOCKED dev=0x35 reg 0x80 00
+10:52:36 REAL read dev=0x4a reg 0x23 n=1 -> 6e
+10:52:36 REAL write BLOCKED dev=0x35 reg 0x80 00
+10:53:22 REAL read dev=0x4a reg 0x23 n=1 -> 6e
+10:53:22 REAL write BLOCKED dev=0x35 reg 0x80 01
+11:12:27 listening 127.0.0.1:17420
+11:12:43 shim connected
+11:12:43 REAL read dev=0x4a reg 0x23 n=1 -> 00
+11:12:43 REAL write dev=0x35 reg 0x80 01
+11:12:43 REAL write dev=0x35 reg 0x01 00
+11:12:43 REAL write dev=0x35 reg 0x3a 9f
+11:12:43 REAL read dev=0x35 reg 0x08 n=1 -> 00
+11:12:43 REAL write dev=0x35 reg 0x01 00
+11:12:43 REAL write dev=0x35 reg 0x3a 00
+11:12:43 REAL read dev=0x35 reg 0x08 n=1 -> cf
+11:12:43 REAL write dev=0x35 reg 0x01 00
