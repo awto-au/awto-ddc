@@ -30,6 +30,20 @@ LOGS = ROOT / "tmp" / "logs"
 PATH = "byte"          # set per run from --paths
 
 
+def _is_ours(proc: Path, args: list[bytes]) -> bool:
+    """True when the script arg resolves (against the process cwd) into this repo; other projects' dev.py do not count."""
+    try:
+        cwd = Path(os.readlink(proc / "cwd"))
+    except OSError:
+        return False
+    for a in args:
+        n = Path(a.decode("latin-1"))
+        if n.suffix == ".py" and any(o in n.name for o in OTHERS):
+            f = (n if n.is_absolute() else cwd / n).resolve()
+            return ROOT in f.parents
+    return False
+
+
 def others_running() -> list[str]:
     me, out = os.getpid(), []
     for p in Path("/proc").iterdir():
@@ -41,7 +55,7 @@ def others_running() -> list[str]:
             continue
         if argv and argv[0].endswith((b"python", b"python3", b"python3.13", b"python3.14")) or (argv and b"python" in argv[0]):
             s = " ".join(a.decode("latin-1") for a in argv[1:3])
-            if any(o in s for o in OTHERS) and "i2c_rate_test" not in s:
+            if any(o in s for o in OTHERS) and "i2c_rate_test" not in s and _is_ours(p, argv[1:3]):
                 out.append(f"{p.name}: {s}")
     return out
 
