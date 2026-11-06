@@ -500,10 +500,10 @@ class Machine:
         for d in self.devs:
             for a in d.reads:
                 self.hook[("read", a)] = d
-                self.s.send(f"break xram r 0x{a:x}")
+                self._q.append(f"break xram r 0x{a:x}")      # queued: flush() reads the echo in batches (a bare send of 10 k+ lines fills the pipe)
             for a in d.writes:
                 self.hook[("write", a)] = d
-                self.s.send(f"break xram w 0x{a:x}")
+                self._q.append(f"break xram w 0x{a:x}")      # queued: flush() reads the echo in batches (a bare send of 10 k+ lines fills the pipe)
         for d in self.devs:
             d.init(self)
         self.flush()
@@ -622,7 +622,7 @@ class Machine:
             used = max(1, int(t.group(1)) // TICKS_PER_INSTR) if t else 1
             self.ticks += int(t.group(1)) if t else 0
             self.instr += used
-            ev = re.findall(r"Event `(\w+)' at xram\[0x([0-9a-f]+)\]", out)
+            ev = [(("s" if sp == "sfr" else "") + k, a) for k, sp, a in re.findall(r"Event `(\w+)' at (xram|sfr)\[0x([0-9a-f]+)\]", out)]   # skind "swrite" = SFR
             self.last_out = out
             if not ev:
                 stop = re.search(r"Stop at 0x([0-9a-f]+)", out)
