@@ -71,6 +71,9 @@ def addr_stays_in_bank(code, i, c, funcs):
     return False
 
 
+STACKREAD = re.compile(r"^\s+mov\s+(a|ar[0-7]|r[0-7]|dpl|dph|b),\s*sp\b|^\s+mov\s+_bp,\s*sp\b|\b_bp\b")
+
+
 class Chunk:
     def __init__(self, area, name, lines, module):
         self.area, self.name, self.lines, self.module = area, name, lines, module
@@ -82,6 +85,9 @@ class Chunk:
         """Derive ISR flag, call targets and symbol refs once the body is complete."""
         lines = self.lines
         self.isr = any(re.match(r"^\s+(reti\b|ljmp\s+sdcc_atomic_maybe_rollback\b)", l) for l in lines)
+        # reads its stack-passed args via SP/_bp: a banked call goes through a stub that leaves 4 more bytes
+        # between args and callee (caller ret + restore entry), so the offsets are wrong (#11)
+        self.stack_args = any(STACKREAD.search(l.split(";", 1)[0]) for l in lines)
         self.calls, self.refs = set(), set()
         for l in lines:
             s = l.split(";", 1)[0]
@@ -246,7 +252,7 @@ def main() -> int:
     # common = ISR entry fns + main only; what they call is reached through stubs (bank saved/restored),
     # like Keil's ?B_SWITCH from interrupt code (old fw common is only 0x28C6 B)
     for c in funcs.values():
-        if c.isr or c.name == "_main":
+        if c.isr or c.name == "_main" or c.stack_args:       # stack_args: callable only by direct lcall (#11)
             c.common = True
     for c in funcs.values():
         if c.common:
