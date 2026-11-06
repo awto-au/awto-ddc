@@ -474,19 +474,41 @@ def _diag(u: dict, *args, bus: int | None = None) -> int:
     return _py("rtd_diag.py", bus if bus is not None else _bus(u), *(["--be"] if u["be"] else []), *args, *more)
 
 
-@command("read the diag block (boot stages, rates, self-test)", args="[--unit N]", kind="action")
+@command("read the diag block (boot stages, rates, self-test); --messages [--secs S] polls debug messages; "
+         "--release un-halts a firmware left stopped by a killed --messages; --watch N re-reads",
+         args="[--unit N] [--messages [--secs S] | --release | --watch N]", kind="action")
 def cmd_diag(extra: list[str]) -> int:
-    return _diag(_unit(extra)[1])
+    n, u = _unit(extra)
+    args = [f for f in ("--messages", "--release") if _flag(extra, f)]
+    if len(args) > 1:
+        raise SystemExit("diag: --messages and --release are exclusive; nothing done")
+    for flag in ("--secs", "--watch"):
+        v = _opt(extra, flag)
+        if v is None:
+            continue
+        try:
+            float(v)
+        except (TypeError, ValueError):
+            raise SystemExit(f"diag: {flag} needs a number; nothing done")
+        if flag == "--secs" and "--messages" not in args:
+            raise SystemExit("diag: --secs only applies to --messages; nothing done")
+        args += [flag, v]
+    _done(extra, "diag")
+    return _diag(u, *args)
 
 
 @command("read the safe-boot / canary / bus-watchdog block", args="[--unit N]", kind="action")
 def cmd_safe(extra: list[str]) -> int:
-    return _diag(_unit(extra)[1], "--safe")
+    u = _unit(extra)[1]
+    _done(extra, "safe")
+    return _diag(u, "--safe")
 
 
 @command("poll the function-entry trace ring until the unit stops answering", args="[--unit N]", kind="action")
 def cmd_trace(extra: list[str]) -> int:
-    return _diag(_unit(extra)[1], "--trace")
+    u = _unit(extra)[1]
+    _done(extra, "trace")
+    return _diag(u, "--trace")
 
 
 @command("log which I2C slaves answer through the first seconds after power-on", args="[--unit N] [--bus N] [--window S]",

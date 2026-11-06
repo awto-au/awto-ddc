@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Read and decode the firmware boot-stage / timing diag block (48 B at XDATA 0xF6D0) over debug slave 0x35.
 
-usage: rtd_diag.py <bus> [--watch N | --messages | --release | --trace]
+usage: rtd_diag.py <bus> [--watch N | --messages [--secs S] | --release | --trace]
   Reads only: stage hi byte (cmd 0x01), then per byte cmd 0x3A [lo] + 1-byte read (SDK ScalerCommonDebug.c
   ScalerDebug: 0x01 -> data[2] = hi, 0x3A -> ScalerGetByte(hi << 8 | lo) into IIC data-out). Writes pass
   rtd_i2c_bridge.Real.regread_ok (staging + read cmds only). 65 transfers per block.
   The read phase is [write 0x08][read 1]; cmd 0x08 matches no dispatcher case and carries no data byte, so it never runs.
---messages: poll the SDK debug-message channel (ScalerCommonDebug.c ScalerDebugMessage), print `text = value`.
+--messages: runs at most --secs (default 60); SIGINT/SIGTERM/SIGHUP/expiry/any error end with a retried 0x2A + 0x2F release.
+  Poll the SDK debug-message channel (ScalerCommonDebug.c ScalerDebugMessage), print `text = value`.
   Host sequence: write 0x55 [0x5A] (enable, reply 0xE7); status read: 0xFC none, 0xF1 message pending (fw halted until
   0x2A); write 0x25 [0x00] + read 9 = FA F5 len v3 v2 v1 v0 c1 c2; per 15-char chunk k write 0x25 [k] + read n+1 (text
   + checksum k+0x0F+sum); write 0x2A (end, reply 0xF7, releases fw); on exit write 0x2F. Only these staging/read cmds.
@@ -136,8 +137,39 @@ def load_msgids(root: Path) -> dict:
     return out
 
 
+RELEASE_TRIES = 5                   # per command: a transfer is ~0.3 ms; 5 tries cover an i915 GMBUS timeout burst (~10 ms apart)
+RELEASE_GAP_S = 0.01                # lets the adapter fall back out of bit-bang between tries
+
+
+def _send(io, cmd: int) -> bool:
+    for n in range(1, RELEASE_TRIES + 1):
+        if io.write(DEV8, cmd, b""):
+            return True
+        log(f"release: cmd 0x{cmd:02X} no ACK, try {n}/{RELEASE_TRIES}")
+        time.sleep(RELEASE_GAP_S)
+    return False
+
+
+def _release(io, done: bool = True) -> bool:
+    """0x2A (end message: fw resumes) then, if `done`, 0x2F (stop). Retried; a firmware left halted wedges the unit (#37),
+    so every exit path of --messages ends here. False + a log line when it never ACKed."""
+    ok = _send(io, MSG_END)
+    if done:
+        ok = _send(io, MSG_DONE) and ok
+    if not ok:
+        log("release FAILED: firmware may be left halted; ./dev.py diag --release, else power-cycle + flash")
+    return ok
+
+
 def fetch_message(io):
-    """One pending message -> (text bytes, value) or None. Ends with 0x2A so the firmware resumes."""
+    """One pending message -> (text bytes, value) or None. Always ends with 0x2A (retried) so the firmware resumes."""
+    try:
+        return _fetch_message(io)
+    finally:
+        _release(io, done=False)
+
+
+def _fetch_message(io):
     if not io.write(DEV8, MSG_FETCH, b"\x00"):
         return None
     h = io.read(DEV8, READ_SUB, 9)
@@ -152,18 +184,21 @@ def fetch_message(io):
         if c is None or (k + 0x0F + sum(c[:n])) & 0xFF != c[n]:
             log(f"message chunk {k} bad checksum/short: {None if c is None else c.hex()}")
         text += c[:n] if c else b""
-    io.write(DEV8, MSG_END, b"")
     if (0x0F + ln + sum(val) + sum(text)) & 0xFF != h[7]:
         log(f"message header checksum mismatch: {h.hex()} text {bytes(text).hex()}")
     return bytes(text), int.from_bytes(val, "big")
 
 
-def messages(io, root: Path) -> int:
+MSG_SECS = 60.0     # default --messages run length: an interactive look, not a daemon; expiry = clean release, rc 0
+
+
+def messages(io, root: Path, secs: float | None = MSG_SECS) -> int:
     ids = load_msgids(root)
     if not io.write(DEV8, MSG_ENABLE, b"\x5a"):
         print("enable failed (no ACK from 0x35)"); return 1
+    t0 = time.monotonic()
     try:
-        while True:
+        while secs is None or time.monotonic() - t0 < secs:
             st = io.read(DEV8, READ_SUB, 1)
             if st is None:
                 print("read failed"); return 1
@@ -182,10 +217,12 @@ def messages(io, root: Path) -> int:
                 label = text.decode("latin-1")
             line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {label} = {val}"
             print(line, flush=True); log(line)
+        log(f"messages: --secs {secs:g} reached")
+        return 0
     except KeyboardInterrupt:
         return 0
     finally:
-        io.write(DEV8, MSG_END, b""); io.write(DEV8, MSG_DONE, b"")   # 0x2A too: killed mid-message leaves fw halted
+        _release(io)                          # every exit path: a halted firmware wedges the unit (#37)
 
 
 TRACE_OFF = 0x28                    # ucTraceSeq, ucSpare, usTrace[3] (RL6449_Project.h StAwtoDiag)
@@ -305,7 +342,9 @@ def _main() -> int:
     # 1 s: block read is ~65 short transfers (tens of ms); 1 s keeps rates well above one read's noise
     ap.add_argument("--watch", type=float, metavar="N", help="re-read every N seconds (Ctrl-C to stop)")
     ap.add_argument("--messages", action="store_true", help="poll the debug-message channel")
-    ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F) to un-halt the firmware")
+    ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F), retried, to un-halt the firmware")
+    ap.add_argument("--secs", type=float, default=MSG_SECS, metavar="S",
+                    help=f"--messages stops after S seconds (default {MSG_SECS:g}; 0 = until interrupted)")
     ap.add_argument("--trace", action="store_true", help="poll the function-entry trace ring (fw/trace_files.txt)")
     ap.add_argument("--ids", help="trace id TSV of the flashed image (default tmp/sdcc-port/trace_ids.tsv)")
     ap.add_argument("--safe", action="store_true", help="read the safe-boot/WDT-canary block (0xF6B0)")
@@ -322,11 +361,12 @@ def _main() -> int:
     LOG = B.setup_logs("rtd_diag").main          # decoded I2C + this tool's lines; byte trace in rtd_diag.raw.log
     io = IO = B.Real(a.bus, allow_write=False, regread=True)
     if a.release:
-        ok = io.write(DEV8, MSG_END, b"") and io.write(DEV8, MSG_DONE, b"")
+        ok = _release(io)
         print("released" if ok else "release: no ACK from 0x35"); return 0 if ok else 1
     if a.messages:
-        signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # run the finally (0x2F) when killed
-        return messages(io, root)
+        for sig in (signal.SIGTERM, signal.SIGHUP):             # terminal closed / killed: run the finally (release)
+            signal.signal(sig, lambda *_: sys.exit(0))
+        return messages(io, root, a.secs or None)
     if a.trace:
         return trace(io, root, a.be, a.ids)
     if a.hold or a.unhold:

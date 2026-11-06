@@ -389,3 +389,126 @@ def test_hold_is_bounded_and_closes_one_fd(monkeypatch, tmp_path):
     assert len(made) == 2 and len(holders) == 2          # io (regread) + ONE hold handle, both closed
     assert clock[0] <= 5.0 + 0.1
 
+
+
+# --- #52.4 / #52.18 diag --messages / --release / extra args ----------------------------------------------------
+
+class FakeDbg:
+    """Debug slave 0x35 fake: records writes; write_fail(cmd) -> number of leading NAKs for that cmd."""
+    def __init__(self, nak=None, reads=None):
+        self.nak = dict(nak or {})
+        self.reads = list(reads or [])
+        self.log = []
+
+    def write(self, dev8, sub, data):
+        if self.nak.get(sub, 0) > 0:
+            self.nak[sub] -= 1
+            self.log.append(("nak", sub))
+            return False
+        self.log.append(("w", sub))
+        return True
+
+    def read(self, dev8, sub, n):
+        return self.reads.pop(0) if self.reads else bytes([0xFC])
+
+
+@pytest.fixture()
+def D(monkeypatch):
+    d = _diag_mod()
+    monkeypatch.setattr(d, "LOG", open(os.devnull, "w"))
+    monkeypatch.setattr(d.time, "sleep", lambda s: None)
+    return d
+
+
+def _acked(io):
+    return [x[1] for x in io.log if x[0] == "w"]
+
+
+def test_release_retries_each_command(D):
+    io = FakeDbg(nak={0x2A: 3, 0x2F: 2})
+    assert D._release(io) is True
+    assert _acked(io) == [0x2A, 0x2F]
+
+
+def test_release_gives_up_after_bounded_tries_and_reports(D):
+    io = FakeDbg(nak={0x2A: 99, 0x2F: 99})
+    assert D._release(io) is False
+    assert sum(1 for x in io.log if x[0] == "nak") == 2 * D.RELEASE_TRIES
+
+
+@pytest.mark.parametrize("reads", [
+    [None],                                              # header read fails
+    [bytes([0x00] * 9)],                                 # bad header magic
+])
+def test_fetch_message_failure_paths_still_send_end(D, reads):
+    io = FakeDbg(reads=reads)
+    assert D.fetch_message(io) is None
+    assert 0x2A in _acked(io)
+
+
+def test_fetch_message_enable_nak_still_sends_end(D):
+    io = FakeDbg(nak={0x25: 99})
+    assert D.fetch_message(io) is None
+    assert 0x2A in _acked(io)
+
+
+def test_messages_secs_limit_then_release(D, monkeypatch, tmp_path):
+    clock = [0.0]
+    monkeypatch.setattr(D.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(D.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
+    io = FakeDbg()                                       # status always 0xFC: no message
+    assert D.messages(io, tmp_path, secs=0.5) == 0
+    assert 0.5 <= clock[0] < 0.6
+    assert _acked(io)[-2:] == [0x2A, 0x2F]
+
+
+def test_messages_read_failure_releases(D, tmp_path):
+    class Dead(FakeDbg):
+        def read(self, *a):
+            return None
+    io = Dead()
+    assert D.messages(io, tmp_path, secs=5) == 1
+    assert _acked(io)[-2:] == [0x2A, 0x2F]
+
+
+def test_messages_interrupt_releases(D, tmp_path):
+    class Intr(FakeDbg):
+        def read(self, *a):
+            raise KeyboardInterrupt
+    io = Intr()
+    assert D.messages(io, tmp_path, secs=5) == 0
+    assert _acked(io)[-2:] == [0x2A, 0x2F]
+
+
+def test_messages_mode_installs_sighup_handler(D, monkeypatch, tmp_path):
+    import signal
+    seen = {}
+    monkeypatch.setattr(D.signal, "signal", lambda sig, h: seen.__setitem__(sig, h))
+    monkeypatch.setattr(D.B, "Real", lambda *a, **k: type("R", (), {"close": lambda s: None})())
+    monkeypatch.setattr(D.B, "setup_logs", lambda name: type("L", (), {"main": open(os.devnull, "w")})())
+    monkeypatch.setattr(D, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(D, "messages", lambda io, root, secs=None: seen.__setitem__("secs", secs) or 0)
+    monkeypatch.setattr(sys, "argv", ["rtd_diag.py", "11", "--messages", "--secs", "7"])
+    assert D.main() == 0
+    assert signal.SIGHUP in seen and signal.SIGTERM in seen and seen["secs"] == 7
+    with pytest.raises(SystemExit):
+        seen[signal.SIGHUP](signal.SIGHUP, None)         # handler exits -> finally in messages() runs
+
+
+def test_dev_diag_passes_messages_release_secs(dev, monkeypatch):
+    seen = []
+    monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: seen.append(a) or 0)
+    assert dev.cmd_diag(["--unit", "3", "--release"]) == 0
+    assert dev.cmd_diag(["--unit", "3", "--messages", "--secs", "5"]) == 0
+    assert dev.cmd_diag(["--unit", "3"]) == 0
+    assert seen == [("--release",), ("--messages", "--secs", "5"), ()]
+
+
+@pytest.mark.parametrize("fn,args", [
+    ("cmd_diag", ["--bogus"]), ("cmd_diag", ["--messages", "--release"]), ("cmd_diag", ["--secs", "5"]),
+    ("cmd_diag", ["--messages", "--secs", "x"]), ("cmd_safe", ["--watch", "2"]), ("cmd_trace", ["--messages"]),
+])
+def test_dev_diag_safe_trace_refuse_extra_args(dev, monkeypatch, fn, args):
+    monkeypatch.setattr(dev, "_diag", lambda *a, **k: pytest.fail("bus touched"))
+    with pytest.raises(SystemExit):
+        getattr(dev, fn)(["--unit", "3", *args])
