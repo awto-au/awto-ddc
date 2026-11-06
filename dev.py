@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -81,6 +82,8 @@ STEPS: dict[str, tuple[str, list[str], bool]] = {
     "fmt-check": ("formatting check (no writes)", [], False),
     "fmt":       ("reformat in place",            [], False),
     "run":       ("build + execute",              [], True),
+    "speed":     ("offline cycle bench of fw images (fw_profile, docs/speed-bench.tsv)",
+                  [sys.executable, "scripts/speed_bench.py"], True),
 }
 
 # gate = fail-fast, blocks a commit. First failure wins; fix that.
@@ -345,7 +348,9 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
     return n, u
 
 
-def _bus(u: dict) -> int:
+BUS_RESCAN_S = 0.25   # one scan of the candidate buses is ~0.1 s; rescan pace while EDID is silent
+
+def _bus(u: dict, wait_s: float = 0.0) -> int:
     """The bus whose EDID serial is the unit's: the connector's i2c link first, else every display bus
     (NVIDIA has no link). A recable moved units between ports on 2026-11-06 and a flash hit the wrong one."""
     link = (Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc").resolve()
@@ -353,9 +358,14 @@ def _bus(u: dict) -> int:
     cands += [b for b in i2cbus.list_buses(display_only=True) if b not in cands]
     if i2cbus.reset_rate():
         log("bus rate: gmbus_rate module was left loaded; unloaded (100 kHz)", "WARN")
-    for b in cands:
-        if i2cbus.edid_serial(b) == u["serial"]:
-            return b
+    t0 = time.monotonic()
+    while True:
+        for b in cands:
+            if i2cbus.edid_serial(b) == u["serial"]:
+                return b
+        if time.monotonic() - t0 >= wait_s:         # wait_s 0 = one scan; >0 = rescan (EDID returns as the scaler boots)
+            break
+        time.sleep(BUS_RESCAN_S)
     raise SystemExit(f"{u['serial']}: no bus with that EDID serial (unit off, wedged, or cabled elsewhere); "
                      f"use --bus N only after checking which monitor it is")
 
@@ -458,10 +468,10 @@ def cmd_power_cycle(extra: list[str]) -> int:
     return _py("power_cycle.py", "--relay", u["relay"], *extra)
 
 
-def _diag(u: dict, *args) -> int:
+def _diag(u: dict, *args, bus: int | None = None) -> int:
     ids = FW / f"{_flashed(u).get('tag', '')}.ids.tsv"
     more = ["--ids", ids] if ids.is_file() else []
-    return _py("rtd_diag.py", _bus(u), *(["--be"] if u["be"] else []), *args, *more)
+    return _py("rtd_diag.py", bus if bus is not None else _bus(u), *(["--be"] if u["be"] else []), *args, *more)
 
 
 @command("read the diag block (boot stages, rates, self-test)", args="[--unit N]", kind="action")
@@ -479,11 +489,14 @@ def cmd_trace(extra: list[str]) -> int:
     return _diag(_unit(extra)[1], "--trace")
 
 
-@command("log which I2C slaves answer through the first seconds after power-on", args="[--unit N] [--window S]",
+@command("log which I2C slaves answer through the first seconds after power-on", args="[--unit N] [--bus N] [--window S]",
          kind="action")
 def cmd_probe(extra: list[str]) -> int:
     _n, u = _unit(extra)
-    return _py("rtd_boot_probe.py", _bus(u), *extra)
+    bus = _opt(extra, "--bus")              # EDID is silent while the unit boots, so _bus cannot find it then
+    if bus is True:
+        raise SystemExit("probe: --bus needs a value; nothing done")
+    return _py("rtd_boot_probe.py", int(bus) if bus else _bus(u), *extra)
 
 
 def _done(extra: list[str], what: str) -> None:
@@ -626,18 +639,36 @@ def cmd_bench(extra: list[str]) -> int:
     return _py("i2c_bench.py", _bus(u))
 
 
+RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2.5x; expiry: SystemExit, unit left powered
+
+
 @command("recover a wedged unit: mains cycle, hold it in the safe window, reflash (default: last flashed)",
-         args="[--unit N] [image.bin]", kind="action")
+         args="[--unit N] [--write-mode byte|burst] [--any-image] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
     n, u = _unit(extra)
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
-    img = _image_arg(extra) or [_flashed(u).get("image", "")]   # validated before the relay is touched
+    any_image = _flag(extra, "--any-image")
+    img = _image_arg(extra) or [_flashed(u).get("image", "")]
+    # everything that can refuse does so BEFORE the relay: image exists, is a .bin, belongs to this unit (#52.3)
+    p = Path(img[0]) if img[0] else None
+    if p is None or p.suffix != ".bin" or not p.is_file():
+        raise SystemExit(f"recover: no usable image ({img[0] or 'no flashed.json image'!r}); give one; nothing done")
+    if not any_image:
+        check_image_identity(u, p)
+    try:
+        bus = _bus(u)                       # unit still answering: identity proven by EDID, before the cycle
+    except SystemExit:
+        bus = None
     rc = cmd_power_cycle(["--unit", n])
     if rc:
         return rc
-    bus = _bus(u)                           # right after power-on, before the hold silences EDID
-    _diag(u, "--hold")                      # best effort: an image without the safe window still flashes over ISP
-    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *img])
+    if bus is None:                         # wedged: EDID silent before, so find it once after power-on
+        bus = _bus(u, wait_s=RECOVER_BUS_WAIT_S)
+    hrc = _diag(u, "--hold", bus=bus)       # best effort: an image without the safe window still flashes over ISP
+    if hrc:
+        log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
+    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, "--any-image" if any_image else "--unit", n,
+                      *img])
 
 
 GDCTL_SHOW_S = 3    # `gdctl show` is one D-Bus call (~0.1 s); 3 s = 30x, expiry -> mode refuses, nothing changed
