@@ -8,7 +8,7 @@ usage: fw_sim.py --serial AWT26110003 [--budget 3000000] [--max-switches 2000]
   Stops on: --budget instructions without a bank switch (prints PC + function from the map), or max switches.
        fw_sim.py --boot-check BIN MAP [--be|--le] [--passes 50]   offline PASS/FAIL: boot to the main loop (#11, #38)
        fw_sim.py --isr-check BIN MAP                              interrupts in every bank return to that bank
-       fw_sim.py --video-check BIN MAP [--mode 1080p60] [--instr 60000000]   stable HDMI source on D2: mode-state timeline
+       fw_sim.py --video-check BIN MAP [--mode 1080p60|2160p60] [--instr 60000000] [--fault underflow]   stable HDMI source on D2: mode-state timeline
          + blocker log (AwtoMsg ids with SDK source line, PC histogram, stub hits) -> tmp/logs/fw_sim_video.log
   Library: Machine (ucsim + Dev register models + function stubs), SimBus (i2cbus-compatible debug slave 0x35, see
   unit_health.py --sim), video_devs/video_stubs (what the firmware sees on D2). Models: IicSlave (FF24..FF2A, FE66),
@@ -341,18 +341,28 @@ class HdmiInput(Dev):
     hardware does (the code doubles it back). MODES: name -> (htotal, hact, hstart, vtotal, vact, vstart, pclk 0.1 MHz)."""
     MODES = {"1080p60": (2200, 1920, 192, 1125, 1080, 41, 1485), "2160p60": (4400, 3840, 384, 2250, 2160, 82, 5940)}
     MEAS_KHZ = 87_700          # _MEASURE_CLK with M2PLL 350.8 MHz / 4 (kHz): HS period counts = clk * 10 / hfreq(0.1 kHz)
+    DATA_PATH_LIMIT = 3000     # RL6449_Series_IDomainInclude.h _DATA_PATH_SPEED_LIMIT (0.1 MHz)
     writes = (0x3106,)
 
     def __init__(self, mode: str = "1080p60"):
+        """Modes above DATA_PATH_LIMIT (2160p60, pixel clock 594 MHz = TMDS clock 148.5 MHz x4 with SCDC 1/40) follow the data
+        path the SDK sets up: P30_00 bit7 (measure clock divider /2: offline H total and width counted at half rate, the code
+        doubles them back) and 1/2 scaling down (P31_05 bit7 = 0 with P31_06 bit7 = 0: auto-function H start/end in half
+        pixels, the code doubles them) until ScalerFmtCnvFinalSetting switches to F-to-P."""
         self.mode = mode
         self.HTOT, self.HACT, self.HSTART, self.VTOT, self.VACT, self.VSTART, self.PCLK = self.MODES[mode]
         self.hfreq10 = round(self.PCLK * 1e5 / self.HTOT / 100)       # 0.1 kHz
+        self.fast = self.PCLK > self.DATA_PATH_LIMIT
+        if self.fast:
+            self.writes = (0x3000, 0x3105, 0x3106)
+        self.div = self.halfsd = False
 
     def cells(self) -> dict[int, int]:
         c = {}
         hs_per = round(self.MEAS_KHZ * 10 / self.hfreq10) - 1
+        k = 2 if self.div else 1                                        # measure clock divider: H counts at half rate
         for a, v, mask_hi in ((0x3005, hs_per, 0x1F), (0x3008, self.VTOT - 1, 0x3F), (0x300A, 3, 0x1F), (0x300C, 4, 0x3F),
-                              (0x300E, self.HTOT - 1, 0x1F), (0x3011, self.VACT - 1, 0x3F), (0x3013, self.HACT - 1, 0x1F)):
+                              (0x300E, self.HTOT // k - 1, 0x1F), (0x3011, self.VACT - 1, 0x3F), (0x3013, self.HACT // k - 1, 0x1F)):
             c[a], c[a + 1] = (v >> 8) & mask_hi, v & 0xFF
         c[0x3003], c[0x3004] = 0x00, 0xC0                              # no measure error flags; HS/VS polarity positive
         c.update(self.auto(False))
@@ -371,10 +381,14 @@ class HdmiInput(Dev):
     def auto(self, ftop: bool) -> dict[int, int]:
         vs, vh = ((self.VSTART - 1) // 2, self.VACT // 2) if ftop else (self.VSTART, self.VACT)
         ve = vs + vh - 1
-        he = self.HSTART + self.HACT - 1
-        return {0x007E: ((vs >> 4) & 0xF0) | ((ve >> 8) & 0x0F), 0x007F: vs & 0xFF, 0x0080: ve & 0xFF,
-                0x0081: (((self.HSTART - 1) >> 4) & 0xF0) | (((he - 1) >> 8) & 0x0F), 0x0082: (self.HSTART - 1) & 0xFF,
-                0x0083: (he - 1) & 0xFF}
+        k = 2 if self.halfsd else 1
+        hs, hw = self.HSTART // k, self.HACT // k
+        he = hs + hw - 1
+        r = {0x007E: ((vs >> 4) & 0xF0) | ((ve >> 8) & 0x0F), 0x007F: vs & 0xFF, 0x0080: ve & 0xFF,
+             0x0081: (((hs - 1) >> 4) & 0xF0) | (((he - 1) >> 8) & 0x0F), 0x0082: (hs - 1) & 0xFF, 0x0083: (he - 1) & 0xFF}
+        if self.fast:
+            r[0x0078] = ((hs >> 11) & 2) | (((he - 1) >> 12) & 1)       # P0_78 bit1/bit0: H start/end bit 11/12 (> 4095 px)
+        return r
 
     def init(self, m):
         for a, v in sorted(self.cells().items()):
@@ -382,6 +396,12 @@ class HdmiInput(Dev):
 
     def on_write(self, m, a):
         ftop = bool(m.rd(0x3106)[0] & 0x80)
+        if self.fast:
+            self.div = bool(m.rd(0x3000)[0] & 0x80)
+            self.halfsd = not (m.rd(0x3105)[0] & 0x80) and not ftop
+            for k, v in self.cells().items():
+                if 0x3005 <= k <= 0x3014:
+                    m.put(f"set memory xram 0x{k:x} 0x{v:x}")
         for k, v in self.auto(ftop).items():
             m.put(f"set memory xram 0x{k:x} 0x{v:x}")
 
@@ -391,12 +411,19 @@ T2_SCALE = 3
 D2_INPUT_PORT, SOURCE_HDMI, SOURCE_NONE = 5, 3, 5          # Kernel/Common/Global.h
 
 
-def video_devs(img: bytes, mode: str = "1080p60"):
+FAULTS = {"underflow": {0x0002: 0x01}}      # name -> sticky flag bits (address -> mask), see W1C
+
+
+def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None):
     """Devs for a board with a stable HDMI source on D2 (#38): regdb reset values, D2 cable pin (low = connected) and no
-    D3 cable, DPCD access port (DP Rx1), the HDMI measure/auto-function results. Returns (devs, hdmi)."""
+    D3 cable, DPCD access port (DP Rx1), the HDMI measure/auto-function results. Returns (devs, hdmi).
+    fault="underflow": P0_02 bit0 (M-domain FIFO underflow) re-sets after every clear, as in the unit-3 4K60 register dump
+    tmp/regs/AWT26110003-20261105-181408.json (P0_02 = 0x01; the vendor dump 180523 has 0x00) (#26)."""
     hdmi = HdmiInput(mode)
     return [regdb_cells(), FlashDev(img), IicSlave(), Cells({0xFE2C: 1, 0xFE32: 0}),
-            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4), W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70}), hdmi], hdmi
+            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4),
+            W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70},
+                FAULTS[fault] if fault else None), hdmi], hdmi
 
 
 def video_stubs(m: "Machine", hdmi: HdmiInput):
@@ -418,12 +445,13 @@ class W1C(Dev):
     """Write-1-to-clear flag bits (mask per address): after a write the flag bits read 0 (no new error/event arrives in the
     sim). Plain XRAM keeps the written 1s, so status checks like ScalerMDomainMemoryCheck failed forever."""
 
-    def __init__(self, masks: dict[int, int]):
-        self.masks = masks
+    def __init__(self, masks: dict[int, int], sticky: dict[int, int] | None = None):
+        """sticky: address -> bits that read 1 again after the clear (a flag the hardware keeps raising)."""
+        self.masks, self.sticky = masks, sticky or {}
         self.writes = tuple(masks)
 
     def on_write(self, m, a):
-        m.put(f"set memory xram 0x{a:x} 0x{m.rd(a)[0] & ~self.masks[a] & 0xFF:x}")
+        m.put(f"set memory xram 0x{a:x} 0x{(m.rd(a)[0] & ~self.masks[a] & 0xFF) | self.sticky.get(a, 0):x}")
 
 
 class IndPort(Dev):
@@ -798,6 +826,177 @@ def boot_check(binp: Path, mapp: Path, be: bool, passes: int, max_instr: int, lo
     return 1
 
 
+DECISION_FNS = ("UserCommonInterfaceCheckNoSupport", "UserInterfaceGetDclkNoSupportStatus", "ScalerMDomainMemoryCheck",
+                "ScalerMeasureInputActiveRegionChange", "ScalerMDomainDHVtotalFinetune", "ScalerFmtCnvFinalSetting")
+
+
+def decision_stubs(m: "Machine") -> dict:
+    """Watch the checks that end in NOSUPPORT (SysJudge: CheckNoSupport / DclkNoSupportStatus; M-domain: MemoryCheck,
+    InputActiveRegionChange) and keep a snapshot of the values they read at each entry: fn -> [count, snapshot of the last]."""
+    snaps: dict = {}
+
+    def snap(name):
+        def f(m_, r):
+            c = snaps.setdefault(name, [0, None])
+            c[0] += 1
+            be = lambda a, n: int.from_bytes(m_.rd(m_.addr(a), n), "big")
+            od = m_.rd(m_.addr("g_stMDomainOutputData"), 20)
+            c[1] = {"P0_02": m_.rd(0x0002)[0], "P0_0C": m_.rd(0x000C)[0], "P0_0D": m_.rd(0x000D)[0], "P0_28": m_.rd(0x0028)[0],
+                    "P30_00": m_.rd(0x3000)[0], "P31_05": m_.rd(0x3105)[0], "P31_06": m_.rd(0x3106)[0],
+                    "pixclk": be("g_usInputPixelClk", 2), "dclk": be("g_ulDClkFreq", 4), "dvf": be("g_usDVFreq", 2),
+                    "info": m_.rd(m_.addr("g_stMDomainInfo"), 3).hex(), "out": [int.from_bytes(od[i:i + 2], "big") for i in range(0, 20, 2)],
+                    "in": m_.rd(m_.addr("g_stMDomainInputData"), 17).hex(), "tin": m_.rd(m_.addr("g_stInputTimingData"), 17).hex()}
+        return f
+    for n in DECISION_FNS:
+        if "_" + n in m.sym:
+            m.stub(n, snap(n))
+    return snaps
+
+
+def panel_consts() -> dict:
+    """Panel / project limits the checks compare against (fw/overlay, same names as the SDK macros)."""
+    out = {}
+    for f in ("Panel/AWTO_LTM270FL01.h", "Project/Header/RL6449_Project.h"):
+        for mt in re.finditer(r"^#define\s+(_PANEL_\w+|_OOR_\w+|_INPUTCLOCK_RANG_HDMI|_FAIL_SAVE_\w+)\s+\(?(\d+)\)?", (ROOT / "fw/overlay" / f).read_text(), re.M):
+            out[mt.group(1)] = int(mt.group(2))
+    return out
+
+
+def decision_report(m: "Machine", snaps: dict) -> list[str]:
+    """One line per decision with the inputs and the verdict; the checks are the SDK's, re-evaluated on the sim's values."""
+    import unit_health as H
+    k, L = panel_consts(), []
+    chk = snaps.get("UserCommonInterfaceCheckNoSupport")
+    if chk:
+        v = chk[1]
+        t = H.decode_timing(bytes.fromhex(v["tin"]))      # g_stInputTimingData (the M-domain copy is made later)
+        oor = [n for n, bad in (("H freq", not k["_OOR_H_FREQ_LOWER_BOUND"] <= t["hfreq"] <= k["_OOR_H_FREQ_UPPER_BOUND"]),
+                                ("V freq", t["vfreq"] > k["_OOR_V_FREQ_UPPER_BOUND"] or t["vfreq"] < k["_OOR_V_FREQ_LOWER_BOUND"]),
+                                ("V height", t["vheight"] < k["_OOR_V_HEIGHT_LOWER_BOUND"]),
+                                ("H width", t["hwidth"] > k["_OOR_H_WIDTH_UPPER_BOUND"]),
+                                ("HDMI pixel clock", v["pixclk"] >= k["_INPUTCLOCK_RANG_HDMI"])) if bad]
+        L.append(f"decision UserCommonInterfaceCheckNoSupport x{chk[0]}: {t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} "
+                 f"hfreq {t['hfreq'] / 10:.1f} kHz pixclk {v['pixclk'] / 10:.1f} MHz (limit {k['_INPUTCLOCK_RANG_HDMI'] / 10:.0f}) -> "
+                 f"{'NOSUPPORT: ' + ', '.join(oor) if oor else 'supported'}")
+    dc = snaps.get("UserInterfaceGetDclkNoSupportStatus")
+    if dc:
+        v, lo, hi = dc[1], k["_PANEL_PIXEL_CLOCK_MIN"] * 1000, k["_PANEL_PIXEL_CLOCK_MAX"] * 1000
+        inf = bytes.fromhex(v["info"])
+        L.append(f"decision UserInterfaceGetDclkNoSupportStatus x{dc[0]}: g_ulDClkFreq {v['dclk']} kHz, panel {lo}..{hi} kHz -> "
+                 f"{'NOSUPPORT (Dclk out of range)' if not lo <= v['dclk'] <= hi else 'in range'}; memory select {inf[0] & 7} "
+                 f"DVF {(inf[0] >> 3) & 7} config {inf[0] >> 6} (g_stMDomainInfo {v['info']}), "
+                 f"DVtotal {v['out'][5]} (panel {k['_PANEL_DV_TOTAL_MIN']}..{k['_PANEL_DV_TOTAL_MAX']})")
+    mc = snaps.get("ScalerMDomainMemoryCheck")
+    if mc:
+        v = mc[1]
+        bad = [n for n, bit in (("P0_02.6 input HV error", 0x40), ("P0_02.5 input HV error", 0x20), ("P0_02.1 FIFO overflow", 0x02),
+                                ("P0_02.0 FIFO underflow", 0x01)) if v["P0_02"] & bit]
+        if v["P0_0C"] & 1:
+            bad.append("P0_0C.0 display vsync timeout")
+        inf = bytes.fromhex(v["info"])
+        lo, hi = k["_PANEL_PIXEL_CLOCK_MIN"] * 1000, k["_PANEL_PIXEL_CLOCK_MAX"] * 1000
+        o = v["out"]
+        L.append(f"state at MemoryCheck: g_ulDClkFreq {v['dclk']} kHz (panel {lo}..{hi}: {'in range' if lo <= v['dclk'] <= hi else 'OUT'}), "
+                 f"memory select {inf[0] & 7} DVF {(inf[0] >> 3) & 7} config {inf[0] >> 6} (g_stMDomainInfo {v['info']}), "
+                 f"display {o[2]}x{o[7]} total {o[0]}x{o[5]} DVF {v['dvf'] / 10:.1f} Hz (DVtotal panel "
+                 f"{k['_PANEL_DV_TOTAL_MIN']}..{k['_PANEL_DV_TOTAL_MAX']}), P30_00 0x{v['P30_00']:02X} P31_05 0x{v['P31_05']:02X} "
+                 f"P31_06 0x{v['P31_06']:02X} P0_28 0x{v['P0_28']:02X}")
+        L.append(f"decision ScalerMDomainMemoryCheck x{mc[0]}: P0_02 0x{v['P0_02']:02X} P0_0C 0x{v['P0_0C']:02X} (last entry) -> "
+                 f"{'FAIL: ' + ', '.join(bad) if bad else 'pass'}")
+    ar = snaps.get("ScalerMeasureInputActiveRegionChange")
+    if ar:
+        L.append(f"decision ScalerMeasureInputActiveRegionChange x{ar[0]} (reads P30_41..44 vs g_ulInputActiveRegionBackUp)")
+    return L
+
+
+# ---- DDR2 / FRC register trace against the vendor dump (#26) -----------------------------------------------
+DDR_PAGES = (0x88, 0xC8, 0x8A, 0xCA, 0x8E, 0xCE, 0x8F, 0xCF, 0xA0, 0xA8, 0x05, 0x45)      # DDR2 PLL/SYS/PHY (B = A + 0x4000 or + 0x800), FRC P5/P45
+DDR_EXTRA = (*range(0x00F8, 0x0100), 0x37B0, 0x37B1)                                       # P0_F8..FF MPLL, P37_B0/B1 DDR2 client mux
+DDR_FNS = ("ScalerMemoryPowerControl", "ScalerDDR2PowerControl", "ScalerPLLSetMPLLFreq", "ScalerPLLSetDDR2PLLFreq",
+           "ScalerDDR2DCSysInitial", "ScalerDDR2DCPHYInitial", "ScalerMDomainControl", "ScalerMDomainMemorySettings",
+           "ScalerMemoryInitial", "ScalerFRCInitial", "ScalerFRCEn", "ScalerFRCControl", "ScalerMemorySetFIFOFreq",
+           "ScalerMemoryReset", "ScalerFRCInputCtrl", "ScalerFRCDisplayCtrl", "ScalerDPLLFineTuneFrameSyncFrameBuffer")
+
+
+class WriteLog(Dev):
+    """Ordered write log (instr, bank, pc, addr, value) of the given XDATA addresses."""
+
+    def __init__(self, addrs):
+        self.writes = tuple(sorted(set(addrs)))
+        self.rows: list[tuple[int, int, int, int, int]] = []
+
+    def on_write(self, m, a):
+        mt = re.search(r"Stop at 0x([0-9a-f]+)", m.last_out)
+        self.rows.append((m.instr, m.rd(0xFFFF)[0] & 15, int(mt.group(1), 16) if mt else -1, a, m.rd(a)[0]))
+
+
+def vendor_pages(path: Path) -> dict[int, int]:
+    import json
+    pages = json.loads(path.read_text())["pages"]
+    return {int(pg, 16) << 8 | i: v for pg, vals in pages.items() for i, v in enumerate(vals)}
+
+
+def ddr_trace(binp: Path, mapp: Path, mode: str, max_instr: int, log, vendor: Path | None) -> int:
+    """Run `mode` to its end state and log, in order: calls of the DDR2/FRC/M-domain functions, every write to the DDR2 PLL / SYS /
+    PHY pages, MPLL regs and FRC pages (function named from the PC), polled status registers (static candidates, saturated count =
+    polled until the firmware timeout), and the last written value of each register against the vendor 4K60 dump."""
+    import fw_regs
+    import unit_health as H
+    img = binp.read_bytes()
+    devs, hdmi = video_devs(img, mode)
+    ranges = {pg << 8 | i for pg in DDR_PAGES for i in range(256)} | set(DDR_EXTRA)
+    rd, _ = fw_regs.candidates(img)
+    wl, rt = WriteLog(ranges), RegTrace(rd & ranges, set())
+    m = Machine(img, mapp, binp.stem + "-ddr", log, [*devs, wl, rt])
+    video_stubs(m, hdmi)
+    m.t2_scale = T2_SCALE
+    calls: list[tuple[int, str]] = []
+    for fn in DDR_FNS:
+        if "_" + fn in m.sym:
+            m.stub(fn, lambda m_, r, fn=fn: calls.append((m_.instr, fn)) or None)
+    ma, last, done, tl = m.addr("g_stModeInfo"), None, 0, []
+    while done < max_instr:
+        m.run(1_000_000); done += 1_000_000
+        ms = m.rd(ma)[0] & 0x1F
+        if ms != last:
+            tl.append((done, ms)); last = ms
+        if ms in (H.MODE_ACTIVE, 6) and ms != 0 and any(s_ in (2, 4) for _, s_ in tl):
+            break
+    names = fw_regs.names()
+    out = [f"ddr-trace {binp.name} mode {mode}: final {MODE_NAMES[last]} after ~{done} instr; timeline "
+           + " -> ".join(f"{MODE_NAMES[s_]}@{n // 1_000_000}M" for n, s_ in tl),
+           f"function calls (instr, name; {len(calls)}):"]
+    out += [f"  {i:>10} {fn}" for i, fn in calls[:80]]
+    out.append(f"register writes in DDR2/MPLL/FRC pages ({len(wl.rows)}); first 400 below, grouped by writer:")
+    for i, b, pc, a, v in wl.rows[:400]:
+        out.append(f"  {i:>10} {m.where(b, pc):<40} 0x{a:04X} {names.get(a, '?'):<34} = 0x{v:02X}")
+    final_all: dict[int, int] = {}
+    for _, _, _, a, v in wl.rows:
+        final_all[a] = v
+    out.append(f"final written value per register ({len(final_all)}): addr=value")
+    out.append("  " + " ".join(f"{a:04X}={v:02X}" for a, v in sorted(final_all.items())))
+    out.append("polled registers (static read candidates in these pages; n+ = polled to the cap):")
+    out += ["  " + r for r in rt.report(m, names, "read")[:40]]
+    if vendor:
+        vend = vendor_pages(vendor)
+        final: dict[int, int] = {}
+        for _, _, _, a, v in wl.rows:
+            final[a] = v
+        diff = [(a, v, vend[a]) for a, v in sorted(final.items()) if a in vend and vend[a] != v]
+        out.append(f"final written value vs vendor dump {vendor.name}: {len(final)} registers written, "
+                   f"{sum(1 for a in final if a in vend and vend[a] == final[a])} equal, {len(diff)} differ:")
+        out += [f"  0x{a:04X} {names.get(a, '?'):<34} ours 0x{v:02X} vendor 0x{w:02X}" for a, v, w in diff[:120]]
+        reset = fw_regs.regdb_reset()
+        only = [(a, w) for a, w in sorted(vend.items()) if a in ranges and a not in final and w != reset.get(a, 0)]
+        out.append(f"vendor dump values != chip reset in these pages that ours never wrote ({len(only)}; status/training bits included):")
+        out += [f"  0x{a:04X} {names.get(a, '?'):<34} vendor 0x{w:02X} reset 0x{reset.get(a, 0):02X}" for a, w in only[:150]]
+    m.close()
+    for ln in out:
+        log.write(ln + "\n")
+    print("\n".join(out[:2]), f"\n(full log: tmp/logs/fw_sim_ddr_<bin>_<mode>.log; {len(calls)} calls, {len(wl.rows)} writes)")
+    return 0
+
+
 def msg_source(mid: int) -> str:
     """AwtoMsg0/AwtoMsgV(0xID...) call site in the SDK sources (tmp/sdcc-port/src), first RL6449-relevant match."""
     root = ROOT / "tmp/sdcc-port/src/Kernel"
@@ -812,15 +1011,16 @@ def msg_source(mid: int) -> str:
     return "?"
 
 
-def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> int:
+def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: str | None = None) -> int:
     """Boot with a stable HDMI source on D2 and report how far the mode state machine gets (#38). Exit 0 = ACTIVE."""
     import unit_health as H
     img = binp.read_bytes()
-    devs, hdmi = video_devs(img, mode)
+    devs, hdmi = video_devs(img, mode, fault)
     msgs: Counter = Counter()
     m = Machine(img, mapp, binp.stem + "-video", log, devs)
     video_stubs(m, hdmi)
     m.t2_scale = T2_SCALE
+    snaps = decision_stubs(m)
 
     def am(m_, r):
         msgs[r["dptr"] & 0xFFFF] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
@@ -835,6 +1035,8 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> int:
             timeline.append((done, ms)); last = ms
             if ms == H.MODE_ACTIVE:
                 break
+        if last == 6 and any(s_ in (2, 4) for _, s_ in timeline):      # POWER_SAVING after a failed setting: end state
+            break
     t = H.decode_timing(m.rd(m.addr("g_stMDomainInputData"), 17))
     hist: Counter = Counter()
     for i in range(100):
@@ -847,7 +1049,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> int:
              "timeline: " + " -> ".join(f"{MODE_NAMES[s]}@{n // 1_000_000}M" for n, s in timeline),
              f"g_stMDomainInputData: {t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} htotal {t['htotal']} vtotal {t['vtotal']} "
              f"hfreq {t['hfreq'] / 10:.1f} kHz",
-             f"stub hits: {m.stub_hits}"]
+             f"stub hits: {m.stub_hits}", *decision_report(m, snaps)]
     if last != H.MODE_ACTIVE:
         lines.append("blockers (AwtoMsg id x count @ source; top 8): " + "; ".join(
             f"0x{k:04X} x{v} @ {msg_source(k)}" for k, v in msgs.most_common(8)))
@@ -991,6 +1193,9 @@ def main() -> int:
     ap.add_argument("--isr-check", nargs=2, metavar=("BIN", "MAP"), help="interrupt return-to-bank check")
     ap.add_argument("--video-check", nargs=2, metavar=("BIN", "MAP"), help="stable HDMI source on D2: how far does the mode state get")
     ap.add_argument("--mode", default="1080p60", choices=sorted(HdmiInput.MODES), help="video-check: source timing")
+    ap.add_argument("--ddr-trace", nargs=2, metavar=("BIN", "MAP"), help="DDR2/FRC call + register-write trace of --mode (log only)")
+    ap.add_argument("--vendor-dump", help="ddr-trace: vendor register dump json (tmp/regs/AWT26110003-20261105-180523.json)")
+    ap.add_argument("--fault", choices=sorted(FAULTS), help="video-check: hardware flag the sim keeps raising (see video_devs)")
     ap.add_argument("--be", action="store_true", help="diag block big-endian (default: from '-be' in the file name)")
     ap.add_argument("--passes", type=int, default=50, help="boot-check: heartbeats to see after stage 8")
     ap.add_argument("--max-instr", type=int, default=60_000_000, help="boot-check: instruction budget")
@@ -1013,9 +1218,13 @@ def main() -> int:
     if a.video_check:
         b, mp_ = map(Path, a.video_check)
         return video_check(b, mp_, a.mode, a.max_instr if a.max_instr != 60_000_000 else 60_000_000,
-                           (ROOT / "tmp/logs/fw_sim_video.log").open("w", buffering=1))
+                           (ROOT / "tmp/logs/fw_sim_video.log").open("w", buffering=1), a.fault)
+    if a.ddr_trace:
+        b, mp_ = map(Path, a.ddr_trace)
+        return ddr_trace(b, mp_, a.mode, a.max_instr if a.max_instr != 60_000_000 else 200_000_000,
+                         (ROOT / f"tmp/logs/fw_sim_ddr_{Path(a.ddr_trace[0]).stem}_{a.mode}.log").open("w", buffering=1), Path(a.vendor_dump) if a.vendor_dump else None)
     if not a.serial:
-        ap.error("--serial, --boot-check, --isr-check or --video-check required")
+        ap.error("--serial, --boot-check, --isr-check, --video-check or --ddr-trace required")
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
     mp = (fw / "fw.map").read_text(errors="replace")

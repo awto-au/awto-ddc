@@ -65,3 +65,73 @@ def test_all_ten_health_checks_pass_in_the_sim(vbus):
     rep.add("bus rate", True, "sim")
     H.run(H.Dbg(vbus, wait=vbus.wait, now=vbus.now), maps, (1920, 1080, 60.0), rep, wait=vbus.wait)
     assert len(rep.rows) == 10 and all(ok for _, ok, _ in rep.rows), rep.rows
+
+
+# ---- 2160p60 (#26): data path above _DATA_PATH_SPEED_LIMIT, line-buffer 4K60 ----------------------------------
+IMG_B = ROOT / "tmp/fw/AWT26110003-wb-stepB-be"
+IMG_FRC = ROOT / "tmp/fw/AWT26110003-wb-frc-be"
+
+
+def _needs(img):
+    return pytest.mark.skipif(not img.with_suffix(".bin").exists() or not img.with_suffix(".map").exists(),
+                              reason=f"image {img.name}.{{bin,map}} absent")
+
+
+def _video(img, mode, fault=None, max_instr=200_000_000):
+    import io
+    log = io.StringIO()
+    rc = fw_sim.video_check(img.with_suffix(".bin"), img.with_suffix(".map"), mode, max_instr, log, fault)
+    return rc, log.getvalue()
+
+
+def test_hdmi_input_2160p60_registers_follow_the_data_path():
+    """594 MHz > 300 MHz limit: measure divider /2 halves the offline H total/width (code doubles), 1/2 scaling down halves the
+    auto-function H window (code doubles), F-to-P keeps full H; auto-function H end > 4095 sets P0_78 bit0. Same register values as the
+    vendor 4K60 dump (tmp/regs/AWT26110003-20261105-180523.json: P30_0E/0F 0x0897, P30_13/14 0x077F)."""
+    h = fw_sim.HdmiInput("2160p60")
+    assert h.fast and set(h.writes) == {0x3000, 0x3105, 0x3106}
+    h.div = True
+    c = h.cells()
+    assert w(c, 0x300E, 0x300F, 0x1F) == 2200 and (c[0x300E], c[0x300F]) == (0x08, 0x97)
+    assert w(c, 0x3013, 0x3014, 0x1F) == 1920 and (c[0x3013], c[0x3014]) == (0x07, 0x7F)
+    h.halfsd = True
+    a = h.auto(False)
+    hs = ((a[0x0081] & 0xF0) << 4 | a[0x0082]) + 1
+    he = ((a[0x0081] & 0x0F) << 8 | a[0x0083]) + 1
+    assert (he - hs + 1) * 2 == 3840 and a[0x0078] == 0                                  # half pixels, no bit 12
+    h.halfsd = False
+    a = h.auto(True)                                                                      # F-to-P: full H, half V
+    he = ((a[0x0081] & 0x0F) << 8 | a[0x0083]) + 1 + (a[0x0078] & 1) * 4096
+    hs = ((a[0x0081] & 0xF0) << 4 | a[0x0082]) + 1
+    assert he - hs + 1 == 3840 and a[0x0078] & 1 == 1                                    # end 4223 needs P0_78 bit0
+    assert fw_sim.HdmiInput("1080p60").writes == (0x3106,) and not fw_sim.HdmiInput("1080p60").fast
+
+
+@_needs(IMG_B)
+@pytest.mark.slow
+def test_2160p60_decodes_and_reaches_active_with_healthy_status():
+    rc, txt = _video(IMG_B, "2160p60")
+    assert rc == 0, txt
+    assert "3840x2160@60.0 htotal 4400 vtotal 2250" in txt
+    assert "P30_00 0x82 P31_05 0x88 P31_06 0x80" in txt                                   # vendor dump values
+    assert "g_ulDClkFreq 539553 kHz" in txt and "in range" in txt
+
+
+@_needs(IMG_B)
+@pytest.mark.slow
+def test_2160p60_ends_in_power_saving_on_fifo_underflow():
+    """Hardware dump of the unit-3 build at 4K60 has P0_02 bit0 (M-domain FIFO underflow) set, the vendor dump not: with that flag
+    kept raised ScalerMDomainMemoryCheck fails, display setting is never ready, NOSUPPORT after 2 s, then POWER_SAVING."""
+    rc, txt = _video(IMG_B, "2160p60", "underflow")
+    assert rc == 1
+    assert "final mode 6 POWER_SAVING" in txt and "DISPLAY_SETTING@" in txt and "NOSUPPORT@" in txt
+    assert "decision ScalerMDomainMemoryCheck" in txt and "FAIL: P0_02.0 FIFO underflow" in txt
+    assert "supported" in txt and "in range" in txt                                       # the SDK-level checks all pass
+
+
+@_needs(IMG_FRC)
+@pytest.mark.slow
+def test_frc_image_2160p60_line_buffer_reaches_active():
+    rc, txt = _video(IMG_FRC, "2160p60")
+    assert rc == 0, txt
+    assert "ScalerMDomainMemoryCheck" in txt and "pass" in txt
