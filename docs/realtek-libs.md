@@ -45,8 +45,8 @@ Status 2026-11-06. Issues: #11 (toolchain, audit), #30 (library signature DB).
 
 ## Work in flight
 
-1. Audit: `scripts/lib_audit.py` -> `tmp/lib_audit.tsv` (our size, vendor size, call sites, ISR use); summary on #11. Agent, worktree branch.
-2. Hand asm for top 5-10, each with a simulator/host equivalence test, SDCC call convention kept. Same agent/branch; merge after review, test flash on unit 3 only.
+1. Audit done 2026-11-06 (`scripts/lib_audit.py` -> `tmp/lib_audit.tsv`, #11 comment): 93 linked lib fns, 14,087 B; where Keil size known, SDCC 13,536 B vs Keil 7,547 B (1.79x). Close on big register sequences (1.1-1.25x), 1.4-3x on small fns (xdata params).
+2. Hand asm done, branch `worktree-agent-a2e2a42cc8a983a00` (not merged): `fw/asmlib/*.asm` replaces 6 lib modules (MulDiv/PowDiv, data-port byte/bit/word, ScalerRead/Write), SDCC ABI unchanged; 2,539 B -> 1,230 B; e.g. PowDiv 74,879 -> 5,438 cycles. Tests: `scripts/asmlib_test.py` (asm vs C reference vs Realtek C). `AWTO_NO_ASMLIB=1` = baseline. Register access order not simulator-checked. Next: flash on unit 3, then merge.
 3. Vendor match (#30), done 2026-11-06 (commit 622f97e):
     - Tools: `scripts/omf51_lib.py` (Keil extended OMF-51 parser); `scripts/rtk_libsig.py build|match|srccheck|list` (masked signatures per library version in `~/vendors/realtek/analysis/libsigs/`).
     - Verdict: vendor JXC image uses the **same FunctionLib build** as our SDK copy. Of 370 lib functions: 111 EXACT (110 vendor addresses), 2 NEAR (95.8%), 48 too short to judge, 209 ABSENT (163 not linked by the vendor; AdvancedLib MBR/TCON not present).
