@@ -18,7 +18,7 @@ void AwtoDiagTestCmd(void)
         g_stAwtoDiag.ucDbgPopup = 1;
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG);
     }
-    else if(ucCmd >= 0x10)
+    else if((ucCmd >= 0x10) && (ucCmd <= (0x10 + _OSDEVENT_DP_VERSIOM_MSG)))      // awto: #53.17 last event id
     {
         SET_OSD_EVENT_MESSAGE(ucCmd - 0x10);
     }

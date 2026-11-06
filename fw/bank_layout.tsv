@@ -1569,7 +1569,6 @@ fn	_SysJudgeModeResetProc	4	0x7fd4	300
 fn	_SysJudgeStateChangeEvent	4	0x8100	96
 fn	_AwtoDiagInit	4	0x8160	52
 fn	_AwtoDiagMainPass	4	0x8194	152
-fn	_AwtoDiagStage	4	0x822c	84
 fn	_SysMainSystemInitial	4	0x8280	88
 fn	_SysModeClrModeStateChange	4	0x82d8	12
 fn	_SysModeGetModeState	4	0x82e4	16
@@ -1627,6 +1626,7 @@ fn	_UserCommonInterfaceOsdHandler	4	0xa108	16
 fn	_UserCommonInterfaceOsdResetProc	4	0xa118	60
 fn	_UserCommonInterfaceTimerEventProc	4	0xa154	32
 fn	_UserCommonNVRamGetSystemData	4	0xa174	416
+fn	_AwtoDiagStage	4	0xa314	92
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
 const	_tSD_V_COEF_64_TAPS	5	0x0110	72

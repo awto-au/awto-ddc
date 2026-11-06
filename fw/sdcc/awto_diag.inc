@@ -4,7 +4,7 @@ void AwtoDiagStage(unsigned char ucStage)
 {
     unsigned int usNow;
 
-    if(ucStage > g_stAwtoDiag.ucStage)
+    if((ucStage > g_stAwtoDiag.ucStage) && (ucStage <= 8))      // awto: #53.17 usStageMs[7] is the last
     {
         do
         {
@@ -22,7 +22,7 @@ void AwtoDiagInit(void)
 
     for(ucI = 0; ucI < sizeof(StAwtoDiag); ucI++)
     {
-        ((volatile __xdata unsigned char *)0xF6D0)[ucI] = 0;
+        ((volatile __xdata unsigned char *)&g_stAwtoDiag)[ucI] = 0;      // awto: #53.18
     }
     g_stAwtoDiag.ucMagic0 = 'A';
     g_stAwtoDiag.ucMagic1 = 'D';
