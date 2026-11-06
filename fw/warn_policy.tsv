@@ -3,8 +3,8 @@
 # Class-wide: no codegen effect.
 ^backslash and newline separated by space$	*	*	ok	cpp: trailing space after macro line continuation in SDK headers; splice still happens
 ^"/\*" within comment$	*	*	ok	cpp: nested comment opener in SDK comments
-^object in read-only c	*	*	ok	SDK `code` tables lack const; writes would raise 293 (not allowed here), tested tmp/codewrite_test.c; prefix match: stderr lines from cpp can split it
-^pointer to object in	*	*	ok	SDK `code` pointers lack const; same as above (one line is stderr-interleaved with cpp output)
+^object in read-only code space should be const$	*	*	ok	SDK `code` tables lack const; writes would raise 293 (not allowed here), tested tmp/codewrite_test.c
+^pointer to object in read-only code space should be pointer to const$	*	*	ok	SDK `code` pointers lack const; same as above
 # SDK #warning notes, checked:
 ^#warning "NOTE: DEBUG MESSAGE SUPPORT ON!!"$	*	*	ok	debug messages on during bring-up (#25); release build turns them off
 ^#warning "NOTE: Please check D[123] EDID table location!!!"$	*	*	ok	EDID tables in code on purpose (docs/edid-fix.md)

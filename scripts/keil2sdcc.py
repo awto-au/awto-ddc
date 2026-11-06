@@ -643,16 +643,31 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
 ASM_MODE = False                               # compile --asm: emit .asm (-S) for the XDATA overlay pass
 
 
+def _run_stage(cmd, **kw):
+    """One compiler stage; returns (stdout + stderr, rc). Stages never share a stderr pipe, so lines never interleave."""
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT, **kw)
+        return r.stdout + r.stderr, r.returncode
+    except subprocess.TimeoutExpired:
+        return f"TIMEOUT after {COMPILE_TIMEOUT}s", 124
+
+
 def compile_one(c: Path, uv2dir: Path, defines, incs, model):
+    """Two stages: cpp (-E to a .i file), then the compiler proper on that file (--c1mode). In one `sdcc` run the cpp
+    and the compiler write the same stderr concurrently and their lines interleave, splitting warning text (#51.7, #47).
+    Message = cpp output, then compiler output. Stage 2 runs in the output dir with a bare -o: --c1mode names the
+    .module from the -o path (bare = same name as a normal run)."""
     rel_dir = uv2dir.relative_to(SRC)
     out = WORK / ("asm" if ASM_MODE else "obj") / rel_dir / (c.stem + (".asm" if ASM_MODE else ".rel"))
     out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + ["-S" if ASM_MODE else "-c", "-o", str(out), str(c)]
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT)
-        msg, rc = r.stdout + r.stderr, r.returncode
-    except subprocess.TimeoutExpired:
-        msg, rc = f"TIMEOUT after {COMPILE_TIMEOUT}s", 124
+    pp = out.with_suffix(".i")
+    base = sdcc_cmd(c, uv2dir, defines, incs, model)
+    msg, rc = _run_stage(base + ["-E", "-o", str(pp), str(c)])
+    if rc == 0:
+        with open(pp, "rb") as fh:
+            m2, rc = _run_stage(base + ["--c1mode"] + ([] if ASM_MODE else ["-c"]) + ["-o", out.name], stdin=fh, cwd=out.parent)
+        msg += m2
+    pp.unlink(missing_ok=True)
     return str(c.relative_to(SRC)), rc, msg
 
 
@@ -763,7 +778,7 @@ def main():
     if a[0] == "port":
         return cmd_port()
     if a[0] == "compile":
-        jobs = int(a[a.index("--jobs") + 1]) if "--jobs" in a else int(os.environ.get("K2S_JOBS", 0)) or os.cpu_count()   # K2S_JOBS: fewer workers = no interleaved stderr lines splitting warn-policy matches
+        jobs = int(a[a.index("--jobs") + 1]) if "--jobs" in a else os.cpu_count()
         only = a[a.index("--only") + 1] if "--only" in a else None
         target = a[a.index("--target") + 1] if "--target" in a else None
         global ASM_MODE, COMPILE_TIMEOUT
