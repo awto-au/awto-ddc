@@ -1107,6 +1107,10 @@ stub	_UserCommonFlashSaveSystemData	C	0x4300	9
 stub	_UserCommonNVRamGetSystemData	C	0x4309	9
 stub	_UserCommonNVRamSetSystemData	C	0x4312	9
 stub	_AwtoDiagTestCmd	C	0x431b	9
+const	_tiOSD_REALTEK_1BIT_LOGO0	C	0x4324	212
+const	_tiOSD_REALTEK_1BIT_LOGO1	C	0x43f8	540
+stub	_OsdDispShowLogo	C	0x4614	9
+stub	_ScalerDDomainPatternGenAdjustColor	C	0x4626	9
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	0	0x0000	1944
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	0	0x0798	1592
 fn	_ScalerDpAuxJudgeHandler_EXINT0	0	0x0dd0	1656
@@ -2273,7 +2277,6 @@ fn	_OsdPropVideoResolution	9	0x7c04	280
 fn	_OsdFontPut1Bit	9	0x7d1c	108
 fn	_OsdFontPut1BitMainMenuIcon	9	0x7d88	228
 fn	_OsdFontPut1BitTable	9	0x7e6c	500
-fn	_OsdFontVLCLoadFont	9	0x8060	104
 fn	_OsdFuncApplyMap	9	0x80c8	348
 fn	_OsdFuncBlending	9	0x8224	32
 fn	_OsdFuncChangeColor1Bit	9	0x8244	236
@@ -2318,6 +2321,10 @@ fn	_SysModeSetUpDisplayInitialization	9	0x9a4c	88
 fn	_SysModeSetUpInputCapture	9	0x9aa4	64
 fn	_SysModeSetUpMDomain	9	0x9ae4	68
 fn	_SysModeSetupIDomainIniValue	9	0x9b28	212
+const	_tICON_REALTEK_1BIT_LOGO0	9	0x9eec	1304
+const	_tICON_REALTEK_1BIT_LOGO1	9	0xa404	1168
+fn	_OsdFontVLCLoadFont	9	0xa894	296
+fn	_OsdDispShowLogo	9	0xa9bc	280
 const	_tFONT1_ICON_ADVANCE	10	0x0000	348
 const	_tFONT1_ICON_ASPECT	10	0x015c	384
 const	_tFONT1_ICON_AUDIO	10	0x02dc	392
@@ -2459,6 +2466,7 @@ fn	_SysTimerEventProc	10	0x8170	80
 fn	_SysTimerHandler	10	0x81c0	132
 fn	_UserCommonDdcciHandler	10	0x8244	8
 fn	_AwtoDiagTestCmd	10	0x824c	64
+fn	_ScalerDDomainPatternGenAdjustColor	10	0x828c	40
 const	_tFONT1_ICON_0_DEGREE	11	0x0000	356
 const	_tFONT1_ICON_180_DEGREE	11	0x0164	404
 const	_tFONT1_ICON_1_DOT_1	11	0x02f8	388
