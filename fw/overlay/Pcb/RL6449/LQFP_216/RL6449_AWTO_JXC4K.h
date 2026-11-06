@@ -132,9 +132,9 @@
 //--------------------------------------------------
 // eDPTx 1.2 HBR2 Main Link Config
 //--------------------------------------------------
-// Vendor PHY regs P38_AE-BF = SDK HBR2 table row swing 3 (deemp 00, DAT f, POST0 d, POST1 2), any pre-emphasis (#7)
-#define _PANEL_DPTX_1_2_SWING_LEVEL             _DP_SWING_1200_MV
-#define _PANEL_DPTX_1_2_PREEMPHASIS_LEVEL       _DP_PREEMPHASIS_0_DB
+// Default levels show a correct picture (2026-11-06). Vendor = 1200 mV / 0 dB (P38_AE-BF): try as its own step (#7)
+#define _PANEL_DPTX_1_2_SWING_LEVEL             _DP_SWING_800_MV
+#define _PANEL_DPTX_1_2_PREEMPHASIS_LEVEL       _DP_PREEMPHASIS_3_5_DB
 
 //--------------------------------------------------
 // eDPTx 1.2 HBR2 SSC Config

@@ -398,13 +398,16 @@ def cmd_flash(extra: list[str]) -> int:
     full = bool(_opt(extra, "--full"))
     verify = _opt(extra, "--verify", "crc")
     wmode = _opt(extra, "--write-mode", "byte")
+    bus = _opt(extra, "--bus")              # recover: bus proven by its own relay cycle (EDID silent while held)
     if extra:
         img = Path(extra[0])
         tag = img.name.removesuffix(".bin")
     else:
         tag = (FW / f"{u['serial']}-last.txt").read_text().strip()
         img = FW / f"{tag}.bin"
-    rc = _py("rtd_flash_image.py", _bus(u), img, "--serial", u["serial"], "--write", "--no-backup",
+    if bus:
+        log(f"flash: bus {bus} given by caller (identity proven by relay cycle), EDID check skipped")
+    rc = _py("rtd_flash_image.py", bus or _bus(u), img, "--serial", u["serial"], "--write", "--no-backup",
              "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []))
     if rc == 0:
         (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
@@ -453,12 +456,14 @@ def cmd_probe(extra: list[str]) -> int:
          args="[--unit N] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
     n, u = _unit(extra)
+    wmode = _opt(extra, "--write-mode", "byte")
     img = extra or [_flashed(u).get("image", "")]
     rc = cmd_power_cycle(["--unit", n])
     if rc:
         return rc
+    bus = _bus(u)                           # right after power-on, before the hold silences EDID
     _diag(u, "--hold")                      # best effort: an image without the safe window still flashes over ISP
-    return cmd_flash(["--unit", n, *img])
+    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *img])
 
 
 @command("set the host video mode on a unit's connector (keeps the layout)", args="[--unit N] " + "|".join(MODES),
