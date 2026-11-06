@@ -498,6 +498,19 @@ def cmd_osd(extra: list[str]) -> int:
     return _py("osd_test.py", _bus(u), "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
 
 
+@command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
+         "input timing vs host, backlight/panel pins, OSD round-trips; PASS/FAIL + exit code",
+         args="[--unit N] [--map F] [--host-mode WxH@HZ]", kind="action")
+def cmd_health(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given, hm = _opt(extra, "--map"), _opt(extra, "--host-mode")
+    if given is True or hm is True:
+        raise SystemExit("health: --map/--host-mode need a value; nothing done")
+    _done(extra, "health")
+    return _py("unit_health.py", _bus(u), "--serial", u["serial"], "--map", _fwmap(u, given),
+               *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]))
+
+
 @command("write scaler registers over ISP (MCU halted), read back; --reset reboots", args="[--unit N] [--reset] ADDR=VAL...",
          kind="action")
 def cmd_poke(extra: list[str]) -> int:
