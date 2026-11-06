@@ -169,8 +169,8 @@ def test_drift_check_cost_is_small(tmp_path):
     I.flash(isp, img, opts(tmp_path))
     isp.reads = 0
     I.flash(isp, img, opts(tmp_path))
-    # calibration 2 reads + 4 sample reads; no whole-image readback
-    assert isp.reads == 2 + 4
+    # calibration 2 reads only: the gate is hardware CRC per unchanged run, no readback
+    assert isp.reads == 2
 
 
 def test_pick_sample():

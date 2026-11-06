@@ -137,8 +137,11 @@ def pick_sample(unchanged: list, rng: random.Random) -> list:
 
 
 def drift_check(isp, img: bytes, state, unchanged: list, rng: random.Random, crc_ok: bool, log=print) -> list:
-    """Sectors whose flash content differs from the manifest. Readback+SHA for the sample (authoritative),
-    hardware CRC8 for every other unchanged sector when the CRC engine is validated (255/256 per bad sector)."""
+    """Sectors whose flash content differs from the manifest.
+    CRC engine validated: one hardware CRC8 per contiguous run of unchanged sectors (Dan 2026-11-06: cheap, just
+    work); a run mismatch is localised per sector. Otherwise readback+SHA of a sample."""
+    if crc_ok:
+        return _drift_runs(isp, img, unchanged, log)
     bad = []
     sample = pick_sample(unchanged, rng)
     for i in sample:
@@ -160,6 +163,34 @@ def drift_check(isp, img: bytes, state, unchanged: list, rng: random.Random, crc
         f"{f' + CRC sweep of {len(unchanged) - len(sample)}' if crc_ok else ' (CRC off)'}: "
         f"{'OK' if not bad else f'{len(bad)} MISMATCH'}")
     return sorted(set(bad))
+
+
+def _runs(idx: list) -> list:
+    """Sorted sector indexes -> [(first, last)] contiguous runs."""
+    out = []
+    for i in sorted(idx):
+        if out and i == out[-1][1] + 1:
+            out[-1] = (out[-1][0], i)
+        else:
+            out.append((i, i))
+    return out
+
+
+def _drift_runs(isp, img: bytes, unchanged: list, log=print) -> list:
+    bad = []
+    runs = _runs(unchanged)
+    for a, b in runs:
+        lo, hi = a * SECTOR, (b + 1) * SECTOR
+        if isp.flash_crc(lo, hi - lo) == crc8(img[lo:hi]):
+            continue
+        for i in range(a, b + 1):                    # localise
+            s = i * SECTOR
+            if isp.flash_crc(s, SECTOR) != crc8(img[s:s + SECTOR]):
+                log(f"DRIFT: sector {i} (0x{s:06x}) hw crc != image crc")
+                bad.append(i)
+    log(f"drift guard: CRC over {len(runs)} run(s) of {len(unchanged)} unchanged sectors: "
+        f"{'OK' if not bad else f'{len(bad)} MISMATCH'}")
+    return bad
 
 
 def readback_diff(isp, img: bytes, state, log=print, chunk=16 * SECTOR) -> list:

@@ -28,6 +28,7 @@ Log: ./tmp/logs/rtd_flash_image.log
 from __future__ import annotations
 
 import argparse, os, random, sys, time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,13 +50,28 @@ SECTOR_TRIES = 5            # failures cluster (i915 stays bit-bang after a GMBU
 BLANK_CRC = S.crc8(b"\xff" * SECTOR)
 
 
+PH: dict[str, float] = {}                           # seconds per phase, for the SUMMARY split
+
+
+@contextmanager
+def phase(name: str):
+    t = time.monotonic()
+    try:
+        yield
+    finally:
+        PH[name] = PH.get(name, 0.0) + time.monotonic() - t
+
+
 def write_sector(isp, addr, new, crc_ok=False):
     """erase+program+verify; on mismatch re-read once (read-path glitch), else redo, up to SECTOR_TRIES."""
     for n in range(1, SECTOR_TRIES + 1):
         try:
             return _write_sector(isp, addr, new, crc_ok)
         except RuntimeError as e:
-            if isp.read_flash(addr, SECTOR) == new:
+            PH["retries"] = PH.get("retries", 0) + 1
+            with phase("verify"):
+                same = isp.read_flash(addr, SECTOR) == new
+            if same:
                 log(f"0x{addr:06x}: {e}; re-read matches (read glitch), accepted"); return
             log(f"0x{addr:06x}: {e}; try {n}/{SECTOR_TRIES}")
             if n == SECTOR_TRIES:
@@ -63,26 +79,30 @@ def write_sector(isp, addr, new, crc_ok=False):
 
 
 def _write_sector(isp, addr, new, crc_ok):
-    for ops in ENGINE_OPS:
-        isp.write(*ops)
-    isp.write_enable()
-    isp.erase_sector(addr)
-    isp.wait_wip(f"erase 0x{addr:06x}", T_ERASE_LIMIT)
+    with phase("erase"):
+        for ops in ENGINE_OPS:
+            isp.write(*ops)
+        isp.write_enable()
+        isp.erase_sector(addr)
+        isp.wait_wip(f"erase 0x{addr:06x}", T_ERASE_LIMIT)
     # blank check: CRC when validated (~10 ms) else readback (~0.4 s); a missed erase also fails the verify below
-    if crc_ok:
-        not_blank = isp.flash_crc(addr, SECTOR) != BLANK_CRC
-    else:
-        not_blank = isp.read_flash(addr, SECTOR) != b"\xff" * SECTOR
+    with phase("blank"):
+        if crc_ok:
+            not_blank = isp.flash_crc(addr, SECTOR) != BLANK_CRC
+        else:
+            not_blank = isp.read_flash(addr, SECTOR) != b"\xff" * SECTOR
     if not_blank:
         raise RuntimeError(f"sector 0x{addr:06x} not blank after erase")
-    isp.program_setup()
-    for off in range(0, SECTOR, PAGE):
-        pg = new[off:off + PAGE]
-        if pg != b"\xff" * PAGE:
-            isp.program_page(addr + off, pg)
-    if crc_ok and isp.flash_crc(addr, SECTOR) == S.crc8(new):
-        return                                           # CRC8 miss chance 1/256 per corrupted sector (docs/flash-crc.md)
-    back = isp.read_flash(addr, SECTOR)                  # CRC mismatch (or crc off): readback names the bad bytes
+    with phase("program"):
+        isp.program_setup()
+        for off in range(0, SECTOR, PAGE):
+            pg = new[off:off + PAGE]
+            if pg != b"\xff" * PAGE:
+                isp.program_page(addr + off, pg)
+    with phase("verify"):
+        if crc_ok and isp.flash_crc(addr, SECTOR) == S.crc8(new):
+            return                                       # CRC8 miss chance 1/256 per corrupted sector (docs/flash-crc.md)
+        back = isp.read_flash(addr, SECTOR)              # CRC mismatch (or crc off): readback names the bad bytes
     if back != new:
         bad = [i for i in range(SECTOR) if back[i] != new[i]]
         detail = " ".join(f"+{i:03x}:{new[i]:02x}->{back[i]:02x}(x{new[i] ^ back[i]:02x})" for i in bad[:12])
@@ -158,7 +178,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 state.save()
                 log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
         if crc_ok:                                      # end-to-end over the image region, written or skipped
-            hw, py = isp.flash_crc(0, len(img)), S.crc8(img)
+            with phase("final crc"):
+                hw, py = isp.flash_crc(0, len(img)), S.crc8(img)
             if hw != py:
                 for i in range(len(img) // SECTOR):
                     state.sectors[i] = None             # unlocalised: next run reads back
@@ -210,15 +231,16 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         bk = "the unit's vendor backup in ~/vendors/realtek/analysis/dumps"
         p = S.plan(hashes, state if have_manifest else None, o.full)
         diff, skipped = list(p.write), len(p.unchanged)
-        if p.unknown:
-            diff = sorted(set(diff) | set(S.resolve_unknown(isp, img, state, p.unknown, log)))
-        if p.unchanged:
-            bad = S.drift_check(isp, img, state, p.unchanged, rng, crc_ok, log)
-            if bad:
-                log(f"!!! DRIFT: manifest does not match the flash ({len(bad)} sector(s) {bad[:8]}); "
-                    f"manifest untrusted -> full readback diff of the image region (authoritative, ~1/5 of a full write)")
-                diff = S.readback_diff(isp, img, state, log)
-                skipped = nimg - len(diff)
+        with phase("gate"):                         # every unchanged sector checked on-chip before any write
+            if p.unknown:
+                diff = sorted(set(diff) | set(S.resolve_unknown(isp, img, state, p.unknown, log)))
+            if p.unchanged:
+                bad = S.drift_check(isp, img, state, p.unchanged, rng, crc_ok, log)
+                if bad:
+                    log(f"!!! DRIFT: manifest does not match the flash ({len(bad)} sector(s) {bad[:8]}); "
+                        f"manifest untrusted -> full readback diff of the image region (authoritative, ~1/5 of a full write)")
+                    diff = S.readback_diff(isp, img, state, log)
+                    skipped = nimg - len(diff)
         mode = "full" if (o.full or not have_manifest) else "incremental"
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
         t_prog = time.monotonic()
@@ -267,6 +289,11 @@ def summary(diff: list[int], nimg: int, t_write: float, t_total: float) -> None:
                                         or "none") + f"; {nb - len(by_bank)} banks untouched")
     log(f"SUMMARY: wrote {wb // 1024} KiB in {t_write:.1f} s = {rate:.1f} KiB/s ({rate / 1024:.3f} MB/s); "
         f"{t_total:.1f} s total incl. checks")
+    named = ("gate", "erase", "blank", "program", "verify", "final crc")
+    split = ", ".join(f"{k} {PH.get(k, 0.0):.1f}" for k in named)
+    other = t_total - sum(PH.get(k, 0.0) for k in named)
+    log(f"SUMMARY: time split (s): {split}, other (ISP enter/JEDEC/protect/reset) {other:.1f}; "
+        f"sector retries {int(PH.get('retries', 0))}")
 
 
 def main() -> int:
