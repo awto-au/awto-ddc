@@ -472,7 +472,48 @@ public class ExportRegAccess extends GhidraScript {
     String rv(V v) { return v.k == 1 ? String.format("%02x", v.c) : "?"; }
 
     // ---- rows ----
+    // owner = function whose intra-procedural flow (jumps/branches/fall-through, calls skipped) first reaches pc;
+    // falls back to the preceding entry for code no entry reaches
+    Map<Integer, Integer> owner = null;
+    List<Integer> flowSucc(int pc) {
+        List<Integer> r = new ArrayList<>();
+        int op = ub(pc), len = LEN[op], b1 = ub(pc + 1), b2 = ub(pc + 2), npc = (pc + len) & 0xFFFF;
+        if (op == 0x22 || op == 0x32 || op == 0x73) return r;
+        if (op == 0x02) { r.add(b1 << 8 | b2); return r; }
+        if ((op & 0x1F) == 0x01) { r.add(((pc + 2) & 0xF800) | ((op & 0xE0) << 3) | b1); return r; }
+        if ((op & 0x1F) == 0x11 || op == 0x12) {
+            int tgt = op == 0x12 ? (b1 << 8 | b2) : (((pc + 2) & 0xF800) | ((op & 0xE0) << 3) | b1);
+            if (tgt == 0x15DA) { r.add((npc + 4) & 0xFFFF); return r; }
+            if (tgt == 0x1617 || tgt == 0x163D) return r;
+            if (isInlineHelper(tgt)) return r;
+            r.add(npc); return r;
+        }
+        if (op == 0x80) { r.add(rel(pc, 2, b1)); return r; }
+        if (op == 0x40 || op == 0x50 || op == 0x60 || op == 0x70) { r.add(rel(pc, 2, b1)); r.add(npc); return r; }
+        if (op == 0x10 || op == 0x20 || op == 0x30 || op == 0xB4 || op == 0xB5 || op == 0xB6 || op == 0xB7 || op == 0xD5 || (op & 0xF8) == 0xB8) {
+            r.add(rel(pc, 3, b2)); r.add(npc); return r;
+        }
+        if ((op & 0xF8) == 0xD8) { r.add(rel(pc, 2, b1)); r.add(npc); return r; }
+        r.add(npc); return r;
+    }
+    void buildOwners() {
+        owner = new HashMap<>();
+        for (int e : funcEntries) if (states.containsKey(e)) owner.put(e, e);
+        for (int e : funcEntries) {
+            ArrayDeque<Integer> q = new ArrayDeque<>();
+            if (!states.containsKey(e)) continue;
+            q.add(e);
+            while (!q.isEmpty()) {
+                int pc = q.poll();
+                if (!states.containsKey(pc)) continue;
+                for (int n : flowSucc(pc)) if (n >= 0 && n <= 0xFFFF && !owner.containsKey(n) && states.containsKey(n)) { owner.put(n, e); q.add(n); }
+            }
+        }
+    }
     int[] funcOf(int pc) {
+        if (owner == null) buildOwners();
+        Integer o = owner.get(pc);
+        if (o != null) return new int[]{o};
         Integer e = funcEntries.floor(pc);
         return new int[]{e == null ? -1 : e};
     }

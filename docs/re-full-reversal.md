@@ -6,7 +6,7 @@ Tracking: awto-ddc#1 (umbrella) and the "Full reversal" issue (see bottom). Conf
 ## Phases
 - Phase 1 (done, this doc): SDK types + typed globals imported into Ghidra, counts, bank-agent instructions.
 - Phase 2: 7 bank agents (no Ghidra) name functions from the exports + SDK source.
-- Phase 3: merge TSVs, `scripts/ghidra_re.py regen all`, re-run `scripts/ghidra_re_stats.py`.
+- Phase 3 (done, section below): export fix, bit-field order, merge + verification, globals, stats.
 
 ## Pipeline (scripts / data)
 | step | file |
@@ -19,6 +19,8 @@ Tracking: awto-ddc#1 (umbrella) and the "Full reversal" issue (see bottom). Conf
 | SDK globals -> `re/jxc-4k/ghidra_globals.tsv` (+ `ghidra_globals_hand.tsv`) | `scripts/ghidra_globals_map.py` |
 | apply types + typed labels | `re/ghidra/ApplySdkTypes.java` (run by `ghidra_re.py` after ApplyNames) |
 | progress table | `scripts/ghidra_re_stats.py` |
+| merge (newest row wins, common area, thunks) | `scripts/ghidra_names_merge.py` -> `tmp/names_merged_bank<N>.tsv` |
+| verification | `scripts/ghidra_verify_names.py` -> `re/jxc-4k/phase2_verification.tsv` (+ `phase2_verification_manual.tsv`) |
 - Exports per bank: `~/vendors/realtek/analysis/jxc-4k/bank<N>/{decompiled_named.c,disassembly.asm,regwrites.tsv,regreads.tsv}`.
 - Names per bank: `re/jxc-4k/ghidra_names_bank<N>.tsv` (source of truth).
 
@@ -106,3 +108,20 @@ Method per function
 5. Keep comments terse (point form, max 3 lines, no measurements).
 Deliverable per agent: appended rows + a line count in the bank section of the final report (rows added by confidence).
 Phase 3 (caller): merge, `scripts/ghidra_re.py regen all`, `scripts/ghidra_re_stats.py`, optionally extend `ghidra_globals_map.py` to treat `[re-agent]` `high` names as anchors.
+
+## PHASE 3 (merge, verification, 2026-11-06)
+Export fix
+- Ghidra flagged Keil helpers (13ed LMUL, 1478 ULDIV, 15ce LSTXDATA, 133e, thunks) non-returning and put `CALL_RETURN` overrides on the calls; decompile/disassembly stopped at the first LCALL.
+- `re/ghidra/FixKeilReturns.java` (run by `ghidra_re.py import|fixret`): clears the flags/overrides on CALLs (JMP overrides from Shared Return Calls stay), disassembles fall-throughs, rebuilds bodies, disables the analyzer that re-flags them. Kept non-returning: CCASE/ICASE (inline tables).
+- `ExportRegAccess.java`: `func_addr` = function whose intra-procedural flow reaches the insn (calls skipped), not the preceding entry.
+- `re/ghidra/EnsureFunctions.java`: every `func` row becomes a real function entry (ApplyNames renamed the containing function otherwise), stale names of superseded rows are reset.
+Merge rules (`ghidra_names_merge.py`)
+- Newest row per address wins; `#` lines skipped; name `-` retracts (reset to default); `ghidra_names_phase3.tsv` applied last.
+- CODE rows: own bank + bank-0 common area (< 0x28C6) in every bank. EXTMEM rows of all banks apply to every program (one XDATA map).
+- `bcall_*` thunk names regenerated from the final target names.
+Verification (`phase2_verification.tsv`)
+- CONFIRMED = exact lib signature, SDK call graph both ways, register set, or hand-checked constants/sequence. PLAUSIBLE = agent reading or one weak signal: not a basis for firmware changes. REFUTED = contradicted.
+- Firmware-relevant verdicts: bit-field order CONFIRMED; DDR2 PHY values = SDK 1200M branch 12/12 CONFIRMED; DDR2 power-up order, M-domain call order, M-domain globals (Keil map shift 0x1AD) CONFIRMED; AC-on `d2a0` head CONFIRMED, tail delays are vendor PCB macros; backlight pin-group "backlight" label PLAUSIBLE only (renamed `pcb_pin_group_*`), proven backlight enable = P9.2 FE2A active low.
+Globals
+- `ghidra_globals_map.py`: anchors = merged names, [re-agent]/[auto-sdk] weight 1.0 only when CONFIRMED (else 0.3); high-confidence [re-agent] `g_` rows named like an SDK XDATA global are fixed seeds (accepted first, consume immediates).
+Counts: `scripts/ghidra_re_stats.py` (bank 3 excludes 0x28C6-0xA7FF; common area counted once per bank program).

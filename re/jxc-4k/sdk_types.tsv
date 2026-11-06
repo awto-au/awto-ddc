@@ -13,7 +13,7 @@ F	5	ucRCAP2L	u8	1
 
 E	EnumDebugTimeCursor	1	_DEBUG_TIME_CURSOR_1=0,_DEBUG_TIME_CURSOR_2=1,_DEBUG_TIME_CURSOR_3=2,_DEBUG_TIME_CURSOR_4=3,_DEBUG_TIME_CURSOR_5=4,_DEBUG_TIME_CURSOR_END=5
 S	StructUserDataInflashType	40
-F	0	bf_b1LvdsDisplayBitMode	u8	1	bit fields (decl order, 8 bits): b1LvdsDisplayBitMode:7, b1DitherWitch:1
+F	0	bf_b1LvdsDisplayBitMode	u8	1	bit fields LSB-first, 8 bits: b1LvdsDisplayBitMode[6:0], b1DitherWitch[7]
 F	1	usPanelMaxFrameRate	u16	1	
 F	3	ucPanelDhStart	u8	1	
 F	4	ucPanelDvStart	u8	1	
@@ -39,7 +39,7 @@ F	36	usPanelPowerOffT6	u16	1
 F	38	usPanelPwmFre	u16	1	
 
 S	StructTimingInfo	21
-F	0	bf_b1HSP	u8	1	bit fields (decl order, 8 bits): b1HSP:1, b1VSP:1, b1Interlace:1, b1DpInterlaceVBID:1, b1VideoField:1
+F	0	bf_b1HSP	u8	1	bit fields LSB-first, 8 bits: b1HSP[0], b1VSP[1], b1Interlace[2], b1DpInterlaceVBID[3], b1VideoField[4]
 F	1	usHFreq	u16	1	
 F	3	usHTotal	u16	1	
 F	5	usHWidth	u16	1	
@@ -52,7 +52,7 @@ F	17	usVStart	u16	1
 F	19	usVSWidth	u16	1	
 
 S	StructMeasureSyncData	15
-F	0	bf_b1HSP	u8	1	bit fields (decl order, 8 bits): b1HSP:1, b1VSP:1
+F	0	bf_b1HSP	u8	1	bit fields LSB-first, 8 bits: b1HSP[0], b1VSP[1]
 F	1	usHSPeriod	u16	1	
 F	3	usHSWidth	u16	1	
 F	5	usVSPeriod	u16	1	
@@ -93,7 +93,7 @@ F	4	usOutputHWidth	u16	1
 F	6	usOutputVHeight	u16	1	
 
 S	StructDVCustomizedFreq	7
-F	0	bf_b1FORCETOFREERUN	u8	1	bit fields (decl order, 8 bits): b1FORCETOFREERUN:1, b1FORCETOFRC8BIT:1
+F	0	bf_b1FORCETOFREERUN	u8	1	bit fields LSB-first, 8 bits: b1FORCETOFREERUN[0], b1FORCETOFRC8BIT[1]
 F	1	usMaxFreq	u16	1	
 F	3	usTypFreq	u16	1	
 F	5	usMinFreq	u16	1	
@@ -104,7 +104,7 @@ F	2	usFRCBW	u16	1
 F	4	usFIFOHwidth	u16	1	
 
 S	StructSDRAMCalControl	1
-F	0	bf_b1FirstAutoKStatus	u8	1	bit fields (decl order, 8 bits): b1FirstAutoKStatus:1, b1CasChangeStatus:1, b1DCOnOnLineStatus:1
+F	0	bf_b1FirstAutoKStatus	u8	1	bit fields LSB-first, 8 bits: b1FirstAutoKStatus[0], b1CasChangeStatus[1], b1DCOnOnLineStatus[2]
 
 S	StructDDR3PhaseInfo	12
 F	0	ulDdrPllInitialPhase0	u32	1	
@@ -112,55 +112,55 @@ F	4	ulDdrPllInitialPhase1	u32	1
 F	8	ulDdrReadDqDelayTap	u32	1	
 
 S	StructMDomainInfo	3
-F	0	bf_b3MemorySelect	u8	1	bit fields (decl order, 8 bits): b3MemorySelect:3, b3DVFSelect:3, b2MemoryConf:2
-F	1	bf_b5DataBit	u8	1	bit fields (decl order, 8 bits): b5DataBit:5, b1HSU:1, b1HSD:1, b1VSU:1
-F	2	bf_b1VSD	u8	1	bit fields (decl order, 8 bits): b1VSD:1, b2MemoryFrameBuf:2
+F	0	bf_b3MemorySelect	u8	1	bit fields LSB-first, 8 bits: b3MemorySelect[2:0], b3DVFSelect[5:3], b2MemoryConf[7:6]
+F	1	bf_b5DataBit	u8	1	bit fields LSB-first, 8 bits: b5DataBit[4:0], b1HSU[5], b1HSD[6], b1VSU[7]
+F	2	bf_b1VSD	u8	1	bit fields LSB-first, 8 bits: b1VSD[0], b2MemoryFrameBuf[2:1]
 
 S	StructDpHdmiCompatibleInfo	1
-F	0	bf_b1D0Hdmi5VStatus	u8	1	bit fields (decl order, 8 bits): b1D0Hdmi5VStatus:1, b1D1Hdmi5VStatus:1, b1D2Hdmi5VStatus:1, b1D3Hdmi5VStatus:1, b1D0HdmiPSWakeUp:1, b1D1HdmiPSWakeUp:1, b1D2HdmiPSWakeUp:1, b1D3HdmiPSWakeUp:1
+F	0	bf_b1D0Hdmi5VStatus	u8	1	bit fields LSB-first, 8 bits: b1D0Hdmi5VStatus[0], b1D1Hdmi5VStatus[1], b1D2Hdmi5VStatus[2], b1D3Hdmi5VStatus[3], b1D0HdmiPSWakeUp[4], b1D1HdmiPSWakeUp[5], b1D2HdmiPSWakeUp[6], b1D3HdmiPSWakeUp[7]
 
 S	StructDPMarginLinkInfo	2
-F	0	bf_b1D0MarginLinkHBR2	u8	1	bit fields (decl order, 8 bits): b1D0MarginLinkHBR2:1, b1D0Lane0MarginLinkHBRRBR:1, b1D0Lane1MarginLinkHBRRBR:1, b1D0Lane2MarginLinkHBRRBR:1, b1D0Lane3MarginLinkHBRRBR:1, b1D1MarginLinkHBR2:1, b1D1Lane0MarginLinkHBRRBR:1, b1D1Lane1MarginLinkHBRRBR:1
-F	1	bf_b1D1Lane2MarginLinkHBRRBR	u8	1	bit fields (decl order, 8 bits): b1D1Lane2MarginLinkHBRRBR:1, b1D1Lane3MarginLinkHBRRBR:1, b1D6MarginLinkHBR2:1
+F	0	bf_b1D0MarginLinkHBR2	u8	1	bit fields LSB-first, 8 bits: b1D0MarginLinkHBR2[0], b1D0Lane0MarginLinkHBRRBR[1], b1D0Lane1MarginLinkHBRRBR[2], b1D0Lane2MarginLinkHBRRBR[3], b1D0Lane3MarginLinkHBRRBR[4], b1D1MarginLinkHBR2[5], b1D1Lane0MarginLinkHBRRBR[6], b1D1Lane1MarginLinkHBRRBR[7]
+F	1	bf_b1D1Lane2MarginLinkHBRRBR	u8	1	bit fields LSB-first, 8 bits: b1D1Lane2MarginLinkHBRRBR[0], b1D1Lane3MarginLinkHBRRBR[1], b1D6MarginLinkHBR2[2]
 
 S	StructDpAuxSetting	1
-F	0	bf_b1DpAuxMode	u8	1	bit fields (decl order, 8 bits): b1DpAuxMode:1, b4DpAuxAdjrSet:4
+F	0	bf_b1DpAuxMode	u8	1	bit fields LSB-first, 8 bits: b1DpAuxMode[0], b4DpAuxAdjrSet[4:1]
 
 E	EnumDpAuxStatus	1	_DP_AUX_FAIL=0,_DP_AUX_PASS=1
 S	StructDpLanesMapping	2
-F	0	bf_b2Lane0Mapping	u8	1	bit fields (decl order, 8 bits): b2Lane0Mapping:2, b2Lane1Mapping:2, b2Lane2Mapping:2, b2Lane3Mapping:2
-F	1	bf_b1Lane0PNSwap	u8	1	bit fields (decl order, 8 bits): b1Lane0PNSwap:1, b1Lane1PNSwap:1, b1Lane2PNSwap:1, b1Lane3PNSwap:1
+F	0	bf_b2Lane0Mapping	u8	1	bit fields LSB-first, 8 bits: b2Lane0Mapping[1:0], b2Lane1Mapping[3:2], b2Lane2Mapping[5:4], b2Lane3Mapping[7:6]
+F	1	bf_b1Lane0PNSwap	u8	1	bit fields LSB-first, 8 bits: b1Lane0PNSwap[0], b1Lane1PNSwap[1], b1Lane2PNSwap[2], b1Lane3PNSwap[3]
 
 S	StructDpRxHdcp2AuthInfo	3
-F	0	bf_b4AuthState	u8	1	bit fields (decl order, 8 bits): b4AuthState:4, b1AuthStateChange:1, b1AuthRepeaterProcTimeout:1
+F	0	bf_b4AuthState	u8	1	bit fields LSB-first, 8 bits: b4AuthState[3:0], b1AuthStateChange[4], b1AuthRepeaterProcTimeout[5]
 F	1	ucAuthUpstreamEvent	u8	1	
-F	2	bf_b1AuthCpIrqTimer	u8	1	bit fields (decl order, 8 bits): b1AuthCpIrqTimer:1, b1AuthHdcp2ContentStreamManage:1, b1AuthHdcp1ContentStreamManage:1, b1AuthRepeaterAuth1Start:1, b1AuthRepeaterAuth2Start:1
+F	2	bf_b1AuthCpIrqTimer	u8	1	bit fields LSB-first, 8 bits: b1AuthCpIrqTimer[0], b1AuthHdcp2ContentStreamManage[1], b1AuthHdcp1ContentStreamManage[2], b1AuthRepeaterAuth1Start[3], b1AuthRepeaterAuth2Start[4]
 
 E	EnumHDCPType	1	_HDCP_NONE=0,_HDCP_14=20,_HDCP_22=34,_HDCP_14_REPEATER=148,_HDCP_22_REPEATER=162
 E	EnumTypeCAttachStatus	1	_TYPE_C_UNATTACH=0,_TYPE_C_ATTACH=1
 E	EnumTypeCOrientation	1	_TYPE_C_ORIENTATION_NONE=0,_TYPE_C_ORIENTATION_UNFLIP=1,_TYPE_C_ORIENTATION_FLIP=2
 S	StructTypeCPowerInfo	21
-F	0	bf_b10AvaliablePower	u16	1	bit fields (decl order, 16 bits): b10AvaliablePower:10
-F	2	bf_b10Rx0MaxPower	u16	1	bit fields (decl order, 16 bits): b10Rx0MaxPower:10
-F	4	bf_b10Rx0ReqPower	u16	1	bit fields (decl order, 16 bits): b10Rx0ReqPower:10
-F	6	bf_b12Rx0OutputVol	u16	1	bit fields (decl order, 16 bits): b12Rx0OutputVol:12
-F	8	bf_b10Rx0OutputCur	u16	1	bit fields (decl order, 16 bits): b10Rx0OutputCur:10
-F	10	bf_b10Rx05VUpBound	u16	1	bit fields (decl order, 16 bits): b10Rx05VUpBound:10
-F	12	bf_b10Rx05VLowBound	u16	1	bit fields (decl order, 16 bits): b10Rx05VLowBound:10
-F	14	bf_b10Rx00VUpBound	u16	1	bit fields (decl order, 16 bits): b10Rx00VUpBound:10
-F	16	bf_b10Rx0LocPowOn	u16	1	bit fields (decl order, 16 bits): b10Rx0LocPowOn:10
-F	18	bf_b10Rx0LocPowOff	u16	1	bit fields (decl order, 16 bits): b10Rx0LocPowOff:10
-F	20	bf_b1VbusStatus	u8	1	bit fields (decl order, 8 bits): b1VbusStatus:1
+F	0	bf_b10AvaliablePower	u16	1	bit fields LSB-first, 16 bits: b10AvaliablePower[9:0]
+F	2	bf_b10Rx0MaxPower	u16	1	bit fields LSB-first, 16 bits: b10Rx0MaxPower[9:0]
+F	4	bf_b10Rx0ReqPower	u16	1	bit fields LSB-first, 16 bits: b10Rx0ReqPower[9:0]
+F	6	bf_b12Rx0OutputVol	u16	1	bit fields LSB-first, 16 bits: b12Rx0OutputVol[11:0]
+F	8	bf_b10Rx0OutputCur	u16	1	bit fields LSB-first, 16 bits: b10Rx0OutputCur[9:0]
+F	10	bf_b10Rx05VUpBound	u16	1	bit fields LSB-first, 16 bits: b10Rx05VUpBound[9:0]
+F	12	bf_b10Rx05VLowBound	u16	1	bit fields LSB-first, 16 bits: b10Rx05VLowBound[9:0]
+F	14	bf_b10Rx00VUpBound	u16	1	bit fields LSB-first, 16 bits: b10Rx00VUpBound[9:0]
+F	16	bf_b10Rx0LocPowOn	u16	1	bit fields LSB-first, 16 bits: b10Rx0LocPowOn[9:0]
+F	18	bf_b10Rx0LocPowOff	u16	1	bit fields LSB-first, 16 bits: b10Rx0LocPowOff[9:0]
+F	20	bf_b1VbusStatus	u8	1	bit fields LSB-first, 8 bits: b1VbusStatus[0]
 
 S	StructTypeCInfo	10
-F	0	bf_b5State	u8	1	bit fields (decl order, 8 bits): b5State:5, b3AttachStatus:3
-F	1	bf_b3CC1Resistor	u8	1	bit fields (decl order, 8 bits): b3CC1Resistor:3, b3CC2Resistor:3, b1FRSrcEnable:1, b1FRSnkEnable:1
+F	0	bf_b5State	u8	1	bit fields LSB-first, 8 bits: b5State[4:0], b3AttachStatus[7:5]
+F	1	bf_b3CC1Resistor	u8	1	bit fields LSB-first, 8 bits: b3CC1Resistor[2:0], b3CC2Resistor[5:3], b1FRSrcEnable[6], b1FRSnkEnable[7]
 F	2	enumCCAttached	EnumTypeCAttachStatus	1	
 F	3	enumOrientation	EnumTypeCOrientation	1	
 F	4	ucUnattachDebounce	u8	1	
-F	5	bf_b1Error	u16	1	bit fields (decl order, 16 bits): b1Error:1, b1RaExist:1, b1VconnStatus:1, b1ConnectEnable:1, b1DRPConnectMode:1, b1AcOnReconnect:1, b10DefCurrent:10
+F	5	bf_b1Error	u16	1	bit fields LSB-first, 16 bits: b1Error[0], b1RaExist[1], b1VconnStatus[2], b1ConnectEnable[3], b1DRPConnectMode[4], b1AcOnReconnect[5], b10DefCurrent[15:6]
 F	7	usDefOcpCurrent	u16	1	
-F	9	bf_b1DeviceDetect	u8	1	bit fields (decl order, 8 bits): b1DeviceDetect:1
+F	9	bf_b1DeviceDetect	u8	1	bit fields LSB-first, 8 bits: b1DeviceDetect[0]
 
 S	StructDpRxErrorCount	8
 F	0	usDpRxLane0ErrorCount	u16	1	
@@ -279,7 +279,7 @@ E	EnumTypeCPmicDischarge	1	_TYPE_C_PMIC_DISCHARGE_DISABLE=0,_TYPE_C_PMIC_DISCHAR
 E	EnumTypeCPmicSwitchControl	1	_TYPE_C_PMIC_SWITCH_CONTROL_DISABLE=0,_TYPE_C_PMIC_SWITCH_CONTROL_ENABLE=1
 E	EnumTypeCPmicOperationMode	1	_TYPE_C_PMIC_CV_MODE_OPERATION=0,_TYPE_C_PMIC_CC_MODE_OPERATION=1,_TYPE_C_PMIC_TRANSITION_MODE=2,_TYPE_C_PMIC_NONE_MODE_OPERATION=255
 S	StructTypeCUserPDO	4
-F	0	bf_enumPdoType	u8	1	bit fields (decl order, 8 bits): enumPdoType:8
+F	0	bf_enumPdoType	u8	1	bit fields LSB-first, 8 bits: enumPdoType[7:0]
 F	1	ucMaxVoltage	u8	1	
 F	2	ucMinVoltage	u8	1	
 F	3	ucMaxCurrent	u8	1	
@@ -291,7 +291,7 @@ S	StructTypeCUserRDO	6
 F	0	enumObjPos	EnumTypeCPdoNumber	1	
 F	1	usReqInfo1	u16	1	
 F	3	usReqInfo2	u16	1	
-F	5	bf_b1CapMismatch	u8	1	bit fields (decl order, 8 bits): b1CapMismatch:1, b1GiveBack:1
+F	5	bf_b1CapMismatch	u8	1	bit fields LSB-first, 8 bits: b1CapMismatch[0], b1GiveBack[1]
 
 E	EnumPdoCheck	1	_TYPE_C_PDO_NO_CHANGE=0,_TYPE_C_PDO_CHANGE=1
 E	EnumTypeCLenovoAltModeStatus	1	_TYPE_C_LENOVO_ALT_MODE_NOT_READY=0,_TYPE_C_LENOVO_ALT_MODE_READY=1
@@ -301,12 +301,12 @@ E	EnumTypeCLenovoSysPowerMode	1	_TYPE_C_LENOVO_SYS_DC_MODE=0,_TYPE_C_LENOVO_SYS_
 E	EnumTypeCLenovoSysState	1	_TYPE_C_LENOVO_SYS_STATE_NONE=0,_TYPE_C_LENOVO_SYS_S0=1,_TYPE_C_LENOVO_SYS_S0I3=2,_TYPE_C_LENOVO_SYS_S3=3,_TYPE_C_LENOVO_SYS_S4=4,_TYPE_C_LENOVO_SYS_S5=5
 S	StructTypeCLenovoDockEvent	2
 F	0	enumDockingPowerSwitch	EnumTypeCLenovoDockPowerSwitch	1	
-F	1	bf_b1DockingWolRequest	u8	1	bit fields (decl order, 8 bits): b1DockingWolRequest:1, b1DockingEvent:1, b4DockingReserved:4
+F	1	bf_b1DockingWolRequest	u8	1	bit fields LSB-first, 8 bits: b1DockingWolRequest[0], b1DockingEvent[1], b4DockingReserved[5:2]
 
 S	StructTypeCLenovoSysEvent	4
 F	0	enumSystemPowerMode	EnumTypeCLenovoSysPowerMode	1	
 F	1	enumSystemState	EnumTypeCLenovoSysState	1	
-F	2	bf_b1SystemEvent	u8	1	bit fields (decl order, 8 bits): b1SystemEvent:1, b3SystemReserved:3
+F	2	bf_b1SystemEvent	u8	1	bit fields LSB-first, 8 bits: b1SystemEvent[0], b3SystemReserved[3:1]
 F	3	ucSystemAcknowlegde	u8	1	
 
 E	EnumTypeCAcerAltModeStatus	1	_TYPE_C_ACER_ALT_MODE_NOT_READY=0,_TYPE_C_ACER_ALT_MODE_READY=1
@@ -316,12 +316,12 @@ E	EnumTypeCAcerSysEvent	1	_TYPE_C_ACER_SYS_EVENT_NONE=0,_TYPE_C_ACER_SYS_EVENT_S
 S	StructTypeCAcerUserEvent	26
 F	0	enumEvent	EnumTypeCAcerUserEvent	1	
 F	1	pucVdmData	u8	24	
-F	25	bf_b3VdmCnt	u8	1	bit fields (decl order, 8 bits): b3VdmCnt:3
+F	25	bf_b3VdmCnt	u8	1	bit fields LSB-first, 8 bits: b3VdmCnt[2:0]
 
 S	StructTypeCAcerSysEvent	26
 F	0	enumEvent	EnumTypeCAcerSysEvent	1	
 F	1	pucVdmData	u8	24	
-F	25	bf_b3VdmCnt	u8	1	bit fields (decl order, 8 bits): b3VdmCnt:3
+F	25	bf_b3VdmCnt	u8	1	bit fields LSB-first, 8 bits: b3VdmCnt[2:0]
 
 E	EnumTypeCHpAltModeStatus	1	_TYPE_C_HP_ALT_MODE_NOT_READY=0,_TYPE_C_HP_ALT_MODE_READY=1
 E	EnumTypeCHpBusyStatus	1	_TYPE_C_HP_USER_EVENT_NOT_BUSY=0,_TYPE_C_HP_USER_EVENT_BUSY=1
@@ -330,12 +330,12 @@ E	EnumTypeCHpSysEvent	1	_TYPE_C_HP_SYS_EVENT_NONE=0,_TYPE_C_HP_SYS_EVENT_SET_CON
 S	StructTypeCHpUserEvent	22
 F	0	enumEvent	EnumTypeCHpUserEvent	1	
 F	1	pucVdmData	u8	20	
-F	21	bf_b3VdmCnt	u8	1	bit fields (decl order, 8 bits): b3VdmCnt:3
+F	21	bf_b3VdmCnt	u8	1	bit fields LSB-first, 8 bits: b3VdmCnt[2:0]
 
 S	StructTypeCHpSysEvent	22
 F	0	enumEvent	EnumTypeCHpSysEvent	1	
 F	1	pucVdmData	u8	20	
-F	21	bf_b3VdmCnt	u8	1	bit fields (decl order, 8 bits): b3VdmCnt:3
+F	21	bf_b3VdmCnt	u8	1	bit fields LSB-first, 8 bits: b3VdmCnt[2:0]
 
 E	EnumUSBPDSupportStatus	1	_USB3_PD_ENABLE=1,_USB2_PD_ENABLE=2,_USB_PD_DISABLE=3
 E	EnumUSBPSSupportStatus	1	_USB3_PS_ENABLE=1,_USB2_PS_ENABLE=2,_USB_PS_DISABLE=3
@@ -395,15 +395,15 @@ S	StructCecTxTransmitInfo	19
 F	0	ucTransmitHb	u8	1	
 F	1	pucTransmitDb	u8	16	
 F	17	ucDbLength	u8	1	
-F	18	bf_b3RetryCnt	u8	1	bit fields (decl order, 8 bits): b3RetryCnt:3
+F	18	bf_b3RetryCnt	u8	1	bit fields LSB-first, 8 bits: b3RetryCnt[2:0]
 
 S	StructCecGeneralCtrl	4
 F	0	usCecPhyAddr	u16	1	
 F	2	ucCecTxEvent	u8	1	
-F	3	bf_bReadDone	u8	1	bit fields (decl order, 8 bits): bReadDone:1, bCecTxStart:1, b2CecTxState:2, bCecFxEnable:1, bCecRxInfoAnalyzing:1, bReadFromBackupFifo:1
+F	3	bf_bReadDone	u8	1	bit fields LSB-first, 8 bits: bReadDone[0], bCecTxStart[1], b2CecTxState[3:2], bCecFxEnable[4], bCecRxInfoAnalyzing[5], bReadFromBackupFifo[6]
 
 S	StructDPFREESYNCENABLE	13
-F	0	bf_b1DPFREESYNCEnable	u8	1	bit fields (decl order, 8 bits): b1DPFREESYNCEnable:1, b1DPMSTFREESYNCEnable:1, b1DPRX0FREESYNCCapabilitySwitch:1, b1DPRX1FREESYNCCapabilitySwitch:1, b1DPRX2FREESYNCCapabilitySwitch:1, b1DPRX6FREESYNCCapabilitySwitch:1, b1DPRX0SPDInfoFrameReceived:1, b1DPRX1SPDInfoFrameReceived:1
+F	0	bf_b1DPFREESYNCEnable	u8	1	bit fields LSB-first, 8 bits: b1DPFREESYNCEnable[0], b1DPMSTFREESYNCEnable[1], b1DPRX0FREESYNCCapabilitySwitch[2], b1DPRX1FREESYNCCapabilitySwitch[3], b1DPRX2FREESYNCCapabilitySwitch[4], b1DPRX6FREESYNCCapabilitySwitch[5], b1DPRX0SPDInfoFrameReceived[6], b1DPRX1SPDInfoFrameReceived[7]
 F	1	enumDPRX0FREESYNCSupport	EnumFreeSyncSupport	1	
 F	2	enumDPRX1FREESYNCSupport	EnumFreeSyncSupport	1	
 F	3	enumDPRX2FREESYNCSupport	EnumFreeSyncSupport	1	
@@ -414,7 +414,7 @@ F	9	usDPRX0FREESYNCHtotalMargin	u16	1
 F	11	usDPRX1FREESYNCHtotalMargin	u16	1	
 
 S	StructHDMIFREESYNCENABLE	7
-F	0	bf_b1HDMIFREESYNCEnable	u8	1	bit fields (decl order, 8 bits): b1HDMIFREESYNCEnable:1, b1HDMIRX0SPDInfoFrameReceived:1, b1HDMIRX1SPDInfoFrameReceived:1, b1HDMIRX2SPDInfoFrameReceived:1, b1HDMIRX3SPDInfoFrameReceived:1, b1HDMIRX4SPDInfoFrameReceived:1, b1HDMIRX5SPDInfoFrameReceived:1
+F	0	bf_b1HDMIFREESYNCEnable	u8	1	bit fields LSB-first, 8 bits: b1HDMIFREESYNCEnable[0], b1HDMIRX0SPDInfoFrameReceived[1], b1HDMIRX1SPDInfoFrameReceived[2], b1HDMIRX2SPDInfoFrameReceived[3], b1HDMIRX3SPDInfoFrameReceived[4], b1HDMIRX4SPDInfoFrameReceived[5], b1HDMIRX5SPDInfoFrameReceived[6]
 F	1	enumHDMIRX0FREESYNCSupport	EnumFreeSyncSupport	1	
 F	2	enumHDMIRX1FREESYNCSupport	EnumFreeSyncSupport	1	
 F	3	enumHDMIRX2FREESYNCSupport	EnumFreeSyncSupport	1	
@@ -475,7 +475,7 @@ F	5	enumHDR10RX5Support	EnumHDR10ModeDef	1
 F	6	enumHDR10RX6Support	EnumHDR10ModeDef	1	
 
 S	StructFreeSyncIIInfo	2
-F	0	bf_b1NativeColorSpaceEnable	u8	1	bit fields (decl order, 8 bits): b1NativeColorSpaceEnable:1, b1BacklightControlEnable:1, b1LocalDimmingDisable:1, b5EOTFType:5
+F	0	bf_b1NativeColorSpaceEnable	u8	1	bit fields LSB-first, 8 bits: b1NativeColorSpaceEnable[0], b1BacklightControlEnable[1], b1LocalDimmingDisable[2], b5EOTFType[7:3]
 F	1	ucBacklightControlRatio	u8	1	
 
 E	EnumFreeSyncIIContent	1	_FREESYNC_II_NATIVE_COLOR_SPACE_ENABLE=0,_FREESYNC_II_BACKLIGHT_CONTROL_ENABLE=1,_FREESYNC_II_EOTF_TYPE=2,_FREESYNC_II_BACKLIGHT_CONTROL_RATIO=3
@@ -484,8 +484,8 @@ E	EnumSourceSearchPortPriority	1	_INPUT_PORT_PRIORITY_0=0,_INPUT_PORT_PRIORITY_1
 E	EnumSourceSearchGroup	1	_INPUT_PORT_GROUP_0=0,_INPUT_PORT_GROUP_1=1,_INPUT_PORT_GROUP_2=2,_INPUT_PORT_GROUP_3=3,_INPUT_PORT_GROUP_4=4,_INPUT_PORT_GROUP_5=5,_INPUT_PORT_GROUP_6=6,_INPUT_PORT_GROUP_7=7,_INPUT_PORT_GROUP_8=8,_INPUT_PORT_GROUP_9=9,_INPUT_PORT_GROUP_NONE=10
 E	EnumInputPortType	1	_PORT_NONE=0,_PORT_VGA=1,_PORT_DVI=2,_PORT_HDMI=3,_PORT_DP=4,_PORT_MHL=5,_PORT_HDMI20=6,_PORT_DUAL_DVI=7
 S	StructPortCableStatus	2
-F	0	bf_b1A0CableDetect	u8	1	bit fields (decl order, 8 bits): b1A0CableDetect:1, b1A1CableDetect:1, b1A2CableDetect:1, b1D0CableDetect:1, b1D1CableDetect:1, b1D2CableDetect:1, b1D3CableDetect:1, b1D4CableDetect:1
-F	1	bf_b1D5CableDetect	u8	1	bit fields (decl order, 8 bits): b1D5CableDetect:1, b1D6CableDetect:1, b1D0MHLCableDetect:1, b1D1MHLCableDetect:1, b1D2MHLCableDetect:1, b1D3MHLCableDetect:1, b1D4MHLCableDetect:1, b1D5MHLCableDetect:1
+F	0	bf_b1A0CableDetect	u8	1	bit fields LSB-first, 8 bits: b1A0CableDetect[0], b1A1CableDetect[1], b1A2CableDetect[2], b1D0CableDetect[3], b1D1CableDetect[4], b1D2CableDetect[5], b1D3CableDetect[6], b1D4CableDetect[7]
+F	1	bf_b1D5CableDetect	u8	1	bit fields LSB-first, 8 bits: b1D5CableDetect[0], b1D6CableDetect[1], b1D0MHLCableDetect[2], b1D1MHLCableDetect[3], b1D2MHLCableDetect[4], b1D3MHLCableDetect[5], b1D4MHLCableDetect[6], b1D5MHLCableDetect[7]
 
 E	EnumScalerTimerOperationMode	1	_TIMER_OPERATION_INITIAL_MODE=0,_TIMER_OPERATION_POWER_NORMAL_MODE=1,_TIMER_OPERATION_POWER_SAVING_MODE=2,_TIMER_OPERATION_POWER_SAVING_FAST_MODE=3,_TIMER_OPERATION_POWER_IDLE_MODE=4,_TIMER_OPERATION_OSD_MODE=5
 E	EnumTimingInfoSelect	1	_HPOLARITY=0,_VPOLARITY=1,_INTERLACE=2,_IHFREQ=3,_IHTOTAL=4,_IHWIDTH=5,_IHSTART=6,_IVFREQ=7,_IVTOTAL=8,_IVHEIGHT=9,_IVSTART=10,_IVSYNC_WIDTH=11,_MISC=12
@@ -622,47 +622,47 @@ E	EnumOsdRoundedWindowType	1	_OSD_ROUNDED_WIN_SIZE_8X8=0,_OSD_ROUNDED_WIN_SIZE_1
 E	EnumOsdSpecialColorMaskOperation	1	_OSD_SPECIAL_COLOR_MASK_AND_OPERATION=0,_OSD_SPECIAL_COLOR_MASK_OR_OPERATION=1
 E	EnumOsdDecodeCompressionType	1	_OSD_DECODE_COMPRESSED=0,_OSD_DECODE_NON_COMPRESSED=2
 S	StructOsdWindow	7
-F	0	bf_b6WindowColor	u8	1	bit fields (decl order, 8 bits): b6WindowColor:6, b1WindowGradientPolarityR:1, b1WindowGradientEnableR:1
-F	1	bf_b6WindowColorShadow	u8	1	bit fields (decl order, 8 bits): b6WindowColorShadow:6, b1WindowGradientPolarityG:1, b1WindowGradientEnableG:1
-F	2	bf_b6WindowColorBorder	u8	1	bit fields (decl order, 8 bits): b6WindowColorBorder:6, b1WindowGradientPolarityB:1, b1WindowGradientEnableB:1
-F	3	bf_b3WindowShadowBorderPixelWidth	u8	1	bit fields (decl order, 8 bits): b3WindowShadowBorderPixelWidth:3, b3WindowShadowBorderPixelHeight:3, b2WindowGradientLevelStep:2
-F	4	bf_b3WindowGradientLevelPer	u8	1	bit fields (decl order, 8 bits): b3WindowGradientLevelPer:3, b5WindowNumber:5
-F	5	bf_b3WindowType	u8	1	bit fields (decl order, 8 bits): b3WindowType:3, b1WindowRotationFunctionEnable:1, b1WindowEnable:1, b1WindowBlend:1, b1WindowGradient:1, b1WindowGradientDirection:1
-F	6	bf_b1WindowGradientSaturatedColorMode	u8	1	bit fields (decl order, 8 bits): b1WindowGradientSaturatedColorMode:1, b1WindowGradientReversedColorMode:1, b1WindowReferenceDelay:1, b1WindowBorderPriority:1, b1WindowGradientLevelExtension:1, b1WindowButtonEnable:1, b1WindowWaitEvenStop:1
+F	0	bf_b6WindowColor	u8	1	bit fields LSB-first, 8 bits: b6WindowColor[5:0], b1WindowGradientPolarityR[6], b1WindowGradientEnableR[7]
+F	1	bf_b6WindowColorShadow	u8	1	bit fields LSB-first, 8 bits: b6WindowColorShadow[5:0], b1WindowGradientPolarityG[6], b1WindowGradientEnableG[7]
+F	2	bf_b6WindowColorBorder	u8	1	bit fields LSB-first, 8 bits: b6WindowColorBorder[5:0], b1WindowGradientPolarityB[6], b1WindowGradientEnableB[7]
+F	3	bf_b3WindowShadowBorderPixelWidth	u8	1	bit fields LSB-first, 8 bits: b3WindowShadowBorderPixelWidth[2:0], b3WindowShadowBorderPixelHeight[5:3], b2WindowGradientLevelStep[7:6]
+F	4	bf_b3WindowGradientLevelPer	u8	1	bit fields LSB-first, 8 bits: b3WindowGradientLevelPer[2:0], b5WindowNumber[7:3]
+F	5	bf_b3WindowType	u8	1	bit fields LSB-first, 8 bits: b3WindowType[2:0], b1WindowRotationFunctionEnable[3], b1WindowEnable[4], b1WindowBlend[5], b1WindowGradient[6], b1WindowGradientDirection[7]
+F	6	bf_b1WindowGradientSaturatedColorMode	u8	1	bit fields LSB-first, 8 bits: b1WindowGradientSaturatedColorMode[0], b1WindowGradientReversedColorMode[1], b1WindowReferenceDelay[2], b1WindowBorderPriority[3], b1WindowGradientLevelExtension[4], b1WindowButtonEnable[5], b1WindowWaitEvenStop[6]
 
 S	StructOsdGridWindow	5
-F	0	bf_b2GridLineWidth	u8	1	bit fields (decl order, 8 bits): b2GridLineWidth:2, b6GridLineColor:6
-F	1	bf_b1GridLineHorizontalEnable	u8	1	bit fields (decl order, 8 bits): b1GridLineHorizontalEnable:1, b1GridLineVerticalEnable:1, b6GridLineOffset:6
-F	2	bf_b1GridFunctionEnable	u16	1	bit fields (decl order, 16 bits): b1GridFunctionEnable:1, b15GridLinePitch:15
-F	4	bf_b3GridLineWindowNumber	u8	1	bit fields (decl order, 8 bits): b3GridLineWindowNumber:3
+F	0	bf_b2GridLineWidth	u8	1	bit fields LSB-first, 8 bits: b2GridLineWidth[1:0], b6GridLineColor[7:2]
+F	1	bf_b1GridLineHorizontalEnable	u8	1	bit fields LSB-first, 8 bits: b1GridLineHorizontalEnable[0], b1GridLineVerticalEnable[1], b6GridLineOffset[7:2]
+F	2	bf_b1GridFunctionEnable	u16	1	bit fields LSB-first, 16 bits: b1GridFunctionEnable[0], b15GridLinePitch[15:1]
+F	4	bf_b3GridLineWindowNumber	u8	1	bit fields LSB-first, 8 bits: b3GridLineWindowNumber[2:0]
 
 E	EnumOsdScaleUpBoundaryType	1	_OSD_SCALING_BOUNDARY_NEIGHTBOOR=0,_OSD_SCALING_BOUNDARY_THIN=1,_OSD_SCALING_BOUNDARY_FAT=2
 S	StructInputInfoType	6
-F	0	bf_b1SearchTimeInitial	u8	1	bit fields (decl order, 8 bits): b1SearchTimeInitial:1, b1SearchPortInitial:1, b1Detecting:1, b1SourceSwitchCount:1, b1SourceSearchTimeReactivate:1, b1SourceSearchCheckNVRamPort:1, b2SourceSearchDelayMode:2
+F	0	bf_b1SearchTimeInitial	u8	1	bit fields LSB-first, 8 bits: b1SearchTimeInitial[0], b1SearchPortInitial[1], b1Detecting[2], b1SourceSwitchCount[3], b1SourceSearchTimeReactivate[4], b1SourceSearchCheckNVRamPort[5], b2SourceSearchDelayMode[7:6]
 F	1	usSourceEizoEventTime	u16	1	
-F	3	bf_b1SourceEizoPSSupport	u8	1	bit fields (decl order, 8 bits): b1SourceEizoPSSupport:1, b1SourceEizoInfoReset:1, b1SourceHpSourceJudge:1, b1SourceHpSwitchNoCable:1, b1SourceHpTimingChange:1, b1SourceHpFromTimingChange:1, b2SourceHpTargetSearchTimes:2
-F	4	bf_b3SourceHpPortSwitchTarget	u8	1	bit fields (decl order, 8 bits): b3SourceHpPortSwitchTarget:3, b1SourceHpTargetNoSignal:1, b1SourceAsusStartAuto:1, b1SourceAsusFirstStartAuto:1, b1SourceAsusStartPolling:1, b1SourceFujitsuSwitchPort:1
-F	5	bf_b1SourceDpSwitchTimeout	u8	1	bit fields (decl order, 8 bits): b1SourceDpSwitchTimeout:1, b4SourceSwitchType:4
+F	3	bf_b1SourceEizoPSSupport	u8	1	bit fields LSB-first, 8 bits: b1SourceEizoPSSupport[0], b1SourceEizoInfoReset[1], b1SourceHpSourceJudge[2], b1SourceHpSwitchNoCable[3], b1SourceHpTimingChange[4], b1SourceHpFromTimingChange[5], b2SourceHpTargetSearchTimes[7:6]
+F	4	bf_b3SourceHpPortSwitchTarget	u8	1	bit fields LSB-first, 8 bits: b3SourceHpPortSwitchTarget[2:0], b1SourceHpTargetNoSignal[3], b1SourceAsusStartAuto[4], b1SourceAsusFirstStartAuto[5], b1SourceAsusStartPolling[6], b1SourceFujitsuSwitchPort[7]
+F	5	bf_b1SourceDpSwitchTimeout	u8	1	bit fields LSB-first, 8 bits: b1SourceDpSwitchTimeout[0], b4SourceSwitchType[4:1]
 
 S	StructModeInfoType	3
-F	0	bf_b5ModeState	u8	1	bit fields (decl order, 8 bits): b5ModeState:5, b1DisplaySettingReady:1, b1TimingConfirm:1, b1ModeStateChangedForOthers:1
-F	1	bf_b1ModeStateChangedForOsd	u8	1	bit fields (decl order, 8 bits): b1ModeStateChangedForOsd:1, b1ModeStateChangedForSource:1, b1ModeStateChangedForMode:1, b1ModeStateChangedForMHL:1, b4ModeResetFlag:4
-F	2	bf_b1NoWaitForActive	u8	1	bit fields (decl order, 8 bits): b1NoWaitForActive:1, b1ActiveReady:1, b1AutokReady:1
+F	0	bf_b5ModeState	u8	1	bit fields LSB-first, 8 bits: b5ModeState[4:0], b1DisplaySettingReady[5], b1TimingConfirm[6], b1ModeStateChangedForOthers[7]
+F	1	bf_b1ModeStateChangedForOsd	u8	1	bit fields LSB-first, 8 bits: b1ModeStateChangedForOsd[0], b1ModeStateChangedForSource[1], b1ModeStateChangedForMode[2], b1ModeStateChangedForMHL[3], b4ModeResetFlag[7:4]
+F	2	bf_b1NoWaitForActive	u8	1	bit fields LSB-first, 8 bits: b1NoWaitForActive[0], b1ActiveReady[1], b1AutokReady[2]
 
 S	StructPowerInfoType	2
-F	0	bf_b4PowerAction	u8	1	bit fields (decl order, 8 bits): b4PowerAction:4, b4PowerStatus:4
-F	1	bf_b1IsolationAFlag	u8	1	bit fields (decl order, 8 bits): b1IsolationAFlag:1, b1IsolationBFlag:1, b1IsolationCFlag:1, b1IsolationDFlag:1, b1IsolationEFlag:1, b1PowerSwitchtoFakeSaving:1, b1PowerSwitchtoFakeOff:1
+F	0	bf_b4PowerAction	u8	1	bit fields LSB-first, 8 bits: b4PowerAction[3:0], b4PowerStatus[7:4]
+F	1	bf_b1IsolationAFlag	u8	1	bit fields LSB-first, 8 bits: b1IsolationAFlag[0], b1IsolationBFlag[1], b1IsolationCFlag[2], b1IsolationDFlag[3], b1IsolationEFlag[4], b1PowerSwitchtoFakeSaving[5], b1PowerSwitchtoFakeOff[6]
 
 S	StructSourceInfoType	2
-F	0	bf_b3SourceType	u8	1	bit fields (decl order, 8 bits): b3SourceType:3, b2SearchTimes:2, b1CableDetect:1, b1CableStatusChange:1, b1SourceChosen:1
-F	1	bf_b1SourcePreDetect	u8	1	bit fields (decl order, 8 bits): b1SourcePreDetect:1
+F	0	bf_b3SourceType	u8	1	bit fields LSB-first, 8 bits: b3SourceType[2:0], b2SearchTimes[4:3], b1CableDetect[5], b1CableStatusChange[6], b1SourceChosen[7]
+F	1	bf_b1SourcePreDetect	u8	1	bit fields LSB-first, 8 bits: b1SourcePreDetect[0]
 
 S	StructAudioInfoType	1
-F	0	bf_b4AudioPlaybackSearchIndex	u8	1	bit fields (decl order, 8 bits): b4AudioPlaybackSearchIndex:4, b2AudioState:2, b1AudioStateChange:1
+F	0	bf_b4AudioPlaybackSearchIndex	u8	1	bit fields LSB-first, 8 bits: b4AudioPlaybackSearchIndex[3:0], b2AudioState[5:4], b1AudioStateChange[6]
 
 S	StructUsbHubInfo	3
-F	0	bf_b7USBHubModeState	u8	1	bit fields (decl order, 8 bits): b7USBHubModeState:7, b1SSDeviceDetecting:1
-F	1	bf_b4UsbHubStatus	u8	1	bit fields (decl order, 8 bits): b4UsbHubStatus:4
+F	0	bf_b7USBHubModeState	u8	1	bit fields LSB-first, 8 bits: b7USBHubModeState[6:0], b1SSDeviceDetecting[7]
+F	1	bf_b4UsbHubStatus	u8	1	bit fields LSB-first, 8 bits: b4UsbHubStatus[3:0]
 F	2	enumHubDspChange	EnumHubDspDetectStatus	1	
 
 E	EnumUsbModeStatus	1	_USB_MODE_STATUS_INITIAL=0,_USB_MODE_STATUS_DETECT_SS_STATE=1,_USB_MODE_STATUS_SS_STATE=2,_USB_MODE_STATUS_PS_STATE=3,_USB_MODE_STATUS_PD_STATE=4,_USB_MODE_STATUS_NONE=255
@@ -672,9 +672,9 @@ E	EnumDpHotPlugTime	2	_DP_LONG_HPD_TIME=700,_DP_HDCP_LONG_HPD_TIME=800,_DP_MST_L
 E	EnumDpMeasureTarget	1	_DP_MEASURE_TARGET_RAW_DATA=0,_DP_MEASURE_TARGET_CDR_CLOCK=32
 E	EnumDpMeasurePeriod	1	_DP_MEASURE_PERIOD_250_CYCLE=0,_DP_MEASURE_PERIOD_1000_CYCLE=1,_DP_MEASURE_PERIOD_2000_CYCLE=2
 S	StructColorInfo	3
-F	0	bf_b3ColorSpace	u8	1	bit fields (decl order, 8 bits): b3ColorSpace:3, b5ColorDepth:5
-F	1	bf_b5ExtColorimetry	u8	1	bit fields (decl order, 8 bits): b5ExtColorimetry:5, b2RgbQuantizationRange:2, b1RgbLimitRangeUser:1
-F	2	bf_b2YccQuantizationRange	u8	1	bit fields (decl order, 8 bits): b2YccQuantizationRange:2, b1YccFullRangeUser:1, b4Colorimetry:4
+F	0	bf_b3ColorSpace	u8	1	bit fields LSB-first, 8 bits: b3ColorSpace[2:0], b5ColorDepth[7:3]
+F	1	bf_b5ExtColorimetry	u8	1	bit fields LSB-first, 8 bits: b5ExtColorimetry[4:0], b2RgbQuantizationRange[6:5], b1RgbLimitRangeUser[7]
+F	2	bf_b2YccQuantizationRange	u8	1	bit fields LSB-first, 8 bits: b2YccQuantizationRange[1:0], b1YccFullRangeUser[2], b4Colorimetry[6:3]
 
 S	StructFlashInformation	13
 F	0	ucIDCheck1OpCode	u8	1	
@@ -692,8 +692,8 @@ F	11	ucUnprotectWRSR	u8	1
 F	12	ucProtectWRSR	u8	1	
 
 S	StructTMDSCtrlInfo	2
-F	0	bf_b1RGBHVDetecting	u8	1	bit fields (decl order, 8 bits): b1RGBHVDetecting:1, b1PacketDetecting:1, b1AVIInfoFrameReceived:1, b1GCPReceived:1, b1Z0Asserted:1, b1TMDSDdcDetected:1, b1TMDSPhySet:1, b1HDMI2FormatResetWaiting:1
-F	1	bf_b1HDMI2RREnable	u8	1	bit fields (decl order, 8 bits): b1HDMI2RREnable:1, b1HDMI2HighSpeedMode:1, b3HPDTriggerEvent:3
+F	0	bf_b1RGBHVDetecting	u8	1	bit fields LSB-first, 8 bits: b1RGBHVDetecting[0], b1PacketDetecting[1], b1AVIInfoFrameReceived[2], b1GCPReceived[3], b1Z0Asserted[4], b1TMDSDdcDetected[5], b1TMDSPhySet[6], b1HDMI2FormatResetWaiting[7]
+F	1	bf_b1HDMI2RREnable	u8	1	bit fields LSB-first, 8 bits: b1HDMI2RREnable[0], b1HDMI2HighSpeedMode[1], b3HPDTriggerEvent[4:2]
 
 S	StructTmdsHpdSequence	3
 F	0	enumPort	EnumSourceSearchPort	1	
@@ -716,21 +716,21 @@ F	2	ucD6Version	u8	1
 F	3	ucD0LaneCount	u8	1	
 F	4	ucD1LaneCount	u8	1	
 F	5	ucD6LaneCount	u8	1	
-F	6	bf_b1D0Edid	u8	1	bit fields (decl order, 8 bits): b1D0Edid:1, b1D1Edid:1, b1D6Edid:1, b2MSTPort:2, b1Rx0HdcpCap:1, b1Rx1HdcpCap:1, b1MsgSwitched:1
+F	6	bf_b1D0Edid	u8	1	bit fields LSB-first, 8 bits: b1D0Edid[0], b1D1Edid[1], b1D6Edid[2], b2MSTPort[4:3], b1Rx0HdcpCap[5], b1Rx1HdcpCap[6], b1MsgSwitched[7]
 
 S	StructCloneModeSwitchInfo	1
-F	0	bf_b1CloneModeCap	u8	1	bit fields (decl order, 8 bits): b1CloneModeCap:1
+F	0	bf_b1CloneModeCap	u8	1	bit fields LSB-first, 8 bits: b1CloneModeCap[0]
 
 S	StructDPTxStatusInfo	1
-F	0	bf_b2HdcpUpstreamPort	u8	1	bit fields (decl order, 8 bits): b2HdcpUpstreamPort:2, b2Hdcp2UpstreamPort:2
+F	0	bf_b2HdcpUpstreamPort	u8	1	bit fields LSB-first, 8 bits: b2HdcpUpstreamPort[1:0], b2Hdcp2UpstreamPort[3:2]
 
 S	StructDpCableStatus	1
-F	0	bf_b1D1Status	u8	1	bit fields (decl order, 8 bits): b1D1Status:1
+F	0	bf_b1D1Status	u8	1	bit fields LSB-first, 8 bits: b1D1Status[0]
 
 E	EnumDpAuxManualModeSetting	1	_DP_AUX_MANUAL_MODE_SET=0,_DP_AUX_MANUAL_MODE_RECOVER=1
 E	EnumDpRxCheckSourceOUI	1	_LT_TP1_PERMIT_SWING_LEVEL_0=0
 S	StructHdmiRxPsWakeupHpd	1
-F	0	bf_b1Rx0PsWakeupHpd	u8	1	bit fields (decl order, 8 bits): b1Rx0PsWakeupHpd:1, b1Rx1PsWakeupHpd:1, b1Rx2PsWakeupHpd:1, b1Rx3PsWakeupHpd:1, b1Rx4PsWakeupHpd:1, b1Rx5PsWakeupHpd:1
+F	0	bf_b1Rx0PsWakeupHpd	u8	1	bit fields LSB-first, 8 bits: b1Rx0PsWakeupHpd[0], b1Rx1PsWakeupHpd[1], b1Rx2PsWakeupHpd[2], b1Rx3PsWakeupHpd[3], b1Rx4PsWakeupHpd[4], b1Rx5PsWakeupHpd[5]
 
 E	EnumAviInfoColorSpaceKernel	1	_AVI_COLOR_SPACE_00=0,_AVI_COLOR_SPACE_01=1,_AVI_COLOR_SPACE_10=2,_AVI_COLOR_SPACE_11=3,_AVI_COLOR_SPACE_KERNEL_RESERVED=4
 E	EnumAviInfoColorimetryKernel	1	_AVI_COLORIMETRY_00=0,_AVI_COLORIMETRY_01=1,_AVI_COLORIMETRY_10=2,_AVI_COLORIMETRY_11=3
@@ -742,12 +742,12 @@ E	EnumDpNFCodeRef	1	_DP_NF_REF_XTAL=0,_DP_NF_REF_D10_2=1
 E	EnumDpResetStatus	1	_DP_DPCD_LINK_STATUS_INITIAL=0,_DP_DPCD_LINK_STATUS_RESET=1
 E	EnumDpRxBStatusType	1	_DP_HDCP_BSTATUS_V_READY=1,_DP_HDCP_BSTATUS_R0_AVAILABLE=2,_DP_HDCP_BSTATUS_LINK_INTEGRITY_FAIL=4,_DP_HDCP_BSTATUS_REAUTH_REQ=8
 S	StructDigitalColorInfoChanged	1
-F	0	bf_b1DigitalColorimetryChanged	u8	1	bit fields (decl order, 8 bits): b1DigitalColorimetryChanged:1, b1DigitalColorimetryExtChanged:1, b1DigitalQuantizationChanged:1
+F	0	bf_b1DigitalColorimetryChanged	u8	1	bit fields LSB-first, 8 bits: b1DigitalColorimetryChanged[0], b1DigitalColorimetryExtChanged[1], b1DigitalQuantizationChanged[2]
 
 S	StructDigitalColorInfo	3
 F	0	ucDigitalColorSpacePreValue	u8	1	
-F	1	bf_b4DigitalColorimetryPreValue	u8	1	bit fields (decl order, 8 bits): b4DigitalColorimetryPreValue:4, b4DigitalColorimetryExtPreValue:4
-F	2	bf_b3DigitalColorDepthPreValue	u8	1	bit fields (decl order, 8 bits): b3DigitalColorDepthPreValue:3, b2DigitalQuantizationPreValue:2
+F	1	bf_b4DigitalColorimetryPreValue	u8	1	bit fields LSB-first, 8 bits: b4DigitalColorimetryPreValue[3:0], b4DigitalColorimetryExtPreValue[7:4]
+F	2	bf_b3DigitalColorDepthPreValue	u8	1	bit fields LSB-first, 8 bits: b3DigitalColorDepthPreValue[2:0], b2DigitalQuantizationPreValue[4:3]
 
 E	EnumDPInfoFrameRSV0	1	_DP_INFO_RSV0_DB0=33,_DP_INFO_RSV0_DB1=34,_DP_INFO_RSV0_DB2=35,_DP_INFO_RSV0_DB3=36,_DP_INFO_RSV0_DB4=37,_DP_INFO_RSV0_DB5=38,_DP_INFO_RSV0_DB6=39,_DP_INFO_RSV0_DB7=40,_DP_INFO_RSV0_DB8=41,_DP_INFO_RSV0_DB9=42,_DP_INFO_RSV0_DB10=43,_DP_INFO_RSV0_DB11=44,_DP_INFO_RSV0_DB12=45,_DP_INFO_RSV0_DB13=46,_DP_INFO_RSV0_DB14=47,_DP_INFO_RSV0_DB15=48,_DP_INFO_RSV0_DB16=49,_DP_INFO_RSV0_DB17=50,_DP_INFO_RSV0_DB18=51,_DP_INFO_RSV0_DB19=52,_DP_INFO_RSV0_DB20=53,_DP_INFO_RSV0_DB21=54,_DP_INFO_RSV0_DB22=55,_DP_INFO_RSV0_DB23=56,_DP_INFO_RSV0_DB24=57,_DP_INFO_RSV0_DB25=58,_DP_INFO_RSV0_DB26=59,_DP_INFO_RSV0_DB27=60
 E	EnumEdidCtaDataBlock	1	_CTA_VDB=0,_CTA_ADB=1,_CTA_VCDB=2,_CTA_420VDB=3,_CTA_420CMDB=4,_CTA_CDB=5,_CTA_SHDR_DB=6,_CTA_DHDR_DB=7,_CTA_FS_DB=8,_CTA_HDMI_VSDB=9,_CTA_HF_VSDB=10,_CTA_TOTAL_DB=11
@@ -757,10 +757,10 @@ F	0	ucDPCDRev	u8	1
 F	1	ucLinkRate	u8	1	
 F	2	ucMaxLinkRate	u8	1	
 F	3	ucSinkCount	u8	1	
-F	4	bf_b3PeerDeviceType	u8	1	bit fields (decl order, 8 bits): b3PeerDeviceType:3, b3LaneNum:3, b1MSGCapStatus:1, b1DPPlugStatus:1
-F	5	bf_b1DPPlugChange	u8	1	bit fields (decl order, 8 bits): b1DPPlugChange:1, b1LegacyPlugStatus:1, b1EnhanceFraming:1, b1AlternateSrCapable:1, b1FramingChangeCapable:1, b1SSCSupport:1, b1TP3Support:1, b1NumberOfSDP:1
-F	6	bf_b1NumberOfSDPSink	u8	1	bit fields (decl order, 8 bits): b1NumberOfSDPSink:1, b5MaxLaneNum:5, b1UpRequestCap:1, b1DownStreamInfoReady:1
-F	7	bf_b5MaxLaneNumTemp	u8	1	bit fields (decl order, 8 bits): b5MaxLaneNumTemp:5, b1SinkCountChange:1
+F	4	bf_b3PeerDeviceType	u8	1	bit fields LSB-first, 8 bits: b3PeerDeviceType[2:0], b3LaneNum[5:3], b1MSGCapStatus[6], b1DPPlugStatus[7]
+F	5	bf_b1DPPlugChange	u8	1	bit fields LSB-first, 8 bits: b1DPPlugChange[0], b1LegacyPlugStatus[1], b1EnhanceFraming[2], b1AlternateSrCapable[3], b1FramingChangeCapable[4], b1SSCSupport[5], b1TP3Support[6], b1NumberOfSDP[7]
+F	6	bf_b1NumberOfSDPSink	u8	1	bit fields LSB-first, 8 bits: b1NumberOfSDPSink[0], b5MaxLaneNum[5:1], b1UpRequestCap[6], b1DownStreamInfoReady[7]
+F	7	bf_b5MaxLaneNumTemp	u8	1	bit fields LSB-first, 8 bits: b5MaxLaneNumTemp[4:0], b1SinkCountChange[5]
 
 S	StructDPTxLTInfo	13
 F	0	ucLinkPBNPerTimeSlot	u8	1	
@@ -773,13 +773,13 @@ F	6	ucLane23LTStatus	u8	1
 F	7	ucLaneAlignStatus	u8	1	
 F	8	ucAdjustReqLane01	u8	1	
 F	9	ucAdjustReqLane23	u8	1	
-F	10	bf_b3TP1Lane0SameVolCnt	u8	1	bit fields (decl order, 8 bits): b3TP1Lane0SameVolCnt:3, b3TP1Lane1SameVolCnt:3, b2LinkTrainingState:2
-F	11	bf_b4LinkTrainingResult	u16	1	bit fields (decl order, 16 bits): b4LinkTrainingResult:4, b3TP1Lane2SameVolCnt:3, b3TP1Lane3SameVolCnt:3, b3TP2count:3
+F	10	bf_b3TP1Lane0SameVolCnt	u8	1	bit fields LSB-first, 8 bits: b3TP1Lane0SameVolCnt[2:0], b3TP1Lane1SameVolCnt[5:3], b2LinkTrainingState[7:6]
+F	11	bf_b4LinkTrainingResult	u16	1	bit fields LSB-first, 16 bits: b4LinkTrainingResult[3:0], b3TP1Lane2SameVolCnt[6:4], b3TP1Lane3SameVolCnt[9:7], b3TP2count[12:10]
 
 S	StructDisplayDPTxInputInfo	4
-F	0	bf_b3ColorDepth	u8	1	bit fields (decl order, 8 bits): b3ColorDepth:3, b3ColorSpace:3
+F	0	bf_b3ColorDepth	u8	1	bit fields LSB-first, 8 bits: b3ColorDepth[2:0], b3ColorSpace[5:3]
 F	1	usInputPixelClk	u16	1	
-F	3	bf_b1LinkConfig	u8	1	bit fields (decl order, 8 bits): b1LinkConfig:1, b1StremOutput:1
+F	3	bf_b1LinkConfig	u8	1	bit fields LSB-first, 8 bits: b1LinkConfig[0], b1StremOutput[1]
 
 E	EnumDisplayDPTxLane	1	_DISPLAY_DP_TX_LANE_0=0,_DISPLAY_DP_TX_LANE_1=1,_DISPLAY_DP_TX_LANE_2=2,_DISPLAY_DP_TX_LANE_3=3
 E	EnumDisplayDPTxTrainPattern	1	_DISPLAY_DP_TX_TP_NONE=0,_DISPLAY_DP_TX_TP_1=1,_DISPLAY_DP_TX_TP_2=2,_DISPLAY_DP_TX_TP_3=3
@@ -813,7 +813,7 @@ F	0	usDHtotal	u16	1
 F	2	usDVtotal	u16	1	
 
 S	StructDHtotalFTStatus	3
-F	0	bf_b1DHtotalFineTuneStatus	u8	1	bit fields (decl order, 8 bits): b1DHtotalFineTuneStatus:1
+F	0	bf_b1DHtotalFineTuneStatus	u8	1	bit fields LSB-first, 8 bits: b1DHtotalFineTuneStatus[0]
 F	1	usDHtotal	u16	1	
 
 E	EnumDclkOORModify	1	_MODIFY_NONE=0,_MODIFY_DHTOTAL=1,_MODIFY_DHTOTAL_DVTOTAL=2
@@ -844,7 +844,7 @@ F	1	enumColorimetryEXTSetting	EnumColorimetryExt	1
 E	EnumColorimetryChangeStatus	1	_COLORIMETRY_NO_CHANGE=0,_COLORIMETRY_CHANGE=1
 E	EnumSeamlessFlowStatus	1	_SEAMLESS_BACKUP_SETTING=0,_SEAMLESS_PROC_ACTIVE=1,_SEAMLESS_FLOW_CHANGE=2
 S	StructColorimetryUpdate	1
-F	0	bf_b1HDR10UpdateColorimetry	u8	1	bit fields (decl order, 8 bits): b1HDR10UpdateColorimetry:1, b1SDRUpdateColorimetry:1, b1FreesyncIIUpdateColorimetry:1
+F	0	bf_b1HDR10UpdateColorimetry	u8	1	bit fields LSB-first, 8 bits: b1HDR10UpdateColorimetry[0], b1SDRUpdateColorimetry[1], b1FreesyncIIUpdateColorimetry[2]
 
 S	StructModeTableType	19
 F	0	ucMiscFlag	u8	1	
@@ -873,7 +873,7 @@ E	EnumHDR10LightEnhanceType	1	_HDR10_LIGHTENHANCE_NONE=0,_HDR10_LIGHTENHANCE_TYP
 E	EnumHDR10ColorEnhanceType	1	_HDR10_COLORENHANCE_OFF=0,_HDR10_COLORENHANCE_TYPE_1=1,_HDR10_COLORENHANCE_TYPE_2=2,_HDR10_COLORENHANCE_TYPE_3=3
 E	EnumFlashItemIDType	1	_FLASH_ITEMID_VGA_ADC_DATA=0,_FLASH_ITEMID_YPBPR_ADC_DATA=1,_FLASH_ITEMID_SYSTEM_DATA=2,_FLASH_ITEMID_PANEL_INDEX=3,_FLASH_ITEMID_OSD_DATA_START=4,_FLASH_ITEMID_OSD_DATA_0=5,_FLASH_ITEMID_OSD_DATA_1=6,_FLASH_ITEMID_OSD_DATA_END=7,_FLASH_ITEMID_BRICON_SRC0_VGA=8,_FLASH_ITEMID_BRICON_SRC1_VIDEO=9,_FLASH_ITEMID_BRICON_SRC2_DVI=10,_FLASH_ITEMID_BRICON_SRC3_HDMI=11,_FLASH_ITEMID_BRICON_SRC4_DP=12,_FLASH_ITEMID_COLORPROC0_9300=13,_FLASH_ITEMID_COLORPROC1_7500=14,_FLASH_ITEMID_COLORPROC2_6500=15,_FLASH_ITEMID_COLORPROC3_5800=16,_FLASH_ITEMID_COLORPROC4_SRGB=17,_FLASH_ITEMID_COLORPROC5_USER=18,_FLASH_ITEMID_SIXCOLOR_DATA=19,_FLASH_ITEMID_PANEL_DATA=20,_FLASH_ITEMID_MODE_USER_DATA=21,_FLASH_ITEMID_MODE_USER_DATA_END=22
 S	StructTypeCLenovoDockEventQueue	7
-F	0	bf_b2DockEventCnt	u8	1	bit fields (decl order, 8 bits): b2DockEventCnt:2, b2DockEventHead:2, b2DockEventTail:2
+F	0	bf_b2DockEventCnt	u8	1	bit fields LSB-first, 8 bits: b2DockEventCnt[1:0], b2DockEventHead[3:2], b2DockEventTail[5:4]
 F	1	pstDockEvent	StructTypeCLenovoDockEvent	3	
 
 S	StructOsdUserDataType	23
@@ -883,22 +883,22 @@ F	3	ucOsdVPos	u8	1
 F	4	ucOsdTimeout	u8	1	
 F	5	ucAspectOriginRatio	u8	1	
 F	6	ucTransparency	u8	1	
-F	7	bf_b4Language	u8	1	bit fields (decl order, 8 bits): b4Language:4, b4ColorEffect:4
-F	8	bf_b4ColorTempType	u8	1	bit fields (decl order, 8 bits): b4ColorTempType:4, b3VGARGBYUV:3
-F	9	bf_b3DVIRGBYUV	u8	1	bit fields (decl order, 8 bits): b3DVIRGBYUV:3, b3Sharpness:3, b2OsdRotate:2
-F	10	bf_b2DispRotationSizeType	u8	1	bit fields (decl order, 8 bits): b2DispRotationSizeType:2, b1OverScan:1, b3Gamma:3
-F	11	bf_b3AspectRatio	u8	1	bit fields (decl order, 8 bits): b3AspectRatio:3, b1DDCCIStatus:1, b1OsdDcrStatus:1
+F	7	bf_b4Language	u8	1	bit fields LSB-first, 8 bits: b4Language[3:0], b4ColorEffect[7:4]
+F	8	bf_b4ColorTempType	u8	1	bit fields LSB-first, 8 bits: b4ColorTempType[3:0], b3VGARGBYUV[6:4]
+F	9	bf_b3DVIRGBYUV	u8	1	bit fields LSB-first, 8 bits: b3DVIRGBYUV[2:0], b3Sharpness[5:3], b2OsdRotate[7:6]
+F	10	bf_b2DispRotationSizeType	u8	1	bit fields LSB-first, 8 bits: b2DispRotationSizeType[1:0], b1OverScan[2], b3Gamma[5:3]
+F	11	bf_b3AspectRatio	u8	1	bit fields LSB-first, 8 bits: b3AspectRatio[2:0], b1DDCCIStatus[3], b1OsdDcrStatus[4]
 F	12	ucODGain	u8	1	
 F	13	ucHue	u8	1	
 F	14	ucSaturation	u8	1	
 F	15	ucHLWinType	u8	1	
-F	16	bf_b3PCMStatus	u8	1	bit fields (decl order, 8 bits): b3PCMStatus:3, b2UltraVividStatus:2, b1VolumeMute:1, b1AudioStandAloneStatus:1, b1AudioSourceStatus:1
+F	16	bf_b3PCMStatus	u8	1	bit fields LSB-first, 8 bits: b3PCMStatus[2:0], b2UltraVividStatus[4:3], b1VolumeMute[5], b1AudioStandAloneStatus[6], b1AudioSourceStatus[7]
 F	17	ucVolume	u8	1	
-F	18	bf_b1ODStatus	u8	1	bit fields (decl order, 8 bits): b1ODStatus:1, b33DConvergenceMode:3, b1FactoryAutoColorType:1, b1PanelUniformity:1, b1PCMSoftProftMode:1
+F	18	bf_b1ODStatus	u8	1	bit fields LSB-first, 8 bits: b1ODStatus[0], b33DConvergenceMode[3:1], b1FactoryAutoColorType[4], b1PanelUniformity[5], b1PCMSoftProftMode[6]
 F	19	ucOsdInputPort	u8	1	
-F	20	bf_b2OsdDpD0PortVersion	u8	1	bit fields (decl order, 8 bits): b2OsdDpD0PortVersion:2, b2OsdDpD1PortVersion:2, b3OsdDispRotate:3, b1OsdDpVersionHotKeyDisp:1
-F	21	bf_b1PreShowDpHotKeyVersion	u8	1	bit fields (decl order, 8 bits): b1PreShowDpHotKeyVersion:1, b3PanelUniformityType:3, b2OsdDpD6PortVersion:2, b2OsdDpD2PortVersion:2
-F	22	bf_b1FreeSyncStatus	u8	1	bit fields (decl order, 8 bits): b1FreeSyncStatus:1, b1CloneMode:1, b2LatencyStatus:2, b1OsdDoubleSize:1, b3OsdDpMST:3
+F	20	bf_b2OsdDpD0PortVersion	u8	1	bit fields LSB-first, 8 bits: b2OsdDpD0PortVersion[1:0], b2OsdDpD1PortVersion[3:2], b3OsdDispRotate[6:4], b1OsdDpVersionHotKeyDisp[7]
+F	21	bf_b1PreShowDpHotKeyVersion	u8	1	bit fields LSB-first, 8 bits: b1PreShowDpHotKeyVersion[0], b3PanelUniformityType[3:1], b2OsdDpD6PortVersion[5:4], b2OsdDpD2PortVersion[7:6]
+F	22	bf_b1FreeSyncStatus	u8	1	bit fields LSB-first, 8 bits: b1FreeSyncStatus[0], b1CloneMode[1], b2LatencyStatus[3:2], b1OsdDoubleSize[4], b3OsdDpMST[7:5]
 
 S	StructColorProcDataType	6
 F	0	usColorTempR	u16	1	
@@ -954,8 +954,8 @@ E	EnumUniformityTypeSelectIndex	1	_UNIFORMITY_OSD_TYPE1=0,_UNIFORMITY_OSD_TYPE2=
 E	EnumOSDCloneModeDef	1	_OSD_CLONE_OFF=0,_OSD_CLONE_ON=1
 E	EnumLevelType	1	_LEVEL_OFF=0,_LEVEL_L=1,_LEVEL_M=2,_LEVEL_H=3,_LEVEL_AMOUNT=4
 S	StructOsdInfo	15
-F	0	bf_b1OsdLogo	u8	1	bit fields (decl order, 8 bits): b1OsdLogo:1, b1OsdWakeUpSwitchDdcciPort:1, b1OsdWakeUpShowSource:1, b1OsdFactoryModeStatus:1, b1OsdDoAspectRatio:1, b3OsdColorFormat:3
-F	1	bf_b3OsdsixColor	u8	1	bit fields (decl order, 8 bits): b3OsdsixColor:3, b1OsdDoubleSizeStatus:1, b1FreezeStatus:1
+F	0	bf_b1OsdLogo	u8	1	bit fields LSB-first, 8 bits: b1OsdLogo[0], b1OsdWakeUpSwitchDdcciPort[1], b1OsdWakeUpShowSource[2], b1OsdFactoryModeStatus[3], b1OsdDoAspectRatio[4], b3OsdColorFormat[7:5]
+F	1	bf_b3OsdsixColor	u8	1	bit fields LSB-first, 8 bits: b3OsdsixColor[2:0], b1OsdDoubleSizeStatus[3], b1FreezeStatus[4]
 F	2	ucOsdStatePrevious	u8	1	
 F	3	usOsdState	u16	1	
 F	5	ucOsdEventMsg	u8	1	
@@ -965,7 +965,7 @@ F	8	b3OsdsixColorHue	u8	1
 F	9	b3OsdsixColorSaturation	u8	1	
 F	10	ucOsd3DEffectRealValue	u8	1	
 F	11	ucOsdItemIndex	u8	1	
-F	12	bf_b2StringMode	u8	1	bit fields (decl order, 8 bits): b2StringMode:2
+F	12	bf_b2StringMode	u8	1	bit fields LSB-first, 8 bits: b2StringMode[1:0]
 F	13	ucStringModeLength	u8	1	
 F	14	ucStringBlankPixel	u8	1	
 
@@ -995,10 +995,10 @@ E	EnumOsdFactoryMenuPtr	1	_MENU_FACTORY_AUTOCOLOR=0,_MENU_FACTORY_AUTOCOLOR_TYPE
 E	EnumEepromWriteSize	1	_WRITE_SIZE_8=8,_WRITE_SIZE_16=16,_WRITE_SIZE_32=32
 E	EnumLDActiveMode	1	_CALIBRATION_OFF=0,_CALIBRATION_ON=1
 S	StructPanelPowerInfo	1
-F	0	bf_b3Status	u8	1	bit fields (decl order, 8 bits): b3Status:3
+F	0	bf_b3Status	u8	1	bit fields LSB-first, 8 bits: b3Status[2:0]
 
 S	StructVGAModeUserDataType	14
-F	0	bf_b1IsPresetMode	u8	1	bit fields (decl order, 8 bits): b1IsPresetMode:1, b1DoFirstAuto:1
+F	0	bf_b1IsPresetMode	u8	1	bit fields LSB-first, 8 bits: b1IsPresetMode[0], b1DoFirstAuto[1]
 F	1	ucModeNumber	u8	1	
 F	2	ucUserHPosition	u8	1	
 F	3	ucUserVPosition	u8	1	
@@ -1013,14 +1013,14 @@ S	StructSystemDataType	13
 F	0	ucModeSlotIndex	u8	1	
 F	1	ucSSC	u8	1	
 F	2	ucDPEDIDSelect	u8	1	
-F	3	bf_b3HDMIHotPlugSupportTime	u8	1	bit fields (decl order, 8 bits): b3HDMIHotPlugSupportTime:3, b1HDMIHotPlugSupport:1, b1SourceHPAutoSearch:1, b3SourceHPDefaultSearchIndex:3
-F	4	bf_b1DPHotPlugDCOffHigh	u8	1	bit fields (decl order, 8 bits): b1DPHotPlugDCOffHigh:1, b1DPAuxDiffMode:1, b3D0DpLanes:3, b3D1DpLanes:3
-F	5	bf_b3D2DpLanes	u8	1	bit fields (decl order, 8 bits): b3D2DpLanes:3, b3D6DpLanes:3, b1PowerStatus:1, b1ColorSeamlessChange:1
-F	6	bf_b4SearchPort	u16	1	bit fields (decl order, 16 bits): b4SearchPort:4, b3EdidD0:3, b3EdidD1:3, b3EdidD2:3, b3EdidD3:3
-F	8	bf_b3EdidD4	u16	1	bit fields (decl order, 16 bits): b3EdidD4:3, b3EdidD5:3, b3EdidD6:3, b4SourceScanType:4
-F	10	bf_b4DPAuxAdjrSetting	u8	1	bit fields (decl order, 8 bits): b4DPAuxAdjrSetting:4
+F	3	bf_b3HDMIHotPlugSupportTime	u8	1	bit fields LSB-first, 8 bits: b3HDMIHotPlugSupportTime[2:0], b1HDMIHotPlugSupport[3], b1SourceHPAutoSearch[4], b3SourceHPDefaultSearchIndex[7:5]
+F	4	bf_b1DPHotPlugDCOffHigh	u8	1	bit fields LSB-first, 8 bits: b1DPHotPlugDCOffHigh[0], b1DPAuxDiffMode[1], b3D0DpLanes[4:2], b3D1DpLanes[7:5]
+F	5	bf_b3D2DpLanes	u8	1	bit fields LSB-first, 8 bits: b3D2DpLanes[2:0], b3D6DpLanes[5:3], b1PowerStatus[6], b1ColorSeamlessChange[7]
+F	6	bf_b4SearchPort	u16	1	bit fields LSB-first, 16 bits: b4SearchPort[3:0], b3EdidD0[6:4], b3EdidD1[9:7], b3EdidD2[12:10], b3EdidD3[15:13]
+F	8	bf_b3EdidD4	u16	1	bit fields LSB-first, 16 bits: b3EdidD4[2:0], b3EdidD5[5:3], b3EdidD6[8:6], b4SourceScanType[12:9]
+F	10	bf_b4DPAuxAdjrSetting	u8	1	bit fields LSB-first, 8 bits: b4DPAuxAdjrSetting[3:0]
 F	11	ucDpIrqTime_10us	u8	1	
-F	12	bf_b1DPIllegalIdlePatternCheck	u8	1	bit fields (decl order, 8 bits): b1DPIllegalIdlePatternCheck:1
+F	12	bf_b1DPIllegalIdlePatternCheck	u8	1	bit fields LSB-first, 8 bits: b1DPIllegalIdlePatternCheck[0]
 
 S	StructESDcrInfo	4
 F	0	ucESDcrCurRGBAvgValue	u8	1	
@@ -1029,7 +1029,7 @@ F	2	ucESDcrPWMTargetValue	u8	1
 F	3	ucESDcrPWMAdjustValue	u8	1	
 
 S	StructPortControllerCommonInfo	1
-F	0	bf_b1DetectCcAttachFlag	u8	1	bit fields (decl order, 8 bits): b1DetectCcAttachFlag:1, b1DetectAltModeFlag:1
+F	0	bf_b1DetectCcAttachFlag	u8	1	bit fields LSB-first, 8 bits: b1DetectCcAttachFlag[0], b1DetectAltModeFlag[1]
 
 E	EnumDpEDIDSelection	1	_DP_EDID_1080P=0,_DP_EDID_2560_1440=1,_DP_EDID_4K2K_60HZ=2,_DP_EDID_AMOUNT=3,_DP_EDID_4K2K_30HZ=4
 E	EnumHDMIVerSelection	1	_HDMI_1P4=0,_HDMI_2P0=1,_HDMI_2P1=2

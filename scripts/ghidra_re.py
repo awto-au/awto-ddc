@@ -2,8 +2,9 @@
 """Ghidra RE driver for the JXC 4K monitor firmware (8051, one program per 64 KB bank).
 
 usage: ghidra_re.py import <bank|all>   create/refresh the program from banks/bank<N>.bin, seed, analyse, apply names, export
+       ghidra_re.py fixret <bank|all>   FixKeilReturns.java (Keil helpers returning), re-analyse, apply, export
        ghidra_re.py regen  <bank|all>   apply names TSV to the existing program and re-export (daily use)
-Per-bank data in re/jxc-4k/: ghidra_names_bank<N>.tsv (source of truth), seeds_bank<N>.txt (new banks: scripts/ghidra_seeds.py).
+Per-bank data in re/jxc-4k/: ghidra_names_bank<N>.tsv + ghidra_names_phase3.tsv (sources of truth; scripts/ghidra_names_merge.py -> tmp/names_merged_bank<N>.tsv), seeds_bank<N>.txt (new banks: scripts/ghidra_seeds.py).
 Register labels (every scaler register, XDATA (page<<8)|reg, chip RTD2795T-CG) come from re/regdb via
 scripts/regdb_ghidra_labels.py (hand names win) into ./tmp/regs_bank<N>.tsv (+ ./tmp/regs_ports.tsv, data-port index
 names) and are applied before the hand names.
@@ -20,7 +21,7 @@ import os, subprocess, sys, threading, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import regdb_ghidra_labels
+import regdb_ghidra_labels, ghidra_names_merge
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
@@ -63,7 +64,8 @@ def main() -> int:
 
 def one(cmd, bank) -> int:
     name = f"bank{bank}.bin"
-    tsv, seeds = DATA / f"ghidra_names_bank{bank}.tsv", DATA / f"seeds_bank{bank}.txt"
+    ghidra_names_merge.main()   # effective names (newest row wins, bank-0 common area, all-bank globals, regenerated thunks)
+    tsv, seeds = ROOT / "tmp" / f"names_merged_bank{bank}.tsv", DATA / f"seeds_bank{bank}.txt"
     out = VEND / "jxc-4k" / f"bank{bank}"
     out.mkdir(parents=True, exist_ok=True)
     PROJ_DIR.mkdir(parents=True, exist_ok=True)
@@ -71,7 +73,7 @@ def one(cmd, bank) -> int:
     paths = ["-scriptPath", f"{HERE.parent / 're' / 'ghidra'};{A2000}"]   # Ghidra separates with ';' on all OSes
     regs, ports = ROOT / "tmp" / f"regs_bank{bank}.tsv", ROOT / "tmp" / "regs_ports.tsv"
     regdb_ghidra_labels.write(CHIP, [tsv], regs, ports)
-    tail = ["-postScript", "ApplyRegLabels.java", str(regs), "-postScript", "ApplyNames.java", str(tsv),
+    tail = ["-postScript", "ApplyRegLabels.java", str(regs), "-postScript", "EnsureFunctions.java", str(tsv), str(ROOT / "tmp" / "names_all.txt"), "-postScript", "ApplyNames.java", str(tsv),
             "-postScript", "ApplySdkTypes.java", str(DATA / "sdk_types.tsv"), str(DATA / "ghidra_globals.tsv"),
             str(DATA / "ghidra_globals_hand.tsv"), str(tsv),
             "-postScript", "ExportRegAccess.java", str(out), str(ports), str(regs),
@@ -79,9 +81,11 @@ def one(cmd, bank) -> int:
     if cmd == "import":
         c = base + ["-import", str(VEND / "banks" / name), "-overwrite", "-loader", "BinaryLoader",
                     "-loader-baseAddr", "0", "-processor", LANG] + paths + \
-            ["-postScript", "SeedFile.java", str(seeds)] + tail
+            ["-postScript", "SeedFile.java", str(seeds), "-postScript", "FixKeilReturns.java"] + tail
     elif cmd == "regen":
         c = base + ["-process", name, "-noanalysis"] + paths + tail
+    elif cmd == "fixret":   # clear Keil non-returning flags, re-analyse, then apply+export as regen
+        c = base + ["-process", name] + paths + ["-postScript", "FixKeilReturns.java"] + tail
     else:
         return 2
     return run(c, ROOT / "tmp" / "logs" / f"re_{cmd}_bank{bank}.log")

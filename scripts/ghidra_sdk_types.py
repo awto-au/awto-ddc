@@ -7,7 +7,8 @@ types/globals unioned by name from tmp/sdcc-port/src headers (read only). Prepro
 Layout model = Keil C51 (what the vendor firmware was built with): big-endian, char 1, int/short 2, long/float 4,
 enum = 1 byte if all values < 256 else 2 (else 4), no padding, pointers by memory space (xdata/code 2, data/idata/pdata 1,
 generic 3). Bit fields: consecutive same-type fields packed into units of the base type, emitted as ONE plain member
-`bf_<first>` (comment lists the fields in declaration order; bit order not verified against the vendor build).
+`bf_<first>`. Keil C51 packs LSB-first (first declared = bit 0): the comment lists `name[hi:lo]` positions
+(vendor evidence: re/jxc-4k/phase2_verification.tsv; Ghidra bit-field members are not used).
 Config caveat: struct bodies depend on #if of OUR port config; the vendor build can differ (sizes are checked in Ghidra only
 where the global's address map agrees, see docs/re-full-reversal.md).
 Outputs: re/jxc-4k/sdk_types.tsv, ./tmp/ghidra_types/sdk_globals.tsv (name, space, type, size, module), log ./tmp/logs/ghidra_sdk_types.log
@@ -243,13 +244,22 @@ class Types:
         return out
 
     def layout(self, kind, body):
+        def bf_positions(names):
+            out, pos = [], 0
+            for n in names:
+                nm, w = n.split(":")
+                w = int(w)
+                out.append(f"{nm}[{pos + w - 1}:{pos}]" if w > 1 else f"{nm}[{pos}]")
+                pos += w
+            return ", ".join(out)
+
         fields, off, unit, maxsize = [], 0, None, 0
 
         def flush():
             nonlocal off, unit
             if unit:
                 ref = {1: "u8", 2: "u16", 4: "u32"}[unit["size"]]
-                fields.append((unit["start"], "bf_" + unit["names"][0].split(":")[0], ref, 1, "bit fields (decl order, " + str(unit["cap"]) + " bits): " + ", ".join(unit["names"])))
+                fields.append((unit["start"], "bf_" + unit["names"][0].split(":")[0], ref, 1, "bit fields LSB-first, " + str(unit["cap"]) + " bits: " + bf_positions(unit["names"])))
                 unit = None
 
         for st in self.split_members(body):
