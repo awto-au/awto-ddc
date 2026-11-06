@@ -79,6 +79,19 @@ JMP = re.compile(r"^\s+(?:sjmp|ljmp|ajmp|djnz|jnz|jz|jc|jnc|jb|jnb|jbc|cjne)\b[^
                  r"^\s+(?:sjmp|ljmp|ajmp)\s+(\d+\$)\s*(?:;.*)?$")
 
 
+def gptr_callee(code, i, funcs):
+    """Callee that receives the CONST address loaded at code[i] (first call within SCAN_MAX; param stores in between
+    are skipped) when it reads generic pointers (__gptrget): it reads in ITS bank, so the CONST must be common or there (#46)."""
+    for l in code[i + 1:i + 1 + SCAN_MAX]:
+        m = CALLJ.match(l)
+        if m:
+            t = funcs.get(m.group(2))
+            return t if t is not None and t.gptr else None
+        if re.match(r"^\s+(ret|reti|sjmp|ljmp|jmp)\b", l):
+            return None
+    return None
+
+
 def call_sites(lines):
     """(callee, loop depth) per lcall/ljmp-to-function in a chunk. Loop = span from a local label (`00101$`) to a later
     jump back to it; depth at a site = number of spans containing it (asm has no loop info; this is the static proxy)."""
@@ -117,6 +130,7 @@ class Chunk:
         # reads its stack-passed args via SP/_bp: a banked call goes through a stub that leaves 4 more bytes
         # between args and callee (caller ret + restore entry), so the offsets are wrong (#11)
         self.stack_args = any(STACKREAD.search(l.split(";", 1)[0]) for l in lines)
+        self.gptr = any(re.match(r"^\s+[la]call\s+__gptrget", l) for l in lines)   # reads a generic (code) pointer in ITS bank
         self.calls, self.refs = set(), set()
         for l in lines:
             s = l.split(";", 1)[0]
@@ -555,6 +569,7 @@ def main() -> int:
     # used from exactly one other bank -> placed in that bank
     users = defaultdict(set)
     escaping = set()                                         # address may reach another bank (#16)
+    gptr_x = {}                                              # CONST -> (caller, gptr-reading callee in another bank) (#46)
     for m in mods:
         for c in m.chunks:
             if c.area != "CSEG":
@@ -564,6 +579,11 @@ def main() -> int:
                 rs = [r for r in SYM.findall(l) if r in consts]
                 if rs and not addr_stays_in_bank(code, i, c, funcs):
                     escaping.update(rs)
+                if rs:
+                    t = gptr_callee(code, i, funcs)
+                    if t is not None and not t.common and t.bank != c.bank:
+                        for r in rs:
+                            gptr_x[r] = (c.name, t.name)
             for r in c.refs:
                 if r in consts:
                     users[r].add(c.bank)
@@ -587,8 +607,10 @@ def main() -> int:
         c = consts[r]
         if not u:
             continue                                         # unreferenced: stays with its module
-        if len(u) > 1 or None in u:
+        if len(u) > 1 or None in u or r in gptr_x:
             c.common, c.bank = True, None
+            if r in gptr_x and len(u) <= 1 and None not in u:
+                log(f"const {r} -> common: passed by {gptr_x[r][0]} to gptr reader {gptr_x[r][1]} in another bank (#46)")
         elif u != {c.bank}:
             if r in escaping:
                 c.common, c.bank = True, None; stopped.append(r)
