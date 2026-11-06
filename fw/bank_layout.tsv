@@ -875,7 +875,7 @@ stub	_UserCommonFlashSaveSystemData	C	0x36be	9
 stub	_UserCommonNVRamGetSystemData	C	0x36c7	9
 stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1229	C	0x36e2	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1224	C	0x36e2	92
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1151,7 +1151,6 @@ fn	_ScalerDpRx1PhyCtsTp2SetPhy	2	0x1ad8	3404
 fn	_ScalerDpRx1RebuildPhy	2	0x2824	4588
 fn	_ScalerDpRx1SignalDetectInitial	2	0x3a10	300
 fn	_ScalerMcuGpioInitial	2	0x3b3c	152
-fn	_ScalerPinshareHwIICPin	2	0x3bd4	8
 fn	_ScalerPowerAllGroupPowerCutReset	2	0x3bdc	288
 fn	_ScalerPowerGroupADIIsolation	2	0x3cfc	56
 fn	_ScalerPowerGroupADIPowerCut	2	0x3d34	196
@@ -1189,8 +1188,6 @@ fn	_ScalerDebug	2	0x610c	932
 fn	_ScalerDebugGetRegisters	2	0x64b0	328
 fn	_ScalerDebugSendData	2	0x65f8	180
 fn	_ScalerDebugSetRegisters	2	0x66ac	344
-fn	_ScalerMcuHwIICRead	2	0x6804	484
-fn	_ScalerMcuHwIICWrite	2	0x69e8	816
 fn	_ScalerRead	2	0x6d18	200
 fn	_ScalerSyncDpCheckHdcpEnable	2	0x6de0	16
 fn	_ScalerTimerWaitForActiveTimerEvent	2	0x6df0	32
@@ -1361,7 +1358,6 @@ const	___str_6	4	0x01d4	12
 const	___str_7	4	0x01e0	12
 const	___str_8	4	0x01ec	12
 const	___str_9	4	0x01f8	12
-const	_tHwI2cSetting	4	0x0204	24
 const	_tEDID_TABLE_D1	4	0x021c	268
 const	_tEDID_TABLE_D2	4	0x0328	268
 const	_tEDID_TABLE_D3	4	0x0434	268
@@ -1481,9 +1477,6 @@ fn	_ScalerDebugGetDDCCIDebugMode	4	0x4820	12
 fn	_ScalerDebugSelectDDCCIDebugMode	4	0x482c	16
 fn	_ScalerMcu5usDelayCalc	4	0x483c	52
 fn	_ScalerMcuCacheControl	4	0x4870	28
-fn	_ScalerMcuHwIICConfigSetting	4	0x488c	40
-fn	_ScalerMcuHwIICInitial	4	0x48b4	140
-fn	_ScalerMcuHwIICSetFreqDiv	4	0x4940	156
 fn	_ScalerMcuIspInitial	4	0x49dc	16
 fn	_ScalerMcuPwmAdjustFrequency	4	0x49ec	704
 fn	_ScalerMcuPwmClockSel	4	0x4cac	264

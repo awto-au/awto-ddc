@@ -203,7 +203,7 @@
 #define _SW_IIC_SUPPORT                         _OFF
 #define _SW_IIC_CLK_DIV                         _DIV_1
 
-#define _HW_IIC_SUPPORT                         _ON
+#define _HW_IIC_SUPPORT                         _OFF    // awto: no EEPROM / IIC device on the HW IIC pins 210/211 (GPIO here), #53.3
 #define _HW_IIC_SPEED                           _HW_IIC_LOW_SPEED_100K
 
 
@@ -216,7 +216,7 @@
 //--------------------------------------------------
 #define _EEPROM_TYPE                            _EEPROM_24LC16
 #define _EEPROM_SLAVE_ADDRESS                   0xA0
-#define _PCB_SYS_EEPROM_IIC                     _HW_IIC_PIN_210_211
+#define _PCB_SYS_EEPROM_IIC                     _NO_IIC_PIN     // awto: settings are flash-emulated (#53.3)
 
 
 //////////
@@ -370,16 +370,13 @@
 //-----------------------------------------------
 // Macro of System Eeprom WP High/Low
 //-----------------------------------------------
-#define bEEPROM_WRITE_PROTECT                   (MCU_FE36_PORTA6_PIN_REG) // Pin_209, PA.6
-
+// awto: no EEPROM, PA.6 is not driven (#53.3)
 #define _EEPROM_WP_ENABLE                       1
 #define _EEPROM_WP_DISABLE                      0
 
-#define PCB_EEPROM_WRITE_PROTECT(x)             {\
-                                                    bEEPROM_WRITE_PROTECT = (x);\
-                                                }
+#define PCB_EEPROM_WRITE_PROTECT(x)             {}
 
-#define PCB_EEPROM_WRITE_PROTECT_DETECT()       (bEEPROM_WRITE_PROTECT)
+#define PCB_EEPROM_WRITE_PROTECT_DETECT()       (_EEPROM_WP_ENABLE)
 
 //-----------------------------------------------
 // Macro of EDID Eeprom WP High/Low
