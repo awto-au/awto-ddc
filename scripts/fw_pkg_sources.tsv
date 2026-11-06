@@ -31,3 +31,35 @@ gigabyte	giga_m27f_f04_20201230_1408_1a06_r6119	https://download.gigabyte.com/Fi
 gigabyte	aorus_fo27q3_f05	https://download.gigabyte.com/FileList/Firmware/AORUS_FO27Q3_F05.zip	vendor support page firmware list
 gigabyte	aorus_fo27q2_f03	https://download.gigabyte.com/FileList/Firmware/AORUS_FO27Q2_F03.zip	vendor support page firmware list
 dell	u2723qe-m2t104	https://dl.dell.com/FOLDER10460395M/1/Dell_U2723QE_FWUpdate_M2T104_Windows.zip	driver id K76J3
+dell	g3223d-m3c101	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Dell_G3223D_M3C101.bin	community mirror github.com/balika011/realtek_display firmwares/
+dell	g3223d-m3c104	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Dell_G3223D_M3C104.bin	community mirror github.com/balika011/realtek_display firmwares/
+dell	g3223d-m3c105	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Dell_G3223D_M3C105.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v2	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V2.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v3	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V3.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v4	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V4.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v5-iis	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V5_IIS.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-lm270qq2-spa3	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LM270QQ2-SPA3.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r9a18-lm270qq2-spa3	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R9A18_LM270QQ2-SPA3_V%3F%3F%3F.bin	community mirror github.com/balika011/realtek_display firmwares/
+razer	raptor27-144hz-v101	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Razer_Raptor_27_144Hz_V1.01.bin	community mirror github.com/balika011/realtek_display firmwares/
+lenovo	thinkvision_p24h_30_fw3_7_tool_1_0_12141_0	https://download.lenovo.com/consumer/monitor/thinkvision_p24h_30_fw3_7_tool_1_0_12141_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p24q_30_fw3_4_tool_1_0_12141_0	https://download.lenovo.com/consumer/monitor/thinkvision_p24q_30_fw3_4_tool_1_0_12141_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p27u_20_fw3_2_tool_1_19_0_0	https://download.lenovo.com/consumer/monitor/thinkvision_p27u_20_fw3_2_tool_1_19_0_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p32pz_30_fw1_2_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p32pz_30_fw1_2_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p34w_20_fw1_9_fw2_5_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p34w_20_fw1_9_fw2_5_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p40w_20_fw4_0_tool_1_0_12141_0_241108_1	https://download.lenovo.com/consumer/monitor/thinkvision_p40w_20_fw4_0_tool_1_0_12141_0_241108_1.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p27h_30_fw1_6_fw2_1_tool_1_79	https://download.lenovo.com/consumer/monitor/thinkvision_p27h_30_fw1_6_fw2_1_tool_1_79.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p32p_30_fw1_1_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p32p_30_fw1_1_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p49w_30_fw1_5_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p49w_30_fw1_5_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t24m_20_fw3_2_tool_1_64_0_0	https://download.lenovo.com/consumer/monitor/thinkvision_t24m_20_fw3_2_tool_1_64_0_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t24m_29_fw3_2_tool_1_64_0_0	https://download.lenovo.com/consumer/monitor/thinkvision_t24m_29_fw3_2_tool_1_64_0_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t24mv_30_l1_1_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_t24mv_30_l1_1_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t27h_30_fw1_3_fw2_2_tool_1_25	https://download.lenovo.com/consumer/monitor/thinkvision_t27h_30_fw1_3_fw2_2_tool_1_25.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t27hv_30_l1_1_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_t27hv_30_l1_1_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t27p_30_fw1_3_tool_1_88	https://download.lenovo.com/consumer/monitor/thinkvision_t27p_30_fw1_3_tool_1_88.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t32h_30_fw1_3_tool_1_46	https://download.lenovo.com/consumer/monitor/thinkvision_t32h_30_fw1_3_tool_1_46.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t32p_30_fw1_3_tool_1_46	https://download.lenovo.com/consumer/monitor/thinkvision_t32p_30_fw1_3_tool_1_46.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t34w_30_fw1_6_tool_1_107	https://download.lenovo.com/consumer/monitor/thinkvision_t34w_30_fw1_6_tool_1_107.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+hp	u28-4k-sp149152	https://ftp.hp.com/pub/softpaq/sp149001-149500/sp149152.exe	HP U28 4K HDR monitor firmware 1.0.4.0 (swItemId vc-318015-1)
+dell	u3223qe-m3t102	https://dl.dell.com/FOLDER10105441M/1/Dell_U3223QE_FWUpdate_M3T102_Windows.exe	driver id CHHRV
+dell	u2723qe-m2t103-mac	https://dl.dell.com/FOLDER10058640M/1/Dell_U2723QE_FWUpdate_M2T103_Mac.zip	driver id JYV4W (macOS updater)
+lenovo	thinkvision_p27pz_30_fw1_2_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p27pz_30_fw1_2_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool

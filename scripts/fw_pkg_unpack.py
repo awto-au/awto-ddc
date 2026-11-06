@@ -36,8 +36,14 @@ def run(cmd):
     return p.returncode, (p.stdout + p.stderr)
 
 
+SKIP_NAMES = ("wdfcoinstaller", "wsusscan", "windows6.0-kb", "microsoft kernel-mode", "vcredist", "vc_redist",
+              "dotnetfx", "ndp4", "dpinst", "libusb")  # runtime/driver payloads: never contain scaler images
+
+
 def sniff(path):
     """Return container kind or None (leaf)."""
+    if any(k in path.name.lower() for k in SKIP_NAMES):
+        return None
     with open(path, "rb") as f:
         head = f.read(4096)
     if head[:4] == b"PK\x03\x04" or head[:4] == b"PK\x05\x06":
@@ -52,6 +58,10 @@ def sniff(path):
         return "cab"
     if head[:8] == bytes.fromhex("d0cf11e0a1b11ae1"):
         return "msi-ole" if path.suffix.lower() in (".msi", ".msp") else "ole"
+    if head[:4] == b"xar!":
+        return "xar"
+    if head[:6] in (b"070701", b"070707", b"070702"):
+        return "cpio"
     if head[:2] == b"\x1f\x8b":
         return "gzip"
     if head[:6] == b"\xfd7zXZ\x00":
@@ -128,6 +138,8 @@ def main():
         kind = sniff(path) if path.is_file() and path.stat().st_size > 0 else None
         size = path.stat().st_size if path.is_file() else 0
         if kind is None or depth >= depth_max:
+            if depth == 0 and path.is_file():  # raw image shipped as-is: copy so the scan sees it
+                shutil.copy2(path, out_parent / path.name)
             tree.append((depth, str(path), size, kind or "leaf", "", "leaf" if kind is None else "depth-limit", 0))
             return
         dst = out_parent / (path.name + ".x")

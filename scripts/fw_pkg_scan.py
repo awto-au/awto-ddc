@@ -16,7 +16,7 @@ usage: python3 -I fw_pkg_scan.py <vendor> <package|*> [--copy] [--model NAME]
 - Patterns catalog: scripts/fw_pkg_patterns.json (package layouts); matched pattern id goes in evidence.
 Log: tmp/logs/fw_pkg_scan-<package>.log
 """
-import collections, fnmatch, gzip, json, math, os, re, shutil, subprocess, sys
+import collections, fnmatch, gzip, hashlib, json, math, os, re, shutil, subprocess, sys
 from pathlib import Path
 
 HOME = Path.home()
@@ -25,7 +25,7 @@ NAME_HINT = re.compile(r"(?:Scaler|UserCommon|Osd|Sys|RTD|RL6|Ddcci|Flash|Mcu)[A
 SYM_EXT = {".m51": "keil-map", ".map": "linker-map", ".lst": "keil-listing", ".omf": "omf", ".abs": "keil-abs",
            ".pdb": "pdb", ".sym": "symbols", ".lin": "keil-link-script", ".elf": "elf", ".so": "elf-so",
            ".lib": "keil-lib", ".h00": "bank-hex", ".hex": "hex"}
-KIND_SKIP = (b"MZ", b"PK\x03\x04", b"%PDF", b"\x89PNG", b"GIF8", b"\xff\xd8\xff", b"7z\xbc\xaf", b"\x7fELF", b"Rar!")
+KIND_SKIP = (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"MZ", b"PK\x03\x04", b"%PDF", b"\x89PNG", b"GIF8", b"\xff\xd8\xff", b"7z\xbc\xaf", b"\x7fELF", b"Rar!")
 TRANSPORT_KEYS = {
     "NvAPI": b"nvapi", "ADL": b"atiadlxx", "IGCL": b"ControlLib", "Intel-IGFX": b"igfx",
     "dxva2-MonitorConfig": b"GetVCPFeatureAndVCPFeatureReply", "dxva2-caps": b"CapabilitiesRequestAndCapabilitiesReply",
@@ -166,10 +166,12 @@ def sim_ours(d, w=32, step=4):
     return f"{100 * hit / n:.1f}%" if n else ""
 
 
-def match_pattern(pkg_files, patterns):
+def match_pattern(pkg_files, patterns, vendor=""):
     names = [os.path.basename(f) for f in pkg_files]
     out = []
     for p in patterns:
+        if p.get("vendor") and p["vendor"] != vendor:
+            continue
         need = p.get("package_files_all", [])
         if need and all(any(fnmatch.fnmatch(n, g) for n in names) for g in need):
             out.append(p["id"])
@@ -193,7 +195,7 @@ def scan(vendor, pkg, copy, model, regsets, patterns):
     udir = base / "unpacked"
     files = sorted(p for p in udir.rglob("*") if p.is_file())
     rel = [str(f.relative_to(udir)) for f in files]
-    pats = match_pattern(rel, patterns)
+    pats = match_pattern(rel, patterns, vendor)
     if not model:
         model = re.sub(r"(?i)^(gigabyte_|aorus_|giga_)", "", pkg).upper()
     imgs, syms, apps = [], [], []
@@ -206,12 +208,14 @@ def scan(vendor, pkg, copy, model, regsets, patterns):
             kind = SYM_EXT[ext]
             if ext in (".hex", ".lin") and size < 2000:
                 continue
+            if ext == ".lib" and not re.search(rb"C51|BL51|RL6|Keil", head):
+                continue
             blob = f.read_bytes()[:4_000_000]
             names = collections.Counter(NAME_HINT.findall(blob.decode("latin1")))
             if ext in (".hex",) and not names:
                 continue
             syms.append((vendor, pkg, str(f.relative_to(udir)), kind, "", ",".join(k for k, _ in names.most_common(6))))
-        if head[:2] == b"MZ" and size > 8192:
+        if (head[:2] == b"MZ" or head[:4] in (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xfe\xed\xfa\xce", b"\x7fELF")) and size > 8192:
             d = f.read_bytes()
             lowname = f.name.lower()
             tr = [k for k, v in TRANSPORT_KEYS.items() if v.lower() in d.lower()]
@@ -234,6 +238,12 @@ def scan(vendor, pkg, copy, model, regsets, patterns):
         ent = entropy(d[:1 << 20])
         ok, det = mcu8051_score(d)
         ver, dates, models, caps, hint = version_info(d)
+        rec = d[0xF800:0xF840]  # Lenovo/RTDCustomerTool version record (IspSetting.ini ReadBinStartAddr=0xF800)
+        txt = "".join(chr(c) if 32 <= c < 127 else "|" for c in rec).strip("|")
+        txt = re.sub(r"\|+", "|", txt).split("|")
+        txt = "|".join(t for t in txt if t)
+        if len(txt) >= 5 and re.match(r"[A-Za-z0-9]", txt) and len(re.findall(r"[A-Za-z0-9]", txt)) >= 4 and len(rec) == 64:
+            ver.append("rec@F800:" + txt[:40])
         upd = f.with_name("upd.xml")
         if upd.exists():  # Gigabyte/Realtek updater pack manifest: <model>, <fw>, <fw_ver>
             t = upd.read_text(errors="replace")
@@ -253,6 +263,8 @@ def scan(vendor, pkg, copy, model, regsets, patterns):
             fam = "string:" + "/".join(rtd[:3]) + ("" if ok else " non-8051?")
         elif other:
             fam = "other-vendor:" + "/".join(other)
+        elif ok and size < 262144:
+            fam = "small-8051-image (hub/PD/MCU, not a scaler?)"
         elif ok:
             fam = "8051-banked:" + (top[0][1] if top and top[0][2] > 0 else "unknown")
         else:
@@ -267,7 +279,7 @@ def scan(vendor, pkg, copy, model, regsets, patterns):
         if size % 65536 == 0:
             ev.append(f"{size // 65536}x64KiB")
         imgs.append((vendor, model, pkg, str(f.relative_to(udir)), size, fam, "; ".join(ev), ",".join(ver),
-                     ",".join(dates), ",".join(models + hint[:2]), ",".join(caps), ",".join(edids[:2]), c51, f"{ent:.2f}", sim_ours(d) if ok else ""))
+                     ",".join(dates), ",".join(models + hint[:2]), ",".join(caps), ",".join(edids[:2]), c51, f"{ent:.2f}", sim_ours(d) if ok else "", hashlib.sha256(d).hexdigest()[:16]))
         if copy:
             idir = base / "images"; idir.mkdir(exist_ok=True)
             shutil.copy2(f, idir / f.name)
@@ -291,7 +303,7 @@ def main():
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     for pk in pkgs:
         imgs, syms, apps = scan(vendor, pk, copy, model, regsets, patterns)
-        replace_rows(adir / "found_images.tsv", "vendor model package file size family_guess evidence fw_version build_date model_strings caps edid c51_sigs entropy sim_ours_2795t".split(), 2, pk, imgs)
+        replace_rows(adir / "found_images.tsv", "vendor model package file size family_guess evidence fw_version build_date model_strings caps edid c51_sigs entropy sim_ours_2795t sha256_16".split(), 2, pk, imgs)
         replace_rows(adir / "found_symbols.tsv", "vendor package file kind family_guess names".split(), 1, pk, syms)
         replace_rows(adir / "found_hostapps.tsv", "vendor package app version transport addresses_opcodes evidence".split(), 1, pk, apps)
         msg = f"{vendor}/{pk}: images={len(imgs)} symbols={len(syms)} hostapps={len(apps)}"

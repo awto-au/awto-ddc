@@ -1,21 +1,104 @@
 [
- {"id": "gigabyte-raw-bin-zip", "vendor": "gigabyte",
+ {
+  "id": "gigabyte-raw-bin-zip",
+  "vendor": "gigabyte",
   "container": "zip -> single <MODEL>_<ver>.bin (raw SPI flash image, size multiple of 64 KiB banks)",
   "image": "the .bin itself; sizes 640 KiB-2 MiB; header = banked 8051 (LJMP at 0, 8-byte vectors)",
-  "package_files_all": ["*.bin"], "obfuscation": "none seen (RTD27xx 8051 images entropy ~6.9)",
-  "notes": "Novatek/MStar/Realtek all ship this way; family from strings (RTDnnnn/NT68nnn) and DDC caps model()"},
- {"id": "gigabyte-fwupd-sfx", "vendor": "gigabyte",
+  "package_files_all": [
+   "*.bin"
+  ],
+  "obfuscation": "none seen (RTD27xx 8051 images entropy ~6.9)",
+  "notes": "Novatek/MStar/Realtek all ship this way; family from strings (RTDnnnn/NT68nnn) and DDC caps model()"
+ },
+ {
+  "id": "gigabyte-fwupd-sfx",
+  "vendor": "gigabyte",
   "container": "zip -> <MODEL>_<ver>.exe (PE + appended 7z SFX) -> FWUPD/{F<ver>.bin, FA<ver>.bin, upd.xml, setup.iss, UpdFW_RTK.exe, RFlash.dll, RtHIDlib.dll, RTKCmd_x64.dll}",
   "image": "FWUPD/F*.bin (main) and FA*.bin (second image, e.g. second scaler/USB-C MCU); upd.xml has <model>,<fw>,<fw_ver>,<exe>rtk",
-  "package_files_all": ["UpdFW_RTK.exe", "upd.xml"], "obfuscation": "none for RTD2718/19/28/98; RTD2738/2739 images are not plain 8051 (entropy 7.1, no reset vector)",
-  "notes": "Updater talks to the monitor over USB HID (RtHIDlib.dll HID_i2cread/i2cwrite/readflash/writeflash/handshakeauth...), not GPU DDC"},
- {"id": "gigabyte-fwupd-nested-updpack", "vendor": "gigabyte",
+  "package_files_all": [
+   "UpdFW_RTK.exe",
+   "upd.xml"
+  ],
+  "obfuscation": "none for RTD2718/19/28/98; RTD2738/2739 images are not plain 8051 (entropy 7.1, no reset vector)",
+  "notes": "Updater talks to the monitor over USB HID (RtHIDlib.dll HID_i2cread/i2cwrite/readflash/writeflash/handshakeauth...), not GPU DDC"
+ },
+ {
+  "id": "gigabyte-fwupd-nested-updpack",
+  "vendor": "gigabyte",
   "container": "zip -> .exe -> 7z -> setup.exe (InstallShield/NSIS) + FWUPD/UpdPack.exe (7z SFX) -> OSDSidekick + F*.bin + UpdFW_RTK/UpdFW_Nova",
-  "image": "F*.bin / M32U*.bin next to UpdFW_*.exe", "package_files_all": ["UpdFW_Nova.exe"],
-  "notes": "Nova = Novatek variant of the same updater pack; both in one package"},
- {"id": "dell-nsis-upg", "vendor": "dell",
+  "image": "F*.bin / M32U*.bin next to UpdFW_*.exe",
+  "package_files_all": [
+   "UpdFW_Nova.exe"
+  ],
+  "notes": "Nova = Novatek variant of the same updater pack; both in one package"
+ },
+ {
+  "id": "dell-nsis-upg",
+  "vendor": "dell",
   "container": "zip -> Dell_<model>_FWUpdate_<ver>_Windows.exe (NSIS) -> Firmware Updater.exe (Sciter GUI) + plugins/{display,hub,pdc,tbt,webcam,audio,bridge,devices}.dll + <ver>/<model>_<ver>_<date>.upg",
   "image": ".upg = Dell UPG container: big-endian length-prefixed header (UPG, 1.0.6, model, version, component list 'DISPLAY'...), per-chunk base64-url strings, then binary payload",
-  "package_files_all": ["Firmware Updater.exe", "*.upg"], "obfuscation": "payload encrypted (random-looking, per-chunk key strings in header); key logic in Firmware Updater.exe, not cracked",
-  "notes": "plugins/display.dll has MStarISP and RealtekISP classes (scalar/realtek/realtek_isp.cpp), I2C channel select"}
+  "package_files_all": [
+   "Firmware Updater.exe",
+   "*.upg"
+  ],
+  "obfuscation": "payload encrypted (random-looking, per-chunk key strings in header); key logic in Firmware Updater.exe, not cracked",
+  "notes": "plugins/display.dll has MStarISP and RealtekISP classes (scalar/realtek/realtek_isp.cpp), I2C channel select"
+ },
+ {
+  "id": "lenovo-rtdtool-fwupdate",
+  "vendor": "lenovo",
+  "container": "zip -> <pkg>/{LenovoFwUpdate.exe (Rust GUI), fwconfig.ini, FW/<hub>.bin, Scaler/{fwupdate.exe, Comm.dll, Comm/*.dll, PlugIn/{Flash.dat,WinIspPlugIn.dll}, IspSetting.ini, <MODEL>_<RTDnnnn>_Multipanel_<flashaddr>_<ver>.bin}}",
+  "image": "Scaler/*.bin = Realtek ISP image (RTDCustomerTool 'Reduce' image, flash address in name); FW/*.bin = RTS54xx hub/PD firmware",
+  "package_files_all": [
+   "fwupdate.exe",
+   "Comm.dll"
+  ],
+  "obfuscation": "none (8051 banked, entropy ~6.9)",
+  "notes": "Host side is RTDCustomerTool: Comm_{RealtekUSB,UsbHubI2C,TypeCUsb,TypeCI2C,Aux}.dll + IntelControlAPI; WinSignatureVerify.dll"
+ },
+ {
+  "id": "lenovo-pkg-monitor-isp",
+  "vendor": "lenovo",
+  "container": "zip -> LenovoFirmwareUpdateTool.exe + pkg/{fwconfig.ini, Monitor/{ISPTool.exe(.NET), fwconfig.ini, <model>.bin, Genesys/*.bin, Infineon/*.bin, Firmware upgrade sop.docx}}",
+  "image": "pkg/Monitor/*.bin",
+  "package_files_all": [
+   "LenovoFirmwareUpdateTool.exe"
+  ],
+  "obfuscation": "none seen",
+  "notes": "same package shape for P32p-30/P27h-30/P49w-30"
+ },
+ {
+  "id": "lenovo-multiisp-gl",
+  "vendor": "lenovo",
+  "container": "zip -> MultiIsp vN (update tool)/{Multi-ISP.exe, GlFlash_*.fl, GL Driver Installation.exe} + 'Scaler FW'/*.bin + 'HUB FW'/*.bin (Genesys hub)",
+  "image": "'Scaler FW'/*.bin",
+  "package_files_all": [
+   "Multi-ISP.exe"
+  ],
+  "obfuscation": "none",
+  "notes": "P27u-20, P40w-20"
+ },
+ {
+  "id": "hp-sp-exe-hpfwupdate",
+  "vendor": "hp",
+  "container": "spNNNNNN.exe (7z SFX) -> HPFwUpdate.exe + GLHub.dll + RvcLib.dll + rsa_{pub,pub_isp}.txt + rsa_verify/decrypt.exe + *Service_Header.bin (scaler) + GL35xx hub .bin",
+  "image": "*_Service_Header.bin (signed: RSA header; U28 = MStar, not Realtek)",
+  "package_files_all": [
+   "HPFwUpdate.exe"
+  ],
+  "obfuscation": "RSA signature header",
+  "notes": "transport GL hub USB (GLHub.dll/RvcLib.dll)"
+ },
+ {
+  "id": "dell-macos-pkg",
+  "vendor": "dell",
+  "container": "zip -> *_Mac.pkg (xar) -> component_*.pkg/Payload (gzip cpio) -> firmwareupdater.app (Sciter, libusb, libdisplay/libdevices/libwebcam dylibs) + <ver>/<model>_<ver>_ECN*.upg",
+  "image": ".upg (same encrypted UPG container as Windows)",
+  "package_files_all": [
+   "firmwareupdater",
+   "*.upg"
+  ],
+  "obfuscation": "encrypted payload",
+  "notes": "unpack_fw handles xar+cpio via 7z"
+ }
 ]
