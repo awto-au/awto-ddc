@@ -265,9 +265,10 @@ def main() -> int:
                  *(["--pin-common", a.pin_common] if a.pin_common else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    # crt_memcpy reads its PARMs little-endian, ABI 0: BE and --sdcccall>=1 builds keep the library memcpy (#24, #15, #51.1)
-    # crt_mod0/crt_divulong are ABI-independent: compiler-generated helper calls keep arg 2 in <fn>_PARM_2 (fw/simtests/crt_ops)
-    crts = ("crt_mod0", "crt_divulong") + (() if T.BIG_ENDIAN or T.SDCCCALL != "0" else ("crt_memcpy",))
+    # crt_mod0/crt_divulong/crt_memcpy are Keil-register (--sdcccall 3) versions only; the level-0 versions are deleted (awto-sdcc#7 C5)
+    if T.SDCCCALL != "3":
+        sys.exit("fw_build: the C runtime overrides (fw/sdcc/crt_*.c) need AWTO_SDCCCALL=3 (Keil registers)")
+    crts = ("crt_mod0", "crt_divulong", "crt_memcpy")
     for c in crts:
         run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])

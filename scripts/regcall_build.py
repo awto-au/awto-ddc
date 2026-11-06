@@ -2,8 +2,7 @@
 """Build the firmware once per --sdcccall level and keep the artefacts (awto-sdcc#2 phase 2).
 
 usage: regcall_build.py LEVEL [--bin DIR] [--serial S] [--tag NAME] [--layout fw/bank_layout.tsv]
-  LEVEL  0|1|2 (AWTO_SDCCCALL); --bin = compiler install whose lib matches LEVEL (default: rc-be-install[-scN] next
-  to /mnt/2tb/git/awto-sdcc-rcbe/tmp, AWTO_SDCC_BE=1)
+  LEVEL  0|1|2 (AWTO_SDCCCALL); --bin = compiler install whose lib matches LEVEL (REQUIRED; one install holds the libs of all levels)
 Result: tmp/runs/<tag>/{fw.bin,fw.map,fw.ihx,build.json,sdcc_bank.log tail,size.txt}. Log: tmp/logs/regcall_build.log
 """
 import argparse, os, shutil, subprocess, sys, time
@@ -27,7 +26,9 @@ def main() -> int:
     ap.add_argument("--pin-common", default="")
     a = ap.parse_args()
     tag = a.tag or f"sc{a.level}"
-    inst = a.bin or str(RCBE / ("rc-be-install" if a.level == "0" else f"rc-be-install-sc{a.level}"))
+    if not a.bin:
+        sys.exit("--bin is required: name the compiler install explicitly (e.g. .../awto-sdcc-rcbe/tmp/install-<commit>); it must be stamped by awto-sdcc scripts/build.py")
+    inst = a.bin
     env = dict(os.environ, AWTO_DDC_REPO=str(ROOT), AWTO_SDCC_BE="1", AWTO_SDCCCALL=a.level,
                AWTO_SDCC_BIN=f"{inst}/bin", AWTO_SDCC_SRC="/mnt/2tb/git/awto-sdcc-rcbe")
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
