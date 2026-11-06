@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the firmware once per --sdcccall level and keep the artefacts (awto-sdcc#2 phase 2).
 
-usage: regcall_build.py LEVEL [--bin DIR] [--serial S] [--tag NAME]
+usage: regcall_build.py LEVEL [--bin DIR] [--serial S] [--tag NAME] [--layout fw/bank_layout.tsv]
   LEVEL  0|1|2 (AWTO_SDCCCALL); --bin = compiler install whose lib matches LEVEL (default: rc-be-install[-scN] next
   to /mnt/2tb/git/awto-sdcc-rcbe/tmp, AWTO_SDCC_BE=1)
 Result: tmp/runs/<tag>/{fw.bin,fw.map,fw.ihx,build.json,sdcc_bank.log tail,size.txt}. Log: tmp/logs/regcall_build.log
@@ -21,6 +21,7 @@ def main() -> int:
     ap.add_argument("--bin", default=None)
     ap.add_argument("--serial", default="AWT26110003")
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--layout", default="", help="passed to fw_build (sticky layout, working-base)")
     a = ap.parse_args()
     tag = a.tag or f"sc{a.level}"
     inst = a.bin or str(RCBE / ("rc-be-install" if a.level == "0" else f"rc-be-install-sc{a.level}"))
@@ -29,7 +30,7 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (ROOT / "tmp/logs/regcall_build.log").open("a")
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} build {tag} bin={inst}\n")
-    p = subprocess.Popen([sys.executable, "scripts/fw_build.py", "--serial", a.serial], cwd=ROOT, env=env,
+    p = subprocess.Popen([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", a.layout] if a.layout else [])], cwd=ROOT, env=env,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     import select
     t_last, t0 = time.monotonic(), time.monotonic()
