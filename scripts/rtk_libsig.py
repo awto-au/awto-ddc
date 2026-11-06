@@ -11,6 +11,8 @@
   rtk_libsig.py list      -> stored labels
 
 Classes: EXACT = all non-wildcard bytes match (n>1 placements = EXACT-MULTI, first reported);
+SIBLING = fuzzy placement (>=50%) coincides with the EXACT placement of another lib function (same wrapper
+shape, different constants: not evidence for this function);
 NEAR = best placement >= 90% of non-wildcard bytes; SHORT = < 12 bytes or < 8 fixed bytes
 (placements listed, never counted as evidence); else ABSENT.
 Logs: ./tmp/logs/rtk_libsig.log. Repo root: $AWTO_DDC_REPO -> file-relative.
@@ -96,11 +98,14 @@ def fuzzy(data, mask, banks):
                     votes[(bn, pos - a)] += b - a
                 pos = img.find(data[a:b], pos + 1); n += 1
     best = (0.0, None)
-    for (bn, st), _ in votes.most_common(8):
+    cands = {c for c, _ in votes.most_common(8)}
+    # +-16 byte refinement: run votes can be offset when vendor code has an inserted/removed byte run
+    cands |= {(bn, st + d) for bn, st in list(cands) for d in range(-16, 17) if st + d >= 0}
+    for bn, st in cands:
         img = banks[bn][st:st + len(data)]
         ok = sum(1 for i in fixed if i < len(img) and img[i] == data[i])
         sc = ok / len(fixed)
-        if sc > best[0]:
+        if sc > best[0] or (sc == best[0] and best[1] and (bn, st) < best[1]):
             best = (sc, (bn, st))
     return best
 
@@ -115,11 +120,11 @@ def classify(f, banks):
             hits += [(bn, m.start()) for m in pat.finditer(img)]
     short = f["size"] < SHORT_BYTES or nfixed < SHORT_FIXED
     if short:
-        return "SHORT", hits, 1.0 if hits else 0.0
+        return "SHORT", hits, 1.0 if hits else 0.0, None
     if hits:
-        return ("EXACT" if len(hits) == 1 else "EXACT-MULTI"), hits, 1.0
+        return ("EXACT" if len(hits) == 1 else "EXACT-MULTI"), hits, 1.0, None
     sc, loc = fuzzy(data, mask, banks)
-    return ("NEAR" if sc >= NEAR_MIN else "ABSENT"), ([loc] if loc and sc >= NEAR_MIN else []), sc
+    return ("NEAR" if sc >= NEAR_MIN else "ABSENT"), ([loc] if loc and sc >= NEAR_MIN else []), sc, loc
 
 
 def match(image, labels, outdir):
@@ -129,10 +134,17 @@ def match(image, labels, outdir):
     for sf in files:
         db = json.load(open(sf))
         for f in db["functions"]:
-            cls, hits, sc = classify(f, banks)
+            cls, hits, sc, best = classify(f, banks)
             bank = ";".join(f"{b}:{a:04x}" for b, a in hits[:4]) + (f";+{len(hits)-4}" if len(hits) > 4 else "")
             rows.append(dict(function=f["name"], module=f["module"], label=db["label"], size=f["size"],
-                             cls=cls, where=bank, pct=round(sc * 100, 1), hits=hits))
+                             cls=cls, where=bank, pct=round(sc * 100, 1), hits=hits, best=best))
+    # a >=50% fuzzy placement that is the EXACT placement of a different lib function is that
+    # sibling's code (same shape, other constants), not evidence for this function: SIBLING
+    exact_at = {r["hits"][0]: r["function"] for r in rows if r["cls"] == "EXACT"}
+    for r in rows:
+        loc = r["best"]
+        if r["cls"] in ("NEAR", "ABSENT") and loc and r["pct"] >= 50 and exact_at.get(loc, r["function"]) != r["function"]:
+            r["cls"] = "SIBLING"; r["where"] = f"{loc[0]}:{loc[1]:04x} (= {exact_at[loc]})"
     outdir = Path(outdir); outdir.mkdir(parents=True, exist_ok=True)
     with open(outdir / "lib_match.tsv", "w") as o:
         o.write("function\tmodule\tlabel\tsize\tclass\tbank:addr\tmatch%\n")
@@ -152,7 +164,9 @@ def match(image, labels, outdir):
     long_ = [r for r in rows if r["cls"] != "SHORT"]
     ex = [r for r in long_ if r["cls"].startswith("EXACT")]
     ne = [r for r in long_ if r["cls"] == "NEAR"]
-    log(f"  non-short functions {len(long_)}: exact {len(ex)}, near {len(ne)}, absent {len(long_)-len(ex)-len(ne)}")
+    sib = [r for r in long_ if r["cls"] == "SIBLING"]
+    log(f"  non-short functions {len(long_)}: exact {len(ex)}, near {len(ne)}, sibling {len(sib)}, "
+        f"absent {len(long_)-len(ex)-len(ne)-len(sib)}")
     weak = [r for r in rows if r["cls"] == "ABSENT" and r["pct"] >= 60]
     log(f"  ABSENT but 60-90% similar (likely a variant of the lib function, or a look-alike): {len(weak)}")
     for r in weak:
@@ -179,11 +193,12 @@ def match(image, labels, outdir):
 
 def srccheck(lib, srcdirs):
     """Compare .LIB code publics with C functions defined in the given source trees."""
-    pat = re.compile(r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)[ \t]*\([^;{}]*\)[ \t]*(?://[^\n]*)?\n?[ \t]*\{", re.M)
+    pat = re.compile(r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)[ \t]*\([^;{}]*\)[ \t]*(?:(?:using|reentrant)[ \t]*\d*[ \t]*)*(?://[^\n]*)?\n?[ \t]*\{", re.M)
     defs = set()
     for d in srcdirs:
         for f in Path(d).rglob("*.c"):
-            t = re.sub(r"/\*.*?\*/", "", f.read_text(errors="replace"), flags=re.S)
+            t = re.sub(r"//[^\n]*", "", f.read_text(errors="replace"))  # line comments first: a '/*' inside one must not open a block
+            t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
             defs |= {m.group(1) for m in pat.finditer(t) if m.group(1) not in ("if", "while", "for", "switch")}
     libfn = {omf.display_name(m, n) for m in omf.parse_lib(lib) for n, *_ in m.functions()}
     log(f"srccheck {lib}: lib {len(libfn)} functions, sources define {len(defs)}")
