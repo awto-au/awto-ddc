@@ -47,6 +47,30 @@ void main(void)
         ra = (WORD)((WORD)(ra * 3 + i) ^ (WORD)(i * 5 + b));
     }
     chk("loop", a == ra);
+    {   /* Keil ABI across stubs: generic pointers (xdata/code/data tags), long, float, every return type */
+        static BYTE __xdata xb4[4] = {5, 6, 7, 8};
+        static const BYTE __code cb4[4] = {1, 2, 3, 4};
+        BYTE __data db4[4];
+        const BYTE *gp;
+        db4[0] = 9; db4[1] = 8; db4[2] = 7; db4[3] = 6;
+        chk("gsum x", gsum(xb4, 4) == 26 && gsum(xb4 + 1, 2) == 13);
+        chk("gsum c", gsum(cb4, 4) == 10 && gsum(cb4 + 2, 2) == 7);
+        chk("gsum d", gsum(db4, 4) == 30);
+        chk("gpick", gpick(2, 0x1203, xb4) == 7 + 3 && gpick(1, 1, cb4) == 3 && gpick(3, 0x0100, db4) == 6);
+        chk("gp2", gp2(1, xb4, 3) == 15 && gp2(2, cb4, 4) == 10 && gp2(0, db4, 1) == 19);
+        chk("lmix", lmix(0x01020304UL, 5, 6) == 0x01020304UL * 3 + 11 && lmix(0xFFFFUL, 0xFF, 1) == 0xFFFFUL * 3 + 256);
+        chk("lsum3", lsum3(0x1234, 5, 6) == 0x1234000BUL);
+        gp = gret(0); chk("gret c", gp[2] == 30 && gsum(gp, 4) == 100);
+        gp = gret(1); chk("gret x", gp[3] == 4 && gsum(gp, 4) == 10);
+        vset(0x5A); gp = gret(2); chk("gret d", gp[0] == 0x5A && vget() == 0x5A);
+        chk("xret", xret()[2] == 3 && *dret() == 0x5A);
+        *dret() = 0x33; chk("dret", vget() == 0x33);
+        chk("fret", fret(3) == 1.5f && fret(10) == 5.0f);
+        chk("fmul", fmul(1.5f, 4) == 6.0f && fmul(fret(3), 2) == 3.0f);
+        chk("cret", cret(0xFE) == 0xFF && cret(9) == 10);
+        chk("scr", scr(3, 5) == -2);
+        chk("gnest", gnest(xb4, 4, 1) == 27 && gnest(cb4, 4, 2) == 12 && gnest(db4, 2, 3) == 20);
+    }
 #if __SDCCCALL >= 1
     chk("fp2", tab2[0](a, b) == f2(a, b) && tab2[1](b, c) == g2(b, c));
 #endif

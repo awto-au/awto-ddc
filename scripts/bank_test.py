@@ -58,9 +58,9 @@ def main() -> int:
     wl = [f"-Wl-aBANK{n}=0x{n * BANK + common:x}" for n in used]
     ihx = W / "out.ihx"
     r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",
-                           f"-L{T.LIB}", *wl, "-o", ihx, *rels], ihx, rels)
+                           f"-L{T.LIB}", "-Wl-aDSEG=0x30", *wl, "-o", ihx, *rels], ihx, rels)
     if r.returncode or not ihx.exists():
-        sys.exit(f"FAIL link: {(r.stdout + r.stderr)[-1500:]}")
+        sys.exit("FAIL link: " + "\n".join(l for l in (r.stdout + r.stderr).splitlines() if "Library:" not in l and "found more than once" not in l)[-1500:])
     mem = fw_build.parse_ihx(ihx)
     cend = max((x for x in mem if x < common), default=0) + 1
     nb = max(used, default=0) + 1
