@@ -814,7 +814,6 @@ stub	_SysJudgeGetActiveWaitTime	C	0x3236	9
 stub	_SysJudgeHandler	C	0x323f	9
 stub	_AwtoDiagInit	C	0x3248	9
 stub	_AwtoDiagMainPass	C	0x3251	9
-stub	_AwtoDiagSelfTest	C	0x325a	9
 stub	_AwtoDiagStage	C	0x3263	9
 stub	_SysMainSystemInitial	C	0x326c	9
 stub	_SysMainSytemPowerDetect	C	0x3275	9
@@ -876,6 +875,7 @@ stub	_UserCommonFlashSaveSystemData	C	0x36be	9
 stub	_UserCommonNVRamGetSystemData	C	0x36c7	9
 stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1229	C	0x36e2	92
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1631,7 +1631,6 @@ const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
 const	_tSD_V_COEF_64_TAPS	5	0x0110	72
 const	_tSTRING_RESOLUTION_TABLE	5	0x0158	104
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1230	5	0x01c0	92
 const	_tDDITHER_SEQ_TABLE	5	0x021c	56
 const	_tDDITHER_TABLE	5	0x0254	152
 const	_tDDITHER_TEMPOFFSET_TABLE	5	0x02ec	40
@@ -2008,9 +2007,6 @@ fn	_ScalerMDomainAspectOriginMode	8	0x8fcc	12
 fn	_ScalerMDomainCalculateDclkDVtotal	8	0x8fd8	1536
 fn	_ScalerTMDSRx2ReadRequestTimerEventEnable_WDINT	8	0x95d8	40
 fn	_ScalerTMDSRx3ReadRequestTimerEventEnable_WDINT	8	0x9600	40
-fn	_AwtoDiagBench	8	0x9628	364
-fn	_AwtoDiagSelfTest	8	0x9794	216
-fn	_AwtoDiagT2Now	8	0x986c	232
 fn	_UserAdjustZoomRatio	8	0x9954	220
 fn	_UserCommonAdjustAspectRatio	8	0x9a30	2340
 fn	_UserCommonAdjustGamma	8	0xa354	72

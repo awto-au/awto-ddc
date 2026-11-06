@@ -51,6 +51,7 @@ void AwtoDiagMainPass(void)
     AwtoDiagStage(5);
 }
 
+#if(_AWTO_DIAG_SELFTEST == _ON)      // awto: #53.6 off by default (boot time), numbers in docs/diag-block.md
 // Timer2 counts since an arbitrary origin: whole 1 ms ticks x reload period + TH2:TL2 offset.
 // EA off so the ISR cannot move g_usTimerCounter; a pending TF2 is an overflow whose tick is not yet counted.
 static unsigned long AwtoDiagT2Now(void)
@@ -78,115 +79,6 @@ static unsigned long AwtoDiagT2Now(void)
     return ((unsigned long)(usTick + ucF) * (0x10000UL - usRcap)) + (((unsigned int)ucH << 8) | ucL) - usRcap;
 }
 
-// 1000 x one instruction (4 x 250 djnz), exact counts; EA off so the Timer2 ISR cannot add time.
-static void AwtoDiagBench(void)
-{
-    unsigned long ulT;
-    unsigned char ucEa;
-
-    ucEa = EA;
-    EA = 0;
-    ulT = AwtoDiagT2Now();
-    __asm
-        push ar6
-        push ar7
-        push ar0
-        push dpl
-        push dph
-        push acc
-        mov dptr,#0xF6D0
-        mov r0,#0xFF
-        mov r6,#4
-    10$:
-        mov r7,#250
-    11$:
-        mov a,0x7f
-        djnz r7,11$
-        djnz r6,10$
-        pop acc
-        pop dph
-        pop dpl
-        pop ar0
-        pop ar7
-        pop ar6
-    __endasm;
-    g_stAwtoDiag.usBenchDirect = (unsigned int)(AwtoDiagT2Now() - ulT);
-    ulT = AwtoDiagT2Now();
-    __asm
-        push ar6
-        push ar7
-        push ar0
-        push dpl
-        push dph
-        push acc
-        mov dptr,#0xF6D0
-        mov r0,#0xFF
-        mov r6,#4
-    20$:
-        mov r7,#250
-    21$:
-        movx a,@dptr
-        djnz r7,21$
-        djnz r6,20$
-        pop acc
-        pop dph
-        pop dpl
-        pop ar0
-        pop ar7
-        pop ar6
-    __endasm;
-    g_stAwtoDiag.usBenchXdata = (unsigned int)(AwtoDiagT2Now() - ulT);
-    ulT = AwtoDiagT2Now();
-    __asm
-        push ar6
-        push ar7
-        push ar0
-        push dpl
-        push dph
-        push acc
-        mov dptr,#0xF6D0
-        mov r0,#0xFF
-        mov r6,#4
-    30$:
-        mov r7,#250
-    31$:
-        mov a,@r0
-        djnz r7,31$
-        djnz r6,30$
-        pop acc
-        pop dph
-        pop dpl
-        pop ar0
-        pop ar7
-        pop ar6
-    __endasm;
-    g_stAwtoDiag.usBenchIdata = (unsigned int)(AwtoDiagT2Now() - ulT);
-    ulT = AwtoDiagT2Now();
-    __asm
-        push ar6
-        push ar7
-        push ar0
-        push dpl
-        push dph
-        push acc
-        mov dptr,#0xF6D0
-        mov r0,#0xFF
-        mov r6,#4
-    40$:
-        mov r7,#250
-    41$:
-        djnz r7,41$
-        djnz r6,40$
-        pop acc
-        pop dph
-        pop dpl
-        pop ar0
-        pop ar7
-        pop ar6
-    __endasm;
-    g_stAwtoDiag.usBenchEmpty = (unsigned int)(AwtoDiagT2Now() - ulT);
-    EA = ucEa;
-}
 
 void AwtoDiagSelfTest(void)
 {
@@ -212,6 +104,6 @@ void AwtoDiagSelfTest(void)
     }
     g_stAwtoDiag.usBusy1ms = (unsigned int)((AwtoDiagT2Now() - ulT) >> 2);
 
-    AwtoDiagBench();
 }
+#endif
 #endif

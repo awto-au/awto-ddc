@@ -104,7 +104,7 @@ def report(d: dict, prev: dict | None, dt: float | None) -> str:
         L.append(f"self-test (5us base N={d['d5']}, Timer2 {per} counts/ms):")
         L.append(f"  ScalerTimerDelayXms({NOM_XMS_MS}): {xms:7.3f} ms  vs {NOM_XMS_MS} nominal  ({xms / NOM_XMS_MS * 100:5.1f} %)")
         L.append(f"  200 x 5us busy-wait:    {busy:7.1f} us  vs {NOM_BUSY_US} nominal  ({busy / NOM_BUSY_US * 100:5.1f} %)")
-    if d.get("bench") and per:
+    if d.get("bench") and any(d["bench"]) and per:
         L += bench_lines(d["bench"], per, d["rcap2h"])
     return "\n".join(L)
 

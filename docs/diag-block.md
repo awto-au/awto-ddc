@@ -15,14 +15,11 @@
 | 0x14 | 2 | main-loop heartbeat |
 | 0x16 | 2 | Timer2 ISR count |
 | 0x18 | 2 | EXINT1 (DDC-CI/debug) ISR count |
-| 0x1A | 1 | `g_ucDelay5usN_Base` (set by `ScalerMcu5usDelayCalc`) at self-test |
-| 0x1B | 2 | `ScalerTimerDelayXms(10)` in Timer2 counts / 4 |
-| 0x1D | 2 | 200 x `ScalerDelay5us()` in Timer2 counts / 4 |
-| 0x1F | 1 | `RCAP2H` at self-test |
-| 0x20 | 2 | micro-bench: 1000 x `mov a,0x7f`, raw Timer2 counts |
-| 0x22 | 2 | 1000 x `movx a,@dptr` (DPTR = block base) |
-| 0x24 | 2 | 1000 x `mov a,@r0` (R0 = 0xFF) |
-| 0x26 | 2 | 1000 x empty `djnz` loop (baseline) |
+| 0x1A | 1 | `g_ucDelay5usN_Base` (set by `ScalerMcu5usDelayCalc`) at self-test; 0 with the self-test off |
+| 0x1B | 2 | `ScalerTimerDelayXms(10)` in Timer2 counts / 4; 0 with the self-test off |
+| 0x1D | 2 | 200 x `ScalerDelay5us()` in Timer2 counts / 4; 0 with the self-test off |
+| 0x1F | 1 | `RCAP2H` at self-test; 0 with the self-test off |
+| 0x20 | 8 | reserved (was the micro-bench, removed in #53.6); 0 |
 | 0x28 | 1 | test command (#33): 0x01-0x04 key MENU/RIGHT/LEFT/EXIT, 0x10+n OSD event n, 0x20 debug pop-up; cleared when applied |
 | 0x29 | 1 | debug pop-up pending (#34): 1 = next input-info pop-up draws the debug lines; test cmd 0x20 sets it + raises event 10 |
 | 0x2A | 2 | main-loop passes in the last ~1 s (u16, target byte order) |
@@ -31,7 +28,7 @@
 ## Stages (temporal order; timestamp 0 before Timer2 runs)
 1 BOOT start of main | 2 GPIO init done (inside `ScalerMcuInitial`) | 3 `ScalerMcuInitial` done | 4 pin-share done | 5 main loop first pass | 6 panel power on | 7 DPTx link start | 8 DPTx link done.
 - 6..8 are marked in both the `_PANEL_ON` and `_BACKLIGHT_ON` paths of `UserCommonInterfacePanelPowerAction`.
-- The self-test runs once, just before stage 6 (final clock, interrupts live). Both counts stay 0 if `ScalerTimerDelayXms` never returns (#23).
+- Self-test: switch `_AWTO_DIAG_SELFTEST` (`_OFF` default, #53.6). When on it runs once, just before stage 6 (final clock, interrupts live). Both counts stay 0 if `ScalerTimerDelayXms` never returns (#23).
 
 ## Timer2 constants (SDK `ScalerCommonTimerFunction.c`; M2PLL 351 MHz, flash div 4, MCU div 1, xtal 14.318 MHz)
 - M2PLL mode: 701582 / 96 = 7308, reload `0xE373`, 7309 counts per 1 ms tick.
@@ -39,9 +36,19 @@
 - Counts = whole ticks x (0x10000 - RCAP2) + TH2:TL2 offset, read with EA off; stored value is counts >> 2.
 - Host picks the row by `RCAP2H` (0xE3 / 0xFB). Nominal: `DelayXms(10)` = 10 ms, 200 x 5 us = 1000 us.
 
-## Micro-bench (self-test, after the delays)
-- Inline asm, 4 x 250 `djnz` nest, EA off; R6/R7/R0/DPTR/ACC saved. Raw counts (not shifted), host: (x - empty) / 1000 = Timer2 counts per instruction.
-- Host assumes DW8051 cycles: `mov a,dir` 2, `movx` 2, `mov a,@r0` 1, `djnz` 2-3; 4 clocks per cycle; expected MCU clock 87.7 MHz (M2PLL 350.8 / 4).
+## Measured numbers (self-test + micro-bench, removed from the firmware in #53.6)
+- Measured 2026-11-06 on unit AWT26110003, image wb-fw53 step 2 (working-base + #53.2/17/18), M2PLL clock, Timer2 7309 counts/ms.
+- Self-test: `ScalerTimerDelayXms(10)` = 9.847 ms (98.5 %); 200 x `ScalerDelay5us()` (N=26) = 1094 us (109.4 %).
+- Micro-bench, 1000 iterations each, EA off, raw Timer2 counts (empty `djnz` loop 1216):
+
+| instruction | raw counts | cycles at the expected 87.7 MHz |
+|---|---|---|
+| `mov a,dir` | 1919 | 2.11 (expect 2) |
+| `movx a,@dptr` | 1883 | 2.00 |
+| `mov a,@r0` | 1550 | 1.00 |
+| `djnz` | 1216 (empty loop) | 3.65 (expect 2-3) |
+
+- Boot cost of bench + self-test (stage times of one boot each, same unit, 2026-11-06): stage 6 at 566 ms vs 554 ms, stage 8 at 711 ms vs 699 ms after removal = 12 ms. Stage 5 is 424 ms in both.
 
 ## Debug slave 0x35 read protocol (#38)
 - Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, inserted by `keil2sdcc.py` into `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.

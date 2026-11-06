@@ -29,6 +29,7 @@
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON
+#define _AWTO_DIAG_SELFTEST                                     _OFF    // _ON = delay self-test before panel power (usDelayXms10/usBusy1ms), costs boot time (#53.6)
 #if(_AWTO_DIAG == _ON)
 typedef struct
 {
@@ -44,10 +45,7 @@ typedef struct
     unsigned int usDelayXms10;                  // ScalerTimerDelayXms(10), Timer2 counts / 4
     unsigned int usBusy1ms;                     // 200 x ScalerDelay5us(), Timer2 counts / 4
     unsigned char ucRcap2h;                     // RCAP2H at self-test: tells XTAL from M2PLL reload
-    unsigned int usBenchDirect;                 // 1000 x mov a,0x7f, raw Timer2 counts
-    unsigned int usBenchXdata;                  // 1000 x movx a,@dptr (diag block byte)
-    unsigned int usBenchIdata;                  // 1000 x mov a,@r0 (R0 = 0xFF)
-    unsigned int usBenchEmpty;                  // 1000 x empty loop (djnz overhead)
+    unsigned int usReserved[4];                 // was the micro-bench (removed, #53.6); stays 0
     unsigned char ucTestCmd;                    // OSD test command, written over I2C, applied + cleared in main loop (#33)
     unsigned char ucDbgPopup;                   // 1 = next input-info pop-up shows the debug lines (#34), cleared when drawn
     unsigned int usLoopRate;                    // main-loop passes in the last ~1 s (#34)
@@ -64,7 +62,11 @@ extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
 extern void AwtoOsdDebugLines(void);
+#if(_AWTO_DIAG_SELFTEST == _ON)
 extern void AwtoDiagSelfTest(void);
+#else
+#define AwtoDiagSelfTest()
+#endif
 #define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 #else
