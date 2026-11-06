@@ -202,9 +202,12 @@ def cmd_doctor(_extra: list[str]) -> int:
     return 0
 
 
-@command("remove build output and logs", kind="action")
+@command("remove build output only (tmp/sdcc-port, tmp/fw/<serial>/ build dirs); images, maps, manifests, flashed.json, regs, logs kept",
+         kind="action")
 def cmd_clean(_extra: list[str]) -> int:
-    for path in (TMP,):
+    # #52.17: tmp/ also holds frozen images, flash state, measurements and logs - not regenerable
+    targets = [TMP / "sdcc-port"] + (sorted(p for p in FW.iterdir() if p.is_dir()) if FW.is_dir() else [])
+    for path in targets:
         if path.exists():
             shutil.rmtree(path)
             log(f"removed {path.relative_to(REPO)}")
