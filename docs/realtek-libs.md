@@ -1,3 +1,4 @@
+!! what nmonitors support that ?
 # Realtek libraries (FunctionLib, AdvancedLib)
 
 Status 2026-11-06. Issues: #11 (toolchain, audit), #30 (library signature DB).
@@ -46,7 +47,12 @@ Status 2026-11-06. Issues: #11 (toolchain, audit), #30 (library signature DB).
 
 1. Audit: `scripts/lib_audit.py` -> `tmp/lib_audit.tsv` (our size, vendor size, call sites, ISR use); summary on #11. Agent, worktree branch.
 2. Hand asm for top 5-10, each with a simulator/host equivalence test, SDCC call convention kept. Same agent/branch; merge after review, test flash on unit 3 only.
-3. Vendor match (#30): `scripts/omf51_lib.py` parses the Keil `.LIB`; `scripts/rtk_libsig.py build|match` stores masked signatures per library version under `~/vendors/realtek/analysis/libsigs/` and matches any firmware: EXACT / NEAR / ABSENT per function, library-version verdict, names TSV for Ghidra. Answers: does the vendor image use this library build; do our C sources match the `.LIB`.
+3. Vendor match (#30), done 2026-11-06 (commit 622f97e):
+    - Tools: `scripts/omf51_lib.py` (Keil extended OMF-51 parser); `scripts/rtk_libsig.py build|match|srccheck|list` (masked signatures per library version in `~/vendors/realtek/analysis/libsigs/`).
+    - Verdict: vendor JXC image uses the **same FunctionLib build** as our SDK copy. Of 370 lib functions: 111 EXACT (110 vendor addresses), 2 NEAR (95.8%), 48 too short to judge, 209 ABSENT (163 not linked by the vendor; AdvancedLib MBR/TCON not present).
+    - Real variants (60-90%): `ScalerGetDataPortSingleByte`, `ScalerColorRGBOutputGammaAdjust`, two DCR local-dimming functions.
+    - Sources vs `.LIB`: all 186 functions in the C sources exist in the `.LIB`; the `.LIB` has 169 more with no source. Byte-equality of a Keil compile of the sources not tested.
+    - 110 vendor function names -> `~/vendors/realtek/analysis/lib_match_names_bank0..6.tsv` (status `[lib]`), fed to the Ghidra naming pass.
 4. More versions: firmware-package hunt and RTDCustomerTool version hunt feed the signature DB; finds indexed in `~/vendors/realtek/analysis/found_images.tsv`, `found_symbols.tsv`, `found_hostapps.tsv`.
 
 ## Open questions (Dan)
