@@ -1,3 +1,6 @@
 # ghidra_names_bank3.tsv - JXC 4K monitor firmware, bank 3 (flash 0x30000-0x3FFFF), 8051:BE:16:default
 # Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
 # No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
+CODE:d1c3	ScalerFlashWrite	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONFLASHWRITE, exact masked match.	[lib]
+CODE:e49b	ScalerMemoryCalculateNumberAndRemain	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_MEMORYFUNCTION, exact masked match.	[lib]
+CODE:ef2b	ScalerFlashRead	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONFLASHREAD, exact masked match.	[lib]

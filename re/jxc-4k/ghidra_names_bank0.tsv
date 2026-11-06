@@ -12,3 +12,7 @@ CODE:fd87	osd_keyevt_handler_fd87	func	Switch on e151: 1->ee33(1), 2->ee33(3), 3
 CODE:eee4	osd_keyevt_handler_eee4	func	Switch on e151: 1/2 adjust value; 3/6 fcfe+0dc5, e150=0x10.	[guess]
 CODE:f184	osd_keyevt_handler_f184	func	Switch on e151: 1/2 value change; 3/6 fcfe.	[guess]
 CODE:f97a	osd_keyevt_handler_f97a	func	Switch on e151 (1,2,3,6).	[guess]
+CODE:db28	pwm_set_freq	func	PWM frequency: R7=0x10 selects PWM4, R4:R5 freq param; FF3A/FF3C/FF43/FF44/FF49 (issue #7).	[fw]
+CODE:e896	mcu_init_pwm_uart	func	Boot init; PWM_DUT_TYPE|=0x3f, PWM_VS_CTRL=0 (issue #7).	[fw]
+CODE:fb79	pwm_enable_ctrl	func	PWM_EN (FF48) read-modify-write, bit4 = PWM4 (issue #7).	[fw]
+CODE:c119	ScalerColorDCRGetAverage	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDCRGETAVERAGE, exact masked match.	[lib]
