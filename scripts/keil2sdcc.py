@@ -112,6 +112,9 @@ WRAPS = [
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO0\[\]", r"^\};", LOGO_SDK_DATA),
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO1\[\]", r"^\};", LOGO_SDK_DATA),
     (OSD + "RTD2014OsdFontVLC.c", r"^\s*case _REALTEK_1BIT_LOGO0:", r"^\s*default:", "_AWTO_DEMO_LOGO", "before-end"),
+    # input-info + debug pop-up: speech-bubble "i" icon at the left (tFONT1_ICON_INFORMATION), blank when _AWTO_POPUP_ICON is _OFF (#46)
+    (OSD + "RTD2014OsdDisplay.c", r"OsdFontVLCDynamicLoadIcon\(_ICON_POS_UP_0, _MENU_INFORMATION\);",
+     r"OsdFontPut1BitMainMenuIcon\(ROW\(_OSD_MESSAGE_ROW_START\), COL\(3\)", "_AWTO_POPUP_ICON"),
     # _AWTO_DEBUG_PORT: RL6449_Project.h forces GET_OSD_DDCCI_STATUS() off -> DDC port in Realtek debug mode (#13)
     ("User/RTD Series/RTD2014Osd/Header/RTD2014Include.h", r"^#define GET_OSD_DDCCI_STATUS\(\)",
      r"^#define GET_OSD_DDCCI_STATUS\(\)", "_AWTO_DEBUG_PORT == _OFF"),

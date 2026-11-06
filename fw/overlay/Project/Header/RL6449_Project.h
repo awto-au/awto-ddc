@@ -24,6 +24,7 @@
 //--------------------------------------------------
 #define _AWTO_DEMO_LOGO                                         _ON     // awto: back on (#46)
 #define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)
+#define _AWTO_POPUP_ICON                                        _OFF    // _ON = SDK info-bubble icon at the left of the input-info/debug pop-ups (#46)
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON
