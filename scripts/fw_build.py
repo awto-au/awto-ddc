@@ -4,6 +4,9 @@
 usage: fw_build.py --serial AWT26110003 [--skip-compile] [--common 0x5000]
   output: tmp/fw/<serial>/fw.ihx, fw.map, fw.bin (bank k at file offset k*64 KiB), build.json
   --skip-compile  reuse tmp/sdcc-port/asm (skip port/EDID/compile)
+  --layout FILE   sticky flash layout (fw/bank_layout.tsv, scripts/sdcc_layout.py): fixed slot per chunk, reused
+                  between builds so a small edit rewrites few 4 KiB sectors (#12); missing/empty file = create it
+  --src-patch F   JSON [{file, old, new}] applied to tmp/sdcc-port/src after `port` (measurement edits, no SDK change)
 Memory (SDK + board, awto-ddc#8):
 - XDATA window 0xD700-0xF6FF; fixed DDC RAM for D0-D3 at E080/E280/E480/E680 (+256 B each) splits it
   into holes; module XSEG areas are distributed over the holes (sdld cannot split one area).
@@ -48,6 +51,17 @@ def run(step, cmd):
     return r.stdout
 
 
+def apply_src_patch(p: Path):
+    """Measurement edits on the derived tree (tmp/sdcc-port/src); each old string must occur exactly once."""
+    for e in json.loads(p.read_text()):
+        f = ROOT / "tmp/sdcc-port/src" / e["file"]
+        t = f.read_text(errors="replace")
+        if t.count(e["old"]) != 1:
+            sys.exit(f"src-patch: {e['file']}: old text found {t.count(e['old'])}x")
+        f.write_text(t.replace(e["old"], e["new"]))
+        log(f"src-patch applied: {e['file']}")
+
+
 def holes():
     h, cur = [], XRAM[0]
     for a, b in sorted(EDID_RAM):
@@ -78,6 +92,27 @@ def check_xdata(mp: str, hs):
             bad.append(f"{m.group(1)} 0x{a:04x}+{n}")
     if bad:
         sys.exit(f"XDATA outside holes {[(hex(a), hex(b)) for a, b in hs]}: {sorted(set(bad))}")
+
+
+def check_layout(mp: str, pins: dict, layout: str):
+    """Every pinned area sits at its slot; residual areas (vectors/HOME/GSINIT/library/XINIT) end below resid_end."""
+    got, want = {}, {}                                       # the map prints area names cut to 32 chars
+    for m in re.finditer(r"^((?:CH|ST)\S*)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =", mp, re.M):
+        got.setdefault(m.group(1)[:32], []).append(int(m.group(2), 16))
+    for n, v in pins.items():
+        want.setdefault(n[:32], []).append(v)
+    bad = [n for n in want if sorted(want[n]) != sorted(got.get(n, []))]
+    if bad:
+        sys.exit(f"layout: {len(bad)} areas not at their slot in the map: {bad[:5]}")
+    end = 0
+    for m in re.finditer(r"^(HOME|GSINIT\d*|GSFINAL|CSEG|CONST|XINIT)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
+        lo, n = int(m.group(2), 16), int(m.group(3), 16)
+        if n and lo < BANK:
+            end = max(end, lo + n)
+    resid = int(next((l.split()[1] for l in Path(layout).read_text().splitlines() if l.startswith("#resid_end")), "0"), 0)
+    log(f"layout: {len(pins)} areas at their slots; residual areas end 0x{end:x} (resid_end 0x{resid:x})")
+    if end > resid:
+        sys.exit(f"layout: residual areas end 0x{end:x} > resid_end 0x{resid:x}: raise --resid-end (relayout)")
 
 
 def split_xseg(asm_dir: Path):
@@ -181,6 +216,8 @@ def main() -> int:
     ap.add_argument("--serial", required=True)
     ap.add_argument("--skip-compile", action="store_true")
     ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
+    ap.add_argument("--layout", default="")
+    ap.add_argument("--src-patch", default="")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/fw_build.log").open("a")
@@ -188,13 +225,16 @@ def main() -> int:
     log(f"byte order: {'BIG-endian (--big-endian, Keil order)' if T.BIG_ENDIAN else 'little-endian (default)'}, lib {T.LIB}")
     if not a.skip_compile:
         run("port", [py, "scripts/keil2sdcc.py", "port"])
+        if a.src_patch:
+            apply_src_patch(Path(a.src_patch))
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", LIB_UV2, "--asm"])
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
-    run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
+    run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS,
+                 *(["--layout", a.layout] if a.layout else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_memcpy reads its PARMs little-endian: BE builds keep the library's BE memcpy (#24, #15)
@@ -217,9 +257,14 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     rels = sorted(bank_dir.glob("*.rel"))
     used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.M)})
+    pins = {}
+    if a.layout:                                             # one area per chunk/stub, each pinned to its slot
+        ab = json.loads((ROOT / "tmp/sdcc-port/area_bases.json").read_text())
+        used, pins = ab["banks"], ab["areas"]
     xsegs = {int(m) for r in rels for m in re.findall(r"^A XSEG(\d+) ", r.read_text(errors="replace"), re.M)}
     # trunk sdld: area base = -a (asxxxx 5.50; -b gone); a base for an undefined area is an error
-    wl = [f"-Wl-aBANK{n}=0x{n * BANK + a.common:x}" for n in used]
+    wl = [] if pins else [f"-Wl-aBANK{n}=0x{n * BANK + a.common:x}" for n in used]
+    wl += [f"-Wl-a{n}=0x{v:x}" for n, v in sorted(pins.items())]
     wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
     cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",
@@ -234,6 +279,8 @@ def main() -> int:
         sys.exit(f"[link] failed{' (undefined: ' + ', '.join(undef) + ')' if undef else ''}")
     log(f"IRAM: {iram}")
     check_xdata((out / "fw.map").read_text(errors="replace"), hs)
+    if pins:
+        check_layout((out / "fw.map").read_text(errors="replace"), pins, a.layout)
     mem = parse_ihx(out / "fw.ihx")
     common_end = max((x for x in mem if x < a.common), default=0) + 1
     nb = max(used) + 1
