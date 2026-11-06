@@ -129,7 +129,13 @@ WRAPS = [
     ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h",
      r"^#if\(_D0_MHL_EMBEDDED_DDCRAM_SIZE", r"^extern BYTE xdata MCU_DDCRAM_MHL_D2\[", "!defined(_AWTO_DDCRAM_DEFINER)"),
 ]
-FW_TAG = subprocess.run(["git", "describe", "--always", "--dirty"], cwd=ROOT, capture_output=True, text=True).stdout.strip() or "nogit"
+def fw_tag(root) -> str:
+    """No --dirty, fixed abbrev: rebuilding one commit gives identical bytes (#51.5); AWTO_FW_TAG overrides."""
+    return os.environ.get("AWTO_FW_TAG") or subprocess.run(
+        ["git", "describe", "--always", "--abbrev=7"], cwd=root, capture_output=True, text=True).stdout.strip() or "nogit"
+
+
+FW_TAG = fw_tag(ROOT)
 LOGO_INC = "#if((_AWTO_DEMO_LOGO == _ON) && (_AWTO_LOGO_SDK == _OFF))\n%s\n#endif"
 # Lines inserted before the first line matching anchor: (SDK-relative file, anchor regex, text)
 INSERTS = [

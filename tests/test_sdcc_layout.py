@@ -80,3 +80,48 @@ def test_fw_build_promotes_after_link_and_check():
     main = src[src.index("def main()"):]
     assert main.index('"link"') < main.index("check_layout(") < main.index("promote_layout(") if '"link"' in main else \
         main.index("sdcc_link.link(") < main.index("check_layout(") < main.index("promote_layout(")
+
+
+# --- #51.5 / #51.6 fw_build defaults, --cluster, FW_TAG ---------------------------------------------------------
+
+def test_fw_build_default_layout_is_tracked_file():
+    import fw_build
+    assert fw_build.parse_args(["--serial", "X"]).layout == "fw/bank_layout.tsv"
+    assert fw_build.parse_args(["--serial", "X", "--layout", ""]).layout == ""
+
+
+def test_fw_build_cluster_refused_unless_layout_created(tmp_path, monkeypatch):
+    import fw_build
+    monkeypatch.setattr(fw_build, "ROOT", tmp_path)
+    (tmp_path / "fw").mkdir()
+    with pytest.raises(SystemExit, match="--cluster"):                         # no layout at all
+        fw_build.parse_args(["--serial", "X", "--layout", "", "--cluster", "fn"])
+    (tmp_path / "fw/bank_layout.tsv").write_text(ROW)
+    with pytest.raises(SystemExit, match="existing layout"):                   # layout in use
+        fw_build.parse_args(["--serial", "X", "--cluster", "fn"])
+    (tmp_path / "fw/bank_layout.tsv").unlink()                                 # being created: allowed
+    assert fw_build.parse_args(["--serial", "X", "--cluster", "fn"]).cluster == "fn"
+
+
+def test_sdcc_bank_cluster_refused_with_existing_layout(tmp_path):
+    import os
+    import subprocess
+    (tmp_path / "asm").mkdir()
+    lay = _file(tmp_path, "#common 0x6000\n#resid_end 0xc00\n")
+    r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
+                        "--out", str(tmp_path / "out"), "--layout", str(lay), "--cluster", "fn"],
+                       env=dict(os.environ, AWTO_DDC_REPO=str(tmp_path)), capture_output=True, text=True, timeout=30)
+    assert r.returncode != 0 and "--cluster" in r.stderr
+
+
+def test_fw_tag_env_override_and_no_dirty(tmp_path, monkeypatch):
+    import subprocess
+    import keil2sdcc
+    monkeypatch.setenv("AWTO_FW_TAG", "fixed-1")
+    assert keil2sdcc.fw_tag(tmp_path) == "fixed-1"
+    monkeypatch.delenv("AWTO_FW_TAG")
+    g = lambda *a: subprocess.run(["git", *a], cwd=tmp_path, check=True, capture_output=True)
+    g("init", "-q"); g("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "x")
+    clean = keil2sdcc.fw_tag(tmp_path)
+    (tmp_path / "f").write_text("x"); g("add", "f")                            # staged change: --dirty would append
+    assert keil2sdcc.fw_tag(tmp_path) == clean and "dirty" not in clean and len(clean) == 7

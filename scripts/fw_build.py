@@ -218,16 +218,28 @@ def parse_ihx(p: Path) -> dict:
     return mem
 
 
-def main() -> int:
-    global LOG
+def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", required=True)
     ap.add_argument("--skip-compile", action="store_true")
     ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
-    ap.add_argument("--layout", default="")
-    ap.add_argument("--cluster", choices=["module", "fn"], default="", help="call-graph bank placement at layout creation (sdcc_bank.py)")
+    ap.add_argument("--layout", default="fw/bank_layout.tsv",
+                    help="sticky layout (default: the tracked, proven one); '' = no layout, first-fit packing")
+    ap.add_argument("--cluster", choices=["module", "fn"], default="",
+                    help="call-graph bank placement; only valid while a layout is being created (missing/empty --layout file)")
     ap.add_argument("--src-patch", default="")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
+    if a.cluster:
+        import sdcc_layout
+        if not a.layout or sdcc_layout.Layout.load(ROOT / a.layout).rows:
+            sys.exit(f"--cluster only applies while creating a layout: --layout {a.layout!r} is "
+                     f"{'unset' if not a.layout else 'an existing layout (delete it to re-cluster)'}; nothing done")
+    return a
+
+
+def main() -> int:
+    global LOG
+    a = parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/fw_build.log").open("a")
     py = sys.executable

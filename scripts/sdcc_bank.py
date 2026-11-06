@@ -375,6 +375,8 @@ def main() -> int:
     sticky = bool(a.layout)
     lay = L.Layout.load(a.layout) if sticky else L.Layout()
     reuse = sticky and bool(lay.rows)                        # existing layout: placement comes from it
+    if a.cluster and not (sticky and not reuse):             # #51.6: it only acts while a layout is created
+        sys.exit("--cluster is ignored unless a layout is being created (--layout FILE missing or empty); refusing")
     if reuse:
         lay.check_header(a.common_max, a.resid_end, a.layout)   # #51.3
     fill = [0] * a.banks
