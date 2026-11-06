@@ -148,14 +148,15 @@ def open_native(img: bytes, d: Path, log, flash: FlashPort | None = None, extra_
     return s
 
 
-def parse_map(mp: str, img: bytes):
-    """(sym dict, where(bank, pc)). Common area = leading bytes identical in every bank (no build.json for loose images)."""
+def parse_map(mp: str, img: bytes, ncode: int | None = None):
+    """(sym dict, where(bank, pc)). Common area = leading bytes identical in every code bank (no build.json for loose
+    images); ncode = number of code banks (vendor image: 7 of 16, the rest is 0xFF / settings)."""
     sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
     for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", mp, re.M):      # full-length names (the C: lines cut at 32 chars)
         sym["_" + m.group(1)] = int(m.group(2), 16)
     funcs = sorted((v, k) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_"))
     keys = [v for v, _ in funcs]
-    nb = len(img) // BANK
+    nb = ncode or len(img) // BANK
     cend = 0
     while cend < BANK and all(img[k * BANK + cend] == img[cend] for k in range(1, nb)):
         cend += 1
@@ -482,17 +483,19 @@ class Machine:
     """ucsim running a banked image with Dev models. run(n) serves device events until n instructions are used
     (estimated from ticks), a non-event stop (breakpoint) happens, or a model calls request_stop()."""
 
-    def __init__(self, img: bytes, mapp: Path, tag: str, log=None, devs=(), extra_breaks=()):
+    def __init__(self, img: bytes, mapp: Path, tag: str, log=None, devs=(), extra_breaks=(), ncode: int | None = None,
+                 ret_pc: int | None = None):
+        """ncode / ret_pc: vendor (Keil) image: code bank count, and the address of any RET in the common area (stub return)."""
         self.img, self.devs = img, list(devs)
         self.map_text = mapp.read_text(errors="replace")
-        self.sym, self.where = parse_map(self.map_text, img)
+        self.sym, self.where = parse_map(self.map_text, img, ncode)
         self.log = log or _Null()
         self.s = open_native(img, ROOT / "tmp/fwsim" / tag, _Null(), None, extra_breaks)
         self.s.send("fill xram 0x0 0xfffe 0x0")            # ucsim starts XRAM random: registers read the same every run
         self.ticks, self.instr, self._n, self._q, self._stop, self.last_out = 0, 0, 0, [], False, ""
         self.stubs, self.stub_hits = {}, {}
         self.t2_scale, self._t2_set, self._t2_at = 1, -1, -10**9
-        self.ret_pc = self.sym["__bs_call_sw"] + 5            # the RET that ends __bs_call (mov dpl,r5 / mov dph,r6 / mov a,r4 / ret)
+        self.ret_pc = ret_pc if ret_pc is not None else self.sym["__bs_call_sw"] + 5            # the RET that ends __bs_call (mov dpl,r5 / mov dph,r6 / mov a,r4 / ret)
         self.hook = {}
         for d in self.devs:
             for a in d.reads:
@@ -583,6 +586,8 @@ class Machine:
         if ret is None:                                   # watch only: the function runs
             return
         
+        if "r7" in ret:                                   # Keil byte result (register bank 0; main-context calls)
+            self.put(f"set memory iram 0x7 0x{ret['r7'] & 255:x}")
         if "dpl" in ret:
             self.put(f"set memory sfr 0x82 0x{ret['dpl'] & 255:x}")
         if "dph" in ret:
