@@ -188,7 +188,7 @@
 #define _PWM1_RST_EN                            _OFF
 #define _PWM2_RST_EN                            _OFF
 #define _PWM3_RST_EN                            _OFF
-#define _PWM4_RST_EN                            _ON
+#define _PWM4_RST_EN                            _OFF
 #define _PWM5_RST_EN                            _OFF
 #define _PWM_RST_SIGNAL_SEL                     _DVS
 
