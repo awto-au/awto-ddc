@@ -10,6 +10,8 @@ names) and are applied before the hand names.
 Exports per bank in ~/vendors/realtek/analysis/jxc-4k/bank<N>/: decompiled*.c, disassembly.asm, and (re/ghidra/ExportRegAccess.java)
   regwrites.tsv / regreads.tsv: every register access site (insn, function, reg, name, kind, constant value/masks, callee).
   Columns/kinds: header of ExportRegAccess.java. Example: grep -P '\tFF3A\t|\tff3a\t' bank*/regwrites.tsv
+Types + typed globals: re/ghidra/ApplySdkTypes.java reads re/jxc-4k/sdk_types.tsv (scripts/ghidra_sdk_types.py) and
+ghidra_globals.tsv (scripts/ghidra_globals_map.py) [+ ghidra_globals_hand.tsv, + `var:<type>` rows of the names TSV].
 Shared scripts (ApplyNames.java, ExportAll.java) are used from awto-2000 by path ($AWTO_2000), not copied.
 Project + firmware bytes stay out of git: ~/vendors/realtek/analysis/. Log: ./tmp/logs/re_<cmd>_<bank>.log
 Process: awto-dan docs/embedded/reversing/README.md
@@ -70,6 +72,8 @@ def one(cmd, bank) -> int:
     regs, ports = ROOT / "tmp" / f"regs_bank{bank}.tsv", ROOT / "tmp" / "regs_ports.tsv"
     regdb_ghidra_labels.write(CHIP, [tsv], regs, ports)
     tail = ["-postScript", "ApplyRegLabels.java", str(regs), "-postScript", "ApplyNames.java", str(tsv),
+            "-postScript", "ApplySdkTypes.java", str(DATA / "sdk_types.tsv"), str(DATA / "ghidra_globals.tsv"),
+            str(DATA / "ghidra_globals_hand.tsv"), str(tsv),
             "-postScript", "ExportRegAccess.java", str(out), str(ports), str(regs),
             "-postScript", "ExportAll.java", str(out), str(tsv)]
     if cmd == "import":

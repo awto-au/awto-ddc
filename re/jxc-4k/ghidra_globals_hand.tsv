@@ -1,0 +1,2 @@
+# ghidra_globals_hand.tsv - hand-verified typed globals, applied after ghidra_globals.tsv (wins on clashes; merged into it by scripts/ghidra_globals_map.py).
+# Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (type: u8 s8 u16 s16 u32 s32 ptr3, <StructName> from sdk_types.tsv, [n] for arrays)
