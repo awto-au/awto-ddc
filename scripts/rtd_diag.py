@@ -21,7 +21,7 @@ Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Head
 Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, MCU div 1, 14.318 MHz xtal):
   M2PLL: 701582 / 96 = 7308 -> reload 0xE373, 7309 counts per 1 ms tick; xtal (initial mode): 14318 / 12 = 1193
   -> reload 0xFB56, 1194 counts per tick. RCAP2H in the block selects the row.
-Log: ./tmp/logs/rtd_diag.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
+Log: ./tmp/logs/rtd_diag.log (decoded), ./tmp/logs/rtd_diag.raw.log (I2C trace). Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
 import argparse, os, signal, struct, sys, time
 from pathlib import Path
@@ -306,7 +306,8 @@ def main() -> int:
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (root / "tmp/logs/rtd_diag.log").open("a")
-    B.log = lambda s: LOG.write(f"{time.strftime('%H:%M:%S')} {s}\n")      # bridge logs to file only
+    RAW = (root / "tmp/logs/rtd_diag.raw.log").open("a")                 # I2C byte trace; rtd_diag.log = decoded only
+    B.log = lambda s: RAW.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
     io = B.Real(a.bus, allow_write=False, regread=True)
     if a.release:
         ok = io.write(DEV8, MSG_END, b"") and io.write(DEV8, MSG_DONE, b"")

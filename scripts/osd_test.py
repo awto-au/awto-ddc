@@ -46,14 +46,18 @@ def main() -> int:
     base = diag_addr(a.map) if a.cmd else osdinfo_addr(a.map)
     writes = []
     for act in a.actions:
+        kind = "event" if act in EVENTS else "key"
         if a.cmd:
-            writes.append(f"{base + TESTCMD_OFF:04X}={(0x10 + EVENTS[act]) if act in EVENTS else (1 + KEYS[act]):02X}")
+            val = (0x10 + EVENTS[act]) if act in EVENTS else (1 + KEYS[act])
+            writes.append((f"{base + TESTCMD_OFF:04X}={val:02X}", f"osd_test {act.upper()} {kind} via ucTestCmd (cmd 0x{val:02X})"))
             continue
         off, val = (EVENT_OFF, EVENTS[act]) if act in EVENTS else (KEY_OFF, KEYS[act])
-        writes.append(f"{base + off:04X}={val:02X}")
+        field = "ucOsdEventMsg" if act in EVENTS else "ucOsdKeyMessage"
+        writes.append((f"{base + off:04X}={val:02X}", f"osd_test {act.upper()} {kind} via g_stOsdInfo.{field}={val}"))
     rc = 0
-    for w in writes:                       # one call per action: the firmware consumes each before the next
-        rc |= subprocess.call([sys.executable, str(HERE / "rtd_dbg_write.py"), str(a.bus), "--serial", a.serial, w])
+    for w, label in writes:                # one call per action: the firmware consumes each before the next
+        rc |= subprocess.call([sys.executable, str(HERE / "rtd_dbg_write.py"), str(a.bus), "--serial", a.serial,
+                               "--label", label, w])
     return rc
 
 
