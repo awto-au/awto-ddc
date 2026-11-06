@@ -39,6 +39,8 @@ TRIALS = {
     "T10_07FC_15": [(0x07FC, 0x15)],
     "T11_dither": DITH,
     "T12_meas": MEAS,
+    "A1_a32e_fe": [(0xA32E, 0xFE)],                             # DDR PHY LPDDR mode_reg_addr bit6 set (vendor value), #26
+    "A2_ddr_err_clr": [(0xA851, 0x00), (0xA852, 0x00), (0xA853, 0x00), (0xA86E, 0x00), (0xA86F, 0x00)],   # clear DDR PHY sticky FIFO errors
     "T13_all": [(0x0028, 0x0B), (0x31C0, 0x80), (0x0026, 0xC1), (0x4026, 0xC1), (0x003D, 0xD0), (0x0041, 0xD1),
                 (0x3040, 0x00), (0x07FC, 0x15)] + LS + DITH + MEAS,
 }
@@ -101,6 +103,8 @@ def main() -> int:
                 log(f"  write {ad:04X} failed")
         log(f"  wrote {' '.join(f'{ad:04X}={f2(prd(ad))}' for ad, _ in regs[:6])}{' ...' if len(regs) > 6 else ''}")
         burst(f"{name} candidate")
+        if name.startswith("A"):
+            log("  readback " + " ".join(f"{ad:04X}={f2(prd(ad))}" for ad in (0xA32E, 0xAB28, 0xA851, 0xA852, 0xA853, 0xA86E, 0xA86F)))
         for ad, v in orig:
             if v is not None:
                 pwr(ad, v)
