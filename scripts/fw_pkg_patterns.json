@@ -1,0 +1,21 @@
+[
+ {"id": "gigabyte-raw-bin-zip", "vendor": "gigabyte",
+  "container": "zip -> single <MODEL>_<ver>.bin (raw SPI flash image, size multiple of 64 KiB banks)",
+  "image": "the .bin itself; sizes 640 KiB-2 MiB; header = banked 8051 (LJMP at 0, 8-byte vectors)",
+  "package_files_all": ["*.bin"], "obfuscation": "none seen (RTD27xx 8051 images entropy ~6.9)",
+  "notes": "Novatek/MStar/Realtek all ship this way; family from strings (RTDnnnn/NT68nnn) and DDC caps model()"},
+ {"id": "gigabyte-fwupd-sfx", "vendor": "gigabyte",
+  "container": "zip -> <MODEL>_<ver>.exe (PE + appended 7z SFX) -> FWUPD/{F<ver>.bin, FA<ver>.bin, upd.xml, setup.iss, UpdFW_RTK.exe, RFlash.dll, RtHIDlib.dll, RTKCmd_x64.dll}",
+  "image": "FWUPD/F*.bin (main) and FA*.bin (second image, e.g. second scaler/USB-C MCU); upd.xml has <model>,<fw>,<fw_ver>,<exe>rtk",
+  "package_files_all": ["UpdFW_RTK.exe", "upd.xml"], "obfuscation": "none for RTD2718/19/28/98; RTD2738/2739 images are not plain 8051 (entropy 7.1, no reset vector)",
+  "notes": "Updater talks to the monitor over USB HID (RtHIDlib.dll HID_i2cread/i2cwrite/readflash/writeflash/handshakeauth...), not GPU DDC"},
+ {"id": "gigabyte-fwupd-nested-updpack", "vendor": "gigabyte",
+  "container": "zip -> .exe -> 7z -> setup.exe (InstallShield/NSIS) + FWUPD/UpdPack.exe (7z SFX) -> OSDSidekick + F*.bin + UpdFW_RTK/UpdFW_Nova",
+  "image": "F*.bin / M32U*.bin next to UpdFW_*.exe", "package_files_all": ["UpdFW_Nova.exe"],
+  "notes": "Nova = Novatek variant of the same updater pack; both in one package"},
+ {"id": "dell-nsis-upg", "vendor": "dell",
+  "container": "zip -> Dell_<model>_FWUpdate_<ver>_Windows.exe (NSIS) -> Firmware Updater.exe (Sciter GUI) + plugins/{display,hub,pdc,tbt,webcam,audio,bridge,devices}.dll + <ver>/<model>_<ver>_<date>.upg",
+  "image": ".upg = Dell UPG container: big-endian length-prefixed header (UPG, 1.0.6, model, version, component list 'DISPLAY'...), per-chunk base64-url strings, then binary payload",
+  "package_files_all": ["Firmware Updater.exe", "*.upg"], "obfuscation": "payload encrypted (random-looking, per-chunk key strings in header); key logic in Firmware Updater.exe, not cracked",
+  "notes": "plugins/display.dll has MStarISP and RealtekISP classes (scalar/realtek/realtek_isp.cpp), I2C channel select"}
+]
