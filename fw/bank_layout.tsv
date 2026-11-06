@@ -807,6 +807,7 @@ stub	_UserCommonInterfaceGetDVMaxMinFreq	C	0x2d8b	9
 stub	_AwtoMeasEvent	C	0x2d94	9
 stub	_AwtoMeasInit	C	0x2d9d	9
 stub	_AwtoMeasT2Sample	C	0x2da6	9
+const	_tOSD_FACTORY_WIN0	C	0x2daf	12
 fn	_ScalerMDomainDHtotalFinetune	C	0x2dc1	616
 stub	_ScalerMDomainDtotalLastLineFinetune	C	0x3029	9
 stub	_ScalerMDomainMemoryConfig	C	0x3032	9
@@ -903,6 +904,8 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
+const	_tiOSD_REALTEK_1BIT_LOGO0	C	0x3b26	212
+const	_tiOSD_REALTEK_1BIT_LOGO1	C	0x3bfa	540
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1253,8 +1256,6 @@ const	_g_stOSDDefaultData	3	0x0000	28
 const	_g_stSixColorDefaultData	3	0x001c	16
 const	_tBriConDefaultData	3	0x002c	24
 const	_tColorTempDefaultData	3	0x0044	44
-const	_tiOSD_REALTEK_1BIT_LOGO0	3	0x0070	212
-const	_tiOSD_REALTEK_1BIT_LOGO1	3	0x0144	540
 const	_tFONT1_GLOBAL	3	0x0360	756
 const	_tICON_REALTEK_1BIT_LOGO0	3	0x0654	24
 const	_tICON_REALTEK_1BIT_LOGO1	3	0x066c	444
@@ -2162,7 +2163,6 @@ const	_tOSD_FACTORY_ON_OFF_TABLE	10	0x0b6c	8
 const	_tOSD_FACTORY_PAGE_1_TABLE	10	0x0b74	36
 const	_tOSD_FACTORY_PAGE_TABLE	10	0x0b98	48
 const	_tOSD_FACTORY_RGB_TABLE	10	0x0bc8	12
-const	_tOSD_FACTORY_WIN0	10	0x0bd4	12
 const	_tsCOLORIMETRY_SEAMLESS	10	0x0be0	28
 const	_tsOSD_DOUBLE_SIZE	10	0x0bfc	16
 const	_tsOSD_FACTORY_ADC_GAIN	10	0x0c0c	16
@@ -2251,7 +2251,6 @@ fn	_ScalerTMDSFirstActiveProc	10	0x1bbc	52
 fn	_ScalerTMDSRx2CheckDataDFE	10	0x1bf0	128
 fn	_ScalerTMDSRx3CheckDataDFE	10	0x1c70	128
 fn	_UserDdcciHandler	10	0x1cf0	8
-fn	_AwtoDiagTestCmd	10	0x1cf8	64
 fn	_RTDFlashRestorePanelUsedTimeData	10	0x1d38	52
 fn	_RTDFlashSavePanelUsedTimeData	10	0x1d6c	36
 fn	_MenuAdvanceDpOptionD0	10	0x1d90	96
@@ -2730,6 +2729,7 @@ fn	_UserCommonInterfaceOsdActiveProc	10	0xa1e0	8
 fn	_ScalerDisplaySetDVFreq	10	0xa1e8	332
 fn	_ScalerMDomainMemoryConfig	10	0xa334	128
 fn	_ScalerMDomainMemorySelectConfirm	10	0xa3b4	72
+fn	_AwtoDiagTestCmd	10	0xa3fc	84
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	11	0x0000	56
 const	_tFONT1_ICON_ADVANCE	11	0x0038	348
 const	_tFONT1_ICON_ASPECT	11	0x0194	384
