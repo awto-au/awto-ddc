@@ -22,6 +22,7 @@ def main() -> int:
     ap.add_argument("--serial", default="AWT26110003")
     ap.add_argument("--tag", default=None)
     ap.add_argument("--layout", default="", help="passed to fw_build (sticky layout, working-base)")
+    ap.add_argument("--cluster", choices=["module", "fn"], default="", help="passed to fw_build")
     a = ap.parse_args()
     tag = a.tag or f"sc{a.level}"
     inst = a.bin or str(RCBE / ("rc-be-install" if a.level == "0" else f"rc-be-install-sc{a.level}"))
@@ -30,7 +31,7 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (ROOT / "tmp/logs/regcall_build.log").open("a")
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} build {tag} bin={inst}\n")
-    p = subprocess.Popen([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", a.layout] if a.layout else [])], cwd=ROOT, env=env,
+    p = subprocess.Popen([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", a.layout] if a.layout else []), *(["--cluster", a.cluster] if a.cluster else [])], cwd=ROOT, env=env,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     import select
     t_last, t0 = time.monotonic(), time.monotonic()
