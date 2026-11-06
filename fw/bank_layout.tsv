@@ -814,6 +814,7 @@ stub	_SysJudgeGetActiveWaitTime	C	0x3236	9
 stub	_SysJudgeHandler	C	0x323f	9
 stub	_AwtoDiagInit	C	0x3248	9
 stub	_AwtoDiagMainPass	C	0x3251	9
+stub	_AwtoMeasEvent	C	0x325a	9
 stub	_AwtoDiagStage	C	0x3263	9
 stub	_SysMainSystemInitial	C	0x326c	9
 stub	_SysMainSytemPowerDetect	C	0x3275	9
@@ -845,9 +846,10 @@ stub	_SysSourceSwitchInputPort	C	0x33e0	9
 stub	_SysTMDSRxHandler	C	0x33e9	9
 stub	_SysTMDSRxSetPsWakeupHpdToggle	C	0x33f2	9
 stub	_SysTimerHandler	C	0x33fb	9
-fn	_SysTimerIntProc0	C	0x3404	156
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1227	C	0x3404	92
+stub	_AwtoMeasInit	C	0x3460	9
+stub	_AwtoMeasT2Sample	C	0x3469	9
 fn	_SysTimerIntProc1	C	0x34a0	44
-fn	_SysTimerIntProc2	C	0x34cc	180
 fn	_SysTimerWDIntProc	C	0x3580	120
 stub	_UserCommonAdjustAspectRatio	C	0x35f8	9
 stub	_UserCommonAdjustGammaRegionEnable	C	0x3601	9
@@ -875,7 +877,8 @@ stub	_UserCommonFlashSaveSystemData	C	0x36be	9
 stub	_UserCommonNVRamGetSystemData	C	0x36c7	9
 stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1224	C	0x36e2	92
+fn	_SysTimerIntProc0	C	0x36e2	168
+fn	_SysTimerIntProc2	C	0x378a	192
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1562,6 +1565,7 @@ fn	_SysJudgeModeResetProc	4	0x7fd4	300
 fn	_SysJudgeStateChangeEvent	4	0x8100	96
 fn	_AwtoDiagInit	4	0x8160	52
 fn	_AwtoDiagMainPass	4	0x8194	152
+fn	_AwtoMeasInit	4	0x822c	52
 fn	_SysMainSystemInitial	4	0x8280	88
 fn	_SysModeClrModeStateChange	4	0x82d8	12
 fn	_SysModeGetModeState	4	0x82e4	16
@@ -1620,6 +1624,8 @@ fn	_UserCommonInterfaceOsdResetProc	4	0xa118	60
 fn	_UserCommonInterfaceTimerEventProc	4	0xa154	32
 fn	_UserCommonNVRamGetSystemData	4	0xa174	416
 fn	_AwtoDiagStage	4	0xa314	92
+fn	_AwtoMeasEvent	4	0xa370	260
+fn	_AwtoMeasT2Sample	4	0xa474	448
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
 const	_tSD_V_COEF_64_TAPS	5	0x0110	72
@@ -1723,7 +1729,6 @@ fn	_ScalerIDomainVgipIVDelayIVstStepAdjust	5	0x526c	804
 fn	_ScalerIDomainVgipSetInputCapture	5	0x5590	648
 fn	_ScalerMDomainCheckDisplayFormat	5	0x5818	204
 fn	_ScalerMDomainCheckDisplaySetting	5	0x58e4	416
-fn	_ScalerMDomainControl	5	0x5a84	240
 fn	_ScalerMDomainDisplayTimingGenCheck	5	0x5b74	8
 fn	_ScalerMDomainGetColorDepth	5	0x5b7c	32
 fn	_ScalerMDomainGetDisplayActiveRegion	5	0x5b9c	936
@@ -1794,6 +1799,7 @@ fn	_UserCommonInterfaceAdjustInputTiming	5	0xa318	12
 fn	_UserCommonInterfaceGetColorFormat	5	0xa324	48
 fn	_UserCommonInterfaceGetDisplaySettingBacklightAction	5	0xa354	12
 fn	_UserCommonInterfaceOsdPowerOnInitial	5	0xa360	16
+fn	_ScalerMDomainControl	5	0xa370	516
 const	_OperationFactoryTable	6	0x0000	756
 fn	_ScalerDpSecDataReset	6	0x02f4	24
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	6	0x030c	1944

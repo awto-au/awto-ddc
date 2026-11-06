@@ -34,11 +34,11 @@ def rel_sizes(rels):
 
 
 def _sdld(cmd, ihx: Path):
-    """sdcc link; if the only error is sdld's -M ROM summary (wrong for code above 64 KB: it wraps banks onto
+    """sdcc link; if the only errors are sdld's -M ROM / EXTERNAL RAM summaries (XRAM sums all holes, fw_build.check_xdata re-checks each area) (wrong for code above 64 KB: it wraps banks onto
     each other), relink with sdld directly without -M. Verified 2026-11-04 on a 2-bank test: ihx correct."""
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=LINK_TIMEOUT)
     errs = [l for l in (r.stdout + r.stderr).splitlines() if "Error" in l or "ERROR" in l]
-    if r.returncode and errs and all("Insufficient ROM" in l for l in errs) and ihx.with_suffix(".lk").exists():
+    if r.returncode and errs and all(("Insufficient ROM" in l or "Insufficient EXTERNAL RAM" in l) for l in errs) and ihx.with_suffix(".lk").exists():
         lk = ihx.with_suffix(".lk")
         nolk = ihx.with_name(ihx.stem + "_nom.lk")
         nolk.write_text("\n".join(l for l in lk.read_text().splitlines() if l.strip() != "-M") + "\n")

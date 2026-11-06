@@ -164,6 +164,27 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^#include", "#define _AWTO_DIAG_DEFINER"),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoDiagInit();"),                 # stage 1
+    # awto-ddc#26 4K60 measurement ring: functions (fw/sdcc/awto_meas4k.inc), Timer2 sampler, M-domain / DPLL fine-tune call events
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_meas4k.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoMeasInit();"),
+    ("Kernel/System/Code/SysTimer.c", r"^\s*// Reload Backup for Burst Write Bug", "    AWTO_MEAS_T2ISR();", r"^void SysTimerIntProc2\(void\) __interrupt\(5\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainMemorySettings\(&stFIFOScaling\);", "    AwtoMeasEvent(1, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemoryInitial\(\);", "    AwtoMeasEvent(2, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemoryFrameSyncSetDt\(_DT_TARGET_PERCENTAGE\);", "    AwtoMeasEvent(3, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainSetDisplayFormat\(_FRAME_SYNC_LINE_BUFFER\);", "    AwtoMeasEvent(4, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerDPLLFineTuneFrameSyncLineBuffer\(\);", "    AwtoMeasEvent(5, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerIDomainVgipAdjustIHVDelay\(\);", "    AwtoMeasEvent(6, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainControlDBApply\(\);", "    AwtoMeasEvent(7, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerPLLSetDPLLSSC\(GET_DCLK", "    AwtoMeasEvent(8, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerTimerWaitForEvent\(_EVENT_IVS\);", "    AwtoMeasEvent(9, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemoryReset\(\);", "    AwtoMeasEvent(10, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerSetByte\(P0_02_STATUS0, 0xFF\);", "    AwtoMeasEvent(14, 0, AWTO_MEAS_P0_02_0C());", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*if\(\(ScalerMDomainMemoryCheck\(\) == _FALSE\)", "    AwtoMeasEvent(11, 0, AWTO_MEAS_P0_02_0C());", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerGlobalIDDomainDBSetTriggerEvent\(\);", "    AwtoMeasEvent(13, 0, AWTO_MEAS_P0_02_0C());", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^\s*// Temporary Enable Frame Sync Fine Tune for Interlace", "    AwtoMeasEvent(30, 0, 0);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^\s*stDHtotalFTStatus = ScalerMDomainDHtotalFinetune", "    AwtoMeasEvent(31, ucDebounceCnt, (unsigned int)ulDiffOffsetNew);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^\s*SET_D_CLK_FREQ\(ScalerPLLGetNewCount\(ulDiffOffsetNew", "    AwtoMeasEvent(32, 0, (unsigned int)ulDiffOffsetNew);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r'^\s*// Switch to "input active region"', "    AwtoMeasEvent(33, 0, 0);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"^\s*ScalerMcuIspInitial\(\);", "    AwtoDiagStage(2);",
      r"^\s*ScalerMcuGpioInitial\(\);"),                                                                   # after GPIO init
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
