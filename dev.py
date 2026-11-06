@@ -615,35 +615,81 @@ def cmd_recover(extra: list[str]) -> int:
     return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *img])
 
 
-@command("set the host video mode on a unit's connector (keeps the layout)", args="[--unit N] " + "|".join(MODES),
+GDCTL_SHOW_S = 3    # `gdctl show` is one D-Bus call (~0.1 s); 3 s = 30x, expiry -> mode refuses, nothing changed
+GDCTL_SET_S = 15    # a modeset of 4 outputs takes ~2-3 s; expiry -> reported, layout left as mutter has it
+
+
+def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
+    """`gdctl set` args that re-apply EVERY logical monitor from `gdctl show` unchanged (position, primary, scale,
+    transform, each monitor's current mode) except `target`, which gets `mode` (#52.7). SystemExit if target is absent."""
+    head, sep, tail = show.partition("Logical monitors:")
+    if not sep:
+        raise SystemExit("mode: no 'Logical monitors:' section in gdctl show; nothing done")
+    cur, name = {}, None
+    lines = [ln.strip("│├└─ ") for ln in head.splitlines()]
+    for i, s_ in enumerate(lines):
+        if s_.startswith("Monitor "):
+            name = s_.split(" ")[1]
+        elif s_ == "Current mode" and name and i + 1 < len(lines):
+            cur[name] = lines[i + 1]
+    blocks, blk = [], None
+    for s_ in (ln.strip("│├└─ ") for ln in tail.splitlines()):
+        if s_.startswith("Logical monitor #"):
+            blk = {"mons": [], "prim": False, "scale": "1.0", "tf": "normal", "pos": None}
+            blocks.append(blk)
+        elif blk is None:
+            continue
+        elif s_.startswith("Position:"):
+            blk["pos"] = s_.split(":", 1)[1].strip(" ()").replace(" ", "").split(",")
+        elif s_.startswith("Scale:"):
+            blk["scale"] = s_.split(":", 1)[1].strip()
+        elif s_.startswith("Transform:"):
+            blk["tf"] = s_.split(":", 1)[1].strip()
+        elif s_.startswith("Primary:"):
+            blk["prim"] = s_.endswith("yes")
+        elif s_.startswith("Monitors:"):
+            continue
+        elif re.match(r"[A-Za-z]+-[A-Za-z0-9-]+ \(", s_):
+            blk["mons"].append(s_.split(" ")[0])
+    if not any(target in b_["mons"] for b_ in blocks):
+        raise SystemExit(f"mode: {target} is not an active logical monitor in gdctl show; nothing done")
+    args = []
+    for b_ in blocks:
+        if not b_["mons"] or b_["pos"] is None or any(m not in cur for m in b_["mons"]):
+            raise SystemExit(f"mode: cannot read position/mode of logical monitor {b_['mons']}; nothing done")
+        args += ["--logical-monitor", *(["--primary"] if b_["prim"] else [])]
+        for m in b_["mons"]:
+            args += ["--monitor", m, "--mode", mode if m == target else cur[m]]
+        args += ["--x", b_["pos"][0], "--y", b_["pos"][1]]
+        if float(b_["scale"]) != 1.0:                   # defaults omitted: keeps the old, live-proven command shape
+            args += ["--scale", b_["scale"]]
+        if b_["tf"] != "normal":
+            args += ["--transform", b_["tf"]]
+    return args
+
+
+@command("set the host video mode on a unit's connector (keeps the layout)", args="[--unit N] [--dp] " + "|".join(MODES),
          kind="action")
 def cmd_mode(extra: list[str]) -> int:
     _n, u = _unit(extra)
-    if not extra or extra[0] not in MODES:
+    if len(extra) != 1 or extra[0] not in MODES:
         log(f"mode: one of {', '.join(MODES)}", "ERROR")
         return 2
-    show = subprocess.run(["gdctl", "show"], capture_output=True, text=True).stdout
-    cur, mon = {}, None
-    for line in show.split("Logical monitors:")[0].splitlines():
-        s = line.strip("│├└─ ")
-        if s.startswith("Monitor "):
-            mon = s.split(" ")[1]
-        elif mon and "@" in s and "x" in s and mon not in cur and s[0].isdigit():
-            cur[mon] = s.split(" ")[0]
-    args, prim, pos = [], False, None
-    for line in show.split("Logical monitors:")[1].splitlines():
-        s = line.strip("│├└─ ")
-        if s.startswith("Position:"):
-            pos = s.split(":", 1)[1].strip(" ()").replace(" ", "").split(",")
-        elif s.startswith("Primary:"):
-            prim = s.endswith("yes")
-        elif pos and s.split(" ")[0] in {v["gdctl"] for v in _units().values()} | {"DP-2"}:
-            mon = s.split(" ")[0]
-            args += ["--logical-monitor", *(["--primary"] if prim else []), "--monitor", mon,
-                     "--mode", MODES[extra[0]] if mon == u["gdctl"] else cur[mon], "--x", pos[0], "--y", pos[1]]
-            pos = None
+    try:
+        show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S)
+    except subprocess.TimeoutExpired:
+        log(f"mode: gdctl show timed out after {GDCTL_SHOW_S} s; nothing changed", "ERROR")
+        return 1
+    if show.returncode:
+        log(f"mode: gdctl show rc={show.returncode}: {show.stderr.strip()}; nothing changed", "ERROR")
+        return 1
+    args = gdctl_set_args(show.stdout, u["gdctl"], MODES[extra[0]])
     log("run: gdctl set " + " ".join(args))
-    return subprocess.call(["gdctl", "set", *args])
+    try:
+        return subprocess.call(["gdctl", "set", *args], timeout=GDCTL_SET_S)
+    except subprocess.TimeoutExpired:
+        log(f"mode: gdctl set timed out after {GDCTL_SET_S} s", "ERROR")
+        return 1
 
 
 def _register_steps() -> None:

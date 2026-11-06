@@ -1,0 +1,63 @@
+Monitors:
+├──Monitor DP-4 (AWT 27")
+│  ├──Vendor: AWT
+│  ├──Product: awto-mon
+│  ├──Serial: AWT26110002
+│  ├──Current mode
+│  │   └──3840x2160@60.000
+│  └──Preferences
+│      └──Backlight: None
+├──Monitor DP-2 (Philips Consumer Electronics Company 28")
+│  ├──Vendor: PHL
+│  ├──Product: PHL 288E2
+│  ├──Serial: UK52307000611
+│  ├──Current mode
+│  │   └──3840x2160@59.997
+│  └──Preferences
+│      └──Backlight: None
+├──Monitor HDMI-3 (AWT 27")
+│  ├──Vendor: AWT
+│  ├──Product: awto-mon
+│  ├──Serial: AWT26110001
+│  ├──Current mode
+│  │   └──3840x2160@60.000
+│  └──Preferences
+│      └──Backlight: None
+└──Monitor HDMI-2 (AWT 27")
+   ├──Vendor: AWT
+   ├──Product: awto-mon
+   ├──Serial: AWT26110003
+   ├──Current mode
+   │   └──1920x1080@60.000
+   └──Preferences
+       └──Backlight: None
+
+Logical monitors:
+├──Logical monitor #1
+│  ├──Position: (0, 0)
+│  ├──Scale: 1.0
+│  ├──Transform: normal
+│  ├──Primary: yes
+│  └──Monitors: (1)
+│      └──DP-4 (AWT 27")
+├──Logical monitor #2
+│  ├──Position: (3840, 0)
+│  ├──Scale: 1.0
+│  ├──Transform: normal
+│  ├──Primary: no
+│  └──Monitors: (1)
+│      └──DP-2 (Philips Consumer Electronics Company 28")
+├──Logical monitor #3
+│  ├──Position: (7680, 0)
+│  ├──Scale: 1.0
+│  ├──Transform: normal
+│  ├──Primary: no
+│  └──Monitors: (1)
+│      └──HDMI-3 (AWT 27")
+└──Logical monitor #4
+   ├──Position: (11520, 0)
+   ├──Scale: 1.0
+   ├──Transform: normal
+   ├──Primary: no
+   └──Monitors: (1)
+       └──HDMI-2 (AWT 27")
