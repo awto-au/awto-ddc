@@ -34,6 +34,7 @@ RATE_WINDOW_S, RATE_REPEATS = 1.0, 3
 CONSUME_WAIT_S = 0.5
 TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): host 60.000 vs measured 60.1
 HDIAG_STAGE = 8
+MAP_SYMS = ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo")
 RETRY_TRIES = 2
 
 
@@ -88,8 +89,8 @@ class Dbg:
     """XDATA reads/writes through the firmware debug slave. Reads use the block path (0x3C, docs/diag-block.md) once
     check_diag saw diag version >= 2, else the byte path (0x01 [hi], 0x3A [lo], read 0x08)."""
 
-    def __init__(self, io, wait=time.sleep):
-        self.io, self.wait, self.retries, self.block = io, wait, 0, False
+    def __init__(self, io, wait=time.sleep, now=time.monotonic):
+        self.io, self.wait, self.now, self.retries, self.block = io, wait, now, 0, False
 
     def _try(self, what: str, fn):
         """0x35 NAKs intermittently at 100 kHz (seen 2026-11-06): one retry per transfer group after 5 ms
@@ -233,12 +234,12 @@ def check_osd(rep, d, osd_addr, diag_addr, wait=time.sleep) -> bool:
     """usOsdState does not move for pop-ups (event path); the evidence is the consume + the debug-slave stall while drawing."""
     st0 = be16(d.read(osd_addr + OSD_STATE, 2), 0)
     d.write(osd_addr + OSD_EVENT, EVENT_INFO)
-    ok, dt, naks = consumed(d, osd_addr + OSD_EVENT, wait)
+    ok, dt, naks = consumed(d, osd_addr + OSD_EVENT, wait, d.now)
     r1 = rep.add("osd event", ok, f"info event {'consumed' if ok else 'NOT consumed'} in {dt * 1000:.0f} ms, "
                  f"{naks} NAKed polls while drawing (limit {CONSUME_WAIT_S * 1000:.0f} ms); usOsdState 0x{st0:04X}")
     tc = diag_addr + DIAG_OFF["testcmd"]
     d.write(tc, TESTCMD_DEBUG)
-    ok, dt, naks = consumed(d, tc, wait)
+    ok, dt, naks = consumed(d, tc, wait, d.now)
     r2 = rep.add("osd test cmd", ok, f"debug test byte 0x{TESTCMD_DEBUG:02X} {'consumed' if ok else 'NOT consumed'} in "
                  f"{dt * 1000:.0f} ms, {naks} NAKed polls (limit {CONSUME_WAIT_S * 1000:.0f} ms)")
     return r1 and r2
@@ -259,15 +260,21 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep) -> int:
 
 
 def main() -> int:
-    import i2cbus
-    import rtd_i2c_bridge as B
     ap = argparse.ArgumentParser()
-    ap.add_argument("bus", type=int)
-    ap.add_argument("--serial", required=True)
-    ap.add_argument("--map", required=True, type=Path)
+    ap.add_argument("bus", type=int, nargs="?")
+    ap.add_argument("--serial")
+    ap.add_argument("--map", type=Path)
     ap.add_argument("--gdctl", help="host monitor name for the current mode (gdctl show, read-only)")
     ap.add_argument("--host-mode", help="WxH@HZ instead of gdctl")
+    ap.add_argument("--sim", nargs=2, type=Path, metavar=("BIN", "MAP"),
+                    help="run against the firmware simulator (fw_sim.SimBus), no hardware; host mode defaults to 1920x1080@60")
     a = ap.parse_args()
+    if a.sim:
+        return run_sim(a)
+    if a.bus is None or not a.serial or not a.map:
+        ap.error("bus, --serial and --map are required (or --sim BIN MAP)")
+    import i2cbus
+    import rtd_i2c_bridge as B
     log = B.setup_logs("unit_health", map=a.map).main
     i2cbus.dev_hint("health", "unit_health.py")
     rep = Report(log)
@@ -276,7 +283,7 @@ def main() -> int:
         return rep.summary(a.serial)
     i2cbus.require_unit(a.bus, a.serial)
     txt = a.map.read_text(errors="replace")
-    maps = {n: sym_addr(txt, n) for n in ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo")}
+    maps = {n: sym_addr(txt, n) for n in MAP_SYMS}
     host = None
     mode = a.host_mode
     if not mode and a.gdctl:
@@ -287,6 +294,23 @@ def main() -> int:
     dbg = Dbg(B.Real(a.bus, allow_write=True))
     run(dbg, maps, host, rep)
     return rep.summary(a.serial, dbg.retries)
+
+
+def run_sim(a) -> int:
+    """All checks against the firmware simulator; time = firmware Timer2 time (SimBus.wait / now)."""
+    import fw_sim
+    binp, mapp = a.sim
+    mode = a.host_mode or "1920x1080@60"
+    rep = Report()
+    bus = fw_sim.SimBus(binp, mapp)
+    try:
+        maps = {n: sym_addr(mapp.read_text(errors="replace"), n) for n in MAP_SYMS}
+        rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode}")
+        dbg = Dbg(bus, wait=bus.wait, now=bus.now)
+        run(dbg, maps, parse_host_mode(mode), rep, wait=bus.wait)
+        return rep.summary(binp.stem, dbg.retries)
+    finally:
+        bus.close()
 
 
 if __name__ == "__main__":

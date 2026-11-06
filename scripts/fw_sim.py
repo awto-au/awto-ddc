@@ -34,10 +34,24 @@ def write_ihx(data: bytes, path: Path):
     path.write_text("\n".join(out + [":00000001FF"]) + "\n")
 
 
+def nodelay_env() -> dict:
+    """ucsim sleeps 100 ms per idle console poll once it is 2 s old (every command round trip then costs 100 ms);
+    scripts/ucsim_nodelay.c turns that sleep into 50 us. Built on first use into tmp/; no gcc = slow but correct."""
+    src, so = Path(__file__).resolve().parent / "ucsim_nodelay.c", ROOT / "tmp/ucsim_nodelay.so"
+    try:
+        if not so.exists() or so.stat().st_mtime < src.stat().st_mtime:
+            so.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["gcc", "-O2", "-shared", "-fPIC", "-o", str(so), str(src), "-ldl"], check=True, timeout=60,
+                           capture_output=True)
+        return {**os.environ, "LD_PRELOAD": str(so)}
+    except (OSError, subprocess.SubprocessError):
+        return dict(os.environ)
+
+
 class Sim:
     def __init__(self, ihx, log):
         self.p = subprocess.Popen([T.tool("ucsim_51"), "-t", "52", *([str(ihx)] if ihx else [])], stdin=subprocess.PIPE,
-                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, env=nodelay_env())
         self.log, self.buf = log, b""
 
     def send(self, cmd):
@@ -153,6 +167,281 @@ def run_chunk(s, flash, n, timeout=120):
         if flash and flash.handle(s, out):
             s.send(f"step {n}"); continue
         return out
+
+
+# ---- Machine: ucsim + peripheral models (offline monitor; #38) ----------------------------------------------
+TICKS_PER_INSTR = 21        # ucsim ticks per instruction on this image (stepped 3 M instr = 63.7 M ticks, 2026-11-06)
+
+
+class _Null:
+    def write(self, _):
+        pass
+
+
+class SimError(RuntimeError):
+    pass
+
+
+class Dev:
+    """Peripheral model. Registers are plain ucsim XRAM cells; only addresses in reads/writes raise an event stop
+    (after the accessing instruction), where the model fixes up the cells the next access will see."""
+    reads: tuple = ()
+    writes: tuple = ()
+
+    def init(self, m):
+        """Called after reset: preset constant status cells."""
+
+    def on_read(self, m, a):
+        pass
+
+    def on_write(self, m, a):
+        pass
+
+
+class FlashDev(Dev):
+    """FlashPort (FF78..FF7B) as a Dev."""
+    reads, writes = (FlashPort.PORT,), (FlashPort.ADDR + 2,)
+
+    def __init__(self, img):
+        self.fp = FlashPort(img)
+
+    def _preload(self, m):
+        m.put(f"set memory xram 0x{FlashPort.PORT:x} 0x{self.fp.byte(self.fp.ptr):x}")
+
+    def on_write(self, m, a):
+        v = m.rd(FlashPort.ADDR, 3)
+        self.fp.ptr = v[0] << 16 | v[1] << 8 | v[2]
+        self._preload(m)
+
+    def on_read(self, m, a):
+        self.fp.ptr += 1; self.fp.reads += 1
+        self._preload(m)
+
+
+class IicSlave(Dev):
+    """Debug slave 0x35 on DDC2 (SDK ScalerDebugIntProc_EXINT1 + fw/sdcc/awto_dbgisr.inc).
+    FF24 SUB_IN, FF25 DATA_IN (rx FIFO head), FF26 DATA_OUT (tx FIFO), FF27 STATUS (bit1 SUB_I, bit2 D_IN_I, bit4 stop;
+    write 0 clears), FF29 STATUS2 (bit1 rx empty, bit2 tx full), FF2A IRQ_CONTROL2 (bit6 reset FIFO), FE66 bit0 SCL hold."""
+    SUB, DIN, DOUT, STAT, STAT2, IRQ2, SCL = 0xFF24, 0xFF25, 0xFF26, 0xFF27, 0xFF29, 0xFF2A, 0xFE66
+    SUB_I, D_IN_I, STOP_I = 0x02, 0x04, 0x10
+    reads, writes = (DIN,), (DOUT, STAT, IRQ2, SCL)
+
+    def __init__(self):
+        self.rx, self.rxpos, self.tx, self.flags = b"", 0, bytearray(), 0
+        self.held = self.released = False
+        self.ex1_ticks = 0
+
+    def init(self, m):
+        m.put(f"set memory xram 0x{self.STAT2:x} 0x02")          # rx FIFO empty
+
+    def on_read(self, m, a):
+        self.rxpos += 1
+        if self.rxpos < len(self.rx):
+            m.put(f"set memory xram 0x{self.DIN:x} 0x{self.rx[self.rxpos]:x}")
+        else:
+            m.put(f"set memory xram 0x{self.STAT2:x} 0x{m.rd(self.STAT2)[0] | 0x02:x}")
+
+    def on_write(self, m, a):
+        v = m.rd(a)[0]
+        if a == self.DOUT:
+            self.tx.append(v)
+        elif a == self.IRQ2:
+            if v & 0x40:
+                self.tx.clear()
+        elif a == self.STAT:
+            self.flags &= v
+            m.put(f"set memory xram 0x{self.STAT:x} 0x{self.flags:x}")
+        elif a == self.SCL:
+            if v & 1:
+                self.held = True
+            elif self.held:
+                self.released = True; m.request_stop()
+
+    def inject(self, m, sub: int, data: bytes, stop: bool = True):
+        """Present one host transaction (sub byte + data, then stop) and raise EXINT1 (IE1)."""
+        self.rx, self.rxpos, self.held, self.released = bytes(data), 0, False, False
+        self.flags = self.SUB_I | (self.D_IN_I if data else 0) | (self.STOP_I if stop else 0)
+        st2 = m.rd(self.STAT2)[0]
+        m.put(f"set memory xram 0x{self.SUB:x} 0x{sub:x}")
+        if data:
+            m.put(f"set memory xram 0x{self.DIN:x} 0x{data[0]:x}")
+        m.put(f"set memory xram 0x{self.STAT2:x} 0x{(st2 & ~2) if data else (st2 | 2):x}")
+        m.put(f"set memory xram 0x{self.STAT:x} 0x{self.flags:x}")
+        m.put("set bit 0x8b 1")
+        m.flush()
+
+
+class Machine:
+    """ucsim running a banked image with Dev models. run(n) serves device events until n instructions are used
+    (estimated from ticks), a non-event stop (breakpoint) happens, or a model calls request_stop()."""
+
+    def __init__(self, img: bytes, mapp: Path, tag: str, log=None, devs=(), extra_breaks=()):
+        self.img, self.devs = img, list(devs)
+        self.map_text = mapp.read_text(errors="replace")
+        self.sym, self.where = parse_map(self.map_text, img)
+        self.log = log or _Null()
+        self.s = open_native(img, ROOT / "tmp/fwsim" / tag, _Null(), None, extra_breaks)
+        self.ticks, self.instr, self._n, self._q, self._stop = 0, 0, 0, [], False
+        self.hook = {}
+        for d in self.devs:
+            for a in d.reads:
+                self.hook[("read", a)] = d
+                self.s.send(f"break xram r 0x{a:x}")
+            for a in d.writes:
+                self.hook[("write", a)] = d
+                self.s.send(f"break xram w 0x{a:x}")
+        for d in self.devs:
+            d.init(self)
+        self.flush()
+
+    def cmd(self, text: str, timeout: float = 120) -> str:
+        self._n += 1
+        tag = f"@@{self._n}"
+        self.s.send(f"{text}\necho {tag}")
+        out = self.s.read_until(rb"(?:^|\n)" + tag.encode() + rb"\n", timeout)
+        if out is None:
+            raise SimError(f"ucsim did not answer `{text[:60]}` within {timeout} s")
+        return out
+
+    def put(self, c: str):
+        self._q.append(c)
+
+    def flush(self):
+        if self._q:
+            self.cmd("\n".join(self._q)); self._q = []
+
+    def rd(self, a: int, n: int = 1, space: str = "xram") -> bytes:
+        self.flush()
+        out = self.cmd(f"dump {space} 0x{a:x} 0x{a + n - 1:x} 16")
+        got = {}
+        for m in re.finditer(r"0x([0-9a-f]{4})\s{2,}((?:[0-9a-f]{2} )+)", out):
+            base = int(m.group(1), 16)
+            for i, h in enumerate(m.group(2).split()[:min(16, a + n - base)]):
+                got[base + i] = int(h, 16)
+        if len(got) < n:
+            raise SimError(f"dump {space} 0x{a:x}+{n} returned {len(got)} bytes")
+        return bytes(got[a + i] for i in range(n))
+
+    def wr(self, a: int, data: bytes, space: str = "xram"):
+        self.put(f"set memory {space} 0x{a:x} " + " ".join(f"0x{b:x}" for b in data)); self.flush()
+
+    def request_stop(self):
+        self._stop = True
+
+    def run(self, n: int) -> str:
+        rem, self._stop = n, False
+        while True:
+            out = self.cmd(f"step {max(rem, 1)}")
+            t = re.search(r"Simulated (\d+) ticks", out)
+            used = max(1, int(t.group(1)) // TICKS_PER_INSTR) if t else 1
+            self.ticks += int(t.group(1)) if t else 0
+            self.instr += used
+            ev = re.findall(r"Event `(\w+)' at xram\[0x([0-9a-f]+)\]", out)
+            if not ev:
+                return out
+            rem -= used
+            for kind, a in ev:
+                getattr(self.hook[(kind, int(a, 16))], "on_" + kind)(self, int(a, 16))
+            self.flush()
+            if rem <= 0 or self._stop:
+                return out
+
+    def close(self):
+        try:
+            self.s.send("quit"); self.s.p.wait(5)
+        except Exception:
+            self.s.p.kill()
+
+
+class SimBus:
+    """Offline stand-in for i2cbus.Bus / rtd_i2c_bridge.Real on the debug slave 0x35 (#38): write(dev8, sub, data) -> bool,
+    read(dev8, sub, n) -> bytes | None, wait(s) / now() in firmware time (Timer2 ticks of 1 ms), xdata(addr, n) direct."""
+    DEV8 = 0x6A
+    WRITE_BUDGET = 3_000_000       # instr until the SCL release; one main-loop pass is ~0.1 M (boot-check: 67 passes / 16 M)
+    ISR_BUDGET = 20_000            # instr for a SUB_I-only EXINT1 (read address phase)
+
+    def __init__(self, binp: Path, mapp: Path, tag: str | None = None, log=None, boot: bool = True,
+                 devs=()):
+        import rtd_diag
+        self.rtd_diag = rtd_diag
+        self.img = Path(binp).read_bytes()
+        self.be = "-be" in Path(binp).name or T.BIG_ENDIAN
+        self.iic = IicSlave()
+        self.m = Machine(self.img, Path(mapp), tag or Path(binp).stem, log, [FlashDev(self.img), self.iic, *devs])
+        self.diag_base = self.m.sym.get("_g_stAwtoDiag", 0xF6D0)
+        self.t2_abs, self._t2_last = 0, None
+        self.naks = 0
+        if boot:
+            self.boot()
+
+    def addr(self, name: str) -> int:
+        mt = re.search(rf"([0-9A-F]{{8}})\s+_{name}\b", self.m.map_text)
+        if not mt:
+            raise SimError(f"_{name} not in map")
+        return int(mt.group(1), 16) & 0xFFFF
+
+    def xdata(self, a: int, n: int = 1) -> bytes:
+        return self.m.rd(a, n)
+
+    def diag(self) -> dict:
+        return self.rtd_diag.decode(self.m.rd(0xF6D0, 48), self.be)
+
+    def boot(self, passes: int = 3, max_instr: int = 60_000_000, chunk: int = 1_000_000):
+        hb0, used = None, 0
+        while used < max_instr:
+            self.m.run(chunk); used += chunk
+            d = self.diag()
+            if d["stage"] >= 8:
+                hb0 = d["hb"] if hb0 is None else hb0
+                if (d["hb"] - hb0) & 0xFFFF >= passes:
+                    return d
+        raise SimError(f"boot: stage {self.diag()['stage']} after {used} instr")
+
+    def write(self, dev8: int, sub: int, data: bytes) -> bool:
+        if dev8 != self.DEV8:
+            return False
+        self.iic.inject(self.m, sub, bytes(data))
+        used = 0
+        while used < self.WRITE_BUDGET and not self.iic.released:
+            self.m.run(5000); used += 5000
+        if not self.iic.released:
+            self.naks += 1
+        return self.iic.released
+
+    def read(self, dev8: int, sub: int, n: int) -> bytes | None:
+        if dev8 != self.DEV8:
+            return None
+        tx = bytes(self.iic.tx)
+        self.iic.inject(self.m, sub, b"")
+        self.m.run(self.ISR_BUDGET)
+        if len(tx) < n:
+            self.naks += 1
+            return None
+        self.iic.tx.clear()
+        return tx[:n]
+
+    def _t2(self) -> int:
+        t = self.diag_t2()
+        if self._t2_last is not None:
+            self.t2_abs += (t - self._t2_last) & 0xFFFF
+        self._t2_last = t
+        return self.t2_abs
+
+    def diag_t2(self) -> int:
+        b = self.m.rd(self.diag_base + 0x16, 2)
+        return int.from_bytes(b, "big" if self.be else "little")
+
+    def now(self) -> float:
+        return self._t2() / 1000.0
+
+    def wait(self, sec: float):
+        t0 = self._t2()
+        goal = max(1, int(sec * 1000))
+        while self._t2() - t0 < goal:
+            self.m.run(min(200_000, 4200 * max(1, goal - (self.t2_abs - t0))))
+
+    def close(self):
+        self.m.close()
 
 
 def cur_bank(s) -> int:
