@@ -21,3 +21,4 @@ id:b327  # VGA off-line double check fail
 id:ba6b  # VGA active count difference fail
 id:bb1d  # VGA auto-function fail
 id:ccf2  # VGA off-line measure fail
+cat:Digital

@@ -1467,7 +1467,6 @@ fn	_ScalerPinshareHwIICPin	3	0x2274	8
 fn	_ScalerPinshareInitial	3	0x227c	296
 fn	_ScalerPinsharePowerOnReset	3	0x23a4	100
 fn	_ScalerSyncGetInputPixelClk	3	0x2408	124
-fn	_ScalerSyncHdcpDownLoadBKsv	3	0x2484	340
 fn	_ScalerSyncHdcpDownLoadKey	3	0x25d8	256
 fn	_ScalerSyncHdcpEnableDownLoadKey	3	0x26d8	316
 fn	_ScalerVgipInputInitial	3	0x2814	100
@@ -1535,6 +1534,7 @@ fn	_ScalerPLLSetDPLLSSC	3	0x9500	132
 fn	_ScalerPLLSetMPLLFreq	3	0x9584	1536
 fn	_ScalerPLLSetMPLLOffset	3	0x9b84	116
 fn	_ScalerBurstWriteTimeoutCal	3	0x9bf8	168
+fn	_ScalerSyncHdcpDownLoadBKsv	3	0x9ca0	424
 fn	_ScalerOsdFontWindowVericalAlignemnt	4	0x0000	28
 fn	_ScalerOsdGlobalDoubleBuffer	4	0x001c	28
 fn	_ScalerDpRx1AuxIntInitial	4	0x0038	116
