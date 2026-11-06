@@ -9,7 +9,7 @@
 | off | size | field |
 |---|---|---|
 | 0x00 | 2 | magic `'A' 'D'` |
-| 0x02 | 1 | version (1) |
+| 0x02 | 1 | version: 1 = byte reads only; 2 = debug slave also answers 0x3C block read (`_AWTO_DBGISR`) |
 | 0x03 | 1 | stage, last reached (monotonic) |
 | 0x04 | 16 | 8 x u16 `g_usTimerCounter` (1 ms) at first entry of stage 1..8 |
 | 0x14 | 2 | main-loop heartbeat |
@@ -42,3 +42,17 @@
 ## Micro-bench (self-test, after the delays)
 - Inline asm, 4 x 250 `djnz` nest, EA off; R6/R7/R0/DPTR/ACC saved. Raw counts (not shifted), host: (x - empty) / 1000 = Timer2 counts per instruction.
 - Host assumes DW8051 cycles: `mov a,dir` 2, `movx` 2, `mov a,@r0` 1, `djnz` 2-3; 4 clocks per cycle; expected MCU clock 87.7 MHz (M2PLL 350.8 / 4).
+
+## Debug slave 0x35 read protocol (#38)
+- Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, inserted by `keil2sdcc.py` into `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.
+- Cause of the old design's 1 MHz failures: the ISR only latched the command and held SCL (FE66 bit0); `ScalerDebug()` loaded FF26 one main-loop pass later (#12).
+- Now the ISR, at the STOP of the command write, resets the IIC data FIFO (FF2A bit6), loads FF26 and releases SCL, with no main-loop step.
+- Byte read (all versions): write `0x01 [hi]` (main loop, staging), write `0x3A [lo]`, read sub `0x08` x1.
+- Block read (version >= 2): write `0x3C [lo, hi, len, seq]`, then ONE read transaction `[0x08]` + repeated start + `len + 1` bytes: data, then checksum `(seq + lo + hi + sum(data)) & 0xFF`.
+  - The host verifies the checksum and retries (3 tries): at 1 MHz a reply raced by the ISR returns the previous reply (stale, wrong seq) or garbage.
+  - `len` clamped to `_AWTO_DBGISR_BLK_MAX` (24 data + 1 checksum in the IIC data FIFO; the SDK 0xBB reply fills 27); the ISR also stops filling at FF29 bit2 (FIFO full).
+  - Host chunks reads at `dbg_xdata.BLK_MAX` = 24. 48 B diag block = 4 transfers (byte path: 97).
+  - 0x3C overwrites the staged hi byte (g_pucDdcciData[2]); byte-path callers stage `0x01` themselves each time.
+  - Unused by the SDK: main-loop `ScalerDebug()` has no 0x3C case (low nibble 0xC matches no default case).
+  - Tried and dropped: FF29 bit7 (iic_force_scl_l, stretch SCL while the FIFO is empty in a read) wedged the DDC bus (EDID silent, power cycle needed) (#38).
+- Host picks the path from the version byte: `dbg_xdata.probe` (rtd_diag), `check_diag` (unit_health); version 1 or unreadable -> byte path.

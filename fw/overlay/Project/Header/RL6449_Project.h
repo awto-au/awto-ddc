@@ -34,7 +34,7 @@ typedef struct
 {
     unsigned char ucMagic0;                     // 'A'
     unsigned char ucMagic1;                     // 'D'
-    unsigned char ucVersion;                    // 1
+    unsigned char ucVersion;                    // 1; 2 = debug slave block read 0x3C (#38)
     unsigned char ucStage;                      // last stage reached (1..8, monotonic)
     unsigned int usStageMs[8];                  // g_usTimerCounter (1 ms) at first entry of stage n
     unsigned int usHeartbeat;                   // main-loop passes
@@ -76,6 +76,9 @@ extern void AwtoDiagSelfTest(void);
 #define AWTO_DIAG_T2ISR()
 #define AWTO_DIAG_EX1ISR()
 #endif
+// Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
+#define _AWTO_DBGISR                                            _ON
+#define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC data FIFO fill, as the SDK 0xBB reply
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON

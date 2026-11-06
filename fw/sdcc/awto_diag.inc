@@ -26,7 +26,7 @@ void AwtoDiagInit(void)
     }
     g_stAwtoDiag.ucMagic0 = 'A';
     g_stAwtoDiag.ucMagic1 = 'D';
-    g_stAwtoDiag.ucVersion = 1;
+    g_stAwtoDiag.ucVersion = (_AWTO_DBGISR == _ON) ? 2 : 1;
     AwtoDiagStage(1);
 }
 

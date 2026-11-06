@@ -1215,7 +1215,6 @@ fn	_ScalerTMDSRx3SwitchSlaveAddr	1	0x387c	76
 fn	_ScalerTMDSRx3TMDSScanInputPort	1	0x38c8	1688
 fn	_ScalerTMDSRx3TMDSStableDetect	1	0x3f60	700
 fn	_ScalerDpRx1DecodeErrorCountReset_WDINT	1	0x421c	20
-fn	_ScalerDebugIntProc_EXINT1	1	0x428c	276
 fn	_ScalerSyncDdcDetect_EXINT1	1	0x43a0	288
 fn	_ScalerSyncDpAuxManualModeSetting_EXINT	1	0x44c0	64
 fn	_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT	1	0x4500	68
@@ -1334,6 +1333,7 @@ fn	_SysSourceStableCheck	1	0x91c0	148
 fn	_SysSourceSwitchPort	1	0x9254	808
 fn	_AwtoDiagMainPass	1	0x957c	152
 fn	_ScalerTimerGetCommonDivisor	1	0x9614	148
+fn	_ScalerDebugIntProc_EXINT1	1	0x96a8	512
 fn	_ScalerOsdGetDoubleFunctionH	2	0x0000	24
 fn	_ScalerColor420To422D2D3Enable	2	0x0018	68
 fn	_ScalerDDR2CalcWrlvlConfig	2	0x005c	616

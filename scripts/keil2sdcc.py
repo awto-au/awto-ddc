@@ -152,6 +152,9 @@ INSERTS = [
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c",
      r"^void ScalerDebugSelectDDCCIDebugMode\(EnumDDCCIDebugMode enumMode\)$", '#include "AwtoMsg.h"'),
     # boot-stage / timing diag block (RL6449_Project.h StAwtoDiag; functions in fw/sdcc/awto_diag.inc; no-op when off)
+    # awto-ddc#38: debug slave answers 0x3A / block read 0x3C inside the EXINT1 ISR (fw/sdcc/awto_dbgisr.inc, docs/diag-block.md)
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c", r"^\s*MCU_FF2A_IIC_IRQ_CONTROL2 \|= 0x20;",
+     (SHIM / "awto_dbgisr.inc").read_text().rstrip("\n"), r"^void ScalerDebugIntProc_EXINT1\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^#include", "#define _AWTO_DIAG_DEFINER"),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoDiagInit();"),                 # stage 1
