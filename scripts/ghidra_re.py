@@ -4,8 +4,12 @@
 usage: ghidra_re.py import <bank|all>   create/refresh the program from banks/bank<N>.bin, seed, analyse, apply names, export
        ghidra_re.py regen  <bank|all>   apply names TSV to the existing program and re-export (daily use)
 Per-bank data in re/jxc-4k/: ghidra_names_bank<N>.tsv (source of truth), seeds_bank<N>.txt (new banks: scripts/ghidra_seeds.py).
-Register labels (EXTMEM 0xFD00-0xFFFF) are generated from re/regdb by scripts/regdb_ghidra_labels.py (consensus of all
-chips; hand names win) into ./tmp/regs_bank<N>.tsv and applied before the hand names.
+Register labels (every scaler register, XDATA (page<<8)|reg, chip RTD2795T-CG) come from re/regdb via
+scripts/regdb_ghidra_labels.py (hand names win) into ./tmp/regs_bank<N>.tsv (+ ./tmp/regs_ports.tsv, data-port index
+names) and are applied before the hand names.
+Exports per bank in ~/vendors/realtek/analysis/jxc-4k/bank<N>/: decompiled*.c, disassembly.asm, and (re/ghidra/ExportRegAccess.java)
+  regwrites.tsv / regreads.tsv: every register access site (insn, function, reg, name, kind, constant value/masks, callee).
+  Columns/kinds: header of ExportRegAccess.java. Example: grep -P '\tFF3A\t|\tff3a\t' bank*/regwrites.tsv
 Shared scripts (ApplyNames.java, ExportAll.java) are used from awto-2000 by path ($AWTO_2000), not copied.
 Project + firmware bytes stay out of git: ~/vendors/realtek/analysis/. Log: ./tmp/logs/re_<cmd>_<bank>.log
 Process: awto-dan docs/embedded/reversing/README.md
@@ -22,6 +26,7 @@ A2000 = Path(os.environ.get("AWTO_2000", "/mnt/2tb/git/awto-2000")) / "tools" / 
 VEND = Path.home() / "vendors" / "realtek" / "analysis"
 PROJ_DIR, PROJ = VEND / "ghidra", "jxc4k"
 LANG = "8051:BE:16:default"
+CHIP = os.environ.get("RTD_CHIP", "RTD2795T-CG")   # or "consensus"
 DATA = ROOT / "re" / "jxc-4k"
 # Stall: Ghidra prints per phase; 120 s silence = hung. Backstop 900 s (cold bank import ~60 s measured).
 STALL_S, TOTAL_S = 120, 900
@@ -62,9 +67,11 @@ def one(cmd, bank) -> int:
     PROJ_DIR.mkdir(parents=True, exist_ok=True)
     base = ["analyzeHeadless", str(PROJ_DIR), PROJ]
     paths = ["-scriptPath", f"{HERE.parent / 're' / 'ghidra'};{A2000}"]   # Ghidra separates with ';' on all OSes
-    regs = ROOT / "tmp" / f"regs_bank{bank}.tsv"
-    regdb_ghidra_labels.write("consensus", [tsv], regs)
-    tail = ["-postScript", "ApplyRegLabels.java", str(regs), "-postScript", "ApplyNames.java", str(tsv), "-postScript", "ExportAll.java", str(out), str(tsv)]
+    regs, ports = ROOT / "tmp" / f"regs_bank{bank}.tsv", ROOT / "tmp" / "regs_ports.tsv"
+    regdb_ghidra_labels.write(CHIP, [tsv], regs, ports)
+    tail = ["-postScript", "ApplyRegLabels.java", str(regs), "-postScript", "ApplyNames.java", str(tsv),
+            "-postScript", "ExportRegAccess.java", str(out), str(ports), str(regs),
+            "-postScript", "ExportAll.java", str(out), str(tsv)]
     if cmd == "import":
         c = base + ["-import", str(VEND / "banks" / name), "-overwrite", "-loader", "BinaryLoader",
                     "-loader-baseAddr", "0", "-processor", LANG] + paths + \
