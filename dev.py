@@ -759,13 +759,11 @@ def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
 
     tb = next(b_ for b_ in blocks if target in b_["mons"])
     x, y, w, h = rect(tb, mode)
-    for b_ in blocks:                                   # new size would overlap a neighbour: keep the old footprint
-        if b_ is not tb:
-            ox, oy, ow, oh = rect(b_, cur[b_["mons"][0]])
-            if x < ox + ow and ox < x + w and y < oy + oh and oy < y + h:
-                old_w = rect(tb, cur[target])[2]
-                tb["scale"] = f"{int(mode.split('x')[0]) / old_w:g}"
-                break
+    old_w = rect(tb, cur[target])[2]
+    overlap = any(x < ox + ow and ox < x + w and y < oy + oh and oy < y + h
+                  for ox, oy, ow, oh in (rect(b_, cur[b_["mons"][0]]) for b_ in blocks if b_ is not tb))
+    if overlap or w < old_w:                            # would overlap or leave a gap: keep the old footprint
+        tb["scale"] = f"{int(mode.split('x')[0]) / old_w:g}"
     args = []
     for b_ in blocks:
         args += ["--logical-monitor", *(["--primary"] if b_["prim"] else [])]
