@@ -154,15 +154,16 @@ def check(im, xdata=(), regnames=None):
     fn_start = {(c["reg"], c["addr"] & 0xFFFF): c for c in im.chunks if c["kind"] == "fn"}
     stubs = {}
     in_xdata = lambda v: any(lo <= v < hi for lo, hi in xdata)
-    # stub decode: lcall __bs_call + lo, hi, bank
+    # stub decode: lcall __bs_call + lo, hi, bank (6 B) or mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp (9 B)
     for c in im.chunks:
         if c["kind"] != "stub":
             continue
         b = im.code(c)
-        if len(b) != 6 or b[0] != 0x12:
+        t = stub_target(b)
+        if t is None:
             add("stub_bad_target", c["name"], f"unexpected stub bytes {b.hex()}", c["addr"])
             continue
-        tgt, bank = b[3] | b[4] << 8, b[5]
+        tgt, bank = t
         tc = fn_start.get((bank, tgt)) if tgt >= im.common else fn_start.get(("C", tgt))
         stubs[c["addr"]] = (tgt, bank, tc)
         if tc is None:
@@ -303,13 +304,24 @@ def symbolize(im, stubmap, reg, v):
     return (nm, v - (c["addr"] & 0xFFFF))
 
 
+def stub_target(b):
+    """(target 16-bit address, bank) of a stub's bytes, or None. 6 B: lcall __bs_call + lo hi bank;
+    9 B: mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp __bs_call."""
+    if len(b) == 6 and b[0] == 0x12:
+        return b[3] | b[4] << 8, b[5]
+    if len(b) == 9 and (b[0], b[2], b[4], b[6]) == (0x78, 0x79, 0x7A, 0x02):
+        return b[3] | b[5] << 8, b[1]
+    return None
+
+
 def stub_targets(im):
     fn_start = {(c["reg"], c["addr"] & 0xFFFF): c for c in im.chunks if c["kind"] == "fn"}
     out = {}
     for c in im.chunks:
         b = im.code(c)
-        if c["kind"] == "stub" and len(b) == 6 and b[0] == 0x12:
-            tc = fn_start.get((b[5], b[3] | b[4] << 8)) or fn_start.get(("C", b[3] | b[4] << 8))
+        t = stub_target(b) if c["kind"] == "stub" else None
+        if t:
+            tc = fn_start.get((t[1], t[0])) or fn_start.get(("C", t[0]))
             out[c["addr"]] = (tc["name"], 0) if tc else ("?bad", 0)
     return out
 

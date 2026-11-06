@@ -872,6 +872,13 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
     cur = int(m.group(1), 16)
     flash = FlashPort(img)
     s = open_native(img, ROOT / "tmp/fwsim" / binp.stem, log, flash, VECTORS)
+    # trampoline switch window: __bs_cur is already the target, the bank register not yet (written at the movx). An IRQ
+    # whose return PC lies inside is consistent (ISR code is common; its own stubs restore __bs_cur's bank); skip the compare.
+    windows = []
+    for a, b in ((sym["__bs_call"], sym["__bs_call_sw"]), (sym["__bs_ret"], sym["__bs_ret_sw"])):
+        for i in range(a, b - 1):
+            if img[i + 1] == cur & 0xFF and img[i] in (0xF5, 0x88, 0x89, 0x8A, 0x8B):     # mov __bs_cur,A / Rn
+                windows.append((i + 2, b)); break
 
     def logical():
         s.send(f"dump iram 0x{cur:x} 0x{cur:x}")
@@ -896,6 +903,8 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
             if spv > pending[1]:                        # the ISR itself ran through this PC (common code): still inside it
                 s.send(f"tbreak 0x{pc:x}"); continue
             bank, lg = cur_bank(s), logical()
+            if any(a <= pc < b for a, b in windows):
+                bank = lg = pending[0]                  # in the switch window (see above): only SP is compared
             if not (bank == lg == pending[0]) or spv != pending[1]:
                 bad.append(f"vector 0x{pending[3]:02x} in logical bank {pending[0]}: back with bank reg {bank}, __bs_cur {lg}, "
                            f"SP 0x{spv:02x} (was 0x{pending[1]:02x}) at pc 0x{pc:04x}")

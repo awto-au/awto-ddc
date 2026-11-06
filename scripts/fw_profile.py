@@ -52,7 +52,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log):
     s, sym, where = boot(img, mapp, be, log)
     allsym, stubs = parse_syms(mp)
     stub_starts = [v for v, _ in stubs]
-    ssize = min(b - a for a, b in zip(stub_starts, stub_starts[1:])) if len(stub_starts) > 1 else 6
+    ssize = 9 if stubs and img[stubs[0][0]] == 0x78 else 6      # 9 B mov/mov/mov/ljmp stub or 6 B lcall + data
     stub_name = dict(stubs)
     call, call_sw, ret, ret_sw = (allsym[k] for k in ("__bs_call", "__bs_call_sw", "__bs_ret", "__bs_ret_sw"))
     rtab = (ret - 64, ret)
@@ -108,7 +108,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log):
     cur = step()[0]
     excl, incl, reg = Counter(), Counter(), Counter()
     cnt = Counter()
-    xcalls, calls = Counter(), Counter()
+    xcalls, calls, edges = Counter(), Counter(), Counter()   # edges: every call caller -> callee fn, direct or via stub
     r2_ok = lambda a: region(a) == ""          # direct call to a real function (stub entries are counted at the trampoline)
     per_pass = []
     stackf = ["_main"]               # shadow call stack of names (the sampled window starts inside main()'s loop)
@@ -149,8 +149,11 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log):
                 cnt["stub_entries"] += 1 if passes_done >= 0 else 0
                 if passes_done >= 0:
                     xcalls[f"{sym_pc} -> {stub_name[npc][5:]}"] += 1
+                    edges[f"{sym_pc} _{stub_name[npc][5:]}"] += 1
             else:
                 cnt["direct_calls"] += 1 if passes_done >= 0 else 0
+                if passes_done >= 0 and r2_ok(npc):
+                    edges[f"{sym_pc} {tgt}"] += 1
         elif mn == "RET":
             if call_sw <= pc < call_sw + 8:
                 if passes_done >= 0:
@@ -183,7 +186,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log):
     return {"image": binp.name, "passes": n, "cycles_per_pass_list": [t // 12 for t in per_pass],
             "cycles_per_pass": sum(per_pass) / 12 / n, "instr_per_pass": n_instr / n,
             "excl": {k: v / 12 / n for k, v in excl.items()}, "incl": {k: v / 12 / n for k, v in incl.items()},
-            "region": {k: v / 12 / n for k, v in reg.items()}, "calls": {k: v / n for k, v in calls.most_common(80)}, "xbank_calls": {k: v / n for k, v in xcalls.most_common(40)}, "counts": {k: v / n for k, v in cnt.items() if k != "passes"}}
+            "region": {k: v / 12 / n for k, v in reg.items()}, "calls": {k: v / n for k, v in calls.most_common(80)}, "xbank_calls": {k: v / n for k, v in xcalls.most_common(40)}, "edges": {k: v / n for k, v in edges.items()}, "counts": {k: v / n for k, v in cnt.items() if k != "passes"}}
 
 
 def main():
