@@ -6,7 +6,11 @@ usage: fw_sim.py --serial AWT26110003 [--budget 3000000] [--max-switches 2000]
   that bank's 64 KiB image (common area identical in every bank, so the swap is exact). Peripherals are
   not modelled (XDATA/SFR reads return RAM contents), so a wait-for-hardware loop shows up as a stall.
   Stops on: --budget instructions without a bank switch (prints PC + function from the map), or max switches.
-Log: tmp/logs/fw_sim.log; per-bank ihx in tmp/fwsim/<serial>/
+       fw_sim.py --boot-check BIN MAP [--be|--le] [--passes 50]   offline PASS/FAIL: boot to the main loop (#11, #38)
+       fw_sim.py --isr-check BIN MAP                              interrupts in every bank return to that bank
+  Boot check = native banking + flash-read port model (below); PASS = diag stage 8 and the heartbeat advances.
+  Native-mode histogram runs stop after --samples interrupts (~300k instr): that, not hardware, ended at stage 4.
+Log: tmp/logs/fw_sim.log; per-bank ihx in tmp/fwsim/<serial>/ (boot/isr check: tmp/fwsim/<bin stem>/)
 """
 import argparse, bisect, os, re, select, subprocess, sys, time
 from collections import Counter
@@ -66,6 +70,229 @@ def print_diag(s):
     print(rtd_diag.report(rtd_diag.decode(blk, T.BIG_ENDIAN), None, None))
 
 
+class FlashPort:
+    """Flash data port (SDK ScalerFlashRead): FF78..FF7A = 24-bit flash address, FF7B = data port, auto-increment.
+    Served from the image (flash content = the .bin; 0xFF beyond it). ucsim has no auto-increment: event
+    breakpoints on FF7A writes / FF7B reads preload the next byte into the cell."""
+    ADDR, PORT = 0xFF78, 0xFF7B
+
+    def __init__(self, img: bytes):
+        self.img, self.ptr, self.reads = img, 0, 0
+
+    def arm(self, s):
+        s.send(f"break xram w 0x{self.ADDR + 2:x}"); s.send(f"break xram r 0x{self.PORT:x}")
+
+    def byte(self, p):
+        return self.img[p] if p < len(self.img) else 0xFF
+
+    def handle(self, s, out) -> bool:
+        """True if this stop was a flash-port event (handled; caller resumes)."""
+        if "Event break" not in out:
+            return False
+        s.send(f"dump xram 0x{self.ADDR:x} 0x{self.PORT:x}")
+        r = s.read_until(rb"0xff78\s+((?:[0-9a-f]{2} ){4})", 10)
+        if r is None:
+            return False
+        ev = re.findall(r"Event `(\w+)' at xram\[0x([0-9a-f]+)\]", out + r)
+        a = [int(x, 16) for x in re.search(r"0xff78\s+((?:[0-9a-f]{2} ){4})", r).group(1).split()]
+        kind, adr = ev[-1] if ev else ("", "")
+        if adr == f"{self.ADDR + 2:x}" and kind == "write":
+            self.ptr = a[0] << 16 | a[1] << 8 | a[2]
+        elif adr == f"{self.PORT:x}":
+            self.ptr += 1; self.reads += 1
+        else:
+            return False
+        s.send(f"set memory xram 0x{self.PORT:x} 0x{self.byte(self.ptr):x}")
+        return True
+
+
+def open_native(img: bytes, d: Path, log, flash: FlashPort | None = None, extra_breaks=()):
+    """ucsim with the RL6449 banker (see native), all banks loaded, reset, breakpoints set."""
+    nb = len(img) // BANK
+    d.mkdir(parents=True, exist_ok=True)
+    for k in range(nb):
+        write_ihx(img[k * BANK:(k + 1) * BANK], d / f"bank{k}.ihx")
+    s = Sim(None, log)
+    s.send(f"memory create chip flash 0x{nb * BANK:x} 8")
+    s.send("memory create banker xram 0xffff 0x0f rom 0x0000 0xffff")
+    for k in range(nb):
+        s.send(f"memory create bank rom 0x0000 {k} flash 0x{k * BANK:x}")
+    for k in range(nb):
+        s.send(f"set memory xram 0xffff {k}"); s.send(f'file "{d / f"bank{k}.ihx"}"')
+        if not s.read_until(rb"Loading from[^\n]*bank%d\.ihx" % k, 30):
+            raise RuntimeError(f"load of bank {k} failed")
+    s.send("set memory xram 0xffff 0"); s.send("reset")
+    for v in extra_breaks:
+        s.send(f"break 0x{v:x}")
+    if flash:
+        flash.arm(s)
+    return s
+
+
+def parse_map(mp: str, img: bytes):
+    """(sym dict, where(bank, pc)). Common area = leading bytes identical in every bank (no build.json for loose images)."""
+    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
+    funcs = sorted((v, k) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_"))
+    keys = [v for v, _ in funcs]
+    nb = len(img) // BANK
+    cend = 0
+    while cend < BANK and all(img[k * BANK + cend] == img[cend] for k in range(1, nb)):
+        cend += 1
+    where = lambda bank, pc: next((k for v, k in reversed(funcs[:bisect.bisect_right(
+        keys, pc if pc < cend or bank == 0 else bank * BANK + pc)])), "?")
+    return sym, where
+
+
+def run_chunk(s, flash, n, timeout=120):
+    """step n instructions, serving flash-port events; returns the last output (the Stop/Simulated text)."""
+    s.send(f"step {n}")
+    while True:
+        out = s.read_until(rb"Simulated \d+ ticks[^\n]*\n", timeout)
+        if out is None:
+            return None
+        if flash and flash.handle(s, out):
+            s.send(f"step {n}"); continue
+        return out
+
+
+def cur_bank(s) -> int:
+    s.send("dump xram 0xffff 0xffff")
+    bk = s.read_until(rb"0xffff\s+([0-9a-f]{2})", 10)
+    return int(re.search(r"0xffff\s+([0-9a-f]{2})", bk).group(1), 16) & 0x0F if bk else -1
+
+
+def read_diag(s):
+    s.send("dump xram 0xf6d0 0xf6ff")
+    out = s.read_until(rb"0xf6f8 [^\n]*\n", 30)
+    rows = {int(m.group(1), 16): bytes.fromhex(m.group(2).replace(" ", ""))
+            for m in re.finditer(r"^0x([0-9a-f]{4})\s+((?:[0-9a-f]{2} ){8})", out or "", re.M)}
+    blk = b"".join(rows.get(a, b"") for a in range(0xF6D0, 0xF700, 8))
+    return blk if len(blk) == 48 else None
+
+
+def boot_check(binp: Path, mapp: Path, be: bool, passes: int, max_instr: int, log) -> int:
+    """PASS: diag stage 8 and the heartbeat advances `passes` (u16 wrap-safe) after it. FAIL: restart, `SJMP $` trap,
+    no (stage, heartbeat) change for STALL_CHUNKS chunks, or max_instr used up. Prints last PC/bank/symbol/stage."""
+    import rtd_diag
+    img = binp.read_bytes()
+    sym, where = parse_map(mapp.read_text(errors="replace"), img)
+    gsinit = sym.get("__sdcc_gsinit_startup")
+    flash = FlashPort(img)
+    s = open_native(img, ROOT / "tmp/fwsim" / binp.stem, log, flash, [gsinit] if gsinit is not None else [])
+    chunk, stall_chunks, done = 1_000_000, 15, 0   # 1 M instr ~ 0.35 s; startup waits (DPTx, delays) can sit 10 M instr at one stage
+    starts, last, hb0, same, verdict = 0, None, None, 0, None
+    d = None
+    while done < max_instr and verdict is None:
+        out = run_chunk(s, flash, chunk)
+        done += chunk
+        if out is None:
+            verdict = "ucsim did not answer"; break
+        stop = re.search(r"Stop at 0x([0-9a-f]+)", out)
+        pc = int(stop.group(1), 16) if stop else None
+        if pc is not None and pc == gsinit:
+            starts += 1
+            if starts > 1:
+                verdict = f"RESTART (startup re-entered) after ~{done} instr"
+            continue
+        blk = read_diag(s)
+        d = rtd_diag.decode(blk, be) if blk else None
+        key = (d["stage"], d["hb"]) if d else None
+        if d and d["stage"] >= 8:
+            hb0 = d["hb"] if hb0 is None else hb0
+            if (d["hb"] - hb0) & 0xFFFF >= passes:
+                verdict = "PASS"; break
+        same = same + 1 if key == last else 0
+        last = key
+        if re.search(r"\n0x[0-9a-f]+\s+80 fe\s+SJMP", out):
+            verdict = "FAIL trap: SJMP $ at the stop PC"
+        elif same >= stall_chunks:
+            verdict = f"FAIL stall: no stage/heartbeat change for {stall_chunks * chunk} instr"
+    bank = cur_bank(s)
+    s.send("quit")
+    st = d["stage"] if d else -1
+    hb = d["hb"] if d else -1
+    pcs = f"0x{pc:04x} bank {bank} in {where(bank, pc)}" if pc is not None else "?"
+    sp = re.search(r"SP 0x([0-9a-f]+) -> ([0-9a-f]{2}) ([0-9a-f]{2})", out or "")
+    if sp and verdict != "PASS":                          # @SP = PCH, @SP-1 = PCL: a caller guess (valid at a trap entered by lcall)
+        r = int(sp.group(2) + sp.group(3), 16)
+        pcs += f"; stack top 0x{r:04x} = {where(bank, r)} (SP 0x{sp.group(1)})"
+    if verdict == "PASS":
+        print(f"PASS boot-check {binp.name}: stage {st}, heartbeat {hb0} -> {hb} (+{(hb - hb0) & 0xFFFF}), "
+              f"~{done} instr, flash-port reads {flash.reads}")
+        return 0
+    if verdict is None:
+        verdict = f"FAIL budget: {max_instr} instr without {passes} heartbeats at stage 8"
+    print(f"{verdict}\\nFAIL boot-check {binp.name}: last PC {pcs}; diag stage {st} heartbeat {hb}; "
+          f"~{done} instr; flash-port reads {flash.reads}".replace("\\n", "\n"))
+    if d:
+        print(rtd_diag.report(d, None, None))
+    return 1
+
+
+def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_instr: int = 60_000_000) -> int:
+    """An interrupt taken with logical bank k (= __bs_cur, the bank the code thinks it is in) returns with bank register
+    == __bs_cur == k and SP as before. Timer2 comes by itself; EXINT1 (IE1) is forced once per bank seen.
+    Flow: vector stop -> note (__bs_cur, SP, return PC) -> tbreak at the return PC -> compare."""
+    img = binp.read_bytes()
+    mp = mapp.read_text(errors="replace")
+    sym, where = parse_map(mp, img)
+    m = re.search(r"^\s+([0-9A-F]{8})\s+__bs_cur\s", mp, re.M)
+    if not m:
+        print("FAIL isr-check: __bs_cur not in map"); return 1
+    cur = int(m.group(1), 16)
+    flash = FlashPort(img)
+    s = open_native(img, ROOT / "tmp/fwsim" / binp.stem, log, flash, VECTORS)
+
+    def logical():
+        s.send(f"dump iram 0x{cur:x} 0x{cur:x}")
+        r = s.read_until(rb"\n0x%02x\s+[0-9a-f]{2} [^\n]*\n" % cur, 10)
+        g = re.search(r"0x[0-9a-f]+\s+([0-9a-f]{2})", r or "")
+        return int(g.group(1), 16) if g else -1
+
+    seen, bad, injected, irqs, done = Counter(), [], set(), 0, 0
+    waited, chunk, pending = 0, 1_000_000, None                   # pending = (logical bank, SP before the IRQ, return PC, vector)
+    while irqs < want_irqs and done < max_instr:
+        out = run_chunk(s, flash, chunk)
+        if out is None:
+            print("FAIL isr-check: ucsim did not answer"); return 1
+        stop = re.search(r"Stop at 0x([0-9a-f]+)", out)
+        done += 1000 if stop else chunk
+        if not stop:
+            continue
+        pc = int(stop.group(1), 16)
+        sp = re.search(r"SP 0x([0-9a-f]+) -> ([0-9a-f]{2}) ([0-9a-f]{2})", out)
+        if pending and pc == pending[2] and (pc not in VECTORS):
+            spv = int(sp.group(1), 16) if sp else -1
+            if spv > pending[1]:                        # the ISR itself ran through this PC (common code): still inside it
+                s.send(f"tbreak 0x{pc:x}"); continue
+            bank, lg = cur_bank(s), logical()
+            if not (bank == lg == pending[0]) or spv != pending[1]:
+                bad.append(f"vector 0x{pending[3]:02x} in logical bank {pending[0]}: back with bank reg {bank}, __bs_cur {lg}, "
+                           f"SP 0x{spv:02x} (was 0x{pending[1]:02x}) at pc 0x{pc:04x}")
+            seen[pending[0]] += 1; pending = None; irqs += 1
+            if lg not in injected:                      # main-context point in this bank: force EXINT1 once
+                injected.add(lg)
+                s.send("set bit 0x8b 1")
+            continue
+        if pc in VECTORS and pending is not None:
+            waited += 1
+            if waited > 50:                             # 50 more vectors and still no return to the interrupted PC
+                bad.append(f"vector 0x{pending[3]:02x} in logical bank {pending[0]}: never returned to pc 0x{pending[2]:04x} "
+                           f"(SP 0x{pending[1]:02x}); now pc 0x{pc:04x} bank {cur_bank(s)}")
+                break
+        if pc in VECTORS and sp and pending is None:
+            waited = 0    # SP in the stop text is after the push of the return PC
+            ret = int(sp.group(2) + sp.group(3), 16)    # @SP = PCH, @SP-1 = PCL (see native)
+            pending = (logical(), int(sp.group(1), 16) - 2, ret, pc)
+            s.send(f"tbreak 0x{ret:x}")
+    s.send("quit")
+    print(f"isr-check {binp.name}: {irqs} interrupts returned, banks covered {sorted(seen)} of {len(img) // BANK}, "
+          f"~{done} instr")
+    for b in bad[:10]:
+        print("FAIL", b)
+    return 1 if bad or not irqs else 0
+
+
 def native(a, sym, d, nb, where, log) -> int:
     """ucsim's own banker: XDATA 0xFFFF selects which 64 KiB slice of a flash chip is code memory, as on
     the RL6449. Free run; stops only at ISR vectors (PC samples) and at startup re-entry (restart = crash)."""
@@ -120,7 +347,12 @@ def native(a, sym, d, nb, where, log) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--serial", required=True)
+    ap.add_argument("--serial")
+    ap.add_argument("--boot-check", nargs=2, metavar=("BIN", "MAP"), help="offline boot-to-main-loop PASS/FAIL")
+    ap.add_argument("--isr-check", nargs=2, metavar=("BIN", "MAP"), help="interrupt return-to-bank check")
+    ap.add_argument("--be", action="store_true", help="diag block big-endian (default: from '-be' in the file name)")
+    ap.add_argument("--passes", type=int, default=50, help="boot-check: heartbeats to see after stage 8")
+    ap.add_argument("--max-instr", type=int, default=60_000_000, help="boot-check: instruction budget")
     ap.add_argument("--budget", type=int, default=3_000_000, help="instructions without a bank switch = stall")
     ap.add_argument("--max-switches", type=int, default=20000)
     ap.add_argument("--samples", type=int, default=300, help="interrupts sampled (main-context PC) before report")
@@ -130,6 +362,15 @@ def main() -> int:
                     help="breakpoint + ihx-reload bank model (slow; keeps the banked-call trail)")
     ap.add_argument("--instr", type=int, default=200_000_000, help="native mode: total instructions to run")
     a = ap.parse_args()
+    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
+    for mode in ("boot_check", "isr_check"):
+        if getattr(a, mode):
+            b, m = map(Path, getattr(a, mode))
+            lg = (ROOT / "tmp/logs/fw_sim.log").open("w", buffering=1)
+            be = a.be or "-be" in b.name or T.BIG_ENDIAN
+            return (boot_check(b, m, be, a.passes, a.max_instr, lg) if mode == "boot_check" else isr_check(b, m, be, lg))
+    if not a.serial:
+        ap.error("--serial, --boot-check or --isr-check required")
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
     mp = (fw / "fw.map").read_text(errors="replace")
