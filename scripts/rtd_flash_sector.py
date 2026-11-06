@@ -49,7 +49,7 @@ import argparse, ctypes, fcntl, os, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_isp_probe import Isp, Msg, ISP_ADDR, repo_root  # noqa: E402
+from rtd_isp_probe import Isp, Msg, ISP_ADDR, I2C_M_RD, repo_root  # noqa: E402
 
 SECTOR = 4096
 PAGE = 256
@@ -78,6 +78,12 @@ POLL_MAX = 20
 T_WRSR_LIMIT, T_ERASE_LIMIT = 0.05, 0.25
 T_PROG_LIMIT = 0.05        # tPP 3 ms x1.25 = 3.75 ms is below one I2C poll (~5-10 ms); floor at ~5 polls
 T_BUFRDY_LIMIT = 0.05      # page buffer ready should be immediate; same floor, fires only on a stuck engine
+
+# Burst page program (#12): data bytes per I2C write to 0x70. 256 = whole page (rtdflash does the same through an
+# RP2040 bridge on RTD2795). Message = reg + data = 257 B <= GMBUS 511 (gen9+, intel_gmbus.c); gen<9 caps at 256,
+# use --burst-chunk 128 there. Never exceeds the 256 B page SRAM (0x71 = 255).
+WRITE_MODES = ("byte", "burst")
+BURST_CHUNK = 256
 
 LOG = None
 
@@ -226,6 +232,18 @@ class Rtd(Isp):
                 out += self.read_block(0x70, 64)
         return bytes(out[:n])
 
+    def flash_crc(self, addr, n):
+        """On-chip CRC8 over flash [addr, addr+n-1] (end inclusive), result reg 0x75. docs/flash-crc.md.
+        Limit: worst-case flash clock 1 MHz (reads at >=5 MHz expected) -> n*8 us x1.25 + 20 ms for the poll
+        granularity; on expiry TimeoutError names op/limit/elapsed (poll_reg)."""
+        end = addr + n - 1
+        for r, v in zip((0x64, 0x65, 0x66, 0x72, 0x73, 0x74),
+                        (addr >> 16, addr >> 8, addr, end >> 16, end >> 8, end)):
+            self.write(r, v & 0xFF)
+        self.write(0x6F, 0x84)                        # isp_en | crc_start; crc_done (bit1) drops, then rises
+        self.poll_reg(0x6F, 0x02, 0x02, f"crc 0x{addr:06x}+{n}", n * 8e-6 * 1.25 + 0.02)
+        return self.read(0x75)
+
     def cmd(self, op, limit=0.3):
         # Bare opcode, no address/data (ENSO/EXSO). Engine WRITE type, nw=0: 60<-type, 61<-op, 60<-type|1.
         self.common(T_WRITE_WREN, op, nr=0, nw=0, limit=limit)
@@ -289,12 +307,40 @@ class Rtd(Isp):
         # ONCE before the page loop (rtdflash flash_write_sector): program opcode, program size-1, low addr byte.
         self.write(0x6D, OP_PROG); self.write(0x71, PAGE - 1); self.write(0x66, 0x00)
 
+    write_mode = "byte"            # "byte" = one data byte per I2C message (#12 safe path), "burst" = BURST_CHUNK
+    burst_chunk = BURST_CHUNK
+    burst_fails = 0                # bursts that raised (NAK mid-message); the sector then redoes in byte mode
+    _byte_sector = None            # sector base forced to byte mode after a burst failure
+
+    def burst_write(self, reg, data):
+        """One I2C_RDWR: [select 0x6F][read 1 byte][reg + data...]. The select/read pair is an i915 GMBUS
+        index cycle that absorbs the "NAK on first message, retry" resend (intel_gmbus.c, do_gmbus_xfer: only i == 0
+        is resent). A mid-data NAK then surfaces as ENXIO instead of resending the whole message and duplicating
+        its accepted prefix in the 0x70 FIFO (#12). Returns the 0x6F byte read in front of the data."""
+        sel = ctypes.create_string_buffer(bytes([0x6F]), 1)
+        rd = ctypes.create_string_buffer(1)
+        w = ctypes.create_string_buffer(bytes([reg]) + bytes(data), 1 + len(data))
+        self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(sel)),
+                    Msg(ISP_ADDR, I2C_M_RD, 1, ctypes.addressof(rd)),
+                    Msg(ISP_ADDR, 0, 1 + len(data), ctypes.addressof(w))])
+        return rd.raw[0]
+
+    def _stage_page(self, addr):
+        self.write(0x64, (addr >> 16) & 0xFF); self.write(0x65, (addr >> 8) & 0xFF)
+        self.poll_reg(0x6F, PROG_BUF_RDY, PROG_BUF_RDY, f"page 0x{addr:06x} buffer-ready", T_BUFRDY_LIMIT)
+
+    def _start_page(self, addr):
+        v = self.read(0x6F)
+        self.write(0x6F, (v & 0xFF) | PROG_BUSY)             # update_bits(0x6F, 0xFF, 0x20): set start bit
+        self.poll_reg(0x6F, PROG_BUSY, 0x00, f"page 0x{addr:06x} program", T_PROG_LIMIT)
+
     def program_page(self, addr, data):
         # rtdflash flash_program_page_prepared: stage high addr bytes, wait buffer ready (6F.4==1),
         # write 256 B to 0x70, start (6F |= 0x20), wait done (6F.5==0). Engine issues its own per-page WREN.
         assert len(data) == PAGE
-        self.write(0x64, (addr >> 16) & 0xFF); self.write(0x65, (addr >> 8) & 0xFF)
-        self.poll_reg(0x6F, PROG_BUF_RDY, PROG_BUF_RDY, f"page 0x{addr:06x} buffer-ready", T_BUFRDY_LIMIT)
+        if self.write_mode == "burst" and (addr & ~(SECTOR - 1)) != self._byte_sector:
+            return self.program_page_burst(addr, data)
+        self._stage_page(addr)
         # 0x70 is a FIFO: a resent chunk duplicates bytes (#12). Block the i2c-core resend on GMBUS timeout
         # (-EAGAIN, adapter retries = 1); other resends still happen -> caller verifies and redoes the sector.
         self.set_retries(0)
@@ -305,9 +351,32 @@ class Rtd(Isp):
             raise RuntimeError(f"page 0x{addr:06x} buffer write failed at chunk +0x{i:02x}: {e}") from e
         finally:
             self.set_retries(I2C_RETRIES_DEFAULT)
-        v = self.read(0x6F)
-        self.write(0x6F, (v & 0xFF) | PROG_BUSY)             # update_bits(0x6F, 0xFF, 0x20): set start bit
-        self.poll_reg(0x6F, PROG_BUSY, 0x00, f"page 0x{addr:06x} program", T_PROG_LIMIT)
+        self._start_page(addr)
+
+    def program_page_burst(self, addr, data):
+        """Same handshake as program_page, but the 256 B go out as ceil(256/burst_chunk) bursts (see burst_write).
+        Any bus error: flush the half-filled page buffer (kick a program of the partial page into the sector that
+        is about to be erased and redone, so the FIFO pointer restarts at 0), force the redo of this sector into
+        byte mode, raise RuntimeError (write_sector catches it; its verify + SECTOR_TRIES stay the backstop)."""
+        self._stage_page(addr)
+        self.set_retries(0)
+        i = 0
+        try:
+            for i in range(0, PAGE, self.burst_chunk):
+                if not self.burst_write(0x70, data[i:i + self.burst_chunk]) & PROG_BUF_RDY:
+                    raise OSError(0, "0x6F.4 buffer-ready clear during burst")
+        except OSError as e:
+            self.burst_fails += 1
+            self._byte_sector = addr & ~(SECTOR - 1)
+            try:
+                self.set_retries(I2C_RETRIES_DEFAULT)
+                self._start_page(addr)
+            except Exception as e2:
+                log(f"page 0x{addr:06x}: flush after burst failure also failed: {e2}")
+            raise RuntimeError(f"page 0x{addr:06x} burst failed at +0x{i:02x}: {e}") from e
+        finally:
+            self.set_retries(I2C_RETRIES_DEFAULT)
+        self._start_page(addr)
 
 
 def do_write(isp, addr, new, sr0, reprotect, nd, bk):
@@ -362,6 +431,7 @@ class FakeRtd(Rtd):
         self.programmed = False
         self.bad_verify = False                    # corrupt read-back after programming (selftest)
         self.pend = None                           # staged page buffer: (addr, bytearray)
+        self.partial_ok = False                    # burst-failure flush kicks a short page (stale tail)
         self.regs[0x6F] = 0x80                      # ISP mode bit set, program bits clear
 
     def _faddr(self):
@@ -398,6 +468,12 @@ class FakeRtd(Rtd):
         for b in data:
             self.write(reg, b)
 
+    def burst_write(self, reg, data):
+        self.bursts = getattr(self, "bursts", []) + [len(data)]
+        for b in data:
+            self.write(reg, b)
+        return self.read(0x6F)
+
     def _exec_engine(self, typ, op, nw):
         # Distinguish by write-byte count: write_enable() frames 2 write bytes (0x60<-0x71, 64<-06,65<-00)
         # and leaves WEL set for the following erase; WRSR via common() frames 1 write byte (0x60<-0x69).
@@ -421,8 +497,9 @@ class FakeRtd(Rtd):
         if self.pend is None:
             raise SystemExit("selftest: program started with no staged page (6F.4 buffer-ready not honoured)")
         addr, buf = self.pend
-        if len(buf) != PAGE:
+        if len(buf) != PAGE and not self.partial_ok:
             raise SystemExit(f"selftest: staged {len(buf)} bytes, expected {PAGE} (data load wrong)")
+        buf = (bytes(buf) + os.urandom(PAGE))[:PAGE]   # hardware always clocks 256 B: a short fill leaves stale SRAM
         a = addr - self.base
         for i in range(PAGE):                       # NOR: program only clears bits (AND)
             self.flash[a + i] &= buf[i]
