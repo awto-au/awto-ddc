@@ -2,6 +2,7 @@
 """Write a multi-bank firmware image to a Realtek RTD scaler's SPI flash in ONE ISP session.
 
 usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no-backup] [--full] [--verify crc|readback]
+                          [--write-mode byte|burst] [--burst-chunk N]
                           [--manifest PATH] [--tag TAG] [--backup-dir DIR] [--reprotect V|none]
   default = DRY RUN: enter ISP, JEDEC check, read the whole 1 MiB flash once (backup) and the image region again, require identical reads,
             save the backup + flash-state manifest, list the 4 KiB sectors inside the image length that differ. Nothing written.
@@ -14,6 +15,9 @@ usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no
   --full  : ignore the manifest, write every image sector.
   --verify: crc (default) = on-chip CRC8 per sector, auto-falls back to readback if the engine fails its
             in-session calibration (docs/flash-crc.md); readback = compare all 4 KiB back (old behaviour).
+  --write-mode: byte (default) = 1 data byte per I2C message; burst = one I2C write of --burst-chunk bytes (default 256) per
+            page to the 0x70 FIFO, ~3x faster per sector; unvalidated on hardware, verify/retry unchanged (#12).
+            A burst error redoes that sector in byte mode.
   --serial: label for the backup/manifest; must match `ddcutil detect` for this bus (checked by the caller).
   Revert: rerun with the backup (1 MiB) as <image.bin>: only sectors that differ are rewritten.
   Image sectors beyond its length are never touched (banks 14-15 = settings/gamma data, #8).
@@ -163,6 +167,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
         state.save(source="write-failed")
         raise
     state.save(image=tag, image_size=len(img), source="write", commit=commit)
+    log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}")
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
     if reprot is not None:
         isp.reprotect(reprot)
@@ -252,6 +257,8 @@ def main() -> int:
                     help="skip the dump reads (unit already runs our own build); incremental by the flash-state manifest")
     ap.add_argument("--full", action="store_true", help="ignore the manifest: write every image sector")
     ap.add_argument("--verify", choices=("crc", "readback"), default="crc")
+    ap.add_argument("--write-mode", choices=F.WRITE_MODES, default="byte")
+    ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
@@ -263,11 +270,14 @@ def main() -> int:
     if len(img) % SECTOR or len(img) > FLASH:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2
     log(f"mode={'WRITE' if a.write else 'DRY-RUN'} bus=/dev/i2c-{a.bus} image={a.image} ({len(img)} B) serial={a.serial} "
-        f"no_backup={a.no_backup} full={a.full} verify={a.verify}")
+        f"no_backup={a.no_backup} full={a.full} verify={a.verify} write_mode={a.write_mode} burst_chunk={a.burst_chunk}")
     o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot,
              backup_dir=a.backup_dir, manifest=a.manifest or root / "tmp/fw" / f"{a.serial}-flash-state.json",
              tag=a.tag or a.image.stem, commit=S.git_commit(root))
+    if not 1 <= a.burst_chunk <= PAGE:
+        log(f"refuse: --burst-chunk {a.burst_chunk} outside 1..{PAGE}"); return 2
     isp = Rtd(a.bus)
+    isp.write_mode, isp.burst_chunk = a.write_mode, a.burst_chunk
     isp.write(0x6F, 0x80)
     if not isp.read(0x6F) & 0x80:
         log("ISP mode not enabled; aborting"); return 3

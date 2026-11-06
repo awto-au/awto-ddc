@@ -392,11 +392,12 @@ def cmd_build(extra: list[str]) -> int:
 
 
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
-         args="[--unit N] [--full] [--verify crc|readback] [image.bin]", kind="action")
+         args="[--unit N] [--full] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     n, u = _unit(extra)
     full = bool(_opt(extra, "--full"))
     verify = _opt(extra, "--verify", "crc")
+    wmode = _opt(extra, "--write-mode", "byte")
     if extra:
         img = Path(extra[0])
         tag = img.name.removesuffix(".bin")
@@ -404,7 +405,7 @@ def cmd_flash(extra: list[str]) -> int:
         tag = (FW / f"{u['serial']}-last.txt").read_text().strip()
         img = FW / f"{tag}.bin"
     rc = _py("rtd_flash_image.py", _bus(u), img, "--serial", u["serial"], "--write", "--no-backup",
-             "--tag", tag, "--verify", verify, *(["--full"] if full else []))
+             "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []))
     if rc == 0:
         (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
     return rc
