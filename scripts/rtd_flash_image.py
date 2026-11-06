@@ -353,7 +353,9 @@ def main() -> int:
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    F.LOG = rtd_proto.setup_logs("rtd_flash_image", raw=os.environ.get("AWTO_RAW_TRACE") == "1", merge_pages=True).main
+    lg = rtd_proto.setup_logs("rtd_flash_image", raw=os.environ.get("AWTO_RAW_TRACE") == "1", merge_pages=True,
+                              detail=True)            # per-sector protocol lines -> rtd_flash_image.detail.log
+    F.LOG, F.DETAIL = lg.main, lg.detail
     img = a.image.read_bytes()
     if len(img) % SECTOR or len(img) > FLASH:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2

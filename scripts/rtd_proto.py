@@ -738,17 +738,19 @@ class Logs:
 
 
 def setup_logs(name: str, map=None, raw: bool | None = None, merge_pages: bool = False, chip: str = "RTD2795T-CG",
-               root: Path | None = None) -> Logs:
+               root: Path | None = None, detail: bool = False) -> Logs:
     """Decoded lines + the tool's own lines -> tmp/logs/<name>.log; byte trace -> <name>.raw.log.
-    raw=None: on unless $AWTO_RAW_TRACE=0 (flash tools pass raw=False: ~1M lines per image). Replaces earlier taps."""
+    raw=None: on unless $AWTO_RAW_TRACE=0 (flash tools pass raw=False: ~1M lines per image). Replaces earlier taps.
+    detail=True: decoded protocol lines go to <name>.detail.log; the main log keeps the tool's own lines only."""
     root = root or repo_root()
     d = root / "tmp/logs"
     d.mkdir(parents=True, exist_ok=True)
     f = (d / f"{name}.log").open("a")
+    df = (d / f"{name}.detail.log").open("a") if detail else f
     if raw is None:
         raw = os.environ.get("AWTO_RAW_TRACE") != "0"
     rf = (d / f"{name}.raw.log").open("a") if raw else None
-    dec = Decoder(lambda ts, tag, text: f.write(f"{ts} {tag:<4} {text}\n"), Symbols.load(root, map), regdb_namer(chip),
+    dec = Decoder(lambda ts, tag, text: df.write(f"{ts} {tag:<4} {text}\n"), Symbols.load(root, map), regdb_namer(chip),
                   load_msgids(root), merge_pages)
     err = []
 
@@ -764,10 +766,12 @@ def setup_logs(name: str, map=None, raw: bool | None = None, merge_pages: bool =
     TAPS.clear()
     TAPS.append(tap)
     lg = Logs(LogFile(f, dec), rf, dec, tap)
+    lg.detail = LogFile(df, dec)
 
     def done():
         try:
             lg.main.flush()
+            lg.detail.flush()
             if rf:
                 rf.flush()
         except ValueError:

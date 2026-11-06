@@ -87,12 +87,19 @@ WRITE_MODES = ("byte", "burst")
 BURST_CHUNK = 256
 
 LOG = None
+DETAIL = None               # per-operation lines (erase timings); None = main log
 
 
 def log(s):
     line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
     print(line, flush=True)
     LOG.write(line + "\n"); LOG.flush()
+
+
+def dlog(s):
+    if DETAIL is None:
+        return log(s)
+    DETAIL.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
 
 
 I2C_RETRIES = 0x0701        # linux/i2c-dev.h: set adapter retry count (adapter-wide, not per fd)
@@ -220,7 +227,7 @@ class Rtd(Isp):
         while self.status() & SR_WIP:
             if time.monotonic() - t0 > limit:
                 raise TimeoutError(f"{what}: WIP still set after {time.monotonic()-t0:.3f}s (limit {limit}s)")
-        log(f"{what} done in {time.monotonic()-t0:.3f}s")
+        dlog(f"{what} done in {time.monotonic()-t0:.3f}s")
 
     def read_flash(self, addr, n):
         out = bytearray()
