@@ -47,7 +47,8 @@ def log(s):
 
 
 SECTOR_TRIES = 5            # failures cluster (i915 stays bit-bang after a GMBUS timeout); 3 aborted once (#12)
-BLANK_CRC = S.crc8(b"\xff" * SECTOR)
+BLANK = b"\xff" * SECTOR
+BLANK_CRC = S.crc8(BLANK)
 
 
 PH: dict[str, float] = {}                           # seconds per phase, for the SUMMARY split
@@ -189,7 +190,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
             s = i * SECTOR
             ts = time.monotonic()
             try:
-                program_verify(isp, s, img[s:s + SECTOR], crc_ok)
+                if img[s:s + SECTOR] != BLANK:          # blank in the new image: erase was the whole job
+                    program_verify(isp, s, img[s:s + SECTOR], crc_ok)
             except RuntimeError as e:
                 log(f"0x{s:06x}: {e}; redo sector alone (erase+program+verify)")
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok)
@@ -202,13 +204,16 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 state.save()
                 log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
         if crc_ok:                                      # end-to-end over the image region, written or skipped
-            with phase("final crc"):
-                hw, py = isp.flash_crc(0, len(img)), S.crc8(img)
-            if hw != py:
-                for i in range(len(img) // SECTOR):
-                    state.sectors[i] = None             # unlocalised: next run reads back
-                raise RuntimeError(f"whole-image CRC mismatch hw 0x{hw:02x} != 0x{py:02x}")
-            log(f"whole-image CRC OK 0x{hw:02x} over {len(img)} B")
+            runs = S._runs([i for i in range(len(img) // SECTOR) if img[i * SECTOR:(i + 1) * SECTOR] != BLANK])
+            with phase("final crc"):                    # every non-blank run of the image, written or skipped
+                for a, b in runs:
+                    lo, hi = a * SECTOR, (b + 1) * SECTOR
+                    hw, py = isp.flash_crc(lo, hi - lo), S.crc8(img[lo:hi])
+                    if hw != py:
+                        for i in range(a, b + 1):
+                            state.sectors[i] = None     # unlocalised: next run reads back
+                        raise RuntimeError(f"CRC mismatch 0x{lo:06x}-0x{hi:06x} hw 0x{hw:02x} != 0x{py:02x}")
+            log(f"final CRC OK over {len(runs)} non-blank run(s)")
     except BaseException:
         state.save(source="write-failed")
         raise
@@ -258,8 +263,10 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         with phase("gate"):                         # every unchanged sector checked on-chip before any write
             if p.unknown:
                 diff = sorted(set(diff) | set(S.resolve_unknown(isp, img, state, p.unknown, log)))
-            if p.unchanged:
-                bad = S.drift_check(isp, img, state, p.unchanged, rng, crc_ok, log)
+            # Dan 2026-11-06: a sector that is blank (all FF) in the new image is never checked; erase-only if changed
+            check = [i for i in p.unchanged if img[i * SECTOR:(i + 1) * SECTOR] != BLANK]
+            if check:
+                bad = S.drift_check(isp, img, state, check, rng, crc_ok, log)
                 if bad:
                     log(f"!!! DRIFT: manifest does not match the flash ({len(bad)} sector(s) {bad[:8]}); "
                         f"manifest untrusted -> full readback diff of the image region (authoritative, ~1/5 of a full write)")
