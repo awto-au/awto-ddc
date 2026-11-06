@@ -302,7 +302,7 @@ def run_sim(a) -> int:
     binp, mapp = a.sim
     mode = a.host_mode or "1920x1080@60"
     rep = Report()
-    bus = fw_sim.SimBus(binp, mapp)
+    bus = fw_sim.SimBus(binp, mapp, video="1080p60")
     try:
         maps = {n: sym_addr(mapp.read_text(errors="replace"), n) for n in MAP_SYMS}
         rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode}")

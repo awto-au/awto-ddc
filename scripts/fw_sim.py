@@ -8,6 +8,11 @@ usage: fw_sim.py --serial AWT26110003 [--budget 3000000] [--max-switches 2000]
   Stops on: --budget instructions without a bank switch (prints PC + function from the map), or max switches.
        fw_sim.py --boot-check BIN MAP [--be|--le] [--passes 50]   offline PASS/FAIL: boot to the main loop (#11, #38)
        fw_sim.py --isr-check BIN MAP                              interrupts in every bank return to that bank
+       fw_sim.py --video-check BIN MAP [--mode 1080p60] [--instr 60000000]   stable HDMI source on D2: mode-state timeline
+         + blocker log (AwtoMsg ids with SDK source line, PC histogram, stub hits) -> tmp/logs/fw_sim_video.log
+  Library: Machine (ucsim + Dev register models + function stubs), SimBus (i2cbus-compatible debug slave 0x35, see
+  unit_health.py --sim), video_devs/video_stubs (what the firmware sees on D2). Models: IicSlave (FF24..FF2A, FE66),
+  FlashDev (FF78..FF7B), IndPort (DPCD), HdmiInput (measure + auto-function results), regdb reset values (re/regdb).
   Boot check = native banking + flash-read port model (below); PASS = diag stage 8 and the heartbeat advances.
   Native-mode histogram runs stop after --samples interrupts (~300k instr): that, not hardware, ended at stage 4.
 Log: tmp/logs/fw_sim.log; per-bank ihx in tmp/fwsim/<serial>/ (boot/isr check: tmp/fwsim/<bin stem>/)
@@ -146,6 +151,8 @@ def open_native(img: bytes, d: Path, log, flash: FlashPort | None = None, extra_
 def parse_map(mp: str, img: bytes):
     """(sym dict, where(bank, pc)). Common area = leading bytes identical in every bank (no build.json for loose images)."""
     sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
+    for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", mp, re.M):      # full-length names (the C: lines cut at 32 chars)
+        sym["_" + m.group(1)] = int(m.group(2), 16)
     funcs = sorted((v, k) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_"))
     keys = [v for v, _ in funcs]
     nb = len(img) // BANK
@@ -154,6 +161,7 @@ def parse_map(mp: str, img: bytes):
         cend += 1
     where = lambda bank, pc: next((k for v, k in reversed(funcs[:bisect.bisect_right(
         keys, pc if pc < cend or bank == 0 else bank * BANK + pc)])), "?")
+    where.cend = cend
     return sym, where
 
 
@@ -271,6 +279,156 @@ class IicSlave(Dev):
         m.flush()
 
 
+class RegTrace(Dev):
+    """Which constant-address registers does the code read/write? Event breakpoints on the static candidates
+    (fw_regs.candidates); a breakpoint is deleted after `limit` hits (so counts saturate at limit = polled)."""
+
+    def __init__(self, rd_addrs, wr_addrs, limit: int = 200):
+        self.reads, self.writes, self.limit = tuple(sorted(rd_addrs)), tuple(sorted(wr_addrs)), limit
+        self.cnt = {"read": {}, "write": {}}
+        self.first = {"read": {}, "write": {}}               # addr -> (pc, bank, value)
+        self.nr = {}
+
+    def init(self, m):
+        m.flush()
+        out = m.cmd("info breakpoints")
+        for g in re.finditer(r"^(\d+)\s+event\s+keep\s+\d+\s+\d+\s+0x([0-9a-f]+)\s+(read|write)", out, re.M):
+            self.nr[(g.group(3), int(g.group(2), 16))] = int(g.group(1))
+
+    def _hit(self, m, kind, a):
+        c = self.cnt[kind]
+        c[a] = c.get(a, 0) + 1
+        if a not in self.first[kind]:
+            mt = re.search(r"Stop at 0x([0-9a-f]+)", m.last_out)
+            self.first[kind][a] = (int(mt.group(1), 16) if mt else -1, m.rd(0xFFFF)[0] & 15, m.rd(a)[0])
+        if c[a] >= self.limit and (kind, a) in self.nr:
+            m.put(f"delete {self.nr.pop((kind, a))}")
+
+    def on_read(self, m, a):
+        self._hit(m, "read", a)
+
+    def on_write(self, m, a):
+        self._hit(m, "write", a)
+
+    def report(self, m, names, kind="read") -> list[str]:
+        rows = []
+        for a, c in sorted(self.cnt[kind].items(), key=lambda kv: -kv[1]):
+            pc, bank, v = self.first[kind][a]
+            rows.append(f"{kind[0]} 0x{a:04X} {names.get(a, '?'):<42} n={c}{'+' if c >= self.limit else ' '} "
+                        f"first {m.where(bank, pc)}@{bank} val 0x{v:02X}")
+        return rows
+
+
+class Cells(Dev):
+    """Constant register values (after reset); name -> value dicts are applied through m.put."""
+
+    def __init__(self, cells: dict[int, int]):
+        self.cells = dict(cells)
+
+    def init(self, m):
+        items, i = sorted(self.cells.items()), 0
+        while i < len(items):                         # consecutive addresses in one command (<= 16 values)
+            j = i
+            while j + 1 < len(items) and items[j + 1][0] == items[j][0] + 1 and j - i < 15:
+                j += 1
+            m.put(f"set memory xram 0x{items[i][0]:x} " + " ".join(f"0x{v:x}" for _, v in items[i:j + 1]))
+            i = j + 1
+
+
+class HdmiInput(Dev):
+    """Stable CEA video on D2: sync-measure and auto-function result registers (P30_02..14 offline measure, P0_7C..83 auto
+    function) as the SDK ScalerMeasure* code decodes them. F-to-P (P31_06 bit7) halves the auto-function V window as the
+    hardware does (the code doubles it back). MODES: name -> (htotal, hact, hstart, vtotal, vact, vstart, pclk 0.1 MHz)."""
+    MODES = {"1080p60": (2200, 1920, 192, 1125, 1080, 41, 1485), "2160p60": (4400, 3840, 384, 2250, 2160, 82, 5940)}
+    MEAS_KHZ = 87_700          # _MEASURE_CLK with M2PLL 350.8 MHz / 4 (kHz): HS period counts = clk * 10 / hfreq(0.1 kHz)
+    writes = (0x3106,)
+
+    def __init__(self, mode: str = "1080p60"):
+        self.mode = mode
+        self.HTOT, self.HACT, self.HSTART, self.VTOT, self.VACT, self.VSTART, self.PCLK = self.MODES[mode]
+        self.hfreq10 = round(self.PCLK * 1e5 / self.HTOT / 100)       # 0.1 kHz
+
+    def cells(self) -> dict[int, int]:
+        c = {}
+        hs_per = round(self.MEAS_KHZ * 10 / self.hfreq10) - 1
+        for a, v, mask_hi in ((0x3005, hs_per, 0x1F), (0x3008, self.VTOT - 1, 0x3F), (0x300A, 3, 0x1F), (0x300C, 4, 0x3F),
+                              (0x300E, self.HTOT - 1, 0x1F), (0x3011, self.VACT - 1, 0x3F), (0x3013, self.HACT - 1, 0x1F)):
+            c[a], c[a + 1] = (v >> 8) & mask_hi, v & 0xFF
+        c[0x3003], c[0x3004] = 0x00, 0xC0                              # no measure error flags; HS/VS polarity positive
+        c.update(self.auto(False))
+        c[0x007D] = 0x40                                                # auto-function finished
+        c[0x007C] = c[0x0078] = 0
+        c[0x3106] = 0x10                                                # F-to-P off until the firmware enables it
+        return c
+
+    def auto(self, ftop: bool) -> dict[int, int]:
+        vs, vh = ((self.VSTART - 1) // 2, self.VACT // 2) if ftop else (self.VSTART, self.VACT)
+        ve = vs + vh - 1
+        he = self.HSTART + self.HACT - 1
+        return {0x007E: ((vs >> 4) & 0xF0) | ((ve >> 8) & 0x0F), 0x007F: vs & 0xFF, 0x0080: ve & 0xFF,
+                0x0081: (((self.HSTART - 1) >> 4) & 0xF0) | (((he - 1) >> 8) & 0x0F), 0x0082: (self.HSTART - 1) & 0xFF,
+                0x0083: (he - 1) & 0xFF}
+
+    def init(self, m):
+        for a, v in sorted(self.cells().items()):
+            m.put(f"set memory xram 0x{a:x} 0x{v:x}")
+
+    def on_write(self, m, a):
+        ftop = bool(m.rd(0x3106)[0] & 0x80)
+        for k, v in self.auto(ftop).items():
+            m.put(f"set memory xram 0x{k:x} 0x{v:x}")
+
+
+MODE_NAMES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNAL", "POWER_SAVING", "POWER_OFF", "FACTORY"]
+D2_INPUT_PORT, SOURCE_HDMI, SOURCE_NONE = 5, 3, 5          # Kernel/Common/Global.h
+
+
+def video_devs(img: bytes, mode: str = "1080p60"):
+    """Devs for a board with a stable HDMI source on D2 (#38): regdb reset values, D2 cable pin (low = connected) and no
+    D3 cable, DPCD access port (DP Rx1), the HDMI measure/auto-function results. Returns (devs, hdmi)."""
+    hdmi = HdmiInput(mode)
+    return [regdb_cells(), FlashDev(img), IicSlave(), Cells({0xFE2C: 1, 0xFE32: 0}),
+            IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4), hdmi], hdmi
+
+
+def video_stubs(m: "Machine", hdmi: HdmiInput):
+    """Functions replaced because they poll the HDMI Rx PHY (CDR/DFE lock, TMDS clock count, packet SRAM) that is not modelled:
+    pre-detect and scan on D2 succeed, stability check passes, scan sets the input pixel clock like the SDK does."""
+    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["dptr"] & 255) == D2_INPUT_PORT})
+    m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
+
+    def scan(m, r):
+        if (r["dptr"] & 255) != D2_INPUT_PORT:
+            return {"dpl": SOURCE_NONE}
+        m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
+        return {"dpl": SOURCE_HDMI}
+    m.stub("ScalerTMDSScanInputPort", scan)
+
+
+class IndPort(Dev):
+    """Address-then-data port (DPCD access port etc.): data cell is preloaded with mem[addr] when the last address
+    register is written (the read that follows then sees the right value); a data write stores into mem[addr]."""
+
+    def __init__(self, addr_regs: tuple, data_reg: int, mem: dict | None = None):
+        self.addr_regs, self.data_reg, self.mem = addr_regs, data_reg, mem if mem is not None else {}
+        self.writes = (addr_regs[-1], data_reg)
+
+    def addr(self, m):
+        return int.from_bytes(b"".join(m.rd(a) for a in self.addr_regs), "big")
+
+    def on_write(self, m, a):
+        if a == self.data_reg:
+            self.mem[self.addr(m)] = m.rd(a)[0]
+        else:
+            m.put(f"set memory xram 0x{self.data_reg:x} 0x{self.mem.get(self.addr(m), 0):x}")
+
+
+def regdb_cells(chip: str = "RTD2795T-CG") -> Cells:
+    """Register file at chip reset (re/regdb), minus the firmware's XDATA RAM (0xD700..0xF6FF) and the bank register."""
+    import fw_regs
+    return Cells({a: v for a, v in fw_regs.regdb_reset(chip).items() if not 0xD700 <= a < 0xF700 and a != 0xFFFF})
+
+
 class Machine:
     """ucsim running a banked image with Dev models. run(n) serves device events until n instructions are used
     (estimated from ticks), a non-event stop (breakpoint) happens, or a model calls request_stop()."""
@@ -281,7 +439,10 @@ class Machine:
         self.sym, self.where = parse_map(self.map_text, img)
         self.log = log or _Null()
         self.s = open_native(img, ROOT / "tmp/fwsim" / tag, _Null(), None, extra_breaks)
-        self.ticks, self.instr, self._n, self._q, self._stop = 0, 0, 0, [], False
+        self.s.send("fill xram 0x0 0xfffe 0x0")            # ucsim starts XRAM random: registers read the same every run
+        self.ticks, self.instr, self._n, self._q, self._stop, self.last_out = 0, 0, 0, [], False, ""
+        self.stubs, self.stub_hits = {}, {}
+        self.ret_pc = self.sym["__bs_call_sw"] + 5            # the RET that ends __bs_call (mov dpl,r5 / mov dph,r6 / mov a,r4 / ret)
         self.hook = {}
         for d in self.devs:
             for a in d.reads:
@@ -303,12 +464,20 @@ class Machine:
             raise SimError(f"ucsim did not answer `{text[:60]}` within {timeout} s")
         return out
 
+    def addr(self, name: str) -> int:
+        """XDATA address of a global (16-bit, from the map)."""
+        mt = re.search(rf"([0-9A-F]{{8}})\s+_{name}\b", self.map_text)
+        if not mt:
+            raise SimError(f"_{name} not in the map")
+        return int(mt.group(1), 16) & 0xFFFF
+
     def put(self, c: str):
         self._q.append(c)
 
     def flush(self):
-        if self._q:
-            self.cmd("\n".join(self._q)); self._q = []
+        q, self._q = self._q, []
+        for i in range(0, len(q), 100):              # bounded batches: ucsim echoes input, an unread pipe would deadlock
+            self.cmd("\n".join(q[i:i + 100]))
 
     def rd(self, a: int, n: int = 1, space: str = "xram") -> bytes:
         self.flush()
@@ -328,6 +497,48 @@ class Machine:
     def request_stop(self):
         self._stop = True
 
+    def stub(self, name: str, fn):
+        """Replace a function: fetch breakpoint on its entry (bank checked at the stop; common code matches any bank);
+        fn(m, regs) -> dict (dpl, dph, carry) is the return value and the call is skipped with a RET at the entry; None =
+        watch only, the function runs. regs = acc, r[0..7], dptr from the stop text."""
+        v = self.sym.get("_" + name)
+        if v is None:
+            raise SimError(f"_{name} not in the map")
+        bank, pc = v >> 16, v & 0xFFFF
+        common = v < getattr(self.where, "cend", 0)
+        self.stubs.setdefault(pc, []).append((None if common else bank, name, fn))
+        if len(self.stubs[pc]) == 1:
+            self.s.send(f"break 0x{pc:x}")
+
+    def _do_stub(self, pc: int, out: str):
+        bank = self.rd(0xFFFF)[0] & 15
+        hit = [(n, f) for b, n, f in self.stubs[pc] if b is None or b == bank]
+        if not hit:
+            return
+        name, fn = hit[0]
+        acc = re.search(r"ACC= 0x([0-9a-f]{2})", out)
+        rr = re.search(r"R0 R1 R2 R3 R4 R5 R6 R7\s*\n\s*((?:[0-9a-f]{2} ){7}[0-9a-f]{2})", out)
+        dp = re.search(r"DPTR= 0x([0-9a-f]{4})", out)
+        bb = re.search(r"B= 0x([0-9a-f]{2})", out)
+        regs = {"acc": int(acc.group(1), 16) if acc else 0, "b": int(bb.group(1), 16) if bb else 0, "r": [int(x, 16) for x in rr.group(1).split()] if rr else [0] * 8,
+                "dptr": int(dp.group(1), 16) if dp else 0}
+        ret = fn(self, regs)
+        self.stub_hits[name] = self.stub_hits.get(name, 0) + 1
+        if ret is None:                                   # watch only: the function runs
+            return
+        
+        if "dpl" in ret:
+            self.put(f"set memory sfr 0x82 0x{ret['dpl'] & 255:x}")
+        if "dph" in ret:
+            self.put(f"set memory sfr 0x83 0x{ret['dph'] & 255:x}")
+        if "carry" in ret:
+            self.put(f"set bit 0xd7 {int(bool(ret['carry']))}")
+        self.put(f"pc 0x{self.ret_pc:x}")
+        self.flush()
+
+    def watch(self, name: str):
+        self.stub(name, lambda m, r: None)
+
     def run(self, n: int) -> str:
         rem, self._stop = n, False
         while True:
@@ -337,7 +548,15 @@ class Machine:
             self.ticks += int(t.group(1)) if t else 0
             self.instr += used
             ev = re.findall(r"Event `(\w+)' at xram\[0x([0-9a-f]+)\]", out)
+            self.last_out = out
             if not ev:
+                stop = re.search(r"Stop at 0x([0-9a-f]+)", out)
+                if stop and int(stop.group(1), 16) in self.stubs and "Breakpoint" in out:
+                    self._do_stub(int(stop.group(1), 16), out)
+                    rem -= used
+                    if rem <= 0 or self._stop:
+                        return out
+                    continue
                 return out
             rem -= used
             for kind, a in ev:
@@ -361,13 +580,22 @@ class SimBus:
     ISR_BUDGET = 20_000            # instr for a SUB_I-only EXINT1 (read address phase)
 
     def __init__(self, binp: Path, mapp: Path, tag: str | None = None, log=None, boot: bool = True,
-                 devs=()):
+                 devs=(), video: str | None = None):
+        """video = HdmiInput mode name ("1080p60") for a firmware that sees a stable HDMI source on D2; None = bare
+        CPU + flash port + debug slave (random XRAM, no source)."""
         import rtd_diag
         self.rtd_diag = rtd_diag
         self.img = Path(binp).read_bytes()
         self.be = "-be" in Path(binp).name or T.BIG_ENDIAN
-        self.iic = IicSlave()
-        self.m = Machine(self.img, Path(mapp), tag or Path(binp).stem, log, [FlashDev(self.img), self.iic, *devs])
+        if video:
+            all_devs, self.hdmi = video_devs(self.img, video)
+            self.iic = next(d for d in all_devs if isinstance(d, IicSlave))
+        else:
+            self.iic = IicSlave()
+            all_devs, self.hdmi = [FlashDev(self.img), self.iic], None
+        self.m = Machine(self.img, Path(mapp), tag or Path(binp).stem, log, [*all_devs, *devs])
+        if video:
+            video_stubs(self.m, self.hdmi)
         self.diag_base = self.m.sym.get("_g_stAwtoDiag", 0xF6D0)
         self.t2_abs, self._t2_last = 0, None
         self.naks = 0
@@ -375,10 +603,10 @@ class SimBus:
             self.boot()
 
     def addr(self, name: str) -> int:
-        mt = re.search(rf"([0-9A-F]{{8}})\s+_{name}\b", self.m.map_text)
-        if not mt:
-            raise SimError(f"_{name} not in map")
-        return int(mt.group(1), 16) & 0xFFFF
+        return self.m.addr(name)
+
+    def mode_state(self) -> int:
+        return self.m.rd(self.addr("g_stModeInfo"))[0] & 0x1F
 
     def xdata(self, a: int, n: int = 1) -> bytes:
         return self.m.rd(a, n)
@@ -518,6 +746,66 @@ def boot_check(binp: Path, mapp: Path, be: bool, passes: int, max_instr: int, lo
     return 1
 
 
+def msg_source(mid: int) -> str:
+    """AwtoMsg0/AwtoMsgV(0xID...) call site in the SDK sources (tmp/sdcc-port/src), first RL6449-relevant match."""
+    root = ROOT / "tmp/sdcc-port/src/Kernel"
+    pat = re.compile(r"AwtoMsg[0V]\(0x%04X\b" % mid, re.I)
+    for f in sorted(root.rglob("*.c")):
+        if any(x in f.parts for x in ("RL6492_Series_Scaler", "RL6463_Series_Scaler", "RL6432_Series_Scaler", "RL6410_Series_Scaler",
+                                      "RL6369_Series_Scaler")):
+            continue
+        for n, line in enumerate(f.read_text(errors="replace").splitlines(), 1):
+            if pat.search(line):
+                return f"{f.relative_to(root)}:{n}"
+    return "?"
+
+
+def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> int:
+    """Boot with a stable HDMI source on D2 and report how far the mode state machine gets (#38). Exit 0 = ACTIVE."""
+    import unit_health as H
+    img = binp.read_bytes()
+    devs, hdmi = video_devs(img, mode)
+    msgs: Counter = Counter()
+    m = Machine(img, mapp, binp.stem + "-video", log, devs)
+    video_stubs(m, hdmi)
+
+    def am(m_, r):
+        msgs[r["dptr"] & 0xFFFF] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
+    for fn in ("AwtoMsg0", "AwtoMsgV"):
+        m.stub(fn, am)
+    ma = m.addr("g_stModeInfo")
+    timeline, done, last = [], 0, None
+    while done < max_instr:
+        m.run(1_000_000); done += 1_000_000
+        ms = m.rd(ma)[0] & 0x1F
+        if ms != last:
+            timeline.append((done, ms)); last = ms
+            if ms == H.MODE_ACTIVE:
+                break
+    t = H.decode_timing(m.rd(m.addr("g_stMDomainInputData"), 17))
+    hist: Counter = Counter()
+    for i in range(100):
+        out = m.run(1009 if i % 2 else 1511)
+        mt = re.search(r"Stop at 0x([0-9a-f]+)", out)
+        if mt:
+            hist[m.where(m.rd(0xFFFF)[0] & 15, int(mt.group(1), 16))] += 1
+    lines = [f"video-check {binp.name} mode {mode}: final mode {last} {MODE_NAMES[last] if last < len(MODE_NAMES) else '?'} "
+             f"after ~{done} instr",
+             "timeline: " + " -> ".join(f"{MODE_NAMES[s]}@{n // 1_000_000}M" for n, s in timeline),
+             f"g_stMDomainInputData: {t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} htotal {t['htotal']} vtotal {t['vtotal']} "
+             f"hfreq {t['hfreq'] / 10:.1f} kHz",
+             f"stub hits: {m.stub_hits}"]
+    if last != H.MODE_ACTIVE:
+        lines.append("blockers (AwtoMsg id x count @ source; top 8): " + "; ".join(
+            f"0x{k:04X} x{v} @ {msg_source(k)}" for k, v in msgs.most_common(8)))
+        lines.append("PC histogram (200 samples): " + ", ".join(f"{k} {v}" for k, v in hist.most_common(6)))
+    m.close()
+    for ln in lines:
+        print(ln)
+        log.write(ln + "\n")
+    return 0 if last == H.MODE_ACTIVE else 1
+
+
 def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_instr: int = 60_000_000) -> int:
     """An interrupt taken with logical bank k (= __bs_cur, the bank the code thinks it is in) returns with bank register
     == __bs_cur == k and SP as before. Timer2 comes by itself; EXINT1 (IE1) is forced once per bank seen.
@@ -639,6 +927,8 @@ def main() -> int:
     ap.add_argument("--serial")
     ap.add_argument("--boot-check", nargs=2, metavar=("BIN", "MAP"), help="offline boot-to-main-loop PASS/FAIL")
     ap.add_argument("--isr-check", nargs=2, metavar=("BIN", "MAP"), help="interrupt return-to-bank check")
+    ap.add_argument("--video-check", nargs=2, metavar=("BIN", "MAP"), help="stable HDMI source on D2: how far does the mode state get")
+    ap.add_argument("--mode", default="1080p60", choices=sorted(HdmiInput.MODES), help="video-check: source timing")
     ap.add_argument("--be", action="store_true", help="diag block big-endian (default: from '-be' in the file name)")
     ap.add_argument("--passes", type=int, default=50, help="boot-check: heartbeats to see after stage 8")
     ap.add_argument("--max-instr", type=int, default=60_000_000, help="boot-check: instruction budget")
@@ -658,8 +948,12 @@ def main() -> int:
             lg = (ROOT / "tmp/logs/fw_sim.log").open("w", buffering=1)
             be = a.be or "-be" in b.name or T.BIG_ENDIAN
             return (boot_check(b, m, be, a.passes, a.max_instr, lg) if mode == "boot_check" else isr_check(b, m, be, lg))
+    if a.video_check:
+        b, mp_ = map(Path, a.video_check)
+        return video_check(b, mp_, a.mode, a.max_instr if a.max_instr != 60_000_000 else 60_000_000,
+                           (ROOT / "tmp/logs/fw_sim_video.log").open("w", buffering=1))
     if not a.serial:
-        ap.error("--serial, --boot-check or --isr-check required")
+        ap.error("--serial, --boot-check, --isr-check or --video-check required")
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
     mp = (fw / "fw.map").read_text(errors="replace")
