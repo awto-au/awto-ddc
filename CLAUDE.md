@@ -7,6 +7,7 @@ Global rules apply (`~/.claude/CLAUDE.md`). Repo specifics:
   - Reflashing our own builds: `rtd_flash_image.py ... --write --no-backup`. Never keep dumps of our own builds (Dan, 2026-11-05).
 - Vendor binaries, flash dumps and the Ghidra project (firmware bytes) stay in `~/vendors/realtek/`; this repo holds our own tools, measurements, notes and names TSVs.
 - **Exception (Dan, 2026-11-04):** full JSON extracted from Realtek's tool data (register databases etc.) may be committed under `re/regdb/`, on condition this repo stays PRIVATE. Before ever making it public: remove `re/regdb/`, the register descriptions in docs and `re/jxc-4k/` from history or scrub them.
+- **Exception (Dan, 2026-11-06):** RE review docs quoting Realtek lib / vendor disassembly may be committed under `re/lib-review/` (same PRIVATE condition; scrub before public).
 - Repo root in scripts: `$AWTO_DDC_REPO` → file-relative. Logs: `./tmp/logs/`.
 - Findings and open questions: GitHub issues (this repo; tracking issue #1), not chat.
 - Reversing conventions (confidence tags): awto-dan `docs/embedded/reversing/README.md`.
