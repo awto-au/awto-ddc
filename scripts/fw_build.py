@@ -239,8 +239,9 @@ def main() -> int:
                  *(["--cluster", a.cluster] if a.cluster else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    # crt_memcpy reads its PARMs little-endian: BE builds keep the library's BE memcpy (#24, #15)
-    crts = ("crt_mod0", "crt_divulong") + (() if T.BIG_ENDIAN else ("crt_memcpy",))
+    # crt_memcpy reads its PARMs little-endian, ABI 0: BE and --sdcccall>=1 builds keep the library memcpy (#24, #15, #51.1)
+    # crt_mod0/crt_divulong are ABI-independent: compiler-generated helper calls keep arg 2 in <fn>_PARM_2 (fw/simtests/crt_ops)
+    crts = ("crt_mod0", "crt_divulong") + (() if T.BIG_ENDIAN or T.SDCCCALL != "0" else ("crt_memcpy",))
     for c in crts:
         run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])
