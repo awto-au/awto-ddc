@@ -430,7 +430,7 @@ def cmd_power_cycle(extra: list[str]) -> int:
     if not u["relay"]:
         log(f"unit {n} has no relay (scripts/devices.json)", "ERROR")
         return 1
-    return _py("power_cycle.py", *extra)
+    return _py("power_cycle.py", "--relay", u["relay"], *extra)
 
 
 def _diag(u: dict, *args) -> int:
