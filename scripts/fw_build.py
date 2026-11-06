@@ -106,9 +106,26 @@ def split_xseg(asm_dir: Path):
     return hs, moved
 
 
+def apply_asm_overrides():
+    """fw/asmlib/<Module>.asm (hand-written, SDCC ABI, #11) replaces the compiled lib module of the same name.
+    The asm must keep the module's globals + PARM symbols and the SDCC area order (see its header)."""
+    import shutil
+    for ov in sorted((ROOT / "fw/asmlib").glob("*.asm")):
+        hit = list((ASM / Path(LIB_UV2).parent).rglob(ov.name))
+        if len(hit) != 1:
+            sys.exit(f"asm override {ov.name}: {len(hit)} lib modules of that name under {ASM}")
+        vc = ROOT / "tmp/sdcc-port/asm_vendorC"             # compiled vendor C, kept for scripts/asmlib_test.py
+        vc.mkdir(parents=True, exist_ok=True)
+        if hit[0].read_text() != ov.read_text():            # freshly compiled (not yet overridden)
+            shutil.copy2(hit[0], vc / ov.name)
+        shutil.copy2(ov, hit[0])
+        log(f"asm override: {ov.name} replaces {hit[0].relative_to(ASM)}")
+
+
 def select_lib():
     """Project asm + only the Lib modules needed to resolve its globals (like a linker pulling from a .LIB)."""
     import shutil
+    apply_asm_overrides()
     if SEL.exists():
         shutil.rmtree(SEL)
     SEL.mkdir(parents=True)

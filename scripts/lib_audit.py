@@ -138,6 +138,31 @@ def vendor_funcs():
     return out
 
 
+LIB_MATCH = Path.home() / "vendors/realtek/analysis/lib_match.tsv"
+
+
+def load_lib_match():
+    """Exact vendor locations from scripts/lib_vendor_match.py (OMF-based) when present; header-keyword column pick."""
+    if not LIB_MATCH.exists():
+        return {}
+    rows = [l.split("\t") for l in LIB_MATCH.read_text(errors="replace").split("\n") if l and not l.startswith("#")]
+    hdr = [h.lower() for h in rows[0]]
+    col = lambda *keys: next((i for i, h in enumerate(hdr) if any(k in h for k in keys)), None)
+    cn, cs, ca, cb = col("func", "symbol", "name"), col("size", "bytes", "len"), col("addr", "offset"), col("bank")
+    if cn is None or cs is None:
+        log(f"{LIB_MATCH}: columns not recognised {hdr}; ignored")
+        return {}
+    out = {}
+    for r in rows[1:]:
+        try:
+            out[r[cn].lstrip("_")] = {"bank": r[cb] if cb is not None else "?", "addr": int(r[ca], 0) if ca is not None else 0,
+                                      "name": r[cn], "size": int(r[cs], 0)}
+        except (ValueError, IndexError):
+            continue
+    log(f"{LIB_MATCH}: {len(out)} exact vendor entries")
+    return out
+
+
 def main():
     global LOG
     ap = argparse.ArgumentParser()
@@ -182,6 +207,7 @@ def main():
     vf = vendor_funcs()
     log(f"vendor functions: {len(vf)}")
     rows = []
+    exact = load_lib_match()
     for n, f in sorted(libf.items()):
         best, amb = None, 0
         if len(f.consts) >= 1:
@@ -195,7 +221,11 @@ def main():
                 elif k == best[0]:
                     amb += 1
         ok = best and best[0][0] >= min(a.min_score, len(f.consts)) and amb <= AMBIG_MAX
-        rows.append((f, ok and best[1], ok and best[0], amb))
+        ex = exact.get(n.lstrip("_"))
+        if ex:                                           # exact OMF match beats the fingerprint guess
+            rows.append((f, ex, (len(f.consts), 1.0), 1))
+        else:
+            rows.append((f, ok and best[1], ok and best[0], amb))
     hdr = ["module", "func", "our_bytes", "our_clocks", "sites", "wsites", "isr", "main", "hot", "nconst",
            "vendor", "vendor_name", "vendor_bytes", "common", "jaccard", "ambig", "ratio", "cost"]
     outp = ROOT / "tmp/lib_audit.tsv"
@@ -205,7 +235,7 @@ def main():
         ws = sum(w for ss in sites.values() for c, w in ss if c == n)
         lines.append("\t".join(map(str, [
             f.mod, n, f.bytes, f.cycles, nsites[n], ws, int(n in reach["isr"]), int(n in reach["main"]), hot.get(n, 0), len(f.consts),
-            f"{v['bank']}:{v['addr']:04x}" if v else "-", v["name"] if v else "-", v["size"] if v else "-",
+            (f"{v['bank']}:{v['addr']:04x}" if isinstance(v["bank"], int) else f"{v['bank']}:{v['addr']:x}") if v else "-", v["name"] if v else "-", v["size"] if v else "-",
             sc[0] if sc else "-", f"{sc[1]:.2f}" if sc else "-", amb if sc else "-",
             f"{f.bytes / v['size']:.2f}" if v and v["size"] else "-", hot.get(n, 0) * f.cycles])))
     outp.write_text("\n".join(lines) + "\n")
