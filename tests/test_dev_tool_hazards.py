@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -284,3 +285,107 @@ def test_successful_flash_records_new_tag(dev, tmp_path, monkeypatch):
     monkeypatch.setattr(dev, "_py", lambda *a, env=None: 0)
     assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
     assert json.loads(fj.read_text()) == {"tag": "AWT26110003-new-be", "image": str(img)}
+
+
+# --- #52.2 / #52.3 / #48 recover, probe --bus; #52.1 hold bounded ---------------------------------------------
+
+def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
+    """bus_results: iterable of ints / SystemExit instances returned by successive _bus calls."""
+    img = _img(tmp_path, "AWT26110003-r-be.bin", b"AWT26110003")
+    dev.FW.mkdir(parents=True, exist_ok=True)
+    events, it = [], iter(bus_results)
+
+    def fake_bus(u, wait_s=0.0):
+        events.append(("bus", wait_s))
+        r = next(it)
+        if isinstance(r, BaseException):
+            raise r
+        return r
+    monkeypatch.setattr(dev, "_bus", fake_bus)
+    monkeypatch.setattr(dev, "cmd_power_cycle", lambda e: events.append(("relay",)) or 0)
+    monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: events.append(("diag", a, bus)) or 0)
+    monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash", e)) or 0)
+    return img, events
+
+
+def test_recover_bad_image_refused_before_relay(dev, tmp_path, monkeypatch):
+    _img_, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
+    with pytest.raises(SystemExit):
+        dev.cmd_recover(["--unit", "3"])                # no flashed.json, no image
+    with pytest.raises(SystemExit):
+        dev.cmd_recover(["--unit", "3", str(_img(tmp_path, "AWT26110002-x-be.bin", b"AWT26110002"))])
+    assert events == []
+
+
+def test_recover_scans_bus_once_before_relay_when_unit_answers(dev, tmp_path, monkeypatch):
+    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
+    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
+    assert [e[0] for e in events] == ["bus", "relay", "diag", "flash"]
+    assert events[2][2] == 11                           # hold gets the resolved bus, no second scan
+    assert events[3][1][events[3][1].index("--bus") + 1] == "11"
+
+
+def test_recover_wedged_unit_short_deadline_lookup_after_relay(dev, tmp_path, monkeypatch):
+    img, events = _recover_setup(dev, tmp_path, monkeypatch, [SystemExit("silent"), 11])
+    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
+    assert [e[0] for e in events] == ["bus", "relay", "bus", "diag", "flash"]
+    assert 0 < events[2][1] <= 5.0
+
+
+def test_recover_hold_failure_still_flashes(dev, tmp_path, monkeypatch):
+    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
+    monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: 1)
+    monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash",)) or 0)
+    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
+    assert ("flash",) in events
+
+
+def test_bus_wait_rescans_until_edid_appears(dev, monkeypatch):
+    u = dict(dev._units()["3"])
+    seq = iter([None, None, "AWT26110003"])
+    monkeypatch.setattr(dev.i2cbus, "edid_serial", lambda b: next(seq))
+    monkeypatch.setattr(dev.i2cbus, "list_buses", lambda display_only=True: [])
+    monkeypatch.setattr(dev.i2cbus, "reset_rate", lambda: False)
+    monkeypatch.setattr(dev, "BUS_RESCAN_S", 0.001)
+    monkeypatch.setattr(dev.Path, "resolve", lambda self: Path("/sys/class/drm/x/i2c-11"))
+    assert dev._bus(u, wait_s=2.0) == 11
+
+
+def test_probe_accepts_bus_without_edid_scan(dev, monkeypatch):
+    seen = []
+    monkeypatch.setattr(dev, "_bus", lambda u, wait_s=0.0: pytest.fail("EDID scan"))
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None: seen.append((script, a)) or 0)
+    assert dev.cmd_probe(["--unit", "3", "--bus", "11", "--window", "3"]) == 0
+    assert seen == [("rtd_boot_probe.py", (11, "--window", "3"))]
+
+
+def _diag_mod():
+    import rtd_diag
+    return rtd_diag
+
+
+def test_hold_is_bounded_and_closes_one_fd(monkeypatch, tmp_path):
+    D = _diag_mod()
+    assert D.HOLD_WAIT_S <= 5.0
+    made = []
+
+    class FakeReal:
+        def __init__(self, bus, allow_write=False, regread=False):
+            self.closed = False
+            made.append(self)
+        def write(self, *a):
+            return False                                # never ACKs
+        def close(self):
+            self.closed = True
+    clock = [0.0]
+    monkeypatch.setattr(D.B, "Real", FakeReal)
+    monkeypatch.setattr(D.B, "setup_logs", lambda name: type("L", (), {"main": open(os.devnull, "w")})())
+    monkeypatch.setattr(D, "repo_root", lambda: tmp_path)
+    monkeypatch.setattr(D.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(D.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
+    monkeypatch.setattr(sys, "argv", ["rtd_diag.py", "11", "--hold"])
+    assert D.main() == 1
+    holders = [m for m in made if m.closed]
+    assert len(made) == 2 and len(holders) == 2          # io (regread) + ONE hold handle, both closed
+    assert clock[0] <= 5.0 + 0.1
+

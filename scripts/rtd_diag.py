@@ -206,7 +206,9 @@ def read_bytes(io, off: int, n: int) -> bytes | None:
 
 SAFE = 0xF6B0                       # StAwtoSafe, 32 B (RL6449_Project.h): survives a warm reset
 SAFE_HOLD, SAFE_MARKER = 0xA55A, 0x5AFE
-HOLD_WAIT_S = 1800                  # --hold waits for a human power cycle (minutes); each try is a few I2C NAKs
+# --hold follows a relay power-on that dev.py has already verified: scaler answers 0x35 ~1-2 s after power and the safe
+# window ends 2 s later (_AWTO_SAFE_BOOT_MS). 5 s = 2.5x the window; expiry: "hold: no ACK", rc 1 (flash goes on over ISP).
+HOLD_WAIT_S = 5.0
 HOLD_POLL_S = 0.05                  # 40 tries inside the 2 s safe window (_AWTO_SAFE_BOOT_MS)
 
 
@@ -237,9 +239,9 @@ def safe_report(s: dict, names: dict) -> str:
     return "\n".join(L)
 
 
-def set_hold(bus: int, value: int, be: bool) -> bool:
-    """usHold at SAFE via debug cmds 0x01 [hi] (stage), 0x03 [val] (stage), 0x3B [lo] -> ScalerSetByte. Only this write."""
-    w = B.Real(bus, allow_write=True)
+def set_hold(w, value: int, be: bool) -> bool:
+    """usHold at SAFE via debug cmds 0x01 [hi] (stage), 0x03 [val] (stage), 0x3B [lo] -> ScalerSetByte. Only this write.
+    `w` = one open B.Real(allow_write=True), reused across tries (a new fd per 50 ms try hit EMFILE, #52.1)."""
     for off, val in ((0, value >> 8), (1, value & 0xFF)) if be else ((0, value & 0xFF), (1, value >> 8)):
         if not (w.write(DEV8, 0x01, bytes([SAFE >> 8])) and w.write(DEV8, 0x03, bytes([val]))
                 and w.write(DEV8, 0x3B, bytes([(SAFE + off) & 0xFF]))):
@@ -285,8 +287,19 @@ def trace(io, root: Path, be: bool, ids: str | None) -> int:
         return 0
 
 
+IO = None                           # the read handle of this run, closed by main()
+
+
 def main() -> int:
-    global LOG
+    try:
+        return _main()
+    finally:
+        if IO is not None:
+            IO.close()
+
+
+def _main() -> int:
+    global LOG, IO
     ap = argparse.ArgumentParser()
     ap.add_argument("bus", type=int)
     # 1 s: block read is ~65 short transfers (tens of ms); 1 s keeps rates well above one read's noise
@@ -298,6 +311,8 @@ def main() -> int:
     ap.add_argument("--safe", action="store_true", help="read the safe-boot/WDT-canary block (0xF6B0)")
     ap.add_argument("--hold", action="store_true",
                     help="poll until the fw answers, then hold it in the safe window (no inputs/display)")
+    ap.add_argument("--hold-wait", type=float, default=HOLD_WAIT_S, metavar="S",
+                    help=f"--hold gives up after S seconds (default {HOLD_WAIT_S:g}: 2.5x the 2 s safe window)")
     ap.add_argument("--unhold", action="store_true", help="release the safe-window hold (fw continues booting)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
@@ -305,7 +320,7 @@ def main() -> int:
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = B.setup_logs("rtd_diag").main          # decoded I2C + this tool's lines; byte trace in rtd_diag.raw.log
-    io = B.Real(a.bus, allow_write=False, regread=True)
+    io = IO = B.Real(a.bus, allow_write=False, regread=True)
     if a.release:
         ok = io.write(DEV8, MSG_END, b"") and io.write(DEV8, MSG_DONE, b"")
         print("released" if ok else "release: no ACK from 0x35"); return 0 if ok else 1
@@ -317,11 +332,17 @@ def main() -> int:
     if a.hold or a.unhold:
         val = SAFE_HOLD if a.hold else 0
         t0 = time.monotonic()
-        # --hold races the 2 s safe window after power-on: retry every write attempt until it lands
-        while not set_hold(a.bus, val, a.be):
-            if not a.hold or time.monotonic() - t0 > HOLD_WAIT_S:
-                print(f"{'hold' if a.hold else 'unhold'}: no ACK from 0x35"); return 1
-            time.sleep(HOLD_POLL_S)
+        w = B.Real(a.bus, allow_write=True)
+        try:
+            # --hold races the 2 s safe window after power-on: retry every write attempt until it lands
+            while not set_hold(w, val, a.be):
+                if not a.hold or time.monotonic() - t0 > a.hold_wait:
+                    el = time.monotonic() - t0
+                    print(f"{'hold' if a.hold else 'unhold'}: no ACK from 0x35 after {el:.1f} s (limit {a.hold_wait:g} s)")
+                    return 1
+                time.sleep(HOLD_POLL_S)
+        finally:
+            w.close()
         line = f"{'hold set' if a.hold else 'hold released'} after {time.monotonic() - t0:.1f} s"
         print(line); log(line)
     if a.safe or a.hold or a.unhold:

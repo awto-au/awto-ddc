@@ -139,6 +139,9 @@ class Real:
     DBG_READ = {0x80, 0x41, 0x44, 0x45, 0x3A, 0x3C, 0xBB, 0x55, 0x20, 0x25, 0x2A, 0x2F}   # run ctl, reads, msg
     DBG_STAGE = {0x1, 0x2, 0x3, 0x5, 0x6}       # low nibble: parameter staging only
 
+    def close(self) -> None:
+        self.bus.close()
+
     def regread_ok(self, dev8, sub, data) -> bool:
         """--regread: only writes that select/read registers. ISP 0x4A: 0xF4 index, 0xF5 when index = 0x9F.
         Debug 0x35: read cmds, staging, and register-write cmd only for page select 0x9F (data = [val, reg]).

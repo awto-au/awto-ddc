@@ -442,7 +442,7 @@ def cmd_flash(extra: list[str]) -> int:
         check_image_identity(u, img)
     identity = None
     if bus:
-        identity = "dev.py recover: bus resolved right after this unit's own relay cycle"
+        identity = "dev.py recover: bus resolved by this unit's EDID serial, before or right after its own relay cycle"
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
@@ -667,8 +667,7 @@ def cmd_recover(extra: list[str]) -> int:
     hrc = _diag(u, "--hold", bus=bus)       # best effort: an image without the safe window still flashes over ISP
     if hrc:
         log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
-    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, "--any-image" if any_image else "--unit", n,
-                      *img])
+    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *(["--any-image"] if any_image else []), *img])
 
 
 GDCTL_SHOW_S = 3    # `gdctl show` is one D-Bus call (~0.1 s); 3 s = 30x, expiry -> mode refuses, nothing changed
