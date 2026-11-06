@@ -7,7 +7,8 @@ Per module: fw/asmlib/tests/<Module>/*.c = driver (test.c: calls the asm functio
   A) fw/asmlib/<Module>.asm (the override)            must print PASS
   B) tmp/sdcc-port/asm_vendorC/<Module>.asm (vendor C as compiled by SDCC, saved by the last full fw_build), if present:
      the same driver must also PASS (proves the reference matches the vendor C); ticks A vs B = speed change.
-  deps file (optional): module names linked into variant B too.
+  deps file (optional): module names linked into variant B too. Variant A compiles with -DVARIANT_A (asm-only checks,
+  e.g. inputs where the stock SDCC lib hangs).
 Run: ucsim_51 -t 52, step cap 20M instr, break at _sim_halt (as sim_test.py). Flags/CFLAGS reused from sim_test.py.
 Log: tmp/logs/asmlib_test.log; scratch tmp/asmlib_test/<Module>/{A,B}.  Exit 0 only if every test passes.
 """
@@ -21,6 +22,7 @@ import sdcc_tools as T  # noqa: E402
 ROOT = S.ROOT
 LIBDIR = ROOT / "fw/asmlib"
 WORK = ROOT / "tmp/asmlib_test"
+S.STEP_CAP, S.SIM_TMO = 100_000_000, 60    # slow C reference (stock __divulong) in MulDiv tests; ucsim ~9M instr/s
 ORIG = ROOT / "tmp/sdcc-port/asm_vendorC"      # compiled vendor C, saved by fw_build.apply_asm_overrides
 
 
@@ -37,7 +39,7 @@ def bench_ticks(ihx):
     return int(n.group(1)) if t and n else None
 
 
-def variant(name, asm_path, srcs, w, defs=(), deps=()):
+def variant(name, asm_path, srcs, w, defs=(), deps=(), bench=False):
     d = w
     shutil.rmtree(d, ignore_errors=True)
     (d / "asm").mkdir(parents=True)
@@ -51,7 +53,7 @@ def variant(name, asm_path, srcs, w, defs=(), deps=()):
     err = S.assemble_link(d / "asm", d / "obj", d / "out.ihx")
     if err:
         return None, err, 0
-    if defs:
+    if bench:
         return "", None, bench_ticks(d / "out.ihx")
     out, err, ticks = S.simulate(d / "out.ihx", d)
     return out, err, ticks
@@ -70,14 +72,14 @@ def main():
             if not asm.exists():
                 continue
             deps = (tdir / n / "deps").read_text().split() if tag == "B" and (tdir / n / "deps").exists() else ()
-            out, err, ticks = variant(n, asm, srcs, WORK / n / tag, deps=deps)
+            out, err, ticks = variant(n, asm, srcs, WORK / n / tag, defs=(["-DVARIANT_A"] if tag == "A" else []), deps=deps)
             ok = out is not None and "PASS" in out and S.SENTINEL in out
             res[tag] = (ok, ticks, err or (out or "")[-120:].replace("\n", " | "))
             if ok:                                    # per-function timing: test.c `// BENCH-NAMES: a,b,c`
                 nm = re.search(r"BENCH-NAMES:\s*(.+)", (tdir / n / "test.c").read_text())
                 bt = []
                 for i, fn in enumerate(nm.group(1).split(",") if nm else [], 1):
-                    _, _, t = variant(n, asm, srcs, WORK / n / f"{tag}b", [f"-DBENCH={i}", f"-DBENCH_N={BENCH_N}"], deps)
+                    _, _, t = variant(n, asm, srcs, WORK / n / f"{tag}b", [f"-DBENCH={i}", f"-DBENCH_N={BENCH_N}"], deps, bench=True)
                     bt.append((fn.strip(), t))
                 bench[tag] = bt
         a = res.get("A")

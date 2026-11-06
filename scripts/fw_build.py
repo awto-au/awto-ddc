@@ -110,6 +110,9 @@ def apply_asm_overrides():
     """fw/asmlib/<Module>.asm (hand-written, SDCC ABI, #11) replaces the compiled lib module of the same name.
     The asm must keep the module's globals + PARM symbols and the SDCC area order (see its header)."""
     import shutil
+    if os.environ.get("AWTO_NO_ASMLIB") == "1":              # baseline build: compiled C only
+        log("asm overrides disabled (AWTO_NO_ASMLIB=1)")
+        return
     for ov in sorted((ROOT / "fw/asmlib").glob("*.asm")):
         hit = list((ASM / Path(LIB_UV2).parent).rglob(ov.name))
         if len(hit) != 1:

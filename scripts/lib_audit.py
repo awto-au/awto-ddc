@@ -11,7 +11,7 @@ Columns: our bytes + static straight-line clocks (12 per machine cycle; listing 
 Hotness model (static, no profile): site weight = 8^(loop depth) (loop = backward branch span inside the caller);
   caller weight = 1 for main-reachable roots, ISR_W for ISR roots; hot(fn) = sum(site weight * caller hot),
   propagated over the call graph (cycles cut after DEPTH passes). Relative numbers only.
-Vendor match: fingerprint = set of 16-bit `mov dptr,#imm` constants >= 0xF700 (scaler/MCU register window; same
+Vendor match: ~/vendors/realtek/analysis/lib_match.tsv when present (EXACT/NEAR rows); else fingerprint = set of 16-bit `mov dptr,#imm` constants >= 0xF700 (scaler/MCU register window; same
   silicon family), score = |common| with ties by Jaccard; needs >= --min-score common constants (default 2).
   Functions with fewer register constants stay unmatched (marked '-'): pure RAM/arith helpers have no fingerprint.
 """
@@ -142,24 +142,17 @@ LIB_MATCH = Path.home() / "vendors/realtek/analysis/lib_match.tsv"
 
 
 def load_lib_match():
-    """Exact vendor locations from scripts/lib_vendor_match.py (OMF-based) when present; header-keyword column pick."""
+    """lib_match.tsv (scripts/rtk_libsig.py: Keil .LIB function sizes located in the vendor binary).
+    Columns: function module label size class bank:addr match%. EXACT/NEAR rows used; size = Keil code bytes."""
     if not LIB_MATCH.exists():
         return {}
-    rows = [l.split("\t") for l in LIB_MATCH.read_text(errors="replace").split("\n") if l and not l.startswith("#")]
-    hdr = [h.lower() for h in rows[0]]
-    col = lambda *keys: next((i for i, h in enumerate(hdr) if any(k in h for k in keys)), None)
-    cn, cs, ca, cb = col("func", "symbol", "name"), col("size", "bytes", "len"), col("addr", "offset"), col("bank")
-    if cn is None or cs is None:
-        log(f"{LIB_MATCH}: columns not recognised {hdr}; ignored")
-        return {}
     out = {}
-    for r in rows[1:]:
-        try:
-            out[r[cn].lstrip("_")] = {"bank": r[cb] if cb is not None else "?", "addr": int(r[ca], 0) if ca is not None else 0,
-                                      "name": r[cn], "size": int(r[cs], 0)}
-        except (ValueError, IndexError):
-            continue
-    log(f"{LIB_MATCH}: {len(out)} exact vendor entries")
+    for l in LIB_MATCH.read_text(errors="replace").split("\n")[1:]:
+        r = l.split("\t")
+        if len(r) >= 7 and r[4] in ("EXACT", "NEAR"):
+            bank, _, addr = r[5].split(";")[0].partition(":")
+            out[r[0]] = {"bank": int(bank), "addr": int(addr, 16), "name": f"{r[0]}[{r[4]}]", "size": int(r[3])}
+    log(f"{LIB_MATCH}: {len(out)} EXACT/NEAR vendor entries")
     return out
 
 
@@ -222,8 +215,10 @@ def main():
                     amb += 1
         ok = best and best[0][0] >= min(a.min_score, len(f.consts)) and amb <= AMBIG_MAX
         ex = exact.get(n.lstrip("_"))
-        if ex:                                           # exact OMF match beats the fingerprint guess
+        if ex:
             rows.append((f, ex, (len(f.consts), 1.0), 1))
+        elif exact:                                      # lib_match.tsv present: its ABSENT/SHORT rows are authoritative
+            rows.append((f, None, None, 0))
         else:
             rows.append((f, ok and best[1], ok and best[0], amb))
     hdr = ["module", "func", "our_bytes", "our_clocks", "sites", "wsites", "isr", "main", "hot", "nconst",
