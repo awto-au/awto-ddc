@@ -45,13 +45,13 @@ STAGES_OLD = ["", "BOOT (start of main)", "GPIO init done (in McuInitial)", "Mcu
 BOOTING_MS = 2000      # cold boot reaches stage 8 at ~0.5 s (#63, wb-port7); under 2 s uptime a missing stage = still booting
 PERIOD = {0xE3: 7309, 0xFB: 1194}   # Timer2 counts per 1 ms tick, keyed by RCAP2H (see docstring)
 # Delay calibration rows: (key, label, calls in the measured body, nominal us per call, lo, hi). A busy delay shorter than
-# nominal breaks the minimum waits it stands for (PHY settle, SDK `DELAY_XUS`); longer only costs time. Lower bound -10 %:
-# the loops are cycle-counted, N calibrated by Realtek (flash cache on). Upper bound +25 %: the earlier hardware run
-# (2026-11-06, unit 3, ISR time included) read 109 %, leaving room for the real loop; refine from the first clean run (#53.6).
-CAL_ROWS = (("d5us10", "DELAY_5US", 10, 5.0, 0.90, 1.25),
-            ("xus100", "DELAY_XUS(100)", 1, 100.0, 0.90, 1.25),
-            ("xusisr100", "DELAY_XUS_EXINT(100)", 1, 100.0, 0.90, 1.25),
-            ("d5isr10", "DELAY_5US_EXINT", 10, 5.0, 0.90, 1.25))
+# nominal breaks the minimum waits it stands for (PHY settle, SDK `DELAY_XUS`); longer only costs time. So strict low,
+# loose high: lo 97 % (boot self-cal targets 105 %; one count step ~4 %), hi 150 % catches a broken loop, not layout
+# drift (126-132 % seen on 2026-11-07, #54).
+CAL_ROWS = (("d5us10", "DELAY_5US", 10, 5.0, 0.97, 1.50),
+            ("xus100", "DELAY_XUS(100)", 1, 100.0, 0.97, 1.50),
+            ("xusisr100", "DELAY_XUS_EXINT(100)", 1, 100.0, 0.97, 1.50),
+            ("d5isr10", "DELAY_5US_EXINT", 10, 5.0, 0.97, 1.50))
 CAL_TICK_TOL = 0.005                # 10 ticks vs the reload period: both from Timer2, a miss means a lost tick or wrong reload
 CAL_T3_FAST_MAX_MS = 100   # fast boot (#63): 20 ms own-pattern T3 + the ~40 ms delay test inside it, x~1.5
 CAL_T3_MS, CAL_T3_TOL_MS = 550, 1.5  # panel T3 (_PANEL_POWER_ON_T3): ScalerTimerDelayXms granularity 1 tick + 64-count resolution
