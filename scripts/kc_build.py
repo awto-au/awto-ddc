@@ -26,10 +26,11 @@ def main() -> int:
     ap.add_argument("--no-layout", action="store_true")
     ap.add_argument("--layout", default="")
     ap.add_argument("--resid-end", default="")
+    ap.add_argument("--fw-args", default="", help="more fw_build args, e.g. '--cluster fn --cluster-weights fw/cluster_weights.json'")
     argv = sys.argv[1:]
     for i, s in enumerate(argv[:-1]):          # --flags "--keil-compat" (argparse rejects values starting with --)
-        if s == "--flags" and argv[i + 1].startswith("-"):
-            argv[i:i + 2] = [f"--flags={argv[i + 1]}"]
+        if s in ("--flags", "--fw-args") and argv[i + 1].startswith("-"):
+            argv[i:i + 2] = [f"{s}={argv[i + 1]}"]
     a = ap.parse_args(argv)
     env = dict(os.environ, AWTO_DDC_REPO=str(ROOT), AWTO_SDCC_BE="1", AWTO_SDCCCALL=a.level, AWTO_SDCC_BIN=a.bin,
                AWTO_SDCC_SRC=a.src, K2S_SDCC_EXTRA=a.flags)
@@ -39,7 +40,7 @@ def main() -> int:
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a.tag}: bin={a.bin} flags={a.flags!r} level={a.level}\n")
     r = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", ""] if a.no_layout else []),
                         *(["--layout", str(Path(a.layout).resolve())] if a.layout else []),
-                        *(["--resid-end", a.resid_end] if a.resid_end else [])], cwd=ROOT, env=env,
+                        *(["--resid-end", a.resid_end] if a.resid_end else []), *a.fw_args.split()], cwd=ROOT, env=env,
                        capture_output=True, text=True, timeout=BUILD_TMO)
     log.write(r.stdout[-3000:] + r.stderr[-2000:])
     out = ROOT / "tmp/runs" / a.tag
