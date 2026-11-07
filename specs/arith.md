@@ -30,7 +30,7 @@ Covers `awto/include/arith.h`. Results feed register values: they must match bit
 
 ## 5. Implementer task
 - Files: `awto/arith/arith.c`, `tests/host/test_arith.c` (reads the vectors file given on the command line).
-- Budget: <= 600 B code; slow regime <= 20,000 cycles per call on the 8051 target.
+- Budget: <= 1,480 B code (re-based 2026-11-07 on the implementation that meets every vector: 1,445 B); slow regime <= 20,000 cycles per call on the 8051 target.
 - Free to use any method (long division, 64-bit emulation) as long as every vector matches.
 
 ## 6. Q&A

@@ -15,6 +15,9 @@ Everything you may use is in this brief and in the current directory (`/mnt/2tb/
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. No remotes, no push.
 - Build check: `/home/dan/opt/awto-sdcc/bin/sdcc -mmcs51 --model-large --std-c11 -Iawto/include -Ifacts -c <file>` for each file.
 - Host test: gcc, `-Iawto/include -Ifacts`, a recording `REG8` mock defined before including `reg.h`; run it; it must pass.
+  - A test that `#include`s the implementation `.c` is built from the test file alone; one that does not is built with the `.c` files
+    listed. Put the exact command in the test's header comment and run THAT command (a wrong command in the comment is a defect).
+- `cleanroom_lint` (the leak check) runs on the spec side only; you cannot run it. Keep to the rules above and it will pass.
 
 ## Report (final message)
 - Files created, functions implemented, sdcc code size per file, host test result.
