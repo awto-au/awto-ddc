@@ -904,7 +904,7 @@ def cmd_mode(extra: list[str]) -> int:
          args="[--unit N] [--dry-run] [--modes WxH@HZ,...] [--label L] [--resume TSV]", kind="action")
 def cmd_sweep(extra: list[str]) -> int:
     n, u = _unit(extra)
-    opts = [f for f in ("--dry-run",) if _flag(extra, f)]
+    opts = [f for f in ("--dry-run", "--dp") if _flag(extra, f)]
     for flag in ("--modes", "--label", "--resume"):
         v = _opt(extra, flag)
         if v is True:

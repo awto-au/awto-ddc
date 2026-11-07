@@ -224,12 +224,17 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--modes", help="comma list WxH@HZ (default: all the host offers for the connector)")
     ap.add_argument("--label", default="")
+    ap.add_argument("--dp", action="store_true", help="sweep the unit's DP connector: DP-1 takes HDMI-2's slot (same position, "
+                    "HDMI-2 off; the firmware's search finds D1), Dan's layout put back at the end")
     ap.add_argument("--resume", type=Path, help="TSV of an interrupted sweep: modes already in it (not SETFAIL) are skipped, rows appended")
     ap.add_argument("--recover-image", help="image for dev.py recover on HANG (default: flashed.json image)")
     a = ap.parse_args()
     u = dev._units()[a.unit]
     if not u.get("test"):
         raise SystemExit(f"unit {a.unit} is a working screen; nothing done")
+    hdmi_g = u["gdctl"]
+    if a.dp:
+        u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
     LOG.parent.mkdir(parents=True, exist_ok=True)
     lf = LOG.open("a")
     modes = a.modes.split(",") if a.modes else host_modes(u["gdctl"])
@@ -250,8 +255,28 @@ def main() -> int:
         return 0
     if i2cbus.rate_khz() != 100:
         raise SystemExit(f"bus rate {i2cbus.rate_khz()} kHz; the 0x35 probe runs at 100 kHz only; nothing done")
+    home = None
+    if a.dp:                                         # DP-1 into HDMI-2's slot at REST; home = Dan's layout as it is now
+        home = dev.gdctl_set_args(gdctl_show(), hdmi_g, REST)
+        swap = list(home)
+        i = swap.index(hdmi_g)
+        swap[i], swap[i + 2] = u["gdctl"], REST
+        r = subprocess.run(["gdctl", "set", *swap], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
+        if r.returncode:
+            raise SystemExit(f"sweep --dp: swapping DP-1 into {hdmi_g}'s slot failed: {r.stderr.strip()}; nothing changed")
+        say(lf, f"DP-1 in {hdmi_g}'s slot at {REST}; settle {SETTLE_S:g} s")
+        time.sleep(SETTLE_S)
+        try:
+            return sweep(a, u, lf, modes, swap, home)
+        finally:
+            r = subprocess.run(["gdctl", "set", *home], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
+            say(lf, f"layout restored ({hdmi_g} back, DP-1 off): rc={r.returncode} {r.stderr.strip()}")
+    return sweep(a, u, lf, modes, dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST), None)
+
+
+def sweep(a, u, lf, modes, orig_args, home) -> int:
     maps, mapname = sym_map(u)
-    ORIG_ARGS[:] = dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST)
+    ORIG_ARGS[:] = orig_args
     ORIG_X[:] = [set_block_val_get(ORIG_ARGS, u["gdctl"])]
     flashed = dev._flashed(u)
     image = a.recover_image or flashed.get("image", "")
