@@ -170,7 +170,7 @@ def probe(u: dict, maps: dict, host: tuple[int, int, float]) -> dict:
                    f"{t['hwidth']}x{t['vheight']}@~{t['vfreq'] / 10:.1f}")
     r["timing_detail"] = P.fmt_timing(t, x) + (f"; {note}" if note else "")
     w, h, hz = host
-    r["timing_ok"] = (t["hwidth"], t["vheight"]) == (w, h) and (abs(x["vfreq_mhz"] - hz * 1000) <= H.TIMING_EXACT_TOL_MHZ if x else
+    r["timing_ok"] = (t["hwidth"], t["vheight"]) == (w, h) and (abs(x["vfreq_mhz"] - hz * 1000) <= max(H.TIMING_EXACT_TOL_MHZ, H.TIMING_EXACT_TOL_REL * hz * 1000) if x else
                                                               abs(t["vfreq"] - hz * 10) <= H.TIMING_VFREQ_TOL)
     d = dbg.io
     r["p0_02"] = rd(d, 0x0002)

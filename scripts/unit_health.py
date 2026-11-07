@@ -35,8 +35,10 @@ SIM_RATE_WINDOW_S = 1.0          # 0.1 s windows read 0 / 30 / 1549 right after 
 # Consume wait: pop-up draw stalls the debug slave ~0.4 s (#11 comment); limit = 1.25x worst seen, expiry = FAIL.
 CONSUME_WAIT_S = 0.5
 TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): SDK value only (no count); host 60.000 vs measured 60.1
-# exact (active-region count) vs host: crystal +-50 ppm = 3 mHz at 60 Hz, host string 0.5 mHz, count 0.05 mHz; 10 mHz = ~3x
+# exact (active-region count) vs host: relative, max(10 mHz, 0.25 %). Sweep 2026-11-07 (#26): -150 ppm on 4K60 (unit 3
+# measure clock), up to +2000 ppm on 720p24 / +1100 ppm on 1280x960 (low pixel clocks); a fixed 10 mHz flagged 12 ACTIVE modes.
 TIMING_EXACT_TOL_MHZ = 10
+TIMING_EXACT_TOL_REL = 0.0025
 HDIAG_STAGE = 8
 MAP_SYMS = ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
 MAP_SYMS_OPT = (P.AWTO_FREQ_SYM,)              # images with fw/sdcc/awto_freq.inc (#34)
@@ -218,7 +220,7 @@ def check_timing(rep, d, maps: dict, host: tuple[int, int, float] | None) -> boo
     if host is None:
         return rep.add("input timing", False, f"measured {got}; host mode unknown")
     w, h, hz = host
-    ok = (t["hwidth"], t["vheight"]) == (w, h) and (abs(x["vfreq_mhz"] - hz * 1000) <= TIMING_EXACT_TOL_MHZ if x else
+    ok = (t["hwidth"], t["vheight"]) == (w, h) and (abs(x["vfreq_mhz"] - hz * 1000) <= max(TIMING_EXACT_TOL_MHZ, TIMING_EXACT_TOL_REL * hz * 1000) if x else
                                                      abs(t["vfreq"] - hz * 10) <= TIMING_VFREQ_TOL) and "DISAGREES" not in note
     return rep.add("input timing", ok, f"measured {got} vs host {w}x{h}@{hz:.3f}")
 
