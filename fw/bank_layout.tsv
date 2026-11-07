@@ -779,7 +779,7 @@ stub	_ScalerGlobalFirstActiveProc	C	0x2c3c	9
 stub	_ScalerGlobalOsdInitial	C	0x2c45	9
 stub	_ScalerGlobalResetProc	C	0x2c4e	9
 stub	_ScalerMDomainCalculateDclkDVtotal	C	0x2c57	9
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1230	C	0x2c60	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1231	C	0x2c60	92
 stub	_ScalerFRCInputCtrl	C	0x2cbc	9
 stub	_ScalerFRCOneFrameCtrl	C	0x2cc5	9
 stub	_ScalerFRCSetOneFrameDVTotal	C	0x2cce	9
@@ -887,6 +887,7 @@ stub	_ScalerDpGetLanePreEmpLv	C	0x3514	9
 stub	_ScalerDpGetLaneVoltageSwingLv	C	0x351d	9
 stub	_ScalerDpGetLinkRate	C	0x3526	9
 stub	_ScalerDpGetPowerStatus	C	0x352f	9
+stub	_AwtoMsgWait	C	0x3538	9
 fn	_SysTimerWDIntProc	C	0x3580	120
 stub	_UserCommonAdjustAspectRatio	C	0x35f8	9
 stub	_UserCommonAdjustGammaRegionEnable	C	0x3601	9
@@ -1231,11 +1232,12 @@ fn	_ScalerDpRx1SignalCheck	2	0x58f4	772
 fn	_ScalerDpRx1SignalDetectMeasureCount	2	0x5bf8	220
 fn	_ScalerDpRx1VBIOSMSACheck	2	0x5cd4	396
 fn	_ScalerDpRx1ValidSignalDetection	2	0x5e60	584
-fn	_AwtoMsgV	2	0x60a8	100
+fn	_AwtoMsgWait	2	0x60a8	56
 fn	_ScalerDebug	2	0x610c	932
 fn	_ScalerDebugGetRegisters	2	0x64b0	328
 fn	_ScalerDebugSendData	2	0x65f8	180
 fn	_ScalerDebugSetRegisters	2	0x66ac	344
+fn	_AwtoMsgV	2	0x6804	260
 fn	_ScalerRead	2	0x6d18	200
 fn	_ScalerSyncDpCheckHdcpEnable	2	0x6de0	16
 fn	_ScalerTimerWaitForActiveTimerEvent	2	0x6df0	32
@@ -2746,7 +2748,7 @@ fn	_UserCommonInterfaceOsdActiveProc	10	0xa1e0	8
 fn	_ScalerDisplaySetDVFreq	10	0xa1e8	332
 fn	_ScalerMDomainMemoryConfig	10	0xa334	128
 fn	_ScalerMDomainMemorySelectConfirm	10	0xa3b4	72
-fn	_AwtoDiagTestCmd	10	0xa3fc	84
+fn	_AwtoDiagTestCmd	10	0xa3fc	100
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	11	0x0000	56
 const	_tFONT1_ICON_ADVANCE	11	0x0038	348
 const	_tFONT1_ICON_ASPECT	11	0x0194	384

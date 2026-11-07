@@ -79,6 +79,8 @@ RULES = [
     # input-info pop-up after mode ACTIVE (_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG): SDK 3 s -> _AWTO_INFO_POPUP_SEC
     (re.compile(r"ScalerTimerActiveTimerEvent\(SEC\(3\), (_USER_TIMER_EVENT_OSD_DISABLE\);)"),
      r"ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), \1"),
+    # host-wait loop of ScalerDebugMessage: host-silence timeout (fw/overlay AwtoMsg.h, #56)
+    (re.compile(r"^(\s*)while\(g_bFwHalt != 0\);", re.M), r"\1while((g_bFwHalt != 0) && (AwtoMsgWait() != 0));"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position

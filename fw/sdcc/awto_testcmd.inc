@@ -1,5 +1,5 @@
 #if(_AWTO_DIAG == _ON)
-// #33: 0x01..0x04 = key MENU/RIGHT/LEFT/EXIT, 0x10+n = OSD event n, 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46). Inserted into RTD2014Key.c (OSD macros).
+// #33: 0x01..0x04 = key MENU/RIGHT/LEFT/EXIT, 0x10+n = OSD event n, 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46), 0x22/0x23 = message log on/off (#56). Inserted into RTD2014Key.c (OSD macros).
 void AwtoDiagTestCmd(void)
 {
     unsigned char ucCmd = g_stAwtoDiag.ucTestCmd;
@@ -17,6 +17,10 @@ void AwtoDiagTestCmd(void)
     {
         g_stAwtoDiag.ucDbgPopup = 1;
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG);
+    }
+    else if((ucCmd == 0x22) || (ucCmd == 0x23))      // #56: on-screen message log on / off
+    {
+        g_ucAwtoMsgLog = (ucCmd == 0x22);
     }
 #if(_AWTO_DEMO_LOGO == _ON)
     else if(ucCmd == 0x21)

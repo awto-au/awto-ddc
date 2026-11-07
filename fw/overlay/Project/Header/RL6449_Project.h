@@ -60,6 +60,17 @@ volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #else
 extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #endif
+#define AWTO_MSG_RING                                           40      // on-screen message log entries (#56)
+typedef struct
+{
+    unsigned int usId;
+    unsigned long ulValue;
+} StAwtoMsg;
+extern __xdata StAwtoMsg g_pstAwtoMsgRing[AWTO_MSG_RING];
+extern __xdata unsigned char g_ucAwtoMsgHead;
+extern __xdata unsigned int g_usAwtoMsgSeq;
+extern __xdata unsigned char g_ucAwtoMsgLog;
+extern unsigned char AwtoMsgWait(void);
 extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);

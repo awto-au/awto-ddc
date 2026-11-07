@@ -45,6 +45,7 @@ MCU_MHZ = {0xE3: 14.318 * 49 / 2 / 4, 0xFB: 14.318}   # expected MCU clock by RC
 IDLE_POLL_S = 0.002   # a status read is ~0.3 ms at 100 kHz; 2 ms bounds the stall added per message (fw halts until fetched)
 MSG_ENABLE, MSG_FETCH, MSG_END, MSG_DONE = 0x55, 0x25, 0x2A, 0x2F
 ST_NONE, ST_PENDING = 0xFC, 0xF1
+REARM_S = 0.5   # idle re-enable period: a re-arm after a 100 ms fw timeout loses < 0.5 s of messages (they stay in the fw ring)
 LOG = None
 
 
@@ -172,6 +173,7 @@ def messages(io, root: Path, serial=None, table=None) -> int:
     print(f"message ids: {len(ids)} from {src}", flush=True); log(f"message ids: {len(ids)} from {src}")
     if not io.write(DEV8, MSG_ENABLE, b"\x5a"):
         print("enable failed (no ACK from 0x35)"); return 1
+    t_en = time.monotonic()
     try:
         while True:
             st = io.read(DEV8, READ_SUB, 1)
@@ -179,6 +181,8 @@ def messages(io, root: Path, serial=None, table=None) -> int:
                 print("read failed"); return 1
             if st[0] != ST_PENDING:
                 time.sleep(IDLE_POLL_S)
+                if time.monotonic() - t_en > REARM_S:      # fw drops a host silent for 100 ms (#56): re-arm
+                    io.write(DEV8, MSG_ENABLE, b"\x5a"); t_en = time.monotonic()
                 continue
             m = fetch_message(io)
             if m is None:

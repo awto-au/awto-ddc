@@ -1,7 +1,7 @@
 0101	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:320	g_BestPhase	0
 0104	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:774	StepToGB[2]	0
-0110	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1915	VSC change: Colorimetry Ext	1
-0110	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1931	VSC change: Colorimetry Ext	1
+0110	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1915	VSC change: Colorimetry Ext	0
+0110	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1931	VSC change: Colorimetry Ext	0
 0111	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1123	6. DisplayPLL Charge Pump icp =	1
 0111	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1375	6. DisplayPLL Charge Pump icp =	1
 0111	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:888	6. DisplayPLL Charge Pump icp =	1
