@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (health sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--against REF_STEM] [--speed LABEL] [--only boot,isr,link,h1080,h2160]
-  IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). --against: link-check findings not in REF are the failures.
+usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160]
+  IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL line per gate; exit 1 if any fails.
 Stall guard (awto-dan#53): a gate silent for STALL_S is killed and FAILs; backstop LIMIT_S per gate.
@@ -32,9 +32,6 @@ def gates(b: Path, m: Path, ref, tree):
             "--save", ROOT / "tmp/logs/fw_gates" / f"{b.stem}.link-findings.txt"]
     if tree:
         link += ["--layout", Path(tree) / "fw/bank_layout.tsv", "--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
-    if ref:
-        lref = ROOT / "tmp/logs/fw_gates" / f"{Path(ref).name}.link-findings.txt"
-        link += ["--against", lref] if lref.exists() else []
     return {
         "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],
         "isr": [*PY, f"{s}/fw_sim.py", "--isr-check", b, m],
@@ -77,7 +74,7 @@ def run(name, cmd, out: Path, res: dict, log):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("stem")
-    ap.add_argument("--against", default="")
+    ap.add_argument("--against", default="", help="ignored (#66: link findings must be 0, no baseline)")
     ap.add_argument("--speed", default="")
     ap.add_argument("--only", default="")
     ap.add_argument("--tree", default="", help="worktree the image was built in (its bank_layout.tsv + asm_bank)")
