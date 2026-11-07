@@ -36,8 +36,13 @@ DEV8 = 0x6A                         # 7-bit 0x35
 BASE = 0xF6D0
 SIZE = 48
 CMD_HI, CMD_READ, READ_SUB = 0x01, 0x3A, 0x08
+# #63 order (images from wb-port 2026-11-07 on): VDD comes right after pin-share, so 5 = VDD, 6 = first main-loop pass,
+# 7 = eDP link done, 8 = backlight on. Stages 1-4 are coarse: Timer2 starts inside McuInitial (pre-main not counted).
 STAGES = ["", "BOOT (start of main)", "GPIO init done (in McuInitial)", "McuInitial done", "pin-share done",
-          "main loop first pass", "panel power on", "DPTx link start", "DPTx link done"]
+          "panel VDD on", "main loop first pass", "eDP link done", "backlight on"]
+STAGES_OLD = ["", "BOOT (start of main)", "GPIO init done (in McuInitial)", "McuInitial done", "pin-share done",
+              "main loop first pass", "panel power on", "DPTx link start", "DPTx link done"]
+BOOTING_MS = 2000      # cold boot reaches stage 8 at ~0.5 s (#63, wb-port7); under 2 s uptime a missing stage = still booting
 PERIOD = {0xE3: 7309, 0xFB: 1194}   # Timer2 counts per 1 ms tick, keyed by RCAP2H (see docstring)
 # Delay calibration rows: (key, label, calls in the measured body, nominal us per call, lo, hi). A busy delay shorter than
 # nominal breaks the minimum waits it stands for (PHY settle, SDK `DELAY_XUS`); longer only costs time. Lower bound -10 %:
@@ -80,11 +85,15 @@ def report(d: dict, prev: dict | None, dt: float | None) -> str:
     if not d["magic_ok"]:
         return f"magic not 'AD' (version {d['ver']}): firmware without the diag block, or read path failed"
     st = d["stage"]
-    L.append(f"version {d['ver']}  stage {st}: {STAGES[st] if st < len(STAGES) else '?'}"
-             f"  WDT_TEST at boot 0x{d['wdt']:02x}{' (WATCHDOG RESET)' if d['wdt'] & 0x80 else ''}")
+    names = STAGES if d.get("new_stages", True) else STAGES_OLD
+    booting = st < 8 and d["t2"] < BOOTING_MS
+    L.append(f"version {d['ver']}  stage {st}: {names[st] if st < len(names) else '?'}"
+             + (f"  (boot in progress, uptime {d['t2']} ms)" if booting else "")
+             + f"  WDT_TEST at boot 0x{d['wdt']:02x}{' (WATCHDOG RESET)' if d['wdt'] & 0x80 else ''}")
     for n in range(1, 9):
         reached = n <= st or d["ts"][n - 1]
-        L.append(f"  stage {n} {STAGES[n]:32s} " + (f"{d['ts'][n - 1]:6d} ms" if reached else "   not reached"))
+        L.append(f"  stage {n} {names[n]:32s} " + (f"{d['ts'][n - 1]:6d} ms" if reached else
+                                                    ("   not yet (booting)" if booting else "   not reached")))
     if prev is not None and dt:                            # u16 wrap-safe deltas
         w = lambda k: (d[k] - prev[k]) & 0xFFFF
         L.append(f"main loop {w('hb') / dt:9.1f} /s   Timer2 ISR {w('t2') / dt:7.1f} /s   EXINT1 ISR {w('ex1') / dt:7.1f} /s"
