@@ -27,3 +27,6 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-07T14:07:03+11:00	eacaa0f	AWT26110003-wb-delaycal2-be	wb-delaycal-v2	12	43861	5522	17.3	1100	22538	17.5			672089
 2026-11-07T14:11:22+11:00	c68391e	AWT26110003-wb-port2-be	wb-port2	12	43861	5539	17.4	1105	22540	17.5			671128
 2026-11-07T14:23:39+11:00	9ed6819	AWT26110003-wb-port3-be	wb-port3	12	43860	5529	17.3	1100	22539	17.5			672898
+2026-11-07T14:30:44+11:00	0985e1d	AWT26110003-kcA-be	kc A: wb-vfreq + keil2sdcc ~bX rule, flags off (awto-sdcc#25)	12	43861	5309	17.4	1105	22517	17.5	153ae2d	1	657404
+2026-11-07T14:31:03+11:00	0985e1d	AWT26110003-kcBnd-be	kc: rule dropped, --keil-bit-not/loop-reread/eval-order, tracked layout	12	43861	5289	17.4	1105	22517	17.5	0e379fa	1	657380
+2026-11-07T14:31:21+11:00	0985e1d	AWT26110003-kcB-be	kc B: rule dropped, --keil-compat, first-fit layout (stubs not comparable)	12	43861	7725	57.1	3545	22842	17.5	0e379fa	1	678594
