@@ -13,8 +13,10 @@ BIG_ENDIAN = os.environ.get("AWTO_SDCC_BE") == "1"
 # AWTO_SDCC_BIN); 0/unset = today's ABI
 SDCCCALL = os.environ.get("AWTO_SDCCCALL", "0")
 CFLAGS_EXTRA = (["--big-endian"] if BIG_ENDIAN else []) + (["--sdcccall", SDCCCALL] if SDCCCALL != "0" else [])
-# trunk installs mcs51.lib in lib/mcs51-large but the driver still searches lib/large (r17118+ move)
-LIB = BIN.parent / ("share/sdcc/lib/mcs51-large-be" if BIG_ENDIAN else "share/sdcc/lib/mcs51-large")
+# Library = the install's lib/mcs51-large[-be][-scN] (ABI of SDCCCALL), and only it: the driver's own -k dirs
+# (lib/large*, configure-time DATADIR) can name another install (awto-sdcc#20), so links use LINK_LIBS (--nostdlib)
+LIB = BIN.parent / ("share/sdcc/lib/mcs51-large" + ("-be" if BIG_ENDIAN else "") + (f"-sc{SDCCCALL}" if SDCCCALL != "0" else ""))
+LINK_LIBS = ["--nostdlib", f"-L{LIB}", "-lmcs51"]       # mcs51 port default libs = {"mcs51"} (sdcc src/mcs51/main.c)
 # ISR lib clones are compiled from this source tree (the BE branch carries the BE lib code)
 LIBSRC = Path(os.environ.get("AWTO_SDCC_SRC") or ("/mnt/2tb/git/awto-sdcc-be" if BIG_ENDIAN else "/mnt/2tb/git/awto-sdcc")) / "device/lib"
 

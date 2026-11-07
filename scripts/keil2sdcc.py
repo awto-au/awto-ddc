@@ -593,6 +593,12 @@ def tokenise_messages(text: str, stats, rel: str) -> str:
 
 def rewrite(text, here, idx, sfr_addr, using, stats, rel):
     text = text.replace("\r\n", "\n")
+    # cpp splices `\ <spaces>\n` anyway (warns "backslash and newline separated by space"): drop the spaces, same splice
+    text, n = re.subn(r"\\[ \t]+\n", "\\\n", text)
+    stats["backslash-space"] += n
+    # "/*" inside a block comment (cpp warns): the comment still ends at the first */; "/ *" keeps the text, no warning
+    text = COMMENT.sub(lambda m: "/*" + m.group(0)[2:-2].replace("/*", "/ *") + "*/"
+                       if m.group(0).startswith("/*") else m.group(0), text)
     text = tokenise_messages(text, stats, rel)
     text = fix_includes(text, here, idx)
     text = add_using_to_protos(text, using, stats)
@@ -861,7 +867,9 @@ def cmd_compile(uv2_rel, jobs, only, target):
             wfile[f] = ws
             for w in set(norm_err(l) for l in ws):
                 whist[w] += 1
-    (WORK / "warnings.txt").write_text("".join(f"== {f}\n" + "\n".join(ws) + "\n" for f, ws in sorted(wfile.items())))
+    wtxt = "".join(f"== {f}\n" + "\n".join(ws) + "\n" for f, ws in sorted(wfile.items()))
+    (WORK / "warnings.txt").write_text(wtxt)
+    (WORK / f"warnings-{Path(uv2_rel).stem}.txt").write_text(wtxt)    # per compile: scripts/warn_policy_check.py
     unreviewed = warn_gate(res)
     seg = Counter()                                          # area sizes summed over ok files
     for f, _, _ in ok:
