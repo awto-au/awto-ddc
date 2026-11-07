@@ -7,18 +7,21 @@
 #include <stdint.h>
 #include "cc.h"
 
-/* host tests may predefine REG8 to a recording mock before including this header */
-#ifndef REG8
-#define REG8(a) (*(volatile __xdata uint8_t *)(uint16_t)(a))
+/* one CPU access each. Host tests predefine both hooks to record reads and writes separately. */
+#ifndef REG8_RD
+#define REG8_RD(a) (*(volatile __xdata uint8_t *)(uint16_t)(a))
+#endif
+#ifndef REG8_WR
+#define REG8_WR(a, v) ((*(volatile __xdata uint8_t *)(uint16_t)(a)) = (uint8_t)(v))
 #endif
 
 /* single byte */
-#define reg_rd(a)              (REG8(a))
-#define reg_wr(a, v)           (REG8(a) = (uint8_t)(v))
+#define reg_rd(a)              (REG8_RD(a))
+#define reg_wr(a, v)           REG8_WR(a, v)
 /* new = (old & keep) | set: exactly one read, then one write */
-#define reg_rmw(a, keep, set)  (REG8(a) = (uint8_t)((REG8(a) & (uint8_t)(keep)) | (uint8_t)(set)))
+#define reg_rmw(a, keep, set)  REG8_WR(a, (uint8_t)((REG8_RD(a) & (uint8_t)(keep)) | (uint8_t)(set)))
 /* old & mask (one read) */
-#define reg_test(a, mask)      ((uint8_t)(REG8(a) & (uint8_t)(mask)))
+#define reg_test(a, mask)      ((uint8_t)(REG8_RD(a) & (uint8_t)(mask)))
 
 /* multi-byte, big-endian in register space */
 uint16_t reg_rd16(uint16_t a);
