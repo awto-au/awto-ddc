@@ -295,7 +295,8 @@ SDCC_BE_BIN = "/mnt/2tb/git/awto-sdcc-be/tmp/be-install/bin"     # awto-sdcc big
 FW = TMP / "fw"
 BOOT_PORTS = {"DP": "_D1_INPUT_PORT", "HDMI": "_D2_INPUT_PORT"}               # debug port before first ACTIVE (#28)
 MODES = {"1080p50": "1920x1080@50.000", "1080p60": "1920x1080@60.000", "4k30": "3840x2160@30.000",
-         "4k60": "3840x2160@60.000"}
+         "4k60": "3840x2160@60.000", "4k5994": "3840x2160@59.940",
+         "off": "off"}                  # off: remove the connector from the desktop, other monitors unchanged
 
 
 def _units() -> dict:
@@ -772,13 +773,25 @@ def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
         return int(b_["pos"][0]), int(b_["pos"][1]), w / s, h / s
 
     tb = next(b_ for b_ in blocks if target in b_["mons"])
-    x, y, w, h = rect(tb, mode)
-    old_w = rect(tb, cur[target])[2]
-    overlap = any(x < ox + ow and ox < x + w and y < oy + oh and oy < y + h
-                  for ox, oy, ow, oh in (rect(b_, cur[b_["mons"][0]]) for b_ in blocks if b_ is not tb))
-    keep = int(mode.split("x")[0]) / old_w
-    if (overlap or w < old_w) and keep >= 1:            # would overlap or leave a gap: keep the old footprint
-        tb["scale"] = f"{keep:g}"                       # (scale < 1 is invalid: then shrink at the current scale)
+    if mode == "off":                                   # drop target's logical monitor, everything else unchanged
+        if len(blocks) == 1:
+            raise SystemExit(f"mode: {target} is the only logical monitor; nothing done")
+        if tb["prim"]:
+            raise SystemExit(f"mode: {target} is primary; nothing done")
+        rx, ry, rw, _rh = rect(tb, cur[target])
+        blocks.remove(tb)
+        for b_ in blocks:                               # close the gap: same-row monitors right of it move left
+            if int(b_["pos"][1]) == ry and int(b_["pos"][0]) > rx:
+                b_["pos"][0] = str(int(int(b_["pos"][0]) - rw))
+        target, mode = None, None
+    else:
+        x, y, w, h = rect(tb, mode)
+        old_w = rect(tb, cur[target])[2]
+        overlap = any(x < ox + ow and ox < x + w and y < oy + oh and oy < y + h
+                      for ox, oy, ow, oh in (rect(b_, cur[b_["mons"][0]]) for b_ in blocks if b_ is not tb))
+        keep = int(mode.split("x")[0]) / old_w
+        if (overlap or w < old_w) and keep >= 1:        # would overlap or leave a gap: keep the old footprint
+            tb["scale"] = f"{keep:g}"                   # (scale < 1 is invalid: then shrink at the current scale)
     args = []
     for b_ in blocks:
         args += ["--logical-monitor", *(["--primary"] if b_["prim"] else [])]
