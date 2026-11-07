@@ -257,6 +257,7 @@ def main() -> int:
         # #66: every policy row must still match a warning of this build (stale rows fail), every warning a row
         run("edid", [py, "scripts/warn_policy_check.py", WORK_DIR / "warnings-STD_FW_1P.txt",
                      WORK_DIR / f"warnings-{Path(LIB_UV2).stem}.txt"])
+    run("asm", [py, "scripts/keil2sdcc.py", "awto"])         # clean tree + shim (#68); no-op without clean sources
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
