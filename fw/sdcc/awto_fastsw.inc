@@ -47,6 +47,13 @@ void AwtoSwCacheStore(void)
 #endif
 }
 
+unsigned char AwtoSwCacheValid(unsigned char ucPort)
+{
+    BYTE ucI = ucPort - _D1_INPUT_PORT;
+
+    return (ucI < 3) ? s_pstAwtoSwCache[ucI].ucValid : 0;
+}
+
 static void AwtoSwFastGo(BYTE ucI, BYTE ucPort, BYTE ucType)
 {
     ScalerDDomainBackgroundEnable(_ENABLE);

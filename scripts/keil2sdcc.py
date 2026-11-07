@@ -239,6 +239,10 @@ INSERTS = [
     # #60 KVM: input select + DDC/CI engines (fw/sdcc/awto_ddcci.inc), polled before the SDK DDC/CI handler
     (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$", (SHIM / "awto_ddcci.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonDdcciHandler\(\);", "            AWTO_DDCCI_POLL();", r"^void main\(void\)$"),
+    # #79 MENU held + RIGHT (or EXIT): debug link toggle (fw/sdcc/awto_ddcci.inc AwtoKeyDbgLink)
+    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _RIGHT_KEY_MASK):\n        case (_MENU_KEY_MASK | _EXIT_KEY_MASK):\n"
+     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n",
+     r"^void RTDKeyMessageProc\(void\)$"),
     ("Kernel/System/Code/SysJudge.c", r"^\s*AwtoMsgV\(0x07D6,", "                AWTO_TMDS_STUCK();", r"^bit SysJudgeCheckStatus\(void\)$"),  # #78
 ] + [
     # #60 phase probes 7..19 (names: main scripts/sw_timeline.py); marks builds also poll mode changes right after judge / mode handler
@@ -329,6 +333,9 @@ SUBS = [
     (OSD + "RTD2014Ddcci.c", r"SET_FORCE_POW_SAV_STATUS\(_FALSE\);\s*SysSourceSetScanType\(_SOURCE_SWITCH_FIXED_PORT\);\s*"
      r"SysSourceSwitchInputPort\((_\w+)\);\s*SysModeSetResetTarget\(_MODE_ACTION_RESET_TO_SEARCH\);",
      lambda m: "AwtoInputSelect(%s, 0x60);  // [keil2sdcc] sub: fast path (fw/sdcc/awto_ddcci.inc)" % m.group(1), 7),
+    # #60 front key: EXIT with no menu = next input (the SDK's VGA auto adjust there is compiled out: no VGA)
+    (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
+     lambda m: m.group(1) + "            AwtoKeyNextInput();  // [keil2sdcc] sub\n            break;\n", 1),
 ] + [
     # #78: TMDS Initial after a no-signal power-off wiped SCDC 0x20 (host's 1/40 ratio lost -> no lock, endless search after DPMS)
 ] + [(f"Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx{n}.c",

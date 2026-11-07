@@ -159,6 +159,12 @@ void AwtoDiagTestCmd(void)
     {
         AwtoSwArm(SysSourceGetInputPort());
     }
+#if(_AWTO_DBG_SWAP == _ON)
+    else if((ucCmd == 0x3B) || (ucCmd == 0x3C))         // #79 debug link: 3B back to DDC/CI now, 3C on until told back
+    {
+        AwtoDbgLinkStart((ucCmd == 0x3C) ? 0xFF : 0);
+    }
+#endif
     else if(ucCmd == 0x30)                              // #60 back to auto search in group (NVRAM default), no switch
     {
         AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);

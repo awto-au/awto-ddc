@@ -230,6 +230,33 @@ extern void AwtoFreqUpdate(void);
 #endif
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
+extern void AwtoKeyNextInput(void);
+extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
+// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E8 = A5 NN (or MENU+RIGHT, test cmd 0x3C) moves the
+// debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: channel 7.
+#if((_AWTO_DDCCI_ENGINES == 1) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
+#define _AWTO_DBG_SWAP                                          _ON
+#else
+#define _AWTO_DBG_SWAP                                          _OFF
+#endif
+#define AWTO_DBG_PARK_CH                                        0x07
+#define AWTO_DBG_LINK_VCP                                       0xE8
+#define AWTO_DBG_LINK_MAGIC                                     0xA5
+#define AWTO_DBG_LINK_KEY_MIN                                   30
+#if(_AWTO_DBG_SWAP == _ON)
+extern __xdata unsigned char g_ucAwtoDbgLink;
+extern __xdata unsigned int g_usAwtoDbgLinkSec;
+extern __xdata unsigned char g_ucAwtoDdcciCh;
+extern void AwtoDbgLinkSet(unsigned char ucMin);
+extern void AwtoDbgLinkStart(unsigned char ucMin);
+extern void AwtoDbgLinkPoll(void);
+extern void AwtoKeyDbgLink(void);
+#define AWTO_DBG_LINK_POLL()                                    { if(g_ucAwtoDbgLink != 0) { AwtoDbgLinkPoll(); } }
+#define AWTO_KEY_DBG_LINK()                                     AwtoKeyDbgLink()
+#else
+#define AWTO_DBG_LINK_POLL()
+#define AWTO_KEY_DBG_LINK()
+#endif
 #if(_AWTO_DDCCI_ENGINES != 0)
 extern void AwtoDdcciPoll(void);
 #if(_AWTO_DDCCI_NOPOLL == 1)
@@ -239,7 +266,7 @@ extern void AwtoDdcciPoll(void);
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } }
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
-#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } }
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
 #if((_AWTO_DDCCI_PARK == 1) || (_AWTO_DDCCI_FIXCH != 0))
 #define AWTO_DDCCI_FOLLOW(ch)
 #else

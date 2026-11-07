@@ -1,19 +1,18 @@
 #if(_AWTO_DBG_FOLLOW == _ON)
 // #28: debug IIC engine follows the active port (SDK: fixed _DEBUG_DDC_CHANNEL_SEL). Called from ScalerMcuDdcciSwitchPort's debug branch.
-static void AwtoDbgSelectChannel(BYTE ucInputPort)
+// #79 runtime swap (_AWTO_DBG_SWAP): the active port's DDC belongs to DDC/CI (IIC_1, 0x37) unless g_ucAwtoDbgLink != 0;
+// the other engine is parked on AWTO_DBG_PARK_CH. Never both on one channel (kvm1: both NAK), so park first, then move.
+#if(_AWTO_DBG_SWAP == _ON)
+__xdata BYTE g_ucAwtoDbgLink;               // 0 = DDC/CI on the active port (default), 1 = debug slave 0x35 there
+__xdata WORD g_usAwtoDbgLinkSec;            // debug link seconds left (0 = until told back)
+__xdata BYTE g_ucAwtoDdcciCh = AWTO_DBG_PARK_CH;    // IIC_1 channel wanted (fw/sdcc/awto_ddcci.inc re-inits with it)
+static __xdata BYTE s_ucAwtoDbgPort = _D2_INPUT_PORT;
+#endif
+
+static void AwtoDbgSetFF22(BYTE ucCh)
 {
-    BYTE ucCh = 0x03;                       // DDC2 (_PCB_DEBUG_DDC) for ports without their own DDC
     BYTE ucIrq;
 
-    if(ucInputPort == _D1_INPUT_PORT)
-    {
-        ucCh = 0x02;                        // DDC1 = DP AUX I2C
-    }
-    else if(ucInputPort == _D3_INPUT_PORT)
-    {
-        ucCh = 0x04;
-    }
-    AWTO_DDCCI_FOLLOW(ucCh);                // #60: DDC/CI engine IIC_1 on the same channel (_AWTO_DDCCI_ENGINES == 1)
     if((MCU_FF22_IIC_CH_SEL & 0x07) == ucCh)
     {
         return;
@@ -31,4 +30,45 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
     MCU_FF2A_IIC_IRQ_CONTROL2 &= ~_BIT6;
     MCU_FF28_IIC_IRQ_CONTROL = ucIrq;
 }
+
+static void AwtoDbgSelectChannel(BYTE ucInputPort)
+{
+    BYTE ucCh = 0x03;                       // DDC2 (_PCB_DEBUG_DDC) for ports without their own DDC
+
+    if(ucInputPort == _D1_INPUT_PORT)
+    {
+        ucCh = 0x02;                        // DDC1 = DP AUX I2C
+    }
+    else if(ucInputPort == _D3_INPUT_PORT)
+    {
+        ucCh = 0x04;
+    }
+#if(_AWTO_DBG_SWAP == _ON)
+    s_ucAwtoDbgPort = ucInputPort;
+    if(g_ucAwtoDbgLink == 0)
+    {
+        AwtoDbgSetFF22(AWTO_DBG_PARK_CH);   // debug engine off the port first
+        g_ucAwtoDdcciCh = ucCh;
+        AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | ucCh;      // IIC_1 CH_SEL
+    }
+    else
+    {
+        g_ucAwtoDdcciCh = AWTO_DBG_PARK_CH;
+        AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | AWTO_DBG_PARK_CH;
+        AwtoDbgSetFF22(ucCh);
+    }
+#else
+    AWTO_DDCCI_FOLLOW(ucCh);                // #60: DDC/CI engine IIC_1 on the same channel (_AWTO_DDCCI_ENGINES == 1)
+    AwtoDbgSetFF22(ucCh);
+#endif
+}
+
+#if(_AWTO_DBG_SWAP == _ON)
+void AwtoDbgLinkSet(BYTE ucMin)             // main-loop context. 0 = back to DDC/CI; 0xFF = debug link until told back
+{
+    g_ucAwtoDbgLink = (ucMin != 0);
+    g_usAwtoDbgLinkSec = (ucMin == 0xFF) ? 0 : (WORD)ucMin * 60;
+    AwtoDbgSelectChannel(s_ucAwtoDbgPort);
+}
+#endif
 #endif

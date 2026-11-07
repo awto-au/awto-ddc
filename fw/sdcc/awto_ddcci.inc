@@ -27,6 +27,79 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     }
 }
 
+void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu): next port D1 -> D2 -> D3, cached ports first
+{
+    BYTE ucP = SysSourceGetInputPort();
+    BYTE ucK;
+
+    for(ucK = 0; ucK < 3; ucK++)
+    {
+        ucP = (ucP >= _D3_INPUT_PORT) ? _D1_INPUT_PORT : (ucP + 1);
+#if(_AWTO_FAST_SWITCH == _ON)
+        if(AwtoSwCacheValid(ucP) != 0)
+        {
+            break;
+        }
+#else
+        break;
+#endif
+    }
+    if(ucK == 3)                                // nothing cached: plain next port
+    {
+        ucP = SysSourceGetInputPort();
+        ucP = (ucP >= _D3_INPUT_PORT) ? _D1_INPUT_PORT : (ucP + 1);
+    }
+    AwtoInputSelect(ucP, 0x4B);                 // 0x4B = key (switch log)
+}
+
+#if(_AWTO_DBG_SWAP == _ON)
+static __xdata WORD s_usAwtoDbgLinkMs;
+
+void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B, MENU+RIGHT; 0 = back to DDC/CI
+{
+    do
+    {
+        s_usAwtoDbgLinkMs = g_stAwtoDiag.usT2Isr;
+    }
+    while(s_usAwtoDbgLinkMs != g_stAwtoDiag.usT2Isr);
+    AwtoDbgLinkSet(ucMin);
+}
+
+void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the debug link is on: minutes count down
+{
+    WORD usNow;
+
+    if(g_usAwtoDbgLinkSec == 0)
+    {
+        return;                                 // until told back
+    }
+    do
+    {
+        usNow = g_stAwtoDiag.usT2Isr;
+    }
+    while(usNow != g_stAwtoDiag.usT2Isr);
+    if((WORD)(usNow - s_usAwtoDbgLinkMs) < 1000)
+    {
+        return;
+    }
+    s_usAwtoDbgLinkMs += 1000;
+    if(--g_usAwtoDbgLinkSec == 0)
+    {
+        AwtoDbgLinkSet(0);
+    }
+}
+
+void AwtoKeyDbgLink(void)                       // MENU held + RIGHT: toggle the debug link; closes the menu MENU opened
+{
+    if(GET_OSD_STATE() != _MENU_NONE)
+    {
+        OsdDispDisableOsd();
+        SET_OSD_STATE(_MENU_NONE);
+    }
+    AwtoDbgLinkStart((g_ucAwtoDbgLink != 0) ? 0 : AWTO_DBG_LINK_KEY_MIN);
+}
+#endif
+
 #if(_AWTO_DDCCI_ENGINES != 0)
 #define AWTO_IIC_CH_SEL                 0       // register offsets from the engine base (IIC_1 = 0xFE86 .. 0xFE8F)
 #define AWTO_IIC_SLAVE                  1
@@ -98,6 +171,12 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
                 AwtoInputSelect(ucI, 0x60);
             }
         }
+#if(_AWTO_DBG_SWAP == _ON)
+        else if((pucRx[3] == AWTO_DBG_LINK_VCP) && (pucRx[4] == AWTO_DBG_LINK_MAGIC) && (pucRx[5] != 0))
+        {
+            AwtoDbgLinkStart(pucRx[5]);         // #79: debug slave 0x35 on this DDC for value minutes (0xFF = until told back)
+        }
+#endif
         return;
     }
     if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP: 51 82 01 vcp chk -> 6E 88 02 rc vcp 00 maxH maxL curH curL chk
@@ -179,7 +258,11 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
 #if(_AWTO_DDCCI_ENGINES == 3)
             AwtoDdcEngineInit(pucR, tAwtoIicCh[ucE]);
 #else
+#if(_AWTO_DBG_SWAP == _ON)
+            AwtoDdcEngineInit(pucR, g_ucAwtoDdcciCh);       // #79: AwtoDbgSelectChannel owns the channel
+#else
             AwtoDdcEngineInit(pucR, (_AWTO_DDCCI_FIXCH != 0) ? _AWTO_DDCCI_FIXCH : (_AWTO_DDCCI_PARK == 1) ? 0x07 : (AWTO_XB(0xFF22) & (_BIT2 | _BIT1 | _BIT0)));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
+#endif
 #endif
             ucN = 0;
         }
