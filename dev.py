@@ -22,6 +22,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -278,6 +279,13 @@ def cmd_selftest(_extra: list[str]) -> int:
     check("--help exits 2 (usage)", h.returncode == 2)
     check("--help lists commands", all(c in h.stdout for c in COMMANDS))
 
+    # #72: every non-step command's --help is side-effect free (intercepted in main(), handler never called)
+    # timeout: help prints in <1 s; 30 s only stops a handler that ran anyway (raises -> selftest fails loudly)
+    bad = [n for n, m in COMMANDS.items() if m["kind"] != "step" and n != "selftest"
+           and subprocess.run([sys.executable, __file__, n, "--help"], capture_output=True, text=True,
+                              cwd=REPO, timeout=30).returncode != 0]
+    check(f"action --help exits 0 without running ({', '.join(bad) or 'all'})", not bad)
+
     u = subprocess.run([sys.executable, __file__, "no-such-command"],
                        capture_output=True, text=True, cwd=REPO)
     check("unknown command exits 2", u.returncode == 2)
@@ -393,22 +401,47 @@ def check_image_identity(u: dict, img: Path) -> None:
                          f"--any-image to flash it anyway")
 
 
-def _py(script: str, *args, env: dict | None = None) -> int:
+def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> int:
+    """shield: SIGINT/SIGTERM/SIGHUP are forwarded to the child once (it stops at a safe point) and dev.py keeps draining
+    its output; otherwise dev.py would die first and its finally (fast_bus unload) would reload the bus mid-flash."""
     cmd = [sys.executable, str(REPO / "scripts" / script), *map(str, args)]
     log("run: " + " ".join(cmd[1:]))
     full_env = {**os.environ, "AWTO_VIA_DEV": "1", **(env or {})}
-    if _UNIT_LOG is None:
-        rc = subprocess.call(cmd, cwd=REPO, env=full_env)
-    else:                                   # tee the tool's output into the unit log, line by line
+    sigs = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP) if shield else ()
+    old, p, fwd = {}, None, []
+
+    def on_sig(signum, _frame):
+        fwd.append(signum)
+        if p is not None and len(fwd) == 1:  # a group-wide kill reaches the child anyway; a duplicate only bumps its count
+            p.send_signal(signal.SIGTERM)
+
+    def out(line: str) -> None:
+        try:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+        except (OSError, ValueError):    # the shell that ran dev.py is gone: keep the flash going, the logs still fill
+            pass
+
+    for s in sigs:
+        old[s] = signal.signal(s, on_sig)
+    try:
         p = subprocess.Popen(cmd, cwd=REPO, env={**full_env, "PYTHONUNBUFFERED": "1"},
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        with _UNIT_LOG.open("a", encoding="utf-8") as fh:
+        if _UNIT_LOG is None:
             for line in p.stdout:
-                sys.stdout.write(line)
-                sys.stdout.flush()
-                fh.write(f"{_stamp()}  {script}: {line}")
-                fh.flush()
+                out(line)
+        else:                               # tee the tool's output into the unit log, line by line
+            with _UNIT_LOG.open("a", encoding="utf-8") as fh:
+                for line in p.stdout:
+                    out(line)
+                    fh.write(f"{_stamp()}  {script}: {line}")
+                    fh.flush()
         rc = p.wait()
+    finally:
+        for s, h in old.items():
+            signal.signal(s, h)
+    if fwd:
+        log(f"{script}: {len(fwd)} stop signal(s) during the run, forwarded; child finished at a safe point (rc={rc})", "WARN")
     log(f"rc={rc}: {script}", "INFO" if rc == 0 else "ERROR")
     return rc
 
@@ -473,7 +506,7 @@ def cmd_flash(extra: list[str]) -> int:
                  *([] if u.get("relay") else ["--per-sector", "--max-min", "20"]),   # no relay: per sector; stop if > 20 min (#71)
                  *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
                  "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
-                 *(["--identity", identity] if identity else []))
+                 *(["--identity", identity] if identity else []), shield=True)
     if rc == 0:
         (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
         if _py("fw_archive.py", "--commit", img):      # every flashed image kept in git; failure doesn't fail the flash
@@ -987,6 +1020,10 @@ def main(argv: list[str] | None = None) -> int:
     if meta is None:
         print(f"unknown command: {name!r} — try ./dev.py describe", file=sys.stderr)
         return 2
+    # #72: an action's --help must never reach its handler (build --help built and repointed last.txt)
+    if meta["kind"] != "step" and any(a in ("-h", "--help") for a in extra):
+        print(f"./dev.py {name} {meta.get('args', '')}".rstrip() + f"\n  {meta['summary']}")
+        return 0
     rc = meta["fn"](extra)
     return 0 if rc == SKIPPED else rc
 

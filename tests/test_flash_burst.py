@@ -36,6 +36,7 @@ class BusRtd(F.Rtd):
     def __init__(self, nak_data_byte=None, nak_once=True):
         self.m = F.FakeRtd(sr=0x00, wp_low=False, base=BASE)
         self.m.partial_ok = True
+        self._i915 = True                   # models i915 GMBUS (is_i915 cache; no real self.bus here)
         self.m.flash[:] = b"\xff" * SECTOR
         self.log = []                       # ("W"|"R", reg, nbytes) per message, in bus order
         self.retries_set = []

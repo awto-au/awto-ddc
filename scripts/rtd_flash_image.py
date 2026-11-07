@@ -28,7 +28,7 @@ Log: ./tmp/logs/rtd_flash_image.log
 """
 from __future__ import annotations
 
-import argparse, os, random, sys, time
+import argparse, os, random, signal, sys, time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,6 +70,57 @@ def phase(name: str):
         yield
     finally:
         PH[name] = PH.get(name, 0.0) + time.monotonic() - t
+
+
+class _QuietStream:
+    """stdout/stderr after a stop request: the parent (dev.py / agent shell) may be gone; a broken pipe must not abort a flash."""
+
+    def __init__(self, s):
+        self.s = s
+
+    def write(self, t):
+        try:
+            return self.s.write(t)
+        except (OSError, ValueError):
+            return len(t)
+
+    def flush(self):
+        try:
+            self.s.flush()
+        except (OSError, ValueError):
+            pass
+
+
+class StopGuard:
+    """SIGINT/SIGTERM/SIGHUP during a write never stop mid-sector (unit 3, 2026-11-07T19:42: killed after the erase-all, dead).
+    Per-sector: stop at the next sector boundary. Erase-all: erased sectors only boot once written, so finish the run.
+    The 3rd signal forces an exit (KeyboardInterrupt). SIGKILL cannot be caught: never send it to a flash."""
+    SIGS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+
+    def __init__(self):
+        self.count, self.old = 0, {}
+
+    @property
+    def stop(self) -> bool:
+        return self.count > 0
+
+    def _on(self, signum, _frame):
+        self.count += 1
+        if not isinstance(sys.stdout, _QuietStream):
+            sys.stdout, sys.stderr = _QuietStream(sys.stdout), _QuietStream(sys.stderr)
+        if self.count >= 3:
+            log(f"{signal.Signals(signum).name} x{self.count}: forced exit, flash state unknown (manifest marks it)")
+            raise KeyboardInterrupt
+        log(f"{signal.Signals(signum).name}: stop requested ({self.count}/3); finishing the current sector / erased set first")
+
+    def __enter__(self):
+        for s in self.SIGS:
+            self.old[s] = signal.signal(s, self._on)
+        return self
+
+    def __exit__(self, *_):
+        for s, h in self.old.items():
+            signal.signal(s, h)
 
 
 IO_ERRORS = (RuntimeError, TimeoutError, OSError)   # TimeoutError: engine/CRC/WIP poll limits; OSError: ENXIO when i915 drops to bit-bang
@@ -215,7 +266,9 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
         state.sectors[i] = None
     state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
     t0 = time.monotonic()
+    guard = StopGuard()
     try:
+        guard.__enter__()
         if per_sector:
             # no-relay units: erase+program+verify one sector at a time, boot/common last; a stop leaves at most one
             # sector erased and the old boot path intact longest
@@ -254,6 +307,13 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
             if k % S.SAVE_EVERY == S.SAVE_EVERY - 1 or k == len(diff) - 1:
                 state.save()
                 log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
+            if per_sector and guard.stop and k + 1 < len(diff):
+                state.save()
+                log(f"STOP (signal) at a sector boundary: {k + 1}/{len(diff)} written, none erased-unwritten "
+                    f"(manifest saved; rerun continues)")
+                if reprot is not None:
+                    isp.reprotect(reprot)
+                return 9
             if per_sector and max_min and k + 1 == PROJECT_AFTER and len(diff) > PROJECT_AFTER:
                 proj = (time.monotonic() - t0) / PROJECT_AFTER * len(diff) / 60
                 log(f"projection after {PROJECT_AFTER} sectors: {proj:.1f} min for {len(diff)} (limit {max_min:g} min)")
@@ -277,6 +337,10 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     except BaseException:
         state.save(source="write-failed")
         raise
+    finally:
+        guard.__exit__()
+    if guard.stop:
+        log("stop request deferred to the end of the run (erase-all mode: erased sectors must be written first)")
     state.save(image=tag, image_size=len(img), source="write", commit=commit)
     log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}")
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")

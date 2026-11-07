@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import random
+import signal
 import sys
 from pathlib import Path
 
@@ -319,3 +320,48 @@ def test_enter_isp_failure_still_sends_reset(monkeypatch, tmp_path):
     monkeypatch.setattr(I, "Rtd", Bad)
     assert I.main() == 7
     assert writes[-1] == (0xEE, 0x02)
+
+
+# --- stop signals never leave erased-unwritten sectors (unit 3 2026-11-07T19:42) ----------------------------------
+
+class SigIsp(FakeIsp):
+    """Raises SIGTERM at the process after the nth page program (inside a sector)."""
+    def __init__(self, nth, count=1, **kw):
+        super().__init__(**kw)
+        self.nth, self.count, self.pages = nth, count, 0
+
+    def program_page(self, addr, data):
+        super().program_page(addr, data)
+        self.pages += 1
+        if self.pages == self.nth:
+            for _ in range(self.count):
+                os.kill(os.getpid(), signal.SIGTERM)
+
+
+def _erased_unwritten(isp, img):
+    return [s for s in sorted({a // SECTOR for a in isp.erased}) if bytes(isp.flash[s * SECTOR:(s + 1) * SECTOR]) == b"\xff" * SECTOR
+            and img[s * SECTOR:(s + 1) * SECTOR] != b"\xff" * SECTOR]
+
+
+def test_sigterm_per_sector_stops_at_boundary_then_rerun_finishes(tmp_path):
+    img, isp = image(), SigIsp(nth=16 * 3 + 5)            # mid 4th sector
+    assert I.flash(isp, img, opts(tmp_path, per_sector=True)) == 9
+    assert _erased_unwritten(isp, img) == []
+    assert len(set(isp.erased)) == 4 and isp.reprotected == 0x9C
+    assert signal.getsignal(signal.SIGTERM) is signal.SIG_DFL
+    isp.nth = 0
+    assert I.flash(isp, img, opts(tmp_path, per_sector=True)) == 0
+    assert bytes(isp.flash[:len(img)]) == img
+
+
+def test_sigterm_erase_all_finishes_the_run(tmp_path):
+    img, isp = image(), SigIsp(nth=40)
+    assert I.flash(isp, img, opts(tmp_path)) == 0
+    assert bytes(isp.flash[:len(img)]) == img
+
+
+def test_third_signal_forces_exit_and_marks_manifest(tmp_path):
+    img, isp = image(), SigIsp(nth=40, count=3)
+    with pytest.raises(KeyboardInterrupt):
+        I.flash(isp, img, opts(tmp_path))
+    assert S.FlashState.load(tmp_path / "AWT0-flash-state.json", "AWT0").source == "write-failed"

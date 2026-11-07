@@ -76,7 +76,7 @@ def test_power_cycle_known_relay_cycles(monkeypatch, tmp_path):
 
 def test_dev_passes_unit_relay(dev, monkeypatch):
     seen = []
-    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None: seen.append((script, a)) or 0)
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append((script, a)) or 0)
     assert dev.cmd_power_cycle(["--unit", "3", "--off"]) == 0
     assert seen == [("power_cycle.py", ("--relay", "so-th-1", "--off"))]
 
@@ -228,7 +228,7 @@ def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
     img = _img(tmp_path, "AWT26110003-abc-be.bin", b"AWT26110003")
     seen = []
     dev.FW.mkdir(parents=True)
-    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None: seen.append(a) or 0)
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append(a) or 0)
 
     class FB:
         def __init__(s, bus): pass
@@ -260,7 +260,7 @@ def _flash_setup(dev, tmp_path, monkeypatch):
 def test_failed_flash_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
-    monkeypatch.setattr(dev, "_py", lambda *a, env=None: 7)
+    monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 7)
     assert dev.cmd_flash(["--unit", "3", str(img)]) == 7
     d = json.loads(fj.read_text())
     assert d["tag"] == "" and d["image"] == str(img)
@@ -272,7 +272,7 @@ def test_flash_exception_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
 
-    def boom(*a, env=None):
+    def boom(*a, env=None, shield=False):
         raise KeyboardInterrupt
     monkeypatch.setattr(dev, "_py", boom)
     with pytest.raises(KeyboardInterrupt):
@@ -283,7 +283,7 @@ def test_flash_exception_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
 def test_successful_flash_records_new_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
-    monkeypatch.setattr(dev, "_py", lambda *a, env=None: 0)
+    monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 0)
     assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
     assert json.loads(fj.read_text()) == {"tag": "AWT26110003-new-be", "image": str(img)}
 
@@ -380,7 +380,7 @@ def test_bus_wait_rescans_until_edid_appears(dev, monkeypatch):
 def test_probe_accepts_bus_without_edid_scan(dev, monkeypatch):
     seen = []
     monkeypatch.setattr(dev, "_bus", lambda u, wait_s=0.0: pytest.fail("EDID scan"))
-    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None: seen.append((script, a)) or 0)
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append((script, a)) or 0)
     assert dev.cmd_probe(["--unit", "3", "--bus", "11", "--window", "3"]) == 0
     assert seen == [("rtd_boot_probe.py", (11, "--window", "3"))]
 
