@@ -877,10 +877,36 @@ def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
     return args
 
 
-@command("set the host video mode on a unit's connector (keeps the layout)", args="[--unit N] [--dp] " + "|".join(MODES),
+@command("set the host video mode on a unit's connector (keeps the layout); --dp mirror|off: DP-1 mirrored into the HDMI slot",
+         args="[--unit N] [--dp] " + "|".join(MODES) + " | --dp mirror|off",
          kind="action")
+def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
+    """Dan's layout with DP-1 added to (on) or removed from (off) the HDMI connector's logical monitor, at the HDMI mode:
+    same slot, same position, nothing else moves (#60 input-switch tests)."""
+    hdmi, dp = _units()[u["_n"]]["gdctl"], u["gdctl"]
+    cur = re.search(rf"Monitor {re.escape(hdmi)} .*?Current mode\s*\n[│├└─\s]*(\S+@\S+)", show, re.S)
+    if not cur:
+        raise SystemExit(f"mode --dp: no current mode for {hdmi}; nothing changed")
+    m = cur.group(1)
+    args = gdctl_set_args(show, hdmi, m)
+    out, k = [], 0
+    while k < len(args):                              # drop an existing DP-1 entry first
+        if args[k] == "--monitor" and args[k + 1] == dp:
+            k += 4; continue
+        out.append(args[k]); k += 1
+    if on:
+        i = out.index(hdmi)
+        out[i + 3:i + 3] = ["--monitor", dp, "--mode", m]
+    return out
+
+
 def cmd_mode(extra: list[str]) -> int:
-    _n, u = _unit(extra)
+    n, u = _unit(extra)
+    if u.get("input") == "DP" and len(extra) == 1 and extra[0] in ("mirror", "off"):
+        show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S).stdout
+        args = _dp_mirror_args(show, {**u, "_n": n}, extra[0] == "mirror")
+        log("run: gdctl set " + " ".join(args))
+        return subprocess.call(["gdctl", "set", *args], timeout=GDCTL_SET_S)
     if len(extra) != 1 or extra[0] not in MODES:
         log(f"mode: one of {', '.join(MODES)}", "ERROR")
         return 2
