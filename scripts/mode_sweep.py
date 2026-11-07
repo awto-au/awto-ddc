@@ -4,7 +4,7 @@
 usage: ./dev.py sweep [--unit N] [--dry-run] [--modes WxH@HZ,...] [--label L]
   Per mode: gdctl set (same gdctl_set_args as dev.py mode, other monitors stay put) -> settle -> read firmware mode state,
   measured input timing vs host, P0_02 FIFO flags, FRC on/off (P5_27/P5_AC), DDR PHY flags (pages 8F/CF) when FRC is on
-  -> verdict -> back to 1080p60 (rest state). Modes come from `gdctl show --verbose` for the unit's connector.
+  -> verdict -> back to REST 4K60.000 (rest state). Modes come from `gdctl show --verbose` for the unit's connector.
   Verdicts: OK, OK-FRC, GARBLE (FRC + DDR flags), FIFO, TIMING, NOSUPPORT, POWERSAVE, NOSIGNAL, STATE:<n>, HANG (bus silent -> recover).
 Log: tmp/logs/mode_sweep.log (one line per mode), TSV tmp/logs/mode_sweep-<label>-<stamp>.tsv.
 """
@@ -25,7 +25,8 @@ import i2cbus  # noqa: E402
 import rtd_proto as P  # noqa: E402
 import unit_health as H  # noqa: E402
 
-REST = "1920x1080@60.000"
+REST = "3840x2160@60.000"     # Dan 2026-11-07: units rest at 4K60.000 (was 1080p60)
+REST_W = int(REST.split("x")[0])
 # Settle after gdctl set: modeset ~2-3 s (dev.GDCTL_SET_S note) + HDMI link retrain + firmware SEARCH/DISPLAY_SETTING
 # (~3 s at 4K, #26 observation) ~= 6-8 s. No 0x35 traffic during it: the debug ISR NAKs/wedges while the main loop
 # re-programs the scaler (wedge seen 2026-11-06), and probing then would read transient states.
@@ -78,7 +79,7 @@ def set_mode(u: dict, mode: str) -> tuple[bool, str]:
     t = u["gdctl"]
     args = dev.gdctl_set_args(gdctl_show(), t, mode)
     w = int(mode.split("x")[0])
-    rx = str(int(ORIG_X[0]) + 1920 - w) if ORIG_X and w < 1920 else None
+    rx = str(int(ORIG_X[0]) + REST_W - w) if ORIG_X and w < REST_W else None
     if mode == REST:
         attempts = [("1", ORIG_X[0] if ORIG_X else None)]
     else:
@@ -292,7 +293,7 @@ def main() -> int:
             row += [""] * 7 + [note]
         tf.write("\t".join(row) + "\n")
         tf.flush()
-        if m != REST:                                # rest state 1080p60 after EACH mode (Dan's rule)
+        if m != REST:                                # rest state after EACH mode (Dan's rule)
             ok, why = set_mode(u, REST)
             if not ok:
                 say(lf, f"  return to {REST} FAILED: {why}; stopping")
