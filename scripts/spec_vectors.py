@@ -33,6 +33,8 @@ def shldiv(a: int, k: int, c: int) -> int:
 
 
 def muldiv(a: int, b: int, c: int) -> int:
+    if c == 0:
+        return M32                                         # x / 0 = all ones (spec arith section 1)
     if a == 0 or b == 0 or a < M32 // b:
         return (a * b // c) & M32                          # exact floor; a*b < 2^32 here
     p = a * b
@@ -69,6 +71,20 @@ def arith_cases(rng: random.Random):
                 yield ("shldiv", a, k, c)
     for _ in range(200):
         yield ("shldiv", rng.getrandbits(32), rng.randint(0, 32), rng.randint(1, 0x80000000))
+    for a, b in ((0, 0), (1, 1), (0x3C0, 0x82320), (0x3C0, 0x83D7C), (0x10000, 0x10000), (M32, M32), (M32, 2)):   # c = 0
+        yield ("muldiv", a, b, 0)
+
+
+GAMMA_IDX = (0, 1, 2, 3, 4, 5, 10, 50, 100, 256, 512, 768, 1000, 1022, 1023, 1024, 1025)
+
+
+def gamma_entry(g10: int, i: int, native10: int = 22) -> int:
+    """spec gamma section 5: u14 with 4 fraction bits; 1024 power-law points, then 0x3FF0, then 0."""
+    if i == 1024:
+        return 0x3FF0
+    if i == 1025:
+        return 0
+    return int(16368 * (i / 1023) ** (g10 / native10) + 0.5)
 
 
 def main() -> int:
@@ -85,6 +101,8 @@ def main() -> int:
     gaps = [f"{d}\t{h}\t{osd_gap(d, h):02x}" for d in (0, 1, 25000, 74250, 148500, 297000, 533250, 594000, 600000, 6054000, 7000000)
             for h in (0, 1)]
     (a.out / "osdgap.tsv").write_text("# dclk_khz\thdouble\texpected (hex; spec reg R5)\n" + "\n".join(gaps) + "\n")
+    gam = [f"{g}\t{i}\t{gamma_entry(g, i):04x}" for g in (18, 20, 22, 24) for i in GAMMA_IDX]
+    (a.out / "gamma.tsv").write_text("# gamma_x10\tindex\texpected u16 (hex; spec gamma section 5; accept +-1)\n" + "\n".join(gam) + "\n")
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     with (root / "tmp/logs/spec_vectors.log").open("a") as f:

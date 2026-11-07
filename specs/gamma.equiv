@@ -1,0 +1,3 @@
+# trace_equiv rules for spec gamma. Control sequence compared, table contents are ours (values differ by design).
+ignore 0066
+barrier 0067

@@ -4,7 +4,8 @@ Covers `awto/include/arith.h`. Results feed register values: they must match bit
 
 ## 1. Interface
 - All values unsigned 32-bit; results mod 2^32.
-- Domain: 1 <= c <= 2^31. Outside it (c = 0, c > 2^31): any result, but the call must return.
+- Domain: 1 <= c <= 2^31. `ar_muldiv` with c = 0 returns 0xFFFFFFFF in both regimes (the display-link timing code calls it with c = 0 before the link rate is known; `measured`: reference image, 1080p60 and 2160p60 traces, 2026-11-07).
+- c > 2^31, and `ar_shldiv` with c = 0: any result, but the call must return.
 - Pure functions; reentrancy not required.
 
 ## 2. Definitions
@@ -19,6 +20,7 @@ Covers `awto/include/arith.h`. Results feed register values: they must match bit
 ## 3. Data
 | item | tag | source |
 |---|---|---|
+| c = 0 result 0xFFFFFFFF (`ar_muldiv`) | measured | reference image, 3 captured calls (c = 0, fast regime) return 0xFFFFFFFF; slow regime with c = 0 is our choice (same value) | 
 | regime rule, rounding rule | measured | reference arithmetic run on host against `specs/vectors/arith.tsv`, 2026-11-07: 1600/1600 equal |
 
 ## 4. Oracle
