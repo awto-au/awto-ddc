@@ -291,11 +291,14 @@ extern bit AwtoSlowDue(unsigned char ucSlot);
 #endif
 #define AWTO_SW_SLOW_MS                                         20      // 7x a 4K60 pass (2.7 ms): only real stalls get logged
 #define AWTO_SW_EV_SLOW                                         0x91    // arg = mark k: the code before mark k took >= AWTO_SW_SLOW_MS
+#define AWTO_SW_EV_RESET_AT                                     0x92    // arg = mark k: a mode reset target was set in the code before mark k
 #if(_AWTO_SW_MARKS == _ON)
 extern void AwtoSwMark(unsigned char ucK);
 #define AWTO_SW_MARK(k)                                         AwtoSwMark(k)
+#define AWTO_SW_POLL_MARKS()                                    AwtoSwPoll()   // mode change logged right after judge / mode handler
 #else
 #define AWTO_SW_MARK(k)
+#define AWTO_SW_POLL_MARKS()
 #endif
 #define AWTO_SW_EV_PROBE                                      0x90    // switch-path probe (#60); arg = site, names in scripts/sw_timeline.py
 typedef struct
@@ -343,6 +346,56 @@ extern void AwtoPanelVddEarly(void);
 #endif
 // #60 step 3: _OFF = the SDK never pulses HDMI HPD low on a switch / timing change (host saw 2 drm uevents per switch to D2)
 #define _AWTO_HDMI_HPD_TOGGLE                                   _OFF
+// #60: _ON = ScalerSyncInterfaceSwitch leaves the other ports powered (PHY, Z0, TMDS MAC): the idle receiver stays locked
+#ifndef _AWTO_KEEP_IDLE_RX
+#define _AWTO_KEEP_IDLE_RX                                      _ON
+#endif
+#if(_AWTO_KEEP_IDLE_RX == _ON)
+#define AWTO_IDLE_RX_OFF(port)
+// idle TMDS: freq-detect / clock IRQs off (their ISR forces the shared display to background on a clock mismatch),
+// MAC power and the clock count kept (the SDK's ScalerTMDSFreqDetectDisable also cut those)
+#define AWTO_IDLE_TMDS_OFF()                                    { ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00); ScalerSetBit(P71_EF_HDMI_ERROR_TH, ~_BIT7, 0x00);\
+                                                                  ScalerSetBit(P72_E6_HDMI_FREQDET_CTRL, ~_BIT1, 0x00); ScalerSetBit(P72_EF_HDMI_ERROR_TH, ~_BIT7, 0x00); }
+#else
+#define AWTO_IDLE_TMDS_OFF()                                    ScalerTMDSFreqDetectDisable()
+#define AWTO_IDLE_RX_OFF(port)                                  ScalerGDIPhyPowerProc((port), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF)
+#endif
+// #60: _ON = a switch to a port whose cached timing matches the screen skips search / measure / display setting
+// (fw/sdcc/awto_fastsw.inc); needs the switch log (timer) and idle receivers kept powered
+#ifndef _AWTO_FAST_SWITCH
+#define _AWTO_FAST_SWITCH                                       _ON
+#endif
+#if((_AWTO_SW_LOG == _OFF) || (_AWTO_KEEP_IDLE_RX == _OFF))
+#undef _AWTO_FAST_SWITCH
+#define _AWTO_FAST_SWITCH                                       _OFF
+#endif
+#define AWTO_SW_EV_FAST                                         0xA0    // arg 0 = taken, 1 = refused (state / no cache), 0x21..0x28 = timing field differs, 3 = receiver unstable, 4 = SDK reset meanwhile, 5 = timeout -> full path
+#if(_AWTO_FAST_SWITCH == _ON)
+extern void AwtoSwCacheStore(void);
+extern unsigned char AwtoSwFast(unsigned char ucPort);
+extern void AwtoSwFastPoll(void);
+extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up by the fast path, 0 = none
+#define AWTO_SW_EV_FAST_WHY                                     0xA1    // at a fast-path timeout: 1 measure busy, 2 watchdog, 4 FIFO / HV error, 8 receiver unstable, 0x10 timing change, 0x20 judge check
+#define AWTO_SW_EV_FAST_FLAGS                                   0xA2    // first M-domain error after a fast unblank: P0_02 bits 6,5,1,0, bit7 = watchdog P0_0C.0
+#define AWTO_FAST_JUDGE_HOLD()                                  (g_ucAwtoFastPending != 0)     // AwtoSwFastPoll does the judge's checks meanwhile
+#if(_AWTO_SW_MARKS == _ON)
+#define AWTO_SW_FAST_POLL()                                     AwtoSwFastPoll()               // also runs the post-unblank flag watch
+#else
+#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } }   // no banked call per pass
+#endif
+#define AWTO_FAST_SCALER_BYTES                                  48      // >= sizeof(StAwtoFastScaler), checked at compile time
+extern void AwtoFastScalerSave(unsigned char __xdata *pucBuf);
+extern unsigned char AwtoFastScalerMatch(unsigned char __xdata *pucBuf);
+extern void AwtoFastScalerClearStatus(unsigned char ucFirst);
+extern unsigned char AwtoFastScalerApply(unsigned char __xdata *pucBuf, unsigned char ucSourceType, unsigned char ucPort);
+extern unsigned char AwtoFastScalerMeasureOk(void);
+extern unsigned char AwtoFastScalerStatus(void);
+#else
+#define AwtoSwCacheStore()
+#define AwtoSwFastPoll()
+#define AWTO_SW_FAST_POLL()
+#define AWTO_FAST_JUDGE_HOLD()                                  _FALSE
+#endif
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)

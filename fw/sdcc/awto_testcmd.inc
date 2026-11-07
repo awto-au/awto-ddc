@@ -135,9 +135,14 @@ void AwtoDiagTestCmd(void)
         AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);
         SET_FORCE_POW_SAV_STATUS(_FALSE);
         SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-        SysSourceSwitchInputPort(_D0_INPUT_PORT + (ucCmd - 0x30));
-        AwtoSwEvent(AWTO_SW_EV_PROBE, 6);
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+#if(_AWTO_FAST_SWITCH == _ON)
+        if(AwtoSwFast(_D0_INPUT_PORT + (ucCmd - 0x30)) == _FALSE)
+#endif
+        {
+            SysSourceSwitchInputPort(_D0_INPUT_PORT + (ucCmd - 0x30));
+            AwtoSwEvent(AWTO_SW_EV_PROBE, 6);
+            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+        }
     }
     else if((ucCmd == 0x22) || (ucCmd == 0x23))      // #56: on-screen message log on / off
     {

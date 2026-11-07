@@ -31,9 +31,20 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
 #if(_AWTO_SW_MARKS == _ON)
 static unsigned int s_usAwtoSwMark;
 
+static unsigned char s_ucAwtoSwReset;
+
 void AwtoSwMark(unsigned char ucK)      // logs AWTO_SW_EV_SLOW(k) when the code since the previous mark took >= AWTO_SW_SLOW_MS
 {
     unsigned int usNow = AwtoSwNow();
+
+    if(GET_MODE_RESET_TARGET() != s_ucAwtoSwReset)    // which segment set a mode reset (#60)
+    {
+        s_ucAwtoSwReset = GET_MODE_RESET_TARGET();
+        if(s_ucAwtoSwReset != _MODE_ACTION_NO_RESET_MODE)
+        {
+            AwtoSwEvent(AWTO_SW_EV_RESET_AT, ucK);
+        }
+    }
 
     if((unsigned int)(usNow - s_usAwtoSwMark) >= AWTO_SW_SLOW_MS)
     {

@@ -564,6 +564,10 @@ stub	_hb_osd_gap	C	0x24be	9
 stub	_reg_rd_n	C	0x24c7	9
 stub	_reg_wr_n	C	0x24d0	9
 stub	_mode_dclk_khz	C	0x24d9	9
+stub	_AwtoFastScalerMatch	C	0x24e2	8
+stub	_AwtoFastScalerMeasureOk	C	0x24ea	8
+stub	_AwtoFastScalerSave	C	0x24f2	8
+stub	_ScalerMeasureTimingChange	C	0x24fa	8
 stub	_RTDFactoryMainMenu	C	0x2506	9
 stub	_RTDFactoryMenuOperation	C	0x250f	9
 stub	_RTDFactoryAdcOffsetBAdjustLeft	C	0x2518	9
@@ -632,6 +636,8 @@ stub	_AwtoDiagT2Diff	C	0x2746	9
 fn	_ScalerBurstWrite	C	0x2750	168
 fn	_ScalerGetDataPortWord	C	0x27f8	68
 stub	_AwtoDiagT2Snap	C	0x283c	9
+stub	_ScalerTMDSStableDetect	C	0x2845	8
+stub	_AwtoFastScalerApply	C	0x284d	8
 stub	_AwtoMsg0	C	0x285c	9
 stub	_AwtoMsgV	C	0x2865	9
 stub	_ScalerDebug	C	0x286e	9
@@ -706,7 +712,9 @@ stub	_ScalerDDomainBackgroundSetColor	C	0x2cca	9
 stub	_ScalerOsdFontRotateCtrl	C	0x2cd3	9
 stub	_ScalerOsdPosition	C	0x2cdc	9
 stub	_ScalerMemoryGetIVS2DVSDelayPixel	C	0x2ce9	9
-fn	_main	C	0x2cf2	72
+stub	_AwtoSwFast	C	0x2cf2	8
+stub	_AwtoSwFastPoll	C	0x2cfa	8
+stub	_AwtoFastScalerClearStatus	C	0x2d02	8
 stub	_RTDFactoryAdcGainRAdjustEnter	C	0x2d3a	9
 stub	_RTDFactoryAdcGainRAdjustExit	C	0x2d43	9
 stub	_RTDFactoryAdcGainRAdjustLeft	C	0x2d4c	9
@@ -843,7 +851,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1240	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1249	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -922,6 +930,7 @@ fn	_ScalerGetDataPortByte	C	0x3e7e	132
 fn	_ScalerRead	C	0x3f02	128
 fn	_ScalerWrite	C	0x3f82	128
 const	_tPALETTE_MAIN_MENU	C	0x4002	56
+fn	_main	C	0x403a	128
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -948,7 +957,6 @@ fn	_ScalerScalingSetScalingUp	0	0x1464	1292
 fn	_ScalerSyncHdcpDownLoadBKsv	0	0x2168	416
 fn	_ScalerTMDSAfterHotPlugEventProc	0	0x2308	28
 fn	_ScalerTMDSBeforeHotPlugEventProc	0	0x2324	28
-fn	_ScalerTMDSFreqDetectDisable	0	0x2340	12
 fn	_ScalerTMDSHdcpEnabled	0	0x234c	40
 fn	_ScalerTMDSHdmiAVMuteProc	0	0x2374	68
 fn	_ScalerTMDSHotPlugEvent	0	0x23b8	28
@@ -1250,7 +1258,6 @@ fn	_ScalerDpRx1MeasureLaneCDRClk	2	0x8144	420
 fn	_ScalerDpRx1NormalPreDetect	2	0x82e8	988
 fn	_ScalerDpRx1PhyCtsTp1Check	2	0x86c4	144
 fn	_ScalerDpRx1PhyCtsTp2Check	2	0x8754	252
-fn	_ScalerDpRx1ScanInputPort	2	0x8850	236
 fn	_ScalerDpRx1ScrambleSetting	2	0x893c	312
 fn	_ScalerDpRx1SetDFEInitial	2	0x8a74	676
 fn	_ScalerDpRx1SetDpcdBitValue	2	0x8d18	72
@@ -1261,6 +1268,7 @@ fn	_ScalerTMDSRx3TMDSNormalPreDetect	2	0x8f48	108
 fn	_ScalerTMDSRx3TMDSPSPreDetect	2	0x8fb4	164
 fn	_SysSourceCableDetection	2	0x9058	800
 fn	_ScalerDpRx1InterlaceCheck	2	0x9378	3292
+fn	_ScalerDpRx1ScanInputPort	2	0xa054	252
 const	_g_stOSDDefaultData	3	0x0000	28
 const	_g_stSixColorDefaultData	3	0x001c	16
 const	_tBriConDefaultData	3	0x002c	24
@@ -1607,7 +1615,7 @@ fn	_SysModeClrModeStateChange	4	0x8454	12
 fn	_SysModeGetModeState	4	0x8460	16
 fn	_SysModeGetModeStateChange	4	0x8470	16
 fn	_SysModeGetTimingConfirm	4	0x8480	16
-fn	_SysModeHandler	4	0x8490	800
+fn	_AwtoSwFastPoll	4	0x8490	476
 fn	_SysModeResetState	4	0x87b0	348
 fn	_SysPowerCheckFakeOff	4	0x890c	16
 fn	_SysPowerCheckFakeSaving	4	0x891c	104
@@ -1629,7 +1637,7 @@ fn	_SysSourceFirstActiveProc	4	0x925c	8
 fn	_SysSourceGetCableDetect	4	0x9264	44
 fn	_SysSourceGetCableStatusChange	4	0x9290	44
 fn	_SysSourceGetInputPortType	4	0x92bc	36
-fn	_SysSourceHandler	4	0x92e0	164
+fn	_AwtoFastNow	4	0x933c	32
 fn	_SysSourceInfoReset	4	0x9384	192
 fn	_SysSourceInitial	4	0x9444	400
 fn	_SysSourceJudge	4	0x95d4	212
@@ -1659,11 +1667,16 @@ fn	_UserCommonInterfaceOsdHandler	4	0xa294	16
 fn	_UserCommonInterfaceOsdResetProc	4	0xa2a4	68
 fn	_UserCommonInterfaceTimerEventProc	4	0xa2e8	32
 fn	_UserCommonNVRamGetSystemData	4	0xa308	416
+fn	_SysModeHandler	4	0xa4a8	872
+fn	_AwtoSwFast	4	0xa810	476
 fn	_ScalerMcu5usDelayCalc	4	0xadf8	100
 const	___str_22	4	0xae5c	20
+fn	_SysSourceHandler	4	0xae70	184
+fn	_AwtoSwCacheStore	4	0xaf28	120
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
 const	_tSD_V_COEF_64_TAPS	5	0x0110	72
+fn	_AwtoFastSameBytes	5	0x0158	44
 const	_tDDITHER_SEQ_TABLE	5	0x01c0	56
 const	_tDDITHER_TABLE	5	0x01f8	152
 const	_tDDITHER_TEMPOFFSET_TABLE	5	0x0290	40
@@ -1710,6 +1723,7 @@ fn	_ScalerMeasureInterlaceCheck	5	0x208c	920
 fn	_ScalerMeasureSetAuto	5	0x2424	96
 fn	_ScalerMeasureSetOfflineMeasure	5	0x2484	552
 fn	_ScalerMeasureUpdateInputTimingPolarity	5	0x26ac	452
+fn	_UserInterfaceAdjustOsdActiveProc	5	0x2870	128
 fn	_ScalerMemoryGetIVS2DVSDelayPixel	5	0x2970	264
 fn	_ScalerScalingSetScalingDownCoef	5	0x2a78	220
 fn	_ScalerScalingSetScalingUpCoef	5	0x2b54	124
@@ -1726,7 +1740,6 @@ fn	_OsdFuncColorFormatAdjust	5	0x362c	72
 fn	_UserInterfaceAdjustColorProc	5	0x3674	188
 fn	_UserInterfaceAdjustDisplayTiming	5	0x3730	8
 fn	_UserInterfaceAdjustInputTiming	5	0x3738	8
-fn	_UserInterfaceAdjustOsdActiveProc	5	0x3740	116
 fn	_UserInterfaceAdjustOsdPowerOnInitial	5	0x37b4	24
 fn	_UserInterfaceDisplayInitialization	5	0x37cc	8
 fn	_UserInterfaceGetActiveByPassStatus	5	0x37d4	40
@@ -1741,6 +1754,7 @@ fn	_ScalerColorIDitherLoadDitherTable	5	0x3a8c	112
 fn	_ScalerColorIDitherLoadSeqTable	5	0x3afc	120
 fn	_ScalerColorSetYCCFullRange	5	0x3b74	20
 fn	_ScalerColorWaitDDomainDBApply	5	0x3b88	8
+fn	_AwtoFastScalerMatch	5	0x3b90	464
 fn	_ScalerMeasureAutoFuncHBoundInitial	5	0x3db8	120
 fn	_ScalerDpRx1CheckVgipVsBypass	5	0x3e30	152
 fn	_ScalerDisplaySelectDVFMode	5	0x3ec8	332
@@ -1775,7 +1789,11 @@ fn	_ScalerMeasureSetInputRegionCount	5	0x5d00	44
 fn	_ScalerMeasureTimingChange	5	0x5d2c	496
 fn	_ScalerMeasureUpdateInputTimingData	5	0x5f1c	1572
 fn	_ScalerMeasureWatchdogStatus	5	0x6540	136
+fn	_SysJudgeCheckStatus	5	0x66a4	440
+fn	_AwtoFastScalerSave	5	0x685c	324
 fn	_ScalerMemoryFineTuneIVS2DVSDelay	5	0x69a8	2352
+fn	_AwtoFastScalerMeasureOk	5	0x72d8	56
+fn	_AwtoFastScalerClearStatus	5	0x7310	40
 fn	_ScalerMemoryInitial	5	0x7340	8
 fn	_ScalerMemoryReset	5	0x7348	8
 fn	_ScalerMemorySetIVS2DVSLineDelay	5	0x7350	100
@@ -1800,7 +1818,7 @@ fn	_ScalerVgipSetCaptureVHeight	5	0x8af0	144
 fn	_ScalerVgipSetCaptureVStartPosition	5	0x8b80	132
 fn	_ScalerVgipVgipDoubleBufferApply	5	0x8c04	124
 fn	_ScalerVgipVsBypassEnable	5	0x8c80	48
-fn	_SysJudgeCheckStatus	5	0x8cb0	416
+fn	_AwtoFastScalerApply	5	0x8cb0	416
 fn	_SysModeCheckToDisableGlobalDoubleBuffer	5	0x8e50	40
 fn	_SysModeColorSpaceConvert	5	0x8e78	40
 fn	_SysModeDisplaySetting	5	0x8ea0	28
@@ -1830,6 +1848,7 @@ fn	_ScalerMemoryFrameSyncSetDt	5	0x9b00	3564
 fn	_ScalerIDomainVgipIVDelayIVstStepAdjust	5	0xa8ec	844
 fn	_AwtoFreqUpdate	5	0xac38	888
 fn	_mode_dclk_khz	5	0xafb0	32
+fn	_AwtoFastNear	5	0xafd0	40
 fn	_ScalerDpSecDataReset	6	0x02f4	24
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	6	0x030c	1944
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	6	0x0aa4	1528
@@ -2211,7 +2230,7 @@ const	_tsOSD_FACTORY_RESET_BURNIN_TIME	10	0x0f88	24
 const	_tsOSD_FACTORY_RESET_PANEL_TIME	10	0x0fa0	24
 const	_tsOSD_FACTORY_SSC	10	0x0fb8	8
 const	_tsOSD_FACTORY_VERSION	10	0x0fc0	16
-fn	_AwtoDiagTestCmd	10	0x0fd0	324
+fn	_AwtoDiagTestCmd	10	0x0fd0	348
 const	_tCOLOR_CONV_RGB2YUV_ITU709	10	0x12c4	32
 const	_tHDCP_KEY_BKSV	10	0x12e4	12
 fn	_ScalerOsd2BitFontOffset	10	0x12f0	64

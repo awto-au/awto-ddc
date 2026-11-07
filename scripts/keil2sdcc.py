@@ -109,6 +109,7 @@ RULES = [
 # Lines start..end (first end match after start) get wrapped in #if(switch == _ON). Switches default _OFF
 # in fw/overlay/Project/Header/RL6449_Project.h. SDCC's linker keeps unreferenced code, so this saves flash.
 OSD = "User/RTD Series/RTD2014Osd/Code/"
+UI = "User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c"
 LOGO_SDK_DATA = "(_AWTO_DEMO_LOGO == _ON) && (_AWTO_LOGO_SDK == _ON)"   # Realtek logo consts; _OFF = ours (fw/sdcc/awto_logo_*.inc)
 WRAPS = [
     # Realtek demo boot logo (call, draw fn, char maps, VLC glyph blobs + loader cases); ours replaces it
@@ -226,6 +227,31 @@ INSERTS = [
     ("Kernel/System/Code/SysMode.c", r"^\s*SysSourceInfoReset\(\);", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 4);", r"^void SysModeResetState\(BYTE ucResetTarget\)$"),
     ("Kernel/System/Code/SysMode.c", r"^\s*ScalerTimerCancelTimerEvent\(_SYSTEM_TIMER_EVENT_JUDGE_ACTIVE_STATE\);", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 5);",
      r"^void SysModeResetState\(BYTE ucResetTarget\)$"),
+    # #60 cached fast switch (fw/sdcc/awto_fastsw.inc): cache stored at a full-path first ACTIVE, unblank polled per pass
+    ("Kernel/System/Code/SysSource.c", r"^void SysSourceSwitchInputPort\(BYTE ucInputPort\)$", (SHIM / "awto_fastsw.inc").read_text().rstrip("\n")),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c", r"^bit ScalerMeasureTimingChange\(EnumSourceTypeDef enumSourceType, EnumSourceSearchPort enumSourceSearchPort\)$",
+     (SHIM / "awto_fastsw_scaler.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysJudgeHandler\(\);", "            AWTO_SW_FAST_POLL();", r"^void main\(void\)$"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SysSourceFirstActiveProc\(\);", "                AwtoSwCacheStore();", r"^\s*case _MODE_STATUS_ACTIVE:"),
+    # #60 which SysJudgeCheckStatus check fails (probes 20..23, before its debug message)
+] + [("Kernel/System/Code/SysJudge.c", rf"^\s*AwtoMsgV\({mid},", f"                AwtoSwEvent(AWTO_SW_EV_PROBE, {k});", r"^bit SysJudgeCheckStatus\(void\)$")
+     for k, mid in ((20, "0x07D6"), (21, "0xC702"), (22, "0x8870"), (23, "0xD588"))] + [
+    # #60 phase probes 7..19 (names: main scripts/sw_timeline.py); marks builds also poll mode changes right after judge / mode handler
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysTimerHandler\(\);", "            AWTO_SW_POLL_MARKS();", r"^void main\(void\)$"),
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysDpRxHandler\(\);", "            AWTO_SW_POLL_MARKS();", r"^void main\(void\)$"),
+    (UI, r"^\s*UserCommonNVRamSaveSystemData\(\);", "        AwtoSwEvent(AWTO_SW_EV_PROBE, 7);", r"^void UserInterfaceAdjustOsdActiveProc\(void\)$"),
+    (UI, r"^\s*if\(UserInterfaceGetActiveByPassStatus\(\) == _FALSE\)", "    AwtoSwEvent(AWTO_SW_EV_PROBE, 8);", r"^void UserInterfaceAdjustOsdActiveProc\(void\)$"),
+    (UI, r"^\s*ScalerDDomainBackgroundEnable\(_DISABLE\);", "    AwtoSwEvent(AWTO_SW_EV_BLANK, 0);", r"^void UserInterfaceAdjustOsdActiveProc\(void\)$"),
+    (OSD + "RTD2014Osd.c", r"^\s*OsdDispOsdMessage\(_OSD_DISP_INPUT_SIGNAL_MSG\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 9);", r"^\s*case _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG:"),
+    (OSD + "RTD2014Osd.c", r"^\s*ScalerTimerActiveTimerEvent\(SEC\(_AWTO_INFO_POPUP_SEC\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 10);", r"^\s*case _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG:"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*UserCommonInterfaceOsdActiveProc\(\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 11);", r"^\s*case _MODE_STATUS_ACTIVE:"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SysSourceFirstActiveProc\(\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 12);", r"^\s*case _MODE_STATUS_ACTIVE:"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*if\(SysModeDisplaySetting\(\) == _TRUE\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 14);", r"^\s*case _MODE_STATUS_DISPLAY_SETTING:"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*UserCommonInterfaceAdjustColorProc\(\);", "                    AwtoSwEvent(AWTO_SW_EV_PROBE, 15);", r"^\s*case _MODE_STATUS_DISPLAY_SETTING:"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_DISPLAY_SETTING_READY\(\);", "                    AwtoSwEvent(AWTO_SW_EV_PROBE, 16);", r"^\s*case _MODE_STATUS_DISPLAY_SETTING:"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*if\(ScalerMeasureInputInfo\(", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 17);", r"^void SysModeHandler\(void\)$"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_TIMING_CONFIRM\(\);", "                    AwtoSwEvent(AWTO_SW_EV_PROBE, 18);", r"^void SysModeHandler\(void\)$"),
+    ("Kernel/System/Code/SysSource.c", r"^\s*SET_SOURCE_JUDGE\(g_ucSearchIndex, _TRUE\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 19);", r"^void SysSourceJudge\(void\)$"),
     # exact input frequencies (#34, #26): fw/sdcc/awto_freq.inc after each active-region count, 3-decimal pop-up strings
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c", r"^void ScalerMeasureUpdateInputTimingData\(.*\)$", (SHIM / "awto_freq.inc").read_text().rstrip("\n")),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainMemorySettings\(&stFIFOScaling\);", "    AwtoFreqInvalidate();", r"^bit ScalerMDomainControl\(void\)$"),
@@ -292,6 +318,12 @@ INSERTS = [
 # the SDK, go to the DDC FF22 selects (_AWTO_DBG_FOLLOW); the SDK block stays in the #else.
 SCL_BLOCK = r"#if\(_DEBUG_DDC_CHANNEL_SEL == _DDC5\)\s*\n\s*MCU_FE81_DDC5_DDC_CONTROL_2 (\|= _BIT0|&= ~_BIT0);.*?#endif"
 SUBS = [
+    # #60: a switch leaves the other ports' PHY / Z0 / TMDS MAC powered (AWTO_IDLE_RX_OFF, RL6449_Project.h)
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c",
+     r"ScalerGDIPhyPowerProc\((_D\d_INPUT_PORT), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF\);",
+     lambda m: "AWTO_IDLE_RX_OFF(%s);  // [keil2sdcc] sub" % m.group(1), 60),
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c", r"\bScalerTMDSFreqDetectDisable\(\);",
+     lambda m: "AWTO_IDLE_TMDS_OFF();  // [keil2sdcc] sub", 2),   # it also cuts the TMDS MAC power and clears the clock count
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c", SCL_BLOCK,
      lambda m: "#if(_AWTO_DBG_FOLLOW == _ON)  // [keil2sdcc] sub\n    AWTO_DBG_SCL(%s);\n#else\n%s\n#endif" % (m.group(1), m.group(0)), 4),
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c",
@@ -325,7 +357,7 @@ SUBS = [
     # #75 main-loop split (fw/sdcc/awto_loopsplit.inc): the stable/timing watchdog every AWTO_SLOW_MS in ACTIVE (other
     # states: every pass, a short glitch while locking still resets the search), cable detection every AWTO_SLOW_MS
     ("Kernel/System/Code/SysJudge.c", r"if\(SysJudgeCheckStatus\(\) == _FALSE\)",
-     lambda m: "if(((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE))  // [keil2sdcc] sub", 1),
+     lambda m: "if((AWTO_FAST_JUDGE_HOLD() == _FALSE) && ((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE))  // [keil2sdcc] sub", 1),
     ("Kernel/System/Code/SysSource.c", r"(void SysSourceHandler\(void\)\n\{\n)    SysSourceCableDetection\(\);",
      lambda m: m.group(1) + "    if(AWTO_SLOW_DUE_CABLE() == _TRUE)  // [keil2sdcc] sub\n    {\n        SysSourceCableDetection();\n    }", 1),
     # #60: DP Rx1 SST two-frame waits = 2 x the measured frame (fw/sdcc/awto_dpframe.inc), not 2 x 45 ms
