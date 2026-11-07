@@ -230,8 +230,8 @@ def parse_args(argv=None):
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
     ap.add_argument("--pin-common", default="", help="passed to sdcc_bank (comma list of fns forced into common)")
     ap.add_argument("--src-patch", default="")
-    ap.add_argument("--resid-end", default="", help="passed to sdcc_bank: common bytes kept for vectors/library before the "
-                    "chunk slots (default 0xc00); a different value needs a new layout file")
+    ap.add_argument("--resid-end", default="0x1100", help="passed to sdcc_bank: common bytes kept for vectors/library before "
+                    "the chunk slots; 0x1100 since --keil-compat (its /0 helpers, awto-sdcc#25); must match the layout file")
     a = ap.parse_args(argv)
     if a.cluster:
         import sdcc_layout
