@@ -2,7 +2,8 @@
 """One firmware build for the --keil-compat A/B (awto-sdcc#25): fw_build with a given awto-sdcc install and extra sdcc
 flags, outputs kept in tmp/runs/<tag>/ (fw.bin/.map/.ihx, build.json, asm/ = the per-file compiler output).
 
-usage: kc_build.py TAG --bin INSTALL/bin [--src AWTO_SDCC_TREE] [--flags "--keil-compat"] [--level 1]
+usage: kc_build.py TAG --bin INSTALL/bin [--src AWTO_SDCC_TREE] [--flags "--keil-compat"] [--level 1] [--no-layout]
+  --no-layout: first-fit packing (fw_build --layout ''), for code that no longer fits the sticky slots
   Big-endian, --sdcccall LEVEL (wb-vfreq: 1). Image copy: tmp/runs/<tag>/AWT26110003-<tag>-be.{bin,map}.
 Log: tmp/logs/kc_build.log (fw_build output: tmp/logs/fw_build.log)
 """
@@ -21,6 +22,7 @@ def main() -> int:
     ap.add_argument("--flags", default="")
     ap.add_argument("--level", default="1")
     ap.add_argument("--serial", default="AWT26110003")
+    ap.add_argument("--no-layout", action="store_true")
     argv = sys.argv[1:]
     for i, s in enumerate(argv[:-1]):          # --flags "--keil-compat" (argparse rejects values starting with --)
         if s == "--flags" and argv[i + 1].startswith("-"):
@@ -32,19 +34,21 @@ def main() -> int:
     log = (ROOT / "tmp/logs/kc_build.log").open("a", buffering=1)
     t0 = time.monotonic()
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a.tag}: bin={a.bin} flags={a.flags!r} level={a.level}\n")
-    r = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial], cwd=ROOT, env=env,
+    r = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", ""] if a.no_layout else [])], cwd=ROOT, env=env,
                        capture_output=True, text=True, timeout=BUILD_TMO)
     log.write(r.stdout[-3000:] + r.stderr[-2000:])
     out = ROOT / "tmp/runs" / a.tag
     shutil.rmtree(out, ignore_errors=True)
     out.mkdir(parents=True)
     if r.returncode:
+        if (ROOT / "tmp/sdcc-port/asm").is_dir():          # asm is complete when only link/layout failed
+            shutil.copytree(ROOT / "tmp/sdcc-port/asm", out / "asm")
         print(f"FAIL {a.tag}: fw_build rc={r.returncode}: {(r.stdout + r.stderr).strip().splitlines()[-1:]}")
         return 1
     fw = ROOT / "tmp/fw" / a.serial
     for f in fw.iterdir():
         shutil.copy2(f, out / f.name)
-    shutil.copytree(ROOT / "tmp/sdcc-port/asm", out / "asm")
+    shutil.copytree(ROOT / "tmp/sdcc-port/asm", out / "asm", dirs_exist_ok=True)
     stem = out / f"{a.serial}-{a.tag}-be"
     shutil.copy2(fw / "fw.bin", stem.with_suffix(".bin"))
     shutil.copy2(fw / "fw.map", stem.with_suffix(".map"))
