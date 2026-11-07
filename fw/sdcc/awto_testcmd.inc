@@ -1,10 +1,17 @@
 #if(_AWTO_DIAG == _ON)
 // #33: 0x01..0x04 = key MENU/RIGHT/LEFT/EXIT, 0x10+n = OSD event n, 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46).
-// 0x22/0x23 reserved: message log on/off (wb-msgtable, #56). #28 hold variants (stay until cleared, g_stAwtoDiag.ucHold bits):
+// 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
 // 0x24 logo on, 0x25 logo off, 0x26 debug pop-up held, 0x27 clear all holds. #60: 0x31..0x33 switch to D1..D3 (fixed port),
 // 0x30 auto search. Inserted into RTD2014Key.c (OSD macros).
 #define AWTO_HOLD_LOGO                          0x01
 #define AWTO_HOLD_POPUP                         0x02
+
+void AwtoMsgLoad(void)              // #74: after RTDNVRamStartup (keil2sdcc sub); reset value 0 = off until then
+{
+#if(_DEBUG_MESSAGE_SUPPORT == _ON)
+    g_ucAwtoMsgOn = g_stOSDUserData.b1AwtoMsgOn;
+#endif
+}
 
 #if(_AWTO_DEMO_LOGO == _ON)
 void AwtoTestHoldLogoOff(void)      // global: its map symbol tells hosts (osd_test.py) that 0x24..0x27 exist
@@ -131,6 +138,18 @@ void AwtoDiagTestCmd(void)
         SysSourceSwitchInputPort(_D0_INPUT_PORT + (ucCmd - 0x30));
         SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
     }
+    else if((ucCmd == 0x22) || (ucCmd == 0x23))      // #56: on-screen message log on / off
+    {
+        g_ucAwtoMsgLog = (ucCmd == 0x22);
+    }
+#if(_DEBUG_MESSAGE_SUPPORT == _ON)
+    else if((ucCmd == 0x28) || (ucCmd == 0x29))      // #74: debug messages on / off, saved to NVRAM by the OSD handler
+    {
+        g_stOSDUserData.b1AwtoMsgOn = (ucCmd == 0x28);
+        g_ucAwtoMsgOn = (ucCmd == 0x28);
+        SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
+    }
+#endif
     else if(ucCmd == 0x30)                              // #60 back to auto search in group (NVRAM default), no switch
     {
         AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);

@@ -83,6 +83,8 @@ RULES = [
      r"ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), \1"),
     # panel T3 (video valid -> backlight on, 550 ms blind): the delay calibration runs inside it, same end tick (#53.6)
     (re.compile(r"\bScalerTimerDelayXms\(_PANEL_POWER_ON_T3\)"), "AwtoDiagPanelT3Wait(_PANEL_POWER_ON_T3)"),
+    # host-wait loop of ScalerDebugMessage: host-silence timeout (fw/overlay AwtoMsg.h, #56)
+    (re.compile(r"^(\s*)while\(g_bFwHalt != 0\);", re.M), r"\1while((g_bFwHalt != 0) && (AwtoMsgWait() != 0));"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
     # Keil `~` on a bit operand (Realtek's b-prefixed bit vars/params) is bit NOT (CPL C); SDCC does not complement it (passes
@@ -280,6 +282,11 @@ SUBS = [
      lambda m: "if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT) == _TRUE))  // [keil2sdcc] sub", 1),
     ("Kernel/User Common Function/Code/UserCommonNVRamSystem.c", r"if\(g_stSystemData\.b1HDMIHotPlugSupport == _TRUE\)",
      lambda m: "if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (g_stSystemData.b1HDMIHotPlugSupport == _TRUE))  // [keil2sdcc] sub", 1),
+    # #74 debug-messages switch in NVRAM: a spare bit of the last OSD-user byte (sizeof and record layout unchanged, default 0)
+    ("User/RTD Series/RTD2014Osd/Header/RTD2014NVRamOsd.h",r"BYTE b3OsdDpMST : 3;",
+     lambda m: m.group(0) + "\n    BYTE b1AwtoMsgOn : 1;  // [keil2sdcc] sub", 1),
+    ("User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c", r"(void UserInterfaceInitial\(void\)\n\{\n    PCB_PWM_SETTING\(\);\n    RTDNVRamStartup\(\);)",
+     lambda m: m.group(1) + "\n#if(_AWTO_DIAG == _ON)  // [keil2sdcc] sub\n    AwtoMsgLoad();\n#endif", 1),
     # #54: an M2PLL re-entry (power saving -> on) keeps the self-calibrated loop counts
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelay5usN_Base = _M2PLL_DELAY6US_CNT;",
      lambda m: "g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;  // [keil2sdcc] sub", 1),
