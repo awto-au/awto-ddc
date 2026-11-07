@@ -546,6 +546,12 @@ def cmd_flash(extra: list[str]) -> int:
     return rc
 
 
+@command("KVM: switch every unit's input at once over DDC/CI VCP 0x60, one process per bus (scripts/kvm.py, #60)",
+         args="<D1|D2|D3|dp|hdmi1|hdmi2|next> [--units 1,2,3] [--ddcutil] [--verify] [--dry-run]", kind="action")
+def cmd_kvm(extra: list[str]) -> int:
+    return _py("kvm.py", *extra)
+
+
 @command("mains power-cycle a unit via its relay (scripts/power_cycle.py)", args="[--unit N] [--on|--off]",
          kind="action")
 def cmd_power_cycle(extra: list[str]) -> int:
