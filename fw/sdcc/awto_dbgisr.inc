@@ -28,7 +28,9 @@
                     MCU_FF2A_IIC_IRQ_CONTROL2 &= (~_BIT5);
                     g_ucDdcciCommandNumber = 0;
                     DELAY_30US_EXINT();
-#if(_DEBUG_DDC_CHANNEL_SEL == _DDC2)
+#if(_AWTO_DBG_FOLLOW == _ON)
+                    AWTO_DBG_SCL(&= ~_BIT0);
+#elif(_DEBUG_DDC_CHANNEL_SEL == _DDC2)
                     MCU_FE66_DDC2_DDC_CONTROL_2 &= ~_BIT0;
 #else
 #error _AWTO_DBGISR: SCL release only written for _DDC2

@@ -152,6 +152,9 @@ INSERTS = [
     (OSD + "RTD2014OsdFontDynamicIcon_1.c", r"^BYTE __code \* __code tFONT1_MAIN_ICON_TABLE_1\[\]",
      "#if(_AWTO_POPUP_ICON_AWTO == _ON)\n%s\n#endif" % (SHIM / "awto_icon_info.inc").read_text().rstrip("\n")),
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c", r"^#include", "#define _AWTO_DDCRAM_DEFINER"),
+    # #28: debug IIC engine follows the active port (fw/sdcc/awto_dbgport.inc; SUBS below route the debug branch to it)
+    ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c",
+     r"^void ScalerMcuDdcciSwitchPort\(EnumDDCCIDebugMode enumMode, BYTE ucInputPort\)$", (SHIM / "awto_dbgport.inc").read_text().rstrip("\n")),
     # our board (fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h); id 0x4F is unused in Pcb_List.h
     ("Kernel/Common/Pcb_List.h", r"^#define _RL6449_QA_B_1A2MHL1DP1mDP_DPTX_eDP\s",
      "#define _RL6449_AWTO_JXC4K                                          0x4F"),
@@ -231,6 +234,30 @@ INSERTS = [
                     (r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "    AwtoDiagStage(7);"),
                     (tail, "    AwtoDiagStage(8);"))
 ]
+
+
+# Block substitutions: (SDK-relative file, regex (DOTALL), replacement fn(match) -> text, expected count).
+# #28: SCL hold/release of the debug protocol and the debug-mode channel select, fixed to _DEBUG_DDC_CHANNEL_SEL in
+# the SDK, go to the DDC FF22 selects (_AWTO_DBG_FOLLOW); the SDK block stays in the #else.
+SCL_BLOCK = r"#if\(_DEBUG_DDC_CHANNEL_SEL == _DDC5\)\s*\n\s*MCU_FE81_DDC5_DDC_CONTROL_2 (\|= _BIT0|&= ~_BIT0);.*?#endif"
+SUBS = [
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c", SCL_BLOCK,
+     lambda m: "#if(_AWTO_DBG_FOLLOW == _ON)  // [keil2sdcc] sub\n    AWTO_DBG_SCL(%s);\n#else\n%s\n#endif" % (m.group(1), m.group(0)), 4),
+    ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c",
+     r"#if\(_DEBUG_DDC_CHANNEL_SEL == _DDC3\)\s*\n {8}// DDC from DDC3 channel.*?#endif",   # SwitchPort (8 sp), not DdcciInitial (4)
+     lambda m: "#if(_AWTO_DBG_FOLLOW == _ON)  // [keil2sdcc] sub\n        AwtoDbgSelectChannel(ucInputPort);\n#else\n%s\n#endif" % m.group(0), 1),
+]
+
+
+def apply_subs(rel: str, text: str, stats) -> str:
+    for f, rx, fn, want in SUBS:
+        if f != rel:
+            continue
+        text, n = re.subn(rx, fn, text, flags=re.S)
+        if n != want:
+            sys.exit(f"sub rule matched {n}x, want {want}: {f} {rx[:60]!r}")
+        stats[f"sub {f.rsplit('/', 1)[-1]}"] += n
+    return text
 
 
 def apply_inserts(rel: str, text: str, stats) -> str:
@@ -594,6 +621,7 @@ def cmd_port():
             out = rewrite(raw, p.parent, idx, sfr_addr, using, stats, str(rel))
             out = apply_wraps(str(rel), out, stats)
             out = apply_inserts(str(rel), out, stats)
+            out = apply_subs(str(rel), out, stats)
             dst.write_bytes(out.encode("latin-1"))
             n += 1
         elif p.suffix.lower() in {".uv2", ".lin", ".a51", ".inc"}:

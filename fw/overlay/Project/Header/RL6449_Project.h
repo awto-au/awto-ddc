@@ -86,6 +86,14 @@ extern void AwtoDiagSelfTest(void);
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC data FIFO fill, as the SDK 0xBB reply
+// Debug slave 0x35 on the DDC of the active port, not fixed _PCB_DEBUG_DDC (#28): D1 -> DDC1 (DP AUX), D2 -> DDC2, D3 -> DDC3.
+// SCL hold/release of the debug protocol follow FF22 (fw/sdcc/awto_dbgport.inc, keil2sdcc SUBS).
+#define _AWTO_DBG_FOLLOW                                        _ON
+#if(_AWTO_DBG_FOLLOW == _ON)
+#define AWTO_DBG_SCL(op)                                        do { BYTE ucAwtoCh = MCU_FF22_IIC_CH_SEL & 0x07; \
+    if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
+    else if(ucAwtoCh == 0x02) { MCU_FF2E_DDC1_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x01) { MCU_FF20_DDC0_DDC_CONTROL_2 op; } } while(0)
+#endif
 // 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every 20 ms from the first M-domain setup; layout in scripts/meas4k_dump.py.
 // Re-arm: write state byte (g_stAwtoMeas+3) = 0 over the debug slave, then change mode.
 #define _AWTO_MEAS4K                                            _ON
