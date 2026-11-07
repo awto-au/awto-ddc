@@ -40,6 +40,9 @@ AWT26110003-wb-4k-ft1-be	0915b9ae5993	917504	2026-11-07T08:40:05+11:00	/mnt/2tb/
 AWT26110003-wb-4kmeas-be	afd08f3ade27	786432	2026-11-07T06:51:15+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-4kmeas-be.bin	main@c8667c1f
 AWT26110003-wb-awtologo-be	781af494441e	917504	2026-11-06T15:18:59+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-awtologo-be.bin	main@c8667c1f
 AWT26110003-wb-awtopop-be	abd73ee12fd3	917504	2026-11-06T15:45:21+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-awtopop-be.bin	main@c8667c1f
+AWT26110003-wb-biglogo-be	f668d0f79a4c	917504	2026-11-07T15:34:53+11:00	/mnt/2tb/git/awto-ddc-biglogo/tmp/fw/AWT26110003-wb-biglogo-be.bin	given
+AWT26110003-wb-clean1-be	7b79feb53f14	917504	2026-11-07T16:25:24+11:00	/mnt/2tb/git/awto-ddc-lc/tmp/fw/AWT26110003-wb-clean1-be.bin	given
+AWT26110003-wb-clean2-be	1fa8bfad40d2	917504	2026-11-07T16:32:55+11:00	/mnt/2tb/git/awto-ddc-lc/tmp/fw/AWT26110003-wb-clean2-be.bin	given
 AWT26110003-wb-clu3-be	83a230a2e297	786432	2026-11-06T17:47:16+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-clu3-be.bin	main@c8667c1f
 AWT26110003-wb-dbg1-be	db3f2c8d5da1	917504	2026-11-06T16:05:12+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-dbg1-be.bin	main@c8667c1f
 AWT26110003-wb-dbgisr-be	cf4702404731	917504	2026-11-06T17:33:42+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-dbgisr-be.bin	main@c8667c1f
@@ -48,6 +51,7 @@ AWT26110003-wb-ddrinit-be	d98275312a69	917504	2026-11-07T11:45:48+11:00	/mnt/2tb
 AWT26110003-wb-delaycal-be	cb7498d58ec3	917504	2026-11-07T12:07:23+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-delaycal-be.bin	main@c8667c1f
 AWT26110003-wb-delaycal2-be	20dd1be153ff	917504	2026-11-07T14:06:37+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-delaycal2-be.bin	given
 AWT26110003-wb-dp1-be	aab2090f2e2f	917504	2026-11-07T12:23:41+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-dp1-be.bin	main@c8667c1f
+AWT26110003-wb-drops-be	2619ac6ab2c2	917504	2026-11-07T16:31:32+11:00	/mnt/2tb/git/awto-ddc-drops/tmp/fw/AWT26110003-wb-drops-be.bin	given
 AWT26110003-wb-edid-be	2fd191bdbc43	917504	2026-11-07T12:22:44+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-edid-be.bin	main@c8667c1f
 AWT26110003-wb-edid-be@given	c92adc026e10	917504	2026-11-07T12:32:37+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-edid-be.bin	given
 AWT26110003-wb-edid60-be	807f33a14d15	917504	2026-11-07T13:14:05+11:00	/mnt/2tb/git/awto-ddc/tmp/fw/AWT26110003-wb-edid60-be.bin	given
