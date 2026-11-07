@@ -839,13 +839,29 @@ def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
                 b_["pos"][0] = str(int(int(b_["pos"][0]) - rw))
         target, mode = None, None
     else:
-        x, y, w, h = rect(tb, mode)
-        old_w = rect(tb, cur[target])[2]
-        overlap = any(x < ox + ow and ox < x + w and y < oy + oh and oy < y + h
-                      for ox, oy, ow, oh in (rect(b_, cur[b_["mons"][0]]) for b_ in blocks if b_ is not tb))
-        keep = int(mode.split("x")[0]) / old_w
-        if (overlap or w < old_w) and keep >= 1:        # would overlap or leave a gap: keep the old footprint
-            tb["scale"] = f"{keep:g}"                   # (scale < 1 is invalid: then shrink at the current scale)
+        _, _, w, h = rect(tb, mode)
+        ox, oy, ow, oh = rect(tb, cur[target])
+        others = [rect(b_, cur[b_["mons"][0]]) for b_ in blocks if b_ is not tb]
+
+        def touch(edge_a, edge_b, lo_a, hi_a, lo_b, hi_b):   # shared edge with overlapping span
+            return abs(edge_a - edge_b) < 1 and lo_a < hi_b and lo_b < hi_a
+        right = any(touch(bx, ox + ow, by, by + bh, oy, oy + oh) for bx, by, bw, bh in others)
+        left = any(touch(bx + bw, ox, by, by + bh, oy, oy + oh) for bx, by, bw, bh in others)
+        below = any(touch(by, oy + oh, bx, bx + bw, ox, ox + ow) for bx, by, bw, bh in others)
+        above = any(touch(by + bh, oy, bx, bx + bw, ox, ox + ow) for bx, by, bw, bh in others)
+        # resize keeping the edge that touches a neighbour (grow or shrink); bbox normalised below
+        nx = ox + ow - w if right and not left else ox
+        ny = oy + oh - h if below and not above else oy
+        overlap = any(nx < bx + bw and bx < nx + w and ny < by + bh and by < ny + h for bx, by, bw, bh in others)
+        keep = int(mode.split("x")[0]) / ow
+        if overlap and keep >= 1:                       # neighbours on both sides: keep the old footprint by scale
+            tb["scale"] = f"{keep:g}"
+            nx, ny = ox, oy
+        tb["pos"] = [str(round(nx)), str(round(ny))]
+        mx = min(int(b_["pos"][0]) for b_ in blocks)    # mutter wants the bounding box at (0,0) ("positions are offset")
+        my = min(int(b_["pos"][1]) for b_ in blocks)
+        for b_ in blocks:
+            b_["pos"] = [str(int(b_["pos"][0]) - mx), str(int(b_["pos"][1]) - my)]
     args = []
     for b_ in blocks:
         args += ["--logical-monitor", *(["--primary"] if b_["prim"] else [])]
