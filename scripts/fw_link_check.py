@@ -200,6 +200,14 @@ class Image:
             self._cst = {c["addr"] & 0xFFFF for c in self.chunks if c["kind"] == "const"}
         return self._cst
 
+    def names_const(self, c, a16):
+        """True/False: the .rst operand of the insn at a16 names a const chunk / names only non-const symbols; None: unknown."""
+        s = self.rst.syms_at.get((c["addr"] & ~0xFFFF) | a16) if self.rst else None
+        if not s:
+            return None
+        self.sym_consts(c)                                    # builds the name index
+        return any(x[:32] in self._cbn for x in s)
+
     def literal(self, c, a16):
         """True if the insn at 16-bit a16 of chunk c has a numeric-literal immediate in the .rst source."""
         return bool(self.rst) and ((c["addr"] & ~0xFFFF) | a16) in self.rst.lit
@@ -508,13 +516,14 @@ def check(im, xdata=(), regnames=None, proven=None):
                                                            "CJNE", "DJNZ"):
                 if not (base <= i.target < base + c["size"]) and not resid:
                     add("rel_leaves_chunk", src, f"{t}", i.addr)
-            if t.startswith("ADD A,#") and not resid and not im.literal(c, i.addr):   # table base: add a,#t; mov a,#(t>>8); addc a,b
+            if t.startswith("ADD A,#") and not resid and not im.literal(c, i.addr) and im.names_const(c, i.addr) is not False:
+                # table base: add a,#t; mov a,#(t>>8); addc a,b
                 lo = int(t[7:9], 16)
                 for y in ins[k + 1:k + 8]:
                     m3 = re.match(r"MOV A,#([0-9A-F]{2})h$", y.text)
                     if m3:
                         v = int(m3.group(1), 16) << 8 | lo
-                        if v >= im.common and any(z.text.startswith("ADDC A,") for z in ins[k + 1:k + 10]):
+                        if v >= im.common and not in_xdata(v) and any(z.text.startswith("ADDC A,") for z in ins[k + 1:k + 10]):
                             cs = im.consts_at(v)
                             own = [x for r, x in cs if r == reg]
                             refs[c["addr"]] += own

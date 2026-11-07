@@ -207,6 +207,16 @@ def main():
         (asm / "x.rst").write_text((asm / "x.rst").read_text().replace("016000", "016004"))
         _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)
         assert "kind_stale" in {f["kind"] for f in F}, F
+    # arith table base (add a,#lo; mov a,#hi; addc a,..): an xdata symbol in the .rst is not the bank-0 const at that address
+    for sym, want in (("_g_x", set()), ("_t0", {"const_other_bank"})):
+        im = Img()
+        im.add("_t0", 0xF512, [(b"\x01\x02", "")], data=True)
+        im.add("_f", 0x16000, [(b"\x24\x12", f"add a,#{sym}"), (b"\x74\xf5", f"mov a,#({sym} >> 8)"),
+                               (b"\x35\xf0", "addc a,b"), (b"\x22", "ret")])
+        with tempfile.TemporaryDirectory() as d:
+            b, m, asm = im.files(d)
+            _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)
+        assert {f["kind"] for f in F} == want, (sym, F)
     print("PASS fw_link_check_test")
     return 0
 
