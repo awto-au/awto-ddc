@@ -50,12 +50,15 @@ def main() -> int:
         base = bus.addr("g_stOsdInfo")
         ok = wr(bus, base + osd["ucOsdEventMsg"], 10)          # info pop-up: arms the 6 s OSD-disable timer
         bus.wait(1.0)
-        armed[0] = True
         ok = ok and wr(bus, TESTCMD, cmd)
+        bus.wait(0.5)                                          # the logo draw itself calls OsdFuncDisableOsd: count after it
+        armed[0] = True
         bus.wait(a.secs)
         hold = bus.xdata(HOLD)[0]
-        sw = bus.addr("g_stAwtoSw") if "_g_stAwtoSw" in bus.m.sym else None
-        blocks = bus.xdata(sw + 11)[0] if sw else -1
+        try:
+            blocks = bus.xdata(bus.addr("g_stAwtoSw") + 11)[0]     # StAwtoSw.ucHoldBlocks
+        except Exception:                                      # image without #60 log
+            blocks = -1
         want = 0x01 if cmd == 0x24 else 0x02
         good = ok and (hold & want) and calls["OsdFuncDisableOsd"] == 0
         say(f"{'PASS' if good else 'FAIL'} {a.bin.name} cmd 0x{cmd:02X} {a.secs:g} s: hold 0x{hold:02X}, OsdFuncDisableOsd {calls['OsdFuncDisableOsd']}, "
