@@ -95,7 +95,24 @@ def parse_raw(line: str) -> Txn | None:
 OSD_EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
               "source-menu": 7}
 OSD_KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
-OSD_FIELDS = {5: "ucOsdEventMsg", 6: "ucOsdKeyMessage"}      # g_stOsdInfo (RTD2014Include.h), no size in the map
+# g_stOsdInfo (StructOsdInfo, RTD2014Include.h): byte offsets of the fields the tools touch. The map has no member offsets and
+# _DP_DEBUG_MSG (#37) adds a bit-field byte in front of them, so: firmware self-report (diag block 0x2C..0x2E, images from #37 on)
+# > map hint (DP-info function linked = +1) > the layout of the images without both (_DP_DEBUG_MSG off).
+OSD_OFS_LEGACY = {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}
+DIAG_OSD_OFS_AT = 0x2C
+OSD_DP_INFO_SYM = "OsdPropGetShowDpInfoStringAddress"          # exists only with _DP_DEBUG_MSG on
+
+
+def osd_offsets_from_map(map_text: str) -> dict:
+    shift = 1 if OSD_DP_INFO_SYM in map_text else 0
+    return {k: v + shift for k, v in OSD_OFS_LEGACY.items()}
+
+
+def osd_offsets_from_diag(diag3: bytes) -> dict | None:
+    """diag3 = diag block bytes 0x2C..0x2E; None when the image does not report (zeros; the event offset is never 0)."""
+    if len(diag3) < 3 or diag3[1] == 0:
+        return None
+    return dict(zip(OSD_OFS_LEGACY, diag3[:3]))
 TESTCMD = ("g_stAwtoDiag", 0x28)                               # firmware test-command byte (awto-ddc#33)
 _CTYPE = {"unsigned char": 1, "unsigned int": 2, "unsigned long": 4, "char": 1, "int": 2}
 
@@ -133,13 +150,16 @@ class Symbols:
         self.addr: dict[int, str] = {}              # exact XDATA/XFR symbol addresses
         self.struct_at: list[tuple[int, str, list]] = []   # (base, symbol, fields)
         self.size: dict[str, int] = {}
+        self.osd_ofs = dict(OSD_OFS_LEGACY)
 
     @classmethod
     def load(cls, root: Path | None = None, map_path: Path | str | None = None) -> "Symbols":
         s, root = cls(), root or repo_root()
         mp = Path(map_path) if map_path else default_map(root)
         if mp and Path(mp).exists():
-            for line in Path(mp).read_text(errors="replace").splitlines():
+            mtxt = Path(mp).read_text(errors="replace")
+            s.osd_ofs = osd_offsets_from_map(mtxt)
+            for line in mtxt.splitlines():
                 m = re.match(r"^(?:(D):)?\s+([0-9A-F]{8})\s+_(\w+)", line)
                 if m and int(m[2], 16) <= 0xFFFF and (m[1] or int(m[2], 16) >= 0xE000):
                     s.addr.setdefault(int(m[2], 16), m[3])
@@ -153,7 +173,8 @@ class Symbols:
                     s.size[name] = sum(f[1] for f in structs[typ])
         for a, n in list(s.addr.items()):
             if n == "g_stOsdInfo":
-                s.struct_at.append((a, n, [(o, 1, f) for o, f in OSD_FIELDS.items()]))
+                o = s.osd_ofs
+                s.struct_at.append((a, n, [(o["ucOsdEventMsg"], 1, "ucOsdEventMsg"), (o["ucOsdKeyMessage"], 1, "ucOsdKeyMessage")]))
         return s
 
     def base(self, name: str) -> int | None:

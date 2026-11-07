@@ -8,13 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import unit_health as H  # noqa: E402
 
 MAPS = {"g_stAwtoDiag": 0xF6D0, "g_stModeInfo": 0xF2A5, "g_stPowerInfo": 0xF2B0, "g_stMDomainInputData": 0xF0D9,
-        "g_stOsdInfo": 0xEA89}
+        "g_stOsdInfo": 0xEA89, "osd_ofs": {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}}
 TIMING = bytes.fromhex("03 0547 1130 0f00 0226 000b 0259 08ca 0870 004e 0003".replace(" ", ""))
 
 
 class FakeIo:
     """Debug slave model: 0x01 stage hi, 0x3A stage lo -> read, 0x03 stage value, 0x3B write. consume_after: reads of
     the event/test byte before the firmware clears it (None = never)."""
+    osd_ev = 5                                                         # ucOsdEventMsg offset the model consumes
 
     def __init__(self, mem, consume_after=1, fail_first=0):
         self.mem, self.hi, self.lo, self.val = mem, 0, 0, 0
@@ -37,10 +38,10 @@ class FakeIo:
         elif sub == 0x3B:
             a = (self.hi << 8) | data[0]
             self.mem[a] = self.val
-            if a in (MAPS["g_stOsdInfo"] + 5, MAPS["g_stAwtoDiag"] + 0x28):
+            if a in (MAPS["g_stOsdInfo"] + self.osd_ev, MAPS["g_stAwtoDiag"] + 0x28):
                 self.pending[a] = self.consume_after
-                if a == MAPS["g_stOsdInfo"] + 5:
-                    self.mem[MAPS["g_stOsdInfo"] + 4] = self.mem.get(MAPS["g_stOsdInfo"] + 4, 0) ^ 0x01   # osd state moves
+                if a == MAPS["g_stOsdInfo"] + self.osd_ev:
+                    self.mem[MAPS["g_stOsdInfo"] + self.osd_ev - 1] = self.mem.get(MAPS["g_stOsdInfo"] + self.osd_ev - 1, 0) ^ 0x01   # osd state moves
         return True
 
     def _byte(self, a):
@@ -172,3 +173,27 @@ def test_byte_path_when_version_1():
     io, rep = FakeIo(mem), H.Report()
     H.run(H.Dbg(io), MAPS, (3840, 2160, 60.0), rep, wait=Clock(mem).wait)
     assert all(names(rep).values()) and io.blk_reads == 0
+
+
+def test_osd_layout_selfreport_dp_debug():
+    """Image with _DP_DEBUG_MSG: firmware reports offsets +1; the map model (DP-info symbol linked) must say the same (#37)."""
+    import rtd_proto as P
+    assert P.osd_offsets_from_map("CH_OsdPropGetShowDpInfoStringAddress=0x1") == {"usOsdState": 4, "ucOsdEventMsg": 6, "ucOsdKeyMessage": 7}
+    assert P.osd_offsets_from_map("nothing") == P.OSD_OFS_LEGACY
+    assert P.osd_offsets_from_diag(bytes([0, 0, 0])) is None
+    dp = {"usOsdState": 4, "ucOsdEventMsg": 6, "ucOsdKeyMessage": 7}
+    mem = healthy_mem()
+    for i, b in enumerate((4, 6, 7)):
+        mem[MAPS["g_stAwtoDiag"] + 0x2C + i] = b
+    mp = dict(MAPS, osd_ofs=dp)
+    rep = H.Report()
+    clk = Clock(mem)
+    io = FakeIo(mem, 1, 0)
+    io.osd_ev = 6
+    H.run(H.Dbg(io), mp, (3840, 2160, 60.0), rep, wait=clk.wait)
+    row = next(r for r in rep.rows if r[0] == "osd event")
+    assert "layout = firmware report" in row[2]
+    rep = H.Report()                                       # map model disagrees with the firmware: loud FAIL
+    H.run(H.Dbg(FakeIo(mem, 1, 0)), MAPS, (3840, 2160, 60.0), rep, wait=Clock(mem).wait)
+    row = next(r for r in rep.rows if r[0] == "osd event")
+    assert not row[1] and "firmware reports" in row[2]

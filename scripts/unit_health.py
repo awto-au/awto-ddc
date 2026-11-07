@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X  # noqa: E402
+import rtd_proto as P  # noqa: E402
 
 DEV8 = 0x6A                                   # 7-bit 0x35
 DIAG_OFF = {"magic": 0, "stage": 3, "hb": 0x14, "t2": 0x16, "testcmd": 0x28}
@@ -27,7 +28,6 @@ POWER_NAMES = ["AC_ON", "OFF", "NORMAL", "SAVING"]
 MODE_ACTIVE, POWER_NORMAL = 3, 2
 PIN_BACKLIGHT_N, PIN_PANEL = 0xFE2A, 0xFE1A    # P9.2 active low enable, P7.2 panel power; bit 0 = pin level
 EVENT_INFO, TESTCMD_DEBUG = 10, 0x20           # EnumOsdEvent info pop-up; ucTestCmd 0x20 = debug pop-up (#34)
-OSD_STATE, OSD_EVENT = 3, 5                    # StructOsdInfo: usOsdState (BE WORD) at +3, ucOsdEventMsg at +5
 # Loop-rate window: 1 s of Timer2 ticks gives ~170 loop counts per window (+-1 %); bus idle in the window.
 RATE_WINDOW_S, RATE_REPEATS = 1.0, 3
 # Consume wait: pop-up draw stalls the debug slave ~0.4 s (#11 comment); limit = 1.25x worst seen, expiry = FAIL.
@@ -230,13 +230,27 @@ def consumed(d: Dbg, addr: int, wait=time.sleep, now=time.monotonic) -> tuple[bo
         wait(0.005)                            # ~1 main-loop pass between polls
 
 
-def check_osd(rep, d, osd_addr, diag_addr, wait=time.sleep) -> bool:
+def osd_layout(d, diag_addr, hint):
+    """g_stOsdInfo offsets (ofs, note): the firmware's own report (diag 0x2C..0x2E) wins; the map model must agree (#37)."""
+    got = P.osd_offsets_from_diag(d.read(diag_addr + P.DIAG_OSD_OFS_AT, 3))
+    if got is None:
+        return hint, "layout from map (image has no self-report)"
+    if got != hint:
+        return None, f"firmware reports g_stOsdInfo layout {got} but the map model says {hint}: fix rtd_proto.osd_offsets_from_map"
+    return got, "layout = firmware report"
+
+
+def check_osd(rep, d, osd_addr, diag_addr, hint, wait=time.sleep) -> bool:
     """usOsdState does not move for pop-ups (event path); the evidence is the consume + the debug-slave stall while drawing."""
-    st0 = be16(d.read(osd_addr + OSD_STATE, 2), 0)
-    d.write(osd_addr + OSD_EVENT, EVENT_INFO)
-    ok, dt, naks = consumed(d, osd_addr + OSD_EVENT, wait, d.now)
+    ofs, note = osd_layout(d, diag_addr, hint)
+    if ofs is None:
+        rep.add("osd event", False, note)
+        return False
+    st0 = be16(d.read(osd_addr + ofs["usOsdState"], 2), 0)
+    d.write(osd_addr + ofs["ucOsdEventMsg"], EVENT_INFO)
+    ok, dt, naks = consumed(d, osd_addr + ofs["ucOsdEventMsg"], wait, d.now)
     r1 = rep.add("osd event", ok, f"info event {'consumed' if ok else 'NOT consumed'} in {dt * 1000:.0f} ms, "
-                 f"{naks} NAKed polls while drawing (limit {CONSUME_WAIT_S * 1000:.0f} ms); usOsdState 0x{st0:04X}")
+                 f"{naks} NAKed polls while drawing (limit {CONSUME_WAIT_S * 1000:.0f} ms); usOsdState 0x{st0:04X}; {note}")
     tc = diag_addr + DIAG_OFF["testcmd"]
     d.write(tc, TESTCMD_DEBUG)
     ok, dt, naks = consumed(d, tc, wait, d.now)
@@ -253,7 +267,7 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep) -> int:
              ("mode state", lambda: check_state(rep, d, maps["g_stModeInfo"], maps["g_stPowerInfo"])),
              ("input timing", lambda: check_timing(rep, d, maps["g_stMDomainInputData"], host)),
              ("pins", lambda: check_pins(rep, d)),
-             ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, wait))]
+             ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, maps["osd_ofs"], wait))]
     for name, fn in steps:
         guarded(rep, name, fn)
     return 0
@@ -284,6 +298,7 @@ def main() -> int:
     i2cbus.require_unit(a.bus, a.serial)
     txt = a.map.read_text(errors="replace")
     maps = {n: sym_addr(txt, n) for n in MAP_SYMS}
+    maps["osd_ofs"] = P.osd_offsets_from_map(txt)
     host = None
     mode = a.host_mode
     if not mode and a.gdctl:
@@ -306,6 +321,7 @@ def run_sim(a) -> int:
     bus.run_until_mode(MODE_ACTIVE)                 # the unit under test is already up: let the display setup finish
     try:
         maps = {n: sym_addr(mapp.read_text(errors="replace"), n) for n in MAP_SYMS}
+        maps["osd_ofs"] = P.osd_offsets_from_map(mapp.read_text(errors="replace"))
         rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode}")
         dbg = Dbg(bus, wait=bus.wait, now=bus.now)
         run(dbg, maps, parse_host_mode(mode), rep, wait=bus.wait)
