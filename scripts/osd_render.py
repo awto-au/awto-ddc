@@ -69,6 +69,7 @@ class Session:
     def __init__(self, binp: Path, mapp: Path, mode: str):
         self.binp, self.mapp, self.mode = binp, mapp, mode
         self.model = M.OsdModel()
+        self.model.img = binp.read_bytes()
         self.logo = {"show": False, "done": False}
         self.bus = S.SimBus(binp, mapp, "osdr-" + binp.stem, None, boot=False, devs=[self.model], video=mode)
         m = self.bus.m

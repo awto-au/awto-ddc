@@ -81,7 +81,7 @@ class OsdState:
 
 class OsdModel(S.Dev):
     """Write tap on the OSD port + palette; state in .st. `mem` = callable(addr) -> XRAM byte (m.rd) for the protection/VLC regs."""
-    writes = (ADR_MSB, ADR_LSB, DATA, WOPT, LUT_ADDR, LUT_PORT)
+    writes = (ADR_MSB, ADR_LSB, DATA, WOPT, LUT_ADDR, LUT_PORT, 0xFFF3)
 
     def __init__(self):
         self.st = OsdState()
@@ -92,6 +92,9 @@ class OsdModel(S.Dev):
         self.vbytes: list[int] = []
         self.lut_idx, self.lut_buf = None, []
         self.log: list[tuple] = []                   # (kind, ...) of notable events, for tests
+        self.img = b""                               # flash image for the burst-DMA engine (set by the session)
+        self.trace: list[tuple] = []                 # (wopt, addr, value) of data-port writes when trace_on
+        self.trace_on = False
 
     # -- helpers
     def _rd(self, m, a): return m.rd(a)[0]
@@ -124,9 +127,37 @@ class OsdModel(S.Dev):
                     self.st.pal[self.lut_idx] = tuple(self.lut_buf)
                     self.lut_idx, self.lut_buf = (self.lut_idx + 1) & 0x3F, []
             return
-        # data port
+        if a == 0xFFF3:
+            self._burst(m, v)
+            return
+        self._data(m, v)
+
+    def _burst(self, m, v: int):
+        """Scaler burst-DMA (ScalerBurstWrite): FFF3 bit3 = data burst (bit5 set = no address increment), count FFF9/A, source
+        bank FFF6 + addr FFF7/8 (FFFC bit5 = from XRAM), host reg = page 0x9F : FFF4. Copies the bytes, then clears bit3 (done).
+        Command bursts (bit4) are not modelled."""
+        if not v & 0x08:
+            return
+        r = lambda a: self._rd(m, a)
+        n, src, bank = r(0xFFF9) << 8 | r(0xFFFA), r(0xFFF7) << 8 | r(0xFFF8), r(0xFFF6)
+        host = r(0x9F) << 8 | r(0xFFF4)
+        data = m.rd(src, n) if r(0xFFFC) & 0x20 else self.img[bank * 0x10000 + src: bank * 0x10000 + src + n]
+        self.log.append(("burst", host, n, bank, src, v))
+        for i, b in enumerate(data):
+            if host == DATA:
+                m.put(f"set memory xram 0x{DATA:x} 0x{b:x}")
+                m.flush()
+                self._data(m, b)
+            else:
+                m.put(f"set memory xram 0x{host + (0 if v & 0x20 else i):x} 0x{b:x}")
+        m.put(f"set memory xram 0xfff3 0x{v & ~0x08 & 0xFF:x}")
+        m.flush()
+
+    def _data(self, m, v: int):
         self.st.nwr += 1
         wopt = self._rd(m, WOPT)
+        if self.trace_on:
+            self.trace.append((wopt, self.addr, v))
         sel, bytesel = (wopt >> 2) & 3, (wopt >> 5) & 7
         if sel == SRAM_FONT and self._rd(m, FRAME + 0x17) & 1 and not self._rd(m, FRAME + 0x17) & 2:
             if self.vlc is None:
