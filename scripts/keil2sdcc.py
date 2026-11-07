@@ -256,6 +256,9 @@ INSERTS = [
      "            if(g_stAwtoDiag.ucDbgPopup == 1)\n            {\n                AwtoOsdDebugLines();\n                break;\n            }"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_loopsplit.inc").read_text().rstrip("\n")),   # #75
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c", r"^bit ScalerDpRx1DisplayFormatSetting\(void\)$",
+     (SHIM / "awto_dpframe.inc").read_text().rstrip("\n")),   # #60
 ] + [   # main-loop cost per handler (fw/sdcc/awto_loopprof.inc, -D_AWTO_LOOP_PROF=_ON); AWTO_LP(k) lands just before handler k
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_loopprof.inc").read_text().rstrip("\n")),
 ] + [("Kernel/System/Code/SysMain.c", rf"^\s*{fn}\(\);", f"            AWTO_LP({k});", r"^void main\(void\)$")
@@ -322,6 +325,19 @@ SUBS = [
      lambda m: "g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;  // [keil2sdcc] sub", 1),
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelayXusN_Base = _M2PLL_DELAY4US_CNT;",
      lambda m: "g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;  // [keil2sdcc] sub", 1),
+    # #75 main-loop split (fw/sdcc/awto_loopsplit.inc): the stable/timing watchdog every AWTO_SLOW_MS in ACTIVE (other
+    # states: every pass, a short glitch while locking still resets the search), cable detection every AWTO_SLOW_MS
+    ("Kernel/System/Code/SysJudge.c", r"if\(SysJudgeCheckStatus\(\) == _FALSE\)",
+     lambda m: "if(((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE))  // [keil2sdcc] sub", 1),
+    ("Kernel/System/Code/SysSource.c", r"(void SysSourceHandler\(void\)\n\{\n)    SysSourceCableDetection\(\);",
+     lambda m: m.group(1) + "    if(AWTO_SLOW_DUE_CABLE() == _TRUE)  // [keil2sdcc] sub\n    {\n        SysSourceCableDetection();\n    }", 1),
+    # #60: DP Rx1 SST two-frame waits = 2 x the measured frame (fw/sdcc/awto_dpframe.inc), not 2 x 45 ms
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c",
+     r"(bit ScalerDpRx1DisplayFormatSetting\(void\)\n\{.*?)ScalerTimerDelayXms\(_DP_TWO_FRAME_TIME_MAX\);",
+     lambda m: m.group(1) + "AWTO_DP_FRAME_SET(ulVBs2BsCount);  // [keil2sdcc] sub\n        ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());", 1),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c",
+     r"(bit ScalerDpRx1FifoCheck\(EnumDpFifoCheckCondition enumFifoCheckCondition\)\n\{.*?)ScalerTimerDelayXms\(_DP_TWO_FRAME_TIME_MAX\);",
+     lambda m: m.group(1) + "ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());  // [keil2sdcc] sub", 1),
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
     (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
      lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),

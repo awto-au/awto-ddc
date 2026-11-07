@@ -625,6 +625,7 @@ stub	_ScalerDpRx1GetVideoInfo	C	0x26fe	9
 stub	_ScalerDpRx1HDCPUnplugReset	C	0x2707	9
 stub	_ScalerDpRx1SetHotPlugEvent	C	0x2710	9
 stub	_ScalerDpRx1VideoSetting	C	0x2719	9
+stub	_AwtoSlowDue	C	0x2722	9
 stub	_dp_rd16	C	0x272b	9
 stub	_dp_rd_n	C	0x2734	9
 stub	_AwtoDiagDelayCal	C	0x273d	9
@@ -843,7 +844,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1239	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1240	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -1225,6 +1226,7 @@ fn	_ScalerDpRx1PhyCtsAction	2	0x669c	8
 fn	_ScalerDebugSetRegisters	2	0x66ac	344
 fn	_ScalerDebugSendData	2	0x6804	232
 fn	_AwtoMsgV	2	0x68ec	264
+fn	_AwtoDpFrameSet	2	0x69f4	212
 fn	_ScalerSyncDpCheckHdcpEnable	2	0x6de0	16
 fn	_ScalerTimerWaitForActiveTimerEvent	2	0x6df0	32
 fn	_ScalerDpRx1AdjustLaneFLDBand	2	0x6e10	532
@@ -1247,6 +1249,7 @@ fn	_ScalerDpRx1MarginLinkCheck	2	0x9098	28
 fn	_ScalerDpRx1MeasureLaneCDRClk	2	0x90b4	420
 fn	_ScalerDpRx1NormalPreDetect	2	0x9258	988
 fn	_ScalerDpRx1PhyCtsTp2Check	2	0x9634	252
+fn	_AwtoDpTwoFramesMs	2	0x9730	56
 fn	_ScalerDpRx1ScanInputPort	2	0x97c0	236
 fn	_ScalerDpRx1ScrambleSetting	2	0x98ac	312
 fn	_ScalerDpRx1SetDFEInitial	2	0x99e4	676
@@ -1385,7 +1388,6 @@ const	___str_19	4	0x01a0	8
 const	___str_2	4	0x01a8	8
 const	___str_20	4	0x01b0	12
 const	___str_21	4	0x01bc	8
-const	___str_22	4	0x01c4	12
 const	___str_3	4	0x01d0	8
 const	___str_4	4	0x01d8	8
 const	___str_5	4	0x01e0	8
@@ -1658,6 +1660,7 @@ fn	_UserCommonInterfaceOsdResetProc	4	0xa2a4	68
 fn	_UserCommonInterfaceTimerEventProc	4	0xa2e8	32
 fn	_UserCommonNVRamGetSystemData	4	0xa308	416
 fn	_ScalerMcu5usDelayCalc	4	0xadf8	100
+const	___str_22	4	0xae5c	20
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
 const	_tSD_V_COEF_64_TAPS	5	0x0110	72
@@ -2859,6 +2862,7 @@ fn	_dp_wr16	12	0x0c04	112
 fn	_hb_burst	12	0x0c74	340
 fn	_reg_rd_n	12	0x0dc8	120
 fn	_AwtoDiagDelayCal	12	0x0e40	2848
+fn	_AwtoSlowDue	13	0x0000	312
 fn	_AwtoMeasEvent	13	0x1df0	260
 fn	_AwtoMeasT2Sample	13	0x1ef4	448
 fn	_AwtoSwArm	13	0x20b4	60

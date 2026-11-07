@@ -246,6 +246,46 @@ extern void AwtoLpMark(unsigned char ucK);
 #else
 #define AWTO_LP(k)
 #endif
+#ifndef _AWTO_DP_FRAME_WAIT
+#define _AWTO_DP_FRAME_WAIT                                     _ON     // #60: DP Rx1 two-frame waits from the measured frame (fw/sdcc/awto_dpframe.inc)
+#endif
+#ifndef _AWTO_LOOP_SPLIT
+#define _AWTO_LOOP_SPLIT                                        _ON     // #75: slow checks every AWTO_SLOW_MS, not every pass (fw/sdcc/awto_loopsplit.inc)
+#endif
+#define AWTO_SLOW_MS                                            10      // detection latency <= 10 ms + 1 pass (limit 50 ms, #75)
+#define AWTO_SLOW_JUDGE                                         0       // SysJudgeCheckStatus (48.6 % of an ACTIVE pass, #75)
+#define AWTO_SLOW_CABLE                                         1       // SysSourceCableDetection
+#define AWTO_SLOW_SLOTS                                         2
+typedef struct
+{
+    unsigned int usFastRate;                    // main-loop passes in the last ~1 s (= g_stAwtoDiag.usLoopRate)
+    unsigned int usSlowRate;                    // AWTO_SLOW_JUDGE runs in the last ~1 s (~1000 / AWTO_SLOW_MS)
+    unsigned int usSlowRuns;                    // AWTO_SLOW_JUDGE runs, free-running
+    unsigned int usMaxGapMs;                    // longest gap between two AWTO_SLOW_JUDGE runs in the last ~1 s
+} StAwtoLoop;
+#if(_AWTO_LOOP_SPLIT == _ON)
+extern __xdata StAwtoLoop g_stAwtoLoop;
+extern bit AwtoSlowDue(unsigned char ucSlot);
+#define AWTO_SLOW_DUE(k)                                        AwtoSlowDue(k)
+#else
+#define AWTO_SLOW_DUE(k)                                        _TRUE
+#endif
+#ifndef _AWTO_SPLIT_CABLE
+#define _AWTO_SPLIT_CABLE                                       _OFF    // _ON: cable detection on the slow path too: +6 % loop, but ACTIVE ~50 ms later at cold boot (#75)
+#endif
+#if(_AWTO_SPLIT_CABLE == _ON)
+#define AWTO_SLOW_DUE_CABLE()                                   AWTO_SLOW_DUE(AWTO_SLOW_CABLE)
+#else
+#define AWTO_SLOW_DUE_CABLE()                                   _TRUE
+#endif
+#ifndef _AWTO_SPLIT_JUDGE
+#define _AWTO_SPLIT_JUDGE                                       _ON     // SysJudgeCheckStatus on the slow path (#75)
+#endif
+#if(_AWTO_SPLIT_JUDGE == _ON)
+#define AWTO_SLOW_DUE_JUDGE()                                   AWTO_SLOW_DUE(AWTO_SLOW_JUDGE)
+#else
+#define AWTO_SLOW_DUE_JUDGE()                                   _TRUE
+#endif
 #ifndef _AWTO_SW_MARKS
 #define _AWTO_SW_MARKS                                          _OFF    // -D_AWTO_SW_MARKS=_ON: log main-loop segments >= AWTO_SW_SLOW_MS (#60)
 #endif
