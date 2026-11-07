@@ -60,6 +60,8 @@ SRC_EXT = {".c", ".h"}
 # pData scratch arrays and all Keil `idata` go to XDATA (keil_compat.h) so 0x80-0xFF is left to the stack.
 DROP_USING = True
 RULES = [
+    # OSD default D1 DP version: _AWTO_DP_D1_VERSION (RL6449_Project.h; SDK 0 = DP 1.1) (#28)
+    (re.compile(r"^(\s*)0,(\s*// b1OsdDpD1PortVersion\b)", re.M), r"\1_AWTO_DP_D1_VERSION,\2"),
     (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"xdata\1"),
     # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
     # and puts t in RAM (and `xdata BYTE *p` would become a 2-byte xdata pointer). Move the qualifier next

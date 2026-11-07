@@ -144,8 +144,11 @@ extern void AwtoMeasT2Sample(void);
 #if(_AWTO_DEBUG_PORT == _ON)
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
 #endif
+// Debug mode never follows the input: ScalerMcuDdcciSwitchPort puts 0x35 on _PCB_DEBUG_DDC (DDC2 = HDMI D2) for any port (#28)
+// D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
+#define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)
-#define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
+#define _CHECKSUM                                               0xA3    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 
 
 /////////////
