@@ -966,6 +966,9 @@ def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
     if not cur:
         raise SystemExit(f"mode --dp: no current mode for {hdmi}; nothing changed")
     m = cur.group(1)
+    alone = re.search(rf"Monitors: \(1\)\s*\n[│├└─\s]*{re.escape(dp)} \(", show)
+    if not on and alone:                              # DP-1 is its own logical monitor (mutter's default row): drop it
+        return gdctl_set_args(show, dp, "off")
     args = gdctl_set_args(show, hdmi, m)
     out, k = [], 0
     while k < len(args):                              # drop an existing DP-1 entry first

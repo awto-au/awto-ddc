@@ -23,7 +23,7 @@ MODES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNA
 POWER = {0: "PANEL_ON", 1: "PANEL_OFF", 2: "BACKLIGHT_ON", 3: "BACKLIGHT_OFF"}       # SDK _PANEL_ON.. order (UserCommonInterface)
 TESTCMD = 0xF6F8
 PORT_CMD = {"D1": 0x31, "D2": 0x32, "D3": 0x33}
-N_EV = 40
+N_EV = 64                   # AWTO_SW_EVENTS (40 before #78); an older image just returns spare bytes
 PROBES = {1: "reset-to-SEARCH start", 2: "SysModeResetState done", 3: "judge SEARCH refused (retry)", 4: "OSD reset proc done",
           5: "free run done", 6: "SysSourceSwitchInputPort done", 7: "active proc: NVRAM system-data save start",
           8: "active proc: NVRAM save done", 9: "OSD info pop-up draw start", 10: "OSD info pop-up drawn",
@@ -79,6 +79,7 @@ def name(ev_id: int, arg: int) -> str:
     if ev_id == 0xA0:
         return "FAST " + {0: "path taken (mux switched, blanked)", 1: "refused: no cache for the port", 6: "refused: mode not ACTIVE",
                           7: "refused: a fast switch is pending", 8: "refused: already on that port", 9: "refused: mode reset pending",
+                          10: "refused: Fast switch setting off (#67)",
                           3: "refused: receiver not stable", 4: "dropped: SDK reset the mode", 5: "measure timeout -> full path",
                           0x21: "refused: H/V width", 0x22: "refused: H/V total", 0x23: "refused: H start", 0x24: "refused: V start",
                           0x25: "refused: interlace", 0x26: "refused: V freq", 0x27: "refused: pixel clock",
@@ -91,6 +92,8 @@ def name(ev_id: int, arg: int) -> str:
         why = [n for b, n in ((1, "off-line measure busy"), (2, "on-line watchdog"), (4, "FIFO / HV-sync error"),
                               (8, "receiver unstable"), (0x10, "timing change"), (0x20, "SysJudgeCheckStatus")) if arg & b]
         return "FAST failed checks: " + (", ".join(why) or "none")
+    if ev_id == 0xB0:
+        return f"HPD recovery pulse on D{arg} (host lost SCDC / link: #78)"
     if ev_id == 0x80 and arg == 0:
         return "UNBLANK (picture on)"
     return {0x50: "hold: disable blocked", 0x51: "hold: logo redrawn", 0x52: "hold: OSD event dropped", 0x60: "logo",
