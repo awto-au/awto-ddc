@@ -41,6 +41,7 @@ void AwtoSwArm(unsigned char ucPort)
 void AwtoPanelVddEarly(void)                    // #63: right after pin-share; eDP lanes stay off until the SDK's _PANEL_ON (T1 later)
 {
     PCB_PANEL_POWER(_PANEL_CONTROL_ON);
+    AwtoDiagStage(5);
     AwtoSwEvent(AWTO_SW_EV_VDD, 1);
 }
 #endif

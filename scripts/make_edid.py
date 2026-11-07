@@ -9,7 +9,7 @@ usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
   port (the host keys monitor identity on them: mutter layout, dev.py serial guard); only the tag tells D1/D2/D3 apart.
 Design + per-port rationale: docs/edid-fix.md.  Log: ./tmp/logs/make_edid.log
 """
-import shutil, subprocess, sys
+import os, shutil, subprocess, sys
 from pathlib import Path
 
 OUT_DEFAULT = Path("/mnt/2tb/vendors/realtek/analysis/edid")
@@ -108,21 +108,32 @@ def port_vsdb(port):
 
 
 VICS = [97, 16]    # 97 = DTD1 (4K60.000, works since the ~bit fix); 16 = 1080p60; other rates dropped (PC use, #26)
+# TEST profile (EDID_PROFILE=test, sweep only, never a production unit): every mode removed on 2026-11-07, for the mode sweep
+# (#26): 4K 60/50/30/25/24 (+ x1000/1001), 1080p 60/50/30/25/24, 720p 60/50/24/25/30, SD 640x480 / 480p; DTDs 4K 533.12 MHz
+# (vendor 59.982), 2560x1600 and 1920x1200 CVT-RB, 2560x1440. Colorimetry + HDR blocks left out to make room for 4 DTDs.
+TEST = os.environ.get("EDID_PROFILE") == "test"
+VICS_TEST = [97, 96, 95, 94, 93, 16, 31, 34, 33, 32, 4, 19, 60, 61, 62, 1, 2, 3]
+DTDS_TEST = (dtd(53312, 3840, 160, 48, 32, 2160, 62, 3, 5, 1, 0)     # vendor 4K 59.982 (htotal 4000, vtotal 2222)
+             + dtd(26850, 2560, 160, 48, 32, 1600, 46, 3, 6, 1, 0)   # 2560x1600@60 CVT-RB
+             + dtd(24150, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 0)   # 2560x1440@60 CVT-RB
+             + dtd(15400, 1920, 160, 48, 32, 1200, 35, 3, 6, 1, 0))  # 1920x1200@60 CVT-RB
 
 
 def cta_block(port):
     d = bytearray()
-    vdb = bytes(v for v in VICS)
+    vdb = bytes(v for v in (VICS_TEST if TEST else VICS))
     d += bytes([(2 << 5) | len(vdb)]) + vdb
     # NO Audio Data Block / Speaker Allocation Block: these units have no speakers (Dan 2026-11-04).
     # The CTA header "basic audio" bit is also cleared so the OS does not route sound to a dead endpoint.
     # Colorimetry Data Block (ext tag 0x05): byte1 0x06 = xvYCC709 + sYCC601 extended-gamut YCC;
     # byte2 0x20 = sRGB colorimetry (CTA-861-H) — the panel covers sRGB, and setting it is what
     # edid-decode recommends to avoid interop issues. BT.2020 is NOT advertised (~99% sRGB VA panel).
-    d += bytes([(7 << 5) | 3, 0x05, 0x06, 0x20])
+    if not TEST:
+        d += bytes([(7 << 5) | 3, 0x05, 0x06, 0x20])
     # HDR Static Metadata Data Block (ext tag 0x06): EOTF = Traditional gamma SDR only (bit0); Static
     # Metadata Type 1 supported. NO PQ(SMPTE2084)/HLG — this is a ~300 cd/m2 SDR VA panel, not HDR10.
-    d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
+    if not TEST:
+        d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
     d += bytes([(7 << 5) | 2, 0x00, 0xCA])                 # VCDB: QY+QS (YCC/RGB quant selectable), IT/CE underscan
     if port.startswith("hdmi"):
         # HDMI 1.4 VSDB: PA 1.0.0.0, DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
@@ -131,7 +142,7 @@ def cta_block(port):
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
         # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue
     d += port_vsdb(port)
-    dtds = DTD_1080
+    dtds = DTDS_TEST if TEST else DTD_1080
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
     b[2] = 4 + len(d)

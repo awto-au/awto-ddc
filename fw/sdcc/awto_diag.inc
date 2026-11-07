@@ -49,7 +49,7 @@ void AwtoDiagMainPass(void)
         usLastHb = g_stAwtoDiag.usHeartbeat;
         usLastMs = usNow;
     }
-    AwtoDiagStage(5);
+    AwtoDiagStage(6);                                  // first main-loop pass (#63 order: 5 = panel VDD comes first)
 }
 
 #endif

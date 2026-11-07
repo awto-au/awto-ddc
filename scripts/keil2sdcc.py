@@ -248,9 +248,11 @@ INSERTS = [
     ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")
     for case, tail in (("_PANEL_ON", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)"),
                        ("_BACKLIGHT_ON", r"^\s*// Set Video Stream parameter"))
-    for rx, txt in ((r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagStage(6);"),
-                    (r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "    AwtoDiagStage(7);"),
-                    (tail, "    AwtoDiagStage(8);"))
+    for rx, txt in ((r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagStage(5);"),     # panel VDD (#63 order)
+                    (tail, "    AwtoDiagStage(7);"))                                                 # eDP link done
+] + [   # stage 8 = backlight on: the DPTx branch of _BACKLIGHT_ON (first PCB_BACKLIGHT_POWER after the stream set-up)
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_BACKLIGHT_POWER\(_LIGHT_CONTROL_ON\);",
+     "    AwtoDiagStage(8);", r"^\s*// Set Video Stream parameter")
 ]
 
 
