@@ -13,6 +13,7 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
     {
         ucCh = 0x04;
     }
+    AWTO_DDCCI_FOLLOW(ucCh);                // #60: DDC/CI engine IIC_1 on the same channel (_AWTO_DDCCI_ENGINES == 1)
     if((MCU_FF22_IIC_CH_SEL & 0x07) == ucCh)
     {
         return;
