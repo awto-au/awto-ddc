@@ -36,6 +36,9 @@ extern void AwtoMenuForget(void);
 extern bit AwtoMenuKeyHook(void);
 extern bit AwtoVcpGetHook(void);
 extern bit AwtoVcpSetHook(void);
+extern __xdata unsigned char g_ucAwtoKeyHold;
+extern unsigned char AwtoKeyHold(void);
+#define AWTO_KEY_HOLD()                                         ((g_ucAwtoKeyHold != 0) ? AwtoKeyHold() : 0)
 #endif
 #define _AWTO_DEMO_LOGO                                         _ON     // awto: back on (#46)
 #define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)

@@ -9,4 +9,34 @@ BYTE set_recovery_requested(void)            // Menu (ADC A0 ladder) + Left (ADC
     PCB_KEY_STATE(0, ucV1, ucV2, 0, ucState);
     return ((ucState & (_MENU_KEY_MASK | _LEFT_KEY_MASK)) == (_MENU_KEY_MASK | _LEFT_KEY_MASK));
 }
+
+// Host key injection (#67, menu.h key_inject / key_hold): a key message as the key scan would give it, or a raw key
+// mask ORed into RTDKeyScan for ms (long press, combinations; the SDK's own hold timers see it as a held key).
+__xdata BYTE g_ucAwtoKeyHold;                // mask, 0 = none
+static __xdata WORD s_usAwtoKeyHoldT0;
+static __xdata WORD s_usAwtoKeyHoldMs;
+
+void key_inject(BYTE ucKey)
+{
+    if(ucKey < _KEY_AMOUNT)
+    {
+        SET_KEYMESSAGE(ucKey);
+    }
+}
+
+void key_hold(BYTE ucMask, WORD usMs)
+{
+    s_usAwtoKeyHoldT0 = g_usTimerCounter;
+    s_usAwtoKeyHoldMs = usMs;
+    g_ucAwtoKeyHold = ucMask & (_POWER_KEY_MASK | _MENU_KEY_MASK | _RIGHT_KEY_MASK | _LEFT_KEY_MASK | _EXIT_KEY_MASK);
+}
+
+BYTE AwtoKeyHold(void)                       // RTDKeyScan (AWTO_KEY_HOLD): the held mask until its time is up
+{
+    if((WORD)(g_usTimerCounter - s_usAwtoKeyHoldT0) >= s_usAwtoKeyHoldMs)
+    {
+        g_ucAwtoKeyHold = 0;
+    }
+    return g_ucAwtoKeyHold;
+}
 #endif

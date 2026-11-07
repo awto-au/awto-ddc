@@ -855,7 +855,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1256	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1257	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -1004,16 +1004,16 @@ stub	_menu_key	C	0x453a	8
 stub	_menu_open	C	0x4542	8
 stub	_menu_relayout	C	0x454a	8
 stub	_menu_service	C	0x4552	8
-stub	_mn_back	C	0x455a	8
+stub	_key_hold	C	0x455a	8
 stub	_mn_blank	C	0x4562	8
 stub	_mn_draw_entry	C	0x456a	8
 stub	_mn_draw_list	C	0x4572	8
 stub	_mn_draw_status	C	0x457a	8
 stub	_mn_draw_title	C	0x4582	8
-stub	_mn_enter	C	0x458a	8
-stub	_mn_entry	C	0x4592	8
+stub	_menu_cmd	C	0x458a	8
+stub	_mn_change	C	0x4592	8
 stub	_mn_go	C	0x459a	8
-stub	_mn_move	C	0x45a2	8
+stub	_key_inject	C	0x45a2	8
 stub	_mn_scroll	C	0x45aa	8
 stub	_pi_at	C	0x45b2	8
 stub	_set_apply_call	C	0x45ba	8
@@ -1049,6 +1049,9 @@ stub	_st_touch	C	0x46a2	8
 stub	_vcp_box_service	C	0x46aa	8
 stub	_vcp_get	C	0x46b2	8
 stub	_vcp_set	C	0x46ba	8
+stub	_mn_key	C	0x46c2	8
+stub	_mn_row	C	0x46ca	8
+stub	_mn_sync	C	0x46d2	8
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1622,7 +1625,6 @@ fn	_RTDKeyMessageConvert	4	0x25f4	100
 fn	_RTDKeyMessageProc	4	0x2658	112
 fn	_RTDKeyPowerKeyMix	4	0x26c8	8
 fn	_RTDKeyPowerKeyProc	4	0x26d0	64
-fn	_RTDKeyScan	4	0x2710	172
 fn	_RTDKeyScanReady	4	0x27bc	52
 fn	_RTDKeySpecialProc	4	0x27f0	60
 fn	_UserInterfaceKeyHandler	4	0x282c	68
@@ -1650,6 +1652,8 @@ fn	_AwtoShowLine	4	0x3f00	108
 fn	_OsdDispAdvanceMenuReDraw	4	0x3f6c	96
 fn	_OsdDispDisableOsd	4	0x3fcc	60
 fn	_ScalerMcuDdcciGetInputPort	4	0x4008	108
+fn	_RTDKeyScan	4	0x4074	188
+fn	_key_hold	4	0x4130	44
 fn	_OsdDispResetDpCapabilitySwitch	4	0x4190	44
 fn	_OsdPropGetShowHFreqPClkStringAddress	4	0x41bc	436
 fn	_OsdFuncSetOsdItemFlag	4	0x4370	124
@@ -1663,6 +1667,7 @@ fn	_UserInterfaceGetForcePSStatus	4	0x44d4	8
 fn	_UserInterfaceGetIntoPSStatus	4	0x44dc	16
 fn	_UserInterfaceGetLogoStatus	4	0x44ec	16
 fn	_UserInterfaceGetdNoSupportStatus	4	0x44fc	8
+fn	_AwtoKeyHold	4	0x4504	52
 fn	_UserInterfaceKeyPadLedControl	4	0x4544	292
 fn	_UserInterfacePowerSwitch	4	0x4668	160
 fn	_UserInterfaceTimerEventProc	4	0x4708	220
@@ -1793,6 +1798,7 @@ fn	_SysSourceGetCableDetect	4	0x9264	44
 fn	_SysSourceGetCableStatusChange	4	0x9290	44
 fn	_SysSourceGetInputPortType	4	0x92bc	36
 fn	_AwtoFastNow	4	0x933c	32
+fn	_key_inject	4	0x935c	16
 fn	_SysSourceInfoReset	4	0x9384	192
 fn	_SysSourceInitial	4	0x9444	400
 fn	_SysSourceJudge	4	0x95d4	212
@@ -3109,7 +3115,11 @@ fn	_set_service	12	0x4784	96
 fn	_st_apply	12	0x47e4	56
 fn	_st_load	12	0x481c	24
 fn	_st_touch	12	0x4834	36
-fn	_vcp_get	12	0x4858	488
+fn	_vcp_get	12	0x4858	592
+fn	_menu_cmd	12	0x4aa8	504
+fn	_mn_key	12	0x4ca0	308
+fn	_mn_row	12	0x4dd4	56
+fn	_mn_sync	12	0x4e0c	280
 fn	_AwtoSlowDue	13	0x0000	312
 const	_font_tab	13	0x0138	2652
 const	_ptitle	13	0x0b94	36
@@ -3170,5 +3180,5 @@ fn	_set_revert	13	0x336c	60
 fn	_st_all_defaults	13	0x33a8	60
 fn	_st_clampv	13	0x33e4	148
 fn	_st_inputs_ok	13	0x3478	108
-fn	_vcp_box_service	13	0x34e4	180
-fn	_vcp_set	13	0x3598	208
+fn	_vcp_set	13	0x3598	240
+fn	_vcp_box_service	13	0x3688	252
