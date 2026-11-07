@@ -191,6 +191,7 @@ def main() -> int:
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", LIB_UV2, "--asm"])
+    run("asm", [py, "scripts/keil2sdcc.py", "awto"])         # clean tree + shim (#68); no-op without clean sources
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
