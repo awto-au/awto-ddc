@@ -564,14 +564,20 @@ class IndPort(Dev):
         self.addr_regs, self.data_reg, self.mem = addr_regs, data_reg, mem if mem is not None else {}
         self.writes = (addr_regs[-1], data_reg)
 
-    def addr(self, m):
-        return int.from_bytes(b"".join(m.rd(a) for a in self.addr_regs), "big")
+    def regs(self, m) -> tuple[int, int]:
+        """(address, data cell); one ucsim dump when the registers are contiguous (BAC1..BAC4), else one per register"""
+        lo, hi = min(self.addr_regs + (self.data_reg,)), max(self.addr_regs + (self.data_reg,))
+        if hi - lo < 8:
+            blk = m.rd(lo, hi - lo + 1)
+            return int.from_bytes(bytes(blk[r - lo] for r in self.addr_regs), "big"), blk[self.data_reg - lo]
+        return int.from_bytes(b"".join(m.rd(r) for r in self.addr_regs), "big"), m.rd(self.data_reg)[0]
 
     def on_write(self, m, a):
+        adr, data = self.regs(m)
         if a == self.data_reg:
-            self.mem[self.addr(m)] = m.rd(a)[0]
+            self.mem[adr] = data
         else:
-            m.put(f"set memory xram 0x{self.data_reg:x} 0x{self.mem.get(self.addr(m), 0):x}")
+            m.put(f"set memory xram 0x{self.data_reg:x} 0x{self.mem.get(adr, 0):x}")
 
 
 def regdb_cells(chip: str = "RTD2795T-CG") -> Cells:

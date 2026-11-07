@@ -26,6 +26,13 @@ PORT_CMD = {"D1": 0x31, "D2": 0x32, "D3": 0x33}
 N_EV = 40
 PROBES = {1: "reset-to-SEARCH start", 2: "SysModeResetState done", 3: "judge SEARCH refused (retry)", 4: "OSD reset proc done",
           5: "free run done", 6: "SysSourceSwitchInputPort done"}       # AWTO_SW_EV_PROBE sites (#60, keil2sdcc)
+MARKS = {0: "DDC/CI + colour + ScalerDebug (pass tail)", 1: "key+diag+testcmd", 2: "SysPowerHandler", 3: "SysJudgeHandler",
+         4: "SysTimerHandler", 5: "SysSourceHandler (rest: judge)", 6: "SysModeHandler", 7: "SysDpRxHandler",
+         8: "SysTMDSRxHandler", 9: "HDCP2 / MST", 10: "OSD handler",
+         20: "source: cable detect + SwitchPort", 21: "source: SysSourceScanPortInitial", 22: "source: SearchTimeInitial",
+         23: "source: SysSourceDetectPort", 30: "DP Rx1: predetect .. scramble", 31: "DP Rx1: HdcpCheck",
+         32: "DP Rx1: GetVideoStream", 33: "DP Rx1: MSACheck", 34: "DP Rx1: GetVideoInfo", 35: "DP Rx1: DisplayFormatSetting",
+         36: "DP Rx1: StreamClkRegenerate", 37: "DP Rx1: FifoCheck (+ vsync adjust)"}           # AWTO_SW_EV_SLOW: segment that ENDS at mark k (keil2sdcc AWTO_SW_MARK)
 
 
 def sym(map_path: Path, name: str) -> int:
@@ -59,6 +66,8 @@ def name(ev_id: int, arg: int) -> str:
         return f"switch cmd 0x{arg:02X}"
     if ev_id == 0x90:
         return f"probe {PROBES.get(arg, arg)}"
+    if ev_id == 0x91:
+        return f"SLOW >= 20 ms before mark {arg}: {MARKS.get(arg, '?')}"
     return {0x50: "hold: disable blocked", 0x51: "hold: logo redrawn", 0x52: "hold: OSD event dropped", 0x60: "logo",
             0x70: "panel VDD early", 0x80: "blank instead of backlight off"}.get(ev_id, f"ev 0x{ev_id:02X}") + f" ({arg})"
 
