@@ -9,7 +9,8 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ALLOWED = {ROOT / "scripts" / "i2cbus.py"}
+ALLOWED = {ROOT / "scripts" / "i2cbus.py",
+           ROOT / "scripts" / "aux_probe.py"}     # fcntl for /dev/nvidiactl RM ioctls (#71); i2c goes through i2cbus
 NAMES = {"I2C_RDWR", "I2C_SLAVE", "I2C_RETRIES", "I2C_TIMEOUT", "I2C_M_RD_RAW", "fcntl"}
 CODES = {0x0701, 0x0702, 0x0703, 0x0707}          # I2C_RETRIES, I2C_TIMEOUT, I2C_SLAVE, I2C_RDWR
 
