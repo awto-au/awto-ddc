@@ -628,8 +628,11 @@ stub	_ScalerDpRx1VideoSetting	C	0x2719	9
 stub	_dp_rd	C	0x2722	9
 stub	_dp_rd16	C	0x272b	9
 stub	_dp_rd_n	C	0x2734	9
+stub	_AwtoDiagDelayCal	C	0x273d	9
+stub	_AwtoDiagT2Diff	C	0x2746	9
 fn	_ScalerBurstWrite	C	0x2750	168
 fn	_ScalerGetDataPortWord	C	0x27f8	68
+stub	_AwtoDiagT2Snap	C	0x283c	9
 stub	_AwtoMsg0	C	0x285c	9
 stub	_AwtoMsgV	C	0x2865	9
 stub	_ScalerDebug	C	0x286e	9
@@ -639,6 +642,7 @@ stub	_ScalerFlashRead	C	0x2889	9
 stub	_ScalerFlashWrite	C	0x2892	9
 stub	_ScalerIOSCTrimming	C	0x289b	9
 stub	_ScalerMcuPwmAdjustFrequency	C	0x28a4	9
+stub	_AwtoCalSecant	C	0x28ad	9
 stub	_ScalerSyncActiveProc	C	0x28b6	9
 stub	_ScalerSyncCheckUrgentEvent	C	0x28bf	9
 stub	_ScalerSyncDdcDetect_EXINT1	C	0x28c8	9
@@ -1655,7 +1659,7 @@ fn	_UserCommonInterfaceOsdHandler	4	0xa294	16
 fn	_UserCommonInterfaceOsdResetProc	4	0xa2a4	68
 fn	_UserCommonInterfaceTimerEventProc	4	0xa2e8	32
 fn	_UserCommonNVRamGetSystemData	4	0xa308	416
-fn	_AwtoDiagDelayCal	4	0xa4a8	2384
+fn	_AwtoCalSecant	4	0xa4a8	920
 fn	_ScalerMcu5usDelayCalc	4	0xadf8	100
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
@@ -2858,6 +2862,7 @@ fn	_dp_wr	12	0x0bc4	64
 fn	_dp_wr16	12	0x0c04	112
 fn	_hb_burst	12	0x0c74	340
 fn	_reg_rd_n	12	0x0dc8	120
+fn	_AwtoDiagDelayCal	12	0x0e40	2848
 fn	_AwtoMeasEvent	13	0x1df0	260
 fn	_AwtoMeasT2Sample	13	0x1ef4	448
 fn	_AwtoSwArm	13	0x20b4	60

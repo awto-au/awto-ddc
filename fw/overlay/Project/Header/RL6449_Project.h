@@ -248,7 +248,18 @@ extern void AwtoLpMark(unsigned char ucK);
 #else
 #define AWTO_LP(k)
 #endif
-#define AWTO_SW_EV_PROBE                                       0x90    // switch-path probe (#60); arg = site, names in scripts/sw_timeline.py
+#ifndef _AWTO_SW_MARKS
+#define _AWTO_SW_MARKS                                          _OFF    // -D_AWTO_SW_MARKS=_ON: log main-loop segments >= AWTO_SW_SLOW_MS (#60)
+#endif
+#define AWTO_SW_SLOW_MS                                         20      // 7x a 4K60 pass (2.7 ms): only real stalls get logged
+#define AWTO_SW_EV_SLOW                                         0x91    // arg = mark k: the code before mark k took >= AWTO_SW_SLOW_MS
+#if(_AWTO_SW_MARKS == _ON)
+extern void AwtoSwMark(unsigned char ucK);
+#define AWTO_SW_MARK(k)                                         AwtoSwMark(k)
+#else
+#define AWTO_SW_MARK(k)
+#endif
+#define AWTO_SW_EV_PROBE                                      0x90    // switch-path probe (#60); arg = site, names in scripts/sw_timeline.py
 typedef struct
 {
     unsigned char ucId;

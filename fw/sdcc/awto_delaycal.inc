@@ -40,6 +40,31 @@ static __xdata StAwtoT2Snap s_stSnapA, s_stSnapB, s_stT3A, s_stT3B;
 unsigned char g_ucAwtoCal5;                                        // calibrated DELAY_5US / DELAY_XUS base counts, 0 = none yet
 unsigned char g_ucAwtoCalX;
 unsigned char g_ucAwtoCal5X;                                       // DELAY_5US_EXINT's own count (#54: copies differ by layout)
+
+// N for 10 x 5 us at AWTO_DELAY_TARGET_PCT, from (n0, t0) and (n1, t1) on the line t = a + b*n; rounded up (never short)
+static unsigned char AwtoCalSecant(unsigned char ucN0, unsigned int usT0, unsigned char ucN1, unsigned int usT1, unsigned int usNom)
+{
+    long lTgt = (long)usNom * AWTO_DELAY_TARGET_PCT / 100;
+    long lDn = (long)ucN0 - ucN1, lDt = (long)usT0 - usT1, lNum, lQ, lN;
+
+    if((lDn == 0) || (lDt == 0) || ((lDn > 0) != (lDt > 0)))
+    {
+        return ucN1;                                               // no slope: keep the proportional result
+    }
+    lNum = (lTgt - (long)usT1) * lDn;
+    if(lDt < 0)
+    {
+        lNum = -lNum;
+        lDt = -lDt;
+    }
+    lQ = lNum / lDt;                                               // truncates toward 0
+    if(lQ * lDt < lNum)
+    {
+        lQ++;                                                      // ceil
+    }
+    lN = ucN1 + lQ;
+    return (lN < 1) ? 1 : ((lN > 255) ? 255 : (unsigned char)lN);
+}
 #endif
 
 // Snapshot pair around a body, EA off for the body (<= 100 us: the Timer2 ISR only runs later, TF2 holds one overflow);
@@ -99,6 +124,8 @@ static void AwtoDiagDelayCal(void)
 
         if((RCAP2H == AWTO_DELAY_CAL_RCAP2H) && (usM5 != 0) && (usI5 != 0) && (usMinX != 0))      // M2PLL clock only (counts are per clock)
         {
+            unsigned char ucN0 = g_ucDelay5usN_Base, ucN0X = g_ucAwtoDelay5usNX;
+
             ulN = ((unsigned long)g_ucDelay5usN_Base * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usM5) - 1) / (100UL * usM5);
             g_ucAwtoCal5 = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
             ulN = ((unsigned long)g_ucAwtoDelay5usNX * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usI5) - 1) / (100UL * usI5);
@@ -112,6 +139,12 @@ static void AwtoDiagDelayCal(void)
             AWTO_CAL_RUN(g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
             AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
             AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
+            AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
+            // 5 us copies: time = fixed + N x step, so the proportional N above overshoots; one secant step from both points
+            g_ucDelay5usN_Base = g_ucAwtoCal5 = AwtoCalSecant(ucN0, usM5, g_ucAwtoCal5, g_stAwtoDiag.usDelay5us10, usNom5);
+            g_ucAwtoDelay5usNX = g_ucAwtoCal5X = AwtoCalSecant(ucN0X, usI5, g_ucAwtoCal5X, g_stAwtoDiag.usDelay5usIsr10, usNom5);
+            g_stAwtoDiag.ucDelay5usN = g_ucDelay5usN_Base;
+            AWTO_CAL_RUN(g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
             AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
         }
     }

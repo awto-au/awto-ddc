@@ -28,6 +28,21 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
     }
 }
 
+#if(_AWTO_SW_MARKS == _ON)
+static unsigned int s_usAwtoSwMark;
+
+void AwtoSwMark(unsigned char ucK)      // logs AWTO_SW_EV_SLOW(k) when the code since the previous mark took >= AWTO_SW_SLOW_MS
+{
+    unsigned int usNow = AwtoSwNow();
+
+    if((unsigned int)(usNow - s_usAwtoSwMark) >= AWTO_SW_SLOW_MS)
+    {
+        AwtoSwEvent(AWTO_SW_EV_SLOW, ucK);
+    }
+    s_usAwtoSwMark = usNow;
+}
+#endif
+
 void AwtoSwArm(unsigned char ucPort)
 {
     g_stAwtoSw.ucMagic = 'S';

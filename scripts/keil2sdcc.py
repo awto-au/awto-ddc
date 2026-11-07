@@ -261,7 +261,15 @@ INSERTS = [
 ] + [("Kernel/System/Code/SysMain.c", rf"^\s*{fn}\(\);", f"            AWTO_LP({k});", r"^void main\(void\)$")
      for k, fn in enumerate(("AwtoSwPoll", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler", "SysSourceHandler",
                              "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler", "ScalerHdcp2Handler", "AwtoHoldOsdGuard",
-                             "UserCommonDdcciHandler"))] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
+                             "UserCommonDdcciHandler"))] + [
+    ("Kernel/System/Code/SysMain.c", rf"^\s*{fn}\(\);", f"            AWTO_SW_MARK({k});", r"^void main\(void\)$")     # #60 slow segments
+    for k, fn in enumerate(("AwtoSwPoll", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler", "SysSourceHandler",
+                            "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler", "ScalerHdcp2Handler", "AwtoHoldOsdGuard",
+                            "UserCommonDdcciHandler"))] + [
+    ("Kernel/System/Code/SysSource.c", rf"^\s*{fn}\(g_ucSearchIndex\);", f"            AWTO_SW_MARK({k});", r"^void SysSourceHandler\(void\)$")
+    for k, fn in ((20, "SysSourceScanPortInitial"), (21, "SysSourceSearchTimeInitial"), (22, "SysSourceDetectPort"))] + [
+    ("Kernel/System/Code/SysSource.c", r"^\s*SysSourceJudge\(\);", "            AWTO_SW_MARK(23);", r"^void SysSourceHandler\(void\)$"),
+] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
     ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")
     for case, tail in (("_PANEL_ON", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)"),
                        ("_BACKLIGHT_ON", r"^\s*// Set Video Stream parameter"))
