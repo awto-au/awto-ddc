@@ -104,6 +104,10 @@ def dlog(s):
 
 
 class Rtd(Isp):
+    # bytes per I2C read of the 0x70 read FIFO (divides 1024). Cost is per transaction, not per byte: NVIDIA DP-AUX i2c
+    # ~42 ms per write+read whatever the length up to its 256 B cap (unit 2, 2026-11-07, #61): 256 = 4x fewer reads.
+    read_chunk = 64
+
     def set_retries(self, n):
         self.bus.set_retries(n)
 
@@ -233,8 +237,8 @@ class Rtd(Isp):
             self.write(0x64, (a >> 16) & 0xFF); self.write(0x65, (a >> 8) & 0xFF); self.write(0x66, a & 0xFF)
             self.write(0x60, 0x47)
             self.wait_engine(f"read 0x{a:06x}")
-            for _ in range(1024 // 64):
-                out += self.read_block(0x70, 64)
+            for _ in range(1024 // self.read_chunk):
+                out += self.read_block(0x70, self.read_chunk)
         return bytes(out[:n])
 
     def flash_crc(self, addr, n):

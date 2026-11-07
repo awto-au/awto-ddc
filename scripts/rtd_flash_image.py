@@ -44,6 +44,12 @@ FLASH = 1 << 20
 DUMPS = Path.home() / "vendors/realtek/analysis/dumps"
 
 
+def unit_log(serial: str, s: str) -> None:
+    """ISP enter/exit into the per-monitor log Dan watches (dev.py writes the rest there)."""
+    with (F.repo_root() / f"tmp/logs/unit-{serial}.log").open("a") as f:
+        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} [rtd_flash_image] {s}\n")
+
+
 def log(s):
     F.log(s)
 
@@ -368,6 +374,8 @@ def main() -> int:
     ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--identity", help="EDID silent (unit held): how the bus was proven to be this unit")
+    ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
+                    help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
     i2cbus.dev_hint("flash", "rtd_flash_image.py")
@@ -391,10 +399,13 @@ def main() -> int:
     seen = i2cbus.require_unit(a.bus, a.serial, a.identity)        # before any ISP traffic (#50.28)
     log(f"unit guard: EDID serial {seen!r} on bus {a.bus}" + (f"; EDID silent, identity per caller: {a.identity}" if seen is None else ""))
     isp = Rtd(a.bus)
+    isp.read_chunk = a.read_chunk
     isp.write_mode, isp.burst_chunk = a.write_mode, a.burst_chunk
     entered = False                                   # 0xEE reset only once the ISP-enable write was attempted
     try:
         entered = True
+        unit_log(a.serial, f"ISP enter (MCU halted) bus {a.bus}")
+        t_isp = time.monotonic()
         isp.write(0x6F, 0x80)
         if not isp.read(0x6F) & 0x80:
             entered = False                           # MCU never halted: nothing to reset
@@ -414,6 +425,7 @@ def main() -> int:
             except OSError:
                 pass
             log("scaler reset sent (0xEE <- 0x02)")
+            unit_log(a.serial, f"ISP exit (reset) after {time.monotonic() - t_isp:.1f} s")
         log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)")
             + f", bus {i2cbus.rate_khz()} kHz")
 
