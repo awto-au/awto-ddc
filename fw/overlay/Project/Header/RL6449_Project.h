@@ -47,7 +47,9 @@
 #if(_AWTO_DELAY_SELFCAL == _ON)
 extern unsigned char g_ucAwtoCal5;
 extern unsigned char g_ucAwtoCalX;
+extern unsigned char g_ucAwtoCal5X;
 #endif
+extern __data unsigned char g_ucAwtoDelay5usNX;       // DELAY_5US_EXINT count (#54), set beside g_ucDelay5usN_Base
 #if(_AWTO_DIAG == _ON)
 typedef struct
 {
@@ -229,6 +231,7 @@ extern void AwtoFreqUpdate(void);
 #define AWTO_SW_EV_LOGO                                         0x60    // OsdDispShowLogo: arg 0 = draw start, 1 = drawn (OSD on)
 #define AWTO_SW_EV_VDD                                          0x70    // panel VDD on early, right after pin-share (#63 boot time)
 #define AWTO_SW_EV_BLANK                                        0x80    // backlight kept on, picture blanked instead (#60 step 2); arg = site
+#define AWTO_SW_EV_PROBE                                        0x90    // switch-path probe (#60); arg = site, names in scripts/sw_timeline.py
 typedef struct
 {
     unsigned char ucId;
