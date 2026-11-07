@@ -973,9 +973,9 @@ def cmd_awto(jobs):
     for c, rc, msg in res:
         for l in msg.splitlines():
             log(f"awto {c.name}: {l}")
-    if SHIM_C.exists():                                      # fw_build passes this to sdcc_bank --pin-common (names defined in the shim)
-        sh = (WORK / "asm" / "awto_shim_sdk_boundary.asm").read_text()
-        (WORK / "pin_common.txt").write_text(",".join("_" + n for n in PIN_COMMON if re.search(rf"^_{n}:", sh, re.M)))
+    # fw_build passes this to sdcc_bank --pin-common: names defined in the shim or in a clean module (#68: aliased hot leaves)
+    sh = "\n".join(p.read_text(errors="replace") for p in sorted((WORK / "asm").glob("awto_*.asm")))
+    (WORK / "pin_common.txt").write_text(",".join("_" + n for n in PIN_COMMON if re.search(rf"^_{n}:", sh, re.M)))
     bad = [c for c, rc, _ in res if rc]
     log(f"awto: modules {', '.join(awto_modules())}; {len(res) - len(bad)}/{len(res)} files ok")
     return 1 if bad else 0
