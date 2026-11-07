@@ -37,12 +37,40 @@ def run(extra_c):
     return {f["kind"] for f in F}
 
 
+MAP_K = MAP.replace("00015000    00000001 =           1.", "00015000    0000000A =          10.") + """CH_k                                00016000    00000004 =           4. bytes (REL,CON,CODE)
+C:   00016000  _k
+ST_b                                00000210    00000008 =           8. bytes (REL,CON,CODE)
+C:   00000210  __bs_b
+"""
+
+
+def run_keil(tag_bank):
+    """bank-1 fn passes a bank-1 const as a Keil generic pointer (R1 lo, R2 hi, R3 tag) through an 8 B stub to bank `tag_bank`."""
+    img = bytearray(build(bytes([0x22, 0x22, 0x22, 0x22])))
+    img[0x15000:0x1500a] = bytes([0x79, 0x00, 0x7A, 0x60, 0x7B, 0x80, 0x12, 0x02, 0x10, 0x22])  # mov r1/r2/r3; lcall __bs_b; ret
+    img[0x210:0x218] = bytes([0x78, tag_bank, 0x90, 0x50, 0x00, 0x02, 0x02, 0x78])               # mov r0,#bank; mov dptr; ljmp
+    with tempfile.TemporaryDirectory() as d:
+        b, m, lay = Path(d, "i.bin"), Path(d, "i.map"), Path(d, "l.tsv")
+        b.write_bytes(bytes(img)); m.write_text(MAP_K)
+        lay.write_text("fn\t_a\t0\t0x0000\t8\nfn\t_b\t1\t0x0000\t16\nfn\t_c\tC\t0x0100\t8\nconst\t_k\t1\t0x1000\t4\n")
+        _, F = L.run(b, m, lay, 0x5000, log=lambda s: None)
+    return {f["kind"] for f in F}
+
+
 def main():
     ok = run(bytes([0x12, 0x50, 0x00, 0x22]))                # common calls banked 0x5000 directly
     assert "call_common_to_banked" in ok, ok
     assert "stack_arg_via_stub" in ok, ok                    # _a reads SP and has a stub
     clean = run(bytes([0x12, 0x02, 0x00, 0x22]))              # common calls the stub at 0x0200: fine
     assert "call_common_to_banked" not in clean, clean
+    assert "stub_bad_target" not in clean, clean
+    # stub forms: 6 B lcall + data, 9 B mov r0/r1/r2 + ljmp (SDCC 0-2), 8 B mov r0 + mov dptr + ljmp (Keil ABI, --sdcccall 3)
+    assert L.stub_target(bytes([0x12, 0x00, 0x50, 0x34, 0x92, 0x03])) == (0x9234, 3)
+    assert L.stub_target(bytes([0x78, 0x05, 0x79, 0x34, 0x7A, 0x92, 0x02, 0x02, 0x78])) == (0x9234, 5)
+    assert L.stub_target(bytes([0x78, 0x07, 0x90, 0x92, 0x34, 0x02, 0x02, 0x78])) == (0x9234, 7)
+    assert L.stub_target(bytes([0x78, 0x07, 0x90, 0x92, 0x34, 0x12, 0x02, 0x78])) is None    # lcall, not ljmp
+    assert "gptr_const_xbank" in run_keil(0), "Keil gptr to a bank-1 const through a stub into bank 0 not flagged"
+    assert "gptr_const_xbank" not in run_keil(1)              # callee in the const's own bank: fine
     print("PASS fw_link_check_test")
     return 0
 

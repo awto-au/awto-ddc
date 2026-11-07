@@ -156,7 +156,7 @@ def check(im, xdata=(), regnames=None):
     fn_start = {(c["reg"], c["addr"] & 0xFFFF): c for c in im.chunks if c["kind"] == "fn"}
     stubs = {}
     in_xdata = lambda v: any(lo <= v < hi for lo, hi in xdata)
-    # stub decode: lcall __bs_call + lo, hi, bank (6 B) or mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp (9 B)
+    # stub decode: lcall __bs_call + lo, hi, bank (6 B), mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp (9 B), mov r0,#bank; mov dptr,#t; ljmp (8 B)
     for c in im.chunks:
         if c["kind"] != "stub":
             continue
@@ -170,6 +170,18 @@ def check(im, xdata=(), regnames=None):
         stubs[c["addr"]] = (tgt, bank, tc)
         if tc is None:
             add("stub_bad_target", c["name"], f"-> bank {bank} 0x{tgt:04x} is not a function start", c["addr"])
+    stub_lo = {a & 0xFFFF: a for a in stubs}
+
+    def xbank_stub(own, nxt, reg, src, at):
+        """pointer to a banked const set up: does a stub call into another bank follow?"""
+        for x in nxt:
+            if x.text.startswith(("RET", "LJMP", "SJMP", "AJMP", "JMP")):
+                break
+            if x.text.startswith("LCALL") and x.target is not None and x.target in stub_lo:
+                tgt, bank, tc = stubs[stub_lo[x.target]]
+                if bank != reg:
+                    add("gptr_const_xbank", src, f"{own[0]['name']} (bank {reg}) -> stub {short(tc)} (bank {bank})", at)
+                break
     sp_read = re.compile(r"^MOV (A|R[0-7]|DPL|DPH|B),SP$")
     for sa, (tgt, bank, tc) in stubs.items():
         if tc is None or tc["reg"] == "C":
@@ -245,6 +257,14 @@ def check(im, xdata=(), regnames=None):
                             elif cs and not own and not im.find(reg, v):
                                 add("const_other_bank", src, f"arith base 0x{v:04x}: {cs[0][1]['name']} is in bank {cs[0][0]}, code in bank {reg}", i.addr)
                         break
+            mr = R2_IMM.match(t)
+            if mr:                                   # Keil ABI generic pointer argument: R3 tag, R2 hi, R1 lo (R1 holds nothing else)
+                lo = next((int(m1.group(1), 16) for y in ins[max(0, k - 4):k + 5] if (m1 := R1_IMM.match(y.text))), None)
+                v = int(mr.group(1), 16) << 8 | (lo or 0)
+                if lo is not None and v >= im.common:
+                    own = [x for r, x in im.consts_at(v) if r == reg]
+                    if own:
+                        xbank_stub(own, ins[k + 1:k + 15], reg, src, i.addr)
             if i.dptr is not None:
                 v = i.dptr
                 nxt = ins[k + 1:k + 1 + 14]
@@ -267,16 +287,7 @@ def check(im, xdata=(), regnames=None):
                     elif cs and not own and not im.find(reg, v):
                         add("const_other_bank", src, f"{cs[0][1]['name']} is in bank {cs[0][0]}, code in bank {reg}", i.addr)
                     elif own:
-                        # pointer to a banked const: does a stub call into another bank follow?
-                        for x in nxt:
-                            if x.text.startswith(("RET", "LJMP", "SJMP", "AJMP", "JMP")):
-                                break
-                            if x.text.startswith("LCALL") and x.target is not None and x.target in {a & 0xFFFF for a in stubs}:
-                                sa = next(a for a in stubs if a & 0xFFFF == x.target)
-                                tgt, bank, tc = stubs[sa]
-                                if bank != reg:
-                                    add("gptr_const_xbank", src, f"{own[0]['name']} (bank {reg}) -> stub {short(tc)} (bank {bank})", i.addr)
-                                break
+                        xbank_stub(own, nxt, reg, src, i.addr)
                     # address of a banked fn taken in code
                     if reg != "C" or v >= im.common:
                         for fc in fnaddrs.get(v, ()):
@@ -306,13 +317,18 @@ def symbolize(im, stubmap, reg, v):
     return (nm, v - (c["addr"] & 0xFFFF))
 
 
+R1_IMM, R2_IMM = re.compile(r"MOV R1,#([0-9A-F]{2})h$"), re.compile(r"MOV R2,#([0-9A-F]{2})h$")
+
+
 def stub_target(b):
     """(target 16-bit address, bank) of a stub's bytes, or None. 6 B: lcall __bs_call + lo hi bank;
-    9 B: mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp __bs_call."""
+    9 B: mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp __bs_call; 8 B (Keil ABI): mov r0,#bank; mov dptr,#target; ljmp __bs_call."""
     if len(b) == 6 and b[0] == 0x12:
         return b[3] | b[4] << 8, b[5]
     if len(b) == 9 and (b[0], b[2], b[4], b[6]) == (0x78, 0x79, 0x7A, 0x02):
         return b[3] | b[5] << 8, b[1]
+    if len(b) == 8 and (b[0], b[2], b[5]) == (0x78, 0x90, 0x02):
+        return b[3] << 8 | b[4], b[1]
     return None
 
 

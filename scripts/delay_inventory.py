@@ -642,7 +642,7 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
     targets = {"delay_ms": "ScalerTimerDelayXms", "poll": "ScalerTimerPollingFlagProc", "wait_event": "ScalerTimerWaitForEvent"}
 
     rtab_lo = syms["__bs_ret"][0] - 64
-    rtab_hi = syms["__bs_ret_sw"][0] + 8
+    rtab_hi = rtab_lo + 64                             # 16 restore entries x 4 B (fw/sdcc/bank.asm __bs_rtab)
     img = b.img
     by_fk = collections.defaultdict(list)
     for r in rows:
@@ -682,7 +682,7 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
 
     def on_entry(kind):
         def fn(mm, regs):
-            arg = regs["dptr"]
+            arg = regs["a1"]
             key, pc, bank = locate(kind, arg)
             now = t2()
             s = sites.setdefault(key, dict(kind=kind, calls=0, nominal_ms=0, ms=0.0, first_ms=now, expired=0, args=[],
@@ -717,7 +717,7 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
 
     def on_event(react):
         def fn(mm, regs):
-            events.append((t2(), regs["dptr"], regs["r"][7], react, phase["p"] == "act_"))
+            events.append((t2(), regs["a1"], regs["a2"], react, phase["p"] == "act_"))
             return None
         return fn
 

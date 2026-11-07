@@ -25,8 +25,7 @@ LINE = re.compile(r"^0x([0-9a-f]+)\s+((?:[0-9a-f]{2} )+)\s*(\w+)", re.M)
 
 def parse_syms(mp: str):
     allsym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
-    stubs = sorted((v, k) for k, v in allsym.items() if k.startswith("__bs_") and k not in (
-        "__bs_call", "__bs_call_sw", "__bs_ret", "__bs_ret_sw"))
+    stubs = sorted((v, k) for k, v in allsym.items() if k.startswith("__bs_") and k not in F.BS_TRAMP)
     return allsym, stubs
 
 
@@ -52,16 +51,17 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log):
     s, sym, where = boot(img, mapp, be, log)
     allsym, stubs = parse_syms(mp)
     stub_starts = [v for v, _ in stubs]
-    ssize = 9 if stubs and img[stubs[0][0]] == 0x78 else 6      # 9 B mov/mov/mov/ljmp stub or 6 B lcall + data
+    ssize = F.stub_size(img, stubs[0][0]) if stubs else 6
     stub_name = dict(stubs)
     call, call_sw, ret, ret_sw = (allsym[k] for k in ("__bs_call", "__bs_call_sw", "__bs_ret", "__bs_ret_sw"))
+    call_end, ret_end = F.sw_ret(img, call_sw) + 1, F.sw_ret(img, ret_sw) + 1
     rtab = (ret - 64, ret)
 
     def region(pc):
         """'' or the trampoline part this pc belongs to"""
-        if call <= pc < call_sw + 8:
+        if call <= pc < call_end:
             return "__bs_call"
-        if rtab[0] <= pc < ret_sw + 8:
+        if rtab[0] <= pc < ret_end:
             return "__bs_ret+rtab"
         i = bisect.bisect_right(stub_starts, pc) - 1
         if i >= 0 and pc < stub_starts[i] + ssize:

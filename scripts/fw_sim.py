@@ -166,6 +166,30 @@ def parse_map(mp: str, img: bytes, ncode: int | None = None):
     return sym, where
 
 
+BS_TRAMP = ("__bs_call", "__bs_call_sw", "__bs_ret", "__bs_ret_sw", "__bs_cur", "__bs_keil")   # bank.asm labels, not stubs
+
+
+def keil_abi(sym: dict) -> bool:
+    """Image built at --sdcccall 3 (Keil registers, awto-sdcc#7): fw/sdcc/bank.asm exports the __bs_keil marker.
+    Without it: SDCC levels 0-2 (arg 1 DPL/DPH, byte/int result DPL/DPH)."""
+    return "__bs_keil" in sym
+
+
+def sw_ret(img: bytes, at: int) -> int:
+    """Address of the RET that ends a trampoline from its *_sw label (old stub: 4 moves then RET; Keil stub: RET at +0)."""
+    for i in range(at, at + 9):
+        if img[i] == 0x22:
+            return i
+    raise ValueError(f"no RET within 9 B of 0x{at:x}")
+
+
+def stub_size(img: bytes, at: int) -> int:
+    """Bank stub length from its bytes: 8 B mov r0,#b; mov dptr,#fn; ljmp (Keil), 9 B mov r0/r1/r2; ljmp, 6 B lcall + data."""
+    if img[at] == 0x78:
+        return 8 if img[at + 2] == 0x90 else 9
+    return 6
+
+
 def run_chunk(s, flash, n, timeout=120):
     """step n instructions, serving flash-port events; returns the last output (the Stop/Simulated text)."""
     s.send(f"step {n}")
@@ -430,15 +454,15 @@ def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None):
 def video_stubs(m: "Machine", hdmi: HdmiInput):
     """Functions replaced because they poll the HDMI Rx PHY (CDR/DFE lock, TMDS clock count, packet SRAM) that is not modelled:
     pre-detect and scan on D2 succeed, stability check passes, scan sets the input pixel clock like the SDK does."""
-    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["dptr"] & 255) == D2_INPUT_PORT})
+    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == D2_INPUT_PORT})
     m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
     m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})   # no DP source: pending HPD events never end
 
     def scan(m, r):
-        if (r["dptr"] & 255) != D2_INPUT_PORT:
-            return {"dpl": SOURCE_NONE}
+        if (r["a1"] & 255) != D2_INPUT_PORT:
+            return {"val": SOURCE_NONE}
         m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
-        return {"dpl": SOURCE_HDMI}
+        return {"val": SOURCE_HDMI}
     m.stub("ScalerTMDSScanInputPort", scan)
 
 
@@ -495,7 +519,8 @@ class Machine:
         self.ticks, self.instr, self._n, self._q, self._stop, self.last_out = 0, 0, 0, [], False, ""
         self.stubs, self.stub_hits = {}, {}
         self.t2_scale, self._t2_set, self._t2_at = 1, -1, -10**9
-        self.ret_pc = ret_pc if ret_pc is not None else self.sym["__bs_call_sw"] + 5            # the RET that ends __bs_call (mov dpl,r5 / mov dph,r6 / mov a,r4 / ret)
+        self.keil = ncode is not None or keil_abi(self.sym)      # vendor (Keil) image or --sdcccall 3 build
+        self.ret_pc = ret_pc if ret_pc is not None else sw_ret(img, self.sym["__bs_call_sw"])   # skips the stub's register moves
         self.hook = {}
         for d in self.devs:
             for a in d.reads:
@@ -558,8 +583,10 @@ class Machine:
 
     def stub(self, name: str, fn):
         """Replace a function: fetch breakpoint on its entry (bank checked at the stop; common code matches any bank);
-        fn(m, regs) -> dict (dpl, dph, carry) is the return value and the call is skipped with a RET at the entry; None =
-        watch only, the function runs. regs = acc, r[0..7], dptr from the stop text."""
+        fn(m, regs) -> dict is the return value and the call is skipped with a RET at the entry; None = watch only, the
+        function runs. regs = acc, b, r[0..7], dptr from the stop text, plus ABI-neutral a1 (arg 1 as int: DPH:DPL, Keil
+        R6:R7; a char arg is a1 & 255) and a2 (char arg 2: R7, Keil R5). Result keys: val (char/int result in the image's
+        registers), carry (bit), or raw dpl / dph / r6 / r7."""
         v = self.sym.get("_" + name)
         if v is None:
             raise SimError(f"_{name} not in the map")
@@ -581,11 +608,18 @@ class Machine:
         bb = re.search(r"B= 0x([0-9a-f]{2})", out)
         regs = {"acc": int(acc.group(1), 16) if acc else 0, "b": int(bb.group(1), 16) if bb else 0, "r": [int(x, 16) for x in rr.group(1).split()] if rr else [0] * 8,
                 "dptr": int(dp.group(1), 16) if dp else 0}
+        r = regs["r"]
+        regs["a1"], regs["a2"] = (r[6] << 8 | r[7], r[5]) if self.keil else (regs["dptr"], r[7])
         ret = fn(self, regs)
         self.stub_hits[name] = self.stub_hits.get(name, 0) + 1
         if ret is None:                                   # watch only: the function runs
             return
-        
+        ret = dict(ret)
+        if "val" in ret:                                  # char/int result: R7 / R6:R7 (Keil), DPL / DPH:DPL (SDCC 0-2)
+            v = ret.pop("val")
+            ret.update({"r7": v & 255, "r6": v >> 8 & 255} if self.keil else {"dpl": v & 255, "dph": v >> 8 & 255})
+        if "r6" in ret:
+            self.put(f"set memory iram 0x6 0x{ret['r6'] & 255:x}")
         if "r7" in ret:                                   # Keil byte result (register bank 0; main-context calls)
             self.put(f"set memory iram 0x7 0x{ret['r7'] & 255:x}")
         if "dpl" in ret:
@@ -1028,7 +1062,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
     snaps = decision_stubs(m)
 
     def am(m_, r):
-        msgs[r["dptr"] & 0xFFFF] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
+        msgs[r["a1"]] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
     for fn in ("AwtoMsg0", "AwtoMsgV"):
         m.stub(fn, am)
     ma = m.addr("g_stModeInfo")
