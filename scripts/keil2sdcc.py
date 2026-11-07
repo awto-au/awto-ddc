@@ -319,15 +319,7 @@ SUBS = [
      lambda m: m.group(1) + "\n#if(_AWTO_DIAG == _ON)  // [keil2sdcc] sub\n    AwtoMsgLoad();\n#endif", 1),
     # #54: an M2PLL re-entry (power saving -> on) keeps the self-calibrated loop counts
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelay5usN_Base = _M2PLL_DELAY6US_CNT;",
-     lambda m: "g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;  // [keil2sdcc] sub\n"
-               "        g_ucAwtoDelay5usNX = (g_ucAwtoCal5X != 0) ? g_ucAwtoCal5X : _M2PLL_DELAY6US_CNT;", 1),
-    # #54 option A: DELAY_5US_EXINT gets its own count (the two copies differ by layout, one shared count put one at 126 %)
-    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelay5usN_Base = (_IOSC|_XTAL)(_DELAY6US_CNT);",
-     lambda m: m.group(0) + "  // [keil2sdcc] sub\n        g_ucAwtoDelay5usNX = " + m.group(1) + m.group(2) + ";", 2),
-    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"BYTE __data g_ucDelay5usI_EXINT = 1;",
-     lambda m: m.group(0) + "\nBYTE __data g_ucAwtoDelay5usNX = 1;  // [keil2sdcc] sub", 1),
-    ("Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h", r"g_ucDelay5usI_EXINT = \(g_ucDelay5usN_Base\);",
-     lambda m: "g_ucDelay5usI_EXINT = (g_ucAwtoDelay5usNX);", 1),
+     lambda m: "g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;  // [keil2sdcc] sub", 1),
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelayXusN_Base = _M2PLL_DELAY4US_CNT;",
      lambda m: "g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;  // [keil2sdcc] sub", 1),
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE

@@ -47,9 +47,7 @@
 #if(_AWTO_DELAY_SELFCAL == _ON)
 extern unsigned char g_ucAwtoCal5;
 extern unsigned char g_ucAwtoCalX;
-extern unsigned char g_ucAwtoCal5X;
 #endif
-extern __data unsigned char g_ucAwtoDelay5usNX;       // DELAY_5US_EXINT count (#54), set beside g_ucDelay5usN_Base
 #if(_AWTO_DIAG == _ON)
 typedef struct
 {

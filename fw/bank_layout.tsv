@@ -625,7 +625,6 @@ stub	_ScalerDpRx1GetVideoInfo	C	0x26fe	9
 stub	_ScalerDpRx1HDCPUnplugReset	C	0x2707	9
 stub	_ScalerDpRx1SetHotPlugEvent	C	0x2710	9
 stub	_ScalerDpRx1VideoSetting	C	0x2719	9
-stub	_dp_rd	C	0x2722	9
 stub	_dp_rd16	C	0x272b	9
 stub	_dp_rd_n	C	0x2734	9
 stub	_AwtoDiagDelayCal	C	0x273d	9
@@ -642,7 +641,6 @@ stub	_ScalerFlashRead	C	0x2889	9
 stub	_ScalerFlashWrite	C	0x2892	9
 stub	_ScalerIOSCTrimming	C	0x289b	9
 stub	_ScalerMcuPwmAdjustFrequency	C	0x28a4	9
-stub	_AwtoCalSecant	C	0x28ad	9
 stub	_ScalerSyncActiveProc	C	0x28b6	9
 stub	_ScalerSyncCheckUrgentEvent	C	0x28bf	9
 stub	_ScalerSyncDdcDetect_EXINT1	C	0x28c8	9
@@ -1659,7 +1657,6 @@ fn	_UserCommonInterfaceOsdHandler	4	0xa294	16
 fn	_UserCommonInterfaceOsdResetProc	4	0xa2a4	68
 fn	_UserCommonInterfaceTimerEventProc	4	0xa2e8	32
 fn	_UserCommonNVRamGetSystemData	4	0xa308	416
-fn	_AwtoCalSecant	4	0xa4a8	920
 fn	_ScalerMcu5usDelayCalc	4	0xadf8	100
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
@@ -2854,7 +2851,6 @@ fn	_RTDFactorySSCRight	12	0x035c	12
 fn	_ar_muldiv	12	0x0368	584
 fn	_mul64	12	0x05b0	520
 fn	_rnd_shl	12	0x07b8	660
-fn	_dp_rd	12	0x0a4c	60
 fn	_dp_rd_n	12	0x0a88	152
 fn	_dp_rmw	12	0x0b20	100
 fn	_dp_test	12	0x0b84	64
