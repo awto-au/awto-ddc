@@ -41,7 +41,7 @@ def main() -> int:
     try:
         for it in a.items:
             name, _, n = it.partition(":")
-            addr = int(name, 0) if re.match(r"^(0x)?[0-9a-fA-F]+$", name) else sym.get(name)
+            addr = int(name, 16) if re.match(r"^(0x)?[0-9a-fA-F]+$", name) else sym.get(name)   # bare hex = hex
             if addr is None:
                 print(f"{name}: not in map"); continue
             vals = []

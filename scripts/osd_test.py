@@ -24,6 +24,9 @@ sys.path.insert(0, str(HERE))
 from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "logo-off": 0x25, "logo-3s": 0x21,
             "clear": 0x27}                                 # --cmd only (firmware test byte, #33/#28)
+HOLD_MARK = "_g_ucAwtoTestCmdMax"                       # in the map = image understands 0x24..0x27 (#28)
+OLD_FALLBACK = {0x26: 0x20, 0x24: 0x21}                 # image without holds: timed variants; 0x25/0x27 have none
+CONSUME_READS = 8                                      # read-backs (~0.4 s each); main loop clears the byte in one pass, but 0x35 NAKs while it draws the OSD
 
 
 def osdinfo_addr(map_path: Path) -> int:
@@ -50,6 +53,7 @@ def main() -> int:
     a = ap.parse_args()
     base = diag_addr(a.map) if a.cmd else osdinfo_addr(a.map)
     ofs = osd_offsets_from_map(a.map.read_text(errors="replace"))
+    hold = HOLD_MARK in a.map.read_text(errors="replace")
     writes = []
     for act in a.actions:
         if act in CMD_ONLY and not a.cmd:
@@ -57,6 +61,12 @@ def main() -> int:
         kind = "event" if act in EVENTS else "key" if act in KEYS else "popup"
         if a.cmd:
             val = CMD_ONLY.get(act) or ((0x10 + EVENTS[act]) if act in EVENTS else (1 + KEYS[act]))
+            if 0x24 <= val <= 0x27 and not hold:
+                if val not in OLD_FALLBACK:
+                    print(f"osd_test: {act} (0x{val:02X}) needs an image with held visuals (#28; {HOLD_MARK} not in {a.map.name}); skipped")
+                    continue
+                print(f"osd_test: {a.map.name} has no held visuals (#28): {act} sent as timed 0x{OLD_FALLBACK[val]:02X}")
+                val = OLD_FALLBACK[val]
             writes.append((f"{base + TESTCMD_OFF:04X}={val:02X}", f"osd_test {act.upper()} {kind} via ucTestCmd (cmd 0x{val:02X})"))
             continue
         field = "ucOsdEventMsg" if act in EVENTS else "ucOsdKeyMessage"
@@ -66,7 +76,23 @@ def main() -> int:
     for w, label in writes:                # one call per action: the firmware consumes each before the next
         rc |= subprocess.call([sys.executable, str(HERE / "rtd_dbg_write.py"), str(a.bus), "--serial", a.serial,
                                "--map", str(a.map), "--label", label, w])
+        if a.cmd and rc == 0:
+            rc |= consumed(a, w.split("=")[0])
     return rc
+
+
+def consumed(a, addr: str) -> int:
+    """Test byte back to 0 = the main loop applied it; still set = firmware stuck or no #33 handler."""
+    for k in range(CONSUME_READS):
+        out = subprocess.run([sys.executable, str(HERE / "rtd_dbg_read.py"), str(a.bus),      # read-only; the write was serial-guarded
+                              "--map", str(a.map), "0x" + addr], capture_output=True, text=True,
+                             timeout=5).stdout       # 1-byte read ~0.4 s incl. interpreter start; 5 s = hung bus, raises
+        m = re.search(r"@0x[0-9a-f]+: ([0-9a-f]{2}|--)", out)
+        if m and m.group(1) == "00":
+            print(f"osd_test: test byte 0x{addr} consumed (read {k + 1})")
+            return 0
+    print(f"osd_test: test byte 0x{addr} NOT consumed after {CONSUME_READS} reads (last: {out.strip()[-80:]})")
+    return 1
 
 
 if __name__ == "__main__":
