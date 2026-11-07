@@ -88,9 +88,9 @@ def report(d: dict, prev: dict | None, dt: float | None) -> str:
         w = lambda k: (d[k] - prev[k]) & 0xFFFF
         L.append(f"main loop {w('hb') / dt:9.1f} /s   Timer2 ISR {w('t2') / dt:7.1f} /s   EXINT1 ISR {w('ex1') / dt:7.1f} /s"
                  f"   (over {dt:.2f} s)")
-    elif d["t2"]:                                          # one read: rate vs Timer2 ISR count (1 ms each)
-        L.append(f"main loop {d['hb'] * 1000.0 / d['t2']:9.1f} /s   EXINT1 ISR {d['ex1'] * 1000.0 / d['t2']:7.1f} /s"
-                 f"   (cumulative over {d['t2']} Timer2 ticks)")
+    else:                                                  # one read: counters are u16, wrap independently every ~65 s
+        L.append("main loop rate: needs two reads (u16 counters wrap independently; one-read ratio is meaningless "
+                 "after 65 s uptime): use --watch or ./dev.py health")
     L.append(f"Timer2 ISR count {d['t2']}   main-loop count {d['hb']}   EXINT1 count {d['ex1']}")
     L += [f"delay cal {'ok  ' if ok else 'FAIL' if ok is False else '-   '} {name}: {detail}" for name, ok, detail in cal_eval(d)]
     return "\n".join(L)
