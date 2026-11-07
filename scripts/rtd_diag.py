@@ -15,10 +15,10 @@ usage: rtd_diag.py <bus> [--watch N | --messages [--secs S] | --release | --trac
   Text starting 0x01 = token: bytes 1-2 big-endian id -> fw/msgids.tsv (id, category, file:line, text).
 Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Header/RL6449_Project.h StAwtoDiag:
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
-  | 1A ucDelay5usN | 1B u16 DelayXms(10) counts/4 | 1D u16 200x5us counts/4 | 1F RCAP2H
-  | 20 u16 x1000 mov a,dir | 22 u16 x1000 movx | 24 u16 x1000 mov a,@r0 | 26 u16 x1000 empty djnz loop
+  | 1A ucDelay5usN | 1B u16 10 ticks of ScalerTimerDelayXms, counts/4 | 1D u16 10 x DELAY_5US raw counts | 1F RCAP2H
+  | 20 u16 DELAY_XUS(100) | 22 u16 DELAY_XUS_EXINT(100) | 24 u16 10 x DELAY_5US_EXINT | 26 u16 panel T3 wait total, counts/64
   | 28 trace seq | 29 WDT_TEST (FFEB) at boot, bit7 = watchdog reset | 2A u16 trace id[3], [2] newest (--trace; ids in tmp/sdcc-port/trace_ids.tsv)
-  Bench counts are raw Timer2 counts (1000 iterations, EA off); (x - empty) / 1000 = counts per instruction.
+  Delay-calibration counts are raw Timer2 counts (EA off, overhead of an empty snapshot pair subtracted); fw/sdcc/awto_delaycal.inc.
 Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, MCU div 1, 14.318 MHz xtal):
   M2PLL: 701582 / 96 = 7308 -> reload 0xE373, 7309 counts per 1 ms tick; xtal (initial mode): 14318 / 12 = 1193
   -> reload 0xFB56, 1194 counts per tick. RCAP2H in the block selects the row.
@@ -39,11 +39,16 @@ CMD_HI, CMD_READ, READ_SUB = 0x01, 0x3A, 0x08
 STAGES = ["", "BOOT (start of main)", "GPIO init done (in McuInitial)", "McuInitial done", "pin-share done",
           "main loop first pass", "panel power on", "DPTx link start", "DPTx link done"]
 PERIOD = {0xE3: 7309, 0xFB: 1194}   # Timer2 counts per 1 ms tick, keyed by RCAP2H (see docstring)
-NOM_XMS_MS, NOM_BUSY_US = 10, 1000  # nominal lengths of the two self-test delays
-# DW8051 machine cycles per instruction: (name, cycles); djnz cost is taken from the empty loop (2-3 cycles)
-BENCH = (("mov a,dir", 2), ("movx a,@dptr", 2), ("mov a,@r0", 1))
-CLOCKS_PER_CYCLE = 4                # DW8051: 4 clocks per machine cycle
-MCU_MHZ = {0xE3: 14.318 * 49 / 2 / 4, 0xFB: 14.318}   # expected MCU clock by RCAP2H: M2PLL 350.79 / flash div 4
+# Delay calibration rows: (key, label, calls in the measured body, nominal us per call, lo, hi). A busy delay shorter than
+# nominal breaks the minimum waits it stands for (PHY settle, SDK `DELAY_XUS`); longer only costs time. Lower bound -10 %:
+# the loops are cycle-counted, N calibrated by Realtek (flash cache on). Upper bound +25 %: the earlier hardware run
+# (2026-11-06, unit 3, ISR time included) read 109 %, leaving room for the real loop; refine from the first clean run (#53.6).
+CAL_ROWS = (("d5us10", "DELAY_5US", 10, 5.0, 0.90, 1.25),
+            ("xus100", "DELAY_XUS(100)", 1, 100.0, 0.90, 1.25),
+            ("xusisr100", "DELAY_XUS_EXINT(100)", 1, 100.0, 0.90, 1.25),
+            ("d5isr10", "DELAY_5US_EXINT", 10, 5.0, 0.90, 1.25))
+CAL_TICK_TOL = 0.005                # 10 ticks vs the reload period: both from Timer2, a miss means a lost tick or wrong reload
+CAL_T3_MS, CAL_T3_TOL_MS = 550, 1.5  # panel T3 (_PANEL_POWER_ON_T3): ScalerTimerDelayXms granularity 1 tick + 64-count resolution
 IDLE_POLL_S = 0.002   # a status read is ~0.3 ms at 100 kHz; 2 ms bounds the stall added per message (fw halts until fetched)
 MSG_ENABLE, MSG_FETCH, MSG_END, MSG_DONE = 0x55, 0x25, 0x2A, 0x2F
 ST_NONE, ST_PENDING = 0xFC, 0xF1
@@ -62,10 +67,11 @@ def decode(b: bytes, be: bool = False) -> dict:
     m0, m1, ver, stage = b[0], b[1], b[2], b[3]
     ts = list(struct.unpack_from(("> " if be else "<")[0] + "8H", b, 4))
     hb, t2, ex1 = struct.unpack_from(("> " if be else "<")[0] + "3H", b, 20)
-    d5, xms, busy = b[26], *struct.unpack_from(("> " if be else "<")[0] + "2H", b, 27)
-    bench = list(struct.unpack_from(("> " if be else "<")[0] + "4H", b, 32)) if len(b) >= 40 else None
-    return {"bench": bench, "magic_ok": (m0, m1) == (0x41, 0x44), "ver": ver, "stage": stage, "ts": ts, "hb": hb, "t2": t2,
-            "ex1": ex1, "d5": d5, "xms4": xms, "busy4": busy, "rcap2h": b[31], "wdt": b[0x29]}
+    e = ("> " if be else "<")[0]
+    d5, xms, d5us10 = b[26], *struct.unpack_from(e + "2H", b, 27)
+    xus100, xusisr100, d5isr10, t3_64 = struct.unpack_from(e + "4H", b, 32)
+    return {"xus100": xus100, "xusisr100": xusisr100, "d5isr10": d5isr10, "t3_64": t3_64, "magic_ok": (m0, m1) == (0x41, 0x44), "ver": ver, "stage": stage, "ts": ts, "hb": hb, "t2": t2,
+            "ex1": ex1, "d5": d5, "xms4": xms, "d5us10": d5us10, "rcap2h": b[31], "wdt": b[0x29]}
 
 
 def report(d: dict, prev: dict | None, dt: float | None) -> str:
@@ -86,41 +92,38 @@ def report(d: dict, prev: dict | None, dt: float | None) -> str:
         L.append(f"main loop {d['hb'] * 1000.0 / d['t2']:9.1f} /s   EXINT1 ISR {d['ex1'] * 1000.0 / d['t2']:7.1f} /s"
                  f"   (cumulative over {d['t2']} Timer2 ticks)")
     L.append(f"Timer2 ISR count {d['t2']}   main-loop count {d['hb']}   EXINT1 count {d['ex1']}")
-    per = PERIOD.get(d["rcap2h"])
-    if not d["xms4"]:
-        L.append(f"self-test: not run, or ScalerTimerDelayXms(10) never returned  (5us base N={d['d5']}, RCAP2H 0x{d['rcap2h']:02X})")
-    elif per is None:
-        L.append(f"self-test: RCAP2H 0x{d['rcap2h']:02X} not in the constants table; raw counts "
-                 f"DelayXms(10) {d['xms4'] * 4}, 200x5us {d['busy4'] * 4}")
-    else:
-        xms = d["xms4"] * 4 / per                          # ms
-        busy = d["busy4"] * 4 / per * 1000                 # us
-        L.append(f"self-test (5us base N={d['d5']}, Timer2 {per} counts/ms):")
-        L.append(f"  ScalerTimerDelayXms({NOM_XMS_MS}): {xms:7.3f} ms  vs {NOM_XMS_MS} nominal  ({xms / NOM_XMS_MS * 100:5.1f} %)")
-        L.append(f"  200 x 5us busy-wait:    {busy:7.1f} us  vs {NOM_BUSY_US} nominal  ({busy / NOM_BUSY_US * 100:5.1f} %)")
-    if d.get("bench") and per:
-        L += bench_lines(d["bench"], per, d["rcap2h"])
+    L += [f"delay cal {'ok  ' if ok else 'FAIL' if ok is False else '-   '} {name}: {detail}" for name, ok, detail in cal_eval(d)]
     return "\n".join(L)
 
 
-def bench_lines(bn, per, rcap2h) -> list:
-    """bn = raw Timer2 counts for 1000x direct, movx, idata, empty. Cycle rate comes from each instruction's known
-    cycle count; MHz = cycles/s x clocks per cycle. djnz row assumes 3 cycles (2 if the MHz rows say 2)."""
-    cnt_s = per * 1000.0                                   # Timer2 counts per second (1 tick = 1 ms)
-    e = bn[3]
-    L = [f"micro-bench, 1000 iterations, Timer2 {per} counts/ms (expected MCU clock {MCU_MHZ.get(rcap2h, 0):.1f} MHz):",
-         f"  empty djnz loop: {e} counts = {e / 1000:.3f} counts/iter = {e / 1000 / cnt_s * 1e9:.1f} ns/iter"]
-    for (name, cyc), x in zip(BENCH, bn[:3]):
-        net = (x - e) / 1000.0                             # counts per instruction
-        if net <= 0:
-            L.append(f"  {name:13s} raw {x}: not above the empty loop (net {net:.3f} counts)")
+def cal_eval(d: dict, sim: bool = False) -> list:
+    """Delay calibration rows [(name, ok, detail)] from a decoded block. ok None = not applicable. sim: the simulator's
+    Timer2 counts ucsim machine cycles, so the busy-loop rows are not timed there; tick and T3 rows are (same reload)."""
+    per = PERIOD.get(d["rcap2h"])
+    if per is None and sim:                               # fw_sim._scale_t2 rewrites RCAP2 to k x the firmware's count
+        per = PERIOD[0xE3] * round((256 - d["rcap2h"]) * 256 / PERIOD[0xE3])
+    if not d["xms4"]:
+        return [("run", False, f"not run: the panel T3 wait was never reached, or ScalerTimerDelayXms never returned (RCAP2H 0x{d['rcap2h']:02X})")]
+    if per is None:
+        return [("run", False, f"RCAP2H 0x{d['rcap2h']:02X} not in the Timer2 table")]
+    rows = []
+    ticks = d["xms4"] * 4 / per                           # ms, expected 10
+    rows.append(("tick", abs(ticks - 10) <= 10 * CAL_TICK_TOL,
+                 f"10 ticks = {ticks:.3f} ms (limit +-{CAL_TICK_TOL * 100:.1f} %)"))
+    for key, label, calls, nom, lo, hi in CAL_ROWS:
+        us = d[key] / per * 1000.0 / calls
+        if sim:
+            rows.append((label, None, f"{us:.2f} us/call (sim, not timed; nominal {nom:g})"))
             continue
-        sec = net / cnt_s
-        L.append(f"  {name:13s} raw {x}: {net:.3f} counts = {sec * 1e9:6.1f} ns -> {cyc} cycles @ {cyc * CLOCKS_PER_CYCLE / sec / 1e6:6.1f} MHz,"
-                 f" or {sec * MCU_MHZ.get(rcap2h, 0) * 1e6 / CLOCKS_PER_CYCLE:.2f} cycles at the expected clock (expect {cyc})")
-    sec = e / 1000.0 / cnt_s
-    L.append(f"  djnz: {sec * MCU_MHZ.get(rcap2h, 0) * 1e6 / CLOCKS_PER_CYCLE:.2f} cycles at the expected clock (expect 2-3)")
-    return L
+        rows.append((label, nom * lo <= us <= nom * hi,
+                     f"{us:.2f} us/call, {us / nom * 100:.0f} % of {nom:g} (limit {lo * 100:.0f}..{hi * 100:.0f} %)"))
+    t3 = d["t3_64"] * 64 / per
+    if sim:                                               # dilated Timer2 (x3): the u16 of counts/64 wraps; compare mod 2^16
+        err = ((d["t3_64"] - CAL_T3_MS * per // 64 + 0x8000) & 0xFFFF) - 0x8000
+        t3 = CAL_T3_MS + err * 64 / per
+    rows.append(("T3 wait", d["t3_64"] != 0 and abs(t3 - CAL_T3_MS) <= CAL_T3_TOL_MS,
+                 f"{t3:.2f} ms incl. the test (limit {CAL_T3_MS} +-{CAL_T3_TOL_MS} ms)"))
+    return rows
 
 
 def load_msgids(root: Path) -> dict:

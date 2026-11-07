@@ -259,7 +259,18 @@ def check_osd(rep, d, osd_addr, diag_addr, hint, wait=time.sleep) -> bool:
     return r1 and r2
 
 
-def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep) -> int:
+def check_delaycal(rep, d: Dbg, base: int, sim: bool = False) -> bool:
+    """Delay calibration the firmware ran inside the panel T3 wait (fw/sdcc/awto_delaycal.inc): tick, busy loops, T3 length."""
+    import rtd_diag
+    blk = bytearray(48)
+    blk[0x1A:0x28] = d.read(base + 0x1A, 14)          # ucDelay5usN .. usT3Wait64 only
+    cal = rtd_diag.decode(bytes(blk), True)
+    rows = rtd_diag.cal_eval(cal, sim)
+    bad = [n for n, ok, _ in rows if ok is False]
+    return rep.add("delay cal", not bad, "; ".join(f"{n} {det}" for n, ok, det in rows) + (f"  [FAIL: {', '.join(bad)}]" if bad else ""))
+
+
+def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = False) -> int:
     """All checks, each independent: a failed read marks that check FAIL and the rest still run."""
     base = maps["g_stAwtoDiag"]
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
@@ -267,7 +278,8 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep) -> int:
              ("mode state", lambda: check_state(rep, d, maps["g_stModeInfo"], maps["g_stPowerInfo"])),
              ("input timing", lambda: check_timing(rep, d, maps["g_stMDomainInputData"], host)),
              ("pins", lambda: check_pins(rep, d)),
-             ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, maps["osd_ofs"], wait))]
+             ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, maps["osd_ofs"], wait)),
+             ("delay cal", lambda: check_delaycal(rep, d, base, sim))]
     for name, fn in steps:
         guarded(rep, name, fn)
     return 0
@@ -324,7 +336,7 @@ def run_sim(a) -> int:
         maps["osd_ofs"] = P.osd_offsets_from_map(mapp.read_text(errors="replace"))
         rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode}")
         dbg = Dbg(bus, wait=bus.wait, now=bus.now)
-        run(dbg, maps, parse_host_mode(mode), rep, wait=bus.wait)
+        run(dbg, maps, parse_host_mode(mode), rep, wait=bus.wait, sim=True)
         return rep.summary(binp.stem, dbg.retries)
     finally:
         bus.close()
