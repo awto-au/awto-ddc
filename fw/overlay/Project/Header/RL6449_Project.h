@@ -26,6 +26,16 @@
 #define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)
 #define _AWTO_POPUP_ICON                                        _ON     // _ON = icon at the left of the input-info/debug pop-ups, _OFF = blank (#46)
 #define _AWTO_POPUP_ICON_AWTO                                   _ON     // _ON = awto mark (fw/sdcc/awto_icon_info.inc, scripts/osd_icon_encode.py), _OFF = SDK info bubble
+// #65 step 1 drops: _OFF = SDK code compiled out (scripts/keil2sdcc_drops.py)
+#define _AWTO_FACTORY                                           _OFF    // RTD factory menu (RTDFactoryMode/Function); no key path or DDC command reaches it
+#define _AWTO_GAMMA_ALL                                         _OFF    // _OFF = 1.8/2.0/2.4 OSD gamma options alias the 2.2 LUT
+#define _AWTO_DP_PHYCTS                                         _OFF    // DP PHY compliance (CTS) process
+#define _AWTO_FLASH_ALL                                         _OFF    // _OFF = MX25L8006E (JEDEC c22014) only
+#if(_AWTO_FLASH_ALL == _ON)
+#define _AWTO_FLASH_IDX                                         g_ucFlashType
+#else
+#define _AWTO_FLASH_IDX                                         0
+#endif
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON
