@@ -19,7 +19,7 @@
       "be": true,
       "relay": null,
       "test": true,
-      "note": "2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX"
+      "note": "2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX; Dan 2026-11-07: no vendor dump needed for unit 2 (dump-twice rule waived for this unit only; unit 1's vendor dump stays the model reference)"
     },
     "3": {
       "serial": "AWT26110003",
