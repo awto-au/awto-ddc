@@ -18,7 +18,8 @@
       "gdctl": "DP-4",
       "be": true,
       "relay": null,
-      "test": false
+      "test": true,
+      "note": "2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX"
     },
     "3": {
       "serial": "AWT26110003",
