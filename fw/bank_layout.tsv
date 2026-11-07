@@ -647,6 +647,7 @@ stub	_ScalerFlashRead	C	0x2889	9
 stub	_ScalerFlashWrite	C	0x2892	9
 stub	_ScalerIOSCTrimming	C	0x289b	9
 stub	_ScalerMcuPwmAdjustFrequency	C	0x28a4	9
+stub	_AwtoTmdsStuck	C	0x28ad	8
 stub	_ScalerSyncActiveProc	C	0x28b6	9
 stub	_ScalerSyncCheckUrgentEvent	C	0x28bf	9
 stub	_ScalerSyncDdcDetect_EXINT1	C	0x28c8	9
@@ -851,7 +852,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1249	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1250	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -2882,12 +2883,13 @@ fn	_hb_burst	12	0x0c74	340
 fn	_reg_rd_n	12	0x0dc8	120
 fn	_AwtoDiagDelayCal	12	0x0e40	2848
 fn	_AwtoSlowDue	13	0x0000	312
+fn	_AwtoSwEvent	13	0x0138	160
+fn	_AwtoTmdsStuck	13	0x01d8	132
 fn	_AwtoMeasEvent	13	0x1df0	260
 fn	_AwtoMeasT2Sample	13	0x1ef4	448
 fn	_AwtoSwArm	13	0x20b4	60
-fn	_AwtoSwEvent	13	0x20f0	112
+fn	_AwtoSwPoll	13	0x20f0	60
 fn	_AwtoSwNow	13	0x2160	44
-fn	_AwtoSwPoll	13	0x218c	44
 fn	_AwtoPanelVddEarly	13	0x21b8	20
 fn	_dp_rd16	13	0x21cc	124
 fn	_hb_osd_gap	13	0x2248	216

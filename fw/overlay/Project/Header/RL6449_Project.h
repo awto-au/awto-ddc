@@ -218,7 +218,7 @@ extern void AwtoFreqUpdate(void);
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
 #define _AWTO_SW_LOG                                            _ON
 #if(_AWTO_SW_LOG == _ON)
-#define AWTO_SW_EVENTS                                          40
+#define AWTO_SW_EVENTS                                          64      // #78: a wake logs ~45; repeats of the last event are dropped
 #define AWTO_SW_EV_MODE                                         0x01    // arg = new g_stModeInfo mode state
 #define AWTO_SW_EV_POWER                                        0x10    // arg = UserCommonInterfacePanelPowerAction event
 #define AWTO_SW_EV_T3                                           0x20    // arg 0 = T3 wait start, 1 = end
@@ -346,6 +346,24 @@ extern void AwtoPanelVddEarly(void);
 #endif
 // #60 step 3: _OFF = the SDK never pulses HDMI HPD low on a switch / timing change (host saw 2 drm uevents per switch to D2)
 #define _AWTO_HDMI_HPD_TOGGLE                                   _OFF
+// #78: _ON = TMDS Initial keeps the SCDC module (host-written 1/40 ratio, scrambling) after a no-signal power-off; the
+// HPD-low IRQ still clears it (SDK). With no HPD pulse the host never rewrites SCDC: DPMS wake searched forever
+#ifndef _AWTO_SCDC_KEEP
+#define _AWTO_SCDC_KEEP                                         _ON
+#endif
+// #78: _ON = AWTO_TMDS_STUCK_N "source unstable" judges in a row on HDMI = one HPD pulse (host re-links, rewrites SCDC);
+// at most AWTO_TMDS_HPD_MAX per episode. Case: chip reset (flash, watchdog) under a live 4K60 link, no host hot-plug seen
+#define _AWTO_TMDS_HPD_RECOVER                                  _ON
+#define AWTO_TMDS_STUCK_N                                       3       // one search round ~180 ms: pulse ~0.55 s into a stuck link
+#define AWTO_TMDS_HPD_MAX                                       2
+#define AWTO_TMDS_HPD_LOW_MS                                    110     // HDMI 1.4b: a source reads HPD low >= 100 ms as unplug
+#define AWTO_SW_EV_HPD_RECOVER                                  0xB0    // arg = port pulsed
+#if((_AWTO_TMDS_HPD_RECOVER == _ON) && (_AWTO_SW_LOG == _ON))
+extern void AwtoTmdsStuck(void);
+#define AWTO_TMDS_STUCK()                                       AwtoTmdsStuck()
+#else
+#define AWTO_TMDS_STUCK()
+#endif
 // #60: _ON = ScalerSyncInterfaceSwitch leaves the other ports powered (PHY, Z0, TMDS MAC): the idle receiver stays locked
 #ifndef _AWTO_KEEP_IDLE_RX
 #define _AWTO_KEEP_IDLE_RX                                      _ON

@@ -51,8 +51,8 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	303	ok	OK-CONFIG: usFCode=ulCMUFreq%(_EXT_XTAL*2) is compile-time constant from constant link rate and xtal
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	166	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	65	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3094	ok	OK-HARMLESS: local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c	3097	ok	OK-HARMLESS: same as TMDSRx2: ucDivS is only set immediately before break
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3096	ok	OK-HARMLESS: local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c	3099	ok	OK-HARMLESS: same as TMDSRx2: ucDivS is only set immediately before break
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	524	ok	OK-HARMLESS: switch(enumDpMeasurePeriod): 2000_CYCLE shares body with default; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	601	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	669	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
@@ -176,9 +176,9 @@
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	135	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	139	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	141	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	413	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	415	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	459	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	417	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	419	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	463	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5541	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5540	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5539	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design

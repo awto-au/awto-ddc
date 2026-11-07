@@ -236,6 +236,8 @@ INSERTS = [
     # #60 which SysJudgeCheckStatus check fails (probes 20..23, before its debug message)
 ] + [("Kernel/System/Code/SysJudge.c", rf"^\s*AwtoMsgV\({mid},", f"                AwtoSwEvent(AWTO_SW_EV_PROBE, {k});", r"^bit SysJudgeCheckStatus\(void\)$")
      for k, mid in ((20, "0x07D6"), (21, "0xC702"), (22, "0x8870"), (23, "0xD588"))] + [
+    ("Kernel/System/Code/SysJudge.c", r"^\s*AwtoMsgV\(0x07D6,", "                AWTO_TMDS_STUCK();", r"^bit SysJudgeCheckStatus\(void\)$"),  # #78
+] + [
     # #60 phase probes 7..19 (names: main scripts/sw_timeline.py); marks builds also poll mode changes right after judge / mode handler
     ("Kernel/System/Code/SysMain.c", r"^\s*SysTimerHandler\(\);", "            AWTO_SW_POLL_MARKS();", r"^void main\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysDpRxHandler\(\);", "            AWTO_SW_POLL_MARKS();", r"^void main\(void\)$"),
@@ -318,6 +320,11 @@ INSERTS = [
 # the SDK, go to the DDC FF22 selects (_AWTO_DBG_FOLLOW); the SDK block stays in the #else.
 SCL_BLOCK = r"#if\(_DEBUG_DDC_CHANNEL_SEL == _DDC5\)\s*\n\s*MCU_FE81_DDC5_DDC_CONTROL_2 (\|= _BIT0|&= ~_BIT0);.*?#endif"
 SUBS = [
+    # #78: TMDS Initial after a no-signal power-off wiped SCDC 0x20 (host's 1/40 ratio lost -> no lock, endless search after DPMS)
+] + [(f"Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx{n}.c",
+      rf"(if\(ScalerGetBit\(P7{n - 1}_E6_HDMI_FREQDET_CTRL, _BIT1\) == 0x00\)\s*\{{\s*// Disable HDMI 2.0 SCDC Function\s*\n)(\s*)(ScalerSetBit\(P7{n - 1}_19_HDMI_CTRL_19, ~_BIT7, 0x00\);)",
+      lambda m: m.group(1) + "#if(_AWTO_SCDC_KEEP == _OFF)  // [keil2sdcc] sub\n" + m.group(2) + m.group(3) + "\n#endif", 1)
+     for n in (2, 3)] + [
     # #60: a switch leaves the other ports' PHY / Z0 / TMDS MAC powered (AWTO_IDLE_RX_OFF, RL6449_Project.h)
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c",
      r"ScalerGDIPhyPowerProc\((_D\d_INPUT_PORT), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF\);",

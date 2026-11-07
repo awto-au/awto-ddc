@@ -156,6 +156,10 @@ void AwtoDiagTestCmd(void)
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
     }
 #endif
+    else if(ucCmd == 0x34)                              // #78 arm the switch log only (wake / power-level timing)
+    {
+        AwtoSwArm(SysSourceGetInputPort());
+    }
     else if(ucCmd == 0x30)                              // #60 back to auto search in group (NVRAM default), no switch
     {
         AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);
