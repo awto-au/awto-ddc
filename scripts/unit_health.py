@@ -30,7 +30,7 @@ PIN_BACKLIGHT_N, PIN_PANEL = 0xFE2A, 0xFE1A    # P9.2 active low enable, P7.2 pa
 EVENT_INFO, TESTCMD_DEBUG = 10, 0x20           # EnumOsdEvent info pop-up; ucTestCmd 0x20 = debug pop-up (#34)
 # Loop-rate window: 1 s of Timer2 ticks gives ~170 loop counts per window (+-1 %); bus idle in the window.
 RATE_WINDOW_S, RATE_REPEATS = 1.0, 3
-SIM_RATE_WINDOW_S = 0.1          # sim is deterministic: 0.1 s firmware time gives the same rate, 10x less sim time
+SIM_RATE_WINDOW_S = 1.0          # 0.1 s windows read 0 / 30 / 1549 right after ACTIVE (OSD pop-up drawing blocks the loop): kept at 1 s
 # Consume wait: pop-up draw stalls the debug slave ~0.4 s (#11 comment); limit = 1.25x worst seen, expiry = FAIL.
 CONSUME_WAIT_S = 0.5
 TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): SDK value only (no count); host 60.000 vs measured 60.1
