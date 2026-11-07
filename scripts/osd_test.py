@@ -7,9 +7,12 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
   Offsets/values: RTD2014Include.h (EnumOsdEvent order, _*_KEY_MESSAGE); address from the image's map.
   Writes via rtd_dbg_write.py (debug slave 0x35, EDID-serial guarded). Field offsets: rtd_proto.osd_offsets_from_map (_DP_DEBUG_MSG moves them, #37; unit_health cross-checks the firmware's own report).
   --cmd: write the firmware test byte (g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
-    injected after the key scan, 0x10+n = event n, `debug` = 0x20 = debug pop-up (awto-ddc#34),
-    `logo` = 0x21 = redraw the boot logo for 3 s (awto-ddc#46).
-    Works for keys (the direct key write is overwritten).
+    injected after the key scan, 0x10+n = event n. Visuals someone is asked to look at stay up until cleared (#28):
+      logo / logo-on = 0x24  boot logo, held (black background)      logo-off = 0x25  logo away, picture back
+      debug = 0x26           debug pop-up, held                       clear    = 0x27  every held visual away
+      timed (old images): debug-6s = 0x20 (pop-up, _AWTO_INFO_POPUP_SEC, #34), logo-3s = 0x21 (boot logo 3 s, #46).
+    0x22/0x23 = message log on/off (wb-msgtable, #56). An image older than #28 ignores 0x24..0x27.
+    Held state: g_stAwtoDiag + 0x2F (bit0 logo, bit1 pop-up). Works for keys (the direct key write is overwritten).
 Log: ./tmp/logs/rtd_dbg_write.log
 """
 import argparse, re, subprocess, sys
@@ -19,7 +22,8 @@ HERE = Path(__file__).resolve().parent
 TESTCMD_OFF = 0x28
 sys.path.insert(0, str(HERE))
 from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
-CMD_ONLY = {"debug": 0x20, "logo": 0x21}                  # --cmd only
+CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "logo-off": 0x25, "logo-3s": 0x21,
+            "clear": 0x27}                                 # --cmd only (firmware test byte, #33/#28)
 
 
 def osdinfo_addr(map_path: Path) -> int:
