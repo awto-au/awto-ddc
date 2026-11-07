@@ -111,6 +111,12 @@ class Rtd(Isp):
     def set_retries(self, n):
         self.bus.set_retries(n)
 
+    def is_i915(self) -> bool:
+        """GMBUS adapter (the 0x6F select/read resend guard of burst_write is i915-specific)."""
+        if getattr(self, "_i915", None) is None:
+            self._i915 = i2cbus.adapter_name(self.bus.bus).startswith("i915") if hasattr(self.bus, "bus") else True
+        return self._i915
+
     def write_block(self, reg, data):
         # One data byte per message: the scaler NAKs mid-message when busy and i915 resends the whole message
         # ("NAK on first message, retry", dmesg drm.debug=0x4), duplicating the accepted prefix in the 0x70 FIFO.
@@ -325,7 +331,17 @@ class Rtd(Isp):
         """One transfer of 3 messages: [select 0x6F][read 1 byte][reg + data...]. The select/read pair is an i915 GMBUS
         index cycle that absorbs the "NAK on first message, retry" resend (intel_gmbus.c, do_gmbus_xfer: only i == 0
         is resent). A mid-data NAK then surfaces as ENXIO instead of resending the whole message and duplicating
-        its accepted prefix in the 0x70 FIFO (#12). Returns the 0x6F byte read in front of the data."""
+        its accepted prefix in the 0x70 FIFO (#12). Returns the 0x6F byte read in front of the data.
+        Other adapters (NVIDIA: ~21 ms per message, 256 B per message cap, #71): the data message alone, then 0x6F."""
+        if not self.is_i915():
+            if len(data) > 255:
+                raise ValueError(f"burst of {len(data)} B: non-i915 adapters carry reg + 255 data bytes per message")
+            try:
+                i2cbus.run_ops(self._xfer, ISP_ADDR, [bytes([reg]) + bytes(data)])
+            except OSError as e:
+                rtd_proto.trace(ISP_ADDR, "w", reg, bytes(data), 0, str(e)); raise
+            rtd_proto.trace(ISP_ADDR, "w", reg, bytes(data))
+            return self.read(0x6F)
         try:
             rd = i2cbus.run_ops(self._xfer, ISP_ADDR, [bytes([0x6F]), 1, bytes([reg]) + bytes(data)])[0]
         except OSError as e:
@@ -371,8 +387,9 @@ class Rtd(Isp):
         self.set_retries(0)
         i = 0
         try:
-            for i in range(0, PAGE, self.burst_chunk):
-                if not self.burst_write(0x70, data[i:i + self.burst_chunk]) & PROG_BUF_RDY:
+            ch = self.burst_chunk if (self.is_i915() or self.burst_chunk <= 255) else 128   # non-i915: 255 B per message cap
+            for i in range(0, PAGE, ch):
+                if not self.burst_write(0x70, data[i:i + ch]) & PROG_BUF_RDY:
                     raise OSError(0, "0x6F.4 buffer-ready clear during burst")
         except OSError as e:
             self.burst_fails += 1

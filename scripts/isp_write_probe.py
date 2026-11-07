@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Can this bus carry a burst write to the ISP page FIFO (0x70), and how long does it take? Nothing is programmed (#28).
+"""Can this bus carry a burst write to the ISP page FIFO (0x70), and how long does it take? (--burst = the flash path) Nothing is programmed (#28).
 
 usage: isp_write_probe.py <bus> --serial S [--sizes 64,128,255,256]
   Enters ISP (MCU halted), writes N bytes of 0xFF to 0x70 per size (fills the page buffer; no program start), times
@@ -23,6 +23,7 @@ def main() -> int:
     ap.add_argument("bus", type=int)
     ap.add_argument("--serial", required=True)
     ap.add_argument("--sizes", default="64,128,255,256")
+    ap.add_argument("--burst", action="store_true", help="the flash path's burst_write (one data message) instead of write_block (one message per byte)")
     a = ap.parse_args()
     root = P.repo_root()
     P.LOG = rtd_proto.setup_logs("isp_write_probe").main
@@ -40,7 +41,7 @@ def main() -> int:
         for n in map(int, a.sizes.split(",")):
             t0 = time.monotonic()
             try:
-                isp.write_block(0x70, b"\xff" * n)
+                isp.burst_write(0x70, b"\xff" * n) if a.burst else isp.write_block(0x70, b"\xff" * n)
                 P.log(f"write 0x70 x {n} B: ok, {(time.monotonic() - t0) * 1000:.1f} ms")
             except OSError as e:
                 P.log(f"write 0x70 x {n} B: FAIL {e!r} after {(time.monotonic() - t0) * 1000:.1f} ms")
