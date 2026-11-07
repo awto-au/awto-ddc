@@ -41,7 +41,7 @@ TIMING_EXACT_TOL_MHZ = 10
 TIMING_EXACT_TOL_REL = 0.0025
 HDIAG_STAGE = 8
 MAP_SYMS = ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
-MAP_SYMS_OPT = (P.AWTO_FREQ_SYM,)              # images with fw/sdcc/awto_freq.inc (#34)
+MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop")   # awto_freq.inc (#34); awto_loopsplit.inc (#75)
 RETRY_TRIES = 2
 
 
@@ -200,10 +200,19 @@ def loop_rate(d: Dbg, base: int, wait=time.sleep, window: float = RATE_WINDOW_S)
     return sum(rates) / len(rates), rates, cum
 
 
-def check_rate(rep, d, base, wait=time.sleep, min_rate=50.0, window: float = RATE_WINDOW_S) -> bool:
+SLOW_GAP_MAX_MS = 50    # #75: cable / signal changes must be noticed within 50 ms (slow path every 10 ms + one pass)
+
+
+def check_rate(rep, d, base, wait=time.sleep, min_rate=50.0, window: float = RATE_WINDOW_S, loop_addr=None) -> bool:
     mean, rates, _cum = loop_rate(d, base, wait, window)
-    return rep.add("main loop", mean >= min_rate,
-                   f"{mean:.1f}/s mean of {len(rates)} x {window:g} s windows ({', '.join(f'{r:.1f}' for r in rates)})")
+    ok, slow = mean >= min_rate, ""
+    if loop_addr is not None:              # g_stAwtoLoop (#75 split images): fast, slow rate, runs, max gap (BE words)
+        b = d.read(loop_addr, 8)
+        fast, srate, gap = be16(b, 0), be16(b, 2), be16(b, 6)
+        ok &= 0 < gap <= SLOW_GAP_MAX_MS
+        slow = f"; fast {fast}/s, slow path {srate}/s, max gap {gap} ms (limit {SLOW_GAP_MAX_MS})"
+    return rep.add("main loop", ok,
+                   f"{mean:.1f}/s mean of {len(rates)} x {window:g} s windows ({', '.join(f'{r:.1f}' for r in rates)})" + slow)
 
 
 def check_state(rep, d, mode_addr, power_addr) -> bool:
@@ -291,7 +300,8 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = Fals
     """All checks, each independent: a failed read marks that check FAIL and the rest still run."""
     base = maps["g_stAwtoDiag"]
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
-             ("main loop", lambda: check_rate(rep, d, base, wait, window=SIM_RATE_WINDOW_S if sim else RATE_WINDOW_S)),
+             ("main loop", lambda: check_rate(rep, d, base, wait, window=SIM_RATE_WINDOW_S if sim else RATE_WINDOW_S,
+                                              loop_addr=maps.get("g_stAwtoLoop"))),
              ("mode state", lambda: check_state(rep, d, maps["g_stModeInfo"], maps["g_stPowerInfo"])),
              ("input timing", lambda: check_timing(rep, d, maps, host)),
              ("pins", lambda: check_pins(rep, d)),
