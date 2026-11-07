@@ -308,7 +308,8 @@ def main() -> int:
     ap.add_argument("--host-mode", help="WxH@HZ instead of gdctl")
     ap.add_argument("--sim", nargs=2, type=Path, metavar=("BIN", "MAP"),
                     help="run against the firmware simulator (fw_sim.SimBus), no hardware; host mode defaults to 1920x1080@60")
-    ap.add_argument("--no-ffwd", action="store_true", help="sim: run ScalerTimerDelayXms spins for real (no idle fast-forward)")
+    ap.add_argument("--ffwd", action="store_true", help="sim: fast-forward ScalerTimerDelayXms spins (off: it moves g_usTimerCounter "
+                    "without Timer2, so the delay-cal T3 check reads 593 vs 550 ms)")
     ap.add_argument("--sim-port", default="D2", choices=("D2", "D3"),
                     help="sim: HDMI input carrying the source; the host reads 0x35 on that port's DDC (#28)")
     a = ap.parse_args()
@@ -347,7 +348,7 @@ def run_sim(a) -> int:
     rep = Report()
     w, h, hz = parse_host_mode(mode)
     video = "1080p60" if h == 1080 else ("2160p59.94" if hz < 59.97 else "2160p60")   # fw_sim.HdmiInput preset for the host mode
-    bus = fw_sim.SimBus(binp, mapp, video=video, port=a.sim_port, ffwd=not a.no_ffwd)
+    bus = fw_sim.SimBus(binp, mapp, video=video, port=a.sim_port, ffwd=a.ffwd)
     bus.run_until_mode(MODE_ACTIVE)                 # the unit under test is already up: let the display setup finish
     try:
         maps = load_maps(mapp.read_text(errors="replace"))

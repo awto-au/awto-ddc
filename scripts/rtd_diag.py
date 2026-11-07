@@ -48,6 +48,7 @@ CAL_ROWS = (("d5us10", "DELAY_5US", 10, 5.0, 0.90, 1.25),
             ("xusisr100", "DELAY_XUS_EXINT(100)", 1, 100.0, 0.90, 1.25),
             ("d5isr10", "DELAY_5US_EXINT", 10, 5.0, 0.90, 1.25))
 CAL_TICK_TOL = 0.005                # 10 ticks vs the reload period: both from Timer2, a miss means a lost tick or wrong reload
+CAL_T3_FAST_MAX_MS = 100   # fast boot (#63): 20 ms own-pattern T3 + the ~40 ms delay test inside it, x~1.5
 CAL_T3_MS, CAL_T3_TOL_MS = 550, 1.5  # panel T3 (_PANEL_POWER_ON_T3): ScalerTimerDelayXms granularity 1 tick + 64-count resolution
 IDLE_POLL_S = 0.002   # a status read is ~0.3 ms at 100 kHz; 2 ms bounds the stall added per message (fw halts until fetched)
 MSG_ENABLE, MSG_FETCH, MSG_END, MSG_DONE = 0x55, 0x25, 0x2A, 0x2F
@@ -121,8 +122,9 @@ def cal_eval(d: dict, sim: bool = False) -> list:
     if sim:                                               # dilated Timer2 (x3): the u16 of counts/64 wraps; compare mod 2^16
         err = ((d["t3_64"] - CAL_T3_MS * per // 64 + 0x8000) & 0xFFFF) - 0x8000
         t3 = CAL_T3_MS + err * 64 / per
-    rows.append(("T3 wait", d["t3_64"] != 0 and abs(t3 - CAL_T3_MS) <= CAL_T3_TOL_MS,
-                 f"{t3:.2f} ms incl. the test (limit {CAL_T3_MS} +-{CAL_T3_TOL_MS} ms)"))
+    fast = (not sim) and 0 < t3 <= CAL_T3_FAST_MAX_MS      # #63 fast boot: T3 = one frame while the scaler shows its own pattern
+    rows.append(("T3 wait", d["t3_64"] != 0 and (fast or abs(t3 - CAL_T3_MS) <= CAL_T3_TOL_MS),
+                 f"{t3:.2f} ms incl. the test (limit {CAL_T3_MS} +-{CAL_T3_TOL_MS} ms, or <= {CAL_T3_FAST_MAX_MS} ms own-pattern fast boot)"))
     return rows
 
 
