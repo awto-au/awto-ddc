@@ -255,7 +255,6 @@ INSERTS = [
      "    AwtoDiagStage(8);", r"^\s*// Set Video Stream parameter")
 ]
 
-
 # Block substitutions: (SDK-relative file, regex (DOTALL), replacement fn(match) -> text, expected count).
 # #28: SCL hold/release of the debug protocol and the debug-mode channel select, fixed to _DEBUG_DDC_CHANNEL_SEL in
 # the SDK, go to the DDC FF22 selects (_AWTO_DBG_FOLLOW); the SDK block stays in the #else.
@@ -288,6 +287,23 @@ SUBS = [
 from keil2sdcc_drops import DROP_WRAPS, DROP_SUBS  # noqa: E402  (#65 step 1)
 WRAPS += DROP_WRAPS
 SUBS += DROP_SUBS
+
+# Per-module rules (#65, docs/cleanroom.md): fw/awto/<mod>/rules.py may define WRAPS, INSERTS and SUBS (formats above).
+
+def load_module_rules(base=ROOT / "fw" / "awto"):
+    import importlib.util
+    for p in sorted(base.glob("*/rules.py")):
+        spec = importlib.util.spec_from_file_location(f"awto_rules_{p.parent.name}", p)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        for name, dst in (("WRAPS", WRAPS), ("INSERTS", INSERTS), ("SUBS", SUBS)):
+            dst.extend(getattr(m, name, []))
+
+
+load_module_rules()
+
+
+load_module_rules()
 
 
 def apply_subs(rel: str, text: str, stats) -> str:
@@ -755,6 +771,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
     cmd += FILE_FLAGS.get(c.name, [])
+    cmd += [f"-D_AWTO_NEW_{m.upper()}" for m in awto_modules()]   # per-module WRAPS compile-out (#68)
     cmd += T.CFLAGS_EXTRA                                      # --big-endian when AWTO_SDCC_BE=1
     cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
@@ -843,6 +860,66 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
             STATS["cache_miss"] += 1
     pp.unlink(missing_ok=True)
     return str(c.relative_to(SRC)), rc, msg
+
+
+# ---------------- clean-room mixed build (#65, #68) ----------------
+CLEAN = Path(os.environ.get("AWTO_RTDFW_REPO", "/mnt/2tb/git/awto-rtdfw"))
+SHIM_C = ROOT / "fw" / "awto" / "awto_shim" / "sdk_boundary.c"   # integrator-owned SDK<->clean bridge
+
+
+def awto_sources():
+    """{module: [.c]} of the clean tree: awto/<mod>/**/*.c (awto/include excluded). Empty = SDK-only build."""
+    out = {}
+    for p in sorted((CLEAN / "awto").glob("*/**/*.c")) + sorted((CLEAN / "awto").glob("*.c")):
+        mod = p.relative_to(CLEAN / "awto").parts[0] if p.parent != CLEAN / "awto" else "core"
+        if mod != "include":
+            out.setdefault(mod, []).append(p)
+    return out
+
+
+def awto_modules():
+    return sorted(awto_sources())
+
+
+def cmd_awto(jobs):
+    """Compile clean sources (only awto/include + facts visible, SDK flags) and the shim (SDK includes) to asm in
+    tmp/sdcc-port/asm/awto_<mod>_<file>.asm, where fw_build's select_lib picks them up as project modules."""
+    (WORK / "asm").mkdir(parents=True, exist_ok=True)
+    for old in (WORK / "asm").glob("awto_*.asm"):
+        old.unlink()
+    srcs = awto_sources()
+    if not srcs:
+        log("awto: no clean sources (SDK-only build)"); return 0
+    uv2 = SRC / "STD_FW_1P.Uv2"
+    _, defines, incs, model = parse_uv2(uv2, "RL6449_Project")
+    jobs_l = []                                              # (src, out, cmd)
+    for mod, cs in srcs.items():
+        for c in cs:
+            cmd = [x for x in sdcc_cmd(c, uv2.parent, [], [], model) if not x.startswith(("-Wp-include", "-I"))]   # no Keil shim
+            cmd += [f"-I{CLEAN / 'awto' / 'include'}", f"-I{CLEAN / 'facts'}", f"-I{c.parent}"]
+            cmd += ["-D__data=__xdata"]            # direct RAM is full on this board (#8): clean DATA working sets live in XDATA
+            jobs_l.append((c, WORK / "asm" / f"awto_{mod}_{c.stem}.asm", cmd))
+    if SHIM_C.exists():                                      # may name SDK symbols: full project flags
+        cmd = sdcc_cmd(SHIM_C, uv2.parent, defines, incs, model) + [f"-I{CLEAN / 'awto' / 'include'}", f"-I{SHIM_C.parent}"] \
+            + [f"-I{CLEAN / 'awto' / m}" for m in srcs]
+        jobs_l.append((SHIM_C, WORK / "asm" / "awto_shim_sdk_boundary.asm", cmd))
+
+    def one(j):
+        c, out, cmd = j
+        try:
+            r = subprocess.run(cmd + ["-S", "-o", str(out), str(c)], capture_output=True, text=True, errors="replace",
+                               timeout=COMPILE_TIMEOUT)
+            return c, r.returncode, r.stdout + r.stderr
+        except subprocess.TimeoutExpired:
+            return c, 124, f"TIMEOUT after {COMPILE_TIMEOUT}s"
+    with ThreadPoolExecutor(jobs) as ex:
+        res = list(ex.map(one, jobs_l))
+    for c, rc, msg in res:
+        for l in msg.splitlines():
+            log(f"awto {c.name}: {l}")
+    bad = [c for c, rc, _ in res if rc]
+    log(f"awto: modules {', '.join(awto_modules())}; {len(res) - len(bad)}/{len(res)} files ok")
+    return 1 if bad else 0
 
 
 def cmd_compile(uv2_rel, jobs, only, target):
@@ -962,6 +1039,8 @@ def main():
         if "--timeout" in a:                                 # for measuring a slow file once
             COMPILE_TIMEOUT = int(a[a.index("--timeout") + 1])
         return cmd_compile(a[1], jobs, only, target)
+    if a[0] == "awto":
+        return cmd_awto(int(a[a.index("--jobs") + 1]) if "--jobs" in a else os.cpu_count())
     if a[0] == "pp":                                         # preprocess one file with a target's flags
         target = a[a.index("--target") + 1] if "--target" in a else None
         uv2 = SRC / a[1]
