@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_proto  # noqa: E402
 
 I2C_RETRIES, I2C_TIMEOUT, I2C_SLAVE, I2C_RDWR = 0x0701, 0x0702, 0x0703, 0x0707   # linux/i2c-dev.h
+I2C_SMBUS = 0x0720
 I2C_M_RD = 1
 I2C_RETRIES_DEFAULT = 1     # i915 gmbus sets adapter.retries = 1 (intel_gmbus.c); restored after a page
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -28,6 +29,10 @@ ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.p
 class Msg(ctypes.Structure):
     _fields_ = [("addr", ctypes.c_uint16), ("flags", ctypes.c_uint16),
                 ("len", ctypes.c_uint16), ("buf", ctypes.c_void_p)]
+
+
+class SmbusArg(ctypes.Structure):
+    _fields_ = [("rw", ctypes.c_uint8), ("cmd", ctypes.c_uint8), ("size", ctypes.c_uint32), ("data", ctypes.c_void_p)]
 
 
 class RdWr(ctypes.Structure):
@@ -121,6 +126,17 @@ class Bus:
     def raw_write(self, addr: int, data: bytes) -> None:
         fcntl.ioctl(self.fd, I2C_SLAVE, addr)
         os.write(self.fd, data)
+
+    def smbus_read(self, addr: int, size: int, cmd: int, n: int = 0) -> bytes:
+        """I2C_SMBUS read (ioctl 0x0720): size 2 = byte data, 3 = word, 5 = block, 8 = I2C block of n. Index write + repeated
+        start inside the adapter (NVIDIA RM does this itself; its I2C_RDWR sends a STOP between messages). Returns the data buf."""
+        buf = ctypes.create_string_buffer(34)
+        if size == 8:
+            buf[0] = bytes([n])
+        fcntl.ioctl(self.fd, I2C_SLAVE, addr)
+        arg = SmbusArg(1, cmd, size, ctypes.addressof(buf))
+        fcntl.ioctl(self.fd, I2C_SMBUS, arg)
+        return buf.raw[1:1 + n] if size == 8 else buf.raw
 
     def probe(self, addr: int) -> bool:
         """Does addr ACK a 1-byte read (no write)."""
