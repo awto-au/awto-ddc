@@ -24,3 +24,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-07T12:51:48+11:00	669eae9	AWT26110003-wb-rtkdbg-dp-be	vfreq: ~bit fix + exact freq (vs rtkdbg-dp)	12	43861	5532	17.4	1105	22539	17.5		1	706116
 2026-11-07T12:52:09+11:00	669eae9	AWT26110003-wb-vfreq-be	vfreq: ~bit fix + exact freq (vs rtkdbg-dp)	12	43861	5532	17.4	1105	22539	17.5		1	710167
 2026-11-07T13:53:14+11:00	534e1dd	AWT26110003-wb-port-be	wb-port	12	43861	5539	17.4	1105	22540	17.5			670946
+2026-11-07T14:07:03+11:00	eacaa0f	AWT26110003-wb-delaycal2-be	wb-delaycal-v2	12	43861	5522	17.3	1100	22538	17.5			672089
+2026-11-07T14:11:22+11:00	c68391e	AWT26110003-wb-port2-be	wb-port2	12	43861	5539	17.4	1105	22540	17.5			671128

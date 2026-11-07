@@ -27,7 +27,7 @@ Tracking: awto-ddc#1 (umbrella) and the "Full reversal" issue (see bottom). Conf
 ## Types (task 1)
 - Source: `sdcc -E` of all 232 C files of `STD_FW_1P.Uv2` (target `RL6449_Project`, same flags as the port build), headers under `tmp/sdcc-port/src`, unioned by name.
 - Result: 464 types under `/SDK` (368 enums, 96 struct/union; every `Struct*` typedef of the build). All 7 programs get them.
-- Layout model = Keil C51: big-endian, int/short 2, long/float 4, no padding, enum = 1 byte if all values < 256 else 2, pointers by space (xdata/code 2, data 1, generic 3).
+- Layout model = Keil C51 data layout: awto-sdcc `docs/keil-c51.md` ("Data layout").
 - Bit fields are NOT split: consecutive bit fields pack into one `u8`/`u16` member `bf_<first field>`, comment lists the fields.
   - Bit order: first-declared field = MSB. Evidence: `StructPowerInfoType` byte 0 = `b4PowerAction:4, b4PowerStatus:4`; vendor code tests `g_stPowerInfo.bf_b4PowerAction >> 4 == 3` (bank1 0x0003 thunk target region), i.e. PowerAction is the high nibble [fw].
 - Caveat: struct bodies follow OUR port config (`#if` of the RL6449 project defaults); the vendor build can have extra/missing fields. Sizes are only checked where the anchored address map agrees.
