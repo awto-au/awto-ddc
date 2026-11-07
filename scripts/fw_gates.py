@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Offline gates for one firmware image, run in parallel: boot-check, isr-check, link check, health --sim 1080p60 + 2160p60.
+
+usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--against REF_STEM] [--speed LABEL] [--only boot,isr,link,h1080,h2160]
+  IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). --against: link-check findings not in REF are the failures.
+  --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
+  Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL line per gate; exit 1 if any fails.
+Stall guard (awto-dan#53): a gate silent for STALL_S is killed and FAILs; backstop LIMIT_S per gate.
+Log: ./tmp/logs/fw_gates.log
+"""
+import argparse
+import os
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sdcc_overlay import repo_root
+
+ROOT = repo_root()
+STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
+SILENT_S = {"h1080": 480, "h2160": 480}   # health --sim prints only at the end: 3x its cold 160 s (2026-11-07)
+LIMIT_S = 900         # backstop: 3x the slowest gate seen (health --sim 2160p60 ~ 5 min cold, 2026-11-07)
+PY = [sys.executable, "-u"]
+
+
+def gates(b: Path, m: Path, ref, tree):
+    s = str(ROOT / "scripts")
+    link = [*PY, f"{s}/fw_link_check.py", "--bin", b, "--map", m,
+            "--save", ROOT / "tmp/logs/fw_gates" / f"{b.stem}.link-findings.txt"]
+    if tree:
+        link += ["--layout", Path(tree) / "fw/bank_layout.tsv", "--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
+    if ref:
+        lref = ROOT / "tmp/logs/fw_gates" / f"{Path(ref).name}.link-findings.txt"
+        link += ["--against", lref] if lref.exists() else []
+    return {
+        "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],
+        "isr": [*PY, f"{s}/fw_sim.py", "--isr-check", b, m],
+        "link": link,
+        "h1080": [*PY, f"{s}/unit_health.py", "--sim", b, m, "--host-mode", "1920x1080@60"],
+        "h2160": [*PY, f"{s}/unit_health.py", "--sim", b, m, "--host-mode", "3840x2160@60"],
+    }
+
+
+def run(name, cmd, out: Path, res: dict, log):
+    t0 = time.monotonic()
+    last = [t0, ""]
+    with out.open("w") as f:
+        p = subprocess.Popen(list(map(str, cmd)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT,
+                             env=dict(os.environ, PYTHONHASHSEED="0"))
+
+        def watch():
+            while p.poll() is None:
+                now = time.monotonic()
+                stall = SILENT_S.get(name, STALL_S)
+                if now - last[0] > stall or now - t0 > LIMIT_S:
+                    why = "stall" if now - last[0] > stall else "limit"
+                    log(f"{name}: KILL ({why}) after {now - t0:.0f}s, silent {now - last[0]:.0f}s, last: {last[1][:160]!r}, "
+                        f"loadavg {os.getloadavg()[0]:.1f}")
+                    p.kill()
+                    return
+                try:
+                    p.wait(timeout=1)            # 1 s watchdog tick; returns at once when the gate exits
+                except subprocess.TimeoutExpired:
+                    pass
+
+        threading.Thread(target=watch, daemon=True).start()
+        for line in p.stdout:
+            f.write(line); f.flush()
+            last[0], last[1] = time.monotonic(), line.strip()
+        rc = p.wait()
+    res[name] = (rc, time.monotonic() - t0, last[1])
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("stem")
+    ap.add_argument("--against", default="")
+    ap.add_argument("--speed", default="")
+    ap.add_argument("--only", default="")
+    ap.add_argument("--tree", default="", help="worktree the image was built in (its bank_layout.tsv + asm_bank)")
+    a = ap.parse_args()
+    (ROOT / "tmp/logs/fw_gates").mkdir(parents=True, exist_ok=True)
+    lf = (ROOT / "tmp/logs/fw_gates.log").open("a", buffering=1)
+
+    def log(s):
+        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        print(line, flush=True); lf.write(line + "\n")
+
+    stem = Path(a.stem)
+    b, m = stem.with_suffix(".bin") if stem.suffix != ".bin" else stem, None
+    m = b.with_suffix(".map")
+    g = gates(b, m, a.against, a.tree)
+    if a.only:
+        g = {k: v for k, v in g.items() if k in a.only.split(",")}
+    if a.speed:
+        g["speed"] = [*PY, str(ROOT / "scripts/speed_bench.py"), b.with_suffix(""), "--label", a.speed]
+    log(f"=== gates {b.name}: {', '.join(g)} ===")
+    res, th = {}, []
+    for k, cmd in g.items():
+        t = threading.Thread(target=run, args=(k, cmd, ROOT / "tmp/logs/fw_gates" / f"{b.stem}.{k}.log", res, log))
+        t.start(); th.append(t)
+    for t in th:
+        t.join()
+    bad = 0
+    for k in g:
+        rc, dt, last = res[k]
+        ok = rc == 0
+        bad += not ok
+        log(f"{'PASS' if ok else 'FAIL'} {k:6s} rc={rc} {dt:5.0f}s  {last[:150]}")
+    log(f"=== {b.name}: {'ALL PASS' if not bad else f'{bad} FAIL'} ===")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
