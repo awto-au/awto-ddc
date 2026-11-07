@@ -41,8 +41,10 @@ def main() -> int:
     bus = S.SimBus(a.bin, a.map, video=a.mode)
     calls = {"OsdFuncDisableOsd": 0, "OsdDispDisableOsd": 0}
     armed = [False]
+    where = []
     for fn in calls:
-        bus.m.stub(fn, lambda m, r, fn=fn: (calls.__setitem__(fn, calls[fn] + armed[0])) and None)
+        bus.m.stub(fn, lambda m, r, fn=fn: (calls.__setitem__(fn, calls[fn] + armed[0]),
+                                             where.append((fn, bus.mode_state(), round(bus.now(), 3))) if armed[0] else None) and None)
     try:
         if not bus.run_until_mode(3):
             say(f"FAIL {a.bin.name}: no ACTIVE"); return 1
@@ -55,10 +57,17 @@ def main() -> int:
         armed[0] = True
         bus.wait(a.secs)
         hold = bus.xdata(HOLD)[0]
-        try:
-            blocks = bus.xdata(bus.addr("g_stAwtoSw") + 11)[0]     # StAwtoSw.ucHoldBlocks
-        except Exception:                                      # image without #60 log
-            blocks = -1
+        blocks, evs = -1, []
+        if "_g_stAwtoSw" in bus.m.sym or True:
+            try:
+                sw = bus.addr("g_stAwtoSw")
+                raw = bus.xdata(sw, 12 + 4 * 40)
+                blocks = raw[11]
+                evs = [(raw[12 + 4 * i], raw[13 + 4 * i], int.from_bytes(raw[14 + 4 * i:16 + 4 * i], "big")) for i in range(min(raw[3], 40))]
+            except Exception as e:                             # image without the #60 log
+                say(f"no g_stAwtoSw: {e!r}")
+        say("events (id arg ms): " + " ".join(f"{i:02x}/{g:02x}@{t}" for i, g, t in evs[-16:]))
+        say(f"disable calls at: {where}")
         want = 0x01 if cmd == 0x24 else 0x02
         good = ok and (hold & want) and calls["OsdFuncDisableOsd"] == 0
         say(f"{'PASS' if good else 'FAIL'} {a.bin.name} cmd 0x{cmd:02X} {a.secs:g} s: hold 0x{hold:02X}, OsdFuncDisableOsd {calls['OsdFuncDisableOsd']}, "
