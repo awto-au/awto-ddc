@@ -297,8 +297,9 @@ def main() -> int:
     wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
     cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",
-           "--xram-loc", hex(hs[0][0]), "--xram-size", hex(hs[0][1] - hs[0][0]), "--iram-size", "256",
-           f"-L{T.LIB}", *wl, "-o", out / "fw.ihx", *rels]
+           # --xram-size = all holes: sdld's -M summary sums every XDATA area (check_xdata checks each hole); libs: sdcc_link
+           "--xram-loc", hex(hs[0][0]), "--xram-size", hex(sum(b - a for a, b in hs)), "--iram-size", "256",
+           *wl, "-o", out / "fw.ihx", *rels]
     log(f"[link] {' '.join(map(str, cmd[:20]))} ... ({len(rels)} rels)")
     r, iram = sdcc_link.link(cmd, out / "fw.ihx", rels)
     LOG.write(r.stdout + r.stderr)
