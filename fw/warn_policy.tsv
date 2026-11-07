@@ -260,11 +260,11 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3388	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	421	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	458	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5072	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5229	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5331	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5461	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5573	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5074	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5231	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5333	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5463	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5575	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1209	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1213	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	458	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead
@@ -335,3 +335,4 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1833	ok	OK-CONFIG: ScalerMDomainGetFRCMemoryBW: GET_OD_STIRCT_CONDITION() is _FALSE with OD cut (#8), so the if is constant false
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1835	ok	OK-CONFIG: body of the constant-false OD-strict if above (usHWidth = DHtotal, OD only)
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	570	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c	435	ok	OK-CONFIG: _AWTO_FAST_BOOT: Group A power-cut OFF branch empty (PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops on our board, the 2 x 10 ms rail waits removed); the condition only reads two status bits

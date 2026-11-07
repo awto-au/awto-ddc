@@ -230,6 +230,10 @@ INSERTS = [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"^\s*ScalerMcuIspInitial\(\);", "    AwtoDiagStage(2);",
      r"^\s*ScalerMcuGpioInitial\(\);"),                                                                   # after GPIO init
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
+    ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "#if(_AWTO_FAST_BOOT == _ON)\n    AwtoPanelVddEarly();\n#endif"),  # after pin-share
+    # #63 logo draw timestamps (switch log)
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*g_ucLogoTimerCounter = 0;", "    AwtoSwEvent(AWTO_SW_EV_LOGO, 0);", r"^void OsdDispShowLogo\(void\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*SET_OSD_LOGO_ON\(_ON\);", "    AwtoSwEvent(AWTO_SW_EV_LOGO, 1);", r"^void OsdDispShowLogo\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
     ("Kernel/System/Code/SysMain.c", r"^\s*SysPowerHandler\(\);", "            AwtoDiagTestCmd();"),  # after key scan (#33)
@@ -260,6 +264,11 @@ SUBS = [
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c",
      r"#if\(_DEBUG_DDC_CHANNEL_SEL == _DDC3\)\s*\n {8}// DDC from DDC3 channel.*?#endif",   # SwitchPort (8 sp), not DdcciInitial (4)
      lambda m: "#if(_AWTO_DBG_FOLLOW == _ON)  // [keil2sdcc] sub\n        AwtoDbgSelectChannel(ucInputPort);\n#else\n%s\n#endif" % m.group(0), 1),
+    # #63 fast boot: no waits for rails our board never switches (PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops)
+    ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c", r"PCB_DDR_POWER_RELEASE_TIME\(_DDR_POWER_OFF_TIME\);",
+     lambda m: "#if(_AWTO_FAST_BOOT == _OFF)  // [keil2sdcc] sub\n" + m.group(0) + "\n#endif", 1),
+    ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c", r"(// Wait for (DDR|1\.1V) stable, can't delete\s*\n\s*)(ScalerTimerDelayXms\(10\);)",
+     lambda m: m.group(1) + "\n#if(_AWTO_FAST_BOOT == _OFF)  // [keil2sdcc] sub\n            " + m.group(3) + "\n#endif", 2),
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
     (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
      lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),

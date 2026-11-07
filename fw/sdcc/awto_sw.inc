@@ -37,6 +37,14 @@ void AwtoSwArm(unsigned char ucPort)
     g_stAwtoSw.usT0 = AwtoSwNow();
 }
 
+#if(_AWTO_FAST_BOOT == _ON)
+void AwtoPanelVddEarly(void)                    // #63: right after pin-share; eDP lanes stay off until the SDK's _PANEL_ON (T1 later)
+{
+    PCB_PANEL_POWER(_PANEL_CONTROL_ON);
+    AwtoSwEvent(AWTO_SW_EV_VDD, 1);
+}
+#endif
+
 void AwtoSwPoll(void)                           // once per main-loop pass: mode-state changes
 {
     unsigned char ucMode = GET_MODE_STATE();

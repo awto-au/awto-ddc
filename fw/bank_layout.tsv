@@ -870,6 +870,7 @@ stub	_AwtoFreqModeStr	C	0x3553	9
 stub	_OsdPropVideoResolution	C	0x355c	9
 stub	_AwtoSwPoll	C	0x3565	9
 stub	_SysSourceSetScanType	C	0x356e	9
+stub	_AwtoPanelVddEarly	C	0x3577	9
 fn	_SysTimerWDIntProc	C	0x3580	120
 stub	_UserCommonAdjustAspectRatio	C	0x35f8	9
 stub	_UserCommonAdjustGammaRegionEnable	C	0x3601	9
@@ -899,8 +900,8 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1237	C	0x3b26	92
 const	_tSTRING_RESOLUTION_TABLE	C	0x3e16	104
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1236	C	0x3e7e	92
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1658,7 +1659,7 @@ fn	_UserCommonInterfaceOsdResetProc	4	0xa778	60
 fn	_UserCommonInterfaceTimerEventProc	4	0xa7b4	32
 fn	_UserCommonNVRamGetSystemData	4	0xa7d4	416
 fn	_AwtoDiagT2Diff	4	0xa974	300
-fn	_AwtoDiagPanelT3Wait	4	0xaaa0	288
+fn	_AwtoDiagPanelT3Wait	4	0xaaa0	316
 fn	_AwtoMeasInit	4	0xaf78	52
 const	___str_21	4	0xafac	8
 const	___str_22	4	0xafb4	12
@@ -2841,5 +2842,6 @@ fn	_AwtoSwArm	13	0x20b4	60
 fn	_AwtoSwEvent	13	0x20f0	112
 fn	_AwtoSwNow	13	0x2160	44
 fn	_AwtoSwPoll	13	0x218c	44
+fn	_AwtoPanelVddEarly	13	0x21b8	20
 fn	_ScalerMDomainCheckDisplaySetting	13	0x23a0	988
 fn	_ScalerMDomainGetDisplayActiveRegion	13	0x277c	1088

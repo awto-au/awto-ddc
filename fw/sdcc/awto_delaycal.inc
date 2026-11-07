@@ -93,6 +93,12 @@ void AwtoDiagPanelT3Wait(unsigned int usMs)
     {
         return;
     }
+#if(_AWTO_FAST_BOOT == _ON)
+    if(((ScalerGetByte(P7_F0_DISP_PG_R_CTRL) & _BIT7) != 0) || ((ScalerGetByte(P0_28_VIDEO_DISPLAY_CONTROL_REG) & _BIT5) != 0))
+    {
+        usMs = AWTO_T3_OWN_PATTERN_MS;                             // pattern gen or forced background: our own frame
+    }
+#endif
     do
     {
         usN0 = g_usTimerCounter;
