@@ -699,6 +699,19 @@ def cmd_osd(extra: list[str]) -> int:
     return _py("osd_test.py", _bus(u), "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
 
 
+@command("settings registry (#67) on a unit or the sim: list | get NAME | set NAME VALUE | defaults | save | rows "
+         "(rows = the table, offline)", args="[--unit N | --sim BIN] [--map F] [--no-confirm] CMD [ARGS]", kind="action")
+def cmd_settings(extra: list[str]) -> int:
+    sim, given = _opt(extra, "--sim"), _opt(extra, "--map")
+    if extra[:1] == ["rows"]:
+        return _py("settings_cli.py", "--map", "-", *extra)
+    if sim:
+        mp = given or str(Path(sim).with_suffix(".map"))
+        return _py("settings_cli.py", "--sim", sim, "--map", mp, *extra)
+    n, u = _unit(extra)
+    return _py("settings_cli.py", "--bus", str(_bus(u)), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
+
+
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
          "input timing vs host, backlight/panel pins, OSD round-trips; PASS/FAIL + exit code",
          args="[--unit N] [--map F] [--host-mode WxH@HZ] | --sim BIN", kind="action")
@@ -967,9 +980,12 @@ def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
         raise SystemExit(f"mode --dp: no current mode for {hdmi}; nothing changed")
     m = cur.group(1)
     alone = re.search(rf"Monitors: \(1\)\s*\n[│├└─\s]*{re.escape(dp)} \(", show)
-    if not on and alone:                              # DP-1 is its own logical monitor (mutter's default row): drop it
-        return gdctl_set_args(show, dp, "off")
-    args = gdctl_set_args(show, hdmi, m)
+    if alone:                                         # DP-1 is its own logical monitor (mutter re-adds it on unit 3 hot-plugs)
+        args = gdctl_set_args(show, dp, "off")        # drop it, gap closed
+        if not on:
+            return args
+    else:
+        args = gdctl_set_args(show, hdmi, m)
     out, k = [], 0
     while k < len(args):                              # drop an existing DP-1 entry first
         if args[k] == "--monitor" and args[k + 1] == dp:
@@ -990,7 +1006,7 @@ def cmd_mode(extra: list[str]) -> int:
         show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S).stdout
         args = _dp_mirror_args(show, {**u, "_n": n}, extra[0] == "mirror")
         log("run: gdctl set " + " ".join(args))
-        return subprocess.call(["gdctl", "set", *args], timeout=GDCTL_SET_S)
+        return subprocess.call(["gdctl", "set", "--persistent", *args], timeout=GDCTL_SET_S)
     if len(extra) != 1 or extra[0] not in MODES:
         log(f"mode: one of {', '.join(MODES)}", "ERROR")
         return 2
@@ -1005,7 +1021,7 @@ def cmd_mode(extra: list[str]) -> int:
     args = gdctl_set_args(show.stdout, u["gdctl"], MODES[extra[0]])
     log("run: gdctl set " + " ".join(args))
     try:
-        return subprocess.call(["gdctl", "set", *args], timeout=GDCTL_SET_S)
+        return subprocess.call(["gdctl", "set", "--persistent", *args], timeout=GDCTL_SET_S)
     except subprocess.TimeoutExpired:
         log(f"mode: gdctl set timed out after {GDCTL_SET_S} s", "ERROR")
         return 1

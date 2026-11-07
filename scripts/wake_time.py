@@ -25,7 +25,7 @@ WAKE_LIMIT_S = 6.0          # full-path wake: 1.0-1.2 s mode ACTIVE at cold boot
 POLL_S = 0.05               # log poll while waking: 50 ms resolution on the stop condition only (event times are firmware ms)
 MUTTER = ["busctl", "--user", "set-property", "org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig",
           "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", "i"]
-PICTURE = {(0x80, 0), (0x10, 2)}        # UNBLANK (blank event arg 0), power BACKLIGHT_ON
+PICTURE = {(0x80, 0)}                    # UNBLANK (blank event arg 0); the SDK path turns the backlight on in the same ms
 
 
 def sym(map_path: Path, name: str) -> int:
@@ -121,7 +121,7 @@ def main() -> int:
                 say(f"  {ms - on_ms:+7.0f} ms  {T.name(i, g)}")
             if hit is None:
                 rc = 1
-            time.sleep(2.0)         # picture settled before the next off (one info pop-up is 6 s; not counted)
+            time.sleep(4.0)         # > AWTO_REHOLD_MS (3 s): the next off may hold again; one info pop-up is 6 s, not counted
     finally:
         subprocess.run(MUTTER + ["0"], timeout=5)
         io.close()

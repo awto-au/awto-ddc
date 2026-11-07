@@ -92,6 +92,11 @@ def name(ev_id: int, arg: int) -> str:
         why = [n for b, n in ((1, "off-line measure busy"), (2, "on-line watchdog"), (4, "FIFO / HV-sync error"),
                               (8, "receiver unstable"), (0x10, "timing change"), (0x20, "SysJudgeCheckStatus")) if arg & b]
         return "FAST failed checks: " + (", ".join(why) or "none")
+    if ev_id == 0xA8:
+        return "HOLD " + {1: "L1: signal lost, set-up held, backlight off", 2: "L2: panel off", 3: "L3: released to SDK power saving",
+                          4: "tries used up: full path", 5: "receiver stable again: fast wake", 6: "backlight / panel on (wake)",
+                          7: "fast wake timed out: back to hold", 8: "clock back (pre-detect), SDK scan next",
+                          9: "auto search: another port has a signal, released", 0x10: "SDK reset the mode meanwhile"}.get(arg, str(arg))
     if ev_id == 0xB0:
         return f"HPD recovery pulse on D{arg} (host lost SCDC / link: #78)"
     if ev_id == 0x80 and arg == 0:

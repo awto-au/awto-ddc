@@ -18,6 +18,10 @@ def main() -> int:
     tree, serial, tag = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
     stem = REPO / "tmp/fw" / f"{serial}-{tag}-be"
     src = tree / "tmp/fw" / serial
+    new = (src / "fw.bin").read_bytes()
+    same = [b.name for b in (REPO / "tmp/fw").glob(f"{serial}-*.bin") if b != Path(f"{stem}.bin") and b.read_bytes() == new]
+    if same:                # a failed build leaves the previous fw.bin: it once got staged + flashed under a new tag
+        sys.exit(f"refuse: {src}/fw.bin is byte-identical to {same[0]} (stale build output?); nothing staged")
     for ext in ("bin", "map"):
         shutil.copy2(src / f"fw.{ext}", f"{stem}.{ext}")
     ids = tree / "tmp/sdcc-port/trace_ids.tsv"
