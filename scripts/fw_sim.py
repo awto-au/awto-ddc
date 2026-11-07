@@ -252,12 +252,14 @@ class FlashDev(Dev):
 
 
 class IicSlave(Dev):
-    """Debug slave 0x35 on DDC2 (SDK ScalerDebugIntProc_EXINT1 + fw/sdcc/awto_dbgisr.inc).
+    """Debug slave 0x35 (SDK ScalerDebugIntProc_EXINT1 + fw/sdcc/awto_dbgisr.inc) on the DDC channel FF22[2:0] selects.
     FF24 SUB_IN, FF25 DATA_IN (rx FIFO head), FF26 DATA_OUT (tx FIFO), FF27 STATUS (bit1 SUB_I, bit2 D_IN_I, bit4 stop;
-    write 0 clears), FF29 STATUS2 (bit1 rx empty, bit2 tx full), FF2A IRQ_CONTROL2 (bit6 reset FIFO), FE66 bit0 SCL hold."""
-    SUB, DIN, DOUT, STAT, STAT2, IRQ2, SCL = 0xFF24, 0xFF25, 0xFF26, 0xFF27, 0xFF29, 0xFF2A, 0xFE66
+    write 0 clears), FF29 STATUS2 (bit1 rx empty, bit2 tx full), FF2A IRQ_CONTROL2 (bit6 reset FIFO), DDCn_CONTROL_2 bit0
+    SCL hold (SCL: FF22 channel -> register, regdb). The host bus sits on one channel (SimBus ddc): FF22 elsewhere = NAK."""
+    SUB, DIN, DOUT, STAT, STAT2, IRQ2, CHSEL = 0xFF24, 0xFF25, 0xFF26, 0xFF27, 0xFF29, 0xFF2A, 0xFF22
+    SCL = {1: 0xFF20, 2: 0xFF2E, 3: 0xFE66, 4: 0xFE6F}          # DDC0..DDC3 CONTROL_2
     SUB_I, D_IN_I, STOP_I = 0x02, 0x04, 0x10
-    reads, writes = (DIN,), (DOUT, STAT, IRQ2, SCL)
+    reads, writes = (DIN,), (DOUT, STAT, IRQ2, *SCL.values())
 
     def __init__(self):
         self.rx, self.rxpos, self.tx, self.flags = b"", 0, bytearray(), 0
@@ -284,11 +286,14 @@ class IicSlave(Dev):
         elif a == self.STAT:
             self.flags &= v
             m.put(f"set memory xram 0x{self.STAT:x} 0x{self.flags:x}")
-        elif a == self.SCL:
+        elif a in self.SCL.values():
             if v & 1:
                 self.held = True
             elif self.held:
                 self.released = True; m.request_stop()
+
+    def channel(self, m) -> int:
+        return m.rd(self.CHSEL)[0] & 7
 
     def inject(self, m, sub: int, data: bytes, stop: bool = True):
         """Present one host transaction (sub byte + data, then stop) and raise EXINT1 (IE1)."""
@@ -479,32 +484,37 @@ class HdmiInput(Dev):
 MODE_NAMES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNAL", "POWER_SAVING", "POWER_OFF", "FACTORY"]
 T2_SCALE = 3
 D2_INPUT_PORT, SOURCE_HDMI, SOURCE_NONE = 5, 3, 5          # Kernel/Common/Global.h
+PORTS = {"D2": 5, "D3": 6}                                  # _D2/_D3_INPUT_PORT
+PORT_DDC = {"D1": 2, "D2": 3, "D3": 4}                       # IIC_CH_SEL value of the port's DDC (regdb FF22)
+# cable pins (board header RL6449_AWTO_JXC4K.h, low = connected): D2 PA.2 = FE32, D3 P9.4 = FE2C
+CABLE = {"D2": {0xFE32: 0, 0xFE2C: 1}, "D3": {0xFE32: 1, 0xFE2C: 0}}
 
 
 FAULTS = {"underflow": {0x0002: 0x01}}      # name -> sticky flag bits (address -> mask), see W1C
 
 
-def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None):
+def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None, port: str = "D2"):
     """Devs for a board with a stable HDMI source on D2 (#38): regdb reset values, D2 cable pin (low = connected) and no
     D3 cable, DPCD access port (DP Rx1), the HDMI measure/auto-function results. Returns (devs, hdmi).
     fault="underflow": P0_02 bit0 (M-domain FIFO underflow) re-sets after every clear, as in the unit-3 4K60 register dump
     tmp/regs/AWT26110003-20261105-181408.json (P0_02 = 0x01; the vendor dump 180523 has 0x00) (#26)."""
     hdmi = HdmiInput(mode)
-    return [regdb_cells(), FlashDev(img), IicSlave(), Cells({0xFE2C: 1, 0xFE32: 0}),
+    return [regdb_cells(), FlashDev(img), IicSlave(), Cells(CABLE[port]),
             IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4),
             W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70},
                 FAULTS[fault] if fault else None), hdmi], hdmi
 
 
-def video_stubs(m: "Machine", hdmi: HdmiInput):
+def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     """Functions replaced because they poll the HDMI Rx PHY (CDR/DFE lock, TMDS clock count, packet SRAM) that is not modelled:
     pre-detect and scan on D2 succeed, stability check passes, scan sets the input pixel clock like the SDK does."""
-    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == D2_INPUT_PORT})
+    src = PORTS[port]
+    m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == src})
     m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
     m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})   # no DP source: pending HPD events never end
 
     def scan(m, r):
-        if (r["a1"] & 255) != D2_INPUT_PORT:
+        if (r["a1"] & 255) != src:
             return {"val": SOURCE_NONE}
         m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
         return {"val": SOURCE_HDMI}
@@ -751,23 +761,25 @@ class SimBus:
     ISR_BUDGET = 20_000            # instr for a SUB_I-only EXINT1 (read address phase)
 
     def __init__(self, binp: Path, mapp: Path, tag: str | None = None, log=None, boot: bool = True,
-                 devs=(), video: str | None = None):
-        """video = HdmiInput mode name ("1080p60") for a firmware that sees a stable HDMI source on D2; None = bare
-        CPU + flash port + debug slave (random XRAM, no source)."""
+                 devs=(), video: str | None = None, port: str = "D2"):
+        """video = HdmiInput mode name ("1080p60") for a firmware that sees a stable HDMI source on `port` (D2/D3); None = bare
+        CPU + flash port + debug slave (random XRAM, no source). The host is on `port`'s DDC: 0x35 answers only while FF22
+        selects it (fw without #28 keeps DDC2)."""
         import rtd_diag
         self.rtd_diag = rtd_diag
         self.img = Path(binp).read_bytes()
         self.be = "-be" in Path(binp).name or T.BIG_ENDIAN
         if video:
-            all_devs, self.hdmi = video_devs(self.img, video)
+            all_devs, self.hdmi = video_devs(self.img, video, port=port)
             self.iic = next(d for d in all_devs if isinstance(d, IicSlave))
         else:
             self.iic = IicSlave()
             all_devs, self.hdmi = [FlashDev(self.img), self.iic], None
         self.m = Machine(self.img, Path(mapp), tag or Path(binp).stem, log, [*all_devs, *devs])
         if video:
-            video_stubs(self.m, self.hdmi)
+            video_stubs(self.m, self.hdmi, port)
             self.m.t2_scale = T2_SCALE
+        self.ddc = PORT_DDC[port] if video else None
         self.diag_base = self.m.sym.get("_g_stAwtoDiag", 0xF6D0)
         self.t2_abs, self._t2_last = 0, None
         self.naks = 0
@@ -806,8 +818,15 @@ class SimBus:
                     return d
         raise SimError(f"boot: stage {self.diag()['stage']} after {used} instr")
 
+    def on_channel(self) -> bool:
+        """IIC engine on the host's DDC? Off it the slave does not see the transaction (counted as a NAK)."""
+        if self.ddc is None or self.iic.channel(self.m) == self.ddc:
+            return True
+        self.naks += 1
+        return False
+
     def write(self, dev8: int, sub: int, data: bytes) -> bool:
-        if dev8 != self.DEV8:
+        if dev8 != self.DEV8 or not self.on_channel():
             return False
         self.iic.inject(self.m, sub, bytes(data))
         used = 0
@@ -818,7 +837,7 @@ class SimBus:
         return self.iic.released
 
     def read(self, dev8: int, sub: int, n: int) -> bytes | None:
-        if dev8 != self.DEV8:
+        if dev8 != self.DEV8 or not self.on_channel():
             return None
         tx = bytes(self.iic.tx)
         self.iic.inject(self.m, sub, b"")

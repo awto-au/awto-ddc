@@ -307,6 +307,8 @@ def main() -> int:
     ap.add_argument("--host-mode", help="WxH@HZ instead of gdctl")
     ap.add_argument("--sim", nargs=2, type=Path, metavar=("BIN", "MAP"),
                     help="run against the firmware simulator (fw_sim.SimBus), no hardware; host mode defaults to 1920x1080@60")
+    ap.add_argument("--sim-port", default="D2", choices=("D2", "D3"),
+                    help="sim: HDMI input carrying the source; the host reads 0x35 on that port's DDC (#28)")
     a = ap.parse_args()
     if a.sim:
         return run_sim(a)
@@ -343,11 +345,11 @@ def run_sim(a) -> int:
     rep = Report()
     w, h, hz = parse_host_mode(mode)
     video = "1080p60" if h == 1080 else ("2160p59.94" if hz < 59.97 else "2160p60")   # fw_sim.HdmiInput preset for the host mode
-    bus = fw_sim.SimBus(binp, mapp, video=video)
+    bus = fw_sim.SimBus(binp, mapp, video=video, port=a.sim_port)
     bus.run_until_mode(MODE_ACTIVE)                 # the unit under test is already up: let the display setup finish
     try:
         maps = load_maps(mapp.read_text(errors="replace"))
-        rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode} (source model {video})")
+        rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode} (source model {video} on {a.sim_port})")
         dbg = Dbg(bus, wait=bus.wait, now=bus.now)
         run(dbg, maps, parse_host_mode(mode), rep, wait=bus.wait, sim=True)
         return rep.summary(binp.stem, dbg.retries)
