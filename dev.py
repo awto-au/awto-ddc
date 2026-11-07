@@ -757,6 +757,19 @@ def cmd_settings(extra: list[str]) -> int:
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
+@command("our OSD menu over I2C (#67): state | key K | hold KEYS MS | open PAGE | select ITEM | set ITEM V | get ITEM | "
+         "back | close | walk (every page + item checked against the registry; --png DIR renders pages in the sim)",
+         args="[--unit N | --sim BIN] [--map F] [--png DIR] CMD [ARGS]", kind="action")
+def cmd_menu(extra: list[str]) -> int:
+    sim, given, png = _opt(extra, "--sim"), _opt(extra, "--map"), _opt(extra, "--png")
+    pa = ["--png", png] if png else []
+    if sim:
+        return _py("menu_cli.py", "--sim", sim, "--map", given or str(Path(sim).with_suffix(".map")), *pa, *extra)
+    n, u = _unit(extra)
+    b = _bus(u)
+    return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra)
+
+
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
          "input timing vs host, backlight/panel pins, OSD round-trips; PASS/FAIL + exit code",
          args="[--unit N] [--map F] [--host-mode WxH@HZ] | --sim BIN", kind="action")

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (health sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160]
+usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc]
+  menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL line per gate; exit 1 if any fails.
@@ -21,7 +22,7 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-SILENT_S = {"h1080": 480, "h2160": 480}   # health --sim prints only at the end: 3x its cold 160 s (2026-11-07)
+SILENT_S = {"h1080": 480, "h2160": 480, "menu": 480, "ddc": 480}   # health --sim prints only at the end: 3x its cold 160 s (2026-11-07); menu/ddc boot silently first
 LIMIT_S = 900         # backstop: 3x the slowest gate seen (health --sim 2160p60 ~ 5 min cold, 2026-11-07)
 PY = [sys.executable, "-u"]
 
@@ -32,7 +33,14 @@ def gates(b: Path, m: Path, ref, tree):
             "--save", ROOT / "tmp/logs/fw_gates" / f"{b.stem}.link-findings.txt"]
     if tree:
         link += ["--layout", Path(tree) / "fw/bank_layout.tsv", "--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
+    g = {}
+    mt = Path(m).read_text(errors="replace")
+    if " _menu_diag" in mt:                    # #67 images: menu walk + MCCS over the spare DDC engine
+        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk"]
+    if " _vcp_box" in mt and " _AwtoDdcciPoll" in mt:
+        g["ddc"] = [*PY, f"{s}/ddc_sim.py", b, "--map", m]
     return {
+        **g,
         "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],
         "isr": [*PY, f"{s}/fw_sim.py", "--isr-check", b, m],
         "link": link,

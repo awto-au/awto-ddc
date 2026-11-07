@@ -66,6 +66,20 @@ class Box:
             raise SystemExit(f"debug-slave read 0x{a:04X}: no data")
         return r[0]
 
+    def xrd(self, addr: int, n: int) -> bytes:
+        """n XDATA bytes: byte reads over the debug slave; in the sim straight from the model (fast, same bytes)"""
+        if self.sim:
+            return bytes(self.bus.m.rd(addr, n))
+        out = bytearray()
+        for a in range(addr, addr + n):
+            if not (self.bus.write(DBG, 0x01, bytes([a >> 8])) and self.bus.write(DBG, 0x3A, bytes([a & 0xFF]))):
+                raise SystemExit(f"debug-slave read 0x{a:04X} NAK")
+            r = self.bus.read(DBG, 0x08, 1)
+            if not r:
+                raise SystemExit(f"debug-slave read 0x{a:04X}: no data")
+            out += r
+        return bytes(out)
+
     def call(self, cmd: int, code: int, v: int = 0) -> tuple[int, int, int]:
         """(cur, max, type); raises on an unsupported code or no answer"""
         if self.rd(BOX["magic"]) != ord("V"):
@@ -85,6 +99,8 @@ class Box:
             raise SystemExit(f"mailbox: no answer to cmd {cmd} code 0x{code:02X} after {POLLS} polls "
                              f"({time.monotonic() - t0:.2f} s host time)")
         if not self.rd(BOX["result"]):
+            if cmd == 3:
+                raise SystemExit(f"menu command {code} arg {v}: refused")
             raise SystemExit(f"VCP 0x{code:02X}: unsupported (no such row or code)")
         g = lambda o: self.rd(BOX[o + "_lo"]) | self.rd(BOX[o + "_hi"]) << 8
         return g("cur"), g("max"), self.rd(BOX["type"])
