@@ -325,7 +325,8 @@ def main() -> int:
             img[x] = v
     (out / "fw.bin").write_bytes(img)
     rep = {"serial": a.serial, "common_end": common_end, "common_max": a.common, "banks": used,
-           "bin_bytes": len(img), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram}
+           "bin_bytes": len(img), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram,
+           "sdcccall": int(T.SDCCCALL), "compiler": T.stamp()}
     (out / "build.json").write_text(json.dumps(rep, indent=1))
     log(f"image {out / 'fw.bin'}: {nb} banks, common 0x{common_end:x}/0x{a.common:x}")
     return 0

@@ -7,12 +7,14 @@
 	.globl	__bs_call
 	.globl	__bs_cur
 	.globl	__bs_ret		; for scripts/fw_sim.py breakpoints
+	.globl	__bs_keil		; marker: images with these stubs use the Keil register ABI (scripts/fw_sim.py)
 	.globl	__bs_call_sw, __bs_ret_sw	; just after the 0xFFFF write (A = new bank): fw_sim switches here
 
 	.area	DSEG	(DATA)
 __bs_cur:	.ds	1		; current bank shadow; written before 0xFFFF so an ISR restores the target bank
 
 	.area	CSEG	(CODE)
+__bs_keil = .
 __bs_call:				; r0 = bank, dptr = target (set by the stub)
 	mov	a,__bs_cur		; push &__bs_rtab[cur] (4 B per entry): target's ret -> restore entry of the caller's bank
 	rl	a
