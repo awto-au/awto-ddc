@@ -470,7 +470,8 @@ def cmd_flash(extra: list[str]) -> int:
     with i2cbus.fast_bus(bus) as khz:       # 1 MHz only around the ISP write (0x35 NAKs at 1 MHz); unloaded in finally
         log(f"flash: bus {bus} at {khz} kHz")
         rc = _py("rtd_flash_image.py", bus, img, "--serial", u["serial"], "--write", "--no-backup",
-                 *([] if u.get("relay") else ["--per-sector"]),          # no relay: no recovery by power cycle (#28)
+                 *([] if u.get("relay") else ["--per-sector", "--max-min", "20"]),   # no relay: per sector; stop if > 20 min (#71)
+                 *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
                  "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
                  *(["--identity", identity] if identity else []))
     if rc == 0:

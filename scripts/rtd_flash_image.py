@@ -188,6 +188,7 @@ def crc_calibrate(isp) -> bool:
     return True
 
 
+PROJECT_AFTER = 5                                     # --max-min: project the total from the first 5 sectors
 COMMON_END = 0x5000                                   # fw_build --common: [0, 0x5000) of every bank = common code + vectors
 
 
@@ -202,7 +203,7 @@ def boot_last(diff: list[int]) -> list[int]:
 
 
 def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's vendor backup", tag="", commit="",
-            per_sector: bool = False) -> int:
+            per_sector: bool = False, max_min: float = 0) -> int:
     """Write+verify the sectors in `diff`; the manifest follows: a sector is unknown (null) from its erase until
     its verify passes, so a kill or failure never leaves a stale hash."""
     sr0 = isp.status()
@@ -253,6 +254,15 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
             if k % S.SAVE_EVERY == S.SAVE_EVERY - 1 or k == len(diff) - 1:
                 state.save()
                 log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
+            if per_sector and max_min and k + 1 == PROJECT_AFTER and len(diff) > PROJECT_AFTER:
+                proj = (time.monotonic() - t0) / PROJECT_AFTER * len(diff) / 60
+                log(f"projection after {PROJECT_AFTER} sectors: {proj:.1f} min for {len(diff)} (limit {max_min:g} min)")
+                if proj > max_min:
+                    state.save()
+                    log(f"STOP at a sector boundary: {PROJECT_AFTER}/{len(diff)} written (manifest saved; rerun continues)")
+                    if reprot is not None:
+                        isp.reprotect(reprot)
+                    return 8
         if crc_ok:                                      # end-to-end over the image region, written or skipped
             runs = S._runs([i for i in range(len(img) // SECTOR) if img[i * SECTOR:(i + 1) * SECTOR] != BLANK])
             with phase("final crc"):                    # every non-blank run of the image, written or skipped
@@ -288,6 +298,7 @@ class Opts:
     tag: str = ""
     commit: str = ""
     per_sector: bool = False
+    max_min: float = 0
     seed: int | None = None
 
 
@@ -326,7 +337,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         mode = "full" if (o.full or not have_manifest) else "incremental"
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
         t_prog = time.monotonic()
-        rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit, o.per_sector)
+        rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit, o.per_sector, o.max_min)
         summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
         return rc
     t0 = time.monotonic()
@@ -399,6 +410,8 @@ def main() -> int:
     ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--identity", help="EDID silent (unit held): how the bus was proven to be this unit")
+    ap.add_argument("--max-min", type=float, default=0, help="per-sector: stop at a sector boundary if the total projected "
+                    "from the first 5 sectors exceeds this many minutes (0 = off)")
     ap.add_argument("--per-sector", action="store_true",
                     help="erase+program+verify one sector at a time, boot/common sectors last (units without a relay)")
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
@@ -423,7 +436,7 @@ def flash_main(a) -> int:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2
     log(f"mode={'WRITE' if a.write else 'DRY-RUN'} bus=/dev/i2c-{a.bus} image={a.image} ({len(img)} B) serial={a.serial} "
         f"no_backup={a.no_backup} full={a.full} verify={a.verify} write_mode={a.write_mode} burst_chunk={a.burst_chunk}")
-    o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot, per_sector=a.per_sector,
+    o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot, per_sector=a.per_sector, max_min=a.max_min,
              backup_dir=a.backup_dir, manifest=a.manifest or root / "tmp/fw" / f"{a.serial}-flash-state.json",
              tag=a.tag or a.image.stem, commit=S.git_commit(root))
     if not 1 <= a.burst_chunk <= PAGE:
