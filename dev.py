@@ -815,11 +815,11 @@ def cmd_mode(extra: list[str]) -> int:
 
 
 @command("eyes-free host-mode sweep of a test unit (what works: OK/FRC/GARBLE/NOSUPPORT...), 1080p60 after each; log tmp/logs/mode_sweep.log",
-         args="[--unit N] [--dry-run] [--modes WxH@HZ,...] [--label L]", kind="action")
+         args="[--unit N] [--dry-run] [--modes WxH@HZ,...] [--label L] [--resume TSV]", kind="action")
 def cmd_sweep(extra: list[str]) -> int:
     n, u = _unit(extra)
     opts = [f for f in ("--dry-run",) if _flag(extra, f)]
-    for flag in ("--modes", "--label"):
+    for flag in ("--modes", "--label", "--resume"):
         v = _opt(extra, flag)
         if v is True:
             raise SystemExit(f"sweep: {flag} needs a value; nothing done")

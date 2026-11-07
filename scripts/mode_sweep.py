@@ -73,11 +73,39 @@ def gdctl_show() -> str:
 def set_mode(u: dict, mode: str) -> tuple[bool, str]:
     """Same command shape as dev.py mode; keeps the other monitors. -> (ok, detail)."""
     args = dev.gdctl_set_args(gdctl_show(), u["gdctl"], mode)
-    try:
-        r = subprocess.run(["gdctl", "set", *args], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
-    except subprocess.TimeoutExpired:
-        return False, f"gdctl set timed out after {dev.GDCTL_SET_S} s"
-    return r.returncode == 0, (r.stderr.strip() or f"rc={r.returncode}") if r.returncode else ""
+    for scale in (["1"] if mode == REST else [None, *OVERLAP_SCALES]):      # dev.py's footprint-keeping scale can be unsupported (2048 wide): retry integer-ish ones
+        a2 = args if scale is None else with_scale(args, u["gdctl"], scale)
+        try:
+            r = subprocess.run(["gdctl", "set", *a2], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
+        except subprocess.TimeoutExpired:
+            return False, f"gdctl set timed out after {dev.GDCTL_SET_S} s"
+        if r.returncode == 0:
+            return True, "" if scale in (None, "1") else f"scale {scale}"
+        if "overlap" not in r.stderr and "scale" not in r.stderr:
+            break
+    return False, r.stderr.strip() or f"rc={r.returncode}"
+
+
+OVERLAP_SCALES = ["1.25", "1.5", "2"]
+
+
+def with_scale(args: list[str], target: str, scale: str) -> list[str]:
+    """args with the target's logical monitor block given --scale <scale> (any existing --scale replaced)."""
+    blocks, cur = [], None
+    for x in args:
+        if x == "--logical-monitor":
+            cur = []
+            blocks.append(cur)
+        cur.append(x)
+    out = []
+    for b in blocks:
+        if target in b:
+            while "--scale" in b:
+                i = b.index("--scale")
+                del b[i:i + 2]
+            b += ["--scale", scale]
+        out += b
+    return out
 
 
 def sym_map(u: dict) -> tuple[dict, str]:
@@ -154,6 +182,7 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--modes", help="comma list WxH@HZ (default: all the host offers for the connector)")
     ap.add_argument("--label", default="")
+    ap.add_argument("--resume", type=Path, help="TSV of an interrupted sweep: modes already in it (not SETFAIL) are skipped, rows appended")
     ap.add_argument("--recover-image", help="image for dev.py recover on HANG (default: flashed.json image)")
     a = ap.parse_args()
     u = dev._units()[a.unit]
@@ -164,6 +193,10 @@ def main() -> int:
     modes = a.modes.split(",") if a.modes else host_modes(u["gdctl"])
     # the rest mode first (cheap), then the rest of the list in the host's order
     modes = [m for m in modes if m != REST]
+    done = set()
+    if a.resume:
+        done = {ln.split("\t")[0] for ln in a.resume.read_text().splitlines()[1:] if ln.split("\t")[1] != "SETFAIL"}
+        modes = [m for m in modes if m not in done]
     say(lf, f"sweep unit {a.unit} {u['serial']} connector {u['gdctl']}: {len(modes)} modes + rest {REST}")
     if a.dry_run:
         show = gdctl_show()
@@ -179,13 +212,14 @@ def main() -> int:
     flashed = dev._flashed(u)
     image = a.recover_image or flashed.get("image", "")
     label = a.label or flashed.get("tag", "image")
-    tsv = ROOT / f"tmp/logs/mode_sweep-{label}-{time.strftime('%Y%m%d-%H%M%S')}.tsv"
+    tsv = a.resume or ROOT / f"tmp/logs/mode_sweep-{label}-{time.strftime('%Y%m%d-%H%M%S')}.tsv"
     cols = ["mode", "verdict", "mode_state", "timing", "p0_02", "p5_27", "p5_ac", "frc", "ddr_flag_bytes", "note"]
-    tf = tsv.open("w")
-    tf.write("\t".join(cols) + "\n")
+    tf = tsv.open("a" if a.resume else "w")
+    if not a.resume:
+        tf.write("\t".join(cols) + "\n")
     say(lf, f"image {label} (map {mapname}); TSV {tsv.relative_to(ROOT)}")
     rc = 0
-    for m in [REST] + modes:
+    for m in ([] if a.resume else [REST]) + modes:
         ok, why = set_mode(u, m)
         if not ok:
             r, note = {"verdict": "SETFAIL", "err": why}, why
