@@ -606,10 +606,53 @@ def cmd_reset(extra: list[str]) -> int:
     return _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
 
 
+def _dbg_py(bus: int, script: str, *args, **kw) -> int:
+    """_py with debug slave 0x35 on the unit's DDC for the run (#79 runtime swap: DDC/CI owns it by default); swapped
+    back afterwards only if this call swapped it (scripts/dbg_link.py)."""
+    import dbg_link
+    with dbg_link.linked(int(bus)):
+        return _py(script, *args, **kw)
+
+
 def _diag(u: dict, *args, bus: int | None = None) -> int:
     ids = FW / f"{_flashed(u).get('tag', '')}.ids.tsv"
     more = ["--ids", ids] if ids.is_file() else []
-    return _py("rtd_diag.py", bus if bus is not None else _bus(u), *(["--be"] if u["be"] else []), *args, *more)
+    b = bus if bus is not None else _bus(u)
+    return _dbg_py(b, "rtd_diag.py", b, *(["--be"] if u["be"] else []), *args, *more)
+
+
+@command("read the diag block (boot stages, rates, self-test); --messages [--secs S] polls debug messages; "
+         "--release un-halts a firmware left stopped by a killed --messages; --watch N re-reads",
+         args="[--unit N] [--messages [--secs S] | --release | --watch N]", kind="action")
+def cmd_diag(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    args = [f for f in ("--messages", "--release") if _flag(extra, f)]
+    if len(args) > 1:
+        raise SystemExit("diag: --messages and --release are exclusive; nothing done")
+    for flag in ("--secs", "--watch"):
+        v = _opt(extra, flag)
+        if v is None:
+            continue
+        try:
+            float(v)
+        except (TypeError, ValueError):
+            raise SystemExit(f"diag: {flag} needs a number; nothing done")
+        if flag == "--secs" and "--messages" not in args:
+            raise SystemExit("diag: --secs only applies to --messages; nothing done")
+        args += [flag, v]
+    _done(extra, "diag")
+    return _diag(u, *args)
+
+
+@command("#79 debug link: on = debug slave 0x35 onto the unit's DDC (DDC/CI owns it by default; on --minutes N, "
+         "255 = until off), off = back to DDC/CI, state = who answers", args="[--unit N] on|off|state [--minutes N]",
+         kind="action")
+def cmd_link(extra: list[str]) -> int:
+    _n, u = _unit(extra)
+    mins = _opt(extra, "--minutes")
+    if mins is True or (extra[:1] not in (["on"], ["off"], ["state"])) or len(extra) != 1:
+        raise SystemExit("link: on|off|state [--minutes N]; nothing done")
+    return _py("dbg_link.py", extra[0], _bus(u), *(["--minutes", mins] if mins else []))
 
 
 @command("read the diag block (boot stages, rates, self-test); --messages [--secs S] polls debug messages; "
@@ -696,7 +739,8 @@ def cmd_osd(extra: list[str]) -> int:
         raise SystemExit(f"osd: actions are {sorted(ok)}; got {bad or 'none'}; nothing done")
     cmdmode = cmdmode or any(x in osd_test.CMD_ONLY for x in extra)       # popup-only actions imply --cmd
     mp = _fwmap(u, given)
-    return _py("osd_test.py", _bus(u), "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
+    b = _bus(u)
+    return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
 
 
 @command("settings registry (#67) on a unit or the sim: list | get NAME | set NAME VALUE | defaults | save | rows "
@@ -709,7 +753,8 @@ def cmd_settings(extra: list[str]) -> int:
         mp = given or str(Path(sim).with_suffix(".map"))
         return _py("settings_cli.py", "--sim", sim, "--map", mp, *extra)
     n, u = _unit(extra)
-    return _py("settings_cli.py", "--bus", str(_bus(u)), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
+    b = _bus(u)
+    return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
@@ -727,7 +772,8 @@ def cmd_health(extra: list[str]) -> int:
     if given is True or hm is True:
         raise SystemExit("health: --map/--host-mode need a value; nothing done")
     _done(extra, "health")
-    return _py("unit_health.py", _bus(u), "--serial", u["serial"], "--map", _fwmap(u, given),
+    b = _bus(u)
+    return _dbg_py(b, "unit_health.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
                *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]))
 
 
@@ -768,7 +814,8 @@ def cmd_dbg_write(extra: list[str]) -> int:
     if label is True:
         raise SystemExit("dbg-write: --label needs a value; nothing done")
     writes = _pairs(extra, "dbg-write")
-    return _py("rtd_dbg_write.py", _bus(u), "--serial", u["serial"], "--map", _fwmap(u, given), "--label", label, *writes)
+    b = _bus(u)
+    return _dbg_py(b, "rtd_dbg_write.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), "--label", label, *writes)
 
 
 @command("read live XDATA via debug slave 0x35 (addr|symbol[:len])", args="[--unit N] [--map F] [--halt] ITEM...",
@@ -779,7 +826,8 @@ def cmd_dbg_read(extra: list[str]) -> int:
     bad = [x for x in extra if x.startswith("-")]
     if bad or not extra:
         raise SystemExit(f"dbg-read: need ITEMs (addr|symbol[:len]); bad {bad or 'none'}; nothing done")
-    return _py("rtd_dbg_read.py", _bus(u), "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
+    b = _bus(u)
+    return _dbg_py(b, "rtd_dbg_read.py", b, "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
 
 
 @command("read the sink's HDMI SCDC registers (0x54), read-only", args="[--unit N]", kind="action")
