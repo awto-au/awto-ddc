@@ -38,6 +38,17 @@ static int16_t __xdata edit_v, edit_old;
 static struct setting __xdata row;
 static char __xdata line[MENU_COLS + 1];
 static char __xdata tmp[24];
+static uint16_t __xdata redraws;
+static uint8_t __xdata last_key = 0xFF;
+struct menu_diag __xdata menu_diag;
+
+static void mn_sync(void);
+
+static void mn_row(uint8_t r, const char __xdata *s, uint8_t n, uint8_t fg, uint8_t bg)
+{
+    redraws++;
+    osd_tc_row(r, s, n, fg, bg);
+}
 
 static uint8_t mn_n_entries(void)
 {
@@ -166,7 +177,7 @@ static void mn_draw_title(void)
         set_page_title(page, tmp, sizeof tmp);
         mn_put(11 + n, tmp, 28 - n);
     }
-    osd_tc_row(0, line, MENU_COLS, OC_TITLE, OC_BG);
+    mn_row(0, line, MENU_COLS, OC_TITLE, OC_BG);
 }
 
 static void mn_draw_entry(uint8_t k)
@@ -210,7 +221,7 @@ static void mn_draw_entry(uint8_t k)
         fg = (mode == M_EDIT) ? OC_EDIT : OC_HL;
         bg = OC_HL_BG;
     }
-    osd_tc_row(ROW_FIRST + k - top, line, MENU_COLS, fg, bg);
+    mn_row(ROW_FIRST + k - top, line, MENU_COLS, fg, bg);
 }
 
 static void mn_draw_status(void)
@@ -242,13 +253,13 @@ static void mn_draw_status(void)
         else if (row.flags & SF_RISKY)
             mn_put_c(1, mn_s12);
     }
-    osd_tc_row(MENU_ROWS - 2, line, MENU_COLS, warn ? OC_WARN : OC_DIM, OC_BG);
+    mn_row(MENU_ROWS - 2, line, MENU_COLS, warn ? OC_WARN : OC_DIM, OC_BG);
     mn_blank();
     if (mode == M_EDIT)
         mn_put_c(1, mn_s13);
     else
         mn_put_c(1, mn_s14);
-    osd_tc_row(MENU_ROWS - 1, line, MENU_COLS, OC_DIM, OC_BG);
+    mn_row(MENU_ROWS - 1, line, MENU_COLS, OC_DIM, OC_BG);
     last_left = (uint8_t)(left / 1000);
 }
 
@@ -263,7 +274,7 @@ static void mn_draw_list(void)
 static void mn_draw_all(void)
 {
     mn_blank();
-    osd_tc_row(1, line, MENU_COLS, OC_TEXT, OC_BG);
+    mn_row(1, line, MENU_COLS, OC_TEXT, OC_BG);
     mn_draw_title();
     mn_draw_list();
     mn_draw_status();
@@ -308,6 +319,7 @@ void menu_open(void)
     sec_t = set_now_ms();
     mn_go(MAIN, 0);
     osd_tc_show(1);
+    mn_sync();
 }
 
 void menu_close(void)
@@ -319,11 +331,13 @@ void menu_close(void)
     active = 0;
     set_save_now();
     osd_tc_close();
+    mn_sync();
 }
 
 void menu_forget(void)
 {
     active = 0;
+    mn_sync();
 }
 
 uint8_t menu_active(void)
@@ -413,7 +427,126 @@ static void mn_back(void)
     mn_go(page, k < n ? k : 0);
 }
 
+/* fill menu_diag from the engine state (after every key, command and service pass that drew) */
+static void mn_sync(void)
+{
+    uint8_t e = 0;
+    int16_t v = 0;
+
+    menu_diag.seq++;                             /* odd: update in progress */
+    menu_diag.magic = 'M';
+    menu_diag.version = 1;
+    menu_diag.open = active;
+    menu_diag.page = page;
+    menu_diag.cursor = cursor;
+    menu_diag.item_id = 0;
+    menu_diag.item_page = 0xFF;
+    menu_diag.n = active ? mn_n_entries() : 0;
+    if (active && cursor < menu_diag.n) {
+        e = mn_entry(cursor);
+        if (e & 0x80) {
+            menu_diag.item_page = e & 0x7F;
+        } else {
+            set_row(e, &row);
+            menu_diag.item_id = row.id;
+            v = (mode == M_EDIT) ? edit_v : set_get(row.id);
+        }
+    }
+    menu_diag.mode = mode;
+    menu_diag.top = top;
+    menu_diag.val_lo = (uint8_t)v;
+    menu_diag.val_hi = (uint8_t)((uint16_t)v >> 8);
+    menu_diag.redraw_lo = (uint8_t)redraws;
+    menu_diag.redraw_hi = (uint8_t)(redraws >> 8);
+    menu_diag.last_key = last_key;
+    menu_diag.pending = set_pending();
+    menu_diag.parent = (page == MAIN) ? 0xFF : set_page_parent(page);
+    menu_diag.seq++;
+}
+
+static void mn_key(uint8_t k);
+
 void menu_key(uint8_t k)
+{
+    last_key = k;
+    mn_key(k);
+    mn_sync();
+}
+
+uint8_t menu_cmd(uint8_t op, uint16_t arg)
+{
+    uint8_t k, n, ok = 1;
+
+    secs = 0;                                    /* a host command is activity: the menu timeout restarts */
+    sec_t = set_now_ms();
+    switch (op) {
+    case MO_KEY:
+        key_inject((uint8_t)arg);            /* through the firmware key path, like a front key */
+        break;
+    case MO_HOLD:
+        key_hold((uint8_t)(arg & 0x1F), (uint16_t)(arg >> 5) * 50u);
+        break;
+    case MO_OPEN:
+        if ((uint8_t)arg != MAIN && (uint8_t)arg >= SET_PAGES) {
+            ok = 0;
+            break;
+        }
+        if (!active)
+            menu_open();
+        mn_go((uint8_t)arg, 0);
+        break;
+    case MO_SELECT:
+        ok = 0;
+        if (!active)
+            break;
+        n = mn_n_entries();
+        for (k = 0; k < n && !ok; k++) {
+            uint8_t e = mn_entry(k);
+            if (arg & 0x80) {
+                ok = (e == (uint8_t)arg);
+            } else if (!(e & 0x80)) {
+                set_row(e, &row);
+                ok = (row.id == (uint8_t)arg);
+            }
+            if (ok) {
+                mode = M_LIST;
+                cursor = k;
+                mn_scroll();
+                mn_draw_list();
+                mn_draw_status();
+            }
+        }
+        break;
+    case MO_SET:
+        ok = 0;
+        if (!active || mn_n_entries() == 0 || (mn_entry(cursor) & 0x80))
+            break;
+        set_row(mn_entry(cursor), &row);
+        mode = M_LIST;
+        ok = set_put(row.id, (int16_t)arg, 1);
+        mn_draw_entry(cursor);
+        mn_draw_status();
+        break;
+    case MO_BACK:
+        if (active)
+            mn_back();
+        break;
+    case MO_CLOSE:
+        menu_close();
+        break;
+    case MO_ENTER:
+        if (active)
+            mn_key(MK_MENU);
+        break;
+    default:
+        ok = 0;
+        break;
+    }
+    mn_sync();
+    return ok;
+}
+
+static void mn_key(uint8_t k)
 {
     uint8_t e;
 
@@ -484,10 +617,12 @@ void menu_service(void)
             return;
         }
     }
-    if (set_pending() != 0 && (uint8_t)(set_pending_left() / 1000) != last_left)
+    if (set_pending() != 0 && (uint8_t)(set_pending_left() / 1000) != last_left) {
         mn_draw_status();                           /* countdown, once a second */
-    else if (set_pending() == 0 && last_left != 0) {
+        mn_sync();
+    } else if (set_pending() == 0 && last_left != 0) {
         mn_draw_list();                             /* auto-revert happened: show the old value again */
         mn_draw_status();
+        mn_sync();
     }
 }
