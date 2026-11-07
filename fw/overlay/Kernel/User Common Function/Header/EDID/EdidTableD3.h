@@ -5,7 +5,7 @@
 
 BYTE code tEDID_TABLE_D3[] =
 {
-#include "awto_edid_hdmi.h"
+#include "awto_edid_hdmi_d3.h"
 };
 
 #endif

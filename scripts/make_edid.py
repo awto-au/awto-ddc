@@ -5,6 +5,8 @@ usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
   writes DIR/awto-dp.bin and DIR/awto-hdmi.bin (default DIR: $VENDORS/realtek/analysis/edid)
   then runs `edid-decode -c` on each if installed and prints the result.
   --serial sets the per-unit serial text in the 0xFF descriptor (default AWT26110001).
+  Also writes DIR/awto-hdmi-d3.bin: = awto-hdmi.bin except the port tag (PORT_VSDB). Name + serial are the same on every
+  port (the host keys monitor identity on them: mutter layout, dev.py serial guard); only the tag tells D1/D2/D3 apart.
 Design + per-port rationale: docs/edid-fix.md.  Log: ./tmp/logs/make_edid.log
 """
 import shutil, subprocess, sys
@@ -94,6 +96,17 @@ def base_block(port, serial=SERIAL_TXT):
     return bytes(b)
 
 
+# Port tag (#28): CTA vendor-specific data block, OUI AWTO_OUI (unregistered, not used by any known vendor), payload
+# "AWTO" + port number (1 = D1 DP, 2 = D2 HDMI, 3 = D3 HDMI). Read by dev.py port.
+AWTO_OUI = 0xA770D0
+PORT_TAG = {"dp": 1, "hdmi": 2, "hdmi-d3": 3}
+
+
+def port_vsdb(port):
+    pl = AWTO_OUI.to_bytes(3, "little") + b"AWTO" + bytes([PORT_TAG[port]])
+    return bytes([(3 << 5) | len(pl)]) + pl
+
+
 VICS = [97, 16]    # 97 = DTD1 (4K60.000, works since the ~bit fix); 16 = 1080p60; other rates dropped (PC use, #26)
 
 
@@ -111,12 +124,13 @@ def cta_block(port):
     # Metadata Type 1 supported. NO PQ(SMPTE2084)/HLG — this is a ~300 cd/m2 SDR VA panel, not HDR10.
     d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
     d += bytes([(7 << 5) | 2, 0x00, 0xCA])                 # VCDB: QY+QS (YCC/RGB quant selectable), IT/CE underscan
-    if port == "hdmi":
+    if port.startswith("hdmi"):
         # HDMI 1.4 VSDB: PA 1.0.0.0, DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
         d += bytes([(3 << 5) | 7, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x18, 0x44])
         # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5; i915 rejects the 533.12 MHz DTD as CLOCK_RANGE with 540), SCDC present + LTE_340Mcsc scrambling
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
         # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue
+    d += port_vsdb(port)
     dtds = DTD_1080
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
@@ -143,7 +157,7 @@ def main():
     assert len(serial) <= 13, "serial text must fit the 13-byte 0xFF descriptor"
     out.mkdir(parents=True, exist_ok=True)
     rc = 0
-    for port in ("dp", "hdmi"):
+    for port in ("dp", "hdmi", "hdmi-d3"):
         e = build(port, serial)
         assert len(e) == 256 and sum(e[:128]) % 256 == 0 and sum(e[128:]) % 256 == 0
         p = out / f"awto-{port}.bin"
