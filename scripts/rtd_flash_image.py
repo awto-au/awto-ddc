@@ -39,6 +39,7 @@ import rtd_flash_sector as F  # noqa: E402
 import flash_state as S  # noqa: E402
 import i2cbus  # noqa: E402
 import unit_lock  # noqa: E402
+import disk_guard  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
 
 FLASH = 1 << 20
@@ -521,6 +522,8 @@ def flash_main(a) -> int:
              tag=a.tag or a.image.stem, commit=S.git_commit(root))
     if not 1 <= a.burst_chunk <= PAGE:
         log(f"refuse: --burst-chunk {a.burst_chunk} outside 1..{PAGE}"); return 2
+    if a.write:
+        disk_guard.require_free("flash")                           # ENOSPC mid-flash left unit 2 mixed (#77)
     seen = i2cbus.require_unit(a.bus, a.serial, a.identity)        # before any ISP traffic (#50.28)
     log(f"unit guard: EDID serial {seen!r} on bus {a.bus}" + (f"; EDID silent, identity per caller: {a.identity}" if seen is None else ""))
     isp = Rtd(a.bus)

@@ -58,6 +58,7 @@ def _repo_root() -> Path:
 REPO = _repo_root()
 sys.path.insert(0, str(REPO / "scripts"))
 import i2cbus  # noqa: E402  (the only module that touches /dev/i2c-N, #48)
+import disk_guard  # noqa: E402  (free-space refusal + tmp/fw pruning, #77)
 TMP = REPO / "tmp"           # scratch, pidfiles
 LOGS = TMP / "logs"          # logs, per the ./tmp/logs/ rule
 LOG = LOGS / "dev.log"
@@ -469,6 +470,8 @@ def _flashed(u: dict) -> dict:
          args="[--unit N] [--frc]", kind="action")
 def cmd_build(extra: list[str]) -> int:
     n, u = _unit(extra)
+    disk_guard.prune_fw(FW)
+    disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
     frc = _flag(extra, "--frc")
     defs = ["-D_AWTO_FRC"] if frc else []
     if BOOT_PORTS.get(u["input"]):
@@ -506,6 +509,7 @@ def cmd_flash(extra: list[str]) -> int:
         img = FW / f"{tag}.bin"
     if not any_image:
         check_image_identity(u, img)
+    disk_guard.require_free("flash")        # before the flash-state file is touched (#77)
     identity = None
     if bus:
         identity = "dev.py recover: bus resolved by this unit's EDID serial, before or right after its own relay cycle"
