@@ -877,9 +877,6 @@ def gdctl_set_args(show: str, target: str, mode: str) -> list[str]:
     return args
 
 
-@command("set the host video mode on a unit's connector (keeps the layout); --dp mirror|off: DP-1 mirrored into the HDMI slot",
-         args="[--unit N] [--dp] " + "|".join(MODES) + " | --dp mirror|off",
-         kind="action")
 def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
     """Dan's layout with DP-1 added to (on) or removed from (off) the HDMI connector's logical monitor, at the HDMI mode:
     same slot, same position, nothing else moves (#60 input-switch tests)."""
@@ -900,6 +897,9 @@ def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
     return out
 
 
+@command("set the host video mode on a unit's connector (keeps the layout); --dp mirror|off: DP-1 mirrored into the HDMI slot",
+         args="[--unit N] [--dp] " + "|".join(MODES) + " | --dp mirror|off",
+         kind="action")
 def cmd_mode(extra: list[str]) -> int:
     n, u = _unit(extra)
     if u.get("input") == "DP" and len(extra) == 1 and extra[0] in ("mirror", "off"):
