@@ -44,10 +44,10 @@ def dtd(clk10k, ha, hb, hfp, hsw, va, vb, vfp, vsw, hpol, vpol):
         0, 0, f])
 
 
-# 3840x2160 @59.982 Hz, 533.12 MHz CVT-RB: the vendor EDID's DTD1 and the panel's own timing
-# (htotal 4000 fp48 sw32 bp80, vtotal 2222 fp3 sw5 bp54, +H -V). 594.00 MHz (VIC 97) is NOSUPPORT on our
-# firmware (#26): no VIC 97, no 4K FRC modes.
-DTD_4K = dtd(53312, 3840, 160, 48, 32, 2160, 62, 3, 5, 1, 0)
+# 3840x2160 @59.940 Hz = VIC 97 x 1000/1001: 593.41 MHz, htotal 4400 (fp176 sw88 bp296), vtotal 2250
+# (fp8 sw10 bp72), +H +V. The vendor's 533.12 MHz CVT-RB DTD is pruned by i915 (CLOCK_RANGE) and 594.000 MHz
+# is NOSUPPORT on our firmware; 59.94 is clean on unit 3 via Intel (#26, Dan 2026-11-07). No VIC 97.
+DTD_4K = dtd(59341, 3840, 560, 176, 88, 2160, 90, 8, 10, 1, 1)
 # VIC 16 exact: 148.5 MHz, htotal 2200 (88/44/148), vtotal 1125 (4/5/36), +H +V
 DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
 
