@@ -334,3 +334,7 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1830	ok	OK-CONFIG: ScalerMDomainGetFRCMemoryBW: GET_OD_STIRCT_CONDITION() is _FALSE with OD cut (#8), so the if is constant false
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1832	ok	OK-CONFIG: body of the constant-false OD-strict if above (usHWidth = DHtotal, OD only)
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	570	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	2043	ok	OK-HARMLESS: messages off (u1 build): if body is only a ((void)0) debug stub; condition has no side effects
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	2052	ok	OK-HARMLESS: messages off (u1 build): if body is only a ((void)0) debug stub; condition has no side effects
+^conditional flow changed by optimizer	Kernel/System/Code/SysMode.c	143	ok	OK-HARMLESS: messages off (u1 build): if/else bodies are only ((void)0) debug stubs; GET_INPUT_TIMING_H_POLARITY() is a plain read
+^conditional flow changed by optimizer	Kernel/System/Code/SysMode.c	152	ok	OK-HARMLESS: messages off (u1 build): same as :143 for V polarity
