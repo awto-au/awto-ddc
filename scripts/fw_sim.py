@@ -764,7 +764,7 @@ class SimBus:
     ISR_BUDGET = 20_000            # instr for a SUB_I-only EXINT1 (read address phase)
 
     def __init__(self, binp: Path, mapp: Path, tag: str | None = None, log=None, boot: bool = True,
-                 devs=(), video: str | None = None, port: str = "D2"):
+                 devs=(), video: str | None = None, port: str = "D2", ffwd: bool = False):
         """video = HdmiInput mode name ("1080p60") for a firmware that sees a stable HDMI source on `port` (D2/D3); None = bare
         CPU + flash port + debug slave (random XRAM, no source). The host is on `port`'s DDC: 0x35 answers only while FF22
         selects it (fw without #28 keeps DDC2)."""
@@ -784,6 +784,12 @@ class SimBus:
             self.m.t2_scale = T2_SCALE
         self.ddc = PORT_DDC[port] if video else None
         self.diag_base = self.m.sym.get("_g_stAwtoDiag", 0xF6D0)
+        self.ffwd_ms = 0
+        if ffwd:
+            mt = re.search(r"^\s+([0-9A-F]{8})\s+_g_usTimerCounter\s", self.m.map_text, re.M)    # DATA (IRAM) global
+            if mt:
+                self._tc_addr = int(mt.group(1), 16)
+                self.m.stub("ScalerTimerDelayXms", self._delay_ffwd)
         self.t2_abs, self._t2_last = 0, None
         self.naks = 0
         if boot:
@@ -791,6 +797,22 @@ class SimBus:
 
     def addr(self, name: str) -> int:
         return self.m.addr(name)
+
+    def _delay_ffwd(self, m, r):
+        """Idle fast-forward: ScalerTimerDelayXms(ms) is a spin on g_usTimerCounter (87 % of a main-loop pass in
+        speed_bench). Skip the spin and advance what the Timer2 ISR would have: g_usTimerCounter (IRAM, u16) and the diag
+        T2 ISR count (the health time base), by ms ticks. Timer events compare g_usTimerCounter, so they fire as before."""
+        ms = r["a1"] & 0xFFFF
+        if ms == 0 or ms > 1000:                     # out of the range the SDK uses per call: run it for real
+            return None
+        a = self._tc_addr
+        cur = int.from_bytes(self.m.rd(a, 2, "iram"), "big" if self.be else "little")
+        self.m.wr(a, ((cur + ms) & 0xFFFF).to_bytes(2, "big" if self.be else "little"), "iram")
+        t2 = self.diag_base + 0x16
+        cur = int.from_bytes(self.m.rd(t2, 2), "big" if self.be else "little")
+        self.m.wr(t2, ((cur + ms) & 0xFFFF).to_bytes(2, "big" if self.be else "little"))
+        self.ffwd_ms += ms
+        return {}
 
     def mode_state(self) -> int:
         return self.m.rd(self.addr("g_stModeInfo"))[0] & 0x1F
