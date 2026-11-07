@@ -24,6 +24,8 @@ POWER = {0: "PANEL_ON", 1: "PANEL_OFF", 2: "BACKLIGHT_ON", 3: "BACKLIGHT_OFF"}  
 TESTCMD = 0xF6F8
 PORT_CMD = {"D1": 0x31, "D2": 0x32, "D3": 0x33}
 N_EV = 40
+PROBES = {1: "reset-to-SEARCH start", 2: "SysModeResetState done", 3: "judge SEARCH refused (retry)", 4: "OSD reset proc done",
+          5: "free run done", 6: "SysSourceSwitchInputPort done"}       # AWTO_SW_EV_PROBE sites (#60, keil2sdcc)
 
 
 def sym(map_path: Path, name: str) -> int:
@@ -55,7 +57,10 @@ def name(ev_id: int, arg: int) -> str:
         return f"T3 wait {'start' if arg == 0 else 'end'}"
     if ev_id == 0x40:
         return f"switch cmd 0x{arg:02X}"
-    return {0x50: "hold: disable blocked", 0x51: "hold: logo redrawn", 0x52: "hold: OSD event dropped"}.get(ev_id, f"ev 0x{ev_id:02X}") + f" ({arg})"
+    if ev_id == 0x90:
+        return f"probe {PROBES.get(arg, arg)}"
+    return {0x50: "hold: disable blocked", 0x51: "hold: logo redrawn", 0x52: "hold: OSD event dropped", 0x60: "logo",
+            0x70: "panel VDD early", 0x80: "blank instead of backlight off"}.get(ev_id, f"ev 0x{ev_id:02X}") + f" ({arg})"
 
 
 def main() -> int:
