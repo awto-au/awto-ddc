@@ -16,7 +16,9 @@ Reads (firmware RAM, needs the flashed image's --map): g_ucSearchIndex, g_pucSou
 (SDK SysSourceGetInputPort: port = priority[index]; 4 = D1, 5 = D2, 6 = D3), g_pstSourceInfo[] raw bytes.
 Log: ./tmp/logs/isp_port.log
 """
-import argparse, re, sys
+import argparse
+import re
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -32,7 +34,7 @@ RX = {"D2": 0x71, "D3": 0x72}
 
 def map_syms(path: Path, names) -> dict:
     out = {}
-    for m in re.finditer(r"^D:\s+([0-9A-F]{8})\s+_(\w+)\s", path.read_text(errors="replace"), re.M):
+    for m in re.finditer(r"^D:\s+([0-9A-F]{8})\s+_(\w+)\s", path.read_text(errors="replace"), re.MULTILINE):
         if m.group(2) in names:
             out[m.group(2)] = int(m.group(1), 16)
     return out
