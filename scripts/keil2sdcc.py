@@ -75,6 +75,8 @@ RULES = [
     # input-info pop-up after mode ACTIVE (_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG): SDK 3 s -> _AWTO_INFO_POPUP_SEC
     (re.compile(r"ScalerTimerActiveTimerEvent\(SEC\(3\), (_USER_TIMER_EVENT_OSD_DISABLE\);)"),
      r"ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), \1"),
+    # panel T3 (video valid -> backlight on, 550 ms blind): the delay calibration runs inside it, same end tick (#53.6)
+    (re.compile(r"\bScalerTimerDelayXms\(_PANEL_POWER_ON_T3\)"), "AwtoDiagPanelT3Wait(_PANEL_POWER_ON_T3)"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position
@@ -171,6 +173,9 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^#include", "#define _AWTO_DIAG_DEFINER"),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoDiagInit();"),                 # stage 1
+    # delay calibration (#53.6) needs the DELAY_XUS macros, which only scaler files see
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"^void ScalerMcu5usDelayCalc\(EnumClkSel enumClock\)$",
+     (SHIM / "awto_delaycal.inc").read_text().rstrip("\n")),
     # awto-ddc#26 4K60 measurement ring: functions (fw/sdcc/awto_meas4k.inc), Timer2 sampler, M-domain / DPLL fine-tune call events
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_meas4k.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoMeasInit();"),
@@ -209,8 +214,7 @@ INSERTS = [
     ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")
     for case, tail in (("_PANEL_ON", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)"),
                        ("_BACKLIGHT_ON", r"^\s*// Set Video Stream parameter"))
-    for rx, txt in ((r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagSelfTest();"),
-                    (r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagStage(6);"),
+    for rx, txt in ((r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "    AwtoDiagStage(6);"),
                     (r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "    AwtoDiagStage(7);"),
                     (tail, "    AwtoDiagStage(8);"))
 ]
