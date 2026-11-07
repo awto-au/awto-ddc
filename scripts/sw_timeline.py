@@ -25,7 +25,13 @@ TESTCMD = 0xF6F8
 PORT_CMD = {"D1": 0x31, "D2": 0x32, "D3": 0x33}
 N_EV = 40
 PROBES = {1: "reset-to-SEARCH start", 2: "SysModeResetState done", 3: "judge SEARCH refused (retry)", 4: "OSD reset proc done",
-          5: "free run done", 6: "SysSourceSwitchInputPort done"}       # AWTO_SW_EV_PROBE sites (#60, keil2sdcc)
+          5: "free run done", 6: "SysSourceSwitchInputPort done", 7: "active proc: NVRAM system-data save start",
+          8: "active proc: NVRAM save done", 9: "OSD info pop-up draw start", 10: "OSD info pop-up drawn",
+          11: "first active: ScalerGlobalFirstActiveProc done", 12: "first active: OSD active proc + backlight done (SysSourceFirstActiveProc next)",
+          14: "display setting start", 15: "display setting done (colour next)",
+          16: "colour proc done (setting ready)", 17: "measure start", 18: "measure done (timing confirmed)",
+          19: "source judged (port found)", 20: "judge check FAIL: source unstable", 21: "judge check FAIL: timing change",
+          22: "judge check FAIL: interlace", 23: "judge check FAIL: M-domain memory / timing gen"}       # AWTO_SW_EV_PROBE sites (#60, keil2sdcc)
 MARKS = {0: "DDC/CI + colour + ScalerDebug (pass tail)", 1: "key+diag+testcmd", 2: "SysPowerHandler", 3: "SysJudgeHandler",
          4: "SysTimerHandler", 5: "SysSourceHandler (rest: judge)", 6: "SysModeHandler", 7: "SysDpRxHandler",
          8: "SysTMDSRxHandler", 9: "HDCP2 / MST", 10: "OSD handler",
@@ -66,8 +72,27 @@ def name(ev_id: int, arg: int) -> str:
         return f"switch cmd 0x{arg:02X}"
     if ev_id == 0x90:
         return f"probe {PROBES.get(arg, arg)}"
+    if ev_id == 0x92:
+        return f"MODE RESET set before mark {arg}: {MARKS.get(arg, '?')}"
     if ev_id == 0x91:
         return f"SLOW >= 20 ms before mark {arg}: {MARKS.get(arg, '?')}"
+    if ev_id == 0xA0:
+        return "FAST " + {0: "path taken (mux switched, blanked)", 1: "refused: no cache for the port", 6: "refused: mode not ACTIVE",
+                          7: "refused: a fast switch is pending", 8: "refused: already on that port", 9: "refused: mode reset pending",
+                          3: "refused: receiver not stable", 4: "dropped: SDK reset the mode", 5: "measure timeout -> full path",
+                          0x21: "refused: H/V width", 0x22: "refused: H/V total", 0x23: "refused: H start", 0x24: "refused: V start",
+                          0x25: "refused: interlace", 0x26: "refused: V freq", 0x27: "refused: pixel clock",
+                          0x28: "refused: colour info"}.get(arg, str(arg))
+    if ev_id == 0xA2:
+        bits = [n for b, n in ((0x40, "input HV-sync error 6"), (0x20, "input HV-sync error 5"), (0x02, "FIFO overflow"),
+                               (0x01, "FIFO underflow"), (0x80, "watchdog")) if arg & b]
+        return f"FAST post-unblank M-domain flags 0x{arg:02X}: " + ", ".join(bits)
+    if ev_id == 0xA1:
+        why = [n for b, n in ((1, "off-line measure busy"), (2, "on-line watchdog"), (4, "FIFO / HV-sync error"),
+                              (8, "receiver unstable"), (0x10, "timing change"), (0x20, "SysJudgeCheckStatus")) if arg & b]
+        return "FAST failed checks: " + (", ".join(why) or "none")
+    if ev_id == 0x80 and arg == 0:
+        return "UNBLANK (picture on)"
     return {0x50: "hold: disable blocked", 0x51: "hold: logo redrawn", 0x52: "hold: OSD event dropped", 0x60: "logo",
             0x70: "panel VDD early", 0x80: "blank instead of backlight off"}.get(ev_id, f"ev 0x{ev_id:02X}") + f" ({arg})"
 
