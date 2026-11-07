@@ -276,6 +276,11 @@ SUBS = [
      lambda m: m.group(1) + "AWTO_BL_OFF_OR_BLANK(1);  // [keil2sdcc] sub", 2),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"UserCommonInterfacePanelPowerAction\(_BACKLIGHT_OFF\);",
      lambda m: "AWTO_BL_OFF_OR_BLANK(2);  // [keil2sdcc] sub", 1),
+    # #60 step 3: no HDMI hot-plug pulse on an input switch (the host then re-reads the EDID and re-lays out): toggle off
+    ("Kernel/System/Code/SysSource.c", r"if\(UserCommonNVRamGetSystemData\(_HDMI_HOT_PLUG_SUPPORT\) == _TRUE\)",
+     lambda m: "if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT) == _TRUE))  // [keil2sdcc] sub", 1),
+    ("Kernel/User Common Function/Code/UserCommonNVRamSystem.c", r"if\(g_stSystemData\.b1HDMIHotPlugSupport == _TRUE\)",
+     lambda m: "if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (g_stSystemData.b1HDMIHotPlugSupport == _TRUE))  // [keil2sdcc] sub", 1),
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
     (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
      lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),

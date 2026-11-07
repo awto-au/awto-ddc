@@ -251,6 +251,8 @@ extern void AwtoPanelVddEarly(void);
 #else
 #define AWTO_BL_OFF_OR_BLANK(site)                              UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF)
 #endif
+// #60 step 3: _OFF = the SDK never pulses HDMI HPD low on a switch / timing change (host saw 2 drm uevents per switch to D2)
+#define _AWTO_HDMI_HPD_TOGGLE                                   _OFF
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
