@@ -1,2 +1,2 @@
-/* separate TU: SDCC infers register use of same-TU callees, an extern naked asm fn is assumed to clobber all */
-#include "../../sdcc/crt_mod0.c"
+/* second TU kept so the test stays multi-file: the helpers under test now come from the library (awto-sdcc#44) */
+int mod0_dummy;

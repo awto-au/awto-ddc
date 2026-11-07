@@ -196,9 +196,9 @@ def main() -> int:
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
     run("bank", [py, "scripts/sdcc_bank.py", "--common-max", hex(a.common), "--banks", NBANKS])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
-    # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    # crt_memcpy reads its PARMs little-endian: BE builds keep the library's BE memcpy (#24, #15)
-    crts = ("crt_mod0", "crt_divulong") + (() if T.BIG_ENDIAN else ("crt_memcpy",))
+    # C runtime overrides: compile to asm, linked ahead of mcs51.lib. % by 0 is the library's (fork guard x % 0 = x in
+    # every lib variant, awto-sdcc#44); crt_memcpy reads its PARMs little-endian: BE builds keep the library's (#24, #15)
+    crts = ("crt_divulong",) + (() if T.BIG_ENDIAN else ("crt_memcpy",))
     for c in crts:
         run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])

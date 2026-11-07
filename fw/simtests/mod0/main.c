@@ -1,4 +1,4 @@
-/* fw/sdcc/crt_mod0.c (_modulong/_moduint hand asm) vs vectors generated with Python: a mod b, a mod 0 = a.
+/* library _modulong/_moduint (fork guard x % 0 = x, awto-sdcc#44; was fw/sdcc/crt_mod0.c) vs vectors generated with Python: a mod b, a mod 0 = a.
  * Vector rows: {a, b, 32-bit result, 16-bit result on the low halves}; edge cases + LCG(12345) pairs. */
 #include "sim.h"
 unsigned long _modulong(unsigned long a, unsigned long b);
