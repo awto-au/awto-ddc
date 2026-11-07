@@ -257,6 +257,7 @@ def main() -> int:
         # #66: every policy row must still match a warning of this build (stale rows fail), every warning a row
         run("edid", [py, "scripts/warn_policy_check.py", WORK_DIR / "warnings-STD_FW_1P.txt",
                      WORK_DIR / f"warnings-{Path(LIB_UV2).stem}.txt"])
+    run("asm", [py, "scripts/keil2sdcc.py", "awto"])         # clean tree + shim (#68); no-op without clean sources
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
@@ -266,7 +267,8 @@ def main() -> int:
                  *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
                  *(["--cluster", a.cluster] if a.cluster else []),
                  *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
-                 *(["--pin-common", a.pin_common] if a.pin_common else [])])
+                 *(["--pin-common", pin] if (pin := ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()
+                                                                         if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)) else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_memcpy reads its PARMs little-endian, ABI 0: BE and --sdcccall>=1 builds keep the library memcpy (#24, #15, #51.1)

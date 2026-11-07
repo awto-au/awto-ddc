@@ -1,0 +1,1 @@
+a49470b   # awto-rtdfw commit compiled into the image (git archive); HEAD needs the timer module for gamma. Edit to move the pin
