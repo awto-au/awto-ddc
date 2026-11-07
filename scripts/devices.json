@@ -8,8 +8,8 @@
       "gdctl": "HDMI-3",
       "be": true,
       "relay": null,
-      "test": false,
-      "note": "2026-11-06 10:41: NVIDIA HDMI-A-3 (I2C bus via EDID scan, e.g. 18)"
+      "test": true,
+      "note": "2026-11-06 10:41: NVIDIA HDMI-A-3 (I2C bus via EDID scan, e.g. 18). 2026-11-07: test unit too (Dan), still his working screen: no relay, keep layout; cable in monitor input D3 (isp_port.py)"
     },
     "2": {
       "serial": "AWT26110002",
