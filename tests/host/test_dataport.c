@@ -7,7 +7,7 @@
 #include <string.h>
 
 /* recording mocks: the data register returns a counter, so returned values are checked too */
-#define REG8(a)       mock_rd((uint16_t)(a))
+#define REG8_RD(a)    mock_rd((uint16_t)(a))
 #define REG8_WR(a, v) mock_wr((uint16_t)(a), (uint8_t)(v))
 
 struct acc {

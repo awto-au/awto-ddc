@@ -3,11 +3,6 @@
 #include "reg.h"
 #include "dataport.h"
 
-/* write hook: host tests redefine REG8_WR to record writes (see tests/host/test_dataport.c) */
-#ifndef REG8_WR
-#define REG8_WR(a, v) (REG8(a) = (uint8_t)(v))
-#endif
-
 void dp_wr(uint16_t port, uint8_t idx, uint8_t v)
 {
     REG8_WR(port, idx);
