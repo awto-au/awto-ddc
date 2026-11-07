@@ -13,10 +13,10 @@
 0137	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7523	Get Colorimetry YCC_SMPTE_170M	0
 0137	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7533	Get Colorimetry YCC_SMPTE_170M	0
 0145	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_ComboPhy.c:400	DP Audio -> OFF	0
-0148	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:62	R_OV	0
-0148	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:69	R_OV	0
-0148	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:69	R_OV	0
-0148	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:74	R_OV	0
+0148	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:62	R_OV	1
+0148	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:69	R_OV	1
+0148	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:69	R_OV	1
+0148	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:74	R_OV	1
 0152	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:749	tx2 dqs	0
 015c	Rx1	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx1.c:4242	7. TMDS Lane0 LE Min	0
 0160	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY9228.c:823	A.Pmic:Product ID	0
@@ -32,10 +32,10 @@
 01b8	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2367	5. //----LVDS TXC Pass----//	0
 01b8	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_DSPC.c:1553	5. //----LVDS TXC Pass----//	0
 01b8	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2137	5. //----LVDS TXC Pass----//	0
-01ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1977	_LAST_LINE_TARGET too close to DHtotal boundary !!! Double check _LAST_LINE_TARGET.	0
-01d3	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:604	DDEN Period	0
-01d3	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:607	DDEN Period	0
-01d3	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:591	DDEN Period	0
+01ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1977	_LAST_LINE_TARGET too close to DHtotal boundary !!! Double check _LAST_LINE_TARGET.	1
+01d3	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:604	DDEN Period	1
+01d3	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:607	DDEN Period	1
+01d3	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:591	DDEN Period	1
 01d4	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx0.c:10290	7. DP Error Count Fail	0
 01d4	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx0_SeptPhy.c:1230	7. DP Error Count Fail	0
 01db	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8612	Get Color Space YUV444	0
@@ -55,10 +55,10 @@
 0231	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7987	Get Color Space YUV420	0
 023c	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2450	5. LVDS TXDCK Fail	0
 023c	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2220	5. LVDS TXDCK Fail	0
-024a	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:60	R_IV	0
-024a	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:67	R_IV	0
-024a	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:67	R_IV	0
-024a	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:72	R_IV	0
+024a	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:60	R_IV	1
+024a	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:67	R_IV	1
+024a	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:67	R_IV	1
+024a	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:72	R_IV	1
 028f	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4713	5. D2 420to422 Bist Fail	0
 028f	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3818	5. D2 420to422 Bist Fail	0
 029a	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_ComboPhy.c:725	False : D0 AVMute	0
@@ -240,7 +240,7 @@
 08e2	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:1351	***Search Result***	0
 08ec	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:1434	5. 2PCS DDR1 RX0	0
 08fb	System	Kernel/System/Code/SysVGA.c:101	VGA Measure Measure Info	1
-08fc	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1971	Measured last-line value away from _LAST_LINE_TARGET !!!	0
+08fc	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1971	Measured last-line value away from _LAST_LINE_TARGET !!!	1
 090f	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8072	Get Pixel Repetition Error	0
 091a	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:3192	5. PCM Start	0
 091a	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain.c:665	5. PCM Start	0
@@ -377,7 +377,7 @@
 0e6c	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8364	Get YCC RANGE Error	0
 0e95	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4652	5. ScaleDown S2 DRF Bist Start Pause Time Out Fail	0
 0e95	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3757	5. ScaleDown S2 DRF Bist Start Pause Time Out Fail	0
-0ea1	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2009	OD use bit	0
+0ea1	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2009	OD use bit	1
 0ed8	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:638	5. ScaleDown M2 Bist Time Out Fail	0
 0ed8	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:829	5. ScaleDown M2 Bist Time Out Fail	0
 0f01	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Main.c:1771	5. D0 MST2SST FIFO Pass	0
@@ -403,7 +403,7 @@
 0f86	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:172	5. ADCNR Bist Time Out Fail	0
 0f86	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:484	5. ADCNR Bist Time Out Fail	0
 0f8b	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain.c:1279	6. 5K3K PCM PASS	0
-0f91	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:184	Last Line Difference	0
+0f91	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:184	Last Line Difference	1
 0f93	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:362	HDR10 Metadata Y2	0
 0f95	System	Kernel/System/Code/SysSource.c:3050	7. VGA Port Initial	1
 0fa0	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9202	Get Color Space RGB	0
@@ -444,7 +444,7 @@
 10e6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:1347	6. MHL CBUS SINK ON	0
 10e6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:1446	6. MHL CBUS SINK ON	0
 10eb	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8892	Get Colorimetry EXT_YCC_ITUR_BT2020_NCL	0
-10f3	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:529	7.Calculated Max	0
+10f3	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:529	7.Calculated Max	1
 10f5	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2797	Rx Start Good Phase	0
 10fb	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1842	VSC change: Color Space, _COLOR_SPACE_YCBCR444	0
 1108	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8964	Get YCC LIMIT RANGE	0
@@ -500,19 +500,19 @@
 12ee	Audio	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Audio.c:468	Audio D2: WatchDog	0
 12ee	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:431	Audio D2: WatchDog	0
 1303	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2505	====ScanPhase WL===	0
-1308	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:70	4. Remaining BW for OD	0
+1308	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:70	4. Remaining BW for OD	1
 130d	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx0.c:913	7.FREESYNC IVF out of panel range	0
 1323	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:613	6. ScaleDown M1 DRF Bist FAIL	0
 1323	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:364	6. ScaleDown M1 DRF Bist FAIL	0
 1323	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:804	6. ScaleDown M1 DRF Bist FAIL	0
 132c	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1352	5. ====SHP S1/S2 Bist Test Start	0
 132c	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1301	5. ====SHP S1/S2 Bist Test Start	0
-133c	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:68	OD_ON	0
-133c	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:79	OD_ON	0
-133c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:71	OD_ON	0
-133c	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:76	OD_ON	0
-133c	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:71	OD_ON	0
-133c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:71	OD_ON	0
+133c	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:68	OD_ON	1
+133c	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:79	OD_ON	1
+133c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:71	OD_ON	1
+133c	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:76	OD_ON	1
+133c	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:71	OD_ON	1
+133c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:71	OD_ON	1
 1363	Scaler	Kernel/System/Code/SysMode.c:976	DRR Get IVF from SPD info	0
 1377	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:2882	M domain CRC fail!	0
 1377	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:2957	M domain CRC fail!	0
@@ -694,10 +694,10 @@
 1895	QC	User/None Factory/Code/NoneFactoryFunction_RL6369.c:189	7. **** QC Test Finsish Pass ****	0
 1895	QC	User/None Factory/Code/NoneFactoryFunction_RL6410.c:293	7. **** QC Test Finsish Pass ****	0
 18e1	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:520	6. #### D0 Port ucResult1 =	0
-1903	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:268	2. No Further IVS2DVSDelay Can Be Added	0
-1903	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:231	2. No Further IVS2DVSDelay Can Be Added	0
-1903	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:240	2. No Further IVS2DVSDelay Can Be Added	0
-1903	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:236	2. No Further IVS2DVSDelay Can Be Added	0
+1903	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:268	2. No Further IVS2DVSDelay Can Be Added	1
+1903	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:231	2. No Further IVS2DVSDelay Can Be Added	1
+1903	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:240	2. No Further IVS2DVSDelay Can Be Added	1
+1903	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:236	2. No Further IVS2DVSDelay Can Be Added	1
 1906	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:1358	** rDQ Delay Tap = 	0
 1906	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2647	** rDQ Delay Tap = 	0
 1906	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2876	** rDQ Delay Tap = 	0
@@ -915,7 +915,7 @@
 21bd	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerTMDS_ComboPhy.c:595	4. PLL Setting Error	0
 21be	Rx0	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_TMDS.c:3124	Rx HPD Toggle!!	0
 21be	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_TMDS.c:1791	Rx HPD Toggle!!	0
-21c6	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1939	InputRegionCount	0
+21c6	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1939	InputRegionCount	1
 21ca	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2513	====ScanPhase C====	0
 21fb	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonFreeSync.c:706	Get Candidated Vfreq from EDID EXT DTD	0
 220c	Rx4	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx4.c:4504	HDMI AVI info frame has changed	0
@@ -976,14 +976,14 @@
 23b6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2375	DP HBR___PASS---1	0
 23c5	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4482	6. FormatConv Sub DRF Bist FAIL	0
 23c5	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3587	6. FormatConv Sub DRF Bist FAIL	0
-23d0	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Scaling.c:553	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Scaling.c:641	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:581	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:690	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:584	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Scaling.c:459	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:571	ulHSDBW	0
-23d0	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:677	ulHSDBW	0
+23d0	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Scaling.c:553	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Scaling.c:641	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:581	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:690	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:584	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Scaling.c:459	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:571	ulHSDBW	1
+23d0	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:677	ulHSDBW	1
 23fe	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerSyncProc.c:1194	SOG mid-lv change	0
 2403	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2595	5. 3D Gamma M2 Bist Fail	0
 2403	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2601	5. 3D Gamma M2 Bist Fail	0
@@ -1045,7 +1045,7 @@
 2590	QC	User/None Factory/Code/NoneFactoryFunction_RL6410.c:225	7. **** QC Test Finsish Fail ****	0
 2590	QC	User/None Factory/Code/NoneFactoryFunction_RL6432.c:150	7. **** QC Test Finsish Fail ****	0
 25ab	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:1527	Tx dqs3 half T	0
-25bb	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1675	4. FRC Size	0
+25bb	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1675	4. FRC Size	1
 25bd	Analog	User/Beacon Series/BeaconOsd/Code/BeaconOsdFunc.c:2956	ucTargetOSD BL 2	0
 25bd	Analog	User/Beacon Series/BeaconOsd/Code/BeaconOsdFunc.c:2988	ucTargetOSD BL 2	0
 25c0	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:366	pucDCRResult[4]	0
@@ -1261,7 +1261,7 @@
 27eb	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7553	Get Colorimetry Extended	0
 27eb	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7586	Get Colorimetry Extended	0
 27ee	MHL	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx1.c:942	Rx1 ReadDev MHL_ABORT_FAIL	0
-27f4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:561	-D addr2 FRC	0
+27f4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:561	-D addr2 FRC	1
 280c	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:388	VBIOS_Lane_Count	0
 280d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2943	Vby1_B RBR___PASS----2	0
 280d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2871	Vby1_B RBR___PASS----2	0
@@ -1269,9 +1269,9 @@
 280f	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1503	_COLORIMETRY_RGB_COLOR_PROFILE	0
 281e	MHL	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_MHL.c:2512	ReadDev MHL_SUCCESS	0
 2838	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain.c:1205	5. D Random PG 5K3K Start	0
-2871	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2041	[Warning]!!!!!! Efficiency Utilization near boundry	0
-2872	Memory	Kernel/User Common Function/Code/UserCommonAdjust.c:1439	Exceed Minimum Limit	0
-2872	Memory	Kernel/User Common Function/Code/UserCommonAdjust.c:1479	Exceed Minimum Limit	0
+2871	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2041	[Warning]!!!!!! Efficiency Utilization near boundry	1
+2872	Memory	Kernel/User Common Function/Code/UserCommonAdjust.c:1439	Exceed Minimum Limit	1
+2872	Memory	Kernel/User Common Function/Code/UserCommonAdjust.c:1479	Exceed Minimum Limit	1
 2875	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8649	Get Pixel Repetition 4	0
 289c	System	User/Beacon Series/BeaconFunction/Code/BeaconUserSensor.c:532	ReadLux fail 2	1
 28aa	Rx2	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx2.c:2693	G Channel CDR Unstable	0
@@ -1294,8 +1294,8 @@
 2903	System	Kernel/User Common Function/Code/UserCommonPortControllerRts5400.c:1195	ReConnet Fail Wr fail	1
 2911	System	Kernel/System/Code/SysTypeC.c:898	8. [TYPE C] <RDO> Object Position =	1
 2913	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:400	g_pusApplyPWM[5]	0
-2918	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:187	DRR Dt warning	0
-2918	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:187	DRR Dt warning	0
+2918	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:187	DRR Dt warning	1
+2918	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:187	DRR Dt warning	1
 292c	Rx0	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_DPRx0.c:4390	CDR Reset	0
 292c	Rx0	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_DPRx0.c:4404	CDR Reset	0
 292c	Rx0	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx0.c:4237	CDR Reset	0
@@ -1424,11 +1424,11 @@
 2dc0	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Color.c:2620	6.====D Random SHP PASS====	0
 2dc9	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:9665	VSC change: Color Space, _COLOR_SPACE_YCBCR422	0
 2dc9	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1928	VSC change: Color Space, _COLOR_SPACE_YCBCR422	0
-2de2	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:61	R-OH	0
-2de2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:68	R-OH	0
-2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	0
-2de2	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:73	R-OH	0
-2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:766	FrameTrack-DVT-Error	0
+2de2	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:61	R-OH	1
+2de2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:68	R-OH	1
+2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	1
+2de2	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:73	R-OH	1
+2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:766	FrameTrack-DVT-Error	1
 2df5	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:274	VBIOS_Link_Rate_MST	0
 2e06	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_DSPC.c:1677	6. LVDS_Combo_DP RBR: FAIL	0
 2e31	Scaler	User/Beacon Series/BeaconFunction/Code/BeaconUserInterface.c:3445	MBR: bLightCtrl	0
@@ -1745,7 +1745,7 @@
 36cf	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10479	Get Pixel Repetition 5	0
 36d8	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2096	Accuracy IVF	0
 36db	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxHDCP2.c:1215	S - Fail 0	0
-36ec	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1987	FrameSync Line Buffer	0
+36ec	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1987	FrameSync Line Buffer	1
 36ed	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2757	eDP Tx2 LTend Pass	1
 371c	Rx1	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx1.c:4870	HDMI Info Frame Not Received and not RGB	0
 371c	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDS.c:2950	HDMI Info Frame Not Received and not RGB	0
@@ -1773,7 +1773,7 @@
 37b1	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxHDCP2.c:2851	CSM - DPTX M Verify fail	0
 37c6	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2950	Vby1_B RBR___FAIL	0
 37c6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2878	Vby1_B RBR___FAIL	0
-37db	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:593	7. Target Dt Value	0
+37db	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:593	7. Target Dt Value	1
 37df	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9879	Get Pixel Repetition 6	0
 37ed	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx5HDCP2_SeptPhy.c:963	[D5]DCP LLC Signature	0
 3823	MHL	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_MHLRx4.c:1396	D4 MHL Discovery Done	0
@@ -1806,12 +1806,12 @@
 393e	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OSD.c:3614	5.OsdTestFrame14 END	0
 393e	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_OSD.c:3852	5.OsdTestFrame14 END	0
 393e	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OSD.c:3619	5.OsdTestFrame14 END	0
-394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:489	-CW180 W_Addr2	0
-394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:717	-CW180 W_Addr2	0
-394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:425	-CW180 W_Addr2	0
-394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:539	-CW180 W_Addr2	0
-394b	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:494	-CW180 W_Addr2	0
-394b	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:710	-CW180 W_Addr2	0
+394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:489	-CW180 W_Addr2	1
+394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:717	-CW180 W_Addr2	1
+394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:425	-CW180 W_Addr2	1
+394b	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:539	-CW180 W_Addr2	1
+394b	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:494	-CW180 W_Addr2	1
+394b	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:710	-CW180 W_Addr2	1
 395a	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1401	_COLORIMETRY_RGB_SRGB_CEA	0
 3966	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10876	Colorimetry Changed	0
 3968	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:2095	5. Format Conversion Start	0
@@ -1850,26 +1850,26 @@
 3a9c	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:5370	6.====5k3k 1P LSR Fail====	0
 3aa7	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4735	6. D2 420to422 Bist FAIL	0
 3aa7	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3840	6. D2 420to422 Bist FAIL	0
-3aab	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Scaling.c:552	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Scaling.c:640	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:580	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:689	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:583	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Scaling.c:458	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:570	ulHSDSpace	0
-3aab	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:676	ulHSDSpace	0
+3aab	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Scaling.c:552	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Scaling.c:640	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:580	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:689	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:583	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Scaling.c:458	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:570	ulHSDSpace	1
+3aab	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:676	ulHSDSpace	1
 3ad0	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1657	5. eDPTX Bist Pass	0
 3ad0	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_BIST.c:724	5. eDPTX Bist Pass	0
 3af0	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_DPRx0.c:1364	Level 2 LE ErrorCount[_D0_DP_LANE0]	0
 3af4	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1869	VSC change: Color Space, _COLOR_SPACE_Y_ONLY	0
 3afc	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1333	_COLOR_SPACE_Y_ONLY	0
 3b0b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1423	D3 Audio Test On	0
-3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:481	-CW180 W_Addr1	0
-3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:708	-CW180 W_Addr1	0
-3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:417	-CW180 W_Addr1	0
-3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:530	-CW180 W_Addr1	0
-3b13	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:486	-CW180 W_Addr1	0
-3b13	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:701	-CW180 W_Addr1	0
+3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:481	-CW180 W_Addr1	1
+3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:708	-CW180 W_Addr1	1
+3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:417	-CW180 W_Addr1	1
+3b13	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:530	-CW180 W_Addr1	1
+3b13	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:486	-CW180 W_Addr1	1
+3b13	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:701	-CW180 W_Addr1	1
 3b20	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_DPRx0.c:1372	Level 1 LE ErrorCount[_D0_DP_LANE1]	0
 3b4c	MHL	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_MHL.c:2592	GET_MHL_READY_TO_TRANSMIT	0
 3b6d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4637	5. ====ScaleDown S2 DRF Bist Test Start	0
@@ -1905,12 +1905,12 @@
 3bda	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonFreeSync.c:915	Freesync SPD info abnormal	0
 3bda	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonFreeSync.c:926	Freesync SPD info abnormal	0
 3bda	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonFreeSync.c:931	Freesync SPD info abnormal	0
-3bef	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1089	Error4-input faster/slower mis-match: DHF'	0
-3bef	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1100	Error4-input faster/slower mis-match: DHF'	0
-3bef	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:1002	Error4-input faster/slower mis-match: DHF'	0
-3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1049	Error4-input faster/slower mis-match: DHF'	0
-3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1060	Error4-input faster/slower mis-match: DHF'	0
-3bef	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:995	Error4-input faster/slower mis-match: DHF'	0
+3bef	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1089	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1100	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:1002	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1049	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1060	Error4-input faster/slower mis-match: DHF'	1
+3bef	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:995	Error4-input faster/slower mis-match: DHF'	1
 3bf1	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:4352	6. D Dither FAIL	0
 3bf1	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_III.c:3183	6. D Dither FAIL	0
 3bf1	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain_III.c:1070	6. D Dither FAIL	0
@@ -2021,7 +2021,7 @@
 3fa8	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCPower.c:687	    [PWR/PMIC] Vbus Power On : 	0
 3fb2	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10514	Get Pixel Repetition Error	0
 3fb8	Rx4	Kernel/Scaler/ScalerFunction/Code/ScalerDualLinkDVI.c:1970	D4 Video Detect	0
-3fd3	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1683	4. OD bit	0
+3fd3	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1683	4. OD bit	1
 3fd5	Rx5	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx5.c:3196	TMDS clk	0
 3fd7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8884	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
 3fe2	Digital	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_TMDS.c:2756	Format Detect HDMI	1
@@ -2105,7 +2105,7 @@
 438f	System	User/Beacon Series/BeaconFunction/Code/BeaconUserSensor.c:499	Init45313 success	1
 43b7	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxHDCP2.c:2401	CSM - MST2MST	0
 43bc	Rx5	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx5.c:3894	Deep Color Mode Detected	0
-43c8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2032	[Warning]!!!!!! HSD for Memory BW/ size	0
+43c8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2032	[Warning]!!!!!! HSD for Memory BW/ size	1
 43ca	Rx0	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_DPRx0.c:1827	7. PPPPProgressive	0
 43ca	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_DPRx0.c:2287	7. PPPPProgressive	0
 43ca	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx0.c:4883	7. PPPPProgressive	0
@@ -2116,7 +2116,7 @@
 43ce	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_DSPC.c:625	5. LVDS TXE3 Fail	0
 43e5	System	User/Beacon Series/BeaconFunction/Code/BeaconUserAdjustOutputGamma.c:458	1 ucGammaNum 	1
 43e7	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:912	HTotal Count	0
-43f1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:187	Compensated Dt	0
+43f1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:187	Compensated Dt	1
 440d	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxHDCP2.c:2509	CSM - SST2SST Type	0
 4423	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY8665.c:862	0.Pmic:Power Good Status	0
 4423	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY9329.c:870	0.Pmic:Power Good Status	0
@@ -2192,7 +2192,7 @@
 4653	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2252	5. RGB Gamma M1 SetB DRF Bist Start Pause Time Out Fail	0
 4653	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2258	5. RGB Gamma M1 SetB DRF Bist Start Pause Time Out Fail	0
 4671	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_BIST.c:478	5. DisplayTimingGen Even DRF BIST Fail Flag for SRAM No.1	0
-4673	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2018	[Warning]!!!!!! OD Disable	0
+4673	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2018	[Warning]!!!!!! OD Disable	1
 4674	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3767	5. OD S1 Cap Bist Fail	0
 4675	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:887	HDR apply BT2020 matrix EXT default	0
 4680	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_II.c:4521	5. 5K3K Cts Bri End	0
@@ -2203,7 +2203,7 @@
 46e2	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCRx0Pd.c:1283	    ----> Data  Role : UFP(0) / DFP(1)	0
 4718	Rx0	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_TMDS.c:3399	Pixel Repetition Not Received and not Pixel repetition 0	0
 4718	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_TMDS.c:1985	Pixel Repetition Not Received and not Pixel repetition 0	0
-473b	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1521	DVT	0
+473b	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1521	DVT	1
 474d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3139	5. Panel Uniformity S1 Decay LUT DRF Bist Time Out Fail	0
 474d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3086	5. Panel Uniformity S1 Decay LUT DRF Bist Time Out Fail	0
 477d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2849	5. 3D Gamma S2 DRF Bist Start Pause Time Out Fail -1 	0
@@ -2248,7 +2248,7 @@
 48a1	System	Kernel/User Common Function/Code/UserCommonPortControllerRts5400.c:829	8. IIC Read 5400 Info Fail	1
 48b1	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_III.c:3680	6. 2P D-Domain Color Conversion FAIL	0
 48b1	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_III.c:2535	6. 2P D-Domain Color Conversion FAIL	0
-48c6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:582	-D addr3 FRC	0
+48c6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:582	-D addr3 FRC	1
 48ed	System	Kernel/System/Code/SysTypeC.c:630	8. [TYPE C] ==========> Power Switch, Set Cap Change ! ! !	1
 4920	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7742	Get YCC RANGE Error	0
 493d	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:2463	5. Mode_12	0
@@ -2387,10 +2387,10 @@
 4d68	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:176	5. ====ADCNR Bist Test Start	0
 4d68	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:141	5. ====ADCNR Bist Test Start	0
 4d68	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:453	5. ====ADCNR Bist Test Start	0
-4d79	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:291	Target IVS to DVS Delay Value	0
-4d79	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:254	Target IVS to DVS Delay Value	0
-4d79	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:263	Target IVS to DVS Delay Value	0
-4d79	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:259	Target IVS to DVS Delay Value	0
+4d79	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:291	Target IVS to DVS Delay Value	1
+4d79	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:254	Target IVS to DVS Delay Value	1
+4d79	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:263	Target IVS to DVS Delay Value	1
+4d79	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:259	Target IVS to DVS Delay Value	1
 4da0	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_OSD.c:3545	5.OsdTestFrame4 END	0
 4da0	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_OSD.c:3717	5.OsdTestFrame4 END	0
 4da0	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OSD.c:3504	5.OsdTestFrame4 END	0
@@ -2711,7 +2711,7 @@
 53f3	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:4021	6. 2P Fail Mode	0
 53f3	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:4104	6. 2P Fail Mode	0
 5424	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerSyncProc.c:327	Toggle clamp-to-top status	0
-5429	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1520	usIvs2dvsDelay	0
+5429	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1520	usIvs2dvsDelay	1
 5430	Rx1	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx1.c:4911	HDMI GCP PACKET Not Received and not 8 bit	0
 5430	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDS.c:2987	HDMI GCP PACKET Not Received and not 8 bit	0
 5446	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3447	5. VBO Drf Bist1 Time Out Fail: 1	0
@@ -2726,10 +2726,10 @@
 54d3	Rx2	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx2.c:3788	TMDS Rx2 First 1:10 set phy not success	0
 54d3	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3679	TMDS Rx2 First 1:10 set phy not success	0
 54e5	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_III.c:3696	5. 5k3k 1P SHP Start	0
-54ea	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:300	2. Target IVS2DVS Delay too Large	0
-54ea	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:263	2. Target IVS2DVS Delay too Large	0
-54ea	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:272	2. Target IVS2DVS Delay too Large	0
-54ea	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:268	2. Target IVS2DVS Delay too Large	0
+54ea	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:300	2. Target IVS2DVS Delay too Large	1
+54ea	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:263	2. Target IVS2DVS Delay too Large	1
+54ea	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:272	2. Target IVS2DVS Delay too Large	1
+54ea	FS	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Memory.c:268	2. Target IVS2DVS Delay too Large	1
 5508	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1684	5. ====Gamma M1/M2 DRF Bist Test Start	0
 5508	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1633	5. ====Gamma M1/M2 DRF Bist Test Start	0
 5550	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1493	_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL	0
@@ -2754,7 +2754,7 @@
 561e	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain.c:1170	5. DPG 5K3K Start	0
 5647	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4799	5. 5K3K Format Conversion Test Start	0
 5665	System	User/Beacon Series/BeaconFunction/Code/BeaconUserSensor.c:1262	Init Senser : TSL25721 start	1
-566c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1999	MN FrameSync Frame Buffer	0
+566c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1999	MN FrameSync Frame Buffer	1
 5670	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8276	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
 5671	System	User/Beacon Series/BeaconFunction/Code/BeaconUserSensor.c:480	Enter Init45313 	1
 5673	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonUSB3Retimer.c:246	Turn On Retimer by Initial	0
@@ -2774,9 +2774,9 @@
 56c9	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4347	Color Depth Has Changed	0
 56d3	System	Kernel/System/Code/SysSource.c:349	ucSearchIndex = 	1
 56ec	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:5071	MBR: Constant to Strobe	0
-570c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:741	-CW180 R_PoAddr1	0
-570c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:734	-CW180 R_PoAddr1	0
-570c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:573	-CW180 R_PoAddr1	0
+570c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:741	-CW180 R_PoAddr1	1
+570c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:734	-CW180 R_PoAddr1	1
+570c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:573	-CW180 R_PoAddr1	1
 5721	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:1487	5. 1PCS DDR1 RX1	0
 572f	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:708	6. ScaleDown M2 DRF Bist FAIL	0
 572f	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:899	6. ScaleDown M2 DRF Bist FAIL	0
@@ -2891,7 +2891,7 @@
 59e1	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonUSB3Retimer.c:213	Turn On hub by PinAssCE back	0
 59fe	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:293	P4_A5_SDR_MEM_TYPE	0
 59fe	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:643	P4_A5_SDR_MEM_TYPE	0
-5a0a	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:95	4. 6_0_bit OD BW	0
+5a0a	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:95	4. 6_0_bit OD BW	1
 5a0e	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:958	6. DisplayTimingGen Odd DRF Bist Fail Mode	0
 5a0e	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1149	6. DisplayTimingGen Odd DRF Bist Fail Mode	0
 5a12	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7399	Get Pixel Repetition 1	0
@@ -2929,10 +2929,10 @@
 5b9c	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2430	pin38 ==0	0
 5b9c	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_DSPC.c:1637	pin38 ==0	0
 5bd9	Mst	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTx.c:3701	Link BW is not enough for DP TX Clone	0
-5bfc	FS	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Memory.c:195	FREESYNC Dt warning	0
-5bfc	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:224	FREESYNC Dt warning	0
-5bfc	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:210	FREESYNC Dt warning	0
-5bfc	FS	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Memory.c:161	FREESYNC Dt warning	0
+5bfc	FS	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Memory.c:195	FREESYNC Dt warning	1
+5bfc	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:224	FREESYNC Dt warning	1
+5bfc	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:210	FREESYNC Dt warning	1
+5bfc	FS	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Memory.c:161	FREESYNC Dt warning	1
 5bfe	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Main.c:1260	6. Audio Test Pass	0
 5bfe	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Main.c:999	6. Audio Test Pass	0
 5c02	Analog	Kernel/System/Code/SysVGA.c:81	Apll initial Fail	0
@@ -2968,7 +2968,7 @@
 5cd5	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1732	6. Display Conversion Bist Fail Mode	0
 5cd5	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3423	6. Display Conversion Bist Fail Mode	0
 5cd5	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_BIST.c:799	6. Display Conversion Bist Fail Mode	0
-5d0e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:185	Dt Compensate Value	0
+5d0e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:185	Dt Compensate Value	1
 5d1d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:985	5. DisplayTimingGen Sub1 BIST Fail for SRAM No.1	0
 5d23	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_OSD.c:3539	5.OsdTestFrame4 Start	0
 5d23	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_OSD.c:3711	5.OsdTestFrame4 Start	0
@@ -3112,7 +3112,7 @@
 5e5b	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:558	Write FWR Regualting Volt Fail	0
 5e5b	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:613	Write FWR Regualting Volt Fail	0
 5e73	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4063	5. OD S1 Disp Drf Bist Fail	0
-5ea8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1995	Free Run Mode	0
+5ea8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1995	Free Run Mode	1
 5ecb	Rx3	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx3.c:4155	Rx3 HPD Toggle!!	0
 5ecb	Rx3	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx3.c:4466	Rx3 HPD Toggle!!	0
 5ecb	Rx3	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx3.c:4079	Rx3 HPD Toggle!!	0
@@ -3193,7 +3193,7 @@
 615b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1498	_COLORIMETRY_RGB_DCI_P3	0
 615f	MHL	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_MHL.c:2183	MSC MHL_PROTOCOL_ERROR	0
 6162	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:2823	7.MST DelayTime	0
-616d	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1932	== DISP_CHECK_START ==	0
+616d	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1932	== DISP_CHECK_START ==	1
 6171	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Main.c:2033	5. DP MST2SST CRC - 4	0
 6171	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Main.c:1391	5. DP MST2SST CRC - 4	0
 6171	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:1848	5. DP MST2SST CRC - 4	0
@@ -3267,7 +3267,7 @@
 656f	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:897	5. ====DisplayTimingGen Odd DRF Bist Test Start	0
 656f	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1088	5. ====DisplayTimingGen Odd DRF Bist Test Start	0
 6579	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7406	Get Pixel Repetition 2	0
-658b	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:96	4. 6_0_bit OD Size	0
+658b	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:96	4. 6_0_bit OD Size	1
 6590	System	Kernel/System/Code/SysSource.c:2262	7. Bingo Defautlt!!!!!!!	1
 6590	System	Kernel/System/Code/SysSource.c:2918	7. Bingo Defautlt!!!!!!!	1
 65b8	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:285	CEC0 RX Backup Fifo Finished	0
@@ -3289,7 +3289,7 @@
 665b	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Main.c:1491	5. DP1 Check CRC0	0
 665e	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx0.c:4103	Signal Detection Initial_Orientation	0
 6667	MHL	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx1.c:1443	D1 MHL HPD Done	0
-6673	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:683	-I_addr3 FRC	0
+6673	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:683	-I_addr3 FRC	1
 6679	QC	User/None Factory/Code/NoneFactoryFunction_RL6410.c:230	7. ## RL6410 Normal Package ##	0
 6679	QC	User/None Factory/Code/NoneFactoryFunction_RL6410.c:233	7. ## RL6410 Normal Package ##	0
 6679	QC	User/None Factory/Code/NoneFactoryFunction_RL6410.c:236	7. ## RL6410 Normal Package ##	0
@@ -3338,7 +3338,7 @@
 67c3	MHL	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_MHLRx5.c:1176	D5 MHL Adopter IDH	0
 67d7	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3071	5. usPEValue	0
 67f7	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:2068	Level 2 LE ErrorCount[_D1_DP_LANE1]	0
-67ff	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:81	4. 7_5_bit OD Size	0
+67ff	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:81	4. 7_5_bit OD Size	1
 6807	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10270	Colorimetry Changed	0
 6809	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4243	5. 2P I-Domain Color Conversion Start	0
 6809	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:3980	5. 2P I-Domain Color Conversion Start	0
@@ -3386,12 +3386,12 @@
 6939	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerDPTx.c:930	DP TX Clone MSA info Ref. Source	0
 6957	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:1225	5.Pmic:OTP	0
 6958	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1482	V adj. limit	0
-696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:497	-CW180 W_Addr3	0
-696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:726	-CW180 W_Addr3	0
-696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:433	-CW180 W_Addr3	0
-696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:548	-CW180 W_Addr3	0
-696c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:502	-CW180 W_Addr3	0
-696c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:719	-CW180 W_Addr3	0
+696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:497	-CW180 W_Addr3	1
+696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:726	-CW180 W_Addr3	1
+696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:433	-CW180 W_Addr3	1
+696c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:548	-CW180 W_Addr3	1
+696c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:502	-CW180 W_Addr3	1
+696c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:719	-CW180 W_Addr3	1
 69b5	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2632	DP HBR___FAIL	0
 69b5	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2406	DP HBR___FAIL	0
 69c0	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4808	6. 5K3K Format Conversion PASS	0
@@ -3409,7 +3409,7 @@
 6ab4	Measure	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_Measure.c:377	Digital auto-function fail	1
 6ab4	Measure	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Measure.c:450	Digital auto-function fail	1
 6abc	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3HDCP2_SeptPhy.c:401	[D3]REAUTH_REQ	0
-6af8	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:71	4. Remaining Space for OD	0
+6af8	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:71	4. Remaining Space for OD	1
 6b09	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY9228.c:855	Pmic:Current Value(10mA)	0
 6b09	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY9329.c:910	Pmic:Current Value(10mA)	0
 6b0d	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:6905	7. DP Rebuild PHY Fail	0
@@ -3441,8 +3441,8 @@
 6bcc	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2408	5. LVDS TXC4 Fail	0
 6bcc	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_DSPC.c:1594	5. LVDS TXC4 Fail	0
 6bcc	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2178	5. LVDS TXC4 Fail	0
-6bd1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2158	_Last_line_modify_Dclk	0
-6bd1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2441	_Last_line_modify_Dclk	0
+6bd1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2158	_Last_line_modify_Dclk	1
+6bd1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2441	_Last_line_modify_Dclk	1
 6bea	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:1026	pusNormPWM	0
 6bf6	Rx3	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx3.c:3750	HDMI 2.0 Error Boundary set Low Byte	0
 6bf6	Rx3	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx3.c:3695	HDMI 2.0 Error Boundary set Low Byte	0
@@ -3461,7 +3461,7 @@
 6c5c	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1174	5. Panel Uniformity M1 Decay LUT Bist Fail	0
 6c5c	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2896	5. Panel Uniformity M1 Decay LUT Bist Fail	0
 6c8e	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2318	*** Clk5 ***	0
-6ca0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:179	Original Dt	0
+6ca0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:179	Original Dt	1
 6ca8	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_BIST.c:147	5. DisplayTimingGen Even BIST Fail for SRAM No.1	0
 6ca8	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:746	5. DisplayTimingGen Even BIST Fail for SRAM No.1	0
 6ca8	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:402	5. DisplayTimingGen Even BIST Fail for SRAM No.1	0
@@ -3517,7 +3517,7 @@
 6dad	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_II.c:2685	6. DCC PASS	0
 6dad	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Color.c:3099	6. DCC PASS	0
 6db1	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY9228.c:816	6.Pmic:Inductor OCP Flag	0
-6db7	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1722	4.OD use BW	0
+6db7	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1722	4.OD use BW	1
 6dc2	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:3970	6.====4P LSR PASS====	0
 6dc2	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:3707	6.====4P LSR PASS====	0
 6dd2	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4687	6. ScaleDown S2 DRF Bist Fail Mode	0
@@ -3607,7 +3607,7 @@
 70fc	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx0.c:5492	1st PE Loop	0
 7112	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8684	Get Pixel Repetition 9	0
 7131	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:772	StepToGB[0]	0
-7152	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1125	WARNING: Transient Dvtotal is out of spec!!!	0
+7152	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1125	WARNING: Transient Dvtotal is out of spec!!!	1
 718d	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:621	HDR apply type 10000 parameter	0
 7191	System	Kernel/System/Code/SysVGA.c:103	Input Timing V Polarity	1
 7192	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2640	***** Check Phase1 Start= 	0
@@ -3648,7 +3648,7 @@
 72b3	Rx3	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx3.c:4085	CDR Unstable!!	0
 72b3	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4157	CDR Unstable!!	0
 72d5	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_DPRx0.c:5056	7. wuzanne test : Adjust DP Lane to 2	0
-72e0	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2045	== DISP_CHECK_END ==	0
+72e0	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2045	== DISP_CHECK_END ==	1
 72ef	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_OSD.c:3600	5.OsdTestFrame9 END	0
 72ef	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_OSD.c:3772	5.OsdTestFrame9 END	0
 72ef	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OSD.c:3559	5.OsdTestFrame9 END	0
@@ -3710,9 +3710,9 @@
 7432	MHL	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx3.c:767	Rx3 ReadDev MHL_SUCCESS	0
 7432	MHL	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx3.c:763	Rx3 ReadDev MHL_SUCCESS	0
 7435	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_BIST.c:563	6. Gamma DRF Bist Fail Mode	0
-743e	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:593	DDEN	0
-743e	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:596	DDEN	0
-743e	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:580	DDEN	0
+743e	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:593	DDEN	1
+743e	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:596	DDEN	1
+743e	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:580	DDEN	1
 745a	IR	Kernel/Scaler/ScalerFunction/Code/ScalerIR.c:135	IR4	0
 7464	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4897	6. 5K3K I-Domain Color Conversion FAIL	0
 7469	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMbr.c:464	MBR Adv: ucBacklightPos	0
@@ -3748,7 +3748,7 @@
 751f	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:186	6. ADCNR Bist FAIL	0
 751f	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:496	6. ADCNR Bist FAIL	0
 752a	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:1234	5.Pmic:Info1 Fail	0
-7561	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:480	Timeout counter	0
+7561	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:480	Timeout counter	1
 757a	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:7321	7. Fifo Underflow --> QD882 Case	0
 757a	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:299	7. Fifo Underflow --> QD882 Case	0
 7580	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3HDCP2_SeptPhy.c:963	[D3]DCP LLC Signature	0
@@ -3761,7 +3761,7 @@
 7591	Analog	Kernel/User Common Function/Code/UserCommonModeSearch.c:507	2. Detect By Width 1	0
 75a0	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2687	DP RBR___PASS---2	0
 75a0	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2461	DP RBR___PASS---2	0
-75ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2003	Free Run No Input	0
+75ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2003	Free Run No Input	1
 75d1	System	Kernel/User Common Function/Code/UserCommonPortControllerRts5400.c:477	8. Read 5400 D0 Alt Mode Ready By IIC Fail	1
 75e6	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:1446	5. 2PCS DDR2 RX3	0
 75e9	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Main.c:1998	5. DP MST2SST Vbuf DRF Bist Fail3	0
@@ -3833,7 +3833,7 @@
 76b6	Rx3	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_MHLRx3.c:1143	D3 MHL Sent Devies Capabilitly Ready	0
 76b6	Rx3	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx3.c:1147	D3 MHL Sent Devies Capabilitly Ready	0
 76b6	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx3.c:1143	D3 MHL Sent Devies Capabilitly Ready	0
-76c2	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:963	3Block-addr2	0
+76c2	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:963	3Block-addr2	1
 76da	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:2072	Level 3 LE ErrorCount[_D1_DP_LANE2]	0
 76eb	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:2140	5. Mode_3	0
 76eb	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:2320	5. Mode_3	0
@@ -4038,16 +4038,16 @@
 79b8	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:1352	***** Clk0 Phase = 	0
 79d7	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6279	7. MST PPPPProgressive	0
 7a19	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCPmic.c:2901	Pmic GPIO interrupt!	0
-7a38	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:543	-CW180 W_PoAddr1	0
-7a38	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:548	-CW180 W_PoAddr1	0
-7a38	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:445	-CW180 W_PoAddr1	0
-7a39	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:964	3Block-addr3	0
+7a38	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:543	-CW180 W_PoAddr1	1
+7a38	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:548	-CW180 W_PoAddr1	1
+7a38	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:445	-CW180 W_PoAddr1	1
+7a39	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:964	3Block-addr3	1
 7a3b	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:449	5. ====FormatConv FB DRF Bist Test Start	0
 7a46	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10348	YCC Quantization Range Changed	0
 7a4d	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCRx0Cc.c:414	[WARNING] CC Enter Unexpected State	0
 7a4f	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4731	6. D2 420to422 Bist PASS	0
 7a4f	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3836	6. D2 420to422 Bist PASS	0
-7a65	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:665	-I_addr1 FRC	0
+7a65	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:665	-I_addr1 FRC	1
 7a7e	Rx1	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_DPRx1.c:4194	CDR No Reset	0
 7a7e	Rx1	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_DPRx1.c:4214	CDR No Reset	0
 7a7e	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4183	CDR No Reset	0
@@ -4232,13 +4232,13 @@
 7fa0	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OSD.c:3575	5.OsdTestFrame10 END	0
 7fa1	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_III.c:3730	6.====D Random 5k3k 1P SHP Fail====	0
 7fa7	Scaler	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_BIST.c:320	5. SDRAM MN DRF Bist P3 Fail	0
-7fab	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1940	DisplayRegionCount	0
+7fab	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1940	DisplayRegionCount	1
 7fc9	Rx5	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx5.c:3264	4. PLL Setting Error	0
 7fd4	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2961	ucMcode	0
 7fe2	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10435	Get Color Space YUV444	0
 7fea	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9460	Get Colorimetry EXT_YCC_XVYCC601	0
 7ff3	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8642	Get Pixel Repetition 3	0
-8008	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1991	FrameSync Frame Buffer	0
+8008	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1991	FrameSync Frame Buffer	1
 8012	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:353	HDR10 Metadata EOTF	0
 8021	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_DPRx0.c:1370	Level 3 LE ErrorCount[_D0_DP_LANE1]	0
 8029	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:587	5. ScaleDown M1 Linebuffer0 DRF Bist Fail	0
@@ -4311,11 +4311,11 @@
 82bd	System	Kernel/System/Code/SysSource.c:4499	0. Cable Status Changed D6	1
 82f7	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:5004	MBR: Adim Adjust for strobe	0
 82fa	MHL	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_MHL.c:4942	5) MHL CBUS Done	0
-82fc	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:603	IVSync Period	0
-82fc	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:606	IVSync Period	0
-82fc	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:590	IVSync Period	0
-8340	FS	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Memory.c:223	FREESYNC IVS2DVS delay close to 1 line, modify IVS2DVS delay	0
-8340	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:253	FREESYNC IVS2DVS delay close to 1 line, modify IVS2DVS delay	0
+82fc	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:603	IVSync Period	1
+82fc	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:606	IVSync Period	1
+82fc	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:590	IVSync Period	1
+8340	FS	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Memory.c:223	FREESYNC IVS2DVS delay close to 1 line, modify IVS2DVS delay	1
+8340	FS	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Memory.c:253	FREESYNC IVS2DVS delay close to 1 line, modify IVS2DVS delay	1
 8347	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1426	_COLORIMETRY_RGB_COLOR_PROFILE	0
 8367	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1754	5. Gamma M1 SetB DRF Bist Fail	0
 8367	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1703	5. Gamma M1 SetB DRF Bist Fail	0
@@ -4348,7 +4348,7 @@
 849a	MHL	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_MHLRx3.c:775	Rx3 ReadDev MHL_ABORT_FAIL	0
 849a	MHL	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx3.c:779	Rx3 ReadDev MHL_ABORT_FAIL	0
 849a	MHL	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx3.c:775	Rx3 ReadDev MHL_ABORT_FAIL	0
-84a4	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:504	7.ulVFCI	0
+84a4	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:504	7.ulVFCI	1
 84b4	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4314	6. OSD Bist PASS	0
 84b4	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1469	6. OSD Bist PASS	0
 84ba	Mst	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTx.c:683	Dp Tx Donwstream Caps. Extended Field Support	0
@@ -4648,12 +4648,12 @@
 8e1b	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:502	Write CR2 Success	0
 8e2e	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DP.c:1953	Set Rx0 HDCP capability!!	0
 8e2e	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DP.c:1983	Set Rx0 HDCP capability!!	0
-8e46	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:76	Dynamic OD	0
-8e46	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:83	Dynamic OD	0
-8e46	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:79	Dynamic OD	0
-8e46	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:80	Dynamic OD	0
-8e46	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:75	Dynamic OD	0
-8e46	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:79	Dynamic OD	0
+8e46	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:76	Dynamic OD	1
+8e46	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:83	Dynamic OD	1
+8e46	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:79	Dynamic OD	1
+8e46	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:80	Dynamic OD	1
+8e46	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:75	Dynamic OD	1
+8e46	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:79	Dynamic OD	1
 8e7f	MHL	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_MHLRx5.c:1460	D5 MHL CBUS Done	0
 8e82	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_V.c:347	5. UniformityMode_4	0
 8e82	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain.c:932	5. UniformityMode_4	0
@@ -4744,19 +4744,19 @@
 928a	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3343	5. VBO Bist0 Time Out Fail	0
 928a	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3289	5. VBO Bist0 Time Out Fail	0
 9290	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7795	Get RGB RANGE Error	0
-92b7	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1088	Error3-input faster/slower mis-match: IHF'	0
-92b7	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1099	Error3-input faster/slower mis-match: IHF'	0
-92b7	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:1001	Error3-input faster/slower mis-match: IHF'	0
-92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1048	Error3-input faster/slower mis-match: IHF'	0
-92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1059	Error3-input faster/slower mis-match: IHF'	0
-92b7	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:994	Error3-input faster/slower mis-match: IHF'	0
+92b7	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1088	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1099	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:1001	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1048	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1059	Error3-input faster/slower mis-match: IHF'	1
+92b7	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:994	Error3-input faster/slower mis-match: IHF'	1
 92ba	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:4263	6. D-Domain Color Conversion FAIL	0
 92ba	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_III.c:2999	6. D-Domain Color Conversion FAIL	0
 92ba	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain_III.c:888	6. D-Domain Color Conversion FAIL	0
 92ba	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_III.c:1855	6. D-Domain Color Conversion FAIL	0
 92ba	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Color.c:2570	6. D-Domain Color Conversion FAIL	0
 92cc	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:1394	rx dqs3 fall	0
-92d9	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:216	DRR IVS2DVS delay close to 1 line, modify IVS2DVS delay	0
+92d9	FS	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Memory.c:216	DRR IVS2DVS delay close to 1 line, modify IVS2DVS delay	1
 92e2	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_III.c:2840	5. SHP Start	0
 92e2	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain_III.c:743	5. SHP Start	0
 92e2	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_III.c:1696	5. SHP Start	0
@@ -5232,11 +5232,11 @@ a413	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6337	MST FREESY
 a415	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2009	D5 Audio Tracking Enable	0
 a432	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9416	Get Colorimetry RGB_SRGB	0
 a45f	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1318	_COLOR_SPACE_YCBCR444	0
-a46f	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Scaling.c:580	4. FRC truncate color bit	0
-a46f	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Scaling.c:720	4. FRC truncate color bit	0
-a46f	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:718	4. FRC truncate color bit	0
-a46f	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:693	4. FRC truncate color bit	0
-a46f	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:705	4. FRC truncate color bit	0
+a46f	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_Scaling.c:580	4. FRC truncate color bit	1
+a46f	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Scaling.c:720	4. FRC truncate color bit	1
+a46f	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:718	4. FRC truncate color bit	1
+a46f	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:693	4. FRC truncate color bit	1
+a46f	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:705	4. FRC truncate color bit	1
 a491	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1269	5. DisplayTimingGen Sub2 DRF BIST Fail for SRAM No.1	0
 a497	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:3371	5. 4PI Dither End	0
 a49b	HDCP2	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDSRx1HDCP2.c:230	[D1]Dkey0	0
@@ -5296,11 +5296,11 @@ a5cb	Rx4	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx4.c:4348	TM
 a5cb	Rx4	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx4.c:4369	TMDS Format Changed	0
 a5cb	Rx4	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx4.c:4386	TMDS Format Changed	0
 a5cb	Rx4	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx4.c:4394	TMDS Format Changed	0
-a5cf	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:523	-CW180 W_RvAddr1	0
-a5cf	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:551	-CW180 W_RvAddr1	0
-a5cf	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:528	-CW180 W_RvAddr1	0
-a5cf	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:556	-CW180 W_RvAddr1	0
-a5cf	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:453	-CW180 W_RvAddr1	0
+a5cf	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:523	-CW180 W_RvAddr1	1
+a5cf	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:551	-CW180 W_RvAddr1	1
+a5cf	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:528	-CW180 W_RvAddr1	1
+a5cf	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:556	-CW180 W_RvAddr1	1
+a5cf	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:453	-CW180 W_RvAddr1	1
 a5f7	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:3063	Vby1_A HBR2___FAIL	0
 a5f7	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2589	Vby1_A HBR2___FAIL	0
 a5f9	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:3512	5. 4P_Mode_2	0
@@ -5333,7 +5333,7 @@ a6b5	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_DSPC.c:1952	LVD
 a6c7	Analog	Kernel/User Common Function/Code/UserCommonModeSearch.c:228	4. PresetMode Number =	0
 a6ce	System	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c:2327	No More Available Storage for Simultaneous Event!!!!!!	1
 a6d2	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3572	5. eDPTX2 Bist Pass	0
-a6de	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:217	warning !!! Aspect ratio/ overscan maybe have garbage	0
+a6de	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:217	warning !!! Aspect ratio/ overscan maybe have garbage	1
 a6f8	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4814	6. 5K3K Format Conversion FAIL	0
 a70b	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_BIST.c:354	6. SDRAM DRF Bist Fail Mode	0
 a71a	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:599	5. ScaleDown M1 Linebuffer1 DRF Bist Time Out Fail	0
@@ -5468,7 +5468,7 @@ aa49	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2285	5. 
 aa49	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_DSPC.c:1477	5. LVDS TXACK Fail	0
 aa49	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2055	5. LVDS TXACK Fail	0
 aa7c	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3494	5. eDPTX1 Bist Time Out Fail	0
-aa8d	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:530	7.Calculated Min	0
+aa8d	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:530	7.Calculated Min	1
 aa90	MHL	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx1.c:800	Rx1 MSC MHL_ABORT_FAIL	0
 aa99	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9271	Get Pixel Repetition 6	0
 aac8	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Main.c:1836	5. DP0 Vbuf Bist Fail1	0
@@ -5481,12 +5481,12 @@ aaf6	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4141	5. 
 aafb	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1378	_COLORIMETRY_YCC_XVYCC709	0
 ab15	System	Kernel/User Common Function/Code/UserCommonPortControllerRts5400.c:813	8. IIC Write Command to 5400 Fail	1
 ab19	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7578	Get Colorimetry RGB_SRGB	0
-ab2c	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:102	OD_OFF	0
-ab2c	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:112	OD_OFF	0
-ab2c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:108	OD_OFF	0
-ab2c	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:109	OD_OFF	0
-ab2c	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:101	OD_OFF	0
-ab2c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:108	OD_OFF	0
+ab2c	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:102	OD_OFF	1
+ab2c	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:112	OD_OFF	1
+ab2c	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:108	OD_OFF	1
+ab2c	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:109	OD_OFF	1
+ab2c	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:101	OD_OFF	1
+ab2c	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:108	OD_OFF	1
 ab36	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Main.c:581	6. HDMI CBUS0 Test Fail	0
 ab36	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Main.c:626	6. HDMI CBUS0 Test Fail	0
 ab36	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Main.c:774	6. HDMI CBUS0 Test Fail	0
@@ -5537,9 +5537,9 @@ ad31	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_I
 ad48	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1602	_RGB_QUANTIZATION_LIMIT_RANGE	0
 ad50	TypeC	User/Device/Code/TypeC_Pmic_ONSEMI_NCP81239.c:785	0.Pmic:Vchn Flag	0
 ad54	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3HDCP2_SeptPhy.c:255	[D3]AKE_STORED_KM	0
-ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2181	New offset	0
-ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2190	New offset	0
-ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2197	New offset	0
+ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2181	New offset	1
+ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2190	New offset	1
+ad5e	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2197	New offset	1
 ad5f	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4233	5. OSD Bist Time Out Fail	0
 ad5f	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1456	5. OSD Bist Time Out Fail	0
 ad73	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:225	5. ====ADCNR DRF Bist Test Start	0
@@ -5549,7 +5549,7 @@ ad77	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2719	5. 
 ad77	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1053	5. 3D Gamma M1 DRF Bist Start Pause Time Out Fail	0
 ad77	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2666	5. 3D Gamma M1 DRF Bist Start Pause Time Out Fail	0
 ad77	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_BIST.c:637	5. 3D Gamma M1 DRF Bist Start Pause Time Out Fail	0
-ad9b	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2014	OD Efficiency(%)	0
+ad9b	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2014	OD Efficiency(%)	1
 ada3	Digital	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_TMDS.c:2882	Deep Color Mode Detected	1
 ada3	Digital	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_TMDS.c:1641	Deep Color Mode Detected	1
 ada3	Digital	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDS.c:2506	Deep Color Mode Detected	1
@@ -5877,7 +5877,7 @@ b6af	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1920	5. 
 b6af	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1936	5. Gamma S2 SetA DRF Bist Start Pause Time Out Fail	0
 b6af	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1869	5. Gamma S2 SetA DRF Bist Start Pause Time Out Fail	0
 b6af	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1885	5. Gamma S2 SetA DRF Bist Start Pause Time Out Fail	0
-b6d1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:602	7. Target Dt Value new	0
+b6d1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:602	7. Target Dt Value new	1
 b6d4	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:365	HDR10 Metadata Wy	0
 b6d5	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:2825	7.MST Frame[N + 1] VBS2BS Counter	0
 b6d7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8860	Get Colorimetry EXT_YCC_XVYCC709	0
@@ -5889,7 +5889,7 @@ b717	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4240	CDR 
 b71b	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:939	5. DisplayTimingGen Odd DRF BIST Fail for SRAM No.0	0
 b71b	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1130	5. DisplayTimingGen Odd DRF BIST Fail for SRAM No.0	0
 b738	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10706	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
-b747	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1674	4. FRC BW	0
+b747	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1674	4. FRC BW	1
 b781	Rx1	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_DPRx1.c:2215	P Code	0
 b781	Rx1	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_DPRx1.c:2243	P Code	0
 b781	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2214	P Code	0
@@ -5917,10 +5917,10 @@ b7b2	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2101	5. 
 b7bb	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1691	Misc change: Color Depth	0
 b7be	Digital	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_TMDS.c:1758	R Channel CDR Unstable	1
 b7be	Digital	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_TMDS.c:1774	R Channel CDR Unstable	1
-b7e4	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:57	R_Type	0
-b7e4	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:64	R_Type	0
-b7e4	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:64	R_Type	0
-b7e4	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:69	R_Type	0
+b7e4	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:57	R_Type	1
+b7e4	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:64	R_Type	1
+b7e4	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:64	R_Type	1
+b7e4	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:69	R_Type	1
 b7f7	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:884	rx2 ien	0
 b828	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_V.c:283	5. PanelUniformity Start	0
 b828	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain.c:867	5. PanelUniformity Start	0
@@ -6152,12 +6152,12 @@ bfdf	Digital	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3110	8. 
 bfdf	Digital	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3111	8. HDCP Aksv Backup	1
 bfe3	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:8854	7.FREESYNC IVF out of panel range	0
 bfe3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:2029	7.FREESYNC IVF out of panel range	0
-bff2	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:84	Static OD	0
-bff2	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:91	Static OD	0
-bff2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:87	Static OD	0
-bff2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:88	Static OD	0
-bff2	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:83	Static OD	0
-bff2	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:87	Static OD	0
+bff2	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_OD.c:84	Static OD	1
+bff2	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_OD.c:91	Static OD	1
+bff2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_OD.c:87	Static OD	1
+bff2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_OD.c:88	Static OD	1
+bff2	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_OD.c:83	Static OD	1
+bff2	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_OD.c:87	Static OD	1
 c033	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxHDCP2.c:323	DPTX HDCP2 - Stored Km	0
 c04d	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:7227	7. Fifo Under/Overflow	0
 c04d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5830	7. Fifo Under/Overflow	0
@@ -6172,7 +6172,7 @@ c0c0	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1150	5. 
 c0c0	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1220	5. DisplayTimingGen FIFO DRF BIST Fail for SRAM No.3	0
 c0c7	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4578	5. ScaleDown S1 Linebuffer1 DRF Bist Time Out Fail	0
 c0c7	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3683	5. ScaleDown S1 Linebuffer1 DRF Bist Time Out Fail	0
-c0d9	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2037	FRC + OD Efficiency(%)	0
+c0d9	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2037	FRC + OD Efficiency(%)	1
 c0e7	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0HDCP2.c:1233	SHA256(kd)	0
 c0e7	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1HDCP2.c:549	SHA256(kd)	0
 c0ef	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCRx0Cc.c:1078	    ----> Ra Exist : 	0
@@ -6282,8 +6282,8 @@ c2fa	Rx1	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx1.c:4801	7.
 c2fa	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDS.c:2851	7. HDCP Abnormal !!!!!	0
 c2fa	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDS.c:2877	7. HDCP Abnormal !!!!!	0
 c2fe	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Main.c:1494	5. DP1 Check CRC3	0
-c310	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1977	Original offset	0
-c310	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2312	Original offset	0
+c310	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:1977	Original offset	1
+c310	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2312	Original offset	1
 c358	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:3924	5. SU Mode_0 check	0
 c358	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:3661	5. SU Mode_0 check	0
 c367	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1162	5. DisplayTimingGen FIFO DRF BIST Fail for SRAM No.1	0
@@ -6366,17 +6366,17 @@ c4db	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.
 c4db	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:4501	6.====2P LSR PASS====	0
 c4dc	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:381	5. FormatConv DRF bist_result_3 Fail	0
 c4dc	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:658	5. FormatConv DRF bist_result_3 Fail	0
-c4e0	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:58	R_Size	0
-c4e0	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:65	R_Size	0
-c4e0	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:65	R_Size	0
-c4e0	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:70	R_Size	0
+c4e0	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:58	R_Size	1
+c4e0	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:65	R_Size	1
+c4e0	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:65	R_Size	1
+c4e0	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:70	R_Size	1
 c4eb	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSync.c:631	CRC PASS	0
 c4f0	Digital	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_GDIPhy.c:492	!!! D2 Z0 Switch ON -Flag-	1
 c4f0	Digital	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_GDIPhy.c:248	!!! D2 Z0 Switch ON -Flag-	1
 c4f2	HDCP2	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDSRx2HDCP2.c:248	[D2]AKE_NO_STORED_KM	0
 c4f2	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2HDCP2_SeptPhy.c:248	[D2]AKE_NO_STORED_KM	0
 c4fc	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:431	5. FormatConv FB Bist Time Out Fail	0
-c506	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:561	7. DtMin	0
+c506	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:561	7. DtMin	1
 c53a	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:3696	7. PPPPProgressive	0
 c53a	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4212	7. PPPPProgressive	0
 c53d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3366	5. ====VBO Bist Test End	0
@@ -6410,9 +6410,9 @@ c64a	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2541	6. 
 c64a	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:839	6. RGB Gamma DRF Bist PASS	0
 c64a	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2488	6. RGB Gamma DRF Bist PASS	0
 c64a	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_BIST.c:423	6. RGB Gamma DRF Bist PASS	0
-c670	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:592	IDEN	0
-c670	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:595	IDEN	0
-c670	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:579	IDEN	0
+c670	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Scaling.c:592	IDEN	1
+c670	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:595	IDEN	1
+c670	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Scaling.c:579	IDEN	1
 c671	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:933	5. DisplayTimingGen Odd DRF BIST Fail for SRAM No.1	0
 c671	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1124	5. DisplayTimingGen Odd DRF BIST Fail for SRAM No.1	0
 c6a8	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:684	eDP Tx1 LT2 Pass	1
@@ -6457,8 +6457,8 @@ c80d	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:443	ucTempDi
 c80d	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:559	ucTempDiffPhase	0
 c80d	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:623	ucTempDiffPhase	0
 c80e	IR	Kernel/Scaler/ScalerFunction/Code/ScalerIR.c:136	IR5	0
-c814	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:530	-CW180 W_RvAddr2	0
-c814	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:535	-CW180 W_RvAddr2	0
+c814	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:530	-CW180 W_RvAddr2	1
+c814	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:535	-CW180 W_RvAddr2	1
 c81d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1888	5. Gamma S1 SetB DRF Bist Start Pause Time Out Fail	0
 c81d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1904	5. Gamma S1 SetB DRF Bist Start Pause Time Out Fail	0
 c81d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1837	5. Gamma S1 SetB DRF Bist Start Pause Time Out Fail	0
@@ -6644,7 +6644,7 @@ cdac	Rx0	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_DPRx0.c:4398	CDR 
 cdac	Rx0	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_DPRx0.c:4412	CDR Reset Done	0
 cdac	Rx0	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx0.c:4245	CDR Reset Done	0
 cdac	Rx0	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx0.c:9056	CDR Reset Done	0
-cdc5	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2130	Estimated last-line	0
+cdc5	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2130	Estimated last-line	1
 cdd4	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:2073	Level 2 LE ErrorCount[_D1_DP_LANE2]	0
 cdea	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3399	5. VBO Drf Bist0 Time Out Fail: 2	0
 cdea	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3345	5. VBO Drf Bist0 Time Out Fail: 2	0
@@ -6730,7 +6730,7 @@ d1fb	Audio	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Audio.c:1516	WD
 d1fb	Audio	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Audio.c:1909	WD : D0 DP Audio Over/Underflow	0
 d1fb	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1328	WD : D0 DP Audio Over/Underflow	0
 d1fb	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_ComboPhy.c:1024	WD : D0 DP Audio Over/Underflow	0
-d210	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:469	Error condition	0
+d210	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:469	Error condition	1
 d219	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:3091	Check Phase2 FAIL	0
 d221	System	Kernel/System/Code/SysSource.c:2162	7. == SearchIndex ==	1
 d221	System	Kernel/System/Code/SysSource.c:2418	7. == SearchIndex ==	1
@@ -6826,14 +6826,14 @@ d589	Rx3	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx3.c:3235	4.
 d589	Rx3	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx3.c:3180	4. reset Icp	0
 d589	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:3230	4. reset Icp	0
 d596	Rx5	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx5.c:4338	Color Info Changed	0
-d5a6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:540	-D addr1 FRC	0
+d5a6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:540	-D addr1 FRC	1
 d5b6	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2193	5. RGB Gamma S2 SetA Bist Even Fail	0
 d5b6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2142	5. RGB Gamma S2 SetA Bist Even Fail	0
 d5c9	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:830	HDR apply AdobeRGB matrix	0
 d5e2	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Main.c:1250	6. DP0 Test FAIL	0
 d5ed	System	Kernel/System/Code/SysMode.c:161	Input Timing InterLace	1
 d5ed	System	Kernel/System/Code/SysVGA.c:104	Input Timing InterLace	1
-d60f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:570	7. dt max modifyed	0
+d60f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:570	7. dt max modifyed	1
 d614	MHL	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_MHLRx2.c:643	Rx2 MSC MHL_PROTOCOL_ERROR	0
 d614	MHL	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_MHLRx2.c:654	Rx2 MSC MHL_PROTOCOL_ERROR	0
 d614	MHL	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx2.c:643	Rx2 MSC MHL_PROTOCOL_ERROR	0
@@ -6911,8 +6911,8 @@ d816	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4838	5. 
 d816	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3943	5. ====D3 420to422 DRF Bist Test Start	0
 d836	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:5059	5. 5k3k 1P Highlight Window Start	0
 d843	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx5HDCP2_SeptPhy.c:1035	[D5]Ekh(km)	0
-d87a	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:509	-CW180 W_PsAddr1	0
-d87a	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:514	-CW180 W_PsAddr1	0
+d87a	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:509	-CW180 W_PsAddr1	1
+d87a	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:514	-CW180 W_PsAddr1	1
 d884	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:2072	5. DCC DRF Bist Fail	0
 d884	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:717	5. DCC DRF Bist Fail	0
 d884	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2021	5. DCC DRF Bist Fail	0
@@ -6953,7 +6953,7 @@ d982	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:734	5. D
 d982	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:390	5. DisplayTimingGen Even BIST Fail for SRAM No.3	0
 d982	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:925	5. DisplayTimingGen Even BIST Fail for SRAM No.3	0
 d982	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_BIST.c:119	5. DisplayTimingGen Even BIST Fail for SRAM No.3	0
-d9b0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1522	DVS	0
+d9b0	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1522	DVS	1
 d9b9	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10032	Get Colorimetry Extended	0
 d9b9	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9999	Get Colorimetry Extended	0
 d9c6	TypeC	User/Device/Code/TypeC_Pmic_ONSEMI_NCP81239.c:778	0.Pmic:CS1 Value	0
@@ -6997,7 +6997,7 @@ db3d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4349	6. 
 db3d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3454	6. ScaleDown S1 & S2 Bist Fail Mode	0
 db43	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4938	5. 5K3K_Mode_1	0
 db47	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1459	DP Rx1 MST reset	0
-db5c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2028	FRC Efficiency(%)	0
+db5c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2028	FRC Efficiency(%)	1
 db62	System	Kernel/System/Code/SysMode.c:168	Input Timing VTotal	1
 db62	System	Kernel/System/Code/SysVGA.c:111	Input Timing VTotal	1
 db72	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2479	___________Version:	0
@@ -7059,10 +7059,10 @@ de6b	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2539	pin
 de6b	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_DSPC.c:1712	pin36 ==1	0
 de6b	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2311	pin36 ==1	0
 de7f	System	Kernel/User Common Function/Code/UserCommonSign.c:475	HASH IN	1
-de82	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:59	R-IH	0
-de82	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:66	R-IH	0
-de82	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:66	R-IH	0
-de82	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:71	R-IH	0
+de82	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Rotation.c:59	R-IH	1
+de82	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Rotation.c:66	R-IH	1
+de82	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:66	R-IH	1
+de82	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_Rotation.c:71	R-IH	1
 de96	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY9228.c:821	8.Pmic:Output Voltage Value	0
 dea9	Audio	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Audio.c:1778	False : D1 DP Audio Buffer	0
 dea9	Audio	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_Audio.c:969	False : D1 DP Audio Buffer	0
@@ -7256,7 +7256,7 @@ e11a	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4245	7.
 e11f	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCRx0Pd.c:1284	    ----> Vconn Role : Vconn SRC (0)	0
 e13b	System	User/Beacon Series/BeaconFunction/Code/BeaconUserSensor.c:498	Default_Progress_Dark  	1
 e13b	System	User/Beacon Series/BeaconFunction/Code/BeaconUserSensor.c:611	Default_Progress_Dark  	1
-e151	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:962	3Block-addr1	0
+e151	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:962	3Block-addr1	1
 e162	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7543	Get Colorimetry YCC_ITUR_BT709	0
 e170	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1906	VSC change: Color Depth	0
 e178	Rx4	Kernel/Scaler/ScalerFunction/Code/ScalerDualLinkDVI.c:1971	D5 Video Detect	0
@@ -7375,7 +7375,7 @@ e4ef	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_DSPC.c:633	5. /
 e502	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:1697	Write Command Fail	0
 e502	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:771	Write Command Fail	0
 e51e	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0HDCP2.c:1488	DPRX0 HDCP2 - Get AKE INIT	0
-e52f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:253	IVDelay step step	0
+e52f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:253	IVDelay step step	1
 e549	Measure	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_Measure.c:685	Digital format conversion fail	1
 e549	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:597	Digital format conversion fail	1
 e54d	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:583	tx2 clk	0
@@ -7414,12 +7414,12 @@ e5c6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2369	pin
 e5c6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2428	pin42	0
 e5c6	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_DSPC.c:1571	pin42	0
 e5c6	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_DSPC.c:1635	pin42	0
-e5ce	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1086	Error1-input faster/slower mis-match: IDEN	0
-e5ce	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1097	Error1-input faster/slower mis-match: IDEN	0
-e5ce	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:999	Error1-input faster/slower mis-match: IDEN	0
-e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1046	Error1-input faster/slower mis-match: IDEN	0
-e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1057	Error1-input faster/slower mis-match: IDEN	0
-e5ce	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:992	Error1-input faster/slower mis-match: IDEN	0
+e5ce	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1086	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1097	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:999	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1046	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1057	Error1-input faster/slower mis-match: IDEN	1
+e5ce	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:992	Error1-input faster/slower mis-match: IDEN	1
 e5da	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DP.c:1350	_D1_HOT_PLUG_HIGH	0
 e5df	Rx0	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_DPRx0.c:4635	7. DP MSA Fail	0
 e5df	Rx0	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_DPRx0.c:4861	7. DP MSA Fail	0
@@ -7957,7 +7957,7 @@ f359	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:4216	5. 
 f359	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_BIST.c:1439	5. OSD Bist No.1 Fail	0
 f375	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10172	Get YCC FULL RANGE	0
 f37c	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:149	CEC Initial	0
-f389	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:674	-I_addr2 FRC	0
+f389	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:674	-I_addr2 FRC	1
 f38d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1809	5. Gamma M2 SetB DRF Bist Start Pause Time Out Fail	0
 f38d	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1825	5. Gamma M2 SetB DRF Bist Start Pause Time Out Fail	0
 f38d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1758	5. Gamma M2 SetB DRF Bist Start Pause Time Out Fail	0
@@ -7970,14 +7970,14 @@ f3b8	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1HDCP2.c:853	
 f3b9	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:632	5. ScaleDown M2 Linebuffer1 Bist Fail	0
 f3b9	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:823	5. ScaleDown M2 Linebuffer1 Bist Fail	0
 f3c0	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:3484	5. eDPTX1 Bist Fail	0
-f3d2	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_FRC.c:344	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:524	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:393	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:359	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:644	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:450	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_FRC.c:300	FRC-V	0
-f3d2	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:398	FRC-V	0
+f3d2	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_FRC.c:344	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:524	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:393	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:359	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:644	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:450	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_FRC.c:300	FRC-V	1
+f3d2	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:398	FRC-V	1
 f3fb	System	User/Beacon Series/BeaconFunction/Code/BeaconUserInterface.c:4427	!!!!!!Cancel no support	1
 f404	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain.c:505	5. MODE 0	0
 f404	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain.c:540	5. MODE 0	0
@@ -8124,7 +8124,7 @@ f6a5	System	Kernel/System/Code/SysTypeC.c:900	8. [TYPE C] <RDO> Info2 (Fix PDO =
 f6c7	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_DSPC.c:711	5. DSPC test Start	0
 f6d1	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:9225	_COLORIMETRY_RGB_SCRGB	0
 f6d1	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1488	_COLORIMETRY_RGB_SCRGB	0
-f6ed	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1558	bChangeDVStartStatus	0
+f6ed	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1558	bChangeDVStartStatus	1
 f6f4	Rx5	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx5.c:3792	7. TMDS Lane2 LE Max	0
 f6fa	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_IMDomain.c:4988	5. 5K3K I Dither Start	0
 f70f	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:863	HDR apply AdobeRGB matrix EXT	0
@@ -8148,7 +8148,7 @@ f777	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_I
 f791	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:2821	MST ####Calculated usVTotal####	0
 f7a1	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:3456	5. BackGround Color Start	0
 f7a1	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Color.c:3383	5. BackGround Color Start	0
-f7b1	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:80	4. 7_5_bit OD BW	0
+f7b1	Memory	Kernel/Scaler/ScalerFunction/Code/ScalerOD.c:80	4. 7_5_bit OD BW	1
 f7d5	Rx2	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_TMDSRx2.c:4267	7. HDCP Normal	0
 f7d5	Rx2	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_TMDSRx2.c:4347	7. HDCP Normal	0
 f7d5	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4258	7. HDCP Normal	0
@@ -8171,12 +8171,12 @@ f844	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_I
 f844	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_III.c:1745	6. SHP PASS	0
 f845	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxHDCP2.c:2679	CSM - type	0
 f860	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2719	Tx Clk Good Pass Range	0
-f868	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1087	Error2-input faster/slower mis-match: DDEN	0
-f868	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1098	Error2-input faster/slower mis-match: DDEN	0
-f868	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:1000	Error2-input faster/slower mis-match: DDEN	0
-f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1047	Error2-input faster/slower mis-match: DDEN	0
-f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1058	Error2-input faster/slower mis-match: DDEN	0
-f868	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:993	Error2-input faster/slower mis-match: DDEN	0
+f868	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1087	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:1098	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:1000	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1047	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:1058	Error2-input faster/slower mis-match: DDEN	1
+f868	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:993	Error2-input faster/slower mis-match: DDEN	1
 f87c	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:871	5. DisplayTimingGen Odd BIST Fail for SRAM No.0	0
 f87c	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1062	5. DisplayTimingGen Odd BIST Fail for SRAM No.0	0
 f881	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx4HDCP2_SeptPhy.c:387	[D4]SKE_SEND_EKS	0
@@ -8310,8 +8310,8 @@ fa65	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_Color_DDomain_I
 fa65	QC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_Color_DDomain_II.c:4228	5. IAPS Gain Start	0
 fa65	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_II.c:2872	5. IAPS Gain Start	0
 fa65	QC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_Color.c:3195	5. IAPS Gain Start	0
-fa79	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:515	-CW180 W_PsAddr2	0
-fa79	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:520	-CW180 W_PsAddr2	0
+fa79	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:515	-CW180 W_PsAddr2	1
+fa79	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:520	-CW180 W_PsAddr2	1
 fa7e	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:1146	I-domain CRC:	0
 fa86	System	Kernel/System/Code/SysTypeC.c:3896	8. [TYPE C] <HUB> D1 Hub Info Change	1
 fa99	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_Color.c:2067	6.ADCNR PASS	0
@@ -8399,9 +8399,9 @@ fc55	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0HDCP2.c:1701
 fc5d	System	Kernel/User Common Function/Code/UserCommonPortControllerRts5400.c:586	8. Read 5400 D1 Alt Mode Ready By IIC Fail	1
 fc71	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2480	___________Iteration:	0
 fc77	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:773	StepToGB[1]	0
-fc85	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:750	-CW180 R_RvAddr1	0
-fc85	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:743	-CW180 R_RvAddr1	0
-fc85	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:582	-CW180 R_RvAddr1	0
+fc85	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:750	-CW180 R_RvAddr1	1
+fc85	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:743	-CW180 R_RvAddr1	1
+fc85	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_QC_OD_FRC.c:582	-CW180 R_RvAddr1	1
 fc97	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR1.c:1083	rx dqs1 rise	0
 fcb7	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_BIST.c:1642	5. Gamma S2 SetA Bist Fail	0
 fcb7	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1591	5. Gamma S2 SetA Bist Fail	0
@@ -8423,14 +8423,14 @@ fd22	QC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_QC_DSPC.c:2909	pin
 fd22	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2549	pin37_Vby1_B	0
 fd22	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2673	pin37_Vby1_B	0
 fd22	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_DSPC.c:2795	pin37_Vby1_B	0
-fd23	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_FRC.c:343	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:523	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:392	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:358	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:643	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:449	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_FRC.c:299	FRC-H	0
-fd23	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:397	FRC-H	0
+fd23	FRC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_FRC.c:343	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6410_Series_Scaler/Code/RL6410_Series_FRC.c:523	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_FRC.c:392	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:358	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6432_Series_Scaler/Code/RL6432_Series_QC_OD_FRC.c:643	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c:449	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6463_Series_Scaler/Code/RL6463_Series_FRC.c:299	FRC-H	1
+fd23	FRC	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_FRC.c:397	FRC-H	1
 fd24	HDCP2	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_TMDSRx1HDCP2.c:248	[D1]AKE_NO_STORED_KM	0
 fd24	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1HDCP2.c:597	[D1]AKE_NO_STORED_KM	0
 fd24	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx1HDCP2_SeptPhy.c:248	[D1]AKE_NO_STORED_KM	0
@@ -8446,7 +8446,7 @@ fd37	QC	Kernel/Scaler/RL6369_Series_Scaler/Code/RL6369_Series_QC_BIST.c:252	6. S
 fd3c	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSDRAM.c:302	P4_C4_SDR_RX_CLK_DLY3	0
 fd5d	Rx1	Kernel/Scaler/RL6492_Series_Scaler/Code/RL6492_Series_DPRx1.c:2383	7. wuzanne test : DP CDR Unlock	0
 fd5d	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3530	7. wuzanne test : DP CDR Unlock	0
-fd6c	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:560	7. DtMax	0
+fd6c	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:560	7. DtMax	1
 fd87	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9257	Get Pixel Repetition 4	0
 fd8b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_ComboPhy.c:748	False : D0 HDMI Audio DB Retry	0
 fdae	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8417	Get RGB RANGE Error	0

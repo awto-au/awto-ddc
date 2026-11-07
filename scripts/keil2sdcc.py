@@ -72,6 +72,10 @@ RULES = [
                 f"{m.group(1)}{m.group(3)} {m.group(2)} {m.group(4)} {m.group(2)} {m.group(5)}")),
     (re.compile(r"^(\s*(?:extern\s+|static\s+)*)(code|xdata|idata|data|pdata)\s+([A-Za-z_][\w ]*?)\s*\(\s*\*\s*"
                 r"([A-Za-z_]\w*)", re.M), r"\1\3 (* \2 \4"),
+    # CheckMDomain messages call ScalerMDomainGetFRCMemoryBW, which the SDK builds only with FRC+OD (OD is cut, #37)
+    (re.compile(r"^#if\(\(\(_FRC_SUPPORT == _ON\) && \(_OD_SUPPORT == _ON\)\) \|\| \(_DISP_LATENCY_ADJUST_SUPPORT == _ON\)\)", re.M),
+     "#if((((_FRC_SUPPORT == _ON) && (_OD_SUPPORT == _ON)) || (_DISP_LATENCY_ADJUST_SUPPORT == _ON)) || "
+     "((_FRC_SUPPORT == _ON) && (_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON)))"),
     # input-info pop-up after mode ACTIVE (_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG): SDK 3 s -> _AWTO_INFO_POPUP_SEC
     (re.compile(r"ScalerTimerActiveTimerEvent\(SEC\(3\), (_USER_TIMER_EVENT_OSD_DISABLE\);)"),
      r"ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), \1"),

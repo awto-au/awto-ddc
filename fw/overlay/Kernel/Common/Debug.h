@@ -65,11 +65,7 @@
 #define _DEBUG_MESSAGE_HDMITX                       _OFF
 #define _DEBUG_MESSAGE_TYPE_C                       _OFF
 #define _DEBUG_MESSAGE_CHECK_DISP_SETTING           _ON 
-#ifdef _AWTO_FRC                                        // its check calls ScalerMDomainGetFRCMemoryBW: FRC+OD only (#26)
-#define _DEBUG_MESSAGE_CHECK_MDOMAIN                _OFF
-#else
-#define _DEBUG_MESSAGE_CHECK_MDOMAIN                _ON
-#endif
+#define _DEBUG_MESSAGE_CHECK_MDOMAIN                _ON    // FRC-only builds: keil2sdcc RULES compile ScalerMDomainGetFRCMemoryBW for it (#37)
 
 //--------------------------------------------------
 // Tokenised message (awto, #25): {0x01, id_hi, id_lo, 0} in code; text is in fw/msgids.tsv. Bytes are 1..255 (no NUL).
