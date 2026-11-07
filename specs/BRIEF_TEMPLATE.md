@@ -11,7 +11,7 @@ Everything you may use is in this brief and in the current directory (`/mnt/2tb/
 - Names: functions/types from `awto/include/*.h`; registers from `facts/regs.h` / `facts/names.h` only.
 - Every number not given by `facts/` carries its provenance tag from the spec in a comment (`derived` / `measured` / `vendor-value`).
 - Comments: terse, our words, at most 3 lines each.
-- Work on branch `mod/{mod}` (`git switch -c mod/{mod}`); commit with trailer
+- Work on branch `mod/{mod}` (`git switch -c mod/{mod}`); when finished, leave `main` checked out (`git switch main`) so later merges never land on your branch; commit with trailer
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. No remotes, no push.
 - Build check: `/home/dan/opt/awto-sdcc/bin/sdcc -mmcs51 --model-large --std-c11 -Iawto/include -Ifacts -c <file>` for each file.
 - Host test: gcc, `-Iawto/include -Ifacts`, a recording `REG8` mock defined before including `reg.h`; run it; it must pass.
