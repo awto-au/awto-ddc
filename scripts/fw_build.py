@@ -232,6 +232,9 @@ def parse_args(argv=None):
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
     ap.add_argument("--pin-common", default="", help="passed to sdcc_bank (comma list of fns forced into common)")
     ap.add_argument("--src-patch", default="")
+    # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
+    ap.add_argument("--resid-end", default="0xc38", help="passed to sdcc_bank: common bytes kept for vectors/library before "
+                    "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
     if a.cluster:
         import sdcc_layout
@@ -269,7 +272,8 @@ def main() -> int:
                  *(["--cluster", a.cluster] if a.cluster else []),
                  *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
                  *(["--pin-common", pin] if (pin := ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()
-                                                                         if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)) else [])])
+                                                                         if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)) else []),
+                 *(["--resid-end", a.resid_end] if a.resid_end else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_mod0/crt_divulong/crt_memcpy are Keil-register (--sdcccall 3) versions only; the level-0 versions are deleted (awto-sdcc#7 C5)

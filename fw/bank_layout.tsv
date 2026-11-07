@@ -1,8 +1,7 @@
 #common 0x5000
-#resid_end 0xc00
+#resid_end 0xc38
 #slot_pad size+4+size/32,4B
 # kind	name	region	offset	slot    (scripts/sdcc_layout.py; region C = common)
-const	_tPALETTE_MAIN_MENU	C	0x0c00	56
 const	_tPALETTE_RTD_LOGO	C	0x0c38	56
 const	_tINPUT_PORT_TYPE	C	0x0c70	16
 fn	_ScalerOsdAddrLsb	C	0x0c80	16
@@ -922,6 +921,7 @@ const	_tSTRING_RESOLUTION_TABLE	C	0x3e16	104
 fn	_ScalerGetDataPortByte	C	0x3e7e	132
 fn	_ScalerRead	C	0x3f02	128
 fn	_ScalerWrite	C	0x3f82	128
+const	_tPALETTE_MAIN_MENU	C	0x4002	56
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28

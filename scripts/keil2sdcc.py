@@ -87,9 +87,6 @@ RULES = [
     (re.compile(r"^(\s*)while\(g_bFwHalt != 0\);", re.M), r"\1while((g_bFwHalt != 0) && (AwtoMsgWait() != 0));"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
-    # Keil `~` on a bit operand (Realtek's b-prefixed bit vars/params) is bit NOT (CPL C); SDCC does not complement it (passes
-    # the bit through): FineTuneFrameSyncLineBuffer moved DCLK away from the input, 4K60.000 line-buffer underflow (#26)
-    (re.compile(r"~(\s*\(?\s*)(b[A-Z]\w*)\b"), r"!\1\2"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position
     (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
     (re.compile(r"\bdata(?=\s+[\*A-Za-z_])"), "__data"),
@@ -850,6 +847,20 @@ FILE_FLAGS = {
 }
 
 
+_KC = None
+
+
+def keil_compat():
+    """--keil-compat, refusing a compiler without it: sdcc only warns on an unknown option, and the ~bit rule is gone."""
+    global _KC
+    if _KC is None:
+        r = subprocess.run([SDCC, "--help"], capture_output=True, text=True, timeout=30)
+        if "--keil-compat" not in r.stdout + r.stderr:
+            sys.exit(f"{SDCC} has no --keil-compat (awto-sdcc#25): Keil ~bit semantics would be lost")
+        _KC = ["--keil-compat"]
+    return _KC
+
+
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
            "--std-sdcc11", "--opt-code-size",                 # flash is the constraint (Dan: smallest)
@@ -858,6 +869,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
            "--nooverlay",                                     # `data` locals -> DSEG for sdcc_overlay (call-graph aware), not OSEG
            "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
            "--nogenconstprop",                                # SDK polls ISR-set non-volatile flags; trunk folded the delay loop away (#23)
+           *keil_compat(),                                    # Keil ~bit (replaces the ~bX -> !bX rule, #26), /0, loop re-read, eval order (awto-sdcc#25)
            f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
     if awto_alias_header():
         cmd.append(f"-Wp-include,{awto_alias_header()}")
