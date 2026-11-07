@@ -1,7 +1,8 @@
 #if(_AWTO_DIAG == _ON)
 // #33: 0x01..0x04 = key MENU/RIGHT/LEFT/EXIT, 0x10+n = OSD event n, 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46).
 // 0x22/0x23 reserved: message log on/off (wb-msgtable, #56). #28 hold variants (stay until cleared, g_stAwtoDiag.ucHold bits):
-// 0x24 logo on, 0x25 logo off, 0x26 debug pop-up held, 0x27 clear all holds. Inserted into RTD2014Key.c (OSD macros).
+// 0x24 logo on, 0x25 logo off, 0x26 debug pop-up held, 0x27 clear all holds. #60: 0x31..0x33 switch to D1..D3 (fixed port),
+// 0x30 auto search. Inserted into RTD2014Key.c (OSD macros).
 #define AWTO_HOLD_LOGO                          0x01
 #define AWTO_HOLD_POPUP                         0x02
 
@@ -23,13 +24,48 @@ void AwtoTestHoldLogoOff(void)      // global: its map symbol tells hosts (osd_t
 }
 #endif
 
+// Hold guards (#28): a held visual survives the SDK's own OSD paths; each blocked path is logged (StAwtoSw, scripts/sw_timeline.py).
+bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: the SDK OSD timeout / reset paths
+{
+    if(g_stAwtoDiag.ucHold == 0)
+    {
+        return _FALSE;
+    }
+    AwtoSwEvent(AWTO_SW_EV_HOLD_BLOCK, SysModeGetModeState());
+    g_stAwtoSw.ucHoldBlocks++;
+    return _TRUE;
+}
+
+void AwtoHoldOsdGuard(void)                       // main loop, just before UserCommonInterfaceOsdHandler
+{
+    if((g_stAwtoDiag.ucHold & AWTO_HOLD_LOGO) == 0)
+    {
+        return;
+    }
+    if(GET_OSD_EVENT_MESSAGE() != _OSDEVENT_NONE_MSG)
+    {
+        AwtoSwEvent(AWTO_SW_EV_HOLD_DROP, GET_OSD_EVENT_MESSAGE());      // a pop-up would draw over the logo
+        g_stAwtoSw.ucHoldBlocks++;
+        SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);
+    }
+#if(_AWTO_DEMO_LOGO == _ON)
+    if(GET_OSD_LOGO_ON() == _OFF)                  // OSD reset on a mode change cleared it: draw it again
+    {
+        AwtoSwEvent(AWTO_SW_EV_HOLD_REDRAW, SysModeGetModeState());
+        g_stAwtoSw.ucHoldBlocks++;
+        OsdDispShowLogo();
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
+    }
+#endif
+}
+
 void AwtoDiagTestCmd(void)
 {
     unsigned char ucCmd = g_stAwtoDiag.ucTestCmd;
 
-    if((g_stAwtoDiag.ucHold & AWTO_HOLD_POPUP) != 0)
+    if(g_stAwtoDiag.ucHold != 0)
     {
-        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // each pop-up draw re-arms its timeout
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // pending pop-up timeout (each draw re-arms it)
     }
     if(ucCmd == 0)
     {
@@ -51,17 +87,19 @@ void AwtoDiagTestCmd(void)
     }
     else if(ucCmd == 0x27)
     {
-        if((g_stAwtoDiag.ucHold & AWTO_HOLD_POPUP) != 0)
+        unsigned char ucWas = g_stAwtoDiag.ucHold;
+
+        g_stAwtoDiag.ucHold = 0;                     // first: OsdDispDisableOsd is blocked while a hold is set
+        if((ucWas & AWTO_HOLD_POPUP) != 0)
         {
             OsdDispDisableOsd();
         }
 #if(_AWTO_DEMO_LOGO == _ON)
-        if((g_stAwtoDiag.ucHold & AWTO_HOLD_LOGO) != 0)
+        if((ucWas & AWTO_HOLD_LOGO) != 0)
         {
             AwtoTestHoldLogoOff();
         }
 #endif
-        g_stAwtoDiag.ucHold = 0;
     }
 #if(_AWTO_DEMO_LOGO == _ON)
     else if((ucCmd == 0x21) || (ucCmd == 0x24))
@@ -74,15 +112,30 @@ void AwtoDiagTestCmd(void)
         else
         {
             ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
+            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // an info pop-up's 6 s timeout turned the held logo off (Dan 14:28)
             g_stAwtoDiag.ucHold |= AWTO_HOLD_LOGO;
         }
     }
     else if(ucCmd == 0x25)
     {
+        g_stAwtoDiag.ucHold &= ~AWTO_HOLD_LOGO;      // first: OsdDispDisableOsd is blocked while a hold is set
         AwtoTestHoldLogoOff();
-        g_stAwtoDiag.ucHold &= ~AWTO_HOLD_LOGO;
     }
 #endif
+    else if((ucCmd >= 0x31) && (ucCmd <= 0x33))      // #60 switch to D1/D2/D3, fixed port, as VCP 0x60 (RTD2014Ddcci.c)
+    {
+        AwtoSwArm(_D0_INPUT_PORT + (ucCmd - 0x30));
+        AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);
+        SET_FORCE_POW_SAV_STATUS(_FALSE);
+        SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
+        SysSourceSwitchInputPort(_D0_INPUT_PORT + (ucCmd - 0x30));
+        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+    }
+    else if(ucCmd == 0x30)                              // #60 back to auto search in group (NVRAM default), no switch
+    {
+        AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);
+        SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
+    }
     else if((ucCmd >= 0x10) && (ucCmd <= (0x10 + _OSDEVENT_DP_VERSIOM_MSG)))      // awto: #53.17 last event id
     {
         SET_OSD_EVENT_MESSAGE(ucCmd - 0x10);

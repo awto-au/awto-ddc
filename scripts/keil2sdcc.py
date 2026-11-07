@@ -182,6 +182,14 @@ INSERTS = [
      (SHIM / "awto_dbgisr.inc").read_text().rstrip("\n"), r"^void ScalerDebugIntProc_EXINT1\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^#include", "#define _AWTO_DIAG_DEFINER"),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
+    # #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state poll per pass, panel power actions; #28 hold guards
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_sw.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoSwPoll();"),
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AwtoHoldOsdGuard();"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*switch\(ucEvent\)", "    AwtoSwEvent(AWTO_SW_EV_POWER, ucEvent);",
+     r"^void UserCommonInterfacePanelPowerAction\(BYTE ucEvent\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*SET_OSD_STATE\(_MENU_NONE\);", "    if(AwtoHoldBlocksDisable() == _TRUE)\n    {\n        return;\n    }",
+     r"^void OsdDispDisableOsd\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoDiagInit();"),                 # stage 1
     # delay calibration (#53.6) needs the DELAY_XUS macros, which only scaler files see
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"^void ScalerMcu5usDelayCalc\(EnumClkSel enumClock\)$",

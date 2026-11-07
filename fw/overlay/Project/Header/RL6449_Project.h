@@ -68,6 +68,8 @@ extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
 extern void AwtoTestHoldLogoOff(void);
+extern bit AwtoHoldBlocksDisable(void);
+extern void AwtoHoldOsdGuard(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
 #if(_AWTO_DIAG_DELAYCAL == _ON)
@@ -181,6 +183,45 @@ extern void AwtoFreqUpdate(void);
 #define _AWTO_DEBUG_PORT                                        _ON
 #if(_AWTO_DEBUG_PORT == _ON)
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
+#endif
+// #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
+#define _AWTO_SW_LOG                                            _ON
+#if(_AWTO_SW_LOG == _ON)
+#define AWTO_SW_EVENTS                                          40
+#define AWTO_SW_EV_MODE                                         0x01    // arg = new g_stModeInfo mode state
+#define AWTO_SW_EV_POWER                                        0x10    // arg = UserCommonInterfacePanelPowerAction event
+#define AWTO_SW_EV_T3                                           0x20    // arg 0 = T3 wait start, 1 = end
+#define AWTO_SW_EV_CMD                                          0x40    // arg = switch command (test cmd 0x30..0x33)
+#define AWTO_SW_EV_HOLD_BLOCK                                   0x50    // OsdDispDisableOsd blocked by a hold (#28); arg = mode state
+#define AWTO_SW_EV_HOLD_REDRAW                                  0x51    // held logo drawn again after an OSD reset; arg = mode state
+#define AWTO_SW_EV_HOLD_DROP                                    0x52    // OSD event dropped under a held logo; arg = event
+typedef struct
+{
+    unsigned char ucId;
+    unsigned char ucArg;
+    unsigned int usMs;
+} StAwtoSwEv;
+typedef struct
+{
+    unsigned char ucMagic;                      // 'S'
+    unsigned char ucSeq;                        // +1 per arm
+    unsigned char ucPort;                       // armed for this port (_Dn_INPUT_PORT)
+    unsigned char ucN;                          // events recorded since the arm (max AWTO_SW_EVENTS)
+    unsigned int usT0;                          // g_usTimerCounter at the arm
+    unsigned char ucLastMode;
+    unsigned char ucHpdLow[4];                  // HPD-low writes per port D0..D3 since boot (wraps)
+    unsigned char ucHoldBlocks;                 // SDK OSD paths stopped by a held visual (#28), wraps
+    StAwtoSwEv stEv[AWTO_SW_EVENTS];
+} StAwtoSw;
+extern __xdata StAwtoSw g_stAwtoSw;
+extern void AwtoSwEvent(unsigned char ucId, unsigned char ucArg);
+extern void AwtoSwArm(unsigned char ucPort);
+extern void AwtoSwPoll(void);
+#define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
+#else
+#define AwtoSwEvent(a, b)
+#define AwtoSwPoll()
+#define AWTO_SW_HPD(port, x)
 #endif
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)

@@ -98,6 +98,7 @@ void AwtoDiagPanelT3Wait(unsigned int usMs)
         usN0 = g_usTimerCounter;
     }
     while(usN0 != g_usTimerCounter);
+    AwtoSwEvent(AWTO_SW_EV_T3, 0);
     AwtoDiagT2Snap(&s_stT3A);
     if(g_stAwtoDiag.usDelayXms10 == 0)
     {
@@ -113,6 +114,7 @@ void AwtoDiagPanelT3Wait(unsigned int usMs)
     }
     while((unsigned int)(usNow - usN0) < usMs);
     AwtoDiagT2Snap(&s_stT3B);
+    AwtoSwEvent(AWTO_SW_EV_T3, 1);
     g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, usRcap) >> 6);
 }
 #endif

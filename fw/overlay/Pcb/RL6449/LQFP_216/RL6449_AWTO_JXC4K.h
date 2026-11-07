@@ -464,18 +464,22 @@
 #define _D3_HOT_PLUG_LOW                        0
 
 #define PCB_D0_HOTPLUG(x)                       {\
+                                                    AWTO_SW_HPD(0, x);\
                                                     bD0_HPD = (x);\
                                                 }
 
 #define PCB_D1_HOTPLUG(x)                       {\
+                                                    AWTO_SW_HPD(1, x);\
                                                     bD1_HPD = (x);\
                                                 }
 
 #define PCB_D2_HOTPLUG(x)                       {\
+                                                    AWTO_SW_HPD(2, x);\
                                                     bD2_HPD = (x);\
                                                 }
 
 #define PCB_D3_HOTPLUG(x)                       {\
+                                                    AWTO_SW_HPD(3, x);\
                                                     bD3_HPD = (x);\
                                                 }
 
