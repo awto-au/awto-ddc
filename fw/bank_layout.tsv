@@ -622,11 +622,8 @@ stub	_ScalerGetDataPortBit	C	0x273e	9
 stub	_ScalerGetDataPortByte	C	0x2747	9
 fn	_ScalerSetDataPortBit	C	0x2750	168
 fn	_ScalerSetDataPortByte	C	0x27f8	100
-stub	_AwtoMsg0	C	0x285c	9
-stub	_AwtoMsgV	C	0x2865	9
 stub	_ScalerDebug	C	0x286e	9
 stub	_ScalerDebugIntProc_EXINT1	C	0x2877	9
-stub	_ScalerDebugMessage	C	0x2880	9
 stub	_ScalerFlashRead	C	0x2889	9
 stub	_ScalerFlashWrite	C	0x2892	9
 stub	_ScalerIOSCTrimming	C	0x289b	9
@@ -1208,7 +1205,6 @@ fn	_ScalerDpRx1SignalCheck	2	0x58f4	772
 fn	_ScalerDpRx1SignalDetectMeasureCount	2	0x5bf8	220
 fn	_ScalerDpRx1VBIOSMSACheck	2	0x5cd4	396
 fn	_ScalerDpRx1ValidSignalDetection	2	0x5e60	584
-fn	_AwtoMsgV	2	0x60a8	100
 fn	_ScalerDebug	2	0x610c	932
 fn	_ScalerDebugGetRegisters	2	0x64b0	328
 fn	_ScalerMcuGpioInitial	2	0x65f8	164
@@ -1975,7 +1971,6 @@ fn	_OsdFontVLCLoadMainIcon_2	7	0x91a0	216
 fn	_ScalerPLLSetDPLLFreq	7	0x96f0	64
 fn	_ScalerPLLSetDPLLFreqNfCascade	7	0x9730	3136
 fn	_ScalerPLLSetDPLLOffset	7	0xa370	60
-fn	_ScalerDebugMessage	7	0xa3ac	1196
 const	_tFONT1_ICON_DP	8	0x0000	376
 const	_tFONT1_ICON_DVI	8	0x0178	412
 const	_tFONT1_ICON_HDMI	8	0x0314	372
@@ -2774,7 +2769,6 @@ fn	_ScalerGDIPhyBandgap	11	0x6efc	368
 fn	_OsdFontVLCLoadMainIcon_1	11	0x706c	232
 fn	_ScalerComputeDwordMulDiv	11	0x7154	976
 fn	_ScalerComputeDwordPowDiv	11	0x7524	560
-fn	_AwtoMsg0	11	0x7754	56
 fn	_ScalerDpRx1HSActiveTrackingMode	11	0x778c	56
 fn	_ScalerDpLowPowerProc	11	0x77c4	112
 fn	_ScalerDisplayDPTx1AuxRead	11	0x7834	524
