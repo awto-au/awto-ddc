@@ -455,6 +455,8 @@ def cmd_flash(extra: list[str]) -> int:
                  *(["--identity", identity] if identity else []))
     if rc == 0:
         (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
+        if _py("fw_archive.py", "--commit", img):      # every flashed image kept in git; failure doesn't fail the flash
+            log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
     return rc
 
 
