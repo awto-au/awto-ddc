@@ -122,12 +122,13 @@ class Region:
             cur += self.placed[k][1]
 
 
-def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fill_target=0.80):
+def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fill_target=0.80, reserve=None):
     """Place every item; returns (placed: key -> (region, offset, slot), moved: key -> new region).
-    items: list[Item] with .region = wanted region (C or bank). A kept row needs the same region."""
+    items: list[Item] with .region = wanted region (C or bank). A kept row needs the same region.
+    reserve: {bank: bytes} kept free at the top of that bank (fixed data block, scripts/msg_table.py)."""
     regs = {"C": Region("C", common_lo, common_hi)}
     for b in range(nbanks):
-        regs[b] = Region(b, 0, bank_cap)
+        regs[b] = Region(b, 0, bank_cap - (reserve or {}).get(b, 0))
     order = lambda it: (it.is_const is False, it.module, it.key[1])
     by_key = {it.key: it for it in items}
     korder = lambda k: (by_key[k].is_const is False, by_key[k].module, k[1])
@@ -187,11 +188,11 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
     return placed, moved
 
 
-def stats(placed, nbanks, common_lo, common_hi, bank_cap):
+def stats(placed, nbanks, common_lo, common_hi, bank_cap, reserve=None):
     used = defaultdict(int)
     for k, (rid, o, s) in placed.items():
         used[rid] += s
     out = {"C": (used["C"], common_hi - common_lo)}
     for b in range(nbanks):
-        out[b] = (used[b], bank_cap)
+        out[b] = (used[b], bank_cap - (reserve or {}).get(b, 0))
     return out

@@ -28,6 +28,7 @@ from sdcc_overlay import repo_root  # noqa: E402
 import sdcc_tools as T  # noqa: E402
 import sdcc_layout as L  # noqa: E402
 import sdcc_cluster as SC  # noqa: E402
+import msg_table as MT  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -41,6 +42,7 @@ CALLJ = re.compile(r"^\s+(lcall|ljmp|acall)\s+(\w+)")
 SCAN_MAX = 30             # lines from an address load to its consumer; longer = give up (stays common)
 AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
 BANK_SIZE = 0x10000
+MSG_RESERVE = {MT.MSG_BANK: MT.MSG_SIZE}   # top of one bank = fixed debug-message block (#56), never code
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
 STUB_SIZE = 9             # mov r0,#bank; mov r1,#lo; mov r2,#hi; ljmp __bs_call (2+2+2+3 B)
@@ -519,7 +521,7 @@ def main() -> int:
             st = L.Item("stub", nm, STUB_SIZE, "C", "", slot=STUB_SIZE)
             st.fixed = True
             its.append(st)
-        placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log)
+        placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE)
         for (kind, name), rid in rehomed.items():
             if kind == "fn" and rid != "C":
                 funcs[name].bank = rid
@@ -649,7 +651,7 @@ def main() -> int:
             st = L.Item("stub", f_, STUB_SIZE, "C", mn, slot=STUB_SIZE)
             st.fixed = True
             its.append(st)
-        placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log)
+        placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE)
         apply_placed(placed)
         placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
         lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "slot_pad": "size+4+size/32,4B"})
@@ -657,7 +659,7 @@ def main() -> int:
             an = ("ST" if kind == "stub" else "CH") + name
             aname[(kind, name)] = an
             bases[an] = off if rid == "C" else rid * BANK_SIZE + a.common_max + off
-        st_ = L.stats(placed, a.banks, a.resid_end, a.common_max, cap)
+        st_ = L.stats(placed, a.banks, a.resid_end, a.common_max, cap, MSG_RESERVE)
         log("slot fill (used/capacity): " + ", ".join(f"{k}:{u}/{c}" for k, (u, c) in st_.items() if u))
         (ROOT / "tmp/sdcc-port/area_bases.json").write_text(json.dumps(
             {"areas": bases, "banks": sorted({r for r, _, _ in placed.values() if r != "C"}),

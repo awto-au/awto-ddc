@@ -11,7 +11,8 @@ usage: rtd_diag.py <bus> [--watch N | --messages | --release]
   0x2A); write 0x25 [0x00] + read 9 = FA F5 len v3 v2 v1 v0 c1 c2; per 15-char chunk k write 0x25 [k] + read n+1 (text
   + checksum k+0x0F+sum); write 0x2A (end, reply 0xF7, releases fw); on exit write 0x2F. Only these staging/read cmds.
   --release: send 0x2A + 0x2F only; frees a firmware left halted by a killed --messages run (reads then echo one byte).
-  Text starting 0x01 = token: bytes 1-2 big-endian id -> fw/msgids.tsv (id, category, file:line, text).
+  Text starting 0x01 = token: bytes 1-2 big-endian id -> the table inside the flashed image (--serial/--table,
+  scripts/msg_table.py, #56), else fw/msgids.tsv (id, category, file:line, text).
 Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Header/RL6449_Project.h StAwtoDiag:
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
   | 1A ucDelay5usN | 1B u16 DelayXms(10) counts/4 | 1D u16 200x5us counts/4 | 1F RCAP2H
@@ -165,8 +166,10 @@ def fetch_message(io):
     return bytes(text), int.from_bytes(val, "big")
 
 
-def messages(io, root: Path) -> int:
-    ids = load_msgids(root)
+def messages(io, root: Path, serial=None, table=None) -> int:
+    import msg_table
+    ids, src = msg_table.load_ids(root, serial, table)      # image table (#56) first, fw/msgids.tsv last
+    print(f"message ids: {len(ids)} from {src}", flush=True); log(f"message ids: {len(ids)} from {src}")
     if not io.write(DEV8, MSG_ENABLE, b"\x5a"):
         print("enable failed (no ACK from 0x35)"); return 1
     try:
@@ -202,6 +205,8 @@ def main() -> int:
     # 1 s: block read is ~65 short transfers (tens of ms); 1 s keeps rates well above one read's noise
     ap.add_argument("--watch", type=float, metavar="N", help="re-read every N seconds (Ctrl-C to stop)")
     ap.add_argument("--messages", action="store_true", help="poll the debug-message channel")
+    ap.add_argument("--serial", help="--messages: take the id table from this unit's flashed image (tmp/fw/<serial>-flashed.json)")
+    ap.add_argument("--table", type=Path, help="--messages: id table block or firmware image (scripts/msg_table.py)")
     ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F) to un-halt the firmware")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
@@ -216,7 +221,7 @@ def main() -> int:
         print("released" if ok else "release: no ACK from 0x35"); return 0 if ok else 1
     if a.messages:
         signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))   # run the finally (0x2F) when killed
-        return messages(io, root)
+        return messages(io, root, a.serial, a.table)
     prev, tprev = None, None
     while True:
         t = time.monotonic()

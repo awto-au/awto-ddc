@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 import sdcc_link  # noqa: E402
 import sdcc_tools as T  # noqa: E402
+import msg_table as MT  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -313,7 +314,10 @@ def main() -> int:
         promote_layout(new_layout, ROOT / a.layout)   # absolute a.layout wins in the join
     mem = parse_ihx(out / "fw.ihx")
     common_end = max((x for x in mem if x < a.common), default=0) + 1
-    nb = max(used) + 1
+    nb = max(max(used) + 1, MT.MSG_BANK + 1)                 # image must reach the message block (#56)
+    clash = sorted(x for x in mem if MT.MSG_ADDR <= x < MT.MSG_ADDR + MT.MSG_SIZE)
+    if clash:
+        sys.exit(f"message table region 0x{MT.MSG_ADDR:x}+0x{MT.MSG_SIZE:x} holds code/data: first byte at 0x{clash[0]:x}")
     img = bytearray(b"\xff" * (nb * BANK))
     for k in range(nb):
         for x in range(common_end):
@@ -322,9 +326,15 @@ def main() -> int:
     for x, v in mem.items():                                 # banked bytes (bank 0's sit at [common, 64K))
         if x >= a.common:
             img[x] = v
+    blk = MT.build(MT.rows_from_tsv((ROOT / "fw/msgids.tsv").read_text()))   # enabled ids of this build's port step
+    img[MT.MSG_ADDR:MT.MSG_ADDR + len(blk)] = blk
+    minfo = MT.parse(blk)
+    (out / "msgtable.bin").write_bytes(blk)
+    log(f"msgtable: {minfo['count']} ids, {len(blk)} B of {MT.MSG_SIZE} at 0x{MT.MSG_ADDR:x}, hash {minfo['hash']}")
     (out / "fw.bin").write_bytes(img)
     rep = {"serial": a.serial, "common_end": common_end, "common_max": a.common, "banks": used,
-           "bin_bytes": len(img), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram}
+           "bin_bytes": len(img),
+           "msgtable": {"addr": MT.MSG_ADDR, "bytes": len(blk), "ids": minfo["count"], "hash": minfo["hash"]}, "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram}
     (out / "build.json").write_text(json.dumps(rep, indent=1))
     log(f"image {out / 'fw.bin'}: {nb} banks, common 0x{common_end:x}/0x{a.common:x}")
     return 0
