@@ -2,7 +2,7 @@
 // #33: 0x01..0x04 = key MENU/RIGHT/LEFT/EXIT, 0x10+n = OSD event n, 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46).
 // 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
 // 0x24 logo on, 0x25 logo off, 0x26 debug pop-up held, 0x27 clear all holds. #60: 0x31..0x33 switch to D1..D3 (fixed port),
-// 0x30 auto search. Inserted into RTD2014Key.c (OSD macros).
+// 0x30 auto search, 0x40 settings defaults (#67). Inserted into RTD2014Key.c (OSD macros).
 #define AWTO_HOLD_LOGO                          0x01
 #define AWTO_HOLD_POPUP                         0x02
 
@@ -154,6 +154,13 @@ void AwtoDiagTestCmd(void)
         g_stOSDUserData.b1AwtoMsgOn = (ucCmd == 0x28);
         g_ucAwtoMsgOn = (ucCmd == 0x28);
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
+    }
+#endif
+#ifdef _AWTO_NEW_SETTINGS
+    else if(ucCmd == 0x40)                              // #67 every settings-registry row to its default (recovery)
+    {
+        extern void set_defaults(void);
+        set_defaults();
     }
 #endif
     else if(ucCmd == 0x30)                              // #60 back to auto search in group (NVRAM default), no switch

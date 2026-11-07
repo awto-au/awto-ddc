@@ -22,6 +22,21 @@
 //--------------------------------------------------
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
+#ifdef _AWTO_NEW_SETTINGS                                       // #67 settings registry (awto-rtdfw): ids + reader
+#include "AwtoSetIds.h"
+extern int set_get(unsigned char ucId);
+#define AWTO_SET(n)                                             set_get(AWTO_SET_##n)
+extern void AwtoSetInit(void);                                  // hooks: fw/awto/settings/glue*.inc
+extern void AwtoSetLoop(void);
+extern __xdata unsigned char g_ucAwtoMenuOn;                    // our menu on screen: service every pass
+extern __xdata unsigned int g_usAwtoSetLast;
+#define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
+#define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
+extern void AwtoMenuForget(void);
+extern bit AwtoMenuKeyHook(void);
+extern bit AwtoVcpGetHook(void);
+extern bit AwtoVcpSetHook(void);
+#endif
 #define _AWTO_DEMO_LOGO                                         _ON     // awto: back on (#46)
 #define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)
 #define _AWTO_POPUP_ICON                                        _ON     // _ON = icon at the left of the input-info/debug pop-ups, _OFF = blank (#46)
@@ -212,7 +227,10 @@ extern void AwtoFreqUpdate(void);
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON
-#if(_AWTO_DEBUG_PORT == _ON)
+#ifdef _AWTO_NEW_SETTINGS                                       // #67: Debug link / DDC/CI rows, fixed at boot (ISR reads it)
+extern __xdata unsigned char g_ucAwtoDdcciOn;
+#define GET_OSD_DDCCI_STATUS()                                  (g_ucAwtoDdcciOn)
+#elif(_AWTO_DEBUG_PORT == _ON)
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
 #endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
@@ -360,6 +378,11 @@ extern void AwtoPanelVddEarly(void);
 #define AWTO_IDLE_TMDS_OFF()                                    ScalerTMDSFreqDetectDisable()
 #define AWTO_IDLE_RX_OFF(port)                                  ScalerGDIPhyPowerProc((port), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF)
 #endif
+#if((_AWTO_KEEP_IDLE_RX == _ON) && defined(_AWTO_NEW_SETTINGS))   // #67: Keep idle inputs row, fixed at boot
+extern __xdata unsigned char g_ucAwtoKeepIdle;
+#undef AWTO_IDLE_RX_OFF
+#define AWTO_IDLE_RX_OFF(port)                                  { if(g_ucAwtoKeepIdle == 0) { ScalerGDIPhyPowerProc((port), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF); } }
+#endif
 // #60: _ON = a switch to a port whose cached timing matches the screen skips search / measure / display setting
 // (fw/sdcc/awto_fastsw.inc); needs the switch log (timer) and idle receivers kept powered
 #ifndef _AWTO_FAST_SWITCH
@@ -396,7 +419,11 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AWTO_SW_FAST_POLL()
 #define AWTO_FAST_JUDGE_HOLD()                                  _FALSE
 #endif
+#ifdef _AWTO_NEW_SETTINGS
+#define AWTO_T3_OWN_PATTERN_MS                                  AWTO_SET(PANEL_T3_OWN)      // #67 registry, default 20
+#else
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
+#endif
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2

@@ -52,6 +52,12 @@ unsigned char AwtoSwFast(unsigned char ucPort)  // _TRUE = fast path taken, no m
     ucType = ((ucI >= 3) || (s_pstAwtoSwCache[ucI].ucValid == 0)) ? 1 : (GET_MODE_STATE() != _MODE_STATUS_ACTIVE) ? 6 :
              (g_ucAwtoFastPending != 0) ? 7 : (ucPort == SysSourceGetInputPort()) ? 8 :
              (GET_MODE_RESET_TARGET() != _MODE_ACTION_NO_RESET_MODE) ? 9 : 0;
+#ifdef _AWTO_NEW_SETTINGS
+    if((ucType == 0) && (AWTO_SET(FAST_SWITCH) == 0))      // #67 Fast switch row off: always the full path
+    {
+        ucType = 10;
+    }
+#endif
     if(ucType != 0)
     {
         AwtoSwEvent(AWTO_SW_EV_FAST, ucType);
