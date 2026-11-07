@@ -56,11 +56,46 @@ def units() -> dict:
     return json.loads((REPO / "scripts/devices.json").read_text())["units"]
 
 
+def _ddcci_acks(bus: int) -> bool:
+    try:
+        with i2cbus.Bus(bus) as b:
+            b.raw_read(DDCCI, 1)            # an idle DDC/CI slave answers with its null message
+        return True
+    except OSError:
+        return False
+
+
+BUS_CACHE = _repo() / "tmp/kvm_bus.json"       # serial -> bus of the last switch; checked by one EDID read + 0x37 ACK
+
+
 def find_bus(u: dict) -> int | None:
-    link = (Path("/sys/class/drm") / u["connector"] / "ddc").resolve()
-    cands = [int(link.name.split("-")[1])] if link.name.startswith("i2c-") else []
+    """The unit's bus that answers DDC/CI: a unit cabled twice (unit 3: HDMI + DP) only has 0x37 where the engine sits."""
+    try:
+        b = json.loads(BUS_CACHE.read_text()).get(u["serial"])
+        if b is not None and i2cbus.edid_serial(b) == u["serial"] and _ddcci_acks(b):
+            return b
+    except (OSError, ValueError):
+        pass
+    b = _find_bus_scan(u)
+    if b is not None:
+        try:
+            d = json.loads(BUS_CACHE.read_text()) if BUS_CACHE.is_file() else {}
+            d[u["serial"]] = b
+            BUS_CACHE.write_text(json.dumps(d))     # one process per bus writes its own key; a lost race only costs a rescan
+        except (OSError, ValueError):
+            pass
+    return b
+
+
+def _find_bus_scan(u: dict) -> int | None:
+    cands = []
+    for c in (u["connector"], u.get("connector_dp")):
+        link = (Path("/sys/class/drm") / c / "ddc").resolve() if c else Path("x")
+        if link.name.startswith("i2c-"):
+            cands.append(int(link.name.split("-")[1]))
     cands += [b for b in i2cbus.list_buses(display_only=True) if b not in cands]
-    return next((b for b in cands if i2cbus.edid_serial(b) == u["serial"]), None)
+    mine = [b for b in cands if i2cbus.edid_serial(b) == u["serial"]]
+    return next((b for b in mine if _ddcci_acks(b)), mine[0] if mine else None)
 
 
 def _chk(start: int, data: bytes) -> int:
@@ -82,8 +117,8 @@ def raw_get(bus: int, vcp: int) -> int:
         for _ in range(READ_TRIES):
             time.sleep(REPLY_WAIT_S)        # spec reply wait, not a poll
             r = b.raw_read(DDCCI, 11)
-            if r[:2] == b"\x6e\x80":
-                continue                    # null message: not ready yet
+            if r[:2] == b"\x6e\x80" or r[:3] == body[:3]:
+                continue                    # null message, or our request still in the engine buffer (main loop busy): not ready
             if r[0] != 0x6E or r[1] != 0x88 or r[2] != 0x02 or _chk(0x50, r[:10]) != r[10]:
                 raise OSError(f"bad reply {r.hex(' ')}")
             if r[3] != 0:
