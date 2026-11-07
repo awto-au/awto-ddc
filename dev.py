@@ -468,6 +468,14 @@ def cmd_power_cycle(extra: list[str]) -> int:
     return _py("power_cycle.py", "--relay", u["relay"], *extra)
 
 
+@command("reboot the scaler MCU over ISP (0xEE <- 0x02), <1 s; falls back to nothing: use power-cycle if 0x4A is silent",
+         args="[--unit N]", kind="action")
+def cmd_reset(extra: list[str]) -> int:
+    _n, u = _unit(extra)
+    _done(extra, "reset")
+    return _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
+
+
 def _diag(u: dict, *args, bus: int | None = None) -> int:
     ids = FW / f"{_flashed(u).get('tag', '')}.ids.tsv"
     more = ["--ids", ids] if ids.is_file() else []
@@ -696,6 +704,10 @@ def cmd_recover(extra: list[str]) -> int:
         bus = _bus(u)                       # unit still answering: identity proven by EDID, before the cycle
     except SystemExit:
         bus = None
+    if bus is not None and _py("rtd_reset.py", bus, "--serial", u["serial"]) == 0:
+        log("recover: ISP reset sent (fast path, no mains cycle)")   # 0x4A answered: no 8 s relay cycle needed
+        return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode,
+                          *(["--any-image"] if any_image else []), *img])
     rc = cmd_power_cycle(["--unit", n])
     if rc:
         return rc
