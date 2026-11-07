@@ -56,8 +56,9 @@ uint32_t ar_muldiv(uint32_t a, uint32_t b, uint32_t c)
 {
     uint32_t hi;
 
+    /* c = 0 is called before the link rate is known; result 0xFFFFFFFF (spec arith section 1) */
     if (c == 0)
-        return 0;
+        return 0xFFFFFFFFUL;
     /* fast regime: a * b fits in 32 bits (boundary a = floor((2^32-1)/b) is slow) */
     if (a == 0 || b == 0 || a < 0xFFFFFFFFUL / b)
         return (a * b) / c;
