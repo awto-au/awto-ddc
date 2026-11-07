@@ -138,6 +138,32 @@ extern void AwtoMeasT2Sample(void);
 #define AWTO_MEAS_T2ISR()
 #define AWTO_MEAS_P0_02_0C()                                    0
 #endif
+// Exact input frequencies (#34, #26) from the input active-region count the M-domain set-up took (fw/sdcc/awto_freq.inc);
+// pop-ups show 3 decimals from these. The SDK's own 0.1 Hz / 0.1 kHz values and decisions are untouched.
+#define _AWTO_FREQ                                              _ON
+#if(_AWTO_FREQ == _ON)
+#define AWTO_XTAL_HZ                                            14318180UL      // board crystal, 4x NTSC colour burst; SDK _XTAL14318K = 14318 kHz
+typedef struct
+{
+    unsigned long ulCount;                      // g_ulInputActiveRegionBackUp: measure clocks, first to last active pixel
+    unsigned long ulMeasHz;                     // measure clock: crystal or M2PLL / P40_07 divider
+    unsigned long ulPclkHz;                     // ulMeasHz * (IHtotal * (IVheight - 1 + extra) + IHwidth) / ulCount
+    unsigned long ulHFreqHz;                    // ulPclkHz / IHtotal
+    unsigned long ulVFreqmHz;                   // ulPclkHz * 1000 / (IHtotal * IVtotal)
+    unsigned int usIHTotal;
+    unsigned int usIVTotal;
+    unsigned int usIHWidth;
+    unsigned int usIVHeight;
+    unsigned char ucExtraLines;                 // count spans extra lines with V scale-down (SDK fine-tune: 1, F-to-P 2)
+    unsigned char ucValid;                      // 1 = fields above are from the current count
+} StAwtoFreq;                                   // 30 B, big-endian in -be images
+extern __xdata StAwtoFreq g_stAwtoFreq;
+extern void AwtoFreqUpdate(void);
+#define AwtoFreqInvalidate()                                    (g_stAwtoFreq.ucValid = 0)
+#else
+#define AwtoFreqUpdate()
+#define AwtoFreqInvalidate()
+#endif
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON

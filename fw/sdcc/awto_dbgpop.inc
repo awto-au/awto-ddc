@@ -88,6 +88,14 @@ static void AwtoPutNum(unsigned long ulV, BYTE ucMin)
     }
 }
 
+// ulV in thousandths -> "int.ddd" (#34: every frequency with 3 decimals)
+static void AwtoPutMilli(unsigned long ulV)
+{
+    AwtoPutNum(ulV / 1000, 1);
+    AwtoPutChar('.');
+    AwtoPutNum(ulV % 1000, 3);
+}
+
 static void AwtoShowLine(BYTE ucRow, BYTE ucPage)
 {
     s_pucAwtoDbg[s_ucAwtoLen] = _END_;
@@ -114,9 +122,18 @@ void AwtoOsdDebugLines(void)
     AwtoPutStr("x");
     AwtoPutNum(GET_INPUT_TIMING_VHEIGHT(), 1);
     AwtoPutStr(" ");
-    AwtoPutNum(usV / 10, 1);
-    AwtoPutStr(".");
-    AwtoPutNum(usV % 10, 1);
+#if(_AWTO_FREQ == _ON)
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutMilli(g_stAwtoFreq.ulVFreqmHz);
+    }
+    else
+#endif
+    {
+        AwtoPutNum(usV / 10, 1);      // SDK 0.1 Hz value: no exact count yet
+        AwtoPutStr(".");
+        AwtoPutNum(usV % 10, 1);
+    }
     AwtoPutStr("Hz");
     AwtoShowLine(_OSD_MESSAGE_ROW_START, _PFONT_PAGE_0);
 
@@ -128,16 +145,29 @@ void AwtoOsdDebugLines(void)
     AwtoPutNum(ucPwr, 1);
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 1, _PFONT_PAGE_1);
 
+#if(_AWTO_FREQ == _ON)
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutStr("PCLK ");
+        AwtoPutMilli(g_stAwtoFreq.ulPclkHz / 1000);
+        AwtoPutStr(" ");
+    }
+#endif
     AwtoPutStr("DCLK ");
-    AwtoPutNum(ulDclk / 1000, 1);
-    AwtoPutStr(".");
-    AwtoPutNum((ulDclk % 1000) / 100, 1);
-    AwtoPutStr("MHz");
+    AwtoPutMilli(ulDclk);
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
 
     AwtoPutStr("LOOP ");
     AwtoPutNum(g_stAwtoDiag.usLoopRate, 1);
     AwtoPutStr("/s");
+#if(_AWTO_FREQ == _ON)
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutStr("  H ");
+        AwtoPutMilli(g_stAwtoFreq.ulHFreqHz);
+        AwtoPutStr("kHz");
+    }
+#endif
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 3, _PFONT_PAGE_0);
 
     AwtoPutStr("FW ");

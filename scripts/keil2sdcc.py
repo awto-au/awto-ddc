@@ -81,6 +81,9 @@ RULES = [
      r"ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), \1"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
+    # Keil `~` on a bit operand (Realtek's b-prefixed bit vars/params) is bit NOT (CPL C); SDCC does not complement it (passes
+    # the bit through): FineTuneFrameSyncLineBuffer moved DCLK away from the input, 4K60.000 line-buffer underflow (#26)
+    (re.compile(r"~(\s*\(?\s*)(b[A-Z]\w*)\b"), r"!\1\2"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position
     (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
     (re.compile(r"\bdata(?=\s+[\*A-Za-z_])"), "__data"),
@@ -196,6 +199,16 @@ INSERTS = [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^\s*stDHtotalFTStatus = ScalerMDomainDHtotalFinetune", "    AwtoMeasEvent(31, ucDebounceCnt, (unsigned int)ulDiffOffsetNew);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r"^\s*SET_D_CLK_FREQ\(ScalerPLLGetNewCount\(ulDiffOffsetNew", "    AwtoMeasEvent(32, 0, (unsigned int)ulDiffOffsetNew);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c", r'^\s*// Switch to "input active region"', "    AwtoMeasEvent(33, 0, 0);", r"^void ScalerDPLLFineTuneFrameSyncLineBuffer\(void\)$"),
+    # exact input frequencies (#34, #26): fw/sdcc/awto_freq.inc after each active-region count, 3-decimal pop-up strings
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c", r"^void ScalerMeasureUpdateInputTimingData\(.*\)$", (SHIM / "awto_freq.inc").read_text().rstrip("\n")),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainMemorySettings\(&stFIFOScaling\);", "    AwtoFreqInvalidate();", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerIDomainVgipAdjustIHVDelay\(\);", "            AwtoFreqUpdate();", r"^bit ScalerMDomainControl\(void\)$"),
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemorySetFIFOFreq\(_FIFO_FREQ_FRAME_BUFFER_SEL\);", "            AwtoFreqUpdate();", r"^bit ScalerMDomainControl\(void\)$"),
+    (OSD + "RTD2014OsdFontProp.c", r"^void OsdPropGetShowVFreqStringAddress\(void\)$", (SHIM / "awto_freqstr.inc").read_text().rstrip("\n")),
+] + [(OSD + "RTD2014OsdFontProp.c", anchor, "#if(_AWTO_FREQ == _ON)\n    if(AwtoFreqModeStr(%s) == _TRUE)\n    {\n        return;\n    }\n#endif" % which, rf"^void {fn}\(void\)$")
+     for fn, anchor, which in (("OsdPropGetShowVFreqStringAddress", r"^\s*usTemp = GET_INPUT_TIMING_VFREQ\(\);", "AWTO_STR_VFREQ"),
+                               ("OsdPropGetShowHFreqPClkStringAddress", r"^\s*g_pucModeInfoData\[0\] = _H_;", "AWTO_STR_HFREQ_PCLK"),
+                               ("OsdPropGetShowResolutionStringAddress", r"^\s*if\(ucI != 0\)", "AWTO_STR_RES"))] + [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"^\s*ScalerMcuIspInitial\(\);", "    AwtoDiagStage(2);",
      r"^\s*ScalerMcuGpioInitial\(\);"),                                                                   # after GPIO init
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
