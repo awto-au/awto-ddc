@@ -139,3 +139,12 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
   ESN reads all-0xFF (unprogrammed) on both factory units. Confirmed via `rtd_flash_sector.py <bus> --read-id`.
 - Flash ceremony: a standalone no-op dry-run is pointless. `--write` already does backup -> blank-check ->
   program -> read-back verify -> abort-on-mismatch -> re-protect. One --write is the safe path; skip the separate dry-run.
+
+## Input EDID revision for the firmware build (2026-11-07, #26; branch wb-edid; NOT in the ISP-flashed sector)
+- Applies to the EDIDs compiled into our firmware (`scripts/fw_edid_tables.py` -> `make_edid.py`), all 3 input ports.
+- DTD1 (preferred) = vendor's 3840x2160 @59.982 Hz, 533.12 MHz CVT-RB (4000x2222, +H -V), image size 597x336.
+- Removed: VIC 97 and 93-96 (4K24/25/30/50), 4K30 DTD, 1080p50, all 24/25/30/50 Hz and 59.94 VICs, DTD3 2560x1440.
+- Kept: VIC 16 + DTD2 1080p60 only. Basis: mode sweep (#26) - only exact-60.0 Hz modes work; the rest NOSUPPORT or garble (DDR bug).
+- Range limits 48-60 Hz V, 15-135 kHz H, 540 MHz; HF-VSDB max TMDS 540 MHz (0x6C), SCDC + scrambling kept (needed >340 MHz); HDMI feature byte `0x2F` (RGB; was `0x27` = monochrome type).
+- edid-decode -c: PASS, one warning "VIC 16 and the first DTD are not identical" (benign: first VIC vs 4K DTD1).
+- Est./std timings (640x480, 1440x900 ...) unchanged, unverified on firmware.

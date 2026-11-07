@@ -44,15 +44,12 @@ def dtd(clk10k, ha, hb, hfp, hsw, va, vb, vfp, vsw, hpol, vpol):
         0, 0, f])
 
 
-# 3840x2160 @60.000 Hz EXACTLY VIC 97 (CTA standard): 594.00 MHz, htotal 4400 (fp176 sw88 bp296),
-# vtotal 2250 (fp8 sw10 bp72), +H +V. Identical to VIC 97 so edid-decode emits no "VIC/DTD differ"
-# warning; 594 MHz < 600 MHz range limit, standard 4K60 every GPU/panel link supports. (Was a 533.12 MHz
-# reduced-blanking DTD @59.98 Hz — our own choice, not a factory constraint; dropped for 100% clean decode.)
-DTD_4K = dtd(59400, 3840, 560, 176, 88, 2160, 90, 8, 10, 1, 1)
+# 3840x2160 @59.940 Hz = VIC 97 x 1000/1001: 593.41 MHz, htotal 4400 (fp176 sw88 bp296), vtotal 2250
+# (fp8 sw10 bp72), +H +V. The vendor's 533.12 MHz CVT-RB DTD is pruned by i915 (CLOCK_RANGE) and 594.000 MHz
+# is NOSUPPORT on our firmware; 59.94 is clean on unit 3 via Intel (#26, Dan 2026-11-07). No VIC 97.
+DTD_4K = dtd(59341, 3840, 560, 176, 88, 2160, 90, 8, 10, 1, 1)
 # VIC 16 exact: 148.5 MHz, htotal 2200 (88/44/148), vtotal 1125 (4/5/36), +H +V
 DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
-# CVT-RB 2560x1440: 241.7 MHz, htotal 2720 (48/32/80), vtotal 1481 (3/5/33), +H -V... as in original (+/+)
-DTD_1440 = dtd(24170, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 1)
 
 # Chromaticity: standard sRGB / BT.709 primaries. Panel is IPS/PLS (Dan visual confirm 2026-11-04:
 # stable off-axis, corner glow), ~99% sRGB; no measured panel primaries, so the honest choice is the
@@ -81,7 +78,7 @@ def base_block(port, serial=SERIAL_TXT):
     # Feature byte. sRGB-default bit (0x04) SET: chromaticities are exactly sRGB, so "default colour
     # space = sRGB" is legitimate (edid-decode only complains when the bit is set but primaries differ).
     # 1.4: preferred=DTD1, continuous freq, RGB+YCbCr444/422; 1.3: RGB, preferred, GTF.
-    b[24] = 0x3F if port == "dp" else 0x27
+    b[24] = 0x3F if port == "dp" else 0x2F
     b[25:35] = CHROMA                              # standard sRGB primaries (see CHROMA note)
     b[35:38] = bytes.fromhex("210800")             # est. timings 640x480, 800x600, 1024x768
     # ratio codes: 0=16:10 1=4:3 2=5:4 3=16:9; unused slots = 0x0101
@@ -91,14 +88,14 @@ def base_block(port, serial=SERIAL_TXT):
     b[54:72] = DTD_4K
     b[72:90] = text_desc(0xFC, MODEL_TXT)
     b[90:108] = text_desc(0xFF, serial)
-    # range limits (type 0x01 = range limits only; GTF is deprecated in 1.4): 24-60 Hz V (24p modes), 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
-    b[108:126] = bytes([0, 0, 0, 0xFD, 0, 24, 60, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
+    # range limits (type 0x01 = range limits only; GTF is deprecated in 1.4): 48-60 Hz V, 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
+    b[108:126] = bytes([0, 0, 0, 0xFD, 0, 48, 60, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
     b[126] = 1
     b[127] = cksum(b[:127])
     return bytes(b)
 
 
-VICS = [97, 96, 95, 94, 93, 16, 31, 32, 33, 34, 4, 19, 60, 61, 62, 1, 2, 3]
+VICS = [16]    # only modes verified working on our firmware (mode sweep, #26): non-60.000 Hz / frame-buffer modes garble
 
 
 def cta_block(port):
@@ -118,10 +115,10 @@ def cta_block(port):
     if port == "hdmi":
         # HDMI 1.4 VSDB: PA 1.0.0.0, DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
         d += bytes([(3 << 5) | 7, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x18, 0x44])
-        # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5), SCDC present + LTE_340Mcsc scrambling
+        # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5; i915 rejects the 533.12 MHz DTD as CLOCK_RANGE with 540), SCDC present + LTE_340Mcsc scrambling
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
         # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue
-    dtds = DTD_1080 + DTD_1440
+    dtds = DTD_1080
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
     b[2] = 4 + len(d)
