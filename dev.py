@@ -489,6 +489,42 @@ def cmd_power_cycle(extra: list[str]) -> int:
     return _py("power_cycle.py", "--relay", u["relay"], *extra)
 
 
+@command("which monitor input the cable is in, from the EDID port tag (scripts/edid_port.py, read-only; #28)",
+         args="[--unit N]", kind="action")
+def cmd_port(extra: list[str]) -> int:
+    _n, u = _unit(extra)
+    _done(extra, "port")
+    sysfs = Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "edid"
+    return _py("edid_port.py", _bus(u), "--serial", u["serial"], "--sysfs", sysfs)
+
+
+@command("active input port over ISP 0x4A (TMDS Rx2/Rx3 lock, scripts/isp_port.py); --draw leaves a panel up, MCU halted,"
+         " until isp-port --clear (scaler reset)", args="[--unit N] [--draw | --clear]", kind="action")
+def cmd_isp_port(extra: list[str]) -> int:
+    _n, u = _unit(extra)
+    draw, clear = _flag(extra, "--draw"), _flag(extra, "--clear")
+    _done(extra, "isp-port")
+    if clear:       # MCU halted by --draw: EDID may read silent, so the bus is the one whose 0x4A is in ISP mode
+        b = next((x for x in i2cbus.list_buses(display_only=True) if _isp_halted(x)), None)
+        if b is None:
+            log("isp-port --clear: no bus with 0x4A in ISP mode (0x6F bit7); nothing to clear", "ERROR")
+            return 1
+        return _py("isp_port.py", b, "--serial", u["serial"], "--draw", "--reset",
+                   "--identity", f"bus {b}: 0x4A reg 0x6F bit7 set (halted by isp-port --draw)")
+    tag = _flashed(u).get("tag", "")
+    m = FW / f"{tag}.map"
+    return _py("isp_port.py", _bus(u), "--serial", u["serial"], *(["--map", m] if m.is_file() else []),
+               "--tag", tag.removeprefix(u["serial"] + "-"), *(["--draw"] if draw else []))
+
+
+def _isp_halted(bus: int) -> bool:
+    try:
+        with i2cbus.Bus(bus) as b:
+            return bool(b.read(0x4A, 0x6F, 1)[0] & 0x80)
+    except OSError:
+        return False
+
+
 @command("reboot the scaler MCU over ISP (0xEE <- 0x02), <1 s; falls back to nothing: use power-cycle if 0x4A is silent",
          args="[--unit N]", kind="action")
 def cmd_reset(extra: list[str]) -> int:
