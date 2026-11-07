@@ -24,7 +24,7 @@ sys.path.insert(0, str(HERE))
 from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "logo-off": 0x25, "logo-3s": 0x21,
             "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23,
-            "msg-on": 0x28, "msg-off": 0x29}               # --cmd only (firmware test byte, #33/#28/#56; msg-on/off = NVRAM, #74)
+            "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30}   # --cmd only (firmware test byte, #33/#28/#56; msg-on/off = NVRAM, #74; auto-search #60)
 HOLD_MARK = "_AwtoTestHoldLogoOff"                       # in the map = image understands 0x24..0x27 (#28)
 OLD_FALLBACK = {0x26: 0x20, 0x24: 0x21}                 # image without holds: timed variants; 0x25/0x27 have none
 CONSUME_READS = 8                                      # read-backs (~0.4 s each); main loop clears the byte in one pass, but 0x35 NAKs while it draws the OSD
