@@ -212,7 +212,27 @@ extern void AwtoFreqUpdate(void);
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON
-#if(_AWTO_DEBUG_PORT == _ON)
+// #60 KVM: DDC/CI 0x37 on the spare IIC engines, polled (fw/sdcc/awto_ddcci.inc); 0 = off, 1 = IIC_1 following the active
+// port, 3 = IIC_1..3 fixed on DDC1/2/3 (every host can switch). The main engine then never enters DDC/CI mode (both would ACK 0x6E)
+#ifndef _AWTO_DDCCI_ENGINES
+#define _AWTO_DDCCI_ENGINES                                     1
+#endif
+#define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
+extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
+#if(_AWTO_DDCCI_ENGINES != 0)
+extern void AwtoDdcciPoll(void);
+#if(_AWTO_DDCCI_ENGINES == 3)
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } }
+#define AWTO_DDCCI_FOLLOW(ch)
+#else
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } }
+#define AWTO_DDCCI_FOLLOW(ch)                                   { AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | (ch); }
+#endif
+#else
+#define AWTO_DDCCI_POLL()
+#define AWTO_DDCCI_FOLLOW(ch)
+#endif
+#if((_AWTO_DEBUG_PORT == _ON) || (_AWTO_DDCCI_ENGINES != 0))
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
 #endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
