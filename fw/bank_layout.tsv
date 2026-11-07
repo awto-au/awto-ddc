@@ -619,7 +619,6 @@ stub	_ScalerColorSpaceConvertDDomainEnable	C	0x26c8	9
 stub	_ScalerColorSpaceConvertIDomainEnable	C	0x26d1	9
 stub	_ScalerColorSpaceConvertLoadTable	C	0x26da	9
 stub	_ScalerColorSpaceLoadYuv2RgbTable	C	0x26e3	9
-stub	_ScalerBurstWrite	C	0x26ec	9
 stub	_ScalerComputeDwordMulDiv	C	0x26f5	9
 stub	_ScalerDpRx1GetVideoInfo	C	0x26fe	9
 stub	_ScalerDpRx1HDCPUnplugReset	C	0x2707	9
@@ -628,10 +627,8 @@ stub	_ScalerDpRx1VideoSetting	C	0x2719	9
 stub	_dp_rd	C	0x2722	9
 stub	_dp_rd16	C	0x272b	9
 stub	_dp_rd_n	C	0x2734	9
-stub	_ScalerGetDataPortBit	C	0x273e	9
-stub	_ScalerGetDataPortByte	C	0x2747	9
-fn	_ScalerSetDataPortBit	C	0x2750	168
-fn	_ScalerSetDataPortByte	C	0x27f8	100
+fn	_ScalerBurstWrite	C	0x2750	168
+fn	_ScalerGetDataPortWord	C	0x27f8	68
 stub	_AwtoMsg0	C	0x285c	9
 stub	_AwtoMsgV	C	0x2865	9
 stub	_ScalerDebug	C	0x286e	9
@@ -641,7 +638,6 @@ stub	_ScalerFlashRead	C	0x2889	9
 stub	_ScalerFlashWrite	C	0x2892	9
 stub	_ScalerIOSCTrimming	C	0x289b	9
 stub	_ScalerMcuPwmAdjustFrequency	C	0x28a4	9
-stub	_ScalerRead	C	0x28ad	9
 stub	_ScalerSyncActiveProc	C	0x28b6	9
 stub	_ScalerSyncCheckUrgentEvent	C	0x28bf	9
 stub	_ScalerSyncDdcDetect_EXINT1	C	0x28c8	9
@@ -919,6 +915,9 @@ stub	_RTDFactoryColortemp2BEnter	C	0x3df8	9
 stub	_RTDFactoryColortemp2BExit	C	0x3e01	9
 stub	_RTDFactoryColortemp2BLeft	C	0x3e0a	9
 const	_tSTRING_RESOLUTION_TABLE	C	0x3e16	104
+fn	_ScalerGetDataPortByte	C	0x3e7e	132
+fn	_ScalerRead	C	0x3f02	128
+fn	_ScalerWrite	C	0x3f82	128
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -991,8 +990,6 @@ fn	_ScalerTMDSRx3SwitchSlaveAddr	0	0x5724	20
 fn	_ScalerTMDSRx3TMDSScanInputPort	0	0x5738	1620
 fn	_ScalerTMDSRx3TMDSStableDetect	0	0x5d8c	628
 fn	_ScalerDpRx1FakeLTProtect	0	0x6000	68
-fn	_ScalerGetDataPortBit	0	0x6044	104
-fn	_ScalerGetDataPortByte	0	0x60ac	204
 fn	_ScalerIOSCTrimming	0	0x6178	616
 fn	_ScalerSyncActiveProc	0	0x63e0	24
 fn	_ScalerSyncDpFakeLTProtect	0	0x63f8	8
@@ -1224,7 +1221,6 @@ fn	_ScalerMcuGpioInitial	2	0x65f8	164
 fn	_ScalerDpRx1PhyCtsAction	2	0x669c	8
 fn	_ScalerDebugSetRegisters	2	0x66ac	344
 fn	_ScalerDebugSendData	2	0x6804	232
-fn	_ScalerRead	2	0x6d18	200
 fn	_ScalerSyncDpCheckHdcpEnable	2	0x6de0	16
 fn	_ScalerTimerWaitForActiveTimerEvent	2	0x6df0	32
 fn	_ScalerDpRx1AdjustLaneFLDBand	2	0x6e10	532
@@ -1656,7 +1652,6 @@ fn	_UserCommonInterfaceOsdHandler	4	0xa25c	16
 fn	_UserCommonInterfaceOsdResetProc	4	0xa26c	68
 fn	_UserCommonInterfaceTimerEventProc	4	0xa2b0	32
 fn	_UserCommonNVRamGetSystemData	4	0xa2d0	416
-fn	_ScalerWrite	4	0xa470	200
 fn	_AwtoDiagDelayCal	4	0xa538	2136
 fn	_ScalerMcu5usDelayCalc	4	0xad90	80
 const	_tSD_H_COEF_128_TAPS	5	0x0000	136
@@ -1739,9 +1734,6 @@ fn	_ScalerColorIDitherLoadDitherTable	5	0x3a8c	112
 fn	_ScalerColorIDitherLoadSeqTable	5	0x3afc	120
 fn	_ScalerColorSetYCCFullRange	5	0x3b74	20
 fn	_ScalerColorWaitDDomainDBApply	5	0x3b88	8
-fn	_ScalerBurstWrite	5	0x3b90	304
-fn	_ScalerGetDataPortWord	5	0x3cc0	136
-fn	_ScalerSetDataPortWord	5	0x3d48	112
 fn	_ScalerMeasureAutoFuncHBoundInitial	5	0x3db8	120
 fn	_ScalerDpRx1CheckVgipVsBypass	5	0x3e30	152
 fn	_ScalerDisplaySelectDVFMode	5	0x3ec8	332
