@@ -81,9 +81,6 @@ RULES = [
      r"ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), \1"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
-    # Keil `~` on a bit operand (Realtek's b-prefixed bit vars/params) is bit NOT (CPL C); SDCC does not complement it (passes
-    # the bit through): FineTuneFrameSyncLineBuffer moved DCLK away from the input, 4K60.000 line-buffer underflow (#26)
-    (re.compile(r"~(\s*\(?\s*)(b[A-Z]\w*)\b"), r"!\1\2"),
     # Keil memory qualifiers that can also be identifiers: only in declarator position
     (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
     (re.compile(r"\bdata(?=\s+[\*A-Za-z_])"), "__data"),
