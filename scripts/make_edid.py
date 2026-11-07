@@ -107,16 +107,18 @@ def port_vsdb(port):
     return bytes([(3 << 5) | len(pl)]) + pl
 
 
-VICS = [97, 16]    # 97 = DTD1 (4K60.000, works since the ~bit fix); 16 = 1080p60; other rates dropped (PC use, #26)
+# Production (#26 sweep 2026-11-07, test EDID on HDMI + DP): every listed rate ACTIVE in line-buffer mode. Left out:
+# 1080p24 / 23.976 (NOSIGNAL / SEARCH via FRC) and the vendor 533.12 MHz 4K DTD (i915 HDMI prunes it).
+VICS = [97, 96, 95, 94, 93, 16, 31, 34, 33, 4, 19, 62, 61, 60, 1, 2, 3]
 # TEST profile (EDID_PROFILE=test, sweep only, never a production unit): every mode removed on 2026-11-07, for the mode sweep
 # (#26): 4K 60/50/30/25/24 (+ x1000/1001), 1080p 60/50/30/25/24, 720p 60/50/24/25/30, SD 640x480 / 480p; DTDs 4K 533.12 MHz
 # (vendor 59.982), 2560x1600 and 1920x1200 CVT-RB, 2560x1440. Colorimetry + HDR blocks left out to make room for 4 DTDs.
 TEST = os.environ.get("EDID_PROFILE") == "test"
 VICS_TEST = [97, 96, 95, 94, 93, 16, 31, 34, 33, 32, 4, 19, 60, 61, 62, 1, 2, 3]
-DTDS_TEST = (dtd(53312, 3840, 160, 48, 32, 2160, 62, 3, 5, 1, 0)     # vendor 4K 59.982 (htotal 4000, vtotal 2222)
-             + dtd(26850, 2560, 160, 48, 32, 1600, 46, 3, 6, 1, 0)   # 2560x1600@60 CVT-RB
-             + dtd(24150, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 0)   # 2560x1440@60 CVT-RB
-             + dtd(15400, 1920, 160, 48, 32, 1200, 35, 3, 6, 1, 0))  # 1920x1200@60 CVT-RB
+DTDS_RB = (dtd(26850, 2560, 160, 48, 32, 1600, 46, 3, 6, 1, 0)       # 2560x1600@60 CVT-RB
+           + dtd(24150, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 0)     # 2560x1440@60 CVT-RB
+           + dtd(15400, 1920, 160, 48, 32, 1200, 35, 3, 6, 1, 0))    # 1920x1200@60 CVT-RB
+DTDS_TEST = dtd(53312, 3840, 160, 48, 32, 2160, 62, 3, 5, 1, 0) + DTDS_RB   # + vendor 4K 59.982 (htotal 4000, vtotal 2222)
 
 
 def cta_block(port):
@@ -142,7 +144,7 @@ def cta_block(port):
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
         # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue
     d += port_vsdb(port)
-    dtds = DTDS_TEST if TEST else DTD_1080
+    dtds = DTDS_TEST if TEST else DTDS_RB                  # 1080p60 = VIC 16
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
     b[2] = 4 + len(d)
