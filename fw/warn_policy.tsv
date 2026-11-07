@@ -178,8 +178,8 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1512	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	3487	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	4206	ok	OK-HARMLESS: both arms are ((void)0) debug stubs; ScalerDpRx1InterlaceCheck() call (writes usDpVtotal) is kept
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7149	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7182	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7157	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7190	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c	1270	ok	OK-CONFIG: _DP_MST_SUPPORT off: NORMAL_TO_FAKE_OFF case empty, equals default
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	218	ok	OK-CONFIG: _VSU_INI_PHASE_LINES==_VSU_4_LINE constant; 3-line arm dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	565	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead

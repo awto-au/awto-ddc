@@ -269,6 +269,13 @@ INSERTS = [
     ("Kernel/System/Code/SysSource.c", rf"^\s*{fn}\(g_ucSearchIndex\);", f"            AWTO_SW_MARK({k});", r"^void SysSourceHandler\(void\)$")
     for k, fn in ((20, "SysSourceScanPortInitial"), (21, "SysSourceSearchTimeInitial"), (22, "SysSourceDetectPort"))] + [
     ("Kernel/System/Code/SysSource.c", r"^\s*SysSourceJudge\(\);", "            AWTO_SW_MARK(23);", r"^void SysSourceHandler\(void\)$"),
+] + [("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c", rf"^\s*if\({fn}\(", f"    AWTO_SW_MARK({k});",
+      r"^BYTE ScalerDpRx1ScanInputPort\(void\)$")      # #60: DP Rx1 scan steps (marks 30..36)
+     for k, fn in ((30, "ScalerDpRx1HdcpCheck"), (31, "ScalerDpRx1GetVideoStream"), (32, "ScalerDpRx1MSACheck"),
+                   (33, "ScalerDpRx1GetVideoInfo"), (34, "ScalerDpRx1DisplayFormatSetting"),
+                   (35, "ScalerDpRx1StreamClkRegenerate"), (36, "ScalerDpRx1FifoCheck"))] + [
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c", r"^\s*ScalerTimerCancelTimerEvent\(_SCALER_TIMER_EVENT_DP_RX1_HDCP_LONG_HOTPLUG_EVENT\);",
+     "    AWTO_SW_MARK(37);", r"^BYTE ScalerDpRx1ScanInputPort\(void\)$"),
 ] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
     ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")
     for case, tail in (("_PANEL_ON", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)"),
