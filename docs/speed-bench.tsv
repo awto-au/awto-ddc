@@ -32,3 +32,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-07T14:31:21+11:00	0985e1d	AWT26110003-kcB-be	kc B: rule dropped, --keil-compat, first-fit layout (stubs not comparable)	12	43861	7725	57.1	3545	22842	17.5	0e379fa	1	678594
 2026-11-07T15:22:38+11:00	1ca89d7	AWT26110003-wb-port4-be	wb-port4	12	43861	5694	19.4	1225	22557	17.5			674404
 2026-11-07T15:35:15+11:00	952e320	AWT26110003-kcBL-be	kc BL: --keil-compat incl. /0 (f3aba0f helpers, #44 guard), new layout resid 0x1100 + cluster fn	12	43861	5589	21.4	1405	22557	17.5	7853683	1	640553
+2026-11-07T16:13:44+11:00	594df53	AWT26110003-sc3base-be	#24 peephole 2.b A/B on wb-sc3 (sc3)	12	43861	4830	17.2	697	22521	17.5	7853683 / 6109670	3	592732
+2026-11-07T16:14:01+11:00	594df53	AWT26110003-sc3pp2b-be	#24 peephole 2.b A/B on wb-sc3 (sc3)	12	43861	4830	17.2	697	22521	17.5	7853683 / 6109670	3	592675
