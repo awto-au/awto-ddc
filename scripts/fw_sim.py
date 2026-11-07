@@ -586,7 +586,8 @@ class Machine:
         self.map_text = mapp.read_text(errors="replace")
         self.sym, self.where = parse_map(self.map_text, img, ncode)
         self.log = log or _Null()
-        self.s = open_native(img, ROOT / "tmp/fwsim" / tag, _Null(), None, extra_breaks)
+        self.simdir = ROOT / "tmp/fwsim" / f"{tag}.{os.getpid()}"     # per process: two sims of one image collided (2026-11-07)
+        self.s = open_native(img, self.simdir, _Null(), None, extra_breaks)
         self.s.send("fill xram 0x0 0xfffe 0x0")            # ucsim starts XRAM random: registers read the same every run
         self.ticks, self.instr, self._n, self._q, self._stop, self.last_out = 0, 0, 0, [], False, ""
         self.stubs, self.stub_hits = {}, {}
@@ -751,6 +752,8 @@ class Machine:
             self.s.send("quit"); self.s.p.wait(5)
         except Exception:
             self.s.p.kill()
+        import shutil
+        shutil.rmtree(self.simdir, ignore_errors=True)
 
 
 class SimBus:
@@ -895,7 +898,7 @@ def boot_check(binp: Path, mapp: Path, be: bool, passes: int, max_instr: int, lo
     sym, where = parse_map(mapp.read_text(errors="replace"), img)
     gsinit = sym.get("__sdcc_gsinit_startup")
     flash = FlashPort(img)
-    s = open_native(img, ROOT / "tmp/fwsim" / binp.stem, log, flash, [gsinit] if gsinit is not None else [])
+    s = open_native(img, ROOT / "tmp/fwsim" / f"{binp.stem}.{os.getpid()}", log, flash, [gsinit] if gsinit is not None else [])
     chunk, stall_chunks, done = 1_000_000, 15, 0   # 1 M instr ~ 0.35 s; startup waits (DPTx, delays) can sit 10 M instr at one stage
     starts, last, hb0, same, verdict = 0, None, None, 0, None
     d = None
@@ -1200,7 +1203,7 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
         print("FAIL isr-check: __bs_cur not in map"); return 1
     cur = int(m.group(1), 16)
     flash = FlashPort(img)
-    s = open_native(img, ROOT / "tmp/fwsim" / binp.stem, log, flash, VECTORS)
+    s = open_native(img, ROOT / "tmp/fwsim" / f"{binp.stem}.{os.getpid()}", log, flash, VECTORS)
     # trampoline switch window: __bs_cur is already the target, the bank register not yet (written at the movx). An IRQ
     # whose return PC lies inside is consistent (ISR code is common; its own stubs restore __bs_cur's bank); skip the compare.
     windows = []

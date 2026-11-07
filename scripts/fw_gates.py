@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline gates for one firmware image, one after another: boot-check, isr-check, link check, health --sim 1080p60 + 2160p60.
+"""Offline gates for one firmware image (health sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60.
 
 usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--against REF_STEM] [--speed LABEL] [--only boot,isr,link,h1080,h2160]
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). --against: link-check findings not in REF are the failures.
@@ -106,7 +106,8 @@ def main() -> int:
         for k in group:
             t = threading.Thread(target=run, args=(k, g[k], ROOT / "tmp/logs/fw_gates" / f"{b.stem}.{k}.log", res, log))
             t.start(); th.append(t)
-            t.join()                     # all one at a time: two health sims of one image also collided (boot stage 0, 2026-11-07)
+            if k in ("boot", "isr", "link"):
+                t.join()                 # short ones in turn; the health sims run in parallel (per-process sim dir, fw_sim)
         for t in th:
             t.join()
     bad = 0

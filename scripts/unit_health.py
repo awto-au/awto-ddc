@@ -30,6 +30,7 @@ PIN_BACKLIGHT_N, PIN_PANEL = 0xFE2A, 0xFE1A    # P9.2 active low enable, P7.2 pa
 EVENT_INFO, TESTCMD_DEBUG = 10, 0x20           # EnumOsdEvent info pop-up; ucTestCmd 0x20 = debug pop-up (#34)
 # Loop-rate window: 1 s of Timer2 ticks gives ~170 loop counts per window (+-1 %); bus idle in the window.
 RATE_WINDOW_S, RATE_REPEATS = 1.0, 3
+SIM_RATE_WINDOW_S = 0.1          # sim is deterministic: 0.1 s firmware time gives the same rate, 10x less sim time
 # Consume wait: pop-up draw stalls the debug slave ~0.4 s (#11 comment); limit = 1.25x worst seen, expiry = FAIL.
 CONSUME_WAIT_S = 0.5
 TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): SDK value only (no count); host 60.000 vs measured 60.1
@@ -180,12 +181,12 @@ def check_diag(rep, d: Dbg, base: int, wait=time.sleep) -> bool:
     return rep.add("diag stage", False, f"read failed twice: {last}")
 
 
-def loop_rate(d: Dbg, base: int, wait=time.sleep) -> tuple[float, list[float], float]:
+def loop_rate(d: Dbg, base: int, wait=time.sleep, window: float = RATE_WINDOW_S) -> tuple[float, list[float], float]:
     """(mean rate/s, per-window rates, cumulative rate). Rate = d(hb)/d(Timer2 ticks of 1 ms); bus idle in the window."""
     rates = []
     for _ in range(RATE_REPEATS):
         a = d.read(base + DIAG_OFF["hb"], 4)
-        wait(RATE_WINDOW_S)
+        wait(window)
         b = d.read(base + DIAG_OFF["hb"], 4)
         dh = (be16(b, 0) - be16(a, 0)) & 0xFFFF
         dt = (be16(b, 2) - be16(a, 2)) & 0xFFFF
@@ -196,10 +197,10 @@ def loop_rate(d: Dbg, base: int, wait=time.sleep) -> tuple[float, list[float], f
     return sum(rates) / len(rates), rates, cum
 
 
-def check_rate(rep, d, base, wait=time.sleep, min_rate=50.0) -> bool:
-    mean, rates, _cum = loop_rate(d, base, wait)
+def check_rate(rep, d, base, wait=time.sleep, min_rate=50.0, window: float = RATE_WINDOW_S) -> bool:
+    mean, rates, _cum = loop_rate(d, base, wait, window)
     return rep.add("main loop", mean >= min_rate,
-                   f"{mean:.1f}/s mean of {len(rates)} x {RATE_WINDOW_S:.0f} s windows ({', '.join(f'{r:.1f}' for r in rates)})")
+                   f"{mean:.1f}/s mean of {len(rates)} x {window:g} s windows ({', '.join(f'{r:.1f}' for r in rates)})")
 
 
 def check_state(rep, d, mode_addr, power_addr) -> bool:
@@ -287,7 +288,7 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = Fals
     """All checks, each independent: a failed read marks that check FAIL and the rest still run."""
     base = maps["g_stAwtoDiag"]
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
-             ("main loop", lambda: check_rate(rep, d, base, wait)),
+             ("main loop", lambda: check_rate(rep, d, base, wait, window=SIM_RATE_WINDOW_S if sim else RATE_WINDOW_S)),
              ("mode state", lambda: check_state(rep, d, maps["g_stModeInfo"], maps["g_stPowerInfo"])),
              ("input timing", lambda: check_timing(rep, d, maps, host)),
              ("pins", lambda: check_pins(rep, d)),
