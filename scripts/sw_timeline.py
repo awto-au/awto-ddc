@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--settle-s", type=float, default=8.0, help="read the log this long after the switch (DP search 3 s + display setting)")
     ap.add_argument("--read-only", action="store_true")
+    ap.add_argument("--read-bus", type=int, help="bus to read the log on after the switch (debug slave follows the new port: "
+                    "D1 = the DP AUX adapter); default = <bus>")
     a = ap.parse_args()
     root = Path(__file__).resolve().parent.parent
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -95,7 +97,10 @@ def main() -> int:
                     time.sleep(0.25)
                 udev.terminate()
                 ue = [ln for ln in udev.communicate(timeout=2)[0].splitlines() if "change" in ln or "add" in ln or "remove" in ln]
-            raw = X.read_blocks(io, base, 12 + 4 * N_EV)
+            rio = B.Real(a.read_bus, allow_write=False, regread=True) if a.read_bus not in (None, a.bus) else io
+            raw = X.read_blocks(rio, base, 12 + 4 * N_EV)
+            if rio is not io:
+                rio.close()
             if raw is None:
                 say("log read failed (0x35 silent)"); return 1
             hdr, evs = decode(raw)
