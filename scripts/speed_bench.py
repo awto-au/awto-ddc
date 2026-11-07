@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Offline speed bench of firmware images: main-loop cycles per pass in ucsim (fw_profile.py), appended to docs/speed-bench.tsv.
 
-usage: speed_bench.py IMAGE_STEM [IMAGE_STEM ...] [--passes 12] [--label TEXT] [--compiler COMMIT] [--abi N] [--no-record]
+usage: speed_bench.py IMAGE_STEM [IMAGE_STEM ...] [--passes 12] [--label TEXT] [--compiler COMMIT] [--abi N]
+                      [--xdata-free N] [--unit-loop R] [--no-record]
   --compiler/--abi are recorded as given (sdcc commit, --sdcccall level); code_bytes = bytes of the .bin that are not 0xFF fill.
   IMAGE_STEM = path to <stem>.bin with <stem>.map beside it (e.g. tmp/fw/AWT26110003-wb-clu3-be).
   `work` = cycles/pass minus the _ScalerTimerDelayXms spin (a timer-polled wait; the sim's timer is not the hardware's).
@@ -17,7 +18,7 @@ import fw_profile as P  # noqa: E402
 import fw_sim as F  # noqa: E402
 
 TSV = F.ROOT / "docs/speed-bench.tsv"
-COLS = ["date", "commit", "image", "label", "passes", "cycles_pass", "work", "stub_entries", "stub_cyc", "instr_pass", "movc", "compiler", "abi", "code_bytes"]
+COLS = ["date", "commit", "image", "label", "passes", "cycles_pass", "work", "stub_entries", "stub_cyc", "instr_pass", "movc", "compiler", "abi", "code_bytes", "xdata_free", "unit_loop"]
 
 
 def main():
@@ -27,6 +28,8 @@ def main():
     ap.add_argument("--label", default="")
     ap.add_argument("--compiler", default="", help="awto-sdcc commit the image was built with")
     ap.add_argument("--abi", default="", help="--sdcccall level of the image")
+    ap.add_argument("--xdata-free", default="", help="free bytes of the XDATA window (fw_ram_report.py)")
+    ap.add_argument("--unit-loop", default="", help="unit main-loop rate /s (loop_rate.py steady median, unit in --label)")
     ap.add_argument("--no-record", action="store_true")
     a = ap.parse_args()
     (F.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -41,7 +44,7 @@ def main():
         row = [datetime.now().astimezone().isoformat(timespec="seconds"), commit, b.stem, a.label, r["passes"],
                round(r["cycles_per_pass"]), round(r["cycles_per_pass"] - wait), round(r["counts"].get("stub_entries", 0), 1),
                round(stub), round(r["instr_per_pass"]), round(r["counts"].get("movc", 0), 1), a.compiler, a.abi,
-               len(b.read_bytes()) - b.read_bytes().count(0xFF)]
+               len(b.read_bytes()) - b.read_bytes().count(0xFF), a.xdata_free, a.unit_loop]
         rows.append(row)
         print("\t".join(map(str, row)), flush=True)
     if not a.no_record:
