@@ -267,7 +267,8 @@ def main() -> int:
                  *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
                  *(["--cluster", a.cluster] if a.cluster else []),
                  *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
-                 *(["--pin-common", a.pin_common] if a.pin_common else [])])
+                 *(["--pin-common", pin] if (pin := ",".join(x for x in (a.pin_common, (ROOT / "tmp/sdcc-port/pin_common.txt").read_text().strip()
+                                                                         if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)) else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_memcpy reads its PARMs little-endian, ABI 0: BE and --sdcccall>=1 builds keep the library memcpy (#24, #15, #51.1)

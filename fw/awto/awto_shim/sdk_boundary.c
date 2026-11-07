@@ -29,34 +29,19 @@ unsigned long ScalerComputeDwordPowDiv(unsigned long a, unsigned char pow, unsig
 
 #define DP_STEP(autoinc) ((autoinc) == SDK_AUTOINC ? DP_SW_STEP : DP_HW_STEP)
 
-/* FunctionLib ScalerCommonDataPortAccess{,GetWord,SetWord}.c */
+/* FunctionLib ScalerCommonDataPortAccess{,GetWord,SetWord}.c: Set/GetDataPortBit, SetDataPortByte/Word are macros
+ * to dp_* (rules.py ALIASES); the ones below differ in argument order or step polarity and are pinned to common. */
 unsigned char ScalerEnableAccessPort(unsigned int port, unsigned char v) { (void)port; return v; }
 void ScalerDisableAccessPort(unsigned int port) { (void)port; }
 
-void ScalerSetDataPortByte(unsigned int port, unsigned char idx, unsigned char v)
-{
-    dp_wr(port, idx, v);
-}
 
 void ScalerGetDataPortByte(unsigned int port, unsigned char idx, unsigned int n, unsigned char *dst, __bit autoinc)
 {
     dp_rd_n(port, idx, dst, n, DP_STEP(autoinc));
 }
 
-void ScalerSetDataPortBit(unsigned int port, unsigned char idx, unsigned char keep, unsigned char set)
-{
-    dp_rmw(port, idx, keep, set);
-}
 
-unsigned char ScalerGetDataPortBit(unsigned int port, unsigned char idx, unsigned char mask)
-{
-    return dp_test(port, idx, mask);
-}
 
-void ScalerSetDataPortWord(unsigned int port, unsigned char idx, unsigned int v)
-{
-    dp_wr16(port, idx, v);
-}
 
 unsigned int ScalerGetDataPortWord(unsigned int port, unsigned char idx, __bit autoinc)
 {
@@ -93,5 +78,35 @@ void ScalerBurstWrite(unsigned char *addr, unsigned int n, unsigned char bank, u
                       unsigned char type, __bit from_xram)
 {
     hb_burst(((uint32_t)bank << 16) | (uint16_t)(unsigned int)addr, n, host, (type - 1) & 3, from_xram);
+}
+#endif
+
+#ifdef _AWTO_NEW_GAMMA
+#include "gamma.h"
+#include "timer.h"
+
+/* tmr_wait_edge (timer.h) until the timer module lands: SDK wait events IVS 0x01, IEN_STOP 0x04, DVS 0x08, DEN_STOP 0x20 */
+extern __bit ScalerTimerWaitForEvent(unsigned char event);
+
+uint8_t tmr_wait_edge(uint8_t edge)
+{
+    switch (edge) {
+    case TE_IN_VSYNC:  return ScalerTimerWaitForEvent(0x01);
+    case TE_IN_VEND:   return ScalerTimerWaitForEvent(0x04);
+    case TE_OUT_VSYNC: return ScalerTimerWaitForEvent(0x08);
+    default:           return ScalerTimerWaitForEvent(0x20);
+    }
+}
+
+/* called from RTD2014UserAdjustOutputGamma.c (rules.py SUBS): gamma OSD value 1..4 -> kind 0..3 */
+void AwtoGammaLoad(unsigned char kind)
+{
+    gamma_load(kind);
+}
+
+/* FunctionLib RL6449_Series_ColorOutputGammaEnable.c (on = _FUNCTION_ON = 1, anything else off) */
+void ScalerColorOutputGammaEnable(unsigned char on)
+{
+    gamma_enable(on == 1);
 }
 #endif
