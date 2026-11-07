@@ -29,6 +29,8 @@ def parm_bytes(asm: Path) -> dict:
     """{space: bytes} of _PARM_ slots (bit slots counted in bits) from the post-bank asm."""
     tot = {"xdata": 0, "data": 0, "bit": 0}
     for f in asm.rglob("*.asm"):
+        if "_size" in f.relative_to(asm).parts:            # sdcc_bank's size-probe copy, not linked
+            continue
         cur, parm = None, False
         for line in f.read_text(errors="replace").splitlines():
             m = re.match(r"\s+\.area\s+(\w+)", line)
