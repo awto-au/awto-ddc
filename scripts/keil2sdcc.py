@@ -281,6 +281,11 @@ SUBS = [
      lambda m: "if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT) == _TRUE))  // [keil2sdcc] sub", 1),
     ("Kernel/User Common Function/Code/UserCommonNVRamSystem.c", r"if\(g_stSystemData\.b1HDMIHotPlugSupport == _TRUE\)",
      lambda m: "if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (g_stSystemData.b1HDMIHotPlugSupport == _TRUE))  // [keil2sdcc] sub", 1),
+    # #54: an M2PLL re-entry (power saving -> on) keeps the self-calibrated loop counts
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelay5usN_Base = _M2PLL_DELAY6US_CNT;",
+     lambda m: "g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;  // [keil2sdcc] sub", 1),
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c", r"g_ucDelayXusN_Base = _M2PLL_DELAY4US_CNT;",
+     lambda m: "g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;  // [keil2sdcc] sub", 1),
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
     (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
      lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),

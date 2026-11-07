@@ -40,6 +40,14 @@
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON
 #define _AWTO_DIAG_DELAYCAL                                     _ON     // _ON = delay calibration test inside the panel T3 wait (no added boot time, #53.6, docs/diag-block.md)
+// #54: busy-loop counts from the T3 measurement (the SDK constants are 112..127 % depending on code placement)
+#define _AWTO_DELAY_SELFCAL                                     _ON
+#define AWTO_DELAY_TARGET_PCT                                   105     // shorter copy of each pair; health limit 90..125 %
+#define AWTO_DELAY_CAL_RCAP2H                                   0xE3    // M2PLL Timer2 reload (rtd_diag PERIOD); others keep the SDK counts
+#if(_AWTO_DELAY_SELFCAL == _ON)
+extern unsigned char g_ucAwtoCal5;
+extern unsigned char g_ucAwtoCalX;
+#endif
 #if(_AWTO_DIAG == _ON)
 typedef struct
 {

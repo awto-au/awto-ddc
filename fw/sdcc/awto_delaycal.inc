@@ -36,6 +36,10 @@ static unsigned long AwtoDiagT2Diff(__xdata StAwtoT2Snap *a, __xdata StAwtoT2Sna
 }
 
 static __xdata StAwtoT2Snap s_stSnapA, s_stSnapB, s_stT3A, s_stT3B;
+#if(_AWTO_DELAY_SELFCAL == _ON)
+unsigned char g_ucAwtoCal5;                                        // calibrated DELAY_5US / DELAY_XUS base counts, 0 = none yet
+unsigned char g_ucAwtoCalX;
+#endif
 
 // Snapshot pair around a body, EA off for the body (<= 100 us: the Timer2 ISR only runs later, TF2 holds one overflow);
 // result = raw counts minus the empty snapshot pair, never below 0. Bodies are unrolled: loop overhead would not cancel.
@@ -80,6 +84,33 @@ static void AwtoDiagDelayCal(void)
     AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
     AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
     AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
+#if(_AWTO_DELAY_SELFCAL == _ON)
+    // #54: set the loop counts from this measurement: the shorter of each pair (main / _EXINT copy, they share the count)
+    // lands at AWTO_DELAY_TARGET_PCT of nominal; then measure again, so the diag (and health's 90..125 % check) sees the result.
+    {
+        unsigned long ulPer = 0x10000UL - usRcap;                 // Timer2 counts per 1 ms tick
+        unsigned int usNom5 = (unsigned int)(ulPer * 50 / 1000);  // 10 x 5 us
+        unsigned int usNomX = (unsigned int)(ulPer * 100 / 1000); // 100 us
+        unsigned int usMin5 = (g_stAwtoDiag.usDelay5us10 < g_stAwtoDiag.usDelay5usIsr10) ? g_stAwtoDiag.usDelay5us10 : g_stAwtoDiag.usDelay5usIsr10;
+        unsigned int usMinX = (g_stAwtoDiag.usDelayXus100 < g_stAwtoDiag.usDelayXusIsr100) ? g_stAwtoDiag.usDelayXus100 : g_stAwtoDiag.usDelayXusIsr100;
+        unsigned long ulN;
+
+        if((RCAP2H == AWTO_DELAY_CAL_RCAP2H) && (usMin5 != 0) && (usMinX != 0))      // M2PLL clock only (the counts are per clock)
+        {
+            ulN = ((unsigned long)g_ucDelay5usN_Base * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usMin5) - 1) / (100UL * usMin5);
+            g_ucAwtoCal5 = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
+            ulN = ((unsigned long)g_ucDelayXusN_Base * AWTO_DELAY_TARGET_PCT * usNomX + (100UL * usMinX) - 1) / (100UL * usMinX);
+            g_ucAwtoCalX = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
+            g_ucDelay5usN_Base = g_ucAwtoCal5;
+            g_ucDelayXusN_Base = g_ucAwtoCalX;
+            g_stAwtoDiag.ucDelay5usN = g_ucDelay5usN_Base;
+            AWTO_CAL_RUN(g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
+            AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
+            AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
+            AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
+        }
+    }
+#endif
 }
 
 // ScalerTimerDelayXms(usMs) for the panel T3 wait with the calibration run inside it (once per boot): the wait ends at
