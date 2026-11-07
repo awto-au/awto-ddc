@@ -230,11 +230,11 @@ INSERTS = [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"^\s*ScalerMcuIspInitial\(\);", "    AwtoDiagStage(2);",
      r"^\s*ScalerMcuGpioInitial\(\);"),                                                                   # after GPIO init
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
-    ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "#if(_AWTO_FAST_BOOT == _ON)\n    AwtoPanelVddEarly();\n#endif"),  # after pin-share
     # #63 logo draw timestamps (switch log)
     (OSD + "RTD2014OsdDisplay.c", r"^\s*g_ucLogoTimerCounter = 0;", "    AwtoSwEvent(AWTO_SW_EV_LOGO, 0);", r"^void OsdDispShowLogo\(void\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^\s*SET_OSD_LOGO_ON\(_ON\);", "    AwtoSwEvent(AWTO_SW_EV_LOGO, 1);", r"^void OsdDispShowLogo\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
+    ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "#if(_AWTO_FAST_BOOT == _ON)\n    AwtoPanelVddEarly();\n#endif"),  # after stage 4: inserts stack, the later rule lands nearer the anchor
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
     ("Kernel/System/Code/SysMain.c", r"^\s*SysPowerHandler\(\);", "            AwtoDiagTestCmd();"),  # after key scan (#33)
     (OSD + "RTD2014Key.c", r"^void UserInterfaceKeyHandler\(void\)$", (SHIM / "awto_testcmd.inc").read_text().rstrip("\n")),
