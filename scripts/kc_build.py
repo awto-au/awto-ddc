@@ -3,7 +3,8 @@
 flags, outputs kept in tmp/runs/<tag>/ (fw.bin/.map/.ihx, build.json, asm/ = the per-file compiler output).
 
 usage: kc_build.py TAG --bin INSTALL/bin [--src AWTO_SDCC_TREE] [--flags "--keil-compat"] [--level 1] [--no-layout]
-  --no-layout: first-fit packing (fw_build --layout ''), for code that no longer fits the sticky slots
+  --no-layout: first-fit packing (fw_build --layout ''); no CH_ names in the map, so fw_sim/health cannot run on it
+  --layout FILE: a sticky layout file; a missing one is created (fresh layout for code that no longer fits)
   Big-endian, --sdcccall LEVEL (wb-vfreq: 1). Image copy: tmp/runs/<tag>/AWT26110003-<tag>-be.{bin,map}.
 Log: tmp/logs/kc_build.log (fw_build output: tmp/logs/fw_build.log)
 """
@@ -23,6 +24,7 @@ def main() -> int:
     ap.add_argument("--level", default="1")
     ap.add_argument("--serial", default="AWT26110003")
     ap.add_argument("--no-layout", action="store_true")
+    ap.add_argument("--layout", default="")
     argv = sys.argv[1:]
     for i, s in enumerate(argv[:-1]):          # --flags "--keil-compat" (argparse rejects values starting with --)
         if s == "--flags" and argv[i + 1].startswith("-"):
@@ -34,7 +36,8 @@ def main() -> int:
     log = (ROOT / "tmp/logs/kc_build.log").open("a", buffering=1)
     t0 = time.monotonic()
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a.tag}: bin={a.bin} flags={a.flags!r} level={a.level}\n")
-    r = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", ""] if a.no_layout else [])], cwd=ROOT, env=env,
+    r = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", ""] if a.no_layout else []),
+                        *(["--layout", str(Path(a.layout).resolve())] if a.layout else [])], cwd=ROOT, env=env,
                        capture_output=True, text=True, timeout=BUILD_TMO)
     log.write(r.stdout[-3000:] + r.stderr[-2000:])
     out = ROOT / "tmp/runs" / a.tag
