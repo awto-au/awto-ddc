@@ -188,7 +188,21 @@ def crc_calibrate(isp) -> bool:
     return True
 
 
-def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's vendor backup", tag="", commit="") -> int:
+COMMON_END = 0x5000                                   # fw_build --common: [0, 0x5000) of every bank = common code + vectors
+
+
+def boot_last(diff: list[int]) -> list[int]:
+    """Banked sectors first, then the common sectors of banks 1.., then bank 0's (reset vector at 0x0000) as the very last:
+    a stop mid-run leaves the old boot path + common code in place for as long as possible."""
+    per = BANK // SECTOR
+    def key(i):
+        common = (i % per) * SECTOR < COMMON_END
+        return (common, common and i < per, i)
+    return sorted(diff, key=key)
+
+
+def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's vendor backup", tag="", commit="",
+            per_sector: bool = False) -> int:
     """Write+verify the sectors in `diff`; the manifest follows: a sector is unknown (null) from its erase until
     its verify passes, so a kill or failure never leaves a stale hash."""
     sr0 = isp.status()
@@ -201,18 +215,27 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
     t0 = time.monotonic()
     try:
-        # Dan 2026-11-06: erase every changed sector up front, then program; no per-sector blank check
-        # (a bad erase fails the verify, and that sector is redone alone by write_sector)
-        with phase("erase"):
-            for k, i in enumerate(diff):
-                erase_with_retry(isp, i * SECTOR, nudge)
-                if k % S.SAVE_EVERY == S.SAVE_EVERY - 1:
-                    log(f"erased {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
-        log(f"erased {len(diff)} sectors ({time.monotonic() - t0:.1f}s)")
+        if per_sector:
+            # no-relay units: erase+program+verify one sector at a time, boot/common last; a stop leaves at most one
+            # sector erased and the old boot path intact longest
+            diff = boot_last(diff)
+            log(f"per-sector mode: {len(diff)} sectors, boot/common last")
+        else:
+            # Dan 2026-11-06: erase every changed sector up front, then program; no per-sector blank check
+            # (a bad erase fails the verify, and that sector is redone alone by write_sector)
+            with phase("erase"):
+                for k, i in enumerate(diff):
+                    erase_with_retry(isp, i * SECTOR, nudge)
+                    if k % S.SAVE_EVERY == S.SAVE_EVERY - 1:
+                        log(f"erased {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
+            log(f"erased {len(diff)} sectors ({time.monotonic() - t0:.1f}s)")
         for k, i in enumerate(diff):
             s = i * SECTOR
             ts = time.monotonic()
             try:
+                if per_sector:
+                    with phase("erase"):
+                        erase_with_retry(isp, s, nudge)
                 if img[s:s + SECTOR] != BLANK:          # blank in the new image: erase was the whole job
                     program_verify(isp, s, img[s:s + SECTOR], crc_ok)
                 else:                                   # but check it, ~10 ms CRC (Dan: else a failed erase reads as good)
@@ -264,6 +287,7 @@ class Opts:
     manifest: Path | None = None
     tag: str = ""
     commit: str = ""
+    per_sector: bool = False
     seed: int | None = None
 
 
@@ -302,7 +326,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         mode = "full" if (o.full or not have_manifest) else "incremental"
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
         t_prog = time.monotonic()
-        rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit)
+        rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit, o.per_sector)
         summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
         return rc
     t0 = time.monotonic()
@@ -325,7 +349,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         + ", ".join(f"0x{i * SECTOR:05x}" for i in diff[:12]) + (" ..." if len(diff) > 12 else ""))
     if not o.write:
         log("DRY-RUN complete: nothing erased or programmed"); return 0
-    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit)
+    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector)
     summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
     return rc
 
@@ -375,6 +399,8 @@ def main() -> int:
     ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--identity", help="EDID silent (unit held): how the bus was proven to be this unit")
+    ap.add_argument("--per-sector", action="store_true",
+                    help="erase+program+verify one sector at a time, boot/common sectors last (units without a relay)")
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
                     help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
@@ -397,7 +423,7 @@ def flash_main(a) -> int:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2
     log(f"mode={'WRITE' if a.write else 'DRY-RUN'} bus=/dev/i2c-{a.bus} image={a.image} ({len(img)} B) serial={a.serial} "
         f"no_backup={a.no_backup} full={a.full} verify={a.verify} write_mode={a.write_mode} burst_chunk={a.burst_chunk}")
-    o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot,
+    o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot, per_sector=a.per_sector,
              backup_dir=a.backup_dir, manifest=a.manifest or root / "tmp/fw" / f"{a.serial}-flash-state.json",
              tag=a.tag or a.image.stem, commit=S.git_commit(root))
     if not 1 <= a.burst_chunk <= PAGE:
