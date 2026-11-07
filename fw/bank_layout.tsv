@@ -287,7 +287,7 @@ stub	_OsdPropGetShowResolutionStringAddress	C	0x1720	9
 stub	_OsdPropPutString	C	0x1729	9
 stub	_OsdPropPutStringCenter	C	0x1732	9
 stub	_OsdPropShowNumber	C	0x173b	9
-stub	_OsdFontPut1BitTable	C	0x1744	9
+stub	_AwtoLogoDraw	C	0x1744	9
 stub	_OsdFontVLCLoadFont	C	0x174d	9
 stub	_OsdFuncApplyMap	C	0x1756	9
 stub	_OsdFuncBlending	C	0x175f	9
@@ -899,8 +899,6 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_tiOSD_REALTEK_1BIT_LOGO0	C	0x3b26	212
-const	_tiOSD_REALTEK_1BIT_LOGO1	C	0x3bfa	540
 const	_tSTRING_RESOLUTION_TABLE	C	0x3e16	104
 const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1236	C	0x3e7e	92
 const	_tDDR2_PLL_PHASE	0	0x0000	16
@@ -1176,6 +1174,8 @@ fn	_UserCommonInterfacePanelPowerAction	1	0x9df4	700
 fn	_UserCommonNVRamSetSystemData	1	0xa0b0	692
 fn	_AwtoPutGlyph	1	0xa364	48
 fn	_OsdDispOsdMessage	1	0xa394	1680
+const	_tAWTO_LOGO_RUNS	1	0xaa24	1068
+fn	_AwtoLogoDraw	1	0xae50	228
 fn	_ScalerDpRx1ChangeDpcdVersion	2	0x0000	1420
 fn	_ScalerDpRx1HdcpCheck	2	0x058c	264
 fn	_ScalerDpRx1PhyCTS	2	0x0694	3688
@@ -1261,8 +1261,6 @@ const	_g_stSixColorDefaultData	3	0x001c	16
 const	_tBriConDefaultData	3	0x002c	24
 const	_tColorTempDefaultData	3	0x0044	44
 const	_tFONT1_GLOBAL	3	0x0360	756
-const	_tICON_REALTEK_1BIT_LOGO0	3	0x0654	24
-const	_tICON_REALTEK_1BIT_LOGO1	3	0x066c	444
 const	_g_stSystemDefaultData	3	0x0828	20
 fn	_ScalerOsdBurstWriteDataPort	3	0x083c	124
 fn	_ScalerOsdDrawWindow	3	0x08b8	1088
@@ -1368,6 +1366,8 @@ fn	_UserCommonFlashRestoreSystemData	3	0x9bcc	84
 fn	_UserCommonFlashSaveItem	3	0x9c20	1572
 fn	_UserCommonFlashSaveSystemData	3	0xa244	36
 fn	_UserCommonFlashWrite	3	0xa268	108
+const	_tICON_REALTEK_1BIT_LOGO0	3	0xa2d4	1232
+const	_tICON_REALTEK_1BIT_LOGO1	3	0xa7a4	1164
 const	_OperationTable	4	0x0000	312
 const	___str_0	4	0x0138	8
 const	___str_1	4	0x0140	8
