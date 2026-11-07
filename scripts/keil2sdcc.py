@@ -664,10 +664,25 @@ FILE_FLAGS = {
 }
 
 
+_KC = None
+
+
+def keil_compat():
+    """--keil-compat, refusing a compiler without it: sdcc only warns on an unknown option, and the ~bit rule is gone."""
+    global _KC
+    if _KC is None:
+        r = subprocess.run([SDCC, "--help"], capture_output=True, text=True, timeout=30)
+        if "--keil-compat" not in r.stdout + r.stderr:
+            sys.exit(f"{SDCC} has no --keil-compat (awto-sdcc#25, branch awto/keil-compat): Keil ~bit semantics would be lost")
+        _KC = ["--keil-compat"]
+    return _KC
+
+
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
            "--std-sdcc11", "--opt-code-size",                 # flash is the constraint (Dan: smallest)
            "--fsigned-char",                                  # Keil: plain char signed; SDK SBYTE = char (awto-sdcc#3)
+           *keil_compat(),                                    # Keil ~bit, /0, loop re-read, eval order (awto-sdcc#25)
            "--norestartseqatomics",                           # trunk: else every ISR exits via sdcc_atomic_maybe_rollback
            "--nooverlay",                                     # `data` locals -> DSEG for sdcc_overlay (call-graph aware), not OSEG
            "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
