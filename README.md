@@ -17,10 +17,7 @@ Problems in the factory firmware and what we did:
   Flashed into all 3 EDID slots (DP + 2x HDMI). See `docs/edid-fix.md`, `scripts/make_edid.py`.
 - **DDC/CI controls hidden.** Caps string advertised only 1 VCP though the firmware answers brightness/
   contrast/input/power. Documented; control works today via `scripts/ddc_ctl.py`.
-- **Power-save shows a colour test pattern instead of sleeping; no host power-down.** Characterised; DPMS /
-  VCP 0xD6 behaviour documented (`docs/firmware-proposal.md`). Firmware-fix route noted, not yet applied.
-- **Dahua boot splash.** 2-colour OSD-drawn logo; awto replacement built (`scripts/make_logo.py`), volatile
-  OSD preview works; persistent flash deliberately BLOCKED until the glyph sector is located (brick risk).
+- **Power-save pattern, boot splash, DDC/CI controls:** handled by our own firmware, built on the Realtek RL6449 SDK (#7); status and open work in issues #7, #26, #38. Vendor-image patch routes are retired (`docs/history.md`).
 - **Flashing recovered + made safe.** Flash WP# is a scaler GPIO; writer releases WP#, erases, programs
   (rtdflash RTD2795 handshake), read-back verifies, re-protects to 0x9C — datasheet-timed, offline selftest.
 
@@ -61,7 +58,8 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 - Headless tool host: `scripts/rtd_headless/` — C host for the ISP plugin's version reads (see `docs/rtdtool-headless-feasibility.md`).
 
 ## Docs
-- `docs/firmware-proposal.md` — issues + fix routes (settings-patch vs firmware-patch), priority order, OSD design.
+- `docs/firmware-proposal.md` — technical OSD design notes.
+- `docs/history.md` — superseded, refuted or wrong claims, one line each.
 - `docs/edid-fix.md` — the EDID rebuild (identity/size/conformance), patch plan, flash procedure + revert.
 - `docs/logo/` — awto monitor mark (red, house style) + boot-splash replacement (640x360): `-colour` (primary), plain = black/white fallback.
 - `docs/boot-logo.md`, `docs/reversing/realtek-rtd/{buttons,osd,db-bin-format}.md`, `docs/rtdtool-*.md`, `docs/monitors/`.

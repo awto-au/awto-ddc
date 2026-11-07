@@ -1,6 +1,6 @@
 # EDID rewrite: JXC 28in 4K, "awto" identity
 
-Status: authored + validated offline; NOTHING written to the device. Write is gated by the main session.
+Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits a 594 MHz VIC 97 DTD1 (ab8c4c9, not flashed); decided to go back to the vendor DTD1 3840x2160@59.982, 533.12 MHz and drop VIC 97 (#26, 2026-11-07).
 
 ## Files
 - Builder: `scripts/make_edid.py` (stdlib; runs `edid-decode -c` on its output)
@@ -64,7 +64,7 @@ CTA-861 rev 3 extension:
 - VCDB `0xCA`: YCC + RGB quantization selectable; IT/CE always underscanned (matches header underscan bit).
 - HDMI slots only:
   - HDMI VSDB: PA 1.0.0.0, DC_30bit + DC_Y444, legacy max TMDS 340 MHz (`0x44`).
-  - HF-VSDB: v1, max TMDS char rate 600 MHz (`0x78`), SCDC present, scrambling for <= 340 Mcsc. 4K60 4:4:4 8 bpc (VIC 97, 594 MHz) fits; 10-bit 4K60 is not claimed (needs 742 MHz). Dropped the old `DC_30bit_420` bit (no Y420 map declared).
+  - HF-VSDB: v1, max TMDS char rate 600 MHz (`0x78`), SCDC present, scrambling for <= 340 Mcsc. 4K60 4:4:4 8 bpc (594 MHz) fits the field, but 594 MHz is not pursued (#26); 10-bit 4K60 is not claimed (needs 742 MHz). Dropped the old `DC_30bit_420` bit (no Y420 map declared).
   - AMD VSDB carried over unchanged (48-60 Hz FreeSync range) [fw: original bytes].
 - DTD2 1920x1080 148.5 MHz: now exactly VIC 16 timing (88/44/148, 4/5/36). DTD3 2560x1440 241.7 MHz (CVT-RB) unchanged. Both image size 620x350 mm.
 
@@ -74,11 +74,11 @@ Before (live HDMI copy; DP copy equivalent, `FAIL`):
 - also (HDMI copy): duplicate VIC 16, HF-VSDB / legacy max TMDS 600 > 340 inconsistency; timings out of Monitor Range (24 Hz modes vs 48-60 Hz); base 1.4 vs 1.3 mismatch between ports
 
 After (both `awto-dp.bin` and `awto-hdmi.bin`): `EDID conformity: PASS`, zero failures.
-- Remaining warning (both): "VIC 97 and the first DTD are not identical". Intended: DTD1 is the panel's real 533.12 MHz reduced-blanking timing, VIC 97 is the standard 594 MHz CTA timing.
+- Remaining warning (flashed EDID): "VIC 97 and the first DTD are not identical"; goes away when VIC 97 is dropped (#26).
 
 ## Colour + colorimetry revision (2026-11-04, flashed)
 - Panel is **IPS/PLS**, not VA — Dan visual confirm 2026-11-04 (stable off-axis, corner/edge glow). Earlier VA assumption was wrong.
-- Chromaticity: **standard sRGB / BT.709** primaries — the honest choice for a ~99%-sRGB IPS panel with no measured panel primaries: R 0.640,0.330 G 0.300,0.600 B 0.150,0.060 W 0.3127,0.3290 (D65). Bytes `ee91a3544c99260f5054` (edid-decode's exact sRGB reference encoding). Gamma 2.20 (`0x17=0x78`), 10bpc kept (DP). Replaces the prior Samsung-VA guess (`cd01a6554c9c260e5054`, R 0.651/0.332 G 0.300/0.610 B 0.148/0.055).
+- Chromaticity: **standard sRGB / BT.709** primaries — the choice for a ~99%-sRGB IPS panel with no measured panel primaries: R 0.640,0.330 G 0.300,0.600 B 0.150,0.060 W 0.3127,0.3290 (D65). Bytes `ee91a3544c99260f5054` (edid-decode's exact sRGB reference encoding). Gamma 2.20 (`0x17=0x78`), 10bpc kept (DP). Replaces the prior Samsung-VA guess (`cd01a6554c9c260e5054`, R 0.651/0.332 G 0.300/0.610 B 0.148/0.055).
 - sRGB-default feature bit RE-SET (`0x18`: `0x3f` DP / `0x27` HDMI): chromaticities now equal the sRGB standard, so "default colour space = sRGB" is legitimate. edid-decode does NOT emit the "sRGB signalled but chromaticities don't match" warning (it only fires when the bit is set but primaries differ).
 - Kept CTA Colorimetry DB (sRGB + xvYCC709 + sYCC601; no BT.2020) and HDR Static Metadata DB (SDR EOTF only, no PQ/HLG). Audio still REMOVED (no speakers): no Audio/Speaker-Allocation block, basic-audio header bit cleared.
 - Identity/size/timings unchanged: AWT / awto-mon / AWT26110001, 597x336 mm, native DTD 3840x2160@60 533.12 MHz, deduped mode list.
@@ -98,7 +98,6 @@ After (both `awto-dp.bin` and `awto-hdmi.bin`): `EDID conformity: PASS`, zero fa
 - sha256 orig (factory demo) sector `70cb3052910dc2ae388c6829df3cfd99a51ffab2af4574d7848b09a3667eee52`
 - sha256 patched sector (sRGB/IPS revision) `feeff814de5ea113d7fc6ba97963bef3bb32653dc064f2e114e09149013c383d`
 - Flash chip: Macronix `C2 20 14` (1 MiB); 4 KiB sector erase op `0x20`. Sector `0x13000` also holds non-EDID data (before `0x138D8` and after `0x13BD8`); it is rewritten byte-identical.
-- Offline simulation of the writer (dry-run and write paths against a mock register file) reproduced the expected result; it has not been exercised against real hardware.
 
 ## Flash procedure
 Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect --brief`. Do all of this on the same bus the dumps used (bus 20 last time). Use dir `/mnt/2tb/git/awto-ddc`.

@@ -1,8 +1,8 @@
-# Panel: Samsung LTM270FL01 (JXC/Dahua 27" 4K, RTD2795T)
+# Panel candidate: Samsung LTM270FL01 (JXC/Dahua 27" 4K, RTD2795T)
 
 Panel's own EDID (597 x 336 mm) supports the 27" size: [panel-edid.md](panel-edid.md). Service menu names Innolux M280DCA-E3B (28"): [panel-innolux-m280dca-e3b.md](panel-innolux-m280dca-e3b.md). Model still unresolved.
 
-Status: 2026-11-04T14:00+10:00. Panel identity settled by Dan (size + measured active area match).
+Status: candidate only, not confirmed (size + measured active area match; many 27" 16:9 panels do). Best candidate is BOE MV270QUM-N20 (#3, panel-edid.md).
 **Datasheet NOT obtained.** Only reseller/database listings read. Panelook is behind a slider CAPTCHA
 (playwrong fetch fails; alt host `huasun.panelook.com` has a bad cert). alldatasheet.com has a "LTM270FL01"
 PDF entry but it is a Samsung "PRODUCT SELECTION GUIDE" (28 pp, 3.3 MB), not the panel spec; PDF not fetched.
