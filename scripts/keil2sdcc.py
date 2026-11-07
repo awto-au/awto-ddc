@@ -15,7 +15,7 @@ usage: keil2sdcc.py port                     SDK -> tmp/sdcc-port/src (rewritten
   fw/msg_enable.txt, and writes fw/msgids.tsv (awto-ddc#25, #26).
 - Repo is private (Realtek code), see CLAUDE.md. Tracking: awto-ddc#8.
 """
-import fnmatch, json, os, re, shutil, subprocess, sys, time
+import fnmatch, hashlib, json, os, re, shutil, subprocess, sys, time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -742,6 +742,44 @@ def _run_stage(cmd, **kw):
         return f"TIMEOUT after {COMPILE_TIMEOUT}s", 124
 
 
+def _cache_dir() -> Path | None:
+    """Compile cache shared by every worktree (one-file change = one compile): $AWTO_SDCC_CACHE, else the main checkout's
+    tmp/sdcc-cache (git common dir's parent); AWTO_SDCC_CACHE=off disables it."""
+    env = os.environ.get("AWTO_SDCC_CACHE")
+    if env == "off":
+        return None
+    if env:
+        return Path(env)
+    r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True)
+    return Path(r.stdout.strip()).parent / "tmp/sdcc-cache" if r.returncode == 0 else ROOT / "tmp/sdcc-cache"
+
+
+CACHE = _cache_dir()
+_COMPILER_ID = None
+STATS = Counter()                              # cache_hit / cache_miss per compile run
+
+
+def _compiler_id() -> str:
+    """Compiler identity in the cache key: size + mtime of every file in the install's bin and libexec dirs."""
+    global _COMPILER_ID
+    if _COMPILER_ID is None:
+        inst = Path(SDCC).resolve().parent.parent
+        parts = [f"{p.relative_to(inst)}:{p.stat().st_size}:{p.stat().st_mtime_ns}"
+                 for d in ("bin", "libexec") for p in sorted((inst / d).rglob("*")) if p.is_file()]
+        _COMPILER_ID = hashlib.sha256("\n".join(parts).encode()).hexdigest()
+    return _COMPILER_ID
+
+
+def _cache_key(pp: bytes, args: list) -> str:
+    """Preprocessed source (worktree root replaced, so all worktrees share entries) + compiler flags (paths stripped) +
+    compiler identity + output kind/name."""
+    root = str(ROOT).encode()
+    h = hashlib.sha256(pp.replace(root, b"@ROOT@"))
+    h.update("\0".join(a.replace(str(ROOT), "@ROOT@") for a in args).encode())
+    h.update(_compiler_id().encode())
+    return h.hexdigest()
+
+
 def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     """Two stages: cpp (-E to a .i file), then the compiler proper on that file (--c1mode). In one `sdcc` run the cpp
     and the compiler write the same stderr concurrently and their lines interleave, splitting warning text (#51.7, #47).
@@ -754,9 +792,25 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     base = sdcc_cmd(c, uv2dir, defines, incs, model)
     msg, rc = _run_stage(base + ["-E", "-o", str(pp), str(c)])
     if rc == 0:
-        with open(pp, "rb") as fh:
-            m2, rc = _run_stage(base + ["--c1mode"] + ([] if ASM_MODE else ["-c"]) + ["-o", out.name], stdin=fh, cwd=out.parent)
-        msg += m2
+        c1 = base + ["--c1mode"] + ([] if ASM_MODE else ["-c"]) + ["-o", out.name]
+        key = _cache_key(pp.read_bytes(), c1) if CACHE else None
+        hit = CACHE / f"{key}{out.suffix}" if key else None
+        if hit and hit.exists() and hit.with_suffix(".msg").exists():
+            root = str(ROOT).encode()
+            out.write_bytes(hit.read_bytes().replace(b"@ROOT@", root))
+            msg += hit.with_suffix(".msg").read_text(errors="replace").replace("@ROOT@", str(ROOT))
+            STATS["cache_hit"] += 1
+        else:
+            with open(pp, "rb") as fh:
+                m2, rc = _run_stage(c1, stdin=fh, cwd=out.parent)
+            msg += m2
+            if hit and rc == 0:                              # only successful compiles are cached (msg = c1 stage)
+                CACHE.mkdir(parents=True, exist_ok=True)
+                tmp = hit.with_name(hit.name + f".{os.getpid()}")
+                tmp.write_bytes(out.read_bytes().replace(str(ROOT).encode(), b"@ROOT@"))
+                hit.with_suffix(".msg").write_text(m2.replace(str(ROOT), "@ROOT@"))
+                tmp.replace(hit)                             # entry visible only when complete (.msg first)
+            STATS["cache_miss"] += 1
     pp.unlink(missing_ok=True)
     return str(c.relative_to(SRC)), rc, msg
 
@@ -815,7 +869,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
            "warn_unreviewed": unreviewed}
     log("segment bytes: " + ", ".join(f"{k}={v}" for k, v in seg.most_common() if v))
     (WORK / "report.json").write_text(json.dumps(rep, indent=1))
-    log(f"compiled in {time.time() - t0:.0f}s: ok {len(ok)} fail {len(bad)}")
+    log(f"compiled in {time.time() - t0:.0f}s: ok {len(ok)} fail {len(bad)}; cache {STATS['cache_hit']} hit / {STATS['cache_miss']} miss ({CACHE or 'off'})")
     print_hist(rep)
     for u in unreviewed:
         log(f"WARN-GATE unreviewed: {u}")
