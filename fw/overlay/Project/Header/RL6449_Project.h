@@ -52,7 +52,7 @@ typedef struct
     unsigned char ucOsdOfsState;                // offsetof(StructOsdInfo, usOsdState): g_stOsdInfo layout moves with _DP_DEBUG_MSG (#37)
     unsigned char ucOsdOfsEvent;                // offsetof(StructOsdInfo, ucOsdEventMsg)
     unsigned char ucOsdOfsKey;                  // offsetof(StructOsdInfo, ucOsdKeyMessage)
-    unsigned char ucSpare;
+    unsigned char ucHold;                       // #28 held test visuals: bit0 logo (cmd 0x24), bit1 debug pop-up (0x26); 0x27 clears
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -64,6 +64,7 @@ extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
+extern void AwtoTestHoldLogoOff(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
 #if(_AWTO_DIAG_SELFTEST == _ON)
