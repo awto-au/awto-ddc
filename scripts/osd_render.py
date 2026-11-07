@@ -116,6 +116,8 @@ def save(st: M.OsdState, out: Path, bg: str, scale: int):
     render_snap(st, bg, scale).save(out)
     info = M.summary(st)
     out.with_suffix(".json").write_text(json.dumps(info, indent=1, default=str))
+    import pickle
+    out.with_suffix(".state.pkl").write_bytes(pickle.dumps(st))      # OsdState for offline analysis / re-render
     say(f"png {out}  OSD en={info['en']} {info['cols']}x{info['rows']} cells, {info['uniq_ids']} unique ids (max {info['max_id']}), "
         f"scale {info['sx']}x{info['sy']}, {info['nwin']} windows, font SRAM {info['font_words']} words")
 
