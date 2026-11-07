@@ -123,10 +123,14 @@ def log(msg: str, level: str = "INFO") -> None:
     sys.stderr.flush()
     try:
         LOGS.mkdir(parents=True, exist_ok=True)
-        with LOG.open("a", encoding="utf-8") as fh:
-            fh.write(line + "\n")          # file copy is ALWAYS plain
+        for p in (LOG, *([_UNIT_LOG] if _UNIT_LOG else [])):
+            with p.open("a", encoding="utf-8") as fh:
+                fh.write(line + "\n")      # file copy is ALWAYS plain
     except OSError:
         pass                                # never let logging kill the run
+
+
+_UNIT_LOG: Path | None = None               # tmp/logs/unit-<serial>.log once a command picks a unit (_unit)
 
 
 SKIPPED = 125   # distinct from any real tool's exit code
@@ -346,6 +350,8 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
         u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
     if not u.get("test") and not _flag(extra, "--force"):
         raise SystemExit(f"unit {n} is a working screen (devices.json test=false): add --force to touch it")
+    global _UNIT_LOG
+    _UNIT_LOG = LOGS / f"unit-{u['serial']}.log"    # one file per monitor: dev.py lines + full tool output
     return n, u
 
 
@@ -390,7 +396,19 @@ def check_image_identity(u: dict, img: Path) -> None:
 def _py(script: str, *args, env: dict | None = None) -> int:
     cmd = [sys.executable, str(REPO / "scripts" / script), *map(str, args)]
     log("run: " + " ".join(cmd[1:]))
-    rc = subprocess.call(cmd, cwd=REPO, env={**os.environ, "AWTO_VIA_DEV": "1", **(env or {})})
+    full_env = {**os.environ, "AWTO_VIA_DEV": "1", **(env or {})}
+    if _UNIT_LOG is None:
+        rc = subprocess.call(cmd, cwd=REPO, env=full_env)
+    else:                                   # tee the tool's output into the unit log, line by line
+        p = subprocess.Popen(cmd, cwd=REPO, env={**full_env, "PYTHONUNBUFFERED": "1"},
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        with _UNIT_LOG.open("a", encoding="utf-8") as fh:
+            for line in p.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                fh.write(f"{_stamp()}  {script}: {line}")
+                fh.flush()
+        rc = p.wait()
     log(f"rc={rc}: {script}", "INFO" if rc == 0 else "ERROR")
     return rc
 
