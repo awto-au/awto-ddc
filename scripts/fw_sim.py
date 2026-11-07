@@ -363,11 +363,15 @@ class Cells(Dev):
 class HdmiInput(Dev):
     """Stable CEA video on D2: sync-measure and auto-function result registers (P30_02..14 offline measure, P0_7C..83 auto
     function) as the SDK ScalerMeasure* code decodes them. F-to-P (P31_06 bit7) halves the auto-function V window as the
-    hardware does (the code doubles it back). MODES: name -> (htotal, hact, hstart, vtotal, vact, vstart, pclk 0.1 MHz)."""
-    MODES = {"1080p60": (2200, 1920, 192, 1125, 1080, 41, 1485), "2160p60": (4400, 3840, 384, 2250, 2160, 82, 5940)}
-    MEAS_KHZ = 87_700          # _MEASURE_CLK with M2PLL 350.8 MHz / 4 (kHz): HS period counts = clk * 10 / hfreq(0.1 kHz)
+    hardware does (the code doubles it back). MODES: name -> (htotal, hact, hstart, vtotal, vact, vstart, pclk 0.1 MHz).
+    RATE: pixel clock factor (x1000/1001 for the NTSC-rate presets; totals unchanged)."""
+    MODES = {"1080p60": (2200, 1920, 192, 1125, 1080, 41, 1485), "2160p60": (4400, 3840, 384, 2250, 2160, 82, 5940),
+             "2160p59.94": (4400, 3840, 384, 2250, 2160, 82, 5940)}
+    RATE = {"2160p59.94": 1000 / 1001}
+    XTAL_KHZ = 14_318.18       # 4x NTSC colour burst; the SDK's _XTAL14318K is 14318 (-13 ppm)
+    MEAS_KHZ = XTAL_KHZ * 49 / 2 / 4     # _MEASURE_CLK: M2PLL (M 49, N 2, O 1) / _M2PLL_MEASURE_DIV 4
     DATA_PATH_LIMIT = 3000     # RL6449_Series_IDomainInclude.h _DATA_PATH_SPEED_LIMIT (0.1 MHz)
-    writes = (0x3106,)
+    writes = (0x3106, 0x0044, 0x3045)
 
     def __init__(self, mode: str = "1080p60"):
         """Modes above DATA_PATH_LIMIT (2160p60, pixel clock 594 MHz = TMDS clock 148.5 MHz x4 with SCDC 1/40) follow the data
@@ -375,33 +379,57 @@ class HdmiInput(Dev):
         doubles them back) and 1/2 scaling down (P31_05 bit7 = 0 with P31_06 bit7 = 0: auto-function H start/end in half
         pixels, the code doubles them) until ScalerFmtCnvFinalSetting switches to F-to-P."""
         self.mode = mode
-        self.HTOT, self.HACT, self.HSTART, self.VTOT, self.VACT, self.VSTART, self.PCLK = self.MODES[mode]
-        self.hfreq10 = round(self.PCLK * 1e5 / self.HTOT / 100)       # 0.1 kHz
+        self.HTOT, self.HACT, self.HSTART, self.VTOT, self.VACT, self.VSTART, pclk = self.MODES[mode]
+        self.pclk_hz = pclk * 1e5 * self.RATE.get(mode, 1)
+        self.PCLK = round(self.pclk_hz / 1e5)                           # SET_INPUT_PIXEL_CLK (0.1 MHz, TMDS clock measure)
+        self.hfreq_hz = self.pclk_hz / self.HTOT
+        self.vfreq_hz = self.hfreq_hz / self.VTOT
         self.fast = self.PCLK > self.DATA_PATH_LIMIT
         if self.fast:
-            self.writes = (0x3000, 0x3105, 0x3106)
+            self.writes = (0x3000, 0x3105, 0x3106, 0x0044, 0x3045)
         self.div = self.halfsd = False
+        self.dclk = None          # m -> (DCLK kHz, DHtotal, DHwidth, DVheight) the D domain runs at; video_stubs sets it
+
+    def hs_count(self) -> float:
+        """HS period in measure clocks; P30_05/06 = whole counts - 1, P30_07[7:4] = 1/16 fraction."""
+        return self.MEAS_KHZ * 1e3 / self.hfreq_hz
+
+    def active_count(self, hz: float, htot: int, hw: int, vh: int) -> int:
+        """Active-region measure (P30_41 input, P30_46 display): measure clocks from the first to the last active pixel."""
+        return int((htot * (vh - 1) + hw) / hz * self.MEAS_KHZ * 1e3)
 
     def cells(self) -> dict[int, int]:
         c = {}
-        hs_per = round(self.MEAS_KHZ * 10 / self.hfreq10) - 1
+        whole = int(self.hs_count())
+        hs_per = whole - 1
         k = 2 if self.div else 1                                        # measure clock divider: H counts at half rate
         for a, v, mask_hi in ((0x3005, hs_per, 0x1F), (0x3008, self.VTOT - 1, 0x3F), (0x300A, 3, 0x1F), (0x300C, 4, 0x3F),
                               (0x300E, self.HTOT // k - 1, 0x1F), (0x3011, self.VACT - 1, 0x3F), (0x3013, self.HACT // k - 1, 0x1F)):
             c[a], c[a + 1] = (v >> 8) & mask_hi, v & 0xFF
+        c[0x3007] = int((self.hs_count() - whole) * 16) << 4
         c[0x3003], c[0x3004] = 0x00, 0xC0                              # no measure error flags; HS/VS polarity positive
         c.update(self.auto(False))
         c[0x007D] = 0x40                                                # auto-function finished
         c[0x007C] = c[0x0078] = 0
         c[0x3106] = 0x10                                                # F-to-P off until the firmware enables it
-        # active-region clock counts (P30_41..44 input, P30_46..49 display): ScalerDPLLFineTuneFrameSyncLineBuffer scales Dclk
-        # by their ratio; equal counts = already in sync (zeros gave Dclk 0x830B6229 -> NOSUPPORT)
-        n = round(self.VACT * self.HTOT / self.PCLK * 1e-1 * self.MEAS_KHZ * 1e3 / self.HTOT * self.HACT / 1e3)
+        # active-region clock counts: ScalerDPLLFineTuneFrameSyncLineBuffer scales Dclk by display/input; the display count
+        # follows the firmware's DCLK at each pop-up (0x3045 write), equal to the input count until then
+        n = self.active_count(self.pclk_hz, self.HTOT, self.HACT, self.VACT)
         c[0x0044], c[0x0045], c[0x0046] = 0x08, 0xCA, 0x00               # LAST_LINE = display DVtotal read-back (2250 in line-buffer mode)
         for base in (0x3041, 0x3046):
-            c[base] = 0
-            c[base + 1], c[base + 2], c[base + 3] = (n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF
+            c.update(self._dword(base, n))
         return c
+
+    @staticmethod
+    def _dword(base: int, n: int) -> dict[int, int]:
+        return {base: 0, base + 1: (n >> 16) & 0xFF, base + 2: (n >> 8) & 0xFF, base + 3: n & 0xFF}
+
+    def display(self, m):
+        """D-domain state for the display measures, or None before a DCLK is set."""
+        if self.dclk is None:
+            return None
+        dclk, dht, dhw, dvh = self.dclk(m)
+        return (dclk, dht, dhw, dvh) if dclk and dht and dvh else None
 
     def auto(self, ftop: bool) -> dict[int, int]:
         vs, vh = ((self.VSTART - 1) // 2, self.VACT // 2) if ftop else (self.VSTART, self.VACT)
@@ -420,6 +448,21 @@ class HdmiInput(Dev):
             m.put(f"set memory xram 0x{a:x} 0x{v:x}")
 
     def on_write(self, m, a):
+        if a == 0x3045:                                                 # display active-region pop-up
+            d = self.display(m)
+            if d:
+                for k, v in self._dword(0x3046, self.active_count(d[0] * 1e3, d[1], d[2], d[3])).items():
+                    m.put(f"set memory xram 0x{k:x} 0x{v:x}")
+            return
+        if a == 0x0044:                                                 # frame-sync DVtotal (bit7 = 1) / last line (bit7 = 0)
+            d = self.display(m)
+            if d:
+                pix = self.VTOT * self.HTOT / self.pclk_hz * d[0] * 1e3   # display pixels per input frame
+                v = int(pix // d[1]) if m.rd(0x0044)[0] & 0x80 else int(pix % d[1]) >> 1   # last line in pixels >> _D_DOMAIN_PATH
+                m.put(f"set memory xram 0x44 0x{(m.rd(0x0044)[0] & 0x80) | ((v >> 8) & 0x1F):x}")
+                m.put(f"set memory xram 0x45 0x{v & 0xFF:x}")
+                m.put(f"set memory xram 0x46 0x{(v >> 13) & 1:x}")
+            return
         ftop = bool(m.rd(0x3106)[0] & 0x80)
         if self.fast:
             self.div = bool(m.rd(0x3000)[0] & 0x80)
@@ -464,6 +507,11 @@ def video_stubs(m: "Machine", hdmi: HdmiInput):
         m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
         return {"val": SOURCE_HDMI}
     m.stub("ScalerTMDSScanInputPort", scan)
+
+    def dclk(m):
+        out = [int.from_bytes(b, "big") for b in (lambda o: (o[0:2], o[4:6], o[14:16]))(m.rd(m.addr("g_stMDomainOutputData"), 16))]
+        return (int.from_bytes(m.rd(m.addr("g_ulDClkFreq"), 4), "big"), out[0], out[1], out[2])
+    hdmi.dclk = dclk
 
 
 class W1C(Dev):

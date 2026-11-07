@@ -89,7 +89,7 @@ def test_hdmi_input_2160p60_registers_follow_the_data_path():
     auto-function H window (code doubles), F-to-P keeps full H; auto-function H end > 4095 sets P0_78 bit0. Same register values as the
     vendor 4K60 dump (tmp/regs/AWT26110003-20261105-180523.json: P30_0E/0F 0x0897, P30_13/14 0x077F)."""
     h = fw_sim.HdmiInput("2160p60")
-    assert h.fast and set(h.writes) == {0x3000, 0x3105, 0x3106}
+    assert h.fast and set(h.writes) == {0x3000, 0x3105, 0x3106, 0x0044, 0x3045}       # + last-line / display-count models
     h.div = True
     c = h.cells()
     assert w(c, 0x300E, 0x300F, 0x1F) == 2200 and (c[0x300E], c[0x300F]) == (0x08, 0x97)
@@ -104,7 +104,16 @@ def test_hdmi_input_2160p60_registers_follow_the_data_path():
     he = ((a[0x0081] & 0x0F) << 8 | a[0x0083]) + 1 + (a[0x0078] & 1) * 4096
     hs = ((a[0x0081] & 0xF0) << 4 | a[0x0082]) + 1
     assert he - hs + 1 == 3840 and a[0x0078] & 1 == 1                                    # end 4223 needs P0_78 bit0
-    assert fw_sim.HdmiInput("1080p60").writes == (0x3106,) and not fw_sim.HdmiInput("1080p60").fast
+    assert fw_sim.HdmiInput("1080p60").writes == (0x3106, 0x0044, 0x3045) and not fw_sim.HdmiInput("1080p60").fast
+
+
+def test_hdmi_input_60_000_vs_59_940_hs_period():
+    """Unit 3 measured 4K60.000 as 60.1 Hz and 4K59.940 as 60.0 (mode_sweep 2026-11-07): HS period whole counts, truncated (#26)."""
+    sdk = lambda h: (lambda hsp: ((87697 * 20 // hsp + 1) // 2, (87697 * 20000 // hsp // h.VTOT + 1) // 2))(
+        w(h.cells(), 0x3005, 0x3006, 0x1F))                                             # _MEASURE_CLK 350791 / 4 (kHz)
+    a, b = fw_sim.HdmiInput("2160p60"), fw_sim.HdmiInput("2160p59.94")
+    assert sdk(a) == (1351, 601) and sdk(b) == (1349, 600)
+    assert a.PCLK == 5940 and b.PCLK == 5934 and abs(b.vfreq_hz - 59.94006) < 1e-4
 
 
 @_needs(IMG_B)
