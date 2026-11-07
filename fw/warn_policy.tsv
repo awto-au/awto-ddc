@@ -323,3 +323,7 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c	435	ok	OK-CONFIG: _AWTO_FAST_BOOT: Group A power-cut OFF branch empty (PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops on our board, the 2 x 10 ms rail waits removed); the condition only reads two status bits
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	*	ok	dead flash-type cases: g_ucFlashType is the constant _FLASH_MX25L8006E while _AWTO_FLASH_ALL is _OFF (#65)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonNVRam/ScalerCommonFlashWrite.c	*	ok	dead flash-type branches (constant g_ucFlashType, _AWTO_FLASH_ALL _OFF, #65)
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	2046	ok	OK-HARMLESS: messages off (u1 build): if body is only a ((void)0) debug stub; condition has no side effects
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	2055	ok	OK-HARMLESS: messages off (u1 build): if body is only a ((void)0) debug stub; condition has no side effects
+^conditional flow changed by optimizer	Kernel/System/Code/SysMode.c	143	ok	OK-HARMLESS: messages off (u1 build): if/else bodies are only ((void)0) debug stubs; GET_INPUT_TIMING_H_POLARITY() is a plain read
+^conditional flow changed by optimizer	Kernel/System/Code/SysMode.c	152	ok	OK-HARMLESS: messages off (u1 build): same as :143 for V polarity
