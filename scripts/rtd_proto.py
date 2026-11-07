@@ -279,6 +279,9 @@ DDC_OPS = {0x01: "get VCP", 0x02: "VCP reply", 0x03: "set VCP", 0x07: "save sett
 DEV_TAG = {0x35: "dbg", 0x4A: "isp", 0x50: "edid", 0x54: "scdc", 0x37: "ddc"}
 
 
+INLINE_MAX = 8     # decoded log shows bytes of reads up to this size; longer ones are in <tool>.raw.log
+
+
 def hx(b, limit: int = 48) -> str:
     s = " ".join("--" if x is None else f"{x:02x}" for x in b[:limit])
     return s + (f" ... ({len(b)} B)" if len(b) > limit else "")
@@ -370,8 +373,8 @@ class Decoder:
                 return f"{w} {what} 0x{lo:04X} {arrow} {vs}{note}{self._xname(lo) if e.what == 'x' else ''}"
             hi = lo + n - 1
             nm = self.sym.range_name(lo, hi) or self.regname(lo) or ""
-            return (f"{w} {what} 0x{lo:04X}..0x{hi:04X} ({n} B){'  ' + nm if nm else ''}"
-                    f"{':' if k == 'dr' else ' <-'} {hx(e.vals)}")
+            vals = f"{':' if k == 'dr' else ' <-'} {hx(e.vals)}" if n <= INLINE_MAX else ""   # longer: .raw.log + tool's decode
+            return f"{w} {what} 0x{lo:04X}..0x{hi:04X} ({n} B){'  ' + nm if nm else ''}{vals}"
         if k == "msg":
             text = bytes(e.text)
             if not text and e.val is None:              # header not seen by the decoder: the tool's own line follows
@@ -385,7 +388,7 @@ class Decoder:
             val = "?" if e.val is None else str(e.val)
             return f'message "{label}" = {val}{"" if e.ok else "  (checksum mismatch)"}'
         if k == "rr":
-            return f"read reg 0x{e.sub:02X} ({len(e.vals)} B): {hx(e.vals)}"
+            return f"read reg 0x{e.sub:02X} ({len(e.vals)} B)" + (f": {hx(e.vals)}" if len(e.vals) <= INLINE_MAX else "")
         if k == "mpoll":
             return f"message channel status: {'message pending' if e.st == 0xF1 else 'none'}" + (f" (x{e.n})" if e.n > 1 else "")
         if k == "edid":
