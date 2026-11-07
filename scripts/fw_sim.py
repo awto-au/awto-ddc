@@ -510,8 +510,12 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     pre-detect and scan on D2 succeed, stability check passes, scan sets the input pixel clock like the SDK does."""
     src = PORTS[port]
     m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == src})
-    m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
-    m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})   # no DP source: pending HPD events never end
+    if getattr(m, "hle", True):                          # constant results: patched code, no breakpoint (--no-hle: stubs)
+        m.patch_const("ScalerTMDSStableDetect", 1)
+        m.patch_const("ScalerSyncDpCheckUrgentHotPlugEventExist", 0)     # no DP source: pending HPD events never end
+    else:
+        m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
+        m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})
 
     def scan(m, r):
         if (r["a1"] & 255) != src:
@@ -668,6 +672,20 @@ class Machine:
         self.stubs.setdefault(pc, []).append((None if common else bank, name, fn))
         if len(self.stubs[pc]) == 1:
             self.s.send(f"break 0x{pc:x}")
+
+    def patch_const(self, name: str, carry: int):
+        """HLE for a stub with a constant bit result: write `SETB C / CLR C; RET` over the function entry in the sim's
+        flash (the bank it lives in; every bank for common code). No breakpoint, so no Python round trip per call
+        (ScalerSyncDpCheckUrgentHotPlugEventExist: 52733 stops per boot-to-ACTIVE before, 2026-11-07)."""
+        v = self.sym.get("_" + name)
+        if v is None:
+            raise SimError(f"_{name} not in the map")
+        bank, pc = v >> 16, v & 0xFFFF
+        common = v < getattr(self.where, "cend", 0)
+        code = (0xD3 if carry else 0xC3, 0x22)
+        for b in (range(len(self.img) // BANK) if common else (bank,)):
+            self.s.send(f"set memory flash 0x{b * BANK + pc:x} 0x{code[0]:02x} 0x{code[1]:02x}")
+        self.patched = getattr(self, "patched", []) + [name]
 
     def _do_stub(self, pc: int, out: str):
         bank = self.rd(0xFFFF)[0] & 15
