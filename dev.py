@@ -365,6 +365,7 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
 
 
 BUS_RESCAN_S = 0.25   # one scan of the candidate buses is ~0.1 s; rescan pace while EDID is silent
+CONN_TRIES = 3        # EDID reads of the connector's own bus before other buses (~0.5 s worst case, then fallback + WARN)
 
 def _conn_bus(u: dict) -> int | None:
     """The connector's own i2c bus from sysfs (i915 links it; NVIDIA has none -> None)."""
@@ -379,10 +380,17 @@ def _bus(u: dict, wait_s: float = 0.0) -> int:
     cands += [b for b in i2cbus.list_buses(display_only=True) if b not in cands]
     if i2cbus.reset_rate():
         log("bus rate: gmbus_rate module was left loaded; unloaded (100 kHz)", "WARN")
+    conn = cands[0] if cands and cands[0] == _conn_bus(u) else None
+    for _ in range(CONN_TRIES if conn is not None else 0):   # one missed EDID read fell through to DP-1 AUX (#76)
+        if i2cbus.edid_serial(conn) == u["serial"]:
+            return conn
+        time.sleep(BUS_RESCAN_S)
     t0 = time.monotonic()
     while True:
         for b in cands:
             if i2cbus.edid_serial(b) == u["serial"]:
+                if conn is not None and b != conn:
+                    log(f"bus: {u['serial']} not on its connector bus {conn} after {CONN_TRIES} reads; using bus {b}", "WARN")
                 return b
         if time.monotonic() - t0 >= wait_s:         # wait_s 0 = one scan; >0 = rescan (EDID returns as the scaler boots)
             break
