@@ -27,9 +27,23 @@ Some ports advance their index by themselves after a data access, some are FIFOs
 
 ## 4. Timing
 - No waits. Each access is one CPU XDATA access.
+- Performance requirement (hot path: these run many times per main-loop pass on the unit; 2026-11-07 the module cost ~4 % loop rate):
+  - `dp_wr`, `dp_rd`, `dp_rmw`, `dp_test`, `dp_wr16`, `dp_rd16`: NO calls to other functions (no `dp_rd` inside `dp_test`/`dp_rmw`, no `dp_wr` inside `dp_wr16`). The port access is written inline in each function, with exactly the register sequence of section 2.
+  - Keep arguments and temporaries out of XDATA where the compiler allows (no extra copies of arguments into locals; use the parameters directly; narrow types; `__data` is not available to the integrator build, so minimise live temporaries instead).
+  - Budgets per call, measured as below (machine cycles from entry to return, `movx` instructions executed); the clean function must be <= the reference on BOTH:
+| function | reference cycles | reference movx | what is measured |
+|---|---|---|---|
+| `dp_wr` | 112 | 13 | write byte, port 0x0031, idx 0x20 |
+| `dp_test` | 116 | 13 | test bit |
+| `dp_rmw` | 200 | 20 | read-modify-write |
+| `dp_wr16` | 324 | 36 | write 16-bit value |
+  - Current implementation (first merge), same method: `dp_wr` 56 / 9, `dp_test` 110 / 15, `dp_rmw` 142 / 18, `dp_wr16` 212 / 28. Only `dp_test` exceeds a budget (15 > 13 movx; 63 vs 66 instructions). Target for all: strictly fewer instructions than the reference.
+  - `dp_rd_n` / `dp_rd16`: no reference budget measured (the reference takes a bit argument); same rule: no internal calls, loop body inline.
 
 ## 5. Data
-- None.
+| item | tag | source |
+|---|---|---|
+| reference cycles / movx in section 4 | measured | ucsim, reference image wb-port13 (SDK routines), image with the first clean merge, 2026-11-07, args: port 0x0031 idx 0x20 |
 
 ## 6. Oracle
 - Host test, recording REG8 mock: each row of section 2 for idx in {0x00, 0x7F, 0xFF} (wrap: 0xFF + 1 = 0x00), n in {0, 1, 2, 5},
@@ -39,6 +53,7 @@ Some ports advance their index by themselves after a data access, some are FIFOs
 
 ## 7. Implementer task
 - Files: `awto/dataport/dataport.c`, `tests/host/test_dataport.c`.
-- Budget: <= 500 B code total (sdcc --model-large).
+- Budget: <= 500 B code total (sdcc --model-large). Performance: section 4 (no internal calls; per-call budgets).
+- Report the measured numbers: ucsim, entry to return, cycles and movx per function (the verifier repeats the measurement).
 
 ## 8. Q&A
