@@ -802,6 +802,21 @@ def cmd_mode(extra: list[str]) -> int:
         return 1
 
 
+@command("eyes-free host-mode sweep of a test unit (what works: OK/FRC/GARBLE/NOSUPPORT...), 1080p60 after each; log tmp/logs/mode_sweep.log",
+         args="[--unit N] [--dry-run] [--modes WxH@HZ,...] [--label L]", kind="action")
+def cmd_sweep(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    opts = [f for f in ("--dry-run",) if _flag(extra, f)]
+    for flag in ("--modes", "--label"):
+        v = _opt(extra, flag)
+        if v is True:
+            raise SystemExit(f"sweep: {flag} needs a value; nothing done")
+        if v is not None:
+            opts += [flag, v]
+    _done(extra, "sweep")
+    return _py("mode_sweep.py", "--unit", n, *opts)
+
+
 def _register_steps() -> None:
     """Expose each STEPS entry as a first-class command."""
     for name, (summary, _argv, takes_extra) in STEPS.items():
