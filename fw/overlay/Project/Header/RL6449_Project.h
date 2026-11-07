@@ -29,7 +29,7 @@
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON
-#define _AWTO_DIAG_SELFTEST                                     _OFF    // _ON = delay self-test before panel power (usDelayXms10/usBusy1ms), costs boot time (#53.6)
+#define _AWTO_DIAG_DELAYCAL                                     _ON     // _ON = delay calibration test inside the panel T3 wait (no added boot time, #53.6, docs/diag-block.md)
 #if(_AWTO_DIAG == _ON)
 typedef struct
 {
@@ -42,10 +42,13 @@ typedef struct
     unsigned int usT2Isr;                       // Timer2 ISR entries
     unsigned int usEx1Isr;                      // EXINT1 (DDC-CI/debug) ISR entries
     unsigned char ucDelay5usN;                  // g_ucDelay5usN_Base seen by the self-test
-    unsigned int usDelayXms10;                  // ScalerTimerDelayXms(10), Timer2 counts / 4
-    unsigned int usBusy1ms;                     // 200 x ScalerDelay5us(), Timer2 counts / 4
-    unsigned char ucRcap2h;                     // RCAP2H at self-test: tells XTAL from M2PLL reload
-    unsigned int usReserved[4];                 // was the micro-bench (removed, #53.6); stays 0
+    unsigned int usDelayXms10;                  // 10 ticks of ScalerTimerDelayXms, Timer2 counts / 4
+    unsigned int usDelay5us10;                  // 10 x ScalerDelay5us(), raw Timer2 counts, EA off
+    unsigned char ucRcap2h;                     // RCAP2H at the test: tells XTAL from M2PLL reload
+    unsigned int usDelayXus100;                 // DELAY_XUS(100), raw Timer2 counts, EA off
+    unsigned int usDelayXusIsr100;              // DELAY_XUS_EXINT(100), raw counts
+    unsigned int usDelay5usIsr10;               // 10 x DELAY_5US_EXINT(), raw counts
+    unsigned int usT3Wait64;                    // whole panel T3 wait (test included), Timer2 counts / 64
     unsigned char ucTestCmd;                    // OSD test command, written over I2C, applied + cleared in main loop (#33)
     unsigned char ucDbgPopup;                   // 1 = next input-info pop-up shows the debug lines (#34), cleared when drawn
     unsigned int usLoopRate;                    // main-loop passes in the last ~1 s (#34)
@@ -66,10 +69,10 @@ extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
-#if(_AWTO_DIAG_SELFTEST == _ON)
-extern void AwtoDiagSelfTest(void);
+#if(_AWTO_DIAG_DELAYCAL == _ON)
+extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
-#define AwtoDiagSelfTest()
+#define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #endif
 #define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
@@ -79,7 +82,7 @@ extern void AwtoDiagSelfTest(void);
 #define AwtoDiagStage(n)
 #define AwtoDiagMainPass()
 #define AwtoDiagTestCmd()
-#define AwtoDiagSelfTest()
+#define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #define AWTO_DIAG_T2ISR()
 #define AWTO_DIAG_EX1ISR()
 #endif
