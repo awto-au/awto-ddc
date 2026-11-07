@@ -231,7 +231,24 @@ extern void AwtoFreqUpdate(void);
 #define AWTO_SW_EV_LOGO                                         0x60    // OsdDispShowLogo: arg 0 = draw start, 1 = drawn (OSD on)
 #define AWTO_SW_EV_VDD                                          0x70    // panel VDD on early, right after pin-share (#63 boot time)
 #define AWTO_SW_EV_BLANK                                        0x80    // backlight kept on, picture blanked instead (#60 step 2); arg = site
-#define AWTO_SW_EV_PROBE                                        0x90    // switch-path probe (#60); arg = site, names in scripts/sw_timeline.py
+#ifndef _AWTO_LOOP_PROF
+#define _AWTO_LOOP_PROF                                         _OFF    // -D_AWTO_LOOP_PROF=_ON: per-handler main-loop cost (fw/sdcc/awto_loopprof.inc)
+#endif
+#define AWTO_LP_SLOTS                                           12
+typedef struct
+{
+    unsigned char ucReset;                      // host writes 1: zeroed at the next pass start
+    unsigned int usPer;                         // Timer2 counts per 1 ms tick
+    unsigned long ulPasses;
+    unsigned long pulT2[AWTO_LP_SLOTS];         // Timer2 counts per segment (scripts/loop_prof.py SLOTS)
+} StAwtoLoopProf;
+#if(_AWTO_LOOP_PROF == _ON)
+extern void AwtoLpMark(unsigned char ucK);
+#define AWTO_LP(k)                                              AwtoLpMark(k)
+#else
+#define AWTO_LP(k)
+#endif
+#define AWTO_SW_EV_PROBE                                       0x90    // switch-path probe (#60); arg = site, names in scripts/sw_timeline.py
 typedef struct
 {
     unsigned char ucId;

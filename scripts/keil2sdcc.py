@@ -256,7 +256,12 @@ INSERTS = [
      "            if(g_stAwtoDiag.ucDbgPopup == 1)\n            {\n                AwtoOsdDebugLines();\n                break;\n            }"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
-] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
+] + [   # main-loop cost per handler (fw/sdcc/awto_loopprof.inc, -D_AWTO_LOOP_PROF=_ON); AWTO_LP(k) lands just before handler k
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_loopprof.inc").read_text().rstrip("\n")),
+] + [("Kernel/System/Code/SysMain.c", rf"^\s*{fn}\(\);", f"            AWTO_LP({k});", r"^void main\(void\)$")
+     for k, fn in enumerate(("AwtoSwPoll", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler", "SysSourceHandler",
+                             "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler", "ScalerHdcp2Handler", "AwtoHoldOsdGuard",
+                             "UserCommonDdcciHandler"))] + [   # panel power-up in UserCommonInterfacePanelPowerAction: _PANEL_ON path, then the _BACKLIGHT_ON path
     ("Kernel/User Common Function/Code/UserCommonInterface.c", rx, txt, rf"^\s*case {case}:")
     for case, tail in (("_PANEL_ON", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)"),
                        ("_BACKLIGHT_ON", r"^\s*// Set Video Stream parameter"))
