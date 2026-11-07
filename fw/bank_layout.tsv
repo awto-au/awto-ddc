@@ -779,7 +779,7 @@ stub	_ScalerGlobalFirstActiveProc	C	0x2c3c	9
 stub	_ScalerGlobalOsdInitial	C	0x2c45	9
 stub	_ScalerGlobalResetProc	C	0x2c4e	9
 stub	_ScalerMDomainCalculateDclkDVtotal	C	0x2c57	9
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1230	C	0x2c60	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1231	C	0x2c60	92
 stub	_ScalerMemoryGetIVS2DVSDelayPixel	C	0x2ce9	9
 stub	_AwtoMeasEvent	C	0x2d94	9
 stub	_AwtoMeasInit	C	0x2d9d	9
@@ -818,6 +818,7 @@ stub	_SysJudgeGetActiveWaitTime	C	0x3236	9
 stub	_SysJudgeHandler	C	0x323f	9
 stub	_AwtoDiagInit	C	0x3248	9
 stub	_AwtoDiagMainPass	C	0x3251	9
+stub	_AwtoDiagPanelT3Wait	C	0x325a	9
 stub	_AwtoDiagStage	C	0x3263	9
 stub	_SysMainSystemInitial	C	0x326c	9
 stub	_SysMainSytemPowerDetect	C	0x3275	9
@@ -1399,6 +1400,9 @@ fn	_ScalerDpRx1AuxIntInitial	4	0x07e8	116
 fn	_ScalerDpRx1AuxPowerOnInitial	4	0x085c	240
 fn	_ScalerDpRx1DpcdInitial	4	0x094c	564
 fn	_ScalerDisplayDPTx1AuxPHYSet	4	0x0b80	112
+fn	_AwtoDiagDelayCal	4	0x0bf0	1036
+fn	_AwtoDiagPanelT3Wait	4	0x0ffc	272
+fn	_AwtoDiagT2Snap	4	0x110c	124
 fn	_MenuNone	4	0x1188	312
 fn	_ScalerFRCEn	4	0x1354	272
 fn	_ScalerFRCInitial	4	0x1464	252
@@ -1648,6 +1652,7 @@ fn	_UserCommonInterfaceOsdHandler	4	0xa768	16
 fn	_UserCommonInterfaceOsdResetProc	4	0xa778	60
 fn	_UserCommonInterfaceTimerEventProc	4	0xa7b4	32
 fn	_UserCommonNVRamGetSystemData	4	0xa7d4	416
+fn	_AwtoDiagT2Diff	4	0xa974	300
 fn	_AwtoMeasInit	4	0xaf78	52
 const	___str_21	4	0xafac	8
 const	___str_22	4	0xafb4	12

@@ -182,6 +182,7 @@ extern void AwtoFreqUpdate(void);
 #if(_AWTO_DEBUG_PORT == _ON)
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
 #endif
+#define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)
 #define _CHECKSUM                                               0xA2    // awto NVRAM layout id; change = defaults reload (SDK 0x1A)
 

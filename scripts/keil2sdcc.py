@@ -250,6 +250,9 @@ SUBS = [
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c",
      r"#if\(_DEBUG_DDC_CHANNEL_SEL == _DDC3\)\s*\n {8}// DDC from DDC3 channel.*?#endif",   # SwitchPort (8 sp), not DdcciInitial (4)
      lambda m: "#if(_AWTO_DBG_FOLLOW == _ON)  // [keil2sdcc] sub\n        AwtoDbgSelectChannel(ucInputPort);\n#else\n%s\n#endif" % m.group(0), 1),
+    # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
+    (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
+     lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),
 ]
 
 
