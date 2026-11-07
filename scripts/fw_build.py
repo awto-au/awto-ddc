@@ -230,6 +230,8 @@ def parse_args(argv=None):
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
     ap.add_argument("--pin-common", default="", help="passed to sdcc_bank (comma list of fns forced into common)")
     ap.add_argument("--src-patch", default="")
+    ap.add_argument("--resid-end", default="", help="passed to sdcc_bank: common bytes kept for vectors/library before the "
+                    "chunk slots (default 0xc00); a different value needs a new layout file")
     a = ap.parse_args(argv)
     if a.cluster:
         import sdcc_layout
@@ -262,7 +264,8 @@ def main() -> int:
                  *(["--layout", a.layout, "--layout-out", new_layout] if a.layout else []),
                  *(["--cluster", a.cluster] if a.cluster else []),
                  *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
-                 *(["--pin-common", a.pin_common] if a.pin_common else [])])
+                 *(["--pin-common", a.pin_common] if a.pin_common else []),
+                 *(["--resid-end", a.resid_end] if a.resid_end else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
     # crt_memcpy reads its PARMs little-endian, ABI 0: BE and --sdcccall>=1 builds keep the library memcpy (#24, #15, #51.1)

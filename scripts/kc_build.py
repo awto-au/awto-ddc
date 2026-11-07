@@ -25,6 +25,7 @@ def main() -> int:
     ap.add_argument("--serial", default="AWT26110003")
     ap.add_argument("--no-layout", action="store_true")
     ap.add_argument("--layout", default="")
+    ap.add_argument("--resid-end", default="")
     argv = sys.argv[1:]
     for i, s in enumerate(argv[:-1]):          # --flags "--keil-compat" (argparse rejects values starting with --)
         if s == "--flags" and argv[i + 1].startswith("-"):
@@ -37,7 +38,8 @@ def main() -> int:
     t0 = time.monotonic()
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a.tag}: bin={a.bin} flags={a.flags!r} level={a.level}\n")
     r = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", ""] if a.no_layout else []),
-                        *(["--layout", str(Path(a.layout).resolve())] if a.layout else [])], cwd=ROOT, env=env,
+                        *(["--layout", str(Path(a.layout).resolve())] if a.layout else []),
+                        *(["--resid-end", a.resid_end] if a.resid_end else [])], cwd=ROOT, env=env,
                        capture_output=True, text=True, timeout=BUILD_TMO)
     log.write(r.stdout[-3000:] + r.stderr[-2000:])
     out = ROOT / "tmp/runs" / a.tag
