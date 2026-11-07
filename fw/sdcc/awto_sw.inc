@@ -1,17 +1,17 @@
-// #60 input-switch timeline (RL6449_Project.h StAwtoSw): events with g_usTimerCounter ms; test cmd 0x31..0x33 arms it
+// #60 input-switch timeline (RL6449_Project.h StAwtoSw): events in Timer2 ms ticks; test cmd 0x31..0x33 arms it
 // (fixed port D1..D3), 0x30 = auto search again. Host: scripts/sw_timeline.py. Inserted into SysMain.c by keil2sdcc.py.
 #if(_AWTO_SW_LOG == _ON)
 __xdata StAwtoSw g_stAwtoSw;
 
-static unsigned int AwtoSwNow(void)
-{
+static unsigned int AwtoSwNow(void)             // Timer2 ISR count = 1 per ms tick; g_usTimerCounter is rebased to 0
+{                                               // by ScalerTimerCheckTimerEvent near _EVENT_TIME_MAX (log showed the jumps)
     unsigned int usNow;
 
     do
     {
-        usNow = g_usTimerCounter;
+        usNow = g_stAwtoDiag.usT2Isr;
     }
-    while(usNow != g_usTimerCounter);
+    while(usNow != g_stAwtoDiag.usT2Isr);
     return usNow;
 }
 
