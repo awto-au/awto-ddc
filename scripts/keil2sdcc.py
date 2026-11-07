@@ -274,6 +274,10 @@ SUBS = [
      lambda m: m.group(1) + "\n    SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());  // [keil2sdcc] sub", 1),
 ]
 
+from keil2sdcc_drops import DROP_WRAPS, DROP_SUBS  # noqa: E402  (#65 step 1)
+WRAPS += DROP_WRAPS
+SUBS += DROP_SUBS
+
 
 def apply_subs(rel: str, text: str, stats) -> str:
     for f, rx, fn, want in SUBS:
