@@ -77,7 +77,7 @@ def set_mode(u: dict, mode: str) -> tuple[bool, str]:
     scale 1.25/1.5/2 (mode wider than the footprint: dev.py's keep-footprint scale can be unsupported) and
     x right-aligned against the neighbour (mode narrower: gap = 'not adjacent'). REST: scale 1 at the original x."""
     t = u["gdctl"]
-    args = dev.gdctl_set_args(gdctl_show(), t, mode)
+    args = ORIG_ARGS[:] if mode == REST and ORIG_ARGS else dev.gdctl_set_args(gdctl_show(), t, mode)
     w = int(mode.split("x")[0])
     rx = str(int(ORIG_X[0]) + REST_W - w) if ORIG_X and w < REST_W else None
     if mode == REST:
@@ -88,7 +88,7 @@ def set_mode(u: dict, mode: str) -> tuple[bool, str]:
     for scale, x in attempts:
         a2 = args if scale is None else with_scale(args, t, scale)
         if x is not None:
-            a2 = set_block_val(a2, t, "--x", x)
+            a2 = normalise(set_block_val(a2, t, "--x", x))
         try:
             r = subprocess.run(["gdctl", "set", *a2], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
         except subprocess.TimeoutExpired:
@@ -96,12 +96,13 @@ def set_mode(u: dict, mode: str) -> tuple[bool, str]:
         if r.returncode == 0:
             return True, ", ".join(x_ for x_ in (f"scale {scale}" if scale not in (None, "1") else "", f"x {x}" if x and mode != REST else "") if x_)
         err = r.stderr.strip() or f"rc={r.returncode}"
-        if not re.search(r"overlap|adjacent|scale", err):
+        if not re.search(r"overlap|adjacent|scale|offset", err):
             break
     return False, err
 
 
 ORIG_X: list[str] = []          # target's x in the rest layout, recorded at start; every REST set restores it
+ORIG_ARGS: list[str] = []       # whole rest layout at start: REST re-applies it verbatim (a shifted fallback layout moved the others)
 OVERLAP_SCALES = ["1.25", "1.5", "2"]
 
 
@@ -116,6 +117,14 @@ def set_block_val(args: list[str], target: str, flag: str, new: str) -> list[str
     j = args.index("--logical-monitor", i) if "--logical-monitor" in args[i:] else len(args)
     k = args.index(flag, i, j)
     return args[:k + 1] + [new] + args[k + 2:]
+
+
+def normalise(args: list[str]) -> list[str]:
+    """Shift every --x so the leftmost logical monitor is at x 0: mutter refuses a layout with an offset origin
+    ('positions are offset'); relative arrangement unchanged, the REST set puts the original coordinates back."""
+    xs = [int(args[i + 1]) for i, v in enumerate(args) if v == "--x"]
+    dx = min(xs) if xs else 0
+    return [str(int(v) - dx) if i and args[i - 1] == "--x" else v for i, v in enumerate(args)] if dx else args
 
 
 def with_scale(args: list[str], target: str, scale: str) -> list[str]:
@@ -242,7 +251,8 @@ def main() -> int:
     if i2cbus.rate_khz() != 100:
         raise SystemExit(f"bus rate {i2cbus.rate_khz()} kHz; the 0x35 probe runs at 100 kHz only; nothing done")
     maps, mapname = sym_map(u)
-    ORIG_X[:] = [set_block_val_get(dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST), u["gdctl"])]
+    ORIG_ARGS[:] = dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST)
+    ORIG_X[:] = [set_block_val_get(ORIG_ARGS, u["gdctl"])]
     flashed = dev._flashed(u)
     image = a.recover_image or flashed.get("image", "")
     label = a.label or flashed.get("tag", "image")
