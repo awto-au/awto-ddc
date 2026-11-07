@@ -125,7 +125,9 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC data FIFO fill, as the SDK 0xBB reply
 // Debug slave 0x35 on the DDC of the active port, not fixed _PCB_DEBUG_DDC (#28): D1 -> DDC1 (DP AUX), D2 -> DDC2, D3 -> DDC3.
 // SCL hold/release of the debug protocol follow FF22 (fw/sdcc/awto_dbgport.inc, keil2sdcc SUBS).
+#ifndef _AWTO_DBG_FOLLOW
 #define _AWTO_DBG_FOLLOW                                        _ON
+#endif
 #if(_AWTO_DBG_FOLLOW == _ON)
 #define AWTO_DBG_SCL(op)                                        do { BYTE ucAwtoCh = MCU_FF22_IIC_CH_SEL & 0x07; \
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
@@ -217,6 +219,9 @@ extern void AwtoFreqUpdate(void);
 #ifndef _AWTO_DDCCI_PARK
 #define _AWTO_DDCCI_PARK                                        0       // bisect (kvm1 dead on unit 3): 1 = IIC_1 polled but parked on channel 7 (no DDC)
 #endif
+#ifndef _AWTO_DDCCI_FIXCH
+#define _AWTO_DDCCI_FIXCH                                       0       // bisect: IIC_1 fixed on this DDC channel (2 = DDC1 / D1 DP AUX), no follow
+#endif
 #ifndef _AWTO_DDCCI_NOPOLL
 #define _AWTO_DDCCI_NOPOLL                                      0
 #endif
@@ -235,7 +240,7 @@ extern void AwtoDdcciPoll(void);
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } }
-#if(_AWTO_DDCCI_PARK == 1)
+#if((_AWTO_DDCCI_PARK == 1) || (_AWTO_DDCCI_FIXCH != 0))
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
 #define AWTO_DDCCI_FOLLOW(ch)                                   { AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | (ch); }

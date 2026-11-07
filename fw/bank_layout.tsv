@@ -716,6 +716,12 @@ stub	_ScalerMemoryGetIVS2DVSDelayPixel	C	0x2ce9	9
 stub	_AwtoSwFast	C	0x2cf2	8
 stub	_AwtoSwFastPoll	C	0x2cfa	8
 stub	_AwtoFastScalerClearStatus	C	0x2d02	8
+stub	_AwtoDdcEngineInit	C	0x2d0a	8
+stub	_AwtoDdcPortToVcp	C	0x2d12	8
+stub	_AwtoDdcReply	C	0x2d1a	8
+stub	_AwtoDdcciPoll	C	0x2d22	8
+stub	_AwtoInputSelect	C	0x2d2a	8
+stub	_UserCommonAdjustRealValueToPercent	C	0x2d32	8
 stub	_RTDFactoryAdcGainRAdjustEnter	C	0x2d3a	9
 stub	_RTDFactoryAdcGainRAdjustExit	C	0x2d43	9
 stub	_RTDFactoryAdcGainRAdjustLeft	C	0x2d4c	9
@@ -852,7 +858,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1251	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1252	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -1424,7 +1430,6 @@ fn	_ScalerFRCInitial	4	0x0cb8	252
 fn	_ScalerFRCSetDDomainSourceSelect	4	0x0db4	80
 fn	_ScalerGlobalCrystalClkSel	4	0x0e04	68
 fn	_ScalerLDOPowerControl	4	0x0e48	8
-fn	_AwtoDbgSelectChannel	4	0x0e50	152
 fn	_ScalerMcuDdcDebounceSel	4	0x0ee8	124
 fn	_ScalerMcuDdcInitial	4	0x0f64	276
 fn	_ScalerMcuDdcciInitial	4	0x1078	144
@@ -2271,6 +2276,8 @@ fn	_ScalerPowerGroupD3PowerCut	10	0x1bac	196
 fn	_ScalerTMDSFirstActiveProc	10	0x1c70	52
 fn	_ScalerTMDSRx2CheckDataDFE	10	0x1ca4	128
 fn	_ScalerTMDSRx3CheckDataDFE	10	0x1d24	128
+fn	_AwtoDdcEngineInit	10	0x1da4	148
+fn	_AwtoDdcReply	10	0x1e38	196
 fn	_UserDdcciHandler	10	0x1f20	8
 fn	_AwtoDiagTestCmd	10	0x1f28	348
 fn	_RTDFlashRestorePanelUsedTimeData	10	0x2084	52
@@ -2733,6 +2740,7 @@ fn	_UserCommonInterfaceGetHDCPKeyBKsv	10	0xaec8	92
 fn	_UserCommonInterfaceGetRGBQuantizationLimitRangeStatus	10	0xaf24	36
 fn	_UserCommonInterfaceOsdActiveProc	10	0xaf48	8
 fn	_AwtoInputSelect	10	0xaf50	112
+fn	_AwtoDdcPortToVcp	10	0xafc0	36
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	11	0x0000	56
 const	_tFONT1_ICON_ADVANCE	11	0x0038	348
 const	_tFONT1_ICON_ASPECT	11	0x0194	384
@@ -2875,6 +2883,7 @@ fn	_RTDFactorySSCRight	12	0x035c	12
 fn	_ar_muldiv	12	0x0368	584
 fn	_mul64	12	0x05b0	520
 fn	_rnd_shl	12	0x07b8	660
+const	_tAwtoIicBase	12	0x0a4c	12
 fn	_dp_rd_n	12	0x0a88	152
 fn	_dp_rmw	12	0x0b20	100
 fn	_dp_test	12	0x0b84	64
@@ -2883,6 +2892,9 @@ fn	_dp_wr16	12	0x0c04	112
 fn	_hb_burst	12	0x0c74	340
 fn	_reg_rd_n	12	0x0dc8	120
 fn	_AwtoDiagDelayCal	12	0x0e40	2848
+fn	_AwtoDdcRequest	12	0x1960	816
+fn	_AwtoDdcciPoll	12	0x1c90	620
+const	_tAwtoDdcCaps	12	0x1efc	96
 fn	_AwtoSlowDue	13	0x0000	312
 fn	_AwtoSwEvent	13	0x0138	160
 fn	_AwtoTmdsStuck	13	0x01d8	132
