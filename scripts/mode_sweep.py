@@ -31,8 +31,8 @@ REST = "1920x1080@60.000"
 SETTLE_S = 7.0
 FLAG_REAPPEAR_S = 0.5          # #26: cleared DDR flags are back within ~0.5 s under FRC traffic
 GDCTL_SHOW_V_S = 5             # one D-Bus call ~0.1 s, verbose 49 modes; 50x; expiry = abort before any change
-# FRC on = P5_27 bit 7 (vendor FRC modes read A2; line-buffer 1080p60 is read as baseline and logged raw).
-FRC_BIT = 0x80
+# FRC (DDR frame buffer) = P5_27 bit 5: A2/P5_AC 41 in FRC modes, 82/05 in line-buffer modes (dp sweep 2026-11-07, #26).
+FRC_BIT = 0x20
 DDR_FLAGS = [0x04 + i for i in range(8)] + [0xF1 + i for i in range(7)]      # VALID_WIN_DET SLIC0/1, INT_STATUS1
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/mode_sweep.log"
@@ -71,22 +71,49 @@ def gdctl_show() -> str:
 
 
 def set_mode(u: dict, mode: str) -> tuple[bool, str]:
-    """Same command shape as dev.py mode; keeps the other monitors. -> (ok, detail)."""
-    args = dev.gdctl_set_args(gdctl_show(), u["gdctl"], mode)
-    for scale in (["1"] if mode == REST else [None, *OVERLAP_SCALES]):      # dev.py's footprint-keeping scale can be unsupported (2048 wide): retry integer-ish ones
-        a2 = args if scale is None else with_scale(args, u["gdctl"], scale)
+    """Same command shape as dev.py mode; keeps the other monitors. Fallbacks when mutter refuses the layout:
+    scale 1.25/1.5/2 (mode wider than the footprint: dev.py's keep-footprint scale can be unsupported) and
+    x right-aligned against the neighbour (mode narrower: gap = 'not adjacent'). REST: scale 1 at the original x."""
+    t = u["gdctl"]
+    args = dev.gdctl_set_args(gdctl_show(), t, mode)
+    w = int(mode.split("x")[0])
+    rx = str(int(ORIG_X[0]) + 1920 - w) if ORIG_X and w < 1920 else None
+    if mode == REST:
+        attempts = [("1", ORIG_X[0] if ORIG_X else None)]
+    else:
+        attempts = [(None, None)] + ([(None, rx)] if rx else []) + [(sc, x) for sc in OVERLAP_SCALES for x in ([None, rx] if rx else [None])]
+    err = ""
+    for scale, x in attempts:
+        a2 = args if scale is None else with_scale(args, t, scale)
+        if x is not None:
+            a2 = set_block_val(a2, t, "--x", x)
         try:
             r = subprocess.run(["gdctl", "set", *a2], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
         except subprocess.TimeoutExpired:
             return False, f"gdctl set timed out after {dev.GDCTL_SET_S} s"
         if r.returncode == 0:
-            return True, "" if scale in (None, "1") else f"scale {scale}"
-        if "overlap" not in r.stderr and "scale" not in r.stderr:
+            return True, ", ".join(x_ for x_ in (f"scale {scale}" if scale not in (None, "1") else "", f"x {x}" if x and mode != REST else "") if x_)
+        err = r.stderr.strip() or f"rc={r.returncode}"
+        if not re.search(r"overlap|adjacent|scale", err):
             break
-    return False, r.stderr.strip() or f"rc={r.returncode}"
+    return False, err
 
 
+ORIG_X: list[str] = []          # target's x in the rest layout, recorded at start; every REST set restores it
 OVERLAP_SCALES = ["1.25", "1.5", "2"]
+
+
+def set_block_val_get(args: list[str], target: str) -> str:
+    i = args.index(target)
+    j = args.index("--logical-monitor", i) if "--logical-monitor" in args[i:] else len(args)
+    return args[args.index("--x", i, j) + 1]
+
+
+def set_block_val(args: list[str], target: str, flag: str, new: str) -> list[str]:
+    i = args.index(target)
+    j = args.index("--logical-monitor", i) if "--logical-monitor" in args[i:] else len(args)
+    k = args.index(flag, i, j)
+    return args[:k + 1] + [new] + args[k + 2:]
 
 
 def with_scale(args: list[str], target: str, scale: str) -> list[str]:
@@ -209,10 +236,11 @@ def main() -> int:
     if i2cbus.rate_khz() != 100:
         raise SystemExit(f"bus rate {i2cbus.rate_khz()} kHz; the 0x35 probe runs at 100 kHz only; nothing done")
     maps, mapname = sym_map(u)
+    ORIG_X[:] = [set_block_val_get(dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST), u["gdctl"])]
     flashed = dev._flashed(u)
     image = a.recover_image or flashed.get("image", "")
     label = a.label or flashed.get("tag", "image")
-    tsv = a.resume or ROOT / f"tmp/logs/mode_sweep-{label}-{time.strftime('%Y%m%d-%H%M%S')}.tsv"
+    tsv = a.resume.resolve() if a.resume else ROOT / f"tmp/logs/mode_sweep-{label}-{time.strftime('%Y%m%d-%H%M%S')}.tsv"
     cols = ["mode", "verdict", "mode_state", "timing", "p0_02", "p5_27", "p5_ac", "frc", "ddr_flag_bytes", "note"]
     tf = tsv.open("a" if a.resume else "w")
     if not a.resume:
@@ -230,11 +258,21 @@ def main() -> int:
             note = r.get("err", "")
             if r["verdict"] == "HANG":
                 say(lf, f"{m:<18} HANG ({note}); dev.py recover {image}")
-                if dev.cmd_recover(["--unit", a.unit, image]) != 0:
+                rc_r = dev.cmd_reset(["--unit", a.unit])          # fast ISP reboot first; recover (relay cycle + reflash) if still silent
+                if rc_r == 0:
+                    time.sleep(SETTLE_S)                          # waits for: firmware boot + mode detect (same settle as a modeset)
+                    r2 = measure(u, maps, m, lf)
+                    if r2["verdict"] != "HANG":
+                        say(lf, f"{m:<18} after reset: {r2['verdict']}")
+                        r, note = {"verdict": "HANG"}, f"bus silent; dev.py reset recovered (then {r2['verdict']})"
+                if note.startswith("bus silent"):
+                    pass
+                elif dev.cmd_recover(["--unit", a.unit, image]) != 0:
                     say(lf, "recover FAILED; stopping with the unit as is")
                     tf.write(f"{m}\tHANG\t\t\t\t\t\t\t\trecover failed\n")
                     return 1
-                note = "recovered"
+                else:
+                    note = "bus silent; recovered by relay cycle + reflash"
             else:
                 s = r["ms"]
                 say(lf, f"{m:<18} {r['verdict']:<10} state={H.MODE_NAMES[s] if s < len(H.MODE_NAMES) else s} "
