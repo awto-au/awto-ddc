@@ -271,6 +271,11 @@ SUBS = [
      lambda m: "#if(_AWTO_FAST_BOOT == _OFF)  // [keil2sdcc] sub\n" + m.group(0) + "\n#endif", 1),
     ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c", r"(// Wait for (DDR|1\.1V) stable, can't delete\s*\n\s*)(ScalerTimerDelayXms\(10\);)",
      lambda m: m.group(1) + "\n#if(_AWTO_FAST_BOOT == _OFF)  // [keil2sdcc] sub\n            " + m.group(3) + "\n#endif", 2),
+    # #60 step 2: the three backlight-offs of an input change / display setting become a blank (AWTO_BL_OFF_OR_BLANK)
+    ("Kernel/System/Code/SysMode.c", r"(// Turn off backlight to prevent garbage\s*\n\s*)UserCommonInterfacePanelPowerAction\(_BACKLIGHT_OFF\);",
+     lambda m: m.group(1) + "AWTO_BL_OFF_OR_BLANK(1);  // [keil2sdcc] sub", 2),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"UserCommonInterfacePanelPowerAction\(_BACKLIGHT_OFF\);",
+     lambda m: "AWTO_BL_OFF_OR_BLANK(2);  // [keil2sdcc] sub", 1),
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
     (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
      lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),

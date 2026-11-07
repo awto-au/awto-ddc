@@ -207,6 +207,7 @@ extern void AwtoFreqUpdate(void);
 #define AWTO_SW_EV_HOLD_DROP                                    0x52    // OSD event dropped under a held logo; arg = event
 #define AWTO_SW_EV_LOGO                                         0x60    // OsdDispShowLogo: arg 0 = draw start, 1 = drawn (OSD on)
 #define AWTO_SW_EV_VDD                                          0x70    // panel VDD on early, right after pin-share (#63 boot time)
+#define AWTO_SW_EV_BLANK                                        0x80    // backlight kept on, picture blanked instead (#60 step 2); arg = site
 typedef struct
 {
     unsigned char ucId;
@@ -242,6 +243,14 @@ extern void AwtoPanelVddEarly(void);
 // D027 2 x 10 ms; PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops), panel VDD right after pin-share, T3 = one frame while the
 // scaler shows its own pattern (logo / black background): no host video can glitch, the panel only needs a valid frame.
 #define _AWTO_FAST_BOOT                                         _ON
+// #60 step 2 (Dan's panel policy 4): no backlight off on mode reset / display setting / DCLK change; the picture is blanked
+// (forced background) instead and the active proc unblanks it. Real power saving still turns the backlight off.
+#define _AWTO_KEEP_BACKLIGHT                                    _ON
+#if(_AWTO_KEEP_BACKLIGHT == _ON)
+#define AWTO_BL_OFF_OR_BLANK(site)                              { ScalerDDomainBackgroundEnable(_ENABLE); AwtoSwEvent(AWTO_SW_EV_BLANK, (site)); }
+#else
+#define AWTO_BL_OFF_OR_BLANK(site)                              UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF)
+#endif
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)

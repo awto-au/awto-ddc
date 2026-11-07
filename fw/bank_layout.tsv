@@ -1381,6 +1381,7 @@ const	___str_6	4	0x01d4	12
 const	___str_7	4	0x01e0	12
 const	___str_8	4	0x01ec	12
 const	___str_9	4	0x01f8	12
+fn	_UserCommonInterfaceOsdResetProc	4	0x0204	68
 const	_tEDID_TABLE_D1	4	0x0260	268
 const	_tEDID_TABLE_D2	4	0x036c	268
 const	_tEDID_TABLE_D3	4	0x0478	268
@@ -1640,7 +1641,6 @@ fn	_UserCommonInterfaceInitial	4	0xa64c	12
 fn	_UserCommonInterfaceLoadEmbeddedEdidData	4	0xa658	48
 fn	_UserCommonInterfaceLoadEmbeddedEdidDataByPort	4	0xa688	224
 fn	_UserCommonInterfaceOsdHandler	4	0xa768	16
-fn	_UserCommonInterfaceOsdResetProc	4	0xa778	60
 fn	_UserCommonInterfaceTimerEventProc	4	0xa7b4	32
 fn	_UserCommonNVRamGetSystemData	4	0xa7d4	416
 fn	_AwtoDiagT2Diff	4	0xa974	300
