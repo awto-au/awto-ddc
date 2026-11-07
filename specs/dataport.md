@@ -53,7 +53,9 @@ Some ports advance their index by themselves after a data access, some are FIFOs
 
 ## 7. Implementer task
 - Files: `awto/dataport/dataport.c`, `tests/host/test_dataport.c`.
-- Budget: <= 500 B code total (sdcc --model-large). Performance: section 4 (no internal calls; per-call budgets).
+- Budget: <= 550 B code total (sdcc --model-large; re-based 2026-11-07 on the inline implementation, 546 B, under the 790 B of the replaced routines). Performance: section 4 (no internal calls; per-call budgets).
 - Report the measured numbers: ucsim, entry to return, cycles and movx per function (the verifier repeats the measurement).
 
 ## 8. Q&A
+- Q (implementer): does the reference cycle figure include call / argument overhead? A: the cycles run from the function's first instruction to its `ret`, with the arguments already in place (registers and parameter bytes preset). Not included: the caller's argument set-up, the bank trampoline / stub, the call instruction. Included: everything the function itself executes (its own argument copies, internal calls, `ret`). `movx` counts the same span. Method: `scripts/dp_cycles.py` (spec side), ucsim, `ticks / 12`. The clean figures in section 4 are measured the same way.
+- Accepted 2026-11-07: `dp_wr` 51, `dp_test` 55, `dp_rmw` 73, `dp_wr16` 72 machine cycles (reference 112 / 116 / 200 / 324).
