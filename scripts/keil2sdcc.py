@@ -263,6 +263,15 @@ SUBS = [
     # boot / held logo artwork = window 0 colour (osd_logo_encode.py: artwork transparent): _AWTO_LOGO_COLOR, SDK _LOGO_CP_BLUE
     (OSD + "RTD2014OsdDisplay.c", r"(XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\), )_LOGO_CP_BLUE\);",
      lambda m: m.group(1) + "_AWTO_LOGO_COLOR);  // [keil2sdcc] sub", 1),
+    # #63 big logo: 2x OSD scale for the logo only (flag restored after the draw), our grid size, run-length map draw, window = grid
+    (OSD + "RTD2014OsdDisplay.c", r"    OsdFuncApplyMap\(WIDTH\(70\), HEIGHT\(10\),",
+     lambda m: "    SET_OSD_DOUBLE_SIZE(_ON);  // [keil2sdcc] sub\n    OsdFuncApplyMap(WIDTH(AWTO_LOGO_COLS), HEIGHT(AWTO_LOGO_ROWS),", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"    OsdFontPut1BitTable\(ROW\(0\), COL\(0\), tiOSD_REALTEK_1BIT_LOGO0.*?LOGO1, COLOR\(_LOGO_CP_BG, _LOGO_CP_BG\)\);",
+     lambda m: "    {  // [keil2sdcc] sub\n        extern void AwtoLogoDraw(void);\n        AwtoLogoDraw();\n    }", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"XEND\(_LOGO_WINDOW_SIZE_X\), YEND\(_LOGO_WINDOW_SIZE_Y\)",
+     lambda m: "XEND(AWTO_LOGO_COLS * 12 - 1), YEND(AWTO_LOGO_ROWS * 18 - 1)", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawing\(_OSD_WINDOW_0, [^\n]*\n    OsdFuncEnableOsd\(\);)",
+     lambda m: m.group(1) + "\n    SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());  // [keil2sdcc] sub", 1),
 ]
 
 

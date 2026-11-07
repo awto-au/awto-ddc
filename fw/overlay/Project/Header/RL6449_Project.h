@@ -223,6 +223,8 @@ extern void AwtoSwPoll(void);
 #define AwtoSwPoll()
 #define AWTO_SW_HPD(port, x)
 #endif
+#define AWTO_LOGO_COLS                                          95      // boot/held logo grid (scripts/osd_logo_big.py --cols/--rows; 2x OSD scale, #63)
+#define AWTO_LOGO_ROWS                                          58
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
