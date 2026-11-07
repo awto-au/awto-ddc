@@ -1,0 +1,493 @@
+/* menu.c: our OSD menu engine (awto/include/menu.h, awto-ddc#67). Walks the generated page tables; one line per
+ * entry: label, value. Sub-pages first, then rows. No per-item code. */
+#include <stdint.h>
+#include "cc.h"
+#include "settings.h"
+#include "osd.h"
+#include "menu.h"
+
+#define MAIN       0xFE           /* virtual top page: every page whose parent is the top */
+#define M_LIST     0
+#define M_EDIT     1
+#define M_RUN      2              /* action: press Menu again to run */
+#define LABEL_COL  2
+#define VALUE_COL  25
+#define VALUE_W    14
+#define ROW_FIRST  2
+
+/* UI strings: named arrays (an anonymous literal is a __str_N area, a name the bank layout shares across modules) */
+static const char __code mn_s0[] = "AWTO";
+static const char __code mn_s1[] = "Settings";
+static const char __code mn_s2[] = "> ";
+static const char __code mn_s3[] = "AWTO >";
+static const char __code mn_s4[] = " > ";
+static const char __code mn_s5[] = " >";
+static const char __code mn_s6[] = "Keep new value? Menu=keep Exit=undo";
+static const char __code mn_s7[] = "Press Menu again to run, Exit = cancel";
+static const char __code mn_s8[] = "Recovery: all settings at defaults";
+static const char __code mn_s9[] = "* stored only: no effect yet";
+static const char __code mn_s10[] = "read only";
+static const char __code mn_s11[] = "takes effect after a restart";
+static const char __code mn_s12[] = "reverts after 15 s unless kept";
+static const char __code mn_s13[] = "Left/Right change  Menu set  Exit undo";
+static const char __code mn_s14[] = "Left/Right move  Menu open  Exit back";
+
+static uint8_t __xdata active, mode, page, cursor, top, secs, last_left;
+static uint16_t __xdata sec_t;
+static int16_t __xdata edit_v, edit_old;
+static struct setting __xdata row;
+static char __xdata line[MENU_COLS + 1];
+static char __xdata tmp[24];
+
+static uint8_t mn_n_entries(void)
+{
+    uint8_t p, n = 0;
+
+    if (page != MAIN)
+        return set_page_n(page);
+    for (p = 0; p < SET_PAGES; p++)
+        n += set_page_parent(p) == 0xFF;
+    return n;
+}
+
+static uint8_t mn_entry(uint8_t k)
+{
+    uint8_t p;
+
+    if (page != MAIN)
+        return set_page_entry(page, k);
+    for (p = 0; p < SET_PAGES; p++)
+        if (set_page_parent(p) == 0xFF && k-- == 0)
+            return 0x80 | p;
+    return 0x80;
+}
+
+static void mn_blank(void)
+{
+    uint8_t k;
+
+    for (k = 0; k < MENU_COLS; k++)
+        line[k] = ' ';
+    line[MENU_COLS] = 0;
+}
+
+static uint8_t mn_put(uint8_t col, const char __xdata *s, uint8_t max)
+{
+    uint8_t n = 0;
+
+    while (s[n] != 0 && n < max && col + n < MENU_COLS) {
+        line[col + n] = s[n];
+        n++;
+    }
+    return n;
+}
+
+static void mn_put_c(uint8_t col, const char __code *s)
+{
+    while (*s != 0 && col < MENU_COLS)
+        line[col++] = *s++;
+}
+
+static uint8_t mn_num(char __xdata *d, int16_t v, uint8_t dec)
+{
+    char __xdata *p = tmp + sizeof tmp - 1;
+    uint16_t u = v < 0 ? (uint16_t)-v : (uint16_t)v;
+    uint8_t n = 0, k = 0;
+
+    *p = 0;
+    do {
+        *--p = (char)('0' + u % 10);
+        u /= 10;
+        if (++k == dec)
+            *--p = '.';
+    } while (u != 0 || k <= dec);
+    if (v < 0)
+        *--p = '-';
+    while (p[n] != 0) {
+        d[n] = p[n];
+        n++;
+    }
+    d[n] = 0;
+    return n;
+}
+
+/* value text of row (loaded in `row`) into buf */
+static void mn_value_text(char __xdata *buf, int16_t v)
+{
+    uint8_t n;
+
+    buf[0] = 0;
+    if (row.type == STY_ACTION) {
+        buf[0] = '.'; buf[1] = '.'; buf[2] = '.'; buf[3] = 0;
+        return;
+    }
+    if (row.type == STY_BOOL) {
+        buf[0] = 'O';
+        buf[1] = v ? 'n' : 'f';
+        buf[2] = v ? 0 : 'f';
+        buf[3] = 0;
+        return;
+    }
+    if (row.type == STY_ENUM && row.opts != 0xFFFF) {
+        set_text(set_opt(row.opts, (uint8_t)(v - row.min)), buf, VALUE_W + 1);
+        return;
+    }
+    n = mn_num(buf, v, row.unit == SU_DHZ ? 1 : 0);
+    switch (row.unit) {
+    case SU_PERCENT: buf[n++] = '%'; break;
+    case SU_MS: buf[n++] = ' '; buf[n++] = 'm'; buf[n++] = 's'; break;
+    case SU_S: buf[n++] = ' '; buf[n++] = 's'; break;
+    case SU_HZ: case SU_DHZ: buf[n++] = ' '; buf[n++] = 'H'; buf[n++] = 'z'; break;
+    default: break;
+    }
+    buf[n] = 0;
+}
+
+static void mn_draw_title(void)
+{
+    uint8_t n;
+
+    mn_blank();
+    mn_put_c(1, mn_s0);
+    if (page == MAIN) {
+        mn_put_c(6, mn_s1);
+    } else {
+        mn_put_c(6, mn_s2);
+        set_page_title(page, tmp, sizeof tmp);
+        mn_put(8, tmp, 30);
+    }
+    if (page != MAIN && set_page_parent(page) != 0xFF) {
+        n = set_page_title(set_page_parent(page), tmp, sizeof tmp);
+        (void)n;
+        mn_blank();
+        mn_put_c(1, mn_s3);
+        n = mn_put(8, tmp, 14);
+        mn_put_c(8 + n, mn_s4);
+        set_page_title(page, tmp, sizeof tmp);
+        mn_put(11 + n, tmp, 28 - n);
+    }
+    osd_tc_row(0, line, MENU_COLS, OC_TITLE, OC_BG);
+}
+
+static void mn_draw_entry(uint8_t k)
+{
+    uint8_t e, sel = (k == cursor), fg, bg, n;
+    int16_t v;
+
+    mn_blank();
+    if (k < mn_n_entries()) {
+        e = mn_entry(k);
+        if (e & 0x80) {
+            set_page_title(e & 0x7F, tmp, sizeof tmp);
+            n = mn_put(LABEL_COL, tmp, 22);
+            mn_put_c(LABEL_COL + n, mn_s5);
+        } else {
+            set_row(e, &row);
+            set_text(row.label, tmp, sizeof tmp);
+            mn_put(LABEL_COL, tmp, 22);
+            v = (sel && mode == M_EDIT) ? edit_v : set_get(row.id);
+            mn_value_text(tmp, v);
+            n = mn_put(VALUE_COL, tmp, VALUE_W);
+            if (sel && mode == M_EDIT) {
+                line[VALUE_COL - 1] = '<';
+                line[VALUE_COL + n] = '>';
+            }
+            if (row.flags & SF_INERT)
+                line[MENU_COLS - 1] = '*';
+        }
+        if (sel)
+            line[0] = '>';
+    }
+    if (k == top && top > 0)
+        line[MENU_COLS - 1] = '^';
+    if (k == top + MENU_LIST - 1 && k + 1 < mn_n_entries())
+        line[MENU_COLS - 1] = 'v';
+    fg = OC_TEXT;
+    bg = OC_BG;
+    if (k < mn_n_entries() && !(mn_entry(k) & 0x80) && (row.flags & SF_INERT))
+        fg = OC_DIM;
+    if (sel) {
+        fg = (mode == M_EDIT) ? OC_EDIT : OC_HL;
+        bg = OC_HL_BG;
+    }
+    osd_tc_row(ROW_FIRST + k - top, line, MENU_COLS, fg, bg);
+}
+
+static void mn_draw_status(void)
+{
+    uint8_t e, warn = 0;
+    uint16_t left = set_pending_left();
+
+    mn_blank();
+    if (set_pending() != 0) {
+        mn_put_c(1, mn_s6);
+        line[37] = (char)('0' + (left / 1000) / 10);
+        line[38] = (char)('0' + (left / 1000) % 10);
+        line[39] = 's';
+        warn = 1;
+    } else if (mode == M_RUN) {
+        mn_put_c(1, mn_s7);
+        warn = 1;
+    } else if (set_load_result() == 2) {
+        mn_put_c(1, mn_s8);
+        warn = 1;
+    } else if (mn_n_entries() != 0 && !((e = mn_entry(cursor)) & 0x80)) {
+        set_row(e, &row);
+        if (row.flags & SF_INERT)
+            mn_put_c(1, mn_s9);
+        else if (row.flags & SF_RO)
+            mn_put_c(1, mn_s10);
+        else if (row.flags & SF_REBOOT)
+            mn_put_c(1, mn_s11);
+        else if (row.flags & SF_RISKY)
+            mn_put_c(1, mn_s12);
+    }
+    osd_tc_row(MENU_ROWS - 2, line, MENU_COLS, warn ? OC_WARN : OC_DIM, OC_BG);
+    mn_blank();
+    if (mode == M_EDIT)
+        mn_put_c(1, mn_s13);
+    else
+        mn_put_c(1, mn_s14);
+    osd_tc_row(MENU_ROWS - 1, line, MENU_COLS, OC_DIM, OC_BG);
+    last_left = (uint8_t)(left / 1000);
+}
+
+static void mn_draw_list(void)
+{
+    uint8_t k;
+
+    for (k = top; k < top + MENU_LIST; k++)
+        mn_draw_entry(k);
+}
+
+static void mn_draw_all(void)
+{
+    mn_blank();
+    osd_tc_row(1, line, MENU_COLS, OC_TEXT, OC_BG);
+    mn_draw_title();
+    mn_draw_list();
+    mn_draw_status();
+}
+
+static void mn_scroll(void)
+{
+    uint8_t old = top;
+
+    if (cursor < top)
+        top = cursor;
+    if (cursor >= top + MENU_LIST)
+        top = cursor - MENU_LIST + 1;
+    if (old != top)
+        mn_draw_list();
+}
+
+static void mn_go(uint8_t p, uint8_t c)
+{
+    page = p;
+    cursor = c;
+    top = 0;
+    mode = M_LIST;
+    mn_scroll();
+    mn_draw_all();
+}
+
+void menu_relayout(void)
+{
+    if (active)
+        osd_tc_place((uint8_t)set_get(SET_ID_OSD_HPOS), (uint8_t)set_get(SET_ID_OSD_VPOS),
+                     (uint8_t)set_get(SET_ID_OSD_SCALE));
+}
+
+void menu_open(void)
+{
+    osd_tc_open(MENU_COLS, MENU_ROWS);
+    osd_font_load();
+    active = 1;
+    menu_relayout();
+    secs = 0;
+    sec_t = set_now_ms();
+    mn_go(MAIN, 0);
+    osd_tc_show(1);
+}
+
+void menu_close(void)
+{
+    if (!active)
+        return;
+    if (mode == M_EDIT)
+        set_put(row.id, edit_old, 1);
+    active = 0;
+    set_save_now();
+    osd_tc_close();
+}
+
+void menu_forget(void)
+{
+    active = 0;
+}
+
+uint8_t menu_active(void)
+{
+    return active;
+}
+
+uint8_t menu_state(void)
+{
+    return (uint8_t)(mode << 6 | (page & 0x3F));
+}
+
+uint8_t menu_cursor(void)
+{
+    return cursor;
+}
+
+static void mn_move(int8_t d)
+{
+    uint8_t n = mn_n_entries(), old = cursor;
+
+    if (n == 0)
+        return;
+    cursor = d > 0 ? (cursor + 1 >= n ? 0 : cursor + 1) : (cursor == 0 ? n - 1 : cursor - 1);
+    mn_scroll();
+    if (old >= top && old < top + MENU_LIST)
+        mn_draw_entry(old);
+    mn_draw_entry(cursor);
+    mn_draw_status();
+}
+
+static void mn_change(int8_t d)
+{
+    int16_t v = edit_v + (d > 0 ? row.step : -row.step);
+
+    if (row.type == STY_BOOL)
+        v = !edit_v;
+    else if (row.type == STY_ENUM && v > row.max)
+        v = row.min;                                     /* option lists wrap */
+    else if (row.type == STY_ENUM && v < row.min)
+        v = row.max;
+    if (v < row.min)
+        v = row.min;
+    if (v > row.max)
+        v = row.max;
+    edit_v = v;
+    if (row.flags & SF_LIVE)
+        set_put(row.id, v, 0);
+    mn_draw_entry(cursor);
+}
+
+static void mn_enter(void)
+{
+    uint8_t e = mn_entry(cursor);
+
+    if (e & 0x80) {
+        mn_go(e & 0x7F, 0);
+        return;
+    }
+    set_row(e, &row);
+    if (row.flags & SF_RO)
+        return;
+    if (row.type == STY_ACTION) {
+        mode = M_RUN;
+        mn_draw_status();
+        return;
+    }
+    edit_v = edit_old = set_get(row.id);
+    mode = M_EDIT;
+    mn_draw_entry(cursor);
+    mn_draw_status();
+}
+
+static void mn_back(void)
+{
+    uint8_t p = page, up, k, n;
+
+    if (page == MAIN) {
+        menu_close();
+        return;
+    }
+    up = set_page_parent(page);
+    page = (up == 0xFF) ? MAIN : up;
+    n = mn_n_entries();
+    for (k = 0; k < n && mn_entry(k) != (0x80 | p); k++)
+        ;
+    mn_go(page, k < n ? k : 0);
+}
+
+void menu_key(uint8_t k)
+{
+    uint8_t e;
+
+    if (!active)
+        return;
+    secs = 0;
+    sec_t = set_now_ms();
+    if (set_pending() != 0 && mode == M_LIST && (k == MK_MENU || k == MK_EXIT)) {
+        if (k == MK_MENU)
+            set_confirm();
+        else
+            set_revert();
+        mn_draw_list();
+        mn_draw_status();
+        return;
+    }
+    if (mode == M_EDIT) {
+        switch (k) {
+        case MK_RIGHT: mn_change(1); break;
+        case MK_LEFT: mn_change(-1); break;
+        case MK_MENU:
+            mode = M_LIST;
+            set_put(row.id, edit_v, 1);
+            mn_draw_entry(cursor);
+            mn_draw_status();
+            break;
+        default:
+            mode = M_LIST;
+            if (set_get(row.id) != edit_old)
+                set_put(row.id, edit_old, 1);
+            mn_draw_entry(cursor);
+            mn_draw_status();
+            break;
+        }
+        return;
+    }
+    if (mode == M_RUN) {
+        mode = M_LIST;
+        e = mn_entry(cursor);
+        set_row(e, &row);
+        mn_draw_status();
+        if (k == MK_MENU)
+            set_action(row.id);                  /* may close the menu (vendor / factory menu) */
+        return;
+    }
+    switch (k) {
+    case MK_RIGHT: mn_move(1); break;
+    case MK_LEFT: mn_move(-1); break;
+    case MK_MENU: mn_enter(); break;
+    default: mn_back(); break;
+    }
+}
+
+void menu_service(void)
+{
+    uint16_t now, to;
+
+    if (!active)
+        return;
+    now = set_now_ms();
+    if ((uint16_t)(now - sec_t) >= 1000u) {
+        sec_t += 1000u;
+        if (secs < 255)
+            secs++;
+        to = (uint16_t)set_get(SET_ID_OSD_TIMEOUT);
+        if (to != 0 && secs >= to && set_pending() == 0 && mode != M_EDIT) {
+            menu_close();
+            return;
+        }
+    }
+    if (set_pending() != 0 && (uint8_t)(set_pending_left() / 1000) != last_left)
+        mn_draw_status();                           /* countdown, once a second */
+    else if (set_pending() == 0 && last_left != 0) {
+        mn_draw_list();                             /* auto-revert happened: show the old value again */
+        mn_draw_status();
+    }
+}

@@ -1,23 +1,25 @@
 /* nvram.h: settings records in SPI flash, plus raw flash access.
- * DRAFT interface (wave A); spec nvram (step 6) refines it. Record layout and wear policy are ours. */
+ * DRAFT interface (wave A); spec nvram (step 6) refines it. Record layout and wear policy are ours (awto-ddc#67). */
 #ifndef AWTO_NVRAM_H
 #define AWTO_NVRAM_H
 
 #include <stdint.h>
+#include "cc.h"
 
-/* The settings record (layout GENERATED from the settings registry, settings.h): header {set_schema, length, check},
- * then each SF_NV row at its nv_slot. Schema or check mismatch -> nv_load returns 0 and set_load applies defaults. */
+/* The settings record (settings.c): {schema u16, n, n x (id, value lo, value hi)}. Id-tagged, so a firmware update
+ * keeps every value whose row still exists and is in range; a schema change alone loses nothing. */
 #define NV_REC_SETTINGS 0
+#define NV_PAYLOAD_MAX  500u     /* bytes per record (slot 512 B less the 12 B header) */
 
-/* records: small fixed-size structs, each with our version byte and check value */
-uint8_t nv_load(uint8_t rec, void *dst, uint8_t len);     /* 1 = valid copy found; 0 = caller applies defaults */
-void    nv_store(uint8_t rec, const void *src, uint8_t len);   /* queued; written by nv_service */
-void    nv_service(void);                                 /* main loop: writes queued records */
-void    nv_wipe(void);                                    /* factory reset: all records invalid */
+/* records: nvram.c keeps a log of slots in two flash sectors; the newest valid slot wins. 1 = ok */
+uint16_t nv_load(uint8_t rec, uint8_t __xdata *dst, uint16_t max);   /* payload length, 0 = no valid copy */
+uint8_t  nv_store(uint8_t rec, const uint8_t __xdata *src, uint16_t len);   /* writes now (callers debounce) */
+void     nv_wipe(void);                                    /* factory reset: all records invalid */
+uint16_t nv_seq(void);                                     /* sequence number of the newest slot (diag) */
 
-/* raw flash (24-bit addresses). Erase unit and timings per spec nvram. 1 = ok */
-uint8_t fl_read(uint32_t a, uint8_t *dst, uint16_t n);
-uint8_t fl_write(uint32_t a, const uint8_t *src, uint16_t n);  /* within one page */
+/* raw flash (24-bit addresses), integrator. Erase unit 4 KiB. 1 = ok */
+uint8_t fl_read(uint32_t a, uint8_t __xdata *dst, uint16_t n);
+uint8_t fl_write(uint32_t a, const uint8_t __xdata *src, uint16_t n);  /* within one 256 B page */
 uint8_t fl_erase(uint32_t sector_a);
 
 #endif
