@@ -21,3 +21,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-07T11:45:14+11:00	be1838b	AWT26110003-wb-sc3b-be	sc3 Keil ABI (awto-sdcc#7 C6)	12	43861	4830	17.3	697	22521	17.5	257a130	3	584753
 2026-11-07T12:22:00+11:00	cf06ac8	AWT26110003-wb-sc3c-be	sc3 + #46 const rule	12	43861	4830	17.2	697	22521	17.5	257a130	3	592732
 2026-11-07T12:22:15+11:00	cf06ac8	AWT26110003-wb-sc3d-be	sc3 + #46 + C8 xdata PARM overlay	12	43861	4830	17.2	697	22521	17.5	257a130	3	592732
+2026-11-07T12:51:48+11:00	669eae9	AWT26110003-wb-rtkdbg-dp-be	vfreq: ~bit fix + exact freq (vs rtkdbg-dp)	12	43861	5532	17.4	1105	22539	17.5		1	706116
+2026-11-07T12:52:09+11:00	669eae9	AWT26110003-wb-vfreq-be	vfreq: ~bit fix + exact freq (vs rtkdbg-dp)	12	43861	5532	17.4	1105	22539	17.5		1	710167
