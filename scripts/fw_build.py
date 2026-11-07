@@ -230,6 +230,7 @@ def parse_args(argv=None):
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
     ap.add_argument("--pin-common", default="", help="passed to sdcc_bank (comma list of fns forced into common)")
     ap.add_argument("--src-patch", default="")
+    ap.add_argument("--xparms", action="store_true", help="sdcc_overlay --xparms: XDATA _PARM_ slots by call graph (C8)")
     a = ap.parse_args(argv)
     if a.cluster:
         import sdcc_layout
@@ -254,7 +255,7 @@ def main() -> int:
         run("asm", [py, "scripts/keil2sdcc.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", LIB_UV2, "--asm"])
     select_lib()
-    run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
+    run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL, *(["--xparms"] if a.xparms else [])])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
     new_layout = ROOT / "tmp/sdcc-port/bank_layout.new.tsv"
     new_layout.unlink(missing_ok=True)                        # only this run's output may be promoted

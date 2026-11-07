@@ -24,6 +24,7 @@ def main() -> int:
     ap.add_argument("--cluster", choices=["module", "fn"], default="", help="passed to fw_build")
     ap.add_argument("--cluster-weights", default="")
     ap.add_argument("--pin-common", default="")
+    ap.add_argument("--xparms", action="store_true")
     a = ap.parse_args()
     tag = a.tag or f"sc{a.level}"
     if not a.bin:
@@ -36,7 +37,7 @@ def main() -> int:
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} build {tag} bin={inst}\n")
     p = subprocess.Popen([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", a.layout] if a.layout else []), *(["--cluster", a.cluster] if a.cluster else []),
                           *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
-                          *(["--pin-common", a.pin_common] if a.pin_common else [])], cwd=ROOT, env=env,
+                          *(["--pin-common", a.pin_common] if a.pin_common else []), *(["--xparms"] if a.xparms else [])], cwd=ROOT, env=env,
                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     import select
     t_last, t0 = time.monotonic(), time.monotonic()

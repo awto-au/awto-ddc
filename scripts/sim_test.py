@@ -109,7 +109,7 @@ def one(name, srcs):
     ovlroot = w / "ovlroot"
     (ovlroot / "tmp/sdcc-port").mkdir(parents=True)
     asmB = w / "B/asm"
-    r = run([sys.executable, str(ROOT / "scripts/sdcc_overlay.py"), "--asm", str(asmA), "--out", str(asmB)],
+    r = run([sys.executable, str(ROOT / "scripts/sdcc_overlay.py"), "--asm", str(asmA), "--out", str(asmB), "--xparms"],
             env={**os.environ, "AWTO_DDC_REPO": str(ovlroot)})
     if r.returncode:
         return "BUILD-FAIL", "overlay pass rc=%d" % r.returncode, {}

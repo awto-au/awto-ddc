@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Keil-BL51-style RAM overlay for SDCC mcs51 asm: functions that are never live together share local storage.
 
-usage: sdcc_overlay.py [--asm DIR] [--out DIR] [--xdata] [--xlimit N] [--dlimit N]
+usage: sdcc_overlay.py [--asm DIR] [--out DIR] [--xdata] [--xparms] [--xlimit N] [--dlimit N]
   --xdata overlay XDATA locals too (default: DATA spill slots only)
+  --xparms overlay XDATA _PARM_ slots (memory-passed args) by the same call graph, locals stay static (plan C8, #11)
   --asm   SDCC -S output tree (default tmp/sdcc-port/asm)
   --out   rewritten tree + __ovl.asm (default tmp/sdcc-port/asm_ovl)
   --xlimit / --dlimit  fail if total XDATA / DATA after overlay exceeds this (bytes; default 8192 / 0 = no check)
 
 Method (awto-ddc#8):
 - Per function: XSEG locals (`_fn_var_L_N`) and DSEG/XSEG spill slots (`_fn_slocK_*`) form its frame.
-  PARMs stay static: callers write them, possibly while evaluating other calls' args (sibling overlap risk).
+  PARMs (DATA/BIT, XDATA with --xparms) are part of the callee's frame. Sibling risk: a caller writes g's PARM, then
+  calls another fn before `lcall g` (its frame may sit on g's slots): such g keep private PARMs (scan per call site).
 - Call graph from `lcall/ljmp/acall/ajmp _fn`. Regions: main tree, each ISR (fn with `reti`), each
   address-taken fn (indirect call target). Frame offset = max(caller offset + caller frame) within a region.
 - Kept static (own storage): fns reachable from more than one region, fns in call cycles, unattributed labels.
@@ -43,6 +45,8 @@ ZERO = lambda: {m: 0 for m in MEMS}
 # Default: overlay only DATA spill slots (952 B can never fit 256 B IRAM). XDATA fits without it after the
 # storage-first + MST/TX fixes (5.7 KB vs ~6.5 KB free), so XDATA overlay is opt-in (--xdata), #8.
 OVERLAY_XDATA = "--xdata" in sys.argv
+OVERLAY_XPARMS = "--xparms" in sys.argv
+PARM_REF = re.compile(r"\b(_\w+?)_PARM_\d+\b")
 CALL = re.compile(r"^\s+(?:lcall|ljmp|acall|ajmp)\s+(\w+)\s*$")
 FUNC_HDR = re.compile(r"^;\s+function (\w+)\s*$")
 
@@ -61,10 +65,11 @@ class Module:
         self.refs = set()        # symbols used outside call position (address-taken candidates)
         self.alloc = {}          # storage label -> (fn asm label, C var name), from SDCC allocation comments
         self.src = None          # C source path (from SDCC line comments)
+        self.parm_hazard = []    # (g, X): a PARM of g written, then X called before g (sibling overlap risk)
         self.parse()
 
     def parse(self):
-        area, cur, pending, alloc_fn = None, None, None, None
+        area, cur, pending, alloc_fn, pend = None, None, None, None, set()
         globl = set(re.findall(r"^\s+\.globl\s+(\w+)", "\n".join(self.lines), re.M))   # SDCC fns: `_f:` + .globl
         for i, line in enumerate(self.lines):
             if line.startswith("\t.area"):
@@ -90,13 +95,19 @@ class Module:
             if lab and area == "CSEG" and lab.group(1) == pending:
                 cur = pending
                 self.funcs[cur] = {"global": lab.group(2) == "::" or cur in globl, "calls": set(), "isr": False}
-                pending = None
+                pending, pend = None, set()
                 continue
             if lab and area in MEM and i + 1 < len(self.lines) and self.lines[i + 1].strip().startswith(".ds"):
                 if lab.group(2) == ":":                       # module-local storage only
                     self.storage.append((i, i + 1, lab.group(1), area, int(self.lines[i + 1].split()[1], 0)))
                 continue
-            if area == "CSEG" and cur:
+            if area == "CSEG" and cur and not line.lstrip().startswith(";"):
+                c = CALL.match(line)
+                if c:
+                    self.parm_hazard += [(g, c.group(1)) for g in pend if g != c.group(1)]
+                    pend.discard(c.group(1))
+                else:
+                    pend.update(g for g in PARM_REF.findall(line) if g != cur)
                 c = CALL.match(line)
                 if c and c.group(1) == "sdcc_atomic_maybe_rollback":
                     self.funcs[cur]["isr"] = True                   # ISR epilogue, not a call
@@ -213,8 +224,8 @@ def main():
     for mi, m in enumerate(mods):
         for li, ld, label, area, size in m.storage:
             mem = MEM[area]
-            if mem == "x" and not OVERLAY_XDATA:
-                continue                                    # XDATA locals stay where SDCC put them
+            if mem == "x" and not (OVERLAY_XDATA or OVERLAY_XPARMS and "_PARM_" in label and not label.startswith("__")):
+                continue                                    # XDATA locals stay; so do PARMs of `__` support routines (library callers write them)
             own = m.owner(label)
             if own is None or own[0] not in m.funcs:
                 static_bytes["unowned"] += size
@@ -287,7 +298,14 @@ def main():
                     comp_of[w] = v
                 if len(comp) > 1 or v in calls.get(v, ()):
                     cyc.update(comp)
-    keep_static = shared | cyc
+    # PARM written, then another tree fn called before the owner's lcall: owner keeps private storage
+    hazard = set()
+    for mi, m in enumerate(mods):
+        for g, x in m.parm_hazard:
+            gn, xn = resolve(mi, g), resolve(mi, x)
+            if gn and xn:
+                hazard.add(gn)
+    keep_static = shared | cyc | hazard
 
     # offsets per region on the SCC-condensed DAG. Private-storage nodes (cyclic/shared) still pass
     # offsets through with frame 0, so callees reached via them never land on a live caller's frame.
@@ -402,6 +420,7 @@ def main():
     rep = {"modules": len(mods), "functions": len(nodes), "roots": len(roots),
            "isr": sum(1 for _, n in roots if nodes[n]["isr"]), "addr_taken": len(addr_taken),
            "kept_static_fns": len(keep_static), "cyclic_fns": len(cyc), "shared_fns": len(shared),
+           "parm_hazard_fns": sorted(n[1] for n in hazard),
            "frames_before": before, "overlay_block": cursor, "static_parm_x": static_bytes["parm_x"],
            "local_static": static_bytes["local_static"],
            "private_frames": sorted(((n[1], dict(frame[n])) for n in nodes
@@ -416,7 +435,7 @@ def main():
     (ROOT / "tmp/sdcc-port/overlay.json").write_text(json.dumps(rep, indent=1, default=str))
     log(f"indirect call sites {len(indirect_sites)}")
     log(f"functions {len(nodes)}, roots {len(roots)} (isr {rep['isr']}, address-taken {len(addr_taken)}), "
-        f"kept static {len(keep_static)} (shared {len(shared)}, cyclic {len(cyc)})")
+        f"kept static {len(keep_static)} (shared {len(shared)}, cyclic {len(cyc)}, PARM sibling hazard {len(hazard)})")
     log(f"frames before: XDATA {before['x']} B, DATA {before['d']} B, BIT {before['b']} bits (PARMs included)")
     log(f"DATA blocks {dsize}; dead fns at offset 0: {len(dead)}")
     log(f"overlay blocks: __xovl {cursor['x']} B, __dovl* {cursor['d']} B, __bovl {cursor['b']} bits; "

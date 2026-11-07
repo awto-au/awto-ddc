@@ -61,20 +61,29 @@ def dseg_extent(map_text, rels):
 
 def dseg_runs(map_text, rels, mem: Path | None = None):
     """Real DSEG ranges [(lo, hi)]. sdld puts each module's DSEG part in the first free gap, so DSEG splits around the
-    bit bytes at 0x20; its map line is a synthetic total from 0x00. From the -M grid (.mem: a-z / D = DSEG parts) when
-    present, else lowest DSEG symbol + .rel total (contiguous assumption)."""
+    bit bytes at 0x20; its map line is a synthetic total from 0x00. From the -M grid (.mem) when present, else lowest
+    DSEG symbol + .rel total (contiguous assumption).
+    - Grid letters a..z = DATA areax parts in allocation order: DSEG first (every module opens it), then the DDOVL* areas
+      (__ovl.asm), shown at sdld's own first fit, not their -b address: trailing letters sized like a DDOVL area drop."""
     if mem is not None and mem.exists():
         g = {}
         for m in re.finditer(r"^0x([0-9a-f]{2}):((?:\|.){16})\|", mem.read_text(errors="replace"), re.M):
             for i, ch in enumerate(m.group(2)[1::2]):
                 g[int(m.group(1), 16) + i] = ch
-        runs = []
-        for a in sorted(x for x, ch in g.items() if ch.islower() or ch == "D"):
-            if runs and runs[-1][1] == a:
-                runs[-1][1] = a + 1
-            else:
-                runs.append([a, a + 1])
-        return [tuple(r) for r in runs]
+        letters = sorted({ch for ch in g.values() if ch.islower()})
+        if "D" not in g.values():                       # 'D' = sdld ran out of letters: order unknown, fall back
+            ovl = [v for v in rel_sizes(rels)[2].values() if v]
+            size = {ch: sum(1 for x in g.values() if x == ch) for ch in letters}
+            while letters and size[letters[-1]] in ovl:   # trailing parts the size of a DDOVL area (sdld may omit some)
+                ovl.remove(size[letters.pop()])
+            keep = set(letters)
+            runs = []
+            for a in sorted(x for x, ch in g.items() if ch in keep and x < DIRECT_END):
+                if runs and runs[-1][1] == a:
+                    runs[-1][1] = a + 1
+                else:
+                    runs.append([a, a + 1])
+            return [tuple(r) for r in runs]
     d = dseg_extent(map_text, rels)
     return [d] if d else []
 
