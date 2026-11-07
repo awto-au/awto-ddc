@@ -1,0 +1,2 @@
+# cleanroom_lint allowlist: reviewed hits only. kind<TAB>value<TAB>reason (reviewer, date)
+# kind: ident (identifier) | code / prose (16-hex hit hash from the lint report)

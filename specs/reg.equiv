@@ -1,0 +1,6 @@
+# trace_equiv rules for spec reg (hb_burst). Engine control: compare the write sequence, not the final state.
+action FFF3
+# page select and burst setup must be in place before the go write; the go write is the barrier
+barrier FFF3=10
+barrier FFF3=08
+barrier FFF3=28

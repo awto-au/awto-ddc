@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X  # noqa: E402
 import rtd_proto as P  # noqa: E402
+import unit_lock  # noqa: E402
 
 DEV8 = 0x6A                                   # 7-bit 0x35
 DIAG_OFF = {"magic": 0, "stage": 3, "hb": 0x14, "t2": 0x16, "testcmd": 0x28}
@@ -317,6 +318,11 @@ def main() -> int:
         return run_sim(a)
     if a.bus is None or not a.serial or not a.map:
         ap.error("bus, --serial and --map are required (or --sim BIN MAP)")
+    with unit_lock.held(a.serial, "unit_health"):                # one work stream per unit (#65)
+        return health_hw(a)
+
+
+def health_hw(a) -> int:
     import i2cbus
     import rtd_i2c_bridge as B
     log = B.setup_logs("unit_health", map=a.map).main

@@ -167,6 +167,33 @@ INSERTS = [
                     (tail, "    AwtoDiagStage(8);"))
 ]
 
+# Per-module rules (#65, docs/cleanroom.md): fw/awto/<mod>/rules.py may define WRAPS, INSERTS (formats above) and
+# SUBS = [(SDK-relative file, regex, replacement)]; a SUBS rule that matches nothing fails the port.
+SUBS = []
+
+
+def load_module_rules(base=ROOT / "fw" / "awto"):
+    import importlib.util
+    for p in sorted(base.glob("*/rules.py")):
+        spec = importlib.util.spec_from_file_location(f"awto_rules_{p.parent.name}", p)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        for name, dst in (("WRAPS", WRAPS), ("INSERTS", INSERTS), ("SUBS", SUBS)):
+            dst.extend(getattr(m, name, []))
+
+
+load_module_rules()
+
+
+def apply_subs(rel: str, text: str, stats) -> str:
+    for f, rx, rep in SUBS:
+        if f == rel:
+            text, n = re.subn(rx, rep, text, flags=re.M)
+            if not n:
+                sys.exit(f"subs rule did not match: {f} {rx!r}")
+            stats["subs"] += n
+    return text
+
 
 # Function-entry trace (#26): every fn defined in a file matching fw/trace_files.txt gets AWTO_TRACE(id) first.
 # ISR-context fns skipped (shared ring, not reentrant). Ids -> tmp/sdcc-port/trace_ids.tsv (rtd_diag.py --trace).
@@ -560,6 +587,7 @@ def cmd_port():
             out = rewrite(raw, p.parent, idx, sfr_addr, using, stats, str(rel))
             out = apply_wraps(str(rel), out, stats)
             out = apply_inserts(str(rel), out, stats)
+            out = apply_subs(str(rel), out, stats)
             out = apply_trace(str(rel), out, tglobs, stats)
             dst.write_bytes(out.encode("latin-1"))
             n += 1

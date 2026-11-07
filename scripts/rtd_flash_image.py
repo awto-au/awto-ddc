@@ -38,6 +38,7 @@ import rtd_proto  # noqa: E402
 import rtd_flash_sector as F  # noqa: E402
 import flash_state as S  # noqa: E402
 import i2cbus  # noqa: E402
+import unit_lock  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
 
 FLASH = 1 << 20
@@ -378,6 +379,11 @@ def main() -> int:
                     help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
+    with unit_lock.held(a.serial, "rtd_flash_image"):            # one work stream per unit (#65)
+        return flash_main(a)
+
+
+def flash_main(a) -> int:
     i2cbus.dev_hint("flash", "rtd_flash_image.py")
     t_main = time.monotonic()
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
