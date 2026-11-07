@@ -41,5 +41,5 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-07T22:28:38+11:00	cff1d05	AWT26110003-wb-p14split-be	#75 loop split (BE)	12	43861	5652	19.8	1250	22551	16.0			701709		
 2026-11-08T00:23:48+11:00	a8c15ca	AWT26110003-wb-p14lsd-be	compiler move step 0: rolled image, unit 3	12	43861	5684	19.3	1220	22556	17.5	rc-be-install-sc1	1	701916	22	828.3
 2026-11-08T00:24:00+11:00	a8c15ca	AWT26110003-wb-p14n1-be	compiler move step 1: same sources, 440cfd2 sc1, unit 3	12	43861	5471	19.4	1225	22535	17.5	440cfd2	1	687579	22	874.3
-2026-11-08T00:35:19+11:00	d3a61c9	AWT26110003-wb-p14sc3-be	compiler move step 2: 440cfd2 sc3 + 8 B stubs + clean f4063ad at sc3, unit 3	12	43861	4942	19.4	776	22502	17.5	440cfd2	3	646558	46	990.0
+2026-11-08T00:35:19+11:00	d3a61c9	AWT26110003-wb-p14sc3-be	compiler move step 2: 440cfd2 sc3 + 8 B stubs + clean f4063ad at sc3, unit 3 (repeat 4 boots: 974.0; boots bimodal ~973 / ~991)	12	43861	4942	19.4	776	22502	17.5	440cfd2	3	646558	46	990.0
 2026-11-08T00:53:22+11:00	f29dd9b	AWT26110003-wb-p14kc2-be	compiler move step 3: + --keil-compat (no ~bX rule), resid_end 0xc38, unit 3 (sc3 repeat 974.0)	12	43861	4922	19.4	776	22502	17.5	440cfd2	3	654203	34	972.1
