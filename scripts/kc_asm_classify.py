@@ -10,8 +10,8 @@ import argparse, difflib, os, sys, time
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
-sys.path.insert(0, "/mnt/2tb/git/awto-ddc-kc/scripts")
-import kc_asmdiff as K  # noqa: E402  (per-function normaliser, wb-keilcompat d3a5b5c)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kc_asmdiff as K  # noqa: E402  (per-function normaliser)
 
 
 def load(run: Path) -> dict:
