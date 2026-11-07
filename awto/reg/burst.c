@@ -4,53 +4,40 @@
 #include "mode.h"
 #include "names.h"
 
-#ifndef REG8_WR
-#define REG8_WR(a, v) (REG8(a) = (uint8_t)(v))
-#endif
-
-/* S11 restart limit: 100 busy checks (reference behaviour, vendor-value; spec reg T2) */
+/* T2: 100 busy checks, reference behaviour (vendor-value; spec reg section 4) */
 #define HB_BUSY_CHECKS 100
-
-/* one read, then one write: new = (old & keep) | set */
-static void rmw8(uint16_t a, uint8_t keep, uint8_t set)
-{
-    uint8_t old = reg_rd(a);
-    REG8_WR(a, (old & keep) | set);
-}
-
-static uint8_t osd_gap_for(uint32_t dclk_khz)
-{
-    uint8_t hd = (reg_rd(OSD_FRAME_0A) & OSD_HDOUBLE) ? 1 : 0;
-    return hb_osd_gap(dclk_khz, hd);
-}
 
 uint8_t hb_burst(uint32_t src24, uint16_t len, uint16_t target, uint8_t kind, uint8_t from_xram)
 {
     uint8_t go = (kind == HB_CMDS) ? HB_CTRL_CMD_GO : HB_CTRL_DATA_GO;
-    uint8_t ctl;
-    uint8_t gap;
-    uint8_t checks;
-    uint8_t start;
-    uint8_t ret;
+    uint8_t ctl, gap, start, checks, ret, hd;
 
-    /* S1 */
+    /* S1, S2, S3: each read-modify-write is one read then one write */
     REG8_WR(REG_PAGE, target >> 8);
-    /* S2, S3 */
-    rmw8(HB_CTRL, (uint8_t)~(HB_CTRL_CMD_GO | HB_CTRL_DATA_GO), 0);
-    rmw8(HB_CTRL, 0xFF, HB_CTRL_NOINC);
-    /* S4..S9 */
+    REG8_WR(HB_CTRL, REG8_RD(HB_CTRL) & (uint8_t)~(HB_CTRL_CMD_GO | HB_CTRL_DATA_GO));
+    REG8_WR(HB_CTRL, REG8_RD(HB_CTRL) | HB_CTRL_NOINC);
+
+    /* S4..S7 */
     if (kind != HB_CMDS)
-        REG8_WR(HB_TARGET, target & 0xFF);
+        REG8_WR(HB_TARGET, target);
     REG8_WR(HB_SRC_BANK, src24 >> 16);
     REG8_WR(HB_SRC_HI, src24 >> 8);
     REG8_WR(HB_SRC_LO, src24);
     REG8_WR(HB_LEN_HI, len >> 8);
     REG8_WR(HB_LEN_LO, len);
-    /* gap 3: non-OSD item gap, vendor-value (spec reg S8) */
-    gap = (kind == HB_OSD) ? osd_gap_for(mode_dclk_khz()) : 3;
+
+    /* S8r, S8: gap 3 for non-OSD kinds is vendor-value (spec reg S8) */
+    if (kind == HB_OSD) {
+        hd = (REG8_RD(OSD_FRAME_0A) & OSD_HDOUBLE) ? 1 : 0;
+        gap = hb_osd_gap(mode_dclk_khz(), hd);
+    } else {
+        gap = 3;
+    }
     REG8_WR(HB_GAP, gap);
+
+    /* S9 */
     if (from_xram)
-        rmw8(MCU_MAP, 0xFF, MCU_MAP_BURST_FROM_XRAM);
+        REG8_WR(MCU_MAP, REG8_RD(MCU_MAP) | MCU_MAP_BURST_FROM_XRAM);
 
     /* S10: start; the CPU stalls until the engine is done or an interrupt releases it */
     if (kind == HB_CMDS)
@@ -61,10 +48,10 @@ uint8_t hb_burst(uint32_t src24, uint16_t len, uint16_t target, uint8_t kind, ui
         start = HB_CTRL_DATA_GO | HB_CTRL_NOINC;
     REG8_WR(HB_CTRL, start);
 
-    /* S11: restart while the go bit reads 1; the check read is the RMW read */
+    /* S11: a check read; while busy, a restart is its own RMW (read, then write read | go) */
     checks = 0;
     for (;;) {
-        ctl = reg_rd(HB_CTRL);
+        ctl = REG8_RD(HB_CTRL);
         if (!(ctl & go)) {
             ret = 0;
             break;
@@ -73,19 +60,22 @@ uint8_t hb_burst(uint32_t src24, uint16_t len, uint16_t target, uint8_t kind, ui
             ret = 1;
             break;
         }
-        REG8_WR(HB_CTRL, ctl | go);
+        REG8_WR(HB_CTRL, REG8_RD(HB_CTRL) | go);
     }
 
     /* S12 runs on the timeout path too */
-    rmw8(MCU_MAP, (uint8_t)~MCU_MAP_BURST_FROM_XRAM, 0);
+    REG8_WR(MCU_MAP, REG8_RD(MCU_MAP) & (uint8_t)~MCU_MAP_BURST_FROM_XRAM);
     return ret;
 }
 
 uint8_t hb_osd_gap(uint32_t dclk_khz, uint8_t hdouble)
 {
-    /* 48438000 = 69 x 351 x 1000 x 2, derived (spec reg D1) */
-    uint32_t q = dclk_khz ? 48438000UL / (dclk_khz * 4UL) : 0xFFFFFFFFUL;
-    uint16_t g = (uint16_t)(q - 2);
+    /* 12,109,500 = 69 x 351 x 1000 x 2 / 4, derived (spec reg D1) */
+    uint16_t g;
+
+    if (!dclk_khz)
+        return 0xFF;   /* q = 0xFFFFFFFF: g > 0xFF with or without doubling */
+    g = (uint16_t)(12109500UL / dclk_khz - 2);
 
     if (hdouble)
         g = (uint16_t)(g << 1);

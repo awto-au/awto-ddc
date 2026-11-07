@@ -2,11 +2,6 @@
 #include <stdint.h>
 #include "reg.h"
 
-/* write hook: host tests redefine REG8_WR to record writes (see tests/host/test_reg.c) */
-#ifndef REG8_WR
-#define REG8_WR(a, v) (REG8(a) = (uint8_t)(v))
-#endif
-
 uint16_t reg_rd16(uint16_t a)
 {
     uint8_t hi = reg_rd(a);

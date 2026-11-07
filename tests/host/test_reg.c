@@ -9,8 +9,8 @@
 
 #include "names.h"
 
-/* recording mocks: reads and writes are separate calls so the access list keeps its kind */
-#define REG8(a)       mock_rd((uint16_t)(a))
+/* recording hooks: reads and writes are separate calls, so the access list keeps its kind */
+#define REG8_RD(a)    mock_rd((uint16_t)(a))
 #define REG8_WR(a, v) mock_wr((uint16_t)(a), (uint8_t)(v))
 
 struct acc {
@@ -24,8 +24,11 @@ static struct acc logv[4096];
 static int nlog;
 static struct acc expv[4096];
 static int nexp;
-static int armed;      /* HB_CTRL start written: busy reads apply */
-static int busy_left;  /* busy checks still to report */
+static int armed;          /* S10 start written: HB_CTRL busy model applies */
+static int busy_left;      /* busy check reads still to report */
+static int restart_pending;/* last HB_CTRL check read was busy: next HB_CTRL read is the restart read */
+static uint8_t last_busy;  /* value the busy check read returned */
+static int n_check, n_rr, n_rw;  /* HB_CTRL check reads, restart reads, restart writes */
 static int checks, fails;
 
 static void log_add(struct acc *arr, int *n, char op, uint16_t a, uint8_t v)
@@ -36,16 +39,32 @@ static void log_add(struct acc *arr, int *n, char op, uint16_t a, uint8_t v)
     (*n)++;
 }
 
+/* go bit that the engine reports while busy: CMD for a command burst, DATA otherwise */
+static uint8_t go_of(uint8_t v)
+{
+    return (v & HB_CTRL_CMD_GO) ? HB_CTRL_CMD_GO : HB_CTRL_DATA_GO;
+}
+
 static uint8_t mock_rd(uint16_t a)
 {
     uint8_t v = mem[a];
+
     if (a == HB_CTRL && armed) {
-        uint8_t go = (v & HB_CTRL_CMD_GO) ? HB_CTRL_CMD_GO : HB_CTRL_DATA_GO;
-        if (busy_left > 0) {
-            busy_left--;
-            v |= go;
+        if (restart_pending) {
+            /* restart read: returns what the preceding busy check returned */
+            restart_pending = 0;
+            n_rr++;
+            v = last_busy;
         } else {
-            v &= (uint8_t)~go;
+            n_check++;
+            if (busy_left > 0) {
+                busy_left--;
+                v |= go_of(mem[a]);
+                last_busy = v;
+                restart_pending = 1;
+            } else {
+                v &= (uint8_t)~go_of(mem[a]);
+            }
         }
     }
     log_add(logv, &nlog, 'R', a, v);
@@ -54,8 +73,12 @@ static uint8_t mock_rd(uint16_t a)
 
 static void mock_wr(uint16_t a, uint8_t v)
 {
+    if (a == HB_CTRL && armed)
+        n_rw++;
     if (a == HB_CTRL && (v & (HB_CTRL_CMD_GO | HB_CTRL_DATA_GO)))
         armed = 1;
+    if (a == HB_CTRL)
+        restart_pending = 0;
     mem[a] = v;
     log_add(logv, &nlog, 'W', a, v);
 }
@@ -77,6 +100,9 @@ static void reset_case(void)
     nexp = 0;
     armed = 0;
     busy_left = 0;
+    restart_pending = 0;
+    last_busy = 0;
+    n_check = n_rr = n_rw = 0;
 }
 
 static void ex(char op, uint16_t a, uint8_t v)
@@ -116,6 +142,15 @@ static void check_u32(const char *name, uint32_t got, uint32_t want)
     printf("FAIL %s: got %08lX want %08lX\n", name, (unsigned long)got, (unsigned long)want);
 }
 
+static void check_int(const char *name, const char *what, int got, int want)
+{
+    checks++;
+    if (got == want)
+        return;
+    fails++;
+    printf("FAIL %s: %s got %d want %d\n", name, what, got, want);
+}
+
 static void test_multibyte(void)
 {
     uint8_t src[5] = {1, 2, 3, 4, 5};
@@ -124,7 +159,6 @@ static void test_multibyte(void)
     uint32_t r32;
     int n;
 
-    /* reg_rd16 / reg_wr16 */
     reset_case();
     mem[0x1234] = 0xAB;
     mem[0x1235] = 0xCD;
@@ -140,7 +174,7 @@ static void test_multibyte(void)
     ex('W', 0x1235, 0xCD);
     check("wr16");
 
-    /* reg_rd32 / reg_wr32: measured 32-bit write order (high byte first) */
+    /* measured 32-bit write order: high byte first */
     reset_case();
     mem[0x8A04] = 0x00;
     mem[0x8A05] = 0x01;
@@ -162,7 +196,6 @@ static void test_multibyte(void)
     ex('W', 0x8A07, 0x00);
     check("wr32");
 
-    /* reg_rmw32: new = (old & keep) | (set & ~keep) */
     reset_case();
     mem[0x8A04] = 0x11;
     mem[0x8A05] = 0x22;
@@ -222,7 +255,7 @@ static void test_multibyte(void)
     }
 }
 
-/* S1..S12 of spec reg section 2, in the fixed order used by burst.c */
+/* spec reg section 2 in burst.c order: S1 S2 S3 S4-S7 [S8r] S8 S9 S10 S11 S12 */
 static void burst_case(uint8_t kind, uint8_t xram, uint8_t hd, int busy_n)
 {
     const uint16_t target = 0x8B04;
@@ -231,16 +264,16 @@ static void burst_case(uint8_t kind, uint8_t xram, uint8_t hd, int busy_n)
     const uint8_t go = (kind == HB_CMDS) ? HB_CTRL_CMD_GO : HB_CTRL_DATA_GO;
     uint8_t ctl = 0x80;     /* HB_CTRL reset value (facts PFF_F3_RST) */
     uint8_t map = 0x08;     /* MCU_MAP reset value (facts PFF_FC_RST) */
-    uint8_t start, gap, want_ret;
-    uint8_t ret;
-    int k;
+    uint8_t hdv = hd ? OSD_HDOUBLE : 0;
+    uint8_t start, gap, ret, want_ret;
+    int k, busy, want_check, want_rr;
     char name[80];
 
     snprintf(name, sizeof name, "burst kind=%d xram=%d hd=%d busy=%d", kind, xram, hd, busy_n);
     reset_case();
     mem[HB_CTRL] = ctl;
     mem[MCU_MAP] = map;
-    mem[OSD_FRAME_0A] = hd ? OSD_HDOUBLE : 0;
+    mem[OSD_FRAME_0A] = hdv;
     busy_left = busy_n;
 
     /* S1 */
@@ -253,22 +286,22 @@ static void burst_case(uint8_t kind, uint8_t xram, uint8_t hd, int busy_n)
     ex('R', HB_CTRL, ctl);
     ctl |= HB_CTRL_NOINC;
     ex('W', HB_CTRL, ctl);
-    /* S4 */
+    /* S4..S7 */
     if (kind != HB_CMDS)
         ex('W', HB_TARGET, target & 0xFF);
-    /* S5..S7 */
     ex('W', HB_SRC_BANK, src >> 16);
     ex('W', HB_SRC_HI, (src >> 8) & 0xFF);
     ex('W', HB_SRC_LO, src & 0xFF);
     ex('W', HB_LEN_HI, len >> 8);
     ex('W', HB_LEN_LO, len & 0xFF);
-    /* S8 */
+    /* S8r: OSD only, one read of the double-size bit */
     if (kind == HB_OSD) {
+        ex('R', OSD_FRAME_0A, hdv);
         gap = hd ? 0x9E : 0x4F;     /* osdgap rows at 148500 kHz */
-        ex('R', OSD_FRAME_0A, hd ? OSD_HDOUBLE : 0);
     } else {
         gap = 3;
     }
+    /* S8 */
     ex('W', HB_GAP, gap);
     /* S9 */
     if (xram) {
@@ -279,10 +312,9 @@ static void burst_case(uint8_t kind, uint8_t xram, uint8_t hd, int busy_n)
     /* S10 */
     start = (kind == HB_CMDS) ? 0x10 : (kind == HB_STEP) ? 0x08 : 0x28;
     ex('W', HB_CTRL, start);
-    /* S11: busy reads report go; each busy read below 100 is followed by a restart write */
-    ret = 0;
+    /* S11: check read; while busy, restart = read (= check value) + write (read | go) */
     for (k = 1;; k++) {
-        int busy = k <= busy_n;
+        busy = k <= busy_n;
         ex('R', HB_CTRL, busy ? (uint8_t)(start | go) : (uint8_t)(start & ~go));
         if (!busy) {
             ret = 0;
@@ -292,6 +324,7 @@ static void burst_case(uint8_t kind, uint8_t xram, uint8_t hd, int busy_n)
             ret = 1;
             break;
         }
+        ex('R', HB_CTRL, start | go);
         ex('W', HB_CTRL, start | go);
     }
     /* S12: always */
@@ -301,12 +334,15 @@ static void burst_case(uint8_t kind, uint8_t xram, uint8_t hd, int busy_n)
 
     want_ret = (busy_n >= 100);
     ret = hb_burst(src, len, target, kind, xram);
-    if (ret != want_ret) {
-        fails++;
-        printf("FAIL %s: return %d want %d\n", name, ret, want_ret);
-    }
-    checks++;
+    check_int(name, "return", ret, want_ret);
     check(name);
+
+    /* S11 counts (spec reg section 2) */
+    want_check = busy_n < 100 ? busy_n + 1 : 100;
+    want_rr = busy_n < 100 ? busy_n : 99;
+    check_int(name, "check reads", n_check, want_check);
+    check_int(name, "restart reads", n_rr, want_rr);
+    check_int(name, "restart writes", n_rw, want_rr);
 }
 
 static void test_burst(void)
