@@ -389,6 +389,7 @@ class HdmiInput(Dev):
             self.writes = (0x3000, 0x3105, 0x3106, 0x0044, 0x3045)
         self.div = self.halfsd = False
         self.dclk = None          # m -> (DCLK kHz, DHtotal, DHwidth, DVheight) the D domain runs at; video_stubs sets it
+        self.gdar = self.half = False     # inside GetDisplayActiveRegion / its half-height measure is on (video_stubs)
 
     def hs_count(self) -> float:
         """HS period in measure clocks; P30_05/06 = whole counts - 1, P30_07[7:4] = 1/16 fraction."""
@@ -451,7 +452,8 @@ class HdmiInput(Dev):
         if a == 0x3045:                                                 # display active-region pop-up
             d = self.display(m)
             if d:
-                for k, v in self._dword(0x3046, self.active_count(d[0] * 1e3, d[1], d[2], d[3])).items():
+                vh = d[3] // 2 if self.half else d[3]
+                for k, v in self._dword(0x3046, self.active_count(d[0] * 1e3, d[1], d[2], vh)).items():
                     m.put(f"set memory xram 0x{k:x} 0x{v:x}")
             return
         if a == 0x0044:                                                 # frame-sync DVtotal (bit7 = 1) / last line (bit7 = 0)
@@ -512,6 +514,18 @@ def video_stubs(m: "Machine", hdmi: HdmiInput):
         out = [int.from_bytes(b, "big") for b in (lambda o: (o[0:2], o[4:6], o[14:16]))(m.rd(m.addr("g_stMDomainOutputData"), 16))]
         return (int.from_bytes(m.rd(m.addr("g_ulDClkFreq"), 4), "big"), out[0], out[1], out[2])
     hdmi.dclk = dclk
+
+    # ScalerMDomainGetDisplayActiveRegion measures half the display height when DVtotal < IVS2DVS + DVstart + DVheight + 2
+    # (sets V act end to half, D-domain DB apply, then scales the count back): the display-count model follows that DB apply
+    def gdar(m, r):
+        hdmi.gdar, hdmi.half = True, False
+    def dbapply(m, r):                  # 1st apply in the function: V act end = half; 2nd: back to full
+        if hdmi.gdar:
+            hdmi.half = not hdmi.half
+            hdmi.gdar = hdmi.half
+    for fn, cb in (("ScalerMDomainGetDisplayActiveRegion", gdar), ("ScalerGlobalDDomainDBApply", dbapply)):
+        if "_" + fn in m.sym:
+            m.stub(fn, lambda m_, r, cb=cb: cb(m_, r) or None)
 
 
 class W1C(Dev):
