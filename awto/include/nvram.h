@@ -5,6 +5,10 @@
 
 #include <stdint.h>
 
+/* The settings record (layout GENERATED from the settings registry, settings.h): header {set_schema, length, check},
+ * then each SF_NV row at its nv_slot. Schema or check mismatch -> nv_load returns 0 and set_load applies defaults. */
+#define NV_REC_SETTINGS 0
+
 /* records: small fixed-size structs, each with our version byte and check value */
 uint8_t nv_load(uint8_t rec, void *dst, uint8_t len);     /* 1 = valid copy found; 0 = caller applies defaults */
 void    nv_store(uint8_t rec, const void *src, uint8_t len);   /* queued; written by nv_service */

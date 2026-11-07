@@ -26,4 +26,17 @@ void    osd_fill(uint8_t row, uint8_t col, uint8_t n, uint8_t glyph, uint8_t fg,
 void    osd_font(uint16_t first, const uint8_t __code *src, uint16_t len);   /* our font format, spec osd */
 void    osd_palette(uint8_t idx, uint8_t r, uint8_t g, uint8_t b);
 
+/* Menu pages are GENERATED from the settings registry (settings.h): one page per group, one item per row.
+ * The UI walks these tables; it never hard-codes an item. */
+struct osd_item { uint16_t set_id; uint8_t label; };          /* label = our string table index */
+struct osd_page {
+    uint8_t title;                                            /* our string table index */
+    uint8_t group;                                            /* settings group shown on this page */
+    uint8_t n;                                                /* items */
+    const struct osd_item __code *items;
+    uint8_t parent;                                           /* page index, 0xFF = top */
+};
+extern const struct osd_page __code osd_pages[];
+extern const uint8_t osd_page_count;
+
 #endif

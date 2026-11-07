@@ -1,0 +1,7 @@
+# Settings registry: the single source (awto/include/settings.h). Generated from it: set_table, OSD menu pages, VCP map,
+# NVRAM layout + schema version, host tool settings, docs/settings.md. Ids are stable and never reused.
+# id	name	type	unit	group	flags	min	max	step	default	nv_slot	vcp	apply	note
+1	brightness	int	percent	picture	nv,live	0	100	1	80	auto	0x10	panel_backlight	MCCS VCP 0x10 (public standard)
+2	contrast	int	percent	picture	nv,live	0	100	1	50	auto	0x12	colour_contrast	MCCS VCP 0x12
+3	input	enum	none	input	nv	1	3	1	2	auto	0x60	inp_select	D1 DP, D2 HDMI, D3 HDMI
+4	factory_reset	action	none	system	-	0	1	1	0	-	0x04	set_defaults	MCCS VCP 0x04 restore factory defaults
