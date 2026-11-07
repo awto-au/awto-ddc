@@ -179,3 +179,15 @@ def test_old_mixed_log_passthrough():
     text = decode_file("dbg_read.old.log")
     assert "2026-11-05T16:22:13+1100 0x0000 @0x0000: cf" in text           # tool line kept in place
     assert "REAL" not in text
+
+
+def test_timing_reads_decoded_with_exact_frequency():
+    """g_stMDomainInputData then g_ulInputActiveRegionBackUp reads: decoded line carries the 3-decimal frequency (#34)."""
+    from types import SimpleNamespace as NS
+    s = P.Symbols()
+    s.addr.update({0xEEA3: "g_stMDomainInputData", 0xEE9F: "g_ulInputActiveRegionBackUp"})
+    d = P.Decoder(lambda *a: None, s)
+    tin = bytes.fromhex("03 0547 1130 0f00 0226 000b 0259 08ca 0870 004e 0003".replace(" ", ""))
+    assert "3840x2160 htotal 4400 vtotal 2250 (SDK 60.1 Hz)" in d._timing_note(NS(kind="dr", what="x", vals=list(tin)), 0xEEA3, 21)
+    note = d._timing_note(NS(kind="dr", what="x", vals=list((1403098).to_bytes(4, "big"))), 0xEE9F, 4)
+    assert "count 1403098 -> 3840x2160@60.000 Hz (H 135.000 kHz, pclk 594.000 MHz" in note

@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import dev  # noqa: E402  (gdctl_set_args, _bus, _fwmap, cmd_recover: the same code paths as dev.py mode/recover)
 import dbg_xdata as X  # noqa: E402
 import i2cbus  # noqa: E402
+import rtd_proto as P  # noqa: E402
 import unit_health as H  # noqa: E402
 
 REST = "1920x1080@60.000"
@@ -138,7 +139,7 @@ def with_scale(args: list[str], target: str, scale: str) -> list[str]:
 def sym_map(u: dict) -> tuple[dict, str]:
     mp = Path(dev._fwmap(u, None))
     txt = mp.read_text(errors="replace")
-    return {n: H.sym_addr(txt, n) for n in H.MAP_SYMS}, mp.name
+    return H.load_maps(txt), mp.name
 
 
 def probe(u: dict, maps: dict, host: tuple[int, int, float]) -> dict:
@@ -153,10 +154,14 @@ def probe(u: dict, maps: dict, host: tuple[int, int, float]) -> dict:
     r = {"stage": hdr[3]}
     r["ms"] = H.decode_mode(dbg.read(maps["g_stModeInfo"], 1))
     r["ps"] = H.decode_power(dbg.read(maps["g_stPowerInfo"], 1))[1]
-    t = H.decode_timing(dbg.read(maps["g_stMDomainInputData"], 17))
-    r["timing"] = f"{t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f}"
+    t, x, note = P.read_timing(dbg.read, maps)
+    # 3 decimals from the active-region count (#34); "~" = SDK 0.1 Hz value (no count for this timing yet)
+    r["timing"] = (f"{t['hwidth']}x{t['vheight']}@{x['vfreq_mhz'] / 1000:.3f}" if x else
+                   f"{t['hwidth']}x{t['vheight']}@~{t['vfreq'] / 10:.1f}")
+    r["timing_detail"] = P.fmt_timing(t, x) + (f"; {note}" if note else "")
     w, h, hz = host
-    r["timing_ok"] = (t["hwidth"], t["vheight"]) == (w, h) and abs(t["vfreq"] - hz * 10) <= H.TIMING_VFREQ_TOL
+    r["timing_ok"] = (t["hwidth"], t["vheight"]) == (w, h) and (abs(x["vfreq_mhz"] - hz * 1000) <= H.TIMING_EXACT_TOL_MHZ if x else
+                                                              abs(t["vfreq"] - hz * 10) <= H.TIMING_VFREQ_TOL)
     d = dbg.io
     r["p0_02"] = rd(d, 0x0002)
     r["p5_27"], r["p5_ac"] = rd(d, 0x0527), rd(d, 0x05AC)
@@ -276,7 +281,7 @@ def main() -> int:
             else:
                 s = r["ms"]
                 say(lf, f"{m:<18} {r['verdict']:<10} state={H.MODE_NAMES[s] if s < len(H.MODE_NAMES) else s} "
-                        f"measured={r['timing']} P0_02={r['p0_02']:02X} P5_27={r['p5_27']:02X} P5_AC={r['p5_ac']:02X} "
+                        f"measured={r['timing_detail']} P0_02={r['p0_02']:02X} P5_27={r['p5_27']:02X} P5_AC={r['p5_ac']:02X} "
                         f"frc={'on' if r['frc'] else 'off'} ddr_flag_bytes={r['ddr'] if r['ddr'] is not None else '-'}")
         row = [m, r["verdict"]]
         if "ms" in r:

@@ -32,9 +32,12 @@ EVENT_INFO, TESTCMD_DEBUG = 10, 0x20           # EnumOsdEvent info pop-up; ucTes
 RATE_WINDOW_S, RATE_REPEATS = 1.0, 3
 # Consume wait: pop-up draw stalls the debug slave ~0.4 s (#11 comment); limit = 1.25x worst seen, expiry = FAIL.
 CONSUME_WAIT_S = 0.5
-TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): host 60.000 vs measured 60.1
+TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): SDK value only (no count); host 60.000 vs measured 60.1
+# exact (active-region count) vs host: crystal +-50 ppm = 3 mHz at 60 Hz, host string 0.5 mHz, count 0.05 mHz; 10 mHz = ~3x
+TIMING_EXACT_TOL_MHZ = 10
 HDIAG_STAGE = 8
-MAP_SYMS = ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo")
+MAP_SYMS = ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
+MAP_SYMS_OPT = (P.AWTO_FREQ_SYM,)              # images with fw/sdcc/awto_freq.inc (#34)
 RETRY_TRIES = 2
 
 
@@ -49,6 +52,18 @@ def sym_addr(map_text: str, name: str) -> int:
     return int(m.group(1), 16) & 0xFFFF
 
 
+def load_maps(map_text: str) -> dict:
+    """Symbol -> XDATA address: MAP_SYMS required, MAP_SYMS_OPT None when the image has none; + osd_ofs."""
+    maps = {n: sym_addr(map_text, n) for n in MAP_SYMS}
+    for n in MAP_SYMS_OPT:
+        try:
+            maps[n] = sym_addr(map_text, n)
+        except DbgError:
+            maps[n] = None
+    maps["osd_ofs"] = P.osd_offsets_from_map(map_text)
+    return maps
+
+
 def be16(b: bytes, i: int) -> int:
     return (b[i] << 8) | b[i + 1]
 
@@ -61,10 +76,7 @@ def decode_power(b: bytes) -> tuple[int, int]:
     return b[0] & 0x0F, b[0] >> 4              # b4PowerAction, b4PowerStatus
 
 
-def decode_timing(b: bytes) -> dict:
-    """StructTimingInfo: byte 0 = 5 flag bits, then WORDs packed without padding."""
-    return {"hfreq": be16(b, 1), "htotal": be16(b, 3), "hwidth": be16(b, 5), "vfreq": be16(b, 11),
-            "vtotal": be16(b, 13), "vheight": be16(b, 15)}
+decode_timing = P.decode_timing                # StructTimingInfo (SDK 0.1 kHz / 0.1 Hz units)
 
 
 def parse_host_mode(s: str) -> tuple[int, int, float]:
@@ -198,13 +210,14 @@ def check_state(rep, d, mode_addr, power_addr) -> bool:
     return ok1 and ok2
 
 
-def check_timing(rep, d, timing_addr, host: tuple[int, int, float] | None) -> bool:
-    t = decode_timing(d.read(timing_addr, 17))
-    got = f"{t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} (htotal {t['htotal']} vtotal {t['vtotal']} hfreq {t['hfreq'] / 10:.1f} kHz)"
+def check_timing(rep, d, maps: dict, host: tuple[int, int, float] | None) -> bool:
+    t, x, note = P.read_timing(d.read, maps)
+    got = P.fmt_timing(t, x) + (f"; {note}" if note else "")
     if host is None:
         return rep.add("input timing", False, f"measured {got}; host mode unknown")
     w, h, hz = host
-    ok = (t["hwidth"], t["vheight"]) == (w, h) and abs(t["vfreq"] - hz * 10) <= TIMING_VFREQ_TOL
+    ok = (t["hwidth"], t["vheight"]) == (w, h) and (abs(x["vfreq_mhz"] - hz * 1000) <= TIMING_EXACT_TOL_MHZ if x else
+                                                     abs(t["vfreq"] - hz * 10) <= TIMING_VFREQ_TOL) and "DISAGREES" not in note
     return rep.add("input timing", ok, f"measured {got} vs host {w}x{h}@{hz:.3f}")
 
 
@@ -276,7 +289,7 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = Fals
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
              ("main loop", lambda: check_rate(rep, d, base, wait)),
              ("mode state", lambda: check_state(rep, d, maps["g_stModeInfo"], maps["g_stPowerInfo"])),
-             ("input timing", lambda: check_timing(rep, d, maps["g_stMDomainInputData"], host)),
+             ("input timing", lambda: check_timing(rep, d, maps, host)),
              ("pins", lambda: check_pins(rep, d)),
              ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, maps["osd_ofs"], wait)),
              ("delay cal", lambda: check_delaycal(rep, d, base, sim))]
@@ -309,8 +322,7 @@ def main() -> int:
         return rep.summary(a.serial)
     i2cbus.require_unit(a.bus, a.serial)
     txt = a.map.read_text(errors="replace")
-    maps = {n: sym_addr(txt, n) for n in MAP_SYMS}
-    maps["osd_ofs"] = P.osd_offsets_from_map(txt)
+    maps = load_maps(txt)
     host = None
     mode = a.host_mode
     if not mode and a.gdctl:
@@ -329,12 +341,13 @@ def run_sim(a) -> int:
     binp, mapp = a.sim
     mode = a.host_mode or "1920x1080@60"
     rep = Report()
-    bus = fw_sim.SimBus(binp, mapp, video="1080p60")
+    w, h, hz = parse_host_mode(mode)
+    video = "1080p60" if h == 1080 else ("2160p59.94" if hz < 59.97 else "2160p60")   # fw_sim.HdmiInput preset for the host mode
+    bus = fw_sim.SimBus(binp, mapp, video=video)
     bus.run_until_mode(MODE_ACTIVE)                 # the unit under test is already up: let the display setup finish
     try:
-        maps = {n: sym_addr(mapp.read_text(errors="replace"), n) for n in MAP_SYMS}
-        maps["osd_ofs"] = P.osd_offsets_from_map(mapp.read_text(errors="replace"))
-        rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode}")
+        maps = load_maps(mapp.read_text(errors="replace"))
+        rep.add("bus rate", True, f"simulated bus; image {binp.name}; host mode {mode} (source model {video})")
         dbg = Dbg(bus, wait=bus.wait, now=bus.now)
         run(dbg, maps, parse_host_mode(mode), rep, wait=bus.wait, sim=True)
         return rep.summary(binp.stem, dbg.retries)

@@ -244,6 +244,30 @@ def read_bytes(io, off: int, n: int) -> bytes | None:
     return X.read(io, BASE + off, n, _BLOCK)
 
 
+def timing_line(io, root: Path, map_path: str | None) -> str | None:
+    """'input 3840x2160@59.940 Hz (H 134.865 kHz, pclk 593.407 MHz; ...)' from the active-region count (#34); None = no map."""
+    import rtd_proto as P
+    mp = Path(map_path) if map_path else P.default_map(root)
+    if not mp or not Path(mp).exists():
+        return None
+    import unit_health as H
+    try:
+        maps = H.load_maps(Path(mp).read_text(errors="replace"))
+    except H.DbgError as e:
+        return f"input timing: {e}"
+
+    def rd(a, n):
+        b = X.read(io, a, n, _BLOCK)
+        if b is None:
+            raise H.DbgError(f"read 0x{a:04X}+{n} failed")
+        return b
+    try:
+        t, x, note = P.read_timing(rd, maps)
+    except H.DbgError as e:
+        return f"input timing: {e}"
+    return f"input {P.fmt_timing(t, x)}" + (f"; {note}" if note else "") + f"  [map {Path(mp).name}]"
+
+
 SAFE = 0xF6B0                       # StAwtoSafe, 32 B (RL6449_Project.h): survives a warm reset
 SAFE_HOLD, SAFE_MARKER = 0xA55A, 0x5AFE
 # --hold follows a relay power-on that dev.py has already verified: scaler answers 0x35 ~1-2 s after power and the safe
@@ -356,6 +380,7 @@ def _main() -> int:
     ap.add_argument("--hold-wait", type=float, default=HOLD_WAIT_S, metavar="S",
                     help=f"--hold gives up after S seconds (default {HOLD_WAIT_S:g}: 2.5x the 2 s safe window)")
     ap.add_argument("--unhold", action="store_true", help="release the safe-window hold (fw continues booting)")
+    ap.add_argument("--map", help="image .map: also print the input timing with exact frequencies (default $AWTO_DDC_MAP, else the newest tmp/fw/*/fw.map)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
     a = ap.parse_args()
@@ -405,6 +430,9 @@ def _main() -> int:
         log(f"bus {a.bus} block {blk.hex()}")
         d = decode(blk, a.be)
         txt = report(d, prev, (t - tprev) if tprev else None)
+        tl = timing_line(io, root, a.map)
+        if tl:
+            txt += "\n" + tl
         print(f"--- {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n{txt}", flush=True)
         log(txt)
         prev, tprev = d, t

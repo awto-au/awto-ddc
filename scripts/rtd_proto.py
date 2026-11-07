@@ -91,6 +91,73 @@ def parse_raw(line: str) -> Txn | None:
                None if err else data, n, err, bool(m["blk"]))
 
 
+# ---- exact input frequencies (#34, #26) --------------------------------------------------------------------------
+# The SDK keeps HFreq in 0.1 kHz and VFreq in 0.1 Hz from the HS period (~650 measure clocks at 4K: 1 count = 0.15 %), so 60.000
+# and 59.940 both read "60.0" (60.000 even reads 60.1). Exact values come from the input active-region count the M-domain set-up
+# took (g_ulInputActiveRegionBackUp, measure clocks from the first to the last active pixel): resolution 1 in ~1.4 M at 4K.
+XTAL_HZ = 14_318_180                       # board crystal (4x NTSC colour burst); SDK _XTAL14318K = 14318 kHz
+MEAS_HZ = XTAL_HZ * 49 // 2 // 4           # _MEASURE_CLK: M2PLL (M 49, N 2, O 1) / P40_07 divider 4 = 87.699 MHz
+TIMING_SYMS = ("g_stMDomainInputData", "g_ulInputActiveRegionBackUp")   # + g_stAwtoFreq in images with fw/sdcc/awto_freq.inc
+AWTO_FREQ_SYM, AWTO_FREQ_LEN = "g_stAwtoFreq", 30
+STALE_TOL = 0.01                           # exact vs SDK VFreq: SDK error <= 0.2 % at 4K (1 HS count); 1 % apart = other timing
+
+
+def _be(b: bytes, i: int, n: int) -> int:
+    return int.from_bytes(b[i:i + n], "big")
+
+
+def decode_timing(b: bytes) -> dict:
+    """g_stMDomainInputData (StructTimingInfo, big-endian WORDs after the flag byte): SDK units (0.1 kHz, 0.1 Hz)."""
+    return {"hfreq": _be(b, 1, 2), "htotal": _be(b, 3, 2), "hwidth": _be(b, 5, 2), "vfreq": _be(b, 11, 2),
+            "vtotal": _be(b, 13, 2), "vheight": _be(b, 15, 2)}
+
+
+def exact_timing(t: dict, count: int, extra_lines: int = 0, meas_hz: int = MEAS_HZ) -> dict | None:
+    """Pixel clock / H / V frequency from the active-region count: {pclk_hz, hfreq_hz, vfreq_mhz} (floats), None = no count."""
+    if not count or not t["htotal"] or not t["vtotal"] or not t["vheight"]:
+        return None
+    pclk = meas_hz * (t["htotal"] * (t["vheight"] - 1 + extra_lines) + t["hwidth"]) / count
+    x = {"pclk_hz": pclk, "hfreq_hz": pclk / t["htotal"], "vfreq_mhz": pclk * 1000 / (t["htotal"] * t["vtotal"])}
+    if t["vfreq"] and abs(x["vfreq_mhz"] / 100 - t["vfreq"]) > max(3, t["vfreq"] * STALE_TOL):
+        return None                        # count from an earlier mode set (timing changed since): not this timing
+    return x
+
+
+def decode_awto_freq(b: bytes) -> dict:
+    """g_stAwtoFreq (RL6449_Project.h StAwtoFreq, big-endian): the firmware's own exact values and the raw count they came from."""
+    return {"count": _be(b, 0, 4), "meas_hz": _be(b, 4, 4), "pclk_hz": _be(b, 8, 4), "hfreq_hz": _be(b, 12, 4),
+            "vfreq_mhz": _be(b, 16, 4), "htotal": _be(b, 20, 2), "vtotal": _be(b, 22, 2), "hwidth": _be(b, 24, 2),
+            "vheight": _be(b, 26, 2), "extra": b[28], "valid": b[29]}
+
+
+def fmt_timing(t: dict, x: dict | None) -> str:
+    """'3840x2160@59.940 Hz (H 134.865 kHz, pclk 593.407 MHz; htotal 4400 vtotal 2250)'; no count: the SDK's 0.1 values, marked."""
+    if x:
+        return (f"{t['hwidth']}x{t['vheight']}@{x['vfreq_mhz'] / 1000:.3f} Hz (H {x['hfreq_hz'] / 1000:.3f} kHz, "
+                f"pclk {x['pclk_hz'] / 1e6:.3f} MHz; htotal {t['htotal']} vtotal {t['vtotal']})")
+    return (f"{t['hwidth']}x{t['vheight']}@{t['vfreq'] / 10:.1f} Hz (SDK 0.1 Hz, no active-region count; H {t['hfreq'] / 10:.1f} kHz; "
+            f"htotal {t['htotal']} vtotal {t['vtotal']})")
+
+
+def read_timing(read, addr: dict) -> tuple[dict, dict | None, str]:
+    """read(addr, n) -> bytes; addr: symbol -> XDATA address (TIMING_SYMS required, AWTO_FREQ_SYM optional).
+    -> (SDK timing, exact from the raw count or None, note on the firmware's own exact values vs ours)."""
+    t = decode_timing(read(addr["g_stMDomainInputData"], 17))
+    count = _be(read(addr["g_ulInputActiveRegionBackUp"], 4), 0, 4)
+    note, extra = "", 0
+    if addr.get(AWTO_FREQ_SYM) is not None:
+        f = decode_awto_freq(read(addr[AWTO_FREQ_SYM], AWTO_FREQ_LEN))
+        if f["valid"] and f["count"] == count:
+            extra = f["extra"]
+            x = exact_timing(t, count, extra, f["meas_hz"])
+            dv = abs(x["vfreq_mhz"] - f["vfreq_mhz"]) if x else None
+            note = (f"fw {f['vfreq_mhz'] / 1000:.3f} Hz " + ("agrees" if dv is not None and dv <= 1.5 else f"DISAGREES by {dv} mHz")
+                    if x else "")
+        else:
+            note = "fw exact values not valid for this count"
+    return t, exact_timing(t, count, extra), note
+
+
 # ---- symbols ---------------------------------------------------------------------------------------------------
 OSD_EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
               "source-menu": 7}
@@ -358,6 +425,21 @@ class Decoder:
         n = self.sym.name(a) or self.regname(a)
         return f"  {n}" if n else ""
 
+    def _timing_note(self, e, lo: int, n: int) -> str:
+        """Reads of the input timing / active-region count: decoded, exact frequency once both are seen (#34)."""
+        if e.kind != "dr" or e.what != "x" or None in e.vals:
+            return ""
+        b = bytes(e.vals)
+        if lo == self.sym.base("g_stMDomainInputData") and n >= 17:
+            self.last_timing = decode_timing(b)
+            t = self.last_timing
+            return f"  = {t['hwidth']}x{t['vheight']} htotal {t['htotal']} vtotal {t['vtotal']} (SDK {t['vfreq'] / 10:.1f} Hz)"
+        if lo == self.sym.base("g_ulInputActiveRegionBackUp") and n == 4:
+            cnt = int.from_bytes(b, "big")
+            x = exact_timing(self.last_timing, cnt) if getattr(self, "last_timing", None) else None
+            return f"  = count {cnt}" + (f" -> {fmt_timing(self.last_timing, x)}" if x else "")
+        return ""
+
     # -- rendering of coalesced events
     def _render(self, e) -> str:
         k = e.kind
@@ -374,7 +456,7 @@ class Decoder:
             hi = lo + n - 1
             nm = self.sym.range_name(lo, hi) or self.regname(lo) or ""
             vals = f"{':' if k == 'dr' else ' <-'} {hx(e.vals)}" if n <= INLINE_MAX else ""   # longer: .raw.log + tool's decode
-            return f"{w} {what} 0x{lo:04X}..0x{hi:04X} ({n} B){'  ' + nm if nm else ''}{vals}"
+            return f"{w} {what} 0x{lo:04X}..0x{hi:04X} ({n} B){'  ' + nm if nm else ''}{vals}{self._timing_note(e, lo, n)}"
         if k == "msg":
             text = bytes(e.text)
             if not text and e.val is None:              # header not seen by the decoder: the tool's own line follows

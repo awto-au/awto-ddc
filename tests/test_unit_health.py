@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import unit_health as H  # noqa: E402
 
 MAPS = {"g_stAwtoDiag": 0xF6D0, "g_stModeInfo": 0xF2A5, "g_stPowerInfo": 0xF2B0, "g_stMDomainInputData": 0xF0D9,
-        "g_stOsdInfo": 0xEA89, "osd_ofs": {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}}
+        "g_stOsdInfo": 0xEA89, "g_ulInputActiveRegionBackUp": 0xEE9F, "osd_ofs": {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}}
 TIMING = bytes.fromhex("03 0547 1130 0f00 0226 000b 0259 08ca 0870 004e 0003".replace(" ", ""))
 
 
@@ -125,6 +125,28 @@ def test_all_pass():
     rep = run_all(healthy_mem())
     assert all(ok for _, ok, _ in rep.rows), rep.rows
     assert rep.summary("t") == 0
+
+
+def set_count(m, cnt, vfreq10=None):
+    for i, b in enumerate(cnt.to_bytes(4, "big")):
+        m[MAPS["g_ulInputActiveRegionBackUp"] + i] = b
+    if vfreq10 is not None:                                          # SDK VFreq (0.1 Hz) at offset 11
+        m[MAPS["g_stMDomainInputData"] + 11], m[MAPS["g_stMDomainInputData"] + 12] = vfreq10 >> 8, vfreq10 & 255
+
+
+def test_timing_exact_from_count():
+    """4K60.000 and 4K59.940 both look like 60.x in SDK units; the active-region count tells them apart (#34)."""
+    m = healthy_mem()
+    set_count(m, 1403098)                       # fw_sim 2160p60 count (measure clock 87.699 MHz)
+    rows = {n: (ok, d) for n, ok, d in run_all(m).rows}
+    assert rows["input timing"][0] and "3840x2160@60.000 Hz (H 135.000 kHz, pclk 594.000 MHz" in rows["input timing"][1]
+    set_count(m, 1404502, 600)                  # 2160p59.94
+    rows = {n: (ok, d) for n, ok, d in run_all(m, host=(3840, 2160, 59.94)).rows}
+    assert rows["input timing"][0] and "@59.940 Hz (H 134.865 kHz, pclk 593.407 MHz" in rows["input timing"][1]
+    assert not names(run_all(m, host=(3840, 2160, 60.0)))["input timing"]      # 59.940 is not 60.000 any more
+    set_count(m, 2806196, 601)                  # stale count (other timing): SDK value, marked
+    rows = {n: (ok, d) for n, ok, d in run_all(m).rows}
+    assert "SDK 0.1 Hz" in rows["input timing"][1]
 
 
 def test_power_saving_fails():
