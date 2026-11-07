@@ -31,6 +31,7 @@ NBANKS = 14                                                   # banks 14-15 = da
 # bank 5 s, link 20 s (first runs 2026-11-04). 3x cold worst case per awto-dan#53.
 TIMEOUT = {"port": 60, "edid": 60, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
 LIB_UV2 = "Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2"   # Realtek ships it as a .LIB
+WORK_DIR = ROOT / "tmp/sdcc-port"
 ASM = ROOT / "tmp/sdcc-port/asm"
 SEL = ROOT / "tmp/sdcc-port/asm_sel"
 
@@ -253,6 +254,9 @@ def main() -> int:
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
         run("asm", [py, "scripts/keil2sdcc.py", "compile", LIB_UV2, "--asm"])
+        # #66: every policy row must still match a warning of this build (stale rows fail), every warning a row
+        run("edid", [py, "scripts/warn_policy_check.py", WORK_DIR / "warnings-STD_FW_1P.txt",
+                     WORK_DIR / f"warnings-{Path(LIB_UV2).stem}.txt"])
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)
