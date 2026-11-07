@@ -1,14 +1,12 @@
 # Compiler/cpp warning policy for keil2sdcc compile (#26). Unmatched warning = build fails.
 # pattern (regex on warning text)	file glob (src-relative)	line (* or N)	verdict (ok)	reason
-# Class-wide: no codegen effect.
-^backslash and newline separated by space$	*	*	ok	cpp: trailing space after macro line continuation in SDK headers; splice still happens
-^"/\*" within comment$	*	*	ok	cpp: nested comment opener in SDK comments
-^object in read-only code space should be const$	*	*	ok	SDK `code` tables lack const; writes would raise 293 (not allowed here), tested tmp/codewrite_test.c
-^pointer to object in read-only code space should be pointer to const$	*	*	ok	SDK `code` pointers lack const; same as above
+# Class-wide: no codegen effect. cpp backslash-space and nested /* are fixed in keil2sdcc rewrite() (no rows).
+^object in read-only code space should be const$	*	*	ok	qualifier lint only: const changes no codegen for __code (same asm); a write to __code raises warning 293, which has no row (build fails). Adding const at source (keil2sdcc `code` -> `const __code`) trades it for warning 196 at every table passed to the SDK's `BYTE *` params
+^pointer to object in read-only code space should be pointer to const$	*	*	ok	same as above (pointer form)
 # SDK #warning notes, checked:
 ^#warning "NOTE: DEBUG MESSAGE SUPPORT ON!!"$	*	*	ok	debug messages on during bring-up (#25); release build turns them off
 ^#warning "NOTE: Please check D[123] EDID table location!!!"$	*	*	ok	EDID tables in code on purpose (docs/edid-fix.md)
-# Per-site entries (overflow 158, always-false 94, enum 291, optimizer 110, unreachable 126) follow from the review in #26.
+# W158 on (x << n) constants is a compiler false positive (awto-sdcc#47). Per-site entries (overflow 158, always-false 94, enum 291, optimizer 110, unreachable 126) follow from the review in #26.
 # Reviewed 2026-11-05 (#26): overflow 158 / always-false 94 / enum 291 - no bugs; spurious 158 above 127 into BYTE with --fsigned-char
 ^overflow in implicit constant conversion$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	499	ok	0x98 into BYTE; asm #0x98
 ^enumeration constant outside the range of int	Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonSyncCommonInclude.h	130	ok	_DP_HPD_TIME_NONE 0xFFFF = int -1, stored 16-bit; only ==/!=/assign uses see it
@@ -75,7 +73,6 @@
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	668	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	821	ok	OK-HARMLESS: switch(ucDpcdLane&0x1F): case _DP_FOUR_LANE shares body with default, SDCC drops the redundant compare; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1_INT.c	102	ok	OK-HARMLESS: switch(g_ucDpRx1LaneCount): FOUR_LANE and default share body; compare dropped, same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_FRC.c	1055	ok	OK-HARMLESS: body is only ((void)0) stubs (debug messages removed by keil2sdcc); empty if removed, no side effect lost
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_LDO.c	57	ok	OK-CONFIG: all cases of switch(enumPorStatus) are empty for this config; whole switch folds to nothing
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1375	ok	OK-CONFIG: _DEBUG_MESSAGE_SUPPORT==_ON (awto bring-up, Debug.h) forces enumMode=_DEBUG_MODE so enumMode==_DDCCI_MODE is false; DDC/CI off by design (_AWTO_DEBUG_PORT)
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1378	ok	OK-CONFIG: body of the DDCCI_MODE branch (slave 0x6E and port DDC mux) dead because debug-mode is forced; intended: debug slave 0x35 replaces DDC/CI
@@ -90,7 +87,6 @@
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1444	ok	OK-CONFIG: body of the DDCCI_MODE branch (slave 0x6E and port DDC mux) dead because debug-mode is forced; intended: debug slave 0x35 replaces DDC/CI
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1452	ok	OK-CONFIG: body of the DDCCI_MODE branch (slave 0x6E and port DDC mux) dead because debug-mode is forced; intended: debug slave 0x35 replaces DDC/CI
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c	933	ok	OK-CONFIG: DP/default cases empty for this config; switch(ucSourceType) merges them into default
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Pinshare.c	271	ok	OK-CONFIG: all case bodies empty (_PIN_xxx_OFF_REGION/_PIN_2xx not ==8); switch folds away
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	112	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulMacClk arms dead
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	116	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulMacClk arms dead
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	198	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulCMUFreq arms dead
@@ -187,8 +183,6 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7143	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7176	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c	1270	ok	OK-CONFIG: _DP_MST_SUPPORT off: NORMAL_TO_FAKE_OFF case empty, equals default
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c	192	ok	OK-HARMLESS: switch(GET_MEMORY_SELECT()): default and _MN_FRAME_SYNC_MEMORY share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1139	ok	OK-HARMLESS: if body is only a ((void)0) debug stub; condition has no side effects (abs of locals/macros)
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	218	ok	OK-CONFIG: _VSU_INI_PHASE_LINES==_VSU_4_LINE constant; 3-line arm dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	565	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	567	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
@@ -248,7 +242,6 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6615	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6637	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6661	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1155	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1161	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1159	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1163	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
@@ -273,8 +266,6 @@
 # Reviewed 2026-11-05 (#26): FRC-off build sites
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	732	ok	OK-CONFIG: FRC off -> switch(ucMemorySel) has only the line-buffer case, merges with default
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	914	ok	OK-CONFIG: same switch(ucMemorySel), FRC off
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1985	ok	OK-HARMLESS: debug-check if with ((void)0) body
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1990	ok	OK-CONFIG: compares panel constants only (_PANEL_DH_TOTAL, _LAST_LINE_TARGET)
 ^#warning "_FRC_SUPPORT Should Be _ON!!!"$	Kernel/Common/Project_Config_Check.h	98	ok	TEMP KNOWN WRONG: _ASPECT_ORIGINAL_MODE_SUPPORT needs FRC; FRC ON wedged unit 3, fix pending (#26)
 # Reviewed 2026-11-05 (#26): SDK Lib sources (RL6449_Series_Lib.Uv2) - no bugs
 ^overflow\ in\ implicit\ constant\ conversion	Kernel/Scaler/RL6449_Series_Scaler/Lib/Code/RL6449_Series_Color/RL6449_Series_ColorDCRAdjust.c	62	ok	OK-HARMLESS: (PT<<2)|_BIT0 in 0xE1/0xE5 into BYTE param; asm bytes match
@@ -319,7 +310,6 @@
 ^Cast\ of\ pointer\ to\ integer\ type\ that\ can	Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonReg/ScalerCommonBurstWrite.c	75	ok	OK-SAME: (WORD)generic ptr takes the 16-bit address (tag byte dropped, asm: ADRM=ptr+1 hi, ADRL=ptr+2 lo); bank passed separately via ucBankNum; Keil identical; tag unused
 ^Cast\ of\ pointer\ to\ integer\ type\ that\ can	Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonReg/ScalerCommonBurstWrite.c	76	ok	OK-SAME: (WORD)generic ptr takes the 16-bit address (tag byte dropped, asm: ADRM=ptr+1 hi, ADRL=ptr+2 lo); bank passed separately via ucBankNum; Keil identical; tag unused
 ^non\-pointer\ type\ cast\ to\ generic\ pointer	Kernel/Scaler/ScalerFunction/Lib/Code/ScalerColor/ScalerColorPCMInputGammaLoadTable.c	58	ok	OK-SAME: WORD from ScalerColorPCMGetTableAddress ((WORD)code ptr) cast to BYTE*: tag 0x00 in SDCC but pointer is only passed to ScalerBurstWrite which uses low 16 bits + separate bank; never dereferenced; Keil same
-^overflow in implicit constant conversion$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontTable.c	102	ok	logo tile map entries >0x7f into BYTE; byte value correct (spurious under --fsigned-char)
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	750	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	754	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	774	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
@@ -331,7 +321,4 @@
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	955	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	989	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c	707	ok	OK-CONFIG: _HW_IIC_SUPPORT _OFF (#53.3): debug IIC read/write cases (0x44/0x45) compiled out, switch folds
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1798	ok	OK-CONFIG: ScalerMDomainGetFRCMemorySpace (compiled for the CheckMDomain messages, #37): _MEMORY_ACCESS_TYPE constant, the other arm is dead
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1833	ok	OK-CONFIG: ScalerMDomainGetFRCMemoryBW: GET_OD_STIRCT_CONDITION() is _FALSE with OD cut (#8), so the if is constant false
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1835	ok	OK-CONFIG: body of the constant-false OD-strict if above (usHWidth = DHtotal, OD only)
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	570	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
