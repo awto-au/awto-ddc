@@ -365,3 +365,19 @@ def test_third_signal_forces_exit_and_marks_manifest(tmp_path):
     with pytest.raises(KeyboardInterrupt):
         I.flash(isp, img, opts(tmp_path))
     assert S.FlashState.load(tmp_path / "AWT0-flash-state.json", "AWT0").source == "write-failed"
+
+
+def test_unstable_read_path_refuses_before_any_erase(tmp_path):
+    """#71: 1 MHz reads in the low-power state differ run to run; nothing may be erased on such a session."""
+    img, isp = image(), FakeIsp()
+    n = [0]
+
+    def flaky(addr, k):
+        n[0] += 1
+        d = bytearray(isp.flash[addr:addr + k])
+        d[n[0] % k] ^= 0x01
+        return bytes(d)
+    isp.read_flash = flaky
+    with pytest.raises(I.ReadPathUnstable):
+        I.flash(isp, img, opts(tmp_path))
+    assert isp.erased == []

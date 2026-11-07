@@ -221,12 +221,27 @@ def _verify(isp, addr, new, crc_ok):
 SLOW_SECTOR_S = 7.5
 
 
-def crc_calibrate(isp) -> bool:
+class ReadPathUnstable(RuntimeError):
+    """Two readbacks of one range differ: every readback-based decision (diff, drift, blank, verify) is unsafe."""
+
+
+def read_gate(isp) -> bytes:
+    """Before any erase: two readbacks of sector 0 must match. Seen on unit 3 in D1 power saving at 1 MHz: ~60 bad
+    bytes per 4 KiB plus a stale first byte per 1 KiB read, while the on-chip CRC stayed right (#71)."""
+    r1, r2 = isp.read_flash(0, SECTOR), isp.read_flash(0, SECTOR)
+    if r1 != r2:
+        nd = sum(x != y for x, y in zip(r1, r2))
+        raise ReadPathUnstable(f"read path unstable: two readbacks of sector 0 differ in {nd} byte(s)")
+    return r1
+
+
+def crc_calibrate(isp, s0: bytes) -> bool:
     """Is the on-chip CRC the CRC8 we reproduce? Compare against crc8 of a readback of sector 0 (real code,
-    non-trivial) and of its first 1 KiB (a second range, catches a stale crc_done/result). False -> readback verify."""
+    non-trivial) and of its first 1 KiB (a second range, catches a stale crc_done/result). False -> readback verify.
+    s0 = sector 0 as read_gate read it (twice, equal), so a mismatch means the CRC engine, not the read path."""
     try:
         for n in (SECTOR, 1024):
-            data = isp.read_flash(0, n)
+            data = s0[:n]
             hw, py = isp.flash_crc(0, n), S.crc8(data)
             if hw != py:
                 log(f"CRC calibration FAILED 0x0+{n}: hw 0x{hw:02x} != py 0x{py:02x} "
@@ -380,7 +395,8 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
             log(f"no usable flash-state manifest {o.manifest}: full path")
     else:
         log(f"flash-state manifest: {o.manifest} ({state.image or '?'}, {state.source}, {state.time}, {state.commit})")
-    crc_ok = o.write and o.verify == "crc" and crc_calibrate(isp)
+    s0 = read_gate(isp) if o.write else b""          # raises before any erase (#71)
+    crc_ok = o.write and o.verify == "crc" and crc_calibrate(isp, s0)
     if o.no_backup and o.write:
         # Dan 2026-11-05: re-dumping our own builds is wasted time; the vendor backup per unit is kept once
         bk = "the unit's vendor backup in ~/vendors/realtek/analysis/dumps"
@@ -524,6 +540,10 @@ def flash_main(a) -> int:
         if jid != JEDEC_OK:
             log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
         return flash(isp, img, o, nudge=lambda: i2cbus.gmbus_nudge(a.bus))
+    except ReadPathUnstable as e:
+        log(f"refuse: {e}; nothing erased or programmed. Unit in power saving / low flash clock? "
+            f"Bring it to an active input, or rerun at 100 kHz (#71)")
+        return 5
     except Exception as e:
         log(f"ERROR: {e!r}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
         return 7

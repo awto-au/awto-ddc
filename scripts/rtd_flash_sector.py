@@ -58,7 +58,7 @@ PAGE = 256
 JEDEC_OK = bytes.fromhex("c22014")      # Macronix 1 MiB, seen on all dumped units (docs/monitors/README.md)
 T_READ, T_WRITE_WREN, T_ERASE = 2, 3, 5
 OP_ERASE_4K, OP_RDSR, OP_WRSR, OP_WREN, OP_PROG = 0x20, 0x05, 0x01, 0x06, 0x02
-SR_WIP, SR_WEL = 0x01, 0x02
+SR_WIP, SR_WEL, SR_SRWD = 0x01, 0x02, 0x80
 SR_PROT = 0x9C                          # SRWD | BP2 | BP1 | BP0 (MX25L8006E Table 5); bits 6,5 reserved
 # reg 0x6F program-engine bits (rtdflash flash_program_page_prepared): bit4 (0x10) page buffer ready,
 # bit5 (0x20) set to start a page program, cleared by the engine when the page is written.
@@ -196,8 +196,13 @@ class Rtd(Isp):
         """WREN+WRSR(value) with WP# released, verify RDSR, then re-assert WP#. Raises on mismatch."""
         for ops in ENGINE_OPS:
             self.write(*ops)
-        if self.wp_saved is None:
-            self.release_wp()
+        sr = self.status()
+        if self.wp_saved is None and sr & SR_SRWD:
+            self.release_wp()                         # SRWD=1 + WP# low locks WRSR (Table 6)
+        elif self.wp_saved is None:
+            # SRWD=0 (flash left unprotected): WRSR needs no WP# release. Skipping it avoids the sys[0x1036] write that
+            # does not take on a chip whose firmware never ran (readback 0x00, #71)
+            log(f"reprotect: status 0x{sr:02x} has SRWD clear; WRSR without WP# release")
         try:
             self.wrsr(value, f"WRSR reprotect 0x{value:02x}")
             sr = self.status()
@@ -310,6 +315,10 @@ class Rtd(Isp):
         self.write(0x64, OP_WREN); self.write(0x65, 0x00)
         self.write(0x60, 0x71)
         self.wait_engine("WREN", T_WRSR_LIMIT)
+        sr = self.status()
+        if not sr & SR_WEL or sr & SR_PROT & ~SR_SRWD:
+            # erase/program without WEL, or with BP set, is silently ignored by the flash (#71)
+            raise RuntimeError(f"WREN not effective: status 0x{sr:02x} (want WEL=1, BP2..0=0)")
 
     def erase_sector(self, addr):
         # rtdflash flash_erase_sector_prepared: 64<-A23:16, 65<-A15:8, 66<-00, 60<-B8, 61<-ERASE(0x20), 60<-B9,
@@ -508,7 +517,7 @@ class FakeRtd(Rtd):
         if typ == T_WRITE_WREN and nw == 1 and op == OP_WRSR and self.regs.get(0x62) == 0x06 and not (self.wp_low and self.sr & 0x80):
             self.sr = (self.sr & ~SR_PROT) | (self.regs[0x64] & SR_PROT)
         if typ == T_READ and op == OP_RDSR:
-            self.regs[0x67] = self.sr
+            self.regs[0x67] = self.sr | (SR_WEL if self.wel else 0)
         if typ == T_ERASE and op == OP_ERASE_4K:
             if not self.wel:
                 raise SystemExit("selftest: erase attempted without WREN (write-enable latch clear)")

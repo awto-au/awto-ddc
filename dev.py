@@ -18,6 +18,7 @@ and should not need editing.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -365,11 +366,16 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
 
 BUS_RESCAN_S = 0.25   # one scan of the candidate buses is ~0.1 s; rescan pace while EDID is silent
 
+def _conn_bus(u: dict) -> int | None:
+    """The connector's own i2c bus from sysfs (i915 links it; NVIDIA has none -> None)."""
+    link = (Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc").resolve()
+    return int(link.name.split("-")[1]) if link.name.startswith("i2c-") else None
+
+
 def _bus(u: dict, wait_s: float = 0.0) -> int:
     """The bus whose EDID serial is the unit's: the connector's i2c link first, else every display bus
     (NVIDIA has no link). A recable moved units between ports on 2026-11-06 and a flash hit the wrong one."""
-    link = (Path("/sys/class/drm") / u.get("_conn", u["connector"]) / "ddc").resolve()
-    cands = [int(link.name.split("-")[1])] if link.name.startswith("i2c-") else []
+    cands = [b] if (b := _conn_bus(u)) is not None else []
     cands += [b for b in i2cbus.list_buses(display_only=True) if b not in cands]
     if i2cbus.reset_rate():
         log("bus rate: gmbus_rate module was left loaded; unloaded (100 kHz)", "WARN")
@@ -499,16 +505,30 @@ def cmd_flash(extra: list[str]) -> int:
     bus = int(bus or _bus(u))
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
-    (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": "", "image": str(img), "attempted": tag}))
-    with i2cbus.fast_bus(bus) as khz:       # 1 MHz only around the ISP write (0x35 NAKs at 1 MHz); unloaded in finally
-        log(f"flash: bus {bus} at {khz} kHz")
-        rc = _py("rtd_flash_image.py", bus, img, "--serial", u["serial"], "--write", "--no-backup",
-                 *([] if u.get("relay") else ["--per-sector", "--max-min", "20"]),   # no relay: per sector; stop if > 20 min (#71)
-                 *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
-                 "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
-                 *(["--identity", identity] if identity else []), shield=True)
+    fj = FW / f"{u['serial']}-flashed.json"
+    before = fj.read_text() if fj.is_file() else None
+    fj.write_text(json.dumps({"tag": "", "image": str(img), "attempted": tag}))
+    args = [bus, img, "--serial", u["serial"], "--write", "--no-backup",
+            *([] if u.get("relay") else ["--per-sector", "--max-min", "20"]),   # no relay: per sector; stop if > 20 min (#71)
+            *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
+            "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
+            *(["--identity", identity] if identity else [])]
+    # rc 5 = read gate refused before any erase: 1 MHz ISP reads corrupt in the low-power state (unit 3, D1
+    # NOSIGNAL -> POWER_OFF, #71). rtd_flash_image's exit reset reboots the unit at full clock: retry 1 MHz once, then 100 kHz
+    for attempt in (1, 2, 3):
+        with (contextlib.nullcontext(100) if attempt == 3 else i2cbus.fast_bus(bus)) as khz:  # 1 MHz only around ISP
+            log(f"flash: bus {bus} at {khz} kHz" + (f" (attempt {attempt})" if attempt > 1 else ""))
+            rc = _py("rtd_flash_image.py", *args, shield=True)
+        if rc != 5 or (attempt == 2 and khz <= 100):
+            break
+        log(f"flash: read path unstable at {khz} kHz, nothing erased; "
+            + ("retry after the reset reboot" if attempt == 1 else "retry at 100 kHz"), "WARN")
+        if attempt == 1 and not identity:
+            _bus(u, wait_s=RECOVER_BUS_WAIT_S)     # EDID back = rebooted (and the same unit)
+    if rc == 5 and before is not None:      # nothing erased: the flash still holds the old image
+        fj.write_text(before)
     if rc == 0:
-        (FW / f"{u['serial']}-flashed.json").write_text(json.dumps({"tag": tag, "image": str(img)}))
+        fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
         if _py("fw_archive.py", "--commit", img):      # every flashed image kept in git; failure doesn't fail the flash
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
     return rc
@@ -780,11 +800,12 @@ RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2
 
 
 @command("recover a wedged unit: mains cycle, hold it in the safe window, reflash (default: last flashed)",
-         args="[--unit N] [--write-mode byte|burst] [--any-image] [image.bin]", kind="action")
+         args="[--unit N] [--bus N] [--write-mode byte|burst] [--any-image] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
     n, u = _unit(extra)
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     any_image = _flag(extra, "--any-image")
+    given_bus = _opt(extra, "--bus")        # caller-proven bus (EDID silent); still needs this unit's relay cycle
     img = _image_arg(extra) or [_flashed(u).get("image", "")]
     # everything that can refuse does so BEFORE the relay: image exists, is a .bin, belongs to this unit (#52.3)
     p = Path(img[0]) if img[0] else None
@@ -804,7 +825,16 @@ def cmd_recover(extra: list[str]) -> int:
     if rc:
         return rc
     if bus is None:                         # wedged: EDID silent before, so find it once after power-on
-        bus = _bus(u, wait_s=RECOVER_BUS_WAIT_S)
+        try:
+            bus = _bus(u, wait_s=RECOVER_BUS_WAIT_S)
+        except SystemExit:
+            # EDID silent even after the cycle (sector 0 / EDID code erased, #71): --bus, else the connector's link
+            bus = int(given_bus) if given_bus and given_bus is not True else _conn_bus(u)
+            if bus is None:
+                raise
+            log(f"recover: EDID silent after the relay cycle; bus {bus} = "
+                + ("--bus" if given_bus else f"connector {u['connector']}'s ddc link (devices.json)")
+                + "; identity from this unit's own relay", "WARN")
     if _flashed_has_safe_block(u):          # --hold writes the marker at 0xF6B0: ordinary XDATA on images without the block (#52)
         hrc = _diag(u, "--hold", bus=bus)   # best effort: a failed hold still flashes over ISP
         if hrc:
