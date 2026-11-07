@@ -3,28 +3,28 @@
 # Messages stay listed (enabled column) in fw/msgids.tsv.
 
 # eDP Tx1/Tx2 LT1/LT2/LTend pass/fail (category Check, _DEBUG_MESSAGE_CHECK_DISP_SETTING)
-cat:Check
+# u1 build, messages OFF: cat:Check
 # panel link-training files
-file:Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c
-file:Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c
+# u1 build, messages OFF: file:Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c
+# u1 build, messages OFF: file:Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c
 # power / source / mode state machine
-cat:System
+# u1 build, messages OFF: cat:System
 
 # input Measure fail messages (RL6449_Series_Measure.c, ScalerMeasure.c)
-id:3c14  # Digital check V height fail
-id:3c15  # Digital off-line measure fail
-id:6ab4  # Digital auto-function fail
-id:baad  # Digital check H width fail
-id:c478  # Final setting in measure fail
-id:e549  # Digital format conversion fail
-id:b327  # VGA off-line double check fail
-id:ba6b  # VGA active count difference fail
-id:bb1d  # VGA auto-function fail
-id:ccf2  # VGA off-line measure fail
-cat:Digital
+# u1 build, messages OFF: id:3c14  # Digital check V height fail
+# u1 build, messages OFF: id:3c15  # Digital off-line measure fail
+# u1 build, messages OFF: id:6ab4  # Digital auto-function fail
+# u1 build, messages OFF: id:baad  # Digital check H width fail
+# u1 build, messages OFF: id:c478  # Final setting in measure fail
+# u1 build, messages OFF: id:e549  # Digital format conversion fail
+# u1 build, messages OFF: id:b327  # VGA off-line double check fail
+# u1 build, messages OFF: id:ba6b  # VGA active count difference fail
+# u1 build, messages OFF: id:bb1d  # VGA auto-function fail
+# u1 build, messages OFF: id:ccf2  # VGA off-line measure fail
+# u1 build, messages OFF: cat:Digital
 
 # M-domain / frame-sync / FRC bring-up (#37, #26 4K30/4K60): memory sizing, frame-sync, FRC set-up, display-setting check
-cat:Memory
-cat:FS
-cat:FRC
-cat:CheckMDomain
+# u1 build, messages OFF: cat:Memory
+# u1 build, messages OFF: cat:FS
+# u1 build, messages OFF: cat:FRC
+# u1 build, messages OFF: cat:CheckMDomain
