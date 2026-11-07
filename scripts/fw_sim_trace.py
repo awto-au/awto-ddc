@@ -11,6 +11,8 @@ usage: fw_sim_trace.py vendor [IMG] [--mode 2160p60]            vendor Keil imag
   decoded: idx = value of the port's address register(s) at the data write (+N = Nth data write since, auto-increment).
   TSV: seq instr fw_ms bank pc func+off kind addr reg idx value phase   (kind W | SFR | CALL | STATE)
   phase = boot (INITIAL/POWER_OFF) | search | ds (DISPLAY_SETTING) | active | other; fw_ms = instr / 12.6 k (T2_SCALE = 3).
+  --ddr: tap ONLY the DDR pages (DDR_PAGES: PLL/CRT, INT_STATUS, DC_SYS, PHY, DC_PHY incl. A1/A9 not in the regdb, MPLL,
+         client mux) + DDR_CALLS watches; for the DRAM init sequence diff (scripts/ddr_init_diff.py).
 Log: tmp/logs/trace_<tag>.tsv.gz (+ tmp/logs/fw_sim_trace_<tag>.log)
 """
 import argparse, sys
@@ -40,6 +42,12 @@ CALLS = ("ScalerMDomainControl", "ScalerMDomainMemorySettings", "ScalerMDomainSe
          "ScalerFmtCnvInitialSetting", "ScalerMeasureUpdateOnlineMeasureResult", "ScalerMeasureInputActiveRegionChange",
          "ScalerVgipInputInitial", "ScalerMemoryFineTuneIVS2DVSDelay", "ScalerGlobalWatchDog", "ScalerMemorySetShiftOneLine")
 TICKS_MS = 4200 * S.T2_SCALE
+# DDR2 A/B: CRT/PLL 88/C8, INT_STATUS 90/D0, DC_SYS 8A, PHY 8E/8F/CE/CF, DC_PHY A0-A7 / A8-AF (DDR2_GET_REG offsets)
+DDR_PAGES = (0x88, 0xC8, 0x90, 0xD0, 0x8A, 0x8E, 0x8F, 0xCE, 0xCF, *range(0xA0, 0xB0))
+DDR_EXTRA = (0x00F8, 0x00F9, 0x00FA, 0x00FB, 0x00FC, 0x00FD, 0x00FE, 0x00FF, 0x37B0, 0x37B1)   # MPLL, M-domain client mux
+DDR_CALLS = ("ScalerMemoryPowerControl", "ScalerDDR2PowerControl", "ScalerPLLSetMPLLFreq", "ScalerPLLSetDDR2PLLFreq",
+             "ScalerPLLDDR2PLLCtrl", "ScalerPLLDDR2PLLOutputCtrl", "ScalerDDR2DCSysInitial", "ScalerDDR2DCPHYInitial",
+             "ScalerTimerDelayXms", "ScalerTimerPollingFlagProc", "ScalerMcuClockSel", "ScalerPowerGroupAPowerCut")
 
 
 class Logger(S.Dev):
@@ -116,8 +124,12 @@ class Trace:
             self.done_at = m.instr
             m.request_stop()
 
-    def call(self, m, name):
+    def call(self, m, name, r=None):
         self.add(m, "CALL", 0, 0, name)
+        if r is not None:                                          # args: a1 (int arg 1), r3/r5/r7 (Keil/SDCC byte args)
+            row = list(self.rows[-1])
+            row[9] = f"a1={r.get('a1', 0):x} r3={r['r'][3]:02x} r5={r['r'][5]:02x} r7={r['r'][7]:02x} dptr={r.get('dptr', 0):04x}"
+            self.rows[-1] = tuple(row)
 
 
 def reg_space(img: bytes) -> set[int]:
@@ -136,7 +148,7 @@ def reg_space(img: bytes) -> set[int]:
     return s
 
 
-def run(kind: str, img_path: Path, map_path: Path | None, mode: str, max_instr: int, tail: int, tag: str):
+def run(kind: str, img_path: Path, map_path: Path | None, mode: str, max_instr: int, tail: int, tag: str, ddr: bool = False):
     img = img_path.read_bytes()
     names = fw_regs.names()
     import csv, gzip
@@ -149,6 +161,8 @@ def run(kind: str, img_path: Path, map_path: Path | None, mode: str, max_instr: 
     devs, hdmi = S.video_devs(img, mode)
     taken = {a: d for d in devs for a in d.writes}
     ranges = reg_space(img)
+    if ddr:
+        ranges = {p << 8 | i for p in DDR_PAGES for i in range(256)} | set(DDR_EXTRA)
     lg = Logger(tr, ranges - set(taken))
     if kind == "vendor":
         import fw_sim_vendor as V
@@ -173,9 +187,9 @@ def run(kind: str, img_path: Path, map_path: Path | None, mode: str, max_instr: 
     for a in SFR_WATCH:
         m.s.send(f"break sfr w 0x{a:x}")
         m.hook[("swrite", a)] = lg
-    for n in CALLS:
+    for n in CALLS + (DDR_CALLS if ddr else ()):
         if "_" + n in m.sym:
-            m.stub(n, lambda m_, r, n=n: tr.call(m_, n))
+            m.stub(n, lambda m_, r, n=n: tr.call(m_, n, r))
     done = 0
     while done < max_instr and tr.done_at is None:
         m.run(1_000_000); done += 1_000_000
@@ -201,14 +215,15 @@ def main() -> int:
     ap.add_argument("--max-instr", type=int, default=150_000_000)
     ap.add_argument("--tail", type=int, default=2_000_000)
     ap.add_argument("--tag")
+    ap.add_argument("--ddr", action="store_true", help="tap only the DDR pages + DDR call watches")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     if a.kind == "vendor":
         import fw_sim_vendor as V
         img = Path(a.img) if a.img else V.VENDOR_IMG
-        return run("vendor", img, None, a.mode, a.max_instr, a.tail, a.tag or f"vendor_{a.mode}")
+        return run("vendor", img, None, a.mode, a.max_instr, a.tail, a.tag or f"vendor_{a.mode}", a.ddr)
     b = Path(a.img)
-    return run("ours", b, Path(a.map), a.mode, a.max_instr, a.tail, a.tag or f"{b.stem}_{a.mode}")
+    return run("ours", b, Path(a.map), a.mode, a.max_instr, a.tail, a.tag or f"{b.stem}_{a.mode}", a.ddr)
 
 
 if __name__ == "__main__":
