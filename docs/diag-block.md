@@ -23,7 +23,8 @@
 | 0x28 | 1 | test command (#33): 0x01-0x04 key MENU/RIGHT/LEFT/EXIT, 0x10+n OSD event n, 0x20 debug pop-up; cleared when applied |
 | 0x29 | 1 | debug pop-up pending (#34): 1 = next input-info pop-up draws the debug lines; test cmd 0x20 sets it + raises event 10 |
 | 0x2A | 2 | main-loop passes in the last ~1 s (u16, target byte order) |
-| 0x2C | 4 | spare |
+| 0x2C | 3 | `g_stOsdInfo` byte offsets of `usOsdState`, `ucOsdEventMsg`, `ucOsdKeyMessage` (`offsetof`, set at boot by `AwtoOsdOfsInit`; #37). `_DP_DEBUG_MSG` on = 4, 6, 7; off = 3, 5, 6; 0 = image without the report. Host: `rtd_proto.osd_offsets_from_diag` |
+| 0x2F | 1 | spare |
 
 ## Stages (temporal order; timestamp 0 before Timer2 runs)
 1 BOOT start of main | 2 GPIO init done (inside `ScalerMcuInitial`) | 3 `ScalerMcuInitial` done | 4 pin-share done | 5 main loop first pass | 6 panel power on | 7 DPTx link start | 8 DPTx link done.

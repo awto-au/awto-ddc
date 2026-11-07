@@ -13,7 +13,7 @@ Host side: main checkout `./dev.py` (diag, osd, dbg-read, dbg-write); debug slav
 | Factory mode menu | `_FACTORY_INCLUDE "RTDFactoryInclude.h"` | ON, linked (RTDFactoryMainMenu, MenuFactory in map); `_MODE_STATUS_FACTORY` has no entry action | service OSD (burn-in, white balance, ADC gain, panel timer); reachable as the OSD main-menu item next to Information/Picture | `osd_test.py --cmd menu\|left\|right` (key injection) | none to enable; verify only |
 | QC self-test | `_FACTORY_RTD_QC_SUPPORT` (QC_Option.h) | OFF | colour/OD/FRC block tests | none | `QC_Option.h` forces ~25 picture features `_OFF` (OD, gamma, dither, ICM...); 4751 of the 8507 message sites are QC; no RL6449 branch in the QC_Option.h include chain. Not built. |
 | `_AUTO_TEST_SUPPORT` | AT_Option.h | OFF | IIC slave 0x3E test channel, SysAutotestHandler | none | `ScalerMcuDdcciSwitchPort` sets slave 0x3E and returns early: takes the DDC channel from 0x35. Incompatible with the debug port. Not built. |
-| `_DP_DEBUG_MSG` | RTD2014Project.h / User_Project_Option.h | OFF | DP info strings in input pop-up / power-saving screen | none (panel only) | adds fields to `g_stOsdInfo` (shifts the byte offsets `osd_test.py` writes without `--cmd`), 2 OSD strings, extra pop-up draws; collides with the awto debug pop-up |
+| `_DP_DEBUG_MSG` | `fw/overlay/User/RTD Series/RTD2014Osd/Header/RTD2014Project.h` (`#undef` + `_ON`; SDK `User_Project_Option.h` defines it `_OFF`) | ON (#37) | DP info strings (power state, lanes, link rate, swing/pre-emphasis) on the input pop-up for a DP source, and on the power-saving screen per DP port (D1 here) | input-info event / wake from power saving | adds a bit-field byte to `g_stOsdInfo`: event/key/state offsets +1 (firmware reports them in diag 0x2C..0x2E, `rtd_proto.osd_offsets_*`); the DP block runs before the awto debug-pop-up hook, so the debug pop-up is not drawn while the mode is not ACTIVE |
 | `_DEBUG_IIC_BY_USERINTERFACE` | Debug.h | OFF | `UserInterfaceDebugIIC` hook in 0x44/0x04 IIC pages; only reaches an LED driver (`_DEVICE_LED_DRIVER_TYPE`) | none | no LED driver on this board: nothing gained |
 
 ## Size (vs wb-4k-ft1 build, sticky layout, `_AWTO_FRC` image)
@@ -29,5 +29,5 @@ Host side: main checkout `./dev.py` (diag, osd, dbg-read, dbg-write); debug slav
 4. DebugMessage `Rx0-3` (512/492/207/203 sites): large; per port, only the port in use.
 5. Timer cursors: only with our own call sites (#46 trace).
 6. Factory menu: already in the image; check by key injection, no flash.
-7. `_DP_DEBUG_MSG`: panel-only info, layout side effects; low value.
+7. `_DP_DEBUG_MSG`: on in the -dp image (#37).
 8. Not worth it: QC (disables the picture pipeline), `_AUTO_TEST_SUPPORT` (kills 0x35), `_DEBUG_IIC_BY_USERINTERFACE` (nothing to reach).

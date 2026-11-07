@@ -49,7 +49,10 @@ typedef struct
     unsigned char ucTestCmd;                    // OSD test command, written over I2C, applied + cleared in main loop (#33)
     unsigned char ucDbgPopup;                   // 1 = next input-info pop-up shows the debug lines (#34), cleared when drawn
     unsigned int usLoopRate;                    // main-loop passes in the last ~1 s (#34)
-    unsigned char ucSpare[4];
+    unsigned char ucOsdOfsState;                // offsetof(StructOsdInfo, usOsdState): g_stOsdInfo layout moves with _DP_DEBUG_MSG (#37)
+    unsigned char ucOsdOfsEvent;                // offsetof(StructOsdInfo, ucOsdEventMsg)
+    unsigned char ucOsdOfsKey;                  // offsetof(StructOsdInfo, ucOsdKeyMessage)
+    unsigned char ucSpare;
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -62,6 +65,7 @@ extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
 extern void AwtoOsdDebugLines(void);
+extern void AwtoOsdOfsInit(void);
 #if(_AWTO_DIAG_SELFTEST == _ON)
 extern void AwtoDiagSelfTest(void);
 #else
@@ -71,6 +75,7 @@ extern void AwtoDiagSelfTest(void);
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 #else
 #define AwtoDiagInit()
+#define AwtoOsdOfsInit()
 #define AwtoDiagStage(n)
 #define AwtoDiagMainPass()
 #define AwtoDiagTestCmd()

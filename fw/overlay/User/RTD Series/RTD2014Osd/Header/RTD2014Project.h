@@ -42,7 +42,8 @@
 //--------------------------------------------------
 // Definitions of DP extra infomation for debug , DP Support must set ON
 //--------------------------------------------------
-#define _DP_DEBUG_MSG                              _OFF
+#undef _DP_DEBUG_MSG                                // User_Project_Option.h defines it _OFF
+#define _DP_DEBUG_MSG                              _ON     // awto #37: DP info on input pop-up / power-saving screen; widens g_stOsdInfo
 
 
 //--------------------------------------------------

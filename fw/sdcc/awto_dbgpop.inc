@@ -1,8 +1,16 @@
 // Debug pop-up (#34): same window/font/colours as the input-info pop-up; hooked into OsdDispOsdMessage by keil2sdcc.py.
 #if(_AWTO_DIAG == _ON)
 extern BYTE *g_pucShowNumberAddress;
+#include <stddef.h>
 static BYTE s_pucAwtoDbg[28];
 static BYTE s_ucAwtoLen;
+
+void AwtoOsdOfsInit(void)
+{
+    g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
+    g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
+    g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
+}
 
 static void AwtoPutGlyph(BYTE ucG)
 {

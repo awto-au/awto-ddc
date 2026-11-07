@@ -779,7 +779,7 @@ stub	_ScalerGlobalFirstActiveProc	C	0x2c3c	9
 stub	_ScalerGlobalOsdInitial	C	0x2c45	9
 stub	_ScalerGlobalResetProc	C	0x2c4e	9
 stub	_ScalerMDomainCalculateDclkDVtotal	C	0x2c57	9
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1229	C	0x2c60	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1230	C	0x2c60	92
 stub	_ScalerFRCInputCtrl	C	0x2cbc	9
 stub	_ScalerFRCOneFrameCtrl	C	0x2cc5	9
 stub	_ScalerFRCSetOneFrameDVTotal	C	0x2cce	9
@@ -881,6 +881,12 @@ stub	_ScalerMDomainGetDisplayActiveRegion	C	0x34de	9
 stub	_ScalerMDomainGetFRCMemoryBW	C	0x34e7	9
 stub	_ScalerMeasureGetDisplayRegionCountResult	C	0x34f0	9
 stub	_ScalerMemorySetFrameTrackingEnable	C	0x34f9	9
+stub	_AwtoOsdOfsInit	C	0x3502	9
+stub	_ScalerDpGetLaneCount	C	0x350b	9
+stub	_ScalerDpGetLanePreEmpLv	C	0x3514	9
+stub	_ScalerDpGetLaneVoltageSwingLv	C	0x351d	9
+stub	_ScalerDpGetLinkRate	C	0x3526	9
+stub	_ScalerDpGetPowerStatus	C	0x352f	9
 fn	_SysTimerWDIntProc	C	0x3580	120
 stub	_UserCommonAdjustAspectRatio	C	0x35f8	9
 stub	_UserCommonAdjustGammaRegionEnable	C	0x3601	9
@@ -1120,7 +1126,12 @@ fn	_OsdDispMainMenuKeyInfo	1	0x68b0	1212
 fn	_OsdDispMainMenuOptionSetting	1	0x6d6c	2912
 fn	_OsdDispMainMenuSubSelect	1	0x78cc	144
 fn	_OsdDispMainOptionIcon	1	0x795c	172
-fn	_OsdDispOsdMessage	1	0x7a08	1484
+fn	_AwtoOsdOfsInit	1	0x7a08	24
+fn	_ScalerDpGetLaneCount	1	0x7a20	40
+fn	_ScalerDpGetLanePreEmpLv	1	0x7a48	64
+fn	_ScalerDpGetLaneVoltageSwingLv	1	0x7a88	56
+fn	_ScalerDpGetLinkRate	1	0x7ac0	32
+fn	_ScalerDpGetPowerStatus	1	0x7ae0	84
 fn	_OsdDispPanelUniformityMsgSwitch	1	0x7fd4	104
 fn	_OsdDispShowInformation	1	0x803c	196
 fn	_OsdDisplayGetSourcePortString	1	0x8100	44
@@ -1178,6 +1189,7 @@ fn	_UserCommonInterfaceGetDpMstCapablePort	1	0x9db4	64
 fn	_UserCommonInterfacePanelPowerAction	1	0x9df4	700
 fn	_UserCommonNVRamSetSystemData	1	0xa0b0	692
 fn	_AwtoPutGlyph	1	0xa364	48
+fn	_OsdDispOsdMessage	1	0xa394	1680
 fn	_ScalerDpRx1ChangeDpcdVersion	2	0x0000	1420
 fn	_ScalerDpRx1HdcpCheck	2	0x058c	264
 fn	_ScalerDpRx1PhyCTS	2	0x0694	3688
@@ -1408,6 +1420,7 @@ fn	_ScalerDpRx1AuxPowerOnInitial	4	0x085c	240
 fn	_ScalerDpRx1DpcdInitial	4	0x094c	564
 fn	_ScalerDisplayDPTx1AuxPHYSet	4	0x0b80	112
 fn	_ScalerFRCCompareIHFandDHF	4	0x0bf0	1432
+fn	_MenuNone	4	0x1188	312
 fn	_ScalerFRCEn	4	0x1354	272
 fn	_ScalerFRCInitial	4	0x1464	252
 fn	_ScalerFRCSetDDomainSourceSelect	4	0x1560	80
@@ -1470,8 +1483,7 @@ fn	_MenuAdvanceOverScanAdjust	4	0x3890	180
 fn	_MenuAdvanceUltraVividAdjust	4	0x3944	184
 fn	_MenuFactory	4	0x39fc	152
 fn	_MenuHotKeyDdcci	4	0x3a94	144
-fn	_MenuNone	4	0x3b24	244
-fn	_RTDOsdSystemFlowProc	4	0x3c18	612
+fn	_RTDOsdSystemFlowProc	4	0x3b24	648
 fn	_UserOsdHandler	4	0x3e7c	12
 fn	_AwtoOsdDebugLines	4	0x3e88	988
 fn	_AwtoPutChar	4	0x4264	244
@@ -2158,6 +2170,7 @@ fn	_ScalerMDomainDtotalLastLineFinetune	9	0x9d80	380
 fn	_ScalerMeasureUpdateOnlineMeasureResult	9	0x9efc	724
 fn	_UserCommonInterfaceReadyForActive	9	0xa1d0	32
 fn	_UserCommonFlashErasePage	9	0xa1f0	40
+fn	_OsdPropGetShowDpInfoStringAddress	9	0xa218	1164
 const	_tFONT_FACTORY_EUROPE	10	0x0000	2680
 const	_tFONT_FACTORY_GLOBAL	10	0x0a78	24
 const	_tOSD_FACTORY_AUTO_COLOR_TYPE_TABLE	10	0x0a90	8
