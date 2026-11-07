@@ -2148,7 +2148,7 @@ fn	_AwtoFreqModeStr	9	0xa6a4	568
 fn	_AwtoModePut	9	0xa8dc	56
 fn	_AwtoModePutFix	9	0xa914	296
 fn	_AwtoModePutHz	9	0xaa3c	132
-fn	_ScalerDebugIntProc_EXINT1	9	0xaac0	608
+fn	_ScalerDebugIntProc_EXINT1	9	0xaac0	800
 const	_tFONT_FACTORY_EUROPE	10	0x0000	2680
 const	_tFONT_FACTORY_GLOBAL	10	0x0a78	24
 const	_tOSD_FACTORY_AUTO_COLOR_TYPE_TABLE	10	0x0a90	8

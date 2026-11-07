@@ -1,6 +1,31 @@
 #if(_AWTO_DBGISR == _ON)
 // awto #38: answer 0x3A (XDATA byte) and 0x3C (XDATA block: lo, hi, len, seq) here, FIFO loaded before the SCL release.
 // 0x3C reply = len data bytes + checksum (seq + lo + hi + sum of data); the host rejects a stale or garbled reply.
+// #28: the write staging 0x01 [hi] / 0x03 [val] and the write 0x3B [lo] are done here too, so SCL is held ~30 us, not until
+// the next main-loop pass: NVIDIA's I2C engine fails the next START (EIO) while SCL is still held (unit 1, 0x3B after 0x03).
+                if(((g_pucDdcciData[0] == 0x01) || (g_pucDdcciData[0] == 0x03) || (g_pucDdcciData[0] == 0x3B)) && (g_ucDdcciCommandNumber == 1))
+                {
+                    if(g_pucDdcciData[0] == 0x01)
+                    {
+                        g_pucDdcciData[2] = g_pucDdcciData[1];
+                    }
+                    else if(g_pucDdcciData[0] == 0x03)
+                    {
+                        g_pucDdcciData[3] = g_pucDdcciData[1];
+                    }
+                    else
+                    {
+                        *((volatile __xdata BYTE *)(((WORD)g_pucDdcciData[2] << 8) | g_pucDdcciData[1])) = g_pucDdcciData[3];
+                    }
+                    g_ucDdcciCommandNumber = 0;
+                    DELAY_30US_EXINT();
+#if(_AWTO_DBG_FOLLOW == _ON)
+                    AWTO_DBG_SCL(&= ~_BIT0);
+#else
+                    MCU_FE66_DDC2_DDC_CONTROL_2 &= ~_BIT0;
+#endif
+                    return;
+                }
                 if(((g_pucDdcciData[0] == 0x3A) && (g_ucDdcciCommandNumber >= 1)) || ((g_pucDdcciData[0] == 0x3C) && (g_ucDdcciCommandNumber == 4)))
                 {
                     volatile __xdata BYTE *pucAwtoSrc = (volatile __xdata BYTE *)(((WORD)g_pucDdcciData[2] << 8) | g_pucDdcciData[1]);

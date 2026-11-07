@@ -329,7 +329,7 @@
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	928	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	955	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	989	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c	682	ok	OK-CONFIG: _HW_IIC_SUPPORT _OFF (#53.3): debug IIC read/write cases (0x44/0x45) compiled out, switch folds
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c	707	ok	OK-CONFIG: _HW_IIC_SUPPORT _OFF (#53.3): debug IIC read/write cases (0x44/0x45) compiled out, switch folds
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1798	ok	OK-CONFIG: ScalerMDomainGetFRCMemorySpace (compiled for the CheckMDomain messages, #37): _MEMORY_ACCESS_TYPE constant, the other arm is dead
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1833	ok	OK-CONFIG: ScalerMDomainGetFRCMemoryBW: GET_OD_STIRCT_CONDITION() is _FALSE with OD cut (#8), so the if is constant false
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1835	ok	OK-CONFIG: body of the constant-false OD-strict if above (usHWidth = DHtotal, OD only)
