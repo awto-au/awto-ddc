@@ -39,6 +39,10 @@ Some ports advance their index by themselves after a data access, some are FIFOs
 
 ## 7. Implementer task
 - Files: `awto/dataport/dataport.c`, `tests/host/test_dataport.c`.
-- Budget: <= 500 B code total (sdcc --model-large).
+- Hooks: use `REG8_RD` / `REG8_WR` from `reg.h` (spec reg section 7); no per-file hook definitions.
+- Budget: <= 790 B code total (sdcc --model-large, CSEG bytes). Basis: the replaced reference routines measure 791 B in
+  the image map AWT26110003-wb-port8-be (2026-11-07; 7 routines of 22-194 B). First implementation: 572-608 B, inside it.
 
 ## 8. Q&A
+- 2026-11-07, Q1 (hook): `REG8_RD` / `REG8_WR` come from `reg.h`; remove the local fallbacks.
+- 2026-11-07, Q5 (size): budget re-based on the replaced code (790 B); first implementation already fits.

@@ -28,7 +28,23 @@ Covers `awto/include/arith.h`. Results feed register values: they must match bit
 
 ## 5. Implementer task
 - Files: `awto/arith/arith.c`, `tests/host/test_arith.c` (reads the vectors file given on the command line).
-- Budget: <= 600 B code; slow regime <= 20,000 cycles per call on the 8051 target.
-- Free to use any method (long division, 64-bit emulation) as long as every vector matches.
+- Budget: <= 1480 B code (sdcc --model-large, CSEG bytes of the object file; the 32-bit divide / modulo / multiply routines
+  the compiler calls are runtime library routines already in the image and are not counted); slow regime <= 20,000 cycles
+  per call on the 8051 target. Basis: the replaced reference routines measure 940 + 539 = 1479 B in the image map
+  AWT26110003-wb-port8-be (2026-11-07). First implementation: 1906-2361 B (a 64-bit-by-32-bit restoring divider written
+  out in 32-bit C, instantiated for both routines).
+- Free to use any method as long as every vector matches. SDCC mcs51 has no 64-bit integer type: do not emulate one.
+- Size hints (the maths is ours, `derived`):
+  - Because c <= 2^31, a remainder r < c always satisfies 2r < 2^32. So R(x, k, c) needs no 64-bit division: start with
+    q = x / c and r = x mod c (one 32-bit divide and modulo, library), then k times: r = 2r, q = 2q (mod 2^32), and when
+    r >= c subtract c from r and add 1 to q. Result q + (1 if 2r >= c). k = 0 is the plain rounded division.
+  - The slow regime is then R(H, 32, c) + R(L, 0, c): two calls of the same function; there is no separate divider.
+  - Product halves H, L from four 16 x 16 partial products with carry; no wider type needed.
+  - A prototype of this shape measured 1211 B and passed all 1600 rows (SDCC 4.6.4, 2026-11-07); static `__data`
+    working variables measured 336 B for the shldiv function alone (vs 443 B), at the price of internal RAM and
+    non-reentrancy (allowed, section 1): use only if the budget needs it.
 
 ## 6. Q&A
+- 2026-11-07, Q5 (size, ldiv32 ~443 B): the 600 B budget had no basis; re-based to the replaced code (1480 B). The excess
+  came from the hand-written 64/32 divider in 32-bit C (SDCC does 32-bit shifts/compares through XDATA, 30-60 B each) and
+  its duplication; see the size hints. SDCC has no 64-bit division to use.
