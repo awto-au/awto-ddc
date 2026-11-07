@@ -18,9 +18,14 @@ Builds on `osd.md` (ports, windows) and `osd-font-download.md` (VLC, char words)
 
 ## Hardware read-back of the SRAM size (for the firmware agent)
 - Not run by this agent. Unit must be halted in an ISP session (OSD SRAM persists). `rtd_osd.Osd.read_word` reads one byte plane; `0x3A33[4]` (sram_read_en) must be 1 and the first read is discarded ("send 2 times, the 2nd is right" [regdb]).
-- Plan: write marker words at 12286, 12287, 12288, 12289, 16383 (font SRAM, all planes, `osdw:font:ADDR=B0,B1,B2`), read them back `osdr:font:ADDR`; the first address that does not return its marker (or aliases a lower one) is the SRAM end. Compare with the SDK constant 12288. Font SRAM read-back returned zeros in the 2026-11-04 attempt (osd.md): with `0x3A33[4]=1` and OSD off it may work; if it still reads 0, test aliasing by writing a marker at 0 and checking whether address 12288 changes it (needs window-SRAM-style read only).
+- Command (bus = the unit's I2C bus; the OSD is halted by the ISP session, the monitor reboots afterwards unless `--keep`; ops run left to right):
+  `python3 scripts/rtd_osd.py BUS --keep wr:0x3A33=0x10 osdw:font:0x0000=A1,A2,A3 osdw:font:0x2FFF=B1,B2,B3 osdw:font:0x3000=C1,C2,C3 osdw:font:0x3001=D1,D2,D3 osdw:font:0x3FFF=E1,E2,E3 osdr:font:0x0000 osdr:font:0x2FFF osdr:font:0x3000 osdr:font:0x3001 osdr:font:0x3FFF osdr:font:0x0000`
+  - `wr:0x3A33=0x10` = sram_read_en; the first read after an address set is discarded, so each `osdr` is read twice by the firmware agent if the first value looks stale.
+  - SRAM end = first marker address that does not read back its own marker. 0x2FFF = last word if the size is 12288. Aliasing (a high address reading A1,A2,A3 or the last marker overwriting word 0) means the SRAM is smaller than the address range.
+  - If every font read returns 0 (as on 2026-11-04), repeat with window SRAM (`osdw:win`) only to check the read path itself; then the size stays the SDK constant 12288.
 
 ## Renderer (scripts/osd_render.py, scripts/osd_model.py)
 - Runs an image in fw_sim, taps OSD port / palette / burst DMA, renders 3840x2160 PNG over grey. Tests: tests/test_osd_model.py.
 - Validated: boot logo shape and colour of image wb-port3 = what Dan sees on unit 3 (2026-11-07, "looks correct"). Scale and position not compared yet.
+- Pop-up text: prop-font glyph bursts (27 B from XRAM, FFFC bit5) read all zeros in the sim (source buffer 0xEA37 empty), so info/debug pop-up text rows render blank; icon, windows and menu are fine. Cause not found yet.
 - Not modelled: window border/shadow/gradient, 2-/4-bit fonts, font B, rotation, alpha direction (255 assumed opaque), FB-shift, pipeline position offsets.

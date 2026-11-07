@@ -142,7 +142,7 @@ class OsdModel(S.Dev):
         n, src, bank = r(0xFFF9) << 8 | r(0xFFFA), r(0xFFF7) << 8 | r(0xFFF8), r(0xFFF6)
         host = r(0x9F) << 8 | r(0xFFF4)
         data = m.rd(src, n) if r(0xFFFC) & 0x20 else self.img[bank * 0x10000 + src: bank * 0x10000 + src + n]
-        self.log.append(("burst", host, n, bank, src, v))
+        self.log.append(("burst", host, n, bank, src, v, r(0xFFFC) & 0x20, bytes(data).hex()))
         for i, b in enumerate(data):
             if host == DATA:
                 m.put(f"set memory xram 0x{DATA:x} 0x{b:x}")

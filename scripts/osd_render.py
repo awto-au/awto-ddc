@@ -182,6 +182,7 @@ def main() -> int:
             snaps["logo"] = s.logo_snap
         elif "logo" in whens:
             say("no boot logo captured (OsdDispShowLogo/OsdFuncEnableOsd not reached)")
+        (ROOT / "tmp/logs/osd_bursts.txt").write_text("\n".join(map(str, s.model.log)))
         for k, st in snaps.items():
             save(st, out if len(snaps) == 1 else out.with_name(f"{out.stem}_{k}.png"), a.bg, a.scale)
         if a.video:
