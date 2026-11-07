@@ -374,6 +374,8 @@ class Decoder:
                     f"{':' if k == 'dr' else ' <-'} {hx(e.vals)}")
         if k == "msg":
             text = bytes(e.text)
+            if not text and e.val is None:              # header not seen by the decoder: the tool's own line follows
+                return "message fetch"
             if text[:1] == b"\x01" and len(text) >= 3:
                 mid = int.from_bytes(text[1:3], "big")
                 loc, txt = self.msgids.get(mid, (None, None))
@@ -536,6 +538,8 @@ class Decoder:
             else:
                 self.open(t, "dbg", "mpoll", st=d[0], n=1)
             return
+        if t.sub == 0x08 and self.msg_mode:             # message payload: the tool logs the decoded message line;
+            return                                      # bytes stay in the .raw.log
         if e and e.kind == "rr" and e.sub == t.sub:
             e.vals += d
         else:
@@ -552,7 +556,7 @@ class Decoder:
             e.text += txt
             e.ok &= (e.expect + 0x0F + sum(txt)) & 0xFF == d[-1]
             e.expect = None
-        else:
+        elif not self.msg_mode:
             self.flush(); self.put(t, "dbg", f"read reg 0x{t.sub:02X} ({len(d)} B) {hx(d)}")
 
     # -- 0x4A ISP slave
