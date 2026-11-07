@@ -156,6 +156,16 @@ void AwtoDiagTestCmd(void)
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
     }
 #endif
+#if(_AWTO_WAKE_HOLD == _ON)
+    else if((ucCmd >= 0x36) && (ucCmd <= 0x3A))      // #78 power levels: 36 all on (defaults), 37 L1 off (SDK path),
+    {                                                // 38 L2 off, 39 short timeouts L2 5 s / L3 20 s (tests), 3A L3 off
+        g_stAwtoPower.ucL1 = (ucCmd != 0x37);
+        g_stAwtoPower.ucL2 = (ucCmd != 0x38);
+        g_stAwtoPower.ucL3 = (ucCmd != 0x3A);
+        g_stAwtoPower.usL2Sec = (ucCmd == 0x39) ? 5 : AWTO_L2_SEC;
+        g_stAwtoPower.usL3Sec = (ucCmd == 0x39) ? 20 : AWTO_L3_SEC;
+    }
+#endif
     else if(ucCmd == 0x34)                              // #78 arm the switch log only (wake / power-level timing)
     {
         AwtoSwArm(SysSourceGetInputPort());

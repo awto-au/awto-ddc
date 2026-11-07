@@ -364,7 +364,7 @@ SUBS = [
     # #75 main-loop split (fw/sdcc/awto_loopsplit.inc): the stable/timing watchdog every AWTO_SLOW_MS in ACTIVE (other
     # states: every pass, a short glitch while locking still resets the search), cable detection every AWTO_SLOW_MS
     ("Kernel/System/Code/SysJudge.c", r"if\(SysJudgeCheckStatus\(\) == _FALSE\)",
-     lambda m: "if((AWTO_FAST_JUDGE_HOLD() == _FALSE) && ((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE))  // [keil2sdcc] sub", 1),
+     lambda m: "if((AWTO_FAST_JUDGE_HOLD() == _FALSE) && ((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE) && (AWTO_WAKE_HOLD() == _FALSE))  // [keil2sdcc] sub; #78 hold", 1),
     ("Kernel/System/Code/SysSource.c", r"(void SysSourceHandler\(void\)\n\{\n)    SysSourceCableDetection\(\);",
      lambda m: m.group(1) + "    if(AWTO_SLOW_DUE_CABLE() == _TRUE)  // [keil2sdcc] sub\n    {\n        SysSourceCableDetection();\n    }", 1),
     # #60: DP Rx1 SST two-frame waits = 2 x the measured frame (fw/sdcc/awto_dpframe.inc), not 2 x 45 ms

@@ -395,11 +395,46 @@ extern void AwtoSwFastPoll(void);
 extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up by the fast path, 0 = none
 #define AWTO_SW_EV_FAST_WHY                                     0xA1    // at a fast-path timeout: 1 measure busy, 2 watchdog, 4 FIFO / HV error, 8 receiver unstable, 0x10 timing change, 0x20 judge check
 #define AWTO_SW_EV_FAST_FLAGS                                   0xA2    // first M-domain error after a fast unblank: P0_02 bits 6,5,1,0, bit7 = watchdog P0_0C.0
-#define AWTO_FAST_JUDGE_HOLD()                                  (g_ucAwtoFastPending != 0)     // AwtoSwFastPoll does the judge's checks meanwhile
-#if(_AWTO_SW_MARKS == _ON)
-#define AWTO_SW_FAST_POLL()                                     AwtoSwFastPoll()               // also runs the post-unblank flag watch
+// #78 power levels (fw/sdcc/awto_fastsw.inc AwtoWakeHold): L1 backlight off at signal loss, L2 panel off, L3 SDK power saving
+#ifndef _AWTO_WAKE_HOLD
+#define _AWTO_WAKE_HOLD                                         _ON
+#endif
+#define AWTO_L2_SEC                                             60      // Dan 2026-11-08 defaults: L2 after 1 min, L3 after 10 min
+#define AWTO_L3_SEC                                             600
+#define AWTO_HOLD_CHECK_MS                                      10      // receiver check while held: wake latency <= 10 ms + 1 pass
+#define AWTO_HOLD_OTHER_MS                                      100     // auto search: other ports pre-detected in turn, each every 300 ms
+#define AWTO_REHOLD_MS                                          3000    // no new hold this soon after a fast wake (a post-wake judge fail = full path)
+#define AWTO_HOLD_TRIES                                         4       // fast wakes that time out (8 frames each) before the full path
+#define AWTO_SW_EV_HOLD                                         0xA8    // 1 L1 entered, 2 L2 panel off, 3 L3 released, 4 tries used up, 5 signal back, 6 backlight on, 7 retry, 9 other port has a signal, 0x10 SDK reset
+typedef struct
+{
+    unsigned char ucL1;                         // per-level enable (0/1); settings registry / test cmds 0x36..0x3A
+    unsigned char ucL2;
+    unsigned char ucL3;
+    unsigned int usL2Sec;                       // s in hold before L2 (panel off)
+    unsigned int usL3Sec;                       // s in hold before L3 (SDK power saving)
+} StAwtoPower;
+#if(_AWTO_WAKE_HOLD == _ON)
+extern __xdata StAwtoPower g_stAwtoPower;
+extern __xdata unsigned char g_ucAwtoHold;
+extern __xdata unsigned char g_ucAwtoWakePending;
+extern __xdata unsigned char g_ucAwtoNoHold;
+extern bit AwtoWakeHold(void);
+extern void AwtoWakePoll(void);
+#define AWTO_WAKE_HOLD()                                        AwtoWakeHold()
+#define AWTO_FAST_SETTLE_FRAMES                                 ((g_ucAwtoWakePending != 0) ? 1 : 3)   // wake: same port, no mux jump
+#define AWTO_FAST_JUDGE_HOLD()                                  ((g_ucAwtoFastPending != 0) || (g_ucAwtoHold != 0))
+#define AWTO_WAKE_POLL()                                        { if(g_ucAwtoHold != 0) { AwtoWakePoll(); } }
 #else
-#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } }   // no banked call per pass
+#define AWTO_WAKE_HOLD()                                        _FALSE
+#define AWTO_FAST_SETTLE_FRAMES                                 3
+#define AWTO_FAST_JUDGE_HOLD()                                  (g_ucAwtoFastPending != 0)     // AwtoSwFastPoll does the judge's checks meanwhile
+#define AWTO_WAKE_POLL()
+#endif
+#if(_AWTO_SW_MARKS == _ON)
+#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); }    // also runs the post-unblank flag watch
+#else
+#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); }
 #endif
 #define AWTO_FAST_SCALER_BYTES                                  48      // >= sizeof(StAwtoFastScaler), checked at compile time
 extern void AwtoFastScalerSave(unsigned char __xdata *pucBuf);
@@ -413,6 +448,9 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AwtoSwFastPoll()
 #define AWTO_SW_FAST_POLL()
 #define AWTO_FAST_JUDGE_HOLD()                                  _FALSE
+#define AWTO_WAKE_HOLD()                                        _FALSE
+#undef _AWTO_WAKE_HOLD
+#define _AWTO_WAKE_HOLD                                         _OFF
 #endif
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
