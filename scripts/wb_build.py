@@ -5,6 +5,7 @@ usage: wb_build.py --tree /mnt/2tb/git/awto-ddc-port --serial AWT26110003 --tag 
 - Compiler = the one the rolled images use (BE, rcbe sc1, --sdcccall 1); a default-env fw_build gives an LE image
   that boots with byte-swapped diag fields and broken delay cal (#75, 2026-11-07).
 - -D: extra defines (K2S_SDCC_EXTRA), e.g. -D _AWTO_LOOP_PROF=_ON.
+- --fw-args: more fw_build args; fresh layout = `--layout <missing file> --cluster fn --cluster-weights fw/cluster_weights.json`.
 - --bin/--src/--level/--flags: compiler A/B (install bin dir, its source tree for the ISR lib clones, --sdcccall, extra flags).
 Log: ./tmp/logs/wb_build.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_build output)
 """
@@ -33,6 +34,7 @@ def main() -> int:
     ap.add_argument("--src", default="")
     ap.add_argument("--level", default="1")
     ap.add_argument("--flags", default="", help="extra sdcc flags, e.g. --flags=--keil-compat")
+    ap.add_argument("--fw-args", default="", help="more fw_build args (fresh layout: '--layout NEW.tsv --cluster fn ...')")
     a = ap.parse_args()
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -50,7 +52,7 @@ def main() -> int:
     out = a.tree / f"tmp/logs/build_{a.tag}_{a.serial}.out"
     say(f"build {a.tag} serial {a.serial} tree {a.tree} bin {a.bin} sc{a.level} flags {a.flags!r} defs {a.defs or 'none'} -> {out}")
     with out.open("w") as fh:
-        rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial], cwd=a.tree, env=env,
+        rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *a.fw_args.split()], cwd=a.tree, env=env,
                             stdout=fh, stderr=subprocess.STDOUT).returncode
     head = out.read_text().splitlines()[:1]
     say(f"rc={rc}; {head[0][25:] if head else 'no output'}")
