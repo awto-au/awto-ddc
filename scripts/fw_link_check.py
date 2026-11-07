@@ -29,7 +29,7 @@ Finding kinds (key = kind|src|detail, address-free so two images can be diffed):
 Chunk kinds: the linked .rst in --asm (an area of data directives only = const, never disassembled), else --layout.
 Proofs (one `proven` log line each, no finding), all from this image + its .rst:
   bank switch   __bs_call/__bs_ret: `mov __bs_cur,Rn` .. `mov a,Rn; movx @dptr(=0xFFFF),a`, Rn untouched in between
-                (an ISR between the two writes saves/restores __bs_cur = the bank being entered)
+                (an ISR between the two writes saves/restores __bs_cur = the bank being entered); Keil-ABI __bs_ret: the same via A
   bank read     `movx a,@0xFFFF` (GET_CURRENT_BANK_NUMBER) in bank-n code: every const it references, and every entry of a
                 pointer table it references, is in bank n or common; in common code: all common (it reads the caller's bank)
   DMA callee    gptr_const_xbank where the caller also reads 0xFFFF (the DMA bank argument) and the callee's call closure has
@@ -73,6 +73,7 @@ def parse_map(path):
 
 # .rst line: addr, bytes, [cycles], source line number, source text
 RST_LINE = re.compile(r"^ {6}([0-9A-F]{6})?(?: [0-9A-F]{2})*\s*(?:\[\s*\d+\])?\s*\d+ (.*)$")
+RST_CONT = re.compile(r"^\s+(?:[0-9A-F]{2} ?)+$")   # continuation of a long .db/.ascii: bytes only (RST_LINE read "63 33" as line 63)
 DATA_DIR = re.compile(r"^\.(db|byte|dw|word|ascii|asciz|ascis|ds|blkb|blkw|str|strz|strs)\b", re.I)
 LIT_IMM = re.compile(r"#\s*\(?\s*(?:0x[0-9a-fA-F]+|\d+)\s*\)?\s*$")
 SIG = re.compile(r"^;\s+\S.*\.c:\d+: [\w\s\*]*?\b(\w+)\s*\((.*)\)\s*$")
@@ -88,7 +89,7 @@ class Rst:
         for f in sorted(Path(asm_dir).glob("*.rst")):
             cur = None
             for l in f.read_text(errors="replace").splitlines():
-                m = RST_LINE.match(l)
+                m = None if RST_CONT.match(l) else RST_LINE.match(l)
                 if not m:
                     continue
                 a = int(m.group(1), 16) if m.group(1) else None
@@ -310,6 +311,9 @@ def switch_proof(im):
         n = ins[st[0]].raw[0] & 7 if len(st) == 1 else None
         ok = (n is not None and w >= 2 and ins[w].text == "MOVX @DPTR,A" and ins[w - 1].raw == bytes([0xE8 | n])
               and ins[w - 2].dptr == BANK_REG and st[0] < w - 2 and not any(writes_rn(x, n) for x in ins[st[0] + 1:w]))
+        # Keil-ABI __bs_ret (sdcccall 3, R1-R7 kept): `mov __bs_cur,a; mov dptr,#0xFFFF; movx @dptr,a`, A untouched between
+        ok = ok or (w >= 2 and ins[w].text == "MOVX @DPTR,A" and ins[w - 1].dptr == BANK_REG
+                    and ins[w - 2].raw == bytes([0xF5, cur]))
         if ok:
             ranges.append((lo, hi))
         else:
