@@ -2,7 +2,7 @@
 """Build the firmware once per --sdcccall level and keep the artefacts (awto-sdcc#2 phase 2).
 
 usage: regcall_build.py LEVEL [--bin DIR] [--serial S] [--tag NAME] [--layout fw/bank_layout.tsv]
-  LEVEL  0|1|2 (AWTO_SDCCCALL); --bin = compiler install whose lib matches LEVEL (REQUIRED; one install holds the libs of all levels)
+  LEVEL  0|1|2|3 (AWTO_SDCCCALL); --bin = compiler install whose lib matches LEVEL (REQUIRED; one install holds the libs of all levels)
 Result: tmp/runs/<tag>/{fw.bin,fw.map,fw.ihx,build.json,sdcc_bank.log tail,size.txt}. Log: tmp/logs/regcall_build.log
 """
 import argparse, os, shutil, subprocess, sys, time
@@ -16,7 +16,7 @@ STALL = 300             # fw_build is silent inside a step (asm step <= 240 s ow
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("level", choices="012")
+    ap.add_argument("level", choices="0123")
     ap.add_argument("--bin", default=None)
     ap.add_argument("--serial", default="AWT26110003")
     ap.add_argument("--tag", default=None)
@@ -30,7 +30,7 @@ def main() -> int:
         sys.exit("--bin is required: name the compiler install explicitly (e.g. .../awto-sdcc-rcbe/tmp/install-<commit>); it must be stamped by awto-sdcc scripts/build.py")
     inst = a.bin
     env = dict(os.environ, AWTO_DDC_REPO=str(ROOT), AWTO_SDCC_BE="1", AWTO_SDCCCALL=a.level,
-               AWTO_SDCC_BIN=f"{inst}/bin", AWTO_SDCC_SRC="/mnt/2tb/git/awto-sdcc-rcbe")
+               AWTO_SDCC_BIN=f"{inst}/bin", AWTO_SDCC_SRC=os.environ.get("AWTO_SDCC_SRC", "/mnt/2tb/git/awto-sdcc-rcbe"))
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (ROOT / "tmp/logs/regcall_build.log").open("a")
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} build {tag} bin={inst}\n")

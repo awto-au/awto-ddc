@@ -96,7 +96,27 @@ def dseg_extent(map_text, rels):
     return (min(dsyms), min(dsyms) + dtot) if dsyms and dtot else None
 
 
-def holes_from_map(map_text, rels):
+def dseg_runs(map_text, rels, mem: Path | None = None):
+    """Real DSEG ranges [(lo, hi)]. sdld puts each module's DSEG part in the first free gap, so DSEG splits around the
+    bit bytes at 0x20; its map line is a synthetic total from 0x00. From the -M grid (.mem: a-z / D = DSEG parts) when
+    present, else lowest DSEG symbol + .rel total (contiguous assumption)."""
+    if mem is not None and mem.exists():
+        g = {}
+        for m in re.finditer(r"^0x([0-9a-f]{2}):((?:\|.){16})\|", mem.read_text(errors="replace"), re.M):
+            for i, ch in enumerate(m.group(2)[1::2]):
+                g[int(m.group(1), 16) + i] = ch
+        runs = []
+        for a in sorted(x for x, ch in g.items() if ch.islower() or ch == "D"):
+            if runs and runs[-1][1] == a:
+                runs[-1][1] = a + 1
+            else:
+                runs.append([a, a + 1])
+        return [tuple(r) for r in runs]
+    d = dseg_extent(map_text, rels)
+    return [d] if d else []
+
+
+def holes_from_map(map_text, rels, mem: Path | None = None):
     """Direct-RAM holes left by the areas sdld places itself (it ignores -b for OSEG)."""
     used = []
     for m in MAP_AREA.finditer(map_text):
@@ -105,9 +125,7 @@ def holes_from_map(map_text, rels):
             continue
         if n and lo < DIRECT_END:
             used.append((lo, lo + n))
-    d = dseg_extent(map_text, rels)
-    if d:
-        used.append(d)
+    used += dseg_runs(map_text, rels, mem)
     holes, cur = [], 0
     for lo, hi in sorted(used):
         if lo > cur:
@@ -126,11 +144,12 @@ def link(cmd, ihx: Path, rels):
     park, cur = [], ISEG_BASE
     for k, v in ddovl.items():
         park.append(f"-Wl-a{k}=0x{cur:x}"); cur += v
+    mapf, memf = ihx.with_suffix(".map"), ihx.with_suffix(".mem")
+    memf.unlink(missing_ok=True)                        # -M grid; absent when _sdld relinked without -M (banked)
     r = run(park + [f"-Wl-aISEG=0x{cur:x}"])
-    mapf = ihx.with_suffix(".map")
     if r.returncode or not mapf.exists():
         return r, {}
-    holes, used = holes_from_map(mapf.read_text(errors="replace"), rels)
+    holes, used = holes_from_map(mapf.read_text(errors="replace"), rels, memf)
     base = {}
     for name, size in sorted(ddovl.items(), key=lambda kv: -kv[1]):
         h = next((h for h in holes if h[1] - h[0] >= size), None)
@@ -140,6 +159,7 @@ def link(cmd, ihx: Path, rels):
             return r, {"used": used}
         base[name] = h[0]; h[0] += size
     base["ISEG"] = ISEG_BASE
+    memf.unlink(missing_ok=True)
     r = run([f"-Wl-a{k}=0x{v:x}" for k, v in base.items()])
     if r.returncode:
         return r, {}
@@ -150,10 +170,7 @@ def link(cmd, ihx: Path, rels):
     iram = [(int(a, 16), int(a, 16) + int(n, 16), k) for k, a, n in
             re.findall(r"^(REG_BANK_\d|DSEG|OSEG|ISEG|BSEG_BYTES|BIT_BANK|DDOVL\w*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mt, re.M)
             if int(n, 16)]
-    iram = [x for x in iram if x[2] != "DSEG"]
-    d = dseg_extent(mt, rels)
-    if d:
-        iram.append((*d, "DSEG"))
+    iram = [x for x in iram if x[2] != "DSEG"] + [(*d, "DSEG") for d in dseg_runs(mt, rels, memf)]
     iram = sorted(set(iram))
     clash = [(x[2], y[2]) for x, y in zip(iram, iram[1:]) if y[0] < x[1] and not (x[2] == y[2])]
     top = max((hi for _, hi, _ in iram), default=0)
