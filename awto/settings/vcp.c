@@ -4,6 +4,7 @@
 #include "cc.h"
 #include "settings.h"
 #include "vcp.h"
+#include "menu.h"
 
 static struct setting __xdata row;
 static uint8_t __xdata sel = 1;
@@ -31,6 +32,30 @@ uint8_t vcp_get(uint8_t code, uint16_t __xdata *cur, uint16_t __xdata *max, uint
         *cur = 0;
         *max = 1;
         *type = 1;
+        return 1;
+    case VCP_NEWCTL:
+        *cur = 1;
+        *max = 2;
+        return 1;
+    case VCP_CTRL:
+        *cur = 0x0009;
+        *max = 0xFFFF;
+        return 1;
+    case VCP_FWLVL:
+        *cur = VCP_FW_LEVEL;
+        *max = 0xFFFF;
+        return 1;
+    case VCP_VERSION:
+        *cur = 0x0202;
+        *max = 0xFFFF;
+        return 1;
+    case VCP_MENU:
+        *cur = (uint16_t)menu_diag.page << 8 | menu_diag.open;
+        *max = 0xFFFF;
+        return 1;
+    case VCP_ITEM:
+        *cur = (uint16_t)menu_diag.mode << 8 | menu_diag.item_id;
+        *max = 0xFFFF;
         return 1;
     case VCP_VAL:
         i = set_idx(sel);
@@ -68,6 +93,10 @@ uint8_t vcp_set(uint8_t code, uint16_t v)
         sel = (uint8_t)v;
         return 1;
     case VCP_SCHEMA:
+    case VCP_NEWCTL:
+    case VCP_CTRL:
+    case VCP_FWLVL:
+    case VCP_VERSION:
         return 1;
     case VCP_CMD:
         if (v == 1)
@@ -80,6 +109,10 @@ uint8_t vcp_set(uint8_t code, uint16_t v)
     case VCP_RESET:
         if (v != 0)
             set_defaults();
+        return 1;
+    case VCP_MENU:
+        return menu_cmd((uint8_t)(v >> 8), v & 0xFF);
+    case VCP_ITEM:
         return 1;
     case VCP_VAL:
         return set_put(sel, (int16_t)v, 1);
@@ -100,7 +133,8 @@ uint8_t vcp_set(uint8_t code, uint16_t v)
 }
 
 /* Host mailbox (debug link, map symbol _vcp_box): the host writes code + value, then cmd; the main loop answers.
- * cmd 1 = get, 2 = set (then get); done: cmd = 0, result 1 = ok, 0 = unsupported code. Bytes, so no endian issue. */
+ * cmd 1 = get, 2 = set (then get), 3 = menu command (code = op, value = arg, menu.h menu_cmd); done: cmd = 0,
+ * result 1 = ok, 0 = unsupported code / refused. Bytes, so no endian issue. State: _menu_diag (menu.h). */
 struct vcp_box {
     uint8_t magic;               /* 'V' once the firmware has run vcp_box_service */
     uint8_t cmd, code, result;
@@ -118,9 +152,14 @@ void vcp_box_service(void)
     vcp_box.magic = 'V';
     if (vcp_box.cmd == 0)
         return;
-    if (vcp_box.cmd == 2)
+    if (vcp_box.cmd == 3) {
+        ok = menu_cmd(vcp_box.code, (uint16_t)vcp_box.val_hi << 8 | vcp_box.val_lo);
+        bcur = bmax = 0;
+        btype = 0;
+    } else if (vcp_box.cmd == 2) {
         ok = vcp_set(vcp_box.code, (uint16_t)vcp_box.val_hi << 8 | vcp_box.val_lo);
-    if (ok)
+    }
+    if (ok && vcp_box.cmd != 3)
         ok = vcp_get(vcp_box.code, &bcur, &bmax, &btype);
     vcp_box.cur_lo = (uint8_t)bcur;
     vcp_box.cur_hi = (uint8_t)(bcur >> 8);

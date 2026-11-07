@@ -38,6 +38,8 @@ uint16_t set_opt(uint16_t opts, uint8_t k);              /* offset of option k *
 uint8_t  set_vcp_opt(uint8_t idx, int16_t v);            /* VCP value of enum option v (option '=N' or v) */
 int16_t  set_opt_from_vcp(uint8_t idx, uint8_t vcpv);    /* inverse; -1 = no option has it */
 uint8_t  set_vcp_row(uint8_t vcp);                       /* row index of a MCCS code, 0xFF = none */
+uint16_t set_caps_len(void);                             /* DDC/CI capabilities string (generated from the vcp column) */
+char     set_caps_at(uint16_t i);
 void     set_apply_call(uint8_t ap, uint8_t id, int16_t v);
 uint8_t  set_page_title(uint8_t page, char __xdata *dst, uint8_t max);
 uint8_t  set_page_parent(uint8_t page);                  /* 0xFF = top level */
@@ -60,6 +62,7 @@ void    set_action(uint8_t id);          /* run a STY_ACTION row */
 void    set_load(void);                  /* boot: defaults, then every valid NVRAM pair (id-tagged: rows that still exist survive) */
 void    set_apply_all(void);             /* push every row with an apply to the firmware (first main-loop pass) */
 void    set_defaults(void);              /* every row to def, apply all, save */
+void    set_group_defaults(uint8_t group);   /* rows of one page (SET_PAGE_*) to def, applied */
 void    set_save_now(void);              /* write the record now (menu exit, host 'save') */
 void    set_service(void);               /* main loop: debounced save, risky auto-revert */
 uint8_t set_load_result(void);           /* 0 = defaults (no record), 1 = record loaded, 2 = recovery defaults */

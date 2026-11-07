@@ -222,6 +222,29 @@ void set_defaults(void)
     set_save_now();
 }
 
+void set_group_defaults(uint8_t group)
+{
+    uint8_t i;
+
+    for (i = 0; i < SET_COUNT; i++) {
+        set_row(i, &row);
+        if (row.group != group || row.type == STY_ACTION || (row.flags & SF_RO))
+            continue;
+        val[i] = row.def;
+        st_apply(i);
+        st_touch();
+    }
+}
+
+/* MCCS 0x08 restore colour defaults */
+void set_ap_colour_reset(uint8_t id, int16_t v)
+{
+    (void)id;
+    (void)v;
+    set_group_defaults(SET_PAGE_COLOUR);
+    set_group_defaults(SET_PAGE_SIXAXIS);
+}
+
 void set_ap_defaults(uint8_t id, int16_t v)
 {
     (void)id;

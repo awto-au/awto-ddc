@@ -60,7 +60,10 @@ static int ap_calls, last_ap_id, last_ap_v;
 #define AP(n) void set_ap_##n(uint8_t id, int16_t v) { ap_calls++; last_ap_id = id; last_ap_v = v; }
 AP(aspect) AP(backlight) AP(black_level) AP(colour_temp) AP(contrast) AP(debug_msgs) AP(debug_popup) AP(dp_edid)
 AP(dp_version) AP(factory_menu) AP(gamma) AP(input_mode) AP(input_select) AP(msg_log) AP(osd_pos) AP(osd_scale)
-AP(osd_transparency) AP(overscan) AP(power) AP(sdk_language) AP(search_time) AP(user_rgb) AP(vendor_menu)
+AP(osd_transparency) AP(overscan) AP(power) AP(power_mode) AP(sdk_language) AP(search_time) AP(user_rgb) AP(vendor_menu)
+static int injected = -1, held_mask, held_ms;
+void key_inject(uint8_t k) { injected = k; menu_key(k); }   /* the firmware routes the key back into menu_key */
+void key_hold(uint8_t mask, uint16_t ms) { held_mask = mask; held_ms = ms; }
 
 /* ---- mock OSD: text grid ---- */
 static char grid[MENU_ROWS][MENU_COLS + 1];
@@ -168,6 +171,17 @@ int main(int argc, char **argv)
     CHECK(set_pending() == 0, "vcp confirm");
     CHECK(vcp_get(VCP_SCHEMA, &cur, &max, &type) && cur == SET_SCHEMA, "schema");
     CHECK(!vcp_get(0x99, &cur, &max, &type), "unsupported code");
+    CHECK(vcp_get(0x14, &cur, &max, &type) && cur == 0x05, "0x14 6500K = MCCS 0x05: %x", cur);
+    CHECK(vcp_set(0x14, 0x0B) && set_get(SET_ID_COLOUR_TEMP) == 5, "0x14 user");
+    CHECK(vcp_set(0x08, 1) && set_get(SET_ID_COLOUR_TEMP) == 2, "0x08 colour reset");
+    CHECK(vcp_get(0xDF, &cur, &max, &type) && cur == 0x0202, "VCP version 2.2");
+    CHECK(vcp_get(0xE6, &cur, &max, &type) && cur == 1 && max == 1, "manufacturer 0xE6 = fast switch");
+    {
+        char c[400]; uint16_t i, n = set_caps_len();
+        for (i = 0; i < n && i < sizeof c - 1; i++) c[i] = set_caps_at(i);
+        c[i] = 0;
+        CHECK(strstr(c, "model(awto-mon)") && strstr(c, "60(0F 11 12)") && strstr(c, "mccs_ver(2.2))"), "caps %s", c);
+    }
     vcp_set(VCP_RESET, 1);
     CHECK(set_get(SET_ID_PANEL_T6) == 1100 && set_get(SET_ID_BRIGHTNESS) == 44, "vcp 0x04 reset");
     {
@@ -225,6 +239,25 @@ int main(int argc, char **argv)
     menu_open();
     for (k = 0; k < 31; k++) { now_ms += 1000; menu_service(); }
     CHECK(!menu_active(), "timeout closes the menu");
+
+    /* 10. host commands + state struct */
+    {
+        uint16_t r0;
+        CHECK(menu_cmd(MO_OPEN, 0) && menu_diag.open == 1 && menu_diag.page == 0 && menu_diag.item_id == SET_ID_BRIGHTNESS, "open page 0");
+        r0 = menu_diag.redraw_lo | menu_diag.redraw_hi << 8;
+        CHECK(menu_cmd(MO_SELECT, SET_ID_CONTRAST) && menu_diag.item_id == SET_ID_CONTRAST && menu_diag.cursor == 2, "select contrast");
+        CHECK((uint16_t)(menu_diag.redraw_lo | menu_diag.redraw_hi << 8) != r0, "redraw counter moves");
+        CHECK(menu_cmd(MO_SET, 61) && set_get(SET_ID_CONTRAST) == 61 && menu_diag.val_lo == 61, "set via command");
+        CHECK(!menu_cmd(MO_SELECT, SET_ID_PANEL_T3), "select an item of another page refused");
+        CHECK(menu_cmd(MO_OPEN, 1) && menu_diag.item_page == 2 && menu_diag.item_id == 0, "colour page: sub-page entry first");
+        CHECK(menu_cmd(MO_KEY, MK_MENU) && menu_diag.page == 2 && menu_diag.parent == 1 && injected == MK_MENU, "key into sub-page");
+        CHECK(menu_cmd(MO_BACK, 0) && menu_diag.page == 1 && menu_diag.cursor == 0, "back");
+        CHECK(menu_cmd(MO_HOLD, (60 << 5) | 0x0A) && held_mask == 0x0A && held_ms == 3000, "hold menu+left 3 s");
+        CHECK(menu_cmd(MO_OPEN, MENU_MAIN) && menu_diag.page == MENU_MAIN && menu_diag.item_page == 0, "main");
+        CHECK(vcp_set(VCP_MENU, MO_CLOSE << 8) && !menu_diag.open, "close via VCP 0xE4");
+        CHECK(!menu_cmd(MO_OPEN, 200), "bad page refused");
+        menu_close();
+    }
 
     printf("%s: %d failures (flash writes %d, erases %d)\n", fails ? "FAIL" : "PASS", fails, writes, erases);
     return fails != 0;
