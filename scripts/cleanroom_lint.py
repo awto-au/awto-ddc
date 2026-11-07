@@ -146,7 +146,8 @@ def grams(code, prose, structural=False):
     cg = windows(ch, N_CODE)
     if len(cg):
         cs = np.convolve(content, np.ones(N_CODE, dtype=np.int32), "valid")
-        keep = cs >= MIN_CONTENT
+        idn = np.convolve(np.array([k == "id" for _, _, k in code], dtype=np.int32), np.ones(N_CODE, dtype=np.int32), "valid")
+        keep = (cs >= MIN_CONTENT) & (idn >= 1)                      # literals + punctuation only carry no expression
         cg, cl = cg[keep], np.nonzero(keep)[0]                       # window start = token index
     else:
         cl = np.zeros(0, dtype=np.int64)
