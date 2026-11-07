@@ -179,7 +179,7 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
 #if(_AWTO_DDCCI_ENGINES == 3)
             AwtoDdcEngineInit(pucR, tAwtoIicCh[ucE]);
 #else
-            AwtoDdcEngineInit(pucR, AWTO_XB(0xFF22) & (_BIT2 | _BIT1 | _BIT0));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
+            AwtoDdcEngineInit(pucR, (_AWTO_DDCCI_PARK == 1) ? 0x07 : (AWTO_XB(0xFF22) & (_BIT2 | _BIT1 | _BIT0)));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
 #endif
             ucN = 0;
         }

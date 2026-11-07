@@ -214,6 +214,12 @@ extern void AwtoFreqUpdate(void);
 #define _AWTO_DEBUG_PORT                                        _ON
 // #60 KVM: DDC/CI 0x37 on the spare IIC engines, polled (fw/sdcc/awto_ddcci.inc); 0 = off, 1 = IIC_1 following the active
 // port, 3 = IIC_1..3 fixed on DDC1/2/3 (every host can switch). The main engine then never enters DDC/CI mode (both would ACK 0x6E)
+#ifndef _AWTO_DDCCI_PARK
+#define _AWTO_DDCCI_PARK                                        0       // bisect (kvm1 dead on unit 3): 1 = IIC_1 polled but parked on channel 7 (no DDC)
+#endif
+#ifndef _AWTO_DDCCI_NOPOLL
+#define _AWTO_DDCCI_NOPOLL                                      0
+#endif
 #ifndef _AWTO_DDCCI_ENGINES
 #define _AWTO_DDCCI_ENGINES                                     1
 #endif
@@ -221,12 +227,19 @@ extern void AwtoFreqUpdate(void);
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 #if(_AWTO_DDCCI_ENGINES != 0)
 extern void AwtoDdcciPoll(void);
-#if(_AWTO_DDCCI_ENGINES == 3)
+#if(_AWTO_DDCCI_NOPOLL == 1)
+#define AWTO_DDCCI_POLL()                                       // bisect: engine code linked, never called
+#define AWTO_DDCCI_FOLLOW(ch)
+#elif(_AWTO_DDCCI_ENGINES == 3)
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } }
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } }
+#if(_AWTO_DDCCI_PARK == 1)
+#define AWTO_DDCCI_FOLLOW(ch)
+#else
 #define AWTO_DDCCI_FOLLOW(ch)                                   { AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | (ch); }
+#endif
 #endif
 #else
 #define AWTO_DDCCI_POLL()
