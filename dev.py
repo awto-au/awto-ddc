@@ -491,9 +491,30 @@ def cmd_build(extra: list[str]) -> int:
     return 0
 
 
+LAYOUT_PID = TMP / "desk_layout_watch.pid"
+
+
+def _layout_watch() -> None:
+    """Keep scripts/desk_layout.py watch running (one per session): a unit reboot re-plugs its monitor and mutter
+    then falls back to a row with DP-1 on; the watcher restores Dan's layout for the monitors present (#78)."""
+    try:
+        pid = int(LAYOUT_PID.read_text())
+        os.kill(pid, 0)
+        if "desk_layout.py" in Path(f"/proc/{pid}/cmdline").read_text(errors="replace"):
+            return
+    except (OSError, ValueError):
+        pass
+    out = (LOGS / "desk_layout_watch.out").open("a")
+    pr = subprocess.Popen([sys.executable, str(REPO / "scripts/desk_layout.py"), "watch"], stdout=out, stderr=out,
+                          stdin=subprocess.DEVNULL, start_new_session=True)
+    LAYOUT_PID.write_text(str(pr.pid))
+    log(f"layout watcher started (pid {pr.pid}, tmp/logs/desk_layout.log)")
+
+
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
          args="[--unit N] [--full] [--any-image] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
+    _layout_watch()
     n, u = _unit(extra)
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
@@ -555,6 +576,7 @@ def cmd_kvm(extra: list[str]) -> int:
 @command("mains power-cycle a unit via its relay (scripts/power_cycle.py)", args="[--unit N] [--on|--off]",
          kind="action")
 def cmd_power_cycle(extra: list[str]) -> int:
+    _layout_watch()
     n, u = _unit(extra)
     if not u["relay"]:
         log(f"unit {n} has no relay (scripts/devices.json)", "ERROR")
@@ -601,6 +623,7 @@ def _isp_halted(bus: int) -> bool:
 @command("reboot the scaler MCU over ISP (0xEE <- 0x02), <1 s; falls back to nothing: use power-cycle if 0x4A is silent",
          args="[--unit N]", kind="action")
 def cmd_reset(extra: list[str]) -> int:
+    _layout_watch()
     _n, u = _unit(extra)
     _done(extra, "reset")
     return _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
@@ -619,29 +642,6 @@ def _diag(u: dict, *args, bus: int | None = None) -> int:
     more = ["--ids", ids] if ids.is_file() else []
     b = bus if bus is not None else _bus(u)
     return _dbg_py(b, "rtd_diag.py", b, *(["--be"] if u["be"] else []), *args, *more)
-
-
-@command("read the diag block (boot stages, rates, self-test); --messages [--secs S] polls debug messages; "
-         "--release un-halts a firmware left stopped by a killed --messages; --watch N re-reads",
-         args="[--unit N] [--messages [--secs S] | --release | --watch N]", kind="action")
-def cmd_diag(extra: list[str]) -> int:
-    n, u = _unit(extra)
-    args = [f for f in ("--messages", "--release") if _flag(extra, f)]
-    if len(args) > 1:
-        raise SystemExit("diag: --messages and --release are exclusive; nothing done")
-    for flag in ("--secs", "--watch"):
-        v = _opt(extra, flag)
-        if v is None:
-            continue
-        try:
-            float(v)
-        except (TypeError, ValueError):
-            raise SystemExit(f"diag: {flag} needs a number; nothing done")
-        if flag == "--secs" and "--messages" not in args:
-            raise SystemExit("diag: --secs only applies to --messages; nothing done")
-        args += [flag, v]
-    _done(extra, "diag")
-    return _diag(u, *args)
 
 
 @command("#79 debug link: on = debug slave 0x35 onto the unit's DDC (DDC/CI owns it by default; on --minutes N, "
@@ -894,6 +894,7 @@ RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2
 @command("recover a wedged unit: mains cycle, hold it in the safe window, reflash (default: last flashed)",
          args="[--unit N] [--bus N] [--write-mode byte|burst] [--any-image] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
+    _layout_watch()
     n, u = _unit(extra)
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     any_image = _flag(extra, "--any-image")
