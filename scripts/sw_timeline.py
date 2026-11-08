@@ -3,6 +3,8 @@
 
 usage: sw_timeline.py <bus> --serial S --map MAP [--to D1|D2|D3] [--runs N] [--settle-s 8] [--read-only]
   --to: test cmd 0x31..0x33 (fixed port, as VCP 0x60), then read g_stAwtoSw once the unit is ACTIVE again or --settle-s passed.
+  --vcp: switch with DDC/CI VCP 0x60 (raw 0x37 on <bus>, as kvm.py) instead of the test cmd; after the settle the
+    debug slave is linked onto --read-bus for the read (dbg_link on/off: DDC/CI owns the active port, #79).
   --read-only: decode the current log only. Host side per run: kernel drm uevents (udevadm monitor) and mutter journal lines.
   Events (RL6449_Project.h AWTO_SW_EV_*): 01 mode state, 10 panel power action, 20 T3 wait start/end, 40 switch cmd,
   50/51/52 held-visual guards. Times = firmware g_usTimerCounter ms relative to the arm (usT0).
@@ -15,6 +17,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dbg_link
 import dbg_xdata as X
 import i2cbus
 import rtd_i2c_bridge as B
@@ -23,6 +26,7 @@ MODES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNA
 POWER = {0: "PANEL_ON", 1: "PANEL_OFF", 2: "BACKLIGHT_ON", 3: "BACKLIGHT_OFF"}       # SDK _PANEL_ON.. order (UserCommonInterface)
 TESTCMD = 0xF6F8
 PORT_CMD = {"D1": 0x31, "D2": 0x32, "D3": 0x33}
+PORT_VCP = {"D1": 0x0F, "D2": 0x11, "D3": 0x12}      # MCCS 0x60 values (kvm.py PORTS)
 N_EV = 64                   # AWTO_SW_EVENTS (40 before #78); an older image just returns spare bytes
 PROBES = {1: "reset-to-SEARCH start", 2: "SysModeResetState done", 3: "judge SEARCH refused (retry)", 4: "OSD reset proc done",
           5: "free run done", 6: "SysSourceSwitchInputPort done", 7: "active proc: NVRAM system-data save start",
@@ -102,6 +106,9 @@ def name(ev_id: int, arg: int) -> str:
     if ev_id == 0xB8:
         return "DEAD PORT (#84) " + {1: "key / VCP 0x60 to a port with no cable: refused", 2: "key next input: no other cabled port",
                                      3: "fixed port, no cable, no signal: back to auto search"}.get(arg, str(arg))
+    if ev_id == 0xB9:
+        return "PREFILL (#83) D1 " + {1: "filled (cache valid 2)", 2: "pre-detect false", 3: "scan not DP", 4: "not stable",
+                                      5: "pixel clock differs > 1 %"}.get(arg, str(arg))
     if ev_id == 0xB0:
         return f"HPD recovery pulse on D{arg} (host lost SCDC / link: #78)"
     if ev_id == 0x80 and arg == 0:
@@ -119,6 +126,7 @@ def main() -> int:
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--settle-s", type=float, default=8.0, help="read the log this long after the switch (DP search 3 s + display setting)")
     ap.add_argument("--read-only", action="store_true")
+    ap.add_argument("--vcp", action="store_true", help="switch via DDC/CI VCP 0x60 instead of test cmd 0x31..0x33")
     ap.add_argument("--read-bus", type=int, help="bus to read the log on after the switch (debug slave follows the new port: "
                     "D1 = the DP AUX adapter); default = <bus>")
     a = ap.parse_args()
@@ -132,6 +140,29 @@ def main() -> int:
 
     i2cbus.require_unit(a.bus, a.serial)
     base = sym(a.map, "g_stAwtoSw")
+    if a.vcp:
+        if a.read_only or a.runs != 1:
+            sys.exit("--vcp: one switch per call (the log is read over a re-linked debug slave)")
+        rbus = a.read_bus if a.read_bus is not None else a.bus
+        t_host = time.time()
+        dbg_link._setvcp(a.bus, 0x60, 0x00, PORT_VCP[a.to])
+        deadline = time.monotonic() + a.settle_s
+        while time.monotonic() < deadline:            # host-side wait: switch + info pop-up (main loop busy ~0.5 s)
+            time.sleep(0.25)
+        with dbg_link.linked(rbus, 2):
+            rio = B.Real(rbus, allow_write=False, regread=True)
+            for _ in range(3):                      # a read right after the link sometimes fails once (2026-11-08)
+                raw = X.read_blocks(rio, base, 12 + 4 * N_EV)
+                if raw is not None:
+                    break
+            rio.close()
+        if raw is None:
+            say("log read failed (0x35 silent)"); return 1
+        hdr, evs = decode(raw)
+        say(f"vcp 0x60 switch to {a.to} seq {hdr['seq']} port {hdr['port']} events {hdr['n']} HPD-low D0..D3 {hdr['hpd_low']}")
+        for ms, i, g in evs:
+            say(f"  +{ms:5d} ms  {name(i, g)}")
+        return 0
     io = B.Real(a.bus, allow_write=not a.read_only, regread=True)     # regread: 0x35 read staging passes in read-only mode
     try:
         for run in range(1 if a.read_only else a.runs):
