@@ -19,9 +19,9 @@
       "connector_dp": "card1-DP-1",
       "gdctl_dp": "DP-1",
       "be": true,
-      "relay": null,
+      "relay": "so-th-1",
       "test": true,
-      "note": "2026-11-08T14:11: D1 (DP) cabled by Dan from Intel DP-1 (bus 15), off the desktop unless mirrored into HDMI-2 (dev.py mode --unit 2 --dp mirror); D2 HDMI stays. 2026-11-08T11:42: recabled by Dan to Intel HDMI-A-2 (bus 11), was NVIDIA DP-4. 2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX; Dan 2026-11-07: no vendor dump needed for unit 2 (dump-twice rule waived for this unit only; unit 1's vendor dump stays the model reference)"
+      "note": "2026-11-08T19:08: Sonoff so-th-1 feeds unit 2 (Dan); power-cycled it via scripts/power_cycle.py after the wb-p14audio1 flash failure (#96). 2026-11-08T14:11: D1 (DP) cabled by Dan from Intel DP-1 (bus 15), off the desktop unless mirrored into HDMI-2 (dev.py mode --unit 2 --dp mirror); D2 HDMI stays. 2026-11-08T11:42: recabled by Dan to Intel HDMI-A-2 (bus 11), was NVIDIA DP-4. 2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX; Dan 2026-11-07: no vendor dump needed for unit 2 (dump-twice rule waived for this unit only; unit 1's vendor dump stays the model reference)"
     },
     "3": {
       "serial": "AWT26110003",
@@ -29,9 +29,9 @@
       "connector": "card2-DP-4",
       "gdctl": "DP-4",
       "be": true,
-      "relay": "so-th-1",
+      "relay": null,
       "test": false,
-      "note": "2026-11-08T14:00: Dan's working screen again, hands off (tests on unit 2 only, memory units-test-policy). 2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
+      "note": "2026-11-08T19:08: so-th-1 no longer feeds unit 3 (Dan: it feeds unit 2). 2026-11-08T14:00: Dan's working screen again, hands off (tests on unit 2 only, memory units-test-policy). 2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
     }
   }
 }
