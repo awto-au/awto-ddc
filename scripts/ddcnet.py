@@ -35,6 +35,8 @@ RING = 128                     # RL6449_Project.h AWTO_NET_RING
 B_MAX, A_MAX, A_IN = 20, 9, 10  # AWTO_NET_B_MAX / _A_MAX / _A_IN
 B_IN = 27                      # 0x3D data limit: SDK g_pucDdcciData 32 B - sub - seq/ctl/ack - chk
 B_IN_SAFE = 12                 # default: whole write (sub + 15) fits the 16-byte IIC FIFO (regdb FF25) even if the ISR is late
+GROW_AFTER = 32                # opt-in only: consecutive clean, full-sized accepted writes before each increase
+FRAME_MAX = 300                # firmware AWTO_NET_BUF (Ethernet header + IP MTU 286)
 XCHG_TRIES = 4                 # per exchange: a failed write/read/checksum is retried with the same seq (fw dedups)
 END, ESC, ESC_END, ESC_ESC = 0xC0, 0xDB, 0xDC, 0xDD
 ETH_CFG = 0x88B5               # local experimental ethertype: host -> monitor config (MAC + IP)
@@ -59,15 +61,24 @@ class DbgLink:
     DEV8, SUB, READ_SUB = 0x6A, 0x3D, 0x08
     name, rmax = "dbg", B_MAX
 
-    def __init__(self, io, wmax: int = B_IN_SAFE):
-        self.io, self.wmax = io, min(wmax, B_IN)
+    def __init__(self, io, wmax: int = B_IN_SAFE, adaptive: bool = False):
+        if not 1 <= wmax <= B_IN:
+            raise ValueError(f"dbg write size must be 1..{B_IN}")
+        self.io, self.wmax = io, wmax
+        self.adaptive = adaptive
+        self.wire_bytes = 0                    # requested I2C bytes incl. address/sub; excludes START/STOP timing
 
     def xchg(self, seq, ctl, ack, data):
+        if len(data) > B_IN:
+            raise ValueError("dbg payload exceeds protocol limit")
         q = bytes([seq, ctl, ack]) + bytes(data)
+        self.wire_bytes += len(q) + 3          # address, sub, checksum
         if not self.io.write(self.DEV8, self.SUB, q + bytes([(0x3D + sum(q)) & 0xFF])):
             return None
+        self.wire_bytes += 28                 # sub-select address/sub + read address + 25-byte reply
         r = self.io.read(self.DEV8, self.READ_SUB, 25)
-        if r is None or len(r) < 25 or (0x3D + sum(r[:24])) & 0xFF != r[24] or r[0] != seq or not r[1] & F_UP or r[3] > B_MAX:
+        if (r is None or len(r) != 25 or (0x3D + sum(r[:24])) & 0xFF != r[24] or r[0] != seq
+                or not valid_reply(r[1], r[2]) or r[3] > B_MAX):
             return None
         return r[1], r[2], bytes(r[4:4 + r[3]])
 
@@ -80,17 +91,24 @@ class DdcciLink:
     READ_WAITS = (0.003, 0.006, 0.040, 0.040)
 
     def __init__(self, io, wmax: int = A_IN):
-        self.io, self.wmax = io, min(wmax, A_IN)
+        if not 1 <= wmax <= A_IN:
+            raise ValueError(f"ddcci write size must be 1..{A_IN}")
+        self.io, self.wmax = io, wmax
+        self.wire_bytes = 0
 
     def xchg(self, seq, ctl, ack, data):
+        if len(data) > A_IN:
+            raise ValueError("ddcci payload exceeds protocol limit")
         body = bytes([0x80 | (4 + len(data)), 0xD0, seq, ctl, ack]) + bytes(data)
         chk = 0x6E ^ 0x51
         for b in body:
             chk ^= b
+        self.wire_bytes += len(body) + 3        # address, 0x51, checksum
         if not self.io.ddc_write(body + bytes([chk])):
             return None
         for w in self.READ_WAITS:
             self.io.wait(w)
+            self.wire_bytes += 17             # address + requested 16-byte reply (possibly padded)
             r = self.io.ddc_read(16)
             if r is None or len(r) < 3 or r[0] != 0x6E or r[2] != 0xD1:
                 continue                         # null message 6E 80 BE, or our request still in the buffer
@@ -98,10 +116,17 @@ class DdcciLink:
             c = 0x50
             for b in r[:2 + n]:
                 c ^= b
-            if n < 4 or len(r) < 3 + n or c != r[2 + n] or r[3] != seq or not r[4] & F_UP:
+            if (not 4 <= n <= 4 + A_MAX or len(r) < 3 + n or c != r[2 + n] or r[3] != seq
+                    or not valid_reply(r[4], r[5])):
                 return None
             return r[4], r[5], bytes(r[6:2 + n])
         return None
+
+
+def valid_reply(flags: int, free: int) -> bool:
+    # RESET can accompany cached ACC/FULL while reset is pending; BAD cannot be applied.
+    return (bool(flags & F_UP) and free <= RING and flags & (F_ACC | F_FULL) != (F_ACC | F_FULL)
+            and not (flags & F_BAD and flags & (F_ACC | F_FULL)))
 
 
 class Pipe:
@@ -111,8 +136,29 @@ class Pipe:
         self.link, self.ctl = link, ctl
         self.seq = random.randint(1, 255)
         self.ack = 0
-        self.n = self.retries = self.full = 0
+        self.n = self.retries = self.full = self.bad = 0
         self.free = RING
+        self.wmax = min(B_IN_SAFE, link.wmax) if getattr(link, "adaptive", False) else link.wmax
+        self.clean = self.promotions = self.backoffs = 0
+        self.locked = False                    # an error disables growth for this pipe's lifetime
+        self.failed = False                    # unknown acceptance: no new seq until an explicit reset
+
+    def _backoff(self):
+        self.clean = 0
+        if getattr(self.link, "adaptive", False) and not self.locked:
+            self.wmax = min(B_IN_SAFE, self.link.wmax)
+            self.locked = True
+            self.backoffs += 1
+
+    def _accepted(self, n):
+        if not getattr(self.link, "adaptive", False) or self.locked or n != self.wmax:
+            self.clean = 0
+            return
+        self.clean += 1
+        if self.clean >= GROW_AFTER and self.wmax < self.link.wmax:
+            self.wmax = min(20 if self.wmax < 20 else B_IN, self.link.wmax)
+            self.clean = 0
+            self.promotions += 1
 
     def _next(self):
         self.seq = self.seq % 255 + 1            # 1..255: the firmware's boot value 0 never matches
@@ -120,24 +166,47 @@ class Pipe:
 
     def xchg(self, data: bytes = b"", ctl: int | None = None):
         """-> (taken: bool, got: bytes, flags). Raises LinkError after XCHG_TRIES failed tries."""
+        if self.failed:
+            raise LinkError(f"{self.link.name}: previous request outcome unknown; explicit reset required")
+        data = bytes(data)                      # freeze retry payload even if caller supplied a bytearray
         seq, c = self._next(), self.ctl if ctl is None else ctl
+        uncertain = False
         for k in range(XCHG_TRIES):
             r = self.link.xchg(seq, c, self.ack, data)
             self.n += 1
             if r is None:
+                uncertain = True
                 self.retries += 1
+                self._backoff()                # affects only FUTURE requests; this seq/data/ack stays unchanged
                 continue
             flags, self.free, got = r
+            if flags & F_BAD:
+                self.bad += 1
+                self._backoff()
+                if uncertain:
+                    # BAD is checked BEFORE firmware dedup: it rejects this attempt, not an earlier
+                    # request whose reply was lost. Only ACC/FULL can resolve that earlier outcome.
+                    self.retries += 1
+                    continue
+            if flags & F_RESET:
+                self.clean = 0
+                return False, b"", flags       # no TX data is valid during reset
             if flags & (F_ACC | F_FULL):         # applied: our ack moved the firmware's TX tail, `got` starts after it
                 self.ack = len(got)
                 self.full += bool(flags & F_FULL)
+                if flags & F_ACC and not c & CTL_RESET:
+                    self._accepted(len(data))
+                else:
+                    self.clean = 0             # FULL = flow control, not evidence of an incompatible write size
                 return bool(flags & F_ACC), got, flags
             return False, b"", flags             # BAD / RESET: nothing applied, ack kept
-        raise LinkError(f"{self.link.name}: exchange seq {seq} failed {XCHG_TRIES}x")
+        self.failed = True
+        raise LinkError(f"{self.link.name}: exchange seq {seq} failed {XCHG_TRIES}x; outcome unknown, pipe stopped")
 
     def reset(self, ctl: int = 0, tries: int = 20) -> None:
         """Empty both firmware rings and its frame state; ctl = mode afterwards (CTL_ECHO = raw loopback)."""
         self.ctl = ctl
+        self.failed = False                    # caller explicitly permits discarding both rings/frame state
         self.xchg(b"", ctl | CTL_RESET)
         self.ack = 0
         for _ in range(tries):                   # AwtoNetPoll applies it on its next main-loop pass
@@ -269,14 +338,18 @@ def open_io(a):
     return RealIo(a.bus)
 
 
-def make_link(io, transport: str, wmax: int | None, drop: float = 0.0):
+def make_link(io, transport: str, wmax: int | None, drop: float = 0.0, adaptive: bool = False):
+    if adaptive and (transport != "dbg" or wmax is not None):
+        raise ValueError("--adaptive requires dbg and cannot be combined with --wmax")
     if drop:                                     # fault injection: lose replies after the firmware applied the request
         rnd = random.Random(8080)
         rd, dr = io.read, getattr(io, "ddc_read", None)
         io.read = lambda dev8, sub, n: None if rnd.random() < drop else rd(dev8, sub, n)
         if dr:
             io.ddc_read = lambda n: None if rnd.random() < drop else dr(n)
-    return DbgLink(io, wmax or B_IN_SAFE) if transport == "dbg" else DdcciLink(io, wmax or A_IN)
+    if transport == "dbg":
+        return DbgLink(io, B_IN if adaptive else B_IN_SAFE if wmax is None else wmax, adaptive)
+    return DdcciLink(io, A_IN if wmax is None else wmax)
 
 
 # ---- SLIP + frames -------------------------------------------------------------------------------------------------
@@ -289,22 +362,31 @@ def slip_enc(frame: bytes) -> bytes:
 
 class SlipDec:
     def __init__(self):
-        self.buf, self.esc = bytearray(), False
+        self.buf, self.esc, self.bad = bytearray(), False, False
 
     def feed(self, data: bytes) -> list[bytes]:
         out = []
         for b in data:
             if b == END:
-                if self.buf:
+                if self.buf and not self.bad and not self.esc:
                     out.append(bytes(self.buf))
-                self.buf, self.esc = bytearray(), False
+                self.buf, self.esc, self.bad = bytearray(), False, False
+            elif self.bad:
+                continue                       # corrupted/oversized frame: resync only at END
+            elif self.esc:
+                if b not in (ESC_END, ESC_ESC):
+                    self.bad = True
+                    self.buf.clear()
+                    continue
+                self.buf.append(END if b == ESC_END else ESC)
+                self.esc = False
             elif b == ESC:
                 self.esc = True
             else:
-                if self.esc:
-                    b = END if b == ESC_END else ESC if b == ESC_ESC else b
-                    self.esc = False
                 self.buf.append(b)
+            if len(self.buf) > FRAME_MAX:
+                self.bad = True
+                self.buf.clear()
         return out
 
 
@@ -356,7 +438,7 @@ class Peer:
 
     def step(self) -> int:
         """One exchange: as many queued bytes as the link and the firmware's free space allow."""
-        n = min(self.p.link.wmax, self.p.free, len(self.out))
+        n = min(self.p.wmax, self.p.free, len(self.out))
         took, got, _ = self.p.xchg(bytes(self.out[:n]))
         if took:
             del self.out[:n]
@@ -380,16 +462,17 @@ class Peer:
 
 # ---- tests ---------------------------------------------------------------------------------------------------------
 def loopback(a, io) -> int:
-    link = make_link(io, a.transport, a.wmax, a.drop)
+    link = make_link(io, a.transport, a.wmax, a.drop, a.adaptive)
     p = Pipe(link)
     p.reset(CTL_ECHO)
-    data = bytes(random.Random(80).randrange(256) for _ in range(a.bytes))
-    t0, n0, r0 = io.now(), p.n, p.retries
+    rnd = random.Random(80)
+    data = bytes(rnd.randrange(256) for _ in range(a.bytes))
+    t0, n0, r0, f0, b0, w0 = io.now(), p.n, p.retries, p.full, p.bad, link.wire_bytes
     sent, back = 0, bytearray()
     lat = []
     limit = a.limit_s
     while len(back) < len(data) and io.now() - t0 < limit:
-        n = min(link.wmax, p.free, len(data) - sent)
+        n = min(p.wmax, p.free, len(data) - sent)
         took, got, _ = p.xchg(data[sent:sent + n])
         if took:
             sent += n
@@ -398,10 +481,14 @@ def loopback(a, io) -> int:
             io.wait(a.poll_s)                    # echo pending on the next main-loop pass
     dt = io.now() - t0
     ok = bytes(back) == data
+    exchanges, retries, full = p.n - n0, p.retries - r0, p.full - f0
+    bad = p.bad - b0
+    wire = link.wire_bytes - w0
+    rate = len(back) / dt if dt else 0
+    sizing = f"wmax {p.wmax}, rmax {link.rmax}, promotions {p.promotions}, backoffs {p.backoffs}"
     # latency: one byte out, exchanges until it is back
     t1, n1 = io.now(), p.n
-    p.xchg(b"\x5a")
-    got = b""
+    _, got, _ = p.xchg(b"\x5a")
     while not got and io.now() - t1 < 1.0:
         io.wait(a.poll_s)
         _, got, _ = p.xchg(b"")
@@ -409,14 +496,15 @@ def loopback(a, io) -> int:
     p.reset(0)
     unit = "fw ms" if a.sim else "ms"
     say(f"loopback {link.name} ({'sim' if a.sim else f'bus {a.bus}'}): {'PASS' if ok else 'FAIL'} {len(back)}/{len(data)} B echoed "
-        f"in {dt * 1000:.0f} {unit}, {p.n - n0} exchanges ({p.retries - r0} retries, {p.full} full), "
-        f"{len(data) / dt:.0f} B/s each way (wmax {link.wmax}, rmax {link.rmax}); 1-byte round trip {lat[0] * 1000:.1f} {unit}, "
-        f"{lat[1]} exchanges")
+        f"in {dt * 1000:.0f} {unit}, {exchanges} exchanges ({retries} retries, {full} full, {bad} bad), "
+        f"{rate:.0f} B/s each way ({sizing}); {wire} requested I2C B, "
+        f"{2 * len(back) / wire if wire else 0:.1%} duplex payload/requested bytes; "
+        f"1-byte round trip {lat[0] * 1000:.1f} {unit}, {lat[1]} exchanges")
     return 0 if ok else 1
 
 
 def stack(a, io) -> int:
-    link = make_link(io, a.transport, a.wmax, a.drop)
+    link = make_link(io, a.transport, a.wmax, a.drop, a.adaptive)
     p = Pipe(link)
     p.reset(0)
     peer = Peer(p, a.poll_s)
@@ -506,7 +594,8 @@ def stack(a, io) -> int:
     r, dt, n = svc(b"\x7f\x15")
     check("service unknown op -> FF", r is not None and r[:3] == b"\xff\x15\xff")
     say(f"stack {link.name} ({'sim' if a.sim else f'bus {a.bus}'}): {'PASS' if not fails else f'{fails} FAIL'}; "
-        f"ping rtt {min(rtts):.1f}..{max(rtts):.1f} {unit}; {p.n} exchanges, {p.retries} retries, {p.full} full")
+        f"ping rtt {min(rtts):.1f}..{max(rtts):.1f} {unit}; {p.n} exchanges, {p.retries} retries, {p.full} full; "
+        f"wmax {p.wmax}, promotions {p.promotions}, backoffs {p.backoffs}, {link.wire_bytes} requested I2C B")
     return 1 if fails else 0
 
 
@@ -574,7 +663,7 @@ def daemon(a) -> int:
             bus = kvm.find_bus(info) if a.transport == "ddcci" else a.bus
             i2cbus.require_unit(bus, info["serial"])
             io = RealIo(bus)
-        p = Pipe(make_link(io, a.transport, a.wmax))
+        p = Pipe(make_link(io, a.transport, a.wmax, adaptive=a.adaptive))
         p.reset(0)
         fd = tap_open(tap)
         mon_mac = bytes.fromhex(f"0241570000{int(u):02x}")
@@ -602,7 +691,8 @@ def daemon(a) -> int:
                 try:
                     busy |= bool(pe.step()) or bool(pe.out)
                 except LinkError as e:
-                    say(f"unit {L['u']}: {e}")
+                    # Unknown acceptance requires an explicit reset, not a new sequence on the next daemon step.
+                    raise LinkError(f"unit {L['u']}: {e}") from e
                 for fr in pe.frames:
                     if fr[12:14] != struct.pack("!H", ETH_CFG):
                         os.write(L["fd"], fr); L["back"] += 1
@@ -614,8 +704,10 @@ def daemon(a) -> int:
     finally:
         for L in links:
             p = L["p"]
-            say(f"unit {L['u']}: {L['frames']} frames to the monitor, {L['back']} back; {p.n} exchanges, {p.retries} retries")
+            say(f"unit {L['u']}: {L['frames']} frames to the monitor, {L['back']} back; {p.n} exchanges, {p.retries} retries; "
+                f"wmax {p.wmax}, promotions {p.promotions}, backoffs {p.backoffs}")
             os.close(L["fd"])
+            p.link.io.close()
             if not a.keep:
                 sh("ip", "link", "del", L["tap"])
         if a.bridge and not a.keep:
@@ -668,6 +760,7 @@ def main() -> int:
     ap.add_argument("--units", default="3")
     ap.add_argument("--transport", choices=("dbg", "ddcci"), default="dbg")
     ap.add_argument("--wmax", type=int, help=f"bytes per write (dbg: default {B_IN_SAFE}, max {B_IN}; ddcci max {A_IN})")
+    ap.add_argument("--adaptive", action="store_true", help="opt-in dbg sizing: 12 -> 20 -> 27 after clean traffic; errors lock at 12")
     ap.add_argument("--bytes", type=int, default=600)
     ap.add_argument("--drop", type=float, default=0.0, help="test: fraction of reply reads lost (firmware dedup + host retry)")
     ap.add_argument("--poll-s", type=float, default=0.002, help="idle gap between exchanges (main-loop pass ~2.7 ms at 4K60)")
@@ -679,6 +772,10 @@ def main() -> int:
     ap.add_argument("--ip")
     ap.add_argument("--follow", action="store_true")
     a = ap.parse_args()
+    if a.adaptive and (a.transport != "dbg" or a.wmax is not None):
+        ap.error("--adaptive requires --transport dbg and cannot be combined with --wmax")
+    if a.wmax is not None and not 1 <= a.wmax <= (B_IN if a.transport == "dbg" else A_IN):
+        ap.error(f"--wmax must be 1..{B_IN if a.transport == 'dbg' else A_IN}")
     LOG = rtd_proto.setup_logs("ddcnet")
     say(f"ddcnet {' '.join(sys.argv[1:])}")
     if a.cmd == "svc":

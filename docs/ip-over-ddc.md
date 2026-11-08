@@ -2,6 +2,8 @@
 
 - Firmware: branch `wb-p14net` (worktree `/mnt/2tb/git/awto-ddc-net`), `fw/sdcc/awto_net.inc`, ISR block in `fw/sdcc/awto_dbgisr.inc`, D0 dispatch in `fw/sdcc/awto_ddcci.inc`, switch `_AWTO_NET` in `RL6449_Project.h`.
 - Host: `scripts/ddcnet.py` (loopback, stack, daemon, svc). Decoded log lines: `rtd_proto` (`net 0x3D` / `net DDC/CI D0` runs).
+- Host throughput policy, offline regression/model results and approval-gated hardware commands:
+  [Busorra throughput](busorra-throughput.md). Default remains 12 B; `--adaptive` is opt-in for debug transport only.
 
 ## Link
 - Two byte rings in XDATA (`g_stAwtoNet`): host -> fw 128 B, fw -> host 128 B. BYTE indices, 128 divides 256.
@@ -80,4 +82,7 @@ Sim only so far (fw_sim, unit 3 image wb-p14net1, wb-p14net de074ad, 1080p60 sou
 - Speed bench (main loop, docs/speed-bench.tsv): work 4938 (kvm2e) -> 4944 cycles/pass (wb-p14net1), instr/pass 22503 both; with #67 settings 5062 (wb-osd67i) -> 5068 (wb-osd67net1, wb-osd67net c7ec071).
 - wb-osd67net1 (registry): stack get id 1 = 44, set id 1 = 60 read back; `ddc_sim.py` (MCCS) PASS beside D0.
 - Linux end to end in the sim: `ping 10.235.0.13` through TAP + bridge, 5/5, rtt 1.6-1.8 s wall (sim speed); `ddcnet.py svc info|get|msgs` through the kernel; route mode + ddcci ping 3/3 (9.4 s wall; first ARP timed out at sim speed).
-- Hardware (unit 3): pending, commands on #80.
+- Hardware is working: [unit 3, both transports and TAP](https://github.com/awto-au/awto-ddc/issues/80#issuecomment-6715078111),
+  [unit 2, DDC/CI and routed TAP](https://github.com/awto-au/awto-ddc/issues/80#issuecomment-6716137339).
+  Unit 3's 600 B debug loopback measured 2417 B/s at 12 B and 3449 B/s at 27 B (35 exchanges, zero retries/full at 27 B).
+  This does not validate the adaptive host policy or sustained/cross-adapter operation.
