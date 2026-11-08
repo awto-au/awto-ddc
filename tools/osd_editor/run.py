@@ -15,6 +15,9 @@ def main() -> int:
     if not PY.exists():
         subprocess.check_call(["uv", "venv", "--python", str(PY313 if PY313.exists() else "3.13"), str(VENV)])
         subprocess.check_call(["uv", "pip", "install", "--python", str(PY), "PySide6-Essentials", "numpy", "pillow"])
+    # Qt-Wayland text-input focus warnings and GIO volume-monitor lookups (masked units) are harmless noise
+    os.environ.setdefault("QT_LOGGING_RULES", "qt.qpa.wayland.textinput=false")
+    os.environ.setdefault("GIO_USE_VOLUME_MONITOR", "unix")
     os.execv(str(PY), [str(PY), str(HERE / "app.py"), *sys.argv[1:]])
 
 
