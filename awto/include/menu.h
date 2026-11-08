@@ -1,5 +1,5 @@
 /* menu.h: our OSD menu (awto-ddc#67). Pages and items come from the settings registry (settings.h); no per-item code.
- * Keys (front panel): Menu = enter / edit / confirm, Right / Left = move or change, Exit = back / revert. */
+ * Keys (front panel): MENU = enter / edit / confirm, UP / DOWN = move or change, AUTO = back / revert. */
 #ifndef AWTO_MENU_H
 #define AWTO_MENU_H
 
