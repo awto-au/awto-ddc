@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """KVM input switch for all our monitors at once (#60): DDC/CI VCP 0x60, one process per bus, in parallel.
 
-usage: kvm.py <D1|D2|D3|dp|hdmi1|hdmi2|next> [--units 1,2,3] [--ddcutil] [--verify] [--dry-run]
+usage: kvm.py <D1|D2|D3|dp|hdmi1|hdmi2|next|here> [--units 1,2,3] [--ddcutil] [--verify] [--dry-run]
 - Bus per unit = the one whose EDID serial is the unit's (connector i2c link first; NVIDIA has none: scan display buses).
 - Raw path: i2cbus (the only /dev/i2c toucher, #48) to 0x37. --ddcutil: `ddcutil --bus N setvcp 60 0xNN --noverify`.
 - next: getvcp 0x60 on the first unit, then the next of D1 -> D2 -> D3 -> D1 for every unit.
+- here: each unit gets its own current input back (getvcp, then setvcp the same value; the firmware ignores a switch to
+  where it is): times a parallel all-monitor command without losing a single-cable unit's picture or its DDC/CI.
 - Firmware side: fw/sdcc/awto_ddcci.inc (wb-p14kvm). With _AWTO_DDCCI_ENGINES 1 only the host on the active port reaches 0x37.
 Log: ./tmp/logs/kvm.log (one decoded line per monitor + the wall time)
 """
@@ -152,6 +154,9 @@ def switch_one(job: tuple) -> tuple:
     if bus is None:
         return n, None, value, 0.0, (t_bus - t0) * 1000, "no bus with that EDID serial", None
     try:
+        if value is None:                   # here
+            value = get_input(bus, use_ddcutil)
+            time.sleep(REPLY_WAIT_S)        # spec gap before the next request
         if use_ddcutil:
             ddcutil(bus, "setvcp", "60", f"0x{value:02x}", "--noverify")
         else:
@@ -168,7 +173,7 @@ def switch_one(job: tuple) -> tuple:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("target", choices=[*PORTS, "next"])
+    ap.add_argument("target", choices=[*PORTS, "next", "here"])
     ap.add_argument("--units", default="", help="comma list (default: every unit in scripts/devices.json)")
     ap.add_argument("--ddcutil", action="store_true")
     ap.add_argument("--verify", action="store_true", help="getvcp 0x60 after the set")
@@ -183,7 +188,8 @@ def main() -> int:
     if a.dry_run:
         for n in sel:
             log(f"dry-run: unit {n} {all_u[n]['serial']} ({all_u[n]['connector']}): setvcp 0x60 "
-                + ("<next of first unit>" if a.target == "next" else f"0x{PORTS[a.target]:02X} ({NAMES[PORTS[a.target]]})")
+                + ("<next of first unit>" if a.target == "next" else "<its own input>" if a.target == "here"
+                   else f"0x{PORTS[a.target]:02X} ({NAMES[PORTS[a.target]]})")
                 + f" via {how}; bus by EDID serial at run time")
         return 0
     t0 = time.monotonic()
@@ -196,9 +202,9 @@ def main() -> int:
         value = CYCLE[(CYCLE.index(cur) + 1) % len(CYCLE)] if cur in CYCLE else CYCLE[0]
         log(f"next: unit {sel[0]} reports 0x{cur:02X} ({NAMES.get(cur, '?')}) -> 0x{value:02X} ({NAMES[value]})")
     else:
-        value = PORTS[a.target]
+        value = None if a.target == "here" else PORTS[a.target]
     jobs = [(n, all_u[n], value, a.ddcutil, a.verify) for n in sel]
-    limit = (DDCUTIL_LIMIT_S if a.ddcutil else RAW_LIMIT_S) * (2 if a.verify else 1) + 2.0     # + bus scan (EDID reads)
+    limit = (DDCUTIL_LIMIT_S if a.ddcutil else RAW_LIMIT_S) * (1 + a.verify + (value is None)) + 2.0     # + bus scan (EDID reads)
     rc = 0
     with ProcessPoolExecutor(max_workers=len(jobs)) as ex:
         futs = [ex.submit(switch_one, j) for j in jobs]
