@@ -117,7 +117,11 @@ void AwtoKeyDbgLink(void)                       // MENU held + RIGHT: toggle the
 #define AWTO_IIC_STATUS2                7       // bit5/4 buffer over/underflow, bit2 full, bit1 empty
 #define AWTO_IIC_IRQ2                   8       // bit6 reset buffer, bit5 MCU writes the buffer
 #define AWTO_IIC_CHANNEL                9       // bit5 null message when the host reads an empty buffer
+#if(_AWTO_NET == _ON)
+#define AWTO_DDC_RX                     17      // #80 net op D0: source + len + 14 + checksum (16-byte engine buffer)
+#else
 #define AWTO_DDC_RX                     8       // longest request we take: set VCP = 7 bytes incl. source + checksum
+#endif
 #define AWTO_DDC_CAP_CHUNK              10      // 16-byte engine buffer - 6 framing bytes
 
 static __code WORD tAwtoIicBase[3] = {0xFE86, 0xFE94, 0xFEA3};      // IIC_2 / IIC_3: SDK header only, not in the 2795T regdb
@@ -245,6 +249,15 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
 #ifdef _AWTO_NEW_SETTINGS
     if(AwtoDdcRegistry(pucR, pucRx, ucLen, pucTx) == _TRUE)     // #67: MCCS 2.2 on the settings registry (glue.inc)
     {
+        return;
+    }
+#endif
+#if(_AWTO_NET == _ON)
+    if((pucRx[2] == 0xD0) && (ucLen >= 7))      // #80 net: 51 len D0 seq ctl ack data[n] chk -> 6E len D1 seq flags free data[m] chk
+    {
+        pucTx[1] = 0x80 | (4 + AwtoNetXchgA(pucRx + 3, ucLen - 7, pucTx + 3));
+        pucTx[2] = 0xD1;
+        AwtoDdcReply(pucR, pucTx);
         return;
     }
 #endif

@@ -11,7 +11,7 @@
 ^overflow in implicit constant conversion$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	499	ok	0x98 into BYTE; asm #0x98
 ^enumeration constant outside the range of int	Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonSyncCommonInclude.h	130	ok	_DP_HPD_TIME_NONE 0xFFFF = int -1, stored 16-bit; only ==/!=/assign uses see it
 ^comparison is always false due to limited range of data type$	User/RTD Factory/Code/RTDFactoryFunction.c	2812	ok	(bit)x == _BIT1 always false in Keil too; callers pass _FORCE_SHOW_NUMBER_OFF only
-^overflow in implicit constant conversion$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4054	ok	icon 0x92 into BYTE / ~bit into 1-bit field (LSB kept, same as Keil)
+^overflow in implicit constant conversion$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4055	ok	icon 0x92 into BYTE / ~bit into 1-bit field (LSB kept, same as Keil)
 ^comparison is always false due to limited range of data type$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1211	ok	BYTE > 0xFF always false in Keil too; same behaviour
 # Reviewed 2026-11-05 (#26): optimizer-fold 110 / unreachable 126. 16 BUG sites (non-volatile ISR flags) fixed by keil2sdcc volatile rule, no entry
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	735	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_LTM270FL01 panel) is constant; RBR/HBR table else-branch dead
@@ -161,49 +161,49 @@
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2814	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1478	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1484	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1923	ok	OK-CONFIG: _VGA_SUPPORT off: remaining cases empty, merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2746	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3707	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3770	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3774	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	424	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	426	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	429	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	433	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	437	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	444	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	454	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	452	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	448	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	422	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	424	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	468	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5541	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1924	ok	OK-CONFIG: _VGA_SUPPORT off: remaining cases empty, merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2747	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3708	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3771	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3775	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1123	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1125	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1128	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1132	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1136	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1143	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1153	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1151	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1147	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	429	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	431	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	475	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5544	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5542	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5543	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6505	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6534	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6561	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6595	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6619	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6641	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6665	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1161	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1159	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1163	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1167	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2927	ok	OK-HARMLESS: ucTest local =0: SDK dead "uncall" block in OsdDispMainMenu
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2929	ok	OK-HARMLESS: body of dead ucTest block
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3332	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3355	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3388	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6506	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6535	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6562	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6596	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6620	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6642	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6666	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1162	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1160	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1164	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1168	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2928	ok	OK-HARMLESS: ucTest local =0: SDK dead "uncall" block in OsdDispMainMenu
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2930	ok	OK-HARMLESS: body of dead ucTest block
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3333	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3356	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3389	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	421	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	458	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5074	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5231	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5333	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5463	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5575	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5075	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5232	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5334	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5464	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5576	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1209	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1213	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	458	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead
@@ -231,7 +231,7 @@
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	928	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	955	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	989	ok	OK-CONFIG: _PCB_SYS_EEPROM_IIC = _NO_IIC_PIN (settings flash-emulated, #53.3): EEPROM IIC branches fold away
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c	707	ok	OK-CONFIG: _HW_IIC_SUPPORT _OFF (#53.3): debug IIC read/write cases (0x44/0x45) compiled out, switch folds
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c	794	ok	OK-CONFIG: _HW_IIC_SUPPORT _OFF (#53.3): debug IIC read/write cases (0x44/0x45) compiled out, switch folds
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	570	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c	435	ok	OK-CONFIG: _AWTO_FAST_BOOT: Group A power-cut OFF branch empty (PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops on our board, the 2 x 10 ms rail waits removed); the condition only reads two status bits
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	*	ok	dead flash-type cases: g_ucFlashType is the constant _FLASH_MX25L8006E while _AWTO_FLASH_ALL is _OFF (#65)
@@ -241,19 +241,10 @@
 ^unreachable code$	Kernel/System/Code/SysSource.c	3279	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	555	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	557	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5386	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5396	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5403	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5520	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5531	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5538	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5661	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5671	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
-^conditional flow changed by optimizer: so said EVELYN the modified DOG$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	5678	ok	OK-CONFIG: _AWTO_KEEP_IDLE_RX _ON (#60): AWTO_IDLE_RX_OFF is empty, the if(GET_DIGITAL_PORT_SWITCH_TO_Dx()) around it has no body
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1477	ok	OK-CONFIG: body of the DDCCI_MODE branch (slave 0x6E and port DDC mux) dead because debug-mode is forced; intended: debug slave 0x35 replaces DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	611	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	613	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	615	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	617	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	620	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	622	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	612	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	614	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	616	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	618	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	621	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	623	ok	OK-AWTO: MenuNone EXIT = next input (#60 keil2sdcc sub); the SDK's power-saving DDC/CI-port wake after it is dead by design
