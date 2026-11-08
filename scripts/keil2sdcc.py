@@ -239,6 +239,10 @@ INSERTS = [
     # #60 KVM: input select + DDC/CI engines (fw/sdcc/awto_ddcci.inc), polled before the SDK DDC/CI handler
     (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$", (SHIM / "awto_ddcci.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonDdcciHandler\(\);", "            AWTO_DDCCI_POLL();", r"^void main\(void\)$"),
+    # #80 IP over DDC (fw/sdcc/awto_net.inc after awto_ddcci.inc: AwtoDdcRequest calls AwtoNetXchgA); poll gated by g_ucAwtoNetRun
+    (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$",
+     (SHIM / "awto_net.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonDdcciHandler\(\);", "            AWTO_NET_POLL();", r"^void main\(void\)$"),
     ("Kernel/System/Code/SysJudge.c", r"^\s*AwtoMsgV\(0x07D6,", "                AWTO_TMDS_STUCK();", r"^bit SysJudgeCheckStatus\(void\)$"),  # #78
 ] + [
     # #60 phase probes 7..19 (names: main scripts/sw_timeline.py); marks builds also poll mode changes right after judge / mode handler

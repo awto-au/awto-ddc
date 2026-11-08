@@ -858,7 +858,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1252	C	0x3b26	92
+stub	_AwtoNetPoll	C	0x3b2e	8
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -938,6 +938,7 @@ fn	_ScalerRead	C	0x3f02	128
 fn	_ScalerWrite	C	0x3f82	128
 const	_tPALETTE_MAIN_MENU	C	0x4002	56
 fn	_main	C	0x403a	128
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1254	C	0x40ba	92
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1388,7 +1389,6 @@ fn	_UserCommonFlashWrite	3	0xa268	108
 const	_tICON_REALTEK_1BIT_LOGO0	3	0xa2d4	1232
 const	_tICON_REALTEK_1BIT_LOGO1	3	0xa7a4	1164
 const	_OperationTable	4	0x0000	312
-const	___str_0	4	0x0138	8
 const	___str_1	4	0x0140	8
 const	___str_10	4	0x0148	12
 const	___str_11	4	0x0154	8
@@ -1644,6 +1644,7 @@ fn	_SysSourceGetCableDetect	4	0x9264	44
 fn	_SysSourceGetCableStatusChange	4	0x9290	44
 fn	_SysSourceGetInputPortType	4	0x92bc	36
 fn	_AwtoFastNow	4	0x933c	32
+const	___str_0	4	0x935c	16
 fn	_SysSourceInfoReset	4	0x9384	192
 fn	_SysSourceInitial	4	0x9444	400
 fn	_SysSourceJudge	4	0x95d4	212
@@ -2180,7 +2181,7 @@ fn	_AwtoFreqModeStr	9	0xa6a4	568
 fn	_AwtoModePut	9	0xa8dc	56
 fn	_AwtoModePutFix	9	0xa914	296
 fn	_AwtoModePutHz	9	0xaa3c	132
-fn	_ScalerDebugIntProc_EXINT1	9	0xaac0	800
+fn	_ScalerDebugIntProc_EXINT1	9	0xaac0	1276
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	10	0x006c	108
 const	_tFACTORY_PAGE_SELECT_ITEM_TABLE	10	0x00d8	192
 const	_tFONT_FACTORY_EUROPE	10	0x0198	2680
@@ -2884,6 +2885,7 @@ fn	_ar_muldiv	12	0x0368	584
 fn	_mul64	12	0x05b0	520
 fn	_rnd_shl	12	0x07b8	660
 const	_tAwtoIicBase	12	0x0a4c	12
+fn	_AwtoNetCopy	12	0x0a58	36
 fn	_dp_rd_n	12	0x0a88	152
 fn	_dp_rmw	12	0x0b20	100
 fn	_dp_test	12	0x0b84	64
@@ -2892,9 +2894,21 @@ fn	_dp_wr16	12	0x0c04	112
 fn	_hb_burst	12	0x0c74	340
 fn	_reg_rd_n	12	0x0dc8	120
 fn	_AwtoDiagDelayCal	12	0x0e40	2848
-fn	_AwtoDdcRequest	12	0x1960	816
+fn	_AwtoNetEq	12	0x1960	44
+fn	_AwtoNetEthTo	12	0x198c	52
+fn	_AwtoNetMsgPut	12	0x19c0	552
+fn	_AwtoNetSend	12	0x1be8	32
+fn	_AwtoNetSetting	12	0x1c08	36
 fn	_AwtoDdcciPoll	12	0x1c90	620
 const	_tAwtoDdcCaps	12	0x1efc	96
+fn	_AwtoDdcRequest	12	0x1f5c	916
+fn	_AwtoNetFrame	12	0x22f0	980
+fn	_AwtoNetPoll	12	0x26c4	520
+fn	_AwtoNetService	12	0x28cc	648
+fn	_AwtoNetSum	12	0x2b54	128
+fn	_AwtoNetTxPush	12	0x2bd4	256
+fn	_AwtoNetUdpTo	12	0x2cd4	292
+fn	_AwtoNetXchgA	12	0x2df8	572
 fn	_AwtoSlowDue	13	0x0000	312
 fn	_AwtoSwEvent	13	0x0138	160
 fn	_AwtoTmdsStuck	13	0x01d8	132
