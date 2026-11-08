@@ -28,6 +28,45 @@ GW, GH = 12, 18                                   # 1-bit glyph cell
 SRAM_WORDS = 12288                                # _OSD_SRAM_SIZE, RL6449_OSD_Gen_Option.h
 FRAME = 0x3A00
 END_CODE = "11111111"
+TB_CTRL, TB_SHIFT12, TB_SHIFT3L, TB_IN, TB_OUT = 0xFF03, 0xFF04, 0xFF05, 0xFF06, 0xFF07   # triple-byte engine (regdb 0xFF03-07)
+
+
+class TripleEngine:
+    """Font triple-byte engine: builds proportional glyph cells (OsdPropPutString: 12 px cell = glyph pieces side by side).
+    A triple A,B,C -> rows X = A7:4 B7:4 C7:4, Y = A3:0 B3:0 C3:0 (12 px, MSB left; ctrl bit6 reorder, bit5 undo on output).
+    First triple after a restart: X,Y << FF04[7:4]. Later triples: OR'd in, >> FF05[7:4]. Output = X<<12|Y as 3 bytes.
+    [guess] Semantics derived from the SDK call sequence (RTD2014OsdFontProp.c), not a hardware test."""
+
+    def __init__(self):
+        self.buf, self.first, self.acc, self.out = [], True, (0, 0), []
+
+    @staticmethod
+    def split(a, b, c, reorder):
+        if not reorder:
+            return (a << 4 | b >> 4) & 0xFFF, (b & 15) << 8 | c
+        return (a >> 4) << 8 | (b >> 4) << 4 | c >> 4, (a & 15) << 8 | (b & 15) << 4 | c & 15
+
+    def restart(self):
+        self.buf, self.first, self.acc, self.out = [], True, (0, 0), []
+
+    def put(self, ctrl, sh12, sh3l, v):
+        self.buf.append(v)
+        if len(self.buf) < 3:
+            return
+        x, y = self.split(*self.buf, bool(ctrl & 0x40))
+        self.buf = []
+        if self.first:
+            n = sh12 >> 4
+            self.acc = ((x << n) & 0xFFF, (y << n) & 0xFFF)
+            self.first = False
+        else:
+            n = sh3l >> 4
+            self.acc = (self.acc[0] | x >> n, self.acc[1] | y >> n)
+        x, y = self.acc
+        if ctrl & 0x20:                                   # output reorder back to A,B,C
+            self.out = [(x >> 8) << 4 | y >> 8, (x >> 4 & 15) << 4 | y >> 4 & 15, (x & 15) << 4 | y & 15]
+        else:
+            self.out = [x >> 4, (x & 15) << 4 | y >> 8, y & 0xFF]
 
 
 # --- VLC stream decoder (hardware: 0x3A17[0], codes + map regdb 0x3A0F-0x3A16) --------------------------------------
@@ -81,7 +120,8 @@ class OsdState:
 
 class OsdModel(S.Dev):
     """Write tap on the OSD port + palette; state in .st. `mem` = callable(addr) -> XRAM byte (m.rd) for the protection/VLC regs."""
-    writes = (ADR_MSB, ADR_LSB, DATA, WOPT, LUT_ADDR, LUT_PORT, 0xFFF3)
+    reads = (TB_OUT,)
+    writes = (ADR_MSB, ADR_LSB, DATA, WOPT, LUT_ADDR, LUT_PORT, 0xFFF3, TB_CTRL, TB_IN)
 
     def __init__(self):
         self.st = OsdState()
@@ -95,6 +135,7 @@ class OsdModel(S.Dev):
         self.img = b""                               # flash image for the burst-DMA engine (set by the session)
         self.trace: list[tuple] = []                 # (wopt, addr, value) of data-port writes when trace_on
         self.trace_on = False
+        self.tb = TripleEngine()
 
     # -- helpers
     def _rd(self, m, a): return m.rd(a)[0]
@@ -130,7 +171,27 @@ class OsdModel(S.Dev):
         if a == 0xFFF3:
             self._burst(m, v)
             return
+        if a == TB_CTRL:
+            if v & 3:                                      # restart bits auto-clear
+                self.tb.restart()
+                m.put(f"set memory xram 0x{TB_CTRL:x} 0x{v & ~3 & 0xFF:x}")
+                m.flush()
+            return
+        if a == TB_IN:
+            self.tb.put(self._rd(m, TB_CTRL), self._rd(m, TB_SHIFT12), self._rd(m, TB_SHIFT3L), v)
+            self._tb_preload(m)
+            return
         self._data(m, v)
+
+    def on_read(self, m, a):
+        if a == TB_OUT and self.tb.out:
+            self.tb.out.pop(0)
+            self._tb_preload(m)
+
+    def _tb_preload(self, m):
+        if self.tb.out:
+            m.put(f"set memory xram 0x{TB_OUT:x} 0x{self.tb.out[0]:x}")
+            m.flush()
 
     def _burst(self, m, v: int):
         """Scaler burst-DMA (ScalerBurstWrite): FFF3 bit3 = data burst (bit5 set = no address increment), count FFF9/A, source
@@ -262,7 +323,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     img = np.empty((H, W, 3), np.uint8)
     img[:] = bg
     g = frame_geometry(st)
-    if not g["en"]:
+    if not g["en"] or not st.ovl[0] & 1:                      # 0x6C[0] overlay port off = ScalerOsdDisableOsd (SRAM keeps its content)
         return img
     sx, sy = g["sx"], g["sy"]
     ox, oy = g["hd"] * g["step"] * sx, g["vd"] * sy          # panel px of the OSD origin: delay x step x scale [spec, SDK OsdDispSetPosition]
