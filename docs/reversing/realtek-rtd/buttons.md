@@ -83,5 +83,12 @@ pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A 
   - MENU + UP = #79 debug link toggle (also boot recovery, #67)
   - UP + DOWN = key test screen open / close (#39)
   - SOURCE = next input (#60)
+  - Power saving (DDC/CI D6 off = forced PS, or no-signal PS): any new key press wakes, and that press does nothing else. The SDK woke only from OFF, on POWER; in PS its POWER went to OFF (unit 2, #85).
+  - MENU + DOWN can't work: both on A0, the mixed voltage hits no band (or a wrong one).
+  - Combo release: once two keys were down, no key message and no SOURCE until all keys are up (a hand lets go of one key first). The first key of a combo still sends its message on press.
 - Test screen: `rtd_keywatch.py <bus> --log --map MAP` reads the press log (`g_stAwtoKey`); test cmd 0x41 / 0x42 open / close.
+  - Drawn at open (not via the ACTIVE one-time event): works with no signal. Over the #67 menu: closes it (`menu_close`), closes to no menu.
+  - While open: SDK no-signal / power-saving pop-ups and timers held off (as the #67 menu does).
+  - Redraw only when a shown value changed, at most every 80 ms: one redraw (6 proportional rows) blocks the main loop for a long time (sim numbers in #85).
+- Offline proof: `scripts/keys_sim.py BIN MAP` (fw_sim); bounds and measured latencies in #85.
 - ADC reference voltage: not in `re/regdb` (ADC_ACONTROL 0xFF08 has bias current + clock polarity, ADC_CLK_DIV 0xFF0D the clock); the screen shows R/256 of full scale.

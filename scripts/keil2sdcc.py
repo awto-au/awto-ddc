@@ -359,6 +359,10 @@ SUBS = [
     # test screen up: POWER is only logged (it must not switch the monitor off while keys are being tested), no hold-key special handling
     (OSD + "RTD2014Key.c", r"(bit RTDKeyPowerKeyProc\(void\)\s*\{)",
      lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON() && ((g_ucKeyStateCurr & _POWER_KEY_MASK) != 0)) { return _TRUE; }  // [keil2sdcc] sub", 1),
+    # #85: any new key press in power saving (DDC/CI D6 off = forced PS, or no-signal PS) wakes and is used up; the SDK only woke from OFF
+    (OSD + "RTD2014Key.c", r"(bit RTDKeyPowerKeyProc\(void\)\s*\{)",
+     lambda m: m.group(1) + " if((g_ucKeyStateCurr != 0) && (g_ucKeyStateCurr != g_ucKeyStatePrev) && (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))"
+     " { SET_FORCE_POW_SAV_STATUS(_FALSE); SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL); return _TRUE; }  // [keil2sdcc] sub\n", 1),
     (OSD + "RTD2014Key.c", r"(bit RTDKeySpecialProc\(BYTE ucKeyMask\)\s*\{)",
      lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON()) { return _FALSE; }  // [keil2sdcc] sub", 1),
     # #85: AUTO (= EXIT) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key

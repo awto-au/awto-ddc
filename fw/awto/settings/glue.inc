@@ -10,6 +10,7 @@
 extern void set_load(void);
 extern void set_boot(void);
 extern void set_service(void);
+extern void set_track(BYTE ucId, int iV);
 extern int set_put(BYTE ucId, int iV, BYTE ucNow);
 extern BYTE set_in_boot(void);
 extern void set_defaults(void);
@@ -537,6 +538,10 @@ void AwtoSetLoop(void)                             // main loop (AWTO_SET_LOOP: 
         set_boot();                                // recovery keys, then every apply
     }
     set_service();
+    if((SysSourceGetInputPort() >= _D1_INPUT_PORT) && (SysSourceGetInputPort() <= _D3_INPUT_PORT))
+    {
+        set_track(AWTO_SET_INPUT, SysSourceGetInputPort() - _D1_INPUT_PORT);   // every switch path (key, test cmd, VCP 0x60, search), #67
+    }
     vcp_box_service();
     if(menu_active() != 0)
     {

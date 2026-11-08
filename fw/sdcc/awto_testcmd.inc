@@ -66,14 +66,18 @@ void AwtoHoldOsdGuard(void)                       // main loop, just before User
 #endif
 }
 
+static __xdata unsigned int s_usAwtoHoldCancel;  // usT2Isr at the last OSD_DISABLE cancel
+
 void AwtoDiagTestCmd(void)
 {
-    unsigned char ucCmd = g_stAwtoDiag.ucTestCmd;
+    unsigned char ucCmd = g_stAwtoDiag.ucHold;
 
-    if(g_stAwtoDiag.ucHold != 0)
+    if((ucCmd != 0) && ((unsigned int)(g_stAwtoDiag.usT2Isr - s_usAwtoHoldCancel) >= AWTO_KEY_REFRESH_MS))
     {
-        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // pending pop-up timeout (each draw re-arms it)
+        s_usAwtoHoldCancel = g_stAwtoDiag.usT2Isr;                       // pending pop-up timeout (each draw re-arms it; seconds):
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // every 80 ms, not every pass (a cancel walks the timer table)
     }
+    ucCmd = g_stAwtoDiag.ucTestCmd;
     if(ucCmd == 0)
     {
         return;

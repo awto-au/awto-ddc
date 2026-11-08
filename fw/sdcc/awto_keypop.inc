@@ -43,10 +43,32 @@ static void AwtoPutKeys(BYTE ucMask)            // front keys left to right, spa
     }
 }
 
-static void AwtoPutKeyMsg(BYTE ucMsg)
+static void AwtoPutKeyMsg(BYTE ucMsg)            // one call per literal: a ?: chain of string literals printed garbage (keys2 render)
 {
-    AwtoPutStr((ucMsg == _MENU_KEY_MESSAGE) ? "MENU" : (ucMsg == _RIGHT_KEY_MESSAGE) ? "UP" : (ucMsg == _LEFT_KEY_MESSAGE) ? "DOWN" :
-               (ucMsg == _EXIT_KEY_MESSAGE) ? "AUTO" : (ucMsg == AWTO_KEY_MSG_SOURCE) ? "SOURCE" : "NONE");
+    if(ucMsg == _MENU_KEY_MESSAGE)
+    {
+        AwtoPutStr("MENU");
+    }
+    else if(ucMsg == _RIGHT_KEY_MESSAGE)
+    {
+        AwtoPutStr("UP");
+    }
+    else if(ucMsg == _LEFT_KEY_MESSAGE)
+    {
+        AwtoPutStr("DOWN");
+    }
+    else if(ucMsg == _EXIT_KEY_MESSAGE)
+    {
+        AwtoPutStr("AUTO");
+    }
+    else if(ucMsg == AWTO_KEY_MSG_SOURCE)
+    {
+        AwtoPutStr("SOURCE");
+    }
+    else
+    {
+        AwtoPutStr("NONE");
+    }
 }
 
 static void AwtoPutAdc(BYTE ucCh, BYTE ucRaw)   // "A0 7C 15 0.484FS": raw hex, 5-bit code, fraction of full scale (reference not in the regdb)
@@ -93,6 +115,7 @@ void AwtoOsdKeyLines(void)
     g_ucFontPointer1 = _OSD_PAGE_1_START;
     g_ucFontPointer2 = _OSD_PAGE_2_START;
     g_stAwtoKey.ucDrawn = 1;
+    g_stAwtoKey.ucRedraws++;
     s_ucAwtoLen = 0;
 
     AwtoPutAdc(0, g_stAwtoKey.ucA0);

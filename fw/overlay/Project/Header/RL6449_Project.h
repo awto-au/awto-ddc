@@ -159,7 +159,8 @@ typedef struct
     unsigned char ucMask;
     unsigned char ucMsg;                        // last key message (0..4) or AWTO_KEY_MSG_NONE
     unsigned char ucFlags;                      // bit0 repeat enable, bit1 repeat start, bit2 key hold, bit7 injected (live)
-    unsigned char ucReserved[4];
+    unsigned char ucRedraws;                    // screen redraws (wraps): keys_sim checks an idle open screen does not redraw
+    unsigned char ucReserved[3];
     StAwtoKeyEntry pstLog[AWTO_KEY_LOG_N];
 } StAwtoKey;
 extern __xdata StAwtoKey g_stAwtoKey;

@@ -5,6 +5,7 @@ typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_MENU_KEY_
                               (_LEFT_KEY_MASK == AWTO_KM_DOWN) && (_EXIT_KEY_MASK == AWTO_KM_AUTO) && (_KEY5_MASK == AWTO_KM_SOURCE)) ? 1 : -1];
 #ifdef _AWTO_NEW_SETTINGS
 #define AWTO_KEY_HELD_INJ()                     (g_ucAwtoKeyHold != 0)
+extern void menu_close(void);
 #else
 #define AWTO_KEY_HELD_INJ()                     0
 #endif
@@ -12,6 +13,9 @@ typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_MENU_KEY_
 __xdata StAwtoKey g_stAwtoKey;
 static __xdata BYTE s_ucAwtoKeyPend;            // log index + 1 of the press still waiting for its key message
 static __xdata WORD s_usAwtoKeyDraw;            // usT2Isr at the last redraw
+static __xdata BYTE s_pucAwtoKeyShown[6];       // A0 A1 P30 mask msg flags as last drawn (redraw on change only)
+static __xdata BYTE s_ucAwtoKeyShownN;          // ucCount as last drawn
+static __xdata BYTE s_ucAwtoKeyCombo;           // a combo was down: no key message / SOURCE until all keys are up (release passes single keys)
 
 static WORD AwtoKeyNow(void)
 {
@@ -98,6 +102,17 @@ static void AwtoKeyMsgNote(BYTE ucMsg)          // the key message of the press 
     }
 }
 
+static void AwtoKeyShown(void)                  // the values the screen is about to draw
+{
+    s_pucAwtoKeyShown[0] = g_stAwtoKey.ucA0;
+    s_pucAwtoKeyShown[1] = g_stAwtoKey.ucA1;
+    s_pucAwtoKeyShown[2] = g_stAwtoKey.ucP30;
+    s_pucAwtoKeyShown[3] = g_stAwtoKey.ucMask;
+    s_pucAwtoKeyShown[4] = g_stAwtoKey.ucMsg;
+    s_pucAwtoKeyShown[5] = g_stAwtoKey.ucFlags;
+    s_ucAwtoKeyShownN = g_stAwtoKey.ucCount;
+}
+
 void AwtoKeyScan(void)                          // every key scan, before the power key / message processing
 {
     BYTE ucP30 = (P3_0 != 0) ? AWTO_KEY_F_P30 : 0;
@@ -108,6 +123,14 @@ void AwtoKeyScan(void)                          // every key scan, before the po
     g_stAwtoKey.ucP30 = ucP30;
     g_stAwtoKey.ucMask = g_ucKeyStateCurr;
     g_stAwtoKey.ucFlags = AwtoKeyFlags();
+    if((g_ucKeyStateCurr & (g_ucKeyStateCurr - 1)) != 0)
+    {
+        s_ucAwtoKeyCombo = 1;
+    }
+    else if((g_ucKeyStateCurr == 0) && (g_ucKeyStatePrev == 0))
+    {
+        s_ucAwtoKeyCombo = 0;                   // two empty scans: RTDKeyScan returns one 0 on every change of keys
+    }
     if((g_ucKeyStateCurr != 0) && (g_ucKeyStateCurr != g_ucKeyStatePrev))
     {
         AwtoKeyLog(g_ucKeyStateCurr, AWTO_KEY_MSG_NONE, ucP30 | (g_stAwtoKey.ucFlags & AWTO_KEY_F_INJ));
@@ -117,10 +140,26 @@ void AwtoKeyScan(void)                          // every key scan, before the po
         g_stAwtoKey.ucOpen = 0;                 // test cmd 0x27 (clear holds) took the screen away
         g_stAwtoKey.ucDrawn = 0;
     }
-    if((g_stAwtoKey.ucOpen != 0) && (g_stAwtoKey.ucDrawn != 0) && ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) >= AWTO_KEY_REFRESH_MS))
+    if((g_stAwtoKey.ucOpen != 0) && (GET_OSD_EVENT_MESSAGE() >= _OSDEVENT_SHOW_NOSIGNAL_MSG) &&
+       (GET_OSD_EVENT_MESSAGE() <= _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG))
     {
-        s_usAwtoKeyDraw = AwtoKeyNow();
-        AwtoOsdKeyLines();
+        SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);  // as the #67 menu (AwtoSetLoop): no SDK pop-up over the screen
+    }
+    if((g_stAwtoKey.ucOpen == 0) || (g_stAwtoKey.ucDrawn == 0) || ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) < AWTO_KEY_REFRESH_MS))
+    {
+        return;
+    }
+    s_usAwtoKeyDraw = AwtoKeyNow();
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);     // SDK pop-up / power-saving timers (seconds): every
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);      // refresh period, not every pass (each cancel walks
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);  // the timer table)
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
+    if((s_pucAwtoKeyShown[0] != g_stAwtoKey.ucA0) || (s_pucAwtoKeyShown[1] != g_stAwtoKey.ucA1) || (s_pucAwtoKeyShown[2] != g_stAwtoKey.ucP30) ||
+       (s_pucAwtoKeyShown[3] != g_stAwtoKey.ucMask) || (s_pucAwtoKeyShown[4] != g_stAwtoKey.ucMsg) || (s_pucAwtoKeyShown[5] != g_stAwtoKey.ucFlags) ||
+       (s_ucAwtoKeyShownN != g_stAwtoKey.ucCount))
+    {
+        AwtoKeyShown();
+        AwtoOsdKeyLines();                      // a redraw costs main-loop time (6 proportional rows): only when a shown value changed
     }
 }
 
@@ -130,6 +169,12 @@ void AwtoKeyMsg(void)                           // after RTDKeyMessageProc: note
 
     if(ucM >= _KEY_AMOUNT)
     {
+        return;
+    }
+    if((s_ucAwtoKeyCombo != 0) && ((g_stAwtoKey.ucFlags & AWTO_KEY_F_INJ) == 0))
+    {
+        SET_KEYMESSAGE(_NONE_KEY_MESSAGE);      // the last key of a combo let go: not a press
+        s_ucAwtoKeyPend = 0;                    // its log entry keeps "no message" (a later message is not its)
         return;
     }
     AwtoKeyMsgNote(ucM);
@@ -158,6 +203,10 @@ static void AwtoKeySourceDo(void)               // SOURCE = next input, only wit
 void AwtoKeySourcePress(void)                   // RTDKeyMessageProc: SOURCE key edge
 {
     AwtoKeyEnsure();
+    if(s_ucAwtoKeyCombo != 0)
+    {
+        return;                                 // SOURCE left down after SOURCE + AUTO
+    }
     AwtoKeyMsgNote(AWTO_KEY_MSG_SOURCE);
     AwtoKeySourceDo();
 }
@@ -199,16 +248,25 @@ void AwtoKeyTestSet(BYTE ucOn)                  // 0 close, 1 open, 2 toggle (ke
     g_stAwtoKey.ucDrawn = 0;
     if(ucOn != 0)
     {
+#ifdef _AWTO_NEW_SETTINGS
+        menu_close();                           // #67 menu up: a real close (open edit reverted, settings saved); the disable only forgets it
+#endif
         OsdDispDisableOsd();                    // before the hold: it blocks the disable
         g_stAwtoKey.ucOpen = 1;
         g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
-        SET_OSD_EVENT_MESSAGE(_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG);
+        AwtoKeyShown();
+        s_usAwtoKeyDraw = AwtoKeyNow();
+        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);     // draw now: the ACTIVE one-time event never comes with no signal (after SOURCE)
     }
     else
     {
         g_stAwtoKey.ucOpen = 0;
         g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
         OsdDispDisableOsd();
+        if(SysModeGetModeState() == _MODE_STATUS_NOSIGNAL)     // re-arm what the open screen cancelled (as osd_tc_close)
+        {
+            ScalerTimerActiveTimerEvent(SEC(2), _USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
+        }
     }
 }
 #endif
