@@ -789,7 +789,7 @@ class SimBus:
     ISR_BUDGET = 20_000            # instr for a SUB_I-only EXINT1 (read address phase)
 
     def __init__(self, binp: Path, mapp: Path, tag: str | None = None, log=None, boot: bool = True,
-                 devs=(), video: str | None = None, port: str = "D2", ffwd: bool = False):
+                 devs=(), video: str | None = None, port: str = "D2", ffwd: bool = False, dbg_link: bool = True):
         """video = HdmiInput mode name ("1080p60") for a firmware that sees a stable HDMI source on `port` (D2/D3); None = bare
         CPU + flash port + debug slave (random XRAM, no source). The host is on `port`'s DDC: 0x35 answers only while FF22
         selects it (fw without #28 keeps DDC2)."""
@@ -819,9 +819,23 @@ class SimBus:
         self.naks = 0
         if boot:
             self.boot()
+            if dbg_link:
+                self.dbg_link_on()
 
     def addr(self, name: str) -> int:
         return self.m.addr(name)
+
+    def dbg_link_on(self) -> None:
+        """#79 images park 0x35 off the host port (DDC/CI owns it): put the debug link there, as `dbg_link.on` does on a
+        unit (g_ucAwtoDbgLink = 1, no timeout; FF22 on the host's DDC (D2 when bare), IIC_1 parked on DDC0). Older images: no-op."""
+        try:
+            a, s = self.m.addr("g_ucAwtoDbgLink"), self.m.addr("g_usAwtoDbgLinkSec")
+        except SimError:
+            return
+        self.m.wr(a, b"\x01")
+        self.m.wr(s, b"\x00\x00")
+        self.m.wr(0xFE86, bytes([(self.m.rd(0xFE86)[0] & 0xF8) | 1]))
+        self.m.wr(0xFF22, bytes([(self.m.rd(0xFF22)[0] & 0xF8) | (self.ddc if self.ddc is not None else PORT_DDC["D2"])]))
 
     def _delay_ffwd(self, m, r):
         """Idle fast-forward: ScalerTimerDelayXms(ms) is a spin on g_usTimerCounter (87 % of a main-loop pass in

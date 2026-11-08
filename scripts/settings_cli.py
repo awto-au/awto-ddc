@@ -28,6 +28,8 @@ DBG = 0x6A                           # debug slave 0x35, 8-bit address
 SEL, VAL, SCHEMA, CMD = 0xE0, 0xE1, 0xE2, 0xE3
 BOX = dict(magic=0, cmd=1, code=2, result=3, val_lo=4, val_hi=5, cur_lo=6, cur_hi=7, max_lo=8, max_hi=9, type=10, seq=11)
 POLLS = 40                           # mailbox answer: main loop serves it every pass (~3 ms); one poll = 3 I2C transfers
+# hardware: the main loop can be blocked by an OSD draw (input-info pop-up 375 ms, #60); 1.25 x -> 0.47 s, then FAIL
+MAILBOX_S = 0.47
 
 
 def say(s: str):
@@ -90,13 +92,18 @@ class Box:
         self.wr(BOX["val_hi"], v >> 8 & 0xFF)
         self.wr(BOX["cmd"], cmd)
         t0 = time.monotonic()
-        for k in range(POLLS):
+        for k in range(POLLS if self.sim else 1 << 30):
             if self.sim:
                 self.bus.wait(0.01)
+            elif time.monotonic() - t0 > MAILBOX_S:
+                k = -1
+                break
             if self.rd(BOX["cmd"]) == 0 and self.rd(BOX["seq"]) != seq:
                 break
         else:
-            raise SystemExit(f"mailbox: no answer to cmd {cmd} code 0x{code:02X} after {POLLS} polls "
+            k = -1
+        if k < 0:
+            raise SystemExit(f"mailbox: no answer to cmd {cmd} code 0x{code:02X} after {k if k >= 0 else 'all'} polls "
                              f"({time.monotonic() - t0:.2f} s host time)")
         if not self.rd(BOX["result"]):
             if cmd == 3:

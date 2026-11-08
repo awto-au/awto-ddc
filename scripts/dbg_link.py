@@ -3,7 +3,7 @@
 
 usage: dbg_link.py on|off|state|expiry BUS [--minutes N]
 - state: does 0x35 answer (diag version byte) / does 0x37 ACK.
-- on: 0x35 answers already = nothing sent ("already"). Else DDC/CI setvcp E8 = A5 NN (NN minutes, FF = until told back)
+- on: 0x35 answers already = nothing sent ("already"). Else DDC/CI setvcp E3 = A5 NN (NN minutes, FF = until told back)
   to 0x37, then 0x35 is re-probed after each MCCS wait. Exit 0 = linked ("swapped" / "already"), 1 = no link.
 - off: test cmd 0x3B over 0x35 (back to DDC/CI); then 0x37 must ACK.
 - expiry: test of the firmware timeout: 0x37 back within 1.25 x --minutes (checked once per second).
@@ -24,7 +24,7 @@ import i2cbus  # noqa: E402
 
 LOG = i2cbus.ROOT / "tmp/logs/dbg_link.log"
 DBG, DDCCI = 0x35, 0x37
-VCP_LINK, MAGIC = 0xE8, 0xA5            # RL6449_Project.h AWTO_DBG_LINK_VCP / _MAGIC
+VCP_LINK, MAGIC = 0xE3, 0xA5            # RL6449_Project.h AWTO_DBG_LINK_VCP / _MAGIC
 TESTCMD = 0xF6F8                        # g_stAwtoDiag (0xF6D0) + 0x28
 CMD_BACK = 0x3B
 DIAG_MAGIC = 0xF6D0                     # g_stAwtoDiag.ucMagic[2] = 'AD' (docs/diag-block.md)
@@ -92,7 +92,7 @@ def on(bus: int, minutes: int = DEFAULT_MIN) -> str:
             log(f"bus {bus}: debug link ON ({minutes if minutes != 0xFF else 'until off'} min), "
                 f"0x35 up after {(time.monotonic() - t0) * 1000:.0f} ms ({k + 1} probes)")
             return "swapped"
-    raise SystemExit(f"dbg_link on bus {bus}: setvcp E8 sent, 0x35 still NAK after {PROBES} probes / "
+    raise SystemExit(f"dbg_link on bus {bus}: setvcp E3 sent, 0x35 still NAK after {PROBES} probes / "
                      f"{(time.monotonic() - t0) * 1000:.0f} ms")
 
 

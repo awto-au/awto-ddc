@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""#79 runtime DDC channel swap in fw_sim: DDC/CI owns the host port by default, VCP E8 = A5 NN moves debug slave 0x35 there.
+"""#79 runtime DDC channel swap in fw_sim: DDC/CI owns the host port by default, VCP E3 = A5 NN moves debug slave 0x35 there.
 
 usage: swap_sim.py BIN [--map MAP] [--mode 1080p60]
-  Checks (host on D2's DDC): after boot FF22 parked (7) and IIC_1 (FE86) on DDC2, 0x35 NAKs; setvcp E8 A50A -> FF22 on DDC2,
+  Checks (host on D2's DDC): after boot FF22 parked (7) and IIC_1 (FE86) on DDC2, 0x35 NAKs; setvcp E3 A50A -> FF22 on DDC2,
   IIC_1 parked, 0x35 answers, 600 s left; test cmd 0x3B -> back; test cmd 0x3C -> on, 0 s (until told back); 0x3B -> back.
   DDC/CI engine model: scripts/ddc_sim.py. Firmware: fw/sdcc/awto_dbgport.inc, awto_ddcci.inc (wb-p14swap).
 Exit 1 on a failed check. Log: ./tmp/logs/swap_sim.log
@@ -41,7 +41,7 @@ def main() -> int:
     a = ap.parse_args()
     a.map = a.map or a.bin.with_suffix(".map")
     eng = D.DdcEngine()
-    bus = S.SimBus(a.bin, a.map, devs=[eng], video=a.mode)
+    bus = S.SimBus(a.bin, a.map, devs=[eng], video=a.mode, dbg_link=False)
     d = D.Mccs(bus, eng)
     sec_at = bus.addr("g_usAwtoDbgLinkSec")
     fails = 0
@@ -68,17 +68,17 @@ def main() -> int:
         g = d.get(0x60)
         say(f"{'PASS' if g and g['cur'] == 0x11 else 'FAIL'} getvcp 60 over DDC/CI: {g}")
         fails += not (g and g["cur"] == 0x11)
-        d.set(0xE8, 0x1234)
+        d.set(0xE3, 0x1234)
         bus.wait(CMD_S)
-        state(False, None, "setvcp E8 without the A5 magic: ignored")
-        d.set(0xE8, 0xA50A)
+        state(False, None, "setvcp E3 without the A5 magic: ignored")
+        d.set(0xE3, 0xA50A)
         bus.wait(CMD_S)
-        state(True, 600, "setvcp E8 A50A: debug link 10 min")
+        state(True, 600, "setvcp E3 A50A: debug link 10 min")
         cmd(0x3B)
         state(False, None, "test cmd 0x3B: back to DDC/CI")
-        d.set(0xE8, 0xA5FF)
+        d.set(0xE3, 0xA5FF)
         bus.wait(CMD_S)
-        state(True, 0, "setvcp E8 A5FF: debug link until told back")
+        state(True, 0, "setvcp E3 A5FF: debug link until told back")
         cmd(0x3B)
         state(False, None, "test cmd 0x3B: back to DDC/CI")
     finally:
