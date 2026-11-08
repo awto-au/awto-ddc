@@ -2,7 +2,7 @@
 """Watch front-panel key presses live by polling the scaler's ADC key registers over DDC/ISP.
 
 usage: rtd_keywatch.py <bus> [--halt] [--secs N]
-       rtd_keywatch.py <bus> --log --map MAP [--serial S] [--secs N] [--open] [--close] [--once]   (#39: firmware key log, no screen needed)
+       rtd_keywatch.py <bus> --log --map MAP [--serial S] [--secs N] [--open] [--close] [--once] [--history]   (#39: firmware key log, no screen needed)
   --log: reads g_stAwtoKey (map symbol _g_stAwtoKey, 144 B) over debug slave 0x35, read-only except --open/--close (test cmd 0x41/0x42
          = key test screen). Prints the live raw A0/A1/P3.0 when they change and every new press-log entry (raw values, decoded key,
          key message, injected mark, firmware tick ms). Needs dbg_xdata / rtd_i2c_bridge / i2cbus (main tree: AWTO_DDC_MAIN).
@@ -60,7 +60,8 @@ def band_hint(a0, a1):
     return ",".join(h) or "idle"
 
 
-def log_mode(a, root):
+def log_mode(a, root, io=None):
+    """io = an already open bus (fw_sim SimBus in keys_sim.py); default: the real unit on <bus>."""
     import re
     import dbg_xdata as X
     import i2cbus
@@ -71,11 +72,12 @@ def log_mode(a, root):
         sys.exit("_g_stAwtoKey not in the map: image without the #39 key log")
     base = int(m.group(1), 16)
     bus = int(a[0])
-    if "--serial" in a:
+    if "--serial" in a and io is None:
         i2cbus.require_unit(bus, a[a.index("--serial") + 1])
     secs = float(a[a.index("--secs") + 1]) if "--secs" in a else 25.0
     wr = "--open" in a or "--close" in a
-    io = B.Real(bus, allow_write=wr, regread=True)
+    own = io is None
+    io = io or B.Real(bus, allow_write=wr, regread=True)
     lf = (root / "tmp" / "logs" / "rtd_keywatch.log").open("a", buffering=1)
 
     def say(s):
@@ -98,7 +100,7 @@ def log_mode(a, root):
         else:
             cnt, a0, a1, p30, mask, msg, flags = raw[5], raw[6], raw[7], raw[8], raw[9], raw[10], raw[11]
             if seen is None:
-                seen = cnt                                      # only presses from now on
+                seen = (cnt - LOG_N) & 0xFF if "--history" in a else cnt      # --history: the ring as it stands; else only presses from now on
                 say(f"key block ok: screen {'OPEN' if raw[3] else 'closed'}, {cnt} presses logged so far")
             live = (a0, a1, p30, mask)
             if live != last:
@@ -107,13 +109,16 @@ def log_mode(a, root):
                 last = live
             for n in range(seen, seen + ((cnt - seen) & 0xFF)):
                 e = raw[HDR + KEY_SZ * (n & (LOG_N - 1)):][:KEY_SZ]
+                if e[0] != (n & 0xFF) or (e[6] == 0 and e[7] == 0xFF):
+                    continue                                    # empty / overwritten slot
                 say(f"PRESS #{e[0]} t={e[1] << 8 | e[2]} ms A0=0x{e[3]:02X} A1=0x{e[4]:02X} P3.0={e[5] & 1} bands {band_hint(e[3], e[4])} -> "
                     f"key {keys_of(e[6]) if e[6] else 'msg-only'} msg {MSG_NAMES.get(e[7], e[7])}{' INJECTED' if e[5] & 0x80 else ''}")
             seen = cnt
         if "--once" in a or time.time() - t0 >= secs:
             break
         time.sleep(POLL_S)
-    io.close()
+    if own:
+        io.close()
     return 0
 
 

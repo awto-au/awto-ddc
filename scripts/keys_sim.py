@@ -82,22 +82,32 @@ class Keys:
         return False
 
 
+FAILS = []
+
+
+def chk(name, ok, detail=""):
+    say(f"{'ok  ' if ok else 'FAIL'} {name} {detail}")
+    if not ok:
+        FAILS.append(name)
+    return ok
+
+
 def check_decode(k):
-    bad = 0
-    cases = [(v, 0xF8, 1) for v in EDGES0] + [(0xF8, v, 1) for v in EDGES1] + [(0xF8, 0xF8, 0), IDLE]
-    cases += [(0x80, 0x30, 1), (0x30, 0x30, 1), (0xD0, 0x78, 1), (0x80, 0x78, 1), IDLE]       # MENU+UP, DOWN+UP, SOURCE+AUTO, MENU+AUTO
+    cases = [(v, 0xF8, 1) for v in EDGES0] + [(0xF8, v, 1) for v in EDGES1]
+    cases += [(0x30, 0xF8, 1), (0xD0, 0x78, 1), (0x80, 0x78, 1), IDLE]       # single DOWN, SOURCE+AUTO, MENU+AUTO (no combo with an action)
     for a0, a1, p3 in cases:
-        if p3 == 0:
-            continue                                            # POWER last: it switches the monitor off in the SDK flow
         k.put(a0, a1, p3)
-        k.settle()
+        k.settle(150)
         st = k.state()
         want = model(a0, a1, p3)
-        ok = st["mask"] == want and st["a0"] == a0 and st["a1"] == a1
-        bad += not ok
-        say(f"{'ok  ' if ok else 'FAIL'} A0={a0:02X} A1={a1:02X} P3.0={p3} -> mask {st['mask']:02X} want {want:02X} "
-            f"({'+'.join(n for b, n in NAMES.items() if want & b) or 'none'}) msg {st['msg']:02X} count {st['count']}")
-    return bad
+        chk(f"decode A0={a0:02X} A1={a1:02X} P3.0={p3}", st["mask"] == want and st["a0"] == a0 and st["a1"] == a1,
+            f"mask {st['mask']:02X} want {want:02X} ({'+'.join(n for b, n in NAMES.items() if want & b) or 'none'}) msg {st['msg']:02X} count {st['count']}")
+
+
+def state_open(k, want, why):
+    st = k.state()
+    chk(why, st["open"] == want, f"open={st['open']} drawn={st['drawn']} count={st['count']}")
+    return st
 
 
 def main():
@@ -108,48 +118,64 @@ def main():
     ap.add_argument("--skip-decode", action="store_true")
     a = ap.parse_args()
     s = R.Session(a.bin, a.map, "2160p60")
-    bad = 0
     try:
         s.boot()
         k = Keys(s)
         k.put(*IDLE)
         k.settle(200)
         if not a.skip_decode:
-            bad += check_decode(k)                              # the DOWN+UP case opened the screen (combo works); close it by test cmd
-            k.cmd(0x42)
-            k.settle(400)
-            say(f"after test cmd 0x42: open={k.state()['open']}")
-        # test screen
+            check_decode(k)
+            k.put(0x80, 0xF8, 1)                                # MENU may have opened our menu: leave it with AUTO presses
+            k.settle(200)
+            for _ in range(2):
+                k.put(0xF8, 0x78, 1); k.settle(300)
+                k.put(*IDLE); k.settle(300)
+        # 1. open by test cmd, screen drawn
         k.cmd(0x41)
         k.settle(900)
+        st = state_open(k, 1, "cmd 0x41 opens")
+        chk("screen drawn", st["drawn"] == 1)
+        # 2. keys while open: real DOWN, injected UP, MENU + UP (no debug-link side effect needed to be checked here)
+        c0 = st["count"]
+        k.put(0x30, 0xF8, 1); k.settle(1500)
+        k.put(*IDLE); k.settle(600)
+        k.cmd(0x02); k.settle(900)
         st = k.state()
-        say(f"test screen open={st['open']} drawn={st['drawn']}")
-        bad += not (st["open"] and st["drawn"])
-        k.put(0x80, 0x30, 1)                                   # MENU + UP held
-        k.settle(900)
-        k.put(0x30, 0xF8, 1)                                   # DOWN
-        k.settle(900)
-        k.cmd(0x02)                                            # injected UP
-        k.settle(900)
-        k.put(0x80, 0x30, 1)
-        k.settle(900)
-        s.snap  # noqa
+        new = [e for e in st["log"] if (e["seq"] - c0) & 0xFF < 8 and (e["seq"] - c0) & 0xFF < ((st["count"] - c0) & 0xFF)]
+        chk("DOWN logged", any(e["mask"] == DOWN and not e["flags"] & 0x80 for e in new), f"count {st['count']}")
+        chk("injected UP logged", any(e["mask"] == 0 and e["msg"] == 1 and e["flags"] & 0x80 for e in new))
+        chk("keys swallowed while open", st["open"] == 1)
         a.png_dir.mkdir(parents=True, exist_ok=True)
         R.save(s.snap(), a.png_dir / "keytest.png", "grey", 1)
-        st = k.state()
-        for e in st["log"]:
+        for e in st["log"][:st["count"] if st["count"] < 16 else 16]:
             say(f"log seq {e['seq']:3d} tick {e['tick']:5d} A0={e['a0']:02X} A1={e['a1']:02X} flags {e['flags']:02X} mask {e['mask']:02X} msg {e['msg']:02X}")
-        k.put(*IDLE)
-        k.settle(200)
-        k.put(0x30, 0x30, 1)                                   # UP + DOWN: close
-        k.settle(900)
-        st = k.state()
-        say(f"after UP+DOWN: open={st['open']}")
-        bad += st["open"] != 0
+        # 3. close by UP+DOWN
+        k.put(0x30, 0x30, 1); k.settle(1500)
+        k.put(*IDLE); k.settle(900)
+        state_open(k, 0, "UP+DOWN closes")
+        # 4. open by UP+DOWN from idle
+        k.put(0x30, 0x30, 1); k.settle(1500)
+        k.put(*IDLE); k.settle(900)
+        st = state_open(k, 1, "UP+DOWN opens")
+        chk("combo-opened screen drawn", st["drawn"] == 1)
+        k.cmd(0x42); k.settle(900)
+        state_open(k, 0, "cmd 0x42 closes")
+        # 5. the host tool against the sim bus: reads the same block over the 0x35 protocol
+        import importlib.util
+        sp = importlib.util.spec_from_file_location("kw", Path(__file__).resolve().parent / "rtd_keywatch.py")
+        kw = importlib.util.module_from_spec(sp)
+        sp.loader.exec_module(kw)
+        import io as _io, contextlib
+        buf = _io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            kw.log_mode(["0", "--log", "--map", str(a.map), "--once", "--history"], ROOT, io=s.bus)
+        out = buf.getvalue()
+        say("rtd_keywatch --log (sim bus):\n" + out)
+        chk("rtd_keywatch reads the block", "key block ok" in out and "PRESS #" in out, out.splitlines()[0][26:100] if out else "")
     finally:
         s.bus.close()
-    say("RESULT " + ("PASS" if bad == 0 else f"FAIL ({bad})"))
-    return 1 if bad else 0
+    say("RESULT " + ("PASS" if not FAILS else "FAIL " + ", ".join(FAILS)))
+    return 1 if FAILS else 0
 
 
 if __name__ == "__main__":
