@@ -69,7 +69,7 @@ void    set_service(void);               /* main loop: debounced save, risky aut
 uint8_t set_load_result(void);           /* 0 = defaults (no record), 1 = record loaded, 2 = recovery defaults */
 
 /* Factory-defaults recovery: a bad setting must never brick the unit.
- * - boot: MENU + UP held for SET_RECOVERY_MS at the first main-loop pass -> set_defaults()
+ * - boot: MENU + DOWN held for SET_RECOVERY_MS at the first main-loop pass -> set_defaults()
  * - DDC/CI VCP 0x04 (MCCS restore factory defaults), debug test command 0x40 -> set_defaults()
  * - SF_RISKY values auto-revert after SET_CONFIRM_MS without a confirm */
 #define SET_RECOVERY_MS 1000u    /* hold time (derived: longer than a key bounce, short enough to hold at power-on) */
