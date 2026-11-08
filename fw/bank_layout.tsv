@@ -888,6 +888,9 @@ fn	_AwtoSwNow	C	0x2fdc	32
 stub	_AwtoSwPoll	C	0x2ffc	8
 stub	_SysMainSystemInitial	C	0x3004	8
 stub	_SysMainSytemPowerDetect	C	0x300c	8
+stub	_AwtoFastScalerKeep	C	0x3014	8
+stub	_AwtoFastScalerRetarget	C	0x301c	8
+stub	_AwtoPrefillPoll	C	0x3024	8
 stub	_SysModeDisplaySetting	C	0x30c8	8
 stub	_SysModeGetActiveReady	C	0x30d0	8
 fn	_SysModeGetModeState	C	0x30d8	12
@@ -978,10 +981,10 @@ fn	_ScalerGetDataPortByte	C	0x3654	72
 fn	_ScalerGetDataPortWord	C	0x369c	20
 fn	_ScalerRead	C	0x36b0	44
 fn	_ScalerWrite	C	0x36dc	44
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1269	C	0x3708	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1272	C	0x3708	92
 stub	_AwtoDeadPortPoll	C	0x3764	8
 stub	_AwtoPortCable	C	0x376c	8
-fn	_main	C	0x3774	204
+fn	_main	C	0x3774	252
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tSD_SU_COEF_128_TAPS	0	0x0010	136
 const	_tAwtoDdcCaps	0	0x0098	96
@@ -1177,7 +1180,6 @@ fn	_AwtoRxRescan	0	0x8c4c	160
 fn	_AwtoRxStable	0	0x8cec	36
 fn	_AwtoSwFast	0	0x8d10	312
 fn	_AwtoSwFastGo	0	0x8e48	192
-fn	_AwtoSwFastPoll	0	0x8f08	556
 fn	_AwtoWakeHold	0	0x9134	212
 fn	_AwtoWakePoll	0	0x9208	492
 fn	_AwtoWakeRelease	0	0x93f4	52
@@ -1216,6 +1218,8 @@ fn	_UserCommonInterfaceTimerEventProc	0	0xa448	24
 fn	_UserCommonNVRamGetSystemData	0	0xa460	404
 fn	_set_caps_at	0	0xa5f4	20
 fn	_set_caps_len	0	0xa608	12
+fn	_AwtoPrefillPoll	0	0xa614	536
+fn	_AwtoSwFastPoll	0	0xa82c	636
 const	_tGAMMA_TABLE	1	0x0000	12
 const	_tLUTGAMMA_18_TABLE	1	0x000c	6352
 const	_tLUTGAMMA_20_TABLE	1	0x18dc	6352
@@ -1439,6 +1443,7 @@ fn	_nv_write_slot	2	0xa560	452
 const	_tFONT1_GLOBAL	3	0x0000	756
 const	_tICON_REALTEK_1BIT_LOGO0	3	0x02f4	1232
 const	_tICON_REALTEK_1BIT_LOGO1	3	0x07c4	1164
+fn	_AwtoFastScalerRetarget	3	0x0c50	36
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	3	0x0cac	108
 const	_tFACTORY_PAGE_SELECT_ITEM_TABLE	3	0x0d18	192
 fn	_ScalerOsdBurstWriteDataPort	3	0x0dd8	56
@@ -1586,6 +1591,7 @@ fn	_UserCommonAdjustOverScan	3	0xa1a4	280
 fn	_UserCommonAdjustVPosition	3	0xa2bc	608
 fn	_UserCommonInterfaceGetColorFormat	3	0xa51c	48
 fn	_dp_wr16	3	0xa54c	48
+fn	_AwtoFastScalerKeep	3	0xa57c	164
 const	_OSD_ADVANCE_ITEM_PRI	4	0x0000	12
 const	_tSTRING_RESOLUTION_TABLE	4	0x000c	104
 const	_tOSD_iREALTEK	4	0x0074	32

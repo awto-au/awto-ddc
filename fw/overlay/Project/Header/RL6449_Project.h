@@ -575,11 +575,30 @@ extern void AwtoWakePoll(void);
 #define AWTO_WAKE_POLL()
 #endif
 #if(_AWTO_SW_MARKS == _ON)
-#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); }    // also runs the post-unblank flag watch
+#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); AWTO_PREFILL_POLL(); }    // also runs the post-unblank flag watch
 #else
-#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); }
+#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); AWTO_PREFILL_POLL(); }
 #endif
 #define AWTO_FAST_SCALER_BYTES                                  48      // >= sizeof(StAwtoFastScaler), checked at compile time
+// #83 idle-port cache pre-fill (fw/sdcc/awto_fastsw.inc AwtoPrefillPoll): idle DP D1 only (TMDS: the freq-stable ISR
+// writes shared globals and P0_28, #83). One background SDK scan blocks the loop like a full-path DP scan (~0.3-0.5 s).
+#ifndef _AWTO_PREFILL
+#define _AWTO_PREFILL                                           _ON
+#endif
+#define AWTO_PF_STEP_MS                                         2000    // between tries: a host still training D1 gets 5 x 2 s
+#define AWTO_PF_TRIES                                           5       // per D1 plug episode; then none until the cable changes
+#define AWTO_FC_SRC_D1                                          0x40    // P31_00 path0 source for D1 (#60: read 0x40 after a fast switch)
+#define AWTO_SW_EV_PREFILL                                      0xB9    // 1 filled, 2 D1 pre-detect false, 3 scan not DP, 4 not stable, 5 pixel clock differs
+extern void AwtoFastScalerRetarget(unsigned char __xdata *pucBuf, unsigned char ucFcSrc, unsigned int usPixelClk);
+extern unsigned int AwtoFastScalerKeep(unsigned char ucRestore);
+#if(_AWTO_PREFILL == _ON)
+extern void AwtoPrefillPoll(void);
+extern __xdata unsigned int g_usAwtoPfMs;
+#define AWTO_PREFILL_POLL()                                     { if((GET_MODE_STATE() == _MODE_STATUS_ACTIVE) && \
+                                                                     ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoPfMs) >= AWTO_PF_STEP_MS)) { AwtoPrefillPoll(); } }
+#else
+#define AWTO_PREFILL_POLL()
+#endif
 extern void AwtoFastScalerSave(unsigned char __xdata *pucBuf);
 extern unsigned char AwtoFastScalerMatch(unsigned char __xdata *pucBuf);
 extern void AwtoFastScalerClearStatus(unsigned char ucFirst);

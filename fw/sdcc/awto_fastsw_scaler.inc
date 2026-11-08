@@ -29,6 +29,30 @@ void AwtoFastScalerSave(BYTE __xdata *pucBuf)
     pstS->pucIvs2Dvs[5] = ScalerGetByte(P0_42_IVS2DVS_DLY_TUNE_EVEN);
 }
 
+void AwtoFastScalerRetarget(BYTE __xdata *pucBuf, BYTE ucFcSrc, WORD usPixelClk)  // #83 pre-fill: same set-up, other port
+{
+    ((__xdata StAwtoFastScaler *)pucBuf)->ucFcSrc = ucFcSrc;
+    ((__xdata StAwtoFastScaler *)pucBuf)->usPixelClk = usPixelClk;
+}
+
+static __xdata StructColorInfo s_stAwtoKeepColor;
+static __xdata WORD s_usAwtoKeepPclk;
+
+WORD AwtoFastScalerKeep(BYTE ucRestore)         // #83: _FALSE = save pixel clock + colour info; _TRUE = put back, returns the clock found
+{
+    WORD usNow = GET_INPUT_PIXEL_CLK();
+
+    if(ucRestore == _FALSE)
+    {
+        s_usAwtoKeepPclk = usNow;
+        memcpy(&s_stAwtoKeepColor, &g_stColorInfo, sizeof(StructColorInfo));
+        return usNow;
+    }
+    SET_INPUT_PIXEL_CLK(s_usAwtoKeepPclk);
+    memcpy(&g_stColorInfo, &s_stAwtoKeepColor, sizeof(StructColorInfo));
+    return usNow;
+}
+
 static bit AwtoFastSameBytes(BYTE __xdata *pucA, BYTE __xdata *pucB, BYTE ucN)     // no lib memcmp: it would grow the residual area
 {
     while(ucN-- != 0)

@@ -12,7 +12,7 @@ typedef struct
 
 extern bit SysJudgeCheckStatus(void);           // SysJudge.c, no header prototype
 extern void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus);   // SysPower.c, no header prototype
-static __xdata StAwtoSwCache s_pstAwtoSwCache[3];
+__xdata StAwtoSwCache s_pstAwtoSwCache[3];         // not static: the sim reads it (#83); ucValid 1 = full path, 2 = pre-filled
 __xdata BYTE g_ucAwtoFastPending;
 static __xdata WORD s_usAwtoFastT0;
 static __xdata BYTE s_ucAwtoFastFrameMs;
@@ -408,10 +408,74 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
 #endif
         AwtoSwEvent(AWTO_SW_EV_FAST, 5);
         AwtoSwEvent(AWTO_SW_EV_FAST_WHY, ucWhy);
+        if(s_pstAwtoSwCache[SysSourceGetInputPort() - _D1_INPUT_PORT].ucValid == 2)
+        {
+            s_pstAwtoSwCache[SysSourceGetInputPort() - _D1_INPUT_PORT].ucValid = 0;    // #83 pre-fill was wrong: the full path stores a real one
+        }
         SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
         return;
     }
     AwtoFastScalerClearStatus(_FALSE);          // re-lock still settling: clear the flags again, check one frame later
     s_usAwtoFastNextMs = usDt + s_ucAwtoFastFrameMs;
 }
+#if(_AWTO_PREFILL == _ON)
+// #83 cache pre-fill for an idle DP D1: background SDK scan (PreDetect, Scan, StableDetect: D1 pages PB0/PB8/PB9/PBA only)
+// while another port is ACTIVE; the globals the scan writes (pixel clock, colour info) are put back. Entry = the on-screen
+// port's set-up retargeted to D1 (valid 2), kept only when D1's pixel clock is within 1 %. The fast path re-checks it all.
+__xdata WORD g_usAwtoPfMs;                      // last try; the SysMain macro compares it first (no call per pass)
+static __xdata BYTE s_ucAwtoPfTries;
+static __xdata BYTE s_ucAwtoPfCable;
+__xdata BYTE g_ucAwtoPfScans;                   // diag: background scans run since boot
+
+void AwtoPrefillPoll(void)                      // every pass while ACTIVE (AWTO_PREFILL_POLL)
+{
+    BYTE ucI = SysSourceGetInputPort() - _D1_INPUT_PORT;
+    BYTE ucWhy;
+    WORD usPclk;
+    WORD usDp;
+
+    if((WORD)(AwtoFastNow() - g_usAwtoPfMs) < AWTO_PF_STEP_MS)
+    {
+        return;
+    }
+    g_usAwtoPfMs = AwtoFastNow();
+    if(GET_D1_CABLE_STATUS() != s_ucAwtoPfCable)  // plug / unplug: tries re-armed, a pre-filled entry dropped
+    {
+        s_ucAwtoPfCable = GET_D1_CABLE_STATUS();
+        s_ucAwtoPfTries = 0;
+        if(s_pstAwtoSwCache[0].ucValid == 2)
+        {
+            s_pstAwtoSwCache[0].ucValid = 0;
+        }
+    }
+    if((s_ucAwtoPfCable == 0) || (ucI == 0) || (ucI >= 3) || (s_pstAwtoSwCache[ucI].ucValid != 1) ||
+       (s_pstAwtoSwCache[0].ucValid != 0) || (s_ucAwtoPfTries >= AWTO_PF_TRIES) || (g_ucAwtoFastPending != 0) ||
+#if(_AWTO_WAKE_HOLD == _ON)
+       (g_ucAwtoHold != 0) ||
+#endif
+       (GET_MODE_RESET_TARGET() != _MODE_ACTION_NO_RESET_MODE))
+    {
+        return;
+    }
+    s_ucAwtoPfTries++;
+    usPclk = AwtoFastScalerKeep(_FALSE);        // pixel clock + colour info saved (the scan writes both)
+    ucWhy = (ScalerDpNormalPreDetect(_D1_INPUT_PORT) == _FALSE) ? 2 : (ScalerDpScanInputPort(_D1_INPUT_PORT) != _SOURCE_DP) ? 3 :
+            (ScalerDpStableDetect(_D1_INPUT_PORT) == _FALSE) ? 4 : 0;
+    usDp = AwtoFastScalerKeep(_TRUE);           // D1's pixel clock; the active port's values back
+    g_ucAwtoPfScans++;
+    if((ucWhy == 0) && (((usDp > usPclk) ? (usDp - usPclk) : (usPclk - usDp)) > (usPclk / 100)))      // 1 %, as AwtoFastScalerMatch
+    {
+        ucWhy = 5;
+    }
+    if(ucWhy == 0)
+    {
+        memcpy(&s_pstAwtoSwCache[0], &s_pstAwtoSwCache[ucI], sizeof(StAwtoSwCache));
+        s_pstAwtoSwCache[0].ucSourceType = _SOURCE_DP;
+        AwtoFastScalerRetarget(s_pstAwtoSwCache[0].pucScaler, AWTO_FC_SRC_D1, usDp);
+        s_pstAwtoSwCache[0].ucValid = 2;
+        s_ucAwtoPfTries = AWTO_PF_TRIES;
+    }
+    AwtoSwEvent(AWTO_SW_EV_PREFILL, (ucWhy == 0) ? 1 : ucWhy);
+}
+#endif
 #endif
