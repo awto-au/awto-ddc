@@ -72,7 +72,7 @@ static const struct setting __code tab[SET_COUNT] = {
     { 57, 2, 3,  8, 0x01, 0, 120, 5, 30, 0xEA, 0, 1045u, 0xFFFFu},  /* osd_timeout */
     { 58, 2, 1,  8, 0x03, 0, 100, 1, 50, 0x00, 17, 1058u, 0xFFFFu},  /* osd_hpos */
     { 59, 2, 1,  8, 0x03, 0, 100, 1, 50, 0x00, 17, 1074u, 0xFFFFu},  /* osd_vpos */
-    { 60, 1, 0,  8, 0x03, 0, 1, 1, 1, 0xF4, 18, 1090u, 0x044Cu},  /* osd_scale */
+    { 60, 1, 0,  8, 0x03, 0, 1, 1, 0, 0xF4, 18, 1090u, 0x044Cu},  /* osd_scale */
     { 61, 2, 1,  8, 0x03, 0, 100, 1, 0, 0x00, 19, 1106u, 0xFFFFu},  /* osd_transparency */
     { 62, 1, 0,  8, 0x01, 0, 1, 1, 0, 0x00, 23, 1119u, 0x0475u},  /* language */
     { 63, 1, 0,  8, 0x21, 0, 3, 1, 0, 0x00, 0, 1159u, 0x0493u},  /* osd_rotate */

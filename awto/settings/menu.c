@@ -4,6 +4,7 @@
 #include "cc.h"
 #include "settings.h"
 #include "osd.h"
+#include "ui.h"
 #include "menu.h"
 
 #define MAIN       0xFE           /* virtual top page: every page whose parent is the top */
@@ -13,7 +14,7 @@
 #define LABEL_COL  2
 #define VALUE_COL  25
 #define VALUE_W    14
-#define ROW_FIRST  2
+#define STRIP_MS   200u           /* status strip refresh: ports change on a seconds scale (cable, link, mode); 5 Hz is live to the eye */
 
 /* UI strings: named arrays (an anonymous literal is a __str_N area, a name the bank layout shares across modules) */
 static const char __code mn_s0[] = "AWTO";
@@ -22,18 +23,16 @@ static const char __code mn_s2[] = "> ";
 static const char __code mn_s3[] = "AWTO >";
 static const char __code mn_s4[] = " > ";
 static const char __code mn_s5[] = " >";
-static const char __code mn_s6[] = "Keep new value? MENU=keep AUTO=undo";
-static const char __code mn_s7[] = "Press MENU again to run, AUTO = cancel";
+static const char __code mn_s6[] = "Keep the new value";
+static const char __code mn_s7[] = "Press MENU again to run";
 static const char __code mn_s8[] = "Recovery: all settings at defaults";
 static const char __code mn_s9[] = "* stored only: no effect yet";
 static const char __code mn_s10[] = "read only";
 static const char __code mn_s11[] = "takes effect after a restart";
 static const char __code mn_s12[] = "reverts after 15 s unless kept";
-static const char __code mn_s13[] = "UP/DOWN change  MENU set  AUTO undo";
-static const char __code mn_s14[] = "UP/DOWN move  MENU open  AUTO back";
 
 static uint8_t __xdata active, mode, page, cursor, top, secs, last_left;
-static uint16_t __xdata sec_t;
+static uint16_t __xdata sec_t, strip_t;
 static int16_t __xdata edit_v, edit_old;
 static struct setting __xdata row;
 static char __xdata line[MENU_COLS + 1];
@@ -44,10 +43,10 @@ struct menu_diag __xdata menu_diag;
 
 static void mn_sync(void);
 
-static void mn_row(uint8_t r, const char __xdata *s, uint8_t n, uint8_t fg, uint8_t bg)
+static void mn_row(uint8_t r, const char __xdata *s, uint8_t style, uint8_t sel)
 {
     redraws++;
-    osd_tc_row(r, s, n, fg, bg);
+    ui_row(r, s, style, sel);
 }
 
 static uint8_t mn_n_entries(void)
@@ -143,6 +142,14 @@ static void mn_value_text(char __xdata *buf, int16_t v)
         set_text(set_opt(row.opts, (uint8_t)(v - row.min)), buf, VALUE_W + 1);
         return;
     }
+    if (row.id == SET_ID_INFO_VFREQ) {                   /* measured timing: 3 decimals */
+        struct ui_timing __xdata t;
+
+        if (ui_timing(&t) && t.vmhz != 0) {
+            ui_fmt_vfreq(buf, t.vmhz);
+            return;
+        }
+    }
     n = mn_num(buf, v, row.unit == SU_DHZ ? 1 : 0);
     switch (row.unit) {
     case SU_PERCENT: buf[n++] = '%'; break;
@@ -159,30 +166,31 @@ static void mn_draw_title(void)
     uint8_t n;
 
     mn_blank();
-    mn_put_c(1, mn_s0);
+    mn_put_c(0, mn_s0);
     if (page == MAIN) {
-        mn_put_c(6, mn_s1);
+        mn_put_c(5, mn_s1);
     } else {
-        mn_put_c(6, mn_s2);
+        mn_put_c(5, mn_s2);
         set_page_title(page, tmp, sizeof tmp);
-        mn_put(8, tmp, 30);
+        mn_put(7, tmp, 30);
     }
     if (page != MAIN && set_page_parent(page) != 0xFF) {
         n = set_page_title(set_page_parent(page), tmp, sizeof tmp);
         (void)n;
         mn_blank();
-        mn_put_c(1, mn_s3);
-        n = mn_put(8, tmp, 14);
-        mn_put_c(8 + n, mn_s4);
+        mn_put_c(0, mn_s3);
+        n = mn_put(7, tmp, 14);
+        mn_put_c(7 + n, mn_s4);
         set_page_title(page, tmp, sizeof tmp);
-        mn_put(11 + n, tmp, 28 - n);
+        mn_put(10 + n, tmp, 28 - n);
     }
-    mn_row(0, line, MENU_COLS, OC_TITLE, OC_BG);
+    redraws++;
+    ui_title(line);
 }
 
 static void mn_draw_entry(uint8_t k)
 {
-    uint8_t e, sel = (k == cursor), fg, bg, n;
+    uint8_t e, sel = (k == cursor), style = OS_TEXT, n;
     int16_t v;
 
     mn_blank();
@@ -206,60 +214,65 @@ static void mn_draw_entry(uint8_t k)
             if (row.flags & SF_INERT)
                 line[MENU_COLS - 1] = '*';
         }
-        if (sel)
-            line[0] = '>';
     }
     if (k == top && top > 0)
         line[MENU_COLS - 1] = '^';
     if (k == top + MENU_LIST - 1 && k + 1 < mn_n_entries())
         line[MENU_COLS - 1] = 'v';
-    fg = OC_TEXT;
-    bg = OC_BG;
     if (k < mn_n_entries() && !(mn_entry(k) & 0x80) && (row.flags & SF_INERT))
-        fg = OC_DIM;
-    if (sel) {
-        fg = (mode == M_EDIT) ? OC_EDIT : OC_HL;
-        bg = OC_HL_BG;
-    }
-    mn_row(ROW_FIRST + k - top, line, MENU_COLS, fg, bg);
+        style = OS_DIM;
+    if (sel && mode == M_EDIT && ui_hl_style == UI_HL_MARK)
+        style = OS_RED;
+    if (sel)
+        ui_highlight(UI_L_LIST + k - top);
+    mn_row(UI_L_LIST + k - top, line, style, sel && k < mn_n_entries());
 }
 
 static void mn_draw_status(void)
 {
-    uint8_t e, warn = 0;
+    uint8_t e, warn = 0, ctx = UC_PAGE;
     uint16_t left = set_pending_left();
+    const char __code *m = 0;
 
-    mn_blank();
     if (set_pending() != 0) {
-        mn_put_c(1, mn_s6);
-        line[37] = (char)('0' + (left / 1000) / 10);
-        line[38] = (char)('0' + (left / 1000) % 10);
-        line[39] = 's';
+        m = mn_s6;
         warn = 1;
+        ctx = UC_KEEP;
     } else if (mode == M_RUN) {
-        mn_put_c(1, mn_s7);
+        m = mn_s7;
         warn = 1;
+        ctx = UC_RUN;
     } else if (set_load_result() == 2) {
-        mn_put_c(1, mn_s8);
+        m = mn_s8;
         warn = 1;
-    } else if (mn_n_entries() != 0 && !((e = mn_entry(cursor)) & 0x80)) {
-        set_row(e, &row);
-        if (row.flags & SF_INERT)
-            mn_put_c(1, mn_s9);
-        else if (row.flags & SF_RO)
-            mn_put_c(1, mn_s10);
-        else if (row.flags & SF_REBOOT)
-            mn_put_c(1, mn_s11);
-        else if (row.flags & SF_RISKY)
-            mn_put_c(1, mn_s12);
     }
-    mn_row(MENU_ROWS - 2, line, MENU_COLS, warn ? OC_WARN : OC_DIM, OC_BG);
-    mn_blank();
     if (mode == M_EDIT)
-        mn_put_c(1, mn_s13);
-    else
-        mn_put_c(1, mn_s14);
-    mn_row(MENU_ROWS - 1, line, MENU_COLS, OC_DIM, OC_BG);
+        ctx = UC_EDIT;
+    else if (mn_n_entries() != 0 && page == MAIN)
+        ctx = UC_MAIN;
+    if (m == 0 && mode == M_LIST && mn_n_entries() != 0 && !((e = mn_entry(cursor)) & 0x80)) {
+        set_row(e, &row);
+        ctx = row.type == STY_ACTION ? UC_ACTION : (row.flags & SF_RO) ? UC_RO : UC_ROW;
+        if (row.flags & SF_INERT)
+            m = mn_s9;
+        else if (row.flags & SF_RO)
+            m = mn_s10;
+        else if (row.flags & SF_REBOOT)
+            m = mn_s11;
+        else if (row.flags & SF_RISKY)
+            m = mn_s12;
+    }
+    mn_blank();
+    if (m != 0)
+        mn_put_c(0, m);
+    if (set_pending() != 0) {
+        line[MENU_COLS - 3] = (char)('0' + (left / 1000) / 10);
+        line[MENU_COLS - 2] = (char)('0' + (left / 1000) % 10);
+        line[MENU_COLS - 1] = 's';
+    }
+    redraws++;
+    ui_message(line, warn ? OS_RED : OS_DIM);
+    ui_legend(ctx);
     last_left = (uint8_t)(left / 1000);
 }
 
@@ -273,9 +286,8 @@ static void mn_draw_list(void)
 
 static void mn_draw_all(void)
 {
-    mn_blank();
-    mn_row(1, line, MENU_COLS, OC_TEXT, OC_BG);
     mn_draw_title();
+    ui_strip(1);
     mn_draw_list();
     mn_draw_status();
 }
@@ -311,14 +323,13 @@ void menu_relayout(void)
 
 void menu_open(void)
 {
-    osd_tc_open(MENU_COLS, MENU_ROWS);
-    osd_font_load();
+    ui_open();
     active = 1;
     menu_relayout();
     secs = 0;
     sec_t = set_now_ms();
     mn_go(MAIN, 0);
-    osd_tc_show(1);
+    ui_show(1);
     mn_sync();
 }
 
@@ -330,7 +341,7 @@ void menu_close(void)
         set_put(row.id, edit_old, 1);
     active = 0;
     set_save_now();
-    osd_tc_close();
+    ui_close();
     mn_sync();
 }
 
@@ -363,6 +374,7 @@ static void mn_move(int8_t d)
         return;
     cursor = d > 0 ? (cursor + 1 >= n ? 0 : cursor + 1) : (cursor == 0 ? n - 1 : cursor - 1);
     mn_scroll();
+    ui_highlight(UI_L_LIST + cursor - top);              /* the bar first: the rows below draw onto it */
     if (old >= top && old < top + MENU_LIST)
         mn_draw_entry(old);
     mn_draw_entry(cursor);
@@ -608,6 +620,10 @@ void menu_service(void)
     if (!active)
         return;
     now = set_now_ms();
+    if ((uint16_t)(now - strip_t) >= STRIP_MS) {
+        strip_t = now;
+        ui_strip(0);                                     /* live inputs; redraws only on a change */
+    }
     if ((uint16_t)(now - sec_t) >= 1000u) {
         sec_t += 1000u;
         if (secs < 255)
