@@ -136,49 +136,87 @@ int set_status(BYTE ucId)
     }
 }
 
-//---- text cells on the OSD engine (osd.h osd_tc_*): map = SDK layout (OsdFuncApplyMap), our glyphs from id 0 ----
-// osd.h OC_*: text, dim, highlight text, highlight bg, title, warning, window (transparent), value being edited
-static __code BYTE tAwtoOcPal[8] = {_CP_WHITE, _CP_GRAY, _CP_BLUE, _CP_LIGHTBLUE, _CP_WHITE, _CP_YELLOW, _CP_BG, _CP_RED};
-#define AWTO_OC(x)                  tAwtoOcPal[(x) < 8 ? (x) : 0]
+//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): 24 x 36 px characters = 2 x 2 hardware cells of 12 x 18, 2 bpp ----
+// palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette
+// 1 red, 2 / 8 grey 66 % / 33 %, 3 white, 4 / 9 / 5 dim 66 % / 33 % / 100 %, 6 / 10 red-white 66 % / 33 %, 7 / 11 dark red 66 % / 33 %, 12 black
+static __code BYTE tAwtoPal[12][3] = {
+    {255, 0, 0}, {170, 170, 170}, {255, 255, 255}, {73, 73, 73}, {110, 110, 110}, {255, 170, 170},
+    {170, 0, 0}, {85, 85, 85}, {37, 37, 37}, {255, 85, 85}, {85, 0, 0}, {0, 0, 0}};
+// the 2 bit char word holds the 4 colours c0..c3 of pixel levels 0..3 (c0 = 0: transparent); styles: osd_style
+static __code BYTE tAwtoStyle[4][4] = {{0, 8, 2, 3}, {0, 9, 4, 5}, {0, 10, 6, 3}, {0, 11, 7, 1}};
+#define AWTO_BAR_BLACK              12
+#define AWTO_BAR_RED                1
 
-void osd_tc_open(BYTE ucCols, BYTE ucRows)
+void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
+    BYTE ucI;
+
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
-    OsdFuncApplyMap(WIDTH(ucCols), HEIGHT(ucRows), COLOR(_CP_WHITE, _CP_BG));
+    OsdFuncApplyMap(WIDTH(2 * ucChars), HEIGHT(2 * ucLines), COLOR(0, 0));
     OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
     OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
-    OsdWindowDrawingByFont(_OSD_WINDOW_0, ROW(0), COL(0), WIDTH(ucCols), HEIGHT(ucRows), _CP_BLUE);
-    OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(ucCols), HEIGHT(1), _CP_BLUE_120);
+    for(ucI = 0; ucI < 12; ucI++)
+    {
+        ScalerOsdSetColorPalette(ucI + 1, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
+    }
+    ScalerOsd2BitFontOffset(0);                    // 2 bit glyph i at font base + 18 * i
 }
 
-void osd_tc_glyph(WORD usId, BYTE xdata *pucBits)
+void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
-    BYTE ucW;
-    WORD usA = g_usFontTableStart + usId * 9;
+    BYTE ucC0 = tAwtoStyle[ucStyle][0];
+    BYTE ucC1 = tAwtoStyle[ucStyle][1];
+    BYTE ucB0 = 0x80 | ((ucC0 & 8) << 2) | ((ucC1 & 8) << 1) | ((tAwtoStyle[ucStyle][3] & 7) << 1) | ((ucC0 & 4) >> 2);
+    BYTE ucB2 = ((ucC0 & 3) << 6) | ((tAwtoStyle[ucStyle][2] & 7) << 3) | (ucC1 & 7);
 
-    for(ucW = 0; ucW < 9; ucW++)
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
+    while(ucN-- != 0)                              // one address, then B0 B1 B2 per cell (the word address increments by itself)
     {
-        ScalerOsdCommandAllByte(usA + ucW, pucBits[ucW * 3], pucBits[ucW * 3 + 1], pucBits[ucW * 3 + 2]);
+        ScalerOsdDataPort(ucB0);
+        ScalerOsdDataPort(*pucTiles++);
+        ScalerOsdDataPort(ucB2);
     }
 }
 
-void osd_tc_row(BYTE ucRow, char xdata *pcS, BYTE ucN, BYTE ucFg, BYTE ucBg)
+void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour)
 {
-    BYTE ucK;
-    BYTE ucC;
-    BYTE ucColor = COLOR(AWTO_OC(ucFg), AWTO_OC(ucBg));
-    WORD usA = g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth;
+    OsdWindowDrawing(ucWin, usX0, usY0, usX1, usY1, (ucColour == 0) ? AWTO_BAR_BLACK : AWTO_BAR_RED);
+}
 
-    for(ucK = 0; (ucK < ucN) && (ucK < g_ucOsdWidth); ucK++)
+void osd_tc_bar_off(BYTE ucWin)
+{
+    ScalerOsdWindowDisable((EnumOsdWindowsType)ucWin);
+}
+
+// VLC font download, osd-font-download.md section 1: value map -> 0x3A0F..0x3A16, 0x3A17[0] = 1, destination word address,
+// stream bytes to the data port (3 decoded bytes = one word per 6 symbols, END code stops), 0x3A17[1:0] = 0
+void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
+{
+    BYTE ucI;
+
+    for(ucI = 0; ucI < 8; ucI++)
     {
-        ucC = (BYTE)pcS[ucK];
-        ucC = ((ucC >= 0x20) && (ucC <= 0x7E)) ? (ucC - 0x20) : ('?' - 0x20);
-        ScalerOsdCommandAllByte(usA + ucK, 0x4C, ucC, ucColor);      // 1-bit glyph, 12 px wide, id 0..255
+        ScalerSetByte(0x3A0F + ucI, pucMap[ucI]);
     }
+    ScalerSetBit(0x3A17, ~_BIT0, _BIT0);
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 18, _OSD_WITHOUT_DB);
+}
+
+void osd_tc_vlc_put(BYTE __xdata *pucData, BYTE ucN)
+{
+    while(ucN-- != 0)
+    {
+        ScalerOsdDataPort(*pucData++);
+    }
+}
+
+void osd_tc_vlc_end(void)
+{
+    ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
 }
 
 void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
@@ -214,6 +252,54 @@ void osd_tc_close(void)
     {
         ScalerTimerActiveTimerEvent(SEC(2), _USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
     }
+}
+
+// status strip data (ui.h): D1..D3 state and the active input's measured timing
+struct AwtoUiTiming
+{
+    WORD usW, usH;
+    DWORD ulVmHz;
+};
+
+BYTE ui_port_state(BYTE ucI)
+{
+    BYTE ucP = _D1_INPUT_PORT + ucI;
+    bit bCable = (ucI == 0) ? GET_D1_CABLE_STATUS() : (ucI == 1) ? GET_D2_CABLE_STATUS() : GET_D3_CABLE_STATUS();
+
+    if((SysSourceGetInputPort() == ucP) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
+    {
+        return 3;                                  // UPS_ACTIVE
+    }
+    if(bCable == _FALSE)
+    {
+        return 0;                                  // UPS_NOCABLE
+    }
+#if(_AWTO_FAST_SWITCH == _ON)
+    if(AwtoSwCacheValid(ucP) != 0)
+    {
+        return 2;                                  // UPS_READY: this port has carried a picture (#60 cache)
+    }
+#endif
+    return 1;                                      // UPS_NOSIGNAL
+}
+
+BYTE ui_timing(struct AwtoUiTiming __xdata *pst)
+{
+    if(SysModeGetModeState() != _MODE_STATUS_ACTIVE)
+    {
+        return _FALSE;
+    }
+    pst->usW = GET_INPUT_TIMING_HWIDTH();
+    pst->usH = GET_INPUT_TIMING_VHEIGHT();
+#if(_AWTO_FREQ == _ON)
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        pst->ulVmHz = g_stAwtoFreq.ulVFreqmHz;     // exact: measured clock / (htotal x vtotal) (#34)
+        return _TRUE;
+    }
+#endif
+    pst->ulVmHz = (DWORD)GET_INPUT_TIMING_VFREQ() * 100;
+    return _TRUE;
 }
 
 //---- apply functions (settings.h set_ap_*): registry value -> this firmware's variables and adjust calls ----
