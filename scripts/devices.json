@@ -13,25 +13,23 @@
     },
     "2": {
       "serial": "AWT26110002",
-      "input": "DP",
-      "connector": "card2-DP-4",
-      "gdctl": "DP-4",
-      "be": true,
-      "relay": null,
-      "test": true,
-      "note": "2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX; Dan 2026-11-07: no vendor dump needed for unit 2 (dump-twice rule waived for this unit only; unit 1's vendor dump stays the model reference)"
-    },
-    "3": {
-      "serial": "AWT26110003",
       "input": "HDMI",
       "connector": "card1-HDMI-A-2",
       "gdctl": "HDMI-2",
       "be": true,
+      "relay": null,
+      "test": true,
+      "note": "2026-11-08T11:42: recabled by Dan to Intel HDMI-A-2 (bus 11), was NVIDIA DP-4. 2026-11-07: test unit too (Dan, 'upgrade unit 2'); Dan's PRIMARY screen: layout/position never change; NVIDIA DP-4 (AUX i2c bus via EDID scan), 0x4A ACKs over AUX; Dan 2026-11-07: no vendor dump needed for unit 2 (dump-twice rule waived for this unit only; unit 1's vendor dump stays the model reference)"
+    },
+    "3": {
+      "serial": "AWT26110003",
+      "input": "DP",
+      "connector": "card2-DP-4",
+      "gdctl": "DP-4",
+      "be": true,
       "relay": "so-th-1",
       "test": true,
-      "connector_dp": "card1-DP-1",
-      "gdctl_dp": "DP-1",
-      "note": "2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
+      "note": "2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
     }
   }
 }

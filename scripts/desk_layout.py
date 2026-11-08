@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Restore Dan's desktop layout (scripts/desk_layout.json) for the monitors that are present; 'off' connectors stay off (#78).
 
-usage: desk_layout.py show | restore [--dry-run] | check | store | watch
+usage: desk_layout.py show | restore [--dry-run] | check | store | watch | save
 - Why: with one monitor missing (unit 2 dark) mutter rejects its stored configuration, falls back to a row, turns DP-1
   back on, and unit 3 auto-searches onto DP. `gdctl set --persistent` alone did not stop it.
 - restore: each row (same y) keeps its order; a missing monitor's slot is closed by shifting the ones right of it left
@@ -16,6 +16,8 @@ usage: desk_layout.py show | restore [--dry-run] | check | store | watch
   wake); once the signals have been quiet for SETTLE_S and the desktop is not in DPMS power
   save, restore if the layout differs. Why: a monitor that drops HPD in standby (card2 change event ~5 s into a DPMS off,
   2026-11-08) makes mutter rebuild a default row with DP-1 on, and it keeps that row after the wake.
+- watch only undoes mutter's fallback (one row at y 0, or an 'off' connector on): a layout Dan arranges himself is left
+  alone; `save` writes the live layout into the json.
 - dev.py calls restore after flash / reset / power-cycle / recover (unit reboots re-plug a monitor).
 Log: ./tmp/logs/desk_layout.log
 """
@@ -165,6 +167,12 @@ def gdctl_args(want: list[dict], prim: str | None) -> list[str]:
     return a
 
 
+def fallback(pos: dict[str, tuple[int, int]]) -> bool:
+    """mutter's fallback: every monitor in one row at y 0 (its default), or an 'off' connector on the desktop."""
+    off = json.loads(CFG.read_text())["off"]
+    return any(c in pos for c in off) or (len(pos) > 1 and all(y == 0 for _x, y in pos.values()))
+
+
 SETTLE_S = 3.0             # a re-plug + mutter re-layout is 1-2 s of events (2026-11-08); restore after 3 s of quiet
 MUTTER_PS = ["busctl", "--user", "get-property", "org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig",
              "org.gnome.Mutter.DisplayConfig", "PowerSaveMode"]
@@ -195,6 +203,9 @@ def watch() -> int:
         if prim_now == prim and set(pos) == {m["connector"] for m in want} and \
                 all(pos.get(m["connector"]) == (m["x"], m["y"]) for m in want):
             continue
+        if not fallback(pos):
+            log(f"watch: layout differs but is not mutter's fallback ({pos}): Dan's own change, left alone")
+            continue
         r2 = subprocess.run(["gdctl", "set", "--persistent", *gdctl_args(want, prim)], capture_output=True, text=True,
                             timeout=SET_S, check=False)
         log(f"watch: layout differed ({pos}, primary {prim_now}); restore rc={r2.returncode} "
@@ -203,7 +214,7 @@ def watch() -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["show", "restore", "check", "store", "watch"])
+    ap.add_argument("action", choices=["show", "restore", "check", "store", "watch", "save"])
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     if a.action == "watch":
@@ -215,6 +226,22 @@ def main() -> int:
     desc = ", ".join(f"{m['connector']}@{m['x']},{m['y']}" for m in want) + f"; primary {prim}"
     if a.action == "show":
         log(f"connected {mons}; live {pos} primary {prim_now}; want {desc}; {'same' if same else 'DIFFERS'}")
+        return 0
+    if a.action == "save":
+        cfg = json.loads(CFG.read_text())
+        sp = specs()
+        modes = {m["connector"]: m["mode"] for m in cfg["monitors"]}
+        cur = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=SHOW_S, check=True).stdout
+        for c in pos:
+            mm = re.search(rf"Monitor {re.escape(c)} \(.*?Current mode\s*\n\W*(\d+x\d+@[\d.]+)", cur, re.S)
+            if mm:
+                modes[c] = mm.group(1)
+        cfg["monitors"] = [{"connector": c, "serial": sp.get(c, ("", "", ""))[2], "mode": modes.get(c, "3840x2160@60.000"),
+                            "x": x, "y": y} for c, (x, y) in sorted(pos.items(), key=lambda kv: (kv[1][1], kv[1][0]))]
+        if prim_now:
+            cfg["primary"] = [prim_now] + [c for c in cfg["primary"] if c != prim_now]
+        CFG.write_text(json.dumps(cfg, indent=2) + "\n")
+        log(f"save: {pos}, primary {prim_now} -> {CFG.name}")
         return 0
     if a.action == "store":
         log(store(want, prim, mons))
