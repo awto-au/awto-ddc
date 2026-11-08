@@ -53,7 +53,7 @@ Single-byte macros (`reg_rd`, `reg_wr`, `reg_rmw`, `reg_test`) are defined in th
 ## 4. Timing
 | what | value | source | tag |
 |---|---|---|---|
-| T2 restart limit | at most 100 busy checks / 99 restarts after S10 (still busy at check 100 -> return 1) | reference behaviour | vendor-value |
+| T2 restart limit | at most 100 busy checks / 99 restarts after S10 (still busy at check 100 -> return 1) | reference behaviour | sdk-value |
 | burst duration | hardware; CPU stalled | - | - |
 
 ## 5. Data
@@ -67,9 +67,9 @@ Domain: dclk_khz < 2^30 (1.07 THz; real clocks are < 1 GHz). Outside it: any res
 4. g > 0xFF -> 0xFF. Then g < 2 -> 2. Return g.
 | constant | value | tag | source |
 |---|---|---|---|
-| item length in display clocks | 69 (57 + 4 per serial font byte x 3) | vendor-value | reference timing formula |
+| item length in display clocks | 69 (57 + 4 per serial font byte x 3) | sdk-value | reference timing formula |
 | M2PLL | 351 MHz (14.318 MHz x 49 / 2, rounded) | derived | board crystal + PLL setting |
-| flash clock divider x MCU divider | 4 x 1 | vendor-value | reference clock plan (fast flash, no MCU speed-up) |
+| flash clock divider x MCU divider | 4 x 1 | sdk-value | reference clock plan (fast flash, no MCU speed-up) |
 | 12,109,500 | 69 x 351 x 1000 x 2 / 4 | derived | the rows above (the /4 is the flash divider) |
 - Vectors: `specs/vectors/osdgap.tsv`.
 

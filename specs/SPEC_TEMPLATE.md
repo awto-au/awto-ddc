@@ -20,7 +20,8 @@ Rules: docs/cleanroom.md "Spec format". No pseudo-C, no SDK names, no copied com
 ## 5. Decision tables / state machines
 
 ## 6. Data
-| name | value | unit | tag (derived / measured / vendor-value) | source |
+Tags: `derived` / `measured` / `sdk-value` (Realtek SDK source default) / `dahua-value` (original Dahua firmware dump, RE or RTDCustomerTool board data).
+| name | value | unit | tag (derived / measured / sdk-value / dahua-value) | source |
 |---|---|---|---|---|
 
 ## 7. Oracle

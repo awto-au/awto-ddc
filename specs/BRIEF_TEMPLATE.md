@@ -9,7 +9,7 @@ Everything you may use is in this brief and in the current directory (`/mnt/2tb/
 - Do not guess vendor names or try to recall any vendor SDK. If the brief does not answer something, STOP that part and
   write a line `QUESTION: <question>` in your final report. Never fill a gap from memory of other firmware.
 - Names: functions/types from `awto/include/*.h`; registers from `facts/regs.h` / `facts/names.h` only.
-- Every number not given by `facts/` carries its provenance tag from the spec in a comment (`derived` / `measured` / `vendor-value`).
+- Every number not given by `facts/` carries its provenance tag from the spec in a comment (`derived` / `measured` / `sdk-value` / `dahua-value`; `sdk-value` = Realtek SDK source default, `dahua-value` = original Dahua firmware dump, RE or RTDCustomerTool board data).
 - Comments: terse, our words, at most 3 lines each.
 - Work on branch `mod/{mod}` (`git switch -c mod/{mod}`); commit with trailer
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. No remotes, no push.

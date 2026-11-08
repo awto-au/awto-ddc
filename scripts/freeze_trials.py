@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""awto-ddc#26: freeze a failed 4K60 pass, then try vendor-value register candidates, one per trial.
+"""awto-ddc#26: freeze a failed 4K60 pass, then try sdk-value register candidates, one per trial.
 
 usage: freeze_trials.py --unit N --bus B --serial S [--only T1,T2] [--n 30]
   Freeze as dpll_hold.py/freeze_dump.py (main paused 0x80 01). Per trial: write candidate regs (0xPPRR=VV via 0x35),

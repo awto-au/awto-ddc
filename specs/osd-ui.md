@@ -2,7 +2,7 @@
 Status: TO WRITE (spec writer: Sonnet). Template: `SPEC_TEMPLATE.md`. Interface below it: `awto/include/osd.h` (engine, step 4).
 
 ## Sources (spec side)
-- Functional facts from the vendor image, tag `vendor-ui`: menu tree, items, value ranges and steps, defaults, key behaviour
+- Functional facts from the vendor image, tag `sdk-ui`: menu tree, items, value ranges and steps, defaults, key behaviour
   (menu/left/right/exit, repeat, timeouts), what each item changes. Method: `fw_sim_vendor.py` + `osd_render.py`
   (osd_model hooks) on the vendor image, walking every page with key actions -> `tmp/osd/vendor/<page>.png` + JSON state.
 - Factory menu (kept, Dan 2026-11-07): same method on its pages; items and ranges as facts.

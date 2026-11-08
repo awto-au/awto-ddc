@@ -11,7 +11,7 @@ Never write bare "vendor": say which one.
 | **Realtek SDK menu** | Realtek's RTD2014 demo OSD (9-icon menu, pop-ups) from the SDK source, compiled into our images | our images ("Vendor menu" on the System page until #87) |
 | **awto menu** | our registry menu (#67) | our images (MENU key default) |
 
-- Legacy tag `[vendor-ui]` in `awto-rtdfw/settings/registry.tsv` = Realtek SDK menu fact (rename pending, #87).
+- Tag `[sdk-ui]` in `awto-rtdfw/settings/registry.tsv` = Realtek SDK menu fact.
 
 ## 1. Layers
 ### Hardware (RL6449 / RTD2795T)
