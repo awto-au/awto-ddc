@@ -29,6 +29,7 @@ extern int set_get(unsigned char ucId);
 extern void AwtoSetInit(void);                                  // hooks: fw/awto/settings/glue*.inc
 extern void AwtoSetLoop(void);
 extern __xdata unsigned char g_ucAwtoMenuOn;                    // our menu on screen: service every pass
+extern void menu_close(void);                                   // awto-rtdfw menu.c: closes it (saves an edit in progress)
 extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
 #define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }

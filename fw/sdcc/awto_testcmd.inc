@@ -34,6 +34,12 @@ void AwtoTestHoldLogoOff(void)      // global: its map symbol tells hosts (osd_t
 // Hold guards (#28): a held visual survives the SDK's own OSD paths; each blocked path is logged (StAwtoSw, scripts/sw_timeline.py).
 bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: the SDK OSD timeout / reset paths
 {
+#ifdef _AWTO_NEW_SETTINGS
+    if((g_ucAwtoMenuOn != 0) && (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL) && (SysModeGetModeState() != _MODE_STATUS_POWER_SAVING))
+    {
+        return _TRUE;                            // #67 / #88: the source search resets the SDK OSD every few seconds; the awto menu closes itself
+    }
+#endif
     if(g_stAwtoDiag.ucHold == 0)
     {
         return _FALSE;

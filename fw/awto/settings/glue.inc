@@ -629,6 +629,10 @@ void AwtoSetLoop(void)                             // main loop (AWTO_SET_LOOP: 
         set_track(AWTO_SET_INPUT, SysSourceGetInputPort() - _D1_INPUT_PORT);   // every switch path (key, test cmd, VCP 0x60, search), #67
     }
     vcp_box_service();
+    if((menu_active() != 0) && ((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (SysModeGetModeState() == _MODE_STATUS_POWER_SAVING)))
+    {
+        menu_close();                              // power off / saving takes the screen: OsdDispDisableOsd is blocked while the menu is up
+    }
     if(menu_active() != 0)
     {
         menu_service();

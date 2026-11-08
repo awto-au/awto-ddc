@@ -97,6 +97,12 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
 
 void AwtoKeyDbgLink(void)                       // MENU held + DOWN: toggle the debug link; closes the menu MENU opened
 {
+#ifdef _AWTO_NEW_SETTINGS
+    if(g_ucAwtoMenuOn != 0)
+    {
+        menu_close();                           // the awto menu: a real close (the SDK disable is blocked while it is up)
+    }
+#endif
     if(GET_OSD_STATE() != _MENU_NONE)
     {
         OsdDispDisableOsd();

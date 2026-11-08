@@ -166,18 +166,18 @@
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3708	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3771	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3775	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1123	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1125	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1128	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1132	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1136	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1143	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1129	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1131	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1134	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1138	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1142	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1149	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1159	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1157	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1153	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1151	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1147	ok	OK-CONFIG: GET_OSD_DDCCI_STATUS() overridden to (_OFF) in Project/Header/RL6449_Project.h (_AWTO_DEBUG_PORT): DDC/CI handler body dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	437	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	439	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	484	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	443	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	445	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	490	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5544	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5542	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5543	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
