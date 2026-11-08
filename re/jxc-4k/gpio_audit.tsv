@@ -1,0 +1,22 @@
+pin	port	dahua_writes	dahua_reads	in_our_header	header_line
+1	P1.0	D3 HPD (5:f722)@5:f748=set; D3 HPD (5:f917)@5:f933=clear; ScalerMcuGpioInitial@5:d2b6=set		yes	#define bD3_HPD                                 (P1_0) // Pin_1, P1.0
+14	P1.1	D2 HPD (5:f774)@5:f799=set; D2 HPD (5:fa36)@5:fa4e=clear; ScalerMcuGpioInitial@5:d2b4=set		yes	#define bD2_HPD                                 (P1_1) // Pin_14, P1.1
+71	P3.0		key_scan_adc@6:3a61 (JB 0xB0, power key)	NO	
+91	P3.5	ScalerMcuGpioInitial@5:d311=set; d6b2 LED switch@1:d6f1=set; d6b2 LED switch@1:d6f6=clear; d6b2 LED switch@1:d6fb=clear; d6b2 LED switch@1:d700=set		NO	
+92	P3.6	ScalerMcuGpioInitial@5:d313=clear; d6b2 LED switch@1:d6f3=clear; d6b2 LED switch@1:d6f8=set; d6b2 LED switch@1:d6fd=clear; d6b2 LED switch@1:d703=set		NO	
+97	P4.2	FUN_CODE_818e@1:82b9=0x00; FUN_CODE_818e@1:8319=0x01; FUN_CODE_d319@4:d376=0x00; FUN_CODE_e1c0@1:e1ca=0x01; FUN_CODE_e1c0@1:e1f6=0x00; ScalerMcuGpioInitial@5:d2b3=0x00	FUN_CODE_c275@1:c2e9; FUN_CODE_d319@4:d32e; FUN_CODE_dab8@1:daec; FUN_CODE_e1c0@1:e1c6; FUN_CODE_e1c0@1:e1d3; FUN_CODE_fbb1@4:fbb4; FUN_CODE_fbcc@4:fbd4	yes	#define bD1_HPD                                 (MCU_FE02_PORT42_PIN_REG) // Pin_97, P4.2
+113	P4.5		FUN_CODE_f69b@1:f69e; FUN_CODE_f69b@1:f6a7	NO	
+159	P7.2	FUN_CODE_9294@1:929e=0x01; ScalerMcuGpioInitial@5:d30b=0x00; panel_power_seq@1:91ed=0x00		yes	#define bPANELPOWER                             (MCU_FE1A_PORT72_PIN_REG) // Pin_159, P7.2
+160	P7.3	ScalerMcuGpioInitial@5:d324=0x00		NO	
+161	P7.4	FUN_CODE_ea99@1:eaba=?; ScalerMcuGpioInitial@5:d319=0x00		NO	
+184	P8.4	ScalerMcuGpioInitial@5:d306=0x01; ScalerPinshareConfig@6:5dc0=0x00; pcb_pin_group_p84_p85_seq@1:de75=0x00; pcb_pin_group_p84_p85_seq@1:de94=0x01; pcb_pin_group_p97_pa0_p85_p84_on@1:f199=0x01; pcb_pin_group_p97_pa0_p85_p84_set@5:e22c=?		yes	#define bLED1                                   (MCU_FE24_PORT84_PIN_REG) // Pin_184, P8.4
+185	P8.5	ScalerMcuGpioInitial@5:d2cc=0x01; ScalerPinshareConfig@6:5dbc=0x00; pcb_pin_group_p84_p85_seq@1:de71=0x00; pcb_pin_group_p84_p85_seq@1:dea1=0x01; pcb_pin_group_p97_pa0_p85_p84_on@1:f195=0x01; pcb_pin_group_p97_pa0_p85_p84_set@5:e228=?		yes	#define bBACKLIGHTPOWER                         (MCU_FE25_PORT85_PIN_REG) // Pin_185, P8.5
+190	P8.6	ScalerMcuGpioInitial@5:d2c3=0x00; flash_cmd_end_wp_pin_assert@3:d40c=0x00; flash_wp_pin_release@3:d443=0x01		yes	#define bFLASH_WRITE_PROTECT                    (MCU_FE26_PORT86_PIN_REG) // Pin_190, P8.6
+196	P9.2	ScalerMcuGpioInitial@5:d310=0x01; panel_power_seq@1:91c9=0x01; panel_power_seq@1:9223=0x00; panel_power_seq@1:9241=0x00; panel_power_seq@1:9266=0x01	FUN_CODE_ab18@1:aba1; FUN_CODE_ab18@1:abe8	yes	#define bBACKLIGHT_EN_N                         (MCU_FE2A_PORT92_PIN_REG) // Pin_196, P9.2
+198	P9.4		FUN_CODE_a47a@4:a494; SysSourceCableDetection@4:a374	yes	#define bD3_CONNECT                             (MCU_FE2C_PORT94_PIN_REG) // PIN_198, P9.4
+201	P9.7	ScalerPinshareConfig@6:5db4=0x00; pcb_pin_group_p97_pa0_p85_p84_on@1:f18d=0x01; pcb_pin_group_p97_pa0_p85_p84_set@5:e222 (caller)		yes	#define bD3_MHL_VBUS_SWITCH                     (MCU_FE2F_PORT97_PIN_REG) // Pin_201, P9.7
+202	PA.0	ScalerPinshareConfig@6:5db8=0x00; pcb_pin_group_p97_pa0_p85_p84_on@1:f191=0x01; pcb_pin_group_p97_pa0_p85_p84_set@5:e224 (caller)		yes	#define bD2_MHL_CONNECT                         (MCU_FE30_PORTA0_PIN_REG) // Pin_202, PA.0
+204	PA.2		SysSourceCableDetection@4:a365; SysSourceCableDetection@4:a433	yes	#define bD2_CONNECT                             (MCU_FE32_PORTA2_PIN_REG) // PIN_204, PA.2
+206	PA.3		FUN_CODE_a3cf@4:a3da; SysSourceCableDetection@4:a354	yes	#define bD1_DP_PIN17_CONNECT                    (MCU_FE33_PORTA3_PIN_REG) // Pin_206, PA.3
+207	PA.4		SysSourceCableDetection@4:a344; SysSourceCableDetection@4:a3ca	yes	#define bD1_DP_PIN15_CONNECT                    (MCU_FE34_PORTA4_PIN_REG) // Pin_207, PA.4
+208	PA.5		FUN_CODE_a3cf@4:a3d2; SysSourceCableDetection@4:a34c	yes	#define bD1_DP_PIN16_CONNECT                    (MCU_FE35_PORTA5_PIN_REG) // Pin_208, PA.5

@@ -1,0 +1,1034 @@
+kind	bank	insn	func_addr	func	reason
+write	0	0414	0412	FUN_CODE_0412	dptr join
+read	0	1202	11fb	keil_CLDPTR	dptr compute
+read	0	1221	1214	keil_CLDOPTR	dptr compute
+write	0	1248	1241	keil_CSTPTR	dptr compute
+write	0	1262	1253	FUN_CODE_1253	dptr compute
+read	0	1316	1312	keil_OFFXADD	dptr from caller: 5 of 19 callers not constant
+write	0	1318	1312	keil_OFFXADD	dptr from caller: 5 of 19 callers not constant
+read	0	1324	1312	keil_OFFXADD	dptr compute
+write	0	1326	1312	keil_OFFXADD	dptr compute
+read	0	1338	1328	FUN_CODE_1328	dptr compute
+write	0	133b	1328	FUN_CODE_1328	dptr compute
+read	0	1345	133e	FUN_CODE_133e	dptr compute
+read	0	1349	133e	FUN_CODE_133e	dptr compute
+read	0	1376	1369	FUN_CODE_1369	dptr compute
+read	0	137a	1369	FUN_CODE_1369	dptr compute
+write	0	13a8	13a1	FUN_CODE_13a1	dptr compute
+write	0	13ac	13a1	FUN_CODE_13a1	dptr compute
+write	0	13cf	13c0	FUN_CODE_13c0	dptr compute
+write	0	13d3	13c0	FUN_CODE_13c0	dptr compute
+write	0	182a	181a	keil_MEMSET	dptr compute
+read	0	1ca3	1bc9	ScalerDebug	dptr compute
+write	0	1cc5	1bc9	ScalerDebug	dptr compute
+write	0	1d2a	1bc9	ScalerDebug	dptr compute
+read	0	1f7b	1f12	ScalerDebugSetRegisters	dptr call
+write	0	1fc5	1f12	ScalerDebugSetRegisters	dptr compute
+read	0	21a7	20fb	ScalerDebugGetRegisters	dptr compute
+write	0	21b0	20fb	ScalerDebugGetRegisters	dptr call
+write	0	21e1	20fb	ScalerDebugGetRegisters	dptr call
+read	0	2212	2212	FUN_CODE_2212	dptr from caller: 7 of 8 callers not constant
+read	0	2286	2286	ScalerDebug_frag_ret_dbbb	dptr from caller: 2 of 3 callers not constant
+read	0	229b	2294	ScalerDebug_frag_ddcci_data_addr_b	dptr compute
+write	0	23ba	234a	ScalerDebugIntProc_EXINT1	dptr call
+write	0	2402	23f4	c_startup_init	dptr join
+write	0	247e	23f4	c_startup_init	dptr compute
+read	0	60c2	60bf	FUN_CODE_60bf	dptr from caller: 1 of 1 callers not constant
+write	0	60ce	60c8	FUN_CODE_60c8	dptr from caller: 2 of 2 callers not constant
+read	0	60cf	60c8	FUN_CODE_60c8	dptr from caller: 2 of 2 callers not constant
+read	0	60de	60c8	FUN_CODE_60c8	dptr from caller: 2 of 2 callers not constant
+write	0	61ca	61ff	FUN_CODE_61ff	dptr from caller: 2 of 2 callers not constant
+read	0	a1ac	a19e	FUN_CODE_a19e	dptr compute
+write	0	a20c	a20c	FUN_CODE_a20c	dptr from caller: 2 of 4 callers not constant
+write	0	a210	a210	FUN_CODE_a210	dptr from caller: 1 of 4 callers not constant
+write	0	a213	a213	FUN_CODE_a213	dptr from caller: 1 of 2 callers not constant
+read	0	a273	a271	FUN_CODE_a271	dptr compute
+read	0	a32b	a32b	FUN_CODE_a32b	dptr from caller: 2 of 2 callers not constant
+read	0	a32e	a32b	FUN_CODE_a32b	dptr from caller: 2 of 2 callers not constant
+read	0	a33c	a32b	FUN_CODE_a32b	dptr from caller: 2 of 2 callers not constant
+write	0	a3eb	a3eb	FUN_CODE_a3eb	dptr from caller: 4 of 4 callers not constant
+read	0	a4fc	a4fc	FUN_CODE_a4fc	dptr from caller: 2 of 2 callers not constant
+read	0	a528	a522	FUN_CODE_a522	dptr from caller: 2 of 2 callers not constant
+read	0	a52b	a522	FUN_CODE_a522	dptr from caller: 2 of 2 callers not constant
+read	0	a673	a673	FUN_CODE_a673	dptr from caller: 2 of 2 callers not constant
+read	0	a676	a673	FUN_CODE_a673	dptr from caller: 2 of 2 callers not constant
+read	0	a680	a673	FUN_CODE_a673	dptr from caller: 2 of 2 callers not constant
+write	0	a684	a683	FUN_CODE_a683	dptr from caller: 1 of 2 callers not constant
+write	0	a687	a683	FUN_CODE_a683	dptr from caller: 1 of 2 callers not constant
+write	0	a782	a781	FUN_CODE_a781	dptr from caller: 1 of 2 callers not constant
+write	0	a7d4	a7d3	FUN_CODE_a7d3	dptr from caller: 1 of 3 callers not constant
+read	0	a7d5	a7d3	FUN_CODE_a7d3	dptr from caller: 1 of 3 callers not constant
+write	0	a8f6	a81e	FUN_CODE_a81e	dptr not reached
+write	0	a925	a81e	FUN_CODE_a81e	dptr not reached
+write	0	a96b	a81e	FUN_CODE_a81e	dptr not reached
+write	0	a96f	a81e	FUN_CODE_a81e	dptr not reached
+read	0	a99d	a81e	FUN_CODE_a81e	dptr not reached
+write	0	a9a0	a81e	FUN_CODE_a81e	dptr not reached
+read	0	a9a3	a81e	FUN_CODE_a81e	dptr not reached
+write	0	a9a6	a81e	FUN_CODE_a81e	dptr not reached
+write	0	ac15	aa24	FUN_CODE_aa24	dptr not reached
+write	0	ac96	ac7c	FUN_CODE_ac7c	dptr call
+write	0	acb0	ac7c	FUN_CODE_ac7c	dptr call
+write	0	acca	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ace4	ac7c	FUN_CODE_ac7c	dptr call
+write	0	acfe	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ad18	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ad39	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ad54	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ad7f	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ad99	ac7c	FUN_CODE_ac7c	dptr call
+write	0	adb3	ac7c	FUN_CODE_ac7c	dptr call
+write	0	adcd	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ade9	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ae04	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ae1f	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ae3a	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ae5b	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ae75	ac7c	FUN_CODE_ac7c	dptr call
+write	0	ae8f	ac7c	FUN_CODE_ac7c	dptr call
+write	0	aead	ac7c	FUN_CODE_ac7c	dptr call
+write	0	aec8	ac7c	FUN_CODE_ac7c	dptr call
+write	0	aee3	ac7c	FUN_CODE_ac7c	dptr call
+write	0	af06	ac7c	FUN_CODE_ac7c	dptr call
+write	0	af20	ac7c	FUN_CODE_ac7c	dptr call
+write	0	af3a	ac7c	FUN_CODE_ac7c	dptr call
+write	0	af54	ac7c	FUN_CODE_ac7c	dptr call
+write	0	af6e	ac7c	FUN_CODE_ac7c	dptr call
+write	0	af88	ac7c	FUN_CODE_ac7c	dptr call
+write	0	afa9	ac7c	FUN_CODE_ac7c	dptr call
+write	0	afc4	ac7c	FUN_CODE_ac7c	dptr call
+write	0	afdf	ac7c	FUN_CODE_ac7c	dptr call
+write	0	affa	ac7c	FUN_CODE_ac7c	dptr call
+write	0	b015	ac7c	FUN_CODE_ac7c	dptr call
+write	0	b030	ac7c	FUN_CODE_ac7c	dptr call
+write	0	b48b	b44c	osd_text_render_b44c	dptr compute
+write	0	b83d	b83a	FUN_CODE_b83a	dptr compute
+write	0	ba23	ba23	FUN_CODE_ba23	dptr from caller: 1 of 2 callers not constant
+write	0	ba26	ba23	FUN_CODE_ba23	dptr from caller: 1 of 2 callers not constant
+write	0	ba29	ba23	FUN_CODE_ba23	dptr from caller: 1 of 2 callers not constant
+write	0	ba2e	ba2b	FUN_CODE_ba2b	dptr compute
+read	0	ba9c	ba91	FUN_CODE_ba91	dptr compute
+write	0	beaa	be30	FUN_CODE_be30	dptr not reached
+read	0	beab	be30	FUN_CODE_be30	dptr not reached
+write	0	beb9	be30	FUN_CODE_be30	dptr not reached
+write	0	bed8	be30	FUN_CODE_be30	dptr not reached
+write	0	bedc	be30	FUN_CODE_be30	dptr not reached
+read	0	c0dc	be30	FUN_CODE_be30	dptr not reached
+write	0	c0df	be30	FUN_CODE_be30	dptr not reached
+read	0	c0e2	be30	FUN_CODE_be30	dptr not reached
+write	0	c0e5	be30	FUN_CODE_be30	dptr not reached
+read	0	c4be	c3ea	FUN_CODE_c3ea	dptr compute
+write	0	c9f8	c971	FUN_CODE_c971	dptr call
+write	0	ca7b	c971	FUN_CODE_c971	dptr compute
+write	0	ca8b	c971	FUN_CODE_c971	dptr call
+read	0	caa2	c971	FUN_CODE_c971	dptr compute
+write	0	cad2	c971	FUN_CODE_c971	dptr compute
+write	0	cb07	c971	FUN_CODE_c971	dptr compute
+write	0	cb0d	c971	FUN_CODE_c971	dptr call
+read	0	cff9	cfc1	FUN_CODE_cfc1	dptr not reached
+write	0	d010	cfc1	FUN_CODE_cfc1	dptr not reached
+read	0	d197	d048	FUN_CODE_d048	dptr compute
+write	0	d1a0	d048	FUN_CODE_d048	dptr call
+write	0	d1bb	d048	FUN_CODE_d048	dptr call
+write	0	d1e2	d048	FUN_CODE_d048	dptr call
+write	0	d209	d048	FUN_CODE_d048	dptr compute
+write	0	d215	d048	FUN_CODE_d048	dptr compute
+write	0	d22a	d048	FUN_CODE_d048	dptr compute
+write	0	d3a5	d271	osd_screen_dispatch	dptr not reached
+write	0	d3b8	d271	osd_screen_dispatch	dptr not reached
+write	0	d3cb	d271	osd_screen_dispatch	dptr not reached
+write	0	d3df	d271	osd_screen_dispatch	dptr not reached
+write	0	d73d	d5ea	FUN_CODE_d5ea	dptr not reached
+write	0	d741	d5ea	FUN_CODE_d5ea	dptr not reached
+write	0	d749	d5ea	FUN_CODE_d5ea	dptr not reached
+write	0	d74d	d5ea	FUN_CODE_d5ea	dptr not reached
+write	0	d755	d5ea	FUN_CODE_d5ea	dptr not reached
+write	0	d759	d5ea	FUN_CODE_d5ea	dptr not reached
+read	0	e785	e6cb	FUN_CODE_e6cb	dptr not reached
+write	0	e7a0	e6cb	FUN_CODE_e6cb	dptr not reached
+read	0	ee7c	ee33	osd_main_menu_select_item	dptr not reached
+write	0	ee93	ee33	osd_main_menu_select_item	dptr not reached
+read	0	f95c	f924	FUN_CODE_f924	dptr not reached
+write	0	f96e	f924	FUN_CODE_f924	dptr not reached
+write	1	4e1e	4bd0	osd_screen_builder_1	dptr not reached
+write	1	4e24	4bd0	osd_screen_builder_1	dword store via bank1:15da (dest from caller)
+write	1	4e30	4bd0	osd_screen_builder_1	dptr call
+write	1	4e36	4bd0	osd_screen_builder_1	dword store via bank1:15da (dest from caller)
+write	1	4e42	4bd0	osd_screen_builder_1	dptr not reached
+write	1	4e59	4bd0	osd_screen_builder_1	dptr not reached
+write	1	4e5f	4bd0	osd_screen_builder_1	dword store via bank1:15da (dest from caller)
+write	1	4e6b	4bd0	osd_screen_builder_1	dptr call
+write	1	4e71	4bd0	osd_screen_builder_1	dword store via bank1:15da (dest from caller)
+write	1	4e7c	4bd0	osd_screen_builder_1	dptr not reached
+write	1	5c32	5a41	RTDFactoryOsdFuncPutStringProp	dptr compute
+write	1	6078	6075	FUN_CODE_6075	dptr compute
+read	1	60ba	60af	FUN_CODE_60af	dptr compute
+read	1	629e	629e	FUN_CODE_629e	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	1	62a1	629e	FUN_CODE_629e	dptr from caller: 9 different constants (indexed / loop over blocks)
+write	1	6d2b	6d2a	FUN_CODE_6d2a	dptr from caller: 1 of 2 callers not constant
+write	1	6d2d	6d2a	FUN_CODE_6d2a	dptr from caller: 1 of 2 callers not constant
+write	1	6d2f	6d2a	FUN_CODE_6d2a	dptr from caller: 1 of 2 callers not constant
+read	1	6dfc	6dfc	FUN_CODE_6dfc	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	1	6dff	6dfc	FUN_CODE_6dfc	dptr from caller: 9 different constants (indexed / loop over blocks)
+write	1	6f13	6f11	FUN_CODE_6f11	dptr from caller: 1 of 3 callers not constant
+write	1	6f17	6f11	FUN_CODE_6f11	dptr from caller: 1 of 3 callers not constant
+read	1	6fb4	6fa7	FUN_CODE_6fa7	dptr compute
+write	1	7004	7004	FUN_CODE_7004	dptr from caller: 2 of 7 callers not constant
+read	1	7040	702f	FUN_CODE_702f	dptr compute
+read	1	704d	7044	FUN_CODE_7044	dptr from caller: 1 of 3 callers not constant
+write	1	7051	7044	FUN_CODE_7044	dptr from caller: 1 of 3 callers not constant
+read	1	7052	7044	FUN_CODE_7044	dptr from caller: 1 of 3 callers not constant
+read	1	70ab	709e	FUN_CODE_709e	dptr compute
+read	1	70ae	709e	FUN_CODE_709e	dptr compute
+read	1	74ce	7374	osd_show_number	dptr compute
+write	1	74d7	7374	osd_show_number	dptr call
+write	1	74f2	7374	osd_show_number	dptr call
+write	1	7519	7374	osd_show_number	dptr call
+write	1	7533	7374	osd_show_number	dptr compute
+write	1	7585	7562	FUN_CODE_7562	dptr call
+write	1	759a	7562	FUN_CODE_7562	dptr call
+write	1	759e	7562	FUN_CODE_7562	dptr call
+write	1	75a9	7562	FUN_CODE_7562	dptr call
+write	1	75ad	7562	FUN_CODE_7562	dptr call
+write	1	75bb	7562	FUN_CODE_7562	dptr call
+write	1	75be	7562	FUN_CODE_7562	dptr call
+write	1	75d8	7562	FUN_CODE_7562	dptr call
+write	1	75f0	7562	FUN_CODE_7562	dptr call
+write	1	75f4	7562	FUN_CODE_7562	dptr call
+write	1	75ff	7562	FUN_CODE_7562	dptr call
+write	1	7603	7562	FUN_CODE_7562	dptr call
+write	1	7611	7562	FUN_CODE_7562	dptr call
+write	1	7614	7562	FUN_CODE_7562	dptr call
+read	1	764e	7562	FUN_CODE_7562	dptr call
+read	1	7651	7562	FUN_CODE_7562	dptr call
+read	1	765a	7562	FUN_CODE_7562	dptr call
+read	1	76ca	7562	FUN_CODE_7562	dptr call
+read	1	76f8	7562	FUN_CODE_7562	dptr call
+read	1	772a	7562	FUN_CODE_7562	dptr call
+write	1	7ac6	7ac4	FUN_CODE_7ac4	dptr from caller: 1 of 2 callers not constant
+write	1	7aca	7ac4	FUN_CODE_7ac4	dptr from caller: 1 of 2 callers not constant
+write	1	7ad2	7ad0	FUN_CODE_7ad0	dptr from caller: 1 of 2 callers not constant
+write	1	7ad6	7ad0	FUN_CODE_7ad0	dptr from caller: 1 of 2 callers not constant
+write	1	7ade	7adc	FUN_CODE_7adc	dptr from caller: 1 of 2 callers not constant
+write	1	7ae2	7adc	FUN_CODE_7adc	dptr from caller: 1 of 2 callers not constant
+write	1	7aea	7ae8	FUN_CODE_7ae8	dptr from caller: 1 of 2 callers not constant
+write	1	7aee	7ae8	FUN_CODE_7ae8	dptr from caller: 1 of 2 callers not constant
+write	1	81bc	818e	FUN_CODE_818e	dptr call
+write	1	81bf	818e	FUN_CODE_818e	dptr call
+write	1	81d7	818e	FUN_CODE_818e	dptr compute
+read	1	8215	818e	FUN_CODE_818e	dptr call
+read	1	8218	818e	FUN_CODE_818e	dptr call
+read	1	8221	818e	FUN_CODE_818e	dptr call
+read	1	82a1	818e	FUN_CODE_818e	dptr call
+read	1	82e8	818e	FUN_CODE_818e	dptr call
+read	1	90e2	90e2	FUN_CODE_90e2	dptr join
+read	1	90e5	90e2	FUN_CODE_90e2	dptr join
+write	1	90e7	90e2	FUN_CODE_90e2	dptr join
+read	1	b383	b347	FUN_CODE_b347	dptr compute
+read	1	b3af	b347	FUN_CODE_b347	dptr compute
+read	1	b3c7	b347	FUN_CODE_b347	dptr compute
+read	1	b3d6	b347	FUN_CODE_b347	dptr compute
+read	1	b400	b347	FUN_CODE_b347	dptr compute
+read	1	b617	b586	ddcci_reply_frame_tx	dptr compute
+write	1	b6ac	b63d	FUN_CODE_b63d	dptr call
+read	1	bc47	bbd1	ScalerRead	dptr compute
+read	1	cc90	cc83	FUN_CODE_cc83	dptr compute
+read	1	ccb9	ccac	FUN_CODE_ccac	dptr compute
+read	1	ccbc	ccac	FUN_CODE_ccac	dptr compute
+read	1	cccc	ccbf	FUN_CODE_ccbf	dptr compute
+read	1	cf43	cf39	FUN_CODE_cf39	dptr compute
+write	1	d677	d65e	FUN_CODE_d65e	dptr compute
+read	1	d83b	d7fc	FUN_CODE_d7fc	dptr compute
+read	1	defa	deef	FUN_CODE_deef	dptr compute
+write	1	defc	defc	FUN_CODE_defc	dptr from caller: 1 of 2 callers not constant
+read	1	e79f	e790	FUN_CODE_e790	dptr compute
+read	2	422c	4190	FUN_CODE_4190	dptr join
+read	2	4243	4190	FUN_CODE_4190	dptr join
+read	2	441b	4190	FUN_CODE_4190	dptr join
+read	2	6e1a	6e1a	FUN_CODE_6e1a	dptr from caller: 2 of 16 callers not constant
+read	2	6e1d	6e1a	FUN_CODE_6e1a	dptr from caller: 2 of 16 callers not constant
+read	2	6e20	6e1a	FUN_CODE_6e1a	dptr from caller: 2 of 16 callers not constant
+read	2	6e23	6e1a	FUN_CODE_6e1a	dptr from caller: 2 of 16 callers not constant
+read	2	6e31	6e31	FUN_CODE_6e31	dptr from caller: 24 different constants (indexed / loop over blocks)
+read	2	6e4a	6e4a	FUN_CODE_6e4a	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	2	6e4d	6e4a	FUN_CODE_6e4a	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	2	6e50	6e4a	FUN_CODE_6e4a	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	2	6e53	6e4a	FUN_CODE_6e4a	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	2	6e5b	6e5b	FUN_CODE_6e5b	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	2	6e5e	6e5b	FUN_CODE_6e5b	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	2	6e7b	6e7b	FUN_CODE_6e7b	dptr from caller: 1 of 18 callers not constant
+read	2	6e7e	6e7b	FUN_CODE_6e7b	dptr from caller: 1 of 18 callers not constant
+write	2	7004	7003	FUN_CODE_7003	dptr from caller: 1 of 4 callers not constant
+write	2	7007	7003	FUN_CODE_7003	dptr from caller: 1 of 4 callers not constant
+read	2	7539	7537	ScalerPLLSetDPLLFreqMN_frag_7537	dptr from caller: 2 of 3 callers not constant
+write	2	7e89	7e82	FUN_CODE_7e82	dword store via bank2:15da (dest from caller)
+write	2	8148	8148	FUN_CODE_8148	dptr from caller: 2 of 3 callers not constant
+write	2	89f1	89e4	FUN_CODE_89e4	dword store via bank2:15da (dest from caller)
+read	2	8dad	8dad	FUN_CODE_8dad	dptr from caller: 10 different constants (indexed / loop over blocks)
+read	2	8db0	8dad	FUN_CODE_8dad	dptr from caller: 10 different constants (indexed / loop over blocks)
+read	2	8dbb	8dbb	FUN_CODE_8dbb	dptr from caller: 1 of 26 callers not constant
+read	2	8dbe	8dbb	FUN_CODE_8dbb	dptr from caller: 1 of 26 callers not constant
+read	2	90dd	90db	FUN_CODE_90db	dptr from caller: 6 of 7 callers not constant
+read	2	9ba4	9ba4	FUN_CODE_9ba4	dptr from caller: 3 of 4 callers not constant
+read	2	9ba9	9ba4	FUN_CODE_9ba4	dptr from caller: 3 of 4 callers not constant
+write	2	a049	a043	ScalerDPLLFineTuneFrameSyncLineBuffer	dword store via bank2:15da (dest from caller)
+read	2	a283	a283	FUN_CODE_a283	dptr from caller: 1 of 33 callers not constant
+read	2	a286	a284	FUN_CODE_a284	dptr from caller: 1 of 2 callers not constant
+read	2	a289	a284	FUN_CODE_a284	dptr from caller: 1 of 2 callers not constant
+read	2	a28c	a284	FUN_CODE_a284	dptr from caller: 1 of 2 callers not constant
+read	2	af61	af5b	FUN_CODE_af5b	dptr compute
+read	2	afb5	afa3	FUN_CODE_afa3	dptr compute
+read	2	b02f	b027	FUN_CODE_b027	dptr compute
+read	2	b3a7	b3a7	FUN_CODE_b3a7	dptr from caller: 2 of 5 callers not constant
+read	2	b3aa	b3a7	FUN_CODE_b3a7	dptr from caller: 2 of 5 callers not constant
+read	2	b3ad	b3a7	FUN_CODE_b3a7	dptr from caller: 2 of 5 callers not constant
+read	2	b3b0	b3a7	FUN_CODE_b3a7	dptr from caller: 2 of 5 callers not constant
+write	2	c479	c46f	FUN_CODE_c46f	dword store via bank2:15da (dest from caller)
+read	2	c903	c903	FUN_CODE_c903	dptr from caller: 1 of 14 callers not constant
+read	2	c906	c903	FUN_CODE_c903	dptr from caller: 1 of 14 callers not constant
+read	2	d3b0	d339	ScalerMeasureUpdateInputTimingPolarity	dptr compute
+read	2	d3c5	d339	ScalerMeasureUpdateInputTimingPolarity	dptr compute
+write	2	d416	d339	ScalerMeasureUpdateInputTimingPolarity	dptr call
+write	2	d433	d339	ScalerMeasureUpdateInputTimingPolarity	dptr call
+write	2	ded7	de12	FUN_CODE_de12	dptr call
+read	2	f3eb	f3c0	ScalerSetDataPortBit	dptr compute
+read	2	f45a	f411	FUN_CODE_f411	dptr join
+write	2	f45d	f411	FUN_CODE_f411	dptr join
+write	2	f6f7	f6ee	FUN_CODE_f6ee	dword store via bank2:15da (dest from caller)
+read	2	fb80	fb76	FUN_CODE_fb76	dptr compute
+read	3	2602	7960	FUN_CODE_7960	dptr from caller: 1 of 1 callers not constant
+write	3	28db	28cb	FUN_CODE_28cb	dptr from caller: 2 of 2 callers not constant
+write	3	294b	294b	FUN_CODE_294b	dptr join
+read	3	2d1b	2d19	FUN_CODE_2d19	dptr from caller: 2 of 2 callers not constant
+write	3	2d1d	2d1c	FUN_CODE_2d1c	dptr from caller: 2 of 2 callers not constant
+read	3	2e9f	2e1b	FUN_CODE_2e1b	dptr from caller: 2 of 2 callers not constant
+write	3	2ff5	300d	FUN_CODE_300d	dptr call
+write	3	30c5	3071	FUN_CODE_3071	dptr join
+write	3	30c7	3071	FUN_CODE_3071	dptr join
+write	3	30e1	30d4	FUN_CODE_30d4	dptr from caller: 2 of 2 callers not constant
+write	3	3177	3174	FUN_CODE_3174	dptr join
+read	3	37c3	3726	FUN_CODE_3726	dptr call
+write	3	38c9	381a	FUN_CODE_381a	dptr join
+write	3	38cb	381a	FUN_CODE_381a	dptr join
+write	3	391b	3917	FUN_CODE_3917	dptr join
+write	3	3c01	3c17	FUN_CODE_3c17	dptr join
+read	3	3e45	3e3a	FUN_CODE_3e3a	dptr join
+read	3	407b	4068	FUN_CODE_4068	dptr call
+write	3	40cd	4089	FUN_CODE_4089	dptr join
+write	3	40cf	4089	FUN_CODE_4089	dptr join
+write	3	411f	411b	FUN_CODE_411b	dptr from caller: 1 of 1 callers not constant
+read	3	4209	4204	FUN_CODE_4204	dptr join
+write	3	47cb	4005	FUN_CODE_4005	dptr call
+read	3	4813	4005	FUN_CODE_4005	dptr call
+write	3	4815	4005	FUN_CODE_4005	dptr call
+write	3	48d3	48d2	FUN_CODE_48d2	dptr join
+write	3	4d73	4d1b	FUN_CODE_4d1b	dptr join
+write	3	4e0f	48e3	FUN_CODE_48e3	dptr join
+write	3	50d5	4f1a	FUN_CODE_4f1a	dptr call
+write	3	50d7	4f1a	FUN_CODE_4f1a	dptr call
+read	3	5311	5308	FUN_CODE_5308	dptr call
+write	3	5807	5805	FUN_CODE_5805	dptr join
+read	3	5861	581e	FUN_CODE_581e	dptr join
+read	3	58b1	589d	FUN_CODE_589d	dptr join
+write	3	58d9	58cf	FUN_CODE_58cf	dptr call
+write	3	58db	58cf	FUN_CODE_58cf	dptr call
+read	3	59f3	59e5	FUN_CODE_59e5	dptr join
+read	3	5a4f	5a30	FUN_CODE_5a30	dptr join
+read	3	5bfd	5c02	FUN_CODE_5c02	dptr call
+read	3	5dd3	5d1a	FUN_CODE_5d1a	dptr call
+read	3	5fc7	5f0c	FUN_CODE_5f0c	dptr not reached
+read	3	618d	6185	FUN_CODE_6185	dptr from caller: 2 of 2 callers not constant
+read	3	6631	6612	FUN_CODE_6612	dptr join
+write	3	68e1	68e0	FUN_CODE_68e0	dptr from caller: 1 of 1 callers not constant
+write	3	68e3	68a2	FUN_CODE_68a2	dptr from caller: 1 of 1 callers not constant
+write	3	70c3	70c0	FUN_CODE_70c0	dptr join
+write	3	70e5	70e3	FUN_CODE_70e3	dptr join
+write	3	70e7	70e3	FUN_CODE_70e3	dptr join
+read	3	71ad	719d	FUN_CODE_719d	dptr from caller: 1 of 1 callers not constant
+read	3	71ef	71e1	FUN_CODE_71e1	dptr from caller: 1 of 1 callers not constant
+write	3	71f1	71e1	FUN_CODE_71e1	dptr from caller: 1 of 1 callers not constant
+read	3	75f7	760f	FUN_CODE_760f	dptr join
+write	3	77eb	7807	FUN_CODE_7807	dptr from caller: 1 of 1 callers not constant
+write	3	78eb	782b	FUN_CODE_782b	dptr join
+read	3	7931	792b	FUN_CODE_792b	dptr from caller: 2 of 2 callers not constant
+write	3	7f51	7997	FUN_CODE_7997	dptr from caller: 1 of 2 callers not constant
+read	3	805f	800c	FUN_CODE_800c	dptr join
+read	3	84d7	8326	FUN_CODE_8326	dptr call
+write	3	84d9	8326	FUN_CODE_8326	dptr call
+read	3	8531	8528	FUN_CODE_8528	dptr from caller: 1 of 1 callers not constant
+read	3	86f5	8326	FUN_CODE_8326	dptr call
+write	3	8803	87ef	FUN_CODE_87ef	dptr join
+read	3	885b	87ef	FUN_CODE_87ef	dptr join
+write	3	88f1	8919	FUN_CODE_8919	dptr call
+write	3	88f3	8919	FUN_CODE_8919	dptr call
+write	3	8906	8919	FUN_CODE_8919	dptr call
+write	3	8909	8919	FUN_CODE_8919	dptr call
+read	3	8fac	8f38	FUN_CODE_8f38	dptr join
+write	3	9102	9075	FUN_CODE_9075	dptr join
+read	3	9174	9174	FUN_CODE_9174	dptr join
+read	3	91d8	91d2	FUN_CODE_91d2	dptr from caller: 2 of 2 callers not constant
+write	3	91e0	91dc	FUN_CODE_91dc	dptr from caller: 3 of 3 callers not constant
+write	3	926e	9212	FUN_CODE_9212	dptr from caller: 2 of 2 callers not constant
+write	3	9340	933f	FUN_CODE_933f	dptr from caller: 1 of 1 callers not constant
+write	3	9394	919e	FUN_CODE_919e	dptr join
+read	3	9456	943e	FUN_CODE_943e	dptr join
+write	3	9470	943e	FUN_CODE_943e	dptr join
+read	3	9540	953e	FUN_CODE_953e	dptr from caller: 1 of 1 callers not constant
+write	3	961e	961c	FUN_CODE_961c	dptr from caller: 1 of 1 callers not constant
+write	3	97ac	9713	FUN_CODE_9713	dptr join
+read	3	9884	98ba	FUN_CODE_98ba	dptr from caller: 1 of 1 callers not constant
+read	3	98c2	5939	FUN_CODE_5939	dptr call
+read	3	9942	5939	FUN_CODE_5939	dptr call
+write	3	9946	5939	FUN_CODE_5939	dptr call
+read	3	9a52	5939	FUN_CODE_5939	dptr call
+write	3	9b04	5939	FUN_CODE_5939	dptr call
+write	3	9b06	5939	FUN_CODE_5939	dptr call
+write	3	9fa6	9f17	FUN_CODE_9f17	dptr call
+write	3	9fd6	9f17	FUN_CODE_9f17	dptr call
+write	3	a246	a240	FUN_CODE_a240	dptr join
+write	3	a280	a240	FUN_CODE_a240	dptr join
+write	3	a39e	a120	FUN_CODE_a120	dptr call
+write	3	aa17	aa12	ScalerFlashWREN_at25sf321_page	dptr from caller: 2 of 2 callers not constant
+write	3	aaf3	aa12	ScalerFlashWREN_at25sf321_page	dptr not reached
+write	3	ac8a	ac12	FUN_CODE_ac12	dptr not reached
+write	3	aced	ac12	FUN_CODE_ac12	dptr not reached
+write	3	ad4b	ad02	FUN_CODE_ad02	dptr not reached
+write	3	ada9	ad02	FUN_CODE_ad02	dptr not reached
+write	3	b136	b112	FUN_CODE_b112	dptr not reached
+write	3	b271	b112	FUN_CODE_b112	dptr not reached
+write	3	b6bc	b6af	FUN_CODE_b6af	dptr not reached
+write	3	b860	b7ee	FUN_CODE_b7ee	dptr not reached
+write	3	baa2	b7ee	FUN_CODE_b7ee	dptr not reached
+write	3	bcc0	bc9f	FUN_CODE_bc9f	dptr not reached
+read	3	bdc2	bc9f	FUN_CODE_bc9f	dptr not reached
+read	3	bdda	bc9f	FUN_CODE_bc9f	dptr not reached
+write	3	be29	bc9f	FUN_CODE_bc9f	dptr not reached
+write	3	c143	c012	FUN_CODE_c012	dptr not reached
+read	3	c1dc	c177	UserCommonFlashSaveItem	dptr compute
+read	3	c1f3	c177	UserCommonFlashSaveItem	dptr compute
+read	3	c1f6	c177	UserCommonFlashSaveItem	dptr compute
+read	3	c2d9	c177	UserCommonFlashSaveItem	dptr compute
+read	3	c35e	c322	FUN_CODE_c322	dptr compute
+read	3	c361	c322	FUN_CODE_c322	dptr compute
+read	3	c3e9	c322	FUN_CODE_c322	dptr compute
+write	3	c416	c322	FUN_CODE_c322	dptr compute
+write	3	c419	c322	FUN_CODE_c322	dptr compute
+read	3	c43d	c322	FUN_CODE_c322	dptr compute
+read	3	c44e	c322	FUN_CODE_c322	dptr compute
+read	3	c487	c322	FUN_CODE_c322	dptr compute
+read	3	c498	c322	FUN_CODE_c322	dptr compute
+read	3	c4ed	c4df	RTDFlashMoveData	dptr call
+write	3	c586	c4df	RTDFlashMoveData	dptr call
+read	3	c5a2	c4df	RTDFlashMoveData	dptr call
+write	3	c71c	c4df	RTDFlashMoveData	dptr call
+write	3	c71f	c4df	RTDFlashMoveData	dptr call
+read	3	ce5c	cd09	FUN_CODE_cd09	dptr not reached
+read	3	cec8	cd09	FUN_CODE_cd09	dptr not reached
+write	3	cf70	cf70	FUN_CODE_cf70	dptr from caller: 1 of 2 callers not constant
+write	3	cf73	cf70	FUN_CODE_cf70	dptr from caller: 1 of 2 callers not constant
+read	3	cff1	cff1	FUN_CODE_cff1	dptr from caller: 1 of 2 callers not constant
+read	3	d038	d038	FUN_CODE_d038	dptr from caller: 1 of 2 callers not constant
+read	3	d12c	d12c	FUN_CODE_d12c	dptr from caller: 2 of 4 callers not constant
+read	3	d41b	d414	FUN_CODE_d414	dptr compute
+write	3	d681	d612	FUN_CODE_d612	dptr compute
+read	3	d72e	5975	FUN_CODE_5975	dptr compute
+write	3	da86	da12	ScalerFlashWRProtect	dptr not reached
+write	3	dab6	da12	ScalerFlashWRProtect	dptr not reached
+write	3	dace	da12	ScalerFlashWRProtect	dptr not reached
+write	3	db36	daf9	RTDFlashInitialAddr	dptr call
+write	3	dba8	daf9	RTDFlashInitialAddr	dptr call
+read	3	dbc2	daf9	RTDFlashInitialAddr	dptr call
+write	3	dc16	daf9	RTDFlashInitialAddr	dptr call
+read	3	dc35	daf9	RTDFlashInitialAddr	dptr call
+write	3	dc55	daf9	RTDFlashInitialAddr	dptr call
+write	3	dc58	daf9	RTDFlashInitialAddr	dptr call
+read	3	de38	ddb2	SysAudioAnalogAudioHandler	dptr compute
+read	3	e02d	e012	FUN_CODE_e012	dptr compute
+read	3	e044	e012	FUN_CODE_e012	dptr compute
+read	3	e047	e012	FUN_CODE_e012	dptr compute
+read	3	ec95	ec93	FUN_CODE_ec93	dptr from caller: 3 of 3 callers not constant
+write	3	eddd	edc1	RTDFlashInitialDataPage	dptr call
+write	3	ede3	edc1	RTDFlashInitialDataPage	dptr call
+write	3	ede5	edc1	RTDFlashInitialDataPage	dptr call
+read	3	edf9	edc1	RTDFlashInitialDataPage	dptr call
+read	3	f118	f0e1	RTDFlashGetFreePage	dptr call
+read	3	f212	f205	RTDFlashSearchPageAddr	dptr call
+write	4	2900	28d0	dprx1_phy_cdr_relock_nop_delay	dword store via bank4:15da (dest from caller)
+write	4	291d	28d0	dprx1_phy_cdr_relock_nop_delay	dword store via bank4:15da (dest from caller)
+read	4	2c56	28d0	dprx1_phy_cdr_relock_nop_delay	dptr not reached
+read	4	2c5b	28d0	dprx1_phy_cdr_relock_nop_delay	dptr not reached
+read	4	35ee	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	3632	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	3671	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	368b	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	36ad	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	3823	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	384f	3210	ScalerDpRx1PhyCTS	dptr call
+read	4	385b	3210	ScalerDpRx1PhyCTS	dptr call
+write	4	3866	3210	ScalerDpRx1PhyCTS	dptr call
+read	4	387c	3210	ScalerDpRx1PhyCTS	dptr call
+read	4	388f	3210	ScalerDpRx1PhyCTS	dptr call
+read	4	38a4	3210	ScalerDpRx1PhyCTS	dptr call
+read	4	38c2	3210	ScalerDpRx1PhyCTS	dptr compute
+write	4	38d3	3210	ScalerDpRx1PhyCTS	dptr compute
+read	4	39b8	39b1	FUN_CODE_39b1	dptr compute
+write	4	3fd7	3a5a	ScalerDpRx1RebuildPhy	dptr call
+write	4	3fda	3a5a	ScalerDpRx1RebuildPhy	dptr call
+read	4	50b0	50b0	FUN_CODE_50b0	dptr from caller: 2 of 24 callers not constant
+read	4	50b3	50b0	FUN_CODE_50b0	dptr from caller: 2 of 24 callers not constant
+read	4	50b6	50b0	FUN_CODE_50b0	dptr from caller: 2 of 24 callers not constant
+read	4	50b9	50b0	FUN_CODE_50b0	dptr from caller: 2 of 24 callers not constant
+write	4	5127	5127	FUN_CODE_5127	dptr from caller: 1 of 2 callers not constant
+read	4	5129	5127	FUN_CODE_5127	dptr from caller: 1 of 2 callers not constant
+read	4	5144	5144	FUN_CODE_5144	dptr from caller: 4 of 16 callers not constant
+write	4	518b	518b	FUN_CODE_518b	dptr from caller: 2 of 2 callers not constant
+read	4	519c	519c	FUN_CODE_519c	dptr from caller: 1 of 12 callers not constant
+read	4	519f	519c	FUN_CODE_519c	dptr from caller: 1 of 12 callers not constant
+read	4	51a2	519c	FUN_CODE_519c	dptr from caller: 1 of 12 callers not constant
+read	4	51a5	519c	FUN_CODE_519c	dptr from caller: 1 of 12 callers not constant
+read	4	51ba	51ba	FUN_CODE_51ba	dptr from caller: 2 of 9 callers not constant
+write	4	51bf	51ba	FUN_CODE_51ba	dptr from caller: 2 of 9 callers not constant
+write	4	5205	5205	FUN_CODE_5205	dptr from caller: 10 different constants (indexed / loop over blocks)
+read	4	5296	5296	FUN_CODE_5296	dptr from caller: 1 of 5 callers not constant
+write	4	529b	5296	FUN_CODE_5296	dptr from caller: 1 of 5 callers not constant
+read	4	52ae	52ae	FUN_CODE_52ae	dptr from caller: 2 of 2 callers not constant
+read	4	52de	52de	FUN_CODE_52de	dptr from caller: 3 of 3 callers not constant
+read	4	532c	532c	FUN_CODE_532c	dptr from caller: 1 of 2 callers not constant
+read	4	5352	5352	FUN_CODE_5352	dptr from caller: 1 of 6 callers not constant
+write	4	5357	5352	FUN_CODE_5352	dptr from caller: 1 of 6 callers not constant
+read	4	53a9	53a9	FUN_CODE_53a9	dptr from caller: 1 of 2 callers not constant
+read	4	53ac	53a9	FUN_CODE_53a9	dptr from caller: 1 of 2 callers not constant
+read	4	5450	5450	FUN_CODE_5450	dptr from caller: 4 of 4 callers not constant
+read	4	548c	548c	FUN_CODE_548c	dptr from caller: 2 of 2 callers not constant
+write	4	55c3	55b9	ScalerDpRx1DisplayFormatSetting	dword store via bank4:15da (dest from caller)
+read	4	66d9	66d9	FUN_CODE_66d9	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	4	6730	672e	FUN_CODE_672e	dptr compute
+read	4	6733	672e	FUN_CODE_672e	dptr compute
+read	4	68d8	68d6	FUN_CODE_68d6	dptr compute
+read	4	68db	68d6	FUN_CODE_68d6	dptr compute
+read	4	6ceb	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+read	4	6cf9	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	6d01	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	6d54	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	6d5d	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	6d84	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	6d8f	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr not reached
+read	4	6e52	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr compute
+read	4	6e88	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr compute
+read	4	6e95	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr compute
+write	4	6ea4	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr compute
+read	4	6efd	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr compute
+write	4	6f0b	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr compute
+read	4	6f1c	6b17	ScalerTMDSRx2Hdcp2IntHandler_EXINT0	dptr call
+write	4	6fcd	6fcb	FUN_CODE_6fcb	dptr from caller: 1 of 2 callers not constant
+write	4	6fd1	6fcb	FUN_CODE_6fcb	dptr from caller: 1 of 2 callers not constant
+read	4	71c8	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+read	4	71d6	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	71de	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	7231	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	723a	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	7261	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+write	4	726c	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr not reached
+read	4	732f	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr compute
+read	4	7365	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr compute
+read	4	7372	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr compute
+write	4	7381	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr compute
+read	4	73da	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr compute
+write	4	73e8	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr compute
+read	4	73f9	6ff4	ScalerTMDSRx3Hdcp2IntHandler_EXINT0	dptr call
+write	4	74aa	74a8	FUN_CODE_74a8	dptr from caller: 1 of 2 callers not constant
+write	4	74ae	74a8	FUN_CODE_74a8	dptr from caller: 1 of 2 callers not constant
+read	4	7ac7	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+write	4	7ad5	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+read	4	7ae6	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr call
+read	4	7b01	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+read	4	7b65	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr not reached
+read	4	7b73	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr not reached
+write	4	7b7b	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr not reached
+read	4	7cb4	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+read	4	7cd9	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+read	4	7ce0	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+write	4	7ce7	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr call
+read	4	7ceb	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr call
+read	4	7d05	79aa	ScalerDpRx1Hdcp2Handler_EXINT0	dptr compute
+write	4	8822	881f	FUN_CODE_881f	dptr compute
+write	4	8aa6	88d7	ScalerDpRx1Tp2SetPhy_EXINT0	dptr call
+write	4	8aa9	88d7	ScalerDpRx1Tp2SetPhy_EXINT0	dptr call
+read	4	8aae	88d7	ScalerDpRx1Tp2SetPhy_EXINT0	dptr call
+read	4	8ab1	88d7	ScalerDpRx1Tp2SetPhy_EXINT0	dptr call
+read	4	8d1e	8d13	FUN_CODE_8d13	dptr compute
+read	4	8d21	8d13	FUN_CODE_8d13	dptr compute
+read	4	8e0b	8e0b	FUN_CODE_8e0b	dptr from caller: 2 of 2 callers not constant
+read	4	8e0e	8e0b	FUN_CODE_8e0b	dptr from caller: 2 of 2 callers not constant
+write	4	90e1	90df	FUN_CODE_90df	dptr from caller: 4 of 5 callers not constant
+read	4	90e2	90df	FUN_CODE_90df	dptr from caller: 4 of 5 callers not constant
+write	4	90e5	90df	FUN_CODE_90df	dptr from caller: 4 of 5 callers not constant
+read	4	90e7	90df	FUN_CODE_90df	dptr from caller: 4 of 5 callers not constant
+read	4	95d5	95d5	FUN_CODE_95d5	dptr from caller: 2 of 10 callers not constant
+write	4	95da	95d5	FUN_CODE_95d5	dptr from caller: 2 of 10 callers not constant
+read	4	95ef	95ef	FUN_CODE_95ef	dptr from caller: 2 of 6 callers not constant
+write	4	95f4	95ef	FUN_CODE_95ef	dptr from caller: 2 of 6 callers not constant
+read	4	97b6	97b6	FUN_CODE_97b6	dptr from caller: 31 different constants (indexed / loop over blocks)
+read	4	97b9	97b6	FUN_CODE_97b6	dptr from caller: 31 different constants (indexed / loop over blocks)
+read	4	97bc	97b6	FUN_CODE_97b6	dptr from caller: 31 different constants (indexed / loop over blocks)
+write	4	9814	9811	FUN_CODE_9811	dptr compute
+write	4	981d	981c	FUN_CODE_981c	dptr from caller: 14 different constants (indexed / loop over blocks)
+write	4	9820	981c	FUN_CODE_981c	dptr from caller: 14 different constants (indexed / loop over blocks)
+write	4	9823	981c	FUN_CODE_981c	dptr from caller: 14 different constants (indexed / loop over blocks)
+read	4	9874	986a	FUN_CODE_986a	dptr compute
+write	4	98c8	98bf	FUN_CODE_98bf	dptr compute
+read	4	98ec	98ea	FUN_CODE_98ea	dptr compute
+write	4	98fb	98ea	FUN_CODE_98ea	dptr compute
+read	4	9903	9901	FUN_CODE_9901	dptr compute
+write	4	9912	9901	FUN_CODE_9901	dptr compute
+read	4	a2cc	a17c	FUN_CODE_a17c	dptr compute
+read	4	a397	a33c	SysSourceCableDetection	dptr call
+write	4	a39a	a33c	SysSourceCableDetection	dptr call
+read	4	a3f0	a33c	SysSourceCableDetection	dptr call
+write	4	a416	a33c	SysSourceCableDetection	dptr call
+read	4	a4db	a33c	SysSourceCableDetection	dptr call
+write	4	a4de	a33c	SysSourceCableDetection	dptr call
+read	4	acd1	aca4	FUN_CODE_aca4	dptr call
+read	4	ad0c	aca4	FUN_CODE_aca4	dptr call
+read	4	ad27	aca4	FUN_CODE_aca4	dptr call
+read	4	ad2f	aca4	FUN_CODE_aca4	dptr call
+write	4	ad33	aca4	FUN_CODE_aca4	dptr call
+read	4	ad38	aca4	FUN_CODE_aca4	dptr call
+read	4	ad40	aca4	FUN_CODE_aca4	dptr call
+write	4	ad44	aca4	FUN_CODE_aca4	dptr call
+read	4	ad51	aca4	FUN_CODE_aca4	dptr call
+write	4	ad55	aca4	FUN_CODE_aca4	dptr call
+write	4	ad64	aca4	FUN_CODE_aca4	dptr call
+read	4	ad69	aca4	FUN_CODE_aca4	dptr call
+read	4	ad77	aca4	FUN_CODE_aca4	dptr call
+read	4	ad7f	aca4	FUN_CODE_aca4	dptr call
+write	4	ad83	aca4	FUN_CODE_aca4	dptr call
+read	4	ad90	aca4	FUN_CODE_aca4	dptr call
+write	4	ad94	aca4	FUN_CODE_aca4	dptr call
+read	4	ad9d	aca4	FUN_CODE_aca4	dptr call
+write	4	ada1	aca4	FUN_CODE_aca4	dptr call
+read	4	adad	aca4	FUN_CODE_aca4	dptr call
+write	4	adb1	aca4	FUN_CODE_aca4	dptr call
+write	4	adc0	aca4	FUN_CODE_aca4	dptr call
+read	4	adcd	aca4	FUN_CODE_aca4	dptr call
+write	4	add1	aca4	FUN_CODE_aca4	dptr call
+read	4	adda	aca4	FUN_CODE_aca4	dptr call
+write	4	adde	aca4	FUN_CODE_aca4	dptr call
+write	4	adfb	aca4	FUN_CODE_aca4	dptr call
+write	4	ae03	aca4	FUN_CODE_aca4	dptr call
+write	4	ae1e	ae1e	FUN_CODE_ae1e	dptr from caller: 3 of 15 callers not constant
+write	4	ae22	ae1e	FUN_CODE_ae1e	dptr from caller: 3 of 15 callers not constant
+read	4	ae31	ae25	FUN_CODE_ae25	dptr compute
+write	4	ae3f	ae3c	FUN_CODE_ae3c	dptr compute
+read	4	ae51	ae45	FUN_CODE_ae45	dptr compute
+write	4	ae56	ae54	FUN_CODE_ae54	dptr from caller: 2 of 5 callers not constant
+write	4	ae5a	ae54	FUN_CODE_ae54	dptr from caller: 2 of 5 callers not constant
+read	4	aeae	aea3	FUN_CODE_aea3	dptr compute
+write	4	aeee	aeec	FUN_CODE_aeec	dptr from caller: 1 of 2 callers not constant
+write	4	aef2	aef1	FUN_CODE_aef1	dptr from caller: 1 of 2 callers not constant
+write	4	af12	af09	FUN_CODE_af09	dptr compute
+write	4	af43	af41	FUN_CODE_af41	dptr from caller: 1 of 3 callers not constant
+write	4	af4a	af48	FUN_CODE_af48	dptr from caller: 1 of 3 callers not constant
+read	4	af94	af73	FUN_CODE_af73	dptr compute
+read	4	af9e	af73	FUN_CODE_af73	dptr compute
+read	4	afc3	afb8	FUN_CODE_afb8	dptr compute
+read	4	afcf	afcf	FUN_CODE_afcf	dptr from caller: 5 of 5 callers not constant
+read	4	afea	afea	FUN_CODE_afea	dptr from caller: 2 of 3 callers not constant
+write	4	b019	b017	FUN_CODE_b017	dptr from caller: 1 of 2 callers not constant
+write	4	b01c	b017	FUN_CODE_b017	dptr from caller: 1 of 2 callers not constant
+read	4	b023	b023	FUN_CODE_b023	dptr from caller: 1 of 3 callers not constant
+read	4	b02a	b02a	FUN_CODE_b02a	dptr from caller: 4 of 4 callers not constant
+read	4	b03e	b03e	FUN_CODE_b03e	dptr from caller: 3 of 3 callers not constant
+read	4	b08b	b08b	FUN_CODE_b08b	dptr from caller: 2 of 2 callers not constant
+read	4	b09e	b09e	FUN_CODE_b09e	dptr from caller: 3 of 3 callers not constant
+read	4	b0ad	b0ad	FUN_CODE_b0ad	dptr from caller: 3 of 3 callers not constant
+write	4	b0b1	b0ad	FUN_CODE_b0ad	dptr from caller: 3 of 3 callers not constant
+read	4	b2c2	b212	FUN_CODE_b212	dptr call
+write	4	b2c5	b212	FUN_CODE_b212	dptr call
+read	4	b774	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr compute
+write	4	b77a	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+write	4	b781	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+read	4	b7b9	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr compute
+write	4	b7bf	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+write	4	b7c6	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+write	4	b7f1	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+write	4	b80a	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+write	4	b821	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr compute
+write	4	b833	b73f	ScalerDpRx1Hdcp2MPrimeCalculate_EXINT0	dptr call
+read	4	b8b2	b884	SysSourceSwitchPort	dptr call
+write	4	b8d2	b884	SysSourceSwitchPort	dptr call
+read	4	b8f8	b884	SysSourceSwitchPort	dptr call
+write	4	b95d	b884	SysSourceSwitchPort	dptr call
+read	4	b99b	b884	SysSourceSwitchPort	dptr call
+write	4	b9c1	b9b2	FUN_CODE_b9b2	dptr from caller: 2 of 2 callers not constant
+write	4	bfd5	bfd5	FUN_CODE_bfd5	dptr from caller: 3 of 8 callers not constant
+write	4	bfd9	bfd5	FUN_CODE_bfd5	dptr from caller: 3 of 8 callers not constant
+read	4	bfe8	bfe0	FUN_CODE_bfe0	dptr compute
+read	4	c008	bffd	FUN_CODE_bffd	dptr compute
+write	4	c017	c014	FUN_CODE_c014	dptr compute
+write	4	c01f	c01d	FUN_CODE_c01d	dptr from caller: 2 of 4 callers not constant
+write	4	c023	c01d	FUN_CODE_c01d	dptr from caller: 2 of 4 callers not constant
+write	4	c0ed	c0ed	FUN_CODE_c0ed	dptr from caller: 3 of 8 callers not constant
+write	4	c0f1	c0ed	FUN_CODE_c0ed	dptr from caller: 3 of 8 callers not constant
+read	4	c100	c0f8	FUN_CODE_c0f8	dptr compute
+read	4	c120	c115	FUN_CODE_c115	dptr compute
+write	4	c12f	c12c	FUN_CODE_c12c	dptr compute
+write	4	c137	c135	FUN_CODE_c135	dptr from caller: 2 of 4 callers not constant
+write	4	c13b	c135	FUN_CODE_c135	dptr from caller: 2 of 4 callers not constant
+write	4	c547	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c54e	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c555	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c55c	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c563	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c56a	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c571	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c578	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5ab	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5b2	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5b9	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5c0	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5c7	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5ce	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c5d5	c4fb	FUN_CODE_c4fb	dptr not reached
+write	4	c85e	c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	dptr call
+write	4	c861	c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	dptr call
+read	4	c866	c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	dptr call
+read	4	c869	c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	dptr call
+read	4	c874	c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	dptr call
+read	4	c877	c7de	ScalerDpRx1AdjustLaneFLDBand_EXINT0	dptr call
+read	4	caaa	ca92	SysSourceDetectPort	dptr call
+write	4	caaf	ca92	SysSourceDetectPort	dptr call
+write	4	caeb	ca92	SysSourceDetectPort	dptr call
+read	4	cb0f	ca92	SysSourceDetectPort	dptr call
+write	4	cb3e	ca92	SysSourceDetectPort	dptr call
+read	4	cb64	ca92	SysSourceDetectPort	dptr call
+write	4	cb68	ca92	SysSourceDetectPort	dptr call
+write	4	cc05	cb6a	ScalerHdcp2HPrimeCalculate_EXINT0	dptr compute
+write	4	cc26	cb6a	ScalerHdcp2HPrimeCalculate_EXINT0	dptr compute
+write	4	cc9d	cc40	ScalerDpRx1AdjustLaneFLDBand	dptr compute
+write	4	cca0	cc40	ScalerDpRx1AdjustLaneFLDBand	dptr compute
+read	4	ccaa	cc40	ScalerDpRx1AdjustLaneFLDBand	dptr compute
+read	4	ccad	cc40	ScalerDpRx1AdjustLaneFLDBand	dptr compute
+write	4	ce08	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr compute
+write	4	ce11	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr compute
+write	4	ce32	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr compute
+write	4	ce54	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr compute
+read	4	ce65	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr not reached
+write	4	ce7f	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr not reached
+write	4	ce88	cde4	ScalerHdcp2LPrimeCalculate_EXINT0	dptr compute
+write	4	d18f	d0f9	FUN_CODE_d0f9	dptr compute
+read	4	dbc9	db89	FUN_CODE_db89	dptr compute
+read	4	e004	dfee	SysSourceJudge	dptr call
+write	4	e01d	dfee	SysSourceJudge	dptr call
+read	4	e054	e054	FUN_CODE_e054	dptr from caller: 16 of 16 callers not constant
+write	4	e071	dfee	SysSourceJudge	dptr join
+read	4	e3ab	e386	SysSourceHandler	dptr call
+read	4	e641	e5ec	FUN_CODE_e5ec	dptr call
+write	4	e646	e5ec	FUN_CODE_e5ec	dptr call
+read	4	e64b	e5ec	FUN_CODE_e5ec	dptr call
+write	4	e64e	e5ec	FUN_CODE_e5ec	dptr call
+read	4	e653	e5ec	FUN_CODE_e5ec	dptr call
+write	4	e656	e5ec	FUN_CODE_e5ec	dptr call
+write	4	e65d	e5ec	FUN_CODE_e5ec	dptr call
+read	4	eae7	eac0	FUN_CODE_eac0	dptr compute
+read	4	ede9	ede9	FUN_CODE_ede9	dptr from caller: 11 different constants (indexed / loop over blocks)
+read	4	edec	ede9	FUN_CODE_ede9	dptr from caller: 11 different constants (indexed / loop over blocks)
+read	4	edef	edee	FUN_CODE_edee	dptr from caller: 11 different constants (indexed / loop over blocks)
+read	4	edf2	edee	FUN_CODE_edee	dptr from caller: 11 different constants (indexed / loop over blocks)
+read	4	f184	f17c	SysSourceScanPortInitial	dptr call
+write	4	f590	f565	FUN_CODE_f565	dptr compute
+read	4	f6c3	f6a6	FUN_CODE_f6a6	dptr compute
+write	4	f776	f75a	ScalerTMDSRx2Hdcp2RxRsaCalculate_EXINT0	dptr compute
+write	4	f7ad	f791	ScalerTMDSRx3Hdcp2RxRsaCalculate_EXINT0	dptr compute
+read	4	fa5f	fa5c	FUN_CODE_fa5c	dptr call
+read	4	fa73	fa5c	FUN_CODE_fa5c	dptr call
+read	4	fb86	fb7a	FUN_CODE_fb7a	dptr call
+write	4	fc58	fc45	FUN_CODE_fc45	dptr call
+read	4	fc74	fc6d	FUN_CODE_fc6d	dptr call
+read	4	fd42	fd39	FUN_CODE_fd39	dptr call
+read	4	fdad	fda6	FUN_CODE_fda6	dptr call
+read	4	fecb	fec8	FUN_CODE_fec8	dptr call
+write	5	30be	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	30fd	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	3146	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	3191	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	31ae	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	31cb	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	31e8	2ec2	FUN_CODE_2ec2	dptr not reached
+write	5	3202	2ec2	FUN_CODE_2ec2	dptr not reached
+read	5	3438	3437	FUN_CODE_3437	dptr from caller: 2 of 2 callers not constant
+read	5	343b	3437	FUN_CODE_3437	dptr from caller: 2 of 2 callers not constant
+read	5	35fc	35fb	FUN_CODE_35fb	dptr from caller: 2 of 2 callers not constant
+read	5	35ff	35fb	FUN_CODE_35fb	dptr from caller: 2 of 2 callers not constant
+read	5	58ec	56eb	FUN_CODE_56eb	dptr compute
+write	5	5919	56eb	FUN_CODE_56eb	dptr compute
+write	5	5925	56eb	FUN_CODE_56eb	dptr compute
+write	5	5930	56eb	FUN_CODE_56eb	dptr compute
+write	5	595e	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5962	56eb	FUN_CODE_56eb	dptr not reached
+read	5	598a	56eb	FUN_CODE_56eb	dptr compute
+write	5	59a7	56eb	FUN_CODE_56eb	dptr compute
+write	5	59b2	56eb	FUN_CODE_56eb	dptr compute
+read	5	5a26	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5a29	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5a58	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5a5b	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5a7f	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5a82	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5aa6	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5aa9	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5ae0	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5b94	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5b98	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5bb3	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5bb7	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5be0	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5be3	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5c04	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5c07	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c18	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c1b	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c41	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c44	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c48	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c4c	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c50	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5c6a	56eb	FUN_CODE_56eb	dptr not reached
+read	5	5c6d	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c7e	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5c81	56eb	FUN_CODE_56eb	dptr not reached
+write	5	5cbc	5c8d	FUN_CODE_5c8d	dptr not reached
+read	5	6262	6262	FUN_CODE_6262	dptr from caller: 15 different constants (indexed / loop over blocks)
+read	5	6350	6350	FUN_CODE_6350	dptr from caller: 9 different constants (indexed / loop over blocks)
+write	5	6355	6350	FUN_CODE_6350	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	5	6607	65fe	FUN_CODE_65fe	dptr compute
+read	5	66e1	66e1	FUN_CODE_66e1	dptr from caller: 15 different constants (indexed / loop over blocks)
+write	5	66e6	66e1	FUN_CODE_66e1	dptr from caller: 15 different constants (indexed / loop over blocks)
+read	5	67cf	67cf	FUN_CODE_67cf	dptr from caller: 9 different constants (indexed / loop over blocks)
+write	5	67d4	67cf	FUN_CODE_67cf	dptr from caller: 9 different constants (indexed / loop over blocks)
+read	5	6a88	6a7f	FUN_CODE_6a7f	dptr compute
+write	5	6c72	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6c88	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6c9e	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6cb4	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6cbd	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6cc8	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6cdf	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d11	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d19	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d1f	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d27	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d2f	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d37	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d8e	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6d91	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6da0	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6daa	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6dad	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	6de5	6b1a	ddcci_set_vcp_feature_handler	dptr not reached
+write	5	7689	7689	FUN_CODE_7689	dptr from caller: 1 of 2 callers not constant
+read	5	76a2	769c	FUN_CODE_769c	dptr call
+read	5	76a5	769c	FUN_CODE_769c	dptr call
+write	5	770a	76ee	FUN_CODE_76ee	dptr compute
+write	5	7722	7721	FUN_CODE_7721	dptr from caller: 1 of 3 callers not constant
+write	5	7724	7724	FUN_CODE_7724	dptr from caller: 1 of 2 callers not constant
+write	5	7726	7725	FUN_CODE_7725	dptr from caller: 2 of 2 callers not constant
+write	5	7728	7727	FUN_CODE_7727	dptr from caller: 1 of 2 callers not constant
+write	5	772a	7727	FUN_CODE_7727	dptr from caller: 1 of 2 callers not constant
+write	5	772c	7727	FUN_CODE_7727	dptr from caller: 1 of 2 callers not constant
+write	5	772e	7727	FUN_CODE_7727	dptr from caller: 1 of 2 callers not constant
+write	5	774b	774a	FUN_CODE_774a	dptr from caller: 1 of 2 callers not constant
+write	5	77d2	77d1	FUN_CODE_77d1	dptr from caller: 2 of 3 callers not constant
+write	5	77d6	77d1	FUN_CODE_77d1	dptr from caller: 2 of 3 callers not constant
+write	5	77da	77d1	FUN_CODE_77d1	dptr from caller: 2 of 3 callers not constant
+read	5	7820	781a	FUN_CODE_781a	dptr call
+read	5	7823	781a	FUN_CODE_781a	dptr call
+write	5	7921	791d	FUN_CODE_791d	dptr compute
+write	5	7958	7956	FUN_CODE_7956	dptr from caller: 2 of 2 callers not constant
+write	5	795c	795b	FUN_CODE_795b	dptr from caller: 1 of 2 callers not constant
+write	5	7965	7962	FUN_CODE_7962	dptr from caller: 1 of 3 callers not constant
+write	5	7967	7962	FUN_CODE_7962	dptr from caller: 1 of 3 callers not constant
+write	5	7969	7962	FUN_CODE_7962	dptr from caller: 1 of 3 callers not constant
+write	5	796f	796d	FUN_CODE_796d	dptr from caller: 2 of 2 callers not constant
+write	5	7973	796d	FUN_CODE_796d	dptr from caller: 2 of 2 callers not constant
+read	5	797c	7975	FUN_CODE_7975	dptr compute
+read	5	7985	797e	FUN_CODE_797e	dptr compute
+write	5	79b3	79b3	FUN_CODE_79b3	dptr from caller: 1 of 2 callers not constant
+write	5	79b7	79b3	FUN_CODE_79b3	dptr from caller: 1 of 2 callers not constant
+write	5	79cf	79cd	FUN_CODE_79cd	dptr from caller: 1 of 3 callers not constant
+write	5	79d3	79cd	FUN_CODE_79cd	dptr from caller: 1 of 3 callers not constant
+write	5	79fa	79f8	FUN_CODE_79f8	dptr from caller: 3 of 3 callers not constant
+write	5	79fd	79f8	FUN_CODE_79f8	dptr from caller: 3 of 3 callers not constant
+read	5	7a01	7a00	FUN_CODE_7a00	dptr from caller: 13 of 13 callers not constant
+read	5	7a04	7a00	FUN_CODE_7a00	dptr from caller: 13 of 13 callers not constant
+write	5	8469	830c	ddcci_get_vcp_feature_handler	dptr not reached
+read	5	8944	8944	FUN_CODE_8944	dptr from caller: 2 of 2 callers not constant
+read	5	8947	8944	FUN_CODE_8944	dptr from caller: 2 of 2 callers not constant
+read	5	8978	8978	FUN_CODE_8978	dptr from caller: 2 of 2 callers not constant
+read	5	897b	8978	FUN_CODE_8978	dptr from caller: 2 of 2 callers not constant
+read	5	89a4	89a4	FUN_CODE_89a4	dptr from caller: 2 of 2 callers not constant
+read	5	89a7	89a4	FUN_CODE_89a4	dptr from caller: 2 of 2 callers not constant
+read	5	89d5	89ca	FUN_CODE_89ca	dptr compute
+write	5	89ec	89eb	FUN_CODE_89eb	dptr from caller: 4 of 7 callers not constant
+write	5	89ef	89eb	FUN_CODE_89eb	dptr from caller: 4 of 7 callers not constant
+read	5	8b0a	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8b34	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8ba1	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8bb9	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8bbc	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8bd6	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8bd9	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8c44	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8c5c	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8c5f	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8c79	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8c7c	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8c8c	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+write	5	8c8f	8aa2	ScalerTimerWDActivateTimerEvent_WDINT	dptr call
+read	5	8d06	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8d30	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	8d9a	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	8daf	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	8db2	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8dcb	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8dce	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	8e36	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	8e4b	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	8e4e	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8e68	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8e6b	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8e7b	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+write	5	8e7e	8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	dptr call
+read	5	970d	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	9710	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	9723	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	9726	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	972a	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	972d	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	973d	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	9741	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	9751	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	9754	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	9758	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	9777	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	978a	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	978f	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	9792	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+write	5	97ac	9616	ScalerColorSetSRGBGlobalHueSat	dptr compute
+write	5	97ce	9616	ScalerColorSetSRGBGlobalHueSat	dptr call
+read	5	a407	a399	ScalerTimerWDEventProc_WDINT	dptr call
+read	5	a433	a399	ScalerTimerWDEventProc_WDINT	dptr call
+write	5	a447	a399	ScalerTimerWDEventProc_WDINT	dptr call
+write	5	a46a	a399	ScalerTimerWDEventProc_WDINT	dptr call
+write	5	a46d	a399	ScalerTimerWDEventProc_WDINT	dptr call
+write	5	a4d0	a399	ScalerTimerWDEventProc_WDINT	dptr call
+write	5	a4d3	a399	ScalerTimerWDEventProc_WDINT	dptr call
+read	5	a4d7	a399	ScalerTimerWDEventProc_WDINT	dptr call
+read	5	a4da	a399	ScalerTimerWDEventProc_WDINT	dptr call
+write	5	a918	a854	ScalerTMDSRx2FLDBandFineTune_EXINT0	dptr call
+write	5	a91b	a854	ScalerTMDSRx2FLDBandFineTune_EXINT0	dptr call
+read	5	a944	a854	ScalerTMDSRx2FLDBandFineTune_EXINT0	dptr call
+read	5	a947	a854	ScalerTMDSRx2FLDBandFineTune_EXINT0	dptr call
+write	5	a972	a854	ScalerTMDSRx2FLDBandFineTune_EXINT0	dptr compute
+write	5	aa9c	a9d8	ScalerTMDSRx3FLDBandFineTune_EXINT0	dptr call
+write	5	aa9f	a9d8	ScalerTMDSRx3FLDBandFineTune_EXINT0	dptr call
+read	5	aac8	a9d8	ScalerTMDSRx3FLDBandFineTune_EXINT0	dptr call
+read	5	aacb	a9d8	ScalerTMDSRx3FLDBandFineTune_EXINT0	dptr call
+write	5	aaf6	a9d8	ScalerTMDSRx3FLDBandFineTune_EXINT0	dptr compute
+read	5	b10c	b10c	FUN_CODE_b10c	dptr from caller: 10 different constants (indexed / loop over blocks)
+read	5	b10f	b10c	FUN_CODE_b10c	dptr from caller: 10 different constants (indexed / loop over blocks)
+write	5	b52e	b52e	FUN_CODE_b52e	dptr from caller: 2 of 2 callers not constant
+read	5	b5e4	b5e4	FUN_CODE_b5e4	dptr from caller: 1 of 4 callers not constant
+read	5	b5e7	b5e4	FUN_CODE_b5e4	dptr from caller: 1 of 4 callers not constant
+write	5	c07c	c043	FUN_CODE_c043	dptr not reached
+write	5	c080	c043	FUN_CODE_c043	dptr not reached
+write	5	c084	c043	FUN_CODE_c043	dptr not reached
+write	5	c088	c043	FUN_CODE_c043	dptr not reached
+write	5	c09e	c043	FUN_CODE_c043	dptr not reached
+write	5	c0a2	c043	FUN_CODE_c043	dptr not reached
+write	5	c0a4	c043	FUN_CODE_c043	dptr not reached
+write	5	c0a7	c043	FUN_CODE_c043	dptr not reached
+write	5	c0c3	c043	FUN_CODE_c043	dptr not reached
+write	5	c0d5	c043	FUN_CODE_c043	dptr not reached
+read	5	c810	c79c	ScalerTimerCheckTimerEvent	dptr call
+read	5	c826	c79c	ScalerTimerCheckTimerEvent	dptr call
+read	5	c829	c79c	ScalerTimerCheckTimerEvent	dptr call
+read	5	c83c	c79c	ScalerTimerCheckTimerEvent	dptr not reached
+read	5	c848	c79c	ScalerTimerCheckTimerEvent	dptr not reached
+write	5	c84e	c79c	ScalerTimerCheckTimerEvent	dptr not reached
+write	5	c851	c79c	ScalerTimerCheckTimerEvent	dptr not reached
+write	5	c85b	c79c	ScalerTimerCheckTimerEvent	dptr call
+write	5	c85d	c79c	ScalerTimerCheckTimerEvent	dptr call
+write	5	d1d9	d178	ScalerMcuDdcciSwitchPort	dptr not reached
+write	5	d1e0	d178	ScalerMcuDdcciSwitchPort	dptr not reached
+write	5	d1e9	d178	ScalerMcuDdcciSwitchPort	dptr not reached
+write	5	d1f0	d178	ScalerMcuDdcciSwitchPort	dptr not reached
+write	5	d1f7	d178	ScalerMcuDdcciSwitchPort	dptr not reached
+read	5	d6be	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+write	5	d6c1	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+read	5	d6cd	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+write	5	d6d0	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+read	5	d6ff	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+write	5	d702	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+read	5	d70e	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+write	5	d711	d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	dptr join
+read	5	d728	d715	ScalerTimerReactiveTimerEvent	dptr call
+read	5	d75a	d715	ScalerTimerReactiveTimerEvent	dptr call
+write	5	d771	d715	ScalerTimerReactiveTimerEvent	dptr call
+write	5	d78e	d715	ScalerTimerReactiveTimerEvent	dptr call
+write	5	d791	d715	ScalerTimerReactiveTimerEvent	dptr call
+read	5	d943	d930	ScalerTimerActiveTimerEvent	dptr call
+read	5	d971	d930	ScalerTimerActiveTimerEvent	dptr call
+write	5	d988	d930	ScalerTimerActiveTimerEvent	dptr call
+write	5	d9a5	d930	ScalerTimerActiveTimerEvent	dptr call
+write	5	d9a8	d930	ScalerTimerActiveTimerEvent	dptr call
+read	5	d9e2	d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	dptr join
+read	5	d9f1	d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	dptr join
+read	5	da22	d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	dptr join
+write	5	da25	d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	dptr join
+read	5	da31	d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	dptr join
+write	5	da34	d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	dptr join
+read	5	daa6	daa6	FUN_CODE_daa6	dptr from caller: 2 of 3 callers not constant
+write	5	daab	daa6	FUN_CODE_daa6	dptr from caller: 2 of 3 callers not constant
+read	5	dc4b	dc24	FUN_CODE_dc24	dptr call
+read	5	e1e6	e1e6	FUN_CODE_e1e6	dptr from caller: 2 of 3 callers not constant
+read	5	e1f8	e1f8	FUN_CODE_e1f8	dptr from caller: 2 of 3 callers not constant
+write	5	e1fb	e1f8	FUN_CODE_e1f8	dptr from caller: 2 of 3 callers not constant
+read	5	e209	e209	FUN_CODE_e209	dptr from caller: 2 of 4 callers not constant
+write	5	e20c	e209	FUN_CODE_e209	dptr from caller: 2 of 4 callers not constant
+read	5	e211	e211	FUN_CODE_e211	dptr from caller: 2 of 4 callers not constant
+write	5	e214	e211	FUN_CODE_e211	dptr from caller: 2 of 4 callers not constant
+read	5	e4c3	e49f	ScalerTimerPollingFlagProc	dptr compute
+write	5	efc7	efbf	FUN_CODE_efbf	dptr compute
+read	5	f502	f4f5	FUN_CODE_f4f5	dptr call
+write	5	f519	f4f5	FUN_CODE_f4f5	dptr call
+read	5	f533	f526	FUN_CODE_f526	dptr call
+write	5	f54a	f526	FUN_CODE_f526	dptr call
+read	5	f8c6	f8aa	ddcci_reply_checksum	dptr compute
+read	5	f8d5	f8cf	FUN_CODE_f8cf	dptr call
+write	5	f8eb	f8cf	FUN_CODE_f8cf	dptr call
+read	5	fa22	fa17	FUN_CODE_fa17	dptr call
+write	5	fa2b	fa17	FUN_CODE_fa17	dptr call
+read	5	fa5a	fa54	FUN_CODE_fa54	dptr call
+read	5	fb4b	fb45	FUN_CODE_fb45	dptr call
+write	5	fb54	fb45	FUN_CODE_fb45	dptr call
+read	5	fbe2	fbdf	FUN_CODE_fbdf	dptr call
+write	5	fd1d	fd17	FUN_CODE_fd17	dptr call
+read	5	fe4e	fe4a	FUN_CODE_fe4a	dptr call
+read	5	fe51	fe4a	FUN_CODE_fe4a	dptr call
+write	5	fed1	fecd	FUN_CODE_fecd	dptr call
+read	5	fed6	fed3	FUN_CODE_fed3	dptr call
+write	6	3924	3922	FUN_CODE_3922	dptr from caller: 3 of 4 callers not constant
+write	6	392e	392c	FUN_CODE_392c	dptr from caller: 3 of 4 callers not constant
+read	6	3d5f	3c8c	FUN_CODE_3c8c	dptr join
+write	6	4bf3	4bf2	FUN_CODE_4bf2	dptr from caller: 23 different constants (indexed / loop over blocks)
+write	6	4bf6	4bf2	FUN_CODE_4bf2	dptr from caller: 23 different constants (indexed / loop over blocks)
+write	6	52bc	52ba	FUN_CODE_52ba	dptr from caller: 1 of 2 callers not constant
+write	6	52bf	52ba	FUN_CODE_52ba	dptr from caller: 1 of 2 callers not constant
+read	6	5c96	5c96	FUN_CODE_5c96	dptr from caller: 1 of 2 callers not constant
+read	6	5c99	5c96	FUN_CODE_5c96	dptr from caller: 1 of 2 callers not constant
+read	6	5c9c	5c96	FUN_CODE_5c96	dptr from caller: 1 of 2 callers not constant
+read	6	5c9f	5c96	FUN_CODE_5c96	dptr from caller: 1 of 2 callers not constant
+read	6	63ce	63be	FUN_CODE_63be	dptr compute
+read	6	68bd	68bd	FUN_CODE_68bd	dptr from caller: 1 of 2 callers not constant
+read	6	68c0	68bd	FUN_CODE_68bd	dptr from caller: 1 of 2 callers not constant
