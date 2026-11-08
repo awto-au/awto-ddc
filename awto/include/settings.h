@@ -50,9 +50,10 @@ uint8_t  set_page_entry(uint8_t page, uint8_t k);        /* 0x80 | page = sub-pa
 #define SET_SAVE_MS    2000u     /* NVRAM write after the last change (derived: one save per slider drag) */
 
 int16_t set_get(uint8_t id);
-/* clamp to [min, max] on step, store, apply (SF_LIVE or apply_now), queue the NVRAM save (SF_NV). 1 = accepted.
+/* clamp to [min, max] (step = menu increment, not enforced), store, apply (SF_LIVE or apply_now), queue the NVRAM save (SF_NV). 1 = accepted.
  * A SF_RISKY row keeps its old value as the revert target until set_confirm() or SET_CONFIRM_MS. */
 uint8_t set_put(uint8_t id, int16_t v, uint8_t apply_now);
+void    set_track(uint8_t id, int16_t v);    /* the firmware changed it (input after any switch path): store, no apply, no save */
 void    set_confirm(void);               /* keep the pending SF_RISKY value */
 void    set_revert(void);                /* restore it now */
 uint8_t set_in_boot(void);               /* 1 while set_boot applies the stored values (apply functions skip switches) */

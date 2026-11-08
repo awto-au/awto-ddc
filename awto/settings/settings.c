@@ -24,14 +24,12 @@ static uint8_t st_load(uint8_t id)
     return i;
 }
 
-static int16_t st_clampv(int16_t v)
+static int16_t st_clampv(int16_t v)                /* step = the menu's increment only: a host may set any value in range */
 {
     if (v < row.min)
         v = row.min;
     if (v > row.max)
         v = row.max;
-    if (row.step > 1)
-        v = row.min + (int16_t)((v - row.min) / row.step) * row.step;
     return v;
 }
 
@@ -108,6 +106,14 @@ uint8_t set_put(uint8_t id, int16_t v, uint8_t apply_now)
         st_apply(i);
     st_touch();
     return 1;
+}
+
+void set_track(uint8_t id, int16_t v)
+{
+    uint8_t i = st_load(id);
+
+    if (i != 0xFF)
+        val[i] = st_clampv(v);
 }
 
 void set_confirm(void)
