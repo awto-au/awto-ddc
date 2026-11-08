@@ -888,7 +888,6 @@ fn	_AwtoSwNow	C	0x2fdc	32
 stub	_AwtoSwPoll	C	0x2ffc	8
 stub	_SysMainSystemInitial	C	0x3004	8
 stub	_SysMainSytemPowerDetect	C	0x300c	8
-fn	_main	C	0x3014	180
 stub	_SysModeDisplaySetting	C	0x30c8	8
 stub	_SysModeGetActiveReady	C	0x30d0	8
 fn	_SysModeGetModeState	C	0x30d8	12
@@ -979,6 +978,10 @@ fn	_ScalerGetDataPortByte	C	0x3654	72
 fn	_ScalerGetDataPortWord	C	0x369c	20
 fn	_ScalerRead	C	0x36b0	44
 fn	_ScalerWrite	C	0x36dc	44
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1269	C	0x3708	92
+stub	_AwtoDeadPortPoll	C	0x3764	8
+stub	_AwtoPortCable	C	0x376c	8
+fn	_main	C	0x3774	204
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tSD_SU_COEF_128_TAPS	0	0x0010	136
 const	_tAwtoDdcCaps	0	0x0098	96
@@ -1218,7 +1221,6 @@ const	_tLUTGAMMA_18_TABLE	1	0x000c	6352
 const	_tLUTGAMMA_20_TABLE	1	0x18dc	6352
 const	_tLUTGAMMA_22_TABLE	1	0x31ac	6352
 const	_tLUTGAMMA_24_TABLE	1	0x4a7c	6352
-fn	_AwtoInputSelect	1	0x634c	112
 fn	_AwtoKeyNextInput	1	0x63bc	152
 fn	_AwtoPortCable	1	0x6454	52
 fn	_MenuAdvanceODGainAdjust	1	0x6488	428
@@ -1268,6 +1270,7 @@ fn	_UserCommonAdjustRealValueToPercent	1	0xa428	460
 fn	_set_apply_call	1	0xa5f4	224
 fn	_set_action	1	0xa6d4	48
 fn	_set_in_boot	1	0xa704	12
+fn	_AwtoInputSelect	1	0xa710	152
 const	_g_stOSDDefaultData	2	0x0000	28
 const	_g_stSixColorDefaultData	2	0x001c	16
 const	_tBriConDefaultData	2	0x002c	24
@@ -1436,7 +1439,6 @@ fn	_nv_write_slot	2	0xa560	452
 const	_tFONT1_GLOBAL	3	0x0000	756
 const	_tICON_REALTEK_1BIT_LOGO0	3	0x02f4	1232
 const	_tICON_REALTEK_1BIT_LOGO1	3	0x07c4	1164
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1268	3	0x0c50	92
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	3	0x0cac	108
 const	_tFACTORY_PAGE_SELECT_ITEM_TABLE	3	0x0d18	192
 fn	_ScalerOsdBurstWriteDataPort	3	0x0dd8	56
@@ -2315,7 +2317,6 @@ fn	_SysMainSytemPowerDetect	9	0x82a4	8
 fn	_osd_font_load	9	0x82ac	104
 fn	_menu_active	9	0x8314	12
 fn	_menu_close	9	0x8320	60
-fn	_menu_cmd	9	0x835c	540
 fn	_menu_forget	9	0x8578	12
 fn	_menu_key	9	0x8584	16
 fn	_menu_open	9	0x8594	60
@@ -2381,6 +2382,8 @@ fn	_st_touch	9	0xa240	36
 fn	_vcp_box_service	9	0xa264	252
 fn	_vcp_get	9	0xa360	716
 fn	_vcp_set	9	0xa62c	260
+fn	_AwtoDeadPortPoll	9	0xa730	116
+fn	_menu_cmd	9	0xa7a4	624
 const	_tSD_H_COEF_128_TAPS	10	0x0000	136
 const	_tSD_V_COEF_64_TAPS	10	0x0088	72
 const	_tOSD_TABLE_LANGUAGE_FONT_WIDTH	10	0x00d0	12

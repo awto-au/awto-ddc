@@ -1,11 +1,22 @@
 // #60 KVM: one input-select entry (test cmds 0x31..0x33, DDC/CI VCP 0x60) + DDC/CI 0x37 on the spare IIC engines, polled
 // from the main loop (no IRQ: the SDK EXINT1 ISR only serves the main engine, which stays in debug mode 0x35).
 // Recipe: SDK ScalerMcuDdcciIntGetData_EXINT1 / ScalerMcuDdcciSendData on the IIC_n copy of FF22..FF2B. Inserted into RTD2014Ddcci.c.
+static bit AwtoPortCable(BYTE ucPort)
+{
+    return (ucPort == _D1_INPUT_PORT) ? GET_D1_CABLE_STATUS() : (ucPort == _D2_INPUT_PORT) ? GET_D2_CABLE_STATUS() :
+           GET_D3_CABLE_STATUS();
+}
+
 void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy = test cmd or 0x60 (logged)
 {
     if((ucPort != _D1_INPUT_PORT) && (ucPort != _D2_INPUT_PORT) && (ucPort != _D3_INPUT_PORT))
     {
         return;                                 // SDK VCP 0x60 table: VGA / DVI / DP2 have no port on this board
+    }
+    if(((ucWhy == 0x60) || (ucWhy == 0x4B)) && (AwtoPortCable(ucPort) == _FALSE))
+    {
+        AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: key / VCP to a port with no cable = fixed-port dead end; test cmds still go
+        return;
     }
     if((ucWhy == 0x60) && (ucPort == SysSourceGetInputPort()) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
@@ -27,10 +38,23 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     }
 }
 
-static bit AwtoPortCable(BYTE ucPort)
+void AwtoDeadPortPoll(void)                     // #84: fixed port, no cable on it, no signal, another port cabled: auto search
 {
-    return (ucPort == _D1_INPUT_PORT) ? GET_D1_CABLE_STATUS() : (ucPort == _D2_INPUT_PORT) ? GET_D2_CABLE_STATUS() :
-           GET_D3_CABLE_STATUS();
+    BYTE ucCur = SysSourceGetInputPort();
+
+    if((SysSourceGetScanType() != _SOURCE_SWITCH_FIXED_PORT) ||
+       ((SysModeGetModeState() != _MODE_STATUS_NOSIGNAL) && (SysModeGetModeState() != _MODE_STATUS_POWER_SAVING)) ||
+       (AwtoPortCable(ucCur) == _TRUE) ||
+       (((ucCur == _D1_INPUT_PORT) || (GET_D1_CABLE_STATUS() == _FALSE)) &&
+        ((ucCur == _D2_INPUT_PORT) || (GET_D2_CABLE_STATUS() == _FALSE)) &&
+        ((ucCur == _D3_INPUT_PORT) || (GET_D3_CABLE_STATUS() == _FALSE))))
+    {
+        return;
+    }
+    AwtoSwEvent(AWTO_SW_EV_DEADPORT, 3);
+    SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
+    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+    SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
 }
 
 void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu): next of D1 -> D2 -> D3 after the current
@@ -55,7 +79,12 @@ void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu)
             ucCable = ucP;
         }
     }
-    AwtoInputSelect((ucCable != _NO_INPUT_PORT) ? ucCable : ((ucCur >= _D3_INPUT_PORT) ? _D1_INPUT_PORT : (ucCur + 1)), 0x4B);
+    if(ucCable == _NO_INPUT_PORT)
+    {
+        AwtoSwEvent(AWTO_SW_EV_DEADPORT, 2);    // #84: single-cable unit, nowhere to go (was: the plain next port, no way back)
+        return;
+    }
+    AwtoInputSelect(ucCable, 0x4B);
 }
 
 #if(_AWTO_DBG_SWAP == _ON)

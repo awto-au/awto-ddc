@@ -490,6 +490,12 @@ extern void AwtoPanelVddEarly(void);
 #define AWTO_TMDS_HPD_MAX                                       2
 #define AWTO_TMDS_HPD_LOW_MS                                    110     // HDMI 1.4b: a source reads HPD low >= 100 ms as unplug
 #define AWTO_SW_EV_HPD_RECOVER                                  0xB0    // arg = port pulsed
+// #84 dead-port guard (fw/sdcc/awto_ddcci.inc): arg 1 = key / VCP 0x60 to a port with no cable refused, 2 = key: no other
+// cabled port, 3 = fixed port without cable in NOSIGNAL / PS while another port is cabled -> auto search, normal, SEARCH
+#define AWTO_SW_EV_DEADPORT                                     0xB8
+extern void AwtoDeadPortPoll(void);
+#define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
+                                                                     (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF
 #if((_AWTO_TMDS_HPD_RECOVER == _ON) && (_AWTO_SW_LOG == _ON))
 extern void AwtoTmdsStuck(void);
 #define AWTO_TMDS_STUCK()                                       AwtoTmdsStuck()
@@ -569,9 +575,9 @@ extern void AwtoWakePoll(void);
 #define AWTO_WAKE_POLL()
 #endif
 #if(_AWTO_SW_MARKS == _ON)
-#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); }    // also runs the post-unblank flag watch
+#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); }    // also runs the post-unblank flag watch
 #else
-#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); }
+#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); }
 #endif
 #define AWTO_FAST_SCALER_BYTES                                  48      // >= sizeof(StAwtoFastScaler), checked at compile time
 extern void AwtoFastScalerSave(unsigned char __xdata *pucBuf);
@@ -583,7 +589,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #else
 #define AwtoSwCacheStore()
 #define AwtoSwFastPoll()
-#define AWTO_SW_FAST_POLL()
+#define AWTO_SW_FAST_POLL()                                     AWTO_DEAD_PORT_POLL()
 #define AWTO_FAST_JUDGE_HOLD()                                  _FALSE
 #define AWTO_WAKE_HOLD()                                        _FALSE
 #undef _AWTO_WAKE_HOLD
