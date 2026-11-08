@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Restore Dan's desktop layout (scripts/desk_layout.json) for the monitors that are present; 'off' connectors stay off (#78).
 
-usage: desk_layout.py show | restore [--dry-run] | check | store | watch | save
+usage: desk_layout.py show | restore [--dry-run] | check | store | watch | save | mirror <off-conn> <host-conn> | unmirror
 - Why: with one monitor missing (unit 2 dark) mutter rejects its stored configuration, falls back to a row, turns DP-1
   back on, and unit 3 auto-searches onto DP. `gdctl set --persistent` alone did not stop it.
 - restore: each row (same y) keeps its order; a missing monitor's slot is closed by shifting the ones right of it left
   (mutter refuses gaps). A monitor in another row keeps its x, clamped to touch the row below. Primary = first present
-  in "primary". Modes from the file. One `gdctl set --persistent` call.
+  in "primary". Modes from the file. One `gdctl set` call, TEMPORARY (ApplyMonitorsConfig method 1): a persistent apply
+  pops GNOME's "Keep these display settings?" dialog and reverts in 20 s unanswered (Dan 2026-11-08). Persistence = `store`.
 - store: also written by restore. ~/.config/monitors.xml entry for the connected set (incl. 'off' connectors as
   <disabled>) replaced by this layout; old file copied to tmp/monitors.xml.<stamp>. Why: `gdctl set --persistent` left the
   file untouched (mtime 2026-11-07) and a stale entry for this set (DP-1 at 2560x1600@59.987, a mode our EDID dropped) made
@@ -18,6 +19,9 @@ usage: desk_layout.py show | restore [--dry-run] | check | store | watch | save
   2026-11-08) makes mutter rebuild a default row with DP-1 on, and it keeps that row after the wake.
 - watch only undoes mutter's fallback (one row at y 0, or an 'off' connector on): a layout Dan arranges himself is left
   alone; `save` writes the live layout into the json.
+- mirror / unmirror: test-mode flag (tmp/desk_layout_mirror.json). While set, an 'off' connector sharing its host's
+  logical monitor (same position) is an allowed state for watch / check / restore, not mutter's fallback.
+  `dev.py mode --unit 2 --dp mirror|off` sets / clears it around the gdctl call (#60, #83 two-input tests).
 - dev.py calls restore after flash / reset / power-cycle / recover (unit reboots re-plug a monitor).
 Log: ./tmp/logs/desk_layout.log
 """
@@ -167,9 +171,33 @@ def gdctl_args(want: list[dict], prim: str | None) -> list[str]:
     return a
 
 
+MIRROR = REPO / "tmp/desk_layout_mirror.json"
+
+
+def mirrors() -> dict[str, str]:
+    """Test-mode mirrors {off connector: host connector}; empty when the flag file is absent."""
+    try:
+        return json.loads(MIRROR.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def strip_mirrors(pos: dict[str, tuple[int, int]]) -> dict[str, tuple[int, int]]:
+    """pos without flagged mirror connectors that sit in their host's logical monitor."""
+    mir = mirrors()
+    return {c: p for c, p in pos.items() if not (c in mir and pos.get(mir[c]) == p)}
+
+
+def same_layout(pos: dict[str, tuple[int, int]], prim_now: str | None, want: list[dict], prim: str | None) -> bool:
+    pos = strip_mirrors(pos)
+    return (prim_now == prim and set(pos) == {m["connector"] for m in want}
+            and all(pos.get(m["connector"]) == (m["x"], m["y"]) for m in want))
+
+
 def fallback(pos: dict[str, tuple[int, int]]) -> bool:
     """mutter's fallback: every monitor in one row at y 0 (its default), or an 'off' connector on the desktop."""
     off = json.loads(CFG.read_text())["off"]
+    pos = strip_mirrors(pos)
     return any(c in pos for c in off) or (len(pos) > 1 and all(y == 0 for _x, y in pos.values()))
 
 
@@ -200,29 +228,39 @@ def watch() -> int:
             continue
         mons, pos, prim_now = live()
         want, prim = plan(mons)
-        if prim_now == prim and set(pos) == {m["connector"] for m in want} and \
-                all(pos.get(m["connector"]) == (m["x"], m["y"]) for m in want):
+        if same_layout(pos, prim_now, want, prim):
             continue
         if not fallback(pos):
             log(f"watch: layout differs but is not mutter's fallback ({pos}): Dan's own change, left alone")
             continue
-        r2 = subprocess.run(["gdctl", "set", "--persistent", *gdctl_args(want, prim)], capture_output=True, text=True,
+        r2 = subprocess.run(["gdctl", "set", *gdctl_args(want, prim)], capture_output=True, text=True,
                             timeout=SET_S, check=False)
-        log(f"watch: layout differed ({pos}, primary {prim_now}); restore rc={r2.returncode} "
+        log(f"watch: layout differed ({pos}, primary {prim_now}); restore (temporary apply) rc={r2.returncode} "
             + ", ".join(f"{m['connector']}@{m['x']},{m['y']}" for m in want))
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("action", choices=["show", "restore", "check", "store", "watch", "save"])
+    ap.add_argument("action", choices=["show", "restore", "check", "store", "watch", "save", "mirror", "unmirror"])
+    ap.add_argument("conns", nargs="*", help="mirror: <off connector> <host connector>, e.g. DP-1 HDMI-2")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
     if a.action == "watch":
         return watch()
+    if a.action == "mirror":
+        off = json.loads(CFG.read_text())["off"]
+        if len(a.conns) != 2 or a.conns[0] not in off:
+            ap.error(f"mirror: <off connector> <host connector>; off connectors: {off}")
+        MIRROR.write_text(json.dumps({**mirrors(), a.conns[0]: a.conns[1]}) + "\n")
+        log(f"mirror: {a.conns[0]} allowed in {a.conns[1]}'s logical monitor (test mode, {MIRROR.name})")
+        return 0
+    if a.action == "unmirror":
+        MIRROR.unlink(missing_ok=True)
+        log("unmirror: test-mode mirrors cleared")
+        return 0
     mons, pos, prim_now = live()
     want, prim = plan(mons)
-    same = (prim_now == prim and set(pos) == {m["connector"] for m in want}
-            and all(pos.get(m["connector"]) == (m["x"], m["y"]) for m in want))
+    same = same_layout(pos, prim_now, want, prim)
     desc = ", ".join(f"{m['connector']}@{m['x']},{m['y']}" for m in want) + f"; primary {prim}"
     if a.action == "show":
         log(f"connected {mons}; live {pos} primary {prim_now}; want {desc}; {'same' if same else 'DIFFERS'}")
@@ -247,12 +285,12 @@ def main() -> int:
         log(store(want, prim, mons))
         return 0
     if a.action == "check":
-        log(f"layout {'OK' if same else 'DIFFERS'}: live {pos} primary {prim_now}; want {desc}")
+        log(f"layout {'OK' if same else 'DIFFERS'}{' (mirrors ' + str(mirrors()) + ')' if mirrors() else ''}: live {pos} primary {prim_now}; want {desc}")
         return 0 if same else 1
     if same:
         log(f"restore: already {desc}; " + store(want, prim, mons))
         return 0
-    cmd = ["gdctl", "set", "--persistent", *gdctl_args(want, prim)]
+    cmd = ["gdctl", "set", *gdctl_args(want, prim)]
     if a.dry_run:
         log("restore (dry run): " + " ".join(cmd))
         return 0
@@ -261,7 +299,7 @@ def main() -> int:
     except subprocess.TimeoutExpired:
         log(f"restore: gdctl set timed out after {SET_S} s; layout left as mutter has it")
         return 1
-    log(f"restore rc={r.returncode}: {desc} (was {pos}, primary {prim_now}) {r.stderr.strip()[:200]}")
+    log(f"restore (temporary apply) rc={r.returncode}: {desc} (was {pos}, primary {prim_now}) {r.stderr.strip()[:200]}")
     if r.returncode == 0:
         log(store(want, prim, mons))
     return r.returncode

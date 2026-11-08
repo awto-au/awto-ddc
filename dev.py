@@ -1066,9 +1066,16 @@ def cmd_mode(extra: list[str]) -> int:
     n, u = _unit(extra)
     if u.get("input") == "DP" and len(extra) == 1 and extra[0] in ("mirror", "off"):
         show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S).stdout
-        args = _dp_mirror_args(show, {**u, "_n": n}, extra[0] == "mirror")
-        log("run: gdctl set " + " ".join(args))
-        return subprocess.call(["gdctl", "set", "--persistent", *args], timeout=GDCTL_SET_S)
+        on = extra[0] == "mirror"
+        args = _dp_mirror_args(show, {**u, "_n": n}, on)
+        if on:                                        # layout watcher: the mirror is allowed, not mutter's fallback
+            _py("desk_layout.py", "mirror", u["gdctl"], _units()[n]["gdctl"])
+            _layout_watch()
+        log("run: gdctl set (temporary, no keep-changes dialog) " + " ".join(args))
+        rc = subprocess.call(["gdctl", "set", *args], timeout=GDCTL_SET_S)
+        if not on and rc == 0:
+            _py("desk_layout.py", "unmirror")
+        return rc
     if len(extra) != 1 or extra[0] not in MODES:
         log(f"mode: one of {', '.join(MODES)}", "ERROR")
         return 2
@@ -1083,7 +1090,7 @@ def cmd_mode(extra: list[str]) -> int:
     args = gdctl_set_args(show.stdout, u["gdctl"], MODES[extra[0]])
     log("run: gdctl set " + " ".join(args))
     try:
-        return subprocess.call(["gdctl", "set", "--persistent", *args], timeout=GDCTL_SET_S)
+        return subprocess.call(["gdctl", "set", *args], timeout=GDCTL_SET_S)
     except subprocess.TimeoutExpired:
         log(f"mode: gdctl set timed out after {GDCTL_SET_S} s", "ERROR")
         return 1
