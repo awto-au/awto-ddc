@@ -58,6 +58,7 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 - Headless tool host: `scripts/rtd_headless/` — C host for the ISP plugin's version reads (see `docs/rtdtool-headless-feasibility.md`).
 
 ## Docs
+- `docs/osd.md` — OSD system overview (layers, fonts, inputs, tools, open work); start here for anything OSD.
 - `docs/firmware-proposal.md` — technical OSD design notes.
 - `docs/history.md` — superseded, refuted or wrong claims, one line each.
 - `docs/edid-fix.md` — the EDID rebuild (identity/size/conformance), patch plan, flash procedure + revert.
