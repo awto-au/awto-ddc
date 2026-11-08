@@ -25,6 +25,11 @@ def dev(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "LOG", tmp_path / "tmp" / "logs" / "dev.log")
     import json
     real = json.loads((REPO / "scripts/devices.json").read_text())["units"]
+    # Offline fixtures must not depend on which real screen is currently the test unit.
+    real = {n: {**u, "test": True} for n, u in real.items()}
+    real["3"].update(connector="card1-HDMI-A-2", gdctl="HDMI-2",
+                     connector_dp="card1-DP-1", gdctl_dp="DP-1")
+    monkeypatch.setattr(m, "_layout_watch", lambda: None)
     monkeypatch.setattr(m, "_units", lambda: real)
     yield m
     sys.modules.pop("dev_under_test", None)
@@ -48,6 +53,9 @@ def test_clean_keeps_images_state_regs_logs(dev, tmp_path):
 # --- #52.9 power_cycle honours the relay name --------------------------------
 
 def _run_power_cycle(monkeypatch, tmp_path, argv):
+    # The relay driver lives in another checkout; all power operations below are faked.
+    from types import SimpleNamespace
+    monkeypatch.setitem(sys.modules, "_power", SimpleNamespace(power_set_verified=lambda *a, **kw: None))
     spec = importlib.util.spec_from_file_location("pc_under_test", REPO / "scripts" / "power_cycle.py")
     pc = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(pc)
@@ -77,7 +85,7 @@ def test_power_cycle_known_relay_cycles(monkeypatch, tmp_path):
 def test_dev_passes_unit_relay(dev, monkeypatch):
     seen = []
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append((script, a)) or 0)
-    assert dev.cmd_power_cycle(["--unit", "3", "--off"]) == 0
+    assert dev.cmd_power_cycle(["--unit", "2", "--off"]) == 0
     assert seen == [("power_cycle.py", ("--relay", "so-th-1", "--off"))]
 
 
@@ -170,6 +178,7 @@ def _flash_main(monkeypatch, tmp_path, extra, require):
     def no_rtd(bus):
         opened.append(bus)
         raise AssertionError("ISP session opened")
+    monkeypatch.setattr(I.dbg_link, "flash_guard", lambda bus: __import__("contextlib").nullcontext())
     monkeypatch.setattr(I, "Rtd", no_rtd)
     return I, opened
 
@@ -538,3 +547,4 @@ def test_dev_diag_safe_trace_refuse_extra_args(dev, monkeypatch, fn, args):
     monkeypatch.setattr(dev, "_diag", lambda *a, **k: pytest.fail("bus touched"))
     with pytest.raises(SystemExit):
         getattr(dev, fn)(["--unit", "3", *args])
+

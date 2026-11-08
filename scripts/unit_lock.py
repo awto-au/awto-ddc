@@ -35,9 +35,16 @@ SESSION_COMM = ("claude", "node")
 
 
 def log(s: str) -> None:
-    (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    with (ROOT / "tmp/logs/unit_lock.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+    try:
+        (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
+        with (ROOT / "tmp/logs/unit_lock.log").open("a") as f:
+            f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+    except OSError as error:
+        # In particular, ENOSPC after a verified flash must not mask its result.
+        try:
+            print(f"WARNING: unit lock log unavailable: {error}", file=sys.stderr)
+        except (OSError, ValueError):
+            pass
 
 
 def alive(pid: int) -> bool:
@@ -169,3 +176,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

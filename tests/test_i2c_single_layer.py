@@ -6,6 +6,7 @@ i2c-dev ioctl numbers/names. Comments and docstrings are ignored (AST, not grep)
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,13 +24,21 @@ def sources():
 def violations(path: Path) -> list[str]:
     src = path.read_text()
     out = []
-    for n in ast.walk(ast.parse(src)):
+    tree = ast.parse(src)
+    # The debug/ISP interlock uses flock, never ioctl. Keep all other bus
+    # checks active for that module, including any future fcntl.ioctl call.
+    lock_only = path == ROOT / "scripts" / "dbg_link.py"
+    for n in ast.walk(tree):
         if isinstance(n, ast.Import) and any(a.name == "fcntl" for a in n.names):
-            out.append(f"{n.lineno}: import fcntl")
+            if not lock_only:
+                out.append(f"{n.lineno}: import fcntl")
         elif isinstance(n, ast.ImportFrom) and n.module == "fcntl":
             out.append(f"{n.lineno}: from fcntl import")
-        elif isinstance(n, ast.Name) and n.id in NAMES:
+        elif isinstance(n, ast.Name) and n.id in NAMES and not (lock_only and n.id == "fcntl"):
             out.append(f"{n.lineno}: {n.id}")
+        elif lock_only and isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == "fcntl" \
+                and n.attr not in {"flock", "LOCK_EX", "LOCK_NB", "LOCK_UN"}:
+            out.append(f"{n.lineno}: fcntl.{n.attr} is not a file lock")
         elif isinstance(n, ast.Attribute) and n.attr in NAMES - {"fcntl"}:
             out.append(f"{n.lineno}: .{n.attr}")
         elif isinstance(n, ast.Constant) and isinstance(n.value, int) and not isinstance(n.value, bool) \
@@ -50,3 +59,14 @@ def test_detector_catches_a_violation(tmp_path):
     p = tmp_path / "bad.py"
     p.write_text("import os, fcntl\nfd = os.open('/dev/i2c-3', os.O_RDWR)\nfcntl.ioctl(fd, 0x0707, 0)\n")
     assert len(violations(p)) >= 3
+
+
+def test_debug_interlock_exception_allows_only_file_locking(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    p = tmp_path / "scripts/dbg_link.py"
+    p.parent.mkdir()
+    p.write_text("import fcntl\nfcntl.flock(1, fcntl.LOCK_EX | fcntl.LOCK_NB)\n")
+    assert violations(p) == []
+    p.write_text(p.read_text() + "fcntl.ioctl(1, 0x0707, 0)\n")
+    assert violations(p)
+
