@@ -12,6 +12,7 @@ Status: built, simulated, **never run on hardware** (wb-p14audio1). Hardware pla
 ## Pins, jack
 - Output used: the **headphone out**, pins 109 AUDIO_HOUTL / 110 AUDIO_HOUTR (the Dahua firmware powers only hpout, section 3). 116/117 AUDIO_SOUTL/R (speaker/line out, aout) stay powered down; 115 AUDIO_REF. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`. Live on unit 3 all in audio mode (0x03). [hw]
 - That equals the SDK reference value (`ref` column), so it does not prove a jack. 113/114 LINE_INL/INR are GPIO inputs live (reference: line_in): line-in pins were deliberately switched away in the board config. [hw] [?: whether 109/110/116/117 reach a connector or an amp is unknown; look at the board / trace the pins]
+- Dan's observation (#3, #22): no speakers and no audio jack on the units; the Dahua datasheet lists 2 W x2 speakers, so parts may be unfitted. Until a connector or amp is found, the EDID audio blocks make the PC offer a sink that goes nowhere (the reason they were removed 2026-11-04). [?]
 - No amp-mute GPIO: no unlisted pin toggles with mute in the Dahua firmware (`docs/reversing/dahua-fw/register-audit.md`). `PCB_AMP_MUTE(x)` = no-op in our board header. [fw]
 - The SDK demo board uses P3.5 (pin 91) as AMP_MUTE; our pin 91 is DPTX_AUX_P (P3D5 output, live 0x01). Not the same function. [hw]
 
