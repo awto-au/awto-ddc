@@ -131,18 +131,7 @@ void AwtoDiagTestCmd(void)
 #endif
     else if((ucCmd >= 0x31) && (ucCmd <= 0x33))      // #60 switch to D1/D2/D3, fixed port, as VCP 0x60 (RTD2014Ddcci.c)
     {
-        AwtoSwArm(_D0_INPUT_PORT + (ucCmd - 0x30));
-        AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);
-        SET_FORCE_POW_SAV_STATUS(_FALSE);
-        SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-#if(_AWTO_FAST_SWITCH == _ON)
-        if(AwtoSwFast(_D0_INPUT_PORT + (ucCmd - 0x30)) == _FALSE)
-#endif
-        {
-            SysSourceSwitchInputPort(_D0_INPUT_PORT + (ucCmd - 0x30));
-            AwtoSwEvent(AWTO_SW_EV_PROBE, 6);
-            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-        }
+        AwtoInputSelect(_D0_INPUT_PORT + (ucCmd - 0x30), ucCmd);     // fw/sdcc/awto_ddcci.inc, shared with VCP 0x60
     }
     else if((ucCmd == 0x22) || (ucCmd == 0x23))      // #56: on-screen message log on / off
     {
@@ -163,6 +152,10 @@ void AwtoDiagTestCmd(void)
         set_defaults();
     }
 #endif
+    else if(ucCmd == 0x34)                              // #78 arm the switch log only (wake / power-level timing)
+    {
+        AwtoSwArm(SysSourceGetInputPort());
+    }
     else if(ucCmd == 0x30)                              // #60 back to auto search in group (NVRAM default), no switch
     {
         AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);

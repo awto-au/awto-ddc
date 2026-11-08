@@ -92,6 +92,8 @@
 #define AWTO_SET_AUDIO_STANDALONE     90
 #define AWTO_SET_AUDIO_SOURCE         91
 #define AWTO_SET_FACTORY_RESET        4
+#define AWTO_SET_COLOUR_RESET         102
+#define AWTO_SET_POWER_MODE           103
 #define AWTO_SET_FACTORY_MENU         92
 #define AWTO_SET_VENDOR_MENU          93
 #define AWTO_SET_INFO_INPUT           95

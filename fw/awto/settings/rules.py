@@ -1,8 +1,9 @@
 # settings (#67): the registry, our menu, DDC/CI VCP and the NVRAM record (awto-rtdfw awto/settings, awto/nvram).
-# Glue (SDK side): glue.inc (RTD2014Osd.c), glue_ddcci.inc (RTD2014Ddcci.c), glue_key.inc (RTD2014Key.c); ids: fw/overlay/Project/Header/AwtoSetIds.h
+# Glue (SDK side): glue.inc (RTD2014Osd.c), glue_key.inc (RTD2014Key.c); ids: fw/overlay/Project/Header/AwtoSetIds.h
 # (scripts/settings_gen.py), included by RL6449_Project.h (with the hook prototypes). Glue goes at the end of
 # each file and every hook is one line, so SDK line numbers (fw/warn_policy.tsv keys) move as little as possible.
-# Overlay readers use AWTO_SET(NAME) under #ifdef _AWTO_NEW_SETTINGS: panel T1-T6 (AWTO_LTM270FL01.h), T3 own pattern,
+# DDC/CI: the #60 spare-engine 0x37 handler (fw/sdcc/awto_ddcci.inc) calls the registry (AwtoDdcRegistry); the SDK
+# DDC/CI handler stays off. Overlay readers use AWTO_SET(NAME) under #ifdef _AWTO_NEW_SETTINGS: panel T1-T6 (AWTO_LTM270FL01.h), T3 own pattern,
 # DDC/CI / debug link, keep idle inputs (RL6449_Project.h), fast switch (fw/sdcc/awto_fastsw.inc).
 import os
 from pathlib import Path
@@ -26,7 +27,6 @@ if (_CLEAN / "awto" / "settings").is_dir():
          "        if(AwtoMenuKeyHook() == _TRUE) { return; }", r"^void RTDOsdSystemFlowProc\(void\)$"),
         (OSD + "RTD2014OsdDisplay.c", r"^\s*SET_OSD_IN_FACTORY_MENU_STATUS\(_FALSE\);",
          "    AwtoMenuForget();", r"^void OsdDispDisableOsd\(void\)$"),
-        (OSD + "RTD2014Ddcci.c", r"^#endif // End of #if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", _txt("glue_ddcci.inc")),
         (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", _txt("glue_key.inc")),
         ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);",
          "            AWTO_SET_LOOP();"),       # inline time check: no banked call on most passes
@@ -43,9 +43,4 @@ if (_CLEAN / "awto" / "settings").is_dir():
          lambda m: "ScalerTimerActiveTimerEvent((AWTO_SET(LOGO) != 0) ? AWTO_SET(LOGO_MS) : 0, _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);  // [keil2sdcc] sub", 1),
         (OSD + "RTD2014Osd.c", r"(\n\s*)OsdDispShowLogo\(\);",
          lambda m: m.group(1) + "if(AWTO_SET(LOGO) != 0) { OsdDispShowLogo(); }  // [keil2sdcc] sub", 1),
-        (OSD + "RTD2014Ddcci.c", r"(void RTDDdcciGetVCPFeature\(void\)\n\{.*?)\n    switch\(g_pucDdcciRxBuf\[_DDCCI_SOURCE_OPCODE\]\)",
-         lambda m: m.group(1) + "\n    if(AwtoVcpGetHook() == _FALSE)  // [keil2sdcc] sub\n    switch(g_pucDdcciRxBuf[_DDCCI_SOURCE_OPCODE])", 1),
-        (OSD + "RTD2014Ddcci.c", r"    if\(RTDDdcciSetVCPFeatureCheck\(\) == _FAIL\)",
-         lambda m: "    if(AwtoVcpSetHook() == _TRUE)  // [keil2sdcc] sub\n    {\n        UserCommonDdcciInitTx();\n    }\n"
-                   "    else if(RTDDdcciSetVCPFeatureCheck() == _FAIL)", 1),
     ]

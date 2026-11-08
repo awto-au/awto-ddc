@@ -333,25 +333,33 @@ void set_ap_input_mode(BYTE ucId, int iV)
     SysSourceSetScanType((iV != 0) ? _SOURCE_SWITCH_FIXED_PORT : _SOURCE_SWITCH_AUTO_IN_GROUP);
 }
 
-void set_ap_input_select(BYTE ucId, int iV)        // as test command 0x31..0x33 / VCP 0x60: fixed port, fast path first
+void set_ap_input_select(BYTE ucId, int iV)        // the KVM entry (#60 AwtoInputSelect): fixed port, fast path first
 {
-    BYTE ucPort = _D1_INPUT_PORT + (BYTE)iV;
-
     ucId = ucId;
-    if((set_in_boot() == _TRUE) || (ucPort == SysSourceGetInputPort()))
+    if(set_in_boot() == _TRUE)
     {
-        return;                                     // boot: the search owns the port; same port: nothing to do
+        return;                                     // boot: the search owns the port
     }
     set_put(AWTO_SET_INPUT_MODE, 1, 0);
-    AwtoSwArm(ucPort);
-    SET_FORCE_POW_SAV_STATUS(_FALSE);
-    SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-#if(_AWTO_FAST_SWITCH == _ON)
-    if(AwtoSwFast(ucPort) == _FALSE)
-#endif
+    AwtoInputSelect(_D1_INPUT_PORT + (BYTE)iV, 0x60);
+}
+
+void set_ap_power_mode(BYTE ucId, int iV)          // MCCS 0xD6: on, or any off state -> power saving (L1..L3 owner: #78)
+{
+    ucId = ucId;
+    if(set_in_boot() == _TRUE)
     {
-        SysSourceSwitchInputPort(ucPort);
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+        return;
+    }
+    if(iV == 0)
+    {
+        SET_FORCE_POW_SAV_STATUS(_FALSE);
+        SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+    }
+    else
+    {
+        SET_FORCE_POW_SAV_STATUS(_TRUE);
+        SysPowerSetTargetPowerStatus(_POWER_STATUS_SAVING);
     }
 }
 
@@ -516,7 +524,7 @@ void set_ap_power(BYTE ucId, int iV)               // placeholder store (see StA
 void AwtoSetInit(void)                             // UserInterfaceInitial, after RTDNVRamStartup: values for boot readers
 {
     set_load();
-    g_ucAwtoDdcciOn = (set_get(AWTO_SET_DEBUG_LINK) == 0) && (set_get(AWTO_SET_DDCCI) != 0);
+    g_ucAwtoDdcciOn = (set_get(AWTO_SET_DDCCI) != 0);             // spare-engine DDC/CI 0x37 (#60); debug 0x35 stays
     g_ucAwtoKeepIdle = (set_get(AWTO_SET_KEEP_IDLE_RX) != 0);
 }
 

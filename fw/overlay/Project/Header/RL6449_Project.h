@@ -34,8 +34,6 @@ extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
 extern void AwtoMenuForget(void);
 extern bit AwtoMenuKeyHook(void);
-extern bit AwtoVcpGetHook(void);
-extern bit AwtoVcpSetHook(void);
 extern __xdata unsigned char g_ucAwtoKeyHold;
 extern unsigned char AwtoKeyHold(void);
 #define AWTO_KEY_HOLD()                                         ((g_ucAwtoKeyHold != 0) ? AwtoKeyHold() : 0)
@@ -143,7 +141,9 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC data FIFO fill, as the SDK 0xBB reply
 // Debug slave 0x35 on the DDC of the active port, not fixed _PCB_DEBUG_DDC (#28): D1 -> DDC1 (DP AUX), D2 -> DDC2, D3 -> DDC3.
 // SCL hold/release of the debug protocol follow FF22 (fw/sdcc/awto_dbgport.inc, keil2sdcc SUBS).
+#ifndef _AWTO_DBG_FOLLOW
 #define _AWTO_DBG_FOLLOW                                        _ON
+#endif
 #if(_AWTO_DBG_FOLLOW == _ON)
 #define AWTO_DBG_SCL(op)                                        do { BYTE ucAwtoCh = MCU_FF22_IIC_CH_SEL & 0x07; \
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
@@ -230,16 +230,55 @@ extern void AwtoFreqUpdate(void);
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON
-#ifdef _AWTO_NEW_SETTINGS                                       // #67: Debug link / DDC/CI rows, fixed at boot (ISR reads it)
-extern __xdata unsigned char g_ucAwtoDdcciOn;
-#define GET_OSD_DDCCI_STATUS()                                  (g_ucAwtoDdcciOn)
-#elif(_AWTO_DEBUG_PORT == _ON)
+// #60 KVM: DDC/CI 0x37 on the spare IIC engines, polled (fw/sdcc/awto_ddcci.inc); 0 = off, 1 = IIC_1 following the active
+// port, 3 = IIC_1..3 fixed on DDC1/2/3 (every host can switch). The main engine then never enters DDC/CI mode (both would ACK 0x6E)
+#ifndef _AWTO_DDCCI_PARK
+#define _AWTO_DDCCI_PARK                                        0       // bisect (kvm1 dead on unit 3): 1 = IIC_1 polled but parked on channel 7 (no DDC)
+#endif
+#ifndef _AWTO_DDCCI_FIXCH
+#define _AWTO_DDCCI_FIXCH                                       0       // bisect: IIC_1 fixed on this DDC channel (2 = DDC1 / D1 DP AUX), no follow
+#endif
+#ifndef _AWTO_DDCCI_NOPOLL
+#define _AWTO_DDCCI_NOPOLL                                      0
+#endif
+#ifndef _AWTO_DDCCI_ENGINES
+#define _AWTO_DDCCI_ENGINES                                     1
+#endif
+#define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
+extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
+#if(_AWTO_DDCCI_ENGINES != 0)
+extern void AwtoDdcciPoll(void);
+#if(_AWTO_DDCCI_NOPOLL == 1)
+#define AWTO_DDCCI_POLL()                                       // bisect: engine code linked, never called
+#define AWTO_DDCCI_FOLLOW(ch)
+#elif(_AWTO_DDCCI_ENGINES == 3)
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } }
+#define AWTO_DDCCI_FOLLOW(ch)
+#else
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } }
+#if((_AWTO_DDCCI_PARK == 1) || (_AWTO_DDCCI_FIXCH != 0))
+#define AWTO_DDCCI_FOLLOW(ch)
+#else
+#define AWTO_DDCCI_FOLLOW(ch)                                   { AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | (ch); }
+#endif
+#endif
+#else
+#define AWTO_DDCCI_POLL()
+#define AWTO_DDCCI_FOLLOW(ch)
+#endif
+#if((_AWTO_DEBUG_PORT == _ON) || (_AWTO_DDCCI_ENGINES != 0))
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
+#endif
+#if(defined(_AWTO_NEW_SETTINGS) && (_AWTO_DDCCI_ENGINES != 0))   // #67 DDC/CI row: the spare-engine 0x37 path on/off, fixed at boot
+extern __xdata unsigned char g_ucAwtoDdcciOn;
+#define AWTO_DDCCI_POLL_ON()                                    (g_ucAwtoDdcciOn != 0)
+#else
+#define AWTO_DDCCI_POLL_ON()                                    (1)
 #endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
 #define _AWTO_SW_LOG                                            _ON
 #if(_AWTO_SW_LOG == _ON)
-#define AWTO_SW_EVENTS                                          40
+#define AWTO_SW_EVENTS                                          64      // #78: a wake logs ~45; repeats of the last event are dropped
 #define AWTO_SW_EV_MODE                                         0x01    // arg = new g_stModeInfo mode state
 #define AWTO_SW_EV_POWER                                        0x10    // arg = UserCommonInterfacePanelPowerAction event
 #define AWTO_SW_EV_T3                                           0x20    // arg 0 = T3 wait start, 1 = end
@@ -367,6 +406,24 @@ extern void AwtoPanelVddEarly(void);
 #endif
 // #60 step 3: _OFF = the SDK never pulses HDMI HPD low on a switch / timing change (host saw 2 drm uevents per switch to D2)
 #define _AWTO_HDMI_HPD_TOGGLE                                   _OFF
+// #78: _ON = TMDS Initial keeps the SCDC module (host-written 1/40 ratio, scrambling) after a no-signal power-off; the
+// HPD-low IRQ still clears it (SDK). With no HPD pulse the host never rewrites SCDC: DPMS wake searched forever
+#ifndef _AWTO_SCDC_KEEP
+#define _AWTO_SCDC_KEEP                                         _ON
+#endif
+// #78: _ON = AWTO_TMDS_STUCK_N "source unstable" judges in a row on HDMI = one HPD pulse (host re-links, rewrites SCDC);
+// at most AWTO_TMDS_HPD_MAX per episode. Case: chip reset (flash, watchdog) under a live 4K60 link, no host hot-plug seen
+#define _AWTO_TMDS_HPD_RECOVER                                  _ON
+#define AWTO_TMDS_STUCK_N                                       3       // one search round ~180 ms: pulse ~0.55 s into a stuck link
+#define AWTO_TMDS_HPD_MAX                                       2
+#define AWTO_TMDS_HPD_LOW_MS                                    110     // HDMI 1.4b: a source reads HPD low >= 100 ms as unplug
+#define AWTO_SW_EV_HPD_RECOVER                                  0xB0    // arg = port pulsed
+#if((_AWTO_TMDS_HPD_RECOVER == _ON) && (_AWTO_SW_LOG == _ON))
+extern void AwtoTmdsStuck(void);
+#define AWTO_TMDS_STUCK()                                       AwtoTmdsStuck()
+#else
+#define AWTO_TMDS_STUCK()
+#endif
 // #60: _ON = ScalerSyncInterfaceSwitch leaves the other ports powered (PHY, Z0, TMDS MAC): the idle receiver stays locked
 #ifndef _AWTO_KEEP_IDLE_RX
 #define _AWTO_KEEP_IDLE_RX                                      _ON
