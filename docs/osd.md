@@ -2,16 +2,27 @@
 
 Overview only; each fact lives in the linked doc. Tracking: awto-ddc#1 (index), #67 (menu), #86, #87, #85, #39.
 
+## Naming
+Never write bare "vendor": say which one.
+
+| name | what | where it runs |
+|---|---|---|
+| **Dahua firmware** | the monitor's original factory firmware (Dahua/JXC). Known only by RE of the flash dump: buttons, boot logo, fonts | units as shipped; dump in `~/vendors/realtek/analysis/dumps/` |
+| **Realtek SDK menu** | Realtek's RTD2014 demo OSD (9-icon menu, pop-ups) from the SDK source, compiled into our images | our images ("Vendor menu" on the System page until #87) |
+| **awto menu** | our registry menu (#67) | our images (MENU key default) |
+
+- Legacy tag `[vendor-ui]` in `awto-rtdfw/settings/registry.tsv` = Realtek SDK menu fact (rename pending, #87).
+
 ## 1. Layers
 ### Hardware (RL6449 / RTD2795T)
 - OSD SRAM (12288 x 24 bit words), row / char command layout, windows, palette, x2 scale: [reversing/realtek-rtd/osd.md](reversing/realtek-rtd/osd.md), [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
 - Font download (VLC decode, char words, burst DMA from flash): [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md).
 - No framebuffer: everything (logo, menus, pop-ups) is glyph cells + windows.
 
-### SDK RTD2014 OSD (vendor code, compiled into our image)
-- Pop-ups (input info, source hot menu, no-signal / no-cable messages, DDC/CI hot menu) and the 9-icon vendor menu.
+### Realtek SDK menu (RTD2014 demo OSD, compiled into our image)
+- Pop-ups (input info, source hot menu, no-signal / no-cable messages, DDC/CI hot menu) and the 9-icon Realtek SDK menu.
 - Code: SDK `RTD2014*Osd*.c` (p14 line, tmp/sdcc-port/src); drawn by `OsdDispOsdMessage` and the OSD state machine; opened by keys / events (`ucOsdEventMsg`, `ucOsdKeyMessage`).
-- Walkthrough of every page and key action: [osd-vendor-menu.md](osd-vendor-menu.md).
+- Walkthrough of every page and key action: [osd-realtek-sdk-menu.md](osd-realtek-sdk-menu.md).
 
 ### Our parts
 - Boot logo
@@ -32,7 +43,7 @@ Overview only; each fact lives in the linked doc. Tracking: awto-ddc#1 (index), 
 
 ## 2. Fonts in use
 - Our cell font: 95 glyphs (ASCII 0x20..0x7E -> ids 0..94), 12x18 1-bit cells, 9 OSD words (27 bytes) per glyph; `tools/gen_font.py` -> `font_tab.inc` -> `font.c` (`osd_font_load`) in awto-rtdfw. Fixed pitch, one glyph id per cell.
-- Vendor pop-ups and the boot logo: SDK font tables downloaded from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph set descriptors per [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0]).
+- Realtek SDK pop-ups and the boot logo: SDK font tables downloaded from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph set descriptors per [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0]).
 - Font SRAM budget: `H + 1 + W*H + 9*U <= 12288` words (U = unique tiles, H rows, W cols); 512 1-bit ids max: [osd-limits.md](reversing/realtek-rtd/osd-limits.md). SRAM size on hardware not yet read back.
 
 ## 3. Inputs to the OSD

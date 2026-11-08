@@ -1,8 +1,11 @@
-# Vendor (SDK RTD2014 demo) OSD menu, as built for our board
+# Realtek SDK menu (RTD2014 demo OSD), as built for our board
+
+- **Not** Dahua's original menu: this is Realtek's demo UI from the SDK, compiled into our own images. Naming: [osd.md](osd.md#naming).
+- In our menu it is "Vendor menu" (System page) until #87 relabels it.
 
 Walked for awto-ddc#67 (2026-11-08): sim renders of image wb-p14sw (`scripts/osd_render.py`, key actions) plus the
 compiled source tree (tmp/sdcc-port/src of the p14sc3 line). Every row here is a `[vendor-ui]` row of
-`awto-rtdfw/settings/registry.tsv`; our list: [settings.md](settings.md).
+`awto-rtdfw/settings/registry.tsv` (tag = Realtek SDK menu fact; rename pending, #87); our list: [settings.md](settings.md).
 
 - Renders: `tmp/osd67/sdk/sdk_icon_*.png` (main icon row, one per icon), `tmp/osd67/sdk_main.png`.
 - Main menu: 9 icons, wrapping: Picture, Display, Color, Advance, Input, Audio, Other, Information, Factory.
