@@ -858,7 +858,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1260	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1262	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -937,7 +937,9 @@ fn	_ScalerGetDataPortByte	C	0x3e7e	132
 fn	_ScalerRead	C	0x3f02	128
 fn	_ScalerWrite	C	0x3f82	128
 const	_tPALETTE_MAIN_MENU	C	0x4002	56
-fn	_main	C	0x403a	128
+stub	_AwtoFastScalerRetarget	C	0x403a	8
+stub	_AwtoFastNow	C	0x4042	8
+stub	_AwtoSwPrefillPoll	C	0x404a	8
 stub	_AwtoDdcPortToVcp	C	0x40ba	8
 stub	_AwtoDdcciPoll	C	0x40c2	8
 stub	_AwtoInputSelect	C	0x40ca	8
@@ -945,6 +947,7 @@ stub	_AwtoKeyDbgLink	C	0x40d2	8
 stub	_AwtoKeyNextInput	C	0x40da	8
 stub	_AwtoSwCacheValid	C	0x40e2	8
 stub	_UserCommonAdjustRealValueToPercent	C	0x40ea	8
+fn	_main	C	0x40f2	144
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -1656,7 +1659,7 @@ fn	_AwtoRxStable	4	0x9228	36
 fn	_AwtoSwCacheStore	4	0x924c	120
 fn	_AwtoSwFast	4	0x92c4	476
 fn	_AwtoSwFastGo	4	0x94a0	192
-fn	_AwtoSwFastPoll	4	0x9560	556
+fn	_AwtoSwPrefillPoll	4	0x95bc	340
 fn	_AwtoWakeHold	4	0x978c	212
 fn	_AwtoWakePoll	4	0x9860	488
 fn	_AwtoWakeRelease	4	0x9a48	48
@@ -1704,6 +1707,7 @@ const	_tSD_H_COEF_128_TAPS	5	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	5	0x0088	136
 const	_tSD_V_COEF_64_TAPS	5	0x0110	72
 fn	_AwtoFastSameBytes	5	0x0158	44
+fn	_AwtoFastScalerRetarget	5	0x0184	28
 const	_tDDITHER_SEQ_TABLE	5	0x01c0	56
 const	_tDDITHER_TABLE	5	0x01f8	152
 const	_tDDITHER_TEMPOFFSET_TABLE	5	0x0290	40
@@ -2918,8 +2922,10 @@ fn	_AwtoDdcReply	12	0x1960	196
 fn	_AwtoDdcRequest	12	0x1a24	864
 fn	_AwtoDdcciPoll	12	0x1d84	624
 fn	_AwtoInputSelect	12	0x1ff4	112
-fn	_AwtoKeyNextInput	12	0x2064	96
+fn	_AwtoPortCable	12	0x2064	52
 const	_tAwtoDdcCaps	12	0x20c4	96
+fn	_AwtoKeyNextInput	12	0x2124	152
+fn	_AwtoSwFastPoll	12	0x21bc	724
 fn	_AwtoSlowDue	13	0x0000	312
 fn	_AwtoSwEvent	13	0x0138	160
 fn	_AwtoTmdsStuck	13	0x01d8	132

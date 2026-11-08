@@ -27,29 +27,35 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     }
 }
 
-void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu): next port D1 -> D2 -> D3, cached ports first
+static bit AwtoPortCable(BYTE ucPort)
 {
-    BYTE ucP = SysSourceGetInputPort();
+    return (ucPort == _D1_INPUT_PORT) ? GET_D1_CABLE_STATUS() : (ucPort == _D2_INPUT_PORT) ? GET_D2_CABLE_STATUS() :
+           GET_D3_CABLE_STATUS();
+}
+
+void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu): next of D1 -> D2 -> D3 after the current
+{                                               // port: cached (fast) first, else one with a cable, else the plain next
+    BYTE ucCur = SysSourceGetInputPort();
+    BYTE ucP = ucCur;
+    BYTE ucCable = _NO_INPUT_PORT;
     BYTE ucK;
 
-    for(ucK = 0; ucK < 3; ucK++)
+    for(ucK = 0; ucK < 2; ucK++)
     {
         ucP = (ucP >= _D3_INPUT_PORT) ? _D1_INPUT_PORT : (ucP + 1);
 #if(_AWTO_FAST_SWITCH == _ON)
         if(AwtoSwCacheValid(ucP) != 0)
         {
-            break;
+            AwtoInputSelect(ucP, 0x4B);         // 0x4B = key (switch log)
+            return;
         }
-#else
-        break;
 #endif
+        if((ucCable == _NO_INPUT_PORT) && (AwtoPortCable(ucP) == _TRUE))
+        {
+            ucCable = ucP;
+        }
     }
-    if(ucK == 3)                                // nothing cached: plain next port
-    {
-        ucP = SysSourceGetInputPort();
-        ucP = (ucP >= _D3_INPUT_PORT) ? _D1_INPUT_PORT : (ucP + 1);
-    }
-    AwtoInputSelect(ucP, 0x4B);                 // 0x4B = key (switch log)
+    AwtoInputSelect((ucCable != _NO_INPUT_PORT) ? ucCable : ((ucCur >= _D3_INPUT_PORT) ? _D1_INPUT_PORT : (ucCur + 1)), 0x4B);
 }
 
 #if(_AWTO_DBG_SWAP == _ON)
