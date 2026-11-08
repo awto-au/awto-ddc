@@ -144,6 +144,8 @@ def main() -> int:
         fails += not ok
         say(f"{'PASS' if ok else 'FAIL'} {name} {detail}")
     try:
+        if not bus.run_until_mode(3):                # ACTIVE: during boot the main loop blocks in the panel power waits
+            raise SystemExit("never reached ACTIVE")   # (T1..T3, ~0.3 s gaps: requests unanswered, see #67)
         bus.wait(0.3)
         caps = d.caps()
         check("capabilities = generated string", caps == T.CAPS, caps[:80] + "...")
@@ -153,7 +155,7 @@ def main() -> int:
         for c in top:
             g = d.get(c)
             if g is None or g["rc"] != 0:
-                bad.append(f"{c:02X}:{g}")
+                bad.append(f"{c:02X}:{g} last reply bytes {bytes(d.eng.tx).hex() or 'none'}")
         check(f"getvcp every listed code ({len(top)})", not bad, " ".join(bad))
         g = d.get(0xDF)
         check("DF = 2.2", g and g["cur"] == 0x0202, str(g))
