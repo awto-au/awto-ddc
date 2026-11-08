@@ -149,6 +149,75 @@ static void AwtoDdcReply(volatile __xdata BYTE *pucR, BYTE *pucTx)       // pucT
     pucR[AWTO_IIC_IRQ2] &= ~_BIT5;
 }
 
+#ifdef _AWTO_NEW_SETTINGS
+extern BYTE vcp_get(BYTE ucCode, WORD xdata *pusCur, WORD xdata *pusMax, BYTE xdata *pucType);
+extern BYTE vcp_set(BYTE ucCode, WORD usV);
+extern void set_save_now(void);
+extern WORD set_caps_len(void);
+extern char set_caps_at(WORD usI);
+static __xdata WORD s_usAwtoDdcCur;
+static __xdata WORD s_usAwtoDdcMax;
+static __xdata BYTE s_ucAwtoDdcType;
+
+// MCCS get / set / save / capabilities from the registry (awto-rtdfw vcp.c). _TRUE = handled (replied or no reply due)
+static bit AwtoDdcRegistry(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen, BYTE *pucTx)
+{
+    BYTE ucI;
+    WORD usOff;
+
+    if((pucRx[2] == 0x03) && (ucLen >= 7))      // set VCP: 51 84 03 vcp hi lo chk; no reply
+    {
+        vcp_set(pucRx[3], ((WORD)pucRx[4] << 8) | pucRx[5]);
+        return _TRUE;
+    }
+    if((pucRx[2] == 0x0C) && (ucLen >= 4))      // save current settings: 51 81 0C chk
+    {
+        set_save_now();
+        return _TRUE;
+    }
+    if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP -> 6E 88 02 rc vcp type maxH maxL curH curL chk
+    {
+        pucTx[3] = 0x00;
+        if(vcp_get(pucRx[3], &s_usAwtoDdcCur, &s_usAwtoDdcMax, &s_ucAwtoDdcType) == 0)
+        {
+            pucTx[3] = 0x01;                    // unsupported VCP code
+            s_usAwtoDdcCur = s_usAwtoDdcMax = 0;
+            s_ucAwtoDdcType = 0;
+        }
+        else if(pucRx[3] == 0xD6)               // DPM: the firmware's power state, not the last request
+        {
+            s_usAwtoDdcCur = (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL) ? 0x01 : 0x04;
+        }
+        pucTx[1] = 0x88;
+        pucTx[2] = 0x02;
+        pucTx[4] = pucRx[3];
+        pucTx[5] = s_ucAwtoDdcType;
+        pucTx[6] = s_usAwtoDdcMax >> 8;
+        pucTx[7] = s_usAwtoDdcMax & 0xFF;
+        pucTx[8] = s_usAwtoDdcCur >> 8;
+        pucTx[9] = s_usAwtoDdcCur & 0xFF;
+        AwtoDdcReply(pucR, pucTx);
+        return _TRUE;
+    }
+    if((pucRx[2] == 0xF3) && (ucLen >= 6))      // capabilities chunk from the generated string
+    {
+        usOff = ((WORD)pucRx[3] << 8) | pucRx[4];
+        ucLen = (usOff >= set_caps_len()) ? 0 : ((set_caps_len() - usOff) > AWTO_DDC_CAP_CHUNK) ? AWTO_DDC_CAP_CHUNK : (BYTE)(set_caps_len() - usOff);
+        pucTx[1] = 0x80 | (ucLen + 3);
+        pucTx[2] = 0xE3;
+        pucTx[3] = pucRx[3];
+        pucTx[4] = pucRx[4];
+        for(ucI = 0; ucI < ucLen; ucI++)
+        {
+            pucTx[5 + ucI] = set_caps_at(usOff + ucI);
+        }
+        AwtoDdcReply(pucR, pucTx);
+        return _TRUE;
+    }
+    return _FALSE;
+}
+#endif
+
 static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
 {
     BYTE pucTx[16];
@@ -166,6 +235,19 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         return;                                 // bad checksum: no reply, the host retries
     }
     pucTx[0] = 0x6E;
+#if(_AWTO_DBG_SWAP == _ON)
+    if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_DBG_LINK_VCP) && (pucRx[4] == AWTO_DBG_LINK_MAGIC) && (pucRx[5] != 0))
+    {
+        AwtoDbgLinkStart(pucRx[5]);             // #79: debug slave 0x35 on this DDC for value minutes (0xFF = until told back)
+        return;
+    }
+#endif
+#ifdef _AWTO_NEW_SETTINGS
+    if(AwtoDdcRegistry(pucR, pucRx, ucLen, pucTx) == _TRUE)     // #67: MCCS 2.2 on the settings registry (glue.inc)
+    {
+        return;
+    }
+#endif
     if((pucRx[2] == 0x03) && (ucLen >= 7))      // set VCP: 51 84 03 vcp hi lo chk
     {
         if(pucRx[3] == 0x60)
@@ -177,12 +259,6 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
                 AwtoInputSelect(ucI, 0x60);
             }
         }
-#if(_AWTO_DBG_SWAP == _ON)
-        else if((pucRx[3] == AWTO_DBG_LINK_VCP) && (pucRx[4] == AWTO_DBG_LINK_MAGIC) && (pucRx[5] != 0))
-        {
-            AwtoDbgLinkStart(pucRx[5]);         // #79: debug slave 0x35 on this DDC for value minutes (0xFF = until told back)
-        }
-#endif
         return;
     }
     if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP: 51 82 01 vcp chk -> 6E 88 02 rc vcp 00 maxH maxL curH curL chk

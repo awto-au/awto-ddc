@@ -51,6 +51,20 @@
 #define _PANEL_POWER_OFF_T4                     250
 #define _PANEL_POWER_OFF_T5                     20
 #define _PANEL_POWER_OFF_T6                     1100
+#ifdef _AWTO_NEW_SETTINGS                       // #67: power sequence from the settings registry (values above = registry defaults)
+#undef _PANEL_POWER_ON_T1
+#undef _PANEL_POWER_ON_T2
+#undef _PANEL_POWER_ON_T3
+#undef _PANEL_POWER_OFF_T4
+#undef _PANEL_POWER_OFF_T5
+#undef _PANEL_POWER_OFF_T6
+#define _PANEL_POWER_ON_T1                      AWTO_SET(PANEL_T1)
+#define _PANEL_POWER_ON_T2                      AWTO_SET(PANEL_T2)
+#define _PANEL_POWER_ON_T3                      AWTO_SET(PANEL_T3)
+#define _PANEL_POWER_OFF_T4                     AWTO_SET(PANEL_T4)
+#define _PANEL_POWER_OFF_T5                     AWTO_SET(PANEL_T5)
+#define _PANEL_POWER_OFF_T6                     AWTO_SET(PANEL_T6)
+#endif
 
 #define _LAST_LINE_TARGET                       (_PANEL_DH_TOTAL - 300)
 #define _FRAME_SYNC_MARGIN                      20                         // 0.1 Hz

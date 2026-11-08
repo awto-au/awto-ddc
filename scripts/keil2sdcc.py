@@ -238,7 +238,7 @@ INSERTS = [
      for k, mid in ((20, "0x07D6"), (21, "0xC702"), (22, "0x8870"), (23, "0xD588"))] + [
     # #60 KVM: input select + DDC/CI engines (fw/sdcc/awto_ddcci.inc), polled before the SDK DDC/CI handler
     (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$", (SHIM / "awto_ddcci.inc").read_text().rstrip("\n")),
-    ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonDdcciHandler\(\);", "            AWTO_DDCCI_POLL();", r"^void main\(void\)$"),
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonDdcciHandler\(\);", "            if(AWTO_DDCCI_POLL_ON()) AWTO_DDCCI_POLL();", r"^void main\(void\)$"),
     # #78 eDP panel-on phases in the SDK _BACKLIGHT_ON path (probes 24 VDD on, 26 HPD high = T2 poll returned, 27 link trained)
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _BACKLIGHT_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _BACKLIGHT_ON:"),

@@ -22,6 +22,22 @@
 //--------------------------------------------------
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
+#ifdef _AWTO_NEW_SETTINGS                                       // #67 settings registry (awto-rtdfw): ids + reader
+#include "AwtoSetIds.h"
+extern int set_get(unsigned char ucId);
+#define AWTO_SET(n)                                             set_get(AWTO_SET_##n)
+extern void AwtoSetInit(void);                                  // hooks: fw/awto/settings/glue*.inc
+extern void AwtoSetLoop(void);
+extern __xdata unsigned char g_ucAwtoMenuOn;                    // our menu on screen: service every pass
+extern __xdata unsigned int g_usAwtoSetLast;
+#define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
+#define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
+extern void AwtoMenuForget(void);
+extern bit AwtoMenuKeyHook(void);
+extern __xdata unsigned char g_ucAwtoKeyHold;
+extern unsigned char AwtoKeyHold(void);
+#define AWTO_KEY_HOLD()                                         ((g_ucAwtoKeyHold != 0) ? AwtoKeyHold() : 0)
+#endif
 #define _AWTO_DEMO_LOGO                                         _ON     // awto: back on (#46)
 #define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)
 #define _AWTO_POPUP_ICON                                        _ON     // _ON = icon at the left of the input-info/debug pop-ups, _OFF = blank (#46)
@@ -232,7 +248,7 @@ extern void AwtoFreqUpdate(void);
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoKeyNextInput(void);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
-// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E8 = A5 NN (or MENU+RIGHT, test cmd 0x3C) moves the
+// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+RIGHT, test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.
 #if((_AWTO_DDCCI_ENGINES == 1) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
 #define _AWTO_DBG_SWAP                                          _ON
@@ -240,7 +256,7 @@ extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 #define _AWTO_DBG_SWAP                                          _OFF
 #endif
 #define AWTO_DBG_PARK_CH                                        0x01    // DDC0: no D0 port here (7 = reserved: 0x35 then ACKed on DDC2, dead)
-#define AWTO_DBG_LINK_VCP                                       0xE8
+#define AWTO_DBG_LINK_VCP                                       0xE3    // not a registry code (0xE8 is, #67)
 #define AWTO_DBG_LINK_MAGIC                                     0xA5
 #define AWTO_DBG_LINK_KEY_MIN                                   30
 #if(_AWTO_DBG_SWAP == _ON)
@@ -279,6 +295,12 @@ extern void AwtoDdcciPoll(void);
 #endif
 #if((_AWTO_DEBUG_PORT == _ON) || (_AWTO_DDCCI_ENGINES != 0))
 #define GET_OSD_DDCCI_STATUS()                                  (_OFF)
+#endif
+#if(defined(_AWTO_NEW_SETTINGS) && (_AWTO_DDCCI_ENGINES != 0))   // #67 DDC/CI row: the spare-engine 0x37 path on/off, fixed at boot
+extern __xdata unsigned char g_ucAwtoDdcciOn;
+#define AWTO_DDCCI_POLL_ON()                                    (g_ucAwtoDdcciOn != 0)
+#else
+#define AWTO_DDCCI_POLL_ON()                                    (1)
 #endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
 #define _AWTO_SW_LOG                                            _ON
@@ -443,6 +465,11 @@ extern void AwtoTmdsStuck(void);
 #define AWTO_IDLE_TMDS_OFF()                                    ScalerTMDSFreqDetectDisable()
 #define AWTO_IDLE_RX_OFF(port)                                  ScalerGDIPhyPowerProc((port), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF)
 #endif
+#if((_AWTO_KEEP_IDLE_RX == _ON) && defined(_AWTO_NEW_SETTINGS))   // #67: Keep idle inputs row, fixed at boot
+extern __xdata unsigned char g_ucAwtoKeepIdle;
+#undef AWTO_IDLE_RX_OFF
+#define AWTO_IDLE_RX_OFF(port)                                  { if(g_ucAwtoKeepIdle == 0) { ScalerGDIPhyPowerProc((port), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF); } }
+#endif
 // #60: _ON = a switch to a port whose cached timing matches the screen skips search / measure / display setting
 // (fw/sdcc/awto_fastsw.inc); needs the switch log (timer) and idle receivers kept powered
 #ifndef _AWTO_FAST_SWITCH
@@ -517,7 +544,11 @@ extern unsigned char AwtoFastScalerStatus(void);
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF
 #endif
+#ifdef _AWTO_NEW_SETTINGS
+#define AWTO_T3_OWN_PATTERN_MS                                  AWTO_SET(PANEL_T3_OWN)      // #67 registry, default 20
+#else
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
+#endif
 #define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork (Dan 2026-11-07: red); _PALETTE_MAIN_MENU 11 = 255,0,0
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2

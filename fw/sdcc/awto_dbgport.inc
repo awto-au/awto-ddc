@@ -45,7 +45,7 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
     }
 #if(_AWTO_DBG_SWAP == _ON)
     s_ucAwtoDbgPort = ucInputPort;
-    if(g_ucAwtoDbgLink == 0)
+    if((g_ucAwtoDbgLink == 0) && AWTO_DDCCI_POLL_ON())     // #67 DDC/CI row off: the debug slave keeps the port
     {
         AwtoDbgSetFF22(AWTO_DBG_PARK_CH);   // debug engine off the port first
         g_ucAwtoDdcciCh = ucCh;
