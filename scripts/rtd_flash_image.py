@@ -44,6 +44,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_link
 import disk_guard
+import flash_io
 import flash_state as S
 import i2cbus
 import rtd_flash_sector as F
@@ -64,10 +65,17 @@ FLASH = 1 << 20
 DUMPS = Path.home() / "vendors/realtek/analysis/dumps"
 
 
-def unit_log(serial: str, s: str) -> None:
+def unit_log(serial: str, s: str, diagnostics=None) -> None:
     """ISP enter/exit into the per-monitor log Dan watches (dev.py writes the rest there)."""
-    with (F.repo_root() / f"tmp/logs/unit-{serial}.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} [rtd_flash_image] {s}\n")
+    path = F.repo_root() / f"tmp/logs/unit-{serial}.log"
+    try:
+        with path.open("a") as f:
+            f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} [rtd_flash_image] {s}\n")
+    except OSError as error:
+        if diagnostics is not None:
+            diagnostics.failed(str(path), error)
+        else:
+            log(f"WARNING: unit log unavailable: {error}")
 
 
 def log(s):
@@ -297,6 +305,13 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     recovery option, but only after a non-blank sector passes full readback.
     """
     diff = boot_last(diff)
+    verified, pending = 0, set()
+
+    def progress():
+        global DONE
+        DONE = f"{verified}/{len(diff)} sectors verified; {len(pending)} erase-intent sector(s) not verified"
+
+    progress()
     # No sacrificial address: prove the first non-blank changed sector in boot-last
     # order. Earlier blank sectors complete their whole job by erase + verify.
     probe = next((i for i in diff if img[i * SECTOR:(i + 1) * SECTOR] != BLANK), None)
@@ -316,6 +331,18 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
         for i in indices:
             state.sectors[i] = None
         state.save(source="write-in-progress")
+        pending.update(indices)
+        progress()  # never report 'nothing written' after a partial erase/program
+
+    def checkpoint(**kwargs):
+        # Only use after verification. Failure must never interrupt the repair
+        # of already-erased sectors. Pre-erase unknown() remains mandatory.
+        try:
+            state.save(**kwargs)
+            return True
+        except OSError as error:
+            log(f"WARNING: recovery state not saved: {error}; verified hashes remain in memory")
+            return False
 
     try:
         guard.__enter__()
@@ -373,29 +400,37 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 proof_done = True
                 log(f"write-path proof OK at 0x{s:06x}: programmed and stable full readback; continuing")
             state.sectors[i] = hashes[i]
+            verified += 1
+            pending.discard(i)
+            progress()
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
                 nudge()
             if k % S.SAVE_EVERY == S.SAVE_EVERY - 1 or k == len(diff) - 1:
-                state.save()
+                saved = checkpoint()
                 log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
+                if not saved and k + 1 < len(diff) and (per_sector or not bulk_started):
+                    log("STOP: recovery state unavailable; current sector verified, no next sector erased")
+                    if reprot is not None:
+                        isp.reprotect(reprot)
+                    return 11
             if guard.stop and k + 1 < len(diff) and (per_sector or not bulk_started):
-                state.save(source="write-stopped")
+                saved = checkpoint(source="write-stopped")
                 log(f"STOP (signal) at a sector boundary: {k + 1}/{len(diff)} written, none erased-unwritten "
                     f"(manifest saved; rerun continues)")
                 if reprot is not None:
                     isp.reprotect(reprot)
-                return 9
+                return 9 if saved else 11
             if per_sector and max_min and k + 1 == PROJECT_AFTER and len(diff) > PROJECT_AFTER:
                 proj = (time.monotonic() - t0) / PROJECT_AFTER * len(diff) / 60
                 log(f"projection after {PROJECT_AFTER} sectors: {proj:.1f} min for {len(diff)} (limit {max_min:g} min)")
                 if proj > max_min:
-                    state.save(source="write-stopped")
+                    saved = checkpoint(source="write-stopped")
                     log(f"STOP at a sector boundary: {PROJECT_AFTER}/{len(diff)} written (manifest saved; rerun continues)")
                     if reprot is not None:
                         isp.reprotect(reprot)
-                    return 8
+                    return 8 if saved else 11
         if crc_ok:
             runs = S._runs([i for i in range(len(img) // SECTOR) if img[i * SECTOR:(i + 1) * SECTOR] != BLANK])
             with phase("final crc"):
@@ -408,18 +443,18 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                         raise RuntimeError(f"CRC mismatch 0x{lo:06x}-0x{hi:06x} hw 0x{hw:02x} != 0x{py:02x}")
             log(f"final CRC OK over {len(runs)} non-blank run(s)")
     except BaseException:
-        state.save(source="write-failed")
+        checkpoint(source="write-failed")  # preserve the original hardware/interruption error
         raise
     finally:
         guard.__exit__()
     if guard.stop:
         log("stop request deferred to the end of the run (erase-all mode: erased sectors must be written first)")
-    state.save(image=tag, image_size=len(img), source="write", commit=commit)
+    saved = checkpoint(image=tag, image_size=len(img), source="write", commit=commit)
     log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}")
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
     if reprot is not None:
         isp.reprotect(reprot)
-    return 0
+    return 0 if saved else 10
 
 
 @dataclass
@@ -445,7 +480,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     hashes = S.sector_hashes(img)
     nimg = len(hashes)
     rng = random.Random(o.seed)
-    state = None if o.full else S.FlashState.load(o.manifest, o.serial, log)
+    state = S.FlashState.load(o.manifest, o.serial, log)  # --full selects writes, retains untouched tail hashes
     have_manifest = state is not None
     if state is None:
         state = S.FlashState.empty(o.manifest, o.serial)
@@ -476,12 +511,17 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
         t_prog = time.monotonic()
         rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit, o.per_sector, o.max_min)
-        summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+        if rc in (0, 10):
+            summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+        else:
+            log(f"SUMMARY: stopped (exit {rc}): {DONE}")
         return rc
     t0 = time.monotonic()
     d1 = isp.read_flash(0, FLASH)
     log(f"dump 1 read in {time.monotonic() - t0:.1f}s")
     d2 = isp.read_flash(0, len(img))                  # 2nd read only where we write; the rest is never touched (Dan 2026-11-05)
+    if len(d1) != FLASH or len(d2) != len(img):
+        log("refuse: short backup/image read; nothing erased or programmed"); return 5
     if d1[:len(img)] != d2:
         nd = sum(x != y for x, y in zip(d1, d2))
         log(f"refuse: two reads differ in {nd} bytes of the image region (unstable read path)"); return 5
@@ -499,7 +539,10 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     if not o.write:
         log("DRY-RUN complete: nothing erased or programmed"); return 0
     rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector, o.max_min)
-    summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+    if rc in (0, 10):
+        summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+    else:
+        log(f"SUMMARY: stopped (exit {rc}): {DONE}")
     return rc
 
 
@@ -559,18 +602,24 @@ def main() -> int:
                     help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
     a = ap.parse_args()
-    with unit_lock.held(a.serial, "rtd_flash_image"):            # one work stream per unit (#65)
-        return flash_main(a)
+    diagnostics = flash_io.Diagnostics()
+    with diagnostics.output(), unit_lock.held(a.serial, "rtd_flash_image"):
+        rc = flash_main(a, diagnostics)
+    diagnostics.report()
+    return 10 if rc == 0 and diagnostics.failures else rc
 
 
-def flash_main(a) -> int:
+def flash_main(a, diagnostics=None) -> int:
+    global DONE
+    DONE = ""
+    PH.clear()
     i2cbus.dev_hint("flash", "rtd_flash_image.py")
     t_main = time.monotonic()
     reprot = None if a.reprotect.lower() == "none" else int(a.reprotect, 0)
     root = F.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     lg = rtd_proto.setup_logs("rtd_flash_image", raw=os.environ.get("AWTO_RAW_TRACE") == "1", merge_pages=True,
-                              detail=True)            # per-sector protocol lines -> rtd_flash_image.detail.log
+                              detail=True, diagnostics=diagnostics)  # best effort after ISP begins (#82)
     F.LOG, F.DETAIL = lg.main, lg.detail
     img = a.image.read_bytes()
     if len(img) % SECTOR or len(img) > FLASH:
@@ -588,13 +637,19 @@ def flash_main(a) -> int:
     log(f"unit guard: EDID serial {seen!r} on bus {a.bus}" + (f"; EDID silent, identity per caller: {a.identity}" if seen is None else ""))
     try:
         with dbg_link.flash_guard(a.bus):
-            return _flash_session(a, img, o, t_main)
+            try:
+                return _flash_session(a, img, o, t_main, diagnostics)
+            finally:
+                lg.main.flush()
+                lg.detail.flush()
+                if lg.raw:
+                    lg.raw.flush()
     except dbg_link.FlashPreflightError as e:
         log(f"refuse: {e}; no ISP session started, nothing erased or programmed")
         return 6
 
 
-def _flash_session(a, img, o, t_main) -> int:
+def _flash_session(a, img, o, t_main, diagnostics=None) -> int:
     """The debug-link guard stays held until the exit reset, including every failure."""
     isp = Rtd(a.bus)
     isp.read_chunk = a.read_chunk
@@ -602,8 +657,8 @@ def _flash_session(a, img, o, t_main) -> int:
     entered = False                                   # 0xEE reset only once the ISP-enable write was attempted
     try:
         entered = True
-        unit_log(a.serial, f"ISP enter (MCU halted) bus {a.bus}")
         t_isp = time.monotonic()
+        unit_log(a.serial, f"ISP enter (MCU halted) bus {a.bus}", diagnostics)
         isp.write(0x6F, 0x80)
         if not isp.read(0x6F) & 0x80:
             entered = False                           # MCU never halted: nothing to reset
@@ -627,7 +682,7 @@ def _flash_session(a, img, o, t_main) -> int:
             except OSError:
                 pass
             log("scaler reset sent (0xEE <- 0x02)")
-            unit_log(a.serial, f"ISP exit (reset) after {time.monotonic() - t_isp:.1f} s")
+            unit_log(a.serial, f"ISP exit (reset) after {time.monotonic() - t_isp:.1f} s", diagnostics)
         log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)")
             + f", bus {i2cbus.rate_khz()} kHz")
 

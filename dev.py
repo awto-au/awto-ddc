@@ -59,6 +59,7 @@ REPO = _repo_root()
 sys.path.insert(0, str(REPO / "scripts"))
 import i2cbus  # noqa: E402  (the only module that touches /dev/i2c-N, #48)
 import disk_guard  # noqa: E402  (free-space refusal + tmp/fw pruning, #77)
+import flash_io
 TMP = REPO / "tmp"           # scratch, pidfiles
 LOGS = TMP / "logs"          # logs, per the ./tmp/logs/ rule
 LOG = LOGS / "dev.log"
@@ -119,11 +120,14 @@ def _stamp() -> str:
 
 def log(msg: str, level: str = "INFO") -> None:
     line = f"{_stamp()}  {level:<5} [dev.py] {msg}"
-    if _USE_COLOR:
-        sys.stderr.write(f"{_COLOR.get(level, '')}{line}{_RESET}\n")
-    else:
-        sys.stderr.write(line + "\n")
-    sys.stderr.flush()
+    try:
+        if _USE_COLOR:
+            sys.stderr.write(f"{_COLOR.get(level, '')}{line}{_RESET}\n")
+        else:
+            sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+    except (OSError, ValueError):
+        pass
     try:
         LOGS.mkdir(parents=True, exist_ok=True)
         for p in (LOG, *([_UNIT_LOG] if _UNIT_LOG else [])):
@@ -437,6 +441,9 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
     full_env = {**os.environ, "AWTO_VIA_DEV": "1", **(env or {})}
     sigs = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP) if shield else ()
     old, p, fwd = {}, None, []
+    diagnostics = flash_io.Diagnostics()
+    output = diagnostics.stream(sys.stdout, "dev.py stdout")
+    tee = None
 
     def on_sig(signum, _frame):
         fwd.append(signum)
@@ -444,30 +451,35 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
             p.send_signal(signal.SIGTERM)
 
     def out(line: str) -> None:
-        try:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-        except (OSError, ValueError):    # the shell that ran dev.py is gone: keep the flash going, the logs still fill
-            pass
+        output.write(line)
+        output.flush()
 
     for s in sigs:
         old[s] = signal.signal(s, on_sig)
     try:
         p = subprocess.Popen(cmd, cwd=REPO, env={**full_env, "PYTHONUNBUFFERED": "1"},
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-        if _UNIT_LOG is None:
-            for line in p.stdout:
-                out(line)
-        else:                               # tee the tool's output into the unit log, line by line
-            with _UNIT_LOG.open("a", encoding="utf-8") as fh:
-                for line in p.stdout:
-                    out(line)
-                    fh.write(f"{_stamp()}  {script}: {line}")
-                    fh.flush()
+        if _UNIT_LOG is not None:
+            try:
+                tee = diagnostics.open(_UNIT_LOG)
+            except OSError as error:
+                diagnostics.failed(str(_UNIT_LOG), error)
+        # Always drain and wait. Leaving this loop on ENOSPC would let fast_bus
+        # restore the adapter rate while the child is still erasing/programming.
+        for line in p.stdout:
+            out(line)
+            if tee is not None:
+                tee.write(f"{_stamp()}  {script}: {line}")
+                tee.flush()
         rc = p.wait()
     finally:
+        if tee is not None:
+            tee.close()
         for s, h in old.items():
             signal.signal(s, h)
+    diagnostics.report()
+    if shield and rc == 0 and diagnostics.failures:
+        rc = 10
     if fwd:
         log(f"{script}: {len(fwd)} stop signal(s) during the run, forwarded; child finished at a safe point (rc={rc})", "WARN")
     log(f"rc={rc}: {script}", "INFO" if rc == 0 else "ERROR")
@@ -572,9 +584,16 @@ def cmd_flash(extra: list[str]) -> int:
         if attempt == 1 and not identity:
             _bus(u, wait_s=RECOVER_BUS_WAIT_S)     # EDID back = rebooted (and the same unit)
     if rc in (5, 6) and before is not None:      # nothing erased: the flash still holds the old image
-        fj.write_text(before)
-    if rc == 0:
-        fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
+        try:
+            fj.write_text(before)
+        except OSError as error:
+            log(f"flash: previous tag could not be restored: {error}", "WARN")
+    if rc in (0, 10):                         # 10 = verified image, incomplete diagnostics/state
+        try:
+            fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
+        except OSError as error:
+            log(f"flash: image verified but firmware tag could not be saved: {error}", "WARN")
+            return 10
         if _py("fw_archive.py", "--commit", img):      # every flashed image kept in git; failure doesn't fail the flash
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
     return rc
@@ -905,11 +924,14 @@ RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2
 
 
 @command("recover a wedged unit: mains cycle, hold it in the safe window, reflash (default: last flashed)",
-         args="[--unit N] [--bus N] [--write-mode byte|burst] [--any-image] [image.bin]", kind="action")
+         args="[--unit N] [--bus N] [--write-mode byte|burst] [--verify readback|crc] [--any-image] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
     wmode = _opt(extra, "--write-mode", "byte")  # recovery favours the known-safe path; burst remains opt-in (#96)
+    verify = _opt(extra, "--verify", "readback")
+    if wmode not in ("byte", "burst") or verify not in ("readback", "crc"):
+        raise SystemExit("recover: invalid write/verify mode; nothing done")
     any_image = _flag(extra, "--any-image")
     given_bus = _opt(extra, "--bus")        # caller-proven bus (EDID silent); still needs this unit's relay cycle
     img = _image_arg(extra) or [_flashed(u).get("image", "")]
@@ -919,13 +941,14 @@ def cmd_recover(extra: list[str]) -> int:
         raise SystemExit(f"recover: no usable image ({img[0] or 'no flashed.json image'!r}); give one; nothing done")
     if not any_image:
         check_image_identity(u, p)
+    disk_guard.require_free("recover")         # refuse before an ISP reset or relay cycle (#82)
     try:
         bus = _bus(u)                       # unit still answering: identity proven by EDID, before the cycle
     except SystemExit:
         bus = None
     if bus is not None and _py("rtd_reset.py", bus, "--serial", u["serial"]) == 0:
         log("recover: ISP reset sent (fast path, no mains cycle)")   # 0x4A answered: no 8 s relay cycle needed
-        return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode,
+        return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, "--verify", verify,
                           *(["--any-image"] if any_image else []), *img])
     rc = cmd_power_cycle(["--unit", n])
     if rc:
@@ -947,7 +970,8 @@ def cmd_recover(extra: list[str]) -> int:
             log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
     else:
         log("recover: flashed image has no _g_stAwtoSafe in its map; hold skipped, flashing over ISP", "WARN")
-    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *(["--any-image"] if any_image else []), *img])
+    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, "--verify", verify,
+                      *(["--any-image"] if any_image else []), *img])
 
 
 GDCTL_SHOW_S = 3    # `gdctl show` is one D-Bus call (~0.1 s); 3 s = 30x, expiry -> mode refuses, nothing changed

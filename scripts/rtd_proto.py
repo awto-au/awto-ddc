@@ -883,18 +883,20 @@ class Logs:
 
 
 def setup_logs(name: str, map=None, raw: bool | None = None, merge_pages: bool = False, chip: str = "RTD2795T-CG",
-               root: Path | None = None, detail: bool = False) -> Logs:
+               root: Path | None = None, detail: bool = False, diagnostics=None) -> Logs:
     """Decoded lines + the tool's own lines -> tmp/logs/<name>.log; byte trace -> <name>.raw.log.
     raw=None: on unless $AWTO_RAW_TRACE=0 (flash tools pass raw=False: ~1M lines per image). Replaces earlier taps.
-    detail=True: decoded protocol lines go to <name>.detail.log; the main log keeps the tool's own lines only."""
+    detail=True: decoded protocol lines go to <name>.detail.log; the main log keeps the tool's own lines only.
+    diagnostics: best-effort sinks for flash sessions; opening still fails before ISP."""
     root = root or repo_root()
     d = root / "tmp/logs"
     d.mkdir(parents=True, exist_ok=True)
-    f = (d / f"{name}.log").open("a")
-    df = (d / f"{name}.detail.log").open("a") if detail else f
+    open_log = diagnostics.open if diagnostics is not None else lambda path: path.open("a")
+    f = open_log(d / f"{name}.log")
+    df = open_log(d / f"{name}.detail.log") if detail else f
     if raw is None:
         raw = os.environ.get("AWTO_RAW_TRACE") != "0"
-    rf = (d / f"{name}.raw.log").open("a") if raw else None
+    rf = open_log(d / f"{name}.raw.log") if raw else None
     dec = Decoder(lambda ts, tag, text: df.write(f"{ts} {tag:<4} {text}\n"), Symbols.load(root, map), regdb_namer(chip),
                   load_msgids(root), merge_pages)
     err = []

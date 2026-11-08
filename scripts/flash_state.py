@@ -8,7 +8,13 @@ Manifest: tmp/fw/<serial>-flash-state.json
 Writers: after every verified sector (saved every SAVE_EVERY and at exit), after any full flash read.
 Hardware CRC8 (FF75, poly 0x07 init 0): docs/flash-crc.md.
 """
-import hashlib, json, os, random, subprocess, time
+import hashlib
+import json
+import os
+import random
+import subprocess
+import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -102,9 +108,26 @@ class FlashState:
              "image_size": self.image_size, "time": self.time, "git_commit": self.commit,
              "source": self.source, "sectors": self.sectors}
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(d, indent=0))
-        os.replace(tmp, self.path)           # atomic: a kill never leaves a half-written manifest
+        # Persist unknown BEFORE erase. Atomic rename alone does not make data
+        # durable across host loss; sync the replacement and its directory.
+        fd, name = tempfile.mkstemp(prefix=self.path.name + ".", suffix=".tmp", dir=self.path.parent)
+        tmp = Path(name)
+        try:
+            with os.fdopen(fd, "w") as out:
+                out.write(json.dumps(d, indent=0))
+                out.flush()
+                os.fsync(out.fileno())
+            os.replace(tmp, self.path)
+            directory = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        finally:
+            try:
+                tmp.unlink(missing_ok=True)
+            except OSError:
+                pass  # cleanup must not mask the failed durable checkpoint
 
 
 @dataclass

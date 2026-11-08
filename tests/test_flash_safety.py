@@ -356,4 +356,80 @@ def test_recover_defaults_to_byte_mode_and_preserves_bus_override(dev, monkeypat
     monkeypatch.setattr(dev, "cmd_flash", lambda extra: calls.append(extra) or 0)
     assert dev.cmd_recover(["--bus", "11", str(img)]) == 0
     assert calls[0][calls[0].index("--write-mode") + 1] == "byte"
+    assert calls[0][calls[0].index("--verify") + 1] == "readback"
     assert calls[0][calls[0].index("--bus") + 1] == "11"
+
+
+def test_recover_disk_guard_runs_before_any_bus_reset_or_relay(dev, monkeypatch, tmp_path):
+    monkeypatch.setattr(dev, "_unit", lambda extra: ("2", {"serial": "AWT0", "relay": "so-th-1"}))
+    def forbidden(*args, **kwargs): pytest.fail("hardware touched before storage guard")
+    monkeypatch.setattr(dev, "_bus", forbidden)
+    monkeypatch.setattr(dev, "cmd_power_cycle", forbidden)
+    monkeypatch.setattr(dev, "_py", forbidden)
+    def full(what): raise SystemExit(6)
+    monkeypatch.setattr(dev.disk_guard, "require_free", full)
+    with pytest.raises(SystemExit) as error:
+        dev.cmd_recover([str(tmp_path / "AWT0-test.bin")])
+    assert error.value.code == 6
+
+
+@pytest.mark.parametrize("status", [0, 10])
+def test_verified_flash_tag_enospc_reports_warning_status(dev, monkeypatch, tmp_path, status):
+    monkeypatch.setattr(dev, "_unit", lambda extra: ("2", {"serial": "AWT0", "relay": "so-th-1"}))
+    real_write = Path.write_text
+    def write(path, text, *args, **kwargs):
+        if path.name == "AWT0-flashed.json" and '"attempted"' not in text:
+            raise OSError(errno.ENOSPC, "tag disk full")
+        return real_write(path, text, *args, **kwargs)
+    monkeypatch.setattr(Path, "write_text", write)
+    monkeypatch.setattr(dev, "_py", lambda *args, **kwargs: status)
+    assert dev.cmd_flash(["--bus", "11", str(tmp_path / "AWT0-test.bin")]) == 10
+
+
+def test_recovery_reset_interlocks_debug_before_isp(monkeypatch, tmp_path):
+    import rtd_reset as reset
+    bus = DebugBus(stuck=True, expiry=None)
+    install_bus(monkeypatch, bus)
+    monkeypatch.setattr(reset.i2cbus, "require_unit", lambda *args: "AWT0")
+    monkeypatch.setattr(reset, "Rtd", lambda bus: pytest.fail("entered ISP with debug active"))
+    monkeypatch.setenv("AWTO_DDC_REPO", str(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["rtd_reset.py", "11", "--serial", "AWT0"])
+    assert reset.main() == 6
+
+
+@pytest.mark.parametrize("fault", ["open", "write", "flush", "close"])
+def test_parent_log_enospc_still_drains_and_waits_for_flash(dev, monkeypatch, tmp_path, fault):
+    import io
+    class Full(io.StringIO):
+        def write(self, text):
+            if fault == "write": raise OSError(errno.ENOSPC, "tee write")
+            return super().write(text)
+        def flush(self):
+            if fault == "flush": raise OSError(errno.ENOSPC, "tee flush")
+            super().flush()
+        def close(self):
+            if fault == "close": raise OSError(errno.ENOSPC, "tee close")
+            super().close()
+    path = tmp_path / "tee.log"
+    monkeypatch.setattr(dev, "_UNIT_LOG", path)
+    original_open = Path.open
+    def open_tee(p, *args, **kwargs):
+        if p == path:
+            if fault == "open": raise OSError(errno.ENOSPC, "tee open")
+            return Full()
+        return original_open(p, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", open_tee)
+    consumed, waited = [], []
+    class Child:
+        @property
+        def stdout(self):
+            for index in range(20):
+                consumed.append(index)
+                yield f"verified sector {index}\n"
+        def wait(self):
+            assert consumed == list(range(20))
+            waited.append(True)
+            return 0
+    monkeypatch.setattr(dev.subprocess, "Popen", lambda *args, **kwargs: Child())
+    assert dev._py("rtd_flash_image.py", shield=True) == 10
+    assert waited == [True]
