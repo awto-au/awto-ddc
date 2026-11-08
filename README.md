@@ -14,9 +14,9 @@ Clean-room firmware for the RL6449-based JXC-4K monitor board. LOCAL repo: no re
 - Never paste vendor names, identifiers, comments or code shapes. Names come from `awto/include` and `facts/names.h`.
 - A question the spec does not answer goes back to the spec writer as a question; never "go look".
 - `facts/` is register FACTS only: page, address, index, bits, reset, access. No vendor names or descriptions.
-- Every vendor-derived number in code carries its provenance tag in a comment: `derived`, `measured` or `vendor-value`.
+- Every vendor-derived number in code carries its provenance tag in a comment: `derived`, `measured`, `sdk-value` or `dahua-value`.
 - `cleanroom_lint` must pass on every commit (SDK identifiers / 6-token n-grams; `facts/` exempt).
 - Commits: normal local git identity, trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` on agent commits.
 
 ## Status
-- Not public. Publishing needs: Dan's sign-off on `facts/`, every `vendor-value` replaced by a `measured` one, an SDK-free build.
+- Not public. Publishing needs: Dan's sign-off on `facts/`, every `sdk-value` and `dahua-value` replaced by a `measured` one, an SDK-free build.
