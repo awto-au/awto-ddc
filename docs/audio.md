@@ -82,7 +82,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 
 ## Our volume mapping (`AwtoAudioGain`, fw/awto/settings/glue.inc)
 - Registry `volume` 0..100 % -> DVC_GAIN (14 bit, linear, 0x3FFF = 0 dB, 1/16384 steps [spec]).
-- 0 % = 0 (silence), 10 % = 164 (-40 dB), then -4 dB per 10 % (x0.631), linear interpolation between the 10 % points, 100 % = 0x3FFF. 50 % = 1638 = -20 dB. [guess: taste; Dahua default is -16.5 dB]
+- 0 % = 0 (silence), 10 % = 164 (-40 dB), then -4 dB per 10 % (x0.631), linear interpolation between the 10 % points, 100 % = 0x3FFF. 50 % = 1034 (0x040A) = -24 dB, 90 % = 10337 = -4 dB. [guess: taste; Dahua default is -16.5 dB] The sim trace of this image writes DVC_GAIN 04 0A at ACTIVE (default 50 %).
 - Why not the SDK mapping: `UserCommonAdjustPercentToRealValue` is linear in gain: 50 % would be -6 dB and 10 % -20 dB (steep, hard to set low). Change the table `tAwtoVolGain` to tune.
 - `DA_GAIN_L/R` (DAC, 0.75 dB steps) are not used for volume; the register field range (7 bit, -65.25..0 dB) would also work but the SDK/Dahua path ramps through the DVC (click-free).
 
