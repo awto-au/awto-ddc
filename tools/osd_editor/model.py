@@ -14,15 +14,15 @@ GEOMS = {"12x18": (12, 18, "a"), "24x36": (24, 36, "b")}
 HEADER = re.compile(r"//\s*osd_editor:\s*name=(\S+)\s+bpp=(\d)\s+geom=(\S+)\s+tiles=(\d+)\s+chunks=(\d+)")
 
 
-def ramp(bpp: int, rgb=(255, 40, 40)):
+def ramp(bpp: int, rgb=(255, 255, 255)):          # OSD text = white on black; red is for decorations (#89)
     n = (1 << bpp) - 1
     return [tuple(round(c * i / n) for c in rgb) for i in range(n + 1)]
 
 
 @dataclass
 class GlyphSet:
-    bpp: int = 1
-    geom: str = "12x18"
+    bpp: int = 2
+    geom: str = "24x36"
     tiles: list = field(default_factory=list)          # uint8 arrays (uh, uw), values 0..2^bpp-1
     palette: list = None
     name: str = "font"

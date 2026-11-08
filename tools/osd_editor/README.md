@@ -8,6 +8,7 @@ PySide6 viewer/editor on top of `scripts/` (VLC encoder via `vlc_adapter.py` -> 
 - glyphs: tile list, pixel editor (left = colour, right = colour 0, ctrl+z undo), 1x / 2x preview; 1 / 2 / 4 bpp, 12x18 or 24x36 (2x2 cells, cell borders drawn)
 - import: TTF (ASCII 0x20..0x7E), PNG / SVG sheet sliced into tiles; open: our `.inc` export or an OsdEdit "HardWare VLC 2523V" `.txt`
 - export C: `BYTE __code NAME_VLC0[]` blobs (our encoder), header line carries bpp / geometry / tile count for re-import
+- defaults (#89): 24x36 at 2 bpp, palette = black-to-white ramp (text); red is reserved for decorations (frame, title, highlight, icons)
 - budget (top): font SRAM words / 12288, flash raw vs VLC bytes, red above 100 %
 - screens: pages through `tmp/osd_catalog/*/catalog.tsv` renders, fit or zoom; "render BIN..." runs `scripts/osd_catalog.py`
 
