@@ -481,6 +481,12 @@ def stack(a, io) -> int:
     want = 0x00 if reg else 0xFE
     check("service get ids 1, 7", r is not None and r[:4] == b"\x82\x12\x00\x02" and r[5] == want and r[9] == want,
           f"{svc_get(r) if r else ''} ({'registry' if reg else 'no registry: status FE expected'})")
+    if reg:                                      # id 1 = brightness (awto-rtdfw registry.tsv): set, read back, restore
+        r0 = r
+        r, dt, n = svc(b"\x03\x16\x01\x01\x00\x3c")
+        check("service set id 1 = 60", r is not None and r[:4] == b"\x83\x16\x00\x01" and r[5] == 0 and r[6:8] == b"\x00\x3c",
+              svc_get(r) if r else "")
+        svc(b"\x03\x17\x01\x01" + r0[6:8])
     r, dt, n = svc(b"\x04\x13\x03")
     check("service subscribe + ring on", r is not None and r[:3] == b"\x84\x13\x00", f"seq {r[3] << 8 | r[4] if r else '?'}")
     if a.sim:                                    # 3 messages the way AwtoMsgV logs them (BE image) -> one push to the subscriber
