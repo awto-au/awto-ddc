@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mains power-cycle test unit 3 (AWT26110003) via the Sonoff TH outlet so-th-1 (moved from the UNVR bench, Dan 2026-11-06).
+"""Mains power-cycle a monitor via its configured relay from devices.json.
 
 usage: power_cycle.py --relay NAME [--on | --off] [--off-s S]
   --relay: the unit's relay name from devices.json; only outlets listed in OUTLETS are drivable (#52.9).

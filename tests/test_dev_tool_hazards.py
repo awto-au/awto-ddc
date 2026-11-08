@@ -85,7 +85,7 @@ def test_power_cycle_known_relay_cycles(monkeypatch, tmp_path):
 def test_dev_passes_unit_relay(dev, monkeypatch):
     seen = []
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append((script, a)) or 0)
-    assert dev.cmd_power_cycle(["--unit", "3", "--off"]) == 0
+    assert dev.cmd_power_cycle(["--unit", "2", "--off"]) == 0
     assert seen == [("power_cycle.py", ("--relay", "so-th-1", "--off"))]
 
 

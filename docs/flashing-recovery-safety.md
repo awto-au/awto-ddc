@@ -136,8 +136,9 @@ operation. Obtain approval for that operation. Do not merge without approval.
 2. Revalidate the cable/bus mapping against unit 2's EDID using read-only
    inspection. Bus 11 was the HDMI bus in #96; it must not be assumed to remain
    so. Reconcile `scripts/devices.json` with the confirmed wiring. In particular,
-   main still assigns `so-th-1` to unit 3, whereas #96 records Dan confirming it
-   powers unit 2. Do not run `recover` against that stale relay assignment.
+   this PR corrects `so-th-1` to unit 2 and clears unit 3's relay, matching Dan's
+   confirmation in #96. Unit 1 also has no relay. Use the corrected configuration
+   on the monitor host before any approved recovery operation.
 3. Show Dan the exact commit, unit, bus, image path, SHA-256, byte range, retained
    settings range, write/verify modes and resets/relay actions. Ask for explicit
    approval. **Stop here until approval.** Disabling the debug link and a dry-run
