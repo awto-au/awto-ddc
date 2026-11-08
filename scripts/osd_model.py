@@ -336,6 +336,23 @@ def layout_rows(st: OsdState, g: dict) -> list[dict]:
     return rows
 
 
+def ink_cells(st: OsdState) -> list[list[int]]:
+    """Per map row: the cell columns that show ink (a 1-bit glyph with a set pixel, or a 2-bit glyph with a non-zero level).
+    The hardware draws what the map says, wrapping at the row length (row command char count) into the next row and not clipping
+    to the windows: this is what a text-fit check looks at (keys_sim, popup_fit)."""
+    g = frame_geometry(st)
+    out = []
+    for row in layout_rows(st, g):
+        cols = []
+        for k, ch in enumerate(row["chars"]):
+            if ch["kind"] == "1bit" and glyph_bits(st, g, ch["id"]).any():
+                cols.append(k)
+            elif ch["kind"] == "2bit" and glyph_levels2(st, g, ch["id"]).any():
+                cols.append(k)
+        out.append(cols)
+    return out
+
+
 def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha_opaque: bool = False) -> np.ndarray:
     """Composite the OSD over a flat background. Returns uint8 (H, W, 3)."""
     img = np.empty((H, W, 3), np.uint8)
