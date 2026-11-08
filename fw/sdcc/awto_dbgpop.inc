@@ -52,6 +52,10 @@ static void AwtoPutChar(char c)
     {
         ucG = _SLINE_;
     }
+    else if(c == '/')
+    {
+        ucG = _AND_;                  // U002F: the SDK font has it, the old mapping printed '?'
+    }
     AwtoPutGlyph(ucG);
     if((c == 'W') || (c == 'w'))
     {
@@ -101,6 +105,7 @@ static void AwtoShowLine(BYTE ucRow, BYTE ucPage)
     s_pucAwtoDbg[s_ucAwtoLen] = _END_;
     s_ucAwtoLen = 0;
     g_pucShowNumberAddress = s_pucAwtoDbg;
+    OsdFuncClearOsd(ucRow, _OSD_MESSAGE_CENTER_COL_START, _OSD_MESSAGE_CENTER_COL_END + 1, 1);     // a shorter text must not leave the old one's cells
     OsdPropPutStringCenter(ROW(ucRow), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), ucPage, _STRING_SHOW_NUMBER, COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
 }
 

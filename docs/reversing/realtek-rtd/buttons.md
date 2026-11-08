@@ -14,28 +14,25 @@ Bank 6 needed new seeds (0x3902-0x392c, 0x3944, 0x5f70, 0x6217, 0x5942, 0x5255);
 ## 2. ADC to key decode (hard-coded immediates, no table)
 Compares at CODE:39e9-3a60. Raw value R = register byte; band is `lo <= R < hi`. Mask bits accumulate in XDATA dbad.
 
-Physical buttons, left-to-right per Dan (2026-11-04): **SOURCE, MENU, DOWN, UP, AUTO, POWER** (6 keys) [user].
-POWER = the digital P3.0 key [fw+user]. The other 5 are the A0/A1 ADC bands below. The exact band->label
-pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A (see confirm note); the
-`[user-pending]` tags are my best mapping from dispatch order, not yet hardware-verified.
+Physical buttons, left-to-right (Dan, 2026-11-04): **SOURCE, MENU, DOWN, UP, AUTO, POWER** (6 keys). POWER = the digital P3.0 key [fw+user].
+The other 5 are the A0/A1 ADC bands below. Label pairing confirmed on unit 2 (#85, Dan pressed left to right, press log
+`rtd_keywatch.py --log`; the raw value of each key is in the "reads" column) and by the Dahua dispatch (mask 0x20 = SOURCE).
 
-| mask | source | raw band | 5-bit code (R>>3) | label |
+| mask | source | raw band | reads | label |
 |---|---|---|---|---|
-| 0x01 | P3.0 low | n/a | n/a | POWER [fw+user] |
-| 0x02 | ADC_A0 | 0xC0..0xDF | 24..27 | [user-pending] — top of A0 ladder; likely SOURCE or AUTO |
-| 0x04 | ADC_A0 | 0x28..0x47 | 5..8 | [user-pending] DOWN (adjust-) |
-| 0x08 | ADC_A1 | 0x28..0x47 | 5..8 | [user-pending] UP (adjust+) |
-| 0x10 | ADC_A0 | 0x70..0x8F | 14..17 | [user-pending] MENU (only key with long-press timer) |
-| 0x20 | ADC_A1 | 0x68..0x87 | 13..16 | [user-pending] SOURCE or AUTO |
+| 0x01 | P3.0 low | n/a | n/a | POWER [fw+hw] |
+| 0x02 | ADC_A0 | 0xC0..0xDF | 0xD0 | MENU [hw] |
+| 0x04 | ADC_A0 | 0x28..0x47 | 0x38 | UP [hw] |
+| 0x08 | ADC_A1 | 0x28..0x47 | 0x38 | DOWN [hw] |
+| 0x10 | ADC_A0 | 0x70..0x8F | 0x80 | AUTO [hw]; the only key with the long-press timer [guess: the Dahua firmware's long-press key] |
+| 0x20 | ADC_A1 | 0x68..0x87 | 0x80 | SOURCE [hw] |
 
-- 6 distinct single keys: 1 digital (POWER) + 3 on A0 + 2 on A1 [fw]
-- Dan's order is SOURCE,MENU,DOWN,UP,AUTO,POWER. 5 analog keys for {SOURCE,MENU,DOWN,UP,AUTO}: MENU is almost
-  certainly 0x10 (sole long-press key); DOWN/UP are the symmetric adjust pair 0x04/0x08; that leaves SOURCE
-  and AUTO as 0x02 and 0x20 (order unconfirmed). Confirm by press-test. [guess+user]
-- Idle (no key) = no band hit = R near 0xF8 (pull-up) [guess]
+- 6 distinct single keys: 1 digital (POWER) + 3 on A0 (MENU, UP, AUTO) + 2 on A1 (SOURCE, DOWN) [fw+hw]
+- The Dahua mask bits and our SDK masks agree: MENU 0x02, UP 0x04 (_RIGHT), DOWN 0x08 (_LEFT), AUTO 0x10 (_EXIT), SOURCE 0x20 (_KEY5)
 - Bands are 32 raw counts wide (4 codes) around nominal centres; centre voltage fraction of full-scale = R/256 [guess]; absolute volts depend on ADC ref, not checked [?]
-- Combos: masks OR together (e.g. 0x18 = 0x10 + 0x08). Only 0x18 and 0x03 have special handling; others fall through to "no key" [fw]
-- Labels are inferred from behaviour only (long press, gating, OSD handler cases). Nothing in flash carries label text for keys [?]. Confirm on hardware by pressing each key and reading `0xFF09/0xFF0A` + P3.0.
+- Combos: masks OR together (e.g. 0x18 = 0x10 + 0x08). Only 0x18 and 0x03 have special handling in the Dahua firmware; others fall through to "no key" [fw]
+- Two keys on the same ladder (A0: MENU UP AUTO; A1: SOURCE DOWN) put a mixed voltage on it that falls in no band: only an A0 + A1 pair can be a combo [hw: unit 2 reads]
+- Labels in the Dahua firmware come from behaviour only (long press, gating, OSD handler cases); nothing in flash carries label text for keys [?]
 - Debounce: new mask is accepted only when seen on 2 consecutive scans (`e205` compare); first sighting returns 0 [fw]. `e205` is not cleared on release, so re-pressing the same key is accepted on first scan [?]
 
 ## 3. Dispatch
@@ -43,23 +40,23 @@ pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A 
 - `key_power_edge` CODE:5942: mask bit0 set in both cur/prev-xor (press edge) -> banked call `0x0f39` (arg 1 or 2 depending on `0x07a7` result) = power toggle; CY=1 stops further dispatch [guess on the toggle meaning]
 - `key_event_dispatch` CODE:5255: switch on e208 [fw]:
 
-| e208 | key event idx (R5) | extra |
-|---|---|---|
-| 0x02 | 0 | clears e152 bit3 |
-| 0x04 | 1 | |
-| 0x08 | 2 | |
-| 0x10 | 3 | clears e152 bit3 |
-| 0x18 | 3 | clears e152 bit3 |
-| 0x20 | 4 | only if e14e/e14f (16-bit) == 0 |
+| e208 | key (#85) | key event idx (R5) | extra |
+|---|---|---|---|
+| 0x02 | MENU | 0 | clears e152 bit3 |
+| 0x04 | UP | 1 | |
+| 0x08 | DOWN | 2 | |
+| 0x10 | AUTO [guess] | 3 | clears e152 bit3 |
+| 0x18 | AUTO + DOWN | 3 | clears e152 bit3 |
+| 0x20 | SOURCE | 4 | only if e14e/e14f (16-bit) == 0 |
 
 - `key_post_event` CODE:5b45: new key -> `641e`; for 0x10/0x18 arms 3000-unit timer id 0xd (long press, 0x0BB8) and returns without posting [fw]. Otherwise `e151 = idx`, then `6567` cancels timers 0xb/0xd/0xe [fw]
 - Held key (no change): if e152 bit3 set, repeats e151 or arms timer id 1 with 0x01F4 (500 units, auto-repeat delay) [fw]. Timer time unit not determined [?]
 - Consumer: `e151` (XDATA 0xE151, named `osd_key_event_idx`) is read in ~30 places in bank0 OSD code (0xA6ED-0xFE0B) as `switch(e151)` DEC chains with cases 1, 2, 3, 6 [fw]:
   - 1, 2 = value adjust (two direction keys): `fd66`, `fd87` (+ siblings fda8/fdc9/fdea/fe0b) call `ee33(n)`, `eee4`/`f184` change a value [guess]
-  - 3 = select/enter or back: `fcfe` [guess]
+  - 3 = select/enter or back: `fcfe` [guess]; the AUTO key (mask 0x10)
   - 6 = other event (`c3ea`); not produced by the scan path, so it comes from the long-press timer (id 0xd) or OSD logic [?]
   - idx 0 and 4 are consumed by different code (bank0 ~0xC3EA-0xC5xx: `e151 == 0` test) [?]
-- Entry into OSD/menu state machine: not isolated. Candidates: idx 3 (MENU/ENTER key, 0x10) via `fcfe`/`c3ea` in bank0; `0dc5` banked call (called from `63fe`, `eee4`) [?]. Needs a proper bank0 decompile: the OSD region 0xA000-0xFFFF in bank0 is only partially disassembled (seeded from e151 xrefs, function starts are heuristic).
+- Entry into OSD/menu state machine: not isolated. Candidates: idx 3 (AUTO key, 0x10: the long-press key [guess]) via `fcfe`/`c3ea` in bank0; `0dc5` banked call (called from `63fe`, `eee4`) [?]. Needs a proper bank0 decompile: the OSD region 0xA000-0xFFFF in bank0 is only partially disassembled (seeded from e151 xrefs, function starts are heuristic).
 - `key_alt_source_poll` CODE:5154 runs when no ADC/P3.0 key is down: copies 8 bytes from code `0xFF:3067` into dbb4, calls 57f3, returns dbbe; result can set a key mask via `68a7`. Possibly the VCP 0xCA "OSD button control" injection path (bank5 case_vcp_ca_osd_button_ctrl -> bank0 0x0db9) [?]
 
 ## 4. Data-driven or hard-coded
@@ -77,9 +74,8 @@ pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A 
 
 ## 6. Our firmware (#85, #39)
 - Decode = section 2 bands in `PCB_KEY_STATE` (`fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`); POWER = `P3_0` low. P3.0 = pin 71, pin-share 0 (GPIO in) in our header and live (`docs/monitors/pinshare-live-AWT26110003.tsv`).
-- SOURCE vs AUTO pairing = one define, `_AWTO_KEY_A0TOP_SOURCE` (_ON: A0 top = SOURCE, A1 mid = AUTO). Unconfirmed until a press is logged.
 - SDK masks: SOURCE = `_KEY5_MASK` (handled in `RTDKeyMessageProc`, no SDK message), MENU, DOWN = `_LEFT`, UP = `_RIGHT`, AUTO = `_EXIT`, POWER.
-- Combos need keys on different ladders (A0: SOURCE MENU DOWN; A1: UP AUTO); two keys on one ladder give a mixed voltage that matches no band.
+- Combos need keys on different ladders (A0: MENU UP AUTO; A1: SOURCE DOWN); two keys on one ladder give a mixed voltage that matches no band.
   - MENU + UP = #79 debug link toggle (also boot recovery, #67)
   - UP + DOWN = key test screen open / close (#39)
   - SOURCE = next input (#60)
@@ -87,6 +83,7 @@ pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A 
   - MENU + DOWN can't work: both on A0, the mixed voltage hits no band (or a wrong one).
   - Combo release: once two keys were down, no key message and no SOURCE until all keys are up (a hand lets go of one key first). The first key of a combo still sends its message on press.
 - Test screen: `rtd_keywatch.py <bus> --log --map MAP` reads the press log (`g_stAwtoKey`); test cmd 0x41 / 0x42 open / close.
+  - Rows (info pop-up window, text area = map cells 12..35 = 288 px, centred): `A0 hex code frac` / `A1 ... P30 n` / `KEY <keys down>` / `MSG key R rep H hold [INJ]` / `LAST` 8 presses / `N count CLOSE UP DOWN`; worst case of each row <= 213 px (`scripts/popup_fit.py`, font page capacity checked too). Each row clears its 24 text cells first (a shorter text must not leave the longer one's cells).
   - Drawn at open (not via the ACTIVE one-time event): works with no signal. Over the #67 menu: closes it (`menu_close`), closes to no menu.
   - While open: SDK no-signal / power-saving pop-ups and timers held off (as the #67 menu does).
   - Redraw only when a shown value changed, at most every 80 ms: one redraw (6 proportional rows) blocks the main loop for a long time (sim numbers in #85).
