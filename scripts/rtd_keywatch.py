@@ -2,6 +2,10 @@
 """Watch front-panel key presses live by polling the scaler's ADC key registers over DDC/ISP.
 
 usage: rtd_keywatch.py <bus> [--halt] [--secs N]
+       rtd_keywatch.py <bus> --log --map MAP [--serial S] [--secs N] [--open] [--close] [--once]   (#39: firmware key log, no screen needed)
+  --log: reads g_stAwtoKey (map symbol _g_stAwtoKey, 144 B) over debug slave 0x35, read-only except --open/--close (test cmd 0x41/0x42
+         = key test screen). Prints the live raw A0/A1/P3.0 when they change and every new press-log entry (raw values, decoded key,
+         key message, injected mark, firmware tick ms). Needs dbg_xdata / rtd_i2c_bridge / i2cbus (main tree: AWTO_DDC_MAIN).
 Default: MCU left RUNNING; reads scaler regs via F4/F5 (index/data) at ISP 0x4A and decodes the
 key bands from buttons.md. Press each physical button; the decoded key is printed when it changes.
 --halt: enter ISP (stops MCU) first — only if the running read returns nothing (then presses may not
@@ -34,8 +38,93 @@ def decode(a0, a1):
     return hits
 
 
+SDK_NAMES = [(0x20, "SOURCE"), (0x02, "MENU"), (0x08, "DOWN"), (0x04, "UP"), (0x10, "AUTO"), (0x01, "POWER")]    # left to right
+MSG_NAMES = {0: "MENU", 1: "UP", 2: "DOWN", 3: "AUTO", 4: "SOURCE", 0xFF: "-"}
+KEY_SZ, LOG_N, HDR = 8, 16, 16
+POLL_S = 0.2        # a human presses <= ~5 keys/s and the ring holds 16: 0.2 s polls cannot lose an entry; one read = 6 blocks ~ 40 ms
+
+
+def keys_of(mask):
+    return "+".join(n for b, n in SDK_NAMES if mask & b) or "-"
+
+
+def band_hint(a0, a1):
+    """Which ladder band the raw values fall in, independent of the firmware's SOURCE/AUTO pairing."""
+    h = []
+    for lo, hi, n in ((0xC0, 0xE0, "A0-top"), (0x70, 0x90, "A0-MENU"), (0x28, 0x48, "A0-DOWN")):
+        if lo <= a0 < hi:
+            h.append(n)
+    for lo, hi, n in ((0x68, 0x88, "A1-mid"), (0x28, 0x48, "A1-UP")):
+        if lo <= a1 < hi:
+            h.append(n)
+    return ",".join(h) or "idle"
+
+
+def log_mode(a, root):
+    import re
+    import dbg_xdata as X
+    import i2cbus
+    import rtd_i2c_bridge as B
+    mp = Path(a[a.index("--map") + 1]).read_text(errors="replace")
+    m = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoKey\b", mp, re.M)
+    if not m:
+        sys.exit("_g_stAwtoKey not in the map: image without the #39 key log")
+    base = int(m.group(1), 16)
+    bus = int(a[0])
+    if "--serial" in a:
+        i2cbus.require_unit(bus, a[a.index("--serial") + 1])
+    secs = float(a[a.index("--secs") + 1]) if "--secs" in a else 25.0
+    wr = "--open" in a or "--close" in a
+    io = B.Real(bus, allow_write=wr, regread=True)
+    lf = (root / "tmp" / "logs" / "rtd_keywatch.log").open("a", buffering=1)
+
+    def say(s):
+        line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+        print(line, flush=True)
+        lf.write(line + "\n")
+
+    if wr:
+        v = 0x41 if "--open" in a else 0x42
+        d = X.diag_base if hasattr(X, "diag_base") else None
+        mdiag = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoDiag\b", mp, re.M)
+        tc = (int(mdiag.group(1), 16) if mdiag else 0xF6D0) + 0x28
+        ok = io.write(X.DEV8, 0x01, bytes([tc >> 8])) and io.write(X.DEV8, 0x03, bytes([v])) and io.write(X.DEV8, 0x3B, bytes([tc & 0xFF]))
+        say(f"test cmd 0x{v:02X} (key test screen {'open' if v == 0x41 else 'close'}) {'sent' if ok else 'NAK'}")
+    seen, last, t0 = None, None, time.time()
+    while True:
+        raw = X.read_blocks(io, base, HDR + KEY_SZ * LOG_N)
+        if raw is None or raw[:2] != b"KY":
+            say(f"read failed or no key block at 0x{base:04X} (magic {raw[:2] if raw else None}; the block is created at the first key scan)")
+        else:
+            cnt, a0, a1, p30, mask, msg, flags = raw[5], raw[6], raw[7], raw[8], raw[9], raw[10], raw[11]
+            if seen is None:
+                seen = cnt                                      # only presses from now on
+                say(f"key block ok: screen {'OPEN' if raw[3] else 'closed'}, {cnt} presses logged so far")
+            live = (a0, a1, p30, mask)
+            if live != last:
+                say(f"live A0=0x{a0:02X} A1=0x{a1:02X} P3.0={p30 & 1} bands {band_hint(a0, a1)} -> key {keys_of(mask)} msg {MSG_NAMES.get(msg, msg)} "
+                    f"rep={flags & 1}{(flags >> 1) & 1} hold={(flags >> 2) & 1}{' INJ' if flags & 0x80 else ''}")
+                last = live
+            for n in range(seen, seen + ((cnt - seen) & 0xFF)):
+                e = raw[HDR + KEY_SZ * (n & (LOG_N - 1)):][:KEY_SZ]
+                say(f"PRESS #{e[0]} t={e[1] << 8 | e[2]} ms A0=0x{e[3]:02X} A1=0x{e[4]:02X} P3.0={e[5] & 1} bands {band_hint(e[3], e[4])} -> "
+                    f"key {keys_of(e[6]) if e[6] else 'msg-only'} msg {MSG_NAMES.get(e[7], e[7])}{' INJECTED' if e[5] & 0x80 else ''}")
+            seen = cnt
+        if "--once" in a or time.time() - t0 >= secs:
+            break
+        time.sleep(POLL_S)
+    io.close()
+    return 0
+
+
 def main() -> int:
     root = P.repo_root()
+    if "--log" in sys.argv:
+        for d in (Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts",):
+            if d.exists() and str(d) not in sys.path:
+                sys.path.append(d.as_posix())
+        (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
+        return log_mode(sys.argv[1:], root)
     (root / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
     P.LOG = (root / "tmp" / "logs" / "rtd_keywatch.log").open("a")
     bus = int(sys.argv[1])

@@ -247,9 +247,13 @@ INSERTS = [
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);", r"^\s*case _PANEL_ON:"),
-    # #79 MENU held + RIGHT (or EXIT): debug link toggle (fw/sdcc/awto_ddcci.inc AwtoKeyDbgLink)
-    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _RIGHT_KEY_MASK):\n        case (_MENU_KEY_MASK | _EXIT_KEY_MASK):\n"
-     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n",
+    # #85 combos (keys on different ladders): MENU + UP = #79 debug link toggle, UP + DOWN = #39 key test screen; SOURCE = next input (#60)
+    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _RIGHT_KEY_MASK):\n"
+     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n"
+     "        case (_LEFT_KEY_MASK | _RIGHT_KEY_MASK):\n"
+     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_TEST_TOGGLE();\n            }\n            break;\n"
+     "        case _KEY5_MASK:\n            CLR_KEYREPEATENABLE();\n"
+     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_SOURCE();\n            }\n            break;\n",
      r"^void RTDKeyMessageProc\(void\)$"),
     # #80 IP over DDC (fw/sdcc/awto_net.inc after awto_ddcci.inc: AwtoDdcRequest calls AwtoNetXchgA); poll gated by g_ucAwtoNetRun
     (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$",
@@ -294,8 +298,12 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
     ("Kernel/System/Code/SysMain.c", r"^\s*SysPowerHandler\(\);", "            AwtoDiagTestCmd();"),  # after key scan (#33)
     (OSD + "RTD2014Key.c", r"^void UserInterfaceKeyHandler\(void\)$", (SHIM / "awto_testcmd.inc").read_text().rstrip("\n")),
+    (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keytest.inc").read_text().rstrip("\n")),    # #39 / #85: at the end, no SDK line moves
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      '#define AWTO_FW_TAG "%s"\n' % FW_TAG + (SHIM / "awto_dbgpop.inc").read_text().rstrip("\n")),
+    (OSD + "RTD2014OsdDisplay.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keypop.inc").read_text().rstrip("\n")),    # #39: at the end, no SDK line moves
+    (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
+     "            if(g_stAwtoKey.ucOpen == 1)\n            {\n                AwtoOsdKeyLines();\n                break;\n            }"),    # #39: before the debug lines
     (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
      "            if(g_stAwtoDiag.ucDbgPopup == 1)\n            {\n                AwtoOsdDebugLines();\n                break;\n            }"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
@@ -345,9 +353,17 @@ SUBS = [
     (OSD + "RTD2014Ddcci.c", r"SET_FORCE_POW_SAV_STATUS\(_FALSE\);\s*SysSourceSetScanType\(_SOURCE_SWITCH_FIXED_PORT\);\s*"
      r"SysSourceSwitchInputPort\((_\w+)\);\s*SysModeSetResetTarget\(_MODE_ACTION_RESET_TO_SEARCH\);",
      lambda m: "AwtoInputSelect(%s, 0x60);  // [keil2sdcc] sub: fast path (fw/sdcc/awto_ddcci.inc)" % m.group(1), 7),
-    # #60 front key: EXIT with no menu = next input (the SDK's VGA auto adjust there is compiled out: no VGA)
+    # #39 / #85 key tracking: raw values + press log after the scan, key message note / swallow after the conversion
+    (OSD + "RTD2014Key.c", r"(g_ucKeyStateCurr = RTDKeyScan\(\);)", lambda m: m.group(1) + " AWTO_KEY_SCAN();  // [keil2sdcc] sub", 1),
+    (OSD + "RTD2014Key.c", r"(\n\s*)(RTDKeyMessageProc\(\);)", lambda m: m.group(1) + m.group(2) + " AWTO_KEY_MSG();  // [keil2sdcc] sub", 1),
+    # test screen up: POWER is only logged (it must not switch the monitor off while keys are being tested), no hold-key special handling
+    (OSD + "RTD2014Key.c", r"(bit RTDKeyPowerKeyProc\(void\)\s*\{)",
+     lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON() && ((g_ucKeyStateCurr & _POWER_KEY_MASK) != 0)) { return _TRUE; }  // [keil2sdcc] sub", 1),
+    (OSD + "RTD2014Key.c", r"(bit RTDKeySpecialProc\(BYTE ucKeyMask\)\s*\{)",
+     lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON()) { return _FALSE; }  // [keil2sdcc] sub", 1),
+    # #85: AUTO (= EXIT) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
     (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
-     lambda m: m.group(1) + "            AwtoKeyNextInput();  // [keil2sdcc] sub\n            break;\n", 1),
+     lambda m: m.group(1) + "            // AUTO: no action  [keil2sdcc] sub\n            break;\n", 1),
 ] + [
     # #78: TMDS Initial after a no-signal power-off wiped SCDC 0x20 (host's 1/40 ratio lost -> no lock, endless search after DPMS)
 ] + [(f"Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx{n}.c",

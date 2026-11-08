@@ -33,7 +33,7 @@ static bit AwtoPortCable(BYTE ucPort)
            GET_D3_CABLE_STATUS();
 }
 
-void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu): next of D1 -> D2 -> D3 after the current
+void AwtoKeyNextInput(void)                     // #60 front key (SOURCE, no menu): next of D1 -> D2 -> D3 after the current
 {                                               // port: cached (fast) first, else one with a cable, else the plain next
     BYTE ucCur = SysSourceGetInputPort();
     BYTE ucP = ucCur;
@@ -61,7 +61,7 @@ void AwtoKeyNextInput(void)                     // #60 front key (EXIT, no menu)
 #if(_AWTO_DBG_SWAP == _ON)
 static __xdata WORD s_usAwtoDbgLinkMs;
 
-void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B, MENU+RIGHT; 0 = back to DDC/CI
+void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B, MENU+UP; 0 = back to DDC/CI
 {
     do
     {
@@ -95,7 +95,7 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
     }
 }
 
-void AwtoKeyDbgLink(void)                       // MENU held + RIGHT: toggle the debug link; closes the menu MENU opened
+void AwtoKeyDbgLink(void)                       // MENU held + UP: toggle the debug link; closes the menu MENU opened
 {
     if(GET_OSD_STATE() != _MENU_NONE)
     {

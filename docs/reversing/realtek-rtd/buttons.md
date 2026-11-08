@@ -74,3 +74,14 @@ pairing is still to be confirmed by pressing each key and reading 0xFF09/0xFF0A 
 - bank0: `osd_key_event_idx`, `osd_keyevt_handler_*` (fd66, fd87, eee4, f184, f97a)
 - Scratch XDATA dbad-dbb3 deliberately unnamed: shared scratch (dbae is `ddcci_cmd_byte` in bank5)
 - Seeds appended: `seeds_bank6.txt` (6 entries), `seeds_bank0.txt` (26 heuristic function starts from e151 xrefs)
+
+## 6. Our firmware (#85, #39)
+- Decode = section 2 bands in `PCB_KEY_STATE` (`fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`); POWER = `P3_0` low. P3.0 = pin 71, pin-share 0 (GPIO in) in our header and live (`docs/monitors/pinshare-live-AWT26110003.tsv`).
+- SOURCE vs AUTO pairing = one define, `_AWTO_KEY_A0TOP_SOURCE` (_ON: A0 top = SOURCE, A1 mid = AUTO). Unconfirmed until a press is logged.
+- SDK masks: SOURCE = `_KEY5_MASK` (handled in `RTDKeyMessageProc`, no SDK message), MENU, DOWN = `_LEFT`, UP = `_RIGHT`, AUTO = `_EXIT`, POWER.
+- Combos need keys on different ladders (A0: SOURCE MENU DOWN; A1: UP AUTO); two keys on one ladder give a mixed voltage that matches no band.
+  - MENU + UP = #79 debug link toggle (also boot recovery, #67)
+  - UP + DOWN = key test screen open / close (#39)
+  - SOURCE = next input (#60)
+- Test screen: `rtd_keywatch.py <bus> --log --map MAP` reads the press log (`g_stAwtoKey`); test cmd 0x41 / 0x42 open / close.
+- ADC reference voltage: not in `re/regdb` (ADC_ACONTROL 0xFF08 has bias current + clock polarity, ADC_CLK_DIV 0xFF0D the clock); the screen shows R/256 of full scale.

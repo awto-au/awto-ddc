@@ -119,6 +119,62 @@ extern bit AwtoHoldBlocksDisable(void);
 extern void AwtoHoldOsdGuard(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
+// #39 key test screen + press log (fw/sdcc/awto_keytest.inc, awto_keypop.inc): read over debug slave 0x35 at map symbol _g_stAwtoKey
+// (host: scripts/rtd_keywatch.py --log). Bytes only, so the layout is the same in LE and BE images.
+#define AWTO_KEY_LOG_N                                          16      // press-log entries (ring, newest at index (ucCount - 1) % 16)
+#define AWTO_KEY_REFRESH_MS                                     80      // screen redraw period: 100 ms (10 Hz floor) / 1.25
+#define AWTO_KM_POWER                                           0x01    // = SDK masks of RTD2014Key.c (checked there); the Key.c names are not visible in OsdDisplay.c
+#define AWTO_KM_MENU                                            0x02
+#define AWTO_KM_UP                                              0x04    // _RIGHT_KEY_MASK
+#define AWTO_KM_DOWN                                            0x08    // _LEFT_KEY_MASK
+#define AWTO_KM_AUTO                                            0x10    // _EXIT_KEY_MASK
+#define AWTO_KM_SOURCE                                          0x20    // _KEY5_MASK
+#define AWTO_KEY_LAST_N                                         8       // keys in the screen's LAST row
+#define AWTO_KEY_MSG_NONE                                       0xFF    // log entry: no key message came with the press (combo, POWER)
+#define AWTO_KEY_MSG_SOURCE                                     4       // our SOURCE message (SDK messages 0..3 = MENU RIGHT LEFT EXIT)
+#define AWTO_KEY_F_INJ                                          0x80    // flags: injected (I2C test cmd, key_inject, key_hold)
+#define AWTO_KEY_F_P30                                          0x01    // flags: P3.0 level (live and log entries)
+typedef struct                                  // 8 B
+{
+    unsigned char ucSeq;                        // = ucCount at the time
+    unsigned char ucTickHi;                     // g_stAwtoDiag.usT2Isr (1 ms), high byte first
+    unsigned char ucTickLo;
+    unsigned char ucA0;                         // raw ADC_A0 (0xFF09)
+    unsigned char ucA1;                         // raw ADC_A1 (0xFF0A)
+    unsigned char ucFlags;                      // bit0 = P3.0 level, bit7 = AWTO_KEY_F_INJ
+    unsigned char ucMask;                       // SDK key mask (0 = injected message only)
+    unsigned char ucMsg;                        // key message 0..4 or AWTO_KEY_MSG_NONE
+} StAwtoKeyEntry;
+typedef struct
+{
+    unsigned char ucMagic0;                     // 'K'
+    unsigned char ucMagic1;                     // 'Y'
+    unsigned char ucVersion;                    // 1
+    unsigned char ucOpen;                       // test screen open
+    unsigned char ucDrawn;                      // screen has been drawn (redraw allowed)
+    unsigned char ucCount;                      // presses logged, wraps at 256; also the next seq
+    unsigned char ucA0;
+    unsigned char ucA1;
+    unsigned char ucP30;
+    unsigned char ucMask;
+    unsigned char ucMsg;                        // last key message (0..4) or AWTO_KEY_MSG_NONE
+    unsigned char ucFlags;                      // bit0 repeat enable, bit1 repeat start, bit2 key hold, bit7 injected (live)
+    unsigned char ucReserved[4];
+    StAwtoKeyEntry pstLog[AWTO_KEY_LOG_N];
+} StAwtoKey;
+extern __xdata StAwtoKey g_stAwtoKey;
+extern void AwtoKeyScan(void);
+extern void AwtoKeyMsg(void);
+extern void AwtoKeyInject(unsigned char ucMsg);
+extern void AwtoKeySourcePress(void);
+extern void AwtoKeyTestSet(unsigned char ucOn);
+extern void AwtoOsdKeyLines(void);
+#define AWTO_KEY_TEST_ON()                                      (g_stAwtoKey.ucOpen != 0)
+#define AWTO_KEY_SCAN()                                         AwtoKeyScan()
+#define AWTO_KEY_MSG()                                          AwtoKeyMsg()
+#define AWTO_KEY_SOURCE()                                       AwtoKeySourcePress()
+#define AWTO_KEY_TEST_TOGGLE()                                  AwtoKeyTestSet(2)
+#define AWTO_KEY_INJECT(m)                                      AwtoKeyInject(m)
 #if(_AWTO_DIAG_DELAYCAL == _ON)
 extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
@@ -135,6 +191,12 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #define AWTO_DIAG_T2ISR()
 #define AWTO_DIAG_EX1ISR()
+#define AWTO_KEY_TEST_ON()                                      0
+#define AWTO_KEY_SCAN()
+#define AWTO_KEY_MSG()
+#define AWTO_KEY_SOURCE()                                       AwtoKeyNextInput()
+#define AWTO_KEY_TEST_TOGGLE()
+#define AWTO_KEY_INJECT(m)                                      { if((m) < _KEY_AMOUNT) { SET_KEYMESSAGE(m); } }
 #endif
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
@@ -248,7 +310,7 @@ extern void AwtoFreqUpdate(void);
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoKeyNextInput(void);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
-// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+RIGHT, test cmd 0x3C) moves the
+// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+UP, test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.
 #if((_AWTO_DDCCI_ENGINES == 1) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
 #define _AWTO_DBG_SWAP                                          _ON

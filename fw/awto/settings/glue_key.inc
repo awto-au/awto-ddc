@@ -1,13 +1,13 @@
 // #67 recovery keys (integrator-owned, private): inserted into RTD2014Key.c (key masks) by fw/awto/settings/rules.py.
 #ifdef _AWTO_NEW_SETTINGS
-BYTE set_recovery_requested(void)            // Menu (ADC A0 ladder) + Left (ADC A1 ladder) down together
+BYTE set_recovery_requested(void)            // MENU (A0 ladder) + UP (A1 ladder) down together (#85)
 {
     BYTE ucState = 0;
     BYTE ucV1 = PCB_ADKEY1();
     BYTE ucV2 = PCB_ADKEY2();
 
     PCB_KEY_STATE(0, ucV1, ucV2, 0, ucState);
-    return ((ucState & (_MENU_KEY_MASK | _LEFT_KEY_MASK)) == (_MENU_KEY_MASK | _LEFT_KEY_MASK));
+    return ((ucState & (_MENU_KEY_MASK | _RIGHT_KEY_MASK)) == (_MENU_KEY_MASK | _RIGHT_KEY_MASK));
 }
 
 // Host key injection (#67, menu.h key_inject / key_hold): a key message as the key scan would give it, or a raw key
@@ -18,17 +18,14 @@ static __xdata WORD s_usAwtoKeyHoldMs;
 
 void key_inject(BYTE ucKey)
 {
-    if(ucKey < _KEY_AMOUNT)
-    {
-        SET_KEYMESSAGE(ucKey);
-    }
+    AWTO_KEY_INJECT(ucKey);                  // 0..3 SDK messages, 4 = SOURCE (#85)
 }
 
 void key_hold(BYTE ucMask, WORD usMs)
 {
     s_usAwtoKeyHoldT0 = g_usTimerCounter;
     s_usAwtoKeyHoldMs = usMs;
-    g_ucAwtoKeyHold = ucMask & (_POWER_KEY_MASK | _MENU_KEY_MASK | _RIGHT_KEY_MASK | _LEFT_KEY_MASK | _EXIT_KEY_MASK);
+    g_ucAwtoKeyHold = ucMask & (_POWER_KEY_MASK | _MENU_KEY_MASK | _RIGHT_KEY_MASK | _LEFT_KEY_MASK | _EXIT_KEY_MASK | _KEY5_MASK);
 }
 
 BYTE AwtoKeyHold(void)                       // RTDKeyScan (AWTO_KEY_HOLD): the held mask until its time is up
