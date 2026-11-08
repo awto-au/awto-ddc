@@ -16,8 +16,8 @@ Plan, inventory and step list: #65 (scoping comment). Dan's decisions: #65 comme
 | dataport | 2 | `specs/dataport.md` | facts + reference behaviour | draft, brief ready |
 | arith (mul/div) | 2 | `specs/arith.md` + `vectors/arith.tsv` | maths, checked vs reference | draft, brief ready |
 | settings registry | 5-7 | `specs/settings.md` | OUR design (not ported): one registry -> menus, VCP, NVRAM, docs | to write |
-| factory menu | 5 | `specs/osd-ui.md` | `vendor-ui` facts (vendor image walk); part of our OSD UI | to write |
-| OSD UI menus | 5 | `specs/osd-ui.md` | `vendor-ui` facts; assets redrawn | to write |
+| factory menu | 5 | `specs/osd-ui.md` | `sdk-ui` facts (vendor image walk); part of our OSD UI | to write |
+| OSD UI menus | 5 | `specs/osd-ui.md` | `sdk-ui` facts; assets redrawn | to write |
 | gamma LUTs | 8 | `specs/gamma.md` | maths (`derived`); vendor tables only as a check | to write |
 | flash part table | 6 | `specs/flashtable.md` | flash datasheets (`derived`) | to write |
 | DP PHY CTS | 12 | `specs/dpphycts.md` | public DP spec (`derived`) + facts | to write |
@@ -98,8 +98,8 @@ Every number in a spec (and its code comment) carries one:
 - `measured`: our measurement (reference image in fw_sim, trace, scope, hardware unit); cite what, when (date/commit), conditions.
 - `vendor-value`: a number taken from the SDK or Realtek tool data with no derivation of ours. Allowed now (Dan, 2026-11-07),
   stays private; each one is replaced by a `measured` value before anything is published. Track them in the spec's Data table.
-- `vendor-ui`: a functional fact about the vendor firmware's user interface (menu tree, items, ranges, defaults, key
-  behaviour), observed by running the vendor image (below). Facts only: the vendor's code, fonts, icons and graphics are
+- `sdk-ui`: a Realtek SDK menu fact: a functional fact about the Realtek SDK menu's user interface (menu tree, items,
+  ranges, defaults, key behaviour), observed by running the vendor image (below). Facts only: the vendor's code, fonts, icons and graphics are
   their copyright. Private builds may use the assets; the clean tree redraws them and implements from the spec.
 - HDCP 1.4 keys: Realtek's table now; public tree option = keys generated from the public master key (#65 decision).
 
@@ -117,7 +117,7 @@ Every number in a spec (and its code comment) carries one:
 ## OSD oracle: vendor walk and side-by-side render
 - Vendor walk (spec side): `fw_sim_vendor.py` + `osd_render.py` (osd_model hooks) on the vendor image; a key script visits
   every menu page (incl. factory) -> `tmp/osd/vendor/<page>.png` + JSON state (page, items, selection, values).
-  The spec writer derives the menu tree, items, ranges and key behaviour from these (`vendor-ui` facts); this is the
+  The spec writer derives the menu tree, items, ranges and key behaviour from these (`sdk-ui` facts); this is the
   menu list #65 asked Dan for.
 - Gap: key injection into the vendor image (it has no Awto test byte): needs a keypad input model in fw_sim (follow-up issue).
 - Check: the same key script on the vendor image and on ours; per page the two PNGs side by side (`tmp/osd/sbs/<page>.png`)
