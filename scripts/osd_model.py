@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np  # noqa: E402
 import fw_sim as S  # noqa: E402
 from glyph_decode import CODES, tile  # noqa: E402
+import osd_vlc  # noqa: E402
 
 ADR_MSB, ADR_LSB, DATA, MISC, WOPT = 0x90, 0x91, 0x92, 0x93, 0x94
 LUT_ADDR, LUT_PORT = 0x6E, 0x6F
@@ -279,9 +280,17 @@ def decode_window(win: dict, i: int) -> dict | None:
 
 
 def decode_char(w: list[int]) -> dict:
-    """Char command [B0, B1, B2]. 1-bit: B0[7:6]=01, B0[5] = id bit 8 (font 256..511), B0[4:0] = width px; B2 = fg<<4|bg [SDK]."""
+    """Char command [B0, B1, B2].
+    1-bit: B0[7:6]=01, B0[5] = id bit 8 (font 256..511), B0[4:0] = width px; B2 = fg<<4|bg [SDK].
+    2-bit: B0[7:6]=10, no width field (12 px); the 4 colours are spread over B0 and B2 (SDK OsdFontPut2Bit packing):
+           B0 = 1 c0[3] c1[3] c3[2:0] c0[2];  B2 = c0[1:0] c2[2:0] c1[2:0];  pixel value v selects colour c<v> [SDK, derived]
+    4-bit: B0[7:6]=11, layout not known: decoded as kind 4bit, drawn as nothing."""
     b0, b1, b2 = w
     kind = {0: "blank", 1: "1bit", 2: "2bit", 3: "4bit"}[b0 >> 6]
+    if kind == "2bit":
+        c0 = (b0 >> 5 & 1) << 3 | (b0 & 1) << 2 | b2 >> 6
+        c1 = (b0 >> 4 & 1) << 3 | (b2 & 7)
+        return dict(kind=kind, id=b1, width=GW, cols=(c0, c1, b2 >> 3 & 7, b0 >> 1 & 7), fg=c1, bg=c0)
     return dict(kind=kind, id=b1 + (256 if kind == "1bit" and b0 & 0x20 else 0), width=b0 & 0x1F, fg=b2 >> 4, bg=b2 & 15)
 
 
@@ -303,6 +312,15 @@ def glyph_bits(st: OsdState, g: dict, gid: int) -> np.ndarray:
     base = g["font_base"] + 9 * gid
     by = bytes(b for k in range(9) for b in st.font.get(base + k, [0, 0, 0]))
     return tile(by, 0)
+
+
+def glyph_levels2(st: OsdState, g: dict, gid: int) -> np.ndarray:
+    """2-bit glyph: 18 words, row-major 12 px, 2 bits per px MSB first, 24-bit words stored low byte first (osd_vlc.pack_unit).
+    Address = font_base + 9 * char_sel_2bit_offset + 18 * id [derived from the 3A21/3A22 field text; not seen on hardware]."""
+    off2 = (st.reg(FRAME + 0x21) >> 1 & 1) << 8 | st.reg(FRAME + 0x22)
+    base = g["font_base"] + 9 * off2 + 18 * gid
+    by = bytes(b for k in range(18) for b in st.font.get(base + k, [0, 0, 0]))
+    return np.array(osd_vlc.unpack_unit(by, GW, GH, 2), np.uint8)
 
 
 def layout_rows(st: OsdState, g: dict) -> list[dict]:
@@ -370,6 +388,18 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                         ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W) & mk
                         img[np.broadcast_to(ys, mk.shape)[ok], np.broadcast_to(xs, mk.shape)[ok]] = rgb
                 x += w
+            elif ch["kind"] == "2bit":
+                lv = glyph_levels2(st, g, ch["id"])
+                px, py = fx + x * sx, fy + y * sy
+                for v in range(4):
+                    ci = ch["cols"][v]
+                    if ci == 0:                                  # colour index 0 = transparent (as the 1-bit background) [spec]
+                        continue
+                    mk = np.kron(lv == v, np.ones((sy, sx), bool))
+                    ys, xs = py + np.arange(mk.shape[0])[:, None], px + np.arange(mk.shape[1])[None, :]
+                    ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W) & mk
+                    img[np.broadcast_to(ys, mk.shape)[ok], np.broadcast_to(xs, mk.shape)[ok]] = st.pal[ci]
+                x += GW
             else:
                 x += ch["width"] or GW
         y += row["h"]
@@ -382,7 +412,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
 def summary(st: OsdState) -> dict:
     g = frame_geometry(st)
     rows = layout_rows(st, g)
-    ids = {c["id"] for r in rows for c in r["chars"] if c["kind"] == "1bit"}
+    ids = {(c["kind"], c["id"]) for r in rows for c in r["chars"] if c["kind"] in ("1bit", "2bit")}
     return dict(g, nwin=sum(1 for i in range(26) if decode_window(st.win, i)["en"]), rows=len(rows),
                 cols=max((r["n"] for r in rows), default=0), cells=sum(r["n"] for r in rows), uniq_ids=len(ids),
-                max_id=max(ids, default=-1), font_words=len(st.font), win_words=len(st.win))
+                max_id=max((i for _, i in ids), default=-1), font_words=len(st.font), win_words=len(st.win))

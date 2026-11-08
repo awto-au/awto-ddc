@@ -138,7 +138,7 @@ def test_render_pixels():
     regs = bytearray(256)
     regs[0x02], regs[0x0A] = 1, 3
     regs[0x0C], regs[0x0D], regs[0x0E] = 2, 0x00, 0x10                         # fs_base 2, font_base 0x100
-    st = M.OsdState(regs=bytes(regs))
+    st = M.OsdState(regs=bytes(regs), ovl=(1, 0))                             # 0x6C[0] overlay port on (6652bc4)
     st.pal[1], st.pal[2] = (255, 0, 0), (0, 0, 255)
     st.font[0] = [0x80, 17, 2]                                                 # row command: 2 chars, height 18
     st.font[1] = [0, 0, 0]                                                     # end of rows
@@ -157,3 +157,50 @@ def test_render_pixels():
 def test_summary_counts():
     st = M.OsdState(regs=bytes(256))
     assert M.summary(st)["cells"] == 0
+
+
+def sdk_pack2(c0, c1, c2, c3):
+    """OsdFontPut2Bit colour packing (SDK RTD2014OsdFontTable.c), the encoder side of decode_char."""
+    b0 = 0x80 | ((c0 & 8) << 2) | ((c1 & 8) << 1) | ((c3 & 7) << 1) | ((c0 & 4) >> 2)
+    return b0, ((c0 & 3) << 6) | ((c2 & 7) << 3) | (c1 & 7)
+
+
+def test_char_2bit_colours_roundtrip():
+    for cols in ((0, 1, 2, 3), (9, 15, 7, 7), (4, 8, 5, 6), (15, 0, 0, 0)):
+        b0, b2 = sdk_pack2(*cols)
+        ch = M.decode_char([b0, 5, b2])
+        assert ch["kind"] == "2bit" and ch["id"] == 5 and ch["width"] == 12
+        assert ch["cols"] == (cols[0], cols[1], cols[2] & 7, cols[3] & 7), cols
+
+
+def test_render_2bit_pixels_and_vlc_download():
+    """A 2-bpp glyph loaded through the VLC data-port path draws its four levels with the char's four colours (derived layout)."""
+    import osd_vlc
+    lv = [[(x // 3 + y) % 4 for x in range(12)] for y in range(18)]
+    data = osd_vlc.pack_unit(lv, 2)
+    assert len(data) == 54
+    blob = osd_vlc.encode(data)
+    m, o = FakeM(), M.OsdModel()
+    for i in range(8):
+        m.set(M.FRAME + 0x0F + i, blob[i])
+    m.set(M.FRAME + 0x17, 1)
+    base = 0x100 + 18 * 3                                                       # font_base 0x100, glyph id 3 (offset 0)
+    set_addr(m, o, base, 0xE8)
+    for b in blob[10:]:
+        port_write(m, o, M.DATA, b)
+    assert bytes(b for k in range(18) for b in o.st.font[base + k]) == data
+    regs = bytearray(256)
+    regs[0x02], regs[0x0A] = 1, 0                                               # 1x scale
+    regs[0x0C], regs[0x0D], regs[0x0E] = 2, 0x00, 0x10
+    st = M.OsdState(regs=bytes(regs), font=o.st.font, ovl=(1, 0))
+    st.pal[1], st.pal[2], st.pal[3] = (50, 0, 0), (150, 0, 0), (250, 0, 0)
+    b0, b2 = sdk_pack2(0, 1, 2, 3)
+    st.font[0] = [0x80, 17, 1]
+    st.font[1] = [0, 0, 0]
+    st.font[2] = [b0, 3, b2]
+    img = M.render(st, 32, 32, bg=(9, 9, 9))
+    for y in (0, 5, 17):
+        for x in (0, 4, 11):
+            v = lv[y][x]
+            want = (9, 9, 9) if v == 0 else ((50, 0, 0), (150, 0, 0), (250, 0, 0))[v - 1]    # level 0 = colour index 0 = transparent
+            assert tuple(img[y, x]) == want, (x, y, v)
