@@ -54,7 +54,7 @@ Request `[op tag ...]`, reply `[op|0x80 tag status ...]`; values big-endian.
 | 05 push (fw -> subscriber) | - | as 06 reply, tag 0 |
 
 - Setting status: 0 ok, 1 no such id, 2 refused (read-only / inputs rule), 0xFE image without the #67 registry.
-- Registry calls: `set_get` / `set_put(id, v, 1)` / `set_idx`, under `#ifdef _AWTO_NEW_SETTINGS` (compile-tested only once merged with wb-osd67).
+- Registry calls: `set_get` / `set_put(id, v, 1)` / `set_idx`, under `#ifdef _AWTO_NEW_SETTINGS` (live on `wb-osd67net`).
 - Unknown op: status 0xFF.
 
 ## Addresses (host-only, not the house LAN 192.168.25.0/24)
@@ -77,6 +77,7 @@ Sim only so far (fw_sim, unit 3 image wb-p14net1, wb-p14net de074ad, 1080p60 sou
 | ping burst 6 x 200 B | 223 fw ms, 135 exchanges | | |
 | 20 % replies lost (dedup) | 600 B intact, 12 retries | | 200 B intact at 60 % loss |
 
-- Speed bench (main loop, docs/speed-bench.tsv): work 4938 (kvm2e) -> 4944 cycles/pass (wb-p14net1), instr/pass 22503 both.
+- Speed bench (main loop, docs/speed-bench.tsv): work 4938 (kvm2e) -> 4944 cycles/pass (wb-p14net1), instr/pass 22503 both; with #67 settings 5062 (wb-osd67i) -> 5068 (wb-osd67net1, wb-osd67net c7ec071).
+- wb-osd67net1 (registry): stack get id 1 = 44, set id 1 = 60 read back; `ddc_sim.py` (MCCS) PASS beside D0.
 - Linux end to end in the sim: `ping 10.235.0.13` through TAP + bridge, 5/5, rtt 1.6-1.8 s wall (sim speed); `ddcnet.py svc info|get|msgs` through the kernel; route mode + ddcci ping 3/3 (9.4 s wall; first ARP timed out at sim speed).
 - Hardware (unit 3): pending, commands on #80.
