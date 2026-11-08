@@ -1418,6 +1418,8 @@ const	___str_6	4	0x01f0	12
 const	___str_7	4	0x01fc	12
 const	___str_8	4	0x0208	12
 const	___str_9	4	0x0214	12
+fn	_AwtoL2LinkOff	4	0x0220	20
+fn	_AwtoL2LinkOn	4	0x0234	40
 const	_tEDID_TABLE_D1	4	0x027c	268
 const	_tEDID_TABLE_D2	4	0x0388	268
 const	_tEDID_TABLE_D3	4	0x0494	268

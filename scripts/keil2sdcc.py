@@ -239,6 +239,14 @@ INSERTS = [
     # #60 KVM: input select + DDC/CI engines (fw/sdcc/awto_ddcci.inc), polled before the SDK DDC/CI handler
     (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$", (SHIM / "awto_ddcci.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonDdcciHandler\(\);", "            AWTO_DDCCI_POLL();", r"^void main\(void\)$"),
+    # #78 eDP panel-on phases in the SDK _BACKLIGHT_ON path (probes 24 VDD on, 26 HPD high = T2 poll returned, 27 link trained)
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _BACKLIGHT_ON:"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _BACKLIGHT_ON:"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*ScalerDisplayDPTxStreamHanlder\(_ENABLE\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 27);", r"^\s*case _BACKLIGHT_ON:"),
+    # same phases in the SDK _PANEL_ON path (full path, L3 / boot): 24 VDD on, 26 HPD high, 27 link trained
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _PANEL_ON:"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _PANEL_ON:"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);", r"^\s*case _PANEL_ON:"),
     # #79 MENU held + RIGHT (or EXIT): debug link toggle (fw/sdcc/awto_ddcci.inc AwtoKeyDbgLink)
     (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _RIGHT_KEY_MASK):\n        case (_MENU_KEY_MASK | _EXIT_KEY_MASK):\n"
      "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n",

@@ -1,7 +1,7 @@
 #if(_AWTO_DBG_FOLLOW == _ON)
 // #28: debug IIC engine follows the active port (SDK: fixed _DEBUG_DDC_CHANNEL_SEL). Called from ScalerMcuDdcciSwitchPort's debug branch.
 // #79 runtime swap (_AWTO_DBG_SWAP): the active port's DDC belongs to DDC/CI (IIC_1, 0x37) unless g_ucAwtoDbgLink != 0;
-// the other engine is parked on AWTO_DBG_PARK_CH. Never both on one channel (kvm1: both NAK), so park first, then move.
+// the other engine is parked on AWTO_DBG_PARK_CH (DDC0). Never both on one channel (kvm1: both NAK), so park first, then move.
 #if(_AWTO_DBG_SWAP == _ON)
 __xdata BYTE g_ucAwtoDbgLink;               // 0 = DDC/CI on the active port (default), 1 = debug slave 0x35 there
 __xdata WORD g_usAwtoDbgLinkSec;            // debug link seconds left (0 = until told back)

@@ -105,6 +105,27 @@ static bit AwtoRxPreDetect(BYTE ucPort, BYTE ucType)
     return _FALSE;
 }
 
+// L2 = eDP link + video off, panel VDD kept (backlight already off from L1); VDD goes off with the SDK at L3.
+// Wake = PHY + link training only: HPD never dropped, so no T1 / HPD wait / T3 (#78, Dan 2026-11-08).
+static void AwtoL2LinkOff(void)
+{
+    ScalerDisplayDPTxStreamHanlder(_DISABLE);   // idle pattern
+    ScalerDisplayDPTxSSCSet(_DISABLE);
+    ScalerDisplayDPTxAnalogPhyConrol(_DISABLE);
+}
+
+static void AwtoL2LinkOn(void)
+{
+    AwtoSwEvent(AWTO_SW_EV_PROBE, 25);
+    ScalerDisplayDPTxPhyInitial();
+    if(ScalerDisplayDPTxLinkSequence() == _FAIL)
+    {
+        AwtoSwEvent(AWTO_SW_EV_PROBE, 28);
+    }
+    ScalerDisplayDPTxStreamHanlder(_ENABLE);
+    AwtoSwEvent(AWTO_SW_EV_PROBE, 27);
+}
+
 static bit AwtoRxRescan(BYTE ucPort, BYTE ucType)  // held port: receiver set up again by the SDK's own pre-detect + scan
 {
     if(AwtoRxStable(ucPort, ucType) == _TRUE)
@@ -116,9 +137,10 @@ static bit AwtoRxRescan(BYTE ucPort, BYTE ucType)  // held port: receiver set up
         return _FALSE;
     }
     AwtoSwEvent(AWTO_SW_EV_HOLD, 8);
-    if(s_ucAwtoHoldLevel == 2)                  // L2: panel up (T1, eDP HPD, T3; black) before the scan, not after it
+    if(s_ucAwtoHoldLevel == 2)                  // L2: link up (black) before the scan, not after it
     {
-        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+        AwtoL2LinkOn();
+        PCB_BACKLIGHT_POWER_PIN(_LIGHT_CONTROL_ON);
         AwtoSwEvent(AWTO_SW_EV_HOLD, 6);
         s_ucAwtoHoldLevel = 0;
     }
@@ -139,7 +161,6 @@ __xdata BYTE g_ucAwtoHold;                      // port held, 0 = none
 static __xdata WORD s_usAwtoHoldSec;
 static __xdata WORD s_usAwtoHoldMs;             // ms into the current second / last 10 ms check
 static __xdata BYTE s_ucAwtoHoldTries;
-static __xdata BYTE s_ucAwtoHoldOther;
 __xdata BYTE g_ucAwtoWakePending;               // a fast wake is in flight (its unblank stamps s_usAwtoWokeMs)
 static __xdata WORD s_usAwtoWokeMs;
 static __xdata BYTE s_ucAwtoWoke;
@@ -167,10 +188,14 @@ bit AwtoWakeHold(void)                          // judge check failed in ACTIVE:
     return _TRUE;
 }
 
-static void AwtoHoldBacklightSdk(void)          // leaving an L1 hold to the SDK: its own backlight-off, so its state is right
+static void AwtoHoldBacklightSdk(void)          // leaving an L1/L2 hold to the SDK: its own backlight-off, so its state is right
 {
-    if(s_ucAwtoHoldLevel == 1)
+    if(s_ucAwtoHoldLevel != 0)                  // L1 or L2: SDK state is still "backlight on"; L2 also had the link off
     {
+        if(s_ucAwtoHoldLevel == 2)
+        {
+            AwtoL2LinkOn();
+        }
         PCB_BACKLIGHT_POWER_PIN(_LIGHT_CONTROL_ON);
         UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF);
     }
@@ -224,18 +249,17 @@ void AwtoWakePoll(void)                         // every pass while held
     if((s_ucAwtoHoldLevel == 1) && (g_stAwtoPower.ucL2 != 0) && (s_usAwtoHoldSec >= g_stAwtoPower.usL2Sec))
     {
         s_ucAwtoHoldLevel = 2;
-        UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+        AwtoL2LinkOff();
         AwtoSwEvent(AWTO_SW_EV_HOLD, 2);
     }
-    if((GET_SOURCE_SCAN_TYPE() != _SOURCE_SWITCH_FIXED_PORT) && ((s_usAwtoHoldMs % AWTO_HOLD_OTHER_MS) < AWTO_HOLD_CHECK_MS))
-    {                                           // auto search: another port with a signal ends the hold (one port per check)
-        s_ucAwtoHoldOther = (s_ucAwtoHoldOther >= 2) ? 0 : (s_ucAwtoHoldOther + 1);
-        ucI = _D1_INPUT_PORT + s_ucAwtoHoldOther;
-        if((ucI != g_ucAwtoHold) && (((ucI == _D1_INPUT_PORT) ? AwtoRxStable(ucI, _SOURCE_DP) : AwtoRxPreDetect(ucI, _SOURCE_HDMI)) == _TRUE))   // DP pre-detect is true on an idle cable: trained link only
-        {
-            AwtoWakeRelease(9);
-            return;
-        }
+    if((GET_SOURCE_SCAN_TYPE() != _SOURCE_SWITCH_FIXED_PORT) && (s_usAwtoHoldSec >= AWTO_HOLD_AUTO_SEC) &&
+       (((g_ucAwtoHold != _D1_INPUT_PORT) && (GET_D1_CABLE_STATUS() == _TRUE) && (s_pstAwtoSwCache[0].ucValid != 0)) ||
+        ((g_ucAwtoHold != _D2_INPUT_PORT) && (GET_D2_CABLE_STATUS() == _TRUE) && (s_pstAwtoSwCache[1].ucValid != 0)) ||
+        ((g_ucAwtoHold != _D3_INPUT_PORT) && (GET_D3_CABLE_STATUS() == _TRUE) && (s_pstAwtoSwCache[2].ucValid != 0))))
+    {                                           // auto search + another cable that has carried a picture (cache): the SDK
+                                                // search may find it live. A cable that never did (idle DP) keeps the fast wake.
+        AwtoWakeRelease(9);                     // (idle ports have no clock detection: their freq-detect IRQ is off, #60)
+        return;
     }
     ucI = g_ucAwtoHold - _D1_INPUT_PORT;
     if(AwtoRxRescan(g_ucAwtoHold, s_pstAwtoSwCache[ucI].ucSourceType) == _FALSE)
@@ -251,11 +275,11 @@ void AwtoWakePoll(void)                         // every pass while held
     g_ucAwtoHold = 0;
     g_ucAwtoWakePending = 1;
     AwtoSwFastGo(ucI, SysSourceGetInputPort(), s_pstAwtoSwCache[ucI].ucSourceType);
-    if(s_ucAwtoHoldLevel == 2)                  // L2: SDK panel on (T1, eDP link, T3) while the fast path's 3 frames pass; still
-    {                                           // blanked (black) and before its flag clear, so its checks see the result
-        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+    if(s_ucAwtoHoldLevel == 2)                  // L2: link training while the fast path's frames pass; still blanked (black)
+    {
+        AwtoL2LinkOn();
     }
-    else if(s_ucAwtoHoldLevel == 1)
+    if(s_ucAwtoHoldLevel != 0)
     {
         PCB_BACKLIGHT_POWER_PIN(_LIGHT_CONTROL_ON);
     }

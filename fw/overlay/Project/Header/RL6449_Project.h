@@ -233,13 +233,13 @@ extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoKeyNextInput(void);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 // #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E8 = A5 NN (or MENU+RIGHT, test cmd 0x3C) moves the
-// debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: channel 7.
+// debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.
 #if((_AWTO_DDCCI_ENGINES == 1) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
 #define _AWTO_DBG_SWAP                                          _ON
 #else
 #define _AWTO_DBG_SWAP                                          _OFF
 #endif
-#define AWTO_DBG_PARK_CH                                        0x07
+#define AWTO_DBG_PARK_CH                                        0x01    // DDC0: no D0 port here (7 = reserved: 0x35 then ACKed on DDC2, dead)
 #define AWTO_DBG_LINK_VCP                                       0xE8
 #define AWTO_DBG_LINK_MAGIC                                     0xA5
 #define AWTO_DBG_LINK_KEY_MIN                                   30
@@ -467,10 +467,10 @@ extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up 
 #define AWTO_L2_SEC                                             60      // Dan 2026-11-08 defaults: L2 after 1 min, L3 after 10 min
 #define AWTO_L3_SEC                                             600
 #define AWTO_HOLD_CHECK_MS                                      10      // receiver check while held: wake latency <= 10 ms + 1 pass
-#define AWTO_HOLD_OTHER_MS                                      100     // auto search: other ports pre-detected in turn, each every 300 ms
+#define AWTO_HOLD_AUTO_SEC                                      5       // auto search + a 2nd cable: hold this long, then SDK search
 #define AWTO_REHOLD_MS                                          3000    // no new hold this soon after a fast wake (a post-wake judge fail = full path)
 #define AWTO_HOLD_TRIES                                         4       // fast wakes that time out (8 frames each) before the full path
-#define AWTO_SW_EV_HOLD                                         0xA8    // 1 L1 entered, 2 L2 panel off, 3 L3 released, 4 tries used up, 5 signal back, 6 backlight on, 7 retry, 9 other port has a signal, 0x10 SDK reset
+#define AWTO_SW_EV_HOLD                                         0xA8    // 1 L1 entered, 2 L2 eDP link off, 3 L3 released, 4 tries used up, 5 signal back, 6 backlight on, 7 retry, 9 auto search, another cable, 0x10 SDK reset
 typedef struct
 {
     unsigned char ucL1;                         // per-level enable (0/1); settings registry / test cmds 0x36..0x3A
