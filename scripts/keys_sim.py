@@ -24,18 +24,22 @@ import osd_model as M  # noqa: E402
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/keys_sim.log"
 IDLE = (0xF8, 0xF8, 1)
+# raw (A0, A1) of one key down, as read on unit 2 (idle 0xF8): A0 = MENU AUTO UP, A1 = SOURCE DOWN
+V_MENU, V_AUTO, V_UP, V_SOURCE, V_DOWN = (0xD0, 0xF8), (0x80, 0xF8), (0x38, 0xF8), (0xF8, 0x80), (0xF8, 0x38)
 SOURCE, MENU, DOWN, UP, AUTO, POWER = 0x20, 0x02, 0x08, 0x04, 0x10, 0x01      # SDK masks (_KEY5, _MENU, _LEFT, _RIGHT, _EXIT, _POWER)
 NAMES = {SOURCE: "SOURCE", MENU: "MENU", DOWN: "DOWN", UP: "UP", AUTO: "AUTO", POWER: "POWER"}
 
-# Bounds, sim ms (T2 tick) = 1.25 x the worst latency `--calibrate` measured on wb-p14keys3 (numbers: #85). Expiry = FAIL naming the step.
+# Bounds, sim ms (T2 tick) = 1.25 x the worst latency `--calibrate` measured on wb-p14keys4 (numbers: #85). Expiry = FAIL naming the step.
 # KEY: ADC change -> debounced mask (10 ms scan timer + 2 equal scans; a test-screen redraw blocks the loop meanwhile).
 # DRAW: open -> AwtoOsdKeyLines ran. CLOSE: close -> OSD off (waits for DEN stop + any redraw in progress).
 # MENU: MENU press -> #67 menu on (same pass as the key message: KEY bound). CMD: test cmd written -> acted on.
 # PS: D6 off -> mode POWER_SAVING. WAKE: key -> mode ACTIVE (panel on + link training, #78). INPUT: switch -> input row = port.
 POLL_MS = 2
-KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS = 448, 8, 223, 448, 3
+KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS = 453, 68, 223, 453, 223
 MODE_ACTIVE, MODE_PS = 3, 6                      # EnumModeStatus (Kernel/Common/Global.h)
-PS_MS, WAKE_MS, INPUT_MS = 589, 2370, 552
+PS_MS, WAKE_MS, INPUT_MS, DBG_MS = 595, 2374, 527, 375
+REFRESH_MS = 80     # AWTO_KEY_REFRESH_MS (RL6449_Project.h)
+REDRAW_MS = 250     # one redraw of the 6 rows takes ~175 ms in the sim (calibrate: CLOSE); +40 % for the main loop around it
 STABLE_MS = KEY_MS  # hold after a match: a late band hit shows one scan later, which a slow pass delays up to the KEY bound
 LOOP_MS = 1000      # main-loop rate window: closed vs idle open screen (redraw only on change, so the same rate)
 LOOP_MIN = 0.95     # open / closed: the open screen adds a few checks per pass and 4 timer cancels per 80 ms
@@ -50,20 +54,20 @@ def say(s):
         f.write(line + "\n")
 
 
-def model(a0, a1, p3, a0top_source=True):
-    """Expected SDK mask: vendor bands lo <= R < hi (buttons.md), POWER = P3.0 low."""
+def model(a0, a1, p3):
+    """Expected SDK mask: lo <= R < hi (buttons.md section 2, unit 2 press log #85), POWER = P3.0 low."""
     m = 0
     inb = lambda v, lo, hi: lo <= v < hi
     if inb(a0, 0xC0, 0xE0):
-        m |= SOURCE if a0top_source else AUTO
-    if inb(a0, 0x70, 0x90):
         m |= MENU
+    if inb(a0, 0x70, 0x90):
+        m |= AUTO
     if inb(a0, 0x28, 0x48):
-        m |= DOWN
-    if inb(a1, 0x68, 0x88):
-        m |= AUTO if a0top_source else SOURCE
-    if inb(a1, 0x28, 0x48):
         m |= UP
+    if inb(a1, 0x68, 0x88):
+        m |= SOURCE
+    if inb(a1, 0x28, 0x48):
+        m |= DOWN
     if p3 == 0:
         m |= POWER
     return m
@@ -166,7 +170,9 @@ def until_off(k, what, bound_ms):
 
 def check_decode(k):
     cases = [(v, 0xF8, 1) for v in EDGES0] + [(0xF8, v, 1) for v in EDGES1]
-    cases += [(0x30, 0xF8, 1), (0xF8, 0xF8, 0), (0xD0, 0x78, 1), (0x80, 0x78, 1), IDLE]   # DOWN, POWER, SOURCE+AUTO, MENU+AUTO, idle
+    cases += [(*V_MENU, 1), (*V_AUTO, 1), (*V_UP, 1), (*V_SOURCE, 1), (*V_DOWN, 1), (0xF8, 0xF8, 0)]      # every key as read on unit 2, POWER
+    cases += [(0x38, 0x80, 1), (0x80, 0x38, 1), (0xD0, 0x80, 1)]       # UP+SOURCE, AUTO+DOWN, MENU+SOURCE: A0 + A1 pairs without an action
+    cases += [(0xA0, 0xF8, 1), (0xF8, 0xA0, 1), IDLE]                  # a mixed voltage between two bands matches none
     for a0, a1, p3 in cases:
         if (a0, a1, p3) == (0xF8, 0xF8, 0):
             continue                                            # POWER would power the sim off: decode of P3.0 is checked on the open screen
@@ -182,6 +188,27 @@ def check_decode(k):
         k.until("KEY", lambda s: s["mask"] == 0, KEY_MS)
 
 
+def screen_ink(s):
+    """ink cell columns of the 6 text rows (map rows 2..7) of the pop-up"""
+    return [tuple(c) for c in M.ink_cells(s.snap())[2:8]]
+
+
+ICON0 = None        # cells < 12 (the pop-up icon) as drawn at open: text that overflows the 24 cell text area wraps into them
+
+
+def ink_ok(rows):
+    """text cells inside 13..34 (one cell of margin each side of the text area 12..35) and the icon area untouched"""
+    global ICON0
+    icon = [tuple(c for c in r if c < 12) for r in rows]
+    if ICON0 is None:
+        ICON0 = icon
+    return len(rows) == 6 and all(13 <= c <= 34 for r in rows for c in r if c >= 12) and icon == ICON0
+
+
+def ink_show(rows):
+    return "text cells per row " + " ".join(f"{(min(c for c in r if c >= 12), max(r)) if any(c >= 12 for c in r) else '-'}" for r in rows)
+
+
 def loop_rate(s, ms=LOOP_MS):
     """main-loop passes per sim second over ms (diag heartbeat, u16)"""
     d0 = s.bus.diag()
@@ -194,7 +221,7 @@ def leave_menu(k):
     for _ in range(6):                                          # menu depth <= page + edit + confirm: AUTO backs out one level each
         if k.state(False)["menu"] == 0:
             return True
-        k.press("AUTO", 0xF8, 0x78, AUTO)
+        k.press("AUTO", *V_AUTO, AUTO)
         k.until("MENU", lambda st: st["menu"] == 0, MENU_MS)
     return k.state(False)["menu"] == 0
 
@@ -208,7 +235,7 @@ def main():
     ap.add_argument("--calibrate", action="store_true", help="every bound 3000 ms: measure the worst latencies (then set the bounds to 1.25x)")
     a = ap.parse_args()
     if a.calibrate:
-        global KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS, PS_MS, WAKE_MS, INPUT_MS
+        global KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS, PS_MS, WAKE_MS, INPUT_MS, DBG_MS
         KEY_MS = DRAW_MS = CLOSE_MS = MENU_MS = CMD_MS = PS_MS = WAKE_MS = INPUT_MS = 3000
     say(f"keys_sim {a.bin.name}: bounds KEY {KEY_MS} DRAW {DRAW_MS} CLOSE {CLOSE_MS} MENU {MENU_MS} CMD {CMD_MS} PS {PS_MS} WAKE {WAKE_MS} INPUT {INPUT_MS} ms, poll {POLL_MS} ms")
     s = R.Session(a.bin, a.map, "2160p60")
@@ -232,9 +259,27 @@ def main():
         chk("idle open screen: no redraw", n1 == n0, f"{(n1 - n0) & 0xFF} redraws in {LOOP_MS} ms")
         chk("idle open screen keeps the main-loop rate", r_open >= LOOP_MIN * r_closed,
             f"{r_open:.0f}/s open vs {r_closed:.0f}/s closed (min {LOOP_MIN:.0%})")
+        # 1b. text fit (unit 2: characters wrapped): every text row's ink stays in the pop-up's text area (cells 12..35), the worst
+        # case row (three keys down: one per ladder + POWER) fits, and a shorter text leaves nothing of the longer one behind
+        base = screen_ink(s)
+        chk("key screen text inside the pop-up text area", ink_ok(base), ink_show(base))
+        n0 = k.state(False)["redraws"]
+        k.put(V_UP[0], V_SOURCE[1], 0)
+        k.until("KEY", lambda st: st["mask"] == UP | SOURCE | POWER, KEY_MS)
+        k.until("DRAW", lambda st: st["redraws"] != n0, DRAW_MS + 2 * REFRESH_MS)
+        k.dwell(REDRAW_MS)
+        worst = screen_ink(s)
+        chk("three keys down: the KEY row fits", ink_ok(worst) and len(worst[2]) > len(base[2]), ink_show(worst))
+        n0 = k.state(False)["redraws"]
+        k.put(*IDLE)
+        k.until("KEY", lambda st: st["mask"] == 0, KEY_MS)
+        k.until("DRAW", lambda st: st["redraws"] != n0, DRAW_MS + 2 * REFRESH_MS)
+        k.dwell(REDRAW_MS)
+        after = screen_ink(s)
+        chk("shorter text leaves no ghost cells", after[:3] == base[:3], f"rows A0 / A1 / KEY cells now {[len(r) for r in after[:3]]} fresh {[len(r) for r in base[:3]]}")
         # 2. keys while open: real DOWN, POWER (P3.0 low; swallowed, no power toggle), injected UP
-        c0 = st["count"]
-        chk("DOWN press seen", k.press("DOWN", 0x30, 0xF8, DOWN))
+        c0 = k.state(False)["count"]
+        chk("DOWN press seen", k.press("DOWN", *V_DOWN, DOWN))
         k.put(0xF8, 0xF8, 0)
         st, el = k.until("KEY", lambda st: st["mask"] == POWER and st["p30"] == 0, KEY_MS)
         k.put(*IDLE)
@@ -251,10 +296,28 @@ def main():
         R.save(s.snap(), a.png_dir / "keytest.png", "grey", 1)
         for e in st["log"][:st["count"] if st["count"] < 16 else 16]:
             say(f"log seq {e['seq']:3d} tick {e['tick']:5d} A0={e['a0']:02X} A1={e['a1']:02X} flags {e['flags']:02X} mask {e['mask']:02X} msg {e['msg']:02X}")
+        # 2b. the debug pop-up (#34) rows, same fit check (held by test cmd 0x26 on top of the closed key screen is not possible: close first)
+        k.cmd(0x42)
+        until_off(k, "CLOSE", CLOSE_MS)
+        k.cmd(0x26)
+        t0 = s.ms()
+        dbg, prev = None, None
+        while s.ms() - t0 < DBG_MS:                              # drawn = the OSD is on and the 5 rows stopped changing for 150 ms
+            k.dwell(150)
+            dbg = screen_ink(s)
+            if osd_en(s) and all(dbg[:5]) and dbg == prev:
+                break
+            prev = dbg
+        WORST["DBG"] = max(WORST.get("DBG", 0.0), s.ms() - t0 - 150)
+        chk("debug pop-up text inside the pop-up text area", ink_ok(dbg) and all(dbg[:5]), ink_show(dbg))
+        k.cmd(0x27)
+        until_off(k, "CLOSE", CLOSE_MS)
+        k.cmd(0x41)
+        k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, CMD_MS + DRAW_MS)
         # 3. close by UP+DOWN, let go of UP first (a hand does): the DOWN left down is no press (no LEFT message)
-        k.put(0x30, 0x30, 1)
+        k.put(V_UP[0], V_DOWN[1], 1)
         k.until("KEY", lambda st: st["mask"] == UP | DOWN, KEY_MS)
-        k.put(0x30, 0xF8, 1)
+        k.put(*V_DOWN, 1)
         st, el = k.until("KEY", lambda st: st["mask"] == DOWN, KEY_MS, log=True)
         k.dwell(STABLE_MS)                                      # the message, if any, is converted in the same pass
         st = k.state()
@@ -267,31 +330,43 @@ def main():
         st, el = until_off(k, "CLOSE", CLOSE_MS)
         chk("UP+DOWN closes", el is not None, f"open={st['open']} osd_en={osd_en(s)} in {el} ms")
         # 4. open by UP+DOWN from no menu
-        k.press("UP+DOWN", 0x30, 0x30, UP | DOWN)
+        k.press("UP+DOWN", V_UP[0], V_DOWN[1], UP | DOWN)
         st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, DRAW_MS)
         chk("UP+DOWN opens, drawn", el is not None, f"open={st['open']} drawn={st['drawn']} mode={st['mode']}")
         k.cmd(0x42)
         st, el = until_off(k, "CLOSE", CLOSE_MS)
         chk("cmd 0x42 closes", el is not None, f"in {el} ms")
         # 5. open by UP+DOWN while the #67 menu is up: the screen takes over, closes back to no menu
-        k.press("MENU", 0x80, 0xF8, MENU)
+        k.press("MENU", *V_MENU, MENU)
         st, el = k.until("MENU", lambda st: st["menu"] == 1, MENU_MS)
         chk("MENU opens the #67 menu", el is not None, f"menu={st['menu']} mode={st['mode']}")
-        k.press("UP+DOWN", 0x30, 0x30, UP | DOWN)
+        k.press("UP+DOWN", V_UP[0], V_DOWN[1], UP | DOWN)
         st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1 and st["menu"] == 0, DRAW_MS)
         chk("UP+DOWN over the menu opens, drawn, menu closed", el is not None, f"open={st['open']} drawn={st['drawn']} menu={st['menu']}")
         R.save(s.snap(), a.png_dir / "keytest_over_menu.png", "grey", 1)
-        k.press("UP+DOWN", 0x30, 0x30, UP | DOWN)
+        k.press("UP+DOWN", V_UP[0], V_DOWN[1], UP | DOWN)
         st, el = until_off(k, "CLOSE", CLOSE_MS)
         k.dwell(STABLE_MS)                                      # nothing reopens the menu afterwards
         st = k.state(False)
         chk("UP+DOWN closes to no menu", el is not None and st["menu"] == 0 and not osd_en(s), f"open={st['open']} menu={st['menu']} osd_en={osd_en(s)}")
+        # 5b. MENU + DOWN (A0 + A1) = debug link toggle (#79; also the boot recovery chord): off, then on again
+        dl = k.m.addr("g_ucAwtoDbgLink")
+        d0 = k.m.rd(dl)[0]
+        k.press("MENU+DOWN", V_MENU[0], V_DOWN[1], MENU | DOWN)
+        st, el = k.until("CMD", lambda st: k.m.rd(dl)[0] != d0, CMD_MS)
+        chk("MENU+DOWN toggles the debug link", el is not None, f"g_ucAwtoDbgLink {d0} -> {k.m.rd(dl)[0]}")
+        k.press("MENU+DOWN", V_MENU[0], V_DOWN[1], MENU | DOWN)
+        st, el = k.until("CMD", lambda st: (k.m.rd(dl)[0] != 0) == (d0 != 0), CMD_MS)
+        chk("MENU+DOWN again toggles it back", el is not None, f"g_ucAwtoDbgLink {k.m.rd(dl)[0]}")
+        s.bus.dbg_link_on()                                     # a key-opened link times out after minutes: the sim host wants it unlimited
+        st = k.state(False)
+        chk("no menu left up by the chord", st["menu"] == 0 and st["open"] == 0, f"menu={st['menu']} open={st['open']}")
         # 6. wake from DDC/CI D6 off (forced power saving, settings row power_mode = Off): POWER wakes; MENU wakes and is used up
         import settings_cli as C
         import settings_table as T
         box = C.Box(s.bus, a.map.read_text(errors="replace"), sim=True)
         pm = next(r for r in T.ROWS if r["name"] == "power_mode")
-        for what, a0, a1, p3, mask in (("POWER", 0xF8, 0xF8, 0, POWER), ("MENU", 0x80, 0xF8, 1, MENU)):
+        for what, a0, a1, p3, mask in (("POWER", 0xF8, 0xF8, 0, POWER), ("MENU", *V_MENU, 1, MENU)):
             box.set_row(pm, pm["options"].index("Off"))
             st, el = k.until("PS", lambda st: st["mode"] == MODE_PS, PS_MS)
             chk(f"D6 off -> power saving (before {what})", el is not None, f"mode {st['mode']} in {el} ms")
@@ -324,6 +399,15 @@ def main():
             if el > WORST.get("INPUT", 0.0):
                 WORST["INPUT"], WHERE["INPUT"] = el, how
             chk(f"input row follows {how}", cur == want and info == want, f"input {cur} info_input {info} want {want} in {el:.0f} ms")
+        # SOURCE (A1) = next input, no menu up: info_input moves off home, then back by test cmd
+        k.press("SOURCE", *V_SOURCE, SOURCE)
+        t0 = s.ms()
+        while box.get_row(rinfo) == home and s.ms() - t0 < INPUT_MS:
+            k.dwell(POLL_MS * 5)
+        el = s.ms() - t0
+        WORST["INPUT"] = max(WORST.get("INPUT", 0.0), el)
+        chk("SOURCE key = next input", box.get_row(rinfo) != home, f"info_input {home} -> {box.get_row(rinfo)} in {el:.0f} ms")
+        k.cmd(0x31 + home)
         st, _ = k.until("WAKE", lambda st: st["mode"] == MODE_ACTIVE, WAKE_MS)
         st = k.state()
         e = st["log"][rel_seq & 15]

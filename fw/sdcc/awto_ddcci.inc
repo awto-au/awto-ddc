@@ -61,7 +61,7 @@ void AwtoKeyNextInput(void)                     // #60 front key (SOURCE, no men
 #if(_AWTO_DBG_SWAP == _ON)
 static __xdata WORD s_usAwtoDbgLinkMs;
 
-void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B, MENU+UP; 0 = back to DDC/CI
+void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B, MENU+DOWN; 0 = back to DDC/CI
 {
     do
     {
@@ -95,7 +95,7 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
     }
 }
 
-void AwtoKeyDbgLink(void)                       // MENU held + UP: toggle the debug link; closes the menu MENU opened
+void AwtoKeyDbgLink(void)                       // MENU held + DOWN: toggle the debug link; closes the menu MENU opened
 {
     if(GET_OSD_STATE() != _MENU_NONE)
     {

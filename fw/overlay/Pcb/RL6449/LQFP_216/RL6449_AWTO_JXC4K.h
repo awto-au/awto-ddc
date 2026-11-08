@@ -601,35 +601,34 @@
 #define PCB_ADKEY1()                            (AD_KEY1)
 #define PCB_ADKEY2()                            (AD_KEY2)
 
-// Keys left to right: SOURCE MENU DOWN UP AUTO POWER. Vendor decode (buttons.md, #85): lo <= R < hi on 0xFF09 (A0) / 0xFF0A (A1), POWER = P3.0 low.
-// SDK masks: SOURCE = _KEY5_MASK, DOWN = _LEFT, UP = _RIGHT, AUTO = _EXIT. A0 top (0xC0) vs A1 mid (0x68): which is SOURCE is unconfirmed (#85).
-// _ON = A0 top is SOURCE. Combos need keys on different ladders (A0: SOURCE MENU DOWN, A1: UP AUTO), else the voltages mix.
-#define _AWTO_KEY_A0TOP_SOURCE                  _ON
-#define AWTO_KEY_A0_TOP_MASK                    ((_AWTO_KEY_A0TOP_SOURCE == _ON) ? _KEY5_MASK : _EXIT_KEY_MASK)
-#define AWTO_KEY_A1_MID_MASK                    ((_AWTO_KEY_A0TOP_SOURCE == _ON) ? _EXIT_KEY_MASK : _KEY5_MASK)
+// Keys left to right: SOURCE MENU DOWN UP AUTO POWER. Decode: lo <= R < hi on 0xFF09 (A0, ucV1) / 0xFF0A (A1, ucV2), POWER = P3.0 low
+// (buttons.md section 2 bands; mapping to the labels from the unit 2 press log + the Dahua firmware dispatch, #85).
+//   A0: MENU 0xC0..0xDF (reads 0xD0), AUTO 0x70..0x8F (0x80), UP 0x28..0x47 (0x38)
+//   A1: SOURCE 0x68..0x87 (0x80), DOWN 0x28..0x47 (0x38)
+// SDK masks: SOURCE = _KEY5_MASK, MENU, DOWN = _LEFT, UP = _RIGHT, AUTO = _EXIT. Combos need one key per ladder (A0 + A1), else the voltages mix.
 #define AWTO_KEY_BAND(v, lo, hi)                (((lo) <= (v)) && ((v) < (hi)))
 
 #define PCB_KEY_STATE(ucV0, ucV1,\
                       ucV2, ucV3, ucKeyState)   {\
                                                     if(AWTO_KEY_BAND(ucV1, 0xC0, 0xE0))\
                                                     {\
-                                                        (ucKeyState) |= AWTO_KEY_A0_TOP_MASK;\
+                                                        (ucKeyState) |= _MENU_KEY_MASK;\
                                                     }\
                                                     if(AWTO_KEY_BAND(ucV1, 0x70, 0x90))\
                                                     {\
-                                                        (ucKeyState) |= _MENU_KEY_MASK;\
+                                                        (ucKeyState) |= _EXIT_KEY_MASK;\
                                                     }\
                                                     if(AWTO_KEY_BAND(ucV1, 0x28, 0x48))\
                                                     {\
-                                                        (ucKeyState) |= _LEFT_KEY_MASK;\
+                                                        (ucKeyState) |= _RIGHT_KEY_MASK;\
                                                     }\
                                                     if(AWTO_KEY_BAND(ucV2, 0x68, 0x88))\
                                                     {\
-                                                        (ucKeyState) |= AWTO_KEY_A1_MID_MASK;\
+                                                        (ucKeyState) |= _KEY5_MASK;\
                                                     }\
                                                     if(AWTO_KEY_BAND(ucV2, 0x28, 0x48))\
                                                     {\
-                                                        (ucKeyState) |= _RIGHT_KEY_MASK;\
+                                                        (ucKeyState) |= _LEFT_KEY_MASK;\
                                                     }\
                                                     if(P3_0 == 0)\
                                                     {\

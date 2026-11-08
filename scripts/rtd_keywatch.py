@@ -19,13 +19,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
 
-# (mask, source reg, lo, hi, provisional label) from buttons.md
+# (mask, source reg, lo, hi, label): the SDK-mask view of the bands (buttons.md section 2, confirmed on unit 2, #85)
 BANDS = [
-    (0x02, 0xFF09, 0xC0, 0xE0, "A0-top (SOURCE/AUTO?)"),
-    (0x04, 0xFF09, 0x28, 0x48, "DOWN?"),
-    (0x08, 0xFF0A, 0x28, 0x48, "UP?"),
-    (0x10, 0xFF09, 0x70, 0x90, "MENU?"),
-    (0x20, 0xFF0A, 0x68, 0x88, "A1-mid (SOURCE/AUTO?)"),
+    (0x02, 0xFF09, 0xC0, 0xE0, "MENU"),
+    (0x10, 0xFF09, 0x70, 0x90, "AUTO"),
+    (0x04, 0xFF09, 0x28, 0x48, "UP"),
+    (0x20, 0xFF0A, 0x68, 0x88, "SOURCE"),
+    (0x08, 0xFF0A, 0x28, 0x48, "DOWN"),
 ]
 
 
@@ -49,12 +49,12 @@ def keys_of(mask):
 
 
 def band_hint(a0, a1):
-    """Which ladder band the raw values fall in, independent of the firmware's SOURCE/AUTO pairing."""
+    """Which ladder band the raw values fall in."""
     h = []
-    for lo, hi, n in ((0xC0, 0xE0, "A0-top"), (0x70, 0x90, "A0-MENU"), (0x28, 0x48, "A0-DOWN")):
+    for lo, hi, n in ((0xC0, 0xE0, "A0-MENU"), (0x70, 0x90, "A0-AUTO"), (0x28, 0x48, "A0-UP")):
         if lo <= a0 < hi:
             h.append(n)
-    for lo, hi, n in ((0x68, 0x88, "A1-mid"), (0x28, 0x48, "A1-UP")):
+    for lo, hi, n in ((0x68, 0x88, "A1-SOURCE"), (0x28, 0x48, "A1-DOWN")):
         if lo <= a1 < hi:
             h.append(n)
     return ",".join(h) or "idle"

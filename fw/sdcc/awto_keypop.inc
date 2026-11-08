@@ -121,11 +121,11 @@ void AwtoOsdKeyLines(void)
     AwtoPutAdc(0, g_stAwtoKey.ucA0);
     AwtoShowLine(_OSD_MESSAGE_ROW_START, _PFONT_PAGE_0);
     AwtoPutAdc(1, g_stAwtoKey.ucA1);
+    AwtoPutStr(" P30 ");                         // the POWER pin: 1 idle, 0 = pressed
+    AwtoPutNum(g_stAwtoKey.ucP30 & AWTO_KEY_F_P30, 1);
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 1, _PFONT_PAGE_1);
 
-    AwtoPutStr("P30 ");
-    AwtoPutNum(g_stAwtoKey.ucP30 & AWTO_KEY_F_P30, 1);
-    AwtoPutStr(" KEY ");
+    AwtoPutStr("KEY ");
     AwtoPutKeys(g_stAwtoKey.ucMask);
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
 

@@ -247,8 +247,8 @@ INSERTS = [
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);", r"^\s*case _PANEL_ON:"),
-    # #85 combos (keys on different ladders): MENU + UP = #79 debug link toggle, UP + DOWN = #39 key test screen; SOURCE = next input (#60)
-    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _RIGHT_KEY_MASK):\n"
+    # #85 combos (one key on each ladder, A0 + A1): MENU + DOWN = #79 debug link toggle, UP + DOWN = #39 key test screen; SOURCE = next input (#60)
+    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _LEFT_KEY_MASK):\n"
      "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n"
      "        case (_LEFT_KEY_MASK | _RIGHT_KEY_MASK):\n"
      "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_TEST_TOGGLE();\n            }\n            break;\n"

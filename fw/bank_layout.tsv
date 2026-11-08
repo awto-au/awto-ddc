@@ -2339,7 +2339,6 @@ fn	_AwtoPutGlyph	9	0x60cc	36
 fn	_AwtoPutMilli	9	0x60f0	116
 fn	_AwtoPutNum	9	0x6164	192
 fn	_AwtoPutStr	9	0x6224	48
-fn	_AwtoShowLine	9	0x6254	80
 fn	_OsdDispSetPosition	9	0x62a4	672
 fn	_OsdFontVLCLoadInputIcon	9	0x6544	180
 fn	_OsdFuncSetPosition	9	0x65f8	60
@@ -2364,6 +2363,7 @@ fn	_osd_font_load	9	0x82ac	104
 fn	_menu_active	9	0x8314	12
 fn	_menu_close	9	0x8320	60
 fn	_AwtoSetLoop	9	0x835c	132
+fn	_AwtoShowLine	9	0x83e0	100
 fn	_menu_forget	9	0x8578	12
 fn	_menu_key	9	0x8584	16
 fn	_menu_open	9	0x8594	60
