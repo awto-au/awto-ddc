@@ -201,8 +201,10 @@ void ui_row(uint8_t line, const char __xdata *s, uint8_t style, uint8_t selected
     if (selected && ui_hl_style == UI_HL_BAR)
         style = OS_ONRED;
     ui_text(line, 0, s, UI_CHARS, style);
-    if (selected && ui_hl_style == UI_HL_MARK)
-        ui_text(line, 0, ">", 1, OS_RED);
+    if (selected && ui_hl_style == UI_HL_MARK) {
+        buf[0] = '>';                                    /* xdata is not initialised at start: build the marker */
+        ui_text(line, 0, buf, 1, OS_RED);
+    }
 }
 
 void ui_message(const char __xdata *s, uint8_t style)
