@@ -20,7 +20,6 @@ from pathlib import Path
 CODES = ["0", "100", "1010", "1011", "1100", "11010", "11011", "11100", "111010", "111011",
          "111100", "111101", "1111100", "1111101", "1111110", "11111110"]
 END_CODE = "11111111"
-BLOB_CHUNK = 24000          # the length field is 16 bit; stay well below 65535 (one blob per chunk)
 
 
 def freq_map(data):
@@ -33,7 +32,13 @@ def freq_map(data):
 
 
 def encode(data, vmap=None):
-    """bytes (+ optional 16-entry value map in CODES order) -> blob bytes."""
+    """bytes (+ optional 16-entry value map in CODES order) -> blob bytes (the stream must fit the 16 bit length)."""
+    blob = _encode(data, vmap)
+    assert len(blob) - 10 < 65536, "stream too long for the 16-bit length: split with encode_chunks"
+    return blob
+
+
+def _encode(data, vmap=None):
     vmap = list(vmap) if vmap is not None else freq_map(data)
     assert sorted(vmap) == list(range(16)), "value map must be a permutation of 0..15"
     code_of = {v: CODES[i] for i, v in enumerate(vmap)}
@@ -41,17 +46,23 @@ def encode(data, vmap=None):
     bits += "1" * (-len(bits) % 8) + END_CODE
     stream = bytes(int(bits[i:i + 8][::-1], 2) for i in range(0, len(bits), 8))
     head = bytes((vmap[i] << 4) | vmap[i + 1] for i in range(0, 16, 2))
-    assert len(stream) < 65536, "stream too long for the 16-bit length: split with encode_chunks"
-    return head + len(stream).to_bytes(2, "big") + stream
+    return head + (len(stream) & 0xFFFF).to_bytes(2, "big") + stream
 
 
-def encode_chunks(data, unit_bytes, chunk=BLOB_CHUNK):
-    """Split whole units into blobs whose stream stays under `chunk` bytes (worst case 8 bits per nibble): [(first_unit, n_units, blob)]."""
-    per = max(1, chunk // (unit_bytes * 2))
-    out, n = [], len(data) // unit_bytes
-    for u in range(0, n, per):
-        part = data[u * unit_bytes:min(u + per, n) * unit_bytes]
-        out.append((u, len(part) // unit_bytes, encode(part)))
+def encode_chunks(data, unit_bytes, limit=60000):
+    """Whole units as few blobs as possible: one blob unless its stream passes `limit` bytes (the length field is 16 bit), then halves:
+    [(first_unit, n_units, blob)]."""
+    out = []
+
+    def rec(a, b):
+        blob = _encode(data[a * unit_bytes:b * unit_bytes]) if b - a > 0 else b""
+        if len(blob) - 10 <= limit or b - a == 1:
+            out.append((a, b - a, blob))
+        else:
+            m = (a + b) // 2
+            rec(a, m)
+            rec(m, b)
+    rec(0, len(data) // unit_bytes)
     return out
 
 
@@ -141,9 +152,10 @@ def selftest(sdk=False):
                 continue
             lv = [[rnd.randrange(1 << bpp) for _ in range(w)] for _ in range(h)]
             assert unpack_unit(pack_unit(lv, bpp), w, h, bpp) == lv
-    big = bytes(rnd.randrange(256) for _ in range(40000))
+    big = bytes(rnd.randrange(256) for _ in range(90000))
     ch = encode_chunks(big, 54)
-    assert b"".join(decode(b) for _, _, b in ch) == big[:len(big) // 54 * 54]
+    assert len(ch) > 1 and b"".join(decode(b) for _, _, b in ch) == big[:len(big) // 54 * 54]
+    assert len(encode_chunks(big[:5400], 54)) == 1
     try:
         decode(encode(b"abc")[:-1])
         raise SystemExit("truncated blob decoded")
