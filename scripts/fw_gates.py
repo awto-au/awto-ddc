@@ -36,7 +36,10 @@ def gates(b: Path, m: Path, ref, tree):
     g = {}
     mt = Path(m).read_text(errors="replace")
     if " _menu_diag" in mt:                    # #67 images: menu walk + MCCS over the spare DDC engine
-        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk"]
+        # with video (osd_render session, 1080p60 ACTIVE): without it the main loop sits in the SDK's DP RX PHY CTS routine (sim: the
+        # PHY registers read 0) and the mailbox goes silent after a few seconds (#88); earlier images only passed because the
+        # sim image was powered off by a phantom POWER key (ADC 0 under the old decode)
+        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]
     if " _vcp_box" in mt and " _AwtoDdcciPoll" in mt:
         g["ddc"] = [*PY, f"{s}/ddc_sim.py", b, "--map", m]
     return {

@@ -178,6 +178,7 @@ def main() -> int:
     ap.add_argument("--sim", type=Path)
     ap.add_argument("--map", required=True)
     ap.add_argument("--png", type=Path, help="sim: render each page to this directory during walk")
+    ap.add_argument("--hl", type=int, choices=(0, 1), help="sim: selected-row look (ui_hl_style: 0 red bar, 1 red marker + underline, #87)")
     ap.add_argument("cmd", choices=["state", "key", "hold", "open", "select", "set", "get", "back", "close", "enter", "walk"])
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
@@ -197,6 +198,8 @@ def main() -> int:
             raise SystemExit("need --bus N --serial S (dev.py menu --unit N fills them) or --sim BIN")
         bus, _ = C.open_bus(a)
     mt = Path(a.map).read_text(errors="replace")
+    if a.sim and a.hl is not None:
+        bus.m.wr(bus.addr("ui_hl_style"), bytes([a.hl]))
     m = Menu(C.Box(bus, mt, bool(a.sim)), mt, bool(a.sim))
     try:
         if a.cmd == "walk":

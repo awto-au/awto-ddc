@@ -52,6 +52,9 @@ def log(s: str):
         f.write(line + "\n")
 
 
+ALT_PAGES = ("main", "picture", "colour")
+
+
 def run_all(binp: Path, mapp: Path, out: Path, mode: str) -> dict:
     procs = {}
     for name, extra, _ in POPUPS:
@@ -131,6 +134,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bin", type=Path)
     ap.add_argument("--menu-dir", type=Path)
+    ap.add_argument("--alt-dir", type=Path, help="a second walk of the same pages (e.g. the other highlight look, menu_cli --hl 1): the first ALT_PAGES pages are added")
+    ap.add_argument("--alt-label", default="alternative look")
     ap.add_argument("--out", type=Path)
     ap.add_argument("--mode", default="2160p60")
     ap.add_argument("--reuse", action="store_true", help="skip rendering: rebuild index/sheet from PNGs already in OUT")
@@ -156,6 +161,13 @@ def main() -> int:
             dst = out / f"menu_{page}.png"      # copied beside index.html: VS Code's HTML view blocks file:// images
             shutil.copyfile(p, dst)
             rows.append(("menu", page, f"menu page: {page}", dst))
+    if a.alt_dir:
+        for page in ALT_PAGES:
+            p = a.alt_dir / f"walk_{page}.png"
+            if p.exists():
+                dst = out / f"menu_{page}_alt.png"
+                shutil.copyfile(p, dst)
+                rows.append(("menu", f"{page} ({a.alt_label})", f"menu page: {page}, {a.alt_label}", dst))
     with (out / "catalog.tsv").open("w") as f:
         f.write("kind\tname\twhat\tpng\n")
         for k, n, w, p in rows:
