@@ -124,6 +124,7 @@ extern void AwtoOsdOfsInit(void);
 // (host: scripts/rtd_keywatch.py --log). Bytes only, so the layout is the same in LE and BE images.
 #define AWTO_KEY_LOG_N                                          16      // press-log entries (ring, newest at index (ucCount - 1) % 16)
 #define AWTO_KEY_REFRESH_MS                                     80      // screen redraw period: 100 ms (10 Hz floor) / 1.25
+#define AWTO_KEY_RETRY_MS                                       250     // open but never drawn: draw again after this (one draw ~175 ms in the sim)
 #define AWTO_KM_POWER                                           0x01    // = SDK masks of RTD2014Key.c (checked there); the Key.c names are not visible in OsdDisplay.c
 #define AWTO_KM_MENU                                            0x02
 #define AWTO_KM_UP                                              0x04    // _RIGHT_KEY_MASK

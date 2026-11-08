@@ -249,9 +249,14 @@ def main():
         chk("decode leaves no menu up", leave_menu(k))
         # 1. open by test cmd (mode may be NOSIGNAL: SOURCE presses in the decode switched inputs)
         r_closed = loop_rate(s)
+        rd0 = k.state(False)["redraws"]
         k.cmd(0x41)
         st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, CMD_MS + DRAW_MS)
         chk("cmd 0x41 opens, drawn", el is not None, f"open={st['open']} drawn={st['drawn']} mode={st['mode']} in {el} ms")
+        k.dwell(REDRAW_MS)
+        st, rows = k.state(False), screen_ink(s)
+        chk("cmd 0x41: redraws > 0, OSD on, all 6 rows have ink in the model", st["redraws"] != rd0 and osd_en(s) and all(rows),
+            f"redraws {rd0} -> {st['redraws']} drawn={st['drawn']} osd_en={osd_en(s)} {ink_show(rows)}")
         k.dwell(2 * 80)                                         # one change redraw after the first draw (AWTO_KEY_REFRESH_MS), then idle
         n0 = k.state(False)["redraws"]
         r_open = loop_rate(s)
@@ -311,6 +316,24 @@ def main():
         WORST["DBG"] = max(WORST.get("DBG", 0.0), s.ms() - t0 - 150)
         chk("debug pop-up text inside the pop-up text area", ink_ok(dbg) and all(dbg[:5]), ink_show(dbg))
         k.cmd(0x27)
+        until_off(k, "CLOSE", CLOSE_MS)
+        # 2c. keys5 (unit 2): opened while the mode is not ACTIVE the SDK's DP-info branch skipped the draw: open=1 drawn=0 for good,
+        # and a second 0x41 did nothing. Now: drawn anyway, and a second 0x41 on an open, undrawn screen draws it.
+        for mode in (0, 1, MODE_PS):
+            k.cmd(0x42)
+            until_off(k, "CLOSE", CLOSE_MS)
+            s.bus.m.wr(k.mode_a, bytes([mode]))
+            k.cmd(0x41)
+            st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, CMD_MS + DRAW_MS)
+            k.dwell(REDRAW_MS)
+            rows = screen_ink(s)
+            chk(f"cmd 0x41 with mode {mode} (not ACTIVE): drawn, rows in the model", el is not None and osd_en(s) and all(rows),
+                f"open={st['open']} drawn={st['drawn']} mode={st['mode']} {ink_show(rows)}")
+        s.bus.m.wr(k.mode_a, bytes([MODE_ACTIVE]))
+        k.cmd(0x41)
+        k.dwell(CMD_MS)
+        chk("second 0x41 on a drawn screen: still open, drawn", k.state(False)["open"] == 1 and k.state(False)["drawn"] == 1)
+        k.cmd(0x42)
         until_off(k, "CLOSE", CLOSE_MS)
         k.cmd(0x41)
         k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, CMD_MS + DRAW_MS)
