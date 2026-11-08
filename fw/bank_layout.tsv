@@ -1068,7 +1068,7 @@ fn	_AwtoDdcReply	0	0x303c	196
 fn	_AwtoDdcRequest	0	0x3100	1080
 fn	_AwtoDdcciPoll	0	0x3538	624
 fn	_AwtoKeyDbgLink	0	0x37a8	44
-fn	_AwtoKeyTestSet	0	0x37d4	124
+fn	_AwtoKeyTestSet	0	0x37d4	140
 fn	_AwtoHoldBlocksDisable	0	0x398c	36
 fn	_AwtoHoldOsdGuard	0	0x39b0	84
 fn	_AwtoKeyHold	0	0x3a04	52

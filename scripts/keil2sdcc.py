@@ -353,6 +353,9 @@ SUBS = [
     (OSD + "RTD2014Ddcci.c", r"SET_FORCE_POW_SAV_STATUS\(_FALSE\);\s*SysSourceSetScanType\(_SOURCE_SWITCH_FIXED_PORT\);\s*"
      r"SysSourceSwitchInputPort\((_\w+)\);\s*SysModeSetResetTarget\(_MODE_ACTION_RESET_TO_SEARCH\);",
      lambda m: "AwtoInputSelect(%s, 0x60);  // [keil2sdcc] sub: fast path (fw/sdcc/awto_ddcci.inc)" % m.group(1), 7),
+    # #85 keys5: the DP-info branch of the input pop-up (not ACTIVE) broke out before the key / debug screens: open, never drawn
+    (OSD + "RTD2014OsdDisplay.c", r"(#if\(_DP_DEBUG_MSG == _ON\)\s*if\()(SysModeGetModeState\(\) != _MODE_STATUS_ACTIVE)\)",
+     lambda m: m.group(1) + "(" + m.group(2) + ") && (g_stAwtoKey.ucOpen == 0) && (g_stAwtoDiag.ucDbgPopup == 0))  // [keil2sdcc] sub", 1),
     # #39 / #85 key tracking: raw values + press log after the scan, key message note / swallow after the conversion
     (OSD + "RTD2014Key.c", r"(g_ucKeyStateCurr = RTDKeyScan\(\);)", lambda m: m.group(1) + " AWTO_KEY_SCAN();  // [keil2sdcc] sub", 1),
     (OSD + "RTD2014Key.c", r"(\n\s*)(RTDKeyMessageProc\(\);)", lambda m: m.group(1) + m.group(2) + " AWTO_KEY_MSG();  // [keil2sdcc] sub", 1),

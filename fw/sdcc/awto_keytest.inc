@@ -145,6 +145,12 @@ void AwtoKeyScan(void)                          // every key scan, before the po
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);  // as the #67 menu (AwtoSetLoop): no SDK pop-up over the screen
     }
+    if((g_stAwtoKey.ucOpen != 0) && (g_stAwtoKey.ucDrawn == 0) && ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) >= AWTO_KEY_RETRY_MS))
+    {
+        s_usAwtoKeyDraw = AwtoKeyNow();         // open but never drawn (the first draw was skipped): draw again, every RETRY period
+        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
+        return;
+    }
     if((g_stAwtoKey.ucOpen == 0) || (g_stAwtoKey.ucDrawn == 0) || ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) < AWTO_KEY_REFRESH_MS))
     {
         return;
@@ -241,11 +247,12 @@ void AwtoKeyTestSet(BYTE ucOn)                  // 0 close, 1 open, 2 toggle (ke
     {
         ucOn = (g_stAwtoKey.ucOpen == 0) ? 1 : 0;
     }
-    if(ucOn == g_stAwtoKey.ucOpen)
+    if((ucOn == g_stAwtoKey.ucOpen) && ((ucOn == 0) || (g_stAwtoKey.ucDrawn != 0)))
     {
-        return;
+        return;                                 // already so; an open screen that was never drawn is drawn again (below)
     }
     g_stAwtoKey.ucDrawn = 0;
+    g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;    // a re-open: the hold would block the disable below
     if(ucOn != 0)
     {
 #ifdef _AWTO_NEW_SETTINGS
