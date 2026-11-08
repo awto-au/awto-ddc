@@ -57,3 +57,7 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-08T13:04:36+11:00	e6a6514	AWT26110003-wb-p14wk11-be	wk11 vs swap7, search index pinned 0 (same HDMI detect pass)	12	43861	4930	19.4	776	22502	17.5			658438		906
 2026-11-08T13:04:50+11:00	e6a6514	AWT26110003-wb-p14swap7-be	wk11 vs swap7, search index pinned 0 (same HDMI detect pass)	12	44039	5199	23.7	937	22624	17.5			686501		906
 2026-11-08T13:20:15+11:00	e6a6514	AWT26110003-wb-p14swap8-be	swap8 = swap7 + #67 key-sync fix, search index pinned 0	12	44039	5199	23.7	937	22624	17.5			686585		
+2026-11-08T13:24:20+11:00	b1ada71	AWT26110003-wb-p14swap7-be	#84 dead-port guard swap9 vs swap7	12	44039	5199	23.7	937	22624	17.5			686501		
+2026-11-08T13:24:39+11:00	b1ada71	AWT26110003-wb-p14swap9-be	#84 dead-port guard swap9 vs swap7	12	43905	5349	25.6	1010	22575	18.5			688179		
+2026-11-08T13:24:59+11:00	b1ada71	AWT26110003-wb-p14swap8-be	swap8 (offline agent: swap7 + 9c6ba58), #84 split	12	44039	5199	23.7	937	22624	17.5			686585		
+2026-11-08T13:29:39+11:00	b281603	AWT26110003-wb-p14swap10-be	#84 swap10: guard gated on mode in the macro	12	43861	5207	23.7	937	22536	17.5			688362		

@@ -99,6 +99,9 @@ def name(ev_id: int, arg: int) -> str:
                           4: "tries used up: full path", 5: "receiver stable again: fast wake", 6: "backlight / panel on (wake)",
                           7: "fast wake timed out: back to hold", 8: "clock back (pre-detect), SDK scan next",
                           9: "auto search: another port has a signal, released", 0x10: "SDK reset the mode meanwhile"}.get(arg, str(arg))
+    if ev_id == 0xB8:
+        return "DEAD PORT (#84) " + {1: "key / VCP 0x60 to a port with no cable: refused", 2: "key next input: no other cabled port",
+                                     3: "fixed port, no cable, no signal: back to auto search"}.get(arg, str(arg))
     if ev_id == 0xB0:
         return f"HPD recovery pulse on D{arg} (host lost SCDC / link: #78)"
     if ev_id == 0x80 and arg == 0:
