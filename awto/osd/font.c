@@ -11,14 +11,14 @@ static uint8_t __xdata fbuf[32];
 
 void osd_font_tiles(char c, uint8_t __xdata *q4)
 {
-    uint8_t i, k;
+    uint8_t i, k = (uint8_t)c;
+    uint16_t o;                                          /* 95 characters x 4 ids = 380: not a byte */
 
-    k = (uint8_t)c;
     if (k < OSD_FONT_FIRST || k > OSD_FONT_LAST)
         k = OSD_FONT_FIRST;
-    k = (uint8_t)((k - OSD_FONT_FIRST) * 4);
+    o = (uint16_t)(k - OSD_FONT_FIRST) * 4;
     for (i = 0; i < 4; i++)
-        q4[i] = font_ids[k + i];
+        q4[i] = font_ids[o + i];
 }
 
 /* one blob = [8 byte value map][2 byte BE length N][N stream bytes]; tile = first tile id of this blob */
