@@ -31,7 +31,9 @@ PROBES = {1: "reset-to-SEARCH start", 2: "SysModeResetState done", 3: "judge SEA
           14: "display setting start", 15: "display setting done (colour next)",
           16: "colour proc done (setting ready)", 17: "measure start", 18: "measure done (timing confirmed)",
           19: "source judged (port found)", 20: "judge check FAIL: source unstable", 21: "judge check FAIL: timing change",
-          22: "judge check FAIL: interlace", 23: "judge check FAIL: M-domain memory / timing gen"}       # AWTO_SW_EV_PROBE sites (#60, keil2sdcc)
+          22: "judge check FAIL: interlace", 23: "judge check FAIL: M-domain memory / timing gen",
+          24: "eDP: panel VDD on", 25: "eDP: L2 link-only wake: PHY init", 26: "eDP: panel HPD high (T2 poll returned)",
+          27: "eDP: link trained", 28: "eDP: link training FAIL"}       # AWTO_SW_EV_PROBE sites (#60, keil2sdcc)
 MARKS = {0: "DDC/CI + colour + ScalerDebug (pass tail)", 1: "key+diag+testcmd", 2: "SysPowerHandler", 3: "SysJudgeHandler",
          4: "SysTimerHandler", 5: "SysSourceHandler (rest: judge)", 6: "SysModeHandler", 7: "SysDpRxHandler",
          8: "SysTMDSRxHandler", 9: "HDCP2 / MST", 10: "OSD handler",
@@ -93,7 +95,7 @@ def name(ev_id: int, arg: int) -> str:
                               (8, "receiver unstable"), (0x10, "timing change"), (0x20, "SysJudgeCheckStatus")) if arg & b]
         return "FAST failed checks: " + (", ".join(why) or "none")
     if ev_id == 0xA8:
-        return "HOLD " + {1: "L1: signal lost, set-up held, backlight off", 2: "L2: panel off", 3: "L3: released to SDK power saving",
+        return "HOLD " + {1: "L1: signal lost, set-up held, backlight off", 2: "L2: eDP link off (VDD on)", 3: "L3: released to SDK power saving",
                           4: "tries used up: full path", 5: "receiver stable again: fast wake", 6: "backlight / panel on (wake)",
                           7: "fast wake timed out: back to hold", 8: "clock back (pre-detect), SDK scan next",
                           9: "auto search: another port has a signal, released", 0x10: "SDK reset the mode meanwhile"}.get(arg, str(arg))

@@ -27,7 +27,7 @@ DBG, DDCCI = 0x35, 0x37
 VCP_LINK, MAGIC = 0xE8, 0xA5            # RL6449_Project.h AWTO_DBG_LINK_VCP / _MAGIC
 TESTCMD = 0xF6F8                        # g_stAwtoDiag (0xF6D0) + 0x28
 CMD_BACK = 0x3B
-DIAG_VERSION = 0xF6D2
+DIAG_MAGIC = 0xF6D0                     # g_stAwtoDiag.ucMagic[2] = 'AD' (docs/diag-block.md)
 MCCS_WAIT_S = 0.050                     # MCCS 2.2: host waits 50 ms after a set before the next transaction
 # swap = one main-loop pass (~1 ms); worst case the loop is blocked by the input-info pop-up draw, 375 ms (#60 phase
 # table). 1.25 x 375 ms / 50 ms -> 10 probes. Expiry: "no link" logged with the elapsed time, exit 1.
@@ -44,12 +44,16 @@ def log(s: str) -> None:
 
 
 def dbg_ok(bus: int) -> bool:
-    """0x35 answers a diag version byte read (byte path: stage hi, 0x3A lo, read)."""
+    """0x35 answers with the diag magic 'AD' (byte path: stage hi, 0x3A lo, read). An ACK alone is not enough: a parked
+    engine on a reserved channel once ACKed 0x35 on DDC2 and returned 0xCD (#79)."""
     try:
         with i2cbus.Bus(bus) as b:
-            b.write(DBG, 0x01, bytes([DIAG_VERSION >> 8]))
-            b.write(DBG, 0x3A, bytes([DIAG_VERSION & 0xFF]))
-            return len(b.read(DBG, 0x08, 1)) == 1
+            got = b""
+            for a in (DIAG_MAGIC, DIAG_MAGIC + 1):
+                b.write(DBG, 0x01, bytes([a >> 8]))
+                b.write(DBG, 0x3A, bytes([a & 0xFF]))
+                got += b.read(DBG, 0x08, 1)
+            return got == b"AD"
     except OSError:
         return False
 
