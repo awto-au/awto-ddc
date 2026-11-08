@@ -37,3 +37,13 @@
 - 2026-11-07 | `docs/handover.md` (2026-11-05 snapshot: unit table, "verify the flash lights the panel", Keil-vs-SDCC pending, P8.5 backlight) | all items done or superseded; state lives in issues #7, #26, #38 | git history
 - 2026-11-07 | `docs/firmware-proposal.md` patch routes A/B and EDID-fail list | firmware is our own build on the SDK (#7); EDID failures fixed (`docs/edid-fix.md`) | #7
 - 2026-11-04 | persistent boot-splash patch of the vendor image | our firmware draws the logo (confirmed on unit 3, `dev.py osd logo`) | #5, #46
+
+## Front keys, naming, test units (#85, #91)
+- 2026-11-04 | key labels in `buttons.md`: MENU "almost certainly 0x10 (sole long-press key)", DOWN/UP "the symmetric pair", SOURCE/AUTO "order unconfirmed" | wrong for 5 of 6 keys; settled 2026-11-08 by Dan's presses on unit 2 (ADC readings) + the Dahua dispatch trace: MENU 0x02, UP 0x04, DOWN 0x08, AUTO 0x10 (the long-press key), SOURCE 0x20 | #85, #91
+- 2026-11-04 | board header kept the SDK reference keypad (LEFT/RIGHT/EXIT, `QA_B`) for the JXC board | replaced by the JXC ladder decode (keys4+); earlier combos (#34, #60, #67, #79) used keys this monitor does not have | #85, #91
+- 2026-11-05 | 'AUTO long press = auto-adjust / lock / factory entry' (guess in chat) | timer 0xD has no consumer in banks 0-6; a held AUTO does nothing extra [fw, medium] | `docs/reversing/dahua-fw/keys.md`
+- 2026-11-05 | 'IR/key_alt_source_poll role unknown', '8 bytes at 0xFF:3067 are a code table' | it is the IR path (NEC); the 8 bytes are the zero initialiser | #93, `dahua-fw/gpio-ir.md`
+- 2026-11-05 | 'no audio-mute GPIO' (gpio-roles.md), 'P9.7/PA.0 never written' | P7.4 is the speaker-amp enable, P4.5 the jack select; P9.7/PA.0 follow the power state | #93, #95
+- 2026-11-07 | all three units free for tests (units 1/2 after an image booted on unit 3) | from 2026-11-08 only unit 2 (lower left, HDMI-A-2 + DP-1, so-th-1 relay); units 1 and 3 are Dan's working screens | `scripts/devices.json`, #85
+- 2026-11-08 | `docs/osd-vendor-menu.md`, 'vendor menu' | said "vendor" for the Realtek SDK demo menu; renamed `osd-realtek-sdk-menu.md`; terms: Dahua firmware / Realtek SDK menu / awto menu | `docs/osd.md` naming, #87
+- 2026-11-08 | menu keys MENU = open, AUTO = back (keys4/5) | Dan: AUTO = open, MENU = back (keys6, unverified) | #85

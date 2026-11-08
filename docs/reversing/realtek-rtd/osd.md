@@ -83,3 +83,9 @@ Code: `scripts/rtd_osd.py` (clean-room; imports `rtd_isp_probe`). Log: `tmp/logs
 7. `0x3A00=0x08`, `0x3A01=0x20` (OSD origin ~ (128 px, 64 lines)); `0x3A02 |= 1`.
 - Expected visible: a blue rectangle (high confidence: window layout matches the measured firmware window). Text visible only if the map row-command and char-word guesses are right.
 - Reset (0xEE=0x02) at the end reboots the monitor and discards all of it.
+
+## OSD vs the picture path (clock domains)
+- Two sides: the input side runs on the PC's clock (receiver, measure, line buffer or DDR frame buffer); the display side runs on the scaler's own display clock and drives the panel at its native 3840x2160@60 timing whatever the source sends [fw: DPLL/M-domain setup, awto-ddc#26].
+- The OSD is drawn by the display side from on-chip OSD SRAM as each pixel goes to the panel; it uses neither the input clock nor the DDR [guess, consistent with the OSD showing on the no-signal screen with no input, and with the OSD working while the picture was garbled, 2026-11-06/07]. So the OSD never depends on the PC's timing.
+- Only the picture crosses from the PC's clock to the display clock (line buffer, or DDR frame buffer when FRC is on). Faults seen on that crossing (4K60 line-buffer underflow, 4K30/1080p50 FRC bad data, #26, #36) do not affect the OSD or the panel link.
+- Consequence: a persistent overlay (debug lines, key test screen) can stay up at any input mode; it only costs OSD SRAM words (`osd-limits.md`).

@@ -48,15 +48,16 @@ Dahua code detail: `docs/reversing/dahua-fw/keys.md`.
 | 0x18 | 3 | clears e152 bit3 |
 | 0x20 | 4 | only if e14e/e14f (16-bit) == 0 |
 
-- `key_post_event` CODE:5b45: new key -> `641e`; for 0x10/0x18 arms 3000-unit timer id 0xd (long press, 0x0BB8) and returns without posting [fw]. Otherwise `e151 = idx`, then `6567` cancels timers 0xb/0xd/0xe [fw]
+- `key_post_event` CODE:5b45: new key -> `641e`; for 0x10/0x18 (AUTO) arms 3000-unit timer id 0xd (0x0BB8) and returns without posting [fw]. Nothing in banks 0-6 reads timer 0xd or acts on its expiry, so a held AUTO does nothing extra [fw, medium: a table-driven consumer is not excluded; see dahua-fw/keys.md]. Otherwise `e151 = idx`, then `6567` cancels timers 0xb/0xd/0xe [fw]
 - Held key (no change): if e152 bit3 set, repeats e151 or arms timer id 1 with 0x01F4 (500 units, auto-repeat delay) [fw]. Timer time unit not determined [?]
 - Consumer: `e151` (XDATA 0xE151, named `osd_key_event_idx`) is read in ~30 places in bank0 OSD code (0xA6ED-0xFE0B) as `switch(e151)` DEC chains with cases 1, 2, 3, 6 [fw]:
   - 1, 2 = value adjust (two direction keys): `fd66`, `fd87` (+ siblings fda8/fdc9/fdea/fe0b) call `ee33(n)`, `eee4`/`f184` change a value [guess]
-  - 3 = select/enter or back: `fcfe` [guess]
-  - 6 = other event (`c3ea`); not produced by the scan path, so it comes from the long-press timer (id 0xd) or OSD logic [?]
-  - idx 0 and 4 are consumed by different code (bank0 ~0xC3EA-0xC5xx: `e151 == 0` test) [?]
-- Entry into OSD/menu state machine: not isolated. Candidates: idx 3 (MENU/ENTER key, 0x10) via `fcfe`/`c3ea` in bank0; `0dc5` banked call (called from `63fe`, `eee4`) [?]. Needs a proper bank0 decompile: the OSD region 0xA000-0xFFFF in bank0 is only partially disassembled (seeded from e151 xrefs, function starts are heuristic).
-- `key_alt_source_poll` CODE:5154 runs when no ADC/P3.0 key is down: copies 8 bytes from code `0xFF:3067` into dbb4, calls 57f3, returns dbbe; result can set a key mask via `68a7`. Possibly the VCP 0xCA "OSD button control" injection path (bank5 case_vcp_ca_osd_button_ctrl -> bank0 0x0db9) [?]
+  - 3 = AUTO: back (`fcfe`) with a menu open; no case with the OSD closed (handler `f97a`) [fw]
+  - 6 = never produced by the scan path; the handler header comments say "6 -> c3ea" but the code tests 0 [fw, dahua-fw/keys.md]
+  - idx 0 (MENU) with the OSD closed opens the main menu (`d439`); inside menus it is select/OK (`c3ea`) [fw, awto-ddc#85 trace]
+  - idx 4 (SOURCE, only with the OSD closed: e14e/e14f is the 16-bit OSD state) builds the 3-row page at `dd7c` via `bcall_osd_builder_menu_source(2)`; its handler `e7b1` moves the cursor on 1/2 and confirms on 0 [fw]. That the page is the input list is [guess] (builder name, 3 rows, port set); a press of the original's SOURCE key would settle it
+- Entry into the OSD state machine: OSD state table at bank0 `a047` sends state 0 to handler `f97a`; with the OSD closed e151==0 opens the main menu, e151==4 the source page, e151==1/2 are hotkeys (`e4dc`) [fw]. Unread bodies: `eee4`, `f184`, `e7b1` (MENU/AUTO branches), `fcfe`, `c3ea`, `e4dc` [?].
+- `key_alt_source_poll` CODE:5154 is the IR key path (NEC, `ScalerIRHWModeInitial` at boot, pin 194 `irda_in`): the 8 bytes copied from code `0xFF:3067` are all zero (the SDK `pucIRCodeBuffer[8] = {0}` initialiser), not a code table; command 0xB9 = POWER, F1 opens the menu, A7 the input list [fw]; byte order of the received frame unverified, needs a remote: `dahua-fw/gpio-ir.md`, awto-ddc#93
 
 ## 4. Data-driven or hard-coded
 - Thresholds: 5 pairs of immediates in code (`MOV A,#0x68/0xC0/0x28/0x70..`, `SUBB A,#0x88/0xE0/0x48/0x90`) at CODE:39e9-3a60 [fw]. Not a flash table.
