@@ -320,7 +320,7 @@ def load_msgids(root: Path) -> dict:
 # ---- tables ----------------------------------------------------------------------------------------------------
 DBG_CMDS = {0x01: "stage hi", 0x02: "stage hi", 0x03: "stage value", 0x05: "stage b4", 0x06: "stage value",
             0x04: "EEPROM write", 0x0F: "EEPROM write", 0x20: "handshake", 0x25: "message fetch", 0x2A: "message end",
-            0x2F: "message stop", 0x3A: "XDATA read", 0x3B: "XDATA write", 0x3C: "XDATA block read", 0x41: "scaler read", 0x44: "EEPROM read",
+            0x2F: "message stop", 0x3A: "XDATA read", 0x3B: "XDATA write", 0x3C: "XDATA block read", 0x3D: "net exchange (#80)", 0x41: "scaler read", 0x44: "EEPROM read",
             0x45: "EEPROM read", 0x55: "message enable", 0x71: "DDC/CI mode switch", 0x80: "halt main"}
 ISP_REGS = {0x60: "SPI_CTL", 0x61: "SPI_OP", 0x62: "OP_WREN", 0x63: "OP_EWSR", 0x6A: "OP_READ", 0x6B: "OP_FAST_READ", 0x6E: "OP_RDSR", 0x64: "ADDR_H", 0x65: "ADDR_M", 0x66: "ADDR_L",
             0x67: "RDATA0", 0x68: "RDATA1", 0x69: "RDATA2", 0x6D: "OP_PP", 0x6F: "ISP_CTL", 0x70: "FIFO",
@@ -342,7 +342,8 @@ VCP = {0x02: "new control value", 0x04: "restore factory defaults", 0x10: "brigh
        0xC8: "controller type", 0xC9: "firmware version", 0xCA: "OSD", 0xCC: "OSD language", 0xD6: "power mode",
        0xDC: "display mode", 0xDF: "VCP version"}
 DDC_OPS = {0x01: "get VCP", 0x02: "VCP reply", 0x03: "set VCP", 0x07: "save settings", 0xE3: "capabilities reply",
-           0xF3: "capabilities request", 0x0C: "enable/disable", 0xA1: "timing request", 0xA2: "timing reply"}
+           0xF3: "capabilities request", 0x0C: "enable/disable", 0xA1: "timing request", 0xA2: "timing reply",
+           0xD0: "net exchange (#80)", 0xD1: "net reply (#80)"}
 DEV_TAG = {0x35: "dbg", 0x4A: "isp", 0x50: "edid", 0x54: "scdc", 0x37: "ddc"}
 
 
@@ -375,6 +376,7 @@ class Decoder:
         self.d_hi = self.d_val = self.d_rd = None
         self.d_kind = "x"
         self.d_blk = None
+        self.net_q = None                # #80 net exchange request waiting for its reply read
         self.msg_mode = False
         self.reg: dict[int, int] = {}
         self.f4 = self.page = None
@@ -471,6 +473,11 @@ class Decoder:
             return f'message "{label}" = {val}{"" if e.ok else "  (checksum mismatch)"}'
         if k == "rr":
             return f"read reg 0x{e.sub:02X} ({len(e.vals)} B)" + (f": {hx(e.vals)}" if len(e.vals) <= INLINE_MAX else "")
+        if k == "net":
+            x = [f"{e.full} full" if e.full else "", f"{e.bad} bad/retried" if e.bad else "", f"{e.reset} reset" if e.reset else "",
+                 "echo mode" if e.ctl & 1 else ""]
+            return (f"net {'0x3D' if e.tr == 'B' else 'DDC/CI D0'}: {e.n} exchange(s), out {e.o} B, in {e.i} B"
+                    + "".join(f", {s}" for s in x if s))
         if k == "mpoll":
             return f"message channel status: {'message pending' if e.st == 0xF1 else 'none'}" + (f" (x{e.n})" if e.n > 1 else "")
         if k == "edid":
@@ -560,6 +567,8 @@ class Decoder:
             self.d_rd, self.d_kind = (self.d_hi or 0) << 8 | d[0], "x"; return
         if s == 0x3C and len(d) == 4:                          # block read: lo, hi, len, seq; read of len data + checksum follows
             self.d_rd, self.d_kind, self.d_blk = d[1] << 8 | d[0], "x", d[2]; return
+        if s == 0x3D and len(d) >= 4:                          # #80 net: seq ctl ack data chk; fixed 25 B reply read follows
+            self.net_q = d; return
         if s == 0x41 and d:
             self.d_rd, self.d_kind = d[0], "s"; return
         if s in (0x44, 0x45) and d:
@@ -608,6 +617,10 @@ class Decoder:
         e = self.ev
         if t.sub == 0x08 and e and e.kind == "msg":
             return self._msg_data(t, e)
+        if t.sub == 0x08 and self.net_q is not None and len(d) == 25:
+            q, self.net_q = self.net_q, None
+            ok = (0x3D + sum(d[:24])) & 0xFF == d[24] and d[0] == q[0]
+            return self._net(t, "B", q[1], len(q) - 4, d[1] if ok else None, min(d[3], 20) if ok else 0)
         if t.sub == 0x08 and self.d_rd is not None and len(d) >= 1:
             a, kind, self.d_rd = self.d_rd, self.d_kind, None
             n = self.d_blk if self.d_blk else 1                # block read: len data bytes (the checksum byte is dropped)
@@ -803,6 +816,8 @@ class Decoder:
                 self.open(t, "ddc", "ddc", text=f"get VCP {vn(a[0])} (no reply read)", code=a[0])
             elif op == 0x03 and len(a) >= 3:
                 self.put(t, "ddc", f"set VCP {vn(a[0])} = {a[1] << 8 | a[2]}")
+            elif op == 0xD0 and len(a) >= 3:                  # #80 net: seq ctl ack data
+                self.net_q = a
             else:
                 self.put(t, "ddc", f"{DDC_OPS.get(op, f'op 0x{op:02X}')} {hx(a)}")
             return
@@ -815,8 +830,23 @@ class Decoder:
                 if self.ev and self.ev.kind == "ddc":
                     self.ev = None
                 return self.put(t, "ddc", txt)
+            if op == 0xD1 and len(a) >= 3 and self.net_q is not None:
+                q, self.net_q = self.net_q, None
+                return self._net(t, "A", q[1], len(q) - 3, a[1] if a[0] == q[0] else None, len(a) - 3)
             return self.put(t, "ddc", f"{DDC_OPS.get(op, f'op 0x{op:02X}')} {hx(a)}")
         self.put(t, "ddc", f"{'write' if t.kind == 'w' else 'read'} reg 0x{t.sub:02X} {hx(d)}")
+
+    def _net(self, t: Txn, tr: str, ctl: int, n_out: int, flags, n_in: int) -> None:
+        """#80 exchanges coalesce into one line per run: count, bytes each way, retries / full / reset seen."""
+        e = self.ev
+        if not (e and e.kind == "net" and e.tr == tr):
+            e = self.open(t, "dbg" if tr == "B" else "ddc", "net", tr=tr, n=0, o=0, i=0, bad=0, full=0, reset=0, ctl=ctl)
+        e.n += 1
+        if flags is None:
+            e.bad += 1; return
+        e.bad += bool(flags & 0x04); e.full += bool(flags & 0x02); e.reset += bool(flags & 0x08)
+        e.o += n_out if flags & 0x01 else 0
+        e.i += n_in if flags & 0x03 else 0
 
 
 # ---- logging API -----------------------------------------------------------------------------------------------

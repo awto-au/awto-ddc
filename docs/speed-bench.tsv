@@ -49,3 +49,6 @@ date	commit	image	label	passes	cycles_pass	work	stub_entries	stub_cyc	instr_pass
 2026-11-08T10:20:49+11:00	1475711	AWT26110003-wb-p14wk2-be	wb-p14wk2	12	43861	4924	19.4	776	22502	17.5			656839		
 2026-11-08T10:21:02+11:00	1475711	AWT26110003-wb-p14wk11-be	wb-p14wk11	12	43861	4930	19.4	776	22502	17.5			658438		
 2026-11-08T10:35:57+11:00	d3ea579	AWT26110003-wb-osd67h-be	wb-osd67h #67 settings+menu+MCCS on kvm2e config	12	43861	5062	20.7	823	22519	17.5			699237		
+2026-11-08T10:47:41+11:00	1d376da	AWT26110003-wb-osd67i-be	wb-osd67i #67 final: settings+menu+MCCS, kvm2e config (FIXCH 2, DBG_FOLLOW off), pin fc545f6	12	43861	5062	20.7	823	22519	17.5			699278		
+2026-11-08T10:57:04+11:00	ddfbd23	AWT26110003-wb-p14net1-be	wb-p14net1 #80 IP over DDC (kvm2e defs)	12	43861	4944	19.4	776	22503	17.5			665521		
+2026-11-08T11:00:58+11:00	631d8b8	AWT26110003-wb-p14kvm2e-be	wb-p14kvm2e baseline for #80	12	43861	4938	19.4	776	22503	17.5			659216		
