@@ -24,7 +24,7 @@ Overview only; each fact lives in the linked doc. Tracking: awto-ddc#1 (index), 
 - Registry menu (#67)
   - Code: `/mnt/2tb/git/awto-rtdfw/awto/settings/menu.c`, `set_table.c` (generated), `settings.c`, `vcp.c`; header `awto/include/menu.h`; registry `/mnt/2tb/git/awto-rtdfw/settings/registry.tsv` + `pages.tsv`.
   - Drawn through the text-cell layer (`osd_tc_glyph`, `awto/include/osd.h`) with our font.
-  - Opened with the front keys (Menu = enter / edit / confirm, Right / Left = move, Exit = back), `menu_cli.py open`, or VCP 0xE4.
+  - Opened with the front keys, `menu_cli.py open`, or VCP 0xE4. Key roles use SDK names (Menu / Right / Left / Exit); physical keys after #85: MENU = enter / edit / confirm, UP / DOWN = move, AUTO = back.
   - Doc (generated): [settings.md](settings.md).
 - Key test screen (#39, open)
   - Code: `awto_keytest.inc` + `awto_keypop.inc` in `/mnt/2tb/git/awto-ddc-keys/fw/sdcc/` (branch wb-p14keys); hooks `AWTO_KEY_SCAN` / `AWTO_KEY_MSG` in RTD2014Key.c.
