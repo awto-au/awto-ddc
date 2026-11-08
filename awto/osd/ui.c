@@ -97,17 +97,16 @@ static void fill_blank(uint8_t from)
     buf[UI_CHARS] = 0;
 }
 
-/* copy a __code string into buf at col, return the length */
-static uint8_t put_c(uint8_t col, const char __code *s)
-{
-    uint8_t n = 0;
-
-    while (s[n] != 0 && col + n < UI_CHARS) {
-        buf[col + n] = s[n];
-        n++;
-    }
-    return n;
-}
+/* copy a __code string into buf at col, n = its length. A macro, not a function: the string lives in the bank of the function that
+ * names it, and a helper called from there may run in another bank (banked 8051: it would read the wrong bytes). */
+#define PUT_C(n, col, str) \
+    do { \
+        (n) = 0; \
+        while ((str)[(n)] != 0 && (col) + (n) < UI_CHARS) { \
+            buf[(col) + (n)] = (str)[(n)]; \
+            (n)++; \
+        } \
+    } while (0)
 
 static uint8_t put_dec(uint8_t col, uint32_t v, uint8_t decimals)
 {
@@ -130,8 +129,11 @@ uint8_t ui_fmt_vfreq(char __xdata *dst, uint32_t vmhz)
 {
     uint8_t n;
 
+    uint8_t m;
+
     n = put_dec(0, vmhz, 3);
-    n += put_c(n, us_hz);
+    PUT_C(m, n, us_hz);
+    n += m;
     buf[n] = 0;
     for (vmhz = 0; vmhz <= n; vmhz++)
         dst[vmhz] = buf[vmhz];
@@ -234,12 +236,12 @@ void ui_legend(uint8_t ctx)
         for (k = 0; k < 3; k++) {
             col = k * KSLOT + 1;
             fill_blank(0);
-            n = put_c(0, us_key[3 * line + k]);
+            PUT_C(n, 0, us_key[3 * line + k]);
             ui_text(UI_L_LEGEND + line, col, buf, n, OS_RED);
             a = ua_ctx[ctx][3 * line + k];
             if (a[0] != 0) {
                 fill_blank(0);
-                n = put_c(0, a);
+                PUT_C(n, 0, a);
                 ui_text(UI_L_LEGEND + line, col + 7, buf, n, OS_TEXT);
             }
         }
@@ -252,10 +254,10 @@ static void strip_port(uint8_t line, uint8_t col, uint8_t i, uint8_t st)
     uint8_t n;
 
     fill_blank(0);
-    n = put_c(0, us_port[i]);
+    PUT_C(n, 0, us_port[i]);
     ui_text(line, col + 2, buf, 8, OS_TEXT);
     fill_blank(0);
-    n = put_c(0, us_state[st]);
+    PUT_C(n, 0, us_state[st]);
     ui_text(line, col + 10, buf, 9, st == UPS_ACTIVE ? OS_TEXT : OS_DIM);
     if (st == UPS_ACTIVE) {
         buf[0] = '>';

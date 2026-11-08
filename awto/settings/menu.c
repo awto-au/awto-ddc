@@ -92,11 +92,16 @@ static uint8_t mn_put(uint8_t col, const char __xdata *s, uint8_t max)
     return n;
 }
 
-static void mn_put_c(uint8_t col, const char __code *s)
-{
-    while (*s != 0 && col < MENU_COLS)
-        line[col++] = *s++;
-}
+/* a macro, not a function: a __code string must be read by the function that names it (banked 8051: a helper may run in another bank) */
+static uint8_t __xdata pc;
+#define mn_put_c(col, str) \
+    do { \
+        pc = 0; \
+        while ((str)[pc] != 0 && (col) + pc < MENU_COLS) { \
+            line[(col) + pc] = (str)[pc]; \
+            pc++; \
+        } \
+    } while (0)
 
 static uint8_t mn_num(char __xdata *d, int16_t v, uint8_t dec)
 {
