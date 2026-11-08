@@ -858,7 +858,7 @@ stub	_UserCommonNVRamSetSystemData	C	0x36d0	9
 stub	_AwtoPutGlyph	C	0x36d9	9
 fn	_ScalerMDomainDHVtotalFinetune	C	0x36e2	900
 fn	_SysTimerIntProc2	C	0x3a66	192
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1258	C	0x3b26	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1260	C	0x3b26	92
 stub	_RTDFactoryBgBLeft	C	0x3b82	9
 stub	_RTDFactoryBgBRight	C	0x3b8b	9
 stub	_RTDFactoryBgEnter	C	0x3b94	9
@@ -1060,6 +1060,7 @@ stub	_st_load	C	0x4566	8
 stub	_st_touch	C	0x456e	8
 stub	_vcp_box_service	C	0x4576	8
 stub	_vcp_get	C	0x457e	8
+stub	_AwtoNetPoll	C	0x4586	8
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerOsdFontLibraryRotation	0	0x0010	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x002c	28
@@ -2342,7 +2343,7 @@ fn	_AwtoFreqModeStr	9	0xa6a4	568
 fn	_AwtoModePut	9	0xa8dc	56
 fn	_AwtoModePutFix	9	0xa914	296
 fn	_AwtoModePutHz	9	0xaa3c	132
-fn	_ScalerDebugIntProc_EXINT1	9	0xaac0	800
+fn	_ScalerDebugIntProc_EXINT1	9	0xaac0	1276
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	10	0x006c	108
 const	_tFACTORY_PAGE_SELECT_ITEM_TABLE	10	0x00d8	192
 const	_tFONT_FACTORY_EUROPE	10	0x0198	2680
@@ -3055,9 +3056,13 @@ fn	_dp_wr16	12	0x0c04	112
 fn	_hb_burst	12	0x0c74	340
 fn	_reg_rd_n	12	0x0dc8	120
 fn	_AwtoDiagDelayCal	12	0x0e40	2848
+fn	_AwtoNetCopy	12	0x1960	36
+fn	_AwtoNetEq	12	0x1984	44
 const	_mn_s5	12	0x19cc	8
 const	_pent	12	0x19d4	112
 fn	_mn_sync	12	0x1a44	304
+fn	_AwtoNetEthTo	12	0x1b74	52
+fn	_AwtoNetSend	12	0x1ba8	32
 fn	_set_ap_power_mode	12	0x1bf8	44
 fn	_set_ap_sdk_language	12	0x1c24	24
 fn	_set_ap_search_time	12	0x1c3c	76
@@ -3065,7 +3070,8 @@ fn	_AwtoDdcciPoll	12	0x1c90	620
 const	_tAwtoDdcCaps	12	0x1efc	96
 const	_tab	12	0x1f5c	1984
 fn	_AwtoDdcRegistry	12	0x271c	1096
-fn	_AwtoDdcRequest	12	0x2b64	884
+fn	_AwtoNetMsgPut	12	0x2b64	552
+fn	_AwtoNetSum	12	0x2d8c	128
 fn	_set_ap_power	12	0x2ed8	164
 fn	_set_ap_user_rgb	12	0x2f7c	32
 fn	_set_ap_vendor_menu	12	0x2f9c	28
@@ -3080,6 +3086,7 @@ fn	_mn_draw_list	12	0x3414	56
 fn	_mn_key	12	0x344c	308
 fn	_mn_put	12	0x3580	84
 fn	_mn_scroll	12	0x35d4	88
+fn	_AwtoNetSetting	12	0x362c	180
 fn	_mn_value_text	12	0x3744	460
 fn	_set_opt_from_vcp	12	0x3910	112
 fn	_set_page_entry	12	0x3980	24
@@ -3099,6 +3106,13 @@ fn	_st_load	12	0x3f68	24
 fn	_st_touch	12	0x3f80	36
 fn	_vcp_box_service	12	0x3fa4	252
 fn	_vcp_set	12	0x40a0	260
+fn	_AwtoDdcRequest	12	0x41a4	996
+fn	_AwtoNetFrame	12	0x4588	928
+fn	_AwtoNetPoll	12	0x4928	520
+fn	_AwtoNetService	12	0x4b30	604
+fn	_AwtoNetTxPush	12	0x4d8c	256
+fn	_AwtoNetUdpTo	12	0x4e8c	292
+fn	_AwtoNetXchgA	12	0x4fb0	572
 fn	_AwtoSlowDue	13	0x0000	312
 fn	_AwtoSwEvent	13	0x0138	160
 fn	_AwtoTmdsStuck	13	0x01d8	132

@@ -275,6 +275,51 @@ extern __xdata unsigned char g_ucAwtoDdcciOn;
 #else
 #define AWTO_DDCCI_POLL_ON()                                    (1)
 #endif
+// #80 IP over DDC (fw/sdcc/awto_net.inc, docs/ip-over-ddc.md): byte rings fed by DDC/CI op 0xD0 (Transport A, polled engine)
+// and debug cmd 0x3D (Transport B, EXINT1 ISR); SLIP-framed Ethernet; ARP, ICMP echo, UDP echo + service. Work only when a
+// transport raised g_ucAwtoNetRun (a host exchange): an idle link costs one XDATA byte test per pass.
+#ifndef _AWTO_NET
+#define _AWTO_NET                                               _ON
+#endif
+#if(_AWTO_NET == _ON)
+#define AWTO_NET_RING                                           128     // bytes per direction; divides 256 (BYTE indices wrap)
+#define AWTO_NET_MASK                                           (AWTO_NET_RING - 1)
+#define AWTO_NET_BUF                                            300     // one Ethernet frame (IP MTU 286), RX decode + TX encode
+#define AWTO_NET_B_MAX                                          20      // 0x3D reply data: 4 hdr + 20 + chk = 25 FIFO bytes (as 0x3C)
+#define AWTO_NET_A_MAX                                          9       // D1 reply data: 16-byte engine buffer - 6E len D1 seq flags free chk
+#define AWTO_NET_A_IN                                           10      // D0 request data: len + D0 seq ctl ack + 10 + chk = 16
+#define AWTO_NET_F_ACC                                          0x01    // reply flags: request data taken
+#define AWTO_NET_F_FULL                                         0x02    // not taken, RX ring full: resend with a new seq
+#define AWTO_NET_F_BAD                                          0x04    // request checksum bad (B): nothing applied
+#define AWTO_NET_F_RESET                                        0x08    // reset pending: no data taken, none sent
+#define AWTO_NET_F_ECHO                                         0x10    // raw loopback mode (ctl bit0)
+#define AWTO_NET_F_MORE                                         0x20    // TX bytes beyond this reply
+#define AWTO_NET_F_UP                                           0x80    // always set: a net firmware answered
+#define AWTO_NET_CTL_ECHO                                       0x01
+#define AWTO_NET_CTL_RESET                                      0x80
+typedef struct
+{
+    unsigned char ucRxHead;                     // host -> fw ring: written by the transport (ISR for B)
+    unsigned char ucRxTail;                     // read by AwtoNetPoll
+    unsigned char ucTxHead;                     // fw -> host ring: written by AwtoNetPoll
+    unsigned char ucTxTail;                     // advanced by the transport on the host's ack
+    unsigned char ucBSeq;                       // 0x3D: last host seq (a repeat = retry: nothing re-applied)
+    unsigned char ucBFlags;                     // its ACC / FULL result
+    unsigned char ucASeq;                       // DDC/CI 0xD0: same
+    unsigned char ucAFlags;
+    unsigned char ucCtl;                        // host ctl of the last new exchange (bit0 echo)
+    unsigned char ucReset;                      // 1 = AwtoNetPoll empties rings + frame state (transports pause)
+    unsigned char pucRx[AWTO_NET_RING];
+    unsigned char pucTx[AWTO_NET_RING];
+} StAwtoNetLink;
+extern __xdata StAwtoNetLink g_stAwtoNet;
+extern __xdata unsigned char g_ucAwtoNetRun;
+extern void AwtoNetPoll(void);
+extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsigned char *pucR);
+#define AWTO_NET_POLL()                                         { if(g_ucAwtoNetRun != 0) { AwtoNetPoll(); } }
+#else
+#define AWTO_NET_POLL()
+#endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
 #define _AWTO_SW_LOG                                            _ON
 #if(_AWTO_SW_LOG == _ON)
