@@ -4,7 +4,7 @@
 #include "mode.h"
 #include "names.h"
 
-/* T2: 100 busy checks, reference behaviour (vendor-value; spec reg section 4) */
+/* T2: 100 busy checks, reference behaviour (sdk-value; spec reg section 4) */
 #define HB_BUSY_CHECKS 100
 
 uint8_t hb_burst(uint32_t src24, uint16_t len, uint16_t target, uint8_t kind, uint8_t from_xram)
@@ -26,7 +26,7 @@ uint8_t hb_burst(uint32_t src24, uint16_t len, uint16_t target, uint8_t kind, ui
     REG8_WR(HB_LEN_HI, len >> 8);
     REG8_WR(HB_LEN_LO, len);
 
-    /* S8r, S8: gap 3 for non-OSD kinds is vendor-value (spec reg S8) */
+    /* S8r, S8: gap 3 for non-OSD kinds is sdk-value (spec reg S8) */
     if (kind == HB_OSD) {
         hd = (REG8_RD(OSD_FRAME_0A) & OSD_HDOUBLE) ? 1 : 0;
         gap = hb_osd_gap(mode_dclk_khz(), hd);

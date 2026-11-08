@@ -74,39 +74,39 @@ static const struct setting __code tab[SET_COUNT] = {
     { 59, 2, 1,  8, 0x03, 0, 100, 1, 50, 0x00, 17, 1074u, 0xFFFFu},  /* osd_vpos */
     { 60, 1, 0,  8, 0x03, 0, 1, 1, 1, 0xF4, 18, 1090u, 0x044Cu},  /* osd_scale */
     { 61, 2, 1,  8, 0x03, 0, 100, 1, 0, 0x00, 19, 1106u, 0xFFFFu},  /* osd_transparency */
-    { 62, 1, 0,  8, 0x01, 0, 1, 1, 0, 0x00, 23, 1119u, 0x046Fu},  /* language */
-    { 63, 1, 0,  8, 0x21, 0, 3, 1, 0, 0x00, 0, 1153u, 0x048Du},  /* osd_rotate */
-    { 64, 1, 0,  8, 0x01, 0, 1, 1, 0, 0xF5, 0, 1178u, 0x04A9u},  /* menu_select */
-    { 65, 0, 0,  9, 0x01, 0, 1, 1, 1, 0xE8, 0, 1215u, 0xFFFFu},  /* logo */
-    { 66, 2, 2,  9, 0x01, 0, 10000, 100, 3000, 0xE9, 0, 1225u, 0xFFFFu},  /* logo_ms */
-    { 67, 2, 2, 10, 0x49, 0, 100, 1, 10, 0x00, 0, 1235u, 0xFFFFu},  /* panel_t1 */
-    { 68, 2, 2, 10, 0x49, 0, 1000, 10, 250, 0x00, 0, 1247u, 0xFFFFu},  /* panel_t2 */
-    { 69, 2, 2, 10, 0x09, 300, 2000, 10, 550, 0xEB, 0, 1262u, 0xFFFFu},  /* panel_t3 */
-    { 70, 2, 2, 10, 0x09, 17, 200, 1, 20, 0x00, 0, 1277u, 0xFFFFu},  /* panel_t3_own */
-    { 71, 2, 2, 10, 0x09, 0, 1000, 10, 250, 0x00, 0, 1292u, 0xFFFFu},  /* panel_t4 */
-    { 72, 2, 2, 10, 0x09, 0, 500, 10, 20, 0x00, 0, 1310u, 0xFFFFu},  /* panel_t5 */
-    { 73, 2, 2, 10, 0x09, 500, 5000, 100, 1100, 0x00, 0, 1329u, 0xFFFFu},  /* panel_t6 */
-    { 74, 2, 2, 10, 0x29, 0, 200, 1, 0, 0x00, 0, 1342u, 0xFFFFu},  /* bl_pwm_ms */
-    { 84, 0, 0, 11, 0x69, 0, 1, 1, 1, 0x00, 0, 1352u, 0xFFFFu},  /* debug_link */
-    { 85, 0, 0, 11, 0x03, 0, 1, 1, 0, 0xF0, 7, 1363u, 0xFFFFu},  /* debug_msgs */
-    { 86, 0, 0, 11, 0x02, 0, 1, 1, 0, 0x00, 16, 1378u, 0xFFFFu},  /* msg_log */
-    { 87, 3, 0, 11, 0x00, 0, 1, 1, 0, 0x00, 8, 1390u, 0xFFFFu},  /* debug_popup */
-    { 88, 2, 1, 12, 0x21, 0, 100, 1, 50, 0x62, 0, 1403u, 0xFFFFu},  /* volume */
-    { 89, 0, 0, 12, 0x21, 0, 1, 1, 0, 0x00, 0, 1410u, 0xFFFFu},  /* mute */
-    { 90, 0, 0, 12, 0x21, 0, 1, 1, 0, 0x00, 0, 1415u, 0xFFFFu},  /* audio_standalone */
-    { 91, 1, 0, 12, 0x21, 0, 1, 1, 0, 0x00, 0, 1427u, 0x05A0u},  /* audio_source */
-    {  4, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x04, 9, 1455u, 0xFFFFu},  /* factory_reset */
-    {102, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x08, 4, 1469u, 0xFFFFu},  /* colour_reset */
-    {103, 1, 0,  7, 0x02, 0, 4, 1, 0, 0xD6, 22, 1482u, 0x05D5u},  /* power_mode */
-    { 92, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x00, 12, 1525u, 0xFFFFu},  /* factory_menu */
-    { 93, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x00, 26, 1538u, 0xFFFFu},  /* vendor_menu */
-    { 95, 1, 0, 14, 0x10, 0, 2, 1, 0, 0x00, 0, 1550u, 0x0614u},  /* info_input */
-    { 96, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1578u, 0xFFFFu},  /* info_hres */
-    { 97, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1587u, 0xFFFFu},  /* info_vres */
-    { 98, 2, 6, 14, 0x10, 0, 2400, 1, 0, 0x00, 0, 1596u, 0xFFFFu},  /* info_vfreq */
-    { 99, 2, 0, 14, 0x10, 0, 15, 1, 0, 0x00, 0, 1603u, 0xFFFFu},  /* info_mode */
-    {100, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1614u, 0xFFFFu},  /* info_loop */
-    {101, 2, 0, 14, 0x10, 0, 32767, 1, 0, 0x00, 0, 1627u, 0xFFFFu},  /* info_schema */
+    { 62, 1, 0,  8, 0x01, 0, 1, 1, 0, 0x00, 23, 1119u, 0x0475u},  /* language */
+    { 63, 1, 0,  8, 0x21, 0, 3, 1, 0, 0x00, 0, 1159u, 0x0493u},  /* osd_rotate */
+    { 64, 1, 0,  8, 0x01, 0, 1, 1, 0, 0xF5, 0, 1184u, 0x04AFu},  /* menu_select */
+    { 65, 0, 0,  9, 0x01, 0, 1, 1, 1, 0xE8, 0, 1222u, 0xFFFFu},  /* logo */
+    { 66, 2, 2,  9, 0x01, 0, 10000, 100, 3000, 0xE9, 0, 1232u, 0xFFFFu},  /* logo_ms */
+    { 67, 2, 2, 10, 0x49, 0, 100, 1, 10, 0x00, 0, 1242u, 0xFFFFu},  /* panel_t1 */
+    { 68, 2, 2, 10, 0x49, 0, 1000, 10, 250, 0x00, 0, 1254u, 0xFFFFu},  /* panel_t2 */
+    { 69, 2, 2, 10, 0x09, 300, 2000, 10, 550, 0xEB, 0, 1269u, 0xFFFFu},  /* panel_t3 */
+    { 70, 2, 2, 10, 0x09, 17, 200, 1, 20, 0x00, 0, 1284u, 0xFFFFu},  /* panel_t3_own */
+    { 71, 2, 2, 10, 0x09, 0, 1000, 10, 250, 0x00, 0, 1299u, 0xFFFFu},  /* panel_t4 */
+    { 72, 2, 2, 10, 0x09, 0, 500, 10, 20, 0x00, 0, 1317u, 0xFFFFu},  /* panel_t5 */
+    { 73, 2, 2, 10, 0x09, 500, 5000, 100, 1100, 0x00, 0, 1336u, 0xFFFFu},  /* panel_t6 */
+    { 74, 2, 2, 10, 0x29, 0, 200, 1, 0, 0x00, 0, 1349u, 0xFFFFu},  /* bl_pwm_ms */
+    { 84, 0, 0, 11, 0x69, 0, 1, 1, 1, 0x00, 0, 1359u, 0xFFFFu},  /* debug_link */
+    { 85, 0, 0, 11, 0x03, 0, 1, 1, 0, 0xF0, 7, 1370u, 0xFFFFu},  /* debug_msgs */
+    { 86, 0, 0, 11, 0x02, 0, 1, 1, 0, 0x00, 16, 1385u, 0xFFFFu},  /* msg_log */
+    { 87, 3, 0, 11, 0x00, 0, 1, 1, 0, 0x00, 8, 1397u, 0xFFFFu},  /* debug_popup */
+    { 88, 2, 1, 12, 0x21, 0, 100, 1, 50, 0x62, 0, 1410u, 0xFFFFu},  /* volume */
+    { 89, 0, 0, 12, 0x21, 0, 1, 1, 0, 0x00, 0, 1417u, 0xFFFFu},  /* mute */
+    { 90, 0, 0, 12, 0x21, 0, 1, 1, 0, 0x00, 0, 1422u, 0xFFFFu},  /* audio_standalone */
+    { 91, 1, 0, 12, 0x21, 0, 1, 1, 0, 0x00, 0, 1434u, 0x05A7u},  /* audio_source */
+    {  4, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x04, 9, 1462u, 0xFFFFu},  /* factory_reset */
+    {102, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x08, 4, 1476u, 0xFFFFu},  /* colour_reset */
+    {103, 1, 0,  7, 0x02, 0, 4, 1, 0, 0xD6, 22, 1489u, 0x05DCu},  /* power_mode */
+    { 92, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x00, 12, 1532u, 0xFFFFu},  /* factory_menu */
+    { 93, 3, 0, 13, 0x00, 0, 1, 1, 0, 0x00, 26, 1545u, 0xFFFFu},  /* vendor_menu */
+    { 95, 1, 0, 14, 0x10, 0, 2, 1, 0, 0x00, 0, 1558u, 0x061Cu},  /* info_input */
+    { 96, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1586u, 0xFFFFu},  /* info_hres */
+    { 97, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1595u, 0xFFFFu},  /* info_vres */
+    { 98, 2, 6, 14, 0x10, 0, 2400, 1, 0, 0x00, 0, 1604u, 0xFFFFu},  /* info_vfreq */
+    { 99, 2, 0, 14, 0x10, 0, 15, 1, 0, 0x00, 0, 1611u, 0xFFFFu},  /* info_mode */
+    {100, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1622u, 0xFFFFu},  /* info_loop */
+    {101, 2, 0, 14, 0x10, 0, 32767, 1, 0, 0x00, 0, 1635u, 0xFFFFu},  /* info_schema */
 };
 
 static const uint8_t __code id2idx[104] = {
@@ -135,12 +135,12 @@ static const char __code txt[] =
     "10 bpc\0""HDMI 4:2:0\0""Colour format\0""RGB\0""YUV\0""Clone\0""DDC/CI\0""L1 backlight off\0""L1 delay\0"
     "L2 panel off\0""L2 delay\0""L3 deep sleep\0""L3 delay\0""Wake on D1\0""Wake on D2\0""Wake on D3\0"
     "Menu timeout\0""Menu H position\0""Menu V position\0""Menu size\0""1x\0""2x\0""Transparency\0"
-    "Vendor language\0""English\0""Chinese-T\0""Menu rotate\0""0\0""90\0""270\0""180\0""Menu key opens\0"
-    "Awto menu\0""Vendor menu\0""Boot logo\0""Logo time\0""T1 VDD rise\0""T2 VDD to link\0""T3 video to BL\0"
+    "Realtek menu language\0""English\0""Chinese-T\0""Menu rotate\0""0\0""90\0""270\0""180\0""Menu key opens\0"
+    "Awto menu\0""Realtek menu\0""Boot logo\0""Logo time\0""T1 VDD rise\0""T2 VDD to link\0""T3 video to BL\0"
     "T3 own pattern\0""T4 BL to link off\0""T5 link to VDD off\0""T6 off to on\0""BL to PWM\0""Debug link\0"
     "Debug messages\0""Message log\0""Debug pop-up\0""Volume\0""Mute\0""Stand alone\0""Audio source\0""Analog\0"
     "Digital\0""Factory reset\0""Colour reset\0""Power mode\0""On\0""Standby\0""Suspend\0""Off\0""Off hard\0"
-    "Factory menu\0""Vendor menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0""V freq\0"
+    "Factory menu\0""Realtek menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0""V freq\0"
     "Mode state\0""Loop rate /s\0""Settings schema\0""Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0"
     "KVM switching\0""Signal\0""Power\0""OSD\0""Boot\0""Panel timing\0""Debug\0""Audio\0""System\0""Information\0";
 
@@ -236,7 +236,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {91, 4, 0xFF},  /* System */
     {95, 7, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1643u, 1651u, 1658u, 1674u, 1682u, 1688u, 1702u, 1709u, 1715u, 1719u, 1724u, 1737u, 1743u, 1749u, 1756u};
+static const uint16_t __code ptitle[SET_PAGES] = {1651u, 1659u, 1666u, 1682u, 1690u, 1696u, 1710u, 1717u, 1723u, 1727u, 1732u, 1745u, 1751u, 1757u, 1764u};
 
 uint8_t set_idx(uint8_t id)
 {
