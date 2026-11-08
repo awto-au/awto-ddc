@@ -90,6 +90,7 @@ class Session:
                 break
         if not bus.run_until_mode(3):
             raise SystemExit("never reached ACTIVE")
+        bus.dbg_link_on()                                          # #79 images: 0x35 is parked off the host port until this
         self.t0 = bus.now()
         say(f"{self.binp.name}: ACTIVE at fw {self.t0:.3f} s ({bus.m.instr} instr), logo drawn: {self.logo_snap is not None}")
 

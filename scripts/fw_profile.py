@@ -45,10 +45,16 @@ def boot(img, mapp, be, log):
     raise RuntimeError("boot did not reach stage 8 + heartbeat")
 
 
-def profile(binp: Path, mapp: Path, passes: int, be: bool, log):
+def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: int | None = 0):
+    """search_index: source search port pinned before sampling (None = leave as booted). The bare sim has no source, so
+    each image sits on whichever port its search starts at (wk11 HDMI index 0, #60/#79 images DP index 1): different
+    detect paths, not comparable. Pinned to the same index, every image measures the same pass."""
     img = binp.read_bytes()
     mp = mapp.read_text(errors="replace")
     s, sym, where = boot(img, mapp, be, log)
+    if search_index is not None:
+        a = int(re.search(r"^D:\s+([0-9A-F]{8})\s+_g_ucSearchIndex\b", mp, re.M).group(1), 16)
+        s.send(f"set memory xram 0x{a:x} 0x{search_index:x}")
     allsym, stubs = parse_syms(mp)
     stub_starts = [v for v, _ in stubs]
     ssize = F.stub_size(img, stubs[0][0]) if stubs else 6
@@ -194,12 +200,13 @@ def main():
     ap.add_argument("bin"); ap.add_argument("map")
     ap.add_argument("--passes", type=int, default=12)
     ap.add_argument("--top", type=int, default=15)
+    ap.add_argument("--search-index", type=int, default=0, help="pinned source search index (default 0; -1 = as booted)")
     ap.add_argument("--json")
     a = ap.parse_args()
     (F.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (F.ROOT / "tmp/logs/fw_profile.log").open("a", buffering=1)
     b, m = Path(a.bin), Path(a.map)
-    r = profile(b, m, a.passes, "-be" in b.name, log)
+    r = profile(b, m, a.passes, "-be" in b.name, log, None if a.search_index < 0 else a.search_index)
     if a.json:
         Path(a.json).write_text(json.dumps(r, indent=1))
     print(f"{r['image']}: {r['cycles_per_pass']:.0f} machine cycles/pass over {r['passes']} passes, "

@@ -32,7 +32,8 @@ MASK = dict(power=0x01, menu=0x02, right=0x04, left=0x08, exit=0x10)
 FIELDS = ["magic", "version", "open", "page", "cursor", "item_id", "item_page", "mode", "top", "val_lo", "val_hi",
           "redraw_lo", "redraw_hi", "last_key", "pending", "n", "parent", "seq"]
 READS = 5                # torn-read retries: the firmware updates the struct from its main loop, the host reads async
-SETTLE_S = 0.25          # sim: firmware time for a key to pass the key scan + OSD handler and a page to draw
+SETTLE_S = 0.25          # HOLD only (sim): no state change to wait for until the long-press time is up
+KEY_S = 0.47             # KEY: wait for menu_diag.seq to move. Same bound as settings_cli.MAILBOX_S (one OSD draw class)
 
 
 def say(s: str):
@@ -74,14 +75,33 @@ class Menu:
             raise SystemExit(f"menu_diag kept changing over {READS} reads")
         s = dict(zip(FIELDS, b))
         if s["magic"] != ord("M"):
-            raise SystemExit("menu_diag magic missing: image without the menu instrumentation, or the menu never ran")
+            raise SystemExit(f"menu_diag at 0x{self.addr:04X}: magic 0x{s['magic']:02X}, not 'M': the menu has not run yet "
+                             "(open it first: `open main`) or the image has no menu")
         s["value"] = int.from_bytes(bytes([s["val_lo"], s["val_hi"]]), "little", signed=True)
         s["redraws"] = s["redraw_lo"] | s["redraw_hi"] << 8
         return s
 
+    def now(self) -> float:
+        return self.box.bus.now() if self.sim else time.monotonic()
+
     def cmd(self, op: str, arg: int = 0):
+        s0 = self.box.xrd(self.addr + 17, 1)[0] if op == "key" else 0
         self.box.call(3, OPS[op], arg)
-        if self.sim and op in ("key", "hold"):
+        if op == "key":
+            # the mailbox acks when the key message is queued; the OSD handler consumes it on a later main-loop pass and
+            # menu_diag.seq (bumped by every handled key) is the completion signal
+            t0 = self.now()
+            while True:
+                q = self.box.xrd(self.addr + 17, 1)[0]
+                if q != s0 and not q & 1:
+                    break
+                if self.now() - t0 > KEY_S:
+                    say(f"WARN key {arg}: menu_diag.seq unchanged after {self.now() - t0:.2f} s (limit {KEY_S} s)")
+                    break
+                if self.sim:
+                    self.box.bus.wait(0.001)
+            self.lat = max(getattr(self, "lat", 0.0), self.now() - t0)
+        elif self.sim and op == "hold":
             self.box.bus.wait(SETTLE_S)
 
     @staticmethod
@@ -146,6 +166,7 @@ def walk(m: Menu, png: Path | None, render) -> int:
     m.cmd("close")
     s = m.state()
     check("close", s["open"] == 0, s)
+    say(f"key latency (ack to seq change), max {getattr(m, 'lat', 0.0) * 1000:.1f} ms")
     say(f"walk: {'PASS' if not fails else f'{fails} FAIL'} ({len(pages)} pages, {sum(len(entries(p)) for p in pages)} entries)")
     return 1 if fails else 0
 
