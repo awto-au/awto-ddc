@@ -17,6 +17,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import osd_vlc  # noqa: E402  (the one VLC codec)
+
 SRAM_WORDS = 12288                      # [sdk] osd-limits.md; HW read-back not yet done
 TILE_W, TILE_H = 12, 18                 # [spec/oss] 1-bpp cell
 FONTS = {
@@ -116,64 +119,17 @@ class Variant:
         return [arr[:, i * self.uw:(i + 1) * self.uw] for i in range(n)]
 
     def pack(self, unit):
-        """Row-major pixels, MSB-first bpp bits, 24-bit words, stored byte order B0,B1,B2 [derived for
-        2/4 bpp and for 24x36; 1-bpp 12x18 matches osd-font-download.md section 5]."""
-        bits = "".join(format(int(v), f"0{self.bpp}b") for v in unit.flatten())
-        out = bytearray()
-        for i in range(0, len(bits), 24):
-            w = int(bits[i:i + 24], 2)
-            out += bytes([w & 0xFF, (w >> 8) & 0xFF, (w >> 16) & 0xFF])
-        return bytes(out)
+        """Row-major pixels, MSB-first bpp bits, 24-bit words, low byte first (osd_vlc.pack_unit) [derived for 2/4 bpp and 24x36]."""
+        return osd_vlc.pack_unit(unit, self.bpp)
 
 
-# ---------------- VLC (osd-font-download.md section 2-3) ----------------
-CODES = ["0", "100", "1010", "1011", "1100", "11010", "11011", "11100", "111010", "111011", "111100",
-         "111101", "1111100", "1111101", "1111110", "11111110"]
-END = "11111111"
-
-
-def vlc_encode(data):
-    """Return blob bytes: 8-byte map + 2-byte BE length + stream (LSB-first bits, END, zero pad)."""
-    nib = []
-    for b in data:
-        nib += [b >> 4, b & 15]
-    freq = {v: 0 for v in range(16)}
-    for v in nib:
-        freq[v] += 1
-    order = sorted(range(16), key=lambda v: (-freq[v], v))           # most frequent -> shortest code
-    code_of = {v: CODES[i] for i, v in enumerate(order)}
-    bits = "".join(code_of[v] for v in nib) + END
-    bits += "0" * (-len(bits) % 8)
-    stream = bytearray()
-    for i in range(0, len(bits), 8):
-        stream.append(int(bits[i:i + 8][::-1], 2))
-    mp = bytes((order[2 * i] << 4) | order[2 * i + 1] for i in range(8))
-    return mp + len(stream).to_bytes(2, "big") + bytes(stream)
-
-
-def vlc_decode(blob):
-    order = []
-    for b in blob[:8]:
-        order += [b >> 4, b & 15]
-    n = int.from_bytes(blob[8:10], "big")
-    bits = "".join(format(b, "08b")[::-1] for b in blob[10:10 + n])
-    table = {c: order[i] for i, c in enumerate(CODES)}
-    nib, cur = [], ""
-    for ch in bits:
-        cur += ch
-        if cur == END:
-            break
-        if cur in table:
-            nib.append(table[cur])
-            cur = ""
-    return bytes((nib[i] << 4) | nib[i + 1] for i in range(0, len(nib) - 1, 2))
+# ---------------- VLC: the one codec, scripts/osd_vlc.py ----------------
+vlc_encode = osd_vlc.encode
+vlc_decode = osd_vlc.decode
 
 
 def selftest():
-    rng = np.random.default_rng(1)
-    d = bytes(int(x) for x in rng.integers(0, 256, 270)) + bytes(27 * 5)
-    assert vlc_decode(vlc_encode(d)) == d
-    log("selftest OK: VLC encode/decode round-trip")
+    return osd_vlc.selftest()
 
 
 # ---------------- measurement ----------------

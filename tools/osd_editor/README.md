@@ -1,5 +1,5 @@
 # awto OSD editor (awto-ddc#89)
-PySide6 viewer/editor on top of `scripts/` (VLC encoder via `vlc_adapter.py` -> `scripts/font_compare.py`; switch to `osd_vlc.py` when it lands).
+PySide6 viewer/editor on top of `scripts/` (VLC codec: `scripts/osd_vlc.py` via `vlc_adapter.py`).
 
 - Launch: `python3 tools/osd_editor/run.py` (first run builds `.venv`, Python 3.13 via uv; default python3 has no PySide6 wheels)
 - Test: `QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_smoke.py` (screenshots -> `tmp/osdedit/shots/`)
