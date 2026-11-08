@@ -8,8 +8,8 @@
       "gdctl": "HDMI-3",
       "be": true,
       "relay": null,
-      "test": true,
-      "note": "2026-11-06 10:41: NVIDIA HDMI-A-3 (I2C bus via EDID scan, e.g. 18). 2026-11-07: test unit too (Dan), still his working screen: no relay, keep layout; cable in monitor input D3 (isp_port.py)"
+      "test": false,
+      "note": "2026-11-08T14:00: Dan's working screen again, hands off (tests on unit 2 only, memory units-test-policy). 2026-11-06 10:41: NVIDIA HDMI-A-3 (I2C bus via EDID scan, e.g. 18). 2026-11-07: test unit too (Dan), still his working screen: no relay, keep layout; cable in monitor input D3 (isp_port.py)"
     },
     "2": {
       "serial": "AWT26110002",
@@ -30,8 +30,8 @@
       "gdctl": "DP-4",
       "be": true,
       "relay": "so-th-1",
-      "test": true,
-      "note": "2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
+      "test": false,
+      "note": "2026-11-08T14:00: Dan's working screen again, hands off (tests on unit 2 only, memory units-test-policy). 2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
     }
   }
 }

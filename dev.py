@@ -400,6 +400,19 @@ def _bus(u: dict, wait_s: float = 0.0) -> int:
                      f"use --bus N only after checking which monitor it is")
 
 
+def _live_bus(u: dict) -> int:
+    """For DDC/CI and debug-slave work: the unit's bus whose DDC is live (0x37 ACK or 0x35 answers).
+    A unit cabled twice (unit 2: HDMI + DP) has both only on the ACTIVE input's cable; the connector bus may be the idle one."""
+    import dbg_link
+    c = _conn_bus(u)
+    cands = ([c] if c is not None else []) + i2cbus.list_buses(display_only=True)
+    mine = [b for b in cands if i2cbus.edid_serial(b) == u["serial"]]
+    for b in dict.fromkeys(mine):
+        if dbg_link.ddcci_ok(b) or dbg_link.dbg_ok(b):
+            return b
+    return _bus(u)
+
+
 def check_image_identity(u: dict, img: Path) -> None:
     """Refuse an image built for another unit (a unit-2 image on unit 3 left the wrong EDID serial, #52.11):
     its file-name tag and every AWT<8 digits> string inside it must be this unit's serial."""
@@ -640,7 +653,7 @@ def _dbg_py(bus: int, script: str, *args, **kw) -> int:
 def _diag(u: dict, *args, bus: int | None = None) -> int:
     ids = FW / f"{_flashed(u).get('tag', '')}.ids.tsv"
     more = ["--ids", ids] if ids.is_file() else []
-    b = bus if bus is not None else _bus(u)
+    b = bus if bus is not None else _live_bus(u)
     return _dbg_py(b, "rtd_diag.py", b, *(["--be"] if u["be"] else []), *args, *more)
 
 
@@ -739,7 +752,7 @@ def cmd_osd(extra: list[str]) -> int:
         raise SystemExit(f"osd: actions are {sorted(ok)}; got {bad or 'none'}; nothing done")
     cmdmode = cmdmode or any(x in osd_test.CMD_ONLY for x in extra)       # popup-only actions imply --cmd
     mp = _fwmap(u, given)
-    b = _bus(u)
+    b = _live_bus(u)
     return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
 
 
@@ -753,7 +766,7 @@ def cmd_settings(extra: list[str]) -> int:
         mp = given or str(Path(sim).with_suffix(".map"))
         return _py("settings_cli.py", "--sim", sim, "--map", mp, *extra)
     n, u = _unit(extra)
-    b = _bus(u)
+    b = _live_bus(u)
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
@@ -766,7 +779,7 @@ def cmd_menu(extra: list[str]) -> int:
     if sim:
         return _py("menu_cli.py", "--sim", sim, "--map", given or str(Path(sim).with_suffix(".map")), *pa, *extra)
     n, u = _unit(extra)
-    b = _bus(u)
+    b = _live_bus(u)
     return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra)
 
 
@@ -785,7 +798,7 @@ def cmd_health(extra: list[str]) -> int:
     if given is True or hm is True:
         raise SystemExit("health: --map/--host-mode need a value; nothing done")
     _done(extra, "health")
-    b = _bus(u)
+    b = _live_bus(u)
     return _dbg_py(b, "unit_health.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
                *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]))
 
@@ -827,7 +840,7 @@ def cmd_dbg_write(extra: list[str]) -> int:
     if label is True:
         raise SystemExit("dbg-write: --label needs a value; nothing done")
     writes = _pairs(extra, "dbg-write")
-    b = _bus(u)
+    b = _live_bus(u)
     return _dbg_py(b, "rtd_dbg_write.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), "--label", label, *writes)
 
 
@@ -839,7 +852,7 @@ def cmd_dbg_read(extra: list[str]) -> int:
     bad = [x for x in extra if x.startswith("-")]
     if bad or not extra:
         raise SystemExit(f"dbg-read: need ITEMs (addr|symbol[:len]); bad {bad or 'none'}; nothing done")
-    b = _bus(u)
+    b = _live_bus(u)
     return _dbg_py(b, "rtd_dbg_read.py", b, "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
 
 

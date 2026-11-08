@@ -89,6 +89,23 @@ def find_bus(u: dict) -> int | None:
     return b
 
 
+def _cache_target(u: dict, value: int) -> None:
+    """DDC/CI follows the active input: after a switch, cache the bus of the cable in the TARGET input
+    (D1 = connector_dp, else connector), so the next call skips the ~0.67 s scan. NVIDIA (no sysfs link): left as is."""
+    if not u.get("connector_dp"):
+        return
+    c = u["connector_dp"] if value == PORTS["D1"] else u["connector"]
+    link = (Path("/sys/class/drm") / c / "ddc").resolve()
+    if not link.name.startswith("i2c-"):
+        return
+    try:
+        d = json.loads(BUS_CACHE.read_text()) if BUS_CACHE.is_file() else {}
+        d[u["serial"]] = int(link.name.split("-")[1])
+        BUS_CACHE.write_text(json.dumps(d))
+    except (OSError, ValueError):
+        pass
+
+
 def _find_bus_scan(u: dict) -> int | None:
     cands = []
     for c in (u["connector"], u.get("connector_dp")):
@@ -162,6 +179,7 @@ def switch_one(job: tuple) -> tuple:
         else:
             raw_set(bus, value)
         ms = (time.monotonic() - t_bus) * 1000
+        _cache_target(u, value)
         got = None
         if verify:
             time.sleep(REPLY_WAIT_S)        # spec gap before the next request
