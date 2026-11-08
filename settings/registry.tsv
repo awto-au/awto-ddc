@@ -4,49 +4,49 @@
 # - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
 # - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
 #   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
-#   the firmware has no reader yet: vendor menu items not built, and our rows whose owner is still to wire it),
+#   the firmware has no reader yet: Realtek SDK menu items not built, and our rows whose owner is still to wire it),
 #   factory (factory page only).
 # - nv_slot: auto = position in the NVRAM record (id-tagged, so slots may move). vcp: MCCS code, or a manufacturer
 #   code 0xE6..0xFF (0xE0..0xE5 are the paged pair 0xE0 id / 0xE1 value, schema, command, menu), or '-';
 #   every row is reachable through the paged pair. The DDC/CI capabilities string is generated from this column.
 # - apply: set_ap_<apply>(id, value) pushes it to the firmware; '-' = the owner reads the value when it needs it.
 # - options: enum labels, '|' separated; label=N gives the VCP value of that option (default: the option index).
-# - provenance: [vendor-ui] = item, range and default of the vendor (SDK demo) menu, walked in the sim (#65, #67).
+# - provenance: [sdk-ui] = item, range and default of the Realtek SDK (demo) menu, walked in the sim (#65, #67).
 # id	name	type	unit	group	flags	min	max	step	default	nv_slot	vcp	apply	label	options	note
-1	brightness	int	percent	picture	nv,live	0	100	1	44	auto	0x10	backlight	Backlight	-	panel PWM duty 30..255; 44 % = vendor default 128 [vendor-ui]
-5	black_level	int	percent	picture	nv,live	0	100	1	50	auto	0xF3	black_level	Brightness	-	digital offset (vendor 'Brightness') [vendor-ui]
-2	contrast	int	percent	picture	nv,live	0	100	1	50	auto	0x12	contrast	Contrast	-	[vendor-ui]
-6	sharpness	int	step	picture	nv,inert	0	4	1	2	auto	0x87	-	Sharpness	-	vendor item, scaler sharpness not built [vendor-ui]
-7	gamma	enum	none	colour	nv,live	0	4	1	0	auto	0xF2	gamma	Gamma	Off|1.8|2.0|2.2|2.4	[vendor-ui]
-8	colour_temp	enum	none	colour	nv,live	0	5	1	2	auto	0x14	colour_temp	Colour temp	9300K=0x08|7500K=0x06|6500K=0x05|5800K=0x04|sRGB=0x01|User=0x0B	MCCS 0x14 (5800K reported as 5000K); presets 9300K..sRGB give equal gains today [vendor-ui]
-9	user_red	int	step	colour	nv,live	0	255	1	128	auto	0x16	user_rgb	User red	-	used when Colour temp = User [vendor-ui]
-10	user_green	int	step	colour	nv,live	0	255	1	128	auto	0x18	user_rgb	User green	-	[vendor-ui]
-11	user_blue	int	step	colour	nv,live	0	255	1	128	auto	0x1A	user_rgb	User blue	-	[vendor-ui]
-12	colour_effect	enum	none	colour	nv,inert	0	5	1	0	auto	-	-	Colour effect	Standard|Game|Movie|Photo|Vivid|User	[vendor-ui]
-25	colour_demo	enum	none	colour	nv,inert	0	5	1	0	auto	-	-	Colour demo	Off|Type 1|Type 2|Type 3|Type 4|Type 5	[vendor-ui]
-26	pcm	enum	none	colour	nv,inert	0	1	1	1	auto	-	-	PCM	User|Native	[vendor-ui]
-27	hue	int	percent	colour	nv,inert	0	100	1	50	auto	-	-	Hue	-	[vendor-ui]
-28	saturation	int	percent	colour	nv,inert	0	100	1	50	auto	-	-	Saturation	-	[vendor-ui]
-29	uniformity	bool	none	colour	nv,inert	0	1	1	0	auto	-	-	Uniformity	-	vendor default On (blocks Gamma there); ours Off [vendor-ui]
-13	sa_red_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Red hue	-	[vendor-ui]
-14	sa_red_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Red sat	-	[vendor-ui]
-15	sa_yellow_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Yellow hue	-	[vendor-ui]
-16	sa_yellow_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Yellow sat	-	[vendor-ui]
-17	sa_green_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Green hue	-	[vendor-ui]
-18	sa_green_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Green sat	-	[vendor-ui]
-19	sa_cyan_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Cyan hue	-	[vendor-ui]
-20	sa_cyan_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Cyan sat	-	[vendor-ui]
-21	sa_blue_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Blue hue	-	[vendor-ui]
-22	sa_blue_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Blue sat	-	[vendor-ui]
-23	sa_magenta_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Magenta hue	-	[vendor-ui]
-24	sa_magenta_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Magenta sat	-	[vendor-ui]
-30	aspect	enum	none	display	nv	0	5	1	0	auto	0xFE	aspect	Aspect ratio	Full|16:9|4:3|5:4|Original|User	display re-set when active [vendor-ui]
-31	overscan	bool	none	display	nv	0	1	1	1	auto	0xFF	overscan	Overscan	-	video timings only [vendor-ui]
-32	disp_rotate	enum	none	display	nv,inert	0	3	1	0	auto	-	-	Rotate	0|90|180|270	[vendor-ui]
-33	latency	enum	none	display	nv,inert	0	2	1	0	auto	-	-	Latency	Low|Mid|High	[vendor-ui]
-34	freeze	bool	none	display	inert	0	1	1	0	-	-	-	Freeze	-	[vendor-ui]
-3	input	enum	none	input	nv	0	2	1	1	auto	0x60	input_select	Input	D1 DP=0x0F|D2 HDMI=0x11|D3 HDMI=0x12	fixed input (switch now); vendor default D2 [vendor-ui]
-35	input_mode	enum	none	input	nv	0	1	1	0	auto	0xEF	input_mode	Search	Auto|Fixed	Auto = search in group [vendor-ui]
+1	brightness	int	percent	picture	nv,live	0	100	1	44	auto	0x10	backlight	Backlight	-	panel PWM duty 30..255; 44 % = Realtek SDK default 128 [sdk-ui]
+5	black_level	int	percent	picture	nv,live	0	100	1	50	auto	0xF3	black_level	Brightness	-	digital offset (Realtek SDK 'Brightness') [sdk-ui]
+2	contrast	int	percent	picture	nv,live	0	100	1	50	auto	0x12	contrast	Contrast	-	[sdk-ui]
+6	sharpness	int	step	picture	nv,inert	0	4	1	2	auto	0x87	-	Sharpness	-	Realtek SDK item, scaler sharpness not built [sdk-ui]
+7	gamma	enum	none	colour	nv,live	0	4	1	0	auto	0xF2	gamma	Gamma	Off|1.8|2.0|2.2|2.4	[sdk-ui]
+8	colour_temp	enum	none	colour	nv,live	0	5	1	2	auto	0x14	colour_temp	Colour temp	9300K=0x08|7500K=0x06|6500K=0x05|5800K=0x04|sRGB=0x01|User=0x0B	MCCS 0x14 (5800K reported as 5000K); presets 9300K..sRGB give equal gains today [sdk-ui]
+9	user_red	int	step	colour	nv,live	0	255	1	128	auto	0x16	user_rgb	User red	-	used when Colour temp = User [sdk-ui]
+10	user_green	int	step	colour	nv,live	0	255	1	128	auto	0x18	user_rgb	User green	-	[sdk-ui]
+11	user_blue	int	step	colour	nv,live	0	255	1	128	auto	0x1A	user_rgb	User blue	-	[sdk-ui]
+12	colour_effect	enum	none	colour	nv,inert	0	5	1	0	auto	-	-	Colour effect	Standard|Game|Movie|Photo|Vivid|User	[sdk-ui]
+25	colour_demo	enum	none	colour	nv,inert	0	5	1	0	auto	-	-	Colour demo	Off|Type 1|Type 2|Type 3|Type 4|Type 5	[sdk-ui]
+26	pcm	enum	none	colour	nv,inert	0	1	1	1	auto	-	-	PCM	User|Native	[sdk-ui]
+27	hue	int	percent	colour	nv,inert	0	100	1	50	auto	-	-	Hue	-	[sdk-ui]
+28	saturation	int	percent	colour	nv,inert	0	100	1	50	auto	-	-	Saturation	-	[sdk-ui]
+29	uniformity	bool	none	colour	nv,inert	0	1	1	0	auto	-	-	Uniformity	-	Realtek SDK default On (blocks Gamma there); ours Off [sdk-ui]
+13	sa_red_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Red hue	-	[sdk-ui]
+14	sa_red_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Red sat	-	[sdk-ui]
+15	sa_yellow_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Yellow hue	-	[sdk-ui]
+16	sa_yellow_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Yellow sat	-	[sdk-ui]
+17	sa_green_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Green hue	-	[sdk-ui]
+18	sa_green_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Green sat	-	[sdk-ui]
+19	sa_cyan_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Cyan hue	-	[sdk-ui]
+20	sa_cyan_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Cyan sat	-	[sdk-ui]
+21	sa_blue_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Blue hue	-	[sdk-ui]
+22	sa_blue_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Blue sat	-	[sdk-ui]
+23	sa_magenta_hue	int	step	sixaxis	nv,inert	0	100	1	50	auto	-	-	Magenta hue	-	[sdk-ui]
+24	sa_magenta_sat	int	step	sixaxis	nv,inert	0	200	1	100	auto	-	-	Magenta sat	-	[sdk-ui]
+30	aspect	enum	none	display	nv	0	5	1	0	auto	0xFE	aspect	Aspect ratio	Full|16:9|4:3|5:4|Original|User	display re-set when active [sdk-ui]
+31	overscan	bool	none	display	nv	0	1	1	1	auto	0xFF	overscan	Overscan	-	video timings only [sdk-ui]
+32	disp_rotate	enum	none	display	nv,inert	0	3	1	0	auto	-	-	Rotate	0|90|180|270	[sdk-ui]
+33	latency	enum	none	display	nv,inert	0	2	1	0	auto	-	-	Latency	Low|Mid|High	[sdk-ui]
+34	freeze	bool	none	display	inert	0	1	1	0	-	-	-	Freeze	-	[sdk-ui]
+3	input	enum	none	input	nv	0	2	1	1	auto	0x60	input_select	Input	D1 DP=0x0F|D2 HDMI=0x11|D3 HDMI=0x12	fixed input (switch now); Realtek SDK default D2 [sdk-ui]
+35	input_mode	enum	none	input	nv	0	1	1	0	auto	0xEF	input_mode	Search	Auto|Fixed	Auto = search in group [sdk-ui]
 36	d1_enable	bool	none	input	nv,risky,inert	0	1	1	1	auto	0xEC	-	D1 DP enable	-	all off = all on (never blank by setting); owner: source search
 37	d2_enable	bool	none	input	nv,risky,inert	0	1	1	1	auto	0xED	-	D2 HDMI enable	-	owner: source search
 38	d3_enable	bool	none	input	nv,risky,inert	0	1	1	1	auto	0xEE	-	D3 HDMI enable	-	owner: source search
@@ -58,15 +58,15 @@
 44	fast_switch	bool	none	kvm	nv,live	0	1	1	1	auto	0xE6	-	Fast switch	-	cached same-timing switch (#60); read by the switch path
 45	keep_idle_rx	bool	none	kvm	nv,reboot	0	1	1	1	auto	0xE7	-	Keep idle inputs	-	idle receivers stay powered and locked (#60); owner: switch path
 46	kvm_prefill	bool	none	kvm	nv,inert	0	1	1	0	auto	-	-	Pre-fill cache	-	fill the fast-switch timing cache of idle inputs (#60); owner: switch path
-48	dp_version	enum	none	signal	nv	0	2	1	1	auto	0xF1	dp_version	DP version	1.1|1.2|1.3	D1 capability; HBR2 needs 1.2 [vendor-ui]
-49	dp_edid	enum	none	signal	nv	0	2	1	0	auto	0xFD	dp_edid	DP EDID	1080p|1440p|2160p60	vendor DP resolution list [vendor-ui]
+48	dp_version	enum	none	signal	nv	0	2	1	1	auto	0xF1	dp_version	DP version	1.1|1.2|1.3	D1 capability; HBR2 needs 1.2 [sdk-ui]
+49	dp_edid	enum	none	signal	nv	0	2	1	0	auto	0xFD	dp_edid	DP EDID	1080p|1440p|2160p60	Realtek SDK DP resolution list [sdk-ui]
 50	edid_pref	enum	none	signal	nv,reboot,inert	0	2	1	0	auto	-	-	EDID preferred	3840x2160@60|2560x1440@60|1920x1080@60	owner: EDID tables (fw-edid)
 51	hdcp	bool	none	signal	nv,reboot,inert	0	1	1	1	auto	-	-	HDCP	-	owner: HDCP (#65 step 13)
 52	colour_depth	enum	none	signal	nv,reboot,inert	0	2	1	0	auto	-	-	Colour depth	Auto|8 bpc|10 bpc	EDID deep-colour advert (#59); owner: EDID tables
 53	hdmi_420	bool	none	signal	nv,reboot,inert	0	1	1	0	auto	-	-	HDMI 4:2:0	-	4K60 YCbCr 4:2:0 10 bpc advert (#59); owner: EDID tables
-54	colour_format	enum	none	signal	nv,inert	0	1	1	0	auto	-	-	Colour format	RGB|YUV	vendor: VGA/DVI only [vendor-ui]
-55	clone	bool	none	signal	nv,inert	0	1	1	0	auto	-	-	Clone	-	no DP TX on this board [vendor-ui]
-56	ddcci	bool	none	signal	nv,reboot	0	1	1	1	auto	-	-	DDC/CI	-	DDC/CI 0x37 on the spare IIC engines (#60), MCCS 2.2 from this registry [vendor-ui]
+54	colour_format	enum	none	signal	nv,inert	0	1	1	0	auto	-	-	Colour format	RGB|YUV	Realtek SDK: VGA/DVI only [sdk-ui]
+55	clone	bool	none	signal	nv,inert	0	1	1	0	auto	-	-	Clone	-	no DP TX on this board [sdk-ui]
+56	ddcci	bool	none	signal	nv,reboot	0	1	1	1	auto	-	-	DDC/CI	-	DDC/CI 0x37 on the spare IIC engines (#60), MCCS 2.2 from this registry [sdk-ui]
 75	pwr_l1_en	bool	none	power	nv,inert	0	1	1	1	auto	0xF6	power	L1 backlight off	-	no signal / DPMS: backlight off
 76	pwr_l1_ms	int	ms	power	nv,inert	0	30000	100	0	auto	0xF7	power	L1 delay	-	0 = immediately
 77	pwr_l2_en	bool	none	power	nv,inert	0	1	1	1	auto	0xF8	power	L2 panel off	-
@@ -76,17 +76,17 @@
 81	wake_d1	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D1	-
 82	wake_d2	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D2	-
 83	wake_d3	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D3	-
-57	osd_timeout	int	s	osd	nv	0	120	5	30	auto	0xEA	-	Menu timeout	-	0 = never; vendor 10..60, <=10 never [vendor-ui]
-58	osd_hpos	int	percent	osd	nv,live	0	100	1	50	auto	-	osd_pos	Menu H position	-	[vendor-ui]
-59	osd_vpos	int	percent	osd	nv,live	0	100	1	50	auto	-	osd_pos	Menu V position	-	[vendor-ui]
+57	osd_timeout	int	s	osd	nv	0	120	5	30	auto	0xEA	-	Menu timeout	-	0 = never; Realtek SDK 10..60, <=10 never [sdk-ui]
+58	osd_hpos	int	percent	osd	nv,live	0	100	1	50	auto	-	osd_pos	Menu H position	-	[sdk-ui]
+59	osd_vpos	int	percent	osd	nv,live	0	100	1	50	auto	-	osd_pos	Menu V position	-	[sdk-ui]
 60	osd_scale	enum	none	osd	nv,live	0	1	1	1	auto	0xF4	osd_scale	Menu size	1x|2x
-61	osd_transparency	int	percent	osd	nv,live	0	100	1	0	auto	-	osd_transparency	Transparency	-	[vendor-ui]
-62	language	enum	none	osd	nv	0	1	1	0	auto	-	sdk_language	Vendor language	English|Chinese-T	vendor menu strings only [vendor-ui]
-63	osd_rotate	enum	none	osd	nv,inert	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[vendor-ui]
-64	menu_select	enum	none	osd	nv	0	1	1	0	auto	0xF5	-	Menu key opens	Awto menu|Vendor menu	vendor menu stays reachable from System
+61	osd_transparency	int	percent	osd	nv,live	0	100	1	0	auto	-	osd_transparency	Transparency	-	[sdk-ui]
+62	language	enum	none	osd	nv	0	1	1	0	auto	-	sdk_language	Realtek menu language	English|Chinese-T	Realtek SDK menu strings only [sdk-ui]
+63	osd_rotate	enum	none	osd	nv,inert	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
+64	menu_select	enum	none	osd	nv	0	1	1	0	auto	0xF5	-	Menu key opens	Awto menu|Realtek menu	Realtek SDK menu stays reachable from System
 65	logo	bool	none	boot	nv	0	1	1	1	auto	0xE8	-	Boot logo	-	read at mode INITIAL
 66	logo_ms	int	ms	boot	nv	0	10000	100	3000	auto	0xE9	-	Logo time	-
-67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	vendor example value, no datasheet [vendor-value]
+67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [vendor-value]
 68	panel_t2	int	ms	panel	nv,risky,reboot	0	1000	10	250	auto	-	-	T2 VDD to link	-	[vendor-value]
 69	panel_t3	int	ms	panel	nv,risky	300	2000	10	550	auto	0xEB	-	T3 video to BL	-	host video; >= 500 ms per 27-inch 4K eDP datasheets
 70	panel_t3_own	int	ms	panel	nv,risky	17	200	1	20	auto	-	-	T3 own pattern	-	logo / background frame: one 60 Hz frame minimum
@@ -98,15 +98,15 @@
 85	debug_msgs	bool	none	debug	nv,live	0	1	1	0	auto	0xF0	debug_msgs	Debug messages	-	(#74)
 86	msg_log	bool	none	debug	live	0	1	1	0	-	-	msg_log	Message log	-	on-screen log (#56)
 87	debug_popup	action	none	debug	-	0	1	1	0	-	-	debug_popup	Debug pop-up	-	(#34)
-88	volume	int	percent	audio	nv,inert	0	100	1	50	auto	0x62	-	Volume	-	[vendor-ui]
-89	mute	bool	none	audio	nv,inert	0	1	1	0	auto	-	-	Mute	-	[vendor-ui]
-90	audio_standalone	bool	none	audio	nv,inert	0	1	1	0	auto	-	-	Stand alone	-	[vendor-ui]
-91	audio_source	enum	none	audio	nv,inert	0	1	1	0	auto	-	-	Audio source	Analog|Digital	[vendor-ui]
+88	volume	int	percent	audio	nv,inert	0	100	1	50	auto	0x62	-	Volume	-	[sdk-ui]
+89	mute	bool	none	audio	nv,inert	0	1	1	0	auto	-	-	Mute	-	[sdk-ui]
+90	audio_standalone	bool	none	audio	nv,inert	0	1	1	0	auto	-	-	Stand alone	-	[sdk-ui]
+91	audio_source	enum	none	audio	nv,inert	0	1	1	0	auto	-	-	Audio source	Analog|Digital	[sdk-ui]
 4	factory_reset	action	none	system	-	0	1	1	0	-	0x04	defaults	Factory reset	-	MCCS 0x04; also the boot key combination
 102	colour_reset	action	none	system	-	0	1	1	0	-	0x08	colour_reset	Colour reset	-	MCCS 0x08: Colour and Six-axis pages to defaults
 103	power_mode	enum	none	power	live	0	4	1	0	-	0xD6	power_mode	Power mode	On=0x01|Standby=0x02|Suspend=0x03|Off=0x04|Off hard=0x05	MCCS 0xD6 (DPM); get = the firmware power state; standby..off -> power saving
-92	factory_menu	action	none	system	-	0	1	1	0	-	-	factory_menu	Factory menu	-	vendor factory menu [vendor-ui]
-93	vendor_menu	action	none	system	-	0	1	1	0	-	-	vendor_menu	Vendor menu	-	the SDK demo menu, until ours covers it
+92	factory_menu	action	none	system	-	0	1	1	0	-	-	factory_menu	Factory menu	-	Realtek SDK factory menu [sdk-ui]
+93	vendor_menu	action	none	system	-	0	1	1	0	-	-	vendor_menu	Realtek menu	-	the SDK demo menu, until ours covers it
 95	info_input	enum	none	info	ro	0	2	1	0	-	-	-	Input	D1 DP|D2 HDMI|D3 HDMI
 96	info_hres	int	none	info	ro	0	8192	1	0	-	-	-	H active	-
 97	info_vres	int	none	info	ro	0	8192	1	0	-	-	-	V active	-
