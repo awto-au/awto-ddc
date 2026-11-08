@@ -555,7 +555,7 @@ def cmd_flash(extra: list[str]) -> int:
     before = fj.read_text() if fj.is_file() else None
     fj.write_text(json.dumps({"tag": "", "image": str(img), "attempted": tag}))
     args = [bus, img, "--serial", u["serial"], "--write", "--no-backup",
-            *([] if u.get("relay") else ["--per-sector", "--max-min", "20"]),   # no relay: per sector; stop if > 20 min (#71)
+            "--per-sector", *([] if u.get("relay") else ["--max-min", "20"]),  # relay is not protection against failed programming (#96)
             *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
             "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
             *(["--identity", identity] if identity else [])]
@@ -571,7 +571,7 @@ def cmd_flash(extra: list[str]) -> int:
             + ("retry after the reset reboot" if attempt == 1 else "retry at 100 kHz"), "WARN")
         if attempt == 1 and not identity:
             _bus(u, wait_s=RECOVER_BUS_WAIT_S)     # EDID back = rebooted (and the same unit)
-    if rc == 5 and before is not None:      # nothing erased: the flash still holds the old image
+    if rc in (5, 6) and before is not None:      # nothing erased: the flash still holds the old image
         fj.write_text(before)
     if rc == 0:
         fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
@@ -909,7 +909,7 @@ RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2
 def cmd_recover(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
-    wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
+    wmode = _opt(extra, "--write-mode", "byte")  # recovery favours the known-safe path; burst remains opt-in (#96)
     any_image = _flag(extra, "--any-image")
     given_bus = _opt(extra, "--bus")        # caller-proven bus (EDID silent); still needs this unit's relay cycle
     img = _image_arg(extra) or [_flashed(u).get("image", "")]
@@ -1179,3 +1179,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

@@ -15,11 +15,14 @@ usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no
   --full  : ignore the manifest, write every image sector.
   --verify: crc (default) = on-chip CRC8 per sector, auto-falls back to readback if the engine fails its
             in-session calibration (docs/flash-crc.md); readback = compare all 4 KiB back (old behaviour).
-  --write-mode: byte (default) = 1 data byte per I2C message; burst = one I2C write of --burst-chunk bytes (default 256) per
+  --write-mode: byte = 1 data byte per I2C message; burst (default) = one I2C write of --burst-chunk bytes (default 256) per
             page to the 0x70 FIFO, ~3x faster per sector; unvalidated on hardware, verify/retry unchanged (#12).
             A burst error redoes that sector in byte mode.
   --serial: must equal the EDID serial on <bus> (i2cbus.require_unit, checked here before ISP is entered, #50.28).
   --identity HOW: only when the EDID is silent (unit held in the safe window): how the caller proved the bus; logged.
+  --per-sector (default): boot/common sectors last, reset-vector sector last of all.
+  --erase-all: explicit legacy mode, only after the first non-blank sector proves programming + full readback.
+  Every ISP session disables the temporary debug link first and refuses if 0x35 still answers.
   Revert: rerun with the backup (1 MiB) as <image.bin>: only sectors that differ are rewritten.
   Image sectors beyond its length are never touched (banks 14-15 = settings/gamma data, #8).
 Single session = the MCU stays halted throughout, so a half-written image never runs.
@@ -28,19 +31,34 @@ Log: ./tmp/logs/rtd_flash_image.log
 """
 from __future__ import annotations
 
-import argparse, os, random, signal, sys, time
+import argparse
+import os
+import random
+import signal
+import sys
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
-import flash_state as S  # noqa: E402
-import i2cbus  # noqa: E402
-import unit_lock  # noqa: E402
-import disk_guard  # noqa: E402
-from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
+import dbg_link
+import disk_guard
+import flash_state as S
+import i2cbus
+import rtd_flash_sector as F
+import rtd_proto
+import unit_lock
+from rtd_flash_sector import (
+    ENGINE_OPS,
+    JEDEC_OK,
+    PAGE,
+    SECTOR,
+    SR_PROT,
+    T_ERASE_LIMIT,
+    T_READ,
+    Rtd,
+)
 
 FLASH = 1 << 20
 DUMPS = Path.home() / "vendors/realtek/analysis/dumps"
@@ -226,13 +244,15 @@ class ReadPathUnstable(RuntimeError):
     """Two readbacks of one range differ: every readback-based decision (diff, drift, blank, verify) is unsafe."""
 
 
-def read_gate(isp) -> bytes:
+def read_gate(isp, addr: int = 0) -> bytes:
     """Before any erase: two readbacks of sector 0 must match. Seen on unit 3 in D1 power saving at 1 MHz: ~60 bad
     bytes per 4 KiB plus a stale first byte per 1 KiB read, while the on-chip CRC stayed right (#71)."""
-    r1, r2 = isp.read_flash(0, SECTOR), isp.read_flash(0, SECTOR)
+    r1, r2 = isp.read_flash(addr, SECTOR), isp.read_flash(addr, SECTOR)
+    if len(r1) != SECTOR or len(r2) != SECTOR:
+        raise ReadPathUnstable(f"short read at 0x{addr:06x}: {len(r1)}, {len(r2)}; expected {SECTOR}")
     if r1 != r2:
         nd = sum(x != y for x, y in zip(r1, r2))
-        raise ReadPathUnstable(f"read path unstable: two readbacks of sector 0 differ in {nd} byte(s)")
+        raise ReadPathUnstable(f"read path unstable: two readbacks of sector 0x{addr:06x} differ in {nd} byte(s)")
     return r1
 
 
@@ -265,56 +285,93 @@ def boot_last(diff: list[int]) -> list[int]:
     per = BANK // SECTOR
     def key(i):
         common = (i % per) * SECTOR < COMMON_END
-        return (common, common and i < per, i)
+        return (common, common and i < per, i == 0, i)
     return sorted(diff, key=key)
 
 
 def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's vendor backup", tag="", commit="",
-            per_sector: bool = False, max_min: float = 0) -> int:
-    """Write+verify the sectors in `diff`; the manifest follows: a sector is unknown (null) from its erase until
-    its verify passes, so a kill or failure never leaves a stale hash."""
+            per_sector: bool = True, max_min: float = 0) -> int:
+    """Prove one real sector before proceeding; persist unknown state BEFORE each erase.
+
+    Per-sector is the default even with a relay. Explicit erase-all retains the old
+    recovery option, but only after a non-blank sector passes full readback.
+    """
+    diff = boot_last(diff)
+    # No sacrificial address: prove the first non-blank changed sector in boot-last
+    # order. Earlier blank sectors complete their whole job by erase + verify.
+    probe = next((i for i in diff if img[i * SECTOR:(i + 1) * SECTOR] != BLANK), None)
     sr0 = isp.status()
     log(f"status reg = 0x{sr0:02x}")
     if sr0 & SR_PROT:
         isp.release_wp(); isp.unprotect(sr0)
     nudge()
-    for i in diff:
-        state.sectors[i] = None
+    # WREN must demonstrate WEL and cleared BP bits before the first erase (#71).
+    if diff:
+        isp.write_enable()
     state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
     t0 = time.monotonic()
     guard = StopGuard()
+
+    def unknown(indices):
+        for i in indices:
+            state.sectors[i] = None
+        state.save(source="write-in-progress")
+
     try:
         guard.__enter__()
-        if per_sector:
-            # no-relay units: erase+program+verify one sector at a time, boot/common last; a stop leaves at most one
-            # sector erased and the old boot path intact longest
-            diff = boot_last(diff)
-            log(f"per-sector mode: {len(diff)} sectors, boot/common last")
-        else:
-            # Dan 2026-11-06: erase every changed sector up front, then program; no per-sector blank check
-            # (a bad erase fails the verify, and that sector is redone alone by write_sector)
-            with phase("erase"):
-                for k, i in enumerate(diff):
-                    erase_with_retry(isp, i * SECTOR, nudge)
-                    if k % S.SAVE_EVERY == S.SAVE_EVERY - 1:
-                        log(f"erased {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
-            log(f"erased {len(diff)} sectors ({time.monotonic() - t0:.1f}s)")
+        log(f"{'per-sector' if per_sector else 'explicit erase-all'} mode: {len(diff)} sectors, boot/common last")
+        bulk_started = proof_done = False
         for k, i in enumerate(diff):
             s = i * SECTOR
+            new = img[s:s + SECTOR]
+            first_program = i == probe
             ts = time.monotonic()
+            # Read the actual probe range twice before mutating it, as well as the
+            # sector-0 gate in flash(). A bad bus leaves the old image untouched.
+            if first_program:
+                try:
+                    read_gate(isp, s)
+                except ReadPathUnstable as e:
+                    raise RuntimeError(f"write-path preflight: {e}") from e
+            if not per_sector and proof_done and not bulk_started:
+                remaining = diff[k:]
+                unknown(remaining)
+                with phase("erase"):
+                    for j in remaining:
+                        erase_with_retry(isp, j * SECTOR, nudge)
+                bulk_started = True
+                log(f"erased {len(remaining)} remaining sectors after write-path proof")
+            individual = per_sector or not bulk_started
+            if individual:
+                unknown([i])
             try:
-                if per_sector:
+                if individual:
                     with phase("erase"):
                         erase_with_retry(isp, s, nudge)
-                if img[s:s + SECTOR] != BLANK:          # blank in the new image: erase was the whole job
-                    program_verify(isp, s, img[s:s + SECTOR], crc_ok)
-                else:                                   # but check it, ~10 ms CRC (Dan: else a failed erase reads as good)
+                if new != BLANK:
+                    program_verify(isp, s, new, False if first_program else crc_ok)
+                else:
                     _verify(isp, s, BLANK, crc_ok)
             except IO_ERRORS as e:
                 log(f"0x{s:06x}: {e!r}; redo sector alone (erase+program+verify)")
                 if not isinstance(e, RuntimeError):
                     _nudge_safe(nudge)
-                write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
+                write_sector(isp, s, new, False if first_program else crc_ok, nudge)
+            if first_program:
+                try:
+                    back = read_gate(isp, s)
+                except ReadPathUnstable as e:
+                    raise RuntimeError(f"write-path proof: {e}") from e
+                if back != new:
+                    raise RuntimeError(f"write-path proof failed at 0x{s:06x}")
+                # A burst NAK may have forced this sector's retry to byte mode.
+                # Continue in that proven mode; do not bulk-erase then retry an
+                # unproven burst transport on the remaining image (#96).
+                if getattr(isp, "_byte_sector", None) == s:
+                    isp.write_mode = "byte"
+                    log("write-path proof used byte fallback; remaining image stays in byte mode")
+                proof_done = True
+                log(f"write-path proof OK at 0x{s:06x}: programmed and stable full readback; continuing")
             state.sectors[i] = hashes[i]
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
@@ -323,8 +380,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
             if k % S.SAVE_EVERY == S.SAVE_EVERY - 1 or k == len(diff) - 1:
                 state.save()
                 log(f"written+verified {k + 1}/{len(diff)} sectors ({time.monotonic() - t0:.0f}s)")
-            if per_sector and guard.stop and k + 1 < len(diff):
-                state.save()
+            if guard.stop and k + 1 < len(diff) and (per_sector or not bulk_started):
+                state.save(source="write-stopped")
                 log(f"STOP (signal) at a sector boundary: {k + 1}/{len(diff)} written, none erased-unwritten "
                     f"(manifest saved; rerun continues)")
                 if reprot is not None:
@@ -334,20 +391,20 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 proj = (time.monotonic() - t0) / PROJECT_AFTER * len(diff) / 60
                 log(f"projection after {PROJECT_AFTER} sectors: {proj:.1f} min for {len(diff)} (limit {max_min:g} min)")
                 if proj > max_min:
-                    state.save()
+                    state.save(source="write-stopped")
                     log(f"STOP at a sector boundary: {PROJECT_AFTER}/{len(diff)} written (manifest saved; rerun continues)")
                     if reprot is not None:
                         isp.reprotect(reprot)
                     return 8
-        if crc_ok:                                      # end-to-end over the image region, written or skipped
+        if crc_ok:
             runs = S._runs([i for i in range(len(img) // SECTOR) if img[i * SECTOR:(i + 1) * SECTOR] != BLANK])
-            with phase("final crc"):                    # every non-blank run of the image, written or skipped
+            with phase("final crc"):
                 for a, b in runs:
                     lo, hi = a * SECTOR, (b + 1) * SECTOR
                     hw, py = isp.flash_crc(lo, hi - lo), S.crc8(img[lo:hi])
                     if hw != py:
                         for i in range(a, b + 1):
-                            state.sectors[i] = None     # unlocalised: next run reads back
+                            state.sectors[i] = None
                         raise RuntimeError(f"CRC mismatch 0x{lo:06x}-0x{hi:06x} hw 0x{hw:02x} != 0x{py:02x}")
             log(f"final CRC OK over {len(runs)} non-blank run(s)")
     except BaseException:
@@ -377,7 +434,7 @@ class Opts:
     manifest: Path | None = None
     tag: str = ""
     commit: str = ""
-    per_sector: bool = False
+    per_sector: bool = True
     max_min: float = 0
     seed: int | None = None
 
@@ -441,7 +498,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         + ", ".join(f"0x{i * SECTOR:05x}" for i in diff[:12]) + (" ..." if len(diff) > 12 else ""))
     if not o.write:
         log("DRY-RUN complete: nothing erased or programmed"); return 0
-    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector)
+    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector, o.max_min)
     summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
     return rc
 
@@ -493,8 +550,11 @@ def main() -> int:
     ap.add_argument("--identity", help="EDID silent (unit held): how the bus was proven to be this unit")
     ap.add_argument("--max-min", type=float, default=0, help="per-sector: stop at a sector boundary if the total projected "
                     "from the first 5 sectors exceeds this many minutes (0 = off)")
-    ap.add_argument("--per-sector", action="store_true",
-                    help="erase+program+verify one sector at a time, boot/common sectors last (units without a relay)")
+    order = ap.add_mutually_exclusive_group()
+    order.add_argument("--per-sector", dest="per_sector", action="store_true", default=True,
+                       help="default: erase+program+verify one sector at a time, boot/common sectors last")
+    order.add_argument("--erase-all", dest="per_sector", action="store_false",
+                       help="explicit legacy mode: prove one sector first, then erase the remaining set up front")
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
                     help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
@@ -526,6 +586,16 @@ def flash_main(a) -> int:
         disk_guard.require_free("flash")                           # ENOSPC mid-flash left unit 2 mixed (#77)
     seen = i2cbus.require_unit(a.bus, a.serial, a.identity)        # before any ISP traffic (#50.28)
     log(f"unit guard: EDID serial {seen!r} on bus {a.bus}" + (f"; EDID silent, identity per caller: {a.identity}" if seen is None else ""))
+    try:
+        with dbg_link.flash_guard(a.bus):
+            return _flash_session(a, img, o, t_main)
+    except dbg_link.FlashPreflightError as e:
+        log(f"refuse: {e}; no ISP session started, nothing erased or programmed")
+        return 6
+
+
+def _flash_session(a, img, o, t_main) -> int:
+    """The debug-link guard stays held until the exit reset, including every failure."""
     isp = Rtd(a.bus)
     isp.read_chunk = a.read_chunk
     isp.write_mode, isp.burst_chunk = a.write_mode, a.burst_chunk
@@ -540,8 +610,8 @@ def flash_main(a) -> int:
             log("ISP mode not enabled; aborting"); return 3
         jid = isp.common(T_READ, 0x9F, nr=3).to_bytes(3, "big")
         log(f"JEDEC {jid.hex()}")
-        if jid != JEDEC_OK:
-            log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
+        if jid != JEDEC_OK or isp.common(T_READ, 0x9F, nr=3).to_bytes(3, "big") != jid:
+            log(f"refuse: JEDEC unavailable, unstable or != {JEDEC_OK.hex()}"); return 4
         return flash(isp, img, o, nudge=lambda: i2cbus.gmbus_nudge(a.bus))
     except ReadPathUnstable as e:
         log(f"refuse: {e}; nothing erased or programmed. Unit in power saving / low flash clock? "
@@ -564,3 +634,4 @@ def flash_main(a) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

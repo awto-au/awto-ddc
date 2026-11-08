@@ -15,12 +15,16 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import errno
+import fcntl
+import os
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
+import i2cbus
 
 LOG = i2cbus.ROOT / "tmp/logs/dbg_link.log"
 DBG, DDCCI = 0x35, 0x37
@@ -32,7 +36,70 @@ MCCS_WAIT_S = 0.050                     # MCCS 2.2: host waits 50 ms after a set
 # swap = one main-loop pass (~1 ms); worst case the loop is blocked by the input-info pop-up draw, 375 ms (#60 phase
 # table). 1.25 x 375 ms / 50 ms -> 10 probes. Expiry: "no link" logged with the elapsed time, exit 1.
 PROBES = 10
+LOCK_DIR = Path(tempfile.gettempdir()) / f"awto-ddc-{os.getuid()}"  # shared across worktrees on this host
 DEFAULT_MIN = 10                        # firmware falls back to DDC/CI by itself if `off` never comes
+
+
+class FlashPreflightError(RuntimeError):
+    """No ISP traffic or flash mutation is allowed after this refusal."""
+
+
+@contextlib.contextmanager
+def bus_guard(bus: int):
+    """Serialize link changes and ISP, including alternate cables and host processes.
+
+    One lock covers all adapters: two cables can reach the same scaler.
+    Hold through the entire debug operation / ISP session, not just the swap. Fail
+    immediately rather than queue a link-on command to run after a flash.
+    """
+    path = LOCK_DIR / "ddc-debug-isp.lock"
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with path.open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as e:
+            raise FlashPreflightError(f"bus {bus}: debug/ISP operation already active") from e
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def debug_responds(bus: int) -> bool:
+    """Any response at 0x35 blocks flashing, even an unrecognised debug slave.
+
+    Only an address NAK establishes silence. A timeout, busy adapter or permission
+    error must not be mistaken for a disabled link.
+    """
+    try:
+        with i2cbus.Bus(bus) as b:
+            b.raw_read(DBG, 1)
+        return True
+    except OSError as e:
+        if e.errno in (errno.ENXIO, errno.EREMOTEIO):
+            return False
+        raise FlashPreflightError(f"bus {bus}: cannot establish 0x35 silence: {e}") from e
+
+
+@contextlib.contextmanager
+def flash_guard(bus: int):
+    """Cancel the temporary link before halting the MCU; keep it off through reset.
+
+    CMD_BACK returns DDC ownership to DDC/CI, so its temporary-link expiry cannot
+    swap the engines during ISP. Never restore the previous temporary link.
+    EDID/DDC/CI may both be silent during blank-flash recovery; ISP is checked by
+    the caller after this guard, before any erase.
+    """
+    with bus_guard(bus):
+        if debug_responds(bus) and not _off(bus):
+            raise FlashPreflightError(f"bus {bus}: debug link did not return to DDC/CI; nothing flashed")
+        # Repeated probes catch an asynchronous swap or intermittent response.
+        for _ in range(PROBES):
+            time.sleep(MCCS_WAIT_S)
+            if debug_responds(bus):
+                raise FlashPreflightError(f"bus {bus}: 0x35 still answers; refusing ISP")
+        log(f"bus {bus}: flash preflight: debug link OFF, 0x35 silent")
+        yield
 
 
 def log(s: str) -> None:
@@ -76,7 +143,7 @@ def _setvcp(bus: int, code: int, hi: int, lo: int) -> None:
         b.write(DDCCI, 0x51, body + bytes([chk]))
 
 
-def on(bus: int, minutes: int = DEFAULT_MIN) -> str:
+def _on(bus: int, minutes: int = DEFAULT_MIN) -> str:
     """"already" | "swapped"; raises SystemExit when 0x35 does not come up."""
     if dbg_ok(bus):
         return "already"
@@ -96,7 +163,7 @@ def on(bus: int, minutes: int = DEFAULT_MIN) -> str:
                      f"{(time.monotonic() - t0) * 1000:.0f} ms")
 
 
-def off(bus: int) -> bool:
+def _off(bus: int) -> bool:
     t0 = time.monotonic()
     try:
         with i2cbus.Bus(bus) as b:
@@ -115,15 +182,26 @@ def off(bus: int) -> bool:
     return False
 
 
+def on(bus: int, minutes: int = DEFAULT_MIN) -> str:
+    with bus_guard(bus):
+        return _on(bus, minutes)
+
+
+def off(bus: int) -> bool:
+    with bus_guard(bus):
+        return _off(bus)
+
+
 @contextlib.contextmanager
 def linked(bus: int, minutes: int = DEFAULT_MIN):
     """0x35 on `bus` for the block; swapped back afterwards only if this call swapped it."""
-    how = on(bus, minutes)
-    try:
-        yield how
-    finally:
-        if how == "swapped":
-            off(bus)
+    with bus_guard(bus):
+        how = _on(bus, minutes)
+        try:
+            yield how
+        finally:
+            if how == "swapped":
+                _off(bus)
 
 
 def main() -> int:
@@ -152,3 +230,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

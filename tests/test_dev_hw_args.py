@@ -18,7 +18,7 @@ DEV = Path(__file__).resolve().parents[1] / "dev.py"
     ["ddc", "get"], ["ddc", "bogus"],
 ])
 def test_refused_before_hardware(args):
-    r = subprocess.run([sys.executable, str(DEV), *args, "--unit", "3"], capture_output=True, text=True, timeout=30)
+    r = subprocess.run([sys.executable, str(DEV), *args, "--unit", "3", "--force"], capture_output=True, text=True, timeout=30)
     assert r.returncode != 0
     assert "nothing done" in r.stderr + r.stdout
 
@@ -27,6 +27,7 @@ def test_refused_before_hardware(args):
                                   ["build", "--help"], ["flash", "-h"]])
 def test_help_prints_usage_and_runs_nothing(args):
     """#72: --help is intercepted in main(): usage, exit 0, handler never called (build --help used to build)."""
-    r = subprocess.run([sys.executable, str(DEV), *args, "--unit", "3"], capture_output=True, text=True, timeout=30)
+    r = subprocess.run([sys.executable, str(DEV), *args, "--unit", "3", "--force"], capture_output=True, text=True, timeout=30)
     assert r.returncode == 0
     assert r.stdout.startswith(f"./dev.py {args[0]}") and "run:" not in r.stdout + r.stderr
+

@@ -224,13 +224,14 @@ def test_persistent_failure_leaves_manifest_safe(tmp_path):
     assert isp.reprotected is None                  # a bad image is never re-protected
     st = S.FlashState.load(tmp_path / "AWT0-flash-state.json", "AWT0")
     h = S.sector_hashes(img)
-    assert st.sectors[:9] == h[:9]                  # verified ones are recorded
+    assert st.sectors[5:9] == h[5:9]                # banked sectors verified before failure
+    assert st.sectors[:5] == [None] * 5             # boot/common not reached
     assert st.sectors[9] is None and st.sectors[10] is None   # failed + not reached: unknown
     assert st.source == "write-failed"
     isp.corrupt = set()
     isp.erased.clear()
     assert I.flash(isp, img, opts(tmp_path)) == 0
-    assert sector_set(isp.erased) == list(range(9, NIMG))     # unknown -> read -> differing/blank rewritten
+    assert sector_set(isp.erased) == [*range(5), *range(9, NIMG)]     # unknown -> read -> differing/blank rewritten
 
 
 def test_broken_crc_engine_falls_back_to_readback(tmp_path):
@@ -294,11 +295,11 @@ def test_persistent_oserror_still_fails_after_tries(tmp_path):
         I.flash(Dead(), image(), opts(tmp_path), nudge=lambda: None)
 
 
-def test_erase_loop_logs_progress(tmp_path):
+def test_sector_loop_logs_verified_progress(tmp_path):
     lines = []
     F.LOG = type("L", (), {"write": lambda s, x: lines.append(x), "flush": lambda s: None})()
     I.flash(FakeIsp(), image(), opts(tmp_path))
-    assert any("erased 16/24" in x for x in lines)
+    assert any("written+verified 16/24" in x for x in lines)
 
 
 # --- #50.6 enter-ISP inside try/finally -----------------------------------------------------------------------
@@ -317,6 +318,7 @@ def test_enter_isp_failure_still_sends_reset(monkeypatch, tmp_path):
             writes.append((reg, val))
         def read(self, reg):
             raise OSError(6, "ENXIO")
+    monkeypatch.setattr(I.dbg_link, "flash_guard", lambda bus: __import__("contextlib").nullcontext())
     monkeypatch.setattr(I, "Rtd", Bad)
     assert I.main() == 7
     assert writes[-1] == (0xEE, 0x02)
@@ -356,7 +358,7 @@ def test_sigterm_per_sector_stops_at_boundary_then_rerun_finishes(tmp_path):
 
 def test_sigterm_erase_all_finishes_the_run(tmp_path):
     img, isp = image(), SigIsp(nth=40)
-    assert I.flash(isp, img, opts(tmp_path)) == 0
+    assert I.flash(isp, img, opts(tmp_path, per_sector=False)) == 0
     assert bytes(isp.flash[:len(img)]) == img
 
 
@@ -381,3 +383,4 @@ def test_unstable_read_path_refuses_before_any_erase(tmp_path):
     with pytest.raises(I.ReadPathUnstable):
         I.flash(isp, img, opts(tmp_path))
     assert isp.erased == []
+
