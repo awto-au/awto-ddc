@@ -542,7 +542,8 @@ uint8_t menu_cmd(uint8_t op, uint16_t arg)
         ok = 0;
         break;
     }
-    mn_sync();
+    if (op != MO_KEY)                            /* a key syncs when menu_key consumes it: seq moving = key handled */
+        mn_sync();
     return ok;
 }
 
