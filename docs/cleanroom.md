@@ -96,7 +96,7 @@ Template: `specs/SPEC_TEMPLATE.md`. Sections, in order:
 Every number in a spec (and its code comment) carries one:
 - `derived`: follows from facts, maths, a public standard (HDMI, DP, VESA), or our own design.
 - `measured`: our measurement (reference image in fw_sim, trace, scope, hardware unit); cite what, when (date/commit), conditions.
-- `vendor-value`: a number taken from the SDK or Realtek tool data with no derivation of ours. Allowed now (Dan, 2026-11-07),
+- `sdk-value`: a number taken from the Realtek SDK or Realtek tool data with no derivation of ours. Allowed now (Dan, 2026-11-07),
   stays private; each one is replaced by a `measured` value before anything is published. Track them in the spec's Data table.
 - `sdk-ui`: a Realtek SDK menu fact: a functional fact about the Realtek SDK menu's user interface (menu tree, items,
   ranges, defaults, key behaviour), observed by running the vendor image (below). Facts only: the vendor's code, fonts, icons and graphics are
