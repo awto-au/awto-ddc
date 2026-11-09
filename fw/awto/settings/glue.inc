@@ -202,7 +202,7 @@ void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
     {
         ScalerSetByte(0x3A0F + ucI, pucMap[ucI]);
     }
-    ScalerSetBit(0x3A17, ~_BIT0, _BIT0);
+    ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), _BIT0);
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 18, _OSD_WITHOUT_DB);
 }
 
@@ -216,6 +216,9 @@ void osd_tc_vlc_put(BYTE __xdata *pucData, BYTE ucN)
 
 void osd_tc_vlc_end(void)
 {
+    // The RTD2795 decoder flushes its final decoded words after the last stream byte. Clearing compression
+    // immediately truncates/corrupts glyph SRAM; Realtek's loader waits 2 ms here for the same reason.
+    ScalerTimerDelayXms(2);
     ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
 }
 

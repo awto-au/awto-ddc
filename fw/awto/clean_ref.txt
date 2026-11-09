@@ -1,1 +1,1 @@
-a6ec614   # awto-rtdfw commit compiled into the image (git archive); split font VLC streams for RTD2795 hardware
+954ef0c   # awto-rtdfw commit compiled into the image (git archive); compressed font streams restored

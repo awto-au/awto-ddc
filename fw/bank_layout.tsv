@@ -1810,7 +1810,6 @@ fn	_osd_tc_close	4	0x488c	64
 const	_tAwtoPal	4	0x48cc	44
 const	_tAwtoStyle	4	0x48f8	20
 fn	_osd_tc_bar_off	4	0x490c	8
-fn	_osd_tc_vlc_end	4	0x4914	12
 fn	_osd_tc_vlc_put	4	0x4920	44
 fn	_osd_tc_show	4	0x4954	24
 fn	_set_ap_dp_version	4	0x496c	76
@@ -1908,6 +1907,7 @@ fn	_osd_tc_vlc_begin	4	0xacf0	92
 fn	_ui_port_state	4	0xad4c	108
 fn	_ui_timing	4	0xadb8	196
 fn	_set_ap_key_test	4	0xae7c	12
+fn	_osd_tc_vlc_end	4	0xae88	20
 fn	_AwtoCardChar	4	0xaf14	196
 fn	_AwtoCardGlyph	4	0xafd8	36
 fn	_ScalerColorBrightnessAdjust	5	0x0000	588
