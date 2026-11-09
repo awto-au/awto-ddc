@@ -303,6 +303,22 @@ INSERTS = [
     (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keytest.inc").read_text().rstrip("\n")),    # #39 / #85: at the end, no SDK line moves
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      '#define AWTO_FW_TAG "%s"\n' % FW_TAG + (SHIM / "awto_dbgpop.inc").read_text().rstrip("\n")),
+    # One AWTO card language for every transient message and the source selector.
+    (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispHotKeySourceMenuIcon\(void\)$",
+     (SHIM / "awto_osdcard.inc").read_text().rstrip("\n")),
+    (OSD + "RTD2014Osd.c", r"^void MenuHotKeySource\(void\)$", "extern void AwtoSourceStep(void);"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*BYTE ucCol = 5;", "    if(AwtoSourceRowsOverride() == _TRUE)\n    {\n        return;\n    }",
+     r"^void OsdDispHotKeySourceMenuIcon\(void\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdFuncDisableOsd\(\);", "    if(AwtoSourceOpenOverride() == _TRUE)\n    {\n        return;\n    }",
+     r"^void OsdDispHotKeySourceMenu\(void\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*if\(GET_OSD_INPUT_PORT_OSD_ITEM\(\) <= _OSD_INPUT_D1\)", "    if(AwtoSourceRowsOverride() == _TRUE)\n    {\n        return;\n    }",
+     r"^void OsdDispHotKeySourceMenuSwitch\(void\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*switch\(enumMessage\)",
+     "    if(AwtoCardMessage(enumMessage) == _FALSE)\n    {", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdDispSetPosition\(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50\);",
+     "    }", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$"),
+    (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdWindowDrawingByFontHighlight\(_OSD_WINDOW_4_1, ROW\(2\), COL\(18 \+ \(9 \* uctemp\)\)",
+     "    if(AwtoPanelCardOverride() == _TRUE)\n    {\n        return;\n    }", r"^void OsdDispPanelUniformityMsgSwitch\(void\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keypop.inc").read_text().rstrip("\n")),    # #39: at the end, no SDK line moves
     (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
      "            if(g_stAwtoKey.ucOpen == 1)\n            {\n                AwtoOsdKeyLines();\n                break;\n            }"),    # #39: before the debug lines
@@ -389,6 +405,12 @@ SUBS = [
      lambda m: m.group(1) + "_CP_BLUE", 1),
     (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_HDCP_MODE[^\n]*COLOR\()_CP_WHITE",
      lambda m: m.group(1) + "_CP_BLUE", 1),
+    # The source hotkey cycles only the four choices that exist on this board.
+    (OSD + "RTD2014Osd.c", r"SET_OSD_INPUT_PORT_OSD_ITEM\(OsdDisplayDetOverRange\(GET_OSD_INPUT_PORT_OSD_ITEM\(\), 8, 0, _ON\)\);",
+     lambda m: "AwtoSourceStep();", 2),
+    # Panel-uniformity confirmation also uses the common left-logo card background.
+    (OSD + "RTD2014OsdDisplay.c", r"if\(enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG\)",
+     lambda m: "if((enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG) && (g_ucOsdWidth == 0))", 1),
     # #85: the SDK exit role (physical MENU key) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
     (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
      lambda m: m.group(1) + "            // MENU key (exit role): no action  [keil2sdcc] sub\n            break;\n", 1),
