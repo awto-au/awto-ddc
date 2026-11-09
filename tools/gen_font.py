@@ -87,19 +87,11 @@ def main():
            f"#define OSD_FONT_FIRST  0x{FIRST:02X}", f"#define OSD_FONT_LAST   0x{LAST:02X}", f"#define OSD_FONT_TILES  {len(tiles)}",
            f"#define OSD_FONT_TILE_BYTES {TILE_BYTES}",
            f"static const uint8_t __code font_ids[{(LAST - FIRST + 1) * 4}] = {{"] + rows + ["};", ""]
-    load = []
-    first = 0
-    for i in range(0, len(tiles), 85):
-        chunk = data[i * TILE_BYTES:min(i + 85, len(tiles)) * TILE_BYTES]
-        count = len(chunk) // TILE_BYTES
-        out.append(f"static const uint8_t __code font_raw{first}[{len(chunk)}] = {{")
-        for k in range(0, len(chunk), 16):
-            out.append("    " + ", ".join(f"0x{x:02X}" for x in chunk[k:k + 16]) + ",")
-        out.append("};")
-        out.append(f"FONT_RAW_LOADER({first}, font_raw{first}, {first}, {count})")
-        load.append(f"font_raw_load{first}();")
-        first += count
-    out.append("#define FONT_LOAD_CHUNKS " + " ".join(load))
+    out.append(f"static const uint8_t __code font_raw[{len(data)}] = {{")
+    for k in range(0, len(data), 16):
+        out.append("    " + ", ".join(f"0x{x:02X}" for x in data[k:k + 16]) + ",")
+    out.append("};")
+    out.append("#define FONT_LOAD_CHUNKS font_raw_data(font_raw, OSD_FONT_TILES);")
     (ROOT / "awto/osd/font_data.inc").write_text("\n".join(out) + "\n")
     words = len(tiles) * 18
     log(f"{len(chars)} chars, {len(tiles)} tiles: {len(data)} B raw; "
