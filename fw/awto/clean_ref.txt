@@ -1,1 +1,1 @@
-ffd254a   # awto-rtdfw commit compiled into the image (git archive); corrected Realtek UI glyph reorder
+84324f7   # awto-rtdfw commit compiled into the image (git archive); blue header-style menu help footer
