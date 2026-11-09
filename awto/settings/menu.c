@@ -227,7 +227,7 @@ static void mn_draw_entry(uint8_t k)
     if (k < mn_n_entries() && !(mn_entry(k) & 0x80) && (row.flags & SF_INERT))
         style = OS_DIM;
     if (sel && mode == M_EDIT && ui_hl_style == UI_HL_MARK)
-        style = OS_RED;
+        style = OS_ACCENT;
     if (sel)
         ui_highlight(UI_L_LIST + k - top);
     mn_row(UI_L_LIST + k - top, line, style, sel && k < mn_n_entries());
@@ -276,7 +276,7 @@ static void mn_draw_status(void)
         line[MENU_COLS - 1] = 's';
     }
     redraws++;
-    ui_message(line, warn ? OS_RED : OS_DIM);
+    ui_message(line, warn ? OS_ACCENT : OS_DIM);
     ui_legend(ctx);
     last_left = (uint8_t)(left / 1000);
 }
