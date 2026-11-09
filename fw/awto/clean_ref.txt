@@ -1,1 +1,1 @@
-3979513   # awto-rtdfw commit compiled into the image (git archive); HEAD needs the timer module for gamma. Edit to move the pin
+a6ec614   # awto-rtdfw commit compiled into the image (git archive); split font VLC streams for RTD2795 hardware

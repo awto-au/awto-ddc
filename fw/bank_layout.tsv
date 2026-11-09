@@ -987,7 +987,6 @@ const	___str_26	C	0x3734	12
 const	___str_27	C	0x3740	8
 const	___str_28	C	0x3748	12
 const	___str_29	C	0x3754	12
-const	___str_35	C	0x3760	8
 const	___str_36	C	0x3768	12
 const	___str_37	C	0x3774	12
 const	___str_38	C	0x3780	12
@@ -1115,6 +1114,7 @@ stub	_OsdFuncApplyMap	C	0x3d70	8
 stub	_OsdFuncBlending	C	0x3d78	8
 stub	_OsdFuncEnableOsd	C	0x3d80	8
 stub	_OsdWindowDrawingByFont	C	0x3d88	8
+const	___str_35	C	0x3d90	16
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tSD_SU_COEF_128_TAPS	0	0x0010	136
 const	_tAwtoDdcCaps	0	0x0098	96
@@ -3276,7 +3276,6 @@ fn	_SysDpSourceKeepDetectingCheck	12	0x07a8	8
 fn	_SysSourceCableResetProc	12	0x07b0	8
 fn	_SysSourceFirstActiveProc	12	0x07b8	8
 fn	_AwtoCardLine	12	0x07c0	148
-fn	_AwtoCardPanel	12	0x0854	68
 fn	_AwtoSourceRowsOverride	12	0x0898	24
 const	_us_active	12	0x08cc	12
 const	_us_d1	12	0x08d8	12
@@ -3293,14 +3292,15 @@ const	_us_ready	12	0x0984	12
 const	_us_state	12	0x0990	12
 fn	_strip_port	12	0x099c	320
 fn	_mn_draw_entry	12	0x0adc	628
-fn	_AwtoCardMessage	12	0x0d50	228
+fn	_AwtoCardPanel	12	0x0d50	184
 fn	_AwtoSourceOpen	12	0x0e34	136
 fn	_AwtoSourceSelection	12	0x0ebc	40
 fn	_mn_move	12	0x0f18	184
 fn	_mn_value_text	12	0x0fd0	544
 fn	_mn_draw_status	12	0x11f0	652
-fn	_AwtoSourceRows	12	0x147c	180
 fn	_AwtoSourceStep	12	0x1530	96
+fn	_AwtoCardMessage	12	0x1590	444
+fn	_AwtoSourceRows	12	0x174c	356
 fn	_fill_blank	13	0x00e4	32
 const	_us_hz	13	0x0104	8
 const	_ua_select	13	0x010c	12

@@ -5,6 +5,7 @@ extern BYTE *g_pucShowNumberAddress;
 
 static BYTE s_pucAwtoCard[28];
 static BYTE s_ucAwtoCardLen;
+static BYTE s_ucAwtoCardSrc;
 
 static void AwtoCardGlyph(BYTE ucG)
 {
@@ -45,19 +46,26 @@ static void AwtoCardChar(char c)
     }
 }
 
-static void AwtoCardLine(BYTE ucRow, const char *pText, BYTE ucColour)
+static void AwtoCardLine(BYTE ucRow, BYTE ucColour)
 {
-    s_ucAwtoCardLen = 0;
-    while(*pText != 0)
-    {
-        AwtoCardChar(*pText++);
-    }
     s_pucAwtoCard[s_ucAwtoCardLen] = _END_;
     g_pucShowNumberAddress = s_pucAwtoCard;
     OsdFuncClearOsd(ROW(ucRow), COL(12), WIDTH(24), HEIGHT(1));
     OsdPropPutStringCenter(ROW(ucRow), COL(13), WIDTH(22), _PFONT_PAGE_0,
                            _STRING_SHOW_NUMBER, COLOR(ucColour, _CP_BG), _ENGLISH);
 }
+
+// Copy the code string in the function that names it. On this banked 8051, passing a code pointer to a helper that the
+// linker places in another bank reads unrelated flash bytes and produces garbled text.
+#define AWTO_CARD_LINE(row, text, colour) \
+    do { \
+        s_ucAwtoCardLen = 0; \
+        s_ucAwtoCardSrc = 0; \
+        while((text)[s_ucAwtoCardSrc] != 0) { \
+            AwtoCardChar((text)[s_ucAwtoCardSrc++]); \
+        } \
+        AwtoCardLine((row), (colour)); \
+    } while(0)
 
 static void AwtoCardLogo(void)
 {
@@ -69,38 +77,60 @@ static void AwtoCardLogo(void)
 static void AwtoCardPanel(void)
 {
     AwtoCardLogo();
-    AwtoCardLine(2, "Panel Uniformity", _CP_BLUE);
-    AwtoCardLine(4, (GET_OSD_PANEL_UNIFORMITY() == _ON) ? "On" : "Off", _CP_BLUE);
+    AWTO_CARD_LINE(2, "Panel Uniformity", _CP_BLUE);
+    if(GET_OSD_PANEL_UNIFORMITY() == _ON)
+    {
+        AWTO_CARD_LINE(4, "On", _CP_BLUE);
+    }
+    else
+    {
+        AWTO_CARD_LINE(4, "Off", _CP_BLUE);
+    }
 }
 
 // Return true when this message has been fully rendered as an AWTO card.
 static bit AwtoCardMessage(EnumOSDDispMsg enumMessage)
 {
-    const char *pText = 0;
-
     switch(enumMessage)
     {
-        case _OSD_DISP_NOSIGNAL_MSG:             pText = "No Signal"; break;
-        case _OSD_DISP_NOCABLE_MSG:              pText = "No Cable"; break;
-        case _OSD_DISP_NOSUPPORT_MSG:            pText = "No Support"; break;
-        case _OSD_DISP_AUTO_CONFIG_MSG:           pText = "Auto Adjust"; break;
-        case _OSD_DISP_AUTO_COLOR_MSG:            pText = "Auto Colour"; break;
-        case _OSD_DISP_POWER_SAVING_MSG:          pText = "Power Saving"; break;
+        case _OSD_DISP_NOSIGNAL_MSG:
+        case _OSD_DISP_NOCABLE_MSG:
+        case _OSD_DISP_NOSUPPORT_MSG:
+        case _OSD_DISP_AUTO_CONFIG_MSG:
+        case _OSD_DISP_AUTO_COLOR_MSG:
+        case _OSD_DISP_POWER_SAVING_MSG:
+            break;
         case _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG:
             AwtoCardPanel();
             return _TRUE;
 #if(_FREEZE_SUPPORT == _ON)
-        case _OSD_DISP_DISABLE_FREEZE_MSG:        pText = "Freeze Disabled"; break;
+        case _OSD_DISP_DISABLE_FREEZE_MSG:        break;
 #endif
 #if(_DP_MST_SUPPORT == _ON)
-        case _OSD_DISP_MST_WARNING_MSG:           pText = "DP MST Warning"; break;
+        case _OSD_DISP_MST_WARNING_MSG:           break;
 #endif
         default:
             return _FALSE;
     }
 
     AwtoCardLogo();
-    AwtoCardLine(3, pText, _CP_BLUE);
+    // Name each literal here so its bank is the active one.
+    switch(enumMessage)
+    {
+        case _OSD_DISP_NOSIGNAL_MSG:             AWTO_CARD_LINE(3, "No Signal", _CP_BLUE); break;
+        case _OSD_DISP_NOCABLE_MSG:              AWTO_CARD_LINE(3, "No Cable", _CP_BLUE); break;
+        case _OSD_DISP_NOSUPPORT_MSG:            AWTO_CARD_LINE(3, "No Support", _CP_BLUE); break;
+        case _OSD_DISP_AUTO_CONFIG_MSG:           AWTO_CARD_LINE(3, "Auto Adjust", _CP_BLUE); break;
+        case _OSD_DISP_AUTO_COLOR_MSG:            AWTO_CARD_LINE(3, "Auto Colour", _CP_BLUE); break;
+        case _OSD_DISP_POWER_SAVING_MSG:          AWTO_CARD_LINE(3, "Power Saving", _CP_BLUE); break;
+#if(_FREEZE_SUPPORT == _ON)
+        case _OSD_DISP_DISABLE_FREEZE_MSG:        AWTO_CARD_LINE(3, "Freeze Disabled", _CP_BLUE); break;
+#endif
+#if(_DP_MST_SUPPORT == _ON)
+        case _OSD_DISP_MST_WARNING_MSG:           AWTO_CARD_LINE(3, "DP MST Warning", _CP_BLUE); break;
+#endif
+        default: break;
+    }
     return _TRUE;
 }
 
@@ -119,10 +149,10 @@ static void AwtoSourceRows(void)
 
     OsdFuncClearOsd(ROW(0), COL(12), WIDTH(24), HEIGHT(8));
     OsdWindowDrawingByFont(_OSD_WINDOW_4_1, ROW(1 + ucSel), COL(12), WIDTH(24), HEIGHT(1), _CP_BLUE);
-    AwtoCardLine(1, "Auto",        (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
-    AwtoCardLine(2, "DisplayPort", (ucSel == 1) ? _CP_WHITE : _CP_BLUE);
-    AwtoCardLine(3, "HDMI 1",      (ucSel == 2) ? _CP_WHITE : _CP_BLUE);
-    AwtoCardLine(4, "HDMI 2",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE);
+    AWTO_CARD_LINE(1, "Auto",        (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
+    AWTO_CARD_LINE(2, "DisplayPort", (ucSel == 1) ? _CP_WHITE : _CP_BLUE);
+    AWTO_CARD_LINE(3, "HDMI 1",      (ucSel == 2) ? _CP_WHITE : _CP_BLUE);
+    AWTO_CARD_LINE(4, "HDMI 2",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE);
 }
 
 static void AwtoSourceOpen(void)
