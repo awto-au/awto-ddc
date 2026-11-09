@@ -43,16 +43,36 @@ def charset():
 
 
 def bits(tile):
-    out = []
-    for b in tile:
-        out.extend((b >> bit) & 1 for bit in range(7, -1, -1))
-    return [out[y * CW:(y + 1) * CW] for y in range(CH)]
+    """Apply the SDK's triple-byte reorder to its proportional source tile."""
+    rows = []
+    for k in range(0, TILE_BYTES, 3):
+        a, b, c = tile[k:k + 3]
+        for row in ((a >> 4) << 8 | (b >> 4) << 4 | c >> 4,
+                    (a & 0xF) << 8 | (b & 0xF) << 4 | c & 0xF):
+            rows.append([(row >> bit) & 1 for bit in range(CW - 1, -1, -1)])
+    return rows
 
 
 def packed(rows):
-    flat = [p for row in rows for p in row]
-    return bytes(sum(flat[k + bit] << (7 - bit) for bit in range(8))
-                 for k in range(0, len(flat), 8))
+    """Pack 18 rows into nine little-endian 24-bit OSD font words."""
+    out = bytearray()
+    for k in range(0, CH, 2):
+        upper = sum(p << (CW - 1 - x) for x, p in enumerate(rows[k]))
+        lower = sum(p << (CW - 1 - x) for x, p in enumerate(rows[k + 1]))
+        word = upper << 12 | lower
+        out.extend((word & 0xFF, word >> 8 & 0xFF, word >> 16 & 0xFF))
+    return bytes(out)
+
+
+def unpacked(tile):
+    """Decode a final little-endian OSD SRAM tile (the inverse of packed)."""
+    rows = []
+    for k in range(0, TILE_BYTES, 3):
+        word = tile[k] | tile[k + 1] << 8 | tile[k + 2] << 16
+        for shift in (12, 0):
+            row = word >> shift & 0xFFF
+            rows.append([(row >> bit) & 1 for bit in range(CW - 1, -1, -1)])
+    return rows
 
 
 def sdk_glyphs():
@@ -87,7 +107,9 @@ def sdk_glyphs():
         else:
             left = (CW - width) // 2
             rows = [[0] * left + row + [0] * (CW - width - left) for row in rows]
-        glyphs[chr(cp)] = packed(rows)
+        tile = packed(rows)
+        assert unpacked(tile) == rows
+        glyphs[chr(cp)] = tile
     return glyphs
 
 
@@ -155,7 +177,7 @@ def main():
         cols = 16
         im = Image.new("1", (cols * (CW + 2), ((len(chars) + cols - 1) // cols) * (CH + 2)))
         for i, ch in enumerate(chars):
-            tile_rows = bits(normal.get(ch, fallback))
+            tile_rows = unpacked(normal.get(ch, fallback))
             glyph = Image.new("1", (CW, CH))
             glyph.putdata([255 if p else 0 for row in tile_rows for p in row])
             im.paste(glyph, ((i % cols) * (CW + 2), (i // cols) * (CH + 2)))
