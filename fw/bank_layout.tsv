@@ -3264,7 +3264,6 @@ fn	_mn_draw_entry	12	0x0adc	628
 fn	_mn_move	12	0x0f18	184
 fn	_mn_value_text	12	0x0fd0	544
 fn	_mn_draw_status	12	0x11f0	652
-fn	_bars	13	0x0000	228
 fn	_fill_blank	13	0x00e4	32
 const	_us_hz	13	0x0104	8
 const	_ua_select	13	0x010c	12
@@ -3276,6 +3275,7 @@ fn	_ui_message	13	0x0578	92
 fn	_ui_open	13	0x05d4	32
 fn	_ui_row	13	0x05f4	96
 fn	_ui_show	13	0x0654	8
+fn	_bars	13	0x065c	272
 fn	_ui_text	13	0x08f4	296
 fn	_ui_title	13	0x0a1c	84
 const	_us_key	13	0x0a70	16

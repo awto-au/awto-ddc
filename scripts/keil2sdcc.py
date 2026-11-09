@@ -380,6 +380,15 @@ SUBS = [
      lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
     (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_0, ROW\(0\), COL\(12\), WIDTH\(g_ucOsdWidth - 12\), g_ucOsdHeight, )_CP_LIGHTBLUE(\);)",
      lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
+    # Information text was white on the old grey surface; use the same blue-on-white treatment as the warning cards.
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*OsdDisplayGetSourcePortString\(\)[^\n]*COLOR\()_CP_WHITE",
+     lambda m: m.group(1) + "_CP_BLUE", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_NOW_RESOLUTION[^\n]*COLOR\()_CP_WHITE",
+     lambda m: m.group(1) + "_CP_BLUE", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_HFREQPCLK[^\n]*COLOR\()_CP_WHITE",
+     lambda m: m.group(1) + "_CP_BLUE", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_HDCP_MODE[^\n]*COLOR\()_CP_WHITE",
+     lambda m: m.group(1) + "_CP_BLUE", 1),
     # #85: the SDK exit role (physical MENU key) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
     (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
      lambda m: m.group(1) + "            // MENU key (exit role): no action  [keil2sdcc] sub\n            break;\n", 1),
