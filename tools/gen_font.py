@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
-"""The awto OSD font: the proven diagnostic 12 x 18 px, 1 bpp glyphs, VLC compressed with scripts/osd_vlc.py.
-Charset = awto/osd/charset.txt. Lower-case letters intentionally use the diagnostic font's upper-case forms.
+"""Build the menu font from the monitor SDK's normal Realtek UI font.
 
-usage: tools/gen_font.py [--ttf PATH] [--size PX] [--png OUT.png]
-  Writes awto/osd/font_data.inc: font_ids[] (one tile id per character 0x20..0x7E), VLC blobs, FONT_LOAD_CHUNKS.
-Tile format is the hardware-proven diagnostic format: 12 x 18 px, 1 bpp, 9 low-byte-first 24-bit words.
-Needs awto-ddc scripts/ (osd_vlc.py and rtd_font5x7.py): $AWTO_DDC_MAIN, default /mnt/2tb/git/awto-ddc.
+The SDK stores proportional glyphs as one or two 12 x 18, 1-bpp tiles.  The
+AWTO menu has a fixed 40-column character map, so this tool centres normal
+glyphs in a cell and condenses the three wide glyphs (%, @, W/w) to 12 px.
+The letterforms are therefore the same ones used by the information/debug
+cards; only their cell spacing differs.
 """
 import argparse
 import os
+import re
 import sys
 import time
 from pathlib import Path
 
 from PIL import Image
 
-ROOT = Path(os.environ.get("AWTO_RTDFW_REPO") or Path(__file__).resolve().parents[1])
-sys.path.insert(0, str(Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts"))
+ROOT = Path(__file__).resolve().parents[1]
+DDC = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc"))
+SDK = Path(os.environ.get("AWTO_SDK_PORT", DDC / "tmp/sdcc-port/src"))
+BODY = SDK / "User/RTD Series/RTD2014Osd/Header/TextTableBody/Rtd2014OsdTextTableBody_0.h"
+WIDTHS = SDK / "User/RTD Series/RTD2014Osd/Header/TextTableBody/Rtd2014OsdTextTableBody_FontWidthTable.h"
+sys.path.insert(0, str(DDC / "scripts"))
 import osd_vlc  # noqa: E402
-import rtd_font5x7 as diagnostic_font  # noqa: E402
 
-CW, CH = diagnostic_font.CELL_W, diagnostic_font.CELL_H
+CW, CH, TILE_BYTES = 12, 18, 27
 FIRST, LAST = 0x20, 0x7E
-TILE_BYTES = diagnostic_font.WORDS_PER_GLYPH * 3
 LOG = ROOT / "tmp/logs/gen_font.log"
 
 
@@ -39,76 +42,127 @@ def charset():
     return sorted(set(c for c in text if FIRST <= ord(c) <= LAST and c != "\n"))
 
 
-def tile(ch):
-    """One diagnostic glyph in the RTD's hardware-proven 1 bpp byte order."""
-    return bytes(v for word in diagnostic_font.glyph_words(ch) for v in word)
+def bits(tile):
+    out = []
+    for b in tile:
+        out.extend((b >> bit) & 1 for bit in range(7, -1, -1))
+    return [out[y * CW:(y + 1) * CW] for y in range(CH)]
+
+
+def packed(rows):
+    flat = [p for row in rows for p in row]
+    return bytes(sum(flat[k + bit] << (7 - bit) for bit in range(8))
+                 for k in range(0, len(flat), 8))
+
+
+def sdk_glyphs():
+    width_text = WIDTHS.read_text().split("BYTE __code tsFontWidth0[] =", 1)[1].split("};", 1)[0]
+    widths = [int(x) for x in re.findall(r"\d+", width_text)]
+    wi = 0
+    glyphs = {}
+    for line in BODY.read_text().splitlines():
+        if "//" not in line:
+            continue
+        data, comment = line.split("//", 1)
+        raw = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", data))
+        m = re.match(r"(U[0-9A-F]{4}|_FONT_SPACE_1),\s*(\d+),", comment)
+        if not m or not raw:
+            continue
+        count = int(m.group(2))
+        ws = widths[wi:wi + count]
+        wi += count
+        if len(raw) != count * TILE_BYTES:
+            raise SystemExit(f"bad SDK glyph {m.group(1)}: {len(raw)} bytes for {count} tiles")
+        if not m.group(1).startswith("U"):
+            continue
+        cp = int(m.group(1)[1:], 16)
+        src_rows = [bits(raw[k * TILE_BYTES:(k + 1) * TILE_BYTES]) for k in range(count)]
+        width = sum(ws)
+        rows = [sum((src_rows[k][y][:ws[k]] for k in range(count)), []) for y in range(CH)]
+        if width > CW:
+            im = Image.new("1", (width, CH))
+            im.putdata([255 if p else 0 for row in rows for p in row])
+            im = im.resize((CW, CH), Image.Resampling.LANCZOS).convert("1")
+            rows = [[1 if im.getpixel((x, y)) else 0 for x in range(CW)] for y in range(CH)]
+        else:
+            left = (CW - width) // 2
+            rows = [[0] * left + row + [0] * (CW - width - left) for row in rows]
+        glyphs[chr(cp)] = packed(rows)
+    return glyphs
+
+
+def symbol(ch):
+    """Four menu marks absent from the SDK's Latin table, drawn at its weight."""
+    rows = [[0] * CW for _ in range(CH)]
+    def px(x, y):
+        if 0 <= x < CW and 0 <= y < CH:
+            rows[y][x] = 1
+    if ch in "<>":
+        for k in range(5):
+            x = 3 + k if ch == ">" else 8 - k
+            for d in (0, 1):
+                px(x, 5 + k + d); px(x, 12 - k - d)
+    elif ch == "^":
+        for k in range(4):
+            for d in (0, 1):
+                px(5 - k, 5 + k + d); px(6 + k, 5 + k + d)
+    else:  # *
+        for k in range(-3, 4):
+            px(6 + k, 9); px(6, 9 + k); px(6 + k, 9 + k); px(6 + k, 9 - k)
+    return packed(rows)
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--png", type=Path)
-    a = ap.parse_args()
+    args = ap.parse_args()
+    normal = sdk_glyphs()
     chars = charset()
+    for ch in "<>^*":
+        normal[ch] = symbol(ch)
     blank = bytes(TILE_BYTES)
     tiles, ids = [blank], {blank: 0}
     glyphs = {}
+    fallback = normal["?"]
     for ch in chars:
-        t = tile(ch)
-        if t not in ids:
-            ids[t] = len(tiles)
-            tiles.append(t)
-        glyphs[ch] = ids[t]
-    if len(tiles) > 256:
-        sys.exit(f"{len(tiles)} distinct tiles > 256 (8 bit tile id): drop characters from awto/osd/charset.txt")
-    fallback = glyphs.get("?", 0)
-    rows = []
-    for c in range(FIRST, LAST + 1):
-        g = glyphs.get(chr(c), fallback if chr(c) != " " else 0)
-        rows.append(f"    {g},  /* {chr(c)!r} */".replace("*/'", "*/ '"))
+        tile = normal.get(ch, fallback)
+        if tile not in ids:
+            ids[tile] = len(tiles)
+            tiles.append(tile)
+        glyphs[ch] = ids[tile]
+    rows = [f"    {glyphs.get(chr(c), glyphs.get('?', 0))},  /* {chr(c)!r} */"
+            for c in range(FIRST, LAST + 1)]
     data = b"".join(tiles)
-    # Keep each compressed stream below 4 KiB. The software model accepts the full 5.7 KiB stream, but the RTD2795
-    # hardware produced corrupt glyph SRAM with it; restarting the decoder between two smaller streams is reliable.
     chunks = osd_vlc.encode_chunks(data, TILE_BYTES, limit=4096)
-    out = ["/* font_data.inc: GENERATED by tools/gen_font.py (AWTO diagnostic 5x7 forms, 12 x 18 px, 1 bpp).",
-           " * %d characters, %d shared glyphs, %d B raw, %d B VLC in %d blob(s). Do not edit. */" % (
-               len(chars), len(tiles), len(data), sum(len(b) for _, _, b in chunks), len(chunks)),
-           f"#define OSD_FONT_FIRST  0x{FIRST:02X}", f"#define OSD_FONT_LAST   0x{LAST:02X}", f"#define OSD_FONT_TILES  {len(tiles)}",
-           f"static const uint8_t __code font_ids[{LAST - FIRST + 1}] = {{"] + rows + ["};", ""]
-    # Keep all streams in one banked object. The firmware linker has a stable reservation for font_blob0; separate
-    # arrays require another bank-sized hole even though their combined data is smaller than the existing reservation.
     joined = b"".join(blob for _, _, blob in chunks)
-    out.append("/* VLC stream layout: " + ", ".join(
-        f"+{sum(len(x[2]) for x in chunks[:i])} tiles {first}..{first + n - 1}"
-        for i, (first, n, blob) in enumerate(chunks)) + " */")
-    out.append(f"static const uint8_t __code font_blob0[{len(joined)}] = {{")
+    out = ["/* font_data.inc: GENERATED by tools/gen_font.py from the normal Realtek UI font.",
+           f" * {len(chars)} characters, {len(tiles)} tiles, {len(data)} B raw, {len(joined)} B VLC. Do not edit. */",
+           f"#define OSD_FONT_FIRST  0x{FIRST:02X}", f"#define OSD_FONT_LAST   0x{LAST:02X}",
+           f"#define OSD_FONT_TILES  {len(tiles)}",
+           f"static const uint8_t __code font_ids[{LAST - FIRST + 1}] = {{"] + rows + ["};", "",
+           f"static const uint8_t __code font_blob0[{len(joined)}] = {{"]
     for k in range(0, len(joined), 16):
         out.append("    " + ", ".join(f"0x{x:02X}" for x in joined[k:k + 16]) + ",")
     out.append("};")
-    load = []
-    offset = 0
-    for first, n, blob in chunks:
+    offset, load = 0, []
+    for first, count, blob in chunks:
         load.append(f"font_blob(font_blob0 + {offset}, {first});")
         offset += len(blob)
+        assert osd_vlc.decode(blob) == data[first * TILE_BYTES:(first + count) * TILE_BYTES]
     out.append("#define FONT_LOAD_CHUNKS " + " ".join(load))
     (ROOT / "awto/osd/font_data.inc").write_text("\n".join(out) + "\n")
-    words = len(tiles) * diagnostic_font.WORDS_PER_GLYPH
-    log(f"{len(chars)} chars, {len(tiles)} tiles: {len(data)} B raw -> {sum(len(b) for _, _, b in chunks)} B VLC in {len(chunks)} blob(s); "
-        f"font SRAM {words} words ({words * 100 / 12288:.1f} % of 12288) + char map")
-    for first, n, blob in chunks:
-        assert osd_vlc.decode(blob) == data[first * TILE_BYTES:(first + n) * TILE_BYTES]
-    log("round trip: every blob decodes byte-exact")
-    if a.png:
+    if args.png:
         cols = 16
-        im = Image.new("L", (cols * (CW + 2), ((len(chars) + cols - 1) // cols) * (CH + 2)), 40)
+        im = Image.new("1", (cols * (CW + 2), ((len(chars) + cols - 1) // cols) * (CH + 2)))
         for i, ch in enumerate(chars):
-            rows = diagnostic_font.cell_rows(ch)
-            glyph = Image.new("L", (CW, CH), 0)
-            glyph.putdata([255 if row & (1 << (CW - 1 - x)) else 0 for row in rows for x in range(CW)])
+            tile_rows = bits(normal.get(ch, fallback))
+            glyph = Image.new("1", (CW, CH))
+            glyph.putdata([255 if p else 0 for row in tile_rows for p in row])
             im.paste(glyph, ((i % cols) * (CW + 2), (i // cols) * (CH + 2)))
-        a.png.parent.mkdir(parents=True, exist_ok=True)
-        im.save(a.png)
-    return 0
+        args.png.parent.mkdir(parents=True, exist_ok=True)
+        im.resize((im.width * 3, im.height * 3), Image.Resampling.NEAREST).save(args.png)
+    log(f"normal Realtek UI font: {len(chars)} chars, {len(tiles)} tiles, {len(joined)} B VLC; round trip byte-exact")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -1,6 +1,5 @@
-/* font.c: the awto OSD font (tools/gen_font.py -> font_data.inc): the proven diagnostic 12 x 18 px, 1 bpp font.
- * Glyphs are shared between characters. The data is VLC compressed and loaded through the hardware decoder
- * (osd-font-download.md). Reading the __code blob happens here (bank-safe), the register work in the integrator (osd_tc_vlc_*). */
+/* font.c: fixed-cell loader for the monitor's normal Realtek UI letterforms.
+ * tools/gen_font.py extracts those glyphs from the SDK and emits the VLC data below. */
 #include <stdint.h>
 #include "cc.h"
 #include "osd.h"
@@ -18,7 +17,7 @@ uint8_t osd_font_glyph(char c)
     return font_ids[k - OSD_FONT_FIRST];
 }
 
-/* one blob = [8 byte value map][2 byte BE length N][N stream bytes]; tile = first tile id of this blob */
+/* one blob = [8-byte value map][2-byte BE length N][N stream bytes] */
 static void font_blob(const uint8_t __code *b, uint16_t tile)
 {
     uint16_t n = (uint16_t)b[8] << 8 | b[9], o = 10;

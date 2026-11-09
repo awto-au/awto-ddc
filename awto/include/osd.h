@@ -24,8 +24,8 @@ void    osd_grid(uint8_t rows, uint8_t cols);        /* character map size */
 void    osd_fill(uint8_t row, uint8_t col, uint8_t n, uint8_t glyph, uint8_t fg, uint8_t bg);
 void    osd_palette(uint8_t idx, uint8_t r, uint8_t g, uint8_t b);
 
-/* Text layer (the awto OSD design system, awto-ddc#89): a chars x lines grid of proven diagnostic 12 x 18 px, 1 bpp glyphs.
- * One glyph id (0..255) per cell; the integrator implements this on the OSD engine. ui.h = the
+/* Text layer (the awto OSD design system, awto-ddc#89): a chars x lines grid using fixed cells made from the firmware's
+ * normal Realtek user-interface letterforms. ui.h = the
  * components on top (frame, title, rows, status strip, key legend); screens never touch this layer directly.
  * Colour sets (osd_style): blue on white / dim / white on accent / accent text. Window 0..7 = decoration bars. */
 enum osd_style { OS_TEXT = 0, OS_DIM = 1, OS_ONACCENT = 2, OS_ACCENT = 3, OS_N = 4 };
@@ -33,16 +33,14 @@ enum osd_bar_colour { OB_SURFACE = 0, OB_ACCENT = 1 };
 #define OSD_CHAR_W 12
 #define OSD_CHAR_H 18
 void    osd_tc_open(uint8_t chars, uint8_t lines);   /* grid + palette, all windows off; OSD stays off until osd_tc_show */
-void    osd_tc_cells(uint8_t maprow, uint8_t cell, const uint8_t __xdata *tiles, uint8_t n, uint8_t style);   /* n cells of one map row */
+void    osd_tc_cells(uint8_t maprow, uint8_t cell, const uint8_t __xdata *tiles, uint8_t n, uint8_t style);
 void    osd_tc_bar(uint8_t win, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t colour);   /* px, inclusive */
 void    osd_tc_bar_off(uint8_t win);
 void    osd_tc_place(uint8_t hpos_pct, uint8_t vpos_pct, uint8_t big);   /* position 0..100 %, big = 2x size */
 void    osd_tc_show(uint8_t on);
 void    osd_tc_close(void);                          /* OSD off; the Realtek SDK menu may draw again */
-/* VLC font download (osd-font-download.md): begin(map8 = the blob's 8 value-map bytes, tile = first tile id), put(stream bytes,
- * the blob after its 10 byte header, END included), end. The caller reads the __code blob (bank-safe) and passes xdata copies. */
+/* VLC font download (osd-font-download.md): begin(map8 = the blob's 8 value-map bytes, tile = first tile id), put stream, end. */
 void    osd_tc_vlc_begin(const uint8_t __xdata *map8, uint16_t tile);
 void    osd_tc_vlc_put(const uint8_t __xdata *p, uint8_t n);
 void    osd_tc_vlc_end(void);
-
 #endif
