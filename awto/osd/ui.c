@@ -5,7 +5,7 @@
 #include "osd.h"
 #include "ui.h"
 
-#define W_FRAME   0              /* decoration windows (osd_tc_bar): frame red, inset black, title bar, separators, highlight */
+#define W_FRAME   0              /* decoration windows: blue frame/title/highlight over a white surface */
 #define W_INSET   1
 #define W_TITLE   2
 #define W_SEP1    3
@@ -136,7 +136,7 @@ uint8_t ui_fmt_vfreq(char __xdata *dst, uint32_t vmhz)
 static void bars(void)
 {
     osd_tc_bar(W_FRAME, 0, 0, PX_W - 1, PX_H - 1, OB_ACCENT);
-    osd_tc_bar(W_INSET, 2, 2, PX_W - 3, PX_H - 3, OB_BLACK);
+    osd_tc_bar(W_INSET, 2, 2, PX_W - 3, PX_H - 3, OB_SURFACE);
     osd_tc_bar(W_TITLE, 2, 2, PX_W - 3, OSD_CHAR_H - 1, OB_ACCENT);
     osd_tc_bar(W_SEP1, 2, UI_L_LIST * OSD_CHAR_H - 2, PX_W - 3, UI_L_LIST * OSD_CHAR_H - 1, OB_ACCENT);
     osd_tc_bar(W_SEP2, 2, UI_L_MSG * OSD_CHAR_H + OSD_CHAR_H + 4, PX_W - 3, UI_L_MSG * OSD_CHAR_H + OSD_CHAR_H + 5, OB_ACCENT);
@@ -241,7 +241,7 @@ void ui_legend(uint8_t ctx)
     }
 }
 
-/* strip slot i (0..2): "> D2 HDMI ACTIVE"; marker red, name white, state white when active else dim */
+/* strip slot i (0..2): "> HDMI 1 ACTIVE"; marker blue, name blue, state blue when active else dim */
 static void strip_port(uint8_t line, uint8_t col, uint8_t i, uint8_t st)
 {
     uint8_t n;
