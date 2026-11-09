@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Catalogue of every OSD layout one firmware image draws: pop-ups rendered in fw_sim + menu-page renders.
+"""Catalogue of every unique visible OSD layout: pop-ups rendered in fw_sim + menu-page renders.
 
 usage: osd_catalog.py BIN [--menu-dir DIR] [--out DIR] [--mode 1080p60|2160p60]
 - Each pop-up = one osd_render.py run (fresh sim), all in parallel. Menu pages: walk_*.png from --menu-dir (menu_cli --png).
@@ -23,14 +23,17 @@ LOG = ROOT / "tmp" / "logs" / "osd_catalog.log"
 # (name, osd_render args, what it is): actions are osd_test names (rtd_proto OSD_EVENTS / osd_test CMD_ONLY)
 POPUPS = [
     ("logo", ["--at", "logo"], "boot logo"),
-    ("idle", ["--at", "8000"], "picture, no OSD (ACTIVE, after the 6 s info pop-up)"),
     ("info", ["--do", "300:info", "--at", "2500"], "input info pop-up"),
     ("debug", ["--do", "300:debug", "--at", "2500"], "debug/tech pop-up (#34), held"),
-    ("nosignal", ["--do", "300:nosignal", "--at", "2500"], "no signal message"),
-    ("nocable", ["--do", "300:nocable", "--at", "2500"], "no cable message"),
-    ("nosupport", ["--do", "300:nosupport", "--at", "2500"], "mode not supported message"),
-    ("failsafe", ["--do", "300:failsafe", "--at", "2500"], "fail-safe mode message"),
-    ("powersaving", ["--do", "300:powersaving-msg", "--at", "2500"], "power saving message"),
+    ("keytest", ["--do", "300:keytest", "--at", "2500"], "front-key test screen"),
+    ("nosignal", ["--do", "300:card-nosignal", "--at", "2500"], "no signal message"),
+    ("nocable", ["--do", "300:card-nocable", "--at", "2500"], "no cable message"),
+    # Fail-safe aliases this exact card; catalogue it once.
+    ("nosupport", ["--do", "300:card-nosupport", "--at", "2500"], "no support message (also used for fail-safe)"),
+    ("autoadjust", ["--do", "300:auto-adjust", "--at", "2500"], "auto-adjust message"),
+    ("autocolour", ["--do", "300:auto-colour", "--at", "2500"], "auto-colour message"),
+    ("powersaving", ["--do", "300:power-saving", "--at", "2500"], "power-saving message"),
+    ("uniformity", ["--do", "300:panel-uniformity", "--at", "2500"], "panel-uniformity message"),
     ("source", ["--do", "300:source-menu", "--at", "2500"], "source (input) menu"),
 ]
 # one osd_render run = sim boot to ACTIVE + actions; limit = 3x cold worst case (tmp/logs/osd_render.log)
