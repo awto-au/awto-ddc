@@ -9,15 +9,15 @@
 #include "cc.h"
 #include "osd.h"
 
-/* screen geometry in characters (960 x 720 px at 1x) */
+/* screen geometry in characters (960 x 756 px at 1x) */
 #define UI_CHARS    40
-#define UI_LINES    20
+#define UI_LINES    21
 #define UI_L_TITLE  0
 #define UI_L_STRIP  1            /* status strip: 3 lines, one per input */
 #define UI_L_LIST   4
-#define UI_LIST     13           /* list lines 4..16; longer pages scroll */
-#define UI_L_MSG    17
-#define UI_L_LEGEND 18           /* key legend: 2 lines */
+#define UI_LIST     14           /* list lines 4..17 */
+#define UI_L_MSG    18
+#define UI_L_LEGEND 19           /* names in physical order, actions below */
 
 /* selected-row look (Dan picks, #87): bar = red bar behind white text; mark = red '>' marker + red underline, text unchanged */
 enum ui_hl { UI_HL_BAR = 0, UI_HL_MARK = 1 };
@@ -31,7 +31,7 @@ void ui_title(const char __xdata *s);                 /* white on the red title 
 void ui_row(uint8_t line, const char __xdata *s, uint8_t style, uint8_t selected);   /* one UI_CHARS wide list line */
 void ui_highlight(uint8_t line);                      /* moves the highlight; 0xFF = none */
 
-/* key legend: what each front key does right now (front-panel order SOURCE MENU DOWN UP AUTO POWER, awto-ddc#85) */
+/* key legend: all six columns in physical left-to-right order: SOURCE MENU DOWN UP AUTO POWER (awto-ddc#85) */
 enum ui_ctx { UC_PAGE = 0, UC_ROW, UC_RO, UC_ACTION, UC_EDIT, UC_RUN, UC_KEEP, UC_MAIN, UC_N };
 void ui_legend(uint8_t ctx);
 void ui_message(const char __xdata *s, uint8_t style);   /* the line above the legend; NULL / "" clears it */

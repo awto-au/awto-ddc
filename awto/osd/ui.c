@@ -14,12 +14,12 @@
 #define W_UL      6
 #define PX_W      (UI_CHARS * OSD_CHAR_W)
 #define PX_H      (UI_LINES * OSD_CHAR_H)
-#define SLOT      20             /* strip: 2 slots per line */
-#define KSLOT     13             /* legend: 3 slots per line */
+#define SLOT      22             /* timing begins after the input name + state */
+#define KSLOT     7              /* legend: 6 physical-key columns */
 
-static const char __code us_d1[] = "D1 DP";
-static const char __code us_d2[] = "D2 HDMI";
-static const char __code us_d3[] = "D3 HDMI";
+static const char __code us_d1[] = "DisplayPort";
+static const char __code us_d2[] = "HDMI 1";
+static const char __code us_d3[] = "HDMI 2";
 static const char __code us_nocable[] = "no cable";
 static const char __code us_nosignal[] = "no signal";
 static const char __code us_ready[] = "ready";
@@ -233,17 +233,17 @@ void ui_legend(uint8_t ctx)
     for (line = 0; line < 2; line++) {
         fill_blank(0);
         ui_text(UI_L_LEGEND + line, 0, buf, UI_CHARS, OS_TEXT);
-        for (k = 0; k < 3; k++) {
-            col = k * KSLOT + 1;
+    }
+    for (k = 0; k < 6; k++) {
+        col = k * KSLOT;
+        fill_blank(0);
+        PUT_C(n, 0, us_key[k]);
+        ui_text(UI_L_LEGEND, col, buf, n, OS_RED);
+        a = ua_ctx[ctx][k];
+        if (a[0] != 0) {
             fill_blank(0);
-            PUT_C(n, 0, us_key[3 * line + k]);
-            ui_text(UI_L_LEGEND + line, col, buf, n, OS_RED);
-            a = ua_ctx[ctx][3 * line + k];
-            if (a[0] != 0) {
-                fill_blank(0);
-                PUT_C(n, 0, a);
-                ui_text(UI_L_LEGEND + line, col + 7, buf, n, OS_TEXT);
-            }
+            PUT_C(n, 0, a);
+            ui_text(UI_L_LEGEND + 1, col, buf, n, OS_TEXT);
         }
     }
 }
@@ -255,10 +255,10 @@ static void strip_port(uint8_t line, uint8_t col, uint8_t i, uint8_t st)
 
     fill_blank(0);
     PUT_C(n, 0, us_port[i]);
-    ui_text(line, col + 2, buf, 8, OS_TEXT);
+    ui_text(line, col + 2, buf, 11, OS_TEXT);
     fill_blank(0);
     PUT_C(n, 0, us_state[st]);
-    ui_text(line, col + 10, buf, 9, st == UPS_ACTIVE ? OS_TEXT : OS_DIM);
+    ui_text(line, col + 13, buf, 9, st == UPS_ACTIVE ? OS_TEXT : OS_DIM);
     if (st == UPS_ACTIVE) {
         buf[0] = '>';
         ui_text(line, col, buf, 1, OS_RED);
