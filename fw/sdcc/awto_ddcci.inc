@@ -138,8 +138,8 @@ static __code char tAwtoDdcCaps[] = "(prot(monitor)type(LCD)model(awto)cmds(01 0
 static __xdata BYTE s_ppucAwtoDdcRx[_AWTO_DDCCI_ENGINES][AWTO_DDC_RX];
 static __xdata BYTE s_pucAwtoDdcN[_AWTO_DDCCI_ENGINES];
 #if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
-#define AWTO_DDC_MUX_IDLE_MS            25      // no request: expose each of the three DDCs often enough for host retries
-#define AWTO_DDC_MUX_REPLY_MS           100     // MCCS host reads a GET reply after its mandatory 50 ms wait
+#define AWTO_DDC_MUX_IDLE_MS            250     // long exposure avoids phase-lock with ddcutil's 200-300 ms retry cadence
+#define AWTO_DDC_MUX_REPLY_MS           150     // MCCS host reads a GET reply after its mandatory 50 ms wait
 #define AWTO_DDC_MUX_PARTIAL_MS         100     // abandon a truncated write rather than pinning one DDC forever
 __xdata BYTE g_ucAwtoDdcMuxTick;
 static __xdata WORD s_usAwtoDdcMuxAt;
