@@ -5,9 +5,27 @@
 #include "cc.h"
 #include "osd.h"
 #include "ui.h"
-#include "font_data.inc"
 
 static uint8_t __xdata fbuf[32];
+
+/* Each loader directly names its own code-space array, allowing the bank linker to keep the function and data together. */
+#define FONT_RAW_LOADER(id, array, first, count) \
+static void font_raw_load##id(void) \
+{ \
+    uint16_t n = (uint16_t)(count) * 54, o = 0; \
+    uint8_t k, m; \
+    osd_tc_raw_begin(first); \
+    while (n != 0) { \
+        m = n > sizeof fbuf ? (uint8_t)sizeof fbuf : (uint8_t)n; \
+        for (k = 0; k < m; k++) fbuf[k] = (array)[o + k]; \
+        osd_tc_raw_put(fbuf, m); \
+        o += m; \
+        n -= m; \
+    } \
+    osd_tc_raw_end(); \
+}
+
+#include "font_data.inc"
 
 void osd_font_tiles(char c, uint8_t __xdata *q4)
 {
@@ -19,23 +37,6 @@ void osd_font_tiles(char c, uint8_t __xdata *q4)
     o = (uint16_t)(k - OSD_FONT_FIRST) * 4;
     for (i = 0; i < 4; i++)
         q4[i] = font_ids[o + i];
-}
-
-static void font_raw_data(const uint8_t __code *b, uint16_t tiles)
-{
-    uint16_t n = tiles * OSD_FONT_TILE_BYTES, o = 0;
-    uint8_t k, m;
-
-    osd_tc_raw_begin(0);
-    while (n != 0) {
-        m = n > sizeof fbuf ? (uint8_t)sizeof fbuf : (uint8_t)n;
-        for (k = 0; k < m; k++)
-            fbuf[k] = b[o + k];
-        osd_tc_raw_put(fbuf, m);
-        o += m;
-        n -= m;
-    }
-    osd_tc_raw_end();
 }
 
 void osd_font_load(void)
