@@ -1,1 +1,1 @@
-954ef0c   # awto-rtdfw commit compiled into the image (git archive); compressed font streams restored
+8c74c97   # awto-rtdfw commit compiled into the image (git archive); proven 1-bit diagnostic menu font

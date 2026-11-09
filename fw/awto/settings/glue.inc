@@ -136,14 +136,14 @@ int set_status(BYTE ucId)
     }
 }
 
-//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): 24 x 36 px characters = 2 x 2 hardware cells of 12 x 18, 2 bpp ----
+//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): proven diagnostic 12 x 18 px, 1 bpp glyphs ----
 // palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette.
 // White surface + Realtek 2014 blue (0,68,166) text/accent; selected rows retain white text on blue.
 static __code BYTE tAwtoPal[12][3] = {
     {0, 68, 166}, {170, 170, 170}, {255, 255, 255}, {73, 73, 73}, {110, 110, 110}, {170, 193, 225},
     {0, 45, 111}, {85, 85, 85}, {37, 37, 37}, {85, 130, 196}, {0, 23, 55}, {0, 0, 0}};
-// the 2 bit char word holds the 4 colours c0..c3 of pixel levels 0..3 (c0 = 0: transparent); styles: osd_style
-static __code BYTE tAwtoStyle[4][4] = {{0, 11, 7, 1}, {0, 2, 8, 4}, {0, 10, 6, 3}, {0, 11, 7, 1}};
+// 1 bit glyph foreground for each osd_style; background 0 is transparent and exposes the white/blue window.
+static __code BYTE tAwtoStyle[4] = {1, 2, 3, 1};
 #define AWTO_BAR_SURFACE            3
 #define AWTO_BAR_ACCENT             1
 
@@ -155,7 +155,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
-    OsdFuncApplyMap(WIDTH(2 * ucChars), HEIGHT(2 * ucLines), COLOR(0, 0));
+    OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
     OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
     OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
@@ -163,15 +163,12 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     {
         ScalerOsdSetColorPalette(ucI + 1, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
     }
-    ScalerOsd2BitFontOffset(0);                    // 2 bit glyph i at font base + 18 * i
 }
 
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
-    BYTE ucC0 = tAwtoStyle[ucStyle][0];
-    BYTE ucC1 = tAwtoStyle[ucStyle][1];
-    BYTE ucB0 = 0x80 | ((ucC0 & 8) << 2) | ((ucC1 & 8) << 1) | ((tAwtoStyle[ucStyle][3] & 7) << 1) | ((ucC0 & 4) >> 2);
-    BYTE ucB2 = ((ucC0 & 3) << 6) | ((tAwtoStyle[ucStyle][2] & 7) << 3) | (ucC1 & 7);
+    BYTE ucB0 = 0x4C;                            // 1 bit font, 12 pixel cell (same as the debug screens)
+    BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
     while(ucN-- != 0)                              // one address, then B0 B1 B2 per cell (the word address increments by itself)
@@ -203,7 +200,7 @@ void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
         ScalerSetByte(0x3A0F + ucI, pucMap[ucI]);
     }
     ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), _BIT0);
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 18, _OSD_WITHOUT_DB);
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 9, _OSD_WITHOUT_DB);
 }
 
 void osd_tc_vlc_put(BYTE __xdata *pucData, BYTE ucN)

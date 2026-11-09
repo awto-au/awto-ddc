@@ -987,6 +987,7 @@ const	___str_26	C	0x3734	12
 const	___str_27	C	0x3740	8
 const	___str_28	C	0x3748	12
 const	___str_29	C	0x3754	12
+stub	_osd_font_glyph	C	0x3760	8
 const	___str_36	C	0x3768	12
 const	___str_37	C	0x3774	12
 const	___str_38	C	0x3780	12
@@ -1039,7 +1040,6 @@ const	_mn_s6	C	0x3a5c	24
 const	_mn_s7	C	0x3a74	28
 const	_mn_s8	C	0x3a90	40
 const	_mn_s9	C	0x3ab8	36
-stub	_ScalerOsd2BitFontOffset	C	0x3adc	8
 stub	_ScalerOsdDataPort	C	0x3ae4	8
 stub	_ScalerOsdSetColorPalette	C	0x3aec	8
 stub	_osd_tc_bar	C	0x3af4	8
@@ -1052,7 +1052,6 @@ stub	_ui_port_state	C	0x3b24	8
 stub	_ui_timing	C	0x3b2c	8
 stub	_AwtoSwCacheValid	C	0x3b34	8
 stub	_osd_font_load	C	0x3b3c	8
-stub	_osd_font_tiles	C	0x3b44	8
 stub	_fill_blank	C	0x3b4c	8
 stub	_set_ap_key_test	C	0x3b54	8
 stub	_strip_port	C	0x3b5c	8
@@ -2348,6 +2347,7 @@ const	___str_19	9	0x00a4	12
 const	___str_20	9	0x00b0	8
 const	___str_21	9	0x00b8	8
 const	___str_22	9	0x00c0	16
+fn	_osd_font_glyph	9	0x00d0	52
 const	_tFONT1_ICON_DP	9	0x0118	376
 const	_tFONT1_ICON_DVI	9	0x0290	412
 const	_tFONT1_ICON_HDMI	9	0x042c	372
@@ -2454,7 +2454,6 @@ fn	_ScalerMemoryUpdateIVS2DVSLineDelay	9	0x894c	1108
 fn	_SysMainSytemPowerDetect	9	0x8da0	8
 fn	_font_blob	9	0x8da8	288
 fn	_osd_font_load	9	0x8ec8	104
-fn	_osd_font_tiles	9	0x8f30	100
 fn	_menu_active	9	0x8f94	12
 fn	_menu_close	9	0x8fa0	60
 fn	_menu_cmd	9	0x8fdc	624
