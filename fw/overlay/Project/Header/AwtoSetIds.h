@@ -87,6 +87,7 @@
 #define AWTO_SET_DEBUG_MSGS           85
 #define AWTO_SET_MSG_LOG              86
 #define AWTO_SET_DEBUG_POPUP          87
+#define AWTO_SET_KEY_TEST             104
 #define AWTO_SET_VOLUME               88
 #define AWTO_SET_MUTE                 89
 #define AWTO_SET_AUDIO_STANDALONE     90

@@ -369,7 +369,17 @@ SUBS = [
      lambda m: m.group(1) + " if((g_ucKeyStateCurr != 0) && (g_ucKeyStateCurr != g_ucKeyStatePrev) && (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))"
      " { SET_FORCE_POW_SAV_STATUS(_FALSE); SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL); return _TRUE; }  // [keil2sdcc] sub\n", 1),
     (OSD + "RTD2014Key.c", r"(bit RTDKeySpecialProc\(BYTE ucKeyMask\)\s*\{)",
-     lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON()) { return _FALSE; }  // [keil2sdcc] sub", 1),
+     lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON()) { return _FALSE; }"
+     " if((GET_OSD_STATE() == _MENU_NONE) && (ucKeyMask == _LEFT_KEY_MASK)) { return _FALSE; }  // [keil2sdcc] sub: no hidden 3 s DP-version action on physical DOWN", 1),
+    # unified OSD cards: white right-hand surface; fail-safe uses the same complete card as No Support
+    (OSD + "RTD2014OsdDisplay.c", r"(void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\s*\{)",
+     lambda m: m.group(1) + " if(enumMessage == _OSD_DISP_FAIL_SAFE_MODE_MSG) { enumMessage = _OSD_DISP_NOSUPPORT_MSG; }  // [keil2sdcc] sub: unified warning card", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_0, ROW\(0\), COL\(12\), WIDTH\(g_ucOsdHeight - 12\), HEIGHT\(g_ucOsdWidth\), )_CP_LIGHTBLUE(\);)",
+     lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_1, ROW\(0\), COL\(0\), WIDTH\(g_ucOsdWidth\), g_ucOsdHeight, )_CP_LIGHTBLUE(\);)",
+     lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
+    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_0, ROW\(0\), COL\(12\), WIDTH\(g_ucOsdWidth - 12\), g_ucOsdHeight, )_CP_LIGHTBLUE(\);)",
+     lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
     # #85: the SDK exit role (physical MENU key) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
     (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
      lambda m: m.group(1) + "            // MENU key (exit role): no action  [keil2sdcc] sub\n            break;\n", 1),

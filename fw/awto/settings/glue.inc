@@ -137,15 +137,15 @@ int set_status(BYTE ucId)
 }
 
 //---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): 24 x 36 px characters = 2 x 2 hardware cells of 12 x 18, 2 bpp ----
-// palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette
-// 1 red, 2 / 8 grey 66 % / 33 %, 3 white, 4 / 9 / 5 dim 66 % / 33 % / 100 %, 6 / 10 red-white 66 % / 33 %, 7 / 11 dark red 66 % / 33 %, 12 black
+// palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette.
+// White surface + Realtek 2014 blue (0,68,166) text/accent; selected rows retain white text on blue.
 static __code BYTE tAwtoPal[12][3] = {
-    {255, 0, 0}, {170, 170, 170}, {255, 255, 255}, {73, 73, 73}, {110, 110, 110}, {255, 170, 170},
-    {170, 0, 0}, {85, 85, 85}, {37, 37, 37}, {255, 85, 85}, {85, 0, 0}, {0, 0, 0}};
+    {0, 68, 166}, {170, 170, 170}, {255, 255, 255}, {73, 73, 73}, {110, 110, 110}, {170, 193, 225},
+    {0, 45, 111}, {85, 85, 85}, {37, 37, 37}, {85, 130, 196}, {0, 23, 55}, {0, 0, 0}};
 // the 2 bit char word holds the 4 colours c0..c3 of pixel levels 0..3 (c0 = 0: transparent); styles: osd_style
-static __code BYTE tAwtoStyle[4][4] = {{0, 8, 2, 3}, {0, 9, 4, 5}, {0, 10, 6, 3}, {0, 11, 7, 1}};
-#define AWTO_BAR_BLACK              12
-#define AWTO_BAR_RED                1
+static __code BYTE tAwtoStyle[4][4] = {{0, 11, 7, 1}, {0, 2, 8, 4}, {0, 10, 6, 3}, {0, 11, 7, 1}};
+#define AWTO_BAR_SURFACE            3
+#define AWTO_BAR_ACCENT             1
 
 void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
@@ -184,7 +184,7 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
 
 void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour)
 {
-    OsdWindowDrawing(ucWin, usX0, usY0, usX1, usY1, (ucColour == 0) ? AWTO_BAR_BLACK : AWTO_BAR_RED);
+    OsdWindowDrawing(ucWin, usX0, usY0, usX1, usY1, (ucColour == 0) ? AWTO_BAR_SURFACE : AWTO_BAR_ACCENT);
 }
 
 void osd_tc_bar_off(BYTE ucWin)
@@ -559,6 +559,14 @@ void set_ap_debug_popup(BYTE ucId, int iV)
     menu_close();
     g_stAwtoDiag.ucDbgPopup = 1;
     SET_OSD_EVENT_MESSAGE(_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG);
+}
+
+void set_ap_key_test(BYTE ucId, int iV)
+{
+    ucId = ucId;
+    iV = iV;
+    menu_close();
+    AWTO_KEY_TEST_TOGGLE();
 }
 
 void set_ap_factory_menu(BYTE ucId, int iV)
