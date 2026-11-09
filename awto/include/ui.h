@@ -13,9 +13,9 @@
 #define UI_CHARS    40
 #define UI_LINES    20
 #define UI_L_TITLE  0
-#define UI_L_STRIP  1            /* status strip: 2 lines */
-#define UI_L_LIST   3
-#define UI_LIST     14           /* list lines 3..16 */
+#define UI_L_STRIP  1            /* status strip: 3 lines, one per input */
+#define UI_L_LIST   4
+#define UI_LIST     13           /* list lines 4..16; longer pages scroll */
 #define UI_L_MSG    17
 #define UI_L_LEGEND 18           /* key legend: 2 lines */
 

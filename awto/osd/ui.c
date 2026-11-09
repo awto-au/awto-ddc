@@ -52,14 +52,14 @@ static const char __code *const __code us_key[6] = { us_k0, us_k1, us_k2, us_k3,
 static const char __code *const __code us_state[4] = { us_nocable, us_nosignal, us_ready, us_active };
 /* action of each key per context (UC_*): SOURCE MENU DOWN UP AUTO POWER */
 static const char __code *const __code ua_ctx[UC_N][6] = {
-    { ua_none, ua_open, ua_prev, ua_next, ua_back, ua_off },      /* UC_PAGE: cursor on a sub-page */
-    { ua_none, ua_edit, ua_prev, ua_next, ua_back, ua_off },      /* UC_ROW */
-    { ua_none, ua_none, ua_prev, ua_next, ua_back, ua_off },      /* UC_RO */
-    { ua_none, ua_run, ua_prev, ua_next, ua_back, ua_off },       /* UC_ACTION */
-    { ua_none, ua_set, ua_less, ua_more, ua_undo, ua_off },       /* UC_EDIT */
-    { ua_none, ua_run, ua_none, ua_none, ua_cancel, ua_off },     /* UC_RUN */
-    { ua_none, ua_keep, ua_none, ua_none, ua_undo, ua_off },      /* UC_KEEP */
-    { ua_none, ua_open, ua_prev, ua_next, ua_close, ua_off },     /* UC_MAIN */
+    { ua_none, ua_back, ua_prev, ua_next, ua_open, ua_off },      /* UC_PAGE: cursor on a sub-page */
+    { ua_none, ua_back, ua_prev, ua_next, ua_edit, ua_off },      /* UC_ROW */
+    { ua_none, ua_back, ua_prev, ua_next, ua_none, ua_off },      /* UC_RO */
+    { ua_none, ua_back, ua_prev, ua_next, ua_run, ua_off },       /* UC_ACTION */
+    { ua_none, ua_undo, ua_less, ua_more, ua_set, ua_off },       /* UC_EDIT */
+    { ua_none, ua_cancel, ua_none, ua_none, ua_run, ua_off },     /* UC_RUN */
+    { ua_none, ua_undo, ua_none, ua_none, ua_keep, ua_off },      /* UC_KEEP */
+    { ua_none, ua_close, ua_prev, ua_next, ua_open, ua_off },     /* UC_MAIN */
 };
 
 uint8_t __xdata ui_hl_style = UI_HL_BAR;
@@ -272,7 +272,7 @@ static void strip_port(uint8_t line, uint8_t col, uint8_t i, uint8_t st)
 void ui_strip(uint8_t force)
 {
     struct ui_timing __xdata t;
-    uint8_t st[3], k, ok, n, chg = force;
+    uint8_t st[3], k, ok, n, timing_line = UI_L_STRIP + 2, chg = force;
 
     for (k = 0; k < 3; k++)
         st[k] = ui_port_state(k);
@@ -295,16 +295,20 @@ void ui_strip(uint8_t force)
     sig[5] = (uint8_t)t.h;
     sig[6] = (uint8_t)(t.h >> 8);
     sig[7] = (uint8_t)(t.vmhz / 10);
-    strip_port(UI_L_STRIP, 0, 0, st[0]);
-    strip_port(UI_L_STRIP, SLOT, 1, st[1]);
-    strip_port(UI_L_STRIP + 1, 0, 2, st[2]);
-    fill_blank(0);
+    for (k = 0; k < 3; k++) {
+        strip_port(UI_L_STRIP + k, 0, k, st[k]);
+        fill_blank(0);
+        ui_text(UI_L_STRIP + k, SLOT, buf, UI_CHARS - SLOT, OS_TEXT);
+        if (st[k] == UPS_ACTIVE)
+            timing_line = UI_L_STRIP + k;
+    }
     if (ok) {
+        fill_blank(0);
         n = put_dec(0, t.w, 0);
         buf[n++] = 'x';
         n += put_dec(n, t.h, 0);
         buf[n++] = '@';
         n += put_dec(n, t.vmhz, 3);
+        ui_text(timing_line, SLOT, buf, UI_CHARS - SLOT, OS_TEXT);
     }
-    ui_text(UI_L_STRIP + 1, SLOT, buf, UI_CHARS - SLOT, OS_TEXT);
 }
