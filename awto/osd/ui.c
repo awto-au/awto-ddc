@@ -57,29 +57,22 @@ static const char __code *const __code ua_ctx[UC_N][6] = {
 };
 
 uint8_t __xdata ui_hl_style = UI_HL_BAR;
-static uint8_t __xdata top_cells[2 * UI_CHARS], bot_cells[2 * UI_CHARS], quad[4];
+static uint8_t __xdata cells[UI_CHARS];
 static char __xdata buf[UI_CHARS + 1];
 static uint8_t __xdata hl_line = 0xFF, last_ctx = 0xFF;
 static uint8_t __xdata sig[8];
 
 void ui_text(uint8_t line, uint8_t col, const char __xdata *s, uint8_t n, uint8_t style)
 {
-    uint8_t k, c = 0;
+    uint8_t k;
 
     if (col >= UI_CHARS)
         return;
     if (col + n > UI_CHARS)
         n = UI_CHARS - col;
-    for (k = 0; k < n; k++) {
-        osd_font_tiles(s[k], quad);
-        top_cells[c] = quad[0];
-        top_cells[c + 1] = quad[1];
-        bot_cells[c] = quad[2];
-        bot_cells[c + 1] = quad[3];
-        c += 2;
-    }
-    osd_tc_cells(2 * line, 2 * col, top_cells, c, style);
-    osd_tc_cells(2 * line + 1, 2 * col, bot_cells, c, style);
+    for (k = 0; k < n; k++)
+        cells[k] = osd_font_glyph(s[k]);
+    osd_tc_cells(line, col, cells, n, style);
 }
 
 static void fill_blank(uint8_t from)

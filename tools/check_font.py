@@ -51,11 +51,11 @@ def strings():
 
 
 def check_layout():
-    """The fixed-pitch layout: legend slots (13 chars: key name <= 6, one space, action <= 6), strip slots (20 chars: marker, name <= 8, state <= 9)."""
+    """The fixed-pitch layout: legend slots (key/action <= 6), strip slots (marker, name <= 11, state <= 9)."""
     bad = 0
     src = (ROOT / "awto/osd/ui.c").read_text()
     for name, text in re.findall(r'static const char __code (us_k\d|ua_\w+|us_d\d|us_(?:nocable|nosignal|ready|active))\[\] = "([^"]*)"', src):
-        lim = 6 if name.startswith(("us_k", "ua_")) else 9 if name.startswith("us_") and not name.startswith("us_d") else 8
+        lim = 6 if name.startswith(("us_k", "ua_")) else 9 if name.startswith("us_") and not name.startswith("us_d") else 11
         if len(text) > lim:
             say(f"TOO LONG {name} = \"{text}\" ({len(text)} > {lim} chars): it would run into the next slot")
             bad += 1

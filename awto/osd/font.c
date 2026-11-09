@@ -1,5 +1,5 @@
-/* font.c: the awto OSD font (tools/gen_font.py -> font_data.inc): 24 x 36 px, 2 bpp, fixed pitch = 4 tiles of 12 x 18 per
- * character, tiles shared between characters. The tile data is VLC compressed and loaded through the hardware decoder
+/* font.c: the awto OSD font (tools/gen_font.py -> font_data.inc): the proven diagnostic 12 x 18 px, 1 bpp font.
+ * Glyphs are shared between characters. The data is VLC compressed and loaded through the hardware decoder
  * (osd-font-download.md). Reading the __code blob happens here (bank-safe), the register work in the integrator (osd_tc_vlc_*). */
 #include <stdint.h>
 #include "cc.h"
@@ -9,16 +9,13 @@
 
 static uint8_t __xdata fbuf[32];
 
-void osd_font_tiles(char c, uint8_t __xdata *q4)
+uint8_t osd_font_glyph(char c)
 {
-    uint8_t i, k = (uint8_t)c;
-    uint16_t o;                                          /* 95 characters x 4 ids = 380: not a byte */
+    uint8_t k = (uint8_t)c;
 
     if (k < OSD_FONT_FIRST || k > OSD_FONT_LAST)
-        k = OSD_FONT_FIRST;
-    o = (uint16_t)(k - OSD_FONT_FIRST) * 4;
-    for (i = 0; i < 4; i++)
-        q4[i] = font_ids[o + i];
+        k = '?';
+    return font_ids[k - OSD_FONT_FIRST];
 }
 
 /* one blob = [8 byte value map][2 byte BE length N][N stream bytes]; tile = first tile id of this blob */

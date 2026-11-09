@@ -9,7 +9,7 @@
 #include "cc.h"
 #include "osd.h"
 
-/* screen geometry in characters (960 x 756 px at 1x) */
+/* screen geometry in characters (480 x 378 px; default hardware 2x presents 960 x 756) */
 #define UI_CHARS    40
 #define UI_LINES    21
 #define UI_L_TITLE  0
@@ -46,6 +46,6 @@ uint8_t ui_fmt_vfreq(char __xdata *dst, uint32_t vmhz);   /* "59.994 Hz" (3 deci
 
 /* font (awto/osd/font.c, generated data) */
 void osd_font_load(void);                             /* VLC download of every tile */
-void osd_font_tiles(char c, uint8_t __xdata *q4);     /* tile ids of one character: top-left, top-right, bottom-left, bottom-right */
+uint8_t osd_font_glyph(char c);                       /* one proven 1 bpp diagnostic glyph id */
 
 #endif
