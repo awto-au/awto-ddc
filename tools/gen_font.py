@@ -89,14 +89,21 @@ def main():
                len(chars), len(tiles), len(data), sum(len(b) for _, _, b in chunks), len(chunks)),
            f"#define OSD_FONT_FIRST  0x{FIRST:02X}", f"#define OSD_FONT_LAST   0x{LAST:02X}", f"#define OSD_FONT_TILES  {len(tiles)}",
            f"static const uint8_t __code font_ids[{(LAST - FIRST + 1) * 4}] = {{"] + rows + ["};", ""]
+    # Keep all streams in one banked object. The firmware linker has a stable reservation for font_blob0; separate
+    # arrays require another bank-sized hole even though their combined data is smaller than the existing reservation.
+    joined = b"".join(blob for _, _, blob in chunks)
+    out.append("/* VLC stream layout: " + ", ".join(
+        f"+{sum(len(x[2]) for x in chunks[:i])} tiles {first}..{first + n - 1}"
+        for i, (first, n, blob) in enumerate(chunks)) + " */")
+    out.append(f"static const uint8_t __code font_blob0[{len(joined)}] = {{")
+    for k in range(0, len(joined), 16):
+        out.append("    " + ", ".join(f"0x{x:02X}" for x in joined[k:k + 16]) + ",")
+    out.append("};")
     load = []
-    for i, (first, n, blob) in enumerate(chunks):
-        out.append(f"/* blob {i}: tiles {first}..{first + n - 1} */")
-        out.append(f"static const uint8_t __code font_blob{i}[{len(blob)}] = {{")
-        for k in range(0, len(blob), 16):
-            out.append("    " + ", ".join(f"0x{x:02X}" for x in blob[k:k + 16]) + ",")
-        out.append("};")
-        load.append(f"font_blob(font_blob{i}, {first});")
+    offset = 0
+    for first, n, blob in chunks:
+        load.append(f"font_blob(font_blob0 + {offset}, {first});")
+        offset += len(blob)
     out.append("#define FONT_LOAD_CHUNKS " + " ".join(load))
     (ROOT / "awto/osd/font_data.inc").write_text("\n".join(out) + "\n")
     words = len(tiles) * 18
