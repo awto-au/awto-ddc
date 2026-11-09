@@ -98,6 +98,7 @@
 85	debug_msgs	bool	none	debug	nv,live	0	1	1	0	auto	0xF0	debug_msgs	Debug messages	-	(#74)
 86	msg_log	bool	none	debug	live	0	1	1	0	-	-	msg_log	Message log	-	on-screen log (#56)
 87	debug_popup	action	none	debug	-	0	1	1	0	-	-	debug_popup	Debug pop-up	-	(#34)
+104	key_test	action	none	debug	-	0	1	1	0	-	-	key_test	Key test	-	front-button diagnostic screen; UP+DOWN closes it (#39, #85)
 88	volume	int	percent	audio	nv,inert	0	100	1	50	auto	0x62	-	Volume	-	[sdk-ui]
 89	mute	bool	none	audio	nv,inert	0	1	1	0	auto	-	-	Mute	-	[sdk-ui]
 90	audio_standalone	bool	none	audio	nv,inert	0	1	1	0	auto	-	-	Stand alone	-	[sdk-ui]

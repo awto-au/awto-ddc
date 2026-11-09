@@ -10,7 +10,7 @@
 #define MAIN       0xFE           /* virtual top page: every page whose parent is the top */
 #define M_LIST     0
 #define M_EDIT     1
-#define M_RUN      2              /* action: press Menu again to run */
+#define M_RUN      2              /* action confirmation: press Select again to run */
 #define LABEL_COL  2
 #define VALUE_COL  25
 #define VALUE_W    14
