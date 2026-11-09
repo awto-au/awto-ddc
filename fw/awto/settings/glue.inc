@@ -219,27 +219,6 @@ void osd_tc_vlc_end(void)
     ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
 }
 
-// Raw 2-bit font download. This is deliberately the same uncompressed SRAM data-port path used by the readable
-// AWTO DIAGNOSTICS hardware test; the RTD2795 VLC decoder corrupts the generated menu font on this panel.
-void osd_tc_raw_begin(WORD usTile)
-{
-    ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 18, _OSD_WITHOUT_DB);
-}
-
-void osd_tc_raw_put(BYTE __xdata *pucData, BYTE ucN)
-{
-    while(ucN-- != 0)
-    {
-        ScalerOsdDataPort(*pucData++);
-    }
-}
-
-void osd_tc_raw_end(void)
-{
-    ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
-}
-
 void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
 {
     SET_OSD_DOUBLE_SIZE(ucBig);

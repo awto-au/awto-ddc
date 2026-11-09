@@ -1,1 +1,1 @@
-2cfeedc   # awto-rtdfw commit compiled into the image (git archive); bank-module raw font upload bypasses RTD2795 VLC
+a6ec614   # awto-rtdfw commit compiled into the image (git archive); split font VLC streams for RTD2795 hardware
