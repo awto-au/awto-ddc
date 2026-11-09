@@ -888,7 +888,7 @@ fn	_AwtoSwNow	C	0x2fdc	32
 stub	_AwtoSwPoll	C	0x2ffc	8
 stub	_SysMainSystemInitial	C	0x3004	8
 stub	_SysMainSytemPowerDetect	C	0x300c	8
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1278	C	0x3014	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1277	C	0x3014	92
 stub	_SysModeDisplaySetting	C	0x30c8	8
 stub	_SysModeGetActiveReady	C	0x30d0	8
 fn	_SysModeGetModeState	C	0x30d8	12
@@ -1128,13 +1128,9 @@ const	___str_21	C	0x3e18	16
 const	___str_63	C	0x3e28	12
 const	___str_64	C	0x3e34	12
 const	___str_66	C	0x3e40	20
-const	_tAwtoIicBase	C	0x3e54	12
-stub	_AwtoDdcEngineInit	C	0x3e60	8
 stub	_AwtoDbgLinkSet	C	0x3e68	8
 stub	_AwtoDbgLinkPoll	C	0x3e70	8
 stub	_AwtoDbgLinkStart	C	0x3e78	8
-stub	_AwtoDdcMuxNow	C	0x3e80	8
-stub	_AwtoDdcciMuxRestore	C	0x3e88	8
 stub	_AwtoKeyDbgLink	C	0x3e90	8
 stub	_AwtoSourceKeyOpen	C	0x3eb0	8
 fn	_main	C	0x3eb8	192
@@ -1142,6 +1138,7 @@ const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tSD_SU_COEF_128_TAPS	0	0x0010	136
 const	_tAwtoDdcCaps	0	0x0098	96
 const	_OperationTable	0	0x00f8	312
+const	_tAwtoIicBase	0	0x0230	12
 const	_tEDID_TABLE_D1	0	0x028c	268
 const	_tEDID_TABLE_D2	0	0x0398	268
 const	_tEDID_TABLE_D3	0	0x04a4	268
@@ -2532,8 +2529,6 @@ fn	_vcp_box_service	9	0xaa2c	252
 fn	_vcp_get	9	0xab28	716
 fn	_vcp_set	9	0xadf4	260
 fn	_AwtoSetLoop	9	0xaef8	156
-fn	_AwtoDdcMuxNow	9	0xaf94	32
-fn	_AwtoDdcciMuxRestore	9	0xafb4	68
 const	_tSD_H_COEF_128_TAPS	10	0x0000	136
 const	_tSD_V_COEF_64_TAPS	10	0x0088	72
 const	_tOSD_TABLE_LANGUAGE_FONT_WIDTH	10	0x00d0	12
