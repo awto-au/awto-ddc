@@ -137,6 +137,26 @@ static __code BYTE tAwtoIicCh[3] = {0x02, 0x03, 0x04};             // DDC1 (D1 D
 static __code char tAwtoDdcCaps[] = "(prot(monitor)type(LCD)model(awto)cmds(01 02 03 F3)vcp(10 60(0F 11 12) D6)mccs_ver(2.2))";
 static __xdata BYTE s_ppucAwtoDdcRx[_AWTO_DDCCI_ENGINES][AWTO_DDC_RX];
 static __xdata BYTE s_pucAwtoDdcN[_AWTO_DDCCI_ENGINES];
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+#define AWTO_DDC_MUX_IDLE_MS            25      // no request: expose each of the three DDCs often enough for host retries
+#define AWTO_DDC_MUX_REPLY_MS           100     // MCCS host reads a GET reply after its mandatory 50 ms wait
+#define AWTO_DDC_MUX_PARTIAL_MS         100     // abandon a truncated write rather than pinning one DDC forever
+__xdata BYTE g_ucAwtoDdcMuxTick;
+static __xdata WORD s_usAwtoDdcMuxAt;
+static __xdata BYTE s_ucAwtoDdcMuxReply;
+
+static WORD AwtoDdcMuxNow(void)
+{
+    WORD usNow;
+
+    do
+    {
+        usNow = g_stAwtoDiag.usT2Isr;
+    }
+    while(usNow != g_stAwtoDiag.usT2Isr);
+    return usNow;
+}
+#endif
 
 static BYTE AwtoDdcPortToVcp(BYTE ucPort)
 {
@@ -364,6 +384,11 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
     BYTE ucK;
     BYTE *pucRx;
     volatile __xdata BYTE *pucR;
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+    WORD usNow = AwtoDdcMuxNow();
+
+    g_ucAwtoDdcMuxTick = (BYTE)usNow;
+#endif
 
     for(ucE = 0; ucE < _AWTO_DDCCI_ENGINES; ucE++)
     {
@@ -385,12 +410,18 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
         }
         if((pucR[AWTO_IIC_STATUS] & _BIT1) != 0)
         {
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+            s_usAwtoDdcMuxAt = usNow;
+#endif
             ucN = 0;
             pucRx[ucN++] = pucR[AWTO_IIC_SUB_IN];
             pucR[AWTO_IIC_STATUS] &= ~_BIT1;
         }
         if((pucR[AWTO_IIC_STATUS] & _BIT2) != 0)
         {
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+            s_usAwtoDdcMuxAt = usNow;
+#endif
             for(ucK = 0; (ucK < 16) && ((pucR[AWTO_IIC_STATUS2] & _BIT1) == 0); ucK++)      // 16 = buffer depth (a missing engine reads junk)
             {
                 if(ucN < AWTO_DDC_RX)
@@ -414,11 +445,34 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
                 pucR[AWTO_IIC_IRQ2] |= _BIT6;   // request consumed; a reply (if any) reloads the buffer
                 AwtoDdcRequest(pucR, pucRx, ucN);
                 ucN = 0;
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+                s_ucAwtoDdcMuxReply = 1;
+                s_usAwtoDdcMuxAt = usNow;
+#endif
             }
         }
         pucR[AWTO_IIC_STATUS] &= ~(_BIT4 | _BIT0);
         pucR[AWTO_IIC_STATUS2] &= ~(_BIT5 | _BIT4);
         s_pucAwtoDdcN[ucE] = ucN;
     }
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+    if(g_ucAwtoDbgLink != 0)
+    {
+        return;                                 // debug owns the connected DDC; IIC_1 remains parked on DDC0
+    }
+    if((s_pucAwtoDdcN[0] != 0) && ((WORD)(usNow - s_usAwtoDdcMuxAt) < AWTO_DDC_MUX_PARTIAL_MS))
+    {
+        return;                                 // keep the channel through a multi-byte host write
+    }
+    if((WORD)(usNow - s_usAwtoDdcMuxAt) < ((s_ucAwtoDdcMuxReply != 0) ? AWTO_DDC_MUX_REPLY_MS : AWTO_DDC_MUX_IDLE_MS))
+    {
+        return;
+    }
+    s_pucAwtoDdcN[0] = 0;
+    s_ucAwtoDdcMuxReply = 0;
+    s_usAwtoDdcMuxAt = usNow;
+    g_ucAwtoDdcciCh = (g_ucAwtoDdcciCh < 0x02 || g_ucAwtoDdcciCh >= 0x04) ? 0x02 : (g_ucAwtoDdcciCh + 1);
+    AwtoDdcEngineInit((volatile __xdata BYTE *)tAwtoIicBase[0], g_ucAwtoDdcciCh);
+#endif
 }
 #endif

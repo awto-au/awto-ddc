@@ -23,18 +23,18 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	821	ok	OK-HARMLESS: switch(ucDpcdLane&0x1F): case _DP_FOUR_LANE shares body with default, SDCC drops the redundant compare; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1_INT.c	102	ok	OK-HARMLESS: switch(g_ucDpRx1LaneCount): FOUR_LANE and default share body; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_LDO.c	57	ok	OK-CONFIG: all cases of switch(enumPorStatus) are empty for this config; whole switch folds to nothing
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1436	ok	OK-CONFIG: _DEBUG_MESSAGE_SUPPORT==_ON (awto bring-up, Debug.h) forces enumMode=_DEBUG_MODE so enumMode==_DDCCI_MODE is false; main debug engine stays in debug mode
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1439	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1445	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1456	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1449	ok	OK-CONFIG: _DEBUG_MESSAGE_SUPPORT==_ON (awto bring-up, Debug.h) forces enumMode=_DEBUG_MODE so enumMode==_DDCCI_MODE is false; main debug engine stays in debug mode
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1452	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1458	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1466	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1473	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1481	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1489	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1497	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1505	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1513	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1469	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1471	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1479	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1486	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1494	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1502	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1510	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1518	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1526	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c	933	ok	OK-CONFIG: DP/default cases empty for this config; switch(ucSourceType) merges them into default
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	112	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulMacClk arms dead
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	116	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulMacClk arms dead
@@ -167,15 +167,15 @@
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3708	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3771	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3775	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1145	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1147	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1150	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1154	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1158	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1165	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1169	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1173	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1175	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1199	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1201	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1204	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1208	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1212	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1219	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1223	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1227	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1229	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	449	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	451	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	496	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty

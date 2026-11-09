@@ -36,6 +36,8 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
     BYTE ucCh = 0x03;                       // DDC2 (_PCB_DEBUG_DDC) for ports without their own DDC
 #if((_AWTO_DBG_SWAP == _ON) && (_AWTO_DDCCI_ENGINES == 3))
     BYTE ucOldPort = s_ucAwtoDbgPort;
+    BYTE ucDbgIrq;
+    BYTE ucDbgSlave;
 #endif
 
     if(ucInputPort == _D1_INPUT_PORT)
@@ -52,6 +54,12 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
     // These IIC engines cannot share one physical DDC channel: both stop answering.  Normally the
     // three spare engines own DDC1..3 and debug is parked on unconnected DDC0.  For a debug session,
     // restore the old port and park only the listener belonging to the new active debug port.
+    // Disable the debug slave for the entire route change.  Without this, moving debug through DDC0
+    // briefly overlaps the parked spare engine there and wedges both engines even after they separate.
+    ucDbgIrq = MCU_FF28_IIC_IRQ_CONTROL;
+    ucDbgSlave = MCU_FF23_IIC_SET_SLAVE;
+    MCU_FF28_IIC_IRQ_CONTROL &= ~(_BIT4 | _BIT2 | _BIT1);
+    MCU_FF23_IIC_SET_SLAVE = 0x3D;
     AwtoDbgSetFF22(AWTO_DBG_PARK_CH);
     AwtoDdcciDebugLink(ucOldPort, 0);
     if((g_ucAwtoDbgLink == 0) && AWTO_DDCCI_POLL_ON())
@@ -63,6 +71,11 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
         AwtoDdcciDebugLink(ucInputPort, 1);
         AwtoDbgSetFF22(ucCh);
     }
+    MCU_FF27_IIC_STATUS = 0x00;
+    MCU_FF2A_IIC_IRQ_CONTROL2 |= _BIT6;
+    MCU_FF2A_IIC_IRQ_CONTROL2 &= ~_BIT6;
+    MCU_FF23_IIC_SET_SLAVE = ucDbgSlave;
+    MCU_FF28_IIC_IRQ_CONTROL = ucDbgIrq;
 #else
     if((g_ucAwtoDbgLink == 0) && AWTO_DDCCI_POLL_ON())     // #67 DDC/CI row off: the debug slave keeps the port
     {

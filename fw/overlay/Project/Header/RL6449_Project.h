@@ -310,8 +310,9 @@ extern void AwtoFreqUpdate(void);
 #define _AWTO_DDCCI_NOPOLL                                      0
 #endif
 #ifndef _AWTO_DDCCI_ENGINES
-#define _AWTO_DDCCI_ENGINES                                     3       // DDC/CI on DP, HDMI 1 and HDMI 2: every attached host can request a KVM/input switch
+#define _AWTO_DDCCI_ENGINES                                     1       // RL6449 has one working spare IIC engine; IIC_2/3 register aliases do not answer on hardware
 #endif
+#define _AWTO_DDCCI_MUX                                         _ON     // time-share IIC_1 across DP, HDMI 1 and HDMI 2
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoKeyNextInput(void);
@@ -347,6 +348,9 @@ extern void AwtoDdcciDebugLink(unsigned char ucPort, unsigned char ucOn);
 #endif
 #if(_AWTO_DDCCI_ENGINES != 0)
 extern void AwtoDdcciPoll(void);
+#if(_AWTO_DDCCI_MUX == _ON)
+extern __xdata unsigned char g_ucAwtoDdcMuxTick;
+#endif
 #if(_AWTO_DDCCI_NOPOLL == 1)
 #define AWTO_DDCCI_POLL()                                       // bisect: engine code linked, never called
 #define AWTO_DDCCI_FOLLOW(ch)
@@ -354,7 +358,11 @@ extern void AwtoDdcciPoll(void);
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
+#if(_AWTO_DDCCI_MUX == _ON)
+#define AWTO_DDCCI_POLL()                                       { if(g_ucAwtoDdcMuxTick != (unsigned char)g_stAwtoDiag.usT2Isr) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#else
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#endif
 #if((_AWTO_DDCCI_PARK == 1) || (_AWTO_DDCCI_FIXCH != 0))
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
