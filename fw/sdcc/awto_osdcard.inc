@@ -171,26 +171,27 @@ static void AwtoSourceRows(void)
     BYTE ucState;
 
     OsdFuncClearOsd(ROW(0), COL(12), WIDTH(24), HEIGHT(8));
-    OsdWindowDrawingByFont(_OSD_WINDOW_4_1, ROW(1 + ucSel), COL(12), WIDTH(24), HEIGHT(1), _CP_BLUE);
-    AWTO_CARD_LINE(1, "Auto Select", (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
+    // Four rows in an eight-row card: rows 2..5 leave equal space above and below.
+    OsdWindowDrawingByFont(_OSD_WINDOW_4_1, ROW(2 + ucSel), COL(12), WIDTH(24), HEIGHT(1), _CP_BLUE);
+    AWTO_CARD_LINE(2, "Auto Select", (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
 
     ucState = AwtoSourceState(_D2_INPUT_PORT);
-    if(ucState == 0)      { AWTO_CARD_LINE(2, "HDMI 1  No Cable",  (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 1) { AWTO_CARD_LINE(2, "HDMI 1  No Signal", (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 2) { AWTO_CARD_LINE(2, "HDMI 1  Ready",     (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-    else                  { AWTO_CARD_LINE(2, "HDMI 1  Active",    (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    if(ucState == 0)      { AWTO_CARD_LINE(3, "HDMI 1  No Cable",  (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 1) { AWTO_CARD_LINE(3, "HDMI 1  No Signal", (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 2) { AWTO_CARD_LINE(3, "HDMI 1  Ready",     (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    else                  { AWTO_CARD_LINE(3, "HDMI 1  Active",    (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
 
     ucState = AwtoSourceState(_D3_INPUT_PORT);
-    if(ucState == 0)      { AWTO_CARD_LINE(3, "HDMI 2  No Cable",  (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 1) { AWTO_CARD_LINE(3, "HDMI 2  No Signal", (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 2) { AWTO_CARD_LINE(3, "HDMI 2  Ready",     (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-    else                  { AWTO_CARD_LINE(3, "HDMI 2  Active",    (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    if(ucState == 0)      { AWTO_CARD_LINE(4, "HDMI 2  No Cable",  (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 1) { AWTO_CARD_LINE(4, "HDMI 2  No Signal", (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 2) { AWTO_CARD_LINE(4, "HDMI 2  Ready",     (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    else                  { AWTO_CARD_LINE(4, "HDMI 2  Active",    (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
 
     ucState = AwtoSourceState(_D1_INPUT_PORT);
-    if(ucState == 0)      { AWTO_CARD_LINE(4, "DP  No Cable",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 1) { AWTO_CARD_LINE(4, "DP  No Signal",     (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 2) { AWTO_CARD_LINE(4, "DP  Ready",         (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-    else                  { AWTO_CARD_LINE(4, "DP  Active",        (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    if(ucState == 0)      { AWTO_CARD_LINE(5, "DP  No Cable",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 1) { AWTO_CARD_LINE(5, "DP  No Signal",     (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 2) { AWTO_CARD_LINE(5, "DP  Ready",         (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    else                  { AWTO_CARD_LINE(5, "DP  Active",        (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
 }
 
 static void AwtoSourceOpen(void)
