@@ -1,6 +1,6 @@
 /* font.c: the awto OSD font (tools/gen_font.py -> font_data.inc): 24 x 36 px, 2 bpp, fixed pitch = 4 tiles of 12 x 18 per
- * character, tiles shared between characters. The tile data is VLC compressed and loaded through the hardware decoder
- * (osd-font-download.md). Reading the __code blob happens here (bank-safe), the register work in the integrator (osd_tc_vlc_*). */
+ * character, tiles shared between characters. Glyphs are uploaded raw: the RTD2795 VLC decoder corrupts this 2-bit font
+ * on real hardware even when fed as short streams. Reading __code happens here (bank-safe); the integrator writes SRAM. */
 #include <stdint.h>
 #include "cc.h"
 #include "osd.h"
@@ -21,24 +21,21 @@ void osd_font_tiles(char c, uint8_t __xdata *q4)
         q4[i] = font_ids[o + i];
 }
 
-/* one blob = [8 byte value map][2 byte BE length N][N stream bytes]; tile = first tile id of this blob */
-static void font_blob(const uint8_t __code *b, uint16_t tile)
+static void font_raw_data(const uint8_t __code *b, uint16_t tiles)
 {
-    uint16_t n = (uint16_t)b[8] << 8 | b[9], o = 10;
+    uint16_t n = tiles * OSD_FONT_TILE_BYTES, o = 0;
     uint8_t k, m;
 
-    for (k = 0; k < 8; k++)
-        fbuf[k] = b[k];
-    osd_tc_vlc_begin(fbuf, tile);
+    osd_tc_raw_begin(0);
     while (n != 0) {
         m = n > sizeof fbuf ? (uint8_t)sizeof fbuf : (uint8_t)n;
         for (k = 0; k < m; k++)
             fbuf[k] = b[o + k];
-        osd_tc_vlc_put(fbuf, m);
+        osd_tc_raw_put(fbuf, m);
         o += m;
         n -= m;
     }
-    osd_tc_vlc_end();
+    osd_tc_raw_end();
 }
 
 void osd_font_load(void)

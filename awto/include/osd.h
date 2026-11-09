@@ -44,5 +44,8 @@ void    osd_tc_close(void);                          /* OSD off; the Realtek SDK
 void    osd_tc_vlc_begin(const uint8_t __xdata *map8, uint16_t tile);
 void    osd_tc_vlc_put(const uint8_t __xdata *p, uint8_t n);
 void    osd_tc_vlc_end(void);
+void    osd_tc_raw_begin(uint16_t tile);
+void    osd_tc_raw_put(const uint8_t __xdata *p, uint8_t n);
+void    osd_tc_raw_end(void);
 
 #endif
