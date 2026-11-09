@@ -1,1 +1,1 @@
-8c74c97   # awto-rtdfw commit compiled into the image (git archive); proven 1-bit diagnostic menu font
+af2669e   # awto-rtdfw commit compiled into the image (git archive); normal Realtek UI font in the menu

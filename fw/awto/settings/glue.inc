@@ -136,7 +136,7 @@ int set_status(BYTE ucId)
     }
 }
 
-//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): proven diagnostic 12 x 18 px, 1 bpp glyphs ----
+//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): normal Realtek UI letterforms, 12 x 18 px cells ----
 // palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette.
 // White surface + Realtek 2014 blue (0,68,166) text/accent; selected rows retain white text on blue.
 static __code BYTE tAwtoPal[12][3] = {
@@ -167,7 +167,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
 
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
-    BYTE ucB0 = 0x4C;                            // 1 bit font, 12 pixel cell (same as the debug screens)
+    BYTE ucB0 = 0x4C;                            // 1 bit normal UI font, 12 pixel cell
     BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
