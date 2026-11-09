@@ -997,7 +997,7 @@ const	___str_41	C	0x379c	12
 const	___str_42	C	0x37a8	12
 const	___str_43	C	0x37b4	8
 const	___str_44	C	0x37bc	20
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1274	C	0x37d0	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1275	C	0x37d0	92
 stub	_AwtoKeyNextInput	C	0x382c	8
 stub	_AwtoKeyInject	C	0x3834	8
 stub	_AwtoOsdKeyLines	C	0x383c	8
@@ -1079,6 +1079,7 @@ fn	_RTDKeyHoldKeyTimerCancel	0	0x3ac4	36
 fn	_RTDKeyInitial	0	0x3ae8	24
 fn	_RTDKeyMessageConvert	0	0x3b00	84
 fn	_AwtoKeyFlags	0	0x3b54	84
+fn	_AwtoKeyOsdReset	0	0x3ba8	36
 fn	_RTDKeyPowerKeyMix	0	0x3bd4	8
 fn	_AwtoKeyNow	0	0x3bdc	32
 fn	_RTDKeyScan	0	0x3c18	188

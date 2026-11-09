@@ -95,7 +95,7 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
     }
 }
 
-void AwtoKeyDbgLink(void)                       // MENU held + DOWN: toggle the debug link; closes the menu MENU opened
+void AwtoKeyDbgLink(void)                       // physical MENU held + DOWN: toggle the debug link; closes any SDK OSD up
 {
     if(GET_OSD_STATE() != _MENU_NONE)
     {

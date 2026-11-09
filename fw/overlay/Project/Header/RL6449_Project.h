@@ -125,14 +125,14 @@ extern void AwtoOsdOfsInit(void);
 #define AWTO_KEY_REFRESH_MS                                     80      // screen redraw period: 100 ms (10 Hz floor) / 1.25
 #define AWTO_KEY_RETRY_MS                                       250     // open but never drawn: draw again after this (one draw ~175 ms in the sim)
 #define AWTO_KM_POWER                                           0x01    // = SDK masks of RTD2014Key.c (checked there); the Key.c names are not visible in OsdDisplay.c
-#define AWTO_KM_MENU                                            0x02
+#define AWTO_KM_MENU                                            0x10    // physical MENU = _EXIT_KEY_MASK (roles swapped, PCB_KEY_STATE)
 #define AWTO_KM_UP                                              0x04    // _RIGHT_KEY_MASK
 #define AWTO_KM_DOWN                                            0x08    // _LEFT_KEY_MASK
-#define AWTO_KM_AUTO                                            0x10    // _EXIT_KEY_MASK
+#define AWTO_KM_AUTO                                            0x02    // physical AUTO = _MENU_KEY_MASK
 #define AWTO_KM_SOURCE                                          0x20    // _KEY5_MASK
 #define AWTO_KEY_LAST_N                                         8       // keys in the screen's LAST row
 #define AWTO_KEY_MSG_NONE                                       0xFF    // log entry: no key message came with the press (combo, POWER)
-#define AWTO_KEY_MSG_SOURCE                                     4       // our SOURCE message (SDK messages 0..3 = MENU RIGHT LEFT EXIT)
+#define AWTO_KEY_MSG_SOURCE                                     4       // our SOURCE message (SDK messages 0..3 = menu role = AUTO key, RIGHT = UP, LEFT = DOWN, exit role = MENU key)
 #define AWTO_KEY_F_INJ                                          0x80    // flags: injected (I2C test cmd, key_inject, key_hold)
 #define AWTO_KEY_F_P30                                          0x01    // flags: P3.0 level (live and log entries)
 typedef struct                                  // 8 B
@@ -170,6 +170,7 @@ extern void AwtoKeyMsg(void);
 extern void AwtoKeyInject(unsigned char ucMsg);
 extern void AwtoKeySourcePress(void);
 extern void AwtoKeyTestSet(unsigned char ucOn);
+extern void AwtoKeyOsdReset(void);
 extern void AwtoOsdKeyLines(void);
 #define AWTO_KEY_TEST_ON()                                      (g_stAwtoKey.ucOpen != 0)
 #define AWTO_KEY_SCAN()                                         AwtoKeyScan()
@@ -177,6 +178,7 @@ extern void AwtoOsdKeyLines(void);
 #define AWTO_KEY_SOURCE()                                       AwtoKeySourcePress()
 #define AWTO_KEY_TEST_TOGGLE()                                  AwtoKeyTestSet(2)
 #define AWTO_KEY_INJECT(m)                                      AwtoKeyInject(m)
+#define AWTO_KEY_OSD_RESET()                                    AwtoKeyOsdReset()
 #if(_AWTO_DIAG_DELAYCAL == _ON)
 extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
@@ -199,6 +201,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define AWTO_KEY_SOURCE()                                       AwtoKeyNextInput()
 #define AWTO_KEY_TEST_TOGGLE()
 #define AWTO_KEY_INJECT(m)                                      { if((m) < _KEY_AMOUNT) { SET_KEYMESSAGE(m); } }
+#define AWTO_KEY_OSD_RESET()
 #endif
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON

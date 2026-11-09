@@ -20,7 +20,7 @@
 | 0x1D | 2 | 200 x `ScalerDelay5us()` in Timer2 counts / 4; 0 with the self-test off |
 | 0x1F | 1 | `RCAP2H` at self-test; 0 with the self-test off |
 | 0x20 | 8 | reserved (was the micro-bench, removed in #53.6); 0 |
-| 0x28 | 1 | test command (#33): 0x01-0x05 key MENU/UP/DOWN/AUTO/SOURCE, 0x10+n OSD event n, 0x20 debug pop-up, 0x41/0x42 key test screen open/close (#39); cleared when applied |
+| 0x28 | 1 | test command (#33): 0x01-0x05 key messages: menu role (AUTO key) / UP / DOWN / exit role (MENU key) / SOURCE, 0x10+n OSD event n, 0x20 debug pop-up, 0x41/0x42 key test screen open/close (#39); cleared when applied |
 | 0x29 | 1 | debug pop-up pending (#34): 1 = next input-info pop-up draws the debug lines; test cmd 0x20 sets it + raises event 10 |
 | 0x2A | 2 | main-loop passes in the last ~1 s (u16, target byte order) |
 | 0x2C | 3 | `g_stOsdInfo` byte offsets of `usOsdState`, `ucOsdEventMsg`, `ucOsdKeyMessage` (`offsetof`, set at boot by `AwtoOsdOfsInit`; #37). `_DP_DEBUG_MSG` on = 4, 6, 7; off = 3, 5, 6; 0 = image without the report. Host: `rtd_proto.osd_offsets_from_diag` |

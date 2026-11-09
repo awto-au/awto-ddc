@@ -1,8 +1,8 @@
 // #39 key test + #85 key log. Inserted into RTD2014Key.c after the test-command code (keil2sdcc.py); hooks: AWTO_KEY_SCAN after the
 // scan, AWTO_KEY_MSG after the message conversion (RL6449_Project.h). Layout of g_stAwtoKey: RL6449_Project.h, host: rtd_keywatch.py.
 #if(_AWTO_DIAG == _ON)
-typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_MENU_KEY_MASK == AWTO_KM_MENU) && (_RIGHT_KEY_MASK == AWTO_KM_UP) &&
-                              (_LEFT_KEY_MASK == AWTO_KM_DOWN) && (_EXIT_KEY_MASK == AWTO_KM_AUTO) && (_KEY5_MASK == AWTO_KM_SOURCE)) ? 1 : -1];
+typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_EXIT_KEY_MASK == AWTO_KM_MENU) && (_RIGHT_KEY_MASK == AWTO_KM_UP) &&
+                              (_LEFT_KEY_MASK == AWTO_KM_DOWN) && (_MENU_KEY_MASK == AWTO_KM_AUTO) && (_KEY5_MASK == AWTO_KM_SOURCE)) ? 1 : -1];
 #ifdef _AWTO_NEW_SETTINGS
 #define AWTO_KEY_HELD_INJ()                     (g_ucAwtoKeyHold != 0)
 extern void menu_close(void);
@@ -188,6 +188,16 @@ void AwtoKeyMsg(void)                           // after RTDKeyMessageProc: note
     if(g_stAwtoKey.ucOpen != 0)
     {
         SET_KEYMESSAGE(_NONE_KEY_MESSAGE);
+    }
+}
+
+void AwtoKeyOsdReset(void)                      // a mode reset cleared the OSD map under an open screen: use the bounded retry path
+{
+    AwtoKeyEnsure();
+    if(g_stAwtoKey.ucOpen != 0)
+    {
+        g_stAwtoKey.ucDrawn = 0;
+        s_usAwtoKeyDraw = AwtoKeyNow();
     }
 }
 

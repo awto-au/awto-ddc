@@ -45,7 +45,7 @@ static void AwtoPutKeys(BYTE ucMask)            // front keys left to right, spa
 
 static void AwtoPutKeyMsg(BYTE ucMsg)            // one call per literal: a ?: chain of string literals printed garbage (keys2 render)
 {
-    if(ucMsg == _MENU_KEY_MESSAGE)
+    if(ucMsg == _EXIT_KEY_MESSAGE)
     {
         AwtoPutStr("MENU");
     }
@@ -57,7 +57,7 @@ static void AwtoPutKeyMsg(BYTE ucMsg)            // one call per literal: a ?: c
     {
         AwtoPutStr("DOWN");
     }
-    else if(ucMsg == _EXIT_KEY_MESSAGE)
+    else if(ucMsg == _MENU_KEY_MESSAGE)
     {
         AwtoPutStr("AUTO");
     }
@@ -92,8 +92,8 @@ static BYTE AwtoKeyLetter(BYTE ucI)             // press log entry -> S M D U A 
 
     if(ucMask == 0)
     {
-        ucL = (ucMsg == _MENU_KEY_MESSAGE) ? 'M' : (ucMsg == _RIGHT_KEY_MESSAGE) ? 'U' : (ucMsg == _LEFT_KEY_MESSAGE) ? 'D' :
-              (ucMsg == _EXIT_KEY_MESSAGE) ? 'A' : (ucMsg == AWTO_KEY_MSG_SOURCE) ? 'S' : ' ';
+        ucL = (ucMsg == _EXIT_KEY_MESSAGE) ? 'M' : (ucMsg == _RIGHT_KEY_MESSAGE) ? 'U' : (ucMsg == _LEFT_KEY_MESSAGE) ? 'D' :
+              (ucMsg == _MENU_KEY_MESSAGE) ? 'A' : (ucMsg == AWTO_KEY_MSG_SOURCE) ? 'S' : ' ';
     }
     else
     {
