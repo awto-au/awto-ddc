@@ -361,6 +361,20 @@ static void AwtoDdcEngineInit(volatile __xdata BYTE *pucR, BYTE ucCh)
     pucR[AWTO_IIC_IRQ2] |= _BIT6;
 }
 
+#if((_AWTO_DDCCI_MUX == _ON) && (_AWTO_DDCCI_ENGINES == 1))
+void AwtoDdcciMuxRestore(BYTE ucCh)
+{
+    WORD usNow = AwtoDdcMuxNow();
+
+    g_ucAwtoDdcciCh = ucCh;
+    g_ucAwtoDdcMuxTick = (BYTE)usNow;
+    s_usAwtoDdcMuxAt = usNow;
+    s_ucAwtoDdcMuxReply = 1;                   // hold 100 ms: dbg_link off probes DDC/CI after 50 ms
+    s_pucAwtoDdcN[0] = 0;
+    AwtoDdcEngineInit((volatile __xdata BYTE *)tAwtoIicBase[0], ucCh);
+}
+#endif
+
 #if((_AWTO_DBG_SWAP == _ON) && (_AWTO_DDCCI_ENGINES == 3))
 void AwtoDdcciDebugLink(BYTE ucPort, BYTE ucOn)
 {

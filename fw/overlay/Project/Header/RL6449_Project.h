@@ -350,6 +350,7 @@ extern void AwtoDdcciDebugLink(unsigned char ucPort, unsigned char ucOn);
 extern void AwtoDdcciPoll(void);
 #if(_AWTO_DDCCI_MUX == _ON)
 extern __xdata unsigned char g_ucAwtoDdcMuxTick;
+extern void AwtoDdcciMuxRestore(unsigned char ucCh);
 #endif
 #if(_AWTO_DDCCI_NOPOLL == 1)
 #define AWTO_DDCCI_POLL()                                       // bisect: engine code linked, never called

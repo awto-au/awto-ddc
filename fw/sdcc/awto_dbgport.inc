@@ -82,6 +82,9 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
         AwtoDbgSetFF22(AWTO_DBG_PARK_CH);   // debug engine off the port first
         g_ucAwtoDdcciCh = ucCh;
         AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | ucCh;      // IIC_1 CH_SEL
+#if(_AWTO_DDCCI_MUX == _ON)
+        AwtoDdcciMuxRestore(ucCh);              // keep this DDC present through dbg_link off's first 50 ms probe
+#endif
     }
     else
     {
