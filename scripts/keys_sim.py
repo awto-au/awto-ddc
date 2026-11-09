@@ -5,7 +5,7 @@ usage: keys_sim.py BIN MAP [--png-dir tmp/osd39] [--skip-decode]
   1. decode: every band edge of A0 / A1 (in and out of band), P3.0, and combos -> g_stAwtoKey.ucMask == the model's mask
   2. test screen: open by test cmd 0x41 (no idle redraw, main-loop rate kept), keys while open, combo release,
      close / open by UP+DOWN, open by UP+DOWN over the #67 menu and close to no menu
-  3. wake from DDC/CI D6 off by POWER and by MENU (#85); #67 rows: pwr_l2_s / pwr_l3_s any value, input follows switches
+  3. wake from DDC/CI D6 off by POWER, MENU and AUTO (#85); AUTO opens the #67 menu, MENU backs out (keys6); #67 rows: pwr_l2_s / pwr_l3_s any value, input follows switches
   4. rtd_keywatch.py --log against the sim bus
   --calibrate: every bound 3 s, prints the worst latency per kind (set the bounds to 1.25x of it)
 Every step waits for its condition (sim time, polled every POLL_MS) up to a bound; bounds and their derivation: below.
@@ -24,22 +24,25 @@ import osd_model as M  # noqa: E402
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/keys_sim.log"
 IDLE = (0xF8, 0xF8, 1)
-# raw (A0, A1) of one key down, as read on unit 2 (idle 0xF8): A0 = MENU AUTO UP, A1 = SOURCE DOWN
+# raw (A0, A1) of one key down, as read on unit 2 (idle 0xF8): A0 = MENU AUTO UP, A1 = SOURCE DOWN. Keys are pressed by these
+# values only (physical keys), never by SDK key message.
 V_MENU, V_AUTO, V_UP, V_SOURCE, V_DOWN = (0xD0, 0xF8), (0x80, 0xF8), (0x38, 0xF8), (0xF8, 0x80), (0xF8, 0x38)
-SOURCE, MENU, DOWN, UP, AUTO, POWER = 0x20, 0x02, 0x08, 0x04, 0x10, 0x01      # SDK masks (_KEY5, _MENU, _LEFT, _RIGHT, _EXIT, _POWER)
+SOURCE, MENU, DOWN, UP, AUTO, POWER = 0x20, 0x10, 0x08, 0x04, 0x02, 0x01      # SDK masks (_KEY5, _EXIT, _LEFT, _RIGHT, _MENU, _POWER): roles swapped, keys6
+MSG_AUTO, MSG_UP, MSG_DOWN, MSG_MENU = 0, 1, 2, 3                              # SDK key messages _MENU _RIGHT _LEFT _EXIT as the key block logs them
 NAMES = {SOURCE: "SOURCE", MENU: "MENU", DOWN: "DOWN", UP: "UP", AUTO: "AUTO", POWER: "POWER"}
 
 # Bounds, sim ms (T2 tick) = 1.25 x the worst latency `--calibrate` measured on wb-p14keys4 (numbers: #85). Expiry = FAIL naming the step.
 # KEY: ADC change -> debounced mask (10 ms scan timer + 2 equal scans; a test-screen redraw blocks the loop meanwhile).
 # DRAW: open -> AwtoOsdKeyLines ran. CLOSE: close -> OSD off (waits for DEN stop + any redraw in progress).
-# MENU: MENU press -> #67 menu on (same pass as the key message: KEY bound). CMD: test cmd written -> acted on.
+# MENU: AUTO press -> #67 menu on / MENU press -> menu off (same pass as the key message: KEY bound). CMD: test cmd written -> acted on.
 # PS: D6 off -> mode POWER_SAVING. WAKE: key -> mode ACTIVE (panel on + link training, #78). INPUT: switch -> input row = port.
 POLL_MS = 2
-KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS = 453, 68, 223, 453, 223
+KEY_MS, DRAW_MS, CLOSE_MS, MENU_MS, CMD_MS = 453, 68, 225, 453, 223  # CLOSE = 223 ms bound + one 2 ms poll quantum
 MODE_ACTIVE, MODE_PS = 3, 6                      # EnumModeStatus (Kernel/Common/Global.h)
 PS_MS, WAKE_MS, INPUT_MS, DBG_MS = 595, 2374, 527, 375
 REFRESH_MS = 80     # AWTO_KEY_REFRESH_MS (RL6449_Project.h)
 REDRAW_MS = 250     # one redraw of the 6 rows takes ~175 ms in the sim (calibrate: CLOSE); +40 % for the main loop around it
+RESET_REDRAW_MS = 250 + 2 * CLOSE_MS  # mode reset can interrupt the first draw: retry interval + two bounded draws
 STABLE_MS = KEY_MS  # hold after a match: a late band hit shows one scan later, which a slow pass delays up to the KEY bound
 LOOP_MS = 1000      # main-loop rate window: closed vs idle open screen (redraw only on change, so the same rate)
 LOOP_MIN = 0.95     # open / closed: the open screen adds a few checks per pass and 4 timer cancels per 80 ms
@@ -218,10 +221,10 @@ def loop_rate(s, ms=LOOP_MS):
 
 
 def leave_menu(k):
-    for _ in range(6):                                          # menu depth <= page + edit + confirm: AUTO backs out one level each
+    for _ in range(6):                                          # menu depth <= page + edit + confirm: MENU backs out one level each
         if k.state(False)["menu"] == 0:
             return True
-        k.press("AUTO", *V_AUTO, AUTO)
+        k.press("MENU", *V_MENU, MENU)
         k.until("MENU", lambda st: st["menu"] == 0, MENU_MS)
     return k.state(False)["menu"] == 0
 
@@ -232,6 +235,8 @@ def main():
     ap.add_argument("map", type=Path)
     ap.add_argument("--png-dir", type=Path, default=ROOT / "tmp/osd39")
     ap.add_argument("--skip-decode", action="store_true")
+    ap.add_argument("--dump-after-decode", action="store_true", help="print every settings row after the decode stage and stop (A/B of two images)")
+    ap.add_argument("--mode-reset-only", action="store_true", help="run only the non-ACTIVE key-screen regression with a call trace")
     ap.add_argument("--calibrate", action="store_true", help="every bound 3000 ms: measure the worst latencies (then set the bounds to 1.25x)")
     a = ap.parse_args()
     if a.calibrate:
@@ -244,9 +249,36 @@ def main():
         k = Keys(s)
         k.put(*IDLE)
         k.until("KEY", lambda st: st["a0"] == 0xF8 and st["mask"] == 0, KEY_MS)
+        if a.mode_reset_only:
+            calls = []
+            for fn in ("AwtoKeyOsdReset", "AwtoOsdKeyLines", "OsdDispDisableOsd", "OsdFuncDisableOsd", "OsdFuncApplyMap",
+                       "ScalerGlobalResetProc", "UserCommonInterfaceOsdResetProc", "UserInterfaceAdjustOsdResetProc"):
+                if "_" + fn in k.m.sym:
+                    k.m.stub(fn, lambda m, r, fn=fn: calls.append((m.instr, fn)) or None)
+            for mode in (0, 1, MODE_PS):
+                calls.clear()
+                k.cmd(0x42)
+                until_off(k, "CLOSE", CLOSE_MS)
+                s.bus.m.wr(k.mode_a, bytes([mode]))
+                k.cmd(0x41)
+                st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, CMD_MS + DRAW_MS)
+                k.dwell(RESET_REDRAW_MS)
+                rows = screen_ink(s)
+                chk(f"cmd 0x41 with mode {mode} (not ACTIVE): drawn, rows in the model", el is not None and osd_en(s) and all(rows),
+                    f"open={st['open']} drawn={st['drawn']} mode={st['mode']} {ink_show(rows)}")
+                say(f"mode {mode} calls " + " ".join(fn for _, fn in calls))
+            say("RESULT " + ("PASS" if not FAILS else "FAIL " + ", ".join(FAILS)))
+            return int(bool(FAILS))
         if not a.skip_decode:
             check_decode(k)
         chk("decode leaves no menu up", leave_menu(k))
+        if a.dump_after_decode:
+            import settings_cli as C
+            import settings_table as T
+            box = C.Box(s.bus, a.map.read_text(errors="replace"), sim=True)
+            say("ROWS " + " ".join(f"{r['name']}={box.get_row(r)}" for r in T.ROWS))
+            say(f"STATE {k.state(False)} cursor {k.m.rd(k.m.addr('menu_diag') + 4)[0]}")
+            return 0
         # 1. open by test cmd (mode may be NOSIGNAL: SOURCE presses in the decode switched inputs)
         r_closed = loop_rate(s)
         rd0 = k.state(False)["redraws"]
@@ -325,7 +357,7 @@ def main():
             s.bus.m.wr(k.mode_a, bytes([mode]))
             k.cmd(0x41)
             st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1, CMD_MS + DRAW_MS)
-            k.dwell(REDRAW_MS)
+            k.dwell(RESET_REDRAW_MS)
             rows = screen_ink(s)
             chk(f"cmd 0x41 with mode {mode} (not ACTIVE): drawn, rows in the model", el is not None and osd_en(s) and all(rows),
                 f"open={st['open']} drawn={st['drawn']} mode={st['mode']} {ink_show(rows)}")
@@ -359,10 +391,32 @@ def main():
         k.cmd(0x42)
         st, el = until_off(k, "CLOSE", CLOSE_MS)
         chk("cmd 0x42 closes", el is not None, f"in {el} ms")
-        # 5. open by UP+DOWN while the #67 menu is up: the screen takes over, closes back to no menu
+        # 5. roles (keys6): MENU with no menu does nothing; AUTO opens the #67 menu (message 0); UP / DOWN move the cursor; MENU backs
+        # out and closes it (message 3); AUTO again to have the menu up for the key screen
+        md = k.m.addr("menu_diag")
         k.press("MENU", *V_MENU, MENU)
+        k.dwell(STABLE_MS)
+        st = k.state(False)
+        chk("MENU with no menu up does nothing", st["menu"] == 0 and st["open"] == 0 and not osd_en(s), f"menu={st['menu']} open={st['open']} osd_en={osd_en(s)}")
+        k.press("AUTO", *V_AUTO, AUTO)
         st, el = k.until("MENU", lambda st: st["menu"] == 1, MENU_MS)
-        chk("MENU opens the #67 menu", el is not None, f"menu={st['menu']} mode={st['mode']}")
+        chk("AUTO opens the #67 menu", el is not None and st["msg"] == MSG_AUTO, f"menu={st['menu']} mode={st['mode']} msg {st['msg']:02X}")
+        cur = lambda: k.m.rd(md + 4)[0]                         # menu_diag.cursor (menu_cli FIELDS)
+        c0 = cur()
+        k.press("DOWN", *V_DOWN, DOWN)
+        k.dwell(STABLE_MS)
+        c1 = cur()
+        k.press("UP", *V_UP, UP)
+        k.dwell(STABLE_MS)
+        chk("DOWN and UP move the cursor", c1 != c0 and cur() == c0, f"cursor {c0} -> {c1} -> {cur()}")
+        k.press("MENU", *V_MENU, MENU)
+        st, el = k.until("MENU", lambda st: st["menu"] == 0, MENU_MS)
+        k.dwell(STABLE_MS)
+        chk("MENU backs out and closes the menu", el is not None and k.state(False)["menu"] == 0 and k.state(False)["msg"] == MSG_MENU,
+            f"menu={k.state(False)['menu']} msg {k.state(False)['msg']:02X}")
+        k.press("AUTO", *V_AUTO, AUTO)
+        st, el = k.until("MENU", lambda st: st["menu"] == 1, MENU_MS)
+        chk("AUTO opens the #67 menu again", el is not None, f"menu={st['menu']}")
         k.press("UP+DOWN", V_UP[0], V_DOWN[1], UP | DOWN)
         st, el = k.until("DRAW", lambda st: st["open"] == 1 and st["drawn"] == 1 and st["menu"] == 0, DRAW_MS)
         chk("UP+DOWN over the menu opens, drawn, menu closed", el is not None, f"open={st['open']} drawn={st['drawn']} menu={st['menu']}")
@@ -372,7 +426,7 @@ def main():
         k.dwell(STABLE_MS)                                      # nothing reopens the menu afterwards
         st = k.state(False)
         chk("UP+DOWN closes to no menu", el is not None and st["menu"] == 0 and not osd_en(s), f"open={st['open']} menu={st['menu']} osd_en={osd_en(s)}")
-        # 5b. MENU + DOWN (A0 + A1) = debug link toggle (#79; also the boot recovery chord): off, then on again
+        # 5b. MENU + DOWN (A0 + A1, physical MENU kept for the chord) = debug link toggle (#79; also the boot recovery chord): off, then on again
         dl = k.m.addr("g_ucAwtoDbgLink")
         d0 = k.m.rd(dl)[0]
         k.press("MENU+DOWN", V_MENU[0], V_DOWN[1], MENU | DOWN)
@@ -384,12 +438,12 @@ def main():
         s.bus.dbg_link_on()                                     # a key-opened link times out after minutes: the sim host wants it unlimited
         st = k.state(False)
         chk("no menu left up by the chord", st["menu"] == 0 and st["open"] == 0, f"menu={st['menu']} open={st['open']}")
-        # 6. wake from DDC/CI D6 off (forced power saving, settings row power_mode = Off): POWER wakes; MENU wakes and is used up
+        # 6. wake from DDC/CI D6 off (forced power saving, settings row power_mode = Off): POWER, MENU and AUTO wake and are used up (no menu opens)
         import settings_cli as C
         import settings_table as T
         box = C.Box(s.bus, a.map.read_text(errors="replace"), sim=True)
         pm = next(r for r in T.ROWS if r["name"] == "power_mode")
-        for what, a0, a1, p3, mask in (("POWER", 0xF8, 0xF8, 0, POWER), ("MENU", *V_MENU, 1, MENU)):
+        for what, a0, a1, p3, mask in (("POWER", 0xF8, 0xF8, 0, POWER), ("MENU", *V_MENU, 1, MENU), ("AUTO", *V_AUTO, 1, AUTO)):
             box.set_row(pm, pm["options"].index("Off"))
             st, el = k.until("PS", lambda st: st["mode"] == MODE_PS, PS_MS)
             chk(f"D6 off -> power saving (before {what})", el is not None, f"mode {st['mode']} in {el} ms")

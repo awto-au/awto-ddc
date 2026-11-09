@@ -74,14 +74,20 @@ The other 5 are the A0/A1 ADC bands below. Label pairing confirmed on unit 2 (#8
 
 ## 6. Our firmware (#85, #39)
 - Decode = section 2 bands in `PCB_KEY_STATE` (`fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`); POWER = `P3_0` low. P3.0 = pin 71, pin-share 0 (GPIO in) in our header and live (`docs/monitors/pinshare-live-AWT26110003.tsv`).
-- SDK masks: SOURCE = `_KEY5_MASK` (handled in `RTDKeyMessageProc`, no SDK message), MENU, DOWN = `_LEFT`, UP = `_RIGHT`, AUTO = `_EXIT`, POWER.
+- SDK masks (roles swapped, keys6): SOURCE = `_KEY5_MASK` (handled in `RTDKeyMessageProc`, no SDK message), physical AUTO = `_MENU_KEY_MASK` 0x02, physical MENU = `_EXIT_KEY_MASK` 0x10, DOWN = `_LEFT`, UP = `_RIGHT`, POWER. Section 3 dispatch table is the Dahua firmware's, not ours.
 - Combos need keys on different ladders (A0: MENU UP AUTO; A1: SOURCE DOWN); two keys on one ladder give a mixed voltage that matches no band.
-  - MENU + UP = #79 debug link toggle (also boot recovery, #67)
+  - MENU + DOWN = #79 debug link toggle (also boot recovery, #67); physical MENU, i.e. the SDK exit mask
   - UP + DOWN = key test screen open / close (#39)
   - SOURCE = next input (#60)
   - Power saving (DDC/CI D6 off = forced PS, or no-signal PS): any new key press wakes, and that press does nothing else. The SDK woke only from OFF, on POWER; in PS its POWER went to OFF (unit 2, #85).
-  - MENU + DOWN can't work: both on A0, the mixed voltage hits no band (or a wrong one).
+  - MENU + UP can't work: both on A0, the mixed voltage hits no band (or a wrong one).
   - Combo release: once two keys were down, no key message and no SOURCE until all keys are up (a hand lets go of one key first). The first key of a combo still sends its message on press.
+- awto roles (Dan, 2026-11-08), key block / key test screen / press log keep the physical names:
+  - AUTO = open the awto menu, enter, edit, confirm (SDK menu role, mask 0x02, message 0); MENU = back, close, undo (SDK exit role, mask 0x10, message 3); UP / DOWN = move or change; SOURCE = next input.
+  - Swap lives in `PCB_KEY_STATE` only; `AWTO_KM_MENU` = 0x10, `AWTO_KM_AUTO` = 0x02 (checked against the SDK masks at compile time in `awto_keytest.inc`).
+  - Consumers of the SDK menu / exit messages: awto menu (`AwtoMenuKeyHook`, `menu_key`), #67 risky confirm (AUTO = keep, MENU = undo), SDK menu (AUTO opens it when `menu_select` = Vendor, MENU backs out); host injection (`key_inject`, test cmd 0x01..0x04, `menu_cli key`) stays by SDK role: `menu` = open / enter, `exit` = back.
+  - Left on the physical MENU key: debug-link and recovery chord (MENU + DOWN = SDK `_EXIT_KEY_MASK | _LEFT_KEY_MASK`; maintenance chords, named by the label on the bezel). Pressing MENU first sends a back message, harmless with no menu up.
+  - Unchanged: UP + DOWN key screen (physical pair), any key wakes from power saving (mask != 0).
 - Test screen: `rtd_keywatch.py <bus> --log --map MAP` reads the press log (`g_stAwtoKey`); test cmd 0x41 / 0x42 open / close.
   - Rows (info pop-up window, text area = map cells 12..35 = 288 px, centred): `A0 hex code frac` / `A1 ... P30 n` / `KEY <keys down>` / `MSG key R rep H hold [INJ]` / `LAST` 8 presses / `N count CLOSE UP DOWN`; worst case of each row <= 213 px (`scripts/popup_fit.py`, font page capacity checked too). Each row clears its 24 text cells first (a shorter text must not leave the longer one's cells).
   - Drawn at open (not via the ACTIVE one-time event): works with no signal. Over the #67 menu: closes it (`menu_close`), closes to no menu.

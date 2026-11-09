@@ -605,18 +605,20 @@
 // (buttons.md section 2 bands; mapping to the labels from the unit 2 press log + the Dahua firmware dispatch, #85).
 //   A0: MENU 0xC0..0xDF (reads 0xD0), AUTO 0x70..0x8F (0x80), UP 0x28..0x47 (0x38)
 //   A1: SOURCE 0x68..0x87 (0x80), DOWN 0x28..0x47 (0x38)
-// SDK masks: SOURCE = _KEY5_MASK, MENU, DOWN = _LEFT, UP = _RIGHT, AUTO = _EXIT. Combos need one key per ladder (A0 + A1), else the voltages mix.
+// SDK masks (roles swapped, Dan 2026-11-08): physical AUTO -> _MENU_KEY_MASK (SDK menu role: open / enter / confirm),
+// physical MENU -> _EXIT_KEY_MASK (back / undo); SOURCE = _KEY5_MASK, DOWN = _LEFT, UP = _RIGHT. Names on screen and in the logs stay physical.
+// Combos need one key per ladder (A0 + A1), else the voltages mix.
 #define AWTO_KEY_BAND(v, lo, hi)                (((lo) <= (v)) && ((v) < (hi)))
 
 #define PCB_KEY_STATE(ucV0, ucV1,\
                       ucV2, ucV3, ucKeyState)   {\
                                                     if(AWTO_KEY_BAND(ucV1, 0xC0, 0xE0))\
                                                     {\
-                                                        (ucKeyState) |= _MENU_KEY_MASK;\
+                                                        (ucKeyState) |= _EXIT_KEY_MASK;\
                                                     }\
                                                     if(AWTO_KEY_BAND(ucV1, 0x70, 0x90))\
                                                     {\
-                                                        (ucKeyState) |= _EXIT_KEY_MASK;\
+                                                        (ucKeyState) |= _MENU_KEY_MASK;\
                                                     }\
                                                     if(AWTO_KEY_BAND(ucV1, 0x28, 0x48))\
                                                     {\

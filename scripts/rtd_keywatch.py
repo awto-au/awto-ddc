@@ -19,10 +19,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
 
-# (mask, source reg, lo, hi, label): the SDK-mask view of the bands (buttons.md section 2, confirmed on unit 2, #85)
+# (mask, source reg, lo, hi, label): the SDK-mask view of the bands (buttons.md section 2, #85); physical MENU = exit mask 0x10, AUTO = menu mask 0x02 (roles swapped, keys6)
 BANDS = [
-    (0x02, 0xFF09, 0xC0, 0xE0, "MENU"),
-    (0x10, 0xFF09, 0x70, 0x90, "AUTO"),
+    (0x10, 0xFF09, 0xC0, 0xE0, "MENU"),
+    (0x02, 0xFF09, 0x70, 0x90, "AUTO"),
     (0x04, 0xFF09, 0x28, 0x48, "UP"),
     (0x20, 0xFF0A, 0x68, 0x88, "SOURCE"),
     (0x08, 0xFF0A, 0x28, 0x48, "DOWN"),
@@ -38,8 +38,8 @@ def decode(a0, a1):
     return hits
 
 
-SDK_NAMES = [(0x20, "SOURCE"), (0x02, "MENU"), (0x08, "DOWN"), (0x04, "UP"), (0x10, "AUTO"), (0x01, "POWER")]    # left to right
-MSG_NAMES = {0: "MENU", 1: "UP", 2: "DOWN", 3: "AUTO", 4: "SOURCE", 0xFF: "-"}
+SDK_NAMES = [(0x20, "SOURCE"), (0x10, "MENU"), (0x08, "DOWN"), (0x04, "UP"), (0x02, "AUTO"), (0x01, "POWER")]    # left to right
+MSG_NAMES = {0: "AUTO", 1: "UP", 2: "DOWN", 3: "MENU", 4: "SOURCE", 0xFF: "-"}
 KEY_SZ, LOG_N, HDR = 8, 16, 16
 POLL_S = 0.2        # a human presses <= ~5 keys/s and the ring holds 16: 0.2 s polls cannot lose an entry; one read = 6 blocks ~ 40 ms
 

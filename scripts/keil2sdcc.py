@@ -227,6 +227,8 @@ INSERTS = [
     ("Kernel/System/Code/SysMode.c", r"^\s*SysSourceInfoReset\(\);", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 4);", r"^void SysModeResetState\(BYTE ucResetTarget\)$"),
     ("Kernel/System/Code/SysMode.c", r"^\s*ScalerTimerCancelTimerEvent\(_SYSTEM_TIMER_EVENT_JUDGE_ACTIVE_STATE\);", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 5);",
      r"^void SysModeResetState\(BYTE ucResetTarget\)$"),
+    ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^#if\(_VGA_SUPPORT == _ON\)$", "    AWTO_KEY_OSD_RESET();",
+     r"^void UserCommonInterfaceOsdResetProc\(void\)$"),
     # #60 cached fast switch (fw/sdcc/awto_fastsw.inc): cache stored at a full-path first ACTIVE, unblank polled per pass
     ("Kernel/System/Code/SysSource.c", r"^void SysSourceSwitchInputPort\(BYTE ucInputPort\)$", (SHIM / "awto_fastsw.inc").read_text().rstrip("\n")),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c", r"^bit ScalerMeasureTimingChange\(EnumSourceTypeDef enumSourceType, EnumSourceSearchPort enumSourceSearchPort\)$",
@@ -247,8 +249,8 @@ INSERTS = [
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);", r"^\s*case _PANEL_ON:"),
-    # #85 combos (one key on each ladder, A0 + A1): MENU + DOWN = #79 debug link toggle, UP + DOWN = #39 key test screen; SOURCE = next input (#60)
-    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_MENU_KEY_MASK | _LEFT_KEY_MASK):\n"
+    # #85 combos (one key on each ladder, A0 + A1): MENU + DOWN (physical MENU = _EXIT mask) = #79 debug link toggle, UP + DOWN = #39 key test screen; SOURCE = next input (#60)
+    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_EXIT_KEY_MASK | _LEFT_KEY_MASK):\n"
      "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n"
      "        case (_LEFT_KEY_MASK | _RIGHT_KEY_MASK):\n"
      "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_TEST_TOGGLE();\n            }\n            break;\n"
@@ -368,9 +370,9 @@ SUBS = [
      " { SET_FORCE_POW_SAV_STATUS(_FALSE); SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL); return _TRUE; }  // [keil2sdcc] sub\n", 1),
     (OSD + "RTD2014Key.c", r"(bit RTDKeySpecialProc\(BYTE ucKeyMask\)\s*\{)",
      lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON()) { return _FALSE; }  // [keil2sdcc] sub", 1),
-    # #85: AUTO (= EXIT) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
+    # #85: the SDK exit role (physical MENU key) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
     (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
-     lambda m: m.group(1) + "            // AUTO: no action  [keil2sdcc] sub\n            break;\n", 1),
+     lambda m: m.group(1) + "            // MENU key (exit role): no action  [keil2sdcc] sub\n            break;\n", 1),
 ] + [
     # #78: TMDS Initial after a no-signal power-off wiped SCDC 0x20 (host's 1/40 ratio lost -> no lock, endless search after DPMS)
 ] + [(f"Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx{n}.c",
