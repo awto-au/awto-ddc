@@ -987,6 +987,7 @@ const	___str_26	C	0x3734	12
 const	___str_27	C	0x3740	8
 const	___str_28	C	0x3748	12
 const	___str_29	C	0x3754	12
+stub	_osd_tc_raw_begin	C	0x3760	8
 const	___str_36	C	0x3768	12
 const	___str_37	C	0x3774	12
 const	___str_38	C	0x3780	12
@@ -1045,9 +1046,9 @@ stub	_ScalerOsdSetColorPalette	C	0x3aec	8
 stub	_osd_tc_bar	C	0x3af4	8
 stub	_osd_tc_bar_off	C	0x3afc	8
 stub	_osd_tc_cells	C	0x3b04	8
-stub	_osd_tc_vlc_begin	C	0x3b0c	8
-stub	_osd_tc_vlc_end	C	0x3b14	8
-stub	_osd_tc_vlc_put	C	0x3b1c	8
+stub	_osd_tc_raw_end	C	0x3b0c	8
+stub	_osd_tc_raw_put	C	0x3b14	8
+stub	_osd_font_raw_0_load	C	0x3b1c	8
 stub	_ui_port_state	C	0x3b24	8
 stub	_ui_timing	C	0x3b2c	8
 stub	_AwtoSwCacheValid	C	0x3b34	8
@@ -1115,6 +1116,8 @@ stub	_OsdFuncBlending	C	0x3d78	8
 stub	_OsdFuncEnableOsd	C	0x3d80	8
 stub	_OsdWindowDrawingByFont	C	0x3d88	8
 const	___str_35	C	0x3d90	16
+stub	_osd_font_raw_170_load	C	0x3da0	8
+stub	_osd_font_raw_85_load	C	0x3da8	8
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tSD_SU_COEF_128_TAPS	0	0x0010	136
 const	_tAwtoDdcCaps	0	0x0098	96
@@ -1810,8 +1813,7 @@ fn	_osd_tc_close	4	0x488c	64
 const	_tAwtoPal	4	0x48cc	44
 const	_tAwtoStyle	4	0x48f8	20
 fn	_osd_tc_bar_off	4	0x490c	8
-fn	_osd_tc_vlc_end	4	0x4914	12
-fn	_osd_tc_vlc_put	4	0x4920	44
+fn	_osd_tc_raw_begin	4	0x4914	56
 fn	_osd_tc_show	4	0x4954	24
 fn	_set_ap_dp_version	4	0x496c	76
 fn	_OsdDispAdvanceIconGet	4	0x49b8	64
@@ -1904,7 +1906,8 @@ fn	_AwtoPutHex2	4	0xaaa0	64
 fn	_AwtoPutKeyMsg	4	0xaae0	84
 fn	_AwtoPutKeys	4	0xab34	120
 fn	_osd_tc_cells	4	0xabac	324
-fn	_osd_tc_vlc_begin	4	0xacf0	92
+fn	_osd_tc_raw_end	4	0xacf0	12
+fn	_osd_tc_raw_put	4	0xacfc	44
 fn	_ui_port_state	4	0xad4c	108
 fn	_ui_timing	4	0xadb8	196
 fn	_set_ap_key_test	4	0xae7c	12
@@ -2356,7 +2359,6 @@ const	_tFONT1_ICON_NO_PORT	9	0x0728	268
 const	_tFONT1_ICON_VGA	9	0x0834	416
 const	_tFONT1_INPUT_ICON_TABLE	9	0x09d4	16
 const	_OperationFactoryTable	9	0x09e4	756
-const	_font_blob0	9	0x0cd8	5944
 const	_font_ids	9	0x241c	396
 const	_mn_s0	9	0x25a8	12
 const	_mn_s1	9	0x25b4	16
@@ -2452,7 +2454,6 @@ fn	_ScalerMemoryGetDtMaxMin	9	0x7ee0	2388
 fn	_ScalerMemoryGetScaleUpDt	9	0x8834	280
 fn	_ScalerMemoryUpdateIVS2DVSLineDelay	9	0x894c	1108
 fn	_SysMainSytemPowerDetect	9	0x8da0	8
-fn	_font_blob	9	0x8da8	288
 fn	_osd_font_load	9	0x8ec8	104
 fn	_osd_font_tiles	9	0x8f30	100
 fn	_menu_active	9	0x8f94	12
@@ -3301,6 +3302,9 @@ fn	_mn_draw_status	12	0x11f0	652
 fn	_AwtoSourceStep	12	0x1530	96
 fn	_AwtoCardMessage	12	0x1590	444
 fn	_AwtoSourceRows	12	0x174c	356
+const	_font_raw_170	12	0x18b0	4740
+fn	_osd_font_raw_170_load	12	0x2b34	196
+fn	_osd_font_raw_0_load	13	0x0000	192
 fn	_fill_blank	13	0x00e4	32
 const	_us_hz	13	0x0104	8
 const	_ua_select	13	0x010c	12
@@ -3313,8 +3317,11 @@ fn	_ui_open	13	0x05d4	32
 fn	_ui_row	13	0x05f4	96
 fn	_ui_show	13	0x0654	8
 fn	_bars	13	0x065c	272
+fn	_osd_font_raw_85_load	13	0x076c	196
 fn	_ui_text	13	0x08f4	296
 fn	_ui_title	13	0x0a1c	84
 const	_us_key	13	0x0a70	16
 fn	_ui_legend	13	0x0a80	512
 fn	_ui_strip	13	0x0c80	736
+const	_font_raw_0	13	0x0f60	4740
+const	_font_raw_85	13	0x21e4	4740
