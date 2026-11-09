@@ -12,6 +12,7 @@
 #define W_SEP2    4
 #define W_HL      5
 #define W_UL      6
+#define W_FOOTER  7
 #define PX_W      (UI_CHARS * OSD_CHAR_W)
 #define PX_H      (UI_LINES * OSD_CHAR_H)
 #define SLOT      22             /* timing begins after the input name + state */
@@ -140,6 +141,7 @@ static void bars(void)
     osd_tc_bar(W_TITLE, 2, 2, PX_W - 3, OSD_CHAR_H - 1, OB_ACCENT);
     osd_tc_bar(W_SEP1, 2, UI_L_LIST * OSD_CHAR_H - 2, PX_W - 3, UI_L_LIST * OSD_CHAR_H - 1, OB_ACCENT);
     osd_tc_bar(W_SEP2, 2, UI_L_MSG * OSD_CHAR_H + OSD_CHAR_H + 4, PX_W - 3, UI_L_MSG * OSD_CHAR_H + OSD_CHAR_H + 5, OB_ACCENT);
+    osd_tc_bar(W_FOOTER, 2, UI_L_LEGEND * OSD_CHAR_H, PX_W - 3, PX_H - 3, OB_ACCENT);
 }
 
 void ui_open(void)
@@ -231,12 +233,12 @@ void ui_legend(uint8_t ctx)
         col = k * KSLOT;
         fill_blank(0);
         PUT_C(n, 0, us_key[k]);
-        ui_text(UI_L_LEGEND, col, buf, n, OS_ACCENT);
+        ui_text(UI_L_LEGEND, col, buf, n, OS_ONACCENT);
         a = ua_ctx[ctx][k];
         if (a[0] != 0) {
             fill_blank(0);
             PUT_C(n, 0, a);
-            ui_text(UI_L_LEGEND + 1, col, buf, n, OS_TEXT);
+            ui_text(UI_L_LEGEND + 1, col, buf, n, OS_ONACCENT);
         }
     }
 }
