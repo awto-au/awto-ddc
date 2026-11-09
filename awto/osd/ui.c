@@ -134,7 +134,8 @@ static void bars(void)
     osd_tc_bar(W_TITLE, 2, 2, PX_W - 3, OSD_CHAR_H - 1, OB_ACCENT);
     osd_tc_bar(W_SEP1, 2, UI_L_LIST * OSD_CHAR_H - 2, PX_W - 3, UI_L_LIST * OSD_CHAR_H - 1, OB_ACCENT);
     osd_tc_bar(W_SEP2, 2, UI_L_MSG * OSD_CHAR_H + OSD_CHAR_H + 4, PX_W - 3, UI_L_MSG * OSD_CHAR_H + OSD_CHAR_H + 5, OB_ACCENT);
-    osd_tc_bar(W_FOOTER, 2, UI_L_LEGEND * OSD_CHAR_H, PX_W - 3, PX_H - 3, OB_ACCENT);
+    /* The contextual help line and key legend form one header-style blue footer. */
+    osd_tc_bar(W_FOOTER, 2, UI_L_MSG * OSD_CHAR_H, PX_W - 3, PX_H - 3, OB_ACCENT);
 }
 
 void ui_open(void)
@@ -201,13 +202,15 @@ void ui_message(const char __xdata *s, uint8_t style)
 {
     uint8_t n = 0;
 
+    (void)style;
+
     fill_blank(0);
     if (s != 0)
         while (s[n] != 0 && n < UI_CHARS - 2) {
             buf[1 + n] = s[n];
             n++;
         }
-    ui_text(UI_L_MSG, 0, buf, UI_CHARS, style);
+    ui_text(UI_L_MSG, 0, buf, UI_CHARS, OS_ONACCENT);
 }
 
 void ui_legend(uint8_t ctx)
