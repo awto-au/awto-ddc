@@ -310,15 +310,16 @@ extern void AwtoFreqUpdate(void);
 #define _AWTO_DDCCI_NOPOLL                                      0
 #endif
 #ifndef _AWTO_DDCCI_ENGINES
-#define _AWTO_DDCCI_ENGINES                                     1
+#define _AWTO_DDCCI_ENGINES                                     3       // DDC/CI on DP, HDMI 1 and HDMI 2: every attached host can request a KVM/input switch
 #endif
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoKeyNextInput(void);
+extern void AwtoSourceKeyOpen(void);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 // #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+DOWN, test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.
-#if((_AWTO_DDCCI_ENGINES == 1) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
+#if(((_AWTO_DDCCI_ENGINES == 1) || (_AWTO_DDCCI_ENGINES == 3)) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
 #define _AWTO_DBG_SWAP                                          _ON
 #else
 #define _AWTO_DBG_SWAP                                          _OFF
@@ -335,6 +336,9 @@ extern void AwtoDbgLinkSet(unsigned char ucMin);
 extern void AwtoDbgLinkStart(unsigned char ucMin);
 extern void AwtoDbgLinkPoll(void);
 extern void AwtoKeyDbgLink(void);
+#if(_AWTO_DDCCI_ENGINES == 3)
+extern void AwtoDdcciDebugLink(unsigned char ucPort, unsigned char ucOn);
+#endif
 #define AWTO_DBG_LINK_POLL()                                    { if(g_ucAwtoDbgLink != 0) { AwtoDbgLinkPoll(); } }
 #define AWTO_KEY_DBG_LINK()                                     AwtoKeyDbgLink()
 #else
@@ -347,7 +351,7 @@ extern void AwtoDdcciPoll(void);
 #define AWTO_DDCCI_POLL()                                       // bisect: engine code linked, never called
 #define AWTO_DDCCI_FOLLOW(ch)
 #elif(_AWTO_DDCCI_ENGINES == 3)
-#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } }
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
 #define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }

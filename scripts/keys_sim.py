@@ -5,7 +5,7 @@ usage: keys_sim.py BIN MAP [--png-dir tmp/osd39] [--skip-decode]
   1. decode: every band edge of A0 / A1 (in and out of band), P3.0, and combos -> g_stAwtoKey.ucMask == the model's mask
   2. test screen: open by test cmd 0x41 (no idle redraw, main-loop rate kept), keys while open, combo release,
      close / open by UP+DOWN, open by UP+DOWN over the #67 menu and close to no menu
-  3. wake from DDC/CI D6 off by POWER, MENU and AUTO (#85); AUTO opens the #67 menu, MENU backs out (keys6); #67 rows: pwr_l2_s / pwr_l3_s any value, input follows switches
+  3. wake from DDC/CI D6 off by POWER, MENU and AUTO (#85); AUTO opens the #67 menu, MENU backs out (keys6); SOURCE opens the four-row selector without switching immediately
   4. rtd_keywatch.py --log against the sim bus
   --calibrate: every bound 3 s, prints the worst latency per kind (set the bounds to 1.25x of it)
 Every step waits for its condition (sim time, polled every POLL_MS) up to a bound; bounds and their derivation: below.
@@ -246,6 +246,12 @@ def main():
     s = R.Session(a.bin, a.map, "2160p60")
     try:
         s.boot()
+        s.bus.dbg_link_on()                                     # production parks debug for three-port DDC/CI; tests use debug transport
+        # fw_sim's legacy helper parks only IIC_1.  The three-port build owns DDC1..3 with IIC_1..3,
+        # so park the engine for this simulated host as AwtoDdcciDebugLink() does on hardware.
+        ddc_iic = {2: 0xFE86, 3: 0xFE94, 4: 0xFEA3}.get(s.bus.ddc)
+        if ddc_iic is not None:
+            s.bus.m.wr(ddc_iic, bytes([(s.bus.m.rd(ddc_iic)[0] & 0xF8) | 1]))
         k = Keys(s)
         k.put(*IDLE)
         k.until("KEY", lambda st: st["a0"] == 0xF8 and st["mask"] == 0, KEY_MS)
@@ -476,16 +482,15 @@ def main():
             if el > WORST.get("INPUT", 0.0):
                 WORST["INPUT"], WHERE["INPUT"] = el, how
             chk(f"input row follows {how}", cur == want and info == want, f"input {cur} info_input {info} want {want} in {el:.0f} ms")
-        # SOURCE (A1) = next input, no menu up: info_input moves off home, then back by test cmd
+        # SOURCE (A1) opens the visible four-row selector; opening alone must not switch input.
+        osd_width = k.m.addr("g_ucOsdWidth")
         k.press("SOURCE", *V_SOURCE, SOURCE)
-        t0 = s.ms()
-        while box.get_row(rinfo) == home and s.ms() - t0 < INPUT_MS:
-            k.dwell(POLL_MS * 5)
-        el = s.ms() - t0
-        WORST["INPUT"] = max(WORST.get("INPUT", 0.0), el)
-        chk("SOURCE key = next input", box.get_row(rinfo) != home, f"info_input {home} -> {box.get_row(rinfo)} in {el:.0f} ms")
-        k.cmd(0x31 + home)
-        st, _ = k.until("WAKE", lambda st: st["mode"] == MODE_ACTIVE, WAKE_MS)
+        st, el = k.until("MENU", lambda st: k.m.rd(osd_width)[0] == 36 and osd_en(s), MENU_MS)
+        chk("SOURCE opens four-row selector", el is not None, f"OSD width {k.m.rd(osd_width)[0]} in {el} ms")
+        chk("SOURCE open does not switch input", box.get_row(rinfo) == home, f"info_input stayed {box.get_row(rinfo)} want {home}")
+        k.press("MENU", *V_MENU, MENU)                         # physical MENU = Back / cancel
+        st, el = k.until("CLOSE", lambda st: not osd_en(s), CLOSE_MS)
+        chk("MENU closes source selector", el is not None, f"OSD visible {osd_en(s)}")
         st = k.state()
         e = st["log"][rel_seq & 15]
         chk("combo release entry still has no message", e["seq"] == rel_seq and e["msg"] == 0xFF, f"seq {e['seq']} msg {e['msg']:02X}")

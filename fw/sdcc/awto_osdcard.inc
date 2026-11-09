@@ -138,21 +138,59 @@ static BYTE AwtoSourceSelection(void)
 {
     BYTE ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
 
-    return (ucItem == _OSD_INPUT_D1) ? 1 :
-           (ucItem == _OSD_INPUT_D2) ? 2 :
-           (ucItem == _OSD_INPUT_D3) ? 3 : 0;
+    return (ucItem == _OSD_INPUT_D2) ? 1 :
+           (ucItem == _OSD_INPUT_D3) ? 2 :
+           (ucItem == _OSD_INPUT_D1) ? 3 : 0;
+}
+
+static BYTE AwtoSourceState(BYTE ucPort)
+{
+    bit bCable = (ucPort == _D1_INPUT_PORT) ? GET_D1_CABLE_STATUS() :
+                 (ucPort == _D2_INPUT_PORT) ? GET_D2_CABLE_STATUS() : GET_D3_CABLE_STATUS();
+
+    if((SysSourceGetInputPort() == ucPort) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
+    {
+        return 3;                               // active picture now
+    }
+    if(bCable == _FALSE)
+    {
+        return 0;                               // no cable / no source power
+    }
+#if(_AWTO_FAST_SWITCH == _ON)
+    if(AwtoSwCacheValid(ucPort) != 0)
+    {
+        return 2;                               // scaler has previously locked this source
+    }
+#endif
+    return 1;                                   // cable present, no usable signal detected
 }
 
 static void AwtoSourceRows(void)
 {
     BYTE ucSel = AwtoSourceSelection();
+    BYTE ucState;
 
     OsdFuncClearOsd(ROW(0), COL(12), WIDTH(24), HEIGHT(8));
     OsdWindowDrawingByFont(_OSD_WINDOW_4_1, ROW(1 + ucSel), COL(12), WIDTH(24), HEIGHT(1), _CP_BLUE);
-    AWTO_CARD_LINE(1, "Auto",        (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
-    AWTO_CARD_LINE(2, "DisplayPort", (ucSel == 1) ? _CP_WHITE : _CP_BLUE);
-    AWTO_CARD_LINE(3, "HDMI 1",      (ucSel == 2) ? _CP_WHITE : _CP_BLUE);
-    AWTO_CARD_LINE(4, "HDMI 2",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE);
+    AWTO_CARD_LINE(1, "Auto Select", (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
+
+    ucState = AwtoSourceState(_D2_INPUT_PORT);
+    if(ucState == 0)      { AWTO_CARD_LINE(2, "HDMI 1  No Cable",  (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 1) { AWTO_CARD_LINE(2, "HDMI 1  No Signal", (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 2) { AWTO_CARD_LINE(2, "HDMI 1  Ready",     (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+    else                  { AWTO_CARD_LINE(2, "HDMI 1  Active",    (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
+
+    ucState = AwtoSourceState(_D3_INPUT_PORT);
+    if(ucState == 0)      { AWTO_CARD_LINE(3, "HDMI 2  No Cable",  (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 1) { AWTO_CARD_LINE(3, "HDMI 2  No Signal", (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 2) { AWTO_CARD_LINE(3, "HDMI 2  Ready",     (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+    else                  { AWTO_CARD_LINE(3, "HDMI 2  Active",    (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
+
+    ucState = AwtoSourceState(_D1_INPUT_PORT);
+    if(ucState == 0)      { AWTO_CARD_LINE(4, "DP  No Cable",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 1) { AWTO_CARD_LINE(4, "DP  No Signal",     (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    else if(ucState == 2) { AWTO_CARD_LINE(4, "DP  Ready",         (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
+    else                  { AWTO_CARD_LINE(4, "DP  Active",        (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
 }
 
 static void AwtoSourceOpen(void)
@@ -189,8 +227,29 @@ void AwtoSourceStep(void)
         ucSel = (ucSel == 3) ? 0 : (ucSel + 1);
     }
     SET_OSD_INPUT_PORT_OSD_ITEM((ucSel == 0) ? _OSD_INPUT_AUTO :
-                                (ucSel == 1) ? _OSD_INPUT_D1 :
-                                (ucSel == 2) ? _OSD_INPUT_D2 : _OSD_INPUT_D3);
+                                (ucSel == 1) ? _OSD_INPUT_D2 :
+                                (ucSel == 2) ? _OSD_INPUT_D3 : _OSD_INPUT_D1);
+}
+
+void AwtoSourceKeyOpen(void)
+{
+    if(SysSourceGetScanType() == _SOURCE_SWITCH_AUTO_IN_GROUP)
+    {
+        SET_OSD_INPUT_PORT_OSD_ITEM(_OSD_INPUT_AUTO);
+    }
+    else
+    {
+        SET_OSD_INPUT_PORT_OSD_ITEM((SysSourceGetInputPort() == _D2_INPUT_PORT) ? _OSD_INPUT_D2 :
+                                    (SysSourceGetInputPort() == _D3_INPUT_PORT) ? _OSD_INPUT_D3 : _OSD_INPUT_D1);
+    }
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
+    SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
+    OsdFuncSetOsdItemFlag();
+    g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
+    OsdDispHotKeySourceMenu();
+    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
 }
 
 // Runtime-selected wrappers retain the SDK implementation as a real fallback.

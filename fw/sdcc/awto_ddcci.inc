@@ -341,6 +341,22 @@ static void AwtoDdcEngineInit(volatile __xdata BYTE *pucR, BYTE ucCh)
     pucR[AWTO_IIC_IRQ2] |= _BIT6;
 }
 
+#if((_AWTO_DBG_SWAP == _ON) && (_AWTO_DDCCI_ENGINES == 3))
+void AwtoDdcciDebugLink(BYTE ucPort, BYTE ucOn)
+{
+    BYTE ucE;
+
+    if((ucPort < _D1_INPUT_PORT) || (ucPort > _D3_INPUT_PORT))
+    {
+        return;
+    }
+    ucE = ucPort - _D1_INPUT_PORT;
+    s_pucAwtoDdcN[ucE] = 0;
+    AwtoDdcEngineInit((volatile __xdata BYTE *)tAwtoIicBase[ucE],
+                      (ucOn != 0) ? AWTO_DBG_PARK_CH : tAwtoIicCh[ucE]);
+}
+#endif
+
 void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when an engine flags data or lost its set-up
 {
     BYTE ucE;

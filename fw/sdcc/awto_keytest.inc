@@ -201,7 +201,7 @@ void AwtoKeyOsdReset(void)                      // a mode reset cleared the OSD 
     }
 }
 
-static void AwtoKeySourceDo(void)               // SOURCE = next input, only with no menu up and the monitor on
+static void AwtoKeySourceDo(void)               // SOURCE = visible four-input selector, only with no menu up and the monitor on
 {
     if((g_stAwtoKey.ucOpen != 0) || (GET_OSD_STATE() != _MENU_NONE) || (SysPowerGetPowerStatus() == _POWER_STATUS_OFF))
     {
@@ -213,7 +213,7 @@ static void AwtoKeySourceDo(void)               // SOURCE = next input, only wit
         return;
     }
 #endif
-    AwtoKeyNextInput();
+    AwtoSourceKeyOpen();
 }
 
 void AwtoKeySourcePress(void)                   // RTDKeyMessageProc: SOURCE key edge
