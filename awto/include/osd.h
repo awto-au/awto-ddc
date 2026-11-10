@@ -24,14 +24,16 @@ void    osd_grid(uint8_t rows, uint8_t cols);        /* character map size */
 void    osd_fill(uint8_t row, uint8_t col, uint8_t n, uint8_t glyph, uint8_t fg, uint8_t bg);
 void    osd_palette(uint8_t idx, uint8_t r, uint8_t g, uint8_t b);
 
-/* Text layer (the awto OSD design system, awto-ddc#89): a chars x lines grid using fixed cells made from the firmware's
- * normal Realtek user-interface letterforms. ui.h = the
+/* Text layer (the awto OSD design system, awto-ddc#89): a chars x lines grid using the native Spleen 8x16 bitmap font.
+ * RTD font SRAM still stores each glyph in its fixed 12x18 tile. ui.h = the
  * components on top (frame, title, rows, status strip, key legend); screens never touch this layer directly.
  * Colour sets (osd_style): blue on white / dim / white on accent / accent text. Window 0..7 = decoration bars. */
 enum osd_style { OS_TEXT = 0, OS_DIM = 1, OS_ONACCENT = 2, OS_ACCENT = 3, OS_N = 4 };
 enum osd_bar_colour { OB_SURFACE = 0, OB_ACCENT = 1 };
-#define OSD_CHAR_W 12
+#define OSD_CHAR_W 8
 #define OSD_CHAR_H 18
+extern uint8_t __xdata osd_cw, osd_rh;          /* cell width / row height px of the loaded font (osd_font_load) */
+void    osd_tc_rowh(uint8_t rh);                      /* row height px of every map row (5-bit field) */
 void    osd_tc_open(uint8_t chars, uint8_t lines);   /* grid + palette, all windows off; OSD stays off until osd_tc_show */
 void    osd_tc_cells(uint8_t maprow, uint8_t cell, const uint8_t __xdata *tiles, uint8_t n, uint8_t style);
 void    osd_tc_bar(uint8_t win, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t colour);   /* px, inclusive */

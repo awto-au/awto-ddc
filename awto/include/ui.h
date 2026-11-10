@@ -1,5 +1,5 @@
-/* ui.h: the awto OSD components (awto-ddc#89). The menu uses the same normal Realtek letterforms as the small user-facing
- * cards, in fixed 12 x 18 cells, with the shared blue-on-white AWTO colour scheme. */
+/* ui.h: the awto OSD components (awto-ddc#89). The menu uses native Spleen 8x16 bitmap glyphs; small user-facing cards
+ * retain the normal proportional Realtek font. Both use the shared blue-on-white AWTO colour scheme. */
 #ifndef AWTO_UI_H
 #define AWTO_UI_H
 
@@ -7,7 +7,7 @@
 #include "cc.h"
 #include "osd.h"
 
-/* screen geometry in characters (480 x 378 px; default hardware 2x presents 960 x 756) */
+/* screen geometry in characters (320 x 378 px; default hardware 2x presents 640 x 756) */
 #define UI_CHARS    40
 #define UI_LINES    21
 #define UI_L_TITLE  0
@@ -42,8 +42,9 @@ uint8_t ui_timing(struct ui_timing __xdata *t);       /* integrator: 1 = the act
 void ui_strip(uint8_t force);
 uint8_t ui_fmt_vfreq(char __xdata *dst, uint32_t vmhz);   /* "59.994 Hz" (3 decimals, from the measured timing) */
 
-/* menu copy of the normal SDK font (awto/osd/font.c, generated data) */
-void osd_font_load(void);
+/* selectable fixed menu fonts (0 Spleen, 1 Tamzen; awto/osd/font.c, generated data) */
+void osd_font_load(uint8_t font);
+uint8_t ui_font_selected(void);                         /* integrator: saved OSD font setting */
 uint8_t osd_font_glyph(char c);
 
 #endif

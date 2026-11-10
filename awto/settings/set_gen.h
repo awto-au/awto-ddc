@@ -3,11 +3,11 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   102u
+#define SET_COUNT   104u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x10D2u    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 86u
-#define SET_TEXT_LEN 1785u
+#define SET_SCHEMA  0x299Fu    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 87u
+#define SET_TEXT_LEN 1821u
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -76,6 +76,7 @@
 #define SET_ID_OSD_HPOS             58u
 #define SET_ID_OSD_VPOS             59u
 #define SET_ID_OSD_SCALE            60u
+#define SET_ID_OSD_FONT             106u
 #define SET_ID_OSD_TRANSPARENCY     61u
 #define SET_ID_LANGUAGE             62u
 #define SET_ID_OSD_ROTATE           63u
@@ -95,6 +96,7 @@
 #define SET_ID_MSG_LOG              86u
 #define SET_ID_DEBUG_POPUP          87u
 #define SET_ID_KEY_TEST             104u
+#define SET_ID_GPIO_TEST            105u
 #define SET_ID_VOLUME               88u
 #define SET_ID_MUTE                 89u
 #define SET_ID_AUDIO_STANDALONE     90u
@@ -141,20 +143,22 @@
 #define AP_DP_VERSION           11u
 #define AP_FACTORY_MENU         12u
 #define AP_GAMMA                13u
-#define AP_INPUT_MODE           14u
-#define AP_INPUT_SELECT         15u
-#define AP_KEY_TEST             16u
-#define AP_MSG_LOG              17u
-#define AP_OSD_POS              18u
-#define AP_OSD_SCALE            19u
-#define AP_OSD_TRANSPARENCY     20u
-#define AP_OVERSCAN             21u
-#define AP_POWER                22u
-#define AP_POWER_MODE           23u
-#define AP_SDK_LANGUAGE         24u
-#define AP_SEARCH_TIME          25u
-#define AP_USER_RGB             26u
-#define AP_VENDOR_MENU          27u
+#define AP_GPIO_TEST            14u
+#define AP_INPUT_MODE           15u
+#define AP_INPUT_SELECT         16u
+#define AP_KEY_TEST             17u
+#define AP_MSG_LOG              18u
+#define AP_OSD_FONT             19u
+#define AP_OSD_POS              20u
+#define AP_OSD_SCALE            21u
+#define AP_OSD_TRANSPARENCY     22u
+#define AP_OVERSCAN             23u
+#define AP_POWER                24u
+#define AP_POWER_MODE           25u
+#define AP_SDK_LANGUAGE         26u
+#define AP_SEARCH_TIME          27u
+#define AP_USER_RGB             28u
+#define AP_VENDOR_MENU          29u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -170,10 +174,12 @@ void set_ap_dp_edid(uint8_t id, int16_t v);
 void set_ap_dp_version(uint8_t id, int16_t v);
 void set_ap_factory_menu(uint8_t id, int16_t v);
 void set_ap_gamma(uint8_t id, int16_t v);
+void set_ap_gpio_test(uint8_t id, int16_t v);
 void set_ap_input_mode(uint8_t id, int16_t v);
 void set_ap_input_select(uint8_t id, int16_t v);
 void set_ap_key_test(uint8_t id, int16_t v);
 void set_ap_msg_log(uint8_t id, int16_t v);
+void set_ap_osd_font(uint8_t id, int16_t v);
 void set_ap_osd_pos(uint8_t id, int16_t v);
 void set_ap_osd_scale(uint8_t id, int16_t v);
 void set_ap_osd_transparency(uint8_t id, int16_t v);

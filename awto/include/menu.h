@@ -7,7 +7,7 @@
 
 enum menu_key { MK_MENU = 0, MK_RIGHT = 1, MK_LEFT = 2, MK_EXIT = 3 };
 
-#define MENU_COLS 40             /* grid: 40 x 20 characters of 24 x 36 px (960 x 720 px at 1x), see ui.h for the lines */
+#define MENU_COLS 40             /* grid: 40 x 20 characters of 16 x 36 presented px (640 x 720 at 2x), see ui.h */
 #define MENU_ROWS 20
 #define MENU_LIST 14             /* item lines per screen (lines 3..16), the rest scrolls */
 

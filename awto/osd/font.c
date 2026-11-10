@@ -1,5 +1,5 @@
-/* font.c: fixed-cell loader for the monitor's normal Realtek UI letterforms.
- * tools/gen_font.py extracts those glyphs from the SDK and emits the VLC data below. */
+/* font.c: fixed-cell loader for native Spleen 8x16 and Tamzen 8x15 bitmap glyphs.
+ * tools/gen_font.py packs them losslessly into the RTD's 12x18 font tiles. */
 #include <stdint.h>
 #include "cc.h"
 #include "osd.h"
@@ -37,7 +37,22 @@ static void font_blob(const uint8_t __code *b, uint16_t tile)
     osd_tc_vlc_end();
 }
 
-void osd_font_load(void)
+uint8_t __xdata osd_cw = 8, osd_rh = 18;       /* cell width / row height of the loaded font */
+
+void osd_font_load(uint8_t font)
 {
-    FONT_LOAD_CHUNKS
+    if (font >= OSD_FONT_N)
+        font = 0;
+    osd_cw = font_cw[font];
+    osd_rh = font_rh[font];
+    switch (font) {
+    case 1: FONT_LOAD_TAMZEN break;
+    case 2: FONT_LOAD_SPLEEN6 break;
+    case 3: FONT_LOAD_SPLEEN5 break;
+    case 4: FONT_LOAD_TAMZEN5 break;
+    case 5: FONT_LOAD_TAMZEN6 break;
+    case 6: FONT_LOAD_TAMZEN7 break;
+    default: FONT_LOAD_SPLEEN break;
+    }
+    osd_tc_rowh(osd_rh);
 }
