@@ -33,11 +33,11 @@
 // 0 ~ 2 (0: P1D1i<I>, 1: P1D1o<PP>, 2: P1D1o<OD> & d2_hdmi_hpd_int<I>)
 
 // DDCSCL_VGA
-#define _PIN_65                                 (8 & 0x0F) // Page 10-0x02[2:0]
+#define _PIN_65                                 (0 & 0x0F) // Page 10-0x02[2:0] awto: unused VGA DDC -> GPIO input
 // 0 ~ 8 (0: P1D2i<I>, 1: P1D2o<PP>, 2: P1D2o<OD>, 8: ddcsclvga<OD>)
 
 // DDCSDA_VGA
-#define _PIN_66                                 (8 & 0x0F) // Page 10-0x03[2:0]
+#define _PIN_66                                 (0 & 0x0F) // Page 10-0x03[2:0] awto: unused VGA DDC -> GPIO input
 // 0 ~ 8 (0: P1D3i<I>, 1: P1D3o<PP>, 2: P1D3o<OD>, 8: ddcsdavga<I>)
 
 // VGA_CABLE_DET
@@ -98,8 +98,8 @@
 // 0 ~ 6 (0: P4D0i<I>, 1: P4D0o<PP>, 2: P4D0o<OD>, 3: a_adc1_0, 4: int1,
 //        5: test4b_out2 , 6:test4b_out3)
 
-// DP_HOT_PLUG_0
-#define _PIN_96                                 (0 & 0x0F) // Page 10-0x11[2:0]
+// Unused board pad: expose it as the spare low-speed ADC channel for diagnostics.
+#define _PIN_96                                 (3 & 0x0F) // Page 10-0x11[2:0]
 // 0 ~ 6 (0: P4D1i<I>, 1: P4D1o<PP>, 2: P4D1o<OD>,  3: a_adc2_0, 4: tcon[9],
 //        5: test4b_out0 , 6:test4b_out1)
 

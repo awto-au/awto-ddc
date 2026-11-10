@@ -12,6 +12,7 @@ extern void set_boot(void);
 extern void set_service(void);
 extern void set_track(BYTE ucId, int iV);
 extern int set_put(BYTE ucId, int iV, BYTE ucNow);
+extern int set_get(BYTE ucId);
 extern BYTE set_in_boot(void);
 extern void set_defaults(void);
 extern void menu_open(void);
@@ -22,6 +23,12 @@ extern void menu_forget(void);
 extern void menu_relayout(void);
 extern BYTE menu_active(void);
 extern void vcp_box_service(void);
+extern void osd_font_load(BYTE ucFont);
+
+BYTE ui_font_selected(void)
+{
+    return (BYTE)set_get(AWTO_SET_OSD_FONT);
+}
 
 __xdata BYTE g_ucAwtoDdcciOn;              // GET_OSD_DDCCI_STATUS (RL6449_Project.h): Debug link off and DDC/CI on
 __xdata BYTE g_ucAwtoKeepIdle = 1;         // AWTO_IDLE_RX_OFF: Keep idle inputs
@@ -136,7 +143,7 @@ int set_status(BYTE ucId)
     }
 }
 
-//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): normal Realtek UI letterforms, 12 x 18 px cells ----
+//---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): native Spleen 8 x 16 bitmap glyphs ----
 // palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette.
 // White surface + Realtek 2014 blue (0,68,166) text/accent; selected rows retain white text on blue.
 static __code BYTE tAwtoPal[12][3] = {
@@ -165,9 +172,22 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     }
 }
 
+extern BYTE __xdata osd_cw;
+extern BYTE __xdata osd_rh;
+
+void osd_tc_rowh(BYTE ucRh)
+{
+    BYTE ucI;
+
+    for(ucI = 0; ucI < g_ucOsdHeight; ucI++)
+    {
+        ScalerOsdCommandAllByte(ucI, 0x80, ucRh - 1, g_ucOsdWidth);   // row height - 1 (5 bit); the SDK map uses 17 = 18 px
+    }
+}
+
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
-    BYTE ucB0 = 0x4C;                            // 1 bit normal UI font, 12 pixel cell
+    BYTE ucB0 = 0x40 | osd_cw;                   // 1 bit font, cell width = the loaded font's pixel width
     BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
@@ -219,11 +239,36 @@ void osd_tc_vlc_end(void)
     ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
 }
 
+// Own placement: the SDK OsdDispSetPosition assumes 12 x 18 cells, so rows x 36 above the panel height wraps to an off-screen position.
 void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
 {
+    DWORD ulW = (DWORD)g_ucOsdWidth * osd_cw;
+    DWORD ulH = (DWORD)g_ucOsdHeight * osd_rh;
+    WORD usX = 0;
+    WORD usY = 0;
+    BYTE ucStep = (ScalerOsdGetHorizontalDelayStep() == _OSD_HORIZONTAL_DELAY_STEP_1_PIXEL) ? 1 : 4;
+
     SET_OSD_DOUBLE_SIZE(ucBig);
     ScalerOsdDoubleFunction(ucBig, ucBig);
-    OsdDispSetPosition(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, ucH, ucV);
+    if(ucBig != 0)
+    {
+        ulW *= 2;
+        ulH *= 2;
+    }
+    if((DWORD)_PANEL_DH_WIDTH > ulW)
+    {
+        usX = (WORD)((((DWORD)_PANEL_DH_WIDTH - ulW) / ucStep) * ucH / 100);
+    }
+    if((DWORD)_PANEL_DV_HEIGHT > ulH)
+    {
+        usY = (WORD)((((DWORD)_PANEL_DV_HEIGHT - ulH) * ucV) / 100);
+    }
+    if(ucBig != 0)
+    {
+        usX /= 2;
+        usY /= 2;
+    }
+    OsdFuncSetPosition(_OSD_POSITION_GLOBAL_A, usX, usY);
 }
 
 void osd_tc_show(BYTE ucOn)
@@ -522,6 +567,15 @@ void set_ap_osd_scale(BYTE ucId, int iV)
     menu_relayout();
 }
 
+void set_ap_osd_font(BYTE ucId, int iV)
+{
+    ucId = ucId;
+    if(g_ucAwtoMenuOn != 0)
+    {
+        osd_font_load((BYTE)iV);                  // same glyph IDs and 8 px geometry; redraw uses the new atlas
+    }
+}
+
 void set_ap_osd_transparency(BYTE ucId, int iV)
 {
     ucId = ucId;
@@ -567,6 +621,14 @@ void set_ap_key_test(BYTE ucId, int iV)
     iV = iV;
     menu_close();
     AWTO_KEY_TEST_TOGGLE();
+}
+
+void set_ap_gpio_test(BYTE ucId, int iV)
+{
+    ucId = ucId;
+    iV = iV;
+    menu_close();
+    AwtoGpioTestSet(1);
 }
 
 void set_ap_factory_menu(BYTE ucId, int iV)

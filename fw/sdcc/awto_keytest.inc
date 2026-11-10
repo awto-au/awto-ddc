@@ -10,6 +10,7 @@ extern void menu_close(void);
 #define AWTO_KEY_HELD_INJ()                     0
 #endif
 
+extern void osd_tc_close(void);
 __xdata StAwtoKey g_stAwtoKey;
 static __xdata BYTE s_ucAwtoKeyPend;            // log index + 1 of the press still waiting for its key message
 static __xdata WORD s_usAwtoKeyDraw;            // usT2Isr at the last redraw
@@ -148,7 +149,7 @@ void AwtoKeyScan(void)                          // every key scan, before the po
     if((g_stAwtoKey.ucOpen != 0) && (g_stAwtoKey.ucDrawn == 0) && ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) >= AWTO_KEY_RETRY_MS))
     {
         s_usAwtoKeyDraw = AwtoKeyNow();         // open but never drawn (the first draw was skipped): draw again, every RETRY period
-        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
+        AwtoOsdKeyLines();
         return;
     }
     if((g_stAwtoKey.ucOpen == 0) || (g_stAwtoKey.ucDrawn == 0) || ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) < AWTO_KEY_REFRESH_MS))
@@ -185,7 +186,7 @@ void AwtoKeyMsg(void)                           // after RTDKeyMessageProc: note
     }
     AwtoKeyMsgNote(ucM);
     g_stAwtoKey.ucFlags = AwtoKeyFlags();
-    if(g_stAwtoKey.ucOpen != 0)
+    if(AWTO_KEY_TEST_ON())
     {
         SET_KEYMESSAGE(_NONE_KEY_MESSAGE);
     }
@@ -203,7 +204,7 @@ void AwtoKeyOsdReset(void)                      // a mode reset cleared the OSD 
 
 static void AwtoKeySourceDo(void)               // SOURCE = visible four-input selector, only with no menu up and the monitor on
 {
-    if((g_stAwtoKey.ucOpen != 0) || (GET_OSD_STATE() != _MENU_NONE) || (SysPowerGetPowerStatus() == _POWER_STATUS_OFF))
+    if(AWTO_KEY_TEST_ON() || (GET_OSD_STATE() != _MENU_NONE) || (SysPowerGetPowerStatus() == _POWER_STATUS_OFF))
     {
         return;
     }
@@ -236,7 +237,7 @@ void AwtoKeyInject(BYTE ucMsg)                  // I2C test cmd 0x01..0x05 / key
     }
     AwtoKeyLog(0, ucMsg, ((P3_0 != 0) ? AWTO_KEY_F_P30 : 0) | AWTO_KEY_F_INJ);
     g_stAwtoKey.ucMsg = ucMsg;
-    if(g_stAwtoKey.ucOpen != 0)
+    if(AWTO_KEY_TEST_ON())
     {
         return;                                 // test screen up: shown, not acted on
     }
@@ -250,40 +251,24 @@ void AwtoKeyInject(BYTE ucMsg)                  // I2C test cmd 0x01..0x05 / key
     }
 }
 
-void AwtoKeyTestSet(BYTE ucOn)                  // 0 close, 1 open, 2 toggle (key combo UP+DOWN, test cmd 0x41 / 0x42)
+void AwtoKeyConSet(BYTE ucOn)                   // the console opens / closes this panel (AwtoDiagConsole draws it)
 {
     AwtoKeyEnsure();
-    if(ucOn == 2)
-    {
-        ucOn = (g_stAwtoKey.ucOpen == 0) ? 1 : 0;
-    }
-    if((ucOn == g_stAwtoKey.ucOpen) && ((ucOn == 0) || (g_stAwtoKey.ucDrawn != 0)))
-    {
-        return;                                 // already so; an open screen that was never drawn is drawn again (below)
-    }
     g_stAwtoKey.ucDrawn = 0;
-    g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;    // a re-open: the hold would block the disable below
     if(ucOn != 0)
     {
-#ifdef _AWTO_NEW_SETTINGS
-        menu_close();                           // #67 menu up: a real close (open edit reverted, settings saved); the disable only forgets it
-#endif
-        OsdDispDisableOsd();                    // before the hold: it blocks the disable
         g_stAwtoKey.ucOpen = 1;
-        g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
         AwtoKeyShown();
         s_usAwtoKeyDraw = AwtoKeyNow();
-        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);     // draw now: the ACTIVE one-time event never comes with no signal (after SOURCE)
     }
     else
     {
         g_stAwtoKey.ucOpen = 0;
-        g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
-        OsdDispDisableOsd();
-        if(SysModeGetModeState() == _MODE_STATUS_NOSIGNAL)     // re-arm what the open screen cancelled (as osd_tc_close)
-        {
-            ScalerTimerActiveTimerEvent(SEC(2), _USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
-        }
     }
+}
+
+void AwtoKeyTestSet(BYTE ucOn)                  // 0 close, 1 open, 2 toggle (key combo UP+DOWN, test cmd 0x41 / 0x42): the diagnostic console
+{
+    AwtoDiagConsole(ucOn);
 }
 #endif

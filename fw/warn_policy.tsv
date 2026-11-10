@@ -6,6 +6,7 @@
 # SDK #warning notes, checked:
 ^#warning "NOTE: DEBUG MESSAGE SUPPORT ON!!"$	*	*	ok	debug messages on during bring-up (#25); release build turns them off
 ^#warning "NOTE: Please check D[123] EDID table location!!!"$	*	*	ok	EDID tables in code on purpose (docs/edid-fix.md)
+^#warning "_INTERNAL_AUDIO_TEST_SUPPORT is _ON!!!"$	Kernel/Common/Scaler_Test_Function.h	*	ok	OK-TEST-BUILD: deliberate only for _AWTO_AUDIO_TEST; normal firmware keeps the feature off
 # W158 on (x << n) constants is a compiler false positive (awto-sdcc#47). Per-site entries (overflow 158, always-false 94, enum 291, optimizer 110, unreachable 126) follow from the review in #26.
 # Reviewed 2026-11-05 (#26): overflow 158 / always-false 94 / enum 291 - no bugs; spurious 158 above 127 into BYTE with --fsigned-char
 ^overflow in implicit constant conversion$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	499	ok	0x98 into BYTE; asm #0x98
@@ -167,18 +168,21 @@
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3708	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3771	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3775	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1145	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1147	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1150	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1154	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1158	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1165	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1169	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1173	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1175	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	449	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	451	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	496	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4270	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4275	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4298	ok	OK-TEST-BUILD: speaker-only DAC selection is a compile-time constant; optimizer keeps the amplifier action
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1177	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1179	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1182	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1186	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1190	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1197	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1201	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1205	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	1207	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	483	ok	OK-HARMLESS: ucKeyState is 0 on the only path reaching it (set to 0 in the else arm, other arm returns); SDK logic quirk, same in Keil
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	485	ok	OK-HARMLESS: RTDKeyInitial() after folded if; dead per SDK logic
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c	530	ok	OK-HARMLESS: RTDKeyPowerKeyMix switch: all cases empty
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5544	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5542	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5543	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
@@ -200,11 +204,11 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3389	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	421	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	458	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5378	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5535	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5637	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5767	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5879	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5606	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	6107	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5763	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5865	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5995	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1209	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1213	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	458	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead

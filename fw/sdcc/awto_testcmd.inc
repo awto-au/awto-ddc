@@ -98,23 +98,57 @@ void AwtoDiagTestCmd(void)
     {
         AwtoKeyTestSet(ucCmd == 0x41);
     }
+    else if((ucCmd == 0x43) || (ucCmd == 0x44))         // unused-GPIO live screen: open / close
+    {
+        AwtoGpioTestSet(ucCmd == 0x43);
+    }
+    else if(ucCmd == 0x45)                              // limit probe: open with the stored line count (default 24) / 0x46 close
+    {
+        AwtoProbeSet((g_ucAwtoProbeLines != 0) ? g_ucAwtoProbeLines : 24);
+    }
+    else if(ucCmd == 0x46)
+    {
+        AwtoProbeSet(0);
+    }
+    else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)
+    {
+        g_ucAwtoDiagFont = ucCmd - 0x60 + 1;
+    }
+    else if((ucCmd == 0x4A) || (ucCmd == 0x4B))         // diagnostic screens at 1x / 2x size
+    {
+        g_ucAwtoDiagSmall = (ucCmd == 0x4A);
+    }
+    else if(ucCmd == 0x47)                              // hardware scroll experiment: one step / 0x48 back to 0
+    {
+        AwtoProbeScroll(0);
+    }
+    else if(ucCmd == 0x48)
+    {
+        AwtoProbeScroll(1);
+    }
+    else if(ucCmd >= 0xC0)                              // 0xC0 + n: probe columns = 4 * n (0xE8 = 160)
+    {
+        g_ucAwtoProbeCols = (ucCmd - 0xC0) << 2;
+    }
+    else if(ucCmd >= 0x80)                              // 0x80 + n: probe with n lines (n = 1..63)
+    {
+        g_ucAwtoProbeLines = ucCmd - 0x80;
+        AwtoProbeSet(g_ucAwtoProbeLines);
+    }
     else if((ucCmd >= 0x50) && (ucCmd <= 0x59))         // every compiled user-visible OSD message, held for review
     {
         OsdDispOsdMessage((EnumOSDDispMsg)(ucCmd - 0x50));
         g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
     }
-    else if((ucCmd == 0x20) || (ucCmd == 0x26))
+    else if((ucCmd == 0x20) || (ucCmd == 0x26))         // debug pop-up: the diagnostic console
     {
-        g_stAwtoDiag.ucDbgPopup = 1;
-        if(ucCmd == 0x26)
-        {
-            g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
-        }
-        SET_OSD_EVENT_MESSAGE(_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG);
+        AwtoDiagConsole(1);
     }
     else if(ucCmd == 0x27)
     {
         unsigned char ucWas = g_stAwtoDiag.ucHold;
+
+        AwtoDiagConsole(0);
 
         g_stAwtoDiag.ucHold = 0;                     // first: OsdDispDisableOsd is blocked while a hold is set
         if((ucWas & AWTO_HOLD_POPUP) != 0)

@@ -245,6 +245,38 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         return;                                 // bad checksum: no reply, the host retries
     }
     pucTx[0] = 0x6E;
+#ifdef _AWTO_AUDIO_TEST
+    // Test builds only: 0x63 is unused by the AWTO registry.  Handle it before
+    // the registry so the internal generator remains reachable with the new
+    // settings/DDC implementation (0xE1 is the registry value mailbox).
+    if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == 0x63))
+    {
+        if(pucRx[5] == 0)
+        {
+            SysAudioInternalGenTestProc(_OFF);
+        }
+        else
+        {
+            SysAudioInternalGenTestProc(_ON);
+            SysAudioMuteProc(_OFF);
+        }
+        return;
+    }
+    if((pucRx[2] == 0x01) && (ucLen >= 5) && (pucRx[3] == 0x63))
+    {
+        pucTx[1] = 0x88;
+        pucTx[2] = 0x02;
+        pucTx[3] = 0x00;
+        pucTx[4] = 0x63;
+        pucTx[5] = 0x00;
+        pucTx[6] = 0x00;
+        pucTx[7] = 0x01;
+        pucTx[8] = 0x00;
+        pucTx[9] = ScalerAudioGetInternalAudioGenEnable(SysSourceGetInputPort());
+        AwtoDdcReply(pucR, pucTx);
+        return;
+    }
+#endif
 #if(_AWTO_DBG_SWAP == _ON)
     if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_DBG_LINK_VCP) && (pucRx[4] == AWTO_DBG_LINK_MAGIC) && (pucRx[5] != 0))
     {

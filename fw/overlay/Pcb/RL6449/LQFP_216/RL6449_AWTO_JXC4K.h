@@ -534,8 +534,9 @@
 //--------------------------------------------------
 // Macro of LED On/Off
 //--------------------------------------------------
-#define bLED1                                   (MCU_FE24_PORT84_PIN_REG) // Pin_184, P8.4
-// awto: LED2..5 (P9.0, P9.5, P6.3, P7.0) are unproven: their macros are no-ops, only LED1 (P8.4) is driven (#53.4)
+#define bLED1                                   (P3_5) // Pin_91, normal/on colour
+#define bLED_STANDBY                            (P3_6) // Pin_92, standby colour
+// awto: P8.4 is a board power-state enable, not an LED. LED2..5 remain unproven/no-op.
 #define bLED2                                   (MCU_FE28_PORT90_PIN_REG) // Pin_194, P9.0
 #define bLED3                                   (MCU_FE2D_PORT95_PIN_REG) // Pin_199, P9.5
 #define bLED4                                   (MCU_FE13_PORT63_PIN_REG) // Pin_152, P6.3
@@ -544,33 +545,19 @@
 #define _LED_ON                                 1
 #define _LED_OFF                                0
 
-#define PCB_LED_AC_ON_INITIAL()                 {\
-                                                    bLED1 = _LED_OFF;\
-                                                }
+#define PCB_LED_AC_ON_INITIAL()                 AwtoLedSetMode(AWTO_LED_OFF)
 
-#define PCB_LED_ACTIVE()                        {\
-                                                    bLED1 = _LED_ON;\
-                                                }
+#define PCB_LED_ACTIVE()                        AwtoLedSetMode(AWTO_LED_ON)
 
-#define PCB_LED_IDLE()                          {\
-                                                    bLED1 = _LED_OFF;\
-                                                }
+#define PCB_LED_IDLE()                          AwtoLedSetMode(AWTO_LED_OFF)
 
-#define PCB_LED_POWER_SAVING()                  {\
-                                                    bLED1 = _LED_OFF;\
-                                                }
+#define PCB_LED_POWER_SAVING()                  AwtoLedSetMode(AWTO_LED_BREATHE)
 
-#define PCB_LED_ON()                            {\
-                                                    bLED1 = _LED_ON;\
-                                                }
+#define PCB_LED_ON()                            AwtoLedSetMode(AWTO_LED_ON)
 
-#define PCB_LED_OFF()                           {\
-                                                    bLED1 = _LED_OFF;\
-                                                }
+#define PCB_LED_OFF()                           AwtoLedSetMode(AWTO_LED_BREATHE)
 
-#define PCB_LED_TYPE1()                         {\
-                                                    bLED1 = _LED_ON;\
-                                                }
+#define PCB_LED_TYPE1()                         AwtoLedSetMode(AWTO_LED_ON)
 
 #define PCB_LED_TYPE2()                         {\
                                                 }

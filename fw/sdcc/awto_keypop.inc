@@ -1,15 +1,7 @@
 // #39 key test screen: rows of the same pop-up as the debug lines (awto_dbgpop.inc, #34); redrawn by AwtoKeyScan every
 // AWTO_KEY_REFRESH_MS while open. Inserted into RTD2014OsdDisplay.c after the debug lines (uses their AwtoPut* helpers).
 #if(_AWTO_DIAG == _ON)
-static void AwtoPutHex2(BYTE ucV)
-{
-    BYTE ucH = ucV >> 4;
-    BYTE ucL = ucV & 0x0F;
-
-    AwtoPutChar((ucH < 10) ? ('0' + ucH) : ('A' + ucH - 10));
-    AwtoPutChar((ucL < 10) ? ('0' + ucL) : ('A' + ucL - 10));
-}
-
+#ifdef _AWTO_NEW_SETTINGS
 static void AwtoPutKeys(BYTE ucMask)            // front keys left to right, space separated
 {
     if(ucMask == 0)
@@ -111,12 +103,17 @@ void AwtoOsdKeyLines(void)
 {
     BYTE ucK;
 
-    g_ucFontPointer0 = _OSD_PAGE_0_START;
-    g_ucFontPointer1 = _OSD_PAGE_1_START;
-    g_ucFontPointer2 = _OSD_PAGE_2_START;
+    bit bFirst = (g_stAwtoKey.ucDrawn == 0);
+
     g_stAwtoKey.ucDrawn = 1;
     g_stAwtoKey.ucRedraws++;
-    s_ucAwtoLen = 0;
+    AwtoPanel(1);
+    if(bFirst != 0)
+    {
+        AwtoPutCol(1);
+        AwtoPutStr("KEY TEST");
+        AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+    }
 
     AwtoPutAdc(0, g_stAwtoKey.ucA0);
     AwtoShowLine(_OSD_MESSAGE_ROW_START, _PFONT_PAGE_0);
@@ -155,4 +152,9 @@ void AwtoOsdKeyLines(void)
     AwtoPutStr(" CLOSE UP DOWN");
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 5, _PFONT_PAGE_2);
 }
+#else
+void AwtoOsdKeyLines(void)
+{
+}
+#endif
 #endif

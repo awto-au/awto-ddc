@@ -230,7 +230,8 @@ def parse_args(argv=None):
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
                     help="call-graph bank placement; only valid while a layout is being created (missing/empty --layout file)")
     ap.add_argument("--cluster-weights", default="", help="passed to sdcc_bank (measured call counts, fw/cluster_weights.json)")
-    ap.add_argument("--pin-common", default="", help="passed to sdcc_bank (comma list of fns forced into common)")
+    ap.add_argument("--pin-common", default="_AwtoPutStr",
+                    help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper must remain common because callers pass bank-local literals)")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--resid-end", default="0xc38", help="passed to sdcc_bank: common bytes kept for vectors/library before "

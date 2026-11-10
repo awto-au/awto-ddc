@@ -20,6 +20,38 @@
 #if(_PROJECT == _RL6449_PROJECT)
 
 //--------------------------------------------------
+// awto two-colour power LED (P3.5 = on, P3.6 = standby)
+//--------------------------------------------------
+#define AWTO_LED_OFF                                            0
+#define AWTO_LED_ON                                             1
+#define AWTO_LED_BREATHE                                        2
+extern volatile __xdata unsigned char g_ucAwtoLedMode;
+extern volatile __xdata unsigned char g_ucAwtoLedPhase;
+extern volatile __xdata unsigned char g_ucAwtoLedLevel;
+extern volatile __xdata unsigned char g_ucAwtoLedTick;
+extern volatile __xdata unsigned char g_ucAwtoLedUp;
+extern void AwtoLedSetMode(unsigned char ucMode);
+// Timer2 ticks each millisecond.  The accumulator produces 1 kHz pulse-density PWM;
+// brightness moves one step every 16 ms for an approximately 8.2 s breathe cycle.
+#define AWTO_LED_T2ISR()                                        do { \
+                                                                    if(g_ucAwtoLedMode == AWTO_LED_BREATHE) { \
+                                                                        g_ucAwtoLedPhase += g_ucAwtoLedLevel; \
+                                                                        P3_5 = 0; \
+                                                                        P3_6 = (g_ucAwtoLedPhase < g_ucAwtoLedLevel); \
+                                                                        if(++g_ucAwtoLedTick >= 16) { \
+                                                                            g_ucAwtoLedTick = 0; \
+                                                                            if(g_ucAwtoLedUp != 0) { \
+                                                                                if(g_ucAwtoLedLevel >= 254) { g_ucAwtoLedLevel = 255; g_ucAwtoLedUp = 0; } \
+                                                                                else { ++g_ucAwtoLedLevel; } \
+                                                                            } else { \
+                                                                                if(g_ucAwtoLedLevel <= 1) { g_ucAwtoLedLevel = 0; g_ucAwtoLedUp = 1; } \
+                                                                                else { --g_ucAwtoLedLevel; } \
+                                                                            } \
+                                                                        } \
+                                                                    } \
+                                                                } while(0)
+
+//--------------------------------------------------
 // awto switches for SDK code compiled out by scripts/keil2sdcc.py WRAPS (#8)
 //--------------------------------------------------
 #ifdef _AWTO_NEW_SETTINGS                                       // #67 settings registry (awto-rtdfw): ids + reader
@@ -173,19 +205,77 @@ extern void AwtoKeySourcePress(void);
 extern void AwtoKeyTestSet(unsigned char ucOn);
 extern void AwtoKeyOsdReset(void);
 extern void AwtoOsdKeyLines(void);
-#define AWTO_KEY_TEST_ON()                                      (g_stAwtoKey.ucOpen != 0)
+#define AWTO_KEY_TEST_ON()                                      ((g_stAwtoKey.ucOpen != 0) || (g_stAwtoGpio.ucOpen != 0))
 #define AWTO_KEY_SCAN()                                         AwtoKeyScan()
 #define AWTO_KEY_MSG()                                          AwtoKeyMsg()
 #define AWTO_KEY_SOURCE()                                       AwtoKeySourcePress()
 #define AWTO_KEY_TEST_TOGGLE()                                  AwtoKeyTestSet(2)
 #define AWTO_KEY_INJECT(m)                                      AwtoKeyInject(m)
 #define AWTO_KEY_OSD_RESET()                                    AwtoKeyOsdReset()
+
+// Input monitor: GPIO pin 65/66/67/68/69/70/74/75, spare ADC2 pin 96, and the six physical buttons. The current bitmap and transition
+// ring are readable at map symbol _g_stAwtoGpio through debug I2C slave 0x35; the OSD redraws only on a change.
+#define AWTO_GPIO_N                                             15
+#define AWTO_OSD_INPUT_N                                        24
+#define AWTO_GPIO_LOG_N                                         32
+#define AWTO_GPIO_REFRESH_MS                                    20
+typedef struct                                  // 4 B, byte-only so LE/BE layout is identical
+{
+    unsigned char ucSeq;
+    unsigned char ucTickHi;
+    unsigned char ucTickLo;
+    unsigned char ucPinState;                   // bits 7..1 input index 0..14, bit0 new level
+} StAwtoGpioEntry;
+typedef struct
+{
+    unsigned char ucMagic0;                     // 'G'
+    unsigned char ucMagic1;                     // 'P'
+    unsigned char ucVersion;                    // 3: GPIOs, ADC2, buttons, raw ADC samples
+    unsigned char ucOpen;                       // GPIO OSD screen open
+    unsigned char ucDrawn;
+    unsigned char ucSeq;                        // next transition sequence; ring index = seq & 31
+    unsigned char ucLevelsLo;                   // current snapshot bits 7..0
+    unsigned char ucLevelsHi;                   // current snapshot bits 14..8
+    unsigned char ucChangedLo;                  // transitions seen since boot, bits 7..0
+    unsigned char ucChangedHi;                  // transitions seen since boot, bits 14..8
+    unsigned char ucRedraws;
+    unsigned char ucDirtyLo;                    // OSD rows awaiting refresh
+    unsigned char ucDirtyHi;
+    unsigned char ucAdc0;                       // pin 94 button ladder, 0..255 ~= 0..3.3 V
+    unsigned char ucAdc1;                       // pin 95 button ladder
+    unsigned char ucAdc2;                       // pin 96 spare analogue input
+    unsigned char ucVgaSync;                    // raw P0_4E sync-detector flags for AVS/AHS/SOG
+    unsigned char ucVgaCompare;                 // raw P0_CD RGB ADC comparator flags
+    unsigned char ucVgaPower;                   // P0_C6 VGA ADC power register
+    unsigned char ucVgaDirty;
+    StAwtoGpioEntry pstLog[AWTO_GPIO_LOG_N];
+} StAwtoGpio;
+extern __xdata StAwtoGpio g_stAwtoGpio;
+extern void AwtoGpioPoll(void);
+extern void AwtoGpioTestSet(unsigned char ucOn);
+extern void AwtoOsdGpioLines(void);
+#define AWTO_GPIO_IO_BASE                                       16      // transition ring index of board IO row 0
+#define AWTO_IO_N                                               18      // board IO rows: inputs 0..9, output read-backs 10..17
+extern __xdata unsigned char g_ucAwtoIoLv[3];
+extern __xdata unsigned char g_ucAwtoIoDirty[3];
+extern __xdata unsigned char g_ucAwtoIoAny;
+extern __xdata unsigned char g_ucAwtoDiagFont;
+extern __xdata unsigned char g_ucAwtoDiagSmall;
+extern __xdata unsigned char g_ucAwtoProbeLines;
+extern __xdata unsigned char g_ucAwtoProbeCols;
+extern void AwtoProbeScroll(unsigned char ucReset);
+extern void AwtoProbeSet(unsigned char ucLines);
+extern void AwtoDiagConsole(unsigned char ucOn);
+extern void AwtoGpioConSet(unsigned char ucOn);
+extern void AwtoKeyConSet(unsigned char ucOn);
+extern const __code unsigned char tAwtoIoPin[AWTO_IO_N];
+#define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)
 #if(_AWTO_DIAG_DELAYCAL == _ON)
 extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #endif
-#define AWTO_DIAG_T2ISR()                                       (g_stAwtoDiag.usT2Isr++)
+#define AWTO_DIAG_T2ISR()                                       do { g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 #else
 #define AwtoDiagInit()
@@ -194,7 +284,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define AwtoDiagMainPass()
 #define AwtoDiagTestCmd()
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
-#define AWTO_DIAG_T2ISR()
+#define AWTO_DIAG_T2ISR()                                       AWTO_LED_T2ISR()
 #define AWTO_DIAG_EX1ISR()
 #define AWTO_KEY_TEST_ON()                                      0
 #define AWTO_KEY_SCAN()
@@ -203,6 +293,9 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define AWTO_KEY_TEST_TOGGLE()
 #define AWTO_KEY_INJECT(m)                                      { if((m) < _KEY_AMOUNT) { SET_KEYMESSAGE(m); } }
 #define AWTO_KEY_OSD_RESET()
+#define AWTO_GPIO_TEST_ON()                                     0
+#define AwtoGpioPoll()
+#define AwtoGpioTestSet(n)
 #endif
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
@@ -1179,12 +1272,22 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // Audio Option
 //-------------------------------------------------
-#define _AUDIO_SUPPORT                                          _OFF // awto: no audio jacks (Dan, 2026-11-04)
+#ifdef _AWTO_AUDIO_TEST
+#define _AUDIO_SUPPORT                                          _ON  // internal generator only; EDID remains audio-free
+#else
+#define _AUDIO_SUPPORT                                          _OFF // awto: no advertised audio (Dan, 2026-11-04)
+#endif
 
 //-------------------------------------------------
 // Audio DAC Option
 //-------------------------------------------------
+#ifdef _AWTO_AUDIO_TEST
+#define _EMBEDDED_DAC_SUPPORT                                   _ON
+#define _DAC_SPEAKER_OUTPUT_SUPPORT                             _ON
+#define _DAC_HP_OUTPUT_SUPPORT                                  _OFF
+#else
 #define _EMBEDDED_DAC_SUPPORT                                   _OFF
+#endif
 
 //-------------------------------------------------
 // Audio Line In Option

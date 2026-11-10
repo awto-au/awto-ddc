@@ -69,6 +69,7 @@
 #define AWTO_SET_OSD_HPOS             58
 #define AWTO_SET_OSD_VPOS             59
 #define AWTO_SET_OSD_SCALE            60
+#define AWTO_SET_OSD_FONT             106
 #define AWTO_SET_OSD_TRANSPARENCY     61
 #define AWTO_SET_LANGUAGE             62
 #define AWTO_SET_OSD_ROTATE           63
@@ -88,6 +89,7 @@
 #define AWTO_SET_MSG_LOG              86
 #define AWTO_SET_DEBUG_POPUP          87
 #define AWTO_SET_KEY_TEST             104
+#define AWTO_SET_GPIO_TEST            105
 #define AWTO_SET_VOLUME               88
 #define AWTO_SET_MUTE                 89
 #define AWTO_SET_AUDIO_STANDALONE     90
@@ -104,5 +106,5 @@
 #define AWTO_SET_INFO_MODE            99
 #define AWTO_SET_INFO_LOOP            100
 #define AWTO_SET_INFO_SCHEMA          101
-#define AWTO_SET_SCHEMA              0x10D2
+#define AWTO_SET_SCHEMA              0x299F
 #endif

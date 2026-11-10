@@ -60,6 +60,13 @@ SRC_EXT = {".c", ".h"}
 # pData scratch arrays and all Keil `idata` go to XDATA (keil_compat.h) so 0x80-0xFF is left to the stack.
 DROP_USING = True
 RULES = [
+    # Optional hardware-only audio check. It does not alter the EDID: private
+    # DDC VCP 0xE1 toggles the RL6449 internal sine generator in audio-test builds.
+    (re.compile(r"#define\s+_INTERNAL_AUDIO_TEST_SUPPORT\s+_OFF"),
+     "#ifdef _AWTO_AUDIO_TEST\n#define _INTERNAL_AUDIO_TEST_SUPPORT _ON\n#else\n#define _INTERNAL_AUDIO_TEST_SUPPORT _OFF\n#endif"),
+    # RL6449 implements the internal generator for HDMI D2/D3, but not D1 DP.
+    (re.compile(r"#if\(_INTERNAL_AUDIO_TEST_SUPPORT == _ON\)\n(\s*)if\(ScalerAudioD1GetInternalAudioGenEnable\(\) == _ENABLE\)"),
+     r"#if 0 /* awto: RL6449 has no D1 internal-generator implementation */\n\1if(0)"),
     # OSD default D1 DP version: _AWTO_DP_D1_VERSION (RL6449_Project.h; SDK 0 = DP 1.1) (#28)
     (re.compile(r"^(\s*)0,(\s*// b1OsdDpD1PortVersion\b)", re.M), r"\1_AWTO_DP_D1_VERSION,\2"),
     (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"xdata\1"),
@@ -183,6 +190,7 @@ INSERTS = [
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c", r"^\s*MCU_FF2A_IIC_IRQ_CONTROL2 \|= 0x20;",
      (SHIM / "awto_dbgisr.inc").read_text().rstrip("\n"), r"^void ScalerDebugIntProc_EXINT1\(void\)$"),
     ("Kernel/System/Code/SysMain.c", r"^#include", "#define _AWTO_DIAG_DEFINER"),
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_led.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
     # #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state poll per pass, panel power actions; #28 hold guards
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_sw.inc").read_text().rstrip("\n")),
@@ -298,9 +306,11 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "    AwtoDiagStage(4);"),  # after pin-share
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerTimerInitialTimerEvent\(\);", "#if(_AWTO_FAST_BOOT == _ON)\n    AwtoPanelVddEarly();\n#endif"),  # after stage 4: inserts stack, the later rule lands nearer the anchor
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoDiagMainPass();"),  # 5
+    ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoGpioPoll();"),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysPowerHandler\(\);", "            AwtoDiagTestCmd();"),  # after key scan (#33)
     (OSD + "RTD2014Key.c", r"^void UserInterfaceKeyHandler\(void\)$", (SHIM / "awto_testcmd.inc").read_text().rstrip("\n")),
     (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keytest.inc").read_text().rstrip("\n")),    # #39 / #85: at the end, no SDK line moves
+    (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_gpio.inc").read_text().rstrip("\n")),
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      '#define AWTO_FW_TAG "%s"\n' % FW_TAG + (SHIM / "awto_dbgpop.inc").read_text().rstrip("\n")),
     # One AWTO card language for every transient message and the source selector.
@@ -320,10 +330,13 @@ INSERTS = [
     (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdWindowDrawingByFontHighlight\(_OSD_WINDOW_4_1, ROW\(2\), COL\(18 \+ \(9 \* uctemp\)\)",
      "    if(AwtoPanelCardOverride() == _TRUE)\n    {\n        return;\n    }", r"^void OsdDispPanelUniformityMsgSwitch\(void\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keypop.inc").read_text().rstrip("\n")),    # #39: at the end, no SDK line moves
+    (OSD + "RTD2014OsdDisplay.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_gpiopop.inc").read_text().rstrip("\n")),
     (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
      "            if(g_stAwtoKey.ucOpen == 1)\n            {\n                AwtoOsdKeyLines();\n                break;\n            }"),    # #39: before the debug lines
     (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
      "            if(g_stAwtoDiag.ucDbgPopup == 1)\n            {\n                AwtoOsdDebugLines();\n                break;\n            }"),
+    (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
+     "            if(g_stAwtoGpio.ucOpen == 1)\n            {\n                AwtoOsdGpioLines();\n                break;\n            }"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_loopsplit.inc").read_text().rstrip("\n")),   # #75
@@ -390,6 +403,10 @@ SUBS = [
     # unified OSD cards: white right-hand surface; fail-safe uses the same complete card as No Support
     (OSD + "RTD2014OsdDisplay.c", r"(void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\s*\{)",
      lambda m: m.group(1) + " if(enumMessage == _OSD_DISP_FAIL_SAFE_MODE_MSG) { enumMessage = _OSD_DISP_NOSUPPORT_MSG; }  // [keil2sdcc] sub: unified warning card", 1),
+    # The input diagnostic uses one row per channel instead of the standard six-row message card.
+    (OSD + "RTD2014OsdDisplay.c", r"(void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\s*\{.*?)(OsdFuncApplyMap\(WIDTH\(36\), HEIGHT\(8\), COLOR\(_CP_WHITE, _CP_BG\)\);)",
+     lambda m: m.group(1) + "if(g_stAwtoGpio.ucOpen != 0) { OsdFuncApplyMap(WIDTH(36), HEIGHT(28), COLOR(_CP_WHITE, _CP_BG)); }"
+     " else { " + m.group(2) + " }  // [keil2sdcc] sub: tall input diagnostics", 1),
     (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_0, ROW\(0\), COL\(12\), WIDTH\(g_ucOsdHeight - 12\), HEIGHT\(g_ucOsdWidth\), )_CP_LIGHTBLUE(\);)",
      lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
     (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_1, ROW\(0\), COL\(0\), WIDTH\(g_ucOsdWidth\), g_ucOsdHeight, )_CP_LIGHTBLUE(\);)",
