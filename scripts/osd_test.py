@@ -25,7 +25,7 @@ from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS, osd_offsets_from_m
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "logo-off": 0x25, "logo-3s": 0x21,
             "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23,
             "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30, "defaults": 0x40,
-            "keytest": 0x41, "keytest-off": 0x42,
+            "keytest": 0x41, "keytest-off": 0x42, "gpio": 0x43, "gpio-off": 0x44,
             # 0x50 + EnumOSDDispMsg: direct, held visual-review paths in current firmware.
             "card-nosignal": 0x50, "card-nocable": 0x51, "card-nosupport": 0x52,
             "auto-adjust": 0x54, "auto-colour": 0x56, "power-saving": 0x58,

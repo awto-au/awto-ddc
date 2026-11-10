@@ -26,6 +26,7 @@ POPUPS = [
     ("info", ["--do", "300:info", "--at", "2500"], "input info pop-up"),
     ("debug", ["--do", "300:debug", "--at", "2500"], "debug/tech pop-up (#34), held"),
     ("keytest", ["--do", "300:keytest", "--at", "2500"], "front-key test screen"),
+    ("gpio", ["--do", "300:gpio", "--at", "2500"], "GPIO / ADC input diagnostics"),
     ("nosignal", ["--do", "300:card-nosignal", "--at", "2500"], "no signal message"),
     ("nocable", ["--do", "300:card-nocable", "--at", "2500"], "no cable message"),
     # Fail-safe aliases this exact card; catalogue it once.
