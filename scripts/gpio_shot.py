@@ -23,6 +23,7 @@ def main():
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/gpio_shot.png")
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--cmds", default="0x43")
+    ap.add_argument("--wait", type=float, default=1.0, help="sim seconds to run after the last command before the snapshot")
     a = ap.parse_args()
     s = R.Session(a.bin, a.map, a.mode)
     s.boot()
@@ -32,7 +33,7 @@ def main():
               and s.bus.write(0x6A, 0x3B, bytes([addr & 0xFF])))
         R.say(f"test cmd 0x{c:02X} {'sent' if ok else 'NAK'}")
         s.bus.wait(0.5)                              # the main loop consumes one command per pass
-    s.bus.wait(1.0)                                  # screen draws within a few main-loop passes
+    s.bus.wait(a.wait)                               # screen draws within a few main-loop passes; --wait shows later redraws
     R.save(s.snap(), a.out, "grey", 2)
     s.bus.close()
     return 0
