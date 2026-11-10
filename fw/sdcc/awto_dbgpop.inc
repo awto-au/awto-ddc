@@ -19,7 +19,7 @@ extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE u
 #ifndef AWTO_HOLD_POPUP
 #define AWTO_HOLD_POPUP     0x02                // same value as awto_testcmd.inc (another translation unit)
 #endif
-#define AWTO_T_MAXCOLS      160                 // cell map limit is 8192 words: 160 columns x 50 rows
+#define AWTO_T_MAXCOLS      96                  // XDATA is nearly full: widest text row (console 84, probe clamped to this)
 #define AWTO_T_STYLE_TEXT   0
 #define AWTO_T_STYLE_ONACC  2
 #define AWTO_T_STYLE_ACCENT 3
@@ -169,6 +169,19 @@ static void AwtoTextLine(BYTE ucLine, BYTE ucStyle)
     AwtoPutCol(s_ucAwtoCols);
     AwtoTextAt(s_ucPanelRow + ucLine, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoCols, ucStyle);
     s_ucAwtoLen = 1;                   // next row: leading space kept in s_pcAwtoRow[0]
+}
+
+// Field update: text composed with AwtoPut* since AwtoFieldBegin is written at exactly row ucRow, column ucCol (nothing else touched).
+static void AwtoFieldBegin(void)
+{
+    s_ucAwtoLen = 0;
+}
+
+static void AwtoFieldEnd(BYTE ucRow, BYTE ucCol, BYTE ucStyle)
+{
+    AwtoTextAt(s_ucPanelRow + ucRow, s_ucPanelCol + ucCol, s_pcAwtoRow, s_ucAwtoLen, ucStyle);
+    s_pcAwtoRow[0] = ' ';              // rows start with the leading space the field just overwrote
+    s_ucAwtoLen = 1;
 }
 
 // Pop-up rows keep their SDK message-card row numbers: row _OSD_MESSAGE_ROW_START + n is text line n + 1 (line 0 = title).
@@ -332,6 +345,8 @@ void AwtoProbeSet(BYTE ucLines)
 {
     BYTE ucR;
     BYTE ucCols = (g_ucAwtoProbeCols != 0) ? g_ucAwtoProbeCols : 36;
+
+    if(ucCols > AWTO_T_MAXCOLS) ucCols = AWTO_T_MAXCOLS;
 
     if(ucLines == 0)
     {

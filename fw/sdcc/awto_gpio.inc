@@ -1,27 +1,65 @@
-// Live monitor for board pads proven unused plus the six physical keys.  The five non-power keys are decoded directly
-// from the two ADC ladders; POWER is P3.0.  Sampling runs every main pass; the OSD is change-only and rate-limited,
-// while the I2C-visible ring retains every transition observed by the sampler.
+// Input monitor: one poller owns the value of every input in fw/awto/inputs.tsv (GPIO pads, ADCs, POWER, VGA front end, board IO,
+// decoded keys). A change is stored once, logged to the I2C-visible ring and marked for the console; nothing else samples or compares.
 #if(_AWTO_DIAG == _ON)
 #define AWTO_VGA_SYNC_REG          0x004E
 #define AWTO_VGA_POWER_REG         0x00C6
 #define AWTO_VGA_COMPARE_REG       0x00CD
 #define AWTO_VGA_SOG_CTRL_REG      0x00D4
 #define AWTO_VGA_ADC_REG2          0x00DA
+#define AWTO_IN_P1                 0
+#define AWTO_IN_P3                 1
+#define AWTO_IN_P30                2
+#define AWTO_IN_ADC0S              3
+#define AWTO_IN_ADC1S              4
+#define AWTO_IN_ADC2S              5
+#define AWTO_IN_VSYNC              6
+#define AWTO_IN_VCMP               7
+#define AWTO_IN_XREG               8
+#define AWTO_IN_KEY0               9
+#define AWTO_IN_KEY1               10
 __xdata StAwtoGpio g_stAwtoGpio;
 static __xdata WORD s_usAwtoGpioDraw;
-static __xdata WORD s_usAwtoGpioShown;
 static __xdata WORD s_usAwtoDbgDraw;
+static __xdata BYTE s_ucVgaSync;
+static __xdata BYTE s_ucVgaCmp;
 #define AWTO_DBG_REFRESH_MS    500             // debug panel values (loop rate, clocks) change slowly: twice a second
 extern void osd_tc_close(void);
 
-__xdata BYTE g_ucAwtoIoLv[3];
-__xdata BYTE g_ucAwtoIoDirty[3];
-__xdata BYTE g_ucAwtoIoAny;
-// Board IO from the pin ledger (docs/monitors/rtd2795t-216-pin-ledger.tsv): page FE PORTxy_PIN_REG bit 0 (bus value, SDK sets FE60 = 0xFF); P1.x via FFE2.
-const __code BYTE tAwtoIoPin[AWTO_IO_N] = {194, 113, 1, 14, 97, 198, 204, 206, 207, 208, 196, 159, 161, 184, 185, 201, 202, 190};
-static const __code WORD tAwtoIoAddr[AWTO_IO_N] = {0xFE28, 0xFE05, 0xFFE2, 0xFFE2, 0xFE02, 0xFE2C, 0xFE32, 0xFE33, 0xFE34, 0xFE35,
-                                                   0xFE2A, 0xFE1A, 0xFE1C, 0xFE24, 0xFE25, 0xFE2F, 0xFE30, 0xFE26};
-static const __code BYTE tAwtoIoMask[AWTO_IO_N] = {1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+// GENERATED-BEGIN awto_inputs
+// kind 0 bit, 1 analog (deadband), 2 byte; src: see awto_gpio.inc AwtoInRead; flags bit0 = screen row, bit1 = logged in the ring
+static const __code BYTE tAwtoInKind[AWTO_IN_N] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0};
+static const __code BYTE tAwtoInSrc[AWTO_IN_N] = {
+    0, 0, 0, 0, 0, 0, 1, 1, 3, 4, 5, 2,
+    6, 6, 7, 7, 7, 7, 6, 7, 7, 8, 8, 8,
+    8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+    8, 8, 8, 10, 9, 10, 9, 9};
+static const __code BYTE tAwtoInA[AWTO_IN_N] = {
+    2, 3, 4, 5, 6, 7, 1, 2, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 104, 192, 40, 40, 112};
+static const __code BYTE tAwtoInB[AWTO_IN_N] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+    2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 136, 224, 72, 72, 144};
+static const __code WORD tAwtoInAddr[AWTO_IN_N] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0xFE28, 0xFE05, 0xFFE2,
+    0xFFE2, 0xFE02, 0xFE2C, 0xFE32, 0xFE33, 0xFE34, 0xFE35, 0xFE2A,
+    0xFE1A, 0xFE1C, 0xFE24, 0xFE25, 0xFE2F, 0xFE30, 0xFE26, 0,
+    0, 0, 0, 0};
+static const __code BYTE tAwtoInFlags[AWTO_IN_N] = {
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3,
+    3, 3, 3, 3, 1, 1, 1, 3, 3, 3, 3, 3,
+    3, 3, 3, 2, 2, 2, 2, 2};
+// GENERATED-END awto_inputs
 
 static void AwtoVgaDiagPower(bit bOn)
 {
@@ -46,137 +84,94 @@ static WORD AwtoGpioNow(void)
     return usNow;
 }
 
-static WORD AwtoGpioRead(void)
+// Current value of input i. Table order puts the ADCs before the keys decoded from them.
+static BYTE AwtoInRead(BYTE ucI)
 {
-    BYTE ucP1 = MCU_FFE2_PORT1_PIN_REG;
-    BYTE ucP3 = MCU_FFE3_PORT3_PIN_REG;
-    BYTE ucA0 = PCB_ADKEY1();
-    BYTE ucA1 = PCB_ADKEY2();
-    WORD usV = (WORD)((ucP1 >> 2) & 0x3F);       // bits 0..5 = package pins 65..70 / P1.2..P1.7
-
-    usV |= (WORD)((ucP3 >> 1) & 0x03) << 6;     // bits 6..7 = package pins 74..75 / P3.1..P3.2
-    if(MCU_FF0B_ADC_A2_CONVERT_RESULT >= 0x80) usV |= (WORD)1 << 8; // bit 8 = ADC2 above nominal half scale
-    if(AWTO_KEY_BAND(ucA1, 0x68, 0x88)) usV |= (WORD)1 << 9;   // SOURCE
-    if(AWTO_KEY_BAND(ucA0, 0xC0, 0xE0)) usV |= (WORD)1 << 10;  // MENU
-    if(AWTO_KEY_BAND(ucA1, 0x28, 0x48)) usV |= (WORD)1 << 11;  // DOWN
-    if(AWTO_KEY_BAND(ucA0, 0x28, 0x48)) usV |= (WORD)1 << 12;  // UP
-    if(AWTO_KEY_BAND(ucA0, 0x70, 0x90)) usV |= (WORD)1 << 13;  // AUTO
-    if(P3_0 == 0) usV |= (WORD)1 << 14;                         // POWER
-    return usV;
+    switch(tAwtoInSrc[ucI])
+    {
+        case AWTO_IN_P1: return (BYTE)((MCU_FFE2_PORT1_PIN_REG >> tAwtoInA[ucI]) & 1);
+        case AWTO_IN_P3: return (BYTE)((MCU_FFE3_PORT3_PIN_REG >> tAwtoInA[ucI]) & 1);
+        case AWTO_IN_P30: return (P3_0 == 0) ? 1 : 0;
+        case AWTO_IN_ADC0S: return PCB_ADKEY1();
+        case AWTO_IN_ADC1S: return PCB_ADKEY2();
+        case AWTO_IN_ADC2S: return MCU_FF0B_ADC_A2_CONVERT_RESULT;
+        case AWTO_IN_VSYNC: return s_ucVgaSync;
+        case AWTO_IN_VCMP: return s_ucVgaCmp;
+        case AWTO_IN_XREG: return (((*(__xdata volatile BYTE *)tAwtoInAddr[ucI]) & tAwtoInB[ucI]) != 0) ? 1 : 0;
+        case AWTO_IN_KEY0: return AWTO_KEY_BAND(g_stAwtoGpio.ucIn[AWTO_IN_ADC0], tAwtoInA[ucI], tAwtoInB[ucI]) ? 1 : 0;
+        default: return AWTO_KEY_BAND(g_stAwtoGpio.ucIn[AWTO_IN_ADC1], tAwtoInA[ucI], tAwtoInB[ucI]) ? 1 : 0;
+    }
 }
 
-static void AwtoIoSample(BYTE ucMode);
-
-static void AwtoGpioEnsure(void)
-{
-    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoGpio;
-    WORD usI, usV;
-
-    if((g_stAwtoGpio.ucMagic0 == 'G') && (g_stAwtoGpio.ucMagic1 == 'P') &&
-       (g_stAwtoGpio.ucVersion == 3)) return;
-    for(usI = 0; usI < sizeof(StAwtoGpio); usI++) puc[usI] = 0;
-    usV = AwtoGpioRead();
-    g_stAwtoGpio.ucMagic0 = 'G';
-    g_stAwtoGpio.ucMagic1 = 'P';
-    g_stAwtoGpio.ucVersion = 3;
-    g_stAwtoGpio.ucLevelsLo = (BYTE)usV;
-    g_stAwtoGpio.ucLevelsHi = (BYTE)(usV >> 8);
-    g_stAwtoGpio.ucDirtyLo = 0xFF;
-    g_stAwtoGpio.ucDirtyHi = 0x7F;
-    g_stAwtoGpio.ucAdc0 = PCB_ADKEY1();
-    g_stAwtoGpio.ucAdc1 = PCB_ADKEY2();
-    g_stAwtoGpio.ucAdc2 = MCU_FF0B_ADC_A2_CONVERT_RESULT;
-    g_stAwtoGpio.ucVgaSync = ScalerGetByte(AWTO_VGA_SYNC_REG);
-    g_stAwtoGpio.ucVgaCompare = ScalerGetByte(AWTO_VGA_COMPARE_REG);
-    g_stAwtoGpio.ucVgaPower = ScalerGetByte(AWTO_VGA_POWER_REG);
-    g_stAwtoGpio.ucVgaDirty = 1;
-    s_usAwtoGpioShown = usV;
-    AwtoIoSample(2);
-}
-
-static void AwtoGpioLog(BYTE ucPin, BYTE ucState, WORD usNow)
+static void AwtoGpioLog(BYTE ucId, BYTE ucVal, WORD usNow)
 {
     BYTE ucI = g_stAwtoGpio.ucSeq & (AWTO_GPIO_LOG_N - 1);
+
     g_stAwtoGpio.pstLog[ucI].ucSeq = g_stAwtoGpio.ucSeq;
     g_stAwtoGpio.pstLog[ucI].ucTickHi = (BYTE)(usNow >> 8);
     g_stAwtoGpio.pstLog[ucI].ucTickLo = (BYTE)usNow;
-    g_stAwtoGpio.pstLog[ucI].ucPinState = (BYTE)(ucPin << 1) | (ucState & 1);
+    g_stAwtoGpio.pstLog[ucI].ucId = ucId;
+    g_stAwtoGpio.pstLog[ucI].ucVal = ucVal;
     g_stAwtoGpio.ucSeq++;
 }
 
-// ucMode 0: log changes into the transition ring (index 16 + row), 1: mark every row dirty (screen open), 2: take levels quietly.
-static void AwtoIoSample(BYTE ucMode)
+// ucMode 0: poll (store, log, mark a change), 1: mark every input changed (console just opened), 2: take the values quietly.
+static void AwtoInScan(BYTE ucMode)
 {
-    BYTE ucI, ucV, ucB, ucX;
+    BYTE ucI, ucV, ucO, ucD;
     WORD usNow = 0;
 
-    for(ucI = 0; ucI < AWTO_IO_N; ucI++)
+    s_ucVgaSync = ScalerGetByte(AWTO_VGA_SYNC_REG);
+    s_ucVgaCmp = ScalerGetByte(AWTO_VGA_COMPARE_REG);
+    for(ucI = 0; ucI < AWTO_IN_N; ucI++)
     {
-        ucV = ((*(__xdata volatile BYTE *)tAwtoIoAddr[ucI]) & tAwtoIoMask[ucI]) != 0;
-        ucB = (BYTE)1 << (ucI & 7);
-        ucX = ucI >> 3;
-        if((ucMode != 0) || ((((g_ucAwtoIoLv[ucX] & ucB) != 0) ? 1 : 0) != ucV))
+        ucV = AwtoInRead(ucI);
+        ucO = g_stAwtoGpio.ucIn[ucI];
+        if(ucMode == 0)
         {
-            if((ucMode == 0) && (usNow == 0)) usNow = AwtoGpioNow();
-            if(ucMode == 0) AwtoGpioLog(AWTO_GPIO_IO_BASE + ucI, ucV, usNow);
-            if(ucV != 0) g_ucAwtoIoLv[ucX] |= ucB; else g_ucAwtoIoLv[ucX] &= ~ucB;
-            g_ucAwtoIoDirty[ucX] |= ucB;
-            g_ucAwtoIoAny = 1;
+            if(tAwtoInKind[ucI] == 1)
+            {
+                ucD = (ucV > ucO) ? (ucV - ucO) : (ucO - ucV);
+                if(ucD < AWTO_ADC_DEADBAND) continue;
+            }
+            else if(ucV == ucO)
+            {
+                continue;
+            }
+            if((tAwtoInFlags[ucI] & 2) != 0)
+            {
+                if(usNow == 0) usNow = AwtoGpioNow();
+                AwtoGpioLog(ucI, ucV, usNow);
+            }
+        }
+        g_stAwtoGpio.ucIn[ucI] = ucV;
+        if(ucMode != 2)
+        {
+            g_stAwtoGpio.ucDirty[ucI >> 3] |= (BYTE)1 << (ucI & 7);
+            g_stAwtoGpio.ucAny = 1;
         }
     }
 }
 
+static void AwtoGpioEnsure(void)
+{
+    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoGpio;
+    WORD usI;
+
+    if((g_stAwtoGpio.ucMagic0 == 'G') && (g_stAwtoGpio.ucMagic1 == 'P') &&
+       (g_stAwtoGpio.ucVersion == 4)) return;
+    for(usI = 0; usI < sizeof(StAwtoGpio); usI++) puc[usI] = 0;
+    g_stAwtoGpio.ucMagic0 = 'G';
+    g_stAwtoGpio.ucMagic1 = 'P';
+    g_stAwtoGpio.ucVersion = 4;
+    g_stAwtoGpio.ucN = AWTO_IN_N;
+    AwtoInScan(2);
+}
+
 void AwtoGpioPoll(void)
 {
-    WORD usOld, usNew, usDiff, usNow;
-    BYTE ucI, ucA0, ucA1, ucA2, ucVgaSync, ucVgaCompare, ucVgaPower;
-
     AwtoGpioEnsure();
-    usOld = (WORD)g_stAwtoGpio.ucLevelsLo | (WORD)g_stAwtoGpio.ucLevelsHi << 8;
-    usNew = AwtoGpioRead();
-    ucA0 = PCB_ADKEY1();
-    ucA1 = PCB_ADKEY2();
-    ucA2 = MCU_FF0B_ADC_A2_CONVERT_RESULT;
-    usDiff = (usOld ^ usNew) & 0x7FFF;
-    if(usDiff != 0)
-    {
-        usNow = AwtoGpioNow();
-        g_stAwtoGpio.ucLevelsLo = (BYTE)usNew;
-        g_stAwtoGpio.ucLevelsHi = (BYTE)(usNew >> 8);
-        g_stAwtoGpio.ucChangedLo |= (BYTE)usDiff;
-        g_stAwtoGpio.ucChangedHi |= (BYTE)(usDiff >> 8);
-        g_stAwtoGpio.ucDirtyLo |= (BYTE)usDiff;
-        g_stAwtoGpio.ucDirtyHi |= (BYTE)(usDiff >> 8);
-        for(ucI = 0; ucI < AWTO_GPIO_N; ucI++)
-            if((usDiff & ((WORD)1 << ucI)) != 0) AwtoGpioLog(ucI, (BYTE)(usNew >> ucI), usNow);
-    }
-    if(ucA0 != g_stAwtoGpio.ucAdc0)
-    {
-        g_stAwtoGpio.ucAdc0 = ucA0;
-        g_stAwtoGpio.ucDirtyHi |= 0x34;          // MENU, UP, AUTO rows
-    }
-    if(ucA1 != g_stAwtoGpio.ucAdc1)
-    {
-        g_stAwtoGpio.ucAdc1 = ucA1;
-        g_stAwtoGpio.ucDirtyHi |= 0x0A;          // SOURCE, DOWN rows
-    }
-    if(ucA2 != g_stAwtoGpio.ucAdc2)
-    {
-        g_stAwtoGpio.ucAdc2 = ucA2;
-        g_stAwtoGpio.ucDirtyHi |= 0x01;          // ADC2 / pin 96 row
-    }
-    ucVgaSync = ScalerGetByte(AWTO_VGA_SYNC_REG);
-    ucVgaCompare = ScalerGetByte(AWTO_VGA_COMPARE_REG);
-    ucVgaPower = ScalerGetByte(AWTO_VGA_POWER_REG);
-    if((ucVgaSync != g_stAwtoGpio.ucVgaSync) || (ucVgaCompare != g_stAwtoGpio.ucVgaCompare) ||
-       (ucVgaPower != g_stAwtoGpio.ucVgaPower))
-    {
-        g_stAwtoGpio.ucVgaSync = ucVgaSync;
-        g_stAwtoGpio.ucVgaCompare = ucVgaCompare;
-        g_stAwtoGpio.ucVgaPower = ucVgaPower;
-        g_stAwtoGpio.ucVgaDirty = 1;
-    }
-    AwtoIoSample(0);
+    AwtoInScan(0);
     if(g_stAwtoGpio.ucOpen == 0) return;
     if((WORD)(AwtoGpioNow() - s_usAwtoDbgDraw) >= AWTO_DBG_REFRESH_MS)
     {
@@ -191,10 +186,9 @@ void AwtoGpioPoll(void)
         AwtoOsdGpioLines();                    // own text layer (Spleen), not the SDK message card
         return;
     }
-    if((g_stAwtoGpio.ucDrawn != 0) && ((g_stAwtoGpio.ucDirtyLo != 0) || (g_stAwtoGpio.ucDirtyHi != 0) || (g_stAwtoGpio.ucVgaDirty != 0) || (g_ucAwtoIoAny != 0)) &&
+    if((g_stAwtoGpio.ucDrawn != 0) && (g_stAwtoGpio.ucAny != 0) &&
        ((WORD)(AwtoGpioNow() - s_usAwtoGpioDraw) >= AWTO_GPIO_REFRESH_MS))
     {
-        s_usAwtoGpioShown = usNew;
         s_usAwtoGpioDraw = AwtoGpioNow();
         AwtoOsdGpioLines();
     }
@@ -208,11 +202,7 @@ void AwtoGpioConSet(BYTE ucOn)                 // the console opens / closes thi
     {
         AwtoVgaDiagPower(1);
         g_stAwtoGpio.ucOpen = 1;
-        g_stAwtoGpio.ucDirtyLo = 0xFF;
-        g_stAwtoGpio.ucDirtyHi = 0x7F;
-        g_stAwtoGpio.ucVgaDirty = 1;
-        AwtoIoSample(1);
-        s_usAwtoGpioShown = AwtoGpioRead();
+        AwtoInScan(1);
         s_usAwtoGpioDraw = AwtoGpioNow();
     }
     else

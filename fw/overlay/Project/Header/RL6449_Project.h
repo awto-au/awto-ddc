@@ -213,52 +213,45 @@ extern void AwtoOsdKeyLines(void);
 #define AWTO_KEY_INJECT(m)                                      AwtoKeyInject(m)
 #define AWTO_KEY_OSD_RESET()                                    AwtoKeyOsdReset()
 
-// Input monitor: GPIO pin 65/66/67/68/69/70/74/75, spare ADC2 pin 96, and the six physical buttons. The current bitmap and transition
-// ring are readable at map symbol _g_stAwtoGpio through debug I2C slave 0x35; the OSD redraws only on a change.
-#define AWTO_GPIO_N                                             15
-#define AWTO_OSD_INPUT_N                                        24
+// Input monitor (fw/awto/inputs.tsv -> scripts/gen_awto_inputs.py): one poller keeps the value of every input; a change updates the transition ring
+// (debug I2C slave 0x35, map symbol _g_stAwtoGpio, layout in scripts/gpio_diag.py) and marks that input for the console, which writes only that field.
+// GENERATED-BEGIN awto_inputs
+#define AWTO_IN_N                                               44      // inputs in fw/awto/inputs.tsv; also the transition ring id range
+#define AWTO_IN_ROWS                                            39      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)
+#define AWTO_IN_ADC0                                            8
+#define AWTO_IN_ADC1                                            9
+// GENERATED-END awto_inputs
 #define AWTO_GPIO_LOG_N                                         32
 #define AWTO_GPIO_REFRESH_MS                                    20
-typedef struct                                  // 4 B, byte-only so LE/BE layout is identical
+#define AWTO_ADC_DEADBAND                                       2       // analog inputs: a change smaller than this is noise, not logged
+typedef struct                                  // 5 B, byte-only so LE/BE layout is identical
 {
     unsigned char ucSeq;
     unsigned char ucTickHi;
     unsigned char ucTickLo;
-    unsigned char ucPinState;                   // bits 7..1 input index 0..14, bit0 new level
-} StAwtoGpioEntry;
+    unsigned char ucId;                         // input index in inputs.tsv
+    unsigned char ucVal;                        // new value (0/1 for bits)
+} StAwtoInEntry;
 typedef struct
 {
     unsigned char ucMagic0;                     // 'G'
     unsigned char ucMagic1;                     // 'P'
-    unsigned char ucVersion;                    // 3: GPIOs, ADC2, buttons, raw ADC samples
-    unsigned char ucOpen;                       // GPIO OSD screen open
+    unsigned char ucVersion;                    // 4: value table + 5 B ring
+    unsigned char ucOpen;                       // diagnostic console open (sampling of VGA front end on)
     unsigned char ucDrawn;
     unsigned char ucSeq;                        // next transition sequence; ring index = seq & 31
-    unsigned char ucLevelsLo;                   // current snapshot bits 7..0
-    unsigned char ucLevelsHi;                   // current snapshot bits 14..8
-    unsigned char ucChangedLo;                  // transitions seen since boot, bits 7..0
-    unsigned char ucChangedHi;                  // transitions seen since boot, bits 14..8
     unsigned char ucRedraws;
-    unsigned char ucDirtyLo;                    // OSD rows awaiting refresh
-    unsigned char ucDirtyHi;
-    unsigned char ucAdc0;                       // pin 94 button ladder, 0..255 ~= 0..3.3 V
-    unsigned char ucAdc1;                       // pin 95 button ladder
-    unsigned char ucAdc2;                       // pin 96 spare analogue input
-    unsigned char ucVgaSync;                    // raw P0_4E sync-detector flags for AVS/AHS/SOG
-    unsigned char ucVgaCompare;                 // raw P0_CD RGB ADC comparator flags
-    unsigned char ucVgaPower;                   // P0_C6 VGA ADC power register
-    unsigned char ucVgaDirty;
-    StAwtoGpioEntry pstLog[AWTO_GPIO_LOG_N];
+    unsigned char ucN;                          // AWTO_IN_N
+    unsigned char ucAny;                        // some input changed since the console drew
+    unsigned char ucDirty[(AWTO_IN_N + 7) / 8]; // inputs changed since drawn
+    unsigned char ucPad[16 - 9 - (AWTO_IN_N + 7) / 8];
+    unsigned char ucIn[AWTO_IN_N];              // current value of every input
+    StAwtoInEntry pstLog[AWTO_GPIO_LOG_N];
 } StAwtoGpio;
 extern __xdata StAwtoGpio g_stAwtoGpio;
 extern void AwtoGpioPoll(void);
 extern void AwtoGpioTestSet(unsigned char ucOn);
 extern void AwtoOsdGpioLines(void);
-#define AWTO_GPIO_IO_BASE                                       16      // transition ring index of board IO row 0
-#define AWTO_IO_N                                               18      // board IO rows: inputs 0..9, output read-backs 10..17
-extern __xdata unsigned char g_ucAwtoIoLv[3];
-extern __xdata unsigned char g_ucAwtoIoDirty[3];
-extern __xdata unsigned char g_ucAwtoIoAny;
 extern __xdata unsigned char g_ucAwtoDiagFont;
 extern __xdata unsigned char g_ucAwtoDiagSmall;
 extern __xdata unsigned char g_ucAwtoProbeLines;
@@ -268,7 +261,6 @@ extern void AwtoProbeSet(unsigned char ucLines);
 extern void AwtoDiagConsole(unsigned char ucOn);
 extern void AwtoGpioConSet(unsigned char ucOn);
 extern void AwtoKeyConSet(unsigned char ucOn);
-extern const __code unsigned char tAwtoIoPin[AWTO_IO_N];
 #define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)
 #if(_AWTO_DIAG_DELAYCAL == _ON)
 extern void AwtoDiagPanelT3Wait(unsigned int usMs);
