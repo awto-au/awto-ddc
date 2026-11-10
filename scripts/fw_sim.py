@@ -781,6 +781,12 @@ class Machine:
         shutil.rmtree(self.simdir, ignore_errors=True)
 
 
+UcsimMachine = Machine
+if os.environ.get("AWTO_SIM_CORE", "ucsim") == "fast":      # in-process 8051 core (scripts/fastmachine.py); default ucsim
+    import fastmachine
+    Machine = fastmachine.bind(sys.modules[__name__])
+
+
 class SimBus:
     """Offline stand-in for i2cbus.Bus / rtd_i2c_bridge.Real on the debug slave 0x35 (#38): write(dev8, sub, data) -> bool,
     read(dev8, sub, n) -> bytes | None, wait(s) / now() in firmware time (Timer2 ticks of 1 ms), xdata(addr, n) direct."""
@@ -1398,13 +1404,23 @@ def main() -> int:
     ap.add_argument("--legacy-banking", action="store_true",
                     help="breakpoint + ihx-reload bank model (slow; keeps the banked-call trail)")
     ap.add_argument("--instr", type=int, default=200_000_000, help="native mode: total instructions to run")
+    ap.add_argument("--fast", action="store_true", help="in-process 8051 core (fastmachine.py) instead of ucsim; "
+                    "same as AWTO_SIM_CORE=fast (isr-check / --serial stay on ucsim)")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
+    fast = a.fast or os.environ.get("AWTO_SIM_CORE") == "fast"
+    if fast:
+        global Machine
+        import fastmachine
+        os.environ["AWTO_SIM_CORE"] = "fast"                 # modules importing fw_sim later bind to it too
+        Machine = fastmachine.bind(sys.modules[__name__])
     for mode in ("boot_check", "isr_check"):
         if getattr(a, mode):
             b, m = map(Path, getattr(a, mode))
             lg = (ROOT / "tmp/logs/fw_sim.log").open("w", buffering=1)
             be = a.be or "-be" in b.name or T.BIG_ENDIAN
+            if mode == "boot_check" and fast:
+                return fastmachine.boot_check(b, m, be, a.passes, a.max_instr, lg, sys.modules[__name__])
             return (boot_check(b, m, be, a.passes, a.max_instr, lg) if mode == "boot_check" else isr_check(b, m, be, lg))
     if a.video_check:
         b, mp_ = map(Path, a.video_check)
