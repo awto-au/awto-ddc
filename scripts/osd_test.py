@@ -25,7 +25,9 @@ from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS, osd_offsets_from_m
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "logo-off": 0x25, "logo-3s": 0x21,
             "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23,
             "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30, "defaults": 0x40,
-            "keytest": 0x41, "keytest-off": 0x42, "gpio": 0x43, "gpio-off": 0x44,
+            "keytest": 0x41, "keytest-off": 0x42, "gpio": 0x43, "gpio-off": 0x44, "probe": 0x45, "probe-off": 0x46, "scale1": 0x4A, "scale2": 0x4B, "scroll": 0x47, "scroll-reset": 0x48,
+            # diagnostic-screen font n (osd_font_load index): 0x60 + n; probe-N = limit probe with N numbered lines (0x80 + N)
+            **{f"font{n}": 0x60 + n for n in range(7)}, **{f"cols{c}": 0xC0 + c // 4 for c in (36, 64, 80, 96, 120, 128, 160)}, **{f"probe{n}": 0x80 + n for n in (16, 24, 28, 32, 36, 40, 42, 48, 56, 58, 60, 62, 63, 72, 90)},
             # 0x50 + EnumOSDDispMsg: direct, held visual-review paths in current firmware.
             "card-nosignal": 0x50, "card-nocable": 0x51, "card-nosupport": 0x52,
             "auto-adjust": 0x54, "auto-colour": 0x56, "power-saving": 0x58,

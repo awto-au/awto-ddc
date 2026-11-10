@@ -129,7 +129,7 @@ def main() -> int:
                     print(f"ring overwrite at sequence {last}; resynchronising")
                     break
                 idx, state = ps >> 1, ps & 1
-                name = INPUTS[idx] if idx < len(INPUTS) else f"input{idx}"
+                name = (INPUTS[idx] if idx < len(INPUTS) else BOARD_IO[idx - 16][0] if 16 <= idx < 16 + len(BOARD_IO) else f"input{idx}")
                 line = f"seq={seq:03d} tick={(hi << 8 | lo):05d}ms input={name} state={state}"
                 print(line, flush=True)
                 logs.main.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n"); logs.main.flush()

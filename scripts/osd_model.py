@@ -392,7 +392,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
             if ch["kind"] == "1bit":
                 bits = glyph_bits(st, g, ch["id"])
                 w = ch["width"] if 0 < ch["width"] < GW else GW
-                c0 = {0: (GW - w) // 2, 1: 0, 2: GW - w}.get(g["zone"], 0)
+                c0 = {0: (GW - w + 1) // 2, 1: 0, 2: GW - w}.get(g["zone"], 0)
                 bits = bits[:, c0:c0 + w]
                 fg, bgc = st.pal[ch["fg"]], ch["bg"]
                 px, py = fx + x * sx, fy + y * sy
