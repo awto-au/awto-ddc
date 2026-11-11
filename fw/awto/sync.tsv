@@ -92,8 +92,10 @@ CC	*	port	EDID read by source: wake
 CD	*	port	AUX command from source: wake
 CE	*	port	DPCD 600h = D0 (source powers the link): wake
 D3	*	port	cable unplugged: wake
+D7	*	portmhz1	wake by TMDS clock, about % (IOSC reference)
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %
 CF	04	vport	wake suppressed (DPCD 600h, once per sleep): %
 CF	05	vport	wake suppressed (cable unplug, once per sleep): %
+CF	06	vport	wake suppressed (TMDS clock, once per sleep): %

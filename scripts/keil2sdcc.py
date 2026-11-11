@@ -395,6 +395,17 @@ SUBS = [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c",
      r"(bit ScalerDpRx1FifoCheck\(EnumDpFifoCheckCondition enumFifoCheckCondition\)\n\{.*?)ScalerTimerDelayXms\(_DP_TWO_FRAME_TIME_MAX\);",
      lambda m: m.group(1) + "ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());  // [keil2sdcc] sub", 1),
+] + [
+    # #144: TMDS power-saving predetect without its reset + 5 ms wait + disable; the wake poll runs the detector every
+    # AWTO_PS_POLL_MS (awto_sync.inc AwtoPsTmdsLive, same criterion). The wait was the whole power-saving main pass.
+    (f"Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx{n}_SeptPhy.c",
+     r"(    // Reset Freq\. Detect Counter\(Toggle\).*?ScalerTimerDelayXms\(5\);\n\n    // Detect Freq\. Measure Stable\n)"
+     r"(    if\(\(ScalerGetBit\(P7\d_E6_HDMI_FREQDET_CTRL[^\n]*\n)(.*?// Disable Freq\. Detection\n)"
+     r"(        ScalerSetBit\(P7\d_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00\);\n)",
+     lambda m, n=n: ("#if(_AWTO_PS_WAKE == _OFF)  // [keil2sdcc] sub #144\n" + m.group(1) + m.group(2) +
+                     f"#else\n    if(AwtoPsTmdsLive(0x7{n - 1}) != 0)\n#endif\n" + m.group(3) +
+                     "#if(_AWTO_PS_WAKE == _OFF)  // [keil2sdcc] sub #144\n" + m.group(4) + "#endif\n"), 1)
+    for n in (2, 3)
 ]
 # #144 no boot logo: mode INITIAL opens the console with the live power-on log (fw/sdcc/awto_osdcard.inc AwtoBootConsole);
 # the logo draw, its hold timer, art, tile maps, VLC loader cases and externs go. Same line count at INITIAL (warn keys).

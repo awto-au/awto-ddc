@@ -8,21 +8,21 @@ static __xdata BYTE s_pucAwtoSyncDet[3];          // D1..D3: last predetect (bit
 static __xdata BYTE s_pucAwtoDdcAge[3];           // D1..D3: DDC polls left in which the port counts as live
 
 // GENERATED-BEGIN awto_sync_rows
-#define AWTO_SYNC_ROWS 85
-static const __code BYTE tAwtoSyncRowId[85] = {
+#define AWTO_SYNC_ROWS 87
+static const __code BYTE tAwtoSyncRowId[87] = {
     0xD0, 0xD0, 0xD0, 0xD0, 0xD0, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD1, 0xD2, 0xD2, 0xD2,
     0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xD5, 0xD6, 0xC0, 0xC0, 0xC0, 0xC0, 0x01, 0x01, 0x01, 0x01, 0x01,
     0x01, 0x01, 0x01, 0x10, 0x10, 0x10, 0x10, 0x70, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
     0x90, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8,
     0xB0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC7, 0xC8, 0xC9, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xD3,
-    0xCF, 0xCF, 0xCF, 0xCF, 0xCF};
-static const __code BYTE tAwtoSyncRowArg[85] = {
+    0xD7, 0xCF, 0xCF, 0xCF, 0xCF, 0xCF, 0xCF};
+static const __code BYTE tAwtoSyncRowArg[87] = {
     0x01, 0x02, 0x03, 0x04, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x01, 0x02, 0x03,
     0x01, 0x02, 0x03, 0x04, 0x05, 0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04,
     0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03, 0xFF, 0x01, 0x0E, 0x14, 0x15, 0x16, 0x17, 0x1A, 0x1B,
     0x1C, 0x00, 0x01, 0x03, 0x04, 0x05, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x09, 0x10,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0x01, 0x02, 0x03, 0x04, 0x05};
+    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06};
 BYTE AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged
 {
     BYTE ucI;
@@ -365,12 +365,52 @@ static BYTE AwtoPsWakeAux(void)                       // DP AUX command received
 }
 
 __xdata WORD g_usAwtoPsPolls;                       // #150: wake polls since power saving began (test readout)
+__xdata WORD g_usAwtoPsGap;                         // longest ms between two wake polls this episode (test readout)
+static __xdata WORD s_usWakeAt;                     // usT2Isr of the last wake poll
+static __xdata BYTE s_ucWakeArmed;                  // 1 = AwtoPsWakeArm ran: the freq detectors are ours
+
+// HDMI freq detector, SDK sequence of ScalerTMDSRx2TMDSPSPreDetect (regdb HDMI_FREQDET_CTRL / ERROR_TH, P71 = D2, P72 = D3):
+// start E6[7] on the TMDS clock (E6[5:4] 0), W1C stable EF[6] and unstable E6[2]. Read back >= AWTO_PS_POLL_MS later.
+static void AwtoPsTmdsStart(WORD usBase)
+{
+    ScalerSetBit(usBase | 0xE6, ~(_BIT7 | _BIT5 | _BIT4), 0x00);
+    ScalerSetBit(usBase | 0xE6, ~_BIT7, _BIT7);
+    ScalerSetBit(usBase | 0xEF, ~_BIT6, _BIT6);
+    ScalerSetBit(usBase | 0xE6, ~_BIT2, _BIT2);
+}
+
+// The SDK's PS criterion: started, first result done, no unstable since the start, stable at least once. Cable required.
+BYTE AwtoPsTmdsLive(BYTE ucPage)
+{
+    WORD usBase = (WORD)ucPage << 8;
+
+    if((s_ucWakeArmed == 0) || (SysSourceGetCableDetect((ucPage == 0x71) ? _D2_INPUT_PORT : _D3_INPUT_PORT) != _TRUE))
+    {
+        return 0;
+    }
+    return ((ScalerGetBit(usBase | 0xE6, (_BIT7 | _BIT6 | _BIT2)) == (_BIT7 | _BIT6)) &&
+            (ScalerGetBit(usBase | 0xEF, _BIT6) == _BIT6)) ? 1 : 0;
+}
+
+static WORD AwtoPsTmdsClk(WORD usBase)              // 0.1 MHz: count x (E7[6] ? 2 : 1) x IOSC / (1000 << F6[1:0]) ref cycles
+{
+    WORD usCount;
+    bit bEx0 = EX0;
+
+    EX0 = 0;                                        // the TMDS ISR pops this detector too
+    ScalerSetBit(usBase | 0xEC, ~_BIT7, _BIT7);
+    usCount = ((WORD)ScalerGetByte(usBase | 0xED) << 8) | ScalerGetByte(usBase | 0xEE);
+    EX0 = bEx0;
+    return (WORD)((DWORD)usCount * ((ScalerGetBit(usBase | 0xE7, _BIT6) != 0) ? 2 : 1) * (AWTO_IOSC_KHZ / 100) /
+                  ((WORD)1000 << (ScalerGetByte(usBase | 0xF6) & 0x03)));
+}
 
 // #150: state of our wake poll when the SDK woke the monitor itself: cable bits 2:0 (D1..D3 now), EDID latches 5:3, AUX 6,
-// DPCD 600h = D0 7, polls since power saving 23:8
+// DPCD 600h = D0 7, polls since power saving 23:8, TMDS live D2 24 / D3 25
 static DWORD AwtoPsWakeState(void)
 {
     BYTE ucI, ucB = AwtoPsWakeCables();
+    DWORD ulT = ((DWORD)AwtoPsTmdsLive(0x71) << 24) | ((DWORD)AwtoPsTmdsLive(0x72) << 25);
 
     for(ucI = 0; ucI < 3; ucI++)
     {
@@ -387,7 +427,7 @@ static DWORD AwtoPsWakeState(void)
     {
         ucB |= _BIT7;
     }
-    return ((DWORD)g_usAwtoPsPolls << 8) | ucB;
+    return ulT | ((DWORD)g_usAwtoPsPolls << 8) | ucB;
 }
 
 void AwtoPsWakeArm(void)                              // power saving entered: baselines, latches cleared
@@ -395,6 +435,11 @@ void AwtoPsWakeArm(void)                              // power saving entered: b
     BYTE ucI;
 
     g_usAwtoPsPolls = 0;
+    g_usAwtoPsGap = 0;
+    s_usWakeAt = AwtoSyncNow();
+    AwtoPsTmdsStart(0x7100);                        // pre-PS stable latches must not count (SDK PS bounds are set by now)
+    AwtoPsTmdsStart(0x7200);
+    s_ucWakeArmed = 1;
     s_ucWakeCable = AwtoPsWakeCables();
     s_ucWakeDpcd = ScalerDpRx1GetDpcdInfo(0x00, 0x06, 0x00);
     for(ucI = 0; ucI < 3; ucI++)
@@ -418,9 +463,10 @@ void AwtoPsWakeReset(void)                            // a picture: every trigge
     }
 }
 
-bit AwtoPsWakeFire(BYTE ucT, BYTE ucI)                 // trigger AWTO_WAKE_T_*, port index; 1 = woke
+bit AwtoPsWakeFire(BYTE ucT, BYTE ucI, WORD usVal)   // trigger AWTO_WAKE_T_*, port index, line value; 1 = woke
 {
     BYTE ucBit = (BYTE)1 << ucI;
+    BYTE ucId = (ucT == AWTO_WAKE_T_UNPLUG) ? AWTO_SYNC_EV_UNPLUG : ((ucT == AWTO_WAKE_T_TMDS) ? AWTO_SYNC_EV_WAKE_TMDS : (AWTO_SYNC_EV_WAKE + ucT));
 
     if((s_pucWakeUsed[ucT] & ucBit) != 0)
     {
@@ -433,19 +479,27 @@ bit AwtoPsWakeFire(BYTE ucT, BYTE ucI)                 // trigger AWTO_WAKE_T_*,
     }
     s_pucWakeUsed[ucT] |= ucBit;
     AwtoSyncBegin(AWTO_SYNC_K_WAKE, _D1_INPUT_PORT + ucI);
-    AwtoSyncPush((ucT == AWTO_WAKE_T_UNPLUG) ? AWTO_SYNC_EV_UNPLUG : (AWTO_SYNC_EV_WAKE + ucT), _D1_INPUT_PORT + ucI, 0);
+    AwtoSyncPush(ucId, _D1_INPUT_PORT + ucI, usVal);
     g_ucAwtoPsWakeCon = 1;
+    s_ucWakeArmed = 0;
     SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
     return 1;
 }
 
-void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power saving, every pass
+void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power saving, every pass; works every AWTO_PS_POLL_MS
 {
     BYTE ucI, ucNow, ucR, ucU;
+    WORD usNow = AwtoSyncNow();
+    WORD usGap = usNow - s_usWakeAt;
 
-    if(g_ucAwtoPsWakeCon != 0)
+    if((g_ucAwtoPsWakeCon != 0) || (usGap < AWTO_PS_POLL_MS))
     {
-        return;                                     // woken; the SDK powers up on its next pass
+        return;                                     // woken (the SDK powers up on its next pass), or not due
+    }
+    s_usWakeAt = usNow;
+    if((g_usAwtoPsPolls != 0) && (usGap > g_usAwtoPsGap))    // poll to poll: the arm -> first poll pass is PS entry work
+    {
+        g_usAwtoPsGap = usGap;
     }
     if(g_usAwtoPsPolls != 0xFFFF)
     {
@@ -457,11 +511,11 @@ void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power sav
     s_ucWakeCable = ucNow;
     for(ucI = 0; ucI < 3; ucI++)
     {
-        if(((ucR & ((BYTE)1 << ucI)) != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_CABLE, ucI) != 0))
+        if(((ucR & ((BYTE)1 << ucI)) != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_CABLE, ucI, 0) != 0))
         {
             return;
         }
-        if(((ucU & ((BYTE)1 << ucI)) != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_UNPLUG, ucI) != 0))
+        if(((ucU & ((BYTE)1 << ucI)) != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_UNPLUG, ucI, 0) != 0))
         {
             return;
         }
@@ -469,13 +523,29 @@ void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power sav
         if((ucNow & _BIT0) != 0)
         {
             AWTO_XB(tAwtoWakeDdc[ucI]) = (ucNow & ~(_BIT2 | _BIT0)) | _BIT0;
-            if(AwtoPsWakeFire(AWTO_WAKE_T_EDID, ucI) != 0)
+            if(AwtoPsWakeFire(AWTO_WAKE_T_EDID, ucI, 0) != 0)
             {
                 return;
             }
         }
     }
-    if((AwtoPsWakeAux() != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_AUX, 0) != 0))             // index 0 = D1, the DP port
+    for(ucI = 1; ucI < 3; ucI++)                    // TMDS clock, HDMI D2 (P71) / D3 (P72); AwtoPsTmdsLive needs the cable
+    {
+        WORD usBase = (WORD)(0x70 + ucI) << 8;
+
+        if(AwtoPsTmdsLive(0x70 + ucI) != 0)
+        {
+            if(AwtoPsWakeFire(AWTO_WAKE_T_TMDS, ucI, AwtoPsTmdsClk(usBase)) != 0)
+            {
+                return;
+            }
+        }
+        else if(((s_ucWakeCable & ((BYTE)1 << ucI)) != 0) && (ScalerGetBit(usBase | 0xE6, (_BIT7 | _BIT2)) != _BIT7))
+        {
+            AwtoPsTmdsStart(usBase);                // stopped, or unstable since the start (no clock): measure again
+        }
+    }
+    if((AwtoPsWakeAux() != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_AUX, 0, 0) != 0))          // index 0 = D1, the DP port
     {
         return;
     }
@@ -484,7 +554,7 @@ void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power sav
     s_ucWakeDpcd = ucNow;
     if(((ucNow & 0x07) == 0x01) && ((ucR & 0x07) != 0x01))
     {
-        AwtoPsWakeFire(AWTO_WAKE_T_DPCD, 0);
+        AwtoPsWakeFire(AWTO_WAKE_T_DPCD, 0, 0);
     }
 }
 #endif
@@ -524,6 +594,12 @@ void AwtoSyncPoll(void)                             // power status changed (AWT
         }
 #endif
     }
+#if(_AWTO_PS_WAKE == _ON)
+    if(ucP != _POWER_STATUS_SAVING)
+    {
+        s_ucWakeArmed = 0;                          // the SDK owns the freq detectors until power saving is armed again
+    }
+#endif
     g_ucAwtoSyncPwr = ucP;
 }
 
