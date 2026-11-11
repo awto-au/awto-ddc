@@ -160,7 +160,7 @@ def read_timing(read, addr: dict) -> tuple[dict, dict | None, str]:
 
 # ---- symbols ---------------------------------------------------------------------------------------------------
 OSD_EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
-              "source-menu": 7}
+              "source-menu": 7, "save-bricon": 16, "save-sixcolor": 17, "dp-version": 18}
 OSD_KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
 # g_stOsdInfo (StructOsdInfo, RTD2014Include.h): byte offsets of the fields the tools touch. The map has no member offsets and
 # _DP_DEBUG_MSG (#37) adds a bit-field byte in front of them, so: firmware self-report (diag block 0x2C..0x2E, images from #37 on)
@@ -184,12 +184,17 @@ TESTCMD = ("g_stAwtoDiag", 0x28)                               # firmware test-c
 _CTYPE = {"unsigned char": 1, "unsigned int": 2, "unsigned long": 4, "char": 1, "int": 2}
 
 
+def event_cmd(n: int) -> int:
+    """Test-command byte raising OSD event n: 0x10+n up to 15, 0x70+n-16 above (0x20..0x22 are commands; #113)."""
+    return 0x10 + n if n < 16 else 0x70 + n - 16
+
+
 def testcmd_name(v: int) -> str:
     if v == 0:
         return "idle"
     if 1 <= v <= 4:
         return f"inject key {next(k for k, x in OSD_KEYS.items() if x == v - 1)}"
-    ev = {x: k for k, x in OSD_EVENTS.items()}.get(v - 0x10)
+    ev = {event_cmd(x): k for k, x in OSD_EVENTS.items()}.get(v)
     return f"raise event {ev}" if ev else f"cmd 0x{v:02X}"
 
 

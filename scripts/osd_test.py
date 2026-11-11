@@ -7,7 +7,7 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
   Offsets/values: RTD2014Include.h (EnumOsdEvent order, _*_KEY_MESSAGE); address from the image's map.
   Writes via rtd_dbg_write.py (debug slave 0x35, EDID-serial guarded). Field offsets: rtd_proto.osd_offsets_from_map (_DP_DEBUG_MSG moves them, #37; unit_health cross-checks the firmware's own report).
   --cmd: write the firmware test byte (g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
-    injected after the key scan, 0x10+n = event n. Visuals someone is asked to look at stay up until cleared (#28):
+    injected after the key scan, 0x10+n = event n (n<16; n>=16 at 0x70+n-16). Visuals someone is asked to look at stay up until cleared (#28):
       logo / logo-on = 0x24  boot logo, held (black background)      logo-off = 0x25  logo away, picture back
       debug = 0x26           debug pop-up, held                       clear    = 0x27  every held visual away
       timed (old images): debug-6s = 0x20 (pop-up, _AWTO_INFO_POPUP_SEC, #34), logo-3s = 0x21 (boot logo 3 s, #46).
@@ -21,7 +21,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 TESTCMD_OFF = 0x28
 sys.path.insert(0, str(HERE))
-from rtd_proto import OSD_EVENTS as EVENTS, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
+from rtd_proto import OSD_EVENTS as EVENTS, event_cmd, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "logo-off": 0x25, "logo-3s": 0x21,
             "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23,
             "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30, "defaults": 0x40,
@@ -68,7 +68,7 @@ def main() -> int:
             sys.exit(f"{act}: needs --cmd")
         kind = "event" if act in EVENTS else "key" if act in KEYS else "popup"
         if a.cmd:
-            val = CMD_ONLY.get(act) or ((0x10 + EVENTS[act]) if act in EVENTS else (1 + KEYS[act]))
+            val = CMD_ONLY.get(act) or (event_cmd(EVENTS[act]) if act in EVENTS else (1 + KEYS[act]))
             if 0x24 <= val <= 0x27 and not hold:
                 if val not in OLD_FALLBACK:
                     print(f"osd_test: {act} (0x{val:02X}) needs an image with held visuals (#28; {HOLD_MARK} not in {a.map.name}); skipped")
