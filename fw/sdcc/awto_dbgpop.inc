@@ -23,6 +23,7 @@ extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE u
 #define AWTO_T_STYLE_TEXT   0
 #define AWTO_T_STYLE_ONACC  2
 #define AWTO_T_STYLE_ACCENT 3
+#define AWTO_T_STYLE_ALERT  4                   // red: an input that is not in the I2C ring
 __xdata BYTE g_ucAwtoProbeCols;                  // limit probe columns = 4 * (test cmd 0xC0 + n); 0 = 36
 __xdata BYTE g_ucAwtoProbeLines;                 // limit probe line count (test cmd 0x80 + n); 0 = 24
 __xdata BYTE g_ucAwtoDiagFont;                  // 0 = default (5x8, font 3); else 1 + font index of osd_font_load (test cmd 0x60 + n)
@@ -42,6 +43,21 @@ static BYTE s_ucPanelRow;
 static const __code BYTE tAwtoPanelCol[3] = {1, 44, 44};
 static const __code BYTE tAwtoPanelRow[3] = {2, 2, 12};
 static const __code BYTE tAwtoPanelW[3] = {40, 36, 36};
+
+// The console owns the OSD only while its map is the one in place. A mode reset or an SDK pop-up replaces the map: then drawing
+// (field writes at console positions) would corrupt that screen, so the console lets go (no OSD change) and returns 1.
+static bit AwtoConLost(void)
+{
+    if((s_ucConOpen == 0) || ((g_ucOsdWidth == AWTO_CON_COLS) && (g_ucOsdHeight == AWTO_CON_ROWS + 1)))
+    {
+        return 0;
+    }
+    s_ucConOpen = 0;
+    g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
+    AwtoGpioConSet(0);
+    AwtoKeyConSet(0);
+    return 1;
+}
 
 static void AwtoPanel(BYTE ucP)
 {
@@ -71,6 +87,7 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, bit bTitleBar)
     ScalerOsdSetColorPalette(1, 0, 255, 65);       // diagnostic look: green on black, title bar reversed
     ScalerOsdSetColorPalette(2, 0, 140, 40);
     ScalerOsdSetColorPalette(3, 0, 0, 0);
+    ScalerOsdSetColorPalette(4, 255, 50, 50);
     osd_font_load(AwtoDiagFont());
     osd_tc_bar(0, 0, 0, (WORD)ucCols * osd_cw - 1, (WORD)ucLines * osd_rh - 1, 1);   // frame (accent)
     osd_tc_bar(1, 2, 2, (WORD)ucCols * osd_cw - 3, (WORD)ucLines * osd_rh - 3, 0);  // surface
@@ -204,6 +221,7 @@ void AwtoOsdDebugLines(void)
         AwtoDiagConsole(1);            // an SDK-triggered debug pop-up opens the console (which draws this panel)
         return;
     }
+    if(AwtoConLost() != 0) return;
     g_stAwtoDiag.ucDbgPopup = 0;
     AwtoPanel(2);
     AwtoPutCol(1);

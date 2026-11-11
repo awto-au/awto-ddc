@@ -23,6 +23,11 @@ static const __code BYTE tAwtoInPinS[AWTO_IN_N] = {
     55, 56, 57, 58, 59, 60, 61, 62, 63, 194, 113, 1,
     14, 97, 198, 204, 206, 207, 208, 196, 159, 161, 184, 185,
     201, 202, 190, 0, 0, 0, 0, 0};
+static const __code BYTE tAwtoInFlagsS[AWTO_IN_N] = {
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3,
+    3, 3, 3, 3, 1, 1, 1, 3, 3, 3, 3, 3,
+    3, 3, 3, 2, 2, 2, 2, 2};
 
 static void AwtoInName(BYTE ucI)
 {
@@ -167,6 +172,11 @@ static void AwtoInText(BYTE ucI)
 }
 // GENERATED-END awto_inputs
 
+static BYTE AwtoInStyle(BYTE ucI)               // red = not in the I2C ring (inputs.tsv log = n)
+{
+    return ((tAwtoInFlagsS[ucI] & 2) != 0) ? AWTO_T_STYLE_TEXT : AWTO_T_STYLE_ALERT;
+}
+
 static void AwtoInRowFull(BYTE ucI)
 {
     BYTE ucV = g_stAwtoGpio.ucIn[ucI];
@@ -180,7 +190,7 @@ static void AwtoInRowFull(BYTE ucI)
     if(ucK == 1) AwtoPutNum(ucV, 3); else if(ucK == 2) AwtoPutHex2(ucV); else AwtoPutChar('-');
     AwtoPutCol(AWTO_TCOL_VALUE);
     if(ucK == 1) AwtoPutVolt(ucV); else AwtoInText(ucI);
-    AwtoTextLine(AWTO_G_L_FIRST + ucI, AWTO_T_STYLE_TEXT);
+    AwtoTextLine(AWTO_G_L_FIRST + ucI, AwtoInStyle(ucI));
 }
 
 static void AwtoInRowField(BYTE ucI)
@@ -192,20 +202,20 @@ static void AwtoInRowField(BYTE ucI)
     if(ucK == 0)
     {
         AwtoPutNum(ucV, 1);
-        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_STATE, AWTO_T_STYLE_TEXT);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_STATE, AwtoInStyle(ucI));
     }
     else if(ucK == 1)
     {
         AwtoPutNum(ucV, 3);
-        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_RAW, AWTO_T_STYLE_TEXT);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_RAW, AwtoInStyle(ucI));
         AwtoFieldBegin();
         AwtoPutVolt(ucV);
-        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_VALUE, AWTO_T_STYLE_TEXT);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_VALUE, AwtoInStyle(ucI));
     }
     else
     {
         AwtoPutHex2(ucV);
-        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_RAW, AWTO_T_STYLE_TEXT);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_RAW, AwtoInStyle(ucI));
     }
 }
 
@@ -221,6 +231,8 @@ static void AwtoTableStatic(void)
     AwtoTextLine(1, AWTO_T_STYLE_ACCENT);
     AwtoPutCol(1); AwtoPutStr("I2C 44 CLOSE");
     AwtoTextLine(AWTO_G_L_FIRST + AWTO_G_ROWS, AWTO_T_STYLE_ACCENT);
+    AwtoPutCol(1); AwtoPutStr("RED = NOT IN THE I2C CHANGE LOG");
+    AwtoTextLine(AWTO_G_L_FIRST + AWTO_G_ROWS + 1, AWTO_T_STYLE_ALERT);
 }
 
 void AwtoOsdGpioLines(void)
@@ -228,6 +240,7 @@ void AwtoOsdGpioLines(void)
     bit bAll = (g_stAwtoGpio.ucDrawn == 0);
     BYTE ucI;
 
+    if(AwtoConLost() != 0) return;
     AwtoPanel(0);
     if(bAll != 0)
     {

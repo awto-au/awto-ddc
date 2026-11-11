@@ -107,6 +107,7 @@ void AwtoOsdKeyLines(void)
 
     g_stAwtoKey.ucDrawn = 1;
     g_stAwtoKey.ucRedraws++;
+    if(AwtoConLost() != 0) return;
     AwtoPanel(1);
     if(bFirst != 0)
     {

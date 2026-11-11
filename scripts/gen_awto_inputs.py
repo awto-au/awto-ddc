@@ -109,7 +109,7 @@ def main():
     r = rows()
     targets = [(ROOT / "fw/overlay/Project/Header/RL6449_Project.h", header_block(r)),
                (ROOT / "fw/sdcc/awto_gpio.inc", table_block(r, ("Kind", "Src", "A", "B", "Addr", "Flags"))),
-               (ROOT / "fw/sdcc/awto_gpiopop.inc", table_block(r, ("Kind", "Pin"), "S") + "\n\n" + names_block(r))]
+               (ROOT / "fw/sdcc/awto_gpiopop.inc", table_block(r, ("Kind", "Pin", "Flags"), "S") + "\n\n" + names_block(r))]
     stale = 0
     for path, blk in targets:
         new, old = patch(path, blk)

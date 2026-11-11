@@ -150,7 +150,7 @@ static __code BYTE tAwtoPal[12][3] = {
     {0, 68, 166}, {170, 170, 170}, {255, 255, 255}, {73, 73, 73}, {110, 110, 110}, {170, 193, 225},
     {0, 45, 111}, {85, 85, 85}, {37, 37, 37}, {85, 130, 196}, {0, 23, 55}, {0, 0, 0}};
 // 1 bit glyph foreground for each osd_style; background 0 is transparent and exposes the white/blue window.
-static __code BYTE tAwtoStyle[4] = {1, 2, 3, 1};
+static __code BYTE tAwtoStyle[5] = {1, 2, 3, 1, 4};      // style 4 = palette 4: only the diagnostic console uses it (alert)
 #define AWTO_BAR_SURFACE            3
 #define AWTO_BAR_ACCENT             1
 
