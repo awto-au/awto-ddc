@@ -1,5 +1,11 @@
 # EDID rewrite: JXC 28in 4K, "awto" identity
 
+> **Current AWTO firmware:** this document records the original factory-firmware
+> sector rewrite. New firmware deployments must use `./dev.py deploy`, which
+> flashes one shared image and then programs its code-resident EDID tables per
+> monitor. See [deployment.md](deployment.md). Do not apply the old `0x13000`
+> procedure to a current AWTO image.
+
 Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits a 594 MHz VIC 97 DTD1 (ab8c4c9, not flashed); decided to go back to the vendor DTD1 3840x2160@59.982, 533.12 MHz and drop VIC 97 (#26, 2026-11-07).
 
 ## Files

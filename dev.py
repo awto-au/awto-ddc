@@ -429,6 +429,46 @@ def check_image_identity(u: dict, img: Path) -> None:
                          f"--any-image to flash it anyway")
 
 
+def _firmware_edid_sector(img: Path) -> int:
+    """Return the one sector containing the three served EDID code tables.
+
+    Importing the offline builder keeps this check identical to the one used
+    to produce the per-monitor sector.  It runs before any hardware is touched.
+    """
+    from build_fw_edid_sector import edid_offsets
+    offsets = edid_offsets(img.read_bytes())
+    return (offsets[0] // 4096) * 4096
+
+
+def _build_unit_edid_sector(u: dict, img: Path) -> tuple[int, Path, Path, int]:
+    """Validate a shared image and emit (address, patched, expected, rc)."""
+    sector_addr = _firmware_edid_sector(img)
+    edid_dir = FW / "edid"
+    stem = img.name.removesuffix(".bin")
+    patched = edid_dir / f"{u['serial']}-{stem}-sector.bin"
+    expected = edid_dir / f"{stem}-shared-sector.bin"
+    rc = _py("build_fw_edid_sector.py", "--image", img, "--serial", u["serial"],
+             "--out", patched, "--expect-out", expected)
+    return sector_addr, patched, expected, rc
+
+
+def _record_unit_edid(u: dict, img: Path, sector_addr: int, patched: Path) -> None:
+    """Record the verified post-deployment sector in both state manifests."""
+    fj = FW / f"{u['serial']}-flashed.json"
+    state = _flashed(u)
+    state.update({"edid_serial": u["serial"], "shared_firmware": str(img)})
+    fj.write_text(json.dumps(state))
+    try:
+        import flash_state
+        manifest = FW / f"{u['serial']}-flash-state.json"
+        fs = flash_state.FlashState.load(manifest, u["serial"], lambda s: log(s, "WARN"))
+        if fs is not None:
+            fs.sectors[sector_addr // 4096] = flash_state.sha(patched.read_bytes())
+            fs.save(source=f"{fs.source}+per-monitor-edid")
+    except (OSError, ValueError) as e:
+        log(f"deploy: could not update flash-state EDID sector ({e}); next flash will drift-check it", "WARN")
+
+
 def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> int:
     """shield: SIGINT/SIGTERM/SIGHUP are forwarded to the child once (it stops at a safe point) and dev.py keeps draining
     its output; otherwise dev.py would die first and its finally (fast_bus unload) would reload the bus mid-flash."""
@@ -479,14 +519,17 @@ def _flashed(u: dict) -> dict:
     return json.loads(f.read_text()) if f.exists() else {}
 
 
-@command("build firmware for a unit; frozen to tmp/fw/<serial>-<commit>[-frc]-be.*",
-         args="[--unit N] [--frc]", kind="action")
+@command("build firmware for a unit; frozen to tmp/fw/<serial>-<commit>[-frc][-audio-test]-be.*",
+         args="[--unit N] [--frc] [--audio-test]", kind="action")
 def cmd_build(extra: list[str]) -> int:
     n, u = _unit(extra)
     disk_guard.prune_fw(FW)
     disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
     frc = _flag(extra, "--frc")
+    audio_test = _flag(extra, "--audio-test")
     defs = ["-D_AWTO_FRC"] if frc else []
+    if audio_test:
+        defs.append("-D_AWTO_AUDIO_TEST")
     if BOOT_PORTS.get(u["input"]):
         defs.append(f"-D_AWTO_BOOT_PORT={BOOT_PORTS[u['input']]}")
     env = {"AWTO_SDCC_BE": "1" if u["be"] else "0", "AWTO_SDCC_BIN": SDCC_BE_BIN, "K2S_SDCC_EXTRA": " ".join(defs)}
@@ -495,12 +538,12 @@ def cmd_build(extra: list[str]) -> int:
         return rc
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=REPO).returncode else ""
-    tag = f"{u['serial']}-{commit}{dirty}{'-frc' if frc else ''}-be"
+    tag = f"{u['serial']}-{commit}{dirty}{'-frc' if frc else ''}{'-audio-test' if audio_test else ''}-be"
     out = FW / u["serial"]
     for src, ext in ((out / "fw.bin", "bin"), (out / "fw.map", "map"), (TMP / "sdcc-port/trace_ids.tsv", "ids.tsv")):
         shutil.copy2(src, FW / f"{tag}.{ext}")
     (FW / f"{u['serial']}-last.txt").write_text(tag)
-    log(f"image tmp/fw/{tag}.bin (unit {n}{', FRC' if frc else ''})", "ALERT")
+    log(f"image tmp/fw/{tag}.bin (unit {n}{', FRC' if frc else ''}{', internal audio test' if audio_test else ''})", "ALERT")
     return 0
 
 
@@ -546,7 +589,7 @@ def cmd_flash(extra: list[str]) -> int:
     disk_guard.require_free("flash")        # before the flash-state file is touched (#77)
     identity = None
     if bus:
-        identity = "dev.py recover: bus resolved by this unit's EDID serial, before or right after its own relay cycle"
+        identity = "dev.py caller: bus resolved for this unit before the flash (or by its own relay cycle)"
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
@@ -577,6 +620,82 @@ def cmd_flash(extra: list[str]) -> int:
         fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
         if _py("fw_archive.py", "--commit", img):      # every flashed image kept in git; failure doesn't fail the flash
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
+    return rc
+
+
+@command("deploy one shared firmware image, then separately program this monitor's unique EDID tables",
+         args="[--unit N] [--force] [--full] [--verify crc|readback] [--write-mode byte|burst] image.bin",
+         kind="action")
+def cmd_deploy(extra: list[str]) -> int:
+    """Safe production deployment: common firmware first, per-unit EDID second.
+
+    ``build --unit`` still makes useful test images, but it is not the
+    multi-monitor deployment procedure.  Deployment deliberately accepts a
+    shared image regardless of the serial compiled into its EDID tables, then
+    replaces only the EDID-table sector for the selected physical monitor.
+    """
+    n, u = _unit(extra)
+    full = _flag(extra, "--full")
+    verify = _opt(extra, "--verify", "crc")
+    wmode = _opt(extra, "--write-mode", "burst")
+    image_args = _image_arg(extra)
+    if not image_args:
+        raise SystemExit("deploy: give the shared firmware image explicitly; nothing done")
+    img = Path(image_args[0])
+
+    # Validate the image and generate both sides of the sector guard before
+    # resolving/touching a monitor.
+    sector_addr, patched, expected, rc = _build_unit_edid_sector(u, img)
+    if rc:
+        return rc
+
+    # Resolve identity while the unit still has its own EDID.  The shared
+    # image may temporarily expose its build serial until the sector step.
+    bus = _bus(u)
+    flash_args = ["--unit", n, "--bus", str(bus), "--any-image",
+                  "--verify", verify, "--write-mode", wmode,
+                  *(["--full"] if full else []),
+                  *(["--force"] if not u.get("test") else []), str(img)]
+    rc = cmd_flash(flash_args)
+    if rc:
+        log(f"deploy: shared firmware failed (rc={rc}); EDID was not programmed", "ERROR")
+        return rc
+
+    log(f"deploy: shared image verified; programming {u['serial']} EDID in sector 0x{sector_addr:x}")
+    rc = _py("rtd_flash_sector.py", bus, hex(sector_addr), patched,
+             "--expect-current", expected, "--write", shield=True)
+    if rc:
+        log("deploy: FIRMWARE IS PRESENT BUT PER-MONITOR EDID FAILED; retry deploy on this same bus", "FATAL")
+        return rc
+
+    _record_unit_edid(u, img, sector_addr, patched)
+    log(f"deploy complete: unit {n}, shared image {img.name}, EDID {u['serial']}", "ALERT")
+    return 0
+
+
+@command("program only this monitor's EDID tables from a shared firmware image (deploy recovery)",
+         args="[--unit N] [--force] [--bus N] image.bin", kind="action")
+def cmd_edid(extra: list[str]) -> int:
+    """Program the per-monitor EDID sector without reflashing common firmware."""
+    n, u = _unit(extra)
+    given_bus = _opt(extra, "--bus")
+    image_args = _image_arg(extra)
+    if not image_args:
+        raise SystemExit("edid: give the shared firmware image explicitly; nothing done")
+    if given_bus is True:
+        raise SystemExit("edid: --bus needs a value; nothing done")
+    img = Path(image_args[0])
+    sector_addr, patched, expected, rc = _build_unit_edid_sector(u, img)
+    if rc:
+        return rc
+    bus = int(given_bus) if given_bus is not None else _bus(u)
+    if given_bus is not None:
+        log(f"edid: using caller-proven physical bus {bus} for unit {n}", "WARN")
+    rc = _py("rtd_flash_sector.py", bus, hex(sector_addr), patched,
+             "--expect-current", expected, "--write", shield=True)
+    if rc == 0:
+        _record_unit_edid(u, img, sector_addr, patched)
+        log(f"EDID complete: unit {n}, {u['serial']}", "ALERT")
     return rc
 
 
@@ -770,8 +889,9 @@ def cmd_settings(extra: list[str]) -> int:
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
-@command("our OSD menu over I2C (#67): state | key K | hold KEYS MS | open PAGE | select ITEM | set ITEM V | get ITEM | "
-         "back | close | walk (every page + item checked against the registry; --png DIR renders pages in the sim)",
+@command("our OSD menu over I2C (#67): keyboard uses the computer arrows; state | key K | hold KEYS MS | open PAGE | "
+         "select ITEM | set ITEM V | get ITEM | back | close | walk (every page + item checked against the registry; "
+         "--png DIR renders pages in the sim)",
          args="[--unit N | --sim BIN] [--map F] [--png DIR] CMD [ARGS]", kind="action")
 def cmd_menu(extra: list[str]) -> int:
     sim, given, png = _opt(extra, "--sim"), _opt(extra, "--map"), _opt(extra, "--png")
@@ -781,6 +901,53 @@ def cmd_menu(extra: list[str]) -> int:
     n, u = _unit(extra)
     b = _live_bus(u)
     return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra)
+
+
+@command("full-screen landscape Pac-Man demo: computer arrow keys steer; Escape/Q closes",
+         args="[--unit N] [--map F]", kind="action")
+def cmd_pacman(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    _done(extra, "pacman")
+    b = _live_bus(u)
+    return _dbg_py(b, "pacman_cli.py", b, "--serial", u["serial"], "--map", _fwmap(u, given))
+
+
+@command("Pygame RTD OSD emulator using the linked firmware's actual glyph/map/palette bytes",
+         args="[BIN] [--map F] [--cols N] [--rows N] [--char-width N] [--row-height N] [--steps N] "
+              "[--no-font24] [--no-double-x] [--no-double-y] [--fullscreen] [--screenshot PNG]", kind="action")
+def cmd_pacman_sim(extra: list[str]) -> int:
+    given, shot = _opt(extra, "--map"), _opt(extra, "--screenshot")
+    fullscreen = _flag(extra, "--fullscreen")
+    geometry = []
+    for flag in ("--cols", "--rows", "--char-width", "--row-height", "--steps"):
+        if (value := _opt(extra, flag)) is not None:
+            if value is True:
+                raise SystemExit(f"pacman-sim: {flag} needs a value")
+            geometry += [flag, str(value)]
+    for flag in ("--no-font24", "--no-double-x", "--no-double-y"):
+        if _flag(extra, flag):
+            geometry.append(flag)
+    image = _image_arg(extra)
+    if image:
+        img = Path(image[0])
+        mp = Path(str(given)) if given else img.with_suffix(".map")
+    else:
+        # Unit 2 is the declared test monitor; its flash manifest identifies
+        # the exact linked image without probing or touching hardware.
+        u = _units()["2"]
+        state = _flashed(u)
+        img = Path(state.get("image", ""))
+        mp = Path(str(given)) if given else FW / f"{state.get('tag', '')}.map"
+    if not img.is_file() or not mp.is_file():
+        raise SystemExit(f"pacman-sim: need matching BIN+MAP, got {img} and {mp}")
+    py = "/usr/bin/python3"                         # Fedora pygame package; project CPython 3.15t has no wheel
+    cmd = [py, str(REPO / "scripts/pacman_emulator.py"), str(img.resolve()), str(mp.resolve()),
+           *geometry, *(["--fullscreen"] if fullscreen else []), *(["--screenshot", str(shot)] if shot else [])]
+    log("run: " + " ".join(cmd[1:]))
+    rc = subprocess.call(cmd, cwd=REPO)
+    log(f"rc={rc}: pacman emulator", "INFO" if rc == 0 else "ERROR")
+    return rc
 
 
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
@@ -856,6 +1023,20 @@ def cmd_dbg_read(extra: list[str]) -> int:
     return _dbg_py(b, "rtd_dbg_read.py", b, "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
 
 
+@command("unused GPIO inputs: snapshot | watch changes | open/close the live OSD screen over I2C",
+         args="[--unit N] [--map F] [--secs S] snapshot|watch|open|close", kind="action")
+def cmd_gpio(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given, secs = _opt(extra, "--map"), _opt(extra, "--secs")
+    if len(extra) != 1 or extra[0] not in ("snapshot", "watch", "open", "close"):
+        raise SystemExit("gpio: snapshot|watch|open|close [--secs S]; nothing done")
+    if secs is True:
+        raise SystemExit("gpio: --secs needs a number; nothing done")
+    b = _live_bus(u)
+    return _dbg_py(b, "gpio_diag.py", b, extra[0], "--serial", u["serial"], "--map", _fwmap(u, given),
+                   *(["--secs", secs] if secs else []))
+
+
 @command("read the sink's HDMI SCDC registers (0x54), read-only", args="[--unit N]", kind="action")
 def cmd_scdc(extra: list[str]) -> int:
     n, u = _unit(extra)
@@ -863,11 +1044,11 @@ def cmd_scdc(extra: list[str]) -> int:
     return _py("hdmi_scdc.py", _bus(u))
 
 
-DDC_SUBS = {"list": 0, "get": 1, "sleep": 0, "wake": 0, "brightness": 1}
+DDC_SUBS = {"list": 0, "get": 1, "set": 2, "sleep": 0, "wake": 0, "brightness": 1}
 
 
-@command("DDC/CI via ddcutil on the unit's own bus: list | get CODE | sleep | wake | brightness N",
-         args="[--unit N] list|get CODE|sleep|wake|brightness N", kind="action")
+@command("DDC/CI via ddcutil on the unit's own bus: list | get CODE | set CODE VALUE | sleep | wake | brightness N",
+         args="[--unit N] list|get CODE|set CODE VALUE|sleep|wake|brightness N", kind="action")
 def cmd_ddc(extra: list[str]) -> int:
     n, u = _unit(extra)
     if not extra or extra[0] not in DDC_SUBS or len(extra) != 1 + DDC_SUBS[extra[0]] \

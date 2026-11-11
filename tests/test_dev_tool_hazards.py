@@ -224,6 +224,41 @@ def test_dev_flash_refuses_other_unit_image_before_bus(dev, tmp_path, monkeypatc
         dev.cmd_flash(["--unit", "3", str(img)])
 
 
+def test_deploy_uses_shared_image_then_programs_unit_edid(dev, tmp_path, monkeypatch):
+    img = _img(tmp_path, "shared.bin", b"shared firmware")
+    dev.FW.mkdir(parents=True)
+    calls = []
+    monkeypatch.setattr(dev, "_firmware_edid_sector", lambda p: 0x5000)
+    monkeypatch.setattr(dev, "_bus", lambda u: 21)
+    monkeypatch.setattr(dev, "cmd_flash", lambda a: calls.append(("flash", a)) or 0)
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False:
+                        calls.append((script, list(a), shield)) or 0)
+    assert dev.cmd_deploy(["--unit", "3", "--force", str(img)]) == 0
+    flash = next(x for x in calls if x[0] == "flash")
+    assert "--any-image" in flash[1] and "--force" in flash[1]
+    sector = next(x for x in calls if x[0] == "rtd_flash_sector.py")
+    assert sector[1][0:2] == [21, "0x5000"]
+    assert "--expect-current" in sector[1] and "--write" in sector[1]
+    state = json.loads((dev.FW / "AWT26110003-flashed.json").read_text())
+    assert state["edid_serial"] == "AWT26110003"
+
+
+def test_edid_recovery_uses_caller_proven_bus_without_reflashing(dev, tmp_path, monkeypatch):
+    img = _img(tmp_path, "shared.bin", b"shared firmware")
+    dev.FW.mkdir(parents=True)
+    patched, expected = dev.FW / "patched.bin", dev.FW / "expected.bin"
+    patched.write_bytes(b"p" * 4096)
+    expected.write_bytes(b"e" * 4096)
+    calls = []
+    monkeypatch.setattr(dev, "_build_unit_edid_sector", lambda u, p: (0x5000, patched, expected, 0))
+    monkeypatch.setattr(dev, "_bus", lambda u: pytest.fail("must not identify by temporary EDID"))
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False:
+                        calls.append((script, list(a), shield)) or 0)
+    assert dev.cmd_edid(["--unit", "3", "--force", "--bus", "21", str(img)]) == 0
+    assert calls == [("rtd_flash_sector.py",
+                      [21, "0x5000", patched, "--expect-current", expected, "--write"], True)]
+
+
 def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
     img = _img(tmp_path, "AWT26110003-abc-be.bin", b"AWT26110003")
     seen = []
