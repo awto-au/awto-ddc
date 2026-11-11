@@ -164,14 +164,16 @@ OSD_EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe
 OSD_KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
 # g_stOsdInfo (StructOsdInfo, RTD2014Include.h): byte offsets of the fields the tools touch. The map has no member offsets and
 # _DP_DEBUG_MSG (#37) adds a bit-field byte in front of them, so: firmware self-report (diag block 0x2C..0x2E, images from #37 on)
-# > map hint (DP-info function linked = +1) > the layout of the images without both (_DP_DEBUG_MSG off).
+# > map hint (g_stOsdInfo is 16 B, not 15 = +1) > the layout of the images without both (_DP_DEBUG_MSG off).
 OSD_OFS_LEGACY = {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}
 DIAG_OSD_OFS_AT = 0x2C
-OSD_DP_INFO_SYM = "OsdPropGetShowDpInfoStringAddress"          # exists only with _DP_DEBUG_MSG on
+OSD_INFO_SIZE_LEGACY = 15                                       # sizeof(StructOsdInfo) with _DP_DEBUG_MSG off
 
 
 def osd_offsets_from_map(map_text: str) -> dict:
-    shift = 1 if OSD_DP_INFO_SYM in map_text else 0
+    """Size = gap to the next symbol (the DP-info function used before is gone since #124)."""
+    m = re.search(r"^\w:\s+([0-9A-F]{8})\s+_g_stOsdInfo\s.*\n\w:\s+([0-9A-F]{8})\s", map_text, re.M)
+    shift = 1 if m and int(m[2], 16) - int(m[1], 16) > OSD_INFO_SIZE_LEGACY else 0
     return {k: v + shift for k, v in OSD_OFS_LEGACY.items()}
 
 
