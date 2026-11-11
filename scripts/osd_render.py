@@ -80,10 +80,20 @@ class Session:
         self.logo_snap = None
         self.t0 = None
 
-    def boot(self):
+    def boot(self, sync_console: bool = False):
+        """sync_console False: the #139 console auto-open is switched off right after the crt init (g_ucAwtoSyncCon = 0),
+        so screen tests start from an empty OSD as before; True = the firmware default (on)."""
         bus, m, used = self.bus, self.bus.m, 0
+        con = None
+        if not sync_console:
+            try:
+                con = m.addr("g_ucAwtoSyncCon")              # XDATA symbol (map D: line); images before #139 lack it
+            except S.SimError:
+                con = None
         while used < 160_000_000:
             m.run(1_000_000); used += 1_000_000
+            if con and not sync_console:
+                m.wr(con, bytes([0]))
             if self.logo["done"] and self.logo_snap is None:
                 m.run(300_000)                                     # let the enable + window writes finish
                 self.logo_snap = self.model.snapshot(m, 0.0)

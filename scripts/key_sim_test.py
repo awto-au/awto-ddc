@@ -24,7 +24,8 @@ LOG = ROOT / "tmp/logs/key_sim_test.log"
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
 WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
-         "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "AwtoKeyDbgLink", "SysPowerSetTargetPowerStatus")
+         "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "AwtoKeyDbgLink", "SysPowerSetTargetPowerStatus",
+         "AwtoPsField", "AwtoSrcPortFields")
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
 
@@ -116,6 +117,7 @@ class Keys:
         self.fails += 0 if ok else 1
 
 
+SRC_COLS = 46               # awto_osdcard.inc AWTO_SRC_COLS (#139: per-port status lines)
 OSD_TIMEOUT_S = 30          # an SDK OSD timeout > 10 s (RTD2014Key: <= 10 = never); registry osd_timeout default is 30
 OSD_TIMEOUT_OFF = 4         # StructOSDUserDataType.ucOsdTimeout (RTD2014NVRamOsd.h: usBackLight, ucOsdHPos, ucOsdVPos first)
 SDK_PSAVE_S = 3 + 2         # SDK no-signal way in: power-saving card after 3 s, power saving 2 s later (RTD2014Osd.c)
@@ -150,6 +152,29 @@ def stay_open(k):
     k.m.wr(to, bytes([old]))
 
 
+D3_CABLE = 0xFE2C            # D3 cable-detect pin (fw_sim CABLE, board header bD3_CONNECT), low = cable
+
+
+def status_rows(k):
+    """#139: the selector's port fields are polled; only a changed value is redrawn (field update)."""
+    k.tap("SOURCE")
+    k.wait(1500)
+    b = k.snap()
+    k.wait(1500)                                                # >= 5 polls (AWTO_SRC_POLL_MS 250) with nothing changing
+    k.check("selector status: polled, nothing redrawn while nothing changes",
+            k.delta(b, "AwtoSrcPortFields") >= 4 and k.delta(b, "AwtoPsField") == 0,
+            f"port polls {k.delta(b, 'AwtoSrcPortFields')}, signal fields drawn {k.delta(b, 'AwtoPsField')}")
+    old = k.m.rd(D3_CABLE)[0]
+    b = k.snap()
+    k.m.wr(D3_CABLE, bytes([old ^ 1]))                          # D3 cable pin flips: its 5V field (and later cbl) change
+    k.wait(800)
+    k.check("selector status: a D3 cable-pin change redraws its fields only", 1 <= k.delta(b, "AwtoPsField") <= 4,
+            f"signal fields drawn {k.delta(b, 'AwtoPsField')}")
+    k.m.wr(D3_CABLE, bytes([old]))
+    k.wait(800)
+    k.tap("MENU")
+
+
 def run(k):
     s = k.s
     k.wait(1000)                                                # main loop is blocked ~150 ms after ACTIVE (pop-up, panel on): a press then is not sampled
@@ -178,7 +203,7 @@ def run(k):
     k.tap("SOURCE")
     sel = k.osd_state()
     w = k.m.rd(k.osd_w)[0]
-    k.check("SOURCE -> selector on the text layer (28-cell rows drawn)", k.delta(b, "AwtoSourceOpen") == 1 and sel != 0 and w == 28
+    k.check(f"SOURCE -> selector on the text layer ({SRC_COLS}-cell rows drawn)", k.delta(b, "AwtoSourceOpen") == 1 and sel != 0 and w == SRC_COLS
             and k.delta(b, "AwtoSourceRows") == 1, f"osd state {sel}, map width {w}, rows drawn {k.delta(b, 'AwtoSourceRows')}")
     n_items = 4                                                 # Auto + D1 DP, D2 HDMI 1, D3 HDMI 2 (fw/overlay Pcb)
     b = k.snap()
@@ -205,6 +230,7 @@ def run(k):
     k.tap("MENU")
     k.check("selector: closed", k.osd_state() == 0)
     stay_open(k)
+    status_rows(k)
 
     b = k.snap()                                                # awto menu: AUTO opens, keys go to menu_key, repeat rate-limited
     k.tap("AUTO")

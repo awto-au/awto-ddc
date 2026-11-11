@@ -394,10 +394,25 @@ def _main() -> int:
     ap.add_argument("--map", help="image .map: also print the input timing with exact frequencies (default $AWTO_DDC_MAP, else the newest tmp/fw/*/fw.map)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
+    ap.add_argument("--sync", action="store_true", help="print the sync / power-on log ring (#139, scripts/sync_log.py; needs --map)")
     a = ap.parse_args()
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = B.setup_logs("rtd_diag").main          # decoded I2C + this tool's lines; byte trace in rtd_diag.raw.log
+    if a.sync:
+        import rtd_proto as P
+        import sync_log as S
+        mp = Path(a.map) if a.map else P.default_map(root)
+        if not mp or not Path(mp).exists():
+            print("--sync needs --map (the flashed image's .map; its .sync.tsv beside it)"); return 1
+        w = IO = B.Real(a.bus, allow_write=True, regread=True)     # a debug read sets the address by a write
+        raw = X.read_blocks(w, S.sym(Path(mp), "g_stAwtoSync"), S.HDR + S.N * S.EV)
+        if raw is None:
+            print("sync: read over 0x35 failed"); return 1
+        h, lines = S.decode(bytes(raw), S.load_rows(S.tsv_for(Path(mp))))
+        txt = "\n".join([f"sync episode: {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines"] + ["  " + ln for ln in lines])
+        print(txt); log(txt)
+        return 0
     io = IO = B.Real(a.bus, allow_write=False, regread=True)
     if a.release:
         ok = _release(io)

@@ -80,6 +80,8 @@ def main() -> int:
     for ext in ("bin", "map"):
         dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.{ext}"
         shutil.copy2(a.tree / f"tmp/fw/{a.serial}/fw.{ext}", dst)
+    if (a.tree / "fw/awto/sync.tsv").exists():          # #139: the sync-log texts of this image (scripts/sync_log.py)
+        shutil.copy2(a.tree / "fw/awto/sync.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.sync.tsv")
     say(f"image tmp/fw/{a.serial}-{a.tag}-be.bin (compiler {got[:10]}, sdcccall {bj.get('sdcccall')})")
     return 0
 
