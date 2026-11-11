@@ -23,10 +23,11 @@ import dbg_xdata as X  # noqa: E402
 DEV8, SIZE, REC_N, SEED = 0x6A, 32, 25, 0xA5
 COMMON_END = 0x5000                                  # banked code from 0x5000 (docs/reversing/realtek-rtd/mcu-8051.md)
 CAUSE = {0: "none", 1: "STALL"}
-BOOT = ((0x01, "LVR"), (0x02, "BITE-PENDING"), (0x04, "TEST-ARMED"), (0x08, "NEW"), (0x10, "WARM"))
+BOOT = ((0x01, "HW-WDT"), (0x02, "BITE-PENDING"), (0x04, "TEST-ARMED"), (0x08, "NEW"), (0x10, "WARM"), (0x20, "COLD"),
+        (0x40, "AFTER-BITE"), (0x80, "AFTER-PROBE"))       # RL6449_Project.h AWTO_WDT_B_* (record v2, #138)
 FIELDS = ("m0 m1 ver cause bites warm pch pcl bank sp psw acc b dph dpl reth retl stage mode hbh hbl uph upl "
           "agh agl check boot passh passl max_pass max_poke probe").split()
-PROBE = ((0x01, "TIMER-MODE"), (0x02, "ARMED"), (0x04, "IRQ"), (0x08, "RESET"), (0x10, "NO-RESET"), (0x20, "WDTI"))
+PROBE = ((0x01, "TIMER-MODE"), (0x02, "ARMED"), (0x04, "IRQ"), (0x08, "RESET"), (0x10, "NO-RESET"), (0x20, "WDTI"), (0x40, "EARLY"))
 POKE_MS = 32 * 2048 / 14318.18                       # ucMaxPoke unit: 32 CNT3 counts (RL6449_Project.h)
 
 

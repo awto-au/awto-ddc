@@ -132,7 +132,7 @@ def main() -> int:
     r.s.bus.wait(a.steady)
     d = r.rec()
     r.check(r.cr.resets == 0, f"no chip reset over boot + {a.steady:.0f} s ACTIVE")
-    r.check(d["valid"] and d["bites"] == 0 and (d["boot"] & 0x01) != 0, "cold boot: fresh record, LVR flag")
+    r.check(d["valid"] and d["bites"] == 0 and (d["boot"] & 0x20) != 0, "cold boot: fresh record, COLD flag")
     say(f"  measured, boot + idle ACTIVE: longest poke gap {r.cr.max_gap:.1f} ms (model; ended by {r.cr.max_who}), record max poke "
         f"{d['max_poke'] * C.POKE_MS:.0f} ms, max pass {d['max_pass'] * 32} ms; warning at {r.lim['warn_ms']:.1f} ms")
     tests = a.tests.split(",")
@@ -175,7 +175,7 @@ def main() -> int:
         dt = r.wait_resets(n, 586 + CMD_LATENCY_MS + 1500)
         r.reboot()
         d = r.rec()
-        r.check(dt is not None and d["probe"] == 0x0C, f"probe 0x49 (model): reset {dt and round(dt, 1)} ms after the clear, probe 0x{d['probe']:02X} (want IRQ|RESET 0x0C)")
+        r.check(dt is not None and d["probe"] == 0x08, f"probe 0x49 (model): reset {dt and round(dt, 1)} ms after the clear, probe 0x{d['probe']:02X} (want RESET only 0x08: normal mode has no threshold IRQ, unit 2)")
     r.check(C.clear(r.s.bus, r.addr) and not C.decode(C.read(r.s.bus, r.addr))["valid"], "host clear: record invalid")
     r.check(r.cr.resets == n, f"chip resets {r.cr.resets} ({n} test bites only)")
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} crash_sim_test {a.bin.name}: {r.fails} failed checks")

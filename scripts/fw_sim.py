@@ -353,9 +353,11 @@ class ChipReset(Dev):
     """MCU_FFEE_MCU_CLOCK_CONTROL bit1 sof_rst (regdb; the host's ISP 0xEE <- 0x02) = chip reset (awto-ddc#131): CPU reset
     (PC 0, SFRs), bank register 0, every Dev re-initialised (register cells back to regdb reset values). XDATA / IRAM RAM kept
     (warm reset, #26) and P0_01 HOST_CTRL kept (regdb: only an LVR clears reset_chk). resets / at_t2: count, diag usT2Isr.
-    Hardware WDT (#138, docs/watchdog.md). ASSUMED (unit 2 to confirm, test cmd 0x49 / 0x4F), same in normal and timer mode:
-    - CNT2 / 2048 XTAL -> CNT3 12 bit (143 us, wraps 585.9 ms) -> CNT1; reset when CNT1 reaches N = FFEA[2:0] + 1 wraps;
-    - threshold FFB0[7:4]:FFAE matches CNT3 once per wrap: FFEB[7] flag; with FFEB[2] and FFC4 wdt_irq_pri = int2 -> EXIF[4];
+    Hardware WDT (#138, docs/watchdog.md). Unit 2, 2026-11-11 (probes 0x49 / 0x4F, wb-p14ui-wd4): normal mode resets but gives
+    NO threshold IRQ; timer mode gives the IRQ and still resets at CNT1 overflow. Modelled so:
+    - CNT2 / 2048 XTAL -> CNT3 12 bit (143 us, wraps 585.9 ms) -> CNT1; reset when CNT1 reaches N = FFEA[2:0] + 1 wraps (both modes);
+    - timer mode only: threshold FFB0[7:4]:FFAE matches CNT3 once per wrap: FFEB[7]; with FFEB[2] and FFC4 int2 -> EXIF[4];
+    - ASSUMED: N wraps in timer mode as in normal mode (probe reset timing; unit 2 normal-mode reset 605 ms vs 586 expected);
     - clr_wdt (FFEA[6] strobe) clears all counters and latches the old values into FFAB / FFAC / FFAD; FFEB[3] latches only.
     - enable = FFEA[7] | FFE9[7] | FF3A[6]. Time = machine cycles / cycles per fw ms (Timer2 reload; crystal / 12 before it)."""
     writes = (0xFFEE, 0xFFEA, 0xFFEB)
@@ -400,6 +402,8 @@ class ChipReset(Dev):
         if k < 0 or k * self.CNT3_MS + thr <= t0:
             return
         ffeb = m.rd(0xFFEB)[0]
+        if not ffeb & 0x10:                          # normal mode: no threshold flag / IRQ (unit 2 measurement)
+            return
         self.flag = True
         m.wr(0xFFEB, bytes([ffeb | 0x80]))
         irq = bool(ffeb & 0x04) and (m.rd(0xFFC4)[0] >> 3 & 7) == 2

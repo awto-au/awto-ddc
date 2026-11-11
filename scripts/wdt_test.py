@@ -4,6 +4,7 @@
 usage: AWTO_SIM_CORE=fast wdt_test.py --sim BIN MAP [--cases a,b] [--baseline-s 10]
        wdt_test.py --unit 2 --map MAP [--cases a,b]          (bus from devices.json by EDID serial; 100 kHz)
        wdt_test.py --list
+       (debug: WDT_TEST_SUB=label,... runs only those sub-cases of t0_arm_from_isr)
 - Cases (CASES table: test cmd, expected, deadline = 1.25 x the expected worst case, checks); ea_off runs last.
   A case the image does not implement (no test cmd / symbol) is SKIP with the reason.
 - Reset detection on the unit: in-process 0x35 poll every POLL_S (one byte read of the diag magic, 3 messages,
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -47,7 +49,8 @@ def reset_ms():
 
 # name, cmd, expected, worst-case ms (deadline = 1.25 x), checks
 CASES = [
-    ("baseline", None, "no reset for --baseline-s", None, "link alive, record bites / warm unchanged; max pass / poke ages"),
+    ("baseline", 0x29, "no reset for --baseline-s, with an NVRAM save (0x29 debug messages off, saved)", None,
+     "link alive, record bites / warm unchanged; max pass / poke ages"),
     ("stall", 0x4C, "warning capture + sof_rst", lambda: warn_ms() + CMD_MS, "reset; record STALL TEST, bites + 1, PC in AwtoWdtHang"),
     ("pass", 0x4D, "nothing: 0x4D is gone (#138: a loop around a poking wait must be bounded; audit rule)", None,
      "no reset for 3 s"),
@@ -166,12 +169,15 @@ class SimTarget:
 
     def watch(self, name: str, fn):
         """fn(regs) at each entry of _name (no change to the run); a name missing from the map raises."""
-        self.m.stub(name, lambda m_, r: fn(r) or None)
+        self.m.stub(name, lambda m_, r: (fn(r), None)[1])
 
     def unwatch(self, name: str):
+        """drop only this name's stubs: another bank's stub can sit at the same 16-bit PC"""
         v = self.m.sym["_" + name] & 0xFFFF
-        self.m.stubs.pop(v, None)
-        self.m.core.pch[v] = 0
+        self.m.stubs[v] = [s for s in self.m.stubs.get(v, []) if s[1] != name]
+        if not self.m.stubs[v]:
+            del self.m.stubs[v]
+        self.m._restub(v)
 
     def run_ms(self, ms: float, step: int = 5_000):
         t0 = self.fw_ms()
@@ -255,34 +261,39 @@ class UnitTarget:
         if drop is None:
             return "none", None
         self.say(f"  link dropped {drop - t0:.0f} ms after the command")
-        end = t0 + deadline_ms + RETURN_S * 1000
-        while self.now_ms() < end:
+        back = self.relink(t0 + deadline_ms + RETURN_S * 1000)
+        if back is None:
+            return "hang", None
+        up = self.uptime_ms()
+        if up is None or up >= back - t0:
+            return "hang", None
+        return "reset", back - up - t0
+
+    def relink(self, end_ms: float) -> float | None:
+        """After a reset: wait for DDC/CI 0x37 (the firmware's main loop runs), then debug link on, retried until 0x35
+        answers; NAKs while it boots are expected. Returns the time 0x35 answered, None if not by end_ms."""
+        import kvm
+        while self.now_ms() < end_ms and not kvm._ddcci_acks(self.bus_n):
+            time.sleep(0.05)                     # 50 ms: one DDC/CI probe; boot to the main loop ~0.3-0.5 s (docs/delays.md)
+        while self.now_ms() < end_ms:
             try:
                 if self.dbg_link.on(self.bus_n, 10) in ("swapped", "already") and self.alive():
-                    up = self.uptime_ms()
-                    back = self.now_ms()
-                    if up is not None and up < back - t0:
-                        return "reset", back - up - t0
-            except OSError:
+                    return self.now_ms()
+            except (OSError, SystemExit):
                 pass
-            time.sleep(0.2)
-        return "hang", None
+            time.sleep(0.1)
+        return None
 
     def soft_reset(self):
         from rtd_flash_sector import Rtd
         isp = Rtd(self.bus_n)
         isp.write(0x6F, 0x80)
         isp.write(0xEE, 0x02)                    # rtd_reset.py: ISP enable, scaler reset
-        time.sleep(1.0)                          # boot to the main loop (~0.5 s, docs/delays.md stage 6) x 2
-        end = self.now_ms() + RETURN_S * 1000
-        while self.now_ms() < end:
-            try:
-                if self.dbg_link.on(self.bus_n, 10) in ("swapped", "already") and self.alive():
-                    return
-            except OSError:
-                pass
-            time.sleep(0.2)
-        raise SystemExit("unit not back 5 s after the ISP reset")
+        t0 = self.now_ms()
+        while self.now_ms() - t0 < 2000 and self.alive():
+            time.sleep(0.02)                     # the reset drops 0x35 within one main-loop pass
+        if self.relink(self.now_ms() + RETURN_S * 1000) is None:
+            raise SystemExit("unit not back 5 s after the ISP reset")
 
     def close(self):
         try:
@@ -357,6 +368,7 @@ class Runner:
             self._cold_done = True
             self.after_reset("cold" if self.t.name == "sim" else "current")
         d0 = self.rec()
+        self.t.cmd(0x29)                            # debug messages off: an NVRAM save (flash erase + program) inside the window
         kind, _ = self.t.wait_reset(self.a.baseline_s * 1000)
         d1 = self.rec()
         ok = kind == "none" and d1["bites"] == d0["bites"] and d1["warm"] == d0["warm"]
@@ -452,8 +464,23 @@ class Runner:
             t = self.t
             t.watch("AwtoT0EvFire", lambda r: self.fired.append((r["r"][7] if t.m.keil else r["a1"] & 255, t.fw_ms())))
             t.watch("AwtoT0EvTest", lambda r: self.armed.append(t.fw_ms()))
-            t.watch("AwtoT0EvTestIsr", lambda r: self.isr_arm.append(t.fw_ms()))
+            self._ip_back = None
+            t.watch("AwtoT0EvTestIsr", lambda r: self._on_hook())
         return True
+
+    def _on_hook(self):
+        self.isr_arm.append(self.t.fw_ms())
+
+    def _ip_restore(self):
+        """IP back once no interrupt is active (main context, as the SDK changes it): restoring it inside EXINT0 flips
+        ScalerTimerPollingFlagProc_EXINT0 to its g_usTimerCounter branch while Timer2 cannot preempt -> endless poll"""
+        if self._ip_back is None:
+            return
+        k = 0
+        while self.t.m.p.nlvl and k < 20_000:
+            self.t.m.run(20); k += 1
+        self.t.sfr(0xB8, self._ip_back)
+        self._ip_back = None
 
     def _timed(self, cmd, want, budget_ms=200.0):
         """send cmd, run until len(want) fires or budget; [(name, ms, fired id, dt)]"""
@@ -539,10 +566,14 @@ class Runner:
             return
         t, bad, txt = self.t, 0, []
         ip0 = t.sfr(0xB8)
-        self._mode(0x5D, 1)
+
+        only = os.environ.get("WDT_TEST_SUB")          # debug: run only the sub-cases whose label starts with these (comma list)
 
         def one(label, setup):
             nonlocal bad
+            if only and not any(label.startswith(x) for x in only.split(",")):
+                return
+            self._mode(0x5D, 1)                         # the hook arms once per test cmd
             self.fired.clear(); self.isr_arm.clear()
             setup()
             t0 = t.fw_ms()
@@ -550,7 +581,7 @@ class Runner:
                 t.m.run(2_000)
             rr = [f for f in self.fired if f[0] == EVENT_IDS["RX2_HDMI_RR_RETRY"]]
             dts = [round((rr[k][1] - self.isr_arm[k]) % 65536, 2) for k in range(min(len(rr), len(self.isr_arm)))]
-            lo = 8.9 if label.startswith("TF0") else 9.0
+            lo = 9.0
             ok = len(rr) == len(self.isr_arm) == 1 and all(lo <= d <= 11.0 for d in dts)
             bad += not ok
             txt.append(f"{label}: arms {len(self.isr_arm)} fires {len(rr)} at {dts} ms")
@@ -564,13 +595,30 @@ class Runner:
         one("IE0 during the Timer0 ISR", during_t0)
         hit.append(1)                                   # stub stays; disarmed
 
-        def both():                                     # TF0 and IE0 set in one write: both pending, EX0 first (natural order)
-            t.sfr(0x88, t.sfr(0x88) | 0x22)             # the forced TF0 is one extra tick: RR due after 9..10 ms
-        self._arm_cmd(0x2A)
+        def both():                                     # IE0 just before Timer0 overflows: both pending, EX0 served first
+            self._arm_cmd(0x2A)                         # Timer0 ticking (30 ms event)
+            k = 0
+            while (t.sfr(0x8C) << 8 | t.sfr(0x8A)) < 0xFFC0 and k < 50_000:     # within 64 counts of the overflow
+                t.m.run(1); k += 1
+            self._exint0()
         one("TF0 + IE0 together", both)
-        t.sfr(0xB8, 0x81)                               # SDK power-saving swap: EXINT0 high, Timer2 low
-        hit.clear()
-        one("IP 0x81: EXINT0 preempts Timer0", lambda: self._arm_cmd(0x2A))
+        # SDK power-saving swap (EXINT0 high, Timer2 low) from the Timer0 ISR entry to the hook's arm
+        def ip81():
+            hit.clear()
+            t.unwatch("AwtoT0EvIsr")
+            ta = t.m.addr("g_ucAwtoT0Test")
+
+            def trig(r):
+                if not hit:
+                    hit.append(1)
+                    t.m.wr(ta, b"\x01")                 # hook mode 1 right here (a natural EXINT0 may have used it)
+                    self._ip_back = t.sfr(0xB8)
+                    t.sfr(0xB8, 0x81)
+                    self._exint0()
+            t.watch("AwtoT0EvIsr", trig)
+            self._arm_cmd(0x2A)
+            self._ip_restore()
+        one("IP 0x81: EXINT0 preempts Timer0", ip81)
         t.sfr(0xB8, ip0)
         self._mode(0x25, 0)
         self.row("t0_arm_from_isr", "PASS" if not bad else "FAIL", "; ".join(txt) + f" (sim; IP restored 0x{ip0:02X})")
@@ -661,7 +709,7 @@ class Runner:
                 if m.core.sfr[0x01] == (sp0 - 2) & 0xFF:
                     break
             out.append(m.p.cycles - c0)
-        m.stubs.pop(v, None); m.core.pch[v] = 0
+        self.t.unwatch(name)
         return out
 
     def c_tick_load(self):

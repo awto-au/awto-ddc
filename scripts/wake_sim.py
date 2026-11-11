@@ -4,7 +4,8 @@
 usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
 - Boot to ACTIVE on D2, switch to D3 (test cmd 0x33: fixed port, no source), force power saving (g_stPowerInfo target).
 - Each step forces power saving again, injects one event, and checks wake / no wake within the bound:
-  D2 unplug (no wake), D2 plug (wake, "D2 cable plugged in: wake"), sleep with every cable in (no wake: no edge),
+  D2 unplug (wake, "D2 cable unplugged: wake", #138 task 6), D2 plug (wake, "D2 cable plugged in: wake"), sleep with every
+  cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
   D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (wake), DPCD 600h = D0 (wake).
 - Measured: edge -> wake line (fw ms), wake line -> console drawn / backlight on (ring), PS main-loop pass time.
 - Sim devices: W1C on the latches (DDCn_EDID_IRQ bit0, AUX_IRQ_STATUS bit0), cable pins (low = cable), DPCD port memory.
@@ -153,7 +154,7 @@ class Run:
         self.check(woke, f"{name}: woke (power target / status NORMAL)", f"seen after {ms} ms (test sampling)" if woke else "no wake")
         self.watch(1500)                            # console + panel on, search: the ring has the follow-up lines
         ev = self.ring_events()
-        hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE)]
+        hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE, 0xD3)]
         lat = ((hit[-1][2] - t_inj) & 0xFFFF) if hit else None
         self.check(lat is not None and lat <= bound, f"{name}: event -> wake (firmware wake line) within {bound} ms", f"{lat} ms")
         txt = "\n".join(self.lines())
@@ -189,7 +190,7 @@ def main():
         while r.bus.mode_state() != MODE_NOSIGNAL and (r.t2() - t0) & 0xFFFF < 5000:
             r.m.run(200_000)
         r.check(r.bus.mode_state() == MODE_NOSIGNAL, "D3 fixed: NO SIGNAL")
-        r.wake_case("D2 cable unplugged", lambda: r.m.wr(D2_PIN, b"\x01"), None, 0)
+        r.wake_case("D2 cable unplugged", lambda: r.m.wr(D2_PIN, b"\x01"), "D2 cable unplugged: wake", BOUND_CABLE_MS)
         r.wake_case("D2 cable plugged in", lambda: r.m.wr(D2_PIN, b"\x00"), "D2 cable plugged in: wake", BOUND_CABLE_MS)
         st = r.model.snapshot(r.m, 0.0)
         img = np.array(R.render_snap(st, "black", 1))
@@ -199,6 +200,12 @@ def main():
             f"console {r.m.rd(r.gpio + 3)[0]})")
         r.check(sm["en"] and sm["cols"] == 120 and r.m.rd(r.gpio + 3)[0] != 0, "console on screen after the cable wake")
         r.wake_case("sleep again, cables in, no edge", lambda: None, None, 0)
+        # same episode (no picture since): each direction has woken once; a second unplug / plug is suppressed
+        r.wake_case("D2 unplug again (no picture since)", lambda: r.m.wr(D2_PIN, b"\x01"), None, 0)
+        r.wake_case("D2 plug again (no picture since)", lambda: r.m.wr(D2_PIN, b"\x00"), None, 0)
+        sup = [x for x in r.lines() if "suppressed (cable" in x]
+        r.check(any("cable unplug, once per sleep): D2" in x for x in sup) and any("(cable, once per sleep): D2" in x for x in sup),
+                "repeat plug / unplug: suppressed once per direction", str(sup))
         r.wake_case("D2 EDID read", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), "D2 EDID read by source: wake",
                     BOUND_LATCH_MS)
         r.wake_case("D2 EDID read again (no picture since)", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), None, 0)

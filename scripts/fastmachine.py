@@ -41,6 +41,7 @@ SO = ROOT / "tmp/mcs51_core.so"
 BANK = 0x10000
 R_DONE, R_EVENT, R_PC, R_BADOP = 0, 1, 2, 3
 EV_KIND = ("read", "write", "sread", "swrite")
+EV_SW = 3                   # EV_KIND index of an SFR write
 GCC_TIMEOUT_S = 60          # gcc -O2 of one 600-line file: < 2 s; 60 s = project host-process stall limit
 
 
@@ -204,6 +205,7 @@ class FastMachine:
         for d in self.devs:
             d.init(self)
         self._tickers = [d for d in self.devs if hasattr(d, "tick")]
+        self.core.hook(EV_SW, 0xCB, True)              # RCAP2H write: dilate the new reload at once (#138: Timer0 follows RCAP2)
 
     # ---- ucsim command subset ----
     def cmd(self, text: str, timeout: float = 120) -> str:
@@ -417,6 +419,12 @@ class FastMachine:
                 if 0 < left:
                     n = min(n, max(1, left // 4))
             r = core.run(n)
+            if self.t2_scale > 1 and r == R_EVENT and any(p.ev[i] == (EV_SW << 16 | 0xCB) for i in range(min(p.nev, 16))):
+                lo, hi = self.rd(0xCA, 2, "sfr")
+                tl, th = self.rd(0xCC, 2, "sfr")
+                self._scale_t2()                       # the firmware's next RCAP2 read sees the dilated reload, as Timer2 does
+                if (tl, th) == (lo, hi):               # SDK loads TL2/TH2 with the same count (ScalerTimerSetTimerCount)
+                    self.wr(0xCC, self.rd(0xCA, 2, "sfr"), "sfr")
             di, dt = p.instr - i0, (p.cycles - c0) * 12
             if r == R_EVENT and p.irq_tail and not self.EXACT:
                 dt -= 12                # ucsim: an event stop's "Simulated" ticks miss the IRQ entry cycle after it

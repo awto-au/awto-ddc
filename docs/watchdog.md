@@ -1,124 +1,182 @@
-# Watchdog and crash canary (#131)
+# Watchdog, crash canary and boot reason (#131, #138, #29)
 
-- Firmware: `awto-ddc-wdt` branch `wb-p14ui-wdt` a559295 (`fw/sdcc/awto_wdt.inc`, `awto_wdtpop.inc`, `fw/awto/wdt/rules.py`, `RL6449_Project.h` `StAwtoWdt`).
-- Host: `scripts/rtd_crash.py` (read / decode / clear), `scripts/crash_sim_test.py` (fw_sim), `scripts/fw_sim.py` `ChipReset`.
-- Related: #29 (reset cause on screen), #35 (self-recovery hooks), #26 (power-key reset; not on this branch, see Open items).
+- Firmware: `awto-ddc-wdt2` branch `wb-p14ui-wdt2` (from wb-p14ui 1c82a51). Files: `fw/sdcc/awto_wdt.inc`, `awto_t0ev.inc`, `awto_wdtpop.inc`,
+  `crt_rtd_startup.asm`, `fw/awto/wdt/rules.py`, `RL6449_Project.h` (`StAwtoWdt`, `AWTO_WDT_*`).
+- Host: `scripts/wdt_test.py` (sim + unit 2 runner), `wdt_sim.py` (boot gaps, Timer0 events, loop rate), `crash_sim_test.py`, `poke_loops.py`
+  (static loop check, table `re/poke_loops.tsv`), `rtd_crash.py` (record v2, `--snap`), `sync_log.py` (boot reason line), `fw_sim.py` `ChipReset`.
+- Superseded design (#131 software watchdog in the 1 ms tick, record v1): git history of this file.
 
-## Registers (regdb `re/regdb/RTD2795T-CG.tsv.gz`)
+## Hardware (regdb `re/regdb/RTD2795T-CG.tsv.gz`, unit 2 2026-11-11 wb-p14ui-wd4)
 
 | reg | bits | fact |
 |---|---|---|
-| FFEA WATCHDOG_TIMER | 7 wdt_en, 6 clr_wdt (W: clear all counters, latch them into FFAA-FFAD), 5/4 halt on SPI-flash / burst write, 2:0 cnt1 = N 1..8 | `ScalerMcuInitial` sets N = 8 and enables it |
-| FFE9 MCU_CLK_CONTROL_1 | 7 wdt_en_3 | any of FFEA[7], FF3A[6], FFE9[7] enables the WDT |
-| FFEB WDT_TEST | 7 wdt_overflow_flag (W1C, set at threshold), 4 timer mode, 3 latch counters, 2 IRQ at threshold, 1/0 bypass CNT2 / CNT3 | SDK: timer mode + IRQ on (`ScalerTimerWDInitial`) |
-| FFAA-FFAD | CNT2 11 bit, CNT3 12 bit, CNT1 3 bit (latched values) | |
-| FFAE-FFB0 | threshold 12 bit + mask | compared with CNT3 (bypass bits 0) |
-| FFEE MCU_CLOCK_CONTROL | 1 sof_rst: "Reset Scaler IC chip" | = host ISP `0xEE <- 0x02` (`rtd_reset.py`), reboots the unit |
-| P0_01 HOST_CTRL | 6 reset_chk: write 1, an LVR clears it | 0 at boot = power-on / brown-out |
+| FFEA | 7 wdt_en, 6 clr_wdt (strobe: clear all counters, latch them into FFAA-FFAD), 5 / 4 halt on SPI flash / burst write, 2:0 N-1 | reset 0x80 (on, N = 1) |
+| FFE9 [7], FF3A [6] | wdt_en_3, wdt_en_2 | ORed with FFEA[7]; reset 1; unit 2 FFE9 0x82, FF3A 0x50: never cleared by our code (whole-byte writes checked: all RMW) |
+| FFEB | 7 flag (W1C), 4 timer mode, 3 latch, 2 IRQ enable, 1 / 0 bypass CNT2 / CNT3 | |
+| FFAE / FFB0[7:4] | threshold, compared with CNT3 | |
+| FFC4 [5:3] | wdt_irq_pri: 2 = int2 (EXINT2, vector 43h, EIE.0 / EXIF.4 / EIP.0) | |
 
-- No reset-cause latch for the WDT: FFEB[7] is the threshold flag of the SDK's timer use and resets to 0 [regdb reset value]; #26 found the same.
-- CNT3 counts once per 2048 XTAL clocks: SDK converts ms with `ms * XTAL_kHz >> 11` (`ScalerCommonTimerFunction.c:631`). XTAL 14.318 MHz (`RL6449_AWTO_JXC4K.h`).
-  - CNT3 wrap: 4096 x 2048 / 14.318 MHz = 585.9 ms. SDK comment: event times "10 ~ 500 ms (for 14.318M)".
-  - Reset after N CNT3 wraps [likely: chain inferred, not measured]: N = 8 -> 4.69 s.
-- DW8051 core has no watchdog of its own (datasheet: timers 0-2, serial, interrupt unit); the WDT is Realtek's XFR block, IRQ on EXINT2 = interrupt 8, vector 0x43, flag EXIF[4].
+- Chain: CNT2 (2048 XTAL) -> CNT3 12 bit (143.0 us, wraps 585.9 ms) -> CNT1. Reset when CNT1 reaches N.
+- Unit 2 probes (test cmd 0x49 / 0x4F, wd4):
+  - normal mode: chip reset at 605 ms (N = 1, expected 586), **no threshold IRQ** (probe 0x08);
+  - timer mode: threshold IRQ fires **and** the chip resets at CNT1 overflow (probe 0x0D).
+- So the build uses timer mode: `AWTO_WDT_MODE = AWTO_WDT_TIMER_IRQ` (default; `AWTO_WDT_NORMAL_IRQ` stays selectable).
+- No reset-cause register: DW8051 has no watchdog and no POR / WTRF flag (databook v3.2a; SFRs reset on por_n and rst_in_n). P0_01[6]
+  reset_chk reads 0 after every reset on unit 2 (#131): not used for cold / warm.
+- MX25L8006E (`/vendors/macronix/MX25L8006E_v1.6.pdf` p. 49): tSE 4 KB sector 200 ms max, tPP 3 ms, tW (WRSR) 40 ms. The CPU halts
+  during a flash command (SDK comment); the WDT keeps counting (FFEA[5] off: "stop by SPI-FLASH access" would also stop it on code fetch).
 
-## Why the old WDT never caught a hung main loop
+## Design: one hardware watchdog
 
-- SDK runs the WDT in timer mode as a one-shot event timer (`_WD_TIMER_INT_SUPPORT` on for DP / HDMI 2.0).
-- `ScalerTimerWDEventProc_WDINT` clears all counters at every threshold IRQ; idle threshold 0xFFF -> cleared every 586 ms.
-- Timer2 ISR (1 ms) clears it too when CNT1 > 4 ("Prevent INT Lock Reset", `SysTimer.c`).
-- So the hardware reset only fires when both ISRs are dead (EA off, or a hang in a high-priority ISR): the backstop, 4.69 s, no capture.
+- Poke = FFEA[6] (`AWTO_WDT_POKE`), only:
+  - once per main-loop pass (`AWTO_WDT_PASS` in `AwtoDiagMainPass`);
+  - inside bounded loops (`AWTO_WDT_FEED`): `ScalerTimerDelayXms`, `ScalerTimerPollingFlagProc`, `ScalerTimerWaitForEvent`, `AwtoMsgWait`,
+    the SDK flash `ScalerFlashWREN` / `ScalerFlashWRDis` (were the SDK's own unconditional pokes).
+- Rule (Dan): only the main loop is unbounded; any loop around a poking wait must be bounded (audit below, `poke_loops.py`). No gating.
+- The 1 ms tick does no watchdog work: #131 check, the SDK latch and its CNT1 > 4 'Prevent INT Lock Reset' clear removed.
+- Every FFEA write in the link (asm check): pokes above, `ScalerMcuInitial` (boot clear + enable), `ScalerTimerWDInitial`, `AwtoWdtProbe`.
+- `ScalerTimerWDInitial`: timer mode, threshold 0xC00, IRQ on int2 at high priority (PX2), N = 2.
+- Warning (`SysTimerWDIntProc` -> `AwtoWdtIrq`): a match with CNT1 < N-1 sets `AWTO_WDT_P_EARLY` and returns; at CNT1 = N-1: capture the
+  stacked PC, SP, regs, bank, stage, pass age, seal, then sof_rst. No poke.
+  - sof_rst right away is safe: the record is sealed before it, XDATA 0xF6B0 survives it (unit 2, #131), and it is the reset the host's
+    ISP 0xEE does. If it did nothing, CNT1 = N resets 146 ms later.
 
-## Design
+### Arithmetic (N, threshold)
 
-- Check in the Timer2 ISR (`AWTO_DIAG_T2ISR` -> `AWTO_WDT_T2ISR`), every `AWTO_WDT_CHECK_MS` = 200 ms (Dan).
-- Two ages, in checks, both bytes (atomic for the main loop):
-  - `ucFeed`: zeroed by every main-loop pass (`AwtoDiagMainPass`) and every ms of a bounded wait: `ScalerTimerDelayXms`, `ScalerTimerPollingFlagProc`, `ScalerTimerWaitForEvent`, `AwtoMsgWait`.
-  - `ucPass`: zeroed by main-loop passes only.
-- Bite when `ucFeed >= AWTO_WDT_FEED_CHECKS` (STALL: compute loop, no wait) or `ucPass >= AWTO_WDT_PASS_CHECKS` (PASS: a wait called in an endless loop).
-- A limit of N checks bites after (N-1)..N checks of silence (phase of the 200 ms check).
-- Bite (`AwtoWdtBite`, Timer2 ISR context): EA off, capture from the ISR frame, seal the record, then:
-  - WDT to normal mode, IRQ off, N = 1 (fallback reset after one CNT3 wrap, 586 ms, if sof_rst does nothing);
-  - FFEE[1] sof_rst; spin.
-- Feed sites are same-line keil2sdcc SUBS: no SDK line moves (`fw/warn_policy.tsv`).
-- WD timer events (DP rebuild PHY, HDMI RR retry) untouched; the watchdog no longer depends on the WD ISR.
-
-### Timeouts (expected worst case, source, multiplier, expiry)
-
-| limit | waits for | expected worst | source | x | value | expiry |
-|---|---|---|---|---|---|---|
-| FEED 5 checks | any feed | < 600 ms compute without a wait | sim: max `ucFeed` 2 over boot, 10 s ACTIVE, console / menu / selector / D3-D2 switch (2026-11-11, wdt3) | 1.25 -> 750 ms <= (5-1) x 200 | 800-1000 ms | capture + reset |
-| PASS 27 checks | main-loop pass | 4056 ms | `docs/delays.md` static worst context (search: 2186 ms blind + 1870 ms poll bounds); sim max `ucPass` 3 (< 800 ms) | 1.25 -> 5070 ms <= (27-1) x 200 | 5.2-5.4 s | capture + reset |
-| SHOW 1000 ms | screen settled after a bite | SDK mode pop-up drawn within one pass (sim < 800 ms) | sim | 1.25 | 1000 ms | console opens |
-| hardware backstop | CNT1 = 8 CNT3 wraps | ISRs dead | regdb + SDK formula [likely] | - | 4.69 s | reset, no capture |
-
-- FEED is set from a sim measurement: hardware-only paths (flash erase, HDMI PHY, DP training) are not in it. Read `max feed` / `max pass` on unit 2 with `rtd_crash.py` and raise the limit with the number if needed.
-
-## Record `g_stAwtoWdt`, 32 B at XDATA 0xF6B0
-
-- Outside the linker XDATA range (`fw_build.py XRAM = (0xD700, 0xF6B0)`): neither the crt (XSEG clear, `crt_xinit.asm`) nor `AwtoDiagInit` touches it.
-- Bytes only: same layout in LE and BE images.
-
-| off | field | |
+| point | from the last poke | |
 |---|---|---|
-| 0-2 | 'W' 'D' version 1 | host clear = write 0 to byte 0 |
-| 3 | cause | 1 STALL, 2 PASS; bit 7 = test hang (cmd 0x4C-0x4E) |
-| 4 | bites | watchdog resets since clear (stops at 255) |
-| 5 | warm | other warm resets: no LVR and no bite (hardware WDT, ISP 0xEE) |
-| 6-7 | PC hi lo | return address stacked by the Timer2 interrupt |
-| 8 | bank | `__bs_cur` (bank.asm shadow) at the interrupt; PC >= 0x5000 is in this bank |
-| 9 | SP | SP before the interrupt |
-| 10-14 | PSW ACC B DPH DPL | from the ISR frame |
-| 15-16 | stack top hi lo | word at SP / SP-1 (often a return address or a bank-return entry) |
-| 17-18 | stage, mode | `g_stAwtoDiag.ucStage`, `GET_MODE_STATE()` |
-| 19-22 | heartbeat, uptime ms | big-endian pairs |
-| 23-24 | feed age, pass age | at the bite, in checks |
-| 25 | check | 0xA5 ^ bytes 0..24 |
-| 26 | boot (live) | 0x01 LVR, 0x02 bite pending, 0x04 test armed, 0x08 not yet shown, 0x10 warm without capture |
-| 27-31 | live | tick ms, feed age, pass age, max feed, max pass (this boot) |
+| early match (CNT1 0, CNT3 = 0xC00) | 3072 x 0.143 = 439.4 ms | IRQ, marker only |
+| warning + capture (CNT1 1, CNT3 = 0xC00) | 585.9 + 439.4 = 1025.3 ms | AWTO_WDT_THR, N-1 |
+| hardware reset (CNT1 = 2) | 2 x 585.9 = 1171.8 ms | AWTO_WDT_N; covers EA off / high-priority hangs |
 
-- ISR frame: SDCC prologue of `SysTimerIntProc2` pushes acc, psw, r7..r0, bits, dpl, dph, b: PC at SP-15/-14 when `AWTO_WDT_T2ISR` reads SP (`AWTO_WDT_FRAME` 16). A prologue change moves it: `crash_sim_test.py` fails (PC not in `AwtoWdtHang`).
-- `AwtoWdtInit` (before EA, once per reset): bad magic / check -> fresh record; bite pending -> not-yet-shown; no LVR and no bite -> warm++.
+- Longest legit gap must be < 1025.3 / 1.25 = 820 ms. Measured: sim 311 ms (boot + workload + NVRAM save), unit 2 188 ms (wd4 baseline).
+  Plus a sector erase halt 200 ms + WRSR 40 ms (not in the sim) -> 551 ms worst estimate.
+- Warning -> reset margin 146 ms (capture takes < 1 ms). Today's old backstop was 4.69 s (N = 8).
 
-## Reading it
+## Boot (task 1)
 
-- Console: opens by itself once stage 8 + ACTIVE / no signal / no support has held 1 s after a bite; panel `WATCHDOG` (col 62, row 19): bites / warm, cause, ages, PC as bank:addr, stack top, SP, A, B, PSW, DPTR, heartbeat, uptime, stage, mode, this boot's class and max ages. Title red until shown.
-  - Chosen over a one-line notice: no new OSD code, the PC is on screen at once, the console is the place Dan already reads.
-  - Not via the info pop-up (`ucDbgPopup`): the SDK pop-up repositions the OSD after the console opened (sim render: vertical delay off screen).
-- Any time: console (test cmd 0x20 / UP+DOWN) shows the panel; `NO BITE RECORDED` when empty.
-- I2C: `python scripts/rtd_crash.py BUS --map MAP --serial SERIAL [--clear]` -> one line, PC as symbol+offset from the map, stack top decoded (bank-return entries named). Log `tmp/logs/rtd_crash.log`.
-- Test cmds (diag `ucTestCmd`): 0x4C spin (STALL), 0x4D spin in `ScalerTimerDelayXms(10)` (PASS), 0x4E spin with EA off (hardware backstop only, no capture).
+- The SDK's boot 'disable' (`ScalerMcuBootInitial`, FFEA[7] only) is not linked (`_FLASH_PARTITION_NONE`) and would be a no-op (FFE9[7] /
+  FF3A[6]); the line is removed by a rule anyway.
+- `crt_rtd_startup`: XFR on, reset snapshot, then FFEA |= 0xC7 (clear, N = 8) at once. `ScalerMcuInitial` clears again, then
+  `ScalerTimerWDInitial` sets the run-time mode.
+- Sim (`wdt_sim.py boot`, wd5): clears at 0 (startup), 39.6 ms (ScalerMcuInitial), 51 ms (WDInitial), then pokes; worst gap before the first
+  main-loop pass 39.6 ms of the 4687 ms period in force. Times before Timer2 are the ucsim 12-clock model (DW8051: 4): upper bounds.
 
-## Timer split (DP rebuild PHY, HDMI RR retry)
+## Timer0 event scheduler (task 2, `awto_t0ev.inc`)
 
-- Users of the WD timer in this build: `_SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY` (30 ms after TP end, armed from EXINT0, `RL6449_Series_DP_INT.c:822`), `RXn_HDMI_RR_RETRY` (10 ms, `ScalerTMDSRx2/3_SeptPhy.c:562`). DP HDCP2 SKE (4 ms) and Type-C PD events are compiled out.
-- Granularity: events of 10 and 30 ms; a 1 ms timer would meet them.
-- Not moved:
-  - Timer2 ISR is high priority (PT2): the rebuild handler blocks ~1 ms (845 us PHY + 150 us delays, `docs/delays.md`) and would delay EXINT0/1 and the 1 ms tick. In the WD ISR (EIP never written = low priority) Timer2 still preempts it.
-  - Timer1 (free: `_INSTANT_TIMER_EVENT_1` off, no UART) counts the MCU clock, which the SDK switches (XTAL / M2PLL / power-saving dividers); its reload would need recalculation at every switch. The WD counter runs on the crystal (SDK only rescales on XTAL <-> IOSC).
-  - Gain is nil now: the watchdog check is in the Timer2 ISR and never reads or clears the WD counter.
-- Separation done instead: the WD ISR keeps its counter clears (timer function); feeding, checks and the bite live in the main loop, wait helpers and Timer2 ISR.
+- The SDK's WD-timer jobs (DP Rx1 rebuild PHY 30 ms, HDMI read-request retry D2 / D3 10 ms; HDCP2 SKE and Type-C PD compiled out) on Timer0.
+  Same function names (`ScalerTimerWDActivateTimerEvent_EXINT0`, `ScalerTimerWDCancelTimerEvent[_EXINT0]`): no SDK call site changes.
+- One ms counter per event ID; re-arm restarts; Timer0 ticks 1 ms only while one is pending. Reload = RCAP2: Timer0 and Timer2 count the same
+  MCU clock /12 (SDK `_TIMER01_TEMP_COUNT_*` = `_TIMER2_COUNT_*`); the ISR adds the counts since the overflow; more than a tick late (a long
+  EXINT0 handler) -> the next tick at once.
+- Arm: Timer0 running -> +1 tick when the current tick is past half (+-0.5 ms); preempting the Timer0 ISR (EXINT0 high in power saving) ->
+  +1 if the ISR has yet to decrement that ID (`s_ucAwtoT0Pos`).
+- Clock switch: `ScalerTimerSetTimerCount` ends with `AwtoT0EvClock`: the rest of the current tick scaled to the new reload.
+- Priority: Timer0 low (PT0 = 0), as the WD IRQ was; handlers run with interrupts on.
 
-## Verified in fw_sim (2026-11-11, image `AWT26110002-wb-p14ui-wdt3-be`, fast core)
+| shared data | contexts | guard |
+|---|---|---|
+| `s_pusAwtoT0Ms[]` | Timer0 ISR, EXINT0 (arm / cancel), main (cancel, tests) | Timer0: EA off per element; main: `__critical`; EXINT0: Timer0 cannot preempt it at the same / lower level |
+| TR0 / TH0 / TL0, `s_usAwtoT0Rl`, `s_ucAwtoT0Pos` | Timer0 ISR, EXINT0 (start), main (rescale) | ISR reload and idle check under EA off; main under `__critical` |
+| `g_stAwtoWdt` live bytes | main pass, pokes, WDT IRQ | single bytes; the capture runs with EA off and never returns |
 
-- `crash_sim_test.py`: no reset over boot + 10 s ACTIVE + workload; 0x4C -> reset 805 ms after the command (limit window 800-1000 ms), PC `AwtoWdtHang+0xc` bank 0B, stack top = bank-return to bank 8 (caller `AwtoDiagTestCmd`); reboot to ACTIVE, console opens by itself, panel drawn; 0x4D -> PASS reset 5363 ms after (window 5200-5400 ms), PC `ScalerTimerDelayXms+0xd`; host clear -> invalid. PNG `tmp/wdt/crash_panel.png`.
-- `key_sim_test.py` at f8e1afd (the #129 version; main's version expects later UI cards, fails identically on the baseline image): 28/28 PASS.
-- `fw_sim.py --fast --boot-check`: PASS.
-- Sim model: `ChipReset` = FFEE[1] -> CPU reset, bank 0, register cells to regdb reset values, RAM and P0_01 kept. The hardware WDT counter is not modelled.
+- EA-off windows are a few instructions (no spin inside): no low-priority path can hold off a higher one.
 
-## Needs hardware (unit 2)
+## Interrupt model (DW8051 databook v3.2a pp. 3-43..3-48)
 
-- sof_rst from firmware resets the chip like the host's ISP write, and XDATA 0xF6B0 survives it.
-- P0_01[6] after sof_rst / ISP 0xEE (kept = WARM count works) and after power-on (0).
-- Reading P0_01 before `SysMainSystemInitial` returns the real value.
-- 0x4E: the hardware backstop resets in ~4.7 s (CNT1 = 8) and the next boot counts it as warm.
-- Real `max feed` / `max pass` over boot, 4K60 HDMI, DP, source switches, menu saves: confirm FEED 5 / PASS 27.
+- Two levels (IP / EIP); same level by natural order EX0, T0, EX1, T1, serial 0, T2, serial 1, int2..int5, wdti; only a higher level preempts;
+  after RETI or an IE / IP / EIE / EIP write one more instruction runs before an IRQ.
+- fw_sim fast core (`mcs51_core.c`): all of the above for EX0..T2 + int2 (43h); serial 1, int3..5, wdti, pfi not modelled (unused). ucsim
+  core: no DW8051 extended interrupts (no 43h): WDT warning tests need `AWTO_SIM_CORE=fast`. SFR reset values are ucsim's (not DW8051's
+  EICON 0x40, EIE / EIP 0xE0, IP 0x80): kept for lockstep with ucsim.
+- fw_sim `ChipReset` hardware WDT: per unit 2: reset at CNT1 = N in both modes; threshold flag / IRQ in timer mode only; clr_wdt latch.
+  ASSUMED: CNT1 counts CNT3 wraps in timer mode as in normal mode.
+- Power-saving IP = 0x81: EXINT0 high. A stuck EXINT0 is then not preempted by the WDT IRQ (same level): hardware reset at 1171.8 ms, no
+  capture (sim: prio_wdt_preempts).
 
-## Prior art
+## Bounded-loop audit (task 4)
 
-- Synopsys DW8051 datasheet (core has timers 0-2, serial, interrupt unit; no WDT): https://www.keil.com/dd/docs/datashts/synopsys/dw8051_ds.pdf (copy: `tmp/wdt/prior/dw8051_ds.pdf`)
-- Dallas DS80C320 high-speed micro watchdog: interrupt first, reset 512 clocks later (pre-reset interrupt pattern): https://www.analog.com/en/resources/design-notes/using-the-highspeed-micros-watchdog-timer.html
-- DS89C420 user guide, WDCON WTRF (latched watchdog reset flag, cleared by software; our chip lacks one): https://crlab.ece.ucr.edu/usbgps/doc/ds89c420_ug.pdf
-- Keil forum, C51 crash handler (save the stacked return address in the handler): https://community.arm.com/support-forums/f/keil-forum/38486/c51-8051-crash-handler
-- Embedded core dumps: PC + registers into no-init RAM, then a software reboot: https://www.codeproject.com/Articles/5376928/Designers-Guide-to-Embedded-Core-Dumps
-- SDCC bug 2335: WDT during startup, handle it in `__sdcc_external_startup`: https://sourceforge.net/p/sdcc/bugs/2335/
+- `poke_loops.py TREE`: 66 loops reach a poking helper (linked call graph): 43 bounded by form, 1 main, 22 read by hand (below), 0 unbounded.
+- Waits over ~0.5 s and how they poke (wake: `wake_sim` cable unplug / plug wake 20 ms after the edge, bound 35 ms): panel T3 550 ms, HDMI HPD low 500 ms, panel T6 1100 ms (all `ScalerTimerDelayXms`: poke per ms);
+  `ScalerMDomainControlDBApply` up to pData[15] frames of `ScalerTimerWaitForEvent` (90 ms bound each, poke per ms); DDR2 PLL lock poll
+  (`PollingFlagProc`, 40 ms); DPTx link sequence (5 retries); NVRAM save: `ScalerFlashWrite` page loop pokes in WREN / WRDis per page,
+  sector erase is one CPU halt <= 200 ms (no poke possible; inside the margin above).
+
+| site | loop | bound | verdict |
+|---|---|---|---|
+| RL6449_Series_DPRx1.c:3662 / 3963 / 4047 `ScalerDpRx1PhyCTS` | while CTS auto mode / error report / CTS flag | none: ends when the DP source ends the PHY CTS test (DPCD 0x270) | **unbounded, pokes (DelayXms)**: bug class; lab-only mode (`_AWTO_DP_PHYCTS`), decision for Dan |
+| ScalerCommonDebug.c:656 `ScalerDebug` | do while host halt (0x80) | none: until the host releases | unbounded; no poke inside -> WDT resets a host halt after 1.03 s (same as #131) |
+| ScalerCommonDebug.c:194 `ScalerDebugMessage` | host wait | `AwtoMsgWait` host-silence timeout (#56) | bounded |
+| RL6449_Series_DisplayDPTx.c:221 | DPTx link sequence | 5 retries | bounded |
+| ScalerDisplayDPTx.c:652 | DPTx training state machine | TP1 / TP2 internal retry counts -> FAIL | bounded [likely] |
+| RL6449_Series_MDomain.c:106 / 135 | pData[15]-- frames | frame count byte | bounded |
+| ScalerCommonDPRx1.c:300 / 731 | lane count step-down, scramble seed toggle | 4 lanes; 2 seeds | bounded [likely] |
+| ScalerAudio.c:768 | DVC mute | PDATA_WORD(1) < limit | bounded |
+| ScalerIDomain.c:222, UserCommonAdjust.c:962 | V delay step | ucSettingCounter / ucTimeoutCounter | bounded |
+| ScalerMemory.c:320 / 361 / 411 | IVS2DVS fine tune | remaining delay / step limit | bounded |
+| RTD2014OsdFontProp.c:1290 / 1373, RTDFactoryFunction.c:1994 | string to the OSD | string terminator (code tables) | bounded |
+| RTD2014Key.c:1164 `AwtoKeyPoll` | key queue drain | queue size | bounded |
+| SysMain.c:1295 `main` | inner power-detect loop | main loop | main |
+
+- No unbounded wait-forever other than the main loop pokes, except the PHY CTS loops (reported).
+
+## Boot reason and early log (task 5)
+
+- First power-on sync line (`AwtoBootReason`, canary only; one function to swap in a hardware flag if the snapshot finds one):
+  `boot: cold power-up` (no valid record) | `boot: watchdog bite, STALL[ TEST], PC bb:pppp fn+off` | `boot: hardware watchdog reset, no capture
+  (an early warning IRQ came)` | `boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)` |
+  `boot: watchdog probe reset`. A host-cleared record boots as cold.
+- Then stage 1..8, MCU init, Timer2 start, watchdog run-time lines. Times = ms since reset: before Timer2 the WDT counter (cleared by the
+  first instruction; 143 us counts on the crystal), carried over the ScalerMcuInitial clear; at the Timer2 start those lines move to Timer2
+  time and the episode's T0 becomes -(ms since reset at Timer2 0).
+- XDATA: ring 24 -> 32 entries +64 B, time base +4 B, Timer0 position +1 B, snapshot 20 B (linker XDATA end 0xF6B0 -> 0xF69C).
+- Power on from soft-off (POWER key / DDC/CI D6) and wake lines were already there (`power key on, Dn`, `Dn cable plugged in: wake`, ...).
+- Reset-vector snapshot (`crt_rtd_startup`, 20 B at 0xF69C, `rtd_crash.py --snap`): 'RS', EICON PCON EXIF CKCON IE EIE IP EIP, FFEA FFEB
+  FFAA-FFAD FFE0 FFED FFEE, P0_01. A byte that differs between cold / WDT / ISP resets on unit 2 is a reset-cause candidate.
+
+## Record v2 (`g_stAwtoWdt`, 32 B at XDATA 0xF6B0, bytes only)
+
+| off | field |
+|---|---|
+| 0-2 | 'W' 'D' 2 |
+| 3 | cause: 1 STALL; 0x40 timer-mode build; 0x80 test hang |
+| 4 / 5 | bites / other warm resets |
+| 6-16 | PC hi lo, bank, SP, PSW, ACC, B, DPH, DPL, stack top hi lo |
+| 17-22 | stage, mode, heartbeat, uptime ms |
+| 23-24 | ms since the last main-loop pass at the warning |
+| 25 | check (0xA5 ^ bytes 0..24) |
+| 26 | boot: 01 HW-WDT, 02 bite pending, 04 test, 08 not shown, 10 warm, 20 cold, 40 after bite, 80 after probe |
+| 27-28 | g_usTimerCounter at the last pass (live) |
+| 29 / 30 | max pass x32 ms / max poke gap x4.58 ms (clr_wdt latch FFAC) this boot |
+| 31 | probe: 01 timer mode, 02 armed, 04 IRQ, 08 reset, 10 no reset in 1.5 s, 20 EICON WDTI, 40 early match since the last pass |
+
+## Test commands
+
+- 0x4C spin (warning capture), 0x4E spin with EA off (hardware reset, no capture), 0x4D gone (loop around a poking wait = audit rule).
+- 0x49 / 0x4F probe normal / timer mode: threshold 36.6 ms, N = 1, no pokes for 1.5 s.
+- Timer0: 0x2A rebuild 30, 0x2B / 0x2C RR D2 / D3 10, 0x2D two, 0x2E / 0x2F across a forced PS reload, 0x5A / 0x5B at the PS reload, 0x5C three
+  out of order + cancel, 0x24 stuck Timer0 handler; EXINT0 hook 0x5D arm once, 0x5E 2-3 ms spin once, 0x5F stuck, 0x25 off.
+
+## Measured (sim, fast core, 2026-11-11; image wb-p14ui-wd5 unless stated)
+
+- `wdt_test.py --sim`: all cases PASS (list: `wdt_test.py --list`). Warning capture 1025 ms after the last poke, PC `AwtoWdtHang+0x10`;
+  EA off: hardware reset 1171.8 ms, no capture, `boot: warm reset, no capture`.
+- Timer0 events: 10 ms -> 10.03-10.05, 30 ms -> 30.07; at the PS reload 9.73 / 29.86; across a PS reload and back 9.85 / 31.05; arm from
+  EXINT0 alone / during a Timer0 ISR / with TF0 pending / IP 0x81 preempting: 10.05 / 10.02 / 10.53 / 9.04 ms; 2-3 ms EXINT0 spin -> 13.04 ms.
+- Timer2 ISR: 219 -> 173 machine cycles mean (wd0 -> wd5). Timer0 ISR 629 cycles a tick (893 on a fire tick), only while an event is pending.
+  Main pass bookkeeping + poke: `AwtoDiagMainPass` 105 -> 219 cycles.
+- Loop rate (`wdt_sim.py rate`, ACTIVE 1080p60): 2617 -> 2586 passes/s.
+- Code +1498 B (wd0 -> wd6, map_size_diff); XDATA free 149 -> 102 B (wd5).
+- Unit 2 (wd4): baseline 10 s no reset, max pass 544 ms, max poke gap 188 ms; probes as above.
+
+## Sim notes
+
+- fw_sim time dilation: a firmware RCAP2 write (and its matching TL2/TH2 load) is dilated at once (fastmachine): Timer0 reads RCAP2.
+- An IP change inside EXINT0 (harness only) flips `ScalerTimerPollingFlagProc_EXINT0` to its g_usTimerCounter branch while Timer2
+  cannot preempt: endless poll. The SDK changes IP in main context only; wdt_test restores IP outside interrupts.
+
+## Needs hardware (unit 2, image wb-p14ui-wd5)
+
+- 0x4C: warning capture in timer mode (link drop ~1025 ms + cmd latency; record STALL TEST, PC AwtoWdtHang, first line `boot: watchdog bite`).
+- 0x4E: hardware reset ~1172 ms, warm + 1, `boot: warm reset, no capture`.
+- Snapshot diffs cold / WDT / ISP; EICON WDTI bit in the probe; DP link training with the rebuild on Timer0.

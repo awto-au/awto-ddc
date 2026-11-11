@@ -3,6 +3,7 @@
 
 usage: AWTO_SIM_CORE=fast wdt_sim.py boot BIN MAP        reset -> startup clear -> ScalerMcuInitial -> first poke / feed
        AWTO_SIM_CORE=fast wdt_sim.py events BIN MAP      arm each WD-timer event ID on Timer0, measure fire time (+-10 %)
+       AWTO_SIM_CORE=fast wdt_sim.py rate BIN MAP        main-loop passes per fw second in ACTIVE (before / after a change)
 - Time = fw_sim ChipReset clock: machine cycles / cycles per fw ms (Timer2 reload; crystal / 12 before Timer2 runs).
   Before the M2PLL switch the ucsim model's 12 clocks per machine cycle make it an upper bound (DW8051: 4).
 - boot: every FFEA write (clear / mode) and the first hit of the watch points, with the gap since the last clear; PASS when
@@ -132,14 +133,29 @@ def events(a) -> int:
     return fails
 
 
+def rate(a) -> int:
+    """main-loop passes per fw second in ACTIVE (diag heartbeat / Timer2 ISR count), 1080p60 D2, after 2 s settle"""
+    bus = S.SimBus(a.bin, a.map, video="1080p60")
+    if not bus.run_until_mode(3):
+        say("FAIL rate: no ACTIVE"); return 1
+    bus.wait(2.0)
+    d0 = bus.diag()
+    bus.wait(3.0)
+    d1 = bus.diag()
+    hb, t2 = (d1["hb"] - d0["hb"]) & 0xFFFF, (d1["t2"] - d0["t2"]) & 0xFFFF
+    say(f"wdt_sim rate {a.bin.name}: {hb} passes in {t2} fw ms = {hb * 1000 / max(t2, 1):.1f} /s (ACTIVE 1080p60, sim)")
+    bus.m.close()
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("boot", "events"))
+    ap.add_argument("what", choices=("boot", "events", "rate"))
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
     ap.add_argument("--clears", type=int, default=12, help="boot: watchdog clears to list (run on until that many)")
     a = ap.parse_args()
-    return 1 if (boot(a) if a.what == "boot" else events(a)) else 0
+    return 1 if {"boot": boot, "events": events, "rate": rate}[a.what](a) else 0
 
 
 if __name__ == "__main__":
