@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Held test visual in the fw_sim model (#28): does a held logo / pop-up survive the SDK's own OSD paths for N s?
+"""Held test visual in the fw_sim model (#28): does a held pop-up (console) survive the SDK's own OSD paths for N s?
 
-usage: hold_sim.py BIN MAP [--cmd 0x24|0x26] [--secs 10] [--mode 2160p60]
+usage: hold_sim.py BIN MAP [--cmd 0x26] [--secs 10] [--mode 2160p60]   (0x24 held logo: gone, #144)
   Boot to ACTIVE, raise the info pop-up (event 10: arms the SDK's _USER_TIMER_EVENT_OSD_DISABLE, the path that cleared
-  the held logo on unit 3, 14:28), then the hold command, run --secs of firmware time.
+  a held visual on unit 3, 14:28), then the hold command, run --secs of firmware time.
   PASS: hold bits still set and no OsdFuncDisableOsd after the hold (OsdDispDisableOsd calls are allowed: blocked + logged).
 Log: tmp/logs/hold_sim.log
 """
@@ -28,7 +28,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
-    ap.add_argument("--cmd", default="0x24")
+    ap.add_argument("--cmd", default="0x26")
     ap.add_argument("--secs", type=float, default=10)
     ap.add_argument("--mode", default="2160p60")
     a = ap.parse_args()
@@ -53,7 +53,7 @@ def main() -> int:
         ok = wr(bus, base + osd["ucOsdEventMsg"], 10)          # info pop-up: arms the 6 s OSD-disable timer
         bus.wait(1.0)
         ok = ok and wr(bus, TESTCMD, cmd)
-        bus.wait(0.5)                                          # the logo draw itself calls OsdFuncDisableOsd: count after it
+        bus.wait(0.5)                                          # the draw itself calls OsdFuncDisableOsd: count after it
         armed[0] = True
         bus.wait(a.secs)
         hold = bus.xdata(HOLD)[0]

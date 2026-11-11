@@ -17,7 +17,7 @@ Never write bare "vendor": say which one.
 ### Hardware (RL6449 / RTD2795T)
 - OSD SRAM (12288 x 24 bit words), row / char command layout, windows, palette, x2 scale: [reversing/realtek-rtd/osd.md](reversing/realtek-rtd/osd.md), [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
 - Font download (VLC decode, char words, burst DMA from flash): [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md).
-- No framebuffer: everything (logo, menus, pop-ups, console) is glyph cells + windows.
+- No framebuffer: everything (menus, pop-ups, console) is glyph cells + windows.
 
 ### Text layer (`osd_tc_*`): the one text path for our screens
 - API: `awto-rtdfw-ui` `awto/include/osd.h` (`osd_tc_open`, `osd_tc_rowh`, `osd_tc_cells`, `osd_tc_bar`, `osd_tc_place`, `osd_tc_show`, `osd_tc_close`, `osd_tc_viewport`, `osd_tc_scroll`, `osd_tc_vlc_*`).
@@ -36,7 +36,7 @@ Never write bare "vendor": say which one.
 
 ### Realtek SDK engine (RTD2014 demo OSD, compiled into our image)
 - Ours on the text layer (`fw/sdcc/awto_osdcard.inc` in awto-ddc-ui): message cards and the input-info card (`OsdDispOsdMessage`, SDK body removed, #124), source selector (`AwtoSourceOpen` / `AwtoSourceKey`, SDK hot-key source menu removed, #134). SDK timers and OSD states still drive them.
-- Still SDK-drawn: DDC/CI and DP-version hot-key menus (proportional font, `OsdPropPutString*`, `tFONT1_GLOBAL`, VLC icons), boot logo loader.
+- Still SDK-drawn: DDC/CI and DP-version hot-key menus (proportional font, `OsdPropPutString*`, `tFONT1_GLOBAL`, VLC icons).
 - DDC/CI and DP-version hot-key menus: no normal entry point left (#122).
 - Source: Realtek SDK `RTD2014*Osd*.c`, rewritten by `scripts/keil2sdcc.py` (generated output in `tmp/sdcc-port/src`); drawn by `OsdDispOsdMessage` and the OSD state machine.
 - Realtek 9-icon main menu: built out by default (`_AWTO_REALTEK_MENU`, `RL6449_Project.h`, default `_OFF`). Re-enable with `-D _AWTO_REALTEK_MENU=_ON` (works at 6bd79ce; #129 removes the operation-table path it uses).
@@ -45,16 +45,14 @@ Never write bare "vendor": say which one.
 ### Our parts
 - Diagnostic console (#89, #128; #34 closed)
   - Code: `awto_dbgpop.inc` (`AwtoDiagConsole`), `awto_keytest.inc`, `awto_gpio.inc` in `awto-ddc-ui/fw/sdcc/`.
-  - Opened by UP+DOWN, test cmd 0x20 / 0x26 (debug pop-up = console), 0x41 / 0x42 (key test panel), 0x43 / 0x44 (GPIO panel). Host: `scripts/osd_test.py`.
-  - Look: green on black (palette 1..4 set in `awto_dbgpop.inc`); default font Spleen 5x8 (font 3); 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
-  - Grid 100 columns x 69 map rows; 45 rows shown, UP / DOWN scroll (`AwtoConScroll`).
-  - Panels: inputs (left), key test and debug (right), event log (below the view).
+  - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `sync_console`), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42 (key test panel), 0x43 / 0x44 (GPIO panel). Closed by UP+DOWN. Host: `scripts/osd_test.py`.
+  - Look: green on black (palette 1..4 set in `awto_dbgpop.inc`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
+  - Grid 120 columns x 63 map rows; 50 rows shown (1920 x 1836 px on the 3840 x 2160 panel), UP / DOWN scroll (`AwtoConScroll`).
+  - Shown: inputs panel (left), event + sync log (right, 47 lines, live: drawn at each sync push). Below the view: key test, debug, watchdog panels.
+  - Power-on in the sim: `scripts/boot_sim.py` (PNGs at set times, console survives display setting).
   - Inputs panel: rows from `fw/awto/inputs.tsv` through `scripts/gen_awto_inputs.py` (generated `AWTO_IN_*`); unlogged inputs red with a legend.
   - Owns the OSD only while its map is in place: an SDK pop-up or mode reset releases it (`AwtoConLost`).
-- Boot logo
-  - Code: `awto_logo_icons.inc`, `awto_logo_maps.inc` (`AwtoLogoDraw`) in `awto-ddc-ui/fw/sdcc/`; art in `docs/logo/`.
-  - Our VLC tiles and run map, red; shown at boot, held by test cmd 0x24, off with 0x25.
-  - Doc: [boot-logo.md](boot-logo.md).
+- Boot logo: removed (#144); the console shows the power-on log instead. Dahua splash RE notes: [boot-logo.md](boot-logo.md).
 - Registry menu (#67)
   - Code: `/mnt/2tb/git/awto-rtdfw/awto/settings/menu.c`, `ui.c`, `set_table.c` (generated), `settings.c`, `vcp.c`; header `awto/include/menu.h`; registry `/mnt/2tb/git/awto-rtdfw/settings/registry.tsv` + `pages.tsv`.
   - Drawn through the text layer with our fonts; blue text on white (`tAwtoPal`).
@@ -82,7 +80,7 @@ Never write bare "vendor": say which one.
 - Each glyph is a window in the 12x18 1-bit RTD tile, centred horizontally (`x0 = (12 - w + 1) / 2`) and placed at a per-font top row. Odd widths start on the right column (seen on hardware, #108 row 4).
 - Full printable ASCII (0x20..0x7E): 95 tiles, id 0 = blank (space), others 1..94; unknown characters use `?`. Fixed pitch, one tile id per cell.
 - Tile = 9 OSD words (27 bytes); VLC-downloaded (`osd_tc_vlc_*`).
-- Menu font setting `osd_font` (registry id 106): Spleen | Tamzen. Console: font 3 (Spleen 5x8) by default.
+- Menu font setting `osd_font` (registry id 106): Spleen | Tamzen. Console: font 0 (Spleen 8x16) by default (#144); limit probe: font 3 (Spleen 5x8).
 - Blob bank pin: font loader and constants in different ROM banks (#111, build workaround).
 - Realtek SDK pop-ups: SDK font tables from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph set descriptors per [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0]). Our message cards still use the SDK proportional font (#89).
 - Diagnostic tables, register views, pin ledgers, and similar dense data screens use fixed-cell text. The SDK-backed diagnostic renderer may reuse the normal Realtek glyph shapes, but must emit one glyph per OSD cell; normal menus, labels, and message cards remain proportional.
@@ -94,7 +92,7 @@ Never write bare "vendor": say which one.
   - 0x01..0x05 = key messages menu (AUTO) / UP / DOWN / exit (MENU) / SOURCE, injected.
   - 0x10+n = OSD event n.
   - 0x20 / 0x26 = debug pop-up (console), 0x27 = clear holds.
-  - 0x21 = boot logo 3 s; 0x24 / 0x25 = logo on / off.
+  - 0x21 / 0x24 / 0x25: free (were the boot logo, removed in #144).
   - 0x41 / 0x42 key test, 0x43 / 0x44 GPIO panel.
   - 0x28 / 0x29 = debug messages on / off (NVRAM, #74).
   - 0x31..0x33 = input D1..D3 (#60).

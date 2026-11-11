@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """OSD cleanup ledger: flash bytes (from the build map) and source lines (from the definitions) per cleanup item, label osd-cleanup.
 
-usage: osd_cleanup_report.py MAP [--out DIR]
+usage: osd_cleanup_report.py MAP [--out DIR] [--tree DIR]
   MAP: an image map (tmp/fw/<tag>.map). Bytes = sum of the CH_<name> areas an item owns; LOC = lines of the matching function /
-  array definitions in the ported SDK (awto-ddc-ui tmp/sdcc-port/src, a build must have run) and our fw/sdcc/*.inc.
+  array definitions in the ported SDK (--tree, default awto-ddc-ui: tmp/sdcc-port/src, a build must have run) and our fw/sdcc/*.inc.
   Items are the ITEMS table below (one per issue). Re-run after each cleanup: the numbers are what is left.
 Writes OUT/report.md and OUT/report.tsv (default tmp/osd_cleanup/). Log: tmp/logs/osd_cleanup_report.log
 """
@@ -16,7 +16,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 UI = Path("/mnt/2tb/git/awto-ddc-ui")
 LOG = ROOT / "tmp/logs/osd_cleanup_report.log"
-SRC_DIRS = [UI / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code", UI / "tmp/sdcc-port/src/User/RTD Factory/Code"]
 CARD_ICONS = r"tFONT1_ICON_(NO_SUPPORT|NO_CABLE|NO_SIGNAL|NO_SIGANL|POWER_SAVIN|AUTO_ADJUST_TEXT|AUTO_COLOR_TEXT|TURN_OFF_PANEL_UN)"
 FREEZE_ICONS = r"tFONT1_ICON_FREEZE"
 LANG_ICONS = r"tFONT1_ICON_(ENGLISH|CHINESE_T)"
@@ -76,11 +75,11 @@ def map_areas(path):
     return out
 
 
-def sources():
+def sources(tree: Path):
     files = []
-    for d in SRC_DIRS:
+    for d in (tree / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code", tree / "tmp/sdcc-port/src/User/RTD Factory/Code"):
         files += sorted(d.glob("*.c"))
-    files += sorted((UI / "fw/sdcc").glob("*.inc"))
+    files += sorted((tree / "fw/sdcc").glob("*.inc"))
     return [(f, f.read_text(errors="replace").splitlines()) for f in files if f.exists()]
 
 
@@ -116,9 +115,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("map", type=Path)
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/osd_cleanup")
+    ap.add_argument("--tree", type=Path, default=UI, help="firmware tree whose ported SDK + fw/sdcc the LOC come from")
     a = ap.parse_args()
     areas = map_areas(a.map)
-    src = sources()
+    src = sources(a.tree)
     a.out.mkdir(parents=True, exist_ok=True)
     rows, detail = [], []
     for iid, title, pats, excl, defs in ITEMS:

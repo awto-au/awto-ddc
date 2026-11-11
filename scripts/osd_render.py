@@ -3,9 +3,9 @@
 
 usage: osd_render.py BIN MAP [--mode 1080p60|2160p60] [--at WHEN ...] [--do MS:ACTION ...] [--out tmp/osd/NAME.png]
                      [--video OUT.mp4 --every MS --until MS [--vscale 4]] [--bg grey|black|checker] [--scale N]
-  WHEN  = sim ms after the firmware reaches ACTIVE (e.g. 500), or `logo` (boot logo drawn, first OsdFuncEnableOsd after
-          OsdDispShowLogo), or `end` (last action + 1 s). Several --at give several PNGs (NAME_<when>.png).
-  ACTION = osd_test.py name: events (info nosignal ...), keys (menu right left exit), logo-on, logo-off, debug, clear, ...
+  WHEN  = sim ms after the firmware reaches ACTIVE (e.g. 500), or `end` (last action + 1 s). Several --at give several
+          PNGs (NAME_<when>.png). Power-on screens (no logo since #144, the console): scripts/boot_sim.py.
+  ACTION = osd_test.py name: events (info nosignal ...), keys (menu right left exit), debug, clear, ...
           written to the firmware test byte (g_stAwtoDiag + 0x28) over the simulated debug slave (osd_test --cmd).
   --video: a frame every --every ms of sim time from 0 to --until (frames downscaled by --vscale), mp4 via ffmpeg
           (image sequence in OUT_frames/ when ffmpeg is missing).
@@ -70,19 +70,14 @@ class Session:
         self.binp, self.mapp, self.mode = binp, mapp, mode
         self.model = M.OsdModel()
         self.model.img = binp.read_bytes()
-        self.logo = {"show": False, "done": False}
         self.bus = S.SimBus(binp, mapp, "osdr-" + binp.stem, None, boot=False, devs=[self.model], video=mode)
-        m = self.bus.m
-        if "_OsdDispShowLogo" in m.sym:  # optimized review builds may omit the stock logo path
-            m.stub("OsdDispShowLogo", lambda m_, r: self.logo.__setitem__("show", True) and None)
-        m.stub("OsdFuncEnableOsd", lambda m_, r: self.logo.__setitem__("done", True) if self.logo["show"] else None)
         self.diag = T.diag_addr(mapp)
-        self.logo_snap = None
         self.t0 = None
 
     def boot(self, sync_console: bool = False):
         """sync_console False: the #139 console auto-open is switched off right after the crt init (g_ucAwtoSyncCon = 0),
-        so screen tests start from an empty OSD as before; True = the firmware default (on)."""
+        so screen tests start from an empty OSD as before; True = the firmware default (on). #144: the power-on console
+        opens at mode INITIAL, so the switch-off is written every 50 k instructions until the main loop runs."""
         bus, m, used = self.bus, self.bus.m, 0
         con = None
         if not sync_console:
@@ -91,19 +86,17 @@ class Session:
             except S.SimError:
                 con = None
         while used < 160_000_000:
-            m.run(1_000_000); used += 1_000_000
+            step = 50_000 if (con and bus.diag()["stage"] < 8) else 1_000_000
+            m.run(step); used += step
             if con and not sync_console:
                 m.wr(con, bytes([0]))
-            if self.logo["done"] and self.logo_snap is None:
-                m.run(300_000)                                     # let the enable + window writes finish
-                self.logo_snap = self.model.snapshot(m, 0.0)
-            if bus.diag()["stage"] >= 8 and self.logo_snap is not None or bus.diag()["stage"] >= 8 and used > 80_000_000:
+            if bus.diag()["stage"] >= 8:
                 break
         if not bus.run_until_mode(3):
             raise SystemExit("never reached ACTIVE")
         bus.dbg_link_on()                                          # #79 images: 0x35 is parked off the host port until this
         self.t0 = bus.now()
-        say(f"{self.binp.name}: ACTIVE at fw {self.t0:.3f} s ({bus.m.instr} instr), logo drawn: {self.logo_snap is not None}")
+        say(f"{self.binp.name}: ACTIVE at fw {self.t0:.3f} s ({bus.m.instr} instr)")
 
     def ms(self) -> float:
         return (self.bus.now() - self.t0) * 1000.0
@@ -174,7 +167,7 @@ def main() -> int:
     s = Session(a.bin, a.map, a.mode)
     try:
         s.boot()
-        marks = sorted({float(w) for w in whens if w not in ("logo", "end")} | {t for t, _ in acts})
+        marks = sorted({float(w) for w in whens if w != "end"} | {t for t, _ in acts})
         frames, vt = [], 0.0
         timeline = sorted(set(marks) | (set(np.arange(0, a.until + 1e-9, a.every).tolist()) if a.video else set()))
         snaps = {}
@@ -190,10 +183,6 @@ def main() -> int:
         if "end" in whens:
             s.run_to((max([t for t, _ in acts], default=0.0) + 1000.0) if acts else s.ms() + 100.0)
             snaps["end"] = s.snap()
-        if "logo" in whens and s.logo_snap is not None:
-            snaps["logo"] = s.logo_snap
-        elif "logo" in whens:
-            say("no boot logo captured (OsdDispShowLogo/OsdFuncEnableOsd not reached)")
         (ROOT / "tmp/logs/osd_bursts.txt").write_text("\n".join(map(str, s.model.log)))
         for k, st in snaps.items():
             save(st, out if len(snaps) == 1 else out.with_name(f"{out.stem}_{k}.png"), a.bg, a.scale)

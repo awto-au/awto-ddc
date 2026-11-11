@@ -22,7 +22,6 @@ LOG = ROOT / "tmp" / "logs" / "osd_catalog.log"
 
 # (name, osd_render args, what it is): actions are osd_test names (rtd_proto OSD_EVENTS / osd_test CMD_ONLY)
 POPUPS = [
-    ("logo", ["--at", "logo"], "boot logo"),
     ("info", ["--do", "300:info", "--at", "2500"], "input info pop-up"),
     ("debug", ["--do", "300:debug", "--at", "2500"], "debug/tech pop-up (#34), held"),
     ("keytest", ["--do", "300:keytest", "--at", "2500"], "front-key test screen"),

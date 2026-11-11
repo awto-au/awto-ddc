@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""#144 power-on in fw_sim: no boot logo, the console with the live power-on log from mode INITIAL; PNGs along the way.
+
+usage: AWTO_SIM_CORE=fast boot_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot] [--at MS ...]
+- Runs from reset (console default on) to ACTIVE + AFTER_MS. Records OSD grid size, console flag and mode per step.
+- PNGs: <out>/boot_<ms>ms.png at each --at (fw ms since power-on, default 300 1000), boot_console_first.png (first OSD on),
+  boot_active.png (mode ACTIVE), boot_after_ds.png (ACTIVE + AFTER_MS: after display setting).
+- Checks: no logo symbols in the map; console open before display setting with the 120 x 63 map; the same console still
+  open at ACTIVE (one "console opened" line: it survived display setting); power-on log lines; no chip reset.
+- Prints power-on -> ACTIVE (sync ring) and first-console / backlight-on times.
+Log: tmp/logs/boot_sim.log
+"""
+import argparse
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import numpy as np  # noqa: E402
+from PIL import Image  # noqa: E402
+import osd_model as M  # noqa: E402
+import osd_render as R  # noqa: E402
+import rtd_crash as C  # noqa: E402
+import sync_log as S  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
+LOG = ROOT / "tmp/logs/boot_sim.log"
+CON_COLS, CON_MAP_ROWS = 120, 63      # awto_dbgpop.inc AWTO_CON_COLS, AWTO_CON_ROWS + pad row
+AFTER_MS = 300                        # after ACTIVE: the console has had display setting + active proc behind it
+BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
+STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)
+LOGO_SYMS = ("_OsdDispShowLogo", "_AwtoLogoDraw", "_tICON_REALTEK_1BIT_LOGO0", "_tAWTO_LOGO_RUNS", "_AwtoTestHoldLogoOff")
+
+
+def say(s):
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+    print(s, flush=True)
+
+
+class Run:
+    def __init__(self, a):
+        self.a, self.fails = a, 0
+        self.s = R.Session(a.bin, a.map, a.mode)
+        self.bus, self.m = self.s.bus, self.s.bus.m
+        self.rows = S.load_rows(S.tsv_for(a.map))
+        self.ring = S.sym(a.map, "g_stAwtoSync")
+        self.gpio = self.m.addr("g_stAwtoGpio")
+        self.w, self.h = self.m.addr("g_ucOsdWidth"), self.m.addr("g_ucOsdHeight")
+        self.cr = next(d for d in self.m.devs if type(d).__name__ == "ChipReset")
+        mt = a.map.read_text(errors="replace")
+        self.caddr, self.mt = C.map_addr(mt), mt
+
+    def check(self, ok, what, detail=""):
+        say(f"  {'PASS' if ok else 'FAIL'} {what}{(': ' + detail) if detail else ''}")
+        self.fails += 0 if ok else 1
+
+    def ms(self):
+        """fw ms since power-on: Timer2 ms (diag usT2Isr) minus the power-on episode's t0 (the ring's own time base)."""
+        raw = self.m.rd(self.ring, 9)
+        if raw[:2] != b"SY":
+            return 0.0
+        return float((self.bus.diag_t2() - (raw[7] << 8 | raw[8])) & 0xFFFF)
+
+    def state(self):
+        return (self.bus.mode_state(), self.m.rd(self.w)[0], self.m.rd(self.h)[0], self.m.rd(self.gpio + 3)[0],
+                M.summary(self.s.model.snapshot(self.m, 0.0))["en"])
+
+    def shot(self, name):
+        st = self.s.model.snapshot(self.m, self.ms())
+        out = self.a.out / f"{name}.png"
+        img = np.array(R.render_snap(st, "black", 1))
+        Image.fromarray(img).resize((R.PANEL_W // 2, R.PANEL_H // 2), Image.BOX).save(out)
+        sm = M.summary(st)
+        say(f"  png {out} at {self.ms():.0f} ms (OSD {'on' if sm['en'] else 'OFF'}, grid {sm['cols']}x{sm['rows']})")
+
+    def episode(self):
+        return S.decode(self.m.rd(self.ring, S.HDR + S.N * S.EV), self.rows)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("bin", type=Path)
+    ap.add_argument("map", type=Path)
+    ap.add_argument("--mode", default="1080p60")
+    ap.add_argument("--out", type=Path, default=ROOT / "tmp/boot")
+    ap.add_argument("--at", type=float, nargs="*", default=[300.0, 1000.0])
+    a = ap.parse_args()
+    a.out.mkdir(parents=True, exist_ok=True)
+    say(f"boot_sim {a.bin.name}")
+    r = Run(a)
+    try:
+        left = [s for s in LOGO_SYMS if s in r.mt]
+        r.check(not left, "no boot logo symbols in the map", ", ".join(left))
+        ats, used, last, first_con, active_ms = sorted(a.at), 0, None, None, None
+        con_at_ds = None
+        while used < BUDGET_INSTR:
+            r.m.run(STEP); used += STEP
+            t, st = r.ms(), r.state()
+            if st != last:
+                say(f"  {t:7.0f} ms mode {st[0]} grid {st[1]}x{st[2]} console {st[3]} osd {'on' if st[4] else 'off'}")
+                if first_con is None and st[3] and st[4]:
+                    first_con = t
+                    r.shot("boot_console_first")
+                if st[0] == 2 and con_at_ds is None:
+                    con_at_ds = (st[1], st[2], st[3])
+                last = st
+            while ats and t >= ats[0]:
+                r.shot(f"boot_{int(ats.pop(0))}ms")
+            if st[0] == 3:
+                active_ms = t
+                r.shot("boot_active")
+                break
+        r.check(active_ms is not None, "reached ACTIVE", f"{used} instr")
+        if active_ms is None:
+            return 1
+        r.bus.wait(AFTER_MS / 1000.0)
+        st = r.state()
+        r.shot("boot_after_ds")
+        h, lines = r.episode()
+        say(f"  power-on: episode {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines, lost {h.get('lost', 0)}")
+        for ln in lines:
+            say(f"    {ln}")
+        txt = "\n".join(lines)
+        r.check(first_con is not None, "console shown during power-on", f"first at {first_con:.0f} ms" if first_con else "never")
+        r.check(con_at_ds is not None and con_at_ds[:2] == (CON_COLS, CON_MAP_ROWS) and con_at_ds[2] != 0,
+                f"console ({CON_COLS} x {CON_MAP_ROWS} map) open when display setting starts", str(con_at_ds))
+        r.check(st[1:4] == (CON_COLS, CON_MAP_ROWS, st[3]) and st[3] != 0 and st[4], "console open after display setting", str(st))
+        r.check(txt.count("console opened") == 1, "one 'console opened' line (survived display setting, no reopen)",
+                f"{txt.count('console opened')}")
+        for want in ("power on", "backlight on", "timing ", "display setting", "mode ACTIVE"):
+            r.check(want in txt, f"power-on log has '{want}'")
+        r.bus.dbg_link_on()                         # #79 images: 0x35 parked off the host port until this
+        d = C.decode(C.read(r.bus, r.caddr))
+        say(f"  measured, watchdog: max feed age {d['max_feed']} checks, max pass age {d['max_pass']} checks")
+        r.check(r.cr.resets == 0, "no chip reset (watchdog)", f"resets {r.cr.resets}")
+    finally:
+        r.bus.close()
+    say(f"{'PASS' if r.fails == 0 else 'FAIL'} boot_sim {a.bin.name}: {r.fails} failed")
+    return 1 if r.fails else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

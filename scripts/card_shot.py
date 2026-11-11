@@ -84,8 +84,6 @@ def main():
     s = R.Session(a.bin, a.map, a.mode)
     try:
         s.boot()
-        if s.logo_snap is not None and (not only or "logo" in only):
-            shot(s.logo_snap, a.out / f"{a.prefix}logo.png", "logo")
         for name, cmds in SHOTS:
             if only and name not in only:
                 continue
