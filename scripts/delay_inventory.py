@@ -163,7 +163,7 @@ SEEDS = [   # (context, root functions); primary context of a function = the nar
     ("power", ["_SysPowerHandler"]),
     ("search", ["_SysSourceHandler", "_SysTMDSRxHandler", "_SysDpRxHandler"]),
     ("mode_change", ["_SysModeHandler", "_SysJudgeHandler"]),
-    ("osd", ["_UserCommonInterfaceOsdHandler", "_UserInterfaceKeyHandler", "_SysColorHandler"]),
+    ("osd", ["_UserCommonInterfaceOsdHandler", "_UserInterfaceKeyHandler", "_AwtoKeyPoll", "_SysColorHandler"]),   # #129: AwtoKeyPoll replaced the SDK key handler
     ("ddcci", ["_UserCommonDdcciHandler"]),
     ("timer_event", ["_SysTimerHandler"]),
     ("debug", ["_ScalerDebug", "_AwtoDiagMainPass", "_AwtoDiagTestCmd"]),
