@@ -1,0 +1,7 @@
+{
+  "frames": 96,
+  "startup_words": 4132,
+  "all_word_writes_match_native": true,
+  "missing_MOVX_negative_control_detected": true,
+  "limit": "8051 display-list player; portable C renderer has not been compiled with SDCC here"
+}
