@@ -11,14 +11,14 @@
 
 static __xdata WORD s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
 static __xdata WORD s_usAwtoT0Rl;                                   // reload (RCAP2) of the running tick
-static __xdata BYTE s_ucAwtoT0Pos;                                  // 0 = Timer0 ISR not running; else the next ID it decrements
+__xdata BYTE g_ucAwtoT0Pos;                                         // 0 = Timer0 ISR not running; else the next ID it decrements
 
 // Timer0 = one 1 ms tick from now at the current clock (Timer2's reload)
 #define AWTO_T0EV_START()               do { TR0 = 0; TL0 = RCAP2L; TH0 = RCAP2H; TF0 = 0; TR0 = 1; \
                                              s_usAwtoT0Rl = (((WORD)RCAP2H) << 8) | RCAP2L; } while(0)
 // Re-arm restarts. Timer0 running: +1 tick when the current tick is past half -> fires within +-0.5 ms of usMs.
 // Preempting the Timer0 ISR (EXINT0 high in power saving): +1 if the ISR has yet to decrement this ID in its tick.
-#define AWTO_T0EV_ARM(usMs, ucId)       do { if(s_ucAwtoT0Pos != 0) { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((ucId) >= s_ucAwtoT0Pos); } \
+#define AWTO_T0EV_ARM(usMs, ucId)       do { if(g_ucAwtoT0Pos != 0) { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((ucId) >= g_ucAwtoT0Pos); } \
                                              else if(TR0 == 0) { AWTO_T0EV_START(); s_pusAwtoT0Ms[(ucId)] = (usMs); } \
                                              else { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((((WORD)(BYTE)(TH0 - RCAP2H)) << 1) >= (WORD)(0x100 - RCAP2H)); } } while(0)
 
@@ -139,13 +139,13 @@ void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms ti
     TL0 = (BYTE)usT;
     TH0 = (BYTE)(usT >> 8);
     TR0 = 1;
-    s_ucAwtoT0Pos = 1;
+    g_ucAwtoT0Pos = 1;
     EA = 1;
     for(ucId = 1; ucId < _SCALER_WD_TIMER_EVENT_COUNT; ucId++)
     {
         EA = 0;
         ucDue = (s_pusAwtoT0Ms[ucId] != 0) && (--s_pusAwtoT0Ms[ucId] == 0);
-        s_ucAwtoT0Pos = ucId + 1;
+        g_ucAwtoT0Pos = ucId + 1;
         EA = 1;
         if(ucDue != 0)
         {
@@ -160,7 +160,7 @@ void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms ti
     {
         TR0 = 0;                                // nothing pending: no ticks
     }
-    s_ucAwtoT0Pos = 0;
+    g_ucAwtoT0Pos = 0;
     EA = 1;
 }
 
