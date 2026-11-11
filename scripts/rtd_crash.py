@@ -33,8 +33,8 @@ SITES = {0: "-", 1: "main pass", 2: "DelayXms", 3: "PollingFlagProc", 4: "WaitFo
          7: "FlashWRDis", 8: "FlashWRProtect", 9: "FlashRead", 10: "FlashWrite", 11: "OsdPropPutString", 12: "PanelT3Wait", 13: "DPTxHpdPoll"}   # AWTO_WDT_S_* (#150)
 
 
-def site_addr(map_text: str) -> int | None:
-    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_ucAwtoPokeSite\b", map_text, re.M)
+def site_addr(map_text: str, name: str = "g_ucAwtoPokeSite") -> int | None:
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_text, re.M)
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 

@@ -204,6 +204,26 @@
   bound 250 ms: the sim's 255 ms gap, HPD not modelled) and `AwtoDiagPanelT3Wait`. Sim max poke gap after: 92 ms.
 - wd7 sim (gates): 0x4C capture 166.2 ms, 0x4E hardware reset 585.9 ms, probes as unit 2.
 
+### wd8 threshold: power saving (2026-11-12, from unit 2 wb-p14ui-wd7, 2026-11-11)
+
+- wd7 on unit 2: wdt_test 5/5 PASS (stall capture 173 ms, PC AwtoWdtHang+0x10; ea_off hardware reset 700 ms), but host_sleep
+  measured a max poke gap of **160 ms** in power saving (ended by the main pass) against the 166.4 ms warning.
+- In power saving the MCU runs on IOSC with the PS flash divider: a main pass without a poking wait is long in real time. The sim
+  does not show it (PS passes there <= 37 ms: no SPI-flash fetch latency, sim max PS poke gap 37 ms), so the long stretch is not
+  identified yet. wd8 records the site that started the longest gap too (`g_ucAwtoPokeFrom`, `wdt_test` "from ...").
+  A loop-profile build (`-D _AWTO_LOOP_PROF=_ON`, `scripts/loop_prof.py`) in power saving gives the per-handler pass cost.
+- wd8: warning = 1.25 x 160 = 200 ms -> threshold 0x577 = 1399 counts = 200.1 ms; N = 1 (reset 585.9 ms, margin 385.8 ms).
+- stress now holds the D3 (no cable) step into power saving (up to 29 s), so its max gap covers the power-saving passes.
+
+### SDK wake vs our wake poll (#150, #144)
+
+- host_sleep on wd7: no wake line: the host's DPMS on brings TMDS back; our poll has no TMDS-clock trigger (cable / EDID read /
+  AUX / DPCD 600h only) and the SDK's own power-saving source detect woke the monitor ('wake on D2' only).
+- wd8: such a wake logs 'Dn wake by the SDK source detect, not our poll (poll state ...)': cable, EDID latches, AUX, DPCD 600h
+  and the number of wake polls since power saving (`g_usAwtoPsPolls`, also read by host_sleep while in power saving).
+- Sim (wd8, D2 source, forced power saving): woke after 905 ms, 'D1 wake by the SDK source detect, not our poll (poll state
+  0x00C803: polls 200, cable 011, EDID 000, AUX 0, DPCD D0 0)': the poll ran, no trigger set.
+
 ### Sync ring in NO SIGNAL (#150)
 
 - Unit 2 wd6, host output off: the ring filled with alternating 'D2 TMDS clock 0.0 MHz detected' / 'D2 signal lost' (every

@@ -98,6 +98,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{v} ms"
     if fmt == "n":                                       # #150 collapsed repeats
         return str(v)
+    if fmt == "x":                                       # #150 wake-poll state (cable 2:0, EDID 5:3, AUX 6, DPCD 7, polls 23:8)
+        return f"0x{v:06X}: polls {v >> 8}, cable {v & 7:03b}, EDID {(v >> 3) & 7:03b}, AUX {(v >> 6) & 1}, DPCD D0 {(v >> 7) & 1}"
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
         c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
         where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"

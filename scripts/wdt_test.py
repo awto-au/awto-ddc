@@ -445,12 +445,15 @@ class Runner:
         return None, (before, after, dt), dl
 
     def site(self) -> str:
+        import dbg_xdata as X
         sa = C.site_addr(self.t.map_text)
         if sa is None:
             return "site n/a"
-        import dbg_xdata as X
         b = X.read_bytes(self.t.io, sa, 1)
-        return f"ended by {C.SITES.get(b[0], b[0])}" if b else "site ?"
+        fa = C.site_addr(self.t.map_text, "g_ucAwtoPokeFrom")
+        f = X.read_bytes(self.t.io, fa, 1) if fa is not None else None
+        frm = f" (from {C.SITES.get(f[0], f[0])})" if f else ""
+        return f"ended by {C.SITES.get(b[0], b[0])}{frm}" if b else "site ?"
 
     def ages(self, d) -> str:
         poke = ">=586" if d["max_poke"] == 255 else str(round(d["max_poke"] * C.POKE_MS))
@@ -540,7 +543,8 @@ class Runner:
     def c_stress(self):
         """#150: saves, menu, input switches D2 / D3 / D1, no-signal power saving and back; max poke gap with its site"""
         d0 = self.rec()
-        steps = [(0x29, 1.0)] * 5 + [(0x01, 1.0), (0x04, 0.5), (0x05, 1.0), (0x33, 8.0), (0x32, 6.0), (0x31, 6.0), (0x32, 6.0)]
+        # 0x33 (D3, no cable) is held up to PS_S: the SDK takes it into power saving, whose passes run on the slow clock (#150)
+        steps = [(0x29, 1.0)] * 5 + [(0x01, 1.0), (0x04, 0.5), (0x05, 1.0), (0x33, PS_S), (0x32, 6.0), (0x31, 6.0), (0x32, 6.0)]
         kinds = []
         for c, s in steps:
             up0, h0 = self.t.uptime(), time.monotonic()
@@ -595,6 +599,12 @@ class Runner:
                 if md is not None and md not in seen:
                     seen[md] = time.monotonic() - t0
                 if md == 6:
+                    self.t.wait(2.0)                      # some wake polls in power saving, then their count (test readout)
+                    pa = C.site_addr(self.t.map_text, "g_usAwtoPsPolls")
+                    if pa is not None:
+                        import dbg_xdata as X
+                        b = X.read_bytes(self.t.io, pa, 2)
+                        txt.append(f"wake polls in PS {b[0] << 8 | b[1] if b else '?'}")
                     break
                 time.sleep(0.2)
             txt.append("modes " + ", ".join(f"{S_MODES.get(k, k)} {v:.1f} s" for k, v in seen.items()))
@@ -613,7 +623,7 @@ class Runner:
                 time.sleep(0.05)
             txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
             ok &= t_act is not None
-            wake = [ln for ln in self.ring_lines() if ": wake" in ln]
+            wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by the SDK" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
             same, why = self.same_boot(d0, None, time.monotonic())
             d1 = self.rec()
