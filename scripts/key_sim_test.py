@@ -3,7 +3,7 @@
 
 usage: AWTO_SIM_CORE=fast key_sim_test.py BIN MAP [--mode 1080p60]
 - Boots to ACTIVE (HDMI D2), then per context: no OSD (DOWN info pop-up, UP selector), source selector (SOURCE opens, UP / DOWN
-  step, no repeat, MENU cancels), awto menu (AUTO opens, DOWN moves, held DOWN repeats at the rate limit), diagnostic console
+  step through Auto + the board ports and wrap, rows redrawn per step, no repeat, MENU cancels; #134 text layer), awto menu (AUTO opens, DOWN moves, held DOWN repeats at the rate limit), diagnostic console
   (UP+DOWN opens with no single-key leak, DOWN scrolls + repeats, AUTO swallowed, UP+DOWN closes), injected test cmd keys,
   MENU+DOWN debug link with no DOWN leak, POWER off / on.
 - Physical key = ADC_A0 (0xFF09) / ADC_A1 (0xFF0A) cell value in a fw/awto/inputs.tsv band; idle = regdb reset 0xF8; POWER = P3.0 low.
@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/key_sim_test.log"
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
-WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "OsdDispHotKeySourceMenu", "AwtoSourceKeyOpen", "AwtoSourceKey", "AwtoSourceStep",
+WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
          "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "AwtoKeyDbgLink", "SysPowerSetTargetPowerStatus")
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
@@ -41,13 +41,15 @@ class Keys:
         self.hits = {}
         self.args = {}
         for n in WATCH:
-            self.m.stub(n, self._watch(n))
+            if "_" + n in self.m.sym:                           # older images lack the #134 names: those checks then fail
+                self.m.stub(n, self._watch(n))
         mt = s.mapp.read_text(errors="replace")
         self.diag = T.diag_addr(s.mapp)
         self.osd = T.osdinfo_addr(s.mapp)
         self.menu_on = self.m.addr("g_ucAwtoMenuOn")
         self.gpio = self.m.addr("g_stAwtoGpio")
         self.key = self.m.addr("g_stAwtoKey")
+        self.osd_w = self.m.addr("g_ucOsdWidth")
         self.fails = 0
         self.mt = mt
 
@@ -131,7 +133,7 @@ def run(k):
     b = k.snap()                                                # no OSD: UP = selector (SDK way in)
     k.tap("UP")
     st = k.osd_state()
-    k.check("no OSD: UP -> source selector", k.delta(b, "OsdDispHotKeySourceMenu") == 1 and st != 0, f"osd state {st}")
+    k.check("no OSD: UP -> source selector (the one open path)", k.delta(b, "AwtoSourceOpen") == 1 and st != 0, f"osd state {st}")
     b = k.snap()
     k.tap("MENU")
     k.check("selector: MENU cancels", k.delta(b, "AwtoSourceKey") == 1 and k.osd_state() == 0, f"osd state {k.osd_state()}")
@@ -139,7 +141,22 @@ def run(k):
     b = k.snap()                                                # SOURCE = selector; UP / DOWN step, no repeat
     k.tap("SOURCE")
     sel = k.osd_state()
-    k.check("SOURCE -> selector", k.delta(b, "AwtoSourceKeyOpen") == 1 and sel != 0, f"osd state {sel}")
+    w = k.m.rd(k.osd_w)[0]
+    k.check("SOURCE -> selector on the text layer (28-cell rows drawn)", k.delta(b, "AwtoSourceOpen") == 1 and sel != 0 and w == 28
+            and k.delta(b, "AwtoSourceRows") == 1, f"osd state {sel}, map width {w}, rows drawn {k.delta(b, 'AwtoSourceRows')}")
+    n_items = 4                                                 # Auto + D1 DP, D2 HDMI 1, D3 HDMI 2 (fw/overlay Pcb)
+    b = k.snap()
+    rows = []
+    for _ in range(n_items):
+        k.tap("UP")
+        rows.append(k.args.get("AwtoSrcSet", [None])[-1])
+    k.check(f"selector: {n_items} UP steps visit every item once and wrap, rows redrawn each step",
+            sorted(rows) == list(range(n_items)) and rows[0] == (rows[-1] + 1) % n_items and k.delta(b, "AwtoSourceRows") == n_items,
+            f"rows {rows}, redraws {k.delta(b, 'AwtoSourceRows')}")
+    b = k.snap()
+    k.tap("DOWN")
+    back = k.args.get("AwtoSrcSet", [None])[-1]
+    k.check("selector: DOWN steps back", back == (rows[-1] - 1) % n_items, f"row {back} after {rows[-1]}")
     b = k.snap()
     k.down("DOWN")
     k.wait(1200)
@@ -181,8 +198,8 @@ def run(k):
     k.adc()
     k.wait(500)
     k.check("UP+DOWN -> console open", k.delta(b, "AwtoKeyTestSet") == 1 and k.console() != 0, f"console {k.console()}")
-    k.check("UP+DOWN: no UP / DOWN action leaked", k.delta(b, "AwtoKeyNoOsd") == 0 and k.delta(b, "OsdDispHotKeySourceMenu") == 0
-            and k.delta(b, "AwtoConScroll") == 0, str({n: k.delta(b, n) for n in ("AwtoKeyNoOsd", "OsdDispHotKeySourceMenu", "AwtoConScroll")}))
+    k.check("UP+DOWN: no UP / DOWN action leaked", k.delta(b, "AwtoKeyNoOsd") == 0 and k.delta(b, "AwtoSourceOpen") == 0
+            and k.delta(b, "AwtoConScroll") == 0, str({n: k.delta(b, n) for n in ("AwtoKeyNoOsd", "AwtoSourceOpen", "AwtoConScroll")}))
     b = k.snap()
     k.tap("DOWN")
     k.check("console: DOWN scrolls once", k.delta(b, "AwtoConScroll") == 1, f"{k.delta(b, 'AwtoConScroll')}")
@@ -196,7 +213,7 @@ def run(k):
     b = k.snap()
     k.tap("AUTO")
     k.tap("SOURCE")
-    k.check("console: AUTO / SOURCE swallowed", k.delta(b, "menu_open") == 0 and k.delta(b, "AwtoSourceKeyOpen") == 0 and k.menu() == 0)
+    k.check("console: AUTO / SOURCE swallowed", k.delta(b, "menu_open") == 0 and k.delta(b, "AwtoSourceOpen") == 0 and k.menu() == 0)
     b = k.snap()
     k.tap("UP", "DOWN", ms=300)
     k.check("UP+DOWN -> console closed, no scroll", k.console() == 0 and k.delta(b, "AwtoConScroll") == 0, f"console {k.console()}")
@@ -211,7 +228,7 @@ def run(k):
     k.check("injected MENU closes the menu", k.menu() == 0)
     b = k.snap()
     k.cmd(0x05)
-    k.check("injected SOURCE -> selector", k.delta(b, "AwtoSourceKeyOpen") == 1 and k.osd_state() != 0)
+    k.check("injected SOURCE -> selector", k.delta(b, "AwtoSourceOpen") == 1 and k.osd_state() != 0)
     k.cmd(0x02)
     k.check("injected UP steps the selector", k.delta(b, "AwtoSourceStep") == 1)
     k.cmd(0x04)

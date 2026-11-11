@@ -21,7 +21,8 @@ CARD_ICONS = r"tFONT1_ICON_(NO_SUPPORT|NO_CABLE|NO_SIGNAL|NO_SIGANL|POWER_SAVIN|
 FREEZE_ICONS = r"tFONT1_ICON_FREEZE"
 LANG_ICONS = r"tFONT1_ICON_(ENGLISH|CHINESE_T)"
 KEEP_ICONS = r"tFONT1_ICON_(INFORMATION|DDCCI|ON|OFF)$"
-SRC_ICONS = r"tFONT1_ICON_(INPUT|AUTOSELECT|VGA|DVI|HDMI|DP|MHL|NO_PORT|D\d|1_DOT_\d)$"
+SRC_ICONS = r"tFONT1_ICON_(INPUT|AUTOSELECT|VGA|DVI|HDMI|DP|MHL|NO_PORT)$"
+HOTKEY_ICONS = r"tFONT1_ICON_(D\d|1_DOT_\d)$"           # DP-version hot-key menu (#122); was counted under source-selector
 
 # id, title, areas (regex on map area names, full match), exclude regex, source definitions (regex on names) for LOC
 ITEMS = [
@@ -33,11 +34,12 @@ ITEMS = [
     ("realtek-menu", "Realtek SDK menu: optional (icons + menu code) behind a build flag",
      [r"tFONT1_ICON_.*", r"Menu[A-Z]\w*", r"OsdDispMainMenu\w*", r"tOSD_iREALTEK", r"tOSD_iKEY_\w+", r"OsdDispSliderAndNumber",
       r"OsdDispClear\w*", r"OsdDispAdvance\w*", r"OsdDispSixColor\w*", r"OsdDispMainSubString", r"OsdDispMainOptionIcon"],
-     "|".join([CARD_ICONS, FREEZE_ICONS, LANG_ICONS, KEEP_ICONS, SRC_ICONS, r"MenuHotKey\w*"]),
+     "|".join([CARD_ICONS, FREEZE_ICONS, LANG_ICONS, KEEP_ICONS, SRC_ICONS, HOTKEY_ICONS, r"MenuHotKey\w*"]),
      [r"Menu[A-Z]\w*", r"OsdDispMainMenu\w*", r"OsdDispSliderAndNumber", r"OsdDispAdvance\w*", r"OsdDispSixColor\w*", r"tFONT1_ICON_\w+"]),
     ("factory-menu", "Factory menu: optional behind a build flag", [r"RTDFactory\w*", r"tFONT_FACTORY\w*", r"OperationFactory\w*", r"tFactory\w*"],
      None, [r"RTDFactory\w*", r"tFONT_FACTORY\w*"]),
-    ("hotkey-menus", "SDK DDC/CI and DP-version hot-key menus: port or remove", [r"OsdDispHotKey\w*", r"MenuHotKey\w*"], None,
+    ("hotkey-menus", "SDK DDC/CI and DP-version hot-key menus: port or remove",
+     [r"OsdDispHotKeyOption\w*", r"MenuHotKey\w*", HOTKEY_ICONS[:-1], r"tFONT1_MAIN_ICON_TABLE_\d"], None,
      [r"OsdDispHotKey\w*", r"MenuHotKey\w*"]),
     ("diag-fonts", "Diagnostic-only fonts (5 of 7): keep, or optional behind a build flag",
      [r"font_blob_(spleen6|spleen5|tamzen5|tamzen6|tamzen7)"], None, []),
@@ -48,8 +50,8 @@ ITEMS = [
      [r"OsdPropGet\w*", r"OsdPropSet\w*", r"OsdPropFontDataToSram", r"OsdPropVideoResolution", r"tFONT1_GLOBAL"], None,
      [r"OsdPropGet\w*", r"OsdPropSet\w*", r"OsdPropFontDataToSram", r"OsdPropVideoResolution"]),
     ("source-selector", "Source selector still drawn by the SDK hot-key source menu + port icons",
-     [r"OsdDispHotKeySourceMenu\w*", SRC_ICONS[:-1],
-      r"OsdFontVLCLoadInputIcon", r"tFONT1_MAIN_ICON_TABLE_\d"], None, [r"OsdDispHotKeySourceMenu\w*"]),
+     [r"OsdDispHotKeySourceMenu\w*", SRC_ICONS[:-1], r"OsdFontVLCLoadInputIcon", r"tFONT1_INPUT_ICON_TABLE"], None,
+     [r"OsdDispHotKeySourceMenu\w*"]),
     ("diag-code", "Diagnostics / test code (console, probe, key test, delay cal, test commands)",
      [r"AwtoDiag\w*", r"AwtoProbe\w*", r"AwtoKey(Show|Letter|Log)\w*", r"AwtoOsd(Debug|Key|Gpio)Lines"], None,
      [r"AwtoDiag\w*", r"AwtoProbe\w*", r"AwtoKey(Show|Letter|Log)\w*", r"AwtoOsd(Debug|Key|Gpio)Lines"]),
