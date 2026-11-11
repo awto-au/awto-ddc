@@ -30,7 +30,7 @@ FIELDS = ("m0 m1 ver cause bites warm pch pcl bank sp psw acc b dph dpl reth ret
 PROBE = ((0x01, "TIMER-MODE"), (0x02, "ARMED"), (0x04, "IRQ"), (0x08, "RESET"), (0x10, "NO-RESET"), (0x20, "WDTI"), (0x40, "EARLY"))
 POKE_MS = 32 * 2048 / 14318.18                       # ucMaxPoke unit: 32 CNT3 counts (RL6449_Project.h)
 SITES = {0: "-", 1: "main pass", 2: "DelayXms", 3: "PollingFlagProc", 4: "WaitForEvent", 5: "AwtoMsgWait", 6: "FlashWREN",
-         7: "FlashWRDis", 8: "FlashWRProtect", 9: "FlashRead", 10: "FlashWrite", 11: "OsdPropPutString"}   # AWTO_WDT_S_* (#150)
+         7: "FlashWRDis", 8: "FlashWRProtect", 9: "FlashRead", 10: "FlashWrite", 11: "OsdPropPutString", 12: "PanelT3Wait", 13: "DPTxHpdPoll"}   # AWTO_WDT_S_* (#150)
 
 
 def site_addr(map_text: str) -> int | None:

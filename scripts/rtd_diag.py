@@ -411,7 +411,13 @@ def _main() -> int:
             print("sync: read over 0x35 failed"); return 1
         S.set_map(Path(mp))                       # #29: boot reason PC as symbol + offset
         h, lines = S.decode(bytes(raw), S.load_rows(S.tsv_for(Path(mp))))
-        txt = "\n".join([f"sync episode: {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines"] + ["  " + ln for ln in lines])
+        pin = None
+        try:                                      # #150: the boot reason, kept outside the ring
+            pin = S.pin_line(X.read_blocks(w, S.sym(Path(mp), "g_stAwtoSyncPin"), S.EV), S.load_rows(S.tsv_for(Path(mp))))
+        except SystemExit:
+            pass
+        txt = "\n".join(([f"boot reason (pinned): {pin}"] if pin else []) +
+                        [f"sync episode: {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines"] + ["  " + ln for ln in lines])
         print(txt); log(txt)
         return 0
     io = IO = B.Real(a.bus, allow_write=False, regread=True)

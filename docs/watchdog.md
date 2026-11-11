@@ -188,7 +188,40 @@
 - Sync lines after boot: `NVRAM save start / end`, `flash erase start / done`, `NVRAM page move`, each with WDT ms since the last poke.
 - Live `g_ucAwtoPokeSite`: which poke site (AWTO_WDT_S_*, `rtd_crash.SITES`) ended the longest gap; console `POKE n MS AT s`.
 - Sim: `FlashHalt` (fw_sim) adds the halt to the WDT model (typ, or datasheet max in wdt_test nvsave); wd6: 40 ops 1600 ms, 0 counted.
-- Next (Dan): `wdt_test --unit 2 --cases stress` gives the max poke gap + site; wd7 sets warning = 1.25 x that, N = 1.
+- Unit 2 wd6 (2026-11-11): 0x4C still bites with bit 5 on (first failed 0x35 read 1056 ms after the cmd); 5 saves, no bite, max
+  poke gap 133 ms; ea_off hardware-only reset, warm 1 -> 2.
+
+### wd7 threshold (2026-11-12, from unit 2 wb-p14ui-wd6 stress, 2026-11-11)
+
+- Measurement: one `wdt_test --unit 2 --cases stress` run (5 saves, menu open / close, D3 no cable, D2, D1 without a DP source, D2):
+  max poke gap 133 ms, ended by the main pass. **No DP traffic** (host DP-1 output off): a DP stress run is still owed.
+- Warning = 1.25 x 133 = 166.25 ms -> threshold 0x48B = 1163 CNT3 counts x 143.0 us = 166.4 ms (the next count up). N = 1: reset
+  585.9 ms after the last poke; warning -> reset margin 419.5 ms (>= 100 ms for the capture).
+- 2x rule: the poking waits poke every ms (DelayXms, PollingFlagProc, WaitForEvent, HPD poll, T3 wait) or per call / character;
+  the longest single step between pokes inside them is ~1 ms, far under 166.4 / 2 = 83 ms. Not below 150 ms.
+- With N = 1 the first threshold match is the warning: no early match, so no `AWTO_WDT_P_EARLY` hardware-WDT evidence.
+- Sim before wd7 found two waits without pokes, now poked per ms: the eDP HPD poll (`ScalerDisplayDPTxPollingHotPlug`, panel T2,
+  bound 250 ms: the sim's 255 ms gap, HPD not modelled) and `AwtoDiagPanelT3Wait`. Sim max poke gap after: 92 ms.
+- wd7 sim (gates): 0x4C capture 166.2 ms, 0x4E hardware reset 585.9 ms, probes as unit 2.
+
+### Sync ring in NO SIGNAL (#150)
+
+- Unit 2 wd6, host output off: the ring filled with alternating 'D2 TMDS clock 0.0 MHz detected' / 'D2 signal lost' (every
+  15-100 ms) and lost the reason and save lines.
+- The lines follow `GET_SOURCE_PREDETECT` of the SDK's per-pass port detect (`AwtoSyncDetect`): the SDK's predetect really flips,
+  the logger only reports it. Why the D2 TMDS predetect reads true with no clock (HDMI +5 V present, DPMS off) is not established:
+  needs a trace of the TMDS clock-detect register on unit 2.
+- wd7: a repeating pair is written once as 'the 2 lines above repeated N more times'; the boot reason has a pinned copy
+  (`g_stAwtoSyncPin`, read first by `wdt_test` and `rtd_diag --sync`).
+- Uptimes are 16-bit ms (wrap at 65.5 s): `wdt_test` compares them modulo 65536 (64779 -> 247 = +1004 ms, same boot).
+
+### host_sleep case (unit only, approved autonomous test)
+
+- Host outputs off (Mutter `PowerSaveMode` 3, checked on `/sys/class/drm/card1-HDMI-A-2/dpms`), test cmd 0x39 (#78 short levels:
+  L3 = SDK power saving at 20 s) -> NOSIGNAL -> power saving (bound 29 s: 20 + 1 s judge + 2 s go-to-PS = 23 s x 1.25), host on:
+  #144 wake line, ms to ACTIVE (bound 9 s), no bite, max poke gap. Host always woken (also on an exception / Ctrl-C), 0x36 restores
+  the levels; the runner holds `gnome-session-inhibit --inhibit idle` for the case.
+- Measured 2026-11-11 (wd6, by hand): host DPMS on -> unit 2 ACTIVE in 863 ms from NOSIGNAL (not from power saving).
 
 ## Sim notes
 

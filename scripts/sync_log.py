@@ -96,6 +96,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{arg:02X}"
     if fmt == "ms":                                      # #150 NVRAM save timing
         return f"{v} ms"
+    if fmt == "n":                                       # #150 collapsed repeats
+        return str(v)
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
         c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
         where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"
@@ -134,6 +136,13 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False):
         evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
     h["lost"] = lost
     return h, [line(rows, ev, h["t0"]) for ev in evs]
+
+
+def pin_line(raw8: bytes, rows: list[dict]) -> str | None:
+    """#150: the pinned boot-reason entry (g_stAwtoSyncPin, 8 B, ring entry layout), time as stored (ms since reset)"""
+    if not raw8 or len(raw8) < EV or raw8[0] == 0:
+        return None
+    return line(rows, (raw8[0], raw8[1], raw8[2] << 8 | raw8[3], int.from_bytes(raw8[4:8], "big")), 0)
 
 
 def sym(map_path: Path, name: str) -> int:

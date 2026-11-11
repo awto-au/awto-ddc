@@ -40,6 +40,15 @@ PROBE_SPIN_MS = 1500                       # AWTO_WDT_PROBE_MS: the probe gives 
 # (dev.py RECOVER_BUS_WAIT_S) + boot 1.7 s + search 3 ports x 2 s + no-signal judge 1 s = 13.7 s x 1.25 -> 17 s
 SETTLE_S = 17.0
 SETTLED_MODES = (3, 4, 5, 6, 7)
+S_MODES = {0: "INITIAL", 1: "SEARCH", 2: "DISPLAY", 3: "ACTIVE", 4: "NOSUPPORT", 5: "NOSIGNAL", 6: "POWER SAVING", 7: "OFF"}
+DPMS_FILE = "/sys/class/drm/card1-HDMI-A-2/dpms"    # unit 2's host connector (devices.json)
+GDBUS_S = 5                                # one D-Bus call (~0.1 s); 5 s backstop, expiry = TimeoutExpired -> case FAIL
+DPMS_S = 3.0                               # connector dpms follows PowerSaveMode in < 1 s (mutter modeset); x3; expiry -> state logged
+# host off -> power saving with test cmd 0x39 (#78 L3 at 20 s) + NOSIGNAL judge 1 s + SDK go-to-PS 2 s = 23 s x 1.25 -> 29 s
+PS_S = 29.0
+# host on -> ACTIVE: measured 863 ms from NOSIGNAL (wd6); from power saving add the #144 wake + boot of the panel path ~2 s;
+# 3 s x 1.25 -> 4 s, plus the 5 s monitor-return rule -> 9 s
+WAKE_S = 9.0
 NVSAVE_GAP_MS = 1000                       # between saves: one save + its OSD event < 1 pass (~0.5 s) x 2
 # 0x35 is silent while the MCU is halted on a flash op: a save's ops (sector erase 200 + WRSR 40 + 16 x 3 ms program, MX25L8006E
 # max) = 288 ms x 1.25 -> reads retried for 360 ms
@@ -87,6 +96,8 @@ CASES = [
     ("nvsave", 0x29, "5 NVRAM saves in a row (#150): no reset", None, "flash-op sync lines, max poke gap + site"),
     ("stress", None, "saves x5, menu open / close, D3 (no signal, power saving), D2, D1 DP, D2 (#150)", None,
      "no reset; max poke gap + site, max pass (Dan sets the warning from it)"),
+    ("host_sleep", None, "host outputs off (Mutter PowerSaveMode 3) -> NOSIGNAL -> power saving (0x39 short L3 20 s) -> host on",
+     lambda: PS_S * 1000 / 1.25, "wake line, ACTIVE time after the host wake, no bite, max poke gap; host always woken (unit)"),
     ("ea_off", 0x4E, "hardware-only reset (EA off, no IRQ, no capture)", lambda: reset_ms() + CMD_MS,
      "reset; bites unchanged, warm + 1, boot WARM"),
 ]
@@ -169,6 +180,9 @@ class SimTarget:
         self.cr.advance(self.m)
         self.cr.reset(self.m)
         self.reboot()
+
+    def ensure_link(self):
+        pass
 
     def stage(self) -> int:
         return self.bus.diag()["stage"]
@@ -267,6 +281,11 @@ class UnitTarget:
         r = self.io.read(0x6A, 0x08, 1)
         return r == b"A"
 
+    def ensure_link(self):
+        """debug link on again when 0x35 is silent but DDC/CI 0x37 answers (after a reboot the firmware parks 0x35)"""
+        if not self.alive() and self.ddcci():
+            self.dbg_link.on(self.bus_n, 10)
+
     def stage(self) -> int:
         import dbg_xdata as X
         b = X.read_bytes(self.io, self.diag + 0x03, 1)
@@ -362,7 +381,12 @@ class Runner:
         self.rows = []
 
     def rec(self, tries: int = 5) -> dict:
-        for _ in range(tries):
+        for k in range(tries):
+            if k:
+                try:
+                    self.t.ensure_link()
+                except (OSError, SystemExit):
+                    pass
             b = C.read(self.t.io, self.addr)
             if b is not None:
                 d = C.decode(b)
@@ -387,9 +411,13 @@ class Runner:
             import dbg_xdata as X
             SL.set_map(self.a.map_path)
             ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+            rows = SL.load_rows(SL.tsv_for(self.a.map_path))
+            pa = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSyncPin\b", self.t.map_text, re.M)
+            pin = SL.pin_line(X.read_blocks(self.t.io, int(pa.group(1), 16) & 0xFFFF, SL.EV), rows) if pa else None
             raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
-            _, lines = SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path))) if raw else ({}, [])
-            got = lines[0].split(" ms ", 1)[-1] if lines else "(no line)"
+            _, lines = SL.decode(raw, rows) if raw else ({}, [])
+            first = pin or (lines[0] if lines else None)               # #150: pinned copy survives a flooded ring
+            got = first.split(" ms ", 1)[-1] if first else "(no line)"
             want = self.WANT.get(label.split("-")[0], "boot:")
             self.reasons = getattr(self, "reasons", []) + [(want, got)]
             self.say(f"  first sync line after {label}: {got}")
@@ -434,6 +462,7 @@ class Runner:
         st = md = None
         while time.monotonic() - t0 < SETTLE_S:
             try:
+                self.t.ensure_link()                     # 0x35 NAK + 0x37 ACK = rebooted, link parked: on again
                 st, md = self.t.stage(), self.t.mode()
                 if st >= 6 and md in SETTLED_MODES and self.t.ddcci():
                     return True
@@ -523,6 +552,87 @@ class Runner:
         d1 = self.rec()
         ok = all(k == "none" for k in kinds) and d1["bites"] == d0["bites"] and d1["warm"] == d0["warm"]
         self.row("stress", "PASS" if ok else "FAIL", f"{len(steps)} steps, resets {sum(k != 'none' for k in kinds)}; {self.ages(d1)}")
+
+    def host_dpms(self, on: bool) -> str:
+        """host outputs on / off (Mutter PowerSaveMode 0 / 3, approved autonomous test); returns the connector dpms state"""
+        import subprocess
+        subprocess.run(["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.DisplayConfig", "--object-path",
+                        "/org/gnome/Mutter/DisplayConfig", "--method", "org.freedesktop.DBus.Properties.Set",
+                        "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", f"<int32 {0 if on else 3}>"],
+                       capture_output=True, text=True, timeout=GDBUS_S)
+        end = time.monotonic() + DPMS_S
+        st = ""
+        while time.monotonic() < end:
+            st = Path(DPMS_FILE).read_text().strip()
+            if st == ("On" if on else "Off"):
+                break
+            time.sleep(0.05)
+        return st
+
+    def c_host_sleep(self):
+        """host monitors asleep -> unit 2 NOSIGNAL -> power saving (short #78 hold timeouts, test cmd 0x39) -> host awake:
+        wake trigger line, time to ACTIVE, no bite, max poke gap"""
+        if self.t.name != "unit":
+            return self.row("host_sleep", "SKIP", "unit only (host outputs)")
+        import subprocess
+        inh = subprocess.Popen(["gnome-session-inhibit", "--inhibit", "idle", "--inhibit-only"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)   # GNOME's idle blank must not interfere
+        txt, ok = [], True
+        try:
+            d0 = self.rec()
+            self.t.cmd(0x39)                             # #78 short levels: L2 5 s, L3 (SDK power saving) 20 s
+            self.t.wait(0.3)
+            st = self.host_dpms(False)
+            txt.append(f"host dpms {st}")
+            t0 = time.monotonic()
+            seen, md = {}, None
+            while time.monotonic() - t0 < PS_S:
+                try:
+                    self.t.ensure_link()
+                    md = self.t.mode()
+                except (OSError, SystemExit):
+                    md = None
+                if md is not None and md not in seen:
+                    seen[md] = time.monotonic() - t0
+                if md == 6:
+                    break
+                time.sleep(0.2)
+            txt.append("modes " + ", ".join(f"{S_MODES.get(k, k)} {v:.1f} s" for k, v in seen.items()))
+            ok &= 6 in seen
+            tw = time.monotonic()
+            st = self.host_dpms(True)
+            t_act = None
+            while time.monotonic() - tw < WAKE_S:
+                try:
+                    self.t.ensure_link()
+                    if self.t.mode() == 3:
+                        t_act = time.monotonic() - tw
+                        break
+                except (OSError, SystemExit):
+                    pass
+                time.sleep(0.05)
+            txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
+            ok &= t_act is not None
+            wake = [ln for ln in self.ring_lines() if ": wake" in ln]
+            txt.append(f"wake line {wake[-1] if wake else 'none'}")
+            same, why = self.same_boot(d0, None, time.monotonic())
+            d1 = self.rec()
+            ok &= same
+            txt.append(self.ages(d1))
+        finally:
+            try:
+                self.host_dpms(True)                     # always: the host's screens come back
+                self.t.cmd(0x36)                         # #78 levels back to the defaults
+            finally:
+                inh.terminate()
+        self.row("host_sleep", "PASS" if ok else "FAIL", "; ".join(txt))
+
+    def ring_lines(self) -> list:
+        import sync_log as SL
+        import dbg_xdata as X
+        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+        raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+        return SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path)), whole=True)[1] if raw else []
 
     def c_baseline(self):
         if not getattr(self, "_cold_done", False):
