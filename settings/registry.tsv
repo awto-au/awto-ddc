@@ -1,6 +1,7 @@
 # Settings registry: the single source (awto/include/settings.h). Generated from it by awto-ddc scripts/settings_gen.py:
 # set_table, OSD menu pages (with settings/pages.tsv), DDC/CI VCP map, NVRAM record + schema, host table, docs/settings.md.
 # - id: stable, never reused (NVRAM key, VCP paged id, docs anchor). 1..255 (the NVRAM record keys are one byte).
+# - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120).
 # - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
 # - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
 #   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
@@ -84,7 +85,6 @@
 61	osd_transparency	int	percent	osd	nv,live	0	100	1	0	auto	-	osd_transparency	Transparency	-	[sdk-ui]
 62	language	enum	none	osd	nv	0	1	1	0	auto	-	sdk_language	Realtek menu language	English|Chinese-T	Realtek SDK menu strings only [sdk-ui]
 63	osd_rotate	enum	none	osd	nv,inert	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
-64	menu_select	enum	none	osd	nv	0	1	1	0	auto	0xF5	-	Menu key opens	Awto menu|Realtek menu	Realtek SDK menu stays reachable from System
 65	logo	bool	none	boot	nv	0	1	1	1	auto	0xE8	-	Boot logo	-	read at mode INITIAL
 66	logo_ms	int	ms	boot	nv	0	10000	100	3000	auto	0xE9	-	Logo time	-
 67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [sdk-value]
@@ -109,7 +109,6 @@
 102	colour_reset	action	none	system	-	0	1	1	0	-	0x08	colour_reset	Colour reset	-	MCCS 0x08: Colour and Six-axis pages to defaults
 103	power_mode	enum	none	power	live	0	4	1	0	-	0xD6	power_mode	Power mode	On=0x01|Standby=0x02|Suspend=0x03|Off=0x04|Off hard=0x05	MCCS 0xD6 (DPM); get = the firmware power state; standby..off -> power saving
 92	factory_menu	action	none	system	-	0	1	1	0	-	-	factory_menu	Factory menu	-	Realtek SDK factory menu [sdk-ui]
-93	vendor_menu	action	none	system	-	0	1	1	0	-	-	vendor_menu	Realtek menu	-	the SDK demo menu, until ours covers it
 95	info_input	enum	none	info	ro	0	2	1	0	-	-	-	Input	D1 DP|D2 HDMI|D3 HDMI
 96	info_hres	int	none	info	ro	0	8192	1	0	-	-	-	H active	-
 97	info_vres	int	none	info	ro	0	8192	1	0	-	-	-	V active	-

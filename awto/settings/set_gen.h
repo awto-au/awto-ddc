@@ -3,11 +3,11 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   107u
+#define SET_COUNT   105u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x299Fu    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 87u
-#define SET_TEXT_LEN 1852u
+#define SET_SCHEMA  0x037Eu    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 86u
+#define SET_TEXT_LEN 1801u
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -80,7 +80,6 @@
 #define SET_ID_OSD_TRANSPARENCY     61u
 #define SET_ID_LANGUAGE             62u
 #define SET_ID_OSD_ROTATE           63u
-#define SET_ID_MENU_SELECT          64u
 #define SET_ID_LOGO                 65u
 #define SET_ID_LOGO_MS              66u
 #define SET_ID_PANEL_T1             67u
@@ -105,7 +104,6 @@
 #define SET_ID_COLOUR_RESET         102u
 #define SET_ID_POWER_MODE           103u
 #define SET_ID_FACTORY_MENU         92u
-#define SET_ID_VENDOR_MENU          93u
 #define SET_ID_INFO_INPUT           95u
 #define SET_ID_INFO_HRES            96u
 #define SET_ID_INFO_VRES            97u
@@ -161,7 +159,6 @@
 #define AP_SDK_LANGUAGE         26u
 #define AP_SEARCH_TIME          27u
 #define AP_USER_RGB             28u
-#define AP_VENDOR_MENU          29u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -192,6 +189,5 @@ void set_ap_power_mode(uint8_t id, int16_t v);
 void set_ap_sdk_language(uint8_t id, int16_t v);
 void set_ap_search_time(uint8_t id, int16_t v);
 void set_ap_user_rgb(uint8_t id, int16_t v);
-void set_ap_vendor_menu(uint8_t id, int16_t v);
 
 #endif
