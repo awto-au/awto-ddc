@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Drive and read our OSD menu over I2C (awto-ddc#67): state | key K | hold KEYS MS | open PAGE | select ITEM | set ITEM V |
-get ITEM | back | close | walk.
+get ITEM | back | close | walk | keyboard.
 
 usage: menu_cli.py (--bus N --serial S | --sim BIN) --map MAP CMD [ARGS] [--png DIR]
   State: struct menu_diag (awto-rtdfw menu.h) at map symbol _menu_diag, read byte-wise over debug slave 0x35.
   Commands: mailbox _vcp_box cmd 3 (= VCP 0xE4 over DDC/CI): KEY (through the firmware key path), HOLD (raw key mask
   for a time: long press / combinations), OPEN page, SELECT item, SET value, BACK, CLOSE.
   Names: pages = settings/pages.tsv groups (or main), items = registry names, keys = menu right left exit power,
-  holds = '+'-joined keys (menu+left).
+  holds = '+'-joined keys (exit+left = the physical MENU+DOWN chord).
+  Key names are SDK ROLES, not bezel labels: menu = open / enter / confirm (physical AUTO key), exit = back / undo (physical
+  MENU key), right = UP key, left = DOWN key (roles swapped 2026-11-08, awto-ddc#85; buttons.md 'awto roles').
+  keyboard: interactively drive the live monitor from this terminal: Up/Down = previous/next, Right/Enter = select,
+  Left/Escape/Backspace = back, Q = close and quit. The monitor's buttons are not used.
   walk: every page by OPEN and by keys, every entry by SELECT and by Right; each state is checked against the registry
   (page, parent, entry count, cursor, item id / sub-page, value = settings get). --png DIR (sim only): one render per page.
 Exit 1 on a failed check. Log: ./tmp/logs/menu_cli.log
@@ -15,6 +19,8 @@ Exit 1 on a failed check. Log: ./tmp/logs/menu_cli.log
 from __future__ import annotations
 
 import argparse
+import os
+import select
 import sys
 import time
 from pathlib import Path
@@ -34,6 +40,81 @@ FIELDS = ["magic", "version", "open", "page", "cursor", "item_id", "item_page", 
 READS = 5                # torn-read retries: the firmware updates the struct from its main loop, the host reads async
 SETTLE_S = 0.25          # HOLD only (sim): no state change to wait for until the long-press time is up
 KEY_S = 0.47             # KEY: wait for menu_diag.seq to move. Same bound as settings_cli.MAILBOX_S (one OSD draw class)
+TESTCMD_OFF = 0x28        # g_stAwtoDiag.ucTestCmd: 1..4 inject the physical AUTO/UP/DOWN/MENU roles
+
+
+def keyboard_action(key: bytes) -> str | None:
+    """Translate one terminal key sequence to a menu role; kept pure so the mappings are testable."""
+    return {
+        b"\x1b[A": "left",       # Up: previous row (firmware's LEFT role / physical DOWN key)
+        b"\x1b[B": "right",      # Down: next row (firmware's RIGHT role / physical UP key)
+        b"\x1b[C": "menu",       # Right: enter/select
+        b"\x1b[D": "exit",       # Left: back
+        b"\r": "menu",
+        b"\n": "menu",
+        b" ": "menu",
+        b"\x1b": "exit",
+        b"\x7f": "exit",
+        b"\x08": "exit",
+        b"q": "quit",
+        b"Q": "quit",
+        b"\x03": "quit",        # Ctrl-C while the terminal is in cbreak mode
+    }.get(key)
+
+
+def read_terminal_key(fd: int) -> bytes:
+    """Read one byte or one ANSI escape sequence from a terminal."""
+    key = os.read(fd, 1)
+    if key != b"\x1b":
+        return key
+    # A bare Escape means Back. Arrow keys arrive as ESC, '[', A/B/C/D; gather the tail briefly.
+    end = time.monotonic() + 0.04
+    while time.monotonic() < end:
+        ready, _, _ = select.select([fd], [], [], end - time.monotonic())
+        if not ready:
+            break
+        key += os.read(fd, 1)
+        if len(key) >= 3:
+            break
+    return key
+
+
+def keyboard(m: Menu) -> int:
+    """Run a raw-terminal keyboard loop against one persistent menu/debug session."""
+    if not sys.stdin.isatty():
+        raise SystemExit("keyboard needs an interactive terminal (run it in the VS Code terminal)")
+    import termios
+    import tty
+
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    current = m.state()
+    if not current["open"]:
+        # Use the normal key path, matching the physical AUTO button. Some deployed images intentionally do not expose
+        # the host-only OPEN operation even though their injected KEY operation is available.
+        m.cmd("key", KEYS["menu"])
+    say("Keyboard menu test: Up/Down navigate | Right/Enter select | Left/Esc back | Q close+quit")
+    say(Menu.show(m.state()))
+    try:
+        tty.setcbreak(fd)
+        while True:
+            action = keyboard_action(read_terminal_key(fd))
+            if action is None:
+                continue
+            if action == "quit":
+                m.cmd("close")
+                say("Menu closed; keyboard test finished")
+                return 0
+            if m.state()["open"]:
+                m.cmd("key", KEYS[action])
+            else:
+                # An action such as Factory menu hands the OSD to the vendor UI and closes our menu. The menu mailbox
+                # cannot reach that UI, so send the same firmware key event as the physical bezel button. In particular,
+                # Left/Escape now sends physical MENU and closes/backs out of the Factory or Vendor menu.
+                m.physical_key(KEYS[action])
+            say(f"{action:>5}  {Menu.show(m.state())}")
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
 
 
 def say(s: str):
@@ -62,6 +143,7 @@ class Menu:
     def __init__(self, box: C.Box, map_text: str, sim: bool):
         self.box, self.sim = box, sim
         self.addr = C.xaddr(map_text, "menu_diag")
+        self.diag = C.xaddr(map_text, "g_stAwtoDiag")
 
     def state(self) -> dict:
         for _ in range(READS):
@@ -103,6 +185,18 @@ class Menu:
             self.lat = max(getattr(self, "lat", 0.0), self.now() - t0)
         elif self.sim and op == "hold":
             self.box.bus.wait(SETTLE_S)
+
+    def physical_key(self, key: int):
+        """Inject a real firmware key role when an external SDK menu owns the OSD."""
+        addr = self.diag + TESTCMD_OFF
+        self.box.xwr(addr, bytes([key + 1]))
+        t0 = self.now()
+        while self.box.xrd(addr, 1)[0] != 0:
+            if self.now() - t0 > KEY_S:
+                say(f"WARN physical key {key}: test byte not consumed after {self.now() - t0:.2f} s")
+                break
+            if self.sim:
+                self.box.bus.wait(0.001)
 
     @staticmethod
     def show(s: dict) -> str:
@@ -179,7 +273,7 @@ def main() -> int:
     ap.add_argument("--map", required=True)
     ap.add_argument("--png", type=Path, help="sim: render each page to this directory during walk")
     ap.add_argument("--hl", type=int, choices=(0, 1), help="sim: selected-row look (ui_hl_style: 0 red bar, 1 red marker + underline, #87)")
-    ap.add_argument("cmd", choices=["state", "key", "hold", "open", "select", "set", "get", "back", "close", "enter", "walk"])
+    ap.add_argument("cmd", choices=["state", "key", "hold", "open", "select", "set", "get", "back", "close", "enter", "walk", "keyboard"])
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
     render, session = None, None
@@ -202,6 +296,8 @@ def main() -> int:
         bus.m.wr(bus.addr("ui_hl_style"), bytes([a.hl]))
     m = Menu(C.Box(bus, mt, bool(a.sim)), mt, bool(a.sim))
     try:
+        if a.cmd == "keyboard":
+            return keyboard(m)
         if a.cmd == "walk":
             return walk(m, a.png, render)
         if a.cmd == "key":

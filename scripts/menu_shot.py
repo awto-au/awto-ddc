@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """One render of the awto menu in fw_sim: open PAGE (and optionally move the cursor / edit), save a PNG.
 
-usage: menu_shot.py BIN MAP PAGE [--hl 0|1] [--keys right,right,menu] [--out OUT.png] [--mode 1080p60|2160p60]
-  --hl: ui_hl_style (0 = red bar behind white text, 1 = red '>' marker + underline; #87), written before the menu opens
+usage: menu_shot.py BIN MAP PAGE|all [--hl 0|1] [--keys right,right,menu] [--out OUT.png|DIR] [--mode 1080p60|2160p60]
+  --hl: ui_hl_style (0 = blue bar behind white text, 1 = blue '>' marker + underline; #87), written before the menu opens
   --keys: menu keys sent after opening (menu_cli names: menu right left exit)
+  PAGE=all: render every page after one simulator boot; --out is a directory containing walk_<page>.png files
 Log: tmp/logs/menu_shot.log
 """
 import argparse
@@ -38,7 +39,7 @@ def main():
     ap.add_argument("page")
     ap.add_argument("--hl", type=int, default=None)
     ap.add_argument("--keys", default="")
-    ap.add_argument("--out", type=Path, default=ROOT / "tmp/menu_shot.png")
+    ap.add_argument("--out", type=Path)
     ap.add_argument("--mode", default="1080p60")
     a = ap.parse_args()
     s = R.Session(a.bin, a.map, a.mode)
@@ -47,12 +48,24 @@ def main():
     if a.hl is not None:
         s.bus.m.wr(s.bus.addr("ui_hl_style"), bytes([a.hl]))
     m = MC.Menu(C.Box(s.bus, mt, True), mt, True)
-    m.cmd("open", MC.page_of(a.page))
-    for k in filter(None, a.keys.split(",")):
-        m.cmd("key", MC.KEYS[k])
-    s.bus.wait(0.3)
-    shot(s, a.out)
-    say(f"{a.out}: {MC.Menu.show(m.state())}")
+    if a.page == "all":
+        out = a.out or ROOT / "tmp/menu_pages"
+        out.mkdir(parents=True, exist_ok=True)
+        pages = [("main", MC.MAIN)] + [(p["group"], i) for i, p in enumerate(MC.T.PAGES)]
+        for name, page in pages:
+            m.cmd("open", page)
+            s.bus.wait(0.3)
+            dst = out / f"walk_{name}.png"
+            shot(s, dst)
+            say(f"{dst}: {MC.Menu.show(m.state())}")
+    else:
+        out = a.out or ROOT / "tmp/menu_shot.png"
+        m.cmd("open", MC.page_of(a.page))
+        for k in filter(None, a.keys.split(",")):
+            m.cmd("key", MC.KEYS[k])
+        s.bus.wait(0.3)
+        shot(s, out)
+        say(f"{out}: {MC.Menu.show(m.state())}")
     s.bus.close()
     return 0
 

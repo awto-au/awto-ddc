@@ -82,6 +82,17 @@ class Box:
             out += r
         return bytes(out)
 
+    def xwr(self, addr: int, data: bytes):
+        """Write XDATA bytes over the debug slave; used for firmware controls outside the VCP mailbox."""
+        if self.sim:
+            self.bus.m.wr(addr, data)
+            return
+        for a, v in zip(range(addr, addr + len(data)), data):
+            ok = self.bus.write(DBG, 0x01, bytes([a >> 8])) and self.bus.write(DBG, 0x03, bytes([v])) and \
+                self.bus.write(DBG, 0x3B, bytes([a & 0xFF]))
+            if not ok:
+                raise SystemExit(f"debug-slave write 0x{a:04X} NAK")
+
     def call(self, cmd: int, code: int, v: int = 0) -> tuple[int, int, int]:
         """(cur, max, type); raises on an unsupported code or no answer"""
         if self.rd(BOX["magic"]) != ord("V"):

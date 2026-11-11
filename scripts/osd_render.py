@@ -73,7 +73,8 @@ class Session:
         self.logo = {"show": False, "done": False}
         self.bus = S.SimBus(binp, mapp, "osdr-" + binp.stem, None, boot=False, devs=[self.model], video=mode)
         m = self.bus.m
-        m.stub("OsdDispShowLogo", lambda m_, r: self.logo.__setitem__("show", True) and None)
+        if "_OsdDispShowLogo" in m.sym:  # optimized review builds may omit the stock logo path
+            m.stub("OsdDispShowLogo", lambda m_, r: self.logo.__setitem__("show", True) and None)
         m.stub("OsdFuncEnableOsd", lambda m_, r: self.logo.__setitem__("done", True) if self.logo["show"] else None)
         self.diag = T.diag_addr(mapp)
         self.logo_snap = None

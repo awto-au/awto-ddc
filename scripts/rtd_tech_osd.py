@@ -18,6 +18,7 @@ options:
   --no-isp-info   skip the scaler/flash ISP read in the info-gather phase (EDID+DDC only; faster, no pre-reset)
   --json      print the gathered info as JSON too
   --scale N   1 = 12x18 px cells (default), 2 = firmware's doubled OSD (0x3A0A[1:0])
+  --vlc-font  upload the diagnostic font through the RTD hardware VLC decoder instead of raw SRAM writes
 
 Facts: docs/reversing/realtek-rtd/tech-osd.md (draw sequence, char-word format, button map).
 SDK-confirmed char word: byte0=0x4C (1bpp, width=12px), byte1=glyph index, byte2=colour [sdk-rl64xx-reference.md].
@@ -32,6 +33,7 @@ import rtd_proto
 import rtd_font5x7 as FNT
 from rtd_osd import Osd, PAGE_SEL, OSD_WOPT, FRAME_BASE, SRAM_WIN, SRAM_FONT, WIN_BASE, WORDS_PER_GLYPH
 import rtd_identify as ID
+import osd_vlc
 
 # ---- char-word format (SDK-confirmed) -----------------------------------------------------------
 CW_BYTE0 = 0x4C                 # 1bpp font, low nibble 12 = cell width in px [sdk-rl64xx-reference.md s2]
@@ -44,6 +46,7 @@ PAL_LABEL  = 2                  # muted label text
 PAL_VALUE  = 3                  # bright value text
 PAL_KEY    = 4                  # button-name highlight
 PAL_HDR    = 5                  # section header
+SCREEN_NAME = "AWTO DIAGNOSTICS"
 
 COL = {                         # 24-bit RRGGBB for each palette slot
     PAL_PANEL: 0x101828,        # near-black navy panel
@@ -197,7 +200,9 @@ def render_rows(lines):
     gut = blank * (COLS - 2 * COL_W)
     h = max(len(L), len(R))
     L += [blank * COL_W] * (h - len(L)); R += [blank * COL_W] * (h - len(R))
-    return [l + gut + r for l, r in zip(L, R)]
+    title = SCREEN_NAME.center(COLS)[:COLS]
+    title_row = [(c, (PAL_HDR << 4) | PAL_BG) for c in title]
+    return [title_row] + [l + gut + r for l, r in zip(L, R)]
 
 
 # ---- drawing -----------------------------------------------------------------------------------
@@ -229,15 +234,35 @@ class TechOsd:
     def reset(self):
         self.o.reset()
 
-    def upload_charset(self, chars: str):
+    def upload_charset(self, chars: str, vlc=False):
         """Upload one 12x18 glyph per unique char to font SRAM. Returns {char: index}."""
         o = self.o
         o.set_opt(SRAM_FONT)
         self.idx = {}
+        raw = bytearray()
         for i, ch in enumerate(chars):
             self.idx[ch] = i
             for k, (b0, b1, b2) in enumerate(FNT.glyph_words(ch)):
-                o.write_word(FONT_BASE + i * WORDS_PER_GLYPH + k, b0, b1, b2)
+                if vlc:
+                    raw.extend((b0, b1, b2))
+                else:
+                    o.write_word(FONT_BASE + i * WORDS_PER_GLYPH + k, b0, b1, b2)
+        if vlc:
+            blob = osd_vlc.encode(bytes(raw))
+            for i, b in enumerate(blob[:8]):
+                o.wr(FRAME_BASE + 0x0F + i, b)
+            o.rmw(FRAME_BASE + 0x33, 0x01, 0x00)       # font SRAM write protection off
+            o.rmw(FRAME_BASE + 0x17, 0x03, 0x01)       # compressed decode on, pass-through off
+            o.set_opt(SRAM_FONT)
+            o.set_addr(FONT_BASE)
+            o.select_page(0)
+            o.isp.write(0xF4, 0x92)
+            n = int.from_bytes(blob[8:10], "big")
+            for b in blob[10:10 + n]:
+                o.isp.write(0xF5, b)
+            time.sleep(0.002)                           # RTD2795 decoder flush; required before compression is cleared
+            o.rmw(FRAME_BASE + 0x17, 0x03, 0x00)
+            P.log(f"VLC font: {len(raw)} B raw -> {n} B stream, {len(chars)} glyphs")
         return self.idx
 
     def write_rows(self, rows):
@@ -270,7 +295,7 @@ class TechOsd:
         o.rmw(FRAME_BASE + 2, 0xF8, ((hx & 3) << 6) | ((vy & 7) << 3))
         P.log(f"origin {hx * 4} px, {vy} lines")
 
-    def setup(self, rows, scale=1, screen=(SCREEN_W, SCREEN_H)):
+    def setup(self, rows, scale=1, screen=(SCREEN_W, SCREEN_H), vlc_font=False):
         o = self.o
         o.rmw(FRAME_BASE + 0x0A, 0x03, 0x03 if scale == 2 else 0x00)   # db_width|db_height (fw boot = 2x)
         for idx, rgb in COL.items():
@@ -280,7 +305,7 @@ class TechOsd:
         o.rmw(0x006C, 0x01, 0x01)                            # OVERLAY_CTRL.overlay_port_en (fw leaves 0 when no menu)
         # upload glyphs for everything we will draw
         allchars = FNT.charset("".join(ch for r in rows for ch, _ in r))
-        self.upload_charset(allchars)
+        self.upload_charset(allchars, vlc_font)
         self.n_rows = len(rows)
         fs = self.fs_base()
         assert fs + self.n_rows * COLS <= FONT_BASE, "text map overruns FONT_BASE"
@@ -380,6 +405,7 @@ def main():
     isp_info = "--no-isp-info" not in args
     as_json = "--json" in args
     scale = int(args[args.index("--scale") + 1]) if "--scale" in args else 1
+    vlc_font = "--vlc-font" in args
     cmd = next((a for a in args if not a.startswith("--") and a not in (str(secs), str(scale))), "draw")
 
     P.log(f"=== tech-osd bus={bus} cmd={cmd} secs={secs} reset={do_reset} isp_info={isp_info} ===")
@@ -416,7 +442,7 @@ def main():
             screen = tuple(int(v) for v in res.split("x"))
         except ValueError:
             screen = (SCREEN_W, SCREEN_H)
-        t.setup(rows, scale, screen)
+        t.setup(rows, scale, screen, vlc_font)
         rb = t.readback()
         for r, v in rb.items():
             P.log(f"readback 0x{r:04x} = 0x{v:02x}")
