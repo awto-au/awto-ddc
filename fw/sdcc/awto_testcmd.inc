@@ -1,5 +1,5 @@
 #if(_AWTO_DIAG == _ON)
-// #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n, 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46).
+// #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46).
 // 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
 // 0x24 logo on, 0x25 logo off, 0x26 debug pop-up held, 0x27 clear all holds. #60: 0x31..0x33 switch to D1..D3 (fixed port),
 // 0x30 auto search, 0x40 settings defaults (#67). 0x50+n directly holds EnumOSDDispMsg n for visual review.
@@ -233,9 +233,13 @@ void AwtoDiagTestCmd(void)
         AwtoSwEvent(AWTO_SW_EV_CMD, ucCmd);
         SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
     }
-    else if((ucCmd >= 0x10) && (ucCmd <= (0x10 + _OSDEVENT_DP_VERSIOM_MSG)))      // awto: #53.17 last event id
+    else if((ucCmd >= 0x10) && (ucCmd <= 0x1F))         // OSD events 0..15 (#53.17); 0x20..0x22 are commands
     {
         SET_OSD_EVENT_MESSAGE(ucCmd - 0x10);
+    }
+    else if((ucCmd >= 0x70) && (ucCmd <= (0x70 + _OSDEVENT_DP_VERSIOM_MSG - 16)))   // OSD events 16..last (#113)
+    {
+        SET_OSD_EVENT_MESSAGE(ucCmd - 0x70 + 16);
     }
 }
 #endif
