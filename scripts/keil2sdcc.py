@@ -498,6 +498,22 @@ SUBS += [
      r"        case _USER_TIMER_EVENT_KEY_SCAN_READY:\n            SET_KEYSCANREADY\(\);\n            break;\n\n", lambda m: "", 1),
     (UI, r"\n    RTDKeyInitial\(\);", lambda m: "", 1),
 ]
+# #117 #118 #120: the icon tables link every icon. With the menu off only these are still drawn (hot-key DDC/CI, DP version,
+# source and info pop-ups); the rest point at one shared stub. Indices stay, so _AWTO_REALTEK_MENU == _ON restores the table.
+_ICON_KEEP = {"INPUT", "INFORMATION", "DDCCI", "AUTOSELECT", "ON", "OFF", "D0", "D1", "D2", "D6", "1_DOT_1", "1_DOT_2"}
+_ICON_STUB = ("#if(_AWTO_REALTEK_MENU == _ON)\n#define AWTO_ICON(x) x\n#else\n#define AWTO_ICON(x) tAWTO_ICON_NONE\n#endif\n")
+
+
+def _icon_table(m, first):
+    body = re.sub(r"^(\s*)tFONT1_ICON_(\w+),", lambda e: e.group(0) if e.group(2) in _ICON_KEEP else
+                  "%sAWTO_ICON(tFONT1_ICON_%s)," % (e.group(1), e.group(2)), m.group(2), flags=re.M)
+    stub = ("#if(_AWTO_REALTEK_MENU != _ON)\nBYTE __code tAWTO_ICON_NONE[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};\n#endif\n" if first
+            else "extern BYTE __code tAWTO_ICON_NONE[];\n")
+    return stub + _ICON_STUB + m.group(1) + body + m.group(3)
+
+
+SUBS += [(OSD + f"RTD2014OsdFontDynamicIcon_{n}.c", rf"(BYTE __code \* __code tFONT1_MAIN_ICON_TABLE_{n}\[\] =\s*\{{)(.*?)(\n\}};)",
+          lambda m, n=n: _icon_table(m, n == 1), 1) for n in (1, 2)]
 SUBS += DROP_SUBS
 
 # Per-module rules (#65, docs/cleanroom.md): fw/awto/<mod>/rules.py may define WRAPS, INSERTS and SUBS (formats above).
