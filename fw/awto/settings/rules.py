@@ -32,10 +32,3 @@ if (_CLEAN / "awto" / "settings").is_dir():
          r"^\s*UserCommonInterfaceDdcciSwitch\(GET_OSD_DDCCI_STATUS\(\), UserCommonNVRamGetSystemData\(_SEARCH_PORT\)\);",
          "    AwtoSetInit();"),
     ]
-    SUBS = [
-        # boot logo row + its time (was SEC(3)); logo off = the logo-end event right away
-        (OSD + "RTD2014Osd.c", r"ScalerTimerActiveTimerEvent\(SEC\(3\), _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO\);",
-         lambda m: "ScalerTimerActiveTimerEvent((AWTO_SET(LOGO) != 0) ? AWTO_SET(LOGO_MS) : 0, _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);  // [keil2sdcc] sub", 1),
-        (OSD + "RTD2014Osd.c", r"(\n\s*)OsdDispShowLogo\(\);",
-         lambda m: m.group(1) + "if(AWTO_SET(LOGO) != 0) { OsdDispShowLogo(); }  // [keil2sdcc] sub", 1),
-    ]

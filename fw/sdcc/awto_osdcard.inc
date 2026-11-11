@@ -785,26 +785,45 @@ static void AwtoSyncConPoll(void)
     {
         return;
     }
-    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (s_ucConOpen != 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
+    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
        (SysPowerGetPowerStatus() == _POWER_STATUS_OFF) || (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))
     {
-        g_stAwtoSync.ucOpenReq = 0;             // off, already open, the selector's log pane shows it, or no screen
-        return;
-    }
-    if((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (GET_OSD_STATE() != _MENU_NONE) || (g_ucAwtoMenuOn != 0) || AWTO_KEY_TEST_ON() || (GET_OSD_LOGO_ON() == _ON) ||
-       (g_stAwtoDiag.ucHold != 0))
-    {
+        g_stAwtoSync.ucOpenReq = 0;             // off, the selector's log pane shows it, or no screen
         return;
     }
     if(g_stAwtoSync.ucDone == 0)
     {
         return;                                 // every episode ends in one of the settled modes (search time-outs)
     }
+    if((s_ucConOpen != 0) && (AwtoConLost() == 0))
+    {
+        g_stAwtoSync.ucOpenReq = 0;             // already open (the power-on console survived display setting)
+        return;
+    }
+    if((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (GET_OSD_STATE() != _MENU_NONE) || (g_ucAwtoMenuOn != 0) || AWTO_KEY_TEST_ON() ||
+       (g_stAwtoDiag.ucHold != 0))
+    {
+        return;
+    }
     g_stAwtoSync.ucOpenReq = 0;
     AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 0, 0);
     AwtoDiagConsole(1);                         // its log backfills the episode (AwtoConLogInit)
-    s_ucConFirst = osd_tc_scroll(AWTO_CON_ROWS + 1 - AWTO_VIEW_ROWS);    // view down to the event log
 }
+
+#if(_AWTO_BOOT_PANEL_EARLY == _ON)
+// #144 power-on, mode INITIAL (RTD2014Osd.c, before the panel comes on): the console with the live power-on log, no logo.
+// The auto-open request stays: at the settled mode AwtoSyncConPoll reopens it if display setting took the OSD.
+void AwtoBootConsole(void)
+{
+    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0))
+    {
+        return;
+    }
+    ScalerDDomainBackgroundEnable(_ENABLE);    // black frame under the OSD: also the short T3 (own pattern) at panel on
+    AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 0, 0);
+    AwtoDiagConsole(1);
+}
+#endif
 
 // Every main-loop pass (AwtoGpioPoll): console log lines, auto-open, selector fields every AWTO_SRC_POLL_MS.
 void AwtoOsdSyncPoll(void)
@@ -983,6 +1002,10 @@ void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)  // replaces the SDK body (ke
     {
         AwtoSrcSleepArm();                      // #139: the open selector stays (its rows show the state); the SDK's 3 s is not restarted
         return;
+    }
+    if((enumMessage == _OSD_DISP_INPUT_SIGNAL_MSG) && (s_ucConOpen != 0) && (AwtoConLost() == 0))
+    {
+        return;                                 // #144: the open console keeps the screen; its log has the timing lines
     }
     OsdDispDisableOsd();
     if(enumMessage == _OSD_DISP_INPUT_SIGNAL_MSG)

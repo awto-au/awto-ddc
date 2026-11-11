@@ -1,10 +1,9 @@
 #if(_AWTO_DIAG == _ON)
-// #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34), 0x21 = redraw the boot logo for 3 s (#46).
+// #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34).
 // 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
-// 0x24 logo on, 0x25 logo off, 0x26 debug pop-up held, 0x27 clear all holds. #60: 0x31..0x33 switch to D1..D3 (fixed port),
+// 0x26 debug pop-up held, 0x27 clear all holds (0x21 / 0x24 / 0x25 were the boot logo, #144). #60: 0x31..0x33 switch to D1..D3 (fixed port),
 // 0x30 auto search, 0x40 settings defaults (#67). 0x50+n directly holds EnumOSDDispMsg n for visual review.
 // Inserted into RTD2014Key.c (OSD macros).
-#define AWTO_HOLD_LOGO                          0x01
 #define AWTO_HOLD_POPUP                         0x02
 
 void AwtoMsgLoad(void)              // #74: after RTDNVRamStartup (keil2sdcc sub); reset value 0 = off until then
@@ -13,24 +12,6 @@ void AwtoMsgLoad(void)              // #74: after RTDNVRamStartup (keil2sdcc sub
     g_ucAwtoMsgOn = g_stOSDUserData.b1AwtoMsgOn;
 #endif
 }
-
-#if(_AWTO_DEMO_LOGO == _ON)
-void AwtoTestHoldLogoOff(void)      // global: its map symbol tells hosts (osd_test.py) that 0x24..0x27 exist
-{
-    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
-    OsdDispDisableOsd();
-    SET_OSD_LOGO_ON(_OFF);
-    ScalerDDomainPatternGenEnable(_DISABLE);
-    if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-    {
-        ScalerDDomainBackgroundEnable(_DISABLE);        // picture back; the SDK logo timeout blanks + backlight off (boot path)
-    }
-    else
-    {
-        ScalerTimerActiveTimerEvent(0, _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);   // no video: the SDK's own logo end
-    }
-}
-#endif
 
 // Hold guards (#28): a held visual survives the SDK's own OSD paths; each blocked path is logged (StAwtoSw, scripts/sw_timeline.py).
 bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: the SDK OSD timeout / reset paths
@@ -48,29 +29,6 @@ bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: th
     AwtoSwEvent(AWTO_SW_EV_HOLD_BLOCK, SysModeGetModeState());
     g_stAwtoSw.ucHoldBlocks++;
     return _TRUE;
-}
-
-void AwtoHoldOsdGuard(void)                       // main loop, just before UserCommonInterfaceOsdHandler
-{
-    if((g_stAwtoDiag.ucHold & AWTO_HOLD_LOGO) == 0)
-    {
-        return;
-    }
-    if(GET_OSD_EVENT_MESSAGE() != _OSDEVENT_NONE_MSG)
-    {
-        AwtoSwEvent(AWTO_SW_EV_HOLD_DROP, GET_OSD_EVENT_MESSAGE());      // a pop-up would draw over the logo
-        g_stAwtoSw.ucHoldBlocks++;
-        SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);
-    }
-#if(_AWTO_DEMO_LOGO == _ON)
-    if(GET_OSD_LOGO_ON() == _OFF)                  // OSD reset on a mode change cleared it: draw it again
-    {
-        AwtoSwEvent(AWTO_SW_EV_HOLD_REDRAW, SysModeGetModeState());
-        g_stAwtoSw.ucHoldBlocks++;
-        OsdDispShowLogo();
-        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
-    }
-#endif
 }
 
 static __xdata unsigned int s_usAwtoHoldCancel;  // usT2Isr at the last OSD_DISABLE cancel
@@ -163,34 +121,7 @@ void AwtoDiagTestCmd(void)
         {
             OsdDispDisableOsd();
         }
-#if(_AWTO_DEMO_LOGO == _ON)
-        if((ucWas & AWTO_HOLD_LOGO) != 0)
-        {
-            AwtoTestHoldLogoOff();
-        }
-#endif
     }
-#if(_AWTO_DEMO_LOGO == _ON)
-    else if((ucCmd == 0x21) || (ucCmd == 0x24))
-    {
-        OsdDispShowLogo();
-        if(ucCmd == 0x21)
-        {
-            ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
-        }
-        else
-        {
-            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
-            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // an info pop-up's 6 s timeout turned the held logo off (Dan 14:28)
-            g_stAwtoDiag.ucHold |= AWTO_HOLD_LOGO;
-        }
-    }
-    else if(ucCmd == 0x25)
-    {
-        g_stAwtoDiag.ucHold &= ~AWTO_HOLD_LOGO;      // first: OsdDispDisableOsd is blocked while a hold is set
-        AwtoTestHoldLogoOff();
-    }
-#endif
     else if((ucCmd >= 0x31) && (ucCmd <= 0x33))      // #60 switch to D1/D2/D3, fixed port, as VCP 0x60 (RTD2014Ddcci.c)
     {
         AwtoInputSelect(_D0_INPUT_PORT + (ucCmd - 0x30), ucCmd);     // fw/sdcc/awto_ddcci.inc, shared with VCP 0x60

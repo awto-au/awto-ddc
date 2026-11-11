@@ -67,6 +67,10 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
     puc[6] = (BYTE)(ulVal >> 8);
     puc[7] = (BYTE)ulVal;
     g_stAwtoSync.ucSeq = AWTO_SYNC_NEXT(ucN);
+    if(g_stAwtoGpio.ucOpen != 0)
+    {
+        AwtoConLogSync();                           // #144 live: the line shows now, also inside a blocking SDK step (panel on)
+    }
 }
 
 // New episode: time base, per-port detect state, console request. A switch inside a power-on / wake that has not settled

@@ -286,7 +286,7 @@ void AwtoOsdGpioLines(void)
     g_stAwtoGpio.ucRedraws++;
 }
 
-// Event log (rows below the panels, shown by scrolling): one line per logged input change, newest after the "-----" marker.
+// Event log (right of the inputs panel, #144): one line per input change / sync line, newest above the "-----" marker.
 static __xdata BYTE s_ucLogHead;
 
 static __xdata BYTE s_ucConSyncSeq;             // #139: sync ring seq the log has shown up to
@@ -294,9 +294,9 @@ static __xdata BYTE s_ucConSyncSeq;             // #139: sync ring seq the log h
 void AwtoConLogInit(void)
 {
     s_ucLogHead = 0;
-    s_ucPanelCol = 1;
-    s_ucAwtoCols = 60;
-    s_ucPanelRow = AWTO_VIEW_ROWS + 1;
+    s_ucPanelCol = AWTO_LOG_COL;
+    s_ucAwtoCols = AWTO_LOG_W;
+    s_ucPanelRow = AWTO_LOG_HDR;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
     AwtoTxt(AWTO_TXT_LOGHDR);
@@ -308,8 +308,8 @@ void AwtoConLogInit(void)
 
 static void AwtoConLogStart(void)               // next log row: compose with AwtoPut*, then AwtoConLogEnd
 {
-    s_ucPanelCol = 1;
-    s_ucAwtoCols = 60;
+    s_ucPanelCol = AWTO_LOG_COL;
+    s_ucAwtoCols = AWTO_LOG_W;
     s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
@@ -318,7 +318,7 @@ static void AwtoConLogStart(void)               // next log row: compose with Aw
 static void AwtoConLogEnd(void)
 {
     AwtoTextLine(0, AWTO_T_STYLE_TEXT);
-    s_ucLogHead = (s_ucLogHead + 1 >= AWTO_CON_ROWS - AWTO_LOG_ROW0) ? 0 : (s_ucLogHead + 1);
+    s_ucLogHead = (s_ucLogHead + 1 >= AWTO_LOG_LINES) ? 0 : (s_ucLogHead + 1);
     s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;      // marker on the next row: also blanks the oldest line
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
