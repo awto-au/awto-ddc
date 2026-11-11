@@ -588,41 +588,8 @@
 #define PCB_ADKEY1()                            (AD_KEY1)
 #define PCB_ADKEY2()                            (AD_KEY2)
 
-// Keys left to right: SOURCE MENU DOWN UP AUTO POWER. Decode: lo <= R < hi on 0xFF09 (A0, ucV1) / 0xFF0A (A1, ucV2), POWER = P3.0 low
-// (buttons.md section 2 bands; mapping to the labels from the unit 2 press log + the Dahua firmware dispatch, #85).
-//   A0: MENU 0xC0..0xDF (reads 0xD0), AUTO 0x70..0x8F (0x80), UP 0x28..0x47 (0x38)
-//   A1: SOURCE 0x68..0x87 (0x80), DOWN 0x28..0x47 (0x38)
-// SDK masks (roles swapped, Dan 2026-11-08): physical AUTO -> _MENU_KEY_MASK (SDK menu role: open / enter / confirm),
-// physical MENU -> _EXIT_KEY_MASK (back / undo); SOURCE = _KEY5_MASK, DOWN = _LEFT, UP = _RIGHT. Names on screen and in the logs stay physical.
+// Keys left to right: SOURCE MENU DOWN UP AUTO POWER. Band decode (ADC A0 / A1, POWER = P3.0 low): only fw/awto/inputs.tsv,
+// read by the input monitor (fw/sdcc/awto_gpio.inc); keys from there: fw/sdcc/awto_keys.inc (#129). No PCB_KEY_STATE: the SDK key scan is gone.
 // Combos need one key per ladder (A0 + A1), else the voltages mix.
-#define AWTO_KEY_BAND(v, lo, hi)                (((lo) <= (v)) && ((v) < (hi)))
-
-#define PCB_KEY_STATE(ucV0, ucV1,\
-                      ucV2, ucV3, ucKeyState)   {\
-                                                    if(AWTO_KEY_BAND(ucV1, 0xC0, 0xE0))\
-                                                    {\
-                                                        (ucKeyState) |= _EXIT_KEY_MASK;\
-                                                    }\
-                                                    if(AWTO_KEY_BAND(ucV1, 0x70, 0x90))\
-                                                    {\
-                                                        (ucKeyState) |= _MENU_KEY_MASK;\
-                                                    }\
-                                                    if(AWTO_KEY_BAND(ucV1, 0x28, 0x48))\
-                                                    {\
-                                                        (ucKeyState) |= _RIGHT_KEY_MASK;\
-                                                    }\
-                                                    if(AWTO_KEY_BAND(ucV2, 0x68, 0x88))\
-                                                    {\
-                                                        (ucKeyState) |= _KEY5_MASK;\
-                                                    }\
-                                                    if(AWTO_KEY_BAND(ucV2, 0x28, 0x48))\
-                                                    {\
-                                                        (ucKeyState) |= _LEFT_KEY_MASK;\
-                                                    }\
-                                                    if(P3_0 == 0)\
-                                                    {\
-                                                        (ucKeyState) |= _POWER_KEY_MASK;\
-                                                    }\
-                                                }
 
 #endif // End of #if(_PCB_TYPE == _RL6449_AWTO_JXC4K)

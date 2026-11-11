@@ -257,14 +257,6 @@ INSERTS = [
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_PANEL_POWER\(_PANEL_CONTROL_ON\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(ScalerDisplayDPTxLinkSequence\(\) == _FAIL\)", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);", r"^\s*case _PANEL_ON:"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*if\(GET_PANELPOWERSTATUS\(\) != _BACKLIGHT_ON_ALREADY\)", "            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);", r"^\s*case _PANEL_ON:"),
-    # #85 combos (one key on each ladder, A0 + A1): MENU + DOWN (physical MENU = _EXIT mask) = #79 debug link toggle, UP + DOWN = #39 key test screen; SOURCE = next input (#60)
-    (OSD + "RTD2014Key.c", r"^\s*default:", "        case (_EXIT_KEY_MASK | _LEFT_KEY_MASK):\n"
-     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_DBG_LINK();\n            }\n            break;\n"
-     "        case (_LEFT_KEY_MASK | _RIGHT_KEY_MASK):\n"
-     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_TEST_TOGGLE();\n            }\n            break;\n"
-     "        case _KEY5_MASK:\n            CLR_KEYREPEATENABLE();\n"
-     "            if(g_ucKeyStatePrev != g_ucKeyStateCurr)\n            {\n                AWTO_KEY_SOURCE();\n            }\n            break;\n",
-     r"^void RTDKeyMessageProc\(void\)$"),
     # #80 IP over DDC (fw/sdcc/awto_net.inc after awto_ddcci.inc: AwtoDdcRequest calls AwtoNetXchgA); poll gated by g_ucAwtoNetRun
     (OSD + "RTD2014Ddcci.c", r"^void UserDdcciHandler\(void\)$",
      (SHIM / "awto_net.inc").read_text().rstrip("\n")),
@@ -311,12 +303,12 @@ INSERTS = [
     (OSD + "RTD2014Key.c", r"^void UserInterfaceKeyHandler\(void\)$", (SHIM / "awto_testcmd.inc").read_text().rstrip("\n")),
     (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keytest.inc").read_text().rstrip("\n")),    # #39 / #85: at the end, no SDK line moves
     (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_gpio.inc").read_text().rstrip("\n")),
+    (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keys.inc").read_text().rstrip("\n")),  # #129
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      '#define AWTO_FW_TAG "%s"\n' % FW_TAG + (SHIM / "awto_dbgpop.inc").read_text().rstrip("\n")),
     # One AWTO card language for every transient message and the source selector.
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispHotKeySourceMenuIcon\(void\)$",
      (SHIM / "awto_osdcard.inc").read_text().rstrip("\n")),
-    (OSD + "RTD2014Osd.c", r"^void MenuHotKeySource\(void\)$", "extern void AwtoSourceStep(void);"),
     (OSD + "RTD2014OsdDisplay.c", r"^\s*BYTE ucCol = 5;", "    if(AwtoSourceRowsOverride() == _TRUE)\n    {\n        return;\n    }",
      r"^void OsdDispHotKeySourceMenuIcon\(void\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdFuncDisableOsd\(\);", "    if(AwtoSourceOpenOverride() == _TRUE)\n    {\n        return;\n    }",
@@ -387,19 +379,6 @@ SUBS = [
     # #85 keys5: the DP-info branch of the input pop-up (not ACTIVE) broke out before the key / debug screens: open, never drawn
     (OSD + "RTD2014OsdDisplay.c", r"(#if\(_DP_DEBUG_MSG == _ON\)\s*if\()(SysModeGetModeState\(\) != _MODE_STATUS_ACTIVE)\)",
      lambda m: m.group(1) + "(" + m.group(2) + ") && (g_stAwtoKey.ucOpen == 0) && (g_stAwtoDiag.ucDbgPopup == 0))  // [keil2sdcc] sub", 1),
-    # #39 / #85 key tracking: raw values + press log after the scan, key message note / swallow after the conversion
-    (OSD + "RTD2014Key.c", r"(g_ucKeyStateCurr = RTDKeyScan\(\);)", lambda m: m.group(1) + " AWTO_KEY_SCAN();  // [keil2sdcc] sub", 1),
-    (OSD + "RTD2014Key.c", r"(\n\s*)(RTDKeyMessageProc\(\);)", lambda m: m.group(1) + m.group(2) + " AWTO_KEY_MSG();  // [keil2sdcc] sub", 1),
-    # test screen up: POWER is only logged (it must not switch the monitor off while keys are being tested), no hold-key special handling
-    (OSD + "RTD2014Key.c", r"(bit RTDKeyPowerKeyProc\(void\)\s*\{)",
-     lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON() && ((g_ucKeyStateCurr & _POWER_KEY_MASK) != 0)) { return _TRUE; }  // [keil2sdcc] sub", 1),
-    # #85: any new key press in power saving (DDC/CI D6 off = forced PS, or no-signal PS) wakes and is used up; the SDK only woke from OFF
-    (OSD + "RTD2014Key.c", r"(bit RTDKeyPowerKeyProc\(void\)\s*\{)",
-     lambda m: m.group(1) + " if((g_ucKeyStateCurr != 0) && (g_ucKeyStateCurr != g_ucKeyStatePrev) && (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))"
-     " { SET_FORCE_POW_SAV_STATUS(_FALSE); SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL); return _TRUE; }  // [keil2sdcc] sub\n", 1),
-    (OSD + "RTD2014Key.c", r"(bit RTDKeySpecialProc\(BYTE ucKeyMask\)\s*\{)",
-     lambda m: m.group(1) + " if(AWTO_KEY_TEST_ON()) { return _FALSE; }"
-     " if((GET_OSD_STATE() == _MENU_NONE) && (ucKeyMask == _LEFT_KEY_MASK)) { return _FALSE; }  // [keil2sdcc] sub: no hidden 3 s DP-version action on physical DOWN", 1),
     # unified OSD cards: white right-hand surface; fail-safe uses the same complete card as No Support
     (OSD + "RTD2014OsdDisplay.c", r"(void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\s*\{)",
      lambda m: m.group(1) + " if(enumMessage == _OSD_DISP_FAIL_SAFE_MODE_MSG) { enumMessage = _OSD_DISP_NOSUPPORT_MSG; }  // [keil2sdcc] sub: unified warning card", 1),
@@ -422,15 +401,9 @@ SUBS = [
      lambda m: m.group(1) + "_CP_BLUE", 1),
     (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_HDCP_MODE[^\n]*COLOR\()_CP_WHITE",
      lambda m: m.group(1) + "_CP_BLUE", 1),
-    # The source hotkey cycles only the four choices that exist on this board.
-    (OSD + "RTD2014Osd.c", r"SET_OSD_INPUT_PORT_OSD_ITEM\(OsdDisplayDetOverRange\(GET_OSD_INPUT_PORT_OSD_ITEM\(\), 8, 0, _ON\)\);",
-     lambda m: "AwtoSourceStep();", 2),
     # Panel-uniformity confirmation also uses the common left-logo card background.
     (OSD + "RTD2014OsdDisplay.c", r"if\(enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG\)",
      lambda m: "if((enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG) && (g_ucOsdWidth == 0))", 1),
-    # #85: the SDK exit role (physical MENU key) with no menu does nothing (the SDK's VGA auto adjust there is compiled out: no VGA); next input is the SOURCE key
-    (OSD + "RTD2014Osd.c", r"(case _EXIT_KEY_MESSAGE:\s*// auto adjust\n)",
-     lambda m: m.group(1) + "            // MENU key (exit role): no action  [keil2sdcc] sub\n            break;\n", 1),
 ] + [
     # #78: TMDS Initial after a no-signal power-off wiped SCDC 0x20 (host's 1/40 ratio lost -> no lock, endless search after DPMS)
 ] + [(f"Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx{n}.c",
@@ -502,19 +475,28 @@ SUBS = [
 
 from keil2sdcc_drops import DROP_WRAPS, DROP_SUBS  # noqa: E402  (#65 step 1)
 WRAPS += DROP_WRAPS
-# #120 Realtek SDK menu: with _AWTO_REALTEK_MENU off every main-menu state runs one stub (closes the OSD) and nothing opens the
-# menu, so its handlers, page drawing and icons are unreferenced. The table keeps its length: OSD state numbers do not move.
-_REALTEK_PAGES = r"\bMenu(Picture|Display|Color|Advance|Input|Audio|Other|Information|Factory)\w*|\bMenuDislayFreeze\b|\bMenuPanelUniformityMsgAdjust\b"
-_AWTO_MENU_GONE = ("#if(_AWTO_REALTEK_MENU != _ON)\nstatic void AwtoMenuGone(void)      // [keil2sdcc] #120: Realtek menu built out\n{\n"
-                   "    SET_OSD_STATE(_MENU_NONE);\n    OsdDispDisableOsd();\n}\n#endif\n")
+# #120 Realtek SDK menu built out: nothing opens it; with the OSD state table gone (#129) its handlers are unreferenced.
 SUBS += [
-    (OSD + "RTD2014Osd.c", r"(void \(\* __code OperationTable\[\]\)\(void\) =\s*\{)(.*?)(\n\};)",
-     lambda m: _AWTO_MENU_GONE + m.group(1) + "\n#if(_AWTO_REALTEK_MENU == _ON)" + m.group(2) + "\n#else  // [keil2sdcc] #120"
-     + re.sub(_REALTEK_PAGES, "AwtoMenuGone", m.group(2)) + "\n#endif" + m.group(3), 1),
     (OSD + "RTD2014Osd.c", r"\bOsdDispMainMenu\(\);", "AWTO_REALTEK_MENU_OPEN();  // [keil2sdcc] #120", 2),
     (OSD + "RTD2014OsdFunc.c", r"\bOsdDispMainMenu\(\);", "AWTO_REALTEK_MENU_OPEN();  // [keil2sdcc] #120", 1),
     (OSD + "RTD2014Osd.c", r"\bOsdDispMainMenuKeyInfo\(", "AWTO_REALTEK_KEYINFO(", 3),          # key legend redraws
     ("User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c", r"\bOsdDispMainMenuKeyInfo\(", "AWTO_REALTEK_KEYINFO(", 1),
+]
+# #129 one key path (fw/sdcc/awto_keys.inc): the SDK key scan, key messages, repeat timers and OperationTable dispatch go.
+# After the #120 rules above (their match counts include sites deleted here).
+_K129 = "// [keil2sdcc] sub #129: removed; keys: fw/sdcc/awto_keys.inc\n"
+SUBS += [
+    ("Kernel/System/Code/SysMain.c", r"\bUserInterfaceKeyHandler\(\);", "AwtoKeyPoll();  // [keil2sdcc] sub #129", 1),
+    (OSD + "RTD2014Key.c", r"void UserInterfaceKeyHandler\(void\)\n\{.*?\n\}\n(?=\n\n#if\(_IR_SUPPORT == _IR_HW_SUPPORT\)\n//-+\n// Description  : IR Key Scan)",
+     lambda m: _K129, 1),
+    (OSD + "RTD2014Osd.c", r"\n    if\(GET_KEYMESSAGE\(\) < _KEY_AMOUNT\)\n    \{\n        // hot key\n.*?\n    \}\n"
+     r"(?=\}\n\n//-+\n// Description  : OSD event message processing function)", lambda m: "\n    " + _K129, 1),
+    (OSD + "RTD2014Osd.c", r"\nvoid MenuNone\(void\)\n\{\n.*?\n\}\n", lambda m: "\n" + _K129, 1),
+    (OSD + "RTD2014Osd.c", r"\nvoid MenuHotKeySource\(void\)\n\{\n.*?\n\}\n", lambda m: "\n" + _K129, 1),   # -> AwtoSourceKey (awto_osdcard.inc)
+    (OSD + "RTD2014Osd.c", r"\nvoid \(\* __code OperationTable\[\]\)\(void\) =\s*\{.*?\n\};\n", lambda m: "\n" + _K129, 1),
+    (UI, r"        case _USER_TIMER_EVENT_KEY_REPEAT_ENABLE:\n            SET_KEYREPEATSTART\(\);\n            break;\n\n"
+     r"        case _USER_TIMER_EVENT_KEY_SCAN_READY:\n            SET_KEYSCANREADY\(\);\n            break;\n\n", lambda m: "", 1),
+    (UI, r"\n    RTDKeyInitial\(\);", lambda m: "", 1),
 ]
 SUBS += DROP_SUBS
 

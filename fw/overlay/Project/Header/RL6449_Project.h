@@ -66,7 +66,9 @@ extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
 #define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
 extern void AwtoMenuForget(void);
-extern bit AwtoMenuKeyHook(void);
+extern void menu_key(unsigned char ucKey);                      // awto-rtdfw menu.h: key numbers = SDK key messages 0..3
+extern void menu_open(void);
+extern unsigned char menu_active(void);
 extern __xdata unsigned char g_ucAwtoKeyHold;
 extern unsigned char AwtoKeyHold(void);
 #define AWTO_KEY_HOLD()                                         ((g_ucAwtoKeyHold != 0) ? AwtoKeyHold() : 0)
@@ -192,38 +194,35 @@ typedef struct
     unsigned char ucP30;
     unsigned char ucMask;
     unsigned char ucMsg;                        // last key message (0..4) or AWTO_KEY_MSG_NONE
-    unsigned char ucFlags;                      // bit0 repeat enable, bit1 repeat start, bit2 key hold, bit7 injected (live)
+    unsigned char ucFlags;                      // bit0 repeating, bit1 combo latch, bit2 HOLD sent, bit7 key_hold mask on (live; #129)
     unsigned char ucRedraws;                    // screen redraws (wraps): keys_sim checks an idle open screen does not redraw
     unsigned char ucReserved[3];
     StAwtoKeyEntry pstLog[AWTO_KEY_LOG_N];
 } StAwtoKey;
 extern __xdata StAwtoKey g_stAwtoKey;
-extern void AwtoKeyScan(void);
-extern void AwtoKeyMsg(void);
+// #129 keys (fw/sdcc/awto_keys.inc): input monitor values -> AwtoKeyPoll (debounce, combos, repeat) -> AwtoKeyRoute (one dispatcher)
+#define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
+#define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN / MENU wait this long for a combo partner before PRESS (two-finger press skew; longer feels slow)
+#define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
+#define AWTO_KEY_RATE_MS                                        100     // then one REPEAT per this: 10 steps / s, a 0..100 slider in 10 s; the SDK repeated every main pass
+#define AWTO_KEY_HOLD_MS                                        3000    // one HOLD event (SDK hold-key actions: SEC(3)); nothing consumes it today
+#define AWTO_KEY_Q_N                                            4       // injected keys waiting for the next AwtoKeyPoll (one per host write; power of 2)
+extern void AwtoKeyPoll(void);
 extern void AwtoKeyInject(unsigned char ucMsg);
-extern void AwtoKeySourcePress(void);
+extern unsigned char AwtoKeyMaskLive(void);
+extern void AwtoSourceKey(unsigned char ucKey);
 extern void AwtoKeyTestSet(unsigned char ucOn);
 extern void AwtoKeyOsdReset(void);
 extern void AwtoOsdKeyLines(void);
 #define AWTO_KEY_TEST_ON()                                      ((g_stAwtoKey.ucOpen != 0) || (g_stAwtoGpio.ucOpen != 0))
-#define AWTO_KEY_SCAN()                                         AwtoKeyScan()
-#define AWTO_KEY_MSG()                                          AwtoKeyMsg()
-#define AWTO_KEY_SOURCE()                                       AwtoKeySourcePress()
-#define AWTO_KEY_TEST_TOGGLE()                                  AwtoKeyTestSet(2)
-#define AWTO_KEY_INJECT(m)                                      AwtoKeyInject(m)
 #define AWTO_KEY_OSD_RESET()                                    AwtoKeyOsdReset()
 
-// Realtek SDK demo menu (awto-ddc#120): off = its pages are built out; every way in opens nothing (our menu has every setting).
-#ifndef _AWTO_REALTEK_MENU
-#define _AWTO_REALTEK_MENU                                      _OFF
+// Realtek SDK demo menu (awto-ddc#120): built out; its OSD state table went with the SDK key path (#129).
+#if(defined(_AWTO_REALTEK_MENU) && (_AWTO_REALTEK_MENU == _ON))
+#error "_AWTO_REALTEK_MENU: the OperationTable dispatch is gone (#129)"
 #endif
-#if(_AWTO_REALTEK_MENU == _ON)
-#define AWTO_REALTEK_MENU_OPEN()                                OsdDispMainMenu()
-#define AWTO_REALTEK_KEYINFO(k, s)                              OsdDispMainMenuKeyInfo(k, s)
-#else
 #define AWTO_REALTEK_MENU_OPEN()                                SET_OSD_STATE(_MENU_NONE)
 #define AWTO_REALTEK_KEYINFO(k, s)
-#endif
 // Input monitor (fw/awto/inputs.tsv -> scripts/gen_awto_inputs.py): one poller keeps the value of every input; a change updates the transition ring
 // (debug I2C slave 0x35, map symbol _g_stAwtoGpio, layout in scripts/gpio_diag.py) and marks that input for the console, which writes only that field.
 // GENERATED-BEGIN awto_inputs
@@ -231,8 +230,12 @@ extern void AwtoOsdKeyLines(void);
 #define AWTO_IN_ROWS                                            39      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)
 #define AWTO_IN_ADC0                                            8
 #define AWTO_IN_ADC1                                            9
-#define AWTO_IN_UP                                              42
+#define AWTO_IN_SOURCE                                          39
+#define AWTO_IN_MENU                                            40
 #define AWTO_IN_DOWN                                            41
+#define AWTO_IN_UP                                              42
+#define AWTO_IN_AUTO                                            43
+#define AWTO_IN_POWER                                           11
 // GENERATED-END awto_inputs
 #define AWTO_GPIO_LOG_N                                         32
 #define AWTO_GPIO_REFRESH_MS                                    20
@@ -294,13 +297,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #define AWTO_DIAG_T2ISR()                                       AWTO_LED_T2ISR()
 #define AWTO_DIAG_EX1ISR()
-#define AWTO_KEY_TEST_ON()                                      0
-#define AWTO_KEY_SCAN()
-#define AWTO_KEY_MSG()
-#define AWTO_KEY_SOURCE()                                       AwtoKeyNextInput()
-#define AWTO_KEY_TEST_TOGGLE()
-#define AWTO_KEY_INJECT(m)                                      { if((m) < _KEY_AMOUNT) { SET_KEYMESSAGE(m); } }
-#define AWTO_KEY_OSD_RESET()
+#error "_AWTO_DIAG off: the front keys are read by the input monitor (fw/sdcc/awto_gpio.inc, awto_keys.inc; #129)"
 #define AWTO_GPIO_TEST_ON()                                     0
 #define AwtoGpioPoll()
 #define AwtoGpioTestSet(n)
@@ -415,7 +412,6 @@ extern void AwtoFreqUpdate(void);
 #endif
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
-extern void AwtoKeyNextInput(void);
 extern void AwtoSourceKeyOpen(void);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 // #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+DOWN, test cmd 0x3C) moves the

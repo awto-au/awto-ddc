@@ -23,8 +23,6 @@ def _txt(name):
 if (_CLEAN / "awto" / "settings").is_dir():
     INSERTS = [
         (OSD + "RTD2014Osd.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", _txt("glue.inc")),      # at the end: no SDK line moves
-        (OSD + "RTD2014Osd.c", r"^\s*if\(GET_OSD_IN_FACTORY_MENU_STATUS\(\) == _TRUE\)$",
-         "        if(AwtoMenuKeyHook() == _TRUE) { return; }", r"^void RTDOsdSystemFlowProc\(void\)$"),
         (OSD + "RTD2014OsdDisplay.c", r"^\s*SET_OSD_IN_FACTORY_MENU_STATUS\(_FALSE\);",
          "    AwtoMenuForget();", r"^void OsdDispDisableOsd\(void\)$"),
         (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", _txt("glue_key.inc")),
@@ -35,9 +33,6 @@ if (_CLEAN / "awto" / "settings").is_dir():
          "    AwtoSetInit();"),
     ]
     SUBS = [
-        # #67 host key hold (glue_key.inc): ORed into the scanned key state, both PCB_KEY_STATE branches of RTDKeyScan
-        (OSD + "RTD2014Key.c", r"PCB_KEY_STATE\(ucVoltage0, ucVoltage1, ucVoltage2, ucVoltage3, ucKeyState\);",
-         lambda m: m.group(0) + " ucKeyState |= AWTO_KEY_HOLD();  // [keil2sdcc] sub", 2),
         # boot logo row + its time (was SEC(3)); logo off = the logo-end event right away
         (OSD + "RTD2014Osd.c", r"ScalerTimerActiveTimerEvent\(SEC\(3\), _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO\);",
          lambda m: "ScalerTimerActiveTimerEvent((AWTO_SET(LOGO) != 0) ? AWTO_SET(LOGO_MS) : 0, _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);  // [keil2sdcc] sub", 1),

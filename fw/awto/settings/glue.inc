@@ -1,8 +1,8 @@
 // #67 settings glue (integrator-owned, private): the clean settings / menu / VCP code (awto-rtdfw awto/settings,
 // awto/nvram) on top of this firmware. Inserted into RTD2014Osd.c by fw/awto/settings/rules.py.
 // - implements the clean interfaces: osd_tc_* (text cells on the OSD engine), fl_* (flash), set_status, set_ap_*
-// - hooks: AwtoSetInit (after RTDNVRamStartup), AwtoSetLoop (main loop), AwtoMenuKeyHook (OSD key flow),
-//   AwtoMenuForget (vendor OSD closes); DDC/CI hooks: glue_ddcci.inc
+// - hooks: AwtoSetInit (after RTDNVRamStartup), AwtoSetLoop (main loop), AwtoMenuForget (vendor OSD closes);
+//   keys reach the menu from the key router (fw/sdcc/awto_keys.inc, #129); DDC/CI hooks: glue_ddcci.inc
 #ifdef _AWTO_NEW_SETTINGS
 #include <stddef.h>
 
@@ -682,7 +682,7 @@ void set_ap_key_test(BYTE ucId, int iV)
     ucId = ucId;
     iV = iV;
     menu_close();
-    AWTO_KEY_TEST_TOGGLE();
+    AwtoKeyTestSet(2);
 }
 
 void set_ap_gpio_test(BYTE ucId, int iV)
@@ -764,29 +764,6 @@ void AwtoSetLoop(void)                             // main loop (AWTO_SET_LOOP: 
         ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
         ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
     }
-}
-
-bit AwtoMenuKeyHook(void)                          // RTDOsdSystemFlowProc, key present: _TRUE = consumed
-{
-    BYTE ucKey = GET_KEYMESSAGE();
-    BYTE ucMode = SysModeGetModeState();
-
-    if(menu_active() != 0)
-    {
-        if((ucKey == _LEFT_KEY_MESSAGE) || (ucKey == _RIGHT_KEY_MESSAGE))
-        {
-            SET_KEYREPEATENABLE();
-        }
-        menu_key(ucKey);                           // menu.h MK_* = the key message numbers
-        return _TRUE;
-    }
-    if((ucKey == _MENU_KEY_MESSAGE) && (GET_OSD_STATE() == _MENU_NONE) && (GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE) &&
-       ((ucMode == _MODE_STATUS_ACTIVE) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT)))
-    {
-        menu_open();
-        return _TRUE;
-    }
-    return _FALSE;
 }
 
 void AwtoMenuForget(void)                          // OsdDispDisableOsd: the vendor OSD took the screen

@@ -92,7 +92,7 @@ void AwtoDiagTestCmd(void)
     g_stAwtoDiag.ucTestCmd = 0;
     if(ucCmd <= 5)
     {
-        AWTO_KEY_INJECT(ucCmd - 1);
+        AwtoKeyInject(ucCmd - 1);                       // routed by the next AwtoKeyPoll (#129)
     }
     else if((ucCmd == 0x41) || (ucCmd == 0x42))         // #39 key test screen: 41 open, 42 close
     {

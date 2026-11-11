@@ -23,6 +23,7 @@ static __xdata WORD s_usAwtoDbgDraw;
 static __xdata BYTE s_ucVgaSync;
 static __xdata BYTE s_ucVgaCmp;
 #define AWTO_DBG_REFRESH_MS    500             // debug panel values (loop rate, clocks) change slowly: twice a second
+#define AWTO_KEY_BAND(v, lo, hi)                (((lo) <= (v)) && ((v) < (hi)))     // key0 / key1 rows: lo <= ADC < hi
 extern void osd_tc_close(void);
 
 // GENERATED-BEGIN awto_inputs
@@ -146,11 +147,6 @@ static void AwtoInScan(BYTE ucMode)
             }
         }
         g_stAwtoGpio.ucIn[ucI] = ucV;
-        if((ucMode == 0) && (ucV != 0))
-        {
-            if(ucI == AWTO_IN_UP) AwtoConScroll(-1);       // UP / DOWN scroll the console
-            else if(ucI == AWTO_IN_DOWN) AwtoConScroll(1);
-        }
         if(ucMode != 2)
         {
             g_stAwtoGpio.ucDirty[ucI >> 3] |= (BYTE)1 << (ucI & 7);
@@ -198,6 +194,27 @@ void AwtoGpioPoll(void)
         s_usAwtoGpioDraw = AwtoGpioNow();
         AwtoOsdGpioLines();
     }
+}
+
+// Front keys as AWTO_KM_* bits, from the values the poller holds (the only band decode: inputs.tsv key0 / key1 / p30 rows).
+static BYTE AwtoKeyMaskNow(void)
+{
+    BYTE ucM = 0;
+
+    if(g_stAwtoGpio.ucIn[AWTO_IN_SOURCE] != 0) ucM |= AWTO_KM_SOURCE;
+    if(g_stAwtoGpio.ucIn[AWTO_IN_MENU] != 0) ucM |= AWTO_KM_MENU;
+    if(g_stAwtoGpio.ucIn[AWTO_IN_DOWN] != 0) ucM |= AWTO_KM_DOWN;
+    if(g_stAwtoGpio.ucIn[AWTO_IN_UP] != 0) ucM |= AWTO_KM_UP;
+    if(g_stAwtoGpio.ucIn[AWTO_IN_AUTO] != 0) ucM |= AWTO_KM_AUTO;
+    if(g_stAwtoGpio.ucIn[AWTO_IN_POWER] != 0) ucM |= AWTO_KM_POWER;
+    return ucM;
+}
+
+BYTE AwtoKeyMaskLive(void)                     // one poll now, then the mask (boot recovery hold loop runs outside the main loop)
+{
+    AwtoGpioEnsure();
+    AwtoInScan(0);
+    return AwtoKeyMaskNow();
 }
 
 void AwtoGpioConSet(BYTE ucOn)                 // the console opens / closes this panel's sampling (AwtoDiagConsole draws it)

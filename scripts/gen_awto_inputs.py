@@ -49,16 +49,19 @@ def arr(name, typ, vals, per_line=12):
     return f"static const __code {typ} {name}[AWTO_IN_N] = {{\n    {body}}};"
 
 
+KEYS = ("SOURCE", "MENU", "DOWN", "UP", "AUTO", "POWER")      # front keys: the key reader (awto_keys.inc) builds its mask from these rows
+
+
 def header_block(r):
     n, ns = len(r), sum(x["screen"] for x in r)
-    idx = {x["name"]: i for i, x in enumerate(r) if x["name"] in ("ADC0", "ADC1", "UP", "DOWN")}
+    idx = {x["name"]: i for i, x in enumerate(r) if x["name"] in ("ADC0", "ADC1") + KEYS}
+    assert all(k in idx for k in KEYS), "inputs.tsv needs a row per front key"
     return "\n".join([
         f"#define AWTO_IN_N                                               {n}      // inputs in fw/awto/inputs.tsv; also the transition ring id range",
         f"#define AWTO_IN_ROWS                                            {ns}      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)",
         f"#define AWTO_IN_ADC0                                            {idx['ADC0']}",
-        f"#define AWTO_IN_ADC1                                            {idx['ADC1']}",
-        f"#define AWTO_IN_UP                                              {idx['UP']}",
-        f"#define AWTO_IN_DOWN                                            {idx['DOWN']}"])
+        f"#define AWTO_IN_ADC1                                            {idx['ADC1']}"]
+        + [f"#define AWTO_IN_{k:<48}{idx[k]}" for k in KEYS])
 
 
 def table_block(r, which, suffix=""):

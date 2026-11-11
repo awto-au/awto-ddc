@@ -215,11 +215,11 @@ static void AwtoSourceOpen(void)
     OsdFuncEnableOsd();
 }
 
-void AwtoSourceStep(void)
+static void AwtoSourceStep(bit bBack)
 {
     BYTE ucSel = AwtoSourceSelection();
 
-    if(GET_KEYMESSAGE() == _LEFT_KEY_MESSAGE)
+    if(bBack != 0)
     {
         ucSel = (ucSel == 0) ? 3 : (ucSel - 1);
     }
@@ -251,6 +251,103 @@ void AwtoSourceKeyOpen(void)
     g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
     OsdDispHotKeySourceMenu();
     UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+}
+
+static bit AwtoSourceNoPicture(void)            // power saving / no signal / no support: the SDK hands back to its pop-up timers
+{
+    BYTE ucMode = SysModeGetModeState();
+
+    return ((ucMode == _MODE_STATUS_POWER_SAVING) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT));
+}
+
+static void AwtoSourceClose(void)
+{
+    if(AwtoSourceNoPicture() == _TRUE)
+    {
+        ScalerTimerReactiveTimerEvent(SEC(0), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
+    }
+    else
+    {
+        OsdDispDisableOsd();
+    }
+}
+
+// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129): the SDK MenuHotKeySource for this board's four choices.
+void AwtoSourceKey(BYTE ucKey)
+{
+    BYTE ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
+    BYTE ucPort;
+
+    if((ucKey == _RIGHT_KEY_MESSAGE) || (ucKey == _LEFT_KEY_MESSAGE))  // UP / DOWN: step
+    {
+        AwtoSourceStep(ucKey == _LEFT_KEY_MESSAGE);
+        OsdDispHotKeySourceMenuSwitch();
+        ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
+        if((ucKey == _RIGHT_KEY_MESSAGE) ? ((ucItem == _OSD_INPUT_D2) || (ucItem == _OSD_INPUT_D6) || (ucItem == _OSD_INPUT_AUTO)) :
+           ((ucItem == _OSD_INPUT_D5) || (ucItem == _OSD_INPUT_D1) || (ucItem == _OSD_INPUT_D6)))
+        {
+            OsdDispHotKeySourceMenuIcon();
+        }
+        if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) || (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
+        {
+            ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
+        }
+        SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
+    }
+    else if(ucKey == _EXIT_KEY_MESSAGE)        // MENU: cancel, the choice goes back
+    {
+        if(g_usBackupValue != ucItem)
+        {
+            SET_OSD_INPUT_PORT_OSD_ITEM(g_usBackupValue);
+            SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
+        }
+        AwtoSourceClose();
+    }
+    else if((ucKey == _MENU_KEY_MESSAGE) && (GET_OSD_DP_VERSION_HOTKEY_DISP() == _OFF))     // AUTO: take the choice
+    {
+        if(g_usBackupValue == ucItem)
+        {
+            AwtoSourceClose();
+        }
+        else if(ucItem == _OSD_INPUT_AUTO)
+        {
+            SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
+            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+            if(UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType())
+            {
+                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
+            }
+        }
+        else
+        {
+            ucPort = (ucItem == _OSD_INPUT_D1) ? _D1_INPUT_PORT : (ucItem == _OSD_INPUT_D2) ? _D2_INPUT_PORT :
+                     (ucItem == _OSD_INPUT_D3) ? _D3_INPUT_PORT : _NO_INPUT_PORT;
+            if(ucPort == _NO_INPUT_PORT)
+            {
+                return;                         // no port on this board: the SDK left the selector up
+            }
+            SET_FORCE_POW_SAV_STATUS(_FALSE);
+            SysSourceSwitchInputPort(ucPort);
+            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
+            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
+               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
+            {
+                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
+                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
+            }
+        }
+#if(_DP_MST_SUPPORT == _ON)
+        if(g_usBackupValue != ucItem)
+        {
+            UserCommonInterfaceMstRx0Rx1switch(UserCommonInterfaceGetDpMstCapablePort());
+            RTDNVRamSaveOSDData();
+        }
+#endif
+        SET_OSD_STATE(_MENU_NONE);
+    }
 }
 
 // Runtime-selected wrappers retain the SDK implementation as a real fallback.
