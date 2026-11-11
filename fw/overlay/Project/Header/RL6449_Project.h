@@ -76,7 +76,7 @@ typedef struct
     unsigned int usDefer;                                       // SDK item saves deferred
     unsigned int usFlush;                                       // flushes
     unsigned int usItemWr;                                      // items programmed (after the SDK's unchanged check)
-    unsigned int usOps;                                         // flash halt ops (erase + status-register writes)
+    unsigned int usOps;                                         // flash halt ops: page programs + sector erases
     unsigned int usStable;                                      // gate inputs at the last service: stable ms, DDC/CI idle ms
     unsigned int usDdcIdle;
 } StAwtoNv;
@@ -94,7 +94,9 @@ extern void AwtoNvCommitSel(void);                              // source select
 #define AWTO_NV_PANEL                                           0x20    // never opens the gate: rides along, power-down
 #define AWTO_NV_AUX                                             0x40
 #define AWTO_SAVE_CARD_MS                                       1000    // "Saving to memory" readable once (derived: one glance)
-#define AWTO_NV_ITEM_WR()                                       (g_stAwtoNv.usItemWr++)
+#define AWTO_NV_ITEM_WR()                                       { g_stAwtoNv.usItemWr++; AWTO_NV_IN_DDC(); }
+#define AWTO_NV_OP()                                            { g_stAwtoNv.usOps++; AWTO_NV_IN_DDC(); }
+#define AWTO_NV_IN_DDC()                                        { if(g_ucAwtoNvInDdc != 0) { g_stAwtoNv.ucInDdc++; } }   // must stay 0
 #define AWTO_NV_AUX_ID                                          0x40    // SDK item ids of the aux block (registry rows without an SDK field)
 #define AWTO_NV_AUX_ITEMS                                       ((AWTO_SET_AUX_MAX + 13) / 14)
 // Gate (Dan, #151): a flash op halts the CPU (no DDC/CI, AUX, tick), so writes wait for a settled picture

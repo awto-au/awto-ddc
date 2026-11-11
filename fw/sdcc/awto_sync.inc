@@ -74,13 +74,9 @@ void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; val
     WORD usC3;
 
 #ifdef _AWTO_NEW_SETTINGS
-    if((ucStep == 3) || (ucStep == 4))              // #151 counters: every erase / common op (a CPU halt)
+    if(ucStep == 3)                                 // #151 counter: a sector erase (programs: AwtoWdtLibPoke)
     {
-        g_stAwtoNv.usOps++;
-        if(g_ucAwtoNvInDdc != 0)
-        {
-            g_stAwtoNv.ucInDdc++;
-        }
+        AWTO_NV_OP();
     }
 #endif
     if(g_stAwtoDiag.ucStage < 8)

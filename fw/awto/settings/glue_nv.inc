@@ -102,6 +102,7 @@ static void AwtoNvWrite(BYTE ucWhy)
     g_stAwtoNv.ucMask = 0;
     g_stAwtoNv.ucWhy = ucWhy;
     g_stAwtoNv.usFlush++;
+    AWTO_NV_IN_DDC();
     AWTO_NV_EV(5 + ucWhy);                          // one sync line per flush (the ring holds 32)
     s_ucNvFlushing = 1;
     if((s_ucNvMaskW & AWTO_NV_SYS) != 0)                 // the input part as chosen in the selector, not the live one (KVM, search)

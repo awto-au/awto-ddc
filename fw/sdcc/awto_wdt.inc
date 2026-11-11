@@ -47,6 +47,12 @@ volatile __xdata BYTE g_ucAwtoPokeLast;
 void AwtoWdtLibPoke(BYTE ucSite)                // the FunctionLib flash read / write loops (no project header there)
 {
     AWTO_WDT_POKE(ucSite);
+#ifdef _AWTO_NEW_SETTINGS
+    if(ucSite == 10)                                // one flash program (#151 counter; a CPU halt)
+    {
+        AWTO_NV_OP();
+    }
+#endif
 }
 
 // Once per reset, before EA: classify the boot, keep the record, reset the live counters.
