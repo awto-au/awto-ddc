@@ -705,19 +705,6 @@ void set_ap_factory_menu(BYTE ucId, int iV)
 #endif
 }
 
-void set_ap_vendor_menu(BYTE ucId, int iV)
-{
-    ucId = ucId;
-    iV = iV;
-    menu_close();
-    if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-    {
-        SET_OSD_STATE(_MENU_PICTURE);
-        OsdFuncSetOsdItemFlag();
-        OsdDispMainMenu();
-    }
-}
-
 void set_ap_power(BYTE ucId, int iV)               // placeholder store (see StAwtoPwrCfg)
 {
     switch(ucId)
@@ -794,7 +781,6 @@ bit AwtoMenuKeyHook(void)                          // RTDOsdSystemFlowProc, key 
         return _TRUE;
     }
     if((ucKey == _MENU_KEY_MESSAGE) && (GET_OSD_STATE() == _MENU_NONE) && (GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE) &&
-       (set_get(AWTO_SET_MENU_SELECT) == 0) &&
        ((ucMode == _MODE_STATUS_ACTIVE) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT)))
     {
         menu_open();

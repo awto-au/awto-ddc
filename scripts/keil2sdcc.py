@@ -502,6 +502,20 @@ SUBS = [
 
 from keil2sdcc_drops import DROP_WRAPS, DROP_SUBS  # noqa: E402  (#65 step 1)
 WRAPS += DROP_WRAPS
+# #120 Realtek SDK menu: with _AWTO_REALTEK_MENU off every main-menu state runs one stub (closes the OSD) and nothing opens the
+# menu, so its handlers, page drawing and icons are unreferenced. The table keeps its length: OSD state numbers do not move.
+_REALTEK_PAGES = r"\bMenu(Picture|Display|Color|Advance|Input|Audio|Other|Information|Factory)\w*|\bMenuDislayFreeze\b|\bMenuPanelUniformityMsgAdjust\b"
+_AWTO_MENU_GONE = ("#if(_AWTO_REALTEK_MENU != _ON)\nstatic void AwtoMenuGone(void)      // [keil2sdcc] #120: Realtek menu built out\n{\n"
+                   "    SET_OSD_STATE(_MENU_NONE);\n    OsdDispDisableOsd();\n}\n#endif\n")
+SUBS += [
+    (OSD + "RTD2014Osd.c", r"(void \(\* __code OperationTable\[\]\)\(void\) =\s*\{)(.*?)(\n\};)",
+     lambda m: _AWTO_MENU_GONE + m.group(1) + "\n#if(_AWTO_REALTEK_MENU == _ON)" + m.group(2) + "\n#else  // [keil2sdcc] #120"
+     + re.sub(_REALTEK_PAGES, "AwtoMenuGone", m.group(2)) + "\n#endif" + m.group(3), 1),
+    (OSD + "RTD2014Osd.c", r"\bOsdDispMainMenu\(\);", "AWTO_REALTEK_MENU_OPEN();  // [keil2sdcc] #120", 2),
+    (OSD + "RTD2014OsdFunc.c", r"\bOsdDispMainMenu\(\);", "AWTO_REALTEK_MENU_OPEN();  // [keil2sdcc] #120", 1),
+    (OSD + "RTD2014Osd.c", r"\bOsdDispMainMenuKeyInfo\(", "AWTO_REALTEK_KEYINFO(", 3),          # key legend redraws
+    ("User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c", r"\bOsdDispMainMenuKeyInfo\(", "AWTO_REALTEK_KEYINFO(", 1),
+]
 SUBS += DROP_SUBS
 
 # Per-module rules (#65, docs/cleanroom.md): fw/awto/<mod>/rules.py may define WRAPS, INSERTS and SUBS (formats above).

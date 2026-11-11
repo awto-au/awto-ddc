@@ -73,7 +73,6 @@
 #define AWTO_SET_OSD_TRANSPARENCY     61
 #define AWTO_SET_LANGUAGE             62
 #define AWTO_SET_OSD_ROTATE           63
-#define AWTO_SET_MENU_SELECT          64
 #define AWTO_SET_LOGO                 65
 #define AWTO_SET_LOGO_MS              66
 #define AWTO_SET_PANEL_T1             67
@@ -98,7 +97,6 @@
 #define AWTO_SET_COLOUR_RESET         102
 #define AWTO_SET_POWER_MODE           103
 #define AWTO_SET_FACTORY_MENU         92
-#define AWTO_SET_VENDOR_MENU          93
 #define AWTO_SET_INFO_INPUT           95
 #define AWTO_SET_INFO_HRES            96
 #define AWTO_SET_INFO_VRES            97
@@ -109,5 +107,5 @@
 #define AWTO_SET_INFO_HFREQ           107
 #define AWTO_SET_INFO_PCLK            108
 #define AWTO_SET_INFO_HDCP            109
-#define AWTO_SET_SCHEMA              0x299F
+#define AWTO_SET_SCHEMA              0x037E
 #endif

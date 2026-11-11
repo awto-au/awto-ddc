@@ -213,6 +213,17 @@ extern void AwtoOsdKeyLines(void);
 #define AWTO_KEY_INJECT(m)                                      AwtoKeyInject(m)
 #define AWTO_KEY_OSD_RESET()                                    AwtoKeyOsdReset()
 
+// Realtek SDK demo menu (awto-ddc#120): off = its pages are built out; every way in opens nothing (our menu has every setting).
+#ifndef _AWTO_REALTEK_MENU
+#define _AWTO_REALTEK_MENU                                      _OFF
+#endif
+#if(_AWTO_REALTEK_MENU == _ON)
+#define AWTO_REALTEK_MENU_OPEN()                                OsdDispMainMenu()
+#define AWTO_REALTEK_KEYINFO(k, s)                              OsdDispMainMenuKeyInfo(k, s)
+#else
+#define AWTO_REALTEK_MENU_OPEN()                                SET_OSD_STATE(_MENU_NONE)
+#define AWTO_REALTEK_KEYINFO(k, s)
+#endif
 // Input monitor (fw/awto/inputs.tsv -> scripts/gen_awto_inputs.py): one poller keeps the value of every input; a change updates the transition ring
 // (debug I2C slave 0x35, map symbol _g_stAwtoGpio, layout in scripts/gpio_diag.py) and marks that input for the console, which writes only that field.
 // GENERATED-BEGIN awto_inputs
