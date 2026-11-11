@@ -149,6 +149,10 @@ def main() -> int:
     stem = Path(a.stem)
     b = stem.with_suffix(".bin") if stem.suffix != ".bin" else stem
     m = b.with_suffix(".map")
+    st = b.with_name(b.stem + ".settings_table.py")    # the image's own registry (wb_build); else scripts/settings_table.py
+    if st.is_file():
+        os.environ["AWTO_SETTINGS_TABLE"] = str(st.resolve())
+        log(f"settings table {st.name}")
     g = gates(b, m, a.against, a.tree)
     sk = skips(b, m, a.tree)
     if a.only:

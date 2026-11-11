@@ -132,3 +132,6 @@ PAGES = [
 ]
 BY_NAME = {r['name']: r for r in ROWS}
 BY_ID = {r['id']: r for r in ROWS}
+import os as _os
+if _os.environ.get("AWTO_SETTINGS_TABLE"):          # image-matched table (settings_gen --host-out; fw_gates sets it)
+    exec(compile(open(_os.environ["AWTO_SETTINGS_TABLE"]).read(), _os.environ["AWTO_SETTINGS_TABLE"], "exec"))

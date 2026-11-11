@@ -47,6 +47,9 @@ DPMS_S = 3.0                               # connector dpms follows PowerSaveMod
 # host off -> power saving with test cmd 0x39 (#78 L3 at 20 s) + NOSIGNAL judge 1 s + SDK go-to-PS 2 s = 23 s x 1.25 -> 29 s
 PS_S = 29.0
 PS_POLL_S = 2.0       # wake-poll sample in power saving: 400 polls at AWTO_PS_POLL_MS 5; fw ms vs host ms shows the PS Timer2 rate
+# mode POWER SAVING -> power status SAVING: one search round, D1 DP 3 s + D2 / D3 2 s dwell (RL6449_Project.h) = 7 s x 1.25
+PS_STATUS_S = 9.0
+PS_TRIES = 3          # power-saving episodes tried for one clean PS_POLL_S window
 # host on -> ACTIVE: measured 863 ms from NOSIGNAL (wd6); from power saving add the #144 wake + boot of the panel path ~2 s;
 # 3 s x 1.25 -> 4 s, plus the 5 s monitor-return rule -> 9 s
 WAKE_S = 9.0
@@ -575,21 +578,38 @@ class Runner:
         return st
 
     def ps_polls(self) -> str:
-        """#144 wake poll in power saving over PS_POLL_S of host time: count, fw ms (Timer2 vs host clock), period, longest gap"""
+        """#144 wake poll in power saving over PS_POLL_S of host time: count, fw ms (Timer2 vs host clock), period, longest gap.
+        Mode POWER SAVING comes first; power status SAVING (where the poll runs) only after one SDK search round: waited for
+        (PS_STATUS_S). A window that leaves SAVING (SDK or our wake) is reported as such, not as a period."""
         import dbg_xdata as X
-        pa, ga = (C.site_addr(self.t.map_text, s) for s in ("g_usAwtoPsPolls", "g_usAwtoPsGap"))
-        if pa is None:
-            return "wake polls: image lacks g_usAwtoPsPolls"
+        pa, ga, wa = (C.site_addr(self.t.map_text, s) for s in ("g_usAwtoPsPolls", "g_usAwtoPsGap", "g_ucAwtoSyncPwr"))
+        if pa is None or wa is None:
+            return "wake polls: image lacks g_usAwtoPsPolls / g_ucAwtoSyncPwr"
         rd = lambda a: (lambda b: None if b is None else b[0] << 8 | b[1])(X.read_bytes(self.t.io, a, 2))
-        n0, f0, h0 = rd(pa), self.t.uptime_ms(), time.monotonic()
-        self.t.wait(PS_POLL_S)
-        n1, f1, h1 = rd(pa), self.t.uptime_ms(), time.monotonic()
+        pw = lambda: (lambda b: None if b is None else b[0])(X.read_bytes(self.t.io, wa, 1))
+        left = []
+        for _ in range(PS_TRIES):                    # the SDK may wake itself (host TMDS clock after DPMS off): next episode
+            t0 = time.monotonic()
+            while pw() != 3 and time.monotonic() - t0 < PS_STATUS_S:
+                time.sleep(0.05)                     # 50 ms: power status poll; bounded by PS_STATUS_S
+            if pw() != 3:
+                return f"wake polls: power status not SAVING {PS_STATUS_S} s after mode POWER SAVING"
+            lag = time.monotonic() - t0
+            n0, f0, h0 = rd(pa), self.t.uptime_ms(), time.monotonic()
+            self.t.wait(PS_POLL_S)                   # no 0x35 traffic: the debug-slave ISR would load the PS passes
+            n1, f1, h1, p1 = rd(pa), self.t.uptime_ms(), time.monotonic(), pw()
+            if None in (n0, n1, f0, f1):
+                return f"wake polls: read failed ({n0}, {n1}, {f0}, {f1})"
+            if p1 == 3 and n1 >= n0:
+                break
+            left.append(f"status {p1}, polls {n0} -> {n1}")
+        else:
+            return f"wake polls: power left SAVING in each {PS_POLL_S} s window ({'; '.join(left)})"
         gap = rd(ga) if ga is not None else None
-        if None in (n0, n1, f0, f1):
-            return f"wake polls: read failed ({n0}, {n1}, {f0}, {f1})"
-        dn, df, dh = (n1 - n0) & 0xFFFF, (f1 - f0) & 0xFFFF, round((h1 - h0) * 1000)
-        per = f"{dh / dn:.1f} ms" if dn else "none"
-        return f"wake polls in PS {n1}: {dn} in {dh} ms host / {df} ms fw (period {per}), longest gap {gap} ms fw"
+        dn, df, dh = n1 - n0, (f1 - f0) & 0xFFFF, round((h1 - h0) * 1000)
+        per = f"{df / dn:.2f} ms fw" if dn else "none"
+        return (f"wake polls in PS (SAVING {lag:.1f} s after mode PS) {n1}: {dn} in {dh} ms host / {df} ms fw (period {per}), "
+                f"longest gap {gap} ms fw" + (f"; {len(left)} earlier window(s) left SAVING" if left else ""))
 
     def c_host_sleep(self):
         """host monitors asleep -> unit 2 NOSIGNAL -> power saving (short #78 hold timeouts, test cmd 0x39) -> host awake:
