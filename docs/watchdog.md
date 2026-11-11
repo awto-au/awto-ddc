@@ -17,10 +17,16 @@
 | FFC4 [5:3] | wdt_irq_pri: 2 = int2 (EXINT2, vector 43h, EIE.0 / EXIF.4 / EIP.0) | |
 
 - Chain: CNT2 (2048 XTAL) -> CNT3 12 bit (143.0 us, wraps 585.9 ms) -> CNT1. Reset when CNT1 reaches N.
-- Unit 2 probes (test cmd 0x49 / 0x4F, wd4):
-  - normal mode: chip reset at 605 ms (N = 1, expected 586), **no threshold IRQ** (probe 0x08);
-  - timer mode: threshold IRQ fires **and** the chip resets at CNT1 overflow (probe 0x0D).
+### One counter, two outputs (unit 2, 2026-11-11, image wb-p14ui-wd4, probes 0x49 / 0x4F: threshold 36.6 ms, N = 1, no pokes)
+
+- Reset output: CNT1 reaching N resets the chip in **both** modes. Normal mode: reset at 605 ms (586 expected); timer mode: reset too.
+- Compare output, timer mode only: count >= threshold sets the flag and raises the IRQ. 0x4F = TIMER-MODE | IRQ | RESET (0x0D);
+  normal mode never raises it, 0x49 = RESET only (0x08).
+- Realtek's use: its event scheduler moved the threshold per event, so it had to keep clearing the counter (WD ISR + the tick's
+  'Prevent INT Lock Reset' clear) to keep the always-live reset away.
+- Our use: a fixed threshold (the warning), pokes only from main-loop progress and bounded loops, events on Timer0.
 - So the build uses timer mode: `AWTO_WDT_MODE = AWTO_WDT_TIMER_IRQ` (default; `AWTO_WDT_NORMAL_IRQ` stays selectable).
+- fw_sim `ChipReset` models exactly this: reset at CNT1 = N in both modes, compare flag / IRQ in timer mode only.
 - No reset-cause register: DW8051 has no watchdog and no POR / WTRF flag (databook v3.2a; SFRs reset on por_n and rst_in_n). P0_01[6]
   reset_chk reads 0 after every reset on unit 2 (#131): not used for cold / warm.
 - MX25L8006E (`/vendors/macronix/MX25L8006E_v1.6.pdf` p. 49): tSE 4 KB sector 200 ms max, tPP 3 ms, tW (WRSR) 40 ms. The CPU halts
