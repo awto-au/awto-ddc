@@ -36,8 +36,14 @@ CMD_MS = 100                               # test cmd written -> consumed: one m
 POLL_S = 0.020                             # unit reset poll period (cost above)
 RETURN_S = 5.0                             # monitor back after a reset (memory rule monitor-wait-5s)
 PROBE_SPIN_MS = 1500                       # AWTO_WDT_PROBE_MS: the probe gives up and restores the watchdog
-SETTLE_S = 8.0                             # before a case: boot to stage 8 (sim boot to ACTIVE 5.7 s, docs/delays.md) x 1.25 -> 7.2 s
+# before a case: settled mode (ACTIVE / NOSUPPORT / NOSIGNAL / POWER_SAVING / OFF). Worst = no signal after a flash: EDID back 5 s
+# (dev.py RECOVER_BUS_WAIT_S) + boot 1.7 s + search 3 ports x 2 s + no-signal judge 1 s = 13.7 s x 1.25 -> 17 s
+SETTLE_S = 17.0
+SETTLED_MODES = (3, 4, 5, 6, 7)
 NVSAVE_GAP_MS = 1000                       # between saves: one save + its OSD event < 1 pass (~0.5 s) x 2
+# 0x35 is silent while the MCU is halted on a flash op: a save's ops (sector erase 200 + WRSR 40 + 16 x 3 ms program, MX25L8006E
+# max) = 288 ms x 1.25 -> reads retried for 360 ms
+FLASH_OP_MS = 360
 TESTCMD_OFF = 0x28                         # g_stAwtoDiag + 0x28 (osd_test.TESTCMD_OFF)
 
 
@@ -167,6 +173,12 @@ class SimTarget:
     def stage(self) -> int:
         return self.bus.diag()["stage"]
 
+    def mode(self) -> int:
+        return self.bus.mode_state()
+
+    def uptime(self) -> int:
+        return self.bus.diag_t2()
+
     def ddcci(self) -> bool:
         return True
 
@@ -223,7 +235,7 @@ class UnitTarget:
         i2cbus.require_unit(self.bus_n, u["serial"])
         if i2cbus.rate_khz() != 100:
             raise SystemExit(f"bus rate {i2cbus.rate_khz()} kHz; 0x35 runs at 100 kHz only")
-        self.logs = B.setup_logs("wdt_test", map=str(mapp))
+        self.logs = B.setup_logs("wdt_test", map=str(mapp), detail=True)   # decoded I2C -> wdt_test.detail.log, bytes -> .raw.log
         self.map_text = mapp.read_text(errors="replace")
         m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoDiag\b", self.map_text, re.M)
         self.diag = int(m.group(1), 16) & 0xFFFF if m else 0xF6D0
@@ -263,6 +275,15 @@ class UnitTarget:
     def ddcci(self) -> bool:
         import kvm
         return kvm._ddcci_acks(self.bus_n)
+
+    def mode(self) -> int | None:
+        import dbg_xdata as X
+        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stModeInfo\b", self.map_text, re.M)
+        b = X.read_bytes(self.io, int(m.group(1), 16) & 0xFFFF, 1) if m else None
+        return b[0] & 0x1F if b else None
+
+    def uptime(self) -> int | None:
+        return self.uptime_ms()
 
     def uptime_ms(self) -> int | None:
         import dbg_xdata as X
@@ -327,6 +348,8 @@ class UnitTarget:
     def close(self):
         try:
             self.dbg_link.off(self.bus_n)
+        except (Exception, SystemExit) as e:             # the summary is already out; a link left on times out by itself
+            self.say(f"  debug link off failed: {e!r}")
         finally:
             self.io.close()
             self.logs.close()
@@ -338,15 +361,15 @@ class Runner:
         self.addr, self.syms = C.map_addr(t.map_text), C.load_syms(t.map_text)
         self.rows = []
 
-    def rec(self) -> dict:
-        for _ in range(5):
+    def rec(self, tries: int = 5) -> dict:
+        for _ in range(tries):
             b = C.read(self.t.io, self.addr)
             if b is not None:
                 d = C.decode(b)
                 self.say(f"  record: {C.line(d, self.syms)}")
                 return d
             self.t.wait(0.3)
-        raise SystemExit("record read failed (0x35 silent)")
+        raise OSError("record read failed (0x35 silent)")
 
     WANT = {"cold": "cold", "stall": "watchdog bite", "ea_off": "no capture", "probe": "probe",
             "clear": "cold", "prio": "watchdog bite"}            # cause words, not the exact text
@@ -406,17 +429,41 @@ class Runner:
         return f"max pass {d['max_pass'] * 32} ms, max poke gap {poke} ms {self.site()} (warning at {warn_ms():.1f} ms)"
 
     def settle(self):
-        """before a case: booted to stage 8 (diag) and, on the unit, DDC/CI answering; SETTLE_S deadline"""
+        """before a case: past the first main-loop pass (stage >= 6), mode settled, DDC/CI answering; SETTLE_S deadline"""
         t0 = time.monotonic()
+        st = md = None
         while time.monotonic() - t0 < SETTLE_S:
             try:
-                if self.t.stage() >= 8 and self.t.ddcci():
+                st, md = self.t.stage(), self.t.mode()
+                if st >= 6 and md in SETTLED_MODES and self.t.ddcci():
                     return True
-            except (OSError, SystemExit):
+            except (OSError, SystemExit, TypeError):
                 pass
             self.t.wait(0.2)
-        self.say(f"  not settled within {SETTLE_S} s (stage {self.t.stage()})")
+        self.say(f"  not settled within {SETTLE_S} s (stage {st}, mode {md})")
         return False
+
+    def same_boot(self, before: dict, up0: int | None, host0: float) -> tuple[bool, str]:
+        """no reset since `before`: record bites / warm unchanged and the diag uptime moved on (0x35 may be silent for a
+        flash op: reads retried for FLASH_OP_MS)"""
+        end = time.monotonic() + FLASH_OP_MS / 1000.0
+        up = d = None
+        while up is None or d is None:
+            try:
+                up = self.t.uptime() if up is None else up
+                d = self.rec(tries=1) if d is None else d
+            except (OSError, SystemExit):
+                pass
+            if (up is None or d is None) and time.monotonic() > end:
+                break
+            if up is None or d is None:
+                self.t.wait(0.05)
+        if up is None or d is None:
+            return False, "no answer"
+        dt_host = (time.monotonic() - host0) * 1000
+        cont = up0 is None or ((up - up0) & 0xFFFF) >= dt_host * 0.5
+        ok = d["bites"] == before["bites"] and d["warm"] == before["warm"] and cont
+        return ok, f"uptime {up0}->{up} in {dt_host:.0f} ms host, bites {before['bites']}->{d['bites']} warm {before['warm']}->{d['warm']}"
 
     def c_nvsave(self):
         """#150: 5 NVRAM saves in a row (test cmd 0x29: debug messages off, saved), 1 s apart: no reset"""
@@ -426,8 +473,12 @@ class Runner:
             fh.use_max, n0 = True, len(fh.halts)        # sim: every flash op at its datasheet max (long save)
         kinds = []
         for k in range(5):
+            up0, h0 = self.t.uptime(), time.monotonic()
             self.t.cmd(0x29)
-            kinds.append(self.t.wait_reset(NVSAVE_GAP_MS)[0])
+            self.t.wait(NVSAVE_GAP_MS / 1000.0)
+            same, why = self.same_boot(d0, up0, h0)
+            kinds.append("none" if same else "reset")
+            self.say(f"  save {k + 1}: {'same boot' if same else 'RESET?'} ({why})")
         if fh:
             fh.use_max = False
             hs = fh.halts[n0:]
@@ -445,8 +496,13 @@ class Runner:
         import sync_log as SL
         import dbg_xdata as X
         ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
-        raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
-        _, lines = SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path))) if raw else ({}, [])
+        raw = None
+        for _ in range(5):                               # flash-op silences: retry
+            raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+            if raw:
+                break
+            self.t.wait(FLASH_OP_MS / 1000.0)
+        _, lines = SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path)), whole=True) if raw else ({}, [])
         nv = [ln for ln in lines if "NVRAM" in ln or "flash erase" in ln]
         for ln in nv:
             self.say(f"    {ln}")
@@ -458,8 +514,12 @@ class Runner:
         steps = [(0x29, 1.0)] * 5 + [(0x01, 1.0), (0x04, 0.5), (0x05, 1.0), (0x33, 8.0), (0x32, 6.0), (0x31, 6.0), (0x32, 6.0)]
         kinds = []
         for c, s in steps:
+            up0, h0 = self.t.uptime(), time.monotonic()
             self.t.cmd(c)
-            kinds.append(self.t.wait_reset(s * 1000)[0])
+            self.t.wait(s)
+            same, why = self.same_boot(d0, up0, h0)
+            kinds.append("none" if same else "reset")
+            self.say(f"  step 0x{c:02X}: {'same boot' if same else 'RESET?'} ({why})")
         d1 = self.rec()
         ok = all(k == "none" for k in kinds) and d1["bites"] == d0["bites"] and d1["warm"] == d0["warm"]
         self.row("stress", "PASS" if ok else "FAIL", f"{len(steps)} steps, resets {sum(k != 'none' for k in kinds)}; {self.ages(d1)}")
@@ -829,10 +889,21 @@ class Runner:
 
     def run(self, names):
         late = [n for n in names if n in ("snapshot", "reason")]       # judged on what the other cases' resets left
-        for n in [n for n in names if n not in late] + late:
-            if n not in late:
-                self.settle()
-            getattr(self, "c_" + n)()
+        try:
+            for n in [n for n in names if n not in late] + late:
+                try:
+                    if n not in late:
+                        self.settle()
+                    getattr(self, "c_" + n)()
+                except (Exception, SystemExit) as e:        # one case's failure never ends the run
+                    self.row(n, "FAIL", f"exception: {e!r}")
+        except KeyboardInterrupt:
+            self.row("run", "FAIL", "interrupted")
+            self.summary()
+            raise
+        return self.summary()
+
+    def summary(self) -> int:
         fails = [r for r in self.rows if r[1] in ("FAIL", "HANG")]
         self.say("---- wdt_test summary " + ("(" + self.t.name + ")"))
         for n, v, d in self.rows:

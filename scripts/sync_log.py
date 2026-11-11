@@ -116,18 +116,21 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     return head + pre + before + value(row["fmt"], a, v) + after
 
 
-def decode(raw: bytes, rows: list[dict]):
+def decode(raw: bytes, rows: list[dict], whole: bool = False):
+    """whole=True: every entry still in the ring (all episodes), times relative to the current episode's t0"""
     h = dict(magic=raw[0:2], version=raw[2], seq=raw[3], ep_seq=raw[4], kind=raw[5], port=raw[6],
              t0=raw[7] << 8 | raw[8], done=raw[9], open_req=raw[10])
     if h["magic"] != b"SY":
         return h, []
     n_, wrap = GEOM.get(h["version"], (N, WRAP))
-    n = (h["seq"] - h["ep_seq"]) % wrap
+    n = n_ if whole else (h["seq"] - h["ep_seq"]) % wrap
     lost = max(0, n - n_)
     evs = []
     for k in range(min(n, n_)):
         s = (h["seq"] - min(n, n_) + k) % wrap
         e = raw[HDR + EV * (s % n_):HDR + EV * (s % n_) + EV]
+        if whole and e[0] == 0:
+            continue                                     # never written (a young ring)
         evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
     h["lost"] = lost
     return h, [line(rows, ev, h["t0"]) for ev in evs]
