@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Watchdog crash record (awto-ddc#131, docs/watchdog.md): read, decode, clear over the firmware debug slave 0x35.
+"""Watchdog crash record v2 (awto-ddc#131, #138, docs/watchdog.md): read, decode, clear over the firmware debug slave 0x35.
 
 usage: rtd_crash.py BUS --map MAP --serial SERIAL [--clear]
 - Reads the 32 B `_g_stAwtoWdt` (address from the map; 0xF6B0 in #131 images) with the 0x3C block read, prints one decoded line:
-  cause, bites / other warm resets, PC as bank:addr + symbol+offset (map), registers, heartbeat, uptime, feed / pass ages.
+  cause, bites / other warm resets, PC as bank:addr + symbol+offset (map), registers, heartbeat, uptime, pass age; live: max
+  pass, max gap between watchdog pokes, the unit-2 probe result (test cmd 0x49 / 0x4F).
 - --clear: writes 0 to the magic byte (debug write 0x01 hi, 0x03 value, 0x3B lo); the record is invalid until the next bite.
 - Library (crash_sim_test.py): decode(b), line(d, syms), symbolize(syms, bank, pc), read(io, addr), clear(io, addr).
 Log: tmp/logs/rtd_crash.log (+ rtd_crash.raw.log byte trace)
@@ -21,11 +22,12 @@ import dbg_xdata as X  # noqa: E402
 
 DEV8, SIZE, REC_N, SEED = 0x6A, 32, 25, 0xA5
 COMMON_END = 0x5000                                  # banked code from 0x5000 (docs/reversing/realtek-rtd/mcu-8051.md)
-CAUSE = {0: "none", 1: "STALL", 2: "PASS"}
+CAUSE = {0: "none", 1: "STALL"}
 BOOT = ((0x01, "LVR"), (0x02, "BITE-PENDING"), (0x04, "TEST-ARMED"), (0x08, "NEW"), (0x10, "WARM"))
 FIELDS = ("m0 m1 ver cause bites warm pch pcl bank sp psw acc b dph dpl reth retl stage mode hbh hbl uph upl "
-          "feed_age pass_age check boot tick feed pass max_feed max_pass").split()
-CHECK_MS = 200                                       # RL6449_Project.h AWTO_WDT_CHECK_MS
+          "agh agl check boot passh passl max_pass max_poke probe").split()
+PROBE = ((0x01, "TIMER-MODE"), (0x02, "ARMED"), (0x04, "IRQ"), (0x08, "RESET"), (0x10, "NO-RESET"), (0x20, "WDTI"))
+POKE_MS = 32 * 2048 / 14318.18                       # ucMaxPoke unit: 32 CNT3 counts (RL6449_Project.h)
 
 
 def decode(b: bytes) -> dict:
@@ -35,7 +37,8 @@ def decode(b: bytes) -> dict:
     s = SEED
     for x in b[:REC_N]:
         s ^= x
-    d["valid"] = b[0:2] == b"WD" and b[2] == 1 and b[REC_N] == s
+    d["valid"] = b[0:2] == b"WD" and b[2] == 2 and b[REC_N] == s
+    d["pass_age"] = d["agh"] << 8 | d["agl"]
     d["pc"], d["ret"] = d["pch"] << 8 | d["pcl"], d["reth"] << 8 | d["retl"]
     d["dptr"], d["hb"], d["up"] = d["dph"] << 8 | d["dpl"], d["hbh"] << 8 | d["hbl"], d["uph"] << 8 | d["upl"]
     return d
@@ -67,18 +70,19 @@ def where(d: dict, pc: int) -> str:
 
 def line(d: dict, syms: tuple | None = None) -> str:
     boot = "|".join(n for bit, n in BOOT if d["boot"] & bit) or "-"
-    live = (f"live: boot {boot} feed {d['feed']} pass {d['pass']} max feed {d['max_feed']} pass {d['max_pass']} "
-            f"(x{CHECK_MS} ms)")
+    probe = "|".join(n for bit, n in PROBE if d["probe"] & bit) or "-"
+    poke = ">=586" if d["max_poke"] == 0xFF else f"{d['max_poke'] * POKE_MS:.0f}"
+    live = f"live: boot {boot} max pass {d['max_pass'] * 32} ms max poke gap {poke} ms probe {probe}"
     if not d["valid"]:
         return f"no crash record (magic/check invalid); {live}"
     if d["bites"] == 0:
         return f"no bite recorded; other warm resets {d['warm']}; {live}"
-    c = CAUSE.get(d["cause"] & 0x7F, f"0x{d['cause']:02x}") + (" TEST" if d["cause"] & 0x80 else "")
+    c = CAUSE.get(d["cause"] & 0x3F, f"0x{d['cause']:02x}") + (" TMODE" if d["cause"] & 0x40 else "") + (" TEST" if d["cause"] & 0x80 else "")
     pcs = where(d, d["pc"]) + (f" {symbolize(syms, d['bank'], d['pc'])}" if syms else "")
     ret = f"{d['ret']:04X}" + (f" ({symbolize(syms, d['bank'], d['ret'])}?)" if syms else "")    # top word: may be data
     return (f"WDT bite {c}: PC {pcs} STACK TOP {ret} SP {d['sp']:02X} A {d['acc']:02X} B {d['b']:02X} PSW {d['psw']:02X} "
             f"DPTR {d['dptr']:04X}; hb {d['hb']} up {d['up']} ms stage {d['stage']} mode {d['mode']}; "
-            f"feed {d['feed_age']} pass {d['pass_age']} x{CHECK_MS} ms; bites {d['bites']} warm {d['warm']}; {live}")
+            f"pass age {d['pass_age']} ms; bites {d['bites']} warm {d['warm']}; {live}")
 
 
 def read(io, addr: int) -> bytes | None:

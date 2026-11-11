@@ -203,6 +203,7 @@ class FastMachine:
                 self.cmd(f"break xram w 0x{a:x}")
         for d in self.devs:
             d.init(self)
+        self._tickers = [d for d in self.devs if hasattr(d, "tick")]
 
     # ---- ucsim command subset ----
     def cmd(self, text: str, timeout: float = 120) -> str:
@@ -410,7 +411,12 @@ class FastMachine:
             self._scale_t2()
         while True:
             i0, c0 = p.instr, p.cycles
-            r = core.run(max(rem, 1))
+            n = max(rem, 1)
+            for d in self._tickers:                    # stop near a model deadline (hardware WDT IRQ / reset): <= 4 cycles per instr
+                left = getattr(d, "deadline", 0) - self.ticks // 12
+                if 0 < left:
+                    n = min(n, max(1, left // 4))
+            r = core.run(n)
             di, dt = p.instr - i0, (p.cycles - c0) * 12
             if r == R_EVENT and p.irq_tail and not self.EXACT:
                 dt -= 12                # ucsim: an event stop's "Simulated" ticks miss the IRQ entry cycle after it
@@ -418,6 +424,8 @@ class FastMachine:
             self.instr += used
             self.ticks += dt
             rem -= used
+            for d in self._tickers:                    # time-driven models (fw_sim ChipReset hardware WDT, #138)
+                d.tick(self)
             if r == R_EVENT:
                 evs = [p.ev[i] for i in range(min(p.nev, 16))]
                 self.last_out = out = self._out("event")

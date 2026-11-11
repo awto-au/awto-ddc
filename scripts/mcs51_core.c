@@ -361,6 +361,20 @@ static inline void irq(core_t *c)
         c->p.nirq++;
         return;
     }
+    /* DW8051 EXINT2 (RL6449 WDT IRQ, FFC4 wdt_irq_pri = int2): EIE.0 enable, EXIF.4 flag (software clears), EIP.0 priority,
+     * vector 0x43; polled after the 8051 sources (#138) */
+    if ((S(0xE8) & 0x01) && (S(0x91) & 0x10)) {
+        int pr = (S(0xF8) & 0x01) ? 1 : 0;
+        if (cur >= 0 && pr <= cur)
+            return;
+        if (c->p.nlvl < 8)
+            c->lvl[c->p.nlvl++] = pr;
+        c->p.cycles += 1;
+        push(c, c->p.pc & 0xFF);
+        push(c, c->p.pc >> 8);
+        c->p.pc = 0x43;
+        c->p.nirq++;
+    }
 }
 
 /* ---- one instruction; returns machine cycles ---- */

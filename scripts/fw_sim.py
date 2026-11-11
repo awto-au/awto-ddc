@@ -352,18 +352,93 @@ class RegTrace(Dev):
 class ChipReset(Dev):
     """MCU_FFEE_MCU_CLOCK_CONTROL bit1 sof_rst (regdb; the host's ISP 0xEE <- 0x02) = chip reset (awto-ddc#131): CPU reset
     (PC 0, SFRs), bank register 0, every Dev re-initialised (register cells back to regdb reset values). XDATA / IRAM RAM kept
-    (warm reset, #26) and P0_01 HOST_CTRL kept (regdb: only an LVR clears reset_chk). resets / at_t2: count, diag usT2Isr."""
-    writes = (0xFFEE,)
+    (warm reset, #26) and P0_01 HOST_CTRL kept (regdb: only an LVR clears reset_chk). resets / at_t2: count, diag usT2Isr.
+    Hardware WDT (#138, docs/watchdog.md). ASSUMED (unit 2 to confirm, test cmd 0x49 / 0x4F), same in normal and timer mode:
+    - CNT2 / 2048 XTAL -> CNT3 12 bit (143 us, wraps 585.9 ms) -> CNT1; reset when CNT1 reaches N = FFEA[2:0] + 1 wraps;
+    - threshold FFB0[7:4]:FFAE matches CNT3 once per wrap: FFEB[7] flag; with FFEB[2] and FFC4 wdt_irq_pri = int2 -> EXIF[4];
+    - clr_wdt (FFEA[6] strobe) clears all counters and latches the old values into FFAB / FFAC / FFAD; FFEB[3] latches only.
+    - enable = FFEA[7] | FFE9[7] | FF3A[6]. Time = machine cycles / cycles per fw ms (Timer2 reload; crystal / 12 before it)."""
+    writes = (0xFFEE, 0xFFEA, 0xFFEB)
+    CNT3_MS = 4096 * 2048 / 14318.18             # regdb CNT3 12 bit, 2048 XTAL clocks per count (docs/watchdog.md)
+    TICK_MS = 2048 / 14318.18
+    XTAL_CPM = 14318.18 / 12                     # machine cycles per ms at the reset clock (ucsim: 12 clocks per cycle)
+    KEEP = 400                                   # clears kept in .clears (boot listing); max_gap covers all
 
     def __init__(self):
         self.resets, self.at_t2 = 0, []
+        self.hw, self.irqs = [], []              # hardware bites (clock, since, N); threshold matches (clock, since, irq raised)
+        self.clock, self.since, self.max_gap, self.max_who, self.clears, self.nclears = 0.0, 0.0, 0.0, "", [], 0
+        self._cyc, self.flag, self.deadline = None, False, 0
 
-    def on_write(self, m, a):
-        if not m.rd(0xFFEE)[0] & 0x02:
+    def _cpm(self, m) -> float:
+        lo, hi = m.rd(0xCA, 2, "sfr")
+        r = hi << 8 | lo
+        return float(0x10000 - r) if r else self.XTAL_CPM
+
+    def advance(self, m) -> float:
+        """Bring clock / since up to now (threshold matches on the way); returns the clock (fw ms)."""
+        cyc = m.ticks // 12
+        if self._cyc is not None and cyc > self._cyc:
+            d = (cyc - self._cyc) / self._cpm(m)
+            self._threshold(m, self.since, self.since + d)
+            self.clock += d
+            self.since += d
+        self._cyc = cyc
+        self._plan(m)
+        return self.clock
+
+    def _plan(self, m):
+        """deadline (machine cycles): the next threshold match or reset, so the core stops there (fastmachine caps its runs)."""
+        thr = ((m.rd(0xFFB0)[0] >> 4) << 8 | m.rd(0xFFAE)[0]) * self.TICK_MS
+        k = int((self.since - thr) // self.CNT3_MS) + 1 if self.since >= thr else 0
+        nxt = min(k * self.CNT3_MS + thr, ((m.rd(0xFFEA)[0] & 7) + 1) * self.CNT3_MS)
+        self.deadline = self._cyc + max(1, int((nxt - self.since) * self._cpm(m)) + 1)
+
+    def _threshold(self, m, t0: float, t1: float):
+        thr = ((m.rd(0xFFB0)[0] >> 4) << 8 | m.rd(0xFFAE)[0]) * self.TICK_MS
+        k = int((t1 - thr) // self.CNT3_MS)       # last match at or before t1: k * wrap + thr
+        if k < 0 or k * self.CNT3_MS + thr <= t0:
             return
+        ffeb = m.rd(0xFFEB)[0]
+        self.flag = True
+        m.wr(0xFFEB, bytes([ffeb | 0x80]))
+        irq = bool(ffeb & 0x04) and (m.rd(0xFFC4)[0] >> 3 & 7) == 2
+        if irq:
+            m.wr(0x91, bytes([m.rd(0x91, 1, "sfr")[0] | 0x10]), "sfr")
+        self.irqs.append((self.clock, t1, irq))
+
+    def _latch(self, m):
+        c3 = int((self.since % self.CNT3_MS) / self.TICK_MS) & 0xFFF
+        m.wr(0xFFAB, bytes([(c3 & 0x1F) << 3, (c3 >> 5) & 0x7F, int(self.since // self.CNT3_MS) & 7]))
+
+    @staticmethod
+    def enabled(m) -> bool:
+        """FFEA[7] wdt_en | FFE9[7] wdt_en_3 | FF3A[6] wdt_en_2 (ORed; regdb resets FFEA 0x80, FFE9 0x81, FF3A 0x40)."""
+        return bool(m.rd(0xFFEA)[0] & 0x80 or m.rd(0xFFE9)[0] & 0x80 or m.rd(0xFF3A)[0] & 0x40)
+
+    def due(self, m) -> bool:
+        n = (m.rd(0xFFEA)[0] & 7) + 1
+        return self.since >= n * self.CNT3_MS and self.enabled(m)
+
+    def check(self, m):
+        self.advance(m)
+        if self.due(m):
+            self.hw.append((self.clock, self.since, (m.rd(0xFFEA)[0] & 7) + 1))
+            self.reset(m)
+            return True
+        return False
+
+    def tick(self, m):
+        cyc = m.ticks // 12
+        if self._cyc is not None and cyc - self._cyc < 4096 and cyc < self.deadline:     # look every 0.2 fw ms or at a deadline
+            return
+        self.check(m)
+
+    def reset(self, m):
         host, t2 = m.rd(0x0001)[0], m.rd(0xF6D0 + 0x16, 2)
         self.resets += 1
         self.at_t2.append(t2[0] << 8 | t2[1])        # BE images (wb builds); LE readers swap
+        self.at_since = getattr(self, "at_since", []) + [self.since]      # ms since the last poke, per reset
         m.put("reset")
         m.wr(0xFFFF, b"\x00")
         for d in m.devs:
@@ -371,6 +446,38 @@ class ChipReset(Dev):
                 d.init(m)
         m.wr(0x0001, bytes([host]))
         m.wr(0xFFEE, bytes([m.rd(0xFFEE)[0] & 0xFD]))
+        self.since, self.flag = 0.0, False
+
+    def on_write(self, m, a):
+        if a == 0xFFEB:
+            v = m.rd(0xFFEB)[0]
+            if v & 0x08:                             # latch_wdt_cnt_start: strobe
+                self.advance(m)
+                self._latch(m)
+            if v & 0x80:                             # wdt_overflow_flag W1C: a 1 clears, a 0 keeps it
+                self.flag = False
+            m.wr(0xFFEB, bytes([(v & 0x77) | (0x80 if self.flag else 0)]))     # bit 3 strobe reads 0
+            return
+        if a == 0xFFEA:
+            if self.check(m):                        # a clear after the due time is too late: bite first
+                return
+            v = m.rd(0xFFEA)[0]
+            if v & 0x40:
+                self._latch(m)
+                self.nclears += 1
+                if len(self.clears) < self.KEEP or self.since > self.max_gap:
+                    who = m.where(m.p.bank, m.p.pc) if hasattr(m, "p") else "?"      # fast core: the clearing function
+                    if len(self.clears) < self.KEEP:
+                        self.clears.append((self.clock, self.since, v, m.rd(0xFFEB)[0], who))
+                    if self.since > self.max_gap:
+                        self.max_gap, self.max_who = self.since, who
+                self.since = 0.0
+                m.wr(0xFFEA, bytes([v & 0xBF]))      # clr_wdt is a strobe: reads 0
+            return
+        if not m.rd(0xFFEE)[0] & 0x02:
+            return
+        self.advance(m)
+        self.reset(m)
 
 
 class Cells(Dev):
@@ -782,6 +889,9 @@ class Machine:
             self.instr += used
             ev = [(("s" if sp == "sfr" else "") + k, a) for k, sp, a in re.findall(r"Event `(\w+)' at (xram|sfr)\[0x([0-9a-f]+)\]", out)]   # skind "swrite" = SFR
             self.last_out = out
+            for d in self.devs:
+                if hasattr(d, "tick"):                    # time-driven models (hardware WDT, #138)
+                    d.tick(self)
             if not ev:
                 stop = re.search(r"Stop at 0x([0-9a-f]+)", out)
                 if stop and int(stop.group(1), 16) in self.stubs and "Breakpoint" in out:
