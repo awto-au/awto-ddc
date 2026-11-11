@@ -24,7 +24,7 @@ from pathlib import Path
 TYPES = {"bool": 0, "enum": 1, "int": 2, "action": 3}
 UNITS = {"none": 0, "percent": 1, "ms": 2, "s": 3, "step": 4, "hz": 5, "dhz": 6}
 UNIT_TXT = {"none": "", "percent": "%", "ms": "ms", "s": "s", "step": "", "hz": "Hz", "dhz": "Hz"}
-FLAGS = {"nv": 0x01, "live": 0x02, "factory": 0x04, "risky": 0x08, "ro": 0x10, "inert": 0x20, "reboot": 0x40}
+FLAGS = {"nv": 0x01, "live": 0x02, "factory": 0x04, "risky": 0x08, "ro": 0x10, "inert": 0x20, "reboot": 0x40, "sdk": 0x80}
 COLS = ["id", "name", "type", "unit", "group", "flags", "min", "max", "step", "default", "nv_slot", "vcp", "apply",
         "label", "options", "note"]
 LABEL_MAX = 22                      # menu: label column width (menu.c LABEL_W)
@@ -120,6 +120,8 @@ def validate(rows, pages):
             err.append(f"{w}: non-ASCII text (font is ASCII 0x20..0x7E)")
         if "nv" in r["flagset"] and r["type"] == "action":
             err.append(f"{w}: an action is not stored")
+        if "sdk" in r["flagset"] and "nv" not in r["flagset"]:
+            err.append(f"{w}: sdk (SDK store field) needs nv")
     vcps = [r["vcpv"] for r in rows if r["vcpv"]]
     if len(vcps) != len(set(vcps)):
         err.append("duplicate VCP code")
@@ -159,6 +161,15 @@ def schema(rows) -> int:
     return crc16(bytes(b)) & 0x7FFF
 
 
+def aux_rows(rows):
+    """stored rows without an SDK store field: the integrator keeps them in its own items of the SDK store (#151)"""
+    return [r for r in rows if "nv" in r["flagset"] and "sdk" not in r["flagset"]]
+
+
+def aux_bytes(rows) -> int:
+    return 1 + sum(2 if r["type"] == "int" else 1 for r in aux_rows(rows))
+
+
 def cstr(s: str) -> str:
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '\\0"'
 
@@ -184,7 +195,8 @@ def gen_c(rows, pages, tree, sch):
            "#ifndef AWTO_SET_GEN_H", "#define AWTO_SET_GEN_H", "#include <stdint.h>", "",
            f"#define SET_COUNT   {len(rows)}u", f"#define SET_PAGES   {len(pages)}u",
            f"#define SET_SCHEMA  0x{sch:04X}u    /* CRC-16 of the NV rows (id, type, min, max) */",
-           f"#define SET_NV_COUNT {sum('nv' in r['flagset'] for r in rows)}u", f"#define SET_TEXT_LEN {ofs}u", ""]
+           f"#define SET_NV_COUNT {sum('nv' in r['flagset'] for r in rows)}u", f"#define SET_TEXT_LEN {ofs}u",
+           f"#define SET_AUX_MAX {aux_bytes(rows)}u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */", ""]
     hdr += [f"#define SET_ID_{r['name'].upper():<20} {r['id']}u" for r in rows]
     hdr += [""] + [f"#define SET_PAGE_{p['group'].upper():<16} {i}u" for i, p in enumerate(pages)]
     hdr += [""] + [f"#define AP_{a.upper():<20} {i}u" for a, i in ap.items()]
@@ -291,7 +303,7 @@ def gen_c(rows, pages, tree, sch):
            "// Firmware glue (fw/awto/settings/glue.inc) and AWTO_SET(NAME) readers name rows by these ids.",
            "#ifndef AWTO_SET_IDS_H", "#define AWTO_SET_IDS_H"]
     inc += [f"#define AWTO_SET_{r['name'].upper():<20} {r['id']}" for r in rows]
-    inc += [f"#define AWTO_SET_SCHEMA              0x{sch:04X}", "#endif", ""]
+    inc += [f"#define AWTO_SET_SCHEMA              0x{sch:04X}", f"#define AWTO_SET_AUX_MAX             {aux_bytes(rows)}", "#endif", ""]
     return "\n".join(hdr), "\n".join(c), "\n".join(inc)
 
 
