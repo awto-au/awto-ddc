@@ -110,7 +110,7 @@ def main() -> int:
     mt = a.map.read_text(errors="replace")
     addr, syms = map_addr(mt), load_syms(mt)
     logs = B.setup_logs("rtd_crash", map=str(a.map))
-    io = B.Real(a.bus, allow_write=a.clear)
+    io = B.Real(a.bus, allow_write=True)      # a debug read sets the address by a write (as rtd_dbg_read); --clear gates the record write
     try:
         b = read(io, addr)
         if b is None:
