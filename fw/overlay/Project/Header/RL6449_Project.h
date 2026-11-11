@@ -173,6 +173,13 @@ volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
 #else
 extern volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
 #endif
+// Reset-vector snapshot (#29 / #138): crt_rtd_startup copies these before any init, 20 B no-init at 0xF69C (rtd_crash.py --snap).
+// 'R' 'S', SFRs EICON PCON EXIF CKCON IE EIE IP EIP, XFRs FFEA FFEB FFAA FFAB FFAC FFAD FFE0 FFED FFEE, P0_01. Reset-cause search.
+#ifdef _AWTO_DIAG_DEFINER
+volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
+#else
+extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
+#endif
 #define AWTO_WDT_REC_N                                          25      // bytes under ucCheck
 #define AWTO_WDT_SEED                                           0xA5
 #define AWTO_WDT_C_STALL                                        1       // pokes stopped: no main-loop pass and no bounded loop
@@ -183,6 +190,14 @@ extern volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
 #define AWTO_WDT_B_TEST                                         0x04    // test hang armed
 #define AWTO_WDT_B_NEW                                          0x08    // record from a bite not yet shown on the console
 #define AWTO_WDT_B_WARM                                         0x10    // this boot: warm reset without a capture
+#define AWTO_WDT_B_COLD                                         0x20    // this boot: no valid record in RAM (power-up / brown-out)
+#define AWTO_WDT_B_AFTER                                        0x40    // this boot follows a captured bite
+#define AWTO_WDT_B_PROBE                                        0x80    // this boot follows a probe reset (test cmd 0x49 / 0x4F)
+// Boot reason (#29): AwtoBootReason, the first sync-log line. Canary only: no reset-cause flag in DW8051 or RL6449 (docs/watchdog.md)
+#define AWTO_BOOT_COLD                                          1
+#define AWTO_BOOT_BITE                                          2       // value: cause << 24 | bank << 16 | PC
+#define AWTO_BOOT_WARM                                          3       // hardware watchdog (no capture) or host ISP 0xEE
+#define AWTO_BOOT_PROBE                                         4
 #define AWTO_WDT_P_TIMER                                        0x01    // probe in timer mode (0x4F); else normal mode (0x49)
 #define AWTO_WDT_P_ARMED                                        0x02    // probe running (a reset while set = the probe's reset)
 #define AWTO_WDT_P_IRQ                                          0x04    // the threshold IRQ came (no pokes, CNT3 = AWTO_WDT_PROBE_THR)
@@ -206,6 +221,8 @@ extern volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
 #if(_AWTO_WDT == _ON)
 extern __data unsigned char _bs_cur;           // fw/sdcc/bank.asm bank shadow
 extern void AwtoWdtInit(void);
+extern unsigned char AwtoBootReason(void);
+extern unsigned long AwtoBootValue(void);
 extern void AwtoWdtIrq(unsigned char ucSp, unsigned char ucBank);
 extern void AwtoWdtHang(unsigned char ucHow);
 extern void AwtoWdtProbe(unsigned char ucTimer);
@@ -750,8 +767,8 @@ extern void AwtoPanelVddEarly(void);
 extern __xdata unsigned char g_pucAwtoInCnt[];   // awto_gpio.inc: rising edges per counted input (wraps), read by the selector
 #define _AWTO_SYNC_LOG                                          _AWTO_SW_LOG
 #if(_AWTO_SYNC_LOG == _ON)
-#define AWTO_SYNC_N                                             24      // ring entries: a power-on logs ~22 lines (sim, #139)
-#define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
+#define AWTO_SYNC_N                                             32      // ring entries: a power-on logs ~22 lines (sim, #139) + reason / stages (#29)
+#define AWTO_SYNC_WRAP                                          224     // seq counts 0..223 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
 #define AWTO_SYNC_BACK(s, n)                                    ((unsigned char)(((s) >= (n)) ? ((s) - (n)) : ((s) + AWTO_SYNC_WRAP - (n))))
@@ -796,6 +813,9 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
 #define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
 #define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
+#define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
+#define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
+#define AWTO_SYNC_EV_INIT                                       0xD2    // arg 1 MCU init, 2 Timer2 tick, 3 watchdog run-time mode
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON
@@ -835,6 +855,9 @@ extern __xdata StAwtoSync g_stAwtoSync;
 // DDC live: HDCP 1.4 Ri checks run every 2 s (the slowest regular DDC traffic) x 1.25 = 2.5 s -> 3 s = 12 polls; expiry = "ddc-"
 #define AWTO_SRC_DDC_POLLS                                      12
 extern void AwtoSyncInit(void);
+extern void AwtoSyncMark(void);
+extern void AwtoSyncT2Start(void);
+#define AWTO_SYNC_MARK()                                        AwtoSyncMark()
 extern void AwtoSyncBegin(unsigned char ucKind, unsigned char ucPort);
 extern void AwtoSyncPush(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);
 extern void AwtoSyncSw(unsigned char ucId, unsigned char ucArg);
@@ -868,6 +891,9 @@ extern void AwtoConLogSync(void);
 #define AWTO_OSD_SYNC_POLL()
 #define AWTO_SYNC_SW(id, arg)
 #define AwtoSyncInit()
+#define AWTO_SYNC_MARK()
+#define AwtoSyncT2Start()
+#define AwtoSyncPush(i, a, v)
 #define AwtoSyncBegin(k, p)
 #define AwtoSyncDetect(p, k, a, t)
 #define AwtoSyncTiming()

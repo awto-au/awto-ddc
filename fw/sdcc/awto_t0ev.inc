@@ -38,6 +38,7 @@ void ScalerTimerWDInitial(void)
     EXIF &= ~_BIT4;
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT2;
     EX2 = 1;
+    AwtoSyncPush(AWTO_SYNC_EV_INIT, 3, AWTO_WDT_MODE);
 }
 
 void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventID enumEventID)
@@ -155,6 +156,8 @@ void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCou
 {
     WORD usNew;
     WORD usLeft;
+
+    AwtoSyncT2Start();                          // #29: the first reload starts the 1 ms tick (boot log time base)
 
     __critical
     {

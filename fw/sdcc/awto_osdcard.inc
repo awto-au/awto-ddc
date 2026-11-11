@@ -268,13 +268,14 @@ static void AwtoPsLbl(BYTE ucRow)                  // signal label (one table + 
 // GENERATED-END awto_port_sigs
 
 // GENERATED-BEGIN awto_sync_text
-static const __code BYTE tAwtoSyncFmt[60] = {
-    0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x83, 0x87, 0x88, 0x80, 0x82, 0x85,
-    0x86, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x01, 0x01, 0x01, 0x01};
-static const __code char tAwtoSyncTxtS[] = "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "";
-static const __code WORD tAwtoSyncTxtOff[60] = {0, 9, 21, 31, 47, 60, 72, 93, 105, 121, 136, 154, 169, 178, 188, 201, 215, 236, 252, 268, 291, 312, 336, 363, 383, 401, 425, 441, 469, 506, 537, 566, 600, 623, 645, 671, 696, 714, 733, 755, 786, 802, 827, 849, 868, 881, 893, 902, 912, 926, 936, 949, 975, 998, 1024, 1054, 1100, 1143, 1190, 1239};
+static const __code BYTE tAwtoSyncFmt[75] = {
+    0x00, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x83, 0x87, 0x88, 0x80, 0x82, 0x85, 0x86,
+    0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x01, 0x01, 0x01, 0x01};
+static const __code char tAwtoSyncTxtS[] = "boot: cold power-up (no valid canary in RAM)\0" "boot: watchdog bite, \x01" "\0" "boot: warm reset, no capture (hardware watchdog or host ISP 0xEE)\0" "boot: watchdog probe reset (test cmd 0x49 / 0x4F)\0" "stage 1: main\0" "stage 2: GPIO init done\0" "stage 3: MCU init done (M2PLL, flash clock, banks, Timer2)\0" "stage 4: pin-share done\0" "stage 5: panel VDD on\0" "stage 6: first main-loop pass\0" "stage 7: DPTx link\0" "stage 8: DPTx video stream\0" "MCU init: crystal clock, watchdog N = 8\0" "Timer2 1 ms tick running\0" "watchdog run-time: warning 1025 ms, reset 1172 ms\0" "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "";
+static const __code WORD tAwtoSyncTxtOff[75] = {0, 45, 68, 134, 184, 198, 222, 281, 305, 327, 357, 376, 403, 443, 468, 518, 527, 539, 549, 565, 578, 590, 611, 623, 639, 654, 672, 687, 696, 706, 719, 733, 754, 770, 786, 809, 830, 854, 881, 901, 919, 943, 959, 987, 1024, 1055, 1084, 1118, 1141, 1163, 1189, 1214, 1232, 1251, 1273, 1304, 1320, 1345, 1367, 1386, 1399, 1411, 1420, 1430, 1444, 1454, 1467, 1493, 1516, 1542, 1572, 1618, 1661, 1708, 1757};
 static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text before (0) / after (1) the value mark, 2 = none; returns the fmt
 {
     const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];
@@ -393,6 +394,13 @@ static void AwtoSyncLine(BYTE ucSeq)
             else AwtoPutNum(ulV, 1);
             break;
         case 9: AwtoPutHex2(puc[1]); break;                                                        // harg
+        case 10:                                                                                   // pc (#29)
+            AwtoPutStr(((puc[4] & 0x80) != 0) ? "STALL TEST, PC " : "STALL, PC ");
+            if(puc[6] >= 0x50) AwtoPutHex2(puc[5]); else AwtoPutChar('C');
+            AwtoPutChar(':');
+            AwtoPutHex2(puc[6]);
+            AwtoPutHex2(puc[7]);
+            break;
         default: break;
     }
     AwtoSyncTxt(ucRow - 1, 1);

@@ -9,7 +9,23 @@
 #   res   value = H << 16 | V -> "3840x2160"          mhz1  value in 0.1 MHz -> "594.0 MHz"     hz1  value in 0.1 Hz -> "60.0 Hz"
 #   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
+#   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
+D0	01	-	boot: cold power-up (no valid canary in RAM)
+D0	02	pc	boot: watchdog bite, %
+D0	03	-	boot: warm reset, no capture (hardware watchdog or host ISP 0xEE)
+D0	04	-	boot: watchdog probe reset (test cmd 0x49 / 0x4F)
+D1	01	-	stage 1: main
+D1	02	-	stage 2: GPIO init done
+D1	03	-	stage 3: MCU init done (M2PLL, flash clock, banks, Timer2)
+D1	04	-	stage 4: pin-share done
+D1	05	-	stage 5: panel VDD on
+D1	06	-	stage 6: first main-loop pass
+D1	07	-	stage 7: DPTx link
+D1	08	-	stage 8: DPTx video stream
+D2	01	-	MCU init: crystal clock, watchdog N = 8
+D2	02	-	Timer2 1 ms tick running
+D2	03	-	watchdog run-time: warning 1025 ms, reset 1172 ms
 C0	01	-	power on
 C0	02	vport	switch to %
 C0	03	vport	wake on %

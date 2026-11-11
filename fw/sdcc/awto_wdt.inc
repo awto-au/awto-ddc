@@ -47,16 +47,18 @@ void AwtoWdtInit(void)
     BYTE ucNew = ((ScalerGetByte(AWTO_P0_01_HOST_CTRL) & _BIT6) == 0) ? AWTO_WDT_B_LVR : 0;
 
     ScalerSetBit(AWTO_P0_01_HOST_CTRL, ~(_BIT6 | _BIT0), _BIT6);   // reset_chk: an LVR clears it (regdb P0_01[6])
+    // cold = no valid record (P0_01[6] reads 0 after every reset on unit 2, #131: kept in ucBoot as a raw fact only)
     if(AwtoWdtValid() == _FALSE)
     {
         AwtoWdtFresh();
         ucOld = 0;
+        ucNew |= AWTO_WDT_B_COLD;
     }
-    if((ucOld & AWTO_WDT_B_BITE) != 0)
+    else if((ucOld & AWTO_WDT_B_BITE) != 0)
     {
-        ucNew |= AWTO_WDT_B_NEW;
+        ucNew |= AWTO_WDT_B_NEW | AWTO_WDT_B_AFTER;
     }
-    else if(ucNew == 0)
+    else
     {
         ucNew |= AWTO_WDT_B_WARM;
         if(g_stAwtoWdt.ucWarm != 0xFF)
@@ -68,6 +70,7 @@ void AwtoWdtInit(void)
     if((g_stAwtoWdt.ucProbe & AWTO_WDT_P_ARMED) != 0)
     {
         g_stAwtoWdt.ucProbe = (g_stAwtoWdt.ucProbe & ~AWTO_WDT_P_ARMED) | AWTO_WDT_P_RESET;    // the probe's reset
+        ucNew |= AWTO_WDT_B_PROBE;
     }
     AwtoWdtSeal();
     g_stAwtoWdt.ucBoot = ucNew;
@@ -75,6 +78,20 @@ void AwtoWdtInit(void)
     g_stAwtoWdt.ucPassLo = 0;
     g_stAwtoWdt.ucMaxPass = 0;
     g_stAwtoWdt.ucMaxPoke = 0;
+}
+
+// Why this boot (#29). Inputs: the canary only (no reset-cause flag in DW8051 or RL6449; a found one goes in here first).
+BYTE AwtoBootReason(void)
+{
+    BYTE ucB = g_stAwtoWdt.ucBoot;
+
+    return ((ucB & AWTO_WDT_B_COLD) != 0) ? AWTO_BOOT_COLD : ((ucB & AWTO_WDT_B_AFTER) != 0) ? AWTO_BOOT_BITE :
+           ((ucB & AWTO_WDT_B_PROBE) != 0) ? AWTO_BOOT_PROBE : AWTO_BOOT_WARM;
+}
+
+DWORD AwtoBootValue(void)                       // bite: cause << 24 | bank << 16 | PC (sync.tsv fmt pc)
+{
+    return ((DWORD)g_stAwtoWdt.ucCause << 24) | ((DWORD)g_stAwtoWdt.ucBank << 16) | ((WORD)g_stAwtoWdt.ucPcHi << 8) | g_stAwtoWdt.ucPcLo;
 }
 
 // WDT IRQ context (SysTimerWDIntProc), never returns. Frame at entry: SP0 + 1 PCL, + 2 PCH, then the ISR prologue pushes

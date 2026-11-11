@@ -13,6 +13,10 @@ void AwtoDiagStage(unsigned char ucStage)
         while(usNow != g_usTimerCounter);
         g_stAwtoDiag.usStageMs[ucStage - 1] = usNow;
         g_stAwtoDiag.ucStage = ucStage;
+        if(ucStage >= 2)
+        {
+            AwtoSyncPush(AWTO_SYNC_EV_STAGE, ucStage, 0);      // stage 1 = AwtoSyncInit's line (the ring starts after it)
+        }
     }
 }
 

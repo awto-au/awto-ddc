@@ -24,7 +24,7 @@ import msg_table as MT  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
-XRAM = (0xD700, 0xF6B0)                                       # SDK XDATA end 0xF700 less the 48 B diag block and 32 B watchdog record (RL6449_Project.h)
+XRAM = (0xD700, 0xF69C)                                       # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot (RL6449_Project.h)
 EDID_RAM = [(0xE080, 0xE180), (0xE280, 0xE380), (0xE480, 0xE580), (0xE680, 0xE780)]   # Mcu.c MCU_DDCRAM_D0..D3, 256 B each
 BANK = 0x10000
 NBANKS = 14                                                   # banks 14-15 = data (#8)
