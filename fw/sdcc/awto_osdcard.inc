@@ -239,6 +239,28 @@ static void AwtoSourceRows(void)                // Auto, then each port with its
     }
 }
 
+static bit AwtoSourceNoPicture(void)            // power saving / no signal / no support: the SDK hands back to its pop-up timers
+{
+    BYTE ucMode = SysModeGetModeState();
+
+    return ((ucMode == _MODE_STATUS_POWER_SAVING) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT));
+}
+
+// #139 the selector stays open until a choice or a cancel. With no picture the monitor must still sleep: after
+// AWTO_SRC_SLEEP_SEC without a key, the SDK power-saving card (2 s) and power saving. With a picture: no timer.
+static void AwtoSrcSleepArm(void)
+{
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+    if(AwtoSourceNoPicture() == _TRUE)
+    {
+        ScalerTimerReactiveTimerEvent(SEC(AWTO_SRC_SLEEP_SEC), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
+    }
+    else
+    {
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
+    }
+}
+
 // The one way in (SOURCE, UP with a picture, OSD event 7 = no signal / wake): preset to the current input (Auto while auto-scanning).
 void AwtoSourceOpen(void)
 {
@@ -253,6 +275,7 @@ void AwtoSourceOpen(void)
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
+    AwtoSrcSleepArm();
     SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
     OsdFuncSetOsdItemFlag();
     g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
@@ -277,13 +300,6 @@ static void AwtoSourceStep(bit bBack)
     AwtoSrcSet(ucSel);
 }
 
-static bit AwtoSourceNoPicture(void)            // power saving / no signal / no support: the SDK hands back to its pop-up timers
-{
-    BYTE ucMode = SysModeGetModeState();
-
-    return ((ucMode == _MODE_STATUS_POWER_SAVING) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT));
-}
-
 static void AwtoSourceClose(void)
 {
     if(AwtoSourceNoPicture() == _TRUE)
@@ -306,10 +322,7 @@ void AwtoSourceKey(BYTE ucKey)
     {
         AwtoSourceStep(ucKey == _LEFT_KEY_MESSAGE);
         AwtoSourceRows();
-        if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) || (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
-        {
-            ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-        }
+        AwtoSrcSleepArm();
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
     }
     else if(ucKey == _EXIT_KEY_MESSAGE)        // MENU: cancel, the choice goes back
@@ -507,6 +520,11 @@ void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)  // replaces the SDK body (ke
 {
     BYTE ucT;
 
+    if((GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) && ((enumMessage == _OSD_DISP_NOSIGNAL_MSG) || (enumMessage == _OSD_DISP_NOCABLE_MSG)))
+    {
+        AwtoSrcSleepArm();                      // #139: the open selector stays (its rows show the state); the SDK's 3 s is not restarted
+        return;
+    }
     OsdDispDisableOsd();
     if(enumMessage == _OSD_DISP_INPUT_SIGNAL_MSG)
     {

@@ -67,6 +67,11 @@ static BYTE AwtoKeyId(BYTE ucM)                 // single key mask -> id; AWTO_K
 
 static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a key: the SDK OSD timeout restarts (ACTIVE only)
 {
+    if(GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)  // #139: the selector has no OSD timeout (sleep rule: AwtoSrcSleepArm)
+    {
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+        return;
+    }
     if((GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
         if(GET_OSD_TIME_OUT() <= 10)

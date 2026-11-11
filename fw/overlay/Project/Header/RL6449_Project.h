@@ -494,6 +494,8 @@ extern void AwtoFreqUpdate(void);
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoSourceOpen(void);
+// #139 selector, no picture: waits for a key; same 60 s as AWTO_L2_SEC (Dan's panel-off default), x1; expiry = SDK power-saving card, sleep
+#define AWTO_SRC_SLEEP_SEC                                      60
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 // #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+DOWN, test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.

@@ -453,6 +453,9 @@ SUBS += [
      for fn in ("OsdDispHotKeySourceMenuIcon", "OsdDispHotKeySourceMenu", "OsdDispHotKeySourceMenuSwitch")] + [
     (OSD + "RTD2014OsdFontDynamicIcon_1.c", r"(\n[ ]+)OsdFontVLCLoadInputIcon\(ucIconPos, usIcon\);",
      lambda m: m.group(1) + "// [keil2sdcc] sub #134: no input icons (the selector is text)", 1),
+    # #139: no 3 s power-saving close after the no-signal way in; AwtoSourceOpen arms the selector's sleep rule
+    (OSD + "RTD2014Osd.c", r"(AwtoSourceOpen\(\);  // \[keil2sdcc\] sub #134\n\s*\n)(\s*)ScalerTimerReactiveTimerEvent\(SEC\(3\), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING\);",
+     lambda m: m.group(1) + m.group(2) + "// [keil2sdcc] sub #139: sleep rule in AwtoSourceOpen (AwtoSrcSleepArm)", 1),
 ]
 # #124 message cards on the text layer (fw/sdcc/awto_osdcard.inc OsdDispOsdMessage): the SDK body goes, and the string-table
 # cases only its info pop-up asked for stop calling their builders (the hot-key menus still use OsdPropPutString*).
