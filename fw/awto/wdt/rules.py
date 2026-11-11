@@ -19,6 +19,11 @@ def _feed(m):
 
 
 SUBS = [
+    # #138: a watchdog is never off. Compiled out here (_FLASH_PARTITION_NONE); kept safe if the boot partition is ever used
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c",
+     r"// Disable watchdog timer\n    MCU_FFEA_WATCHDOG_TIMER &= ~\(_BIT7\);",
+     "// awto #138: watchdog stays on: clear, longest period (N = 8)\n"
+     "    MCU_FFEA_WATCHDOG_TIMER |= _BIT7 | _BIT6 | _BIT2 | _BIT1 | _BIT0;  // [keil2sdcc] sub #138", 1),
     # one feed per elapsed ms inside each bounded wait: the wait itself is not a hang (its bound is the SDK's)
     (TMR, r"(void ScalerTimerDelayXms\(WORD usNum\)\n\{.*?g_bNotifyTimer2Int = _FALSE;\n.*?g_bNotifyTimer2Int = _FALSE;)", _feed, 1),
     (TMR, r"(bit ScalerTimerPollingFlagProc\(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess\)\n\{.*?usTimeElapsed\+\+;)", _feed, 1),

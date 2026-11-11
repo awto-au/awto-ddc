@@ -6,9 +6,9 @@
 
 	.area	CSEG	(CODE)
 ___sdcc_external_startup:
-	mov	dptr,#0xFFEA		; MCU_FFEA_WATCHDOG_TIMER: clear watchdog, CNT1 max
+	mov	dptr,#0xFFEA		; MCU_FFEA_WATCHDOG_TIMER: stays on (reset value), clear, CNT1 max N = 8 (~4.7 s; #138)
 	movx	a,@dptr
-	orl	a,#0x47
+	orl	a,#0xC7
 	movx	@dptr,a
 	mov	dptr,#0xFFFC		; MCU_FFFC_BANK_SWICH_CONTROL: remap, XRAM+XFR, Pbank_switch, banking on
 	movx	a,@dptr
