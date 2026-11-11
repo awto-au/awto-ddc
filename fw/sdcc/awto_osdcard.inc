@@ -268,13 +268,13 @@ static void AwtoPsLbl(BYTE ucRow)                  // signal label (one table + 
 // GENERATED-END awto_port_sigs
 
 // GENERATED-BEGIN awto_sync_text
-static const __code BYTE tAwtoSyncFmt[52] = {
+static const __code BYTE tAwtoSyncFmt[60] = {
     0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x83, 0x87, 0x88, 0x80, 0x82, 0x85,
-    0x86, 0x00, 0x00, 0x00};
-static const __code char tAwtoSyncTxtS[] = "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "";
-static const __code WORD tAwtoSyncTxtOff[52] = {0, 9, 21, 31, 47, 60, 72, 93, 105, 121, 136, 154, 169, 178, 188, 201, 215, 236, 252, 268, 291, 312, 336, 363, 383, 401, 425, 441, 469, 506, 537, 566, 600, 623, 645, 671, 696, 714, 733, 755, 786, 802, 827, 849, 868, 881, 893, 902, 912, 926, 936, 949};
+    0x86, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x01, 0x01, 0x01, 0x01};
+static const __code char tAwtoSyncTxtS[] = "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "";
+static const __code WORD tAwtoSyncTxtOff[60] = {0, 9, 21, 31, 47, 60, 72, 93, 105, 121, 136, 154, 169, 178, 188, 201, 215, 236, 252, 268, 291, 312, 336, 363, 383, 401, 425, 441, 469, 506, 537, 566, 600, 623, 645, 671, 696, 714, 733, 755, 786, 802, 827, 849, 868, 881, 893, 902, 912, 926, 936, 949, 975, 998, 1024, 1054, 1100, 1143, 1190, 1239};
 static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text before (0) / after (1) the value mark, 2 = none; returns the fmt
 {
     const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];
@@ -811,7 +811,8 @@ static void AwtoSyncConPoll(void)
 }
 
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
-// #144 power-on, mode INITIAL (RTD2014Osd.c, before the panel comes on): the console with the live power-on log, no logo.
+// #144 power-on, mode INITIAL (RTD2014Osd.c, before the panel comes on), and a source-event wake (awto_sync.inc): the
+// console with the live log, no logo.
 // The auto-open request stays: at the settled mode AwtoSyncConPoll reopens it if display setting took the OSD.
 void AwtoBootConsole(void)
 {
@@ -821,6 +822,7 @@ void AwtoBootConsole(void)
     }
     ScalerDDomainBackgroundEnable(_ENABLE);    // black frame under the OSD: also the short T3 (own pattern) at panel on
     AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 0, 0);
+    s_ucConOpen = 0;                            // wake: power saving lost the OSD of a console left open; draw it anew
     AwtoDiagConsole(1);
 }
 #endif

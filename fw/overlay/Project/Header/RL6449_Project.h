@@ -760,6 +760,22 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SYNC_EV_PCLK                                       0xC8    // exact pixel clock, kHz
 #define AWTO_SYNC_EV_POWER                                      0xC9    // arg = new power status (off / saving)
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
+#define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
+#define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
+// #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
+#ifndef _AWTO_PS_WAKE
+#define _AWTO_PS_WAKE                                           _ON
+#endif
+#define AWTO_WAKE_T_CABLE                                       0       // cable status not connected -> connected
+#define AWTO_WAKE_T_EDID                                        1       // DDCn_EDID_IRQ bit0: the source read the EDID
+#define AWTO_WAKE_T_AUX                                         2       // DP AUX_IRQ_STATUS bit0: an AUX command arrived
+#define AWTO_WAKE_T_DPCD                                        3       // DPCD 600h went to D0
+#define AWTO_WAKE_T_N                                           4
+#if(_AWTO_PS_WAKE == _ON)
+#define AWTO_PS_CABLE_SDK()                                     (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
+#else
+#define AWTO_PS_CABLE_SDK()                                     _TRUE
+#endif
 // selector stage codes (AwtoSyncStage): texts in awto_osdcard.inc tAwtoCardS from AWTO_CT_STAGE
 #define AWTO_SYNC_ST_IDLE                                       0
 #define AWTO_SYNC_ST_SEARCH                                     1
@@ -798,7 +814,16 @@ extern unsigned char AwtoDdcLive(unsigned char ucI);
 extern unsigned long AwtoTmdsIdleKhz(unsigned char ucPage);
 #define AWTO_SYNC_SW(id, arg)                                   AwtoSyncSw((id), (arg))
 extern __xdata unsigned char g_ucAwtoSyncPwr;
+#if(_AWTO_PS_WAKE == _ON)
+extern __xdata unsigned char g_ucAwtoPsWakeCon;
+extern void AwtoPsWakePoll(void);
+extern void AwtoPsWakeArm(void);
+extern void AwtoPsWakeReset(void);
+#define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
+                                                                  else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
+#else
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
+#endif
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
 extern void AwtoOsdSyncPoll(void);
 extern void AwtoConLogSync(void);
@@ -818,6 +843,9 @@ extern void AwtoConLogSync(void);
 #endif
 // #144 power-on: mode INITIAL opens the console with the live power-on log (awto_osdcard.inc AwtoBootConsole), then
 // panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).
+#ifndef AWTO_PS_CABLE_SDK
+#define AWTO_PS_CABLE_SDK()                                     _TRUE   // no #144 wake poll (sync log off)
+#endif
 #ifndef _AWTO_BOOT_PANEL_EARLY
 #define _AWTO_BOOT_PANEL_EARLY                                  _ON
 #endif
