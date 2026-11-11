@@ -5,7 +5,8 @@ usage: sync_log.py BUS --map MAP [--tsv TSV] [--serial SERIAL]      read over th
        (library) decode(raw, rows) -> (header dict, [lines]); load_rows(tsv); tsv_for(map)
 - Texts and value formats: the firmware tree's fw/awto/sync.tsv (one file for screen and host). Default TSV = the image's
   <map stem>.sync.tsv (wb_build.py copies it beside the image), else $AWTO_SYNC_TSV.
-- Ring layout (RL6449_Project.h StAwtoSync, bytes only): 12 B header, 24 x 8 B entries {id, arg, ms hi, ms lo, value BE x4}.
+- Ring layout (RL6449_Project.h StAwtoSync, bytes only): 12 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4};
+  version 1: N 24, seq wrap 240; version 2 (#29): N 32, wrap 224, power-on episode times = ms since reset.
 Log: tmp/logs/sync_log.log
 """
 from __future__ import annotations
@@ -19,11 +20,21 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sync_log.log"
-HDR, N, EV, WRAP = 12, 24, 8, 240         # AWTO_SYNC_N / AWTO_SYNC_WRAP: seq 0..239, entry = seq % N
+HDR, N, EV, WRAP = 12, 32, 8, 224         # AWTO_SYNC_N / AWTO_SYNC_WRAP (version 2): seq 0..223, entry = seq % N; read size
+GEOM = {1: (24, 240), 2: (32, 224)}       # ring version -> (N, WRAP)
 D0 = 3                                                   # _D0_INPUT_PORT
 SRC = {2: "DVI", 3: "HDMI", 4: "DP"}
 DP_RATE = {0x06: "RBR", 0x0A: "HBR", 0x14: "HBR2", 0x1E: "HBR3"}
 KINDS = {1: "power on", 2: "switch", 3: "wake", 4: "power key on"}
+SYMBOLIZE = None                                         # set_map(): (bank, pc) -> "fn+0x.." for the pc fmt
+
+
+def set_map(map_path: Path) -> None:
+    """symbols for the pc fmt (boot reason line); rtd_crash's map reader"""
+    global SYMBOLIZE
+    import rtd_crash as C
+    syms = C.load_syms(Path(map_path).read_text(errors="replace"))
+    SYMBOLIZE = lambda bank, pc: C.symbolize(syms, bank, pc)
 
 
 def log(s: str):
@@ -83,6 +94,11 @@ def value(fmt: str, arg: int, v: int) -> str:
         return SRC.get(v, str(v))
     if fmt == "harg":
         return f"{arg:02X}"
+    if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
+        c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
+        where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"
+        sym = SYMBOLIZE(bank, pc) if SYMBOLIZE else ""
+        return ("STALL TEST" if c & 0x80 else "STALL") + f", PC {where}" + (f" {sym}" if sym else "")
     return ""
 
 
@@ -103,12 +119,13 @@ def decode(raw: bytes, rows: list[dict]):
              t0=raw[7] << 8 | raw[8], done=raw[9], open_req=raw[10])
     if h["magic"] != b"SY":
         return h, []
-    n = (h["seq"] - h["ep_seq"]) % WRAP
-    lost = max(0, n - N)
+    n_, wrap = GEOM.get(h["version"], (N, WRAP))
+    n = (h["seq"] - h["ep_seq"]) % wrap
+    lost = max(0, n - n_)
     evs = []
-    for k in range(min(n, N)):
-        s = (h["seq"] - min(n, N) + k) % WRAP
-        e = raw[HDR + EV * (s % N):HDR + EV * (s % N) + EV]
+    for k in range(min(n, n_)):
+        s = (h["seq"] - min(n, n_) + k) % wrap
+        e = raw[HDR + EV * (s % n_):HDR + EV * (s % n_) + EV]
         evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
     h["lost"] = lost
     return h, [line(rows, ev, h["t0"]) for ev in evs]

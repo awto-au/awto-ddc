@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Watchdog crash record v2 (awto-ddc#131, #138, docs/watchdog.md): read, decode, clear over the firmware debug slave 0x35.
 
-usage: rtd_crash.py BUS --map MAP --serial SERIAL [--clear]
+usage: rtd_crash.py BUS --map MAP --serial SERIAL [--clear] [--snap]
 - Reads the 32 B `_g_stAwtoWdt` (address from the map; 0xF6B0 in #131 images) with the 0x3C block read, prints one decoded line:
   cause, bites / other warm resets, PC as bank:addr + symbol+offset (map), registers, heartbeat, uptime, pass age; live: max
   pass, max gap between watchdog pokes, the unit-2 probe result (test cmd 0x49 / 0x4F).
@@ -85,6 +85,45 @@ def line(d: dict, syms: tuple | None = None) -> str:
             f"pass age {d['pass_age']} ms; bites {d['bites']} warm {d['warm']}; {live}")
 
 
+def ages(d: dict) -> str:
+    """live watchdog ages of this boot (record v2): longest main-loop pass, longest gap between pokes"""
+    poke = ">=586" if d["max_poke"] == 0xFF else f"{d['max_poke'] * POKE_MS:.0f}"
+    return f"max pass {d['max_pass'] * 32} ms, max poke gap {poke} ms"
+
+
+# Reset-vector snapshot (#29 / #138): crt_rtd_startup copies these before any init; 20 B at _g_stAwtoSnap (0xF69C).
+SNAP_N = 20
+SNAP_REGS = ("EICON D8", "PCON 87", "EXIF 91", "CKCON 8E", "IE A8", "EIE E8", "IP B8", "EIP F8", "FFEA", "FFEB", "FFAA",
+             "FFAB", "FFAC", "FFAD", "FFE0", "FFED", "FFEE", "P0_01")
+# DW8051 databook v3.2a reset values (SFRs; XFRs: regdb). A byte away from it on some reset type = reset-cause candidate.
+SNAP_RESET = {"EICON D8": 0x40, "PCON 87": 0x30, "EXIF 91": 0x08, "CKCON 8E": 0x01, "IE A8": 0x00, "EIE E8": 0xE0,
+              "IP B8": 0x80, "EIP F8": 0xE0}
+
+
+def snap_addr(map_text: str) -> int | None:
+    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSnap\b", map_text, re.M)
+    return int(m.group(1), 16) & 0xFFFF if m else None
+
+
+def snap_decode(b: bytes) -> dict | None:
+    if b is None or len(b) < SNAP_N or b[0:2] != b"RS":
+        return None
+    return dict(zip(SNAP_REGS, b[2:SNAP_N]))
+
+
+def snap_line(s: dict | None) -> str:
+    if s is None:
+        return "no snapshot"
+    return " ".join(f"{k.split()[0]}={v:02X}" + ("" if SNAP_RESET.get(k, v) == v else "!") for k, v in s.items())
+
+
+def snap_diff(snaps: list) -> str:
+    """registers that differ between snapshots (reset-cause candidates)"""
+    ok = [s for s in snaps if s]
+    d = [k for k in SNAP_REGS if len({s[k] for s in ok}) > 1]
+    return ", ".join(f"{k}: " + "/".join(f"{s[k]:02X}" for s in ok) for k in d) or "none"
+
+
 def read(io, addr: int) -> bytes | None:
     return X.read_blocks(io, addr, SIZE)
 
@@ -109,6 +148,7 @@ def main() -> int:
     ap.add_argument("--map", required=True, type=Path)
     ap.add_argument("--serial", required=True)
     ap.add_argument("--clear", action="store_true")
+    ap.add_argument("--snap", action="store_true", help="also print the reset-vector snapshot (#29), '!' = not the DW8051 reset value")
     a = ap.parse_args()
     i2cbus.require_unit(a.bus, a.serial)
     mt = a.map.read_text(errors="replace")
@@ -120,6 +160,9 @@ def main() -> int:
         if b is None:
             raise SystemExit("crash record read failed (debug slave 0x35 silent or checksum errors)")
         out = line(decode(b), syms)
+        if a.snap:
+            sa = snap_addr(mt)
+            out += "; snapshot: " + (snap_line(snap_decode(X.read_blocks(io, sa, SNAP_N))) if sa else "image without it")
         if a.clear:
             out += "; " + ("cleared" if clear(io, addr) else "CLEAR FAILED (I2C write)")
         print(out)

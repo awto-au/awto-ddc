@@ -308,6 +308,29 @@ class Runner:
             self.t.wait(0.3)
         raise SystemExit("record read failed (0x35 silent)")
 
+    WANT = {"cold": "boot: cold power-up", "stall": "boot: watchdog bite", "ea_off": "boot: warm reset, no capture",
+            "probe": "boot: watchdog probe reset", "clear": "boot: cold power-up", "prio": "boot: watchdog bite"}
+
+    def after_reset(self, label: str):
+        """#29: snapshot + first sync-log line of this boot (images that have them)"""
+        sa = C.snap_addr(self.t.map_text)
+        if sa is not None:
+            import dbg_xdata as X
+            s = C.snap_decode(X.read_blocks(self.t.io, sa, C.SNAP_N))
+            self.snaps = getattr(self, "snaps", []) + [(label, s)]
+            self.say(f"  snapshot after {label}: {C.snap_line(s)}")
+        if self.has("AwtoBootReason"):
+            import sync_log as SL
+            import dbg_xdata as X
+            SL.set_map(self.a.map_path)
+            ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+            raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+            _, lines = SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path))) if raw else ({}, [])
+            got = lines[0].split(" ms ", 1)[-1] if lines else "(no line)"
+            want = self.WANT.get(label.split("-")[0], "boot:")
+            self.reasons = getattr(self, "reasons", []) + [(want, got)]
+            self.say(f"  first sync line after {label}: {got}")
+
     def has(self, sym: str) -> bool:
         return re.search(rf"\b_{sym}\b", self.t.map_text) is not None
 
@@ -326,9 +349,13 @@ class Runner:
             return self.row(name, "HANG" if kind == "hang" else "FAIL",
                             f"no reset by {dl:.0f} ms" + (" and not back: POWER-CYCLE UNIT 2" if kind == "hang" else "")), None, None
         after = self.rec()
+        self.after_reset(name)
         return None, (before, after, dt), dl
 
     def c_baseline(self):
+        if not getattr(self, "_cold_done", False):
+            self._cold_done = True
+            self.after_reset("cold" if self.t.name == "sim" else "current")
         d0 = self.rec()
         kind, _ = self.t.wait_reset(self.a.baseline_s * 1000)
         d1 = self.rec()
@@ -368,6 +395,8 @@ class Runner:
             if kind == "none":
                 self.t.wait(0.2)
             d = self.rec()
+            if kind == "reset":
+                self.after_reset(f"probe-{mode}")
             got = "|".join(n for bit, n in C.PROBE if d["probe"] & bit)
             decided = bool(d["probe"] & 0x18)
             self.row(f"probe-{mode}", "PASS" if decided else "FAIL",
@@ -376,10 +405,10 @@ class Runner:
     def c_snapshot(self):
         if not self.has("g_stAwtoSnap"):
             return self.row("snapshot", "SKIP", "image without the reset-vector snapshot (_g_stAwtoSnap, #29 task 5)")
-        import rtd_crash as RC
         snaps = getattr(self, "snaps", [])
-        self.row("snapshot", "PASS" if snaps else "SKIP",
-                 "; ".join(f"{k}: {RC.snap_line(s)}" for k, s in snaps) + ("; diffs " + RC.snap_diff([s for _, s in snaps]) if len(snaps) > 1 else ""))
+        ok = bool(snaps) and all(s is not None for _, s in snaps)
+        self.row("snapshot", "PASS" if ok else "FAIL", f"{len(snaps)} snapshots ({', '.join(k for k, _ in snaps)}); "
+                 f"differs between them: {C.snap_diff([s for _, s in snaps])}")
 
     def c_reason(self):
         if not self.has("AwtoBootReason"):
@@ -394,6 +423,7 @@ class Runner:
         ok1 = ok1 and not d["valid"]
         self.t.soft_reset()
         d2 = self.rec()
+        self.after_reset("clear")
         ok = ok1 and d2["valid"] and d2["bites"] == 0
         self.row("clear", "PASS" if ok else "FAIL", f"after clear valid={d['valid']}; after a soft reboot valid={d2['valid']} "
                  f"bites {d2['bites']} warm {d2['warm']}")
@@ -596,6 +626,7 @@ class Runner:
             if kind != "reset":
                 bad += 1; txt.append(f"{label}: {kind}" + (" POWER-CYCLE UNIT 2" if kind == "hang" else "")); continue
             d = self.rec()
+            self.after_reset("prio" if where else "ea_off")
             sym = C.symbolize(self.syms, d["bank"], d["pc"])
             if where:
                 ok = d["bites"] == before["bites"] + 1 and sym.startswith(where)
@@ -647,7 +678,8 @@ class Runner:
         self.row("tick_load", "INFO", txt + " (machine cycles, sim)")
 
     def run(self, names):
-        for n in names:
+        late = [n for n in names if n in ("snapshot", "reason")]       # judged on what the other cases' resets left
+        for n in [n for n in names if n not in late] + late:
             getattr(self, "c_" + n)()
         fails = [r for r in self.rows if r[1] in ("FAIL", "HANG")]
         self.say("---- wdt_test summary " + ("(" + self.t.name + ")"))
@@ -678,6 +710,7 @@ def main() -> int:
             dl = f"1.25 x {w:.1f} = {1.25 * w:.0f} ms" if w else "-"
             print(f"{n:9s} cmd {'-' if cmd is None else f'0x{cmd:02X}':4s} expected: {exp}; deadline {dl}; checks: {chk}")
         return 0
+    a.map_path = a.sim[1] if a.sim else a.map
     names = [n for n in a.cases.split(",") if n]
     order = [c[0] for c in CASES]
     names.sort(key=order.index)                  # ea_off last (can need a power cycle)

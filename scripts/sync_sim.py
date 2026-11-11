@@ -155,7 +155,7 @@ def main():
             r.shot(f"{name}_console")
             r.cmd(CON_CLOSE, 0.5)
         d = C.decode(C.read(r.s.bus, r.caddr))
-        say(f"  measured, watchdog: max feed age {d['max_feed']} checks, max pass age {d['max_pass']} checks")
+        say(f"  measured, watchdog: {C.ages(d)}")
         r.check(r.cr.resets == 0, "no chip reset (watchdog) over power-on, selector and two switches", f"resets {r.cr.resets}")
     finally:
         r.s.bus.close()

@@ -210,7 +210,7 @@ def main():
         if r.pass_ms:
             say(f"  measured, power-saving main-loop pass: {min(r.pass_ms):.2f}..{max(r.pass_ms):.2f} ms")
         d = C.decode(C.read(r.bus, r.caddr))
-        say(f"  measured, watchdog: max feed age {d['max_feed']} checks, max pass age {d['max_pass']} checks")
+        say(f"  measured, watchdog: {C.ages(d)}")
         r.check(r.cr.resets == 0, "no chip reset (watchdog)", f"resets {r.cr.resets}")
     finally:
         r.bus.close()

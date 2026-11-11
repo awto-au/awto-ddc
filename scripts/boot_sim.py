@@ -8,6 +8,8 @@ usage: AWTO_SIM_CORE=fast boot_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot] 
 - Checks: no logo symbols in the map; console open before display setting with the 120 x 63 map; the same console still
   open at ACTIVE (one "console opened" line: it survived display setting); power-on log lines; no chip reset.
 - Prints power-on -> ACTIVE (sync ring) and first-console / backlight-on times.
+- #29 (images with AwtoBootReason): first line = boot reason, stage lines, times since reset; cold boot and, with --bite
+  (default), after a 0x4C watchdog bite. PNGs boot_reason_cold.png / boot_reason_bite.png.
 Log: tmp/logs/boot_sim.log
 """
 import argparse
@@ -29,6 +31,7 @@ CON_COLS, CON_MAP_ROWS = 120, 63      # awto_dbgpop.inc AWTO_CON_COLS, AWTO_CON_
 AFTER_MS = 300                        # after ACTIVE: the console has had display setting + active proc behind it
 BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
 STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)
+BITE_INSTR = 40_000_000               # 0x4C -> reset: cmd ~0.1 s + warning 1.03 s at ~12.6 k instr / fw ms = 14 M; x2.5
 LOGO_SYMS = ("_OsdDispShowLogo", "_AwtoLogoDraw", "_tICON_REALTEK_1BIT_LOGO0", "_tAWTO_LOGO_RUNS", "_AwtoTestHoldLogoOff")
 
 
@@ -75,6 +78,19 @@ class Run:
         sm = M.summary(st)
         say(f"  png {out} at {self.ms():.0f} ms (OSD {'on' if sm['en'] else 'OFF'}, grid {sm['cols']}x{sm['rows']})")
 
+    def reason(self, tag, want, lines, sym=""):
+        """#29: first line = the reason; stage lines 1..6 present, times (ms since reset) never step back; PNG."""
+        for ln in lines[:16]:
+            say(f"    {ln}")
+        first = lines[0].split(" ms ", 1)[1] if lines else ""
+        self.check(first.startswith(want) and sym in first, f"{tag}: first line is the boot reason", first)
+        st = [ln for ln in lines if " stage " in ln]
+        self.check(len(st) >= 6, f"{tag}: boot stage lines", f"{len(st)}")
+        ms = [int(ln[1:].split("ms")[0]) for ln in lines]
+        # 1 ms slack: the WDT-counter time (before Timer2) and the Timer2 time meet with integer-ms truncation
+        self.check(all(b >= a - 1 for a, b in zip(ms, ms[1:])), f"{tag}: line times never step back (> 1 ms)", str(ms[:12]))
+        self.shot(f"boot_reason_{tag}")
+
     def episode(self):
         return S.decode(self.m.rd(self.ring, S.HDR + S.N * S.EV), self.rows)
 
@@ -86,6 +102,7 @@ def main():
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/boot")
     ap.add_argument("--at", type=float, nargs="*", default=[300.0, 1000.0])
+    ap.add_argument("--bite", action=argparse.BooleanOptionalAction, default=True, help="#29: 0x4C bite, reboot, reason line")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     say(f"boot_sim {a.bin.name}")
@@ -133,8 +150,24 @@ def main():
             r.check(want in txt, f"power-on log has '{want}'")
         r.bus.dbg_link_on()                         # #79 images: 0x35 parked off the host port until this
         d = C.decode(C.read(r.bus, r.caddr))
-        say(f"  measured, watchdog: max feed age {d['max_feed']} checks, max pass age {d['max_pass']} checks")
+        say(f"  measured, watchdog: {C.ages(d)}")
         r.check(r.cr.resets == 0, "no chip reset (watchdog)", f"resets {r.cr.resets}")
+        if "_AwtoBootReason" in r.mt:               # #29: reason line first, boot stages with ms since reset
+            S.set_map(a.map)
+            r.reason("cold", "boot: cold power-up", lines)
+            if a.bite:
+                T = __import__("osd_test")
+                ad = T.diag_addr(a.map) + T.TESTCMD_OFF
+                r.bus.write(0x6A, 0x01, bytes([ad >> 8])); r.bus.write(0x6A, 0x03, b"\x4c"); r.bus.write(0x6A, 0x3B, bytes([ad & 0xFF]))
+                used = 0
+                while r.cr.resets == 0 and used < BITE_INSTR:
+                    r.m.run(STEP); used += STEP
+                r.check(r.cr.resets == 1, "test cmd 0x4C: watchdog reset", f"{used} instr")
+                while r.bus.mode_state() == 3 and used < 2 * BITE_INSTR:     # ACTIVE in RAM until init rewrites it
+                    r.m.run(STEP); used += STEP
+                r.check(r.bus.run_until_mode(3), "ACTIVE again after the bite")
+                r.bus.wait(AFTER_MS / 1000.0)
+                r.reason("bite", "boot: watchdog bite, STALL TEST, PC ", r.episode()[1], "AwtoWdtHang+")
     finally:
         r.bus.close()
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} boot_sim {a.bin.name}: {r.fails} failed")

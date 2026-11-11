@@ -409,6 +409,7 @@ def _main() -> int:
         raw = X.read_blocks(w, S.sym(Path(mp), "g_stAwtoSync"), S.HDR + S.N * S.EV)
         if raw is None:
             print("sync: read over 0x35 failed"); return 1
+        S.set_map(Path(mp))                       # #29: boot reason PC as symbol + offset
         h, lines = S.decode(bytes(raw), S.load_rows(S.tsv_for(Path(mp))))
         txt = "\n".join([f"sync episode: {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines"] + ["  " + ln for ln in lines])
         print(txt); log(txt)
