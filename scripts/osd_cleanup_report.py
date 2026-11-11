@@ -21,6 +21,7 @@ CARD_ICONS = r"tFONT1_ICON_(NO_SUPPORT|NO_CABLE|NO_SIGNAL|NO_SIGANL|POWER_SAVIN|
 FREEZE_ICONS = r"tFONT1_ICON_FREEZE"
 LANG_ICONS = r"tFONT1_ICON_(ENGLISH|CHINESE_T)"
 KEEP_ICONS = r"tFONT1_ICON_(INFORMATION|DDCCI|ON|OFF)$"
+SRC_ICONS = r"tFONT1_ICON_(INPUT|AUTOSELECT|VGA|DVI|HDMI|DP|MHL|NO_PORT|D\d|1_DOT_\d)$"
 
 # id, title, areas (regex on map area names, full match), exclude regex, source definitions (regex on names) for LOC
 ITEMS = [
@@ -32,7 +33,7 @@ ITEMS = [
     ("realtek-menu", "Realtek SDK menu: optional (icons + menu code) behind a build flag",
      [r"tFONT1_ICON_.*", r"Menu[A-Z]\w*", r"OsdDispMainMenu\w*", r"tOSD_iREALTEK", r"tOSD_iKEY_\w+", r"OsdDispSliderAndNumber",
       r"OsdDispClear\w*", r"OsdDispAdvance\w*", r"OsdDispSixColor\w*", r"OsdDispMainSubString", r"OsdDispMainOptionIcon"],
-     "|".join([CARD_ICONS, FREEZE_ICONS, LANG_ICONS, KEEP_ICONS, r"MenuHotKey\w*"]),
+     "|".join([CARD_ICONS, FREEZE_ICONS, LANG_ICONS, KEEP_ICONS, SRC_ICONS, r"MenuHotKey\w*"]),
      [r"Menu[A-Z]\w*", r"OsdDispMainMenu\w*", r"OsdDispSliderAndNumber", r"OsdDispAdvance\w*", r"OsdDispSixColor\w*", r"tFONT1_ICON_\w+"]),
     ("factory-menu", "Factory menu: optional behind a build flag", [r"RTDFactory\w*", r"tFONT_FACTORY\w*", r"OperationFactory\w*", r"tFactory\w*"],
      None, [r"RTDFactory\w*", r"tFONT_FACTORY\w*"]),
@@ -43,6 +44,17 @@ ITEMS = [
     ("sdk-cards", "Port the message cards to the text layer (drop SDK card bodies, proportional font, card windows)",
      [r"OsdDispOsdMessage", r"tsFontCBody0", r"tsFontWidth0", r"OsdPropPutString\w*", r"OsdFontVLC\w*"], None,
      [r"OsdDispOsdMessage", r"OsdPropPutString\w*", r"AwtoCard\w*"]),
+    ("prop-strings", "SDK proportional-string helpers behind the info pop-up and cards (go with sdk-cards)",
+     [r"OsdPropGet\w*", r"OsdPropSet\w*", r"OsdPropFontDataToSram", r"OsdPropVideoResolution", r"tFONT1_GLOBAL"], None,
+     [r"OsdPropGet\w*", r"OsdPropSet\w*", r"OsdPropFontDataToSram", r"OsdPropVideoResolution"]),
+    ("source-selector", "Source selector still drawn by the SDK hot-key source menu + port icons",
+     [r"OsdDispHotKeySourceMenu\w*", SRC_ICONS[:-1],
+      r"OsdFontVLCLoadInputIcon", r"tFONT1_MAIN_ICON_TABLE_\d"], None, [r"OsdDispHotKeySourceMenu\w*"]),
+    ("diag-code", "Diagnostics / test code (console, probe, key test, delay cal, test commands)",
+     [r"AwtoDiag\w*", r"AwtoProbe\w*", r"AwtoKey(Show|Letter|Log)\w*", r"AwtoOsd(Debug|Key|Gpio)Lines"], None,
+     [r"AwtoDiag\w*", r"AwtoProbe\w*", r"AwtoKey(Show|Letter|Log)\w*", r"AwtoOsd(Debug|Key|Gpio)Lines"]),
+    ("boot-logo", "Boot logo (our art, SDK names tICON_REALTEK_*)", [r"tICON_REALTEK_1BIT_LOGO\d", r"tAWTO_LOGO_RUNS", r"AwtoLogoDraw", r"OsdDispShowLogo"],
+     None, [r"AwtoLogoDraw", r"OsdDispShowLogo"]),
 ]
 
 
