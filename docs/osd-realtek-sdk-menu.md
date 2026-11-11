@@ -1,16 +1,24 @@
 # Realtek SDK menu (RTD2014 demo OSD), as built for our board
 
-- **Not** Dahua's original menu: this is Realtek's demo UI from the SDK, compiled into our own images. Naming: [osd.md](osd.md#naming).
-- In our menu it is "Vendor menu" (System page) until #87 relabels it.
+- **Not** Dahua's original menu: this is Realtek's demo UI from the SDK. Naming: [osd.md](osd.md#naming).
+- **Built out of the default image since 2026-11-11** (#120). Nothing opens the 9-icon menu; System > Realtek menu and
+  "Menu key opens" retired (registry ids 93 / 64, `awto-rtdfw` 9604103).
+- Re-enable: `-D _AWTO_REALTEK_MENU=_ON` (`RL6449_Project.h`, default `_OFF`; works at 6bd79ce, #129 removes the path).
+- Every setting in the table below that has an effect exists in the awto menu (coverage check in #120, 2026-11-11).
+  Information rows (H freq, pixel clock, HDCP) added in 73e48c4.
+- The Factory page is still built (System > Factory; `RTDFactoryMainMenu`).
+- The page table and key walk below are kept as a historical reference (sim renders of 2026-11-08).
 
 Walked for awto-ddc#67 (2026-11-08): sim renders of image wb-p14sw (`scripts/osd_render.py`, key actions) plus the
 compiled source tree (tmp/sdcc-port/src of the p14sc3 line). Every row here is a `[sdk-ui]` row of
-`awto-rtdfw/settings/registry.tsv` (tag = Realtek SDK menu fact; rename pending, #87); our list: [settings.md](settings.md).
+`awto-rtdfw/settings/registry.tsv` (tag = Realtek SDK menu fact); our list: [settings.md](settings.md).
 
 - Renders: `tmp/osd67/sdk/sdk_icon_*.png` (main icon row, one per icon), `tmp/osd67/sdk_main.png`.
 - Main menu: 9 icons, wrapping: Picture, Display, Color, Advance, Input, Audio, Other, Information, Factory.
-- Keys: OSD off: Menu = open (ACTIVE only), Right = source hot menu, Left = input info / hold 3 s DP version, Exit = DDC/CI
-  hot menu (no signal). Icon: Menu = enter, Right / Left = next / previous (wrap), Exit = close. Item: Menu = adjust,
+- Keys: OSD off: Menu = open (ACTIVE only), Right = source hot menu, Left = input info / hold 3 s DP version, Exit = nothing
+  (`scripts/keil2sdcc.py` exit-role patch, #85; the DDC/CI hot-menu path went with it; SDK hot-key menus #122).
+  Physical keys: Menu role = AUTO, Right = UP, Left = DOWN, Exit = MENU, SOURCE = source selector (#129 key table).
+  Icon: Menu = enter, Right / Left = next / previous (wrap), Exit = close. Item: Menu = adjust,
   Exit = back. Adjust: Right / Left = +1 / -1 (repeat after 0.5 s), Menu = keep + save, Exit = revert.
 - Sliders show 0-100 %, mapped piecewise-linear around the centre to the real value (UserCommonAdjustPercentToRealValue).
 
