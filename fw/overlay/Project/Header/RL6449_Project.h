@@ -820,6 +820,7 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
 #define AWTO_SYNC_EV_INIT                                       0xD2    // arg 1 MCU init, 2 Timer2 tick, 3 watchdog run-time mode
+#define AWTO_SYNC_EV_UNPLUG                                     0xD3    // arg = port: a cable unplug woke the monitor (AWTO_WAKE_T_UNPLUG)
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON
@@ -828,7 +829,8 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_WAKE_T_EDID                                        1       // DDCn_EDID_IRQ bit0: the source read the EDID
 #define AWTO_WAKE_T_AUX                                         2       // DP AUX_IRQ_STATUS bit0: an AUX command arrived
 #define AWTO_WAKE_T_DPCD                                        3       // DPCD 600h went to D0
-#define AWTO_WAKE_T_N                                           4
+#define AWTO_WAKE_T_UNPLUG                                      4       // cable status connected -> not connected (task 6)
+#define AWTO_WAKE_T_N                                           5
 #if(_AWTO_PS_WAKE == _ON)
 #define AWTO_PS_CABLE_SDK()                                     (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
 #else

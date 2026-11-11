@@ -417,8 +417,8 @@ SUBS += [
     (_OSDH, r"\nextern void OsdDispShowLogo\(void\);", lambda m: "", 1),
     # the logo-end timer event: never armed now
     (UI, r"        case _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO:\n.*?break;\n\n", lambda m: "", 1),
-    # #144 task 4: in power saving the cable wake is ours (any port, plug edge only); the SDK's woke on any change of the
-    # NVRAM search port, unplug included
+    # #144 task 4 / #138 task 6: in power saving the cable wake is ours (any port, plug and unplug edges, one line each);
+    # the SDK's woke on any change of the NVRAM search port: off, so there is one wake path
     (UI, r"(bit UserInterfaceGetCableResetStatus\(void\)\n\{\n    if\()",
      lambda m: m.group(1) + "AWTO_PS_CABLE_SDK() && ", 1),
 ]
