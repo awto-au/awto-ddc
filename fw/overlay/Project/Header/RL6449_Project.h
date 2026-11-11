@@ -217,10 +217,11 @@ extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_POKE()                                         do { unsigned char ucG_; AWTO_XFR(0xFFEA) |= 0x40; \
                                                                      ucG_ = ((AWTO_XFR(0xFFAD) & 0x07) != 0) ? 0xFF : (AWTO_XFR(0xFFAC) & 0x7F); \
                                                                      if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; } } while(0)
+// g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
 #define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
 #define AWTO_WDT_FEED()                                         AWTO_WDT_POKE()     // inside a bounded loop (docs/watchdog.md table)
 #define AWTO_WDT_PASS(usNow)                                    do { unsigned int usG_ = (usNow) - AWTO_WDT_PASS_AT(); \
-                                                                     usG_ = ((usG_ >> 5) > 0xFF) ? 0xFF : (usG_ >> 5); \
+                                                                     usG_ = (usG_ >= 0x8000) ? 0 : (((usG_ >> 5) > 0xFF) ? 0xFF : (usG_ >> 5)); \
                                                                      if((unsigned char)usG_ > g_stAwtoWdt.ucMaxPass) { g_stAwtoWdt.ucMaxPass = (unsigned char)usG_; } \
                                                                      g_stAwtoWdt.ucPassHi = (unsigned char)((usNow) >> 8); g_stAwtoWdt.ucPassLo = (unsigned char)(usNow); \
                                                                      AWTO_WDT_POKE(); } while(0)
@@ -241,6 +242,9 @@ extern void AwtoWdtShow(void);
 extern void AwtoT0EvIsr(void);
 extern void AwtoT0EvClock(void);
 extern void AwtoT0EvTest(unsigned char ucHow);
+extern void AwtoT0EvTestIsr(void);
+extern volatile __xdata unsigned char g_ucAwtoT0Test;
+#define AWTO_T0EV_EXINT0()                                      do { if(g_ucAwtoT0Test != 0) { AwtoT0EvTestIsr(); } } while(0)
 #define AWTO_MSG_RING                                           40      // on-screen message log entries (#56)
 typedef struct
 {

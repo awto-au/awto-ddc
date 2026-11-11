@@ -81,6 +81,18 @@ void AwtoDiagTestCmd(void)
     {                                                   // 2D 2A+2B, 2E/2F = 2A/2B across a forced clock-switch reload
         AwtoT0EvTest(ucCmd - 0x2A);
     }
+    else if((ucCmd >= 0x5A) && (ucCmd <= 0x5C))         // 5A/5B = 2A/2B at the PS reload, 5C three out of order + cancel
+    {
+        AwtoT0EvTest(ucCmd - 0x5A + 6);
+    }
+    else if(ucCmd == 0x24)                              // stuck Timer0 handler
+    {
+        AwtoT0EvTest(9);
+    }
+    else if((ucCmd == 0x25) || ((ucCmd >= 0x5D) && (ucCmd <= 0x5F)))   // EXINT0 hook: 25 off, 5D arm, 5E 2 ms spin, 5F stuck
+    {
+        g_ucAwtoT0Test = (ucCmd == 0x25) ? 0 : (ucCmd - 0x5C);
+    }
 #endif
     else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)
     {

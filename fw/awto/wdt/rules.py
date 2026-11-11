@@ -50,6 +50,9 @@ SUBS = [
      lambda m: "    // [keil2sdcc] sub #138: no watchdog work in the 1 ms tick" + "\n" * m.group(0).count("\n"), 1),
     ("Kernel/System/Code/SysTimer.c", r"    ScalerTimerWDEventProc_WDINT\(\);",
      "    AWTO_WDT_IRQ();  // [keil2sdcc] sub #138: watchdog warning (capture + reset)", 1),
+    # interrupt tests (wdt_test.py prio_*, t0_arm_from_isr): one XDATA flag test per EXINT0
+    ("Kernel/System/Code/SysInt.c", r"(void SysEXINT0\(void\)[^\n]*\n\{\n    // Backup for Burst Write Bug\n    g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR;)",
+     lambda m: m.group(1) + " AWTO_T0EV_EXINT0();  // [keil2sdcc] sub #138", 1),
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c", r"MCU_FFEA_WATCHDOG_TIMER \|= 0x40;",
      "AWTO_WDT_FEED();  // [keil2sdcc] sub #138", 3),
 ]

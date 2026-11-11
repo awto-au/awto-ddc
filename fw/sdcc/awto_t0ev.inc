@@ -70,8 +70,17 @@ void ScalerTimerWDCancelTimerEvent_EXINT0(EnumScalerWDTimerEventID enumEventID)
 }
 #endif
 
+#if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
+extern volatile __xdata BYTE g_ucAwtoT0Test;
+#endif
+
 void AwtoT0EvFire(EnumScalerWDTimerEventID enumEventID)     // the SDK's WD event switch; Timer0 ISR context
 {
+#if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
+    while((g_ucAwtoT0Test == 4) && (enumEventID == _SCALER_WD_TIMER_EVENT_RX5_HDMI_RR_RETRY))
+    {
+    }                                           // test 9: stuck Timer0 handler (RX5 is never armed otherwise)
+#endif
     switch(enumEventID)
     {
 #if(_D0_DP_EXIST == _ON)
@@ -165,32 +174,90 @@ void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCou
 }
 
 #if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
-// Test cmd 0x2A + n (sim: wdt_sim.py events), armed through the same macro: 0 DP rebuild 30 ms, 1 / 2 HDMI RR D2 / D3 10 ms,
-// 3 = 0 + 1 pending together, 4 / 5 = 0 / 1 with a forced Timer2 reload to the power-saving count and back while pending.
+// Tests (sim: wdt_test.py t0_* / prio_*; unit 2 where it can): test cmd 0x2A + n -> n 0..5, 0x5A..0x5C -> 6..8, 0x24 -> 9.
+// 0 DP rebuild 30 ms, 1 / 2 HDMI RR D2 / D3 10 ms, 3 = 0 + 1 together, 4 / 5 = 0 / 1 with a forced PS reload and back while pending,
+// 6 / 7 = 0 / 1 armed and fired at the PS reload, 8 = RR D3 10, rebuild 30, RR D2 5 out of order, then RR D3 cancelled,
+// 9 = RX5 RR 1 ms whose handler spins (a stuck Timer0 handler: the WDT warning must preempt it).
+volatile __xdata BYTE g_ucAwtoT0Test;           // EXINT0 test mode (test cmds 0x5D..0x5F, 0x25 off): 1 arm, 2 spin 2 ms, 3 spin
+volatile __xdata BYTE g_ucAwtoT0Arms;           // arms done by the EXINT0 test hook
+
 void AwtoT0EvTest(BYTE ucHow)
 {
-    EnumScalerWDTimerEventID enumId = ((ucHow == 0) || (ucHow == 4)) ? _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY :
+    EnumScalerWDTimerEventID enumId = ((ucHow == 0) || (ucHow == 4) || (ucHow == 6)) ? _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY :
                                       (ucHow == 2) ? _SCALER_WD_TIMER_EVENT_RX3_HDMI_RR_RETRY : _SCALER_WD_TIMER_EVENT_RX2_HDMI_RR_RETRY;
     BYTE ucMs = (enumId == _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY) ? 30 : 10;
 
-    if(ucHow > 5)
+    if(ucHow > 9)
     {
         return;
     }
+    if((ucHow == 6) || (ucHow == 7))
+    {
+        ScalerTimerSetTimerCount(_TIMER_OPERATION_POWER_SAVING_MODE);
+    }
     __critical
     {
-        AWTO_T0EV_ARM(ucMs, enumId);
-        if(ucHow == 3)
+        if(ucHow == 8)
         {
+            AWTO_T0EV_ARM(10, _SCALER_WD_TIMER_EVENT_RX3_HDMI_RR_RETRY);
             AWTO_T0EV_ARM(30, _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY);
+            AWTO_T0EV_ARM(5, _SCALER_WD_TIMER_EVENT_RX2_HDMI_RR_RETRY);
+        }
+        else if(ucHow == 9)
+        {
+            g_ucAwtoT0Test = 4;
+            AWTO_T0EV_ARM(1, _SCALER_WD_TIMER_EVENT_RX5_HDMI_RR_RETRY);
+        }
+        else
+        {
+            AWTO_T0EV_ARM(ucMs, enumId);
+            if(ucHow == 3)
+            {
+                AWTO_T0EV_ARM(30, _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY);
+            }
         }
     }
-    if(ucHow >= 4)
+    if(ucHow == 8)
+    {
+        ScalerTimerDelayXms(2);
+        ScalerTimerWDCancelTimerEvent(_SCALER_WD_TIMER_EVENT_RX3_HDMI_RR_RETRY);
+    }
+    else if((ucHow == 4) || (ucHow == 5))
     {
         ScalerTimerDelayXms(ucMs / 6);
         ScalerTimerSetTimerCount(_TIMER_OPERATION_POWER_SAVING_MODE);
         ScalerTimerDelayXms(ucMs / 3);
         ScalerTimerSetTimerCount(_TIMER_OPERATION_POWER_NORMAL_MODE);
+    }
+    else if((ucHow == 6) || (ucHow == 7))
+    {
+        ScalerTimerDelayXms(ucMs + (ucMs >> 2));            // the event fires inside (x1.25), still at the PS reload
+        ScalerTimerSetTimerCount(_TIMER_OPERATION_POWER_NORMAL_MODE);
+    }
+}
+
+void AwtoT0EvTestIsr(void)                      // SysEXINT0 entry while g_ucAwtoT0Test != 0 (EXINT0 context)
+{
+    WORD usT0;
+
+    if(g_ucAwtoT0Test == 1)
+    {
+        AWTO_T0EV_ARM(10, _SCALER_WD_TIMER_EVENT_RX2_HDMI_RR_RETRY);
+        g_ucAwtoT0Arms++;
+    }
+    else if(g_ucAwtoT0Test == 2)
+    {
+        g_ucAwtoT0Test = 0;
+        usT0 = g_usTimerCounter;                // Timer2 (high) keeps ticking: spin 2..3 ms
+        while((WORD)(g_usTimerCounter - usT0) < 3)
+        {
+        }
+    }
+    else if(g_ucAwtoT0Test == 3)
+    {
+        while(_TRUE)                            // stuck EXINT0 handler: no pokes; the WDT warning (high) must preempt
+        {
+        }
     }
 }
 #endif
