@@ -100,10 +100,7 @@ static void AwtoKeyNoOsd(BYTE ucK)              // nothing open (SDK MenuNone; _
         }
         else if(ucMode == _MODE_STATUS_ACTIVE)
         {
-            SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
-            OsdFuncSetOsdItemFlag();
-            g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-            OsdDispHotKeySourceMenu();
+            AwtoSourceOpen();                   // the one open path (#132 q5)
         }
     }
     else if((ucK == AWTO_K_DOWN) && (ucMode == _MODE_STATUS_ACTIVE))
@@ -190,7 +187,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         return;
     }
 #endif
-    if(ucK == AWTO_K_SOURCE)                    // SOURCE: the four-input selector, with nothing open and the monitor on
+    if(ucK == AWTO_K_SOURCE)                    // SOURCE: the input selector, with nothing open and the monitor on
     {
         if((bRep == 0) && (GET_OSD_STATE() == _MENU_NONE) && (SysPowerGetPowerStatus() != _POWER_STATUS_OFF)
 #ifdef _AWTO_NEW_SETTINGS
@@ -198,7 +195,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 #endif
           )
         {
-            AwtoSourceKeyOpen();
+            AwtoSourceOpen();
         }
         return;
     }

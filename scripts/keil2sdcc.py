@@ -306,15 +306,9 @@ INSERTS = [
     (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keys.inc").read_text().rstrip("\n")),  # #129
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      '#define AWTO_FW_TAG "%s"\n' % FW_TAG + (SHIM / "awto_dbgpop.inc").read_text().rstrip("\n")),
-    # One AWTO card language for every transient message and the source selector.
-    (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispHotKeySourceMenuIcon\(void\)$",
+    # cards + source selector (#134): after awto_dbgpop.inc (same anchor, later rule = nearer it), whose text layer they use
+    (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      (SHIM / "awto_osdcard.inc").read_text().rstrip("\n")),
-    (OSD + "RTD2014OsdDisplay.c", r"^\s*BYTE ucCol = 5;", "    if(AwtoSourceRowsOverride() == _TRUE)\n    {\n        return;\n    }",
-     r"^void OsdDispHotKeySourceMenuIcon\(void\)$"),
-    (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdFuncDisableOsd\(\);", "    if(AwtoSourceOpenOverride() == _TRUE)\n    {\n        return;\n    }",
-     r"^void OsdDispHotKeySourceMenu\(void\)$"),
-    (OSD + "RTD2014OsdDisplay.c", r"^\s*if\(GET_OSD_INPUT_PORT_OSD_ITEM\(\) <= _OSD_INPUT_D1\)", "    if(AwtoSourceRowsOverride() == _TRUE)\n    {\n        return;\n    }",
-     r"^void OsdDispHotKeySourceMenuSwitch\(void\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^\s*switch\(enumMessage\)",
      "    if(AwtoCardMessage(enumMessage) == _FALSE)\n    {", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdDispSetPosition\(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50\);",
@@ -498,15 +492,30 @@ SUBS += [
      r"        case _USER_TIMER_EVENT_KEY_SCAN_READY:\n            SET_KEYSCANREADY\(\);\n            break;\n\n", lambda m: "", 1),
     (UI, r"\n    RTDKeyInitial\(\);", lambda m: "", 1),
 ]
+# #134 source selector as text (fw/sdcc/awto_osdcard.inc AwtoSourceOpen / AwtoSourceKey): the SDK hot-key source menu and
+# the input icons it alone loaded go; the no-signal / wake event opens ours.
+_K134 = "// [keil2sdcc] sub #134: removed; source selector: fw/sdcc/awto_osdcard.inc\n"
+SUBS += [
+    (OSD + "RTD2014Osd.c", r"(\n[ ]+)OsdDispHotKeySourceMenu\(\);", lambda m: m.group(1) + "AwtoSourceOpen();  // [keil2sdcc] sub #134", 1),
+] + [(OSD + "RTD2014OsdDisplay.c", rf"\nvoid {fn}\(void\)\n\{{\n.*?\n\}}\n", lambda m: "\n" + _K134, 1)
+     for fn in ("OsdDispHotKeySourceMenuIcon", "OsdDispHotKeySourceMenu", "OsdDispHotKeySourceMenuSwitch")] + [
+    (OSD + "RTD2014OsdFontDynamicIcon_1.c", r"(\n[ ]+)OsdFontVLCLoadInputIcon\(ucIconPos, usIcon\);",
+     lambda m: m.group(1) + "// [keil2sdcc] sub #134: no input icons (the selector is text)", 1),
+]
 # #117 #118 #120: the icon tables link every icon. With the menu off only these are still drawn (hot-key DDC/CI, DP version,
-# source and info pop-ups); the rest point at one shared stub. Indices stay, so _AWTO_REALTEK_MENU == _ON restores the table.
-_ICON_KEEP = {"INPUT", "INFORMATION", "DDCCI", "AUTOSELECT", "ON", "OFF", "D0", "D1", "D2", "D6", "1_DOT_1", "1_DOT_2"}
-_ICON_STUB = ("#if(_AWTO_REALTEK_MENU == _ON)\n#define AWTO_ICON(x) x\n#else\n#define AWTO_ICON(x) tAWTO_ICON_NONE\n#endif\n")
+# info pop-up); the rest point at one shared stub. Indices stay, so _AWTO_REALTEK_MENU == _ON restores the table.
+# #134: INPUT / AUTOSELECT were the SDK selector's; Dn only where Dn is a DP port (DP-version hot-key menu, #122).
+_ICON_KEEP = {"INFORMATION", "DDCCI", "ON", "OFF", "1_DOT_1", "1_DOT_2"}
+_ICON_DP = ("D0", "D1", "D2", "D6")
+_ICON_STUB = ("#if(_AWTO_REALTEK_MENU == _ON)\n#define AWTO_ICON(x) x\n#else\n#define AWTO_ICON(x) tAWTO_ICON_NONE\n#endif\n" +
+              "".join(f"#if(_{p}_INPUT_PORT_TYPE == _{p}_DP_PORT)\n#define AWTO_ICON_{p}(x) x\n#else\n#define AWTO_ICON_{p}(x) AWTO_ICON(x)\n#endif\n"
+                      for p in _ICON_DP))
 
 
 def _icon_table(m, first):
     body = re.sub(r"^(\s*)tFONT1_ICON_(\w+),", lambda e: e.group(0) if e.group(2) in _ICON_KEEP else
-                  "%sAWTO_ICON(tFONT1_ICON_%s)," % (e.group(1), e.group(2)), m.group(2), flags=re.M)
+                  "%sAWTO_ICON%s(tFONT1_ICON_%s)," % (e.group(1), "_" + e.group(2) if e.group(2) in _ICON_DP else "", e.group(2)),
+                  m.group(2), flags=re.M)
     stub = ("#if(_AWTO_REALTEK_MENU != _ON)\nBYTE __code tAWTO_ICON_NONE[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};\n#endif\n" if first
             else "extern BYTE __code tAWTO_ICON_NONE[];\n")
     return stub + _ICON_STUB + m.group(1) + body + m.group(3)

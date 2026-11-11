@@ -1,6 +1,9 @@
-// AWTO user-facing OSD cards. Inserted into RTD2014OsdDisplay.c by keil2sdcc.py.
-// Every transient message uses the same AWTO monitor mark, blue-on-white surface,
-// and the source selector lists only this board's four meaningful choices.
+// AWTO user-facing OSD cards and the source selector. Inserted into RTD2014OsdDisplay.c after awto_dbgpop.inc (its text layer).
+// - Cards: AWTO mark + one line, SDK proportional font (#124 moves them to the text layer).
+// - Source selector (#134): text rows on the awto text layer, one per board port + Auto, awto menu look.
+#if((_AWTO_DIAG != _ON) || !defined(_AWTO_NEW_SETTINGS))
+#error "awto_osdcard.inc draws on the awto text layer (awto_dbgpop.inc, _AWTO_NEW_SETTINGS)"
+#endif
 extern BYTE *g_pucShowNumberAddress;
 
 static BYTE s_pucAwtoCard[28];
@@ -134,105 +137,149 @@ static bit AwtoCardMessage(EnumOSDDispMsg enumMessage)
     return _TRUE;
 }
 
-static BYTE AwtoSourceSelection(void)
-{
-    BYTE ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
-
-    return (ucItem == _OSD_INPUT_D2) ? 1 :
-           (ucItem == _OSD_INPUT_D3) ? 2 :
-           (ucItem == _OSD_INPUT_D1) ? 3 : 0;
-}
-
-static BYTE AwtoSourceState(BYTE ucPort)
-{
-    bit bCable = (ucPort == _D1_INPUT_PORT) ? GET_D1_CABLE_STATUS() :
-                 (ucPort == _D2_INPUT_PORT) ? GET_D2_CABLE_STATUS() : GET_D3_CABLE_STATUS();
-
-    if((SysSourceGetInputPort() == ucPort) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
-    {
-        return 3;                               // active picture now
-    }
-    if(bCable == _FALSE)
-    {
-        return 0;                               // no cable / no source power
-    }
-#if(_AWTO_FAST_SWITCH == _ON)
-    if(AwtoSwCacheValid(ucPort) != 0)
-    {
-        return 2;                               // scaler has previously locked this source
-    }
+//---- source selector (#134) ----
+// Board ports from the PCB config (type = port << 4 | kind). ui_port_state (glue.inc) knows D1..D3 only.
+#if((_D0_INPUT_PORT_TYPE != _D0_NO_PORT) || (_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D6_INPUT_PORT_TYPE != _D6_NO_PORT))
+#error "source selector: ui_port_state (glue.inc) covers D1..D3 only"
 #endif
-    return 1;                                   // cable present, no usable signal detected
-}
-
-static void AwtoSourceRows(void)
-{
-    BYTE ucSel = AwtoSourceSelection();
-    BYTE ucState;
-
-    OsdFuncClearOsd(ROW(0), COL(12), WIDTH(24), HEIGHT(8));
-    // Four rows in an eight-row card: rows 2..5 leave equal space above and below.
-    OsdWindowDrawingByFont(_OSD_WINDOW_4_1, ROW(2 + ucSel), COL(12), WIDTH(24), HEIGHT(1), _CP_BLUE);
-    AWTO_CARD_LINE(2, "Auto Select", (ucSel == 0) ? _CP_WHITE : _CP_BLUE);
-
-    ucState = AwtoSourceState(_D2_INPUT_PORT);
-    if(ucState == 0)      { AWTO_CARD_LINE(3, "HDMI 1  No Cable",  (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 1) { AWTO_CARD_LINE(3, "HDMI 1  No Signal", (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 2) { AWTO_CARD_LINE(3, "HDMI 1  Ready",     (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-    else                  { AWTO_CARD_LINE(3, "HDMI 1  Active",    (ucSel == 1) ? _CP_WHITE : _CP_BLUE); }
-
-    ucState = AwtoSourceState(_D3_INPUT_PORT);
-    if(ucState == 0)      { AWTO_CARD_LINE(4, "HDMI 2  No Cable",  (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 1) { AWTO_CARD_LINE(4, "HDMI 2  No Signal", (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 2) { AWTO_CARD_LINE(4, "HDMI 2  Ready",     (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-    else                  { AWTO_CARD_LINE(4, "HDMI 2  Active",    (ucSel == 2) ? _CP_WHITE : _CP_BLUE); }
-
-    ucState = AwtoSourceState(_D1_INPUT_PORT);
-    if(ucState == 0)      { AWTO_CARD_LINE(5, "DP  No Cable",      (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 1) { AWTO_CARD_LINE(5, "DP  No Signal",     (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-    else if(ucState == 2) { AWTO_CARD_LINE(5, "DP  Ready",         (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-    else                  { AWTO_CARD_LINE(5, "DP  Active",        (ucSel == 3) ? _CP_WHITE : _CP_BLUE); }
-}
-
-static void AwtoSourceOpen(void)
-{
-    OsdFuncDisableOsd();
-    OsdFuncApplyMap(WIDTH(36), HEIGHT(8), COLOR(_CP_WHITE, _CP_BG));
-#if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE)
-    ScalerOsdMapRotation(GET_OSD_ROTATE_STATUS(), _ENABLE, HEIGHT(8), _DISABLE, 0, _ENABLE);
+extern BYTE ui_port_state(BYTE ucI);
+static const __code BYTE tAwtoSrcType[] = {
+#if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
+    _D1_INPUT_PORT_TYPE,
 #endif
-    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
-    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
-    OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
-    OsdFuncSet2BitIconOffset(_2BIT_ICON_OFFSET);
-    OsdFontVLCLoadFont(_FONT1_GLOBAL);
-    OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(12), HEIGHT(8), _CP_BLUE);
-    OsdWindowDrawingByFont(_OSD_WINDOW_0, ROW(0), COL(12), WIDTH(24), HEIGHT(8), _CP_WHITE);
-    AwtoCardLogo();
-    AwtoSourceRows();
-    OsdDispSetPosition(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50);
-    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
-    OsdFuncEnableOsd();
-}
+#if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
+    _D2_INPUT_PORT_TYPE,
+#endif
+#if(_D3_INPUT_PORT_TYPE != _D3_NO_PORT)
+    _D3_INPUT_PORT_TYPE,
+#endif
+};
+#define AWTO_SRC_PORTS      ((BYTE)sizeof(tAwtoSrcType))
+#define AWTO_CARD_COLS      28                  // text cells per card row
+#define AWTO_SRC_STATE_COL  15                  // port state column
+#define AWTO_SRC_ROW0       2                   // first item row: title, one blank row, then the items
+#define AWTO_WIN_FRAME      0                   // window ids as the awto menu (awto-rtdfw ui.c)
+#define AWTO_WIN_INSET      1
+#define AWTO_WIN_TITLE      2
+#define AWTO_WIN_HL         5
+#define AWTO_T_STYLE_DIM    1
 
-static void AwtoSourceStep(bit bBack)
+// Fixed card texts: one table, read only by AwtoCardTxt (a constant read through a pointer sits in its reader's bank, awto-sdcc#39).
+#define AWTO_CT_INPUT       0
+#define AWTO_CT_AUTO        1
+#define AWTO_CT_DP          2
+#define AWTO_CT_HDMI        3
+#define AWTO_CT_PORT        4
+#define AWTO_CT_STATE       5                   // + ui_port_state: no cable, no signal, ready, ACTIVE
+static const __code char tAwtoCardS[] = "Input\0Auto select\0DisplayPort\0HDMI \0Input D\0no cable\0no signal\0ready\0ACTIVE\0";
+
+static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
-    BYTE ucSel = AwtoSourceSelection();
+    const __code char *pc = tAwtoCardS;
 
-    if(bBack != 0)
+    while(ucI != 0)
     {
-        ucSel = (ucSel == 0) ? 3 : (ucSel - 1);
+        if(*pc++ == 0)
+        {
+            ucI--;
+        }
     }
-    else
+    while(*pc != 0)
     {
-        ucSel = (ucSel == 3) ? 0 : (ucSel + 1);
+        AwtoPutChar(*pc++);
     }
-    SET_OSD_INPUT_PORT_OSD_ITEM((ucSel == 0) ? _OSD_INPUT_AUTO :
-                                (ucSel == 1) ? _OSD_INPUT_D2 :
-                                (ucSel == 2) ? _OSD_INPUT_D3 : _OSD_INPUT_D1);
 }
 
-void AwtoSourceKeyOpen(void)
+// Card frame in the awto menu look (blue frame + title bar on white, the menu font), centred; the OSD stays off until shown.
+static void AwtoCardOpen(BYTE ucLines)
+{
+    WORD usW, usH;
+
+    osd_tc_open(AWTO_CARD_COLS, ucLines);
+    osd_font_load(ui_font_selected());
+    usW = (WORD)AWTO_CARD_COLS * osd_cw;
+    usH = (WORD)ucLines * osd_rh;
+    osd_tc_bar(AWTO_WIN_FRAME, 0, 0, usW - 1, usH - 1, 1);
+    osd_tc_bar(AWTO_WIN_INSET, 2, 2, usW - 3, usH - 3, 0);
+    osd_tc_bar(AWTO_WIN_TITLE, 2, 2, usW - 3, osd_rh - 1, 1);
+    osd_tc_place(50, 50, GET_OSD_NVRAM_DOUBLE_SIZE());
+    s_ucPanelRow = 0;
+    s_ucPanelCol = 0;
+    s_ucAwtoCols = AWTO_CARD_COLS;
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+}
+
+static BYTE AwtoSrcPort(BYTE ucI)               // selector row 1..n -> input port
+{
+    return tAwtoSrcType[ucI - 1] >> 4;
+}
+
+static BYTE AwtoSrcItem(BYTE ucPort)            // input port -> OSD input item (_OSD_INPUT_D*)
+{
+    return ucPort - _D0_INPUT_PORT + _OSD_INPUT_D0;
+}
+
+static BYTE AwtoSrcSel(void)                    // OSD input item -> selector row (0 = Auto)
+{
+    BYTE ucI;
+
+    for(ucI = 1; ucI <= AWTO_SRC_PORTS; ucI++)
+    {
+        if(AwtoSrcItem(AwtoSrcPort(ucI)) == GET_OSD_INPUT_PORT_OSD_ITEM())
+        {
+            return ucI;
+        }
+    }
+    return 0;
+}
+
+static void AwtoSrcSet(BYTE ucI)
+{
+    SET_OSD_INPUT_PORT_OSD_ITEM((ucI == 0) ? _OSD_INPUT_AUTO : AwtoSrcItem(AwtoSrcPort(ucI)));
+}
+
+static void AwtoSourceRows(void)                // Auto, then each port with its state; the selection on the bar
+{
+    BYTE ucSel = AwtoSrcSel();
+    BYTE ucI, ucSt, ucHdmi = 0;
+
+    osd_tc_bar(AWTO_WIN_HL, 2, (WORD)(AWTO_SRC_ROW0 + ucSel) * osd_rh, (WORD)AWTO_CARD_COLS * osd_cw - 3,
+               (WORD)(AWTO_SRC_ROW0 + ucSel + 1) * osd_rh - 1, 1);
+    for(ucI = 0; ucI <= AWTO_SRC_PORTS; ucI++)
+    {
+        ucSt = 0;
+        if(ucI == 0)
+        {
+            AwtoCardTxt(AWTO_CT_AUTO);
+        }
+        else if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_DP)
+        {
+            AwtoCardTxt(AWTO_CT_DP);
+        }
+        else if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_HDMI)
+        {
+            AwtoCardTxt(AWTO_CT_HDMI);
+            AwtoPutNum(++ucHdmi, 1);
+        }
+        else
+        {
+            AwtoCardTxt(AWTO_CT_PORT);
+            AwtoPutNum(AwtoSrcPort(ucI) - _D0_INPUT_PORT, 1);
+        }
+        AwtoTextLine(AWTO_SRC_ROW0 + ucI, (ucI == ucSel) ? AWTO_T_STYLE_ONACC : AWTO_T_STYLE_TEXT);
+        if(ucI != 0)
+        {
+            ucSt = ui_port_state(AwtoSrcPort(ucI) - _D1_INPUT_PORT);
+            AwtoFieldBegin();
+            AwtoCardTxt(AWTO_CT_STATE + ucSt);
+            AwtoFieldEnd(AWTO_SRC_ROW0 + ucI, AWTO_SRC_STATE_COL, (ucI == ucSel) ? AWTO_T_STYLE_ONACC : ((ucSt == 3) ? AWTO_T_STYLE_TEXT : AWTO_T_STYLE_DIM));
+        }
+    }
+}
+
+// The one way in (SOURCE, UP with a picture, OSD event 7 = no signal / wake): preset to the current input (Auto while auto-scanning).
+void AwtoSourceOpen(void)
 {
     if(SysSourceGetScanType() == _SOURCE_SWITCH_AUTO_IN_GROUP)
     {
@@ -240,8 +287,7 @@ void AwtoSourceKeyOpen(void)
     }
     else
     {
-        SET_OSD_INPUT_PORT_OSD_ITEM((SysSourceGetInputPort() == _D2_INPUT_PORT) ? _OSD_INPUT_D2 :
-                                    (SysSourceGetInputPort() == _D3_INPUT_PORT) ? _OSD_INPUT_D3 : _OSD_INPUT_D1);
+        SET_OSD_INPUT_PORT_OSD_ITEM(AwtoSrcItem(SysSourceGetInputPort()));
     }
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);
@@ -249,8 +295,28 @@ void AwtoSourceKeyOpen(void)
     SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
     OsdFuncSetOsdItemFlag();
     g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-    OsdDispHotKeySourceMenu();
+    AwtoCardOpen(AWTO_SRC_ROW0 + AWTO_SRC_PORTS + 2);   // + Auto + pad row (the frame covers the last 2 px)
+    AwtoCardTxt(AWTO_CT_INPUT);
+    AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+    AwtoSourceRows();
+    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
+    OsdFuncEnableOsd();
     UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+}
+
+static void AwtoSourceStep(bit bBack)
+{
+    BYTE ucSel = AwtoSrcSel();
+
+    if(bBack != 0)
+    {
+        ucSel = (ucSel == 0) ? AWTO_SRC_PORTS : (ucSel - 1);
+    }
+    else
+    {
+        ucSel = (ucSel == AWTO_SRC_PORTS) ? 0 : (ucSel + 1);
+    }
+    AwtoSrcSet(ucSel);
 }
 
 static bit AwtoSourceNoPicture(void)            // power saving / no signal / no support: the SDK hands back to its pop-up timers
@@ -272,7 +338,7 @@ static void AwtoSourceClose(void)
     }
 }
 
-// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129): the SDK MenuHotKeySource for this board's four choices.
+// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129).
 void AwtoSourceKey(BYTE ucKey)
 {
     BYTE ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
@@ -281,13 +347,7 @@ void AwtoSourceKey(BYTE ucKey)
     if((ucKey == _RIGHT_KEY_MESSAGE) || (ucKey == _LEFT_KEY_MESSAGE))  // UP / DOWN: step
     {
         AwtoSourceStep(ucKey == _LEFT_KEY_MESSAGE);
-        OsdDispHotKeySourceMenuSwitch();
-        ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
-        if((ucKey == _RIGHT_KEY_MESSAGE) ? ((ucItem == _OSD_INPUT_D2) || (ucItem == _OSD_INPUT_D6) || (ucItem == _OSD_INPUT_AUTO)) :
-           ((ucItem == _OSD_INPUT_D5) || (ucItem == _OSD_INPUT_D1) || (ucItem == _OSD_INPUT_D6)))
-        {
-            OsdDispHotKeySourceMenuIcon();
-        }
+        AwtoSourceRows();
         if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) || (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
         {
             ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
@@ -321,11 +381,10 @@ void AwtoSourceKey(BYTE ucKey)
         }
         else
         {
-            ucPort = (ucItem == _OSD_INPUT_D1) ? _D1_INPUT_PORT : (ucItem == _OSD_INPUT_D2) ? _D2_INPUT_PORT :
-                     (ucItem == _OSD_INPUT_D3) ? _D3_INPUT_PORT : _NO_INPUT_PORT;
+            ucPort = (ucItem >= _OSD_INPUT_D0) ? (ucItem - _OSD_INPUT_D0 + _D0_INPUT_PORT) : _NO_INPUT_PORT;
             if(ucPort == _NO_INPUT_PORT)
             {
-                return;                         // no port on this board: the SDK left the selector up
+                return;                         // not a port of this board: the selector stays up
             }
             SET_FORCE_POW_SAV_STATUS(_FALSE);
             SysSourceSwitchInputPort(ucPort);
@@ -350,20 +409,7 @@ void AwtoSourceKey(BYTE ucKey)
     }
 }
 
-// Runtime-selected wrappers retain the SDK implementation as a real fallback.
-// This also lets the warning gate distinguish our override from dead source.
-bit AwtoSourceRowsOverride(void)
-{
-    AwtoSourceRows();
-    return (g_ucOsdWidth == 36);
-}
-
-bit AwtoSourceOpenOverride(void)
-{
-    AwtoSourceOpen();
-    return (g_ucOsdWidth == 36);
-}
-
+// Runtime override of the SDK panel-uniformity switch (drawn as an AWTO card).
 bit AwtoPanelCardOverride(void)
 {
     AwtoCardPanel();
