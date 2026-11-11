@@ -93,11 +93,17 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 | older lines | wb-p14kvm, wb-p14net, wb-osd67(+net), wb-p14sw, wb-sc3, wb-keilcompat, wb-mixed*, wb-port*, wb-ddrinit, wb-msgtable, wb-p14new, wb-vfreq | merged or superseded; prune with `scripts/worktree_prune.py` / `branch_prune.py` after review (they archive images first) |
 
 ## 6. Runbook
-- Health: `./dev.py health --unit 2`. Flash: debug link off, then `./dev.py flash --unit 2 <image>` (incremental, burst). Wedged: `scripts/power_cycle.py --relay so-th-1`, then `./dev.py recover --unit 2 --bus 11` or `./dev.py flash --unit 2 --bus 11 --full --write-mode byte <image>`; after a wipe wake with `ddcutil --bus 11 setvcp D6 01`.
+- Health: `./dev.py health --unit 2`. Flash: debug link off, then `./dev.py flash --unit 2 <image>` (incremental, burst). Needs a gate record: run `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` first (see Gates below); archived `fw/images/` images pass; `--force-ungated` overrides (ALERT line in the unit log). Wedged: `scripts/power_cycle.py --relay so-th-1`, then `./dev.py recover --unit 2 --bus 11` or `./dev.py flash --unit 2 --bus 11 --full --write-mode byte <image>`; after a wipe wake with `ddcutil --bus 11 setvcp D6 01`.
 - Key presses: `scripts/dbg_link.py on 11 --minutes 10`, then in the keys worktree `python3 scripts/rtd_keywatch.py 11 --log --map <map> --serial AWT26110002 --secs 180` (`--open` / `--close` = key test screen); link off afterwards.
 - Inputs: `./dev.py mode --unit 2 --dp mirror|off`; `scripts/kvm.py dp|hdmi1 --units 2`; `scripts/kvm_demo.py`.
 - OSD: `./dev.py osd ...`, `./dev.py menu ...`, `./dev.py settings list|get|set --unit 2`; catalogue `python3 scripts/osd_catalog.py <bin> --menu-dir <dir>`.
-- Build: `python scripts/wb_build.py --tree <worktree> --serial AWT26110002 --tag <tag>` (from this repo); gates `scripts/fw_gates.py`; speed `scripts/loop_rate.py`, sim `docs/speed-bench.tsv`.
+- Build: `python scripts/wb_build.py --tree <worktree> --serial AWT26110002 --tag <tag>` (from this repo); gates `scripts/fw_gates.py` (below); speed `scripts/loop_rate.py`, sim `docs/speed-bench.tsv`.
+- Gates: `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` -> `tmp/fw/<tag>.gates.json` (image SHA-256, date, per-gate PASS/FAIL/SKIP + seconds, fw_gates commit, `complete`).
+  - Gates: boot, isr, link, h1080, h2160, menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes. `--only` runs a subset and marks the record partial (not flashable).
+  - SKIP = image lacks the feature (map symbol) or the gate needs `--tree`; counted and printed, allowed by the flash check.
+  - `dev.py flash|recover|deploy` refuse: no record, SHA-256 mismatch, partial record, any FAIL. Override `--force-ungated`.
+  - Sims run with `AWTO_SIM_CORE=fast` (the ucsim default needs `ucsim_51` on PATH).
+  - Cold times per gate: awto-ddc commit message of the gate-record change.
 - Logs: `tmp/logs/` (`unit-<serial>.log` per monitor, `dev.log`, tool logs); decoded one line per action, raw to `*.raw.log`.
 
 ## 7. Open decisions for Dan

@@ -25,6 +25,7 @@ def dev(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "LOG", tmp_path / "tmp" / "logs" / "dev.log")
     import json
     real = json.loads((REPO / "scripts/devices.json").read_text())["units"]
+    real = {k: {**v, "test": True} for k, v in real.items()}     # no hardware here; the working-screen guard is not under test
     monkeypatch.setattr(m, "_units", lambda: real)
     yield m
     sys.modules.pop("dev_under_test", None)
@@ -233,9 +234,9 @@ def test_deploy_uses_shared_image_then_programs_unit_edid(dev, tmp_path, monkeyp
     monkeypatch.setattr(dev, "cmd_flash", lambda a: calls.append(("flash", a)) or 0)
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False:
                         calls.append((script, list(a), shield)) or 0)
-    assert dev.cmd_deploy(["--unit", "3", "--force", str(img)]) == 0
+    assert dev.cmd_deploy(["--unit", "3", "--force", "--force-ungated", str(img)]) == 0
     flash = next(x for x in calls if x[0] == "flash")
-    assert "--any-image" in flash[1] and "--force" in flash[1]
+    assert "--any-image" in flash[1] and "--force-ungated" in flash[1]
     sector = next(x for x in calls if x[0] == "rtd_flash_sector.py")
     assert sector[1][0:2] == [21, "0x5000"]
     assert "--expect-current" in sector[1] and "--write" in sector[1]
@@ -270,7 +271,7 @@ def test_dev_flash_bus_passes_identity(dev, tmp_path, monkeypatch):
         def __enter__(s): return 1000
         def __exit__(s, *a): return False
     monkeypatch.setattr(dev.i2cbus, "fast_bus", FB)
-    assert dev.cmd_flash(["--unit", "3", "--bus", "11", str(img)]) == 0
+    assert dev.cmd_flash(["--unit", "3", "--bus", "11", "--force-ungated", str(img)]) == 0
     assert "--identity" in seen[0]
 
 
@@ -296,7 +297,7 @@ def test_failed_flash_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
     monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 7)
-    assert dev.cmd_flash(["--unit", "3", str(img)]) == 7
+    assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 7
     d = json.loads(fj.read_text())
     assert d["tag"] == "" and d["image"] == str(img)
     with pytest.raises(SystemExit):                 # dbg/osd/health map lookup refuses
@@ -311,7 +312,7 @@ def test_flash_exception_leaves_no_stale_tag(dev, tmp_path, monkeypatch):
         raise KeyboardInterrupt
     monkeypatch.setattr(dev, "_py", boom)
     with pytest.raises(KeyboardInterrupt):
-        dev.cmd_flash(["--unit", "3", str(img)])
+        dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)])
     assert json.loads(fj.read_text())["tag"] == ""
 
 
@@ -319,7 +320,7 @@ def test_successful_flash_records_new_tag(dev, tmp_path, monkeypatch):
     import json
     img, fj = _flash_setup(dev, tmp_path, monkeypatch)
     monkeypatch.setattr(dev, "_py", lambda *a, env=None, shield=False: 0)
-    assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
+    assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 0
     assert json.loads(fj.read_text()) == {"tag": "AWT26110003-new-be", "image": str(img)}
 
 
@@ -329,6 +330,8 @@ def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
     """bus_results: iterable of ints / SystemExit instances returned by successive _bus calls."""
     img = _img(tmp_path, "AWT26110003-r-be.bin", b"AWT26110003")
     dev.FW.mkdir(parents=True, exist_ok=True)
+    (dev.FW / "AWT26110003-r-be.gates.json").write_text(json.dumps(
+        {"sha256": __import__("hashlib").sha256(img.read_bytes()).hexdigest(), "complete": True, "gates": {"link": {"result": "PASS"}}}))
     events, it = [], iter(bus_results)
 
     def fake_bus(u, wait_s=0.0):
@@ -573,3 +576,82 @@ def test_dev_diag_safe_trace_refuse_extra_args(dev, monkeypatch, fn, args):
     monkeypatch.setattr(dev, "_diag", lambda *a, **k: pytest.fail("bus touched"))
     with pytest.raises(SystemExit):
         getattr(dev, fn)(["--unit", "3", *args])
+
+
+# --- flash refuses ungated images (tmp/fw/<stem>.gates.json from scripts/fw_gates.py) -------------
+
+def _gated_setup(dev, tmp_path, monkeypatch, gates=None, sha_of=None, complete=True, write=True):
+    import hashlib
+    img, fj = _flash_setup(dev, tmp_path, monkeypatch)
+    ran = []
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: ran.append(script) or 0)
+    if write:
+        sha = hashlib.sha256(sha_of if sha_of is not None else img.read_bytes()).hexdigest()
+        (dev.FW / f"{img.stem}.gates.json").write_text(json.dumps(
+            {"image": img.name, "sha256": sha, "complete": complete,
+             "gates": gates or {"link": {"result": "PASS"}, "keys": {"result": "SKIP"}}}))
+    return img, ran
+
+
+def test_flash_refuses_image_without_gate_record(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
+    with pytest.raises(SystemExit, match="no AWT26110003-new-be.gates.json"):
+        dev.cmd_flash(["--unit", "3", str(img)])
+    assert ran == []
+
+
+def test_flash_refuses_gate_record_for_changed_image(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, sha_of=b"another build")
+    with pytest.raises(SystemExit, match="SHA-256 mismatch"):
+        dev.cmd_flash(["--unit", "3", str(img)])
+    assert ran == []
+
+
+def test_flash_refuses_failed_gate(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, gates={"link": {"result": "PASS"}, "wake": {"result": "FAIL"}})
+    with pytest.raises(SystemExit, match="FAILED: wake"):
+        dev.cmd_flash(["--unit", "3", str(img)])
+    assert ran == []
+
+
+def test_flash_refuses_partial_gate_record(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, complete=False)
+    with pytest.raises(SystemExit, match="partial"):
+        dev.cmd_flash(["--unit", "3", str(img)])
+
+
+def test_flash_accepts_pass_and_skip(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch)
+    assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
+    assert "rtd_flash_image.py" in ran
+
+
+def test_force_ungated_flashes_and_logs_loudly(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, gates={"link": {"result": "FAIL"}})
+    lines = []
+    monkeypatch.setattr(dev, "log", lambda msg, level="INFO": lines.append((level, msg)))
+    assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 0
+    assert any(l == "ALERT" and "UNGATED IMAGE FLASHED ON PURPOSE" in m and "FAILED: link" in m for l, m in lines)
+
+
+def test_archived_image_needs_no_gate_record(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
+    (tmp_path / "fw" / "images").mkdir(parents=True)
+    (tmp_path / "fw" / "images" / img.name).write_bytes(img.read_bytes())
+    assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
+
+
+def test_archived_name_with_other_bytes_is_not_accepted(dev, tmp_path, monkeypatch):
+    img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
+    (tmp_path / "fw" / "images").mkdir(parents=True)
+    (tmp_path / "fw" / "images" / img.name).write_bytes(b"different")
+    with pytest.raises(SystemExit, match="flash refused"):
+        dev.cmd_flash(["--unit", "3", str(img)])
+
+
+def test_deploy_refuses_ungated_before_any_step(dev, tmp_path, monkeypatch):
+    img = _img(tmp_path, "shared.bin", b"shared firmware")
+    dev.FW.mkdir(parents=True)
+    monkeypatch.setattr(dev, "_py", lambda *a, **k: pytest.fail("ran a tool"))
+    with pytest.raises(SystemExit, match="flash refused"):
+        dev.cmd_deploy(["--unit", "3", "--force", str(img)])

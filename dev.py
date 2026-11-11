@@ -19,6 +19,7 @@ and should not need editing.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -358,7 +359,8 @@ def _unit(extra: list[str]) -> tuple[str, dict]:
         if not u.get("connector_dp"):
             raise SystemExit(f"unit {n} has no DP link in scripts/devices.json")
         u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
-    if not u.get("test") and not _flag(extra, "--force"):
+    forced = _flag(extra, "--force")        # always consumed, also on a test unit
+    if not u.get("test") and not forced:
         raise SystemExit(f"unit {n} is a working screen (devices.json test=false): add --force to touch it")
     global _UNIT_LOG
     _UNIT_LOG = LOGS / f"unit-{u['serial']}.log"    # one file per monitor: dev.py lines + full tool output
@@ -427,6 +429,42 @@ def check_image_identity(u: dict, img: Path) -> None:
     if me.encode() not in found:
         raise SystemExit(f"image {img.name} does not embed serial {me} (not built by `dev.py build --unit`?); "
                          f"--any-image to flash it anyway")
+
+
+def check_gated(img: Path, force: bool) -> None:
+    """Flash only gated images: tmp/fw/<stem>.gates.json (scripts/fw_gates.py) with this .bin's SHA-256, complete, no FAIL
+    (SKIP allowed). Images archived in fw/images/ (byte-identical, already flashed once) pass. force: logged, never silent."""
+    sha = hashlib.sha256(img.read_bytes()).hexdigest()
+    why = None
+    arch = REPO / "fw" / "images" / img.name
+    if arch.is_file() and hashlib.sha256(arch.read_bytes()).hexdigest() == sha:
+        log(f"gates: {img.name} is archived in fw/images/ (byte-identical, flashed before)")
+        return
+    rec = next((r for r in (FW / f"{img.stem}.gates.json", img.with_suffix(".gates.json")) if r.is_file()), None)
+    if rec is None:
+        why = f"no {img.stem}.gates.json (run scripts/fw_gates.py on it)"
+    else:
+        try:
+            d = json.loads(rec.read_text())
+            gates = d["gates"]
+            failed = sorted(k for k, v in gates.items() if v.get("result") == "FAIL")
+            if d.get("sha256") != sha:
+                why = f"{rec.name} is for another build (SHA-256 mismatch: image changed after the gates ran)"
+            elif failed:
+                why = f"{rec.name}: gate(s) FAILED: {', '.join(failed)}"
+            elif not d.get("complete"):
+                why = f"{rec.name} is partial (fw_gates --only); run the full gate set"
+            else:
+                skipped = sorted(k for k, v in gates.items() if v.get("result") == "SKIP")
+                log(f"gates: {img.name} passed {len(gates) - len(skipped)} gate(s) at {d.get('date')}, {len(skipped)} SKIP"
+                    + (f" ({', '.join(skipped)})" if skipped else ""))
+                return
+        except (OSError, ValueError, KeyError, AttributeError) as e:
+            why = f"{rec.name} unreadable ({e})"
+    if force:
+        log(f"gates: UNGATED IMAGE FLASHED ON PURPOSE (--force-ungated): {img.name}: {why}", "ALERT")
+        return
+    raise SystemExit(f"flash refused: {img.name}: {why}; --force-ungated to flash it anyway; nothing done")
 
 
 def _firmware_edid_sector(img: Path) -> int:
@@ -568,7 +606,7 @@ def _layout_watch() -> None:
 
 
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
-         args="[--unit N] [--full] [--any-image] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
+         args="[--unit N] [--full] [--any-image] [--force-ungated] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
@@ -577,6 +615,7 @@ def cmd_flash(extra: list[str]) -> int:
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     bus = _opt(extra, "--bus")              # recover: bus proven by its own relay cycle (EDID silent while held)
     any_image = _flag(extra, "--any-image")
+    ungated = _flag(extra, "--force-ungated")
     extra = _image_arg(extra)
     if extra:
         img = Path(extra[0])
@@ -586,6 +625,7 @@ def cmd_flash(extra: list[str]) -> int:
         img = FW / f"{tag}.bin"
     if not any_image:
         check_image_identity(u, img)
+    check_gated(img, ungated)
     disk_guard.require_free("flash")        # before the flash-state file is touched (#77)
     identity = None
     if bus:
@@ -624,7 +664,7 @@ def cmd_flash(extra: list[str]) -> int:
 
 
 @command("deploy one shared firmware image, then separately program this monitor's unique EDID tables",
-         args="[--unit N] [--force] [--full] [--verify crc|readback] [--write-mode byte|burst] image.bin",
+         args="[--unit N] [--force] [--force-ungated] [--full] [--verify crc|readback] [--write-mode byte|burst] image.bin",
          kind="action")
 def cmd_deploy(extra: list[str]) -> int:
     """Safe production deployment: common firmware first, per-unit EDID second.
@@ -638,10 +678,12 @@ def cmd_deploy(extra: list[str]) -> int:
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
     wmode = _opt(extra, "--write-mode", "burst")
+    ungated = _flag(extra, "--force-ungated")
     image_args = _image_arg(extra)
     if not image_args:
         raise SystemExit("deploy: give the shared firmware image explicitly; nothing done")
     img = Path(image_args[0])
+    check_gated(img, ungated)       # before the EDID step and any hardware; cmd_flash re-checks (same result)
 
     # Validate the image and generate both sides of the sector guard before
     # resolving/touching a monitor.
@@ -655,7 +697,7 @@ def cmd_deploy(extra: list[str]) -> int:
     flash_args = ["--unit", n, "--bus", str(bus), "--any-image",
                   "--verify", verify, "--write-mode", wmode,
                   *(["--full"] if full else []),
-                  *(["--force"] if not u.get("test") else []), str(img)]
+                  *(["--force"] if not u.get("test") else []), *(["--force-ungated"] if ungated else []), str(img)]
     rc = cmd_flash(flash_args)
     if rc:
         log(f"deploy: shared firmware failed (rc={rc}); EDID was not programmed", "ERROR")
@@ -1086,12 +1128,13 @@ RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2
 
 
 @command("recover a wedged unit: mains cycle, hold it in the safe window, reflash (default: last flashed)",
-         args="[--unit N] [--bus N] [--write-mode byte|burst] [--any-image] [image.bin]", kind="action")
+         args="[--unit N] [--bus N] [--write-mode byte|burst] [--any-image] [--force-ungated] [image.bin]", kind="action")
 def cmd_recover(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
     wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
     any_image = _flag(extra, "--any-image")
+    ungated = _flag(extra, "--force-ungated")
     given_bus = _opt(extra, "--bus")        # caller-proven bus (EDID silent); still needs this unit's relay cycle
     img = _image_arg(extra) or [_flashed(u).get("image", "")]
     # everything that can refuse does so BEFORE the relay: image exists, is a .bin, belongs to this unit (#52.3)
@@ -1100,6 +1143,7 @@ def cmd_recover(extra: list[str]) -> int:
         raise SystemExit(f"recover: no usable image ({img[0] or 'no flashed.json image'!r}); give one; nothing done")
     if not any_image:
         check_image_identity(u, p)
+    check_gated(p, ungated)                 # refuse before the relay too
     try:
         bus = _bus(u)                       # unit still answering: identity proven by EDID, before the cycle
     except SystemExit:
@@ -1107,7 +1151,8 @@ def cmd_recover(extra: list[str]) -> int:
     if bus is not None and _py("rtd_reset.py", bus, "--serial", u["serial"]) == 0:
         log("recover: ISP reset sent (fast path, no mains cycle)")   # 0x4A answered: no 8 s relay cycle needed
         return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode,
-                          *(["--any-image"] if any_image else []), *img])
+                          *(["--any-image"] if any_image else []),
+                          *(["--force-ungated"] if ungated else []), *img])
     rc = cmd_power_cycle(["--unit", n])
     if rc:
         return rc
@@ -1128,7 +1173,8 @@ def cmd_recover(extra: list[str]) -> int:
             log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
     else:
         log("recover: flashed image has no _g_stAwtoSafe in its map; hold skipped, flashing over ISP", "WARN")
-    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *(["--any-image"] if any_image else []), *img])
+    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *(["--any-image"] if any_image else []),
+                          *(["--force-ungated"] if ungated else []), *img])
 
 
 GDCTL_SHOW_S = 3    # `gdctl show` is one D-Bus call (~0.1 s); 3 s = 30x, expiry -> mode refuses, nothing changed

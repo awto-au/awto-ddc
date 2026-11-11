@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
-"""Offline gates for one firmware image (health sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60.
+"""Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
+menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc]
+usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
+  keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
+  sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
-  Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL line per gate; exit 1 if any fails.
+  Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL/SKIP line per gate; exit 1 if any fails.
+SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbols), or the gate needs --tree and none was given.
+  wdt cases the image does not implement report SKIP inside wdt_test; they are counted in the gate's note.
+Record: tmp/fw/<stem>.gates.json = image SHA-256, date, per-gate result + seconds, fw_gates git commit, complete (no --only).
+  `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
 Stall guard (awto-dan#53): a gate silent for STALL_S is killed and FAILs; backstop LIMIT_S per gate.
 Log: ./tmp/logs/fw_gates.log
 """
 import argparse
+import hashlib
+import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -22,10 +32,36 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-SILENT_S = {"h1080": 480, "h2160": 480, "menu": 480, "ddc": 480}   # health --sim prints only at the end: 3x its cold 160 s (2026-11-07); menu/ddc boot silently first
-LIMIT_OF = {"menu": 2700}   # menu walk with --png ~900 s (16 pages, 2026-11-08, ui5): 3x
-LIMIT_S = 900         # backstop: 3x the slowest gate seen (health --sim 2160p60 ~ 5 min cold, 2026-11-07)
+LIMIT_OF = {"keys": 60, "wdt": 60}   # 3x the cold run (keys 20 s, wdt 18 s; fast core, 2026-11-11); table of all gates: commit message
+LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
+SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
+NO_SIM = {"link", "pokes", "speed"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
+SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
+    "keys": ("_AwtoSourceOpen",),
+    "crash": ("_AwtoWdtHang",),
+    "wdt": ("_AwtoWdtHang",),
+    "sync": ("_g_stAwtoSync",),
+    "bootsim": ("_g_stAwtoSync",),
+    "wake": ("_AwtoPsWakeFire",),
+}
+
+
+def header(tree):
+    h = Path(tree) / "fw/overlay/Project/Header/RL6449_Project.h" if tree else None
+    return h if h and h.is_file() else None
+
+
+def skips(b: Path, m: Path, tree) -> dict:
+    """Gates that cannot run on this image: name -> reason (SKIP, not FAIL)."""
+    mt = m.read_text(errors="replace")
+    sk = {k: f"image lacks {', '.join(x for x in v if f' {x}' not in mt)}"
+          for k, v in SKIP_IF_MISSING.items() if any(f" {x}" not in mt for x in v)}
+    if not header(tree):
+        sk.setdefault("crash", "needs --tree with fw/overlay/Project/Header/RL6449_Project.h")
+    if not (tree and Path(tree).is_dir()):
+        sk["pokes"] = "needs --tree (static check of the worktree's sources)"
+    return sk
 
 
 def gates(b: Path, m: Path, ref, tree):
@@ -43,6 +79,16 @@ def gates(b: Path, m: Path, ref, tree):
         g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]
     if " _vcp_box" in mt and " _AwtoDdcciPoll" in mt:
         g["ddc"] = [*PY, f"{s}/ddc_sim.py", b, "--map", m]
+    out = ROOT / "tmp/fw_gates" / b.stem             # own PNG/json dir per image (gates run in parallel)
+    g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m]
+    g["wdt"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
+    g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
+    g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
+    g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    if header(tree):
+        g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
+    if tree and Path(tree).is_dir():
+        g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
     return {
         **g,
         "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],
@@ -58,14 +104,13 @@ def run(name, cmd, out: Path, res: dict, log):
     last = [t0, ""]
     with out.open("w") as f:
         p = subprocess.Popen(list(map(str, cmd)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT,
-                             env=dict(os.environ, PYTHONHASHSEED="0"))
+                             env=dict(os.environ, PYTHONHASHSEED="0", **({"AWTO_SIM_CORE": "fast"} if name not in NO_SIM else {})))
 
         def watch():
             while p.poll() is None:
                 now = time.monotonic()
-                stall = SILENT_S.get(name, STALL_S)
-                if now - last[0] > stall or now - t0 > LIMIT_OF.get(name, LIMIT_S):
-                    why = "stall" if now - last[0] > stall else "limit"
+                if now - last[0] > STALL_S or now - t0 > LIMIT_OF.get(name, SPEED_LIMIT_S if name == "speed" else LIMIT_S):
+                    why = "stall" if now - last[0] > STALL_S else "limit"
                     log(f"{name}: KILL ({why}) after {now - t0:.0f}s, silent {now - last[0]:.0f}s, last: {last[1][:160]!r}, "
                         f"loadavg {os.getloadavg()[0]:.1f}")
                     p.kill()
@@ -99,34 +144,61 @@ def main() -> int:
         print(line, flush=True); lf.write(line + "\n")
 
     stem = Path(a.stem)
-    b, m = stem.with_suffix(".bin") if stem.suffix != ".bin" else stem, None
+    b = stem.with_suffix(".bin") if stem.suffix != ".bin" else stem
     m = b.with_suffix(".map")
     g = gates(b, m, a.against, a.tree)
+    sk = skips(b, m, a.tree)
     if a.only:
         g = {k: v for k, v in g.items() if k in a.only.split(",")}
+    sk = {k: v for k, v in sk.items() if k in g}
+    g = {k: v for k, v in g.items() if k not in sk}
     if a.speed:
         g["speed"] = [*PY, str(ROOT / "scripts/speed_bench.py"), b.with_suffix(""), "--label", a.speed]
-    log(f"=== gates {b.name}: {', '.join(g)} ===")
+    log(f"=== gates {b.name}: {', '.join(g)}{'; SKIP ' + ', '.join(sk) if sk else ''} ===")
     res = {}
     # boot/isr/link first, one at a time: boot-check shares tmp/fwsim/<stem>/ with the health sims (a parallel run FAILed at
-    # gsinit, 2026-11-07); then the two health sims (separate SimBus machines) in parallel
+    # gsinit, 2026-11-07); then the rest (separate SimBus machines) in parallel
     for group in ([k for k in g if k in ("boot", "isr", "link")], [k for k in g if k not in ("boot", "isr", "link")]):
         th = []
         for k in group:
             t = threading.Thread(target=run, args=(k, g[k], ROOT / "tmp/logs/fw_gates" / f"{b.stem}.{k}.log", res, log))
             t.start(); th.append(t)
             if k in ("boot", "isr", "link"):
-                t.join()                 # short ones in turn; the health sims run in parallel (per-process sim dir, fw_sim)
+                t.join()                 # short ones in turn; the sims run in parallel (per-process sim dir, fw_sim)
         for t in th:
             t.join()
-    bad = 0
+    bad, rec = 0, {}
     for k in g:
         rc, dt, last = res[k]
         ok = rc == 0 or (k.startswith("h") and last.endswith("FAIL: delay cal"))   # delay cal needs wb-delaycal (#54)
         bad += not ok
-        log(f"{'PASS' if ok else 'FAIL'} {k:6s} rc={rc} {dt:5.0f}s  {last[:150]}")
-    log(f"=== {b.name}: {'ALL PASS' if not bad else f'{bad} FAIL'} ===")
+        note = last[:150]
+        if k == "wdt":
+            n = sum(1 for ln in (ROOT / "tmp/logs/fw_gates" / f"{b.stem}.{k}.log").read_text(errors="replace").splitlines()
+                    if re.match(r"\s+SKIP\s", ln))
+            note = f"{n} case(s) SKIP; {note}" if n else note
+        rec[k] = {"result": "PASS" if ok else "FAIL", "rc": rc, "seconds": round(dt, 1), "note": note}
+        log(f"{rec[k]['result']} {k:6s} rc={rc} {dt:5.0f}s  {note}")
+    for k, why in sk.items():
+        rec[k] = {"result": "SKIP", "rc": None, "seconds": 0, "note": why}
+        log(f"SKIP {k:6s} {why}")
+    write_record(b, rec, a.tree, complete=not a.only)
+    log(f"=== {b.name}: {'ALL PASS' if not bad else f'{bad} FAIL'}, {len(sk)} SKIP ===")
     return 1 if bad else 0
+
+
+def write_record(b: Path, rec: dict, tree, complete: bool) -> None:
+    """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL)."""
+    def git(*x):
+        return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True).stdout.strip()
+    doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
+           "date": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "complete": complete, "tree": str(tree or ""),
+           "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
+           "gates": rec}
+    out = b.with_suffix(".gates.json")
+    tmp = out.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(doc, indent=1) + "\n")
+    tmp.replace(out)
 
 
 if __name__ == "__main__":
