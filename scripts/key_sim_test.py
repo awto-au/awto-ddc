@@ -116,6 +116,40 @@ class Keys:
         self.fails += 0 if ok else 1
 
 
+OSD_TIMEOUT_S = 30          # an SDK OSD timeout > 10 s (RTD2014Key: <= 10 = never); registry osd_timeout default is 30
+OSD_TIMEOUT_OFF = 4         # StructOSDUserDataType.ucOsdTimeout (RTD2014NVRamOsd.h: usBackLight, ucOsdHPos, ucOsdVPos first)
+SDK_PSAVE_S = 3 + 2         # SDK no-signal way in: power-saving card after 3 s, power saving 2 s later (RTD2014Osd.c)
+
+
+def stay_open(k):
+    """#139: the selector closes only on a choice or a cancel (no OSD timeout, no stale info-card timeout, no 3 s sleep)."""
+    to = k.m.addr("g_stOSDUserData") + OSD_TIMEOUT_OFF
+    old = k.m.rd(to)[0]
+    k.m.wr(to, bytes([OSD_TIMEOUT_S]))                          # SDK OSD timeout armed (sim NVRAM default is <= 10 s = never)
+    k.tap("SOURCE")
+    sel = k.osd_state()
+    k.tap("DOWN")                                               # a step re-armed the SDK OSD timeout before #139
+    k.wait((OSD_TIMEOUT_S + 5) * 1000)
+    k.check(f"selector: still open {OSD_TIMEOUT_S + 5} s after the last key (no OSD timeout)", sel != 0 and k.osd_state() == sel,
+            f"osd state {k.osd_state()} (open {sel})")
+    k.tap("MENU")
+    k.tap("DOWN")                                               # info card: arms an OSD close (5 s, then the key's OSD timeout)
+    k.tap("SOURCE")
+    k.wait((OSD_TIMEOUT_S + 2) * 1000)
+    k.check("selector: the info card's pending close does not close a selector opened after it", k.osd_state() == sel,
+            f"osd state {k.osd_state()}")
+    k.tap("MENU")
+    b = k.snap()
+    k.cmd(0x17)                                                 # OSD event 7, the no-signal way in
+    k.wait((SDK_PSAVE_S + 2) * 1000)
+    k.check(f"selector (no-signal way in, picture on): open after {SDK_PSAVE_S + 2} s, no power saving",
+            k.osd_state() == sel and k.delta(b, "SysPowerSetTargetPowerStatus") == 0,
+            f"osd state {k.osd_state()}, power requests {k.delta(b, 'SysPowerSetTargetPowerStatus')}")
+    k.tap("MENU")
+    k.check("selector: MENU closes it", k.osd_state() == 0)
+    k.m.wr(to, bytes([old]))
+
+
 def run(k):
     s = k.s
     k.wait(1000)                                                # main loop is blocked ~150 ms after ACTIVE (pop-up, panel on): a press then is not sampled
@@ -170,6 +204,7 @@ def run(k):
     k.check("selector: UP steps", k.delta(b, "AwtoSourceStep") == 1)
     k.tap("MENU")
     k.check("selector: closed", k.osd_state() == 0)
+    stay_open(k)
 
     b = k.snap()                                                # awto menu: AUTO opens, keys go to menu_key, repeat rate-limited
     k.tap("AUTO")
