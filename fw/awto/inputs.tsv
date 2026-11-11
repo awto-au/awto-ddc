@@ -1,50 +1,50 @@
 # Every monitored input, in index order (the index is the transition-ring id). Generated into C by scripts/gen_awto_inputs.py.
-# name	pin	kind	src	a	b	text	screen	log
+# name	pin	kind	src	a	b	text	screen	log	desc
 # kind: bit | analog (8-bit, deadband) | byte (8-bit register)
 # src: p1/p3 (MCU port bit a) | p30 (P3.0, active low) | adc0/adc1/adc2 | vsync/vcmp (VGA scaler regs 0x4E/0xCD) | xreg (XDATA reg a, mask b) | key0/key1 (band a..b of adc0/adc1)
 # DPS15/16/17 (DP connector AUX sense) are not logged: DPS17 pulses ~4 ms every 60-100 ms and would flood the 32-entry ring.
-# text: VALUE column label on the screen. screen: y = a row of the diagnostic console (rows come first, in order). log: y = changes go to the I2C ring.
-GPIO	65	bit	p1	2	0	DIGITAL	y	y
-GPIO	66	bit	p1	3	0	DIGITAL	y	y
-GPIO	67	bit	p1	4	0	DIGITAL	y	y
-GPIO	68	bit	p1	5	0	DIGITAL	y	y
-GPIO	69	bit	p1	6	0	DIGITAL	y	y
-GPIO	70	bit	p1	7	0	DIGITAL	y	y
-GPIO	74	bit	p3	1	0	DIGITAL	y	y
-GPIO	75	bit	p3	2	0	DIGITAL	y	y
-ADC0	94	analog	adc0	0	0	VOLT	y	y
-ADC1	95	analog	adc1	0	0	VOLT	y	y
-ADC2	96	analog	adc2	0	0	VOLT	y	y
-POWER	71	bit	p30	0	0	DIGITAL	y	y
-AVS	55	byte	vsync	0	0	SYNC	y	n
-AHS	56	byte	vsync	0	0	SYNC	y	n
-BM	57	byte	vcmp	0	0	CMP	y	n
-BP	58	byte	vcmp	0	0	CMP	y	n
-GM	59	byte	vcmp	0	0	CMP	y	n
-GP	60	byte	vcmp	0	0	CMP	y	n
-SOG	61	byte	vsync	0	0	SYNC	y	n
-RM	62	byte	vcmp	0	0	CMP	y	n
-RP	63	byte	vcmp	0	0	CMP	y	n
-IR	194	bit	xreg	0xFE28	1	IN	y	y
-HPSEL	113	bit	xreg	0xFE05	1	IN	y	y
-H2HPD	1	bit	xreg	0xFFE2	1	IN	y	y
-H1HPD	14	bit	xreg	0xFFE2	2	IN	y	y
-DPHPD	97	bit	xreg	0xFE02	1	IN	y	y
-H2CBL	198	bit	xreg	0xFE2C	1	IN	y	y
-H1CBL	204	bit	xreg	0xFE32	1	IN	y	y
-DPS17	206	bit	xreg	0xFE33	1	IN	y	n
-DPS15	207	bit	xreg	0xFE34	1	IN	y	n
-DPS16	208	bit	xreg	0xFE35	1	IN	y	n
-BLEN	196	bit	xreg	0xFE2A	1	OUT	y	y
-PNLPW	159	bit	xreg	0xFE1A	1	OUT	y	y
-MUTE	161	bit	xreg	0xFE1C	1	OUT	y	y
-PWR1	184	bit	xreg	0xFE24	1	OUT	y	y
-PWR2	185	bit	xreg	0xFE25	1	OUT	y	y
-PWR3	201	bit	xreg	0xFE2F	1	OUT	y	y
-PWR4	202	bit	xreg	0xFE30	1	OUT	y	y
-FLWP	190	bit	xreg	0xFE26	1	OUT	y	y
-SOURCE	0	bit	key1	0x68	0x88	-	n	y
-MENU	0	bit	key0	0xC0	0xE0	-	n	y
-DOWN	0	bit	key1	0x28	0x48	-	n	y
-UP	0	bit	key0	0x28	0x48	-	n	y
-AUTO	0	bit	key0	0x70	0x90	-	n	y
+# desc: plain-language meaning shown on the console (max 30 chars). text: VALUE column label on the screen. screen: y = a row of the diagnostic console (rows come first, in order). log: y = changes go to the I2C ring.
+GPIO	65	bit	p1	2	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	66	bit	p1	3	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	67	bit	p1	4	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	68	bit	p1	5	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	69	bit	p1	6	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	70	bit	p1	7	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	74	bit	p3	1	0	DIGITAL	y	y	spare pad, high-Z input
+GPIO	75	bit	p3	2	0	DIGITAL	y	y	spare pad, high-Z input
+ADC0	94	analog	adc0	0	0	VOLT	y	y	key ladder A0: MENU UP AUTO
+ADC1	95	analog	adc1	0	0	VOLT	y	y	key ladder A1: SOURCE DOWN
+ADC2	96	analog	adc2	0	0	VOLT	y	y	spare ADC, 3.3 V full scale
+POWER	71	bit	p30	0	0	DIGITAL	y	y	front POWER key, 1 = pressed
+AVS	55	byte	vsync	0	0	SYNC	y	n	analog VGA vertical sync
+AHS	56	byte	vsync	0	0	SYNC	y	n	analog VGA horizontal sync
+BM	57	byte	vcmp	0	0	CMP	y	n	VGA blue- compare flag
+BP	58	byte	vcmp	0	0	CMP	y	n	VGA blue+ compare flag
+GM	59	byte	vcmp	0	0	CMP	y	n	VGA green- compare flag
+GP	60	byte	vcmp	0	0	CMP	y	n	VGA green+ compare flag
+SOG	61	byte	vsync	0	0	SYNC	y	n	VGA sync on green
+RM	62	byte	vcmp	0	0	CMP	y	n	VGA red- compare flag
+RP	63	byte	vcmp	0	0	CMP	y	n	VGA red+ compare flag
+IR	194	bit	xreg	0xFE28	1	IN	y	y	IR receiver, idle high
+HPSEL	113	bit	xreg	0xFE05	1	IN	y	y	speaker / headphone select
+H2HPD	1	bit	xreg	0xFFE2	1	IN	y	y	HDMI-2 hot-plug output
+H1HPD	14	bit	xreg	0xFFE2	2	IN	y	y	HDMI-1 hot-plug output
+DPHPD	97	bit	xreg	0xFE02	1	IN	y	y	DisplayPort hot-plug output
+H2CBL	198	bit	xreg	0xFE2C	1	IN	y	y	HDMI-2 cable detect, 1 = cable
+H1CBL	204	bit	xreg	0xFE32	1	IN	y	y	HDMI-1 cable detect, 1 = cable
+DPS17	206	bit	xreg	0xFE33	1	IN	y	n	DP connector pin 17 (AUX-)
+DPS15	207	bit	xreg	0xFE34	1	IN	y	n	DP connector pin 15 (AUX+)
+DPS16	208	bit	xreg	0xFE35	1	IN	y	n	DP connector pin 16 (GND)
+BLEN	196	bit	xreg	0xFE2A	1	OUT	y	y	backlight enable, 0 = on
+PNLPW	159	bit	xreg	0xFE1A	1	OUT	y	y	panel power enable, 1 = on
+MUTE	161	bit	xreg	0xFE1C	1	OUT	y	y	speaker amp, 1 = enabled
+PWR1	184	bit	xreg	0xFE24	1	OUT	y	y	power-state output P8.4
+PWR2	185	bit	xreg	0xFE25	1	OUT	y	y	power-state output P8.5
+PWR3	201	bit	xreg	0xFE2F	1	OUT	y	y	power-state open drain P9.7
+PWR4	202	bit	xreg	0xFE30	1	OUT	y	y	power-state open drain PA.0
+FLWP	190	bit	xreg	0xFE26	1	OUT	y	y	SPI flash write protect
+SOURCE	0	bit	key1	0x68	0x88	-	n	y	-
+MENU	0	bit	key0	0xC0	0xE0	-	n	y	-
+DOWN	0	bit	key1	0x28	0x48	-	n	y	-
+UP	0	bit	key0	0x28	0x48	-	n	y	-
+AUTO	0	bit	key0	0x70	0x90	-	n	y	-

@@ -113,6 +113,7 @@ static void AwtoGpioLog(BYTE ucId, BYTE ucVal, WORD usNow)
     g_stAwtoGpio.pstLog[ucI].ucId = ucId;
     g_stAwtoGpio.pstLog[ucI].ucVal = ucVal;
     g_stAwtoGpio.ucSeq++;
+    AwtoConLogEvent(ucId, ucVal, usNow);           // the console's event log (does nothing when it is closed)
 }
 
 // ucMode 0: poll (store, log, mark a change), 1: mark every input changed (console just opened), 2: take the values quietly.
@@ -145,6 +146,11 @@ static void AwtoInScan(BYTE ucMode)
             }
         }
         g_stAwtoGpio.ucIn[ucI] = ucV;
+        if((ucMode == 0) && (ucV != 0))
+        {
+            if(ucI == AWTO_IN_UP) AwtoConScroll(-1);       // UP / DOWN scroll the console
+            else if(ucI == AWTO_IN_DOWN) AwtoConScroll(1);
+        }
         if(ucMode != 2)
         {
             g_stAwtoGpio.ucDirty[ucI >> 3] |= (BYTE)1 << (ucI & 7);

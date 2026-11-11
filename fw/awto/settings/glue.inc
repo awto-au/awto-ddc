@@ -132,6 +132,12 @@ int set_status(BYTE ucId)
             return GET_INPUT_TIMING_VHEIGHT();
         case AWTO_SET_INFO_VFREQ:
             return GET_INPUT_TIMING_VFREQ();
+        case AWTO_SET_INFO_HFREQ:
+            return GET_INPUT_TIMING_HFREQ();                // 0.1 kHz
+        case AWTO_SET_INFO_PCLK:
+            return ScalerSyncGetInputPixelClk();            // 0.1 MHz
+        case AWTO_SET_INFO_HDCP:
+            return (ScalerSyncHdcpCheckEnabled(SysSourceGetInputPort()) != _FALSE) ? 1 : 0;
         case AWTO_SET_INFO_MODE:
             return SysModeGetModeState();
         case AWTO_SET_INFO_LOOP:
@@ -154,6 +160,10 @@ static __code BYTE tAwtoStyle[5] = {1, 2, 3, 1, 4};      // style 4 = palette 4:
 #define AWTO_BAR_SURFACE            3
 #define AWTO_BAR_ACCENT             1
 
+static BYTE s_ucVpRows;                          // viewport rows (0 = the whole map is shown)
+static BYTE s_ucVpFirst;                         // first map row shown
+static BYTE s_ucVpEnd;                           // map row that currently holds the end-of-rows marker
+
 void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
     BYTE ucI;
@@ -163,6 +173,10 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
     OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
+    ScalerSetBit(0x3A18, ~_BIT7, 0x00);             // roll-up (viewport scroll) off
+    s_ucVpRows = 0;
+    s_ucVpFirst = 0;
+    s_ucVpEnd = ucLines;
     OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
     OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
@@ -183,6 +197,52 @@ void osd_tc_rowh(BYTE ucRh)
     {
         ScalerOsdCommandAllByte(ucI, 0x80, ucRh - 1, g_ucOsdWidth);   // row height - 1 (5 bit); the SDK map uses 17 = 18 px
     }
+}
+
+// Viewport (standard scrolling screen): the map has more rows than the window shows. Hardware roll-up moves the first displayed row
+// (0x3A19 row base, 0x3A1B/0x3A1C font-select base, 12 bit) and the end-of-rows marker moves with it, so the shown height stays fixed.
+// Call after osd_tc_open and the font load. Returns the first row actually shown (limited by the map end and by the 12-bit base).
+BYTE osd_tc_scroll(BYTE ucFirst)
+{
+    WORD usFs;
+    BYTE ucEnd;
+
+    if(s_ucVpRows == 0)
+    {
+        return 0;
+    }
+    if(ucFirst > g_ucOsdHeight - s_ucVpRows)
+    {
+        ucFirst = g_ucOsdHeight - s_ucVpRows;
+    }
+    while((ucFirst != 0) && ((WORD)ucFirst * g_ucOsdWidth + g_usFontSelectStart > 4095))
+    {
+        ucFirst--;
+    }
+    ucEnd = ucFirst + s_ucVpRows;
+    if(s_ucVpEnd < g_ucOsdHeight)
+    {
+        ScalerOsdCommandAllByte(s_ucVpEnd, 0x80, osd_rh - 1, g_ucOsdWidth);    // the old marker row is a text row again
+    }
+    if(ucEnd < g_ucOsdHeight)
+    {
+        ScalerOsdCommandByte(ucEnd, _OSD_BYTE0, 0x00);                         // end-of-rows marker: the view stops here
+    }
+    s_ucVpEnd = ucEnd;
+    usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
+    ScalerSetBit(0x3A18, ~(_BIT7 | _BIT6), _BIT7);                              // special function on, 0 = roll-up
+    ScalerSetByte(0x3A19, ucFirst);
+    ScalerSetBit(0x3A1B, 0x0F, (BYTE)((usFs >> 8) << 4));
+    ScalerSetByte(0x3A1C, (BYTE)usFs);
+    s_ucVpFirst = ucFirst;
+    return ucFirst;
+}
+
+void osd_tc_viewport(BYTE ucRows)
+{
+    s_ucVpRows = (ucRows < g_ucOsdHeight) ? ucRows : 0;
+    s_ucVpFirst = 0;
+    osd_tc_scroll(0);
 }
 
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
@@ -243,7 +303,7 @@ void osd_tc_vlc_end(void)
 void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
 {
     DWORD ulW = (DWORD)g_ucOsdWidth * osd_cw;
-    DWORD ulH = (DWORD)g_ucOsdHeight * osd_rh;
+    DWORD ulH = (DWORD)((s_ucVpRows != 0) ? s_ucVpRows : g_ucOsdHeight) * osd_rh;
     WORD usX = 0;
     WORD usY = 0;
     BYTE ucStep = (ScalerOsdGetHorizontalDelayStep() == _OSD_HORIZONTAL_DELAY_STEP_1_PIXEL) ? 1 : 4;
@@ -287,6 +347,8 @@ void osd_tc_show(BYTE ucOn)
 void osd_tc_close(void)
 {
     g_ucAwtoMenuOn = 0;
+    ScalerSetBit(0x3A18, ~_BIT7, 0x00);              // viewport roll-up off: the next screen starts at row 0
+    s_ucVpRows = 0;
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());

@@ -10,6 +10,7 @@
 #define AWTO_TCOL_STATE     12
 #define AWTO_TCOL_RAW       15
 #define AWTO_TCOL_VALUE     20
+#define AWTO_TCOL_DESC      28
 
 // GENERATED-BEGIN awto_inputs
 // kind 0 bit, 1 analog (deadband), 2 byte; src: see awto_gpio.inc AwtoInRead; flags bit0 = screen row, bit1 = logged in the ring
@@ -170,6 +171,23 @@ static void AwtoInText(BYTE ucI)
         default: break;
     }
 }
+
+#define AWTO_TXT_DESCHDR       44
+#define AWTO_TXT_LOGHDR        45
+#define AWTO_TXT_MS            46
+#define AWTO_TXT_MARK          47
+static const __code char tAwtoTxtS[] = "spare pad, high-Z input\0key ladder A0: MENU UP AUTO\0key ladder A1: SOURCE DOWN\0spare ADC, 3.3 V full scale\0front POWER key, 1 = pressed\0analog VGA vertical sync\0analog VGA horizontal sync\0VGA blue- compare flag\0VGA blue+ compare flag\0VGA green- compare flag\0VGA green+ compare flag\0VGA sync on green\0VGA red- compare flag\0VGA red+ compare flag\0IR receiver, idle high\0speaker / headphone select\0HDMI-2 hot-plug output\0HDMI-1 hot-plug output\0DisplayPort hot-plug output\0HDMI-2 cable detect, 1 = cable\0HDMI-1 cable detect, 1 = cable\0DP connector pin 17 (AUX-)\0DP connector pin 15 (AUX+)\0DP connector pin 16 (GND)\0backlight enable, 0 = on\0panel power enable, 1 = on\0speaker amp, 1 = enabled\0power-state output P8.4\0power-state output P8.5\0power-state open drain P9.7\0power-state open drain PA.0\0SPI flash write protect\0\0DESCRIPTION\0EVENT LOG - UP / DOWN SCROLLS THE SCREEN\0 MS  \0-----\0";
+static const __code WORD tAwtoTxtOffS[48] = {0, 0, 0, 0, 0, 0, 0, 0, 24, 52, 79, 107, 136, 161, 188, 211, 234, 258, 282, 300, 322, 344, 367, 394, 417, 440, 468, 499, 530, 557, 584, 610, 635, 662, 687, 711, 735, 763, 791, 815, 815, 815, 815, 815, 816, 828, 869, 875};
+static void AwtoTxt(BYTE ucI)                  // input description (0..AWTO_IN_N-1) or AWTO_TXT_*
+{
+    const __code char *pc = &tAwtoTxtS[tAwtoTxtOffS[ucI]];
+
+    while(*pc != 0)
+    {
+        AwtoPutChar(*pc);
+        pc++;
+    }
+}
 // GENERATED-END awto_inputs
 
 static BYTE AwtoInStyle(BYTE ucI)               // red = not in the I2C ring (inputs.tsv log = n)
@@ -190,6 +208,7 @@ static void AwtoInRowFull(BYTE ucI)
     if(ucK == 1) AwtoPutNum(ucV, 3); else if(ucK == 2) AwtoPutHex2(ucV); else AwtoPutChar('-');
     AwtoPutCol(AWTO_TCOL_VALUE);
     if(ucK == 1) AwtoPutVolt(ucV); else AwtoInText(ucI);
+    AwtoPutCol(AWTO_TCOL_DESC); AwtoTxt(ucI);
     AwtoTextLine(AWTO_G_L_FIRST + ucI, AwtoInStyle(ucI));
 }
 
@@ -228,6 +247,7 @@ static void AwtoTableStatic(void)
     AwtoPutCol(AWTO_TCOL_STATE); AwtoPutStr("S");
     AwtoPutCol(AWTO_TCOL_RAW); AwtoPutStr("RAW");
     AwtoPutCol(AWTO_TCOL_VALUE); AwtoPutStr("VALUE");
+    AwtoPutCol(AWTO_TCOL_DESC); AwtoTxt(AWTO_TXT_DESCHDR);
     AwtoTextLine(1, AWTO_T_STYLE_ACCENT);
     AwtoPutCol(1); AwtoPutStr("I2C 44 CLOSE");
     AwtoTextLine(AWTO_G_L_FIRST + AWTO_G_ROWS, AWTO_T_STYLE_ACCENT);
@@ -265,9 +285,54 @@ void AwtoOsdGpioLines(void)
     g_stAwtoGpio.ucDrawn = 1;
     g_stAwtoGpio.ucRedraws++;
 }
+
+// Event log (rows below the panels, shown by scrolling): one line per logged input change, newest after the "-----" marker.
+static __xdata BYTE s_ucLogHead;
+
+void AwtoConLogInit(void)
+{
+    s_ucLogHead = 0;
+    s_ucPanelCol = 1;
+    s_ucAwtoCols = 60;
+    s_ucPanelRow = AWTO_VIEW_ROWS + 1;
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+    AwtoTxt(AWTO_TXT_LOGHDR);
+    AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+}
+
+void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)
+{
+    if((s_ucConOpen == 0) || (AwtoConLost() != 0))
+    {
+        return;
+    }
+    s_ucPanelCol = 1;
+    s_ucAwtoCols = 60;
+    s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+    AwtoPutNum(usTick, 5); AwtoTxt(AWTO_TXT_MS); AwtoInName(ucId); AwtoPutChar(' '); AwtoPutChar(' '); AwtoPutNum(ucVal, 1);
+    AwtoTextLine(0, AWTO_T_STYLE_TEXT);
+    s_ucLogHead = (s_ucLogHead + 1 >= AWTO_CON_ROWS - AWTO_LOG_ROW0) ? 0 : (s_ucLogHead + 1);
+    s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;      // marker on the next row: also blanks the oldest line
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+    AwtoTxt(AWTO_TXT_MARK);
+    AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+}
 #else
 void AwtoOsdGpioLines(void)
 {
+}
+
+void AwtoConLogInit(void)
+{
+}
+
+void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)
+{
+    (void)ucId; (void)ucVal; (void)usTick;
 }
 #endif
 #endif

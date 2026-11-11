@@ -106,5 +106,8 @@
 #define AWTO_SET_INFO_MODE            99
 #define AWTO_SET_INFO_LOOP            100
 #define AWTO_SET_INFO_SCHEMA          101
+#define AWTO_SET_INFO_HFREQ           107
+#define AWTO_SET_INFO_PCLK            108
+#define AWTO_SET_INFO_HDCP            109
 #define AWTO_SET_SCHEMA              0x299F
 #endif

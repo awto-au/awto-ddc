@@ -220,6 +220,8 @@ extern void AwtoOsdKeyLines(void);
 #define AWTO_IN_ROWS                                            39      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)
 #define AWTO_IN_ADC0                                            8
 #define AWTO_IN_ADC1                                            9
+#define AWTO_IN_UP                                              42
+#define AWTO_IN_DOWN                                            41
 // GENERATED-END awto_inputs
 #define AWTO_GPIO_LOG_N                                         32
 #define AWTO_GPIO_REFRESH_MS                                    20
@@ -259,6 +261,9 @@ extern __xdata unsigned char g_ucAwtoProbeCols;
 extern void AwtoProbeScroll(unsigned char ucReset);
 extern void AwtoProbeSet(unsigned char ucLines);
 extern void AwtoDiagConsole(unsigned char ucOn);
+extern void AwtoConScroll(signed char cD);
+extern void AwtoConLogInit(void);
+extern void AwtoConLogEvent(unsigned char ucId, unsigned char ucVal, unsigned int usTick);
 extern void AwtoGpioConSet(unsigned char ucOn);
 extern void AwtoKeyConSet(unsigned char ucOn);
 #define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)

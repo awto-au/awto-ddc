@@ -13,13 +13,15 @@ extern void osd_font_load(BYTE ucFont);
 extern BYTE ui_font_selected(void);
 extern BYTE __xdata osd_cw;
 extern BYTE __xdata osd_rh;
+extern void osd_tc_viewport(BYTE ucRows);
+extern BYTE osd_tc_scroll(BYTE ucFirst);
 extern BYTE osd_font_glyph(char c);
 extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle);
 
 #ifndef AWTO_HOLD_POPUP
 #define AWTO_HOLD_POPUP     0x02                // same value as awto_testcmd.inc (another translation unit)
 #endif
-#define AWTO_T_MAXCOLS      96                  // XDATA is nearly full: widest text row (console 84, probe clamped to this)
+#define AWTO_T_MAXCOLS      100                 // XDATA is nearly full: widest text row (console 100, probe clamped to this)
 #define AWTO_T_STYLE_TEXT   0
 #define AWTO_T_STYLE_ONACC  2
 #define AWTO_T_STYLE_ACCENT 3
@@ -35,14 +37,16 @@ static BYTE s_ucAwtoLen;
 static BYTE s_ucAwtoCols;
 
 // One diagnostic console (AwtoDiagConsole): a fixed grid with the GPIO, key test and debug panels side by side.
-#define AWTO_CON_COLS       84
-#define AWTO_CON_ROWS       45                  // + the pad row AwtoTextOpen adds
+#define AWTO_CON_COLS       100
+#define AWTO_CON_ROWS       69                  // map rows (+ the pad row AwtoTextOpen adds): panels, then the event log
+#define AWTO_VIEW_ROWS      45                  // rows shown at a time; UP / DOWN scroll the view over the map
+#define AWTO_LOG_ROW0       (AWTO_VIEW_ROWS + 2)  // first event log line (the row before it is the log heading)
 static __xdata BYTE s_ucConOpen;
 static BYTE s_ucPanelCol;
 static BYTE s_ucPanelRow;
-static const __code BYTE tAwtoPanelCol[3] = {1, 44, 44};
+static const __code BYTE tAwtoPanelCol[3] = {1, 62, 62};
 static const __code BYTE tAwtoPanelRow[3] = {2, 2, 12};
-static const __code BYTE tAwtoPanelW[3] = {40, 36, 36};
+static const __code BYTE tAwtoPanelW[3] = {60, 36, 36};
 
 // The console owns the OSD only while its map is the one in place. A mode reset or an SDK pop-up replaces the map: then drawing
 // (field writes at console positions) would corrupt that screen, so the console lets go (no OSD change) and returns 1.
@@ -53,10 +57,25 @@ static bit AwtoConLost(void)
         return 0;
     }
     s_ucConOpen = 0;
+    ScalerSetBit(0x3A18, ~_BIT7, 0x00);            // the new map must not be shifted by our roll-up
     g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     AwtoGpioConSet(0);
     AwtoKeyConSet(0);
     return 1;
+}
+
+static __xdata BYTE s_ucConFirst;               // first map row shown (hardware scroll)
+
+void AwtoConScroll(signed char cD)              // UP / DOWN while the console is open
+{
+    BYTE ucN;
+
+    if((s_ucConOpen == 0) || (AwtoConLost() != 0))
+    {
+        return;
+    }
+    ucN = (cD < 0) ? ((s_ucConFirst != 0) ? (s_ucConFirst - 1) : 0) : (s_ucConFirst + 1);
+    s_ucConFirst = osd_tc_scroll(ucN);
 }
 
 static void AwtoPanel(BYTE ucP)
@@ -77,9 +96,12 @@ void AwtoOsdOfsInit(void)
 
 
 // Grid + frame/surface windows (+ optional title bar), centred, 2x; the OSD stays off until AwtoTextShow.
-static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, bit bTitleBar)
+static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar)   // ucView: rows shown (0 = all, no scrolling)
 {
-    ucLines++;                         // one blank pad row: the frame border covers the last 2 px of a full-height row
+    BYTE ucWin;
+
+    ucLines++;
+    ucWin = (ucView != 0) ? (ucView + 1) : ucLines;                         // one blank pad row: the frame border covers the last 2 px of a full-height row
     s_ucAwtoCols = ucCols;
     s_pcAwtoRow[0] = ' ';              // every row starts one cell in, clear of the frame
     s_ucAwtoLen = 1;
@@ -89,8 +111,12 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, bit bTitleBar)
     ScalerOsdSetColorPalette(3, 0, 0, 0);
     ScalerOsdSetColorPalette(4, 255, 50, 50);
     osd_font_load(AwtoDiagFont());
-    osd_tc_bar(0, 0, 0, (WORD)ucCols * osd_cw - 1, (WORD)ucLines * osd_rh - 1, 1);   // frame (accent)
-    osd_tc_bar(1, 2, 2, (WORD)ucCols * osd_cw - 3, (WORD)ucLines * osd_rh - 3, 0);  // surface
+    if(ucView != 0)
+    {
+        osd_tc_viewport(ucWin);
+    }
+    osd_tc_bar(0, 0, 0, (WORD)ucCols * osd_cw - 1, (WORD)ucWin * osd_rh - 1, 1);   // frame (accent)
+    osd_tc_bar(1, 2, 2, (WORD)ucCols * osd_cw - 3, (WORD)ucWin * osd_rh - 3, 0);  // surface
     if(bTitleBar != 0)
     {
         osd_tc_bar(2, 2, 2, (WORD)ucCols * osd_cw - 3, osd_rh - 1, 1);              // one row high title bar
@@ -308,7 +334,8 @@ void AwtoDiagConsole(BYTE ucOn)
         g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
         AwtoGpioConSet(1);
         AwtoKeyConSet(1);
-        AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, 1);
+        AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
+        s_ucConFirst = 0;
         s_ucAwtoCols = AWTO_CON_COLS;
         s_ucPanelCol = 0;
         s_ucPanelRow = 0;
@@ -321,6 +348,7 @@ void AwtoDiagConsole(BYTE ucOn)
         g_stAwtoKey.ucDrawn = 0;
         AwtoOsdKeyLines();
         AwtoOsdDebugLines();
+        AwtoConLogInit();
         AwtoTextShow();
     }
     else
@@ -385,7 +413,7 @@ void AwtoProbeSet(BYTE ucLines)
     s_ucAwtoConCols = ucCols;
     s_ucAwtoConRows = ucLines + 1;
     g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
-    AwtoTextOpen(ucCols, ucLines, 1);
+    AwtoTextOpen(ucCols, ucLines, 0, 1);
     for(ucR = 0; ucR < ucLines; ucR++)
     {
         AwtoConRow(ucR, ucCols, (ucR == 0) ? AWTO_T_STYLE_ONACC : AWTO_T_STYLE_TEXT);

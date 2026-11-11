@@ -118,12 +118,14 @@ void AwtoDiagTestCmd(void)
     {
         g_ucAwtoDiagSmall = (ucCmd == 0x4A);
     }
-    else if(ucCmd == 0x47)                              // hardware scroll experiment: one step / 0x48 back to 0
+    else if(ucCmd == 0x47)                              // scroll down one row (console; the limit probe steps on)
     {
+        AwtoConScroll(1);
         AwtoProbeScroll(0);
     }
-    else if(ucCmd == 0x48)
+    else if(ucCmd == 0x48)                              // scroll up one row (console; the limit probe goes back to 0)
     {
+        AwtoConScroll(-1);
         AwtoProbeScroll(1);
     }
     else if(ucCmd >= 0xC0)                              // 0xC0 + n: probe columns = 4 * n (0xE8 = 160)

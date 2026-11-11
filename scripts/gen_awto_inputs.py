@@ -35,9 +35,9 @@ def rows():
     for ln in TSV.read_text().splitlines():
         if not ln.strip() or ln.startswith("#"):
             continue
-        n, pin, kind, src, a, b, text, screen, lg = ln.split("\t")
+        n, pin, kind, src, a, b, text, screen, lg, desc = ln.split("\t")
         out.append(dict(name=n, pin=int(pin), kind=KINDS[kind], src=SRCS[src], a=int(a, 0), b=int(b, 0), text=text,
-                        screen=screen == "y", log=lg == "y", srcname=src, kindname=kind))
+                        screen=screen == "y", log=lg == "y", desc=desc, srcname=src, kindname=kind))
     n_screen = sum(r["screen"] for r in out)
     assert all(r["screen"] for r in out[:n_screen]), "screen rows must come first"
     assert len(out) <= 255, "ring id is one byte"
@@ -51,12 +51,14 @@ def arr(name, typ, vals, per_line=12):
 
 def header_block(r):
     n, ns = len(r), sum(x["screen"] for x in r)
-    idx = {x["name"]: i for i, x in enumerate(r) if x["name"] in ("ADC0", "ADC1")}
+    idx = {x["name"]: i for i, x in enumerate(r) if x["name"] in ("ADC0", "ADC1", "UP", "DOWN")}
     return "\n".join([
         f"#define AWTO_IN_N                                               {n}      // inputs in fw/awto/inputs.tsv; also the transition ring id range",
         f"#define AWTO_IN_ROWS                                            {ns}      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)",
         f"#define AWTO_IN_ADC0                                            {idx['ADC0']}",
-        f"#define AWTO_IN_ADC1                                            {idx['ADC1']}"])
+        f"#define AWTO_IN_ADC1                                            {idx['ADC1']}",
+        f"#define AWTO_IN_UP                                              {idx['UP']}",
+        f"#define AWTO_IN_DOWN                                            {idx['DOWN']}"])
 
 
 def table_block(r, which, suffix=""):
@@ -90,7 +92,43 @@ def names_block(r):
             L.append(f'            AwtoPutStr("{t}"); break;')
         L += ["        default: break;", "    }", "}"]
         return "\n".join(L)
-    return sw("AwtoInName", "name") + "\n\n" + sw("AwtoInText", "text")
+    return sw("AwtoInName", "name") + "\n\n" + sw("AwtoInText", "text") + "\n\n" + text_table(r)
+
+
+UI_TEXT = [("AWTO_TXT_DESCHDR", "DESCRIPTION"), ("AWTO_TXT_LOGHDR", "EVENT LOG - UP / DOWN SCROLLS THE SCREEN"),
+           ("AWTO_TXT_MS", " MS  "), ("AWTO_TXT_MARK", "-----")]
+
+
+def text_table(r):
+    """Console text as one constant table + one reader (stable names, so the layout can keep both in one bank:
+    a constant read through a pointer must sit in the reader's bank, awto-sdcc#39 / awto-ddc#111)."""
+    texts = [x["desc"] if x["desc"] != "-" else "" for x in r] + [t for _, t in UI_TEXT]
+    offs, blob = [], ""
+    for t in texts:
+        offs.append(len(blob))
+        blob += t + "\\0"
+    lens = [o for o in offs]
+    L = [f"#define {n:<22} {len(r) + i}" for i, (n, _) in enumerate(UI_TEXT)]
+    uniq, real, pos = {}, [], 0                   # identical texts share one copy
+    for t in texts:
+        if t not in uniq:
+            uniq[t] = pos
+            pos += len(t) + 1
+        real.append(uniq[t])
+    body = "".join(t.replace('"', '\\"') + "\\0" for t in uniq)
+    L.append(f"static const __code char tAwtoTxtS[] = \"{body}\";")
+    L.append(f"static const __code WORD tAwtoTxtOffS[{len(texts)}] = {{" + ", ".join(str(o) for o in real) + "};")
+    L += ["static void AwtoTxt(BYTE ucI)                  // input description (0..AWTO_IN_N-1) or AWTO_TXT_*",
+          "{",
+          "    const __code char *pc = &tAwtoTxtS[tAwtoTxtOffS[ucI]];",
+          "",
+          "    while(*pc != 0)",
+          "    {",
+          "        AwtoPutChar(*pc);",
+          "        pc++;",
+          "    }",
+          "}"]
+    return "\n".join(L)
 
 
 def patch(path, new_block):
