@@ -4,7 +4,7 @@
 usage: warn_policy_check.py WARNINGS.txt [WARNINGS.txt ...] [--policy fw/warn_policy.tsv] [--prune]
   WARNINGS.txt = keil2sdcc's tmp/sdcc-port/warnings-<uv2>.txt of every compile of the build (project + Lib)
   --prune  rewrite the policy without the rows no warning matches (comments kept)
-Exit 1 if a row is unused (without --prune) or a warning matches no row. Log: tmp/logs/warn_policy_check.log
+Exit 1 if a row is unused (without --prune; only reported when K2S_SDCC_EXTRA is set) or a warning matches no row. Log: tmp/logs/warn_policy_check.log
 """
 import argparse, fnmatch, os, re, sys, time
 from pathlib import Path
@@ -55,6 +55,9 @@ def main() -> int:
     if a.prune and dead:
         Path(a.policy).write_text("\n".join(l for i, l in enumerate(lines) if i not in set(dead)) + "\n")
         log(f"pruned {len(dead)} rows from {a.policy}")
+        dead = []
+    if dead and os.environ.get("K2S_SDCC_EXTRA", "").strip():   # rows are tuned to the default build; -D builds only report them
+        log(f"K2S_SDCC_EXTRA set (non-default build): {len(dead)} unused row(s) reported, not fatal")
         dead = []
     return 1 if dead or unmatched else 0
 
