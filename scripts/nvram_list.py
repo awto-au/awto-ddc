@@ -243,7 +243,7 @@ DUP = {
     "OSD.ucVolume": "volume", "OSD.b1PanelUniformity": "uniformity", "OSD.ucOsdInputPort": "input",
     "OSD.b2OsdDpD1PortVersion": "dp_version", "OSD.b3OsdDispRotate": "disp_rotate", "OSD.b1CloneMode": "clone",
     "OSD.b2LatencyStatus": "latency", "OSD.b1OsdDoubleSize": "osd_scale", "OSD.b1AwtoMsgOn": "debug_msgs",
-    "SYS.ucDPEDIDSelect": "dp_edid", "SYS.b1SourceHPAutoSearch": "input_mode", "SYS.b4SourceScanType": "input_mode",
+    "SYS.b3EdidD1": "dp_edid", "SYS.b1PowerStatus": "power_on", "SYS.b3D1DpLanes": "dp_lanes", "SYS.ucDpIrqTime_10us": "dp_irq_10us", "SYS.ucSSC": "ssc", "TIME.usHour": "panel_hours", "TIME.ucMin": "panel_min", "SYS.b1SourceHPAutoSearch": "input_mode", "SYS.b4SourceScanType": "input_mode",
     "SYS.b4SearchPort": "search_order",
     "BRI.usBrightness": "black_level", "BRI.usContrast": "contrast",
     "CT.usColorTempR": "user_red (preset USER only)", "CT.usColorTempG": "user_green (preset USER only)",
@@ -255,19 +255,19 @@ for _i, _c in enumerate(SIXC):
     DUP[f"SIX.ucSixColorSaturation{'RYGCBM'[_i]}"] = f"sa_{_c}_sat"
 
 SDK_MENU_OFF = "SDK menu built out (#120): none reachable"
+GATE = "gate"          # #151: every SDK item save deferred; written by the flush gate (see Stores)
 WRITERS = {
-    "SYS": "F input switch reaching ACTIVE; H power on/off; M boot/recovery",
-    "OSD": "G selector UP/DOWN/cancel; J factory menu; L debug toggles 0x28/0x29; M boot",
-    "BRI": f"{SDK_MENU_OFF}; J factory; M boot restore",
-    "CT": f"{SDK_MENU_OFF}; J factory; M boot restore",
-    "SIX": f"{SDK_MENU_OFF}; M boot restore",
-    "TIME": "I every 20 min of backlight",
+    "SYS": f"{GATE}: registry row / power on / off (H) / factory (J); M boot recovery direct",
+    "OSD": f"{GATE}: registry row / factory (J) / 0x28-0x29 (registry debug_msgs); M boot recovery direct",
+    "BRI": f"{GATE}: registry black_level / contrast (current source); J factory",
+    "CT": f"{GATE}: registry user RGB at colour temp User; J factory",
+    "SIX": f"{GATE}: registry six-axis rows",
+    "TIME": "rides along with every flush; power off / saving entry; never on its own (was I, every 20 min)",
 }
 FIELD_WRITERS = {
-    "SYS.ucDPEDIDSelect": "K registry dp_edid change", "SYS.b1PowerStatus": "H power on/off",
-    "SYS.b4SearchPort": "F input switch reaching ACTIVE", "SYS.b4SourceScanType": "F input switch reaching ACTIVE",
-    "OSD.ucOsdInputPort": "G selector UP/DOWN/cancel; F", "OSD.b1AwtoMsgOn": "L debug toggles 0x28/0x29",
-    "OSD.b2OsdDpD1PortVersion": "K registry dp_version change",
+    "SYS.b4SearchPort": "source selector choice only (KVM / search keep it in RAM: F no longer saves)",
+    "SYS.b4SourceScanType": "source selector choice only (as b4SearchPort)",
+    "OSD.ucOsdInputPort": "source selector choice only (UP / DOWN / cancel never stored)",
 }
 
 ITEMS = [  # id, name, struct key, bytes, note
@@ -390,8 +390,7 @@ def registry() -> list[dict]:
 REG_DUP_REV = {}
 for _k, _v in DUP.items():
     REG_DUP_REV.setdefault(_v.split(" ")[0], []).append(_k)
-REG_WRITERS = "A/E registry change (2 s); B/C VCP save / defaults; D menu close"
-REG_SPECIAL = {"input": " + F2 VCP 0x60 / menu switch", "dp_edid": " + K event", "dp_version": " + K"}
+REG_STORE = lambda r: "SDK field" if "sdk" in r["flags"] else f"AUX item 0x40-0x43"   # #151
 
 
 # ------------------------------------------------------------------------------------------------ live
@@ -488,6 +487,10 @@ def reg_range(r: dict) -> str:
     return f"{r['min']}..{r['max']}{unit}; def {d}"
 
 
+def aux_bytes(nv) -> int:
+    return 1 + sum(2 if r["type"] == "int" else 1 for r in nv if "sdk" not in r["flags"])
+
+
 def build(sdk, sizes, reg, live_s, live_r, hdr_extra: str) -> tuple[str, str]:
     nv = [r for r in reg if "nv" in r["flags"]]
     inert_nv = [r for r in nv if "inert" in r["flags"]]
@@ -497,8 +500,9 @@ def build(sdk, sizes, reg, live_s, live_r, hdr_extra: str) -> tuple[str, str]:
     reg_names = {r["name"] for r in reg}
     stale = [d for d in reg_dups if d not in reg_names]
     counts = (f"SDK fields {len(sdk)} in {len({r['struct'] for r in sdk})} structs ({len(ITEMS)} item ids, "
-              f"{sum(1 for i in ITEMS if i[2])} used); registry rows {len(reg)} ({len(nv)} nv = "
-              f"{3 * len(nv)} B payload + 3 B header); duplicates: {len(sdk_dups)} SDK fields <-> "
+              f"{sum(1 for i in ITEMS if i[2])} used); registry rows {len(reg)} ({len(nv)} nv: "
+              f"{sum(1 for r in nv if 'sdk' in r['flags'])} on SDK fields, aux block {aux_bytes(nv)} B); "
+              f"duplicates: {len(sdk_dups)} SDK fields <-> "
               f"{len(reg_dups)} registry rows; inert: {len(inert_all)} rows ({len(inert_nv)} of them nv)")
     today = time.strftime("%Y-%m-%dT%H:%M:%S%z")
 
@@ -511,17 +515,23 @@ def build(sdk, sizes, reg, live_s, live_r, hdr_extra: str) -> tuple[str, str]:
          hdr_extra,
          "- SDK defaults are positional (C initialiser): the OSD initialiser lists MST before DispRotate, so from byte 20.4 "
          "each default lands one field late; 'init comment names X' marks the value written for X.",
-         "- Triggers A-M are the write triggers of awto-au/awto-ddc#151 (A/E registry change, B/C VCP save, "
-         "D menu close, F input switch to ACTIVE, G selector, H power, I panel timer, J factory, K dp_edid, "
-         "L debug toggles, M boot).",
+         "- Letters A-M: the write triggers of awto-au/awto-ddc#151. Since wb-p14ui-nv (#151): one store (SDK), every save "
+         "through the flush gate; F (input switch), F2 (input row), G (selector steps), I (panel timer), K (dp_edid "
+         "duplicate) gone; B/C (VCP save / defaults) are flags.",
          "",
          "## Stores",
          "",
          "| store | where | format | writers |", "|---|---|---|---|",
          "| SDK | bank 15 pages 11-12, flash 0xFB000-0xFCFFF | 16 B items (14 B payload), EEPROM emulation, "
-         "unchanged items deduped, page move every ~239 writes | F G H I J K L M |",
-         f"| REG | flash 0xFD000-0xFEFFF, 2 sectors x 8 slots of 512 B | 12 B header + schema(2) + n(1) + "
-         f"(id, int16 LE) x {len(nv)} = {3 + 3 * len(nv)} B, whole record per save, no unchanged check | A-E K |",
+         "unchanged items not written (SDK compare), page move every ~239 item writes | the flush gate only |",
+         f"| AUX | SDK items 0x40-0x43 (same store) | aux block: check byte + {sum(1 for r in nv if 'sdk' not in r['flags'])} "
+         f"registry rows without an SDK field (bool / enum 1 B, int 2 B LE), {aux_bytes(nv)} B | the flush gate only |",
+         "| REG (retired) | flash 0xFD000-0xFEFFF | old registry record: read once at the first boot of the #151 layout, "
+         "never written | - |",
+         "",
+         "- Gate (glue_nv.inc, RL6449_Project.h AWTO_NV_*): write when ACTIVE stable 3 s, no DDC/CI for 500 ms and 2 s since "
+         "the last change (no debounce after a menu / selector close: 'Saving to memory' card), forced after 30 s dirty, at "
+         "once at power off / power-saving entry. DDC/CI handlers only mark dirty. Counters: g_stAwtoNv (scripts/nv_test.py).",
          "", "## SDK item ids (store SDK)", "", "| id | item | struct | payload | note |", "|---|---|---|---|---|"]
     for i, n, k, ln, note in ITEMS:
         m.append(f"| {i} | {n} | {k or '-'} | {ln} B | {note} |")
@@ -535,8 +545,8 @@ def build(sdk, sizes, reg, live_s, live_r, hdr_extra: str) -> tuple[str, str]:
         m.append(f"| {r['item']} | {md(r['key'])} | {r['struct'].replace('Struct', '').replace('DataType', '')} "
                  f"{pos} | {md(r['meaning'])}{md(c)} | {r['range']}; def {md(fmt_default(r['default']))} | {lv} | "
                  f"{md(r['written_by'])} | {md(r['dup'])} |")
-    m += ["", "## Registry rows with the nv flag (store REG)", "",
-          "| id | name | page | meaning | range / default | live | VCP | inert | written by | duplicate-of |",
+    m += ["", "## Registry rows with the nv flag (stored)", "",
+          "| id | name | page | meaning | range / default | live | VCP | inert | store | SDK field |",
           "|---|---|---|---|---|---|---|---|---|---|"]
     for r in nv:
         dups = ", ".join(REG_DUP_REV.get(r["name"], []))
@@ -544,13 +554,13 @@ def build(sdk, sizes, reg, live_s, live_r, hdr_extra: str) -> tuple[str, str]:
         m.append(f"| {r['id']} | {r['name']} | {md(r['page'])} | {md(r['label'])}{' - ' + md(note) if note else ''} | "
                  f"{md(reg_range(r))} | {md(reg_live_text(r, (live_r or {}).get(r['id'])))} | "
                  f"{'' if r['vcp'] == '-' else r['vcp']} | {'inert' if 'inert' in r['flags'] else ''} | "
-                 f"{REG_WRITERS}{REG_SPECIAL.get(r['name'], '')} | {md(dups)} |")
+                 f"{REG_STORE(r)} | {md(dups)} |")
     m += ["", "## Registry rows without nv (not stored)", "", "| id | name | type | flags | note |", "|---|---|---|---|---|"]
     for r in reg:
         if "nv" not in r["flags"]:
             m.append(f"| {r['id']} | {r['name']} | {r['type']} | {','.join(r['flags'])} | "
                      f"{md(r['note'] if r['note'] != '-' else '')} |")
-    m += ["", "## Stored twice (SDK item + registry row): the one-owner question of #151", "",
+    m += ["", "## Registry rows on SDK fields (one RAM copy since #151; registry live = the field in registry units)", "",
           "| registry row | SDK field(s) | registry inert | SDK live | registry live |", "|---|---|---|---|---|"]
     by_reg = {}
     for r in sdk_dups:

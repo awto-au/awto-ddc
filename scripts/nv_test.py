@@ -2,12 +2,13 @@
 """NVRAM store + flush gate test (awto-ddc#151): the same cases in fw_sim and on unit 2.
 
 usage: AWTO_SIM_CORE=fast nv_test.py --sim BIN [--map MAP] [--cases a,b]
-       nv_test.py --unit 2 --map MAP [--cases a,b] [--no-cycle]
+       nv_test.py --unit 2 --map MAP [--cases a,b] [--reboot mains|isp]
 - Store: the Realtek SDK EEPROM emulation only; SDK item saves are deferred and written by the gate (glue_nv.inc).
 - Counters: g_stAwtoNv (RL6449_Project.h StAwtoNv, big-endian words): mask, why, in-DDC flash ops, deferred, flushes,
   items programmed, flash halt ops, gate inputs (stable ms, DDC/CI idle ms).
 - Cases: unchanged (no write), vcp (no write in the handler or while DDC/CI is busy; written after the gate opens),
   forced (DDC/CI busy 30 s: written anyway), switch (KVM / search switches: no write), menu (close: card + write),
+  selector (cancel: nothing; a choice: stored at the gate with the card),
   power (POWER off: written at once), halt (6 x test cmd 0x3D: max poke gap), persist (unit: mains cycle, values back).
 - Sim DDC/CI: ddc_sim.DdcEngine (spare IIC engine). Unit: ddcutil on the unit's bus with the debug link off, then the
   link back on to read the counters; values through the VCP mailbox (settings_cli.Box) otherwise.
@@ -176,12 +177,12 @@ class Run:
 
     def wait_write(self, d0: dict, s: float, poll=None) -> tuple[dict, float | None]:
         """poll (DDC/CI traffic) every DDC_POLL_S while waiting; returns (counters, s until items_written moved)"""
-        t = 0.0
+        t, h0 = 0.0, time.monotonic()
         while t < s:
             if poll:
                 poll()
             self.t.wait(DDC_POLL_S if poll else 0.25)
-            t += DDC_POLL_S if poll else 0.25
+            t = (time.monotonic() - h0) if self.t.name == "unit" else t + (DDC_POLL_S if poll else 0.25)
             d = self.t.nv()
             if d["item_wr"] != d0["item_wr"] or d["flush"] != d0["flush"]:
                 return d, t
@@ -228,9 +229,9 @@ class Run:
             self.t.cmd(c)
             self.t.wait(s)
         d, dt = self.wait_write(d0, FORCE_S if self.t.name == "unit" else GATE_S)
-        ok = d["item_wr"] == d0["item_wr"] and d["flush"] == d0["flush"]
+        ok = d["item_wr"] == d0["item_wr"] and d["flush"] == d0["flush"] and d["ops"] == d0["ops"]
         self.row("switch", "PASS" if ok else "FAIL", f"KVM D3 / D1 / D2 + auto search: items written "
-                 f"{d0['item_wr']} -> {d['item_wr']}, flushes {d0['flush']} -> {d['flush']}; {show(d)}")
+                 f"{d0['item_wr']} -> {d['item_wr']}, flushes {d0['flush']} -> {d['flush']}, flash ops {d0['ops']} -> {d['ops']}; {show(d)}")
 
     def c_menu(self):
         import settings_table as T
@@ -259,6 +260,29 @@ class Run:
         self.t.wait(8.0 if self.t.name == "unit" else 3.0)
         self.t.vcp_set(0x10, cur)
 
+    def c_selector(self):
+        """SOURCE + UP + MENU (cancel): nothing stored; SOURCE + UP + AUTO (take): the input stored with the card at the
+        gate; then back (SOURCE + DOWN + AUTO). Test cmds: 0x05 SOURCE, 0x02 UP, 0x03 DOWN, 0x01 AUTO, 0x04 MENU."""
+        d0 = self.settle()
+        self.t.cmd(0x27); self.t.wait(0.5)               # the console (opens by itself at power-on) closed: keys reach the selector
+        for c in (0x05, 0x02, 0x04):
+            self.t.cmd(c); self.t.wait(0.5)
+        d1, dt = self.wait_write(d0, GATE_S)
+        cancel_ok = dt is None and d1["mask"] & ~0x20 == 0
+        res = []
+        for step in (0x02, 0x03):
+            a = self.t.nv()
+            self.t.cmd(0x27); self.t.wait(0.5)
+            for c in (0x05, step, 0x01):
+                self.t.cmd(c); self.t.wait(0.5)
+            d, dt = self.wait_write(a, FORCE_S)
+            res.append((dt, d["why"], d["item_wr"] - a["item_wr"]))
+            self.t.wait(3.0)
+        ok = cancel_ok and all(x[0] is not None and x[1] in (2, 4) for x in res)    # forced: the chosen input has no picture
+        self.row("selector", "PASS" if ok else "FAIL", f"cancel: {'nothing stored' if cancel_ok else 'STORED'}; take / back: "
+                 + ", ".join(f"written after {x[0] if x[0] is None else round(x[0], 1)} s ({WHY.get(x[1])}, {x[2]} items)" for x in res)
+                 + f"; {show(self.t.nv())}")
+
     def c_halt(self):
         if self.t.name != "unit":
             return self.row("halt", "SKIP", "unit only (real flash halts)")
@@ -273,9 +297,9 @@ class Run:
                  f"6 x 0x3D: items written {d0['item_wr']} -> {d['item_wr']}, flash ops {d0['ops']} -> {d['ops']}; {show(d)}"
                  + (f"; record {rec}" if rec else ""))
 
-    def c_persist(self, cycle: bool):
-        if self.t.name != "unit" or not cycle:
-            return self.row("persist", "SKIP", "unit with --cycle only (mains relay of unit 2)")
+    def c_persist(self, how: str | None):
+        if self.t.name != "unit" or not how:
+            return self.row("persist", "SKIP", "unit with --reboot mains|isp only")
         import settings_table as T
         rows = {"osd_timeout": None, "kvm_prefill": None, "brightness": None}
         for n in rows:
@@ -288,14 +312,19 @@ class Run:
         self.t.cmd(0x3E)                                 # soft off: the flush
         d, dt = self.wait_write(d0, POWER_S + 1.0)
         self.say(f"  soft off: written {dt}; {show(d)}")
-        rc = subprocess.run([sys.executable, str(ROOT / "dev.py"), "power-cycle", "--unit", "2"], capture_output=True, text=True,
-                            timeout=60).returncode        # relay off 8 s + on; 60 s = relay API stuck, case FAILs
-        self.say(f"  mains cycle rc={rc}")
+        if how == "mains":                               # relay off 8 s + on; 60 s = relay API stuck, case FAILs
+            cmd = [sys.executable, str(ROOT / "dev.py"), "power-cycle", "--unit", "2"]
+        else:                                            # ISP 0xEE reboot: RAM rebuilt, the SDK store read back from flash
+            cmd = [sys.executable, str(ROOT / "dev.py"), "reset", "--unit", "2"]
+        rc = subprocess.run(cmd, capture_output=True, text=True, timeout=60).returncode
+        self.say(f"  {how} reboot rc={rc}")
+        self.t.wait(5.0)                                 # monitor back: 5 s max (memory rule)
         self.t = Unit("2", self.t.mapp, self.say)        # bus number may change after a cycle
+        nv = self.t.nv()
         got = {n: self.t.box.get_row(T.BY_NAME[n]) for n in want}
         pw = self.t.box.get_row(T.BY_NAME["power_on"])
-        ok = got == want and pw == 0
-        self.row("persist", "PASS" if ok else "FAIL", f"after soft off + mains cycle: {got} (want {want}), power_on {pw} "
+        ok = rc == 0 and got == want and pw == 0 and nv["flush"] == 0     # flushes 0: really a new boot
+        self.row("persist", "PASS" if ok else "FAIL", f"after soft off + {how} reboot: {got} (want {want}), power_on {pw} "
                  f"(off before the cycle: stays off); {show(self.t.nv())}")
         self.t.cmd(0x3E)                                 # on
         self.t.wait(8.0)
@@ -303,7 +332,7 @@ class Run:
             self.t.box.set_row(T.BY_NAME[n], v)
 
 
-CASES = ["unchanged", "vcp", "forced", "switch", "menu", "power", "halt", "persist"]
+CASES = ["unchanged", "vcp", "forced", "switch", "menu", "selector", "power", "halt", "persist"]
 
 
 def main() -> int:
@@ -312,7 +341,7 @@ def main() -> int:
     ap.add_argument("--unit")
     ap.add_argument("--map", type=Path)
     ap.add_argument("--cases", default=",".join(CASES))
-    ap.add_argument("--cycle", action="store_true", help="persist: soft off + mains relay cycle of unit 2")
+    ap.add_argument("--reboot", choices=("mains", "isp"), help="persist: soft off, then the relay (mains) or ISP 0xEE reboot")
     a = ap.parse_args()
     say = Log()
     if a.sim:
@@ -333,7 +362,7 @@ def main() -> int:
     try:
         for c in a.cases.split(","):
             if c == "persist":
-                r.c_persist(a.cycle)
+                r.c_persist(a.reboot)
             else:
                 getattr(r, f"c_{c}")()
     finally:
