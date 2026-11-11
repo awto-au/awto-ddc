@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Watchdog crash record (awto-ddc#131, docs/watchdog.md): read, decode, clear over the firmware debug slave 0x35.
+
+usage: rtd_crash.py BUS --map MAP --serial SERIAL [--clear]
+- Reads the 32 B `_g_stAwtoWdt` (address from the map; 0xF6B0 in #131 images) with the 0x3C block read, prints one decoded line:
+  cause, bites / other warm resets, PC as bank:addr + symbol+offset (map), registers, heartbeat, uptime, feed / pass ages.
+- --clear: writes 0 to the magic byte (debug write 0x01 hi, 0x03 value, 0x3B lo); the record is invalid until the next bite.
+- Library (crash_sim_test.py): decode(b), line(d, syms), symbolize(syms, bank, pc), read(io, addr), clear(io, addr).
+Log: tmp/logs/rtd_crash.log (+ rtd_crash.raw.log byte trace)
+"""
+from __future__ import annotations
+
+import argparse
+import bisect
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import dbg_xdata as X  # noqa: E402
+
+DEV8, SIZE, REC_N, SEED = 0x6A, 32, 25, 0xA5
+COMMON_END = 0x5000                                  # banked code from 0x5000 (docs/reversing/realtek-rtd/mcu-8051.md)
+CAUSE = {0: "none", 1: "STALL", 2: "PASS"}
+BOOT = ((0x01, "LVR"), (0x02, "BITE-PENDING"), (0x04, "TEST-ARMED"), (0x08, "NEW"), (0x10, "WARM"))
+FIELDS = ("m0 m1 ver cause bites warm pch pcl bank sp psw acc b dph dpl reth retl stage mode hbh hbl uph upl "
+          "feed_age pass_age check boot tick feed pass max_feed max_pass").split()
+CHECK_MS = 200                                       # RL6449_Project.h AWTO_WDT_CHECK_MS
+
+
+def decode(b: bytes) -> dict:
+    if len(b) < SIZE:
+        raise ValueError(f"crash record: {len(b)} bytes, want {SIZE}")
+    d = dict(zip(FIELDS, b[:SIZE]))
+    s = SEED
+    for x in b[:REC_N]:
+        s ^= x
+    d["valid"] = b[0:2] == b"WD" and b[2] == 1 and b[REC_N] == s
+    d["pc"], d["ret"] = d["pch"] << 8 | d["pcl"], d["reth"] << 8 | d["retl"]
+    d["dptr"], d["hb"], d["up"] = d["dph"] << 8 | d["dpl"], d["hbh"] << 8 | d["hbl"], d["uph"] << 8 | d["upl"]
+    return d
+
+
+def load_syms(map_text: str) -> tuple[list, list, tuple]:
+    """Sorted (address, name) of code symbols (bank << 16 | addr for banked code, addr for common) + the bank-return table
+    range of fw/sdcc/bank.asm (__bs_call_sw + 1 .. __bs_ret: 16 entries of 4 B, entry k returns into bank k)."""
+    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.M)}
+    for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", map_text, re.M):      # full-length names (C: lines cut at 32 chars)
+        sym["_" + m.group(1)] = int(m.group(2), 16)
+    f = sorted((v, k[1:]) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_") and not k.startswith("__str_"))
+    rtab = (sym["__bs_call_sw"] + 1, sym["__bs_ret"]) if "__bs_call_sw" in sym and "__bs_ret" in sym else (0, 0)
+    return [v for v, _ in f], f, rtab
+
+
+def symbolize(syms: tuple, bank: int, pc: int) -> str:
+    keys, f, rtab = syms
+    if rtab[0] <= pc < rtab[1]:
+        return f"bank-return to bank {(pc - rtab[0]) // 4}"
+    a = pc if pc < COMMON_END else bank << 16 | pc
+    i = bisect.bisect_right(keys, a) - 1
+    return f"{f[i][1]}+0x{a - f[i][0]:x}" if i >= 0 else "?"
+
+
+def where(d: dict, pc: int) -> str:
+    return f"{d['bank']:02X}:{pc:04X}" if pc >= COMMON_END else f"C:{pc:04X}"
+
+
+def line(d: dict, syms: tuple | None = None) -> str:
+    boot = "|".join(n for bit, n in BOOT if d["boot"] & bit) or "-"
+    live = (f"live: boot {boot} feed {d['feed']} pass {d['pass']} max feed {d['max_feed']} pass {d['max_pass']} "
+            f"(x{CHECK_MS} ms)")
+    if not d["valid"]:
+        return f"no crash record (magic/check invalid); {live}"
+    if d["bites"] == 0:
+        return f"no bite recorded; other warm resets {d['warm']}; {live}"
+    c = CAUSE.get(d["cause"] & 0x7F, f"0x{d['cause']:02x}") + (" TEST" if d["cause"] & 0x80 else "")
+    pcs = where(d, d["pc"]) + (f" {symbolize(syms, d['bank'], d['pc'])}" if syms else "")
+    ret = f"{d['ret']:04X}" + (f" ({symbolize(syms, d['bank'], d['ret'])}?)" if syms else "")    # top word: may be data
+    return (f"WDT bite {c}: PC {pcs} STACK TOP {ret} SP {d['sp']:02X} A {d['acc']:02X} B {d['b']:02X} PSW {d['psw']:02X} "
+            f"DPTR {d['dptr']:04X}; hb {d['hb']} up {d['up']} ms stage {d['stage']} mode {d['mode']}; "
+            f"feed {d['feed_age']} pass {d['pass_age']} x{CHECK_MS} ms; bites {d['bites']} warm {d['warm']}; {live}")
+
+
+def read(io, addr: int) -> bytes | None:
+    return X.read_blocks(io, addr, SIZE)
+
+
+def clear(io, addr: int) -> bool:
+    return (io.write(DEV8, 0x01, bytes([addr >> 8])) and io.write(DEV8, 0x03, b"\x00")
+            and io.write(DEV8, 0x3B, bytes([addr & 0xFF])))
+
+
+def map_addr(map_text: str) -> int:
+    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoWdt\b", map_text, re.M)
+    if not m:
+        raise SystemExit("_g_stAwtoWdt not in this map: image without the #131 watchdog")
+    return int(m.group(1), 16) & 0xFFFF
+
+
+def main() -> int:
+    import i2cbus
+    import rtd_i2c_bridge as B
+    ap = argparse.ArgumentParser()
+    ap.add_argument("bus", type=int)
+    ap.add_argument("--map", required=True, type=Path)
+    ap.add_argument("--serial", required=True)
+    ap.add_argument("--clear", action="store_true")
+    a = ap.parse_args()
+    i2cbus.require_unit(a.bus, a.serial)
+    mt = a.map.read_text(errors="replace")
+    addr, syms = map_addr(mt), load_syms(mt)
+    logs = B.setup_logs("rtd_crash", map=str(a.map))
+    io = B.Real(a.bus, allow_write=a.clear)
+    try:
+        b = read(io, addr)
+        if b is None:
+            raise SystemExit("crash record read failed (debug slave 0x35 silent or checksum errors)")
+        out = line(decode(b), syms)
+        if a.clear:
+            out += "; " + ("cleared" if clear(io, addr) else "CLEAR FAILED (I2C write)")
+        print(out)
+        logs.log(f"bus {a.bus} {a.serial}: {out}")
+        return 0
+    finally:
+        io.close()
+        logs.close()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

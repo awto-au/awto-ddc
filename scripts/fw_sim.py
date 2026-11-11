@@ -349,6 +349,30 @@ class RegTrace(Dev):
         return rows
 
 
+class ChipReset(Dev):
+    """MCU_FFEE_MCU_CLOCK_CONTROL bit1 sof_rst (regdb; the host's ISP 0xEE <- 0x02) = chip reset (awto-ddc#131): CPU reset
+    (PC 0, SFRs), bank register 0, every Dev re-initialised (register cells back to regdb reset values). XDATA / IRAM RAM kept
+    (warm reset, #26) and P0_01 HOST_CTRL kept (regdb: only an LVR clears reset_chk). resets / at_t2: count, diag usT2Isr."""
+    writes = (0xFFEE,)
+
+    def __init__(self):
+        self.resets, self.at_t2 = 0, []
+
+    def on_write(self, m, a):
+        if not m.rd(0xFFEE)[0] & 0x02:
+            return
+        host, t2 = m.rd(0x0001)[0], m.rd(0xF6D0 + 0x16, 2)
+        self.resets += 1
+        self.at_t2.append(t2[0] << 8 | t2[1])        # BE images (wb builds); LE readers swap
+        m.put("reset")
+        m.wr(0xFFFF, b"\x00")
+        for d in m.devs:
+            if d is not self:
+                d.init(m)
+        m.wr(0x0001, bytes([host]))
+        m.wr(0xFFEE, bytes([m.rd(0xFFEE)[0] & 0xFD]))
+
+
 class Cells(Dev):
     """Constant register values (after reset); name -> value dicts are applied through m.put."""
 
@@ -503,7 +527,7 @@ def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None, port
     return [regdb_cells(), FlashDev(img), IicSlave(), Cells(CABLE[port]),
             IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4),
             W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70},
-                FAULTS[fault] if fault else None), hdmi], hdmi
+                FAULTS[fault] if fault else None), hdmi, ChipReset()], hdmi
 
 
 def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
