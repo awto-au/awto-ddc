@@ -30,7 +30,9 @@ Never write bare "vendor": say which one.
 ### Limits
 - Measured SDK limit: `OsdDispSetPosition` wraps above the panel height at 2x (60+ rows): #108, row 1 (unit 2, 2026-11-11).
 - Roll-up font-select base is 12 bit (0x3A1B / 0x3A1C); `osd_tc_scroll` stops the view where the base would pass 4095. Register width: [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
-- Cell-map read limit and SRAM size on hardware: no measured value in the issues or code; see [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
+- Cell map: the OSD reads cells only below map address 8192 (13 bit). Measured 2026-11-11, unit 2, limit probe at 5x8: 160 x 48 lines clean; 160 x 63 lines correct up to map row 50 (address 65 + 50 x 160 = 8065), corrupt and wrapped from address 8192; 160 x 72 / 90 show nothing. Rule: cols x rows + rows + 1 < 8192.
+- Roll-up base wrap, measured the same day: 46 scroll steps at 160 columns corrupt the lower half once the 12-bit font-select base passes 4095 (about step 25).
+- Font SRAM size (12288 words) is the SDK constant, not read back from hardware; see [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
 
 ### Realtek SDK engine (RTD2014 demo OSD, compiled into our image)
 - Still live: our message cards (`AwtoCardMessage`, `AwtoCardPanel` in `awto_osdcard.inc`: No Signal / No Cable / No Support / Auto Adjust / Power Saving / panel uniformity), input-info pop-up (SDK `_OSD_DISP_INPUT_SIGNAL_MSG`, text recoloured), source selector (`AwtoSourceOpen`).
