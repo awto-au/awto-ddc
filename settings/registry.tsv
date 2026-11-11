@@ -1,7 +1,8 @@
 # Settings registry: the single source (awto/include/settings.h). Generated from it by awto-ddc scripts/settings_gen.py:
 # set_table, OSD menu pages (with settings/pages.tsv), DDC/CI VCP map, NVRAM record + schema, host table, docs/settings.md.
 # - id: stable, never reused (NVRAM key, VCP paged id, docs anchor). 1..255 (the NVRAM record keys are one byte).
-# - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120).
+# - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120); 65 logo,
+#   66 logo_ms (boot logo removed, the console shows the power-on log, awto-ddc#144).
 # - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
 # - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
 #   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
@@ -85,12 +86,10 @@
 61	osd_transparency	int	percent	osd	nv,live	0	100	1	0	auto	-	osd_transparency	Transparency	-	[sdk-ui]
 62	language	enum	none	osd	nv	0	1	1	0	auto	-	sdk_language	Realtek menu language	English|Chinese-T	Realtek SDK menu strings only [sdk-ui]
 63	osd_rotate	enum	none	osd	nv,inert	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
-65	logo	bool	none	boot	nv	0	1	1	1	auto	0xE8	-	Boot logo	-	read at mode INITIAL
-66	logo_ms	int	ms	boot	nv	0	10000	100	3000	auto	0xE9	-	Logo time	-
 67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [sdk-value]
 68	panel_t2	int	ms	panel	nv,risky,reboot	0	1000	10	250	auto	-	-	T2 VDD to link	-	[sdk-value]
 69	panel_t3	int	ms	panel	nv,risky	300	2000	10	550	auto	0xEB	-	T3 video to BL	-	host video; >= 500 ms per 27-inch 4K eDP datasheets
-70	panel_t3_own	int	ms	panel	nv,risky	17	200	1	20	auto	-	-	T3 own pattern	-	logo / background frame: one 60 Hz frame minimum
+70	panel_t3_own	int	ms	panel	nv,risky	17	200	1	20	auto	-	-	T3 own pattern	-	background frame: one 60 Hz frame minimum
 71	panel_t4	int	ms	panel	nv,risky	0	1000	10	250	auto	-	-	T4 BL to link off	-	[sdk-value]
 72	panel_t5	int	ms	panel	nv,risky	0	500	10	20	auto	-	-	T5 link to VDD off	-	[sdk-value]
 73	panel_t6	int	ms	panel	nv,risky	500	5000	100	1100	auto	-	-	T6 off to on	-	minimum VDD off time [sdk-value]

@@ -3,11 +3,11 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   106u
-#define SET_PAGES   15u
-#define SET_SCHEMA  0x7044u    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 87u
-#define SET_TEXT_LEN 1818u
+#define SET_COUNT   104u
+#define SET_PAGES   14u
+#define SET_SCHEMA  0x434Du    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 85u
+#define SET_TEXT_LEN 1793u
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -80,8 +80,6 @@
 #define SET_ID_OSD_TRANSPARENCY     61u
 #define SET_ID_LANGUAGE             62u
 #define SET_ID_OSD_ROTATE           63u
-#define SET_ID_LOGO                 65u
-#define SET_ID_LOGO_MS              66u
 #define SET_ID_PANEL_T1             67u
 #define SET_ID_PANEL_T2             68u
 #define SET_ID_PANEL_T3             69u
@@ -125,12 +123,11 @@
 #define SET_PAGE_SIGNAL           6u
 #define SET_PAGE_POWER            7u
 #define SET_PAGE_OSD              8u
-#define SET_PAGE_BOOT             9u
-#define SET_PAGE_PANEL            10u
-#define SET_PAGE_DEBUG            11u
-#define SET_PAGE_AUDIO            12u
-#define SET_PAGE_SYSTEM           13u
-#define SET_PAGE_INFO             14u
+#define SET_PAGE_PANEL            9u
+#define SET_PAGE_DEBUG            10u
+#define SET_PAGE_AUDIO            11u
+#define SET_PAGE_SYSTEM           12u
+#define SET_PAGE_INFO             13u
 
 #define AP_ASPECT               1u
 #define AP_BACKLIGHT            2u
