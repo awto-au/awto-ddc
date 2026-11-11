@@ -67,6 +67,7 @@ def show_snapshot(data: bytes, ins: list) -> None:
                 cells.append(f"{label(ins, i)}={v}({v * 3.3 / 255:.3f}V)" if kind == "analog" else f"{label(ins, i)}={v}")
         line.append(f"{gname}: " + " ".join(cells))
     print("snapshot " + "  ".join(line) + f"  VGA_SYNC=0x{vals[[i for i, x in enumerate(ins) if x[0] == 'AVS'][0]]:02x} VGA_CMP=0x{vals[[i for i, x in enumerate(ins) if x[0] == 'BM'][0]]:02x}  transitions={data[5]}")
+    print("NOT in the change ring (red on the console): " + " ".join(label(ins, i) for i, x in enumerate(ins) if not x[5]))
     io = [(i, x) for i, x in enumerate(ins) if x[3] in ("IN", "OUT")]
     print("board IO inputs: " + " ".join(f"{label(ins, i)}={vals[i]}" for i, x in io if x[3] == "IN"))
     print("board IO outputs read back: " + " ".join(f"{label(ins, i)}={vals[i]}" for i, x in io if x[3] == "OUT"))

@@ -303,7 +303,8 @@ def frame_geometry(st: OsdState) -> dict:
     fv = (r(FRAME + 0x24) & 15) << 8 | r(FRAME + 0x26)
     return dict(en=r(FRAME + 2) & 1, sx=2 if r(FRAME + 0x0A) & 2 else 1, sy=2 if r(FRAME + 0x0A) & 1 else 1,
                 hd=hd, vd=vd, step=step, fh=fh, fv=fv,
-                fs_base=(r(FRAME + 0x0D) >> 4) << 8 | r(FRAME + 0x0C), font_base=(r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
+                fs_base=((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if (r(FRAME + 0x18) & 0xC0) == 0x80 else  # roll-up: font-select base 0
+                ((r(FRAME + 0x0D) >> 4) << 8 | r(FRAME + 0x0C)), font_base=(r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
                 row_base=r(FRAME + 0x19), blend_type=r(FRAME + 0x0A) >> 2 & 3, zone=r(FRAME + 2) >> 1 & 3,
                 su_on=int(not r(FRAME + 0xC0) & 0x80), fb_shift=(r(FRAME + 0x5C) << 4 | r(FRAME + 0x5D) & 15) if r(FRAME + 0x5E) & 0x80 else 0)
 
