@@ -14,4 +14,5 @@ panel	Panel timing	-	panel power sequence T1-T6 (SF_RISKY)
 debug	Debug	-	debug link, messages
 audio	Audio	-	stored only: no audio path on this board
 system	System	-	factory reset, factory menu, SDK menu
+service	Service	system	system data kept in the registry: power state, DP link, SSC, panel time (awto-ddc#151)
 info	Information	-	read-only status

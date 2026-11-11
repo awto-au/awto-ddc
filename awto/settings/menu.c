@@ -354,8 +354,8 @@ void menu_close(void)
     if (mode == M_EDIT)
         set_put(row.id, edit_old, 1);
     active = 0;
-    set_save_now();
     ui_close();
+    set_nv_commit(1);                            /* changed values: "Saving to memory", written at the gate (#151) */
     mn_sync();
 }
 

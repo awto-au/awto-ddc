@@ -3,11 +3,12 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   104u
-#define SET_PAGES   14u
-#define SET_SCHEMA  0x434Du    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 85u
-#define SET_TEXT_LEN 1793u
+#define SET_COUNT   110u
+#define SET_PAGES   15u
+#define SET_SCHEMA  0x7AC0u    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 89u
+#define SET_TEXT_LEN 1879u
+#define SET_AUX_MAX 52u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -113,6 +114,12 @@
 #define SET_ID_INFO_PCLK            108u
 #define SET_ID_INFO_HDCP            109u
 #define SET_ID_SYNC_CONSOLE         110u
+#define SET_ID_POWER_ON             111u
+#define SET_ID_DP_LANES             112u
+#define SET_ID_DP_IRQ_10US          113u
+#define SET_ID_SSC                  114u
+#define SET_ID_PANEL_HOURS          115u
+#define SET_ID_PANEL_MIN            116u
 
 #define SET_PAGE_PICTURE          0u
 #define SET_PAGE_COLOUR           1u
@@ -127,7 +134,8 @@
 #define SET_PAGE_DEBUG            10u
 #define SET_PAGE_AUDIO            11u
 #define SET_PAGE_SYSTEM           12u
-#define SET_PAGE_INFO             13u
+#define SET_PAGE_SERVICE          13u
+#define SET_PAGE_INFO             14u
 
 #define AP_ASPECT               1u
 #define AP_BACKLIGHT            2u
@@ -155,8 +163,9 @@
 #define AP_POWER                24u
 #define AP_POWER_MODE           25u
 #define AP_SDK_LANGUAGE         26u
-#define AP_SEARCH_TIME          27u
-#define AP_USER_RGB             28u
+#define AP_SDK_SYS              27u
+#define AP_SEARCH_TIME          28u
+#define AP_USER_RGB             29u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -185,6 +194,7 @@ void set_ap_overscan(uint8_t id, int16_t v);
 void set_ap_power(uint8_t id, int16_t v);
 void set_ap_power_mode(uint8_t id, int16_t v);
 void set_ap_sdk_language(uint8_t id, int16_t v);
+void set_ap_sdk_sys(uint8_t id, int16_t v);
 void set_ap_search_time(uint8_t id, int16_t v);
 void set_ap_user_rgb(uint8_t id, int16_t v);
 

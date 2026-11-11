@@ -102,7 +102,7 @@ uint8_t vcp_set(uint8_t code, uint16_t v)
         if (v == 1)
             set_confirm();
         else if (v == 2)
-            set_save_now();
+            set_nv_commit(0);                    /* flag only: written by the gate, never in this handler (#151) */
         else if (v == 3)
             set_defaults();
         return 1;

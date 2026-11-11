@@ -6,60 +6,60 @@
 
 static const struct setting __code tab[SET_COUNT] = {
     /* id type unit group flags min max step def vcp apply label opts */
-    {  1, 2, 1,  0, 0x03, 0, 100, 1, 44, 0x10, 2, 0u, 0xFFFFu},  /* brightness */
-    {  5, 2, 1,  0, 0x03, 0, 100, 1, 50, 0xF3, 3, 10u, 0xFFFFu},  /* black_level */
-    {  2, 2, 1,  0, 0x03, 0, 100, 1, 50, 0x12, 6, 21u, 0xFFFFu},  /* contrast */
-    {  6, 2, 4,  0, 0x21, 0, 4, 1, 2, 0x87, 0, 30u, 0xFFFFu},  /* sharpness */
-    {  7, 1, 0,  1, 0x03, 0, 4, 1, 0, 0xF2, 13, 40u, 0x002Eu},  /* gamma */
-    {  8, 1, 0,  1, 0x03, 0, 5, 1, 2, 0x14, 5, 66u, 0x004Eu},  /* colour_temp */
-    {  9, 2, 4,  1, 0x03, 0, 255, 1, 128, 0x16, 28, 112u, 0xFFFFu},  /* user_red */
-    { 10, 2, 4,  1, 0x03, 0, 255, 1, 128, 0x18, 28, 121u, 0xFFFFu},  /* user_green */
-    { 11, 2, 4,  1, 0x03, 0, 255, 1, 128, 0x1A, 28, 132u, 0xFFFFu},  /* user_blue */
-    { 12, 1, 0,  1, 0x21, 0, 5, 1, 0, 0x00, 0, 142u, 0x009Cu},  /* colour_effect */
+    {  1, 2, 1,  0, 0x83, 0, 100, 1, 44, 0x10, 2, 0u, 0xFFFFu},  /* brightness */
+    {  5, 2, 1,  0, 0x83, 0, 100, 1, 50, 0xF3, 3, 10u, 0xFFFFu},  /* black_level */
+    {  2, 2, 1,  0, 0x83, 0, 100, 1, 50, 0x12, 6, 21u, 0xFFFFu},  /* contrast */
+    {  6, 2, 4,  0, 0xA1, 0, 4, 1, 2, 0x87, 0, 30u, 0xFFFFu},  /* sharpness */
+    {  7, 1, 0,  1, 0x83, 0, 4, 1, 0, 0xF2, 13, 40u, 0x002Eu},  /* gamma */
+    {  8, 1, 0,  1, 0x83, 0, 5, 1, 2, 0x14, 5, 66u, 0x004Eu},  /* colour_temp */
+    {  9, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x16, 29, 112u, 0xFFFFu},  /* user_red */
+    { 10, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x18, 29, 121u, 0xFFFFu},  /* user_green */
+    { 11, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x1A, 29, 132u, 0xFFFFu},  /* user_blue */
+    { 12, 1, 0,  1, 0xA1, 0, 5, 1, 0, 0x00, 0, 142u, 0x009Cu},  /* colour_effect */
     { 25, 1, 0,  1, 0x21, 0, 5, 1, 0, 0x00, 0, 193u, 0x00CDu},  /* colour_demo */
-    { 26, 1, 0,  1, 0x21, 0, 1, 1, 1, 0x00, 0, 244u, 0x00F8u},  /* pcm */
-    { 27, 2, 1,  1, 0x21, 0, 100, 1, 50, 0x00, 0, 260u, 0xFFFFu},  /* hue */
-    { 28, 2, 1,  1, 0x21, 0, 100, 1, 50, 0x00, 0, 264u, 0xFFFFu},  /* saturation */
-    { 29, 0, 0,  1, 0x21, 0, 1, 1, 0, 0x00, 0, 275u, 0xFFFFu},  /* uniformity */
-    { 13, 2, 4,  2, 0x21, 0, 100, 1, 50, 0x00, 0, 286u, 0xFFFFu},  /* sa_red_hue */
-    { 14, 2, 4,  2, 0x21, 0, 200, 1, 100, 0x00, 0, 294u, 0xFFFFu},  /* sa_red_sat */
-    { 15, 2, 4,  2, 0x21, 0, 100, 1, 50, 0x00, 0, 302u, 0xFFFFu},  /* sa_yellow_hue */
-    { 16, 2, 4,  2, 0x21, 0, 200, 1, 100, 0x00, 0, 313u, 0xFFFFu},  /* sa_yellow_sat */
-    { 17, 2, 4,  2, 0x21, 0, 100, 1, 50, 0x00, 0, 324u, 0xFFFFu},  /* sa_green_hue */
-    { 18, 2, 4,  2, 0x21, 0, 200, 1, 100, 0x00, 0, 334u, 0xFFFFu},  /* sa_green_sat */
-    { 19, 2, 4,  2, 0x21, 0, 100, 1, 50, 0x00, 0, 344u, 0xFFFFu},  /* sa_cyan_hue */
-    { 20, 2, 4,  2, 0x21, 0, 200, 1, 100, 0x00, 0, 353u, 0xFFFFu},  /* sa_cyan_sat */
-    { 21, 2, 4,  2, 0x21, 0, 100, 1, 50, 0x00, 0, 362u, 0xFFFFu},  /* sa_blue_hue */
-    { 22, 2, 4,  2, 0x21, 0, 200, 1, 100, 0x00, 0, 371u, 0xFFFFu},  /* sa_blue_sat */
-    { 23, 2, 4,  2, 0x21, 0, 100, 1, 50, 0x00, 0, 380u, 0xFFFFu},  /* sa_magenta_hue */
-    { 24, 2, 4,  2, 0x21, 0, 200, 1, 100, 0x00, 0, 392u, 0xFFFFu},  /* sa_magenta_sat */
-    { 30, 1, 0,  3, 0x01, 0, 5, 1, 0, 0xFE, 1, 404u, 0x01A1u},  /* aspect */
-    { 31, 0, 0,  3, 0x01, 0, 1, 1, 1, 0xFF, 23, 449u, 0xFFFFu},  /* overscan */
-    { 32, 1, 0,  3, 0x21, 0, 3, 1, 0, 0x00, 0, 458u, 0x01D1u},  /* disp_rotate */
-    { 33, 1, 0,  3, 0x21, 0, 2, 1, 0, 0x00, 0, 478u, 0x01E6u},  /* latency */
+    { 26, 1, 0,  1, 0xA1, 0, 1, 1, 1, 0x00, 0, 244u, 0x00F8u},  /* pcm */
+    { 27, 2, 1,  1, 0xA1, 0, 100, 1, 50, 0x00, 0, 260u, 0xFFFFu},  /* hue */
+    { 28, 2, 1,  1, 0xA1, 0, 100, 1, 50, 0x00, 0, 264u, 0xFFFFu},  /* saturation */
+    { 29, 0, 0,  1, 0xA1, 0, 1, 1, 0, 0x00, 0, 275u, 0xFFFFu},  /* uniformity */
+    { 13, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 286u, 0xFFFFu},  /* sa_red_hue */
+    { 14, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 294u, 0xFFFFu},  /* sa_red_sat */
+    { 15, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 302u, 0xFFFFu},  /* sa_yellow_hue */
+    { 16, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 313u, 0xFFFFu},  /* sa_yellow_sat */
+    { 17, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 324u, 0xFFFFu},  /* sa_green_hue */
+    { 18, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 334u, 0xFFFFu},  /* sa_green_sat */
+    { 19, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 344u, 0xFFFFu},  /* sa_cyan_hue */
+    { 20, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 353u, 0xFFFFu},  /* sa_cyan_sat */
+    { 21, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 362u, 0xFFFFu},  /* sa_blue_hue */
+    { 22, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 371u, 0xFFFFu},  /* sa_blue_sat */
+    { 23, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 380u, 0xFFFFu},  /* sa_magenta_hue */
+    { 24, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 392u, 0xFFFFu},  /* sa_magenta_sat */
+    { 30, 1, 0,  3, 0x81, 0, 5, 1, 0, 0xFE, 1, 404u, 0x01A1u},  /* aspect */
+    { 31, 0, 0,  3, 0x81, 0, 1, 1, 1, 0xFF, 23, 449u, 0xFFFFu},  /* overscan */
+    { 32, 1, 0,  3, 0xA1, 0, 3, 1, 0, 0x00, 0, 458u, 0x01D1u},  /* disp_rotate */
+    { 33, 1, 0,  3, 0xA1, 0, 2, 1, 0, 0x00, 0, 478u, 0x01E6u},  /* latency */
     { 34, 0, 0,  3, 0x20, 0, 1, 1, 0, 0x00, 0, 499u, 0xFFFFu},  /* freeze */
-    {  3, 1, 0,  4, 0x01, 0, 2, 1, 1, 0x60, 16, 506u, 0x0200u},  /* input */
-    { 35, 1, 0,  4, 0x01, 0, 1, 1, 0, 0xEF, 15, 534u, 0x021Du},  /* input_mode */
+    {  3, 1, 0,  4, 0x00, 0, 2, 1, 1, 0x60, 16, 506u, 0x0200u},  /* input */
+    { 35, 1, 0,  4, 0x00, 0, 1, 1, 0, 0xEF, 15, 534u, 0x021Du},  /* input_mode */
     { 36, 0, 0,  4, 0x29, 0, 1, 1, 1, 0xEC, 0, 552u, 0xFFFFu},  /* d1_enable */
     { 37, 0, 0,  4, 0x29, 0, 1, 1, 1, 0xED, 0, 565u, 0xFFFFu},  /* d2_enable */
     { 38, 0, 0,  4, 0x29, 0, 1, 1, 1, 0xEE, 0, 580u, 0xFFFFu},  /* d3_enable */
     { 39, 1, 0,  4, 0x21, 0, 5, 1, 3, 0xFC, 0, 595u, 0x0260u},  /* search_order */
-    { 40, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 27, 662u, 0xFFFFu},  /* search_hdmi_ms */
-    { 41, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 27, 674u, 0xFFFFu},  /* search_dp_ms */
-    { 42, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 27, 684u, 0xFFFFu},  /* nocable_hdmi_ms */
-    { 43, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 27, 698u, 0xFFFFu},  /* nocable_dp_ms */
+    { 40, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 28, 662u, 0xFFFFu},  /* search_hdmi_ms */
+    { 41, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 28, 674u, 0xFFFFu},  /* search_dp_ms */
+    { 42, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 28, 684u, 0xFFFFu},  /* nocable_hdmi_ms */
+    { 43, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 28, 698u, 0xFFFFu},  /* nocable_dp_ms */
     { 44, 0, 0,  5, 0x03, 0, 1, 1, 1, 0xE6, 0, 710u, 0xFFFFu},  /* fast_switch */
     { 45, 0, 0,  5, 0x41, 0, 1, 1, 1, 0xE7, 0, 722u, 0xFFFFu},  /* keep_idle_rx */
     { 46, 0, 0,  5, 0x21, 0, 1, 1, 0, 0x00, 0, 739u, 0xFFFFu},  /* kvm_prefill */
-    { 48, 1, 0,  6, 0x01, 0, 2, 1, 1, 0xF1, 11, 754u, 0x02FDu},  /* dp_version */
-    { 49, 1, 0,  6, 0x01, 0, 2, 1, 0, 0xFD, 10, 777u, 0x0311u},  /* dp_edid */
+    { 48, 1, 0,  6, 0x81, 0, 2, 1, 1, 0xF1, 11, 754u, 0x02FDu},  /* dp_version */
+    { 49, 1, 0,  6, 0x81, 0, 2, 1, 0, 0xFD, 10, 777u, 0x0311u},  /* dp_edid */
     { 50, 1, 0,  6, 0x61, 0, 2, 1, 0, 0x00, 0, 805u, 0x0334u},  /* edid_pref */
     { 51, 0, 0,  6, 0x61, 0, 1, 1, 1, 0x00, 0, 859u, 0xFFFFu},  /* hdcp */
     { 52, 1, 0,  6, 0x61, 0, 2, 1, 0, 0x00, 0, 864u, 0x036Du},  /* colour_depth */
     { 53, 0, 0,  6, 0x61, 0, 1, 1, 0, 0x00, 0, 895u, 0xFFFFu},  /* hdmi_420 */
-    { 54, 1, 0,  6, 0x21, 0, 1, 1, 0, 0x00, 0, 906u, 0x0398u},  /* colour_format */
-    { 55, 0, 0,  6, 0x21, 0, 1, 1, 0, 0x00, 0, 928u, 0xFFFFu},  /* clone */
-    { 56, 0, 0,  6, 0x41, 0, 1, 1, 1, 0x00, 0, 934u, 0xFFFFu},  /* ddcci */
+    { 54, 1, 0,  6, 0xA1, 0, 1, 1, 0, 0x00, 0, 906u, 0x0398u},  /* colour_format */
+    { 55, 0, 0,  6, 0xA1, 0, 1, 1, 0, 0x00, 0, 928u, 0xFFFFu},  /* clone */
+    { 56, 0, 0,  6, 0xC1, 0, 1, 1, 1, 0x00, 0, 934u, 0xFFFFu},  /* ddcci */
     { 75, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xF6, 24, 941u, 0xFFFFu},  /* pwr_l1_en */
     { 76, 2, 2,  7, 0x21, 0, 30000, 100, 0, 0xF7, 24, 958u, 0xFFFFu},  /* pwr_l1_ms */
     { 77, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xF8, 24, 967u, 0xFFFFu},  /* pwr_l2_en */
@@ -69,14 +69,14 @@ static const struct setting __code tab[SET_COUNT] = {
     { 81, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 24, 1012u, 0xFFFFu},  /* wake_d1 */
     { 82, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 24, 1023u, 0xFFFFu},  /* wake_d2 */
     { 83, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 24, 1034u, 0xFFFFu},  /* wake_d3 */
-    { 57, 2, 3,  8, 0x01, 0, 120, 5, 30, 0xEA, 0, 1045u, 0xFFFFu},  /* osd_timeout */
-    { 58, 2, 1,  8, 0x03, 0, 100, 1, 50, 0x00, 20, 1058u, 0xFFFFu},  /* osd_hpos */
-    { 59, 2, 1,  8, 0x03, 0, 100, 1, 50, 0x00, 20, 1074u, 0xFFFFu},  /* osd_vpos */
-    { 60, 1, 0,  8, 0x03, 0, 1, 1, 0, 0xF4, 21, 1090u, 0x044Cu},  /* osd_scale */
+    { 57, 2, 3,  8, 0x81, 0, 120, 5, 30, 0xEA, 0, 1045u, 0xFFFFu},  /* osd_timeout */
+    { 58, 2, 1,  8, 0x83, 0, 100, 1, 50, 0x00, 20, 1058u, 0xFFFFu},  /* osd_hpos */
+    { 59, 2, 1,  8, 0x83, 0, 100, 1, 50, 0x00, 20, 1074u, 0xFFFFu},  /* osd_vpos */
+    { 60, 1, 0,  8, 0x83, 0, 1, 1, 0, 0xF4, 21, 1090u, 0x044Cu},  /* osd_scale */
     {106, 1, 0,  8, 0x03, 0, 1, 1, 0, 0x00, 19, 1106u, 0x045Cu},  /* osd_font */
-    { 61, 2, 1,  8, 0x03, 0, 100, 1, 0, 0x00, 22, 1130u, 0xFFFFu},  /* osd_transparency */
-    { 62, 1, 0,  8, 0x01, 0, 1, 1, 0, 0x00, 26, 1143u, 0x048Du},  /* language */
-    { 63, 1, 0,  8, 0x21, 0, 3, 1, 0, 0x00, 0, 1183u, 0x04ABu},  /* osd_rotate */
+    { 61, 2, 1,  8, 0x83, 0, 100, 1, 0, 0x00, 22, 1130u, 0xFFFFu},  /* osd_transparency */
+    { 62, 1, 0,  8, 0x81, 0, 1, 1, 0, 0x00, 26, 1143u, 0x048Du},  /* language */
+    { 63, 1, 0,  8, 0xA1, 0, 3, 1, 0, 0x00, 0, 1183u, 0x04ABu},  /* osd_rotate */
     { 67, 2, 2,  9, 0x49, 0, 100, 1, 10, 0x00, 0, 1208u, 0xFFFFu},  /* panel_t1 */
     { 68, 2, 2,  9, 0x49, 0, 1000, 10, 250, 0x00, 0, 1220u, 0xFFFFu},  /* panel_t2 */
     { 69, 2, 2,  9, 0x09, 300, 2000, 10, 550, 0xEB, 0, 1235u, 0xFFFFu},  /* panel_t3 */
@@ -86,40 +86,47 @@ static const struct setting __code tab[SET_COUNT] = {
     { 73, 2, 2,  9, 0x09, 500, 5000, 100, 1100, 0x00, 0, 1302u, 0xFFFFu},  /* panel_t6 */
     { 74, 2, 2,  9, 0x29, 0, 200, 1, 0, 0x00, 0, 1315u, 0xFFFFu},  /* bl_pwm_ms */
     { 84, 0, 0, 10, 0x69, 0, 1, 1, 1, 0x00, 0, 1325u, 0xFFFFu},  /* debug_link */
-    { 85, 0, 0, 10, 0x03, 0, 1, 1, 0, 0xF0, 7, 1336u, 0xFFFFu},  /* debug_msgs */
+    { 85, 0, 0, 10, 0x83, 0, 1, 1, 0, 0xF0, 7, 1336u, 0xFFFFu},  /* debug_msgs */
     { 86, 0, 0, 10, 0x02, 0, 1, 1, 0, 0x00, 18, 1351u, 0xFFFFu},  /* msg_log */
     { 87, 3, 0, 10, 0x00, 0, 1, 1, 0, 0x00, 8, 1363u, 0xFFFFu},  /* debug_popup */
     {104, 3, 0, 10, 0x00, 0, 1, 1, 0, 0x00, 17, 1376u, 0xFFFFu},  /* key_test */
     {105, 3, 0, 10, 0x00, 0, 1, 1, 0, 0x00, 14, 1385u, 0xFFFFu},  /* gpio_test */
-    { 88, 2, 1, 11, 0x21, 0, 100, 1, 50, 0x62, 0, 1397u, 0xFFFFu},  /* volume */
-    { 89, 0, 0, 11, 0x21, 0, 1, 1, 0, 0x00, 0, 1404u, 0xFFFFu},  /* mute */
-    { 90, 0, 0, 11, 0x21, 0, 1, 1, 0, 0x00, 0, 1409u, 0xFFFFu},  /* audio_standalone */
-    { 91, 1, 0, 11, 0x21, 0, 1, 1, 0, 0x00, 0, 1421u, 0x059Au},  /* audio_source */
+    { 88, 2, 1, 11, 0xA1, 0, 100, 1, 50, 0x62, 0, 1397u, 0xFFFFu},  /* volume */
+    { 89, 0, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1404u, 0xFFFFu},  /* mute */
+    { 90, 0, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1409u, 0xFFFFu},  /* audio_standalone */
+    { 91, 1, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1421u, 0x059Au},  /* audio_source */
     {  4, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x04, 9, 1449u, 0xFFFFu},  /* factory_reset */
     {102, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x08, 4, 1463u, 0xFFFFu},  /* colour_reset */
     {103, 1, 0,  7, 0x02, 0, 4, 1, 0, 0xD6, 25, 1476u, 0x05CFu},  /* power_mode */
     { 92, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x00, 12, 1519u, 0xFFFFu},  /* factory_menu */
-    { 95, 1, 0, 13, 0x10, 0, 2, 1, 0, 0x00, 0, 1532u, 0x0602u},  /* info_input */
-    { 96, 2, 0, 13, 0x10, 0, 8192, 1, 0, 0x00, 0, 1560u, 0xFFFFu},  /* info_hres */
-    { 97, 2, 0, 13, 0x10, 0, 8192, 1, 0, 0x00, 0, 1569u, 0xFFFFu},  /* info_vres */
-    { 98, 2, 6, 13, 0x10, 0, 2400, 1, 0, 0x00, 0, 1578u, 0xFFFFu},  /* info_vfreq */
-    { 99, 2, 0, 13, 0x10, 0, 15, 1, 0, 0x00, 0, 1585u, 0xFFFFu},  /* info_mode */
-    {100, 2, 0, 13, 0x10, 0, 30000, 1, 0, 0x00, 0, 1596u, 0xFFFFu},  /* info_loop */
-    {101, 2, 0, 13, 0x10, 0, 32767, 1, 0, 0x00, 0, 1609u, 0xFFFFu},  /* info_schema */
-    {107, 2, 0, 13, 0x10, 0, 30000, 1, 0, 0x00, 0, 1625u, 0xFFFFu},  /* info_hfreq */
-    {108, 2, 0, 13, 0x10, 0, 30000, 1, 0, 0x00, 0, 1632u, 0xFFFFu},  /* info_pclk */
-    {109, 1, 0, 13, 0x10, 0, 1, 1, 0, 0x00, 0, 1644u, 0x0671u},  /* info_hdcp */
+    { 95, 1, 0, 14, 0x10, 0, 2, 1, 0, 0x00, 0, 1532u, 0x0602u},  /* info_input */
+    { 96, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1560u, 0xFFFFu},  /* info_hres */
+    { 97, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1569u, 0xFFFFu},  /* info_vres */
+    { 98, 2, 6, 14, 0x10, 0, 2400, 1, 0, 0x00, 0, 1578u, 0xFFFFu},  /* info_vfreq */
+    { 99, 2, 0, 14, 0x10, 0, 15, 1, 0, 0x00, 0, 1585u, 0xFFFFu},  /* info_mode */
+    {100, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1596u, 0xFFFFu},  /* info_loop */
+    {101, 2, 0, 14, 0x10, 0, 32767, 1, 0, 0x00, 0, 1609u, 0xFFFFu},  /* info_schema */
+    {107, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1625u, 0xFFFFu},  /* info_hfreq */
+    {108, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1632u, 0xFFFFu},  /* info_pclk */
+    {109, 1, 0, 14, 0x10, 0, 1, 1, 0, 0x00, 0, 1644u, 0x0671u},  /* info_hdcp */
     {110, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1656u, 0xFFFFu},  /* sync_console */
+    {111, 0, 0, 13, 0x81, 0, 1, 1, 1, 0x00, 27, 1673u, 0xFFFFu},  /* power_on */
+    {112, 2, 0, 13, 0xC1, 1, 4, 1, 4, 0x00, 27, 1682u, 0xFFFFu},  /* dp_lanes */
+    {113, 2, 0, 13, 0xC1, 0, 95, 1, 75, 0x00, 27, 1691u, 0xFFFFu},  /* dp_irq_10us */
+    {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 27, 1709u, 0xFFFFu},  /* ssc */
+    {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 27, 1725u, 0xFFFFu},  /* panel_hours */
+    {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 27, 1737u, 0xFFFFu},  /* panel_min */
 };
 
-static const uint8_t __code id2idx[111] = {
+static const uint8_t __code id2idx[117] = {
     0xFF, 0x00, 0x02, 0x20, 0x59, 0x01, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0F, 0x10, 0x11,
     0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x1B, 0x1C,
     0x1D, 0x1E, 0x1F, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0xFF,
     0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x3F, 0x40, 0x41, 0x42, 0x44, 0x45, 0x46,
     0xFF, 0xFF, 0xFF, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x36, 0x37, 0x38, 0x39, 0x3A,
     0x3B, 0x3C, 0x3D, 0x3E, 0x4F, 0x50, 0x51, 0x52, 0x55, 0x56, 0x57, 0x58, 0x5C, 0xFF, 0xFF, 0x5D,
-    0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x5A, 0x5B, 0x53, 0x54, 0x43, 0x64, 0x65, 0x66, 0x67,
+    0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x5A, 0x5B, 0x53, 0x54, 0x43, 0x64, 0x65, 0x66, 0x67, 0x68,
+    0x69, 0x6A, 0x6B, 0x6C, 0x6D,
 };
 
 static const char __code txt[] =
@@ -145,8 +152,9 @@ static const char __code txt[] =
     "Digital\0""Factory reset\0""Colour reset\0""Power mode\0""On\0""Standby\0""Suspend\0""Off\0""Off hard\0"
     "Factory menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0""V freq\0""Mode state\0"
     "Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0""Sync log console\0"
-    "Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0"
-    "Panel timing\0""Debug\0""Audio\0""System\0""Information\0";
+    "Power on\0""DP lanes\0""DP IRQ HPD x10 us\0""Spread spectrum\0""Panel hours\0""Panel minutes\0""Picture\0"
+    "Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0"
+    "Debug\0""Audio\0""System\0""Service\0""Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
 static const uint8_t __code vopt[14][3] = {
@@ -211,14 +219,14 @@ static const uint8_t __code vcode[35][2] = {
     {0xFF, 28},
 };
 
-static const uint8_t __code pent[105] = {
+static const uint8_t __code pent[112] = {
     0x00, 0x01, 0x02, 0x03, 0x82, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
     0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E,
     0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E,
     0x2F, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, 0x3E,
     0x5B, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x67, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C,
-    0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5A, 0x5C, 0x5D,
-    0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
+    0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x8D, 0x59, 0x5A, 0x5C,
+    0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
 };
 static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, parent */
     {0, 4, 0xFF},  /* Picture */
@@ -233,14 +241,15 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {74, 8, 0xFF},  /* Panel timing */
     {82, 6, 0xFF},  /* Debug */
     {88, 4, 0xFF},  /* Audio */
-    {92, 3, 0xFF},  /* System */
-    {95, 10, 0xFF},  /* Information */
+    {92, 4, 0xFF},  /* System */
+    {96, 6, 0x0C},  /* Service */
+    {102, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1673u, 1681u, 1688u, 1704u, 1712u, 1718u, 1732u, 1739u, 1745u, 1749u, 1762u, 1768u, 1774u, 1781u};
+static const uint16_t __code ptitle[SET_PAGES] = {1751u, 1759u, 1766u, 1782u, 1790u, 1796u, 1810u, 1817u, 1823u, 1827u, 1840u, 1846u, 1852u, 1859u, 1867u};
 
 uint8_t set_idx(uint8_t id)
 {
-    return id <= 110 ? id2idx[id] : 0xFF;
+    return id <= 116 ? id2idx[id] : 0xFF;
 }
 
 void set_row(uint8_t idx, struct setting __xdata *out)    /* field copies: no pointer into tab (banker #16) */
@@ -445,6 +454,9 @@ void set_apply_call(uint8_t ap, uint8_t id, int16_t v)
         break;
     case AP_SDK_LANGUAGE:
         set_ap_sdk_language(id, v);
+        break;
+    case AP_SDK_SYS:
+        set_ap_sdk_sys(id, v);
         break;
     case AP_SEARCH_TIME:
         set_ap_search_time(id, v);

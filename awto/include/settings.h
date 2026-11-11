@@ -18,6 +18,7 @@ enum set_unit { SU_NONE = 0, SU_PERCENT = 1, SU_MS = 2, SU_S = 3, SU_STEP = 4, S
 #define SF_RO        0x10   /* read-only status value (set_status) */
 #define SF_INERT     0x20   /* stored only: no firmware function behind it yet */
 #define SF_REBOOT    0x40   /* takes effect after a restart */
+#define SF_SDK       0x80   /* value lives in an SDK store field (integrator set_sdk_get / set_sdk_put): one RAM copy */
 
 /* One row. No pointers: const tables stay in the bank of their accessors (set_table.c), callers get copies. */
 struct setting {
@@ -47,7 +48,6 @@ uint8_t  set_page_n(uint8_t page);                       /* entries: sub-pages f
 uint8_t  set_page_entry(uint8_t page, uint8_t k);        /* 0x80 | page = sub-page, else row index */
 
 #define SET_CONFIRM_MS 15000u    /* SF_RISKY auto-revert window (derived: our UI choice; time to read and press Menu) */
-#define SET_SAVE_MS    2000u     /* NVRAM write after the last change (derived: one save per slider drag) */
 
 int16_t set_get(uint8_t id);
 /* clamp to [min, max] (step = menu increment, not enforced), store, apply (SF_LIVE or apply_now), queue the NVRAM save (SF_NV). 1 = accepted.
@@ -60,12 +60,17 @@ uint8_t set_in_boot(void);               /* 1 while set_boot applies the stored 
 uint8_t set_pending(void);               /* id of the risky row waiting for a confirm, 0 = none */
 uint16_t set_pending_left(void);         /* ms until the auto-revert */
 void    set_action(uint8_t id);          /* run a STY_ACTION row */
-void    set_load(void);                  /* boot: defaults, then every valid NVRAM pair (id-tagged: rows that still exist survive) */
+void    set_load(void);                  /* boot: defaults of the rows held here (SF_SDK rows: the SDK store loaded them) */
+uint8_t set_load_legacy(void);           /* once: the old registry record (nvram.c) into the rows; 1 = there was one */
+/* Rows SF_NV without SF_SDK ("aux"): one packed block stored by the integrator in its own items of the SDK store.
+ * Layout: byte 0 = layout check, then per aux row in table order: bool / enum 1 byte, int 2 bytes LE. */
+uint8_t __xdata *set_aux_buf(void);      /* the block buffer (SET_AUX_MAX bytes) */
+uint8_t set_aux_pack(void);              /* fills it from the rows (a pending SF_RISKY row: its old value); returns the length */
+void    set_aux_unpack(uint8_t len);     /* rows from it; wrong layout check = defaults stay */
 void    set_apply_all(void);             /* push every row with an apply to the firmware (first main-loop pass) */
-void    set_defaults(void);              /* every row to def, apply all, save */
+void    set_defaults(void);              /* every row to def, apply all; stored through the gate (never written here) */
 void    set_group_defaults(uint8_t group);   /* rows of one page (SET_PAGE_*) to def, applied */
-void    set_save_now(void);              /* write the record now (menu exit, host 'save') */
-void    set_service(void);               /* main loop: debounced save, risky auto-revert */
+void    set_service(void);               /* main loop: risky auto-revert */
 uint8_t set_load_result(void);           /* 0 = defaults (no record), 1 = record loaded, 2 = recovery defaults */
 
 /* Factory-defaults recovery: a bad setting must never brick the unit.
@@ -80,5 +85,10 @@ void    set_boot(void);                  /* first main-loop pass: recovery check
 int16_t set_status(uint8_t id);          /* SF_RO rows */
 uint16_t set_now_ms(void);               /* free-running ms count */
 void    set_wait_ms(uint16_t ms);        /* blocking wait (recovery hold only) */
+int16_t set_sdk_get(uint8_t id);         /* SF_SDK rows: the SDK field, in registry units */
+void    set_sdk_put(uint8_t id, int16_t v);  /* SF_SDK rows: store into the SDK field; the integrator marks its item dirty */
+void    set_nv_dirty(void);              /* an aux row changed */
+void    set_nv_commit(uint8_t show);     /* save at the next gate opening without the debounce; show = "Saving to memory" card
+                                          * (menu / selector close; only if something is dirty). Never writes by itself. */
 
 #endif
