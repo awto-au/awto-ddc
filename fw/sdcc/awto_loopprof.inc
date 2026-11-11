@@ -3,6 +3,7 @@
 #if(_AWTO_LOOP_PROF == _ON)
 __xdata StAwtoLoopProf g_stAwtoLoopProf;
 static __xdata unsigned long s_ulLpLast;
+static __xdata unsigned char s_ucLpOk;                 // 1 = this pass counts (all marks so far passed the PS-only check)
 
 void AwtoLpMark(unsigned char ucK)
 {
@@ -27,6 +28,7 @@ void AwtoLpMark(unsigned char ucK)
     while(ucF != TF2);
     EA = bEa;
     ulNow = (unsigned long)(unsigned int)(usTick + ucF) * (0x10000UL - usRcap) + ((((unsigned int)ucH << 8) | ucL) - usRcap);
+    ucF = (g_stAwtoLoopProf.ucPsOnly == 0) || (GET_POWER_STATUS() == _POWER_STATUS_SAVING);   // PS-only: other passes not counted
     if(ucK == 0)
     {
         if(g_stAwtoLoopProf.ucReset != 0)
@@ -39,17 +41,26 @@ void AwtoLpMark(unsigned char ucK)
             }
             g_stAwtoLoopProf.ulPasses = 0;
             g_stAwtoLoopProf.ucReset = 0;
+            s_ucLpOk = 0;
         }
-        else if(g_stAwtoLoopProf.ulPasses != 0)
+        else if((g_stAwtoLoopProf.ulPasses != 0) && (s_ucLpOk != 0) && (ucF != 0))
         {
             g_stAwtoLoopProf.pulT2[AWTO_LP_SLOTS - 1] += ulNow - s_ulLpLast;
         }
-        g_stAwtoLoopProf.ulPasses++;
+        if((ucF != 0) && ((s_ucLpOk != 0) || (g_stAwtoLoopProf.ulPasses == 0)))
+        {
+            g_stAwtoLoopProf.ulPasses++;
+        }
+        s_ucLpOk = ucF;
         g_stAwtoLoopProf.usPer = 0x10000UL - usRcap;
+    }
+    else if((s_ucLpOk != 0) && (ucF != 0))
+    {
+        g_stAwtoLoopProf.pulT2[ucK - 1] += ulNow - s_ulLpLast;
     }
     else
     {
-        g_stAwtoLoopProf.pulT2[ucK - 1] += ulNow - s_ulLpLast;
+        s_ucLpOk = 0;
     }
     s_ulLpLast = ulNow;
 }

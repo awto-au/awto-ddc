@@ -699,6 +699,7 @@ typedef struct
     unsigned int usPer;                         // Timer2 counts per 1 ms tick
     unsigned long ulPasses;
     unsigned long pulT2[AWTO_LP_SLOTS];         // Timer2 counts per segment (scripts/loop_prof.py SLOTS)
+    unsigned char ucPsOnly;                     // host writes 1: count only passes in power status SAVING (#144)
 } StAwtoLoopProf;
 #if(_AWTO_LOOP_PROF == _ON)
 extern void AwtoLpMark(unsigned char ucK);
@@ -925,8 +926,12 @@ extern void AwtoPsWakeReset(void);
 extern unsigned char AwtoPsTmdsLive(unsigned char ucPage);    // SDK TMDS PS predetect without its 5 ms wait (keil2sdcc sub)
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
                                                                   else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
+// between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
+#define AWTO_PS_POLL_SITE()                                     { if((g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) && \
+                                                                     (GET_POWER_STATUS() == _POWER_STATUS_SAVING)) { AwtoPsWakePoll(); } }
 #else
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
+#define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
 extern void AwtoOsdSyncPoll(void);
@@ -948,6 +953,7 @@ extern void AwtoConLogSync(void);
 #define AwtoSyncFreq()
 #define AwtoSyncPoll()
 #define AWTO_SYNC_POLL()
+#define AWTO_PS_POLL_SITE()
 #endif
 // #144 power-on: mode INITIAL opens the console with the live power-on log (awto_osdcard.inc AwtoBootConsole), then
 // panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).

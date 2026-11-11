@@ -1035,7 +1035,7 @@ stub	_AwtoTextLine	C	0x3d60	8
 stub	_AwtoTxt	C	0x3d68	8
 stub	_ScalerSyncGetInputPixelClk	C	0x3d70	8
 fn	_ScalerTimerPollingFlagProc	C	0x3d78	200
-fn	_main	C	0x3e40	240
+fn	_main	C	0x3e40	484
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tHDCP_KEY_TABLE	0	0x0010	336
 fn	_ScalerAudioD1DigitalDetectProc	0	0x0160	332

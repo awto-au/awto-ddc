@@ -486,7 +486,7 @@ bit AwtoPsWakeFire(BYTE ucT, BYTE ucI, WORD usVal)   // trigger AWTO_WAKE_T_*, p
     return 1;
 }
 
-void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power saving, every pass; works every AWTO_PS_POLL_MS
+void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL + AWTO_PS_POLL_SITE (between handlers); works every AWTO_PS_POLL_MS
 {
     BYTE ucI, ucNow, ucR, ucU;
     WORD usNow = AwtoSyncNow();

@@ -327,6 +327,11 @@ INSERTS = [
 ] + [   # stage 8 = backlight on: the DPTx branch of _BACKLIGHT_ON (first PCB_BACKLIGHT_POWER after the stream set-up)
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_BACKLIGHT_POWER\(_LIGHT_CONTROL_ON\);",
      "    AwtoDiagStage(8);", r"^\s*// Set Video Stream parameter")
+] + [   # #144: a unit-2 power-saving pass (IOSC) is ~3x the poll period: the wake poll is due-checked between every handler
+    ("Kernel/System/Code/SysMain.c", rf"^\s*{fn}\(\);", "            AWTO_PS_POLL_SITE();", r"^void main\(void\)$")
+    for fn in ("AwtoGpioPoll", "UserInterfaceKeyHandler", "AwtoDiagTestCmd", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler",
+               "SysSourceHandler", "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler", "ScalerHdcp2Handler",
+               "UserCommonInterfaceOsdHandler", "UserCommonDdcciHandler", "SysColorHandler")
 ]
 
 # Block substitutions: (SDK-relative file, regex (DOTALL), replacement fn(match) -> text, expected count).
