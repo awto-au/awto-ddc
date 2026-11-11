@@ -216,6 +216,11 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #ifndef AWTO_WDT_MODE
 #define AWTO_WDT_MODE                                           AWTO_WDT_TIMER_IRQ
 #endif
+// #150: FFEA[5] sf_hlt_wdt_en stops the counter while the MCU is halted on an SPI-flash common instruction (erase, program,
+// WRSR: up to 200 ms each, no code runs, no pokes). 0 = off (diagnostic build: AWTO_NV_EV then measures the halts)
+#ifndef AWTO_WDT_HALT_FLASH
+#define AWTO_WDT_HALT_FLASH                                     1
+#endif
 #define AWTO_WDT_N                                              2       // reset at 2 x 585.9 = 1171.8 ms without a poke
 #define AWTO_WDT_THR                                            0xC00   // warning at 585.9 + 3072 x 0.143 = 1025.3 ms; 146 ms before the reset
 #define AWTO_WDT_PROBE_THR                                      0x100   // probe: IRQ expected 36.6 ms after the clear, reset at 585.9 ms (N = 1)
@@ -234,18 +239,31 @@ extern bit AwtoWdtValid(void);
 extern void AwtoOsdWdtLines(void);
 extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, _bs_cur)
-// clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke
-#define AWTO_WDT_POKE()                                         do { unsigned char ucG_; AWTO_XFR(0xFFEA) |= 0x40; \
+// clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
+#define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(0xFFEA) |= 0x40; \
                                                                      ucG_ = ((AWTO_XFR(0xFFAD) & 0x07) != 0) ? 0xFF : (AWTO_XFR(0xFFAC) & 0x7F); \
-                                                                     if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; } } while(0)
+                                                                     if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); } } while(0)
+// poke sites (g_ucAwtoPokeSite: which one ended the longest gap; rtd_crash.py SITES)
+#define AWTO_WDT_S_PASS                                         1       // main-loop pass
+#define AWTO_WDT_S_DELAY                                        2       // ScalerTimerDelayXms
+#define AWTO_WDT_S_POLL                                         3       // ScalerTimerPollingFlagProc
+#define AWTO_WDT_S_EVENT                                        4       // ScalerTimerWaitForEvent
+#define AWTO_WDT_S_MSG                                          5       // AwtoMsgWait
+#define AWTO_WDT_S_WREN                                         6       // ScalerFlashWREN
+#define AWTO_WDT_S_WRDIS                                        7       // ScalerFlashWRDis
+#define AWTO_WDT_S_WRPROT                                       8       // ScalerFlashWRProtect
+#define AWTO_WDT_S_FREAD                                        9       // ScalerFlashRead
+#define AWTO_WDT_S_FWRITE                                       10      // ScalerFlashWrite sector part
+#define AWTO_WDT_S_OSDSTR                                       11      // OsdPropPutString character
+extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 // g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
 #define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
-#define AWTO_WDT_FEED()                                         AWTO_WDT_POKE()     // inside a bounded loop (docs/watchdog.md table)
+#define AWTO_WDT_FEED(site)                                     AWTO_WDT_POKE(site) // inside a bounded loop (docs/watchdog.md table)
 #define AWTO_WDT_PASS(usNow)                                    do { unsigned int usG_ = (usNow) - AWTO_WDT_PASS_AT(); \
                                                                      usG_ = (usG_ >= 0x8000) ? 0 : (((usG_ >> 5) > 0xFF) ? 0xFF : (usG_ >> 5)); \
                                                                      if((unsigned char)usG_ > g_stAwtoWdt.ucMaxPass) { g_stAwtoWdt.ucMaxPass = (unsigned char)usG_; } \
                                                                      g_stAwtoWdt.ucPassHi = (unsigned char)((usNow) >> 8); g_stAwtoWdt.ucPassLo = (unsigned char)(usNow); \
-                                                                     g_stAwtoWdt.ucProbe &= ~AWTO_WDT_P_EARLY; AWTO_WDT_POKE(); } while(0)
+                                                                     g_stAwtoWdt.ucProbe &= ~AWTO_WDT_P_EARLY; AWTO_WDT_POKE(AWTO_WDT_S_PASS); } while(0)
 // After a bite the console opens by itself once the screen has been settled this long: the SDK's mode pop-up is drawn within
 // one main-loop pass of the mode change (sim max pass < 4 checks = 800 ms) x 1.25; expiry = open the console (AwtoWdtShow)
 #define AWTO_WDT_SHOW_MS                                        1000
@@ -253,8 +271,8 @@ extern void AwtoWdtShow(void);
 #define AWTO_WDT_SHOW()                                         do { if((g_stAwtoWdt.ucBoot & AWTO_WDT_B_NEW) != 0) { AwtoWdtShow(); } } while(0)
 #else
 #define AWTO_WDT_IRQ()
-#define AWTO_WDT_POKE()
-#define AWTO_WDT_FEED()
+#define AWTO_WDT_POKE(site)
+#define AWTO_WDT_FEED(site)
 #define AWTO_WDT_PASS(usNow)
 #define AWTO_WDT_SHOW()
 #define AwtoOsdWdtLines()
@@ -821,6 +839,7 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
 #define AWTO_SYNC_EV_INIT                                       0xD2    // arg 1 MCU init, 2 Timer2 tick, 3 watchdog run-time mode
 #define AWTO_SYNC_EV_UNPLUG                                     0xD3    // arg = port: a cable unplug woke the monitor (AWTO_WAKE_T_UNPLUG)
+#define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON
@@ -862,6 +881,8 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SRC_DDC_POLLS                                      12
 extern void AwtoSyncInit(void);
 extern void AwtoSyncMark(void);
+extern void AwtoNvEv(unsigned char ucStep);
+#define AWTO_NV_EV(k)                                           AwtoNvEv(k)
 extern void AwtoSyncT2Start(void);
 #define AWTO_SYNC_MARK()                                        AwtoSyncMark()
 extern void AwtoSyncBegin(unsigned char ucKind, unsigned char ucPort);
@@ -898,6 +919,7 @@ extern void AwtoConLogSync(void);
 #define AWTO_SYNC_SW(id, arg)
 #define AwtoSyncInit()
 #define AWTO_SYNC_MARK()
+#define AWTO_NV_EV(k)
 #define AwtoSyncT2Start()
 #define AwtoSyncPush(i, a, v)
 #define AwtoSyncBegin(k, p)

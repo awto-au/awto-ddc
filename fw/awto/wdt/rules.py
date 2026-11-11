@@ -14,8 +14,11 @@ INSERTS = [
 ]
 
 
-def _feed(m):
-    return m.group(1) + " AWTO_WDT_FEED();  // [keil2sdcc] sub #131"
+def _feed(site):
+    return lambda m: m.group(1) + f" AWTO_WDT_FEED({site});  // [keil2sdcc] sub #131"
+
+
+_NV_SITES = iter(("AWTO_WDT_S_WREN", "AWTO_WDT_S_WRDIS", "AWTO_WDT_S_WRPROT"))   # file order of the SDK's flash pokes
 
 
 SUBS = [
@@ -26,10 +29,10 @@ SUBS = [
      "// awto #138: no watchdog disable (three ORed enables; never cleared)\n"
      "  // [keil2sdcc] sub #138", 1),
     # one feed per elapsed ms inside each bounded wait: the wait itself is not a hang (its bound is the SDK's)
-    (TMR, r"(void ScalerTimerDelayXms\(WORD usNum\)\n\{.*?g_bNotifyTimer2Int = _FALSE;\n.*?g_bNotifyTimer2Int = _FALSE;)", _feed, 1),
-    (TMR, r"(bit ScalerTimerPollingFlagProc\(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess\)\n\{.*?usTimeElapsed\+\+;)", _feed, 1),
+    (TMR, r"(void ScalerTimerDelayXms\(WORD usNum\)\n\{.*?g_bNotifyTimer2Int = _FALSE;\n.*?g_bNotifyTimer2Int = _FALSE;)", _feed("AWTO_WDT_S_DELAY"), 1),
+    (TMR, r"(bit ScalerTimerPollingFlagProc\(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess\)\n\{.*?usTimeElapsed\+\+;)", _feed("AWTO_WDT_S_POLL"), 1),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerTimerFunction.c",
-     r"(bit ScalerTimerWaitForEvent\(EnumWaitEventType enumEvent\)\n\{.*?usTimeElapsed\+\+;)", _feed, 1),
+     r"(bit ScalerTimerWaitForEvent\(EnumWaitEventType enumEvent\)\n\{.*?usTimeElapsed\+\+;)", _feed("AWTO_WDT_S_EVENT"), 1),
     # #138: WD-timer events -> Timer0 (fw/sdcc/awto_t0ev.inc, same function names; call sites unchanged). SDK block off,
     # its table gone, ours appended at the end of the file: no line before it moves.
     (TMR, r"#if\(_WD_TIMER_INT_SUPPORT == _ON\)(\n//-+\n// Description  : Watch Dog Timer Initial)",
@@ -53,9 +56,30 @@ SUBS = [
     # #29 boot log: the WDT counter is the clock before Timer2; carry it over ScalerMcuInitial's clear
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"    MCU_FFEA_WATCHDOG_TIMER \|= _BIT6 \| _BIT2 \| _BIT1 \| _BIT0;",
      "    AWTO_SYNC_MARK(); MCU_FFEA_WATCHDOG_TIMER |= _BIT6 | _BIT2 | _BIT1 | _BIT0;  // [keil2sdcc] sub #29", 1),
+    # #150: NVRAM save timing in the sync log (start / end, erase start / done, page move): value = ms since the last poke
+    (OSD + "RTD2014Osd.c", r"(        case _OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG:\n)            RTDNVRamSaveOSDData\(\);",
+     lambda m: m.group(1) + "            AWTO_NV_EV(1); RTDNVRamSaveOSDData(); AWTO_NV_EV(2);  // [keil2sdcc] sub #150", 1),
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c",
+     r"(bit ScalerFlashErasePage\(BYTE ucBank, BYTE ucPage\)\n\{.*?    ScalerFlashWREN\(ucBank, ucPage\);)",
+     lambda m: m.group(1) + " AWTO_NV_EV(3);  // [keil2sdcc] sub #150", 1),
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c",
+     r"(    // No need to polling, 8051 will halt when common instruction executes\n\n    MCU_FF61_COMMON_OP_CODE = 0xFF;)",
+     lambda m: m.group(1) + " AWTO_NV_EV(4);  // [keil2sdcc] sub #150", 1),
+    (OSD + "RTD2014NVRamOsd.c", r"(bit RTDFlashMoveData\(BYTE ucPageID, BYTE \*pucData\)\n\{\n    BYTE ucPrevPage = g_pucFlashPageArr\[ucPageID\];)",
+     lambda m: m.group(1) + " AWTO_NV_EV(5);  // [keil2sdcc] sub #150", 1),
+    # #150: bounded loops that ran without a poke on unit 2 (flash port reads, page programs, prop-font strings): one poke each.
+    # The FunctionLib files do not see RL6449_Project.h: a call (9 = AWTO_WDT_S_FREAD, 10 = AWTO_WDT_S_FWRITE)
+    ("Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonNVRam/ScalerCommonFlashRead.c",
+     r"(    MCU_FF78_ACCESS_FLASH_ADDR_0 = ucBank;)", lambda m: m.group(1) + " { extern void AwtoWdtLibPoke(unsigned char ucSite); AwtoWdtLibPoke(9); }  // [keil2sdcc] sub #150", 1),
+    ("Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonNVRam/ScalerCommonFlashWrite.c",
+     r"(    for\(ucPage = ucStartPage; ucPage <= ucEndPage; ucPage\+\+\)\n    \{)",
+     lambda m: m.group(1) + " { extern void AwtoWdtLibPoke(unsigned char ucSite); AwtoWdtLibPoke(10); }  // [keil2sdcc] sub #150: per 4 KB sector part", 1),
+    (OSD + "RTD2014OsdFontProp.c",
+     r"(        while\(\(\*\(pucArray \+ ucElementCount\) != _END_\) &&\n              \(\*\(pucArray \+ ucElementCount\) != _NEXT_LINE\)\)\n        \{)",
+     lambda m: m.group(1) + " AWTO_WDT_FEED(AWTO_WDT_S_OSDSTR);  // [keil2sdcc] sub #150: per character (string terminator bound)", 1),
     # interrupt tests (wdt_test.py prio_*, t0_arm_from_isr): one XDATA flag test per EXINT0
     ("Kernel/System/Code/SysInt.c", r"(void SysEXINT0\(void\)[^\n]*\n\{\n    // Backup for Burst Write Bug\n    g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR;)",
      lambda m: m.group(1) + " AWTO_T0EV_EXINT0();  // [keil2sdcc] sub #138", 1),
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c", r"MCU_FFEA_WATCHDOG_TIMER \|= 0x40;",
-     "AWTO_WDT_FEED();  // [keil2sdcc] sub #138", 3),
+     lambda m: f"AWTO_WDT_FEED({next(_NV_SITES)});  // [keil2sdcc] sub #138", 3),
 ]

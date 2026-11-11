@@ -85,7 +85,8 @@ void AwtoOsdWdtLines(void)
     AwtoPutNum((WORD)g_stAwtoWdt.ucMaxPass << 5, 1);
     AwtoPutStr(" POKE ");
     AwtoPutNum(((WORD)g_stAwtoWdt.ucMaxPoke * 293) >> 6, 1);
-    AwtoPutStr("MS");
+    AwtoPutStr("MS AT ");
+    AwtoPutNum(g_ucAwtoPokeSite, 1);            // AWTO_WDT_S_* (#150)
     AwtoTextLine(5, AWTO_T_STYLE_TEXT);
     AwtoPutStr("PROBE ");
     AwtoPutHex2(g_stAwtoWdt.ucProbe);           // AWTO_WDT_P_*: 01 timer 02 armed 04 IRQ 08 reset 10 no reset

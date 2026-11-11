@@ -40,6 +40,13 @@ static void AwtoWdtFresh(void)                  // empty record: cold RAM, a hos
     g_stAwtoWdt.ucVersion = 2;
 }
 
+volatile __xdata BYTE g_ucAwtoPokeSite;         // AWTO_WDT_S_* that ended the longest poke gap this boot (#150)
+
+void AwtoWdtLibPoke(BYTE ucSite)                // the FunctionLib flash read / write loops (no project header there)
+{
+    AWTO_WDT_POKE(ucSite);
+}
+
 // Once per reset, before EA: classify the boot, keep the record, reset the live counters.
 void AwtoWdtInit(void)
 {
