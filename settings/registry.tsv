@@ -117,3 +117,6 @@
 99	info_mode	int	none	info	ro	0	15	1	0	-	-	-	Mode state	-	firmware mode state number
 100	info_loop	int	none	info	ro	0	30000	1	0	-	-	-	Loop rate /s	-
 101	info_schema	int	none	info	ro	0	32767	1	0	-	-	-	Settings schema	-
+107	info_hfreq	int	none	info	ro	0	30000	1	0	-	-	-	H freq	-	measured horizontal frequency, 0.1 kHz (shown as kHz); was on the Realtek menu Information page (awto-ddc#120)
+108	info_pclk	int	none	info	ro	0	30000	1	0	-	-	-	Pixel clock	-	input pixel clock, 0.1 MHz (shown as MHz); was on the Realtek menu Information page (awto-ddc#120)
+109	info_hdcp	enum	none	info	ro	0	1	1	0	-	-	-	HDCP	Off|On	HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120)

@@ -33,6 +33,8 @@ enum osd_bar_colour { OB_SURFACE = 0, OB_ACCENT = 1 };
 #define OSD_CHAR_W 8
 #define OSD_CHAR_H 18
 extern uint8_t __xdata osd_cw, osd_rh;          /* cell width / row height px of the loaded font (osd_font_load) */
+void    osd_tc_viewport(uint8_t rows);               /* show only this many map rows (map taller than the window), call after osd_font_load */
+uint8_t osd_tc_scroll(uint8_t first_row);            /* hardware scroll: first map row shown; returns the row actually shown */
 void    osd_tc_rowh(uint8_t rh);                      /* row height px of every map row (5-bit field) */
 void    osd_tc_open(uint8_t chars, uint8_t lines);   /* grid + palette, all windows off; OSD stays off until osd_tc_show */
 void    osd_tc_cells(uint8_t maprow, uint8_t cell, const uint8_t __xdata *tiles, uint8_t n, uint8_t style);

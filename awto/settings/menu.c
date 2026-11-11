@@ -147,6 +147,15 @@ static void mn_value_text(char __xdata *buf, int16_t v)
         set_text(set_opt(row.opts, (uint8_t)(v - row.min)), buf, VALUE_W + 1);
         return;
     }
+    if (row.id == SET_ID_INFO_HFREQ || row.id == SET_ID_INFO_PCLK) {   /* 0.1 kHz / 0.1 MHz */
+        n = mn_num(buf, v, 1);
+        buf[n++] = ' ';
+        buf[n++] = row.id == SET_ID_INFO_HFREQ ? 'k' : 'M';
+        buf[n++] = 'H';
+        buf[n++] = 'z';
+        buf[n] = 0;
+        return;
+    }
     if (row.id == SET_ID_INFO_VFREQ) {                   /* measured timing: 3 decimals */
         struct ui_timing __xdata t;
 
