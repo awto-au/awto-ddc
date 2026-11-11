@@ -221,11 +221,12 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #ifndef AWTO_WDT_HALT_FLASH
 #define AWTO_WDT_HALT_FLASH                                     1
 #endif
+// Warning = 1.25 x the measured worst poke gap, reset at N = 1 (wd7; measurement + arithmetic: docs/watchdog.md, #150)
 #ifndef AWTO_WDT_N
-#define AWTO_WDT_N                                              2       // reset at 2 x 585.9 = 1171.8 ms without a poke
+#define AWTO_WDT_N                                              1       // reset at 585.9 ms without a poke
 #endif
 #ifndef AWTO_WDT_THR
-#define AWTO_WDT_THR                                            0xC00   // warning at 585.9 + 3072 x 0.143 = 1025.3 ms; 146 ms before the reset
+#define AWTO_WDT_THR                                            0x48B   // warning at 1163 x 0.143 = 166.4 ms
 #endif
 #define AWTO_WDT_PROBE_THR                                      0x100   // probe: IRQ expected 36.6 ms after the clear, reset at 585.9 ms (N = 1)
 #define AWTO_WDT_PROBE_MS                                       1500    // probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s
