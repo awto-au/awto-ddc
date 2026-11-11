@@ -3,11 +3,11 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   105u
+#define SET_COUNT   106u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x037Eu    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 86u
-#define SET_TEXT_LEN 1801u
+#define SET_SCHEMA  0x7044u    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 87u
+#define SET_TEXT_LEN 1818u
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -114,6 +114,7 @@
 #define SET_ID_INFO_HFREQ           107u
 #define SET_ID_INFO_PCLK            108u
 #define SET_ID_INFO_HDCP            109u
+#define SET_ID_SYNC_CONSOLE         110u
 
 #define SET_PAGE_PICTURE          0u
 #define SET_PAGE_COLOUR           1u

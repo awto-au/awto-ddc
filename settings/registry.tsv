@@ -119,3 +119,4 @@
 107	info_hfreq	int	none	info	ro	0	30000	1	0	-	-	-	H freq	-	measured horizontal frequency, 0.1 kHz (shown as kHz); was on the Realtek menu Information page (awto-ddc#120)
 108	info_pclk	int	none	info	ro	0	30000	1	0	-	-	-	Pixel clock	-	input pixel clock, 0.1 MHz (shown as MHz); was on the Realtek menu Information page (awto-ddc#120)
 109	info_hdcp	enum	none	info	ro	0	1	1	0	-	-	-	HDCP	Off|On	HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120)
+110	sync_console	bool	none	osd	nv,live	0	1	1	1	auto	-	-	Sync log console	-	the diagnostic console opens by itself with the sync log after a power-on / input switch / wake (awto-ddc#139); read when it would open
