@@ -15,6 +15,7 @@ __xdata unsigned char g_ucAwtoMsgOn;        // #74: 0 (reset value) = messages o
 // Called from the host-wait loop of ScalerDebugMessage (keil2sdcc rule): 0 = give up waiting.
 unsigned char AwtoMsgWait(void)
 {
+    AWTO_WDT_FEED();                        // bounded wait: AWTO_MSG_HOST_MS per message (#131)
 #if(_AWTO_DIAG == _ON)
     if((unsigned int)(g_stAwtoDiag.usT2Isr - s_usAwtoMsgT0) >= AWTO_MSG_HOST_MS)
     {

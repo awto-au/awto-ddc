@@ -131,6 +131,88 @@ volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #else
 extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #endif
+// Watchdog + crash canary (#131, docs/watchdog.md): 32 B at 0xF6B0, outside the linker XDATA range (fw_build.py XRAM end),
+// so neither the crt nor AwtoDiagInit clears it. Bytes only: same layout in LE and BE images (host: scripts/rtd_crash.py).
+#define _AWTO_WDT                                               _ON
+typedef struct
+{
+    unsigned char ucMagic0;                     // 'W'; host clear = write 0 here
+    unsigned char ucMagic1;                     // 'D'
+    unsigned char ucVersion;                    // 1
+    unsigned char ucCause;                      // AWTO_WDT_C_* of the last bite
+    unsigned char ucBites;                      // watchdog resets since the record was cleared (stops at 255)
+    unsigned char ucWarm;                       // other warm resets (no capture: hardware WDT, ISP 0xEE), stops at 255
+    unsigned char ucPcHi;                       // interrupted PC = return address stacked by the Timer2 interrupt
+    unsigned char ucPcLo;
+    unsigned char ucBank;                       // __bs_cur at the interrupt: code bank of a PC >= 0x5000
+    unsigned char ucSp;                         // SP before the interrupt
+    unsigned char ucPsw;
+    unsigned char ucAcc;
+    unsigned char ucB;
+    unsigned char ucDph;
+    unsigned char ucDpl;
+    unsigned char ucRetHi;                      // top word of the interrupted stack (a caller's return address, if any)
+    unsigned char ucRetLo;
+    unsigned char ucStage;                      // g_stAwtoDiag.ucStage
+    unsigned char ucMode;                       // mode state (_MODE_STATUS_*)
+    unsigned char ucHbHi;                       // g_stAwtoDiag.usHeartbeat
+    unsigned char ucHbLo;
+    unsigned char ucUpHi;                       // g_usTimerCounter, ms (wraps at 65.5 s)
+    unsigned char ucUpLo;
+    unsigned char ucFeedAge;                    // checks since the last feed, at the bite
+    unsigned char ucPassAge;                    // checks since the last main-loop pass, at the bite
+    unsigned char ucCheck;                      // AWTO_WDT_SEED ^ bytes 0..24: record valid
+    unsigned char ucBoot;                       // live from here (not in ucCheck): AWTO_WDT_B_*
+    unsigned char ucTick;                       // ms to the next check (Timer2 ISR)
+    unsigned char ucFeed;                       // checks since the last feed (main-loop pass or bounded wait)
+    unsigned char ucPass;                       // checks since the last main-loop pass
+    unsigned char ucMaxFeed;                    // largest ucFeed this boot
+    unsigned char ucMaxPass;                    // largest ucPass this boot
+} StAwtoWdt;
+typedef char AwtoWdtSizeCheck[(sizeof(StAwtoWdt) == 32) ? 1 : -1];
+#ifdef _AWTO_DIAG_DEFINER
+volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
+#else
+extern volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
+#endif
+#define AWTO_WDT_REC_N                                          25      // bytes under ucCheck
+#define AWTO_WDT_SEED                                           0xA5
+#define AWTO_WDT_C_STALL                                        1       // no feed for AWTO_WDT_FEED_CHECKS
+#define AWTO_WDT_C_PASS                                         2       // fed (waits) but no main-loop pass for AWTO_WDT_PASS_CHECKS
+#define AWTO_WDT_C_TEST                                         0x80    // or-ed: hang requested by test cmd 0x4C..0x4E
+#define AWTO_WDT_B_LVR                                          0x01    // this boot: P0_01[6] read 0 = power-on / brown-out (regdb reset_chk)
+#define AWTO_WDT_B_BITE                                         0x02    // set by the bite, read by the next boot
+#define AWTO_WDT_B_TEST                                         0x04    // test hang armed
+#define AWTO_WDT_B_NEW                                          0x08    // record from a bite not yet shown on the console
+#define AWTO_WDT_B_WARM                                         0x10    // this boot: warm reset without a capture
+// Check: Timer2 ISR (1 ms tick) every AWTO_WDT_CHECK_MS (Dan, #131: 200 ms is enough). A limit of N checks bites after (N-1)..N
+// checks without the event. Expected worst cases, sources and the x1.25: docs/watchdog.md. Expiry = capture + chip reset.
+#define AWTO_WDT_CHECK_MS                                       200
+#define AWTO_WDT_FEED_CHECKS                                    5       // no feed (pass or bounded wait): longest compute stretch, sim-measured
+#define AWTO_WDT_PASS_CHECKS                                    27      // no main-loop pass: static worst pass incl. waits (docs/delays.md)
+#define AWTO_WDT_FRAME                                          16      // SysTimerIntProc2: 2 B PC + 14 pushes before AWTO_WDT_T2ISR (crash_sim_test checks)
+#if(_AWTO_WDT == _ON)
+extern __data unsigned char _bs_cur;           // fw/sdcc/bank.asm bank shadow
+extern void AwtoWdtInit(void);
+extern void AwtoWdtCheck(unsigned char ucSp, unsigned char ucBank);
+extern void AwtoWdtHang(unsigned char ucHow);
+extern bit AwtoWdtValid(void);
+extern void AwtoOsdWdtLines(void);
+#define AWTO_WDT_T2ISR()                                        do { if(--g_stAwtoWdt.ucTick == 0) { AwtoWdtCheck(SP, _bs_cur); } } while(0)
+#define AWTO_WDT_FEED()                                         (g_stAwtoWdt.ucFeed = 0)
+#define AWTO_WDT_PASS()                                         do { g_stAwtoWdt.ucFeed = 0; g_stAwtoWdt.ucPass = 0; } while(0)
+// After a bite the console opens by itself once the screen has been settled this long: the SDK's mode pop-up is drawn within
+// one main-loop pass of the mode change (sim max pass < 4 checks = 800 ms) x 1.25; expiry = open the console (AwtoWdtShow)
+#define AWTO_WDT_SHOW_MS                                        1000
+extern void AwtoWdtShow(void);
+#define AWTO_WDT_SHOW()                                         do { if((g_stAwtoWdt.ucBoot & AWTO_WDT_B_NEW) != 0) { AwtoWdtShow(); } } while(0)
+#else
+#define AWTO_WDT_T2ISR()
+#define AWTO_WDT_FEED()
+#define AWTO_WDT_PASS()
+#define AWTO_WDT_SHOW()
+#define AwtoOsdWdtLines()
+#endif
 #define AWTO_MSG_RING                                           40      // on-screen message log entries (#56)
 typedef struct
 {
@@ -285,7 +367,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #endif
-#define AWTO_DIAG_T2ISR()                                       do { g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); } while(0)
+#define AWTO_DIAG_T2ISR()                                       do { g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); AWTO_WDT_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 #else
 #define AwtoDiagInit()

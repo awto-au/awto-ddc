@@ -347,7 +347,7 @@ void AwtoDiagConsole(BYTE ucOn)
         AwtoOsdGpioLines();
         g_stAwtoKey.ucDrawn = 0;
         AwtoOsdKeyLines();
-        AwtoOsdDebugLines();
+        AwtoOsdDebugLines(); AwtoOsdWdtLines();         // #131 watchdog panel; same line: warn_policy line keys stay
         AwtoConLogInit();
         AwtoTextShow();
     }

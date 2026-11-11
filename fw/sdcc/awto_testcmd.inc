@@ -110,6 +110,12 @@ void AwtoDiagTestCmd(void)
     {
         AwtoProbeSet(0);
     }
+#if(_AWTO_WDT == _ON)
+    else if((ucCmd >= 0x4C) && (ucCmd <= 0x4E))         // #131 watchdog test hangs: 4C spin, 4D spin in a wait, 4E spin with EA off
+    {
+        AwtoWdtHang(ucCmd - 0x4C);
+    }
+#endif
     else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)
     {
         g_ucAwtoDiagFont = ucCmd - 0x60 + 1;

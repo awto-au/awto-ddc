@@ -38,6 +38,7 @@ void AwtoDiagMainPass(void)
     unsigned int usNow;
 
     g_stAwtoDiag.usHeartbeat++;
+    AWTO_WDT_PASS();
     do
     {
         usNow = g_usTimerCounter;
@@ -50,6 +51,7 @@ void AwtoDiagMainPass(void)
         usLastMs = usNow;
     }
     AwtoDiagStage(6);                                  // first main-loop pass (#63 order: 5 = panel VDD comes first)
+    AWTO_WDT_SHOW();
 }
 
 #endif
