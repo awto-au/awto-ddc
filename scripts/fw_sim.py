@@ -485,6 +485,36 @@ class ChipReset(Dev):
         self.reset(m)
 
 
+class FlashHalt(Dev):
+    """SPI-flash common instruction (FF60 write with bit0 = start; op code FF61) halts the MCU for the flash op (#150; SDK:
+    "8051 will halt when common instruction executes"). The sim CPU does not stop; the halt is added to the ChipReset WDT
+    clock, and to its count unless FFEA[5] sf_hlt_wdt_en stops it. Durations: MX25L8006E typ (MAX = datasheet max, p. 49)."""
+    writes = (0xFF60,)
+    TYP = {0x20: 40.0, 0xD8: 400.0, 0x01: 5.0, 0x02: 0.6}         # sector erase, block erase, WRSR, page program (ms)
+    MAX = {0x20: 200.0, 0xD8: 2000.0, 0x01: 40.0, 0x02: 3.0}
+    use_max = False
+
+    def __init__(self):
+        self.halts = []                              # (op, ms, counted by the WDT)
+
+    def on_write(self, m, a):
+        if not m.rd(0xFF60)[0] & 0x01:
+            return
+        op = m.rd(0xFF61)[0]
+        d = (self.MAX if self.use_max else self.TYP).get(op, 0.0)
+        if not d:
+            return
+        cr = next(x for x in m.devs if isinstance(x, ChipReset))
+        cr.advance(m)
+        counted = not (m.rd(0xFFEA)[0] & 0x20)
+        cr._threshold(m, cr.since, cr.since + d) if counted else None
+        cr.clock += d
+        if counted:
+            cr.since += d
+        self.halts.append((op, d, counted))
+        cr.check(m)
+
+
 class Cells(Dev):
     """Constant register values (after reset); name -> value dicts are applied through m.put."""
 
@@ -639,7 +669,7 @@ def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None, port
     return [regdb_cells(), FlashDev(img), IicSlave(), Cells(CABLE[port]),
             IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4),
             W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70},
-                FAULTS[fault] if fault else None), hdmi, ChipReset()], hdmi
+                FAULTS[fault] if fault else None), hdmi, ChipReset(), FlashHalt()], hdmi
 
 
 def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):

@@ -8,6 +8,8 @@ usage: poke_loops.py TREE [--out re/poke_loops.tsv]
 - Loops = for / while / do in the compiled C files (an asm_sel module of that name) and Code/*.h of linked functions; a loop pokes when its body calls a
   function that reaches a helper. Class: bounded (for with a compare on a counter; while with a counter / timeout compare),
   unbounded (constant-true condition), check (anything else: a person reads it). main's loop is the one allowed unbounded.
+- halt rows (#150): functions that start an SPI-flash common instruction (FF60 write with bit0): the MCU stops for the
+  flash op (no loop, no poke), so the watchdog must not count it (FFEA[5]) or a poke must follow it.
 - Prints the table; exit 1 if an unbounded poking loop other than main's exists. Log: tmp/logs/poke_loops.log
 """
 from __future__ import annotations
@@ -179,8 +181,24 @@ def main() -> int:
             if name == "main" and cls == "unbounded":
                 cls = "main"
             rows.append((cls, f"{rel}:{line0 + body.count(chr(10), 0, off)}", name, kind, re.sub(r"\s+", " ", hdr)[:90], ",".join(hit[:4])))
+    # hardware halts (#150): an SPI-flash common instruction (FF60 start bit) stops the MCU for the flash op: no loop, no poke
+    halt = defaultdict(set)
+    for q in asm.glob("*.asm"):
+        cur, lines = None, q.read_text(errors="replace").splitlines()
+        for i, ln in enumerate(lines):
+            mm = re.match(r"^_(\w+):", ln)
+            if mm:
+                cur = mm.group(1)
+            if cur and "#_MCU_FF60_COMMON_INST_EN" in ln:
+                for nx in lines[i + 1:i + 6]:
+                    v = re.search(r"mov\s+a,#0x([0-9A-Fa-f]{2})", nx)
+                    if v and int(v.group(1), 16) & 1:
+                        halt[cur].add(f"0x{v.group(1).upper()}")
+    for fn, vals in sorted(halt.items()):
+        rows.append(("halt", fn, fn, "common instruction", "FF60 start " + ",".join(sorted(vals)),
+                     "MCU halted for the flash op: FFEA[5] or a poke right after it (MX25L8006E tSE 200 / tW 40 / tPP 3 ms max)"))
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    order = {"unbounded": 0, "check": 1, "main": 2, "bounded": 3}
+    order = {"unbounded": 0, "halt": 1, "check": 2, "main": 3, "bounded": 4}
     rows.sort(key=lambda r: (order[r[0]], r[1]))
     lines = ["class\tsite\tfunction\tloop\theader\treaches"] + ["\t".join(r) for r in rows]
     with LOG.open("a") as f:

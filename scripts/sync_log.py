@@ -94,6 +94,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return SRC.get(v, str(v))
     if fmt == "harg":
         return f"{arg:02X}"
+    if fmt == "ms":                                      # #150 NVRAM save timing
+        return f"{v} ms"
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
         c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
         where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"

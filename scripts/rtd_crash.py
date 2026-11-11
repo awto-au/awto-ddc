@@ -29,6 +29,13 @@ FIELDS = ("m0 m1 ver cause bites warm pch pcl bank sp psw acc b dph dpl reth ret
           "agh agl check boot passh passl max_pass max_poke probe").split()
 PROBE = ((0x01, "TIMER-MODE"), (0x02, "ARMED"), (0x04, "IRQ"), (0x08, "RESET"), (0x10, "NO-RESET"), (0x20, "WDTI"), (0x40, "EARLY"))
 POKE_MS = 32 * 2048 / 14318.18                       # ucMaxPoke unit: 32 CNT3 counts (RL6449_Project.h)
+SITES = {0: "-", 1: "main pass", 2: "DelayXms", 3: "PollingFlagProc", 4: "WaitForEvent", 5: "AwtoMsgWait", 6: "FlashWREN",
+         7: "FlashWRDis", 8: "FlashWRProtect", 9: "FlashRead", 10: "FlashWrite", 11: "OsdPropPutString"}   # AWTO_WDT_S_* (#150)
+
+
+def site_addr(map_text: str) -> int | None:
+    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_ucAwtoPokeSite\b", map_text, re.M)
+    return int(m.group(1), 16) & 0xFFFF if m else None
 
 
 def decode(b: bytes) -> dict:
@@ -161,6 +168,10 @@ def main() -> int:
         if b is None:
             raise SystemExit("crash record read failed (debug slave 0x35 silent or checksum errors)")
         out = line(decode(b), syms)
+        sa = site_addr(mt)
+        if sa is not None:
+            s = X.read_bytes(io, sa, 1)
+            out += f"; max poke gap ended by {SITES.get(s[0], s[0]) if s else '?'}"
         if a.snap:
             sa = snap_addr(mt)
             out += "; snapshot: " + (snap_line(snap_decode(X.read_blocks(io, sa, SNAP_N))) if sa else "image without it")

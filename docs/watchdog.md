@@ -175,6 +175,21 @@
 - Code +1498 B (wd0 -> wd6, map_size_diff); XDATA free 149 -> 102 B (wd5).
 - Unit 2 (wd4): baseline 10 s no reset, max pass 544 ms, max poke gap 188 ms; probes as above.
 
+## NVRAM save bite (#150, unit 2 2026-11-11, wb-p14ui-wd5)
+
+- Record: STALL, PC C:32B2 SysEXINT1+0x5e (the warning interrupted the debug-slave ISR), stack top OsdPropPutString+0xb1a, up 24305 ms,
+  stage 8, mode 3, pass age 1028 ms, during the baseline NVRAM save (test cmd 0x29).
+- SPI-flash common instructions (FF60 start bit: erase, program, WRSR) halt the MCU for the whole op (SDK `ScalerFlashErasePage`: "8051
+  will halt"); no code, no pokes, no interrupts; with FFEA[5] off the WDT counted the halts. Datasheet max: tSE 200 ms, tW 40 ms, tPP 3 ms.
+- wb-p14ui-wd6: FFEA[5] sf_hlt_wdt_en on (`AWTO_WDT_HALT_FLASH`, default 1); pokes added in `ScalerFlashRead` (per call), `ScalerFlashWrite`
+  (per sector part) and `OsdPropPutString` (per character); `poke_loops.py` lists the 6 functions that start a common instruction (halt rows).
+- Unit 2 decides: 0x4C must still bite with bit 5 on (else bit 5 also stops the counter on code fetch: fall back to
+  `-D AWTO_WDT_HALT_FLASH=0` = image wb-p14ui-wd6n, whose save lines then measure each halt).
+- Sync lines after boot: `NVRAM save start / end`, `flash erase start / done`, `NVRAM page move`, each with WDT ms since the last poke.
+- Live `g_ucAwtoPokeSite`: which poke site (AWTO_WDT_S_*, `rtd_crash.SITES`) ended the longest gap; console `POKE n MS AT s`.
+- Sim: `FlashHalt` (fw_sim) adds the halt to the WDT model (typ, or datasheet max in wdt_test nvsave); wd6: 40 ops 1600 ms, 0 counted.
+- Next (Dan): `wdt_test --unit 2 --cases stress` gives the max poke gap + site; wd7 sets warning = 1.25 x that, N = 1.
+
 ## Sim notes
 
 - fw_sim time dilation: a firmware RCAP2 write (and its matching TL2/TH2 load) is dilated at once (fastmachine): Timer0 reads RCAP2.
