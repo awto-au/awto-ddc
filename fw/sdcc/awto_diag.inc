@@ -38,12 +38,12 @@ void AwtoDiagMainPass(void)
     unsigned int usNow;
 
     g_stAwtoDiag.usHeartbeat++;
-    AWTO_WDT_PASS();
     do
     {
         usNow = g_usTimerCounter;
     }
     while(usNow != g_usTimerCounter);
+    AWTO_WDT_PASS(usNow);
     if((unsigned int)(usNow - usLastMs) >= 1000)
     {
         g_stAwtoDiag.usLoopRate = g_stAwtoDiag.usHeartbeat - usLastHb;

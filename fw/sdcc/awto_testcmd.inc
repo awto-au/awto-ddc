@@ -69,9 +69,13 @@ void AwtoDiagTestCmd(void)
         AwtoProbeSet(0);
     }
 #if(_AWTO_WDT == _ON)
-    else if((ucCmd >= 0x4C) && (ucCmd <= 0x4E))         // #131 watchdog test hangs: 4C spin, 4D spin in a wait, 4E spin with EA off
+    else if((ucCmd >= 0x4C) && (ucCmd <= 0x4E))         // #131 watchdog test hangs: 4C spin, 4E spin with EA off (4D gone, #138)
     {
         AwtoWdtHang(ucCmd - 0x4C);
+    }
+    else if((ucCmd == 0x49) || (ucCmd == 0x4F))         // #138 WDT probe for unit 2: 49 normal mode, 4F timer mode
+    {
+        AwtoWdtProbe(ucCmd == 0x4F);
     }
     else if((ucCmd >= 0x2A) && (ucCmd <= 0x2F))         // #138 Timer0 events: 2A DP rebuild 30 ms, 2B/2C HDMI RR D2/D3 10 ms,
     {                                                   // 2D 2A+2B, 2E/2F = 2A/2B across a forced clock-switch reload

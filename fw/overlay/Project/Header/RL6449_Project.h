@@ -129,18 +129,18 @@ volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #else
 extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
 #endif
-// Watchdog + crash canary (#131, docs/watchdog.md): 32 B at 0xF6B0, outside the linker XDATA range (fw_build.py XRAM end),
+// Watchdog + crash canary (#131, #138, docs/watchdog.md): 32 B at 0xF6B0, outside the linker XDATA range (fw_build.py XRAM end),
 // so neither the crt nor AwtoDiagInit clears it. Bytes only: same layout in LE and BE images (host: scripts/rtd_crash.py).
 #define _AWTO_WDT                                               _ON
 typedef struct
 {
     unsigned char ucMagic0;                     // 'W'; host clear = write 0 here
     unsigned char ucMagic1;                     // 'D'
-    unsigned char ucVersion;                    // 1
+    unsigned char ucVersion;                    // 2 (#138: hardware watchdog only)
     unsigned char ucCause;                      // AWTO_WDT_C_* of the last bite
-    unsigned char ucBites;                      // watchdog resets since the record was cleared (stops at 255)
-    unsigned char ucWarm;                       // other warm resets (no capture: hardware WDT, ISP 0xEE), stops at 255
-    unsigned char ucPcHi;                       // interrupted PC = return address stacked by the Timer2 interrupt
+    unsigned char ucBites;                      // watchdog warnings captured since the record was cleared (stops at 255)
+    unsigned char ucWarm;                       // other warm resets (no capture: hardware reset, ISP 0xEE), stops at 255
+    unsigned char ucPcHi;                       // interrupted PC = return address stacked by the WDT warning interrupt
     unsigned char ucPcLo;
     unsigned char ucBank;                       // __bs_cur at the interrupt: code bank of a PC >= 0x5000
     unsigned char ucSp;                         // SP before the interrupt
@@ -157,15 +157,15 @@ typedef struct
     unsigned char ucHbLo;
     unsigned char ucUpHi;                       // g_usTimerCounter, ms (wraps at 65.5 s)
     unsigned char ucUpLo;
-    unsigned char ucFeedAge;                    // checks since the last feed, at the bite
-    unsigned char ucPassAge;                    // checks since the last main-loop pass, at the bite
+    unsigned char ucPassAgeHi;                  // ms since the last main-loop pass, at the warning (wraps at 65.5 s)
+    unsigned char ucPassAgeLo;
     unsigned char ucCheck;                      // AWTO_WDT_SEED ^ bytes 0..24: record valid
     unsigned char ucBoot;                       // live from here (not in ucCheck): AWTO_WDT_B_*
-    unsigned char ucTick;                       // ms to the next check (Timer2 ISR)
-    unsigned char ucFeed;                       // checks since the last feed (main-loop pass or bounded wait)
-    unsigned char ucPass;                       // checks since the last main-loop pass
-    unsigned char ucMaxFeed;                    // largest ucFeed this boot
-    unsigned char ucMaxPass;                    // largest ucPass this boot
+    unsigned char ucPassHi;                     // g_usTimerCounter at the last main-loop pass
+    unsigned char ucPassLo;
+    unsigned char ucMaxPass;                    // longest main-loop pass this boot, x32 ms (255 = 8.1 s or more)
+    unsigned char ucMaxPoke;                    // longest gap between watchdog pokes this boot, x32 CNT3 = 4.58 ms (255: >= 586 ms)
+    unsigned char ucProbe;                      // AWTO_WDT_P_*: test cmd 0x49 / 0x4F result (kept over resets)
 } StAwtoWdt;
 typedef char AwtoWdtSizeCheck[(sizeof(StAwtoWdt) == 32) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -175,39 +175,65 @@ extern volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
 #endif
 #define AWTO_WDT_REC_N                                          25      // bytes under ucCheck
 #define AWTO_WDT_SEED                                           0xA5
-#define AWTO_WDT_C_STALL                                        1       // no feed for AWTO_WDT_FEED_CHECKS
-#define AWTO_WDT_C_PASS                                         2       // fed (waits) but no main-loop pass for AWTO_WDT_PASS_CHECKS
+#define AWTO_WDT_C_STALL                                        1       // pokes stopped: no main-loop pass and no bounded loop
+#define AWTO_WDT_C_TMODE                                        0x40    // or-ed: built with AWTO_WDT_MODE = AWTO_WDT_TIMER_IRQ
 #define AWTO_WDT_C_TEST                                         0x80    // or-ed: hang requested by test cmd 0x4C..0x4E
-#define AWTO_WDT_B_LVR                                          0x01    // this boot: P0_01[6] read 0 = power-on / brown-out (regdb reset_chk)
+#define AWTO_WDT_B_LVR                                          0x01    // this boot: P0_01[6] read 0 (any reset clears it; #131 unit 2)
 #define AWTO_WDT_B_BITE                                         0x02    // set by the bite, read by the next boot
 #define AWTO_WDT_B_TEST                                         0x04    // test hang armed
 #define AWTO_WDT_B_NEW                                          0x08    // record from a bite not yet shown on the console
 #define AWTO_WDT_B_WARM                                         0x10    // this boot: warm reset without a capture
-// Check: Timer2 ISR (1 ms tick) every AWTO_WDT_CHECK_MS (Dan, #131: 200 ms is enough). A limit of N checks bites after (N-1)..N
-// checks without the event. Expected worst cases, sources and the x1.25: docs/watchdog.md. Expiry = capture + chip reset.
-#define AWTO_WDT_CHECK_MS                                       200
-#define AWTO_WDT_FEED_CHECKS                                    5       // no feed (pass or bounded wait): longest compute stretch, sim-measured
-#define AWTO_WDT_PASS_CHECKS                                    27      // no main-loop pass: static worst pass incl. waits (docs/delays.md)
-#define AWTO_WDT_FRAME                                          16      // SysTimerIntProc2: 2 B PC + 14 pushes before AWTO_WDT_T2ISR (crash_sim_test checks)
+#define AWTO_WDT_P_TIMER                                        0x01    // probe in timer mode (0x4F); else normal mode (0x49)
+#define AWTO_WDT_P_ARMED                                        0x02    // probe running (a reset while set = the probe's reset)
+#define AWTO_WDT_P_IRQ                                          0x04    // the threshold IRQ came (no pokes, CNT3 = AWTO_WDT_PROBE_THR)
+#define AWTO_WDT_P_RESET                                        0x08    // the chip reset (CNT1 = 1) during the probe
+#define AWTO_WDT_P_NORESET                                      0x10    // no reset within AWTO_WDT_PROBE_MS
+#define AWTO_WDT_P_WDTI                                         0x20    // DW8051 EICON[3] WDTI set: Realtek's WDT also drives the core wdti
+// One hardware watchdog (#138). Counters: CNT2 / 2048 XTAL -> CNT3 (143.0 us, wraps 585.9 ms) -> CNT1 (wraps).
+// Poke = FFEA[6] clr_wdt: every main-loop pass and inside bounded loops only (rule: no unbounded loop around a poking wait).
+// Warning = threshold IRQ at CNT1 = N - 1, CNT3 = THR (earlier matches return): capture, then sof_rst. Reset = CNT1 = N.
+#define AWTO_WDT_NORMAL_IRQ                                     1       // normal mode + threshold IRQ (assumed to fire in normal mode)
+#define AWTO_WDT_TIMER_IRQ                                      2       // fallback: timer mode, IRQ = warning, CNT1 overflow = reset (assumed)
+#ifndef AWTO_WDT_MODE
+#define AWTO_WDT_MODE                                           AWTO_WDT_NORMAL_IRQ
+#endif
+#define AWTO_WDT_N                                              2       // reset at 2 x 585.9 = 1171.8 ms without a poke
+#define AWTO_WDT_THR                                            0xC00   // warning at 585.9 + 3072 x 0.143 = 1025.3 ms; 146 ms before the reset
+#define AWTO_WDT_PROBE_THR                                      0x100   // probe: IRQ expected 36.6 ms after the clear, reset at 585.9 ms (N = 1)
+#define AWTO_WDT_PROBE_MS                                       1500    // probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s
+#define AWTO_WDT_FRAME                                          16      // WDT / Timer2 ISR: 2 B PC + 14 pushes (crash_sim_test checks)
+#define AWTO_XFR(a)                                             (*(volatile __xdata unsigned char *)(a))
 #if(_AWTO_WDT == _ON)
 extern __data unsigned char _bs_cur;           // fw/sdcc/bank.asm bank shadow
 extern void AwtoWdtInit(void);
-extern void AwtoWdtCheck(unsigned char ucSp, unsigned char ucBank);
+extern void AwtoWdtIrq(unsigned char ucSp, unsigned char ucBank);
 extern void AwtoWdtHang(unsigned char ucHow);
+extern void AwtoWdtProbe(unsigned char ucTimer);
 extern bit AwtoWdtValid(void);
 extern void AwtoOsdWdtLines(void);
-#define AWTO_WDT_T2ISR()                                        do { if(--g_stAwtoWdt.ucTick == 0) { AwtoWdtCheck(SP, _bs_cur); } } while(0)
-#define AWTO_WDT_FEED()                                         (g_stAwtoWdt.ucFeed = 0)
-#define AWTO_WDT_PASS()                                         do { g_stAwtoWdt.ucFeed = 0; g_stAwtoWdt.ucPass = 0; } while(0)
+extern void ScalerTimerWDInitial(void);
+#define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, _bs_cur)
+// clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke
+#define AWTO_WDT_POKE()                                         do { unsigned char ucG_; AWTO_XFR(0xFFEA) |= 0x40; \
+                                                                     ucG_ = ((AWTO_XFR(0xFFAD) & 0x07) != 0) ? 0xFF : (AWTO_XFR(0xFFAC) & 0x7F); \
+                                                                     if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; } } while(0)
+#define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
+#define AWTO_WDT_FEED()                                         AWTO_WDT_POKE()     // inside a bounded loop (docs/watchdog.md table)
+#define AWTO_WDT_PASS(usNow)                                    do { unsigned int usG_ = (usNow) - AWTO_WDT_PASS_AT(); \
+                                                                     usG_ = ((usG_ >> 5) > 0xFF) ? 0xFF : (usG_ >> 5); \
+                                                                     if((unsigned char)usG_ > g_stAwtoWdt.ucMaxPass) { g_stAwtoWdt.ucMaxPass = (unsigned char)usG_; } \
+                                                                     g_stAwtoWdt.ucPassHi = (unsigned char)((usNow) >> 8); g_stAwtoWdt.ucPassLo = (unsigned char)(usNow); \
+                                                                     AWTO_WDT_POKE(); } while(0)
 // After a bite the console opens by itself once the screen has been settled this long: the SDK's mode pop-up is drawn within
 // one main-loop pass of the mode change (sim max pass < 4 checks = 800 ms) x 1.25; expiry = open the console (AwtoWdtShow)
 #define AWTO_WDT_SHOW_MS                                        1000
 extern void AwtoWdtShow(void);
 #define AWTO_WDT_SHOW()                                         do { if((g_stAwtoWdt.ucBoot & AWTO_WDT_B_NEW) != 0) { AwtoWdtShow(); } } while(0)
 #else
-#define AWTO_WDT_T2ISR()
+#define AWTO_WDT_IRQ()
+#define AWTO_WDT_POKE()
 #define AWTO_WDT_FEED()
-#define AWTO_WDT_PASS()
+#define AWTO_WDT_PASS(usNow)
 #define AWTO_WDT_SHOW()
 #define AwtoOsdWdtLines()
 #endif
@@ -367,7 +393,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #endif
-#define AWTO_DIAG_T2ISR()                                       do { g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); AWTO_WDT_T2ISR(); } while(0)
+#define AWTO_DIAG_T2ISR()                                       do { g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 #else
 #define AwtoDiagInit()

@@ -36,12 +36,12 @@ void AwtoOsdWdtLines(void)
     }
     else
     {
-        AwtoPutStr(((ucC & 0x7F) == AWTO_WDT_C_STALL) ? "STALL" : (((ucC & 0x7F) == AWTO_WDT_C_PASS) ? "PASS" : "?"));
+        AwtoPutStr(((ucC & 0x3F) == AWTO_WDT_C_STALL) ? "STALL" : "?");
+        AwtoPutStr(((ucC & AWTO_WDT_C_TMODE) != 0) ? " TMODE" : "");
         AwtoPutStr(((ucC & AWTO_WDT_C_TEST) != 0) ? " TEST" : "");
-        AwtoPutStr("  AGE FEED ");          // ages in checks of AWTO_WDT_CHECK_MS
-        AwtoPutNum(g_stAwtoWdt.ucFeedAge, 1);
-        AwtoPutStr(" PASS ");
-        AwtoPutNum(g_stAwtoWdt.ucPassAge, 1);
+        AwtoPutStr("  PASS AGE ");
+        AwtoPutNum(((WORD)g_stAwtoWdt.ucPassAgeHi << 8) | g_stAwtoWdt.ucPassAgeLo, 1);
+        AwtoPutStr("MS");
         AwtoTextLine(1, AWTO_T_STYLE_TEXT);
         AwtoPutStr("PC ");
         if(g_stAwtoWdt.ucPcHi >= 0x50)
@@ -80,11 +80,15 @@ void AwtoOsdWdtLines(void)
     }
     AwtoPutStr("THIS BOOT ");
     AwtoPutStr(((g_stAwtoWdt.ucBoot & AWTO_WDT_B_LVR) != 0) ? "COLD" : (((g_stAwtoWdt.ucBoot & AWTO_WDT_B_WARM) != 0) ? "WARM" : "BITE"));
-    AwtoPutStr(" MAX FEED ");
-    AwtoPutNum(g_stAwtoWdt.ucMaxFeed, 1);
-    AwtoPutStr(" PASS ");
-    AwtoPutNum(g_stAwtoWdt.ucMaxPass, 1);
+    AwtoPutStr(" MAX PASS ");                   // x32 ms; poke gap x32 CNT3 = 4.58 ms (RL6449_Project.h)
+    AwtoPutNum((WORD)g_stAwtoWdt.ucMaxPass << 5, 1);
+    AwtoPutStr(" POKE ");
+    AwtoPutNum(((WORD)g_stAwtoWdt.ucMaxPoke * 293) >> 6, 1);
+    AwtoPutStr("MS");
     AwtoTextLine(5, AWTO_T_STYLE_TEXT);
+    AwtoPutStr("PROBE ");
+    AwtoPutHex2(g_stAwtoWdt.ucProbe);           // AWTO_WDT_P_*: 01 timer 02 armed 04 IRQ 08 reset 10 no reset
+    AwtoTextLine(6, AWTO_T_STYLE_TEXT);
 }
 #elif(_AWTO_WDT == _ON)
 void AwtoOsdWdtLines(void)

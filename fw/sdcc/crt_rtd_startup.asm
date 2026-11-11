@@ -6,7 +6,8 @@
 
 	.area	CSEG	(CODE)
 ___sdcc_external_startup:
-	mov	dptr,#0xFFEA		; MCU_FFEA_WATCHDOG_TIMER: stays on (reset value), clear, CNT1 max N = 8 (~4.7 s; #138)
+	mov	dptr,#0xFFEA		; WDT clear + CNT1 N = 8 (~4.7 s; reset default N = 1) at once (#138). On from reset:
+				; FFEA[7] / FFE9[7] / FF3A[6] ORed, all 1; never cleared (docs/watchdog.md)
 	movx	a,@dptr
 	orl	a,#0xC7
 	movx	@dptr,a

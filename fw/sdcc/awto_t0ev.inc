@@ -1,5 +1,6 @@
 // #138: WD-timer protocol events (DP rebuild PHY, HDMI RR retry) on Timer0, so the WD counter is only a watchdog (docs/watchdog.md).
-// Appended to ScalerCommonTimerFunction.c (fw/awto/wdt/rules.py); the SDK's WD-timer block there is #if 0. Same function names.
+// Appended to ScalerCommonTimerFunction.c (fw/awto/wdt/rules.py); the SDK's WD-timer block there is #if 0. Same function names
+// (ScalerTimerWDEventProc_WDINT gone: the WD IRQ is the watchdog warning, SysTimerWDIntProc -> AwtoWdtIrq).
 // 1 ms ticks while an event is pending. Timer0 counts what Timer2 counts (same MCU clock, both /12: SDK _TIMER01_* = _TIMER2_*).
 #if((_SYSTEM_LOW_POWER_IDLE_SUPPORT == _ON) || (_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON))
 #error "awto_t0ev: RCAP2 is not one 1 ms Timer2 period in this configuration"
@@ -9,37 +10,34 @@
 #endif
 
 static __xdata WORD s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
+static __xdata WORD s_usAwtoT0Rl;                                   // reload (RCAP2) of the running tick
 
 // Timer0 = one 1 ms tick from now at the current clock (Timer2's reload)
-#define AWTO_T0EV_START()               do { TR0 = 0; TL0 = RCAP2L; TH0 = RCAP2H; TF0 = 0; TR0 = 1; } while(0)
+#define AWTO_T0EV_START()               do { TR0 = 0; TL0 = RCAP2L; TH0 = RCAP2H; TF0 = 0; TR0 = 1; \
+                                             s_usAwtoT0Rl = (((WORD)RCAP2H) << 8) | RCAP2L; } while(0)
 // Re-arm restarts. Timer0 already running: +1 tick when the current tick is past half -> fires within +-0.5 ms of usMs.
 #define AWTO_T0EV_ARM(usMs, ucId)       do { if(TR0 == 0) { AWTO_T0EV_START(); s_pusAwtoT0Ms[(ucId)] = (usMs); } \
                                              else { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((((WORD)(BYTE)(TH0 - RCAP2H)) << 1) >= (WORD)(0x100 - RCAP2H)); } } while(0)
 
-void ScalerTimerWDInitial(void)                 // ScalerMcuInitial (TMOD 0x11: Timer0 16 bit; PT0 = 0: low priority, as the WD IRQ)
+// ScalerMcuInitial end (TMOD 0x11: Timer0 16 bit; PT0 = 0: low priority, as the WD IRQ was) and AwtoWdtProbe.
+// The WD counter is the watchdog only (#138 task 3, RL6449_Project.h AWTO_WDT_*): warning IRQ on int2 at high priority.
+void ScalerTimerWDInitial(void)
 {
     TR0 = 0;
     TF0 = 0;
     ET0 = 1;
 
-    // WD counter: SDK timer mode, threshold 0xFFF (586 ms), IRQ on EXINT2 (cleared in ScalerTimerWDEventProc_WDINT)
-    MCU_FFC4_IRQ_PRIORITY_3 = (MCU_FFC4_IRQ_PRIORITY_3 & ~(_BIT5 | _BIT4 | _BIT3)) | _BIT4;
+    EX2 = 0;
+    MCU_FFC4_IRQ_PRIORITY_3 = (MCU_FFC4_IRQ_PRIORITY_3 & ~(_BIT5 | _BIT4 | _BIT3)) | _BIT4;  // wdt_irq_pri = int2
+    PX2 = 1;                                    // high: interrupts a hung main loop or a low-priority ISR
+    MCU_FFAF_WATCHDOG_TIMER_THRESHOLD_MASK = 0x00;
+    MCU_FFB0_WATCHDOG_TIMER_H_THRESHOLD_MASK = (AWTO_WDT_THR >> 4) & 0xF0;
+    MCU_FFAE_WATCHDOG_TIMER_THRESHOLD = (BYTE)AWTO_WDT_THR;
+    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~(_BIT7 | _BIT4 | _BIT2)) | _BIT7 | ((AWTO_WDT_MODE == AWTO_WDT_TIMER_IRQ) ? _BIT4 : 0);
+    MCU_FFEA_WATCHDOG_TIMER = (MCU_FFEA_WATCHDOG_TIMER & ~(_BIT2 | _BIT1 | _BIT0)) | _BIT7 | _BIT6 | (AWTO_WDT_N - 1);
+    EXIF &= ~_BIT4;
+    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT2;
     EX2 = 1;
-    MCU_FFB0_WATCHDOG_TIMER_H_THRESHOLD_MASK = (MCU_FFB0_WATCHDOG_TIMER_H_THRESHOLD_MASK & 0x0F) | 0xF0;
-    MCU_FFAE_WATCHDOG_TIMER_THRESHOLD = 0xFF;
-    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT4;
-    MCU_FFEA_WATCHDOG_TIMER |= _BIT6;
-    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT7;
-    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT2;
-}
-
-void ScalerTimerWDEventProc_WDINT(void)         // WD IRQ: no events left on it, so the SDK's idle path only (clear at the threshold)
-{
-    if((MCU_FFEB_WDT_TEST & (_BIT7 | _BIT2)) == (_BIT7 | _BIT2))
-    {
-        MCU_FFEA_WATCHDOG_TIMER |= _BIT6;
-        MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT7;
-    }
 }
 
 void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventID enumEventID)
@@ -118,7 +116,8 @@ void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms ti
     WORD usT;
 
     TR0 = 0;                                    // next tick 1 ms after the overflow: keep the counts since it (ISR latency)
-    usT = ((((WORD)TH0) << 8) | TL0) + ((((WORD)RCAP2H) << 8) | RCAP2L);
+    s_usAwtoT0Rl = (((WORD)RCAP2H) << 8) | RCAP2L;
+    usT = ((((WORD)TH0) << 8) | TL0) + s_usAwtoT0Rl;
     TL0 = (BYTE)usT;
     TH0 = (BYTE)(usT >> 8);
     TR0 = 1;
@@ -143,13 +142,24 @@ void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms ti
     EA = 1;
 }
 
-void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCount (every MCU clock switch): restart the tick
+void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCount (every MCU clock switch)
 {
+    WORD usNew;
+    WORD usLeft;
+
     __critical
     {
-        if(TR0 != 0)
+        usNew = (((WORD)RCAP2H) << 8) | RCAP2L;
+        if((TR0 != 0) && (usNew != s_usAwtoT0Rl))
         {
-            AWTO_T0EV_START();                  // a partial tick at the old clock would run up to (old / new clock) ms
+            TR0 = 0;                            // rest of the tick: same fraction of a period at the new clock
+            usLeft = 0 - ((((WORD)TH0) << 8) | TL0);
+            usLeft = (WORD)(((DWORD)usLeft * (WORD)(0 - usNew)) / (WORD)(0 - s_usAwtoT0Rl));
+            usLeft = 0 - ((usLeft != 0) ? usLeft : 1);
+            TL0 = (BYTE)usLeft;
+            TH0 = (BYTE)(usLeft >> 8);
+            s_usAwtoT0Rl = usNew;
+            TR0 = 1;
         }
     }
 }

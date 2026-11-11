@@ -19,11 +19,12 @@ def _feed(m):
 
 
 SUBS = [
-    # #138: a watchdog is never off. Compiled out here (_FLASH_PARTITION_NONE); kept safe if the boot partition is ever used
+    # #138: a watchdog is never off. The SDK's boot 'disable' clears FFEA[7] only, a no-op: FFE9[7] and FF3A[6] (ORed enables,
+    # reset 1) keep it on. Line removed (compiled out here anyway, _FLASH_PARTITION_NONE); N is set at startup (crt_rtd_startup)
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c",
      r"// Disable watchdog timer\n    MCU_FFEA_WATCHDOG_TIMER &= ~\(_BIT7\);",
-     "// awto #138: watchdog stays on: clear, longest period (N = 8)\n"
-     "    MCU_FFEA_WATCHDOG_TIMER |= _BIT7 | _BIT6 | _BIT2 | _BIT1 | _BIT0;  // [keil2sdcc] sub #138", 1),
+     "// awto #138: no watchdog disable (three ORed enables; never cleared)\n"
+     "  // [keil2sdcc] sub #138", 1),
     # one feed per elapsed ms inside each bounded wait: the wait itself is not a hang (its bound is the SDK's)
     (TMR, r"(void ScalerTimerDelayXms\(WORD usNum\)\n\{.*?g_bNotifyTimer2Int = _FALSE;\n.*?g_bNotifyTimer2Int = _FALSE;)", _feed, 1),
     (TMR, r"(bit ScalerTimerPollingFlagProc\(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess\)\n\{.*?usTimeElapsed\+\+;)", _feed, 1),
@@ -42,4 +43,13 @@ SUBS = [
     ("Kernel/System/Code/SysTimer.c",
      r"(void SysTimerIntProc0\(void\)[^\n]*\n\{\n    // Backup for Burst Write Bug\n    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR;)",
      lambda m: m.group(1) + " AwtoT0EvIsr();  // [keil2sdcc] sub #138", 1),
+    # #138 task 3: one hardware watchdog. The 1 ms tick does no watchdog work (latch + 'Prevent INT Lock Reset' clear gone);
+    # the WD IRQ is the warning (capture); the SDK's flash-op pokes become ours. Blank lines keep the SDK line numbers.
+    ("Kernel/System/Code/SysTimer.c",
+     r"    // Latch Current Counter and not clear any WD timer counter\n.*?\n        CLR_MCU_WATCH_DOG\(\);\n    \}\n",
+     lambda m: "    // [keil2sdcc] sub #138: no watchdog work in the 1 ms tick" + "\n" * m.group(0).count("\n"), 1),
+    ("Kernel/System/Code/SysTimer.c", r"    ScalerTimerWDEventProc_WDINT\(\);",
+     "    AWTO_WDT_IRQ();  // [keil2sdcc] sub #138: watchdog warning (capture + reset)", 1),
+    ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c", r"MCU_FFEA_WATCHDOG_TIMER \|= 0x40;",
+     "AWTO_WDT_FEED();  // [keil2sdcc] sub #138", 3),
 ]
