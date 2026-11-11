@@ -15,6 +15,7 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     AwtoSwArm(ucPort);
 #endif
     AwtoSwEvent(AWTO_SW_EV_CMD, ucWhy);
+    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, ucPort);  // #139: the fast path skips SysSourceSwitchInputPort
     SET_FORCE_POW_SAV_STATUS(_FALSE);
     SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
 #if(_AWTO_FAST_SWITCH == _ON)

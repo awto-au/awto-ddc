@@ -191,6 +191,15 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
     # #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state poll per pass, panel power actions; #28 hold guards
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_sw.inc").read_text().rstrip("\n")),
+    # #139 sync / power-on log + selector port getters (fw/sdcc/awto_sync.inc, after awto_sw.inc: AwtoSwEvent feeds it)
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_sync.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysSource.c", r"^\s*switch\(GET_SOURCE_SCAN_TYPE\(\)\)", "    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, ucInputPort);",
+     r"^void SysSourceSwitchInputPort\(BYTE ucInputPort\)$"),
+    ("Kernel/System/Code/SysSource.c", r"^\}$", "    AwtoSyncDetect(GET_INPUT_PORT(GET_INPUTPORT_TYPE(ucSearchIndex)), "
+     "GET_PORT_TYPE(GET_INPUTPORT_TYPE(ucSearchIndex)), GET_SOURCE_PREDETECT(ucSearchIndex), GET_SOURCE_TYPE(ucSearchIndex));",
+     r"^void SysSourceDetectPort\(BYTE ucSearchIndex\)$"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_TIMING_CONFIRM\(\);", "                    AwtoSyncTiming();", r"^void SysModeHandler\(void\)$"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_DISPLAY_SETTING_READY\(\);", "                    AwtoSyncFreq();", r"^\s*case _MODE_STATUS_DISPLAY_SETTING:"),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoSwPoll();"),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AwtoHoldOsdGuard();"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*switch\(ucEvent\)", "    AwtoSwEvent(AWTO_SW_EV_POWER, ucEvent);",
@@ -204,6 +213,7 @@ INSERTS = [
     # awto-ddc#26 4K60 measurement ring: functions (fw/sdcc/awto_meas4k.inc), Timer2 sampler, M-domain / DPLL fine-tune call events
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_meas4k.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoMeasInit();"),
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoSyncInit();"),     # #139 power-on episode
     ("Kernel/System/Code/SysTimer.c", r"^\s*// Reload Backup for Burst Write Bug", "    AWTO_MEAS_T2ISR();", r"^void SysTimerIntProc2\(void\) __interrupt\(5\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainMemorySettings\(&stFIFOScaling\);", "    AwtoMeasEvent(1, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemoryInitial\(\);", "    AwtoMeasEvent(2, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
@@ -453,6 +463,9 @@ SUBS += [
      for fn in ("OsdDispHotKeySourceMenuIcon", "OsdDispHotKeySourceMenu", "OsdDispHotKeySourceMenuSwitch")] + [
     (OSD + "RTD2014OsdFontDynamicIcon_1.c", r"(\n[ ]+)OsdFontVLCLoadInputIcon\(ucIconPos, usIcon\);",
      lambda m: m.group(1) + "// [keil2sdcc] sub #134: no input icons (the selector is text)", 1),
+    # #139: no 3 s power-saving close after the no-signal way in; AwtoSourceOpen arms the selector's sleep rule
+    (OSD + "RTD2014Osd.c", r"(AwtoSourceOpen\(\);  // \[keil2sdcc\] sub #134\n\s*\n)(\s*)ScalerTimerReactiveTimerEvent\(SEC\(3\), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING\);",
+     lambda m: m.group(1) + m.group(2) + "// [keil2sdcc] sub #139: sleep rule in AwtoSourceOpen (AwtoSrcSleepArm)", 1),
 ]
 # #124 message cards on the text layer (fw/sdcc/awto_osdcard.inc OsdDispOsdMessage): the SDK body goes, and the string-table
 # cases only its info pop-up asked for stop calling their builders (the hot-key menus still use OsdPropPutString*).

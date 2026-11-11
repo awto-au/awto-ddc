@@ -18,6 +18,7 @@
 #define AWTO_IN_KEY0               9
 #define AWTO_IN_KEY1               10
 __xdata StAwtoGpio g_stAwtoGpio;
+__xdata BYTE g_pucAwtoInCnt[(AWTO_PS_CNT_N != 0) ? AWTO_PS_CNT_N : 1];
 static __xdata WORD s_usAwtoGpioDraw;
 static __xdata WORD s_usAwtoDbgDraw;
 static __xdata BYTE s_ucVgaSync;
@@ -145,6 +146,7 @@ static void AwtoInScan(BYTE ucMode)
                 if(usNow == 0) usNow = AwtoGpioNow();
                 AwtoGpioLog(ucI, ucV, usNow);
             }
+            AWTO_PS_COUNT(ucI, ucV);              // #139 selector pulse rates (fw/awto/portsig.tsv cnt rows)
         }
         g_stAwtoGpio.ucIn[ucI] = ucV;
         if(ucMode != 2)
@@ -174,6 +176,7 @@ void AwtoGpioPoll(void)
 {
     AwtoGpioEnsure();
     AwtoInScan(0);
+    AWTO_OSD_SYNC_POLL();                      // #139 selector fields, console sync lines / auto-open
     if(g_stAwtoGpio.ucOpen == 0) return;
     if((WORD)(AwtoGpioNow() - s_usAwtoDbgDraw) >= AWTO_DBG_REFRESH_MS)
     {

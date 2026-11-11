@@ -23,6 +23,7 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
 {
     unsigned char ucN = g_stAwtoSw.ucN;
 
+    AWTO_SYNC_SW(ucId, ucArg);                  // #139 sync log: its own ring, kept when this log is full
     if((ucN != 0) && (g_stAwtoSw.stEv[ucN - 1].ucId == ucId) && (g_stAwtoSw.stEv[ucN - 1].ucArg == ucArg))
     {
         return;                                 // #78: measure-retry probes repeat every ~8 ms; the first one carries the time
@@ -84,6 +85,7 @@ void AwtoSwPoll(void)                           // once per main-loop pass: mode
 {
     unsigned char ucMode = GET_MODE_STATE();
 
+    AWTO_SYNC_POLL();
     if(ucMode != g_stAwtoSw.ucLastMode)
     {
         g_stAwtoSw.ucLastMode = ucMode;

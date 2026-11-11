@@ -1,0 +1,27 @@
+# Per-port signals on the source selector (#139): one row per signal, shown in row order on the port's signal line.
+# Generated into C by scripts/gen_awto_sync.py (block awto_port_sigs). Add a row to show a new signal (e.g. a register bit
+# found by scripts/port_watch.py): no other code changes.
+# port	label	src	a	b	desc
+# port: D1..D3 (board ports). label: <= 4 chars; shown as label+ / label- (bit) or label N/s (cnt).
+# src:  in    = input monitor value of fw/awto/inputs.tsv row a; b = 1 inverts (pin low = signal)
+#       cnt   = rising edges per second of inputs.tsv row a (counted by the input monitor every main-loop pass)
+#       xreg  = XDATA / scaler register a (hex), mask b (hex): + when any masked bit is set
+#       cable = SDK debounced cable status (SysSourceCableDetection)
+#       ddc   = DDC traffic on the port's DDC channel in the last 3 s (DDCn_EDID_IRQ, AwtoDdcLive)
+#       tmds  = TMDS clock present: the port's frequency detector has a result (HDMI_FREQDET, AwtoTmdsIdleKhz)
+D1	cbl	cable	0	0	SDK cable: DPS15 = 1, DPS16 = 1, DPS17 = 0 (board header bD1_CONNECT)
+D1	hpd	in	DPHPD	0	DisplayPort hot-plug output
+D1	p15	in	DPS15	0	DP connector pin 15 sense
+D1	p16	in	DPS16	0	DP connector pin 16 sense
+D1	p17	cnt	DPS17	0	DP connector pin 17 sense: pulses ~4 ms every 60-100 ms on unit 2 (#110)
+D1	ddc	ddc	0	0	DDC1 (DP AUX-I2C) traffic
+D2	cbl	cable	0	0	SDK cable status
+D2	5V	in	H1CBL	1	cable detect pin, low = cable (SDK !PCB_D2_PIN); [guess] the +5 V sense
+D2	hpd	in	H1HPD	0	HDMI-1 hot-plug output
+D2	tmds	tmds	0x71	0	Rx2 frequency detector result
+D2	ddc	ddc	0	0	DDC2 traffic
+D3	cbl	cable	0	0	SDK cable status
+D3	5V	in	H2CBL	1	cable detect pin, low = cable (SDK !PCB_D3_PIN); [guess] the +5 V sense
+D3	hpd	in	H2HPD	0	HDMI-2 hot-plug output
+D3	tmds	tmds	0x72	0	Rx3 frequency detector result
+D3	ddc	ddc	0	0	DDC3 traffic

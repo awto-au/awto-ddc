@@ -107,5 +107,6 @@
 #define AWTO_SET_INFO_HFREQ           107
 #define AWTO_SET_INFO_PCLK            108
 #define AWTO_SET_INFO_HDCP            109
-#define AWTO_SET_SCHEMA              0x037E
+#define AWTO_SET_SYNC_CONSOLE         110
+#define AWTO_SET_SCHEMA              0x7044
 #endif
