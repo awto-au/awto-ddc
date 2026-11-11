@@ -439,6 +439,7 @@ class ChipReset(Dev):
         self.resets += 1
         self.at_t2.append(t2[0] << 8 | t2[1])        # BE images (wb builds); LE readers swap
         self.at_since = getattr(self, "at_since", []) + [self.since]      # ms since the last poke, per reset
+        self.at_clock = getattr(self, "at_clock", []) + [self.clock]      # model clock (fw ms) per reset
         m.put("reset")
         m.wr(0xFFFF, b"\x00")
         for d in m.devs:

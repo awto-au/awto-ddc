@@ -2,7 +2,9 @@
  * Semantics follow ucsim 0.9.12 -t 52 (sim/ucsim/src/sims/s51.src in awto-sdcc) so runs are comparable:
  * - cycles: machine cycles per instruction as ucsim ticks them; an accepted interrupt adds 1 cycle (not seen by timers)
  * - timers 0/1 (modes 0-3), timer 2 (reload/capture/baud/down/clock-out), EX0/EX1 level+edge from the P3 latch
- * - interrupt poll order EX0 T0 EX1 T1 TI RI TF2 EXF2, 2 priority levels (IP), no IRQ after RETI or an IE write
+ * - interrupt poll order EX0 T0 EX1 T1 TI RI TF2 EXF2 then DW8051 int2 (EIE.0/EXIF.4/EIP.0, 43h), 2 priority levels (IP/EIP),
+ *   no IRQ after RETI or an IE / IP / EIE / EIP write (DW8051 databook v3.2a pp. 3-44..3-47; serial 1, int3..5, wdti, pfi
+ *   not modelled: unused here)
  * - code banking: XDATA 0xFFFF write selects the 64 KiB code bank (low nibble), as ucsim's banker in fw_sim
  * Hooks: bitmaps on XDATA / SFR addresses record events (returned after the instruction + IRQ entry);
  * PC hooks (per-bank mask) stop before the instruction. Build: gcc -O2 -shared -fPIC (fastmachine.py does it). */
@@ -110,7 +112,8 @@ static void sfr_store(core_t *c, int a, uint8_t v)
     uint8_t o = S(a);
     switch (a) {
     case 0xE0: set_acc(c, v); return;
-    case 0xA8: IE = v; c->was_reti = 1; return;
+    case 0xA8: case 0xB8: case 0xE8: case 0xF8:    /* IE IP EIE EIP: one more instruction before an IRQ (DW8051 db p. 3-45) */
+        S(a) = v; c->was_reti = 1; return;
     case 0xB0:                   /* P3: INT0/INT1 falling edges, T0/T1 rising edges (pins = latch) */
         if ((TCON & 0x01) && (o & 0x04) && !(v & 0x04)) TCON |= 0x02;
         if ((TCON & 0x04) && (o & 0x08) && !(v & 0x08)) TCON |= 0x08;
