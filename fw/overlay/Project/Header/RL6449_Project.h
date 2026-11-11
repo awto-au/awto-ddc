@@ -221,12 +221,12 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #ifndef AWTO_WDT_HALT_FLASH
 #define AWTO_WDT_HALT_FLASH                                     1
 #endif
-// Warning = 1.25 x the measured worst poke gap, reset at N = 1 (wd7; measurement + arithmetic: docs/watchdog.md, #150)
+// Warning = 1.25 x the measured worst poke gap (wd8: power saving), reset at N = 1 (docs/watchdog.md, #150)
 #ifndef AWTO_WDT_N
 #define AWTO_WDT_N                                              1       // reset at 585.9 ms without a poke
 #endif
 #ifndef AWTO_WDT_THR
-#define AWTO_WDT_THR                                            0x48B   // warning at 1163 x 0.143 = 166.4 ms
+#define AWTO_WDT_THR                                            0x577   // warning at 1399 x 0.143 = 200.1 ms
 #endif
 #define AWTO_WDT_PROBE_THR                                      0x100   // probe: IRQ expected 36.6 ms after the clear, reset at 585.9 ms (N = 1)
 #define AWTO_WDT_PROBE_MS                                       1500    // probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s
@@ -247,7 +247,8 @@ extern void ScalerTimerWDInitial(void);
 // clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
 #define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(0xFFEA) |= 0x40; \
                                                                      ucG_ = ((AWTO_XFR(0xFFAD) & 0x07) != 0) ? 0xFF : (AWTO_XFR(0xFFAC) & 0x7F); \
-                                                                     if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); } } while(0)
+                                                                     if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); \
+                                                                         g_ucAwtoPokeFrom = g_ucAwtoPokeLast; } g_ucAwtoPokeLast = (site); } while(0)
 // poke sites (g_ucAwtoPokeSite: which one ended the longest gap; rtd_crash.py SITES)
 #define AWTO_WDT_S_PASS                                         1       // main-loop pass
 #define AWTO_WDT_S_DELAY                                        2       // ScalerTimerDelayXms
@@ -263,6 +264,8 @@ extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_S_T3                                           12      // AwtoDiagPanelT3Wait (panel T3 with the delay calibration)
 #define AWTO_WDT_S_HPD                                          13      // ScalerDisplayDPTxPollingHotPlug (eDP HPD, panel T2)
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
+extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
+extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke
 // g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
 #define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
 #define AWTO_WDT_FEED(site)                                     AWTO_WDT_POKE(site) // inside a bounded loop (docs/watchdog.md table)
@@ -849,6 +852,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_UNPLUG                                     0xD3    // arg = port: a cable unplug woke the monitor (AWTO_WAKE_T_UNPLUG)
 #define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
+#define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON

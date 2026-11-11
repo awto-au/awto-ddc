@@ -41,6 +41,8 @@ static void AwtoWdtFresh(void)                  // empty record: cold RAM, a hos
 }
 
 volatile __xdata BYTE g_ucAwtoPokeSite;         // AWTO_WDT_S_* that ended the longest poke gap this boot (#150)
+volatile __xdata BYTE g_ucAwtoPokeFrom;         // ... and the site that started it
+volatile __xdata BYTE g_ucAwtoPokeLast;
 
 void AwtoWdtLibPoke(BYTE ucSite)                // the FunctionLib flash read / write loops (no project header there)
 {
