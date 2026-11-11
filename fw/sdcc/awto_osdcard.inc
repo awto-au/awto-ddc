@@ -73,13 +73,14 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_CT_SYNCLOG     54
 #define AWTO_CT_NOLINK      55
 #define AWTO_CT_TMDS        56
+#define AWTO_CT_SAVING      57
 static const __code char tAwtoCardS[] =
     "Input\0Auto select\0DisplayPort\0HDMI \0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
     "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
     "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
     " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0"
     "idle\0search\0scan\0stable\0measure\0timing ok\0display set\0active\0no signal\0no support\0sleep\0off\0fast path\0init\0"
-    "HBR3\0Sync log\0no link\0TMDS \0";
+    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0";
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -727,15 +728,13 @@ void AwtoSourceKey(BYTE ucKey)
     {
         AwtoSourceStep(ucKey == _LEFT_KEY_MESSAGE);
         AwtoSourceRows();
-        AwtoSrcSleepArm();
-        SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
+        AwtoSrcSleepArm();                      // #151: a step is never stored
     }
     else if(ucKey == _EXIT_KEY_MESSAGE)        // MENU: cancel, the choice goes back
     {
         if(g_usBackupValue != ucItem)
         {
             SET_OSD_INPUT_PORT_OSD_ITEM(g_usBackupValue);
-            SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
         }
         AwtoSourceClose();
     }
@@ -750,11 +749,10 @@ void AwtoSourceKey(BYTE ucKey)
             AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
             SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
             SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-            if(UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType())
-            {
-                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-            }
+            UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+#ifdef _AWTO_NEW_SETTINGS
+            AwtoNvCommitSel();                  // #151: the chosen input is stored at the gate ("Saving to memory")
+#endif
         }
         else
         {
@@ -767,13 +765,11 @@ void AwtoSourceKey(BYTE ucKey)
             SysSourceSwitchInputPort(ucPort);
             SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
             SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-            {
-                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-            }
+            UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
+            UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+#ifdef _AWTO_NEW_SETTINGS
+            AwtoNvCommitSel();                  // #151: the chosen input is stored at the gate ("Saving to memory")
+#endif
         }
 #if(_DP_MST_SUPPORT == _ON)
         if(g_usBackupValue != ucItem)
@@ -1006,6 +1002,18 @@ static void AwtoInfoCard(void)
 #endif
     AwtoCardShow();
 }
+
+#ifdef _AWTO_NEW_SETTINGS
+// #151 "Saving to memory": up while the flush gate writes after a menu / selector close; off after AWTO_SAVE_CARD_MS
+void AwtoSaveCard(void)
+{
+    AwtoCardOpen(AWTO_CARD_ROW0 + 2, AWTO_CT_AWTO);
+    AwtoCardTxt(AWTO_CT_SAVING);
+    AwtoCardCentre(AWTO_CARD_ROW0, AWTO_T_STYLE_TEXT);
+    AwtoCardShow();
+    ScalerTimerReactiveTimerEvent(AWTO_SAVE_CARD_MS, _USER_TIMER_EVENT_OSD_DISABLE);
+}
+#endif
 
 // Every SDK message card: our text card. Fail-safe = No Support (one warning card); switch DDC/CI port names the input (#114).
 void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)  // replaces the SDK body (keil2sdcc _K124)

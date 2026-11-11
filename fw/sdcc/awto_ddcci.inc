@@ -15,6 +15,9 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     AwtoSwArm(ucPort);
 #endif
     AwtoSwEvent(AWTO_SW_EV_CMD, ucWhy);
+#ifdef _AWTO_NEW_SETTINGS
+    g_ucAwtoNvSwitch = 1;                       // #151 flush gate: not stable
+#endif
     AwtoSyncBegin(AWTO_SYNC_K_SWITCH, ucPort);  // #139: the fast path skips SysSourceSwitchInputPort
     SET_FORCE_POW_SAV_STATUS(_FALSE);
     SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
@@ -132,7 +135,7 @@ static void AwtoDdcReply(volatile __xdata BYTE *pucR, BYTE *pucTx)       // pucT
 #ifdef _AWTO_NEW_SETTINGS
 extern BYTE vcp_get(BYTE ucCode, WORD xdata *pusCur, WORD xdata *pusMax, BYTE xdata *pucType);
 extern BYTE vcp_set(BYTE ucCode, WORD usV);
-extern void set_save_now(void);
+extern void set_nv_commit(BYTE ucShow);
 extern WORD set_caps_len(void);
 extern char set_caps_at(WORD usI);
 static __xdata WORD s_usAwtoDdcCur;
@@ -152,7 +155,7 @@ static bit AwtoDdcRegistry(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen,
     }
     if((pucRx[2] == 0x0C) && (ucLen >= 4))      // save current settings: 51 81 0C chk
     {
-        set_save_now();
+        set_nv_commit(0);                       // #151: a flag; the gate writes after this handler
         return _TRUE;
     }
     if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP -> 6E 88 02 rc vcp type maxH maxL curH curL chk
@@ -214,6 +217,9 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
     {
         return;                                 // bad checksum: no reply, the host retries
     }
+#ifdef _AWTO_NEW_SETTINGS
+    g_ucAwtoNvDdc = 1;                          // #151 flush gate: DDC/CI busy
+#endif
     pucTx[0] = 0x6E;
 #ifdef _AWTO_AUDIO_TEST
     // Test builds only: 0x63 is unused by the AWTO registry.  Handle it before
@@ -414,7 +420,13 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
             else if((ucN >= 2) && (ucN == (pucRx[1] & 0x7F) + 3))
             {
                 pucR[AWTO_IIC_IRQ2] |= _BIT6;   // request consumed; a reply (if any) reloads the buffer
+#ifdef _AWTO_NEW_SETTINGS
+                g_ucAwtoNvInDdc = 1;            // #151: a flash op in here would be counted (g_stAwtoNv.ucInDdc)
+#endif
                 AwtoDdcRequest(pucR, pucRx, ucN);
+#ifdef _AWTO_NEW_SETTINGS
+                g_ucAwtoNvInDdc = 0;
+#endif
                 ucN = 0;
             }
         }

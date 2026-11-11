@@ -56,9 +56,7 @@ SUBS = [
     # #29 boot log: the WDT counter is the clock before Timer2; carry it over ScalerMcuInitial's clear
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"    MCU_FFEA_WATCHDOG_TIMER \|= _BIT6 \| _BIT2 \| _BIT1 \| _BIT0;",
      "    AWTO_SYNC_MARK(); MCU_FFEA_WATCHDOG_TIMER |= _BIT6 | _BIT2 | _BIT1 | _BIT0;  // [keil2sdcc] sub #29", 1),
-    # #150: NVRAM save timing in the sync log (start / end, erase start / done, page move): value = ms since the last poke
-    (OSD + "RTD2014Osd.c", r"(        case _OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG:\n)            RTDNVRamSaveOSDData\(\);",
-     lambda m: m.group(1) + "            AWTO_NV_EV(1); RTDNVRamSaveOSDData(); AWTO_NV_EV(2);  // [keil2sdcc] sub #150", 1),
+    # #150: NVRAM save timing in the sync log (erase start / done, page move; start / end: the #151 flush): value = ms since the last poke
     ("Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c",
      r"(bit ScalerFlashErasePage\(BYTE ucBank, BYTE ucPage\)\n\{.*?    ScalerFlashWREN\(ucBank, ucPage\);)",
      lambda m: m.group(1) + " AWTO_NV_EV(3);  // [keil2sdcc] sub #150", 1),

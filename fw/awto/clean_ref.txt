@@ -1,1 +1,1 @@
-84324f7   # awto-rtdfw commit compiled into the image (git archive); blue header-style menu help footer
+dd53624   # awto-rtdfw commit compiled into the image (git archive); ui-nv: settings on the SDK store (awto-ddc#151)

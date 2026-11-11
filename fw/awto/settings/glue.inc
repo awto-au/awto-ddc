@@ -23,6 +23,7 @@ extern void menu_forget(void);
 extern void menu_relayout(void);
 extern BYTE menu_active(void);
 extern void vcp_box_service(void);
+extern __xdata struct { BYTE ucMagic, cmd; } vcp_box;   // awto-rtdfw vcp.c: first two bytes (magic, cmd)
 extern void osd_font_load(BYTE ucFont);
 
 BYTE ui_font_selected(void)
@@ -441,11 +442,7 @@ void set_ap_contrast(BYTE ucId, int iV)
 
 void set_ap_gamma(BYTE ucId, int iV)
 {
-    ucId = ucId;
-    if((GET_OSD_GAMMA() == (BYTE)iV) && (set_in_boot() == _FALSE))
-    {
-        return;
-    }
+    ucId = ucId;                                   // called on a change only (settings.c), or at boot
     SET_OSD_GAMMA((BYTE)iV);
 #if(_GAMMA_FUNCTION == _ON)
     ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
@@ -496,10 +493,6 @@ void set_ap_user_rgb(BYTE ucId, int iV)
 void set_ap_aspect(BYTE ucId, int iV)
 {
     ucId = ucId;
-    if(GET_OSD_ASPECT_RATIO_TYPE() == (BYTE)iV)
-    {
-        return;
-    }
     SET_OSD_ASPECT_RATIO_TYPE((BYTE)iV);
     if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
     {
@@ -510,10 +503,6 @@ void set_ap_aspect(BYTE ucId, int iV)
 void set_ap_overscan(BYTE ucId, int iV)
 {
     ucId = ucId;
-    if(GET_OSD_OVERSCAN_STATUS() == (BYTE)iV)
-    {
-        return;
-    }
     SET_OSD_OVERSCAN_STATUS((BYTE)iV);
     if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
     {
@@ -534,7 +523,7 @@ void set_ap_input_select(BYTE ucId, int iV)        // the KVM entry (#60 AwtoInp
     {
         return;                                     // boot: the search owns the port
     }
-    set_put(AWTO_SET_INPUT_MODE, 1, 0);
+    set_track(AWTO_SET_INPUT_MODE, 1);             // not stored: an input switch writes no flash (#151)
     AwtoInputSelect(_D1_INPUT_PORT + (BYTE)iV, 0x60);
 }
 
@@ -581,9 +570,9 @@ void set_ap_search_time(BYTE ucId, int iV)
 void set_ap_dp_version(BYTE ucId, int iV)
 {
     ucId = ucId;
-    if(GET_OSD_DP_D1_VERSION() == (BYTE)iV)
+    if(set_in_boot() == _TRUE)
     {
-        return;
+        return;                                     // the SDK store set it up at boot
     }
     SET_OSD_DP_D1_VERSION((BYTE)iV);
 #if(_DP_SUPPORT == _ON)
@@ -598,12 +587,11 @@ void set_ap_dp_version(BYTE ucId, int iV)
 void set_ap_dp_edid(BYTE ucId, int iV)
 {
     ucId = ucId;
-    if(UserCommonNVRamGetSystemData(_EDID_D1_SELECT) == (BYTE)iV)
+    if(set_in_boot() == _TRUE)
     {
-        return;
+        return;                                     // the SDK store set it up at boot
     }
     UserCommonNVRamSetSystemData(_EDID_D1_SELECT, (BYTE)iV);
-    SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
 #if((_EMBEDDED_EDID_SUPPORT == _ON) && (_DP_SUPPORT == _ON))
     UserCommonInterfaceDPSwitchEdid(_D1_INPUT_PORT);
 #endif
@@ -724,10 +712,13 @@ void set_ap_power(BYTE ucId, int iV)               // placeholder store (see StA
     }
 }
 
+#include "glue_nv.inc"
+
 //---- hooks ----
 void AwtoSetInit(void)                             // UserInterfaceInitial, after RTDNVRamStartup: values for boot readers
 {
     set_load();
+    AwtoNvLoad();                                  // aux rows; SDK rows are the SDK store's fields (#151)
     g_ucAwtoDdcciOn = (set_get(AWTO_SET_DDCCI) != 0);             // spare-engine DDC/CI 0x37 (#60); debug 0x35 stays
     g_ucAwtoKeepIdle = (set_get(AWTO_SET_KEEP_IDLE_RX) != 0);
 }
@@ -741,9 +732,14 @@ void AwtoSetLoop(void)                             // main loop (AWTO_SET_LOOP: 
         set_boot();                                // recovery keys, then every apply
     }
     set_service();
+    AwtoNvService();
     if((SysSourceGetInputPort() >= _D1_INPUT_PORT) && (SysSourceGetInputPort() <= _D3_INPUT_PORT))
     {
         set_track(AWTO_SET_INPUT, SysSourceGetInputPort() - _D1_INPUT_PORT);   // every switch path (key, test cmd, VCP 0x60, search), #67
+    }
+    if(vcp_box.cmd != 0)
+    {
+        g_ucAwtoNvDdc = 1;                         // the host mailbox (debug link) counts as DDC/CI for the gate
     }
     vcp_box_service();
     if((menu_active() != 0) && ((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (SysModeGetModeState() == _MODE_STATUS_POWER_SAVING)))

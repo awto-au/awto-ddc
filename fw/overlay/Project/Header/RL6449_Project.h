@@ -66,6 +66,49 @@ extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
 #define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
 extern void AwtoMenuForget(void);
+// #151 one store: the SDK EEPROM emulation. SDK saves are deferred (item dirty) and written by the flush gate (glue.inc)
+typedef struct
+{
+    unsigned char ucMagic;                                      // 'N' once AwtoSetInit ran
+    unsigned char ucMask;                                       // dirty items (AWTO_NV_*)
+    unsigned char ucWhy;                                        // last flush: AWTO_NV_WHY_*
+    unsigned char ucInDdc;                                      // flash ops seen inside a DDC/CI handler (must stay 0)
+    unsigned int usDefer;                                       // SDK item saves deferred
+    unsigned int usFlush;                                       // flushes
+    unsigned int usItemWr;                                      // items programmed (after the SDK's unchanged check)
+    unsigned int usOps;                                         // flash halt ops (erase + status-register writes)
+    unsigned int usStable;                                      // gate inputs at the last service: stable ms, DDC/CI idle ms
+    unsigned int usDdcIdle;
+} StAwtoNv;
+extern __xdata StAwtoNv g_stAwtoNv;
+extern __xdata unsigned char g_ucAwtoNvDdc;                     // a DDC/CI request since the last service
+extern __xdata unsigned char g_ucAwtoNvInDdc;                   // inside the DDC/CI handler now
+extern __xdata unsigned char g_ucAwtoNvSwitch;                  // an input switch since the last service
+extern void AwtoNvFlush(void);                                  // power-off / saving entry: write all dirty items now
+extern void AwtoNvCommitSel(void);                              // source selector choice: input saved at the gate, card
+#define AWTO_NV_SYS                                             0x01
+#define AWTO_NV_OSD                                             0x02
+#define AWTO_NV_BRI                                             0x04
+#define AWTO_NV_CT                                              0x08
+#define AWTO_NV_SIX                                             0x10
+#define AWTO_NV_PANEL                                           0x20    // never opens the gate: rides along, power-down
+#define AWTO_NV_AUX                                             0x40
+#define AWTO_SAVE_CARD_MS                                       1000    // "Saving to memory" readable once (derived: one glance)
+#define AWTO_NV_ITEM_WR()                                       (g_stAwtoNv.usItemWr++)
+#define AWTO_NV_AUX_ID                                          0x40    // SDK item ids of the aux block (registry rows without an SDK field)
+#define AWTO_NV_AUX_ITEMS                                       ((AWTO_SET_AUX_MAX + 13) / 14)
+// Gate (Dan, #151): a flash op halts the CPU (no DDC/CI, AUX, tick), so writes wait for a settled picture
+#define AWTO_NV_STABLE_MS                                       3000    // ACTIVE, no switch / sync / link training (Dan)
+#define AWTO_NV_DDC_IDLE_MS                                     500     // since the last DDC/CI request (Dan)
+#define AWTO_NV_FORCE_MS                                        30000   // dirty -> written at the latest (Dan)
+#define AWTO_NV_SAVE_MS                                         2000    // after the last change: one write per slider drag (derived)
+#define AWTO_NV_EL_MAX_MS                                       100     // gate ages per service call at most this (5 x AWTO_SET_LOOP_MS)
+#define AWTO_NV_WHY_GATE                                        1
+#define AWTO_NV_WHY_FORCED                                      2
+#define AWTO_NV_WHY_POWER                                       3
+#define AWTO_NV_WHY_CLOSE                                       4
+#define AWTO_NV_WHY_TEST                                        5
+#define AWTO_NV_WHY_SNAP                                        6       // a second BriCon / ColorProc item while one waited
 extern void menu_key(unsigned char ucKey);                      // awto-rtdfw menu.h: key numbers = SDK key messages 0..3
 extern void menu_open(void);
 extern unsigned char menu_active(void);

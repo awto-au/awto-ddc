@@ -22,7 +22,8 @@ def _txt(name):
 
 if (_CLEAN / "awto" / "settings").is_dir():
     INSERTS = [
-        (OSD + "RTD2014Osd.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", _txt("glue.inc")),      # at the end: no SDK line moves
+        (OSD + "RTD2014Osd.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$",
+         _txt("glue.inc").replace('#include "glue_nv.inc"', _txt("glue_nv.inc"))),      # at the end: no SDK line moves
         (OSD + "RTD2014OsdDisplay.c", r"^\s*SET_OSD_IN_FACTORY_MENU_STATUS\(_FALSE\);",
          "    AwtoMenuForget();", r"^void OsdDispDisableOsd\(void\)$"),
         (OSD + "RTD2014Key.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", _txt("glue_key.inc")),
@@ -31,4 +32,28 @@ if (_CLEAN / "awto" / "settings").is_dir():
         ("User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c",
          r"^\s*UserCommonInterfaceDdcciSwitch\(GET_OSD_DDCCI_STATUS\(\), UserCommonNVRamGetSystemData\(_SEARCH_PORT\)\);",
          "    AwtoSetInit();"),
+    ]
+
+# #151 one store (glue_nv.inc): every SDK item save is deferred to the flush gate; same-line subs (no SDK line moves).
+UI = "User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c"
+NVS = "Kernel/User Common Function/Code/UserCommonNVRamSystem.c"
+if (_CLEAN / "awto" / "settings").is_dir():
+    SUBS = [
+        (NVS, r"(bit UserCommonFlashSaveItem\(EnumFlashItemIDType enumItemID, BYTE \*pucData, BYTE ucLength\)\n\{.*?"
+              r"    if\(ucLength > \(_DATA_ITEM_LENGTH - 2\)\)\n    \{\n        return _FALSE;\n    \})",
+         lambda m: m.group(1) + " { extern bit AwtoNvDefer(BYTE ucId, BYTE *pucData); if(AwtoNvDefer(LOBYTE(enumItemID), pucData) == _TRUE) "
+                                "{ return _TRUE; } }  // [keil2sdcc] sub #151: the flush gate writes it", 1),
+        (NVS, r"(    // Write __data\n    UserCommonFlashWrite\(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usPageAddr \+ g_pusFlashAddrArr\[ucPageID\] \* "
+              r"_DATA_ITEM_LENGTH, _DATA_ITEM_LENGTH, pucWholeItem\);)",
+         lambda m: m.group(1) + " AWTO_NV_ITEM_WR();  // [keil2sdcc] sub #151", 1),
+        (NVS, r"(            RTDFlashMoveData\(ucPageID, pucWholeItem\);)", lambda m: m.group(1) + " AWTO_NV_ITEM_WR();  // [keil2sdcc] sub #151", 1),
+        # F: the first ACTIVE after a switch keeps the live port in RAM only; the selector stores the input (AwtoNvCommitSel)
+        (UI, r"(        AwtoSwEvent\(AWTO_SW_EV_PROBE, 7\);  // \[keil2sdcc\] insert\n)        UserCommonNVRamSaveSystemData\(\);",
+         lambda m: m.group(1) + "        // awto #151: no save here (KVM / search switch)  // [keil2sdcc] sub", 1),
+        # power off (key, PS -> off) and power-saving entry (panel off): every dirty item now, panel time with them
+        (UI, r"(_MONITOR_POWER_STATUS, _OFF\);\n\n            // Save System Power Status Data.\n            UserCommonNVRamSaveSystemData\(\);)",
+         lambda m: m.group(1) + " AwtoNvFlush();  // [keil2sdcc] sub #151", 2),
+        (UI, r"(            UserInterfaceKeyPadLedControl\(_LED_POWER_SAVING\);\n\n            // Panel pown down.\n"
+             r"            UserCommonInterfacePanelPowerAction\(_PANEL_OFF\);)",
+         lambda m: m.group(1) + " AwtoNvFlush();  // [keil2sdcc] sub #151", 1),
     ]

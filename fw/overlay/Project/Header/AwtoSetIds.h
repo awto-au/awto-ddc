@@ -106,5 +106,12 @@
 #define AWTO_SET_INFO_PCLK            108
 #define AWTO_SET_INFO_HDCP            109
 #define AWTO_SET_SYNC_CONSOLE         110
-#define AWTO_SET_SCHEMA              0x434D
+#define AWTO_SET_POWER_ON             111
+#define AWTO_SET_DP_LANES             112
+#define AWTO_SET_DP_IRQ_10US          113
+#define AWTO_SET_SSC                  114
+#define AWTO_SET_PANEL_HOURS          115
+#define AWTO_SET_PANEL_MIN            116
+#define AWTO_SET_SCHEMA              0x7AC0
+#define AWTO_SET_AUX_MAX             52
 #endif

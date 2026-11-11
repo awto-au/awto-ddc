@@ -2,7 +2,7 @@
 // #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34).
 // 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
 // 0x26 debug pop-up held, 0x27 clear all holds (0x21 / 0x24 / 0x25 were the boot logo, #144). #60: 0x31..0x33 switch to D1..D3 (fixed port),
-// 0x30 auto search, 0x40 settings defaults (#67). 0x50+n directly holds EnumOSDDispMsg n for visual review. 0x2A..0x2F Timer0 events (#138).
+// 0x30 auto search, 0x40 settings defaults (#67), 0x3D one store write, 0x3E POWER key (#151). 0x50+n directly holds EnumOSDDispMsg n for visual review. 0x2A..0x2F Timer0 events (#138).
 // Inserted into RTD2014Key.c (OSD macros).
 #define AWTO_HOLD_POPUP                         0x02
 
@@ -151,11 +151,16 @@ void AwtoDiagTestCmd(void)
         g_ucAwtoMsgLog = (ucCmd == 0x22);
     }
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-    else if((ucCmd == 0x28) || (ucCmd == 0x29))      // #74: debug messages on / off, saved to NVRAM by the OSD handler
+    else if((ucCmd == 0x28) || (ucCmd == 0x29))      // #74: debug messages on / off; stored by the #151 gate
     {
+#ifdef _AWTO_NEW_SETTINGS
+        extern int set_put(unsigned char ucId, int iV, unsigned char ucNow);
+        set_put(AWTO_SET_DEBUG_MSGS, (ucCmd == 0x28), 1);
+#else
         g_stOSDUserData.b1AwtoMsgOn = (ucCmd == 0x28);
         g_ucAwtoMsgOn = (ucCmd == 0x28);
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
+#endif
     }
 #endif
 #if(_AWTO_WAKE_HOLD == _ON)
@@ -174,7 +179,24 @@ void AwtoDiagTestCmd(void)
         extern void set_defaults(void);
         set_defaults();
     }
+    else if(ucCmd == 0x3D)                              // #151 test: one real item write now (inert aux row kvm_prefill toggled)
+    {
+        extern void AwtoNvTestWrite(void);
+        AwtoNvTestWrite();
+    }
 #endif
+    else if(ucCmd == 0x3E)                              // #151 test: the POWER key (soft off / on; off flushes the store)
+    {
+        if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
+        {
+            SET_OSD_STATE(_MENU_NONE);
+            SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+        }
+        else
+        {
+            SysPowerSetTargetPowerStatus(_POWER_STATUS_OFF);
+        }
+    }
     else if(ucCmd == 0x34)                              // #78 arm the switch log only (wake / power-level timing)
     {
         AwtoSwArm(SysSourceGetInputPort());

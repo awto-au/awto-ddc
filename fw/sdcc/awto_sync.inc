@@ -73,6 +73,16 @@ void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; val
 {
     WORD usC3;
 
+#ifdef _AWTO_NEW_SETTINGS
+    if((ucStep == 3) || (ucStep == 4))              // #151 counters: every erase / common op (a CPU halt)
+    {
+        g_stAwtoNv.usOps++;
+        if(g_ucAwtoNvInDdc != 0)
+        {
+            g_stAwtoNv.ucInDdc++;
+        }
+    }
+#endif
     if(g_stAwtoDiag.ucStage < 8)
     {
         return;                                     // boot-time flash ops would push the boot lines out of the 32-line ring
