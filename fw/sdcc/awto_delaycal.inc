@@ -148,6 +148,7 @@ void AwtoDiagPanelT3Wait(unsigned int usMs)
             usNow = g_usTimerCounter;
         }
         while(usNow != g_usTimerCounter);
+        AWTO_WDT_FEED(AWTO_WDT_S_T3);                             // bounded wait (usMs): poke as ScalerTimerDelayXms does (#150)
     }
     while((unsigned int)(usNow - usN0) < usMs);
     AwtoDiagT2Snap(&s_stT3B);

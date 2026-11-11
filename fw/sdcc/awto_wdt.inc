@@ -164,12 +164,16 @@ void AwtoWdtIrq(BYTE ucSp, BYTE ucBank)
         MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT2) | _BIT7;  // flag cleared, IRQ off; counting goes on to the reset
         return;
     }
+#if(AWTO_WDT_N > 1)
     if(ucCnt1 < (AWTO_WDT_N - 1))
     {
         g_stAwtoWdt.ucProbe |= AWTO_WDT_P_EARLY;    // evidence for the next boot if the warning never captures
         MCU_FFEB_WDT_TEST |= _BIT7;             // flag cleared (W1C); counting goes on
         return;
     }
+#else
+    ucCnt1 = ucCnt1;                            // N = 1: the first match is the warning (no early match, no P_EARLY)
+#endif
     AwtoWdtBite(ucSp, ucBank, AWTO_WDT_C_STALL);
 }
 

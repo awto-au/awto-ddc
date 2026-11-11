@@ -221,8 +221,12 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #ifndef AWTO_WDT_HALT_FLASH
 #define AWTO_WDT_HALT_FLASH                                     1
 #endif
+#ifndef AWTO_WDT_N
 #define AWTO_WDT_N                                              2       // reset at 2 x 585.9 = 1171.8 ms without a poke
+#endif
+#ifndef AWTO_WDT_THR
 #define AWTO_WDT_THR                                            0xC00   // warning at 585.9 + 3072 x 0.143 = 1025.3 ms; 146 ms before the reset
+#endif
 #define AWTO_WDT_PROBE_THR                                      0x100   // probe: IRQ expected 36.6 ms after the clear, reset at 585.9 ms (N = 1)
 #define AWTO_WDT_PROBE_MS                                       1500    // probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s
 #define AWTO_WDT_FRAME                                          16      // WDT / Timer2 ISR: 2 B PC + 14 pushes (crash_sim_test checks)
@@ -255,6 +259,8 @@ extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_S_FREAD                                        9       // ScalerFlashRead
 #define AWTO_WDT_S_FWRITE                                       10      // ScalerFlashWrite sector part
 #define AWTO_WDT_S_OSDSTR                                       11      // OsdPropPutString character
+#define AWTO_WDT_S_T3                                           12      // AwtoDiagPanelT3Wait (panel T3 with the delay calibration)
+#define AWTO_WDT_S_HPD                                          13      // ScalerDisplayDPTxPollingHotPlug (eDP HPD, panel T2)
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 // g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
 #define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
@@ -815,10 +821,11 @@ typedef struct
     unsigned char ucT0Lo;
     unsigned char ucDone;                       // mode reached ACTIVE / NOSIGNAL / NOSUPPORT / POWER SAVING since the start
     unsigned char ucOpenReq;                    // console auto-open pending (awto_osdcard.inc AwtoSyncConPoll)
-    unsigned char ucSpare;
+    unsigned char ucSpare;                      // #150: repeats of the last line pair not yet written (AwtoSyncPush)
     StAwtoSyncEv stEv[AWTO_SYNC_N];
 } StAwtoSync;
 extern __xdata StAwtoSync g_stAwtoSync;
+extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, kept out of the ring
 #define AWTO_SYNC_K_POWER_ON                                    1
 #define AWTO_SYNC_K_SWITCH                                      2
 #define AWTO_SYNC_K_WAKE                                        3
@@ -840,6 +847,7 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SYNC_EV_INIT                                       0xD2    // arg 1 MCU init, 2 Timer2 tick, 3 watchdog run-time mode
 #define AWTO_SYNC_EV_UNPLUG                                     0xD3    // arg = port: a cable unplug woke the monitor (AWTO_WAKE_T_UNPLUG)
 #define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
+#define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON

@@ -77,6 +77,9 @@ SUBS = [
     (OSD + "RTD2014OsdFontProp.c",
      r"(        while\(\(\*\(pucArray \+ ucElementCount\) != _END_\) &&\n              \(\*\(pucArray \+ ucElementCount\) != _NEXT_LINE\)\)\n        \{)",
      lambda m: m.group(1) + " AWTO_WDT_FEED(AWTO_WDT_S_OSDSTR);  // [keil2sdcc] sub #150: per character (string terminator bound)", 1),
+    # #150: eDP HPD poll (panel T2, bound _PANEL_POWER_ON_T2 = 250 ms): per ms, as the SDK's other polls
+    ("Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c", r"(            usTimeElapsed\+\+;)",
+     lambda m: m.group(1) + " AWTO_WDT_FEED(AWTO_WDT_S_HPD);  // [keil2sdcc] sub #150", 1),
     # interrupt tests (wdt_test.py prio_*, t0_arm_from_isr): one XDATA flag test per EXINT0
     ("Kernel/System/Code/SysInt.c", r"(void SysEXINT0\(void\)[^\n]*\n\{\n    // Backup for Burst Write Bug\n    g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR;)",
      lambda m: m.group(1) + " AWTO_T0EV_EXINT0();  // [keil2sdcc] sub #138", 1),

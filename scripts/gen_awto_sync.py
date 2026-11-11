@@ -30,7 +30,7 @@ def repo_root() -> Path:
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 

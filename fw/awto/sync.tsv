@@ -10,7 +10,7 @@
 #   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
 #   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
-#   ms    value in ms -> "12 ms" (#150)
+#   ms    value in ms -> "12 ms" (#150)   n  value as a number (#150)
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
 D0	01	-	boot: cold power-up (no valid canary in RAM)
 D0	02	pc	boot: watchdog bite, %
@@ -33,6 +33,7 @@ D4	02	ms	NVRAM save end (since the last poke %)
 D4	03	ms	flash erase start (since the last poke %)
 D4	04	ms	flash erase done (since the last poke %)
 D4	05	ms	NVRAM page move (since the last poke %)
+D5	*	n	(the 2 lines above repeated % more times)
 C0	01	-	power on
 C0	02	vport	switch to %
 C0	03	vport	wake on %
