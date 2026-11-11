@@ -185,7 +185,6 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_C_STALL                                        1       // pokes stopped: no main-loop pass and no bounded loop
 #define AWTO_WDT_C_TMODE                                        0x40    // or-ed: built with AWTO_WDT_MODE = AWTO_WDT_TIMER_IRQ
 #define AWTO_WDT_C_TEST                                         0x80    // or-ed: hang requested by test cmd 0x4C..0x4E
-#define AWTO_WDT_B_LVR                                          0x01    // this boot: P0_01[6] read 0 (any reset clears it; #131 unit 2)
 #define AWTO_WDT_B_BITE                                         0x02    // set by the bite, read by the next boot
 #define AWTO_WDT_B_TEST                                         0x04    // test hang armed
 #define AWTO_WDT_B_NEW                                          0x08    // record from a bite not yet shown on the console
@@ -193,24 +192,29 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_B_COLD                                         0x20    // this boot: no valid record in RAM (power-up / brown-out)
 #define AWTO_WDT_B_AFTER                                        0x40    // this boot follows a captured bite
 #define AWTO_WDT_B_PROBE                                        0x80    // this boot follows a probe reset (test cmd 0x49 / 0x4F)
+#define AWTO_WDT_B_HWWDT                                        0x01    // this boot: warm, AWTO_WDT_P_EARLY was set (was LVR: P0_01[6] reads 0
+                                                                        // after every reset, #131 unit 2; raw value in the snapshot)
 // Boot reason (#29): AwtoBootReason, the first sync-log line. Canary only: no reset-cause flag in DW8051 or RL6449 (docs/watchdog.md)
 #define AWTO_BOOT_COLD                                          1
 #define AWTO_BOOT_BITE                                          2       // value: cause << 24 | bank << 16 | PC
-#define AWTO_BOOT_WARM                                          3       // hardware watchdog (no capture) or host ISP 0xEE
+#define AWTO_BOOT_WARM                                          3       // no capture, no evidence: host ISP 0xEE, or a WDT reset with interrupts dead
 #define AWTO_BOOT_PROBE                                         4
+#define AWTO_BOOT_HWWDT                                         5       // no capture, but an early threshold IRQ came: hardware watchdog
 #define AWTO_WDT_P_TIMER                                        0x01    // probe in timer mode (0x4F); else normal mode (0x49)
 #define AWTO_WDT_P_ARMED                                        0x02    // probe running (a reset while set = the probe's reset)
 #define AWTO_WDT_P_IRQ                                          0x04    // the threshold IRQ came (no pokes, CNT3 = AWTO_WDT_PROBE_THR)
 #define AWTO_WDT_P_RESET                                        0x08    // the chip reset (CNT1 = 1) during the probe
 #define AWTO_WDT_P_NORESET                                      0x10    // no reset within AWTO_WDT_PROBE_MS
 #define AWTO_WDT_P_WDTI                                         0x20    // DW8051 EICON[3] WDTI set: Realtek's WDT also drives the core wdti
+#define AWTO_WDT_P_EARLY                                        0x40    // a threshold IRQ before the warning since the last main pass (pokes
+                                                                        // stopped > 439 ms); kept over the reset: hardware-WDT evidence
 // One hardware watchdog (#138). Counters: CNT2 / 2048 XTAL -> CNT3 (143.0 us, wraps 585.9 ms) -> CNT1 (wraps).
 // Poke = FFEA[6] clr_wdt: every main-loop pass and inside bounded loops only (rule: no unbounded loop around a poking wait).
 // Warning = threshold IRQ at CNT1 = N - 1, CNT3 = THR (earlier matches return): capture, then sof_rst. Reset = CNT1 = N.
-#define AWTO_WDT_NORMAL_IRQ                                     1       // normal mode + threshold IRQ (assumed to fire in normal mode)
-#define AWTO_WDT_TIMER_IRQ                                      2       // fallback: timer mode, IRQ = warning, CNT1 overflow = reset (assumed)
+#define AWTO_WDT_NORMAL_IRQ                                     1       // normal mode: unit 2 (2026-11-11, probe 0x49): NO threshold IRQ
+#define AWTO_WDT_TIMER_IRQ                                      2       // timer mode: unit 2 (probe 0x4F): IRQ fires, CNT1 overflow resets
 #ifndef AWTO_WDT_MODE
-#define AWTO_WDT_MODE                                           AWTO_WDT_NORMAL_IRQ
+#define AWTO_WDT_MODE                                           AWTO_WDT_TIMER_IRQ
 #endif
 #define AWTO_WDT_N                                              2       // reset at 2 x 585.9 = 1171.8 ms without a poke
 #define AWTO_WDT_THR                                            0xC00   // warning at 585.9 + 3072 x 0.143 = 1025.3 ms; 146 ms before the reset
@@ -241,7 +245,7 @@ extern void ScalerTimerWDInitial(void);
                                                                      usG_ = (usG_ >= 0x8000) ? 0 : (((usG_ >> 5) > 0xFF) ? 0xFF : (usG_ >> 5)); \
                                                                      if((unsigned char)usG_ > g_stAwtoWdt.ucMaxPass) { g_stAwtoWdt.ucMaxPass = (unsigned char)usG_; } \
                                                                      g_stAwtoWdt.ucPassHi = (unsigned char)((usNow) >> 8); g_stAwtoWdt.ucPassLo = (unsigned char)(usNow); \
-                                                                     AWTO_WDT_POKE(); } while(0)
+                                                                     g_stAwtoWdt.ucProbe &= ~AWTO_WDT_P_EARLY; AWTO_WDT_POKE(); } while(0)
 // After a bite the console opens by itself once the screen has been settled this long: the SDK's mode pop-up is drawn within
 // one main-loop pass of the mode change (sim max pass < 4 checks = 800 ms) x 1.25; expiry = open the console (AwtoWdtShow)
 #define AWTO_WDT_SHOW_MS                                        1000

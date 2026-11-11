@@ -13,8 +13,9 @@
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
 D0	01	-	boot: cold power-up (no valid canary in RAM)
 D0	02	pc	boot: watchdog bite, %
-D0	03	-	boot: warm reset, no capture (hardware watchdog or host ISP 0xEE)
+D0	03	-	boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)
 D0	04	-	boot: watchdog probe reset (test cmd 0x49 / 0x4F)
+D0	05	-	boot: hardware watchdog reset, no capture (an early warning IRQ came)
 D1	01	-	stage 1: main
 D1	02	-	stage 2: GPIO init done
 D1	03	-	stage 3: MCU init done (M2PLL, flash clock, banks, Timer2)

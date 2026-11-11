@@ -44,10 +44,10 @@ static void AwtoWdtFresh(void)                  // empty record: cold RAM, a hos
 void AwtoWdtInit(void)
 {
     BYTE ucOld = g_stAwtoWdt.ucBoot;
-    BYTE ucNew = ((ScalerGetByte(AWTO_P0_01_HOST_CTRL) & _BIT6) == 0) ? AWTO_WDT_B_LVR : 0;
+    BYTE ucNew = 0;
 
-    ScalerSetBit(AWTO_P0_01_HOST_CTRL, ~(_BIT6 | _BIT0), _BIT6);   // reset_chk: an LVR clears it (regdb P0_01[6])
-    // cold = no valid record (P0_01[6] reads 0 after every reset on unit 2, #131: kept in ucBoot as a raw fact only)
+    ScalerSetBit(AWTO_P0_01_HOST_CTRL, ~(_BIT6 | _BIT0), _BIT6);   // reset_chk set again (any reset clears it; raw in the snapshot)
+    // cold = no valid record; warm = valid record (P0_01[6] reads 0 after every reset on unit 2, #131: not used)
     if(AwtoWdtValid() == _FALSE)
     {
         AwtoWdtFresh();
@@ -60,12 +60,13 @@ void AwtoWdtInit(void)
     }
     else
     {
-        ucNew |= AWTO_WDT_B_WARM;
+        ucNew |= AWTO_WDT_B_WARM | (((g_stAwtoWdt.ucProbe & AWTO_WDT_P_EARLY) != 0) ? AWTO_WDT_B_HWWDT : 0);
         if(g_stAwtoWdt.ucWarm != 0xFF)
         {
             g_stAwtoWdt.ucWarm++;
         }
     }
+    g_stAwtoWdt.ucProbe &= ~AWTO_WDT_P_EARLY;
     ucNew |= ucOld & AWTO_WDT_B_NEW;            // not yet shown: keep it over another reset
     if((g_stAwtoWdt.ucProbe & AWTO_WDT_P_ARMED) != 0)
     {
@@ -86,7 +87,7 @@ BYTE AwtoBootReason(void)
     BYTE ucB = g_stAwtoWdt.ucBoot;
 
     return ((ucB & AWTO_WDT_B_COLD) != 0) ? AWTO_BOOT_COLD : ((ucB & AWTO_WDT_B_AFTER) != 0) ? AWTO_BOOT_BITE :
-           ((ucB & AWTO_WDT_B_PROBE) != 0) ? AWTO_BOOT_PROBE : AWTO_BOOT_WARM;
+           ((ucB & AWTO_WDT_B_PROBE) != 0) ? AWTO_BOOT_PROBE : ((ucB & AWTO_WDT_B_HWWDT) != 0) ? AWTO_BOOT_HWWDT : AWTO_BOOT_WARM;
 }
 
 DWORD AwtoBootValue(void)                       // bite: cause << 24 | bank << 16 | PC (sync.tsv fmt pc)
@@ -158,6 +159,7 @@ void AwtoWdtIrq(BYTE ucSp, BYTE ucBank)
     }
     if(ucCnt1 < (AWTO_WDT_N - 1))
     {
+        g_stAwtoWdt.ucProbe |= AWTO_WDT_P_EARLY;    // evidence for the next boot if the warning never captures
         MCU_FFEB_WDT_TEST |= _BIT7;             // flag cleared (W1C); counting goes on
         return;
     }

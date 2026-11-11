@@ -11,12 +11,15 @@
 
 static __xdata WORD s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
 static __xdata WORD s_usAwtoT0Rl;                                   // reload (RCAP2) of the running tick
+static __xdata BYTE s_ucAwtoT0Pos;                                  // 0 = Timer0 ISR not running; else the next ID it decrements
 
 // Timer0 = one 1 ms tick from now at the current clock (Timer2's reload)
 #define AWTO_T0EV_START()               do { TR0 = 0; TL0 = RCAP2L; TH0 = RCAP2H; TF0 = 0; TR0 = 1; \
                                              s_usAwtoT0Rl = (((WORD)RCAP2H) << 8) | RCAP2L; } while(0)
-// Re-arm restarts. Timer0 already running: +1 tick when the current tick is past half -> fires within +-0.5 ms of usMs.
-#define AWTO_T0EV_ARM(usMs, ucId)       do { if(TR0 == 0) { AWTO_T0EV_START(); s_pusAwtoT0Ms[(ucId)] = (usMs); } \
+// Re-arm restarts. Timer0 running: +1 tick when the current tick is past half -> fires within +-0.5 ms of usMs.
+// Preempting the Timer0 ISR (EXINT0 high in power saving): +1 if the ISR has yet to decrement this ID in its tick.
+#define AWTO_T0EV_ARM(usMs, ucId)       do { if(s_ucAwtoT0Pos != 0) { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((ucId) >= s_ucAwtoT0Pos); } \
+                                             else if(TR0 == 0) { AWTO_T0EV_START(); s_pusAwtoT0Ms[(ucId)] = (usMs); } \
                                              else { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((((WORD)(BYTE)(TH0 - RCAP2H)) << 1) >= (WORD)(0x100 - RCAP2H)); } } while(0)
 
 // ScalerMcuInitial end (TMOD 0x11: Timer0 16 bit; PT0 = 0: low priority, as the WD IRQ was) and AwtoWdtProbe.
@@ -125,16 +128,24 @@ void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms ti
     BYTE ucDue;
     WORD usT;
 
+    EA = 0;                                     // EXINT0 is high priority in power saving (IP 0x81) and arms: reload atomic
     TR0 = 0;                                    // next tick 1 ms after the overflow: keep the counts since it (ISR latency)
     s_usAwtoT0Rl = (((WORD)RCAP2H) << 8) | RCAP2L;
     usT = ((((WORD)TH0) << 8) | TL0) + s_usAwtoT0Rl;
+    if(usT < s_usAwtoT0Rl)
+    {
+        usT = 0xFFFF;                           // more than a tick late (a long EXINT0 handler): the next tick at once
+    }
     TL0 = (BYTE)usT;
     TH0 = (BYTE)(usT >> 8);
     TR0 = 1;
+    s_ucAwtoT0Pos = 1;
+    EA = 1;
     for(ucId = 1; ucId < _SCALER_WD_TIMER_EVENT_COUNT; ucId++)
     {
-        EA = 0;                                 // EXINT0 is high priority in power saving (IP 0x81) and arms
+        EA = 0;
         ucDue = (s_pusAwtoT0Ms[ucId] != 0) && (--s_pusAwtoT0Ms[ucId] == 0);
+        s_ucAwtoT0Pos = ucId + 1;
         EA = 1;
         if(ucDue != 0)
         {
@@ -149,6 +160,7 @@ void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms ti
     {
         TR0 = 0;                                // nothing pending: no ticks
     }
+    s_ucAwtoT0Pos = 0;
     EA = 1;
 }
 
@@ -181,7 +193,7 @@ void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCou
 // 0 DP rebuild 30 ms, 1 / 2 HDMI RR D2 / D3 10 ms, 3 = 0 + 1 together, 4 / 5 = 0 / 1 with a forced PS reload and back while pending,
 // 6 / 7 = 0 / 1 armed and fired at the PS reload, 8 = RR D3 10, rebuild 30, RR D2 5 out of order, then RR D3 cancelled,
 // 9 = RX5 RR 1 ms whose handler spins (a stuck Timer0 handler: the WDT warning must preempt it).
-volatile __xdata BYTE g_ucAwtoT0Test;           // EXINT0 test mode (test cmds 0x5D..0x5F, 0x25 off): 1 arm, 2 spin 2 ms, 3 spin
+volatile __xdata BYTE g_ucAwtoT0Test;           // EXINT0 test mode (test cmds 0x5D..0x5F, 0x25 off): 1 arm once, 2 spin 2 ms once, 3 spin
 volatile __xdata BYTE g_ucAwtoT0Arms;           // arms done by the EXINT0 test hook
 
 void AwtoT0EvTest(BYTE ucHow)
@@ -245,6 +257,7 @@ void AwtoT0EvTestIsr(void)                      // SysEXINT0 entry while g_ucAwt
 
     if(g_ucAwtoT0Test == 1)
     {
+        g_ucAwtoT0Test = 0;                     // one shot: other EXINT0 sources must not re-arm it
         AWTO_T0EV_ARM(10, _SCALER_WD_TIMER_EVENT_RX2_HDMI_RR_RETRY);
         g_ucAwtoT0Arms++;
     }

@@ -79,7 +79,8 @@ void AwtoOsdWdtLines(void)
         AwtoTextLine(4, AWTO_T_STYLE_TEXT);
     }
     AwtoPutStr("THIS BOOT ");
-    AwtoPutStr(((g_stAwtoWdt.ucBoot & AWTO_WDT_B_LVR) != 0) ? "COLD" : (((g_stAwtoWdt.ucBoot & AWTO_WDT_B_WARM) != 0) ? "WARM" : "BITE"));
+    AwtoPutStr(((g_stAwtoWdt.ucBoot & AWTO_WDT_B_COLD) != 0) ? "COLD" : ((g_stAwtoWdt.ucBoot & AWTO_WDT_B_AFTER) != 0) ? "BITE" :
+               ((g_stAwtoWdt.ucBoot & AWTO_WDT_B_HWWDT) != 0) ? "HW WDT" : "WARM");
     AwtoPutStr(" MAX PASS ");                   // x32 ms; poke gap x32 CNT3 = 4.58 ms (RL6449_Project.h)
     AwtoPutNum((WORD)g_stAwtoWdt.ucMaxPass << 5, 1);
     AwtoPutStr(" POKE ");
