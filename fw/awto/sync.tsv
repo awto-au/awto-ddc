@@ -1,0 +1,64 @@
+# Sync / power-on log texts (#139): one line per ring event. Generated into C by scripts/gen_awto_sync.py; the host decoder
+# (awto-ddc scripts/sync_log.py, rtd_diag.py --sync) reads this file, so screen and host print the same line.
+# id	arg	fmt	text
+# id: event id (hex). Mirrored switch-log ids (RL6449_Project.h AWTO_SW_EV_*): 01 mode, 10 panel power, 70 VDD, 90 probe,
+#   A0 fast path, A8 hold, B0 HPD pulse. Own ids C0..CF (AWTO_SYNC_EV_*). Only rows listed here are logged (mirror filter).
+# arg: hex value, or * = any (first matching row wins: put * rows last).
+# fmt: how the event's value / arg is printed at the % in text:
+#   -     no value          port  "Dn " prefix from arg (port byte, D0 = 3)     vport  value = port byte -> "Dn" (0xFF = auto)
+#   res   value = H << 16 | V -> "3840x2160"          mhz1  value in 0.1 MHz -> "594.0 MHz"     hz1  value in 0.1 Hz -> "60.0 Hz"
+#   hz3   value in mHz -> "59.997 Hz"                 mhz3  value in kHz -> "594.000 MHz"       dp   value = rate << 8 | lanes -> "HBR2 x4"
+#   src   value = SDK source type -> "HDMI"           harg  arg in hex
+# A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
+C0	01	-	power on
+C0	02	vport	switch to %
+C0	03	vport	wake on %
+C0	04	vport	power key on, %
+01	00	-	mode INITIAL
+01	01	-	mode SEARCH
+01	02	-	mode DISPLAY SETTING
+01	03	-	mode ACTIVE
+01	04	-	mode NO SUPPORT
+01	05	-	mode NO SIGNAL
+01	06	-	mode POWER SAVING
+01	07	-	mode POWER OFF
+10	00	-	panel on
+10	01	-	panel off
+10	02	-	backlight on
+10	03	-	backlight off
+70	*	-	panel VDD on (early)
+90	01	-	reset to search
+90	0E	-	display setting
+90	14	-	judge: source unstable
+90	15	-	judge: timing change
+90	16	-	judge: interlace change
+90	17	-	judge: memory / timing gen
+90	1A	-	eDP: panel HPD high
+90	1B	-	eDP: link trained
+90	1C	-	eDP: link training FAIL
+A0	00	-	fast path taken
+A0	01	-	fast path refused: no cache
+A0	03	-	fast path refused: receiver unstable
+A0	04	-	fast path: SDK reset meanwhile
+A0	05	-	fast path timeout: full path
+A0	*	harg	fast path refused: timing field %
+A8	01	-	hold L1: backlight off
+A8	02	-	hold L2: eDP link off
+A8	03	-	hold L3: SDK power saving
+A8	04	-	hold: fast wakes used up
+A8	05	-	hold: signal back
+A8	06	-	hold: backlight on
+A8	07	-	hold: fast wake retry
+A8	09	-	hold: auto search, other cable
+A8	10	-	hold: SDK reset
+B0	*	port	HPD pulse (TMDS recover)
+C1	*	portmhz1	TMDS clock % detected
+C2	*	portdp	DP link % detected
+C3	*	portsrc	scan done: %
+C4	*	port	signal lost
+C5	*	portres	timing %
+C7	*	porthz3	refresh %
+C8	*	portmhz3	pixel clock %
+C9	01	-	power off
+C9	03	-	power saving
+CA	*	-	console opened (sync log)

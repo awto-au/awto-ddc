@@ -191,6 +191,15 @@ INSERTS = [
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_diag.inc").read_text().rstrip("\n")),
     # #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state poll per pass, panel power actions; #28 hold guards
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_sw.inc").read_text().rstrip("\n")),
+    # #139 sync / power-on log + selector port getters (fw/sdcc/awto_sync.inc, after awto_sw.inc: AwtoSwEvent feeds it)
+    ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_sync.inc").read_text().rstrip("\n")),
+    ("Kernel/System/Code/SysSource.c", r"^\s*switch\(GET_SOURCE_SCAN_TYPE\(\)\)", "    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, ucInputPort);",
+     r"^void SysSourceSwitchInputPort\(BYTE ucInputPort\)$"),
+    ("Kernel/System/Code/SysSource.c", r"^\}$", "    AwtoSyncDetect(GET_INPUT_PORT(GET_INPUTPORT_TYPE(ucSearchIndex)), "
+     "GET_PORT_TYPE(GET_INPUTPORT_TYPE(ucSearchIndex)), GET_SOURCE_PREDETECT(ucSearchIndex), GET_SOURCE_TYPE(ucSearchIndex));",
+     r"^void SysSourceDetectPort\(BYTE ucSearchIndex\)$"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_TIMING_CONFIRM\(\);", "                    AwtoSyncTiming();", r"^void SysModeHandler\(void\)$"),
+    ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_DISPLAY_SETTING_READY\(\);", "                    AwtoSyncFreq();", r"^\s*case _MODE_STATUS_DISPLAY_SETTING:"),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserInterfaceKeyHandler\(\);", "            AwtoSwPoll();"),
     ("Kernel/System/Code/SysMain.c", r"^\s*UserCommonInterfaceOsdHandler\(\);", "            AwtoHoldOsdGuard();"),
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*switch\(ucEvent\)", "    AwtoSwEvent(AWTO_SW_EV_POWER, ucEvent);",
@@ -204,6 +213,7 @@ INSERTS = [
     # awto-ddc#26 4K60 measurement ring: functions (fw/sdcc/awto_meas4k.inc), Timer2 sampler, M-domain / DPLL fine-tune call events
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_meas4k.inc").read_text().rstrip("\n")),
     ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoMeasInit();"),
+    ("Kernel/System/Code/SysMain.c", r"^\s*SysMainSystemInitial\(\);", "        AwtoSyncInit();"),     # #139 power-on episode
     ("Kernel/System/Code/SysTimer.c", r"^\s*// Reload Backup for Burst Write Bug", "    AWTO_MEAS_T2ISR();", r"^void SysTimerIntProc2\(void\) __interrupt\(5\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainMemorySettings\(&stFIFOScaling\);", "    AwtoMeasEvent(1, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemoryInitial\(\);", "    AwtoMeasEvent(2, 0, 0);", r"^bit ScalerMDomainControl\(void\)$"),

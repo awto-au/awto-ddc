@@ -68,11 +68,18 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_CT_SINK        33                  // + 1 = repeater
 #define AWTO_CT_LANES       35
 #define AWTO_CT_RBR         36                  // + 1 HBR, + 2 HBR2
+#define AWTO_CT_STAGE       39                  // + AWTO_SYNC_ST_* (#139)
+#define AWTO_CT_HBR3        53
+#define AWTO_CT_SYNCLOG     54
+#define AWTO_CT_NOLINK      55
+#define AWTO_CT_TMDS        56
 static const __code char tAwtoCardS[] =
     "Input\0Auto select\0DisplayPort\0HDMI \0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
     "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
     "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
-    " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0";
+    " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0"
+    "idle\0search\0scan\0stable\0measure\0timing ok\0display set\0active\0no signal\0no support\0sleep\0off\0fast path\0init\0"
+    "HBR3\0Sync log\0no link\0TMDS \0";
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -92,13 +99,13 @@ static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the compo
 }
 
 // Card frame in the awto menu look (blue frame + title bar on white, the menu font), centred, title drawn; the OSD stays off.
-static void AwtoCardOpen(BYTE ucLines, BYTE ucTitle)
+static void AwtoCardOpenW(BYTE ucCols, BYTE ucLines, BYTE ucTitle)
 {
     WORD usW, usH;
 
-    osd_tc_open(AWTO_CARD_COLS, ucLines);
+    osd_tc_open(ucCols, ucLines);
     osd_font_load(ui_font_selected());
-    usW = (WORD)AWTO_CARD_COLS * osd_cw;
+    usW = (WORD)ucCols * osd_cw;
     usH = (WORD)ucLines * osd_rh;
     osd_tc_bar(AWTO_WIN_FRAME, 0, 0, usW - 1, usH - 1, 1);
     osd_tc_bar(AWTO_WIN_INSET, 2, 2, usW - 3, usH - 3, 0);
@@ -106,11 +113,16 @@ static void AwtoCardOpen(BYTE ucLines, BYTE ucTitle)
     osd_tc_place(50, 50, GET_OSD_NVRAM_DOUBLE_SIZE());
     s_ucPanelRow = 0;
     s_ucPanelCol = 0;
-    s_ucAwtoCols = AWTO_CARD_COLS;
+    s_ucAwtoCols = ucCols;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
     AwtoCardTxt(ucTitle);
     AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+}
+
+static void AwtoCardOpen(BYTE ucLines, BYTE ucTitle)
+{
+    AwtoCardOpenW(AWTO_CARD_COLS, ucLines, ucTitle);
 }
 
 static void AwtoCardShow(void)
@@ -211,32 +223,413 @@ static void AwtoSrcSet(BYTE ucI)
     SET_OSD_INPUT_PORT_OSD_ITEM((ucI == 0) ? _OSD_INPUT_AUTO : AwtoSrcItem(AwtoSrcPort(ucI)));
 }
 
-static void AwtoSourceRows(void)                // Auto, then each port with its state; the selection on the bar
+//---- #139 per-port live status + sync log pane ----
+// Layout (AWTO_SRC_COLS wide): Auto; per port 3 lines: name + state, signals (fw/awto/portsig.tsv), stage + rate; the log.
+#define AWTO_SRC_COLS       46
+#define AWTO_SRC_STAGE_COL  3                   // line 3: sync stage
+#define AWTO_SRC_RATE_COL   15                  // line 3: rate (timing / TMDS clock / DP link)
+#define AWTO_SRC_RATE_W     (AWTO_SRC_COLS - AWTO_SRC_RATE_COL - 1)
+#define AWTO_SRC_LOGN       8                   // log pane lines
+#define AWTO_SRC_PROW(i)    (AWTO_SRC_ROW0 + 1 + ((i) - 1) * 3)   // port item i (1..n): first line
+#define AWTO_SRC_LOGHDR     (AWTO_SRC_PROW(AWTO_SRC_PORTS) + 4)
+#define AWTO_SRC_LINES      (AWTO_SRC_LOGHDR + 1 + AWTO_SRC_LOGN + 1)     // + pad row (the frame covers the last 2 px)
+#define AWTO_PS_SRC_IN      0
+#define AWTO_PS_SRC_CNT     1
+#define AWTO_PS_SRC_XREG    2
+#define AWTO_PS_SRC_CABLE   3
+#define AWTO_PS_SRC_DDC     4
+#define AWTO_PS_SRC_TMDS    5
+
+// GENERATED-BEGIN awto_port_sigs
+#define AWTO_PS_N 16
+static const __code BYTE tAwtoPsPort[16] = {
+    0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2};
+static const __code BYTE tAwtoPsSrc[16] = {
+    3, 0, 0, 0, 1, 4, 3, 0, 0, 5, 4, 3, 0, 0, 5, 4};
+static const __code WORD tAwtoPsA[16] = {0x0000, 0x0019, 0x001D, 0x001E, 0x0000, 0x0000, 0x0000, 0x001B, 0x0018, 0x0071, 0x0000, 0x0000, 0x001A, 0x0017, 0x0072, 0x0000};
+static const __code BYTE tAwtoPsB[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+static const __code BYTE tAwtoPsCol[16] = {
+    6, 11, 16, 21, 27, 36, 6, 10, 15, 21, 26, 6, 10, 15, 21, 26};
+static const __code BYTE tAwtoPsLblCol[16] = {
+    3, 8, 13, 18, 23, 33, 3, 8, 12, 17, 23, 3, 8, 12, 17, 23};
+static const __code char tAwtoPsLblS[] = "cbl\0" "hpd\0" "p15\0" "p16\0" "p17\0" "ddc\0" "cbl\0" "5V\0" "hpd\0" "tmds\0" "ddc\0" "cbl\0" "5V\0" "hpd\0" "tmds\0" "ddc\0" "";
+static const __code BYTE tAwtoPsLblOff[16] = {
+    0, 4, 8, 12, 16, 20, 24, 28, 31, 35, 40, 44, 48, 51, 55, 60};
+static void AwtoPsLbl(BYTE ucRow)                  // signal label (one table + its reader, awto-sdcc#39)
+{
+    const __code char *pc = &tAwtoPsLblS[tAwtoPsLblOff[ucRow]];
+
+    while(*pc != 0)
+    {
+        AwtoPutChar(*pc++);
+    }
+}
+// GENERATED-END awto_port_sigs
+
+// GENERATED-BEGIN awto_sync_text
+static const __code BYTE tAwtoSyncFmt[52] = {
+    0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x83, 0x87, 0x88, 0x80, 0x82, 0x85,
+    0x86, 0x00, 0x00, 0x00};
+static const __code char tAwtoSyncTxtS[] = "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "";
+static const __code WORD tAwtoSyncTxtOff[52] = {0, 9, 21, 31, 47, 60, 72, 93, 105, 121, 136, 154, 169, 178, 188, 201, 215, 236, 252, 268, 291, 312, 336, 363, 383, 401, 425, 441, 469, 506, 537, 566, 600, 623, 645, 671, 696, 714, 733, 755, 786, 802, 827, 849, 868, 881, 893, 902, 912, 926, 936, 949};
+static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text before (0) / after (1) the value mark, 2 = none; returns the fmt
+{
+    const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];
+
+    if(ucPart == 2)
+    {
+        return tAwtoSyncFmt[ucRow];
+    }
+    if(ucPart != 0)
+    {
+        while((*pc != 0) && (*pc != 1))
+        {
+            pc++;
+        }
+        if(*pc == 0)
+        {
+            return tAwtoSyncFmt[ucRow];
+        }
+        pc++;
+    }
+    while((*pc != 0) && (*pc != 1))             // AwtoPutChar inlined: no call, so the packer keeps the table in this bank
+    {
+        if(s_ucAwtoLen < s_ucAwtoCols)
+        {
+            s_pcAwtoRow[s_ucAwtoLen++] = *pc;
+        }
+        pc++;
+    }
+    return tAwtoSyncFmt[ucRow];
+}
+// GENERATED-END awto_sync_text
+
+static __xdata BYTE s_pucSrcSt[3];              // last drawn: port state, sync stage, rate checksum
+static __xdata BYTE s_pucSrcStage[3];
+static __xdata WORD s_pusSrcRate[3];             // rate change key (AwtoSrcRateKey)
+static __xdata BYTE s_pucSrcSig[AWTO_PS_N];     // last drawn value per signal row
+static __xdata BYTE s_pucSrcCnt[(AWTO_PS_CNT_N != 0) ? AWTO_PS_CNT_N : 1];   // edge counter at the last poll
+static __xdata WORD s_usSrcPoll;
+static __xdata BYTE s_ucSrcLogSeq;              // ring seq the log pane shows up to
+
+static WORD AwtoSrcNow(void)
+{
+    WORD usNow;
+
+    do
+    {
+        usNow = g_stAwtoDiag.usT2Isr;
+    }
+    while(usNow != g_stAwtoDiag.usT2Isr);
+    return usNow;
+}
+
+static void AwtoPutTenths(DWORD ulV)
+{
+    AwtoPutNum(ulV / 10, 1);
+    AwtoPutChar('.');
+    AwtoPutNum(ulV % 10, 1);
+}
+
+static void AwtoPutDpRate(BYTE ucRate, BYTE ucLanes)
+{
+    if(ucRate == _DP_LINK_RBR) AwtoCardTxt(AWTO_CT_RBR);
+    else if(ucRate == _DP_LINK_HBR) AwtoCardTxt(AWTO_CT_RBR + 1);
+    else if(ucRate == _DP_LINK_HBR2) AwtoCardTxt(AWTO_CT_RBR + 2);
+    else if(ucRate == _DP_LINK_HBR3) AwtoCardTxt(AWTO_CT_HBR3);
+    else AwtoPutHex2(ucRate);
+    AwtoPutStr(" x");
+    AwtoPutNum(ucLanes, 1);
+}
+
+// One sync-ring entry as a log line: "+  260 ms D2 timing 3840x2160" (texts and formats: fw/awto/sync.tsv).
+static void AwtoSyncLine(BYTE ucSeq)
+{
+    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucSeq)];
+    DWORD ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
+    WORD usMs = (((WORD)puc[2] << 8) | puc[3]) - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
+    BYTE ucRow = AwtoSyncRow(puc[0], puc[1]);
+    BYTE ucFmt;
+
+    AwtoPutChar('+');
+    AwtoPutCol(s_ucAwtoLen + ((usMs < 10) ? 4 : (usMs < 100) ? 3 : (usMs < 1000) ? 2 : (usMs < 10000) ? 1 : 0));
+    AwtoPutNum(usMs, 1);
+    AwtoPutStr(" ms ");
+    if(ucRow == 0)
+    {
+        AwtoPutStr("event ");
+        AwtoPutHex2(puc[0]);
+        AwtoPutChar(' ');
+        AwtoPutHex2(puc[1]);
+        return;
+    }
+    ucFmt = AwtoSyncTxt(ucRow - 1, 2);           // part 2 = nothing printed, the fmt only
+    if((ucFmt & 0x80) != 0)
+    {
+        AwtoPutChar('D');
+        AwtoPutNum(puc[1] - _D0_INPUT_PORT, 1);
+        AwtoPutChar(' ');
+    }
+    AwtoSyncTxt(ucRow - 1, 0);
+    switch(ucFmt & 0x7F)
+    {
+        case 1:                                 // vport
+            if(puc[7] == 0xFF) AwtoPutStr("auto");
+            else { AwtoPutChar('D'); AwtoPutNum(puc[7] - _D0_INPUT_PORT, 1); }
+            break;
+        case 2: AwtoPutNum(ulV >> 16, 1); AwtoPutChar('x'); AwtoPutNum(ulV & 0xFFFF, 1); break;    // res
+        case 3: AwtoPutTenths(ulV); AwtoCardTxt(AWTO_CT_HZ + 2); break;                            // mhz1
+        case 4: AwtoPutTenths(ulV); AwtoCardTxt(AWTO_CT_HZ); break;                                // hz1
+        case 5: AwtoPutMilli(ulV); AwtoCardTxt(AWTO_CT_HZ); break;                                 // hz3
+        case 6: AwtoPutMilli(ulV); AwtoCardTxt(AWTO_CT_HZ + 2); break;                             // mhz3
+        case 7: AwtoPutDpRate(puc[6], puc[7]); break;                                              // dp
+        case 8:                                                                                    // src
+            if(ulV == _SOURCE_HDMI) AwtoPutStr("HDMI");
+            else if(ulV == _SOURCE_DP) AwtoPutStr("DP");
+            else if(ulV == _SOURCE_DVI) AwtoPutStr("DVI");
+            else AwtoPutNum(ulV, 1);
+            break;
+        case 9: AwtoPutHex2(puc[1]); break;                                                        // harg
+        default: break;
+    }
+    AwtoSyncTxt(ucRow - 1, 1);
+}
+
+static BYTE AwtoSrcStyle(BYTE ucI)
+{
+    return (ucI == AwtoSrcSel()) ? AWTO_T_STYLE_ONACC : AWTO_T_STYLE_TEXT;
+}
+
+static BYTE AwtoPsValue(BYTE ucR, WORD usDt)    // current value of signal row ucR; usDt = ms since the last poll (cnt rows)
+{
+    BYTE ucPort = _D1_INPUT_PORT + tAwtoPsPort[ucR];
+    WORD usA = tAwtoPsA[ucR];
+    BYTE ucV;
+
+    switch(tAwtoPsSrc[ucR])
+    {
+        case AWTO_PS_SRC_IN:
+            ucV = g_stAwtoGpio.ucIn[usA];
+            return (tAwtoPsB[ucR] != 0) ? (ucV == 0) : (ucV != 0);
+        case AWTO_PS_SRC_CNT:
+            ucV = g_pucAwtoInCnt[usA] - s_pucSrcCnt[usA];
+            s_pucSrcCnt[usA] = g_pucAwtoInCnt[usA];
+            return (usDt == 0) ? 0 : (BYTE)(((DWORD)ucV * 1000 + usDt / 2) / usDt);
+        case AWTO_PS_SRC_XREG:
+            return ((ScalerGetByte(usA) & tAwtoPsB[ucR]) != 0);
+        case AWTO_PS_SRC_CABLE:
+            return SysSourceGetCableDetect(ucPort);
+        case AWTO_PS_SRC_DDC:
+            return AwtoDdcLive(tAwtoPsPort[ucR]);
+        default:
+            return (AwtoTmdsIdleKhz((BYTE)usA) != 0);
+    }
+}
+
+static void AwtoPsField(BYTE ucR, BYTE ucV, BYTE ucStyle)    // value of signal row ucR at its column
+{
+    AwtoFieldBegin();
+    if(tAwtoPsSrc[ucR] == AWTO_PS_SRC_CNT)
+    {
+        AwtoPutNum(ucV, 1);
+        AwtoPutStr("/s");
+        AwtoPutCol(5);
+    }
+    else
+    {
+        AwtoPutChar((ucV != 0) ? '+' : '-');
+    }
+    AwtoFieldEnd(AWTO_SRC_PROW(tAwtoPsPort[ucR] + 1) + 1, tAwtoPsCol[ucR], ucStyle);
+}
+
+// Rate of a port: the active port's timing, the measured timing while syncing, else what its receiver has without a switch.
+static void AwtoSrcRate(BYTE ucPort)
+{
+    DWORD ulK;
+
+    if((ucPort == SysSourceGetInputPort()) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
+    {
+        AwtoPutNum(GET_INPUT_TIMING_HWIDTH(), 1);
+        AwtoPutChar('x');
+        AwtoPutNum(GET_INPUT_TIMING_VHEIGHT(), 1);
+        AwtoPutChar(' ');
+#if(_AWTO_FREQ == _ON)
+        if(g_stAwtoFreq.ucValid != 0)
+        {
+            AwtoPutMilli(g_stAwtoFreq.ulVFreqmHz);
+            AwtoPutStr("Hz ");
+            AwtoPutMilli(g_stAwtoFreq.ulPclkHz / 1000);
+            AwtoPutStr("MHz");
+            return;
+        }
+#endif
+        AwtoPutTenths(GET_INPUT_TIMING_VFREQ());
+        AwtoPutStr("Hz ");
+        AwtoPutTenths(ScalerSyncGetInputPixelClk());
+        AwtoPutStr("MHz");
+        return;
+    }
+#if(_DP_SUPPORT == _ON)
+    if(AwtoPortIsDp(ucPort) != 0)
+    {
+        ulK = ScalerDpGetLaneCount(ucPort);
+        if((ulK == 0) || (SysSourceGetCableDetect(ucPort) == _FALSE))
+        {
+            AwtoCardTxt(AWTO_CT_NOLINK);
+            return;
+        }
+        AwtoCardTxt(AWTO_CT_DPLINK);
+        AwtoPutChar(' ');
+        AwtoPutDpRate(ScalerDpGetLinkRate(ucPort), (BYTE)ulK);       // DPCD 100h / 101h: the last training
+        return;
+    }
+#endif
+    ulK = AwtoTmdsIdleKhz((ucPort == _D2_INPUT_PORT) ? 0x71 : 0x72);
+    if(ulK == 0)
+    {
+        AwtoPutChar('-');
+        return;
+    }
+    AwtoCardTxt(AWTO_CT_TMDS);
+    AwtoPutTenths((ulK + 50) / 100);
+    AwtoCardTxt(AWTO_CT_HZ + 2);
+}
+
+static WORD AwtoSrcRateKey(BYTE ucPort)         // cheap change key of what AwtoSrcRate prints (no text, no division)
+{
+    if((ucPort == SysSourceGetInputPort()) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
+    {
+#if(_AWTO_FREQ == _ON)
+        if(g_stAwtoFreq.ucValid != 0)
+        {
+            return 0x8000 ^ GET_INPUT_TIMING_HWIDTH() ^ (GET_INPUT_TIMING_VHEIGHT() << 4) ^ (WORD)g_stAwtoFreq.ulVFreqmHz ^
+                   (WORD)(g_stAwtoFreq.ulPclkHz >> 10);
+        }
+#endif
+        return 0x8001 ^ GET_INPUT_TIMING_HWIDTH() ^ (GET_INPUT_TIMING_VHEIGHT() << 4) ^ GET_INPUT_TIMING_VFREQ();
+    }
+#if(_DP_SUPPORT == _ON)
+    if(AwtoPortIsDp(ucPort) != 0)
+    {
+        return 0x4000 | ((WORD)SysSourceGetCableDetect(ucPort) << 13) | ((WORD)ScalerDpGetLaneCount(ucPort) << 8) |
+               ScalerDpGetLinkRate(ucPort);
+    }
+#endif
+    return (WORD)(AwtoTmdsIdleKhz((ucPort == _D2_INPUT_PORT) ? 0x71 : 0x72) >> 6);    // 64 kHz steps: count noise is no change
+}
+
+// Port item i: state, stage, rate fields; bAll = draw even if unchanged (full draw).
+static void AwtoSrcPortFields(BYTE ucI, bit bAll)
+{
+    BYTE ucPort = AwtoSrcPort(ucI);
+    BYTE ucK = ucPort - _D1_INPUT_PORT;
+    BYTE ucStyle = AwtoSrcStyle(ucI);
+    BYTE ucV;
+    WORD usKey;
+
+    ucV = ui_port_state(ucK);
+    if((bAll != 0) || (ucV != s_pucSrcSt[ucK]))
+    {
+        s_pucSrcSt[ucK] = ucV;
+        AwtoFieldBegin();
+        AwtoCardTxt(AWTO_CT_STATE + ucV);
+        AwtoPutCol(10);
+        AwtoFieldEnd(AWTO_SRC_PROW(ucI), AWTO_SRC_STATE_COL, (ucStyle == AWTO_T_STYLE_ONACC) ? ucStyle : ((ucV == 3) ? AWTO_T_STYLE_TEXT : AWTO_T_STYLE_DIM));
+    }
+    ucV = AwtoSyncStage(ucPort);
+    if((bAll != 0) || (ucV != s_pucSrcStage[ucK]))
+    {
+        s_pucSrcStage[ucK] = ucV;
+        AwtoFieldBegin();
+        AwtoCardTxt(AWTO_CT_STAGE + ucV);
+        AwtoPutCol(AWTO_SRC_RATE_COL - AWTO_SRC_STAGE_COL);
+        AwtoFieldEnd(AWTO_SRC_PROW(ucI) + 2, AWTO_SRC_STAGE_COL, ucStyle);
+    }
+    usKey = AwtoSrcRateKey(ucPort);
+    if((bAll != 0) || (usKey != s_pusSrcRate[ucK]))
+    {
+        s_pusSrcRate[ucK] = usKey;
+        AwtoFieldBegin();
+        AwtoSrcRate(ucPort);
+        AwtoPutCol(AWTO_SRC_RATE_W);
+        AwtoFieldEnd(AWTO_SRC_PROW(ucI) + 2, AWTO_SRC_RATE_COL, ucStyle);
+    }
+}
+
+static void AwtoSrcSigs(bit bAll, WORD usDt)
+{
+    BYTE ucR, ucV;
+
+    for(ucR = 0; ucR < AWTO_PS_N; ucR++)
+    {
+        ucV = AwtoPsValue(ucR, usDt);
+        if((bAll != 0) || (ucV != s_pucSrcSig[ucR]))
+        {
+            s_pucSrcSig[ucR] = ucV;
+            AwtoPsField(ucR, ucV, AwtoSrcStyle(tAwtoPsPort[ucR] + 1));
+        }
+    }
+}
+
+static void AwtoSrcLog(void)                    // the last AWTO_SRC_LOGN lines of the current episode
+{
+    BYTE ucSeq = g_stAwtoSync.ucSeq;
+    BYTE ucN = AWTO_SYNC_BACK(ucSeq, g_stAwtoSync.ucEpSeq);
+    BYTE ucL;
+
+    s_ucSrcLogSeq = ucSeq;
+    if(ucN > AWTO_SRC_LOGN)
+    {
+        ucN = AWTO_SRC_LOGN;
+    }
+    for(ucL = 0; ucL < AWTO_SRC_LOGN; ucL++)
+    {
+        if(ucL < ucN)
+        {
+            AwtoSyncLine(AWTO_SYNC_BACK(ucSeq, ucN - ucL));
+        }
+        AwtoTextLine(AWTO_SRC_LOGHDR + 1 + ucL, AWTO_T_STYLE_DIM);
+    }
+}
+
+static void AwtoSourceRows(void)                // Auto, then each port with its state, signals, stage and rate; the log
 {
     BYTE ucSel = AwtoSrcSel();
-    BYTE ucI, ucSt;
+    BYTE ucI, ucR;
 
-    osd_tc_bar(AWTO_WIN_HL, 2, (WORD)(AWTO_SRC_ROW0 + ucSel) * osd_rh, (WORD)AWTO_CARD_COLS * osd_cw - 3,
-               (WORD)(AWTO_SRC_ROW0 + ucSel + 1) * osd_rh - 1, 1);
+    ucR = (ucSel == 0) ? AWTO_SRC_ROW0 : AWTO_SRC_PROW(ucSel);
+    osd_tc_bar(AWTO_WIN_HL, 2, (WORD)ucR * osd_rh, (WORD)AWTO_SRC_COLS * osd_cw - 3,
+               (WORD)(ucR + ((ucSel == 0) ? 1 : 3)) * osd_rh - 1, 1);
     for(ucI = 0; ucI <= AWTO_SRC_PORTS; ucI++)
     {
         if(ucI == 0)
         {
             AwtoCardTxt(AWTO_CT_AUTO);
+            AwtoTextLine(AWTO_SRC_ROW0, AwtoSrcStyle(0));
+            continue;
         }
-        else
+        AwtoPortName(AwtoSrcPort(ucI));
+        AwtoTextLine(AWTO_SRC_PROW(ucI), AwtoSrcStyle(ucI));
+        for(ucR = 0; ucR < AWTO_PS_N; ucR++)          // signal labels; values follow
         {
-            AwtoPortName(AwtoSrcPort(ucI));
+            if(tAwtoPsPort[ucR] + 1 == ucI)
+            {
+                AwtoPutCol(tAwtoPsLblCol[ucR]);
+                AwtoPsLbl(ucR);
+            }
         }
-        AwtoTextLine(AWTO_SRC_ROW0 + ucI, (ucI == ucSel) ? AWTO_T_STYLE_ONACC : AWTO_T_STYLE_TEXT);
-        if(ucI != 0)
-        {
-            ucSt = ui_port_state(AwtoSrcPort(ucI) - _D1_INPUT_PORT);
-            AwtoFieldBegin();
-            AwtoCardTxt(AWTO_CT_STATE + ucSt);
-            AwtoFieldEnd(AWTO_SRC_ROW0 + ucI, AWTO_SRC_STATE_COL, (ucI == ucSel) ? AWTO_T_STYLE_ONACC : ((ucSt == 3) ? AWTO_T_STYLE_TEXT : AWTO_T_STYLE_DIM));
-        }
+        AwtoTextLine(AWTO_SRC_PROW(ucI) + 1, AwtoSrcStyle(ucI));
+        AwtoTextLine(AWTO_SRC_PROW(ucI) + 2, AwtoSrcStyle(ucI));
+        AwtoSrcPortFields(ucI, 1);
     }
+    AwtoSrcSigs(1, 0);
+    AwtoCardTxt(AWTO_CT_SYNCLOG);
+    AwtoTextLine(AWTO_SRC_LOGHDR, AWTO_T_STYLE_TEXT);
+    AwtoSrcLog();
+    s_usSrcPoll = AwtoSrcNow();
 }
 
 static bit AwtoSourceNoPicture(void)            // power saving / no signal / no support: the SDK hands back to its pop-up timers
@@ -279,7 +672,7 @@ void AwtoSourceOpen(void)
     SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
     OsdFuncSetOsdItemFlag();
     g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-    AwtoCardOpen(AWTO_SRC_ROW0 + AWTO_SRC_PORTS + 2, AWTO_CT_INPUT);   // + Auto + pad row (the frame covers the last 2 px)
+    AwtoCardOpenW(AWTO_SRC_COLS, AWTO_SRC_LINES, AWTO_CT_INPUT);
     AwtoSourceRows();
     AwtoCardShow();
     UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
@@ -342,6 +735,7 @@ void AwtoSourceKey(BYTE ucKey)
         }
         else if(ucItem == _OSD_INPUT_AUTO)
         {
+            AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
             SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
             SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
             if(UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType())
@@ -377,6 +771,71 @@ void AwtoSourceKey(BYTE ucKey)
         }
 #endif
         SET_OSD_STATE(_MENU_NONE);
+    }
+}
+
+// #139 console auto-open: once per episode, when the screen is ours to take (no menu / selector / logo / hold) and the
+// episode has settled (ACTIVE / no signal / no support / power saving): opening it never delays the sync. Setting: registry
+// sync_console (id 110); g_ucAwtoSyncCon = 0 also stops it (test harness, fw_sim osd_render.Session).
+__xdata BYTE g_ucAwtoSyncCon = 1;
+
+static void AwtoSyncConPoll(void)
+{
+    if(g_stAwtoSync.ucOpenReq == 0)
+    {
+        return;
+    }
+    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (s_ucConOpen != 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
+       (SysPowerGetPowerStatus() == _POWER_STATUS_OFF) || (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))
+    {
+        g_stAwtoSync.ucOpenReq = 0;             // off, already open, the selector's log pane shows it, or no screen
+        return;
+    }
+    if((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (GET_OSD_STATE() != _MENU_NONE) || (g_ucAwtoMenuOn != 0) || AWTO_KEY_TEST_ON() || (GET_OSD_LOGO_ON() == _ON) ||
+       (g_stAwtoDiag.ucHold != 0))
+    {
+        return;
+    }
+    if(g_stAwtoSync.ucDone == 0)
+    {
+        return;                                 // every episode ends in one of the settled modes (search time-outs)
+    }
+    g_stAwtoSync.ucOpenReq = 0;
+    AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 0, 0);
+    AwtoDiagConsole(1);                         // its log backfills the episode (AwtoConLogInit)
+    s_ucConFirst = osd_tc_scroll(AWTO_CON_ROWS + 1 - AWTO_VIEW_ROWS);    // view down to the event log
+}
+
+// Every main-loop pass (AwtoGpioPoll): console log lines, auto-open, selector fields every AWTO_SRC_POLL_MS.
+void AwtoOsdSyncPoll(void)
+{
+    WORD usNow, usDt;
+    BYTE ucI;
+
+    if(s_ucConOpen != 0)
+    {
+        AwtoConLogSync();
+    }
+    AwtoSyncConPoll();
+    if((GET_OSD_STATE() != _MENU_HOTKEY_SOURCE) || (g_ucOsdWidth != AWTO_SRC_COLS))
+    {
+        return;
+    }
+    usNow = AwtoSrcNow();
+    usDt = usNow - s_usSrcPoll;
+    if(usDt < AWTO_SRC_POLL_MS)
+    {
+        return;
+    }
+    s_usSrcPoll = usNow;
+    for(ucI = 1; ucI <= AWTO_SRC_PORTS; ucI++)
+    {
+        AwtoSrcPortFields(ucI, 0);
+    }
+    AwtoSrcSigs(0, usDt);
+    if(s_ucSrcLogSeq != g_stAwtoSync.ucSeq)
+    {
+        AwtoSrcLog();
     }
 }
 

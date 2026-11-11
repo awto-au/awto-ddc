@@ -714,6 +714,115 @@ extern void AwtoPanelVddEarly(void);
 #define AwtoSwPoll()
 #define AWTO_SW_HPD(port, x)
 #endif
+// #139 sync / power-on log (fw/sdcc/awto_sync.inc): ring of stage events per episode (power on, switch, wake), on the console /
+// selector and over I2C at map symbol _g_stAwtoSync (host: scripts/sync_log.py, rtd_diag.py --sync). Bytes only (LE = BE layout).
+// GENERATED-BEGIN awto_port_cnt
+#define AWTO_PS_CNT_N                                           1       // inputs whose rising edges are counted (fw/awto/portsig.tsv cnt rows)
+#define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
+// GENERATED-END awto_port_cnt
+extern __xdata unsigned char g_pucAwtoInCnt[];   // awto_gpio.inc: rising edges per counted input (wraps), read by the selector
+#define _AWTO_SYNC_LOG                                          _AWTO_SW_LOG
+#if(_AWTO_SYNC_LOG == _ON)
+#define AWTO_SYNC_N                                             24      // ring entries: a power-on logs ~22 lines (sim, #139)
+#define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
+#define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
+#define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
+#define AWTO_SYNC_BACK(s, n)                                    ((unsigned char)(((s) >= (n)) ? ((s) - (n)) : ((s) + AWTO_SYNC_WRAP - (n))))
+typedef struct                                  // 8 B
+{
+    unsigned char ucId;                         // AWTO_SW_EV_* (mirrored) or AWTO_SYNC_EV_*
+    unsigned char ucArg;                        // port byte for port events
+    unsigned char ucMsHi;                       // g_stAwtoDiag.usT2Isr (1 ms) at the event
+    unsigned char ucMsLo;
+    unsigned char pucVal[4];                    // value, high byte first (fw/awto/sync.tsv fmt)
+} StAwtoSyncEv;
+typedef struct
+{
+    unsigned char ucMagic0;                     // 'S'
+    unsigned char ucMagic1;                     // 'Y'
+    unsigned char ucVersion;                    // 1
+    unsigned char ucSeq;                        // next event's seq, 0..AWTO_SYNC_WRAP-1; entry = stEv[seq % AWTO_SYNC_N]
+    unsigned char ucEpSeq;                      // seq of the current episode's first event
+    unsigned char ucKind;                       // AWTO_SYNC_K_* of the current episode
+    unsigned char ucPort;                       // its port (0xFF = auto / unknown)
+    unsigned char ucT0Hi;                       // usT2Isr at its start
+    unsigned char ucT0Lo;
+    unsigned char ucDone;                       // mode reached ACTIVE / NOSIGNAL / NOSUPPORT / POWER SAVING since the start
+    unsigned char ucOpenReq;                    // console auto-open pending (awto_osdcard.inc AwtoSyncConPoll)
+    unsigned char ucSpare;
+    StAwtoSyncEv stEv[AWTO_SYNC_N];
+} StAwtoSync;
+extern __xdata StAwtoSync g_stAwtoSync;
+#define AWTO_SYNC_K_POWER_ON                                    1
+#define AWTO_SYNC_K_SWITCH                                      2
+#define AWTO_SYNC_K_WAKE                                        3
+#define AWTO_SYNC_K_POWER_KEY                                   4
+#define AWTO_SYNC_EV_BEGIN                                      0xC0    // arg kind, value port
+#define AWTO_SYNC_EV_TMDS                                       0xC1    // predetect on, HDMI: value = SDK TMDS clock, 0.1 MHz
+#define AWTO_SYNC_EV_DP                                         0xC2    // predetect on, DP: value = link rate << 8 | lanes (DPCD 100h / 101h)
+#define AWTO_SYNC_EV_SCAN                                       0xC3    // scan found a source: value = SDK source type
+#define AWTO_SYNC_EV_LOST                                       0xC4    // predetect off
+#define AWTO_SYNC_EV_TIMING                                     0xC5    // timing confirmed: value = H << 16 | V
+#define AWTO_SYNC_EV_VFREQ                                      0xC7    // display setting done: exact V freq, mHz (#34)
+#define AWTO_SYNC_EV_PCLK                                       0xC8    // exact pixel clock, kHz
+#define AWTO_SYNC_EV_POWER                                      0xC9    // arg = new power status (off / saving)
+#define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
+// selector stage codes (AwtoSyncStage): texts in awto_osdcard.inc tAwtoCardS from AWTO_CT_STAGE
+#define AWTO_SYNC_ST_IDLE                                       0
+#define AWTO_SYNC_ST_SEARCH                                     1
+#define AWTO_SYNC_ST_SCAN                                       2
+#define AWTO_SYNC_ST_STABLE                                     3
+#define AWTO_SYNC_ST_MEASURE                                    4
+#define AWTO_SYNC_ST_TIMING                                     5
+#define AWTO_SYNC_ST_DISPLAY                                    6
+#define AWTO_SYNC_ST_ACTIVE                                     7
+#define AWTO_SYNC_ST_NOSIGNAL                                   8
+#define AWTO_SYNC_ST_NOSUPPORT                                  9
+#define AWTO_SYNC_ST_SLEEP                                      10
+#define AWTO_SYNC_ST_OFF                                        11
+#define AWTO_SYNC_ST_FAST                                       12
+#define AWTO_SYNC_ST_INIT                                       13
+// DDCn_EDID_IRQ of the port's DDC channel (regdb: DDC1 FFE5, DDC2 FE69, DDC3 FE72; bit2 SCL toggle, bit0 EDID read, W1C)
+#define AWTO_DDC_IRQ_REG(sel)                                   (((sel) == _DDC1) ? 0xFFE5 : (((sel) == _DDC2) ? 0xFE69 : 0xFE72))
+#define AWTO_DDC_IRQ_D1                                         AWTO_DDC_IRQ_REG(_D1_DDC_CHANNEL_SEL)
+#define AWTO_DDC_IRQ_D2                                         AWTO_DDC_IRQ_REG(_D2_DDC_CHANNEL_SEL)
+#define AWTO_DDC_IRQ_D3                                         AWTO_DDC_IRQ_REG(_D3_DDC_CHANNEL_SEL)
+// Selector rows refresh: a human reads them; 4 Hz (250 ms) shows a switch's stages; expiry = one field compare per port
+#define AWTO_SRC_POLL_MS                                        250
+// DDC live: HDCP 1.4 Ri checks run every 2 s (the slowest regular DDC traffic) x 1.25 = 2.5 s -> 3 s = 12 polls; expiry = "ddc-"
+#define AWTO_SRC_DDC_POLLS                                      12
+extern void AwtoSyncInit(void);
+extern void AwtoSyncBegin(unsigned char ucKind, unsigned char ucPort);
+extern void AwtoSyncPush(unsigned char ucId, unsigned char ucArg, unsigned long ulVal);
+extern void AwtoSyncSw(unsigned char ucId, unsigned char ucArg);
+extern void AwtoSyncDetect(unsigned char ucPort, unsigned char ucKind, unsigned char ucPre, unsigned char ucType);
+extern void AwtoSyncTiming(void);
+extern void AwtoSyncFreq(void);
+extern void AwtoSyncPoll(void);
+extern unsigned char AwtoSyncRow(unsigned char ucId, unsigned char ucArg);
+extern unsigned char AwtoSyncStage(unsigned char ucPort);
+extern unsigned char AwtoDdcLive(unsigned char ucI);
+extern unsigned long AwtoTmdsIdleKhz(unsigned char ucPage);
+#define AWTO_SYNC_SW(id, arg)                                   AwtoSyncSw((id), (arg))
+extern __xdata unsigned char g_ucAwtoSyncPwr;
+#define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
+extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
+extern void AwtoOsdSyncPoll(void);
+extern void AwtoConLogSync(void);
+// per pass: call only with work to do (console open, auto-open pending, selector open); a call every pass costs loop rate (#139)
+#define AWTO_OSD_SYNC_POLL()                                    { if((g_stAwtoSync.ucOpenReq != 0) || AWTO_KEY_TEST_ON() || \
+                                                                     (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)) { AwtoOsdSyncPoll(); } }
+#else
+#define AWTO_OSD_SYNC_POLL()
+#define AWTO_SYNC_SW(id, arg)
+#define AwtoSyncInit()
+#define AwtoSyncBegin(k, p)
+#define AwtoSyncDetect(p, k, a, t)
+#define AwtoSyncTiming()
+#define AwtoSyncFreq()
+#define AwtoSyncPoll()
+#define AWTO_SYNC_POLL()
+#endif
 #define AWTO_LOGO_COLS                                          95      // boot/held logo grid (scripts/osd_logo_big.py --cols/--rows; 2x OSD scale, #63)
 #define AWTO_LOGO_ROWS                                          58
 // Fast boot (#63, Dan's panel policy 2026-11-07): no waits for the DDR / VCCK rails our board never switches (D026 200 ms,
