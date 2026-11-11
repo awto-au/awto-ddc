@@ -513,7 +513,9 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     m.stub("ScalerTMDSNormalPreDetect", lambda m, r: {"carry": (r["a1"] & 255) == src})
     if getattr(m, "hle", True):                          # constant results: patched code, no breakpoint (--no-hle: stubs)
         m.patch_const("ScalerTMDSStableDetect", 1)
-        m.patch_const("ScalerSyncDpCheckUrgentHotPlugEventExist", 0)     # no DP source: pending HPD events never end
+        # Some optimized builds omit this DP-only helper entirely.
+        if "_ScalerSyncDpCheckUrgentHotPlugEventExist" in m.sym:
+            m.patch_const("ScalerSyncDpCheckUrgentHotPlugEventExist", 0)  # no DP source: pending HPD events never end
     else:
         m.stub("ScalerTMDSStableDetect", lambda m, r: {"carry": 1})
         m.stub("ScalerSyncDpCheckUrgentHotPlugEventExist", lambda m, r: {"carry": 0})

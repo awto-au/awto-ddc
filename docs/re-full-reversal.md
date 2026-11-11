@@ -29,7 +29,7 @@ Tracking: awto-ddc#1 (umbrella) and the "Full reversal" issue (see bottom). Conf
 - Result: 464 types under `/SDK` (368 enums, 96 struct/union; every `Struct*` typedef of the build). All 7 programs get them.
 - Layout model = Keil C51 data layout: awto-sdcc `docs/keil-c51.md` ("Data layout").
 - Bit fields are NOT split: consecutive bit fields pack into one `u8`/`u16` member `bf_<first field>`, comment lists the fields.
-  - Bit order: first-declared field = MSB. Evidence: `StructPowerInfoType` byte 0 = `b4PowerAction:4, b4PowerStatus:4`; vendor code tests `g_stPowerInfo.bf_b4PowerAction >> 4 == 3` (bank1 0x0003 thunk target region), i.e. PowerAction is the high nibble [fw].
+  - Bit order: Keil C51 packs first-declared fields from bit 0 (LSB-first), confirmed by the phase-3 vendor checks and later Keil probes. `StructPowerInfoType` therefore has `b4PowerAction[3:0]` and `b4PowerStatus[7:4]`; see `scripts/ghidra_sdk_types.py` and `re/jxc-4k/sdk_types.tsv`.
 - Caveat: struct bodies follow OUR port config (`#if` of the RL6449 project defaults); the vendor build can have extra/missing fields. Sizes are only checked where the anchored address map agrees.
 - Enums are datatypes only; no equates applied to constants yet.
 - Applying a type to a variable: a `var:<TypeName>` row (column 3) in a names TSV, or a row in `ghidra_globals_hand.tsv` (`type` column: `u8 s8 u16 s16 u32 s32 ptr3 f32`, a type name from `sdk_types.tsv`, `[n]` suffix for arrays).

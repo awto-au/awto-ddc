@@ -23,6 +23,7 @@ from sdcc_overlay import repo_root
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
 SILENT_S = {"h1080": 480, "h2160": 480, "menu": 480, "ddc": 480}   # health --sim prints only at the end: 3x its cold 160 s (2026-11-07); menu/ddc boot silently first
+LIMIT_OF = {"menu": 2700}   # menu walk with --png ~900 s (16 pages, 2026-11-08, ui5): 3x
 LIMIT_S = 900         # backstop: 3x the slowest gate seen (health --sim 2160p60 ~ 5 min cold, 2026-11-07)
 PY = [sys.executable, "-u"]
 
@@ -63,7 +64,7 @@ def run(name, cmd, out: Path, res: dict, log):
             while p.poll() is None:
                 now = time.monotonic()
                 stall = SILENT_S.get(name, STALL_S)
-                if now - last[0] > stall or now - t0 > LIMIT_S:
+                if now - last[0] > stall or now - t0 > LIMIT_OF.get(name, LIMIT_S):
                     why = "stall" if now - last[0] > stall else "limit"
                     log(f"{name}: KILL ({why}) after {now - t0:.0f}s, silent {now - last[0]:.0f}s, last: {last[1][:160]!r}, "
                         f"loadavg {os.getloadavg()[0]:.1f}")

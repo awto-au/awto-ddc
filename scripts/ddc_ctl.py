@@ -113,6 +113,9 @@ def main():
     b.add_argument("value", type=int)
     b.add_argument("--monitor", default="all")
     sub.add_parser("get").add_argument("code")
+    s = sub.add_parser("set")
+    s.add_argument("code")
+    s.add_argument("value", type=lambda value: int(value, 0))
     a = ap.parse_args()
 
     i2cbus.dev_hint("ddc", "ddc_ctl.py")
@@ -133,6 +136,10 @@ def main():
             r = getvcp(m, a.code)
             print(f"{m['connector']:16} bus={m['bus']:<3} {r[2] if r else 'ERROR'}")
         return 0
+    if a.cmd == "set":
+        if not 0 <= a.value <= 0xffff:
+            ap.error("set value must be 0..65535")
+        return 0 if all(setvcp(m, a.code, a.value) for m in mons) else 1
     sel = select(mons, a.monitor)
     if not sel:
         return 2

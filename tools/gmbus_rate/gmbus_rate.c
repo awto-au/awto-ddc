@@ -5,7 +5,7 @@
 #include <linux/i2c.h>
 #include <linux/string.h>
 
-// reg0 offset in struct intel_gmbus, i915 7.2.15-300.fc45 (pahole BTF): 1100.
+// reg0 offset in struct intel_gmbus (pahole -C intel_gmbus /sys/kernel/btf/i915): 1100.
 // adapter is the first member (size 1096), so the bus pointer == the adapter.
 #define GMBUS_REG0_OFF		1100
 #define GMBUS_ADAPTER_SIZE	1096
