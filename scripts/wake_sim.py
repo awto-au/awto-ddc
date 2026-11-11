@@ -16,6 +16,7 @@ usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
 PNG: <out>/wake_cable_console.png (console after the cable wake). Log: tmp/logs/wake_sim.log
 """
 import argparse
+import re
 import sys
 import time
 from pathlib import Path
@@ -204,6 +205,9 @@ class Run:
 
     def poll_period(self):
         """#144: the wake poll in power saving runs every AWTO_PS_POLL_MS (counter + longest gap, test readouts)."""
+        if not re.search(r"\s_g_usAwtoPsGap\b", self.m.map_text):     # XDATA symbol: in the map, not in m.sym (code)
+            say("  SKIP poll period: image without g_usAwtoPsGap (pre-tmds image)")
+            return
         self.check(self.sleep(), "poll period: power saving reached")
         pa, ga = self.m.addr("g_usAwtoPsPolls"), self.m.addr("g_usAwtoPsGap")
         n0, t0 = int.from_bytes(self.m.rd(pa, 2), "big"), self.t2()
@@ -296,14 +300,18 @@ def main():
                     BOUND_LATCH_MS)
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
         r.poll_period()
-        r.fd.set_clock(r.m, 0x71, None)             # freq detector model on, no clock on D2 / D3
-        r.wake_case("D3 TMDS clock, no cable on D3", lambda: r.fd.set_clock(r.m, 0x72, 148_500), None, 0)
-        r.fd.set_clock(r.m, 0x72, None)
-        r.wake_case("D2 TMDS clock", lambda: r.fd.set_clock(r.m, 0x71, 148_500), "D2 wake by TMDS clock, about 148.", BOUND_TMDS_MS)
-        r.wake_case("D2 TMDS clock still on (no picture since)", lambda: None, None, 0)
-        r.check(any("wake suppressed (TMDS clock, once per sleep): D2" in x for x in r.lines()), "TMDS repeat: suppressed",
-                str([x for x in r.lines() if "suppressed" in x]))
-        r.fd.set_clock(r.m, 0x71, None)
+        if "_AwtoPsTmdsLive" not in r.m.sym:
+            say("  SKIP TMDS clock cases: image without AwtoPsTmdsLive (pre-tmds image)")
+        else:
+            r.fd.set_clock(r.m, 0x71, None)         # freq detector model on, no clock on D2 / D3
+            r.wake_case("D3 TMDS clock, no cable on D3", lambda: r.fd.set_clock(r.m, 0x72, 148_500), None, 0)
+            r.fd.set_clock(r.m, 0x72, None)
+            r.wake_case("D2 TMDS clock", lambda: r.fd.set_clock(r.m, 0x71, 148_500), "D2 wake by TMDS clock, about 148.",
+                        BOUND_TMDS_MS)
+            r.wake_case("D2 TMDS clock still on (no picture since)", lambda: None, None, 0)
+            r.check(any("wake suppressed (TMDS clock, once per sleep): D2" in x for x in r.lines()), "TMDS repeat: suppressed",
+                    str([x for x in r.lines() if "suppressed" in x]))
+            r.fd.set_clock(r.m, 0x71, None)
         if r.pass_ms:
             say(f"  measured, power-saving main-loop pass: {min(r.pass_ms):.2f}..{max(r.pass_ms):.2f} ms")
         d = C.decode(C.read(r.bus, r.caddr))
