@@ -55,8 +55,11 @@ def header(tree):
 def skips(b: Path, m: Path, tree) -> dict:
     """Gates that cannot run on this image: name -> reason (SKIP, not FAIL)."""
     mt = m.read_text(errors="replace")
-    sk = {k: f"image lacks {', '.join(x for x in v if f' {x}' not in mt)}"
-          for k, v in SKIP_IF_MISSING.items() if any(f" {x}" not in mt for x in v)}
+
+    def has(sym):                                  # global ' _X' or, for a static, its area 'CH_X' (no global symbol)
+        return f" {sym}" in mt or f"CH_{sym.lstrip('_')} " in mt
+    sk = {k: f"image lacks {', '.join(x for x in v if not has(x))}"
+          for k, v in SKIP_IF_MISSING.items() if not all(has(x) for x in v)}
     if not header(tree):
         sk.setdefault("crash", "needs --tree with fw/overlay/Project/Header/RL6449_Project.h")
     if not (tree and Path(tree).is_dir()):
