@@ -224,6 +224,27 @@
 - Sim (wd8, D2 source, forced power saving): woke after 905 ms, 'D1 wake by the SDK source detect, not our poll (poll state
   0x00C803: polls 200, cable 011, EDID 000, AUX 0, DPCD D0 0)': the poll ran, no trigger set.
 
+### TMDS-clock wake and the PS poll period (tmds1, #144 q7, Dan 2026-11-12)
+
+- Branch `wb-p14ui-tmds` (worktree `awto-ddc-tmds`), image `AWT26110002-wb-p14ui-tmds1-be`. Build: `AWTO_RTDFW_REPO=/mnt/2tb/git/awto-rtdfw-ui`
+  `wb_build.py ... -D _AWTO_AUDIO_TEST` (the pinned clean ref lacks the ui font symbols; layout = `fw/bank_layout.tsv`, was wdt2 `tmp/layout_sync3.tsv`).
+- Why the poll ran 3 times on unit 2 (wd8): the only wait in a power-saving pass was the SDK's TMDS PS predetect (`ScalerTMDSRx2/3TMDSPSPreDetect`:
+  reset the freq detector, `ScalerTimerDelayXms(5)`, read, disable). Sim wd8: PS pass 24 k instr / 6 ms, 5 of them that wait; console redraws
+  (`AwtoGpioPoll` 93 k instr every 500 ms, `AwtoKeyShow`) the other long passes. Unit 2 PS pass length itself not measured (host_sleep now reads it).
+- tmds1:
+  - SDK TMDS PS predetect without its reset / wait / disable: it reads `AwtoPsTmdsLive` (same criterion); the wake poll owns the detectors in PS.
+  - Wake poll every `AWTO_PS_POLL_MS` 5 ms (rate | why: 200/s | the SDK's own 5 ms freq-measure wait = restart -> read interval; cable debounce 10 ms sampled 2x).
+  - No console / key-panel redraws in power saving (panel off).
+  - TMDS trigger: per HDMI port with a cable: live (E6[7] start, E6[6] done, E6[2] unstable 0, EF[6] stable latched; regdb HDMI_FREQDET_CTRL / ERROR_TH)
+    -> wake `Dn wake by TMDS clock, about x MHz (IOSC reference)` (sync D7; count x 28 MHz IOSC / 1000 ref cycles, +-10 %); else stopped / unstable
+    -> restart (SDK sequence). Once per port per sleep (`wake suppressed (TMDS clock, once per sleep)`, CF 06). Armed at PS entry (restart clears pre-PS latches).
+  - Readouts: `g_usAwtoPsPolls`, `g_usAwtoPsGap` (longest poll-to-poll gap; the arm -> first poll pass is PS entry work, not counted); SDK-wake state bits 25:24 = TMDS live D3 D2.
+- Sim (wake_sim, fast core, 2026-11-12, tmds1): PS pass 1.47..1.56 ms (no waits); poll 84 in 500 ms (5.95 ms), longest gap 6 ms (bound 10);
+  TMDS on D2 -> wake line 15 ms (bound 22: clock up after a restart = 2 polls); D3 clock without a cable: no wake; repeat suppressed.
+  Event -> wake line vs wd8: cable 16 / 22 ms (18 / 29), EDID 9 (13), AUX 6 (9), DPCD 7 (12).
+- Unit 2 open: freq detector of the non-search port in PS (both PHYs keep the clock lane on: `P7B/P7C_1A = 0x80` at NORMAL_TO_PS), the real poll
+  period (host_sleep `wake polls in PS`: host ms vs fw ms shows the PS Timer2 rate), which trigger fires first on host DPMS on.
+
 ### Sync ring in NO SIGNAL (#150)
 
 - Unit 2 wd6, host output off: the ring filled with alternating 'D2 TMDS clock 0.0 MHz detected' / 'D2 signal lost' (every

@@ -46,6 +46,7 @@ GDBUS_S = 5                                # one D-Bus call (~0.1 s); 5 s backst
 DPMS_S = 3.0                               # connector dpms follows PowerSaveMode in < 1 s (mutter modeset); x3; expiry -> state logged
 # host off -> power saving with test cmd 0x39 (#78 L3 at 20 s) + NOSIGNAL judge 1 s + SDK go-to-PS 2 s = 23 s x 1.25 -> 29 s
 PS_S = 29.0
+PS_POLL_S = 2.0       # wake-poll sample in power saving: 400 polls at AWTO_PS_POLL_MS 5; fw ms vs host ms shows the PS Timer2 rate
 # host on -> ACTIVE: measured 863 ms from NOSIGNAL (wd6); from power saving add the #144 wake + boot of the panel path ~2 s;
 # 3 s x 1.25 -> 4 s, plus the 5 s monitor-return rule -> 9 s
 WAKE_S = 9.0
@@ -573,6 +574,23 @@ class Runner:
             time.sleep(0.05)
         return st
 
+    def ps_polls(self) -> str:
+        """#144 wake poll in power saving over PS_POLL_S of host time: count, fw ms (Timer2 vs host clock), period, longest gap"""
+        import dbg_xdata as X
+        pa, ga = (C.site_addr(self.t.map_text, s) for s in ("g_usAwtoPsPolls", "g_usAwtoPsGap"))
+        if pa is None:
+            return "wake polls: image lacks g_usAwtoPsPolls"
+        rd = lambda a: (lambda b: None if b is None else b[0] << 8 | b[1])(X.read_bytes(self.t.io, a, 2))
+        n0, f0, h0 = rd(pa), self.t.uptime_ms(), time.monotonic()
+        self.t.wait(PS_POLL_S)
+        n1, f1, h1 = rd(pa), self.t.uptime_ms(), time.monotonic()
+        gap = rd(ga) if ga is not None else None
+        if None in (n0, n1, f0, f1):
+            return f"wake polls: read failed ({n0}, {n1}, {f0}, {f1})"
+        dn, df, dh = (n1 - n0) & 0xFFFF, (f1 - f0) & 0xFFFF, round((h1 - h0) * 1000)
+        per = f"{dh / dn:.1f} ms" if dn else "none"
+        return f"wake polls in PS {n1}: {dn} in {dh} ms host / {df} ms fw (period {per}), longest gap {gap} ms fw"
+
     def c_host_sleep(self):
         """host monitors asleep -> unit 2 NOSIGNAL -> power saving (short #78 hold timeouts, test cmd 0x39) -> host awake:
         wake trigger line, time to ACTIVE, no bite, max poke gap"""
@@ -599,12 +617,7 @@ class Runner:
                 if md is not None and md not in seen:
                     seen[md] = time.monotonic() - t0
                 if md == 6:
-                    self.t.wait(2.0)                      # some wake polls in power saving, then their count (test readout)
-                    pa = C.site_addr(self.t.map_text, "g_usAwtoPsPolls")
-                    if pa is not None:
-                        import dbg_xdata as X
-                        b = X.read_bytes(self.t.io, pa, 2)
-                        txt.append(f"wake polls in PS {b[0] << 8 | b[1] if b else '?'}")
+                    txt.append(self.ps_polls())
                     break
                 time.sleep(0.2)
             txt.append("modes " + ", ".join(f"{S_MODES.get(k, k)} {v:.1f} s" for k, v in seen.items()))
@@ -623,7 +636,7 @@ class Runner:
                 time.sleep(0.05)
             txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
             ok &= t_act is not None
-            wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by the SDK" in ln]
+            wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
             same, why = self.same_boot(d0, None, time.monotonic())
             d1 = self.rec()

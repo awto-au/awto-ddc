@@ -7,8 +7,12 @@ usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
   D2 unplug (wake, "D2 cable unplugged: wake", #138 task 6), D2 plug (wake, "D2 cable plugged in: wake"), sleep with every
   cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
   D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (wake), DPCD 600h = D0 (wake).
+- PS wake-poll period (g_usAwtoPsPolls over 500 ms, longest gap g_usAwtoPsGap) against AWTO_PS_POLL_MS.
+- TMDS clock (#144 q7): on D3 without a cable (no wake), on D2 (wake, "D2 wake by TMDS clock"), still on after re-sleep
+  (suppressed, once per sleep).
 - Measured: edge -> wake line (fw ms), wake line -> console drawn / backlight on (ring), PS main-loop pass time.
-- Sim devices: W1C on the latches (DDCn_EDID_IRQ bit0, AUX_IRQ_STATUS bit0), cable pins (low = cable), DPCD port memory.
+- Sim devices: W1C on the latches (DDCn_EDID_IRQ bit0, AUX_IRQ_STATUS bit0), cable pins (low = cable), DPCD port memory,
+  FreqDet (HDMI freq detector P71 / P72, off until the TMDS cases).
 PNG: <out>/wake_cable_console.png (console after the cable wake). Log: tmp/logs/wake_sim.log
 """
 import argparse
@@ -30,10 +34,18 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wake_sim.log"
 PWR_NORMAL, PWR_SAVING, MODE_NOSIGNAL = 2, 3, 5     # Global.h EnumPowerStatus, MODE_NAMES
 D2_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE69, 0xBADC, 0x000600
+PS_POLL_MS = 5          # RL6449_Project.h AWTO_PS_POLL_MS
+IOSC_KHZ = 28_000       # freq-detect reference in power saving (_INTERNAL_OSC_XTAL)
 # Event -> wake line (firmware ms). Cable: detection every AWTO_SLOW_MS 10 ms + SDK 10 ms debounce re-read + 1 PS pass
 # (8 ms worst, measured below) = 28 ms, x1.25 -> 35 ms. Latches / DPCD: 1 PS pass 8 ms + this test's sample step 2 ms
 # + 1 ms tick = 11 ms, x1.25 -> 13 ms. Over = FAIL.
 BOUND_CABLE_MS, BOUND_LATCH_MS = 35, 13
+# TMDS: the clock comes up after the last restart -> unstable latched -> restart at the next poll -> stable at the one after:
+# 2 x (poll 5 ms + PS pass 2 ms) + sample 2 ms + 1 ms tick = 17 ms, x1.25 -> 22 ms.
+BOUND_TMDS_MS = 22
+# Poll gap: AWTO_PS_POLL_MS 5 + one PS pass (2 ms worst, measured below) + 1 ms tick = 8 ms, x1.25 -> 10 ms. Over = FAIL.
+BOUND_POLL_GAP_MS = 10
+POLL_WINDOW_MS = 500    # PS poll period sample: 100 polls at 5 ms
 QUIET_MS = 1000         # no-wake checks: 1 s = 50x the latch bound; a wake would show well inside it
 SLEEP_SETTLE_MS = 300   # after the forced power saving: power-down switch done, wake triggers armed
 STEP = 20_000           # instructions per sample (~0.3-1 ms of fw time)
@@ -46,13 +58,67 @@ def say(s):
     print(s, flush=True)
 
 
+class FreqDet(S.Dev):
+    """HDMI freq detector of P71 (D2) / P72 (D3) in power saving (regdb HDMI_FREQDET_CTRL E6, ERROR_TH EF, result ED/EE):
+    off until on(); then per port clock_khz (None = no clock). Started (E6[7]) without a clock: done, unstable latched (count 0
+    is under the lower bound), no_clock. A clock that comes up keeps the latched unstable until its W1C (a restart), after
+    which done, stable latched, result = count. W1C: E6[2], EF[6]."""
+
+    def __init__(self):
+        self.on, self.clk = False, {0x71: None, 0x72: None}
+        self.writes = tuple(p << 8 | r for p in (0x71, 0x72) for r in (0xE6, 0xEF))
+        self.last = {}
+
+    def on_write(self, m, a):
+        if not self.on:
+            return
+        p, r = a >> 8, a & 0xFF
+        v = m.rd(a)[0]
+        if r == 0xE6 and v & 0x04:
+            self.last[p] = "unstable-clear"
+        if r == 0xEF and v & 0x40:
+            self.last[p] = "stable-clear"
+        self.update(m, p, w1c_e6=r == 0xE6 and bool(v & 0x04), w1c_ef=r == 0xEF and bool(v & 0x40))
+
+    def update(self, m, p, w1c_e6=False, w1c_ef=False):
+        b = p << 8
+        e6, ef = m.rd(b | 0xE6)[0], m.rd(b | 0xEF)[0]
+        if w1c_e6:
+            e6 &= ~0x04
+        if w1c_ef:
+            ef &= ~0x40
+        khz = self.clk[p]
+        if e6 & 0x80:                                    # started
+            e6 |= 0x40
+            if khz is None:
+                e6 |= 0x04; ef = (ef & ~0x40) | 0x20
+            else:
+                ef &= ~0x20
+                if not e6 & 0x04:
+                    ef |= 0x40
+                n = int(khz * 1000 / IOSC_KHZ)           # F6[1:0] 0 (1000 reference cycles), E7[6] 0 (no divider)
+                m.put(f"set memory xram 0x{b | 0xED:x} 0x{(n >> 8) & 0xFF:x}")
+                m.put(f"set memory xram 0x{b | 0xEE:x} 0x{n & 0xFF:x}")
+        m.put(f"set memory xram 0x{b | 0xE6:x} 0x{e6 & 0xFF:x}")
+        m.put(f"set memory xram 0x{b | 0xEF:x} 0x{ef & 0xFF:x}")
+        m.flush()
+
+    def set_clock(self, m, p, khz):
+        self.on, self.clk[p] = True, khz
+        for q in (0x71, 0x72):
+            m.put(f"set memory xram 0x{q << 8 | 0xF6:x} 0x0")
+            m.put(f"set memory xram 0x{q << 8 | 0xE7:x} 0x0")
+            self.update(m, q)
+
+
 class Run:
     def __init__(self, a):
         self.a, self.fails = a, 0
         self.model = M.OsdModel()
         self.model.img = a.bin.read_bytes()
         w1c = S.W1C({DDC_D2: 0x01, 0xFFE5: 0x01, 0xFE72: 0x01, 0xB7DC: 0x01, AUX_RX1: 0x01})
-        self.bus = S.SimBus(a.bin, a.map, "wake-" + a.bin.stem, None, boot=False, devs=[self.model, w1c], video=a.mode)
+        self.fd = FreqDet()
+        self.bus = S.SimBus(a.bin, a.map, "wake-" + a.bin.stem, None, boot=False, devs=[self.model, w1c, self.fd], video=a.mode)
         self.m = self.bus.m
         self.diag = T.diag_addr(a.map)
         self.pwr = self.m.addr("g_stPowerInfo")
@@ -136,6 +202,21 @@ class Run:
                     say(f"    trace +{(self.t2() - t0) & 0xFFFF} ms: power {st[0]} mode {st[1]} grid {st[2]}x{st[3]} console {st[4]} osd {st[5]}")
                     last = st
 
+    def poll_period(self):
+        """#144: the wake poll in power saving runs every AWTO_PS_POLL_MS (counter + longest gap, test readouts)."""
+        self.check(self.sleep(), "poll period: power saving reached")
+        pa, ga = self.m.addr("g_usAwtoPsPolls"), self.m.addr("g_usAwtoPsGap")
+        n0, t0 = int.from_bytes(self.m.rd(pa, 2), "big"), self.t2()
+        self.bus.wait(POLL_WINDOW_MS / 1000.0)
+        n1, t1 = int.from_bytes(self.m.rd(pa, 2), "big"), self.t2()
+        gap, ms = int.from_bytes(self.m.rd(ga, 2), "big"), (t1 - t0) & 0xFFFF
+        per = ms / (n1 - n0) if n1 > n0 else None
+        say(f"  measured, power-saving wake poll: {n1 - n0} polls in {ms} ms (period {per and round(per, 2)} ms), "
+            f"longest gap {gap} ms since power saving")
+        self.check(per is not None and PS_POLL_MS <= per <= BOUND_POLL_GAP_MS, f"poll period {PS_POLL_MS}..{BOUND_POLL_GAP_MS} ms",
+                   f"{per and round(per, 2)} ms")
+        self.check(gap <= BOUND_POLL_GAP_MS, f"longest poll gap <= {BOUND_POLL_GAP_MS} ms", f"{gap} ms")
+
     def wake_case(self, name, inject, want, bound):
         ok = self.sleep()
         self.check(ok, f"{name}: power saving reached")
@@ -154,7 +235,7 @@ class Run:
         self.check(woke, f"{name}: woke (power target / status NORMAL)", f"seen after {ms} ms (test sampling)" if woke else "no wake")
         self.watch(1500)                            # console + panel on, search: the ring has the follow-up lines
         ev = self.ring_events()
-        hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE, 0xD3)]
+        hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE, 0xD3, 0xD7)]
         lat = ((hit[-1][2] - t_inj) & 0xFFFF) if hit else None
         self.check(lat is not None and lat <= bound, f"{name}: event -> wake (firmware wake line) within {bound} ms", f"{lat} ms")
         txt = "\n".join(self.lines())
@@ -214,6 +295,15 @@ def main():
         r.wake_case("DP AUX command", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), "D1 AUX command from source: wake",
                     BOUND_LATCH_MS)
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
+        r.poll_period()
+        r.fd.set_clock(r.m, 0x71, None)             # freq detector model on, no clock on D2 / D3
+        r.wake_case("D3 TMDS clock, no cable on D3", lambda: r.fd.set_clock(r.m, 0x72, 148_500), None, 0)
+        r.fd.set_clock(r.m, 0x72, None)
+        r.wake_case("D2 TMDS clock", lambda: r.fd.set_clock(r.m, 0x71, 148_500), "D2 wake by TMDS clock, about 148.", BOUND_TMDS_MS)
+        r.wake_case("D2 TMDS clock still on (no picture since)", lambda: None, None, 0)
+        r.check(any("wake suppressed (TMDS clock, once per sleep): D2" in x for x in r.lines()), "TMDS repeat: suppressed",
+                str([x for x in r.lines() if "suppressed" in x]))
+        r.fd.set_clock(r.m, 0x71, None)
         if r.pass_ms:
             say(f"  measured, power-saving main-loop pass: {min(r.pass_ms):.2f}..{max(r.pass_ms):.2f} ms")
         d = C.decode(C.read(r.bus, r.caddr))
