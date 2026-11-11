@@ -1,0 +1,186 @@
+// #138: WD-timer protocol events (DP rebuild PHY, HDMI RR retry) on Timer0, so the WD counter is only a watchdog (docs/watchdog.md).
+// Appended to ScalerCommonTimerFunction.c (fw/awto/wdt/rules.py); the SDK's WD-timer block there is #if 0. Same function names.
+// 1 ms ticks while an event is pending. Timer0 counts what Timer2 counts (same MCU clock, both /12: SDK _TIMER01_* = _TIMER2_*).
+#if((_SYSTEM_LOW_POWER_IDLE_SUPPORT == _ON) || (_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON))
+#error "awto_t0ev: RCAP2 is not one 1 ms Timer2 period in this configuration"
+#endif
+#if((_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON) && (_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON))
+#error "awto_t0ev: Type-C PD WD events (re-armed from their handler) are not ported"
+#endif
+
+static __xdata WORD s_pusAwtoT0Ms[_SCALER_WD_TIMER_EVENT_COUNT];   // ms left per event ID (0 = idle; ID 0 is INVALID)
+
+// Timer0 = one 1 ms tick from now at the current clock (Timer2's reload)
+#define AWTO_T0EV_START()               do { TR0 = 0; TL0 = RCAP2L; TH0 = RCAP2H; TF0 = 0; TR0 = 1; } while(0)
+// Re-arm restarts. Timer0 already running: +1 tick when the current tick is past half -> fires within +-0.5 ms of usMs.
+#define AWTO_T0EV_ARM(usMs, ucId)       do { if(TR0 == 0) { AWTO_T0EV_START(); s_pusAwtoT0Ms[(ucId)] = (usMs); } \
+                                             else { s_pusAwtoT0Ms[(ucId)] = (usMs) + ((((WORD)(BYTE)(TH0 - RCAP2H)) << 1) >= (WORD)(0x100 - RCAP2H)); } } while(0)
+
+void ScalerTimerWDInitial(void)                 // ScalerMcuInitial (TMOD 0x11: Timer0 16 bit; PT0 = 0: low priority, as the WD IRQ)
+{
+    TR0 = 0;
+    TF0 = 0;
+    ET0 = 1;
+
+    // WD counter: SDK timer mode, threshold 0xFFF (586 ms), IRQ on EXINT2 (cleared in ScalerTimerWDEventProc_WDINT)
+    MCU_FFC4_IRQ_PRIORITY_3 = (MCU_FFC4_IRQ_PRIORITY_3 & ~(_BIT5 | _BIT4 | _BIT3)) | _BIT4;
+    EX2 = 1;
+    MCU_FFB0_WATCHDOG_TIMER_H_THRESHOLD_MASK = (MCU_FFB0_WATCHDOG_TIMER_H_THRESHOLD_MASK & 0x0F) | 0xF0;
+    MCU_FFAE_WATCHDOG_TIMER_THRESHOLD = 0xFF;
+    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT4;
+    MCU_FFEA_WATCHDOG_TIMER |= _BIT6;
+    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT7;
+    MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT2;
+}
+
+void ScalerTimerWDEventProc_WDINT(void)         // WD IRQ: no events left on it, so the SDK's idle path only (clear at the threshold)
+{
+    if((MCU_FFEB_WDT_TEST & (_BIT7 | _BIT2)) == (_BIT7 | _BIT2))
+    {
+        MCU_FFEA_WATCHDOG_TIMER |= _BIT6;
+        MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT7;
+    }
+}
+
+void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventID enumEventID)
+{
+    // EXINT0: Timer0 (same or lower priority) cannot preempt; Timer2 does not touch the table
+    if((enumEventID != _SCALER_WD_TIMER_EVENT_INVALID) && (enumEventID < _SCALER_WD_TIMER_EVENT_COUNT))
+    {
+        AWTO_T0EV_ARM((usTime != 0) ? usTime : 1, enumEventID);
+    }
+}
+
+void ScalerTimerWDCancelTimerEvent(EnumScalerWDTimerEventID enumEventID)
+{
+    if(enumEventID < _SCALER_WD_TIMER_EVENT_COUNT)
+    {
+        __critical
+        {
+            s_pusAwtoT0Ms[enumEventID] = 0;     // 2-byte write: EXINT0 / Timer0 must not see half of it
+        }
+    }
+}
+
+#if((_DP_SUPPORT == _ON) || ((_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON) && (_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON)))
+void ScalerTimerWDCancelTimerEvent_EXINT0(EnumScalerWDTimerEventID enumEventID)
+{
+    if(enumEventID < _SCALER_WD_TIMER_EVENT_COUNT)
+    {
+        s_pusAwtoT0Ms[enumEventID] = 0;
+    }
+}
+#endif
+
+void AwtoT0EvFire(EnumScalerWDTimerEventID enumEventID)     // the SDK's WD event switch; Timer0 ISR context
+{
+    switch(enumEventID)
+    {
+#if(_D0_DP_EXIST == _ON)
+        case _SCALER_WD_TIMER_EVENT_RX0_DP_LINK_TRAINING_REBUILD_PHY:
+            ScalerDpWDTimerEventProc_WDINT(enumEventID);
+            break;
+#endif
+#if(_D1_DP_EXIST == _ON)
+        case _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY:
+            ScalerDpWDTimerEventProc_WDINT(enumEventID);
+            break;
+#endif
+#if(_HDMI_2_0_SUPPORT == _ON)
+        case _SCALER_WD_TIMER_EVENT_RX0_HDMI_RR_RETRY:
+        case _SCALER_WD_TIMER_EVENT_RX1_HDMI_RR_RETRY:
+        case _SCALER_WD_TIMER_EVENT_RX2_HDMI_RR_RETRY:
+        case _SCALER_WD_TIMER_EVENT_RX3_HDMI_RR_RETRY:
+        case _SCALER_WD_TIMER_EVENT_RX4_HDMI_RR_RETRY:
+        case _SCALER_WD_TIMER_EVENT_RX5_HDMI_RR_RETRY:
+            ScalerTMDSHdmiReadRequestTimerEnable_WDINT(_ENABLE);
+            break;
+#endif
+#if((_DP_HDCP_2_2_SUPPORT == _ON) && (_D0_DP_EXIST == _ON))
+        case _SCALER_WD_TIMER_EVENT_DP_RX0_HDCP2_SKE:
+            ScalerDpRx0Hdcp2SkeProc_WDINT();
+            break;
+#endif
+#if((_DP_HDCP_2_2_SUPPORT == _ON) && (_D1_DP_EXIST == _ON))
+        case _SCALER_WD_TIMER_EVENT_DP_RX1_HDCP2_SKE:
+            ScalerDpRx1Hdcp2SkeProc_WDINT();
+            break;
+#endif
+        default:
+            break;
+    }
+}
+
+void AwtoT0EvIsr(void)                          // SysTimerIntProc0: one 1 ms tick
+{
+    BYTE ucId;
+    BYTE ucDue;
+    WORD usT;
+
+    TR0 = 0;                                    // next tick 1 ms after the overflow: keep the counts since it (ISR latency)
+    usT = ((((WORD)TH0) << 8) | TL0) + ((((WORD)RCAP2H) << 8) | RCAP2L);
+    TL0 = (BYTE)usT;
+    TH0 = (BYTE)(usT >> 8);
+    TR0 = 1;
+    for(ucId = 1; ucId < _SCALER_WD_TIMER_EVENT_COUNT; ucId++)
+    {
+        EA = 0;                                 // EXINT0 is high priority in power saving (IP 0x81) and arms
+        ucDue = (s_pusAwtoT0Ms[ucId] != 0) && (--s_pusAwtoT0Ms[ucId] == 0);
+        EA = 1;
+        if(ucDue != 0)
+        {
+            AwtoT0EvFire(ucId);                 // handlers run with interrupts on (rebuild PHY ~1 ms)
+        }
+    }
+    EA = 0;
+    for(ucId = 1; (ucId < _SCALER_WD_TIMER_EVENT_COUNT) && (s_pusAwtoT0Ms[ucId] == 0); ucId++)
+    {
+    }
+    if(ucId == _SCALER_WD_TIMER_EVENT_COUNT)
+    {
+        TR0 = 0;                                // nothing pending: no ticks
+    }
+    EA = 1;
+}
+
+void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCount (every MCU clock switch): restart the tick
+{
+    __critical
+    {
+        if(TR0 != 0)
+        {
+            AWTO_T0EV_START();                  // a partial tick at the old clock would run up to (old / new clock) ms
+        }
+    }
+}
+
+#if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
+// Test cmd 0x2A + n (sim: wdt_sim.py events), armed through the same macro: 0 DP rebuild 30 ms, 1 / 2 HDMI RR D2 / D3 10 ms,
+// 3 = 0 + 1 pending together, 4 / 5 = 0 / 1 with a forced Timer2 reload to the power-saving count and back while pending.
+void AwtoT0EvTest(BYTE ucHow)
+{
+    EnumScalerWDTimerEventID enumId = ((ucHow == 0) || (ucHow == 4)) ? _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY :
+                                      (ucHow == 2) ? _SCALER_WD_TIMER_EVENT_RX3_HDMI_RR_RETRY : _SCALER_WD_TIMER_EVENT_RX2_HDMI_RR_RETRY;
+    BYTE ucMs = (enumId == _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY) ? 30 : 10;
+
+    if(ucHow > 5)
+    {
+        return;
+    }
+    __critical
+    {
+        AWTO_T0EV_ARM(ucMs, enumId);
+        if(ucHow == 3)
+        {
+            AWTO_T0EV_ARM(30, _SCALER_WD_TIMER_EVENT_RX1_DP_LINK_TRAINING_REBUILD_PHY);
+        }
+    }
+    if(ucHow >= 4)
+    {
+        ScalerTimerDelayXms(ucMs / 6);
+        ScalerTimerSetTimerCount(_TIMER_OPERATION_POWER_SAVING_MODE);
+        ScalerTimerDelayXms(ucMs / 3);
+        ScalerTimerSetTimerCount(_TIMER_OPERATION_POWER_NORMAL_MODE);
+    }
+}
+#endif

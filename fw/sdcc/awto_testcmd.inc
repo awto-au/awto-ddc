@@ -2,7 +2,7 @@
 // #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34).
 // 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
 // 0x26 debug pop-up held, 0x27 clear all holds (0x21 / 0x24 / 0x25 were the boot logo, #144). #60: 0x31..0x33 switch to D1..D3 (fixed port),
-// 0x30 auto search, 0x40 settings defaults (#67). 0x50+n directly holds EnumOSDDispMsg n for visual review.
+// 0x30 auto search, 0x40 settings defaults (#67). 0x50+n directly holds EnumOSDDispMsg n for visual review. 0x2A..0x2F Timer0 events (#138).
 // Inserted into RTD2014Key.c (OSD macros).
 #define AWTO_HOLD_POPUP                         0x02
 
@@ -72,6 +72,10 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd >= 0x4C) && (ucCmd <= 0x4E))         // #131 watchdog test hangs: 4C spin, 4D spin in a wait, 4E spin with EA off
     {
         AwtoWdtHang(ucCmd - 0x4C);
+    }
+    else if((ucCmd >= 0x2A) && (ucCmd <= 0x2F))         // #138 Timer0 events: 2A DP rebuild 30 ms, 2B/2C HDMI RR D2/D3 10 ms,
+    {                                                   // 2D 2A+2B, 2E/2F = 2A/2B across a forced clock-switch reload
+        AwtoT0EvTest(ucCmd - 0x2A);
     }
 #endif
     else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)

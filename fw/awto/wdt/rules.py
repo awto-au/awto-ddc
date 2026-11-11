@@ -29,4 +29,17 @@ SUBS = [
     (TMR, r"(bit ScalerTimerPollingFlagProc\(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess\)\n\{.*?usTimeElapsed\+\+;)", _feed, 1),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerTimerFunction.c",
      r"(bit ScalerTimerWaitForEvent\(EnumWaitEventType enumEvent\)\n\{.*?usTimeElapsed\+\+;)", _feed, 1),
+    # #138: WD-timer events -> Timer0 (fw/sdcc/awto_t0ev.inc, same function names; call sites unchanged). SDK block off,
+    # its table gone, ours appended at the end of the file: no line before it moves.
+    (TMR, r"#if\(_WD_TIMER_INT_SUPPORT == _ON\)(\n//-+\n// Description  : Watch Dog Timer Initial)",
+     r"#if 0  // [keil2sdcc] sub #138: WD-timer functions in fw/sdcc/awto_t0ev.inc\1", 1),
+    (TMR, r"StructWDTimerEventType g_pstWDTimerEvent\[_WD_TIMER_EVENT_COUNT\];",
+     "// awto #138: event table in awto_t0ev.inc  // [keil2sdcc] sub", 1),
+    (TMR, r"(    ScalerTimerDelayXms\(ScalerTimerGetEventRemainTime\(enumEventID\)\);\n    ScalerTimerCancelTimerEvent\(enumEventID\);\n\}\n)",
+     lambda m: m.group(1) + (_SHIM / "awto_t0ev.inc").read_text(), 1),
+    # every Timer2 reload (MCU clock switch): restart the pending Timer0 tick at the new clock
+    (TMR, r"(    // Run Timer2\n    TR2 = _ON;)", lambda m: m.group(1) + " AwtoT0EvClock();  // [keil2sdcc] sub #138", 1),
+    ("Kernel/System/Code/SysTimer.c",
+     r"(void SysTimerIntProc0\(void\)[^\n]*\n\{\n    // Backup for Burst Write Bug\n    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR;)",
+     lambda m: m.group(1) + " AwtoT0EvIsr();  // [keil2sdcc] sub #138", 1),
 ]
