@@ -672,9 +672,7 @@ void set_ap_debug_popup(BYTE ucId, int iV)
 {
     ucId = ucId;
     iV = iV;
-    menu_close();
-    g_stAwtoDiag.ucDbgPopup = 1;
-    SET_OSD_EVENT_MESSAGE(_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG);
+    AwtoDiagConsole(1);                            // closes the menu; was the info pop-up hook (ucDbgPopup), gone with #124
 }
 
 void set_ap_key_test(BYTE ucId, int iV)

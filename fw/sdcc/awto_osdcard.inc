@@ -1,143 +1,14 @@
-// AWTO user-facing OSD cards and the source selector. Inserted into RTD2014OsdDisplay.c after awto_dbgpop.inc (its text layer).
-// - Cards: AWTO mark + one line, SDK proportional font (#124 moves them to the text layer).
-// - Source selector (#134): text rows on the awto text layer, one per board port + Auto, awto menu look.
+// AWTO user-facing OSD screens on the awto text layer (awto_dbgpop.inc helpers, menu font and colours), inserted into
+// RTD2014OsdDisplay.c after awto_dbgpop.inc. The SDK timers and OSD states drive them as before; only the drawing is ours.
+// - Message cards (#124): OsdDispOsdMessage (the SDK body is removed by keil2sdcc), incl. the DOWN / ACTIVE input-info card.
+// - Source selector (#134): one row per board port + Auto.
 #if((_AWTO_DIAG != _ON) || !defined(_AWTO_NEW_SETTINGS))
 #error "awto_osdcard.inc draws on the awto text layer (awto_dbgpop.inc, _AWTO_NEW_SETTINGS)"
 #endif
-extern BYTE *g_pucShowNumberAddress;
-
-static BYTE s_pucAwtoCard[28];
-static BYTE s_ucAwtoCardLen;
-static BYTE s_ucAwtoCardSrc;
-
-static void AwtoCardGlyph(BYTE ucG)
-{
-    if(s_ucAwtoCardLen < 26)
-    {
-        s_pucAwtoCard[s_ucAwtoCardLen++] = ucG;
-    }
-}
-
-static void AwtoCardChar(char c)
-{
-    BYTE ucG = _QUERY_;
-
-    if((c >= '0') && (c <= '9'))
-    {
-        ucG = _0_ + (c - '0');
-    }
-    else if((c >= 'A') && (c <= 'Z'))
-    {
-        ucG = _A_ + (c - 'A') + ((c > 'W') ? 1 : 0);
-    }
-    else if((c >= 'a') && (c <= 'z'))
-    {
-        ucG = _a_ + (c - 'a') + ((c > 'w') ? 1 : 0);
-    }
-    else if(c == ' ')
-    {
-        ucG = _;
-    }
-    else if(c == '-')
-    {
-        ucG = _SLINE_;
-    }
-    AwtoCardGlyph(ucG);
-    if((c == 'W') || (c == 'w'))
-    {
-        AwtoCardGlyph(ucG + 1);
-    }
-}
-
-static void AwtoCardLine(BYTE ucRow, BYTE ucColour)
-{
-    s_pucAwtoCard[s_ucAwtoCardLen] = _END_;
-    g_pucShowNumberAddress = s_pucAwtoCard;
-    OsdFuncClearOsd(ROW(ucRow), COL(12), WIDTH(24), HEIGHT(1));
-    OsdPropPutStringCenter(ROW(ucRow), COL(13), WIDTH(22), _PFONT_PAGE_0,
-                           _STRING_SHOW_NUMBER, COLOR(ucColour, _CP_BG), _ENGLISH);
-}
-
-// Copy the code string in the function that names it. On this banked 8051, passing a code pointer to a helper that the
-// linker places in another bank reads unrelated flash bytes and produces garbled text.
-#define AWTO_CARD_LINE(row, text, colour) \
-    do { \
-        s_ucAwtoCardLen = 0; \
-        s_ucAwtoCardSrc = 0; \
-        while((text)[s_ucAwtoCardSrc] != 0) { \
-            AwtoCardChar((text)[s_ucAwtoCardSrc++]); \
-        } \
-        AwtoCardLine((row), (colour)); \
-    } while(0)
-
-static void AwtoCardLogo(void)
-{
-    OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _MENU_INFORMATION);
-    OsdFontPut1BitMainMenuIcon(ROW(2), COL(3),
-                              (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-}
-
-static void AwtoCardPanel(void)
-{
-    AwtoCardLogo();
-    AWTO_CARD_LINE(2, "Panel Uniformity", _CP_BLUE);
-    if(GET_OSD_PANEL_UNIFORMITY() == _ON)
-    {
-        AWTO_CARD_LINE(4, "On", _CP_BLUE);
-    }
-    else
-    {
-        AWTO_CARD_LINE(4, "Off", _CP_BLUE);
-    }
-}
-
-// Return true when this message has been fully rendered as an AWTO card.
-static bit AwtoCardMessage(EnumOSDDispMsg enumMessage)
-{
-    switch(enumMessage)
-    {
-        case _OSD_DISP_NOSIGNAL_MSG:
-        case _OSD_DISP_NOCABLE_MSG:
-        case _OSD_DISP_NOSUPPORT_MSG:
-        case _OSD_DISP_AUTO_CONFIG_MSG:
-        case _OSD_DISP_AUTO_COLOR_MSG:
-        case _OSD_DISP_POWER_SAVING_MSG:
-            break;
-        case _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG:
-            AwtoCardPanel();
-            return _TRUE;
-#if(_FREEZE_SUPPORT == _ON)
-        case _OSD_DISP_DISABLE_FREEZE_MSG:        break;
+#if((_FREEZE_SUPPORT == _ON) || (_DP_MST_SUPPORT == _ON))
+#error "awto_osdcard.inc: no card text for the freeze / DP MST messages"
 #endif
-#if(_DP_MST_SUPPORT == _ON)
-        case _OSD_DISP_MST_WARNING_MSG:           break;
-#endif
-        default:
-            return _FALSE;
-    }
 
-    AwtoCardLogo();
-    // Name each literal here so its bank is the active one.
-    switch(enumMessage)
-    {
-        case _OSD_DISP_NOSIGNAL_MSG:             AWTO_CARD_LINE(3, "No Signal", _CP_BLUE); break;
-        case _OSD_DISP_NOCABLE_MSG:              AWTO_CARD_LINE(3, "No Cable", _CP_BLUE); break;
-        case _OSD_DISP_NOSUPPORT_MSG:            AWTO_CARD_LINE(3, "No Support", _CP_BLUE); break;
-        case _OSD_DISP_AUTO_CONFIG_MSG:           AWTO_CARD_LINE(3, "Auto Adjust", _CP_BLUE); break;
-        case _OSD_DISP_AUTO_COLOR_MSG:            AWTO_CARD_LINE(3, "Auto Colour", _CP_BLUE); break;
-        case _OSD_DISP_POWER_SAVING_MSG:          AWTO_CARD_LINE(3, "Power Saving", _CP_BLUE); break;
-#if(_FREEZE_SUPPORT == _ON)
-        case _OSD_DISP_DISABLE_FREEZE_MSG:        AWTO_CARD_LINE(3, "Freeze Disabled", _CP_BLUE); break;
-#endif
-#if(_DP_MST_SUPPORT == _ON)
-        case _OSD_DISP_MST_WARNING_MSG:           AWTO_CARD_LINE(3, "DP MST Warning", _CP_BLUE); break;
-#endif
-        default: break;
-    }
-    return _TRUE;
-}
-
-//---- source selector (#134) ----
 // Board ports from the PCB config (type = port << 4 | kind). ui_port_state (glue.inc) knows D1..D3 only.
 #if((_D0_INPUT_PORT_TYPE != _D0_NO_PORT) || (_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D6_INPUT_PORT_TYPE != _D6_NO_PORT))
 #error "source selector: ui_port_state (glue.inc) covers D1..D3 only"
@@ -156,22 +27,52 @@ static const __code BYTE tAwtoSrcType[] = {
 };
 #define AWTO_SRC_PORTS      ((BYTE)sizeof(tAwtoSrcType))
 #define AWTO_CARD_COLS      28                  // text cells per card row
-#define AWTO_SRC_STATE_COL  15                  // port state column
-#define AWTO_SRC_ROW0       2                   // first item row: title, one blank row, then the items
+#define AWTO_CARD_ROW0      2                   // first body row: title, one blank row, then the body
+#define AWTO_SRC_STATE_COL  15                  // selector: port state column
+#define AWTO_SRC_ROW0       AWTO_CARD_ROW0
+#define AWTO_INFO_VAL_COL   13                  // info card: value column
 #define AWTO_WIN_FRAME      0                   // window ids as the awto menu (awto-rtdfw ui.c)
 #define AWTO_WIN_INSET      1
 #define AWTO_WIN_TITLE      2
 #define AWTO_WIN_HL         5
 #define AWTO_T_STYLE_DIM    1
 
-// Fixed card texts: one table, read only by AwtoCardTxt (a constant read through a pointer sits in its reader's bank, awto-sdcc#39).
+// Fixed texts: one table, read only by AwtoCardTxt (a constant read through a pointer sits in its reader's bank, awto-sdcc#39).
 #define AWTO_CT_INPUT       0
 #define AWTO_CT_AUTO        1
 #define AWTO_CT_DP          2
 #define AWTO_CT_HDMI        3
 #define AWTO_CT_PORT        4
 #define AWTO_CT_STATE       5                   // + ui_port_state: no cable, no signal, ready, ACTIVE
-static const __code char tAwtoCardS[] = "Input\0Auto select\0DisplayPort\0HDMI \0Input D\0no cable\0no signal\0ready\0ACTIVE\0";
+#define AWTO_CT_AWTO        9
+#define AWTO_CT_NOSIGNAL    10
+#define AWTO_CT_NOCABLE     11
+#define AWTO_CT_NOSUPPORT   12
+#define AWTO_CT_AUTOADJ     13
+#define AWTO_CT_AUTOCOL     14
+#define AWTO_CT_DDCCI       15
+#define AWTO_CT_PSAVE       16
+#define AWTO_CT_PANEL       17
+#define AWTO_CT_ON          18                  // + 1 = Off
+#define AWTO_CT_INFO        20
+#define AWTO_CT_RES         21
+#define AWTO_CT_REFRESH     22
+#define AWTO_CT_HFREQ       23
+#define AWTO_CT_PCLK        24
+#define AWTO_CT_HDCP        25
+#define AWTO_CT_DPLINK      26
+#define AWTO_CT_SWING       27
+#define AWTO_CT_STATUS      28
+#define AWTO_CT_HZ          29                  // + 1 kHz, + 2 MHz
+#define AWTO_CT_OFF         32
+#define AWTO_CT_SINK        33                  // + 1 = repeater
+#define AWTO_CT_LANES       35
+#define AWTO_CT_RBR         36                  // + 1 HBR, + 2 HBR2
+static const __code char tAwtoCardS[] =
+    "Input\0Auto select\0DisplayPort\0HDMI \0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
+    "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
+    "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
+    " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0";
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -190,8 +91,8 @@ static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the compo
     }
 }
 
-// Card frame in the awto menu look (blue frame + title bar on white, the menu font), centred; the OSD stays off until shown.
-static void AwtoCardOpen(BYTE ucLines)
+// Card frame in the awto menu look (blue frame + title bar on white, the menu font), centred, title drawn; the OSD stays off.
+static void AwtoCardOpen(BYTE ucLines, BYTE ucTitle)
 {
     WORD usW, usH;
 
@@ -208,8 +109,35 @@ static void AwtoCardOpen(BYTE ucLines)
     s_ucAwtoCols = AWTO_CARD_COLS;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
+    AwtoCardTxt(ucTitle);
+    AwtoTextLine(0, AWTO_T_STYLE_ONACC);
 }
 
+static void AwtoCardShow(void)
+{
+    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
+    OsdFuncEnableOsd();                         // not osd_tc_show: that would flag the awto menu as open
+}
+
+static void AwtoCardCentre(BYTE ucLine, BYTE ucStyle)   // the composed text, centred on the row
+{
+    BYTE ucN = s_ucAwtoLen - 1;
+    BYTE ucShift = (ucN < AWTO_CARD_COLS - 1) ? ((AWTO_CARD_COLS - ucN) / 2 - 1) : 0;
+    BYTE ucI;
+
+    for(ucI = ucN; ucI != 0; ucI--)
+    {
+        s_pcAwtoRow[ucI + ucShift] = s_pcAwtoRow[ucI];
+    }
+    for(ucI = 1; ucI <= ucShift; ucI++)
+    {
+        s_pcAwtoRow[ucI] = ' ';
+    }
+    s_ucAwtoLen = ucN + 1 + ucShift;
+    AwtoTextLine(ucLine, ucStyle);
+}
+
+//---- source selector (#134) ----
 static BYTE AwtoSrcPort(BYTE ucI)               // selector row 1..n -> input port
 {
     return tAwtoSrcType[ucI - 1] >> 4;
@@ -234,6 +162,50 @@ static BYTE AwtoSrcSel(void)                    // OSD input item -> selector ro
     return 0;
 }
 
+static void AwtoPortName(BYTE ucPort)          // "DisplayPort", "HDMI n" (n-th HDMI port of the board), else "Input Dn"
+{
+    BYTE ucI, ucHdmi = 0;
+
+    for(ucI = 1; ucI <= AWTO_SRC_PORTS; ucI++)
+    {
+        if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_HDMI)
+        {
+            ucHdmi++;
+        }
+        if(AwtoSrcPort(ucI) == ucPort)
+        {
+            if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_DP)
+            {
+                AwtoCardTxt(AWTO_CT_DP);
+                return;
+            }
+            if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_HDMI)
+            {
+                AwtoCardTxt(AWTO_CT_HDMI);
+                AwtoPutNum(ucHdmi, 1);
+                return;
+            }
+            break;
+        }
+    }
+    AwtoCardTxt(AWTO_CT_PORT);
+    AwtoPutNum(ucPort - _D0_INPUT_PORT, 1);
+}
+
+static bit AwtoPortIsDp(BYTE ucPort)
+{
+    BYTE ucI;
+
+    for(ucI = 1; ucI <= AWTO_SRC_PORTS; ucI++)
+    {
+        if(AwtoSrcPort(ucI) == ucPort)
+        {
+            return ((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_DP);
+        }
+    }
+    return 0;
+}
+
 static void AwtoSrcSet(BYTE ucI)
 {
     SET_OSD_INPUT_PORT_OSD_ITEM((ucI == 0) ? _OSD_INPUT_AUTO : AwtoSrcItem(AwtoSrcPort(ucI)));
@@ -242,30 +214,19 @@ static void AwtoSrcSet(BYTE ucI)
 static void AwtoSourceRows(void)                // Auto, then each port with its state; the selection on the bar
 {
     BYTE ucSel = AwtoSrcSel();
-    BYTE ucI, ucSt, ucHdmi = 0;
+    BYTE ucI, ucSt;
 
     osd_tc_bar(AWTO_WIN_HL, 2, (WORD)(AWTO_SRC_ROW0 + ucSel) * osd_rh, (WORD)AWTO_CARD_COLS * osd_cw - 3,
                (WORD)(AWTO_SRC_ROW0 + ucSel + 1) * osd_rh - 1, 1);
     for(ucI = 0; ucI <= AWTO_SRC_PORTS; ucI++)
     {
-        ucSt = 0;
         if(ucI == 0)
         {
             AwtoCardTxt(AWTO_CT_AUTO);
         }
-        else if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_DP)
-        {
-            AwtoCardTxt(AWTO_CT_DP);
-        }
-        else if((tAwtoSrcType[ucI - 1] & 0x0F) == _PORT_HDMI)
-        {
-            AwtoCardTxt(AWTO_CT_HDMI);
-            AwtoPutNum(++ucHdmi, 1);
-        }
         else
         {
-            AwtoCardTxt(AWTO_CT_PORT);
-            AwtoPutNum(AwtoSrcPort(ucI) - _D0_INPUT_PORT, 1);
+            AwtoPortName(AwtoSrcPort(ucI));
         }
         AwtoTextLine(AWTO_SRC_ROW0 + ucI, (ucI == ucSel) ? AWTO_T_STYLE_ONACC : AWTO_T_STYLE_TEXT);
         if(ucI != 0)
@@ -295,12 +256,9 @@ void AwtoSourceOpen(void)
     SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
     OsdFuncSetOsdItemFlag();
     g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-    AwtoCardOpen(AWTO_SRC_ROW0 + AWTO_SRC_PORTS + 2);   // + Auto + pad row (the frame covers the last 2 px)
-    AwtoCardTxt(AWTO_CT_INPUT);
-    AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+    AwtoCardOpen(AWTO_SRC_ROW0 + AWTO_SRC_PORTS + 2, AWTO_CT_INPUT);   // + Auto + pad row (the frame covers the last 2 px)
     AwtoSourceRows();
-    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
-    OsdFuncEnableOsd();
+    AwtoCardShow();
     UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
 }
 
@@ -409,9 +367,179 @@ void AwtoSourceKey(BYTE ucKey)
     }
 }
 
-// Runtime override of the SDK panel-uniformity switch (drawn as an AWTO card).
-bit AwtoPanelCardOverride(void)
+//---- message cards (#124) ----
+static void AwtoInfoLabel(BYTE ucT)
 {
-    AwtoCardPanel();
-    return (g_ucOsdWidth == 36);
+    AwtoCardTxt(ucT);
+    AwtoPutCol(AWTO_INFO_VAL_COL);
+}
+
+static void AwtoInfoTenths(WORD usV)            // SDK 0.1-unit value (no exact measurement yet), as the awto menu shows it
+{
+    AwtoPutNum(usV / 10, 1);
+    AwtoPutChar('.');
+    AwtoPutNum(usV % 10, 1);
+}
+
+// Input information (DOWN, mode ACTIVE): what the SDK pop-up showed, exact frequencies from awto_freq (#34) when measured.
+static void AwtoInfoCard(void)
+{
+    BYTE ucPort = SysSourceGetInputPort();
+    BYTE ucRow = AWTO_CARD_ROW0;
+    BYTE ucV;
+    bit bActive = (SysModeGetModeState() == _MODE_STATUS_ACTIVE);
+    bit bDp = AwtoPortIsDp(ucPort);
+
+    AwtoCardOpen(AWTO_CARD_ROW0 + (bActive ? 6 : 2) + (bDp ? 2 : 0) + 1, AWTO_CT_INFO);
+    AwtoInfoLabel(AWTO_CT_INPUT);
+    AwtoPortName(ucPort);
+    AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+    if(bActive == 0)
+    {
+        AwtoInfoLabel(AWTO_CT_STATUS);
+        AwtoCardTxt(AWTO_CT_STATE + ui_port_state(ucPort - _D1_INPUT_PORT));
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+    }
+    else
+    {
+        AwtoInfoLabel(AWTO_CT_RES);
+        AwtoPutNum(GET_INPUT_TIMING_HWIDTH(), 1);
+        AwtoPutChar('x');
+        AwtoPutNum(GET_INPUT_TIMING_VHEIGHT(), 1);
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+        AwtoInfoLabel(AWTO_CT_REFRESH);
+#if(_AWTO_FREQ == _ON)
+        if(g_stAwtoFreq.ucValid != 0)
+        {
+            AwtoPutMilli(g_stAwtoFreq.ulVFreqmHz);
+        }
+        else
+#endif
+        {
+            AwtoInfoTenths(GET_INPUT_TIMING_VFREQ());
+        }
+        AwtoCardTxt(AWTO_CT_HZ);
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+        AwtoInfoLabel(AWTO_CT_HFREQ);
+#if(_AWTO_FREQ == _ON)
+        if(g_stAwtoFreq.ucValid != 0)
+        {
+            AwtoPutMilli(g_stAwtoFreq.ulHFreqHz);
+        }
+        else
+#endif
+        {
+            AwtoInfoTenths(GET_INPUT_TIMING_HFREQ());
+        }
+        AwtoCardTxt(AWTO_CT_HZ + 1);
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+        AwtoInfoLabel(AWTO_CT_PCLK);
+#if(_AWTO_FREQ == _ON)
+        if(g_stAwtoFreq.ucValid != 0)
+        {
+            AwtoPutMilli(g_stAwtoFreq.ulPclkHz / 1000);
+        }
+        else
+#endif
+        {
+            AwtoInfoTenths(ScalerSyncGetInputPixelClk());
+        }
+        AwtoCardTxt(AWTO_CT_HZ + 2);
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+        AwtoInfoLabel(AWTO_CT_HDCP);
+        ucV = ScalerSyncHdcpCheckEnabled(ucPort);          // 0 = off, else version 0x14 / 0x22 | 0x80 = repeater
+        if(ucV == 0)
+        {
+            AwtoCardTxt(AWTO_CT_OFF);
+        }
+        else
+        {
+            AwtoPutNum((ucV & 0x7F) >> 4, 1);
+            AwtoPutChar('.');
+            AwtoPutNum(ucV & 0x0F, 1);
+            AwtoCardTxt(AWTO_CT_SINK + (((ucV & 0x80) != 0) ? 1 : 0));
+        }
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+    }
+#if(_DP_SUPPORT == _ON)
+    if(bDp != 0)
+    {
+        AwtoInfoLabel(AWTO_CT_DPLINK);
+        AwtoPutNum(ScalerDpGetLaneCount(ucPort), 1);
+        AwtoCardTxt(AWTO_CT_LANES);
+        ucV = ScalerDpGetLinkRate(ucPort);
+        if(ucV == _DP_LINK_RBR)
+        {
+            AwtoCardTxt(AWTO_CT_RBR);
+        }
+        else if(ucV == _DP_LINK_HBR)
+        {
+            AwtoCardTxt(AWTO_CT_RBR + 1);
+        }
+        else if(ucV == _DP_LINK_HBR2)
+        {
+            AwtoCardTxt(AWTO_CT_RBR + 2);
+        }
+        else
+        {
+            AwtoPutHex2(ucV);
+        }
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+        AwtoInfoLabel(AWTO_CT_SWING);
+        for(ucV = _DP_LANE_0; ucV <= _DP_LANE_3; ucV++)  // voltage swing / pre-emphasis level per lane
+        {
+            if(ucV != _DP_LANE_0)
+            {
+                AwtoPutChar(' ');
+            }
+            AwtoPutNum(ScalerDpGetLaneVoltageSwingLv(ucPort, ucV), 1);
+            AwtoPutChar('/');
+            AwtoPutNum(ScalerDpGetLanePreEmpLv(ucPort, ucV), 1);
+        }
+        AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
+    }
+#endif
+    AwtoCardShow();
+}
+
+// Every SDK message card: our text card. Fail-safe = No Support (one warning card); switch DDC/CI port names the input (#114).
+void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)  // replaces the SDK body (keil2sdcc _K124)
+{
+    BYTE ucT;
+
+    OsdDispDisableOsd();
+    if(enumMessage == _OSD_DISP_INPUT_SIGNAL_MSG)
+    {
+        AwtoInfoCard();
+        return;
+    }
+    switch(enumMessage)
+    {
+        case _OSD_DISP_NOSIGNAL_MSG:            ucT = AWTO_CT_NOSIGNAL; break;
+        case _OSD_DISP_NOCABLE_MSG:             ucT = AWTO_CT_NOCABLE; break;
+        case _OSD_DISP_AUTO_CONFIG_MSG:         ucT = AWTO_CT_AUTOADJ; break;
+        case _OSD_DISP_AUTO_COLOR_MSG:          ucT = AWTO_CT_AUTOCOL; break;
+        case _OSD_DISP_SWITCH_DDCCI_PORT_MSG:   ucT = AWTO_CT_DDCCI; break;
+        case _OSD_DISP_POWER_SAVING_MSG:        ucT = AWTO_CT_PSAVE; break;
+        case _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG: ucT = AWTO_CT_PANEL; break;
+        default:                                ucT = AWTO_CT_NOSUPPORT; break;     // no support, fail-safe
+    }
+    AwtoCardOpen(AWTO_CARD_ROW0 + 3, AWTO_CT_AWTO);     // message, second line, pad row
+    AwtoCardTxt(ucT);
+    if(ucT == AWTO_CT_DDCCI)
+    {
+        AwtoPortName(SysSourceGetInputPort());
+    }
+    AwtoCardCentre(AWTO_CARD_ROW0, AWTO_T_STYLE_TEXT);
+    if(ucT == AWTO_CT_PANEL)
+    {
+        AwtoCardTxt(AWTO_CT_ON + ((GET_OSD_PANEL_UNIFORMITY() == _ON) ? 0 : 1));
+        AwtoCardCentre(AWTO_CARD_ROW0 + 1, AWTO_T_STYLE_TEXT);
+    }
+    else if((ucT == AWTO_CT_NOSIGNAL) || (ucT == AWTO_CT_NOCABLE) || (ucT == AWTO_CT_NOSUPPORT))
+    {
+        AwtoPortName(SysSourceGetInputPort());
+        AwtoCardCentre(AWTO_CARD_ROW0 + 1, AWTO_T_STYLE_DIM);
+    }
+    AwtoCardShow();
 }

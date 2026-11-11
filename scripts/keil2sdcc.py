@@ -130,9 +130,6 @@ WRAPS = [
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO0\[\]", r"^\};", LOGO_SDK_DATA),
     (OSD + "RTD2014OsdFontVLC.c", r"^BYTE __code tICON_REALTEK_1BIT_LOGO1\[\]", r"^\};", LOGO_SDK_DATA),
     (OSD + "RTD2014OsdFontVLC.c", r"^\s*case _REALTEK_1BIT_LOGO0:", r"^\s*default:", "_AWTO_DEMO_LOGO", "before-end"),
-    # input-info + debug pop-up: speech-bubble "i" icon at the left (tFONT1_ICON_INFORMATION), blank when _AWTO_POPUP_ICON is _OFF (#46)
-    (OSD + "RTD2014OsdDisplay.c", r"OsdFontVLCDynamicLoadIcon\(_ICON_POS_UP_0, _MENU_INFORMATION\);",
-     r"OsdFontPut1BitMainMenuIcon\(ROW\(_OSD_MESSAGE_ROW_START\), COL\(3\)", "_AWTO_POPUP_ICON"),
     # awto mark replaces the SDK info bubble consts when _AWTO_POPUP_ICON_AWTO is _ON (scripts/osd_icon_encode.py, #46)
     (OSD + "RTD2014OsdFontDynamicIcon_1.c", r"^BYTE __code tFONT1_ICON_INFORMATION\[\]", r"^\};", "_AWTO_POPUP_ICON_AWTO == _OFF"),
     # _AWTO_DEBUG_PORT: RL6449_Project.h forces GET_OSD_DDCCI_STATUS() off -> DDC port in Realtek debug mode (#13)
@@ -279,16 +276,11 @@ INSERTS = [
     ("Kernel/System/Code/SysMode.c", r"^\s*if\(ScalerMeasureInputInfo\(", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 17);", r"^void SysModeHandler\(void\)$"),
     ("Kernel/System/Code/SysMode.c", r"^\s*SET_MODE_TIMING_CONFIRM\(\);", "                    AwtoSwEvent(AWTO_SW_EV_PROBE, 18);", r"^void SysModeHandler\(void\)$"),
     ("Kernel/System/Code/SysSource.c", r"^\s*SET_SOURCE_JUDGE\(g_ucSearchIndex, _TRUE\);", "                AwtoSwEvent(AWTO_SW_EV_PROBE, 19);", r"^void SysSourceJudge\(void\)$"),
-    # exact input frequencies (#34, #26): fw/sdcc/awto_freq.inc after each active-region count, 3-decimal pop-up strings
+    # exact input frequencies (#34, #26): fw/sdcc/awto_freq.inc after each active-region count (info card, console)
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c", r"^void ScalerMeasureUpdateInputTimingData\(.*\)$", (SHIM / "awto_freq.inc").read_text().rstrip("\n")),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMDomainMemorySettings\(&stFIFOScaling\);", "    AwtoFreqInvalidate();", r"^bit ScalerMDomainControl\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerIDomainVgipAdjustIHVDelay\(\);", "            AwtoFreqUpdate();", r"^bit ScalerMDomainControl\(void\)$"),
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c", r"^\s*ScalerMemorySetFIFOFreq\(_FIFO_FREQ_FRAME_BUFFER_SEL\);", "            AwtoFreqUpdate();", r"^bit ScalerMDomainControl\(void\)$"),
-    (OSD + "RTD2014OsdFontProp.c", r"^void OsdPropGetShowVFreqStringAddress\(void\)$", (SHIM / "awto_freqstr.inc").read_text().rstrip("\n")),
-] + [(OSD + "RTD2014OsdFontProp.c", anchor, "#if(_AWTO_FREQ == _ON)\n    if(AwtoFreqModeStr(%s) == _TRUE)\n    {\n        return;\n    }\n#endif" % which, rf"^void {fn}\(void\)$")
-     for fn, anchor, which in (("OsdPropGetShowVFreqStringAddress", r"^\s*usTemp = GET_INPUT_TIMING_VFREQ\(\);", "AWTO_STR_VFREQ"),
-                               ("OsdPropGetShowHFreqPClkStringAddress", r"^\s*g_pucModeInfoData\[0\] = _H_;", "AWTO_STR_HFREQ_PCLK"),
-                               ("OsdPropGetShowResolutionStringAddress", r"^\s*if\(ucI != 0\)", "AWTO_STR_RES"))] + [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c", r"^\s*ScalerMcuIspInitial\(\);", "    AwtoDiagStage(2);",
      r"^\s*ScalerMcuGpioInitial\(\);"),                                                                   # after GPIO init
     ("Kernel/System/Code/SysMain.c", r"^\s*ScalerPinshareInitial\(\);", "    AwtoDiagStage(3);"),          # after McuInitial
@@ -309,20 +301,8 @@ INSERTS = [
     # cards + source selector (#134): after awto_dbgpop.inc (same anchor, later rule = nearer it), whose text layer they use
     (OSD + "RTD2014OsdDisplay.c", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$",
      (SHIM / "awto_osdcard.inc").read_text().rstrip("\n")),
-    (OSD + "RTD2014OsdDisplay.c", r"^\s*switch\(enumMessage\)",
-     "    if(AwtoCardMessage(enumMessage) == _FALSE)\n    {", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$"),
-    (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdDispSetPosition\(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50\);",
-     "    }", r"^void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)$"),
-    (OSD + "RTD2014OsdDisplay.c", r"^\s*OsdWindowDrawingByFontHighlight\(_OSD_WINDOW_4_1, ROW\(2\), COL\(18 \+ \(9 \* uctemp\)\)",
-     "    if(AwtoPanelCardOverride() == _TRUE)\n    {\n        return;\n    }", r"^void OsdDispPanelUniformityMsgSwitch\(void\)$"),
     (OSD + "RTD2014OsdDisplay.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_keypop.inc").read_text().rstrip("\n")),    # #39: at the end, no SDK line moves
     (OSD + "RTD2014OsdDisplay.c", r"^#endif//#if\(_OSD_TYPE == _REALTEK_2014_OSD\)$", (SHIM / "awto_gpiopop.inc").read_text().rstrip("\n")),
-    (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
-     "            if(g_stAwtoKey.ucOpen == 1)\n            {\n                AwtoOsdKeyLines();\n                break;\n            }"),    # #39: before the debug lines
-    (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
-     "            if(g_stAwtoDiag.ucDbgPopup == 1)\n            {\n                AwtoOsdDebugLines();\n                break;\n            }"),
-    (OSD + "RTD2014OsdDisplay.c", r"OsdPropPutStringCenter\(.*OsdDisplayGetSourcePortString\(\)",
-     "            if(g_stAwtoGpio.ucOpen == 1)\n            {\n                AwtoOsdGpioLines();\n                break;\n            }"),
     ("Kernel/System/Code/SysTimer.c", r"^\s*TF2 = 0;", "    AWTO_DIAG_T2ISR();"),
     ("Kernel/System/Code/SysInt.c", r"^\s*g_ucBackup_EXINT1 = MCU_FFF4", "    AWTO_DIAG_EX1ISR();"),
     ("Kernel/System/Code/SysMain.c", r"^void main\(void\)$", (SHIM / "awto_loopsplit.inc").read_text().rstrip("\n")),   # #75
@@ -370,34 +350,6 @@ SUBS = [
     (OSD + "RTD2014Ddcci.c", r"SET_FORCE_POW_SAV_STATUS\(_FALSE\);\s*SysSourceSetScanType\(_SOURCE_SWITCH_FIXED_PORT\);\s*"
      r"SysSourceSwitchInputPort\((_\w+)\);\s*SysModeSetResetTarget\(_MODE_ACTION_RESET_TO_SEARCH\);",
      lambda m: "AwtoInputSelect(%s, 0x60);  // [keil2sdcc] sub: fast path (fw/sdcc/awto_ddcci.inc)" % m.group(1), 7),
-    # #85 keys5: the DP-info branch of the input pop-up (not ACTIVE) broke out before the key / debug screens: open, never drawn
-    (OSD + "RTD2014OsdDisplay.c", r"(#if\(_DP_DEBUG_MSG == _ON\)\s*if\()(SysModeGetModeState\(\) != _MODE_STATUS_ACTIVE)\)",
-     lambda m: m.group(1) + "(" + m.group(2) + ") && (g_stAwtoKey.ucOpen == 0) && (g_stAwtoDiag.ucDbgPopup == 0))  // [keil2sdcc] sub", 1),
-    # unified OSD cards: white right-hand surface; fail-safe uses the same complete card as No Support
-    (OSD + "RTD2014OsdDisplay.c", r"(void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\s*\{)",
-     lambda m: m.group(1) + " if(enumMessage == _OSD_DISP_FAIL_SAFE_MODE_MSG) { enumMessage = _OSD_DISP_NOSUPPORT_MSG; }  // [keil2sdcc] sub: unified warning card", 1),
-    # The input diagnostic uses one row per channel instead of the standard six-row message card.
-    (OSD + "RTD2014OsdDisplay.c", r"(void OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\s*\{.*?)(OsdFuncApplyMap\(WIDTH\(36\), HEIGHT\(8\), COLOR\(_CP_WHITE, _CP_BG\)\);)",
-     lambda m: m.group(1) + "if(g_stAwtoGpio.ucOpen != 0) { OsdFuncApplyMap(WIDTH(36), HEIGHT(28), COLOR(_CP_WHITE, _CP_BG)); }"
-     " else { " + m.group(2) + " }  // [keil2sdcc] sub: tall input diagnostics", 1),
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_0, ROW\(0\), COL\(12\), WIDTH\(g_ucOsdHeight - 12\), HEIGHT\(g_ucOsdWidth\), )_CP_LIGHTBLUE(\);)",
-     lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_1, ROW\(0\), COL\(0\), WIDTH\(g_ucOsdWidth\), g_ucOsdHeight, )_CP_LIGHTBLUE(\);)",
-     lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdWindowDrawingByFont\(_OSD_WINDOW_0, ROW\(0\), COL\(12\), WIDTH\(g_ucOsdWidth - 12\), g_ucOsdHeight, )_CP_LIGHTBLUE(\);)",
-     lambda m: m.group(1) + "_CP_WHITE" + m.group(2) + "  // [keil2sdcc] sub", 1),
-    # Information text was white on the old grey surface; use the same blue-on-white treatment as the warning cards.
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*OsdDisplayGetSourcePortString\(\)[^\n]*COLOR\()_CP_WHITE",
-     lambda m: m.group(1) + "_CP_BLUE", 1),
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_NOW_RESOLUTION[^\n]*COLOR\()_CP_WHITE",
-     lambda m: m.group(1) + "_CP_BLUE", 1),
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_HFREQPCLK[^\n]*COLOR\()_CP_WHITE",
-     lambda m: m.group(1) + "_CP_BLUE", 1),
-    (OSD + "RTD2014OsdDisplay.c", r"(OsdPropPutStringCenter\([^\n]*_STRING_HDCP_MODE[^\n]*COLOR\()_CP_WHITE",
-     lambda m: m.group(1) + "_CP_BLUE", 1),
-    # Panel-uniformity confirmation also uses the common left-logo card background.
-    (OSD + "RTD2014OsdDisplay.c", r"if\(enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG\)",
-     lambda m: "if((enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG) && (g_ucOsdWidth == 0))", 1),
 ] + [
     # #78: TMDS Initial after a no-signal power-off wiped SCDC 0x20 (host's 1/40 ratio lost -> no lock, endless search after DPMS)
 ] + [(f"Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx{n}.c",
@@ -502,10 +454,20 @@ SUBS += [
     (OSD + "RTD2014OsdFontDynamicIcon_1.c", r"(\n[ ]+)OsdFontVLCLoadInputIcon\(ucIconPos, usIcon\);",
      lambda m: m.group(1) + "// [keil2sdcc] sub #134: no input icons (the selector is text)", 1),
 ]
-# #117 #118 #120: the icon tables link every icon. With the menu off only these are still drawn (hot-key DDC/CI, DP version,
-# info pop-up); the rest point at one shared stub. Indices stay, so _AWTO_REALTEK_MENU == _ON restores the table.
-# #134: INPUT / AUTOSELECT were the SDK selector's; Dn only where Dn is a DP port (DP-version hot-key menu, #122).
-_ICON_KEEP = {"INFORMATION", "DDCCI", "ON", "OFF", "1_DOT_1", "1_DOT_2"}
+# #124 message cards on the text layer (fw/sdcc/awto_osdcard.inc OsdDispOsdMessage): the SDK body goes, and the string-table
+# cases only its info pop-up asked for stop calling their builders (the hot-key menus still use OsdPropPutString*).
+_K124 = "// [keil2sdcc] sub #124: removed; message cards: fw/sdcc/awto_osdcard.inc\n"
+SUBS += [
+    (OSD + "RTD2014OsdDisplay.c", r"\nvoid OsdDispOsdMessage\(EnumOSDDispMsg enumMessage\)\n\{\n.*?\n\}\n", lambda m: "\n" + _K124, 1),
+] + [(OSD + "RTD2014OsdFontProp.c", rf"(\n[ ]+){fn}\({arg}\);", lambda m: m.group(1) + "// [keil2sdcc] sub #124: info pop-up string, no reader", 1)
+     for fn, arg in (("OsdPropGetShowHFreqPClkStringAddress", ""), ("OsdPropGetShowVFreqStringAddress", ""),
+                     ("OsdPropGetShowHDCPEnable", r"ScalerSyncHdcpCheckEnabled\(SysSourceGetInputPort\(\)\)"),
+                     ("OsdPropGetShowResolutionStringAddress", ""), ("OsdPropGetShowInputPortStringAddress", r"ucString - _STRIN_END"),
+                     ("OsdPropGetShowDpInfoStringAddress", "_STRING_DP_INFO"), ("OsdPropGetShowDpInfoStringAddress", "_STRING_DP_INFO_2"))]
+# #117 #118 #120: the icon tables link every icon. With the menu off only these are still drawn (hot-key DDC/CI and DP
+# version menus); the rest point at one shared stub. Indices stay, so _AWTO_REALTEK_MENU == _ON restores the table.
+# #134 / #124: INPUT / AUTOSELECT were the SDK selector's, INFORMATION the cards'; Dn only where Dn is a DP port (DP-version hot-key menu, #122).
+_ICON_KEEP = {"DDCCI", "ON", "OFF", "1_DOT_1", "1_DOT_2"}
 _ICON_DP = ("D0", "D1", "D2", "D6")
 _ICON_STUB = ("#if(_AWTO_REALTEK_MENU == _ON)\n#define AWTO_ICON(x) x\n#else\n#define AWTO_ICON(x) tAWTO_ICON_NONE\n#endif\n" +
               "".join(f"#if(_{p}_INPUT_PORT_TYPE == _{p}_DP_PORT)\n#define AWTO_ICON_{p}(x) x\n#else\n#define AWTO_ICON_{p}(x) AWTO_ICON(x)\n#endif\n"

@@ -75,7 +75,6 @@ extern unsigned char AwtoKeyHold(void);
 #endif
 #define _AWTO_DEMO_LOGO                                         _ON     // awto: back on (#46)
 #define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)
-#define _AWTO_POPUP_ICON                                        _ON     // _ON = icon at the left of the input-info/debug pop-ups, _OFF = blank (#46)
 #define _AWTO_POPUP_ICON_AWTO                                   _ON     // _ON = awto mark (fw/sdcc/awto_icon_info.inc, scripts/osd_icon_encode.py), _OFF = SDK info bubble
 // #65 step 1 drops: _OFF = SDK code compiled out (scripts/keil2sdcc_drops.py)
 #define _AWTO_FACTORY                                           _ON     // RTD factory menu (RTDFactoryMode/Function); Dan: kept (needed), port to open code later
@@ -119,7 +118,7 @@ typedef struct
     unsigned int usDelay5usIsr10;               // 10 x DELAY_5US_EXINT(), raw counts
     unsigned int usT3Wait64;                    // whole panel T3 wait (test included), Timer2 counts / 64
     unsigned char ucTestCmd;                    // OSD test command, written over I2C, applied + cleared in main loop (#33)
-    unsigned char ucDbgPopup;                   // 1 = next input-info pop-up shows the debug lines (#34), cleared when drawn
+    unsigned char ucDbgPopup;                   // unused since #124 (the menu opens the console directly); kept: diag block layout
     unsigned int usLoopRate;                    // main-loop passes in the last ~1 s (#34)
     unsigned char ucOsdOfsState;                // offsetof(StructOsdInfo, usOsdState): g_stOsdInfo layout moves with _DP_DEBUG_MSG (#37)
     unsigned char ucOsdOfsEvent;                // offsetof(StructOsdInfo, ucOsdEventMsg)
@@ -413,7 +412,6 @@ extern void AwtoFreqUpdate(void);
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 extern void AwtoSourceOpen(void);
-extern bit AwtoPanelCardOverride(void);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 // #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+DOWN, test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.

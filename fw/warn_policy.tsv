@@ -13,7 +13,7 @@
 ^enumeration constant outside the range of int	Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonSyncCommonInclude.h	130	ok	_DP_HPD_TIME_NONE 0xFFFF = int -1, stored 16-bit; only ==/!=/assign uses see it
 ^comparison is always false due to limited range of data type$	User/RTD Factory/Code/RTDFactoryFunction.c	2812	ok	(bit)x == _BIT1 always false in Keil too; callers pass _FORCE_SHOW_NUMBER_OFF only
 ^overflow in implicit constant conversion$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4055	ok	icon 0x92 into BYTE / ~bit into 1-bit field (LSB kept, same as Keil)
-^comparison is always false due to limited range of data type$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1211	ok	BYTE > 0xFF always false in Keil too; same behaviour
+^comparison is always false due to limited range of data type$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1092	ok	BYTE > 0xFF always false in Keil too; same behaviour
 # Reviewed 2026-11-05 (#26): optimizer-fold 110 / unreachable 126. 16 BUG sites (non-volatile ISR flags) fixed by keil2sdcc volatile rule, no entry
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	735	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_LTM270FL01 panel) is constant; RBR/HBR table else-branch dead
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DP_INT.c	868	ok	OK-CONFIG: bReturnValueD0 is a local bit only assigned in D0-DP code that is compiled out; D0==_TRUE folds false, D1 term still tested
@@ -200,13 +200,13 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3389	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	421	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	458	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	6152	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	6040	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5651	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5808	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5910	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1209	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1213	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	6016	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5904	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5515	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5672	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	5774	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1090	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1094	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	458	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	460	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	464	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead
