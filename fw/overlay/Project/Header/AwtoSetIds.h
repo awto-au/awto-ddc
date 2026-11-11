@@ -73,8 +73,6 @@
 #define AWTO_SET_OSD_TRANSPARENCY     61
 #define AWTO_SET_LANGUAGE             62
 #define AWTO_SET_OSD_ROTATE           63
-#define AWTO_SET_LOGO                 65
-#define AWTO_SET_LOGO_MS              66
 #define AWTO_SET_PANEL_T1             67
 #define AWTO_SET_PANEL_T2             68
 #define AWTO_SET_PANEL_T3             69
@@ -108,5 +106,5 @@
 #define AWTO_SET_INFO_PCLK            108
 #define AWTO_SET_INFO_HDCP            109
 #define AWTO_SET_SYNC_CONSOLE         110
-#define AWTO_SET_SCHEMA              0x7044
+#define AWTO_SET_SCHEMA              0x434D
 #endif

@@ -28,24 +28,31 @@ extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE u
 #define AWTO_T_STYLE_ALERT  4                   // red: an input that is not in the I2C ring
 __xdata BYTE g_ucAwtoProbeCols;                  // limit probe columns = 4 * (test cmd 0xC0 + n); 0 = 36
 __xdata BYTE g_ucAwtoProbeLines;                 // limit probe line count (test cmd 0x80 + n); 0 = 24
-__xdata BYTE g_ucAwtoDiagFont;                  // 0 = default (5x8, font 3); else 1 + font index of osd_font_load (test cmd 0x60 + n)
-#define AwtoDiagFont()      ((g_ucAwtoDiagFont != 0) ? (g_ucAwtoDiagFont - 1) : 3)
+__xdata BYTE g_ucAwtoDiagFont;                  // 0 = default (console Spleen 8x16, probe 5x8); else 1 + osd_font_load index (cmd 0x60 + n)
+#define AwtoDiagFont(d)     ((g_ucAwtoDiagFont != 0) ? (g_ucAwtoDiagFont - 1) : (d))
 static __xdata char s_pcAwtoRow[AWTO_T_MAXCOLS];
 static __xdata BYTE s_ucAwtoTiles[AWTO_T_MAXCOLS];
 __xdata BYTE g_ucAwtoDiagSmall;                  // 0 = diagnostic screens at 2x size (default), 1 = 1x (test cmd 0x4B / 0x4A)
 static BYTE s_ucAwtoLen;
 static BYTE s_ucAwtoCols;
 
-// One diagnostic console (AwtoDiagConsole): a fixed grid with the GPIO, key test and debug panels side by side.
-#define AWTO_CON_COLS       100
-#define AWTO_CON_ROWS       69                  // map rows (+ the pad row AwtoTextOpen adds): panels, then the event log
-#define AWTO_VIEW_ROWS      45                  // rows shown at a time; UP / DOWN scroll the view over the map
-#define AWTO_LOG_ROW0       (AWTO_VIEW_ROWS + 2)  // first event log line (the row before it is the log heading)
+// One diagnostic console (AwtoDiagConsole), #144: 120 x 50 shown, Spleen 8x16 at 2x (1920 x 1836 px on the 4K panel).
+// Shown: inputs panel (left), event / sync log (right). Below the view (UP / DOWN scroll): key test, debug, watchdog.
+// Map 120 x 63: cell rule cols x rows + rows + 1 < 8192 (docs/osd.md Limits).
+#define AWTO_CON_COLS       120
+#define AWTO_CON_ROWS       62                  // map rows (+ the pad row AwtoTextOpen adds)
+#define AWTO_VIEW_ROWS      50                  // rows shown at a time; UP / DOWN scroll the view over the map
+#define AWTO_CON_FONT       0                   // osd_font_load index: Spleen 8x16 (8 x 18 cell)
+#define AWTO_LOG_COL        62                  // event log: heading row, then lines to the bottom of the view
+#define AWTO_LOG_W          57
+#define AWTO_LOG_HDR        2
+#define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
+#define AWTO_LOG_LINES      (AWTO_VIEW_ROWS - AWTO_LOG_ROW0)
 static __xdata BYTE s_ucConOpen;
 static BYTE s_ucPanelCol;
 static BYTE s_ucPanelRow;
-static const __code BYTE tAwtoPanelCol[3] = {1, 62, 62};
-static const __code BYTE tAwtoPanelRow[3] = {2, 2, 12};
+static const __code BYTE tAwtoPanelCol[3] = {1, 1, 40};
+static const __code BYTE tAwtoPanelRow[3] = {2, 52, 52};
 static const __code BYTE tAwtoPanelW[3] = {60, 36, 36};
 
 // The console owns the OSD only while its map is the one in place. A mode reset or an SDK pop-up replaces the map: then drawing
@@ -110,7 +117,7 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     ScalerOsdSetColorPalette(2, 0, 140, 40);
     ScalerOsdSetColorPalette(3, 0, 0, 0);
     ScalerOsdSetColorPalette(4, 255, 50, 50);
-    osd_font_load(AwtoDiagFont());
+    osd_font_load(AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe
     if(ucView != 0)
     {
         osd_tc_viewport(ucWin);
@@ -336,7 +343,7 @@ void AwtoDiagConsole(BYTE ucOn)
         AwtoKeyConSet(1);
         AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
         s_ucConFirst = 0;
-        s_ucAwtoCols = AWTO_CON_COLS;
+        s_ucAwtoCols = AWTO_T_MAXCOLS;          // title text; the title bar window spans the full width
         s_ucPanelCol = 0;
         s_ucPanelRow = 0;
         s_ucAwtoLen = 1;

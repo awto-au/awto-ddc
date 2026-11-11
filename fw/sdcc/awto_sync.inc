@@ -8,17 +8,17 @@ static __xdata BYTE s_pucAwtoSyncDet[3];          // D1..D3: last predetect (bit
 static __xdata BYTE s_pucAwtoDdcAge[3];           // D1..D3: DDC polls left in which the port counts as live
 
 // GENERATED-BEGIN awto_sync_rows
-#define AWTO_SYNC_ROWS 52
-static const __code BYTE tAwtoSyncRowId[52] = {
+#define AWTO_SYNC_ROWS 60
+static const __code BYTE tAwtoSyncRowId[60] = {
     0xC0, 0xC0, 0xC0, 0xC0, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x10, 0x10, 0x10, 0x10,
     0x70, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0,
     0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xB0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC7,
-    0xC8, 0xC9, 0xC9, 0xCA};
-static const __code BYTE tAwtoSyncRowArg[52] = {
+    0xC8, 0xC9, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xCF, 0xCF, 0xCF};
+static const __code BYTE tAwtoSyncRowArg[60] = {
     0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x01, 0x02, 0x03,
     0xFF, 0x01, 0x0E, 0x14, 0x15, 0x16, 0x17, 0x1A, 0x1B, 0x1C, 0x00, 0x01, 0x03, 0x04, 0x05, 0xFF,
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x09, 0x10, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0x01, 0x03, 0xFF};
+    0xFF, 0x01, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04};
 BYTE AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged
 {
     BYTE ucI;
@@ -67,6 +67,10 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
     puc[6] = (BYTE)(ulVal >> 8);
     puc[7] = (BYTE)ulVal;
     g_stAwtoSync.ucSeq = AWTO_SYNC_NEXT(ucN);
+    if(g_stAwtoGpio.ucOpen != 0)
+    {
+        AwtoConLogSync();                           // #144 live: the line shows now, also inside a blocking SDK step (panel on)
+    }
 }
 
 // New episode: time base, per-port detect state, console request. A switch inside a power-on / wake that has not settled
@@ -121,6 +125,12 @@ void AwtoSyncSw(BYTE ucId, BYTE ucArg)
        (ucArg == _MODE_STATUS_NOSUPPORT) || (ucArg == _MODE_STATUS_POWER_SAVING)))
     {
         g_stAwtoSync.ucDone = 1;
+#if(_AWTO_PS_WAKE == _ON)
+        if(ucArg == _MODE_STATUS_ACTIVE)
+        {
+            AwtoPsWakeReset();
+        }
+#endif
     }
     if(AwtoSyncRow(ucId, ucArg) != 0)
     {
@@ -190,10 +200,153 @@ void AwtoSyncFreq(void)                             // SysModeHandler: display s
 
 __xdata BYTE g_ucAwtoSyncPwr;                       // power status the log last saw (AWTO_SYNC_POLL compares per pass)
 
+#if(_AWTO_PS_WAKE == _ON)
+// #144 wake from power saving on a source event, any port, every main-loop pass (the SDK predetects one search port per
+// pass with a 2-3 s dwell). Edge / event based; each trigger wakes once per port per sleep episode (until a picture):
+// a source that polls DDC / AUX while off wakes the monitor once, then is logged as suppressed.
+__xdata BYTE g_ucAwtoPsWakeCon;                       // 1 = our trigger woke it: console + panel at power NORMAL
+static __xdata BYTE s_ucWakeCable;                  // bit i = port D1 + i cable at the last poll
+static __xdata BYTE s_ucWakeDpcd;                   // DPCD 600h at the last poll (1 = D0, 2 = D3)
+static __xdata BYTE s_pucWakeUsed[AWTO_WAKE_T_N];   // per trigger: bit i = port D1 + i woke the monitor this sleep episode
+static __xdata BYTE s_pucWakeSaid[AWTO_WAKE_T_N];   // per trigger: suppression already logged since the sleep began
+extern BYTE ScalerDpRx1GetDpcdInfo(BYTE ucH, BYTE ucM, BYTE ucL);
+extern bit SysSourceGetCableDetect(BYTE ucInputPort);           // SysInterface.h (not in this translation unit)
+extern void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus);
+static const __code WORD tAwtoWakeDdc[3] = {AWTO_DDC_IRQ_D1, AWTO_DDC_IRQ_D2, AWTO_DDC_IRQ_D3};
+
+static BYTE AwtoPsWakeCables(void)
+{
+    BYTE ucI, ucB = 0;
+
+    for(ucI = 0; ucI < 3; ucI++)
+    {
+        if(SysSourceGetCableDetect(_D1_INPUT_PORT + ucI) == _TRUE)   // SDK debounced cable status, as the selector shows it
+        {
+            ucB |= (BYTE)1 << ucI;
+        }
+    }
+    return ucB;
+}
+
+static const __code WORD tAwtoWakeAux[2] = {0xB7DC, 0xBADC};
+
+static BYTE AwtoPsWakeAux(void)                       // DP AUX command received (aux_rx_int, W1C); Rx0 B7 / Rx1 BA: both watched
+{
+    BYTE ucI, ucHit = 0;
+
+    for(ucI = 0; ucI < 2; ucI++)
+    {
+        if(ScalerGetBit(tAwtoWakeAux[ucI], _BIT0) != 0)
+        {
+            ucHit = 1;                              // clear only a seen flag: a command between read and clear stays
+            ScalerSetBit(tAwtoWakeAux[ucI], (_BIT5 | _BIT3 | _BIT2), _BIT0);    // enables kept, other W1C flags untouched
+        }
+    }
+    return ucHit;
+}
+
+void AwtoPsWakeArm(void)                              // power saving entered: baselines, latches cleared
+{
+    BYTE ucI;
+
+    s_ucWakeCable = AwtoPsWakeCables();
+    s_ucWakeDpcd = ScalerDpRx1GetDpcdInfo(0x00, 0x06, 0x00);
+    for(ucI = 0; ucI < 3; ucI++)
+    {
+        AWTO_XB(tAwtoWakeDdc[ucI]) = (AWTO_XB(tAwtoWakeDdc[ucI]) & ~(_BIT2 | _BIT0)) | _BIT0;  // EDID-read latch only
+    }
+    AwtoPsWakeAux();
+    for(ucI = 0; ucI < AWTO_WAKE_T_N; ucI++)
+    {
+        s_pucWakeSaid[ucI] = 0;
+    }
+}
+
+void AwtoPsWakeReset(void)                            // a picture: every trigger may wake again
+{
+    BYTE ucI;
+
+    for(ucI = 0; ucI < AWTO_WAKE_T_N; ucI++)
+    {
+        s_pucWakeUsed[ucI] = 0;
+    }
+}
+
+bit AwtoPsWakeFire(BYTE ucT, BYTE ucI)                 // trigger AWTO_WAKE_T_*, port index; 1 = woke
+{
+    BYTE ucBit = (BYTE)1 << ucI;
+
+    if((s_pucWakeUsed[ucT] & ucBit) != 0)
+    {
+        if((s_pucWakeSaid[ucT] & ucBit) == 0)
+        {
+            s_pucWakeSaid[ucT] |= ucBit;
+            AwtoSyncPush(AWTO_SYNC_EV_WAKE_OFF, ucT + 1, _D1_INPUT_PORT + ucI);
+        }
+        return 0;
+    }
+    s_pucWakeUsed[ucT] |= ucBit;
+    AwtoSyncBegin(AWTO_SYNC_K_WAKE, _D1_INPUT_PORT + ucI);
+    AwtoSyncPush(AWTO_SYNC_EV_WAKE + ucT, _D1_INPUT_PORT + ucI, 0);
+    g_ucAwtoPsWakeCon = 1;
+    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+    return 1;
+}
+
+void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL: power saving, every pass
+{
+    BYTE ucI, ucNow, ucR;
+
+    if(g_ucAwtoPsWakeCon != 0)
+    {
+        return;                                     // woken; the SDK powers up on its next pass
+    }
+    ucNow = AwtoPsWakeCables();
+    ucR = ucNow & ~s_ucWakeCable;                   // not connected -> connected only; an unplug just moves the baseline
+    s_ucWakeCable = ucNow;
+    for(ucI = 0; ucI < 3; ucI++)
+    {
+        if(((ucR & ((BYTE)1 << ucI)) != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_CABLE, ucI) != 0))
+        {
+            return;
+        }
+        ucNow = AWTO_XB(tAwtoWakeDdc[ucI]);
+        if((ucNow & _BIT0) != 0)
+        {
+            AWTO_XB(tAwtoWakeDdc[ucI]) = (ucNow & ~(_BIT2 | _BIT0)) | _BIT0;
+            if(AwtoPsWakeFire(AWTO_WAKE_T_EDID, ucI) != 0)
+            {
+                return;
+            }
+        }
+    }
+    if((AwtoPsWakeAux() != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_AUX, 0) != 0))             // index 0 = D1, the DP port
+    {
+        return;
+    }
+    ucNow = ScalerDpRx1GetDpcdInfo(0x00, 0x06, 0x00);
+    ucR = s_ucWakeDpcd;
+    s_ucWakeDpcd = ucNow;
+    if(((ucNow & 0x07) == 0x01) && ((ucR & 0x07) != 0x01))
+    {
+        AwtoPsWakeFire(AWTO_WAKE_T_DPCD, 0);
+    }
+}
+#endif
+
 void AwtoSyncPoll(void)                             // power status changed (AWTO_SYNC_POLL in AwtoSwPoll)
 {
     BYTE ucP = GET_POWER_STATUS();
 
+#if(_AWTO_PS_WAKE == _ON)
+    if((ucP == _POWER_STATUS_NORMAL) && (g_ucAwtoPsWakeCon != 0))
+    {
+        g_ucAwtoPsWakeCon = 0;                        // episode begun by AwtoPsWakeFire: console + panel now (as at power-on)
+        AwtoBootConsole();
+        AWTO_BOOT_PANEL_ON();
+    }
+    else
+#endif
     if((ucP == _POWER_STATUS_NORMAL) && (g_ucAwtoSyncPwr == _POWER_STATUS_SAVING))
     {
         AwtoSyncBegin(AWTO_SYNC_K_WAKE, SysSourceGetInputPort());
@@ -206,6 +359,12 @@ void AwtoSyncPoll(void)                             // power status changed (AWT
     {
         AwtoSyncPush(AWTO_SYNC_EV_POWER, ucP, 0);
         g_stAwtoSync.ucOpenReq = 0;
+#if(_AWTO_PS_WAKE == _ON)
+        if(ucP == _POWER_STATUS_SAVING)
+        {
+            AwtoPsWakeArm();
+        }
+#endif
     }
     g_ucAwtoSyncPwr = ucP;
 }

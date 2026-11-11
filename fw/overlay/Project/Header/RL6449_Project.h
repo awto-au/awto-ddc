@@ -73,8 +73,6 @@ extern __xdata unsigned char g_ucAwtoKeyHold;
 extern unsigned char AwtoKeyHold(void);
 #define AWTO_KEY_HOLD()                                         ((g_ucAwtoKeyHold != 0) ? AwtoKeyHold() : 0)
 #endif
-#define _AWTO_DEMO_LOGO                                         _ON     // awto: back on (#46)
-#define _AWTO_LOGO_SDK                                          _OFF    // _ON = Realtek logo consts; _OFF = awto mark (fw/sdcc/awto_logo_*.inc, scripts/osd_logo_encode.py)
 #define _AWTO_POPUP_ICON_AWTO                                   _ON     // _ON = awto mark (fw/sdcc/awto_icon_info.inc, scripts/osd_icon_encode.py), _OFF = SDK info bubble
 // #65 step 1 drops: _OFF = SDK code compiled out (scripts/keil2sdcc_drops.py)
 #define _AWTO_FACTORY                                           _ON     // RTD factory menu (RTDFactoryMode/Function); Dan: kept (needed), port to open code later
@@ -123,7 +121,7 @@ typedef struct
     unsigned char ucOsdOfsState;                // offsetof(StructOsdInfo, usOsdState): g_stOsdInfo layout moves with _DP_DEBUG_MSG (#37)
     unsigned char ucOsdOfsEvent;                // offsetof(StructOsdInfo, ucOsdEventMsg)
     unsigned char ucOsdOfsKey;                  // offsetof(StructOsdInfo, ucOsdKeyMessage)
-    unsigned char ucHold;                       // #28 held test visuals: bit0 logo (cmd 0x24), bit1 debug pop-up (0x26); 0x27 clears
+    unsigned char ucHold;                       // #28 held test visuals: bit1 debug pop-up / console (0x26); 0x27 clears; bit0 free (was the logo)
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -230,9 +228,7 @@ extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
 extern void AwtoDiagTestCmd(void);
-extern void AwtoTestHoldLogoOff(void);
 extern bit AwtoHoldBlocksDisable(void);
-extern void AwtoHoldOsdGuard(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
 // #39 key test screen + press log (fw/sdcc/awto_keytest.inc, awto_keypop.inc): read over debug slave 0x35 at map symbol _g_stAwtoKey
@@ -608,9 +604,6 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #define AWTO_SW_EV_T3                                           0x20    // arg 0 = T3 wait start, 1 = end
 #define AWTO_SW_EV_CMD                                          0x40    // arg = switch command (test cmd 0x30..0x33)
 #define AWTO_SW_EV_HOLD_BLOCK                                   0x50    // OsdDispDisableOsd blocked by a hold (#28); arg = mode state
-#define AWTO_SW_EV_HOLD_REDRAW                                  0x51    // held logo drawn again after an OSD reset; arg = mode state
-#define AWTO_SW_EV_HOLD_DROP                                    0x52    // OSD event dropped under a held logo; arg = event
-#define AWTO_SW_EV_LOGO                                         0x60    // OsdDispShowLogo: arg 0 = draw start, 1 = drawn (OSD on)
 #define AWTO_SW_EV_VDD                                          0x70    // panel VDD on early, right after pin-share (#63 boot time)
 #define AWTO_SW_EV_BLANK                                        0x80    // backlight kept on, picture blanked instead (#60 step 2); arg = site
 #ifndef _AWTO_LOOP_PROF
@@ -767,6 +760,22 @@ extern __xdata StAwtoSync g_stAwtoSync;
 #define AWTO_SYNC_EV_PCLK                                       0xC8    // exact pixel clock, kHz
 #define AWTO_SYNC_EV_POWER                                      0xC9    // arg = new power status (off / saving)
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
+#define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
+#define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
+// #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
+#ifndef _AWTO_PS_WAKE
+#define _AWTO_PS_WAKE                                           _ON
+#endif
+#define AWTO_WAKE_T_CABLE                                       0       // cable status not connected -> connected
+#define AWTO_WAKE_T_EDID                                        1       // DDCn_EDID_IRQ bit0: the source read the EDID
+#define AWTO_WAKE_T_AUX                                         2       // DP AUX_IRQ_STATUS bit0: an AUX command arrived
+#define AWTO_WAKE_T_DPCD                                        3       // DPCD 600h went to D0
+#define AWTO_WAKE_T_N                                           4
+#if(_AWTO_PS_WAKE == _ON)
+#define AWTO_PS_CABLE_SDK()                                     (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
+#else
+#define AWTO_PS_CABLE_SDK()                                     _TRUE
+#endif
 // selector stage codes (AwtoSyncStage): texts in awto_osdcard.inc tAwtoCardS from AWTO_CT_STAGE
 #define AWTO_SYNC_ST_IDLE                                       0
 #define AWTO_SYNC_ST_SEARCH                                     1
@@ -805,7 +814,16 @@ extern unsigned char AwtoDdcLive(unsigned char ucI);
 extern unsigned long AwtoTmdsIdleKhz(unsigned char ucPage);
 #define AWTO_SYNC_SW(id, arg)                                   AwtoSyncSw((id), (arg))
 extern __xdata unsigned char g_ucAwtoSyncPwr;
+#if(_AWTO_PS_WAKE == _ON)
+extern __xdata unsigned char g_ucAwtoPsWakeCon;
+extern void AwtoPsWakePoll(void);
+extern void AwtoPsWakeArm(void);
+extern void AwtoPsWakeReset(void);
+#define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
+                                                                  else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
+#else
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
+#endif
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
 extern void AwtoOsdSyncPoll(void);
 extern void AwtoConLogSync(void);
@@ -823,11 +841,27 @@ extern void AwtoConLogSync(void);
 #define AwtoSyncPoll()
 #define AWTO_SYNC_POLL()
 #endif
-#define AWTO_LOGO_COLS                                          95      // boot/held logo grid (scripts/osd_logo_big.py --cols/--rows; 2x OSD scale, #63)
-#define AWTO_LOGO_ROWS                                          58
+// #144 power-on: mode INITIAL opens the console with the live power-on log (awto_osdcard.inc AwtoBootConsole), then
+// panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).
+#ifndef AWTO_PS_CABLE_SDK
+#define AWTO_PS_CABLE_SDK()                                     _TRUE   // no #144 wake poll (sync log off)
+#endif
+#ifndef _AWTO_BOOT_PANEL_EARLY
+#define _AWTO_BOOT_PANEL_EARLY                                  _ON
+#endif
+#if(_AWTO_BOOT_PANEL_EARLY == _ON)
+#define AWTO_BOOT_PANEL_ON()                                    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON)
+#else
+#define AWTO_BOOT_PANEL_ON()
+#endif
+#if((_AWTO_SYNC_LOG == _ON) && (_AWTO_DIAG == _ON) && (_AWTO_BOOT_PANEL_EARLY == _ON))
+extern void AwtoBootConsole(void);
+#else
+#define AwtoBootConsole()
+#endif
 // Fast boot (#63, Dan's panel policy 2026-11-07): no waits for the DDR / VCCK rails our board never switches (D026 200 ms,
 // D027 2 x 10 ms; PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops), panel VDD right after pin-share, T3 = one frame while the
-// scaler shows its own pattern (logo / black background): no host video can glitch, the panel only needs a valid frame.
+// scaler shows its own pattern (black background): no host video can glitch, the panel only needs a valid frame.
 #define _AWTO_FAST_BOOT                                         _ON
 // #60 step 2 (Dan's panel policy 4): no backlight off on mode reset / display setting / DCLK change; the picture is blanked
 // (forced background) instead and the active proc unblanks it. Real power saving still turns the backlight off.
@@ -955,7 +989,6 @@ extern unsigned char AwtoFastScalerStatus(void);
 #else
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
 #endif
-#define _AWTO_LOGO_COLOR                                        _CP_RED     // boot/held logo artwork intentionally remains red
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)
@@ -1519,7 +1552,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // Instant Timer Events Option
 //-------------------------------------------------
-#define _INSTANT_TIMER_EVENT_0                                  _ON
+#define _INSTANT_TIMER_EVENT_0                                  _OFF    // awto #144: Timer0 only faded the boot logo in
 #define _INSTANT_TIMER_EVENT_1                                  _OFF
 
 //--------------------------------------------------

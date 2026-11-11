@@ -2,7 +2,7 @@
 # (awto-ddc scripts/sync_log.py, rtd_diag.py --sync) reads this file, so screen and host print the same line.
 # id	arg	fmt	text
 # id: event id (hex). Mirrored switch-log ids (RL6449_Project.h AWTO_SW_EV_*): 01 mode, 10 panel power, 70 VDD, 90 probe,
-#   A0 fast path, A8 hold, B0 HPD pulse. Own ids C0..CF (AWTO_SYNC_EV_*). Only rows listed here are logged (mirror filter).
+#   A0 fast path, A8 hold, B0 HPD pulse. Own ids C0..CF (AWTO_SYNC_EV_*; CB..CF = #144 power-saving wake). Only rows listed here are logged (mirror filter).
 # arg: hex value, or * = any (first matching row wins: put * rows last).
 # fmt: how the event's value / arg is printed at the % in text:
 #   -     no value          port  "Dn " prefix from arg (port byte, D0 = 3)     vport  value = port byte -> "Dn" (0xFF = auto)
@@ -62,3 +62,11 @@ C8	*	portmhz3	pixel clock %
 C9	01	-	power off
 C9	03	-	power saving
 CA	*	-	console opened (sync log)
+CB	*	port	cable plugged in: wake
+CC	*	port	EDID read by source: wake
+CD	*	port	AUX command from source: wake
+CE	*	port	DPCD 600h = D0 (source powers the link): wake
+CF	01	vport	wake suppressed (cable, once per sleep): %
+CF	02	vport	wake suppressed (EDID read, once per sleep): %
+CF	03	vport	wake suppressed (AUX command, once per sleep): %
+CF	04	vport	wake suppressed (DPCD 600h, once per sleep): %
