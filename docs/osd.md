@@ -35,8 +35,8 @@ Never write bare "vendor": say which one.
 - Font SRAM size (12288 words) is the SDK constant, not read back from hardware; see [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
 
 ### Realtek SDK engine (RTD2014 demo OSD, compiled into our image)
-- Still live: our message cards (`AwtoCardMessage`, `AwtoCardPanel` in `awto_osdcard.inc`: No Signal / No Cable / No Support / Auto Adjust / Power Saving / panel uniformity), input-info pop-up (SDK `_OSD_DISP_INPUT_SIGNAL_MSG`, text recoloured), source selector (`AwtoSourceOpen`).
-- SDK card bodies stay linked behind the wrappers (#117).
+- Ours on the text layer (`fw/sdcc/awto_osdcard.inc` in awto-ddc-ui): message cards and the input-info card (`OsdDispOsdMessage`, SDK body removed, #124), source selector (`AwtoSourceOpen` / `AwtoSourceKey`, SDK hot-key source menu removed, #134). SDK timers and OSD states still drive them.
+- Still SDK-drawn: DDC/CI and DP-version hot-key menus (proportional font, `OsdPropPutString*`, `tFONT1_GLOBAL`, VLC icons), boot logo loader.
 - DDC/CI and DP-version hot-key menus: no normal entry point left (#122).
 - Source: Realtek SDK `RTD2014*Osd*.c`, rewritten by `scripts/keil2sdcc.py` (generated output in `tmp/sdcc-port/src`); drawn by `OsdDispOsdMessage` and the OSD state machine.
 - Realtek 9-icon main menu: built out by default (`_AWTO_REALTEK_MENU`, `RL6449_Project.h`, default `_OFF`). Re-enable with `-D _AWTO_REALTEK_MENU=_ON` (works at 6bd79ce; #129 removes the operation-table path it uses).

@@ -30,7 +30,7 @@ CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20, "logo": 0x24, "logo-on": 0x24, "log
             **{f"font{n}": 0x60 + n for n in range(7)}, **{f"cols{c}": 0xC0 + c // 4 for c in (36, 64, 80, 96, 120, 128, 160)}, **{f"probe{n}": 0x80 + n for n in (16, 24, 28, 32, 36, 40, 42, 48, 56, 58, 60, 62, 63, 72, 90)},
             # 0x50 + EnumOSDDispMsg: direct, held visual-review paths in current firmware.
             "card-nosignal": 0x50, "card-nocable": 0x51, "card-nosupport": 0x52,
-            "auto-adjust": 0x54, "auto-colour": 0x56, "power-saving": 0x58,
+            "auto-adjust": 0x54, "auto-colour": 0x56, "ddcci-port": 0x57, "power-saving": 0x58,
             "panel-uniformity": 0x59}   # --cmd only (firmware test byte); freeze is compiled out on this board
 HOLD_MARK = "_AwtoTestHoldLogoOff"                       # in the map = image understands 0x24..0x27 (#28)
 OLD_FALLBACK = {0x26: 0x20, 0x24: 0x21}                 # image without holds: timed variants; 0x25/0x27 have none

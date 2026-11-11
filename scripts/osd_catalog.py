@@ -34,6 +34,7 @@ POPUPS = [
     ("autoadjust", ["--do", "300:auto-adjust", "--at", "2500"], "auto-adjust message"),
     ("autocolour", ["--do", "300:auto-colour", "--at", "2500"], "auto-colour message"),
     ("powersaving", ["--do", "300:power-saving", "--at", "2500"], "power-saving message"),
+    ("ddcciport", ["--do", "300:ddcci-port", "--at", "2500"], "switch DDC/CI port message (#114)"),
     ("uniformity", ["--do", "300:panel-uniformity", "--at", "2500"], "panel-uniformity message"),
     ("source", ["--do", "300:source-menu", "--at", "2500"], "source (input) menu"),
 ]

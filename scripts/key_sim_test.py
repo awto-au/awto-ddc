@@ -127,7 +127,9 @@ def run(k):
 
     b = k.snap()                                                # no OSD: DOWN = input info pop-up
     k.tap("DOWN")
-    k.check("no OSD: DOWN -> info pop-up", k.delta(b, "AwtoKeyNoOsd") == 1 and k.delta(b, "OsdDispOsdMessage") >= 1, str(k.snap()))
+    w = k.m.rd(k.osd_w)[0]
+    k.check("no OSD: DOWN -> info card on the text layer (#124)", k.delta(b, "AwtoKeyNoOsd") == 1 and k.delta(b, "OsdDispOsdMessage") >= 1
+            and w == 28, f"{k.snap()}, map width {w}")
     k.wait(5500)
 
     b = k.snap()                                                # no OSD: UP = selector (SDK way in)
