@@ -163,15 +163,8 @@ def rewrite(text, here, idx, sfr_addr, using, stats):
     return SBIT.sub(sbit, text)
 
 
-def main():
-    global LOG
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", type=Path, default=ROOT / "fw" / "sdk")
-    ap.add_argument("--manifest", type=Path, default=ROOT / "fw" / "sdk_files.txt")
-    a = ap.parse_args()
-    (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
-    LOG = (ROOT / "tmp" / "logs" / "sdk_import.log").open("a")
-    want = [l.strip() for l in a.manifest.read_text().splitlines() if l.strip() and not l.startswith("#")]
+def scan_mirror():
+    """Pass 1 over the whole mirror: name index, sfr addresses, interrupt attributes, _at_ addresses (fills AT_ADDR)."""
     idx = build_name_index()
     sfr_addr, using_all, at_all = {}, {}, {}
     for p in SDK.rglob("*"):                                  # pass 1: sfr addresses, interrupt defs, _at_ defs (whole SDK)
@@ -188,6 +181,19 @@ def main():
     using = {k: next(iter(v)) for k, v in using_all.items() if len(v) == 1}
     AT_ADDR.update({k: next(iter(v)) for k, v in at_all.items()
                     if len(v) == 1 and re.fullmatch(r"0[xX][0-9A-Fa-f]+|\d+", next(iter(v)))})
+    return idx, sfr_addr, using
+
+
+def main():
+    global LOG
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", type=Path, default=ROOT / "fw" / "sdk")
+    ap.add_argument("--manifest", type=Path, default=ROOT / "fw" / "sdk_files.txt")
+    a = ap.parse_args()
+    (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
+    LOG = (ROOT / "tmp" / "logs" / "sdk_import.log").open("a")
+    want = [l.strip() for l in a.manifest.read_text().splitlines() if l.strip() and not l.startswith("#")]
+    idx, sfr_addr, using = scan_mirror()
     stats, n, miss = Counter(), 0, []
     for rel in want:
         p = SDK / rel

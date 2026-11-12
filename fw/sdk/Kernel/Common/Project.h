@@ -46,9 +46,12 @@
 #include "User_Project_Include.h"
 #include "Project_Config_Pre_Check.h"
 
+// awto: customer (Beacon/RL6432) layer redefined _PCB_TYPE/_PANEL_TYPE for every target -> Beacon only (#8)
+#if(_PROJECT == _RL6432_BEACON_PROJECT)
 #include "Project_User_Beacon_List.h"
 #include "Project_User_Beacon_Default.h"
 #include "Project_User_Beacon_Define.h"
+#endif
 
 #include _RLXXXX_PROJECT_DEFAULT
 

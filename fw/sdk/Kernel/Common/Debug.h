@@ -33,39 +33,44 @@
 #define _DEBUG_IIC_BY_USERINTERFACE                 _OFF
 
 //--------------------------------------------------
-// Debug Message Supported
+// Debug Message Supported (awto: bring-up build; categories ON = SYSTEM SCALER DIGITAL RX0-3 MEASURE MEMORY FRAME_SYNC FRC OSD QC CHECK_*)
 //--------------------------------------------------
-#define _DEBUG_MESSAGE_SYSTEM                       _OFF
-#define _DEBUG_MESSAGE_SCALER                       _OFF
+#define _DEBUG_MESSAGE_SYSTEM                       _ON 
+#define _DEBUG_MESSAGE_SCALER                       _ON 
 #define _DEBUG_MESSAGE_ANALOG                       _OFF
-#define _DEBUG_MESSAGE_DIGITAL                      _OFF
-#define _DEBUG_MESSAGE_RX0                          _OFF
-#define _DEBUG_MESSAGE_RX1                          _OFF
-#define _DEBUG_MESSAGE_RX2                          _OFF
-#define _DEBUG_MESSAGE_RX3                          _OFF
+#define _DEBUG_MESSAGE_DIGITAL                      _ON 
+#define _DEBUG_MESSAGE_RX0                          _ON 
+#define _DEBUG_MESSAGE_RX1                          _ON 
+#define _DEBUG_MESSAGE_RX2                          _ON 
+#define _DEBUG_MESSAGE_RX3                          _ON 
 #define _DEBUG_MESSAGE_RX4                          _OFF
 #define _DEBUG_MESSAGE_RX5                          _OFF
 #define _DEBUG_MESSAGE_MHL                          _OFF
 #define _DEBUG_MESSAGE_MST                          _OFF
 #define _DEBUG_MESSAGE_HDCP2                        _OFF
 #define _DEBUG_MESSAGE_AUDIO                        _OFF
-#define _DEBUG_MESSAGE_MEASURE                      _OFF
-#define _DEBUG_MESSAGE_MEMORY                       _OFF
+#define _DEBUG_MESSAGE_MEASURE                      _ON 
+#define _DEBUG_MESSAGE_MEMORY                       _ON 
 #define _DEBUG_MESSAGE_MEMORY_PHASE_CAL             _OFF
-#define _DEBUG_MESSAGE_FRAME_SYNC                   _OFF
-#define _DEBUG_MESSAGE_FRC                          _OFF
-#define _DEBUG_MESSAGE_OSD                          _OFF
+#define _DEBUG_MESSAGE_FRAME_SYNC                   _ON 
+#define _DEBUG_MESSAGE_FRC                          _ON 
+#define _DEBUG_MESSAGE_OSD                          _ON 
 #define _DEBUG_MESSAGE_IR                           _OFF
 #define _DEBUG_MESSAGE_USB_COMM                     _OFF
 #define _DEBUG_MESSAGE_USB_EHCI                     _OFF
 #define _DEBUG_MESSAGE_USB_OHCI                     _OFF
-#define _DEBUG_MESSAGE_QC                           _OFF
+#define _DEBUG_MESSAGE_QC                           _ON 
 #define _DEBUG_MESSAGE_HDR                          _OFF
 #define _DEBUG_MESSAGE_CEC                          _OFF
 #define _DEBUG_MESSAGE_HDMITX                       _OFF
 #define _DEBUG_MESSAGE_TYPE_C                       _OFF
-#define _DEBUG_MESSAGE_CHECK_DISP_SETTING           _OFF
-#define _DEBUG_MESSAGE_CHECK_MDOMAIN                _OFF
+#define _DEBUG_MESSAGE_CHECK_DISP_SETTING           _ON 
+#define _DEBUG_MESSAGE_CHECK_MDOMAIN                _ON    // FRC-only builds: keil2sdcc RULES compile ScalerMDomainGetFRCMemoryBW for it (#37)
+
+//--------------------------------------------------
+// Tokenised message (awto, #25): {0x01, id_hi, id_lo, 0} in code; text is in fw/msgids.tsv. Bytes are 1..255 (no NUL).
+//--------------------------------------------------
+#define AWTO_MSG(id)                                ((BYTE *)(__code BYTE[]){0x01, (id) >> 8, (id) & 0xFF, 0})
 
 #ifndef _DEBUG_MESSAGE_AUTOTEST
 #define _DEBUG_MESSAGE_AUTOTEST                     _OFF
@@ -298,6 +303,12 @@
 #define _DEBUG_MESSAGE_SUPPORT                      _ON
 #else
 #define _DEBUG_MESSAGE_SUPPORT                      _OFF
+#endif
+
+// awto #26: keil2sdcc rewrites enabled DebugMessage<Cat>("text", v) to these (id from fw/msgids.tsv); disabled sites vanish
+#if(_DEBUG_MESSAGE_SUPPORT == _ON)
+extern void AwtoMsg0(unsigned int usId);
+extern void AwtoMsgV(unsigned int usId, unsigned long ulValue);
 #endif
 
 //--------------------------------------------------

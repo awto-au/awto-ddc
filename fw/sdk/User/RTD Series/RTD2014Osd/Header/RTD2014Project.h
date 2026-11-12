@@ -24,7 +24,7 @@
 //-------------------------------------------------
 // Define OSD Rotate Type
 //-------------------------------------------------
-#define _OSD_ROTATE_FUNCTION                        _OSD_ROTATE_HARDWARE
+#define _OSD_ROTATE_FUNCTION                        _OSD_ROTATE_OFF  // awto: no panel/OSD rotation
 
 //--------------------------------------------------
 // Definitions of IR Protocal
@@ -42,7 +42,8 @@
 //--------------------------------------------------
 // Definitions of DP extra infomation for debug , DP Support must set ON
 //--------------------------------------------------
-#define _DP_DEBUG_MSG                              _OFF
+#undef _DP_DEBUG_MSG                                // User_Project_Option.h defines it _OFF
+#define _DP_DEBUG_MSG                              _ON     // awto #37: DP info on input pop-up / power-saving screen; widens g_stOsdInfo
 
 
 //--------------------------------------------------
