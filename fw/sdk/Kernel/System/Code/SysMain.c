@@ -109,6 +109,7 @@ void main(void)
             AWTO_SW_MARK(1);
             AWTO_PS_POLL_SITE();
             SysPowerHandler();
+            UserCommonInterfacePanelPowerTick();    // #162 panel machine: right after the power switch (PHY needs power NORMAL)
             AWTO_SW_FAST_POLL();
             AWTO_LP(2);
             AWTO_SW_MARK(2);
@@ -203,6 +204,7 @@ void main(void)
             AWTO_SW_MARK(9);
             AWTO_PS_POLL_SITE();
             AWTO_SET_LOOP();
+            UserCommonInterfacePanelPowerTick();    // before the OSD handler's long draws (boot console): T3 / PWM steps due now
             UserCommonInterfaceOsdHandler();
 
 #if(_DDCCI_CODE_REDUCTION == _OFF)
@@ -240,6 +242,7 @@ void SysMainSystemInitial(void)
 #endif
 
     ScalerMcuInitial();
+    SysPowerMcuClock(_M2PLL_CLK);           // #162 / #144: init on M2PLL, not the 14.318 MHz crystal (crystal again around the chip reset)
 
     AwtoDiagStage(3);
     ScalerPinshareInitial();
@@ -260,8 +263,8 @@ void SysMainSystemInitial(void)
 #endif
 
     AwtoDiagStage(4);
-#if(_AWTO_FAST_BOOT == _ON)
-    AwtoPanelVddEarly();
+#if(_AWTO_BOOT_PANEL_EARLY == _ON)
+    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);    // #162: VDD + T1 now; PHY / link once power is NORMAL
 #endif
     ScalerTimerInitialTimerEvent();
 

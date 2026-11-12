@@ -94,8 +94,7 @@ void RTDOsdSystemFlowProc(void)
 #endif
 
                 AWTO_BPROF(0x3B);
-                AwtoBootConsole();
-                AWTO_BOOT_PANEL_ON();
+                AwtoBootConsole();      // #162: the panel is the panel machine's, requested at the power switch
             }
 
             break;

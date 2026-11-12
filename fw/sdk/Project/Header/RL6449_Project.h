@@ -347,8 +347,8 @@ extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_S_FREAD                                        9       // ScalerFlashRead
 #define AWTO_WDT_S_FWRITE                                       10      // ScalerFlashWrite sector part
 #define AWTO_WDT_S_OSDSTR                                       11      // OsdPropPutString character
-#define AWTO_WDT_S_T3                                           12      // AwtoDiagPanelT3Wait (panel T3 with the delay calibration)
-#define AWTO_WDT_S_HPD                                          13      // ScalerDisplayDPTxPollingHotPlug (eDP HPD, panel T2)
+#define AWTO_WDT_S_T3                                           12      // retired #162 (was the blocking panel T3 wait); id kept for old crash records
+#define AWTO_WDT_S_HPD                                          13      // retired #162 (was the blocking eDP HPD poll); id kept for old crash records
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
 extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke
@@ -529,9 +529,9 @@ extern void AwtoGpioConSet(unsigned char ucOn);
 extern void AwtoKeyConSet(unsigned char ucOn);
 #define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)
 #if(_AWTO_DIAG_DELAYCAL == _ON)
-extern void AwtoDiagPanelT3Wait(unsigned int usMs);
+extern void AwtoDiagT3Mark(unsigned char ucEnd);
 #else
-#define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
+#define AwtoDiagT3Mark(e)
 #endif
 #define AWTO_DIAG_T2ISR()                                       do { if(++g_stAwtoDiag.usT2Isr == 0) { g_stAwtoHt.usUpHi++; } AWTO_LED_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
@@ -541,7 +541,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #define AwtoDiagStage(n)
 #define AwtoDiagMainPass()
 #define AwtoDiagTestCmd()
-#define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
+#define AwtoDiagT3Mark(e)
 #define AWTO_DIAG_T2ISR()                                       AWTO_LED_T2ISR()
 #define AWTO_DIAG_EX1ISR()
 #error "_AWTO_DIAG off: the front keys are read by the input monitor (fw/sdcc/awto_gpio.inc, awto_keys.inc; #129)"
@@ -777,7 +777,8 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #define AWTO_SW_EV_T3                                           0x20    // arg 0 = T3 wait start, 1 = end
 #define AWTO_SW_EV_CMD                                          0x40    // arg = switch command (test cmd 0x30..0x33)
 #define AWTO_SW_EV_HOLD_BLOCK                                   0x50    // OsdDispDisableOsd blocked by a hold (#28); arg = mode state
-#define AWTO_SW_EV_VDD                                          0x70    // panel VDD on early, right after pin-share (#63 boot time)
+#define AWTO_SW_EV_PANEL                                        0x11    // #162 panel machine: arg = old state << 4 | new state; ring value = ms in the old state
+#define AWTO_SW_EV_PANEL_X                                      0x12    // #162 arg AWTO_PNL_X_*: HPD timeout, link fail, a pin / PWM write outside the machine
 #define AWTO_SW_EV_BLANK                                        0x80    // backlight kept on, picture blanked instead (#60 step 2); arg = site
 #ifndef _AWTO_LOOP_PROF
 #define _AWTO_LOOP_PROF                                         _OFF    // -D_AWTO_LOOP_PROF=_ON: per-handler main-loop cost (fw/sdcc/awto_loopprof.inc)
@@ -874,23 +875,21 @@ extern __xdata StAwtoSw g_stAwtoSw;
 extern void AwtoSwEvent(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSwArm(unsigned char ucPort);
 extern void AwtoSwPoll(void);
-extern void AwtoPanelVddEarly(void);
 #ifndef _AWTO_PANEL_LOG
 #define _AWTO_PANEL_LOG                                         _ON     // every panel / backlight call with its outcome, real pin changes (#144)
 #endif
 #if(_AWTO_PANEL_LOG == _ON)
-extern unsigned char AwtoPanelReqArg(unsigned char ucEvent, unsigned char ucStatus);
 extern void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn);
 #else
-#define AwtoPanelReqArg(e, s)                                   (e)
 #define AwtoPanelPinLog(b, o)
 #endif
+extern void AwtoPanelLog(unsigned char ucArg, unsigned int usMs);
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 #else
 #define AwtoSwEvent(a, b)
-#define AwtoPanelReqArg(e, s)                                   (e)
 #define AwtoPanelPinLog(b, o)
+#define AwtoPanelLog(a, m)
 #define AWTO_BPROF(k)
 #define AwtoSwPoll()
 #define AWTO_SW_HPD(port, x)
@@ -1109,11 +1108,6 @@ extern void AwtoConLogSync(void);
 #ifndef _AWTO_BOOT_PANEL_EARLY
 #define _AWTO_BOOT_PANEL_EARLY                                  _ON
 #endif
-#if(_AWTO_BOOT_PANEL_EARLY == _ON)
-#define AWTO_BOOT_PANEL_ON()                                    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON)
-#else
-#define AWTO_BOOT_PANEL_ON()
-#endif
 #if((_AWTO_SYNC_LOG == _ON) && (_AWTO_DIAG == _ON) && (_AWTO_BOOT_PANEL_EARLY == _ON))
 extern void AwtoBootConsole(void);
 #else
@@ -1125,12 +1119,7 @@ extern void AwtoBootConsole(void);
 #define _AWTO_FAST_BOOT                                         _ON
 // #60 step 2 (Dan's panel policy 4): no backlight off on mode reset / display setting / DCLK change; the picture is blanked
 // (forced background) instead and the active proc unblanks it. Real power saving still turns the backlight off.
-#define _AWTO_KEEP_BACKLIGHT                                    _ON
-#if(_AWTO_KEEP_BACKLIGHT == _ON)
-#define AWTO_BL_OFF_OR_BLANK(site)                              { ScalerDDomainBackgroundEnable(_ENABLE); AwtoSwEvent(AWTO_SW_EV_BLANK, (site)); }
-#else
-#define AWTO_BL_OFF_OR_BLANK(site)                              UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF)
-#endif
+#define AWTO_BLANK(site)                                        { ScalerDDomainBackgroundEnable(_ENABLE); AwtoSwEvent(AWTO_SW_EV_BLANK, (site)); }
 // #60 step 3: _OFF = the SDK never pulses HDMI HPD low on a switch / timing change (host saw 2 drm uevents per switch to D2)
 #define _AWTO_HDMI_HPD_TOGGLE                                   _OFF
 // #78: _ON = TMDS Initial keeps the SCDC module (host-written 1/40 ratio, scrambling) after a no-signal power-off; the
@@ -1191,20 +1180,17 @@ extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up 
 #ifndef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _ON
 #endif
-#define AWTO_L2_SEC                                             60      // Dan 2026-11-08 defaults: L2 after 1 min, L3 after 10 min
-#define AWTO_L3_SEC                                             600
+#define AWTO_L2_SEC                                             60      // Dan 2026-11-08: 1 min; #162 (Dan 2026-11-12): then the no-signal -> power-saving timers
 #define AWTO_HOLD_CHECK_MS                                      10      // receiver check while held: wake latency <= 10 ms + 1 pass
 #define AWTO_HOLD_AUTO_SEC                                      5       // auto search + a 2nd cable: hold this long, then SDK search
 #define AWTO_REHOLD_MS                                          3000    // no new hold this soon after a fast wake (a post-wake judge fail = full path)
 #define AWTO_HOLD_TRIES                                         4       // fast wakes that time out (8 frames each) before the full path
-#define AWTO_SW_EV_HOLD                                         0xA8    // 1 L1 entered, 2 L2 eDP link off, 3 L3 released, 4 tries used up, 5 signal back, 6 backlight on, 7 retry, 9 auto search, another cable, 0x10 SDK reset
+#define AWTO_SW_EV_HOLD                                         0xA8    // 1 L1 entered, 2 L2 released to no signal, 4 tries used up, 5 signal back, 6 backlight on, 7 retry, 9 auto search, another cable, 0x10 SDK reset
 typedef struct
 {
-    unsigned char ucL1;                         // per-level enable (0/1); settings registry / test cmds 0x36..0x3A
+    unsigned char ucL1;                         // per-level enable (0/1); settings registry / test cmds 0x36..0x39
     unsigned char ucL2;
-    unsigned char ucL3;
-    unsigned int usL2Sec;                       // s in hold before L2 (panel off)
-    unsigned int usL3Sec;                       // s in hold before L3 (SDK power saving)
+    unsigned int usL2Sec;                       // s in hold before L2 (released to the no-signal path)
 } StAwtoPower;
 #if(_AWTO_WAKE_HOLD == _ON)
 extern __xdata StAwtoPower g_stAwtoPower;
@@ -1249,6 +1235,36 @@ extern unsigned char AwtoFastScalerStatus(void);
 #else
 #define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
 #endif
+// #162 panel machine (UserCommonInterface.c): the one driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
+// Callers request (UserCommonInterfacePanelPowerAction); UserCommonInterfacePanelPowerTick() steps it, never waits. docs/design-162.md.
+#define AWTO_PNL_OFF                                            0       // VDD off, T6 done
+#define AWTO_PNL_VDD                                            1       // VDD on: T1, then the PHY once power status is NORMAL
+#define AWTO_PNL_HPD                                            2       // PHY on: HPD read each tick, bound T2
+#define AWTO_PNL_LINK                                           3       // link training (one step)
+#define AWTO_PNL_VIDEO                                          4       // stream on, backlight off
+#define AWTO_PNL_T3                                             5       // backlight wanted: T3 from the stream start
+#define AWTO_PNL_BL_PWM                                         6       // backlight pin on: backlight-to-PWM time
+#define AWTO_PNL_BL_ON                                          7       // PWM duty set
+#define AWTO_PNL_BL_OFF                                         8       // PWM dark: PWM-to-backlight time, then the pin off
+#define AWTO_PNL_T4                                             9       // backlight off: T4, then the stream idle
+#define AWTO_PNL_T5                                             10      // stream idle: T5, then link / PHY / VDD off
+#define AWTO_PNL_T6                                             11      // VDD off: T6 before VDD may come on again
+#define AWTO_PNL_TGT_OFF                                        0       // request levels: panel off
+#define AWTO_PNL_TGT_VIDEO                                      1       // VDD + link + stream, backlight off
+#define AWTO_PNL_TGT_BL                                         2       // all on
+#define AWTO_PNL_X_HPD                                          0       // AWTO_SW_EV_PANEL_X args
+#define AWTO_PNL_X_LINK                                         1
+#define AWTO_PNL_X_VDD                                          2       // 2 + resource: written outside the machine
+#define AWTO_PNL_X_BL                                           3
+#define AWTO_PNL_X_PWM                                          4
+#define AWTO_PNL_X_DEFER                                        5       // up-request while the power switch waits for the panel
+#define AWTO_PWM_DARK                                           ((_BACKLIGHT_PWM_INVERSE == _ON) ? 0xFF : 0x00)    // 8-bit duty (_PWM_DUT_RESOLUTION) with the backlight dark
+extern __xdata unsigned char g_ucAwtoPanelOwn;     // 1 while the panel machine drives its pins (AwtoPanelPinLog flags other writers)
+extern void UserCommonInterfacePanelPowerTick(void);
+extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
+extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
+extern void AwtoPanelForeign(unsigned char ucWhat);
+extern unsigned char AwtoOwnFrame(void);
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)

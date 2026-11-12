@@ -1,4 +1,4 @@
-#if((_AWTO_DIAG == _ON) && (_AWTO_DIAG_DELAYCAL == _ON))      // awto: #53.6/#54 delay calibration inside the panel T3 wait; docs/diag-block.md
+#if((_AWTO_DIAG == _ON) && (_AWTO_DIAG_DELAYCAL == _ON))      // awto: #53.6/#54 delay calibration at the first panel stream start; docs/diag-block.md
 // Timer2 snapshot (EA off) and counts since an arbitrary origin: whole ticks x reload period + TH2:TL2 offset.
 // A pending TF2 is an overflow whose tick the ISR has not counted yet.
 typedef struct
@@ -113,46 +113,26 @@ static void AwtoDiagDelayCal(void)
 #endif
 }
 
-// ScalerTimerDelayXms(usMs) for the panel T3 wait with the calibration run inside it (once per boot): the wait ends at
-// the same Timer2 tick as before (tick count taken at entry + usMs), so the test costs no boot time.
-void AwtoDiagPanelT3Wait(unsigned int usMs)
+// #162 panel machine marks: 0 = stream start, 1 = backlight on. The first pair per boot sets usT3Wait64 (health) and
+// runs the calibration once at the stream start (it was inside the blocking T3 wait before; ~40 ms, open item #162).
+void AwtoDiagT3Mark(unsigned char ucEnd)
 {
-    unsigned int usN0, usNow;
-    unsigned int usRcap = ((unsigned int)RCAP2H << 8) | RCAP2L;
-
-    if(TR2 == _OFF)                                               // as ScalerTimerDelayXms: no tick, no wait
+    if((TR2 == _OFF) || (g_stAwtoDiag.usT3Wait64 != 0))         // as ScalerTimerDelayXms: no tick, no measurement
     {
         return;
     }
-#if(_AWTO_FAST_BOOT == _ON)
-    if(((ScalerGetByte(P7_F0_DISP_PG_R_CTRL) & _BIT7) != 0) || ((ScalerGetByte(P0_28_VIDEO_DISPLAY_CONTROL_REG) & _BIT5) != 0))
+    if(ucEnd == 0)
     {
-        usMs = AWTO_T3_OWN_PATTERN_MS;                             // pattern gen or forced background: our own frame
-    }
-#endif
-    do
-    {
-        usN0 = g_usTimerCounter;
-    }
-    while(usN0 != g_usTimerCounter);
-    AwtoSwEvent(AWTO_SW_EV_T3, 0);
-    AwtoDiagT2Snap(&s_stT3A);
-    if(g_stAwtoDiag.usDelayXms10 == 0)
-    {
-        AwtoDiagDelayCal();
-    }
-    do
-    {
-        do
+        AwtoSwEvent(AWTO_SW_EV_T3, 0);
+        AwtoDiagT2Snap(&s_stT3A);
+        if(g_stAwtoDiag.usDelayXms10 == 0)
         {
-            usNow = g_usTimerCounter;
+            AwtoDiagDelayCal();
         }
-        while(usNow != g_usTimerCounter);
-        AWTO_WDT_FEED(AWTO_WDT_S_T3);                             // bounded wait (usMs): poke as ScalerTimerDelayXms does (#150)
+        return;
     }
-    while((unsigned int)(usNow - usN0) < usMs);
     AwtoDiagT2Snap(&s_stT3B);
     AwtoSwEvent(AWTO_SW_EV_T3, 1);
-    g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, usRcap) >> 6);
+    g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, ((unsigned int)RCAP2H << 8) | RCAP2L) >> 6);
 }
 #endif

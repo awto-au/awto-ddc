@@ -9,13 +9,13 @@
 ^#warning "_INTERNAL_AUDIO_TEST_SUPPORT is _ON!!!"$	Kernel/Common/Scaler_Test_Function.h	*	ok	OK-TEST-BUILD: deliberate only for _AWTO_AUDIO_TEST; normal firmware keeps the feature off
 # W158 on (x << n) constants is a compiler false positive (awto-sdcc#47). Per-site entries (overflow 158, always-false 94, enum 291, optimizer 110, unreachable 126) follow from the review in #26.
 # Reviewed 2026-11-05 (#26): overflow 158 / always-false 94 / enum 291 - no bugs; spurious 158 above 127 into BYTE with --fsigned-char
-^overflow in implicit constant conversion$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	499	ok	0x98 into BYTE; asm #0x98
+^overflow in implicit constant conversion$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	489	ok	0x98 into BYTE; asm #0x98
 ^enumeration constant outside the range of int	Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonSyncCommonInclude.h	130	ok	_DP_HPD_TIME_NONE 0xFFFF = int -1, stored 16-bit; only ==/!=/assign uses see it
 ^comparison is always false due to limited range of data type$	User/RTD Factory/Code/RTDFactoryFunction.c	2812	ok	(bit)x == _BIT1 always false in Keil too; callers pass _FORCE_SHOW_NUMBER_OFF only
 ^overflow in implicit constant conversion$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4054	ok	icon 0x92 into BYTE / ~bit into 1-bit field (LSB kept, same as Keil)
 ^comparison is always false due to limited range of data type$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1092	ok	BYTE > 0xFF always false in Keil too; same behaviour
 # Reviewed 2026-11-05 (#26): optimizer-fold 110 / unreachable 126. 16 BUG sites (non-volatile ISR flags) fixed by the volatile bit rule of scripts/sdk_import.py, no entry
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	735	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_LTM270FL01 panel) is constant; RBR/HBR table else-branch dead
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	725	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_LTM270FL01 panel) is constant; RBR/HBR table else-branch dead
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DP_INT.c	868	ok	OK-CONFIG: bReturnValueD0 is a local bit only assigned in D0-DP code that is compiled out; D0==_TRUE folds false, D1 term still tested
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	2127	ok	OK-HARMLESS: local ucpllo is set to 1 on the only path reaching it; fold is correct (no ISR/HW involvement)
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	464	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead
@@ -145,31 +145,25 @@
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	239	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	72	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	84	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
-^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1421	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
-^unreachable code$	Kernel/System/Code/SysPower.c	910	ok	OK-HARMLESS: trailing return after a switch in which all cases return
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1015	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	1193	ok	OK-CONFIG: if(ScalerDisplayDPTxLinkSequence()==_FAIL) body empty (_PANEL_DPTX_FORCE_OUTPUT_SUPPORT off); call kept
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1217	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1276	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1342	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1360	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1362	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1390	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1467	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
+^unreachable code$	Kernel/System/Code/SysPower.c	929	ok	OK-HARMLESS: trailing return after a switch in which all cases return
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	929	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	967	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	365	ok	OK-HARMLESS: bUncall is a local =_FALSE: SDK "uncall" block that only forces link of otherwise unused functions; never meant to run
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	367	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	4149	ok	OK-CONFIG: _DP_TX_EDID case empty (config) so it merges with default
-^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	817	ok	OK-CONFIG: if(ScalerDisplayDPTxLinkSequence()==_FAIL) body empty (_PANEL_DPTX_FORCE_OUTPUT_SUPPORT off); call kept
+^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	3851	ok	OK-CONFIG: _DP_TX_EDID case empty (config) so it merges with default
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2815	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2814	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1437	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1443	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1882	ok	OK-CONFIG: _VGA_SUPPORT off: remaining cases empty, merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2705	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3666	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3729	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3733	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4222	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4227	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	638	ok	OK-HARMLESS: timer-event switch: cases sharing code merged by the optimizer (#162 removed the two panel timer events)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1362	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1368	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1805	ok	OK-CONFIG: _VGA_SUPPORT off: remaining cases empty, merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2628	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3589	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3652	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3656	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4145	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4150	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4272	ok	OK-TEST-BUILD: speaker-only DAC selection is a compile-time constant; optimizer keeps the amplifier action
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	113	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	115	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
@@ -181,14 +175,14 @@
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	141	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	143	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5261	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5262	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5259	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5260	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6253	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6280	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6314	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6338	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6360	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6384	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6252	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6279	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6313	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6337	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6359	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6383	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1161	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1159	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1157	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
@@ -242,8 +236,8 @@
 ^unreachable code$	Kernel/System/Code/SysSource.c	3281	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	555	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	557	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6224	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6223	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	90	ok	OK-CONFIG: -D _AWTO_BOOT_PANEL_EARLY=_OFF only: the mode INITIAL change block is empty (#144)
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4248	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4171	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4269	ok	OK-HARMLESS: same function, empty SAVING branch
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4290	ok	OK-CONFIG: AmpMute compares the constant UserInterfaceGetAudioDACOutput() (headphone only, rules.py SUB) with BOTH; PCB_AMP_MUTE is a no-op anyway

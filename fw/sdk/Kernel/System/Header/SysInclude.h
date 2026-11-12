@@ -607,6 +607,7 @@ extern void SysMHLMscHandler(void);
 extern void SysPowerInitial(void);
 extern void SysPowerHandler(void);
 extern BYTE SysPowerGetPowerStatus(void);
+extern void SysPowerMcuClock(BYTE ucClockSel);
 
 // __SYSTEM_SOURCE__
 extern void SysSourceHandler(void);

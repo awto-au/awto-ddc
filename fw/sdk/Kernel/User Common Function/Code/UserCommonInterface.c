@@ -750,702 +750,403 @@ bit UserCommonInterfaceGetDisplaySettingBacklightAction(void)
 #endif
 }
 
+// awto-ddc#162 panel machine: the only driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
+// Callers request a level; UserCommonInterfacePanelPowerTick() (main loop + each request) steps it and never waits.
+// States AWTO_PNL_* (RL6449_Project.h), transitions logged by AwtoPanelLog (sync.tsv id 11); docs/design-162.md.
+#if((_PANEL_STYLE != _PANEL_DPTX) || (_PANEL_POWER_SEQUENCE_CONTROL_BY_USER == _ON) || (_PANEL_PWM_BEFORE_BL_CONTROL == _ON))
+#error "awto-ddc#162 panel machine: eDP (DPTx), SDK sequence order (PWM after the backlight pin) only"
+#endif
+
+static __xdata BYTE s_ucPnlState;               // AWTO_PNL_*
+static __xdata BYTE s_ucPnlTarget;              // AWTO_PNL_TGT_*
+static __xdata WORD s_usPnlEntry;               // (WORD)AwtoMs() at the state's entry: every wait counts from here
+static __xdata WORD s_usPnlVideo;               // (WORD)AwtoMs() at the stream start: T3 counts from here
+static __xdata BYTE s_ucPnlDown;                // power switch waiting for the panel: 0 none, else 1 + the level to restore
+__xdata BYTE g_ucAwtoPanelOwn;                  // 1 while the machine drives its pins (AwtoPanelForeign)
+
+static WORD UserCommonInterfacePanelSince(WORD usFrom)
+{
+    return (WORD)((WORD)AwtoMs() - usFrom);
+}
+
+// T3 what: stream valid -> backlight on. Own black frame (pattern gen or forced background) on: AWTO_T3_OWN_PATTERN_MS
+// (one frame + margin, #63); else the panel's T3 (registry PANEL_T3, datasheet >= 500 ms). Expiry: backlight on.
+static WORD UserCommonInterfacePanelT3(void)
+{
+    if(AwtoOwnFrame() != 0)
+    {
+        return AWTO_T3_OWN_PATTERN_MS;
+    }
+    return _PANEL_POWER_ON_T3;
+}
+
+static void UserCommonInterfacePanelGo(BYTE ucNew)
+{
+    AwtoPanelLog((BYTE)((s_ucPnlState << 4) | ucNew), UserCommonInterfacePanelSince(s_usPnlEntry));
+    s_ucPnlState = ucNew;
+    s_usPnlEntry = (WORD)AwtoMs();
+}
+
+// The SDK's status view (UserCommonInterfaceReadyForActive reads READY / ALREADY), derived from the state only.
+static void UserCommonInterfacePanelStatus(void)
+{
+    BYTE ucS = s_ucPnlState;
+
+    if((ucS == AWTO_PNL_OFF) || (ucS == AWTO_PNL_T6))
+    {
+        SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
+    }
+    else if((ucS == AWTO_PNL_BL_PWM) || (ucS == AWTO_PNL_BL_ON))
+    {
+        SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
+    }
+    else if(ucS >= AWTO_PNL_BL_OFF)
+    {
+        SET_PANELPOWERSTATUS(_PANEL_BACKLIGHT_OFF);
+    }
+    else if((ucS >= AWTO_PNL_VIDEO) && (UserCommonInterfacePanelSince(s_usPnlVideo) >= UserCommonInterfacePanelT3()))
+    {
+        SET_PANELPOWERSTATUS(_READY_FOR_BACKLIGHT);
+    }
+    else
+    {
+        SET_PANELPOWERSTATUS(_WAITING_FOR_BACKLIGHT);
+    }
+}
+
+static void UserCommonInterfacePanelVideoOn(void)
+{
+    ScalerDisplayDPTxStreamHanlder(_ENABLE);
+    ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_VIDEO_PATTERN);
+    s_usPnlVideo = (WORD)AwtoMs();
+    AwtoDiagStage(8);
+    AwtoDiagT3Mark(0);                          // first T3 of the boot: diag T3 length, delay calibration (#53)
+}
+
+static void UserCommonInterfacePanelVddOff(BYTE ucPhy)
+{
+    if(ucPhy != 0)
+    {
+        ScalerDisplayDPTxSSCSet(_DISABLE);
+        ScalerDisplayDPTxAnalogPhyConrol(_DISABLE);
+    }
+    PCB_PANEL_POWER(_PANEL_CONTROL_OFF);
+    UserCommonInterfacePanelGo(AWTO_PNL_T6);
+}
+
+// One step per call while a state's condition holds; returns _FALSE when the machine must wait (time or target).
+static bit UserCommonInterfacePanelStep(void)
+{
+    BYTE ucT = s_ucPnlTarget;
+    WORD usIn = UserCommonInterfacePanelSince(s_usPnlEntry);
+
+    switch(s_ucPnlState)
+    {
+        case AWTO_PNL_OFF:
+            if(ucT == AWTO_PNL_TGT_OFF)
+            {
+                return _FALSE;
+            }
+            AwtoDiagStage(5);
+            PCB_PANEL_POWER(_PANEL_CONTROL_ON);
+            UserCommonInterfacePanelGo(AWTO_PNL_VDD);
+            return _TRUE;
+
+        case AWTO_PNL_VDD:
+            // T1 what: VDD valid -> eDP PHY / AUX; panel T1 (registry PANEL_T1). The PHY also needs the display power domain
+            // (power status NORMAL, after SysPowerSwitch): at cold boot VDD runs ahead of it. Expiry: PHY on, HPD read.
+            if(ucT == AWTO_PNL_TGT_OFF)
+            {
+                UserCommonInterfacePanelVddOff(_FALSE);
+                return _TRUE;
+            }
+            if((usIn < _PANEL_POWER_ON_T1) || (SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL))
+            {
+                return _FALSE;
+            }
+            ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_PANEL_ON);
+            ScalerDisplayDPTxPhyInitial();
+            UserCommonInterfacePanelGo(AWTO_PNL_HPD);
+            return _TRUE;
+
+        case AWTO_PNL_HPD:
+            // T2 what: HPD high, read once per tick; bound = panel T2 (registry PANEL_T2). Expiry: train anyway (SDK) + line.
+            if(ucT == AWTO_PNL_TGT_OFF)
+            {
+                UserCommonInterfacePanelVddOff(_TRUE);
+                return _TRUE;
+            }
+            if(ScalerDisplayDPTxHotPlugHigh() == _FALSE)
+            {
+                if(usIn < _PANEL_POWER_ON_T2)
+                {
+                    return _FALSE;
+                }
+                AwtoSwEvent(AWTO_SW_EV_PANEL_X, AWTO_PNL_X_HPD);
+            }
+            UserCommonInterfacePanelGo(AWTO_PNL_LINK);
+            return _TRUE;
+
+        case AWTO_PNL_LINK:
+            if(ScalerDisplayDPTxLinkSequence() == _FAIL)
+            {
+                AwtoSwEvent(AWTO_SW_EV_PANEL_X, AWTO_PNL_X_LINK);
+#if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
+                ScalerDisplayDPTxLinkSignalForceOutput();
+#endif
+            }
+            AwtoDiagStage(7);
+            ScalerDDomainBackgroundEnable(_ENABLE);   // fresh link: black until the scaler shows a picture (short T3)
+            UserCommonInterfacePanelVideoOn();
+            UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);
+            return _TRUE;
+
+        case AWTO_PNL_VIDEO:
+            if(ucT == AWTO_PNL_TGT_BL)
+            {
+                UserCommonInterfacePanelGo(AWTO_PNL_T3);
+                return _TRUE;
+            }
+            if(ucT == AWTO_PNL_TGT_OFF)
+            {
+                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
+                UserCommonInterfacePanelGo(AWTO_PNL_T4);
+                return _TRUE;
+            }
+            return _FALSE;
+
+        case AWTO_PNL_T3:
+            if(ucT != AWTO_PNL_TGT_BL)
+            {
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);
+                return _TRUE;
+            }
+            if(UserCommonInterfacePanelSince(s_usPnlVideo) < UserCommonInterfacePanelT3())
+            {
+                return _FALSE;
+            }
+            AwtoDiagT3Mark(1);
+            PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
+            ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
+            UserCommonInterfacePanelGo(AWTO_PNL_BL_PWM);
+            return _TRUE;
+
+        case AWTO_PNL_BL_PWM:
+            // what: backlight pin on -> PWM duty; _PANEL_POWER_ON_BL_TO_PWM (SDK Panel_Default.h). Expiry: user duty.
+            if(ucT != AWTO_PNL_TGT_BL)
+            {
+                PCB_BACKLIGHT_PWM(AWTO_PWM_DARK);
+                UserCommonInterfacePanelGo(AWTO_PNL_BL_OFF);
+                return _TRUE;
+            }
+            if(usIn < _PANEL_POWER_ON_BL_TO_PWM)
+            {
+                return _FALSE;
+            }
+            UserCommonInterfacePanelGo(AWTO_PNL_BL_ON);
+            UserAdjustBacklight(GET_OSD_BACKLIGHT());
+            SET_FORCESETPWMDUTY_FLAG(_FALSE);
+            return _TRUE;
+
+        case AWTO_PNL_BL_ON:
+            if(ucT == AWTO_PNL_TGT_BL)
+            {
+                return _FALSE;
+            }
+            SET_FORCESETPWMDUTY_FLAG(_TRUE);
+            PCB_BACKLIGHT_PWM(AWTO_PWM_DARK);
+            UserCommonInterfacePanelGo(AWTO_PNL_BL_OFF);
+            return _TRUE;
+
+        case AWTO_PNL_BL_OFF:
+            // what: PWM dark -> backlight pin off; _PANEL_POWER_OFF_PWM_TO_BL (SDK Panel_Default.h). Expiry: pin off.
+            if(usIn < _PANEL_POWER_OFF_PWM_TO_BL)
+            {
+                return _FALSE;
+            }
+            PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
+            if(ucT == AWTO_PNL_TGT_OFF)
+            {
+                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
+                UserCommonInterfacePanelGo(AWTO_PNL_T4);
+            }
+            else
+            {
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);     // stream kept: a backlight-on needs no new T3
+            }
+            return _TRUE;
+
+        case AWTO_PNL_T4:
+            // T4 what: backlight off -> stream stops; panel T4 (registry PANEL_T4). Expiry: idle pattern.
+            if(ucT != AWTO_PNL_TGT_OFF)
+            {
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);     // stream still on
+                return _TRUE;
+            }
+            if(usIn < _PANEL_POWER_OFF_T4)
+            {
+                return _FALSE;
+            }
+            ScalerDisplayDPTxStreamHanlder(_DISABLE);
+            ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_IDLE_PATTERN);
+            UserCommonInterfacePanelGo(AWTO_PNL_T5);
+            return _TRUE;
+
+        case AWTO_PNL_T5:
+            // T5 what: stream idle -> link / VDD off; panel T5 (registry PANEL_T5). Expiry: SSC, PHY, VDD off.
+            if(ucT != AWTO_PNL_TGT_OFF)
+            {
+                UserCommonInterfacePanelVideoOn();
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);
+                return _TRUE;
+            }
+            if(usIn < _PANEL_POWER_OFF_T5)
+            {
+                return _FALSE;
+            }
+            UserCommonInterfacePanelVddOff(_TRUE);
+            return _TRUE;
+
+        case AWTO_PNL_T6:
+        default:
+            // T6 what: VDD off -> VDD on again, minimum; panel T6 (registry PANEL_T6). Expiry: OFF (VDD may come on).
+            if(usIn < _PANEL_POWER_OFF_T6)
+            {
+                return _FALSE;
+            }
+            UserCommonInterfacePanelGo(AWTO_PNL_OFF);
+            return _TRUE;
+    }
+}
+
 //--------------------------------------------------
-// Description  : Power Power On/Off Sequence
-// Input Value  : ucEvent --> _PANEL_ON
-//                            _PANEL_OFF
-//                            _BACKLIGHT_ON
-//                            _BACKLIGHT_OFF
+// Description  : Panel machine step: every transition whose condition holds now (bounded: one pass of the states)
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void UserCommonInterfacePanelPowerTick(void)
+{
+    BYTE ucN;
+
+    if(g_ucAwtoPanelOwn != 0)
+    {
+        return;
+    }
+    g_ucAwtoPanelOwn = 1;
+    for(ucN = 0; ucN <= AWTO_PNL_T6; ucN++)    // at most one visit per state: no loop without a wait in it
+    {
+        if(UserCommonInterfacePanelStep() == _FALSE)
+        {
+            break;
+        }
+    }
+    UserCommonInterfacePanelStatus();
+    g_ucAwtoPanelOwn = 0;
+}
+
+//--------------------------------------------------
+// Description  : Panel power request (idempotent, returns at once); logs the request and whether it changed the target
+// Input Value  : ucEvent --> _PANEL_ON (video, backlight unchanged) / _PANEL_OFF / _BACKLIGHT_ON / _BACKLIGHT_OFF (video kept)
 // Output Value : None
 //--------------------------------------------------
 void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 {
-#if(_PANEL_POWER_SEQUENCE_CONTROL_BY_USER == _ON)
+    BYTE ucT = s_ucPnlTarget;
 
-    UserInterfacePanelPowerAction(ucEvent);
-
-#else
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-    SET_PANELPOWERACTION(ucEvent);
-#endif
-
-    AwtoSwEvent(AWTO_SW_EV_POWER, AwtoPanelReqArg(ucEvent, GET_PANELPOWERSTATUS()));
+    if((s_ucPnlDown != 0) && (ucEvent != _PANEL_OFF))
+    {
+        AwtoSwEvent(AWTO_SW_EV_PANEL_X, AWTO_PNL_X_DEFER);    // power-down first; this level is restored if the switch is called off
+        ucT = s_ucPnlDown - 1;
+        if(ucEvent == _BACKLIGHT_ON)
+        {
+            ucT = AWTO_PNL_TGT_BL;
+        }
+        else if(((ucEvent == _PANEL_ON) && (ucT == AWTO_PNL_TGT_OFF)) || ((ucEvent == _BACKLIGHT_OFF) && (ucT == AWTO_PNL_TGT_BL)))
+        {
+            ucT = AWTO_PNL_TGT_VIDEO;
+        }
+        s_ucPnlDown = ucT + 1;
+        return;
+    }
     switch(ucEvent)
     {
         case _PANEL_ON:
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-            if(GET_PANELPOWERSTATUS() == _WAITING_FOR_PANEL_OFF)
-            {
-                return;
-            }
-#endif
-
-            if(GET_PANELPOWERSTATUS() == _PANEL_POWER_OFF_STATE)
-            {
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _OFF)
-                // Check T6
-                ScalerTimerWaitForActiveTimerEvent(_USER_TIMER_EVENT_PANEL_POWER_OFF);
-#endif
-
-                // LCD Power on
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);
-    AwtoDiagStage(5);
-                PCB_PANEL_POWER(_PANEL_CONTROL_ON);
-           
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE != _TDO_1230K40444_V0_2))
-                PCB_PANEL_12V_PCTR(_ON);   
-#endif
-
-#ifdef bBACKLIGHT_12V_ONOFF
-                PCB_BACKLIGHT_12V_ONOFF_PIN(_ON);
-#endif
-
-                UserInterfaceAdjustWaitPanelT1();
-
-#if(_PANEL_STYLE == _PANEL_DPTX)
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_PANEL_ON);
-
-                // Set Dptx PHY
-                ScalerDisplayDPTxPhyInitial();
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);
-                if(ScalerDisplayDPTxLinkSequence() == _FAIL)
-                {
-#if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
-                    ScalerDisplayDPTxLinkSignalForceOutput();
-#endif
-                }
-#endif
-            }
-
-            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);
-    AwtoDiagStage(7);
-            if(GET_PANELPOWERSTATUS() != _BACKLIGHT_ON_ALREADY)
-            {
-#if(_PANEL_STYLE == _PANEL_LVDS)
-
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                ScalerTimerDelayXms(10);
-                PCB_P_RESET_GPIO(_ON);
-                ScalerTimerDelayXms(10);
-                PCB_STBYB_GPIO(_ON);
-                ScalerTimerDelayXms(120);
-#endif
-                // LVDS Power On
-                ScalerDisplayLvdsPower(_ON);
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                // LVDS PLL(Data) On
-                ScalerDisplayLvdsPLL(_ON);
-
-                // Wait Event for Backlight On
-                ScalerTimerActiveTimerEvent(_PANEL_POWER_ON_T3, _USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-
-                SET_PANELPOWERSTATUS(_WAITING_FOR_BACKLIGHT);
-
-#elif(_PANEL_STYLE == _PANEL_TTL)
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                // TTL Power On
-                ScalerDisplayTtlPower(_ON);
-
-                // Wait Event for Backlight On
-                ScalerTimerActiveTimerEvent(_PANEL_POWER_ON_T3, _USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-
-                SET_PANELPOWERSTATUS(_WAITING_FOR_BACKLIGHT);
-
-#elif(_PANEL_STYLE == _PANEL_VBO)
-
-                // Set Vby1 PHY
-                ScalerDisplayVboAnalogPhyConrol(_ENABLE);
-
-                // Set HTPDN control by H/W
-                ScalerDisplayVboHtpdnSetFwControl(_DISABLE);
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                ScalerDisplayVboHtpdnHandler();
-
-                // Set Panel Fast Off Enable
-                ScalerDisplayVboPanelSetFastOff(_ENABLE);
-
-                // Wait Event for Backlight On
-                ScalerTimerActiveTimerEvent(_PANEL_POWER_ON_T3, _USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-
-                SET_PANELPOWERSTATUS(_WAITING_FOR_BACKLIGHT);
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-                ScalerDisplayDPTxStreamHanlder(_ENABLE);
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_PANEL_ON);
-
-                // Wait Event for Backlight On
-                ScalerTimerActiveTimerEvent(_PANEL_POWER_ON_T3, _USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-
-                SET_PANELPOWERSTATUS(_WAITING_FOR_BACKLIGHT);
-
-#endif  // #if(_PANEL_STYLE == _PANEL_LVDS)
-            }
-
+            ucT = (ucT == AWTO_PNL_TGT_OFF) ? AWTO_PNL_TGT_VIDEO : ucT;
             break;
-
-        case _PANEL_OFF:
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-            if((GET_PANELPOWERSTATUS() != _PANEL_POWER_OFF_STATE) &&
-               (GET_PANELPOWERSTATUS() != _WAITING_FOR_PANEL_OFF))
-#else
-            if(GET_PANELPOWERSTATUS() != _PANEL_POWER_OFF_STATE)
-#endif
-            {
-                SET_FORCESETPWMDUTY_FLAG(_TRUE);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _OFF)
-
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-                
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL);
-#endif
-            
-#if(_PANEL_STYLE == _PANEL_LVDS)
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL); 
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-#endif
-
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                ScalerTimerDelayXms(25);
-                PCB_PANEL_12V_PCTR(_OFF);
-#endif
-
-                UserInterfaceAdjustWaitPanelT4();
-
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_STBYB_GPIO(_OFF);
-                ScalerTimerDelayXms(100);
-#endif
-
-                ScalerDisplayLvdsPLL(_OFF);
-
-                ScalerDisplayLvdsPower(_OFF);
-
-                UserInterfaceAdjustWaitPanelT5();
-
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_P_RESET_GPIO(_OFF);
-                ScalerTimerDelayXms(10);
-#endif
-
-
-#elif(_PANEL_STYLE == _PANEL_TTL)
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL); 
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-#endif
-
-                UserInterfaceAdjustWaitPanelT4();
-
-                ScalerDisplayTtlPower(_OFF);
-
-                UserInterfaceAdjustWaitPanelT5();
-
-#elif(_PANEL_STYLE == _PANEL_VBO)
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL); 
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-#endif
-
-                // HTDPN fail before CDR lock, or CDR fail during ALN training, then set panel fast off
-                if(ScalerDisplayVboPanelFastOffCheck() != _ENABLE)
-                {
-                    UserInterfaceAdjustWaitPanelT4();
-                }
-
-                // Force disable video output
-                ScalerDisplayVboForceVideoOutput(_DISABLE);
-
-                // Vby1 Phy Disable
-                ScalerDisplayVboAnalogPhyConrol(_DISABLE);
-
-                // Set HTPDN control by F/W, pull high
-                ScalerDisplayVboHtpdnSetFwControl(_ENABLE);
-
-                UserInterfaceAdjustWaitPanelT5();
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL); 
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-#endif
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
-
-                UserInterfaceAdjustWaitPanelT4();
-
-                // Set IDLE Pattern
-                ScalerDisplayDPTxStreamHanlder(_DISABLE);
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_IDLE_PATTERN);
-
-                UserInterfaceAdjustWaitPanelT5();
-
-                // Disable DPTx Spread Spectrum
-                ScalerDisplayDPTxSSCSet(_DISABLE);
-
-                ScalerDisplayDPTxAnalogPhyConrol(_DISABLE);
-
-#endif // #if(_PANEL_STYLE == _PANEL_LVDS)
-
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE != _TDO_1230K40444_V0_2))
-                PCB_PANEL_12V_PCTR(_OFF);   
-#endif
-
-#ifdef bBACKLIGHT_12V_ONOFF
-                PCB_BACKLIGHT_12V_ONOFF_PIN(_OFF);
-#endif
-
-                PCB_PANEL_POWER(_PANEL_CONTROL_OFF);
-
-                ScalerTimerActiveTimerEvent(_PANEL_POWER_OFF_T6, _USER_TIMER_EVENT_PANEL_POWER_OFF);
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-                SET_PANELPOWERSTATUS(_WAITING_FOR_PANEL_OFF);
-#else
-                SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
-#endif
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-            }
-
-            break;
-
         case _BACKLIGHT_ON:
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-            if(GET_PANELPOWERSTATUS() == _WAITING_FOR_PANEL_OFF)
-            {
-                return;
-            }
-#endif
-
-            if(GET_PANELPOWERSTATUS() == _PANEL_POWER_OFF_STATE)
-            {
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _OFF)
-                // Check T6
-                ScalerTimerWaitForActiveTimerEvent(_USER_TIMER_EVENT_PANEL_POWER_OFF);
-#endif
-
-                // LCD Power on
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);
-    AwtoDiagStage(5);
-                PCB_PANEL_POWER(_PANEL_CONTROL_ON);
-
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE != _TDO_1230K40444_V0_2))
-                PCB_PANEL_12V_PCTR(_ON);   
-#endif
-
-#ifdef bBACKLIGHT_12V_ONOFF
-                PCB_BACKLIGHT_12V_ONOFF_PIN(_ON);
-#endif
-
-                UserInterfaceAdjustWaitPanelT1();
-
-#if(_PANEL_STYLE == _PANEL_LVDS)
-                
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                ScalerTimerDelayXms(10);
-                PCB_P_RESET_GPIO(_ON);
-                ScalerTimerDelayXms(10);
-                PCB_STBYB_GPIO(_ON);
-                ScalerTimerDelayXms(120);
-#endif   
-
-                // LVDS Power On
-                ScalerDisplayLvdsPower(_ON);
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                // LVDS PLL(Data) On
-                ScalerDisplayLvdsPLL(_ON);
-
-                // Wait Delay for Backlight On
-                UserInterfaceAdjustWaitPanelT3();
-                
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_PANEL_12V_PCTR(_ON);
-                ScalerTimerDelayXms(25);
-#endif
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                UserAdjustBacklight(GET_OSD_BACKLIGHT()); 
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#elif(_PANEL_STYLE == _PANEL_TTL)
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                // TTL Power On
-                ScalerDisplayTtlPower(_ON);
-
-                // Wait Delay for Backlight On
-                UserInterfaceAdjustWaitPanelT3();
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                UserAdjustBacklight(GET_OSD_BACKLIGHT()); 
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#elif(_PANEL_STYLE == _PANEL_VBO)
-
-                // Set Vby1 PHY
-                ScalerDisplayVboAnalogPhyConrol(_ENABLE);
-
-                // Set HTPDN control by H/W
-                ScalerDisplayVboHtpdnSetFwControl(_DISABLE);
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                ScalerDisplayVboHtpdnHandler();
-
-                UserInterfaceAdjustWaitPanelT3();
-
-                ScalerDisplayVboLocknHandler();
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                UserAdjustBacklight(GET_OSD_BACKLIGHT()); 
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-                // Set Panel Fast Off Disable
-                ScalerDisplayVboPanelSetFastOff(_DISABLE);
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_PANEL_ON);
-
-                // Set Dptx PHY
-                ScalerDisplayDPTxPhyInitial();
-
-                UserInterfaceAdjustWaitPanelT2();
-
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);
-                if(ScalerDisplayDPTxLinkSequence() == _FAIL)
-                {
-#if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
-                    ScalerDisplayDPTxLinkSignalForceOutput();
-#endif
-                }
-
-    AwtoDiagStage(7);
-                // Set Video Stream parameter
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 27);
-                ScalerDisplayDPTxStreamHanlder(_ENABLE);
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_VIDEO_PATTERN);
-
-                // Wait Delay for Backlight On
-                UserInterfaceAdjustWaitPanelT3();
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                UserAdjustBacklight(GET_OSD_BACKLIGHT()); 
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-    AwtoDiagStage(8);
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#endif // #if(_PANEL_STYLE == _PANEL_LVDS)
-
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _OFF)
-
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-
-#endif
-                SET_FORCESETPWMDUTY_FLAG(_FALSE);
-
-            }
-            else if(GET_PANELPOWERSTATUS() == _PANEL_BACKLIGHT_OFF)
-            {            
-#if(_PANEL_STYLE == _PANEL_LVDS)
-
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                ScalerTimerDelayXms(10);
-                PCB_P_RESET_GPIO(_ON);
-                ScalerTimerDelayXms(10);
-                PCB_STBYB_GPIO(_ON);
-                ScalerTimerDelayXms(120);
-#endif 
-
-                // LVDS PLL(Data) On
-                ScalerDisplayLvdsPLL(_ON);
-
-#elif(_PANEL_STYLE == _PANEL_TTL)
-
-                // TTL Power On
-                ScalerDisplayTtlPower(_ON);
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-                ScalerDisplayDPTxStreamHanlder(_ENABLE);
-
-#endif // #if(_PANEL_STYLE == _PANEL_LVDS)
-
-                // Wait Delay for Backlight On
-                UserInterfaceAdjustWaitPanelT3();
-
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_PANEL_12V_PCTR(_ON);
-                ScalerTimerDelayXms(25);
-#endif
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)                
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _OFF)
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-            
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-#endif
-                SET_FORCESETPWMDUTY_FLAG(_FALSE);
-                
-            }
-            else
-            {
-                ScalerTimerWaitForActiveTimerEvent(_USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-
-#if(_PANEL_STYLE == _PANEL_LVDS)
-
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_PANEL_12V_PCTR(_ON);
-                ScalerTimerDelayXms(25);
-#endif
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)        
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#elif(_PANEL_STYLE == _PANEL_TTL)
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)        
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#elif(_PANEL_STYLE == _PANEL_VBO)
-
-                ScalerDisplayVboLocknHandler();
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)        
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-                // Set Panel Fast Off Disable
-                ScalerDisplayVboPanelSetFastOff(_DISABLE);
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)        
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
-
-                // Panel DPTx Power Sequence Check Point
-                ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
-
-                SET_PANELPOWERSTATUS(_BACKLIGHT_ON_ALREADY);
-
-#endif // #if(_PANEL_STYLE == _PANEL_LVDS)
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _OFF) 
-                ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
-            
-                UserAdjustBacklight(GET_OSD_BACKLIGHT());
-#endif
-
-                SET_FORCESETPWMDUTY_FLAG(_FALSE);
-            }
-#if(_USER_PROJECT_TYPE == UNITED_RTD2785_C23_LG_LM240WU8_SLE1_2LVDS_PWM)                
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
-                ScalerTimerDelayXms(10);
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);                
-#endif     
+            ucT = AWTO_PNL_TGT_BL;
             break;
-
         case _BACKLIGHT_OFF:
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-            if((GET_PANELPOWERSTATUS() != _PANEL_POWER_OFF_STATE) &&
-               (GET_PANELPOWERSTATUS() != _PANEL_BACKLIGHT_OFF) &&
-               (GET_PANELPOWERSTATUS() != _WAITING_FOR_PANEL_OFF))
-#else
-            if((GET_PANELPOWERSTATUS() != _PANEL_POWER_OFF_STATE) &&
-               (GET_PANELPOWERSTATUS() != _PANEL_BACKLIGHT_OFF))
-#endif
-            {
-                SET_FORCESETPWMDUTY_FLAG(_TRUE);
-                
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _OFF) 
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-                
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL);
-#endif
-
-                PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
-
-#if(_PANEL_PWM_BEFORE_BL_CONTROL == _ON)
-                ScalerTimerDelayXms(_PANEL_POWER_OFF_PWM_TO_BL); 
-                //set min pwm duty
-#if(_MCU_PWM_BIT_SUPPORT == _PWM_12BIT)
-                MCU_ADJUST_12BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 4095 : 0);
-#else
-                MCU_ADJUST_8BIT_PWM_DUTY(_BACKLIGHT_PWM,(_BACKLIGHT_PWM_INVERSE == _ENABLE) ? 255 : 0);
-#endif
-#endif
-
-#if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                ScalerTimerDelayXms(25);
-                PCB_PANEL_12V_PCTR(_OFF);
-#endif
-
-#if(_PANEL_STYLE == _PANEL_LVDS)
-
-                UserInterfaceAdjustWaitPanelT4();
-
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_STBYB_GPIO(_OFF);
-                ScalerTimerDelayXms(100);
-#endif
-
-                ScalerDisplayLvdsPLL(_OFF);
-
-#if((_USER_PCB_BOARD_TYPE == _KL_CUSTOMER_PCB_BOARD) && (_PANEL_TYPE == _TDO_1230K40444_V0_2))
-                PCB_P_RESET_GPIO(_OFF);
-                ScalerTimerDelayXms(10);
-#endif
-
-#elif(_PANEL_STYLE == _PANEL_TTL)
-
-                UserInterfaceAdjustWaitPanelT4();
-
-                ScalerDisplayTtlPower(_OFF);
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-                UserInterfaceAdjustWaitPanelT4();
-
-                ScalerDisplayDPTxStreamHanlder(_DISABLE);
-
-#endif // #if(_PANEL_STYLE == _PANEL_LVDS)
-
-                SET_PANELPOWERSTATUS(_PANEL_BACKLIGHT_OFF);
-            }
-
-            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_PANEL_BACKLIGHT_ON);
-
+            ucT = (ucT == AWTO_PNL_TGT_BL) ? AWTO_PNL_TGT_VIDEO : ucT;
             break;
-
         default:
-
+            ucT = AWTO_PNL_TGT_OFF;
             break;
     }
-#endif
+    AwtoSwEvent(AWTO_SW_EV_POWER, 4 + 2 * ucEvent + (ucT == s_ucPnlTarget));     // sync.tsv 10 04..0B
+    s_ucPnlTarget = ucT;
+    UserCommonInterfacePanelPowerTick();
+}
+
+//--------------------------------------------------
+// Description  : SysPower gate, each pass: a NORMAL / AC_ON -> OFF / SAVING switch waits (non-blocking) for the panel down
+//                (T4, T5 done); up-requests meanwhile are deferred; a target withdrawn before the switch restores the level
+// Input Value  : bDown --> power target OFF / SAVING while the power status is NORMAL / AC_ON
+//                bUp   --> power status NORMAL / AC_ON
+// Output Value : _TRUE = the power switch may run
+//--------------------------------------------------
+bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp)
+{
+    if(bDown != 0)
+    {
+        if(s_ucPnlDown == 0)
+        {
+            BYTE ucKeep = s_ucPnlTarget;
+
+            UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+            s_ucPnlDown = ucKeep + 1;
+        }
+        return ((s_ucPnlState == AWTO_PNL_OFF) || (s_ucPnlState == AWTO_PNL_T6));
+    }
+    if((s_ucPnlDown != 0) && (bUp != 0))        // switch called off (target withdrawn): back to the level before it
+    {
+        BYTE ucLevel = s_ucPnlDown - 1;
+
+        s_ucPnlDown = 0;
+        UserCommonInterfacePanelPowerAction((ucLevel == AWTO_PNL_TGT_BL) ? _BACKLIGHT_ON : ((ucLevel == AWTO_PNL_TGT_VIDEO) ? _PANEL_ON : _PANEL_OFF));
+    }
+    s_ucPnlDown = 0;
+    return _TRUE;
+}
+
+//--------------------------------------------------
+// Description  : Backlight duty (UserAdjustBacklight): applied now only while the backlight is on; else at its next on
+// Input Value  : usDuty --> PWM duty
+// Output Value : None
+//--------------------------------------------------
+void UserCommonInterfacePanelPwm(WORD usDuty)
+{
+    BYTE ucOwn = g_ucAwtoPanelOwn;
+
+    if(s_ucPnlState == AWTO_PNL_BL_ON)
+    {
+        g_ucAwtoPanelOwn = 1;
+        PCB_BACKLIGHT_PWM(usDuty);
+        g_ucAwtoPanelOwn = ucOwn;
+    }
+}
+
+//--------------------------------------------------
+// Description  : Display setting / ACTIVE gate needs video: request it only while the target is off (no line per pass)
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+static void UserCommonInterfacePanelVideoWanted(void)
+{
+    if((s_ucPnlTarget == AWTO_PNL_TGT_OFF) && (s_ucPnlDown == 0))
+    {
+        UserCommonInterfacePanelPowerAction(_PANEL_ON);
+    }
 }
 
 #if(_TRANSLATOR_SUPPORT == _OFF)
@@ -1697,7 +1398,7 @@ void UserCommonInterfaceOsdResetProc(void)
         if(SysModeGetModeState() != _MODE_STATUS_SEARCH)
 #endif
 #if(_PANEL_POW_SEQ_FAST_MODE == _ON)
-            AWTO_BL_OFF_OR_BLANK(2);
+            AWTO_BLANK(2);
 #else
             UserCommonInterfacePanelPowerAction(_PANEL_OFF);
 #endif
@@ -1893,6 +1594,7 @@ void UserCommonInterfaceAdjustDisplayTiming(void)
 //--------------------------------------------------
 bit UserCommonInterfaceReadyForActive(void)
 {
+    UserCommonInterfacePanelVideoWanted();      // #162: display setting needs the link; the request replaces its _PANEL_ON call
 #if(_PANEL_POW_SEQ_FAST_MODE == _ON)
     if((GET_PANELPOWERSTATUS() != _READY_FOR_BACKLIGHT) && (GET_PANELPOWERSTATUS() != _BACKLIGHT_ON_ALREADY))
     {
@@ -5262,18 +4964,6 @@ void UserCommonInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
 
     switch(enumEventID)
     {
-        case _USER_TIMER_EVENT_PANEL_POWER_OFF:
-            SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
-
-#if(_PANEL_POW_SEQ_T6_TIMER_EVENT_MODE == _ON)
-            if((GET_PANELPOWERACTION() == _PANEL_ON) ||
-               (GET_PANELPOWERACTION() == _BACKLIGHT_ON))
-            {
-                UserCommonInterfacePanelPowerAction(GET_PANELPOWERACTION());
-            }
-#endif
-            break;
-
         default:
             break;
     }

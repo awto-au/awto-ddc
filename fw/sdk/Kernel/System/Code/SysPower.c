@@ -54,6 +54,7 @@ void SysPowerIdleProc(void);
 
 BYTE SysPowerGetPowerStatus(void);
 void SysPowerSystemClockSelect(BYTE ucClockSel);
+void SysPowerMcuClock(BYTE ucClockSel);
 void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus);
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
@@ -84,7 +85,8 @@ void SysPowerMHLPowerCutProc(void);
 //--------------------------------------------------
 void SysPowerInitial(void)
 {
-    // Scaler whole chip reset
+    // Scaler whole chip reset: it resets the M2PLL registers (regdb HOST_CTRL soft_reset), so the MCU is on the crystal across it
+    SysPowerMcuClock(_EXT_XTAL_CLK);
     ScalerGlobalWholeChipReset();
 
 #if((_LC_TANK_SUPPORT != _ON) || (_XTALESS_SUPPORT != _ON))
@@ -92,6 +94,7 @@ void SysPowerInitial(void)
     AWTO_BPROF(0x35);
     ScalerIOSCTrimming();
 #endif
+    SysPowerMcuClock(_M2PLL_CLK);                   // #162: rest of SysMainSystemInitial on M2PLL
 
     // Initial PC99 System Control
 #if(_HW_PC99_SUPPORT == _ON)
@@ -276,6 +279,15 @@ void SysPowerInitial(void)
 //--------------------------------------------------
 void SysPowerHandler(void)
 {
+    // #162: NORMAL -> OFF / SAVING waits until the panel machine has the panel down (T4 / T5 are its timer steps)
+    bit bUp = ((GET_POWER_STATUS() == _POWER_STATUS_NORMAL) || (GET_POWER_STATUS() == _POWER_STATUS_AC_ON));
+
+    if(UserCommonInterfacePanelPowerDown(bUp && ((GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF) ||
+                                                 (GET_TARGET_POWER_STATUS() == _POWER_STATUS_SAVING)), bUp) == _FALSE)
+    {
+        return;
+    }
+
     // The process will deal with all kinds of power changing by power action flag.
     switch(GET_TARGET_POWER_STATUS())
     {
@@ -448,6 +460,13 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
     if(enumSwitch == _POWER_ACTION_OFF_TO_NORMAL)
     {
         AwtoSyncBegin(AWTO_SYNC_K_POWER_KEY, SysSourceGetInputPort());     // before the INITIAL handler's lines
+#if(_AWTO_BOOT_PANEL_EARLY == _ON)
+        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);    // #162: panel up alongside INITIAL / SEARCH (console at INITIAL)
+#endif
+    }
+    else if(enumSwitch == _POWER_ACTION_PS_TO_NORMAL)
+    {
+        UserCommonInterfacePanelPowerAction(_PANEL_ON);        // #162: link trains during the search; backlight at ACTIVE / a card
     }
     AWTO_BPROF(0x40 + enumSwitch);
     switch(enumSwitch)
@@ -908,6 +927,33 @@ BYTE SysPowerGetPowerStatus(void)
     }
 
     return GET_POWER_STATUS();
+}
+
+//--------------------------------------------------
+// Description  : #162 boot: MCU / flash clock only (M2PLL or crystal), the MCU steps of SysPowerSystemClockSelect in its
+//                order; scaler-side clocks stay with SysPowerSystemClockSelect at AC_ON_TO_NORMAL.
+// Input Value  : ucClockSel    --> _M2PLL_CLK / _EXT_XTAL_CLK
+// Output Value : None
+//--------------------------------------------------
+void SysPowerMcuClock(BYTE ucClockSel)
+{
+    BYTE ucGlobalIRQTemp = 0;
+
+    if(ucClockSel == _M2PLL_CLK)
+    {
+        ScalerPowerXtalPower(_ON);
+        ScalerPLLM2PLLPower(_ON);
+    }
+    ucGlobalIRQTemp = ScalerGlobalGetIRQControl();
+    ScalerGlobalIRQControl(_DISABLE);
+    if(ucClockSel == _M2PLL_CLK)
+    {
+        ScalerMcuCacheControl(_ENABLE);
+    }
+    ScalerMcuFlashClockGroupSetting(ucClockSel);
+    ScalerGlobalSetIRQControl(ucGlobalIRQTemp);
+    ScalerTimerSetTimerCount((ucClockSel == _M2PLL_CLK) ? _TIMER_OPERATION_POWER_NORMAL_MODE : _TIMER_OPERATION_INITIAL_MODE);
+    ScalerMcu5usDelayCalc(ucClockSel);
 }
 
 //--------------------------------------------------

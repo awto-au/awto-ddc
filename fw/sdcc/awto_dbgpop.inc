@@ -501,6 +501,7 @@ void AwtoDiagConsole(BYTE ucOn)
         AwtoGpioConSet(ucOn);
         AwtoKeyConSet(ucOn == AWTO_CON_GPIO);   // key test / debug / watchdog panels: GPIO page only (main page = terminal)
         AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
+        UserCommonInterfacePanelPowerTick();    // #162: the draw takes ~100 ms; panel steps due meanwhile (T3, backlight-to-PWM)
         s_ucConFirst = 0;
         s_ucConRedraw = 0;
         AwtoConTitleBar();
@@ -513,6 +514,7 @@ void AwtoDiagConsole(BYTE ucOn)
             AwtoOsdDebugLines(); AwtoOsdWdtLines();     // #131 watchdog panel
         }
         AwtoConLogInit();
+        UserCommonInterfacePanelPowerTick();
         AwtoTextShow();
     }
     else

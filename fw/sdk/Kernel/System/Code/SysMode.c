@@ -283,9 +283,7 @@ void SysModeHandler(void)
                     }
 #endif
 
-#if((_PANEL_POW_SEQ_FAST_MODE == _ON) || (_PANEL_POWER_ON_BEFORE_COLOR_SETTING == _ON))
-                    UserCommonInterfacePanelPowerAction(_PANEL_ON);
-#endif
+                    // #162: the panel machine brings video up on request (power switch, UserCommonInterfaceReadyForActive)
                     AwtoSwEvent(AWTO_SW_EV_PROBE, 15);
                     UserCommonInterfaceAdjustColorProc();
 
@@ -462,7 +460,7 @@ void SysModeSetUpDisplayInitialization(void)
     {
 #if(_PANEL_POW_SEQ_FAST_MODE == _ON)
         // Turn off backlight to prevent garbage
-        AWTO_BL_OFF_OR_BLANK(1);
+        AWTO_BLANK(1);
 #else
         // Turn off backlight to prevent garbage
         UserCommonInterfacePanelPowerAction(_PANEL_OFF);
@@ -747,7 +745,7 @@ void SysModeSetFreeRun(void)
         UserCommonInterfacePanelPowerAction(_PANEL_OFF);
 #elif(_PANEL_STYLE == _PANEL_DPTX)
         // Turn off backlight to prevent garbage
-        AWTO_BL_OFF_OR_BLANK(1);
+        AWTO_BLANK(1);
 #endif
     }
 }

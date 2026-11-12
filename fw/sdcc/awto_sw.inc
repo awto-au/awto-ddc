@@ -7,11 +7,10 @@ static __xdata unsigned char s_ucAwtoUnstable;  // "source unstable" judge fails
 static __xdata unsigned char s_ucAwtoHpdPulses;
 #endif
 
-void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
+static void AwtoSwRec(unsigned char ucId, unsigned char ucArg)
 {
     unsigned char ucN = g_stAwtoSw.ucN;
 
-    AWTO_SYNC_SW(ucId, ucArg);                  // #139 sync log: its own ring, kept when this log is full
     if((ucN != 0) && (g_stAwtoSw.stEv[ucN - 1].ucId == ucId) && (g_stAwtoSw.stEv[ucN - 1].ucArg == ucArg))
     {
         return;                                 // #78: measure-retry probes repeat every ~8 ms; the first one carries the time
@@ -22,6 +21,35 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
         g_stAwtoSw.stEv[ucN].ucArg = ucArg;
         g_stAwtoSw.stEv[ucN].usMs = ((WORD)AwtoMs());
         g_stAwtoSw.ucN = ucN + 1;
+    }
+}
+
+void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
+{
+    AWTO_SYNC_SW(ucId, ucArg);                  // #139 sync log: its own ring, kept when this log is full
+    AwtoSwRec(ucId, ucArg);
+}
+
+// #162 panel machine transition: switch log (no value) + ring line with the ms spent in the old state.
+void AwtoPanelLog(unsigned char ucArg, unsigned int usMs)
+{
+    AwtoSwRec(AWTO_SW_EV_PANEL, ucArg);
+    AwtoSyncPush(AWTO_SW_EV_PANEL, ucArg, usMs);
+}
+
+// #63 own frame: pattern generator or forced background on, so the panel's short T3 applies (AWTO_T3_OWN_PATTERN_MS)
+unsigned char AwtoOwnFrame(void)
+{
+    return ((ScalerGetByte(AWTO_R_DISP_PG_R_CTRL) & AWTO_F_DISP_PG_R_CTRL_PG_ENABLE) != 0) ||
+           ((ScalerGetByte(AWTO_R_VIDEO_DISPLAY_CONTROL_REG) & AWTO_F_VIDEO_DISPLAY_CONTROL_REG_FORCE_BG_EN) != 0);
+}
+
+// A panel pin or the backlight PWM written outside the panel machine (after boot pin init): logged, for the sim gate too.
+void AwtoPanelForeign(unsigned char ucWhat)
+{
+    if((g_ucAwtoPanelOwn == 0) && (g_stAwtoDiag.ucStage >= 5))
+    {
+        AwtoSwEvent(AWTO_SW_EV_PANEL_X, ucWhat);
     }
 }
 
@@ -61,29 +89,7 @@ void AwtoSwArm(unsigned char ucPort)
 }
 
 #if(_AWTO_PANEL_LOG == _ON)
-// #144 panel log: a call logs 4 + 2 * event + already-in-that-state; a real pin change logs the event (0..3) from the PCB macros.
-unsigned char AwtoPanelReqArg(unsigned char ucEvent, unsigned char ucStatus)
-{
-    unsigned char ucSame;
-
-    switch(ucEvent)
-    {
-        case _PANEL_ON:
-            ucSame = (ucStatus != _PANEL_POWER_OFF_STATE);
-            break;
-        case _PANEL_OFF:
-            ucSame = (ucStatus == _PANEL_POWER_OFF_STATE);
-            break;
-        case _BACKLIGHT_ON:
-            ucSame = (ucStatus == _BACKLIGHT_ON_ALREADY);
-            break;
-        default:
-            ucSame = (ucStatus != _BACKLIGHT_ON_ALREADY);
-            break;
-    }
-    return 4 + 2 * ucEvent + ucSame;
-}
-
+// #144 panel log: a real pin change logs the event (0..3) from the PCB macros; requests log in the panel machine.
 static __xdata unsigned char s_ucAwtoPins;       // last written level: bit0 panel VDD, bit1 backlight (every write goes through the PCB macros)
 
 void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn)    // before the pin is written
@@ -91,6 +97,7 @@ void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn)    // before
     unsigned char ucBit = (ucBacklight != 0) ? 2 : 1;
     unsigned char ucWas = ((s_ucAwtoPins & ucBit) != 0);
 
+    AwtoPanelForeign(AWTO_PNL_X_VDD + ucBacklight);
     if(ucOn != 0)
     {
         s_ucAwtoPins |= ucBit;
@@ -103,15 +110,6 @@ void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn)    // before
     {
         AwtoSwEvent(AWTO_SW_EV_POWER, (ucBacklight != 0) ? ((ucOn != 0) ? _BACKLIGHT_ON : _BACKLIGHT_OFF) : ((ucOn != 0) ? _PANEL_ON : _PANEL_OFF));
     }
-}
-#endif
-
-#if(_AWTO_FAST_BOOT == _ON)
-void AwtoPanelVddEarly(void)                    // #63: right after pin-share; eDP lanes stay off until the SDK's _PANEL_ON (T1 later)
-{
-    PCB_PANEL_POWER(_PANEL_CONTROL_ON);
-    AwtoDiagStage(5);
-    AwtoSwEvent(AWTO_SW_EV_VDD, 1);
 }
 #endif
 

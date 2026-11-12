@@ -30,7 +30,7 @@
 //****************************************************************************
 // INTERFACE FUNCTIONS
 //****************************************************************************
-extern void ScalerDisplayDPTxPollingHotPlug(WORD usNum);
+extern bit ScalerDisplayDPTxHotPlugHigh(void);
 extern bit ScalerDisplayDPTxLinkSequence(void);
 extern void ScalerDisplayDPTxStreamHanlder(bit bOutput);
 

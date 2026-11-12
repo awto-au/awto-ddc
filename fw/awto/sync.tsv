@@ -1,7 +1,7 @@
 # Sync / power-on log texts (#139): one line per ring event. Generated into C by scripts/gen_awto_sync.py; the host decoder
 # (awto-ddc scripts/sync_log.py, rtd_diag.py --sync) reads this file, so screen and host print the same line.
 # id	arg	fmt	text
-# id: event id (hex). Mirrored switch-log ids (RL6449_Project.h AWTO_SW_EV_*): 01 mode, 10 panel power, 70 VDD, 90 probe,
+# id: event id (hex). Mirrored switch-log ids (RL6449_Project.h AWTO_SW_EV_*): 01 mode, 10 panel power, 11 / 12 panel machine, 90 probe,
 #   A0 fast path, A8 hold, B0 HPD pulse. Own ids C0..CF (AWTO_SYNC_EV_*; CB..CF = #144 power-saving wake). Only rows listed here are logged (mirror filter).
 # arg: hex value, or * = any (first matching row wins: put * rows last).
 # fmt: how the event's value / arg is printed at the % in text:
@@ -72,16 +72,39 @@ C0	04	vport	power key on, %
 10	09	-	backlight on requested (already on)
 10	0A	-	backlight off requested
 10	0B	-	backlight off requested (already off)
-70	*	-	panel VDD on (early)
+11	01	ms	panel: OFF -> VDD: VDD on, T1 starts (% in OFF)
+11	12	ms	panel: VDD -> HPD: T1 done, power on, eDP-1 PHY on (% in VDD)
+11	1B	ms	panel: VDD -> T6: off before the PHY, VDD off (% in VDD)
+11	23	ms	panel: HPD -> LINK: eDP-1 HPD high, link training (% in HPD)
+11	2B	ms	panel: HPD -> T6: off, PHY and VDD off (% in HPD)
+11	34	ms	panel: LINK -> VIDEO: eDP-1 link trained, stream on (% in LINK)
+11	45	ms	panel: VIDEO -> T3: backlight wanted, T3 counts from the stream start (% in VIDEO)
+11	49	ms	panel: VIDEO -> T4: off, T4 starts (% in VIDEO)
+11	54	ms	panel: T3 -> VIDEO: backlight no longer wanted (% in T3)
+11	56	ms	panel: T3 -> BL_PWM: T3 done, backlight pin on (% in T3)
+11	67	ms	panel: BL_PWM -> BL_ON: PWM duty set (% in BL_PWM)
+11	68	ms	panel: BL_PWM -> BL_OFF: backlight off wanted, PWM dark (% in BL_PWM)
+11	78	ms	panel: BL_ON -> BL_OFF: PWM dark (% in BL_ON)
+11	84	ms	panel: BL_OFF -> VIDEO: backlight pin off, stream kept (% in BL_OFF)
+11	89	ms	panel: BL_OFF -> T4: backlight pin off, T4 starts (% in BL_OFF)
+11	94	ms	panel: T4 -> VIDEO: on again, stream still on (% in T4)
+11	9A	ms	panel: T4 -> T5: T4 done, stream idle (% in T4)
+11	A4	ms	panel: T5 -> VIDEO: on again, stream on (% in T5)
+11	AB	ms	panel: T5 -> T6: T5 done, link and VDD off (% in T5)
+11	B0	ms	panel: T6 -> OFF: T6 done, VDD may come on again (% in T6)
+11	*	harg	panel: state change % (not a listed transition)
+12	00	-	panel: no eDP-1 HPD within T2, link training anyway
+12	01	-	eDP-1: link training FAIL
+12	02	-	panel VDD pin written outside the panel machine
+12	03	-	backlight pin written outside the panel machine
+12	04	-	backlight PWM written outside the panel machine
+12	05	-	panel request deferred: power off / saving is taking the panel down
 90	01	-	reset to search
 90	0E	-	display setting
 90	14	-	judge: source unstable
 90	15	-	judge: timing change
 90	16	-	judge: interlace change
 90	17	-	judge: memory / timing gen
-90	1A	-	eDP-1: panel HPD high
-90	1B	-	eDP-1: link trained
-90	1C	-	eDP-1: link training FAIL
 A0	00	-	fast path taken
 A0	01	-	fast path refused: no cache
 A0	03	-	fast path refused: receiver unstable
@@ -89,8 +112,7 @@ A0	04	-	fast path: SDK reset meanwhile
 A0	05	-	fast path timeout: full path
 A0	*	harg	fast path refused: timing field %
 A8	01	-	hold L1: backlight off
-A8	02	-	hold L2: eDP link off
-A8	03	-	hold L3: SDK power saving
+A8	02	-	hold L2: released to the no-signal path (power-saving timers)
 A8	04	-	hold: fast wakes used up
 A8	05	-	hold: signal back
 A8	06	-	hold: backlight on

@@ -485,11 +485,6 @@ extern void UserInterfaceGetDpTxHdcp2NPinvByUser(WORD usSubAddr, WORD usLength, 
 extern void UserInterfacePanelPowerAction(BYTE ucEvent);
 #endif
 
-extern void UserInterfaceAdjustWaitPanelT1(void);
-extern void UserInterfaceAdjustWaitPanelT2(void);
-extern void UserInterfaceAdjustWaitPanelT3(void);
-extern void UserInterfaceAdjustWaitPanelT4(void);
-extern void UserInterfaceAdjustWaitPanelT5(void);
 
 //-------------------------------------------------------
 // Misc

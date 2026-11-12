@@ -367,11 +367,6 @@ void UserInterfaceGetDpTxHdcp2NPinvByUser(WORD usSubAddr, WORD usLength, BYTE *p
 void UserInterfacePanelPowerAction(BYTE ucEvent);
 #endif
 
-void UserInterfaceAdjustWaitPanelT1(void);
-void UserInterfaceAdjustWaitPanelT2(void);
-void UserInterfaceAdjustWaitPanelT3(void);
-void UserInterfaceAdjustWaitPanelT4(void);
-void UserInterfaceAdjustWaitPanelT5(void);
 
 //-------------------------------------------------------
 //
@@ -660,14 +655,6 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
 
         case _USER_TIMER_EVENT_OSD_DISABLE:
             OsdDispDisableOsd();
-            break;
-
-        case _USER_TIMER_EVENT_PANEL_BACKLIGHT_ON:
-            SET_PANELPOWERSTATUS(_READY_FOR_BACKLIGHT);
-            break;
-
-        case _USER_TIMER_EVENT_PANEL_POWER_OFF:
-            SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
             break;
 
 #if(_VGA_SUPPORT == _ON)
@@ -1364,68 +1351,6 @@ void UserInterfacePanelPowerAction(BYTE ucEvent)
 #endif
 
 //--------------------------------------------------
-// Description  : Wait For Panel Power Sequence T1
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserInterfaceAdjustWaitPanelT1(void)
-{
-    ScalerTimerDelayXms(_PANEL_POWER_ON_T1);
-}
-
-//--------------------------------------------------
-// Description  : Wait For Panel Power Sequence T2
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserInterfaceAdjustWaitPanelT2(void)
-{
-#if(_PANEL_STYLE == _PANEL_LVDS)
-
-    ScalerTimerDelayXms(_PANEL_POWER_ON_T2);
-
-#elif(_PANEL_STYLE == _PANEL_VBO)
-
-    ScalerDisplayVboPollingHotPlug(_PANEL_POWER_ON_T2);
-
-#elif(_PANEL_STYLE == _PANEL_DPTX)
-
-    ScalerDisplayDPTxPollingHotPlug(_PANEL_POWER_ON_T2);
-
-#endif
-}
-
-//--------------------------------------------------
-// Description  : Wait For Panel Power Sequence T3
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserInterfaceAdjustWaitPanelT3(void)
-{
-    AwtoDiagPanelT3Wait(_PANEL_POWER_ON_T3) /* awto: T3 wait with the delay calibration inside (#53) */;
-}
-
-//--------------------------------------------------
-// Description  : Wait For Panel Power Sequence T4
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserInterfaceAdjustWaitPanelT4(void)
-{
-    ScalerTimerDelayXms(_PANEL_POWER_OFF_T4);
-}
-
-//--------------------------------------------------
-// Description  : Wait For Panel Power Sequence T5
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserInterfaceAdjustWaitPanelT5(void)
-{
-    ScalerTimerDelayXms(_PANEL_POWER_OFF_T5);
-}
-
-//--------------------------------------------------
 // Description  : Uncall Function
 // Input Value  : None
 // Output Value : None
@@ -1496,9 +1421,7 @@ void UserInterfaceInitial(void)
 
     AwtoSetInit();
     UserCommonInterfaceDdcciSwitch(GET_OSD_DDCCI_STATUS(), UserCommonNVRamGetSystemData(_SEARCH_PORT));
-    SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
-
-    // Adjust Backlight
+    // Adjust Backlight (#162: the panel machine applies it while the backlight is on)
     UserAdjustBacklight(GET_OSD_BACKLIGHT());
 
     // Adjust IR Decode

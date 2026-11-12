@@ -63,7 +63,7 @@ BYTE __code tDISPLAY_DPTX_DRV_HBR2_TABLE[48] =
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-void ScalerDisplayDPTxPollingHotPlug(WORD usNum);
+bit ScalerDisplayDPTxHotPlugHigh(void);
 bit ScalerDisplayDPTxLinkSequence(void);
 void ScalerDisplayDPTxLinkConfigCheck(void);
 void ScalerDisplayDPTxCheckSSC(void);
@@ -98,18 +98,14 @@ EnumDisplayDPTxTrainPattern ScalerDisplayDPTx2SetTp2PatternType(void);
 // FUNCTION DEFINITIONS
 //****************************************************************************
 //--------------------------------------------------
-// Description  : Wait for Dp Tx Htpdn
-// Input Value  : WORD usNum
-// Output Value : None
+// Description  : Dp Tx Htpdn read once (awto-ddc#162: the panel machine reads it each tick, bound T2; no wait here)
+// Input Value  : None
+// Output Value : _SUCCESS = HPD high on every enabled DPTx port
 //--------------------------------------------------
-void ScalerDisplayDPTxPollingHotPlug(WORD usNum)
+bit ScalerDisplayDPTxHotPlugHigh(void)
 {
-    WORD usTimeElapsed = 0;
-    WORD usPreviousTime = 0;
     bit bHPCheck = _FALSE;
-    usPreviousTime = g_usTimerCounter;
 
-    do
     {
         bHPCheck = _SUCCESS;
 
@@ -197,15 +193,9 @@ void ScalerDisplayDPTxPollingHotPlug(WORD usNum)
 #endif // End of #if(_DISPLAY_DP_TX_PORT_1 == _ON)
 #endif // End of #if(_PANEL_DPTX_LINK_SEQUENCE_SWAP == _OFF)
 
-        if(usPreviousTime != g_usTimerCounter)
-        {
-            usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_HPD);
-            usPreviousTime = g_usTimerCounter;
-        }
     }
-    while((usTimeElapsed <= usNum) && (bHPCheck != _SUCCESS));
 
-    DebugMessageCheck("eDP HPD Time", usTimeElapsed);
+    return bHPCheck;
 }
 
 //--------------------------------------------------

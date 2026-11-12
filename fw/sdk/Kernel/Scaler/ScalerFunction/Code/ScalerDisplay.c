@@ -693,7 +693,7 @@ void ScalerDisplayVboPanelBacklightReTurnOn(void)
     {
         if((ScalerDisplayVboLocknStatus() == _SUCCESS) || (ScalerGetBit(P38_0D_TRANSMIT_STATUS, _BIT1) == _BIT1))
         {
-            AwtoDiagPanelT3Wait(_PANEL_POWER_ON_T3) /* awto: T3 wait with the delay calibration inside (#53) */;
+            ScalerTimerDelayXms(_PANEL_POWER_ON_T3);
 
             // Check Vby1 ALN_En flag, when Vby1 CDR locked, this flag will be triggered
             if(ScalerGetBit(P38_0D_TRANSMIT_STATUS, _BIT1) == _BIT1)

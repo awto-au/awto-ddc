@@ -372,11 +372,6 @@ extern void UserInterfaceGetDpTxHdcp2NPinvByUser(WORD usSubAddr, WORD usLength, 
 //-------------------------------------------------------
 // Wait for Panel Power Sequence Delay
 //-------------------------------------------------------
-extern void UserInterfaceAdjustWaitPanelT1(void);
-extern void UserInterfaceAdjustWaitPanelT2(void);
-extern void UserInterfaceAdjustWaitPanelT3(void);
-extern void UserInterfaceAdjustWaitPanelT4(void);
-extern void UserInterfaceAdjustWaitPanelT5(void);
 
 #if(_SIGNAL_GPIO_DETECT == _ON)
 extern void UserInterfaceSetForcePowSavStatus(bit bOnOff);

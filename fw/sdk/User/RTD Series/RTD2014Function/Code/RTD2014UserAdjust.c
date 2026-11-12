@@ -242,8 +242,8 @@ void UserAdjustBacklight(WORD usBacklight)
     usBacklight = _BACKLIGHT_MAX - usBacklight;
 #endif
 
-    // Adjust backlight by changing PWM duty
-    PCB_BACKLIGHT_PWM(usBacklight);
+    // Adjust backlight by changing PWM duty: through the panel machine (#162), applied while the backlight is on
+    UserCommonInterfacePanelPwm(usBacklight);
 }
 
 //----------------------------------------------------------------------------
