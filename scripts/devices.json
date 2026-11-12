@@ -1,11 +1,13 @@
 {
-  "_doc": "Test units (awto-ddc). Bus numbers change on reboot; NVIDIA connectors have no i2c link: dev.py finds the bus whose EDID (0x50) carries the unit serial and refuses to flash a bus that doesn't. relay = mains outlet (scripts/power_cycle.py). test=false: Dan's working screens; dev.py refuses them unless --force.",
+  "_doc": "Test units (awto-ddc). Bus numbers change on reboot; NVIDIA connectors have no i2c link: dev.py finds the bus whose EDID (0x50) carries the unit serial and refuses to flash a bus that doesn't. relay = mains outlet (scripts/power_cycle.py). test=false: Dan's working screens; dev.py refuses them unless --force. bus_kind / bus_kind_dp: ddc (HDMI/DVI DDC wires) or dp-aux (I2C over DP AUX) of connector / connector_dp; dev.py flash passes it to rtd_flash_image (NVIDIA adapters cannot tell DP from HDMI by name). write_mode: dev.py flash default (byte|burst); byte on a dp-aux bus is always switched to burst (#177).",
   "units": {
     "1": {
       "serial": "AWT26110001",
       "input": "HDMI",
       "connector": "card2-HDMI-A-3",
       "gdctl": "HDMI-3",
+      "bus_kind": "ddc",
+      "write_mode": "burst",
       "be": true,
       "relay": null,
       "test": false,
@@ -18,6 +20,9 @@
       "gdctl": "DP-1",
       "connector_dp": "card1-DP-1",
       "gdctl_dp": "DP-1",
+      "bus_kind": "ddc",
+      "bus_kind_dp": "dp-aux",
+      "write_mode": "byte",
       "be": true,
       "relay": "so-th-1",
       "test": false,
@@ -28,6 +33,8 @@
       "input": "DP",
       "connector": "card1-HDMI-A-2",
       "gdctl": "HDMI-2",
+      "bus_kind": "ddc",
+      "write_mode": "burst",
       "be": true,
       "relay": null,
       "test": true,

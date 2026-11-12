@@ -15,9 +15,16 @@ usage: rtd_flash_image.py <bus> <image.bin> --serial AWT2611000N [--write] [--no
   --full  : ignore the manifest, write every image sector.
   --verify: crc (default) = on-chip CRC8 per sector, auto-falls back to readback if the engine fails its
             in-session calibration (docs/flash-crc.md); readback = compare all 4 KiB back (old behaviour).
-  --write-mode: byte (default) = 1 data byte per I2C message; burst = one I2C write of --burst-chunk bytes (default 256) per
-            page to the 0x70 FIFO, ~3x faster per sector; unvalidated on hardware, verify/retry unchanged (#12).
-            A burst error redoes that sector in byte mode.
+  --write-mode: burst (default) = one I2C write of --burst-chunk bytes per page to the 0x70 FIFO; byte = 1 data byte per
+            I2C message (#12). A burst error redoes that sector in byte mode. byte on a DP AUX bus is switched to burst
+            (~90 s per sector in byte mode there, #177).
+  --bus-kind ddc|dp-aux|auto: auto = i2cbus.bus_kind (adapter name / connector link); NVIDIA needs it from devices.json.
+  --max-min M: time budget, checked BEFORE the first erase: a dry page program (256 x 0xFF, flash unchanged) is timed
+            and the run projected; over budget -> byte is retried as burst, else refuse (rc 8, nothing erased).
+            Once writing has started the run never stops for time: a stop would leave a mixed image (#177).
+Exit: never sends the scaler reset while the image region is mixed (erased / part-written in this or an earlier
+  session, manifest source write-in-progress|write-failed): the MCU stays halted in ISP and a rerun continues.
+  Last line: `UNIT STATE: ...`.
   --serial: must equal the EDID serial on <bus> (i2cbus.require_unit, checked here before ISP is entered, #50.28).
   --identity HOW: only when the EDID is silent (unit held in the safe window): how the caller proved the bus; logged.
   Revert: rerun with the backup (1 MiB) as <image.bin>: only sectors that differ are rewritten.
@@ -63,6 +70,23 @@ BLANK_CRC = S.crc8(BLANK)
 
 
 PH: dict[str, float] = {}                           # seconds per phase, for the SUMMARY split
+
+
+@dataclass
+class RunState:
+    """What the flash holds, for the exit decision (reset or stay halted in ISP, #177)."""
+    mixed_at_start: bool = False                    # manifest: an earlier session stopped part-way
+    touched: bool = False                           # this session erased a sector of the image region
+    complete: bool = False                          # every changed sector written + verified (+ final CRC)
+    written: int = 0                                # sectors written + verified this session
+    total: int = 0                                  # sectors this session set out to write
+
+    @property
+    def mixed(self) -> bool:
+        return (self.touched or self.mixed_at_start) and not self.complete
+
+
+RUN = RunState()
 
 
 @contextmanager
@@ -345,18 +369,103 @@ def crc_calibrate(isp, s0: bytes) -> bool:
     return True
 
 
-PROJECT_AFTER = 5                                     # --max-min: project the total from the first 5 sectors
+PROJECT_AFTER = 5                                     # log the measured rate after 5 sectors (no stop, #177)
+MIXED_SOURCES = ("write-in-progress", "write-failed")  # manifest sources of a session that ended part-way
 COMMON_END = 0x5000                                   # fw_build --common: [0, 0x5000) of every bank = common code + vectors
 
 
 def boot_last(diff: list[int]) -> list[int]:
-    """Banked sectors first, then the common sectors of banks 1.., then bank 0's (reset vector at 0x0000) as the very last:
-    a stop mid-run leaves the old boot path + common code in place for as long as possible."""
+    """Order for a stop mid-run: banked sectors of banks 1.. first, then bank 0's banked part (DDR/startup init,
+    fw/bank_layout.tsv region 0), then common of banks 1.., bank 0's common (reset vector 0x0000) very last.
+    A relinked image is still unbootable when mixed (calls cross banks): the pre-write budget is the real guard (#177)."""
     per = BANK // SECTOR
     def key(i):
         common = (i % per) * SECTOR < COMMON_END
-        return (common, common and i < per, i)
+        return (common, i < per, i)
     return sorted(diff, key=key)
+
+
+ERASE_S = 0.2                       # MX25L8006E tSE max (Table 13); poll messages are counted on top
+SECTOR_MSGS = (33, 8)               # (writes, reads) per sector outside the pages: engine ops, WREN, erase, WIP, CRC verify
+
+
+def _msg_cost(isp, n: int = 4) -> tuple[float, float]:
+    """Seconds per register write and per register read on this bus (0x64 = staged address byte, re-staged by every op)."""
+    t = time.monotonic()
+    for _ in range(n):
+        isp.write(0x64, 0)
+    tw = (time.monotonic() - t) / n
+    t = time.monotonic()
+    for _ in range(n):
+        isp.read(0x6F)
+    return tw, (time.monotonic() - t) / n
+
+
+def dry_page(isp, addr: int, crc_ok: bool) -> float:
+    """Seconds for one page program through the session's real path, flash unchanged: 256 x 0xFF at `addr` (a sector of
+    this run, far from boot; NOR program clears no bits with 0xFF; a protected flash ignores it). Sector checked after."""
+    for ops in ENGINE_OPS:                          # engine's per-page WREN opcode must be set before any program kick
+        isp.write(*ops)
+    sec = addr & ~(SECTOR - 1)
+    before = isp.flash_crc(sec, SECTOR) if crc_ok else isp.read_flash(sec, SECTOR)
+    fails, byte_sec = getattr(isp, "burst_fails", 0), getattr(isp, "_byte_sector", None)
+    isp.dry = True
+    t = time.monotonic()
+    try:
+        isp.program_setup()
+        isp.program_page(addr, b"\xff" * PAGE)
+    finally:
+        dt = time.monotonic() - t
+        isp.dry = False
+        if hasattr(isp, "burst_fails"):
+            isp.burst_fails, isp._byte_sector = fails, byte_sec
+        if (isp.flash_crc(sec, SECTOR) if crc_ok else isp.read_flash(sec, SECTOR)) != before:
+            RUN.touched = True                      # impossible for NOR; if it happens, never reset onto it
+            raise RuntimeError(f"sector 0x{sec:06x} changed after the 0xFF dry page program: flash state unknown")
+    return dt
+
+
+def project_s(isp, img: bytes, diff: list[int], crc_ok: bool) -> float:
+    """Projected seconds to write `diff`: per non-blank page the timed dry page, per sector the fixed messages + tSE."""
+    tp = dry_page(isp, max(diff) * SECTOR + SECTOR - PAGE, crc_ok)
+    tw, tr = _msg_cost(isp)
+    pages = sum(img[i * SECTOR + o:i * SECTOR + o + PAGE] != b"\xff" * PAGE for i in diff for o in range(0, SECTOR, PAGE))
+    fixed = SECTOR_MSGS[0] * tw + SECTOR_MSGS[1] * tr + ERASE_S
+    total = pages * tp + len(diff) * fixed
+    log(f"projection ({getattr(isp, 'write_mode', '?')}): dry page {tp * 1e3:.1f} ms, write {tw * 1e3:.2f} ms, "
+        f"read {tr * 1e3:.2f} ms -> {pages} pages + {len(diff)} sectors = {total / 60:.1f} min")
+    return total
+
+
+def budget(isp, img: bytes, diff: list[int], o, crc_ok: bool) -> float | None:
+    """Before any erase: projected seconds within o.max_min, else (byte) retry the projection in burst.
+    Returns the projection, or None = refuse (nothing erased). A failing burst dry page switches the run to byte."""
+    if not diff:
+        return 0.0
+    try:
+        proj = project_s(isp, img, diff, crc_ok)
+    except RuntimeError as e:
+        if getattr(isp, "write_mode", "byte") != "burst" or "changed after the 0xFF dry page" in str(e):
+            raise
+        log(f"WARN: burst dry page failed ({e}); this run uses byte mode (#167)")
+        isp.write_mode = "byte"
+        proj = project_s(isp, img, diff, crc_ok)
+    if not o.max_min or proj <= o.max_min * 60:
+        return proj
+    if getattr(isp, "write_mode", "burst") == "byte":
+        log(f"byte mode projects {proj / 60:.1f} min > {o.max_min:g} min: trying burst")
+        isp.write_mode = "burst"
+        try:
+            proj = project_s(isp, img, diff, crc_ok)
+        except RuntimeError as e:
+            log(f"burst dry page failed ({e})")
+            isp.write_mode, proj = "byte", float("inf")
+        if proj <= o.max_min * 60:
+            log(f"WARN: write mode switched byte -> burst ({proj / 60:.1f} min)")
+            return proj
+    log(f"REFUSED before any erase: {len(diff)} sectors project to {proj / 60:.1f} min > budget {o.max_min:g} min. "
+        f"Flash unchanged. Use a DDC (HDMI) bus, or raise --max-min")
+    return None
 
 
 def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's vendor backup", tag="", commit="",
@@ -374,6 +483,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     global INCOMPLETE
     INCOMPLETE = True                                 # from the first erase until the final CRC: never reset into this
     t0 = time.monotonic()
+    RUN.total, RUN.written = len(diff), 0
+    RUN.touched = RUN.touched or bool(diff)         # from the first erase on, a reset would boot a mixed image
     guard = StopGuard()
     try:
         guard.__enter__()
@@ -409,6 +520,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 _recover_if_stuck(isp, f"0x{s:06x}")
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
+            RUN.written = k + 1
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
@@ -423,15 +535,12 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 if reprot is not None:
                     isp.reprotect(reprot)
                 return 9
-            if per_sector and max_min and k + 1 == PROJECT_AFTER and len(diff) > PROJECT_AFTER:
-                proj = (time.monotonic() - t0) / PROJECT_AFTER * len(diff) / 60
-                log(f"projection after {PROJECT_AFTER} sectors: {proj:.1f} min for {len(diff)} (limit {max_min:g} min)")
-                if proj > max_min:
-                    state.save()
-                    log(f"STOP at a sector boundary: {PROJECT_AFTER}/{len(diff)} written (manifest saved; rerun continues)")
-                    if reprot is not None:
-                        isp.reprotect(reprot)
-                    return 8
+            if k + 1 == PROJECT_AFTER and len(diff) > PROJECT_AFTER:
+                # no time stop once writing: a stop here leaves a mixed image (#177); the budget ran before the first erase
+                act = (time.monotonic() - t0) / PROJECT_AFTER * len(diff) / 60
+                over = max_min and act > max_min
+                log(f"{'WARN: ' if over else ''}after {PROJECT_AFTER} sectors: {act:.1f} min projected for {len(diff)}"
+                    + (f" (budget {max_min:g} min); continuing, a stop would leave a mixed image" if over else ""))
         if crc_ok:                                      # end-to-end over the image region, written or skipped
             runs = S._runs([i for i in range(len(img) // SECTOR) if img[i * SECTOR:(i + 1) * SECTOR] != BLANK])
             with phase("final crc"):                    # every non-blank run of the image, written or skipped
@@ -453,6 +562,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     state.save(image=tag, image_size=len(img), source="write", commit=commit)
     INCOMPLETE = False
     log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}; ISP recoveries {RECOVERIES}")
+    RUN.complete = True
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
     if reprot is not None:
         isp.reprotect(reprot)
@@ -482,7 +592,12 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     hashes = S.sector_hashes(img)
     nimg = len(hashes)
     rng = random.Random(o.seed)
-    state = None if o.full else S.FlashState.load(o.manifest, o.serial, log)
+    RUN.__init__()
+    prev = S.FlashState.load(o.manifest, o.serial, log)
+    if prev is not None and prev.source in MIXED_SOURCES:
+        RUN.mixed_at_start = True
+        log(f"manifest source {prev.source!r} ({prev.image}): the flash holds a MIXED image from an earlier session")
+    state = None if o.full else prev
     have_manifest = state is not None
     if state is None:
         state = S.FlashState.empty(o.manifest, o.serial)
@@ -511,6 +626,8 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
                     skipped = nimg - len(diff)
         mode = "full" if (o.full or not have_manifest) else "incremental"
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
+        if budget(isp, img, diff, o, crc_ok) is None:
+            return 8
         t_prog = time.monotonic()
         rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit, o.per_sector, o.max_min)
         summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
@@ -535,7 +652,9 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
         + ", ".join(f"0x{i * SECTOR:05x}" for i in diff[:12]) + (" ..." if len(diff) > 12 else ""))
     if not o.write:
         log("DRY-RUN complete: nothing erased or programmed"); return 0
-    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector)
+    if budget(isp, img, diff, o, crc_ok) is None:
+        return 8
+    rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector, o.max_min)
     summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
     return rc
 
@@ -587,8 +706,10 @@ def main() -> int:
     ap.add_argument("--burst-chunk", type=int, default=F.BURST_CHUNK, help="data bytes per I2C write in burst mode (1..256)")
     ap.add_argument("--manifest", type=Path, help="default: <repo>/tmp/fw/<serial>-flash-state.json")
     ap.add_argument("--identity", help="EDID silent (unit held): how the bus was proven to be this unit")
-    ap.add_argument("--max-min", type=float, default=0, help="per-sector: stop at a sector boundary if the total projected "
-                    "from the first 5 sectors exceeds this many minutes (0 = off)")
+    ap.add_argument("--max-min", type=float, default=0, help="time budget in minutes, checked before the first erase from a "
+                    "timed dry page (0 = off); never stops a run that has started writing")
+    ap.add_argument("--bus-kind", choices=("auto", *i2cbus.BUS_KINDS), default="auto",
+                    help="ddc / dp-aux (devices.json); auto = from the adapter name / connector link")
     ap.add_argument("--per-sector", action="store_true",
                     help="erase+program+verify one sector at a time, boot/common sectors last (units without a relay)")
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
@@ -618,9 +739,16 @@ def flash_main(a) -> int:
         log(f"refuse: image {len(img)} B must be a multiple of {SECTOR} and <= {FLASH}"); return 2
     log(f"mode={'WRITE' if a.write else 'DRY-RUN'} bus=/dev/i2c-{a.bus} image={a.image} ({len(img)} B) serial={a.serial} "
         f"no_backup={a.no_backup} full={a.full} verify={a.verify} write_mode={a.write_mode} burst_chunk={a.burst_chunk}")
+    kind = i2cbus.bus_kind(a.bus) if a.bus_kind == "auto" else a.bus_kind
+    log(f"bus kind: {kind} ({i2cbus.adapter_name(a.bus) or 'no adapter name'}{', given' if a.bus_kind != 'auto' else ''})")
+    if kind == "dp-aux" and a.write_mode == "byte":
+        log("WARN: --write-mode byte on DP AUX (~90 s per sector, #177): using burst")
+        a.write_mode = "burst"
     o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot, per_sector=a.per_sector, max_min=a.max_min,
              backup_dir=a.backup_dir, manifest=a.manifest or root / "tmp/fw" / f"{a.serial}-flash-state.json",
              tag=a.tag or a.image.stem, commit=S.git_commit(root))
+    prev = S.FlashState.load(o.manifest, o.serial, lambda _m: None)
+    RUN.mixed_at_start = prev is not None and prev.source in MIXED_SOURCES   # also guards exits before flash()
     if not 1 <= a.burst_chunk <= PAGE:
         log(f"refuse: --burst-chunk {a.burst_chunk} outside 1..{PAGE}"); return 2
     if a.write:
@@ -631,6 +759,8 @@ def flash_main(a) -> int:
     isp.read_chunk = a.read_chunk
     isp.write_mode, isp.burst_chunk = a.write_mode, a.burst_chunk
     entered = False                                   # 0xEE reset only once the ISP-enable write was attempted
+    global INCOMPLETE
+    INCOMPLETE = False                                # per run (module state outlives a call in tests / imports)
     try:
         entered = True
         unit_log(a.serial, f"ISP enter (MCU halted) bus {a.bus}")
@@ -656,15 +786,22 @@ def flash_main(a) -> int:
         log(f"ERROR: {e!r}. Flash NOT re-protected. Rerun: {again}")
         return 7
     finally:
-        if entered and INCOMPLETE:
-            log("no scaler reset: image incomplete, MCU stays halted in ISP until the rerun")
-            unit_log(a.serial, f"ISP held (image incomplete) after {time.monotonic() - t_isp:.1f} s")
+        if entered and (INCOMPLETE or RUN.mixed):
+            # a reset boots the mixed image: on DP the link (and with it this bus) dies with it (unit 3, #177)
+            st = (f"MIXED image ({RUN.written}/{RUN.total} sectors of {o.tag} written this session"
+                  + (", earlier session part-way too" if RUN.mixed_at_start else "")
+                  + "), MCU HALTED in ISP, NO reset sent. "
+                  f"Rerun the same flash on bus {a.bus} to continue (manifest); do not power-cycle (it would boot the mix)")
+            log(f"UNIT STATE: {st}")
+            unit_log(a.serial, f"ISP held (no reset, mixed / incomplete image) after {time.monotonic() - t_isp:.1f} s")
         elif entered:
             try:
                 isp.write(0xEE, 0x02)
             except OSError:
                 pass
             log("scaler reset sent (0xEE <- 0x02)")
+            log("UNIT STATE: " + ("new image verified, reset sent (rebooting into it)" if RUN.complete
+                                  else "flash unchanged by this session (old image), reset sent"))
             unit_log(a.serial, f"ISP exit (reset) after {time.monotonic() - t_isp:.1f} s")
         log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)")
             + f", bus {i2cbus.rate_khz()} kHz")

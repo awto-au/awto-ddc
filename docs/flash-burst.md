@@ -1,6 +1,6 @@
 # Burst page program (#12)
 
-`rtd_flash_image.py --write-mode burst` (default `byte`); `dev.py flash --write-mode burst`.
+`rtd_flash_image.py --write-mode burst` (default); `dev.py flash` takes the unit's `write_mode` from `scripts/devices.json`, `--write-mode` overrides.
 
 ## Protocol facts
 - 0x70 `PROGRAM_DATA_PORT` = "write data port to SRAM", 0x71 `PROGRAM_LENGTH` (8 bit, len-1), 0x6F bit4 `prog_buf_wr_en` (SRAM writable), bit5 `prog_en` (start, auto-clear), bit0 `rst_flash_ctrl` [regdb RTD2795T-CG page FF]
@@ -37,3 +37,14 @@
 - GMBUS0 rate bits 10:8: code 1 = 50 kHz, 0 = 100 kHz measured; code 2 ("400 kHz") measures 100 kHz on Raptor Lake UHD 770; code 3 = 1 MHz. No 400 kHz step exists on this host
 - Module: `tools/gmbus_rate/` sets `bus->reg0` (offset 1100 in `struct intel_gmbus`, from i915 BTF via pahole); unload restores. Numbers and EDID timing proof: #12
 - Proposal (not implemented): `dev.py flash` loads 1 MHz around the ISP write only (`gmbus_rate.py load 1000` before `rtd_flash_image.py`, `unload` in a finally and before the post-flash diag); needs `sudo -n`
+
+## Stop and exit rules (#177)
+- Time budget (`--max-min`, dev.py 20 min) is checked BEFORE the first erase: a dry page program (256 x 0xFF at 0x000000, NOR clears no bits, flash protected anyway; sector 0 re-checked) is timed in the session's write mode, plus per-sector fixed messages + tSE max
+- Over budget: byte -> retried as burst; still over -> rc 8, nothing erased, reset sent (old image runs)
+- Burst dry page fails -> the run uses byte (#167)
+- Once a sector is erased the run never stops for time; after 5 sectors the measured rate is logged only
+- No scaler reset (0xEE <- 0x02) while the image region is mixed: erased / part-written this session, or manifest source `write-in-progress` / `write-failed` from an earlier one. MCU stays halted in ISP; a rerun on the same bus continues. A reset or power cycle boots the mix: over DP the AUX bus dies with it (no HPD), recovery then needs an HDMI DDC cable (ISP is hardware there)
+- Last line of every run: `UNIT STATE: ...`; `dev.py flash` repeats it from the manifest on failure
+- Bus kind: `i2cbus.bus_kind` (i915 `gmbus` = ddc, `AUX` = dp-aux, else the DRM connector's ddc link); NVIDIA names DP and HDMI alike -> `devices.json` `bus_kind`. Byte on dp-aux is always switched to burst (~90 s per sector in byte there)
+- Per-sector order (`boot_last`): banked sectors of banks 1.., bank 0 banked (DDR/startup init), common of banks 1.., bank 0 common last. A relinked mixed image still does not boot (cross-bank calls); the budget is the guard
+- Tests: `tests/test_flash_stop.py` (fake clock + DP AUX message costs)

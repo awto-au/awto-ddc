@@ -353,15 +353,20 @@ def _image_arg(extra: list[str]) -> list[str]:
     return []
 
 
+def _default_unit() -> str:
+    """No --unit: the first test unit in devices.json (a working screen is never a default)."""
+    return next((k for k, v in _units().items() if v.get("test")), "2")
+
+
 def _unit(extra: list[str]) -> tuple[str, dict]:
-    n = str(_opt(extra, "--unit", "3"))
+    n = str(_opt(extra, "--unit", None) or _default_unit())
     u = _units().get(n)
     if u is None:
         raise SystemExit(f"unknown unit {n!r}: see scripts/devices.json")
     if _flag(extra, "--dp"):
         if not u.get("connector_dp"):
             raise SystemExit(f"unit {n} has no DP link in scripts/devices.json")
-        u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP"}
+        u = {**u, "_conn": u["connector_dp"], "gdctl": u["gdctl_dp"], "input": "DP", "bus_kind": u.get("bus_kind_dp", "dp-aux")}
     forced = _flag(extra, "--force")        # always consumed, also on a test unit
     if not u.get("test") and not forced:
         raise SystemExit(f"unit {n} is a working screen (devices.json test=false): add --force to touch it")
@@ -676,13 +681,19 @@ def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path) -> None:
 
 
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
-         args="[--unit N] [--full] [--any-image] [--force-ungated] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
+         args="[--unit N] [--full] [--any-image] [--force-ungated] [--verify crc|readback] [--write-mode byte|burst] "
+              "[--max-min M] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
-    wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
+    wmode = _opt(extra, "--write-mode")     # default: devices.json write_mode (burst if unset); failed pages redone in byte
+    max_min = _opt(extra, "--max-min", str(FLASH_BUDGET_MIN))
+    try:
+        max_min = f"{float(max_min):g}"
+    except ValueError:
+        raise SystemExit(f"--max-min needs minutes, got {max_min!r}; nothing done") from None
     bus = _opt(extra, "--bus")              # recover: bus proven by its own relay cycle (EDID silent while held)
     any_image = _flag(extra, "--any-image")
     ungated = _flag(extra, "--force-ungated")
@@ -703,13 +714,20 @@ def cmd_flash(extra: list[str]) -> int:
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
     keep = _settings_snapshot(u, bus)       # #219: stored settings by name, restored after the flash if a registry change reset them
+    kind = i2cbus.bus_kind(bus, u.get("bus_kind"))
+    wmode = wmode if isinstance(wmode, str) else u.get("write_mode", "burst")
+    if kind == "dp-aux" and wmode == "byte":
+        log(f"flash: byte mode on DP AUX bus {bus} is ~90 s per sector (#177): using burst", "WARN")
+        wmode = "burst"
+    log(f"flash: bus {bus} kind {kind}, write mode {wmode}, budget {max_min} min (checked before the first erase)")
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
     fj = FW / f"{u['serial']}-flashed.json"
     before = fj.read_text() if fj.is_file() else None
     fj.write_text(json.dumps({"tag": "", "image": str(img), "attempted": tag}))
     args = [bus, img, "--serial", u["serial"], "--write", "--no-backup",
-            *([] if u.get("relay") else ["--per-sector", "--max-min", "20"]),   # no relay: per sector; stop if > 20 min (#71)
+            *([] if u.get("relay") else ["--per-sector"]),   # no relay: per sector, boot/common last (#71)
+            "--max-min", max_min, *(["--bus-kind", kind] if kind != "unknown" else []),
             *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
             "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
             *(["--identity", identity] if identity else [])]
@@ -733,6 +751,8 @@ def cmd_flash(extra: list[str]) -> int:
             _bus(u, wait_s=RECOVER_BUS_WAIT_S)     # EDID back = rebooted (and the same unit)
     if rc == 5 and before is not None:      # nothing erased: the flash still holds the old image
         fj.write_text(before)
+    if rc:
+        _log_unit_state(u, bus, img, rc)
     if rc == 0:
         fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
         if _py("fw_archive.py", img):      # every flashed image kept in build-debris/images; failure doesn't fail the flash
@@ -740,6 +760,23 @@ def cmd_flash(extra: list[str]) -> int:
         if keep:
             _settings_restore(u, bus, keep, FW / f"{tag}.map", FW / f"{tag}.settings_table.py")
     return rc
+
+
+# whole-flash budget (rtd_flash_image --max-min), projected from a timed dry page BEFORE the first erase; over = refuse
+# with the unit unchanged, so a low value costs a rerun, never a unit. Never stops a run once writing (#177)
+FLASH_BUDGET_MIN = 20
+
+
+def _log_unit_state(u: dict, bus: int, img: Path, rc: int) -> None:
+    """After a failed flash: what the unit holds, from the manifest (rtd_flash_image never resets onto a mixed image, #177)."""
+    import flash_state
+    st = flash_state.FlashState.load(FW / f"{u['serial']}-flash-state.json", u["serial"], lambda _m: None)
+    if st is not None and st.source in ("write-in-progress", "write-failed"):
+        log(f"flash rc={rc}: {u['serial']} holds a MIXED image ({st.image}); the scaler is HALTED in ISP (no reset sent). "
+            f"Continue: ./dev.py flash --unit <n> --bus {bus} {img}. Do not power-cycle: it boots the mix "
+            f"(over DP that kills the bus; then recover over an HDMI DDC cable)", "FATAL")
+    elif rc == 8:
+        log(f"flash rc=8: refused by the time budget before any erase; {u['serial']} unchanged and reset (old image)", "WARN")
 
 
 @command("deploy one shared firmware image, then separately program this monitor's unique EDID tables",
@@ -756,7 +793,7 @@ def cmd_deploy(extra: list[str]) -> int:
     n, u = _unit(extra)
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
-    wmode = _opt(extra, "--write-mode", "burst")
+    wmode = _opt(extra, "--write-mode")     # None: devices.json write_mode (cmd_flash)
     ungated = _flag(extra, "--force-ungated")
     image_args = _image_arg(extra)
     if not image_args:
@@ -774,7 +811,7 @@ def cmd_deploy(extra: list[str]) -> int:
     # image may temporarily expose its build serial until the sector step.
     bus = _bus(u)
     flash_args = ["--unit", n, "--bus", str(bus), "--any-image",
-                  "--verify", verify, "--write-mode", wmode,
+                  "--verify", verify, *(["--write-mode", wmode] if isinstance(wmode, str) else []),
                   *(["--full"] if full else []),
                   *(["--force"] if not u.get("test") else []), *(["--force-ungated"] if ungated else []), str(img)]
     rc = cmd_flash(flash_args)
@@ -1247,7 +1284,8 @@ RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2
 def cmd_recover(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
-    wmode = _opt(extra, "--write-mode", "burst")  # burst default: faster, failed pages redone in byte mode (#12)
+    wmode = _opt(extra, "--write-mode")     # None: devices.json write_mode (cmd_flash)
+    wm = ["--write-mode", wmode] if isinstance(wmode, str) else []
     any_image = _flag(extra, "--any-image")
     ungated = _flag(extra, "--force-ungated")
     given_bus = _opt(extra, "--bus")        # caller-proven bus (EDID silent); still needs this unit's relay cycle
@@ -1265,7 +1303,7 @@ def cmd_recover(extra: list[str]) -> int:
         bus = None
     if bus is not None and _py("rtd_reset.py", bus, "--serial", u["serial"]) == 0:
         log("recover: ISP reset sent (fast path, no mains cycle)")   # 0x4A answered: no 8 s relay cycle needed
-        return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode,
+        return cmd_flash(["--unit", n, "--bus", str(bus), *wm,
                           *(["--any-image"] if any_image else []),
                           *(["--force-ungated"] if ungated else []), *img])
     rc = cmd_power_cycle(["--unit", n])
@@ -1288,7 +1326,7 @@ def cmd_recover(extra: list[str]) -> int:
             log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
     else:
         log("recover: flashed image has no _g_stAwtoSafe in its map; hold skipped, flashing over ISP", "WARN")
-    return cmd_flash(["--unit", n, "--bus", str(bus), "--write-mode", wmode, *(["--any-image"] if any_image else []),
+    return cmd_flash(["--unit", n, "--bus", str(bus), *wm, *(["--any-image"] if any_image else []),
                           *(["--force-ungated"] if ungated else []), *img])
 
 

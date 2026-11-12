@@ -45,6 +45,7 @@ class FakeIsp:
         self._cur = None
 
     def write(self, reg, val): pass
+    def read(self, reg): return 0x90           # 0x6F: ISP enabled | page buffer ready
     def status(self): return self.sr
     def release_wp(self): pass
     def unprotect(self, sr0): self.sr = 0

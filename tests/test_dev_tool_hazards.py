@@ -27,6 +27,8 @@ def dev(monkeypatch, tmp_path):
     real = json.loads((REPO / "scripts/devices.json").read_text())["units"]
     real = {k: {**v, "test": True} for k, v in real.items()}     # no hardware here; the working-screen guard is not under test
     monkeypatch.setattr(m, "_units", lambda: real)
+    monkeypatch.setattr(m, "_layout_watch", lambda: None)   # spawns desk_layout.py unless the real tree's watcher runs
+    monkeypatch.setattr(m.i2cbus, "bus_kind", lambda bus, hint=None: hint or "unknown")   # no sysfs
     yield m
     sys.modules.pop("dev_under_test", None)
 
@@ -655,3 +657,45 @@ def test_deploy_refuses_ungated_before_any_step(dev, tmp_path, monkeypatch):
     monkeypatch.setattr(dev, "_py", lambda *a, **k: pytest.fail("ran a tool"))
     with pytest.raises(SystemExit, match="flash refused"):
         dev.cmd_deploy(["--unit", "3", "--force", str(img)])
+
+
+# --- #177 bus kind + write mode from devices.json; #179 build uses the rolled compiler -------------------------
+
+def _flash_args(dev, tmp_path, monkeypatch, unit, bus, kind, *extra):
+    img = _img(tmp_path, f"{dev._units()[unit]['serial']}-k-be.bin", dev._units()[unit]["serial"].encode())
+    dev.FW.mkdir(parents=True, exist_ok=True)
+    seen = []
+    monkeypatch.setattr(dev, "_bus", lambda u: bus)
+    monkeypatch.setattr(dev.i2cbus, "fast_bus", _FB)
+    monkeypatch.setattr(dev.i2cbus, "bus_kind", lambda b, hint=None: kind or hint or "unknown")
+    monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append(list(map(str, a))) or 0)
+    assert dev.cmd_flash(["--unit", unit, "--force-ungated", *extra, str(img)]) == 0
+    a = seen[0]
+    return {k: a[a.index(k) + 1] for k in ("--write-mode", "--max-min", "--bus-kind") if k in a}
+
+
+def test_flash_write_mode_from_devices_json(dev, tmp_path, monkeypatch):
+    for n, u in dev._units().items():
+        got = _flash_args(dev, tmp_path, monkeypatch, n, 11, "ddc")
+        assert got["--write-mode"] == u.get("write_mode", "burst") and got["--bus-kind"] == "ddc"
+        assert got["--max-min"] == f"{dev.FLASH_BUDGET_MIN:g}"
+
+
+def test_flash_byte_on_dp_aux_becomes_burst(dev, tmp_path, monkeypatch):
+    got = _flash_args(dev, tmp_path, monkeypatch, "3", 21, "dp-aux", "--write-mode", "byte", "--max-min", "30")
+    assert got == {"--write-mode": "burst", "--max-min": "30", "--bus-kind": "dp-aux"}   # a DP-AUX bus whatever the unit (unit 3 is on HDMI now)
+
+
+def test_devices_json_has_bus_kind_and_write_mode():
+    units = json.loads((REPO / "scripts/devices.json").read_text())["units"]
+    for n, u in units.items():
+        assert u.get("bus_kind") in ("ddc", "dp-aux"), n
+        assert u.get("write_mode") in ("byte", "burst"), n
+        if u.get("connector_dp"):
+            assert u.get("bus_kind_dp") == "dp-aux", n
+
+
+def test_default_unit_is_a_test_unit(dev, monkeypatch):
+    units = {"1": {"test": False}, "2": {"test": True}, "3": {"test": False}}
+    monkeypatch.setattr(dev, "_units", lambda: units)
+    assert dev._default_unit() == "2"

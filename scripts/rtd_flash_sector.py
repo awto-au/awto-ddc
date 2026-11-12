@@ -336,6 +336,7 @@ class Rtd(Isp):
     burst_chunk = BURST_CHUNK
     burst_fails = 0                # bursts that raised (NAK mid-message); the sector then redoes in byte mode
     _byte_sector = None            # sector base forced to byte mode after a burst failure
+    dry = False                    # timing dry page (rtd_flash_image.dry_page): a failed burst is never flushed (#177)
 
     def burst_write(self, reg, data):
         """One transfer of 3 messages: [select 0x6F][read 1 byte][reg + data...]. The select/read pair is an i915 GMBUS
@@ -406,7 +407,8 @@ class Rtd(Isp):
             self._byte_sector = addr & ~(SECTOR - 1)
             try:
                 self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
-                self._start_page(addr)
+                if not self.dry:                     # the flush programs stale SRAM: only into a sector about to be redone
+                    self._start_page(addr)
             except Exception as e2:
                 log(f"page 0x{addr:06x}: flush after burst failure also failed: {e2}")
             raise RuntimeError(f"page 0x{addr:06x} burst failed at +0x{i:02x}: {e}") from e

@@ -165,6 +165,25 @@ def adapter_name(bus: int) -> str:
         return ""
 
 
+BUS_KINDS = ("ddc", "dp-aux")
+
+
+def bus_kind(bus: int, hint: str | None = None) -> str:
+    """'ddc' (HDMI/DVI DDC wires) / 'dp-aux' (I2C over DP AUX) / 'unknown'. Decides the safe flash write mode (#177).
+    - Adapter name decides where it can: 'i915 gmbus *' = DDC, 'AUX *' = DP AUX; else a DRM connector's ddc link.
+    - NVIDIA names DP and HDMI alike ('NVIDIA i2c adapter N') and has no ddc link: `hint` (devices.json bus_kind)."""
+    n = adapter_name(bus)
+    if n.startswith("i915 gmbus"):
+        return "ddc"
+    if n.startswith("AUX "):
+        return "dp-aux"
+    for c in Path("/sys/class/drm").glob("card*-*"):
+        link = c / "ddc"
+        if link.exists() and link.resolve().name == f"i2c-{bus}":
+            return "dp-aux" if c.name.split("-", 1)[1].startswith(("DP-", "eDP-")) else "ddc"
+    return hint if hint in BUS_KINDS else "unknown"
+
+
 def parse_edid_serial(e: bytes) -> str | None:
     for i in range(54, 126, 18):
         if e[i:i + 3] == b"\0\0\0" and e[i + 3] == 0xFF:
