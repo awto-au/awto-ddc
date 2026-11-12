@@ -24,6 +24,8 @@
 #   ms2   two % marks: value = second ms << 16 | first ms -> "87 ms" ... "32 ms" (#162 s3b; low word = ms in the old state)
 #   wdt   value = warning ms << 16 | reset ms -> "warning 200 ms, reset 586 ms" (live from AWTO_WDT_THR / AWTO_WDT_N)
 #   htime value = unix s, arg = UTC offset (15 min, signed) -> "2026-11-12T08:45:10+11:00" (#157)   sms  signed ms -> "+1234 ms" (#157)
+#   nvw   NVRAM flush result (#151, RL6449_Project.h AWTO_NV_LOG_*): value = groups << 27 | erases << 25 | programs << 19 |
+#         bytes << 9 | ms -> "wrote 32 B (OSD data, panel time) in 2 programs, 0 erases, 4 ms" / "nothing changed, no flash write (3 ms)"
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
 # Width: the console log wraps a line to a second row (under the text); gen_awto_sync.py fails a row whose worst case needs 3.
 # Machine lines read "<machine>: OLD -> NEW (N ms): what", N ms = the time in OLD.
@@ -45,12 +47,13 @@ D4	02	ms	NVRAM save end (since the last poke %)
 D4	03	ms	flash erase start (since the last poke %)
 D4	04	ms	flash erase done (since the last poke %)
 D4	05	ms	NVRAM page move (since the last poke %)
-D4	06	ms	NVRAM flush: gate open (since the last poke %)
-D4	07	ms	NVRAM flush: forced after {AWTO_NV_FORCE_MS/1000} s (since the last poke %)
-D4	08	ms	NVRAM flush: power off / saving entry (since the last poke %)
-D4	09	ms	NVRAM flush: menu / selector close (since the last poke %)
-D4	0A	ms	NVRAM flush: test cmd 0x3D (since the last poke %)
-D4	0B	ms	NVRAM flush: second BriCon / ColorProc item (since the last poke %)
+D4	11	nvw	NVRAM flush (gate open): %
+D4	12	nvw	NVRAM flush (forced after {AWTO_NV_FORCE_MS/1000} s): %
+D4	13	nvw	NVRAM flush (power off / saving entry): %
+D4	14	nvw	NVRAM flush (menu / selector close): %
+D4	15	nvw	NVRAM flush (test cmd 0x3D): %
+D4	16	-	NVRAM write outside the gate: a second BriCon / ColorProc item while one waits, written at once by the SDK save
+D4	17	nvw	NVRAM flush (DDC/CI save settings): %
 D4	0C	n	flash: type % found by the SDK (tFlashInformation index: 24 = MX25L8006E, 254 = none)
 D5	*	n	(the {AWTO_SYNC_REPEAT_LINES} lines above repeated % more times)
 D6	*	portx	wake by the SDK source detect, not our poll (poll state %)

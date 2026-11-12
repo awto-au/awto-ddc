@@ -4959,4 +4959,5 @@ void OsdDispAdvanceItemSelect(BYTE ucIndex)
 #include "awto_keypop.inc"
 #include "awto_gpiopop.inc"
 #include "awto_wdtpop.inc"
+#include "awto_nvpop.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

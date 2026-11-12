@@ -2065,6 +2065,7 @@ bit UserCommonFlashErasePage(BYTE ucBank, BYTE ucPage)
 //--------------------------------------------------
 bit UserCommonFlashWrite(BYTE ucBank, WORD usAddr, WORD usLength, BYTE *pucData)
 {
+    AWTO_NV_BYTES(usLength);
     return ScalerFlashWrite(ucBank, usAddr, usLength, pucData);
 }
 #endif // End of #if(_FLASH_WRITE_FUNCTION_SUPPORT == _ON)
