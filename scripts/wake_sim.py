@@ -6,7 +6,8 @@ usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
 - Each step forces power saving again, injects one event, and checks wake / no wake within the bound:
   D2 unplug (wake, "D2 cable unplugged: wake", #138 task 6), D2 plug (wake, "D2 cable plugged in: wake"), sleep with every
   cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
-  D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (wake), DPCD 600h = D0 (wake).
+  D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (no wake, logged: #163),
+  DPCD 600h = D0 (wake).
 - PS wake-poll period (g_usAwtoPsPolls over 500 ms, longest gap g_usAwtoPsGap) against AWTO_PS_POLL_MS.
 - TMDS clock (#144 q7): on D3 without a cable (no wake), on D2 (wake after the AWTO_PS_TMDS_HOLD_MS hold, "D2 wake by TMDS
   clock"), still on after re-sleep (wakes again: the hold is the gate), 15 ms bursts every 50 ms for 1 s (no wake, burst line).
@@ -317,12 +318,9 @@ def main():
         r.wake_case("D2 EDID read again (no picture since)", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), None, 0)
         r.check(any("wake suppressed (EDID read, once per sleep): D2" in x for x in r.lines()), "suppression logged once",
                 str([x for x in r.lines() if "suppressed" in x]))
-        if re.search(r"\s_g_ucAwtoPsAuxWakeOff\b", r.m.map_text):   # #144 test image: an AUX command is logged, no wake
-            r.wake_case("DP AUX command (AUX wake off)", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), None, 0)
-            r.check(any("D1 AUX command from source in power saving: no wake" in x for x in r.lines()), "AUX command logged")
-        else:
-            r.wake_case("DP AUX command", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])),
-                        "D1 AUX command from source: wake", BOUND_LATCH_MS)
+        r.check(re.search(r"\s_g_ucAwtoPsAuxWakeOff\b", r.m.map_text) is not None, "image: AUX command wake is off (#163)")
+        r.wake_case("DP AUX command (logged, no wake)", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), None, 0)
+        r.check(any("D1 AUX command from source in power saving: no wake" in x for x in r.lines()), "AUX command logged (line DB)")
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
         r.poll_period()
         if "_AwtoPsTmdsLive" not in r.m.sym:
