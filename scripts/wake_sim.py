@@ -240,7 +240,7 @@ class Run:
         self.check(woke, f"{name}: woke (power target / status NORMAL)", f"seen after {ms} ms (test sampling)" if woke else "no wake")
         self.watch(1500)                            # console + panel on, search: the ring has the follow-up lines
         ev = self.ring_events()
-        hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE, 0xD3, 0xD7)]
+        hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE, 0xD3, 0xDC)]
         lat = ((hit[-1][2] - t_inj) & 0xFFFF) if hit else None
         self.check(lat is not None and lat <= bound, f"{name}: event -> wake (firmware wake line) within {bound} ms", f"{lat} ms")
         txt = "\n".join(self.lines())
@@ -331,11 +331,11 @@ def main():
             r.fd.set_clock(r.m, 0x72, None)
             r.wake_case("D2 TMDS clock", lambda: r.fd.set_clock(r.m, 0x71, 148_500), "D2 wake by TMDS clock, about 148.",
                         BOUND_TMDS_MS)
-            n0 = sum(1 for e in r.ring_events() if e[0] == 0xD7)     # still on: wakes again during the re-sleep settle
+            n0 = sum(1 for e in r.ring_events() if e[0] == 0xDC)     # still on: wakes again during the re-sleep settle
             r.sleep()
             r.until_wake(4 * BOUND_TMDS_MS)
             r.watch(300)
-            n1 = sum(1 for e in r.ring_events() if e[0] == 0xD7)
+            n1 = sum(1 for e in r.ring_events() if e[0] == 0xDC)
             r.check(n1 == n0 + 1, "D2 TMDS clock still on (no picture since): wakes again", f"TMDS wake lines {n0} -> {n1}")
             r.fd.set_clock(r.m, 0x71, None)
             r.burst_case()
