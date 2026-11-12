@@ -31,7 +31,7 @@
       "be": true,
       "relay": null,
       "test": false,
-      "note": "2026-11-08T19:08: so-th-1 no longer feeds unit 3 (Dan: it feeds unit 2). 2026-11-08T14:00: Dan's working screen again, hands off (tests on unit 2 only, memory units-test-policy). 2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
+      "note": "2026-11-13T08:31: OFFLINE, half-flashed (wb-p14ui-one1 byte mode over DP AUX stopped at 5/214 sectors, scaler reset; DP-4 dark, no AUX/ISP answer). Replaced on DP-4/DP-2 by the Philips (Dan). Recovery: ISP over an HDMI DDC bus (unit 2's Intel HDMI-A-2 cable into unit 3's HDMI input), resume in burst mode. Issue: see #177. 2026-11-08T19:08: so-th-1 no longer feeds unit 3 (Dan: it feeds unit 2). 2026-11-08T14:00: Dan's working screen again, hands off (tests on unit 2 only, memory units-test-policy). 2026-11-08T11:42: recabled by Dan to NVIDIA DP-4 (AUX bus 21 by EDID scan); Intel DP-1 disconnected. 2026-11-06 10:41: Intel HDMI-A-2 (bus 11) + Intel DP-1; Sonoff so-th-1 confirmed by relay-off test"
     }
   }
 }

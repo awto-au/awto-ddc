@@ -5,7 +5,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 import osd_vlc as _enc  # noqa: E402
-import font_compare as _fc  # noqa: E402  (Variant, SRAM_WORDS)
+import font_tradeoff as _fc  # noqa: E402  (Variant, SRAM_WORDS)
 
 SRAM_WORDS = _fc.SRAM_WORDS
 Variant = _fc.Variant

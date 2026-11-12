@@ -364,7 +364,9 @@ def blend_alpha(st: OsdState) -> float:
 def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha_opaque: bool = False) -> np.ndarray:
     """Composite the OSD over a background: a flat colour or an (H, W, 3) picture. Returns uint8 (H, W, 3).
     The OSD layer (windows + fonts, last writer wins) is built first, then blended once per pixel: a window pixel with its
-    blend_en blends when alpha_blend_type (0x3A0A[3:2]) is 01 / 10 / 11; font foreground only at 10; character background at 10 / 11."""
+    blend_en blends when alpha_blend_type (0x3A0A[3:2]) is 01 / 10 / 11; font foreground only at 10; character background at 10 / 11.
+    A window pixel inside a character cell (cell background index 0 shows the window) counts as character background: at 01 it
+    stays opaque [measured unit 1 2026-11-13: type 01 level 51 menu not see-through, type 11 see-through; awto-ddc#176]."""
     img = np.empty((H, W, 3), np.uint8)
     img[:] = bg
     g = frame_geometry(st)
@@ -409,9 +411,18 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     # fonts
     fx, fy = ox + g["fh"] * sx, oy + g["fv"] * sy
     y = 0
+
+    def cell(px, py, cw, ch_h):                               # window pixels under this cell -> character-background class
+        x0, y0, x1, y1 = max(px, 0), max(py, 0), min(px + cw * sx, W), min(py + ch_h * sy, H)
+        if x1 > x0 and y1 > y0:
+            v = vid[y0:y1, x0:x1]
+            v[cov[y0:y1, x0:x1]] = a_cbg
+
     for row in layout_rows(st, g):
         x = 0
         for ch in row["chars"]:
+            cw = {"1bit": ch["width"] if 0 < ch["width"] < GW else GW, "2bit": GW}.get(ch["kind"], ch["width"] or GW)   # = the advance below
+            cell(fx + x * sx, fy + y * sy, cw, row["h"])
             if ch["kind"] == "1bit":
                 bits = glyph_bits(st, g, ch["id"])
                 w = ch["width"] if 0 < ch["width"] < GW else GW

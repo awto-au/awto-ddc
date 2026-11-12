@@ -621,7 +621,11 @@ LAYOUT_PID = TMP / "desk_layout_watch.pid"
 
 def _layout_watch() -> None:
     """Keep scripts/desk_layout.py watch running (one per session): a unit reboot re-plugs its monitor and mutter
-    then falls back to a row with DP-1 on; the watcher restores Dan's layout for the monitors present (#78)."""
+    then falls back to a row with DP-1 on; the watcher restores Dan's layout for the monitors present (#78).
+    OFF unless AWTO_LAYOUT_WATCH=1 (Dan 2026-11-13: it reverted his own one-row layout 4x; DP-1 is now disabled
+    in unit 2's firmware, #81, so the fallback it guarded against no longer happens)."""
+    if os.environ.get("AWTO_LAYOUT_WATCH") != "1":
+        return
     try:
         pid = int(LAYOUT_PID.read_text())
         os.kill(pid, 0)
