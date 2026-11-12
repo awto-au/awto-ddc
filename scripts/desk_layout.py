@@ -159,6 +159,11 @@ def plan(present: list[str]) -> tuple[list[dict], str | None]:
         for m in want:
             if m["y"] == y:
                 m["x"] = min(max(m["x"], lo), hi - W)
+    if want:                                                   # mutter refuses a layout not starting at 0,0 ("positions are offset")
+        x0, y0 = min(m["x"] for m in want), min(m["y"] for m in want)
+        for m in want:
+            m["x"] -= x0
+            m["y"] -= y0
     prim = next((c for c in cfg["primary"] if any(m["connector"] == c for m in want)), None)
     return want, prim
 
@@ -236,7 +241,7 @@ def watch() -> int:
         r2 = subprocess.run(["gdctl", "set", *gdctl_args(want, prim)], capture_output=True, text=True,
                             timeout=SET_S, check=False)
         log(f"watch: layout differed ({pos}, primary {prim_now}); restore (temporary apply) rc={r2.returncode} "
-            + ", ".join(f"{m['connector']}@{m['x']},{m['y']}" for m in want))
+            + ", ".join(f"{m['connector']}@{m['x']},{m['y']}" for m in want) + f" {r2.stderr.strip()[:200]}")
 
 
 def main() -> int:
