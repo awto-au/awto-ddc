@@ -655,6 +655,13 @@ extern void AwtoFreqUpdate(void);
 #endif
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
+// awto: dead-port guard hook, called from AWTO_SW_FAST_POLL (#84); fw/sdcc/awto_ddcci.inc. Switch-log arg 1 = port with no cable refused (VCP 0x60, menu row, selector),
+// 3 = fixed port without cable in NOSIGNAL / PS while another port is cabled -> auto search, normal, SEARCH
+#define AWTO_SW_EV_DEADPORT                                     0xB8
+extern unsigned char AwtoPortCable(unsigned char ucPort);
+extern void AwtoDeadPortPoll(void);
+#define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
+                                                                     (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF
 extern void AwtoSourceOpen(void);
 // #139 selector, no picture: waits for a key; same 60 s as AWTO_L2_SEC (Dan's panel-off default), x1; expiry = SDK power-saving card, sleep
 #define AWTO_SRC_SLEEP_SEC                                      60
@@ -929,6 +936,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_POWER                                      0xC9    // arg = new power status (off / saving)
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
 #define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
+#define AWTO_SYNC_EV_DEADPORT                                   0xDF    // #84: arg 1 = port with no cable refused, 2 = fixed port without cable -> auto search; value = port
 #define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
 #define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
@@ -1199,9 +1207,9 @@ extern void AwtoWakePoll(void);
 #define AWTO_WAKE_POLL()
 #endif
 #if(_AWTO_SW_MARKS == _ON)
-#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); }    // also runs the post-unblank flag watch
+#define AWTO_SW_FAST_POLL()                                     { AwtoSwFastPoll(); AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); }    // also runs the post-unblank flag watch
 #else
-#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); }
+#define AWTO_SW_FAST_POLL()                                     { if(g_ucAwtoFastPending != 0) { AwtoSwFastPoll(); } AWTO_WAKE_POLL(); AWTO_DEAD_PORT_POLL(); }
 #endif
 #define AWTO_FAST_SCALER_BYTES                                  48      // >= sizeof(StAwtoFastScaler), checked at compile time
 extern void AwtoFastScalerSave(unsigned char __xdata *pucBuf);
@@ -1213,7 +1221,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #else
 #define AwtoSwCacheStore()
 #define AwtoSwFastPoll()
-#define AWTO_SW_FAST_POLL()
+#define AWTO_SW_FAST_POLL()                                     AWTO_DEAD_PORT_POLL()
 #define AWTO_FAST_JUDGE_HOLD()                                  _FALSE
 #define AWTO_WAKE_HOLD()                                        _FALSE
 #undef _AWTO_WAKE_HOLD

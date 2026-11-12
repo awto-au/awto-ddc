@@ -219,6 +219,7 @@ const	___str_101	C	0x17e0	20
 const	___str_139	C	0x17f4	16
 const	___str_137	C	0x1804	12
 const	___str_37	C	0x1810	8
+stub	_AwtoDeadPortPoll	C	0x1818	8
 const	___str_107	C	0x1820	12
 const	___str_133	C	0x182c	12
 stub	_OsdDispOsdMessage	C	0x1838	8
@@ -1056,6 +1057,7 @@ stub	_AwtoGpioConSet	C	0x3ca0	8
 stub	_AwtoKeyConSet	C	0x3ca8	8
 stub	_AwtoConLost	C	0x3cb0	8
 stub	_AwtoNvEv	C	0x3cb8	8
+stub	_AwtoPortCable	C	0x3cc0	8
 const	___str_1	C	0x3cc8	12
 const	___str_144	C	0x3cd4	12
 const	___str_15	C	0x3ce0	8
@@ -1075,7 +1077,6 @@ stub	_AwtoTextLine	C	0x3d60	8
 stub	_AwtoTxt	C	0x3d68	8
 stub	_ScalerSyncGetInputPixelClk	C	0x3d70	8
 fn	_ScalerTimerPollingFlagProc	C	0x3d78	200
-fn	_main	C	0x3e40	240
 const	___str_113	C	0x3f30	16
 const	___str_115	C	0x3f40	24
 const	___str_11	C	0x3f58	12
@@ -1112,6 +1113,7 @@ const	___str_116	C	0x40a0	24
 const	___str_122	C	0x40b8	16
 const	___str_31	C	0x40c8	28
 const	___str_40	C	0x40e4	16
+fn	_main	C	0x40f4	252
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 const	_tHDCP_KEY_TABLE	0	0x0010	336
 fn	_ScalerAudioD1DigitalDetectProc	0	0x0160	332
@@ -1372,6 +1374,7 @@ fn	_OsdPropFontDataToSram	1	0x77d0	1380
 fn	_OsdPropGetFontPointer	1	0x7d34	196
 fn	_OsdPropPutString	1	0x7df8	5976
 fn	_OsdPropSetFontPointer	1	0x9550	144
+fn	_AwtoInputSelect	1	0x95e0	200
 fn	_AwtoNvWrite	1	0x9884	424
 const	_tAwtoVolGain	1	0x9a2c	28
 fn	_OsdFuncSetPosition	1	0x9a48	60
@@ -1395,7 +1398,6 @@ fn	_UserCommonAdjust10bitPanelCompensate	1	0xa39c	132
 fn	_UserCommonAdjustPercentToRealValue	1	0xa420	644
 fn	_UserCommonAdjustRealValueToPercent	1	0xa6a4	460
 fn	_osd_tc_open	1	0xa870	164
-fn	_AwtoInputSelect	1	0xa914	124
 fn	_bars	1	0xa990	268
 fn	_ui_highlight	1	0xaa9c	196
 fn	_set_ap_mute	1	0xab60	52
@@ -1762,7 +1764,7 @@ fn	_AwtoInStyle	4	0xad74	20
 fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1362	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1364	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -2119,6 +2121,7 @@ fn	_AwtoKeyLetter	6	0x5438	252
 fn	_AwtoOsdGpioLines	6	0x5534	160
 fn	_AwtoOsdKeyLines	6	0x55d4	388
 fn	_AwtoConTitleBar	6	0x5758	96
+fn	_AwtoPortCable	6	0x57b8	48
 fn	_AwtoPanel	6	0x57f4	48
 fn	_AwtoPortIsDp	6	0x5824	76
 fn	_AwtoPortName	6	0x5870	220
@@ -2266,6 +2269,7 @@ const	_txt	6	0xa4f0	1952
 fn	_AwtoConLogEnd	6	0xac90	180
 fn	_AwtoOsdSyncPoll	6	0xad44	180
 fn	_AwtoConTitlePoll	6	0xadf8	76
+fn	_AwtoDeadPortPoll	6	0xae44	152
 fn	_ScalerDpRx1SignalDetectInitial	7	0x0000	284
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x011c	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x08a4	1528

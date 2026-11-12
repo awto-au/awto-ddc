@@ -805,6 +805,12 @@ void AwtoSourceKey(BYTE ucKey)
             {
                 return;                         // not a port of this board: the selector stays up
             }
+            if(AwtoPortCable(ucPort) == _FALSE)
+            {
+                AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: no cable on the chosen port: refused, the selector stays up
+                AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
+                return;
+            }
             SET_FORCE_POW_SAV_STATUS(_FALSE);
             SysSourceSwitchInputPort(ucPort);
             SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
