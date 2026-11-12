@@ -69,9 +69,9 @@ C0	04	vport	power key on, %
 90	15	-	judge: timing change
 90	16	-	judge: interlace change
 90	17	-	judge: memory / timing gen
-90	1A	-	eDP: panel HPD high
-90	1B	-	eDP: link trained
-90	1C	-	eDP: link training FAIL
+90	1A	-	eDP-1: panel HPD high
+90	1B	-	eDP-1: link trained
+90	1C	-	eDP-1: link training FAIL
 A0	00	-	fast path taken
 A0	01	-	fast path refused: no cache
 A0	03	-	fast path refused: receiver unstable
