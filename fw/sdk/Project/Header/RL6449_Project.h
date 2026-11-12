@@ -660,6 +660,31 @@ extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 // 3 = fixed port without cable in NOSIGNAL / PS while another port is cabled -> auto search, normal, SEARCH
 #define AWTO_SW_EV_DEADPORT                                     0xB8
 extern unsigned char AwtoPortCable(unsigned char ucPort);
+// #81 per-port settings block (fw/sdcc/awto_port.inc): one bit per port per field, bit n = Dn (AWTO_PORT_BIT). Field today: enable.
+// Disabled port: HPD held low (PCB_Dn_HOTPLUG), EDID channel off (ScalerMcuDdcRamEnable), receiver off (ScalerGDIPhyPowerProc),
+// skipped by the search / AUTO (SysSourceHandler, SysSourceSwitchPort), the fast-switch cache and the wake poll.
+extern __xdata unsigned char g_ucAwtoPortOff;
+#define AWTO_PORT_BIT(port)                                     ((unsigned char)(1 << ((port) - _D0_INPUT_PORT)))
+#define AWTO_PORT_OFF(port)                                     ((g_ucAwtoPortOff & AWTO_PORT_BIT(port)) != 0)
+#define AWTO_PORT_HPD(n, x)                                     ((x) & (~g_ucAwtoPortOff >> (n)) & 1)   // PCB_Dn_HOTPLUG (x = 0 / 1): high only when on; no branch
+#define AWTO_PORT_RX_ACTION(port, a)                            ((AWTO_PORT_OFF(port) && ((a) != _POWER_ACTION_NORMAL_TO_OFF) && ((a) != _POWER_ACTION_AC_ON_TO_OFF) && \
+                                                                  ((a) != _POWER_ACTION_PS_TO_OFF)) ? _POWER_ACTION_SWITCH_INTERFACE_TO_OFF : (a))
+#define AWTO_PORT_WHY_BOOT                                      0x01    // sync.tsv E0 rows: why a port changed (arg)
+#define AWTO_PORT_WHY_OFF                                       0x02
+#define AWTO_PORT_WHY_ON                                        0x03
+#define AWTO_PORT_WHY_SELECTOR                                  0x04
+#define AWTO_PORT_WHY_SELECT                                    0x05
+#define AWTO_PORT_WHY_ON_SCREEN                                 0x06    // refusals
+#define AWTO_PORT_WHY_LAST                                      0x07
+#define AWTO_PORT_WHY_WAKE                                      0x08    // wake trigger on a disabled port (once per sleep)
+#define AWTO_PORT_WHY_ALREADY_OFF                               0x09
+#define AWTO_PORT_WHY_ALREADY_ON                                0x0A
+#define AWTO_PORT_WHY_FIXED                                     0x0B    // fixed search on a disabled port -> auto
+#define AWTO_SYNC_EV_PORT                                       0xE0    // #81 port settings line: arg = AWTO_PORT_WHY_*, value = port
+extern void AwtoPortSelect(unsigned char ucPort, unsigned char ucWhy);   // a selection enables a disabled port first
+extern void AwtoPortSkipSearch(void);
+extern void AwtoPortBoot(void);                                 // AwtoSetInit: stored enables -> mask, boot lines
+#define AWTO_PORT_SEARCH_GATE(idx)                              { if(AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)))) { AwtoPortSkipSearch(); } }
 extern void AwtoDeadPortPoll(void);
 #define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
                                                                      (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF

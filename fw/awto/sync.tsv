@@ -140,6 +140,17 @@ DB	*	port	AUX command from source in power saving: no wake (wake: DPCD 600h = D0
 DE	*	portms	TMDS clock burst % in power saving: shorter than the hold, no wake
 DF	01	vport	refused: no cable on %
 DF	02	vport	no cable on %, no signal, another port cabled: auto search
+E0	01	vport	% disabled by setting (stored): HPD low, EDID off, receiver off, not searched
+E0	02	vport	% disabled by setting: HPD low, EDID off, receiver off, not searched
+E0	03	vport	% enabled by setting: HPD up, EDID on, receiver on, searched
+E0	04	vport	% enabled by the input selector: HPD up, EDID on, receiver on
+E0	05	vport	% enabled by input select (VCP 0x60 / menu / test cmd): HPD up, EDID on, receiver on
+E0	06	vport	disable % refused: the input on screen
+E0	07	vport	disable % refused: the last enabled input
+E0	08	vport	wake on % suppressed: input disabled (once per trigger per sleep)
+E0	09	vport	disable % requested: already disabled
+E0	0A	vport	enable % requested: already enabled
+E0	0B	vport	fixed search on disabled %: auto search
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %

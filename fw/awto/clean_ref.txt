@@ -1,1 +1,1 @@
-d8d966d   # awto-rtdfw commit compiled into the image (git archive); keymap-132: inert rows not active, legend SOURCE = close (awto-ddc#132), on ui e7c597f
+348d5be   # awto-rtdfw commit compiled into the image (git archive); portcfg: port enable rows d1..d3_enable wired, set_veto hook, UPS_DISABLED (awto-ddc#81), on ui d8d966d
