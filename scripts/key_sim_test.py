@@ -4,7 +4,7 @@
 usage: AWTO_SIM_CORE=fast key_sim_test.py BIN MAP [--mode 1080p60]
 - Boots to ACTIVE (HDMI D2), then per context: no OSD (DOWN info pop-up, UP selector), source selector (SOURCE opens, UP / DOWN
   step through Auto + the board ports and wrap, rows redrawn per step, no repeat, MENU cancels; #134 text layer), awto menu (AUTO opens, DOWN moves, held DOWN repeats at the rate limit), diagnostic console
-  (UP+DOWN opens with no single-key leak, DOWN scrolls + repeats, AUTO swallowed, UP+DOWN closes), injected test cmd keys,
+  (UP+DOWN opens with no single-key leak, DOWN scrolls + repeats; main page: AUTO closes it + opens the menu; GPIO page: AUTO / SOURCE swallowed, UP+DOWN closes), injected test cmd keys,
   MENU+DOWN debug link with no DOWN leak, POWER off / on.
 - Physical key = ADC_A0 (0xFF09) / ADC_A1 (0xFF0A) cell value in a fw/awto/inputs.tsv band; idle = regdb reset 0xF8; POWER = P3.0 low.
 - Actions are counted with call watches (fw_sim Machine.watch): the assertions name the function that must / must not run.
@@ -273,10 +273,20 @@ def run(k):
     k.wait(300)
     got = k.delta(b, "AwtoConScroll")
     k.check(f"console: UP held {hold} ms -> about {want} scrolls", want - 3 <= got <= want + 2, f"{got}")
+    b = k.snap()                                                # main page: other keys close it and act (Dan, 2026-11-12)
+    k.tap("AUTO")
+    k.check("console main page: AUTO closes it and opens the menu", k.console() == 0 and k.delta(b, "menu_open") == 1
+            and k.menu() == 1, f"console {k.console()} menu {k.menu()}")
+    for _ in range(4):
+        if k.menu() == 0:
+            break
+        k.cmd(0x04)
     b = k.snap()
+    k.cmd(0x43)                                                 # GPIO (key test) page: keys other than UP / DOWN swallowed
     k.tap("AUTO")
     k.tap("SOURCE")
-    k.check("console: AUTO / SOURCE swallowed", k.delta(b, "menu_open") == 0 and k.delta(b, "AwtoSourceOpen") == 0 and k.menu() == 0)
+    k.check("console GPIO page: AUTO / SOURCE swallowed", k.console() != 0 and k.delta(b, "menu_open") == 0
+            and k.delta(b, "AwtoSourceOpen") == 0 and k.menu() == 0, f"console {k.console()}")
     b = k.snap()
     k.tap("UP", "DOWN", ms=300)
     k.check("UP+DOWN -> console closed, no scroll", k.console() == 0 and k.delta(b, "AwtoConScroll") == 0, f"console {k.console()}")
