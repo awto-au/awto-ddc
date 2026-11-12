@@ -12,6 +12,7 @@
 # - nv_slot: auto = position in the NVRAM record (id-tagged, so slots may move). vcp: MCCS code, or a manufacturer
 #   code 0xE6..0xFF (0xE0..0xE5 are the paged pair 0xE0 id / 0xE1 value, schema, command, menu), or '-';
 #   every row is reachable through the paged pair. The DDC/CI capabilities string is generated from this column.
+#   0xE9 = host time (table write, awto-ddc#157, firmware awto_ddcci.inc): never a row code.
 # - apply: set_ap_<apply>(id, value) pushes it to the firmware; '-' = the owner reads the value when it needs it.
 # - options: enum labels, '|' separated; label=N gives the VCP value of that option (default: the option index).
 # - provenance: [sdk-ui] = item, range and default of the Realtek SDK (demo) menu, walked in the sim (#65, #67).
