@@ -552,7 +552,7 @@ void UserCommonNVRamSetSystemData(EnumSystemDataItemDataType enumDataType, BYTE 
 #if((_HDMI_FREESYNC_SUPPORT == _ON) && (_TMDS_HDCP_2_2_SUPPORT == _ON))
             SET_HDMI_HOTPLUG_TOGGLE();
 #else
-            if(g_stSystemData.b1HDMIHotPlugSupport == _TRUE)
+            if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (g_stSystemData.b1HDMIHotPlugSupport == _TRUE))  // awto: no HDMI hot-plug pulse on an input switch (#60)
             {
                 SET_HDMI_HOTPLUG_TOGGLE();
             }
@@ -1548,7 +1548,7 @@ bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE 
     if(ucLength > (_DATA_ITEM_LENGTH - 2))
     {
         return _FALSE;
-    }
+    } { extern bit AwtoNvDefer(BYTE ucId, BYTE *pucData); if(AwtoNvDefer(LOBYTE(enumItemID), pucData) == _TRUE) { return _TRUE; } }  // awto: the flush gate writes it (#151)
 
     usPageAddr = g_pucFlashPageArr[ucPageID] * _FLASH_PAGE_SIZE;
 
@@ -1611,7 +1611,7 @@ bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE 
     {
         if(usAddrIndex == ((_FLASH_PAGE_SIZE - _PAGE_INFO_LENGTH) / _DATA_ITEM_LENGTH))
         {
-            RTDFlashMoveData(ucPageID, pucWholeItem);
+            RTDFlashMoveData(ucPageID, pucWholeItem); AWTO_NV_ITEM_WR();  // awto: NVRAM item write notes the flush gate (#151)
             return _TRUE;
         }
 
@@ -1640,7 +1640,7 @@ bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE 
     UserCommonFlashWrite(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usPageAddr + g_pusFlashAddrArr[ucPageID] * _DATA_ITEM_LENGTH + _DATA_ITEM_LENGTH - 1, 1, pucWholeItem + _DATA_ITEM_LENGTH - 1);
 #else
     // Write __data
-    UserCommonFlashWrite(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usPageAddr + g_pusFlashAddrArr[ucPageID] * _DATA_ITEM_LENGTH, _DATA_ITEM_LENGTH, pucWholeItem);
+    UserCommonFlashWrite(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usPageAddr + g_pusFlashAddrArr[ucPageID] * _DATA_ITEM_LENGTH, _DATA_ITEM_LENGTH, pucWholeItem); AWTO_NV_ITEM_WR();  // awto: NVRAM item write notes the flush gate (#151)
     // check checksum 
     ucChecksum = 0xFF;
     ucReadPageID= 0xFF;

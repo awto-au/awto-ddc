@@ -770,6 +770,7 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
     SET_PANELPOWERACTION(ucEvent);
 #endif
 
+    AwtoSwEvent(AWTO_SW_EV_POWER, ucEvent);  // awto: switch-log: panel power action (#60)
     switch(ucEvent)
     {
         case _PANEL_ON:
@@ -789,6 +790,8 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 #endif
 
                 // LCD Power on
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);  // awto: switch-log probe: eDP panel-on phase (#78)
+    AwtoDiagStage(5);  // awto: eDP power-up stage (#63)
                 PCB_PANEL_POWER(_PANEL_CONTROL_ON);
            
 #if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE != _TDO_1230K40444_V0_2))
@@ -810,6 +813,7 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 
                 UserInterfaceAdjustWaitPanelT2();
 
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);  // awto: switch-log probe: eDP panel-on phase (#78)
                 if(ScalerDisplayDPTxLinkSequence() == _FAIL)
                 {
 #if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
@@ -819,6 +823,8 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 #endif
             }
 
+            AwtoSwEvent(AWTO_SW_EV_PROBE, 27);  // awto: switch-log probe: eDP panel-on phase (#78)
+    AwtoDiagStage(7);  // awto: eDP power-up stage (#63)
             if(GET_PANELPOWERSTATUS() != _BACKLIGHT_ON_ALREADY)
             {
 #if(_PANEL_STYLE == _PANEL_LVDS)
@@ -1077,6 +1083,8 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 #endif
 
                 // LCD Power on
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 24);  // awto: switch-log probe: eDP panel-on phase (#78)
+    AwtoDiagStage(5);  // awto: eDP power-up stage (#63)
                 PCB_PANEL_POWER(_PANEL_CONTROL_ON);
 
 #if((_KL_5V_12V_GPIO_CONTROL == _ON) && (_PANEL_TYPE != _TDO_1230K40444_V0_2))
@@ -1181,6 +1189,7 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 
                 UserInterfaceAdjustWaitPanelT2();
 
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 26);  // awto: switch-log probe: eDP panel-on phase (#78)
                 if(ScalerDisplayDPTxLinkSequence() == _FAIL)
                 {
 #if(_PANEL_DPTX_FORCE_OUTPUT_SUPPORT == _ON)
@@ -1188,7 +1197,9 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
 #endif
                 }
 
+    AwtoDiagStage(7);  // awto: eDP power-up stage (#63)
                 // Set Video Stream parameter
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 27);  // awto: switch-log probe: eDP panel-on phase (#78)
                 ScalerDisplayDPTxStreamHanlder(_ENABLE);
 
                 // Panel DPTx Power Sequence Check Point
@@ -1202,6 +1213,7 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
                 ScalerTimerDelayXms(_PANEL_POWER_ON_BL_TO_PWM);
 #endif
 
+    AwtoDiagStage(8);  // awto: eDP power-up stage (#63)
                 PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
 
                 // Panel DPTx Power Sequence Check Point
@@ -1685,7 +1697,7 @@ void UserCommonInterfaceOsdResetProc(void)
         if(SysModeGetModeState() != _MODE_STATUS_SEARCH)
 #endif
 #if(_PANEL_POW_SEQ_FAST_MODE == _ON)
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF);
+            AWTO_BL_OFF_OR_BLANK(2);  // awto: backlight off becomes a blank (#60)
 #else
             UserCommonInterfacePanelPowerAction(_PANEL_OFF);
 #endif
@@ -1697,6 +1709,7 @@ void UserCommonInterfaceOsdResetProc(void)
 
     UserInterfaceAdjustOsdResetProc();
 
+    AWTO_KEY_OSD_RESET();  // awto: key panels follow an OSD reset (#129)
 #if(_VGA_SUPPORT == _ON)
     g_ucVgaCheckCounter = 30;
 #endif
