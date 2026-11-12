@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
-menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes, htime.
+menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes, htime, magic, regs.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime]
+usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
+  magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
+  regs: gen_regnames.py --check (AwtoRegs.h matches the names our code uses).
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL/SKIP line per gate; exit 1 if any fails.
@@ -37,7 +39,7 @@ LIMIT_OF = {"keys": 60, "wdt": 60}   # 3x the cold run (keys 20 s, wdt 18 s; fas
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
-NO_SIM = {"link", "pokes", "speed"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
+NO_SIM = {"link", "pokes", "speed", "magic", "regs"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -66,6 +68,7 @@ def skips(b: Path, m: Path, tree) -> dict:
         sk.setdefault("crash", "needs --tree with fw/overlay/Project/Header/RL6449_Project.h")
     if not (tree and Path(tree).is_dir()):
         sk["pokes"] = "needs --tree (static check of the worktree's sources)"
+        sk["magic"] = sk["regs"] = "needs --tree (static check of the worktree's sources)"
     return sk
 
 
@@ -95,6 +98,8 @@ def gates(b: Path, m: Path, ref, tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
     if tree and Path(tree).is_dir():
         g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
+        g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
+        g["regs"] = [*PY, f"{s}/gen_regnames.py", "--tree", tree, "--check"]
     return {
         **g,
         "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],

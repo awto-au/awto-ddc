@@ -1,0 +1,1 @@
+# magic_lint allow-list (awto-ddc#161): file-suffix<TAB>line-substring<TAB>reason. Every entry needs a reason; none needed today.

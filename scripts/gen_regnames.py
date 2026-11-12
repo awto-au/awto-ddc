@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Generate the register/field name header for OUR firmware code from the regdb (awto-ddc#161).
+
+usage: gen_regnames.py [--tree DIR] [--regdb FILE] [--check] [--migrate]
+  default   scan our files for AWTO_R_<REG> / AWTO_F_<REG>_<FIELD> / AWTO_I_<REG> and write fw/overlay/Project/Header/AwtoRegs.h
+            with only those (address, 8-bit field mask, data-port index). An unknown name is an error.
+  --check   exit 1 if the header on disk differs from what would be generated.
+  --migrate one-off: rewrite raw hex addresses in register accesses of our files to AWTO_R_ names (prints each change).
+Names: AWTO_R_<REG>; a register name that exists at several addresses gets the page: AWTO_R_P<PAGE>_<REG> (e.g. B7 / BA AUX_IRQ_STATUS).
+Our files: scripts/magic_lint.py OUR_FILES. Log: ./tmp/logs/gen_regnames.log
+"""
+import argparse
+import csv
+import gzip
+import os
+import re
+import subprocess
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from magic_lint import our_files, ACCESS_RE
+
+HEADER = "fw/overlay/Project/Header/AwtoRegs.h"
+REGDB = "re/regdb/RTD2795T-CG.tsv.gz"
+EXTRA = {"IIC_2_CH_SEL": 0xFE94, "IIC_2_STATUS": 0xFE99,      # IIC_2 / IIC_3 engines: SDK header only, not in the 2795T regdb
+         "IIC_3_CH_SEL": 0xFEA3, "IIC_3_STATUS": 0xFEA8}
+USE_RE =re.compile(r"\bAWTO_([RFI])_([A-Z0-9_]+)\b")
+
+
+def tree_root(arg):
+    if arg:
+        return Path(arg)
+    env = os.environ.get("AWTO_DDC_REPO")
+    if env:
+        return Path(env)
+    try:
+        return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return Path(__file__).resolve().parent.parent
+
+
+def load(db):
+    regs = {}                    # (address, port_idx) -> {name, page, addr, port}
+    fields = defaultdict(list)   # (address, port_idx) -> [(FIELD, hi, lo)]
+    with gzip.open(db, "rt") as f:
+        for r in csv.DictReader(f, delimiter="\t"):
+            if r["reg_type"] != "1" and r["port_idx"] == "":
+                pass
+            key = (int(r["address"], 16), r["port_idx"])
+            if r["kind"] == "REG":
+                regs[key] = {"name": r["register"].upper(), "page": r["page"].upper(), "addr": key[0], "port": r["port_idx"]}
+            elif r["field"].lower() not in ("reserved", "dummy"):
+                fields[key].append((re.sub(r"\W", "_", r["field"]).upper(), int(r["bit_high"]), int(r["bit_low"])))
+    for name, addr in EXTRA.items():
+        regs[(addr, "")] = {"name": name, "page": f"{addr >> 8:02X}", "addr": addr, "port": ""}
+    return regs, fields
+
+
+def name_maps(regs):
+    """full name (REG or P<page>_REG when the name sits at several addresses) -> key; and the reverse."""
+    where = defaultdict(set)
+    for k, r in regs.items():
+        where[r["name"]].add(k)
+    by_name, by_key = {}, {}
+    for name, ks in where.items():
+        for k in ks:
+            full = name if len(ks) == 1 else f"P{regs[k]['page']}_{name}"
+            by_name[full] = k
+            by_key[k] = full
+    return by_name, by_key
+
+
+def scan_uses(files):
+    uses = defaultdict(set)
+    for p in files:
+        for kind, rest in USE_RE.findall(p.read_text(errors="replace")):
+            uses[kind].add(rest)
+    return uses
+
+
+def pad(s):
+    return s.ljust(max(56, len(s) + 1))
+
+
+def generate(root, db, files):
+    regs, fields = load(db)
+    by_name, by_key = name_maps(regs)
+    uses = scan_uses(files)
+    lines, err = {}, []
+
+    def reg_line(full):
+        r = regs[by_name[full]]
+        return (r["addr"], pad(f"#define AWTO_R_{full}") + f"0x{r['addr']:04X}")
+    for rest in sorted(uses["R"]):
+        if rest not in by_name:
+            err.append(f"AWTO_R_{rest}: no such register")
+            continue
+        lines[f"R_{rest}"] = reg_line(rest)
+    for rest in sorted(uses["I"]):
+        if rest not in by_name or regs[by_name[rest]]["port"] == "":
+            err.append(f"AWTO_I_{rest}: no such data-port register")
+            continue
+        r = regs[by_name[rest]]
+        lines[f"I_{rest}"] = (r["addr"], pad(f"#define AWTO_I_{rest}") + f"{r['port']}")
+    for rest in sorted(uses["F"]):
+        hit = None
+        for full, k in by_name.items():                  # longest register-name prefix that has this field
+            if rest.startswith(full + "_"):
+                fld = rest[len(full) + 1:]
+                for n, hi, lo in fields.get(k, []):
+                    if n == fld and (hit is None or len(full) > len(hit[0])):
+                        hit = (full, k, hi, lo)
+        if not hit:
+            err.append(f"AWTO_F_{rest}: no such field")
+            continue
+        full, k, hi, lo = hit
+        mask = ((1 << (hi - lo + 1)) - 1) << lo
+        lines[f"F_{rest}"] = (regs[k]["addr"] + 0.5, pad(f"#define AWTO_F_{rest}") + f"0x{mask:02X}")
+    if err:
+        sys.exit("gen_regnames: " + "; ".join(err))
+    out = ["// GENERATED by awto-ddc scripts/gen_regnames.py from re/regdb/RTD2795T-CG.tsv.gz. Do not edit.",
+           "// Only the registers / fields our code uses. AWTO_R_ address, AWTO_F_ 8-bit mask, AWTO_I_ data-port index.",
+           "#ifndef __AWTO_REGS_H__", "#define __AWTO_REGS_H__", ""]
+    out += [t for _, t in sorted(lines.values(), key=lambda x: (x[0], x[1]))]
+    out += ["", "#endif", ""]
+    return "\n".join(out)
+
+
+def migrate(root, db, files):
+    regs, _ = load(db)
+    by_name, by_key = name_maps(regs)
+    by_addr = {}
+    for (a, port), full in by_key.items():
+        if regs[(a, port)]["port"] == "":
+            by_addr[a] = full
+    n = 0
+    for p in files:
+        txt = p.read_text(errors="replace")
+
+        def sub(m):
+            nonlocal n
+            a = int(m.group(2), 16)
+            if a not in by_addr:
+                print(f"{p}: 0x{a:04X} not in regdb, left")
+                return m.group(0)
+            n += 1
+            return f"{m.group(1)}AWTO_R_{by_addr[a]}"
+        new = ACCESS_RE.sub(sub, txt)
+        if new != txt:
+            p.write_text(new)
+    print(f"migrated {n} literal(s)")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tree", default="")
+    ap.add_argument("--regdb", default="")
+    ap.add_argument("--check", action="store_true")
+    ap.add_argument("--migrate", action="store_true")
+    a = ap.parse_args()
+    root = tree_root(a.tree)
+    db = Path(a.regdb) if a.regdb else root / REGDB
+    files = our_files(root)
+    if a.migrate:
+        migrate(root, db, files)
+    text = generate(root, db, files)
+    hp = root / HEADER
+    if a.check:
+        if not hp.is_file() or hp.read_text() != text:
+            print(f"{HEADER} is stale: run scripts/gen_regnames.py --tree {root}")
+            return 1
+        print(f"{HEADER} up to date")
+        return 0
+    hp.write_text(text)
+    print(f"wrote {HEADER}: {text.count('#define AWTO_') } defines from {len(files)} files")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -79,12 +79,12 @@ class Run:
         say(f"  png {out} at {self.ms():.0f} ms (OSD {'on' if sm['en'] else 'OFF'}, grid {sm['cols']}x{sm['rows']})")
 
     def reason(self, tag, want, lines, sym=""):
-        """#29: first line = the reason; stage lines 1..6 present, times (ms since reset) never step back; PNG."""
+        """#29: first line = the reason; boot milestone lines (>= 6) present, times (ms since reset) never step back; PNG."""
         for ln in lines[:16]:
             say(f"    {ln}")
         first = lines[0].split(" ms ", 1)[1] if lines else ""
         self.check(first.startswith(want) and sym in first, f"{tag}: first line is the boot reason", first)
-        st = [ln for ln in lines if " stage " in ln]
+        st = [ln for ln in lines[1:] if " boot: " in ln]       # milestone lines (sync.tsv D1 rows), after the reason
         self.check(len(st) >= 6, f"{tag}: boot stage lines", f"{len(st)}")
         ms = [int(ln[1:].split("ms")[0]) for ln in lines]
         # 1 ms slack: the WDT-counter time (before Timer2) and the Timer2 time meet with integer-ms truncation
