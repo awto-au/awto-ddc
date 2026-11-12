@@ -315,8 +315,12 @@ def main():
         r.wake_case("D2 EDID read again (no picture since)", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), None, 0)
         r.check(any("wake suppressed (EDID read, once per sleep): D2" in x for x in r.lines()), "suppression logged once",
                 str([x for x in r.lines() if "suppressed" in x]))
-        r.wake_case("DP AUX command", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), "D1 AUX command from source: wake",
-                    BOUND_LATCH_MS)
+        if re.search(r"\s_g_ucAwtoPsAuxWakeOff\b", r.m.map_text):   # #144 test image: an AUX command is logged, no wake
+            r.wake_case("DP AUX command (AUX wake off)", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), None, 0)
+            r.check(any("D1 AUX command from source in power saving: no wake" in x for x in r.lines()), "AUX command logged")
+        else:
+            r.wake_case("DP AUX command", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])),
+                        "D1 AUX command from source: wake", BOUND_LATCH_MS)
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
         r.poll_period()
         if "_AwtoPsTmdsLive" not in r.m.sym:
