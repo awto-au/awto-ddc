@@ -83,6 +83,7 @@ void    set_boot(void);                  /* first main-loop pass: recovery check
 
 /* integrator (firmware side) */
 int16_t set_status(uint8_t id);          /* SF_RO rows */
+uint8_t set_veto(uint8_t id, int16_t v);  /* 1 = refuse this change (it would blank or cut access); the integrator logs why */
 uint16_t set_now_ms(void);               /* free-running ms count */
 void    set_wait_ms(uint16_t ms);        /* blocking wait (recovery hold only) */
 int16_t set_sdk_get(uint8_t id);         /* SF_SDK rows: the SDK field, in registry units */

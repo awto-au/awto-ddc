@@ -161,13 +161,14 @@
 #define AP_OSD_SCALE            22u
 #define AP_OSD_TRANSPARENCY     23u
 #define AP_OVERSCAN             24u
-#define AP_POWER                25u
-#define AP_POWER_MODE           26u
-#define AP_SDK_LANGUAGE         27u
-#define AP_SDK_SYS              28u
-#define AP_SEARCH_TIME          29u
-#define AP_USER_RGB             30u
-#define AP_VOLUME               31u
+#define AP_PORT                 25u
+#define AP_POWER                26u
+#define AP_POWER_MODE           27u
+#define AP_SDK_LANGUAGE         28u
+#define AP_SDK_SYS              29u
+#define AP_SEARCH_TIME          30u
+#define AP_USER_RGB             31u
+#define AP_VOLUME               32u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -194,6 +195,7 @@ void set_ap_osd_pos(uint8_t id, int16_t v);
 void set_ap_osd_scale(uint8_t id, int16_t v);
 void set_ap_osd_transparency(uint8_t id, int16_t v);
 void set_ap_overscan(uint8_t id, int16_t v);
+void set_ap_port(uint8_t id, int16_t v);
 void set_ap_power(uint8_t id, int16_t v);
 void set_ap_power_mode(uint8_t id, int16_t v);
 void set_ap_sdk_language(uint8_t id, int16_t v);

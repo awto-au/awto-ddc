@@ -35,7 +35,7 @@ void ui_legend(uint8_t ctx);
 void ui_message(const char __xdata *s, uint8_t style);   /* the line above the legend; NULL / "" clears it */
 
 /* status strip: D1 D2 D3 state, active input marked, measured timing; redraws only when something changed */
-enum ui_port_state { UPS_NOCABLE = 0, UPS_NOSIGNAL = 1, UPS_READY = 2, UPS_ACTIVE = 3 };
+enum ui_port_state { UPS_NOCABLE = 0, UPS_NOSIGNAL = 1, UPS_READY = 2, UPS_ACTIVE = 3, UPS_DISABLED = 4 };   /* 4: port off by setting */
 struct ui_timing { uint16_t w, h; uint32_t vmhz; };   /* vmhz = vertical frequency in millihertz */
 uint8_t ui_port_state(uint8_t i);                     /* integrator: i = 0..2 = D1..D3 */
 uint8_t ui_timing(struct ui_timing __xdata *t);       /* integrator: 1 = the active input's measured timing is valid */

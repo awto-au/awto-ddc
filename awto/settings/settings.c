@@ -99,6 +99,8 @@ uint8_t set_put(uint8_t id, int16_t v, uint8_t apply_now)
         return 1;
     }
     v = st_clampv(v);
+    if (v != st_cur(i) && set_veto(id, v))
+        return 0;                                /* the integrator refused (and logged) it */
     if (id >= SET_ID_D1_ENABLE && id <= SET_ID_D3_ENABLE && !st_inputs_ok(id, v))
         return 0;
     if (row.flags & SF_RISKY) {

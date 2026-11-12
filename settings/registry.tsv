@@ -51,9 +51,9 @@
 34	freeze	bool	none	display	inert	0	1	1	0	-	-	-	Freeze	-	[sdk-ui]
 3	input	enum	none	input	-	0	2	1	1	auto	0x60	input_select	Input	D1 DP=0x0F|D2 HDMI=0x11|D3 HDMI=0x12	fixed input (switch now); not stored: an input switch writes no flash (awto-ddc#151)
 35	input_mode	enum	none	input	-	0	1	1	0	auto	0xEF	input_mode	Search	Auto|Fixed	Auto = search in group; not stored, boot = Auto (awto-ddc#151) [sdk-ui]
-36	d1_enable	bool	none	input	nv,risky,inert	0	1	1	1	auto	0xEC	-	D1 DP enable	-	all off = all on (never blank by setting); owner: source search
-37	d2_enable	bool	none	input	nv,risky,inert	0	1	1	1	auto	0xED	-	D2 HDMI enable	-	owner: source search
-38	d3_enable	bool	none	input	nv,risky,inert	0	1	1	1	auto	0xEE	-	D3 HDMI enable	-	owner: source search
+36	d1_enable	bool	none	input	nv	0	1	1	1	auto	0xEC	port	D1 DP enable	-	off = HPD low, EDID off, receiver off, not searched / auto-selected / woken on; refused for the input on screen and the last enabled one; selecting the port enables it (awto-ddc#81)
+37	d2_enable	bool	none	input	nv	0	1	1	1	auto	0xED	port	D2 HDMI enable	-	as D1 (per-port settings block, awto-ddc fw/sdcc/awto_port.inc)
+38	d3_enable	bool	none	input	nv	0	1	1	1	auto	0xEE	port	D3 HDMI enable	-	as D1
 39	search_order	enum	none	input	nv,inert	0	5	1	3	auto	0xFC	-	Search order	D1 D2 D3|D1 D3 D2|D2 D1 D3|D2 D3 D1|D3 D1 D2|D3 D2 D1	owner: source search (#60)
 40	search_hdmi_ms	int	ms	input	nv,risky	500	10000	100	2000	auto	-	search_time	HDMI search	-	per-port search time, cable in [sdk-value]
 41	search_dp_ms	int	ms	input	nv,risky	1000	10000	100	3000	auto	-	search_time	DP search	-	[sdk-value]

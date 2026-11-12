@@ -55,7 +55,9 @@ static int ap_calls;
 AP(aspect) AP(backlight) AP(black_level) AP(colour_temp) AP(contrast) AP(debug_msgs) AP(debug_popup)
 AP(dp_edid) AP(dp_version) AP(factory_menu) AP(gamma) AP(gpio_test) AP(input_mode) AP(input_select)
 AP(key_test) AP(msg_log) AP(osd_font) AP(osd_pos) AP(osd_scale) AP(osd_transparency) AP(overscan) AP(power)
-AP(power_mode) AP(sdk_language) AP(sdk_sys) AP(search_time) AP(user_rgb)
+AP(power_mode) AP(sdk_language) AP(sdk_sys) AP(search_time) AP(user_rgb) AP(mute) AP(volume) AP(port)
+static int veto_id;                                 /* set_veto refuses this id (0 = none) */
+uint8_t set_veto(uint8_t id, int16_t v) { (void)v; return id == veto_id; }
 
 static void sdk_defaults(void)
 {
@@ -130,6 +132,15 @@ int main(void)
         CHECK(set_load_legacy() == 1 && sdk[SET_ID_CONTRAST] == 33 && set_get(SET_ID_PANEL_T2) == 300, "legacy import %d %d",
               sdk[SET_ID_CONTRAST], set_get(SET_ID_PANEL_T2));
     }
+
+    /* 6. port enable rows (awto-ddc#81): stored at once (not risky), integrator veto, never all off */
+    set_load();
+    CHECK(set_put(SET_ID_D1_ENABLE, 0, 1) && set_pending() == 0 && set_get(SET_ID_D1_ENABLE) == 0, "d1 off, no revert wait");
+    veto_id = SET_ID_D2_ENABLE;
+    CHECK(!set_put(SET_ID_D2_ENABLE, 0, 1) && set_get(SET_ID_D2_ENABLE) == 1, "veto keeps d2 on");
+    CHECK(set_put(SET_ID_D2_ENABLE, 1, 1), "unchanged value: no veto asked");
+    veto_id = 0;
+    CHECK(set_put(SET_ID_D2_ENABLE, 0, 1) && !set_put(SET_ID_D3_ENABLE, 0, 1) && set_get(SET_ID_D3_ENABLE) == 1, "last input refused");
 
     printf("%s: %d failures (aux %u B, %u rows)\n", fails ? "FAIL" : "PASS", fails, SET_AUX_MAX, SET_COUNT);
     return fails != 0;
