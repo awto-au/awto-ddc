@@ -252,6 +252,9 @@ class FastMachine:
             for a in d.writes:
                 self.hook[("write", a)] = d
                 self.cmd(f"break xram w 0x{a:x}")
+            for a in getattr(d, "swrites", ()):         # SFR writes (on_swrite)
+                self.hook[("swrite", a)] = d
+                self.core.hook(EV_SW, a, True)
         for d in self.devs:
             d.init(self)
         self._tickers = [d for d in self.devs if hasattr(d, "tick")]

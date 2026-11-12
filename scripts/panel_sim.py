@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S  # noqa: E402
 import osd_test as T  # noqa: E402
 import sync_log as L  # noqa: E402
+import led_check as LED  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/panel_sim.log"
@@ -77,9 +78,12 @@ class Run:
     def __init__(self, a):
         self.a, self.fails, self.events, self.phase = a, 0, [], "boot"
         w1c = S.W1C({0xFE69: 0x01, 0xFFE5: 0x01, 0xFE72: 0x01, 0xB7DC: 0x01, 0xBADC: 0x01})    # wake latches as wake_sim.py: no stale latch
-        self.bus = S.SimBus(a.bin, a.map, "panel-" + a.bin.stem, None, boot=False, devs=[PinWatch(self), w1c], video=a.mode)
+        self.led = LED.LedWatch(self)
+        self.bus = S.SimBus(a.bin, a.map, "panel-" + a.bin.stem, None, boot=False, devs=[PinWatch(self), w1c, self.led], video=a.mode)
         self.m = self.bus.m
         mt = self.m.map_text
+        self.led_addr = self.m.addr("g_ucAwtoLedMode") if re.search(r"\s_g_ucAwtoLedMode\b", mt) else None
+        self.led_table = []
         self.own = self.m.addr("g_ucAwtoPanelOwn") if re.search(r"\s_g_ucAwtoPanelOwn\b", mt) else None
         self.pwr = self.m.addr("g_stPowerInfo")
         self.diag = T.diag_addr(a.map)
@@ -148,7 +152,15 @@ class Run:
         say(f"  ring ({title}): {len(new)} new lines")
         for x in new:
             say(f"    {x}")
+        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: .+? -> (.+?) \(\d+ ms\)", x))), None)
+        LED.sample(self.m, self.led, st, self.phase, self.led_addr, self.led_check, self.led_table)
         return new
+
+    def led_check(self, ok, what, detail=""):
+        if self.a.report:
+            say(f"  {'ok' if ok else 'MISMATCH'} {what}{(': ' + detail) if detail else ''}")
+        else:
+            self.check(ok, what, detail)
 
     def stable_detect(self, ok: bool):
         if "_ScalerTMDSStableDetect" in self.m.sym and getattr(self.m, "hle", True):
@@ -226,6 +238,8 @@ class Run:
         say("  timeline (fw ms, phase, write / call, value, owner flag):")
         for t, ph, w, v, o in ev:
             say(f"    {t:7d} {ph:13s} {w:22s} {v:3d} {'-' if o is None else o}")
+        LED.print_table(say, self.led_table)
+        LED.judge_lines(self.lines_seen, self.led_check)
         if self.a.report or self.own is None:
             say("  report only (no g_ucAwtoPanelOwn in this image)" if self.own is None else "  report only")
             return
