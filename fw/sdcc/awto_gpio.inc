@@ -215,13 +215,6 @@ static BYTE AwtoKeyMaskNow(void)
     return ucM;
 }
 
-BYTE AwtoKeyMaskLive(void)                     // one poll now, then the mask (boot recovery hold loop runs outside the main loop)
-{
-    AwtoGpioEnsure();
-    AwtoInScan(0);
-    return AwtoKeyMaskNow();
-}
-
 void AwtoGpioConSet(BYTE ucOn)                 // console page (0 closed, AWTO_CON_*); the GPIO page samples the VGA front end too
 {
     AwtoGpioEnsure();

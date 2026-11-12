@@ -1818,18 +1818,6 @@ typedef enum
     _LATENCY_AMOUNT = _LATENCY_H,
 }EnumOSDDLatency;
 
-//--------------------------------------------------
-// Define HotKey Option
-//--------------------------------------------------
-typedef enum
-{
-    _HOTKEY_DDCCI = 0,
-    _HOTKEY_DP_D0_OPTION,
-    _HOTKEY_DP_D1_OPTION,
-    _HOTKEY_DP_D2_OPTION,
-    _HOTKEY_DP_D6_OPTION,
-    _HOTKEY_AMOUNT = _HOTKEY_DP_D6_OPTION,
-}EnumOSDHotKeyDef;
 
 
 //--------------------------------------------------
@@ -2277,9 +2265,7 @@ typedef enum
     _MENU_ADVANCE_HDR_LD_SMOOTH_ADJ_ADJUST,
 #endif
 
-    _MENU_HOTKEY_DDCCI,
     _MENU_HOTKEY_SOURCE,
-    _MENU_HOTKEY_DP_OPTION,
     _MENU_PANEL_UNIFORMITY_MSG_ADJUST,
 
     _MENU_END,
@@ -2774,7 +2760,6 @@ typedef enum
     _OSDEVENT_SHOW_POWER_SAVING_EVENT_MSG,
     _OSDEVENT_GO_TO_POWER_SAVING_EVENT_MSG,
     _OSDEVENT_SHOW_CHANGE_SOURCE_MENU_MSG,
-    _OSDEVENT_WAKE_UP_SWITCH_DDCCI_PORT_MSG,
     _OSDEVENT_DO_AUTO_CONFIG_MSG,
     _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG,
     _OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG,
@@ -2784,7 +2769,6 @@ typedef enum
     _OSDEVENT_SAVE_NVRAM_COLORPROC_MSG,
     _OSDEVENT_SAVE_NVRAM_BRICON_MSG,
     _OSDEVENT_SAVE_NVRAM_OSDSIXCOLORDATA_MSG,
-    _OSDEVENT_DP_VERSIOM_MSG,
 }EnumOSDEvenMassage;
 
 typedef enum
@@ -3127,8 +3111,6 @@ extern void OsdDispSliderAndNumber(WORD usOsdState, WORD usValue);
 extern WORD OsdDisplayDetOverRange(WORD usValue, WORD usMax, WORD usMin, bit bCycle);
 extern void OsdDispOsdReset(void);
 extern void OsdDispClearSliderAndNumber(void);
-extern void OsdDispHotKeyOptionMenu(BYTE ucOption);
-extern void OsdDispHotKeyOptionMenuSwitch(BYTE ucOption);
 extern void OsdDispHotKeySourceMenuIcon(void);
 extern void OsdDispHotKeySourceMenu(void);
 extern void OsdDispHotKeySourceMenuSwitch(void);

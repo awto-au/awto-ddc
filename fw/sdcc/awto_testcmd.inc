@@ -216,7 +216,7 @@ void AwtoDiagTestCmd(void)
     {
         SET_OSD_EVENT_MESSAGE(ucCmd - 0x10);
     }
-    else if((ucCmd >= 0x70) && (ucCmd <= (0x70 + _OSDEVENT_DP_VERSIOM_MSG - 16)))   // OSD events 16..last (#113)
+    else if((ucCmd >= 0x70) && (ucCmd <= (0x70 + _OSDEVENT_SAVE_NVRAM_OSDSIXCOLORDATA_MSG - 16)))   // OSD events 16..last (#113)
     {
         SET_OSD_EVENT_MESSAGE(ucCmd - 0x70 + 16);
     }

@@ -1,8 +1,8 @@
-// #67 recovery keys (integrator-owned, private): inserted into RTD2014Key.c by fw/awto/settings/rules.py.
+// #67 settings library key hooks (integrator-owned, private): inserted into RTD2014Key.c by fw/awto/settings/rules.py.
 #ifdef _AWTO_NEW_SETTINGS
-BYTE set_recovery_requested(void)            // physical MENU (A0) + DOWN (A1) down together (#85): a fresh input-monitor poll
+BYTE set_recovery_requested(void)            // no key recovery (#132): defaults by DDC/CI VCP 0x04, debug link by VCP 0xE3
 {
-    return ((AwtoKeyMaskLive() & (AWTO_KM_MENU | AWTO_KM_DOWN)) == (AWTO_KM_MENU | AWTO_KM_DOWN));
+    return 0;
 }
 
 // Host key injection (#67, menu.h key_inject / key_hold): one key press through the key router, or a raw key mask

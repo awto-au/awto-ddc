@@ -16,24 +16,19 @@
 #define AWTO_K_SOURCE                           AWTO_KEY_MSG_SOURCE
 #define AWTO_K_POWER                            5
 #define AWTO_K_UP_DOWN                          6       // combo: diagnostic console on / off
-#define AWTO_K_MENU_DOWN                        7       // combo: debug link (#79)
 #define AWTO_K_NONE                             0xFF
 #define AWTO_KEV_PRESS                          0
 #define AWTO_KEV_REPEAT                         1
-#define AWTO_KEV_HOLD                           2
-#define AWTO_KEV_RELEASE                        3
-#define AWTO_KEV_COMBO                          4
+#define AWTO_KEV_RELEASE                        2
+#define AWTO_KEV_COMBO                          3
 #define AWTO_KEV_INJ                            0x80    // flag: injected (test cmd 0x01..0x05, key_inject)
 #define AWTO_KS_IDLE                            0
-#define AWTO_KS_WAIT                            1       // one combo key down, PRESS held back for AWTO_KEY_COMBO_MS
-#define AWTO_KS_DOWN                            2       // PRESS sent: REPEAT / HOLD timing
+#define AWTO_KS_WAIT                            1       // UP / DOWN down, PRESS held back for AWTO_KEY_COMBO_MS (UP+DOWN partner)
+#define AWTO_KS_DOWN                            2       // PRESS sent: REPEAT timing
 #define AWTO_KS_LATCH                           3       // combo or several keys: nothing until all are up
-#define AWTO_KF_REPEAT                          0x01    // g_stAwtoKey.ucFlags (key panel R1 / R2 / H)
+#define AWTO_KF_REPEAT                          0x01    // g_stAwtoKey.ucFlags (key panel R1 / R2)
 #define AWTO_KF_LATCH                           0x02
-#define AWTO_KF_HOLD                            0x04
 
-extern void MenuHotKeyDdcci(void);
-extern void MenuHotKeyDpOption(void);
 extern void RTDFactoryMenuOperation(void);
 
 static __xdata BYTE s_ucKeyRaw;                 // last sample
@@ -46,6 +41,8 @@ static __xdata BYTE s_ucKeyId;
 static __xdata BYTE s_ucKeyFlags;               // AWTO_KF_*
 static __xdata WORD s_usKeyT0;                  // when it went down
 static __xdata WORD s_usKeyRep;                 // last REPEAT
+static __xdata WORD s_usKeyInfoAt;              // DOWN info pop-up opened (AwtoKeyNow)
+static __xdata BYTE s_ucKeyInfo;                // 1 = pop-up window running: closes AWTO_INFO_POPUP_MS after opening, keys do not move it
 static __xdata BYTE s_pucKeyQ[AWTO_KEY_Q_N];    // injected keys
 static __xdata BYTE s_ucKeyQHead;
 static __xdata BYTE s_ucKeyQN;
@@ -60,13 +57,22 @@ static BYTE AwtoKeyId(BYTE ucM)                 // single key mask -> id; AWTO_K
         case AWTO_KM_MENU: return AWTO_K_MENU;
         case AWTO_KM_SOURCE: return AWTO_K_SOURCE;
         case (AWTO_KM_UP | AWTO_KM_DOWN): return AWTO_K_UP_DOWN;
-        case (AWTO_KM_MENU | AWTO_KM_DOWN): return AWTO_K_MENU_DOWN;
         default: return AWTO_K_NONE;
     }
 }
 
+static BYTE AwtoKeyInfoUp(void)                 // the DOWN info pop-up is inside its fixed time
+{
+    return ((s_ucKeyInfo != 0) && (GET_OSD_STATE() == _MENU_NONE) && ((WORD)(AwtoKeyNow() - s_usKeyInfoAt) < AWTO_INFO_POPUP_MS)) ? 1 : 0;
+}
+
 static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a key: the SDK OSD timeout restarts (ACTIVE only)
 {
+    if(AwtoKeyInfoUp() != 0)
+    {
+        return;                                 // the info pop-up keeps its own fixed close time
+    }
+    s_ucKeyInfo = 0;
     if(GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)  // #139: the selector has no OSD timeout (sleep rule: AwtoSrcSleepArm)
     {
         ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
@@ -85,33 +91,14 @@ static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a 
     }
 }
 
-static void AwtoKeyNoOsd(BYTE ucK)              // nothing open (SDK MenuNone; _DP_DEBUG_MSG / VGA branches are off on this board)
+static void AwtoKeyNoOsd(BYTE ucK)              // nothing open: DOWN = input information pop-up (the selector opens on SOURCE only)
 {
-    BYTE ucMode = SysModeGetModeState();
-
-    if(ucK == AWTO_K_UP)                        // the source selector (the SDK's second way in; SOURCE is the first)
+    if((ucK == AWTO_K_DOWN) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE) && (AwtoKeyInfoUp() == 0))
     {
-        if(ucMode == _MODE_STATUS_POWER_SAVING)
-        {
-            SET_OSD_POWER_SAVING_SHOW_SOURCE(_TRUE);
-            if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
-            {
-                SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-            }
-        }
-        else if((ucMode == _MODE_STATUS_NOSUPPORT) || (ucMode == _MODE_STATUS_NOSIGNAL))
-        {
-            SET_OSD_EVENT_MESSAGE(_OSDEVENT_SHOW_CHANGE_SOURCE_MENU_MSG);
-        }
-        else if(ucMode == _MODE_STATUS_ACTIVE)
-        {
-            AwtoSourceOpen();                   // the one open path (#132 q5)
-        }
-    }
-    else if((ucK == AWTO_K_DOWN) && (ucMode == _MODE_STATUS_ACTIVE))
-    {
-        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);      // input information pop-up
-        ScalerTimerActiveTimerEvent(SEC(5), _USER_TIMER_EVENT_OSD_DISABLE);
+        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
+        ScalerTimerActiveTimerEvent(SEC(AWTO_INFO_POPUP_MS / 1000), _USER_TIMER_EVENT_OSD_DISABLE);
+        s_usKeyInfoAt = AwtoKeyNow();
+        s_ucKeyInfo = 1;
     }
 }
 
@@ -124,21 +111,18 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     BYTE ucMode;
     bit bRep = ((ucEv & 0x7F) == AWTO_KEV_REPEAT);
 
-    if(((ucEv & 0x7F) == AWTO_KEV_RELEASE) || ((ucEv & 0x7F) == AWTO_KEV_HOLD))
+    if((ucEv & 0x7F) == AWTO_KEV_RELEASE)
     {
-        return;                                 // no action uses these (yet)
+        return;                                 // no action uses it
     }
     if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
     {
-        if((ucEv & AWTO_KEV_INJ) == 0)          // power saving: a front-key press wakes and is used up (#85)
+        if(bRep == 0)                           // power saving: a key press (front or injected) wakes and is used up (#85)
         {
-            if(bRep == 0)
-            {
-                SET_FORCE_POW_SAV_STATUS(_FALSE);
-                SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-            }
-            return;
+            SET_FORCE_POW_SAV_STATUS(_FALSE);
+            SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
         }
+        return;
     }
     if(ucK == AWTO_K_POWER)
     {
@@ -160,14 +144,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     }
     if((ucEv & 0x7F) == AWTO_KEV_COMBO)
     {
-        if(ucK == AWTO_K_MENU_DOWN)
-        {
-            AWTO_KEY_DBG_LINK();
-        }
-        else
-        {
-            AwtoKeyTestSet(2);
-        }
+        AwtoKeyTestSet(2);                      // UP+DOWN: diagnostic console
         return;
     }
     if(AWTO_KEY_TEST_ON())                      // main page: MENU closes it, POWER above, the rest do nothing (Dan 2026-11-12);
@@ -239,12 +216,6 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         case _MENU_HOTKEY_SOURCE:
             AwtoSourceKey(ucK);
             break;
-        case _MENU_HOTKEY_DDCCI:                // reachable from the test cmd OSD events only
-            AWTO_KEY_SDK(ucK, MenuHotKeyDdcci);
-            break;
-        case _MENU_HOTKEY_DP_OPTION:
-            AWTO_KEY_SDK(ucK, MenuHotKeyDpOption);
-            break;
         default:                                // a Realtek menu state (built out, #120): close
             SET_OSD_STATE(_MENU_NONE);
             OsdDispDisableOsd();
@@ -306,11 +277,6 @@ static void AwtoKeyStep(WORD usNow)             // every sample: debounced mask 
             }
             return;
         }
-        if(((s_ucKeyFlags & AWTO_KF_HOLD) == 0) && ((WORD)(usNow - s_usKeyT0) >= AWTO_KEY_HOLD_MS))
-        {
-            s_ucKeyFlags |= AWTO_KF_HOLD;
-            AwtoKeyRoute(s_ucKeyId, AWTO_KEV_HOLD);
-        }
         if(((s_ucKeyFlags & AWTO_KF_REPEAT) != 0) ? ((WORD)(usNow - s_usKeyRep) >= AWTO_KEY_RATE_MS) :
            ((WORD)(usNow - s_usKeyT0) >= AWTO_KEY_REPEAT_MS))
         {
@@ -336,7 +302,7 @@ static void AwtoKeyStep(WORD usNow)             // every sample: debounced mask 
         s_ucKeyId = ucId;
         s_usKeyT0 = usNow;
         s_ucKeyState = AWTO_KS_WAIT;
-        if((ucId != AWTO_K_UP) && (ucId != AWTO_K_DOWN) && (ucId != AWTO_K_MENU))
+        if((ucId != AWTO_K_UP) && (ucId != AWTO_K_DOWN))
         {
             AwtoKeyPress();
         }
@@ -377,10 +343,7 @@ void AwtoKeyPoll(void)                          // main loop, right after AwtoGp
         ucM = s_pucKeyQ[s_ucKeyQHead];
         s_ucKeyQHead = (s_ucKeyQHead + 1) & (AWTO_KEY_Q_N - 1);
         s_ucKeyQN--;
-        if(AWTO_KEY_TEST_ON() == 0)
-        {
-            AwtoKeyRoute(ucM, AWTO_KEV_PRESS | AWTO_KEV_INJ);       // console up: shown on its key panel, not acted on
-        }
+        AwtoKeyRoute(ucM, AWTO_KEV_PRESS | AWTO_KEV_INJ);           // the front-key rules: power saving wakes only, console page rules
     }
     if((WORD)(usNow - s_usKeySample) >= AWTO_KEY_SAMPLE_MS)
     {

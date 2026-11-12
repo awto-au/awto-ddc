@@ -435,7 +435,7 @@ typedef struct
     unsigned char ucP30;
     unsigned char ucMask;
     unsigned char ucMsg;                        // last key message (0..4) or AWTO_KEY_MSG_NONE
-    unsigned char ucFlags;                      // bit0 repeating, bit1 combo latch, bit2 HOLD sent, bit7 key_hold mask on (live; #129)
+    unsigned char ucFlags;                      // bit0 repeating, bit1 combo latch, bit7 key_hold mask on (live; #129)
     unsigned char ucRedraws;                    // screen redraws (wraps): keys_sim checks an idle open screen does not redraw
     unsigned char ucReserved[3];
     StAwtoKeyEntry pstLog[AWTO_KEY_LOG_N];
@@ -443,14 +443,13 @@ typedef struct
 extern __xdata StAwtoKey g_stAwtoKey;
 // #129 keys (fw/sdcc/awto_keys.inc): input monitor values -> AwtoKeyPoll (debounce, combos, repeat) -> AwtoKeyRoute (one dispatcher)
 #define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
-#define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN / MENU wait this long for a combo partner before PRESS (two-finger press skew; longer feels slow)
+#define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
 #define AWTO_KEY_RATE_MS                                        100     // then one REPEAT per this: 10 steps / s, a 0..100 slider in 10 s; the SDK repeated every main pass
-#define AWTO_KEY_HOLD_MS                                        3000    // one HOLD event (SDK hold-key actions: SEC(3)); nothing consumes it today
+#define AWTO_INFO_POPUP_MS                                      6000    // DOWN info pop-up: closes this long after opening, regardless of keys
 #define AWTO_KEY_Q_N                                            4       // injected keys waiting for the next AwtoKeyPoll (one per host write; power of 2)
 extern void AwtoKeyPoll(void);
 extern void AwtoKeyInject(unsigned char ucMsg);
-extern unsigned char AwtoKeyMaskLive(void);
 extern void AwtoSourceKey(unsigned char ucKey);
 extern void AwtoKeyTestSet(unsigned char ucOn);
 extern void AwtoKeyOsdReset(void);
@@ -666,7 +665,7 @@ extern void AwtoSourceOpen(void);
 // #139 selector, no picture: waits for a key; same 60 s as AWTO_L2_SEC (Dan's panel-off default), x1; expiry = SDK power-saving card, sleep
 #define AWTO_SRC_SLEEP_SEC                                      60
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
-// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (or MENU+DOWN, test cmd 0x3C) moves the
+// #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.
 #if(((_AWTO_DDCCI_ENGINES == 1) || (_AWTO_DDCCI_ENGINES == 3)) && (_AWTO_DDCCI_PARK == 0) && (_AWTO_DDCCI_FIXCH == 0) && (_AWTO_DDCCI_NOPOLL == 0) && (_AWTO_DBG_FOLLOW == _ON))
 #define _AWTO_DBG_SWAP                                          _ON
@@ -676,7 +675,6 @@ extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 #define AWTO_DBG_PARK_CH                                        0x01    // DDC0: no D0 port here (7 = reserved: 0x35 then ACKed on DDC2, dead)
 #define AWTO_DBG_LINK_VCP                                       0xE3    // not a registry code (0xE8 is, #67)
 #define AWTO_DBG_LINK_MAGIC                                     0xA5
-#define AWTO_DBG_LINK_KEY_MIN                                   30
 #if(_AWTO_DBG_SWAP == _ON)
 extern __xdata unsigned char g_ucAwtoDbgLink;
 extern __xdata unsigned int g_usAwtoDbgLinkSec;
@@ -684,15 +682,12 @@ extern __xdata unsigned char g_ucAwtoDdcciCh;
 extern void AwtoDbgLinkSet(unsigned char ucMin);
 extern void AwtoDbgLinkStart(unsigned char ucMin);
 extern void AwtoDbgLinkPoll(void);
-extern void AwtoKeyDbgLink(void);
 #if(_AWTO_DDCCI_ENGINES == 3)
 extern void AwtoDdcciDebugLink(unsigned char ucPort, unsigned char ucOn);
 #endif
 #define AWTO_DBG_LINK_POLL()                                    { if(g_ucAwtoDbgLink != 0) { AwtoDbgLinkPoll(); } }
-#define AWTO_KEY_DBG_LINK()                                     AwtoKeyDbgLink()
 #else
 #define AWTO_DBG_LINK_POLL()
-#define AWTO_KEY_DBG_LINK()
 #endif
 #if(_AWTO_DDCCI_ENGINES != 0)
 extern void AwtoDdcciPoll(void);

@@ -691,22 +691,6 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
             AWTO_REALTEK_KEYINFO(_KEY_INFO_ALL, _OSD_UNHIGHLIGHT);
             break;
 
-        case _USER_TIMER_EVENT_OSD_SHOW_DP_VERSION_SELECT:
-            CLR_KEY_HOLD();
-
-            if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING))
-            {
-                SET_OSD_POWER_SAVING_SHOW_DP_OPTION(_TRUE);
-                ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-                SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-            }
-            else
-            {
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_DP_VERSIOM_MSG);
-            }
-
-            break;
-
 #if(_HDMI_CEC_SUPPORT == _ON)
         case _USER_TIMER_EVENT_CEC_LA_POLLING:
 

@@ -67,7 +67,7 @@ void AwtoDeadPortPoll(void)                     // #84: fixed port, no cable on 
 #if(_AWTO_DBG_SWAP == _ON)
 static __xdata WORD s_usAwtoDbgLinkMs;
 
-void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B, MENU+DOWN; 0 = back to DDC/CI
+void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B; 0 = back to DDC/CI
 {
     do
     {
@@ -99,22 +99,6 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
     {
         AwtoDbgLinkSet(0);
     }
-}
-
-void AwtoKeyDbgLink(void)                       // physical MENU held + DOWN: toggle the debug link; closes any SDK OSD up
-{
-#ifdef _AWTO_NEW_SETTINGS
-    if(g_ucAwtoMenuOn != 0)
-    {
-        menu_close();                           // the awto menu: a real close (the SDK disable is blocked while it is up)
-    }
-#endif
-    if(GET_OSD_STATE() != _MENU_NONE)
-    {
-        OsdDispDisableOsd();
-        SET_OSD_STATE(_MENU_NONE);
-    }
-    AwtoDbgLinkStart((g_ucAwtoDbgLink != 0) ? 0 : AWTO_DBG_LINK_KEY_MIN);
 }
 #endif
 
