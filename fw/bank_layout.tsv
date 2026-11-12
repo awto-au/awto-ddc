@@ -3141,7 +3141,7 @@ fn	_AwtoPutHours	12	0x33e4	120
 fn	_ScalerAudioDACOutputSwitch	12	0x345c	64
 fn	_SysMachinePower	12	0x349c	28
 fn	_AwtoConLogEvent	12	0x34c0	400
-fn	_SysMachineInit	12	0x3650	80
+fn	_SysMachineInit	12	0x3650	92
 fn	_AwtoTableStatic	12	0x36f0	400
 const	_tAwtoTxtS	12	0x3880	1100
 const	_tAwtoTxtOffS	12	0x3ccc	120

@@ -121,6 +121,7 @@ void SysMachineInit(void)
     SET_TARGET_POWER_STATUS(_POWER_STATUS_NONE);
     SET_MODE_RESET_TARGET(_MODE_ACTION_NO_RESET_MODE);
     g_ucAwtoSysOwn = 0;
+    AwtoSwMode(_MODE_STATUS_POWER_OFF);         // the boot 'mode POWER OFF' line (was AwtoSwPoll's first-pass compare)
     s_ucSysState = AWTO_SYS_AC_ON;
     s_ulSysEntry = 0;
     SysMachineRequest((UserCommonNVRamGetSystemData(_MONITOR_POWER_STATUS) == _ON) ? _POWER_STATUS_NORMAL : _POWER_STATUS_OFF, AWTO_SYS_BY_NVRAM);
