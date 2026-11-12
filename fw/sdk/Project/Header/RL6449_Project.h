@@ -964,6 +964,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_INIT                                       0xD2    // arg 1 MCU init, 2 Timer2 tick, 3 watchdog run-time mode
 #define AWTO_SYNC_EV_UNPLUG                                     0xD3    // arg = port: a cable unplug woke the monitor (AWTO_WAKE_T_UNPLUG)
 #define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
+#define AWTO_NV_LOG_FLASH_TYPE                                  0x0C    // AWTO_SYNC_EV_NV arg: flash type the SDK detected (tFlashInformation index), at boot stage 6
 #define AWTO_SYNC_REPEAT_LINES                                  2       // lines the repeat collapse compares (AwtoSyncSame back 2 and 3)
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
