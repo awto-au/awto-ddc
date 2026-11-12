@@ -1087,6 +1087,7 @@ stub	_AwtoSourceIdle	C	0x3ed0	8
 stub	_AwtoSourceTake	C	0x3ed8	8
 stub	_AwtoConWrapLine	C	0x3ee0	8
 stub	_AwtoTextAt	C	0x3ee8	8
+stub	_AwtoSrcRing	C	0x3ef0	8
 const	___str_115	C	0x3f40	24
 const	___str_11	C	0x3f58	12
 const	___str_12	C	0x3f64	12
@@ -2271,15 +2272,16 @@ fn	_ScalerTMDSRx2PSIntHandler_EXINT0	7	0xab7c	288
 fn	_ScalerTMDSRx2ReadRequestProc_EXINT0	7	0xac9c	64
 fn	_ScalerTMDSRx3PSIntHandler_EXINT0	7	0xacdc	288
 fn	_ScalerTMDSRx3ReadRequestProc_EXINT0	7	0xadfc	64
-const	_tAwtoSyncTxtOff	8	0x0000	484
+const	_tAwtoSyncTxtOff	8	0x0000	508
 const	_tAwtoSyncNameRow	8	0x0290	468
 const	_tAwtoSyncFmt	8	0x0464	244
-fn	_AwtoSourceTake	8	0x0558	188
-const	_tAwtoSyncTxtS	8	0x0614	8224
+const	_tAwtoSyncTxtS	8	0x0614	8640
 fn	_AwtoInfoCard	8	0x50cc	916
 fn	_AwtoDiagTestCmd	8	0x5460	752
 fn	_AwtoSourceAuto	8	0x5750	48
 fn	_AwtoSrcRate	8	0x5788	456
+fn	_AwtoSourceTake	8	0x5950	224
+fn	_AwtoSrcItemPort	8	0x5a30	20
 fn	_AwtoBlDraw	8	0x5a4c	300
 fn	_AwtoBlKey	8	0x5b78	464
 fn	_AwtoConWrapLine	8	0x5d48	280
@@ -2305,6 +2307,7 @@ fn	_SysMainSytemPowerDetect	8	0xad98	8
 fn	_osd_font_load	8	0xada0	156
 fn	_font_blob	8	0xae3c	288
 fn	_AwtoSrcSigs	8	0xaf5c	108
+fn	_AwtoSrcRing	8	0xafc8	48
 const	_tFONT_FACTORY_EUROPE	9	0x5444	2680
 const	_tFONT_FACTORY_GLOBAL	9	0x5ebc	24
 const	_tOSD_FACTORY_AUTO_COLOR_TYPE_TABLE	9	0x5ed4	8

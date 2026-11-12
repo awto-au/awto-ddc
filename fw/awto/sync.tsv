@@ -148,6 +148,7 @@ E0	05	vport	input selector cancelled (MENU): % kept
 E0	06	vport	input selector: % refused, no cable; stays open
 E0	07	-	input selector: take ignored, DP version pop-up up
 E0	08	x	input selector: item % is no port of this board; stays open
+E0	09	vport	input selector closed by a mode reset (SDK OSD reset): % kept
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %
@@ -212,6 +213,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 16	1C	-	AUTO key: auto source select
 16	1D	-	UP+DOWN in power saving: wake into the console
 16	1E	-	input selector: no key for {AWTO_SRC_IDLE_COMMIT_MS/1000} s (idle commit)
+16	1F	-	input selector closed by a mode reset: its highlighted input
 17	01	-	power off
 17	02	-	power on
 17	03	-	power saving
@@ -231,6 +233,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 18	02	-	replaces a pending request
 18	03	-	refused in this state
 18	04	-	kept until the state allows it
+18	05	-	dropped: the no-signal search found a timing first
 19	00	-	 -> 
 19	02	-	 (
 19	03	-	 ms): 

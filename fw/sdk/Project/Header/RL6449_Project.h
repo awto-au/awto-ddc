@@ -669,6 +669,7 @@ extern void AwtoSourceOpen(unsigned char ucWhy);                // ucWhy = AWTO_
 #define AWTO_SRC_IDLE_COMMIT_MS                                 2000    // selector: highlighted input taken after this long with no key (Dan, 2026-11-12, #132)
 extern void AwtoSourceAuto(unsigned char ucWho);                // auto source select: the selector's Auto row, the AUTO key (#132)
 extern void AwtoSourceIdle(void);                               // OSD_DISABLE timer with the selector open: idle commit
+extern void AwtoSourceReset(void);                              // SDK OSD reset (UserInterfaceAdjustOsdResetProc): the open selector's choice
 #define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
 #define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
 extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
@@ -974,6 +975,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SEL_EV_NOCABLE                                     0x06    // #84 take refused: no cable on the item; stays open
 #define AWTO_SEL_EV_DPVER                                       0x07    // take ignored: DP version pop-up up
 #define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
+#define AWTO_SEL_EV_RESET                                       0x09    // closed by the SDK OSD reset (mode reset / signal back), nothing to take
 #define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
 #define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
@@ -1372,6 +1374,7 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_BY_KEY_AUTO                                    0x1C    // AUTO with nothing open: auto source select (#132)
 #define AWTO_SYS_BY_KEY_CONSOLE                                 0x1D    // UP+DOWN in power saving: wake into the console (#132)
 #define AWTO_SYS_BY_SELECTOR_IDLE                               0x1E    // selector: highlighted input taken after AWTO_SRC_IDLE_COMMIT_MS (#132)
+#define AWTO_SYS_BY_SELECTOR_RESET                              0x1F    // selector closed by the SDK OSD reset: its highlighted choice taken (#132)
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24
@@ -1393,6 +1396,7 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_REPLACES                                       2
 #define AWTO_SYS_REFUSED                                        3
 #define AWTO_SYS_KEPT                                           4       // kept until the state can take it
+#define AWTO_SYS_DROPPED                                        5       // pending search reset dropped: the no-signal search confirmed a timing first (#132)
 #define AWTO_SYS_MS_MAX                                         0xFFFFFFUL     // transition line: ms in the old state, 24 bits (4.6 h)
 #define AWTO_SW_EV_SYS                                          0x13    // transition: arg old << 4 | new; ring value why << 24 | ms in old
 #define AWTO_SW_EV_SYS_REQ                                      0x14    // request: arg request; ring value who << 8 | outcome

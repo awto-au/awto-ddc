@@ -568,6 +568,13 @@ static void SysMachineJudge(void)
         case AWTO_SYS_WAKE:
             if(SysModeGetTimingConfirm() == _TRUE)
             {
+                if(GET_MODE_RESET_TARGET() == _MODE_ACTION_RESET_TO_SEARCH)
+                {                                       // #132: the no-signal search found a timing on the current port: the
+                    g_ucAwtoSysOwn = 1;                 // pending search reset would only search it again (a second blank)
+                    SET_MODE_RESET_TARGET(_MODE_ACTION_NO_RESET_MODE);
+                    g_ucAwtoSysOwn = 0;
+                    AwtoSyncPush(AWTO_SW_EV_SYS_REQ, AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, ((WORD)s_ucSysModeBy << 8) | AWTO_SYS_DROPPED);
+                }
                 UserCommonInterfaceOsdResetProc();
 
                 if(UserCommonInterfaceCheckNoSupport() == _FALSE)

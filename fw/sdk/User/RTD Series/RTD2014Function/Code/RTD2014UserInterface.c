@@ -3201,6 +3201,8 @@ void UserInterfaceAdjustOsdActiveProc(void)
 //--------------------------------------------------
 void UserInterfaceAdjustOsdResetProc(void)
 {
+    AwtoSourceReset();                          // #132: an open selector's choice is taken or its close logged
+
     // Disable OSD
     if(GET_OSD_LOGO_ON() == _OFF)
     {
