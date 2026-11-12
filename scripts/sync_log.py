@@ -292,6 +292,7 @@ def main() -> int:
     ap.add_argument("--map", type=Path, required=True)
     ap.add_argument("--tsv", type=Path)
     ap.add_argument("--serial", help="EDID serial the bus must belong to (i2cbus.require_unit)")
+    ap.add_argument("--whole", action="store_true", help="every entry still in the ring (all episodes), times vs the current episode")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import dbg_xdata as X        # noqa: E402
@@ -307,7 +308,7 @@ def main() -> int:
     if raw is None:
         log("sync: read over 0x35 failed")
         return 1
-    h, lines = decode(bytes(raw), rows)
+    h, lines = decode(bytes(raw), rows, a.whole)
     if h["magic"] != b"SY":                              # #158: wrong map (not the running image) reads another address
         st = ROOT / f"tmp/fw/{a.serial}-flash-state.json" if a.serial else None
         img = json.loads(st.read_text()).get("image") if st and st.exists() else "? (pass --serial)"

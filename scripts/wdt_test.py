@@ -952,6 +952,9 @@ class Runner:
     def c_t0_timing(self):
         if not self._sim("t0_timing"):
             return
+        # after the reboot in `clear`: the mode reads ACTIVE at the transition now (#162 step 3, no polling lag), before the
+        # SDK's first-ACTIVE RR D2 cancel / re-arm (~0.7-1.2 s in, as t0_arm_from_isr): 1.5 s (1.2 x 1.25) first
+        self.t.run_ms(1500)
         bad, txt = 0, []
         for cmd, label, want in ((0x2A, "M2PLL", [("RX1_DP_REBUILD_PHY", 30)]), (0x2B, "M2PLL", [("RX2_HDMI_RR_RETRY", 10)]),
                                  (0x2C, "M2PLL", [("RX3_HDMI_RR_RETRY", 10)]), (0x5A, "PS reload", [("RX1_DP_REBUILD_PHY", 30)]),

@@ -240,6 +240,8 @@ class Run:
             if not m:
                 continue
             prev = next((t for t in reversed(trans) if t[0] < i), None)
+            if prev is None and m.group(1) == "POWER OFF":
+                continue                             # SysMachineInit: the boot view, before the first transition
             if prev is None or MODE_NAME.get(STATE_MODE.get(prev[2], -1)) != m.group(1):
                 bad.append(x)
         self.check(not bad, "every mode line follows a system transition into that mode", str(bad[:3]))
