@@ -1,0 +1,63 @@
+# pp_audit.py allow list (#162): check\tfile\tname\treason. One row per (check, file, name); reviewed 2026-11-12.
+# undef rows are also the allow list of the build's -Wundef error (fw_compile.py undef_gate).
+family	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_HW_DP_AUX_SINGLE_ENDED_MODE_SUPPORT == _TRUE	_ON vs _TRUE: both 1 by design (on/true families share 1), branch correct
+family	fw/sdk/User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	_AUDIO_SUPPORT == _ENABLE	_ON vs _ENABLE: both 1 by design, branch correct
+nodef	fw/awto/awto_shim/sdk_boundary.c	_AWTO_NEW_GAMMA	ours: -D_AWTO_NEW_<module> per clean module (fw_compile.py), none named gamma today
+nodef	fw/sdcc/awto_ddcci.inc	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test -D
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_FLASH_ACCESS_FUNCTION_SUPPORT	SDK pre-check of a retired option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_FLASH_TYPE_MX25L3206E_OR_MX25L3233F	SDK pre-check of a retired option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPEC_FRSWAP_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPEC_PD_VERSION	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPEC_PORT_ROLE	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_CTS_FLOW	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_DC_OFF_OPTION	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_FRSWAP_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_PD3_PPS_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_PD_VERSION	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_PORT_ROLE	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_USB3_RETIMER_CTS_FLOW_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended
+nodef	fw/sdk/Kernel/Common/Scaler_Test_Function.h	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test -D
+nodef	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_CUSTOM_SYSTEM_DEFAULT_DATA	SDK hook for a customer default-data table, unset: SDK defaults, intended
+nodef	fw/sdk/Kernel/User Common Function/Header/UserCommonInclude.h	_CUSTOM_CLOCK_BIAS_VALUE	SDK hook, unset: SDK default bias, intended
+nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_FRC	ours: dev.py build --frc -D
+nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
+redef	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c	_DDCCI_BUFFER_SIZE	SDK clamp: tested before its own #undef/#define (32 vs _DDCCI_TXBUF_LENGTH), intended
+redef	fw/sdk/Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	_LAST_LINE_FINETUNE_ENABLE	SDK local disable around one block in ScalerPLL.c (#undef ... _DISABLE, restored _ENABLE at 2211), intended
+undef	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonNVRamCommonInclude.h	_AWTO_FLASH_ALL	BUG: Lib TUs do not include RL6449_Project.h, so g_ucFlashType is the constant MX25L8006E there while the project has the full table (_ON); fix pending (hidden customer issue)
+undef	fw/sdk/Kernel/Scaler/ScalerFunction/Header/ScalerFunctionInclude.h	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/System/Code/SysMain.c	_ALS_TYPE	ODM ambient-light option, absent in RL6449: undefined != _SENSER_NONE (0) = off, intended
+undef	fw/sdk/Kernel/System/Code/SysMain.c	_BACKLIGHT_SENSOR	ODM backlight-sensor option, absent: == _ON false = off, intended
+undef	fw/sdk/Kernel/System/Code/SysMain.c	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/System/Code/SysMain.c	_NEW_BACKLIGHT_SENSOR_FUN_EN	ODM backlight-sensor option, absent: == _ON false = off, intended
+undef	fw/sdk/Kernel/System/Code/SysMode.c	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/System/Code/SysMode.c	_USER_BEACON_FACTORY_OSD	Beacon factory OSD option, absent: off, intended
+undef	fw/sdk/Kernel/System/Code/SysSource.c	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/System/Code/SysSource.c	_SIGNAL_GPIO_DETECT	ODM GPIO signal-detect option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonAdjust.c	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonAdjust.c	_NATIVE_COLORTEMP	ODM colour-temp option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonDdcciFunction.c	_GAMMA_IN_FLASH_BANK	Beacon gamma-in-flash option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonDdcciFunction.c	_SUPPORT_GET_LUT	ODM DDC/CI LUT read option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonInterface.c	Dynamic_Show_NoSignal_NoSupport	ODM OSD option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonInterface.c	_HDMI_SPLITTER_1X2_EN	ODM HDMI splitter option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_GAMMA_IN_FLASH_BANK	Beacon gamma-in-flash option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_GET_HARD_ID	ODM DDC/CI option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_HDMI_SPLITTER_1X2_EN	ODM HDMI splitter option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_KL_5V_12V_GPIO_CONTROL	KL board GPIO option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_NEW_BACKLIGHT_SENSOR_FUN_EN	ODM backlight-sensor option, absent: == _ON false = off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonDdcciDefine.h	_SUPPORT_GET_LUT	ODM DDC/CI LUT read option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInclude.h	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInclude.h	_GAMMA_IN_FLASH_BANK	Beacon gamma-in-flash option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInclude.h	_SUPPORT_GET_LUT	ODM DDC/CI LUT read option, absent: off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInterface.h	_ALS_TYPE	ODM ambient-light option, absent in RL6449: undefined != _SENSER_NONE (0) = off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInterface.h	_BACKLIGHT_SENSOR	ODM backlight-sensor option, absent: == _ON false = off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInterface.h	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInterface.h	_NEW_BACKLIGHT_SENSOR_FUN_EN	ODM backlight-sensor option, absent: == _ON false = off, intended
+undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInterface.h	_SIGNAL_GPIO_DETECT	ODM GPIO signal-detect option, absent: off, intended
+undef	fw/sdk/Panel/RTDColorDefaultTable/ColorTableInclude.h	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/Panel/RTDColorDefaultTable/ColorTableInclude.h	_USER_ADJUST_GAMMA_FOR_BEACON	Beacon gamma option, absent: off (normal gamma tables), intended
+undef	fw/sdk/Panel/RTDColorDefaultTable/ColorTempDefault.h	_CUSTOMER	undefined = 0 = _CUS_DEFAULT (Project_List.h:851): default path compiled, customer body out; delete pending Dan (tmp/cus/customer-sites.md, hidden customer issue)
+undef	fw/sdk/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
+undef	fw/sdk/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_2.c	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
+value	fw/sdk/Kernel/Common/Pcb_Config_Check.h	PCB_EMBEDDED_LDO_DETECT	RL6369-only check, outer #if false for RL6449: never evaluated
