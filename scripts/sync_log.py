@@ -7,11 +7,15 @@ usage: sync_log.py BUS --map MAP [--tsv TSV] [--serial SERIAL]      read over th
   <map stem>.sync.tsv (wb_build.py copies it beside the image), else $AWTO_SYNC_TSV.
 - Ring layout (RL6449_Project.h StAwtoSync, bytes only): 12 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4};
   version 1: N 24, seq wrap 240; version 2 (#29): N 32, wrap 224, power-on episode times = ms since reset.
+- Host time (#157): images with g_stAwtoHt print every line with its host ISO 8601 time, from the latest DDC/CI time sync
+  (scripts/host_time.py). Ring ms are 16 bit: unwrapped forward from anchors (episode start C0 carries fw ms bits 31..16,
+  host-sync line D8 the full fw ms); `~` = forward and back-from-now disagree (a gap of 65.5 s or more hid a wrap).
 Log: tmp/logs/sync_log.log
 """
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import re
@@ -102,12 +106,72 @@ def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "x":                                       # #150 wake-poll state (cable 2:0, EDID 5:3, AUX 6, DPCD 7, polls 23:8, TMDS 25:24)
         return (f"0x{v:06X}: polls {(v >> 8) & 0xFFFF}, cable {v & 7:03b}, EDID {(v >> 3) & 7:03b}, AUX {(v >> 6) & 1}, "
                 f"DPCD D0 {(v >> 7) & 1}, TMDS D3D2 {(v >> 24) & 3:02b}")
+    if fmt == "htime":                                   # #157 host unix s, arg = UTC offset (15 min, signed)
+        return iso(v, arg - 256 if arg >= 128 else arg)
+    if fmt == "sms":                                     # #157 signed ms
+        return f"{v - (1 << 32) if v >= 1 << 31 else v:+d} ms"
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
         c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
         where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"
         sym = SYMBOLIZE(bank, pc) if SYMBOLIZE else ""
         return ("STALL TEST" if c & 0x80 else "STALL") + f", PC {where}" + (f" {sym}" if sym else "")
     return ""
+
+
+def iso(t: float, ofs15: int, ms: bool = False) -> str:
+    tz = dt.timezone(dt.timedelta(minutes=15 * ofs15))
+    return dt.datetime.fromtimestamp(t, tz).isoformat(timespec="milliseconds" if ms else "seconds")
+
+
+# ---- #157 host time: g_stAwtoHt (RL6449_Project.h StAwtoHt, BE words) ----------------------------------------------------
+HT_SIZE = 18
+DIAG_T2 = 0x16                                           # StAwtoDiag.usT2Isr (docs/diag-block.md)
+
+
+def ht_decode(b: bytes) -> dict:
+    return dict(syncs=b[0], ofs=b[1] - 256 if b[1] >= 128 else b[1], frac=int.from_bytes(b[2:4], "big"),
+                epoch=int.from_bytes(b[4:8], "big"), fw=int.from_bytes(b[8:12], "big"),
+                drift=int.from_bytes(b[12:14], "big", signed=True), up_hi=int.from_bytes(b[14:16], "big"),
+                up_last=int.from_bytes(b[16:18], "big"))
+
+
+def fw_now(ht: dict, t2: int) -> int:
+    """32-bit fw ms now: wrap count + a usT2Isr read after the struct"""
+    return ((ht["up_hi"] + (1 if t2 < ht["up_last"] else 0)) << 16) | t2
+
+
+def host_time(ht: dict, fw32: int) -> str:
+    """fw ms -> host ISO 8601 from the latest sync pair (offset of that sync)"""
+    return iso(ht["epoch"] + (ht["frac"] + fw32 - ht["fw"]) / 1000.0, ht["ofs"], ms=True)
+
+
+def unwrap(evs: list, now32: int | None) -> list:
+    """ring events (id, arg, ms16, v) -> [(fw32 or None, sure)]: forward from anchors, back from the first anchor / now"""
+    out, cur = [], None
+    for i, a, ms, v in evs:
+        if i == 0xC0:                                    # episode start: value bits 23..8 = fw ms bits 31..16
+            hi = (v >> 8) & 0xFFFF
+            cur = (hi << 16 | ms) - (0x10000 if hi == 0 and ms >= 0x8000 else 0)   # power-on lines before Timer2: < 0
+        elif i == 0xD8:
+            cur = v
+        elif cur is not None:
+            cur += (ms - cur) & 0xFFFF
+        out.append([cur, True])
+    first = next((k for k, (t, _) in enumerate(out) if t is not None), None)
+    if first is None and now32 is not None and evs:
+        first, out[-1][0] = len(out) - 1, now32 - ((now32 - evs[-1][2]) & 0xFFFF)
+    if first is not None:
+        for k in range(first - 1, -1, -1):
+            out[k][0] = out[k + 1][0] - ((evs[k + 1][2] - evs[k][2]) & 0xFFFF)
+    if now32 is not None:
+        back = now32
+        for k in range(len(out) - 1, -1, -1):            # back from now down to the last anchor
+            back -= (back - evs[k][2]) & 0xFFFF
+            if out[k][0] is not None and out[k][0] != back:
+                out[k][1] = False
+            if evs[k][0] in (0xC0, 0xD8):
+                break
+    return [tuple(x) for x in out]
 
 
 def line(rows: list[dict], ev: tuple, t0: int) -> str:
@@ -139,7 +203,39 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False):
             continue                                     # never written (a young ring)
         evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
     h["lost"] = lost
+    h["events"] = evs
     return h, [line(rows, ev, h["t0"]) for ev in evs]
+
+
+def stamp(h: dict, lines: list[str], ht: dict | None, t2: int | None) -> list[str]:
+    """#157: each line prefixed with its host time (no sync yet: unchanged)"""
+    if not ht or not ht["syncs"] or t2 is None:
+        return lines
+    ts = unwrap(h.get("events", []), fw_now(ht, t2))
+    return [(host_time(ht, t) + ("~ " if not sure else "  ") if t is not None else " " * 31) + ln for (t, sure), ln in zip(ts, lines)]
+
+
+def read_ht(io, map_path: Path):
+    """(ht dict, usT2Isr read after it) over 0x35; (None, None) on an image without #157"""
+    import dbg_xdata as X
+    mt = map_path.read_text(errors="replace")
+    if " _g_stAwtoHt " not in mt:
+        return None, None
+    b = X.read_blocks(io, sym(map_path, "g_stAwtoHt"), HT_SIZE)
+    d = X.read_blocks(io, 0xF6D0, DIAG_T2 + 2)           # diag block: fixed address (RL6449_Project.h)
+    if b is None or d is None:
+        return None, None
+    return ht_decode(bytes(b)), int.from_bytes(bytes(d[DIAG_T2:DIAG_T2 + 2]), "big")
+
+
+def ht_line(ht: dict | None, t2: int | None) -> str:
+    if ht is None:
+        return "host time: image without #157 (or read failed)"
+    if not ht["syncs"]:
+        return "host time: no sync since boot (scripts/host_time.py)"
+    now = fw_now(ht, t2)
+    return (f"host time: {ht['syncs']} sync(s), last at fw {ht['fw']} ms = {iso(ht['epoch'] + ht['frac'] / 1000, ht['ofs'], True)}, "
+            f"drift then {ht['drift']:+d} ms; fw now {now} ms = {host_time(ht, now)} (sync age {(now - ht['fw']) / 1000:.1f} s)")
 
 
 def pin_line(raw8: bytes, rows: list[dict]) -> str | None:
@@ -172,6 +268,7 @@ def main() -> int:
     rows = load_rows(a.tsv or tsv_for(a.map))
     io = B.Real(a.bus, allow_write=True, regread=True)
     raw = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), HDR + N * EV)
+    ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
     io.close()
     if raw is None:
         log("sync: read over 0x35 failed")
@@ -183,6 +280,8 @@ def main() -> int:
         log(f"sync: header {bytes(raw[:HDR]).hex(' ')} has no 'SY' magic at {a.map.name}'s g_stAwtoSync: the map is not the "
             f"running image's? flash-state image {img}")
         return 2
+    log(ht_line(ht, t2))
+    lines = stamp(h, lines, ht, t2)
     log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
     for ln in lines:
         log("  " + ln)
