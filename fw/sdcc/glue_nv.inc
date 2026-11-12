@@ -12,6 +12,7 @@ __xdata BYTE g_ucAwtoNvSwitch;
 static __xdata BYTE s_ucNvOn;                       // 0 = boot: SDK saves write at once (version / recovery)
 static __xdata BYTE s_ucNvFlushing;                 // our flush: the hook lets the save through
 static __xdata BYTE s_ucNvCommit;                   // 1 = no debounce; 2 = and the card
+static __xdata BYTE s_ucNvCommitWhy;                // AWTO_NV_WHY_CLOSE (menu / selector) or AWTO_NV_WHY_DDC (MCCS save)
 static __xdata BYTE s_ucNvPort;
 static __xdata WORD s_usNvPrev, s_usNvFirst, s_usNvLast;
 static __xdata BYTE s_ucNvSelPort, s_ucNvSelScan, s_ucNvSelItem;   // the input as last chosen in the selector (stored)
@@ -49,6 +50,7 @@ bit AwtoNvDefer(BYTE ucId, BYTE *pucData)
         if(((g_stAwtoNv.ucMask & AWTO_NV_BRI) != 0) && (s_ucNvBriId != ucId))
         {
             g_stAwtoNv.ucWhy = AWTO_NV_WHY_SNAP;    // another source's values wait: this one is written now (no nesting)
+            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(AWTO_NV_WHY_SNAP), 0);
             return _FALSE;
         }
         s_ucNvBriId = ucId;
@@ -60,6 +62,7 @@ bit AwtoNvDefer(BYTE ucId, BYTE *pucData)
         if(((g_stAwtoNv.ucMask & AWTO_NV_CT) != 0) && (s_ucNvCtId != ucId))
         {
             g_stAwtoNv.ucWhy = AWTO_NV_WHY_SNAP;
+            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(AWTO_NV_WHY_SNAP), 0);
             return _FALSE;
         }
         s_ucNvCtId = ucId;
@@ -95,6 +98,32 @@ bit AwtoNvDefer(BYTE ucId, BYTE *pucData)
 // every DATA byte counts against the IRAM overlay
 static __xdata BYTE s_ucNvA, s_ucNvB, s_ucNvK, s_ucNvLen, s_ucNvMaskW;
 static BYTE __xdata *__xdata s_pucNvAux;
+static __xdata BYTE s_ucNvDone;                     // AWTO_NV_LOG_G_* groups whose items were programmed in this flush
+static __xdata WORD s_usNvIw, s_usNvOps0, s_usNvEr0, s_usNvBy0, s_usNvT0;
+static __xdata BYTE s_ucNvNone;                     // a commit with nothing dirty: its why, logged by the next service
+
+static void AwtoNvGroup(BYTE ucG)                   // after a group's saves: did any item get programmed (SDK compare)
+{
+    if(g_stAwtoNv.usItemWr != s_usNvIw)
+    {
+        s_ucNvDone |= ucG;
+        s_usNvIw = g_stAwtoNv.usItemWr;
+    }
+}
+
+#define AWTO_NV_SAT(v, m)               (((v) > (m)) ? (m) : (v))
+
+// One sync line per flush, after it (fmt nvw): what was written, or "nothing changed"
+static void AwtoNvLog(BYTE ucWhy)
+{
+    s_usNvT0 = (WORD)AwtoMs() - s_usNvT0;
+    s_usNvEr0 = g_stAwtoNv.usErase - s_usNvEr0;
+    s_usNvOps0 = g_stAwtoNv.usOps - s_usNvOps0 - s_usNvEr0;    // programs
+    s_usNvBy0 = g_stAwtoNv.usBytes - s_usNvBy0;
+    AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_ARG(ucWhy), ((DWORD)s_ucNvDone << 27) |
+                 ((DWORD)AWTO_NV_SAT(s_usNvEr0, AWTO_NV_LOG_ER_MAX) << 25) | ((DWORD)AWTO_NV_SAT(s_usNvOps0, AWTO_NV_LOG_PR_MAX) << 19) |
+                 ((DWORD)AWTO_NV_SAT(s_usNvBy0, AWTO_NV_LOG_B_MAX) << 9) | AWTO_NV_SAT(s_usNvT0, AWTO_NV_LOG_MS_MAX));
+}
 
 static void AwtoNvWrite(BYTE ucWhy)
 {
@@ -103,7 +132,12 @@ static void AwtoNvWrite(BYTE ucWhy)
     g_stAwtoNv.ucWhy = ucWhy;
     g_stAwtoNv.usFlush++;
     AWTO_NV_IN_DDC();
-    AWTO_NV_EV(5 + ucWhy);                          // one sync line per flush (the ring holds 32)
+    s_usNvT0 = (WORD)AwtoMs();
+    s_usNvIw = g_stAwtoNv.usItemWr;
+    s_usNvOps0 = g_stAwtoNv.usOps;
+    s_usNvEr0 = g_stAwtoNv.usErase;
+    s_usNvBy0 = g_stAwtoNv.usBytes;
+    s_ucNvDone = 0;
     s_ucNvFlushing = 1;
     if((s_ucNvMaskW & AWTO_NV_SYS) != 0)                 // the input part as chosen in the selector, not the live one (KVM, search)
     {
@@ -114,6 +148,7 @@ static void AwtoNvWrite(BYTE ucWhy)
         UserCommonNVRamSaveSystemData();
         UserCommonNVRamSetSystemData(_SEARCH_PORT, s_ucNvA);
         UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, s_ucNvB);
+        AwtoNvGroup(AWTO_NV_LOG_G_SYS);
     }
     if((s_ucNvMaskW & AWTO_NV_OSD) != 0)
     {
@@ -121,6 +156,7 @@ static void AwtoNvWrite(BYTE ucWhy)
         SET_OSD_INPUT_PORT_OSD_ITEM(s_ucNvSelItem);
         RTDNVRamSaveOSDData();
         SET_OSD_INPUT_PORT_OSD_ITEM(s_ucNvA);
+        AwtoNvGroup(AWTO_NV_LOG_G_OSD);
     }
     if((s_ucNvMaskW & AWTO_NV_BRI) != 0)
     {
@@ -134,7 +170,9 @@ static void AwtoNvWrite(BYTE ucWhy)
     {
         RTDNVRamSaveSixColorData();
     }
+    AwtoNvGroup(AWTO_NV_LOG_G_COLOUR);
     RTDNVRamSavePanelUsedTimeData();                // rides along with every flush (the SDK skips it when unchanged)
+    AwtoNvGroup(AWTO_NV_LOG_G_PANEL);
     if((s_ucNvMaskW & AWTO_NV_AUX) != 0)
     {
         s_ucNvLen = set_aux_pack();
@@ -148,8 +186,10 @@ static void AwtoNvWrite(BYTE ucWhy)
             }
             UserCommonFlashSaveItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + s_ucNvK), pData, 14);
         }
+        AwtoNvGroup(AWTO_NV_LOG_G_AUX);
     }
     s_ucNvFlushing = 0;
+    AwtoNvLog(ucWhy);
 }
 
 void AwtoNvTestWrite(void)                          // test cmd 0x3D: a real item write (flash halt) through the store
@@ -195,6 +235,16 @@ static void AwtoNvService(void)
     s_ucNvPort = SysSourceGetInputPort();
     g_ucAwtoNvSwitch = 0;
     g_ucAwtoNvDdc = 0;
+    if(s_ucNvNone != 0)                             // a commit found nothing dirty: its line (never dropped)
+    {
+        s_usNvT0 = (WORD)AwtoMs();
+        s_usNvOps0 = g_stAwtoNv.usOps;
+        s_usNvEr0 = g_stAwtoNv.usErase;
+        s_usNvBy0 = g_stAwtoNv.usBytes;
+        s_ucNvDone = 0;
+        AwtoNvLog(s_ucNvNone);
+        s_ucNvNone = 0;
+    }
     if((g_stAwtoNv.ucMask & ~AWTO_NV_PANEL) == 0)
     {
         s_ucNvCommit = 0;
@@ -208,7 +258,7 @@ static void AwtoNvService(void)
         {
             AwtoSaveCard();                         // "Saving to memory" while it writes
         }
-        AwtoNvWrite((s_ucNvCommit != 0) ? AWTO_NV_WHY_CLOSE : AWTO_NV_WHY_GATE);
+        AwtoNvWrite((s_ucNvCommit != 0) ? s_ucNvCommitWhy : AWTO_NV_WHY_GATE);
         s_ucNvCommit = 0;
     }
     else if(s_usNvFirst >= AWTO_NV_FORCE_MS)
@@ -227,7 +277,12 @@ void set_nv_commit(BYTE ucShow)                    // menu close (1), MCCS 0x0C 
 {
     if((g_stAwtoNv.ucMask & ~AWTO_NV_PANEL) == 0)
     {
+        s_ucNvNone = (ucShow != 0) ? AWTO_NV_WHY_CLOSE : AWTO_NV_WHY_DDC;   // "nothing changed" at the next service
         return;
+    }
+    if((ucShow != 0) || (s_ucNvCommit == 0))
+    {
+        s_ucNvCommitWhy = (ucShow != 0) ? AWTO_NV_WHY_CLOSE : AWTO_NV_WHY_DDC;
     }
     if((ucShow != 0) && (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL))
     {

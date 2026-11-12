@@ -119,6 +119,8 @@ typedef struct
     unsigned int usOps;                                         // flash halt ops: page programs + sector erases
     unsigned int usStable;                                      // gate inputs at the last service: stable ms, DDC/CI idle ms
     unsigned int usDdcIdle;
+    unsigned int usErase;                                       // sector erases (of usOps)
+    unsigned int usBytes;                                       // bytes programmed (UserCommonFlashWrite lengths)
 } StAwtoNv;
 extern __xdata StAwtoNv g_stAwtoNv;
 extern __xdata unsigned char g_ucAwtoNvDdc;                     // a DDC/CI request since the last service
@@ -136,6 +138,7 @@ extern void AwtoNvCommitSel(void);                              // source select
 #define AWTO_SAVE_CARD_MS                                       1000    // "Saving to memory" readable once (derived: one glance)
 #define AWTO_NV_ITEM_WR()                                       { g_stAwtoNv.usItemWr++; AWTO_NV_IN_DDC(); }
 #define AWTO_NV_OP()                                            { g_stAwtoNv.usOps++; AWTO_NV_IN_DDC(); }
+#define AWTO_NV_BYTES(n)                                        { g_stAwtoNv.usBytes += (n); }
 #define AWTO_NV_IN_DDC()                                        { if(g_ucAwtoNvInDdc != 0) { g_stAwtoNv.ucInDdc++; } }   // must stay 0
 #define AWTO_NV_AUX_ID                                          0x40    // SDK item ids of the aux block (registry rows without an SDK field)
 #define AWTO_NV_AUX_ITEMS                                       ((AWTO_SET_AUX_MAX + 13) / 14)
@@ -151,6 +154,19 @@ extern void AwtoNvCommitSel(void);                              // source select
 #define AWTO_NV_WHY_CLOSE                                       4
 #define AWTO_NV_WHY_TEST                                        5
 #define AWTO_NV_WHY_SNAP                                        6       // a second BriCon / ColorProc item while one waited
+#define AWTO_NV_WHY_DDC                                         7       // DDC/CI save current settings (MCCS 0x0C, VCP 0xE3 = 2)
+// Flush result line (AWTO_SYNC_EV_NV, arg AWTO_NV_LOG_ARG(why), fmt nvw): value = deltas across the flush, saturating
+// [31:27] items written by group (AWTO_NV_LOG_G_*) | [26:25] erases | [24:19] programs | [18:9] bytes | [8:0] ms (AwtoMs tick)
+#define AWTO_NV_LOG_ARG(why)                                    (0x10 + (why))
+#define AWTO_NV_LOG_G_SYS                                       0x01    // SDK system data
+#define AWTO_NV_LOG_G_OSD                                       0x02    // SDK OSD user data (2 items)
+#define AWTO_NV_LOG_G_COLOUR                                    0x04    // SDK BriCon / ColorProc / SixColor items
+#define AWTO_NV_LOG_G_PANEL                                     0x08    // SDK panel used time
+#define AWTO_NV_LOG_G_AUX                                       0x10    // awto aux block (items AWTO_NV_AUX_ID..)
+#define AWTO_NV_LOG_ER_MAX                                      3
+#define AWTO_NV_LOG_PR_MAX                                      63
+#define AWTO_NV_LOG_B_MAX                                       1023
+#define AWTO_NV_LOG_MS_MAX                                      511
 extern void menu_key(unsigned char ucKey);                      // awto-rtdfw menu.h: key numbers = SDK key messages 0..3
 extern void menu_open(void);
 extern unsigned char menu_active(void);
