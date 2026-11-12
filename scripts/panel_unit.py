@@ -25,7 +25,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/panel_unit.log"
 OUT = ROOT / "tmp/logs/panel_unit"
-BUS, SERIAL, UNIT = 11, "AWT26110002", 2      # unit 2 (scripts/devices.json); units 1 / 3 are hands off
+BUS, SERIAL, UNIT = 11, "AWT26110002", 2
+AUTO_BUSES = (11, 15)                         # --bus 0: HDMI-2 (D2), DP-1 (D1) connector buses of unit 2      # unit 2 (scripts/devices.json); units 1 / 3 are hands off
 # --bus: the debug slave follows the active port (D1 = DP-1 connector bus); every read checks the EDID serial (sync_log --serial)
 BOOT_WAIT_S = 6.0      # cold boot -> ACTIVE: s1-5 2.47 s worst with HDMI predetect flaps (#162), x2.4 = 6 s; expiry = run FAIL
 KEY_WAIT_S = 6.0       # POWER-key on -> ACTIVE: s1-5 sim / unit < 2.5 s (#144 boot profile), x2.4; expiry = run FAIL
@@ -54,18 +55,24 @@ def run(*a, limit=120):
 
 
 def ring(mp: Path, whole=False) -> str:
-    run("scripts/dbg_link.py", "on", BUS, limit=30)
-    r = run("scripts/sync_log.py", BUS, "--serial", SERIAL, "--map", mp, *(["--whole"] if whole else []), limit=30)
-    run("scripts/dbg_link.py", "off", BUS, limit=30)
-    return r.stdout
+    """--bus 0: the bus of the port the unit runs on (D2 HDMI-2 = 11, D1 DP-1 = 15): the debug slave follows the active port"""
+    out = ""
+    for b in ((BUS,) if BUS else AUTO_BUSES):
+        run("scripts/dbg_link.py", "on", b, limit=30)
+        out = run("scripts/sync_log.py", b, "--serial", SERIAL, "--map", mp, *(["--whole"] if whole else []), limit=30).stdout
+        run("scripts/dbg_link.py", "off", b, limit=30)
+        if "sync episode" in out:
+            break
+    return out
 
 
-def until_active(mp: Path, wait_s: float, want_kind: str, done=("-> ACTIVE (",)) -> str:
+def until_active(mp: Path, wait_s: float, want_kind: str, done=("-> ACTIVE (",), port=None) -> str:
+    """port (--port D2): wait for an ACTIVE whose last timing line is on that port, not the first ACTIVE"""
     t0, txt = time.monotonic(), ""
     while time.monotonic() - t0 < wait_s:
         time.sleep(POLL_S)
         txt = ring(mp)
-        if want_kind in txt and any(d in txt for d in done):
+        if want_kind in txt and any(d in txt for d in done) and (port is None or facts(txt)["port"] == port):
             break
     return txt
 
@@ -128,7 +135,11 @@ def facts(txt: str) -> dict:
     video = ms(r"-> VIDEO \(\d+ ms\): eDP-1 link trained")
     blon = next((t for t, x in bl if x == "on"), None)
     gaps = time_gaps(rows)
+    act = [i for i, (_, x) in enumerate(rows) if re.search(r"-> ACTIVE \(", x)]
+    tim = [re.match(r"(D\d) timing", x) for _, x in rows[:act[-1]]] if act else []
+    port = next((m.group(1) for m in reversed(tim) if m), None)
     return dict(off=ms(r"-> (OFF|AC ON) \("), search=ms(r"-> SEARCH \("), active=ms(r"-> ACTIVE \("),
+                last_active=rows[act[-1]][0] if act else None, port=port, actives=len(act),
                 flaps=len(re.findall(r"D2 signal lost", txt)) + sum(int(x) for x in re.findall(r"repeated (\d+) more", txt)),
                 bl=" ".join(f"{x}@{t}" for t, x in bl), blinks=blink, tgaps=len(gaps), tgap_lines=gaps,
                 links=sum(1 for _, x in rows if re.search(r"eDP-1 link trained( in \d+ ms)?, stream on", x)),
@@ -141,7 +152,8 @@ def report(tag: str, name: str, txt: str) -> dict:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"{tag}-{name}.txt").write_text(txt)
     d = facts(txt)
-    say(f"  {tag} {name}: POWER OFF +{d['off']} SEARCH +{d['search']} ACTIVE +{d['active']} flaps {d['flaps']} | backlight {d['bl']} "
+    say(f"  {tag} {name}: POWER OFF +{d['off']} SEARCH +{d['search']} ACTIVE +{d['active']} (last ACTIVE +{d['last_active']} on "
+        f"{d['port']}, {d['actives']} ACTIVE entries) flaps {d['flaps']} | backlight {d['bl']} "
         f"blinks {d['blinks']} | link trainings {d['links']} (fail {d['link_fail']}) stream->backlight {d['stream_bl']} ms | "
         f"outside-machine lines {d['outside']} | line-time gaps {d['tgaps']}")
     for g in d["tgap_lines"]:
@@ -156,14 +168,16 @@ def main():
     ap.add_argument("--power-key", type=int, default=1)
     ap.add_argument("--switch", type=int, default=0, help="input switches D1 then D2 (kvm.py, VCP 0x60)")
     ap.add_argument("--no-flash", action="store_true")
-    ap.add_argument("--bus", type=int, default=BUS, help="unit 2 bus of the port it runs on (D2 HDMI-2 = 11 by default)")
+    ap.add_argument("--bus", type=int, default=BUS, help="unit 2 bus of the port it runs on (D2 HDMI-2 = 11 by default; 0 = try 11, 15)")
+    ap.add_argument("--port", help="cold boot: wait for ACTIVE on this port (e.g. D2), not the first ACTIVE")
     ap.add_argument("--wait", type=float, default=BOOT_WAIT_S, help="cold boot -> ACTIVE poll limit, s (characterising slow HDMI scans)")
     a = ap.parse_args()
     globals()["BUS"] = a.bus
     b = ROOT / f"tmp/fw/{SERIAL}-{a.tag}-be.bin"
     mp = b.with_suffix(".map")
     if not a.no_flash:
-        run("scripts/dbg_link.py", "off", BUS, limit=30)
+        for bb in ((BUS,) if BUS else AUTO_BUSES):
+            run("scripts/dbg_link.py", "off", bb, limit=30)
         r = run("dev.py", "flash", "--unit", UNIT, b, limit=400)
         say(f"== {a.tag}: flash rc={r.returncode} {(r.stdout + r.stderr).strip().splitlines()[-1:]}")
         if r.returncode:
@@ -171,7 +185,7 @@ def main():
     bad = 0
     for n in range(a.cold):
         run("scripts/hass_power.py", "cycle", "--unit", UNIT)
-        d = report(a.tag, f"cold{n + 1}", until_active(mp, a.wait, "power on"))
+        d = report(a.tag, f"cold{n + 1}", until_active(mp, a.wait, "power on", port=a.port))
         bad += d["active"] is None
     for n in range(a.power_key):
         if not press_until(mp, (PWR_OFF, MODE_POWER_OFF), OFF_S, "power OFF"):
