@@ -112,6 +112,6 @@
 #define AWTO_SET_SSC                  114
 #define AWTO_SET_PANEL_HOURS          115
 #define AWTO_SET_PANEL_MIN            116
-#define AWTO_SET_SCHEMA              0x7AC0
+#define AWTO_SET_SCHEMA              0x0273
 #define AWTO_SET_AUX_MAX             52
 #endif

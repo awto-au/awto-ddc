@@ -440,6 +440,51 @@ void set_ap_contrast(BYTE ucId, int iV)
 #endif
 }
 
+//---- audio (docs/audio.md): DVC digital gain, mute; the SDK SysAudio state machine does the unmute/mute sequencing ----
+#if(_AUDIO_SUPPORT == _ON)
+// volume % -> DVC_GAIN (linear, 0x3FFF = 0 dB): -4 dB per 10 %, 0 % = silence, linear between the points [guess: taste]
+static __code unsigned int tAwtoVolGain[11] = {0, 164, 260, 412, 652, 1034, 1638, 2597, 4115, 6522, 10337};
+
+unsigned int AwtoAudioGain(unsigned char ucV)
+{
+    unsigned int usA;
+    unsigned int usB;
+
+    if(ucV >= 100)
+    {
+        return 0x3FFF;
+    }
+
+    usA = tAwtoVolGain[ucV / 10];
+    usB = (ucV < 90) ? tAwtoVolGain[ucV / 10 + 1] : 0x3FFF;
+    return usA + (unsigned int)(((unsigned long)(usB - usA) * (ucV % 10)) / 10);
+}
+#endif
+
+void set_ap_volume(BYTE ucId, int iV)
+{
+    ucId = ucId;
+    SET_OSD_VOLUME((BYTE)iV);
+#if(_AUDIO_SUPPORT == _ON)
+    if((set_in_boot() == _FALSE) && (UserInterfaceGetAudioReadyToPlayStatus() == _TRUE))
+    {
+        UserAdjustAudioVolume(GET_OSD_VOLUME());
+    }
+#endif
+}
+
+void set_ap_mute(BYTE ucId, int iV)
+{
+    ucId = ucId;
+    SET_OSD_VOLUME_MUTE(iV == 1);                   // option 1 = On (VCP 0x8D value 1 = muted)
+#if(_AUDIO_SUPPORT == _ON)
+    if((set_in_boot() == _FALSE) && ((iV == 1) || (UserInterfaceGetAudioReadyToPlayStatus() == _TRUE)))
+    {
+        UserAdjustAudioMuteSwitch();
+    }
+#endif
+}
+
 void set_ap_gamma(BYTE ucId, int iV)
 {
     ucId = ucId;                                   // called on a change only (settings.c), or at boot

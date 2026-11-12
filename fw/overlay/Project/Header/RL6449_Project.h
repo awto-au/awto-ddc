@@ -65,6 +65,8 @@ extern void menu_close(void);                                   // awto-rtdfw me
 extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
 #define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
+extern unsigned int AwtoAudioGain(unsigned char ucV);          // volume % -> DVC gain (glue.inc)
+#define AWTO_AUDIO_HOLD()                                       ((SysModeGetModeState() != _MODE_STATUS_ACTIVE) && (SysModeGetModeState() != _MODE_STATUS_DISPLAY_SETTING))
 extern void AwtoMenuForget(void);
 // #151 one store: the SDK EEPROM emulation. SDK saves are deferred (item dirty) and written by the flush gate (glue.inc)
 typedef struct
@@ -1700,22 +1702,13 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // Audio Option
 //-------------------------------------------------
-#ifdef _AWTO_AUDIO_TEST
-#define _AUDIO_SUPPORT                                          _ON  // internal generator only; EDID remains audio-free
-#else
-#define _AUDIO_SUPPORT                                          _OFF // awto: no advertised audio (Dan, 2026-11-04)
-#endif
+#define _AUDIO_SUPPORT                                          _ON  // digital HDMI/DP audio -> embedded DAC (docs/audio.md, #93); _AWTO_AUDIO_TEST adds the sine
 
 //-------------------------------------------------
 // Audio DAC Option
 //-------------------------------------------------
-#ifdef _AWTO_AUDIO_TEST
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
-#define _DAC_SPEAKER_OUTPUT_SUPPORT                             _ON
-#define _DAC_HP_OUTPUT_SUPPORT                                  _OFF
-#else
-#define _EMBEDDED_DAC_SUPPORT                                   _OFF
-#endif
+#define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
 
 //-------------------------------------------------
 // Audio Line In Option

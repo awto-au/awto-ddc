@@ -125,8 +125,10 @@ def cta_block(port):
     d = bytearray()
     vdb = bytes(v for v in (VICS_TEST if TEST else VICS))
     d += bytes([(2 << 5) | len(vdb)]) + vdb
-    # NO Audio Data Block / Speaker Allocation Block: these units have no speakers (Dan 2026-11-04).
-    # The CTA header "basic audio" bit is also cleared so the OS does not route sound to a dead endpoint.
+    # Audio (#93): Audio Data Block = one Short Audio Descriptor, Linear PCM 2 ch, 32/44.1/48 kHz, 16/20/24 bit;
+    # Speaker Allocation Block = FL/FR. Header basic-audio bit set (b[3] below). The units' embedded DAC drives the audio pins.
+    d += bytes([(1 << 5) | 3, (1 << 3) | (2 - 1), 0b00000111, 0b00000111])
+    d += bytes([(4 << 5) | 3, 0x01, 0x00, 0x00])
     # Colorimetry Data Block (ext tag 0x05): byte1 0x06 = xvYCC709 + sYCC601 extended-gamut YCC;
     # byte2 0x20 = sRGB colorimetry (CTA-861-H) — the panel covers sRGB, and setting it is what
     # edid-decode recommends to avoid interop issues. BT.2020 is NOT advertised (~99% sRGB VA panel).
@@ -148,7 +150,7 @@ def cta_block(port):
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
     b[2] = 4 + len(d)
-    b[3] = 0x80 | 0x20 | 0x10 | 1                          # underscan, YCbCr444/422, 1 native DTD (base DTD1); basic-audio bit CLEARED (no speakers)
+    b[3] = 0x80 | 0x40 | 0x20 | 0x10 | 1                   # underscan, basic audio, YCbCr444/422, 1 native DTD (base DTD1)
     b[4:4 + len(d)] = d
     o = 4 + len(d)
     b[o:o + len(dtds)] = dtds

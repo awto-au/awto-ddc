@@ -39,6 +39,17 @@ UI = "User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c"
 NVS = "Kernel/User Common Function/Code/UserCommonNVRamSystem.c"
 if (_CLEAN / "awto" / "settings").is_dir():
     SUBS = [
+        # audio (docs/audio.md): volume % -> DVC gain through our dB table; muted while the mode is not ACTIVE / DISPLAY_SETTING
+        ("User/RTD Series/RTD2014Function/Code/RTD2014UserAdjust.c",
+         r"(WORD UserAdjustAudioVolumeMapping\(BYTE ucVolume\)\n\{).*?\n\}\n",
+         lambda m: m.group(1) + "\n    return AwtoAudioGain(ucVolume);  // [keil2sdcc] sub\n}\n", 1),
+        ("User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c",
+         r"(bit UserInterfaceGetAudioMuteStatus\(void\)\n\{\n    )return GET_OSD_VOLUME_MUTE\(\);",
+         lambda m: m.group(1) + "return (GET_OSD_VOLUME_MUTE() || AWTO_AUDIO_HOLD());  // [keil2sdcc] sub", 1),
+        # audio: the Dahua firmware enables the headphone output only (06C0 = DF after OutputSwitch in its trace); SDK default = both
+        ("User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c",
+         r"(EnumAudioDACOutput UserInterfaceGetAudioDACOutput\(void\)\n\{\n).*?\n\}\n",
+         lambda m: m.group(1) + "    return _AUDIO_DAC_OUTPUT_HEADPHONE;  // [keil2sdcc] sub\n}\n", 1),
         (NVS, r"(bit UserCommonFlashSaveItem\(EnumFlashItemIDType enumItemID, BYTE \*pucData, BYTE ucLength\)\n\{.*?"
               r"    if\(ucLength > \(_DATA_ITEM_LENGTH - 2\)\)\n    \{\n        return _FALSE;\n    \})",
          lambda m: m.group(1) + " { extern bit AwtoNvDefer(BYTE ucId, BYTE *pucData); if(AwtoNvDefer(LOBYTE(enumItemID), pucData) == _TRUE) "

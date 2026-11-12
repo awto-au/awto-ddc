@@ -1,1 +1,1 @@
-dd53624   # awto-rtdfw commit compiled into the image (git archive); ui-nv: settings on the SDK store (awto-ddc#151)
+e7c597f   # awto-rtdfw commit compiled into the image (git archive); ui: settings on the SDK store + audio rows live (awto-ddc#151, #93)

@@ -397,6 +397,11 @@
                                                 }
 
 
+//-----------------------------------------------
+// Macro of PCB Audio AMP Control
+//-----------------------------------------------
+#define PCB_AMP_MUTE(x)                         {}      // awto: no amp-mute pin in the Dahua fw access table (docs/audio.md) [fw]
+
 ////////////////////////
 // Cable Status Macro //
 ////////////////////////

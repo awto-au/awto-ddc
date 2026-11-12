@@ -244,3 +244,6 @@
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	557	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6294	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	90	ok	OK-CONFIG: -D _AWTO_BOOT_PANEL_EARLY=_OFF only: the mode INITIAL change block is empty (#144)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4264	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4269	ok	OK-HARMLESS: same function, empty SAVING branch
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4290	ok	OK-CONFIG: AmpMute compares the constant UserInterfaceGetAudioDACOutput() (headphone only, rules.py SUB) with BOTH; PCB_AMP_MUTE is a no-op anyway
