@@ -64,7 +64,7 @@ static bit AwtoConLost(void)
         return 0;
     }
     s_ucConOpen = 0;
-    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);            // the new map must not be shifted by our roll-up
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);            // the new map must not be shifted by our roll-up
     g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     AwtoGpioConSet(0);
     AwtoKeyConSet(0);
@@ -114,10 +114,10 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     s_pcAwtoRow[0] = ' ';              // every row starts one cell in, clear of the frame
     s_ucAwtoLen = 1;
     osd_tc_open(ucCols, ucLines);
-    ScalerOsdSetColorPalette(1, 0, 255, 65);       // diagnostic look: green on black, title bar reversed
-    ScalerOsdSetColorPalette(2, 0, 140, 40);
-    ScalerOsdSetColorPalette(3, 0, 0, 0);
-    ScalerOsdSetColorPalette(4, 255, 50, 50);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_TEXT, AWTO_RGB_PHOSPHOR_GREEN);       // diagnostic look: green on black, title bar reversed
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_DIM, AWTO_RGB_PHOSPHOR_DIM);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_BG, AWTO_RGB_BLACK);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_ALERT, AWTO_RGB_ALERT_RED);
     osd_font_load(AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe
     if(ucView != 0)
     {
@@ -595,10 +595,10 @@ void AwtoProbeScroll(BYTE ucReset)
 {
     if(s_ucAwtoProbeOpen == 0) return;
     s_ucAwtoScroll = (ucReset != 0) ? 0 : (s_ucAwtoScroll + 1);
-    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~(AWTO_OSD_SPECIAL_EN | AWTO_OSD_POP_ON_EN), AWTO_OSD_SPECIAL_EN);
-    ScalerSetByte(AWTO_OSD_ROW_BASE0, s_ucAwtoScroll);
-    ScalerSetBit(AWTO_OSD_FS_BASE0_HI, 0x0F, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
-    ScalerSetByte(AWTO_OSD_FS_BASE0_LO, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);
+    ScalerSetByte(AWTO_R_FRAME_CTRL_19, s_ucAwtoScroll);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
+    ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));
 }
 #else
 void AwtoOsdOfsInit(void)

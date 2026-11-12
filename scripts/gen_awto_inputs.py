@@ -36,7 +36,7 @@ def rows():
         if not ln.strip() or ln.startswith("#"):
             continue
         n, pin, kind, src, a, b, text, screen, lg, desc = ln.split("\t")
-        out.append(dict(name=n, pin=int(pin), kind=KINDS[kind], src=SRCS[src], a=int(a, 0), b=int(b, 0), text=text,
+        out.append(dict(name=n, pin=int(pin), kind=KINDS[kind], src=SRCS[src], a=a if src == "xreg" else int(a, 0), b=int(b, 0), text=text,
                         screen=screen == "y", log=lg == "y", desc=desc, srcname=src, kindname=kind))
     n_screen = sum(r["screen"] for r in out)
     assert all(r["screen"] for r in out[:n_screen]), "screen rows must come first"
@@ -71,7 +71,7 @@ def table_block(r, which, suffix=""):
         "Src": ("BYTE", [str(x["src"]) for x in r], 12),
         "A": ("BYTE", [str(x["a"] & 0xFF if x["src"] != 8 else 0) for x in r], 12),
         "B": ("BYTE", [str(x["b"]) for x in r], 12),
-        "Addr": ("WORD", [f"0x{x['a']:04X}" if x["src"] == 8 else "0" for x in r], 8),
+        "Addr": ("WORD", [f"AWTO_R_{x['a']}" if x["src"] == 8 else "0" for x in r], 8),
         "Pin": ("BYTE", [str(x["pin"]) for x in r], 12),
         "Flags": ("BYTE", [str(int(x["screen"]) | int(x["log"]) << 1) for x in r], 12),
     }

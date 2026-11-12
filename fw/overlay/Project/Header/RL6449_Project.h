@@ -19,6 +19,40 @@
 
 #if(_PROJECT == _RL6449_PROJECT)
 
+#include "AwtoRegs.h"                                         // generated register / field names (scripts/gen_regnames.py)
+
+// IIC engine status: sub-address or data-in event pending = DDC/CI traffic to service (same layout for IIC_1..3)
+#define AWTO_IIC_ATTN                                           (AWTO_F_IIC_1_STATUS_IIC_1_SUB_I | AWTO_F_IIC_1_STATUS_IIC_1_D_IN_I)
+#define AWTO_DDCCI_WR_ADDR                                      0x6E    // DDC/CI slave 0x37 as the 8-bit write address
+//--------------------------------------------------
+// OSD palette: indices (1-based, ScalerOsdSetColorPalette) and RGB triples (R, G, B)
+//--------------------------------------------------
+#define AWTO_PAL_N                                              12
+#define AWTO_PAL_FIRST                                          1
+#define AWTO_PAL_ACCENT                                         1       // Realtek 2014 blue
+#define AWTO_PAL_GREY                                           2
+#define AWTO_PAL_SURFACE                                        3       // white
+#define AWTO_PAL_ALERT                                          4       // diagnostic console only
+#define AWTO_PAL_DIAG_TEXT                                      1       // diagnostic look re-uses indices 1..4
+#define AWTO_PAL_DIAG_DIM                                       2
+#define AWTO_PAL_DIAG_BG                                        3
+#define AWTO_PAL_DIAG_ALERT                                     4
+#define AWTO_RGB_REALTEK_BLUE                                   0, 68, 166
+#define AWTO_RGB_GREY_AA                                        170, 170, 170
+#define AWTO_RGB_WHITE                                          255, 255, 255
+#define AWTO_RGB_GREY_49                                        73, 73, 73
+#define AWTO_RGB_GREY_6E                                        110, 110, 110
+#define AWTO_RGB_BLUE_PALE                                      170, 193, 225
+#define AWTO_RGB_BLUE_DEEP                                      0, 45, 111
+#define AWTO_RGB_GREY_55                                        85, 85, 85
+#define AWTO_RGB_GREY_25                                        37, 37, 37
+#define AWTO_RGB_BLUE_STEEL                                     85, 130, 196
+#define AWTO_RGB_BLUE_NAVY                                      0, 23, 55
+#define AWTO_RGB_BLACK                                          0, 0, 0
+#define AWTO_RGB_PHOSPHOR_GREEN                                 0, 255, 65
+#define AWTO_RGB_PHOSPHOR_DIM                                   0, 140, 40
+#define AWTO_RGB_ALERT_RED                                      255, 50, 50
+
 //--------------------------------------------------
 // awto two-colour power LED (P3.5 = on, P3.6 = standby)
 //--------------------------------------------------
@@ -292,8 +326,8 @@ extern void AwtoOsdWdtLines(void);
 extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, _bs_cur)
 // clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
-#define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(0xFFEA) |= 0x40; \
-                                                                     ucG_ = ((AWTO_XFR(0xFFAD) & 0x07) != 0) ? 0xFF : (AWTO_XFR(0xFFAC) & 0x7F); \
+#define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT; \
+                                                                     ucG_ = ((AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) != 0) ? 0xFF : (AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE); \
                                                                      if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); \
                                                                          g_ucAwtoPokeFrom = g_ucAwtoPokeLast; } g_ucAwtoPokeLast = (site); } while(0)
 // poke sites (g_ucAwtoPokeSite: which one ended the longest gap; rtd_crash.py SITES)
@@ -482,13 +516,6 @@ extern __xdata unsigned char g_ucAwtoProbeCols;
 extern void AwtoProbeScroll(unsigned char ucReset);
 extern void AwtoProbeSet(unsigned char ucLines);
 extern void AwtoDiagConsole(unsigned char ucOn);
-// OSD roll-up registers (regdb RTD2795T, OSD Frame Control): console viewport / terminal scroll (awto-rtdfw glue.inc osd_tc_scroll)
-#define AWTO_OSD_FRAME_CTRL_18                                  0x3A18  // [7] osd_special_en, [6] pop_on_en (0 = roll-up, 1 = pop-on)
-#define AWTO_OSD_SPECIAL_EN                                     _BIT7
-#define AWTO_OSD_POP_ON_EN                                      _BIT6
-#define AWTO_OSD_ROW_BASE0                                      0x3A19  // FRAME_CTRL_19 row_base0: first map row shown
-#define AWTO_OSD_FS_BASE0_HI                                    0x3A1B  // FRAME_CTRL_1B [7:4] fs_base0 [11:8] ([3:0] fs_base1)
-#define AWTO_OSD_FS_BASE0_LO                                    0x3A1C  // FRAME_CTRL_1C fs_base0 [7:0]
 #define AWTO_CON_MAIN                                           1       // AwtoDiagConsole page: event log (2 = toggle main)
 #define AWTO_CON_GPIO                                           3       // AwtoDiagConsole page: GPIO input table + its changes
 extern void AwtoConScroll(signed char cD);
@@ -576,7 +603,7 @@ extern void AwtoMeasEvent(unsigned char ucId, unsigned char ucArg, unsigned int 
 extern void AwtoMeasT2Sample(void);
 #define AWTO_MEAS_RD(a)                                         (*((volatile __xdata unsigned char *)(a)))
 #define AWTO_MEAS_T2ISR()                                       do { if(g_stAwtoMeas.ucState == 1) { AwtoMeasT2Sample(); } } while(0)
-#define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(0x000C) << 8) | AWTO_MEAS_RD(0x0002))
+#define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(AWTO_R_WATCH_DOG_CTRL0) << 8) | AWTO_MEAS_RD(AWTO_R_STATUS0))
 #else
 #define AwtoMeasInit()
 #define AwtoMeasEvent(a, b, c)
@@ -666,14 +693,14 @@ extern void AwtoDdcciPoll(void);
 #define AWTO_DDCCI_POLL()                                       // bisect: engine code linked, never called
 #define AWTO_DDCCI_FOLLOW(ch)
 #elif(_AWTO_DDCCI_ENGINES == 3)
-#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || ((AWTO_XB(0xFE8B) | AWTO_XB(0xFE99) | AWTO_XB(0xFEA8)) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(AWTO_R_IIC_1_SET_SLAVE) != AWTO_DDCCI_WR_ADDR) || ((AWTO_XB(AWTO_R_IIC_1_STATUS) | AWTO_XB(AWTO_R_IIC_2_STATUS) | AWTO_XB(AWTO_R_IIC_3_STATUS)) & AWTO_IIC_ATTN)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
-#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(0xFE87) != 0x6E) || (AWTO_XB(0xFE8B) & 0x06)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(AWTO_R_IIC_1_SET_SLAVE) != AWTO_DDCCI_WR_ADDR) || (AWTO_XB(AWTO_R_IIC_1_STATUS) & AWTO_IIC_ATTN)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
 #if((_AWTO_DDCCI_PARK == 1) || (_AWTO_DDCCI_FIXCH != 0))
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
-#define AWTO_DDCCI_FOLLOW(ch)                                   { AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | (ch); }
+#define AWTO_DDCCI_FOLLOW(ch)                                   { AWTO_XB(AWTO_R_IIC_1_CH_SEL) = (AWTO_XB(AWTO_R_IIC_1_CH_SEL) & ~AWTO_F_IIC_1_CH_SEL_IIC_1_CH_SEL) | (ch); }
 #endif
 #endif
 #else
@@ -982,7 +1009,7 @@ extern void AwtoHtSync(unsigned char *puc);
 #define AWTO_SYNC_ST_FAST                                       12
 #define AWTO_SYNC_ST_INIT                                       13
 // DDCn_EDID_IRQ of the port's DDC channel (regdb: DDC1 FFE5, DDC2 FE69, DDC3 FE72; bit2 SCL toggle, bit0 EDID read, W1C)
-#define AWTO_DDC_IRQ_REG(sel)                                   (((sel) == _DDC1) ? 0xFFE5 : (((sel) == _DDC2) ? 0xFE69 : 0xFE72))
+#define AWTO_DDC_IRQ_REG(sel)                                   (((sel) == _DDC1) ? AWTO_R_DDC1_EDID_IRQ : (((sel) == _DDC2) ? AWTO_R_DDC2_EDID_IRQ : AWTO_R_DDC3_EDID_IRQ))
 #define AWTO_DDC_IRQ_D1                                         AWTO_DDC_IRQ_REG(_D1_DDC_CHANNEL_SEL)
 #define AWTO_DDC_IRQ_D2                                         AWTO_DDC_IRQ_REG(_D2_DDC_CHANNEL_SEL)
 #define AWTO_DDC_IRQ_D3                                         AWTO_DDC_IRQ_REG(_D3_DDC_CHANNEL_SEL)

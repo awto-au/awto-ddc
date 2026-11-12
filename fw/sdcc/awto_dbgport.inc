@@ -81,12 +81,12 @@ static void AwtoDbgSelectChannel(BYTE ucInputPort)
     {
         AwtoDbgSetFF22(AWTO_DBG_PARK_CH);   // debug engine off the port first
         g_ucAwtoDdcciCh = ucCh;
-        AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | ucCh;      // IIC_1 CH_SEL
+        AWTO_XB(AWTO_R_IIC_1_CH_SEL) = (AWTO_XB(AWTO_R_IIC_1_CH_SEL) & ~AWTO_F_IIC_1_CH_SEL_IIC_1_CH_SEL) | ucCh;      // IIC_1 CH_SEL
     }
     else
     {
         g_ucAwtoDdcciCh = AWTO_DBG_PARK_CH;
-        AWTO_XB(0xFE86) = (AWTO_XB(0xFE86) & 0xF8) | AWTO_DBG_PARK_CH;
+        AWTO_XB(AWTO_R_IIC_1_CH_SEL) = (AWTO_XB(AWTO_R_IIC_1_CH_SEL) & ~AWTO_F_IIC_1_CH_SEL_IIC_1_CH_SEL) | AWTO_DBG_PARK_CH;
         AwtoDbgSetFF22(ucCh);
     }
 #endif

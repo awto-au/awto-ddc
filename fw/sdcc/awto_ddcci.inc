@@ -103,7 +103,7 @@ void AwtoKeyDbgLink(void)                       // physical MENU held + DOWN: to
 #endif
 #define AWTO_DDC_CAP_CHUNK              10      // 16-byte engine buffer - 6 framing bytes
 
-static __code WORD tAwtoIicBase[3] = {0xFE86, 0xFE94, 0xFEA3};      // IIC_2 / IIC_3: SDK header only, not in the 2795T regdb
+static __code WORD tAwtoIicBase[3] = {AWTO_R_IIC_1_CH_SEL, AWTO_R_IIC_2_CH_SEL, AWTO_R_IIC_3_CH_SEL};
 #if(_AWTO_DDCCI_ENGINES == 3)
 static __code BYTE tAwtoIicCh[3] = {0x02, 0x03, 0x04};             // DDC1 (D1 DP AUX), DDC2 (D2), DDC3 (D3): one host each
 #endif
@@ -363,7 +363,7 @@ static void AwtoDdcEngineInit(volatile __xdata BYTE *pucR, BYTE ucCh)
 {
     pucR[AWTO_IIC_IRQ] = 0x00;                  // polled
     pucR[AWTO_IIC_CH_SEL] = (pucR[AWTO_IIC_CH_SEL] & ~(_BIT2 | _BIT1 | _BIT0)) | ucCh;
-    pucR[AWTO_IIC_SLAVE] = 0x6E;
+    pucR[AWTO_IIC_SLAVE] = AWTO_DDCCI_WR_ADDR;
     pucR[AWTO_IIC_CHANNEL] |= _BIT5;
     pucR[AWTO_IIC_STATUS] = 0x00;
     pucR[AWTO_IIC_STATUS2] &= ~(_BIT5 | _BIT4);
@@ -399,7 +399,7 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
         pucR = (volatile __xdata BYTE *)tAwtoIicBase[ucE];
         pucRx = s_ppucAwtoDdcRx[ucE];
         ucN = s_pucAwtoDdcN[ucE];
-        if(pucR[AWTO_IIC_SLAVE] != 0x6E)        // first pass, or the SDK's ScalerMcuDdcciInitial parked IIC_1 at 0x3D
+        if(pucR[AWTO_IIC_SLAVE] != AWTO_DDCCI_WR_ADDR)        // first pass, or the SDK's ScalerMcuDdcciInitial parked IIC_1 at 0x3D
         {
 #if(_AWTO_DDCCI_ENGINES == 3)
             AwtoDdcEngineInit(pucR, tAwtoIicCh[ucE]);
@@ -407,7 +407,7 @@ void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when 
 #if(_AWTO_DBG_SWAP == _ON)
             AwtoDdcEngineInit(pucR, g_ucAwtoDdcciCh);       // #79: AwtoDbgSelectChannel owns the channel
 #else
-            AwtoDdcEngineInit(pucR, (_AWTO_DDCCI_FIXCH != 0) ? _AWTO_DDCCI_FIXCH : (_AWTO_DDCCI_PARK == 1) ? 0x07 : (AWTO_XB(0xFF22) & (_BIT2 | _BIT1 | _BIT0)));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
+            AwtoDdcEngineInit(pucR, (_AWTO_DDCCI_FIXCH != 0) ? _AWTO_DDCCI_FIXCH : (_AWTO_DDCCI_PARK == 1) ? 0x07 : (AWTO_XB(AWTO_R_IIC_CH_SEL) & AWTO_F_IIC_CH_SEL_CH_SEL));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
 #endif
 #endif
             ucN = 0;

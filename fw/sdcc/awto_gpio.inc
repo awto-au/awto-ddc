@@ -1,11 +1,11 @@
 // Input monitor: one poller owns the value of every input in fw/awto/inputs.tsv (GPIO pads, ADCs, POWER, VGA front end, board IO,
 // decoded keys). A change is stored once, logged to the I2C-visible ring and marked for the console; nothing else samples or compares.
 #if(_AWTO_DIAG == _ON)
-#define AWTO_VGA_SYNC_REG          0x004E
-#define AWTO_VGA_POWER_REG         0x00C6
-#define AWTO_VGA_COMPARE_REG       0x00CD
-#define AWTO_VGA_SOG_CTRL_REG      0x00D4
-#define AWTO_VGA_ADC_REG2          0x00DA
+#define AWTO_VGA_SYNC_REG          AWTO_R_HSYNC_TYPE_DETECTION_FLAG
+#define AWTO_VGA_POWER_REG         AWTO_R_ADC_POWER
+#define AWTO_VGA_COMPARE_REG       AWTO_R_ADC_COMPARE_FLAG
+#define AWTO_VGA_SOG_CTRL_REG      AWTO_R_ADC_SOG_CTRL
+#define AWTO_VGA_ADC_REG2          AWTO_R_ADC_REG2
 #define AWTO_IN_P1                 0
 #define AWTO_IN_P3                 1
 #define AWTO_IN_P30                2
@@ -52,9 +52,9 @@ static const __code BYTE tAwtoInB[AWTO_IN_N] = {
 static const __code WORD tAwtoInAddr[AWTO_IN_N] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0xFE28, 0xFE05, 0xFFE2,
-    0xFFE2, 0xFE02, 0xFE2C, 0xFE32, 0xFE33, 0xFE34, 0xFE35, 0xFE2A,
-    0xFE1A, 0xFE1C, 0xFE24, 0xFE25, 0xFE2F, 0xFE30, 0xFE26, 0,
+    0, 0, 0, 0, 0, AWTO_R_PORT90_PIN_REG, AWTO_R_PORT45_PIN_REG, AWTO_R_PORT1_PIN_REG,
+    AWTO_R_PORT1_PIN_REG, AWTO_R_PORT42_PIN_REG, AWTO_R_PORT94_PIN_REG, AWTO_R_PORTA2_PIN_REG, AWTO_R_PORTA3_PIN_REG, AWTO_R_PORTA4_PIN_REG, AWTO_R_PORTA5_PIN_REG, AWTO_R_PORT92_PIN_REG,
+    AWTO_R_PORT72_PIN_REG, AWTO_R_PORT74_PIN_REG, AWTO_R_PORT84_PIN_REG, AWTO_R_PORT85_PIN_REG, AWTO_R_PORT97_PIN_REG, AWTO_R_PORTA0_PIN_REG, AWTO_R_PORT86_PIN_REG, 0,
     0, 0, 0, 0};
 static const __code BYTE tAwtoInFlags[AWTO_IN_N] = {
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,

@@ -1,7 +1,6 @@
 // Watchdog + crash canary (#131, #138, docs/watchdog.md), inserted into SysMain.c (fw/awto/wdt/rules.py). Record: RL6449_Project.h StAwtoWdt.
 // One hardware watchdog: pokes in the main-loop pass and bounded loops; the WDT threshold IRQ (int2, high priority) captures.
 #if(_AWTO_WDT == _ON)
-#define AWTO_P0_01_HOST_CTRL    0x0001          // regdb P0_01 HOST_CTRL (scaler register names are not visible in SysMain.c)
 __sfr __at(0xD8) AWTO_EICON;                    // DW8051 EICON: bit 3 WDTI = core watchdog interrupt input flag (databook)
 bit AwtoWdtValid(void)
 {
@@ -61,7 +60,7 @@ void AwtoWdtInit(void)
     BYTE ucOld = g_stAwtoWdt.ucBoot;
     BYTE ucNew = 0;
 
-    ScalerSetBit(AWTO_P0_01_HOST_CTRL, ~(_BIT6 | _BIT0), _BIT6);   // reset_chk set again (any reset clears it; raw in the snapshot)
+    ScalerSetBit(AWTO_R_HOST_CTRL, ~(AWTO_F_HOST_CTRL_RESET_CHK | AWTO_F_HOST_CTRL_SOFT_RESET), AWTO_F_HOST_CTRL_RESET_CHK);   // reset_chk set again (any reset clears it; raw in the snapshot)
     // cold = no valid record; warm = valid record (P0_01[6] reads 0 after every reset on unit 2, #131: not used)
     if(AwtoWdtValid() == _FALSE)
     {
@@ -165,7 +164,7 @@ void AwtoWdtIrq(BYTE ucSp, BYTE ucBank)
         return;
     }
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT3;     // latch the counters (no clear)
-    ucCnt1 = AWTO_XFR(0xFFAD) & 0x07;
+    ucCnt1 = AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE;
     if((g_stAwtoWdt.ucProbe & AWTO_WDT_P_ARMED) != 0)
     {
         g_stAwtoWdt.ucProbe |= AWTO_WDT_P_IRQ | (((AWTO_EICON & _BIT3) != 0) ? AWTO_WDT_P_WDTI : 0);
@@ -213,8 +212,8 @@ void AwtoWdtProbe(BYTE ucTimer)
     g_stAwtoWdt.ucProbe = AWTO_WDT_P_ARMED | ((ucTimer != 0) ? AWTO_WDT_P_TIMER : 0);
     EA = 0;
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~(_BIT7 | _BIT4 | _BIT2)) | _BIT7 | ((ucTimer != 0) ? _BIT4 : 0);
-    AWTO_XFR(0xFFB0) = (AWTO_XFR(0xFFB0) & 0x0F) | ((AWTO_WDT_PROBE_THR >> 4) & 0xF0);
-    AWTO_XFR(0xFFAE) = (BYTE)AWTO_WDT_PROBE_THR;
+    AWTO_XFR(AWTO_R_WATCHDOG_TIMER_H_THRESHOLD_MASK) = (AWTO_XFR(AWTO_R_WATCHDOG_TIMER_H_THRESHOLD_MASK) & AWTO_F_WATCHDOG_TIMER_H_THRESHOLD_MASK_WDT_CNT_THRESHOLD_H_MASK) | ((AWTO_WDT_PROBE_THR >> 4) & AWTO_F_WATCHDOG_TIMER_H_THRESHOLD_MASK_WDT_CNT_THRESHOLD_H_VALUE);
+    AWTO_XFR(AWTO_R_WATCHDOG_TIMER_THRESHOLD) = (BYTE)AWTO_WDT_PROBE_THR;
     MCU_FFEA_WATCHDOG_TIMER = (MCU_FFEA_WATCHDOG_TIMER & ~(_BIT2 | _BIT1 | _BIT0)) | _BIT6;       // N = 1, clear
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT2;
     EA = 1;

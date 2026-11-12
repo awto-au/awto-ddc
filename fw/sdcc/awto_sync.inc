@@ -51,8 +51,8 @@ static WORD AwtoSyncWdtMs(void)                     // ms on the WDT counter sin
     WORD usC3;
 
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT3;     // latch, no clear
-    usC3 = (((WORD)(AWTO_XFR(0xFFAC) & 0x7F)) << 5) | (AWTO_XFR(0xFFAB) >> 3);
-    return s_usAwtoBootMs + (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(0xFFAD) & 0x07) * 586;
+    usC3 = (((WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE)) << 5) | (AWTO_XFR(AWTO_R_WATCHDOG_CNT23_VALUE) >> 3);
+    return s_usAwtoBootMs + (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) * 586;
 }
 
 static WORD AwtoSyncNow(void)
@@ -86,8 +86,8 @@ void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; val
         return;                                     // boot-time flash ops would push the boot lines out of the 32-line ring
     }
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT3;     // latch, no clear
-    usC3 = (((WORD)(AWTO_XFR(0xFFAC) & 0x7F)) << 5) | (AWTO_XFR(0xFFAB) >> 3);
-    AwtoSyncPush(AWTO_SYNC_EV_NV, ucStep, (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(0xFFAD) & 0x07) * 586);
+    usC3 = (((WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE)) << 5) | (AWTO_XFR(AWTO_R_WATCHDOG_CNT23_VALUE) >> 3);
+    AwtoSyncPush(AWTO_SYNC_EV_NV, ucStep, (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) * 586);
 }
 
 void AwtoSyncMark(void)                             // ScalerMcuInitial, just before it clears the WDT
@@ -420,7 +420,7 @@ static BYTE AwtoPsWakeCables(void)
     return ucB;
 }
 
-static const __code WORD tAwtoWakeAux[2] = {0xB7DC, 0xBADC};
+static const __code WORD tAwtoWakeAux[2] = {AWTO_R_PB7_AUX_IRQ_STATUS, AWTO_R_PBA_AUX_IRQ_STATUS};
 
 static BYTE AwtoPsWakeAux(void)                       // DP AUX command received (aux_rx_int, W1C); Rx0 B7 / Rx1 BA: both watched
 {
@@ -492,7 +492,7 @@ static DWORD AwtoPsWakeState(void)
             ucB |= (BYTE)8 << ucI;
         }
     }
-    if((ScalerGetBit(0xB7DC, _BIT0) != 0) || (ScalerGetBit(0xBADC, _BIT0) != 0))
+    if((ScalerGetBit(AWTO_R_PB7_AUX_IRQ_STATUS, AWTO_F_PB7_AUX_IRQ_STATUS_AUX_RX_INT) != 0) || (ScalerGetBit(AWTO_R_PBA_AUX_IRQ_STATUS, AWTO_F_PBA_AUX_IRQ_STATUS_AUX_RX_INT) != 0))
     {
         ucB |= _BIT6;
     }

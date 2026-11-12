@@ -153,13 +153,13 @@ int set_status(BYTE ucId)
 //---- text layer on the OSD engine (osd.h osd_tc_*, awto-ddc#89): native Spleen 8 x 16 bitmap glyphs ----
 // palette (index: colour): our own entries over the SDK's, restored when the Realtek SDK menu loads its palette.
 // White surface + Realtek 2014 blue (0,68,166) text/accent; selected rows retain white text on blue.
-static __code BYTE tAwtoPal[12][3] = {
-    {0, 68, 166}, {170, 170, 170}, {255, 255, 255}, {73, 73, 73}, {110, 110, 110}, {170, 193, 225},
-    {0, 45, 111}, {85, 85, 85}, {37, 37, 37}, {85, 130, 196}, {0, 23, 55}, {0, 0, 0}};
+static __code BYTE tAwtoPal[AWTO_PAL_N][3] = {
+    {AWTO_RGB_REALTEK_BLUE}, {AWTO_RGB_GREY_AA}, {AWTO_RGB_WHITE}, {AWTO_RGB_GREY_49}, {AWTO_RGB_GREY_6E}, {AWTO_RGB_BLUE_PALE},
+    {AWTO_RGB_BLUE_DEEP}, {AWTO_RGB_GREY_55}, {AWTO_RGB_GREY_25}, {AWTO_RGB_BLUE_STEEL}, {AWTO_RGB_BLUE_NAVY}, {AWTO_RGB_BLACK}};
 // 1 bit glyph foreground for each osd_style; background 0 is transparent and exposes the white/blue window.
-static __code BYTE tAwtoStyle[5] = {1, 2, 3, 1, 4};      // style 4 = palette 4: only the diagnostic console uses it (alert)
-#define AWTO_BAR_SURFACE            3
-#define AWTO_BAR_ACCENT             1
+static __code BYTE tAwtoStyle[5] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SURFACE, AWTO_PAL_ACCENT, AWTO_PAL_ALERT};      // style 4 = palette 4: only the diagnostic console uses it (alert)
+#define AWTO_BAR_SURFACE            AWTO_PAL_SURFACE
+#define AWTO_BAR_ACCENT             AWTO_PAL_ACCENT
 
 static BYTE s_ucVpRows;                          // viewport rows (0 = the whole map is shown)
 static BYTE s_ucVpFirst;                         // first map row shown
@@ -174,16 +174,16 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
     OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
-    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);             // roll-up (viewport scroll) off
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);             // roll-up (viewport scroll) off
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
     OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
     OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
-    for(ucI = 0; ucI < 12; ucI++)
+    for(ucI = 0; ucI < AWTO_PAL_N; ucI++)
     {
-        ScalerOsdSetColorPalette(ucI + 1, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
+        ScalerOsdSetColorPalette(ucI + AWTO_PAL_FIRST, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
     }
 }
 
@@ -233,14 +233,14 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
     if(ucFirst == 0)
     {
-        ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
+        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
         s_ucVpFirst = 0;
         return 0;
     }
-    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~(AWTO_OSD_SPECIAL_EN | AWTO_OSD_POP_ON_EN), AWTO_OSD_SPECIAL_EN);                              // special function on, 0 = roll-up
-    ScalerSetByte(AWTO_OSD_ROW_BASE0, ucFirst);
-    ScalerSetBit(AWTO_OSD_FS_BASE0_HI, 0x0F, (BYTE)((usFs >> 8) << 4));
-    ScalerSetByte(AWTO_OSD_FS_BASE0_LO, (BYTE)usFs);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);                              // special function on, 0 = roll-up
+    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucFirst);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)((usFs >> 8) << 4));
+    ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)usFs);
     s_ucVpFirst = ucFirst;
     return ucFirst;
 }
@@ -284,9 +284,9 @@ void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
 
     for(ucI = 0; ucI < 8; ucI++)
     {
-        ScalerSetByte(0x3A0F + ucI, pucMap[ucI]);
+        ScalerSetByte(AWTO_R_FRAME_CTRL_0F + ucI, pucMap[ucI]);
     }
-    ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), _BIT0);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN);
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 9, _OSD_WITHOUT_DB);
 }
 
@@ -303,7 +303,7 @@ void osd_tc_vlc_end(void)
     // The RTD2795 decoder flushes its final decoded words after the last stream byte. Clearing compression
     // immediately truncates/corrupts glyph SRAM; Realtek's loader waits 2 ms here for the same reason.
     ScalerTimerDelayXms(2);
-    ScalerSetBit(0x3A17, ~(_BIT1 | _BIT0), 0x00);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), 0x00);
 }
 
 // Own placement: the SDK OsdDispSetPosition assumes 12 x 18 cells, so rows x 36 above the panel height wraps to an off-screen position.
@@ -354,7 +354,7 @@ void osd_tc_show(BYTE ucOn)
 void osd_tc_close(void)
 {
     g_ucAwtoMenuOn = 0;
-    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);              // viewport roll-up off: the next screen starts at row 0
+    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);              // viewport roll-up off: the next screen starts at row 0
     s_ucVpRows = 0;
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
