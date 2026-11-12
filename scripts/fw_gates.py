@@ -38,7 +38,7 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-LIMIT_OF = {"keys": 60, "wdt": 60, "rules": 30}   # 3x the cold run (keys 20 s, wdt 18 s; fast core, 2026-11-11); table of all gates: commit message
+LIMIT_OF = {"keys": 150, "wdt": 60, "rules": 30}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]

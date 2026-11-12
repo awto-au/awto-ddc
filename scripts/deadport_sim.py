@@ -7,7 +7,7 @@ usage: deadport_sim.py BIN MAP [--case vcp|sel|cmd|all] [--mode 1080p60] [--secs
   sel  front keys: SOURCE opens the selector (on Auto), 2x DOWN steps to D2, AUTO takes it. PASS: refused, still ACTIVE on D3.
   cmd  test cmd 0x32 (switch to D2, fixed port; test cmds are not refused).
        PASS: back to ACTIVE on D3 within --secs (guard: fixed port, no cable, no signal -> auto search).
-  Each case also needs its log line: switch-log 0xB8 (vcp / sel: arg 1, cmd: arg 3) and the sync-log line (sync.tsv DF).
+  Each case also needs its log line: switch-log 0xB8 (vcp / sel: arg 1, cmd: arg 3) and the sync-log line (sync.tsv DF; sel: E0 06).
   Prints the switch log (g_stAwtoSw) decoded with sw_timeline.name.
 Log: tmp/logs/deadport_sim.log
 """
@@ -98,11 +98,11 @@ def run_case(a, case: str, say) -> bool:
         say("  timeline: " + " -> ".join(f"{S.MODE_NAMES[m] if m < len(S.MODE_NAMES) else m}/0x{p:02X}@{t}s" for t, m, p in seen))
         sw = swlog(bus, say)
         sl = synclog(a, bus, say)
-        want = 3 if case == "cmd" else 1                       # switch-log 0xB8 arg, sync.tsv DF row
-        lines = (not any(ln.endswith("refused: no cable on D2") for ln in sl)) if want == 1 else \
-            (not any("auto search" in ln for ln in sl))
+        want = 3 if case == "cmd" else 1                       # switch-log 0xB8 arg; sync.tsv DF row (vcp, cmd), E0 06 (sel, #132)
+        text = {"vcp": "refused: no cable on D2", "sel": "input selector: D2 refused, no cable; stays open"}.get(case)
+        lines = (not any(ln.endswith(text) for ln in sl)) if text else (not any("auto search" in ln for ln in sl))
         if (0xB8, want) not in sw or lines:
-            say(f"{case}: FAIL log line missing (switch-log 0xB8 arg {want}, sync log DF)")
+            say(f"{case}: FAIL log line missing (switch-log 0xB8 arg {want}, sync log {text or 'auto search'})")
             return False
         ok = ms == 3 and port == D3
         say(f"{case}: {'PASS' if ok else 'FAIL'} {a.bin.name}: end {S.MODE_NAMES[ms] if ms < len(S.MODE_NAMES) else ms} "
