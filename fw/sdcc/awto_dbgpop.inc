@@ -37,13 +37,14 @@ static BYTE s_ucAwtoCols;
 
 // One diagnostic console (AwtoDiagConsole), #144: 120 x 50 shown, Spleen 8x16 at 2x (1920 x 1836 px on the 4K panel).
 // Pages: main (power-on, auto-open) = title + sync / power event log, full width; GPIO (#157) = input table + input changes.
-// Below the view on both (UP / DOWN scroll): key test, debug, watchdog. Map 120 x 63: cols x rows + rows + 1 < 8192 (docs/osd.md).
+// Main page = terminal: lines added at the bottom, the map rolls up (hardware roll-up). GPIO page: key test, debug,
+// watchdog below the view (UP / DOWN scroll). Map 120 x 63: cols x rows + rows + 1 < 8192 (docs/osd.md).
 #define AWTO_CON_COLS       120
 #define AWTO_CON_ROWS       62                  // map rows (+ the pad row AwtoTextOpen adds)
 #define AWTO_VIEW_ROWS      50                  // rows shown at a time; UP / DOWN scroll the view over the map
 #define AWTO_CON_FONT       0                   // osd_font_load index: Spleen 8x16 (8 x 18 cell)
 #define AWTO_LOG_COL        ((s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table
-#define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : AWTO_T_MAXCOLS)
+#define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : (AWTO_T_MAXCOLS - 1))
 #define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
 #define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
 #define AWTO_LOG_LINES      (AWTO_VIEW_ROWS - AWTO_LOG_ROW0)
@@ -63,20 +64,21 @@ static bit AwtoConLost(void)
         return 0;
     }
     s_ucConOpen = 0;
-    ScalerSetBit(0x3A18, ~_BIT7, 0x00);            // the new map must not be shifted by our roll-up
+    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);            // the new map must not be shifted by our roll-up
     g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     AwtoGpioConSet(0);
     AwtoKeyConSet(0);
     return 1;
 }
 
-static __xdata BYTE s_ucConFirst;               // first map row shown (hardware scroll)
+static __xdata BYTE s_ucConFirst;               // first map row shown (hardware roll-up)
+static __xdata BYTE s_ucConRedraw;              // main page: map full, AwtoOsdSyncPoll redraws (next main-loop pass)
 
-void AwtoConScroll(signed char cD)              // UP / DOWN while the console is open
+void AwtoConScroll(signed char cD)              // GPIO page UP / DOWN (main page scrolls itself, as a terminal)
 {
     BYTE ucN;
 
-    if((s_ucConOpen == 0) || (AwtoConLost() != 0))
+    if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0))
     {
         return;
     }
@@ -288,9 +290,9 @@ void AwtoOsdDebugLines(void)
     }
     if(AwtoConLost() != 0) return;
     g_stAwtoDiag.ucDbgPopup = 0;
-    if((s_ucDbgAll == 0) && (s_ucConFirst + AWTO_VIEW_ROWS <= tAwtoPanelRow[2]))
+    if((s_ucConOpen != AWTO_CON_GPIO) || ((s_ucDbgAll == 0) && (s_ucConFirst + AWTO_VIEW_ROWS <= tAwtoPanelRow[2])))
     {
-        return;                        // below the view: the next refresh after a scroll draws what changed
+        return;                        // main page has no panel; below the view: the next refresh after a scroll
     }
     ucPort = SysSourceGetInputPort();
     ucMode = SysModeGetModeState();
@@ -432,7 +434,7 @@ static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-c
         }
         if(ucJ != ucI)
         {
-            AwtoTextAt(0, AWTO_TITLE_COL + ucI, s_pcAwtoRow + ucI, ucJ - ucI, AWTO_T_STYLE_ONACC);
+            AwtoTextAt(s_ucConFirst, AWTO_TITLE_COL + ucI, s_pcAwtoRow + ucI, ucJ - ucI, AWTO_T_STYLE_ONACC);
         }
         else
         {
@@ -452,7 +454,7 @@ void AwtoConTitlePoll(void)                     // every pass while the console 
         usNow = g_stAwtoDiag.usT2Isr;
     }
     while(usNow != g_stAwtoDiag.usT2Isr);
-    if(((WORD)(usNow - s_usConTitleMs) < AWTO_TITLE_MS) || (AwtoConLost() != 0))
+    if(((WORD)(usNow - s_usConTitleMs) < AWTO_TITLE_MS) || (s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
     {
         return;
     }
@@ -461,6 +463,26 @@ void AwtoConTitlePoll(void)                     // every pass while the console 
 #else
 #define AwtoConTitle(a)
 #endif
+
+// Title row at the top of the view (map row s_ucConFirst): the title bar window is fixed on screen, the map rolls under it.
+static void AwtoConTitleBar(void)
+{
+    s_ucAwtoCols = AWTO_T_MAXCOLS;              // covers a log row (cols 1..AWTO_T_MAXCOLS - 1) rolled under it
+    s_ucPanelCol = 0;
+    s_ucPanelRow = s_ucConFirst;
+    s_ucAwtoLen = 1;
+    if(s_ucConOpen == AWTO_CON_GPIO)            // own screen, menu "GPIO inputs" only (Dan 2026-11-12)
+    {
+        AwtoPutStr("GPIO INPUTS  FW ");
+        AwtoPutStr(AWTO_FW_TAG);
+        AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+        return;
+    }
+    AwtoPutStr("AWTO DIAGNOSTICS  FW ");
+    AwtoPutStr(AWTO_FW_TAG);
+    AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+    AwtoConTitle(1);
+}
 
 // The console: 0 close, AWTO_CON_MAIN / AWTO_CON_GPIO open that page (another page open: drawn anew), 2 toggle the main page.
 void AwtoDiagConsole(BYTE ucOn)
@@ -481,25 +503,19 @@ void AwtoDiagConsole(BYTE ucOn)
         s_ucConOpen = ucOn;
         g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
         AwtoGpioConSet(ucOn);
-        AwtoKeyConSet(1);
+        AwtoKeyConSet(ucOn == AWTO_CON_GPIO);   // key test / debug / watchdog panels: GPIO page only (main page = terminal)
         AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
         s_ucConFirst = 0;
-        s_ucAwtoCols = AWTO_T_MAXCOLS;          // title text; the title bar window spans the full width
-        s_ucPanelCol = 0;
-        s_ucPanelRow = 0;
-        s_ucAwtoLen = 1;
-        AwtoPutStr("AWTO DIAGNOSTICS  FW ");
-        AwtoPutStr(AWTO_FW_TAG);
-        AwtoTextLine(0, AWTO_T_STYLE_ONACC);
-        AwtoConTitle(1);
+        s_ucConRedraw = 0;
+        AwtoConTitleBar();
         if(ucOn == AWTO_CON_GPIO)
         {
             AwtoOsdGpioLines();
+            g_stAwtoKey.ucDrawn = 0;
+            AwtoOsdKeyLines();
+            s_ucDbgAll = 1;
+            AwtoOsdDebugLines(); AwtoOsdWdtLines();     // #131 watchdog panel
         }
-        g_stAwtoKey.ucDrawn = 0;
-        AwtoOsdKeyLines();
-        s_ucDbgAll = 1;
-        AwtoOsdDebugLines(); AwtoOsdWdtLines();         // #131 watchdog panel; same line: warn_policy line keys stay
         AwtoConLogInit();
         AwtoTextShow();
     }
@@ -579,10 +595,10 @@ void AwtoProbeScroll(BYTE ucReset)
 {
     if(s_ucAwtoProbeOpen == 0) return;
     s_ucAwtoScroll = (ucReset != 0) ? 0 : (s_ucAwtoScroll + 1);
-    ScalerSetBit(0x3A18, ~(_BIT7 | _BIT6), _BIT7);
-    ScalerSetByte(0x3A19, s_ucAwtoScroll);
-    ScalerSetBit(0x3A1B, 0x0F, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
-    ScalerSetByte(0x3A1C, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));
+    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~(AWTO_OSD_SPECIAL_EN | AWTO_OSD_POP_ON_EN), AWTO_OSD_SPECIAL_EN);
+    ScalerSetByte(AWTO_OSD_ROW_BASE0, s_ucAwtoScroll);
+    ScalerSetBit(AWTO_OSD_FS_BASE0_HI, 0x0F, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
+    ScalerSetByte(AWTO_OSD_FS_BASE0_LO, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));
 }
 #else
 void AwtoOsdOfsInit(void)

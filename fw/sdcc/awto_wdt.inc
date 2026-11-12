@@ -259,7 +259,8 @@ void AwtoWdtShow(void)
     }
     if((WORD)(usNow - s_usAwtoWdtSettled) >= AWTO_WDT_SHOW_MS)
     {
-        AwtoDiagConsole(1);                     // draws the watchdog panel, which clears AWTO_WDT_B_NEW
+        AwtoDiagConsole(1);                     // its first log line is the bite ("boot: watchdog bite, PC ...")
+        g_stAwtoWdt.ucBoot &= ~AWTO_WDT_B_NEW;  // shown: stops this poll reopening it every boot
     }
 }
 #endif

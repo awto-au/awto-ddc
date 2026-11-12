@@ -170,18 +170,20 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         }
         return;
     }
-    if(AWTO_KEY_TEST_ON())                      // console: UP / DOWN scroll; GPIO (key test) page swallows the rest,
-    {                                           // main page: any other key closes it and does its normal job
-        if((ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN))
-        {
-            AwtoConScroll((ucK == AWTO_K_UP) ? -1 : 1);
-            return;
-        }
+    if(AWTO_KEY_TEST_ON())                      // main page: MENU closes it, POWER above, the rest do nothing (Dan 2026-11-12);
+    {                                           // GPIO (key test) page: UP / DOWN scroll its panels, the rest swallowed
         if(g_stAwtoGpio.ucOpen == AWTO_CON_GPIO)
         {
-            return;
+            if((ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN))
+            {
+                AwtoConScroll((ucK == AWTO_K_UP) ? -1 : 1);
+            }
         }
-        AwtoKeyTestSet(0);
+        else if(ucK == AWTO_K_MENU)
+        {
+            AwtoKeyTestSet(0);
+        }
+        return;
     }
 #ifdef _AWTO_NEW_SETTINGS
     if(menu_active() != 0)                      // awto menu: UP / DOWN repeat, SOURCE does nothing

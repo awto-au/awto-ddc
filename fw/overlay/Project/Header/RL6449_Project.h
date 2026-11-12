@@ -482,6 +482,13 @@ extern __xdata unsigned char g_ucAwtoProbeCols;
 extern void AwtoProbeScroll(unsigned char ucReset);
 extern void AwtoProbeSet(unsigned char ucLines);
 extern void AwtoDiagConsole(unsigned char ucOn);
+// OSD roll-up registers (regdb RTD2795T, OSD Frame Control): console viewport / terminal scroll (awto-rtdfw glue.inc osd_tc_scroll)
+#define AWTO_OSD_FRAME_CTRL_18                                  0x3A18  // [7] osd_special_en, [6] pop_on_en (0 = roll-up, 1 = pop-on)
+#define AWTO_OSD_SPECIAL_EN                                     _BIT7
+#define AWTO_OSD_POP_ON_EN                                      _BIT6
+#define AWTO_OSD_ROW_BASE0                                      0x3A19  // FRAME_CTRL_19 row_base0: first map row shown
+#define AWTO_OSD_FS_BASE0_HI                                    0x3A1B  // FRAME_CTRL_1B [7:4] fs_base0 [11:8] ([3:0] fs_base1)
+#define AWTO_OSD_FS_BASE0_LO                                    0x3A1C  // FRAME_CTRL_1C fs_base0 [7:0]
 #define AWTO_CON_MAIN                                           1       // AwtoDiagConsole page: event log (2 = toggle main)
 #define AWTO_CON_GPIO                                           3       // AwtoDiagConsole page: GPIO input table + its changes
 extern void AwtoConScroll(signed char cD);

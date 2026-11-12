@@ -174,7 +174,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
     OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
-    ScalerSetBit(0x3A18, ~_BIT7, 0x00);             // roll-up (viewport scroll) off
+    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);             // roll-up (viewport scroll) off
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
@@ -233,14 +233,14 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
     if(ucFirst == 0)
     {
-        ScalerSetBit(0x3A18, ~_BIT7, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
+        ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
         s_ucVpFirst = 0;
         return 0;
     }
-    ScalerSetBit(0x3A18, ~(_BIT7 | _BIT6), _BIT7);                              // special function on, 0 = roll-up
-    ScalerSetByte(0x3A19, ucFirst);
-    ScalerSetBit(0x3A1B, 0x0F, (BYTE)((usFs >> 8) << 4));
-    ScalerSetByte(0x3A1C, (BYTE)usFs);
+    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~(AWTO_OSD_SPECIAL_EN | AWTO_OSD_POP_ON_EN), AWTO_OSD_SPECIAL_EN);                              // special function on, 0 = roll-up
+    ScalerSetByte(AWTO_OSD_ROW_BASE0, ucFirst);
+    ScalerSetBit(AWTO_OSD_FS_BASE0_HI, 0x0F, (BYTE)((usFs >> 8) << 4));
+    ScalerSetByte(AWTO_OSD_FS_BASE0_LO, (BYTE)usFs);
     s_ucVpFirst = ucFirst;
     return ucFirst;
 }
@@ -354,7 +354,7 @@ void osd_tc_show(BYTE ucOn)
 void osd_tc_close(void)
 {
     g_ucAwtoMenuOn = 0;
-    ScalerSetBit(0x3A18, ~_BIT7, 0x00);              // viewport roll-up off: the next screen starts at row 0
+    ScalerSetBit(AWTO_OSD_FRAME_CTRL_18, ~AWTO_OSD_SPECIAL_EN, 0x00);              // viewport roll-up off: the next screen starts at row 0
     s_ucVpRows = 0;
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);

@@ -891,6 +891,11 @@ void AwtoOsdSyncPoll(void)
 
     if(s_ucConOpen != 0)
     {
+        if(s_ucConRedraw != 0)                  // terminal reached the roll-up limit: one full redraw, then it rolls again
+        {
+            s_ucConOpen = 0;
+            AwtoDiagConsole(AWTO_CON_MAIN);
+        }
         AwtoConLogSync();
 #if(_AWTO_SYNC_LOG == _ON)
         AwtoConTitlePoll();                     // #157 live title fields

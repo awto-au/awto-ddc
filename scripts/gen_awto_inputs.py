@@ -98,7 +98,7 @@ def names_block(r):
     return sw("AwtoInName", "name") + "\n\n" + sw("AwtoInText", "text") + "\n\n" + text_table(r)
 
 
-UI_TEXT = [("AWTO_TXT_DESCHDR", "DESCRIPTION"), ("AWTO_TXT_LOGHDR", "EVENT LOG - UP / DOWN SCROLLS THE SCREEN"),
+UI_TEXT = [("AWTO_TXT_DESCHDR", "DESCRIPTION"), ("AWTO_TXT_LOGHDR", "EVENT LOG"),
            ("AWTO_TXT_MS", " MS  "), ("AWTO_TXT_MARK", "-----")]
 
 

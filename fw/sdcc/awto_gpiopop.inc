@@ -176,8 +176,8 @@ static void AwtoInText(BYTE ucI)
 #define AWTO_TXT_LOGHDR        45
 #define AWTO_TXT_MS            46
 #define AWTO_TXT_MARK          47
-static const __code char tAwtoTxtS[] = "spare pad, high-Z input\0key ladder A0: MENU UP AUTO\0key ladder A1: SOURCE DOWN\0spare ADC, 3.3 V full scale\0front POWER key, 1 = pressed\0analog VGA vertical sync\0analog VGA horizontal sync\0VGA blue- compare flag\0VGA blue+ compare flag\0VGA green- compare flag\0VGA green+ compare flag\0VGA sync on green\0VGA red- compare flag\0VGA red+ compare flag\0IR receiver, idle high\0speaker / headphone select\0HDMI-2 hot-plug output\0HDMI-1 hot-plug output\0DisplayPort hot-plug output\0HDMI-2 cable detect, 0 = cable\0HDMI-1 cable detect, 0 = cable\0DP connector pin 17 (AUX-)\0DP connector pin 15 (AUX+)\0DP connector pin 16 (GND)\0backlight enable, 0 = on\0panel power enable, 1 = on\0speaker amp, 1 = enabled\0power-state output P8.4\0power-state output P8.5\0power-state open drain P9.7\0power-state open drain PA.0\0SPI flash write protect\0\0DESCRIPTION\0EVENT LOG - UP / DOWN SCROLLS THE SCREEN\0 MS  \0-----\0";
-static const __code WORD tAwtoTxtOffS[48] = {0, 0, 0, 0, 0, 0, 0, 0, 24, 52, 79, 107, 136, 161, 188, 211, 234, 258, 282, 300, 322, 344, 367, 394, 417, 440, 468, 499, 530, 557, 584, 610, 635, 662, 687, 711, 735, 763, 791, 815, 815, 815, 815, 815, 816, 828, 869, 875};
+static const __code char tAwtoTxtS[] = "spare pad, high-Z input\0key ladder A0: MENU UP AUTO\0key ladder A1: SOURCE DOWN\0spare ADC, 3.3 V full scale\0front POWER key, 1 = pressed\0analog VGA vertical sync\0analog VGA horizontal sync\0VGA blue- compare flag\0VGA blue+ compare flag\0VGA green- compare flag\0VGA green+ compare flag\0VGA sync on green\0VGA red- compare flag\0VGA red+ compare flag\0IR receiver, idle high\0speaker / headphone select\0HDMI-2 hot-plug output\0HDMI-1 hot-plug output\0DisplayPort hot-plug output\0HDMI-2 cable detect, 0 = cable\0HDMI-1 cable detect, 0 = cable\0DP connector pin 17 (AUX-)\0DP connector pin 15 (AUX+)\0DP connector pin 16 (GND)\0backlight enable, 0 = on\0panel power enable, 1 = on\0speaker amp, 1 = enabled\0power-state output P8.4\0power-state output P8.5\0power-state open drain P9.7\0power-state open drain PA.0\0SPI flash write protect\0\0DESCRIPTION\0EVENT LOG\0 MS  \0-----\0";
+static const __code WORD tAwtoTxtOffS[48] = {0, 0, 0, 0, 0, 0, 0, 0, 24, 52, 79, 107, 136, 161, 188, 211, 234, 258, 282, 300, 322, 344, 367, 394, 417, 440, 468, 499, 530, 557, 584, 610, 635, 662, 687, 711, 735, 763, 791, 815, 815, 815, 815, 815, 816, 828, 838, 844};
 static void AwtoTxt(BYTE ucI)                  // input description (0..AWTO_IN_N-1) or AWTO_TXT_*
 {
     const __code char *pc = &tAwtoTxtS[tAwtoTxtOffS[ucI]];
@@ -334,8 +334,31 @@ static void AwtoConLogStart(void)               // next log row: compose with Aw
     s_ucAwtoLen = 1;
 }
 
+// Main page: 1 = the next log row is in view (rolled up one row if it was below); 0 = map end, full redraw requested.
+static bit AwtoConLogRoom(void)
+{
+    if((s_ucConOpen != AWTO_CON_MAIN) || (AWTO_LOG_ROW0 + s_ucLogHead < s_ucConFirst + AWTO_VIEW_ROWS))
+    {
+        return 1;
+    }
+    if((AWTO_LOG_ROW0 + s_ucLogHead < AWTO_CON_ROWS) && (osd_tc_scroll(s_ucConFirst + 1) != s_ucConFirst))
+    {
+        s_ucConFirst++;
+        AwtoConTitleBar();                      // title over the new top row (its log line scrolls off)
+        return 1;
+    }
+    s_ucConRedraw = 1;                          // roll-up limit (map rows, 12-bit base): redraw from the ring
+    return 0;
+}
+
 static void AwtoConLogEnd(void)
 {
+    if(s_ucConOpen == AWTO_CON_MAIN)            // terminal: rows only go down, never wrap
+    {
+        AwtoTextLine(0, AWTO_T_STYLE_TEXT);
+        s_ucLogHead++;
+        return;
+    }
     if((s_ucLogFull == 0) && (s_ucAwtoLen < s_ucAwtoCols))
     {
         s_ucAwtoCols = (s_ucAwtoLen > 6) ? s_ucAwtoLen : 6;     // over a marker (6 cells) or a blank row
@@ -392,6 +415,10 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         if((AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOST) && (AWTO_SYNC_NEXT(s_ucConSyncSeq) == g_stAwtoSync.ucSeq))
         {
             return;                             // its fw line is pushed next (AwtoHtSync): both on one row then
+        }
+        if(AwtoConLogRoom() == 0)
+        {
+            return;                             // the redraw backfills it
         }
         AwtoConLogStart();
         AwtoSyncLine(s_ucConSyncSeq);
