@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
-menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, pokes, htime, magic, regs.
+menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, sysm, pokes, htime, magic, regs.
 
 usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
@@ -8,6 +8,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; T3..T6 kept.
+  sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
   magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
   regs: gen_regnames.py --check (AwtoRegs.h matches the names our code uses).
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
@@ -36,7 +37,7 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-LIMIT_OF = {"keys": 60, "wdt": 60, "rules": 30}   # 3x the cold run (keys 20 s, wdt 18 s; fast core, 2026-11-11); table of all gates: commit message
+LIMIT_OF = {"keys": 60, "wdt": 60, "rules": 30, "sysm": 60}   # 3x the cold run (keys 20 s, wdt 18 s; sysm 18 s, 2026-11-12; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
@@ -53,6 +54,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "htime": ("_g_stAwtoHt",),
     "deadport": ("_AwtoDeadPortPoll",),
     "panel": ("_g_ucAwtoPanelOwn",),
+    "sysm": ("_g_ucAwtoSysOwn",),
 }
 
 
@@ -101,6 +103,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
+    g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     if header(tree):

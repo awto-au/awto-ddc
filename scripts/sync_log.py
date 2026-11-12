@@ -180,6 +180,23 @@ def unwrap(evs: list, now32: int | None) -> list:
     return [tuple(x) for x in out]
 
 
+SYS_STATE, SYS_WHY, SYS_REQ, SYS_OUT = 0x15, 0x16, 0x17, 0x18    # #162 step 3 name tables (sync.tsv), read by the sys / sysreq fmts
+SYS_MS_MAX = 0xFFFFFF
+
+
+def name(rows: list[dict], i: int, a: int) -> str:
+    row = next((r for r in rows if r["id"] == i and (r["arg"] is None or r["arg"] == a)), None)
+    return row["text"] if row else f"{a:02X}"
+
+
+def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
+    """#162 step 3 system machine: transition (arg old << 4 | new, value why << 24 | ms) / request (value who << 8 | outcome)"""
+    if fmt == "sys":
+        old = name(rows, SYS_STATE, a >> 4)
+        return f"{old} -> {name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, v >> 24)} ({v & SYS_MS_MAX} ms in {old})"
+    return f"{name(rows, SYS_REQ, a)} requested by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
+
+
 def line(rows: list[dict], ev: tuple, t0: int) -> str:
     i, a, ms, v = ev
     dt = (ms - t0) & 0xFFFF
@@ -189,7 +206,8 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
         return head + f"event {i:02X} {a:02X}"
     pre = f"D{a - D0} " if row["port"] else ""
     before, _, after = row["text"].partition("%")
-    return head + pre + before + value(row["fmt"], a, v) + after
+    val = sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else value(row["fmt"], a, v)
+    return head + pre + before + val + after
 
 
 def read_ring(rd, addr: int):

@@ -25,8 +25,9 @@ LOG = ROOT / "tmp/logs/key_sim_test.log"
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
 WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
-         "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "SysPowerSetTargetPowerStatus",
+         "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "SysPowerSetTargetPowerStatus", "SysMachineRequest",
          "AwtoPsField", "AwtoSrcPortFields")
+PWR = "SysPowerSetTargetPowerStatus"             # power requests: counted from SysMachineRequest (#162 step 3) when the image has it
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
 
@@ -57,8 +58,15 @@ class Keys:
 
     def _watch(self, n):
         def f(m, r):
-            self.hits[n] = self.hits.get(n, 0) + 1
-            self.args.setdefault(n, []).append(r["a1"] & 0xFF)
+            a = r["a1"] & 0xFF
+            if n == "SysMachineRequest":             # #162 step 3: the one request entry; power targets are < 0x10
+                if a >= 0x10:
+                    return None
+                n2 = PWR
+            else:
+                n2 = n
+            self.hits[n2] = self.hits.get(n2, 0) + 1
+            self.args.setdefault(n2, []).append(a)
             return None
         return f
 

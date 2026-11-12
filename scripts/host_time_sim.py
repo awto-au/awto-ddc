@@ -78,8 +78,11 @@ class Sim:
     def text(self) -> list[str]:
         st = self.model.snapshot(self.m, 0)
         rows = M.layout_rows(st, M.frame_geometry(st))
-        if self.base is None and rows and len(rows[0]["chars"]) > 1 and rows[0]["chars"][1]["kind"] == "1bit":
-            self.base = rows[0]["chars"][1]["id"] - (ord("A") - 0x20)     # title starts " AWTO"
+        cs = rows[0]["chars"] if rows else []
+        if self.base is None and len(cs) > 4 and all(c["kind"] == "1bit" for c in cs[1:5]):
+            b = cs[1]["id"] - (ord("A") - 0x20)                            # title starts " AWTO"
+            if [c["id"] - b + 0x20 for c in cs[2:5]] == [ord(x) for x in "WTO"]:
+                self.base = b                                              # only from a drawn title (#162 s3: draw timing moved)
         b = self.base or 0
         return ["".join(chr(c["id"] - b + 0x20) if c["kind"] == "1bit" and 0 <= c["id"] - b < 95 else " " for c in r["chars"])
                 for r in rows]

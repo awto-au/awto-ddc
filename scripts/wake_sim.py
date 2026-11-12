@@ -244,7 +244,13 @@ class Run:
         self.watch(1500)                            # console + panel on, search: the ring has the follow-up lines
         ev = self.ring_events()
         hit = [e for e in ev if e[0] in (0xCB, 0xCC, 0xCD, 0xCE, 0xD3, 0xDC)]
-        lat = ((hit[-1][2] - t_inj) & 0xFFFF) if hit else None
+        # #162 step 3: the decision instant = the episode line AwtoPsWakeFire pushes right before the trigger line ("wake on
+        # Dn", C0 03); the trigger line's own time also carries the console's live draw of that line (a scroll / redraw in PS)
+        i = ev.index(hit[-1]) if hit else -1
+        dec = ev[i - 1] if i > 0 and ev[i - 1][0] == 0xC0 and ev[i - 1][1] == 0x03 else (hit[-1] if hit else None)
+        lat = ((dec[2] - t_inj) & 0xFFFF) if dec else None
+        if hit and dec is not hit[-1]:
+            say(f"  measured, {name}: event -> 'wake on' line {lat} ms, -> trigger line {(hit[-1][2] - t_inj) & 0xFFFF} ms")
         self.check(lat is not None and lat <= bound, f"{name}: event -> wake (firmware wake line) within {bound} ms", f"{lat} ms")
         txt = "\n".join(self.lines())
         self.check(want in txt, f"{name}: log line '{want}'")
