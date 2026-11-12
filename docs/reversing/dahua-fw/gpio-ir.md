@@ -41,10 +41,45 @@ Evidence: `/mnt/2tb/vendors/realtek/analysis/jxc-4k/bank*/{disassembly.asm,decom
 | same, mode NOSIGNAL(5), POWER_SAVING(6), POWER_OFF(7) | no LED call | - |
 
 - Reading: P3.5 = "on" colour, P3.6 = "standby" colour, both low = off; it is the front-panel power indicator. [fw+x] for the function (`UserInterfaceKeyPadLedControl` with the SDK enum), [guess] for the physical LED / colours. SDK precedent: board `RL6449_QA_A_156PIN_2H1DP_eDP.h` names `bLED2 = P3_5`, `bLED3 = P3_6`.
-- Path from no signal to the (0, 1) state: the Dahua mode machine sets the target power status SAVING (1:98c0 region writes e23a low nibble = 3) and `SysPowerHandler` then runs action 7. Not traced end to end. [?]
+- Path from no signal to the (0, 1) state: see 2a. [fw]
 - Live dump cannot show the levels: `0xFFE3` reads 0 for every P3 pin including the power key P3.0 (idle high) in both read-control modes (`tmp/regs/AWT26110001-gpio-{on,standby}-*.json`). [hw]
 - Ours: pins are GPIO push-pull by our pin-share (`_PIN_91/_PIN_92` = 1) but nothing drives them; level = reset default [?]. Our `bLED1` is P8.4 (section 3), so the front LED, if it hangs on P3.5/P3.6, stays unlit or in an arbitrary colour. Header: `P3_5/P3_6` not mentioned.
 - Settle: on unit 1 (original firmware) watch the front LED colour in on / DPMS standby and probe pins 91/92 with a meter (expect (high, low) on, (low, high) standby). Then add `bLED2 = P3_5`, `bLED3 = P3_6` with the table above to our header.
+
+## 2a. LED rule per power / mode state (#95 step 1, 2026-11-12)
+Evidence: bank 0 `d8c4` jump table at 0:d8d7 (raw bytes, index -> handler), bank 1 `98c0` / `e49f` / `d3ac` / `d6b2` disassembly (`scripts/dis51.py`). Names: `re/jxc-4k/names_re1.tsv`.
+
+- `d6b2` decompile and disassembly agree with section 2: 14 cases, writes only P3.5 (`T1`) / P3.6 (`WR`), no timer, no delay, no loop. [fw]
+- Mode-state flow (0:d8c4 jump table; index = `SysModeGetModeState`; handler bodies are undisassembled in the Ghidra export, read from raw bytes): [fw]
+
+| mode state | handler | LED call |
+|---|---|---|
+| 0 INITIAL | 0:d904 | none (OSD / keycode work only) |
+| 1 SEARCH | 0:d933 | on state change and power status == NORMAL: `d6b2(1)` -> (1, 0) |
+| 2 DISPLAY_SETTING | 0:d9df | none |
+| 3 ACTIVE | 0:d947 | same gate: `d6b2(2)` -> (1, 0) |
+| 4 NOSUPPORT | 0:d95e | same gate, also `E150 = 3`: `d6b2(4)` -> (1, 0) |
+| 5 NOSIGNAL | 0:d978 | none (OSD message only: no-signal text, 0x1388 = 5000 passed as message arg) |
+| 6 POWER_SAVING | 0:d9c1 | none |
+| 7 POWER_OFF | 0:d8ef | none |
+
+- Gate = "mode state changed" (helper 0:0f99 = trampoline to bank 1 `fd21`; flag meaning [guess]: edge of mode state change, since the handlers run the LED call once per entry. Settle: read `1:fd21`) and `0:d9f1` (power status == 2 NORMAL). [fw]
+- Consequence: with a cable but no signal (SEARCH, NOSIGNAL) the LED stays (1, 0). The LED does NOT change on NOSIGNAL. Only a POWER status change to SAVING changes it. [fw]
+- Saving entry (resolves the open path in section 2): `1:98c0` (power-side handler, called via 0:0633 trampoline) [fw]
+  - Reads mode state (`1:df24` = `e22e & 0x1F`). If it is 6 POWER_SAVING and `e0f4` bit3 is set and `1:faac` returns carry and current power status (`1:e49f`) != 3: sets target power status (`e23a` low nibble) = 3 SAVING and clears `e0f4` bit3 (1:993e-994d). [fw]
+  - Then `SysPowerHandler` (1:a587) runs action 7 NORMAL_TO_PS -> `d3ac(7)` -> `d6b2(3)` = (0, 1) and `917c(1)` panel down. [fw]
+  - Wake: `1:e339` true (source / signal wake test, body only partly read) and current status != 2 -> target NORMAL (2), `e22f` high nibble = 1 (1:995b-996d); action 5 PS_TO_NORMAL has no LED call, so (0, 1) stays until the mode flow reaches SEARCH / ACTIVE and calls `d6b2` (gate above). [fw]; `e339` semantics [?]
+- Full LED rule of the Dahua firmware: [fw]
+  - AC on: (1, 0) (direct SFR writes, 5:d311 / d313).
+  - Power status NORMAL: (1, 0) in every mode state (SEARCH / ACTIVE / NOSUPPORT set it again, NOSIGNAL leaves it).
+  - SAVING (also FAKE_PS): (0, 1). OFF (soft power off, FAKE_OFF): (0, 0). Back to NORMAL: (1, 0).
+  - Never blinks, never breathes: no timer arm, no PWM on pins 91 / 92 (GPIO mode), `d6b2` called only from the sites above. Raw scan for `P3`-byte and bit 0xB5 / 0xB6 ops again finds `d6b2` and 5:d311 / d313 as the only code writes (other hits are operand bytes inside other instructions) [fw]. Coverage limit: indirect-addressed writes to SFR P3 are not possible on the 8051 for SFRs (direct addressing only), so this is complete for P3.
+- For our firmware: LED = f(power status) only; do not tie it to the signal state. SEARCH / NOSIGNAL keep the "on" colour until the saving timer fires.
+
+## 2b. P7.3 (pin 160), role search
+- Only access: `MOV DPTR,#FE1B; CLR A; MOVX @DPTR,A` at 5:d320-d324, 200 ms (`fb15` delay with R7 = 0xC8) after `P7.4 = 0` (FE1C), then P9.7 / PA.0 group. Raw scan of all 7 banks for `MOV DPTR,#FE1B` (90 FE 1B): this one site only (the `FE1A`/`FE1C` hits in the common area are bank-call thunks whose DPTR is a code address, not the port). [fw]
+- Neighbours in the same init: P7.4 (amp enable, muted = 0), P7.2 panel power (FE1A = 0), P9.2 backlight (FE2A = 1). P7.3 follows the amp line in sequence. [fw]
+- Role: [guess] second audio-amp or audio-path control (a shutdown / standby pin released after the amp line is set low), from the 200 ms ordering after P7.4 and from the SDK RL6432 convention that P7.3 / P7.4 are a pair. Settle: probe pin 160 and trace to the first component on unit 1 (expect ~0 V), or poke 0xFE1B high on unit 2 only while playing audio. No consumer reads it. [?] for what it drives.
 
 ## 3. P8.4, P8.5, P9.7, PA.0 (pins 184, 185, 201, 202): switched-peripheral group
 - Modes live: P8.4, P8.5 push-pull (mode 1), P9.7, PA.0 open-drain (mode 2). ON all read 1, standby all read 0 (unit 1). [hw]
