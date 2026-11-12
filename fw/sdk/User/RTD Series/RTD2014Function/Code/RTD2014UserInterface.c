@@ -654,7 +654,14 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
             break;
 
         case _USER_TIMER_EVENT_OSD_DISABLE:
-            OsdDispDisableOsd();
+            if(GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)
+            {
+                AwtoSourceIdle();                   // #132: selector idle commit (AWTO_SRC_IDLE_COMMIT_MS)
+            }
+            else
+            {
+                OsdDispDisableOsd();
+            }
             break;
 
 #if(_VGA_SUPPORT == _ON)

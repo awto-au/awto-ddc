@@ -1,7 +1,7 @@
 // AWTO user-facing OSD screens on the awto text layer (awto_dbgpop.inc helpers, menu font and colours), inserted into
 // RTD2014OsdDisplay.c after awto_dbgpop.inc. The SDK timers and OSD states drive them as before; only the drawing is ours.
-// - Message cards (#124): OsdDispOsdMessage (the SDK body is removed by keil2sdcc), incl. the DOWN / ACTIVE input-info card.
-// - Source selector (#134): one row per board port + Auto.
+// - Message cards (#124): OsdDispOsdMessage (the SDK body is removed by keil2sdcc), incl. the ACTIVE input-info card.
+// - Source selector (#134): one row per board port + Auto. Backlight bar (#132): UP / DOWN with a picture.
 #if((_AWTO_DIAG != _ON) || !defined(_AWTO_NEW_SETTINGS))
 #error "awto_osdcard.inc draws on the awto text layer (awto_dbgpop.inc, _AWTO_NEW_SETTINGS)"
 #endif
@@ -36,6 +36,8 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_WIN_TITLE      2
 #define AWTO_WIN_HL         5
 #define AWTO_T_STYLE_DIM    1
+#define AWTO_BAR_SURFACE    0                   // osd_tc_bar colours = awto-rtdfw osd.h AWTO_BAR_SURFACE / AWTO_BAR_ACCENT
+#define AWTO_BAR_ACCENT     1
 
 // Fixed texts: one table, read only by AwtoCardTxt (a constant read through a pointer sits in its reader's bank, awto-sdcc#39).
 #define AWTO_CT_INPUT       0
@@ -74,13 +76,14 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_CT_NOLINK      55
 #define AWTO_CT_TMDS        56
 #define AWTO_CT_SAVING      57
+#define AWTO_CT_BACKLIGHT   58
 static const __code char tAwtoCardS[] =
     "Input\0Auto select\0DP-1\0HDMI-\0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
     "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
     "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
     " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0"
     "idle\0search\0scan\0stable\0measure\0timing ok\0display set\0active\0no signal\0no support\0sleep\0off\0fast path\0init\0"
-    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0";
+    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0Backlight\0";
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -269,7 +272,7 @@ static void AwtoPsLbl(BYTE ucRow)                  // signal label (one table + 
 // GENERATED-END awto_port_sigs
 
 // GENERATED-BEGIN awto_sync_text
-static const __code BYTE tAwtoSyncFmt[233] = {
+static const __code BYTE tAwtoSyncFmt[237] = {
     0x00, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x10, 0x0B, 0x0B, 0x0B,
     0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0C, 0x0C, 0x8D, 0x0E, 0x0C, 0x0C, 0x0F, 0x00,
     0x01, 0x01, 0x01, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x0B, 0x0B,
@@ -284,9 +287,9 @@ static const __code BYTE tAwtoSyncFmt[233] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-static const __code char tAwtoSyncTxtS[] = "boot: cold power-up (no valid canary in RAM)\0" "boot: watchdog bite, \x01" "\0" "boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)\0" "boot: watchdog probe reset (test cmd 0x49 / 0x4F)\0" "boot: hardware watchdog reset, no capture (an early warning IRQ came)\0" "boot: main() entered\0" "boot: GPIO set up\0" "boot: MCU set up (M2PLL clock, flash clock, code banks, Timer2 tick)\0" "boot: pin functions set\0" "boot: first main-loop pass\0" "MCU init: crystal clock, watchdog N = \x01" "\0" "Timer2 1 ms tick running\0" "watchdog run-time: \x01" "\0" "NVRAM save start (since the last poke \x01" ")\0" "NVRAM save end (since the last poke \x01" ")\0" "flash erase start (since the last poke \x01" ")\0" "flash erase done (since the last poke \x01" ")\0" "NVRAM page move (since the last poke \x01" ")\0" "NVRAM flush: gate open (since the last poke \x01" ")\0" "NVRAM flush: forced after 30 s (since the last poke \x01" ")\0" "NVRAM flush: power off / saving entry (since the last poke \x01" ")\0" "NVRAM flush: menu / selector close (since the last poke \x01" ")\0" "NVRAM flush: test cmd 0x3D (since the last poke \x01" ")\0" "NVRAM flush: second BriCon / ColorProc item (since the last poke \x01" ")\0" "flash: type \x01" " detected (tFlashInformation index; MX25L8006E = 24, 254 = not detected yet)\0" "(the 2 lines above repeated \x01" " more times)\0" "wake by the SDK source detect, not our poll (poll state \x01" ")\0" "host time \x01" "\0" "(fw +\x01" " ms, first host sync since boot)\0" "(fw +\x01" " ms, host sync after a drift)\0" "drift \x01" " (host - fw clock)\0" "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "panel on requested by \x01" " (accepted)\0" "panel on requested by \x01" " (already on)\0" "panel off requested by \x01" " (accepted)\0" "panel off requested by \x01" " (already off)\0" "backlight on requested by \x01" " (accepted)\0" "backlight on requested by \x01" " (already on)\0" "backlight off requested by \x01" " (accepted)\0" "backlight off requested by \x01" " (already off)\0" "panel on requested by \x01" " (deferred: power off / saving is taking the panel down)\0" "backlight on requested by \x01" " (deferred: power off / saving is taking the panel down)\0" "backlight off requested by \x01" " (deferred: power off / saving is taking the panel down)\0" "panel: OFF -> VDD: VDD on, T1 starts (\x01" " in OFF)\0" "panel: VDD -> HPD: T1 done, power on, eDP-1 PHY on (\x01" " in VDD)\0" "panel: VDD -> T6: off before the PHY, VDD off (\x01" " in VDD)\0" "panel: HPD -> LINK: eDP-1 HPD high, link training (\x01" " in HPD)\0" "panel: HPD -> T6: off, PHY and VDD off (\x01" " in HPD)\0" "panel: LINK -> VIDEO: eDP-1 link trained in \x01" ", stream on (\x01" " in LINK)\0" "panel: VIDEO -> T3: backlight wanted, T3 counts from the stream start (\x01" " in VIDEO)\0" "panel: VIDEO -> T4: off, T4 starts (\x01" " in VIDEO)\0" "panel: T3 -> VIDEO: backlight no longer wanted (\x01" " in T3)\0" "panel: T3 -> BL_PWM: T3 done, backlight pin on (\x01" " in T3)\0" "panel: BL_PWM -> BL_ON: PWM duty set (\x01" " in BL_PWM)\0" "panel: BL_PWM -> BL_OFF: backlight off wanted, PWM dark (\x01" " in BL_PWM)\0" "panel: BL_ON -> BL_OFF: PWM dark (\x01" " in BL_ON)\0" "panel: BL_OFF -> VIDEO: backlight pin off, stream kept (\x01" " in BL_OFF)\0" "panel: BL_OFF -> T4: backlight pin off, T4 starts (\x01" " in BL_OFF)\0" "panel: T4 -> VIDEO: on again, stream still on (\x01" " in T4)\0" "panel: T4 -> T5: T4 done, stream idle (\x01" " in T4)\0" "panel: T5 -> VIDEO: on again, stream on (\x01" " in T5)\0" "panel: T5 -> T6: T5 done, link and VDD off (\x01" " in T5)\0" "panel: T6 -> OFF: T6 done, VDD may come on again (\x01" " in T6)\0" "panel: OFF -> T6: warm reset, VDD went off at GPIO init: T6 first (\x01" " in OFF)\0" "panel: VIDEO -> T5: off, backlight never on: no T4, stream idle (\x01" " in VIDEO)\0" "panel: state change \x01" " (not a listed transition)\0" "panel: no eDP-1 HPD within T2, link training anyway\0" "eDP-1: link training FAIL\0" "panel VDD pin off, written outside the panel machine\0" "panel VDD pin on, written outside the panel machine\0" "panel VDD pin off again (already off), written outside the panel machine\0" "panel VDD pin on again (already on), written outside the panel machine\0" "backlight pin off, written outside the panel machine\0" "backlight pin on, written outside the panel machine\0" "backlight pin off again (already off), written outside the panel machine\0" "backlight pin on again (already on), written outside the panel machine\0" "backlight PWM written outside the panel machine\0" "system: \x01" "\0" "system: \x01" "\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path refused: timing field \x01" "\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "HPD high again after 110 ms (TMDS recover)\0" "TMDS predetect on (clock not measured yet)\0" "TMDS clock \x01" " measured\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "cable unplugged: wake\0" "wake by TMDS clock, about \x01" " (IOSC reference)\0" "DDC activity in power saving: no wake (SDK DDC handshake gated, counted)\0" "DP AUX activity in power saving: no wake (SDK AUX toggle gated, counted)\0" "AUX command from source in power saving: no wake (wake: DPCD 600h = D0 or link training)\0" "TMDS clock burst \x01" " in power saving: shorter than the hold, no wake\0" "refused: no cable on \x01" "\0" "no cable on \x01" ", no signal, another port cabled: auto search\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "wake suppressed (cable unplug, once per sleep): \x01" "\0" "wake suppressed (TMDS clock, once per sleep): \x01" "\0" "AC ON\0" "OFF\0" "INITIAL\0" "SEARCH\0" "DISPLAY SETTING\0" "ACTIVE\0" "FAST SWITCH\0" "HOLD L1\0" "NO SUPPORT\0" "NO SIGNAL\0" "POWER SAVING\0" "WAKE SEARCH\0" "POWER DOWN\0" "RESET\0" "POWER key\0" "front key in power saving\0" "test cmd 0x3E (POWER key)\0" "DDC/CI VCP D6 power mode\0" "input select (KVM / VCP 0x60 / menu / test cmd)\0" "input selector\0" "dead port: auto search\0" "our wake poll\0" "SDK power-saving source detect\0" "SDK cable reset (search port cable changed)\0" "no-signal cards: power-saving timer\0" "settings (aspect / overscan / DP version)\0" "SDK OSD (user adjust)\0" "hold L2: released to the no-signal path (power-saving timers)\0" "hold: signal back, fast wake\0" "fast path taken (cached input)\0" "fast path: picture up\0" "fast path timeout: full path\0" "fast wake timeout: back to the hold\0" "judge timer: timing not confirmed in time (no signal)\0" "judge timer: no support\0" "NVRAM power status at boot\0" "SDK\0" "wake search found no source\0" "target written without a request\0" "hold: fast wakes used up\0" "hold: auto search, other cable\0" "INITIAL pass done\0" "timing confirmed, supported\0" "search done, no source\0" "display set, panel video ready\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "judge: eDP unstable\0" "signal lost: L1 hold (backlight off, set-up kept)\0" "panel down (T4 / T5 done)\0" "power off / saving called off\0" "system machine started\0" "power off\0" "power on\0" "power saving\0" "reset to search\0" "display setting again\0" "display setting again (no forced background)\0" "no support\0" "no signal\0" "power-saving reset\0" "power-off reset\0" "factory mode\0" "fast switch\0" "back to the hold\0" "fast path done\0" "accepted\0" "already\0" "replaces a pending request\0" "refused in this state\0" "kept until the state can take it\0" " -> \0" ": \0" " (\0" " ms in \0" " requested by \0" "; \0" "monitor off, inputs not searched\0" "monitor off, inputs not searched\0" "scaler input side reset for a new search\0" "looking for a source (cable, clock / link, stable timing)\0" "programming the scaler for the timing\0" "picture on screen\0" "timing outside what scaler / panel accept\0" "search found no source\0" "no signal, low power, waiting for a wake\0" "boot (cold power-up: panel early)\0" "boot (warm reset: after T6)\0" "power switch OFF -> NORMAL\0" "power switch POWER SAVING -> NORMAL (wake)\0" "our wake poll (console + backlight)\0" "power off / saving: panel down first\0" "power off / saving called off: level before it\0" "display setting / ACTIVE gate: video wanted\0" "display setting: backlight action off\0" "display setting: DCLK change\0" "SDK OSD reset\0" "first ACTIVE pass\0" "L1 hold: signal lost\0" "hold: signal back, fast wake\0" "input selector opened\0" "SDK OSD: no-signal card\0" "SDK OSD: no-cable card\0" "SDK OSD: no-support card\0" "SDK OSD: source menu\0" "SDK OSD: power-saving card\0" "SDK OSD: DP info\0" "FreeSync OD measure\0" "SDK power switch: AC ON -> OFF\0" "SDK power switch: NORMAL -> OFF\0" "SDK power switch: NORMAL -> POWER SAVING\0" "";
-static const __code WORD tAwtoSyncTxtOff[233] = {0, 45, 68, 163, 213, 283, 304, 322, 391, 415, 442, 482, 507, 528, 569, 608, 650, 691, 731, 778, 833, 895, 954, 1005, 1073, 1163, 1205, 1264, 1276, 1315, 1351, 1377, 1386, 1398, 1408, 1424, 1459, 1496, 1532, 1571, 1610, 1651, 1691, 1734, 1814, 1898, 1983, 2031, 2093, 2150, 2211, 2261, 2330, 2413, 2461, 2518, 2575, 2626, 2696, 2742, 2811, 2875, 2931, 2979, 3029, 3082, 3141, 3218, 3295, 3343, 3395, 3421, 3474, 3526, 3599, 3670, 3723, 3775, 3848, 3919, 3967, 3977, 3987, 4010, 4031, 4055, 4082, 4110, 4147, 4178, 4212, 4228, 4253, 4296, 4339, 4361, 4380, 4393, 4405, 4414, 4424, 4438, 4464, 4487, 4513, 4543, 4589, 4611, 4656, 4729, 4802, 4891, 4958, 4981, 5040, 5083, 5130, 5179, 5226, 5276, 5324, 5330, 5334, 5342, 5349, 5365, 5372, 5384, 5392, 5403, 5413, 5426, 5438, 5449, 5455, 5465, 5491, 5517, 5542, 5590, 5605, 5628, 5642, 5673, 5717, 5753, 5795, 5817, 5879, 5908, 5939, 5961, 5990, 6026, 6080, 6104, 6131, 6135, 6163, 6196, 6221, 6252, 6270, 6298, 6321, 6352, 6375, 6396, 6420, 6447, 6467, 6517, 6543, 6573, 6596, 6606, 6615, 6628, 6644, 6666, 6711, 6722, 6732, 6751, 6767, 6780, 6792, 6809, 6824, 6833, 6841, 6868, 6890, 6923, 6928, 6931, 6934, 6942, 6957, 6960, 6993, 7026, 7067, 7125, 7163, 7181, 7223, 7246, 7287, 7321, 7349, 7376, 7419, 7455, 7492, 7539, 7583, 7621, 7650, 7664, 7682, 7703, 7732, 7754, 7778, 7801, 7826, 7847, 7874, 7891, 7911, 7942, 7974};
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const __code char tAwtoSyncTxtS[] = "boot: cold power-up (no valid canary in RAM)\0" "boot: watchdog bite, \x01" "\0" "boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)\0" "boot: watchdog probe reset (test cmd 0x49 / 0x4F)\0" "boot: hardware watchdog reset, no capture (an early warning IRQ came)\0" "boot: main() entered\0" "boot: GPIO set up\0" "boot: MCU set up (M2PLL clock, flash clock, code banks, Timer2 tick)\0" "boot: pin functions set\0" "boot: first main-loop pass\0" "MCU init: crystal clock, watchdog N = \x01" "\0" "Timer2 1 ms tick running\0" "watchdog run-time: \x01" "\0" "NVRAM save start (since the last poke \x01" ")\0" "NVRAM save end (since the last poke \x01" ")\0" "flash erase start (since the last poke \x01" ")\0" "flash erase done (since the last poke \x01" ")\0" "NVRAM page move (since the last poke \x01" ")\0" "NVRAM flush: gate open (since the last poke \x01" ")\0" "NVRAM flush: forced after 30 s (since the last poke \x01" ")\0" "NVRAM flush: power off / saving entry (since the last poke \x01" ")\0" "NVRAM flush: menu / selector close (since the last poke \x01" ")\0" "NVRAM flush: test cmd 0x3D (since the last poke \x01" ")\0" "NVRAM flush: second BriCon / ColorProc item (since the last poke \x01" ")\0" "flash: type \x01" " detected (tFlashInformation index; MX25L8006E = 24, 254 = not detected yet)\0" "(the 2 lines above repeated \x01" " more times)\0" "wake by the SDK source detect, not our poll (poll state \x01" ")\0" "host time \x01" "\0" "(fw +\x01" " ms, first host sync since boot)\0" "(fw +\x01" " ms, host sync after a drift)\0" "drift \x01" " (host - fw clock)\0" "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "panel on requested by \x01" " (accepted)\0" "panel on requested by \x01" " (already on)\0" "panel off requested by \x01" " (accepted)\0" "panel off requested by \x01" " (already off)\0" "backlight on requested by \x01" " (accepted)\0" "backlight on requested by \x01" " (already on)\0" "backlight off requested by \x01" " (accepted)\0" "backlight off requested by \x01" " (already off)\0" "panel on requested by \x01" " (deferred: power off / saving is taking the panel down)\0" "backlight on requested by \x01" " (deferred: power off / saving is taking the panel down)\0" "backlight off requested by \x01" " (deferred: power off / saving is taking the panel down)\0" "panel: OFF -> VDD: VDD on, T1 starts (\x01" " in OFF)\0" "panel: VDD -> HPD: T1 done, power on, eDP-1 PHY on (\x01" " in VDD)\0" "panel: VDD -> T6: off before the PHY, VDD off (\x01" " in VDD)\0" "panel: HPD -> LINK: eDP-1 HPD high, link training (\x01" " in HPD)\0" "panel: HPD -> T6: off, PHY and VDD off (\x01" " in HPD)\0" "panel: LINK -> VIDEO: eDP-1 link trained in \x01" ", stream on (\x01" " in LINK)\0" "panel: VIDEO -> T3: backlight wanted, T3 counts from the stream start (\x01" " in VIDEO)\0" "panel: VIDEO -> T4: off, T4 starts (\x01" " in VIDEO)\0" "panel: T3 -> VIDEO: backlight no longer wanted (\x01" " in T3)\0" "panel: T3 -> BL_PWM: T3 done, backlight pin on (\x01" " in T3)\0" "panel: BL_PWM -> BL_ON: PWM duty set (\x01" " in BL_PWM)\0" "panel: BL_PWM -> BL_OFF: backlight off wanted, PWM dark (\x01" " in BL_PWM)\0" "panel: BL_ON -> BL_OFF: PWM dark (\x01" " in BL_ON)\0" "panel: BL_OFF -> VIDEO: backlight pin off, stream kept (\x01" " in BL_OFF)\0" "panel: BL_OFF -> T4: backlight pin off, T4 starts (\x01" " in BL_OFF)\0" "panel: T4 -> VIDEO: on again, stream still on (\x01" " in T4)\0" "panel: T4 -> T5: T4 done, stream idle (\x01" " in T4)\0" "panel: T5 -> VIDEO: on again, stream on (\x01" " in T5)\0" "panel: T5 -> T6: T5 done, link and VDD off (\x01" " in T5)\0" "panel: T6 -> OFF: T6 done, VDD may come on again (\x01" " in T6)\0" "panel: OFF -> T6: warm reset, VDD went off at GPIO init: T6 first (\x01" " in OFF)\0" "panel: VIDEO -> T5: off, backlight never on: no T4, stream idle (\x01" " in VIDEO)\0" "panel: state change \x01" " (not a listed transition)\0" "panel: no eDP-1 HPD within T2, link training anyway\0" "eDP-1: link training FAIL\0" "panel VDD pin off, written outside the panel machine\0" "panel VDD pin on, written outside the panel machine\0" "panel VDD pin off again (already off), written outside the panel machine\0" "panel VDD pin on again (already on), written outside the panel machine\0" "backlight pin off, written outside the panel machine\0" "backlight pin on, written outside the panel machine\0" "backlight pin off again (already off), written outside the panel machine\0" "backlight pin on again (already on), written outside the panel machine\0" "backlight PWM written outside the panel machine\0" "system: \x01" "\0" "system: \x01" "\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path refused: timing field \x01" "\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "HPD high again after 110 ms (TMDS recover)\0" "TMDS predetect on (clock not measured yet)\0" "TMDS clock \x01" " measured\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "cable unplugged: wake\0" "wake by TMDS clock, about \x01" " (IOSC reference)\0" "DDC activity in power saving: no wake (SDK DDC handshake gated, counted)\0" "DP AUX activity in power saving: no wake (SDK AUX toggle gated, counted)\0" "AUX command from source in power saving: no wake (wake: DPCD 600h = D0 or link training)\0" "TMDS clock burst \x01" " in power saving: shorter than the hold, no wake\0" "refused: no cable on \x01" "\0" "no cable on \x01" ", no signal, another port cabled: auto search\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "wake suppressed (cable unplug, once per sleep): \x01" "\0" "wake suppressed (TMDS clock, once per sleep): \x01" "\0" "AC ON\0" "OFF\0" "INITIAL\0" "SEARCH\0" "DISPLAY SETTING\0" "ACTIVE\0" "FAST SWITCH\0" "HOLD L1\0" "NO SUPPORT\0" "NO SIGNAL\0" "POWER SAVING\0" "WAKE SEARCH\0" "POWER DOWN\0" "RESET\0" "POWER key\0" "front key in power saving\0" "test cmd 0x3E (POWER key)\0" "DDC/CI VCP D6 power mode\0" "input select (KVM / VCP 0x60 / menu / test cmd)\0" "input selector\0" "dead port: auto search\0" "our wake poll\0" "SDK power-saving source detect\0" "SDK cable reset (search port cable changed)\0" "no-signal cards: power-saving timer\0" "settings (aspect / overscan / DP version)\0" "SDK OSD (user adjust)\0" "hold L2: released to the no-signal path (power-saving timers)\0" "hold: signal back, fast wake\0" "fast path taken (cached input)\0" "fast path: picture up\0" "fast path timeout: full path\0" "fast wake timeout: back to the hold\0" "judge timer: timing not confirmed in time (no signal)\0" "judge timer: no support\0" "NVRAM power status at boot\0" "SDK\0" "wake search found no source\0" "target written without a request\0" "hold: fast wakes used up\0" "hold: auto search, other cable\0" "INITIAL pass done\0" "timing confirmed, supported\0" "search done, no source\0" "display set, panel video ready\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "judge: eDP unstable\0" "signal lost: L1 hold (backlight off, set-up kept)\0" "panel down (T4 / T5 done)\0" "power off / saving called off\0" "system machine started\0" "AUTO key: auto source select\0" "UP+DOWN in power saving: wake into the console\0" "input selector: no key for 2 s (idle commit)\0" "power off\0" "power on\0" "power saving\0" "reset to search\0" "display setting again\0" "display setting again (no forced background)\0" "no support\0" "no signal\0" "power-saving reset\0" "power-off reset\0" "factory mode\0" "fast switch\0" "back to the hold\0" "fast path done\0" "accepted\0" "already\0" "replaces a pending request\0" "refused in this state\0" "kept until the state can take it\0" " -> \0" ": \0" " (\0" " ms in \0" " requested by \0" "; \0" "monitor off, inputs not searched\0" "monitor off, inputs not searched\0" "scaler input side reset for a new search\0" "looking for a source (cable, clock / link, stable timing)\0" "programming the scaler for the timing\0" "picture on screen\0" "timing outside what scaler / panel accept\0" "search found no source\0" "no signal, low power, waiting for a wake\0" "boot (cold power-up: panel early)\0" "boot (warm reset: after T6)\0" "power switch OFF -> NORMAL\0" "power switch POWER SAVING -> NORMAL (wake)\0" "our wake poll (console + backlight)\0" "power off / saving: panel down first\0" "power off / saving called off: level before it\0" "display setting / ACTIVE gate: video wanted\0" "display setting: backlight action off\0" "display setting: DCLK change\0" "SDK OSD reset\0" "first ACTIVE pass\0" "L1 hold: signal lost\0" "hold: signal back, fast wake\0" "input selector opened\0" "SDK OSD: no-signal card\0" "SDK OSD: no-cable card\0" "SDK OSD: no-support card\0" "SDK OSD: source menu\0" "SDK OSD: power-saving card\0" "SDK OSD: DP info\0" "FreeSync OD measure\0" "SDK power switch: AC ON -> OFF\0" "SDK power switch: NORMAL -> OFF\0" "SDK power switch: NORMAL -> POWER SAVING\0" "UP+DOWN wake (console + backlight)\0" "";
+static const __code WORD tAwtoSyncTxtOff[237] = {0, 45, 68, 163, 213, 283, 304, 322, 391, 415, 442, 482, 507, 528, 569, 608, 650, 691, 731, 778, 833, 895, 954, 1005, 1073, 1163, 1205, 1264, 1276, 1315, 1351, 1377, 1386, 1398, 1408, 1424, 1459, 1496, 1532, 1571, 1610, 1651, 1691, 1734, 1814, 1898, 1983, 2031, 2093, 2150, 2211, 2261, 2330, 2413, 2461, 2518, 2575, 2626, 2696, 2742, 2811, 2875, 2931, 2979, 3029, 3082, 3141, 3218, 3295, 3343, 3395, 3421, 3474, 3526, 3599, 3670, 3723, 3775, 3848, 3919, 3967, 3977, 3987, 4010, 4031, 4055, 4082, 4110, 4147, 4178, 4212, 4228, 4253, 4296, 4339, 4361, 4380, 4393, 4405, 4414, 4424, 4438, 4464, 4487, 4513, 4543, 4589, 4611, 4656, 4729, 4802, 4891, 4958, 4981, 5040, 5083, 5130, 5179, 5226, 5276, 5324, 5330, 5334, 5342, 5349, 5365, 5372, 5384, 5392, 5403, 5413, 5426, 5438, 5449, 5455, 5465, 5491, 5517, 5542, 5590, 5605, 5628, 5642, 5673, 5717, 5753, 5795, 5817, 5879, 5908, 5939, 5961, 5990, 6026, 6080, 6104, 6131, 6135, 6163, 6196, 6221, 6252, 6270, 6298, 6321, 6352, 6375, 6396, 6420, 6447, 6467, 6517, 6543, 6573, 6596, 6625, 6672, 6717, 6727, 6736, 6749, 6765, 6787, 6832, 6843, 6853, 6872, 6888, 6901, 6913, 6930, 6945, 6954, 6962, 6989, 7011, 7044, 7049, 7052, 7055, 7063, 7078, 7081, 7114, 7147, 7188, 7246, 7284, 7302, 7344, 7367, 7408, 7442, 7470, 7497, 7540, 7576, 7613, 7660, 7704, 7742, 7771, 7785, 7803, 7824, 7853, 7875, 7899, 7922, 7947, 7968, 7995, 8012, 8032, 8063, 8095, 8136};
 static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text after ucPart (0..2) value marks, 0xFF = none; returns the fmt
 {
     const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];
@@ -335,17 +338,17 @@ static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text after ucPart (0..2) v
 static const __code BYTE tAwtoSyncNameRow[448] = {
     121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 0, 0, 0, 0,
+    0, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 175, 176, 177, 0,
     0, 162, 163, 0, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 175, 176, 177, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 178, 179, 180, 181, 182, 183, 184, 185, 0, 0, 0, 0, 0, 0, 0,
-    186, 187, 188, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    189, 190, 191, 192, 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 178, 179, 180, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 181, 182, 183, 184, 185, 186, 187, 188, 0, 0, 0, 0, 0, 0, 0,
+    189, 190, 191, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    192, 193, 194, 195, 196, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    194, 195, 196, 197, 198, 199, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    197, 198, 199, 200, 201, 202, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    200, 201, 202, 203, 204, 205, 0, 0, 206, 207, 208, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    203, 204, 205, 206, 207, 208, 0, 0, 209, 210, 211, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 0, 0, 0, 0, 0, 0,
+    0, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 // GENERATED-END awto_sync_text
 
@@ -762,7 +765,6 @@ static bit AwtoSourceNoPicture(void)            // power saving / no signal / no
 // AWTO_SRC_SLEEP_SEC without a key, the SDK power-saving card (2 s) and power saving. With a picture: no timer.
 static void AwtoSrcSleepArm(void)
 {
-    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
     if(AwtoSourceNoPicture() == _TRUE)
     {
         ScalerTimerReactiveTimerEvent(SEC(AWTO_SRC_SLEEP_SEC), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
@@ -773,9 +775,11 @@ static void AwtoSrcSleepArm(void)
     }
 }
 
-// The one way in (SOURCE, UP with a picture, OSD event 7 = no signal / wake): preset to the current input (Auto while auto-scanning).
+// The one way in (SOURCE, OSD event 7 = no signal / wake): preset to the current input (Auto while auto-scanning).
+// Opening alone arms no idle commit: the selector stays (#139) until a step key starts the AWTO_SRC_IDLE_COMMIT_MS wait.
 void AwtoSourceOpen(void)
 {
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
     if(SysSourceGetScanType() == _SOURCE_SWITCH_AUTO_IN_GROUP)
     {
         SET_OSD_INPUT_PORT_OSD_ITEM(_OSD_INPUT_AUTO);
@@ -824,74 +828,150 @@ static void AwtoSourceClose(void)
     }
 }
 
-// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129).
-void AwtoSourceKey(BYTE ucKey)
+// Auto source select (#132): the selector's Auto row and the AUTO key with nothing open. The SDK auto search takes the first input
+// with a signal; the scan type is stored at the gate ("Saving to memory"). ucWho = AWTO_SYS_BY_* of the request line.
+void AwtoSourceAuto(BYTE ucWho)
+{
+    SET_OSD_INPUT_PORT_OSD_ITEM(_OSD_INPUT_AUTO);
+    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
+    SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
+    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, ucWho);
+    UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+    AwtoNvCommitSel();                          // #151: the chosen input is stored at the gate ("Saving to memory")
+}
+
+// Take the highlighted item: AUTO key (AWTO_SYS_BY_SELECTOR) or the idle commit (AWTO_SYS_BY_SELECTOR_IDLE).
+static void AwtoSourceTake(BYTE ucWho)
 {
     BYTE ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
     BYTE ucPort;
 
-    if((ucKey == _RIGHT_KEY_MESSAGE) || (ucKey == _LEFT_KEY_MESSAGE))  // UP / DOWN: step
+    if(GET_OSD_DP_VERSION_HOTKEY_DISP() != _OFF)
+    {
+        return;
+    }
+    if(g_usBackupValue == ucItem)
+    {
+        AwtoSourceClose();
+    }
+    else if(ucItem == _OSD_INPUT_AUTO)
+    {
+        AwtoSourceAuto(ucWho);
+    }
+    else
+    {
+        ucPort = (ucItem >= _OSD_INPUT_D0) ? (ucItem - _OSD_INPUT_D0 + _D0_INPUT_PORT) : _NO_INPUT_PORT;
+        if(ucPort == _NO_INPUT_PORT)
+        {
+            return;                             // not a port of this board: the selector stays up
+        }
+        if(AwtoPortCable(ucPort) == _FALSE)
+        {
+            AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: no cable on the chosen port: refused, the selector stays up
+            AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
+            return;
+        }
+        SET_FORCE_POW_SAV_STATUS(_FALSE);
+        SysSourceSwitchInputPort(ucPort);
+        SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, ucWho);
+        UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
+        UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+        AwtoNvCommitSel();                      // #151: the chosen input is stored at the gate ("Saving to memory")
+    }
+    SET_OSD_STATE(_MENU_NONE);
+}
+
+void AwtoSourceIdle(void)                       // OSD_DISABLE timer, selector open: no key for AWTO_SRC_IDLE_COMMIT_MS
+{
+    AwtoSourceTake(AWTO_SYS_BY_SELECTOR_IDLE);
+}
+
+// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129). Roles as before #132: AUTO takes, MENU cancels.
+// SOURCE / UP step forward, DOWN back (wrap); every step restarts the idle commit.
+void AwtoSourceKey(BYTE ucKey)
+{
+    if((ucKey == _RIGHT_KEY_MESSAGE) || (ucKey == _LEFT_KEY_MESSAGE) || (ucKey == AWTO_KEY_MSG_SOURCE))
     {
         AwtoSourceStep(ucKey == _LEFT_KEY_MESSAGE);
         AwtoSourceRows();
         AwtoSrcSleepArm();                      // #151: a step is never stored
+        ScalerTimerReactiveTimerEvent(AWTO_SRC_IDLE_COMMIT_MS, _USER_TIMER_EVENT_OSD_DISABLE);
     }
     else if(ucKey == _EXIT_KEY_MESSAGE)        // MENU: cancel, the choice goes back
     {
-        if(g_usBackupValue != ucItem)
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+        if(g_usBackupValue != GET_OSD_INPUT_PORT_OSD_ITEM())
         {
             SET_OSD_INPUT_PORT_OSD_ITEM(g_usBackupValue);
         }
         AwtoSourceClose();
     }
-    else if((ucKey == _MENU_KEY_MESSAGE) && (GET_OSD_DP_VERSION_HOTKEY_DISP() == _OFF))     // AUTO: take the choice
+    else if(ucKey == _MENU_KEY_MESSAGE)        // AUTO: take the choice now
     {
-        if(g_usBackupValue == ucItem)
-        {
-            AwtoSourceClose();
-        }
-        else if(ucItem == _OSD_INPUT_AUTO)
-        {
-            AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
-            SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
-            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SELECTOR);
-            UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-#ifdef _AWTO_NEW_SETTINGS
-            AwtoNvCommitSel();                  // #151: the chosen input is stored at the gate ("Saving to memory")
-#endif
-        }
-        else
-        {
-            ucPort = (ucItem >= _OSD_INPUT_D0) ? (ucItem - _OSD_INPUT_D0 + _D0_INPUT_PORT) : _NO_INPUT_PORT;
-            if(ucPort == _NO_INPUT_PORT)
-            {
-                return;                         // not a port of this board: the selector stays up
-            }
-            if(AwtoPortCable(ucPort) == _FALSE)
-            {
-                AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: no cable on the chosen port: refused, the selector stays up
-                AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
-                return;
-            }
-            SET_FORCE_POW_SAV_STATUS(_FALSE);
-            SysSourceSwitchInputPort(ucPort);
-            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SELECTOR);
-            UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-            UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-#ifdef _AWTO_NEW_SETTINGS
-            AwtoNvCommitSel();                  // #151: the chosen input is stored at the gate ("Saving to memory")
-#endif
-        }
-#if(_DP_MST_SUPPORT == _ON)
-        if(g_usBackupValue != ucItem)
-        {
-            UserCommonInterfaceMstRx0Rx1switch(UserCommonInterfaceGetDpMstCapablePort());
-            RTDNVRamSaveOSDData();
-        }
-#endif
-        SET_OSD_STATE(_MENU_NONE);
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+        AwtoSourceTake(AWTO_SYS_BY_SELECTOR);
     }
+}
+
+//---- backlight bar (#132): UP / DOWN with a picture and nothing open. One card row: bar (OSD windows) + value. ----
+extern void osd_tc_bar_off(BYTE ucWin);
+#define AWTO_BL_ROW         AWTO_CARD_ROW0
+#define AWTO_BL_BAR_COL     1                   // bar: cells 1..AWTO_BL_VAL_COL - 2, value right of it
+#define AWTO_BL_VAL_COL     23
+#define AWTO_BL_VAL_W       4                   // "100%"
+#define AWTO_BL_MAX         100                 // registry brightness max (percent)
+#define AWTO_WIN_BL_EDGE    3                   // bar outline (accent), inside (surface), fill (accent): above the card windows 0..2
+#define AWTO_WIN_BL_IN      4
+#define AWTO_WIN_BL_FILL    5
+#define AWTO_BL_X0          ((WORD)AWTO_BL_BAR_COL * osd_cw)
+#define AWTO_BL_X1          ((WORD)(AWTO_BL_VAL_COL - 1) * osd_cw - 1)
+#define AWTO_BL_Y0          ((WORD)AWTO_BL_ROW * osd_rh + 3)
+#define AWTO_BL_Y1          ((WORD)(AWTO_BL_ROW + 1) * osd_rh - 4)
+#define AWTO_BL_INSET       3                   // fill inset from the outline, px (1 px edge, 2 px surface gap)
+
+static void AwtoBlDraw(void)                    // fill width and value text of the stored backlight
+{
+    BYTE ucV = (BYTE)AWTO_SET(BRIGHTNESS);
+    WORD usW = (AWTO_BL_X1 - AWTO_BL_X0 - 2 * AWTO_BL_INSET) * ucV / AWTO_BL_MAX;
+
+    if(usW == 0)
+    {
+        osd_tc_bar_off(AWTO_WIN_BL_FILL);
+    }
+    else
+    {
+        osd_tc_bar(AWTO_WIN_BL_FILL, AWTO_BL_X0 + AWTO_BL_INSET, AWTO_BL_Y0 + AWTO_BL_INSET, AWTO_BL_X0 + AWTO_BL_INSET + usW - 1,
+                   AWTO_BL_Y1 - AWTO_BL_INSET, AWTO_BAR_ACCENT);
+    }
+    AwtoFieldBegin();
+    AwtoPutNum(ucV, 1);
+    AwtoPutChar('%');
+    AwtoPutCol(AWTO_BL_VAL_W);
+    AwtoFieldEnd(AWTO_BL_ROW, AWTO_BL_VAL_COL, AWTO_T_STYLE_TEXT);
+}
+
+void AwtoBlKey(BYTE ucKey)                      // UP = brighter, DOWN = darker; the first press opens the bar
+{
+    extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
+
+    if(GET_OSD_STATE() != _MENU_HOTKEY_BACKLIGHT)
+    {
+        AwtoCardOpen(AWTO_CARD_ROW0 + 2, AWTO_CT_BACKLIGHT);
+        osd_tc_place(50, AWTO_BL_VPOS_PCT, GET_OSD_NVRAM_DOUBLE_SIZE());
+        osd_tc_bar(AWTO_WIN_BL_EDGE, AWTO_BL_X0, AWTO_BL_Y0, AWTO_BL_X1, AWTO_BL_Y1, AWTO_BAR_ACCENT);
+        osd_tc_bar(AWTO_WIN_BL_IN, AWTO_BL_X0 + 1, AWTO_BL_Y0 + 1, AWTO_BL_X1 - 1, AWTO_BL_Y1 - 1, AWTO_BAR_SURFACE);
+        AwtoTextLine(AWTO_BL_ROW, AWTO_T_STYLE_TEXT);
+        SET_OSD_STATE(_MENU_HOTKEY_BACKLIGHT);
+    }
+    set_put(AWTO_SET_BRIGHTNESS, AWTO_SET(BRIGHTNESS) + ((ucKey == _RIGHT_KEY_MESSAGE) ? AWTO_BL_KEY_STEP : -AWTO_BL_KEY_STEP), 1);
+    AwtoBlDraw();
+    AwtoCardShow();
+}
+
+void AwtoBlClose(void)                          // another key: the bar goes first (OsdDispDisableOsd commits the value)
+{
+    OsdDispDisableOsd();
 }
 
 // #139 console auto-open: once per episode, when the screen is ours to take (no menu / selector / logo / hold) and the
@@ -905,8 +985,16 @@ static void AwtoSyncConPoll(void)
     {
         return;
     }
-    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
-       (SysPowerGetPowerStatus() == _POWER_STATUS_OFF) || (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))
+    if(g_stAwtoSync.ucOpenReq == AWTO_SYNC_OPEN_KEY)    // #132 UP+DOWN wake: waits through the wake, only POWER off drops it
+    {
+        if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
+        {
+            g_stAwtoSync.ucOpenReq = 0;
+            return;
+        }
+    }
+    else if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
+            (SysPowerGetPowerStatus() == _POWER_STATUS_OFF) || (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))
     {
         g_stAwtoSync.ucOpenReq = 0;             // off, the selector's log pane shows it, or no screen
         return;
@@ -940,7 +1028,7 @@ static void AwtoSyncConPoll(void)
 // The auto-open request stays: at the settled mode AwtoSyncConPoll reopens it if display setting took the OSD.
 void AwtoBootConsole(void)
 {
-    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0))
+    if((g_stAwtoSync.ucOpenReq != AWTO_SYNC_OPEN_KEY) && ((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0)))
     {
         return;
     }

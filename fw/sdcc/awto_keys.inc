@@ -8,7 +8,8 @@
 #ifndef AWTO_KEY_HOLD
 #define AWTO_KEY_HOLD()                         0
 #endif
-// key ids = SDK key messages (menu.h MK_*); roles swapped (Dan 2026-11-08): AUTO = menu role (open / enter), MENU = exit role
+// key ids = SDK key messages (menu.h MK_*), test cmd 0x01..0x05 - 1. Inside the menu / selector (Dan 2026-11-08, kept #132):
+// AUTO = enter / take, MENU = back / cancel. Nothing open (#132): MENU opens the menu, AUTO = auto source select.
 #define AWTO_K_AUTO                             _MENU_KEY_MESSAGE
 #define AWTO_K_UP                               _RIGHT_KEY_MESSAGE
 #define AWTO_K_DOWN                             _LEFT_KEY_MESSAGE
@@ -41,8 +42,6 @@ static __xdata BYTE s_ucKeyId;
 static __xdata BYTE s_ucKeyFlags;               // AWTO_KF_*
 static __xdata WORD s_usKeyT0;                  // when it went down
 static __xdata WORD s_usKeyRep;                 // last REPEAT
-static __xdata WORD s_usKeyInfoAt;              // DOWN info pop-up opened (AwtoKeyNow)
-static __xdata BYTE s_ucKeyInfo;                // 1 = pop-up window running: closes AWTO_INFO_POPUP_MS after opening, keys do not move it
 static __xdata BYTE s_pucKeyQ[AWTO_KEY_Q_N];    // injected keys
 static __xdata BYTE s_ucKeyQHead;
 static __xdata BYTE s_ucKeyQN;
@@ -61,21 +60,10 @@ static BYTE AwtoKeyId(BYTE ucM)                 // single key mask -> id; AWTO_K
     }
 }
 
-static BYTE AwtoKeyInfoUp(void)                 // the DOWN info pop-up is inside its fixed time
-{
-    return ((s_ucKeyInfo != 0) && (GET_OSD_STATE() == _MENU_NONE) && ((WORD)(((WORD)AwtoMs()) - s_usKeyInfoAt) < AWTO_INFO_POPUP_MS)) ? 1 : 0;
-}
-
 static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a key: the SDK OSD timeout restarts (ACTIVE only)
 {
-    if(AwtoKeyInfoUp() != 0)
+    if(GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)  // #139 / #132: the selector's timer is its idle commit (AwtoSourceKey)
     {
-        return;                                 // the info pop-up keeps its own fixed close time
-    }
-    s_ucKeyInfo = 0;
-    if(GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)  // #139: the selector has no OSD timeout (sleep rule: AwtoSrcSleepArm)
-    {
-        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
         return;
     }
     if((GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
@@ -91,14 +79,11 @@ static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a 
     }
 }
 
-static void AwtoKeyNoOsd(BYTE ucK)              // nothing open: DOWN = input information pop-up (the selector opens on SOURCE only)
+static void AwtoKeyNoOsd(BYTE ucK)              // nothing open, a picture: UP / DOWN = backlight bar (#132; input info: menu Information page)
 {
-    if((ucK == AWTO_K_DOWN) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE) && (AwtoKeyInfoUp() == 0))
+    if(((ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN)) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
-        OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
-        ScalerTimerActiveTimerEvent(SEC(AWTO_INFO_POPUP_MS / 1000), _USER_TIMER_EVENT_OSD_DISABLE);
-        s_usKeyInfoAt = ((WORD)AwtoMs());
-        s_ucKeyInfo = 1;
+        AwtoBlKey(ucK);
     }
 }
 
@@ -120,7 +105,15 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         if(bRep == 0)                           // power saving: a key press (front or injected) wakes and is used up (#85)
         {
             SET_FORCE_POW_SAV_STATUS(_FALSE);
-            SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_KEY_WAKE);
+            if((ucEv & 0x7F) == AWTO_KEV_COMBO)
+            {
+                SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_KEY_CONSOLE);
+                g_stAwtoSync.ucOpenReq = AWTO_SYNC_OPEN_KEY;    // #132 q2: the console opens once awake (drawing in power saving resets the chip)
+            }
+            else
+            {
+                SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_KEY_WAKE);
+            }
         }
         return;
     }
@@ -163,17 +156,34 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         return;
     }
 #ifdef _AWTO_NEW_SETTINGS
-    if(menu_active() != 0)                      // awto menu: UP / DOWN repeat, SOURCE does nothing
+    if(menu_active() != 0)                      // awto menu: UP / DOWN repeat; SOURCE closes it from any page (#132, save rule of menu_close)
     {
-        if((ucK != AWTO_K_SOURCE) && ((bRep == 0) || (ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN)))
+        if((ucK == AWTO_K_SOURCE) && (bRep == 0))
+        {
+            menu_close();
+        }
+        else if((ucK != AWTO_K_SOURCE) && ((bRep == 0) || (ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN)))
         {
             menu_key(ucK);
         }
         return;
     }
 #endif
-    if(ucK == AWTO_K_SOURCE)                    // SOURCE: the input selector, with nothing open and the monitor on
+    if((GET_OSD_STATE() == _MENU_HOTKEY_BACKLIGHT) && (ucK != AWTO_K_UP) && (ucK != AWTO_K_DOWN))
     {
+        if(bRep != 0)
+        {
+            return;
+        }
+        AwtoBlClose();                          // #132: another key closes the bar (value stored), then acts as with nothing open
+    }
+    if(ucK == AWTO_K_SOURCE)                    // SOURCE: the input selector, with nothing open and the monitor on; in it: next item
+    {
+        if((bRep == 0) && (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE))
+        {
+            AwtoSourceKey(ucK);
+            return;
+        }
         if((bRep == 0) && (GET_OSD_STATE() == _MENU_NONE) && (SysPowerGetPowerStatus() != _POWER_STATUS_OFF)
 #ifdef _AWTO_NEW_SETTINGS
            && (g_ucAwtoMenuOn == 0)
@@ -186,10 +196,19 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     }
     ucMode = SysModeGetModeState();
 #ifdef _AWTO_NEW_SETTINGS
-    if((ucK == AWTO_K_AUTO) && (bRep == 0) && (GET_OSD_STATE() == _MENU_NONE) && (GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE) &&
-       ((ucMode == _MODE_STATUS_ACTIVE) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT)))
-    {
-        menu_open();
+    if(((ucK == AWTO_K_MENU) || (ucK == AWTO_K_AUTO)) && (GET_OSD_STATE() == _MENU_NONE) && (GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE))
+    {                                           // #132 nothing open: MENU = the awto menu, AUTO = auto source select
+        if((bRep == 0) && ((ucMode == _MODE_STATUS_ACTIVE) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT)))
+        {
+            if(ucK == AWTO_K_MENU)
+            {
+                menu_open();
+            }
+            else
+            {
+                AwtoSourceAuto(AWTO_SYS_BY_KEY_AUTO);
+            }
+        }
         return;
     }
 #endif
@@ -215,6 +234,9 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
             break;
         case _MENU_HOTKEY_SOURCE:
             AwtoSourceKey(ucK);
+            break;
+        case _MENU_HOTKEY_BACKLIGHT:            // only UP / DOWN get here (above: other keys closed it)
+            AwtoBlKey(ucK);
             break;
         default:                                // a Realtek menu state (built out, #120): close
             SET_OSD_STATE(_MENU_NONE);

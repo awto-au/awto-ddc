@@ -199,6 +199,9 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 16	2C	-	panel down (T4 / T5 done)
 16	2D	-	power off / saving called off
 16	2E	-	system machine started
+16	1C	-	AUTO key: auto source select
+16	1D	-	UP+DOWN in power saving: wake into the console
+16	1E	-	input selector: no key for {AWTO_SRC_IDLE_COMMIT_MS/1000} s (idle commit)
 17	01	-	power off
 17	02	-	power on
 17	03	-	power saving
@@ -258,3 +261,4 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 1B	17	-	SDK power switch: AC ON -> OFF
 1B	18	-	SDK power switch: NORMAL -> OFF
 1B	19	-	SDK power switch: NORMAL -> POWER SAVING
+1B	1A	-	UP+DOWN wake (console + backlight)

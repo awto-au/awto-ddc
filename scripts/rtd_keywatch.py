@@ -10,7 +10,8 @@ Default: MCU left RUNNING; reads scaler regs via F4/F5 (index/data) at ISP 0x4A 
 key bands from buttons.md. Press each physical button; the decoded key is printed when it changes.
 --halt: enter ISP (stops MCU) first — only if the running read returns nothing (then presses may not
 register, since the halted MCU is not scanning). --secs: watch duration (default 25).
-Reads only; no writes except the F4 index byte. Bands [fw] from docs/reversing/realtek-rtd/buttons.md.
+Reads only; no writes except the F4 index byte. Bands: fw/awto/inputs.tsv key0 / key1 rows (the firmware's table, lo <= ADC < hi);
+key masks: RL6449_Project.h AWTO_KM_<name>.
 Log: ./tmp/logs/rtd_keywatch.log
 """
 import os, sys, time
@@ -19,14 +20,25 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
 
-# (mask, source reg, lo, hi, label): the SDK-mask view of the bands (buttons.md section 2, #85); physical MENU = exit mask 0x10, AUTO = menu mask 0x02 (roles swapped, keys6)
-BANDS = [
-    (0x10, 0xFF09, 0xC0, 0xE0, "MENU"),
-    (0x02, 0xFF09, 0x70, 0x90, "AUTO"),
-    (0x04, 0xFF09, 0x28, 0x48, "UP"),
-    (0x20, 0xFF0A, 0x68, 0x88, "SOURCE"),
-    (0x08, 0xFF0A, 0x28, 0x48, "DOWN"),
-]
+ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
+ADC_REG = {"key0": 0xFF09, "key1": 0xFF0A}           # ladder A0 / A1 result cells (regdb ADC_A0 / ADC_A1)
+
+
+def load_bands(root=ROOT):
+    """(mask, source reg, lo, hi, name) per key row of fw/awto/inputs.tsv; mask = AWTO_KM_<name> (#132 q9: one table)."""
+    import re
+    hdr = (root / "fw/sdk/Project/Header/RL6449_Project.h").read_text(errors="replace")
+    km = {m.group(1): int(m.group(2), 0) for m in re.finditer(r"#define\s+AWTO_KM_(\w+)\s+(0x[0-9A-Fa-f]+)", hdr)}
+    out = []
+    for ln in (root / "fw/awto/inputs.tsv").read_text().splitlines():
+        f = ln.split("\t")
+        if ln.startswith("#") or len(f) < 6 or f[3] not in ADC_REG:
+            continue
+        out.append((km[f[0]], ADC_REG[f[3]], int(f[4], 0), int(f[5], 0), f[0]))
+    return out
+
+
+BANDS = load_bands()
 
 
 def decode(a0, a1):
@@ -38,7 +50,7 @@ def decode(a0, a1):
     return hits
 
 
-SDK_NAMES = [(0x20, "SOURCE"), (0x10, "MENU"), (0x08, "DOWN"), (0x04, "UP"), (0x02, "AUTO"), (0x01, "POWER")]    # left to right
+SDK_NAMES = [(b[0], b[4]) for b in BANDS] + [(0x01, "POWER")]    # inputs.tsv order = front left to right, then POWER
 MSG_NAMES = {0: "AUTO", 1: "UP", 2: "DOWN", 3: "MENU", 4: "SOURCE", 0xFF: "-"}
 KEY_SZ, LOG_N, HDR = 8, 16, 16
 POLL_S = 0.2        # a human presses <= ~5 keys/s and the ring holds 16: 0.2 s polls cannot lose an entry; one read = 6 blocks ~ 40 ms
@@ -50,13 +62,7 @@ def keys_of(mask):
 
 def band_hint(a0, a1):
     """Which ladder band the raw values fall in."""
-    h = []
-    for lo, hi, n in ((0xC0, 0xE0, "A0-MENU"), (0x70, 0x90, "A0-AUTO"), (0x28, 0x48, "A0-UP")):
-        if lo <= a0 < hi:
-            h.append(n)
-    for lo, hi, n in ((0x68, 0x88, "A1-SOURCE"), (0x28, 0x48, "A1-DOWN")):
-        if lo <= a1 < hi:
-            h.append(n)
+    h = [f"{'A0' if reg == 0xFF09 else 'A1'}-{n}" for _, reg, lo, hi, n in BANDS if lo <= (a0 if reg == 0xFF09 else a1) < hi]
     return ",".join(h) or "idle"
 
 
