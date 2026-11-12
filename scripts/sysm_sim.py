@@ -3,7 +3,8 @@
 
 usage: AWTO_SIM_CORE=fast sysm_sim.py BIN MAP [--tree DIR] [--mode 1080p60] [--report]
 Scenario (dw8051 core): cold boot -> ACTIVE; POWER off / on (test cmd 0x3E); POWER off during display setting; switch to D3
-(test cmd 0x33, no source) and back to D2 (0x32); signal lost (L1 hold) and back; power saving by DDC/CI VCP D6 = 4; SOURCE-key wake.
+(test cmd 0x33, no source) and back to D2 (0x32); signal lost (L1 hold) and back; power saving by DDC/CI VCP D6 = 4; SOURCE-key wake;
+unsupported timing (UserCommonInterfaceCheckNoSupport forced true, D3 -> D2): NO SUPPORT kept, then the OSD's power saving (SDK path).
 FAIL (gate):
 - a firmware write that changes the power status / power target (g_stPowerInfo) or the mode state / mode reset target
   (g_stModeInfo) without g_ucAwtoSysOwn = 1 (after the machine's init);
@@ -32,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sysm_sim.log"
 POWER_KEY, K_SOURCE, SEL_D2, SEL_D3 = 0x3E, 0x05, 0x32, 0x33     # test cmds (awto_testcmd.inc)
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                        # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
-MODE_DS, MODE_ACTIVE, MODE_NOSIGNAL, MODE_PS = 2, 3, 5, 6
+MODE_DS, MODE_ACTIVE, MODE_NOSUPPORT, MODE_NOSIGNAL, MODE_PS = 2, 3, 4, 5, 6
 STATE_MODE = {"AC ON": 7, "OFF": 7, "INITIAL": 0, "SEARCH": 1, "DISPLAY SETTING": 2, "ACTIVE": 3, "FAST SWITCH": 3, "HOLD L1": 3,
               "NO SUPPORT": 4, "NO SIGNAL": 5, "POWER SAVING": 6, "WAKE SEARCH": 6}       # POWER DOWN keeps the mode before it
 BOOT_INSTR = 160_000_000
@@ -40,6 +41,8 @@ BOOT_INSTR = 160_000_000
 # no signal after a switch to an empty port: fixed-port HDMI search time 2 s (SDK) + 1 s judge timer, x1.25 -> 4 s;
 # wake: SDK auto search after PS_TO_NORMAL, sim 4.2 s seen (s2-2) x1.25 -> 5.5 s
 OFF_MS, ON_MS, SETTLE_MS, HOLD_MS, PS_MS, NOSIG_MS, WAKE_MS, T6_MS = 1500, 3000, 1000, 1500, 3000, 4000, 5500, 1300
+# no support: hold check 2.5 s (< the OSD's 3 s message); PS = message 3 s + power-saving message 2 s + PS_MS, x1.25 -> 10 s
+NOSUP_HOLD_MS, NOSUP_PS_MS = 2500, 10000
 STEP = 20_000
 OWNED = ("SET_MODE_STATE(", "SET_POWER_STATUS(", "SET_TARGET_POWER_STATUS(", "SET_MODE_RESET_TARGET(")
 OLD = ("SysPowerHandler", "SysJudgeHandler", "SysModeHandler")
@@ -215,6 +218,27 @@ class Run:
         self.bus.wait(SETTLE_MS / 1000)
         wk = self.ring_lines("wake")
         self.check(any("power on requested by front key in power saving" in x for x in wk), "wake requested by the front key (logged)")
+        self.no_support()
+
+    def no_support(self):
+        """SDK no-support path (hidden customer branches issue): no-support timer -> NO SUPPORT, no search loop, then the OSD's
+        NO SUPPORT message (3 s) -> power-saving message (2 s) -> power-saving request. Last phase: the patch is not undone."""
+        if "_UserCommonInterfaceCheckNoSupport" not in self.m.sym:
+            self.check(False, "no support: UserCommonInterfaceCheckNoSupport in the map")
+            return
+        self.m.patch_const("UserCommonInterfaceCheckNoSupport", 1)
+        self.step("no support", lambda: self.cmd(SEL_D3), lambda: self.bus.mode_state() == MODE_NOSIGNAL, NOSIG_MS,
+                  "no support: switch to D3 first (NO SIGNAL)")
+        self.ring_lines("no support: D3")
+        self.step("no support", lambda: self.cmd(SEL_D2), lambda: self.bus.mode_state() == MODE_NOSUPPORT, ON_MS,
+                  "unsupported timing on D2: NO SUPPORT")
+        held, _ = self.until(lambda: self.bus.mode_state() != MODE_NOSUPPORT, NOSUP_HOLD_MS)
+        self.check(not held, f"NO SUPPORT kept {NOSUP_HOLD_MS} ms (no search loop)")
+        # signal still on the port: the SDK takes fake power saving (mode POWER SAVING, power status kept NORMAL)
+        self.step("no support PS", None, lambda: self.bus.mode_state() == MODE_PS, NOSUP_PS_MS, "NO SUPPORT -> OSD power saving (mode)")
+        ns = self.ring_lines("no support")
+        self.check(any("-> NO SUPPORT" in x for x in ns), "no support: system transition into NO SUPPORT logged")
+        self.check(not any("NO SUPPORT -> SEARCH" in x for x in ns), "no support: no NO SUPPORT -> SEARCH loop")
 
     def judge(self):
         ev = self.events
