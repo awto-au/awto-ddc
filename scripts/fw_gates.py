@@ -97,6 +97,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
+    g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     if header(tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]

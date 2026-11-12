@@ -34,7 +34,8 @@ import sync_log as L  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wake_sim.log"
 PWR_NORMAL, PWR_SAVING, MODE_NOSIGNAL = 2, 3, 5     # Global.h EnumPowerStatus, MODE_NAMES
-D2_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE69, 0xBADC, 0x000600
+D2_PIN, D3_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE2C, 0xFE69, 0xBADC, 0x000600
+D1_PINS = (0xFE33,)    # FE33..FE35: D1 cable-status cells (deadport_sim.py NOCABLE_D1)
 PS_POLL_MS = 5          # RL6449_Project.h AWTO_PS_POLL_MS
 IOSC_KHZ = 28_000       # freq-detect reference in power saving (_INTERNAL_OSC_XTAL)
 # Event -> wake line (firmware ms). Cable: detection every AWTO_SLOW_MS 10 ms + SDK 10 ms debounce re-read + 1 PS pass
@@ -289,6 +290,7 @@ def main():
         if not r.bus.run_until_mode(3):
             r.check(False, "boot to ACTIVE"); return 1
         r.bus.dbg_link_on()
+        r.m.wr(D3_PIN, b"\x00")                     # D3 cabled, its source asleep: a fixed port WITHOUT cable wakes to auto search (#84)
         r.cmd(0x33, 0.2)                            # D3, fixed port: no source there
         t0 = r.t2()
         while r.bus.mode_state() != MODE_NOSIGNAL and (r.t2() - t0) & 0xFFFF < 5000:
@@ -327,7 +329,16 @@ def main():
             say("  SKIP TMDS clock cases: image without AwtoPsTmdsLive (pre-tmds image)")
         else:
             r.fd.set_clock(r.m, 0x71, None)         # freq detector model on, no clock on D2 / D3
+            d1 = r.m.rd(D1_PINS[0], 3)               # no cable on D3; D1 / D2 out too, else the #84 guard wakes the dead fixed port
+            r.m.wr(D3_PIN, b"\x01")
+            r.m.wr(D2_PIN, b"\x01")
+            r.m.wr(D1_PINS[0], bytes([0, 1, 1]))     # deadport_sim NOCABLE_D1 (cable status = !bD1_CONNECT)
+            r.watch(500)                            # the unplug edges are consumed awake
             r.wake_case("D3 TMDS clock, no cable on D3", lambda: r.fd.set_clock(r.m, 0x72, 148_500), None, 0)
+            r.m.wr(D2_PIN, b"\x00")
+            r.m.wr(D3_PIN, b"\x00")
+            r.m.wr(D1_PINS[0], bytes(d1))
+            r.watch(500)
             r.fd.set_clock(r.m, 0x72, None)
             r.wake_case("D2 TMDS clock", lambda: r.fd.set_clock(r.m, 0x71, 148_500), "D2 wake by TMDS clock, about 148.",
                         BOUND_TMDS_MS)
