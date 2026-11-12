@@ -1,38 +1,30 @@
 {
-  "_doc": "Dan's desktop layout on the test host (gdctl logical monitors). scripts/desk_layout.py restores it for the monitors present; 'off' connectors are never put on the desktop. Source: dev.log 2026-11-08T03:45 (Dan's arrangement of 2026-11-07T13:06).",
+  "_doc": "Dan's desktop layout on the test host (gdctl logical monitors). scripts/desk_layout.py restores it for the monitors present; 'off' connectors are never put on the desktop. Source: Dan 2026-11-12: Philips DP-2 removed (it caused issues during tests); one row HDMI-2 | DP-4 | HDMI-3.",
   "monitors": [
-    {
-      "connector": "DP-2",
-      "serial": "UK52307000611",
-      "mode": "3840x2160@59.997",
-      "x": 0,
-      "y": 0
-    },
     {
       "connector": "HDMI-2",
       "serial": "AWT26110002",
       "mode": "3840x2160@60.000",
       "x": 0,
-      "y": 2160
+      "y": 0
     },
     {
       "connector": "DP-4",
       "serial": "AWT26110003",
       "mode": "3840x2160@60.000",
       "x": 3840,
-      "y": 2160
+      "y": 0
     },
     {
       "connector": "HDMI-3",
       "serial": "AWT26110001",
       "mode": "3840x2160@60.000",
       "x": 7680,
-      "y": 2160
+      "y": 0
     }
   ],
   "primary": [
     "DP-4",
-    "DP-2",
     "HDMI-3",
     "HDMI-2"
   ],
