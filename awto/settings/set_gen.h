@@ -5,9 +5,9 @@
 
 #define SET_COUNT   110u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x7AC0u    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_SCHEMA  0x0273u    /* CRC-16 of the NV rows (id, type, min, max) */
 #define SET_NV_COUNT 89u
-#define SET_TEXT_LEN 1879u
+#define SET_TEXT_LEN 1886u
 #define SET_AUX_MAX 52u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
@@ -155,17 +155,19 @@
 #define AP_INPUT_SELECT         16u
 #define AP_KEY_TEST             17u
 #define AP_MSG_LOG              18u
-#define AP_OSD_FONT             19u
-#define AP_OSD_POS              20u
-#define AP_OSD_SCALE            21u
-#define AP_OSD_TRANSPARENCY     22u
-#define AP_OVERSCAN             23u
-#define AP_POWER                24u
-#define AP_POWER_MODE           25u
-#define AP_SDK_LANGUAGE         26u
-#define AP_SDK_SYS              27u
-#define AP_SEARCH_TIME          28u
-#define AP_USER_RGB             29u
+#define AP_MUTE                 19u
+#define AP_OSD_FONT             20u
+#define AP_OSD_POS              21u
+#define AP_OSD_SCALE            22u
+#define AP_OSD_TRANSPARENCY     23u
+#define AP_OVERSCAN             24u
+#define AP_POWER                25u
+#define AP_POWER_MODE           26u
+#define AP_SDK_LANGUAGE         27u
+#define AP_SDK_SYS              28u
+#define AP_SEARCH_TIME          29u
+#define AP_USER_RGB             30u
+#define AP_VOLUME               31u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -186,6 +188,7 @@ void set_ap_input_mode(uint8_t id, int16_t v);
 void set_ap_input_select(uint8_t id, int16_t v);
 void set_ap_key_test(uint8_t id, int16_t v);
 void set_ap_msg_log(uint8_t id, int16_t v);
+void set_ap_mute(uint8_t id, int16_t v);
 void set_ap_osd_font(uint8_t id, int16_t v);
 void set_ap_osd_pos(uint8_t id, int16_t v);
 void set_ap_osd_scale(uint8_t id, int16_t v);
@@ -197,5 +200,6 @@ void set_ap_sdk_language(uint8_t id, int16_t v);
 void set_ap_sdk_sys(uint8_t id, int16_t v);
 void set_ap_search_time(uint8_t id, int16_t v);
 void set_ap_user_rgb(uint8_t id, int16_t v);
+void set_ap_volume(uint8_t id, int16_t v);
 
 #endif

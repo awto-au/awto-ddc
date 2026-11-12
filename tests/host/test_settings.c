@@ -60,7 +60,7 @@ static int ap_calls, last_ap_id, last_ap_v;
 #define AP(n) void set_ap_##n(uint8_t id, int16_t v) { ap_calls++; last_ap_id = id; last_ap_v = v; }
 AP(aspect) AP(backlight) AP(black_level) AP(colour_temp) AP(contrast) AP(debug_msgs) AP(debug_popup) AP(dp_edid)
 AP(dp_version) AP(factory_menu) AP(gamma) AP(input_mode) AP(input_select) AP(msg_log) AP(osd_pos) AP(osd_scale)
-AP(osd_transparency) AP(overscan) AP(power) AP(power_mode) AP(sdk_language) AP(search_time) AP(user_rgb) AP(vendor_menu)
+AP(mute) AP(volume) AP(osd_transparency) AP(overscan) AP(power) AP(power_mode) AP(sdk_language) AP(search_time) AP(user_rgb) AP(vendor_menu)
 static int injected = -1, held_mask, held_ms;
 void key_inject(uint8_t k) { injected = k; menu_key(k); }   /* the firmware routes the key back into menu_key */
 void key_hold(uint8_t mask, uint16_t ms) { held_mask = mask; held_ms = ms; }
@@ -162,6 +162,11 @@ int main(int argc, char **argv)
     CHECK(vcp_get(0x10, &cur, &max, &type) && cur == 44 && max == 100, "vcp 0x10 %u/%u", cur, max);
     CHECK(vcp_set(0x10, 66) && set_get(SET_ID_BRIGHTNESS) == 66, "vcp set 0x10");
     CHECK(vcp_get(0x60, &cur, &max, &type) && cur == 0x11, "vcp 0x60 = D2 HDMI 0x11: %x", cur);
+    CHECK(vcp_get(0x62, &cur, &max, &type) && cur == 50 && max == 100, "vcp 0x62 volume %u/%u", cur, max);
+    CHECK(vcp_set(0x62, 30) && set_get(SET_ID_VOLUME) == 30, "vcp 0x62 set");
+    CHECK(vcp_set(0x8D, 1) && set_get(SET_ID_MUTE) == 1, "vcp 0x8D = 1 muted -> option On");
+    CHECK(vcp_get(0x8D, &cur, &max, &type) && cur == 1, "vcp 0x8D reads 1 muted: %u", cur);
+    CHECK(vcp_set(0x8D, 2) && set_get(SET_ID_MUTE) == 0, "vcp 0x8D = 2 unmuted -> option Off");
     CHECK(vcp_set(0x60, 0x0F) && set_get(SET_ID_INPUT) == 0, "vcp 0x60 D1");
     CHECK(vcp_set(0x60, 0x33) && set_get(SET_ID_INPUT) == 0, "vcp 0x60 unknown value ignored");
     vcp_set(VCP_SEL, SET_ID_PANEL_T6);

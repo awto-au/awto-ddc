@@ -12,9 +12,9 @@ static const struct setting __code tab[SET_COUNT] = {
     {  6, 2, 4,  0, 0xA1, 0, 4, 1, 2, 0x87, 0, 30u, 0xFFFFu},  /* sharpness */
     {  7, 1, 0,  1, 0x83, 0, 4, 1, 0, 0xF2, 13, 40u, 0x002Eu},  /* gamma */
     {  8, 1, 0,  1, 0x83, 0, 5, 1, 2, 0x14, 5, 66u, 0x004Eu},  /* colour_temp */
-    {  9, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x16, 29, 112u, 0xFFFFu},  /* user_red */
-    { 10, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x18, 29, 121u, 0xFFFFu},  /* user_green */
-    { 11, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x1A, 29, 132u, 0xFFFFu},  /* user_blue */
+    {  9, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x16, 30, 112u, 0xFFFFu},  /* user_red */
+    { 10, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x18, 30, 121u, 0xFFFFu},  /* user_green */
+    { 11, 2, 4,  1, 0x83, 0, 255, 1, 128, 0x1A, 30, 132u, 0xFFFFu},  /* user_blue */
     { 12, 1, 0,  1, 0xA1, 0, 5, 1, 0, 0x00, 0, 142u, 0x009Cu},  /* colour_effect */
     { 25, 1, 0,  1, 0x21, 0, 5, 1, 0, 0x00, 0, 193u, 0x00CDu},  /* colour_demo */
     { 26, 1, 0,  1, 0xA1, 0, 1, 1, 1, 0x00, 0, 244u, 0x00F8u},  /* pcm */
@@ -34,7 +34,7 @@ static const struct setting __code tab[SET_COUNT] = {
     { 23, 2, 4,  2, 0xA1, 0, 100, 1, 50, 0x00, 0, 380u, 0xFFFFu},  /* sa_magenta_hue */
     { 24, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 392u, 0xFFFFu},  /* sa_magenta_sat */
     { 30, 1, 0,  3, 0x81, 0, 5, 1, 0, 0xFE, 1, 404u, 0x01A1u},  /* aspect */
-    { 31, 0, 0,  3, 0x81, 0, 1, 1, 1, 0xFF, 23, 449u, 0xFFFFu},  /* overscan */
+    { 31, 0, 0,  3, 0x81, 0, 1, 1, 1, 0xFF, 24, 449u, 0xFFFFu},  /* overscan */
     { 32, 1, 0,  3, 0xA1, 0, 3, 1, 0, 0x00, 0, 458u, 0x01D1u},  /* disp_rotate */
     { 33, 1, 0,  3, 0xA1, 0, 2, 1, 0, 0x00, 0, 478u, 0x01E6u},  /* latency */
     { 34, 0, 0,  3, 0x20, 0, 1, 1, 0, 0x00, 0, 499u, 0xFFFFu},  /* freeze */
@@ -44,10 +44,10 @@ static const struct setting __code tab[SET_COUNT] = {
     { 37, 0, 0,  4, 0x29, 0, 1, 1, 1, 0xED, 0, 565u, 0xFFFFu},  /* d2_enable */
     { 38, 0, 0,  4, 0x29, 0, 1, 1, 1, 0xEE, 0, 580u, 0xFFFFu},  /* d3_enable */
     { 39, 1, 0,  4, 0x21, 0, 5, 1, 3, 0xFC, 0, 595u, 0x0260u},  /* search_order */
-    { 40, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 28, 662u, 0xFFFFu},  /* search_hdmi_ms */
-    { 41, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 28, 674u, 0xFFFFu},  /* search_dp_ms */
-    { 42, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 28, 684u, 0xFFFFu},  /* nocable_hdmi_ms */
-    { 43, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 28, 698u, 0xFFFFu},  /* nocable_dp_ms */
+    { 40, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 29, 662u, 0xFFFFu},  /* search_hdmi_ms */
+    { 41, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 29, 674u, 0xFFFFu},  /* search_dp_ms */
+    { 42, 2, 2,  4, 0x09, 500, 10000, 100, 2000, 0x00, 29, 684u, 0xFFFFu},  /* nocable_hdmi_ms */
+    { 43, 2, 2,  4, 0x09, 1000, 10000, 100, 3000, 0x00, 29, 698u, 0xFFFFu},  /* nocable_dp_ms */
     { 44, 0, 0,  5, 0x03, 0, 1, 1, 1, 0xE6, 0, 710u, 0xFFFFu},  /* fast_switch */
     { 45, 0, 0,  5, 0x41, 0, 1, 1, 1, 0xE7, 0, 722u, 0xFFFFu},  /* keep_idle_rx */
     { 46, 0, 0,  5, 0x21, 0, 1, 1, 0, 0x00, 0, 739u, 0xFFFFu},  /* kvm_prefill */
@@ -60,22 +60,22 @@ static const struct setting __code tab[SET_COUNT] = {
     { 54, 1, 0,  6, 0xA1, 0, 1, 1, 0, 0x00, 0, 906u, 0x0398u},  /* colour_format */
     { 55, 0, 0,  6, 0xA1, 0, 1, 1, 0, 0x00, 0, 928u, 0xFFFFu},  /* clone */
     { 56, 0, 0,  6, 0xC1, 0, 1, 1, 1, 0x00, 0, 934u, 0xFFFFu},  /* ddcci */
-    { 75, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xF6, 24, 941u, 0xFFFFu},  /* pwr_l1_en */
-    { 76, 2, 2,  7, 0x21, 0, 30000, 100, 0, 0xF7, 24, 958u, 0xFFFFu},  /* pwr_l1_ms */
-    { 77, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xF8, 24, 967u, 0xFFFFu},  /* pwr_l2_en */
-    { 78, 2, 3,  7, 0x21, 0, 3600, 10, 60, 0xF9, 24, 980u, 0xFFFFu},  /* pwr_l2_s */
-    { 79, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xFA, 24, 989u, 0xFFFFu},  /* pwr_l3_en */
-    { 80, 2, 3,  7, 0x21, 0, 7200, 30, 600, 0xFB, 24, 1003u, 0xFFFFu},  /* pwr_l3_s */
-    { 81, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 24, 1012u, 0xFFFFu},  /* wake_d1 */
-    { 82, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 24, 1023u, 0xFFFFu},  /* wake_d2 */
-    { 83, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 24, 1034u, 0xFFFFu},  /* wake_d3 */
+    { 75, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xF6, 25, 941u, 0xFFFFu},  /* pwr_l1_en */
+    { 76, 2, 2,  7, 0x21, 0, 30000, 100, 0, 0xF7, 25, 958u, 0xFFFFu},  /* pwr_l1_ms */
+    { 77, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xF8, 25, 967u, 0xFFFFu},  /* pwr_l2_en */
+    { 78, 2, 3,  7, 0x21, 0, 3600, 10, 60, 0xF9, 25, 980u, 0xFFFFu},  /* pwr_l2_s */
+    { 79, 0, 0,  7, 0x21, 0, 1, 1, 1, 0xFA, 25, 989u, 0xFFFFu},  /* pwr_l3_en */
+    { 80, 2, 3,  7, 0x21, 0, 7200, 30, 600, 0xFB, 25, 1003u, 0xFFFFu},  /* pwr_l3_s */
+    { 81, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 25, 1012u, 0xFFFFu},  /* wake_d1 */
+    { 82, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 25, 1023u, 0xFFFFu},  /* wake_d2 */
+    { 83, 0, 0,  7, 0x21, 0, 1, 1, 1, 0x00, 25, 1034u, 0xFFFFu},  /* wake_d3 */
     { 57, 2, 3,  8, 0x81, 0, 120, 5, 30, 0xEA, 0, 1045u, 0xFFFFu},  /* osd_timeout */
-    { 58, 2, 1,  8, 0x83, 0, 100, 1, 50, 0x00, 20, 1058u, 0xFFFFu},  /* osd_hpos */
-    { 59, 2, 1,  8, 0x83, 0, 100, 1, 50, 0x00, 20, 1074u, 0xFFFFu},  /* osd_vpos */
-    { 60, 1, 0,  8, 0x83, 0, 1, 1, 0, 0xF4, 21, 1090u, 0x044Cu},  /* osd_scale */
-    {106, 1, 0,  8, 0x03, 0, 1, 1, 0, 0x00, 19, 1106u, 0x045Cu},  /* osd_font */
-    { 61, 2, 1,  8, 0x83, 0, 100, 1, 0, 0x00, 22, 1130u, 0xFFFFu},  /* osd_transparency */
-    { 62, 1, 0,  8, 0x81, 0, 1, 1, 0, 0x00, 26, 1143u, 0x048Du},  /* language */
+    { 58, 2, 1,  8, 0x83, 0, 100, 1, 50, 0x00, 21, 1058u, 0xFFFFu},  /* osd_hpos */
+    { 59, 2, 1,  8, 0x83, 0, 100, 1, 50, 0x00, 21, 1074u, 0xFFFFu},  /* osd_vpos */
+    { 60, 1, 0,  8, 0x83, 0, 1, 1, 0, 0xF4, 22, 1090u, 0x044Cu},  /* osd_scale */
+    {106, 1, 0,  8, 0x03, 0, 1, 1, 0, 0x00, 20, 1106u, 0x045Cu},  /* osd_font */
+    { 61, 2, 1,  8, 0x83, 0, 100, 1, 0, 0x00, 23, 1130u, 0xFFFFu},  /* osd_transparency */
+    { 62, 1, 0,  8, 0x81, 0, 1, 1, 0, 0x00, 27, 1143u, 0x048Du},  /* language */
     { 63, 1, 0,  8, 0xA1, 0, 3, 1, 0, 0x00, 0, 1183u, 0x04ABu},  /* osd_rotate */
     { 67, 2, 2,  9, 0x49, 0, 100, 1, 10, 0x00, 0, 1208u, 0xFFFFu},  /* panel_t1 */
     { 68, 2, 2,  9, 0x49, 0, 1000, 10, 250, 0x00, 0, 1220u, 0xFFFFu},  /* panel_t2 */
@@ -91,31 +91,31 @@ static const struct setting __code tab[SET_COUNT] = {
     { 87, 3, 0, 10, 0x00, 0, 1, 1, 0, 0x00, 8, 1363u, 0xFFFFu},  /* debug_popup */
     {104, 3, 0, 10, 0x00, 0, 1, 1, 0, 0x00, 17, 1376u, 0xFFFFu},  /* key_test */
     {105, 3, 0, 10, 0x00, 0, 1, 1, 0, 0x00, 14, 1385u, 0xFFFFu},  /* gpio_test */
-    { 88, 2, 1, 11, 0xA1, 0, 100, 1, 50, 0x62, 0, 1397u, 0xFFFFu},  /* volume */
-    { 89, 0, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1404u, 0xFFFFu},  /* mute */
-    { 90, 0, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1409u, 0xFFFFu},  /* audio_standalone */
-    { 91, 1, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1421u, 0x059Au},  /* audio_source */
-    {  4, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x04, 9, 1449u, 0xFFFFu},  /* factory_reset */
-    {102, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x08, 4, 1463u, 0xFFFFu},  /* colour_reset */
-    {103, 1, 0,  7, 0x02, 0, 4, 1, 0, 0xD6, 25, 1476u, 0x05CFu},  /* power_mode */
-    { 92, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x00, 12, 1519u, 0xFFFFu},  /* factory_menu */
-    { 95, 1, 0, 14, 0x10, 0, 2, 1, 0, 0x00, 0, 1532u, 0x0602u},  /* info_input */
-    { 96, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1560u, 0xFFFFu},  /* info_hres */
-    { 97, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1569u, 0xFFFFu},  /* info_vres */
-    { 98, 2, 6, 14, 0x10, 0, 2400, 1, 0, 0x00, 0, 1578u, 0xFFFFu},  /* info_vfreq */
-    { 99, 2, 0, 14, 0x10, 0, 15, 1, 0, 0x00, 0, 1585u, 0xFFFFu},  /* info_mode */
-    {100, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1596u, 0xFFFFu},  /* info_loop */
-    {101, 2, 0, 14, 0x10, 0, 32767, 1, 0, 0x00, 0, 1609u, 0xFFFFu},  /* info_schema */
-    {107, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1625u, 0xFFFFu},  /* info_hfreq */
-    {108, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1632u, 0xFFFFu},  /* info_pclk */
-    {109, 1, 0, 14, 0x10, 0, 1, 1, 0, 0x00, 0, 1644u, 0x0671u},  /* info_hdcp */
-    {110, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1656u, 0xFFFFu},  /* sync_console */
-    {111, 0, 0, 13, 0x81, 0, 1, 1, 1, 0x00, 27, 1673u, 0xFFFFu},  /* power_on */
-    {112, 2, 0, 13, 0xC1, 1, 4, 1, 4, 0x00, 27, 1682u, 0xFFFFu},  /* dp_lanes */
-    {113, 2, 0, 13, 0xC1, 0, 95, 1, 75, 0x00, 27, 1691u, 0xFFFFu},  /* dp_irq_10us */
-    {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 27, 1709u, 0xFFFFu},  /* ssc */
-    {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 27, 1725u, 0xFFFFu},  /* panel_hours */
-    {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 27, 1737u, 0xFFFFu},  /* panel_min */
+    { 88, 2, 1, 11, 0x83, 0, 100, 1, 50, 0x62, 31, 1397u, 0xFFFFu},  /* volume */
+    { 89, 1, 0, 11, 0x83, 0, 1, 1, 0, 0x8D, 19, 1404u, 0x0581u},  /* mute */
+    { 90, 0, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1416u, 0xFFFFu},  /* audio_standalone */
+    { 91, 1, 0, 11, 0xA1, 0, 1, 1, 0, 0x00, 0, 1428u, 0x05A1u},  /* audio_source */
+    {  4, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x04, 9, 1456u, 0xFFFFu},  /* factory_reset */
+    {102, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x08, 4, 1470u, 0xFFFFu},  /* colour_reset */
+    {103, 1, 0,  7, 0x02, 0, 4, 1, 0, 0xD6, 26, 1483u, 0x05D6u},  /* power_mode */
+    { 92, 3, 0, 12, 0x00, 0, 1, 1, 0, 0x00, 12, 1526u, 0xFFFFu},  /* factory_menu */
+    { 95, 1, 0, 14, 0x10, 0, 2, 1, 0, 0x00, 0, 1539u, 0x0609u},  /* info_input */
+    { 96, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1567u, 0xFFFFu},  /* info_hres */
+    { 97, 2, 0, 14, 0x10, 0, 8192, 1, 0, 0x00, 0, 1576u, 0xFFFFu},  /* info_vres */
+    { 98, 2, 6, 14, 0x10, 0, 2400, 1, 0, 0x00, 0, 1585u, 0xFFFFu},  /* info_vfreq */
+    { 99, 2, 0, 14, 0x10, 0, 15, 1, 0, 0x00, 0, 1592u, 0xFFFFu},  /* info_mode */
+    {100, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1603u, 0xFFFFu},  /* info_loop */
+    {101, 2, 0, 14, 0x10, 0, 32767, 1, 0, 0x00, 0, 1616u, 0xFFFFu},  /* info_schema */
+    {107, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1632u, 0xFFFFu},  /* info_hfreq */
+    {108, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1639u, 0xFFFFu},  /* info_pclk */
+    {109, 1, 0, 14, 0x10, 0, 1, 1, 0, 0x00, 0, 1651u, 0x0678u},  /* info_hdcp */
+    {110, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1663u, 0xFFFFu},  /* sync_console */
+    {111, 0, 0, 13, 0x81, 0, 1, 1, 1, 0x00, 28, 1680u, 0xFFFFu},  /* power_on */
+    {112, 2, 0, 13, 0xC1, 1, 4, 1, 4, 0x00, 28, 1689u, 0xFFFFu},  /* dp_lanes */
+    {113, 2, 0, 13, 0xC1, 0, 95, 1, 75, 0x00, 28, 1698u, 0xFFFFu},  /* dp_irq_10us */
+    {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 28, 1716u, 0xFFFFu},  /* ssc */
+    {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 28, 1732u, 0xFFFFu},  /* panel_hours */
+    {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 28, 1744u, 0xFFFFu},  /* panel_min */
 };
 
 static const uint8_t __code id2idx[117] = {
@@ -148,16 +148,16 @@ static const char __code txt[] =
     "Tamzen\0""Transparency\0""Realtek menu language\0""English\0""Chinese-T\0""Menu rotate\0""0\0""90\0""270\0"
     "180\0""T1 VDD rise\0""T2 VDD to link\0""T3 video to BL\0""T3 own pattern\0""T4 BL to link off\0"
     "T5 link to VDD off\0""T6 off to on\0""BL to PWM\0""Debug link\0""Debug messages\0""Message log\0"
-    "Debug pop-up\0""Key test\0""GPIO inputs\0""Volume\0""Mute\0""Stand alone\0""Audio source\0""Analog\0"
-    "Digital\0""Factory reset\0""Colour reset\0""Power mode\0""On\0""Standby\0""Suspend\0""Off\0""Off hard\0"
-    "Factory menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0""V freq\0""Mode state\0"
-    "Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0""Sync log console\0"
-    "Power on\0""DP lanes\0""DP IRQ HPD x10 us\0""Spread spectrum\0""Panel hours\0""Panel minutes\0""Picture\0"
-    "Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0"
-    "Debug\0""Audio\0""System\0""Service\0""Information\0";
+    "Debug pop-up\0""Key test\0""GPIO inputs\0""Volume\0""Mute\0""Off\0""On\0""Stand alone\0""Audio source\0"
+    "Analog\0""Digital\0""Factory reset\0""Colour reset\0""Power mode\0""On\0""Standby\0""Suspend\0""Off\0"
+    "Off hard\0""Factory menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0""V freq\0"
+    "Mode state\0""Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0"
+    "Sync log console\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0""Spread spectrum\0""Panel hours\0"
+    "Panel minutes\0""Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0"
+    "Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0""Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
-static const uint8_t __code vopt[14][3] = {
+static const uint8_t __code vopt[16][3] = {
     {5, 0, 0x08},
     {5, 1, 0x06},
     {5, 2, 0x05},
@@ -167,6 +167,8 @@ static const uint8_t __code vopt[14][3] = {
     {32, 0, 0x0F},
     {32, 1, 0x11},
     {32, 2, 0x12},
+    {86, 0, 0x02},
+    {86, 1, 0x01},
     {91, 0, 0x01},
     {91, 1, 0x02},
     {91, 2, 0x03},
@@ -174,14 +176,14 @@ static const uint8_t __code vopt[14][3] = {
     {91, 4, 0x05},
 };
 
-/* DDC/CI capabilities (344 chars), from the vcp column; read by set_caps_at only */
+/* DDC/CI capabilities (354 chars), from the vcp column; read by set_caps_at only */
 static const char __code caps[] =
     "(prot(monitor)type(LCD)model(awto-mon)cmds(01 02 03 0C F3)vcp(02 04 08 10 12 14(08 06 05 04 01 0B) 1"
-    "6 18 1A 60(0F 11 12) 62 87 C8 C9 D6(01 02 03 04 05) DF E0 E1 E2 E3 E4 E5 E6 E7 EA EB EC ED EE EF(00 "
-    "01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 FA FB FC(00 01 02 03 04 05) FD(00 01"
-    " 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
+    "6 18 1A 60(0F 11 12) 62 87 8D(02 01) C8 C9 D6(01 02 03 04 05) DF E0 E1 E2 E3 E4 E5 E6 E7 EA EB EC ED"
+    " EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 FA FB FC(00 01 02 03 04 05"
+    ") FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
 
-static const uint8_t __code vcode[35][2] = {
+static const uint8_t __code vcode[36][2] = {
     {0x04, 89},
     {0x08, 90},
     {0x10, 0},
@@ -193,6 +195,7 @@ static const uint8_t __code vcode[35][2] = {
     {0x60, 32},
     {0x62, 85},
     {0x87, 3},
+    {0x8D, 86},
     {0xD6, 91},
     {0xE6, 42},
     {0xE7, 43},
@@ -245,7 +248,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {96, 6, 0x0C},  /* Service */
     {102, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1751u, 1759u, 1766u, 1782u, 1790u, 1796u, 1810u, 1817u, 1823u, 1827u, 1840u, 1846u, 1852u, 1859u, 1867u};
+static const uint16_t __code ptitle[SET_PAGES] = {1758u, 1766u, 1773u, 1789u, 1797u, 1803u, 1817u, 1824u, 1830u, 1834u, 1847u, 1853u, 1859u, 1866u, 1874u};
 
 uint8_t set_idx(uint8_t id)
 {
@@ -336,7 +339,7 @@ int16_t set_opt_from_vcp(uint8_t idx, uint8_t vcpv)
 
 uint16_t set_caps_len(void)
 {
-    return 344u;
+    return 354u;
 }
 
 char set_caps_at(uint16_t i)
@@ -431,6 +434,9 @@ void set_apply_call(uint8_t ap, uint8_t id, int16_t v)
     case AP_MSG_LOG:
         set_ap_msg_log(id, v);
         break;
+    case AP_MUTE:
+        set_ap_mute(id, v);
+        break;
     case AP_OSD_FONT:
         set_ap_osd_font(id, v);
         break;
@@ -463,6 +469,9 @@ void set_apply_call(uint8_t ap, uint8_t id, int16_t v)
         break;
     case AP_USER_RGB:
         set_ap_user_rgb(id, v);
+        break;
+    case AP_VOLUME:
+        set_ap_volume(id, v);
         break;
     default:
         break;

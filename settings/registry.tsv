@@ -102,10 +102,10 @@
 87	debug_popup	action	none	debug	-	0	1	1	0	-	-	debug_popup	Debug pop-up	-	(#34)
 104	key_test	action	none	debug	-	0	1	1	0	-	-	key_test	Key test	-	front-button diagnostic screen; UP+DOWN closes it (#39, #85)
 105	gpio_test	action	none	debug	-	0	1	1	0	-	-	gpio_test	GPIO inputs	-	live screen for unused GPIO inputs; I2C transition ring at _g_stAwtoGpio
-88	volume	int	percent	audio	nv,inert,sdk	0	100	1	50	auto	0x62	-	Volume	-	[sdk-ui]
-89	mute	bool	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Mute	-	[sdk-ui]
-90	audio_standalone	bool	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Stand alone	-	[sdk-ui]
-91	audio_source	enum	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Audio source	Analog|Digital	[sdk-ui]
+88	volume	int	percent	audio	nv,live,sdk	0	100	1	50	auto	0x62	volume	Volume	-	DVC digital gain via dB table (awto-ddc docs/audio.md); VCP 0x62 [sdk-ui]
+89	mute	enum	none	audio	nv,live,sdk	0	1	1	0	auto	0x8D	mute	Mute	Off=2|On=1	MCCS 0x8D: 1 = muted, 2 = unmuted; DVC ramp mute, unmute only with signal [sdk-ui]
+90	audio_standalone	bool	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Stand alone	-	no line-in pin muxed and no power-save audio (L1-L3 mute) in this build: stored only (awto-ddc docs/audio.md) [sdk-ui]
+91	audio_source	enum	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Audio source	Analog|Digital	no line-in pin muxed and no power-save audio (L1-L3 mute) in this build: stored only (awto-ddc docs/audio.md) [sdk-ui]
 4	factory_reset	action	none	system	-	0	1	1	0	-	0x04	defaults	Factory reset	-	MCCS 0x04; also the boot key combination
 102	colour_reset	action	none	system	-	0	1	1	0	-	0x08	colour_reset	Colour reset	-	MCCS 0x08: Colour and Six-axis pages to defaults
 103	power_mode	enum	none	power	live	0	4	1	0	-	0xD6	power_mode	Power mode	On=0x01|Standby=0x02|Suspend=0x03|Off=0x04|Off hard=0x05	MCCS 0xD6 (DPM); get = the firmware power state; standby..off -> power saving
