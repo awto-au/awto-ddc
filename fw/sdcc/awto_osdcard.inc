@@ -380,13 +380,18 @@ static void AwtoPutIso(void)                    // input s_ulAwtoT = unix s, s_c
 }
 
 // One sync-ring entry as a log line: "+  260 ms D2 timing 3840x2160" (texts and formats: fw/awto/sync.tsv).
+static __xdata DWORD s_ulAwtoLnV;               // #157: value + time in XDATA (DATA overlay path depth, see AwtoPutIso)
+static __xdata WORD s_usAwtoLnMs;
+#define ulV s_ulAwtoLnV
+#define usMs s_usAwtoLnMs
 static void AwtoSyncLine(BYTE ucSeq)
 {
     BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucSeq)];
-    DWORD ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
-    WORD usMs = (((WORD)puc[2] << 8) | puc[3]) - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
     BYTE ucRow = AwtoSyncRow(puc[0], puc[1]);
     BYTE ucFmt;
+
+    ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
+    usMs = (((WORD)puc[2] << 8) | puc[3]) - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
 
     AwtoPutChar('+');
     AwtoPutCol(s_ucAwtoLen + ((usMs < 10) ? 4 : (usMs < 100) ? 3 : (usMs < 1000) ? 2 : (usMs < 10000) ? 1 : 0));
@@ -447,6 +452,8 @@ static void AwtoSyncLine(BYTE ucSeq)
     }
     AwtoSyncTxt(ucRow - 1, 1);
 }
+#undef ulV
+#undef usMs
 
 static BYTE AwtoSrcStyle(BYTE ucI)
 {
