@@ -92,9 +92,30 @@ def specs() -> dict[str, tuple[str, str, str]]:
 
 
 def store(want: list[dict], prim: str | None, present: list[str]) -> str:
+    """One monitors.xml entry per subset of the present connectors (each laid out by plan): a unit re-plugging its two
+    outputs one by one passes through partial sets, and a set without an entry makes mutter fall back to a row with DP-1 on."""
+    import itertools
     import xml.etree.ElementTree as ET
     cfg = json.loads(CFG.read_text())
     sp = specs()
+    tree = ET.parse(MONXML)
+    root = tree.getroot()
+    bak = REPO / "tmp" / f"monitors.xml.{time.strftime('%Y%m%d-%H%M%S')}"
+    bak.write_bytes(MONXML.read_bytes())
+    n = dropped = 0
+    for k in range(1, len(present) + 1):
+        for sub in itertools.combinations(present, k):
+            w, p = (want, prim) if len(sub) == len(present) else plan(list(sub))
+            if not w:
+                continue                                       # only 'off' connectors: nothing to lay out
+            dropped += _store_one(ET, root, cfg, sp, w, p, list(sub))
+            n += 1
+    ET.indent(tree)
+    tree.write(MONXML, encoding="unicode")
+    return f"monitors.xml: {n} entries for the present set and its subsets ({dropped} replaced, backup {bak.name})"
+
+
+def _store_one(ET, root, cfg: dict, sp: dict, want: list[dict], prim: str | None, present: list[str]) -> int:
 
     def spec(parent, conn):
         s = ET.SubElement(parent, "monitorspec")
@@ -122,8 +143,6 @@ def store(want: list[dict], prim: str | None, present: list[str]) -> str:
         for c in off:
             spec(dis, c)
     key = {(c, *sp[c]) for c in present}
-    tree = ET.parse(MONXML)
-    root = tree.getroot()
     dropped = 0
     for c in root.findall("configuration"):
         have = {tuple(s.findtext(k) for k in ("connector", "vendor", "product", "serial")) for s in c.iter("monitorspec")}
@@ -131,11 +150,7 @@ def store(want: list[dict], prim: str | None, present: list[str]) -> str:
             root.remove(c)
             dropped += 1
     root.append(new)
-    bak = REPO / "tmp" / f"monitors.xml.{time.strftime('%Y%m%d-%H%M%S')}"
-    bak.write_bytes(MONXML.read_bytes())
-    ET.indent(tree)
-    tree.write(MONXML, encoding="unicode")
-    return f"monitors.xml: {dropped} entry(s) for this set replaced (backup {bak.name})"
+    return dropped
 
 
 def plan(present: list[str]) -> tuple[list[dict], str | None]:
