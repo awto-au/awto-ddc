@@ -29,7 +29,10 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 - Panel machine starts at power-on and runs alongside the SDK's power-on, INITIAL and SEARCH; console drawn while the link trains; backlight at T3 after link up. No step blocks the main pass.
 - Expected (to be measured, not promised): picture-ready path no longer waits ~0.5 s for the panel; init ~2-3x faster on M2PLL.
 
-## Order (each step: gates + sim + unit-2 cold-boot / POWER / switch timelines before → after, posted on #162)
+## Order (each step: sim first, then unit 2)
+- Sim: build, all gates, sim timelines per transition (cold boot, POWER on / off, switch, signal lost / back, sleep / wake) before → after; VLC view (`sim_live.py`) for Dan.
+- Unit 2 only after the sim is clean: same timelines, posted on #162.
+- Step 1 includes the sim clock model: fw_sim counts fixed instructions per ms, so it shows the ~390 ms crystal-phase init as 148 ms and cannot show an M2PLL-early gain. Model the MCU clock (crystal before the M2PLL switch, M2PLL, IOSC in power saving) so sim times match unit 2.
 1. Time base (low risk, enables the rest).
 2. Panel machine (C1, C2) + M2PLL early. Biggest gain; highest risk (panel T-timings re-proven on unit 2).
 3. OSD owner (C3): console up through switches and wakes.
