@@ -50,6 +50,8 @@ PS_POLL_S = 2.0       # wake-poll sample in power saving: 400 polls at AWTO_PS_P
 # mode POWER SAVING -> power status SAVING: one search round, D1 DP 3 s + D2 / D3 2 s dwell (RL6449_Project.h) = 7 s x 1.25
 PS_STATUS_S = 9.0
 PS_TRIES = 3          # power-saving episodes tried for one clean PS_POLL_S window
+HOLD_S = 60.0         # hold case: power saving must hold this long with host outputs off (#144 pass criterion)
+MODE_POLL_S = 1.0     # hold case: sparse mode poll; every 0x35 access toggles the D2 DDC SCL (SDK DDC-handshake wake, #144)
 # host on -> ACTIVE: measured 863 ms from NOSIGNAL (wd6); from power saving add the #144 wake + boot of the panel path ~2 s;
 # 3 s x 1.25 -> 4 s, plus the 5 s monitor-return rule -> 9 s
 WAKE_S = 9.0
@@ -102,6 +104,8 @@ CASES = [
      "no reset; max poke gap + site, max pass (Dan sets the warning from it)"),
     ("host_sleep", None, "host outputs off (Mutter PowerSaveMode 3) -> NOSIGNAL -> power saving (0x39 short L3 20 s) -> host on",
      lambda: PS_S * 1000 / 1.25, "wake line, ACTIVE time after the host wake, no bite, max poke gap; host always woken (unit)"),
+    ("hold", None, "host outputs off -> power saving, bus 11 silent HOLD_S: time held in SAVING, wakes; then host on",
+     lambda: (PS_S + PS_STATUS_S + HOLD_S) * 1000 / 1.25, "held >= HOLD_S, 0 wakes in the window, wake line, ACTIVE ms, no bite"),
     ("ea_off", 0x4E, "hardware-only reset (EA off, no IRQ, no capture)", lambda: reset_ms() + CMD_MS,
      "reset; bites unchanged, warm + 1, boot WARM"),
 ]
@@ -669,6 +673,103 @@ class Runner:
             finally:
                 inh.terminate()
         self.row("host_sleep", "PASS" if ok else "FAIL", "; ".join(txt))
+
+    def ring_raw(self):
+        import sync_log as SL
+        import dbg_xdata as X
+        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+        return X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+
+    def ps_syms(self) -> dict:
+        """#144 power-saving readouts of the image (missing symbol = not in this image)"""
+        import dbg_xdata as X
+        out = {}
+        for name, n in (("g_ucAwtoSyncPwr", 1), ("g_ulAwtoPsMs", 4), ("g_ucAwtoPsWakes", 1), ("g_usAwtoPsPolls", 2),
+                        ("g_usAwtoPsTmdsLive", 2), ("g_usAwtoPsTmdsRun", 2), ("g_usAwtoPsDdc", 2)):
+            a = C.site_addr(self.t.map_text, name)
+            b = X.read_bytes(self.t.io, a, n) if a is not None else None
+            if b is not None:
+                out[name] = int.from_bytes(b, "big")
+        return out
+
+    def c_hold(self):
+        """#144: host outputs off -> power saving; bus 11 silent for PS_STATUS_S + HOLD_S (no 0x35 = no DDC SCL toggles);
+        then one read: time held in SAVING (fw), wakes in the window (fw counter + ring), TMDS / DDC readouts; host on ->
+        ACTIVE ms + wake line; no bite"""
+        if self.t.name != "unit":
+            return self.row("hold", "SKIP", "unit only (host outputs)")
+        import subprocess
+        import sync_log as SL
+        SL.set_map(self.a.map_path)
+        rows = SL.load_rows(SL.tsv_for(self.a.map_path))
+        inh = subprocess.Popen(["gnome-session-inhibit", "--inhibit", "idle", "--inhibit-only"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        txt, ok = [], True
+        try:
+            d0 = self.rec()
+            self.t.cmd(0x39)                             # #78 short levels: L3 (SDK power saving) at 20 s
+            self.t.wait(0.3)
+            txt.append(f"host dpms {self.host_dpms(False)}")
+            t0, md = time.monotonic(), None
+            while time.monotonic() - t0 < PS_S and md != 6:
+                self.t.wait(MODE_POLL_S)
+                try:
+                    md = self.t.mode()
+                except OSError:
+                    md = None
+            if md != 6:
+                txt.append(f"mode {md}, not POWER SAVING {PS_S} s after host off (host dpms now {Path(DPMS_FILE).read_text().strip()})")
+                ok = False
+            else:
+                raw0, s0 = self.ring_raw(), self.ps_syms()
+                q = PS_STATUS_S + HOLD_S
+                self.say(f"  mode POWER SAVING {time.monotonic() - t0:.1f} s after host off; bus 11 silent {q:.0f} s; {s0}")
+                self.t.wait(q)
+                s1, raw1 = self.ps_syms(), self.ring_raw()
+                hd = Path(DPMS_FILE).read_text().strip()     # user input wakes Mutter's outputs: the window is void then
+                txt.append(f"host dpms at the end of the window {hd}")
+                ok &= hd == "Off"
+                n_new = ((raw1[3] - raw0[3]) % SL.WRAP) if raw0 and raw1 else 0
+                lines = SL.decode(raw1, rows, whole=True)[1] if raw1 else []
+                new = lines[-n_new:] if n_new else []
+                for ln in new:
+                    self.say(f"    ring {ln}")
+                wk_ring = sum(1 for ln in new if "wake on" in ln)
+                held = s1.get("g_ulAwtoPsMs")
+                wk = (s1["g_ucAwtoPsWakes"] - s0["g_ucAwtoPsWakes"]) & 0xFF if "g_ucAwtoPsWakes" in s0 else None
+                sv = s1.get("g_ucAwtoSyncPwr") == 3
+                txt.append(f"after {q:.0f} s silent: power status {'SAVING' if sv else s1.get('g_ucAwtoSyncPwr')}, "
+                           f"held {held if held is None else round(held / 1000, 1)} s fw, wakes {wk} (ring 'wake on' {wk_ring} "
+                           f"in {n_new} new lines); TMDS live polls {s1.get('g_usAwtoPsTmdsLive')}, longest live run "
+                           f"{s1.get('g_usAwtoPsTmdsRun')} ms; SDK DDC detections gated {s1.get('g_usAwtoPsDdc')}")
+                ok &= sv and wk_ring == 0 and (wk in (None, 0)) and (held is None or held >= HOLD_S * 1000)
+            tw = time.monotonic()
+            st = self.host_dpms(True)
+            t_act = None
+            while time.monotonic() - tw < WAKE_S:
+                try:
+                    self.t.ensure_link()
+                    if self.t.mode() == 3:
+                        t_act = time.monotonic() - tw
+                        break
+                except (OSError, SystemExit):
+                    pass
+                self.t.wait(0.05)
+            txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
+            ok &= t_act is not None
+            wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by" in ln]
+            txt.append(f"wake line {wake[-1] if wake else 'none'}")
+            same, why = self.same_boot(d0, None, time.monotonic())
+            d1 = self.rec()
+            ok &= same and d1["bites"] == d0["bites"]
+            txt.append(f"bites {d0['bites']} -> {d1['bites']}; " + self.ages(d1))
+        finally:
+            try:
+                self.host_dpms(True)                     # always: the host's screens come back
+                self.t.cmd(0x36)                         # #78 levels back to the defaults
+            finally:
+                inh.terminate()
+        self.row("hold", "PASS" if ok else "FAIL", "; ".join(txt))
 
     def ring_lines(self) -> list:
         import sync_log as SL

@@ -8,8 +8,8 @@ usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
   cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
   D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (wake), DPCD 600h = D0 (wake).
 - PS wake-poll period (g_usAwtoPsPolls over 500 ms, longest gap g_usAwtoPsGap) against AWTO_PS_POLL_MS.
-- TMDS clock (#144 q7): on D3 without a cable (no wake), on D2 (wake, "D2 wake by TMDS clock"), still on after re-sleep
-  (suppressed, once per sleep).
+- TMDS clock (#144 q7): on D3 without a cable (no wake), on D2 (wake after the AWTO_PS_TMDS_HOLD_MS hold, "D2 wake by TMDS
+  clock"), still on after re-sleep (wakes again: the hold is the gate), 15 ms bursts every 50 ms for 1 s (no wake, burst line).
 - Measured: edge -> wake line (fw ms), wake line -> console drawn / backlight on (ring), PS main-loop pass time.
 - Sim devices: W1C on the latches (DDCn_EDID_IRQ bit0, AUX_IRQ_STATUS bit0), cable pins (low = cable), DPCD port memory,
   FreqDet (HDMI freq detector P71 / P72, off until the TMDS cases).
@@ -41,9 +41,10 @@ IOSC_KHZ = 28_000       # freq-detect reference in power saving (_INTERNAL_OSC_X
 # (8 ms worst, measured below) = 28 ms, x1.25 -> 35 ms. Latches / DPCD: 1 PS pass 8 ms + this test's sample step 2 ms
 # + 1 ms tick = 11 ms, x1.25 -> 13 ms. Over = FAIL.
 BOUND_CABLE_MS, BOUND_LATCH_MS = 35, 13
-# TMDS: the clock comes up after the last restart -> unstable latched -> restart at the next poll -> stable at the one after:
-# 2 x (poll 5 ms + PS pass 2 ms) + sample 2 ms + 1 ms tick = 17 ms, x1.25 -> 22 ms.
-BOUND_TMDS_MS = 22
+# TMDS: clock up after the last restart -> unstable latched -> restart -> stable 2 polls later (2 x (5 + 2) + 2 + 1 = 17 ms),
+# + hold AWTO_PS_TMDS_HOLD_MS 50 + the poll that sees it (5 + 2 + 1) = 75 ms, x1.25 -> 94 ms.
+BOUND_TMDS_MS = 94
+BURST_ON_MS, BURST_PERIOD_MS = 15, 50   # host-like TMDS bursts (#144): shorter than the hold, must not wake
 # Poll gap: AWTO_PS_POLL_MS 5 + one PS pass (2 ms worst, measured below) + 1 ms tick = 8 ms, x1.25 -> 10 ms. Over = FAIL.
 BOUND_POLL_GAP_MS = 10
 POLL_WINDOW_MS = 500    # PS poll period sample: 100 polls at 5 ms
@@ -255,6 +256,24 @@ class Run:
         return hit
 
 
+def _burst_case(self):
+    """#144: TMDS clock bursts shorter than the hold never wake; the burst line is logged once per sleep"""
+    self.check(self.sleep(), "TMDS bursts: power saving reached")
+    t0, woke = self.t2(), False
+    while (self.t2() - t0) & 0xFFFF < QUIET_MS and not woke:
+        self.fd.set_clock(self.m, 0x71, 148_500)
+        woke, _ = self.until_wake(BURST_ON_MS)
+        self.fd.set_clock(self.m, 0x71, None)
+        if not woke:
+            woke, _ = self.until_wake(BURST_PERIOD_MS - BURST_ON_MS)
+    self.check(not woke, f"TMDS bursts {BURST_ON_MS} / {BURST_PERIOD_MS} ms: no wake within {QUIET_MS} ms")
+    self.check(any("D2 TMDS clock burst" in x for x in self.lines()), "TMDS bursts: burst line logged",
+               str(self.lines()[-4:]))
+
+
+Run.burst_case = _burst_case
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
@@ -308,10 +327,14 @@ def main():
             r.fd.set_clock(r.m, 0x72, None)
             r.wake_case("D2 TMDS clock", lambda: r.fd.set_clock(r.m, 0x71, 148_500), "D2 wake by TMDS clock, about 148.",
                         BOUND_TMDS_MS)
-            r.wake_case("D2 TMDS clock still on (no picture since)", lambda: None, None, 0)
-            r.check(any("wake suppressed (TMDS clock, once per sleep): D2" in x for x in r.lines()), "TMDS repeat: suppressed",
-                    str([x for x in r.lines() if "suppressed" in x]))
+            n0 = sum(1 for e in r.ring_events() if e[0] == 0xD7)     # still on: wakes again during the re-sleep settle
+            r.sleep()
+            r.until_wake(4 * BOUND_TMDS_MS)
+            r.watch(300)
+            n1 = sum(1 for e in r.ring_events() if e[0] == 0xD7)
+            r.check(n1 == n0 + 1, "D2 TMDS clock still on (no picture since): wakes again", f"TMDS wake lines {n0} -> {n1}")
             r.fd.set_clock(r.m, 0x71, None)
+            r.burst_case()
         if r.pass_ms:
             say(f"  measured, power-saving main-loop pass: {min(r.pass_ms):.2f}..{max(r.pass_ms):.2f} ms")
         d = C.decode(C.read(r.bus, r.caddr))
