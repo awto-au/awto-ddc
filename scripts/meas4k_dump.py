@@ -3,9 +3,9 @@
 
 usage: meas4k_dump.py --unit N [--map F] [--tag NAME]     live: block reads (0x3C) over debug slave 0x35
        meas4k_dump.py --file RAW [--tag NAME]             decode a saved raw ring (or a sim dump)
-  Output: one line per 20 ms sample, then the call/event list; both to ./tmp/logs/meas4k_<tag>.log and stdout.
+  Output: one line per sample, then the call/event list; both to ./tmp/logs/meas4k_<tag>.log and stdout.
   Re-arm for the next capture (state byte 0): ./dev.py dbg-write --unit N <addr+3 hex>=00 (address printed by this tool).
-Layout (SDCC big-endian: WORD = high byte first): header 16 B, 52 samples x 17 B, 40 events x 6 B.
+Layout (SDCC big-endian: WORD = high byte first): header 16 B (byte 7 = sample slots, version 2), samples x 17 B, 40 events x 6 B.
 """
 from __future__ import annotations
 
@@ -18,9 +18,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-HDR, SAMPLES, EVENTS = 16, 52, 40
+HDR, EVENTS = 16, 40
 REC, EVREC = 17, 6
-SIZE = HDR + SAMPLES * REC + EVENTS * EVREC
 STATE = {0: "idle", 1: "sampling", 2: "done"}
 MODE = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNAL", "POWER_SAVING", "POWER_OFF", "FACTORY"]
 EVNAME = {1: "MDomainControl enter", 2: "MemoryInitial", 3: "FrameSyncSetDt", 4: "SetDisplayFormat(LINE_BUF)",
@@ -36,8 +35,9 @@ def u16(b: bytes, i: int) -> int:
 
 
 def decode(b: bytes) -> dict:
-    if len(b) < SIZE or b[:2] != b"MK":
+    if len(b) < HDR or b[:2] != b"MK" or len(b) < HDR + b[7] * REC + EVENTS * EVREC:
         raise ValueError(f"not a meas4k ring: {len(b)} B, magic {b[:2]!r}")
+    SAMPLES = b[7]
     h = {"version": b[2], "state": b[3], "arms": b[4], "nsamp": b[5], "nev": b[6],
          "start": u16(b, 8), "next": u16(b, 10), "end": u16(b, 12)}
     s = []
@@ -94,7 +94,10 @@ def live(unit: str, mp: Path, wait_done: bool = False) -> tuple[bytes, int]:
                 break
         else:
             print("warning: state never reached 2 (done); dumping anyway", file=sys.stderr)
-    data = X.read_blocks(io, addr, SIZE)
+    h = X.read_blocks(io, addr, HDR)
+    if h is None or h[:2] != b"MK":
+        raise SystemExit("block read failed (0x35 not answering?) or no 'MK' header")
+    data = X.read_blocks(io, addr, HDR + h[7] * REC + EVENTS * EVREC)
     if data is None:
         raise SystemExit("block read failed (0x35 not answering?)")
     return data, addr

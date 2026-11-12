@@ -770,7 +770,7 @@ void UserCommonInterfacePanelPowerAction(BYTE ucEvent)
     SET_PANELPOWERACTION(ucEvent);
 #endif
 
-    AwtoSwEvent(AWTO_SW_EV_POWER, ucEvent);
+    AwtoSwEvent(AWTO_SW_EV_POWER, AwtoPanelReqArg(ucEvent, GET_PANELPOWERSTATUS()));
     switch(ucEvent)
     {
         case _PANEL_ON:
@@ -4318,6 +4318,7 @@ void UserCommonInterfaceInitial(void)
 
     UserInterfaceInitial();
 
+    AWTO_BPROF(0x3C);
 #if((_MEMORY_TYPE_CONFIG == _MEMORY_DDR3) && (_DDR3_MULTIPHASE_EXIST == _ON))
     // Update DDR3 phase __data from user
     UserInterfaceUpdateDDR3PhaseData();

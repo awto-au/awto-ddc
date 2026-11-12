@@ -4,6 +4,7 @@
 usage: diag_build.py TAG          e.g. diag_build.py wb-p14ui-diag1
 - Tree = this worktree; rtdfw = $AWTO_RTDFW_REPO (default /mnt/2tb/git/awto-rtdfw-diag); main repo = $AWTO_DDC_MAIN
   (default /mnt/2tb/git/awto-ddc, where wb_build.py lives); -D _AWTO_AUDIO_TEST, the tracked fw/bank_layout.tsv (fw_build refuses a layout under tmp/).
+- AWTO_DIAG_DEFS="A=_OFF B=_ON": more -D defines.
 - Prints the build summary: XDATA free, main DATA overlay path, link result.
 Log: tmp/logs/diag_build.log
 """
@@ -32,7 +33,8 @@ def build(tag) -> int:
     env = dict(os.environ, AWTO_RTDFW_REPO=RTDFW)
     env.pop("AWTO_DDC_REPO", None)
     return subprocess.run([sys.executable, "scripts/wb_build.py", "--tree", str(TREE), "--serial", "AWT26110002", "--tag", tag,
-                           "-D", "_AWTO_AUDIO_TEST"], cwd=MAIN, env=env,
+                           "-D", "_AWTO_AUDIO_TEST",
+                           *[x for d in os.environ.get("AWTO_DIAG_DEFS", "").split() for x in ("-D", d)]], cwd=MAIN, env=env,
                           capture_output=True, text=True).returncode
 
 

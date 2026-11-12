@@ -62,6 +62,14 @@ C0	04	vport	power key on, %
 10	01	-	panel off
 10	02	-	backlight on
 10	03	-	backlight off
+10	04	-	panel on requested
+10	05	-	panel on requested (already on)
+10	06	-	panel off requested
+10	07	-	panel off requested (already off)
+10	08	-	backlight on requested
+10	09	-	backlight on requested (already on)
+10	0A	-	backlight off requested
+10	0B	-	backlight off requested (already off)
 70	*	-	panel VDD on (early)
 90	01	-	reset to search
 90	0E	-	display setting

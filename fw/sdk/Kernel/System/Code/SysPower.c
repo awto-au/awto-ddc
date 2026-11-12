@@ -89,6 +89,7 @@ void SysPowerInitial(void)
 
 #if((_LC_TANK_SUPPORT != _ON) || (_XTALESS_SUPPORT != _ON))
     // Internal oscillator trimming and on
+    AWTO_BPROF(0x35);
     ScalerIOSCTrimming();
 #endif
 
@@ -98,6 +99,7 @@ void SysPowerInitial(void)
 #endif
 
     // Initial LDO Voltage Output
+    AWTO_BPROF(0x36);
     ScalerLDOPowerControl(_POWER_STATUS_AC_ON);
 
     ///////////////////
@@ -108,6 +110,7 @@ void SysPowerInitial(void)
 #endif
 
 #if(_EMBEDDED_EDID_SUPPORT == _ON)
+    AWTO_BPROF(0x37);
     UserCommonInterfaceLoadEmbeddedEdidData();
 #endif
 
@@ -133,6 +136,7 @@ void SysPowerInitial(void)
 #endif // End of #if(_WRITE_HDCP_TO_SYSTEM_EEPROM == _ON)
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
+    AWTO_BPROF(0x38);
     SysPowerLoadHDCPKey();
 #endif
 
@@ -185,6 +189,7 @@ void SysPowerInitial(void)
 #endif
 
 #if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
+    AWTO_BPROF(0x39);
     ScalerDpInitial(_D1_INPUT_PORT, UserInterfaceGetDPVersion(_D1_INPUT_PORT), UserInterfaceGetDpLaneCount(_D1_INPUT_PORT), UserCommonInterfaceGetDpMstCapablePort(), UserInterfaceGetFreeSyncEnable(_D1_INPUT_PORT));
 #endif
 
@@ -195,6 +200,7 @@ void SysPowerInitial(void)
 #endif // End of #if(_DP_EMBEDDED_SWITCH_SUPPORT_TYPE == _DP_EMBEDDED_SWITCH_2_DP)
 
 #if(_DP_HDCP_ARBITER_SUPPORT == _ON)
+    AWTO_BPROF(0x3A);
     ScalerDpHdcpCtrlDpcdSwitch(SysSourceGetInputPort());
 #endif
 
@@ -439,6 +445,11 @@ void SysPowerHandler(void)
 //--------------------------------------------------
 void SysPowerSwitch(EnumPowerAction enumSwitch)
 {
+    if(enumSwitch == _POWER_ACTION_OFF_TO_NORMAL)
+    {
+        AwtoSyncBegin(AWTO_SYNC_K_POWER_KEY, SysSourceGetInputPort());     // before the INITIAL handler's lines
+    }
+    AWTO_BPROF(0x40 + enumSwitch);
     switch(enumSwitch)
     {
         case _POWER_ACTION_NORMAL_TO_PS:
@@ -839,6 +850,7 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
         default:
             break;
     }
+    AWTO_BPROF(0x50 + enumSwitch);
 }
 
 #if(_SYSTEM_LOW_POWER_IDLE_SUPPORT == _ON)

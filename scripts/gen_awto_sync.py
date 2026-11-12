@@ -216,7 +216,7 @@ def main():
     for path, name, blk in ((ROOT / "fw/sdcc/awto_sync.inc", "awto_sync_rows", rows_block(r)),
                             (ROOT / "fw/sdcc/awto_osdcard.inc", "awto_sync_text", text_block(r)),
                             (ROOT / "fw/sdcc/awto_osdcard.inc", "awto_port_sigs", ps_block(s)),
-                            (ROOT / "fw/overlay/Project/Header/RL6449_Project.h", "awto_port_cnt", cnt_block(cnts))):
+                            (ROOT / "fw/sdk/Project/Header/RL6449_Project.h", "awto_port_cnt", cnt_block(cnts))):
         new, old = patch(path, name, blk)
         if new != old:
             stale += 1

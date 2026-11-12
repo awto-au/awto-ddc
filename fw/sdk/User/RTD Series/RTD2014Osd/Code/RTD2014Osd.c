@@ -93,6 +93,7 @@ void RTDOsdSystemFlowProc(void)
                 UserAdjustFREESYNCODMeasure();
 #endif
 
+                AWTO_BPROF(0x3B);
                 AwtoBootConsole();
                 AWTO_BOOT_PANEL_ON();
             }

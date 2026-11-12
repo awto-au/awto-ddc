@@ -72,6 +72,52 @@ void AwtoSwArm(unsigned char ucPort)
     g_stAwtoSw.usT0 = AwtoSwNow();
 }
 
+#if(_AWTO_PANEL_LOG == _ON)
+// #144 panel log: a call logs 4 + 2 * event + already-in-that-state; a real pin change logs the event (0..3) from the PCB macros.
+unsigned char AwtoPanelReqArg(unsigned char ucEvent, unsigned char ucStatus)
+{
+    unsigned char ucSame;
+
+    switch(ucEvent)
+    {
+        case _PANEL_ON:
+            ucSame = (ucStatus != _PANEL_POWER_OFF_STATE);
+            break;
+        case _PANEL_OFF:
+            ucSame = (ucStatus == _PANEL_POWER_OFF_STATE);
+            break;
+        case _BACKLIGHT_ON:
+            ucSame = (ucStatus == _BACKLIGHT_ON_ALREADY);
+            break;
+        default:
+            ucSame = (ucStatus != _BACKLIGHT_ON_ALREADY);
+            break;
+    }
+    return 4 + 2 * ucEvent + ucSame;
+}
+
+static __xdata unsigned char s_ucAwtoPins;       // last written level: bit0 panel VDD, bit1 backlight (every write goes through the PCB macros)
+
+void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn)    // before the pin is written
+{
+    unsigned char ucBit = (ucBacklight != 0) ? 2 : 1;
+    unsigned char ucWas = ((s_ucAwtoPins & ucBit) != 0);
+
+    if(ucOn != 0)
+    {
+        s_ucAwtoPins |= ucBit;
+    }
+    else
+    {
+        s_ucAwtoPins &= ~ucBit;
+    }
+    if((g_stAwtoDiag.ucStage >= 5) && (ucWas != (ucOn != 0)))      // boot-time pin init is not a panel change
+    {
+        AwtoSwEvent(AWTO_SW_EV_POWER, (ucBacklight != 0) ? ((ucOn != 0) ? _BACKLIGHT_ON : _BACKLIGHT_OFF) : ((ucOn != 0) ? _PANEL_ON : _PANEL_OFF));
+    }
+}
+#endif
+
 #if(_AWTO_FAST_BOOT == _ON)
 void AwtoPanelVddEarly(void)                    // #63: right after pin-share; eDP lanes stay off until the SDK's _PANEL_ON (T1 later)
 {

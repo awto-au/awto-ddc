@@ -558,13 +558,13 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
     else if(ucAwtoCh == 0x02) { MCU_FF2E_DDC1_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x01) { MCU_FF20_DDC0_DDC_CONTROL_2 op; } } while(0)
 #endif
-// 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every 20 ms from the first M-domain setup; layout in scripts/meas4k_dump.py.
+// 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every AWTO_MEAS_PERIOD_MS from the first M-domain setup; layout in scripts/meas4k_dump.py.
 // Re-arm: write state byte (g_stAwtoMeas+3) = 0 over the debug slave, then change mode.
 #define _AWTO_MEAS4K                                            _ON
 #if(_AWTO_MEAS4K == _ON)
-#define AWTO_MEAS_PERIOD_MS                                     20
+#define AWTO_MEAS_PERIOD_MS                                     25
 #define AWTO_MEAS_WINDOW_MS                                     1000
-#define AWTO_MEAS_SAMPLES                                       52      // 1000 / 20 + 1 + 1 spare
+#define AWTO_MEAS_SAMPLES                                       42      // 1000 / 25 + 1 + 1 spare
 #define AWTO_MEAS_EVENTS                                        40
 typedef struct
 {
@@ -589,7 +589,7 @@ typedef struct
     unsigned char ucArms;
     unsigned char ucNSamp;
     unsigned char ucNEv;
-    unsigned char ucSpare;
+    unsigned char ucSampMax;                    // AWTO_MEAS_SAMPLES: the event table starts after this many samples
     unsigned int usStartMs;
     unsigned int usNextMs;
     unsigned int usEndMs;
@@ -875,9 +875,23 @@ extern void AwtoSwEvent(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSwArm(unsigned char ucPort);
 extern void AwtoSwPoll(void);
 extern void AwtoPanelVddEarly(void);
+#ifndef _AWTO_PANEL_LOG
+#define _AWTO_PANEL_LOG                                         _ON     // every panel / backlight call with its outcome, real pin changes (#144)
+#endif
+#if(_AWTO_PANEL_LOG == _ON)
+extern unsigned char AwtoPanelReqArg(unsigned char ucEvent, unsigned char ucStatus);
+extern void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn);
+#else
+#define AwtoPanelReqArg(e, s)                                   (e)
+#define AwtoPanelPinLog(b, o)
+#endif
+#define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 #else
 #define AwtoSwEvent(a, b)
+#define AwtoPanelReqArg(e, s)                                   (e)
+#define AwtoPanelPinLog(b, o)
+#define AWTO_BPROF(k)
 #define AwtoSwPoll()
 #define AWTO_SW_HPD(port, x)
 #endif
@@ -890,8 +904,8 @@ extern void AwtoPanelVddEarly(void);
 extern __xdata unsigned char g_pucAwtoInCnt[];   // awto_gpio.inc: rising edges per counted input (wraps), read by the selector
 #define _AWTO_SYNC_LOG                                          _AWTO_SW_LOG
 #if(_AWTO_SYNC_LOG == _ON)
-#define AWTO_SYNC_N                                             32      // ring entries: a power-on logs ~22 lines (sim, #139) + reason / stages (#29)
-#define AWTO_SYNC_WRAP                                          224     // seq counts 0..223 (a multiple of AWTO_SYNC_N): entry = seq % N
+#define AWTO_SYNC_N                                             52      // cold boot 37 lines in sim (awto-ddc#144) x1.25, a divisor of WRAP
+#define AWTO_SYNC_WRAP                                          208     // seq counts 0..207 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
 #define AWTO_SYNC_BACK(s, n)                                    ((unsigned char)(((s) >= (n)) ? ((s) - (n)) : ((s) + AWTO_SYNC_WRAP - (n))))
@@ -907,7 +921,7 @@ typedef struct
 {
     unsigned char ucMagic0;                     // 'S'
     unsigned char ucMagic1;                     // 'Y'
-    unsigned char ucVersion;                    // 1
+    unsigned char ucVersion;                    // 3: ucN / ucWrap in the header
     unsigned char ucSeq;                        // next event's seq, 0..AWTO_SYNC_WRAP-1; entry = stEv[seq % AWTO_SYNC_N]
     unsigned char ucEpSeq;                      // seq of the current episode's first event
     unsigned char ucKind;                       // AWTO_SYNC_K_* of the current episode
@@ -917,6 +931,8 @@ typedef struct
     unsigned char ucDone;                       // mode reached ACTIVE / NOSIGNAL / NOSUPPORT / POWER SAVING since the start
     unsigned char ucOpenReq;                    // console auto-open pending (awto_osdcard.inc AwtoSyncConPoll)
     unsigned char ucSpare;                      // #150: repeats of the last line pair not yet written (AwtoSyncPush)
+    unsigned char ucN;                          // AWTO_SYNC_N: entries in the ring (hosts size the read from this)
+    unsigned char ucWrap;                       // AWTO_SYNC_WRAP
     StAwtoSyncEv stEv[AWTO_SYNC_N];
 } StAwtoSync;
 extern __xdata StAwtoSync g_stAwtoSync;

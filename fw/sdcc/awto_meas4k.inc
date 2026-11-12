@@ -6,7 +6,8 @@ void AwtoMeasInit(void)
 {
     g_stAwtoMeas.ucMagic0 = 'M';
     g_stAwtoMeas.ucMagic1 = 'K';
-    g_stAwtoMeas.ucVersion = 1;
+    g_stAwtoMeas.ucVersion = 2;                 // 2: ucSampMax in the header
+    g_stAwtoMeas.ucSampMax = AWTO_MEAS_SAMPLES;
     g_stAwtoMeas.ucArms = 0;
     g_stAwtoMeas.ucNSamp = 0;
     g_stAwtoMeas.ucNEv = 0;
@@ -14,7 +15,7 @@ void AwtoMeasInit(void)
     g_stAwtoMeas.ucState = 0;
 }
 
-// Timer2 ISR, state 1 only: one sample per 20 ms from the arm, ends at +1000 ms or mode ACTIVE. No locals that need helpers.
+// Timer2 ISR, state 1 only: one sample per AWTO_MEAS_PERIOD_MS from the arm, ends at +1000 ms or mode ACTIVE. No locals that need helpers.
 void AwtoMeasT2Sample(void)
 {
     __xdata StAwtoMeasRec *pR;

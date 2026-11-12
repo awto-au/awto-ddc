@@ -145,8 +145,8 @@
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	239	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	72	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	84	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
-^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1409	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
-^unreachable code$	Kernel/System/Code/SysPower.c	898	ok	OK-HARMLESS: trailing return after a switch in which all cases return
+^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1421	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
+^unreachable code$	Kernel/System/Code/SysPower.c	910	ok	OK-HARMLESS: trailing return after a switch in which all cases return
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1015	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	1193	ok	OK-CONFIG: if(ScalerDisplayDPTxLinkSequence()==_FAIL) body empty (_PANEL_DPTX_FORCE_OUTPUT_SUPPORT off); call kept
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1217	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
@@ -181,14 +181,14 @@
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	141	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	143	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5328	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5326	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5329	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5327	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6319	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6346	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6380	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6404	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6426	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6450	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6320	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6347	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6381	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6405	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6427	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6451	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1161	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1159	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1163	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
@@ -242,7 +242,7 @@
 ^unreachable code$	Kernel/System/Code/SysSource.c	3281	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	555	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	557	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6290	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6291	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	90	ok	OK-CONFIG: -D _AWTO_BOOT_PANEL_EARLY=_OFF only: the mode INITIAL change block is empty (#144)
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4264	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4269	ok	OK-HARMLESS: same function, empty SAVING branch

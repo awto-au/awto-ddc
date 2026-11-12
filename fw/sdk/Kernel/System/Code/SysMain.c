@@ -265,12 +265,16 @@ void SysMainSystemInitial(void)
 #endif
     ScalerTimerInitialTimerEvent();
 
+    AWTO_BPROF(0x30);
     UserCommonInterfaceInitial();
 
+    AWTO_BPROF(0x31);
     ScalerMcuDdcRamEnable();
 
+    AWTO_BPROF(0x32);
     SysSourceInitial();
 
+    AWTO_BPROF(0x33);
     SysPowerInitial();
 
 #if(_IR_SUPPORT == _IR_HW_SUPPORT)
@@ -291,6 +295,7 @@ void SysMainSystemInitial(void)
     SysMainPictureInit();
 #endif
 
+    AWTO_BPROF(0x34);
     SET_POWER_STATUS(_POWER_STATUS_AC_ON);
 
     if(UserCommonNVRamGetSystemData(_MONITOR_POWER_STATUS) == _ON)
