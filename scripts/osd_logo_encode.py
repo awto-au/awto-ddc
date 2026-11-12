@@ -12,7 +12,7 @@ Formats (awto-ddc#46, confirmed by selftest; decoder = glyph_decode.py):
 - map   = rows of tile ids, _NEXT_ ends a row, _END_ ends the table (RTD2014OsdFontTable.c tiOSD_*)
 - polarity: 1 = box fill (black), 0 = artwork (OsdEdit 'Inv'); the SDK logo is solid 1s with the letters cut out
 - layout: LOGO0 = 80 tiles / 19x10 map at COL(0); LOGO1 = 71 tiles / 51x10 map at COL(19) (tile id = _Logo1_0xNN)
-Source of the SDK arrays: tmp/sdcc-port/src (after keil2sdcc port). Log: tmp/logs/osd_logo_encode.log
+Source of the SDK arrays: tmp/sdcc-port/src (after msg_tokenise.py port). Log: tmp/logs/osd_logo_encode.log
 """
 import os
 import re

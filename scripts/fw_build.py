@@ -237,6 +237,9 @@ def parse_args(argv=None):
     ap.add_argument("--resid-end", default="0xc38", help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
+    if a.layout and Path(os.path.normpath(ROOT / a.layout)).is_relative_to(ROOT / "tmp"):
+        sys.exit(f"layout: {a.layout!r} is under tmp/: the build uses only the tracked layout (fw/bank_layout.tsv), "
+                 "so any worktree rebuilds the same image from git")
     if a.cluster:
         import sdcc_layout
         if not a.layout or sdcc_layout.Layout.load(ROOT / a.layout).rows:
@@ -253,16 +256,16 @@ def main() -> int:
     py = sys.executable
     log(f"byte order: {'BIG-endian (--big-endian, Keil order)' if T.BIG_ENDIAN else 'little-endian (default)'}, lib {T.LIB}")
     if not a.skip_compile:
-        run("port", [py, "scripts/keil2sdcc.py", "port"])
+        run("port", [py, "scripts/msg_tokenise.py", "port"])
         if a.src_patch:
             apply_src_patch(Path(a.src_patch))
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
-        run("asm", [py, "scripts/keil2sdcc.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
-        run("asm", [py, "scripts/keil2sdcc.py", "compile", LIB_UV2, "--asm"])
+        run("asm", [py, "scripts/fw_compile.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
+        run("asm", [py, "scripts/fw_compile.py", "compile", LIB_UV2, "--asm"])
         # #66: every policy row must still match a warning of this build (stale rows fail), every warning a row
         run("edid", [py, "scripts/warn_policy_check.py", WORK_DIR / "warnings-STD_FW_1P.txt",
                      WORK_DIR / f"warnings-{Path(LIB_UV2).stem}.txt"])
-    run("asm", [py, "scripts/keil2sdcc.py", "awto"])         # clean tree + shim (#68); no-op without clean sources
+    run("asm", [py, "scripts/fw_compile.py", "awto"])         # clean tree + shim (#68); no-op without clean sources
     select_lib()
     run("overlay", [py, "scripts/sdcc_overlay.py", "--asm", SEL])
     run("isr", [py, "scripts/sdcc_isr_libs.py"])              # ISR-private non-reentrant lib helpers (#19)

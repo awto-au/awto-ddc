@@ -2,7 +2,7 @@
 """Rows of fw/warn_policy.tsv against the warnings of a full build: unused rows (stale) and per-row hit counts.
 
 usage: warn_policy_check.py WARNINGS.txt [WARNINGS.txt ...] [--policy fw/warn_policy.tsv] [--prune]
-  WARNINGS.txt = keil2sdcc's tmp/sdcc-port/warnings-<uv2>.txt of every compile of the build (project + Lib)
+  WARNINGS.txt = fw_compile's tmp/sdcc-port/warnings-<uv2>.txt of every compile of the build (project + Lib)
   --prune  rewrite the policy without the rows no warning matches (comments kept)
 Exit 1 if a row is unused (without --prune; only reported when K2S_SDCC_EXTRA is set) or a warning matches no row. Log: tmp/logs/warn_policy_check.log
 """
@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 
 ROOT = repo_root()
-WARN_RE = re.compile(r"^(.+?):(\d+)(?::\d+)?: warning(?: (\d+))?: (.*)$")   # same as keil2sdcc.WARN_RE
+WARN_RE = re.compile(r"^(.+?):(\d+)(?::\d+)?: warning(?: (\d+))?: (.*)$")   # same as fw_compile.WARN_RE
 
 
 def main() -> int:

@@ -4,7 +4,7 @@
 usage: sdcc_size_probe.py [--n 40] [--jobs 16] [--sdcc BIN] VARIANT=FLAGS ...
   e.g. base= medium=--model-medium allocs=--max-allocs-per-node=100000
   Sample = the N largest C files of STD_FW_1P.Uv2 target RL6449_Project (ported tree, tmp/sdcc-port/src).
-  FLAGS are appended after keil2sdcc's flags (last --model wins). Modules failing in any variant are dropped.
+  FLAGS are appended after fw_compile's flags (last --model wins). Modules failing in any variant are dropped.
 Log: tmp/logs/sdcc_size_probe.log; objects in tmp/sizeprobe/<variant>/
 """
 import argparse, re, subprocess, sys, time
@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import keil2sdcc as K  # noqa: E402
+import fw_compile as K  # noqa: E402
 
 UV2, TARGET = "STD_FW_1P.Uv2", "RL6449_Project"
 # one large module compiles in ~60 s cold under 16 jobs; 3x backstop per global host-process rule
@@ -65,7 +65,7 @@ def main() -> int:
     base = sum(d[variants[0][0]] for d in good.values())
     for n, f in variants:
         tot = sum(d[n] for d in good.values())
-        log(f"{n:12s} {tot:8d} B  {100.0 * tot / base:6.1f}%  flags: {f or '(keil2sdcc defaults)'}")
+        log(f"{n:12s} {tot:8d} B  {100.0 * tot / base:6.1f}%  flags: {f or '(fw_compile defaults)'}")
     return 0
 
 

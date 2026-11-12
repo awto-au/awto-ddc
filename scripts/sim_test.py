@@ -35,7 +35,7 @@ ROOT = repo_root()
 TESTS = ROOT / "fw/simtests"
 RT = TESTS / "_rt"
 WORK = ROOT / "tmp/simtest"
-CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant", *T.CFLAGS_EXTRA]   # = keil2sdcc
+CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--nooverlay", "--noinvariant", *T.CFLAGS_EXTRA]   # = fw_compile
 STEP_CAP = 20_000_000
 BUILD_TMO, SIM_TMO = 60, 30
 SENTINEL = "SIM-DONE"

@@ -1,4 +1,4 @@
-"""keil2sdcc compile_one: cpp and compiler stderr never interleave, so the warn gate sees whole lines (#51.7, #47).
+"""fw_compile compile_one: cpp and compiler stderr never interleave, so the warn gate sees whole lines (#51.7, #47).
 The fake compiler behaves like sdcc: one run (no -E / --c1mode) writes cpp and compiler stderr interleaved mid-line;
 -E and --c1mode runs write only their own stage's lines."""
 import os
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import keil2sdcc as K  # noqa: E402
+import fw_compile as K  # noqa: E402
 
 FAKE = r'''#!/usr/bin/env python3
 import sys
@@ -45,6 +45,7 @@ def env(tmp_path, monkeypatch):
     (tmp_path / "fw/warn_policy.tsv").write_text(POLICY)
     for k, v in (("SDCC", str(fake)), ("SRC", src), ("WORK", tmp_path / "work"), ("ROOT", tmp_path), ("ASM_MODE", True)):
         monkeypatch.setattr(K, k, v)
+    monkeypatch.setattr(K, "_KC", [])         # the fake compiler has no --keil-compat to probe
     return src
 
 

@@ -4,7 +4,7 @@
 usage: fw_edid_tables.py --serial AWT26110003 [--out DIR]
   runs make_edid.py for that serial, writes C initialiser lists included by the overlay EdidTableD1-3.h
   (D1 = DP, D2 = HDMI, D3 = HDMI with port tag 3: awto_edid_hdmi_d3.h). Default DIR: the ported tree's Kernel/User Common Function/Header/EDID.
-  Run after `keil2sdcc.py port` (port regenerates the tree). Log: ./tmp/logs/fw_edid_tables.log
+  Run after `msg_tokenise.py port` (port regenerates the tree). Log: ./tmp/logs/fw_edid_tables.log
 """
 import argparse, subprocess, sys, time
 from pathlib import Path

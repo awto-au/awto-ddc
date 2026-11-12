@@ -6,7 +6,7 @@
 
 #define SDK_AUTOINC 0     /* SDK _AUTOINC; the data-port/ScalerRead/ScalerWrite routines step the INDEX/ADDRESS when it is 0 */
 
-#ifdef _AWTO_NEW_ARITH            /* set by keil2sdcc for every clean module directory */
+#ifdef _AWTO_NEW_ARITH            /* set by fw_compile for every clean module directory */
 #include "arith.h"
 
 /* FunctionLib ScalerCommonComputeDwordMulDiv.c defines both; defining them here drops that module from the link. */

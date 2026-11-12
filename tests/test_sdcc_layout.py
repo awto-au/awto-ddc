@@ -116,12 +116,12 @@ def test_sdcc_bank_cluster_refused_with_existing_layout(tmp_path):
 
 def test_fw_tag_env_override_and_no_dirty(tmp_path, monkeypatch):
     import subprocess
-    import keil2sdcc
+    import msg_tokenise
     monkeypatch.setenv("AWTO_FW_TAG", "fixed-1")
-    assert keil2sdcc.fw_tag(tmp_path) == "fixed-1"
+    assert msg_tokenise.fw_tag(tmp_path) == "fixed-1"
     monkeypatch.delenv("AWTO_FW_TAG")
     g = lambda *a: subprocess.run(["git", *a], cwd=tmp_path, check=True, capture_output=True)
     g("init", "-q"); g("-c", "user.email=a@b", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "x")
-    clean = keil2sdcc.fw_tag(tmp_path)
+    clean = msg_tokenise.fw_tag(tmp_path)
     (tmp_path / "f").write_text("x"); g("add", "f")                            # staged change: --dirty would append
-    assert keil2sdcc.fw_tag(tmp_path) == clean and "dirty" not in clean and len(clean) == 7
+    assert msg_tokenise.fw_tag(tmp_path) == clean and "dirty" not in clean and len(clean) == 7
