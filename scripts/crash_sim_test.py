@@ -158,7 +158,7 @@ def main() -> int:
         r.check(d["mode"] == 3 and d["stage"] == 8, f"mode {d['mode']} stage {d['stage']} at the bite (ACTIVE, stage 8)")
         r.s.bus.wait(3.0)
         d2 = r.rec()
-        r.check((d2["boot"] & 0x08) == 0, "console drew the watchdog panel (NEW flag cleared)")
+        r.check((d2["boot"] & 0x08) == 0, "console showed the bite (NEW flag cleared)")
         a.out.mkdir(parents=True, exist_ok=True)
         R.save(r.s.snap(), a.out / "crash_panel.png", "grey", 2)
         say(f"  host line: {C.line(d2, r.syms)}")
