@@ -71,6 +71,6 @@ Firmware: branch `wb-p14ui-portcfg` (`fw/sdcc/awto_port.inc`); rtdfw `portcfg` 3
 - Selector: row shown as `disabled`; taking it (or VCP 0x60 / menu Input / test cmd 0x31..0x33) enables it through the registry (NVRAM gate), then switches.
 - Refused (logged): disabling the input on screen (ACTIVE / display setting), the last enabled one. Not `risky`: nothing to revert.
 - Control: menu Input page, DDC/CI VCP 0xEC / 0xED / 0xEE (or paged id), `dev.py settings set d1_enable 0`, test cmds 0x06..0x08 off / 0x09..0x0B on.
-- Logs: sync.tsv E0 (`D1 disabled by setting (stored): HPD low, EDID off, receiver off, not searched` at boot, one line per change / refusal).
+- Logs: sync.tsv E1 (`D1 disabled by setting (stored): HPD low, EDID off, receiver off, not searched` at boot, one line per change / refusal).
 - Limits: a disabled HDMI port is high from GPIO init until AwtoSetInit (chip reset / `ScalerMcuGpioInitial`; the setting is not known before the NVRAM load); D1 (DP) is low from reset. [guess] DDC channel bit 0 = 0 stops EDID replies (regdb: "MCU access enable"); with HPD low no source reads it.
 - Unit 2 (image wb-p14ui-portcfg2, 2026-11-12, `panel_unit.py --cold N --port D2`, ring ms from the power-up): D1 on: ACTIVE 1503 (first boot after the flash, 0 flaps), 5165 / 4948 ms with 45 / 44 HDMI predetect flaps and a `layout differed` each; D1 off (`dev.py settings set d1_enable 0`, stored at the gate): ACTIVE 1506 / 1504 / 1491 ms, 0 flaps, no `layout differed`; host DP-1 `disconnected`, EDID 0 B; boot line at +156 ms.

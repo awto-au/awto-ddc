@@ -31,7 +31,7 @@ TESTCMD = 0xF6F8                        # g_stAwtoDiag + 0x28
 TC_D1_OFF, TC_D3_OFF = 0x06, 0x08       # awto_testcmd.inc AWTO_TC_PORT_OFF + port index
 HPD_D1 = 0xFE02                         # bD1_HPD = MCU_FE02_PORT42_PIN_REG (board header)
 DDC1_DDC_ENABLE, DDC_EN = 0xFF2C, 0x01  # regdb DDC1_DDC_ENABLE bit 0 ddc1_ddc_en
-EV_PORT = 0xE0                          # sync.tsv E0: arg = AWTO_PORT_WHY_*
+EV_PORT = 0xE1                          # sync.tsv E1: arg = AWTO_PORT_WHY_* (E0 = the input selector)
 WHY = {1: "boot", 2: "off", 3: "on", 4: "selector", 5: "select", 6: "on screen", 7: "last", 8: "wake", 9: "already off",
        10: "already on", 11: "fixed->auto"}
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8     # key ADC cells (deadport_sim.py)

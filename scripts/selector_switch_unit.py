@@ -8,6 +8,8 @@ usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
 - Every key waits for its effect (OSD state / item byte), never a fixed settle. Per case: port + mode after, the new ring lines.
 - A target with no cable must be refused with its ring line (#84), then MENU cancels. No video on D1 (host DP-1 off): no signal
   on D1 counts as switched; the way back is taken before the SDK's power-saving card (debug slave silent in power saving).
+- A target disabled by its setting (#81 d1..d3_enable, g_ucAwtoPortOff): the take must enable it (ring line "<port> enabled by
+  the input selector", mask bit clear) and then switch. The run ends with each port's enable as it was at the start.
 - Unit 2 only (keymap_unit.Unit checks the serial). Ends on D2 fixed (settings_cli set input 1), debug link off.
 Log: tmp/logs/selector_switch_unit.log
 """
@@ -29,6 +31,7 @@ ITEM = {"Auto": 0, "D1": 3, "D2": 4, "D3": 5}   # _OSD_INPUT_AUTO, _OSD_INPUT_D1
 PORT = {"D1": 0x04, "D2": 0x05, "D3": 0x06}
 NAME = {v: k for k, v in PORT.items()}
 MODE_NOSIGNAL, MODE_SEARCH = 5, 1
+CLI = Path(__file__).resolve().parent / "settings_cli.py"   # this checkout's host settings table (K.ROOT may be another repo)
 # selector open / step: one main pass + the card draw (sim 175 ms, #139), unit loop ~3x slower with the debug link polled
 # = ~0.5 s; x1.25 -> 0.65 s. Expiry = the key line says NO EFFECT, measured time logged.
 DRAW_S = 0.65
@@ -41,6 +44,11 @@ class Unit(K.Unit):
         super().__init__(mp)
         import settings_cli as C
         self.pri, self.sidx = C.xaddr(self.mt, "g_pucSourceSearchPriority"), C.xaddr(self.mt, "g_ucSearchIndex")
+        self.off_a = C.xaddr(self.mt, "g_ucAwtoPortOff") if "_g_ucAwtoPortOff" in self.mt else None   # #81 images only
+
+    def off(self, p):
+        """port p disabled by its setting (AWTO_PORT_BIT: bit = port - _D0_INPUT_PORT)"""
+        return self.off_a is not None and (self.rd(self.off_a)[0] >> (PORT[p] - 3)) & 1 == 1
 
     def item(self):
         return self.rd(self.ud + ITEM_OFS)[0]
@@ -83,6 +91,7 @@ def case(u, frm, to, how, seen):
     if u.item() != ITEM[to]:
         u.check(f"{frm} -> {to} by {how}: highlight reaches {to}", False, f"item {u.item()}")
         return seen
+    was_off = u.off(to)
     t0 = time.monotonic()
     if how == "auto":
         u.key(K.K_AUTO, settle=0)
@@ -107,6 +116,9 @@ def case(u, frm, to, how, seen):
     u.check(f"{frm} -> {to} by {how}: switched (port {to}, ACTIVE or no signal), ring has the switch + request lines",
             settled is not None and any(ln.rstrip().endswith(f"switch to {to}") for ln in new)
             and any("requested by input selector" in ln for ln in new), f"port {name(u.port())} mode {u.mode()}")
+    if was_off:
+        u.check(f"{frm} -> {to} by {how}: {to} was disabled: enabled by the take (line + mask bit clear)",
+                any(f"{to} enabled by the input selector" in ln for ln in new) and not u.off(to))
     u.check(f"{frm} -> {to} by {how}: one search (no kept reset searching again after display setting)",
             not any("DISPLAY SETTING -> SEARCH" in ln for ln in new))
     return seen
@@ -125,8 +137,11 @@ def main():
     K.say(f"selector_switch_unit {a.map.name} on unit {K.UNIT} (bus {K.BUS})")
     dbg_link.on(K.BUS, 10)
     u = Unit(a.map)
+    off0 = []
     try:
         K.nothing_open(u)
+        off0 = [p for p in PORT if u.off(p)]
+        K.say(f"  disabled by setting at the start: {' '.join(off0) or 'none'}")
         seen = ring_new(u, [])[0]
         for how in (("idle", "auto") if a.how == "both" else (a.how,)):
             for frm, to in (("D2", "D1"), ("D1", "D2"), ("D2", "D3"), ("D3", "D2")):
@@ -136,8 +151,14 @@ def main():
                 seen = case(u, frm, to, how, seen)
     finally:
         u.io.close()
-        out = K.run("scripts/settings_cli.py", "--bus", K.BUS, "--serial", K.SERIAL, "--map", a.map, "set", "input", "1", limit=60)
+        out = K.run(CLI, "--bus", K.BUS, "--serial", K.SERIAL, "--map", a.map, "set", "input", "1", limit=60)
         K.say(f"  input back to D2 fixed: {out.strip().splitlines()[-1] if out.strip() else 'no output'}")
+        for p in off0:                          # enables as at the start (the take enabled a disabled target)
+            out = K.run(CLI, "--bus", K.BUS, "--serial", K.SERIAL, "--map", a.map, "set",
+                        f"{p.lower()}_enable", "0", limit=60)
+            last = out.strip().splitlines()[-1] if out.strip() else "no output"
+            K.say(f"  {p} disabled again: {last}")
+            u.check(f"{p} disabled again at the end", last.startswith("set "), last)
         if not a.keep_link:
             dbg_link.off(K.BUS)
             K.say("  debug link off")
