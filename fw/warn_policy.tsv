@@ -137,8 +137,8 @@
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	569	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1018	ok	OK-CONFIG: bForceFreqDown only set under _IMD_DOMAIN_ULTRA_HIGH_SPEED_SUPPORT (off); local stays _FALSE
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1021	ok	OK-CONFIG: freq-down arm dead for same reason (bForceFreqDown always _FALSE)
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2_SeptPhy.c	751	ok	OK-HARMLESS: trailing return after if/else where both arms return
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3_SeptPhy.c	751	ok	OK-HARMLESS: trailing return after if/else where both arms return
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2_SeptPhy.c	757	ok	OK-HARMLESS: trailing return after if/else where both arms return
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3_SeptPhy.c	757	ok	OK-HARMLESS: trailing return after if/else where both arms return
 ^conditional flow changed by optimizer	Kernel/System/Code/SysColor.c	65	ok	OK-CONFIG: _COLOR_IP_DCC_HISTOGRAM/_DCR/seamless/MBR off: ACTIVE case empty equals default
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	122	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept
 ^conditional flow changed by optimizer	Kernel/System/Code/SysJudge.c	160	ok	OK-HARMLESS: if(SysJudgeStateChangeEvent(..)==_FALSE){break;} followed by break: both paths identical; the call is kept

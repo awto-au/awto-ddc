@@ -91,6 +91,10 @@ static void AwtoKeyShown(void)                  // the values the screen is abou
 
 static void AwtoKeyShow(void)                   // every AwtoKeyPoll: redraw the console's key panel when a shown value changed
 {
+    if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
+    {
+        return;                                 // panel off: a redraw only holds off the wake poll (#144)
+    }
     if((g_stAwtoKey.ucOpen != 0) && ((g_stAwtoDiag.ucHold & AWTO_HOLD_POPUP) == 0))
     {
         g_stAwtoKey.ucOpen = 0;                 // test cmd 0x27 (clear holds) took the screen away

@@ -746,6 +746,7 @@ typedef struct
     unsigned int usPer;                         // Timer2 counts per 1 ms tick
     unsigned long ulPasses;
     unsigned long pulT2[AWTO_LP_SLOTS];         // Timer2 counts per segment (scripts/loop_prof.py SLOTS)
+    unsigned char ucPsOnly;                     // host writes 1: count only passes in power status SAVING (#144)
 } StAwtoLoopProf;
 #if(_AWTO_LOOP_PROF == _ON)
 extern void AwtoLpMark(unsigned char ucK);
@@ -900,6 +901,11 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
+#define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
+#define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
+#define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
+#define AWTO_SYNC_EV_PS_AUXCMD                                  0xDB    // arg = port: AUX command in power saving, no wake (_AWTO_PS_AUX_WAKE off)
+#define AWTO_SYNC_EV_PS_BURST                                   0xDE    // arg = port: TMDS clock live shorter than the hold, value ms (once per sleep)
 #define AWTO_SYNC_EV_HOST                                       0xD7    // #157 host time: arg = UTC offset (15 min, signed), value = unix s
 #define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoUpMs) at the sync
 #define AWTO_SYNC_EV_DRIFT                                      0xD9    // #157 value = host - local tick, ms (signed)
@@ -927,12 +933,25 @@ extern void AwtoHtSync(unsigned char *puc);
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON
 #endif
+// #144 test: an AUX command alone wakes (_ON, decision of task 4) or is only logged (_OFF: host DP idle AUX, DPCD 600h wakes)
+#ifndef _AWTO_PS_AUX_WAKE
+#define _AWTO_PS_AUX_WAKE                                       _ON
+#endif
 #define AWTO_WAKE_T_CABLE                                       0       // cable status not connected -> connected
 #define AWTO_WAKE_T_EDID                                        1       // DDCn_EDID_IRQ bit0: the source read the EDID
 #define AWTO_WAKE_T_AUX                                         2       // DP AUX_IRQ_STATUS bit0: an AUX command arrived
 #define AWTO_WAKE_T_DPCD                                        3       // DPCD 600h went to D0
 #define AWTO_WAKE_T_UNPLUG                                      4       // cable status connected -> not connected (task 6)
-#define AWTO_WAKE_T_N                                           5
+#define AWTO_WAKE_T_TMDS                                        5       // HDMI freq detector stable on a port with a cable (#144 q7)
+#define AWTO_WAKE_T_N                                           6
+// Wake poll period in power saving: 200/s. = the SDK's own freq-measure wait (TMDS PS predetect: 5 ms "for measure 5
+// times"), the TMDS check's restart -> read interval; cable debounce (AWTO_SLOW_MS 10) sampled 2x. Not met = max gap readout.
+#define AWTO_PS_POLL_MS                                         5
+// TMDS wake hold: SDK-stable (FREQDET_STABLE 63 in-bound measurements) at every restarted measurement for 50 ms: ~10 SDK
+// stable windows, outlasts the host's short TMDS bursts (#144); expiry = wake, line D7. Gap > 3 polls ends a run (burst, line D9).
+#define AWTO_PS_TMDS_HOLD_MS                                    50
+#define AWTO_PS_TMDS_GAP_MS                                     (3 * AWTO_PS_POLL_MS)
+#define AWTO_IOSC_KHZ                                           28000UL // _INTERNAL_OSC_XTAL: freq-detect reference in power saving
 #if(_AWTO_PS_WAKE == _ON)
 #define AWTO_PS_CABLE_SDK()                                     (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
 #else
@@ -986,10 +1005,17 @@ extern __xdata unsigned char g_ucAwtoPsWakeCon;
 extern void AwtoPsWakePoll(void);
 extern void AwtoPsWakeArm(void);
 extern void AwtoPsWakeReset(void);
+extern unsigned char AwtoPsTmdsLive(unsigned char ucPage);    // TMDS freq detector live (our wake poll)
+extern void AwtoPsDdcSeen(unsigned char ucPort);
+extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS predetect: AUX toggle counted, no wake (keil2sdcc sub)              // SDK TMDS PS predetect: DDC handshake counted, no wake (keil2sdcc sub)
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
                                                                   else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
+// between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
+#define AWTO_PS_POLL_SITE()                                     { if((g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) && \
+                                                                     (GET_POWER_STATUS() == _POWER_STATUS_SAVING)) { AwtoPsWakePoll(); } }
 #else
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
+#define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
 extern void AwtoOsdSyncPoll(void);
@@ -1011,6 +1037,7 @@ extern void AwtoConLogSync(void);
 #define AwtoSyncFreq()
 #define AwtoSyncPoll()
 #define AWTO_SYNC_POLL()
+#define AWTO_PS_POLL_SITE()
 #endif
 // #144 power-on: mode INITIAL opens the console with the live power-on log (awto_osdcard.inc AwtoBootConsole), then
 // panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).

@@ -176,6 +176,7 @@ void AwtoGpioPoll(void)
 {
     AwtoGpioEnsure();
     AwtoInScan(0);
+    if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING) return;  // panel off: no console work; it held off the wake poll (#144)
     AWTO_OSD_SYNC_POLL();                      // #139 selector fields, console sync lines / auto-open
     if(g_stAwtoGpio.ucOpen == 0) return;
     if((WORD)(AwtoGpioNow() - s_usAwtoDbgDraw) >= AWTO_DBG_REFRESH_MS)
