@@ -248,7 +248,7 @@ void RTDOsdEventMsgProc(void)
             SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
             OsdFuncSetOsdItemFlag();
             g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-            AwtoSourceOpen();
+            AwtoSourceOpen(AWTO_SEL_EV_OPEN_CARD);
 
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_SOURCE));
             break;

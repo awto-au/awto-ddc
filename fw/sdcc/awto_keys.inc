@@ -190,7 +190,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 #endif
           )
         {
-            AwtoSourceOpen();
+            AwtoSourceOpen(AWTO_SEL_EV_OPEN_KEY);
         }
         return;
     }

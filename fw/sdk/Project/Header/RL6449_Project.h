@@ -665,7 +665,7 @@ extern unsigned char AwtoPortCable(unsigned char ucPort);
 extern void AwtoDeadPortPoll(void);
 #define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
                                                                      (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF
-extern void AwtoSourceOpen(void);
+extern void AwtoSourceOpen(unsigned char ucWhy);                // ucWhy = AWTO_SEL_EV_OPEN_KEY / _OPEN_CARD (its ring line)
 // #139 selector, no picture: waits for a key; same 60 s as AWTO_L2_SEC (Dan's panel-off default), x1; expiry = SDK power-saving card, sleep
 #define AWTO_SRC_SLEEP_SEC                                      60
 #define AWTO_SRC_IDLE_COMMIT_MS                                 2000    // selector: highlighted input taken after this long with no key (Dan, 2026-11-12, #132)
@@ -967,6 +967,15 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
 #define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
 #define AWTO_SYNC_EV_DEADPORT                                   0xDF    // #84: arg 1 = port with no cable refused, 2 = fixed port without cable -> auto search; value = port
+#define AWTO_SYNC_EV_SEL                                        0xE0    // input selector (#132): arg AWTO_SEL_EV_*, value = port of the item (0xFF = Auto)
+#define AWTO_SEL_EV_OPEN_KEY                                    0x01    // opened by SOURCE, highlight on the value
+#define AWTO_SEL_EV_OPEN_CARD                                   0x02    // opened by the SDK no-signal / power-saving wake event
+#define AWTO_SEL_EV_KEPT_IDLE                                   0x03    // idle commit on the input it opened on: closed, no switch
+#define AWTO_SEL_EV_KEPT_AUTO                                   0x04    // AUTO on the input it opened on: closed, no switch
+#define AWTO_SEL_EV_CANCEL                                      0x05    // MENU: closed, the input it opened on kept
+#define AWTO_SEL_EV_NOCABLE                                     0x06    // #84 take refused: no cable on the item; stays open
+#define AWTO_SEL_EV_DPVER                                       0x07    // take ignored: DP version pop-up up
+#define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
 #define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
 #define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
