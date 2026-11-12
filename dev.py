@@ -618,7 +618,8 @@ def cmd_build(extra: list[str]) -> int:
     tag = f"{u['serial']}-{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}-be"
     out = FW / u["serial"]
     for src, ext in ((out / "fw.bin", "bin"), (out / "fw.map", "map"), (TMP / "sdcc-port/trace_ids.tsv", "ids.tsv")):
-        shutil.copy2(src, FW / f"{tag}.{ext}")
+        if src.exists() or ext != "ids.tsv":        # trace_ids.tsv is gone since the fw/sdk build (#162, fw/msgids.tsv)
+            shutil.copy2(src, FW / f"{tag}.{ext}")
     (FW / f"{u['serial']}-last.txt").write_text(tag)
     log(f"image tmp/fw/{tag}.bin (unit {n}{', freeze' if freeze else ', no FRC' if nofrc else ''}"
         f"{', internal audio test' if audio_test else ''})", "ALERT")
