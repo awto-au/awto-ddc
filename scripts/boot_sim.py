@@ -32,6 +32,7 @@ AFTER_MS = 300                        # after ACTIVE: the console has had displa
 BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
 STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)
 BITE_INSTR = 40_000_000               # 0x4C -> reset: cmd ~0.1 s + warning 1.03 s at ~12.6 k instr / fw ms = 14 M; x2.5
+TIME_SLACK_MS = 3                     # line time vs 'ms in' of the next line: action after the time stamp (pin, DPTx call) ~1 ms x3
 LOGO_SYMS = ("_OsdDispShowLogo", "_AwtoLogoDraw", "_tICON_REALTEK_1BIT_LOGO0", "_tAWTO_LOGO_RUNS", "_AwtoTestHoldLogoOff")
 
 
@@ -85,11 +86,26 @@ class Run:
         first = lines[0].split(" ms ", 1)[1] if lines else ""
         self.check(first.startswith(want) and sym in first, f"{tag}: first line is the boot reason", first)
         st = [ln for ln in lines[1:] if " boot: " in ln]       # milestone lines (sync.tsv D1 rows), after the reason
-        self.check(len(st) >= 6, f"{tag}: boot stage lines", f"{len(st)}")
+        want = sum(1 for r in self.rows if r["id"] == 0xD1)     # s3b: panel stages 5 / 7 / 8 have no row (the panel machine's lines)
+        self.check(len(st) >= want, f"{tag}: boot stage lines", f"{len(st)} of {want}")
         ms = [int(ln[1:].split("ms")[0]) for ln in lines]
         # 1 ms slack: the WDT-counter time (before Timer2) and the Timer2 time meet with integer-ms truncation
         self.check(all(b >= a - 1 for a, b in zip(ms, ms[1:])), f"{tag}: line times never step back (> 1 ms)", str(ms[:12]))
         self.shot(f"boot_reason_{tag}")
+
+    def machine_times(self, evs):
+        """#162 s3b: a machine line's ring time is its transition: line B -> C ('N ms in B') comes N ms after line A -> B
+        (console open: a live draw between an action and its line shows here). Panel (11) and system (13) lines."""
+        for eid, name in ((0x11, "panel"), (0x13, "system")):
+            tr = [(ms, a, v) for i, a, ms, v in evs if i == eid]
+            bad = []
+            for (t1, a1, _), (t2, a2, v2) in zip(tr, tr[1:]):
+                if (a1 & 0x0F) != (a2 >> 4) or (a1 >> 4) == (a1 & 0x0F) or (eid == 0x11 and a1 == 0x49):
+                    continue                     # chain gap / A -> A (entry kept) / VIDEO -> T4 (T4 counts from the backlight-off)
+                inn = (v2 & 0xFFFF) if eid == 0x11 else (v2 & 0xFFFFFF)
+                if abs(((t2 - t1) & 0xFFFF) - inn) > TIME_SLACK_MS:
+                    bad.append(f"{a1:02X}@{t1} -> {a2:02X}@{t2}: {inn} ms in, lines {(t2 - t1) & 0xFFFF} ms apart")
+            self.check(len(tr) > 1 and not bad, f"{name} lines carry their transition time (+-{TIME_SLACK_MS} ms)", "; ".join(bad[:4]))
 
     def episode(self):
         return S.decode(S.read_ring(self.m.rd, self.ring), self.rows)
@@ -148,8 +164,9 @@ def main():
         r.check(txt.count("console opened") == 1, "one 'console opened' line (survived display setting, no reopen)",
                 f"{txt.count('console opened')}")
         r.check("0.0 MHz" not in txt and "TMDS predetect on (clock not measured yet)" in txt, "HDMI scan: predetect line without a clock value, no 0.0 MHz line")
-        for want in ("power on", "backlight on", "timing ", "display setting", "mode ACTIVE"):
+        for want in ("power on", "backlight pin on", "timing ", "-> DISPLAY SETTING: ", "-> ACTIVE: "):
             r.check(want in txt, f"power-on log has '{want}'")
+        r.machine_times(h["events"])
         r.bus.dbg_link_on()                         # #79 images: 0x35 parked off the host port until this
         d = C.decode(C.read(r.bus, r.caddr))
         say(f"  measured, watchdog: {C.ages(d)}")

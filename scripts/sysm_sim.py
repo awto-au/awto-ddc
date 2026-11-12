@@ -8,7 +8,9 @@ FAIL (gate):
 - a firmware write that changes the power status / power target (g_stPowerInfo) or the mode state / mode reset target
   (g_stModeInfo) without g_ucAwtoSysOwn = 1 (after the machine's init);
 - a 'system: A -> B' line whose A is not the B of the line before (chain broken), or a state name missing (hex in the line);
-- a 'mode X' line without a system transition into a state of mode X right before it;
+- a transition line whose SDK mode text ('; <text>', sync.tsv 1A, #162 s3b) is missing although the mode changed, present
+  although it did not, or not the new state's text; the first line not 'RESET -> AC ON' with the POWER OFF text;
+- a mode text with no row (hex), or a request line of the panel machine without its requester ('requested by <who>');
 - a phase that does not reach its state (bounds below), or a 'target written without a request' line from the firmware's own phases;
 - --tree: SET_MODE_STATE / SET_POWER_STATUS / SET_TARGET_POWER_STATUS / SET_MODE_RESET_TARGET outside SysJudge.c, SysPowerSwitch /
   SysModeResetState called outside the machine's files, the old handlers (SysPowerHandler / SysJudgeHandler / SysModeHandler) anywhere.
@@ -31,7 +33,6 @@ LOG = ROOT / "tmp/logs/sysm_sim.log"
 POWER_KEY, K_SOURCE, SEL_D2, SEL_D3 = 0x3E, 0x05, 0x32, 0x33     # test cmds (awto_testcmd.inc)
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                        # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE, MODE_NOSIGNAL, MODE_PS = 2, 3, 5, 6
-MODE_NAME = {0: "INITIAL", 1: "SEARCH", 2: "DISPLAY SETTING", 3: "ACTIVE", 4: "NO SUPPORT", 5: "NO SIGNAL", 6: "POWER SAVING", 7: "POWER OFF"}
 STATE_MODE = {"AC ON": 7, "OFF": 7, "INITIAL": 0, "SEARCH": 1, "DISPLAY SETTING": 2, "ACTIVE": 3, "FAST SWITCH": 3, "HOLD L1": 3,
               "NO SUPPORT": 4, "NO SIGNAL": 5, "POWER SAVING": 6, "WAKE SEARCH": 6}       # POWER DOWN keeps the mode before it
 BOOT_INSTR = 160_000_000
@@ -234,17 +235,21 @@ class Run:
         self.check(trans and not broken, f"transition chain unbroken ({len(trans)} transitions)", str(broken[:4]))
         unnamed = [x for x in lines if re.search(r"system: .*\b[0-9A-F]{2}\b -> |-> [0-9A-F]{2}: |requested by [0-9A-F]{2} ", x)]
         self.check(not unnamed, "every state / who / request has a name (no hex code in a system line)", str(unnamed[:3]))
-        bad = []
-        for i, x in enumerate(lines):
-            m = re.search(r"\bmode (INITIAL|SEARCH|DISPLAY SETTING|ACTIVE|NO SUPPORT|NO SIGNAL|POWER SAVING|POWER OFF):", x)
-            if not m:
-                continue
-            prev = next((t for t in reversed(trans) if t[0] < i), None)
-            if prev is None and m.group(1) == "POWER OFF":
-                continue                             # SysMachineInit: the boot view, before the first transition
-            if prev is None or MODE_NAME.get(STATE_MODE.get(prev[2], -1)) != m.group(1):
-                bad.append(x)
-        self.check(not bad, "every mode line follows a system transition into that mode", str(bad[:3]))
+        texts = {r["arg"]: r["text"] for r in self.rows if r["id"] == L.SYS_MODE}     # mode text per state index
+        names = {r["text"]: r["arg"] for r in self.rows if r["id"] == L.SYS_STATE}
+        bad, mode = [], None
+        for i, a, b in trans:
+            x = lines[i]
+            tail = x.split(" ms in ", 1)[1].split(")", 1)[1]               # after '(N ms in OLD)'
+            new = STATE_MODE.get(b, mode)                                    # POWER DOWN keeps the mode before it
+            want = f"; {texts.get(names.get(b), '?')}" if new != mode else ""
+            if tail != want:
+                bad.append(f"{x} (want tail {want!r})")
+            mode = new
+        self.check(trans and trans[0][1:] == ("RESET", "AC ON") and not bad,
+                   "mode text on exactly the transitions that change the SDK mode (first: RESET -> AC ON, POWER OFF)", str(bad[:3]))
+        req = [x for x in lines if re.search(r"(panel|backlight) (on|off) requested", x) and " requested by " not in x]
+        self.check(not req, "every panel request line names its requester", str(req[:3]))
         direct = [x for x in lines if "target written without a request" in x]
         self.check(not direct, "no power target without a request", str(direct[:3]))
 

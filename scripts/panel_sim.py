@@ -8,7 +8,9 @@ Recorded: every write to the panel VDD pin (FE1A), backlight pins (FE25 / FE2A),
 the DPTx link / stream / PHY functions, each with the firmware's g_ucAwtoPanelOwn (1 = written by the panel machine).
 FAIL (gate): a write or call outside the machine after its first step; a firmware 'outside the panel machine' line; a
 backlight blink (pin off -> on with no panel-off between); a link training outside a panel bring-up; backlight on sooner than
-T3 after the stream start; VDD off sooner than T4 + T5 after backlight off; VDD on sooner than T6 after VDD off.
+T3 after the stream start; VDD off sooner than T4 + T5 after backlight off; VDD on sooner than T6 after VDD off;
+#162 s3b: a VDD / backlight pin edge by the machine without its transition line (OFF -> VDD, * -> T6, T3 -> BL_PWM,
+BL_OFF -> VIDEO / T4) at the edge's time (+-LINE_SLACK_MS), or such a line without an edge (the lines are the pin record).
 --report: print the timeline only (old images have no owner flag; nothing is judged). Log: tmp/logs/panel_sim.log
 """
 import argparse
@@ -39,6 +41,8 @@ BOOT_INSTR = 160_000_000
 # Wake: SDK auto search after PS_TO_NORMAL = DP dwell 3 s (D1) + HDMI 2 s worst, sim 4.2 s seen (s2-2) x1.25 -> 5.5 s.
 OFF_MS, ON_MS, SETTLE_MS, HOLD_MS, PS_MS, WAKE_MS = 1500, 3000, 1000, 1500, 3000, 5500
 STEP = 20_000
+LINE_SLACK_MS = 3      # pin edge -> its transition line: the line is pushed right after the action (pin, DPTx call), ~1 ms x3
+EDGE_LINES = {("VDD pin", 1): (0x01,), ("VDD pin", 0): (0x1B, 0x2B, 0xAB), ("BL pin", 1): (0x56,), ("BL pin", 0): (0x84, 0x89)}
 
 
 def say(s):
@@ -92,6 +96,8 @@ class Run:
             b, n, f = self.m.stubs[pre][0]
             self.m.stubs[pre][0] = (b, n, lambda m_, r, f=f: f(m_, r) if self.signal else {"carry": 0})
         self.lines_seen = []
+        self.ring_ev = []                            # (id, arg, ms16, value) of every ring entry, by seq
+        self.seq = None
 
     def t(self):
         return self.bus._t2()
@@ -121,8 +127,23 @@ class Run:
         return cond(), self.t() - t0
 
     def ring_lines(self, title):
-        h, lines = L.decode(L.read_ring(self.m.rd, self.ring), self.rows)
-        new = [x for x in lines if x not in self.lines_seen]
+        """ring entries pushed since the last read (by seq, all episodes: a power-off's lines sit in the episode before)"""
+        raw = L.read_ring(self.m.rd, self.ring)
+        seq, n, wrap = raw[3], raw[12], raw[13]
+        last = self.seq if self.seq is not None else (seq - n) % wrap
+        k = (seq - last) % wrap
+        if k > n:
+            self.check(False, f"ring read in time ({title})", f"{k - n} entries overwritten")
+            last, k = (seq - n) % wrap, n
+        evs = []
+        for j in range(k):
+            s = (last + j) % wrap
+            e = raw[L.HDR + L.EV * (s % n):L.HDR + L.EV * (s % n) + L.EV]
+            if e[0]:
+                evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
+        self.seq = seq
+        self.ring_ev += evs
+        new = [L.line(self.rows, ev, 0) for ev in evs]
         self.lines_seen += new
         say(f"  ring ({title}): {len(new)} new lines")
         for x in new:
@@ -238,6 +259,32 @@ class Run:
                    str([v - b for b, v in offs]))
         t6 = [(b[0] - a[0]) for a, b in zip(vdd, vdd[1:]) if a[2] == 0 and b[2] == 1]
         self.check(all(x >= PANEL["T6"] for x in t6), f"VDD on >= T6 ({PANEL['T6']} ms) after VDD off", str(t6))
+        self.edge_lines(self.events)                 # all writes: boot pin init gives the level before the first edge
+
+    def edge_lines(self, ev):
+        """#162 s3b: the machine's transition lines are the pin record: one line per machine pin edge, at the edge's time"""
+        edges, last = [], {"VDD pin": 0, "BL pin": 0}     # reset level: both pins low (off)
+        for t, ph, w, v, own in ev:
+            if w in ("VDD pin", "BL pin"):
+                if last[w] != v and own == 1:
+                    edges.append((t, w, v))
+                last[w] = v
+        off = (self.bus.diag_t2() - self.t()) & 0xFFFF   # event times count from the sim's first read; ring ms = usT2Isr
+        edges = [((te + off) & 0xFFFF, w, v) for te, w, v in edges]
+        t_first = edges[0][0] if edges else 0
+        lines = [(ms, a) for i, a, ms, _ in self.ring_ev if i == 0x11 and any(a in x for x in EDGE_LINES.values())]
+        miss, used = [], set()
+        for t, w, v in edges:
+            k = next((j for j, (ms, a) in enumerate(lines) if j not in used and a in EDGE_LINES[(w, v)] and
+                      abs((((ms - t) + 0x8000) & 0xFFFF) - 0x8000) <= LINE_SLACK_MS), None)
+            if k is None:
+                miss.append(f"{w}={v}@{t}")
+            else:
+                used.add(k)
+        extra = [f"11 {a:02X}@{ms}" for j, (ms, a) in enumerate(lines) if j not in used and ((ms - t_first) & 0xFFFF) < 0x8000]
+        self.check(edges and not miss, f"every machine pin edge has its transition line within {LINE_SLACK_MS} ms "
+                   f"({len(edges)} edges)", "missing: " + ", ".join(miss[:6]))
+        self.check(not extra, "no pin transition line without a pin edge", ", ".join(extra[:6]))
 
 
 def main():

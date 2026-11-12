@@ -181,7 +181,9 @@ def unwrap(evs: list, now32: int | None) -> list:
 
 
 SYS_STATE, SYS_WHY, SYS_REQ, SYS_OUT = 0x15, 0x16, 0x17, 0x18    # #162 step 3 name tables (sync.tsv), read by the sys / sysreq fmts
+SYS_MODE, PNL_BY = 0x1A, 0x1B            # #162 s3b: mode text per state (sys, why bit 7), panel requester (pby)
 SYS_MS_MAX = 0xFFFFFF
+WHY_CODE, WHY_MODE = 0x3F, 0x80          # RL6449_Project.h AWTO_SYS_WHY_CODE / AWTO_SYS_WHY_MODE
 
 
 def name(rows: list[dict], i: int, a: int) -> str:
@@ -192,8 +194,9 @@ def name(rows: list[dict], i: int, a: int) -> str:
 def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
     """#162 step 3 system machine: transition (arg old << 4 | new, value why << 24 | ms) / request (value who << 8 | outcome)"""
     if fmt == "sys":
-        old = name(rows, SYS_STATE, a >> 4)
-        return f"{old} -> {name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, v >> 24)} ({v & SYS_MS_MAX} ms in {old})"
+        old, why = name(rows, SYS_STATE, a >> 4), v >> 24
+        mode = f"; {name(rows, SYS_MODE, a & 0x0F)}" if why & WHY_MODE else ""        # s3b: the SDK mode changed
+        return f"{old} -> {name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, why & WHY_CODE)} ({v & SYS_MS_MAX} ms in {old}){mode}"
     return f"{name(rows, SYS_REQ, a)} requested by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
 
 
@@ -205,8 +208,12 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     if row is None:
         return head + f"event {i:02X} {a:02X}"
     pre = f"D{a - D0} " if row["port"] else ""
+    if row["fmt"] == "ms2":                              # #162 s3b: two values, two % (first ms << 16 | second ms)
+        p0, p1, p2 = row["text"].split("%")
+        return head + pre + f"{p0}{v >> 16} ms{p1}{v & 0xFFFF} ms{p2}"
     before, _, after = row["text"].partition("%")
-    val = sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else value(row["fmt"], a, v)
+    val = (sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
+           name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else value(row["fmt"], a, v))
     return head + pre + before + val + after
 
 

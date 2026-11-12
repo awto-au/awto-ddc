@@ -17,11 +17,15 @@ SIMS = ("boot_sim", "wake_sim", "sync_sim", "key_sim_test")
 LINE = re.compile(r"^\s*\+\s*(\d+) ms (.*)$")
 TEXT_MASK = re.compile(r"^(watchdog run-time:|MCU init: crystal clock, watchdog N).*")      # texts #162 step 1 made live: compare by prefix
 SIM_LIMIT_S = 300          # one sim: gates run each in 5-25 s; 12x margin, expiry = FAIL
-MILESTONES = (("panel VDD on", r"panel VDD switched on"), ("first main-loop pass", r"first main-loop pass"),
-              ("console opened", r"console opened"), ("eDP link trained", r"eDP-1 panel link trained"),
-              ("stream running", r"video stream to the panel running"), ("backlight on (pin)", r"^backlight on$"),
-              ("mode INITIAL", r"^mode INITIAL"), ("mode SEARCH", r"^mode SEARCH"), ("display setting", r"^display setting$"),
-              ("mode ACTIVE", r"^mode ACTIVE"), ("backlight pin edges", None))
+# old | #162 s3b texts (stage / mode / pin-edge lines folded into the machine lines): either side of an A/B
+MILESTONES = (("panel VDD on", r"panel VDD switched on|^panel: OFF -> VDD"), ("first main-loop pass", r"first main-loop pass"),
+              ("console opened", r"console opened"), ("eDP link trained", r"eDP-1 panel link trained|-> VIDEO: eDP-1 link trained"),
+              ("stream running", r"video stream to the panel running|-> VIDEO: eDP-1 link trained"),
+              ("backlight on (pin)", r"^backlight on$|-> BL_PWM: "), ("mode INITIAL", r"^mode INITIAL|^system: .* -> INITIAL: "),
+              ("mode SEARCH", r"^mode SEARCH|^system: .* -> SEARCH: "),
+              ("display setting", r"^display setting$|^system: .* -> DISPLAY SETTING: "),
+              ("mode ACTIVE", r"^mode ACTIVE|^system: .* -> ACTIVE: "), ("backlight pin edges", None))
+PIN_EDGE = re.compile(r"^backlight (on|off)$|backlight pin (on|off)")
 
 
 def say(s):
@@ -54,7 +58,7 @@ def table(sim, pa: Path, la, pb: Path, lb):
     say(f"  {sim} milestones (first match, ms): {pa.stem} | {pb.stem}")
     for name, pat in MILESTONES:
         if pat is None:
-            f = lambda ls: sum(1 for _, x in ls if x in ("backlight on", "backlight off"))
+            f = lambda ls: sum(1 for _, x in ls if PIN_EDGE.search(x))
             say(f"    {name:22s} {f(la):>6} | {f(lb):>6}")
             continue
         f = lambda ls: next((t for t, x in ls if _re.search(pat, x)), None)

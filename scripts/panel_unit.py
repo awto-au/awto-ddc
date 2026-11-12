@@ -3,13 +3,15 @@
 
 usage: panel_unit.py TAG [--cold 3] [--power-key 1] [--switch 0] [--no-flash]      (TAG = tmp/fw/AWT26110002-<tag>-be.bin, gated images only)
 - Flash: ./dev.py flash --unit 2 <bin> (refuses an ungated image). Debug link off first (dbg_link.py off 11).
-- Cold boot: hass_power.py cycle --unit 2; ring polled (dbg_link on, sync_log.py, dbg_link off) until 'mode ACTIVE'.
-- POWER key: test cmd 0x3E (soft off), OFF_S, 0x3E (soft on); ring polled until 'mode ACTIVE' of the power-key episode.
+- Cold boot: hass_power.py cycle --unit 2; ring polled (dbg_link on, sync_log.py, dbg_link off) until '-> ACTIVE: '.
+- POWER key: test cmd 0x3E (soft off), OFF_S, 0x3E (soft on); ring polled until '-> ACTIVE: ' of the power-key episode;
+  then the whole ring (off + on episodes) to <tag>-keyN-whole.txt.
 - Switch (#162 step 3): kvm.py D1 then D2 (DDC/CI VCP 0x60, unit 2 only); ring polled until the switch episode shows a picture
-  ('mode ACTIVE' or the fast path's 'FAST SWITCH -> ACTIVE'). D1 = the DP-1 mirror (host layout untouched). On D1 the debug
+  ('-> ACTIVE: ', also the fast path's 'FAST SWITCH -> ACTIVE'). D1 = the DP-1 mirror (host layout untouched). On D1 the debug
   slave follows the DP port, so that episode is read back whole from D2 (<tag>-switchN-whole.txt).
-- Per run (ring ms of the episode): POWER OFF / SEARCH / ACTIVE, predetect flaps, backlight pin lines, blinks (a backlight off
-  then on again in one episode), link trainings, stream -> backlight on, lines 'outside the panel machine'.
+- Per run (ring ms of the episode): POWER OFF / SEARCH / ACTIVE (system transitions), predetect flaps, backlight pin edges (panel
+  machine lines '-> BL_PWM' / 'backlight pin off', #162 s3b), blinks (a backlight off then on again in one episode), link trainings,
+  stream -> backlight on, lines 'outside the panel machine', machine lines whose time != the previous line + 'N ms in'.
 Ring text per run: tmp/logs/panel_unit/<tag>-<run>.txt. Log: tmp/logs/panel_unit.log
 """
 import argparse
@@ -27,7 +29,7 @@ BUS, SERIAL, UNIT = 11, "AWT26110002", 2      # unit 2 (scripts/devices.json); u
 BOOT_WAIT_S = 6.0      # cold boot -> ACTIVE: s1-5 2.47 s worst with HDMI predetect flaps (#162), x2.4 = 6 s; expiry = run FAIL
 KEY_WAIT_S = 6.0       # POWER-key on -> ACTIVE: s1-5 sim / unit < 2.5 s (#144 boot profile), x2.4; expiry = run FAIL
 SWITCH_WAIT_S = 4.0    # input switch -> picture: full path ~1 s (#60 / #83), DP search time 3 s worst x1.25 ~ 4 s; expiry = run FAIL
-OFF_S = 1.0            # soft off -> 'mode POWER OFF': PWM->BL 50 + T4 250 + T5 20 + NVRAM flush (<= 216 ms stall, #150) = 0.54 s
+OFF_S = 1.0            # soft off -> power OFF: PWM->BL 50 + T4 250 + T5 20 + NVRAM flush (<= 216 ms stall, #150) = 0.54 s
                        # + one ring poll 0.2 s = 0.74 s, x1.25 ~ 1 s; expiry = press again
 T6_S = 1.4             # then the panel's T6 (1.1 s, registry PANEL_T6) x1.25, so the soft on meets a panel past T6
 PRESSES = 3            # a press with the console open can go to closing it (AwtoKeyRoute); 3 = at most two such
@@ -57,7 +59,7 @@ def ring(mp: Path, whole=False) -> str:
     return r.stdout
 
 
-def until_active(mp: Path, wait_s: float, want_kind: str, done=("mode ACTIVE",)) -> str:
+def until_active(mp: Path, wait_s: float, want_kind: str, done=("-> ACTIVE: ",)) -> str:
     t0, txt = time.monotonic(), ""
     while time.monotonic() - t0 < wait_s:
         time.sleep(POLL_S)
@@ -100,17 +102,35 @@ def press_until(mp: Path, want: tuple, wait_s: float, what: str) -> bool:
             rio.close()
 
 
+TIME_SLACK_MS = 3      # machine line time vs the previous line + 'N ms in': action after the stamp (pin, DPTx call) ~1 ms x3
+
+
+def time_gaps(rows: list) -> list:
+    """#162 s3b: panel / system line 'A -> B ... (N ms in A)' should sit N ms after the line into A (its transition time)"""
+    bad = []
+    for kind in ("panel", "system"):
+        tr = [(t, m.group(1), m.group(2), int(m.group(3)) if m.group(3) else None) for t, x in rows
+              if (m := re.match(rf"{kind}: (.+?) -> (.+?): .*?(?:\((\d+) ms in \1\))", x))]
+        for (t1, a1, b1, _), (t2, a2, b2, n2) in zip(tr, tr[1:]):
+            if b1 != a2 or a1 == b1 or (a1, b1) == ("VIDEO", "T4") or n2 is None:
+                continue                         # gap / A -> A (entry kept) / T4 counts from the backlight-off
+            if abs((t2 - t1) - n2) > TIME_SLACK_MS:
+                bad.append(f"{kind} {a2} -> {b2} @{t2}: {n2} ms in {a2}, line into {a2} @{t1}")
+    return bad
+
+
 def facts(txt: str) -> dict:
     rows = [(int(m.group(1)), m.group(2).strip()) for m in re.finditer(r"\+\s*(\d+) ms (.*)", txt)]
     ms = lambda pat: next((t for t, x in rows if re.search(pat, x)), None)
-    bl = [(t, x) for t, x in rows if x in ("backlight on", "backlight off")]
-    blink = sum(1 for a, b in zip(bl, bl[1:]) if a[1] == "backlight off" and b[1] == "backlight on")
+    bl = [(t, "on" if "backlight pin on" in x else "off") for t, x in rows if re.search(r"backlight pin (on|off)", x)]
+    blink = sum(1 for a, b in zip(bl, bl[1:]) if a[1] == "off" and b[1] == "on")
     video = ms(r"-> VIDEO: eDP-1 link trained")
-    blon = next((t for t, x in bl if x == "backlight on"), None)
-    return dict(off=ms(r"^mode POWER OFF"), search=ms(r"^mode SEARCH"), active=ms(r"^mode ACTIVE|FAST SWITCH -> ACTIVE"),
+    blon = next((t for t, x in bl if x == "on"), None)
+    gaps = time_gaps(rows)
+    return dict(off=ms(r"-> (OFF|AC ON): "), search=ms(r"-> SEARCH: "), active=ms(r"-> ACTIVE: "),
                 flaps=len(re.findall(r"D2 signal lost", txt)) + sum(int(x) for x in re.findall(r"repeated (\d+) more", txt)),
-                bl=" ".join(f"{x.split()[1]}@{t}" for t, x in bl), blinks=blink,
-                links=sum(1 for _, x in rows if "eDP-1 link trained, stream on" in x or x == "eDP-1: link trained"),
+                bl=" ".join(f"{x}@{t}" for t, x in bl), blinks=blink, tgaps=len(gaps), tgap_lines=gaps,
+                links=sum(1 for _, x in rows if re.search(r"eDP-1 link trained( in \d+ ms)?, stream on", x)),
                 link_fail=sum(1 for _, x in rows if "link training FAIL" in x),
                 stream_bl=(blon - video) if (video is not None and blon is not None) else None,
                 outside=sum(1 for _, x in rows if "outside the panel machine" in x))
@@ -122,7 +142,9 @@ def report(tag: str, name: str, txt: str) -> dict:
     d = facts(txt)
     say(f"  {tag} {name}: POWER OFF +{d['off']} SEARCH +{d['search']} ACTIVE +{d['active']} flaps {d['flaps']} | backlight {d['bl']} "
         f"blinks {d['blinks']} | link trainings {d['links']} (fail {d['link_fail']}) stream->backlight {d['stream_bl']} ms | "
-        f"outside-machine lines {d['outside']}")
+        f"outside-machine lines {d['outside']} | line-time gaps {d['tgaps']}")
+    for g in d["tgap_lines"]:
+        say(f"    line-time gap: {g}")
     return d
 
 
@@ -154,11 +176,12 @@ def main():
         time.sleep(T6_S)
         ok = press_until(mp, (PWR_NORMAL, MODE_ACTIVE), KEY_WAIT_S, "power key on -> ACTIVE")
         d = report(a.tag, f"key{n + 1}", ring(mp))
+        (OUT / f"{a.tag}-key{n + 1}-whole.txt").write_text(ring(mp, whole=True))      # off episode + on episode
         bad += (not ok) or d["active"] is None
     for n in range(a.switch):
         for port in ("D1", "D2"):
             run("scripts/kvm.py", port, "--units", UNIT, limit=30)
-            d = report(a.tag, f"switch{n + 1}-{port}", until_active(mp, SWITCH_WAIT_S, f"switch to {port}", ("mode ACTIVE", "FAST SWITCH -> ACTIVE")))
+            d = report(a.tag, f"switch{n + 1}-{port}", until_active(mp, SWITCH_WAIT_S, f"switch to {port}"))
             bad += d["active"] is None and port == "D2"     # on D1 the debug slave follows to the DP port: bus 11 reads fail
         (OUT / f"{a.tag}-switch{n + 1}-whole.txt").write_text(ring(mp, whole=True))      # the D1 episode, read back on D2
     say(f"{'PASS' if not bad else 'FAIL'} panel_unit {a.tag}: {bad} run(s) without ACTIVE")

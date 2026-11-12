@@ -260,8 +260,10 @@ class Run:
             tw = hit[-1][2]
             after = lambda i, a=None: next(((e[2] - tw) & 0xFFFF for e in ev if e[0] == i and (a is None or e[1] == a)
                                             and ((e[2] - tw) & 0xFFFF) < 30000 and ev.index(e) > ev.index(hit[-1])), None)
+            first = lambda *x: next((v for v in x if v is not None), None)      # #162 s3b panel machine line | older image's
             say(f"  measured, {name}: event -> wake line {(tw - t_inj) & 0xFFFF} ms; wake line -> console drawn "
-                f"{after(0xCA)} ms, backlight on {after(0x10, 2)} ms, eDP link trained {after(0x90, 0x1B)} ms")
+                f"{after(0xCA)} ms, backlight on {first(after(0x11, 0x56), after(0x10, 2))} ms, "
+                f"eDP link trained {first(after(0x11, 0x34), after(0x90, 0x1B))} ms")
         return hit
 
 
