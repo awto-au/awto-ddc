@@ -3,7 +3,9 @@
 
 usage: led_unit.py TAG          (TAG = tmp/fw/AWT26110002-<tag>-be; image already flashed; caller holds unit_lock)
 - Reads g_ucAwtoLedMode and g_ucAwtoLedPins (MCU_FFE3 copy per main-loop pass; the debug slave reads 0 at FFE3 itself).
-- States: ACTIVE; power saving (ddcutil VCP D6 = 4 on bus 11, never host DPMS); wake (VCP D6 = 1); POWER off / on (test cmd 0x3E).
+- States: ACTIVE; power saving (ddcutil VCP D6 = 4 on bus 11); wake (VCP D6 = 1); POWER off / on (test cmd 0x3E).
+- --host-off: host outputs off (host_dpms.py, guarded) around the power-saving sample: the host's live TMDS clock wakes the
+  unit about 0.4 s after D6 = 4 (#144 wake by TMDS clock), so without it the sample lands in WAKE SEARCH.
 - Per state: SAMPLES reads SAMPLE_S apart (breathing shows as P3.6 varying), expected colour (led_check.STATE_LED).
 - Ends: ring text (sync_log.py) to tmp/logs/led_unit/<tag>.txt; debug link off. Log: tmp/logs/led_unit.log
 """
@@ -26,6 +28,7 @@ POLL_S = 0.3                                     # one xdata read ~0.1 s
 SAMPLES, SAMPLE_S = 6, 0.25                      # 1.5 s: a breathe ramp step is 16 ms, so P3.6 must change between reads
 # State waits = sysm_sim bounds x1.25: power saving 3 s, off 1.5 s, on 3 s, wake 5.5 s; expiry: logged, the state is sampled anyway
 WAIT_PS_S, WAIT_OFF_S, WAIT_ON_S, WAIT_WAKE_S = 3.75, 1.9, 3.75, 6.9
+HOST_GUARD_S = 15                                # host off -> D6 = 4 -> PS wait 3.75 s -> sample 1.5 s -> link ~1 s = ~8 s; x1.25 + margin for ddcutil
 DDC_LIMIT_S = 10                                 # ddcutil setvcp: ~1 s with retries; 10 s = stall
 
 
@@ -103,6 +106,7 @@ def ddc(vcp: str, val: str):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tag")
+    ap.add_argument("--host-off", action="store_true", help="host outputs off during the power-saving sample (host_dpms.py)")
     a = ap.parse_args()
     stem = ROOT / "tmp/fw" / f"{SERIAL}-{a.tag}-be"
     mp = stem.with_suffix(".map")
@@ -111,8 +115,20 @@ def main():
     u, table = Unit(mp), []
     say(f"led_unit {a.tag} (map {mp})")
     u.session(lambda rio: (u.wait(rio, PWR_NORMAL, MODE_ACTIVE, WAIT_ON_S, "ACTIVE"), u.sample(rio, "ACTIVE", table)))
+    import host_dpms as HD
+    host_off = False
+    if a.host_off:
+        try:
+            host_off = HD.off(HOST_GUARD_S)
+        except HD.UserPresent as e:
+            say(f"  host_dpms off refused ({e}): power saving sampled with the host signal on")
     ddc("D6", "04")
-    u.session(lambda rio: (u.wait(rio, PWR_SAVING, None, WAIT_PS_S, "power saving"), u.sample(rio, "POWER SAVING", table)))
+    try:
+        u.session(lambda rio: (u.wait(rio, PWR_SAVING, None, WAIT_PS_S, "power saving"), u.sample(rio, "POWER SAVING", table)))
+    finally:
+        if host_off:
+            HD.on()
+            say(f"  host outputs on: {HD.status()}")
     ddc("D6", "01")
     u.session(lambda rio: (u.wait(rio, PWR_NORMAL, MODE_ACTIVE, WAIT_WAKE_S, "wake: ACTIVE"), u.sample(rio, "ACTIVE", table)))
     u.session(lambda rio: (u.press(rio), u.wait(rio, PWR_OFF, None, WAIT_OFF_S, "POWER off"), u.sample(rio, "OFF", table)))

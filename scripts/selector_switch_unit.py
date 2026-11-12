@@ -10,6 +10,8 @@ usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
   on D1 counts as switched; the way back is taken before the SDK's power-saving card (debug slave silent in power saving).
 - A target disabled by its setting (#81 d1..d3_enable, g_ucAwtoPortOff): the take must enable it (ring line "<port> enabled by
   the input selector", mask bit clear) and then switch. The run ends with each port's enable as it was at the start.
+- The debug slave follows the port with a signal: D1 (DP) with host video answers on DP-1's bus (15), not HDMI-2's (11).
+  follow() moves the reads to whichever of BUSES has the diag magic (after a take, at each case start, at the end).
 - Unit 2 only (keymap_unit.Unit checks the serial). Ends on D2 fixed (settings_cli set input 1), debug link off.
 Log: tmp/logs/selector_switch_unit.log
 """
@@ -31,6 +33,7 @@ ITEM = {"Auto": 0, "D1": 3, "D2": 4, "D3": 5}   # _OSD_INPUT_AUTO, _OSD_INPUT_D1
 PORT = {"D1": 0x04, "D2": 0x05, "D3": 0x06}
 NAME = {v: k for k, v in PORT.items()}
 MODE_NOSIGNAL, MODE_SEARCH = 5, 1
+BUSES = (11, 15)                                # unit 2: HDMI-2 (D2), DP-1 (D1) connector buses (panel_unit.AUTO_BUSES)
 CLI = Path(__file__).resolve().parent / "settings_cli.py"   # this checkout's host settings table (K.ROOT may be another repo)
 # selector open / step: one main pass + the card draw (sim 175 ms, #139), unit loop ~3x slower with the debug link polled
 # = ~0.5 s; x1.25 -> 0.65 s. Expiry = the key line says NO EFFECT, measured time logged.
@@ -45,6 +48,23 @@ class Unit(K.Unit):
         import settings_cli as C
         self.pri, self.sidx = C.xaddr(self.mt, "g_pucSourceSearchPriority"), C.xaddr(self.mt, "g_ucSearchIndex")
         self.off_a = C.xaddr(self.mt, "g_ucAwtoPortOff") if "_g_ucAwtoPortOff" in self.mt else None   # #81 images only
+
+    def follow(self):
+        """reads on the bus whose 0x35 answers (the debug slave moves with the port that has a signal); True = moved"""
+        import dbg_link
+        from rtd_i2c_bridge import Real
+        import settings_cli as C
+        if dbg_link.dbg_ok(K.BUS):
+            return False
+        for b in BUSES:
+            if b != K.BUS and dbg_link.dbg_ok(b):
+                K.say(f"  debug slave on bus {b} now (bus {K.BUS} silent): reads follow")
+                self.io.close()
+                K.BUS = b
+                self.io = Real(b, allow_write=True)
+                self.box = C.Box(self.io, self.mt)
+                return True
+        return False
 
     def off(self, p):
         """port p disabled by its setting (AWTO_PORT_BIT: bit = port - _D0_INPUT_PORT)"""
@@ -65,6 +85,20 @@ class Unit(K.Unit):
         return t
 
 
+def bus_now():
+    """the bus whose 0x35 answers, polled up to SETTLE_S (an input switch moves the slave); expiry: K.BUS, logged"""
+    import dbg_link
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < SETTLE_S:
+        for b in BUSES:
+            if dbg_link.dbg_ok(b):
+                K.BUS = b
+                return b
+        time.sleep(0.1)
+    K.say(f"  no bus of {BUSES} answers 0x35 after {SETTLE_S} s: using bus {K.BUS}")
+    return K.BUS
+
+
 def name(p):
     return NAME.get(p, hex(p))
 
@@ -76,6 +110,7 @@ def ring_new(u, before):
 
 
 def case(u, frm, to, how, seen):
+    u.follow()
     K.say(f"case {frm} -> {to} by {how}: port {name(u.port())} mode {u.mode()} osd {u.osd()}")
     if u.osd() == SEL_STATE:
         u.press(K.K_MENU, "MENU (selector left open)", lambda: u.osd() != SEL_STATE)
@@ -100,6 +135,7 @@ def case(u, frm, to, how, seen):
     went = []                                   # D1: settled only after its search (a stale mode before the reset is no result)
 
     def done():
+        u.follow()
         m = u.mode()
         went.append(m)
         return u.port() == PORT[to] and m in want and (to != "D1" or MODE_SEARCH in went)
@@ -145,22 +181,23 @@ def main():
         seen = ring_new(u, [])[0]
         for how in (("idle", "auto") if a.how == "both" else (a.how,)):
             for frm, to in (("D2", "D1"), ("D1", "D2"), ("D2", "D3"), ("D3", "D2")):
+                u.follow()
                 if u.port() != PORT[frm]:
                     K.say(f"skip {frm} -> {to} by {how}: on {name(u.port())}, not {frm}")
                     continue
                 seen = case(u, frm, to, how, seen)
     finally:
         u.io.close()
-        out = K.run(CLI, "--bus", K.BUS, "--serial", K.SERIAL, "--map", a.map, "set", "input", "1", limit=60)
+        out = K.run(CLI, "--bus", bus_now(),  "--serial", K.SERIAL, "--map", a.map, "set", "input", "1", limit=60)
         K.say(f"  input back to D2 fixed: {out.strip().splitlines()[-1] if out.strip() else 'no output'}")
         for p in off0:                          # enables as at the start (the take enabled a disabled target)
-            out = K.run(CLI, "--bus", K.BUS, "--serial", K.SERIAL, "--map", a.map, "set",
+            out = K.run(CLI, "--bus", bus_now(), "--serial", K.SERIAL, "--map", a.map, "set",
                         f"{p.lower()}_enable", "0", limit=60)
             last = out.strip().splitlines()[-1] if out.strip() else "no output"
             K.say(f"  {p} disabled again: {last}")
             u.check(f"{p} disabled again at the end", last.startswith("set "), last)
         if not a.keep_link:
-            dbg_link.off(K.BUS)
+            dbg_link.off(bus_now())
             K.say("  debug link off")
     K.say(f"{'PASS' if u.fails == 0 else 'FAIL'} selector_switch_unit: {u.fails} failed")
     return 1 if u.fails else 0
