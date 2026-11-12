@@ -480,11 +480,6 @@
 //--------------------------------------------------
 // 
 //--------------------------------------------------
-#if(_CUSTOMER == _CUS_TOSHIBA)
-#define GET_1600_1024_COM()                            ((bit)(g_ucPictureChange & _BIT0))
-#define SET_1600_1024_COM()                            (g_ucPictureChange |= _BIT0)
-#define CLR_1600_1024_COM()                            (g_ucPictureChange &= ~_BIT0)
-#endif
 
 
 typedef enum
@@ -1211,9 +1206,6 @@ extern StructCalibrationInfo g_stCalibrationInfo;
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonAdjust.c
 //----------------------------------------------------------------------------------------
-#if(_CUSTOMER == _CUS_TOSHIBA)
-extern BYTE g_ucPictureChange;
-#endif
 
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonInterface.c
@@ -1249,9 +1241,6 @@ extern BYTE xdata *g_pucDISP_FREESYNC_II_CALIBRATION_FLASH;
 //----------------------------------------------------------------------------------------
 extern StructSystemDataType g_stSystemData;
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-extern StructUserDataInflashType g_stUserDataInFlash; 
-#endif
 
 #if(_VGA_SUPPORT == _ON)
 extern StructVGAModeUserDataType g_stVGAModeUserData;
@@ -1606,11 +1595,6 @@ extern void UserCommonFlashSaveSystemData(void);
 extern void UserCommonFlashLoadSystemData(void);
 extern void UserCommonFlashRestoreSystemData(void);
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-extern void RTDFlashLoadUserData(void);
-extern void RTDFlashRestoreUserData(void);
-extern void RTDFlashSaveUserData(void);
-#endif
 
 #if(_VGA_SUPPORT == _ON)
 extern void UserCommonFlashLoadModeUserData(BYTE ucSlotIndex);

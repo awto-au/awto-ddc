@@ -61,10 +61,6 @@ void SysMainBackLightSensorHandler(void);
 void SysMainStartUserCode(BYTE ucBankAddress);
 #endif
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-void SysMainPictureInit(void);
-void SysMainPictureHandler(void);
-#endif
 
 
 //****************************************************************************
@@ -218,9 +214,6 @@ void main(void)
             SysColorHandler();
             ScalerDebug();
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-            SysMainPictureHandler(); 
-#endif            
         }
     }
     while(_TRUE);
@@ -303,9 +296,6 @@ void SysMainSystemInitial(void)
     InitBacklightSensor();
 #endif
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-    SysMainPictureInit();
-#endif
 
     AWTO_BPROF(0x34);
     SysMachineInit();                       // #162 step 3: AC_ON, power target from NVRAM (a request)
@@ -373,47 +363,4 @@ void SysMainStartUserCode(BYTE ucBankAddress)
 }
 #endif
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-bit g_bDVIPin20CurState = 0;
-bit g_bDVIPin20PreState = 0;
-
-void SysMainPictureInit(void)
-{
-    g_bDVIPin20PreState = g_bDVIPin20CurState = bPin20DVI;
-    if(g_bDVIPin20CurState == _HIGH)
-        Set_1600_1024_State(_ON);
-    else
-        Set_1600_1024_State(_OFF);
-}
-
-void SysMainPictureHandler(void)
-{
-#if(TOSHIBA_DC_POWER == _OFF)
-    if(UserInterfaceGetAspectRatioType() == _ASPECT_RATIO_1280x1024)
-    {
-        if(((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 1024)) || \
-            ((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 900)))
-        {
-            if(GET_MODE_STATE() == _MODE_STATUS_ACTIVE)
-            {
-                g_bDVIPin20CurState = bPin20DVI;
-                if(g_bDVIPin20CurState != g_bDVIPin20PreState)
-                {
-                    g_bDVIPin20PreState = g_bDVIPin20CurState;
-                    if(g_bDVIPin20CurState == _HIGH)
-                        Set_1600_1024_State(_ON);
-                    else
-                        Set_1600_1024_State(_OFF);
-
-#if(_ASPECT_RATIO_SUPPORT == _ON)
-                    SysModeSetResetTarget(_MODE_ACTION_RESET_TO_DISPLAY_SETTING);
-#endif
-                }
-            }
-        }
-    }
-#endif 
-}
-
-#endif
 

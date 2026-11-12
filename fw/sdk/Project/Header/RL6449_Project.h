@@ -158,6 +158,9 @@ extern unsigned char AwtoKeyHold(void);
 // #65 step 1 drops: _OFF = SDK __code compiled out (scripts/keil2sdcc_drops.py)
 #define _AWTO_FACTORY                                           _ON     // RTD factory menu (RTDFactoryMode/Function); Dan: kept (needed), port to open __code later
 #define _AWTO_GAMMA_ALL                                         _ON     // _OFF = 1.8/2.0/2.4 OSD gamma options alias the 2.2 LUT; Dan: all kept
+#ifndef _AWTO_TMDS_MEASURE_ACCEPT                                // build -D overrides (A/B)
+#define _AWTO_TMDS_MEASURE_ACCEPT                               _OFF    // _ON = HDMI search accepts a port only once its timing measures (A/B for the predetect flaps, #162)
+#endif
 #define _AWTO_DP_PHYCTS                                         _ON     // DP PHY compliance (CTS) process; Dan: kept
 #define _AWTO_FLASH_ALL                                         _ON     // _OFF = MX25L8006E (JEDEC c22014) only; Dan: full table kept
 #if(_AWTO_FLASH_ALL == _ON)
