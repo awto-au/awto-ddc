@@ -1044,6 +1044,7 @@ stub	_ScalerComputeDwordMulDiv	C	0x3ba4	8
 fn	_ScalerGetDataPortByte	C	0x3bac	72
 fn	_ScalerGetDataPortWord	C	0x3bf4	20
 fn	_ScalerRead	C	0x3c08	44
+stub	_AwtoSourceReset	C	0x3c34	8
 stub	_osd_tc_vlc_end	C	0x3c60	8
 stub	_osd_tc_vlc_put	C	0x3c68	8
 stub	_ScalerDpGetLaneCount	C	0x3c70	8
@@ -1725,7 +1726,7 @@ fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
 fn	_AwtoMsgV	4	0xaef8	252
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1361	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1362	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -2030,7 +2031,6 @@ fn	_AwtoKeyPoll	6	0x40c4	280
 fn	_AwtoKeyPress	6	0x41dc	28
 fn	_AwtoKeyShow	6	0x41f8	304
 fn	_AwtoKeyShown	6	0x4328	64
-fn	_AwtoKeyTestSet	6	0x4368	8
 fn	_AwtoVgaDiagPower	6	0x4370	60
 fn	_key_hold	6	0x43ac	60
 fn	_key_inject	6	0x43e8	8
@@ -2054,9 +2054,11 @@ fn	_AwtoCardOpenW	6	0x49f4	404
 fn	_AwtoCardShow	6	0x4b88	12
 fn	_AwtoCardTxt	6	0x4b94	64
 fn	_AwtoPutChar	6	0x4bd4	60
+fn	_AwtoBootConsole	6	0x4c10	100
 fn	_AwtoConLogRoom	6	0x4c88	116
 fn	_AwtoConLogEnd	6	0x4cfc	252
 fn	_AwtoConLogStart	6	0x4df8	84
+fn	_AwtoKeyTestSet	6	0x4e4c	16
 fn	_AwtoConLogTail	6	0x4e6c	200
 fn	_AwtoConRow	6	0x4f34	292
 fn	_AwtoConTitle	6	0x5058	788
@@ -2213,7 +2215,6 @@ fn	_vcp_get	6	0xa5a8	716
 fn	_vcp_set	6	0xa874	260
 const	_tAwtoCardS	6	0xa978	504
 const	_ua_close	6	0xab70	12
-fn	_AwtoBootConsole	6	0xab7c	76
 fn	_AwtoConLogSync	6	0xabc8	316
 fn	_ScalerDpRx1SignalDetectInitial	7	0x0000	284
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x011c	1928
@@ -2266,8 +2267,9 @@ fn	_ScalerTMDSRx2ReadRequestProc_EXINT0	7	0xac9c	64
 fn	_ScalerTMDSRx3PSIntHandler_EXINT0	7	0xacdc	288
 fn	_ScalerTMDSRx3ReadRequestProc_EXINT0	7	0xadfc	64
 const	_tAwtoSyncTxtOff	8	0x0000	508
+fn	_AwtoSourceReset	8	0x01fc	92
 const	_tAwtoSyncNameRow	8	0x0290	468
-const	_tAwtoSyncFmt	8	0x0464	244
+const	_tAwtoSyncFmt	8	0x0464	260
 const	_tAwtoSyncTxtS	8	0x0614	8640
 fn	_AwtoInfoCard	8	0x50cc	916
 fn	_AwtoDiagTestCmd	8	0x5460	752
@@ -2280,7 +2282,7 @@ fn	_AwtoBlKey	8	0x5b78	464
 fn	_AwtoConWrapLine	8	0x5d48	280
 fn	_AwtoSyncTxt	8	0x5e60	276
 fn	_AwtoOsdWdtLines	8	0x6038	928
-fn	_AwtoSyncConPoll	8	0x64a4	204
+fn	_AwtoSyncConPoll	8	0x64a4	228
 fn	_AwtoSyncLine	8	0x7a1c	2156
 const	_font_blob_spleen	8	0x908c	1300
 const	_font_blob_spleen5	8	0x95a0	916
@@ -2553,8 +2555,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	11	0x0000	56
 const	_OperationFactoryTable	11	0x0038	756
 const	_tAwtoDdcReg	11	0x032c	12
 const	_tAwtoSyncIdRow	11	0x0338	268
-const	_tAwtoSyncRowArg	11	0x0444	244
-const	_tAwtoSyncRowId	11	0x0538	244
+const	_tAwtoSyncRowArg	11	0x0444	260
 const	_tAwtoWakeAux	11	0x062c	8
 const	_tAwtoWakeDdc	11	0x0634	12
 const	_tIDITHER_SEQ_TABLE	11	0x0640	28
@@ -2761,6 +2762,7 @@ fn	_hb_burst	11	0xaa24	316
 fn	_hb_osd_gap	11	0xab60	132
 fn	_mode_dclk_khz	11	0xabe4	28
 fn	_AwtoNvEv	11	0xac00	276
+const	_tAwtoSyncRowId	11	0xad14	260
 const	_tCOLOR_CONV_RGB2YUV_ITU709	12	0x0000	32
 fn	_ScalerOsdGetOsdEnable	12	0x0054	20
 fn	_ScalerOsdSetTransparencyType	12	0x0068	20
@@ -3159,10 +3161,10 @@ fn	_AwtoDdcRequest	12	0x3de4	1476
 fn	_AwtoPutIso	12	0x43a8	1120
 fn	_AwtoOsdDebugLines	12	0x4808	964
 fn	_SysMachineGo	12	0x4ddc	392
-fn	_SysMachineJudge	12	0x4f64	524
+fn	_SysMachineJudge	12	0x4f64	600
 fn	_SysMachineRequest	12	0x51d4	516
 fn	_SysMachineInit	12	0x53d8	164
 fn	_SysMachineWork	12	0x54cc	872
 fn	_SysMachineReset	12	0x5834	320
 fn	_SysMachinePowerStep	12	0x5974	668
-fn	_AwtoKeyRoute	12	0x5c10	580
+fn	_AwtoKeyRoute	12	0x5c10	656

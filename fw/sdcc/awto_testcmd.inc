@@ -129,6 +129,7 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd == 0x20) || (ucCmd == 0x26))         // debug pop-up: the diagnostic console
     {
         AwtoDiagConsole(1);
+        g_ucAwtoConAuto = 0;
     }
     else if(ucCmd == 0x27)
     {
