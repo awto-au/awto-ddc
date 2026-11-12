@@ -85,7 +85,7 @@
 59	osd_vpos	int	percent	osd	nv,live,sdk	0	100	1	50	auto	-	osd_pos	Menu V position	-	[sdk-ui]
 60	osd_scale	enum	none	osd	nv,live,sdk	0	1	1	0	auto	0xF4	osd_scale	Menu size	1x|2x
 106	osd_font	enum	none	osd	nv,live	0	1	1	0	auto	-	osd_font	Menu font	Spleen|Tamzen	native fixed bitmap fonts; no resampling
-61	osd_transparency	int	percent	osd	nv,live,sdk	0	100	1	0	auto	-	osd_transparency	Transparency	-	[sdk-ui]
+61	osd_transparency	int	percent	osd	nv,live,sdk	0	100	1	20	auto	-	osd_transparency	Transparency	-	every awto screen: OSD windows blend, glyphs opaque; chip level pct x 255 / 100 (20 -> 51 of 255) (awto-ddc#176)
 62	language	enum	none	osd	nv,sdk	0	1	1	0	auto	-	sdk_language	Realtek menu language	English|Chinese-T	Realtek SDK menu strings only [sdk-ui]
 63	osd_rotate	enum	none	osd	nv,inert,sdk	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
 67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [sdk-value]
