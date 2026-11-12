@@ -8,11 +8,13 @@ usage: gen_awto_sync.py [--check]
                               awto_port_sigs: one row per port signal (source, columns, labels)
     RL6449_Project.h          awto_port_cnt: edge counters the input monitor keeps for `cnt` signals
   The sync.tsv texts are also read by the host decoder (scripts/sync_log.py in awto-ddc main).
+  Texts may hold {NAME} / {NAME/DIV}: the integer #define in RL6449_Project.h (resolve(); wb_build.py copies the resolved tsv for the host).
   --check: exit 1 when any block is out of date.
 Log: tmp/logs/gen_awto_sync.log
 """
 import argparse
 import os
+import re
 import subprocess
 import sys
 import time
@@ -50,13 +52,30 @@ def parse_fmt(f: str) -> int:
     return FMTS[f]
 
 
+HEADER = ROOT / "fw/sdk/Project/Header/RL6449_Project.h"
+TOKEN = re.compile(r"\{([A-Za-z0-9_]+)(?:/(\d+))?\}")
+
+
+def define_value(name: str, header: Path = HEADER) -> int:
+    m = re.search(rf"^#define\s+{re.escape(name)}\s+\(?(0x[0-9A-Fa-f]+|\d+)", header.read_text(), re.M)
+    if not m:
+        raise SystemExit(f"sync.tsv: {{{name}}} is not an integer #define in {header.name}")
+    return int(m.group(1), 0)
+
+
+def resolve(text: str, header: Path = HEADER) -> str:
+    """{NAME} / {NAME/DIV} in a text -> the integer #define of NAME (/ DIV) in the project header: a number the firmware
+    knows is never typed into a log text."""
+    return TOKEN.sub(lambda m: str(define_value(m.group(1), header) // int(m.group(2) or 1)), text)
+
+
 def rows(path: Path = TSV):
     out = []
     for ln in path.read_text().splitlines():
         if not ln.strip() or ln.startswith("#"):
             continue
         i, a, f, t = ln.split("\t")
-        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), fmt=parse_fmt(f), text=t))
+        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), fmt=parse_fmt(f), text=resolve(t)))
     assert len(out) < 255, "row index is one byte (0 = no row)"
     assert all(t["text"].count("%") <= 1 for t in out), "one value per line"
     return out
