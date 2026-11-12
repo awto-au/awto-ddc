@@ -17,3 +17,4 @@ Global rules apply (`~/.claude/CLAUDE.md`). Repo specifics:
   and RTDCustomerTool data. Consequence: this repo stays **PRIVATE permanently** (Realtek confidential code).
   - Host-side tools (`scripts/`) stay clean-room: from hardware facts (regdb + measurements), cite the fact.
   - GPL projects (ORTD2662 etc.) are understood, not pasted.
+- **No magic numbers in our code (Dan, 2026-11-12):** register addresses and bits by their regdb name (`re/regdb/RTD2795T-CG.tsv.gz` → generated header), colours / palette indices / timings by named constants. A raw `0x3Axx` in a `Scaler*` call is a defect; a lint gate enforces it (awto-ddc#161). Realtek SDK files stay as they are.
