@@ -137,7 +137,7 @@ def struct_fields(h_text: str, name: str) -> list[dict]:
             continue
         cm = cm.strip().rstrip(";").strip()
         fields.append(dict(ctype=m[1], name=m[2], width=int(m[3]) if m[3] else None,
-                           comment="" if cm.startswith("--") or cm.startswith("[keil2sdcc]") else cm))
+                           comment="" if cm.startswith("--") else cm))
     pos, open_, used = 0, False, 0
     for f in fields:
         if f["width"]:
