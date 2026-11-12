@@ -37,7 +37,7 @@ unsigned char AwtoSwCacheValid(unsigned char ucPort)
 {
     BYTE ucI = ucPort - _D1_INPUT_PORT;
 
-    return (ucI < 3) ? s_pstAwtoSwCache[ucI].ucValid : 0;
+    return ((ucI < 3) && !AWTO_PORT_OFF(ucPort)) ? s_pstAwtoSwCache[ucI].ucValid : 0;     // #81: no fast path to a disabled port
 }
 
 static void AwtoSwFastGo(BYTE ucI, BYTE ucPort, BYTE ucType)

@@ -160,15 +160,15 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4154	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4159	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4274	ok	OK-TEST-BUILD: speaker-only DAC selection is a compile-time constant; optimizer keeps the amplifier action
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	113	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	115	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	118	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	122	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	126	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	133	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	137	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	141	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	143	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	114	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	116	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	119	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	123	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	127	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	134	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	138	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	142	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	144	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5261	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5259	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	5260	ok	OK-CONFIG: if(GET_OSD_DDCCI_STATUS()!=_OFF): macro forced to (_OFF) by awto debug-port override; DDC/CI menu toggle dead by design
@@ -225,9 +225,9 @@
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	570	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c	435	ok	OK-CONFIG: _AWTO_FAST_BOOT: Group A power-cut OFF branch empty (PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops on our board, the 2 x 10 ms rail waits removed); the condition only reads two status bits
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	*	ok	dead flash-type cases: g_ucFlashType is the constant _FLASH_MX25L8006E while _AWTO_FLASH_ALL is _OFF (#65)
-^unreachable code$	Kernel/System/Code/SysSource.c	3279	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^unreachable code$	Kernel/System/Code/SysSource.c	3281	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^unreachable code$	Kernel/System/Code/SysSource.c	3282	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
+^unreachable code$	Kernel/System/Code/SysSource.c	3296	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
+^unreachable code$	Kernel/System/Code/SysSource.c	3298	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
+^unreachable code$	Kernel/System/Code/SysSource.c	3299	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	516	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	518	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6223	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked

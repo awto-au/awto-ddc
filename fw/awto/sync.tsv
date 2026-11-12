@@ -150,6 +150,17 @@ E0	07	-	input selector: take ignored, DP version pop-up up
 E0	08	x	input selector: item % is no port of this board; stays open
 E0	09	vport	input selector closed by a mode reset (SDK OSD reset): % kept
 E0	0A	-	console (opened by itself) closed by SOURCE: input selector next
+E1	01	vport	% disabled by setting (stored): HPD low, EDID off, receiver off, not searched
+E1	02	vport	% disabled by setting: HPD low, EDID off, receiver off, not searched
+E1	03	vport	% enabled by setting: HPD up, EDID on, receiver on, searched
+E1	04	vport	% enabled by the input selector: HPD up, EDID on, receiver on
+E1	05	vport	% enabled by input select (VCP 0x60 / menu / test cmd): HPD up, EDID on, receiver on
+E1	06	vport	disable % refused: the input on screen
+E1	07	vport	disable % refused: the last enabled input
+E1	08	vport	wake on % suppressed: input disabled (once per trigger per sleep)
+E1	09	vport	disable % requested: already disabled
+E1	0A	vport	enable % requested: already enabled
+E1	0B	vport	fixed search on disabled %: auto search
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %

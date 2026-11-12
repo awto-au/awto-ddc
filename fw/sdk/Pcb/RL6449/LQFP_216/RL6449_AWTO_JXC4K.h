@@ -474,19 +474,20 @@
                                                     bD0_HPD = (x);\
                                                 }
 
+// D1..D3: a port disabled by setting stays low whatever the caller asks (#81 AWTO_PORT_HPD, every HPD writer passes here)
 #define PCB_D1_HOTPLUG(x)                       {\
                                                     AWTO_SW_HPD(1, x);\
-                                                    bD1_HPD = (x);\
+                                                    bD1_HPD = AWTO_PORT_HPD(1, x);\
                                                 }
 
 #define PCB_D2_HOTPLUG(x)                       {\
                                                     AWTO_SW_HPD(2, x);\
-                                                    bD2_HPD = (x);\
+                                                    bD2_HPD = AWTO_PORT_HPD(2, x);\
                                                 }
 
 #define PCB_D3_HOTPLUG(x)                       {\
                                                     AWTO_SW_HPD(3, x);\
-                                                    bD3_HPD = (x);\
+                                                    bD3_HPD = AWTO_PORT_HPD(3, x);\
                                                 }
 
 #define PCB_D0_HOTPLUG_DETECT()                 (bD0_HPD)

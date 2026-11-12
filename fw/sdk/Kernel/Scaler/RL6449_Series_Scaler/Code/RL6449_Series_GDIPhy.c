@@ -301,7 +301,10 @@ void ScalerGDIPhyZ0Switch(BYTE ucPortSelect, bit bSelect)
 //--------------------------------------------------
 void ScalerGDIPhyPowerProc(BYTE ucPortSelect, EnumPowerAction enumPowerAction)
 {
-    enumPowerAction = enumPowerAction;
+    if((ucPortSelect >= _D1_INPUT_PORT) && (ucPortSelect <= _D3_INPUT_PORT))
+    {
+        enumPowerAction = AWTO_PORT_RX_ACTION(ucPortSelect, enumPowerAction);     // #81: a disabled port's receiver stays off
+    }
 
     switch(ucPortSelect)
     {

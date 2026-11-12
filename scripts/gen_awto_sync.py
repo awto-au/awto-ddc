@@ -78,11 +78,18 @@ def rows(path: Path = TSV):
             continue
         i, a, f, t = ln.split("\t")
         out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), a=a, f=f, fmt=parse_fmt(f), text=resolve(t)))
-    assert len(out) < 255, "row index is one byte (0 = no row)"
+    out = [x for x in out if x["id"] not in NAME_IDS] + [x for x in out if x["id"] in NAME_IDS]   # logged rows first, names after
+    n = logged(out)
+    assert n < 255 and len(out) - n < 255, "row index is one byte per part (0 = no row): logged rows, name rows"
     for t in out:                                    # one value per line; ms2 has two
         n, two = t["text"].count("%"), (t["fmt"] & 0x7F) == FMTS["ms2"]
         assert (n == 2) if two else (n <= 1), f"{t['id']:02X} {t['arg']:02X}: {n} % marks"
     return out
+
+
+def logged(r) -> int:
+    """rows the ring logs (AWTO_SYNC_ROWS); the name-table rows follow them, indexed from there (tAwtoSyncNameRow)"""
+    return sum(x["id"] not in NAME_IDS for x in r)
 
 
 def arr(name, vals, per=16):
@@ -91,7 +98,8 @@ def arr(name, vals, per=16):
 
 
 def rows_block(r):
-    n = len(r)
+    n = logged(r)
+    r = r[:n]
     ids = [x["id"] for x in r]
     assert all(ids.index(i) + ids.count(i) == len(ids) - ids[::-1].index(i) for i in set(ids)), "rows of one id must be adjacent"
     first = [0] * 256                                 # #162 step 3: row + 1 of the id's first row, so a lookup scans only that id
@@ -129,12 +137,14 @@ NAME_ARGS = 64                                       # args per name table: dire
 
 def names_block(r):
     tab = [0] * (len(NAME_IDS) * NAME_ARGS)
+    n = logged(r)
     for k, x in enumerate(r):
         if x["id"] in NAME_IDS:
             assert x["arg"] < NAME_ARGS, f"name table {x['id']:02X}: arg {x['arg']:02X} >= {NAME_ARGS}"
-            tab[(x["id"] - NAME_IDS.start) * NAME_ARGS + x["arg"]] = k + 1
+            tab[(x["id"] - NAME_IDS.start) * NAME_ARGS + x["arg"]] = k - n + 1    # + AWTO_SYNC_NAME_ROW0 - 1 = text row
     return "\n".join([
         f"#define AWTO_SYNC_NAME_FIRST 0x{NAME_IDS.start:02X}",
+        f"#define AWTO_SYNC_NAME_ROW0 {n}                 // text row of name row 0 (= the logged rows)",
         f"#define AWTO_SYNC_NAME_IDS {len(NAME_IDS)}",
         f"#define AWTO_SYNC_NAME_ARGS {NAME_ARGS}",
         arr("tAwtoSyncNameRow", [str(v) for v in tab], 32)])
@@ -153,13 +163,13 @@ def text_block(r):
         arr("tAwtoSyncFmt", [f"0x{x['fmt']:02X}" for x in r]),
         f'static const __code char tAwtoSyncTxtS[] = "{blob}";',
         f"static const __code WORD tAwtoSyncTxtOff[{len(r)}] = {{" + ", ".join(str(o) for o in real) + "};",
-        "static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text after ucPart (0..2) value marks, 0xFF = none; returns the fmt",
-        "{",
-        "    const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];",
+        "static BYTE AwtoSyncTxt(WORD usRow, BYTE ucPart)   // text after ucPart (0..2) value marks, 0xFF = none; returns the fmt",
+        "{                                                  // usRow: logged row, or AWTO_SYNC_NAME_ROW0 + name row",
+        "    const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[usRow]];",
         "",
         "    if(ucPart == 0xFF)",
         "    {",
-        "        return tAwtoSyncFmt[ucRow];",
+        "        return tAwtoSyncFmt[usRow];",
         "    }",
         "    if(ucPart != 0)                             // at most two marks (ms2); ucPart is not written (no XDATA copy)",
         "    {",
@@ -169,7 +179,7 @@ def text_block(r):
         "        }",
         "        if(*pc == 0)",
         "        {",
-        "            return tAwtoSyncFmt[ucRow];",
+        "            return tAwtoSyncFmt[usRow];",
         "        }",
         "        pc++;",
         "        if(ucPart == 2)",
@@ -180,7 +190,7 @@ def text_block(r):
         "            }",
         "            if(*pc == 0)",
         "            {",
-        "                return tAwtoSyncFmt[ucRow];",
+        "                return tAwtoSyncFmt[usRow];",
         "            }",
         "            pc++;",
         "        }",
@@ -204,7 +214,7 @@ def text_block(r):
         "        }",
         "        pc++;",
         "    }",
-        "    return tAwtoSyncFmt[ucRow];",
+        "    return tAwtoSyncFmt[usRow];",
         "}",
         names_block(r)])
 

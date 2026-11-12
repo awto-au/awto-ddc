@@ -1153,7 +1153,6 @@ fn	_ScalerDpRx1DpcdInitial	0	0x1624	436
 fn	_ScalerFRCEn	0	0x17d8	260
 fn	_ScalerGDIPhyBandgap	0	0x18dc	368
 fn	_ScalerGDIPhyDigitalPhySwitch	0	0x1a4c	8
-fn	_ScalerGDIPhyPowerProc	0	0x1a54	40
 fn	_ScalerLDOPowerControl	0	0x1a7c	8
 fn	_ScalerMcuDdcDebounceSel	0	0x1a84	116
 fn	_ScalerMcuDdcInitial	0	0x1af8	276
@@ -1206,7 +1205,7 @@ fn	_ScalerAudioDVCAdjustVolume	0	0x5898	36
 fn	_ScalerAudioDVCInitial	0	0x58bc	44
 fn	_ScalerAudioDVCSetMuteZCDTimeout	0	0x58e8	296
 fn	_ScalerTimerWDInitial	0	0x5a10	104
-fn	_ScalerMcuGpioInitial	0	0x5a78	176
+fn	_ScalerMcuGpioInitial	0	0x5a78	216
 fn	_ScalerAudioDVCVolumeAdjustType	0	0x5b54	64
 fn	_ScalerAudioDVCVolumeMute	0	0x5b94	192
 fn	_ScalerAudioDigitalAdjustVolume	0	0x5c54	20
@@ -1300,6 +1299,7 @@ fn	_SysDpRxHandler	0	0xa130	60
 fn	_AwtoLedSetMode	0	0xa500	68
 fn	_SysModeResetState	0	0xa544	348
 fn	_SysPowerIsolation	0	0xa858	108
+fn	_ScalerGDIPhyPowerProc	0	0xa8c4	100
 fn	_SysPowerMcuClock	0	0xa93c	116
 fn	_SysPowerSystemClockSelect	0	0xaab4	192
 fn	_SysTimerEventProc	0	0xab74	108
@@ -1351,10 +1351,11 @@ fn	_set_ap_user_rgb	1	0x5970	32
 fn	_AwtoNvLoad	1	0x5990	228
 fn	_AwtoPct	1	0x5a74	260
 fn	_AwtoTo255	1	0x5b78	24
+fn	_set_put	1	0x5b90	508
 fn	_set_sdk_get	1	0x5e30	996
 fn	_set_sdk_put	1	0x6214	1192
 fn	_AwtoNvService	1	0x66bc	704
-fn	_AwtoInputSelect	1	0x95e0	200
+fn	_AwtoInputSelect	1	0x95e0	220
 fn	_AwtoNvWrite	1	0x9884	424
 const	_tAwtoVolGain	1	0x9a2c	28
 fn	_OsdFuncSetPosition	1	0x9a48	60
@@ -1441,7 +1442,6 @@ fn	_ScalerDebugSetRegisters	2	0x6e68	300
 fn	_ScalerSyncDpFakeLTProtect	2	0x6f94	8
 fn	_ScalerSyncHdcpCheckEnabled	2	0x6f9c	84
 fn	_ScalerSyncResetProc	2	0x6ff0	44
-fn	_ScalerTimerEventProc	2	0x701c	124
 fn	_ScalerTimerWDCancelTimerEvent	2	0x7098	64
 fn	_AwtoDpFrameSet	2	0x70d8	172
 fn	_AwtoDpTwoFramesMs	2	0x7184	48
@@ -1497,11 +1497,12 @@ fn	_ScalerTMDSRx3FirstActiveProc	2	0xa53c	8
 fn	_ScalerTMDSRx3Hdmi2FormatResetEvent	2	0xa544	12
 fn	_ScalerTMDSRx3HdmiPacketDetectEvent	2	0xa550	12
 fn	_SysSourceCableDetection	2	0xa55c	804
-fn	_SysSourceHandler	2	0xaa90	164
 fn	_SysSourceJudge	2	0xab34	216
 fn	_UserCommonInterfaceCheckNoSupport	2	0xac0c	92
 fn	_UserCommonInterfaceCheckResolutionNoSupport	2	0xac68	144
 fn	_ScalerComputeDwordMulDiv	2	0xacf8	140
+fn	_ScalerTimerEventProc	2	0xad84	168
+fn	_SysSourceHandler	2	0xae2c	216
 const	_tSD_H_COEF_128_TAPS	3	0x0000	136
 const	_tSD_V_COEF_64_TAPS	3	0x0088	72
 const	_g_stOSDDefaultData	3	0x00d0	28
@@ -1527,7 +1528,6 @@ fn	_ScalerColorDDitherLoadTempoTable	3	0x67cc	72
 fn	_ScalerColorOutputGammaAdjust	3	0x6814	484
 fn	_ScalerColorOutputGammaChannelCtrl	3	0x69f8	64
 fn	_ScalerColorOutputGammaEnable	3	0x6a38	28
-fn	_ScalerMcuDdcRamEnable	3	0x6a54	48
 fn	_ScalerOsdSramBaseAddressSet	3	0x6a84	188
 fn	_ScalerPinshareAdjustConfig	3	0x6b40	1052
 fn	_ScalerPinshareAdjustFlashDrive	3	0x6f5c	212
@@ -1600,6 +1600,7 @@ fn	_RTDFactoryColortemp6RRight	3	0xa034	16
 fn	_RTDFactoryOsdPageRight	3	0xa044	16
 fn	_RTDFactoryResetPanelTimeLeft	3	0xa054	16
 fn	_ScalerColorDDitherLoadSeqTable	3	0xa064	72
+fn	_ScalerMcuDdcRamEnable	3	0xa0ac	112
 fn	_ScalerTimerInitialTimerEvent	3	0xa11c	40
 fn	_ScalerPinshareConfig	3	0xa144	32
 fn	_AwtoDiagInit	3	0xa164	52
@@ -1651,6 +1652,7 @@ fn	_OsdDispDisableOsd	4	0x40e0	80
 fn	_OsdDispOsdMessage	4	0x7550	1512
 fn	_AwtoT0EvFire	4	0x7df8	64
 fn	_AwtoT0EvClock	4	0x7f10	256
+fn	_AwtoPortSkipSearch	4	0x8010	64
 fn	_OsdFuncApplyMap	4	0x807c	284
 fn	_OsdFuncBlending	4	0x8198	24
 fn	_OsdFuncCloseWindow	4	0x81b0	8
@@ -2272,7 +2274,7 @@ const	_tAwtoSyncNameRow	8	0x0290	468
 const	_tAwtoSyncFmt	8	0x0464	260
 const	_tAwtoSyncTxtS	8	0x0614	8640
 fn	_AwtoInfoCard	8	0x50cc	916
-fn	_AwtoDiagTestCmd	8	0x5460	752
+const	_tAwtoSyncFmt	8	0x5460	260
 fn	_AwtoSourceAuto	8	0x5750	48
 fn	_AwtoSrcRate	8	0x5788	456
 fn	_AwtoSourceTake	8	0x5950	224
@@ -2284,6 +2286,7 @@ fn	_AwtoSyncTxt	8	0x5e60	276
 fn	_AwtoOsdWdtLines	8	0x6038	928
 fn	_AwtoSyncConPoll	8	0x64a4	228
 fn	_AwtoSyncLine	8	0x7a1c	2156
+fn	_AwtoDiagTestCmd	8	0x8288	792
 const	_font_blob_spleen	8	0x908c	1300
 const	_font_blob_spleen5	8	0x95a0	916
 const	_font_blob_spleen6	8	0x9934	1000
@@ -3082,7 +3085,6 @@ fn	_ScalerSyncDigitalClrColorimetryExtChanged	12	0x2308	68
 fn	_ScalerSyncDigitalClrQuantizationChanged	12	0x234c	68
 fn	_ScalerSyncDpAuxManualModeSetting_EXINT	12	0x2390	56
 fn	_ScalerSyncDpCheckHdcpEnable	12	0x23c8	16
-fn	_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT	12	0x23d8	88
 fn	_ScalerSyncDpSetCableStatus	12	0x2430	20
 fn	_ScalerTMDSSetPsWakeupHpdToggle	12	0x2444	32
 fn	_ScalerTimerSearchActiveTimerEvent	12	0x2464	60
@@ -3153,6 +3155,7 @@ fn	_AwtoPutHours	12	0x33e4	120
 fn	_ScalerAudioDACOutputSwitch	12	0x345c	64
 fn	_SysMachinePower	12	0x349c	28
 fn	_AwtoConLogEvent	12	0x34c0	400
+fn	_ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT	12	0x3650	108
 fn	_AwtoTableStatic	12	0x36f0	400
 const	_tAwtoTxtS	12	0x3880	1100
 const	_tAwtoTxtOffS	12	0x3ccc	120

@@ -274,6 +274,8 @@ void SysSourceHandler(void)
     {
         if(GET_SOURCE_JUDGE(g_ucSearchIndex) == _FALSE)
         {
+            AWTO_PORT_SEARCH_GATE(g_ucSearchIndex);     // #81: a disabled port is never detected: the switch below moves on now
+
             if(GET_SOURCE_DETECTING() == _FALSE)
             {
                 SysSourceSwitchPort();
@@ -339,6 +341,19 @@ void SysSourceHandler(void)
 
     CLR_MODE_STATE_CHANGE_SOURCE();
 }
+// #81 (AWTO_PORT_SEARCH_GATE, fw/sdcc/awto_port.inc): the search index is on a disabled port. Its detect time ends now, so
+// SysSourceSwitchPort moves on this pass; a fixed search there becomes the auto search (a disabled port is never searched).
+void AwtoPortSkipSearch(void)
+{
+    ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_SOURCE_CLEAR_DETECTING);
+    CLR_SOURCE_DETECTING();
+    if(GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_PORT, AWTO_PORT_WHY_FIXED, SysSourceGetInputPort());
+        SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
+    }
+}
+
 //--------------------------------------------------
 // Description  : Source GPIO Detection
 // Input Value  : None
@@ -1657,7 +1672,9 @@ void SysSourceSwitchPort(void)
 
                 g_ucSearchIndex = (g_ucSearchIndex + 1) % _INPUT_PORT_VALID;
 
-                if(GET_INPUTPORT_GROUP(g_ucSearchIndex) == GET_INPUTPORT_GROUP(ucBackupSearchIndex))
+                // #81: a disabled port is passed over (the next turn of the loop counts it as searched)
+                if((GET_INPUTPORT_GROUP(g_ucSearchIndex) == GET_INPUTPORT_GROUP(ucBackupSearchIndex)) &&
+                   !AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(g_ucSearchIndex))))
                 {
 #if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))
 
