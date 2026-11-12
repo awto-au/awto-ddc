@@ -185,8 +185,9 @@ void SysMachineRequest(BYTE ucReq, BYTE ucBy)
         else
         {
             ucOut = (GET_MODE_RESET_TARGET() != _MODE_ACTION_NO_RESET_MODE) ? AWTO_SYS_REPLACES :
-                    ((s_ucSysState == AWTO_SYS_SAVING) || (s_ucSysState == AWTO_SYS_DOWN) || (s_ucSysState == AWTO_SYS_FAST) ||
-                     (s_ucSysState == AWTO_SYS_HOLD)) ? AWTO_SYS_KEPT : AWTO_SYS_OK;
+                    ((s_ucSysState == AWTO_SYS_SAVING) || (s_ucSysState == AWTO_SYS_DOWN) ||
+                     (((s_ucSysState == AWTO_SYS_FAST) || (s_ucSysState == AWTO_SYS_HOLD)) && (ucReq != _MODE_ACTION_RESET_TO_SEARCH))) ?
+                    AWTO_SYS_KEPT : AWTO_SYS_OK;        // as SysMachineReset: a search reset ends FAST / HOLD at once
             g_ucAwtoSysOwn = 1;
             SET_MODE_RESET_TARGET(ucReq);
             g_ucAwtoSysOwn = 0;

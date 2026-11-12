@@ -81,7 +81,7 @@
 0710	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9214	Get Color Space YUV420	0
 0714	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3740	7. Lane3 DFE Fail	0
 07cb	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:728	5. ScaleDown M1 Linebuffer1 Bist Fail	0
-07d6	System	Kernel/System/Code/SysJudge.c:382	Source Unstable!!	1
+07d6	System	Kernel/System/Code/SysJudge.c:383	Source Unstable!!	1
 0805	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:3901	6.4P Scale Up FAIL	0
 0810	Rx2	Kernel/Scaler/ScalerFunction/Code/ScalerDualLinkDVI.c:696	D3 Video Detect	0
 0835	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2854	5. Panel Uniformity Gain LUT Bist Fail	0
@@ -642,7 +642,7 @@
 31fb	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx0_SeptPhy.c:5495	7. DP Misc Change	0
 3232	TypeC	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTypeCRx0Cc.c:1414	    [CC/BMC] BMC Disconnected	0
 3256	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0.c:1119	VSC DB17	0
-3259	System	Kernel/System/Code/SysJudge.c:682	Input Timing HSyncWidth	1
+3259	System	Kernel/System/Code/SysJudge.c:683	Input Timing HSyncWidth	1
 3259	System	Kernel/System/Code/SysVGA.c:109	Input Timing HSyncWidth	1
 3277	System	Kernel/System/Code/SysSource.c:4488	0. Cable Status Changed D5	1
 327e	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:1702	5. DP Vbuf DRF Bist Fail1	0
@@ -673,7 +673,7 @@
 33ff	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:1607	5. Mode_10	0
 342a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3750	Format Detect HDMI	0
 342a	Rx2	Kernel/Scaler/ScalerFunction/Code/ScalerDualLinkDVI.c:637	Format Detect HDMI	0
-343d	System	Kernel/System/Code/SysJudge.c:687	Input Timing VSyncSWidth	1
+343d	System	Kernel/System/Code/SysJudge.c:688	Input Timing VSyncSWidth	1
 343d	System	Kernel/System/Code/SysVGA.c:114	Input Timing VSyncSWidth	1
 343f	System	Kernel/User Common Function/Code/UserCommonSign.c:370	SIGN PASSSSSSSSSS	1
 3442	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4278	TMDS Video format changed	0
@@ -932,7 +932,7 @@
 4840	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1768	5. Gamma M2 SetB DRF Bist Fail	0
 4857	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:602	FS fine tune, Dclk larger than panel spec => Modify Htotal'	1
 485c	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9700	Ext Colorimetry Changed	0
-488d	System	Kernel/System/Code/SysJudge.c:679	Input Timing HTotal	1
+488d	System	Kernel/System/Code/SysJudge.c:680	Input Timing HTotal	1
 488d	System	Kernel/System/Code/SysVGA.c:106	Input Timing HTotal	1
 488f	System	Kernel/System/Code/SysMode.c:320	SysModeResetState!!	1
 48a1	System	Kernel/User Common Function/Code/UserCommonPortControllerRts5400.c:829	8. IIC Read 5400 Info Fail	1
@@ -947,7 +947,7 @@
 4944	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:503	Interlace: detect by flag	0
 4944	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:235	Interlace: detect by flag	0
 4947	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2HDCP2_SeptPhy.c:289	[D2]L_Prime	0
-4961	System	Kernel/System/Code/SysJudge.c:675	Input Timing H Polarity is Positive	1
+4961	System	Kernel/System/Code/SysJudge.c:676	Input Timing H Polarity is Positive	1
 4982	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:979	DDR B Passed	0
 498e	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3485	HDCP2 Urgent	0
 49d9	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_IV.c:366	6. 3D Gamma FAIL	0
@@ -1202,7 +1202,7 @@
 5c02	Analog	Kernel/System/Code/SysVGA.c:81	Apll initial Fail	0
 5c08	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:1937	5. I Dither Start	0
 5c1b	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1030	6. DisplayTimingGen Even DRF Bist Fail Mode	0
-5c1c	System	Kernel/System/Code/SysJudge.c:680	Input Timing HStart	1
+5c1c	System	Kernel/System/Code/SysJudge.c:681	Input Timing HStart	1
 5c1c	System	Kernel/System/Code/SysVGA.c:107	Input Timing HStart	1
 5c25	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7413	Get Pixel Repetition 3	0
 5c38	TypeC	User/Device/Code/TypeC_Pmic_SILERGY_SY8665.c:865	0.Pmic:Over Temperature Protection	0
@@ -1459,7 +1459,7 @@
 6f80	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:686	CEC TX DB Nack Happened!!	0
 6f81	Analog	Kernel/User Common Function/Code/UserCommonModeSearch.c:178	User Mode Search Mode No. 	0
 6fa8	Analog	Kernel/User Common Function/Code/UserCommonModeSearch.c:521	2. Detect By Bigger Width 1	0
-6fbb	System	Kernel/System/Code/SysJudge.c:683	Input Timing VFreq	1
+6fbb	System	Kernel/System/Code/SysJudge.c:684	Input Timing VFreq	1
 6fbb	System	Kernel/System/Code/SysVGA.c:110	Input Timing VFreq	1
 6fc9	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain_III.c:2525	5. 2P D-Domain Color Conversion End	0
 6fff	MHL	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx2.c:749	ReadDev at Offset	0
@@ -1498,7 +1498,7 @@
 72b3	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4159	CDR Unstable!!	0
 72e0	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2061	== DISP_CHECK_END ==	1
 72ef	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_OSD.c:3797	5.OsdTestFrame9 END	0
-7317	System	Kernel/System/Code/SysJudge.c:681	Input Timing HWidth	1
+7317	System	Kernel/System/Code/SysJudge.c:682	Input Timing HWidth	1
 7317	System	Kernel/System/Code/SysVGA.c:108	Input Timing HWidth	1
 731b	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:664	5. FormatConv DRF bist_result_2 Fail	0
 7356	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1031	6. DisplayTimingGen Even DRF Bist FAIL	0
@@ -1719,7 +1719,7 @@
 80d1	Analog	Kernel/User Common Function/Code/UserCommonAuto.c:374	7. Do Nothing	0
 80ef	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1HDCP2.c:820	DPRX1 HDCP2 - To DPTX HDCP2	0
 816b	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1741	7. Idle Pattern Case	0
-819d	System	Kernel/System/Code/SysJudge.c:432	eDP unstable	1
+819d	System	Kernel/System/Code/SysJudge.c:433	eDP unstable	1
 81ea	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:366	pucDCRResult[5]	0
 81eb	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:1185	5.Pmic:Read DEVICE_ID Fail	0
 81ec	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1717	Misc change: Color Format, _COLOR_SPACE_YCBCR422	0
@@ -1808,7 +1808,7 @@
 8831	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx4HDCP2_SeptPhy.c:235	[D4]Dkey1	0
 8847	Audio	Kernel/System/Code/SysAudio.c:349	Audio Dac Initial	0
 885a	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3555	5. FormatConv Sub DRF bist_result_2 Fail	0
-8870	System	Kernel/System/Code/SysJudge.c:404	Input Timing Double Check : Interlace Flag Change	1
+8870	System	Kernel/System/Code/SysJudge.c:405	Input Timing Double Check : Interlace Flag Change	1
 887d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2355	5. RGB Gamma S1 SetA DRF Bist Start Pause Time Out Fail	0
 887d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2365	5. RGB Gamma S1 SetA DRF Bist Start Pause Time Out Fail	0
 887d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2371	5. RGB Gamma S1 SetA DRF Bist Start Pause Time Out Fail	0
@@ -2568,7 +2568,7 @@ c6c0	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx4HDCP2_SeptPhy.c:248	[D
 c6ec	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:876	DDR3 DMA Write Fail !! Timeout	0
 c6f2	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.c:2300	5. Scale Up Start	0
 c6f8	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx1HDCP2_SeptPhy.c:235	[D1]Dkey1	0
-c702	System	Kernel/System/Code/SysJudge.c:392	Measured Input HV Changed	1
+c702	System	Kernel/System/Code/SysJudge.c:393	Measured Input HV Changed	1
 c745	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1068	5. DisplayTimingGen Odd Bist Time Out Fail	0
 c762	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2643	***** Clk2 PAD CLK Phase = 	0
 c762	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2872	***** Clk2 PAD CLK Phase = 	0
@@ -2669,7 +2669,7 @@ cf23	HDCP2	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx1HDCP2_SeptPhy.c:970	[D
 cf73	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMbr.c:214	MBR: ucToggleTimeTotal	0
 cf73	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4875	MBR: ucToggleTimeTotal	0
 cf81	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx0HDCP2.c:329	[D0]SKE_SEND_EKS	0
-cf88	System	Kernel/System/Code/SysJudge.c:686	Input Timing VHeight	1
+cf88	System	Kernel/System/Code/SysJudge.c:687	Input Timing VHeight	1
 cf88	System	Kernel/System/Code/SysVGA.c:113	Input Timing VHeight	1
 cfbc	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2107	5. ====RGB Gamma S1/S2 Bist Test Start	0
 cfd1	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:368	pucDCRResult[7]	0
@@ -2741,12 +2741,12 @@ d524	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_IMDomain.
 d550	TypeC	User/Device/Code/TypeC_Pmic_INTERSIL_RAA489800.c:608	Write FWR Input Current LB	0
 d56d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:911	6. #### D1 Port ucResult2 =	0
 d57e	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:281	Initial HDR10 Metadata Y2	0
-d588	System	Kernel/System/Code/SysJudge.c:418	Memory Check Failed	1
+d588	System	Kernel/System/Code/SysJudge.c:419	Memory Check Failed	1
 d589	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:3232	4. reset Icp	0
 d5a6	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c:540	-D addr1 FRC	1
 d5b6	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:2142	5. RGB Gamma S2 SetA Bist Even Fail	0
 d5c9	HDR	Kernel/User Common Function/Code/UserCommonHDR.c:830	HDR apply AdobeRGB matrix	0
-d5ed	System	Kernel/System/Code/SysJudge.c:677	Input Timing InterLace	1
+d5ed	System	Kernel/System/Code/SysJudge.c:678	Input Timing InterLace	1
 d5ed	System	Kernel/System/Code/SysVGA.c:104	Input Timing InterLace	1
 d60f	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:570	7. dt max modifyed	1
 d614	MHL	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx2.c:643	Rx2 MSC MHL_PROTOCOL_ERROR	0
@@ -2809,7 +2809,7 @@ da77	MHL	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MHLRx3.c:1022	D3 
 da84	Digital	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTxMST.c:3328	ucTxCurrentSTX Error	1
 da92	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7638	Get Colorimetry EXT_YCC_SYCC601	0
 daa8	System	Kernel/User Common Function/Code/UserCommonScalerDataExchange.c:560	0. Read HW IIC Slave Status Fail	1
-daab	System	Kernel/System/Code/SysJudge.c:678	Input Timing HFreq	1
+daab	System	Kernel/System/Code/SysJudge.c:679	Input Timing HFreq	1
 daab	System	Kernel/System/Code/SysVGA.c:105	Input Timing HFreq	1
 dabe	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:814	False : D2 HDMI Audio DB Retry	0
 dacc	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9872	Get Pixel Repetition 5	0
@@ -2821,7 +2821,7 @@ db22	Rx3	Kernel/Scaler/ScalerFunction/Code/ScalerDualLinkDVI.c:1332	D3 Video Det
 db3d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3454	6. ScaleDown S1 & S2 Bist Fail Mode	0
 db47	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1459	DP Rx1 MST reset	0
 db5c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2044	FRC Efficiency(%)	1
-db62	System	Kernel/System/Code/SysJudge.c:684	Input Timing VTotal	1
+db62	System	Kernel/System/Code/SysJudge.c:685	Input Timing VTotal	1
 db62	System	Kernel/System/Code/SysVGA.c:111	Input Timing VTotal	1
 db72	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerDDR3.c:2479	___________Version:	0
 db90	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9361	Get Colorimetry YCC_SMPTE_170M	0
@@ -2886,7 +2886,7 @@ e0a4	Mst	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPTx.c:715	DPTX Don
 e0d8	System	Kernel/System/Code/SysSource.c:2296	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:2496	7. Bingo Priority!!!!!!!	1
 e0d8	System	Kernel/System/Code/SysSource.c:2955	7. Bingo Priority!!!!!!!	1
-e0f0	System	Kernel/System/Code/SysJudge.c:676	Input Timing V Polarity is Positive	1
+e0f0	System	Kernel/System/Code/SysJudge.c:677	Input Timing V Polarity is Positive	1
 e0fc	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:764	<= Cec Rx Read: HB	0
 e10b	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:3772	5. ScaleDown S2 Linebuffer1 DRF Bist Fail	0
 e10d	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Main.c:1285	6. HDMI Test Pass	0
@@ -3382,7 +3382,7 @@ fd87	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9257	Get Pix
 fdae	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8417	Get RGB RANGE Error	0
 fdb4	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_Color_DDomain.c:875	6. Output Gamma FAIL	0
 fdea	QC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_BIST.c:1081	6. DisplayTimingGen Odd Bist FAIL	0
-fe15	System	Kernel/System/Code/SysJudge.c:685	Input Timing VStart	1
+fe15	System	Kernel/System/Code/SysJudge.c:686	Input Timing VStart	1
 fe15	System	Kernel/System/Code/SysVGA.c:112	Input Timing VStart	1
 fe16	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1394	_COLOR_SPACE_YCBCR444	0
 fe61	HDR	Kernel/User Common Function/Code/UserCommonLocalDimming.c:775	StepToGB[4]	0
