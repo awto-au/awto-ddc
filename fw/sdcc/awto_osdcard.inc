@@ -348,35 +348,35 @@ static void AwtoPutDpRate(BYTE ucRate, BYTE ucLanes)
     AwtoPutNum(ucLanes, 1);
 }
 
-// #157 unix s + UTC offset (15 min) -> "2026-11-12T08:45:10+11:00" (days -> civil date: H. Hinnant's days_from_civil inverse)
-static __xdata WORD s_usAwtoIsoY;               // year, then day of the year
-static __xdata BYTE s_ucAwtoIsoM;
+// #157 unix s + UTC offset (15 min) -> "2026-11-12T08:45:10+11:00" (days -> civil date: H. Hinnant's civil_from_days).
+// No parameters or locals in DATA: it sits on the deepest overlay path (flash save -> sync push -> console line).
+static __xdata DWORD s_ulAwtoD;                 // days, then day of the era, then day of the year
+static __xdata WORD s_usAwtoIsoY;
+static __xdata BYTE s_ucAwtoIsoMp;              // March-based month 0..11
+static __xdata signed char s_cAwtoIsoOfs;       // input: UTC offset, 15 min units
 
-static void AwtoPutIso(DWORD ulT, signed char cOfs)
+static void AwtoPutIso(void)                    // input s_ulAwtoT = unix s, s_cAwtoIsoOfs
 {
-    BYTE ucMp;
-
-    s_ulAwtoT = ulT + (long)cOfs * 900;         // local s
-    ulT = s_ulAwtoT / 86400 + 719468;           // days since 0000-03-01
-    s_usAwtoIsoY = (WORD)(ulT / 146097) * 400;
-    ulT %= 146097;                              // day of the 400-year era
-    s_usAwtoIsoY += (WORD)((ulT - ulT / 1460 + ulT / 36524 - ulT / 146096) / 365);
-    ulT -= 365UL * (s_usAwtoIsoY % 400) + (s_usAwtoIsoY % 400) / 4 - (s_usAwtoIsoY % 400) / 100;   // day of the year (March first)
-    ucMp = (BYTE)((5 * (WORD)ulT + 2) / 153);
-    s_ucAwtoIsoM = (ucMp < 10) ? (ucMp + 3) : (ucMp - 9);
-    AwtoPutNum(s_usAwtoIsoY + ((s_ucAwtoIsoM <= 2) ? 1 : 0), 4);
+    s_ulAwtoT += (long)s_cAwtoIsoOfs * 900;     // local s
+    s_ulAwtoD = s_ulAwtoT / 86400 + 719468;     // days since 0000-03-01
+    s_usAwtoIsoY = (WORD)(s_ulAwtoD / 146097) * 400;
+    s_ulAwtoD %= 146097;
+    s_usAwtoIsoY += (WORD)((s_ulAwtoD - s_ulAwtoD / 1460 + s_ulAwtoD / 36524 - s_ulAwtoD / 146096) / 365);
+    s_ulAwtoD -= 365UL * (s_usAwtoIsoY % 400) + (s_usAwtoIsoY % 400) / 4 - (s_usAwtoIsoY % 400) / 100;
+    s_ucAwtoIsoMp = (BYTE)((5 * (WORD)s_ulAwtoD + 2) / 153);
+    AwtoPutNum(s_usAwtoIsoY + ((s_ucAwtoIsoMp >= 10) ? 1 : 0), 4);
     AwtoPutChar('-');
-    AwtoPutNum(s_ucAwtoIsoM, 2);
+    AwtoPutNum((s_ucAwtoIsoMp < 10) ? (s_ucAwtoIsoMp + 3) : (s_ucAwtoIsoMp - 9), 2);
     AwtoPutChar('-');
-    AwtoPutNum((WORD)ulT - (153 * (WORD)ucMp + 2) / 5 + 1, 2);
+    AwtoPutNum((WORD)s_ulAwtoD - (153 * (WORD)s_ucAwtoIsoMp + 2) / 5 + 1, 2);
     AwtoPutChar('T');
     s_ulAwtoT %= 86400;
     AwtoPutClock();
-    AwtoPutChar((cOfs < 0) ? '-' : '+');
-    ucMp = (cOfs < 0) ? (BYTE)(0 - cOfs) : (BYTE)cOfs;
-    AwtoPutNum(ucMp / 4, 2);
+    AwtoPutChar((s_cAwtoIsoOfs < 0) ? '-' : '+');
+    s_ucAwtoIsoMp = (s_cAwtoIsoOfs < 0) ? (BYTE)(0 - s_cAwtoIsoOfs) : (BYTE)s_cAwtoIsoOfs;
+    AwtoPutNum(s_ucAwtoIsoMp / 4, 2);
     AwtoPutChar(':');
-    AwtoPutNum((ucMp % 4) * 15, 2);
+    AwtoPutNum((s_ucAwtoIsoMp % 4) * 15, 2);
 }
 
 // One sync-ring entry as a log line: "+  260 ms D2 timing 3840x2160" (texts and formats: fw/awto/sync.tsv).
@@ -437,7 +437,7 @@ static void AwtoSyncLine(BYTE ucSeq)
         case 11: AwtoPutNum(ulV, 1); AwtoPutStr(" ms"); break;                                     // ms (#150)
         case 12: AwtoPutNum(ulV, 1); break;                                                        // n (#150)
         case 13: AwtoPutHex2(puc[5]); AwtoPutHex2(puc[6]); AwtoPutHex2(puc[7]); break;             // x (#150)
-        case 14: AwtoPutIso(ulV, (signed char)puc[1]); break;                                     // htime (#157)
+        case 14: s_ulAwtoT = ulV; s_cAwtoIsoOfs = (signed char)puc[1]; AwtoPutIso(); break;                                     // htime (#157)
         case 15:                                                                                   // sms (#157)
             AwtoPutChar(((long)ulV < 0) ? '-' : '+');
             AwtoPutNum(((long)ulV < 0) ? (0 - ulV) : ulV, 1);
