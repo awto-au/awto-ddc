@@ -422,6 +422,14 @@ SUBS = [
                           f"    if(({r} & _BIT3) != _BIT3)\n    {{\n        {r} = ({r} & ~_BIT0) | (_BIT3 | _BIT2);\n    }}\n"
                           "    return _FALSE;\n#else\n" + m.group(2) + m.group(3)[:-2] + "#endif\n}\n"), 1)
     for n, r in ((2, "MCU_FE69_DDC2_EDID_IRQ"), (3, "MCU_FE72_DDC3_EDID_IRQ"))
+] + [
+    # #144: the DP PS predetect's AUX toggle (first AUX activity in power saving) is counted only; our AUX / DPCD 600h
+    # triggers and the SDK's link-training checks still wake
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c",
+     r"(bit ScalerDpRx1PSPreDetect\(void\)\n\{.*?)(    if\(GET_DP_RX1_PS_AUX_TOGGLE\(\) == _TRUE\)\n    \{\n        \(\(void\)0\);\n\n        return _TRUE;\n    \}\n)",
+     lambda m: (m.group(1) + "#if(_AWTO_PS_WAKE == _ON)  // [keil2sdcc] sub #144 (same line count: warn_policy sites)\n"
+                "    if(GET_DP_RX1_PS_AUX_TOGGLE() == _TRUE) { CLR_DP_RX1_PS_AUX_TOGGLE(); AwtoPsAuxSeen(_D1_INPUT_PORT); }\n#else\n"
+                "    if(GET_DP_RX1_PS_AUX_TOGGLE() == _TRUE) { return _TRUE; }\n#endif\n\n"), 1),
 ]
 # #144 no boot logo: mode INITIAL opens the console with the live power-on log (fw/sdcc/awto_osdcard.inc AwtoBootConsole);
 # the logo draw, its hold timer, art, tile maps, VLC loader cases and externs go. Same line count at INITIAL (warn keys).

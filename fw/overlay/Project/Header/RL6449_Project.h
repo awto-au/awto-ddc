@@ -856,6 +856,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xD7    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xD8    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
+#define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_BURST                                   0xD9    // arg = port: TMDS clock live shorter than the hold, value ms (once per sleep)
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
@@ -930,7 +931,8 @@ extern void AwtoPsWakePoll(void);
 extern void AwtoPsWakeArm(void);
 extern void AwtoPsWakeReset(void);
 extern unsigned char AwtoPsTmdsLive(unsigned char ucPage);    // TMDS freq detector live (our wake poll)
-extern void AwtoPsDdcSeen(unsigned char ucPort);              // SDK TMDS PS predetect: DDC handshake counted, no wake (keil2sdcc sub)
+extern void AwtoPsDdcSeen(unsigned char ucPort);
+extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS predetect: AUX toggle counted, no wake (keil2sdcc sub)              // SDK TMDS PS predetect: DDC handshake counted, no wake (keil2sdcc sub)
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
                                                                   else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
 // between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due

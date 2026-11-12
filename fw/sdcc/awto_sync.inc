@@ -436,10 +436,11 @@ __xdata BYTE g_ucAwtoPsWakes;                       // wakes from SAVING since b
 __xdata WORD g_usAwtoPsTmdsLive;                    // polls with a TMDS clock live this episode, D2 + D3 (test readout)
 __xdata WORD g_usAwtoPsTmdsRun;                     // longest TMDS live run this episode, ms (test readout)
 __xdata WORD g_usAwtoPsDdc;                         // SDK DDC handshakes (SCL toggle) seen in SAVING since boot, gated (test readout)
+__xdata WORD g_usAwtoPsAux;                         // SDK DP AUX toggles seen in SAVING since boot, gated (test readout)
 static __xdata WORD s_pusTmdsFirst[2];              // D2 / D3: AwtoSyncNow of the first live poll of the current run
 static __xdata WORD s_pusTmdsLast[2];               // D2 / D3: last live poll
 static __xdata BYTE s_ucTmdsRun;                    // bit i - 1: a run is open on port D1 + i
-static __xdata BYTE s_ucPsSaid;                     // bit i: short-run / DDC line already logged this sleep (D1 + i; DDC << 4)
+static __xdata BYTE s_ucPsSaid;                     // lines logged this sleep: bit i burst (D1 + i), bit 4 + i DDC, bit 7 AUX
 
 // SDK TMDS PS predetect (keil2sdcc sub): a DDC handshake (any SCL toggle on the port's DDC, e.g. a DDC/CI or 0x35 access)
 // is counted, never a wake; an EDID read still wakes through AWTO_WAKE_T_EDID. Line once per sleep.
@@ -455,6 +456,19 @@ void AwtoPsDdcSeen(BYTE ucPort)
     {
         s_ucPsSaid |= ucBit;
         AwtoSyncPush(AWTO_SYNC_EV_PS_DDC, ucPort, 0);
+    }
+}
+
+void AwtoPsAuxSeen(BYTE ucPort)                     // SDK DP PS predetect: AUX toggle counted, no wake; line once per sleep
+{
+    if(g_usAwtoPsAux != 0xFFFF)
+    {
+        g_usAwtoPsAux++;
+    }
+    if((s_ucPsSaid & _BIT7) == 0)
+    {
+        s_ucPsSaid |= _BIT7;
+        AwtoSyncPush(AWTO_SYNC_EV_PS_AUX, ucPort, 0);
     }
 }
 

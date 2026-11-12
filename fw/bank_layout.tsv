@@ -143,6 +143,7 @@ const	___str_109	C	0x145c	24
 const	___str_98	C	0x1474	28
 stub	_AwtoWdtLibPoke	C	0x1490	8
 fn	_ScalerTimerDelayXms	C	0x1498	100
+stub	_AwtoPsAuxSeen	C	0x14fc	8
 stub	_MenuHotKeyDdcci	C	0x1538	8
 stub	_MenuHotKeyDpOption	C	0x1540	8
 stub	_AwtoSourceNoPicture	C	0x1548	8
@@ -1662,7 +1663,7 @@ fn	_AwtoInStyle	4	0xad74	20
 fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1355	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1356	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -2696,6 +2697,7 @@ fn	_AwtoSyncPoll	11	0x4a6c	264
 fn	_AwtoPsWakeFire	11	0x4b98	252
 fn	_AwtoPsWakePoll	11	0x4c94	592
 fn	_AwtoPsTmdsHold	11	0x4ee4	712
+fn	_AwtoPsAuxSeen	11	0x51ac	84
 const	_tAwtoDdcReg	11	0x6458	12
 const	_tAwtoWakeAux	11	0x6464	8
 fn	_UserInterfaceGetAspectRatio	11	0x646c	180
