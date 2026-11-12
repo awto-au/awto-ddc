@@ -51,6 +51,10 @@ PS_POLL_S = 2.0       # wake-poll sample in power saving: 400 polls at AWTO_PS_P
 PS_STATUS_S = 9.0
 PS_TRIES = 3          # power-saving episodes tried for one clean PS_POLL_S window
 HOLD_S = 60.0         # hold case: power saving must hold this long with host outputs off (#144 pass criterion)
+# hold case overall bound: host off -> mode 6 PS_S 29 + silent PS_STATUS_S + HOLD_S 69 + host wake WAKE_S 9 + reads / record
+# ~10 s = 117 s worst, x1.25 -> 146 s. Expiry: log the step + elapsed, host outputs on, process exit 3 (no hang).
+HOLD_LIMIT_S = 146.0
+QUIET_LOG_S = 10.0    # progress line while bus 11 is silent (no output for 60 s = hung, by the host-tool rule)
 MODE_POLL_S = 1.0     # hold case: sparse mode poll; every 0x35 access toggles the D2 DDC SCL (SDK DDC-handshake wake, #144)
 # host on -> ACTIVE: measured 863 ms from NOSIGNAL (wd6); from power saving add the #144 wake + boot of the panel path ~2 s;
 # 3 s x 1.25 -> 4 s, plus the 5 s monitor-return rule -> 9 s
@@ -706,11 +710,27 @@ class Runner:
         inh = subprocess.Popen(["gnome-session-inhibit", "--inhibit", "idle", "--inhibit-only"],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         txt, ok = [], True
+        import threading
+        step, th0 = ["start"], time.monotonic()
+
+        def expire():
+            self.say(f"  HOLD LIMIT: {HOLD_LIMIT_S:.0f} s expired in step '{step[0]}' after {time.monotonic() - th0:.1f} s; "
+                     "host outputs on, exit 3")
+            try:
+                self.host_dpms(True)
+            finally:
+                os._exit(3)
+        guard = threading.Timer(HOLD_LIMIT_S, expire)
+        guard.daemon = True
+        guard.start()
         try:
+            step[0] = "record"
             d0 = self.rec()
             self.t.cmd(0x39)                             # #78 short levels: L3 (SDK power saving) at 20 s
             self.t.wait(0.3)
+            step[0] = "host off"
             txt.append(f"host dpms {self.host_dpms(False)}")
+            step[0] = "wait mode 6"
             t0, md = time.monotonic(), None
             while time.monotonic() - t0 < PS_S and md != 6:
                 self.t.wait(MODE_POLL_S)
@@ -725,7 +745,12 @@ class Runner:
                 raw0, s0 = self.ring_raw(), self.ps_syms()
                 q = PS_STATUS_S + HOLD_S
                 self.say(f"  mode POWER SAVING {time.monotonic() - t0:.1f} s after host off; bus 11 silent {q:.0f} s; {s0}")
-                self.t.wait(q)
+                step[0] = "silent window"
+                tq = time.monotonic()
+                while time.monotonic() - tq < q:
+                    self.t.wait(min(QUIET_LOG_S, q - (time.monotonic() - tq)))
+                    self.say(f"  silent {time.monotonic() - tq:.0f} / {q:.0f} s")
+                step[0] = "read after window"
                 s1, raw1 = self.ps_syms(), self.ring_raw()
                 hd = Path(DPMS_FILE).read_text().strip()     # user input wakes Mutter's outputs: the window is void then
                 txt.append(f"host dpms at the end of the window {hd}")
@@ -744,6 +769,7 @@ class Runner:
                            f"in {n_new} new lines); TMDS live polls {s1.get('g_usAwtoPsTmdsLive')}, longest live run "
                            f"{s1.get('g_usAwtoPsTmdsRun')} ms; SDK DDC detections gated {s1.get('g_usAwtoPsDdc')}, SDK AUX toggles gated {s1.get('g_usAwtoPsAux')}")
                 ok &= sv and wk_ring == 0 and (wk in (None, 0)) and (held is None or held >= HOLD_S * 1000)
+            step[0] = "host on, wait ACTIVE"
             tw = time.monotonic()
             st = self.host_dpms(True)
             t_act = None
@@ -756,8 +782,11 @@ class Runner:
                 except (OSError, SystemExit):
                     pass
                 self.t.wait(0.05)
+            if t_act is None:
+                self.say(f"  no ACTIVE within WAKE_S {WAKE_S} s of the host wake ({time.monotonic() - tw:.1f} s)")
             txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
             ok &= t_act is not None
+            step[0] = "ring + record"
             wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
             same, why = self.same_boot(d0, None, time.monotonic())
@@ -765,6 +794,7 @@ class Runner:
             ok &= same and d1["bites"] == d0["bites"]
             txt.append(f"bites {d0['bites']} -> {d1['bites']}; " + self.ages(d1))
         finally:
+            guard.cancel()
             try:
                 self.host_dpms(True)                     # always: the host's screens come back
                 self.t.cmd(0x36)                         # #78 levels back to the defaults
