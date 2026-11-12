@@ -849,8 +849,11 @@ static void AwtoSyncConPoll(void)
     }
     if((s_ucConOpen != 0) && (AwtoConLost() == 0))
     {
-        g_stAwtoSync.ucOpenReq = 0;             // already open (the power-on console survived display setting)
-        s_ucConFirst = osd_tc_scroll(s_ucConFirst);    // display setting resets the view registers: blank until a scroll
+        BYTE ucP = s_ucConOpen;                 // open since power-on: display setting's panel cycle blanks the OSD;
+
+        g_stAwtoSync.ucOpenReq = 0;             // redraw it as UP+DOWN opens it (re-applying the scroll alone stayed blank)
+        s_ucConOpen = 0;
+        AwtoDiagConsole(ucP);
         return;
     }
     if((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (GET_OSD_STATE() != _MENU_NONE) || (g_ucAwtoMenuOn != 0) || AWTO_KEY_TEST_ON() ||
