@@ -256,7 +256,7 @@ def main() -> int:
         s.check(any("GPIO INPUT DIAGNOSTICS" in r for r in g[:4]) and any("INPUT CHANGES" in r for r in g[:4]),
                 "GPIO page (test cmd 0x43): table + input change list", g[2].strip() if len(g) > 2 else "")
         s.check("GPIO INPUTS  FW " in g[0] and "HOST" not in g[0], "GPIO page: own title row (no live fields)")
-        s.check(not any(("host time" in r) or ("mode ACTIVE" in r) or ("-> ACTIVE: " in r) for r in g), "GPIO page: no sync / power lines")
+        s.check(not any(("host time" in r) or ("mode ACTIVE" in r) or ("-> ACTIVE (" in r) for r in g), "GPIO page: no sync / power lines")
         s.cmd(0x44)
         s.check(s.m.rd(s.m.addr("g_stAwtoGpio") + 3)[0] == 0, "test cmd 0x44 closes the console")
     say(f"=== {a.bin.name}: {'ALL PASS' if not s.fails else f'{s.fails} FAIL'} ===")

@@ -230,17 +230,18 @@ class Run:
         self.check(first is not None and not outside, "every power / mode view change after the machine's init is the machine's",
                    "; ".join(f"{t} {ph} {w} {o:02X}->{n:02X}" for t, ph, w, o, n, _ in outside[:6]))
         trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines)
-                 if (m := re.search(r"system: (.+?) -> (.+?): ", x))]
+                 if (m := re.search(r"system: (.+?) -> (.+?) \(\d+ ms\): ", x))]
         broken = [(a, b) for (_, _, a2), (_, b, _) in zip(trans, trans[1:]) for a, b in [(a2, b)] if a != b]
         self.check(trans and not broken, f"transition chain unbroken ({len(trans)} transitions)", str(broken[:4]))
-        unnamed = [x for x in lines if re.search(r"system: .*\b[0-9A-F]{2}\b -> |-> [0-9A-F]{2}: |requested by [0-9A-F]{2} ", x)]
+        unnamed = [x for x in lines if re.search(r"system: .*\b[0-9A-F]{2}\b -> |-> [0-9A-F]{2} \(|\(\d+ ms\): [0-9A-F]{2}\b|requested by [0-9A-F]{2} ", x)]
         self.check(not unnamed, "every state / who / request has a name (no hex code in a system line)", str(unnamed[:3]))
         texts = {r["arg"]: r["text"] for r in self.rows if r["id"] == L.SYS_MODE}     # mode text per state index
         names = {r["text"]: r["arg"] for r in self.rows if r["id"] == L.SYS_STATE}
         bad, mode = [], None
         for i, a, b in trans:
             x = lines[i]
-            tail = x.split(" ms in ", 1)[1].split(")", 1)[1]               # after '(N ms in OLD)'
+            why = x.split(" ms): ", 1)[1]                                   # after 'OLD -> NEW (N ms): '
+            tail = why[why.index("; "):] if "; " in why else ""
             new = STATE_MODE.get(b, mode)                                    # POWER DOWN keeps the mode before it
             want = f"; {texts.get(names.get(b), '?')}" if new != mode else ""
             if tail != want:

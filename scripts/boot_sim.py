@@ -32,7 +32,7 @@ AFTER_MS = 300                        # after ACTIVE: the console has had displa
 BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
 STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)
 BITE_INSTR = 40_000_000               # 0x4C -> reset: cmd ~0.1 s + warning 1.03 s at ~12.6 k instr / fw ms = 14 M; x2.5
-TIME_SLACK_MS = 3                     # line time vs 'ms in' of the next line: action after the time stamp (pin, DPTx call) ~1 ms x3
+TIME_SLACK_MS = 3                     # line time vs the next line's '(N ms)' (time in its old state): action after the time stamp (pin, DPTx call) ~1 ms x3
 LOGO_SYMS = ("_OsdDispShowLogo", "_AwtoLogoDraw", "_tICON_REALTEK_1BIT_LOGO0", "_tAWTO_LOGO_RUNS", "_AwtoTestHoldLogoOff")
 
 
@@ -94,7 +94,7 @@ class Run:
         self.shot(f"boot_reason_{tag}")
 
     def machine_times(self, evs):
-        """#162 s3b: a machine line's ring time is its transition: line B -> C ('N ms in B') comes N ms after line A -> B
+        """#162 s3b: a machine line's ring time is its transition: line B -> C ('B -> C (N ms)') comes N ms after line A -> B
         (console open: a live draw between an action and its line shows here). Panel (11) and system (13) lines."""
         for eid, name in ((0x11, "panel"), (0x13, "system")):
             tr = [(ms, a, v) for i, a, ms, v in evs if i == eid]
@@ -164,7 +164,7 @@ def main():
         r.check(txt.count("console opened") == 1, "one 'console opened' line (survived display setting, no reopen)",
                 f"{txt.count('console opened')}")
         r.check("0.0 MHz" not in txt and "TMDS predetect on (clock not measured yet)" in txt, "HDMI scan: predetect line without a clock value, no 0.0 MHz line")
-        for want in ("power on", "backlight pin on", "timing ", "-> DISPLAY SETTING: ", "-> ACTIVE: "):
+        for want in ("power on", "backlight pin on", "timing ", "-> DISPLAY SETTING (", "-> ACTIVE ("):
             r.check(want in txt, f"power-on log has '{want}'")
         r.machine_times(h["events"])
         r.bus.dbg_link_on()                         # #79 images: 0x35 parked off the host port until this

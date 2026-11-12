@@ -256,7 +256,7 @@ class Run:
             if v and not any(x[0] < t < v[0] and val == 1 for t, _, val in bl):
                 offs.append((x[0], v[0]))
         self.check(all(v - b >= PANEL["T4"] + PANEL["T5"] for b, v in offs), f"VDD off >= T4 + T5 ({PANEL['T4'] + PANEL['T5']} ms) after backlight off",
-                   str([v - b for b, v in offs]))
+                   str([f"{v - b} (@{b})" for b, v in offs]))
         t6 = [(b[0] - a[0]) for a, b in zip(vdd, vdd[1:]) if a[2] == 0 and b[2] == 1]
         self.check(all(x >= PANEL["T6"] for x in t6), f"VDD on >= T6 ({PANEL['T6']} ms) after VDD off", str(t6))
         self.edge_lines(self.events)                 # all writes: boot pin init gives the level before the first edge

@@ -6,6 +6,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
+  conwrap: con_wrap_sim (#162: console lines whole, a wide line on two rows; widest lines + map end, no watchdog bite).
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; T3..T6 kept.
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
@@ -52,6 +53,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "bootsim": ("_g_stAwtoSync",),
     "wake": ("_AwtoPsWakeFire",),
     "htime": ("_g_stAwtoHt",),
+    "conwrap": ("_AwtoConWrapLine",),
     "deadport": ("_AwtoDeadPortPoll",),
     "panel": ("_g_ucAwtoPanelOwn",),
     "sysm": ("_g_ucAwtoSysOwn",),
@@ -106,6 +108,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
+    g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", *(["--tree", tree] if tree else [])]   # no line clipped
     if header(tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
     if tree and Path(tree).is_dir():
