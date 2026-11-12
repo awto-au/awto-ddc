@@ -147,6 +147,7 @@ def main():
         r.check(st[1:4] == (CON_COLS, CON_MAP_ROWS, st[3]) and st[3] != 0 and st[4], "console open after display setting", str(st))
         r.check(txt.count("console opened") == 1, "one 'console opened' line (survived display setting, no reopen)",
                 f"{txt.count('console opened')}")
+        r.check("0.0 MHz" not in txt and "TMDS predetect on (clock not measured yet)" in txt, "HDMI scan: predetect line without a clock value, no 0.0 MHz line")
         for want in ("power on", "backlight on", "timing ", "display setting", "mode ACTIVE"):
             r.check(want in txt, f"power-on log has '{want}'")
         r.bus.dbg_link_on()                         # #79 images: 0x35 parked off the host port until this
