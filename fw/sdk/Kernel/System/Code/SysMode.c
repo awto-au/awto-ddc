@@ -131,21 +131,6 @@ bit SysModeDisplaySetting(void)
 {
     bit bMdomainsetup = _FALSE;
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-#if(TOSHIBA_DC_POWER == _OFF)
-    if((GET_INPUT_TIMING_HWIDTH() == 1920) && (GET_INPUT_TIMING_VHEIGHT() == 1280))
-    { 
-        if(UserInterfaceGetAspectRatioType() != _ASPECT_RATIO_VMAXIMAGE)
-        {
-#if((_ASPECT_RATIO_LIST_SELECT != _ASPECT_RATIO_LIST_TOSHIBA_1) && \
-    (_ASPECT_RATIO_LIST_SELECT != _ASPECT_RATIO_LIST_TOSHIBA_2))          
-            SET_OSD_ASPECT_RATIO_TYPE(_OSD_ASPECT_RATIO_4);
-            RTDFlashSaveOSDData();
-#endif
-        }       
-    }
-#endif
-#endif
 
     // Set up testing flow
     DISPLAY_SETTING_TEST_INIT();
@@ -574,10 +559,8 @@ extern bit g_ucBeaconFacOsdShowFlag;//Kernel_updata_160115
 void SysModeDisplayTimingInitial(void)
 {
 #if(_USER_BEACON_FACTORY_OSD == _ON)
-#if(_CUSTOMER != _CUS_TOSHIBA)
     if(g_ucBeaconFacOsdShowFlag)
         return;
-#endif
 #endif
 
     // Set Up Display Timing According to Panel Spec

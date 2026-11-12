@@ -1012,7 +1012,7 @@ static bit UserCommonInterfacePanelStep(void)
                 UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);     // stream still on
                 return _TRUE;
             }
-            if(usIn < _PANEL_POWER_OFF_T4)
+            if(usIn <= _PANEL_POWER_OFF_T4)                       // <=: the 1 ms tick of the entry stamp, so >= T4 real
             {
                 return _FALSE;
             }
@@ -1029,7 +1029,7 @@ static bit UserCommonInterfacePanelStep(void)
                 UserCommonInterfacePanelVideoMarks();
                 return _TRUE;
             }
-            if(usIn < _PANEL_POWER_OFF_T5)
+            if(usIn <= _PANEL_POWER_OFF_T5)                       // <=: the 1 ms tick of the entry stamp, so >= T5 real
             {
                 return _FALSE;
             }
@@ -1039,7 +1039,7 @@ static bit UserCommonInterfacePanelStep(void)
         case AWTO_PNL_T6:
         default:
             // T6 what: VDD off -> VDD on again, minimum; panel T6 (registry PANEL_T6). Expiry: OFF (VDD may come on).
-            if(usIn < _PANEL_POWER_OFF_T6)
+            if(usIn <= _PANEL_POWER_OFF_T6)                       // <=: the 1 ms tick of the entry stamp, so >= T6 real
             {
                 return _FALSE;
             }

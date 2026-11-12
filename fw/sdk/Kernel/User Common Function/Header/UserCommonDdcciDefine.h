@@ -267,10 +267,6 @@
 #define _DDCCI_OPCODE_VCP_CONTROL_PANEL_12V_PCTR    0xEF
 #endif
 
-#if(_CUSTOMER == _CUS_BAISHENG)
-#define _DDCCI_OPCODE_VCP_BACKLIGHT_FOR_BS          0xF8
-#define _DDCCI_OPCODE_VCP_RESET_FOR_BS              0xFF
-#endif
 
 #define _DDCCI_OPCODE_VCP_GET_SVNVERSION            0xF9
 #define _DDCCI_OPCODE_VCP_MANUFACTURER              0xFD

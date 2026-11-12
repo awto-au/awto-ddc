@@ -46,9 +46,6 @@
 
 #endif
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-extern StructUserDataInflashType g_stUserDataInFlash; 
-#endif
 
 //****************************************************************************
 // INTERFACE VARIABLE DECLARATIONS
@@ -60,9 +57,6 @@ extern StructUserDataInflashType g_stUserDataInFlash;
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonAdjust.c
 //----------------------------------------------------------------------------------------
-#if(_CUSTOMER == _CUS_TOSHIBA)
-extern void Set_1600_1024_State(bit state);
-#endif
 
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonCec.c

@@ -463,11 +463,12 @@ void SysSourceDetectPort(BYTE ucSearchIndex)
             {
                 if((GET_SOURCE_SEARCH_DELAY_MODE() != _SOURCE_SEARCH_POLLING_MODE) && (GET_SOURCE_PREDETECT(ucSearchIndex) == _TRUE))
                 {
-                #if(_CUSTOMER == _CUS_MINDRAY)
+                #if(_AWTO_TMDS_MEASURE_ACCEPT == _ON)
+                    // accept a TMDS port only once its timing measures (was a Mindray branch; it measured the current port)
                     ucSourceType = ScalerTMDSScanInputPort(enumSearchPort, GET_INPUTPORT_TYPE(ucSearchIndex));
                     if(ucSourceType != _SOURCE_NONE)
                     {
-                        if(ScalerMeasureInputInfo(SysSourceGetSourceType(), SysSourceGetInputPort()) == _FALSE)
+                        if(ScalerMeasureInputInfo((EnumSourceTypeDef)ucSourceType, enumSearchPort) == _FALSE)
                         {
                             DebugMessageSystem("TMDS Measure Fail", 0);
                             ucSourceType = _SOURCE_NONE;

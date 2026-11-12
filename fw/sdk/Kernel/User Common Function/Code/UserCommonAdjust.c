@@ -85,9 +85,6 @@ BYTE __code tUNIFORMITY_OSD_TYPE_OFFSET_ENABLE_INDEX[] =
 #endif // End of #if(_UNIFORMITY_LEVEL0_SUPPORT == _ON)
 #endif // End of #if(_UNIFORMITY_SUPPORT == _ON)
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-BYTE g_ucPictureChange = 0;
-#endif
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -123,9 +120,6 @@ void UserCommonAdjustVPosition(BYTE ucUserVPosition);
 BYTE UserCommonAdjustRealValueToPercent(WORD usRealValue, WORD usMax, WORD usMin, WORD usCenter);
 WORD UserCommonAdjustPercentToRealValue(BYTE ucPercentValue, WORD usMax, WORD usMin, WORD usCenter);
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-void Set_1600_1024_State(bit state);
-#endif
 
 #if(_OVERSCAN_SUPPORT == _ON)
 void UserCommonAdjustOverScan(void);
@@ -509,17 +503,6 @@ WORD UserCommonAdjustGetHPositionRange(BYTE ucPar)
     }
 #endif
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-#if(TOSHIBA_DC_POWER == _OFF)
-    if(GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_VMAXIMAGE)
-    {
-        if((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 900) )
-        {
-            usDeltaIHWidthOverScan = 350;//ScalerVgipGetCaptureVHeight();  // TEST
-        }
-    }
-#endif
-#endif
 
 #if(_VGA_SUPPORT == _ON)
     if(SysSourceGetSourceType() == _SOURCE_VGA)
@@ -703,28 +686,6 @@ WORD UserCommonAdjustGetVPositionRange(BYTE ucPar)
             usDeltaIVHeightUnderScan = ((ScalerVgipGetCaptureVHeight() - usIVHeight) / 2);
         }
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-#if(TOSHIBA_DC_POWER == _OFF)       
-        if((GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_1280x1024) ||(GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_FULL))  
-        {
-             if((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 1024) )
-             {
-                 if((GET_1600_1024_COM() == _ON) || (GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_FULL))
-                 {
-                       usDeltaIVHeightOverScan = 0;//ScalerVgipGetCaptureVHeight();  // TEST
-                 }
-             }
-        }
-    
-        if(GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_VMAXIMAGE)
-        {
-             if((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 900) )
-             {
-                       usDeltaIVHeightOverScan = 144;//ScalerVgipGetCaptureVHeight();  // TEST
-             }        
-        }
-#endif
-#endif
 
         if(ucPar == _GET_VPOSITIONRANGE_MAX)
         {
@@ -1078,15 +1039,6 @@ WORD UserCommonAdjustPercentToRealValue(BYTE ucPercentValue, WORD usMax, WORD us
     }
 }
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-void Set_1600_1024_State(bit state)
-{
-    if(state == _ON)
-        SET_1600_1024_COM();
-    else
-        CLR_1600_1024_COM();
-}
-#endif
 
 #if(_OVERSCAN_SUPPORT == _ON)
 //--------------------------------------------------
@@ -1103,43 +1055,6 @@ void UserCommonAdjustOverScan(void)
         return;
     }
 
-#if(_CUSTOMER == _CUS_TOSHIBA)
-#if(TOSHIBA_DC_POWER == _OFF)
-    if(GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_1280x1024) 
-    {
-        if((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 1024))
-        {
-            if(GET_1600_1024_COM() == _ON)
-            {
-                 SET_MDOMAIN_INPUT_VHEIGHT(900);    
-
-            }
-           else
-           {
-                 SET_MDOMAIN_INPUT_VHEIGHT(1024);    
-           }
-       }
-    }
-     if(GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_FULL) 
-    {
-        if((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 1024))
-        {
-
-                 SET_MDOMAIN_INPUT_VHEIGHT(900);    
-
-       }
-    }
-
-    if(GET_OSD_ASPECT_RATIO_TYPE() == _ASPECT_RATIO_VMAXIMAGE) 
-    {
-       if((GET_INPUT_TIMING_HWIDTH() == 1600) && (GET_INPUT_TIMING_VHEIGHT() == 900))
-       {
-               SET_MDOMAIN_INPUT_VHEIGHT(598);    
-               SET_MDOMAIN_INPUT_HWIDTH(900);
-        }
-    }
-#endif
-#else
     // Modify Over Scanned H
     ucDelta = (BYTE)((DWORD)GET_MDOMAIN_INPUT_HWIDTH() * _OVERSCAN_H_RATIO / 1000);
 
@@ -1162,7 +1077,6 @@ void UserCommonAdjustOverScan(void)
 
     SET_MDOMAIN_INPUT_VSTART(GET_MDOMAIN_INPUT_VSTART() + ucDelta);
     SET_MDOMAIN_INPUT_VHEIGHT(GET_MDOMAIN_INPUT_VHEIGHT() - 2 * ucDelta);
-#endif
 }
 #endif  // End of #if(_OVERSCAN_SUPPORT == _ON)
 
@@ -1333,11 +1247,7 @@ void UserCommonAdjustAspectRatio(void)
             break;
 
         case _ASPECT_RATIO_1280x1024:
-#if(_CUSTOMER == _CUS_TOSHIBA)
-            UserInterfaceAdjustAspectRatio();
-#else
             UserAdjustZoomRatio(1280,1024);
-#endif
             break;
 
         case _ASPECT_RATIO_870x625:
@@ -1754,177 +1664,6 @@ void UserCommonAdjustUltraVivid(EnumFunctionOnOFF enumFunctionOnOFF, EnumColorSp
 // Output Value : None
 //--------------------------------------------------
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-#define CACHE_SIZE 16
-void DitheDataWriteToFlsah(BYTE __code *pTable, WORD usAddr, WORD usLength)
-{
-    BYTE mData_Cache[CACHE_SIZE];
-    BYTE i= 0;
-    BYTE count = 0;
-    
-    if((usLength/CACHE_SIZE) != 0)
-    {
-        count = (usLength/CACHE_SIZE) + 1;
-    }
-    else
-    {
-        count = (usLength/CACHE_SIZE);
-    }
-    
-    for(i=0; i<count; i++)
-    {
-        memset(mData_Cache, 0, CACHE_SIZE);
-        if(i == count - 1)
-        {
-            memcpy(mData_Cache, pTable + i*CACHE_SIZE, usLength - i*CACHE_SIZE);
-            UserCommonFlashWrite(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usAddr + i*CACHE_SIZE, usLength - i*CACHE_SIZE, mData_Cache);
-        }
-        else
-        {
-            memcpy(mData_Cache, pTable + i*CACHE_SIZE, CACHE_SIZE);
-            UserCommonFlashWrite(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usAddr + i*CACHE_SIZE, CACHE_SIZE, mData_Cache);
-        }       
-    }    
-}
-
-void RTDFlashRestoreDitherData(void)
-{
-
-    
-    UserCommonFlashErasePage(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _DITHER_PAGE);
-
-    //DDITHER_TEMPOFFSET_TABLE
-    DitheDataWriteToFlsah(tDDITHER_TEMPOFFSET_TABLE,_TEMP_DITHER_TABLE_ADDR,_TEMP_DITHER_TABLE_SIZE);
-
-    //DDITHER_SEQ_TABLE
-    DitheDataWriteToFlsah(tDDITHER_SEQ_TABLE,_SEQ_TABLE_ADDR,_SEQ_TABLE_SIZE);
-
-    //DDITHER_TABLE
-#if(_DDITHER_TYPE != _DDITHER_GEN_1_6BIT_DITHERTBL)
-    DitheDataWriteToFlsah(tDDITHER_TABLE18Bit,_DITHER_TABLE_18BIT_ADDR,_DITHER_TABLE_18BIT_SIZE);
-#endif
-    DitheDataWriteToFlsah(tDDITHER_TABLE24Bit,_DITHER_TABLE_24BIT_ADDR,_DITHER_TABLE_24BIT_SIZE);
-    DitheDataWriteToFlsah(tDDITHER_TABLE30Bit,_DITHER_TABLE_30BIT_ADDR,_DITHER_TABLE_30BIT_SIZE);
-
-}
-
-extern void ScalerBurstWrite(BYTE *pucAddress, WORD usWriteLength, BYTE ucBankNum, WORD usHostAddr, BYTE ucTableType, bit bTableLocation);
-extern void ScalerColorDDitherLoadSetting(DWORD ulSettingOption);
-void RTDFlashLoadDitherData(void)
-{
-    DWORD ulSettingOption = 0x00000000;
-    BYTE ucKeepNFrame = _DDITHER_KEEP_1_FRAME;
-    BYTE xdata ucDither[2];
-    BYTE  j;
-
-    ScalerSetBit(0x006A, ~(_BIT7 | _BIT6), 0x80);
-    for(j=0;j< (144/2); j++)
-    {
-        if(_PANEL_DISP_BIT_MODE == _PANEL_DISP_18_BIT)
-        {
-#if(_DDITHER_TYPE != _DDITHER_GEN_1_6BIT_DITHERTBL)
-            UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _DITHER_TABLE_18BIT_ADDR+ 2*j, 2,  &ucDither[0]);
-            ScalerBurstWrite(ucDither, 2, GET_CURRENT_BANK_NUMBER(), 0x0069, _BURSTWRITE_DATA_COMMON, _BURSTWRITE_FROM_XRAM);
-#endif
-        }
-        else if(_PANEL_DISP_BIT_MODE == _PANEL_DISP_24_BIT)
-        {
-            UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _DITHER_TABLE_24BIT_ADDR+ 2*j, 2,  &ucDither[0]);
-            ScalerBurstWrite(ucDither, 2, GET_CURRENT_BANK_NUMBER(), 0x0069, _BURSTWRITE_DATA_COMMON, _BURSTWRITE_FROM_XRAM);
-        }
-        else
-        {
-            UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _DITHER_TABLE_30BIT_ADDR + 2*j, 2,  &ucDither[0]);
-            ScalerBurstWrite(ucDither, 2, GET_CURRENT_BANK_NUMBER(), 0x0069, _BURSTWRITE_DATA_COMMON, _BURSTWRITE_FROM_XRAM);
-        }
-    }
-    ScalerSetBit(0x006A, ~(_BIT7 | _BIT6), 0x00);
-
-    ScalerSetBit(0x006A, ~(_BIT7 | _BIT6), 0x40);
-    for(j=0;j<24;j++)
-    {
-        UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _SEQ_TABLE_ADDR+ 2*j, 2,	&ucDither[0]);
-        ScalerBurstWrite(ucDither, 2, GET_CURRENT_BANK_NUMBER(), 0x0069, _BURSTWRITE_DATA_COMMON, _BURSTWRITE_FROM_XRAM);
-    }
-    ScalerSetBit(0x006A, ~(_BIT7 | _BIT6), 0x00);
-
-    ScalerSetBit(0x006A, ~(_BIT7 | _BIT6), 0xC0);
-    for(j=0;j< (32/2); j++)
-    {
-        UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _TEMP_DITHER_TABLE_ADDR+ 2*j, 2,  &ucDither[0]);
-        ScalerBurstWrite(ucDither, 2, GET_CURRENT_BANK_NUMBER(), 0x0069, _BURSTWRITE_DATA_COMMON, _BURSTWRITE_FROM_XRAM);
-    }
-    ScalerSetBit(0x006A, ~(_BIT7 | _BIT6), 0x00);
-
-#if(((_D_DITHER_MULTI_SEQ_ENABLE == _ENABLE) && (_D_DITHER_SERIES_SEQ_ENABLE == _DISABLE)) ||\
-    (_D_DITHER_SHARE_SEQ_ENABLE == _ENABLE) || (_D_DITHER_SEQ_INV_ENABLE == _ENABLE) ||\
-    (_D_DITHER_V_FRAME_MOD == _ENABLE) || (_D_DITHER_H_FRAME_MOD == _ENABLE))
-
-    switch(_D_DITHER_SUPER_PIXEL_SIZE)
-    {
-        case _DDITHER_SUPER_PIXEL_2X2:
-            if((_PANEL_DISP_BIT_MODE == _PANEL_DISP_18_BIT) || (_PANEL_DISP_BIT_MODE == _PANEL_DISP_30_BIT))
-            {
-                ucKeepNFrame = _DDITHER_KEEP_4_FRAME;
-            }
-            else
-            {
-                ucKeepNFrame = _DDITHER_KEEP_16_FRAME;
-            }
-            break;
-
-        case _DDITHER_SUPER_PIXEL_2X4:
-        case _DDITHER_SUPER_PIXEL_4X2:
-            if((_PANEL_DISP_BIT_MODE == _PANEL_DISP_18_BIT) || (_PANEL_DISP_BIT_MODE == _PANEL_DISP_30_BIT))
-            {
-                ucKeepNFrame = _DDITHER_KEEP_2_FRAME;
-            }
-            else
-            {
-                ucKeepNFrame = _DDITHER_KEEP_8_FRAME;
-            }
-            break;
-
-        case _DDITHER_SUPER_PIXEL_4X4:
-            if((_PANEL_DISP_BIT_MODE == _PANEL_DISP_18_BIT) || (_PANEL_DISP_BIT_MODE == _PANEL_DISP_30_BIT))
-            {
-                ucKeepNFrame = _DDITHER_KEEP_1_FRAME;
-            }
-            else
-            {
-                ucKeepNFrame = _DDITHER_KEEP_4_FRAME;
-            }
-            break;
-
-        case _DDITHER_SUPER_PIXEL_4X8:
-        case _DDITHER_SUPER_PIXEL_8X4:
-            if((_PANEL_DISP_BIT_MODE == _PANEL_DISP_18_BIT) || (_PANEL_DISP_BIT_MODE == _PANEL_DISP_30_BIT))
-            {
-                ucKeepNFrame = _DDITHER_KEEP_1_FRAME;
-            }
-            else
-            {
-                ucKeepNFrame = _DDITHER_KEEP_2_FRAME;
-            }
-            break;
-
-            default:
-            ucKeepNFrame = _DDITHER_KEEP_1_FRAME;
-            break;
-    }
-
-#endif
-
-    ulSettingOption = (_D_DITHER_6BIT_PANEL_FUNC_ENABLE << 7) | (1 << 4) | (_D_DITHER_V_FRAME_MOD << 1) | _D_DITHER_H_FRAME_MOD;
-    ulSettingOption = ulSettingOption | (((DWORD)((ucKeepNFrame << 4) | _D_DITHER_SUPER_PIXEL_SIZE)) << 8);
-    ulSettingOption = ulSettingOption | (((DWORD)((_D_DITHER_SERIES_SEQ_ENABLE << 3) | (_D_DITHER_MULTI_SEQ_ENABLE << 2))) << 16);
-    ulSettingOption = ulSettingOption | (((DWORD)((_D_DITHER_SHARE_SEQ_ENABLE << 3) | (_D_DITHER_SEQ_INV_ENABLE << 1) | _D_DITHER_SEQ_INV_MODE)) << 24);
-
-    ScalerColorDDitherLoadSetting(ulSettingOption);
-
-}
-
-#endif
 
 void UserCommonAdjustDDither(void)
 {
@@ -1935,11 +1674,7 @@ void UserCommonAdjustDDither(void)
 #endif
 
 #if(_PANEL_EXIST_MULTIPANEL == _OFF)
-#if(_CUSTOMER == _CUS_MINDRAY)
-    RTDFlashLoadDitherData();
-#else
     ScalerColorDDitherAdjust(tDDITHER_TABLE, tDDITHER_SEQ_TABLE, pucTempoTable, GET_CURRENT_BANK_NUMBER());
-#endif
 #else
     switch(_PANEL_DISP_BIT_MODE)
     {
@@ -1964,7 +1699,7 @@ void UserCommonAdjustDDither(void)
 
 #if(_D_DITHER_ADVANCE_SETTING_ENABLE == _ENABLE)
 
-#if((_PANEL_EXIST_MULTIPANEL == _OFF) && (_CUSTOMER != _CUS_MINDRAY))
+#if(_PANEL_EXIST_MULTIPANEL == _OFF)
     ScalerColorDDitherAdvanceSettingAdjust(tDDITHER_REALIGN_TABLE, tDDITHER_REALIGN_TEMPO_TABLE, tDDITHER_LSB_TABLE, tDDITHER_ADVANCE_SETTING_TABLE, GET_CURRENT_BANK_NUMBER());
 #else
     switch(_PANEL_DISP_BIT_MODE)
@@ -2034,21 +1769,6 @@ void UserCommonAdjustSharpness(EnumSourceSearchPort enumSourceSearchPort)
     switch(ScalerScalingGetScalingUpType())
     {
         case _VSU_2D_4LINE_COEF:
-#if(_CUSTOMER == _CUS_TOSHIBA)
-            // 1:1 Mode Use Different Scaling Table
-            if((ScalerColorScalingByPassTableSel() == _TRUE) || (UserInterfaceSharpnessBypassCheck() == _TRUE))
-            {
-                ScalerMemorySetScalingCoef(UserInterfaceGetSharpnessCoef(_H_SU_128TAPS_1_TO_1, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoef(_V_SU_128TAPS_NORMAL, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoefBankNum());
-            }
-            else
-            {
-                ScalerMemorySetScalingCoef(UserInterfaceGetSharpnessCoef(_H_SU_128TAPS_NORMAL, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoef(_V_SU_128TAPS_NORMAL, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoefBankNum());
-            }
-#else
             // 1:1 Mode Use Different Scaling Table
             if((ScalerColorScalingByPassTableSel() == _TRUE) || (UserInterfaceSharpnessBypassCheck() == _TRUE))
             {
@@ -2062,26 +1782,10 @@ void UserCommonAdjustSharpness(EnumSourceSearchPort enumSourceSearchPort)
                                            UserInterfaceGetSharpnessCoef(_H_V_SU_128TAPS_NORMAL, enumSourceSearchPort),
                                            UserInterfaceGetSharpnessCoefBankNum());
             }
-#endif
             break;
 
 #if(_VSU_3L_SUPPORT == _ON)
         case _VSU_2D_3LINE_COEF:
-#if(_CUSTOMER == _CUS_TOSHIBA)
-            // 1:1 Mode Use Different Scaling Table
-            if((ScalerColorScalingByPassTableSel() == _TRUE) || (UserInterfaceSharpnessBypassCheck() == _TRUE))
-            {
-                ScalerMemorySetScalingCoef(UserInterfaceGetSharpnessCoef(_H_SU_128TAPS_1_TO_1, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoef(_V_SU_96TAPS_NORMAL, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoefBankNum());
-            }
-            else
-            {
-                ScalerMemorySetScalingCoef(UserInterfaceGetSharpnessCoef(_H_SU_128TAPS_NORMAL, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoef(_V_SU_96TAPS_NORMAL, enumSourceSearchPort),
-                                           UserInterfaceGetSharpnessCoefBankNum());
-            }
-#else
             // 1:1 Mode Use Different Scaling Table
             if((ScalerColorScalingByPassTableSel() == _TRUE) || (UserInterfaceSharpnessBypassCheck() == _TRUE))
             {
@@ -2095,7 +1799,6 @@ void UserCommonAdjustSharpness(EnumSourceSearchPort enumSourceSearchPort)
                                            UserInterfaceGetSharpnessCoef(_H_V_SU_96TAPS_NORMAL, enumSourceSearchPort),
                                            UserInterfaceGetSharpnessCoefBankNum());
             }
-#endif
             break;
 #endif
 

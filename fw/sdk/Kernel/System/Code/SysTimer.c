@@ -110,9 +110,7 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
             break;
 
         case _SYSTEM_TIMER_EVENT_JUDGE_NOSUPPORT_STATE:
-            // #162: the SDK's _CUSTOMER test is 0 == 0 here (both names undefined): the Mindray branch (search again) is what
-            // ran; kept on purpose until no-support is designed (awto-ddc issue: hidden customer branches)
-            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_TIMER_NOSUPPORT);
+            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_NOSUPPORT, AWTO_SYS_BY_TIMER_NOSUPPORT);
             break;
 
         case _SYSTEM_TIMER_EVENT_JUDGE_NOSIGNAL_STATE:

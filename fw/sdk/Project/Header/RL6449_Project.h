@@ -158,13 +158,11 @@ extern unsigned char AwtoKeyHold(void);
 // #65 step 1 drops: _OFF = SDK __code compiled out (scripts/keil2sdcc_drops.py)
 #define _AWTO_FACTORY                                           _ON     // RTD factory menu (RTDFactoryMode/Function); Dan: kept (needed), port to open __code later
 #define _AWTO_GAMMA_ALL                                         _ON     // _OFF = 1.8/2.0/2.4 OSD gamma options alias the 2.2 LUT; Dan: all kept
-#define _AWTO_DP_PHYCTS                                         _ON     // DP PHY compliance (CTS) process; Dan: kept
-#define _AWTO_FLASH_ALL                                         _ON     // _OFF = MX25L8006E (JEDEC c22014) only; Dan: full table kept
-#if(_AWTO_FLASH_ALL == _ON)
-#define _AWTO_FLASH_IDX                                         g_ucFlashType
-#else
-#define _AWTO_FLASH_IDX                                         0
+#ifndef _AWTO_TMDS_MEASURE_ACCEPT                                // build -D overrides (A/B)
+#define _AWTO_TMDS_MEASURE_ACCEPT                               _OFF    // _ON = HDMI search accepts a port only once its timing measures (A/B for the predetect flaps, #162)
 #endif
+#define _AWTO_DP_PHYCTS                                         _ON     // DP PHY compliance (CTS) process; Dan: kept
+// _AWTO_FLASH_ALL: RL6449_Gen_Option.h (the Lib flash code sees it there too)
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON
@@ -982,6 +980,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_INIT                                       0xD2    // arg 1 MCU init, 2 Timer2 tick, 3 watchdog run-time mode
 #define AWTO_SYNC_EV_UNPLUG                                     0xD3    // arg = port: a cable unplug woke the monitor (AWTO_WAKE_T_UNPLUG)
 #define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
+#define AWTO_NV_LOG_FLASH_TYPE                                  0x0C    // AWTO_SYNC_EV_NV arg: flash type the SDK detected (tFlashInformation index), at the first NVRAM step after it
 #define AWTO_SYNC_REPEAT_LINES                                  2       // lines the repeat collapse compares (AwtoSyncSame back 2 and 3)
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state

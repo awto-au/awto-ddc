@@ -674,5 +674,13 @@
 
 #include "RL6449_OSD_Gen_Option.h"
 
+// Flash table (ours): here, not in RL6449_Project.h, so the Lib TUs (no project header) see it (hidden customer branches issue)
+#define _AWTO_FLASH_ALL                                         _ON     // _OFF = MX25L8006E (JEDEC c22014) only; Dan: full table kept
+#if(_AWTO_FLASH_ALL == _ON)
+#define _AWTO_FLASH_IDX                                         g_ucFlashType
+#else
+#define _AWTO_FLASH_IDX                                         0
+#endif
+
 #endif // End of #ifndef __RL6449_GEN_OPTION__
 #endif // End of #if(_SCALER_TYPE == _RL6449_SERIES)
