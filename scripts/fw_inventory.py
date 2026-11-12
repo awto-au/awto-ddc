@@ -4,7 +4,7 @@
 usage: fw_inventory.py MAP [--tsv OUT.tsv] [--sdk PATH]
   MAP: sdld map of an SDCC build (tmp/fw/<tag>.map or tmp/fw/<serial>/fw.map). Areas CH_<sym> (one per fn / const, sdcc_bank)
   are attributed to their module; the module (from the map's "Files Linked" object list) to its source file in the SDK,
-  fw/overlay or fw/sdcc; the source path to an origin; origin + names to a plan step (STEP_RULES, first match wins).
+  fw/sdk or fw/sdcc; the source path to an origin; origin + names to a plan step (STEP_RULES, first match wins).
   Other code areas (CSEG lib runtime, HOME, GSINIT, ST_ bank stubs, vectors) are rows of origin "runtime".
   Prints the origin and step tables (markdown); writes one row per symbol to --tsv
   (default tmp/logs/fw_inventory_<tag>.tsv): origin step module source kind symbol bytes addr.
@@ -80,7 +80,7 @@ def log(s: str) -> None:
 def source_index(sdk: Path) -> dict:
     """stem (as compiled: asm/rel name) -> source path relative to its tree root; RL6449 copies preferred."""
     idx = {}
-    roots = [(sdk, ""), (ROOT / "fw" / "overlay", ""), (ROOT / "fw" / "sdcc", "fw/sdcc/")]
+    roots = [(sdk, ""), (ROOT / "fw" / "sdk", ""), (ROOT / "fw" / "sdcc", "fw/sdcc/")]
     for base, prefix in roots:
         if not base.exists():
             continue

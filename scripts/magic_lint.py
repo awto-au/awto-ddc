@@ -8,7 +8,7 @@ Flags in our files (comments stripped):
   - bare 0xFE00-0xFFFE literal (XFR address; 0xFFFF is a sentinel)
   - numeric literal arguments of ScalerOsdSetColorPalette (use AWTO_PAL_* / AWTO_RGB_*)
 Allow-list: scripts/magic_allow.tsv  `file-suffix<TAB>line-substring<TAB>reason`, every entry needs a reason.
-Our files: fw/sdcc/awto_*.inc, fw/awto/**, awto-marked fw/overlay headers; the generated AwtoRegs.h is the one place addresses live.
+Our files: fw/sdcc/awto_*.inc, fw/sdcc/glue*.inc, fw/awto/**, awto-marked fw/sdk headers; the generated AwtoRegs.h is the one place addresses live.
 Log: ./tmp/logs/magic_lint.log
 """
 import argparse
@@ -23,10 +23,10 @@ DEFINE_RE = re.compile(r"#define\s+\w*REG\w*\s+\(?0[xX][0-9A-Fa-f]{3,4}\b")
 CAST_RE = re.compile(r"\*\s*\)\s*\(?0[xX][0-9A-Fa-f]{3,4}\b")
 XFR_RE = re.compile(r"\b0[xX]F[EF][0-9A-Fa-f]{2}\b")
 PAL_RE = re.compile(r"ScalerOsdSetColorPalette\s*\(([^;]*)\)\s*;")
-OVERLAY_OURS = ["fw/overlay/Project/Header/RL6449_Project.h", "fw/overlay/Project/Header/AwtoSetIds.h",
-                "fw/overlay/Kernel/Common/Debug.h", "fw/overlay/Kernel/Scaler/ScalerCommonFunction/Code/AwtoMsg.h",
-                "fw/overlay/Panel/AWTO_LTM270FL01.h", "fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h",
-                "fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K_PINSHARE.h"]
+OVERLAY_OURS = ["fw/sdk/Project/Header/RL6449_Project.h", "fw/sdk/Project/Header/AwtoSetIds.h",
+                "fw/sdk/Kernel/Common/Debug.h", "fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/AwtoMsg.h",
+                "fw/sdk/Panel/AWTO_LTM270FL01.h", "fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h",
+                "fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K_PINSHARE.h"]
 
 
 def tree_root(arg):
@@ -42,7 +42,7 @@ def tree_root(arg):
 
 
 def our_files(root):
-    fs = sorted((root / "fw/sdcc").glob("awto_*.inc"))
+    fs = sorted((root / "fw/sdcc").glob("awto_*.inc")) + sorted((root / "fw/sdcc").glob("glue*.inc"))   # glue = settings glue (was fw/awto/settings)
     for sub in ("*.inc", "*.c", "*.h"):
         fs += sorted((root / "fw/awto").rglob(sub))
     fs += [root / p for p in OVERLAY_OURS if (root / p).is_file()]

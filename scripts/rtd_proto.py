@@ -8,7 +8,7 @@ or by rtd_log.py from an old raw log. Stream out: one line per MEANING, stateful
   0x4A ISP slave   : F4/F5 indexed scaler window + page select 0x9F, 0x6F ISP ctl, SPI engine 0x60-0x6D/0x70-0x75
                      (docs/flash-crc.md, docs/flash-burst.md), 0xEE reset
   0x50 EDID, 0x54 SCDC, 0x37 DDC/CI (VCP)
-  Symbols: --map image .map (XDATA names), StAwtoDiag/StAwtoSafe fields parsed from fw/overlay RL6449_Project.h,
+  Symbols: --map image .map (XDATA names), StAwtoDiag/StAwtoSafe fields parsed from fw/sdk RL6449_Project.h,
   regdb register names (re/regdb via regdb_query).
 API: setup_logs(name, map=None) -> Logs: <tool>.log (decoded + the tool's own lines), <tool>.raw.log (byte trace).
 Raw line format (parse_raw): `<ts> REAL write dev=0x35 reg 0x3b f8` / `REAL read dev=0x35 reg 0x08 n=1 -> 41`.
@@ -237,7 +237,7 @@ class Symbols:
                 m = re.match(r"^(?:(D):)?\s+([0-9A-F]{8})\s+_(\w+)", line)
                 if m and int(m[2], 16) <= 0xFFFF and (m[1] or int(m[2], 16) >= 0xE000):
                     s.addr.setdefault(int(m[2], 16), m[3])
-        h = root / "fw/overlay/Project/Header/RL6449_Project.h"
+        h = root / "fw/sdk/Project/Header/RL6449_Project.h"
         if h.exists():
             structs, syms = parse_structs(h.read_text(errors="replace"))
             for name, (a, typ) in syms.items():

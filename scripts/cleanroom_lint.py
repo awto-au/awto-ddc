@@ -6,7 +6,7 @@ usage: cleanroom_lint.py [--tree /mnt/2tb/git/awto-rtdfw] [--rebuild] [--where] 
     - identifiers: every distinctive identifier in SDK code (len >= 4, not all-lowercase, not a C/SDCC keyword)
     - code n-grams: 6 consecutive code tokens (comments dropped, numbers by value) with >= 2 content tokens (identifiers of 2+ chars, numbers > 1)
     - prose n-grams: 8 consecutive words of comments + string literals with >= 5 words of 3+ letters
-    Sources: the SDK mirror ($RTD_SDK) + awto-ddc fw/overlay and fw/sdcc (tainted: edited SDK copies / SDK names).
+    Sources: the SDK mirror ($RTD_SDK) + awto-ddc fw/sdk and fw/sdcc (tainted: edited SDK copies / SDK names).
     Hashes only (64-bit): the index holds no SDK text.
   Scan: *.c *.h *.asm *.s *.inc *.md *.py *.txt in --tree. Exempt: facts/, awto_shim/, .git/; identifiers #defined in facts/.
   Allowlist: specs/lint_allow.tsv (kind<TAB>value<TAB>reason; kind ident | code | prose, value = identifier or hit hash).
@@ -36,7 +36,7 @@ def repo_root() -> Path:
 
 ROOT = repo_root()
 SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))
-TAINTED = [ROOT / "fw" / "overlay", ROOT / "fw" / "sdcc"]
+TAINTED = [ROOT / "fw" / "sdk", ROOT / "fw" / "sdcc"]
 CLEAN = Path(os.environ.get("AWTO_RTDFW_REPO", "/mnt/2tb/git/awto-rtdfw"))
 CACHE = ROOT / "tmp" / "cleanroom" / "sdk_index.npz"
 ALLOW = ROOT / "specs" / "lint_allow.tsv"

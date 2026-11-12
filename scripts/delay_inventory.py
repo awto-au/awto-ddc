@@ -187,7 +187,7 @@ def macro_dump(build: Path, cache: Path) -> dict[str, str]:
     if not cache.exists():
         os.environ["AWTO_DDC_REPO"] = str(build)
         import importlib
-        k = importlib.import_module("keil2sdcc")
+        k = importlib.import_module("fw_compile")
         uv2 = k.SRC / "STD_FW_1P.Uv2"
         files, defines, incs, model = k.parse_uv2(uv2, "RL6449_Project")
         out = []

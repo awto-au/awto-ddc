@@ -2,7 +2,7 @@
 """Generate the register/field name header for OUR firmware code from the regdb (awto-ddc#161).
 
 usage: gen_regnames.py [--tree DIR] [--regdb FILE] [--check] [--migrate]
-  default   scan our files for AWTO_R_<REG> / AWTO_F_<REG>_<FIELD> / AWTO_I_<REG> and write fw/overlay/Project/Header/AwtoRegs.h
+  default   scan our files for AWTO_R_<REG> / AWTO_F_<REG>_<FIELD> / AWTO_I_<REG> and write fw/sdk/Project/Header/AwtoRegs.h
             with only those (address, 8-bit field mask, data-port index). An unknown name is an error.
   --check   exit 1 if the header on disk differs from what would be generated.
   --migrate one-off: rewrite raw hex addresses in register accesses of our files to AWTO_R_ names (prints each change).
@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from magic_lint import our_files, ACCESS_RE
 
-HEADER = "fw/overlay/Project/Header/AwtoRegs.h"
+HEADER = "fw/sdk/Project/Header/AwtoRegs.h"
 REGDB = "re/regdb/RTD2795T-CG.tsv.gz"
 EXTRA = {"IIC_2_CH_SEL": 0xFE94, "IIC_2_STATUS": 0xFE99,      # IIC_2 / IIC_3 engines: SDK header only, not in the 2795T regdb
          "IIC_3_CH_SEL": 0xFEA3, "IIC_3_STATUS": 0xFEA8}

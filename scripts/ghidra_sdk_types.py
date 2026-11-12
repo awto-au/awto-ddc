@@ -24,7 +24,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
 sys.path.insert(0, str(HERE))
-import keil2sdcc as K  # noqa: E402
+import fw_compile as K  # noqa: E402
 
 TMP = ROOT / "tmp" / "ghidra_types"
 LOG = ROOT / "tmp" / "logs" / "ghidra_sdk_types.log"

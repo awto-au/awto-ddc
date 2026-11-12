@@ -35,11 +35,11 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-LIMIT_OF = {"keys": 60, "wdt": 60}   # 3x the cold run (keys 20 s, wdt 18 s; fast core, 2026-11-11); table of all gates: commit message
+LIMIT_OF = {"keys": 60, "wdt": 60, "rules": 30}   # 3x the cold run (keys 20 s, wdt 18 s; fast core, 2026-11-11); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
-NO_SIM = {"link", "pokes", "speed", "magic", "regs"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
+NO_SIM = {"link", "pokes", "speed", "magic", "regs", "rules"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -48,11 +48,12 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "bootsim": ("_g_stAwtoSync",),
     "wake": ("_AwtoPsWakeFire",),
     "htime": ("_g_stAwtoHt",),
+    "deadport": ("_AwtoDeadPortPoll",),
 }
 
 
 def header(tree):
-    h = Path(tree) / "fw/overlay/Project/Header/RL6449_Project.h" if tree else None
+    h = Path(tree) / "fw/sdk/Project/Header/RL6449_Project.h" if tree else None
     return h if h and h.is_file() else None
 
 
@@ -65,10 +66,12 @@ def skips(b: Path, m: Path, tree) -> dict:
     sk = {k: f"image lacks {', '.join(x for x in v if not has(x))}"
           for k, v in SKIP_IF_MISSING.items() if not all(has(x) for x in v)}
     if not header(tree):
-        sk.setdefault("crash", "needs --tree with fw/overlay/Project/Header/RL6449_Project.h")
+        sk.setdefault("crash", "needs --tree with fw/sdk/Project/Header/RL6449_Project.h")
     if not (tree and Path(tree).is_dir()):
         sk["pokes"] = "needs --tree (static check of the worktree's sources)"
-        sk["magic"] = sk["regs"] = "needs --tree (static check of the worktree's sources)"
+        sk["magic"] = sk["regs"] = sk["rules"] = "needs --tree (static check of the worktree's sources)"
+    if tree and Path(tree).is_dir() and not (Path(tree) / "scripts/sdk_rules_lint.py").is_file():
+        sk["rules"] = "tree has no scripts/sdk_rules_lint.py (SDK not yet our source, #162)"
     return sk
 
 
@@ -93,6 +96,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     if header(tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
@@ -100,6 +104,7 @@ def gates(b: Path, m: Path, ref, tree):
         g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
         g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
         g["regs"] = [*PY, f"{s}/gen_regnames.py", "--tree", tree, "--check"]
+        g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
     return {
         **g,
         "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],

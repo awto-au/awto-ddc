@@ -4,7 +4,7 @@
 usage: settings_gen.py [--rtdfw DIR] [--tree DIR] [--check]
   Reads  $RTDFW/settings/registry.tsv + pages.tsv (format: header of registry.tsv).
   Writes $RTDFW/awto/settings/set_gen.h, set_table.c   (clean firmware: rows, labels, pages, VCP map, apply dispatch)
-         $TREE/fw/overlay/Project/Header/AwtoSetIds.h   (firmware glue: AWTO_SET_<NAME> ids, only with --tree)
+         $TREE/fw/sdk/Project/Header/AwtoSetIds.h   (firmware glue: AWTO_SET_<NAME> ids, only with --tree)
          scripts/settings_table.py                     (host: dev.py settings get|set|list)
          docs/settings.md                              (the list for people)
   --check: write nothing, exit 1 when any output differs from what is on disk (gate).
@@ -398,7 +398,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rtdfw", type=Path, default=Path(os.environ.get("AWTO_RTDFW_REPO", "/mnt/2tb/git/awto-rtdfw")),
                     help="clean tree (default $AWTO_RTDFW_REPO or /mnt/2tb/git/awto-rtdfw)")
-    ap.add_argument("--tree", type=Path, help="firmware worktree for fw/overlay/Project/Header/AwtoSetIds.h")
+    ap.add_argument("--tree", type=Path, help="firmware worktree for fw/sdk/Project/Header/AwtoSetIds.h")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--host-out", type=Path, help="write only the host table here (an image's own: tmp/fw/<stem>.settings_table.py)")
     a = ap.parse_args()
@@ -419,7 +419,7 @@ def main() -> int:
             ROOT / "scripts/settings_table.py": gen_host(rows, pages, tree, sch),
             ROOT / "docs/settings.md": gen_doc(rows, pages, tree, sch)}
     if a.tree:
-        outs[a.tree / "fw/overlay/Project/Header/AwtoSetIds.h"] = inc
+        outs[a.tree / "fw/sdk/Project/Header/AwtoSetIds.h"] = inc
     diff = [p for p, t in outs.items() if not p.exists() or p.read_text() != t]
     if a.check:
         for p in diff:

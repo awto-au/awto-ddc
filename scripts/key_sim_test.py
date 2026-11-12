@@ -205,7 +205,7 @@ def run(k):
     w = k.m.rd(k.osd_w)[0]
     k.check(f"SOURCE -> selector on the text layer ({SRC_COLS}-cell rows drawn)", k.delta(b, "AwtoSourceOpen") == 1 and sel != 0 and w == SRC_COLS
             and k.delta(b, "AwtoSourceRows") == 1, f"osd state {sel}, map width {w}, rows drawn {k.delta(b, 'AwtoSourceRows')}")
-    n_items = 4                                                 # Auto + D1 DP, D2 HDMI 1, D3 HDMI 2 (fw/overlay Pcb)
+    n_items = 4                                                 # Auto + D1 DP, D2 HDMI 1, D3 HDMI 2 (fw/sdk Pcb)
     b = k.snap()
     rows = []
     for _ in range(n_items):

@@ -13,7 +13,7 @@ usage: rtd_diag.py <bus> [--watch N | --messages [--secs S] | --release | --trac
   + checksum k+0x0F+sum); write 0x2A (end, reply 0xF7, releases fw); on exit write 0x2F. Only these staging/read cmds.
   --release: send 0x2A + 0x2F only; frees a firmware left halted by a killed --messages run (reads then echo one byte).
   Text starting 0x01 = token: bytes 1-2 big-endian id -> fw/msgids.tsv (id, category, file:line, text).
-Block layout, little-endian (SDCC; low byte first), from fw/overlay/Project/Header/RL6449_Project.h StAwtoDiag:
+Block layout, little-endian (SDCC; low byte first), from fw/sdk/Project/Header/RL6449_Project.h StAwtoDiag:
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
   | 1A ucDelay5usN | 1B u16 10 ticks of ScalerTimerDelayXms, counts/4 | 1D u16 10 x DELAY_5US raw counts | 1F RCAP2H
   | 20 u16 DELAY_XUS(100) | 22 u16 DELAY_XUS_EXINT(100) | 24 u16 10 x DELAY_5US_EXINT | 26 u16 panel T3 wait total, counts/64

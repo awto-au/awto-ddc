@@ -625,7 +625,7 @@ def main() -> None:
             "docs/monitors/gpio-roles.md",
             "docs/reversing/dahua-fw/gpio-ir.md",
             "re/jxc-4k/gpio_audit.tsv",
-            "fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K_PINSHARE.h",
+            "fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K_PINSHARE.h",
         ],
         "pins": json_rows,
     }
