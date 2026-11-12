@@ -31,6 +31,9 @@ VCP = 0xE9
 UNITS_OK = ("2",)                # Dan: unit 2 only (units 1 / 3 are working screens)
 REPLY_WAIT_S = kvm.REPLY_WAIT_S  # MCCS: >= 40 ms between a request and its reply read
 READ_TRIES = kvm.READ_TRIES      # null message = main loop busy (OSD draw): re-read; 3 x 40 ms, worst ~130 ms
+WRITE_GAP_S = 0.050              # after the table write (no reply), before the get: DDC/CI 1.1 host gap after a
+                                 # write-only command = 50 ms (a request sent at once got only null replies, #157);
+                                 # a fixed wait, the get follows it
 
 
 def log(s: str) -> None:
@@ -80,6 +83,7 @@ def send(u: dict, bus: int) -> bool:
         p = packet(t, ofs15)
         b.write(kvm.DDCCI, 0x51, p)
         raw("w 51", p)
+        time.sleep(WRITE_GAP_S)      # spec gap, not a poll
         syncs, drift = get_e9(b)
     when = dt.datetime.fromtimestamp(t, dt.timezone(dt.timedelta(seconds=lt.tm_gmtoff))).isoformat(timespec="milliseconds")
     log(f"sent {when} (UTC offset {ofs15 * 15} min) -> unit {u['_n']} {u['serial']} bus {bus}: syncs since boot {syncs}, "
