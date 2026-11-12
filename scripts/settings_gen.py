@@ -305,6 +305,9 @@ def gen_c(rows, pages, tree, sch):
            "// Firmware glue (fw/awto/settings/glue.inc) and AWTO_SET(NAME) readers name rows by these ids.",
            "#ifndef AWTO_SET_IDS_H", "#define AWTO_SET_IDS_H"]
     inc += [f"#define AWTO_SET_{r['name'].upper():<20} {r['id']}" for r in rows]
+    # sdk rows: defaults for the SDK store's power-on table (g_stOSDDefaultData), so the registry stays the one default (#176)
+    inc += ["#define AWTO_PCT_TO_255(p)           ((BYTE)(((WORD)(p) * 255) / 100))   // SDK store field of a percent row: 0..255"]
+    inc += [f"#define AWTO_SET_DEF_{r['name'].upper():<16} {r['default']}" for r in rows if "sdk" in r["flagset"]]
     inc += [f"#define AWTO_SET_SCHEMA              0x{sch:04X}", f"#define AWTO_SET_AUX_MAX             {aux_bytes(rows)}", "#endif", ""]
     return "\n".join(hdr), "\n".join(c), "\n".join(inc)
 
