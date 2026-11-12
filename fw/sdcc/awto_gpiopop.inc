@@ -292,7 +292,7 @@ static __xdata BYTE s_ucLogHead;
 static __xdata BYTE s_ucLogFull;                // 0 = first lap: rows below the head are blank, so lines are drawn unpadded
 
 static __xdata BYTE s_ucConSyncSeq;             // #139: sync ring seq the log has shown up to
-static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq
+static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index
 
 void AwtoConLogInit(void)
 {
@@ -367,18 +367,16 @@ void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)    // GPIO page only: i
 
 // #157 "host time <ISO>" + its "(fw +N ms, ...)" entry on one row: the fw entry's text without its "+ nnnnn ms " prefix.
 // XDATA, no locals: AwtoConLogSync sits on the deepest DATA overlay path (see AwtoPutIso).
-static __xdata BYTE s_ucLogL;
-
 static void AwtoConLogTail(void)
 {
-    s_ucLogL = s_ucAwtoLen;
+    s_ucLogI = s_ucAwtoLen;
     AwtoSyncLine(s_ucConSyncSeq);
-    s_pcAwtoRow[s_ucLogL] = ' ';
-    for(s_ucLogI = s_ucLogL + 10; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // AwtoSyncLine prefix: '+', 5 digit field, " ms "
+    s_pcAwtoRow[s_ucLogI] = ' ';
+    for(s_ucLogI += 10; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // AwtoSyncLine prefix: '+', 5 digit field, " ms "
     {
         s_pcAwtoRow[s_ucLogI - 9] = s_pcAwtoRow[s_ucLogI];
     }
-    s_ucAwtoLen = (s_ucAwtoLen > s_ucLogL + 10) ? (s_ucAwtoLen - 9) : (s_ucLogL + 1);
+    s_ucAwtoLen = s_ucLogI - 9;                 // max(len, start + 10) - 9
     s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
 }
 

@@ -159,24 +159,28 @@ static void AwtoPutStr(const char *s)
     }
 }
 
+// Digits low first into the row, then reversed in place: no digit buffer (10 B XDATA), no extra local (deep DATA path).
 static void AwtoPutNum(unsigned long ulV, BYTE ucMin)
 {
-    char pcD[10];
-    BYTE ucN = 0;
+    BYTE ucN = s_ucAwtoLen;
 
+    ucMin += ucN;
     do
     {
-        pcD[ucN++] = '0' + (ulV % 10);
+        AwtoPutChar('0' + (ulV % 10));
         ulV /= 10;
     }
-    while((ulV != 0) && (ucN < 10));
-    while(ucN < ucMin)
+    while(ulV != 0);
+    while((s_ucAwtoLen < ucMin) && (s_ucAwtoLen < s_ucAwtoCols))
     {
-        pcD[ucN++] = '0';
+        AwtoPutChar('0');
     }
-    while(ucN != 0)
+    for(ucMin = s_ucAwtoLen; (BYTE)(ucN + 1) < ucMin; ucN++)
     {
-        AwtoPutChar(pcD[--ucN]);
+        ucMin--;
+        s_pcAwtoRow[ucN] ^= s_pcAwtoRow[ucMin];
+        s_pcAwtoRow[ucMin] ^= s_pcAwtoRow[ucN];
+        s_pcAwtoRow[ucN] ^= s_pcAwtoRow[ucMin];
     }
 }
 
@@ -275,7 +279,6 @@ static void AwtoDbgShow(BYTE ucRow, BYTE ucPage)
 void AwtoOsdDebugLines(void)
 {
     BYTE ucPort, ucMode, ucPwr;
-    unsigned long ulDclk;                          // kHz
     WORD usV;                                      // 0.1 Hz
 
     if(s_ucConOpen == 0)
@@ -292,7 +295,6 @@ void AwtoOsdDebugLines(void)
     ucPort = SysSourceGetInputPort();
     ucMode = SysModeGetModeState();
     ucPwr = SysPowerGetPowerStatus();
-    ulDclk = GET_D_CLK_FREQ();
     usV = GET_INPUT_TIMING_VFREQ();
     AwtoPanel(2);
     if(s_ucDbgAll != 0)
@@ -341,7 +343,7 @@ void AwtoOsdDebugLines(void)
     }
 #endif
     AwtoPutStr("DCLK ");
-    AwtoPutMilli(ulDclk);
+    AwtoPutMilli(GET_D_CLK_FREQ());               // kHz
     AwtoDbgShow(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
 
     AwtoPutStr("LOOP ");
@@ -575,15 +577,12 @@ void AwtoProbeSet(BYTE ucLines)
 // start the displayed map one row further down per step.
 void AwtoProbeScroll(BYTE ucReset)
 {
-    WORD usFs;
-
     if(s_ucAwtoProbeOpen == 0) return;
     s_ucAwtoScroll = (ucReset != 0) ? 0 : (s_ucAwtoScroll + 1);
-    usFs = g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols;
     ScalerSetBit(0x3A18, ~(_BIT7 | _BIT6), _BIT7);
     ScalerSetByte(0x3A19, s_ucAwtoScroll);
-    ScalerSetBit(0x3A1B, 0x0F, (BYTE)((usFs >> 8) << 4));
-    ScalerSetByte(0x3A1C, (BYTE)usFs);
+    ScalerSetBit(0x3A1B, 0x0F, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
+    ScalerSetByte(0x3A1C, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));
 }
 #else
 void AwtoOsdOfsInit(void)

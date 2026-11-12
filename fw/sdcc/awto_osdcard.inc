@@ -883,7 +883,7 @@ void AwtoBootConsole(void)
 // Every main-loop pass (AwtoGpioPoll): console log lines, auto-open, selector fields every AWTO_SRC_POLL_MS.
 void AwtoOsdSyncPoll(void)
 {
-    WORD usNow, usDt;
+    WORD usDt;                                  // ms since the last selector poll (XDATA local: one WORD, #157 merge)
     BYTE ucI;
 
     if(s_ucConOpen != 0)
@@ -898,13 +898,12 @@ void AwtoOsdSyncPoll(void)
     {
         return;
     }
-    usNow = AwtoSrcNow();
-    usDt = usNow - s_usSrcPoll;
+    usDt = AwtoSrcNow() - s_usSrcPoll;
     if(usDt < AWTO_SRC_POLL_MS)
     {
         return;
     }
-    s_usSrcPoll = usNow;
+    s_usSrcPoll += usDt;
     for(ucI = 1; ucI <= AWTO_SRC_PORTS; ucI++)
     {
         AwtoSrcPortFields(ucI, 0);

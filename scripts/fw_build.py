@@ -82,7 +82,7 @@ def area_sizes(rel: Path) -> dict:
     return s
 
 
-LIB_XSEG_MARGIN = 64      # SDCC lib XSEG (e.g. _mullong/_divulong params); post-link check catches overrun
+LIB_XSEG_MARGIN = 37      # SDCC lib XSEG (_mullong/_divulong params) x1.25, measured in awto-ddc#157; check_xdata catches an overrun
 
 
 def check_xdata(mp: str, hs):

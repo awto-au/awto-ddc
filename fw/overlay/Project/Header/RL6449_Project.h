@@ -1011,8 +1011,9 @@ extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS prede
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
                                                                   else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
 // between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
-#define AWTO_PS_POLL_SITE()                                     { if((g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) && \
-                                                                     (GET_POWER_STATUS() == _POWER_STATUS_SAVING)) { AwtoPsWakePoll(); } }
+// one call per site, the compares in AwtoPsPollSite: 14 sites in main, which is in the full common area (#157 merge)
+extern void AwtoPsPollSite(void);
+#define AWTO_PS_POLL_SITE()                                     AwtoPsPollSite()
 #else
 #define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
 #define AWTO_PS_POLL_SITE()

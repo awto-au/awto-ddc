@@ -658,6 +658,14 @@ bit AwtoPsWakeFire(BYTE ucT, BYTE ucI, WORD usVal)   // trigger AWTO_WAKE_T_*, p
     return 1;
 }
 
+void AwtoPsPollSite(void)                           // AWTO_PS_POLL_SITE: armed (AwtoSyncPoll saw SAVING) and still SAVING
+{
+    if((g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) && (GET_POWER_STATUS() == _POWER_STATUS_SAVING))
+    {
+        AwtoPsWakePoll();
+    }
+}
+
 void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL + AWTO_PS_POLL_SITE (between handlers); works every AWTO_PS_POLL_MS
 {
     BYTE ucI, ucNow, ucR, ucU;
