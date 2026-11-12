@@ -216,6 +216,7 @@ def gmbus_nudge(bus: int) -> None:
 
 # ---- bus rate (tools/gmbus_rate kernel module, #12) -----------------------------------------------------------
 FAST_KHZ = 1000
+GMBUS_RETIRED = True        # #159: never load tools/gmbus_rate (host hang 2026-11-12)
 RATE_PARAM = Path("/sys/module/gmbus_rate/parameters/reg0")
 RATE_KHZ = {0: 100, 1: 50, 2: 100, 3: 1000}      # GMBUS0 bits 10:8; code 2 ("400 kHz") measured at 100 kHz on UHD 770
 # gmbus_rate.py: make <= 60 s cold, sudo steps <= 10 s each; stall backstop 3x measured (load ~1 s warm).
@@ -251,8 +252,9 @@ def reset_rate() -> bool:
 def fast_bus(bus: int, khz: int = FAST_KHZ):
     """1 MHz DDC clock around ISP flashing (slave 0x4A) only; unloaded in finally. Yields the rate in effect.
     Debug slave 0x35 NAKs intermittently at 1 MHz (#12), so diag/OSD/EDID/DDC stay at 100 kHz.
-    Not an i915 GMBUS adapter (NVIDIA, DP AUX), or load refused (sudo): yields 100, flash proceeds slowly."""
-    if "i915 gmbus" not in adapter_name(bus):
+    Not an i915 GMBUS adapter (NVIDIA, DP AUX), or load refused (sudo): yields 100, flash proceeds slowly.
+    Retired (Dan, 2026-11-12, #159): host hung after a load/unload; always 100 kHz, the module is never loaded."""
+    if GMBUS_RETIRED or "i915 gmbus" not in adapter_name(bus):
         yield 100
         return
     try:

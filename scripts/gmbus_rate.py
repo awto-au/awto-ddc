@@ -69,6 +69,9 @@ def main():
     ap.add_argument("khz", nargs="?", type=int)
     ap.add_argument("--adapter", type=int, default=11)
     a = ap.parse_args()
+    if a.cmd == "load":
+        log("load refused: gmbus_rate is retired (#159, host hang 2026-11-12); bus stays 100 kHz")
+        sys.exit(2)
     if a.cmd == "build":
         sys.exit(run(["make", "-C", str(SRC)], T_MAKE).returncode)
     if a.cmd == "status":
