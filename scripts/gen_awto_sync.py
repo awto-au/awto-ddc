@@ -34,7 +34,7 @@ def repo_root() -> Path:
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20, "sname": 21}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 
@@ -336,6 +336,7 @@ def value_segs(f: str, r: list, port: list) -> list:
                 sep(r, 3), names(r, 0x16), ["", sep(r, 5)[0]], ["", *names(r, 0x1A)]],
         "sysreq": [names(r, 0x17), sep(r, 4), names(r, 0x16), sep(r, 2), names(r, 0x18), [")"]],
         "pby": [names(r, 0x1B)],
+        "sname": [names(r, 0x15)],
     }[f]
 
 

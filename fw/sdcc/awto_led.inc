@@ -1,37 +1,26 @@
-// awto two-colour power LED.  P3.5 is the normal/on colour and P3.6 is the
-// standby colour.  P8.4 is a board power-state enable and must not be used as
-// an indicator output.
+// awto two-colour power LED (awto-ddc#95): bLED_ON (P3.5) on colour, bLED_STANDBY (P3.6) standby colour, breathing by the
+// Timer2 ISR (AWTO_LED_T2ISR). Only caller: the system machine (SysJudge.c SysMachineLed), on a colour change.
 volatile __xdata unsigned char g_ucAwtoLedMode;
 volatile __xdata unsigned char g_ucAwtoLedPhase;
 volatile __xdata unsigned char g_ucAwtoLedLevel;
 volatile __xdata unsigned char g_ucAwtoLedTick;
 volatile __xdata unsigned char g_ucAwtoLedUp;
+volatile __xdata unsigned char g_ucAwtoLedPins;
 
-void AwtoLedSetMode(unsigned char ucMode)
+void AwtoLedSet(unsigned char ucMode, unsigned char ucState)
 {
-    // Power-state code may report the same standby state more than once.  Do
-    // not restart the ramp when it does.
-    if((ucMode == AWTO_LED_BREATHE) && (g_ucAwtoLedMode == AWTO_LED_BREATHE))
-    {
-        return;
-    }
-
-    // Disable the ISR path while the new state is assembled.
-    g_ucAwtoLedMode = AWTO_LED_OFF;
-    P3_5 = 0;
-    P3_6 = 0;
-
+    g_ucAwtoLedMode = AWTO_LED_OFF;             // ISR path off while the pins are set
+    bLED_ON = 0;
+    bLED_STANDBY = 0;
+    g_ucAwtoLedPhase = 0;                       // breathing starts dark, ramps up
+    g_ucAwtoLedLevel = 0;
+    g_ucAwtoLedTick = 0;
+    g_ucAwtoLedUp = 1;
     if(ucMode == AWTO_LED_ON)
     {
-        P3_5 = 1;
+        bLED_ON = 1;
     }
-    else if(ucMode == AWTO_LED_BREATHE)
-    {
-        g_ucAwtoLedPhase = 0;
-        g_ucAwtoLedLevel = 0;
-        g_ucAwtoLedTick = 0;
-        g_ucAwtoLedUp = 1;
-    }
-
     g_ucAwtoLedMode = ucMode;
+    g_ucAwtoLedPins = MCU_FFE3_PORT3_PIN_REG;
+    AWTO_PNL_LOG(AWTO_SW_EV_LED, ucMode, ucState);      // "LED: <colour> (<state>)" (sync.tsv 1C)
 }

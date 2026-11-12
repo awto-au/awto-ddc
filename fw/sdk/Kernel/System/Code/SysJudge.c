@@ -60,8 +60,47 @@ static const __code BYTE tSysPower[AWTO_SYS_STATES] =
     _POWER_STATUS_SAVING, _POWER_STATUS_NORMAL, _POWER_STATUS_NONE,
 };
 
+// Power LED per state (awto-ddc#95, Dan 2026-11-12): on colour while on, standby colour breathing in power saving, off when
+// OFF. DOWN (AWTO_LED_TARGET): its target's colour at once (SysMachineLed).
+#define AWTO_LED_TARGET                         0xFF
+static const __code BYTE tSysLed[AWTO_SYS_STATES] =
+{
+    AWTO_LED_ON, AWTO_LED_OFF, AWTO_LED_ON, AWTO_LED_ON, AWTO_LED_ON,
+    AWTO_LED_ON, AWTO_LED_ON, AWTO_LED_ON, AWTO_LED_ON, AWTO_LED_ON,
+    AWTO_LED_BREATHE, AWTO_LED_ON, AWTO_LED_TARGET,
+};
+
 bit SysJudgeCheckStatus(void);
 WORD SysJudgeGetActiveWaitTime(void);
+
+//--------------------------------------------------
+// Description  : The LED's one writer: the colour of the state just entered, set (and logged) only when it changes
+// Input Value  : ucState --> AWTO_SYS_*
+// Output Value : None
+//--------------------------------------------------
+static void SysMachineLed(BYTE ucState)
+{
+    BYTE ucLed = tSysLed[ucState];
+
+    if(ucLed == AWTO_LED_TARGET)                // POWER DOWN: off / saving already requested, shown at the key press
+    {
+        ucLed = (GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF) ? AWTO_LED_OFF : AWTO_LED_BREATHE;
+    }
+    if(ucLed != g_ucAwtoLedMode)
+    {
+        AwtoLedSet(ucLed, ucState);
+    }
+}
+
+//--------------------------------------------------
+// Description  : AC on (ScalerMcuGpioInitial, PCB_LED_AC_ON_INITIAL): the AC ON colour once the GPIO latches are set
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void SysMachineLedBoot(void)
+{
+    SysMachineLed(AWTO_SYS_AC_ON);
+}
 
 //--------------------------------------------------
 // Description  : The SDK rule for a mode change: every SDK handler has seen the last one (its change flag is clear)
@@ -123,6 +162,7 @@ static void SysMachineGo(BYTE ucNew, BYTE ucWhy, bit bModeEvent)
         SET_MODE_STATE_CHANGE_OTHERS();
     }
     g_ucAwtoSysOwn = 0;
+    SysMachineLed(ucNew);
 }
 
 //--------------------------------------------------
@@ -647,6 +687,7 @@ void SysMachineHandler(void)
 {
     CLR_MODE_STATE_CHANGE_OTHERS();
     AWTO_TMDS_HPD_TICK();
+    g_ucAwtoLedPins = MCU_FFE3_PORT3_PIN_REG;   // LED pin levels for the debug slave (it reads 0 at FFE3 itself, gpio-ir.md)
     SysMachinePower();
 
 #if(_URGENT_EVENT_CHECK_MODE == _ON)

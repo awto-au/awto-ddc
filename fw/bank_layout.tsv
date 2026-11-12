@@ -293,7 +293,7 @@ stub	_UserInterfaceGetForcePSStatus	C	0x1be4	8
 stub	_UserInterfaceGetFreeSyncEnable	C	0x1bec	8
 const	___str_50	C	0x1bf4	8
 stub	_UserInterfaceGetYCCQuantizationFullRangeStatus	C	0x1bfc	8
-stub	_UserInterfaceKeyPadLedControl	C	0x1c04	8
+stub	_SysMachineLedBoot	C	0x1c04	8
 stub	_AwtoT0EvClock	C	0x1c0c	8
 stub	_RTDFactoryOsdFuncApplyMap	C	0x1c14	8
 stub	_RTDFactoryOsdFuncChangeColor1Bit	C	0x1c1c	8
@@ -1044,6 +1044,7 @@ stub	_ScalerComputeDwordMulDiv	C	0x3ba4	8
 fn	_ScalerGetDataPortByte	C	0x3bac	72
 fn	_ScalerGetDataPortWord	C	0x3bf4	20
 fn	_ScalerRead	C	0x3c08	44
+stub	_AwtoLedSet	C	0x3c34	8
 stub	_osd_tc_vlc_end	C	0x3c60	8
 stub	_osd_tc_vlc_put	C	0x3c68	8
 stub	_ScalerDpGetLaneCount	C	0x3c70	8
@@ -1189,7 +1190,6 @@ fn	_UserInterfaceGetAudioNonLPCMStatus	0	0x55f0	36
 fn	_UserInterfaceGetAudioReadyToPlayStatus	0	0x5614	48
 fn	_UserInterfaceGetAudioSource	0	0x5644	28
 fn	_UserInterfaceGetLogoStatus	0	0x5660	16
-fn	_UserInterfaceKeyPadLedControl	0	0x5670	100
 fn	_UserInterfacePowerSwitch	0	0x56d4	140
 fn	_ScalerADCBandgap	0	0x5760	56
 fn	_ScalerAudioDACClrStateChange	0	0x5798	12
@@ -1295,7 +1295,6 @@ fn	_SysDpCableDetection	0	0xa080	100
 fn	_SysDpCableStatus	0	0xa0e4	20
 fn	_SysDpJudgeHPDToggle	0	0xa0f8	56
 fn	_SysDpRxHandler	0	0xa130	60
-fn	_AwtoLedSetMode	0	0xa500	68
 fn	_SysModeResetState	0	0xa544	348
 fn	_SysPowerIsolation	0	0xa858	108
 fn	_SysPowerMcuClock	0	0xa93c	116
@@ -1724,7 +1723,7 @@ fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
 fn	_AwtoMsgV	4	0xaef8	252
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1361	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1352	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -2758,6 +2757,7 @@ fn	_hb_burst	11	0xaa24	316
 fn	_hb_osd_gap	11	0xab60	132
 fn	_mode_dclk_khz	11	0xabe4	28
 fn	_AwtoNvEv	11	0xac00	276
+fn	_AwtoLedSet	11	0xad14	92
 const	_tCOLOR_CONV_RGB2YUV_ITU709	12	0x0000	32
 fn	_ScalerOsdGetOsdEnable	12	0x0054	20
 fn	_ScalerOsdSetTransparencyType	12	0x0068	20
@@ -2800,6 +2800,7 @@ fn	_set_ap_overscan	12	0x0da8	44
 fn	_set_ap_power	12	0x0dd4	164
 fn	_set_ap_sdk_language	12	0x0e78	24
 const	_tSysPower	12	0x0e90	20
+fn	_SysMachineLedBoot	12	0x0ea4	12
 fn	_UserInterfaceAdjustActiveByPassColorProc	12	0x0eb4	8
 fn	_UserInterfaceAdjustAspectRatio	12	0x0ebc	8
 fn	_UserInterfaceAdjustAudioAmpMuteProc	12	0x0ec4	8
@@ -3128,6 +3129,7 @@ fn	_SysJudgeGetActiveWaitTime	12	0x2de8	72
 fn	_AwtoMeasInit	12	0x2e30	60
 fn	_SysModeGetActiveReady	12	0x2ea0	16
 fn	_SysModeGetTimingConfirm	12	0x2eb0	16
+const	_tSysLed	12	0x2ec0	20
 fn	_SysSourceCableResetProc	12	0x2ee8	8
 fn	_SysSourceFirstActiveProc	12	0x2ef0	8
 fn	_SysSourceGetCableDetect	12	0x2ef8	32
@@ -3143,6 +3145,7 @@ fn	_dp_rd16	12	0x3034	64
 fn	_dp_rd_n	12	0x3074	108
 fn	_reg_rd_n	12	0x30e0	92
 fn	_SysMachineCheck	12	0x31a0	432
+fn	_SysMachineLed	12	0x3350	64
 fn	_AwtoSwPoll	12	0x3390	84
 fn	_AwtoPutHours	12	0x33e4	120
 fn	_ScalerAudioDACOutputSwitch	12	0x345c	64
@@ -3155,7 +3158,7 @@ fn	_AwtoTxt	12	0x3d44	160
 fn	_AwtoDdcRequest	12	0x3de4	1476
 fn	_AwtoPutIso	12	0x43a8	1120
 fn	_AwtoOsdDebugLines	12	0x4808	964
-fn	_SysMachineGo	12	0x4ddc	392
+fn	_SysMachineGo	12	0x4bcc	412
 fn	_SysMachineJudge	12	0x4f64	524
 fn	_SysMachineRequest	12	0x51d4	516
 fn	_SysMachineInit	12	0x53d8	164
