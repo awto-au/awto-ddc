@@ -83,7 +83,19 @@ def main() -> int:
         dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.{ext}"
         shutil.copy2(a.tree / f"tmp/fw/{a.serial}/fw.{ext}", dst)
     if (a.tree / "fw/awto/sync.tsv").exists():          # #139: the sync-log texts of this image (scripts/sync_log.py)
-        shutil.copy2(a.tree / "fw/awto/sync.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.sync.tsv")
+        dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.sync.tsv"
+        gen = a.tree / "scripts/gen_awto_sync.py"
+        if gen.exists():                                  # #162: {NAME} tokens resolved against the tree's header
+            import importlib.util
+            sp = importlib.util.spec_from_file_location("gen_awto_sync_tree", gen)
+            mod = importlib.util.module_from_spec(sp)
+            old = os.environ.get("AWTO_DDC_REPO")
+            os.environ["AWTO_DDC_REPO"] = str(a.tree)
+            sp.loader.exec_module(mod)
+            os.environ.pop("AWTO_DDC_REPO") if old is None else os.environ.__setitem__("AWTO_DDC_REPO", old)
+            dst.write_text("\n".join((ln if ln.startswith("#") else mod.resolve(ln, mod.HEADER)) for ln in (a.tree / "fw/awto/sync.tsv").read_text().splitlines()) + "\n")
+        else:
+            shutil.copy2(a.tree / "fw/awto/sync.tsv", dst)
     rtdfw = os.environ.get("AWTO_RTDFW_REPO")           # the registry this image was built from: its host settings table
     if rtdfw:
         subprocess.run([sys.executable, str(root / "scripts/settings_gen.py"), "--rtdfw", rtdfw, "--host-out",
