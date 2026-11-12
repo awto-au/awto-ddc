@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """OSD transparency on unit 2 (awto-ddc#176): open every awto screen with injected keys, read the blend registers back.
 
-usage: osdt_unit.py MAP [--pct 20] [--leave-menu]   (MAP = tmp/fw/<image>.map of the image on unit 2; unit 2 only, bus 11)
+usage: osdt_unit.py MAP [--pct 50] [--leave-menu]   (MAP = tmp/fw/<image>.map of the image on unit 2; unit 2 only, bus 11)
 - Sets osd_transparency to --pct through the settings mailbox (NVRAM through the gate), then per screen (awto menu, selector,
   backlight bar, info card, console, GPIO page): alpha_blending_level (OVERLAY_CTRL[4:2] = bits 7:5, OVERLAY_CTRL1[7:3] =
-  bits 4:0) and alpha_blend_type (FRAME_CTRL_0A[3:2]); want level = pct x 255 / 100, type 1 (only windows blend).
+  bits 4:0) and alpha_blend_type (FRAME_CTRL_0A[3:2]); want level = pct x 255 / 100, type 3 (windows + character background).
 - Live check: with the menu open, pct x 2 then back; the level must follow without a reopen.
 - --leave-menu: osd_timeout 0 (never) and the awto menu left open for a look (visual-checks-persistent); debug link off.
 Register addresses by regdb name (re/regdb). Keys / reads: keymap_unit.Unit. Log: tmp/logs/osdt_unit.log
@@ -23,7 +23,7 @@ import settings_cli as C  # noqa: E402
 LOG = ROOT / "tmp/logs/osdt_unit.log"
 CHIP = "RTD2795T-CG"
 TC_CLEAR, TC_CONSOLE, TC_GPIO, TC_GPIO_CLOSE, TC_INFO = 0x27, 0x20, 0x43, 0x44, 0x55   # fw/sdcc/awto_testcmd.inc
-TYPE_ONLY_WINDOW = 1                            # FRAME_CTRL_0A alpha_blend_type 01
+TYPE_WIN_CHAR_BG = 3                            # FRAME_CTRL_0A alpha_blend_type 11 (01 showed nothing: backgrounds are char cells)
 OVERLAY_PORT_EN = 0x01                          # OVERLAY_CTRL overlay_port_en: the OSD is on screen
 # screen shown (overlay_port_en) after the key: console open = map clear + font load, the longest; 1.2 s if unmeasured x1.25.
 # On expiry: FAIL naming the screen. The measured time is logged per screen (tmp/logs/osdt_unit.log).
@@ -71,13 +71,13 @@ def screen(u, b, name, want, open_fn):
     osd = u.osd()
     level, typ, raw = b.read()
     u.check(f"{name}: shown {'NOT' if t is None else f'after {t:.2f} s'}, OSD state 0x{osd:04X}, level {level}/256, type {typ}",
-            t is not None and level == want and typ == TYPE_ONLY_WINDOW, f"want level {want}, type {TYPE_ONLY_WINDOW}; {raw}")
+            t is not None and level == want and typ == TYPE_WIN_CHAR_BG, f"want level {want}, type {TYPE_WIN_CHAR_BG}; {raw}")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("map", type=Path)
-    ap.add_argument("--pct", type=int, default=20)
+    ap.add_argument("--pct", type=int, default=50)
     ap.add_argument("--leave-menu", action="store_true")
     a = ap.parse_args()
     import dbg_link
@@ -112,7 +112,8 @@ def main():
             say(f"osd_timeout {u.box.get_row(to)} -> {u.box.set_row(to, 0)} s (0 = never): the menu stays open")
             u.key(K.K_MENU)
             level, typ, raw = b.read()
-            say(f"menu left open: OSD state 0x{u.osd():04X}, menu {u.menu()}, level {level}, type {typ}; {raw}")
+            u.check(f"menu left open: OSD state 0x{u.osd():04X}, menu {u.menu()}, level {level}, type {typ}",
+                    level == want and typ == TYPE_WIN_CHAR_BG, raw)
     finally:
         u.io.close()
         dbg_link.off(K.BUS)
