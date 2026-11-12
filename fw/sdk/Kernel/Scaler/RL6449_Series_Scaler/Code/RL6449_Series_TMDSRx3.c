@@ -227,8 +227,13 @@ void ScalerTMDSRx3Initial(void)
     // Set HDCP DDC Debounce, TMDS Function
     ScalerSetBit(P72_AC_TMDS_Z0CC2, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5));
 
+#if(_AWTO_HDCP == _ON)
     // Set D3 Port HDCP Address is 0x74
     ScalerSetDataPortBit(P72_C3_HDCP_AP, _P72_C4_PT_C2_PORT_PAGE72_HDCP_SLAVE_ADD, ~(_BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0), 0x3A);
+#else
+    // awto: HDCP off (#44): HDCP slave on the SDK's HPD-low parking address, DDC 0x74 unanswered = no HDCP receiver
+    ScalerTMDSRx3SwitchSlaveAddr();
+#endif
 
     // Set HDCP Feature
 #if(_D3_HDMI_SUPPORT == _ON)
