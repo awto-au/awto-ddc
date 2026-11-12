@@ -1630,8 +1630,8 @@ EnumAudioSamplingFreqType ScalerAudioD1SamplingFreqDetect(void)
 {
     EnumAudioSamplingFreqType enumAudioFreq = _AUDIO_FREQ_NO_AUDIO;
 
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-    if(ScalerAudioD1GetInternalAudioGenEnable() == _ENABLE)
+#if 0 /* awto: RL6449 has no D1 internal-generator implementation */
+    if(0) /* awto: audio test build (-D_AWTO_AUDIO_TEST) */
     {
         // For Audio test pattern
         SET_AUDIO_D1_SAMPLING_FREQ(_AUDIO_FREQ_48K);

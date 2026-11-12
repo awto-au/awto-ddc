@@ -382,6 +382,7 @@ void ScalerMeasureInitialSetting(EnumSourceTypeDef enumSourceType, EnumSourceSea
 // Input Value  : None
 // Output Value : _TRUE if HV timing Changed
 //--------------------------------------------------
+#include "awto_fastsw_scaler.inc"  // awto: fast switch: scaler side (#60)
 bit ScalerMeasureTimingChange(EnumSourceTypeDef enumSourceType, EnumSourceSearchPort enumSourceSearchPort)
 {
     bit bTimingChangeStatus = _FALSE;
@@ -886,6 +887,7 @@ bit ScalerMeasureAutoFuncWaitFinish(void)
 //                stInputTimingData --> input timing data
 // Output Value : None
 //--------------------------------------------------
+#include "awto_freq.inc"  // awto: exact input frequencies (#34)
 void ScalerMeasureUpdateInputTimingData(StructMeasureSyncData *pstMeasureSyncHV, StructAutoActiveData *pstActiveRegion)
 {
     // Update measure result

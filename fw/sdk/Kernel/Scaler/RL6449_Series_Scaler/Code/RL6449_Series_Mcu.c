@@ -19,6 +19,7 @@
 
 #define __RL6449_SERIES_MCU__
 
+#define _AWTO_DDCRAM_DEFINER  // awto: DDC RAM arrays defined here, extern hidden (one __at per array) (#8)
 #include "ScalerFunctionInclude.h"
 
 //****************************************************************************
@@ -1317,6 +1318,7 @@ void ScalerMcuDdcDebounceSel(EnumClkSel enumClock)
 //                ucInputPort --> Input Port Type
 // Output Value : None
 //--------------------------------------------------
+#include "awto_dbgport.inc"  // awto: debug IIC engine follows the active port (#28)
 void ScalerMcuDdcciSwitchPort(EnumDDCCIDebugMode enumMode, BYTE ucInputPort)
 {
 #if(_AUTO_TEST_SUPPORT == _ON)
@@ -1447,6 +1449,9 @@ void ScalerMcuDdcciSwitchPort(EnumDDCCIDebugMode enumMode, BYTE ucInputPort)
         // Enable STOP_I, D_IN_I, SUB_I interrupts
         MCU_FF28_IIC_IRQ_CONTROL |= _BIT4 | _BIT2 | _BIT1;
 
+#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+        AwtoDbgSelectChannel(ucInputPort);
+#else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC3)
         // DDC from DDC3 channel
         MCU_FF22_IIC_CH_SEL &= ~(_BIT2 | _BIT1 | _BIT0);
@@ -1466,6 +1471,7 @@ void ScalerMcuDdcciSwitchPort(EnumDDCCIDebugMode enumMode, BYTE ucInputPort)
 #else
         // DDC from VGA_DDC channel
         MCU_FF22_IIC_CH_SEL &= ~(_BIT2 | _BIT1 | _BIT0);
+#endif
 #endif
     }
     ScalerDebugSelectDDCCIDebugMode(enumMode);

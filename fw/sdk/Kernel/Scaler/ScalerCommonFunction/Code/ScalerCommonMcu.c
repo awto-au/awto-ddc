@@ -1837,6 +1837,7 @@ bit ScalerMcuPwmAdjustFrequency(BYTE ucPwmType, WORD usFrequency)
 // Input Value  : Clock --> _M2PLL_CLK/_IOSC_CLK
 // Output Value : ucValue --> N
 //--------------------------------------------------
+#include "awto_delaycal.inc"  // awto: delay calibration (#53)
 void ScalerMcu5usDelayCalc(EnumClkSel enumClock)
 {
     BYTE ucMcuDiv = 0;
@@ -1864,8 +1865,8 @@ void ScalerMcu5usDelayCalc(EnumClkSel enumClock)
 
     if(enumClock == _M2PLL_CLK)
     {
-        g_ucDelay5usN_Base = _M2PLL_DELAY6US_CNT;
-        g_ucDelayXusN_Base = _M2PLL_DELAY4US_CNT;
+        g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;  // awto: M2PLL re-entry keeps the calibrated delay counts (#54)
+        g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;  // awto: M2PLL re-entry keeps the calibrated delay counts (#54)
     }
     else if(enumClock == _IOSC_CLK)
     {
@@ -2946,8 +2947,8 @@ void ScalerMcuIspInitial(void)
 //--------------------------------------------------
 void ScalerMcuBootInitial(void)
 {
-    // Disable watchdog timer
-    MCU_FFEA_WATCHDOG_TIMER &= ~(_BIT7);
+    // awto #138: no watchdog disable (three ORed enables; never cleared)
+// awto: no watchdog disable (three ORed enables; never cleared) (#138)
 
     // Enable global XRAM and XFR, use Pbank_switch, enable bankswitching function
     MCU_FFFC_BANK_SWICH_CONTROL |= (_BIT3 | _BIT2 | _BIT1 | _BIT0);

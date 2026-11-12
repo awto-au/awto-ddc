@@ -106,6 +106,7 @@ void ScalerDebugSetRegisters(void);
 // Input Value  : enumMode --> _DEBUG_MODE / _DDCCI_MODE
 // Output Value : None
 //--------------------------------------------------
+#include "AwtoMsg.h"  // awto: tokenised message functions live in the debug module (#26)
 void ScalerDebugSelectDDCCIDebugMode(EnumDDCCIDebugMode enumMode)
 {
     g_enumDDCCIDebugMode = enumMode;
@@ -342,6 +343,9 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
             DELAY_30US();
 
 // Release SCL Pin
+#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+    AWTO_DBG_SCL(&= ~_BIT0);
+#else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
             MCU_FE81_DDC5_DDC_CONTROL_2 &= ~_BIT0;
 #elif(_DEBUG_DDC_CHANNEL_SEL == _DDC4)
@@ -357,9 +361,10 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 #elif((_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC) || (_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC2))
             CLR_VGADDC_SCL_FORCE_LOW();
 #endif
+#endif
         }
     }
-    while(g_bFwHalt != 0);
+    while((g_bFwHalt != 0) && (AwtoMsgWait() != 0)); /* awto: host-silence timeout of the debug wait (#56) */
 
     g_bDebugMessageStart = 0;
     g_bFwHalt = 0;
@@ -426,6 +431,9 @@ void ScalerDebugIntProc_EXINT1(void)
             if(g_ucDdcciCommandNumber > 0)
             {
 // Hold Scl Pin
+#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+    AWTO_DBG_SCL(|= _BIT0);
+#else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
                 MCU_FE81_DDC5_DDC_CONTROL_2 |= _BIT0;
 #elif(_DEBUG_DDC_CHANNEL_SEL == _DDC4)
@@ -440,6 +448,7 @@ void ScalerDebugIntProc_EXINT1(void)
                 MCU_FF20_DDC0_DDC_CONTROL_2 |= _BIT0;
 #elif((_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC) || (_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC2))
                 SET_VGADDC_SCL_FORCE_LOW();
+#endif
 #endif
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
@@ -467,6 +476,7 @@ void ScalerDebugIntProc_EXINT1(void)
                 }
 #endif
 
+#include "awto_dbgisr.inc"  // awto: debug slave answers in the EXINT1 ISR (#38)
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
                 g_bRunCommand = _TRUE;
             }
@@ -734,6 +744,9 @@ void ScalerDebug(void)
                 DELAY_30US();
 
 // Release Scl Pin
+#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+    AWTO_DBG_SCL(&= ~_BIT0);
+#else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
                 MCU_FE81_DDC5_DDC_CONTROL_2 &= ~_BIT0;
 #elif(_DEBUG_DDC_CHANNEL_SEL == _DDC4)
@@ -748,6 +761,7 @@ void ScalerDebug(void)
                 MCU_FF20_DDC0_DDC_CONTROL_2 &= ~_BIT0;
 #elif((_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC) || (_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC2))
                 CLR_VGADDC_SCL_FORCE_LOW();
+#endif
 #endif
             }
         }
@@ -820,6 +834,9 @@ void ScalerDebugSendData(BYTE ucLen, BYTE *pucSendArray)
             {
                 bReleaseScl = _TRUE;
 // Release Scl Pin
+#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+    AWTO_DBG_SCL(&= ~_BIT0);
+#else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
                 MCU_FE81_DDC5_DDC_CONTROL_2 &= ~_BIT0;
 #elif(_DEBUG_DDC_CHANNEL_SEL == _DDC4)
@@ -834,6 +851,7 @@ void ScalerDebugSendData(BYTE ucLen, BYTE *pucSendArray)
                 MCU_FF20_DDC0_DDC_CONTROL_2 &= ~_BIT0;
 #elif((_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC) || (_DEBUG_DDC_CHANNEL_SEL == _VGA_DDC2))
                 CLR_VGADDC_SCL_FORCE_LOW();
+#endif
 #endif
             }
             ScalerTimerDelayXms(2);

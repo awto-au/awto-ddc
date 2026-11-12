@@ -264,7 +264,7 @@ WORD g_usTimerRecordStartTime;
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
 volatile bit g_bWDTimer2Update = _FALSE;
-StructWDTimerEventType g_pstWDTimerEvent[_WD_TIMER_EVENT_COUNT];
+// awto #138: event table in awto_t0ev.inc  // awto: WD-timer event table replaced by the Timer0 scheduler (#138)
 #endif
 
 volatile WORD __data g_usTimerCounter;
@@ -413,7 +413,7 @@ BYTE ScalerTimerGetRecordTimer_EXINT0(void)
 #endif
 
 
-#if(_WD_TIMER_INT_SUPPORT == _ON)
+#if 0  // awto: WD-timer functions in fw/sdcc/awto_t0ev.inc (#138)
 //--------------------------------------------------
 // Description  : Watch Dog Timer Initial
 // Input Value  : None
@@ -1387,7 +1387,7 @@ void ScalerTimerSetTimerCount(EnumScalerTimerOperationMode enumOperationMode)
     ET2 = _ENABLE;
 
     // Run Timer2
-    TR2 = _ON;
+    TR2 = _ON; AwtoT0EvClock();  // awto: restart the pending Timer0 tick at the new clock (#138)
 
 #if(_INSTANT_TIMER_EVENT_0 == _ON)
     if((bTR0Info == _ON) && (enumOperationMode != _TIMER_OPERATION_INITIAL_MODE) && (enumOperationMode != _TIMER_OPERATION_POWER_IDLE_MODE))
@@ -2599,7 +2599,7 @@ void ScalerTimerDelayXms(WORD usNum)
         {
             if(g_bNotifyTimer2Int == _TRUE)
             {
-                g_bNotifyTimer2Int = _FALSE;
+                g_bNotifyTimer2Int = _FALSE; AWTO_WDT_FEED(AWTO_WDT_S_DELAY);  // awto: watchdog feed per ms in a bounded wait (#131)
 
                 if(--usNum)
                 {
@@ -2637,7 +2637,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
 
         if(usPreviousTime != g_usTimerCounter)
         {
-            usTimeElapsed++;
+            usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_POLL);  // awto: watchdog feed per ms in a bounded wait (#131)
             usPreviousTime = g_usTimerCounter;
         }
     }
@@ -2834,4 +2834,5 @@ void ScalerTimerWaitForActiveTimerEvent(EnumScalerTimerEventID enumEventID)
     ScalerTimerDelayXms(ScalerTimerGetEventRemainTime(enumEventID));
     ScalerTimerCancelTimerEvent(enumEventID);
 }
+#include "awto_t0ev.inc"
 

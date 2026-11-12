@@ -38,6 +38,7 @@
 // CODE TABLES
 //****************************************************************************
 #if((_FLASH_WRITE_FUNCTION_SUPPORT == _ON) || (_FLASH_WR_PROTECT == _ON))
+#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
 StructFlashInformation __code tFlashInformation[] =
 {
     // _FLASH_W25X20A; ucUnprotectWRSR is not used here
@@ -195,11 +196,19 @@ StructFlashInformation __code tFlashInformation[] =
     // _FLASH_XM25QH32CHIGT; ucUnprotectWRSR is not used here
     {0x9F, 0x20, 0x40, 0x16, 0x90, 0x20, 0x15, 0x00, 0x06, 0x04, 0x20, 0x02, 0xFC},
 };
+#else
+StructFlashInformation __code tFlashInformation[] =
+{
+    {0x9F, 0xC2, 0x20, 0x14, 0x90, 0xC2, 0x13, 0x00, 0x06, 0x04, 0x20, 0x02, 0x9C},
+};
+#endif
 
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
+#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
 BYTE g_ucFlashType = _FLASH_UNDETECT;
+#endif
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -238,6 +247,7 @@ void ScalerFlashWRProtect(void);
 // Input Value  : None
 // Output Value : Detected flash type index
 //--------------------------------------------------
+#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
 void ScalerFlashDetectFlashType(void)
 {
     BYTE ucIndex = 0;
@@ -468,6 +478,7 @@ void ScalerFlashDetectFlashType(void)
 
     g_ucFlashType = _FLASH_DEFAULT_TYPE;
 }
+#endif
 
 //--------------------------------------------------
 // Description  : Read flash ID code
@@ -600,7 +611,7 @@ void ScalerFlashWREN(BYTE ucBank, BYTE ucPage)
     BYTE ucRDCR = 0x00;
 
     // Clear watch dog
-    MCU_FFEA_WATCHDOG_TIMER |= 0x40;
+    AWTO_WDT_FEED(AWTO_WDT_S_WREN);  // awto: watchdog feed instead of the SDK flash poke (#138)
 
     switch(g_ucFlashType)
     {
@@ -615,7 +626,7 @@ void ScalerFlashWREN(BYTE ucBank, BYTE ucPage)
 
             // Unprotect Enable
             MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0x78, _CKCON_MCU_SLOW_CYCLE);
-            MCU_FF61_COMMON_OP_CODE = tFlashInformation[g_ucFlashType].ucWRENOpCode;
+            MCU_FF61_COMMON_OP_CODE = tFlashInformation[_AWTO_FLASH_IDX].ucWRENOpCode;
             MCU_FF64_FLASH_PROG_ISP0 = ucBank;
             MCU_FF65_FLASH_PROG_ISP1 = (BYTE)((ucPage << 4) & 0xF0);
             MCU_FF66_FLASH_PROG_ISP2 = 0x00;
@@ -1229,7 +1240,7 @@ void ScalerFlashWREN(BYTE ucBank, BYTE ucPage)
             break;
 
         case _FLASH_SST25LF020A:
-            ScalerFlashSetWRSR(tFlashInformation[g_ucFlashType].ucUnprotectWRSR, _FALSE);
+            ScalerFlashSetWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucUnprotectWRSR, _FALSE);
             break;
 
         case _FLASH_W25X41CL:
@@ -3870,7 +3881,7 @@ void ScalerFlashWREN(BYTE ucBank, BYTE ucPage)
 void ScalerFlashWRDis(void)
 {
     // Clear watch dog
-    MCU_FFEA_WATCHDOG_TIMER |= 0x40;
+    AWTO_WDT_FEED(AWTO_WDT_S_WRDIS);  // awto: watchdog feed instead of the SDK flash poke (#138)
 
     switch(g_ucFlashType)
     {
@@ -3884,7 +3895,7 @@ void ScalerFlashWRDis(void)
         case _FLASH_IS25LP080D:
 
             // Sector Unprotect Disable
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_W25X20A:
@@ -3938,14 +3949,14 @@ void ScalerFlashWRDis(void)
         case _FLASH_XM25QH80B:
         case _FLASH_XM25QH40B:
 
-            ScalerFlashSetWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, _FALSE);
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSetWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, _FALSE);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_SST25LF020A:
 
-            ScalerFlashSetWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, _TRUE);
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSetWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, _TRUE);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_GD25M21B:
@@ -3956,7 +3967,7 @@ void ScalerFlashWRDis(void)
             MCU_FF61_COMMON_OP_CODE = 0x4D;
             MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0x21, _CKCON_MCU_SLOW_CYCLE);
 
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_W25Q32F:
@@ -3964,14 +3975,14 @@ void ScalerFlashWRDis(void)
         case _FLASH_FM25Q08A:
         case _FLASH_FM25Q08:
 
-            ScalerFlashSet2ByteWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _FALSE);
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSet2ByteWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _FALSE);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_GD25Q32C:
 
-            ScalerFlashSet2ByteWRSRonebyone(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _FALSE);
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSet2ByteWRSRonebyone(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _FALSE);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_XT25F08B:
@@ -3979,8 +3990,8 @@ void ScalerFlashWRDis(void)
         case _FLASH_BY25Q80BSTIG:
         case _FLASH_XM25QH32CHIGT:
 
-            ScalerFlashSet2ByteWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _WRITE_SR_MODE_SEL);
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSet2ByteWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _WRITE_SR_MODE_SEL);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_FM25Q04:
@@ -3990,7 +4001,7 @@ void ScalerFlashWRDis(void)
             MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0x61, _CKCON_MCU_SLOW_CYCLE);
             //// Set PTB/PD for sector protect
             ScalerFlashSet4thWRSR(0xFF, _FALSE);
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
 
         case _FLASH_W25Q16JVSIM:
@@ -4005,7 +4016,7 @@ void ScalerFlashWRDis(void)
             MCU_FF61_COMMON_OP_CODE = 0x7E;
             MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0x61, _CKCON_MCU_SLOW_CYCLE);
 
-            ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+            ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             break;
         default:
 
@@ -4267,11 +4278,11 @@ bit ScalerFlashErasePage(BYTE ucBank, BYTE ucPage)
         ScalerFlashDetectFlashType();
     }
 
-    ScalerFlashWREN(ucBank, ucPage);
+    ScalerFlashWREN(ucBank, ucPage); AWTO_NV_EV(3);  // awto: NVRAM save timing in the sync log (#150)
 
     // Sector Erase
     MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0xB8, _CKCON_MCU_SLOW_CYCLE);
-    MCU_FF61_COMMON_OP_CODE = tFlashInformation[g_ucFlashType].ucPageEraseOpCode;
+    MCU_FF61_COMMON_OP_CODE = tFlashInformation[_AWTO_FLASH_IDX].ucPageEraseOpCode;
     // Set WR address
     MCU_FF64_FLASH_PROG_ISP0 = ucBank;
     MCU_FF65_FLASH_PROG_ISP1 = (BYTE)((ucPage << 4) & 0xF0);
@@ -4281,7 +4292,7 @@ bit ScalerFlashErasePage(BYTE ucBank, BYTE ucPage)
 
     // No need to polling, 8051 will halt when common instruction executes
 
-    MCU_FF61_COMMON_OP_CODE = 0xFF;
+    MCU_FF61_COMMON_OP_CODE = 0xFF; AWTO_NV_EV(4);  // awto: NVRAM save timing in the sync log (#150)
 
     ScalerFlashWRDis();
 
@@ -4317,7 +4328,7 @@ void ScalerFlashWRProtect(void)
     BYTE ucRDSR = 0;
 
     // Clear watch dog
-    MCU_FFEA_WATCHDOG_TIMER |= 0x40;
+    AWTO_WDT_FEED(AWTO_WDT_S_WRPROT);  // awto: watchdog feed instead of the SDK flash poke (#138)
 
     // Detect flash type first
     if(g_ucFlashType == _FLASH_UNDETECT)
@@ -4389,10 +4400,10 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
-                ScalerFlashSetWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, _FALSE);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSetWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, _FALSE);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 
@@ -4401,10 +4412,10 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
-                ScalerFlashSetWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, _TRUE);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSetWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, _TRUE);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 
@@ -4414,13 +4425,13 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
                 // Sector Unlock Disable
                 MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0x20, _CKCON_MCU_SLOW_CYCLE);
                 MCU_FF61_COMMON_OP_CODE = 0x4D;
                 MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0x21, _CKCON_MCU_SLOW_CYCLE);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 
@@ -4440,10 +4451,10 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
-                ScalerFlashSet2ByteWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _FALSE);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSet2ByteWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _FALSE);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 
@@ -4452,10 +4463,10 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
-                ScalerFlashSet2ByteWRSRonebyone(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _FALSE);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSet2ByteWRSRonebyone(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _FALSE);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 
@@ -4464,10 +4475,10 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
-                ScalerFlashSet2ByteWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _WRITE_SR_MODE_SEL);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSet2ByteWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _WRITE_SR_MODE_SEL);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 
@@ -4477,10 +4488,10 @@ void ScalerFlashWRProtect(void)
             // Read SR
             ucRDSR = ScalerFlashReadSR(_RDSR_OPCODE);
 
-            if(ucRDSR != tFlashInformation[g_ucFlashType].ucProtectWRSR)
+            if(ucRDSR != tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR)
             {
-                ScalerFlashSet2ByteWRSR(tFlashInformation[g_ucFlashType].ucProtectWRSR, 0x00, _WRITE_SR_MODE_SEL);
-                ScalerFlashSetWREN(tFlashInformation[g_ucFlashType].ucWRDisOpCode);
+                ScalerFlashSet2ByteWRSR(tFlashInformation[_AWTO_FLASH_IDX].ucProtectWRSR, 0x00, _WRITE_SR_MODE_SEL);
+                ScalerFlashSetWREN(tFlashInformation[_AWTO_FLASH_IDX].ucWRDisOpCode);
             }
             break;
 

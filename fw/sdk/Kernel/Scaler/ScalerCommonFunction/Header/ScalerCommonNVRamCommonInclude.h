@@ -146,7 +146,11 @@ typedef struct
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
+#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
 extern BYTE g_ucFlashType;
+#else
+#define g_ucFlashType (_FLASH_MX25L8006E)
+#endif
 
 //****************************************************************************
 // FUNCTION EXTERN

@@ -66,7 +66,7 @@ bit ScalerFlashRead(BYTE ucBank, WORD usAddr, WORD usLength, BYTE *pucData)
     // Enable flash access and address auto increase
     MCU_FF7C_ACCESS_FLASH_DATA_CTRL |= (_BIT1 | _BIT0);
 
-    MCU_FF78_ACCESS_FLASH_ADDR_0 = ucBank;
+    MCU_FF78_ACCESS_FLASH_ADDR_0 = ucBank; { extern void AwtoWdtLibPoke(unsigned char ucSite); AwtoWdtLibPoke(9); }  // awto: watchdog poke in a flash loop (#150)
     MCU_FF79_ACCESS_FLASH_ADDR_1 = (BYTE)(usAddr >> 8);
     MCU_FF7A_ACCESS_FLASH_ADDR_2 = (BYTE)(usAddr);
 

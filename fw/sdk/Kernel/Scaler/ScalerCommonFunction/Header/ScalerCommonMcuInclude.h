@@ -329,6 +329,7 @@ extern BYTE g_uSwIIC_SFRControl;
 extern BYTE xdata MCU_DDCRAM_A0[_A0_EMBEDDED_DDCRAM_MAX_SIZE];
 #endif
 
+#if(!defined(_AWTO_DDCRAM_DEFINER))  // awto: DDC RAM arrays defined here, extern hidden (one __at per array) (#8)
 #if(_D0_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE)
 extern BYTE xdata MCU_DDCRAM_D0[_D0_EMBEDDED_DDCRAM_MAX_SIZE];
 #endif
@@ -352,8 +353,10 @@ extern BYTE xdata MCU_DDCRAM_D4[_D4_EMBEDDED_DDCRAM_MAX_SIZE];
 #if(_D5_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE)
 extern BYTE xdata MCU_DDCRAM_D5[_D5_EMBEDDED_DDCRAM_MAX_SIZE];
 #endif
+#endif
 
 
+#if(!defined(_AWTO_DDCRAM_DEFINER))  // awto: DDC RAM arrays defined here, extern hidden (one __at per array) (#8)
 #if(_D0_MHL_EMBEDDED_DDCRAM_SIZE != _EDID_SIZE_NONE)
 extern BYTE xdata MCU_DDCRAM_MHL_D0[_D0_MHL_EMBEDDED_DDCRAM_SIZE];
 #endif
@@ -364,6 +367,7 @@ extern BYTE xdata MCU_DDCRAM_MHL_D1[_D1_MHL_EMBEDDED_DDCRAM_SIZE];
 
 #if(_D2_MHL_EMBEDDED_DDCRAM_SIZE != _EDID_SIZE_NONE)
 extern BYTE xdata MCU_DDCRAM_MHL_D2[_D2_MHL_EMBEDDED_DDCRAM_SIZE];
+#endif
 #endif
 
 #if(_D3_MHL_EMBEDDED_DDCRAM_SIZE != _EDID_SIZE_NONE)

@@ -691,6 +691,18 @@ bit ScalerTMDSRx2TMDSNormalPreDetect(void)
 //--------------------------------------------------
 bit ScalerTMDSRx2TMDSPSPreDetect(void)
 {
+#if(_AWTO_PS_WAKE == _ON)  // awto: power-saving wake: counted, not returned (#144)
+    if(GET_TMDS_RX2_DDC_DETECTED() == _TRUE)
+    {
+        CLR_TMDS_RX2_DDC_DETECTED();
+        AwtoPsDdcSeen(_D2_INPUT_PORT);
+    }
+    if((MCU_FE69_DDC2_EDID_IRQ & _BIT3) != _BIT3)
+    {
+        MCU_FE69_DDC2_EDID_IRQ = (MCU_FE69_DDC2_EDID_IRQ & ~_BIT0) | (_BIT3 | _BIT2);
+    }
+    return _FALSE;
+#else
     // DDC handshake Detected
     if(GET_TMDS_RX2_DDC_DETECTED() == _TRUE)
     {
@@ -715,6 +727,7 @@ bit ScalerTMDSRx2TMDSPSPreDetect(void)
         MCU_FE69_DDC2_EDID_IRQ |= _BIT3;
     }
 
+#if(_AWTO_PS_WAKE == _OFF)  // awto: power-saving wake: SDK predetect wait kept only without _AWTO_PS_WAKE (#144)
     // Reset Freq. Detect Counter(Toggle) & Choose Measure Clk to TMDS Clk
     ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT7 | _BIT5 | _BIT4), 0x00);
     ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
@@ -730,6 +743,9 @@ bit ScalerTMDSRx2TMDSPSPreDetect(void)
 
     // Detect Freq. Measure Stable
     if((ScalerGetBit(P71_E6_HDMI_FREQDET_CTRL, (_BIT6 | _BIT2)) == _BIT6) && (ScalerGetBit(P71_EF_HDMI_ERROR_TH, _BIT6) == _BIT6))
+#else
+    if(AwtoPsTmdsLive(0x71) != 0)
+#endif
     {
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)
         SET_D2_HDMI_PS_WAKEUP();
@@ -743,12 +759,15 @@ bit ScalerTMDSRx2TMDSPSPreDetect(void)
     else
     {
         // Disable Freq. Detection
+#if(_AWTO_PS_WAKE == _OFF)  // awto: power-saving wake: SDK predetect wait kept only without _AWTO_PS_WAKE (#144)
         ScalerSetBit(P71_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
+#endif
 
         return _FALSE;
     }
 
     return _FALSE;
+#endif
 }
 #endif
 

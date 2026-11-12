@@ -175,7 +175,9 @@ void ScalerTMDSRx2Initial(void)
     if(ScalerGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT1) == 0x00)
     {
         // Disable HDMI 2.0 SCDC Function
+#if(_AWTO_SCDC_KEEP == _OFF)  // awto: keep SCDC 0x20 across a TMDS initial (host 1/40 ratio) (#78)
         ScalerSetBit(P71_19_HDMI_CTRL_19, ~_BIT7, 0x00);
+#endif
 
         CLR_TMDS_RX2_HIGH_SPEED_MODE();
     }
