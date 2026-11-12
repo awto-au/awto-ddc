@@ -1000,7 +1000,7 @@ stub	_UserCommonInterfaceDdcciSwitch	C	0x3988	8
 stub	_UserCommonInterfaceDpAuxSet	C	0x3990	8
 stub	_AwtoDbgLinkStart	C	0x3998	8
 stub	_UserCommonInterfaceGetDpMstCapablePort	C	0x39a0	8
-stub	_UserCommonInterfaceGetHDCPKeyBKsv	C	0x39a8	8
+stub	_ScalerTMDSRx2SwitchSlaveAddr	C	0x39a8	8
 stub	_UserCommonInterfaceLoadEmbeddedEdidData	C	0x39b0	8
 stub	_UserCommonInterfaceLoadEmbeddedEdidDataByPort	C	0x39b8	8
 stub	_UserCommonInterfaceOsdHandler	C	0x39c0	8
@@ -1030,7 +1030,7 @@ stub	_bars	C	0x3ac8	8
 stub	_ui_highlight	C	0x3ad0	8
 stub	_hb_burst	C	0x3ad8	8
 stub	_reg_rd_n	C	0x3ae0	8
-stub	_reg_wr_n	C	0x3ae8	8
+stub	_ScalerTMDSRx3SwitchSlaveAddr	C	0x3ae8	8
 stub	_menu_close	C	0x3af0	8
 stub	_menu_relayout	C	0x3af8	8
 stub	_set_apply_call	C	0x3b00	8
@@ -1044,7 +1044,6 @@ stub	_ScalerComputeDwordMulDiv	C	0x3ba4	8
 fn	_ScalerGetDataPortByte	C	0x3bac	72
 fn	_ScalerGetDataPortWord	C	0x3bf4	20
 fn	_ScalerRead	C	0x3c08	44
-fn	_ScalerWrite	C	0x3c34	44
 stub	_osd_tc_vlc_end	C	0x3c60	8
 stub	_osd_tc_vlc_put	C	0x3c68	8
 stub	_ScalerDpGetLaneCount	C	0x3c70	8
@@ -1124,7 +1123,6 @@ const	___str_31	C	0x40c8	28
 const	___str_40	C	0x40e4	16
 fn	_main	C	0x40f4	252
 const	_tDDR2_PLL_PHASE	0	0x0000	16
-const	_tHDCP_KEY_TABLE	0	0x0010	336
 fn	_ScalerAudioD1DigitalDetectProc	0	0x0160	332
 fn	_ScalerAudioD1LoadInitialICode	0	0x02ac	16
 fn	_ScalerAudioD1SamplingFreqDetect	0	0x02bc	128
@@ -1159,9 +1157,6 @@ fn	_ScalerMcuDdcDebounceSel	0	0x1a84	116
 fn	_ScalerMcuDdcInitial	0	0x1af8	276
 fn	_SysPowerInitial	0	0x1c0c	140
 fn	_ScalerScalingSetScalingDown	0	0x1cac	2524
-fn	_ScalerSyncHdcpDownLoadBKsv	0	0x2688	396
-fn	_ScalerSyncHdcpDownLoadKey	0	0x2814	112
-fn	_ScalerSyncHdcpEnableDownLoadKey	0	0x2884	252
 fn	_ScalerTMDSInterruptInitial	0	0x2980	20
 fn	_ScalerTMDSScanInputPort	0	0x2994	32
 fn	_ScalerTMDSRx2CheckCDRStable	0	0x29b4	528
@@ -1303,12 +1298,10 @@ fn	_SysDpRxHandler	0	0xa130	60
 fn	_AwtoLedSetMode	0	0xa500	68
 fn	_SysModeResetState	0	0xa544	348
 fn	_SysPowerIsolation	0	0xa858	108
-fn	_SysPowerLoadHDCPKey	0	0xa8c4	120
 fn	_SysPowerMcuClock	0	0xa93c	116
 fn	_SysPowerSystemClockSelect	0	0xaab4	192
 fn	_SysTimerEventProc	0	0xab74	108
 fn	_UserCommonInterfaceDpAuxSet	0	0xabec	8
-fn	_UserCommonInterfaceGetHDCPKey	0	0xabf4	48
 fn	_UserCommonInterfaceOsdResetProc	0	0xac24	68
 fn	_UserCommonFlashSaveSystemData	0	0xac68	24
 fn	_ScalerAudioDVCSetVolumeZCDTimeout	0	0xac80	324
@@ -2766,7 +2759,6 @@ fn	_hb_osd_gap	11	0xab60	132
 fn	_mode_dclk_khz	11	0xabe4	28
 fn	_AwtoNvEv	11	0xac00	276
 const	_tCOLOR_CONV_RGB2YUV_ITU709	12	0x0000	32
-const	_tHDCP_KEY_BKSV	12	0x0020	12
 fn	_ScalerOsdGetOsdEnable	12	0x0054	20
 fn	_ScalerOsdSetTransparencyType	12	0x0068	20
 fn	_ScalerOsdWindow7SpecialFunction	12	0x007c	124
@@ -3145,13 +3137,11 @@ fn	_SysTMDSRxSetPsWakeupHpdToggle	12	0x2f74	40
 fn	_UserCommonAdjustRGBQuantizationRange	12	0x2f9c	16
 fn	_UserCommonDdcciHandler	12	0x2fac	8
 fn	_UserCommonInterfaceAdjustActiveByPassColorProc	12	0x2fb4	8
-fn	_UserCommonInterfaceGetHDCPKeyBKsv	12	0x2fbc	60
 fn	_UserCommonInterfaceGetRGBQuantizationLimitRangeStatus	12	0x2ff8	28
 fn	_UserCommonInterfaceReadyForActive	12	0x3014	32
 fn	_dp_rd16	12	0x3034	64
 fn	_dp_rd_n	12	0x3074	108
 fn	_reg_rd_n	12	0x30e0	92
-fn	_reg_wr_n	12	0x313c	100
 fn	_SysMachineCheck	12	0x31a0	432
 fn	_AwtoSwPoll	12	0x3390	84
 fn	_AwtoPutHours	12	0x33e4	120

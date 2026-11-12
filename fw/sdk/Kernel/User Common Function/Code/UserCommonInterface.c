@@ -98,7 +98,7 @@
 //--------------------------------------------------
 // HDCP KEY TABLE
 //--------------------------------------------------
-#if((_DIGITAL_PORT_SUPPORT == _ON) && ((_WRITE_HDCP_TO_SYSTEM_EEPROM == _ON) ||\
+#if((_AWTO_HDCP == _ON) && (_DIGITAL_PORT_SUPPORT == _ON) && ((_WRITE_HDCP_TO_SYSTEM_EEPROM == _ON) ||\
     ((_HDCP_1_4_KEY_LOCATION == _TABLE_LOCATION_CODE) || ((_HDCP_2_2_SUPPORT == _ON) && (_HDCP_2_2_KEY_LOCATION == _TABLE_LOCATION_CODE)))))
 
 #include "HdcpRxKey.h"
@@ -3232,6 +3232,7 @@ void UserCommonInterfaceHDMISwitchMultiEeprom(BYTE ucInputPort, EnumEdidSelectio
 #endif // End of #if(_HDMI_MULTI_EDID_SUPPORT == _ON)
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
+#if(_AWTO_HDCP == _ON)      // awto: key getters only with HDCP (#44)
 //--------------------------------------------------
 // Description  : Get HDCP Bksv
 // Input Value  : None
@@ -3497,6 +3498,7 @@ void UserCommonInterfaceGetDpTxHdcp2NPinv(WORD usSubAddr, WORD usLength, BYTE *p
 }
 #endif
 #endif
+#endif // End of #if(_AWTO_HDCP == _ON)
 
 #if(_DP_TX_SUPPORT == _ON)
 //--------------------------------------------------
