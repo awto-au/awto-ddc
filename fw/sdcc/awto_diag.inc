@@ -2,6 +2,7 @@
 #if(_AWTO_DIAG == _ON)
 #if(_AWTO_FLASH_ALL == _ON)
 extern BYTE g_ucFlashType;                          // ScalerCommonNVRam.c (this TU has no NVRAM header)
+extern void ScalerFlashDetectFlashType(void);
 #endif
 void AwtoDiagStage(unsigned char ucStage)
 {
@@ -23,8 +24,9 @@ void AwtoDiagStage(unsigned char ucStage)
             AwtoSyncPush(AWTO_SYNC_EV_STAGE, ucStage, 0);
         }
 #if(_AWTO_FLASH_ALL == _ON)
-        if(ucStage == 6)                            // NVRAM loaded by now: the flash type the SDK detected (Lib + project, one table)
+        if(ucStage == 6)                            // the SDK detects the flash type at its first write: detect now (same result), log it
         {
+            ScalerFlashDetectFlashType();
             AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_FLASH_TYPE, g_ucFlashType);
         }
 #endif
