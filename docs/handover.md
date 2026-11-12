@@ -24,7 +24,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Layout: DP-2 at (0,0); bottom row HDMI-2 | DP-4 (primary) | HDMI-3. DP-1 is mirrored into HDMI-2 (test mode, gives unit 2 a live D1): `./dev.py mode --unit 2 --dp off` removes it. Watcher: `scripts/desk_layout.py watch` (pid `tmp/desk_layout_watch.pid`); `desk_layout.py check`.
 - Bus numbers change on re-enumeration and recabling: tools find the bus by EDID serial; never pick by number.
 - Recabling history: 2026-11-08 11:42 Dan moved unit 2 to HDMI-2, unit 3 to DP-4.
-- Images: `tmp/fw/<serial>-<tag>-be.bin` (+ .map); every flashed image is archived in `fw/images/` (committed, `fw_archive.py`). `tmp/fw/<serial>-flashed.json` = what runs.
+- Images: `tmp/fw/<serial>-<tag>-be.bin` (+ .map); every flashed image is archived in `build-debris/images/` (gitignored, `fw_archive.py`; before 2026-11-12 committed in `fw/images/`). `tmp/fw/<serial>-flashed.json` = what runs.
 
 ## 3. Decisions by Dan (still in force)
 - 4K60.000 is the preferred mode; all frequencies with 3 decimals everywhere (menu `info_vfreq` still 0.1 Hz: #87).
@@ -93,7 +93,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 | older lines | wb-p14kvm, wb-p14net, wb-osd67(+net), wb-p14sw, wb-sc3, wb-keilcompat, wb-mixed*, wb-port*, wb-ddrinit, wb-msgtable, wb-p14new, wb-vfreq | merged or superseded; prune with `scripts/worktree_prune.py` / `branch_prune.py` after review (they archive images first) |
 
 ## 6. Runbook
-- Health: `./dev.py health --unit 2`. Flash: debug link off, then `./dev.py flash --unit 2 <image>` (incremental, burst). Needs a gate record: run `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` first (see Gates below); archived `fw/images/` images pass; `--force-ungated` overrides (ALERT line in the unit log). Wedged: `scripts/power_cycle.py --relay so-th-1`, then `./dev.py recover --unit 2 --bus 11` or `./dev.py flash --unit 2 --bus 11 --full --write-mode byte <image>`; after a wipe wake with `ddcutil --bus 11 setvcp D6 01`.
+- Health: `./dev.py health --unit 2`. Flash: debug link off, then `./dev.py flash --unit 2 <image>` (incremental, burst). Needs a gate record: run `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` first (see Gates below); archived `build-debris/images/` images pass; `--force-ungated` overrides (ALERT line in the unit log). Wedged: `scripts/hass_power.py cycle --unit 2` (mains via Home Assistant; `power_cycle.py --relay so-th-1` needs the relay's own API, #152), then `./dev.py recover --unit 2 --bus 11` or `./dev.py flash --unit 2 --bus 11 --full --write-mode byte <image>`; after a wipe wake with `ddcutil --bus 11 setvcp D6 01`.
 - Key presses: `scripts/dbg_link.py on 11 --minutes 10`, then in the keys worktree `python3 scripts/rtd_keywatch.py 11 --log --map <map> --serial AWT26110002 --secs 180` (`--open` / `--close` = key test screen); link off afterwards.
 - Inputs: `./dev.py mode --unit 2 --dp mirror|off`; `scripts/kvm.py dp|hdmi1 --units 2`; `scripts/kvm_demo.py`.
 - OSD: `./dev.py osd ...`, `./dev.py menu ...`, `./dev.py settings list|get|set --unit 2`; catalogue `python3 scripts/osd_catalog.py <bin> --menu-dir <dir>`.

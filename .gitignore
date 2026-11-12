@@ -10,3 +10,6 @@ tools/gmbus_rate/*.mod.c
 tools/gmbus_rate/.*.cmd
 tools/gmbus_rate/Module.symvers
 tools/gmbus_rate/modules.order
+
+# built firmware images + maps (fw_archive.py; not tracked: Dan 2026-11-12, image commits were noise)
+/build-debris/

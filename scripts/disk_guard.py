@@ -3,7 +3,7 @@
 
 - A flash cut off by ENOSPC left unit 2 with a mixed image (#77): refuse to start under MIN_FREE_MB.
 - tmp/fw keeps the newest KEEP_TAGS image tags plus anything flashed/attempted/last; older tags are
-  already in git (fw/images, fw_archive.py) or regenerable by `dev.py build`.
+  already archived (build-debris/images, fw_archive.py) or regenerable by `dev.py build`.
 
 CLI: disk_guard.py [--prune] -> prints free MB (and pruned bytes). Log: ./tmp/logs/disk_guard.log
 """

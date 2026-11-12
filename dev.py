@@ -433,12 +433,12 @@ def check_image_identity(u: dict, img: Path) -> None:
 
 def check_gated(img: Path, force: bool) -> None:
     """Flash only gated images: tmp/fw/<stem>.gates.json (scripts/fw_gates.py) with this .bin's SHA-256, complete, no FAIL
-    (SKIP allowed). Images archived in fw/images/ (byte-identical, already flashed once) pass. force: logged, never silent."""
+    (SKIP allowed). Images archived in build-debris/images/ (byte-identical, already flashed once) pass. force: logged, never silent."""
     sha = hashlib.sha256(img.read_bytes()).hexdigest()
     why = None
-    arch = REPO / "fw" / "images" / img.name
+    arch = REPO / "build-debris" / "images" / img.name
     if arch.is_file() and hashlib.sha256(arch.read_bytes()).hexdigest() == sha:
-        log(f"gates: {img.name} is archived in fw/images/ (byte-identical, flashed before)")
+        log(f"gates: {img.name} is archived in build-debris/images/ (byte-identical, flashed before)")
         return
     rec = next((r for r in (FW / f"{img.stem}.gates.json", img.with_suffix(".gates.json")) if r.is_file()), None)
     if rec is None:
@@ -689,7 +689,7 @@ def cmd_flash(extra: list[str]) -> int:
         fj.write_text(before)
     if rc == 0:
         fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
-        if _py("fw_archive.py", "--commit", img):      # every flashed image kept in git; failure doesn't fail the flash
+        if _py("fw_archive.py", img):      # every flashed image kept in build-debris/images; failure doesn't fail the flash
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
     return rc
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Keep every firmware image we build in git: tmp/fw/<name>.bin (+ .map, ids) -> fw/images/<name>.*
+"""Keep every firmware image we build: tmp/fw/<name>.bin (+ .map, ids) -> build-debris/images/<name>.* (gitignored, Dan 2026-11-12:
+  image commits made git log too noisy; fw/images/ held them until then and stays in history)
 
 usage: fw_archive.py [--commit] [image.bin ...]
   No images: scan tmp/fw/ of this repo and of every git worktree.
   Same name, same bytes: skipped. Same name, different bytes: kept as <name>@<branch>.bin.
-  fw/images/index.tsv: name, sha256/12, size, ISO mtime, source path, worktree branch@commit.
-  --commit: one commit of fw/images/ only (via gh_claudia), so concurrent agents' staged work is not swept in.
-  dev.py flash calls this with --commit after every successful flash.
+  build-debris/images/index.tsv: name, sha256/12, size, ISO mtime, source path, worktree branch@commit.
+  --commit: retired (accepted, ignored). dev.py flash calls this after every successful flash.
 Log: ./tmp/logs/fw_archive.log
 """
 import argparse, hashlib, os, shutil, subprocess, sys
@@ -14,10 +14,9 @@ from datetime import datetime
 from pathlib import Path
 
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
-DEST = REPO / "fw/images"
+DEST = REPO / "build-debris/images"
 INDEX = DEST / "index.tsv"
 COMPANIONS = (".map", ".ids.tsv", "-trace_ids.tsv")
-GH = "/mnt/2tb/git/awto-dan/scripts/gh_claudia.py"
 LOG = REPO / "tmp/logs/fw_archive.log"
 
 
@@ -89,7 +88,7 @@ def archive(img: Path, origin: str, index: dict[str, str]) -> str | None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("images", nargs="*", type=Path)
-    ap.add_argument("--commit", action="store_true")
+    ap.add_argument("--commit", action="store_true", help="retired: accepted and ignored (the store is gitignored)")
     a = ap.parse_args()
     DEST.mkdir(parents=True, exist_ok=True)
     index = load_index()
@@ -100,11 +99,6 @@ def main() -> int:
     new = [n for p, br in srcs if (n := archive(p, br, index))]
     INDEX.write_text("name\tsha256\tbytes\tmtime\tsource\tworktree\n" + "".join(index[k] + "\n" for k in sorted(index)))
     log(f"DONE: {len(new)} new image(s) of {len(srcs)} scanned -> {DEST.relative_to(REPO)}/ ({len(index)} kept)")
-    if new and a.commit:
-        subprocess.run([GH, "git", "add", "fw/images"], cwd=REPO, check=True)
-        msg = f"fw/images: archive {len(new)} image(s): {', '.join(new[:6])}{' ...' if len(new) > 6 else ''}"
-        subprocess.run([GH, "git", "commit", "-m", msg, "-m", "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
-                        "--", "fw/images"], cwd=REPO, check=True)
     return 0
 
 
