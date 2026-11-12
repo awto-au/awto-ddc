@@ -28,7 +28,7 @@ ITEM_OFS = 19                                   # g_stOSDUserData.ucOsdInputPort
 ITEM = {"Auto": 0, "D1": 3, "D2": 4, "D3": 5}   # _OSD_INPUT_AUTO, _OSD_INPUT_D1..D3
 PORT = {"D1": 0x04, "D2": 0x05, "D3": 0x06}
 NAME = {v: k for k, v in PORT.items()}
-MODE_NOSIGNAL = 5
+MODE_NOSIGNAL, MODE_SEARCH = 5, 1
 # selector open / step: one main pass + the card draw (sim 175 ms, #139), unit loop ~3x slower with the debug link polled
 # = ~0.5 s; x1.25 -> 0.65 s. Expiry = the key line says NO EFFECT, measured time logged.
 DRAW_S = 0.65
@@ -62,7 +62,8 @@ def name(p):
 
 
 def ring_new(u, before):
-    lines = [ln for ln in u.ring(whole=True).splitlines() if " ms " in ln]
+    """ring lines without sync_log's host-time column (it changes every read), and the ones not in `before`"""
+    lines = [ln.strip().split(" ", 1)[-1] for ln in u.ring(whole=True).splitlines() if " ms " in ln]
     return lines, [ln for ln in lines if ln not in before]
 
 
@@ -86,19 +87,28 @@ def case(u, frm, to, how, seen):
     if how == "auto":
         u.key(K.K_AUTO, settle=0)
     closed = u.until(lambda: u.osd() != SEL_STATE, IDLE_S if how == "idle" else DRAW_S)
-    settled = u.until(lambda: u.port() == PORT[to] and u.mode() in (K.MODE_ACTIVE, MODE_NOSIGNAL), SETTLE_S)
+    want = (K.MODE_ACTIVE,) if to != "D1" else (K.MODE_ACTIVE, MODE_NOSIGNAL)     # D1 = DP: host DP-1 may be off (no video)
+    went = []                                   # D1: settled only after its search (a stale mode before the reset is no result)
+
+    def done():
+        m = u.mode()
+        went.append(m)
+        return u.port() == PORT[to] and m in want and (to != "D1" or MODE_SEARCH in went)
+    settled = u.until(done, SETTLE_S)
     seen, new = ring_new(u, seen)
     K.say(f"  take: selector {'closed after %.2f s' % closed if closed is not None else 'STILL OPEN'}; port {name(u.port())} "
           f"mode {u.mode()} ({'settled %.2f s' % settled if settled is not None else 'not settled'}, "
           f"{time.monotonic() - t0:.1f} s after the take); opened on item {opened}")
     K.say("  ring:\n" + "\n".join("    " + ln.strip() for ln in new))
-    if any("refused, no cable" in ln for ln in new):
+    if closed is None and any(f"input selector: {to} refused, no cable" in ln for ln in new):   # still open + its line (old lines may re-show)
         u.check(f"{frm} -> {to} by {how}: no cable on {to}: refused with its line, selector still open", u.osd() == SEL_STATE)
         u.press(K.K_MENU, "MENU (cancel)", lambda: u.osd() != SEL_STATE)
         return ring_new(u, seen)[0]
     u.check(f"{frm} -> {to} by {how}: switched (port {to}, ACTIVE or no signal), ring has the switch + request lines",
             settled is not None and any(ln.rstrip().endswith(f"switch to {to}") for ln in new)
             and any("requested by input selector" in ln for ln in new), f"port {name(u.port())} mode {u.mode()}")
+    u.check(f"{frm} -> {to} by {how}: one search (no kept reset searching again after display setting)",
+            not any("DISPLAY SETTING -> SEARCH" in ln for ln in new))
     return seen
 
 

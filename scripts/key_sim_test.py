@@ -351,8 +351,12 @@ def take(k, frm, to, how):
     D1 is DP: no DP source in the sim, so a switch to D1 ends in no signal ON D1 (the switch itself is what is checked)."""
     b = k.snap()
     n0 = len(k.who)
+    con = k.console()
     k.tap("SOURCE")
     opened = k.osd_state()
+    if con:                                                     # unit 2 sel3: the console opened by itself at no signal swallowed SOURCE
+        k.check(f"selector {frm} -> {to}: SOURCE with the console (opened by itself) up closes it and opens the selector",
+                k.console() == 0 and opened != 0, f"console {k.console()}, osd {opened}")
     rows = []
     while len(rows) < len(ROW) and (not rows or rows[-1] != ROW[to]):    # step until the highlight is on `to` (Auto when auto-scanning)
         k.tap("SOURCE", ms=100, gap=150)
@@ -378,6 +382,9 @@ def take(k, frm, to, how):
     k.check(f"selector {frm} -> {to} by {how}: ring lines (opened on {frm} / auto, switch to {to}, request by the selector)",
             any(ln.endswith(f"input selector opened (SOURCE key) on {frm}") or ln.endswith("input selector opened (SOURCE key) on auto") for ln in new) and any(ln.endswith(f"switch to {to}") for ln in new)
             and any("reset to search requested by input selector" in ln and by in ln for ln in new))
+    k.check(f"selector {frm} -> {to} by {how}: one search (no kept reset searching again after display setting)",
+            not any("DISPLAY SETTING -> SEARCH" in ln for ln in new))
+    return new
     k.check(f"selector {frm} -> {to} by {how}: on {to} (mode {want[0]}), selector closed and not reopened",
             port_now(k) == PORT[to] and k.s.bus.mode_state() in want and k.osd_state() != opened and k.delta(b, "AwtoSourceOpen") == 1,
             f"port 0x{port_now(k):02X}, mode {k.s.bus.mode_state()} {k.s.ms() - t0:.0f} ms after the take, osd {k.osd_state()}, "
@@ -387,6 +394,7 @@ def take(k, frm, to, how):
 def switches(k):
     """Dan 2026-11-12 "cannot switch to input with cable": the selector takes ANOTHER input, by the idle commit and by AUTO."""
     live_ports(k, ("D2", "D3"))
+    k.m.wr(k.m.addr("g_ucAwtoSyncCon"), b"\x01")             # the firmware default: the console opens itself at a settled episode
     k.ring0 = ring(k)
     k.wait(500)
     st = k.m.rd(k.m.addr("g_stPortCableStatus"))[0]
@@ -394,6 +402,38 @@ def switches(k):
     for how in ("idle", "auto"):
         for frm, to in (("D2", "D3"), ("D3", "D2"), ("D2", "D1"), ("D1", "D2")):
             take(k, frm, to, how)
+    quick(k)
+
+
+def quick(k):
+    """Unit 2 (wb-p14ui-sel2): the selector opened while a switch is still settling must keep its choice: D2 -> D1 (no signal),
+    D1 -> D2, and right after that take (display setting) SOURCE + steps to D3: ends on D3, opened once, one search per take."""
+    take(k, "D2", "D1", "idle")
+    b = k.snap()
+    k.tap("SOURCE")
+    for _ in range(4):
+        if k.args.get("AwtoSrcSet", [None])[-1] == ROW["D2"]:
+            break
+        k.tap("SOURCE", ms=100, gap=150)
+    k.wait(SRC_IDLE_MS + 50)                                    # the idle commit to D2 has just run: its search is on
+    k.tap("SOURCE")
+    for _ in range(4):
+        if k.args.get("AwtoSrcSet", [None])[-1] == ROW["D3"]:
+            break
+        k.tap("SOURCE", ms=100, gap=150)
+    t0 = k.s.ms()
+    while k.s.ms() - t0 < (SRC_IDLE_MS + SWITCH_S * 1000) and not (port_now(k) == PORT["D3"] and k.s.bus.mode_state() == MODE_ACTIVE):
+        k.wait(200)
+    new = ring(k)
+    new = new[len(k.ring0):] if new[:len(k.ring0)] == k.ring0 else new[-30:]
+    k.ring0 = ring(k)
+    say("  ring:\n" + "\n".join("    " + ln for ln in new))
+    k.check("selector opened during a switch: its choice (D3) is taken, opened twice (no reopen), no second search",
+            port_now(k) == PORT["D3"] and k.s.bus.mode_state() == MODE_ACTIVE and k.delta(b, "AwtoSourceOpen") == 2
+            and not any("DISPLAY SETTING -> SEARCH" in ln for ln in new) and any(ln.endswith("switch to D3") for ln in new),
+            f"port 0x{port_now(k):02X} mode {k.s.bus.mode_state()} opens {k.delta(b, 'AwtoSourceOpen')}")
+    k.wait(1000)                                                # main loop blocked ~150 ms after ACTIVE: a press then is not sampled
+    take(k, "D3", "D2", "idle")
 
 
 def auto_select(k, how):
