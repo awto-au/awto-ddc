@@ -685,7 +685,8 @@ class Runner:
         import dbg_xdata as X
         out = {}
         for name, n in (("g_ucAwtoSyncPwr", 1), ("g_ulAwtoPsMs", 4), ("g_ucAwtoPsWakes", 1), ("g_usAwtoPsPolls", 2),
-                        ("g_usAwtoPsTmdsLive", 2), ("g_usAwtoPsTmdsRun", 2), ("g_usAwtoPsDdc", 2)):
+                        ("g_usAwtoPsTmdsLive", 2), ("g_usAwtoPsTmdsRun", 2), ("g_usAwtoPsDdc", 2),
+                        ("g_usAwtoPsAux", 2)):
             a = C.site_addr(self.t.map_text, name)
             b = X.read_bytes(self.t.io, a, n) if a is not None else None
             if b is not None:
@@ -741,7 +742,7 @@ class Runner:
                 txt.append(f"after {q:.0f} s silent: power status {'SAVING' if sv else s1.get('g_ucAwtoSyncPwr')}, "
                            f"held {held if held is None else round(held / 1000, 1)} s fw, wakes {wk} (ring 'wake on' {wk_ring} "
                            f"in {n_new} new lines); TMDS live polls {s1.get('g_usAwtoPsTmdsLive')}, longest live run "
-                           f"{s1.get('g_usAwtoPsTmdsRun')} ms; SDK DDC detections gated {s1.get('g_usAwtoPsDdc')}")
+                           f"{s1.get('g_usAwtoPsTmdsRun')} ms; SDK DDC detections gated {s1.get('g_usAwtoPsDdc')}, SDK AUX toggles gated {s1.get('g_usAwtoPsAux')}")
                 ok &= sv and wk_ring == 0 and (wk in (None, 0)) and (held is None or held >= HOLD_S * 1000)
             tw = time.monotonic()
             st = self.host_dpms(True)
