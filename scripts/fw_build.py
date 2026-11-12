@@ -30,7 +30,7 @@ BANK = 0x10000
 NBANKS = 14                                                   # banks 14-15 = data (#8)
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
 # bank 5 s, link 20 s (first runs 2026-11-04). 3x cold worst case per awto-dan#53.
-TIMEOUT = {"port": 60, "edid": 60, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
+TIMEOUT = {"port": 60, "edid": 60, "pp": 180, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
 LIB_UV2 = "Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2"   # Realtek ships it as a .LIB
 WORK_DIR = ROOT / "tmp/sdcc-port"
 ASM = ROOT / "tmp/sdcc-port/asm"
@@ -260,6 +260,8 @@ def main() -> int:
         if a.src_patch:
             apply_src_patch(Path(a.src_patch))
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
+        # #162: conditionals that pick a branch silently (undefined names, never-defined #ifdef, ...): fw/pp_audit_allow.tsv
+        run("pp", [py, "scripts/pp_audit.py", "--check"])     # TIMEOUT pp: 3x the worst run (commit message)
         run("asm", [py, "scripts/fw_compile.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
         run("asm", [py, "scripts/fw_compile.py", "compile", LIB_UV2, "--asm"])
         # #66: every policy row must still match a warning of this build (stale rows fail), every warning a row

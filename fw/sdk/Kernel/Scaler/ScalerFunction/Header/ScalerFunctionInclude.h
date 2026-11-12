@@ -194,7 +194,4 @@
 
 #include "ScalerDPRxMST_SeptPhyInclude.h"
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-extern StructUserDataInflashType g_stUserDataInFlash; 
-#endif
 

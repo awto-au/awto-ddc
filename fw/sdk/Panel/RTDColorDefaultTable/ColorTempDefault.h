@@ -31,15 +31,9 @@
 #define _CT6500_RED                                 (0x80 << 4)
 #define _CT6500_GREEN                              (0x80 << 4)
 #define _CT6500_BLUE                               (0x80 << 4)
-#if(_CUSTOMER == _CUS_BAISHENG)
-#define _CT5800_RED                                (0x71 << 4)
-#define _CT5800_GREEN                              (0x72 << 4)
-#define _CT5800_BLUE                               (0x72 << 4)
-#else
 #define _CT5800_RED                                (0x80 << 4)
 #define _CT5800_GREEN                              (0x80 << 4)
 #define _CT5800_BLUE                               (0x80 << 4)
-#endif
 #define _CTSRGB_RED                                (0x80 << 4)
 #define _CTSRGB_GREEN                              (0x80 << 4)
 #define _CTSRGB_BLUE                               (0x80 << 4)

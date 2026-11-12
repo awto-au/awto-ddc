@@ -155,6 +155,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
            "--noinvariant",                                   # hoisted loop invariants become DATA spill slots (#8)
            "--nogenconstprop",                                # SDK polls ISR-set non-volatile flags; trunk folded the delay loop away (#23)
            *keil_compat(),                                    # Keil ~bit (replaces the ~bX -> !bX rule, #26), /0, loop re-read, eval order (awto-sdcc#25)
+           "-Wp-Wundef",                                      # undefined name in #if = 0: a build error unless allowed (undef_gate, #162)
            f"-Wp-include,{SHIM / 'keil_compat.h'}", f"-I{SHIM}"]
     if awto_alias_header():
         cmd.append(f"-Wp-include,{awto_alias_header()}")
@@ -320,6 +321,10 @@ def cmd_awto(jobs):
             return c, 124, f"TIMEOUT after {COMPILE_TIMEOUT}s"
     with ThreadPoolExecutor(jobs) as ex:
         res = list(ex.map(one, jobs_l))
+    res, undef_bad = undef_gate(res)
+    for u in undef_bad:
+        log(f"UNDEF-GATE awto: {u}")
+    res = [(c, rc or (1 if undef_bad else 0), msg) for c, rc, msg in res]
     for c, rc, msg in res:
         for l in msg.splitlines():
             log(f"awto {c.name}: {l}")
@@ -343,6 +348,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
     t0 = time.time()
     with ThreadPoolExecutor(jobs) as ex:
         res = list(ex.map(lambda c: compile_one(c, uv2.parent, defines, incs, model), cs))
+    res, undef_bad = undef_gate(res)
     ok = [r for r in res if r[1] == 0]
     bad = [r for r in res if r[1] != 0]
     hist, per_file = Counter(), {}
@@ -393,7 +399,44 @@ def cmd_compile(uv2_rel, jobs, only, target):
         log(f"WARN-GATE unreviewed: {u}")
     if unreviewed:
         log(f"WARN-GATE: {len(unreviewed)} warning site(s) not in fw/warn_policy.tsv -> build fails (#26)")
-    return 0 if not bad and not unreviewed else 1
+    for u in undef_bad:
+        log(f"UNDEF-GATE: {u}")
+    if undef_bad:
+        log(f"UNDEF-GATE: {len(undef_bad)} #if test(s) of an undefined name not in fw/pp_audit_allow.tsv -> build fails (#162)")
+    return 0 if not bad and not unreviewed and not undef_bad else 1
+
+
+UNDEF_RE = re.compile(r'^(.+?):(\d+):\d+: warning: "(\w+)" is not defined, evaluates to 0')
+
+
+def undef_allow():
+    """(file, name) pairs of fw/pp_audit_allow.tsv rows with check `undef` (file = fw/sdk/..., as pp_audit.py names it)."""
+    f = ROOT / "fw" / "pp_audit_allow.tsv"
+    rows = [ln.split("\t") for ln in f.read_text().splitlines() if ln.strip() and not ln.startswith("#")] if f.exists() else []
+    return {(r[1], r[2]) for r in rows if len(r) >= 4 and r[0] == "undef" and r[3].strip()}
+
+
+def undef_gate(res):
+    """-Wundef hits leave the warning stream (and its 2 caret lines); a hit not allowed fails the build."""
+    allow, bad, out = undef_allow(), set(), []
+    for f, rc, msg in res:
+        keep, skip = [], 0
+        for l in msg.splitlines():
+            if skip and re.match(r"^\s*\d*\s*\|", l):
+                skip -= 1
+                continue
+            skip = 0
+            m = UNDEF_RE.match(l)
+            if m:
+                skip = 2
+                path = os.path.normpath(m.group(1))
+                rel = "fw/sdk/" + os.path.relpath(path, SRC) if path.startswith(str(SRC) + os.sep) else os.path.relpath(path, ROOT)
+                if (rel, m.group(3)) not in allow:
+                    bad.add(f"{rel}:{m.group(2)}: {m.group(3)} is not defined (evaluates to 0)")
+                continue
+            keep.append(l)
+        out.append((f, rc, "\n".join(keep)))
+    return out, sorted(bad)
 
 
 WARN_RE = re.compile(r"^(.+?):(\d+)(?::\d+)?: warning(?: (\d+))?: (.*)$")

@@ -38,37 +38,6 @@
 //****************************************************************************
 // CODE TABLES
 //****************************************************************************
-#if(_CUSTOMER == _CUS_MINDRAY)
-__code StructUserDataInflashType g_stUserDataInFlashDefault = 
-{
-    _InFlashLvdsDisplayBitMode,
-    _InFlashDitherWitch,
-    _InFlashPanelMaxFrameRate,
-    _InFlashPanelDhStart,
-    _InFlashPanelDvStart,
-    _InFlashPanelSyncWidth,
-    _InFlashPanelSyncHeight,
-    _InFlashPanelDhWidth,
-    _InFlashPanelDvHeight,
-    _InFlashPanelDhTotal,
-    _InFlashPanelDvTotal,
-    _InFlashPanelMaxDhTotal,
-    _InFlashPanelMaxDvTotal,
-    _InFlashPanelMinDhTotal,
-    _InFlashPanelMinDvTotal,
-    _InFlashPanelPixClock,
-    _InFlashPanelMaxPixClock,
-    _InFlashPanelMinPixClock,
-    _InFlashPanelPowerOnT1,
-    _InFlashPanelPowerOnT2,
-    _InFlashPanelPowerOnT3,
-    _InFlashPanelPowerOffT4,
-    _InFlashPanelPowerOffT5,
-    _InFlashPanelPowerOffT6,
-    _InFlashPwmFre,
-};
-
-#endif
 
 
 #ifdef _CUSTOM_SYSTEM_DEFAULT_DATA
@@ -140,9 +109,6 @@ __code StructAdcDataType g_stADCYpbprDefaultData =
 //****************************************************************************
 StructSystemDataType g_stSystemData;
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-StructUserDataInflashType g_stUserDataInFlash; 
-#endif
 
 #if(_VGA_SUPPORT == _ON)
 StructVGAModeUserDataType g_stVGAModeUserData;
@@ -187,11 +153,6 @@ void UserCommonFlashSaveSystemData(void);
 void UserCommonFlashLoadSystemData(void);
 void UserCommonFlashRestoreSystemData(void);
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-void RTDFlashLoadUserData(void);
-void RTDFlashRestoreUserData(void);
-void RTDFlashSaveUserData(void);
-#endif
 
 #if(_VGA_SUPPORT == _ON)
 void UserCommonFlashLoadModeUserData(BYTE ucSlotIndex);
@@ -1715,27 +1676,6 @@ void UserCommonFlashRestoreSystemData(void)
     }
 }
 
-#if(_CUSTOMER == _CUS_MINDRAY)
-void RTDFlashSaveUserData(void)
-{
-    UserCommonFlashErasePage(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _USER_DATA_FLASH_START_PAGE);
-    UserCommonFlashWrite(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _USER_DATA_FLASH_ADDR, _USER_DATA_FLASH_SIZE , (BYTE*)(&g_stUserDataInFlash));
-}
-
-void RTDFlashLoadUserData(void)
-{
-    if(UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, _USER_DATA_FLASH_ADDR, _USER_DATA_FLASH_SIZE , (BYTE*)(&g_stUserDataInFlash)) == _FALSE)
-    {
-        g_stUserDataInFlash = g_stUserDataInFlashDefault;
-    }
-}
-
-void RTDFlashRestoreUserData(void)
-{
-    g_stUserDataInFlash = g_stUserDataInFlashDefault;
-    RTDFlashSaveUserData();
-}
-#endif
 
 #if(_VGA_SUPPORT == _ON)
 //--------------------------------------------------

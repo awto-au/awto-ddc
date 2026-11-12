@@ -34,6 +34,10 @@ static __xdata char s_pcAwtoRow[AWTO_T_MAXCOLS];  // #157: glyphs converted in p
 __xdata BYTE g_ucAwtoDiagSmall;                  // 0 = diagnostic screens at 2x size (default), 1 = 1x (test cmd 0x4B / 0x4A)
 static BYTE s_ucAwtoLen;
 static BYTE s_ucAwtoCols;
+static bit s_bAwtoWrap;                         // main-page log line: a full row sets s_bAwtoOver (AwtoConWrapLine draws two rows)
+static bit s_bAwtoOver;
+static bit s_bAwtoSkip;                         // second pass of a wrapped line: the first s_ucLogI characters are dropped
+static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index; wrap: skip count
 
 // One diagnostic console (AwtoDiagConsole), #144: 120 x 50 shown, Spleen 8x16 at 2x (1920 x 1836 px on the 4K panel).
 // Pages: main (power-on, auto-open) = title + sync / power event log, full width; GPIO (#157) = input table + input changes.
@@ -44,10 +48,14 @@ static BYTE s_ucAwtoCols;
 #define AWTO_VIEW_ROWS      50                  // rows shown at a time; UP / DOWN scroll the view over the map
 #define AWTO_CON_FONT       0                   // osd_font_load index: Spleen 8x16 (8 x 18 cell)
 #define AWTO_LOG_COL        ((s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table
-#define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : (AWTO_T_MAXCOLS - 1))
+#define AWTO_LOG_W_MAIN     (AWTO_T_MAXCOLS - 1)                     // main-page log row (cells, incl. the leading space)
+#define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : AWTO_LOG_W_MAIN)
+#define AWTO_LOG_TIME_W     10                  // AwtoSyncLine time column "+nnnnn ms "
+#define AWTO_LOG_TXT0       (1 + AWTO_LOG_TIME_W)                   // text column: a wrapped line continues here (gen_awto_sync.py)
 #define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
 #define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
 #define AWTO_LOG_LINES      (AWTO_VIEW_ROWS - AWTO_LOG_ROW0)
+#define AWTO_LOG_REDRAW_N   ((AWTO_CON_ROWS - AWTO_LOG_ROW0) / 2)   // lines a map-full redraw backfills (2 rows each at most)
 static __xdata BYTE s_ucConOpen;                // 0 closed, else the page: AWTO_CON_MAIN / AWTO_CON_GPIO
 static BYTE s_ucPanelCol;
 static BYTE s_ucPanelRow;
@@ -142,9 +150,20 @@ static void AwtoTextShow(void)
 
 static void AwtoPutChar(char c)
 {
-    if(s_ucAwtoLen < s_ucAwtoCols)
+    if(s_bAwtoSkip != 0)
+    {
+        if(--s_ucLogI == 0)
+        {
+            s_bAwtoSkip = 0;
+        }
+    }
+    else if(s_ucAwtoLen < s_ucAwtoCols)
     {
         s_pcAwtoRow[s_ucAwtoLen++] = c;
+    }
+    else if(s_bAwtoWrap != 0)
+    {
+        s_bAwtoOver = 1;
     }
 }
 
@@ -169,14 +188,17 @@ static void AwtoPutNum(unsigned long ulV, BYTE ucMin)
 {
     BYTE ucN = s_ucAwtoLen;
 
-    ucMin += ucN;
-    do
+    do                                          // ucMin counts the digits put (not the row length: a skipped pass drops them)
     {
         AwtoPutChar('0' + (ulV % 10));
         ulV /= 10;
+        if(ucMin != 0)
+        {
+            ucMin--;
+        }
     }
     while(ulV != 0);
-    while((s_ucAwtoLen < ucMin) && (s_ucAwtoLen < s_ucAwtoCols))
+    for(; ucMin != 0; ucMin--)
     {
         AwtoPutChar('0');
     }
@@ -505,7 +527,6 @@ void AwtoDiagConsole(BYTE ucOn)
         AwtoKeyConSet(ucOn == AWTO_CON_GPIO);   // key test / debug / watchdog panels: GPIO page only (main page = terminal)
         AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
         s_ucConFirst = 0;
-        s_ucConRedraw = 0;
         AwtoConTitleBar();
         if(ucOn == AWTO_CON_GPIO)
         {
@@ -516,12 +537,14 @@ void AwtoDiagConsole(BYTE ucOn)
             AwtoOsdDebugLines(); AwtoOsdWdtLines();     // #131 watchdog panel
         }
         AwtoConLogInit();
+        s_ucConRedraw = 0;                      // after the backfill: AwtoConLogInit caps a map-full redraw
         UserCommonInterfacePanelPowerTick();
         AwtoTextShow();
     }
     else
     {
         s_ucConOpen = 0;
+        s_ucConRedraw = 0;
         AwtoGpioConSet(0);
         AwtoKeyConSet(0);
         osd_tc_close();
