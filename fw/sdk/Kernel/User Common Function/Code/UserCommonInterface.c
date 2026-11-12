@@ -780,11 +780,12 @@ static WORD UserCommonInterfacePanelT3(void)
     return _PANEL_POWER_ON_T3;
 }
 
-static void UserCommonInterfacePanelGo(BYTE ucNew)
+// usAt: time of the step's action (taken before it, so its log lines' console draw does not stretch the next wait)
+static void UserCommonInterfacePanelGo(BYTE ucNew, WORD usAt)
 {
-    AwtoPanelLog((BYTE)((s_ucPnlState << 4) | ucNew), UserCommonInterfacePanelSince(s_usPnlEntry));
+    AwtoPanelLog((BYTE)((s_ucPnlState << 4) | ucNew), (WORD)(usAt - s_usPnlEntry));
     s_ucPnlState = ucNew;
-    s_usPnlEntry = (WORD)AwtoMs();
+    s_usPnlEntry = usAt;
 }
 
 // The SDK's status view (UserCommonInterfaceReadyForActive reads READY / ALREADY), derived from the state only.
@@ -823,7 +824,7 @@ static void UserCommonInterfacePanelVideoOn(void)
     AwtoDiagT3Mark(0);                          // first T3 of the boot: diag T3 length, delay calibration (#53)
 }
 
-static void UserCommonInterfacePanelVddOff(BYTE ucPhy)
+static void UserCommonInterfacePanelVddOff(BYTE ucPhy, WORD usNow)
 {
     if(ucPhy != 0)
     {
@@ -831,14 +832,15 @@ static void UserCommonInterfacePanelVddOff(BYTE ucPhy)
         ScalerDisplayDPTxAnalogPhyConrol(_DISABLE);
     }
     PCB_PANEL_POWER(_PANEL_CONTROL_OFF);
-    UserCommonInterfacePanelGo(AWTO_PNL_T6);
+    UserCommonInterfacePanelGo(AWTO_PNL_T6, usNow);
 }
 
 // One step per call while a state's condition holds; returns _FALSE when the machine must wait (time or target).
 static bit UserCommonInterfacePanelStep(void)
 {
     BYTE ucT = s_ucPnlTarget;
-    WORD usIn = UserCommonInterfacePanelSince(s_usPnlEntry);
+    WORD usNow = (WORD)AwtoMs();
+    WORD usIn = (WORD)(usNow - s_usPnlEntry);
 
     switch(s_ucPnlState)
     {
@@ -849,7 +851,7 @@ static bit UserCommonInterfacePanelStep(void)
             }
             AwtoDiagStage(5);
             PCB_PANEL_POWER(_PANEL_CONTROL_ON);
-            UserCommonInterfacePanelGo(AWTO_PNL_VDD);
+            UserCommonInterfacePanelGo(AWTO_PNL_VDD, usNow);
             return _TRUE;
 
         case AWTO_PNL_VDD:
@@ -857,7 +859,7 @@ static bit UserCommonInterfacePanelStep(void)
             // (power status NORMAL, after SysPowerSwitch): at cold boot VDD runs ahead of it. Expiry: PHY on, HPD read.
             if(ucT == AWTO_PNL_TGT_OFF)
             {
-                UserCommonInterfacePanelVddOff(_FALSE);
+                UserCommonInterfacePanelVddOff(_FALSE, usNow);
                 return _TRUE;
             }
             if((usIn < _PANEL_POWER_ON_T1) || (SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL))
@@ -866,14 +868,14 @@ static bit UserCommonInterfacePanelStep(void)
             }
             ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_PANEL_ON);
             ScalerDisplayDPTxPhyInitial();
-            UserCommonInterfacePanelGo(AWTO_PNL_HPD);
+            UserCommonInterfacePanelGo(AWTO_PNL_HPD, usNow);
             return _TRUE;
 
         case AWTO_PNL_HPD:
             // T2 what: HPD high, read once per tick; bound = panel T2 (registry PANEL_T2). Expiry: train anyway (SDK) + line.
             if(ucT == AWTO_PNL_TGT_OFF)
             {
-                UserCommonInterfacePanelVddOff(_TRUE);
+                UserCommonInterfacePanelVddOff(_TRUE, usNow);
                 return _TRUE;
             }
             if(ScalerDisplayDPTxHotPlugHigh() == _FALSE)
@@ -884,7 +886,7 @@ static bit UserCommonInterfacePanelStep(void)
                 }
                 AwtoSwEvent(AWTO_SW_EV_PANEL_X, AWTO_PNL_X_HPD);
             }
-            UserCommonInterfacePanelGo(AWTO_PNL_LINK);
+            UserCommonInterfacePanelGo(AWTO_PNL_LINK, usNow);
             return _TRUE;
 
         case AWTO_PNL_LINK:
@@ -898,19 +900,19 @@ static bit UserCommonInterfacePanelStep(void)
             AwtoDiagStage(7);
             ScalerDDomainBackgroundEnable(_ENABLE);   // fresh link: black until the scaler shows a picture (short T3)
             UserCommonInterfacePanelVideoOn();
-            UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);
+            UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);
             return _TRUE;
 
         case AWTO_PNL_VIDEO:
             if(ucT == AWTO_PNL_TGT_BL)
             {
-                UserCommonInterfacePanelGo(AWTO_PNL_T3);
+                UserCommonInterfacePanelGo(AWTO_PNL_T3, usNow);
                 return _TRUE;
             }
             if(ucT == AWTO_PNL_TGT_OFF)
             {
                 ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
-                UserCommonInterfacePanelGo(AWTO_PNL_T4);
+                UserCommonInterfacePanelGo(AWTO_PNL_T4, usNow);
                 return _TRUE;
             }
             return _FALSE;
@@ -918,7 +920,7 @@ static bit UserCommonInterfacePanelStep(void)
         case AWTO_PNL_T3:
             if(ucT != AWTO_PNL_TGT_BL)
             {
-                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);
                 return _TRUE;
             }
             if(UserCommonInterfacePanelSince(s_usPnlVideo) < UserCommonInterfacePanelT3())
@@ -928,7 +930,7 @@ static bit UserCommonInterfacePanelStep(void)
             AwtoDiagT3Mark(1);
             PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
             ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
-            UserCommonInterfacePanelGo(AWTO_PNL_BL_PWM);
+            UserCommonInterfacePanelGo(AWTO_PNL_BL_PWM, usNow);
             return _TRUE;
 
         case AWTO_PNL_BL_PWM:
@@ -936,14 +938,14 @@ static bit UserCommonInterfacePanelStep(void)
             if(ucT != AWTO_PNL_TGT_BL)
             {
                 PCB_BACKLIGHT_PWM(AWTO_PWM_DARK);
-                UserCommonInterfacePanelGo(AWTO_PNL_BL_OFF);
+                UserCommonInterfacePanelGo(AWTO_PNL_BL_OFF, usNow);
                 return _TRUE;
             }
             if(usIn < _PANEL_POWER_ON_BL_TO_PWM)
             {
                 return _FALSE;
             }
-            UserCommonInterfacePanelGo(AWTO_PNL_BL_ON);
+            UserCommonInterfacePanelGo(AWTO_PNL_BL_ON, usNow);
             UserAdjustBacklight(GET_OSD_BACKLIGHT());
             SET_FORCESETPWMDUTY_FLAG(_FALSE);
             return _TRUE;
@@ -955,7 +957,7 @@ static bit UserCommonInterfacePanelStep(void)
             }
             SET_FORCESETPWMDUTY_FLAG(_TRUE);
             PCB_BACKLIGHT_PWM(AWTO_PWM_DARK);
-            UserCommonInterfacePanelGo(AWTO_PNL_BL_OFF);
+            UserCommonInterfacePanelGo(AWTO_PNL_BL_OFF, usNow);
             return _TRUE;
 
         case AWTO_PNL_BL_OFF:
@@ -968,11 +970,11 @@ static bit UserCommonInterfacePanelStep(void)
             if(ucT == AWTO_PNL_TGT_OFF)
             {
                 ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
-                UserCommonInterfacePanelGo(AWTO_PNL_T4);
+                UserCommonInterfacePanelGo(AWTO_PNL_T4, usNow);
             }
             else
             {
-                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);     // stream kept: a backlight-on needs no new T3
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);     // stream kept: a backlight-on needs no new T3
             }
             return _TRUE;
 
@@ -980,7 +982,7 @@ static bit UserCommonInterfacePanelStep(void)
             // T4 what: backlight off -> stream stops; panel T4 (registry PANEL_T4). Expiry: idle pattern.
             if(ucT != AWTO_PNL_TGT_OFF)
             {
-                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);     // stream still on
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);     // stream still on
                 return _TRUE;
             }
             if(usIn < _PANEL_POWER_OFF_T4)
@@ -989,7 +991,7 @@ static bit UserCommonInterfacePanelStep(void)
             }
             ScalerDisplayDPTxStreamHanlder(_DISABLE);
             ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_IDLE_PATTERN);
-            UserCommonInterfacePanelGo(AWTO_PNL_T5);
+            UserCommonInterfacePanelGo(AWTO_PNL_T5, usNow);
             return _TRUE;
 
         case AWTO_PNL_T5:
@@ -997,14 +999,14 @@ static bit UserCommonInterfacePanelStep(void)
             if(ucT != AWTO_PNL_TGT_OFF)
             {
                 UserCommonInterfacePanelVideoOn();
-                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO);
+                UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);
                 return _TRUE;
             }
             if(usIn < _PANEL_POWER_OFF_T5)
             {
                 return _FALSE;
             }
-            UserCommonInterfacePanelVddOff(_TRUE);
+            UserCommonInterfacePanelVddOff(_TRUE, usNow);
             return _TRUE;
 
         case AWTO_PNL_T6:
@@ -1014,7 +1016,7 @@ static bit UserCommonInterfacePanelStep(void)
             {
                 return _FALSE;
             }
-            UserCommonInterfacePanelGo(AWTO_PNL_OFF);
+            UserCommonInterfacePanelGo(AWTO_PNL_OFF, usNow);
             return _TRUE;
     }
 }

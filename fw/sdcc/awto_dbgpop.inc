@@ -114,11 +114,14 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     s_pcAwtoRow[0] = ' ';              // every row starts one cell in, clear of the frame
     s_ucAwtoLen = 1;
     osd_tc_open(ucCols, ucLines);
+    UserCommonInterfacePanelPowerTick();        // #162: map clear and font load are the long parts of a console open (boot,
+                                                // wake): panel steps due meanwhile (T3, backlight-to-PWM) are not held up
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_TEXT, AWTO_RGB_PHOSPHOR_GREEN);       // diagnostic look: green on black, title bar reversed
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_DIM, AWTO_RGB_PHOSPHOR_DIM);
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_BG, AWTO_RGB_BLACK);
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_ALERT, AWTO_RGB_ALERT_RED);
     osd_font_load(AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe
+    UserCommonInterfacePanelPowerTick();
     if(ucView != 0)
     {
         osd_tc_viewport(ucWin);
@@ -501,7 +504,6 @@ void AwtoDiagConsole(BYTE ucOn)
         AwtoGpioConSet(ucOn);
         AwtoKeyConSet(ucOn == AWTO_CON_GPIO);   // key test / debug / watchdog panels: GPIO page only (main page = terminal)
         AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
-        UserCommonInterfacePanelPowerTick();    // #162: the draw takes ~100 ms; panel steps due meanwhile (T3, backlight-to-PWM)
         s_ucConFirst = 0;
         s_ucConRedraw = 0;
         AwtoConTitleBar();
