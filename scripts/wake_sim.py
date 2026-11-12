@@ -8,13 +8,14 @@ usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
   cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
   D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (no wake, logged: #163),
   DPCD 600h = D0 (wake).
+- Keys (#132): injected SOURCE wakes only; front UP+DOWN wakes into the console (auto-open off for the case).
 - PS wake-poll period (g_usAwtoPsPolls over 500 ms, longest gap g_usAwtoPsGap) against AWTO_PS_POLL_MS.
 - TMDS clock (#144 q7): on D3 without a cable (no wake), on D2 (wake after the AWTO_PS_TMDS_HOLD_MS hold, "D2 wake by TMDS
   clock"), still on after re-sleep (wakes again: the hold is the gate), 15 ms bursts every 50 ms for 1 s (no wake, burst line).
 - Measured: edge -> wake line (fw ms), wake line -> console drawn / backlight on (ring), PS main-loop pass time.
 - Sim devices: W1C on the latches (DDCn_EDID_IRQ bit0, AUX_IRQ_STATUS bit0), cable pins (low = cable), DPCD port memory,
   FreqDet (HDMI freq detector P71 / P72, off until the TMDS cases).
-PNG: <out>/wake_cable_console.png (console after the cable wake). Log: tmp/logs/wake_sim.log
+PNG: <out>/wake_cable_console.png (console after the cable wake), wake_updown_console.png (after UP+DOWN). Log: tmp/logs/wake_sim.log
 """
 import argparse
 import re
@@ -34,6 +35,9 @@ import sync_log as L  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wake_sim.log"
+ADC_A0, ADC_A1, ADC_IDLE, KEY_UP_A0, KEY_DOWN_A1 = 0xFF09, 0xFF0A, 0xF8, 0x38, 0x38   # key_sim_test KEY_ADC band centres
+SYS_REQ_EV, SYS_BY_KEY_CONSOLE = 0x14, 0x1D     # sync.tsv id 14 (system request), RL6449_Project.h AWTO_SYS_BY_KEY_CONSOLE
+KEY_HOLD_MS = 300                           # UP+DOWN held: > the 80 ms combo window + debounce, a short human press
 KEY_WAKE_MS = 250                           # one main-loop pass in power saving (AWTO_PS_POLL_MS 5, key poll 10 ms) x many: bound; expiry = FAIL
 PWR_NORMAL, PWR_SAVING, MODE_NOSIGNAL = 2, 3, 5     # Global.h EnumPowerStatus, MODE_NAMES
 D2_PIN, D3_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE2C, 0xFE69, 0xBADC, 0x000600
@@ -267,6 +271,40 @@ class Run:
         return hit
 
 
+def _updown_case(self):
+    """#132 q2: front UP+DOWN in power saving wakes AND opens the console (auto-open off, so the key opened it)."""
+    if "_AwtoBlKey" not in self.m.sym:
+        say("  SKIP UP+DOWN wake into the console: image before the #132 key map")
+        return
+    con = self.m.addr("g_ucAwtoSyncCon")
+    self.cmd(0x42, 0.2)                         # console closed (test cmd 0x42)
+    self.m.wr(con, b"\x00")                    # sync-log auto-open off: only the key can open it
+    self.check(self.sleep(), "UP+DOWN: power saving reached")
+    self.m.wr(ADC_A0, bytes([KEY_UP_A0]))
+    self.m.wr(ADC_A1, bytes([KEY_DOWN_A1]))
+    woke, ms = self.until_wake(KEY_WAKE_MS)
+    self.check(woke, "front UP+DOWN wakes the monitor", f"{ms} ms")
+    self.watch(KEY_HOLD_MS)
+    self.m.wr(ADC_A0, bytes([ADC_IDLE]))
+    self.m.wr(ADC_A1, bytes([ADC_IDLE]))
+    self.watch(1500)
+    st = self.model.snapshot(self.m, 0.0)
+    sm = M.summary(st)
+    img = np.array(R.render_snap(st, "black", 1))
+    Image.fromarray(img).resize((R.PANEL_W // 2, R.PANEL_H // 2), Image.BOX).save(self.a.out / "wake_updown_console.png")
+    say(f"  png {self.a.out / 'wake_updown_console.png'}")
+    self.check(sm["en"] and sm["cols"] == 120 and self.m.rd(self.gpio + 3)[0] != 0, "UP+DOWN: console on screen after the wake",
+               f"OSD {'on' if sm['en'] else 'OFF'}, grid {sm['cols']}x{sm['rows']}, console {self.m.rd(self.gpio + 3)[0]}")
+    req = [e for e in self.ring_events() if e[0] == SYS_REQ_EV and (e[3] >> 8) & 0xFF == SYS_BY_KEY_CONSOLE]
+    self.check(bool(req), "UP+DOWN: request line names the key (who = UP+DOWN in power saving)",
+               "\n".join(self.lines()[-25:]))
+    self.m.wr(con, b"\x01")
+    self.cmd(0x42, 0.2)                         # console closed again: the cases below expect the plain power-saving pass
+
+
+Run.updown_case = _updown_case
+
+
 def _burst_case(self):
     """#144: TMDS clock bursts shorter than the hold never wake; the burst line is logged once per sleep"""
     self.check(self.sleep(), "TMDS bursts: power saving reached")
@@ -336,6 +374,7 @@ def main():
         r.check(woke, "injected SOURCE wakes the monitor (front-key rule)", f"{ms} ms")
         r.watch(1500)
         r.check(r.power() == PWR_NORMAL and r.bus.mode_state() != 0, "injected SOURCE: awake afterwards", f"power {r.power()}")
+        r.updown_case()
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
         r.poll_period()
         if "_AwtoPsTmdsLive" not in r.m.sym:
