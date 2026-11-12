@@ -1,1 +1,1 @@
-078b75c   # awto-rtdfw commit compiled into the image (git archive); osd-transp: osd_transparency default 20 % (awto-ddc#176), on audit-rec a7fce9d
+aa74554   # awto-rtdfw commit compiled into the image (git archive); osd-transp2: osd_transparency default 50 %, type 11 (awto-ddc#176), on ui 078b75c

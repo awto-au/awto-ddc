@@ -159,11 +159,11 @@ static BYTE s_ucVpFirst;                         // first map row shown
 static BYTE s_ucVpEnd;                           // map row that currently holds the end-of-rows marker
 
 // OSD blend, one owner for every awto screen (menu, selector, cards, backlight bar, console, GPIO page) (awto-ddc#176):
-// type 01 = only windows blend (FRAME_CTRL_0A alpha_blend_type; each window's blend_en set by OsdWindowDrawing), glyph pixels
-// stay opaque; level = registry osd_transparency as 0..255 (OVERLAY_CTRL / OVERLAY_CTRL1 alpha_blending_level, 0 = off).
+// type 11 = windows + character background (FRAME_CTRL_0A alpha_blend_type); glyph foreground stays opaque (10 = all blends it).
+// 01 (windows only) showed nothing on the panel: our backgrounds are character cells. Level = osd_transparency as 0..255.
 static void AwtoOsdBlend(void)
 {
-    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
+    OsdFuncBlending(_OSD_TRANSPARENCY_WINDOW_AND_CHARACTER_BACKGROUND);
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
 }
 
