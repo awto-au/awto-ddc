@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Sim timelines of two images, side by side (#162): boot_sim, wake_sim, sync_sim, key_sim_test.
 
-usage: sim_timelines.py BIN_A BIN_B [--tol-ms 1] [--sims boot_sim wake_sim ...]
+usage: sim_timelines.py BIN_A BIN_B [--tol-ms 1] [--sims boot_sim wake_sim ...] [--table]
 - Runs each sim on both images (fast core), keeps the ring lines "+ NNN ms <text>" per sim and compares them in order.
 - OK = same lines in the same order, every time within --tol-ms (default 1: integer-ms truncation at a tick edge).
+- --table (#162 step 2, intended changes): no verdict; each sim's lines go to tmp/sim_timelines/<image>.<sim>.lines.txt and
+  a milestone table (first line matching each MILESTONES pattern, ms) A vs B is printed.
 Log: tmp/logs/sim_timelines.log
 """
 import argparse, os, re, subprocess, sys, time
@@ -15,6 +17,11 @@ SIMS = ("boot_sim", "wake_sim", "sync_sim", "key_sim_test")
 LINE = re.compile(r"^\s*\+\s*(\d+) ms (.*)$")
 TEXT_MASK = re.compile(r"^(watchdog run-time:|MCU init: crystal clock, watchdog N).*")      # texts #162 step 1 made live: compare by prefix
 SIM_LIMIT_S = 300          # one sim: gates run each in 5-25 s; 12x margin, expiry = FAIL
+MILESTONES = (("panel VDD on", r"panel VDD switched on"), ("first main-loop pass", r"first main-loop pass"),
+              ("console opened", r"console opened"), ("eDP link trained", r"eDP-1 panel link trained"),
+              ("stream running", r"video stream to the panel running"), ("backlight on (pin)", r"^backlight on$"),
+              ("mode INITIAL", r"^mode INITIAL"), ("mode SEARCH", r"^mode SEARCH"), ("display setting", r"^display setting$"),
+              ("mode ACTIVE", r"^mode ACTIVE"), ("backlight pin edges", None))
 
 
 def say(s):
@@ -37,16 +44,38 @@ def lines(sim, binp: Path):
     return out
 
 
+def table(sim, pa: Path, la, pb: Path, lb):
+    import re as _re
+    for p, ls in ((pa, la), (pb, lb)):
+        out = ROOT / "tmp/sim_timelines" / f"{p.stem}.{sim}.lines.txt"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text("".join(f"+{t:6d} ms {x}\n" for t, x in ls))
+        say(f"  {sim}: {len(ls)} lines -> {out}")
+    say(f"  {sim} milestones (first match, ms): {pa.stem} | {pb.stem}")
+    for name, pat in MILESTONES:
+        if pat is None:
+            f = lambda ls: sum(1 for _, x in ls if x in ("backlight on", "backlight off"))
+            say(f"    {name:22s} {f(la):>6} | {f(lb):>6}")
+            continue
+        f = lambda ls: next((t for t, x in ls if _re.search(pat, x)), None)
+        va, vb = f(la), f(lb)
+        say(f"    {name:22s} {'-' if va is None else va:>6} | {'-' if vb is None else vb:>6}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("a", type=Path)
     ap.add_argument("b", type=Path)
     ap.add_argument("--tol-ms", type=int, default=1)
     ap.add_argument("--sims", nargs="*", default=list(SIMS))
+    ap.add_argument("--table", action="store_true", help="intended changes: dump lines + milestone table, no verdict")
     a = ap.parse_args()
     bad = 0
     for sim in a.sims:
         la, lb = lines(sim, a.a), lines(sim, a.b)
+        if a.table:
+            table(sim, a.a, la, a.b, lb)
+            continue
         diffs = []
         if [t for _, t in la] != [t for _, t in lb]:
             diffs.append(f"event order / text differs ({len(la)} vs {len(lb)} lines)")

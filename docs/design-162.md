@@ -47,3 +47,31 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 4. Signal-loss hold: keep L1 (backlight off, fast return) inside the new owners; L2 / L3 fold into the machine's NO SIGNAL → power-saving timers.
 5. Wake poll: Timer0 event every 5 ms; the 14 main-loop sites go.
 6. Order: time base → panel machine + M2PLL early → mode/power machine → OSD owner → wake → source model → NVRAM / log.
+
+## Step 2: panel machine (wb-p14ui-s2, 2026-11-12)
+- Owner: `UserCommonInterfacePanelPowerAction(event)` = request (idempotent, returns at once, logs 10 04..0B); `UserCommonInterfacePanelPowerTick()` = the only driver (UserCommonInterface.c). Ticks: main loop after `SysPowerHandler` and before the OSD handler, console open (map clear, font load, log init), each request.
+- States (`AWTO_PNL_*`, RL6449_Project.h); each wait is an `AwtoMs()` due check from the step's action time:
+
+| state | entry action | leaves when | wait from |
+|---|---|---|---|
+| OFF | - | target > off | - |
+| VDD | VDD pin on | T1 and power status NORMAL | registry PANEL_T1 |
+| HPD | DPTx power seq, PHY on | HPD high (one read per tick), or T2 (line 12 00, train anyway) | PANEL_T2 |
+| LINK | link training, background on, stream on | one step | - |
+| VIDEO | - | target BL (-> T3) / off (-> T4) | - |
+| T3 | - | T3 since the stream start | PANEL_T3_OWN with own frame, else PANEL_T3 |
+| BL_PWM | backlight pin on | backlight-to-PWM | `_PANEL_POWER_ON_BL_TO_PWM` |
+| BL_ON | PWM = user duty | target < BL | - |
+| BL_OFF | PWM dark | PWM-to-backlight, then pin off -> VIDEO (stream kept) or T4 | `_PANEL_POWER_OFF_PWM_TO_BL` |
+| T4 | DPTx BL-off seq | T4, then stream idle | PANEL_T4 |
+| T5 | - | T5, then SSC / PHY / VDD off | PANEL_T5 |
+| T6 | - | T6 | PANEL_T6 |
+
+- SDK status (READY / ALREADY for `UserCommonInterfaceReadyForActive`) derived from the state; ReadyForActive requests video when the target is off (replaces the display-setting `_PANEL_ON`).
+- Power: `SysPowerHandler` waits (non-blocking) for the panel down before NORMAL/AC_ON -> OFF/SAVING; up-requests meanwhile are deferred (line 12 05) and the level restored if the target is withdrawn. Requests at OFF_TO_NORMAL (BL) and PS_TO_NORMAL (video); boot request after pin-share.
+- Removed second drivers: `AwtoPanelVddEarly`, INITIAL `AWTO_BOOT_PANEL_ON`, display-setting `_PANEL_ON`, L1 pin writes, L2 `AwtoL2LinkOff/On` + `AwtoHoldBacklightSdk`, `AWTO_BL_OFF_OR_BLANK`, `AwtoDiagPanelT3Wait`, blocking HPD poll, `UserInterfaceAdjustWaitPanelT1..T5`, panel SDK timer events; `UserAdjustBacklight` writes PWM through the machine.
+- Hidden blink: SDK `_BACKLIGHT_ON` held `#if(_USER_PROJECT_TYPE == UNITED_RTD2785_C23_LG_LM240WU8_SLE1_2LVDS_PWM)`; both undefined, so `0 == 0`: pin off, 10 ms, on, on every backlight-on call (the m15 / s1 blinks).
+- Hold: L1 = BL_OFF / BL_ON requests; after `usL2Sec` the SDK no-signal -> power-saving path (L3 gone).
+- M2PLL early: `SysPowerMcuClock` after `ScalerMcuInitial`; crystal around the whole-chip reset (regdb HOST_CTRL soft_reset resets all registers but HOST_CTRL, incl. M2PLL); M2PLL again after IOSC trimming.
+- Gate `panel` (scripts/panel_sim.py): writes to VDD / backlight pins / PWM4 and DPTx link / stream / PHY calls only with `g_ucAwtoPanelOwn`; no blink; one link training per bring-up; T3 / T4+T5 / T6 kept; power off during display setting. Sim panel model: `fw_sim.EdpPanel` (HPD 115 ms after VDD, #78).
+- Measurements: #162 comment of 2026-11-12 (sim and unit 2 tables).

@@ -662,6 +662,45 @@ PORT_DDC = {"D1": 2, "D2": 3, "D3": 4}                       # IIC_CH_SEL value 
 CABLE = {"D2": {0xFE32: 0, 0xFE2C: 1}, "D3": {0xFE32: 1, 0xFE2C: 0}}
 
 
+class EdpPanel(Dev):
+    """eDP panel on DPTx1 (awto-ddc#162): HPD (P9C_70 bit2, what ScalerDisplayDPTx*HotPlug* reads) high HPD_MS after panel VDD
+    (P7.2 = FE1A) goes on, low again with VDD off. HPD_MS 115: unit 3 VDD -> HPD (#78). dw8051 core only (real ms from
+    m.wall_ms); without it HPD stays low (the firmware's T2 bound ends the wait, as before this model). No AUX / link model."""
+    writes = (0xFE1A,)
+    HPD_MS, HPD_REG, HPD_BIT, VDD = 115, 0x9C70, 0x04, 0xFE1A
+
+    def __init__(self):
+        self.on_at, self.deadline, self.hpd, self.edges = None, 0, False, []
+        self.listeners = []                      # fn(m, on): panel gate (panel_sim.py) sees each VDD write
+
+    def init(self, m):
+        self.on_at, self.deadline, self.hpd = None, 0, False
+
+    def _set(self, m, v: bool):
+        c = m.rd(self.HPD_REG)[0]
+        m.wr(self.HPD_REG, bytes([(c | self.HPD_BIT) if v else (c & ~self.HPD_BIT & 0xFF)]))
+        self.hpd = v
+
+    def on_write(self, m, a):
+        wall = getattr(m, "wall_ms", None)
+        on = bool(m.rd(self.VDD)[0] & 1)
+        self.edges.append((wall, on))
+        for fn in self.listeners:
+            fn(m, on)
+        if on and self.on_at is None and wall is not None:
+            self.on_at, self.deadline = wall, wall + self.HPD_MS
+        elif not on:
+            self.on_at, self.deadline = None, 0
+            if self.hpd:
+                self._set(m, False)
+
+    def tick(self, m):
+        wall = getattr(m, "wall_ms", None)
+        if self.on_at is not None and not self.hpd and wall is not None and wall >= self.on_at + self.HPD_MS:
+            self._set(m, True)
+            self.deadline = 0
+
+
 FAULTS = {"underflow": {0x0002: 0x01}}      # name -> sticky flag bits (address -> mask), see W1C
 
 
@@ -674,7 +713,7 @@ def video_devs(img: bytes, mode: str = "1080p60", fault: str | None = None, port
     return [regdb_cells(), FlashDev(img), IicSlave(), Cells(CABLE[port]),
             IndPort((0xBAC1, 0xBAC2, 0xBAC3), 0xBAC4),
             W1C({0x0002: 0xFF, 0x000C: 0x01, 0x1603: 0xFF, 0x1616: 0x70, 0x3003: 0xF0, 0x3016: 0x70},
-                FAULTS[fault] if fault else None), hdmi, ChipReset(), FlashHalt()], hdmi
+                FAULTS[fault] if fault else None), hdmi, ChipReset(), FlashHalt(), EdpPanel()], hdmi
 
 
 def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):

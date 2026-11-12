@@ -1011,6 +1011,9 @@ class Runner:
             return
         t, bad, txt = self.t, 0, []
         ip0 = t.sfr(0xB8)
+        # the SDK cancels / re-arms RR D2 (id 4) itself around its first ACTIVE on D2; after the reboot in `clear` that is
+        # ~0.7-1.2 s in (faster boot, #162 step 2): settle 1.5 s (1.2 x 1.25) so the hook's RR D2 is the only one
+        t.run_ms(1500)
 
         only = os.environ.get("WDT_TEST_SUB")          # debug: run only the sub-cases whose label starts with these (comma list)
 

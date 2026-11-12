@@ -162,8 +162,10 @@ def main():
         h, lines = r.episode("power key on")
         txt = "\n".join(lines)
         r.check(h["kind"] == 4, "power key episode", f"kind {h['kind']}")
-        for want in ("mode INITIAL", "backlight on requested", "panel on requested", "mode ACTIVE"):
-            r.check(want in txt, f"power key log has '{want}' (episode began before the INITIAL handler)")
+        # #162 step 2: the panel machine's first step ('panel: OFF -> VDD') replaces the display-setting 'panel on requested'
+        for want in ("mode INITIAL", "backlight on requested", ("panel on requested", "panel: OFF -> VDD"), "mode ACTIVE"):
+            alt = want if isinstance(want, tuple) else (want,)
+            r.check(any(w in txt for w in alt), f"power key log has '{' or '.join(alt)}' (episode began before the INITIAL handler)")
         d = C.decode(C.read(r.s.bus, r.caddr))
         say(f"  measured, watchdog: {C.ages(d)}")
         r.check(r.cr.resets == 0, "no chip reset (watchdog) over power-on, selector and two switches", f"resets {r.cr.resets}")

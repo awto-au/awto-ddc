@@ -1,0 +1,264 @@
+#!/usr/bin/env python3
+"""Panel owner gate (awto-ddc#162 step 2) in fw_sim: one driver of panel VDD, eDP-1 link / stream, backlight pin and PWM.
+
+usage: AWTO_SIM_CORE=fast panel_sim.py BIN MAP [--mode 1080p60] [--tree DIR] [--report]
+Scenario (dw8051 core, eDP panel model fw_sim.EdpPanel): cold boot -> ACTIVE; POWER off (test cmd 0x3E) and on after the
+panel's T6; signal lost (L1 hold) and back; power saving (target SAVING) and a SOURCE-key wake.
+Recorded: every write to the panel VDD pin (FE1A), backlight pins (FE25 / FE2A), backlight PWM4 duty (FF50), and every call of
+the DPTx link / stream / PHY functions, each with the firmware's g_ucAwtoPanelOwn (1 = written by the panel machine).
+FAIL (gate): a write or call outside the machine after its first step; a firmware 'outside the panel machine' line; a
+backlight blink (pin off -> on with no panel-off between); a link training outside a panel bring-up; backlight on sooner than
+T3 after the stream start; VDD off sooner than T4 + T5 after backlight off; VDD on sooner than T6 after VDD off.
+--report: print the timeline only (old images have no owner flag; nothing is judged). Log: tmp/logs/panel_sim.log
+"""
+import argparse
+import re
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fw_sim as S  # noqa: E402
+import osd_test as T  # noqa: E402
+import sync_log as L  # noqa: E402
+
+ROOT = Path(__file__).resolve().parents[1]
+LOG = ROOT / "tmp/logs/panel_sim.log"
+VDD, BL, BL_EN_N, PWM4 = 0xFE1A, 0xFE25, 0xFE2A, 0xFF50      # RL6449_AWTO_JXC4K.h P7.2 / P8.5 / P9.2; Project_Option.h PWM4 duty
+DPTX_FNS = ("ScalerDisplayDPTxLinkSequence", "ScalerDisplayDPTxStreamHanlder", "ScalerDisplayDPTxPhyInitial",
+            "ScalerDisplayDPTxAnalogPhyConrol", "ScalerDisplayDPTxSSCSet")
+POWER_KEY, K_SOURCE = 0x3E, 0x05                             # test cmds (awto_testcmd.inc): POWER key, injected SOURCE
+PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
+MODE_DS, MODE_ACTIVE = 2, 3
+# Panel times: registry defaults in fw/sdk/Panel/AWTO_LTM270FL01.h (read from --tree when given); T3 own frame = registry
+# PANEL_T3_OWN default (RL6449_Project.h AWTO_T3_OWN_PATTERN_MS).
+PANEL = {"T3_OWN": 20, "T4": 250, "T5": 20, "T6": 1100}
+# Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off incl. T4 + T5 + flash
+# flush ~0.6 s x2; signal-loss hold: L1 needs one judge run (10 ms slow path) + a pass; settle 1 s.
+BOOT_INSTR = 160_000_000
+# Wake: SDK auto search after PS_TO_NORMAL = DP dwell 3 s (D1) + HDMI 2 s worst, sim 4.2 s seen (s2-2) x1.25 -> 5.5 s.
+OFF_MS, ON_MS, SETTLE_MS, HOLD_MS, PS_MS, WAKE_MS = 1500, 3000, 1000, 1500, 3000, 5500
+STEP = 20_000
+
+
+def say(s):
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+    print(s, flush=True)
+
+
+def panel_times(tree):
+    h = Path(tree) / "fw/sdk/Panel/AWTO_LTM270FL01.h" if tree else None
+    if h and h.is_file():
+        for k, v in re.findall(r"#define\s+_PANEL_POWER_(?:ON|OFF)_(T[3-6])\s+(\d+)", h.read_text()):
+            if k in PANEL:
+                PANEL[k] = int(v)
+    return PANEL
+
+
+class PinWatch(S.Dev):
+    """Writes to the backlight pins and PWM4 duty; VDD comes from fw_sim.EdpPanel (one Dev per address)."""
+
+    def __init__(self, run):
+        self.run, self.writes = run, (BL, BL_EN_N, PWM4)
+
+    def on_write(self, m, a):
+        v = m.rd(a)[0]
+        name = {BL: "BL pin", BL_EN_N: "BL_EN_N pin", PWM4: "PWM4 duty"}[a]
+        self.run.rec(name, v)
+
+
+class Run:
+    def __init__(self, a):
+        self.a, self.fails, self.events, self.phase = a, 0, [], "boot"
+        w1c = S.W1C({0xFE69: 0x01, 0xFFE5: 0x01, 0xFE72: 0x01, 0xB7DC: 0x01, 0xBADC: 0x01})    # wake latches as wake_sim.py: no stale latch
+        self.bus = S.SimBus(a.bin, a.map, "panel-" + a.bin.stem, None, boot=False, devs=[PinWatch(self), w1c], video=a.mode)
+        self.m = self.bus.m
+        mt = self.m.map_text
+        self.own = self.m.addr("g_ucAwtoPanelOwn") if re.search(r"\s_g_ucAwtoPanelOwn\b", mt) else None
+        self.pwr = self.m.addr("g_stPowerInfo")
+        self.diag = T.diag_addr(a.map)
+        self.ring = L.sym(a.map, "g_stAwtoSync")
+        self.rows = L.load_rows(L.tsv_for(a.map))
+        self.panel = next(d for d in self.m.devs if type(d).__name__ == "EdpPanel")
+        self.panel.listeners.append(lambda m, on: self.rec("VDD pin", int(on)))
+        for fn in DPTX_FNS:
+            if "_" + fn in self.m.sym:
+                self.m.stub(fn, lambda m_, r, fn=fn: self.rec(fn.replace("ScalerDisplayDPTx", "DPTx "), r["r"][7] & 1) and None)
+        pre = self.m.sym.get("_ScalerTMDSNormalPreDetect", 0) & 0xFFFF
+        self.signal = True
+        if pre in self.m.stubs:                      # video_stubs' pre-detect: answer by the signal switch
+            b, n, f = self.m.stubs[pre][0]
+            self.m.stubs[pre][0] = (b, n, lambda m_, r, f=f: f(m_, r) if self.signal else {"carry": 0})
+        self.lines_seen = []
+
+    def t(self):
+        return self.bus._t2()
+
+    def rec(self, what, val):
+        own = self.m.rd(self.own)[0] if self.own is not None else None
+        self.events.append((self.t(), self.phase, what, val, own))
+
+    def check(self, ok, what, detail=""):
+        say(f"  {'PASS' if ok else 'FAIL'} {what}{(': ' + detail) if detail else ''}")
+        self.fails += 0 if ok else 1
+
+    def cmd(self, c):
+        addr = self.diag + T.TESTCMD_OFF
+        b = self.bus
+        return b.write(0x6A, 0x01, bytes([addr >> 8])) and b.write(0x6A, 0x03, bytes([c])) and b.write(0x6A, 0x3B, bytes([addr & 0xFF]))
+
+    def power(self):
+        return self.m.rd(self.pwr)[0] >> 4
+
+    def until(self, cond, ms):
+        t0 = self.t()
+        while self.t() - t0 < ms:
+            if cond():
+                return True, self.t() - t0
+            self.m.run(STEP)
+        return cond(), self.t() - t0
+
+    def ring_lines(self, title):
+        h, lines = L.decode(L.read_ring(self.m.rd, self.ring), self.rows)
+        new = [x for x in lines if x not in self.lines_seen]
+        self.lines_seen += new
+        say(f"  ring ({title}): {len(new)} new lines")
+        for x in new:
+            say(f"    {x}")
+        return new
+
+    def stable_detect(self, ok: bool):
+        if "_ScalerTMDSStableDetect" in self.m.sym and getattr(self.m, "hle", True):
+            self.m.patch_const("ScalerTMDSStableDetect", 1 if ok else 0)
+
+    def scenario(self):
+        ok = self.bus.run_until_mode(MODE_ACTIVE, BOOT_INSTR)
+        self.check(ok, "cold boot: ACTIVE")
+        self.bus.dbg_link_on()
+        self.bus.wait(SETTLE_MS / 1000)
+        self.ring_lines("cold boot")
+        self.phase = "power off"
+        self.cmd(POWER_KEY)
+        ok, ms = self.until(lambda: self.power() == PWR_OFF, OFF_MS)
+        self.check(ok, "POWER key: power OFF", f"{ms} ms")
+        self.bus.wait((PANEL["T6"] + 200) / 1000)
+        self.ring_lines("power off")
+        self.phase = "power on"
+        self.cmd(POWER_KEY)
+        ok, ms = self.until(lambda: self.bus.mode_state() == MODE_ACTIVE, ON_MS)
+        self.check(ok, "POWER key: ACTIVE again", f"{ms} ms")
+        self.bus.wait(SETTLE_MS / 1000)
+        self.ring_lines("power on")
+        self.phase = "off in DS"                     # POWER off while display setting asks for video: power-down wins (no ping-pong)
+        self.cmd(POWER_KEY)
+        self.bus.wait((PANEL["T6"] + 200) / 1000)
+        self.cmd(POWER_KEY)
+        ok, _ = self.until(lambda: self.bus.mode_state() == MODE_DS, ON_MS)
+        self.check(ok, "POWER on again: DISPLAY SETTING reached")
+        self.cmd(POWER_KEY)
+        ok, ms = self.until(lambda: self.power() == PWR_OFF, OFF_MS)
+        self.check(ok, "POWER key during DISPLAY SETTING: power OFF", f"{ms} ms")
+        self.bus.wait((PANEL["T6"] + 200) / 1000)
+        self.ring_lines("off in display setting")
+        self.phase = "power on 2"
+        self.cmd(POWER_KEY)
+        ok, ms = self.until(lambda: self.bus.mode_state() == MODE_ACTIVE, ON_MS)
+        self.check(ok, "POWER key: ACTIVE again", f"{ms} ms")
+        self.bus.wait(SETTLE_MS / 1000)
+        self.ring_lines("power on 2")
+        self.phase = "signal lost"
+        self.signal = False
+        self.stable_detect(False)
+        self.bus.wait(HOLD_MS / 1000)
+        self.ring_lines("signal lost")
+        self.phase = "signal back"
+        self.signal = True
+        self.stable_detect(True)
+        ok, ms = self.until(lambda: self.bus.mode_state() == MODE_ACTIVE and self.panel_state() == 7, HOLD_MS)
+        self.bus.wait(SETTLE_MS / 1000)
+        self.check(ok and self.bus.mode_state() == MODE_ACTIVE, "signal back: ACTIVE, backlight on", f"{ms} ms")
+        self.ring_lines("signal back")
+        self.phase = "power saving"
+        b = self.m.rd(self.pwr)[0]
+        self.m.wr(self.pwr, bytes([(b & 0xF0) | PWR_SAVING]))
+        ok, ms = self.until(lambda: self.power() == PWR_SAVING, PS_MS)
+        self.check(ok, "power saving reached", f"{ms} ms")
+        self.bus.wait(0.3)
+        self.ring_lines("power saving")
+        self.phase = "wake"
+        self.cmd(K_SOURCE)
+        ok, ms = self.until(lambda: self.bus.mode_state() == MODE_ACTIVE, WAKE_MS)
+        self.check(ok, "SOURCE key wake: ACTIVE", f"{ms} ms")
+        self.bus.wait(SETTLE_MS / 1000)
+        self.ring_lines("wake")
+
+    def panel_state(self):
+        try:
+            return self.m.rd(self.m.addr("s_ucPnlState"))[0]
+        except S.SimError:
+            return 7                                 # static: not in the map; the ring lines carry it
+
+    def judge(self):
+        ev = self.events
+        say("  timeline (fw ms, phase, write / call, value, owner flag):")
+        for t, ph, w, v, o in ev:
+            say(f"    {t:7d} {ph:13s} {w:22s} {v:3d} {'-' if o is None else o}")
+        if self.a.report or self.own is None:
+            say("  report only (no g_ucAwtoPanelOwn in this image)" if self.own is None else "  report only")
+            return
+        first = next((i for i, e in enumerate(ev) if e[4] == 1), None)
+        outside = [e for e in ev[first or 0:] if e[4] == 0]
+        ev = ev[first or 0:]                         # before the machine's first step: boot pin init (ScalerMcuInitial)
+        self.check(first is not None and not outside, "every panel pin / PWM write and DPTx call after the machine's first step is the machine's",
+                   "; ".join(f"{t} {ph} {w}={v}" for t, ph, w, v, _ in outside[:6]))
+        txt = "\n".join(self.lines_seen)
+        self.check("outside the panel machine" not in txt, "firmware logged no 'outside the panel machine' line")
+        bl = [(t, ph, v) for t, ph, w, v, _ in ev if w == "BL pin"]
+        vdd = [(t, ph, v) for t, ph, w, v, _ in ev if w == "VDD pin"]
+        blink = [(a, b) for a, b in zip(bl, bl[1:]) if a[2] == 0 and b[2] == 1 and
+                 not any(a[0] <= t <= b[0] and v == 0 for t, _, v in vdd) and a[1] == b[1] and a[1] not in ("signal back",)]
+        self.check(not blink, "no backlight blink (pin off -> on inside one phase without a panel off)", str(blink[:3]))
+        links = [(t, ph) for t, ph, w, v, _ in ev if w == "DPTx LinkSequence"]
+        per = {ph: sum(1 for _, p in links if p == ph) for ph in ("boot", "power on", "power on 2", "signal lost", "signal back", "wake")}
+        self.check(per["boot"] == 1 and per["power on"] == 1 and per["power on 2"] == 1 and per["signal lost"] == 0 and per["signal back"] == 0 and per["wake"] <= 1,
+                   "eDP link trained once per panel bring-up (none at display setting, none in the L1 hold)", str(per))
+        vid = [t for t, ph, w, v, _ in ev if w == "DPTx StreamHanlder" and v == 1]      # stream start (fw ms)
+        blon = [t for t, ph, v in bl if v == 1]
+        gaps = [b - max(v for v in vid if v <= b) for b in blon if any(v <= b for v in vid)]
+        self.check(gaps and min(gaps) >= PANEL["T3_OWN"], f"backlight on >= T3 ({PANEL['T3_OWN']} ms own frame) after the stream start",
+                   f"stream -> backlight {gaps} ms")
+        offs = []                                    # backlight off -> the VDD off that follows with no backlight on between
+        for x in (x for x in bl if x[2] == 0):
+            v = next((y for y in vdd if y[0] >= x[0] and y[2] == 0), None)
+            if v and not any(x[0] < t < v[0] and val == 1 for t, _, val in bl):
+                offs.append((x[0], v[0]))
+        self.check(all(v - b >= PANEL["T4"] + PANEL["T5"] for b, v in offs), f"VDD off >= T4 + T5 ({PANEL['T4'] + PANEL['T5']} ms) after backlight off",
+                   str([v - b for b, v in offs]))
+        t6 = [(b[0] - a[0]) for a, b in zip(vdd, vdd[1:]) if a[2] == 0 and b[2] == 1]
+        self.check(all(x >= PANEL["T6"] for x in t6), f"VDD on >= T6 ({PANEL['T6']} ms) after VDD off", str(t6))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("bin", type=Path)
+    ap.add_argument("map", type=Path)
+    ap.add_argument("--mode", default="1080p60")
+    ap.add_argument("--tree", help="worktree: panel T-values from fw/sdk/Panel/AWTO_LTM270FL01.h")
+    ap.add_argument("--report", action="store_true", help="timeline only, no verdict (old images)")
+    a = ap.parse_args()
+    panel_times(a.tree)
+    say(f"panel_sim {a.bin.name} (panel {PANEL})")
+    r = Run(a)
+    try:
+        r.scenario()
+        r.judge()
+    finally:
+        r.bus.close()
+    say(f"{'PASS' if r.fails == 0 else 'FAIL'} panel_sim {a.bin.name}: {r.fails} failed")
+    return 1 if r.fails else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -472,6 +472,8 @@ class FastMachine:
                     left = (getattr(d, "deadline", 0) - self.wall_ms) * self.clock.f_cpu / 1000.0
                     if 0 < left:
                         n = min(n, max(1, int(left / self._avg_clk)))      # last chunk's clk per instruction: a worst-case cap would creep up on the deadline
+                    elif getattr(d, "deadline", 0) > 0:
+                        n = 1                                  # deadline passed, not yet ticked: tick before a full chunk (awto-ddc#162 crash 0x4C overshoot)
                     continue
                 left = getattr(d, "deadline", 0) - self.ticks // 12      # <= 4 cycles per instr
                 if 0 < left:
