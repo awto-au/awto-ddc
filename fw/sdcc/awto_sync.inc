@@ -295,7 +295,10 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
     g_stAwtoSync.ucKind = ucKind;
     g_stAwtoSync.ucPort = ucPort;
     g_stAwtoSync.ucDone = 0;
-    g_stAwtoSync.ucOpenReq = 1;
+    if(g_stAwtoSync.ucOpenReq != AWTO_SYNC_OPEN_KEY)
+    {
+        g_stAwtoSync.ucOpenReq = 1;
+    }
     for(ucI = 0; ucI < 3; ucI++)
     {
         s_pucAwtoSyncDet[ucI] = _SOURCE_NONE << 1;
@@ -799,6 +802,11 @@ void AwtoSyncPoll(void)                             // power status changed (AWT
 #if(_AWTO_PS_WAKE == _ON)
         AwtoSyncPush(AWTO_SYNC_EV_SDKWAKE, SysSourceGetInputPort(), AwtoPsWakeState());   // not our poll: the SDK's detect
 #endif
+        if(g_stAwtoSync.ucOpenReq == AWTO_SYNC_OPEN_KEY)
+        {
+            AwtoBootConsole();                          // #132 UP+DOWN wake: the console at power NORMAL, as a source-event wake
+            UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+        }
     }
     else if((ucP == _POWER_STATUS_OFF) || (ucP == _POWER_STATUS_SAVING))
     {

@@ -451,7 +451,6 @@ extern __xdata StAwtoKey g_stAwtoKey;
 #define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
 #define AWTO_KEY_RATE_MS                                        100     // then one REPEAT per this: 10 steps / s, a 0..100 slider in 10 s; the SDK repeated every main pass
-#define AWTO_INFO_POPUP_MS                                      6000    // DOWN info pop-up: closes this long after opening, regardless of keys
 #define AWTO_KEY_Q_N                                            4       // injected keys waiting for the next AwtoKeyPoll (one per host write; power of 2)
 extern void AwtoKeyPoll(void);
 extern void AwtoKeyInject(unsigned char ucMsg);
@@ -669,6 +668,14 @@ extern void AwtoDeadPortPoll(void);
 extern void AwtoSourceOpen(void);
 // #139 selector, no picture: waits for a key; same 60 s as AWTO_L2_SEC (Dan's panel-off default), x1; expiry = SDK power-saving card, sleep
 #define AWTO_SRC_SLEEP_SEC                                      60
+#define AWTO_SRC_IDLE_COMMIT_MS                                 2000    // selector: highlighted input taken after this long with no key (Dan, 2026-11-12, #132)
+extern void AwtoSourceAuto(unsigned char ucWho);                // auto source select: the selector's Auto row, the AUTO key (#132)
+extern void AwtoSourceIdle(void);                               // OSD_DISABLE timer with the selector open: idle commit
+#define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
+#define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
+extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
+extern void AwtoBlClose(void);                                  // close it; the value is stored at the NVRAM gate
+extern void set_nv_commit(unsigned char ucShow);
 extern unsigned char AwtoSwCacheValid(unsigned char ucPort);
 // #79 runtime swap: DDC/CI (IIC_1) owns the active port's DDC; VCP E3 = A5 NN (test cmd 0x3C) moves the
 // debug slave 0x35 there for NN minutes (FF = until told back); test cmd 0x3B = back to DDC/CI now. Parked engine: DDC0.
@@ -936,7 +943,7 @@ typedef struct
     unsigned char ucT0Hi;                       // usT2Isr at its start
     unsigned char ucT0Lo;
     unsigned char ucDone;                       // mode reached ACTIVE / NOSIGNAL / NOSUPPORT / POWER SAVING since the start
-    unsigned char ucOpenReq;                    // console auto-open pending (awto_osdcard.inc AwtoSyncConPoll)
+    unsigned char ucOpenReq;                    // console auto-open pending (awto_osdcard.inc AwtoSyncConPoll); AWTO_SYNC_OPEN_KEY = by UP+DOWN
     unsigned char ucSpare;                      // #150: repeats of the last line pair not yet written (AwtoSyncPush)
     unsigned char ucN;                          // AWTO_SYNC_N: entries in the ring (hosts size the read from this)
     unsigned char ucWrap;                       // AWTO_SYNC_WRAP
@@ -1086,6 +1093,7 @@ extern void AwtoPsPollSite(void);
 #define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
+#define AWTO_SYNC_OPEN_KEY                                      2       // ucOpenReq: UP+DOWN in power saving (#132): opens once awake, whatever the setting
 extern void AwtoOsdSyncPoll(void);
 extern void AwtoConLogSync(void);
 // per pass: call only with work to do (console open, auto-open pending, selector open); a call every pass costs loop rate (#139)
@@ -1352,6 +1360,9 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_BY_DIRECT                                      0x19    // power target found without a request (host / sim poke)
 #define AWTO_SYS_BY_HOLD_TRIES                                  0x1A    // hold released: fast wakes used up (BY_HOLD = L2 time)
 #define AWTO_SYS_BY_HOLD_AUTO                                   0x1B    // hold released: auto search, another cable
+#define AWTO_SYS_BY_KEY_AUTO                                    0x1C    // AUTO with nothing open: auto source select (#132)
+#define AWTO_SYS_BY_KEY_CONSOLE                                 0x1D    // UP+DOWN in power saving: wake into the console (#132)
+#define AWTO_SYS_BY_SELECTOR_IDLE                               0x1E    // selector: highlighted input taken after AWTO_SRC_IDLE_COMMIT_MS (#132)
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24

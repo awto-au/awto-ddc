@@ -1,7 +1,7 @@
 // AWTO user-facing OSD screens on the awto text layer (awto_dbgpop.inc helpers, menu font and colours), inserted into
 // RTD2014OsdDisplay.c after awto_dbgpop.inc. The SDK timers and OSD states drive them as before; only the drawing is ours.
-// - Message cards (#124): OsdDispOsdMessage (the SDK body is removed by keil2sdcc), incl. the DOWN / ACTIVE input-info card.
-// - Source selector (#134): one row per board port + Auto.
+// - Message cards (#124): OsdDispOsdMessage (the SDK body is removed by keil2sdcc), incl. the ACTIVE input-info card.
+// - Source selector (#134): one row per board port + Auto. Backlight bar (#132): UP / DOWN with a picture.
 #if((_AWTO_DIAG != _ON) || !defined(_AWTO_NEW_SETTINGS))
 #error "awto_osdcard.inc draws on the awto text layer (awto_dbgpop.inc, _AWTO_NEW_SETTINGS)"
 #endif
@@ -36,6 +36,8 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_WIN_TITLE      2
 #define AWTO_WIN_HL         5
 #define AWTO_T_STYLE_DIM    1
+#define AWTO_BAR_SURFACE    0                   // osd_tc_bar colours = awto-rtdfw osd.h AWTO_BAR_SURFACE / AWTO_BAR_ACCENT
+#define AWTO_BAR_ACCENT     1
 
 // Fixed texts: one table, read only by AwtoCardTxt (a constant read through a pointer sits in its reader's bank, awto-sdcc#39).
 #define AWTO_CT_INPUT       0
@@ -74,13 +76,14 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_CT_NOLINK      55
 #define AWTO_CT_TMDS        56
 #define AWTO_CT_SAVING      57
+#define AWTO_CT_BACKLIGHT   58
 static const __code char tAwtoCardS[] =
     "Input\0Auto select\0DP-1\0HDMI-\0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
     "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
     "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
     " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0"
     "idle\0search\0scan\0stable\0measure\0timing ok\0display set\0active\0no signal\0no support\0sleep\0off\0fast path\0init\0"
-    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0";
+    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0Backlight\0";
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -762,7 +765,6 @@ static bit AwtoSourceNoPicture(void)            // power saving / no signal / no
 // AWTO_SRC_SLEEP_SEC without a key, the SDK power-saving card (2 s) and power saving. With a picture: no timer.
 static void AwtoSrcSleepArm(void)
 {
-    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
     if(AwtoSourceNoPicture() == _TRUE)
     {
         ScalerTimerReactiveTimerEvent(SEC(AWTO_SRC_SLEEP_SEC), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
@@ -773,9 +775,11 @@ static void AwtoSrcSleepArm(void)
     }
 }
 
-// The one way in (SOURCE, UP with a picture, OSD event 7 = no signal / wake): preset to the current input (Auto while auto-scanning).
+// The one way in (SOURCE, OSD event 7 = no signal / wake): preset to the current input (Auto while auto-scanning).
+// Opening alone arms no idle commit: the selector stays (#139) until a step key starts the AWTO_SRC_IDLE_COMMIT_MS wait.
 void AwtoSourceOpen(void)
 {
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
     if(SysSourceGetScanType() == _SOURCE_SWITCH_AUTO_IN_GROUP)
     {
         SET_OSD_INPUT_PORT_OSD_ITEM(_OSD_INPUT_AUTO);
@@ -824,74 +828,150 @@ static void AwtoSourceClose(void)
     }
 }
 
-// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129).
-void AwtoSourceKey(BYTE ucKey)
+// Auto source select (#132): the selector's Auto row and the AUTO key with nothing open. The SDK auto search takes the first input
+// with a signal; the scan type is stored at the gate ("Saving to memory"). ucWho = AWTO_SYS_BY_* of the request line.
+void AwtoSourceAuto(BYTE ucWho)
+{
+    SET_OSD_INPUT_PORT_OSD_ITEM(_OSD_INPUT_AUTO);
+    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
+    SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
+    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, ucWho);
+    UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+    AwtoNvCommitSel();                          // #151: the chosen input is stored at the gate ("Saving to memory")
+}
+
+// Take the highlighted item: AUTO key (AWTO_SYS_BY_SELECTOR) or the idle commit (AWTO_SYS_BY_SELECTOR_IDLE).
+static void AwtoSourceTake(BYTE ucWho)
 {
     BYTE ucItem = GET_OSD_INPUT_PORT_OSD_ITEM();
     BYTE ucPort;
 
-    if((ucKey == _RIGHT_KEY_MESSAGE) || (ucKey == _LEFT_KEY_MESSAGE))  // UP / DOWN: step
+    if(GET_OSD_DP_VERSION_HOTKEY_DISP() != _OFF)
+    {
+        return;
+    }
+    if(g_usBackupValue == ucItem)
+    {
+        AwtoSourceClose();
+    }
+    else if(ucItem == _OSD_INPUT_AUTO)
+    {
+        AwtoSourceAuto(ucWho);
+    }
+    else
+    {
+        ucPort = (ucItem >= _OSD_INPUT_D0) ? (ucItem - _OSD_INPUT_D0 + _D0_INPUT_PORT) : _NO_INPUT_PORT;
+        if(ucPort == _NO_INPUT_PORT)
+        {
+            return;                             // not a port of this board: the selector stays up
+        }
+        if(AwtoPortCable(ucPort) == _FALSE)
+        {
+            AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: no cable on the chosen port: refused, the selector stays up
+            AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
+            return;
+        }
+        SET_FORCE_POW_SAV_STATUS(_FALSE);
+        SysSourceSwitchInputPort(ucPort);
+        SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, ucWho);
+        UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
+        UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
+        AwtoNvCommitSel();                      // #151: the chosen input is stored at the gate ("Saving to memory")
+    }
+    SET_OSD_STATE(_MENU_NONE);
+}
+
+void AwtoSourceIdle(void)                       // OSD_DISABLE timer, selector open: no key for AWTO_SRC_IDLE_COMMIT_MS
+{
+    AwtoSourceTake(AWTO_SYS_BY_SELECTOR_IDLE);
+}
+
+// Selector open (_MENU_HOTKEY_SOURCE), key from the key router (#129). Roles as before #132: AUTO takes, MENU cancels.
+// SOURCE / UP step forward, DOWN back (wrap); every step restarts the idle commit.
+void AwtoSourceKey(BYTE ucKey)
+{
+    if((ucKey == _RIGHT_KEY_MESSAGE) || (ucKey == _LEFT_KEY_MESSAGE) || (ucKey == AWTO_KEY_MSG_SOURCE))
     {
         AwtoSourceStep(ucKey == _LEFT_KEY_MESSAGE);
         AwtoSourceRows();
         AwtoSrcSleepArm();                      // #151: a step is never stored
+        ScalerTimerReactiveTimerEvent(AWTO_SRC_IDLE_COMMIT_MS, _USER_TIMER_EVENT_OSD_DISABLE);
     }
     else if(ucKey == _EXIT_KEY_MESSAGE)        // MENU: cancel, the choice goes back
     {
-        if(g_usBackupValue != ucItem)
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+        if(g_usBackupValue != GET_OSD_INPUT_PORT_OSD_ITEM())
         {
             SET_OSD_INPUT_PORT_OSD_ITEM(g_usBackupValue);
         }
         AwtoSourceClose();
     }
-    else if((ucKey == _MENU_KEY_MESSAGE) && (GET_OSD_DP_VERSION_HOTKEY_DISP() == _OFF))     // AUTO: take the choice
+    else if(ucKey == _MENU_KEY_MESSAGE)        // AUTO: take the choice now
     {
-        if(g_usBackupValue == ucItem)
-        {
-            AwtoSourceClose();
-        }
-        else if(ucItem == _OSD_INPUT_AUTO)
-        {
-            AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
-            SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
-            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SELECTOR);
-            UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-#ifdef _AWTO_NEW_SETTINGS
-            AwtoNvCommitSel();                  // #151: the chosen input is stored at the gate ("Saving to memory")
-#endif
-        }
-        else
-        {
-            ucPort = (ucItem >= _OSD_INPUT_D0) ? (ucItem - _OSD_INPUT_D0 + _D0_INPUT_PORT) : _NO_INPUT_PORT;
-            if(ucPort == _NO_INPUT_PORT)
-            {
-                return;                         // not a port of this board: the selector stays up
-            }
-            if(AwtoPortCable(ucPort) == _FALSE)
-            {
-                AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: no cable on the chosen port: refused, the selector stays up
-                AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
-                return;
-            }
-            SET_FORCE_POW_SAV_STATUS(_FALSE);
-            SysSourceSwitchInputPort(ucPort);
-            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SELECTOR);
-            UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-            UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-#ifdef _AWTO_NEW_SETTINGS
-            AwtoNvCommitSel();                  // #151: the chosen input is stored at the gate ("Saving to memory")
-#endif
-        }
-#if(_DP_MST_SUPPORT == _ON)
-        if(g_usBackupValue != ucItem)
-        {
-            UserCommonInterfaceMstRx0Rx1switch(UserCommonInterfaceGetDpMstCapablePort());
-            RTDNVRamSaveOSDData();
-        }
-#endif
-        SET_OSD_STATE(_MENU_NONE);
+        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
+        AwtoSourceTake(AWTO_SYS_BY_SELECTOR);
     }
+}
+
+//---- backlight bar (#132): UP / DOWN with a picture and nothing open. One card row: bar (OSD windows) + value. ----
+extern void osd_tc_bar_off(BYTE ucWin);
+#define AWTO_BL_ROW         AWTO_CARD_ROW0
+#define AWTO_BL_BAR_COL     1                   // bar: cells 1..AWTO_BL_VAL_COL - 2, value right of it
+#define AWTO_BL_VAL_COL     23
+#define AWTO_BL_VAL_W       4                   // "100%"
+#define AWTO_BL_MAX         100                 // registry brightness max (percent)
+#define AWTO_WIN_BL_EDGE    3                   // bar outline (accent), inside (surface), fill (accent): above the card windows 0..2
+#define AWTO_WIN_BL_IN      4
+#define AWTO_WIN_BL_FILL    5
+#define AWTO_BL_X0          ((WORD)AWTO_BL_BAR_COL * osd_cw)
+#define AWTO_BL_X1          ((WORD)(AWTO_BL_VAL_COL - 1) * osd_cw - 1)
+#define AWTO_BL_Y0          ((WORD)AWTO_BL_ROW * osd_rh + 3)
+#define AWTO_BL_Y1          ((WORD)(AWTO_BL_ROW + 1) * osd_rh - 4)
+#define AWTO_BL_INSET       3                   // fill inset from the outline, px (1 px edge, 2 px surface gap)
+
+static void AwtoBlDraw(void)                    // fill width and value text of the stored backlight
+{
+    BYTE ucV = (BYTE)AWTO_SET(BRIGHTNESS);
+    WORD usW = (AWTO_BL_X1 - AWTO_BL_X0 - 2 * AWTO_BL_INSET) * ucV / AWTO_BL_MAX;
+
+    if(usW == 0)
+    {
+        osd_tc_bar_off(AWTO_WIN_BL_FILL);
+    }
+    else
+    {
+        osd_tc_bar(AWTO_WIN_BL_FILL, AWTO_BL_X0 + AWTO_BL_INSET, AWTO_BL_Y0 + AWTO_BL_INSET, AWTO_BL_X0 + AWTO_BL_INSET + usW - 1,
+                   AWTO_BL_Y1 - AWTO_BL_INSET, AWTO_BAR_ACCENT);
+    }
+    AwtoFieldBegin();
+    AwtoPutNum(ucV, 1);
+    AwtoPutChar('%');
+    AwtoPutCol(AWTO_BL_VAL_W);
+    AwtoFieldEnd(AWTO_BL_ROW, AWTO_BL_VAL_COL, AWTO_T_STYLE_TEXT);
+}
+
+void AwtoBlKey(BYTE ucKey)                      // UP = brighter, DOWN = darker; the first press opens the bar
+{
+    extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
+
+    if(GET_OSD_STATE() != _MENU_HOTKEY_BACKLIGHT)
+    {
+        AwtoCardOpen(AWTO_CARD_ROW0 + 2, AWTO_CT_BACKLIGHT);
+        osd_tc_place(50, AWTO_BL_VPOS_PCT, GET_OSD_NVRAM_DOUBLE_SIZE());
+        osd_tc_bar(AWTO_WIN_BL_EDGE, AWTO_BL_X0, AWTO_BL_Y0, AWTO_BL_X1, AWTO_BL_Y1, AWTO_BAR_ACCENT);
+        osd_tc_bar(AWTO_WIN_BL_IN, AWTO_BL_X0 + 1, AWTO_BL_Y0 + 1, AWTO_BL_X1 - 1, AWTO_BL_Y1 - 1, AWTO_BAR_SURFACE);
+        AwtoTextLine(AWTO_BL_ROW, AWTO_T_STYLE_TEXT);
+        SET_OSD_STATE(_MENU_HOTKEY_BACKLIGHT);
+    }
+    set_put(AWTO_SET_BRIGHTNESS, AWTO_SET(BRIGHTNESS) + ((ucKey == _RIGHT_KEY_MESSAGE) ? AWTO_BL_KEY_STEP : -AWTO_BL_KEY_STEP), 1);
+    AwtoBlDraw();
+    AwtoCardShow();
+}
+
+void AwtoBlClose(void)                          // another key: the bar goes first (OsdDispDisableOsd commits the value)
+{
+    OsdDispDisableOsd();
 }
 
 // #139 console auto-open: once per episode, when the screen is ours to take (no menu / selector / logo / hold) and the
@@ -905,8 +985,16 @@ static void AwtoSyncConPoll(void)
     {
         return;
     }
-    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
-       (SysPowerGetPowerStatus() == _POWER_STATUS_OFF) || (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))
+    if(g_stAwtoSync.ucOpenReq == AWTO_SYNC_OPEN_KEY)    // #132 UP+DOWN wake: waits through the wake, only POWER off drops it
+    {
+        if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
+        {
+            g_stAwtoSync.ucOpenReq = 0;
+            return;
+        }
+    }
+    else if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
+            (SysPowerGetPowerStatus() == _POWER_STATUS_OFF) || (SysPowerGetPowerStatus() == _POWER_STATUS_SAVING))
     {
         g_stAwtoSync.ucOpenReq = 0;             // off, the selector's log pane shows it, or no screen
         return;
@@ -940,7 +1028,7 @@ static void AwtoSyncConPoll(void)
 // The auto-open request stays: at the settled mode AwtoSyncConPoll reopens it if display setting took the OSD.
 void AwtoBootConsole(void)
 {
-    if((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0))
+    if((g_stAwtoSync.ucOpenReq != AWTO_SYNC_OPEN_KEY) && ((g_ucAwtoSyncCon == 0) || (AWTO_SET(SYNC_CONSOLE) == 0)))
     {
         return;
     }

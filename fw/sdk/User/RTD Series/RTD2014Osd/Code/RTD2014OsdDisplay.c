@@ -545,6 +545,12 @@ void OsdDispDisableOsd(void)
     {
         return;
     }
+#ifdef _AWTO_NEW_SETTINGS
+    if(GET_OSD_STATE() == _MENU_HOTKEY_BACKLIGHT)
+    {
+        set_nv_commit(1);                       // #132: backlight bar closed: the value is stored at the gate ("Saving to memory")
+    }
+#endif
     SET_OSD_STATE(_MENU_NONE);
     AwtoMenuForget();
     SET_OSD_IN_FACTORY_MENU_STATUS(_FALSE);
