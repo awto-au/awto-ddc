@@ -507,6 +507,29 @@ def _record_unit_edid(u: dict, img: Path, sector_addr: int, patched: Path) -> No
         log(f"deploy: could not update flash-state EDID sector ({e}); next flash will drift-check it", "WARN")
 
 
+TAIL_POLL_S = 0.2       # spool tail: output latency only; the child's exit ends it (no limit: a full byte flash runs minutes)
+
+
+def _tail_until_exit(p, spool: Path):
+    """lines of the detached child's spool file as they appear, until it exits"""
+    with spool.open(encoding="utf-8", errors="replace") as fh:
+        buf = ""
+        while True:
+            done = p.poll() is not None
+            buf += fh.read()
+            *full, buf = buf.split("\n")
+            for line in full:
+                yield line + "\n"
+            if done:
+                if buf:
+                    yield buf + "\n"
+                return
+            try:
+                p.wait(TAIL_POLL_S)
+            except subprocess.TimeoutExpired:
+                pass
+
+
 def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> int:
     """shield: SIGINT/SIGTERM/SIGHUP are forwarded to the child once (it stops at a safe point) and dev.py keeps draining
     its output; otherwise dev.py would die first and its finally (fast_bus unload) would reload the bus mid-flash."""
@@ -518,7 +541,7 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
 
     def on_sig(signum, _frame):
         fwd.append(signum)
-        if p is not None and len(fwd) == 1:  # a group-wide kill reaches the child anyway; a duplicate only bumps its count
+        if p is not None and len(fwd) == 1:  # once: the child stops at its next safe point
             p.send_signal(signal.SIGTERM)
 
     def out(line: str) -> None:
@@ -531,14 +554,22 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
     for s in sigs:
         old[s] = signal.signal(s, on_sig)
     try:
-        p = subprocess.Popen(cmd, cwd=REPO, env={**full_env, "PYTHONUNBUFFERED": "1"},
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        if shield:      # own session + file output: a group SIGKILL (agent teardown) or dev.py's death can't stop a flash (#156)
+            spool = REPO / "tmp" / "logs" / f"{Path(script).stem}.shield.out"
+            with spool.open("w", encoding="utf-8") as so:
+                p = subprocess.Popen(cmd, cwd=REPO, env={**full_env, "PYTHONUNBUFFERED": "1"}, stdout=so,
+                                     stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, start_new_session=True)
+            lines = _tail_until_exit(p, spool)
+        else:
+            p = subprocess.Popen(cmd, cwd=REPO, env={**full_env, "PYTHONUNBUFFERED": "1"},
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            lines = p.stdout
         if _UNIT_LOG is None:
-            for line in p.stdout:
+            for line in lines:
                 out(line)
         else:                               # tee the tool's output into the unit log, line by line
             with _UNIT_LOG.open("a", encoding="utf-8") as fh:
-                for line in p.stdout:
+                for line in lines:
                     out(line)
                     fh.write(f"{_stamp()}  {script}: {line}")
                     fh.flush()
