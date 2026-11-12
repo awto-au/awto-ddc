@@ -1545,7 +1545,7 @@ fn	_RTDFlashRestoreBriCon	3	0x81b8	108
 fn	_RTDFlashRestoreColorSetting	3	0x8224	108
 fn	_RTDFlashRestoreOSDData	3	0x8290	92
 fn	_RTDFlashRestoreSixColorData	3	0x82ec	68
-fn	_AwtoDiagStage	3	0x8330	108
+fn	_AwtoDiagStage	3	0x8330	124
 fn	_UserCommonInterfaceInitial	3	0x83bc	20
 fn	_RTDFlashSaveBriCon	3	0x83dc	24
 fn	_RTDFlashSaveChecksumVersionCode	3	0x83f4	596
@@ -1613,6 +1613,7 @@ fn	_UserCommonFlashWrite	3	0xaccc	60
 fn	_AwtoDiagMainPass	3	0xad08	344
 const	_tSD_SU_COEF_128_TAPS	4	0x0000	136
 fn	_AwtoT0EvIsr	4	0x0088	284
+fn	_AwtoWakeRelease	4	0x01a4	64
 fn	_ScalerOsdCommandAllByte	4	0x01f0	32
 fn	_ScalerOsdDisableOsd	4	0x0210	12
 fn	_ScalerOsdVerticalStartSelect	4	0x021c	24
@@ -1689,7 +1690,6 @@ fn	_AwtoSwFastGo	4	0x9884	192
 fn	_AwtoSwFastPoll	4	0x9944	556
 fn	_AwtoWakeHold	4	0x9b70	212
 fn	_AwtoWakePoll	4	0x9c44	492
-fn	_AwtoWakeRelease	4	0x9e30	52
 fn	_SysSourceClearDetectingEvent	4	0x9e64	44
 fn	_SysSourceConvertSearchPort	4	0x9e90	44
 fn	_SysSourceGetCableStatusChange	4	0x9ebc	32
@@ -2107,6 +2107,7 @@ fn	_AwtoTextLine	6	0x6bb8	64
 fn	_AwtoWdtPutWord	6	0x6bf8	20
 fn	_ScalerDebugGetDDCCIDebugMode	6	0x6c48	12
 fn	_ScalerDebugSelectDDCCIDebugMode	6	0x6c54	12
+fn	_AwtoConLogSync	6	0x6c60	300
 fn	_AwtoDiagT2Diff	6	0x6dcc	252
 fn	_AwtoDiagT2Snap	6	0x6ec8	92
 fn	_ScalerMDomainUpdateLineBufferModeDVtotal	6	0x6f24	172
@@ -2209,7 +2210,6 @@ fn	_AwtoConLogEnd	6	0xac90	180
 fn	_AwtoOsdSyncPoll	6	0xad44	180
 fn	_AwtoConTitlePoll	6	0xadf8	76
 fn	_AwtoDeadPortPoll	6	0xae44	152
-fn	_AwtoConLogSync	6	0xaedc	284
 fn	_ScalerDpRx1SignalDetectInitial	7	0x0000	284
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x011c	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x08a4	1528
@@ -2260,17 +2260,17 @@ fn	_ScalerTMDSRx2PSIntHandler_EXINT0	7	0xab7c	288
 fn	_ScalerTMDSRx2ReadRequestProc_EXINT0	7	0xac9c	64
 fn	_ScalerTMDSRx3PSIntHandler_EXINT0	7	0xacdc	288
 fn	_ScalerTMDSRx3ReadRequestProc_EXINT0	7	0xadfc	64
-const	_tAwtoSyncTxtOff	8	0x0000	436
-const	_tAwtoSyncFmt	8	0x01b4	220
-const	_tAwtoSyncNameRow	8	0x0290	336
-const	_tAwtoSyncTxtS	8	0x0614	7256
+const	_tAwtoSyncTxtOff	8	0x0000	484
+const	_tAwtoSyncNameRow	8	0x0290	468
+const	_tAwtoSyncFmt	8	0x0464	244
+const	_tAwtoSyncTxtS	8	0x0614	8224
 fn	_AwtoInfoCard	8	0x50cc	916
 fn	_AwtoDiagTestCmd	8	0x5460	752
 fn	_AwtoSrcRate	8	0x5788	456
-fn	_AwtoSyncTxt	8	0x5f78	192
+fn	_AwtoSyncTxt	8	0x5950	252
 fn	_AwtoOsdWdtLines	8	0x6038	928
 fn	_AwtoSyncConPoll	8	0x64a4	204
-fn	_AwtoSyncLine	8	0x7a1c	1960
+fn	_AwtoSyncLine	8	0x7a1c	2156
 const	_font_blob_spleen	8	0x908c	1300
 const	_font_blob_spleen5	8	0x95a0	916
 const	_font_blob_spleen6	8	0x9934	1000
@@ -2557,6 +2557,7 @@ const	_tEDID_TABLE_D3	11	0x09cc	268
 fn	_ScalerOsdCharCommandAllByteSeries	11	0x0ad8	56
 fn	_AwtoTmdsHpd	11	0x0b10	100
 const	_tAwtoSyncIdRow	11	0x0b74	268
+fn	_UserCommonInterfacePanelGo	11	0x0c80	128
 fn	_ScalerAudioD1GetAudioDetected	11	0x0d20	124
 fn	_ScalerAudioD1SetAudioPLL	11	0x0d9c	288
 fn	_ScalerAudioGetAudioDetected	11	0x0ebc	48
@@ -2617,7 +2618,6 @@ fn	_UserCommonInterfacePanelStatus	11	0x3348	120
 fn	_AwtoDiagDelayCal	11	0x33c8	2008
 fn	_AwtoDdcLive	11	0x3ba0	152
 fn	_AwtoPsTmdsStart	11	0x3c38	76
-fn	_AwtoPanelLog	11	0x3c84	60
 const	_tAwtoWakeDdc	11	0x3ce8	12
 fn	_AwtoDiagT3Mark	11	0x3cf4	144
 fn	_AwtoPanelPinLog	11	0x3d84	144
@@ -2633,7 +2633,6 @@ fn	_AwtoPsWakeAux	11	0x4074	76
 fn	_AwtoOwnFrame	11	0x40c0	32
 fn	_AwtoSyncRow	11	0x40e0	72
 fn	_AwtoSyncStage	11	0x4128	188
-fn	_UserCommonInterfacePanelGo	11	0x41e4	72
 fn	_UserCommonInterfacePanelSince	11	0x422c	28
 fn	_AwtoSyncTiming	11	0x424c	116
 fn	_AwtoTmdsIdleKhz	11	0x42c0	300
@@ -2644,6 +2643,7 @@ fn	_UserCommonInterfacePanelPowerDown	11	0x4610	120
 fn	_UserCommonInterfacePanelVddOff	11	0x4688	68
 fn	_AwtoSwMode	11	0x46cc	36
 fn	_AwtoSyncPush	11	0x46f0	616
+fn	_UserCommonInterfacePanelVideoMarks	11	0x4958	16
 fn	_AwtoPsWakeFire	11	0x4968	260
 fn	_AwtoPsWakeState	11	0x4a6c	240
 fn	_UserCommonInterfacePanelPowerTick	11	0x4b5c	44
@@ -2651,13 +2651,14 @@ fn	_AwtoNvEv	11	0x4b88	228
 fn	_AwtoHtSync	11	0x4c6c	940
 fn	_AwtoSyncBegin	11	0x5018	340
 fn	_AwtoPsTmdsHold	11	0x516c	712
+const	_tAwtoSyncRowArg	11	0x5434	244
+const	_tAwtoSyncRowId	11	0x5528	244
 fn	_AwtoSyncPoll	11	0x5674	264
 fn	_osd_tc_scroll	11	0x577c	336
 fn	_AwtoSyncT2Start	11	0x58cc	272
 fn	_AwtoPsWakePoll	11	0x59dc	604
 fn	_AwtoSyncDetect	11	0x5c38	608
-fn	_UserCommonInterfacePanelStep	11	0x5e98	1068
-const	_tAwtoSyncRowArg	11	0x62c4	220
+fn	_UserCommonInterfacePanelStep	11	0x5e98	1176
 fn	_AwtoSysLog	11	0x63a0	136
 const	_tAwtoDdcReg	11	0x6458	12
 const	_tAwtoWakeAux	11	0x6464	8
@@ -2740,7 +2741,6 @@ fn	_rnd_shl	11	0xa9ec	628
 fn	_hb_burst	11	0xac60	316
 fn	_hb_osd_gap	11	0xad9c	132
 fn	_mode_dclk_khz	11	0xae20	28
-const	_tAwtoSyncRowId	11	0xae3c	220
 fn	_AwtoTmdsHpdTick	11	0xaf18	68
 fn	_AwtoPanelForeign	11	0xaf5c	28
 fn	_osd_tc_viewport	11	0xaf78	32
@@ -2781,7 +2781,6 @@ fn	_st_aux_check	12	0x0614	76
 fn	_AwtoKeyStep	12	0x0668	596
 fn	_AwtoSourceKey	12	0x08bc	404
 fn	_AwtoConLogInit	12	0x0a50	292
-fn	_SysMachineGo	12	0x0b74	312
 fn	_SysMachineHandler	12	0x0cac	88
 fn	_set_ap_aspect	12	0x0d0c	48
 fn	_set_ap_debug_msgs	12	0x0d3c	32
@@ -3141,7 +3140,6 @@ fn	_AwtoPutHours	12	0x33e4	120
 fn	_ScalerAudioDACOutputSwitch	12	0x345c	64
 fn	_SysMachinePower	12	0x349c	28
 fn	_AwtoConLogEvent	12	0x34c0	400
-fn	_SysMachineInit	12	0x3650	92
 fn	_AwtoTableStatic	12	0x36f0	400
 const	_tAwtoTxtS	12	0x3880	1100
 const	_tAwtoTxtOffS	12	0x3ccc	120
@@ -3150,8 +3148,10 @@ fn	_AwtoDdcRequest	12	0x3de4	1476
 fn	_AwtoPutIso	12	0x43a8	1120
 fn	_AwtoOsdDebugLines	12	0x4808	964
 fn	_AwtoKeyRoute	12	0x4bcc	528
-fn	_SysMachineJudge	12	0x4ddc	484
-fn	_SysMachinePowerStep	12	0x4fc0	532
+fn	_SysMachineGo	12	0x4ddc	392
+fn	_SysMachineJudge	12	0x4f64	524
 fn	_SysMachineRequest	12	0x51d4	516
+fn	_SysMachineInit	12	0x53d8	164
 fn	_SysMachineWork	12	0x54cc	872
-fn	_SysMachineReset	12	0x5834	256
+fn	_SysMachineReset	12	0x5834	320
+fn	_SysMachinePowerStep	12	0x5974	668

@@ -879,19 +879,23 @@ extern void AwtoSwPoll(void);
 #define _AWTO_PANEL_LOG                                         _ON     // every panel / backlight call with its outcome, real pin changes (#144)
 #endif
 #if(_AWTO_PANEL_LOG == _ON)
-extern void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn);
+extern void AwtoPanelPinLog(unsigned char ucWhat);       // bit 1 = backlight pin (else VDD), bit 0 = the level written
 #else
-#define AwtoPanelPinLog(b, o)
+#define AwtoPanelPinLog(w)
 #endif
-extern void AwtoPanelLog(unsigned char ucArg, unsigned int usMs);
+extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
+// #162 panel machine line (UserCommonInterface.c): ring line + switch log. Transition (11): value = ms in the old state;
+// request (10): who. No function of its own: its params would cost XDATA / DATA overlay (both full, #162 s3b).
+#define AWTO_PNL_LOG(id, arg, val)                              { AwtoSyncPush((id), (arg), (val)); AwtoSwRec((id), (arg)); }
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 #else
 #define AwtoSwEvent(a, b)
-#define AwtoPanelPinLog(b, o)
-#define AwtoPanelLog(a, m)
+#define AwtoPanelPinLog(w)
+#define AwtoSwRec(i, a)
+#define AWTO_PNL_LOG(id, arg, val)
 #define AwtoSysLog(a, w, m)
 #define AwtoSwMode(m)
 #define AWTO_BPROF(k)
@@ -953,7 +957,6 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_TIMING                                     0xC5    // timing confirmed: value = H << 16 | V
 #define AWTO_SYNC_EV_VFREQ                                      0xC7    // display setting done: exact V freq, mHz (#34)
 #define AWTO_SYNC_EV_PCLK                                       0xC8    // exact pixel clock, kHz
-#define AWTO_SYNC_EV_POWER                                      0xC9    // arg = new power status (off / saving)
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
 #define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
 #define AWTO_SYNC_EV_DEADPORT                                   0xDF    // #84: arg 1 = port with no cable refused, 2 = fixed port without cable -> auto search; value = port
@@ -1182,7 +1185,9 @@ extern void AwtoSwCacheStore(void);
 extern unsigned char AwtoSwFast(unsigned char ucPort);
 extern void AwtoSwFastPoll(void);
 extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up by the fast path, 0 = none
-#define AWTO_CON_LIVE()                                         (g_ucAwtoFastPending == 0)     // #162 s3: console lines wait while a fast switch settles
+// #162 s3: console lines wait while a fast switch settles; s3b: and inside a panel machine tick / a system transition line (line
+// time = transition time; the OSD poll or the next line draws them)
+#define AWTO_CON_LIVE()                                         ((g_ucAwtoFastPending == 0) && (g_ucAwtoPanelOwn == 0) && (g_ucAwtoSysOwn == 0))
 #define AWTO_SW_EV_FAST_WHY                                     0xA1    // at a fast-path timeout: 1 measure busy, 2 watchdog, 4 FIFO / HV error, 8 receiver unstable, 0x10 timing change, 0x20 judge check
 #define AWTO_SW_EV_FAST_FLAGS                                   0xA2    // first M-domain error after a fast unblank: P0_02 bits 6,5,1,0, bit7 = watchdog P0_0C.0
 // #78 power levels (fw/sdcc/awto_fastsw.inc AwtoWakeHold): L1 backlight off at signal loss, L2 panel off, L3 SDK power saving
@@ -1229,7 +1234,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #else
 #define AwtoSwCacheStore()
 #define AwtoSwFastPoll()
-#define AWTO_CON_LIVE()                                         _TRUE
+#define AWTO_CON_LIVE()                                         ((g_ucAwtoPanelOwn == 0) && (g_ucAwtoSysOwn == 0))
 #define AWTO_SW_FAST_POLL()                                     AWTO_DEAD_PORT_POLL()
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF
@@ -1261,7 +1266,37 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AWTO_PNL_X_VDD                                          2       // 2 + resource: written outside the machine
 #define AWTO_PNL_X_BL                                           3
 #define AWTO_PNL_X_PWM                                          4
-#define AWTO_PNL_X_DEFER                                        5       // up-request while the power switch waits for the panel
+#define AWTO_PNL_X_ON                                           0x10    // pin args (X_VDD / X_BL): + level on
+#define AWTO_PNL_X_SAME                                         0x20    // pin args: + no edge (written to the level it had)
+// #162 s3b panel requests: UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(event, AWTO_PNL_BY_*)), who in bits 7..2
+#define AWTO_PNL_REQ(ev, by)                                    ((unsigned char)(((by) << 2) | (ev)))
+#define AWTO_PNL_EV(req)                                        ((req) & 0x03)      // _PANEL_ON / _PANEL_OFF / _BACKLIGHT_ON / _BACKLIGHT_OFF
+#define AWTO_PNL_REQ_DEFER                                      0x0C    // request line arg 0C + event: deferred (power switch waits for the panel)
+#define AWTO_PNL_BY_BOOT_COLD                                   0x01    // who codes: texts in fw/awto/sync.tsv id 1B
+#define AWTO_PNL_BY_BOOT_WARM                                   0x02
+#define AWTO_PNL_BY_PWR_ON                                      0x03    // SysPowerSwitch OFF_TO_NORMAL
+#define AWTO_PNL_BY_PWR_WAKE                                    0x04    // SysPowerSwitch PS_TO_NORMAL
+#define AWTO_PNL_BY_WAKE_POLL                                   0x05
+#define AWTO_PNL_BY_PWR_DOWN                                    0x06
+#define AWTO_PNL_BY_PWR_BACK                                    0x07
+#define AWTO_PNL_BY_VIDEO_WANTED                                0x08
+#define AWTO_PNL_BY_DS_BL_OFF                                   0x09
+#define AWTO_PNL_BY_DS_DCLK                                     0x0A
+#define AWTO_PNL_BY_OSD_RESET                                   0x0B
+#define AWTO_PNL_BY_FIRST_ACTIVE                                0x0C
+#define AWTO_PNL_BY_HOLD_L1                                     0x0D
+#define AWTO_PNL_BY_HOLD_BACK                                   0x0E
+#define AWTO_PNL_BY_SELECTOR                                    0x0F
+#define AWTO_PNL_BY_OSD_NOSIGNAL                                0x10
+#define AWTO_PNL_BY_OSD_NOCABLE                                 0x11
+#define AWTO_PNL_BY_OSD_NOSUPPORT                               0x12
+#define AWTO_PNL_BY_OSD_SOURCE                                  0x13
+#define AWTO_PNL_BY_OSD_PS                                      0x14
+#define AWTO_PNL_BY_OSD_DPINFO                                  0x15
+#define AWTO_PNL_BY_FREESYNC_OD                                 0x16
+#define AWTO_PNL_BY_USER_AC_OFF                                 0x17    // RTD2014UserInterface power switch
+#define AWTO_PNL_BY_USER_OFF                                    0x18
+#define AWTO_PNL_BY_USER_PS                                     0x19
 #define AWTO_PWM_DARK                                           ((_BACKLIGHT_PWM_INVERSE == _ON) ? 0xFF : 0x00)    // 8-bit duty (_PWM_DUT_RESOLUTION) with the backlight dark
 extern __xdata unsigned char g_ucAwtoPanelOwn;     // 1 while the panel machine drives its pins (AwtoPanelPinLog flags other writers)
 extern void UserCommonInterfacePanelPowerTick(void);
@@ -1315,6 +1350,8 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_BY_SDK                                         0x17
 #define AWTO_SYS_BY_WAKE_EMPTY                                  0x18
 #define AWTO_SYS_BY_DIRECT                                      0x19    // power target found without a request (host / sim poke)
+#define AWTO_SYS_BY_HOLD_TRIES                                  0x1A    // hold released: fast wakes used up (BY_HOLD = L2 time)
+#define AWTO_SYS_BY_HOLD_AUTO                                   0x1B    // hold released: auto search, another cable
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24
@@ -1327,6 +1364,10 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_WHY_HOLD                                       0x2B
 #define AWTO_SYS_WHY_PANEL_DOWN                                 0x2C
 #define AWTO_SYS_WHY_CALLED_OFF                                 0x2D
+#define AWTO_SYS_WHY_BOOT                                       0x2E    // SysMachineInit: the RESET -> AC ON line
+#define AWTO_SYS_WHY_CODE                                       0x3F    // why byte: code bits; 0x40 / 0x80 flags
+#define AWTO_SYS_WHY_AT                                         0x40    // SysMachineGo: line only, before the action; the next Go applies it
+#define AWTO_SYS_WHY_MODE                                       0x80    // in the ring: the SDK mode changed (line gets the mode text, sync.tsv 1A)
 #define AWTO_SYS_OK                                             0       // request outcomes (sync.tsv id 18)
 #define AWTO_SYS_ALREADY                                        1
 #define AWTO_SYS_REPLACES                                       2
@@ -1340,7 +1381,9 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYNC_EV_SYS_REQNAME                                0x17
 #define AWTO_SYNC_EV_SYS_OUTCOME                                0x18
 #define AWTO_SYNC_EV_SYS_SEP                                    0x19    // separators of the two line formats (no string literals in that TU)
-extern volatile __xdata unsigned char g_ucAwtoSysOwn;       // 1 while the machine writes the SDK power / mode views (gate sysm)
+#define AWTO_SYNC_EV_SYS_MODE                                   0x1A    // mode text per system state (sys fmt, why bit 7)
+#define AWTO_SYNC_EV_PNL_BY                                     0x1B    // panel requester names (pby fmt)
+extern volatile __xdata unsigned char g_ucAwtoSysOwn;       // 1 while the machine writes the SDK power / mode views (gate sysm) or pushes a transition line
 extern void SysMachineInit(void);
 extern void SysMachineHandler(void);
 extern void SysMachineWork(void);

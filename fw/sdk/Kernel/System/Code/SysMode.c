@@ -196,7 +196,7 @@ void SysModeSetUpDisplayInitialization(void)
         AWTO_BLANK(1);
 #else
         // Turn off backlight to prevent garbage
-        UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_DS_BL_OFF));
 #endif
     }
 
@@ -475,7 +475,7 @@ void SysModeSetFreeRun(void)
     {
 #if(_PANEL_STYLE == _PANEL_VBO)
         // Turn off backlight to prevent garbage
-        UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_DS_DCLK));
 #elif(_PANEL_STYLE == _PANEL_DPTX)
         // Turn off backlight to prevent garbage
         AWTO_BLANK(1);

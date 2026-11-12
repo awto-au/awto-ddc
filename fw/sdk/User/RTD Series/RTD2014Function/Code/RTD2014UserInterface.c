@@ -1510,7 +1510,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserInterfaceKeyPadLedControl(_LED_POWER_OFF);
 
             // Panel pown down.
-            UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_USER_AC_OFF));
 
             break;
 
@@ -1527,7 +1527,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserInterfaceKeyPadLedControl(_LED_POWER_OFF);
 
             // Panel pown down.
-            UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_USER_OFF));
 
             // Set Monitor Power Off Status
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _OFF);
@@ -1570,7 +1570,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserInterfaceKeyPadLedControl(_LED_POWER_SAVING);
 
             // Panel pown down.
-            UserCommonInterfacePanelPowerAction(_PANEL_OFF); AwtoNvFlush();
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_USER_PS)); AwtoNvFlush();
 
             break;
 

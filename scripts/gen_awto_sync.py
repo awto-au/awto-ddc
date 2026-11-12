@@ -32,7 +32,7 @@ def repo_root() -> Path:
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18, "ms2": 19, "pby": 20}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 
@@ -77,7 +77,9 @@ def rows(path: Path = TSV):
         i, a, f, t = ln.split("\t")
         out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), fmt=parse_fmt(f), text=resolve(t)))
     assert len(out) < 255, "row index is one byte (0 = no row)"
-    assert all(t["text"].count("%") <= 1 for t in out), "one value per line"
+    for t in out:                                    # one value per line; ms2 has two
+        n, two = t["text"].count("%"), (t["fmt"] & 0x7F) == FMTS["ms2"]
+        assert (n == 2) if two else (n <= 1), f"{t['id']:02X} {t['arg']:02X}: {n} % marks"
     return out
 
 
@@ -118,7 +120,8 @@ def rows_block(r):
         "}"])
 
 
-NAME_IDS = range(0x15, 0x1A)                         # #162 step 3 name tables (state, who / why, request, outcome, separators)
+NAME_IDS = range(0x15, 0x1C)                         # #162 step 3 name tables (state, who / why, request, outcome, separators,
+                                                     # s3b: 1A mode text per state, 1B panel requester)
 NAME_ARGS = 64                                       # args per name table: direct row index, no row scan per name (console draws in PS)
 
 
@@ -148,15 +151,15 @@ def text_block(r):
         arr("tAwtoSyncFmt", [f"0x{x['fmt']:02X}" for x in r]),
         f'static const __code char tAwtoSyncTxtS[] = "{blob}";',
         f"static const __code WORD tAwtoSyncTxtOff[{len(r)}] = {{" + ", ".join(str(o) for o in real) + "};",
-        "static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text before (0) / after (1) the value mark, 2 = none; returns the fmt",
+        "static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text after ucPart (0..2) value marks, 0xFF = none; returns the fmt",
         "{",
         "    const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];",
         "",
-        "    if(ucPart == 2)",
+        "    if(ucPart == 0xFF)",
         "    {",
         "        return tAwtoSyncFmt[ucRow];",
         "    }",
-        "    if(ucPart != 0)",
+        "    if(ucPart != 0)                             // at most two marks (ms2); ucPart is not written (no XDATA copy)",
         "    {",
         "        while((*pc != 0) && (*pc != 1))",
         "        {",
@@ -167,6 +170,18 @@ def text_block(r):
         "            return tAwtoSyncFmt[ucRow];",
         "        }",
         "        pc++;",
+        "        if(ucPart == 2)",
+        "        {",
+        "            while((*pc != 0) && (*pc != 1))",
+        "            {",
+        "                pc++;",
+        "            }",
+        "            if(*pc == 0)",
+        "            {",
+        "                return tAwtoSyncFmt[ucRow];",
+        "            }",
+        "            pc++;",
+        "        }",
         "    }",
         "    while((*pc != 0) && (*pc != 1))             // AwtoPutChar inlined: no call, so the packer keeps the table in this bank",
         "    {",

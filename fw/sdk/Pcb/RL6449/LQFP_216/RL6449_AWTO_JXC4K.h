@@ -299,7 +299,7 @@
 #define _PANEL_CONTROL_OFF                      0
 
 #define PCB_PANEL_POWER(x)                      {\
-                                                    AwtoPanelPinLog(0, (x));\
+                                                    AwtoPanelPinLog(((x) != 0) ? 1 : 0);\
                                                     bPANELPOWER = (x);\
                                                 }
 
@@ -314,7 +314,7 @@
 #define bBACKLIGHT_EN_N                         (MCU_FE2A_PORT92_PIN_REG) // Pin_196, P9.2
 
 #define PCB_BACKLIGHT_POWER_PIN(x)              {\
-                                                    AwtoPanelPinLog(1, (x));\
+                                                    AwtoPanelPinLog(((x) != 0) ? 3 : 2);\
                                                     bBACKLIGHT_EN_N = !(x);\
                                                     bBACKLIGHTPOWER = (x);\
                                                 }
