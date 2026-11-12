@@ -546,9 +546,9 @@ void OsdDispDisableOsd(void)
     if(AwtoHoldBlocksDisable() == _TRUE)
     {
         return;
-    }  // awto: an OSD hold (debug pop-up) blocks the disable (#28)
+    }
     SET_OSD_STATE(_MENU_NONE);
-    AwtoMenuForget();  // awto: menu forgets a closed OSD (#67)
+    AwtoMenuForget();
     SET_OSD_IN_FACTORY_MENU_STATUS(_FALSE);
     ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
     OsdFuncDisableOsd();
@@ -4096,21 +4096,18 @@ void OsdDispHotKeyOptionMenuSwitch(BYTE ucOption)
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-  // awto: removed; source selector: fw/sdcc/awto_osdcard.inc (#134)
 
 //--------------------------------------------------
 // Description  :
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-  // awto: removed; source selector: fw/sdcc/awto_osdcard.inc (#134)
 
 //--------------------------------------------------
 // Description  :
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-  // awto: removed; source selector: fw/sdcc/awto_osdcard.inc (#134)
 
 //--------------------------------------------------
 // Description  :
@@ -4131,9 +4128,8 @@ void OsdDispPanelUniformityMsgSwitch(void)
 // Output Value :
 //--------------------------------------------------
 #define AWTO_FW_TAG "@FW_TAG@"
-#include "awto_dbgpop.inc"  // awto: OSD text layer, cards and panels (#134)
-#include "awto_osdcard.inc"  // awto: OSD text layer, cards and panels (#134)
-  // awto: removed; message cards: fw/sdcc/awto_osdcard.inc (#124)
+#include "awto_dbgpop.inc"
+#include "awto_osdcard.inc"
 
 #if(_VGA_SUPPORT == _ON)
 //--------------------------------------------------
@@ -4308,7 +4304,6 @@ void OsdDispResetDpCapabilitySwitch(void)
 }
 #endif
 
-  // awto: boot logo removed (#144)
 
 //--------------------------------------------------
 // Description  : OSD information function
@@ -5125,7 +5120,7 @@ void OsdDispAdvanceItemSelect(BYTE ucIndex)
     }
 }
 
-#include "awto_keypop.inc"  // awto: OSD text layer, cards and panels (#134)
-#include "awto_gpiopop.inc"  // awto: OSD text layer, cards and panels (#134)
-#include "awto_wdtpop.inc"  // awto: main-loop watchdog (#131)
+#include "awto_keypop.inc"
+#include "awto_gpiopop.inc"
+#include "awto_wdtpop.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

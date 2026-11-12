@@ -1897,7 +1897,7 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
     DWORD ulPanelClockMinSpread = MINOF(_PANEL_PIXEL_CLOCK_MIN_SPREAD, _PANEL_PIXEL_CLOCK_KHZ);
     StructDHtotalFTStatus stDHtotalFTStatus;
 
-    AwtoMeasEvent(30, 0, 0);  // awto: 4K60 measurement ring (#26)
+    AwtoMeasEvent(30, 0, 0);
     // Temporary Enable Frame Sync Fine Tune for Interlace Mode in order to Get Equal Frame Period
     if(GET_INTERLACED_MODE() == _TRUE)
     {
@@ -2032,7 +2032,7 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
     ///
     /////////////////////////////////////////////////////////////////////////
 
-    ucDebounceCnt = 1;  // awto: DHtotal fine-tune: one pass, no debounce loop (#26)
+    ucDebounceCnt = 1;
     while(ucDebounceCnt > 0)
     {
         //=====================================
@@ -2059,7 +2059,7 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
         // Calculate Dclk
         ulDclk = (ScalerPLLGetNewCount(ulDiffOffsetNew, ulDiffOffsetOld, GET_D_CLK_FREQ(), bProportion));
 
-    AwtoMeasEvent(31, ucDebounceCnt, (unsigned int)ulDiffOffsetNew);  // awto: 4K60 measurement ring (#26)
+    AwtoMeasEvent(31, ucDebounceCnt, (unsigned int)ulDiffOffsetNew);
         stDHtotalFTStatus = ScalerMDomainDHtotalFinetune(ulDclk, ulPanelClockMaxSpread, ulPanelClockMinSpread);
 
         if(stDHtotalFTStatus.usDHtotal != GET_MDOMAIN_OUTPUT_HTOTAL())
@@ -2093,7 +2093,7 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
     usLastLine = (usLastLine << _D_DOMAIN_PATH);
 
 #undef _LAST_LINE_FINETUNE_ENABLE
-#define _LAST_LINE_FINETUNE_ENABLE _DISABLE  // awto: last-line fine-tune off for this function only (#26)
+#define _LAST_LINE_FINETUNE_ENABLE _DISABLE
 #if(_LAST_LINE_FINETUNE_ENABLE == _ENABLE)
 #if(_FREESYNC_SUPPORT == _ON)
     if(GET_FREESYNC_ENABLED() == _FALSE)
@@ -2168,7 +2168,7 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
     }
 #endif
 
-    AwtoMeasEvent(32, 0, (unsigned int)ulDiffOffsetNew);  // awto: 4K60 measurement ring (#26)
+    AwtoMeasEvent(32, 0, (unsigned int)ulDiffOffsetNew);
     SET_D_CLK_FREQ(ScalerPLLGetNewCount(ulDiffOffsetNew, ulDiffOffsetOld, GET_D_CLK_FREQ(), bProportion));
 
     DebugMessageScaler("Dclk fine tune", GET_D_CLK_FREQ());
@@ -2208,8 +2208,8 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
 #endif
 
 #undef _LAST_LINE_FINETUNE_ENABLE
-#define _LAST_LINE_FINETUNE_ENABLE _ENABLE  // awto: last-line fine-tune off for this function only (#26)
-    AwtoMeasEvent(33, 0, 0);  // awto: 4K60 measurement ring (#26)
+#define _LAST_LINE_FINETUNE_ENABLE _ENABLE
+    AwtoMeasEvent(33, 0, 0);
     // Switch to "input active region"
     ScalerMeasureSetInputRegionCount(_ACTIVE_REGION_TYPE);
 

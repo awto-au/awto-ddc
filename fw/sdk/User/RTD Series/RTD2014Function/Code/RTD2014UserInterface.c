@@ -1506,11 +1506,11 @@ void UserInterfaceInitial(void)
 {
     PCB_PWM_SETTING();
     RTDNVRamStartup();
-#if(_AWTO_DIAG == _ON)  // awto: load the debug-message switch from NVRAM (#74)
+#if(_AWTO_DIAG == _ON)
     AwtoMsgLoad();
 #endif
 
-    AwtoSetInit();  // awto: settings registry / menu glue (#67)
+    AwtoSetInit();
     UserCommonInterfaceDdcciSwitch(GET_OSD_DDCCI_STATUS(), UserCommonNVRamGetSystemData(_SEARCH_PORT));
     SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
 
@@ -1626,7 +1626,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _OFF);
 
             // Save System Power Status Data.
-            UserCommonNVRamSaveSystemData(); AwtoNvFlush();  // awto: flush every dirty NVRAM item now (#151)
+            UserCommonNVRamSaveSystemData(); AwtoNvFlush();
 
             break;
 
@@ -1646,7 +1646,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _OFF);
 
             // Save System Power Status Data.
-            UserCommonNVRamSaveSystemData(); AwtoNvFlush();  // awto: flush every dirty NVRAM item now (#151)
+            UserCommonNVRamSaveSystemData(); AwtoNvFlush();
 
             break;
 
@@ -1663,7 +1663,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserInterfaceKeyPadLedControl(_LED_POWER_SAVING);
 
             // Panel pown down.
-            UserCommonInterfacePanelPowerAction(_PANEL_OFF); AwtoNvFlush();  // awto: flush every dirty NVRAM item now (#151)
+            UserCommonInterfacePanelPowerAction(_PANEL_OFF); AwtoNvFlush();
 
             break;
 
@@ -3248,11 +3248,11 @@ void UserInterfaceAdjustOsdActiveProc(void)
     {
         UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
         UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-        AwtoSwEvent(AWTO_SW_EV_PROBE, 7);  // awto: switch-log probe (#60)
-        // awto #151: no save here (KVM / search switch)  // awto: no NVRAM save at the first ACTIVE after a switch (#151)
+        AwtoSwEvent(AWTO_SW_EV_PROBE, 7);
+        // awto #151: no save here (KVM / search switch)
     }
 
-    AwtoSwEvent(AWTO_SW_EV_PROBE, 8);  // awto: switch-log probe (#60)
+    AwtoSwEvent(AWTO_SW_EV_PROBE, 8);
     if(UserInterfaceGetActiveByPassStatus() == _FALSE)
     {
         // DDCCI switch to active port
@@ -3276,7 +3276,7 @@ void UserInterfaceAdjustOsdActiveProc(void)
     UserCommonAdjustDisplayFreeze(GET_OSD_FREEZE_STATUS());
 #endif
 
-    AwtoSwEvent(AWTO_SW_EV_BLANK, 0);  // awto: switch-log: blank (#60)
+    AwtoSwEvent(AWTO_SW_EV_BLANK, 0);
     ScalerDDomainBackgroundEnable(_DISABLE);
 }
 
@@ -4110,7 +4110,7 @@ EnumAudioInputSource UserInterfaceGetAudioSource(void)
 //--------------------------------------------------
 bit UserInterfaceGetAudioMuteStatus(void)
 {
-    return (GET_OSD_VOLUME_MUTE() || AWTO_AUDIO_HOLD());  // awto: mute while the mode is not ACTIVE / DISPLAY_SETTING (#93)
+    return (GET_OSD_VOLUME_MUTE() || AWTO_AUDIO_HOLD());
 }
 
 //--------------------------------------------------
@@ -4161,7 +4161,7 @@ WORD UserInterfaceGetAudioVolume(void)
 //--------------------------------------------------
 EnumAudioDACOutput UserInterfaceGetAudioDACOutput(void)
 {
-    return _AUDIO_DAC_OUTPUT_HEADPHONE;  // awto: headphone output only (#93)
+    return _AUDIO_DAC_OUTPUT_HEADPHONE;
 }
 
 //--------------------------------------------------

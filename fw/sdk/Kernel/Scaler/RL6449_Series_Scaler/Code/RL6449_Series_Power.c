@@ -425,7 +425,7 @@ void ScalerPowerGroupAPowerCut(BYTE ucOn)
 
         PCB_DDR_POWER(_DDR_POWER_OFF);
 
-        #if(_AWTO_FAST_BOOT == _OFF)  // awto: fast boot: no waits for rails this board never switches (#63)
+        #if(_AWTO_FAST_BOOT == _OFF)
 PCB_DDR_POWER_RELEASE_TIME(_DDR_POWER_OFF_TIME);
 #endif
     }
@@ -438,7 +438,7 @@ PCB_DDR_POWER_RELEASE_TIME(_DDR_POWER_OFF_TIME);
 
             // Wait for DDR stable, can't delete
             
-#if(_AWTO_FAST_BOOT == _OFF)  // awto: fast boot: no waits for rails this board never switches (#63)
+#if(_AWTO_FAST_BOOT == _OFF)
             ScalerTimerDelayXms(10);
 #endif
 
@@ -446,7 +446,7 @@ PCB_DDR_POWER_RELEASE_TIME(_DDR_POWER_OFF_TIME);
 
             // Wait for 1.1V stable, can't delete
             
-#if(_AWTO_FAST_BOOT == _OFF)  // awto: fast boot: no waits for rails this board never switches (#63)
+#if(_AWTO_FAST_BOOT == _OFF)
             ScalerTimerDelayXms(10);
 #endif
         }

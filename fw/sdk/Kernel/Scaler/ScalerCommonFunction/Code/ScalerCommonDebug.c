@@ -106,7 +106,7 @@ void ScalerDebugSetRegisters(void);
 // Input Value  : enumMode --> _DEBUG_MODE / _DDCCI_MODE
 // Output Value : None
 //--------------------------------------------------
-#include "AwtoMsg.h"  // awto: tokenised message functions live in the debug module (#26)
+#include "AwtoMsg.h"
 void ScalerDebugSelectDDCCIDebugMode(EnumDDCCIDebugMode enumMode)
 {
     g_enumDDCCIDebugMode = enumMode;
@@ -343,7 +343,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
             DELAY_30US();
 
 // Release SCL Pin
-#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+#if(_AWTO_DBG_FOLLOW == _ON)
     AWTO_DBG_SCL(&= ~_BIT0);
 #else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
@@ -431,7 +431,7 @@ void ScalerDebugIntProc_EXINT1(void)
             if(g_ucDdcciCommandNumber > 0)
             {
 // Hold Scl Pin
-#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+#if(_AWTO_DBG_FOLLOW == _ON)
     AWTO_DBG_SCL(|= _BIT0);
 #else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
@@ -476,7 +476,7 @@ void ScalerDebugIntProc_EXINT1(void)
                 }
 #endif
 
-#include "awto_dbgisr.inc"  // awto: debug slave answers in the EXINT1 ISR (#38)
+#include "awto_dbgisr.inc"
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
                 g_bRunCommand = _TRUE;
             }
@@ -744,7 +744,7 @@ void ScalerDebug(void)
                 DELAY_30US();
 
 // Release Scl Pin
-#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+#if(_AWTO_DBG_FOLLOW == _ON)
     AWTO_DBG_SCL(&= ~_BIT0);
 #else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)
@@ -834,7 +834,7 @@ void ScalerDebugSendData(BYTE ucLen, BYTE *pucSendArray)
             {
                 bReleaseScl = _TRUE;
 // Release Scl Pin
-#if(_AWTO_DBG_FOLLOW == _ON)  // awto: debug IIC engine follows the active port (#28)
+#if(_AWTO_DBG_FOLLOW == _ON)
     AWTO_DBG_SCL(&= ~_BIT0);
 #else
 #if(_DEBUG_DDC_CHANNEL_SEL == _DDC5)

@@ -38,7 +38,7 @@
 // CODE TABLES
 //****************************************************************************
 #if((_FLASH_WRITE_FUNCTION_SUPPORT == _ON) || (_FLASH_WR_PROTECT == _ON))
-#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
+#if(_AWTO_FLASH_ALL == _ON)
 StructFlashInformation __code tFlashInformation[] =
 {
     // _FLASH_W25X20A; ucUnprotectWRSR is not used here
@@ -206,7 +206,7 @@ StructFlashInformation __code tFlashInformation[] =
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
+#if(_AWTO_FLASH_ALL == _ON)
 BYTE g_ucFlashType = _FLASH_UNDETECT;
 #endif
 
@@ -247,7 +247,7 @@ void ScalerFlashWRProtect(void);
 // Input Value  : None
 // Output Value : Detected flash type index
 //--------------------------------------------------
-#if(_AWTO_FLASH_ALL == _ON)  // awto: size switch: one flash chip, detection and table dropped (#65)
+#if(_AWTO_FLASH_ALL == _ON)
 void ScalerFlashDetectFlashType(void)
 {
     BYTE ucIndex = 0;
@@ -611,7 +611,7 @@ void ScalerFlashWREN(BYTE ucBank, BYTE ucPage)
     BYTE ucRDCR = 0x00;
 
     // Clear watch dog
-    AWTO_WDT_FEED(AWTO_WDT_S_WREN);  // awto: watchdog feed instead of the SDK flash poke (#138)
+    AWTO_WDT_FEED(AWTO_WDT_S_WREN);
 
     switch(g_ucFlashType)
     {
@@ -3881,7 +3881,7 @@ void ScalerFlashWREN(BYTE ucBank, BYTE ucPage)
 void ScalerFlashWRDis(void)
 {
     // Clear watch dog
-    AWTO_WDT_FEED(AWTO_WDT_S_WRDIS);  // awto: watchdog feed instead of the SDK flash poke (#138)
+    AWTO_WDT_FEED(AWTO_WDT_S_WRDIS);
 
     switch(g_ucFlashType)
     {
@@ -4278,7 +4278,7 @@ bit ScalerFlashErasePage(BYTE ucBank, BYTE ucPage)
         ScalerFlashDetectFlashType();
     }
 
-    ScalerFlashWREN(ucBank, ucPage); AWTO_NV_EV(3);  // awto: NVRAM save timing in the sync log (#150)
+    ScalerFlashWREN(ucBank, ucPage); AWTO_NV_EV(3);
 
     // Sector Erase
     MCU_SET_BYTE_WITH_CKCON(MCU_FF60_COMMON_INST_EN, 0xB8, _CKCON_MCU_SLOW_CYCLE);
@@ -4292,7 +4292,7 @@ bit ScalerFlashErasePage(BYTE ucBank, BYTE ucPage)
 
     // No need to polling, 8051 will halt when common instruction executes
 
-    MCU_FF61_COMMON_OP_CODE = 0xFF; AWTO_NV_EV(4);  // awto: NVRAM save timing in the sync log (#150)
+    MCU_FF61_COMMON_OP_CODE = 0xFF; AWTO_NV_EV(4);
 
     ScalerFlashWRDis();
 
@@ -4328,7 +4328,7 @@ void ScalerFlashWRProtect(void)
     BYTE ucRDSR = 0;
 
     // Clear watch dog
-    AWTO_WDT_FEED(AWTO_WDT_S_WRPROT);  // awto: watchdog feed instead of the SDK flash poke (#138)
+    AWTO_WDT_FEED(AWTO_WDT_S_WRPROT);
 
     // Detect flash type first
     if(g_ucFlashType == _FLASH_UNDETECT)

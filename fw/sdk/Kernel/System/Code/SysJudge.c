@@ -267,7 +267,7 @@ void SysJudgeHandler(void)
     // Handle Status Check and Manual Reset Requests
     SysJudgeModeResetProc();
 
-    if((AWTO_FAST_JUDGE_HOLD() == _FALSE) && ((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE) && (AWTO_WAKE_HOLD() == _FALSE))  // awto: main-loop split + L1/L2 hold in the judge check (#78)
+    if((AWTO_FAST_JUDGE_HOLD() == _FALSE) && ((AWTO_SLOW_DUE_JUDGE() == _TRUE) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE)) && (SysJudgeCheckStatus() == _FALSE) && (AWTO_WAKE_HOLD() == _FALSE))
     {
         g_ucSignalUnstable ++;
         // Force Reset
@@ -311,8 +311,8 @@ bit SysJudgeCheckStatus(void)
         {
             if(SysSourceStableCheck() == _FALSE)
             {
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 20);  // awto: switch-log probe: which SysJudgeCheckStatus check failed (#60)
-                AWTO_TMDS_STUCK();  // awto: pulse the HDMI HPD of a stuck TMDS port (#78)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 20);
+                AWTO_TMDS_STUCK();
                 DebugMessageSystem("Source Unstable!!", GET_SOURCE_TYPE(g_ucSearchIndex));
                 return _FALSE;
             }
@@ -323,7 +323,7 @@ bit SysJudgeCheckStatus(void)
             // Check whether Input Timing changed
             if(ScalerMeasureTimingChange(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort()) == _TRUE)
             {
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 21);  // awto: switch-log probe: which SysJudgeCheckStatus check failed (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 21);
                 DebugMessageSystem("Measured Input HV Changed", GET_SOURCE_TYPE(g_ucSearchIndex));
                 return _FALSE;
             }
@@ -336,7 +336,7 @@ bit SysJudgeCheckStatus(void)
                 {
                     if(ScalerMeasureInterlaceCheck(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort()) != GET_INPUT_TIMING_INTERLACE_FLG())
                     {
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 22);  // awto: switch-log probe: which SysJudgeCheckStatus check failed (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 22);
                         DebugMessageSystem("Input Timing Double Check : Interlace Flag Change", GET_SOURCE_TYPE(g_ucSearchIndex));
                         return _FALSE;
                     }
@@ -351,7 +351,7 @@ bit SysJudgeCheckStatus(void)
             if((ScalerMDomainMemoryCheck() == _FALSE) ||
                (ScalerMDomainDisplayTimingGenCheck() == _FALSE))
             {
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 23);  // awto: switch-log probe: which SysJudgeCheckStatus check failed (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 23);
                 DebugMessageSystem("Memory Check Failed", GET_SOURCE_TYPE(g_ucSearchIndex));
                 return _FALSE;
             }
@@ -428,13 +428,13 @@ void SysJudgeModeResetProc(void)
 
             if(SysPowerGetPowerStatus() != _POWER_STATUS_OFF)
             {
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 1);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 1);
                 SysModeResetState(_MODE_ACTION_RESET_TO_SEARCH);
 
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 2);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 2);
                 if(SysJudgeStateChangeEvent(_MODE_STATUS_SEARCH) == _FALSE)
                 {
-                    AwtoSwEvent(AWTO_SW_EV_PROBE, 3);  // awto: switch-log probe (#60)
+                    AwtoSwEvent(AWTO_SW_EV_PROBE, 3);
                     SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
                     return;
                 }

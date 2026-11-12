@@ -694,7 +694,7 @@ typedef enum
 //--------------------------------------------------
 // MACRO for Aspect Ratio Status
 //--------------------------------------------------
-#if((_AWTO_DEBUG_PORT == _OFF) && (_AWTO_DDCCI_ENGINES == 0))  // awto: DDC port in Realtek debug mode / spare engines (#13)
+#if((_AWTO_DEBUG_PORT == _OFF) && (_AWTO_DDCCI_ENGINES == 0))
 #define GET_OSD_DDCCI_STATUS()                      (g_stOSDUserData.b1DDCCIStatus)
 #endif
 #define SET_OSD_DDCCI_STATUS(x)                     (g_stOSDUserData.b1DDCCIStatus = (x))

@@ -7,7 +7,7 @@ Fails when:
 - scripts/keil2sdcc*.py, fw/overlay/ or a fw/awto/*/rules.py exists (the old patch paths);
 - a build script (scripts/*.py other than the one-off sdk_import.py / sdk_own.py) defines INSERTS / SUBS / WRAPS / RULES
   / DROP_WRAPS / DROP_SUBS or writes a `[keil2sdcc]` marker;
-- fw/sdk still carries a `[keil2sdcc]` marker (an edit without its `// awto:` note).
+- fw/sdk still carries a `[keil2sdcc]` marker (a leftover rule-applied edit).
 The mechanical Keil->SDCC rewrite lives only in scripts/sdk_import.py (never run by the build); the allow-list of
 mechanical rules is docs/keil2sdcc-rules.md. Log: tmp/logs/sdk_rules_lint.log
 """
@@ -43,7 +43,7 @@ def lint(tree: Path):
             n += 1
             t = p.read_bytes().decode("latin-1")
             if "[keil2sdcc]" in t:
-                bad.append(f"{p.relative_to(tree)}: [keil2sdcc] marker (edit without an `// awto:` note)")
+                bad.append(f"{p.relative_to(tree)}: [keil2sdcc] marker (leftover rule-applied edit)")
     return bad, n
 
 

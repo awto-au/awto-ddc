@@ -24,7 +24,7 @@
 //-------------------------------------------------
 // Define OSD Rotate Type
 //-------------------------------------------------
-#define _OSD_ROTATE_FUNCTION                        _OSD_ROTATE_OFF  // awto: no panel/OSD rotation
+#define _OSD_ROTATE_FUNCTION                        _OSD_ROTATE_OFF
 
 //--------------------------------------------------
 // Definitions of IR Protocal

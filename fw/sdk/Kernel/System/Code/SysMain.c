@@ -19,7 +19,7 @@
 
 #define __MAIN__
 
-#define _AWTO_DIAG_DEFINER  // awto: diag block defined in SysMain.c, extern elsewhere (#23)
+#define _AWTO_DIAG_DEFINER
 #include "SysInclude.h"
 
 //****************************************************************************
@@ -75,44 +75,44 @@ void SysMainPictureHandler(void);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_led.inc"  // awto: power LED (#23)
-#include "awto_diag.inc"  // awto: boot-stage / timing diagnostics (#23)
-#include "awto_sw.inc"  // awto: switch timeline poll (#60)
-#include "awto_sync.inc"  // awto: sync / power-on log (#139)
-#include "awto_meas4k.inc"  // awto: 4K60 measurement ring (#26)
-#include "awto_loopsplit.inc"  // awto: main-loop split: cable detection every AWTO_SLOW_MS (#75)
-#include "awto_loopprof.inc"  // awto: main-loop cost profile (#75)
-#include "awto_wdt.inc"  // awto: main-loop watchdog (#131)
+#include "awto_led.inc"
+#include "awto_diag.inc"
+#include "awto_sw.inc"
+#include "awto_sync.inc"
+#include "awto_meas4k.inc"
+#include "awto_loopsplit.inc"
+#include "awto_loopprof.inc"
+#include "awto_wdt.inc"
 void main(void)
 {
-    AwtoWdtInit();  // awto: main-loop watchdog (#131)
+    AwtoWdtInit();
     do
     {
-        AwtoDiagInit();  // awto: boot-stage / timing diagnostics (#23)
-        AwtoMeasInit();  // awto: 4K60 measurement ring init (#26)
-        AwtoSyncInit();  // awto: sync / power-on log (#139)
+        AwtoDiagInit();
+        AwtoMeasInit();
+        AwtoSyncInit();
         SysMainSystemInitial();
 
         while(SysMainSytemPowerDetect() == _TRUE)
         {
-            AWTO_LP(0);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(0);  // awto: slow-segment mark (#60)
-            AwtoSwPoll();  // awto: switch timeline poll (#60)
-            AwtoDiagMainPass();  // awto: boot-stage / timing diagnostics (#23)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
-            AwtoGpioPoll();  // awto: GPIO change poll (#39)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
-            AwtoKeyPoll();  // awto: one key path (#129)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
-            AwtoDiagTestCmd();  // awto: boot-stage / timing diagnostics (#23)
-            AWTO_LP(1);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(1);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_LP(0);
+            AWTO_SW_MARK(0);
+            AwtoSwPoll();
+            AwtoDiagMainPass();
+            AWTO_PS_POLL_SITE();
+            AwtoGpioPoll();
+            AWTO_PS_POLL_SITE();
+            AwtoKeyPoll();
+            AWTO_PS_POLL_SITE();
+            AwtoDiagTestCmd();
+            AWTO_LP(1);
+            AWTO_SW_MARK(1);
+            AWTO_PS_POLL_SITE();
             SysPowerHandler();
-            AWTO_SW_FAST_POLL();  // awto: switch timeline poll (#60)
-            AWTO_LP(2);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(2);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_SW_FAST_POLL();
+            AWTO_LP(2);
+            AWTO_SW_MARK(2);
+            AWTO_PS_POLL_SITE();
             SysJudgeHandler();
 
 #if(_ALS_TYPE != _SENSER_NONE)
@@ -126,18 +126,18 @@ void main(void)
 #if(_AUDIO_SUPPORT == _ON)
             SysAudioHandler();
 #endif
-            AWTO_SW_POLL_MARKS();  // awto: switch timeline poll (#60)
-            AWTO_LP(3);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(3);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_SW_POLL_MARKS();
+            AWTO_LP(3);
+            AWTO_SW_MARK(3);
+            AWTO_PS_POLL_SITE();
             SysTimerHandler();
-            AWTO_LP(4);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(4);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_LP(4);
+            AWTO_SW_MARK(4);
+            AWTO_PS_POLL_SITE();
             SysSourceHandler();
-            AWTO_LP(5);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(5);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_LP(5);
+            AWTO_SW_MARK(5);
+            AWTO_PS_POLL_SITE();
             SysModeHandler();
 
 #if(_MHL_SUPPORT == _ON)
@@ -150,17 +150,17 @@ void main(void)
 #endif
 
 #if(_DP_SUPPORT == _ON)
-            AWTO_SW_POLL_MARKS();  // awto: switch timeline poll (#60)
-            AWTO_LP(6);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(6);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_SW_POLL_MARKS();
+            AWTO_LP(6);
+            AWTO_SW_MARK(6);
+            AWTO_PS_POLL_SITE();
             SysDpRxHandler();
 #endif
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
-            AWTO_LP(7);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(7);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_LP(7);
+            AWTO_SW_MARK(7);
+            AWTO_PS_POLL_SITE();
             SysTMDSRxHandler();
 
 #if(_HDMI_CEC_SUPPORT == _ON)
@@ -185,9 +185,9 @@ void main(void)
 #endif
 
 #if(_HDCP_2_2_SUPPORT == _ON)
-            AWTO_LP(8);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(8);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_LP(8);
+            AWTO_SW_MARK(8);
+            AWTO_PS_POLL_SITE();
             ScalerHdcp2Handler();
 #endif
 
@@ -199,21 +199,21 @@ void main(void)
             SysAutotestHandler();
 #endif
 
-            AWTO_LP(9);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(9);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
-            AWTO_SET_LOOP();  // awto: settings registry / menu glue (#67)
+            AWTO_LP(9);
+            AWTO_SW_MARK(9);
+            AWTO_PS_POLL_SITE();
+            AWTO_SET_LOOP();
             UserCommonInterfaceOsdHandler();
 
 #if(_DDCCI_CODE_REDUCTION == _OFF)
-            if(AWTO_DDCCI_POLL_ON()) AWTO_DDCCI_POLL();  // awto: KVM input select + DDC/CI engines (#60)
-            AWTO_NET_POLL();  // awto: IP over DDC (#80)
-            AWTO_LP(10);  // awto: main-loop cost profile (#75)
-            AWTO_SW_MARK(10);  // awto: slow-segment mark (#60)
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            if(AWTO_DDCCI_POLL_ON()) AWTO_DDCCI_POLL();
+            AWTO_NET_POLL();
+            AWTO_LP(10);
+            AWTO_SW_MARK(10);
+            AWTO_PS_POLL_SITE();
             UserCommonDdcciHandler();
 #endif
-            AWTO_PS_POLL_SITE();  // awto: power-saving wake poll between handlers (#144)
+            AWTO_PS_POLL_SITE();
             SysColorHandler();
             ScalerDebug();
 
@@ -241,7 +241,7 @@ void SysMainSystemInitial(void)
 
     ScalerMcuInitial();
 
-    AwtoDiagStage(3);  // awto: boot stage (#63)
+    AwtoDiagStage(3);
     ScalerPinshareInitial();
 
 #if(_CODE_DIGITAL_SIGNATURE_SUPPORT == _SIGNATURE_TYPE_EXTERNAL)
@@ -259,10 +259,10 @@ void SysMainSystemInitial(void)
 
 #endif
 
-    AwtoDiagStage(4);  // awto: boot stage (#63)
+    AwtoDiagStage(4);
 #if(_AWTO_FAST_BOOT == _ON)
     AwtoPanelVddEarly();
-#endif  // awto: early panel VDD (AwtoPanelVddEarly) (#63)
+#endif
     ScalerTimerInitialTimerEvent();
 
     UserCommonInterfaceInitial();

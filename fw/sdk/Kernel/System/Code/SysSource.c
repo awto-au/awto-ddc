@@ -253,7 +253,7 @@ void SysSourceDetectGPIO(void);
 //--------------------------------------------------
 void SysSourceHandler(void)
 {
-    if(AWTO_SLOW_DUE_CABLE() == _TRUE)  // awto: main-loop split: cable detection every AWTO_SLOW_MS (#75)
+    if(AWTO_SLOW_DUE_CABLE() == _TRUE)
     {
         SysSourceCableDetection();
     }
@@ -281,7 +281,7 @@ void SysSourceHandler(void)
 
             if(GET_SOURCE_SEARCH_PORT_INITIAL() == _TRUE)
             {
-            AWTO_SW_MARK(20);  // awto: slow-segment mark (#60)
+            AWTO_SW_MARK(20);
                 SysSourceScanPortInitial(g_ucSearchIndex);
 
                 CLR_SOURCE_SEARCH_PORT_INITIAL();
@@ -289,18 +289,18 @@ void SysSourceHandler(void)
 
             if(GET_SOURCE_SEARCH_TIME_INITIAL() == _TRUE)
             {
-            AWTO_SW_MARK(21);  // awto: slow-segment mark (#60)
+            AWTO_SW_MARK(21);
                 SysSourceSearchTimeInitial(g_ucSearchIndex);
 
                 CLR_SOURCE_SEARCH_TIME_INITIAL();
             }
 
             // Port Detection
-            AWTO_SW_MARK(22);  // awto: slow-segment mark (#60)
+            AWTO_SW_MARK(22);
             SysSourceDetectPort(g_ucSearchIndex);
 
             // Decide if this port is about to be chosen
-            AWTO_SW_MARK(23);  // awto: slow-segment mark (#60)
+            AWTO_SW_MARK(23);
             SysSourceJudge();
         }
 
@@ -593,7 +593,7 @@ void SysSourceDetectPort(BYTE ucSearchIndex)
 
             break;
     }
-    AwtoSyncDetect(GET_INPUT_PORT(GET_INPUTPORT_TYPE(ucSearchIndex)), GET_PORT_TYPE(GET_INPUTPORT_TYPE(ucSearchIndex)), GET_SOURCE_PREDETECT(ucSearchIndex), GET_SOURCE_TYPE(ucSearchIndex));  // awto: sync / power-on log (#139)
+    AwtoSyncDetect(GET_INPUT_PORT(GET_INPUTPORT_TYPE(ucSearchIndex)), GET_PORT_TYPE(GET_INPUTPORT_TYPE(ucSearchIndex)), GET_SOURCE_PREDETECT(ucSearchIndex), GET_SOURCE_TYPE(ucSearchIndex));
 }
 
 //--------------------------------------------------
@@ -1259,7 +1259,7 @@ void SysSourceJudge(void)
                 SET_SOURCE_SEARCH_DELAY_MODE(_SOURCE_SEARCH_DELAY_DEFAULT_MODE);
 
                 // Choose Current Source to proceed
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 19);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 19);
                 SET_SOURCE_JUDGE(g_ucSearchIndex, _TRUE);
 
                 CLR_SOURCE_SWITCH_FINISH();
@@ -3275,7 +3275,7 @@ void SysSourceInitial(void)
     }
 #endif
 
-    if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT) == _TRUE))  // awto: no HDMI hot-plug pulse on an input switch (#60)
+    if((_AWTO_HDMI_HPD_TOGGLE == _ON) && (UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT) == _TRUE))
     {
         SET_HDMI_HOTPLUG_TOGGLE();
         SET_HDMI_HOTPLUG_TIME(UserCommonNVRamGetSystemData(_HDMI_HOT_PLUG_SUPPORT_TIME));
@@ -3475,14 +3475,14 @@ BYTE SysSourceGetAudioPlaybackPort(void)
 // Input Value  : ucInputPort --> Input Port(A0,A1,D0,D1,V1)
 // Output Value : None
 //--------------------------------------------------
-#include "awto_fastsw.inc"  // awto: cached fast input switch (#60)
+#include "awto_fastsw.inc"
 void SysSourceSwitchInputPort(BYTE ucInputPort)
 {
 #if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))
     BYTE ucDpSwitchPortBackup = GET_D6_SWITCH_SELECT();
 #endif
 
-    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, ucInputPort);  // awto: sync / power-on log (#139)
+    AwtoSyncBegin(AWTO_SYNC_K_SWITCH, ucInputPort);
     switch(GET_SOURCE_SCAN_TYPE())
     {
 #if(_HP_SOURCE_SCAN_SUPPORT == _ON)

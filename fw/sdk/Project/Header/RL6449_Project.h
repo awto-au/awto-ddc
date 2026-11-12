@@ -1237,13 +1237,11 @@ extern unsigned char AwtoFastScalerStatus(void);
 //--------------------------------------------------
 // Pcb Option
 //--------------------------------------------------
-// awto: board = 1 DP + 2 HDMI + eDP panel (Dan, awto-ddc#7). Placeholder until our own PCB header.
 #define _PCB_TYPE                                               _RL6449_AWTO_JXC4K  // 216-pin; live pinshare (#7)
 
 //--------------------------------------------------
 // Panel Option
 //--------------------------------------------------
-// awto: Samsung LTM270FL01, eDP HBR2 x4 on TX1 (fw/overlay/Panel/AWTO_LTM270FL01.h, #7)
 #define _PANEL_TYPE                                             _AWTO_LTM270FL01
 #define _PANEL_POW_SEQ_FAST_MODE                                _ON
 
@@ -1299,7 +1297,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // OD Option
 //-------------------------------------------------
-#define _OD_SUPPORT                                             _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _OD_SUPPORT                                             _OFF
 
 //-------------------------------------------------
 // FRC Option
@@ -1314,7 +1312,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // Display Rotation Option
 //-------------------------------------------------
-#define _DISPLAY_ROTATION_SUPPORT                               _OFF    // awto: unused on this board (#7)
+#define _DISPLAY_ROTATION_SUPPORT                               _OFF
 
 //--------------------------------------------------
 // Aspect Ratio Option
@@ -1325,7 +1323,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 //--------------------------------------------------
 // Overscan Option
 //--------------------------------------------------
-#define _OVERSCAN_VGA_SUPPORT                                   _OFF    // awto: unused on this board (#7)
+#define _OVERSCAN_VGA_SUPPORT                                   _OFF
 #define _OVERSCAN_DVI_SUPPORT                                   _ON
 #define _OVERSCAN_HDMI_SUPPORT                                  _ON
 #define _OVERSCAN_DP_SUPPORT                                    _ON
@@ -1353,24 +1351,24 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define _COLOR_FORMAT_CONVERT                                   _ON
 #define _RGB_QUANTIZATION_RANGE_SUPPORT                         _ON
 #define _YCC_QUANTIZATION_RANGE_SUPPORT                         _ON
-#define _ULTRA_VIVID_SUPPORT                                    _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _ULTRA_VIVID_SUPPORT                                    _OFF
 #define _DCR_SUPPORT                                            _OFF
-#define _DCC_FUNCTION                                           _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _DCC_FUNCTION                                           _OFF
 #define _DCC_HISTOGRM_INFO                                      _OFF
-#define _ICM_SUPPORT                                            _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _ICM_SUPPORT                                            _OFF
 #define _ICM_BRI_SUPPORT                                        _OFF
 #define _SCM_SUPPORT                                            _OFF
-#define _SIX_COLOR_SUPPORT                                      _OFF    // awto: cut (Dan 2026-11-04, #8)
-#define _HIGHLIGHT_WINDOW_SUPPORT                               _OFF    // awto: unused on this board (#7)
-#define _RINGING_FILTER_SUPPORT                                 _OFF    // awto: cut (Dan 2026-11-04, #8)
-#define _SHARPNESS_SUPPORT                                      _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _SIX_COLOR_SUPPORT                                      _OFF
+#define _HIGHLIGHT_WINDOW_SUPPORT                               _OFF
+#define _RINGING_FILTER_SUPPORT                                 _OFF
+#define _SHARPNESS_SUPPORT                                      _OFF
 #define _CONTRAST_SUPPORT                                       _ON
 #define _BRIGHTNESS_SUPPORT                                     _ON
 
 //-------------------------------------------------
 // Hue and Saturation Option
 //-------------------------------------------------
-#define _GLOBAL_HUE_SATURATION                                  _OFF    // awto: cut (Dan 2026-11-04, #8)
+#define _GLOBAL_HUE_SATURATION                                  _OFF
 
 #define _HUE_MAX                                                230
 #define _HUE_MIN                                                30
@@ -1411,12 +1409,12 @@ extern unsigned char AwtoFastScalerStatus(void);
 
 #define _OGC_TOTAL_GAMMA                                        5 // 1/2/3/4/5/6
 #define _OGC_TOTAL_CT                                           6
-#define _OGC_FLASH_BANK                                         14 // awto: old fw gamma __data at bank 14 pages 0-2 (1 MiB flash)
+#define _OGC_FLASH_BANK                                         14
 
 //-------------------------------------------------
 // FreesyncII Option
 //-------------------------------------------------
-#define _FREESYNC_II_FLASH_BANK                                 13 // awto: unused (FreeSync II off); kept inside 1 MiB
+#define _FREESYNC_II_FLASH_BANK                                 13
 #define _FREESYNC_II_FLASH_PAGE                                 0
 
 //-------------------------------------------------
@@ -1468,8 +1466,8 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // Flash Access Function Option
 //-------------------------------------------------
-#define _FLASH_WRITE_FUNCTION_SUPPORT                           _ON  // awto: needed by EEPROM emulation
-#define _FLASH_READ_FUNCTION_SUPPORT                            _ON  // awto: needed by EEPROM emulation
+#define _FLASH_WRITE_FUNCTION_SUPPORT                           _ON
+#define _FLASH_READ_FUNCTION_SUPPORT                            _ON
 
 #define _FLASH_TYPE_W25X20A_OR_W25X21CL                         _FLASH_W25X20A
 #define _FLASH_TYPE_W25X40CL_OR_W25X41CL                        _FLASH_W25X40CL
@@ -1487,7 +1485,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // EEPROM Emulation Option
 //-------------------------------------------------
-#define _SYSTEM_EEPROM_EMULATION_SUPPORT                        _ON  // awto: no EEPROM (EEIIC pins GPIO); old fw records at bank 15 p11-12
+#define _SYSTEM_EEPROM_EMULATION_SUPPORT                        _ON
 
 #define _SYSTEM_EEPROM_EMULATION_FLASH_BANK                     15
 #define _SYSTEM_EEPROM_EMULATION_START_PAGE                     11
@@ -1507,7 +1505,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define _EDID_ADDRESS_EEPROM                                    (_EEPROM_PAGE7_BANK0)
 #define _EDID_ADDRESS_FLASH                                     0
 #define _EDID_FLASH_BANK                                        9
-#define _EDID_HDR10_AUTO_SWITCH                                 _OFF    // awto: unused on this board (#7)
+#define _EDID_HDR10_AUTO_SWITCH                                 _OFF
 
 
 //////////////
@@ -1609,9 +1607,9 @@ extern unsigned char AwtoFastScalerStatus(void);
 //--------------------------------------------------
 // VGA YPBPR Option
 //--------------------------------------------------
-#define _YPBPR_SUPPORT                                          _OFF    // awto: unused on this board (#7)
-#define _SOG_SUPPORT                                            _OFF    // awto: unused on this board (#7)
-#define _VGA_COMPOSITE_SUPPORT                                  _OFF    // awto: no VGA port (A0 none); demo default was _ON
+#define _YPBPR_SUPPORT                                          _OFF
+#define _SOG_SUPPORT                                            _OFF
+#define _VGA_COMPOSITE_SUPPORT                                  _OFF
 
 //--------------------------------------------------
 // VGA Mode Search condition reference by picture width Option
@@ -1646,7 +1644,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 //--------------------------------------------------
 // VGA Self-Calibration Option
 //--------------------------------------------------
-#define _ADC_SELF_CALIBRATION                                   _OFF    // awto: unused on this board (#7)
+#define _ADC_SELF_CALIBRATION                                   _OFF
 
 #define _CALIBRATION_R_GAIN_BIAS                                (0)  // Needs modification for EVERY single source
 #define _CALIBRATION_G_GAIN_BIAS                                (0)  // Needs modification for EVERY single source
@@ -1685,12 +1683,12 @@ extern unsigned char AwtoFastScalerStatus(void);
 //--------------------------------------------------
 // DVI & HDMI Option
 //--------------------------------------------------
-#define _DVI_DE_ONLY_SUPPORT                                    _OFF    // awto: unused on this board (#7)
+#define _DVI_DE_ONLY_SUPPORT                                    _OFF
 #define _HDMI_FROM_DVI_CONNECT                                  _ON
 #define _HDMI_FREESYNC_SUPPORT                                  _OFF
 #define _HDMI_HDR10_SUPPORT                                     _OFF
 #define _HDMI_FREESYNC_II_SUPPORT                               _OFF
-#define _TMDS_HDCP_2_2_SUPPORT                                  _OFF    // awto: unused on this board (#7)
+#define _TMDS_HDCP_2_2_SUPPORT                                  _OFF
 
 //--------------------------------------------------
 // HDMI CTS Option
@@ -1706,12 +1704,12 @@ extern unsigned char AwtoFastScalerStatus(void);
 //-------------------------------------------------
 // DP Capability Option
 //-------------------------------------------------
-#define _DP_MST_SUPPORT                                         _OFF    // awto: no DP-out/daisy chain (demo _ON; ~0.9 KB XDATA)
-#define _DP_TX_SUPPORT                                          _OFF    // awto: DP-out port only; eDP panel uses ScalerDisplayDPTx (independent)
+#define _DP_MST_SUPPORT                                         _OFF
+#define _DP_TX_SUPPORT                                          _OFF
 #define _DP_FREESYNC_SUPPORT                                    _OFF
 #define _DP_FREESYNC_II_SUPPORT                                 _OFF
 #define _DP_HDR10_SUPPORT                                       _OFF
-#define _DP_HDCP_2_2_SUPPORT                                    _OFF    // awto: unused on this board (#7)
+#define _DP_HDCP_2_2_SUPPORT                                    _OFF
 
 
 /////////
@@ -1726,7 +1724,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define _MHL2_AUD_CHANNEL                                       _MHL_AUD_2CH
 #define _MHL2_ADOPTER_ID                                        0x0000
 #define _MHL2_DEVICE_ID                                         0x0000
-#define _MHL2_PP_MODE_SUPPORT                                   _OFF    // awto: unused on this board (#7)
+#define _MHL2_PP_MODE_SUPPORT                                   _OFF
 
 
 ///////////

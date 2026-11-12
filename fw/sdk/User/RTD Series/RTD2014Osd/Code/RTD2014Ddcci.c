@@ -52,10 +52,10 @@
 #define _VGA_1                                      _A0_INPUT_PORT
 #define _DVI_1                                      _NO_INPUT_PORT
 #define _DVI_2                                      _NO_INPUT_PORT
-#define _DP_1                                       _D1_INPUT_PORT  // awto: our ports: D1 DP, D2 / D3 HDMI (#60)
+#define _DP_1                                       _D1_INPUT_PORT
 #define _DP_2                                       _NO_INPUT_PORT
-#define _HDMI_1                                     _D2_INPUT_PORT  // awto: our ports: D1 DP, D2 / D3 HDMI (#60)
-#define _HDMI_2                                     _D3_INPUT_PORT  // awto: our ports: D1 DP, D2 / D3 HDMI (#60)
+#define _HDMI_1                                     _D2_INPUT_PORT
+#define _HDMI_2                                     _D3_INPUT_PORT
 
 //--------------------------------------------------
 // Dell DDM Tool
@@ -102,8 +102,8 @@ void RTDDdcciColorReset(void);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_ddcci.inc"  // awto: KVM input select + DDC/CI engines (#60)
-#include "awto_net.inc"  // awto: IP over DDC (#80)
+#include "awto_ddcci.inc"
+#include "awto_net.inc"
 void UserDdcciHandler(void)
 {
     if(GET_OSD_DDCCI_STATUS() == _ON)
@@ -627,31 +627,31 @@ void RTDDdcciSetVCPFeature(void)
 
                 if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x01)
                 {
-                    AwtoInputSelect(_VGA_1, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_VGA_1, 0x60);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x03)
                 {
-                    AwtoInputSelect(_DVI_1, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_DVI_1, 0x60);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x04)
                 {
-                    AwtoInputSelect(_DVI_2, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_DVI_2, 0x60);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x0F)
                 {
-                    AwtoInputSelect(_DP_1, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_DP_1, 0x60);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x10)
                 {
-                    AwtoInputSelect(_DP_2, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_DP_2, 0x60);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x11)
                 {
-                    AwtoInputSelect(_HDMI_1, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_HDMI_1, 0x60);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 0x12)
                 {
-                    AwtoInputSelect(_HDMI_2, 0x60);  // awto: input select through the fast path (#60)
+                    AwtoInputSelect(_HDMI_2, 0x60);
                 }
                 break;
 

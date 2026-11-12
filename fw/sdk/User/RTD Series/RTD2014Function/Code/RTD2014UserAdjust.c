@@ -342,7 +342,7 @@ void UserAdjustAudioVolume(BYTE ucVolume)
 //--------------------------------------------------
 WORD UserAdjustAudioVolumeMapping(BYTE ucVolume)
 {
-    return AwtoAudioGain(ucVolume);  // awto: volume through our dB table (#93)
+    return AwtoAudioGain(ucVolume);
 }
 #endif // End of #if(_AUDIO_SUPPORT == _ON)
 

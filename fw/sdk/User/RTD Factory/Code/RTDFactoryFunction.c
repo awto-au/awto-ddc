@@ -20,7 +20,7 @@
 #define __FACTORY_FUNCTION__
 
 #include "UserCommonInclude.h"
-#if(_AWTO_FACTORY == _ON)  // awto: size switch: factory menu (#65)
+#if(_AWTO_FACTORY == _ON)
 
 //****************************************************************************
 // DEFINITIONS / MACROS

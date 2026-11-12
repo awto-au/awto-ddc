@@ -199,7 +199,7 @@ void ScalerDisplayDPTxPollingHotPlug(WORD usNum)
 
         if(usPreviousTime != g_usTimerCounter)
         {
-            usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_HPD);  // awto: watchdog feed per ms in the eDP HPD poll (#150)
+            usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_HPD);
             usPreviousTime = g_usTimerCounter;
         }
     }

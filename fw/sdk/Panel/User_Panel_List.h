@@ -50,7 +50,7 @@
 #define _LG_LED_DP_27_UHD                       0x39    // 3840 x 2160
 #define _AUO_LED_DP_32_UHD                      0x3A    // 3840 x 2160
 #define _LG_LED_DP_27_QQHD                      0x3B    // 5120 x 2880
-#define _AWTO_LTM270FL01                        0x3D    // 3840 x 2160  // awto: our panel id 0x3D (#7)
+#define _AWTO_LTM270FL01                        0x3D    // 3840 x 2160
 #define _AUO_EDP_27_UHD_LOCAL_DIMMING           0x3C    // 3840 x 2160
 
 #define _AUO_VBO_27_WUXGA_FREESYNC              0x51    // 1920 x 1080

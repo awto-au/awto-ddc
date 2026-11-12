@@ -139,7 +139,7 @@ bit ScalerFlashWrite(BYTE ucBank, WORD usAddr, WORD usLength, BYTE *pucData)
 #endif
 
     for(ucPage = ucStartPage; ucPage <= ucEndPage; ucPage++)
-    { { extern void AwtoWdtLibPoke(unsigned char ucSite); AwtoWdtLibPoke(10); }  // awto: watchdog poke in a flash loop (#150)
+    { { extern void AwtoWdtLibPoke(unsigned char ucSite); AwtoWdtLibPoke(10); }
 #if(_HW_FLASH_ACCESS_METHOD == _FLASH_PORT_ACCESS)
         MCU_FF78_ACCESS_FLASH_ADDR_0 = ucBank;
         MCU_FF79_ACCESS_FLASH_ADDR_1 = (BYTE)(usCurrentAddr >> 8);

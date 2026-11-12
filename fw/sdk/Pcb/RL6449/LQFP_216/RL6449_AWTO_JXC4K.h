@@ -35,7 +35,7 @@
 //--------------------------------------------------
 // A0 Input Port
 //--------------------------------------------------
-#define _A0_INPUT_PORT_TYPE                     _A0_NO_PORT  // awto: no VGA
+#define _A0_INPUT_PORT_TYPE                     _A0_NO_PORT
 #define _A0_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_NONE
 #define _A0_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
 
@@ -45,7 +45,7 @@
 //--------------------------------------------------
 // D0 Input Port
 //--------------------------------------------------
-#define _D0_INPUT_PORT_TYPE                     _D0_NO_PORT  // awto: AUX0 pins are GPIO in old fw
+#define _D0_INPUT_PORT_TYPE                     _D0_NO_PORT
 #define _D0_DDC_CHANNEL_SEL                     _DDC0
 #define _D0_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
 #define _D0_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_USER
@@ -59,7 +59,7 @@
 #define _D1_INPUT_PORT_TYPE                     _D1_DP_PORT
 #define _D1_DDC_CHANNEL_SEL                     _DDC1
 #define _D1_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
-#define _D1_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE  // awto: old fw serves all 3 EDIDs from code (docs/edid-fix.md)
+#define _D1_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
 #define _D1_DP_CONNECTOR_TYPE                   _DP_CONNECTOR_NORMAL
 #define _D1_DP_LINK_CLK_RATE                    _DP_HIGH_SPEED2_540MHZ
 #define _D1_DP_MAIN_LINK_LANES                  _DP_FOUR_LANE
@@ -70,7 +70,7 @@
 #define _D2_INPUT_PORT_TYPE                     _D2_HDMI_PORT
 #define _D2_DDC_CHANNEL_SEL                     _DDC2
 #define _D2_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
-#define _D2_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE  // awto: old fw serves all 3 EDIDs from code (docs/edid-fix.md)
+#define _D2_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
 
 //--------------------------------------------------
 // D3 Input Port
@@ -78,7 +78,7 @@
 #define _D3_INPUT_PORT_TYPE                     _D3_HDMI_PORT
 #define _D3_DDC_CHANNEL_SEL                     _DDC3
 #define _D3_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
-#define _D3_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE  // awto: old fw serves all 3 EDIDs from code (docs/edid-fix.md)
+#define _D3_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
 
 
 /////////////////////////////
@@ -97,7 +97,6 @@
 //--------------------------------------------------
 // Input Port Search Priority Define (Must Start From Valid Port)
 //--------------------------------------------------
-// awto: A0/D0 are not wired; PRI_0 is also the NVRAM default port, i.e. the boot DDC-CI channel (#8)
 #define _INPUT_PORT_SEARCH_PRI_0                _D2_INPUT_PORT
 #define _INPUT_PORT_SEARCH_PRI_1                _D1_INPUT_PORT
 #define _INPUT_PORT_SEARCH_PRI_2                _D3_INPUT_PORT
@@ -203,7 +202,7 @@
 #define _SW_IIC_SUPPORT                         _OFF
 #define _SW_IIC_CLK_DIV                         _DIV_1
 
-#define _HW_IIC_SUPPORT                         _OFF    // awto: no EEPROM / IIC device on the HW IIC pins 210/211 (GPIO here), #53.3
+#define _HW_IIC_SUPPORT                         _OFF
 #define _HW_IIC_SPEED                           _HW_IIC_LOW_SPEED_100K
 
 
@@ -216,7 +215,7 @@
 //--------------------------------------------------
 #define _EEPROM_TYPE                            _EEPROM_24LC16
 #define _EEPROM_SLAVE_ADDRESS                   0xA0
-#define _PCB_SYS_EEPROM_IIC                     _NO_IIC_PIN     // awto: settings are flash-emulated (#53.3)
+#define _PCB_SYS_EEPROM_IIC                     _NO_IIC_PIN
 
 
 //////////
@@ -346,7 +345,7 @@
 #define _REGULATOR_5V_ON                        0
 #define _REGULATOR_5V_OFF                       1
 
-#define PCB_REGULATOR_5V_OUT(x)                 {}      // awto: P8.2 role unproven, not driven (#53.4)
+#define PCB_REGULATOR_5V_OUT(x)                 {}
 
 
 /////////////////////////
@@ -368,7 +367,6 @@
 //-----------------------------------------------
 // Macro of System Eeprom WP High/Low
 //-----------------------------------------------
-// awto: no EEPROM, PA.6 is not driven (#53.3)
 #define _EEPROM_WP_ENABLE                       1
 #define _EEPROM_WP_DISABLE                      0
 
@@ -400,7 +398,7 @@
 //-----------------------------------------------
 // Macro of PCB Audio AMP Control
 //-----------------------------------------------
-#define PCB_AMP_MUTE(x)                         {}      // awto: no amp-mute pin in the Dahua fw access table (docs/audio.md) [fw]
+#define PCB_AMP_MUTE(x)                         {}
 
 ////////////////////////
 // Cable Status Macro //
@@ -541,7 +539,6 @@
 //--------------------------------------------------
 #define bLED1                                   (P3_5) // Pin_91, normal/on colour
 #define bLED_STANDBY                            (P3_6) // Pin_92, standby colour
-// awto: P8.4 is a board power-state enable, not an LED. LED2..5 remain unproven/no-op.
 #define bLED2                                   (MCU_FE28_PORT90_PIN_REG) // Pin_194, P9.0
 #define bLED3                                   (MCU_FE2D_PORT95_PIN_REG) // Pin_199, P9.5
 #define bLED4                                   (MCU_FE13_PORT63_PIN_REG) // Pin_152, P6.3

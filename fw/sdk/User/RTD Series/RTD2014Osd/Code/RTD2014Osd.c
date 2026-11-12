@@ -93,9 +93,8 @@ void RTDOsdSystemFlowProc(void)
                 UserAdjustFREESYNCODMeasure();
 #endif
 
-                AwtoBootConsole();  // awto: boot console instead of the logo (#144)
-                AWTO_BOOT_PANEL_ON();  // awto: boot panel power-on (#144)
-  // awto: boot logo removed (#144)
+                AwtoBootConsole();
+                AWTO_BOOT_PANEL_ON();
             }
 
             break;
@@ -218,7 +217,6 @@ void RTDOsdSystemFlowProc(void)
     UserCommonAdjustEmbeddedDpSwitch();
 #endif
 
-  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 }
 
 //--------------------------------------------------
@@ -263,9 +261,8 @@ void RTDOsdEventMsgProc(void)
             SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
             OsdFuncSetOsdItemFlag();
             g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-            AwtoSourceOpen();  // awto: our source selector (#134)
+            AwtoSourceOpen();
 
-  // awto: sleep rule in AwtoSourceOpen (AwtoSrcSleepArm) (#139)
             UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
             break;
 
@@ -321,9 +318,9 @@ void RTDOsdEventMsgProc(void)
 
             if(GET_OSD_STATE() == _MENU_NONE)
             {
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 9);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 9);
                 OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 10);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 10);
                 ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), _USER_TIMER_EVENT_OSD_DISABLE); /* awto: info pop-up time _AWTO_INFO_POPUP_SEC */
             }
             break;
@@ -416,7 +413,6 @@ void RTDOsdEventMsgProc(void)
 }
 
 
-  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 
 void MenuPicture(void)
 {
@@ -10567,7 +10563,6 @@ void MenuHotKeyDdcci(void)
     }
 }
 
-  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 
 
 void MenuHotKeyDpOption(void)
@@ -10750,7 +10745,7 @@ void MenuPanelUniformityMsgAdjust(void)
             ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
             OsdFuncDisableOsd();
             OsdFuncCloseWindow(_OSD_WINDOW_ALL);
-            AWTO_REALTEK_MENU_OPEN();  // awto: Realtek menu built out (#120)
+            AWTO_REALTEK_MENU_OPEN();
 
             if(g_usBackupValue == _FROM_STATE_GAMMA)
             {
@@ -10882,7 +10877,6 @@ void MenuPanelUniformityMsgAdjust(void)
     }
 }
 
-  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 
-#include "glue.inc"  // awto: settings registry / menu glue (#67)
+#include "glue.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

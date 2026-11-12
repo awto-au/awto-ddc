@@ -495,7 +495,7 @@ BYTE __code tFONT1_ICON_OTHER[]=
     0xec,0x15,0xe6,0x0a,0x58,0x00,0xf0,0xff,
 };
 
-#if(_AWTO_POPUP_ICON_AWTO == _OFF)  // awto: our info mark replaces the SDK bubble (#46)
+#if(_AWTO_POPUP_ICON_AWTO == _OFF)
 BYTE __code tFONT1_ICON_INFORMATION[]=
 {
     0x0f,0xe7,0xc3,0x18,0xbd,0x24,0x56,0x9a,0x01,0x68,0x80,0x05,
@@ -2783,7 +2783,7 @@ BYTE __code tFONT1_ICON_POSITION[] =
 
 #if(_AWTO_POPUP_ICON_AWTO == _ON)
 #include "awto_icon_info.inc"
-#endif  // awto: early panel VDD (AwtoPanelVddEarly) (#63)
+#endif
 #if(_AWTO_REALTEK_MENU != _ON)
 BYTE __code tAWTO_ICON_NONE[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif
@@ -2970,7 +2970,6 @@ void OsdFontVLCDynamicLoadIcon(BYTE ucIconPos, WORD usIcon)
     if((usIcon >= _ICON_INPUT_VGA) && (usIcon < _ICON_INPUT_END))
     {
         // Input Icon
-  // awto: no input icons (the selector is text) (#134)
     }
     else
     {

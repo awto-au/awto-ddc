@@ -138,7 +138,7 @@ void SysModeHandler(void)
                 CLR_INPUT_TIMING_DOUBLE_CHECK();
 
                 // Measure Current Input Timing to gather all required timing Info
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 17);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 17);
                 if(ScalerMeasureInputInfo(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort()) == _TRUE)
                 {
                     if(GET_INPUT_TIMING_H_POLARITY() == _HIGH)
@@ -171,8 +171,8 @@ void SysModeHandler(void)
                     DebugMessageSystem("Input Timing VHeight", GET_INPUT_TIMING_VHEIGHT());
                     DebugMessageSystem("Input Timing VSyncSWidth", GET_INPUT_TIMING_VSYNCWIDTH());
 
-                    AwtoSyncTiming();  // awto: sync / power-on log (#139)
-                    AwtoSwEvent(AWTO_SW_EV_PROBE, 18);  // awto: switch-log probe (#60)
+                    AwtoSyncTiming();
+                    AwtoSwEvent(AWTO_SW_EV_PROBE, 18);
                     SET_MODE_TIMING_CONFIRM();
                     SET_INPUT_TIMING_DOUBLE_CHECK();
                 }
@@ -268,7 +268,7 @@ void SysModeHandler(void)
                 DWORD ulDclk = GET_D_CLK_FREQ();
 #endif
 
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 14);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 14);
                 if(SysModeDisplaySetting() == _TRUE)
                 {
 #if(_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON)
@@ -286,11 +286,11 @@ void SysModeHandler(void)
 #if((_PANEL_POW_SEQ_FAST_MODE == _ON) || (_PANEL_POWER_ON_BEFORE_COLOR_SETTING == _ON))
                     UserCommonInterfacePanelPowerAction(_PANEL_ON);
 #endif
-                    AwtoSwEvent(AWTO_SW_EV_PROBE, 15);  // awto: switch-log probe (#60)
+                    AwtoSwEvent(AWTO_SW_EV_PROBE, 15);
                     UserCommonInterfaceAdjustColorProc();
 
-                    AwtoSyncFreq();  // awto: sync / power-on log (#139)
-                    AwtoSwEvent(AWTO_SW_EV_PROBE, 16);  // awto: switch-log probe (#60)
+                    AwtoSyncFreq();
+                    AwtoSwEvent(AWTO_SW_EV_PROBE, 16);
                     SET_MODE_DISPLAY_SETTING_READY();
 
                     SET_MODE_RESET_TARGET(_MODE_ACTION_NO_RESET_MODE);
@@ -306,11 +306,11 @@ void SysModeHandler(void)
             if(GET_MODE_STATE_CHANGE_MODE() == _TRUE)
             {
                 ScalerGlobalFirstActiveProc(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort());
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 11);  // awto: switch-log probe (#60)
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 11);
                 UserCommonInterfaceOsdActiveProc();
                 UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
-                AwtoSwCacheStore();  // awto: store the fast-switch cache at the first ACTIVE (#60)
-                AwtoSwEvent(AWTO_SW_EV_PROBE, 12);  // awto: switch-log probe (#60)
+                AwtoSwCacheStore();
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 12);
                 SysSourceFirstActiveProc();
             }
 
@@ -462,7 +462,7 @@ void SysModeSetUpDisplayInitialization(void)
     {
 #if(_PANEL_POW_SEQ_FAST_MODE == _ON)
         // Turn off backlight to prevent garbage
-        AWTO_BL_OFF_OR_BLANK(1);  // awto: backlight off becomes a blank (#60)
+        AWTO_BL_OFF_OR_BLANK(1);
 #else
         // Turn off backlight to prevent garbage
         UserCommonInterfacePanelPowerAction(_PANEL_OFF);
@@ -596,7 +596,7 @@ void SysModeResetState(BYTE ucResetTarget)
             UserCommonInterfaceOsdResetProc();
 
             // Clear Source Ready Flag
-            AwtoSwEvent(AWTO_SW_EV_PROBE, 4);  // awto: switch-log probe (#60)
+            AwtoSwEvent(AWTO_SW_EV_PROBE, 4);
             SysSourceInfoReset();
 
             // Clear Measure Ready Flag
@@ -613,7 +613,7 @@ void SysModeResetState(BYTE ucResetTarget)
 
             SysModeSetFreeRun();
 
-            AwtoSwEvent(AWTO_SW_EV_PROBE, 5);  // awto: switch-log probe (#60)
+            AwtoSwEvent(AWTO_SW_EV_PROBE, 5);
             ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_JUDGE_ACTIVE_STATE);
             ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_JUDGE_NOSIGNAL_STATE);
             ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_JUDGE_NOSUPPORT_STATE);
@@ -747,7 +747,7 @@ void SysModeSetFreeRun(void)
         UserCommonInterfacePanelPowerAction(_PANEL_OFF);
 #elif(_PANEL_STYLE == _PANEL_DPTX)
         // Turn off backlight to prevent garbage
-        AWTO_BL_OFF_OR_BLANK(1);  // awto: backlight off becomes a blank (#60)
+        AWTO_BL_OFF_OR_BLANK(1);
 #endif
     }
 }

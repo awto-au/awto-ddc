@@ -5164,7 +5164,7 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
     if((ucPortType != _PORT_DVI) && (ucPortType != _PORT_HDMI) &&
        (ucPortType != _PORT_MHL) && (ucPortType != _PORT_DUAL_DVI))
     {
-        AWTO_IDLE_TMDS_OFF();  // awto: idle TMDS MAC stays powered (#60)
+        AWTO_IDLE_TMDS_OFF();
     }
 #endif
 
@@ -5254,35 +5254,35 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
 
@@ -5388,35 +5388,35 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
 
@@ -5522,7 +5522,7 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
@@ -5530,28 +5530,28 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 
                 if(GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
 
@@ -5663,35 +5663,35 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D3_INPUT_PORT_TYPE != _D3_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -5799,35 +5799,35 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D4_INPUT_PORT_TYPE != _D4_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -5890,35 +5890,35 @@ void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE ucSourceS
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if(GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if(GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE)
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
             }
@@ -5994,7 +5994,7 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
        (ucInputPortType != _PORT_DVI) && (ucInputPortType != _PORT_HDMI) &&
        (ucInputPortType != _PORT_MHL) && (ucInputPortType != _PORT_DUAL_DVI))
     {
-        AWTO_IDLE_TMDS_OFF();  // awto: idle TMDS MAC stays powered (#60)
+        AWTO_IDLE_TMDS_OFF();
     }
 #endif
 
@@ -6080,35 +6080,35 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE) && (ucInputPort != _D1_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE) && (ucInputPort != _D2_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE) && (ucInputPort != _D3_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE) && (ucInputPort != _D4_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE) && (ucInputPort != _D5_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -6209,35 +6209,35 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE) && (ucInputPort != _D0_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE) && (ucInputPort != _D2_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE) && (ucInputPort != _D3_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE) && (ucInputPort != _D4_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE) && (ucInputPort != _D5_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -6338,7 +6338,7 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE) && (ucInputPort != _D0_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
@@ -6346,28 +6346,28 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 
                 if((GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE) && (ucInputPort != _D1_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D2_INPUT_PORT_TYPE != _D2_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE) && (ucInputPort != _D3_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE) && (ucInputPort != _D4_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE) && (ucInputPort != _D5_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -6474,35 +6474,35 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE) && (ucInputPort != _D0_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE) && (ucInputPort != _D1_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE) && (ucInputPort != _D2_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D3_INPUT_PORT_TYPE != _D3_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE) && (ucInputPort != _D4_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE) && (ucInputPort != _D5_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -6609,35 +6609,35 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE) && (ucInputPort != _D0_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE) && (ucInputPort != _D1_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE) && (ucInputPort != _D2_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE) && (ucInputPort != _D3_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D4_INPUT_PORT_TYPE != _D4_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D5() == _TRUE) && (ucInputPort != _D5_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D5_INPUT_PORT);
                 }
 #endif
             }
@@ -6699,35 +6699,35 @@ void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE uc
 #if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D0() == _TRUE) && (ucInputPort != _D0_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D0_INPUT_PORT);
                 }
 #endif
 
 #if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D1() == _TRUE) && (ucInputPort != _D1_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D1_INPUT_PORT);
                 }
 #endif
 
 #if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
                 if((GET_DIGITAL_PORT_SWITCH_TO_D2() == _TRUE) && (ucInputPort != _D2_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D2_INPUT_PORT);
                 }
 #endif
 
 #if((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) || (_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D3() == _TRUE) && (ucInputPort != _D3_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D3_INPUT_PORT);
                 }
 #endif
 
 #if((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT))
                 if((GET_DIGITAL_PORT_SWITCH_TO_D4() == _TRUE) && (ucInputPort != _D4_INPUT_PORT))
                 {
-                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);  // awto: idle receivers stay powered (AWTO_IDLE_RX_OFF) (#60)
+                    AWTO_IDLE_RX_OFF(_D4_INPUT_PORT);
                 }
 #endif
             }

@@ -365,7 +365,7 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
 void SysTimerIntProc0(void) __interrupt(1)
 {
     // Backup for Burst Write Bug
-    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr();  // awto: Timer0 event scheduler tick (#138)
+    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr();
 
 #if(_INSTANT_TIMER_EVENT_0 == _ON)
     // Clear Timer0 flag
@@ -435,14 +435,13 @@ void SysTimerIntProc2(void) __interrupt(5)
     g_ucBackup_TIMER2 = MCU_FFF4_SCA_INF_ADDR;
 
     // Clear Timer2 flag
-    AWTO_DIAG_T2ISR();  // awto: diag hook in the ISR (#23)
+    AWTO_DIAG_T2ISR();
     TF2 = 0;
 
 #if(_WD_TIMER_INT_SUPPORT == _OFF)
     // Clear watchdog
     CLR_MCU_WATCH_DOG();
 #else
-  // awto: no watchdog work in the 1 ms tick (#138)
 
 
 
@@ -494,7 +493,7 @@ void SysTimerIntProc2(void) __interrupt(5)
     ScalerSyncDpHpdIrqAssertTimer2EventProc_EXINT();
 #endif
 
-    AWTO_MEAS_T2ISR();  // awto: 4K60 measurement ring (#26)
+    AWTO_MEAS_T2ISR();
     // Reload Backup for Burst Write Bug
     MCU_FFF4_SCA_INF_ADDR = g_ucBackup_TIMER2;
 }
@@ -516,7 +515,7 @@ void SysTimerWDIntProc(void) __interrupt(8)
     EXIF &= ~_BIT4;
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-    AWTO_WDT_IRQ();  // awto: watchdog warning (capture + reset) (#138)
+    AWTO_WDT_IRQ();
 #endif
 
     if(((MCU_FFEB_WDT_TEST & _BIT7) == _BIT7) && ((EXIF & _BIT4) == 0x00))

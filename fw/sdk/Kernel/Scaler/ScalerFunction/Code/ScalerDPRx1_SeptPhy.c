@@ -1696,7 +1696,7 @@ bit ScalerDpRx1PSPreDetect(void)
         return _TRUE;
     }
 
-#if(_AWTO_PS_WAKE == _ON)  // awto: power-saving wake: counted, not returned (#144)
+#if(_AWTO_PS_WAKE == _ON)
     if(GET_DP_RX1_PS_AUX_TOGGLE() == _TRUE) { CLR_DP_RX1_PS_AUX_TOGGLE(); AwtoPsAuxSeen(_D1_INPUT_PORT); }
 #else
     if(GET_DP_RX1_PS_AUX_TOGGLE() == _TRUE) { return _TRUE; }
@@ -3949,7 +3949,7 @@ bit ScalerDpRx1DecodeCheck(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_dpframe.inc"  // awto: DP Rx1 two-frame waits = 2 x the measured frame (#60)
+#include "awto_dpframe.inc"
 bit ScalerDpRx1DisplayFormatSetting(void)
 {
     BYTE ucOddFlg = 0;
@@ -4064,7 +4064,7 @@ bit ScalerDpRx1DisplayFormatSetting(void)
 #endif
     {
         // Delay a Complete Frame
-        AWTO_DP_FRAME_SET(ulVBs2BsCount);  // awto: DP Rx1 two-frame waits = 2 x the measured frame (#60)
+        AWTO_DP_FRAME_SET(ulVBs2BsCount);
         ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
     }
 
@@ -4309,7 +4309,7 @@ bit ScalerDpRx1FifoCheck(EnumDpFifoCheckCondition enumFifoCheckCondition)
         if(GET_AIO_MODERN_STANDBY_MODE() == _FALSE)
 #endif
         {
-            ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());  // awto: DP Rx1 two-frame waits = 2 x the measured frame (#60)
+            ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());
 
             pData[0] = 0;
 
@@ -4780,7 +4780,7 @@ bit ScalerDpRx1LinkRateChange(void)
 bit ScalerDpRx1NormalPreDetect(void)
 {
     // For Dp PHY CTS Test
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
     if((GET_DP_RX1_PHY_CTS_FLG() == _TRUE) || (ScalerDpRx1GetDpcdBitInfo(0x00, 0x02, 0x70, _BIT7) == _BIT7))
     {
         ScalerDpRx1PhyCTS();
@@ -5146,7 +5146,7 @@ bit ScalerDpRx1NormalPreDetect(void)
 // Input Value  : None
 // Output Value : TRUE --> TP1 Pass
 //--------------------------------------------------
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
 bit ScalerDpRx1PhyCtsTp1Check(void)
 {
     // Wait for 10ms
@@ -5212,7 +5212,7 @@ bit ScalerDpRx1PhyCtsTp1Check(void)
 // Input Value  : None
 // Output Value : TRUE --> TP2 Pass
 //--------------------------------------------------
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
 bit ScalerDpRx1PhyCtsTp2Check(void)
 {
     ScalerTimerDelayXms(10);
@@ -5378,7 +5378,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     // 2nd Scramble Setting Sync
     ScalerDpRx1ScrambleSetting();
 
-    AWTO_SW_MARK(30);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(30);
     if(ScalerDpRx1HdcpCheck() == _FALSE)
     {
         DebugMessageRx1("7. DP HDCP Check Fail", 0);
@@ -5395,7 +5395,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
         return _SOURCE_NONE;
     }
 
-    AWTO_SW_MARK(31);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(31);
     if(ScalerDpRx1GetVideoStream() == _FALSE)
     {
         DebugMessageRx1("7. DP Video Stream Fail", 0);
@@ -5414,7 +5414,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     }
 #endif
 
-    AWTO_SW_MARK(32);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(32);
     if(ScalerDpRx1MSACheck() == _FALSE)
     {
         DebugMessageRx1("7. DP MSA Fail", 0);
@@ -5429,7 +5429,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     }
 #endif
 
-    AWTO_SW_MARK(33);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(33);
     if(ScalerDpRx1GetVideoInfo() == _FALSE)
     {
         DebugMessageRx1("7. DP Get Video Info Fail", 0);
@@ -5441,7 +5441,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
         ScalerDpRx1SetColorInfo();
     }
 
-    AWTO_SW_MARK(34);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(34);
     if(ScalerDpRx1DisplayFormatSetting() == _FALSE)
     {
         DebugMessageRx1("7. DP Display Format Fail", 0);
@@ -5456,7 +5456,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     }
 #endif
 
-    AWTO_SW_MARK(35);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(35);
     if(ScalerDpRx1StreamClkRegenerate() == _FALSE)
     {
         DebugMessageRx1("7. DP SteamClk Fail", 0);
@@ -5471,7 +5471,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
     }
 #endif
 
-    AWTO_SW_MARK(36);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(36);
     if(ScalerDpRx1FifoCheck(_DP_FIFO_DELAY_CHECK) == _FALSE)
     {
 #if(_DP_FREESYNC_SUPPORT == _ON)
@@ -5526,7 +5526,7 @@ BYTE ScalerDpRx1ScanInputPort(void)
         }
     }
 
-    AWTO_SW_MARK(37);  // awto: DP Rx1 scan step mark (#60)
+    AWTO_SW_MARK(37);
     ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_HDCP_LONG_HOTPLUG_EVENT);
 
 #if(_DP_FREESYNC_SUPPORT == _ON)

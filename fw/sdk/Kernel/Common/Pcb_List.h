@@ -62,7 +62,7 @@
 #define _RL6449_PCB_EXAMPLE                                         0x40
 #define _RL6449_PCB_EXAMPLE_156_PIN                                 0x41
 #define _RL6449_QA_A_1A2MHL1DP1mDP_DPTX_eDP                         0x42
-#define _RL6449_AWTO_JXC4K                                          0x4F  // awto: our board id 0x4F (#7)
+#define _RL6449_AWTO_JXC4K                                          0x4F
 #define _RL6449_QA_B_1A2MHL1DP1mDP_DPTX_eDP                         0x43
 #define _RL6449_QA_A_156PIN_2H1DP_eDP                               0x44
 #define _RL6449_DEMO_A_1A2MHL1DP1mDP_DPTX_eDP                       0x45

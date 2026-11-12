@@ -691,7 +691,7 @@ bit ScalerTMDSRx3TMDSNormalPreDetect(void)
 //--------------------------------------------------
 bit ScalerTMDSRx3TMDSPSPreDetect(void)
 {
-#if(_AWTO_PS_WAKE == _ON)  // awto: power-saving wake: counted, not returned (#144)
+#if(_AWTO_PS_WAKE == _ON)
     if(GET_TMDS_RX3_DDC_DETECTED() == _TRUE)
     {
         CLR_TMDS_RX3_DDC_DETECTED();
@@ -727,7 +727,7 @@ bit ScalerTMDSRx3TMDSPSPreDetect(void)
         MCU_FE72_DDC3_EDID_IRQ |= _BIT3;
     }
 
-#if(_AWTO_PS_WAKE == _OFF)  // awto: power-saving wake: SDK predetect wait kept only without _AWTO_PS_WAKE (#144)
+#if(_AWTO_PS_WAKE == _OFF)
     // Reset Freq. Detect Counter(Toggle) & Choose Measure Clk to TMDS Clk
     ScalerSetBit(P72_E6_HDMI_FREQDET_CTRL, ~(_BIT7 | _BIT5 | _BIT4), 0x00);
     ScalerSetBit(P72_E6_HDMI_FREQDET_CTRL, ~_BIT7, _BIT7);
@@ -759,7 +759,7 @@ bit ScalerTMDSRx3TMDSPSPreDetect(void)
     else
     {
         // Disable Freq. Detection
-#if(_AWTO_PS_WAKE == _OFF)  // awto: power-saving wake: SDK predetect wait kept only without _AWTO_PS_WAKE (#144)
+#if(_AWTO_PS_WAKE == _OFF)
         ScalerSetBit(P72_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00);
 #endif
 

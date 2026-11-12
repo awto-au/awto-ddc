@@ -662,7 +662,7 @@ bit OsdFuncCheckFreezeDisable(void)
 //--------------------------------------------------
 void OsdFuncShowOSDAfterClosedFreezeMsg(void)
 {
-    AWTO_REALTEK_MENU_OPEN();  // awto: Realtek menu built out (#120)
+    AWTO_REALTEK_MENU_OPEN();
     switch(GET_OSD_STATE())
     {
 #if(_VGA_SUPPORT == _ON)

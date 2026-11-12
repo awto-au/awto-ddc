@@ -2566,7 +2566,7 @@ bit ScalerDpRx1HdcpCheck(void)
 // Input Value  : FLD Reference Clock
 // Output Value : None
 //--------------------------------------------------
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
 void ScalerDpRx1PhyCtsTp1SetPhy(EnumDpNFCodeRef enumDpNFCodeRef)
 {
     BYTE ucIcp = 0;
@@ -2963,7 +2963,7 @@ void ScalerDpRx1PhyCtsTp1SetPhy(EnumDpNFCodeRef enumDpNFCodeRef)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
 void ScalerDpRx1PhyCtsTp2SetPhy(void)
 {
     BYTE ucBestVCOBand = 0;
@@ -3618,7 +3618,7 @@ void ScalerDpRx1PhyCtsTp2SetPhy(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
 void ScalerDpRx1PhyCTS(void)
 {
     // g_ucDpRx1PhyCtsCtrl(Page0x7A 50[2:0]) = 0x01 --> CDR
@@ -4321,7 +4321,7 @@ void ScalerDpRx1PhyCTS(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#if(_AWTO_DP_PHYCTS == _ON)  // awto: size switch: DP PHY compliance test code (#65)
+#if(_AWTO_DP_PHYCTS == _ON)
 WORD ScalerDpRx1PhyCtsAction(void)
 {
     return P7A_50_CDR_00;

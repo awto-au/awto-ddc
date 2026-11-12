@@ -98,7 +98,7 @@ bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent)
 
         if(usPreviousTime != g_usTimerCounter)
         {
-            usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_EVENT);  // awto: watchdog feed per ms in a bounded wait (#131)
+            usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_EVENT);
             usPreviousTime = g_usTimerCounter;
         }
     }

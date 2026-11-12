@@ -29,8 +29,8 @@ EDITS = {
                 "old": "        // Select at internal Xtal.\n        ScalerSetBit(P0_09_GA_POWER_CTRL, ~_BIT3, _BIT3);",
                 "new": "        // Select at internal Xtal.\n        ScalerSetBit(P0_09_GA_POWER_CTRL, ~_BIT3, _BIT3); ScalerTimerDelayXms(1);"}],
     "main": [{"file": "Kernel/System/Code/SysMain.c",
-              "old": "        AwtoDiagInit();  // awto: boot-stage / timing diagnostics (#23)\n        SysMainSystemInitial();",
-              "new": "        AwtoDiagInit();  // awto: boot-stage / timing diagnostics (#23)\n        SysMainSystemInitial(); SysMainSystemInitial();"}],
+              "old": "        AwtoDiagInit();\n        SysMainSystemInitial();",
+              "new": "        AwtoDiagInit();\n        SysMainSystemInitial(); SysMainSystemInitial();"}],
 }
 LOG = None
 

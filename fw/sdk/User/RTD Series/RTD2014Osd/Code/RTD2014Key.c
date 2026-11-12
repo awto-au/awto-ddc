@@ -122,8 +122,7 @@ BYTE RTDIRKeyScan(void);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_testcmd.inc"  // awto: key / test / GPIO code (#129)
-  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
+#include "awto_testcmd.inc"
 
 
 #if(_IR_SUPPORT == _IR_HW_SUPPORT)
@@ -186,8 +185,8 @@ BYTE RTDIRKeyScan(void)
 }
 #endif // End of #if(_IR_SUPPORT == _IR_HW_SUPPORT)
 
-#include "awto_keytest.inc"  // awto: key / test / GPIO code (#129)
-#include "awto_gpio.inc"  // awto: key / test / GPIO code (#129)
-#include "awto_keys.inc"  // awto: key / test / GPIO code (#129)
-#include "glue_key.inc"  // awto: settings registry / menu glue (#67)
+#include "awto_keytest.inc"
+#include "awto_gpio.inc"
+#include "awto_keys.inc"
+#include "glue_key.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

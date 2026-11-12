@@ -61,7 +61,7 @@ void SysUartSerialPortIntProc(void) __interrupt(4);
 void SysEXINT0(void) __interrupt(0)
 {
     // Backup for Burst Write Bug
-    g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();  // awto: Timer0 event flag test in EXINT0 (#138)
+    g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();
 
 #if(_DP_SUPPORT == _ON)
     if(ScalerDpAuxJudgeHandler_EXINT0() == _TRUE)
@@ -160,7 +160,7 @@ void SysEXINT0(void) __interrupt(0)
 void SysEXINT1(void) __interrupt(2)
 {
     // Backup for Burst Write Bug
-    AWTO_DIAG_EX1ISR();  // awto: diag hook in the ISR (#23)
+    AWTO_DIAG_EX1ISR();
     g_ucBackup_EXINT1 = MCU_FFF4_SCA_INF_ADDR;
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
