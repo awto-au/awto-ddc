@@ -1,0 +1,12 @@
+# names_re1.tsv - functions identified by the RE pass #41 / #95 (branch re-dahua-1), JXC 4K Dahua firmware, 8051:BE:16:default
+# Format: address<TAB>name<TAB>type<TAB>comment<TAB>status (as names_gpio_ir.tsv); the bank is the first token of the comment ([bank N]). Not merged into ghidra_names_bank*.tsv.
+CODE:98c0	SysPowerTargetFromMode	func	[bank 1] mode state 6 POWER_SAVING + e0f4 bit3 + faac carry + current power != 3 -> target power (e23a low nibble) = 3 SAVING; e339 true + current != 2 -> target = 2 NORMAL, e22f hi nibble = 1; trampoline 0:0633	[fw]
+CODE:df24	SysModeGetModeStateB1	func	[bank 1] returns e22e & 0x1F (same as fe05)	[fw]
+CODE:d9f1	osd_power_is_normal	func	[bank 0] bcall_b1_e49f (current power status) == 2	[fw]
+CODE:0f99	bcall_b1_fd21	func	[bank 0] banked-call trampoline to bank 1 fd21 (mode-state-changed test used by d8c4 handlers, meaning [guess])	[guess]
+CODE:d933	osd_flow_mode_search	label	[bank 0] d8c4 mode state 1 handler: on change and power NORMAL -> LED d6b2(1)	[fw]
+CODE:d947	osd_flow_mode_active	label	[bank 0] d8c4 mode state 3 handler: LED d6b2(2)	[fw]
+CODE:d95e	osd_flow_mode_nosupport	label	[bank 0] d8c4 mode state 4 handler: e150 = 3, LED d6b2(4)	[fw]
+CODE:d978	osd_flow_mode_nosignal	label	[bank 0] d8c4 mode state 5 handler: no LED call; shows no-signal OSD message	[fw]
+CODE:d9c1	osd_flow_mode_power_saving	label	[bank 0] d8c4 mode state 6 handler: no LED call	[fw]
+CODE:d8ef	osd_flow_mode_power_off	label	[bank 0] d8c4 mode state 7 handler: no LED call	[fw]
