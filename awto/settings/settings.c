@@ -6,14 +6,11 @@
 #include "settings.h"
 #include "nvram.h"
 
-#define REC_LEN (3u + 3u * SET_NV_COUNT)        /* legacy record: schema lo, hi, n, then (id, lo, hi) per stored row */
-#if REC_LEN < SET_AUX_MAX
-#error "aux block shares the legacy record buffer"
-#endif
+/* legacy record: schema lo, hi, n, then (id, lo, hi) per stored row; read in place, 3 B at a time (awto-ddc#165) */
 
 static int16_t __xdata val[SET_COUNT];
 static struct setting __xdata row;
-static uint8_t __xdata rec[REC_LEN];
+static uint8_t __xdata rec[SET_AUX_MAX];         /* aux block; the legacy load reuses its first 3 B */
 static uint8_t __xdata booting, load_res;
 static uint8_t __xdata pend_id;
 static int16_t __xdata pend_old;
@@ -200,15 +197,17 @@ uint8_t set_load_legacy(void)
     uint8_t i, cnt;
     int16_t v;
 
-    n = nv_load(NV_REC_SETTINGS, rec, REC_LEN);
-    if (n < 3)
+    n = nv_find(NV_REC_SETTINGS);
+    if (n < 3 || !nv_read_at(2, rec, 1))
         return 0;
-    cnt = rec[2];
+    cnt = rec[0];
     for (k = 0; k < cnt && 3u + 3u * k + 2u < n; k++) {
-        i = st_load(rec[3 + 3 * k]);
+        if (!nv_read_at(3u + 3u * k, rec, 3))
+            break;                               /* flash read failed: rows read so far kept, defaults for the rest */
+        i = st_load(rec[0]);
         if (i == 0xFF || !(row.flags & SF_NV) || (row.flags & SF_RO))
             continue;                            /* row dropped or no longer stored: value forgotten */
-        v = (int16_t)((uint16_t)rec[5 + 3 * k] << 8 | rec[4 + 3 * k]);
+        v = (int16_t)((uint16_t)rec[2] << 8 | rec[1]);
         if (v >= row.min && v <= row.max)
             st_store(i, st_clampv(v));           /* out of the new range: the default stays */
     }

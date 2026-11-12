@@ -13,6 +13,8 @@
 
 /* records: nvram.c keeps a log of slots in two flash sectors; the newest valid slot wins. 1 = ok */
 uint16_t nv_load(uint8_t rec, uint8_t __xdata *dst, uint16_t max);   /* payload length, 0 = no valid copy */
+uint16_t nv_find(uint8_t rec);                             /* same check, no buffer: payload length; then nv_read_at */
+uint8_t  nv_read_at(uint16_t off, uint8_t __xdata *dst, uint16_t n);   /* payload bytes of the slot nv_find chose */
 uint8_t  nv_store(uint8_t rec, const uint8_t __xdata *src, uint16_t len);   /* writes now (callers debounce) */
 void     nv_wipe(void);                                    /* factory reset: all records invalid */
 uint16_t nv_seq(void);                                     /* sequence number of the newest slot (diag) */

@@ -38,14 +38,23 @@ static uint16_t nv_fletcher(uint16_t acc, const uint8_t __xdata *p, uint16_t n)
     return (uint16_t)b << 8 | a;
 }
 
-/* check of header bytes 1..7 and the payload; reads the payload in place into dst */
+/* check of header bytes 1..7 and the payload; reads the payload into dst, or (dst 0) through buf only */
 static uint16_t nv_slot_check(uint8_t s, uint8_t __xdata *dst, uint16_t len)
 {
-    uint16_t c = nv_fletcher(0, hdr + 1, 7);
+    uint16_t c = nv_fletcher(0, hdr + 1, 7), o, k;
 
-    if (!fl_read(nv_slot_a(s) + NV_HDR, dst, len))
-        return 0xFFFF;
-    return nv_fletcher(c, dst, len);
+    if (dst) {
+        if (!fl_read(nv_slot_a(s) + NV_HDR, dst, len))
+            return 0xFFFF;
+        return nv_fletcher(c, dst, len);
+    }
+    for (o = 0; o < len; o += k) {
+        k = (uint16_t)(len - o) < (uint16_t)sizeof buf ? (uint16_t)(len - o) : (uint16_t)sizeof buf;
+        if (!fl_read(nv_slot_a(s) + NV_HDR + o, buf, k))
+            return 0xFFFF;
+        c = nv_fletcher(c, buf, k);
+    }
+    return c;
 }
 
 static uint8_t nv_read_hdr(uint8_t s, uint8_t rec)
@@ -99,6 +108,16 @@ static uint16_t nv_scan(uint8_t rec, uint8_t __xdata *dst, uint16_t max)
 uint16_t nv_load(uint8_t rec, uint8_t __xdata *dst, uint16_t max)
 {
     return nv_scan(rec, dst, max);
+}
+
+uint16_t nv_find(uint8_t rec)
+{
+    return nv_scan(rec, 0, NV_PAYLOAD_MAX);
+}
+
+uint8_t nv_read_at(uint16_t off, uint8_t __xdata *dst, uint16_t n)
+{
+    return cur != 0xFF && fl_read(nv_slot_a(cur) + NV_HDR + off, dst, n);
 }
 
 uint16_t nv_seq(void)
