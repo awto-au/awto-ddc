@@ -54,24 +54,28 @@
 #define AWTO_RGB_ALERT_RED                                      255, 50, 50
 
 //--------------------------------------------------
-// awto two-colour power LED (P3.5 = on, P3.6 = standby)
+// awto two-colour power LED (bLED_ON = P3.5 on colour, bLED_STANDBY = P3.6 standby colour; awto-ddc#95)
+// One owner: the system machine (SysJudge.c SysMachineLed) per state; line "LED: <colour> (<state>)" per change (sync.tsv 1C).
 //--------------------------------------------------
-#define AWTO_LED_OFF                                            0
+#define AWTO_LED_OFF                                            0       // also the sync.tsv 1C arg
 #define AWTO_LED_ON                                             1
 #define AWTO_LED_BREATHE                                        2
+#define AWTO_SW_EV_LED                                          0x1C    // LED change: arg AWTO_LED_*, ring value = system state (AWTO_SYS_*)
 extern volatile __xdata unsigned char g_ucAwtoLedMode;
 extern volatile __xdata unsigned char g_ucAwtoLedPhase;
 extern volatile __xdata unsigned char g_ucAwtoLedLevel;
 extern volatile __xdata unsigned char g_ucAwtoLedTick;
 extern volatile __xdata unsigned char g_ucAwtoLedUp;
-extern void AwtoLedSetMode(unsigned char ucMode);
+extern volatile __xdata unsigned char g_ucAwtoLedPins;  // P3 pin levels (MCU_FFE3, bus value) once per main-loop pass: debug-readable
+extern void AwtoLedSet(unsigned char ucMode, unsigned char ucState);    // SysMachineLed only
+extern void SysMachineLedBoot(void);
 // Timer2 ticks each millisecond.  The accumulator produces 1 kHz pulse-density PWM;
 // brightness moves one step every 16 ms for an approximately 8.2 s breathe cycle.
 #define AWTO_LED_T2ISR()                                        do { \
                                                                     if(g_ucAwtoLedMode == AWTO_LED_BREATHE) { \
                                                                         g_ucAwtoLedPhase += g_ucAwtoLedLevel; \
-                                                                        P3_5 = 0; \
-                                                                        P3_6 = (g_ucAwtoLedPhase < g_ucAwtoLedLevel); \
+                                                                        bLED_ON = 0; \
+                                                                        bLED_STANDBY = (g_ucAwtoLedPhase < g_ucAwtoLedLevel); \
                                                                         if(++g_ucAwtoLedTick >= 16) { \
                                                                             g_ucAwtoLedTick = 0; \
                                                                             if(g_ucAwtoLedUp != 0) { \

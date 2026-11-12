@@ -493,7 +493,6 @@ extern void UserInterfaceUncallFunction(void);
 extern void UserInterfaceInitial(void);
 
 extern void UserInterfacePowerSwitch(EnumPowerAction enumSwitch);
-extern void UserInterfaceKeyPadLedControl(BYTE ucKeyPadLed);
 
 //-------------------------------------------------------
 // User Information
