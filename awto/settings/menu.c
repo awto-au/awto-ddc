@@ -26,7 +26,7 @@ static const char __code mn_s5[] = " >";
 static const char __code mn_s6[] = "Keep the new value";
 static const char __code mn_s7[] = "Press MENU again to run";
 static const char __code mn_s8[] = "Recovery: all settings at defaults";
-static const char __code mn_s9[] = "* stored only: no effect yet";
+static const char __code mn_s9[] = "* not active: stored only";
 static const char __code mn_s10[] = "read only";
 static const char __code mn_s11[] = "takes effect after a restart";
 static const char __code mn_s12[] = "reverts after 15 s unless kept";
@@ -217,7 +217,9 @@ static void mn_draw_entry(uint8_t k)
         } else {
             set_row(e, &row);
             set_text(row.label, tmp, sizeof tmp);
-            mn_put(LABEL_COL, tmp, 22);
+            n = mn_put(LABEL_COL, tmp, 22);
+            if (row.flags & SF_INERT)
+                line[LABEL_COL + n + 1] = '*';           /* not active (awto-ddc#132): marker after the label, row dimmed */
             v = (sel && mode == M_EDIT) ? edit_v : set_get(row.id);
             mn_value_text(tmp, v);
             n = mn_put(VALUE_COL, tmp, VALUE_W);
@@ -225,8 +227,6 @@ static void mn_draw_entry(uint8_t k)
                 line[VALUE_COL - 1] = '<';
                 line[VALUE_COL + n] = '>';
             }
-            if (row.flags & SF_INERT)
-                line[MENU_COLS - 1] = '*';
         }
     }
     if (k == top && top > 0)
@@ -266,7 +266,7 @@ static void mn_draw_status(void)
         ctx = UC_MAIN;
     if (m == 0 && mode == M_LIST && mn_n_entries() != 0 && !((e = mn_entry(cursor)) & 0x80)) {
         set_row(e, &row);
-        ctx = row.type == STY_ACTION ? UC_ACTION : (row.flags & SF_RO) ? UC_RO : UC_ROW;
+        ctx = row.type == STY_ACTION ? UC_ACTION : (row.flags & (SF_RO | SF_INERT)) ? UC_RO : UC_ROW;
         if (row.flags & SF_INERT)
             m = mn_s9;
         else if (row.flags & SF_RO)
@@ -424,8 +424,8 @@ static void mn_enter(void)
         return;
     }
     set_row(e, &row);
-    if (row.flags & SF_RO)
-        return;
+    if (row.flags & (SF_RO | SF_INERT))
+        return;                                          /* inert: shown, not changed from the menu (DDC/CI still stores it) */
     if (row.type == STY_ACTION) {
         mode = M_RUN;
         mn_draw_status();

@@ -40,20 +40,21 @@ static const char __code ua_next[] = "next";
 static const char __code ua_less[] = "less";
 static const char __code ua_more[] = "more";
 static const char __code ua_off[] = "off";
+static const char __code ua_close[] = "close";       /* SOURCE: closes the menu from any page (awto-ddc#132) */
 
 static const char __code *const __code us_port[3] = { us_d1, us_d2, us_d3 };
 static const char __code *const __code us_key[6] = { us_k0, us_k1, us_k2, us_k3, us_k4, us_k5 };
 static const char __code *const __code us_state[4] = { us_nocable, us_nosignal, us_ready, us_active };
 /* action of each key per context (UC_*): SOURCE MENU DOWN UP AUTO POWER */
 static const char __code *const __code ua_ctx[UC_N][6] = {
-    { ua_none, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_PAGE: cursor on a sub-page */
-    { ua_none, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_ROW */
-    { ua_none, ua_back, ua_prev, ua_next, ua_none, ua_off },      /* UC_RO */
-    { ua_none, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_ACTION */
-    { ua_none, ua_back, ua_less, ua_more, ua_select, ua_off },    /* UC_EDIT */
-    { ua_none, ua_back, ua_none, ua_none, ua_select, ua_off },    /* UC_RUN */
-    { ua_none, ua_back, ua_none, ua_none, ua_select, ua_off },    /* UC_KEEP */
-    { ua_none, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_MAIN */
+    { ua_close, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_PAGE: cursor on a sub-page */
+    { ua_close, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_ROW */
+    { ua_close, ua_back, ua_prev, ua_next, ua_none, ua_off },      /* UC_RO */
+    { ua_close, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_ACTION */
+    { ua_close, ua_back, ua_less, ua_more, ua_select, ua_off },    /* UC_EDIT */
+    { ua_close, ua_back, ua_none, ua_none, ua_select, ua_off },    /* UC_RUN */
+    { ua_close, ua_back, ua_none, ua_none, ua_select, ua_off },    /* UC_KEEP */
+    { ua_close, ua_back, ua_prev, ua_next, ua_select, ua_off },    /* UC_MAIN */
 };
 
 uint8_t __xdata ui_hl_style = UI_HL_BAR;
