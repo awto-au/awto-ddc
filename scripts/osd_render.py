@@ -2,7 +2,7 @@
 """Run a firmware image in fw_sim, capture its OSD writes and render what the panel shows: PNG / video (#46, #63).
 
 usage: osd_render.py BIN MAP [--mode 1080p60|2160p60] [--at WHEN ...] [--do MS:ACTION ...] [--out tmp/osd/NAME.png]
-                     [--video OUT.mp4 --every MS --until MS [--vscale 4]] [--bg grey|black|checker] [--scale N]
+                     [--video OUT.mp4 --every MS --until MS [--vscale 4]] [--bg grey|black|white|checker|bars] [--scale N]
   WHEN  = sim ms after the firmware reaches ACTIVE (e.g. 500), or `end` (last action + 1 s). Several --at give several
           PNGs (NAME_<when>.png). Power-on screens (no logo since #144, the console): scripts/boot_sim.py.
   ACTION = osd_test.py name: events (info nosignal ...), keys (menu right left exit), debug, clear, ...
@@ -33,7 +33,7 @@ ROOT = S.ROOT
 LOG = ROOT / "tmp/logs/osd_render.log"
 PANEL = {"1080p60": (1920, 1080), "2160p60": (3840, 2160)}      # D-domain size of the 4K panel is 3840x2160 for both input modes
 PANEL_W, PANEL_H = 3840, 2160
-BGS = {"grey": (128, 128, 128), "black": (0, 0, 0)}
+BGS = {"grey": (128, 128, 128), "black": (0, 0, 0), "white": (255, 255, 255)}
 
 
 def say(s: str):
@@ -44,23 +44,23 @@ def say(s: str):
 
 
 def background(kind: str, W: int, H: int) -> np.ndarray:
+    """Test picture under the OSD: flat (BGS), checker, or bars = 75 % colour bars (top 2/3) over a black-to-white ramp."""
     if kind == "checker":
         yy, xx = np.mgrid[0:H, 0:W]
         c = (((yy // 60) + (xx // 60)) % 2) * 40 + 100
         return np.repeat(c[:, :, None].astype(np.uint8), 3, axis=2)
+    if kind == "bars":
+        img = np.empty((H, W, 3), np.uint8)
+        cols = [(191, 191, 191), (191, 191, 0), (0, 191, 191), (0, 191, 0), (191, 0, 191), (191, 0, 0), (0, 0, 191)]
+        for i, c in enumerate(cols):
+            img[:H * 2 // 3, i * W // 7:(i + 1) * W // 7] = c
+        img[H * 2 // 3:] = np.linspace(0, 255, W, dtype=np.float32).astype(np.uint8)[None, :, None]
+        return img
     return np.full((H, W, 3), BGS[kind], np.uint8)
 
 
-def render_snap(st: M.OsdState, bg: str, scale: int = 1) -> Image.Image:
-    if bg == "checker":
-        img = M.render(st, PANEL_W, PANEL_H)
-        base = background("checker", PANEL_W, PANEL_H)
-        flat = np.array(M.render(M.OsdState(regs=b""), PANEL_W, PANEL_H))     # unused: keeps import of render symmetric
-        del flat
-        mask = np.any(img != np.array(BGS["grey"], np.uint8), axis=2)
-        out = np.where(mask[:, :, None], img, base)
-    else:
-        out = M.render(st, PANEL_W, PANEL_H, bg=BGS[bg])
+def render_snap(st: M.OsdState, bg: str, scale: int = 1, opaque: bool = False) -> Image.Image:
+    out = M.render(st, PANEL_W, PANEL_H, bg=background(bg, PANEL_W, PANEL_H), alpha_opaque=opaque)
     im = Image.fromarray(out)
     return im if scale <= 1 else im.resize((PANEL_W // scale, PANEL_H // scale), Image.BOX)
 
@@ -153,7 +153,7 @@ def main() -> int:
     ap.add_argument("--at", action="append", default=[])
     ap.add_argument("--do", action="append", default=[], metavar="MS:ACTION")
     ap.add_argument("--out", type=Path, default=None)
-    ap.add_argument("--bg", default="grey", choices=["grey", "black", "checker"])
+    ap.add_argument("--bg", default="grey", choices=["grey", "black", "white", "checker", "bars"])
     ap.add_argument("--scale", type=int, default=1, help="downscale PNGs by N")
     ap.add_argument("--video", type=Path)
     ap.add_argument("--every", type=float, default=200.0)

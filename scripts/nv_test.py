@@ -5,11 +5,14 @@ usage: AWTO_SIM_CORE=fast nv_test.py --sim BIN [--map MAP] [--cases a,b]
        nv_test.py --unit 2 --map MAP [--cases a,b] [--reboot mains|isp]
 - Store: the Realtek SDK EEPROM emulation only; SDK item saves are deferred and written by the gate (glue_nv.inc).
 - Counters: g_stAwtoNv (RL6449_Project.h StAwtoNv, big-endian words): mask, why, in-DDC flash ops, deferred, flushes,
-  items programmed, flash halt ops, gate inputs (stable ms, DDC/CI idle ms).
+  items programmed, flash halt ops, gate inputs (stable ms, DDC/CI idle ms), erases, bytes programmed (images before
+  the flush line: 16 B, erases / bytes absent).
 - Cases: unchanged (no write), vcp (no write in the handler or while DDC/CI is busy; written after the gate opens),
   forced (DDC/CI busy 30 s: written anyway), switch (KVM / search switches: no write), menu (close: card + write),
   selector (cancel: nothing; a choice: stored at the gate with the card),
-  power (POWER off: written at once), halt (6 x test cmd 0x3D: max poke gap), persist (unit: mains cycle, values back).
+  power (POWER off: written at once), halt (6 x test cmd 0x3D: max poke gap), persist (unit: mains cycle, values back),
+  flushlog (sync ring D4 flush lines: menu close with a change -> "wrote N B ..." matching the counter deltas; close without
+  a change -> "nothing changed, no flash write"; POWER off -> a power-off flush line).
 - Sim DDC/CI: ddc_sim.DdcEngine (spare IIC engine). Unit: ddcutil on the unit's bus with the debug link off, then the
   link back on to read the counters; values through the VCP mailbox (settings_cli.Box) otherwise.
 - Deadlines: gate = debounce 2 s + stable 3 s, x1.25 -> 6.5 s; forced 30 s x1.25 -> 37.5 s; power flush < 1 main pass x2 -> 1 s.
@@ -53,10 +56,13 @@ def sym(map_text: str, name: str) -> int | None:
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 
+NV_SIZE = 20
+
+
 def decode(b: bytes) -> dict:
     w = lambda o: b[o] << 8 | b[o + 1]
     return dict(magic=chr(b[0]), mask=b[1], why=b[2], in_ddc=b[3], defer=w(4), flush=w(6), item_wr=w(8), ops=w(10),
-                stable=w(12), ddc_idle=w(14))
+                stable=w(12), ddc_idle=w(14), erase=w(16), bytes=w(18))
 
 
 def show(d: dict) -> str:
@@ -81,6 +87,8 @@ class Sim:
         self.bus.dbg_link_on()
         self.box = SC.Box(self.bus, self.map_text, sim=True)
         self.nv_a = sym(self.map_text, "g_stAwtoNv")
+        self.ring_a = sym(self.map_text, "g_stAwtoSync")
+        self.mapp = mapp
         import osd_test as T
         self.diag = T.diag_addr(mapp)
 
@@ -88,7 +96,11 @@ class Sim:
         self.bus.wait(s)
 
     def nv(self) -> dict:
-        return decode(bytes(self.bus.m.rd(self.nv_a, 16)))
+        return decode(bytes(self.bus.m.rd(self.nv_a, NV_SIZE)))
+
+    def ring(self) -> bytes:
+        import sync_log as S
+        return bytes(S.read_ring(self.bus.m.rd, self.ring_a))
 
     def cmd(self, c: int):
         a = self.diag + 0x28
@@ -116,6 +128,7 @@ class Unit:
         self.map_text = self.u.map_text
         self.box = SC.Box(self.u.io, self.map_text)
         self.nv_a = sym(self.map_text, "g_stAwtoNv")
+        self.ring_a = sym(self.map_text, "g_stAwtoSync")
 
     def wait(self, s: float):
         time.sleep(s)
@@ -123,7 +136,7 @@ class Unit:
     def nv(self) -> dict:
         import dbg_xdata as X
         for _ in range(5):                                  # silent while the MCU halts on a flash op: retry
-            b = X.read_bytes(self.u.io, self.nv_a, 16)
+            b = X.read_bytes(self.u.io, self.nv_a, NV_SIZE)
             if b:
                 return decode(bytes(b))
             time.sleep(0.36)                                # wdt_test FLASH_OP_MS: one save's ops at datasheet max x1.25
@@ -131,6 +144,16 @@ class Unit:
 
     def cmd(self, c: int):
         self.u.cmd(c)
+
+    def ring(self) -> bytes:
+        import dbg_xdata as X
+        import sync_log as S
+        for _ in range(5):                                  # silent while the MCU halts on a flash op: retry
+            r = S.read_ring(lambda ad, n: X.read_blocks(self.u.io, ad, n), self.ring_a)
+            if r:
+                return bytes(r)
+            time.sleep(0.36)
+        raise SystemExit("g_stAwtoSync: no answer")
 
     def ddcutil(self, *args) -> str:
         r = subprocess.run(["ddcutil", "--bus", str(self.u.bus_n), "--noverify", *args], capture_output=True, text=True,
@@ -166,11 +189,12 @@ class Run:
     def settle(self, s=FORCE_S) -> dict:
         """until nothing gate-relevant is dirty (a boot migration or an earlier case may still wait)"""
         end = time.monotonic() + s if self.t.name == "unit" else None
-        n = 0
+        n, prev = 0, None
         while True:
             d = self.t.nv()
-            if d["mask"] & ~0x20 == 0:
-                return d
+            if d["mask"] & ~0x20 == 0 and prev == (d["flush"], d["item_wr"], d["ops"]):
+                return d                                 # clean and no flash op for 0.5 s (the mask clears at a flush's start)
+            prev = (d["flush"], d["item_wr"], d["ops"])
             if (end and time.monotonic() > end) or (not end and n * 0.5 > s):
                 return d
             self.t.wait(0.5); n += 1
@@ -332,7 +356,73 @@ class Run:
             self.t.box.set_row(T.BY_NAME[n], v)
 
 
-CASES = ["unchanged", "vcp", "forced", "switch", "menu", "selector", "power", "halt", "persist"]
+    def flush_lines(self) -> list[tuple[int, int, str, int, int]]:
+        """(arg, value, decoded line, ring ms, seq) of every D4 flush-result entry in the ring (all episodes), oldest first"""
+        import sync_log as S
+        rows = S.load_rows(S.tsv_for(self.t.mapp))
+        h, _ = S.decode(self.t.ring(), rows, whole=True)
+        out = []
+        for k, ev in enumerate(h.get("events", [])):
+            if ev[0] == 0xD4 and 0x11 <= ev[1] <= 0x17:
+                out.append((ev[1], ev[3], S.line(rows, ev, h["t0"]).split(" ms ", 1)[1], ev[2], k))
+        return out
+
+    def new_flush(self, before: list, s: float):
+        """the first flush line not in `before` (by arg, value, ring ms), polled for s"""
+        seen = {x[:4] for x in before}
+        t = 0.0
+        while t <= s:
+            fresh = [x for x in self.flush_lines() if x[:4] not in seen]
+            if fresh:
+                return fresh[0]
+            self.t.wait(0.25)
+            t += 0.25
+        return None
+
+    def c_flushlog(self):
+        """menu close with a change: a 'wrote' line whose bytes / programs / erases match the counter deltas; menu close
+        without a change: 'nothing changed'; POWER off: a power-off flush line (nothing dirty: panel time only, or nothing)"""
+        import settings_table as T
+        res = []
+        r = T.BY_NAME["osd_timeout"]
+        d0 = self.settle()
+        cur = self.t.box.get_row(r)
+        b0 = self.flush_lines()
+        self.t.box.call(3, 2, 0)                         # MO_OPEN page 0
+        self.t.box.set_row(r, 45 if cur != 45 else 50)
+        self.t.box.call(3, 6, 0)                         # MO_CLOSE
+        ln = self.new_flush(b0, GATE_S)
+        d = self.t.nv()
+        if ln:
+            v = ln[1]
+            want = (d["bytes"] - d0["bytes"], d["ops"] - d0["ops"] - (d["erase"] - d0["erase"]), d["erase"] - d0["erase"])
+            got = ((v >> 9) & 0x3FF, (v >> 19) & 0x3F, (v >> 25) & 3)
+            ok = ln[0] == 0x14 and "wrote" in ln[2] and "OSD data" in ln[2] and got == want
+            res.append(("change", ok, f"{ln[2]} [counters: {want[0]} B, {want[1]} programs, {want[2]} erases]"))
+        else:
+            res.append(("change", False, f"no flush line within {GATE_S} s"))
+        b1 = self.flush_lines()
+        self.t.box.call(3, 2, 0)
+        self.t.box.call(3, 6, 0)                         # close, nothing changed
+        ln = self.new_flush(b1, 1.0)                     # logged by the next settings service (20 ms) x margin
+        ok = bool(ln) and ln[0] == 0x14 and "): nothing changed, no flash write" in ln[2]
+        res.append(("no change", ok, ln[2] if ln else "no flush line within 1 s"))
+        b2 = self.flush_lines()
+        e0 = self.t.nv()
+        self.t.cmd(0x3E)                                 # POWER key: off
+        ln = self.new_flush(b2, POWER_S + 1.0)
+        e = self.t.nv()
+        ok = bool(ln) and ln[0] == 0x13 and (("nothing changed" in ln[2]) == (e["item_wr"] == e0["item_wr"]))
+        res.append(("power off", ok, ln[2] if ln else f"no flush line within {POWER_S + 1.0} s"))
+        self.t.cmd(0x3E)                                 # on again
+        self.t.wait(8.0 if self.t.name == "unit" else 3.0)
+        self.t.box.set_row(r, cur)                       # restored; written by the gate
+        self.t.wait(GATE_S)
+        ok = all(x[1] for x in res)
+        self.row("flushlog", "PASS" if ok else "FAIL", "; ".join(f"{n}: {'ok' if k else 'BAD'} '{s}'" for n, k, s in res))
+
+
+CASES = ["unchanged", "vcp", "forced", "switch", "menu", "selector", "power", "halt", "persist", "flushlog"]
 
 
 def main() -> int:
@@ -369,7 +459,7 @@ def main() -> int:
         r.t.close()
     say(f"---- nv_test summary ({t.name})")
     for n, res, txt in r.rows:
-        say(f"  {res:4} {n:10} {txt[:160]}")
+        say(f"  {res:4} {n:10} {txt[:400]}")
     bad = [x for x in r.rows if x[1] == "FAIL"]
     say(f"{'PASS' if not bad else 'FAIL'} nv_test: {len(r.rows) - len(bad)}/{len(r.rows)} not failed")
     return 1 if bad else 0

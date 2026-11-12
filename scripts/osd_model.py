@@ -8,7 +8,7 @@ Library (no CLI; CLI = osd_render.py). Facts: docs/reversing/realtek-rtd/osd.md,
 - snapshot(m) = model state + frame registers (XRAM 0x3A00-0x3AFF, 0x6C, 0x8F) at one moment.
 - render(snap) -> RGB uint8 (panel H x W), OSD composited over a background.
 Model gaps (marked [guess] in the code): window border/shadow/gradient, 2/4-bit fonts, font B, rotation, 24x36 mode,
-OSD pipeline position offsets (0x3A2C/2F), alpha direction, FB-shift (4-path) position.
+OSD pipeline position offsets (0x3A2C/2F), alpha direction (blend_alpha), FB-shift (4-path) position.
 """
 from __future__ import annotations
 
@@ -354,8 +354,17 @@ def ink_cells(st: OsdState) -> list[list[int]]:
     return out
 
 
+def blend_alpha(st: OsdState) -> float:
+    """Video weight of a blending OSD pixel: alpha_blending_level (0x6C[4:2] = bits 7:5, 0x8F[7:3] = bits 4:0) / 256.
+    [derived] SDK OsdFuncTransparency / ScalerOsdSetTransparency (0..255, 0 = blending off = opaque); regdb 3-bit view
+    '001~111: 1/8~7/8'. Direction (level = video share) from the SDK menu item 'Transparency', not measured on a panel."""
+    return (((st.ovl[0] >> 2) & 7) << 5 | st.ovl[1] >> 3) / 256.0
+
+
 def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha_opaque: bool = False) -> np.ndarray:
-    """Composite the OSD over a flat background. Returns uint8 (H, W, 3)."""
+    """Composite the OSD over a background: a flat colour or an (H, W, 3) picture. Returns uint8 (H, W, 3).
+    The OSD layer (windows + fonts, last writer wins) is built first, then blended once per pixel: a window pixel with its
+    blend_en blends when alpha_blend_type (0x3A0A[3:2]) is 01 / 10 / 11; font foreground only at 10; character background at 10 / 11."""
     img = np.empty((H, W, 3), np.uint8)
     img[:] = bg
     g = frame_geometry(st)
@@ -363,23 +372,36 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
         return img
     sx, sy = g["sx"], g["sy"]
     ox, oy = g["hd"] * g["step"] * sx, g["vd"] * sy          # panel px of the OSD origin: delay x step x scale [spec, SDK OsdDispSetPosition]
-    level = ((st.ovl[0] >> 2) & 7) << 5 | st.ovl[1] >> 3
-    opac = 1.0 if (alpha_opaque or level == 0 or g["blend_type"] == 0) else level / 255.0     # [guess] 255 = opaque
+    t = 0.0 if alpha_opaque else blend_alpha(st)
+    bt = g["blend_type"]
+    a_win = t if bt in (1, 2, 3) else 0.0                      # video share per OSD element (0 = opaque)
+    a_fg = t if bt == 2 else 0.0
+    a_cbg = t if bt in (2, 3) else 0.0
+    osd = np.zeros((H, W, 3), np.uint8)
+    cov = np.zeros((H, W), bool)
+    vid = np.zeros((H, W), np.float32)                       # video share of the OSD pixel
 
-    def rect(x0, y0, x1, y1, rgb, a=1.0):
+    def rect(x0, y0, x1, y1, rgb, a):
         x0, y0, x1, y1 = max(x0, 0), max(y0, 0), min(x1, W), min(y1, H)
         if x1 > x0 and y1 > y0:
-            if a >= 1.0:
-                img[y0:y1, x0:x1] = rgb
-            else:
-                img[y0:y1, x0:x1] = (img[y0:y1, x0:x1] * (1 - a) + np.array(rgb) * a).astype(np.uint8)
+            osd[y0:y1, x0:x1] = rgb
+            cov[y0:y1, x0:x1] = True
+            vid[y0:y1, x0:x1] = a
+
+    def paint(px, py, mk, rgb, a):
+        ys, xs = py + np.arange(mk.shape[0])[:, None], px + np.arange(mk.shape[1])[None, :]
+        ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W) & mk
+        yy, xx = np.broadcast_to(ys, mk.shape)[ok], np.broadcast_to(xs, mk.shape)[ok]
+        osd[yy, xx] = rgb
+        cov[yy, xx] = True
+        vid[yy, xx] = a
 
     wins = [w for i in range(26) if (w := decode_window(st.win, i)) and w["en"]]
     higher = {3: st.reg(FRAME + 7) & 1, 4: st.reg(FRAME + 7) >> 1 & 1, 2: st.reg(FRAME + 8) >> 7, 9: st.reg(FRAME + 8) >> 6 & 1, 8: st.reg(FRAME + 8) >> 5 & 1}
 
     def draw_win(w):
-        a = opac if w["blend"] else 1.0
-        rect(ox + w["x0"] * sx, oy + w["y0"] * sy, ox + (w["x1"] + 1) * sx, oy + (w["y1"] + 1) * sy, st.pal[w["color"]], a)
+        rect(ox + w["x0"] * sx, oy + w["y0"] * sy, ox + (w["x1"] + 1) * sx, oy + (w["y1"] + 1) * sy, st.pal[w["color"]],
+             a_win if w["blend"] else 0.0)
 
     for w in wins:
         if not higher.get(w["i"]):
@@ -398,13 +420,9 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                 fg, bgc = st.pal[ch["fg"]], ch["bg"]
                 px, py = fx + x * sx, fy + y * sy
                 if bits.size:
-                    for val, rgb, solid in ((1, fg, True), (0, st.pal[bgc], bgc != 0)):      # bg index 0 = transparent [spec osd-font-download.md]
-                        if not solid:
-                            continue
-                        mk = np.kron(bits == val, np.ones((sy, sx), bool))
-                        ys, xs = py + np.arange(mk.shape[0])[:, None], px + np.arange(mk.shape[1])[None, :]
-                        ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W) & mk
-                        img[np.broadcast_to(ys, mk.shape)[ok], np.broadcast_to(xs, mk.shape)[ok]] = rgb
+                    for val, rgb, solid, a in ((1, fg, True, a_fg), (0, st.pal[bgc], bgc != 0, a_cbg)):   # bg index 0 = transparent [spec osd-font-download.md]
+                        if solid:
+                            paint(px, py, np.kron(bits == val, np.ones((sy, sx), bool)), rgb, a)
                 x += w
             elif ch["kind"] == "2bit":
                 lv = glyph_levels2(st, g, ch["id"])
@@ -413,10 +431,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                     ci = ch["cols"][v]
                     if ci == 0:                                  # colour index 0 = transparent (as the 1-bit background) [spec]
                         continue
-                    mk = np.kron(lv == v, np.ones((sy, sx), bool))
-                    ys, xs = py + np.arange(mk.shape[0])[:, None], px + np.arange(mk.shape[1])[None, :]
-                    ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W) & mk
-                    img[np.broadcast_to(ys, mk.shape)[ok], np.broadcast_to(xs, mk.shape)[ok]] = st.pal[ci]
+                    paint(px, py, np.kron(lv == v, np.ones((sy, sx), bool)), st.pal[ci], a_fg)
                 x += GW
             else:
                 x += ch["width"] or GW
@@ -424,6 +439,8 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     for w in wins:
         if higher.get(w["i"]):
             draw_win(w)
+    k = vid[cov][:, None]
+    img[cov] = (osd[cov] * (1.0 - k) + img[cov] * k + 0.5).astype(np.uint8)
     return img
 
 

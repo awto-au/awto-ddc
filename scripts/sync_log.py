@@ -112,12 +112,30 @@ def value(fmt: str, arg: int, v: int) -> str:
         return iso(v, arg - 256 if arg >= 128 else arg)
     if fmt == "sms":                                     # #157 signed ms
         return f"{v - (1 << 32) if v >= 1 << 31 else v:+d} ms"
+    if fmt == "nvw":                                     # #151 NVRAM flush result
+        return nv_flush(v)
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
         c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
         where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"
         sym = SYMBOLIZE(bank, pc) if SYMBOLIZE else ""
         return ("STALL TEST" if c & 0x80 else "STALL") + f", PC {where}" + (f" {sym}" if sym else "")
     return ""
+
+
+NV_GROUPS = ("system data", "OSD data", "colour", "panel time", "awto settings")    # RL6449_Project.h AWTO_NV_LOG_G_* bits 0..4
+
+
+def nv_flush(v: int) -> str:
+    """#151 fmt nvw (firmware copy: awto_osdcard.inc AwtoPutNvFlush): groups << 27 | erases << 25 | programs << 19 |
+    bytes << 9 | ms; each field saturates at its max ("+")"""
+    def f(x, mx):
+        return f"{x}+" if x >= mx else str(x)
+    ms, by, pr, er, g = v & 0x1FF, (v >> 9) & 0x3FF, (v >> 19) & 0x3F, (v >> 25) & 3, v >> 27
+    if v >> 19 == 0:
+        return f"nothing changed, no flash write ({f(ms, 0x1FF)} ms)"
+    grp = ", ".join(n for k, n in enumerate(NV_GROUPS) if g >> k & 1)
+    return (f"wrote {f(by, 0x3FF)} B" + (f" ({grp})" if grp else "") + f" in {f(pr, 0x3F)} program{'' if pr == 1 else 's'}, "
+            f"{f(er, 3)} erase{'' if er == 1 else 's'}, {f(ms, 0x1FF)} ms")
 
 
 def iso(t: float, ofs15: int, ms: bool = False) -> str:
