@@ -102,6 +102,7 @@ void RTDDdcciColorReset(void);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
+#include "awto_port.inc"
 #include "awto_ddcci.inc"
 #include "awto_net.inc"
 void UserDdcciHandler(void)

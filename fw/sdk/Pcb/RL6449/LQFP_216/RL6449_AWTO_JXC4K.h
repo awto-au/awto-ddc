@@ -474,19 +474,20 @@
                                                     bD0_HPD = (x);\
                                                 }
 
+// D1..D3: a port disabled by setting stays low whatever the caller asks (#81 AWTO_PORT_HPD, every HPD writer passes here)
 #define PCB_D1_HOTPLUG(x)                       {\
                                                     AWTO_SW_HPD(1, x);\
-                                                    bD1_HPD = (x);\
+                                                    bD1_HPD = AWTO_PORT_HPD(1, x);\
                                                 }
 
 #define PCB_D2_HOTPLUG(x)                       {\
                                                     AWTO_SW_HPD(2, x);\
-                                                    bD2_HPD = (x);\
+                                                    bD2_HPD = AWTO_PORT_HPD(2, x);\
                                                 }
 
 #define PCB_D3_HOTPLUG(x)                       {\
                                                     AWTO_SW_HPD(3, x);\
-                                                    bD3_HPD = (x);\
+                                                    bD3_HPD = AWTO_PORT_HPD(3, x);\
                                                 }
 
 #define PCB_D0_HOTPLUG_DETECT()                 (bD0_HPD)
@@ -540,44 +541,16 @@
 //--------------------------------------------------
 // Macro of LED On/Off
 //--------------------------------------------------
-#define bLED1                                   (P3_5) // Pin_91, normal/on colour
+#define bLED_ON                                 (P3_5) // Pin_91, on colour (Dahua 1:d6b2, docs/reversing/dahua-fw/gpio-ir.md section 2)
 #define bLED_STANDBY                            (P3_6) // Pin_92, standby colour
-#define bLED2                                   (MCU_FE28_PORT90_PIN_REG) // Pin_194, P9.0
-#define bLED3                                   (MCU_FE2D_PORT95_PIN_REG) // Pin_199, P9.5
-#define bLED4                                   (MCU_FE13_PORT63_PIN_REG) // Pin_152, P6.3
-#define bLED5                                   (MCU_FE18_PORT70_PIN_REG) // Pin_157, P7.0
+// P9.0 (Pin_194) is the IR input, P8.4 a NORMAL-state enable (awto-ddc#95): no LED here.
 
 #define _LED_ON                                 1
 #define _LED_OFF                                0
 
-#define PCB_LED_AC_ON_INITIAL()                 AwtoLedSetMode(AWTO_LED_OFF)
-
-#define PCB_LED_ACTIVE()                        AwtoLedSetMode(AWTO_LED_ON)
-
-#define PCB_LED_IDLE()                          AwtoLedSetMode(AWTO_LED_OFF)
-
-#define PCB_LED_POWER_SAVING()                  AwtoLedSetMode(AWTO_LED_BREATHE)
-
-#define PCB_LED_ON()                            AwtoLedSetMode(AWTO_LED_ON)
-
-#define PCB_LED_OFF()                           AwtoLedSetMode(AWTO_LED_BREATHE)
-
-#define PCB_LED_TYPE1()                         AwtoLedSetMode(AWTO_LED_ON)
-
-#define PCB_LED_TYPE2()                         {\
-                                                }
-
-#define PCB_LED_TYPE3()                         {\
-                                                }
-
-#define PCB_LED_TYPE4()                         {\
-                                                }
-
-#define PCB_LED_TYPE5()                         {\
-                                                }
-
-#define PCB_LED_TYPE_FLASH()                    {\
-                                                }
+// awto-ddc#95: the system machine owns the LED (SysJudge.c SysMachineLed); the SDK PCB_LED_* calls are gone. AC on: the on
+// colour as soon as the GPIO latches are set (ScalerMcuGpioInitial), like the Dahua init 5:d311.
+#define PCB_LED_AC_ON_INITIAL()                 SysMachineLedBoot()
 
 
 //////////////////

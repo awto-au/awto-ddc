@@ -1898,14 +1898,11 @@ void ScalerMcuDdcRamEnable(void)
     MCU_FF1E_DDC0_DDC_ENABLE |= (_BIT1 | _BIT0);
 #endif
 
-    // DDC1 Debounce Enable, DDC1 channel enable
-    MCU_FF2C_DDC1_DDC_ENABLE |= (_BIT1 | _BIT0);
-
-    // DDC2 Debounce Enable, DDC2 channel enable
-    MCU_FE64_DDC2_DDC_ENABLE |= (_BIT1 | _BIT0);
-
-    // DDC3 Debounce Enable, DDC3 channel enable
-    MCU_FE6D_DDC3_DDC_ENABLE |= (_BIT1 | _BIT0);
+    // DDC1..3 Debounce Enable; channel enable (EDID to the source) only for a port on (#81: the one owner of the bit, called again
+    // by AwtoPortSet at each enable / disable)
+    MCU_FF2C_DDC1_DDC_ENABLE = AWTO_PORT_OFF(_D1_INPUT_PORT) ? ((MCU_FF2C_DDC1_DDC_ENABLE | _BIT1) & ~_BIT0) : (MCU_FF2C_DDC1_DDC_ENABLE | (_BIT1 | _BIT0));
+    MCU_FE64_DDC2_DDC_ENABLE = AWTO_PORT_OFF(_D2_INPUT_PORT) ? ((MCU_FE64_DDC2_DDC_ENABLE | _BIT1) & ~_BIT0) : (MCU_FE64_DDC2_DDC_ENABLE | (_BIT1 | _BIT0));
+    MCU_FE6D_DDC3_DDC_ENABLE = AWTO_PORT_OFF(_D3_INPUT_PORT) ? ((MCU_FE6D_DDC3_DDC_ENABLE | _BIT1) & ~_BIT0) : (MCU_FE6D_DDC3_DDC_ENABLE | (_BIT1 | _BIT0));
 }
 
 //--------------------------------------------------

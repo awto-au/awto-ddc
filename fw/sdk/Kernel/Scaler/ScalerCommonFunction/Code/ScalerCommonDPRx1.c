@@ -2944,9 +2944,9 @@ void ScalerDpRx1SetInitialRSV0InfoType(void)
 //--------------------------------------------------
 void ScalerDpRx1SetHotPlugEvent(EnumDpHotPlugAssertType enumHpdType)
 {
-    if((enumHpdType > _DP_HPD_LOW) && (ScalerSyncDpCableStatus(_D1_INPUT_PORT) == _FALSE))
+    if((enumHpdType > _DP_HPD_LOW) && ((ScalerSyncDpCableStatus(_D1_INPUT_PORT) == _FALSE) || AWTO_PORT_OFF(_D1_INPUT_PORT)))
     {
-        return;
+        return;                                 // #81 disabled: no HPD high request (and no long-HPD wait for one)
     }
 
     // If the priority of enumHpdType is higher

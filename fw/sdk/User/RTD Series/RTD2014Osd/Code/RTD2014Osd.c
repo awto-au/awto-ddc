@@ -101,20 +101,12 @@ void RTDOsdSystemFlowProc(void)
 
         case _MODE_STATUS_SEARCH:
 
-            if(SysModeGetModeStateChange() == _TRUE)
-            {
 #if(_FREEZE_SUPPORT == _ON)
-                if(GET_OSD_FREEZE_STATUS() == _ON)
-                {
-                    SET_OSD_FREEZE_STATUS(_OFF);
-                }
-#endif
-                if(SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
-                {
-                    UserInterfaceKeyPadLedControl(_LED_POWER_SEARCH);
-                }
+            if((SysModeGetModeStateChange() == _TRUE) && (GET_OSD_FREEZE_STATUS() == _ON))
+            {
+                SET_OSD_FREEZE_STATUS(_OFF);
             }
-
+#endif
             break;
 
         case _MODE_STATUS_DISPLAY_SETTING:
@@ -122,14 +114,6 @@ void RTDOsdSystemFlowProc(void)
             break;
 
         case _MODE_STATUS_ACTIVE:
-
-            if(SysModeGetModeStateChange() == _TRUE)
-            {
-                if(SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
-                {
-                    UserInterfaceKeyPadLedControl(_LED_POWER_ACTIVE);
-                }
-            }
 
             break;
 
@@ -140,7 +124,6 @@ void RTDOsdSystemFlowProc(void)
                 if(SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL)
                 {
                     SET_OSD_EVENT_MESSAGE(_OSDEVENT_SHOW_NOSUPPORT_MSG);
-                    UserInterfaceKeyPadLedControl(_LED_POWER_NOSUPPORT);
                 }
             }
 
@@ -248,7 +231,7 @@ void RTDOsdEventMsgProc(void)
             SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
             OsdFuncSetOsdItemFlag();
             g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-            AwtoSourceOpen();
+            AwtoSourceOpen(AWTO_SEL_EV_OPEN_CARD);
 
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_SOURCE));
             break;

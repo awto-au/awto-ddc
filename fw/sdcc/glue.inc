@@ -373,6 +373,10 @@ BYTE ui_port_state(BYTE ucI)
     BYTE ucP = _D1_INPUT_PORT + ucI;
     bit bCable = (ucI == 0) ? GET_D1_CABLE_STATUS() : (ucI == 1) ? GET_D2_CABLE_STATUS() : GET_D3_CABLE_STATUS();
 
+    if(AWTO_PORT_OFF(ucP))
+    {
+        return 4;                                  // UPS_DISABLED (#81)
+    }
     if((SysSourceGetInputPort() == ucP) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
         return 3;                                  // UPS_ACTIVE
@@ -761,6 +765,7 @@ void AwtoSetInit(void)                             // UserInterfaceInitial, afte
 {
     set_load();
     AwtoNvLoad();                                  // aux rows; SDK rows are the SDK store's fields (#151)
+    AwtoPortBoot();                                // #81: disabled ports before the first HPD high / DDC enable / search
     g_ucAwtoDdcciOn = (set_get(AWTO_SET_DDCCI) != 0);             // spare-engine DDC/CI 0x37 (#60); debug 0x35 stays
     g_ucAwtoKeepIdle = (set_get(AWTO_SET_KEEP_IDLE_RX) != 0);
 }

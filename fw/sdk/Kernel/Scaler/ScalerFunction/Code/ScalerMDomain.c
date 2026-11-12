@@ -252,26 +252,26 @@ bit ScalerMDomainControl(void)
         case _FRAME_SYNC_LINE_BUFFER:
 
             // Initial M Domain Block
-    AWTO_MSTEP(2, 0, 0);
+    AwtoMeasEvent(2, 0, 0);
             ScalerMemoryInitial();
 
             // Set FIFO freq.
             ScalerMemorySetFIFOFreq(_FIFO_FREQ_LINE_BUFFER_SEL);
 
             // Set Initial Dt Value
-    AWTO_MSTEP(3, 0, 0);
+    AwtoMeasEvent(3, 0, 0);
             ScalerMemoryFrameSyncSetDt(_DT_TARGET_PERCENTAGE);
 
             // Set display Format
-    AWTO_MSTEP(4, 0, 0);
+    AwtoMeasEvent(4, 0, 0);
             ScalerMDomainSetDisplayFormat(_FRAME_SYNC_LINE_BUFFER);
 
             // Fine Tune DClk Offset
-    AWTO_MSTEP(5, 0, 0);
+    AwtoMeasEvent(5, 0, 0);
             ScalerDPLLFineTuneFrameSyncLineBuffer();
 
             // Adjust IVS/IHS for Position Range
-    AWTO_MSTEP(6, 0, 0);
+    AwtoMeasEvent(6, 0, 0);
             AwtoFreqUpdate();
             ScalerIDomainVgipAdjustIHVDelay();
 
@@ -353,13 +353,13 @@ bit ScalerMDomainControl(void)
 #endif
     {
         // Enable double buffer
-    AWTO_MSTEP(7, 0, 0);
+    AwtoMeasEvent(7, 0, 0);
         ScalerMDomainControlDBApply();
     }
 
     // Enable Spread Spectrum
     //ScalerPLLSetDPLLSSC(_DCLK_SPREAD_SPEED, _DCLK_SPREAD_RANGE);
-    AWTO_MSTEP(8, 0, 0);
+    AwtoMeasEvent(8, 0, 0);
     ScalerPLLSetDPLLSSC(GET_DCLK_SPREAD_SPEED_VALUE(), GET_DCLK_SPREAD_RANGE_VALUE());
 
 #if(_URGENT_EVENT_CHECK_MODE == _ON)
@@ -391,7 +391,7 @@ bit ScalerMDomainControl(void)
 #endif
 
 #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
-    AWTO_MSTEP(10, 0, 0);
+    AwtoMeasEvent(10, 0, 0);
     ScalerMemoryReset();
 #endif
 
@@ -402,7 +402,7 @@ bit ScalerMDomainControl(void)
 #endif
 
     // Clear Buffer Status
-    AWTO_MSTEP(14, 0, AWTO_MEAS_P0_02_0C());
+    AwtoMeasEvent(14, 0, AWTO_MEAS_P0_02_0C());
     ScalerSetByte(P0_02_STATUS0, 0xFF);
 
     // Clear Display Vsync timeout flag

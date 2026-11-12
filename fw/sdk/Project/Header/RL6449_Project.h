@@ -54,24 +54,28 @@
 #define AWTO_RGB_ALERT_RED                                      255, 50, 50
 
 //--------------------------------------------------
-// awto two-colour power LED (P3.5 = on, P3.6 = standby)
+// awto two-colour power LED (bLED_ON = P3.5 on colour, bLED_STANDBY = P3.6 standby colour; awto-ddc#95)
+// One owner: the system machine (SysJudge.c SysMachineLed) per state; line "LED: <colour> (<state>)" per change (sync.tsv 1C).
 //--------------------------------------------------
-#define AWTO_LED_OFF                                            0
+#define AWTO_LED_OFF                                            0       // also the sync.tsv 1C arg
 #define AWTO_LED_ON                                             1
 #define AWTO_LED_BREATHE                                        2
+#define AWTO_SW_EV_LED                                          0x1C    // LED change: arg AWTO_LED_*, ring value = system state (AWTO_SYS_*)
 extern volatile __xdata unsigned char g_ucAwtoLedMode;
 extern volatile __xdata unsigned char g_ucAwtoLedPhase;
 extern volatile __xdata unsigned char g_ucAwtoLedLevel;
 extern volatile __xdata unsigned char g_ucAwtoLedTick;
 extern volatile __xdata unsigned char g_ucAwtoLedUp;
-extern void AwtoLedSetMode(unsigned char ucMode);
+extern volatile __xdata unsigned char g_ucAwtoLedPins;  // P3 pin levels (MCU_FFE3, bus value) once per main-loop pass: debug-readable
+extern void AwtoLedSet(unsigned char ucMode, unsigned char ucState);    // SysMachineLed only
+extern void SysMachineLedBoot(void);
 // Timer2 ticks each millisecond.  The accumulator produces 1 kHz pulse-density PWM;
 // brightness moves one step every 16 ms for an approximately 8.2 s breathe cycle.
 #define AWTO_LED_T2ISR()                                        do { \
                                                                     if(g_ucAwtoLedMode == AWTO_LED_BREATHE) { \
                                                                         g_ucAwtoLedPhase += g_ucAwtoLedLevel; \
-                                                                        P3_5 = 0; \
-                                                                        P3_6 = (g_ucAwtoLedPhase < g_ucAwtoLedLevel); \
+                                                                        bLED_ON = 0; \
+                                                                        bLED_STANDBY = (g_ucAwtoLedPhase < g_ucAwtoLedLevel); \
                                                                         if(++g_ucAwtoLedTick >= 16) { \
                                                                             g_ucAwtoLedTick = 0; \
                                                                             if(g_ucAwtoLedUp != 0) { \
@@ -535,7 +539,8 @@ extern void AwtoDiagT3Mark(unsigned char ucEnd);
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
     else if(ucAwtoCh == 0x02) { MCU_FF2E_DDC1_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x01) { MCU_FF20_DDC0_DDC_CONTROL_2 op; } } while(0)
 #endif
-// M-domain / DCLK fine-tune set-up steps: one sync log line each (AWTO_SYNC_EV_MSTEP, value = arg << 16 | val), every build (#165).
+// M-domain set-up phases of the first set-up per boot (start, IVS wait 1, DCLK final offset, memory check, check OK): one sync log
+// line each (AWTO_SYNC_EV_MSTEP, value = arg << 16 | val), every build; the other steps only in the ring below (#165).
 // -D_AWTO_MEAS4K=_ON adds the 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every AWTO_MEAS_PERIOD_MS from the
 // first M-domain setup, layout in scripts/meas4k_dump.py; re-arm: write state byte (g_stAwtoMeas+3) = 0 over the debug slave, change mode.
 #ifndef _AWTO_MEAS4K
@@ -544,7 +549,7 @@ extern void AwtoDiagT3Mark(unsigned char ucEnd);
 #define AWTO_MEAS_RD(a)                                         (*((volatile __xdata unsigned char *)(a)))
 #define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(AWTO_R_WATCH_DOG_CTRL0) << 8) | AWTO_MEAS_RD(AWTO_R_STATUS0))
 #define AWTO_MSTEP_LAST                                         13      // step id of the last line of a set-up (memory + timing gen check OK)
-#define AWTO_MSTEP_MAX                                          19      // first set-up 15 lines x1.25: a set-up that never reaches LAST stops here, said in the log
+#define AWTO_MSTEP_MAX                                          7       // first set-up 5 lines x1.25: a set-up that never reaches LAST stops here, said in the log
 #define AWTO_MSTEP(id, arg, val)                                { AwtoMstep((id), (arg), (val)); AwtoMeasEvent((id), (arg), (val)); }
 extern void AwtoMstep(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
 extern __xdata unsigned char g_ucAwtoMstepN;   // step lines logged this boot; AWTO_MSTEP_MAX = done (write 0 over the debug slave to log the next set-up)
@@ -637,15 +642,41 @@ extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 // 3 = fixed port without cable in NOSIGNAL / PS while another port is cabled -> auto search, normal, SEARCH
 #define AWTO_SW_EV_DEADPORT                                     0xB8
 extern unsigned char AwtoPortCable(unsigned char ucPort);
+// #81 per-port settings block (fw/sdcc/awto_port.inc): one bit per port per field, bit n = Dn (AWTO_PORT_BIT). Field today: enable.
+// Disabled port: HPD held low (PCB_Dn_HOTPLUG), EDID channel off (ScalerMcuDdcRamEnable), receiver off (ScalerGDIPhyPowerProc),
+// skipped by the search / AUTO (SysSourceHandler, SysSourceSwitchPort), the fast-switch cache and the wake poll.
+extern __xdata unsigned char g_ucAwtoPortOff;
+#define AWTO_PORT_BIT(port)                                     ((unsigned char)(1 << ((port) - _D0_INPUT_PORT)))
+#define AWTO_PORT_OFF(port)                                     ((g_ucAwtoPortOff & AWTO_PORT_BIT(port)) != 0)
+#define AWTO_PORT_HPD(n, x)                                     ((x) & (~g_ucAwtoPortOff >> (n)) & 1)   // PCB_Dn_HOTPLUG (x = 0 / 1): high only when on; no branch
+#define AWTO_PORT_RX_ACTION(port, a)                            ((AWTO_PORT_OFF(port) && ((a) != _POWER_ACTION_NORMAL_TO_OFF) && ((a) != _POWER_ACTION_AC_ON_TO_OFF) && \
+                                                                  ((a) != _POWER_ACTION_PS_TO_OFF)) ? _POWER_ACTION_SWITCH_INTERFACE_TO_OFF : (a))
+#define AWTO_PORT_WHY_BOOT                                      0x01    // sync.tsv E1 rows: why a port changed (arg)
+#define AWTO_PORT_WHY_OFF                                       0x02
+#define AWTO_PORT_WHY_ON                                        0x03
+#define AWTO_PORT_WHY_SELECTOR                                  0x04
+#define AWTO_PORT_WHY_SELECT                                    0x05
+#define AWTO_PORT_WHY_ON_SCREEN                                 0x06    // refusals
+#define AWTO_PORT_WHY_LAST                                      0x07
+#define AWTO_PORT_WHY_WAKE                                      0x08    // wake trigger on a disabled port (once per sleep)
+#define AWTO_PORT_WHY_ALREADY_OFF                               0x09
+#define AWTO_PORT_WHY_ALREADY_ON                                0x0A
+#define AWTO_PORT_WHY_FIXED                                     0x0B    // fixed search on a disabled port -> auto
+#define AWTO_SYNC_EV_PORT                                       0xE1    // #81 port settings line: arg = AWTO_PORT_WHY_*, value = port
+extern void AwtoPortSelect(unsigned char ucPort, unsigned char ucWhy);   // a selection enables a disabled port first
+extern void AwtoPortSkipSearch(void);
+extern void AwtoPortBoot(void);                                 // AwtoSetInit: stored enables -> mask, boot lines
+#define AWTO_PORT_SEARCH_GATE(idx)                              { if(AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)))) { AwtoPortSkipSearch(); } }
 extern void AwtoDeadPortPoll(void);
 #define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
                                                                      (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF
-extern void AwtoSourceOpen(void);
+extern void AwtoSourceOpen(unsigned char ucWhy);                // ucWhy = AWTO_SEL_EV_OPEN_KEY / _OPEN_CARD (its ring line)
 // #139 selector, no picture: waits for a key; same 60 s as AWTO_L2_SEC (Dan's panel-off default), x1; expiry = SDK power-saving card, sleep
 #define AWTO_SRC_SLEEP_SEC                                      60
 #define AWTO_SRC_IDLE_COMMIT_MS                                 2000    // selector: highlighted input taken after this long with no key (Dan, 2026-11-12, #132)
 extern void AwtoSourceAuto(unsigned char ucWho);                // auto source select: the selector's Auto row, the AUTO key (#132)
 extern void AwtoSourceIdle(void);                               // OSD_DISABLE timer with the selector open: idle commit
+extern void AwtoSourceReset(void);                              // SDK OSD reset (UserInterfaceAdjustOsdResetProc): the open selector's choice
 #define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
 #define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
 extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
@@ -878,7 +909,7 @@ extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // awto_gpio.inc: rising edges per counted input (wraps), read by the selector
-#define AWTO_SYNC_N                                             60      // cold boot 47 lines in sim (boot_sim, #165: + 15 set-up steps) x1.25 = 59, a divisor of WRAP
+#define AWTO_SYNC_N                                             60      // >= cold boot 38 lines x1.25 (boot_sim, #165) and cold boot + power off 50 lines on the console (con_wrap_sim); divides WRAP
 #define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
@@ -927,6 +958,17 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_CONSOLE                                    0xCA    // the console opened by itself
 #define AWTO_SYNC_EV_WAKE                                       0xCB    // + AWTO_WAKE_T_*: a trigger woke the monitor, arg = port
 #define AWTO_SYNC_EV_DEADPORT                                   0xDF    // #84: arg 1 = port with no cable refused, 2 = fixed port without cable -> auto search; value = port
+#define AWTO_SYNC_EV_SEL                                        0xE0    // input selector (#132): arg AWTO_SEL_EV_*, value = port of the item (0xFF = Auto)
+#define AWTO_SEL_EV_OPEN_KEY                                    0x01    // opened by SOURCE, highlight on the value
+#define AWTO_SEL_EV_OPEN_CARD                                   0x02    // opened by the SDK no-signal / power-saving wake event
+#define AWTO_SEL_EV_KEPT_IDLE                                   0x03    // idle commit on the input it opened on: closed, no switch
+#define AWTO_SEL_EV_KEPT_AUTO                                   0x04    // AUTO on the input it opened on: closed, no switch
+#define AWTO_SEL_EV_CANCEL                                      0x05    // MENU: closed, the input it opened on kept
+#define AWTO_SEL_EV_NOCABLE                                     0x06    // #84 take refused: no cable on the item; stays open
+#define AWTO_SEL_EV_DPVER                                       0x07    // take ignored: DP version pop-up up
+#define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
+#define AWTO_SEL_EV_RESET                                       0x09    // closed by the SDK OSD reset (mode reset / signal back), nothing to take
+#define AWTO_SEL_EV_CON_CLOSE                                   0x0A    // SOURCE closed a console that opened by itself, for the selector
 #define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
 #define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8
@@ -937,7 +979,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_REPEAT_LINES                                  2       // lines the repeat collapse compares (AwtoSyncSame back 2 and 3)
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
-#define AWTO_SYNC_EV_MSTEP                                      0xE0    // #165 M-domain / DCLK fine-tune step: arg = step (AWTO_MSTEP), value = arg << 16 | val
+#define AWTO_SYNC_EV_MSTEP                                      0xE2    // #165 M-domain / DCLK fine-tune step: arg = step (AWTO_MSTEP), value = arg << 16 | val
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
@@ -1054,6 +1096,7 @@ extern void AwtoPsPollSite(void);
 #define AWTO_SYNC_POLL()
 #define AWTO_PS_POLL_SITE()
 #endif
+extern __xdata unsigned char g_ucAwtoConAuto;  // the open console opened itself: SOURCE closes it for the selector (#132)
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
 #define AWTO_SYNC_OPEN_KEY                                      2       // ucOpenReq: UP+DOWN in power saving (#132): opens once awake, whatever the setting
 extern void AwtoOsdSyncPoll(void);
@@ -1310,6 +1353,7 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_BY_KEY_AUTO                                    0x1C    // AUTO with nothing open: auto source select (#132)
 #define AWTO_SYS_BY_KEY_CONSOLE                                 0x1D    // UP+DOWN in power saving: wake into the console (#132)
 #define AWTO_SYS_BY_SELECTOR_IDLE                               0x1E    // selector: highlighted input taken after AWTO_SRC_IDLE_COMMIT_MS (#132)
+#define AWTO_SYS_BY_SELECTOR_RESET                              0x1F    // selector closed by the SDK OSD reset: its highlighted choice taken (#132)
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24
@@ -1331,6 +1375,7 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_REPLACES                                       2
 #define AWTO_SYS_REFUSED                                        3
 #define AWTO_SYS_KEPT                                           4       // kept until the state can take it
+#define AWTO_SYS_DROPPED                                        5       // pending search reset dropped: the no-signal search confirmed a timing first (#132)
 #define AWTO_SYS_MS_MAX                                         0xFFFFFFUL     // transition line: ms in the old state, 24 bits (4.6 h)
 #define AWTO_SW_EV_SYS                                          0x13    // transition: arg old << 4 | new; ring value why << 24 | ms in old
 #define AWTO_SW_EV_SYS_REQ                                      0x14    // request: arg request; ring value who << 8 | outcome

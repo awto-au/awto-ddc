@@ -2059,7 +2059,7 @@ void ScalerDPLLFineTuneFrameSyncLineBuffer(void)
         // Calculate Dclk
         ulDclk = (ScalerPLLGetNewCount(ulDiffOffsetNew, ulDiffOffsetOld, GET_D_CLK_FREQ(), bProportion));
 
-    AWTO_MSTEP(31, ucDebounceCnt, (unsigned int)ulDiffOffsetNew);
+    AwtoMeasEvent(31, ucDebounceCnt, (unsigned int)ulDiffOffsetNew);
         stDHtotalFTStatus = ScalerMDomainDHtotalFinetune(ulDclk, ulPanelClockMaxSpread, ulPanelClockMinSpread);
 
         if(stDHtotalFTStatus.usDHtotal != GET_MDOMAIN_OUTPUT_HTOTAL())

@@ -1,9 +1,11 @@
 // #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34).
 // 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
 // 0x26 debug pop-up held, 0x27 clear all holds (0x21 / 0x24 / 0x25 were the boot logo, #144). #60: 0x31..0x33 switch to D1..D3 (fixed port),
-// 0x30 auto search, 0x40 settings defaults (#67), 0x3D one store write, 0x3E POWER key (#151). 0x50+n directly holds EnumOSDDispMsg n for visual review. 0x2A..0x2F Timer0 events (#138).
+// 0x30 auto search, 0x06..0x08 / 0x09..0x0B D1..D3 off / on (#81), 0x40 settings defaults (#67), 0x3D one store write, 0x3E POWER key (#151). 0x50+n directly holds EnumOSDDispMsg n for visual review. 0x2A..0x2F Timer0 events (#138).
 // Inserted into RTD2014Key.c (OSD macros).
 #define AWTO_HOLD_POPUP                         0x02
+#define AWTO_TC_PORT_OFF                        0x06    // #81 test cmds: + 0..2 = D1..D3 off; AWTO_TC_PORT_ON + 0..2 = on
+#define AWTO_TC_PORT_ON                         0x09
 
 void AwtoMsgLoad(void)              // #74: after RTDNVRamStartup (keil2sdcc sub); reset value 0 = off until then
 {
@@ -128,6 +130,7 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd == 0x20) || (ucCmd == 0x26))         // debug pop-up: the diagnostic console
     {
         AwtoDiagConsole(1);
+        g_ucAwtoConAuto = 0;
     }
     else if(ucCmd == 0x27)
     {
@@ -153,7 +156,7 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd == 0x28) || (ucCmd == 0x29))      // #74: debug messages on / off; stored by the #151 gate
     {
 #ifdef _AWTO_NEW_SETTINGS
-        extern int set_put(unsigned char ucId, int iV, unsigned char ucNow);
+        extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
         set_put(AWTO_SET_DEBUG_MSGS, (ucCmd == 0x28), 1);
 #else
         g_stOSDUserData.b1AwtoMsgOn = (ucCmd == 0x28);
@@ -171,6 +174,11 @@ void AwtoDiagTestCmd(void)
     }
 #endif
 #ifdef _AWTO_NEW_SETTINGS
+    else if((ucCmd >= AWTO_TC_PORT_OFF) && (ucCmd < AWTO_TC_PORT_ON + 3))   // #81: 06..08 disable D1..D3, 09..0B enable (registry)
+    {
+        extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
+        set_put(AWTO_SET_D1_ENABLE + ((ucCmd - AWTO_TC_PORT_OFF) % 3), (ucCmd >= AWTO_TC_PORT_ON), 1);
+    }
     else if(ucCmd == 0x40)                              // #67 every settings-registry row to its default (recovery)
     {
         extern void set_defaults(void);

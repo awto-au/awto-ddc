@@ -139,6 +139,11 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         AwtoKeyTestSet(2);                      // UP+DOWN: diagnostic console
         return;
     }
+    if(AWTO_KEY_TEST_ON() && (ucK == AWTO_K_SOURCE) && (bRep == 0) && (g_ucAwtoConAuto != 0) && (g_stAwtoGpio.ucOpen != AWTO_CON_GPIO))
+    {                                           // #132: a console that opened by itself (settled episode) never traps SOURCE:
+        AwtoKeyTestSet(0);                      // it closes, the selector opens below (its log pane shows the same lines)
+        AwtoSyncPush(AWTO_SYNC_EV_SEL, AWTO_SEL_EV_CON_CLOSE, 0xFF);
+    }
     if(AWTO_KEY_TEST_ON())                      // main page: MENU closes it, POWER above, the rest do nothing (Dan 2026-11-12);
     {                                           // GPIO (key test) page: UP / DOWN scroll its panels, the rest swallowed
         if(g_stAwtoGpio.ucOpen == AWTO_CON_GPIO)
@@ -189,7 +194,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 #endif
           )
         {
-            AwtoSourceOpen();
+            AwtoSourceOpen(AWTO_SEL_EV_OPEN_KEY);
         }
         return;
     }

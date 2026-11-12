@@ -145,4 +145,5 @@ void AwtoKeyConSet(BYTE ucOn)                   // the console opens / closes th
 void AwtoKeyTestSet(BYTE ucOn)                  // 0 close, 1 open, 2 toggle (key combo UP+DOWN, test cmd 0x41 / 0x42): the diagnostic console
 {
     AwtoDiagConsole(ucOn);
+    g_ucAwtoConAuto = 0;                        // opened (or closed) on purpose: the console page rules hold
 }

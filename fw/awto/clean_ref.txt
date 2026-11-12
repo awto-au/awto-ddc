@@ -1,1 +1,1 @@
-0ef3e13   # awto-rtdfw commit compiled into the image (git archive); audit-rec: legacy settings record read in place, aux buffer 52 B (awto-ddc#165), on ui d8d966d
+a7fce9d   # awto-rtdfw commit compiled into the image (git archive); audit-rec: legacy settings record read in place, aux buffer 52 B (awto-ddc#165), on ui 348d5be (portcfg)

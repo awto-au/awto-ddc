@@ -375,7 +375,6 @@ void UserInterfaceUncallFunction(void);
 void UserInterfaceInitial(void);
 
 void UserInterfacePowerSwitch(EnumPowerAction enumSwitch);
-void UserInterfaceKeyPadLedControl(BYTE ucKeyPadLed);
 
 //-------------------------------------------------------
 // User Information
@@ -1466,8 +1465,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
 #endif
 #endif
 
-            // Update LED Status
-            UserInterfaceKeyPadLedControl(_LED_POWER_ON);
 
             break;
 
@@ -1491,8 +1488,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
 #endif
 #endif
 
-            // Update LED Status
-            UserInterfaceKeyPadLedControl(_LED_POWER_ON);
 
             // Set Monitor Power On Status
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _ON);
@@ -1511,8 +1506,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
 #endif
 #endif
 
-            // Update LED Status
-            UserInterfaceKeyPadLedControl(_LED_POWER_OFF);
 
             // Panel pown down.
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_USER_AC_OFF));
@@ -1528,8 +1521,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
 #endif
 #endif
 
-            // Update LED Status
-            UserInterfaceKeyPadLedControl(_LED_POWER_OFF);
 
             // Panel pown down.
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_USER_OFF));
@@ -1551,8 +1542,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
 #endif
 #endif
 
-            // Update LED Status
-            UserInterfaceKeyPadLedControl(_LED_POWER_OFF);
 
             // Set Monitor Power Off Status
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _OFF);
@@ -1571,8 +1560,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
 #endif
 #endif
 
-            // Update LED Status
-            UserInterfaceKeyPadLedControl(_LED_POWER_SAVING);
 
             // Panel pown down.
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_USER_PS)); AwtoNvFlush();
@@ -1588,77 +1575,6 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
     ScalerTimer0SetTimerCount(_TIMER_OFF);
 #endif
 }
-
-//--------------------------------------------------
-// Description  : Keypad Led Control
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserInterfaceKeyPadLedControl(BYTE ucKeyPadLed)
-{
-    switch(ucKeyPadLed)
-    {
-        case _LED_POWER_ON:
-            PCB_LED_ON();
-            break;
-
-        case _LED_POWER_ACTIVE:
-            PCB_LED_ACTIVE();
-            break;
-
-        case _LED_POWER_SEARCH:
-            PCB_LED_IDLE();
-            break;
-
-        case _LED_POWER_SAVING:
-            PCB_LED_POWER_SAVING();
-            break;
-
-        case _LED_POWER_NOSUPPORT:
-            PCB_LED_ACTIVE();
-            break;
-
-        case _LED_POWER_NOSUPPORT_SAVING:
-            PCB_LED_POWER_SAVING();
-            break;
-
-        case _LED_POWER_OFF:
-            PCB_LED_OFF();
-            break;
-
-        case _LED_ALL_OFF:
-            PCB_LED_OFF();
-            break;
-
-        case _LED_TYPE_1:
-            PCB_LED_TYPE1();
-            break;
-
-        case _LED_TYPE_2:
-            PCB_LED_TYPE2();
-            break;
-
-        case _LED_TYPE_3:
-            PCB_LED_TYPE3();
-            break;
-
-        case _LED_TYPE_4:
-            PCB_LED_TYPE4();
-            break;
-
-        case _LED_TYPE_5:
-            PCB_LED_TYPE5();
-            break;
-
-        case _LED_TYPE_FLASH:
-            PCB_LED_TYPE_FLASH();
-            break;
-
-        default:
-            break;
-    }
-}
-
 
 //--------------------------------------------------
 // Description  : User OSD Get LogoOn
@@ -3199,6 +3115,8 @@ void UserInterfaceAdjustOsdActiveProc(void)
 //--------------------------------------------------
 void UserInterfaceAdjustOsdResetProc(void)
 {
+    AwtoSourceReset();                          // #132: an open selector's choice is taken or its close logged
+
     // Disable OSD
     if(GET_OSD_LOGO_ON() == _OFF)
     {

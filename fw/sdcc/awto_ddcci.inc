@@ -19,6 +19,7 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
         AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
         return;
     }
+    AwtoPortSelect(ucPort, AWTO_PORT_WHY_SELECT);   // #81: selecting a disabled port enables it (stored), then the switch
     if((ucWhy == 0x60) && (ucPort == SysSourceGetInputPort()) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
         return;                                 // KVM "switch to where we are": no re-search blank
@@ -48,9 +49,9 @@ void AwtoDeadPortPoll(void)                     // #84: fixed port, no cable on 
     if((SysSourceGetScanType() != _SOURCE_SWITCH_FIXED_PORT) ||
        ((SysModeGetModeState() != _MODE_STATUS_NOSIGNAL) && (SysModeGetModeState() != _MODE_STATUS_POWER_SAVING)) ||
        (AwtoPortCable(ucCur) == _TRUE) ||
-       (((ucCur == _D1_INPUT_PORT) || (GET_D1_CABLE_STATUS() == _FALSE)) &&
-        ((ucCur == _D2_INPUT_PORT) || (GET_D2_CABLE_STATUS() == _FALSE)) &&
-        ((ucCur == _D3_INPUT_PORT) || (GET_D3_CABLE_STATUS() == _FALSE))))
+       (((ucCur == _D1_INPUT_PORT) || (GET_D1_CABLE_STATUS() == _FALSE) || AWTO_PORT_OFF(_D1_INPUT_PORT)) &&     // #81: a disabled
+        ((ucCur == _D2_INPUT_PORT) || (GET_D2_CABLE_STATUS() == _FALSE) || AWTO_PORT_OFF(_D2_INPUT_PORT)) &&     // port is no way out
+        ((ucCur == _D3_INPUT_PORT) || (GET_D3_CABLE_STATUS() == _FALSE) || AWTO_PORT_OFF(_D3_INPUT_PORT))))
     {
         return;
     }
