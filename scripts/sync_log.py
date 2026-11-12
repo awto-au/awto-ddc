@@ -214,7 +214,8 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
         return head + pre + f"{p0}{v & 0xFFFF} ms{p1}{v >> 16} ms{p2}"
     before, _, after = row["text"].partition("%")
     val = (sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
-           name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else value(row["fmt"], a, v))
+           name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else
+           name(rows, SYS_STATE, v & 0xFF) if row["fmt"] == "sname" else value(row["fmt"], a, v))     # sname: #95 LED line
     return head + pre + before + val + after
 
 

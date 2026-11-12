@@ -220,6 +220,7 @@ class Dev:
     (after the accessing instruction), where the model fixes up the cells the next access will see."""
     reads: tuple = ()
     writes: tuple = ()
+    swrites: tuple = ()                             # SFR addresses: on_swrite after the write
 
     def init(self, m):
         """Called after reset: preset constant status cells."""
@@ -228,6 +229,9 @@ class Dev:
         pass
 
     def on_write(self, m, a):
+        pass
+
+    def on_swrite(self, m, a):
         pass
 
 
@@ -825,6 +829,9 @@ class Machine:
             for a in d.writes:
                 self.hook[("write", a)] = d
                 self._q.append(f"break xram w 0x{a:x}")      # queued: flush() reads the echo in batches (a bare send of 10 k+ lines fills the pipe)
+            for a in getattr(d, "swrites", ()):         # SFR writes (on_swrite), e.g. the P3 LED pins
+                self.hook[("swrite", a)] = d
+                self._q.append(f"break sfr w 0x{a:x}")
         for d in self.devs:
             d.init(self)
         self.flush()

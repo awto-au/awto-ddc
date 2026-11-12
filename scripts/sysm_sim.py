@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S  # noqa: E402
 import osd_test as T  # noqa: E402
 import sync_log as L  # noqa: E402
+import led_check as LED  # noqa: E402
 from ddc_sim import DdcEngine, Mccs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,8 +89,11 @@ class Run:
         self.own = m0.addr("g_ucAwtoSysOwn") if self.has_own else None
         m0.close() if hasattr(m0, "close") else None
         w1c = S.W1C({0xFE69: 0x01, 0xFFE5: 0x01, 0xFE72: 0x01, 0xB7DC: 0x01, 0xBADC: 0x01})    # wake latches as wake_sim.py: no stale latch
+        self.led = LED.LedWatch(self)
         self.bus = S.SimBus(a.bin, a.map, "sysm-" + a.bin.stem, None, boot=False, video=a.mode,
-                            devs=[StateWatch(self, pwr, mode), self.eng, w1c])
+                            devs=[StateWatch(self, pwr, mode), self.eng, w1c, self.led])
+        self.led_addr = re.search(r"\s_g_ucAwtoLedMode\b", mp) is not None
+        self.led_table = []
         self.m = self.bus.m
         self.pwr = pwr
         self.mccs = Mccs(self.bus, self.eng)
@@ -155,7 +159,16 @@ class Run:
         for x in new:
             say(f"    {x}")
         self.phase_lines.setdefault(title, []).extend(new)
+        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: .+? -> (.+?) \(\d+ ms\)", x))), None)
+        LED.sample(self.m, self.led, st, self.phase if self.phase != "boot" else "cold boot",
+                   self.m.addr("g_ucAwtoLedMode") if self.led_addr else None, self.led_check, self.led_table)
         return new
+
+    def led_check(self, ok, what, detail=""):
+        if self.a.report:
+            say(f"  {'ok' if ok else 'MISMATCH'} {what}{(': ' + detail) if detail else ''}")
+        else:
+            self.check(ok, what, detail)
 
     def step(self, title, action, cond, ms, what):
         self.phase = title
@@ -246,6 +259,9 @@ class Run:
         for t, ph, w, o, n, own in ev:
             say(f"    {t:7d} {ph:13s} {w:6s} {o:02X} -> {n:02X} {'-' if own is None else own}")
         lines = [x for ph in self.phase_lines.values() for x in ph]
+        LED.print_table(say, self.led_table)
+        say(f"  P3.5 / P3.6 changes: {len(self.led.rec)}; P3.6 edges per phase: {self.led.edges}")
+        LED.judge_lines(self.lines_seen, self.led_check)
         if self.a.report or not self.has_own:
             say("  report only" + ("" if self.has_own else " (no g_ucAwtoSysOwn in this image)"))
             return
@@ -298,6 +314,9 @@ def lint(tree: Path, r: Run):
     r.check(not owned, "static: SDK power / mode views written only in SysJudge.c", ", ".join(owned[:6]))
     r.check(not calls, "static: SysPowerSwitch / SysModeResetState called only by the machine (SysJudge.c, SysPower.c, SysMode.c)", ", ".join(calls[:6]))
     r.check(not old, "static: SysPowerHandler / SysJudgeHandler / SysModeHandler gone", ", ".join(old[:6]))
+    led = LED.lint(tree)
+    r.check(not led, "static: LED pins written only by awto_led.inc (+ the breathe ISR), AwtoLedSet only in SysJudge.c, no SDK LED calls",
+            ", ".join(led[:6]))
 
 
 def main():
