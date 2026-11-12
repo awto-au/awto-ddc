@@ -110,3 +110,11 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 - Console: no live log draw while a fast switch settles (`AWTO_CON_LIVE`); the lines stay in the ring and the OSD poll draws them after the unblank.
 - Gate `sysm` (scripts/sysm_sim.py): power / mode view changes only with `g_ucAwtoSysOwn`, unbroken transition chain, named states / requesters, each mode line after its transition, no request-less target; `--tree` lint (view setters only in SysJudge.c, actions only from the machine's files, old handlers gone).
 - Measurements: #162 comment of 2026-11-12 (step 3, sim and unit 2 tables).
+
+## Step 3b: one fact = one line (wb-p14ui-s3b, 2026-11-12)
+- Machine lines are the record of pin / link / stream / power / mode changes; no second line restates them (Dan: three backlight-on lines).
+- Gone (rows removed; switch log keeps the events): pin edges 10 00..03 for machine writes, stage lines D1 05 / 07 / 08, mode lines 01, C9 power off / saving, probes 90 01 / 0E, A0 00 / 05, A8 01..09.
+- Folded: mode text appended to the system transition that changes the SDK mode (why bit 7, table 1A); boot `RESET -> AC ON` (ms since reset) replaces the init mode line; `LINK -> VIDEO` carries the training time (fmt ms2); a pin write outside the machine is one line 12 02..33 (level, edge).
+- Requests say who: panel `UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(event, AWTO_PNL_BY_*))` (who in bits 7..2, table 1B), deferred is an outcome (was 12 05); hold release reasons are requesters (16 0E / 1A / 1B).
+- Times: a line's ring time = its transition. Panel: line before the action (LINK -> VIDEO after training + stream, `-> T6` at the VDD-off edge). System: `SYS_AT` logs before the action, `SysMachineGo` applies after. Console draw held during the panel tick / a system line (`AWTO_CON_LIVE`).
+- Gates: panel_sim (each machine pin edge has its line within 3 ms), boot_sim (line time = previous line + `N ms in`, +-3 ms), sysm_sim (mode text exactly on mode changes, RESET first, requesters named).

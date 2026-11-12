@@ -26,6 +26,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/panel_unit.log"
 OUT = ROOT / "tmp/logs/panel_unit"
 BUS, SERIAL, UNIT = 11, "AWT26110002", 2      # unit 2 (scripts/devices.json); units 1 / 3 are hands off
+# --bus: the debug slave follows the active port (D1 = DP-1 connector bus); every read checks the EDID serial (sync_log --serial)
 BOOT_WAIT_S = 6.0      # cold boot -> ACTIVE: s1-5 2.47 s worst with HDMI predetect flaps (#162), x2.4 = 6 s; expiry = run FAIL
 KEY_WAIT_S = 6.0       # POWER-key on -> ACTIVE: s1-5 sim / unit < 2.5 s (#144 boot profile), x2.4; expiry = run FAIL
 SWITCH_WAIT_S = 4.0    # input switch -> picture: full path ~1 s (#60 / #83), DP search time 3 s worst x1.25 ~ 4 s; expiry = run FAIL
@@ -155,8 +156,10 @@ def main():
     ap.add_argument("--power-key", type=int, default=1)
     ap.add_argument("--switch", type=int, default=0, help="input switches D1 then D2 (kvm.py, VCP 0x60)")
     ap.add_argument("--no-flash", action="store_true")
+    ap.add_argument("--bus", type=int, default=BUS, help="unit 2 bus of the port it runs on (D2 HDMI-2 = 11 by default)")
     ap.add_argument("--wait", type=float, default=BOOT_WAIT_S, help="cold boot -> ACTIVE poll limit, s (characterising slow HDMI scans)")
     a = ap.parse_args()
+    globals()["BUS"] = a.bus
     b = ROOT / f"tmp/fw/{SERIAL}-{a.tag}-be.bin"
     mp = b.with_suffix(".map")
     if not a.no_flash:
