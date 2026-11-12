@@ -145,6 +145,12 @@ def host_time(ht: dict, fw32: int) -> str:
     return iso(ht["epoch"] + (ht["frac"] + fw32 - ht["fw"]) / 1000.0, ht["ofs"], ms=True)
 
 
+def step(a: int, b: int) -> int:
+    """ms from 16-bit time a to b: forward, except a step back of < 256 ms (lines re-based at the Timer2 start, #29)"""
+    d = (b - a) & 0xFFFF
+    return d - 0x10000 if d >= 0xFF00 else d
+
+
 def unwrap(evs: list, now32: int | None) -> list:
     """ring events (id, arg, ms16, v) -> [(fw32 or None, sure)]: forward from anchors, back from the first anchor / now"""
     out, cur = [], None
@@ -155,18 +161,18 @@ def unwrap(evs: list, now32: int | None) -> list:
         elif i == 0xD8:
             cur = v
         elif cur is not None:
-            cur += (ms - cur) & 0xFFFF
+            cur += step(cur & 0xFFFF, ms)
         out.append([cur, True])
     first = next((k for k, (t, _) in enumerate(out) if t is not None), None)
     if first is None and now32 is not None and evs:
         first, out[-1][0] = len(out) - 1, now32 - ((now32 - evs[-1][2]) & 0xFFFF)
     if first is not None:
         for k in range(first - 1, -1, -1):
-            out[k][0] = out[k + 1][0] - ((evs[k + 1][2] - evs[k][2]) & 0xFFFF)
+            out[k][0] = out[k + 1][0] - step(evs[k][2], evs[k + 1][2])
     if now32 is not None:
         back = now32
         for k in range(len(out) - 1, -1, -1):            # back from now down to the last anchor
-            back -= (back - evs[k][2]) & 0xFFFF
+            back -= step(evs[k][2], back & 0xFFFF)
             if out[k][0] is not None and out[k][0] != back:
                 out[k][1] = False
             if evs[k][0] in (0xC0, 0xD8):

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
-menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes.
+menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes, htime.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes]
+usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
+  htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
@@ -44,6 +45,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "sync": ("_g_stAwtoSync",),
     "bootsim": ("_g_stAwtoSync",),
     "wake": ("_AwtoPsWakeFire",),
+    "htime": ("_g_stAwtoHt",),
 }
 
 
@@ -88,6 +90,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     if header(tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
     if tree and Path(tree).is_dir():
