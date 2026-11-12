@@ -1,1 +1,1 @@
-e7c597f   # awto-rtdfw commit compiled into the image (git archive); ui: settings on the SDK store + audio rows live (awto-ddc#151, #93)
+d8d966d   # awto-rtdfw commit compiled into the image (git archive); keymap-132: inert rows not active, legend SOURCE = close (awto-ddc#132), on ui e7c597f

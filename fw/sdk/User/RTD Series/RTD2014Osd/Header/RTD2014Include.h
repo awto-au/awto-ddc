@@ -2266,6 +2266,7 @@ typedef enum
 #endif
 
     _MENU_HOTKEY_SOURCE,
+    _MENU_HOTKEY_BACKLIGHT,                     // awto: UP / DOWN backlight bar (#132)
     _MENU_PANEL_UNIFORMITY_MSG_ADJUST,
 
     _MENU_END,
