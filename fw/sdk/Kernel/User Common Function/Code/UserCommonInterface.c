@@ -900,7 +900,7 @@ static bit UserCommonInterfacePanelStep(void)
             AwtoDiagStage(7);
             ScalerDDomainBackgroundEnable(_ENABLE);   // fresh link: black until the scaler shows a picture (short T3)
             UserCommonInterfacePanelVideoOn();
-            UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, usNow);
+            UserCommonInterfacePanelGo(AWTO_PNL_VIDEO, s_usPnlVideo);     // training + stream (~100 ms) count to LINK
             return _TRUE;
 
         case AWTO_PNL_VIDEO:
