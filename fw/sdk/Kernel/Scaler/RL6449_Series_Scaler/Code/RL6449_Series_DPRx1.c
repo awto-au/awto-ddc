@@ -351,7 +351,10 @@ void ScalerDpRx1DpcdInitial(EnumDpVersionType enumDpVersion, EnumDpLaneCount enu
     ScalerDpRx1SetDpcdValue(0x00, 0x04, 0x10, 0x00);
     ScalerDpRx1SetDpcdValue(0x00, 0x04, 0x12, 0x00);
 
-#if(_EIZO_CUSTOMIZED_VALUE_OF_DPCD_SUPPORT == _OFF)
+#if(_AWTO_HDCP == _OFF)
+    // awto: HDCP off (#44): DPCD Bcaps HDCP_CAPABLE clear, Aksv write IRQ off
+    ScalerDpRx1ChangeHdcpDpcdCapability(_DISABLE);
+#elif(_EIZO_CUSTOMIZED_VALUE_OF_DPCD_SUPPORT == _OFF)
 #if((_DP_TX_SUPPORT == _ON) && (_D1_DP_MST_PORT_SUPPORT == _ON))
     // _BIT1: Repeater,  _BIT0: HDCP Capable
     ScalerDpRx1SetDpcdValue(0x06, 0x80, 0x28, 0x03);

@@ -440,11 +440,13 @@ void ScalerDpPowerSwitch(EnumPowerAction enumPowerAction)
             // Stream Load By 63th MTPH
             ScalerSetBit(PB5_02_STHD_CTRL_1, ~_BIT7, 0x00);
 
+#if(_AWTO_HDCP == _ON)     // awto: HDCP off = Bcaps stays 0 (#44)
             if(enumPowerAction == _POWER_ACTION_OFF_TO_NORMAL)
             {
                 // Enable HDCP support
                 ScalerDpRx0ChangeHdcpDpcdCapability(_ENABLE);
             }
+#endif
 
 #endif // End of #if(_D0_DP_EXIST == _ON)
 
@@ -462,11 +464,13 @@ void ScalerDpPowerSwitch(EnumPowerAction enumPowerAction)
             // Stream Load By 63th MTPH
             ScalerSetBit(PB8_02_STHD_CTRL_1, ~_BIT7, 0x00);
 
+#if(_AWTO_HDCP == _ON)     // awto: HDCP off = Bcaps stays 0 (#44)
             if(enumPowerAction == _POWER_ACTION_OFF_TO_NORMAL)
             {
                 // Enable HDCP support
                 ScalerDpRx1ChangeHdcpDpcdCapability(_ENABLE);
             }
+#endif
 
 #endif // End of #if(_D1_DP_EXIST == _ON)
 

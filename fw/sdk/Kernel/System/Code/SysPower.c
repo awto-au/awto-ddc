@@ -57,7 +57,9 @@ void SysPowerMcuClock(BYTE ucClockSel);
 void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus);
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
+#if(_AWTO_HDCP == _ON)
 void SysPowerLoadHDCPKey(void);
+#endif
 
 #if(_DP_TX_SUPPORT == _ON)
 void SysPowerLoadDPTxHDCPKey(void);
@@ -139,7 +141,13 @@ void SysPowerInitial(void)
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
     AWTO_BPROF(0x38);
+#if(_AWTO_HDCP == _ON)
     SysPowerLoadHDCPKey();
+#else
+    // awto: no HDCP key load (#44); keep the load's closing step: internal IRQ (global) + EX0 on
+    ScalerGlobalIRQControl(_ENABLE);
+    EX0 = 1;
+#endif
 #endif
 
     //////////////////////////
@@ -978,6 +986,7 @@ void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus)
 }
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
+#if(_AWTO_HDCP == _ON)
 //--------------------------------------------------
 // Description  : Recover The Data of HDCP In Gdi Power Cut Area.
 // Input Value  : None
@@ -1084,6 +1093,7 @@ void SysPowerLoadHDCPKey(void)
 
     ScalerSyncHdcpEnableDownLoadKey(_DISABLE);
 }
+#endif // End of #if(_AWTO_HDCP == _ON)
 
 #if(_DP_TX_SUPPORT == _ON)
 //--------------------------------------------------

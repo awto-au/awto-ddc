@@ -1700,6 +1700,11 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 // HDCP Key //
 //////////////
 
+// awto: HDCP parked (#44). _OFF = no key tables in the image, no key load, HDCP DDC slave / DPCD Bcaps not advertised
+#ifndef _AWTO_HDCP
+#define _AWTO_HDCP                                              _OFF
+#endif
+
 //-------------------------------------------------
 // HDCP Key Location Option
 //-------------------------------------------------
@@ -1898,6 +1903,10 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define _DP_FREESYNC_II_SUPPORT                                 _OFF
 #define _DP_HDR10_SUPPORT                                       _OFF
 #define _DP_HDCP_2_2_SUPPORT                                    _OFF
+
+#if((_AWTO_HDCP == _OFF) && ((_TMDS_HDCP_2_2_SUPPORT == _ON) || (_DP_HDCP_2_2_SUPPORT == _ON)))
+#error "HDCP 2.2 needs _AWTO_HDCP _ON (#44)"
+#endif
 
 
 /////////
