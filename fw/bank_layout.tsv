@@ -1085,6 +1085,7 @@ const	___str_119	C	0x3e9c	44
 stub	_AwtoSourceClose	C	0x3ec8	8
 stub	_AwtoSourceIdle	C	0x3ed0	8
 stub	_AwtoSourceTake	C	0x3ed8	8
+stub	_ScalerFlashDetectFlashType	C	0x3ee0	8
 const	___str_115	C	0x3f40	24
 const	___str_11	C	0x3f58	12
 const	___str_12	C	0x3f64	12
@@ -1554,7 +1555,6 @@ fn	_RTDFlashRestoreBriCon	3	0x81b8	108
 fn	_RTDFlashRestoreColorSetting	3	0x8224	108
 fn	_RTDFlashRestoreOSDData	3	0x8290	92
 fn	_RTDFlashRestoreSixColorData	3	0x82ec	68
-fn	_AwtoDiagStage	3	0x8330	124
 fn	_UserCommonInterfaceInitial	3	0x83bc	20
 fn	_RTDFlashSaveBriCon	3	0x83dc	24
 fn	_RTDFlashSaveChecksumVersionCode	3	0x83f4	596
@@ -1620,6 +1620,7 @@ fn	_UserCommonFlashRead	3	0xa6ac	60
 fn	_UserCommonFlashRestoreSystemData	3	0xa6e8	68
 fn	_UserCommonFlashWrite	3	0xaccc	60
 fn	_AwtoDiagMainPass	3	0xad08	344
+fn	_AwtoDiagStage	3	0xae60	176
 const	_tSD_SU_COEF_128_TAPS	4	0x0000	136
 fn	_AwtoT0EvIsr	4	0x0088	284
 fn	_AwtoWakeRelease	4	0x01a4	64
