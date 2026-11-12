@@ -343,8 +343,13 @@ def cmd_compile(uv2_rel, jobs, only, target):
     if only:
         cs = [c for c in cs if only.lower() in str(c).lower()]
     missing = [c for c in cs if not c.exists()]
+    parked = [c for c in missing if (ROOT / "fw/sdk-parked" / c.relative_to(SRC.resolve())).exists()]
     cs = [c for c in cs if c.exists()]
-    log(f"compile {uv2_rel}: {len(cs)} C files ({len(missing)} missing), defines {defines}, model {model}")
+    log(f"compile {uv2_rel}: {len(cs)} C files ({len(parked)} parked in fw/sdk-parked, {len(missing) - len(parked)} missing), "
+        f"defines {defines}, model {model}")
+    if len(missing) > len(parked):                       # a project file in neither tree: a lost source, not a parked one (#165)
+        log(f"missing: {[str(c.relative_to(SRC.resolve())) for c in missing if c not in parked][:10]}")
+        return 1
     t0 = time.time()
     with ThreadPoolExecutor(jobs) as ex:
         res = list(ex.map(lambda c: compile_one(c, uv2.parent, defines, incs, model), cs))

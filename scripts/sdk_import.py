@@ -4,7 +4,8 @@
 usage: sdk_import.py [--out tmp/DIR] [--manifest FILE]    run by hand; the build never calls it
 
 - fw/sdk/ is OUR source (SDCC form, committed). This script reproduces the import commit, or ports a new SDK drop so it
-  can be compared with fw/sdk: `sdk_import.py --out tmp/sdk-new`, then diff against fw/sdk. It refuses any --out
+  can be compared with fw/sdk: `sdk_import.py --out tmp/sdk-new`, then diff against fw/sdk + fw/sdk-parked (0-B sources moved
+  out of the build, #165). It refuses any --out
   outside tmp/ or a non-empty one, so it can never overwrite fw/sdk (our edited source).
 - Mechanical only: Keil keywords (code/data/xdata/sfr/sbit/interrupt/using/_at_), pragmas, pData scratch to xdata,
   storage-first pointer declarations, ISR-flag `volatile bit`, include case fixing, __at on externs, interrupt prototypes.

@@ -9,7 +9,8 @@ usage: pp_audit.py [--check] [--report FILE.md] [--jobs N]
 - Checks (file:line, name, and the branch compiled now):
   undef     #if / #elif names an undefined identifier (sdcpp -Wundef, incl. inside && / ||); "defined later" when the TU defines
             it after the test. Also a hard error in every build (fw_compile.py).
-  nodef     #ifdef / #ifndef / defined(X) on a name never #defined anywhere (fw/sdk, fw/sdcc, generated headers, -D, compiler).
+  nodef     #ifdef / #ifndef / defined(X) on a name never #defined anywhere (fw/sdk, fw/sdk-parked, fw/sdcc, generated headers, -D,
+            compiler).
   value     #if / #elif uses a name whose definition is empty or not an integer expression (string, float, cast).
   family    A == / != B of two macros whose values come from different option families (prefix) and happen to be equal.
   redef     a macro gets two values in one TU (redefinition or #undef + #define) and an #if tests it under the earlier value.
@@ -296,7 +297,7 @@ def main() -> int:
     scans = {f: scan_file(f) for f in ours}
     # every #define in our trees + the -D flags + compiler predefines
     defined = set()
-    for base in (SDK, ROOT / "fw/sdcc", SRC, ROOT / "fw/awto"):
+    for base in (SDK, ROOT / "fw/sdk-parked", ROOT / "fw/sdcc", SRC, ROOT / "fw/awto"):   # parked sources count (#165)
         for p in base.rglob("*"):
             if p.suffix.lower() in (".c", ".h", ".inc") and p.is_file():
                 defined |= set(re.findall(r"^\s*#\s*define\s+(\w+)", p.read_text(errors="replace"), re.M))
