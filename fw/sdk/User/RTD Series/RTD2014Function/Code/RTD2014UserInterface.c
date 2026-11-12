@@ -2652,8 +2652,7 @@ void UserInterfaceAdjustColorProc(void)
     // Adjust Brightness & Contrast
     RTDNVRamLoadBriCon(SysSourceGetSourceType());
 
-    // Adjust Transparency
-    ScalerOsdSetTransparency(GET_OSD_TRANSPARENCY_STATUS());
+    // awto: OSD blend level set by AwtoOsdBlend (glue.inc) at every screen open, not per mode (awto-ddc#176)
 
     // User Adjust Background Color
     ScalerDDomainBackgroundSetColor(0, 0, 0);

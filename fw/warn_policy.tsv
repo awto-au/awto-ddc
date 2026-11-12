@@ -144,11 +144,11 @@
 ^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1374	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1726	ok	OK-CONFIG: _VGA_SUPPORT off: remaining cases empty, merge with default
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2549	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3512	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3575	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3579	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4068	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4073	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3511	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3574	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3578	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4067	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4072	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	114	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	116	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c	119	ok	OK-CONFIG: SDK DDC/CI handler disabled; AWTO spare-engine handler owns DDC/CI
@@ -210,4 +210,4 @@
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	512	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	514	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6206	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4094	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4093	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)

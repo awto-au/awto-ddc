@@ -86,7 +86,6 @@ stub	_ScalerMemorySetFifoCapture	C	0x0fe8	8
 stub	_ScalerOsdDoubleFunction	C	0x0ff0	8
 stub	_ScalerAudioDigitalAdjustVolume	C	0x0ff8	8
 stub	_ScalerOsdHardwareVLC	C	0x1000	8
-stub	_ScalerOsdSetTransparency	C	0x1008	8
 stub	_ScalerOsdSramBaseAddressSet	C	0x1010	8
 stub	_ScalerPinshareCBUSPinInitialReset	C	0x1018	8
 stub	_ScalerPowerIsolation	C	0x1020	8
@@ -1373,6 +1372,7 @@ fn	_OsdFuncSetPosition	1	0x9a48	60
 fn	_OsdFuncTransparency	1	0x9a84	8
 fn	_UserAdjustAudioMuteSwitch	1	0x9a8c	12
 fn	_UserAdjustAudioVolume	1	0x9a98	12
+fn	_AwtoOsdBlend	1	0x9aa4	20
 fn	_OsdWindowDrawing	1	0x9ab8	120
 fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260

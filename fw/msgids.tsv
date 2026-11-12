@@ -83,7 +83,7 @@
 192f	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10786	Get YCC LIMIT RANGE	0
 193d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9229	Get Pixel Repetition 0	0
 19a0	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:423	Audio D1: WatchDog	0
-1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4311	ucIndex if Drr user define timing 	0
+1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4310	ucIndex if Drr user define timing 	0
 1a4a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4333	Pixel Repetition Not Received and not Pixel repetition 0	0
 1ad2	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7371	Get Color Space YUV422	0
 1ada	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8165	Get Colorimetry 709	0
@@ -245,7 +245,7 @@
 43f1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:187	Compensated Dt	1
 4487	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9851	Get Pixel Repetition 2	0
 44b2	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1632	_COLORIMETRY_EXT_Y_ONLY_DICOM_PART14	0
-44c8	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3179	Detected by Special Case to _MODE_640x350_70HZ	0
+44c8	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3178	Detected by Special Case to _MODE_640x350_70HZ	0
 44ef	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:623	6. DPLL SSCG Step	1
 4553	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:391	VBIOS_Link_Rate	0
 456b	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10011	Get Colorimetry INTO_DEFAULT	0
@@ -415,7 +415,7 @@
 72b3	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4164	CDR Unstable!!	0
 72e0	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2061	== DISP_CHECK_END ==	1
 7317	System	Kernel/System/Code/SysJudge.c:765	Input Timing HWidth	1
-73d1	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3157	Detected by Special Case to 640x480-60	0
+73d1	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3156	Detected by Special Case to 640x480-60	0
 7427	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10827	Get RGB DEFAULT RANGE	0
 743e	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:596	DDEN	1
 7561	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:480	Timeout counter	1
@@ -479,12 +479,12 @@
 843b	System	Kernel/System/Code/SysSource.c:1185	7. No Cable Search 5secs	1
 8444	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3031	TMDS clk	0
 8449	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7975	Get Color Space RGB	0
-8469	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3190	Detected by Special Case to _MODE_640x350_85HZ	0
+8469	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3189	Detected by Special Case to _MODE_640x350_85HZ	0
 84a4	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:504	7.ulVFCI	1
 8510	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3032	Rx1 Source Writes 600h = 0x01	0
 852e	System	Kernel/System/Code/SysSource.c:384	bH_Select == 1,bP_Select ==1	1
-8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4037	User Audio Reset Process	0
-8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4051	User Audio Reset Process	0
+8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4036	User Audio Reset Process	0
+8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4050	User Audio Reset Process	0
 8544	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10837	Get RGB RESERVED RANGE	0
 8579	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4240	CDR Reset	0
 857c	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10100	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
@@ -538,7 +538,7 @@
 959d	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2095	False : D5 HDMI Audio DB Retry	0
 9612	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3750	HDMI 2.0 Error Boundary set Low Byte	0
 9672	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8985	Get RGB LIMIT RANGE	0
-971e	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3169	Detected by Special Case to 720x480-60	0
+971e	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3168	Detected by Special Case to 720x480-60	0
 9744	System	Kernel/System/Code/SysSource.c:2207	7. Bingo Switch Port!!!!!!!	1
 9744	System	Kernel/System/Code/SysSource.c:2238	7. Bingo Switch Port!!!!!!!	1
 9744	System	Kernel/System/Code/SysSource.c:2459	7. Bingo Switch Port!!!!!!!	1
@@ -869,7 +869,7 @@ ebe8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1549	False : 
 ec20	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9299	Get Pixel Repetition Error	0
 ec5e	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9844	Get Pixel Repetition 1	0
 ed72	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1602	DVBG end > DVtotal	0
-ed8d	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3163	Detected by Special Case to 720x480-60_GTF	0
+ed8d	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3162	Detected by Special Case to 720x480-60_GTF	0
 ee4e	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:565	_Last_line_Dclk_larger	1
 ee53	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:11642	Warning :  VGA DDC2 wait SCL idle timeout	0
 ee7f	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1570	_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL	0

@@ -158,6 +158,15 @@ static BYTE s_ucVpRows;                          // viewport rows (0 = the whole
 static BYTE s_ucVpFirst;                         // first map row shown
 static BYTE s_ucVpEnd;                           // map row that currently holds the end-of-rows marker
 
+// OSD blend, one owner for every awto screen (menu, selector, cards, backlight bar, console, GPIO page) (awto-ddc#176):
+// type 01 = only windows blend (FRAME_CTRL_0A alpha_blend_type; each window's blend_en set by OsdWindowDrawing), glyph pixels
+// stay opaque; level = registry osd_transparency as 0..255 (OVERLAY_CTRL / OVERLAY_CTRL1 alpha_blending_level, 0 = off).
+static void AwtoOsdBlend(void)
+{
+    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
+    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
+}
+
 void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
     BYTE ucI;
@@ -171,8 +180,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
-    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
-    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
+    AwtoOsdBlend();
     OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
     for(ucI = 0; ucI < AWTO_PAL_N; ucI++)
     {
@@ -675,8 +683,8 @@ void set_ap_osd_font(BYTE ucId, int iV)
 void set_ap_osd_transparency(BYTE ucId, int iV)
 {
     ucId = ucId;
-    SET_OSD_TRANSPARENCY_STATUS((BYTE)(((WORD)iV * 255) / 100));
-    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
+    iV = iV;                                    // stored by set_sdk_put (glue_nv) before the apply
+    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());     // live: the screen open now (type from AwtoOsdBlend) blends at it
 }
 
 void set_ap_sdk_language(BYTE ucId, int iV)

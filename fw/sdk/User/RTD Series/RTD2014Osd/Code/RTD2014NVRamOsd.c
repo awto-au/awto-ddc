@@ -109,7 +109,7 @@ __code StructOsdUserDataType g_stOSDDefaultData =
     50,                       // ucOsdVPos;
     10,                       // ucOsdTimeout;
     0,                        // ucAspectOriginRatio
-    0,                        // ucTransparency;
+    AWTO_PCT_TO_255(AWTO_SET_DEF_OSD_TRANSPARENCY),  // ucTransparency; awto: registry default (awto-ddc#176)
 //--------------------------------------------------------
     _ENGLISH,                 // b4Language;
     _COLOREFFECT_STANDARD,    // b4ColorEffect;

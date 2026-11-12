@@ -362,7 +362,7 @@ int set_sdk_get(BYTE ucId)
 
 static BYTE AwtoTo255(int iV)
 {
-    return (BYTE)(((WORD)iV * 255) / 100);
+    return AWTO_PCT_TO_255(iV);
 }
 
 // item dirty without calling an SDK save (keeps the SDK save + page move off the DDC/CI handler's static call path)
