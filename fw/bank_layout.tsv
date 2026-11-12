@@ -905,6 +905,8 @@ fn	_SysModeGetModeState	C	0x34f0	12
 stub	_AwtoSysLog	C	0x34fc	8
 stub	_AwtoTmdsHpd	C	0x3504	8
 stub	_SysModeSetFreeRun	C	0x350c	8
+stub	_AwtoConWrapLine	C	0x3514	8
+stub	_AwtoTextAt	C	0x351c	8
 fn	_SysPowerGetPowerStatus	C	0x3544	60
 stub	_ScalerMeasureTimingChange	C	0x3580	8
 stub	_SysPowerInitial	C	0x3588	8
@@ -1873,6 +1875,7 @@ const	___str_0	6	0x0170	24
 const	___str_25	6	0x0188	28
 const	___str_26	6	0x01a4	24
 const	___str_73	6	0x01bc	20
+fn	_AwtoConLogStart	6	0x01d0	84
 const	___str_51	6	0x0234	12
 const	___str_52	6	0x0240	8
 const	___str_53	6	0x0248	12
@@ -2046,7 +2049,6 @@ fn	_AwtoCardShow	6	0x4688	12
 fn	_AwtoCardTxt	6	0x4694	64
 fn	_AwtoConLogRoom	6	0x46d4	116
 const	___str_66	6	0x4754	20
-fn	_AwtoConLogStart	6	0x4770	68
 fn	_AwtoKeyOsdTimeout	6	0x47b4	84
 fn	_AwtoConLogTail	6	0x489c	200
 fn	_AwtoConRow	6	0x4964	292
@@ -2076,7 +2078,6 @@ fn	_AwtoPsField	6	0x5a88	132
 fn	_AwtoPsLbl	6	0x5b0c	48
 fn	_AwtoPsValue	6	0x5b3c	360
 fn	_AwtoPutAdc	6	0x5ca4	156
-fn	_AwtoPutChar	6	0x5d40	40
 fn	_AwtoPutClock	6	0x5d68	212
 fn	_AwtoPutCol	6	0x5e3c	24
 fn	_AwtoPutDpRate	6	0x5e54	100
@@ -2105,9 +2106,10 @@ fn	_AwtoSrcStyle	6	0x6b30	24
 fn	_AwtoTextAt	6	0x6b48	112
 fn	_AwtoTextLine	6	0x6bb8	64
 fn	_AwtoWdtPutWord	6	0x6bf8	20
+fn	_AwtoPutChar	6	0x6c0c	60
 fn	_ScalerDebugGetDDCCIDebugMode	6	0x6c48	12
 fn	_ScalerDebugSelectDDCCIDebugMode	6	0x6c54	12
-fn	_AwtoConLogSync	6	0x6c60	300
+fn	_AwtoConLogSync	6	0x6c60	316
 fn	_AwtoDiagT2Diff	6	0x6dcc	252
 fn	_AwtoDiagT2Snap	6	0x6ec8	92
 fn	_ScalerMDomainUpdateLineBufferModeDVtotal	6	0x6f24	172
@@ -2206,10 +2208,10 @@ fn	_vcp_box_service	6	0xa024	252
 fn	_vcp_get	6	0xa120	716
 fn	_vcp_set	6	0xa3ec	260
 const	_txt	6	0xa4f0	1952
-fn	_AwtoConLogEnd	6	0xac90	180
 fn	_AwtoOsdSyncPoll	6	0xad44	180
 fn	_AwtoConTitlePoll	6	0xadf8	76
 fn	_AwtoDeadPortPoll	6	0xae44	152
+fn	_AwtoConLogEnd	6	0xaedc	252
 fn	_ScalerDpRx1SignalDetectInitial	7	0x0000	284
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x011c	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x08a4	1528
@@ -2267,7 +2269,8 @@ const	_tAwtoSyncTxtS	8	0x0614	8224
 fn	_AwtoInfoCard	8	0x50cc	916
 fn	_AwtoDiagTestCmd	8	0x5460	752
 fn	_AwtoSrcRate	8	0x5788	456
-fn	_AwtoSyncTxt	8	0x5950	252
+fn	_AwtoSyncTxt	8	0x5950	276
+fn	_AwtoConWrapLine	8	0x5a64	280
 fn	_AwtoOsdWdtLines	8	0x6038	928
 fn	_AwtoSyncConPoll	8	0x64a4	204
 fn	_AwtoSyncLine	8	0x7a1c	2156
@@ -2780,7 +2783,7 @@ fn	_AwtoHoldBlocksDisable	12	0x05d8	60
 fn	_st_aux_check	12	0x0614	76
 fn	_AwtoKeyStep	12	0x0668	596
 fn	_AwtoSourceKey	12	0x08bc	404
-fn	_AwtoConLogInit	12	0x0a50	292
+fn	_AwtoConLogInit	12	0x0a50	352
 fn	_SysMachineHandler	12	0x0cac	88
 fn	_set_ap_aspect	12	0x0d0c	48
 fn	_set_ap_debug_msgs	12	0x0d3c	32

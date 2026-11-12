@@ -292,7 +292,6 @@ static __xdata BYTE s_ucLogHead;
 static __xdata BYTE s_ucLogFull;                // 0 = first lap: rows below the head are blank, so lines are drawn unpadded
 
 static __xdata BYTE s_ucConSyncSeq;             // #139: sync ring seq the log has shown up to
-static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index
 
 void AwtoConLogInit(void)
 {
@@ -322,6 +321,10 @@ void AwtoConLogInit(void)
     AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
     s_ucConSyncSeq = (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq) <= AWTO_SYNC_N) ? g_stAwtoSync.ucEpSeq :
                      AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, AWTO_SYNC_N);   // backfill the current episode (what the ring still has)
+    if((s_ucConRedraw != 0) && (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq) > AWTO_LOG_REDRAW_N))
+    {
+        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, AWTO_LOG_REDRAW_N);   // map-full redraw: fits even if every line wraps
+    }
     AwtoConLogSync();
 }
 
@@ -332,6 +335,8 @@ static void AwtoConLogStart(void)               // next log row: compose with Aw
     s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
+    s_bAwtoWrap = (s_ucConOpen == AWTO_CON_MAIN);
+    s_bAwtoOver = 0;
 }
 
 // Main page: 1 = the next log row is in view (rolled up one row if it was below); 0 = map end, full redraw requested.
@@ -351,11 +356,60 @@ static bit AwtoConLogRoom(void)
     return 0;
 }
 
+// Main-page log line wider than a row (s_bAwtoOver): the row is drawn up to its last space, the line composed again with that
+// part dropped and the rest continued on the next row at the text column. Two rows at most (gen_awto_sync.py checks the
+// texts). No locals: under AwtoConLogSync (deep DATA path), the second AwtoSyncLine is one level down only.
+static void AwtoConWrapLine(void)
+{
+    s_bAwtoWrap = 0;
+    s_bAwtoOver = 0;
+    if(AWTO_LOG_ROW0 + s_ucLogHead + 1 >= s_ucConFirst + AWTO_VIEW_ROWS)
+    {
+        if((AWTO_LOG_ROW0 + s_ucLogHead + 1 >= AWTO_CON_ROWS) || (osd_tc_scroll(s_ucConFirst + 1) == s_ucConFirst))
+        {
+            s_ucConRedraw = 1;                  // map end: the row is clipped until the redraw (next pass) shows the line
+            return;
+        }
+        s_ucConFirst++;                         // title bar redrawn by AwtoConLogEnd (the row buffer is in use here)
+    }
+    s_ucLogI = s_ucAwtoLen;                     // s_ucLogI = characters to drop on the second pass (free: tail lines never wrap)
+    while((--s_ucLogI > AWTO_LOG_TXT0) && (s_pcAwtoRow[s_ucLogI] != ' '))
+    {
+    }
+    if(s_ucLogI <= AWTO_LOG_TXT0)
+    {
+        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoLen, AWTO_T_STYLE_TEXT);    // no space: break at the edge
+        s_ucLogI = s_ucAwtoLen - 1;
+    }
+    else
+    {
+        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucLogI, AWTO_T_STYLE_TEXT);       // the space is dropped too
+    }
+    for(s_ucAwtoLen = 0; s_ucAwtoLen < AWTO_LOG_TXT0; s_ucAwtoLen++)
+    {
+        s_pcAwtoRow[s_ucAwtoLen] = ' ';
+    }
+    s_ucPanelRow++;
+    s_bAwtoSkip = 1;
+    AwtoSyncLine(s_ucConSyncSeq);
+    s_bAwtoSkip = 0;
+    s_bAwtoOver = 1;                            // AwtoConLogSync: one wrapped line per call (each costs two compositions)
+}
+
 static void AwtoConLogEnd(void)
 {
-    if(s_ucConOpen == AWTO_CON_MAIN)            // terminal: rows only go down, never wrap
+    if(s_ucConOpen == AWTO_CON_MAIN)            // terminal: rows only go down; a long line takes two (AwtoConWrapLine)
     {
+        s_bAwtoWrap = 0;
         AwtoTextLine(0, AWTO_T_STYLE_TEXT);
+        if(s_ucPanelRow != AWTO_LOG_ROW0 + s_ucLogHead)
+        {
+            s_ucLogHead++;
+            if(s_ucPanelRow + 1 == s_ucConFirst + AWTO_VIEW_ROWS)
+            {
+                AwtoConTitleBar();              // AwtoConWrapLine may have rolled the map up under the title
+            }
+        }
         s_ucLogHead++;
         return;
     }
@@ -392,14 +446,15 @@ void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)    // GPIO page only: i
 // XDATA, no locals: AwtoConLogSync sits on the deepest DATA overlay path (see AwtoPutIso).
 static void AwtoConLogTail(void)
 {
+    s_bAwtoWrap = 0;                            // fits one row (gen_awto_sync.py): cells are moved below, no wrap
     s_ucLogI = s_ucAwtoLen;
     AwtoSyncLine(s_ucConSyncSeq);
     s_pcAwtoRow[s_ucLogI] = ' ';
-    for(s_ucLogI += 10; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // AwtoSyncLine prefix: '+', 5 digit field, " ms "
+    for(s_ucLogI += AWTO_LOG_TIME_W; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // drop the AwtoSyncLine time column
     {
-        s_pcAwtoRow[s_ucLogI - 9] = s_pcAwtoRow[s_ucLogI];
+        s_pcAwtoRow[s_ucLogI - (AWTO_LOG_TIME_W - 1)] = s_pcAwtoRow[s_ucLogI];
     }
-    s_ucAwtoLen = s_ucLogI - 9;                 // max(len, start + 10) - 9
+    s_ucAwtoLen = s_ucLogI - (AWTO_LOG_TIME_W - 1);     // max(len, start + time column) - (time column - 1)
     s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
 }
 
@@ -426,6 +481,10 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         }
         AwtoConLogStart();
         AwtoSyncLine(s_ucConSyncSeq);
+        if(s_bAwtoOver != 0)
+        {
+            AwtoConWrapLine();
+        }
         s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
         if((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOSTFW) &&
            (AWTO_LOG_EV(AWTO_SYNC_BACK(s_ucConSyncSeq, 1)) == AWTO_SYNC_EV_HOST))
@@ -433,6 +492,11 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
             AwtoConLogTail();
         }
         AwtoConLogEnd();
+        if(s_bAwtoOver != 0)
+        {
+            s_bAwtoOver = 0;
+            return;                             // the rest next pass: a burst of wide lines bit the watchdog (con_wrap_sim)
+        }
     }
 }
 #else
