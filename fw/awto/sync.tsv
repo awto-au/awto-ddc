@@ -11,6 +11,7 @@
 #   src   value = SDK source type -> "HDMI"           harg  arg in hex
 #   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
 #   ms    value in ms -> "12 ms" (#150)   n  value as a number (#150)   x  value in hex (#150)
+#   htime value = unix s, arg = UTC offset (15 min, signed) -> "2026-11-12T08:45:10+11:00" (#157)   sms  signed ms -> "+1234 ms" (#157)
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
 D0	01	-	boot: cold power-up (no valid canary in RAM)
 D0	02	pc	boot: watchdog bite, %
@@ -41,6 +42,10 @@ D4	0A	ms	NVRAM flush: test cmd 0x3D (since the last poke %)
 D4	0B	ms	NVRAM flush: second BriCon / ColorProc item (since the last poke %)
 D5	*	n	(the 2 lines above repeated % more times)
 D6	*	portx	wake by the SDK source detect, not our poll (poll state %)
+D7	*	htime	host time %
+D8	01	n	(fw +% ms, first host sync since boot)
+D8	02	n	(fw +% ms, host sync after a drift)
+D9	*	sms	drift % (host - fw clock)
 C0	01	-	power on
 C0	02	vport	switch to %
 C0	03	vport	wake on %

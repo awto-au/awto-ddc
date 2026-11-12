@@ -30,8 +30,7 @@ __xdata BYTE g_ucAwtoProbeCols;                  // limit probe columns = 4 * (t
 __xdata BYTE g_ucAwtoProbeLines;                 // limit probe line count (test cmd 0x80 + n); 0 = 24
 __xdata BYTE g_ucAwtoDiagFont;                  // 0 = default (console Spleen 8x16, probe 5x8); else 1 + osd_font_load index (cmd 0x60 + n)
 #define AwtoDiagFont(d)     ((g_ucAwtoDiagFont != 0) ? (g_ucAwtoDiagFont - 1) : (d))
-static __xdata char s_pcAwtoRow[AWTO_T_MAXCOLS];
-static __xdata BYTE s_ucAwtoTiles[AWTO_T_MAXCOLS];
+static __xdata char s_pcAwtoRow[AWTO_T_MAXCOLS];  // #157: glyphs converted in place (no tile copy: 100 B XDATA back)
 __xdata BYTE g_ucAwtoDiagSmall;                  // 0 = diagnostic screens at 2x size (default), 1 = 1x (test cmd 0x4B / 0x4A)
 static BYTE s_ucAwtoLen;
 static BYTE s_ucAwtoCols;
@@ -201,16 +200,16 @@ static void AwtoPutVolt(BYTE ucRaw)                 // 8 bit ADC code on a 3.3 V
     AwtoPutChar('V');
 }
 
-// Generic text write: ucN characters of pc at map row ucRow, column ucCol (any position in the grid, any width up to 255 cells).
-static void AwtoTextAt(BYTE ucRow, BYTE ucCol, const char __xdata *pc, BYTE ucN, BYTE ucStyle)
+// Generic text write: ucN characters of pc at map row ucRow, column ucCol. pc is overwritten with the glyph ids.
+static void AwtoTextAt(BYTE ucRow, BYTE ucCol, char __xdata *pc, BYTE ucN, BYTE ucStyle)
 {
     BYTE ucI;
 
     for(ucI = 0; ucI < ucN; ucI++)
     {
-        s_ucAwtoTiles[ucI] = osd_font_glyph(pc[ucI]);
+        pc[ucI] = osd_font_glyph(pc[ucI]);
     }
-    osd_tc_cells(ucRow, ucCol, s_ucAwtoTiles, ucN, ucStyle);
+    osd_tc_cells(ucRow, ucCol, (BYTE __xdata *)pc, ucN, ucStyle);
 }
 
 // Draw the composed row on text line ucLine, padded to the full width so the previous text of that line is overwritten.
@@ -218,7 +217,8 @@ static void AwtoTextLine(BYTE ucLine, BYTE ucStyle)
 {
     AwtoPutCol(s_ucAwtoCols);
     AwtoTextAt(s_ucPanelRow + ucLine, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoCols, ucStyle);
-    s_ucAwtoLen = 1;                   // next row: leading space kept in s_pcAwtoRow[0]
+    s_pcAwtoRow[0] = ' ';              // next row: leading space (the draw left glyph ids)
+    s_ucAwtoLen = 1;
 }
 
 // Field update: text composed with AwtoPut* since AwtoFieldBegin is written at exactly row ucRow, column ucCol (nothing else touched).
@@ -321,6 +321,98 @@ void AwtoOsdDebugLines(void)
     AwtoShowLine(_OSD_MESSAGE_ROW_START + 4, _PFONT_PAGE_1);
 }
 
+#if(_AWTO_SYNC_LOG == _ON)
+// #157 title row live part: "PANEL 0027.25h  UP 0000.42h  HOST 08:45:10" (+ " STALE"); s_pcConTitle = cells on screen.
+#define AWTO_TITLE_COL      60                  // after "AWTO DIAGNOSTICS  FW <tag>" (tags up to 38 characters)
+#define AWTO_TITLE_N        48
+static __xdata char s_pcConTitle[AWTO_TITLE_N];
+static __xdata WORD s_usConTitleMs;
+
+// Time formatters keep their values in XDATA: they sit on the deepest DATA overlay path (flash save -> sync line).
+static __xdata DWORD s_ulAwtoT;                 // AwtoPutClock input: seconds of the day
+
+static void AwtoPutClock(void)                  // s_ulAwtoT -> hh:mm:ss
+{
+    AwtoPutNum(s_ulAwtoT / 3600, 2);
+    AwtoPutChar(':');
+    AwtoPutNum((s_ulAwtoT / 60) % 60, 2);
+    AwtoPutChar(':');
+    AwtoPutNum(s_ulAwtoT % 60, 2);
+}
+
+static void AwtoPutHours(DWORD ulH100)          // hundredths of an hour -> hour meter "0027.25h"
+{
+    AwtoPutNum(ulH100 / 100, 4);
+    AwtoPutChar('.');
+    AwtoPutNum(ulH100 % 100, 2);
+    AwtoPutChar('h');
+}
+
+static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of cells that changed (ucAll: every cell)
+{
+    DWORD ulUp = AwtoUpMs();
+    BYTE ucI, ucJ;
+
+    s_usConTitleMs = (WORD)ulUp;
+    s_ucAwtoCols = AWTO_TITLE_N;
+    AwtoFieldBegin();
+    AwtoPutStr("PANEL ");
+    AwtoPutHours((DWORD)GET_PANEL_TIME_HOUR() * 100 + (WORD)GET_PANEL_TIME_MIN() * 100 / 60);
+    AwtoPutStr("  UP ");
+    AwtoPutHours(ulUp / 36000);
+    AwtoPutStr("  HOST ");
+    if(g_stAwtoHt.ucSyncs == 0)
+    {
+        AwtoPutStr("--:--:--");
+    }
+    else
+    {
+        s_ulAwtoT = (g_stAwtoHt.ulEpoch + (long)g_stAwtoHt.cOfs * 900 + (ulUp - g_stAwtoHt.ulFwMs + g_stAwtoHt.usFrac) / 1000) % 86400;
+        AwtoPutClock();
+        if((ulUp - g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)
+        {
+            AwtoPutStr(" STALE");
+        }
+    }
+    AwtoPutCol(AWTO_TITLE_N);
+    for(ucI = 0; ucI < AWTO_TITLE_N; ucI = ucJ)
+    {
+        for(ucJ = ucI; (ucJ < AWTO_TITLE_N) && ((ucAll != 0) || (s_pcAwtoRow[ucJ] != s_pcConTitle[ucJ])); ucJ++)
+        {
+            s_pcConTitle[ucJ] = s_pcAwtoRow[ucJ];
+        }
+        if(ucJ != ucI)
+        {
+            AwtoTextAt(0, AWTO_TITLE_COL + ucI, s_pcAwtoRow + ucI, ucJ - ucI, AWTO_T_STYLE_ONACC);
+        }
+        else
+        {
+            ucJ++;
+        }
+    }
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+}
+
+void AwtoConTitlePoll(void)                     // every pass while the console is open (AwtoOsdSyncPoll)
+{
+    WORD usNow;
+
+    do
+    {
+        usNow = g_stAwtoDiag.usT2Isr;
+    }
+    while(usNow != g_stAwtoDiag.usT2Isr);
+    if(((WORD)(usNow - s_usConTitleMs) < AWTO_TITLE_MS) || (AwtoConLost() != 0))
+    {
+        return;
+    }
+    AwtoConTitle(0);
+}
+#else
+#define AwtoConTitle(a)
+#endif
+
 // The console: open / close / toggle (2). Opens the grid and draws every panel; closing releases the panels.
 void AwtoDiagConsole(BYTE ucOn)
 {
@@ -350,6 +442,7 @@ void AwtoDiagConsole(BYTE ucOn)
         AwtoPutStr("AWTO DIAGNOSTICS  FW ");
         AwtoPutStr(AWTO_FW_TAG);
         AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+        AwtoConTitle(1);
         g_stAwtoGpio.ucDrawn = 0;
         AwtoOsdGpioLines();
         g_stAwtoKey.ucDrawn = 0;
@@ -389,9 +482,9 @@ static void AwtoConRow(BYTE ucR, BYTE ucCols, BYTE ucStyle)
             ucI = (ucR + ucC) % 36;
             ucI = (ucI < 10) ? ('0' + ucI) : ('A' + ucI - 10);
         }
-        s_ucAwtoTiles[ucC] = osd_font_glyph(ucI);
+        s_pcAwtoRow[ucC] = osd_font_glyph(ucI);
     }
-    osd_tc_cells(ucR, 0, s_ucAwtoTiles, ucCols, ucStyle);
+    osd_tc_cells(ucR, 0, (BYTE __xdata *)s_pcAwtoRow, ucCols, ucStyle);
 }
 
 void AwtoProbeSet(BYTE ucLines)

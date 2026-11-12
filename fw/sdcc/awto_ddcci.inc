@@ -260,6 +260,27 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         return;
     }
 #endif
+#if(_AWTO_SYNC_LOG == _ON)
+    if((pucRx[3] == AWTO_HT_VCP) && (pucRx[2] == 0xE7) && (ucLen >= 14) && (pucRx[4] == 0) && (pucRx[5] == 0))
+    {
+        AwtoHtSync(pucRx + 6);                  // #157 table write 51 8B E7 E9 00 00 time[4] ms[2] ofs chk: store, no reply
+        return;
+    }
+    if((pucRx[3] == AWTO_HT_VCP) && (pucRx[2] == 0x01) && (ucLen >= 5))
+    {
+        pucTx[1] = 0x88;                        // get: max = syncs since boot, cur = last drift ms (int16)
+        pucTx[2] = 0x02;
+        pucTx[3] = 0x00;
+        pucTx[4] = AWTO_HT_VCP;
+        pucTx[5] = 0x00;
+        pucTx[6] = 0x00;
+        pucTx[7] = g_stAwtoHt.ucSyncs;
+        pucTx[8] = (BYTE)((WORD)g_stAwtoHt.iDrift >> 8);
+        pucTx[9] = (BYTE)g_stAwtoHt.iDrift;
+        AwtoDdcReply(pucR, pucTx);
+        return;
+    }
+#endif
 #ifdef _AWTO_NEW_SETTINGS
     if(AwtoDdcRegistry(pucR, pucRx, ucLen, pucTx) == _TRUE)     // #67: MCCS 2.2 on the settings registry (glue.inc)
     {

@@ -53,6 +53,9 @@ void AwtoDiagMainPass(void)
         g_stAwtoDiag.usLoopRate = g_stAwtoDiag.usHeartbeat - usLastHb;
         usLastHb = g_stAwtoDiag.usHeartbeat;
         usLastMs = usNow;
+#if(_AWTO_SYNC_LOG == _ON)
+        AwtoUpMs();                                    // #157: the 32-bit ms count sees every usT2Isr wrap
+#endif
     }
     AwtoDiagStage(6);                                  // first main-loop pass (#63 order: 5 = panel VDD comes first)
     AWTO_WDT_SHOW();

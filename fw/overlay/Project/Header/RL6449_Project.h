@@ -898,6 +898,29 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_NV                                         0xD4    // #150 NVRAM save timing: arg 1..5 (sync.tsv), value = ms since the last poke
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
+#define AWTO_SYNC_EV_HOST                                       0xD7    // #157 host time: arg = UTC offset (15 min, signed), value = unix s
+#define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoUpMs) at the sync
+#define AWTO_SYNC_EV_DRIFT                                      0xD9    // #157 value = host - local tick, ms (signed)
+// #157 host time: DDC/CI table write (0xE7) to this VCP, offset 0: unix s BE x4, ms BE x2, UTC offset (15 min, signed)
+#define AWTO_HT_VCP                                             0xE9    // retired registry code (logo_ms, #144); get: max = syncs, cur = drift ms
+#define AWTO_HT_STALE_MS                                        180000  // Dan: HOST marked stale after 3 min without a sync (host sends every 60 s)
+#define AWTO_HT_DRIFT_MS                                        1000    // Dan: a ring line when the local tick and the host differ by more
+#define AWTO_HT_GAP_S                                           2000000 // syncs further apart (23 days): drift not computed (ms must fit a long)
+#define AWTO_TITLE_MS                                           1000    // Dan: title row live fields about 1/s; expiry = redraw changed cells
+typedef struct                                  // host-read (sync_log.py): native words, BE images
+{
+    unsigned char ucSyncs;                      // syncs since boot (stops at 255), 0 = none yet
+    signed char cOfs;                           // UTC offset, 15 min units
+    unsigned int usFrac;                        // host ms within the second
+    unsigned long ulEpoch;                      // host unix s at the sync
+    unsigned long ulFwMs;                       // AwtoUpMs() at the sync
+    int iDrift;                                 // host - local tick at the last sync, ms (clamped)
+    unsigned int usUpHi;                        // AwtoUpMs bits 31..16 (bits 15..0 = g_stAwtoDiag.usT2Isr)
+    unsigned int usUpLast;                      // usT2Isr at the last AwtoUpMs (wrap check)
+} StAwtoHt;
+extern __xdata StAwtoHt g_stAwtoHt;
+extern unsigned long AwtoUpMs(void);
+extern void AwtoHtSync(unsigned char *puc);
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON

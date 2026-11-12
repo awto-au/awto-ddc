@@ -269,15 +269,15 @@ static void AwtoPsLbl(BYTE ucRow)                  // signal label (one table + 
 // GENERATED-END awto_port_sigs
 
 // GENERATED-BEGIN awto_sync_text
-static const __code BYTE tAwtoSyncFmt[85] = {
+static const __code BYTE tAwtoSyncFmt[95] = {
     0x00, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0C, 0x8D, 0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0B, 0x0C, 0x8D, 0x0E, 0x0C, 0x0C,
+    0x0F, 0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x80, 0x83, 0x87, 0x88, 0x80, 0x82, 0x85, 0x86, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80,
-    0x01, 0x01, 0x01, 0x01, 0x01};
-static const __code char tAwtoSyncTxtS[] = "boot: cold power-up (no valid canary in RAM)\0" "boot: watchdog bite, \x01" "\0" "boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)\0" "boot: watchdog probe reset (test cmd 0x49 / 0x4F)\0" "boot: hardware watchdog reset, no capture (an early warning IRQ came)\0" "stage 1: main\0" "stage 2: GPIO init done\0" "stage 3: MCU init done (M2PLL, flash clock, banks, Timer2)\0" "stage 4: pin-share done\0" "stage 5: panel VDD on\0" "stage 6: first main-loop pass\0" "stage 7: DPTx link\0" "stage 8: DPTx video stream\0" "MCU init: crystal clock, watchdog N = 8\0" "Timer2 1 ms tick running\0" "watchdog run-time: warning 1025 ms, reset 1172 ms\0" "NVRAM save start (since the last poke \x01" ")\0" "NVRAM save end (since the last poke \x01" ")\0" "flash erase start (since the last poke \x01" ")\0" "flash erase done (since the last poke \x01" ")\0" "NVRAM page move (since the last poke \x01" ")\0" "(the 2 lines above repeated \x01" " more times)\0" "wake by the SDK source detect, not our poll (poll state \x01" ")\0" "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "cable unplugged: wake\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "wake suppressed (cable unplug, once per sleep): \x01" "\0" "";
-static const __code WORD tAwtoSyncTxtOff[85] = {0, 45, 68, 163, 213, 283, 297, 321, 380, 404, 426, 456, 475, 502, 542, 567, 617, 658, 697, 739, 780, 820, 862, 921, 930, 942, 952, 968, 981, 993, 1014, 1026, 1042, 1057, 1075, 1090, 1099, 1109, 1122, 1136, 1157, 1173, 1189, 1212, 1233, 1257, 1284, 1304, 1322, 1346, 1362, 1390, 1427, 1458, 1487, 1521, 1544, 1566, 1592, 1617, 1635, 1654, 1676, 1707, 1723, 1748, 1770, 1789, 1802, 1814, 1823, 1833, 1847, 1857, 1870, 1896, 1919, 1945, 1975, 2021, 2043, 2086, 2133, 2182, 2229};
+    0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x83, 0x87, 0x88, 0x80, 0x82,
+    0x85, 0x86, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01, 0x01, 0x01, 0x01, 0x01};
+static const __code char tAwtoSyncTxtS[] = "boot: cold power-up (no valid canary in RAM)\0" "boot: watchdog bite, \x01" "\0" "boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)\0" "boot: watchdog probe reset (test cmd 0x49 / 0x4F)\0" "boot: hardware watchdog reset, no capture (an early warning IRQ came)\0" "stage 1: main\0" "stage 2: GPIO init done\0" "stage 3: MCU init done (M2PLL, flash clock, banks, Timer2)\0" "stage 4: pin-share done\0" "stage 5: panel VDD on\0" "stage 6: first main-loop pass\0" "stage 7: DPTx link\0" "stage 8: DPTx video stream\0" "MCU init: crystal clock, watchdog N = 8\0" "Timer2 1 ms tick running\0" "watchdog run-time: warning 1025 ms, reset 1172 ms\0" "NVRAM save start (since the last poke \x01" ")\0" "NVRAM save end (since the last poke \x01" ")\0" "flash erase start (since the last poke \x01" ")\0" "flash erase done (since the last poke \x01" ")\0" "NVRAM page move (since the last poke \x01" ")\0" "NVRAM flush: gate open (since the last poke \x01" ")\0" "NVRAM flush: forced after 30 s (since the last poke \x01" ")\0" "NVRAM flush: power off / saving entry (since the last poke \x01" ")\0" "NVRAM flush: menu / selector close (since the last poke \x01" ")\0" "NVRAM flush: test cmd 0x3D (since the last poke \x01" ")\0" "NVRAM flush: second BriCon / ColorProc item (since the last poke \x01" ")\0" "(the 2 lines above repeated \x01" " more times)\0" "wake by the SDK source detect, not our poll (poll state \x01" ")\0" "host time \x01" "\0" "(fw +\x01" " ms, first host sync since boot)\0" "(fw +\x01" " ms, host sync after a drift)\0" "drift \x01" " (host - fw clock)\0" "power on\0" "switch to \x01" "\0" "wake on \x01" "\0" "power key on, \x01" "\0" "mode INITIAL\0" "mode SEARCH\0" "mode DISPLAY SETTING\0" "mode ACTIVE\0" "mode NO SUPPORT\0" "mode NO SIGNAL\0" "mode POWER SAVING\0" "mode POWER OFF\0" "panel on\0" "panel off\0" "backlight on\0" "backlight off\0" "panel VDD on (early)\0" "reset to search\0" "display setting\0" "judge: source unstable\0" "judge: timing change\0" "judge: interlace change\0" "judge: memory / timing gen\0" "eDP: panel HPD high\0" "eDP: link trained\0" "eDP: link training FAIL\0" "fast path taken\0" "fast path refused: no cache\0" "fast path refused: receiver unstable\0" "fast path: SDK reset meanwhile\0" "fast path timeout: full path\0" "fast path refused: timing field \x01" "\0" "hold L1: backlight off\0" "hold L2: eDP link off\0" "hold L3: SDK power saving\0" "hold: fast wakes used up\0" "hold: signal back\0" "hold: backlight on\0" "hold: fast wake retry\0" "hold: auto search, other cable\0" "hold: SDK reset\0" "HPD pulse (TMDS recover)\0" "TMDS clock \x01" " detected\0" "DP link \x01" " detected\0" "scan done: \x01" "\0" "signal lost\0" "timing \x01" "\0" "refresh \x01" "\0" "pixel clock \x01" "\0" "power off\0" "power saving\0" "console opened (sync log)\0" "cable plugged in: wake\0" "EDID read by source: wake\0" "AUX command from source: wake\0" "DPCD 600h = D0 (source powers the link): wake\0" "cable unplugged: wake\0" "wake suppressed (cable, once per sleep): \x01" "\0" "wake suppressed (EDID read, once per sleep): \x01" "\0" "wake suppressed (AUX command, once per sleep): \x01" "\0" "wake suppressed (DPCD 600h, once per sleep): \x01" "\0" "wake suppressed (cable unplug, once per sleep): \x01" "\0" "";
+static const __code WORD tAwtoSyncTxtOff[95] = {0, 45, 68, 163, 213, 283, 297, 321, 380, 404, 426, 456, 475, 502, 542, 567, 617, 658, 697, 739, 780, 820, 867, 922, 984, 1043, 1094, 1162, 1204, 1263, 1275, 1314, 1350, 1376, 1385, 1397, 1407, 1423, 1436, 1448, 1469, 1481, 1497, 1512, 1530, 1545, 1554, 1564, 1577, 1591, 1612, 1628, 1644, 1667, 1688, 1712, 1739, 1759, 1777, 1801, 1817, 1845, 1882, 1913, 1942, 1976, 1999, 2021, 2047, 2072, 2090, 2109, 2131, 2162, 2178, 2203, 2225, 2244, 2257, 2269, 2278, 2288, 2302, 2312, 2325, 2351, 2374, 2400, 2430, 2476, 2498, 2541, 2588, 2637, 2684};
 static BYTE AwtoSyncTxt(BYTE ucRow, BYTE ucPart)   // text before (0) / after (1) the value mark, 2 = none; returns the fmt
 {
     const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[ucRow]];
@@ -348,6 +348,37 @@ static void AwtoPutDpRate(BYTE ucRate, BYTE ucLanes)
     AwtoPutNum(ucLanes, 1);
 }
 
+// #157 unix s + UTC offset (15 min) -> "2026-11-12T08:45:10+11:00" (days -> civil date: H. Hinnant's days_from_civil inverse)
+static __xdata WORD s_usAwtoIsoY;               // year, then day of the year
+static __xdata BYTE s_ucAwtoIsoM;
+
+static void AwtoPutIso(DWORD ulT, signed char cOfs)
+{
+    BYTE ucMp;
+
+    s_ulAwtoT = ulT + (long)cOfs * 900;         // local s
+    ulT = s_ulAwtoT / 86400 + 719468;           // days since 0000-03-01
+    s_usAwtoIsoY = (WORD)(ulT / 146097) * 400;
+    ulT %= 146097;                              // day of the 400-year era
+    s_usAwtoIsoY += (WORD)((ulT - ulT / 1460 + ulT / 36524 - ulT / 146096) / 365);
+    ulT -= 365UL * (s_usAwtoIsoY % 400) + (s_usAwtoIsoY % 400) / 4 - (s_usAwtoIsoY % 400) / 100;   // day of the year (March first)
+    ucMp = (BYTE)((5 * (WORD)ulT + 2) / 153);
+    s_ucAwtoIsoM = (ucMp < 10) ? (ucMp + 3) : (ucMp - 9);
+    AwtoPutNum(s_usAwtoIsoY + ((s_ucAwtoIsoM <= 2) ? 1 : 0), 4);
+    AwtoPutChar('-');
+    AwtoPutNum(s_ucAwtoIsoM, 2);
+    AwtoPutChar('-');
+    AwtoPutNum((WORD)ulT - (153 * (WORD)ucMp + 2) / 5 + 1, 2);
+    AwtoPutChar('T');
+    s_ulAwtoT %= 86400;
+    AwtoPutClock();
+    AwtoPutChar((cOfs < 0) ? '-' : '+');
+    ucMp = (cOfs < 0) ? (BYTE)(0 - cOfs) : (BYTE)cOfs;
+    AwtoPutNum(ucMp / 4, 2);
+    AwtoPutChar(':');
+    AwtoPutNum((ucMp % 4) * 15, 2);
+}
+
 // One sync-ring entry as a log line: "+  260 ms D2 timing 3840x2160" (texts and formats: fw/awto/sync.tsv).
 static void AwtoSyncLine(BYTE ucSeq)
 {
@@ -406,6 +437,12 @@ static void AwtoSyncLine(BYTE ucSeq)
         case 11: AwtoPutNum(ulV, 1); AwtoPutStr(" ms"); break;                                     // ms (#150)
         case 12: AwtoPutNum(ulV, 1); break;                                                        // n (#150)
         case 13: AwtoPutHex2(puc[5]); AwtoPutHex2(puc[6]); AwtoPutHex2(puc[7]); break;             // x (#150)
+        case 14: AwtoPutIso(ulV, (signed char)puc[1]); break;                                     // htime (#157)
+        case 15:                                                                                   // sms (#157)
+            AwtoPutChar(((long)ulV < 0) ? '-' : '+');
+            AwtoPutNum(((long)ulV < 0) ? (0 - ulV) : ulV, 1);
+            AwtoPutStr(" ms");
+            break;
         default: break;
     }
     AwtoSyncTxt(ucRow - 1, 1);
@@ -844,6 +881,9 @@ void AwtoOsdSyncPoll(void)
     if(s_ucConOpen != 0)
     {
         AwtoConLogSync();
+#if(_AWTO_SYNC_LOG == _ON)
+        AwtoConTitlePoll();                     // #157 live title fields
+#endif
     }
     AwtoSyncConPoll();
     if((GET_OSD_STATE() != _MENU_HOTKEY_SOURCE) || (g_ucOsdWidth != AWTO_SRC_COLS))
