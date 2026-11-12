@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """One-off mechanical Keil C51 -> SDCC port of the Realtek SDK mirror into fw/sdk/ (awto-ddc#162).
 
-usage: sdk_import.py [--out DIR] [--manifest FILE]    run by hand; the build never calls it
+usage: sdk_import.py [--out tmp/DIR] [--manifest FILE]    run by hand; the build never calls it
 
 - fw/sdk/ is OUR source (SDCC form, committed). This script reproduces the import commit, or ports a new SDK drop so it
-  can be compared with fw/sdk: `sdk_import.py --out tmp/sdk-new`, then diff against fw/sdk.
+  can be compared with fw/sdk: `sdk_import.py --out tmp/sdk-new`, then diff against fw/sdk. It refuses any --out
+  outside tmp/ or a non-empty one, so it can never overwrite fw/sdk (our edited source).
 - Mechanical only: Keil keywords (code/data/xdata/sfr/sbit/interrupt/using/_at_), pragmas, pData scratch to xdata,
   storage-first pointer declarations, ISR-flag `volatile bit`, include case fixing, __at on externs, interrupt prototypes.
   No behaviour change; no DebugMessage tokenisation (scripts/msg_tokenise.py does that on every build).
@@ -187,9 +188,16 @@ def scan_mirror():
 def main():
     global LOG
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", type=Path, default=ROOT / "fw" / "sdk")
+    ap.add_argument("--out", type=Path, default=ROOT / "tmp" / "sdk-import",
+                    help="new, empty directory under tmp/ (never fw/: fw/sdk is our edited source)")
     ap.add_argument("--manifest", type=Path, default=ROOT / "fw" / "sdk_files.txt")
     a = ap.parse_args()
+    out = a.out.resolve()
+    # fw/sdk is OUR source now (Dan 2026-11-12): an import may only land in an empty scratch dir under tmp/, then be diffed
+    if not out.is_relative_to((ROOT / "tmp").resolve()):
+        raise SystemExit(f"sdk_import: --out {out} is outside {ROOT / 'tmp'}; refusing (it would overwrite our code)")
+    if out.exists() and any(out.iterdir()):
+        raise SystemExit(f"sdk_import: --out {out} is not empty; refusing (pick a new directory)")
     (ROOT / "tmp" / "logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp" / "logs" / "sdk_import.log").open("a")
     want = [l.strip() for l in a.manifest.read_text().splitlines() if l.strip() and not l.startswith("#")]
