@@ -1182,6 +1182,7 @@ extern void AwtoSwCacheStore(void);
 extern unsigned char AwtoSwFast(unsigned char ucPort);
 extern void AwtoSwFastPoll(void);
 extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up by the fast path, 0 = none
+#define AWTO_CON_LIVE()                                         (g_ucAwtoFastPending == 0)     // #162 s3: console lines wait while a fast switch settles
 #define AWTO_SW_EV_FAST_WHY                                     0xA1    // at a fast-path timeout: 1 measure busy, 2 watchdog, 4 FIFO / HV error, 8 receiver unstable, 0x10 timing change, 0x20 judge check
 #define AWTO_SW_EV_FAST_FLAGS                                   0xA2    // first M-domain error after a fast unblank: P0_02 bits 6,5,1,0, bit7 = watchdog P0_0C.0
 // #78 power levels (fw/sdcc/awto_fastsw.inc AwtoWakeHold): L1 backlight off at signal loss, L2 panel off, L3 SDK power saving
@@ -1228,6 +1229,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #else
 #define AwtoSwCacheStore()
 #define AwtoSwFastPoll()
+#define AWTO_CON_LIVE()                                         _TRUE
 #define AWTO_SW_FAST_POLL()                                     AWTO_DEAD_PORT_POLL()
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF

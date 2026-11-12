@@ -406,6 +406,10 @@ static void AwtoConLogTail(void)
 #define AWTO_LOG_EV(s)      (g_stAwtoSync.stEv[AWTO_SYNC_IDX(s)].ucId)
 void AwtoConLogSync(void)                       // #139: new sync ring lines, one log row each (same decoder as the selector)
 {
+    if(AWTO_CON_LIVE() == _FALSE)
+    {
+        return;                                 // #162 s3: a fast switch's frame checks first; the OSD poll draws the lines after
+    }
     while(s_ucConSyncSeq != g_stAwtoSync.ucSeq)
     {
         if((s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
