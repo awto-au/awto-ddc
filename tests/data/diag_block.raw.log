@@ -1,0 +1,97 @@
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x01 f6
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d0
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 41
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d1
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 44
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d2
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 01
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d3
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 08
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d4
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d5
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d6
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d7
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 0a
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d8
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a d9
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 0b
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a da
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a db
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 0c
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a dc
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 01
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a dd
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> cf
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a de
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 02
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a df
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 17
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e0
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 02
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e1
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 88
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e2
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 02
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e3
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> a9
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e4
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> e1
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e5
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 57
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e6
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 9a
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e7
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 6c
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e8
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 01
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a e9
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> af
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a ea
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 1a
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a eb
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 42
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a ec
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 9e
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a ed
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 07
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a ee
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> df
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a ef
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> e3
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f0
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 07
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f1
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 5d
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f2
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 07
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f3
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 5c
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f4
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 06
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f5
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 0f
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f6
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 04
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f7
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> de
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f8
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a f9
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a fa
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a fb
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a fc
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a fd
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a fe
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00
+2026-11-06T14:22:14+1100 REAL write dev=0x35 reg 0x3a ff
+2026-11-06T14:22:14+1100 REAL read dev=0x35 reg 0x08 n=1 -> 00

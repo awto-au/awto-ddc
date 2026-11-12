@@ -14,25 +14,28 @@ Bank 6 needed new seeds (0x3902-0x392c, 0x3944, 0x5f70, 0x6217, 0x5942, 0x5255);
 ## 2. ADC to key decode (hard-coded immediates, no table)
 Compares at CODE:39e9-3a60. Raw value R = register byte; band is `lo <= R < hi`. Mask bits accumulate in XDATA dbad.
 
-Physical buttons, left-to-right (Dan, 2026-11-04): **SOURCE, MENU, DOWN, UP, AUTO, POWER** (6 keys). POWER = the digital P3.0 key [fw+user].
-The other 5 are the A0/A1 ADC bands below. Label pairing confirmed on unit 2 (#85, Dan pressed left to right, press log
-`rtd_keywatch.py --log`; the raw value of each key is in the "reads" column) and by the Dahua dispatch (mask 0x20 = SOURCE).
+Physical buttons, left to right: **SOURCE, MENU, DOWN, UP, AUTO, POWER** (6 keys) [user, 2026-11-04]. POWER = the digital P3.0 key [fw+user].
+Settled 2026-11-08 [fw+hw]: hardware presses by Dan on unit 2 (#85, left to right, press log `rtd_keywatch.py --log`; the raw
+value of each key is in the "reads" column), plus the Dahua firmware trace in #85 (mask 0x20 = SOURCE).
+Dahua code detail: `docs/reversing/dahua-fw/keys.md`.
 
 | mask | source | raw band | reads | label |
 |---|---|---|---|---|
 | 0x01 | P3.0 low | n/a | n/a | POWER [fw+hw] |
-| 0x02 | ADC_A0 | 0xC0..0xDF | 0xD0 | MENU [hw] |
-| 0x04 | ADC_A0 | 0x28..0x47 | 0x38 | UP [hw] |
-| 0x08 | ADC_A1 | 0x28..0x47 | 0x38 | DOWN [hw] |
-| 0x10 | ADC_A0 | 0x70..0x8F | 0x80 | AUTO [hw]; the only key with the long-press timer [guess: the Dahua firmware's long-press key] |
-| 0x20 | ADC_A1 | 0x68..0x87 | 0x80 | SOURCE [hw] |
+| 0x02 | ADC_A0 | 0xC0..0xDF | 0xD0 | MENU [fw+hw] |
+| 0x04 | ADC_A0 | 0x28..0x47 | 0x38 | UP [fw+hw] |
+| 0x08 | ADC_A1 | 0x28..0x47 | 0x38 | DOWN [fw+hw] |
+| 0x10 | ADC_A0 | 0x70..0x8F | 0x80 | AUTO [fw+hw]; the only key with a long-press timer (id 0xd) |
+| 0x20 | ADC_A1 | 0x68..0x87 | 0x80 | SOURCE [fw+hw] |
 
 - 6 distinct single keys: 1 digital (POWER) + 3 on A0 (MENU, UP, AUTO) + 2 on A1 (SOURCE, DOWN) [fw+hw]
 - The Dahua mask bits and our SDK masks agree: MENU 0x02, UP 0x04 (_RIGHT), DOWN 0x08 (_LEFT), AUTO 0x10 (_EXIT), SOURCE 0x20 (_KEY5)
+- Idle (no key) = no band hit = R near 0xF8 (pull-up) [guess]
 - Bands are 32 raw counts wide (4 codes) around nominal centres; centre voltage fraction of full-scale = R/256 [guess]; absolute volts depend on ADC ref, not checked [?]
 - Combos: masks OR together (e.g. 0x18 = 0x10 + 0x08). Only 0x18 and 0x03 have special handling in the Dahua firmware; others fall through to "no key" [fw]
 - Two keys on the same ladder (A0: MENU UP AUTO; A1: SOURCE DOWN) put a mixed voltage on it that falls in no band: only an A0 + A1 pair can be a combo [hw: unit 2 reads]
 - Labels in the Dahua firmware come from behaviour only (long press, gating, OSD handler cases); nothing in flash carries label text for keys [?]
+- Labels settled above.
 - Debounce: new mask is accepted only when seen on 2 consecutive scans (`e205` compare); first sighting returns 0 [fw]. `e205` is not cleared on release, so re-pressing the same key is accepted on first scan [?]
 
 ## 3. Dispatch
@@ -49,15 +52,16 @@ The other 5 are the A0/A1 ADC bands below. Label pairing confirmed on unit 2 (#8
 | 0x18 | AUTO + DOWN | 3 | clears e152 bit3 |
 | 0x20 | SOURCE | 4 | only if e14e/e14f (16-bit) == 0 |
 
-- `key_post_event` CODE:5b45: new key -> `641e`; for 0x10/0x18 arms 3000-unit timer id 0xd (long press, 0x0BB8) and returns without posting [fw]. Otherwise `e151 = idx`, then `6567` cancels timers 0xb/0xd/0xe [fw]
+- `key_post_event` CODE:5b45: new key -> `641e`; for 0x10/0x18 (AUTO) arms 3000-unit timer id 0xd (0x0BB8) and returns without posting [fw]. Nothing in banks 0-6 reads timer 0xd or acts on its expiry, so a held AUTO does nothing extra [fw, medium: a table-driven consumer is not excluded; see dahua-fw/keys.md]. Otherwise `e151 = idx`, then `6567` cancels timers 0xb/0xd/0xe [fw]
 - Held key (no change): if e152 bit3 set, repeats e151 or arms timer id 1 with 0x01F4 (500 units, auto-repeat delay) [fw]. Timer time unit not determined [?]
 - Consumer: `e151` (XDATA 0xE151, named `osd_key_event_idx`) is read in ~30 places in bank0 OSD code (0xA6ED-0xFE0B) as `switch(e151)` DEC chains with cases 1, 2, 3, 6 [fw]:
   - 1, 2 = value adjust (two direction keys): `fd66`, `fd87` (+ siblings fda8/fdc9/fdea/fe0b) call `ee33(n)`, `eee4`/`f184` change a value [guess]
-  - 3 = select/enter or back: `fcfe` [guess]; the AUTO key (mask 0x10)
-  - 6 = other event (`c3ea`); not produced by the scan path, so it comes from the long-press timer (id 0xd) or OSD logic [?]
-  - idx 0 and 4 are consumed by different code (bank0 ~0xC3EA-0xC5xx: `e151 == 0` test) [?]
-- Entry into OSD/menu state machine: not isolated. Candidates: idx 3 (AUTO key, 0x10: the long-press key [guess]) via `fcfe`/`c3ea` in bank0; `0dc5` banked call (called from `63fe`, `eee4`) [?]. Needs a proper bank0 decompile: the OSD region 0xA000-0xFFFF in bank0 is only partially disassembled (seeded from e151 xrefs, function starts are heuristic).
-- `key_alt_source_poll` CODE:5154 runs when no ADC/P3.0 key is down: copies 8 bytes from code `0xFF:3067` into dbb4, calls 57f3, returns dbbe; result can set a key mask via `68a7`. Possibly the VCP 0xCA "OSD button control" injection path (bank5 case_vcp_ca_osd_button_ctrl -> bank0 0x0db9) [?]
+  - 3 = AUTO: back (`fcfe`) with a menu open; no case with the OSD closed (handler `f97a`) [fw]
+  - 6 = never produced by the scan path; the handler header comments say "6 -> c3ea" but the code tests 0 [fw, dahua-fw/keys.md]
+  - idx 0 (MENU) with the OSD closed opens the main menu (`d439`); inside menus it is select/OK (`c3ea`) [fw, awto-ddc#85 trace]
+  - idx 4 (SOURCE, only with the OSD closed: e14e/e14f is the 16-bit OSD state) builds the 3-row page at `dd7c` via `bcall_osd_builder_menu_source(2)`; its handler `e7b1` moves the cursor on 1/2 and confirms on 0 [fw]. That the page is the input list is [guess] (builder name, 3 rows, port set); a press of the original's SOURCE key would settle it
+- Entry into the OSD state machine: OSD state table at bank0 `a047` sends state 0 to handler `f97a`; with the OSD closed e151==0 opens the main menu, e151==4 the source page, e151==1/2 are hotkeys (`e4dc`) [fw]. Unread bodies: `eee4`, `f184`, `e7b1` (MENU/AUTO branches), `fcfe`, `c3ea`, `e4dc` [?].
+- `key_alt_source_poll` CODE:5154 is the IR key path (NEC, `ScalerIRHWModeInitial` at boot, pin 194 `irda_in`): the 8 bytes copied from code `0xFF:3067` are all zero (the SDK `pucIRCodeBuffer[8] = {0}` initialiser), not a code table; command 0xB9 = POWER, F1 opens the menu, A7 the input list [fw]; byte order of the received frame unverified, needs a remote: `dahua-fw/gpio-ir.md`, awto-ddc#93
 
 ## 4. Data-driven or hard-coded
 - Thresholds: 5 pairs of immediates in code (`MOV A,#0x68/0xC0/0x28/0x70..`, `SUBB A,#0x88/0xE0/0x48/0x90`) at CODE:39e9-3a60 [fw]. Not a flash table.

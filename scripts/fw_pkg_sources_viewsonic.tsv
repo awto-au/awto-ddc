@@ -1,0 +1,5 @@
+vendor	package	url	notes
+viewsonic	display_portal_win	https://www.viewsonicglobal.com/public/products_download/software/display/Display_Portal_win.zip	viewsonic.com/global/products/lcd/ViewSonic Display Portal
+viewsonic	display_portal_macos	https://www.viewsonicglobal.com/public/products_download/software/display/Display_Portal_macOS.zip	viewsonic.com/global/products/lcd/ViewSonic Display Portal
+viewsonic	firmware_update_tool_win	https://www.viewsonicglobal.com/public/products_download/software/display/Firmware_Update_Tool_win.zip	guessed name from Display Portal pattern
+viewsonic	firmware_update_tool_macos	https://www.viewsonicglobal.com/public/products_download/software/display/Firmware_Update_Tool_macOS.zip	guessed name from Display Portal pattern

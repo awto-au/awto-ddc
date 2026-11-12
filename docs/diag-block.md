@@ -15,41 +15,42 @@
 | 0x14 | 2 | main-loop heartbeat |
 | 0x16 | 2 | Timer2 ISR count |
 | 0x18 | 2 | EXINT1 (DDC-CI/debug) ISR count |
-| 0x1A | 1 | `g_ucDelay5usN_Base` (set by `ScalerMcu5usDelayCalc`) at self-test; 0 with the self-test off |
-| 0x1B | 2 | `ScalerTimerDelayXms(10)` in Timer2 counts / 4; 0 with the self-test off |
-| 0x1D | 2 | 200 x `ScalerDelay5us()` in Timer2 counts / 4; 0 with the self-test off |
-| 0x1F | 1 | `RCAP2H` at self-test; 0 with the self-test off |
-| 0x20 | 8 | reserved (was the micro-bench, removed in #53.6); 0 |
+| 0x1A | 1 | `g_ucDelay5usN_Base` (set by `ScalerMcu5usDelayCalc`) at the calibration; 0 before it ran |
+| 0x1B | 2 | 10 ticks of `ScalerTimerDelayXms` (started on a tick edge), Timer2 counts / 4 |
+| 0x1D | 2 | 10 x `DELAY_5US()` (= `ScalerDelay5us`), raw Timer2 counts, EA off |
+| 0x1F | 1 | `RCAP2H` at the calibration |
+| 0x20 | 2 | `DELAY_XUS(100)`, raw counts |
+| 0x22 | 2 | `DELAY_XUS_EXINT(100)`, raw counts |
+| 0x24 | 2 | 10 x `DELAY_5US_EXINT()`, raw counts |
+| 0x26 | 2 | whole panel T3 wait (calibration included), Timer2 counts / 64 |
 | 0x28 | 1 | test command (#33): 0x01-0x05 key messages: menu role (AUTO key) / UP / DOWN / exit role (MENU key) / SOURCE, 0x10+n OSD event n, 0x20 debug pop-up, 0x41/0x42 key test screen open/close (#39); cleared when applied |
 | 0x29 | 1 | debug pop-up pending (#34): 1 = next input-info pop-up draws the debug lines; test cmd 0x20 sets it + raises event 10 |
 | 0x2A | 2 | main-loop passes in the last ~1 s (u16, target byte order) |
 | 0x2C | 3 | `g_stOsdInfo` byte offsets of `usOsdState`, `ucOsdEventMsg`, `ucOsdKeyMessage` (`offsetof`, set at boot by `AwtoOsdOfsInit`; #37). `_DP_DEBUG_MSG` on = 4, 6, 7; off = 3, 5, 6; 0 = image without the report. Host: `rtd_proto.osd_offsets_from_diag` |
-| 0x2F | 1 | spare |
+| 0x2F | 1 | `ucHold`: #28 held test visuals, bit1 debug pop-up / console (test cmd 0x26); 0x27 clears |
 
 ## Stages (temporal order; timestamp 0 before Timer2 runs)
 1 BOOT start of main | 2 GPIO init done (inside `ScalerMcuInitial`) | 3 `ScalerMcuInitial` done | 4 pin-share done | 5 main loop first pass | 6 panel power on | 7 DPTx link start | 8 DPTx link done.
-- 6..8 are marked in both the `_PANEL_ON` and `_BACKLIGHT_ON` paths of `UserCommonInterfacePanelPowerAction`.
-- Self-test: switch `_AWTO_DIAG_SELFTEST` (`_OFF` default, #53.6). When on it runs once, just before stage 6 (final clock, interrupts live). Both counts stay 0 if `ScalerTimerDelayXms` never returns (#23).
+- 6..8 are marked in both the `_PANEL_ON` and `_BACKLIGHT_ON` paths of `UserCommonInterfacePanelPowerAction`; stage 8 comes BEFORE the T3 wait (backlight path).
+
+## Delay calibration (`_AWTO_DIAG_DELAYCAL`, default `_ON`; #53.6, #54)
+- Runs once per boot inside the panel T3 wait: `UserInterfaceAdjustWaitPanelT3` -> `AwtoDiagPanelT3Wait(550)` (keil2sdcc rule; code `fw/sdcc/awto_delaycal.inc`, inserted into `ScalerCommonMcu.c` because only scaler files see `DELAY_XUS`).
+- The wait ends at the same tick as `ScalerTimerDelayXms(550)`: tick counter at entry + 550, polled; the test time is part of it, so boot time is unchanged. Whole wait measured with Timer2 (0x26).
+- Interrupts live (as the SDK has them at T3); EA off only inside each measured body (<= ~100 us), Timer2 TF2 holds the overflow. Overhead of an empty snapshot pair subtracted. Bodies are unrolled x10 where a loop would add overhead.
+- 10 ticks are measured from a tick edge (`ScalerTimerDelayXms(1)` first): exact vs the reload period.
+- Host: `rtd_diag.cal_eval` (limits and reasons in its `CAL_ROWS`), `unit_health.py` row "delay cal" (sim: tick and T3 rows only; ucsim Timer2 counts machine cycles, busy loops not timed).
+- Offline guard (cycle counts of every delay loop in the image vs Keil): `scripts/delay_cal_check.py`, known deviations `re/delay_cal_known.tsv`.
 
 ## Timer2 constants (SDK `ScalerCommonTimerFunction.c`; M2PLL 351 MHz, flash div 4, MCU div 1, xtal 14.318 MHz)
 - M2PLL mode: 701582 / 96 = 7308, reload `0xE373`, 7309 counts per 1 ms tick.
 - Xtal (initial) mode: 14318 / 12 = 1193, reload `0xFB56`, 1194 counts per tick.
-- Counts = whole ticks x (0x10000 - RCAP2) + TH2:TL2 offset, read with EA off; stored value is counts >> 2.
-- Host picks the row by `RCAP2H` (0xE3 / 0xFB). Nominal: `DelayXms(10)` = 10 ms, 200 x 5 us = 1000 us.
+- Host picks the row by `RCAP2H` (0xE3 / 0xFB). Counts = whole ticks x (0x10000 - RCAP2) + TH2:TL2 offset, EA off; 0x1B stores counts / 4, 0x26 counts / 64.
 
-## Measured numbers (self-test + micro-bench, removed from the firmware in #53.6)
-- Measured 2026-11-06 on unit AWT26110003, image wb-fw53 step 2 (working-base + #53.2/17/18), M2PLL clock, Timer2 7309 counts/ms.
-- Self-test: `ScalerTimerDelayXms(10)` = 9.847 ms (98.5 %); 200 x `ScalerDelay5us()` (N=26) = 1094 us (109.4 %).
-- Micro-bench, 1000 iterations each, EA off, raw Timer2 counts (empty `djnz` loop 1216):
-
-| instruction | raw counts | cycles at the expected 87.7 MHz |
-|---|---|---|
-| `mov a,dir` | 1919 | 2.11 (expect 2) |
-| `movx a,@dptr` | 1883 | 2.00 |
-| `mov a,@r0` | 1550 | 1.00 |
-| `djnz` | 1216 (empty loop) | 3.65 (expect 2-3) |
-
-- Boot cost of bench + self-test (stage times of one boot each, same unit, 2026-11-06): stage 6 at 566 ms vs 554 ms, stage 8 at 711 ms vs 699 ms after removal = 12 ms. Stage 5 is 424 ms in both.
+## Hardware reference (removed self-test + micro-bench, #53.6)
+- Measured 2026-11-06, unit AWT26110003, image wb-fw53 step 2, M2PLL clock, Timer2 7309 counts/ms, interrupts live.
+- `ScalerTimerDelayXms(10)` = 9.847 ms (started at an arbitrary phase); 200 x `ScalerDelay5us()` (N=26) = 1094 us = 5.47 us per call incl. Timer2 ISR time.
+- Micro-bench, 1000 iterations, EA off (empty `djnz` loop 1216 raw counts): `mov a,dir` 2.11 cycles, `movx a,@dptr` 2.00, `mov a,@r0` 1.00, `djnz` 3.65 (cycles at the expected 87.7 MHz, 4 clocks per cycle).
+- Cycle model of `delay_cal_check.py` runs ~20 % fast against this (N=26 loop: 81 cycles = 3.7 us model, 5.5 us measured with ISR).
 
 ## Debug slave 0x35 read protocol (#38)
 - Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, `#include`d in `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.

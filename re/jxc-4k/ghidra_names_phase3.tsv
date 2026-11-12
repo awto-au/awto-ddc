@@ -1,0 +1,19 @@
+# ghidra_names_phase3.tsv - phase-3 supersessions, applied after all ghidra_names_bank<N>.tsv (scripts/ghidra_names_merge.py).
+# Columns: addr<TAB>name<TAB>type<TAB>comment<TAB>status<TAB>confidence<TAB>bank   (bank = N for a CODE row, `-` = every bank). name `-` retracts the row (reset to the Ghidra default name).
+# Evidence per row: re/jxc-4k/phase2_verification.tsv.
+CODE:f830	ScalerDpRx1HdcpCheckValid	func	SDK ScalerDpRx1HdcpCheckValid (SeptPhy.c:4396): HDCP_DEBUG&0xE0 (1.4) / bit4 + VRF_ANS 0x53/0x1F (2.2); supersedes wrong [auto-sdk] CheckHdcpCpirqStatus	[phase3]	high	4
+CODE:f228	ScalerDpRx1CheckHdcpCpirqStatus	func	SDK ScalerDpRx1CheckHdcpCpirqStatus (SeptPhy.c:528): VRF_ANS 0x53/0x1F then DPCD 0x00202 bit2; name moved from f830	[phase3]	high	4
+CODE:c3f7	ScalerDpRx1CpIRQ	func	body of SDK ScalerDpRx1CpIRQ: switch on the 8 BStatus bits; case 4 (LINK_INTEGRITY_FAIL) contains the efbc tail	[phase3]	high	4
+CODE:efbc	ScalerDpRx1CpIRQ_tail_linkintegrity	func	tail of c3f7 case 4 (HDCP_IRQ&=0xFD, e229=0x14, AUX_MODE_SET toggles); superseded [auto-sdk] ScalerDpRx1CpIRQ	[phase3]	med	4
+CODE:3787	-	func	[auto-sdk] ScalerMemoryUpdateIVS2DVSLineDelay refuted: real one is bank-2 bfc4 (FS_DELAY_FINE_TUNE bit1, HTotal+64 compare); 3787 has a different body	[phase3]		5
+CODE:f188	pcb_pin_group_p97_pa0_p85_p84_on	func	P9.7, PA.0, P8.5, P8.4 all set 1. Label 'backlight' not proven: AC-on (d2a0) writes the same group to 1; proven backlight enable is P9.2 (FE2A, active low)	[phase3]	med	1
+CODE:de69	pcb_pin_group_p84_p85_seq	func	P8.4/P8.5 sequenced with delays; arg 1 = off. Same pin group as f188 (not proven to be backlight)	[phase3]	low	1
+CODE:e222	pcb_pin_group_p97_pa0_p85_p84_set	func	Writes param to fe2f/fe30 (P9.7/PA.0) and PORT85/PORT84; called with 1 twice at the end of ScalerMcuGpioInitial	[phase3]	med	5
+CODE:5d88	ScalerPinshareConfig	func	SDK ScalerPinshareConfig(ucPorStatus): arg 0 AC_ON (flash drive/slew), 2 normal -> pin group 1, 3/other -> 0; was backlight_group_set (#7 guess)	[phase3]	med	6
+CODE:d192	RTDFactoryOsdFuncClearOsdFont_like	func	RTD Factory OSD row-clear loop (0x4C/byte1, stride g_ucOsdWidth); distinct from bank-6 OsdFuncClearOsd 59df	[phase3]	low	1
+EXTMEM:dbae	-	var	overlay local (Keil reuses dbae for DDC/CI, timer, TMDS, DDR2 PHY, power isolation), not a global	[phase3]		-
+EXTMEM:dbaf	-	var	overlay local, not a global	[phase3]		-
+EXTMEM:dbb0	-	var	overlay local, not a global	[phase3]		-
+EXTMEM:dbb1	-	var	overlay local, not a global	[phase3]		-
+CODE:687c	ScalerDDR2DCPHYInitial	func	SDK ScalerDDR2DCPHYInitial: called by f9a9 after DCSysInitial; 12 of 12 timing/mode dword values equal the SDK 1200M branch; DDRSel loop over 0x8exx/0xcexx PHY pages (BODY 6934-6d7c)	[phase3]	high	2
+CODE:7537	ScalerPLLSetDPLLFreqMN_frag_7537	func	fragment of ScalerPLLSetDPLLFreqMN (721c): M, M_N_MSB, wait, N, OUTPUT_CLK_DIV, CRNT, M2PLL_WD, DPLL_WD toggles in SDK order	[phase3]	low	2

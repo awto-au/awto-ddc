@@ -1,0 +1,68 @@
+{
+  "schema": "awto-ddc.rtd2795t-datasheet-facts.v1",
+  "device": "Realtek RTD2795T-CG",
+  "source": {
+    "url": "https://rtddisplay.com/upload/20231007170054.pdf",
+    "title": "RTD2795T-CG Datasheet",
+    "pages": 21,
+    "provenance": "third-party mirror with rtddisplay.com watermark; not an official Realtek host"
+  },
+  "identity": {
+    "device_type": "multi-function display controller",
+    "mcu": "industrial-standard 8051 with external SPI flash",
+    "package": "LQFP216",
+    "body_mm": [24, 24],
+    "lead_span_mm": [26, 26],
+    "lead_pitch_mm": 0.4,
+    "maximum_height_mm": 1.6,
+    "maximum_input_format": "4096x2160@60Hz"
+  },
+  "inputs": {
+    "hdmi2_dvi_ports": 2,
+    "hdmi_max_signalling_ghz": 6,
+    "displayport_1_2_ports": 2,
+    "displayport_link_rates_ghz": [1.62, 2.7, 5.4],
+    "digital_colour_depth_bits": [6, 8, 10, 12],
+    "analogue_rgb_ports": 1,
+    "analogue_adc": "triple-channel 8-bit 210MHz",
+    "ypbpr_maximum": "1080p"
+  },
+  "panel_outputs": {
+    "vbyone_or_edp_hbr_lanes": 8,
+    "edp_hbr2_lanes": 4,
+    "maximum_format": "4096x2160@60Hz",
+    "colour_depth_bits": [8, 10]
+  },
+  "control_resources": {
+    "key_adc_channels": 4,
+    "key_adc_bits": 5,
+    "pwm_channels": 6,
+    "i2c": "master or slave",
+    "crystal_mhz": 14.318
+  },
+  "osd": {
+    "independent_font_engines": 2,
+    "shared_sram_kib": 36,
+    "font_bpp": [1, 2, 4],
+    "palette_colours": 64,
+    "maximum_windows": 26,
+    "proportional_font_range": "12x18 to 4x18",
+    "rotation_degrees": [90, 180, 270],
+    "hardware_font_decompression": true
+  },
+  "electrical": {
+    "pvcc_v": {"minimum": 3.14, "typical": 3.3, "maximum": 3.47},
+    "ddr2_io_v": {"minimum": 1.7, "typical": 1.8, "maximum": 1.9},
+    "core_v": {"minimum": 1.05, "typical": 1.1, "maximum": 1.15},
+    "ambient_operating_c": {"minimum": 0, "maximum": 70},
+    "junction_maximum_c": 125,
+    "reset_pulse_minimum_ns": 1120,
+    "power_on_reset_ms": {"minimum": 145, "typical": 146.5, "maximum": 148}
+  },
+  "re_inferences": [
+    "No CEC-labelled package lead is present in the LQFP216 table.",
+    "No native USB D+ or D- PHY leads are present.",
+    "USB_SPI pins 153-157 are an external-device SPI control interface and are live-configured as GPIO inputs on the JXC board.",
+    "Pins 78-88 are NC."
+  ]
+}

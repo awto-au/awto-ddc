@@ -32,3 +32,134 @@ CODE:66ab	osd_sram_addr_port_setup	func	Programs OSD access port 0x94 (write-opt
 CODE:64f7	osd_set_fontdl_orient	func	0x3A0B (f_dl orient/rotation) = (0x3A0B & 0x3A) | DBBD. DBBD = font-set variant byte.	[fw]
 CODE:6508	load_farptr_dbb2	func	Loads R3:R2:R1 = DBB2:DBB3:DBB4 (the far-pointer seg:mid:low set by 0x4272 entry from caller R3:R2:R1).	[fw]
 CODE:4e55	osd_fontset_dl_indexed	func	Alt font-download site: LCALL ptr_table_lookup 0x661d to pick one of nine 197-B glyph-set blobs (bank6 0x628C6-0x62FB2) then stream. Parallel to the 4 composer sites.	[fw]
+CODE:3af1	ScalerPLLSetDPLLRefPLL	func	auto: matched SDK ScalerPLLSetDPLLRefPLL by register fingerprint, score 0.53, 11 regs.	[auto-sdk]
+CODE:3dfb	ScalerIOSCTrimming	func	auto: matched SDK ScalerIOSCTrimming by register fingerprint, score 0.68, 7 regs.	[auto-sdk]
+CODE:4eaa	ScalerTimerGetEventStatusbyReg	func	auto: matched SDK ScalerTimerGetEventStatusbyReg by register fingerprint, score 0.91, 3 regs.	[auto-sdk]
+CODE:5d0c	ScalerPinshareGpioDdcPinSwitch	func	auto: matched SDK ScalerPinshareGpioDdcPinSwitch by register fingerprint, score 0.53, 6 regs.	[auto-sdk]
+CODE:659d	ScalerSyncAdcApllPowerDown	func	auto: matched SDK ScalerSyncAdcApllPowerDown by register fingerprint, score 1.00, 3 regs.	[auto-sdk]
+CODE:5d88	backlight_group_set	func	arg 2 -> P9.7=1 then P9.7/PA.0/P8.5/P8.4 follow; arg 3/other -> 0 (issue #7).	[fw]
+CODE:34bf	ScalerOsdDrawWindow	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDDRAWWINDOW, exact masked match.	[lib]
+CODE:3f4e	ScalerColorContrastAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORCONTRASTADJUST, exact masked match.	[lib]
+CODE:406d	ScalerOsdPosition	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_OSDPOSITION, exact masked match.	[lib]
+CODE:4175	ScalerODSetFIFO	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_ODFUNCTION, exact masked match.	[lib]
+CODE:4361	ScalerOsdWindowDisable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDWINDOWDISABLE, exact masked match.	[lib]
+CODE:4609	ScalerColorOutputGammaAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLOROUTPUTGAMMAADJUST, exact masked match.	[lib]
+CODE:46e3	ScalerColorPCMOutputGammaAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORPCMOUTPUTGAMMAADJUST, exact masked match.	[lib]
+CODE:47bc	ScalerColorBrightnessAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORBRIGHTNESSADJUST, exact masked match.	[lib]
+CODE:4892	ScalerOsdWindowHighlightFunction	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDWINDOWHIGHLIGHTFUNCTION, exact masked match.	[lib]
+CODE:4964	ScalerColorPCMSRGBAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORPCMSRGBADJUST, exact masked match.	[lib]
+CODE:4a36	ScalerColorHLWDDomainAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORHLWDDOMAINADJUST, exact masked match.	[lib]
+CODE:4af8	ScalerOsdSramAddressCount	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDSRAMADDRESSCOUNT, exact masked match.	[lib]
+CODE:4c5a	ScalerODCompressionSetting	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_ODFUNCTION, exact masked match.	[lib]
+CODE:4e19	ScalerColorPCMLoadTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORPCM, exact masked match.	[lib]
+CODE:5337	ScalerTimerPollingDataBitFlagProc	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONTIMERPOLLINGDATABITFLAGPROC, exact masked match.	[lib]
+CODE:53a7	ScalerColorDDitherLoadSetting	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDDITHER, exact masked match.	[lib]
+CODE:5414	ScalerColorDCRAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDCRADJUST, exact masked match.	[lib]
+CODE:54eb	ScalerColorPCMInputGammaAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORPCMINPUTGAMMAADJUST, exact masked match.	[lib]
+CODE:56dc	ScalerColorScalingByPassTableSel	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSCALING, exact masked match.	[lib]
+CODE:5798	ScalerOsdWindow7SpecialFunction	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDWINDOW7SPECIALFUNCTION, exact masked match.	[lib]
+CODE:5849	ScalerOsdFontRotateCtrl	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_OSDFONTROTATECTRL, exact masked match.	[lib]
+CODE:58f2	ScalerODLoadLUT	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_ODFUNCTION, exact masked match.	[lib]
+CODE:5991	ScalerGetDataPortWord	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONDATAPORTACCESSGETWORD, exact masked match.	[lib]
+CODE:5a2c	ScalerColorDDitherLoadSeqTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORDDITHERLOADSEQTABLE, exact masked match.	[lib]
+CODE:5abb	ScalerODHLWinSetting	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_ODFUNCTION, exact masked match.	[lib]
+CODE:5bc9	ScalerColorHLWBorderAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORHLWBORDERADJUST, exact masked match.	[lib]
+CODE:5ccc	ScalerColorHLWBorderEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORHLWBORDERENABLE, exact masked match.	[lib]
+CODE:5dc2	ScalerColorIDitherEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORIDITHERENABLE, exact masked match.	[lib]
+CODE:5f3f	ScalerColorSpaceConvertLoadTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSPACECONVERTLOADTABLE, exact masked match.	[lib]
+CODE:5fa0	ScalerODInitial	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_ODFUNCTION, exact masked match.	[lib]
+CODE:6056	ScalerSetDataPortWord	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONDATAPORTACCESSSETWORD, exact masked match.	[lib]
+CODE:6082	ScalerColorOutputGammaChannelCtrl	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLOROUTPUTGAMMACHANNELCTRL, exact masked match.	[lib]
+CODE:617a	ScalerColorPCMInputGammaEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORPCMINPUTGAMMAENABLE, exact masked match.	[lib]
+CODE:61ca	ScalerColorSRGBEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORGLOBALHUESATENABLE, exact masked match.	[lib]
+CODE:623c	ScalerOsdWriteAllByte	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDWRITEALLBYTE, exact masked match.	[lib]
+CODE:6261	ScalerColorDDitherLoadDitherTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDDITHER, exact masked match.	[lib]
+CODE:6286	ScalerColorDDitherLoadTempoTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDDITHER, exact masked match.	[lib]
+CODE:62ab	ScalerColorSetScalingDownMaskLSB	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORSETSCALINGDOWNMASKLSB, exact masked match.	[lib]
+CODE:62f2	ScalerOsdSetTransparency	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_OSDSETTRANSPARENCY, exact masked match.	[lib]
+CODE:6359	ScalerColorHLWDCRAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORHLWDCR, exact masked match.	[lib]
+CODE:637b	ScalerOsdFontLibraryRotation	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDFONTLIBRARYROTATION, exact masked match.	[lib]
+CODE:643e	ScalerColor422To444	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORCOLORSAMPLING, exact masked match.	[lib]
+CODE:647d	ScalerOsdCharCommandByteSeries	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDCHARCOMMANDBYTESERIES, exact masked match.	[lib]
+CODE:649c	ScalerOsd2BitFontOffset	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSD2BITFONTOFFSET, exact masked match.	[lib]
+CODE:64bb	ScalerOsdBurstWriteDataPort	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDBURSTWRITEDATAPORT, exact masked match.	[lib]
+CODE:6530	ScalerOsdCommandByte	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDCOMMANDBYTE, exact masked match.	[lib]
+CODE:65d1	ScalerOsdCommandAllByte	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDCOMMANDALLBYTE, exact masked match.	[lib]
+CODE:6604	ScalerOsdFrameControlAllByte	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDFRAMECONTROLALLBYTE, exact masked match.	[lib]
+CODE:66c2	ScalerColorSpaceConvertIDomainEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSPACECONVERTIDOMAINENABLE, exact masked match.	[lib]
+CODE:66d9	ScalerColorSetRGBLimitRange	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSETRGBLIMITRANGE, exact masked match.	[lib]
+CODE:66ef	ScalerColorDCCClrDataReadyStatus	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORDCCCLRDATAREADYSTATUS, exact masked match.	[lib]
+CODE:6704	ScalerColorSetYCCFullRange	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSETYCCFULLRANGE, exact masked match.	[lib]
+CODE:6718	ScalerOsdGlobalDoubleBuffer	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDGLOBALDOUBLEBUFFER, exact masked match.	[lib]
+CODE:6740	ScalerColorSRGBSwap	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORSRGBSWAP, exact masked match.	[lib]
+CODE:6767	ScalerOsdCompressionCtrl	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDCOMPRESSIONCTRL, exact masked match.	[lib]
+CODE:677a	ScalerColorBrightnessEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORBRIGHTNESSENABLE, exact masked match.	[lib]
+CODE:678d	ScalerColorContrastEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORCONTRASTENABLE, exact masked match.	[lib]
+CODE:67a0	ScalerColorOutputGammaEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLOROUTPUTGAMMAENABLE, exact masked match.	[lib]
+CODE:67b3	ScalerColorSpaceConvertDDomainEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSPACECONVERTDDOMAINENABLE, exact masked match.	[lib]
+CODE:67d6	ScalerColorDCCGetDataReadyStatus	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORDCCGETDATAREADYSTATUS, exact masked match.	[lib]
+CODE:67e7	ScalerColorGetColorSpaceRGB	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORGETCOLORSPACERGB, exact masked match.	[lib]
+CODE:67f7	ScalerOsdEnableOsd	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDENABLEDISABLE, exact masked match.	[lib]
+CODE:6822	ScalerOsdVerticalStartSelect	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDVERTICALSTARTSELECT, exact masked match.	[lib]
+CODE:6830	ScalerColorDCRDataRefreshControl	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORDCRDATAREFRESHCONTROL, exact masked match.	[lib]
+CODE:683e	ScalerColorDCREnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORDCRENABLE, exact masked match.	[lib]
+CODE:684c	ScalerOsdGetDoubleFunctionH	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDGETDOUBLEFUNCTIONH, exact masked match.	[lib]
+CODE:685a	ScalerOsdGetDoubleFunctionV	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDGETDOUBLEFUNCTIONV, exact masked match.	[lib]
+CODE:6876	ScalerOsdGetHorizontalDelayStep	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDGETHORIZONTALDELAYSTEP, exact masked match.	[lib]
+CODE:6883	ScalerOsdAddrMsb	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDADDRESS90_91_92, exact masked match.	[lib]
+# --- Phase 2 [re-agent] rows (bank 6). Columns: addr, name, type, comment, status, confidence. ---
+# Finding: bank 6 holds NO menu tree / item handlers / strings. It is the Realtek OSD+colour lib, the RTD2014Key.c key/IR code, OsdFunc helpers and a few kernel funcs (SDK sources in tmp/sdcc-port/src). Menu state machine lives in other banks (reads g_stOsdInfo.usOsdState = e14e:e14f).
+# Finding: Keil C51 bit fields are LSB-first (first-declared field = LOW bits), not MSB-first as in docs/re-full-reversal.md. Evidence: SysColorHandler tests (e22e & 0x1f)==3 = GET_MODE_STATE()==_MODE_STATUS_ACTIVE (b5ModeState declared first); Phase 1 g_stColorInfo e231 & 0xf8 clears b3ColorSpace (first field). The power nibble test >>4==3 is then PowerStatus, not PowerAction.
+CODE:4528	OsdFuncApplyMap	func	RTD2014OsdFunc.c OsdFuncApplyMap(w,h,color): row cmds (ScalerOsdCommandAllByte 0x80,0x11,w), end cmd, font-select/table start -> e1e6/e1e8, char cmd 0x4C fill, g_ucOsdWidth e1ea / Height e1e5, col max e242, DoubleFunction(e14c bit5).	[re-agent]	high
+CODE:5480	OsdFuncChangeColor1Bit	func	RTD2014OsdFunc.c OsdFuncChangeColor1Bit non-rotated path: per row CharCommandByteSeries BYTE0 (0x4C|fontFrom) then BYTE2 colour, addr += g_ucOsdWidth (e1ea).	[re-agent]	high
+CODE:59df	OsdFuncClearOsd	func	RTD2014OsdFunc.c OsdFuncClearOsd non-rotated path: per row CharCommandByteSeries 0x4C BYTE0 + 0x00 BYTE1, addr += g_ucOsdWidth.	[re-agent]	high
+CODE:6694	OsdFuncBlending	func	RTD2014OsdFunc.c OsdFuncBlending: ScalerOsdVerticalStartSelect(0), ScalerOsdWindow7SpecialFunction(6), transparency type via common helper 0x2020.	[re-agent]	high
+CODE:52c6	OsdPaletteLoadPigment	func	RTD2014OsdPalette.c OsdPaletteLoadPigment: 16 entries x 3 bytes read from far code ptr, index = palette*16 (arg<<4), each via osd_lut_write (ScalerOsdSetColorPalette tail).	[re-agent]	high
+CODE:6582	OsdPaletteSelectPalette	func	RTD2014OsdPalette.c OsdPaletteSelectPalette: arg 0 -> code 0xFF:3010 (_PALETTE_RTD_LOGO), 1 -> 0xFF:2FE0 (_PALETTE_MAIN_MENU), then OsdPaletteLoadPigment(index0).	[re-agent]	high
+CODE:2fe0	tPALETTE_MAIN_MENU	var:u8[48]	16 x RGB main-menu palette (bank 6 flash 0x62FE0), used by OsdPaletteSelectPalette(1).	[re-agent]	med
+CODE:3010	tPALETTE_RTD_LOGO	var:u8[48]	16 x RGB logo palette (bank 6 flash 0x63010), used by OsdPaletteSelectPalette(0).	[re-agent]	med
+CODE:5d4b	RTDKeyHoldKeyCheck	func	RTD2014Key.c RTDKeyHoldKeyCheck: if e152 bit4 (KEY_HOLD) then key_prev 02/04/08/10 -> message idx 0/1/2/3 into e151, then hold-timer cancel.	[re-agent]	high
+CODE:4fc4	ScalerIRHWModeIntHandler_EXINT0	func	ScalerIR.c EXINT0 handler: IR_CR2[2] && IR_SR3[1:0]; if g_bIRReceived or IR_SR3[6:4] clear flags else copy IR_RP0..3 + RP2_0..3 into g_pucIRCode e1ee..e1f5, set received flag g_bIRReceived (bit _7_1).	[re-agent]	high
+CODE:57f3	ScalerIRHWModeGetData	func	ScalerIR.c ScalerIRHWModeGetData: if received flag copy 8 bytes e1ee..e1f5 to caller buffer, clear flag. Caller = RTDIRKeyScan (key_alt_source_poll 5154).	[re-agent]	high
+CODE:573b	ScalerIRHWModeDecoder	func	ScalerIR.c ScalerIRHWModeDecoder: 4 burst writes to page 0x23 regs 0xA0 (10 B), 0xAE (6 B), 0xD0 (8 B), 0xDA (8 B, SDK uses table-3 length for the 4th too).	[re-agent]	high
+CODE:6315	ScalerIRHWModeInitial	func	ScalerIR.c ScalerIRHWModeInitial: IR_SF2:SF3 = 0x00B1 (XTAL sample div), IR_SR3 |= 0x7F, IR_CR2 |= 5.	[re-agent]	high
+CODE:654c	ScalerIRHWModeClockSel	func	ScalerIR.c ScalerIRHWModeClockSel: 0 -> SF2:SF3 = 0x00B1 (XTAL), 1 -> 0x015D (IOSC).	[re-agent]	high
+CODE:5554	ScalerBurstWriteTimeoutCal	func	ScalerReg.c: (57+4*font width)*M2PLL*2/(g_ulDClkFreq e010..e013 * flash div * mcu div) - 2, doubled when OSD double-H, clamped 0xFF. Used by ScalerBurstWrite (4445) OSD mode.	[re-agent]	high
+CODE:589f	ScalerTimerClrEventStatusbyReg	func	RL6449_Series_TimerFunction.c: switch on event: 0x10/0x20 -> IRQ_CTRL1 bit4/2, 0xFF -> M2_STATUS1=0xF7 + IRQ_CTRL1 + STATUS1=0xFF, 1/4 -> M1 or M2 STATUS1 by FtoP status.	[re-agent]	high
+CODE:612a	ScalerTimerClrEventStatus	func	RL6449_Series_TimerFunction.c: event 0x10 (DEN_START) with IRQ_CTRL1[3] set -> clear flag e24a else ClrEventStatusbyReg.	[re-agent]	high
+CODE:6152	ScalerTimerGetEventStatus	func	RL6449_Series_TimerFunction.c: event 0x10 with IRQ_CTRL1[3] -> return flag e24a else ScalerTimerGetEventStatusbyReg.	[re-agent]	high
+CODE:4f38	ScalerPinshareInitial	func	RL6449_Series_Pinshare.c ScalerPinshareInitial: PIN_SHARE_CTRL10/11, DDC pin switches (0x11,5,7), bulk CTRL14..CTRL96 fills (outlined 55xx helpers), DDC drive current, then ScalerPinshareConfig(AC_ON) = 5d88(0). Pin values are vendor board data.	[re-agent]	high
+CODE:6806	ScalerPinsharePowerOnReset	func	RL6449_Series_Pinshare.c ScalerPinsharePowerOnReset: off-region CTRL43..CTRL80 (0x1013..) fill via outlined helpers 55ba/560d/55ef.	[re-agent]	med
+CODE:50d1	ScalerPinshareAdjustFlashDrive	func	RL6449_Series_Pinshare.c: PIN_DRIVING_CTRL02[7:5] (arg3==0, SPI clk) or [4:2] (arg3==1, SI/SO/CEB) = drive level 0..5 (3.0..5.5 mA); level 0 -> 0x40/0x08.	[re-agent]	high
+CODE:3902	ScalerPinshareAdjustConfig_Pin195	func	RL6449_Series_Pinshare.c ScalerPinshareAdjustConfig case _CONFIG_PIN_195: PIN_SHARE_CTRL91[2:0]: arg 0->0 GPI, 1->2, 2->1 (GPO od/pp), 0xB->4, 0xC->3 (PWM4 od/pp). Specialised copy.	[re-agent]	med
+CODE:5e6e	ScalerPowerXtalPower	func	ScalerCommonPower.c ScalerPowerXtalPower(on): XTAL_CTRL0[7], pad drive XTAL_CTRL1[4:3], 6 ms wait (07e3) on power-up.	[re-agent]	high
+CODE:645e	ScalerPLLDPTxPLLReset	func	RL6449_Series_PLL.c ScalerPLLDPTxPLLReset: DPTX_CMU5[5] clear + 2 ms delay, DPTX_PHY_CTRL0 &= 0x6F (clear bit7,4).	[re-agent]	high
+CODE:60d8	ScalerADCBandgap	func	ScalerADC.c ScalerADCBandgap(bit): on -> ADC_POWER bit3, SOG_CTRL bit3; off -> ADC_POWER bit4, SOG_CTRL bit1.	[re-agent]	high
+CODE:61f2	ScalerSyncAdcPowerProc	func	ScalerSync.c ScalerSyncAdcPowerProc(action): bandgap on (4..5) vs ApllPowerDown + bandgap off (3,6,7,8); VGA-only parts compiled out.	[re-agent]	med
+CODE:6754	SysColorDCCHistogramHandler	func	SysColor.c: ScalerColorDCCGetDataReadyStatus -> Clr -> ready flag (_6_0), run user handler, clear flag.	[re-agent]	high
+CODE:6514	SysColorDCRHandler	func	SysColor.c: DCR ready (DCR_CTRL) -> clr, ready flag (_5_7), DCR refresh disable/enable via ScalerColorDCRDataRefreshControl, DCR_ADDRESS_PORT=1.	[re-agent]	high
+CODE:67c5	SysColorHandler	func	SysColor.c: if GET_MODE_STATE()==_MODE_STATUS_ACTIVE ((e22e & 0x1F)==3) call DCC histogram + DCR handlers.	[re-agent]	high
+EXTMEM:e14b	g_stOsdInfo	var:StructOsdInfo	RTD2014 g_stOsdInfo base: +3 usOsdState = e14e:e14f (zeroed on power-on key, gates key 0x20), +6 ucOsdKeyMessage = e151, +7 ucOsdKeyControl = e152 (bit0 scan ready, 1 scan start, 2 repeat start, 3 repeat enable, 4 key hold; same as RTD2014Include.h). e14c bit5 = double-size (layout of byte +1 differs from SDK).	[re-agent]	high
+EXTMEM:e1ea	g_ucOsdWidth	var:u8	OsdFuncApplyMap width (words); x12 = pixel width (56d2), added per row in OsdFuncChangeColor1Bit/ClearOsd.	[re-agent]	high
+EXTMEM:e1e5	g_ucOsdHeight	var:u8	OsdFuncApplyMap height (rows); x18 = pixel height in ScalerOsdDrawWindow.	[re-agent]	high
+EXTMEM:e1e6	g_usFontSelectStart	var:u16	OsdFuncApplyMap: height+1 (big-endian pair e1e6:e1e7).	[re-agent]	high
+EXTMEM:e1e8	g_usFontTableStart	var:u16	OsdFuncApplyMap: g_usFontSelectStart + width*height (e1e8:e1e9).	[re-agent]	high
+EXTMEM:e242	g_ucColAMax	var:u8	SET_OSD_MAPA_COL_MAX(width) in OsdFuncApplyMap; used by ScalerOsdSramAddressCount.	[re-agent]	high
+EXTMEM:e243	g_ucColBMax	var:u8	Map-B col max, read by ScalerOsdSramAddressCount when sram addr >= 100.	[re-agent]	med
+EXTMEM:e24c	g_ucMemoryODUseBit	var:u8	GET_OD_USE_BIT: 75 (0x4B) / 60 (0x3C) compared in ScalerODCompressionSetting, used by ScalerODSetFIFO.	[re-agent]	high
+EXTMEM:e24a	g_ucGlobalIntEventDenStart	var:u8	DEN_START event flag read/cleared by ScalerTimerGetEventStatus/ClrEventStatus (612a/6152).	[re-agent]	high
+EXTMEM:e1ee	g_pucIRCode	var:u8[8]	IR HW receive buffer filled by ScalerIRHWModeIntHandler_EXINT0, drained by ScalerIRHWModeGetData.	[re-agent]	high
+EXTMEM:e22e	g_stModeInfo	var:StructModeInfoType	GET_MODE_STATE = e22e & 0x1F (LSB-first bit field); ==3 (_MODE_STATUS_ACTIVE) gates SysColorHandler.	[re-agent]	high
+EXTMEM:e010	g_ulDClkFreq	var:u32	GET_D_CLK_FREQ operand of ScalerBurstWriteTimeoutCal (5554), 32-bit big-endian e010..e013.	[re-agent]	high
+# --- Refinements of existing rows (not edited; names are SDK-exact, phase 3 may supersede the role names) ---
+# CODE:3944 key_scan_adc = RTDKeyScan (RTD2014Key.c); e205 = g_ucBackupKeyState; IR fallback = RTDIRKeyScan
+# CODE:5f70 key_poll = UserInterfaceKeyHandler; e207 = g_ucKeyStateSkip, e208 = g_ucKeyStateCurr, e209 = g_ucKeyStatePrev
+# CODE:6217 key_scan_gate = RTDKeyScanReady; CODE:5942 key_power_edge = RTDKeyPowerKeyProc; CODE:63fe key_power_combo = RTDKeyPowerKeyMix
+# CODE:5255 key_event_dispatch = RTDKeyMessageProc; CODE:5b45 key_post_event = RTDKeyMessageConvert; CODE:641e key_longpress_arm = RTDKeySpecialProc; CODE:6567 key_cancel_timers = RTDKeyHoldKeyTimerCancel
+# CODE:5154 key_alt_source_poll = RTDIRKeyScan (IR code buffer dbb4 zero-init, ScalerIRHWModeGetData, key lookup); no longer [?]
+# CODE:5d88 backlight_group_set = ScalerPinshareConfig(ucPorStatus): arg 0 = AC_ON (AdjustFlashDrive x2 + AdjustFlashSlewRate), 2/3/other = normal/saving/down GPIO macros (P9.7 etc.)
+# CODE:4445 spi_flash_read_engine = ScalerBurstWrite(addr, len, bank, hostaddr, type, loc); dc3c bank, dc3d page, dc3e SCA_INF_ADDR, dc3f type, dc40 timeout=100
+# CODE:4272 osd_font_download_from_flash = ScalerOsdHardwareVLC; 64f7 = its ScalerSetBit(P3A_0B) rotation step; 6508 = arg reload
+# CODE:6029 osd_port_write_byte = ScalerOsdWriteByte; 64d9 osd_port_read_byte = ScalerOsdFrameControlByteGet; 66ab = ScalerOsdAddrSet; 6868 = ScalerOsdSramAddressSet(addr, _OSD_BYTEALL 0xE0)
+# CODE:5ed9 osd_fill_words = ScalerOsdCharCommandAllByteSeries; 504d osd_set_font_bases = ScalerOsdSramBaseAddressSet; 65b7 osd_lut_write = ScalerOsdSetColorPalette tail; 5e35 osd_enable_set = ScalerOsdCircuitActivated
+# Export/TSV address mismatch (not renamed): lib rows 34bf (DrawWindow), 4361 (WindowDisable), 53a7 (DDitherLoadSetting), 649c (Osd2BitFontOffset) are fragments; Ghidra entry points sit at 3c8c, 561e, 4cf2, 6950 and ScalerOsdSetTransparency/EnableOsd appear twice (62f2/6958, 67f7/6961). 4d87 is a second ScalerOsdDrawWindow tail.

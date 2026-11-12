@@ -17,7 +17,9 @@ import argparse, json, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i2cbus
 import rtd_isp_probe as P
+import rtd_proto
 import regdb_query as Q
 from rtd_osd import Osd
 
@@ -41,11 +43,13 @@ def main() -> int:
     ap.add_argument("--ports")
     ap.add_argument("--resume", help="JSON from an interrupted run; pages/ports already in it are skipped")
     a = ap.parse_args()
+    i2cbus.dev_hint("dump", "rtd_reg_dump.py")
+    i2cbus.require_unit(a.bus, a.serial)
     ports = [] if a.ports else a.port or ["2A:2B:0x40"]
     root = P.repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (root / "tmp/regs").mkdir(parents=True, exist_ok=True)
-    P.LOG = (root / "tmp/logs/rtd_reg_dump.log").open("a")
+    P.LOG = rtd_proto.setup_logs("rtd_reg_dump").main
     rows = [r for r in Q.load("RTD2795T-CG") if r["kind"] == "REG"]
     pages = sorted({int(r["page"], 16) for r in rows}) if a.pages == "all" else [int(p, 16) for p in a.pages.split(",")]
     allp = a.ports == "all"

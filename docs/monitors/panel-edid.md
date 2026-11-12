@@ -65,3 +65,10 @@
 - N20 dates from the 2017-2018 spec history, which fits the EDID's week 51 / 2018; N50 (2021) and Innolux E5B (2023) do not.
 - Status: BOE MV270QUM-N20 is the best candidate (colour + date + size + timing); N10 is ruled out by colour; not confirmed by label or marking.
 - Not found: any MST7554 controller datasheet / register manual.
+
+## Apple cross-check (2026-11-06, issue #3)
+- No Apple or Apple-sold display is 27" 3840x2160: Apple's 27" panels are 5120x2880 (iMac 5K, iMac Pro, LG UltraFine 5K, Studio Display; LG Display LM270QQ1 for iMac A1419/UltraFine 5K); Apple-sold UltraFine 4K is 23.7" (24MD4KL); iMac 4K is 21.5" (4096x2304).
+- Sources: https://en.wikipedia.org/wiki/Apple_displays, https://www.panelook.com/LM270QQ1-SDC1_LG_Display_27.0_Assembly_parameter_32963.html, https://support.apple.com/en-us/111963.
+- Dan's "Apple panel" idea likely comes from the shared 27" 16:9 active area (596.736 x 335.664 mm); not evidence of the same part.
+- Panelook lists a BOE MV270QUM-N20 datasheet "for HP" (Ver.A_ES8.0, 2020-03-24, 28 pp): N20 is a branded-OEM part, no Apple listing found. https://www.panelook.com/MV270QUM-N20_BOE_27.0_LCM_overview_31937.html
+- Best candidate unchanged: BOE MV270QUM-N20.

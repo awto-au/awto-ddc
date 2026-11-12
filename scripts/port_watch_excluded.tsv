@@ -1,0 +1,12 @@
+# Registers deliberately not polled by port_watch.py.
+addr	name	reason
+0xFFE3	P3 SFR mirror	reads 0 for every P3 pin on this board (gpio-roles.md); POWER key P3.0 uses the SFR in fw
+0x71ED-0x71EE,0x71F7 / 0x72xx	HDMI_FREQDET_RESULT	result needs a write to 71EC.7 (popup) first: not a passive read
+0x713A / 0x723A	HDMI_SCDC_* data port	indexed through an index register: needs a write
+0xFE68,0xFF32,0xFF34,0xFE71	DDCx_DDC_ACCESS_PORT	index/auto-increment data port into DDC RAM
+0xB7D6,0xB7D9,0xBAD6,0xBAD9	AUX_RX_DATA/AUX_TX_DATA	AUX FIFO ports: a read pops the FIFO
+0x9C70-0x9C7C,0x9E70-0x9E7C	HPD_CTRL/HPD_IRQ (DPTX)	panel-side eDP HPD (TX), not an input port; HPD_IRQ also holds W1C events the fw consumes
+0x9D61-0x9DF8,0x9F61-0x9FF8	AUX_* (DPTX)	eDP panel AUX transmitter, not the sink
+0x27A0-0x27A8,0x2AA0-0x2AFD,0x67A0-0x68FD	CBUS/MHL	no MHL on this board (header: PCB_Dx_MHL_* empty); cable_det is RW config
+0x7100,0x7125 other bits	misc HDMI_CTRL	left out: not needed for plug state; add if SCDC/scramble debug is wanted
+CEC	-	no CEC register block in the regdb (only 'CEC*2' in the 6F10 ADI IRQ-enable text) and no CEC pin on the LQFP216 table

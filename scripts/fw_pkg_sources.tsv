@@ -1,0 +1,65 @@
+vendor	package	url	notes
+gigabyte	gigabyte_m28u_f11	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M28U_F11.zip	vendor support page firmware list
+gigabyte	gigabyte_m28u_f10	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M28U_F10.zip	vendor support page firmware list
+gigabyte	gigabyte_m28u_f08_20211027	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M28U_F08_20211027.zip	vendor support page firmware list
+gigabyte	m28u_f07_20210913	https://download.gigabyte.com/FileList/Firmware/M28U_F07_20210913.zip	vendor support page firmware list
+gigabyte	gigabyte_m32u_f11	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M32U_F11.zip	vendor support page firmware list
+gigabyte	gigabyte_m32u_f10_220628	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M32U_F10_220628.zip	vendor support page firmware list
+gigabyte	gigabyte_m32uc_f02_updatetool	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M32UC_F02_updatetool.zip	vendor support page firmware list
+gigabyte	gigabyte_m32uc_f01	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M32UC_F01.zip	vendor support page firmware list
+gigabyte	gigabyte_m27up_f04	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M27UP_F04.zip	vendor support page firmware list
+gigabyte	aorus_fi32u_f07	https://download.gigabyte.com/FileList/Firmware/AORUS_FI32U_F07.zip	vendor support page firmware list
+gigabyte	aorus_fo48u_f06_220819	https://download.gigabyte.com/FileList/Firmware/AORUS_FO48U_F06_220819.zip	vendor support page firmware list
+gigabyte	aorus_fv43u_f07_0715	https://download.gigabyte.com/FileList/Firmware/AORUS_FV43U_F07_0715.zip	vendor support page firmware list
+gigabyte	aorus_fo32u2_f07	https://download.gigabyte.com/FileList/Firmware/AORUS_FO32U2_F07.zip	vendor support page firmware list
+gigabyte	aorus_fo32u2_f04	https://download.gigabyte.com/FileList/Firmware/AORUS_FO32U2_F04.zip	vendor support page firmware list
+gigabyte	aorus_fo32u2p_f06	https://download.gigabyte.com/FileList/Firmware/AORUS_FO32U2P_F06.zip	vendor support page firmware list
+gigabyte	aorus_fo32u2p_f03	https://download.gigabyte.com/FileList/Firmware/AORUS_FO32U2P_F03.zip	vendor support page firmware list
+gigabyte	gigabyte_m34wq_f06	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M34WQ_F06.zip	vendor support page firmware list
+gigabyte	gigabyte_m32q_f03	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M32Q_F03.zip	vendor support page firmware list
+gigabyte	gigabyte_m32qc_f06	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M32QC_F06.zip	vendor support page firmware list
+gigabyte	aorus_fi32q_f05	https://download.gigabyte.com/FileList/Firmware/AORUS_FI32Q_F05.zip	vendor support page firmware list
+gigabyte	gigabyte_mo32u_f02	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_MO32U_F02.zip	vendor support page firmware list
+gigabyte	gigabyte_m27qp_f04	https://download.gigabyte.com/FileList/Firmware/GIGABYTE_M27QP_F04.zip	vendor support page firmware list
+gigabyte	aorus_fi27q-x_f04_220628	https://download.gigabyte.com/FileList/Firmware/AORUS_FI27Q-X_F04_220628.zip	vendor support page firmware list
+gigabyte	aorus_fi27q_f08	https://download.gigabyte.com/FileList/Firmware/AORUS_FI27Q_F08.zip	vendor support page firmware list
+gigabyte	aorus_fi27qp_f06	https://download.gigabyte.com/FileList/Firmware/AORUS_FI27QP_F06.zip	vendor support page firmware list
+gigabyte	cv27q_f08_20200727_1834_7322_user_r5311	https://download.gigabyte.com/FileList/Firmware/CV27Q_F08_20200727_1834_7322_USER_R5311.zip	vendor support page firmware list
+gigabyte	cv27f_f06_20191121_2037_596a_r4821_user	https://download.gigabyte.com/FileList/Firmware/CV27F_F06_20191121_2037_596A_R4821_USER.zip	vendor support page firmware list
+gigabyte	aorus_kd25f_20190802_f04_47b9	https://download.gigabyte.com/FileList/Firmware/AORUS_KD25F_20190802_F04_47B9.zip	vendor support page firmware list
+gigabyte	giga_m27f_f04_20201230_1408_1a06_r6119	https://download.gigabyte.com/FileList/Firmware/GIGA_M27F_F04_20201230_1408_1A06_R6119.zip	vendor support page firmware list
+gigabyte	aorus_fo27q3_f05	https://download.gigabyte.com/FileList/Firmware/AORUS_FO27Q3_F05.zip	vendor support page firmware list
+gigabyte	aorus_fo27q2_f03	https://download.gigabyte.com/FileList/Firmware/AORUS_FO27Q2_F03.zip	vendor support page firmware list
+dell	u2723qe-m2t104	https://dl.dell.com/FOLDER10460395M/1/Dell_U2723QE_FWUpdate_M2T104_Windows.zip	driver id K76J3
+dell	g3223d-m3c101	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Dell_G3223D_M3C101.bin	community mirror github.com/balika011/realtek_display firmwares/
+dell	g3223d-m3c104	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Dell_G3223D_M3C104.bin	community mirror github.com/balika011/realtek_display firmwares/
+dell	g3223d-m3c105	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Dell_G3223D_M3C105.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v2	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V2.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v3	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V3.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v4	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V4.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-le550pql-v5-iis	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LE550PQL_V5_IIS.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r1811d-lm270qq2-spa3	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R1811D_LM270QQ2-SPA3.bin	community mirror github.com/balika011/realtek_display firmwares/
+realtek	r9a18-lm270qq2-spa3	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/R9A18_LM270QQ2-SPA3_V%3F%3F%3F.bin	community mirror github.com/balika011/realtek_display firmwares/
+razer	raptor27-144hz-v101	https://raw.githubusercontent.com/balika011/realtek_display/HEAD/firmwares/Razer_Raptor_27_144Hz_V1.01.bin	community mirror github.com/balika011/realtek_display firmwares/
+lenovo	thinkvision_p24h_30_fw3_7_tool_1_0_12141_0	https://download.lenovo.com/consumer/monitor/thinkvision_p24h_30_fw3_7_tool_1_0_12141_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p24q_30_fw3_4_tool_1_0_12141_0	https://download.lenovo.com/consumer/monitor/thinkvision_p24q_30_fw3_4_tool_1_0_12141_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p27u_20_fw3_2_tool_1_19_0_0	https://download.lenovo.com/consumer/monitor/thinkvision_p27u_20_fw3_2_tool_1_19_0_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p32pz_30_fw1_2_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p32pz_30_fw1_2_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p34w_20_fw1_9_fw2_5_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p34w_20_fw1_9_fw2_5_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p40w_20_fw4_0_tool_1_0_12141_0_241108_1	https://download.lenovo.com/consumer/monitor/thinkvision_p40w_20_fw4_0_tool_1_0_12141_0_241108_1.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p27h_30_fw1_6_fw2_1_tool_1_79	https://download.lenovo.com/consumer/monitor/thinkvision_p27h_30_fw1_6_fw2_1_tool_1_79.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p32p_30_fw1_1_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p32p_30_fw1_1_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_p49w_30_fw1_5_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p49w_30_fw1_5_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t24m_20_fw3_2_tool_1_64_0_0	https://download.lenovo.com/consumer/monitor/thinkvision_t24m_20_fw3_2_tool_1_64_0_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t24m_29_fw3_2_tool_1_64_0_0	https://download.lenovo.com/consumer/monitor/thinkvision_t24m_29_fw3_2_tool_1_64_0_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t24mv_30_l1_1_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_t24mv_30_l1_1_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t27h_30_fw1_3_fw2_2_tool_1_25	https://download.lenovo.com/consumer/monitor/thinkvision_t27h_30_fw1_3_fw2_2_tool_1_25.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t27hv_30_l1_1_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_t27hv_30_l1_1_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t27p_30_fw1_3_tool_1_88	https://download.lenovo.com/consumer/monitor/thinkvision_t27p_30_fw1_3_tool_1_88.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t32h_30_fw1_3_tool_1_46	https://download.lenovo.com/consumer/monitor/thinkvision_t32h_30_fw1_3_tool_1_46.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t32p_30_fw1_3_tool_1_46	https://download.lenovo.com/consumer/monitor/thinkvision_t32p_30_fw1_3_tool_1_46.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+lenovo	thinkvision_t34w_30_fw1_6_tool_1_107	https://download.lenovo.com/consumer/monitor/thinkvision_t34w_30_fw1_6_tool_1_107.zip	support.lenovo.com ThinkVision firmware tool pages ds5689xx-ds5690xx
+hp	u28-4k-sp149152	https://ftp.hp.com/pub/softpaq/sp149001-149500/sp149152.exe	HP U28 4K HDR monitor firmware 1.0.4.0 (swItemId vc-318015-1)
+dell	u3223qe-m3t102	https://dl.dell.com/FOLDER10105441M/1/Dell_U3223QE_FWUpdate_M3T102_Windows.exe	driver id CHHRV
+dell	u2723qe-m2t103-mac	https://dl.dell.com/FOLDER10058640M/1/Dell_U2723QE_FWUpdate_M2T103_Mac.zip	driver id JYV4W (macOS updater)
+lenovo	thinkvision_p27pz_30_fw1_2_tool_1_0	https://download.lenovo.com/consumer/monitor/thinkvision_p27pz_30_fw1_2_tool_1_0.zip	support.lenovo.com ThinkVision firmware tool

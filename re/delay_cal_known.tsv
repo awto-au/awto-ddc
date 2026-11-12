@@ -1,0 +1,7 @@
+# function	reason (loops whose DELAY_5US/DELAY_XUS cycles differ from the Keil reference; #54)	
+ScalerPowerGroupADIPowerCut	DELAY_5US inside a flag-polling while(): SDCC emits dec/mov/jz/sjmp (8 cycles per iteration vs 3 for djnz), poll slice ~2.7x longer than Keil; polls a ready flag, 50-slice timeout (RL6449_Series_Power.c)
+ScalerPowerGroupD0PowerCut	DELAY_5US inside a flag-polling while(): SDCC emits dec/mov/jz/sjmp (8 cycles per iteration vs 3 for djnz), poll slice ~2.7x longer than Keil; polls a ready flag, 50-slice timeout (RL6449_Series_Power.c)
+ScalerPowerGroupD1PowerCut	DELAY_5US inside a flag-polling while(): SDCC emits dec/mov/jz/sjmp (8 cycles per iteration vs 3 for djnz), poll slice ~2.7x longer than Keil; polls a ready flag, 50-slice timeout (RL6449_Series_Power.c)
+ScalerPowerGroupD2PowerCut	DELAY_5US inside a flag-polling while(): SDCC emits dec/mov/jz/sjmp (8 cycles per iteration vs 3 for djnz), poll slice ~2.7x longer than Keil; polls a ready flag, 50-slice timeout (RL6449_Series_Power.c)
+ScalerPowerGroupD3PowerCut	DELAY_5US inside a flag-polling while(): SDCC emits dec/mov/jz/sjmp (8 cycles per iteration vs 3 for djnz), poll slice ~2.7x longer than Keil; polls a ready flag, 50-slice timeout (RL6449_Series_Power.c)
+ScalerDpRx1InterlaceCheck	Keil-ABI image only (--sdcccall 3): 4 POPs scheduled between mov v,base and djnz v,$ = +8 cycles (+10%) in one DELAY_5US; blind delay in the DP interlace check

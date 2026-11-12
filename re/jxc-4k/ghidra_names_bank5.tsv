@@ -23,3 +23,140 @@ EXTMEM:dbaf	ddcci_caps_len	var	Number of caps-string bytes to send in this reply
 EXTMEM:dbb0	ddcci_caps_index	var	Loop index while copying the caps string.	[fw]
 EXTMEM:dbb1	ddcci_source_class	var	Low nibble selects caps string (3/5/6 -> A, 4 -> B). Probably the active input type; meaning unconfirmed.	[guess]
 EXTMEM:dda9	ddcci_reply_buf	var	Reply buffer base (index added to 0xDDA9).	[fw]
+CODE:3787	ScalerMemoryUpdateIVS2DVSLineDelay	func	auto: matched SDK ScalerMemoryUpdateIVS2DVSLineDelay by register fingerprint, score 0.63, 8 regs.	[auto-sdk]
+CODE:3ee4	ScalerTMDSRx2SetPhy_EXINT0	func	auto: matched SDK ScalerTMDSRx2SetPhy_EXINT0 by register fingerprint, score 0.50, 37 regs.	[auto-sdk]
+CODE:4522	ScalerTMDSRx3SetPhy_EXINT0	func	auto: matched SDK ScalerTMDSRx3SetPhy_EXINT0 by register fingerprint, score 0.50, 37 regs.	[auto-sdk]
+CODE:4b60	ScalerTMDSRx3IntHandler_EXINT0	func	auto: matched SDK ScalerTMDSRx3IntHandler_EXINT0 by register fingerprint, score 0.48, 25 regs.	[auto-sdk]
+CODE:5127	ScalerTMDSRx2IntHandler_EXINT0	func	auto: matched SDK ScalerTMDSRx2IntHandler_EXINT0 by register fingerprint, score 0.48, 25 regs.	[auto-sdk]
+CODE:6f05	ScalerTMDSRx2HdmiSetDeepColorPll	func	auto: matched SDK ScalerTMDSRx2HdmiSetDeepColorPll by register fingerprint, score 0.48, 12 regs.	[auto-sdk]
+CODE:72c4	ScalerTMDSRx3HdmiSetDeepColorPll	func	auto: matched SDK ScalerTMDSRx3HdmiSetDeepColorPll by register fingerprint, score 0.48, 12 regs.	[auto-sdk]
+CODE:925a	ScalerTMDSRx2SetDFEInitial_EXINT0	func	auto: matched SDK ScalerTMDSRx2SetDFEInitial_EXINT0 by register fingerprint, score 0.58, 42 regs.	[auto-sdk]
+CODE:9438	ScalerTMDSRx3SetDFEInitial_EXINT0	func	auto: matched SDK ScalerTMDSRx3SetDFEInitial_EXINT0 by register fingerprint, score 0.58, 42 regs.	[auto-sdk]
+CODE:a399	ScalerTMDSRx2Initial	func	auto: matched SDK ScalerTMDSRx2Initial by register fingerprint, score 0.54, 21 regs.	[auto-sdk]
+CODE:a6c1	ScalerTMDSRx3Initial	func	auto: matched SDK ScalerTMDSRx3Initial by register fingerprint, score 0.56, 20 regs.	[auto-sdk]
+CODE:a854	ScalerTMDSRx2FLDBandFineTune_EXINT0	func	auto: matched SDK ScalerTMDSRx2FLDBandFineTune_EXINT0 by register fingerprint, score 0.66, 8 regs.	[auto-sdk]
+CODE:a9d8	ScalerTMDSRx3FLDBandFineTune_EXINT0	func	auto: matched SDK ScalerTMDSRx3FLDBandFineTune_EXINT0 by register fingerprint, score 0.66, 8 regs.	[auto-sdk]
+CODE:be52	ScalerGDIPhyBandgap	func	auto: matched SDK ScalerGDIPhyBandgap by register fingerprint, score 0.68, 21 regs.	[auto-sdk]
+CODE:bf50	ScalerGlobalWatchDog	func	auto: matched SDK ScalerGlobalWatchDog by register fingerprint, score 0.49, 9 regs.	[auto-sdk]
+CODE:c4e8	ScalerTMDSRx2PSIntHandler_EXINT0	func	auto: matched SDK ScalerTMDSRx2PSIntHandler_EXINT0 by register fingerprint, score 0.77, 14 regs.	[auto-sdk]
+CODE:c5d0	ScalerTMDSRx3PSIntHandler_EXINT0	func	auto: matched SDK ScalerTMDSRx3PSIntHandler_EXINT0 by register fingerprint, score 0.77, 14 regs.	[auto-sdk]
+CODE:ce5d	ScalerGlobalIDDomainDBApply	func	auto: matched SDK ScalerGlobalIDDomainDBApply by register fingerprint, score 0.60, 5 regs.	[auto-sdk]
+CODE:d20d	ScalerTimerWaitForEvent	func	auto: matched SDK ScalerTimerWaitForEvent by register fingerprint, score 0.67, 3 regs.	[auto-sdk]
+CODE:df5b	ScalerVgipSetCaptureVDelay	func	auto: matched SDK ScalerVgipSetCaptureVDelay by register fingerprint, score 1.00, 6 regs.	[auto-sdk]
+CODE:e30e	ScalerGDIPhyRx3Z0Switch	func	auto: matched SDK ScalerGDIPhyRx3Z0Switch by register fingerprint, score 0.64, 5 regs.	[auto-sdk]
+CODE:e373	ScalerTMDSRx3TMDSPSPreDetect	func	auto: matched SDK ScalerTMDSRx3TMDSPSPreDetect by register fingerprint, score 0.51, 3 regs.	[auto-sdk]
+CODE:e67f	ScalerVgipVgipDoubleBufferApply	func	auto: matched SDK ScalerVgipVgipDoubleBufferApply by register fingerprint, score 0.62, 3 regs.	[auto-sdk]
+CODE:e7e4	ScalerTMDSRx2BeforeHotPlugEventProc	func	auto: matched SDK ScalerTMDSRx2BeforeHotPlugEventProc by register fingerprint, score 0.47, 3 regs.	[auto-sdk]
+CODE:e83b	ScalerTMDSRx3BeforeHotPlugEventProc	func	auto: matched SDK ScalerTMDSRx3BeforeHotPlugEventProc by register fingerprint, score 0.47, 3 regs.	[auto-sdk]
+CODE:eacb	ScalerVgipSetCaptureHWidth	func	auto: matched SDK ScalerVgipSetCaptureHWidth by register fingerprint, score 0.62, 6 regs.	[auto-sdk]
+CODE:ebb5	ScalerMDomainDisplayTimingGenDBApply	func	auto: matched SDK ScalerMDomainDisplayTimingGenDBApply by register fingerprint, score 0.80, 3 regs.	[auto-sdk]
+CODE:f7eb	ScalerGlobalDoubleBufferEnable	func	auto: matched SDK ScalerGlobalDoubleBufferEnable by register fingerprint, score 1.00, 3 regs.	[auto-sdk]
+CODE:fbf3	ScalerDDomainPatternGenAdjustColor	func	auto: matched SDK ScalerDDomainPatternGenAdjustColor by register fingerprint, score 1.00, 4 regs.	[auto-sdk]
+CODE:8044	ScalerColorDCRReadResult	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDCRREADRESULT, exact masked match.	[lib]
+CODE:9616	ScalerColorSetSRGBGlobalHueSat	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORGLOBALHUESAT, exact masked match.	[lib]
+CODE:97de	ScalerColorSpaceLoadYuv2RgbTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORSPACELOADYUV2RGBTABLE, exact masked match.	[lib]
+CODE:ae36	ScalerColorSRGBMatrixMultiply	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORGLOBALHUESAT, exact masked match.	[lib]
+CODE:b671	ScalerColorSRGBSine	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORGLOBALHUESAT, exact masked match.	[lib]
+CODE:bd3e	ScalerColorSRGBCosine	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORGLOBALHUESAT, exact masked match.	[lib]
+CODE:ca0f	ScalerColorSpaceConvert	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORCOLORCONVERSION, exact masked match.	[lib]
+CODE:d8aa	ScalerColorSRGBAdjust	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORSRGBADJUST, exact masked match.	[lib]
+CODE:faae	ScalerColorPCMInputGammaLoadTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORPCMINPUTGAMMALOADTABLE, exact masked match.	[lib]
+CODE:fdcb	ScalerMDomainDisplayTimingGenDBEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERMDOMAINDISPLAYTIMINGGENDBENABLE, exact masked match.	[lib]
+CODE:fb15	ScalerTimerDelayXms	func	Delay R6R7 ms: waits Timer2 1ms flag (bit 0x33) per ms, skipped when TR2=0; callers pass (hi,lo); SDK ScalerCommonTimerFunction.c	[re-agent]	high
+CODE:c3ff	ScalerTimer0SetTimerCount	func	Loads TL0/TH0 reload (TR0/ET0/TF0 handling), divisor chosen by GA_POWER_CTRL bit3 (IOSC vs xtal) and MCU_CONTROL bit1; SDK ScalerTimer0SetTimerCount	[re-agent]	high
+CODE:a399	ScalerTimerWDEventProc_WDINT	func	Corrects [auto-sdk] ScalerTMDSRx2Initial at this address: tests WDT_TEST&0x84 or g_enumGlobalXtalClkSelect(e246)!=0, latches WD count, loops 11 WD events; SDK ScalerTimerWDEventProc_WDINT	[re-agent]	high
+CODE:8aa2	ScalerTimerWDActivateTimerEvent_WDINT	func	11-entry WD event table, WATCHDOG_TIMER threshold, count latch, GA_POWER_CTRL bit3 clock select; called from WDEventProc_WDINT (a399); SDK ScalerTimerWDActivateTimerEvent_WDINT	[re-agent]	high
+CODE:8c9e	ScalerTimerWDActivateTimerEvent_EXINT0	func	Same body as WDINT variant with separate overlay (dc99..); called from ScalerTMDSRx2/3 PS handlers (f645/f672); SDK ScalerTimerWDActivateTimerEvent_EXINT0	[re-agent]	high
+CODE:f557	ScalerTimerWDInitial	func	IRQ_PRIORITY_3 bits5:3=2, threshold 0xFFF, WDT_TEST enable/clear/IRQ sequence; SDK ScalerTimerWDInitial	[re-agent]	high
+CODE:e49f	ScalerTimerPollingFlagProc	func	Polls (reg & mask) with bSuccess polarity (bit _0_6) until timeout, returns 0 on timeout; used as (mask,reg_hi,reg_lo,bSuccess,timeout) by TMDS FormatDetect etc.; SDK ScalerTimerPollingFlagProc	[re-agent]	high
+CODE:d930	ScalerTimerActiveTimerEvent	func	18-entry timer event table: returns if event id exists, else takes vacant slot and sets time via ScalerTimerCheckTimerEvent; SDK ScalerTimerActiveTimerEvent	[re-agent]	high
+CODE:d715	ScalerTimerReactiveTimerEvent	func	Same table scan as Active but resets time of an existing event (LAB d772); SDK ScalerTimerReactiveTimerEvent	[re-agent]	high
+CODE:c79c	ScalerTimerCheckTimerEvent	func	Returns present timer count, clamps/wraps against _EVENT_TIME_MAX 0xEE48 (61000 ms) and rebases 18 event times; SDK ScalerTimerCheckTimerEvent	[re-agent]	high
+CODE:f69f	ScalerGlobalCrystalClkSel	func	GA_POWER_CTRL bit3 set/clear, g_enumGlobalXtalClkSelect(e246)=2/1, EXIF bit4 (SFR 0x91) trigger; SDK ScalerGlobalCrystalClkSel	[re-agent]	high
+CODE:d333	ScalerGlobalIDDomainDBSetTriggerEvent	func	I_DB_CTRL &0xC0 variants and IMD_DB_STATUS1 &0xF8|4 selected by display mode e01e bits 2:1 and e23e; SDK ScalerGlobalIDDomainDBSetTriggerEvent	[re-agent]	high
+CODE:e621	ScalerDDomainPatternGenAdjustColor10bit	func	Writes DISP_PG_R/G/B_INITIAL = value>>2, low 2 bits packed into D_PG_INITIAL_M_STEP_L, D_PG_INITIAL_L_CTRL=0; SDK ScalerDDomain.c 10bit variant; called by DDC/CI private cmds	[re-agent]	high
+CODE:e037	ScalerDDomainBackgroundSetColor10bit	func	OVERLAY_CTRL bit5 toggle then 3 writes to BG_COLOR_DATA_PORT_M1 with 10-bit split; SDK RL6492_Series_DDomain.c SetColor10bit	[re-agent]	high
+CODE:fcf9	ScalerDDomainPatternGenEnable	func	DISP_PG_R_CTRL bit7 set/clear from bit arg; SDK ScalerDDomainPatternGenEnable	[re-agent]	high
+CODE:fd26	ScalerDDomainBackgroundEnable	func	VIDEO_DISPLAY_CONTROL_REG bit5 (force to background) from bit arg; SDK ScalerDDomainBackgroundEnable	[re-agent]	high
+CODE:d600	ScalerMDomainMemoryCheck	func	STATUS0 masks 0x62/0x60/0x61/0x63 plus WATCH_DOG_CTRL0 bit0 by V-scale-down/ignore-overflow flags, bit return in carry; SDK RL6449_Series_MDomain.c	[re-agent]	high
+CODE:f76d	ScalerMDomainMemoryCheck_getVsyncTimeoutFlag	func	Returns WATCH_DOG_CTRL0 &1 (display vsync timeout flag); shared tail used by ScalerMDomainMemoryCheck	[re-agent]	med
+CODE:f99b	ScalerVgipCaptureEnable	func	M1/M2_VGIP_CTRL bit0 from bit arg; SDK ScalerVgipCaptureEnable	[re-agent]	high
+CODE:f9d9	ScalerVgipSetDigitalCaptureStatus	func	M1/M2_VGIP_CTRL bit1 from bit arg; SDK ScalerVgipSetDigitalCaptureStatus	[re-agent]	high
+CODE:f9f8	ScalerVgipDoubleBufferEnable	func	M1/M2_VGIP_CTRL bits5:4 = 01 / 00; SDK ScalerVgipDoubleBufferEnable	[re-agent]	high
+CODE:f9ba	ScalerVgipVsBypassEnable	func	M1/M2_VGIP_SIGINV bit6; SDK ScalerVgipVsBypassEnable	[re-agent]	high
+CODE:e892	ScalerVgipModifyPolarity	func	M1/M2_VGIP_SIGINV bit2 (HS) and bit3 (VS, skipped for source type 4) from polarity flags in e095; SDK ScalerVgipModifyPolarity	[re-agent]	med
+CODE:dd15	ScalerVgipSetCaptureHDelay	func	M1_VGIP_HV_DELAY via shadow e223 (bits 2,0 = delay[9:8]), M1/M2_IHS_DELAY low byte, max 3FF with fine tune overflow; SDK ScalerVgipSetCaptureHDelay	[re-agent]	high
+CODE:e501	ScalerVgipSetCaptureHStartPosition	func	M1/M2_IPH_ACT_STA_H/L via shadow e225, analog start offset by 2; SDK ScalerVgipSetCaptureHStartPosition	[re-agent]	high
+CODE:ec01	ScalerVgipGetCaptureHDelay	func	Rebuilds IHdelay from M1_VGIP_HV_DELAY bits 2,0 and M1_IHS_DELAY; SDK ScalerVgipGetCaptureHDelay	[re-agent]	high
+CODE:f0ed	ScalerVgipGetCaptureVDelay	func	M1_IVS_DELAY plus M1_VGIP_HV_DELAY bit1 and WID_H bit5; SDK ScalerVgipGetCaptureVDelay	[re-agent]	high
+CODE:f162	ScalerVgipGetCaptureVHeight	func	M1_IPV_ACT_LEN_L plus M1_IPV_ACT_STA_H high nibble; SDK ScalerVgipGetCaptureVHeight	[re-agent]	high
+CODE:ea7d	ScalerVgipSetCaptureVHeight	func	M1/M2_IPV_ACT_LEN_L, STA_H high nibble in shadow e226, WID_H shadow e224; SDK ScalerVgipSetCaptureVHeight	[re-agent]	high
+CODE:edee	ScalerVgipSetCaptureVStartPosition	func	M1/M2 IPV_ACT_STA_H/L + WID_H bit6 from shadows e226/e224; SDK ScalerVgipSetCaptureVStartPosition	[re-agent]	high
+CODE:9d24	ScalerIDomainVgipSetInputCapture	func	VGIP capture enable, digital capture, H/V start/height/delay setup in SDK order; SDK ScalerIDomainVgipSetInputCapture	[re-agent]	high
+CODE:85c7	ScalerIDomainVgipAdjustIHVDelay	func	FS_DELAY_FINE_TUNE test, rebases V delay/V start via SetCaptureVDelay and SetCaptureVStartPosition; SDK ScalerIDomainVgipAdjustIHVDelay	[re-agent]	med
+CODE:ed1d	ScalerTMDSRx2HdmiAVMuteProc	func	if HDMI_SR bit6==0 and TMDS_OUTCTL[6:4]==0: clear AVMute flag, WDCR0 bit7 off, AVMCR 0x28, OUTCTL|=0x70, WDCR0 on (Rx2 = page 71)	[re-agent]	high
+CODE:ed63	ScalerTMDSRx3HdmiAVMuteProc	func	if HDMI_SR bit6==0 and TMDS_OUTCTL[6:4]==0: clear AVMute flag, WDCR0 bit7 off, AVMCR 0x28, OUTCTL|=0x70, WDCR0 on (Rx3 = page 72)	[re-agent]	high
+CODE:ef38	ScalerTMDSRx2SetPorchColor	func	TMDS_OUT_CTRL bit7 clear, R/G/B_OUT bytes by color space (YCC 0x80/0x10/0x80, RGB 0) (Rx2 = page 71)	[re-agent]	high
+CODE:ef78	ScalerTMDSRx3SetPorchColor	func	TMDS_OUT_CTRL bit7 clear, R/G/B_OUT bytes by color space (YCC 0x80/0x10/0x80, RGB 0) (Rx3 = page 72)	[re-agent]	high
+CODE:ccfd	ScalerTMDSRx2HdmiWatchDog	func	bit mask arg (AVI var / AVMute) + enable bit: HDMI_GPVS/HDMI_AP page writes; Initial calls it with disable (Rx2 = page 71)	[re-agent]	high
+CODE:cdad	ScalerTMDSRx3HdmiWatchDog	func	bit mask arg (AVI var / AVMute) + enable bit: HDMI_GPVS/HDMI_AP page writes; Initial calls it with disable (Rx3 = page 72)	[re-agent]	high
+CODE:e8e6	ScalerTMDSRx2MeasureClk_EXINT0	func	CMU_00 Rx_EN, HDMI_AP 0x28 -> poll HDMI_DP bit3 up to 9x 5us -> HDMI_AP 0x29, APC saved/restored; called from IntHandler_EXINT0 (Rx2 = page 71)	[re-agent]	high
+CODE:e93a	ScalerTMDSRx3MeasureClk_EXINT0	func	CMU_00 Rx_EN, HDMI_AP 0x28 -> poll HDMI_DP bit3 up to 9x 5us -> HDMI_AP 0x29, APC saved/restored; called from IntHandler_EXINT0 (Rx3 = page 72)	[re-agent]	high
+CODE:dd8b	ScalerTMDSRx2FormatDetect	func	polls HDMI_SR bit0 (130 ms), TMDS_WDC bit0, HDMI/DVI result; SDK FormatDetect (Rx2 = page 71)	[re-agent]	high
+CODE:de01	ScalerTMDSRx3FormatDetect	func	polls HDMI_SR bit0 (130 ms), TMDS_WDC bit0, HDMI/DVI result; SDK FormatDetect (Rx3 = page 72)	[re-agent]	high
+CODE:eb19	ScalerTMDSRx2CheckDataDFE	func	COEF_3 lane select, COEF_1/COEF_2 read VTH==0 then TAP0<0x15 over 3 tries; SDK CheckDataDFE (Rx2 = page 71)	[re-agent]	high
+CODE:eb67	ScalerTMDSRx3CheckDataDFE	func	COEF_3 lane select, COEF_1/COEF_2 read VTH==0 then TAP0<0x15 over 3 tries; SDK CheckDataDFE (Rx3 = page 72)	[re-agent]	high
+CODE:f2ea	ScalerTMDSRx2AfterHotPlugEventProc	func	restores HDCP slave addr (e198/e1b2), SCDC enable, IMPEDANCE_00 from saved Z0 status (e19a/e1b4); SDK AfterHotPlugEventProc (Rx2 = page 71)	[re-agent]	high
+CODE:f321	ScalerTMDSRx3AfterHotPlugEventProc	func	restores HDCP slave addr (e198/e1b2), SCDC enable, IMPEDANCE_00 from saved Z0 status (e19a/e1b4); SDK AfterHotPlugEventProc (Rx3 = page 72)	[re-agent]	high
+CODE:fd44	ScalerTMDSRx2Initial_fd44	func	Rename to ScalerTMDSRx2Initial when the wrong a399 row is superseded. TMDS_OUTCTL &7, ACC2 &0x3F, WDC &0xF3, HDMI_APC &0xFE, then HDMI/HDCP/MHL init as SDK (Rx3 twin = a6c1)	[re-agent]	high
+CODE:e10b	ScalerGDIPhyRx1Power	func	BANDGAP_03 &0xCF|0x10, IMPEDANCE_01 =0xE, IMPEDANCE_00 =8 (page 7A, per action switch); SDK ScalerGDIPhyRx1Power	[re-agent]	high
+CODE:d79c	ScalerGDIPhyRx2Power	func	jump-table switch over power action 0..10 (page 7B); SDK ScalerGDIPhyRx2Power	[re-agent]	high
+CODE:d823	ScalerGDIPhyRx3Power	func	jump-table switch over power action 0..10 (page 7C); SDK ScalerGDIPhyRx3Power	[re-agent]	high
+CODE:e733	ScalerGDIPhyRx3PowerProc	func	calls Rx3Power then per-action Z0/PS handling (HDMI_FREQDET PS bounds, Z0 enable); SDK ScalerGDIPhyRx3PowerProc	[re-agent]	high
+CODE:f6f8	ScalerGDIPhyPowerProc	func	dispatch by port (4/5/6 = D1/D2/D3) to Rx1/Rx2 power + PowerProc (Rx2 PowerProc inlined), Rx3 via e733; SDK ScalerGDIPhyPowerProc	[re-agent]	med
+CODE:d2a0	ScalerMcuGpioInitial	func	AC-on GPIO init: MCU_CONTROL|=0x80, PORT_READ_CONTROL=FF, pins, VCCK poll (LVDS_DISP_TYPE=4, 20x1ms), 10 ms, DDR power pin, PORT72/92/74, 200 ms, backlight-group pins (e222); SDK ScalerMcuGpioInitial	[re-agent]	high
+CODE:e222	pcb_backlight_group_set	func	Writes param to PORT85, PORT84 and the two pins at XDATA fe2f/fe30 (PORT97/PORTA0); same pin group as bank1 backlight_group_on; last call in ScalerMcuGpioInitial	[re-agent]	med
+CODE:c6b8	ScalerMcuDdcInitial	func	MCU_CLK_CONTROL_1 &0x9F, DDCRAM_ST_ADDRESS, DDCx control/enable/EDID_IRQ init for ADC/DDC0-3; SDK ScalerMcuDdcInitial	[re-agent]	high
+CODE:eff8	ScalerMcuDdcDebounceSel	func	arg 0 = external xtal debounce (DDC1 ctl1 &0x3F|0x10), else IOSC (ADC/DDC1/2/3 |=0xF0); SDK ScalerMcuDdcDebounceSel	[re-agent]	high
+CODE:f8f3	ScalerMcuDdcRamEnable	func	ADC/DDC0..3_DDC_ENABLE |= 3; SDK ScalerMcuDdcRamEnable	[re-agent]	high
+CODE:ea2e	ScalerMcuDdcciInitial	func	IIC_SET_SLAVE=0x6A, IIC_1_SET_SLAVE=0x3D, IIC_1_CH_SEL|=7, IRQ_PRIORITY_3, IIC_STATUS clear, EX1=1, IRQ_CONTROL|=0x16; SDK ScalerMcuDdcciInitial	[re-agent]	high
+CODE:d178	ScalerMcuDdcciSwitchPort	func	mode 1 = DDCCI: slave 0x6E, IIC_CH_SEL by port case 0..8, else debug slave 0x6A; SDK ScalerMcuDdcciSwitchPort	[re-agent]	high
+CODE:f5b7	ScalerMcuDdcciReleaseScl	func	IIC_CH_SEL&7 selects DDCx_CONTROL_2, clear bit0; SDK ScalerMcuDdcciReleaseScl	[re-agent]	high
+CODE:f5e7	ScalerMcuDdcciHoldScl_EXINT1	func	same as ReleaseScl but sets bit0; SDK ScalerMcuDdcciHoldScl_EXINT1	[re-agent]	high
+CODE:d9b3	ScalerMcuDdcciAutoSwitchInactiveChannel	func	IIC_CH_SEL cases 0..4 set/clear DDCx_CONTROL_2 bit4 (bit arg); called from DDC/CI dispatch f885; SDK ScalerMcuDdcciAutoSwitchInactiveChannel	[re-agent]	med
+CODE:d68d	ScalerMcuDdcciAutoSwitchInactiveChannel_EXINT1	func	same callee set as d9b3, no callers (interrupt context); SDK _EXINT1 variant	[re-agent]	med
+CODE:f885	ddcci_message_dispatch	func	If rx-ready flag: dispatches on opcode EXTMEM dd26: 01->830c get VCP, 03->6b1a set VCP, 07->dfca timing report, F3->b7a9 caps request, else fc19; then clears rx buffer	[re-agent]	med
+CODE:830c	ddcci_get_vcp_feature_handler	func	Opcode 01: builds reply (dda4=0x6E, len 0x88, opcode 02, VCP code dd27) via Keil switch, sends; returns table at 8330	[re-agent]	high
+CODE:6b1a	ddcci_set_vcp_feature_handler	func	Opcode 03: validates value (e373), switch on dd27 via table 6b2e, else null reply (fc19)	[re-agent]	high
+CODE:e373	ddcci_vcp_set_validate_value	func	Corrects [auto-sdk] ScalerTMDSRx3TMDSPSPreDetect: range-checks dd29 per VCP code (02/1e/1f <3, 14 <14, CC <0x26, D6 <6, 04..08 nonzero)	[re-agent]	high
+CODE:dfca	ddcci_timing_report_handler	func	Opcode 07: reply opcode 0x4E, flags (sync polarity), HFreq/VFreq from g_stInputTimingData (x10)	[re-agent]	high
+CODE:b7a9	ddcci_capabilities_request_handler	func	Opcode F3: reply opcode 0xE3, offset echo, copies caps_string_a (source class 3/5/6) or caps_string_b (4); ddcci_caps_reply (b840) is its chunk copier	[re-agent]	high
+CODE:fc19	ddcci_send_null_reply	func	Reply 6E,80 + checksum (null message) for unsupported opcode/value; uses efe7/f8aa	[re-agent]	med
+CODE:fdbc	ddcci_clear_rx_buffer	func	Zeroes 128 bytes from XDATA dd24 (DDC/CI receive buffer)	[re-agent]	high
+CODE:efe7	ddcci_reply_set_src_addr	func	dda4 = 0x6E (reply source address)	[re-agent]	med
+CODE:f8aa	ddcci_reply_checksum	func	Checksum over (dda5&0x7F)+2 reply bytes from dda4 (loop body lost in decompile)	[re-agent]	med
+CODE:d04a	backlight_pwm4_set_level	func	PWM4H_DUT = 0xFF - f(level): base 0x3C/100/0x32/100/0x5A by mode (c1af), piecewise scale around 0x50; PWM4 = backlight dimming output	[re-agent]	med
+CODE:8203	ScalerColorDCRReadResult_blk_8203	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte at DCR_ADDRESS_PORT=param (reads into 29..2c)	[re-agent]	med
+CODE:821b	ScalerColorDCRReadResult_blk_821b	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte, second variant (stores 2a)	[re-agent]	med
+CODE:8233	ScalerColorDCRReadResult_blk_8233	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte at param	[re-agent]	med
+CODE:824b	ScalerColorDCRReadResult_blk_824b	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte at param (stores 2a)	[re-agent]	med
+CODE:8263	ScalerColorDCRReadResult_blk_8263	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte at param	[re-agent]	med
+CODE:827b	ScalerColorDCRReadResult_blk_827b	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte then 32-bit shift (func 153e, 0x16)	[re-agent]	med
+CODE:82ba	ScalerColorDCRReadResult_blk_82ba	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte at param (stores 2a)	[re-agent]	med
+CODE:82f4	ScalerColorDCRReadResult_blk_82f4	func	Switch-case body of ScalerColorDCRReadResult (jump table at 807b): read 1 byte at param	[re-agent]	med
+CODE:82a0	ScalerColorDCRReadResult_case_above_th1_val	func	DCR_ADDRESS_PORT=0x17 (PT 05<<2|3), 4-byte read = _DCR_ABOVE_TH1_VAL case; SDK RL6449_Series_ColorDCRReadResult.c	[re-agent]	high
+CODE:82da	ScalerColorDCRReadResult_case_above_th2_val	func	DCR_ADDRESS_PORT=0x33 (PT 0C<<2|3), 4-byte read = _DCR_ABOVE_TH2_VAL case	[re-agent]	high
+EXTMEM:e246	g_enumGlobalXtalClkSelect	var:u8	1 = to external, 2 = to internal xtal; set in ScalerGlobalCrystalClkSel (f69f), tested in WDEventProc (a399)	[re-agent]	high
+EXTMEM:e223	g_ucVgipDelaySetting	var:u8	shadow of M1_VGIP_HV_DELAY (SetCaptureHDelay dd15)	[re-agent]	high
+EXTMEM:e224	g_ucVgipMiscSetting	var:u8	shadow of M1_IPH_ACT_WID_H (bit6 = V start[12]); edee/ea7d	[re-agent]	high
+EXTMEM:e225	g_ucVgipHSetting	var:u8	shadow of M1_IPH_ACT_STA_H (e501)	[re-agent]	high
+EXTMEM:e226	g_ucVgipVSetting	var:u8	shadow of M1_IPV_ACT_STA_H (edee/ea7d)	[re-agent]	high
+EXTMEM:e198	g_ucTMDSRx2SlaveAddr	var:u8	HDCP slave address restored in AfterHotPlugEventProc (f2ea); Rx3 twin e1b2	[re-agent]	med
+EXTMEM:e19a	g_ucTMDSRx2Z0Status	var:u8	saved IMPEDANCE_00 high nibble (BeforeHotPlug e7e4 / AfterHotPlug f2ea); Rx3 twin e1b4	[re-agent]	high
+EXTMEM:e1b2	g_ucTMDSRx3SlaveAddr	var:u8	Rx3 twin of e198 (f321)	[re-agent]	med
+EXTMEM:e1b4	g_ucTMDSRx3Z0Status	var:u8	Rx3 twin of e19a (f321)	[re-agent]	high
+EXTMEM:dd26	ddcci_rx_opcode	var:u8	DDC/CI received opcode (01 get, 03 set, 07 timing, 0C save, F3 caps), dispatch f885	[re-agent]	med
+EXTMEM:dd25	ddcci_rx_len	var:u8	DDC/CI received length byte (rx buffer dd24..dda3 cleared by fdbc)	[re-agent]	low
+EXTMEM:dda4	ddcci_reply_src_addr	var:u8	reply byte 0 = 0x6E, set by efe7	[re-agent]	med
+EXTMEM:dda5	ddcci_reply_len	var:u8	reply length | 0x80; checksummed length = (dda5&0x7F)+2	[re-agent]	med
+EXTMEM:dda6	ddcci_reply_opcode	var:u8	reply opcode: E3 caps, 02 get VCP, 4E timing report	[re-agent]	med

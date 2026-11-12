@@ -1,0 +1,21 @@
+# Our names for register facts -> facts/names.h (scripts/facts_regs.py). Spec side only; written in our words.
+# our_name	target (positional name in facts/regs/*.h)	note (ours; no vendor text)
+# Rules: UPPER_SNAKE; never equal to a vendor register/field name (generator refuses); one fact, one name.
+REG_PAGE	P00_9F	register page select for the host-bus engine
+HB_CTRL	PFF_F3	host-bus engine control
+HB_CTRL_NOINC	PFF_F3_B5	1 = target address does not auto-increment
+HB_CTRL_CMD_GO	PFF_F3_B4	start command-list burst; reads 1 while busy
+HB_CTRL_DATA_GO	PFF_F3_B3	start data burst; reads 1 while busy
+HB_CTRL_CMD_ERR	PFF_F3_B2	command-list length mismatch
+HB_CTRL_NO_IRQ_RELEASE	PFF_F3_B1	1 = an interrupt does not release the stalled CPU
+HB_TARGET	PFF_F4	target register address, low byte
+HB_SRC_BANK	PFF_F6	burst source address bits 23:16 (flash bank)
+HB_SRC_HI	PFF_F7	burst source address bits 15:8
+HB_SRC_LO	PFF_F8	burst source address bits 7:0
+HB_LEN_HI	PFF_F9	burst length bits 15:8
+HB_LEN_LO	PFF_FA	burst length bits 7:0
+HB_GAP	PFF_FB	gap between burst items, in engine periods
+MCU_MAP	PFF_FC	CPU memory-map control
+MCU_MAP_BURST_FROM_XRAM	PFF_FC_B5	1 = burst source is internal XRAM, 0 = flash
+OSD_FRAME_0A	P3A_0A	OSD frame control byte 0x0A
+OSD_HDOUBLE	P3A_0A_B1	OSD horizontal double-size enabled

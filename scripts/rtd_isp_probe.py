@@ -10,24 +10,18 @@ usage: rtd_isp_probe.py <bus> [--enter-isp [--dump out.bin [--block N]]]   (dump
 Protocol + tags: docs/reversing/realtek-rtd/README.md
 Log: ./tmp/logs/rtd_isp_probe.log
 """
-import ctypes, fcntl, os, sys, time
+import os, sys, time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import rtd_proto  # noqa: E402  (trace tap: decoded + raw logs, see rtd_proto.setup_logs)
+import i2cbus  # noqa: E402
+from i2cbus import Msg, I2C_M_RD  # noqa: E402,F401  (re-export for rtd_flash_sector)
+
 ISP_ADDR = 0x4A
-I2C_RDWR = 0x0707
-I2C_M_RD = 1
 # SPI-engine poll: 3-byte JEDEC at >=1 MHz SPI ~ 30 us; one poll = 2 I2C msgs ~ 0.5 ms
 # at 100 kHz, so 1-2 polls expected. 20 polls (~10 ms) = ~10x; on expiry: log + abort.
 POLL_MAX = 20
-
-
-class Msg(ctypes.Structure):
-    _fields_ = [("addr", ctypes.c_uint16), ("flags", ctypes.c_uint16),
-                ("len", ctypes.c_uint16), ("buf", ctypes.c_void_p)]
-
-
-class RdWr(ctypes.Structure):
-    _fields_ = [("msgs", ctypes.POINTER(Msg)), ("nmsgs", ctypes.c_uint32)]
 
 
 def repo_root() -> Path:
@@ -46,30 +40,28 @@ def log(s: str) -> None:
 
 class Isp:
     def __init__(self, bus: int):
-        self.fd = os.open(f"/dev/i2c-{bus}", os.O_RDWR)
+        self.bus = i2cbus.Bus(bus)
 
     def _xfer(self, msgs):
-        arr = (Msg * len(msgs))(*msgs)
-        d = RdWr(arr, len(msgs))
-        fcntl.ioctl(self.fd, I2C_RDWR, d)
+        self.bus.xfer(msgs)
 
     def read(self, reg: int) -> int:
-        w = ctypes.create_string_buffer(bytes([reg]), 1)
-        r = ctypes.create_string_buffer(1)
-        self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(w)),
-                    Msg(ISP_ADDR, I2C_M_RD, 1, ctypes.addressof(r))])
-        return r.raw[0]
+        return self.read_block(reg, 1)[0]
 
     def read_block(self, reg: int, n: int) -> bytes:
-        w = ctypes.create_string_buffer(bytes([reg]), 1)
-        r = ctypes.create_string_buffer(n)
-        self._xfer([Msg(ISP_ADDR, 0, 1, ctypes.addressof(w)),
-                    Msg(ISP_ADDR, I2C_M_RD, n, ctypes.addressof(r))])
-        return r.raw
+        try:
+            data = i2cbus.run_ops(self._xfer, ISP_ADDR, [bytes([reg]), n])[0]
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR, "r", reg, None, n, str(e)); raise
+        rtd_proto.trace(ISP_ADDR, "r", reg, data, n)
+        return data
 
     def write(self, reg: int, val: int) -> None:
-        w = ctypes.create_string_buffer(bytes([reg, val]), 2)
-        self._xfer([Msg(ISP_ADDR, 0, 2, ctypes.addressof(w))])
+        try:
+            i2cbus.run_ops(self._xfer, ISP_ADDR, [bytes([reg, val])])
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR, "w", reg, bytes([val]), 0, str(e)); raise
+        rtd_proto.trace(ISP_ADDR, "w", reg, bytes([val]))
 
     def spi_jedec(self) -> bytes:
         self.write(0x60, 0x46)   # type=read, nr=3
@@ -107,9 +99,10 @@ def main() -> int:
     global LOG
     logdir = repo_root() / "tmp" / "logs"
     logdir.mkdir(parents=True, exist_ok=True)
-    LOG = (logdir / "rtd_isp_probe.log").open("a")
+    LOG = rtd_proto.setup_logs("rtd_isp_probe").main
     bus = int(sys.argv[1])
     enter = "--enter-isp" in sys.argv
+    i2cbus.dev_hint("identify", "rtd_isp_probe.py")
     isp = Isp(bus)
     log(f"bus=/dev/i2c-{bus} addr=0x{ISP_ADDR:02x} enter_isp={enter}")
     for reg in (0x6F, 0x60, 0x67, 0x68, 0x69):

@@ -4,3 +4,101 @@
 CODE:f049	osd_builder_menu_source	func	Generic MENU/SOURCE/NO-SIGNAL text builder (entry; 0xf070/0xf269 are font-dl tails). Reached from ~8 bank0 states via thunk 0x0FDB. Not the power-on splash. docs/boot-logo.md.	[fw]
 CODE:f070	osd_screen_builder_3	func	Font-dl tail of osd_builder_menu_source (caller of thunk 0x106b); far ptr from code table 0x6206. docs/boot-logo.md.	[fw]
 CODE:f269	osd_screen_builder_4	func	Font-dl tail: far ptr FF:31:AB (flash 0x231AB), descriptor 0x31B3; font-set variant DBBC = E057 & 3 (= INPUT SOURCE) -> source/no-signal screens. docs/boot-logo.md.	[fw]
+CODE:8646	ScalerIDomainScalingDownInitial	func	auto: matched SDK ScalerIDomainScalingDownInitial by register fingerprint, score 0.75, 3 regs.	[auto-sdk]
+CODE:9dfb	ScalerPLLSetMPLLFreq	func	auto: matched SDK ScalerPLLSetMPLLFreq by register fingerprint, score 0.47, 9 regs.	[auto-sdk]
+CODE:a043	ScalerDPLLFineTuneFrameSyncLineBuffer	func	auto: matched SDK ScalerDPLLFineTuneFrameSyncLineBuffer by register fingerprint, score 0.52, 6 regs.	[auto-sdk]
+CODE:bfc4	ScalerMemoryUpdateIVS2DVSLineDelay	func	auto: matched SDK ScalerMemoryUpdateIVS2DVSLineDelay by register fingerprint, score 0.55, 5 regs.	[auto-sdk]
+CODE:e05e	ScalerFRCEn	func	auto: matched SDK ScalerFRCEn by register fingerprint, score 0.55, 5 regs.	[auto-sdk]
+CODE:e322	ScalerFRCInitial	func	auto: matched SDK ScalerFRCInitial by register fingerprint, score 0.63, 15 regs.	[auto-sdk]
+CODE:ec3f	ScalerFmtCnv420To422D2D3Setting	func	auto: matched SDK ScalerFmtCnv420To422D2D3Setting by register fingerprint, score 0.48, 6 regs.	[auto-sdk]
+CODE:ede8	ScalerFmtCnvFtoPControl	func	auto: matched SDK ScalerFmtCnvFtoPControl by register fingerprint, score 0.53, 4 regs.	[auto-sdk]
+CODE:eeb9	ScalerVgipInputInitial	func	auto: matched SDK ScalerVgipInputInitial by register fingerprint, score 0.84, 6 regs.	[auto-sdk]
+CODE:f165	ScalerMeasureWatchdogStatus	func	auto: matched SDK ScalerMeasureWatchdogStatus by register fingerprint, score 0.75, 5 regs.	[auto-sdk]
+CODE:f26d	ScalerPLLSetDPLLReset	func	auto: matched SDK ScalerPLLSetDPLLReset by register fingerprint, score 0.86, 7 regs.	[auto-sdk]
+CODE:f45f	ScalerPLLM2PLLPower	func	auto: matched SDK ScalerPLLM2PLLPower by register fingerprint, score 0.64, 4 regs.	[auto-sdk]
+CODE:f4ac	ScalerMeasureSetAuto	func	auto: matched SDK ScalerMeasureSetAuto by register fingerprint, score 0.74, 4 regs.	[auto-sdk]
+CODE:f72f	ScalerMeasureAutoFuncVBoundInitial	func	auto: matched SDK ScalerMeasureAutoFuncVBoundInitial by register fingerprint, score 0.49, 4 regs.	[auto-sdk]
+CODE:f8d3	ScalerFmtCnvFtoPSetFifo	func	auto: matched SDK ScalerFmtCnvFtoPSetFifo by register fingerprint, score 0.56, 4 regs.	[auto-sdk]
+CODE:faed	ScalerColor420To422D2D3Enable	func	auto: matched SDK ScalerColor420To422D2D3Enable by register fingerprint, score 0.75, 3 regs.	[auto-sdk]
+CODE:c732	ScalerOsdPositionOffsetCalculation	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_OSDPOSITIONOFFSETCORRECTION, exact masked match.	[lib]
+CODE:e3ca	ScalerGetDataPortByte	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONDATAPORTACCESS, exact masked match.	[lib]
+CODE:f3c0	ScalerSetDataPortBit	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONDATAPORTACCESS, exact masked match.	[lib]
+CODE:f9dc	ScalerGetDataPortBit	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONDATAPORTACCESS, exact masked match.	[lib]
+CODE:fb8d	ScalerSetDataPortByte	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONDATAPORTACCESS, exact masked match.	[lib]
+CODE:fe6e	ScalerOsdPositionOffsetCorrection	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_OSDPOSITIONOFFSETCORRECTION, exact masked match.	[lib]
+CODE:f9a9	ScalerDDR2PowerControl	func	ON: 9dfb MPLL(0x000514C8) -> 93b1 DDR2PLL(0x00124F80) -> d22d -> PHY loop inline 687c-6d8c (dbae=DDRSel 0/1); OFF: be0a, e470, MPLL_WD|=1. SDK RL6449_Series_DDR2.c; PHY values = SDK 1200M branch	[re-agent]	high
+CODE:93b1	ScalerPLLSetDDR2PLLFreq	func	arg 0x00124F80 = 1200000 kHz from f9a9; regs CRT_RST/CRT_CTRL/PLL_CTRL (page 88). SDK ScalerPLL.c	[re-agent]	high
+CODE:be0a	ScalerPLLDDR2PLLOutputCtrl	func	PLL_CTRL0_1..4 dwords 0x000018CF / 0x00CF18CF per DDR sel (be32/bf09). Called from f9a9 OFF path first. SDK ScalerPLL.c	[re-agent]	high
+CODE:e470	ScalerPLLDDR2PLLCtrl	func	CRT_RST_CTL_1 dword writes per DDR sel; called from f9a9 OFF path after OutputCtrl. SDK ScalerPLL.c	[re-agent]	high
+CODE:d22d	ScalerDDR2DCSysInitial	func	DC_SYS_MISC3, DC_DEBUG3, DC_PRIORITY3_CTRL1..B dwords per DDR sel; called between DDR2PLL and PHY init in f9a9. SDK RL6449_Series_DDR2.c	[re-agent]	high
+CODE:cc6d	ScalerDDR2CalcWrlvlConfig	func	4 phase bytes thresholded at 0x35/0x55/0x75 -> WRLVL_CTRL bits; called from PHY loop before 8E28 write. SDK RL6449_Series_DDR2.c	[re-agent]	high
+CODE:f665	ScalerDDR2RotationSetClientMux	func	M_DOMAIN_CLIENT_MUX_CTRL0 bit4/bit5 from bit0/bit1, e23e==2 inverts (ROT_CW180). SDK RL6449_Series_DDR2.c	[re-agent]	high
+CODE:6319	ScalerMemoryFrameSyncSetDt	func	called with 0x32 (= _DT_TARGET_PERCENTAGE 50) from d53e line-buffer path; body incl. FS_DELAY_FINE_TUNE rmw at 6853/6868/6871 (interlace tail); 6612/66a8 are fragments. SDK RL6449_Series_Memory.c	[re-agent]	high
+CODE:d11b	ScalerFRCControl	func	calls 0b13(AdjustIVS2DVSDelay), ad0e, 9657+fce7 (sel==3), 90e4, 7a62, buffer-count switch on CAP/DISP_DDR_CTRL1 bits6..3, DB enable. SDK RL6449_Series_FRC.c	[re-agent]	high
+CODE:90e4	ScalerFRCInputCtrl	func	CAP_M1_DDR_CTRL2/LINE_NUM/WR_REMAIN; calls df9f (CalculateFrameLineTotalPixel). SDK RL6449_Series_FRC.c	[re-agent]	high
+CODE:7a62	ScalerFRCDisplayCtrl	func	DISP_M1/M2_PRRD_VST/READ_NUM/READ_LEN/READ_REMAIN; same skeleton as 90e4. SDK RL6449_Series_FRC.c	[re-agent]	high
+CODE:ad0e	ScalerFRCCompareIHFandDHF	func	e01e>>1&3==2 && e23e in (2,5) rotation branch; CAP_Mx_4CH_CTRL2 bit2; DISP_M1_DISP_CTRL1 bit3; output VStart/VHeight e040/e042. SDK RL6449_Series_FRC.c	[re-agent]	high
+CODE:9657	ScalerMemoryFrameTracking	func	called in d11b when GET_MEMORY_SELECT()==3; DISPLAY_FORMAT port + LAST_LINE_H + FS_DELAY. SDK ScalerMemory.c	[re-agent]	high
+CODE:fce7	ScalerMemorySetFrameTrackingEnable	func	DISPLAY_FORMAT_ADDR_PORT pt 0x25 bit7 = bEn; called with 1 after 9657 in d11b. SDK ScalerMemory.c	[re-agent]	high
+CODE:aaff	ScalerFRCSetOneFrameDVTotal	func	anchor from caller (#26 notes); only 1x call, from the free-run branch (memsel==2) of 9b91 like SDK DHVtotalFinetune; body mostly outside export (noreturn cut after 7080). SDK ScalerFRC	[re-agent]	med
+CODE:d43d	ScalerMemorySetFifoCapture	func	FIFO_WINDOW dataport pt 0..3, DISP_Mx_PRRD_VST=0, CAP_M1/M2_PIXEL_NUM, LINE_NUM, DISP_CTRL2 bit7 when data bit==0x1e. SDK RL6449_Series_Memory.c	[re-agent]	high
+CODE:fd19	ScalerMemorySetFIFOFreq	func	M1_FIFO_CLOCK_SELECT bits1:0 = 00/11; called with 1 in line-buffer path of d53e. SDK RL6449_Series_Memory.c	[re-agent]	high
+CODE:fe31	ScalerM2PLLDiv	func	M1_FIFO_CLOCK_SELECT bits6..3 = ucDiv. SDK ScalerPLL.c	[re-agent]	high
+CODE:e90a	ScalerMemorySetShiftOneLine	func	exact structure: ROTATION_IN_WID, ROTATION_CTRL0 bit1, DISP_M1_DISP_CTRL2 bit4, SD_FILTER_CONTROL_REG bit1, input VStart=1 (e030/e031). SDK RL6449_Series_Memory.c	[re-agent]	high
+CODE:fc7d	ScalerMemoryInitial	func	ScalerFRCInitial + e11b (OD addr) + ShiftOneLine(freesync). SDK ScalerMemory.c	[re-agent]	high
+CODE:e11b	ScalerODSetMemoryStartAddress	func	slot between FRCInitial and ShiftOneLine in ScalerMemoryInitial; reads 2 dwords then long arithmetic. SDK RL6449_Series_OD.c	[re-agent]	med
+CODE:826a	ScalerMemoryFineTuneIVS2DVSDelay	func	timeout counter 0xff, clears IVS2DVS_DLY_TUNE_ODD/EVEN + DISPLAY_ALIGN_CONTROL, M1_VGIP_CTRL bit1 test, VStart+VHeight vs VTotal. SDK ScalerMemory.c	[re-agent]	high
+CODE:e775	ScalerMemoryGetIVS2DVSDelayPixel	func	(DISPLAY_ALIGN_CONTROL<<4 & 0x300 | IVS2DVS_DLY_TUNE_ODD)+1)*16 visible. SDK ScalerMemory.c	[re-agent]	high
+CODE:df9f	ScalerMemoryCalculateFrameLineTotalPixel	func	bit mode arg, data bit e01d&0x1f, /64 and 4-align (line mode); called by 90e4/7a62. SDK ScalerMemory.c	[re-agent]	high
+CODE:d53e	ScalerMDomainControl	func	exact call order: e800, fedf, d43d, urgent chk, memsel switch, ..., STATUS0=0xFF, WATCH_DOG_CTRL0|=1, e887, ea80, c5d1, f90b. SDK ScalerMDomain.c	[re-agent]	high
+CODE:e800	ScalerMDomainMemorySettings	func	d730 DVF select -> e27a DVFreq -> fbee data bit -> ed16 mem config -> fa0d mem select -> a49e DclkDVtotal -> fa95 SSC -> scaling; writes g_stMDomainInfo e01c/e01d. SDK ScalerMDomain.c	[re-agent]	high
+CODE:d730	ScalerDisplaySelectDVFMode	func	returns DVF select from input VFreq (e02a) vs panel freq limits; result stored to e01c bits5:3. SDK ScalerDisplay.c	[re-agent]	high
+CODE:e27a	ScalerDisplaySetDVFreq	func	switch on e01c>>3&7, writes g_usDVFreq e01a/e01b = f(input VFreq e02a). SDK ScalerDisplay.c	[re-agent]	high
+CODE:fbee	ScalerMDomainSetMemoryDataBit	func	depth*3 >= limit ? 0x1e : 0x18 into e01d low 5 bits. SDK ScalerMDomain.c	[re-agent]	high
+CODE:ed16	ScalerMDomainMemoryConfig	func	returns memory work mode (line buffer vs memory) from freesync/OSD/rotation state; result to e01c bits7:6. SDK ScalerMDomain.c	[re-agent]	high
+CODE:fa0d	ScalerMDomainMemorySelectConfirm	func	switch on e01c>>3&7 (DVF select): memconf==1 -> frame sync/MN/free-run codes; else line buffer. SDK ScalerMDomain.c	[re-agent]	high
+CODE:a49e	ScalerMDomainCalculateDclkDVtotal	func	arg = memory select (also _FREE_RUN_NO_INPUT from 9b91); between SelectConfirm and SSC in e800. SDK ScalerMDomain.c	[re-agent]	high
+CODE:9b91	ScalerMDomainSetDisplayFormat	func	arg=memory select; calls b8b7; sets VIDEO_DISPLAY_CONTROL_REG masks 0x74|0x0b/0x83; free-run calls aaff and a49e. SDK ScalerMDomain.c	[re-agent]	high
+CODE:b8b7	ScalerMDomainSetDisplayTimingGen	func	DISPLAY_FORMAT_ADDR_PORT 3/9/5/0xd/0xe/0x14/0x10 from g_stMDomainOutputData e03a..e046, VIDEO_DISPLAY_CONTROL_REG1 = &0xE0|0x18. SDK ScalerMDomain.c	[re-agent]	high
+CODE:ea80	ScalerMDomainDisplayTimingGenCheck	func	freesync && memsel in (0,1): output VTotal from last line; check VBStart+VBHeight (e044/e046) vs VTotal (e03e). SDK ScalerMDomain.c	[re-agent]	high
+CODE:f90b	ScalerMDomainUpdateLineBufferModeDVtotal	func	only when memsel==0: reads last-line DVtotal into output VTotal. SDK ScalerMDomain.c	[re-agent]	high
+CODE:e887	ScalerMeasureInputActiveRegionChange	func	I_ACT_MEAS_CTRL bit0 clear; compares region count with g_ulInputActiveRegionBackUp e091 (>>8 tolerance). SDK ScalerMeasure.c	[re-agent]	high
+CODE:fedf	ScalerMeasureSetInputRegionCount	func	thunk to cadc(0x3040 = I_ACT_MEAS_CTRL); called with 0 in d53e. SDK ScalerMeasure.c	[re-agent]	high
+CODE:fd8c	ScalerMeasureGetInputRegionCountResult	func	bWait -> 2x 0855 (IVS wait) then ca4b(0x3040) pop-up; result stored to e091 in d53e. SDK ScalerMeasure.c	[re-agent]	high
+CODE:c5d1	ScalerMeasureUpdateOnlineMeasureResult	func	MEAS_HS_VS_DELTA_WD/IRQ/CTL; called after IDDomain DB trigger in d53e. SDK ScalerMeasure.c	[re-agent]	high
+CODE:a8e3	ScalerMeasureTimingChange	func	MEAS_ERROR_FLG0 masks 0x90 (source 4) / 0xb0, MEAS_CTL1 bit7, calls ba87. SDK ScalerMeasure.c	[re-agent]	high
+CODE:ba87	ScalerMeasureGetOfflineMeasureResult	func	10/10 regs MEAS_CTL1/ERROR_FLG0/1/HS_PERIOD/VS_PERIOD/VS_PULSE. SDK RL6449_Series_Measure.c	[re-agent]	high
+CODE:d63d	ScalerMeasureSetOfflineMeasure	func	SYNC_SELECT/MEAS_CTL0/MEAS_CTL1/YUV420_TO_422_CTL by source type 4/5/6. SDK RL6449_Series_Measure.c	[re-agent]	high
+CODE:f319	ScalerMeasureAutoFuncWaitFinish	func	AUTO_ADJ_CTRL0 bits, AUTO_ADJ_CTRL1 bit0 poll with 0855 delay. SDK ScalerMeasure.c	[re-agent]	high
+CODE:f6ac	ScalerMeasureAutoFuncHBoundInitial	func	H_BOUNDARY_H/STA_L/END_L + GRN_NOISE_MARGIN. SDK ScalerCommonMeasure.c	[re-agent]	high
+CODE:c303	ScalerMeasureInputInfo	func	calls b114 (InterlaceCheck) + 0855 waits + SCALE_CONTROL_REG bit6 test as SDK. SDK RL6449_Series_Measure.c	[re-agent]	high
+CODE:b114	ScalerMeasureInterlaceCheck	func	M1/M2_VGIP_ODD_CTRL, INTERLACE_MODE_CONFIG, M1_IPV_ACT_LEN_H; 5/5 regs. SDK RL6449_Series_Measure.c	[re-agent]	med
+CODE:f2c3	ScalerMeasureInterlaceInitial	func	M1/M2_VGIP_ODD_CTRL &0x3e, IVHS_CTRL_0/2 per port 5/6. SDK RL6449_Series_Measure.c	[re-agent]	med
+CODE:e515	ScalerMeasureGetAutoResult	func	AUTO_ADJ_CTRL1, H_START_END_H, noise-margin helpers. SDK RL6449_Series_Measure.c	[re-agent]	med
+CODE:d339	ScalerMeasureUpdateInputTimingPolarity	func	writes g_stInputTimingData.bf_b1HSP |= 3 / DP MN_STRM_ATTR_CTRL, source types 2,3,4. SDK RL6449_Series_Measure.c	[re-agent]	med
+CODE:8780	ScalerScalingSetScalingDown	func	SCALE_DOWN_CTRL_M1/M2 clear then SD dataport H/V factors (891b..89dc wrappers), LSR_CTRL off; 87ee/885b are split tails. SDK RL6449_Series_Scaling.c	[re-agent]	high
+CODE:fa95	ScalerPLLSetDPLLSSC	func	DCLK_SSC_COUNT=0x94, DCLK_SPREAD_SPECTRUM; called (0,0) in e800/d53e. SDK ScalerPLL.c	[re-agent]	high
+CODE:fa69	ScalerMDomainSetDBOsdFlow	func	ScalerOsdPositionOffsetCalculation -> FRAME_CTRL_2C/2F. SDK ScalerMDomain.c	[re-agent]	high
+CODE:f58c	ScalerFmtCnvSetBackgroundColor	func	PORCH_COLOR_CTRL/R/G/B M1,M2 (7/7 regs). SDK RL6449_Series_FormatConversion.c	[re-agent]	high
+CODE:ebd3	ScalerFmtCnvInitialSetting	func	FC_INPUT_SEL_P01 source type switch, FC_SYNC_CTRL, VS_DELAY_CTRL, half-SD enable. SDK RL6449_Series_FormatConversion.c	[re-agent]	high
+CODE:efe7	ScalerFmtCnvFinalSetting	func	calls FtoPSetFifo/FtoPControl, FC_INPUT_CLK_GATING, M1_IPV_ACT_LEN_H bit5. SDK RL6449_Series_FormatConversion.c	[re-agent]	high
+CODE:fd78	ScalerFmtCnvHalfSDControl	func	FC_SD_CTRL bit7 / FC_EO_LINE_CTRL bit7, bit arg. SDK ScalerFormatConversion.c	[re-agent]	high
+CODE:fdc7	ScalerFmtCnvHalfSDSetFirstPixel	func	FC_SD_CTRL bit3 from LSB of H start. SDK ScalerFormatConversion.c	[re-agent]	high
+CODE:721c	ScalerPLLSetDPLLFreqMN	func	entry: spills ulFreq to dbbe; DPLL_M/N/M_N_MSB/OUTPUT_CLK_DIV/CRNT; state machine dbc2 (7402/75ae/7537 are fragments). Body mostly outside export. SDK ScalerPLL.c	[re-agent]	med
+CODE:8efd	mdomain_get_memory_select	func	returns e01c & 7 (g_stMDomainInfo.b3MemorySelect; GET_MEMORY_SELECT)	[re-agent]	high
+CODE:7032	mdomain_get_memory_select_b	func	same as 8efd (duplicate accessor)	[re-agent]	high
+CODE:8f56	mdomain_get_memory_dvf_select	func	returns e01c>>3 & 7 (GET_MEMORY_DVF_SELECT)	[re-agent]	high
+CODE:6f02	mdomain_get_memory_frame_buffer	func	returns e01e>>1 & 3 (GET_MEMORY_FRAME_BUFFER)	[re-agent]	high
+CODE:90af	mdomain_get_memory_frame_buffer_b	func	same as 6f02 (duplicate accessor)	[re-agent]	high
+CODE:716e	idomain_db_status_bit7	func	I_DB_CTRL0 & 0x80 (P31_A0), the 'if(GetBit(I_DB_CTRL0,BIT7)==0) wait' test in ScalerFRCControl	[re-agent]	high
+CODE:709a	ddomain_db_status_bit7	func	D_DB_CTRL0 & 0x80 (P31_B0)	[re-agent]	high
+CODE:fbe0	get_color_space	func	g_stColorInfo.bf_b3ColorSpace & 7	[re-agent]	high
+EXTMEM:e01c	g_stMDomainInfo	var:StructMDomainInfo	3 bytes; e01c&7 memsel, >>3&7 DVF sel, >>6 memconf; e01d&0x1f data bit; e01e bit0 VSD, >>1&3 frame buffer (bitfields declared-first = LSB)	[re-agent]	high
+EXTMEM:e01f	g_stMDomainInputData	var:StructTimingInfo	usVFreq e02a, usVTotal e02c, usVHeight e02e, usVStart e030 (e90a sets 1); Keil ?XD?SCALERMDOMAIN order info+3	[re-agent]	high
+EXTMEM:e034	g_stMDomainOutputData	var:StructDisplayInfo	HTotal e034, HStart e036, HBackStart e03a, VTotal e03e, VStart e040, VHeight e042, VBackStart e044, VBackHeight e046 (b8b7 vs DISPLAY_FORMAT ports)	[re-agent]	high
+EXTMEM:e014	g_stMDomainFRCFIFOData	var:StructFRCFIFOInfo	e800 writes e014..e019 (space,bw,fifo width)	[re-agent]	high
+EXTMEM:e01a	g_usDVFreq	var:u16	written by e27a ScalerDisplaySetDVFreq	[re-agent]	high
+EXTMEM:e010	g_ulDClkFreq	var:u32	dword read via 8e3b(0xe010); position from ScalerMDomain XD layout	[re-agent]	med
+EXTMEM:e091	g_ulInputActiveRegionBackUp	var:u32	e887 compares with I_ACT_MEAS region count; d53e stores result (15ce 0xe091); ScalerMeasure XD layout g_stInputTimingData e07c + 0x15	[re-agent]	high
+EXTMEM:e095	g_stMeasureSyncHV	var:StructMeasureSyncData	e095&1 = bf_b1HSP compared with dbaf&1; XD layout +4 after BackUp	[re-agent]	med
+EXTMEM:e0a4	g_stActiveRegion	var:StructAutoActiveData	e0a4 u16 VActiveStart, e0a6 VActiveEnd; written by e515 path (af63(0xe0a4))	[re-agent]	med

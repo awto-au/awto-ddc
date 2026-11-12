@@ -1,0 +1,66 @@
+# Side-effect-free registers polled by port_watch.py (reads never change state; W1C flags clear only on a write). Built from re/regdb/RTD2795T-CG.tsv.gz + board header (docs: port_watch.py --list).
+# set: fast = every sweep, slow = every --slow-every sweeps. mode: level = print each change; rate = print edges/s per 1 s window. bits: n or hi:lo.
+addr	bits	name	set	mode	note
+0xFFE2	0	P1.0_H2_HPD_OUT	fast	level	pin 1 HDMI-2 HPD driven by fw; P1 SFR mirror
+0xFFE2	1	P1.1_H1_HPD_OUT	fast	level	pin 14 HDMI-1 HPD driven by fw
+0xFFE2	4	P1.4_A0_CONNECT	fast	level	pin 67 VGA cable-detect pad (VGA unused here)
+0xFFE2	5	P1.5_D0_PIN17	fast	level	pin 68 D0 sense (no D0 connector)
+0xFFE2	6	P1.6_D0_PIN16	fast	level	pin 69 D0 sense
+0xFFE2	7	P1.7_D0_PIN15	fast	level	pin 70 D0 sense
+0xFE01	0	P4.1_D0_HPD	fast	level	pin 96 D0 HPD (unused)
+0xFE02	0	P4.2_DP_HPD_OUT	fast	level	pin 97 DP HPD driven by fw (D1)
+0xFE2B	0	P9.3_HDMI_MHL_SEL	fast	level	pin 197 input, load unresolved
+0xFE2C	0	P9.4_H2_CABLE	fast	level	pin 198 HDMI-2 (D3) cable detect; polarity unconfirmed (inputs.tsv: 1=cable, fw_sim: low=connected)
+0xFE31	0	PA.1_MHL_DET3	fast	level	pin 203 input, load unresolved
+0xFE32	0	PA.2_H1_CABLE	fast	level	pin 204 HDMI-1 (D2) cable detect; polarity unconfirmed
+0xFE33	0	PA.3_DPS17_AUXN	fast	rate	pin 206 DP connector pin 17 sense; pulses ~4 ms every 60-100 ms: reported as edges/s
+0xFE34	0	PA.4_DPS15_AUXP	fast	level	pin 207 DP connector pin 15 sense
+0xFE35	0	PA.5_DPS16_GND	fast	level	pin 208 DP connector pin 16 sense
+0xFFE4	2	DDC0_SCL_TOGGLE	fast	level	latched: SCL toggled since fw last cleared (W1C; read is safe)
+0xFFE4	0	DDC0_EDID_READ	fast	level	latched: EDID read since fw last cleared (W1C)
+0xFFE5	2	DDC1_SCL_TOGGLE	fast	level	latched: SCL toggled since fw last cleared (W1C; read is safe)
+0xFFE5	0	DDC1_EDID_READ	fast	level	latched: EDID read since fw last cleared (W1C)
+0xFE69	2	DDC2_SCL_TOGGLE	fast	level	latched: SCL toggled since fw last cleared (W1C; read is safe)
+0xFE69	0	DDC2_EDID_READ	fast	level	latched: EDID read since fw last cleared (W1C)
+0xFE72	2	DDC3_SCL_TOGGLE	fast	level	latched: SCL toggled since fw last cleared (W1C; read is safe)
+0xFE72	0	DDC3_EDID_READ	fast	level	latched: EDID read since fw last cleared (W1C)
+0x7101	3	D2_HDMI1_SCRAM_DET	slow	level	sink saw scrambled codes (HDMI2.0 source)
+0x7117	5	D2_HDMI1_LOCK_CH2	slow	level	realtime TMDS channel lock
+0x7117	4	D2_HDMI1_LOCK_CH1	slow	level	realtime TMDS channel lock
+0x7117	3	D2_HDMI1_LOCK_CH0	slow	level	realtime TMDS channel lock
+0x7117	2:0	D2_HDMI1_LOCK_TRANS	slow	level	lock transition flags ch2..0
+0x7123	0	D2_HDMI1_HPD_RT	slow	level	HPD realtime flag as the HDMI block sees it
+0x7125	7	D2_HDMI1_SCDC_SLV_HIT	slow	level	source addressed SCDC slave (W1C flag)
+0x7125	4	D2_HDMI1_SCDC_TMDS_CFG_WR	slow	level	source wrote SCDC 0x20 (W1C flag)
+0x71C4	4	D2_HDMI1_HDCP_HDMI_MODE	slow	level	HDMI (not DVI) conditions seen
+0x71E6	6	D2_HDMI1_FREQDET_DONE	slow	level	freq detect ran once (only if fw started it)
+0x71E6	2	D2_HDMI1_FREQ_UNSTABLE	slow	level	freq unstable flag
+0x71EF	5	D2_HDMI1_NO_CLOCK	slow	level	1 = no TMDS clock
+0x71EF	6	D2_HDMI1_FREQ_STABLE	slow	level	freq stable at least once (W1C)
+0x7201	3	D3_HDMI2_SCRAM_DET	slow	level	sink saw scrambled codes (HDMI2.0 source)
+0x7217	5	D3_HDMI2_LOCK_CH2	slow	level	realtime TMDS channel lock
+0x7217	4	D3_HDMI2_LOCK_CH1	slow	level	realtime TMDS channel lock
+0x7217	3	D3_HDMI2_LOCK_CH0	slow	level	realtime TMDS channel lock
+0x7217	2:0	D3_HDMI2_LOCK_TRANS	slow	level	lock transition flags ch2..0
+0x7223	0	D3_HDMI2_HPD_RT	slow	level	HPD realtime flag as the HDMI block sees it
+0x7225	7	D3_HDMI2_SCDC_SLV_HIT	slow	level	source addressed SCDC slave (W1C flag)
+0x7225	4	D3_HDMI2_SCDC_TMDS_CFG_WR	slow	level	source wrote SCDC 0x20 (W1C flag)
+0x72C4	4	D3_HDMI2_HDCP_HDMI_MODE	slow	level	HDMI (not DVI) conditions seen
+0x72E6	6	D3_HDMI2_FREQDET_DONE	slow	level	freq detect ran once (only if fw started it)
+0x72E6	2	D3_HDMI2_FREQ_UNSTABLE	slow	level	freq unstable flag
+0x72EF	5	D3_HDMI2_NO_CLOCK	slow	level	1 = no TMDS clock
+0x72EF	6	D3_HDMI2_FREQ_STABLE	slow	level	freq stable at least once (W1C)
+0xB00E	4	DP_LANE_ALIGN	slow	level	DP lanes aligned
+0xB00E	1	DP_LANE_ALIGN_FALL	slow	level	align -> non-align (W1C)
+0xB051	2	DP_SIG_NO_CLOCK	slow	level	only valid while fw runs DP signal detect
+0xB601	3	DP_VBID_NO_VIDEO	slow	level	VB-ID no-video flag
+0xB636	6	DP_VBID3_CHG	slow	level	VB-ID[3] changed (W1C)
+0xB636	4	DP_STRM_ATTR_CHG	slow	level	main stream attributes changed (W1C)
+0xB7DB	3	AUXB7_RCV_ERR	slow	level	AUX receive error
+0xB7DC	0	AUXB7_RX_INT	slow	level	AUX command received from source (W1C)
+0xB7DC	1	AUXB7_TIMEOUT_INT	slow	level	AUX timeout auto-reply (W1C)
+0xB7DD	7:0	AUXB7_DPCD_WR_IRQ	slow	level	source wrote DPCD 100/101/102/103-108/201/260/270/300/600 (W1C flags, byte)
+0xBADB	3	AUXBA_RCV_ERR	slow	level	AUX receive error
+0xBADC	0	AUXBA_RX_INT	slow	level	AUX command received from source (W1C)
+0xBADC	1	AUXBA_TIMEOUT_INT	slow	level	AUX timeout auto-reply (W1C)
+0xBADD	7:0	AUXBA_DPCD_WR_IRQ	slow	level	source wrote DPCD 100/101/102/103-108/201/260/270/300/600 (W1C flags, byte)

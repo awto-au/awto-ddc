@@ -86,3 +86,9 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - [ ] Open monitor, read scaler part number and SPI flash chip
 - [ ] Try DDC/AUX ISP read with the vendor tool (Windows, outside this box)
 - [ ] Dump flash before any write
+
+## Philips 288E2 (the PC's other monitor, `card2-DP-2`, checked 2026-11-05)
+- Not Realtek: DDC/CI VCP 0xC8 (display controller type) reports MStar, controller 0x16, firmware 1.0; its capabilities string has no `RTK` model [measured, ddcutil].
+- Debug port: not determinable from the PC side. On DP the I2C runs over AUX, which acknowledged every address (same reply for 0x4A, 0x35 and a nonsense address), so probing says nothing [measured]. The Realtek ISP/debug protocol would not apply to an MStar chip anyway.
+- Identity: Philips 288E2, serial UK52307000611, week 7/2023, 4K60 native. EDID saved at `tmp/philips/edid.bin` (not tracked).
+- Never touch it with our tools: it is Dan's own display. Excluded from all flash/DDC test scripts by EDID serial.

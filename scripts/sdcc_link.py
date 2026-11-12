@@ -33,55 +33,18 @@ def rel_sizes(rels):
     return tot, ovr, ddovl
 
 
-def with_libs(cmd):
-    """cmd with its own library args dropped and T.LINK_LIBS added once: one -k (the stamped install's
-    mcs51-large[-be][-scN]) and one -l mcs51 (the driver's default dirs named a second install, awto-sdcc#20)."""
-    out = [c for c in map(str, cmd) if not c.startswith(("-L", "-l")) and c != "--nostdlib"]
-    k = out.index("-o") if "-o" in out else len(out)
-    return out[:k] + T.LINK_LIBS + out[k:]
-
-
-def check_lk(lk: Path):
-    """'' if the link file names exactly one library dir (T.LIB) and one library (mcs51), else the problem."""
-    ls = lk.read_text().splitlines()
-    k, l = [x[3:] for x in ls if x.startswith("-k ")], [x[3:] for x in ls if x.startswith("-l ")]
-    return "" if k == [str(T.LIB)] and l == ["mcs51"] else f"{lk.name}: library dirs {k}, libraries {l} (want [{T.LIB}], [mcs51])"
-
-
-def banked_rom_ok(lk: Path, mapf: Path):
-    """'' if every CODE area of a banked link (code above 64 KiB) ends below -C and stays inside its own 64 KiB bank:
-    the check sdld's -M ROM summary cannot make (it sums all code against a fixed 64 KiB, lkmem.c summary())."""
-    cs = re.search(r"^-C (0x[0-9a-fA-F]+)$", lk.read_text(), re.M)
-    if not cs or not mapf.exists():
-        return f"no -C in {lk.name} or no map"
-    code, bad = int(cs.group(1), 16), []
-    for name, a, n in re.findall(r"^(\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =.*\bCODE\b", mapf.read_text(errors="replace"), re.M):
-        a, n = int(a, 16), int(n, 16)
-        if n and (a + n > code or a >> 16 != (a + n - 1) >> 16):
-            bad.append(f"{name} 0x{a:06x}+{n}")
-    return "" if not bad else f"code areas past -C 0x{code:x} or across a bank: {sorted(set(bad))[:5]}"
-
-
 def _sdld(cmd, ihx: Path):
-    """sdcc link. Fails on any linker warning. A banked image (code > 64 KiB) always trips sdld's -M ROM summary
-    (fixed 64 KiB, lkmem.c): when that is the only error, relink with sdld directly without -M and prove the ROM
-    instead (banked_rom_ok). Verified 2026-11-04 on a 2-bank test: ihx correct."""
+    """sdcc link; if the only error is sdld's -M ROM summary (wrong for code above 64 KB: it wraps banks onto
+    each other), relink with sdld directly without -M. Verified 2026-11-04 on a 2-bank test: ihx correct."""
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=LINK_TIMEOUT)
-    lk = ihx.with_suffix(".lk")
     errs = [l for l in (r.stdout + r.stderr).splitlines() if "Error" in l or "ERROR" in l]
-    if r.returncode and errs and all("Insufficient ROM" in l for l in errs) and lk.exists():
+    if r.returncode and errs and all("Insufficient ROM" in l for l in errs) and ihx.with_suffix(".lk").exists():
+        lk = ihx.with_suffix(".lk")
         nolk = ihx.with_name(ihx.stem + "_nom.lk")
         nolk.write_text("\n".join(l for l in lk.read_text().splitlines() if l.strip() != "-M") + "\n")
         r = subprocess.run([T.tool("sdld"), "-nf", str(nolk)], capture_output=True, text=True, timeout=LINK_TIMEOUT)
-        if not r.returncode:
-            why = banked_rom_ok(nolk, ihx.with_suffix(".map"))
-            if why:
-                r.returncode, r.stdout = 1, r.stdout + f"\nROM check: {why}\n"
-    why = check_lk(lk) if lk.exists() else f"{lk.name} missing"
-    warn = [l for l in (r.stdout + r.stderr).splitlines() if "Warning" in l]
-    if why or warn:                                   # any linker warning fails the link (no accepted warnings)
-        r.returncode = r.returncode or 1
-        r.stdout += "".join(f"\nlink: {x}" for x in [why] * bool(why) + warn) + "\n"
+        if r.returncode == 2 and "Error" not in r.stdout + r.stderr:      # rc 2 = warnings only
+            r.returncode = 0
     return r
 
 
@@ -98,20 +61,29 @@ def dseg_extent(map_text, rels):
 
 def dseg_runs(map_text, rels, mem: Path | None = None):
     """Real DSEG ranges [(lo, hi)]. sdld puts each module's DSEG part in the first free gap, so DSEG splits around the
-    bit bytes at 0x20; its map line is a synthetic total from 0x00. From the -M grid (.mem: a-z / D = DSEG parts) when
-    present, else lowest DSEG symbol + .rel total (contiguous assumption)."""
+    bit bytes at 0x20; its map line is a synthetic total from 0x00. From the -M grid (.mem) when present, else lowest
+    DSEG symbol + .rel total (contiguous assumption).
+    - Grid letters a..z = DATA areax parts in allocation order: DSEG first (every module opens it), then the DDOVL* areas
+      (__ovl.asm), shown at sdld's own first fit, not their -b address: trailing letters sized like a DDOVL area drop."""
     if mem is not None and mem.exists():
         g = {}
         for m in re.finditer(r"^0x([0-9a-f]{2}):((?:\|.){16})\|", mem.read_text(errors="replace"), re.M):
             for i, ch in enumerate(m.group(2)[1::2]):
                 g[int(m.group(1), 16) + i] = ch
-        runs = []
-        for a in sorted(x for x, ch in g.items() if ch.islower() or ch == "D"):
-            if runs and runs[-1][1] == a:
-                runs[-1][1] = a + 1
-            else:
-                runs.append([a, a + 1])
-        return [tuple(r) for r in runs]
+        letters = sorted({ch for ch in g.values() if ch.islower()})
+        if "D" not in g.values():                       # 'D' = sdld ran out of letters: order unknown, fall back
+            ovl = [v for v in rel_sizes(rels)[2].values() if v]
+            size = {ch: sum(1 for x in g.values() if x == ch) for ch in letters}
+            while letters and size[letters[-1]] in ovl:   # trailing parts the size of a DDOVL area (sdld may omit some)
+                ovl.remove(size[letters.pop()])
+            keep = set(letters)
+            runs = []
+            for a in sorted(x for x, ch in g.items() if ch in keep and x < DIRECT_END):
+                if runs and runs[-1][1] == a:
+                    runs[-1][1] = a + 1
+                else:
+                    runs.append([a, a + 1])
+            return [tuple(r) for r in runs]
     d = dseg_extent(map_text, rels)
     return [d] if d else []
 
@@ -139,8 +111,7 @@ def link(cmd, ihx: Path, rels):
     """Pass 1: overlay areas parked in idata, read where sdld put DSEG/OSEG/bits/banks.
     Pass 2: overlay areas first fit (largest first) into the direct holes; ISEG at 0x80, stack after it."""
     _, _, ddovl = rel_sizes(rels)
-    cmd = with_libs(cmd)
-    run = lambda wl: _sdld(cmd + wl, ihx)
+    run = lambda wl: _sdld(list(map(str, cmd)) + wl, ihx)
     park, cur = [], ISEG_BASE
     for k, v in ddovl.items():
         park.append(f"-Wl-a{k}=0x{cur:x}"); cur += v

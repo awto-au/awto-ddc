@@ -13,6 +13,7 @@ import argparse, glob, json, re, subprocess, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i2cbus                                              # noqa: E402
 import rtd_isp_probe as P                                   # noqa: E402
 from rtd_flash_sector import Rtd, T_READ, OP_RDSR, SR_PROT  # noqa: E402
 
@@ -266,11 +267,12 @@ def main():
     a = ap.parse_args()
     if a.bus is None and not a.all:
         ap.error("give <bus> or --all")
+    i2cbus.dev_hint("identify", "rtd_identify.py")
     logdir = P.repo_root() / "tmp" / "logs"
     logdir.mkdir(parents=True, exist_ok=True)
     P.LOG = (logdir / "rtd_identify.log").open("a")
     if a.all:
-        buses = sorted(int(x.rsplit("-", 1)[1]) for x in glob.glob("/dev/i2c-*"))
+        buses = i2cbus.list_buses()
         buses = [b for b in buses if isp_answers(b)]
         log(f"--all: ISP slave answers on buses {buses}")
     else:

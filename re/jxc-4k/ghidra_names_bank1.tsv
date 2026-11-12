@@ -9,3 +9,104 @@ CODE:4bd0	osd_screen_builder_1	func	Font-dl tail of osd_builder_menu_vcp (caller
 CODE:8f33	osd_screen_builder_2	func	Font-dl tail of osd_builder_splash (caller of thunk 0x106b); far ptr FF:38:2F -> flash 0x1382F, bank=SFR 0xFFFF. THE SPLASH path.	[fw]
 CODE:b15e	osd_fontbase_write	label	Writes E1E8:E1E9 = font_base = DBB2(cell_w)*DBB3(rows)+(DBB3+1). E1E8:E1E9 is OSD-SRAM font_base, NOT a flash address. docs/boot-logo.md.	[fw]
 CODE:3837	glyph_set_descriptor_table	data	Glyph-set descriptor table. Preceded by 8-byte signature header at 0x382F (0f 12 34 56 78 9a bc de) read first by 0x4272. Descriptor 0x3837 = 00 08 00 00 00 00 00 00 c0 ff 00 09 11 98 f1 60 (len + far-ptr/len fields). Far ptr seg=0xFF=current bank; bank byte = SFR 0xFFFF at runtime. docs/boot-logo.md.	[fw]
+CODE:565c	ScalerDisplayDPTx1VideoStreamOutput	func	auto: matched SDK ScalerDisplayDPTx1VideoStreamOutput by register fingerprint, score 0.78, 14 regs.	[auto-sdk]
+CODE:7e60	ScalerDisplayDPTx1DisplayFormatSetting	func	auto: matched SDK ScalerDisplayDPTx1DisplayFormatSetting by register fingerprint, score 0.45, 7 regs.	[auto-sdk]
+CODE:87ef	SysJudgeHandler	func	auto: matched SDK SysJudgeHandler by register fingerprint, score 1.00, 3 regs.	[auto-sdk]
+CODE:9027	ScalerDisplayDPTx1AuxRead	func	auto: matched SDK ScalerDisplayDPTx1AuxRead by register fingerprint, score 0.65, 9 regs.	[auto-sdk]
+CODE:a3a2	ScalerDisplayDPTx1SetSignalLevel	func	auto: matched SDK ScalerDisplayDPTx1SetSignalLevel by register fingerprint, score 0.67, 9 regs.	[auto-sdk]
+CODE:a856	ScalerSyncHdcpEnableDownLoadKey	func	auto: matched SDK ScalerSyncHdcpEnableDownLoadKey by register fingerprint, score 0.59, 16 regs.	[auto-sdk]
+CODE:abf9	ScalerDisplayDPTx1AuxWrite	func	auto: matched SDK ScalerDisplayDPTx1AuxWrite by register fingerprint, score 0.61, 8 regs.	[auto-sdk]
+CODE:b283	ScalerDisplayDPTxSSCSet	func	auto: matched SDK ScalerDisplayDPTxSSCSet by register fingerprint, score 0.71, 8 regs.	[auto-sdk]
+CODE:b832	ScalerDisplayDPTx1DisplayMSASetting	func	auto: matched SDK ScalerDisplayDPTx1DisplayMSASetting by register fingerprint, score 0.76, 20 regs.	[auto-sdk]
+CODE:bc66	ScalerPowerAllGroupPowerCutReset	func	auto: matched SDK ScalerPowerAllGroupPowerCutReset by register fingerprint, score 0.70, 7 regs.	[auto-sdk]
+CODE:ce8f	ScalerGlobalSystemClkSel	func	auto: matched SDK ScalerGlobalSystemClkSel by register fingerprint, score 0.91, 5 regs.	[auto-sdk]
+CODE:d2fc	ScalerDpLowPowerProc	func	auto: matched SDK ScalerDpLowPowerProc by register fingerprint, score 0.58, 6 regs.	[auto-sdk]
+CODE:d987	ScalerDisplayDPTxPhyInitial	func	auto: matched SDK ScalerDisplayDPTxPhyInitial by register fingerprint, score 0.48, 7 regs.	[auto-sdk]
+CODE:e5e5	ScalerDisplayDPTxPower	func	auto: matched SDK ScalerDisplayDPTxPower by register fingerprint, score 0.91, 4 regs.	[auto-sdk]
+CODE:e696	ScalerDisplayDPTx1HpdInitial	func	auto: matched SDK ScalerDisplayDPTx1HpdInitial by register fingerprint, score 0.52, 5 regs.	[auto-sdk]
+CODE:e7b7	ScalerOsdPositionOffset	func	auto: matched SDK ScalerOsdPositionOffset by register fingerprint, score 1.00, 3 regs.	[auto-sdk]
+CODE:f188	backlight_group_on	func	P9.7, PA.0, P8.5, P8.4 all set 1 (issue #7).	[fw]
+CODE:de69	backlight_p84_p85_seq	func	P8.4/P8.5 sequenced with delays; arg 1 = off (issue #7).	[fw]
+CODE:917c	panel_power_seq	func	arg 1 = down, 2 = up; P9.2/P7.2 toggles + PWM (issue #7).	[fw]
+CODE:e89d	dptx_dpcd_write	func	AUX native write; addr = R7(low nibble):R5:R3 (issue #7).	[fw]
+CODE:e8c2	dptx_dpcd_read	func	AUX native read; addr = R7(low nibble):R5:R3 (issue #7).	[fw]
+CODE:bbd1	ScalerRead	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONMULTIBYTEREAD, exact masked match.	[lib]
+CODE:e3a1	ScalerColorIDitherLoadSeqTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORIDITHER, exact masked match.	[lib]
+CODE:e90c	ScalerColorIDitherLoadDitherTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORIDITHER, exact masked match.	[lib]
+CODE:e931	ScalerColorIDitherLoadTemporalTable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORIDITHER, exact masked match.	[lib]
+CODE:ea52	ScalerColorHLWDDomainEnable	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORHLWDDOMAINENABLE, exact masked match.	[lib]
+CODE:f5b6	ScalerColorIDitherLoadSetting	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOLORIDITHER, exact masked match.	[lib]
+CODE:f715	ScalerOsdFontWindowVericalAlignemnt	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module OSDFONTWINDOWVERICALALIGNEMNT, exact masked match.	[lib]
+CODE:d4b2	ScalerPowerGroupAIsolation	func	auto: matched SDK ScalerPowerGroupAIsolation by register fingerprint, score 0.83, 3 regs.	[auto-sdk]
+CODE:d509	ScalerPowerRecoverDPRxGroupIsolationData	func	auto: matched SDK ScalerPowerRecoverDPRxGroupIsolationData by register fingerprint, score 0.56, 6 regs.	[auto-sdk]
+CODE:c488	ScalerDisplayDPTx1SignalInitialSetting	func	All 17 imm/reg tokens of SDK fn match, 0 extra; DPTX_LANE_SWAP*/PN_SWAP/PHY_CTRL1; called by TPInitialSet 9ce7.	[re-agent]	high
+CODE:ee04	ScalerDisplayDPTx1Initial	func	Calls AuxInitial(ee23) + HpdInitial(e696), 9c10/9cc9 init, sets g_stDisplayDPTx1InputInfo color depth; ScalerDisplayDPTx.c.	[re-agent]	high
+CODE:ee23	ScalerDisplayDPTx1AuxInitial	func	AUX_TX_CTRL 9da0 bit0 clear, AuxPHYSet(0), AUX_TIMEOUT 9da1=0x95, 9df6; regs+consts match SDK.	[re-agent]	high
+CODE:e14e	ScalerDisplayDPTx1AuxPHYSet	func	1-bit arg selects AUX_6 9d66 / DIG_TX_03 9d67 / 9d61-62 values; 8/8 tokens match SDK.	[re-agent]	high
+CODE:e2d1	ScalerDisplayDPTx1SetTp2PatternType	func	PHY0_TXBIST_01_H2/L2 pattern select by e122 bit6 (g_stDisplayDPTx1LTInfo area); only caller TrainPattern2 774f.	[re-agent]	high
+CODE:f3b9	ScalerDisplayDPTx1EnhanceFramingMode	func	PHY0_TXBIST_01_H2 bit3 clear, DP_MAC_CTRL 9ca0 bit2 = arg; identical to SDK body.	[re-agent]	high
+CODE:f624	ScalerDisplayDPTxAnalogPhyConrol	func	Calls DPTxPower, DPTxPLL(e8e7), DPTxPhy(edc4) with one bit arg; same as SDK (typo in SDK name). Callers panel_power_seq, PhyInitial.	[re-agent]	high
+CODE:e8e7	ScalerDisplayDPTxPLL	func	bOn: DCLK_GATED_CTRL2 bit1 + TRANSMIT_CONTROL_H2 bit6 (RL6449 regs; RL6432 SDK variant uses different regs, same shape). Called by f624.	[re-agent]	high
+CODE:edc4	ScalerDisplayDPTxPhy	func	bOn: VIDEO_FORMAT_H bit4 + PHY0_TXBIST_02_H1 0xFF/0 (SDK: P38_8E 0xFF/0). Called by f624.	[re-agent]	high
+CODE:f7e6	ScalerDisplayDPTxSetZ0	func	All 4 DPTX_Z0_LANE* regs; exact register-set match with SDK fn.	[re-agent]	high
+CODE:bcf9	ScalerDisplayDPTx1LinkTraining	func	LinkConfig check, TPInitialSet(9ce7), state loop TP1(9be7)/TP2(774f)/End, LT state e133 bits7:6; structure = SDK.	[re-agent]	high
+CODE:9ce7	ScalerDisplayDPTx1TPInitialSet	func	DPCD writes (rate/lane 0x100/0x101..), EnhanceFraming f3b9, SignalInitialSetting c488, SSCSet b283; caller bcf9.	[re-agent]	high
+CODE:9be7	ScalerDisplayDPTx1TrainPattern1	func	Calls TP1 lane adjusts b1be/af5d/9de3, uses g_stDisplayDPTx1LTInfo e12e/e131; only caller bcf9.	[re-agent]	high
+CODE:774f	ScalerDisplayDPTx1TrainPattern2	func	Calls SetTp2PatternType e2d1 + TP2 lane adjusts c684/c7f5/c608/c58a; 11/13 consts match SDK.	[re-agent]	high
+CODE:b1be	ScalerDisplayDPTx1TP1Lane0Adjust	func	LTInfo +1 (e12a) lane0 + e131 request + e133 same-vol cnt; caller TrainPattern1.	[re-agent]	high
+CODE:af5d	ScalerDisplayDPTx1TP1Lane1Adjust	func	LTInfo +2 (e12b) lane1 + e131 + e133; sibling of b1be.	[re-agent]	high
+CODE:9de3	ScalerDisplayDPTx1TP1Lane3Adjust	func	LTInfo +4 (e12d) lane3 + e132 request (lane23); caller TrainPattern1; split into helper pieces by Ghidra.	[re-agent]	med
+CODE:a495	ScalerDisplayDPTx1TP1Lane2Adjust	func	Touches e12c (lane2) + e132/e135; only a fragment (a4ff is its continuation), compiler-split.	[re-agent]	low
+CODE:c684	ScalerDisplayDPTx1TP2Lane0Adjust	func	e12a/e131 only; TP2 lane adjust, caller TrainPattern2; lane = LTInfo offset.	[re-agent]	high
+CODE:c7f5	ScalerDisplayDPTx1TP2Lane1Adjust	func	e12b/e131 only; sibling of c684.	[re-agent]	high
+CODE:c608	ScalerDisplayDPTx1TP2Lane2Adjust	func	e12c/e132 only; lane2 of TP2.	[re-agent]	high
+CODE:c58a	ScalerDisplayDPTx1TP2Lane3Adjust	func	e12d/e132 only; lane3 of TP2.	[re-agent]	high
+CODE:d249	ScalerDisplayDPTxLinkSequence	func	Up to 5 retries of f6d1 (LinkConfig) + bcf9 (LinkTraining), pass = e135 low nibble 7; then a DPCD read/write; caller 9294.	[re-agent]	med
+CODE:b408	ScalerDisplayDPTx1LinkConfig	func	DPCD write+read of link rate/lane (dptx_dpcd_*), returns result in carry; wrapper f6d1 stores it into g_stDisplayDPTx1InputInfo.bf_b1LinkConfig.	[re-agent]	med
+CODE:f6d1	dptx1_link_config_store	func	Calls b408 and stores carry into g_stDisplayDPTx1InputInfo.bf_b1LinkConfig (outlined SET_DISPLAY_DP_TX1_LINK_CONFIG).	[re-agent]	med
+CODE:adb1	ScalerPowerIsolation	func	Arg = power action; calls all group isolation/powercut fns in SDK order, returns flag byte (dbae bits0-4); vendor adds backlight_p84_p85_seq.	[re-agent]	high
+CODE:cf55	ScalerPowerGroupADIPowerCut	func	Waits on ADI_POWER_CTRL 0x40/0x80 + VCCKOFF_CONTROL1 bit6; SDK PowerCut shape.	[re-agent]	high
+CODE:cfb5	ScalerPowerGroupD0PowerCut	func	D0_POWER_CTRL + VCCKOFF_CONTROL1 poll; 0x60 bytes like siblings.	[re-agent]	high
+CODE:d015	ScalerPowerGroupD1PowerCut	func	D1_POWER_CTRL + VCCKOFF_CONTROL1 poll.	[re-agent]	high
+CODE:d075	ScalerPowerGroupD2PowerCut	func	D2_POWER_CTRL + VCCKOFF_CONTROL1 poll.	[re-agent]	high
+CODE:d0d5	ScalerPowerGroupD3PowerCut	func	D3_POWER_CTRL + VCCKOFF_CONTROL1 poll.	[re-agent]	high
+CODE:f04c	ScalerPowerGroupADIIsolation	func	VCCKOFF_CONTROL1 bit6 set / ADI_POWER_CTRL bit6 clear; 1 arg.	[re-agent]	high
+CODE:f06a	ScalerPowerGroupD2Isolation	func	VCCKOFF_CONTROL1 bit2 / D2_POWER_CTRL bit2.	[re-agent]	high
+CODE:f088	ScalerPowerGroupD3Isolation	func	VCCKOFF_CONTROL1 / D3_POWER_CTRL; sibling of f06a.	[re-agent]	high
+CODE:f152	ScalerPowerGroupD0Isolation	func	D0_POWER_CTRL bit0 clear, VCCKOFF_CONTROL1 set path; called by adb1 in D0 slot.	[re-agent]	high
+CODE:f16d	ScalerPowerGroupD1Isolation	func	D1_POWER_CTRL bit1 clear; called by adb1 in D1 slot.	[re-agent]	high
+CODE:f675	ScalerPowerGroupBIsolation	func	VCCKOFF_CONTROL0 bit3 set/clear = SDK GroupBIsolation (GroupA is bit4, named d4b2).	[re-agent]	high
+CODE:d8eb	SysPowerIsolation	func	Calls ScalerPowerIsolation(0) and ORs returned flags 1/2/4/8/0x10 into g_stPowerInfo.bf_b1IsolationAFlag.	[re-agent]	med
+CODE:a587	SysPowerHandler	func	Power-state machine on g_stPowerInfo low nibble, IsolationAFlag bits; 18/22 SDK tokens shared.	[re-agent]	med
+CODE:db97	ScalerSyncSetDdcForceNack	func	Port 4/5/6 -> DDC1/2/3_EDID_IRQ bit5 set/clear by bit arg; matches SDK ScalerSyncSetDdcForceNack(port,bSelect).	[re-agent]	high
+CODE:e46d	ScalerSyncGetDdcForceNackStatus	func	Port 4/5/6 -> DDCn_EDID_IRQ & 0x20; read twin of db97.	[re-agent]	high
+CODE:e99e	ddc_force_nack_release_all_ports	func	d2a3(4/5/6) + clears EDID_IRQ bit5 on DDC1/2/3; caller db03 (init).	[re-agent]	med
+CODE:954d	ScalerSyncHDMIDdcCheckBusy	func	Port 5/6: clears SCL-toggle IRQ in DDCn_EDID_IRQ then polls bit2 with delay loops (debounce); SDK shape.	[re-agent]	med
+CODE:717b	RTDFactoryOsdFuncGetOsdFontPointer	func	62/62 consts match; e1eb/e1ec/e1ed = g_ucFontPointer0/1/2 chain by selector. Vendor links RTDFactory OSD code.	[re-agent]	high
+CODE:6aa7	RTDFactoryOsdFuncSetOsdFontPointer	func	65/66 consts match (twin of 717b); callers PutStringProp/b975/bfc5.	[re-agent]	high
+CODE:5a41	RTDFactoryOsdFuncPutStringProp	func	Calls Get(717b) at start and Set(6aa7) at end like SDK; INPUT/RESULT_TRIPLE_BYTES OSD writes; 0x36c bytes.	[re-agent]	high
+CODE:d192	OsdFuncClearOsd	func	Per-row loop writing OSD byte0 0x4C / byte1, row stride g_ucOsdWidth (e1ea), start = g_usFontSelectStart; also matches RTDFactoryOsdFuncClearOsdFont.	[re-agent]	med
+CODE:ce2a	osd_window_geometry_defaults_init	func	Writes 5 pairs of (hi,lo) constants into e034-e047 + e01a/e01b (OSD window x/y/w/h defaults); callers e3d5, fa76.	[re-agent]	med
+CODE:7374	osd_show_number	func	Splits value by 10000/1000/100/10 into digit font cells; OsdPropShowNumber/RTDFactoryOsdFuncShowNumber family.	[re-agent]	med
+CODE:c37f	ddcci_i2c_slave_service	func	IIC_SET_SLAVE&0xFE==0x6E (DDC/CI), IIC_STATUS2/IRQ_CONTROL2 handling, calls reply tx b586; caller common 0x05df.	[re-agent]	med
+CODE:b586	ddcci_reply_frame_tx	func	Builds 6E/88 header + length + checksum xor (xor, 0xB4 term) in dda4.., clocks 0xB bytes out via IIC_DATA_OUT.	[re-agent]	med
+CODE:fac7	backlight_pwm_duty_set_inverted	func	PWM4H_DUT = 0xFF - x (inverted PWM, P4 = backlight dimming).	[re-agent]	med
+CODE:c051	backlight_pwm_ramp_to_target	func	Reads PWM4H_DUT, steps toward arg with timer events (0x14), ramp thresholds 0x33/0x97; thunk fe59.	[re-agent]	med
+CODE:fe59	backlight_pwm_ramp_to_target_thunk	func	Ghidra duplicate/thunk body of c051.	[re-agent]	med
+CODE:e612	ScalerSyncGetInputPixelClk	func	Returns de08 (pixel clk), doubled via de07 when YUV420_TO_YUV422 bit7 on ports 5/6.	[re-agent]	med
+CODE:f7bf	ScalerOsdReset	func	FRAME_CTRL_0B/41 only, 0xD bytes; register set equals SDK ScalerOsdReset.	[re-agent]	low
+CODE:8324	tmds_hdmi_color_info_changed_a	func	SDK ScalerSyncTMDSRx{2,3}HdmiColorInfoChanged; struct base de1a (+1 colorimetry nibble); Rx2/Rx3 unresolved.	[re-agent]	low
+CODE:84b2	tmds_hdmi_color_info_changed_b	func	Twin of 8324 on struct base de17; Rx2/Rx3 unresolved.	[re-agent]	low
+CODE:bd8a	tmds_hdmi_colorimetry_ext_setting_a	func	Called by 8324 (SDK ScalerSyncTMDSRxNHdmiColorimetryExtSetting, 11/14 consts).	[re-agent]	low
+CODE:c404	tmds_hdmi_colorimetry_ext_setting_b	func	Called by 84b2; twin of bd8a.	[re-agent]	low
+CODE:cb35	tmds_hdmi_colorimetry_setting_a	func	Called by 8324 (SDK ScalerSyncTMDSRxNHdmiColorimetrySetting).	[re-agent]	low
+CODE:cac3	tmds_hdmi_colorimetry_setting_b	func	Called by 84b2; twin of cb35.	[re-agent]	low
+CODE:c8e7	tmds_hdmi_quantization_setting_a	func	Called by 8324 (SDK ScalerSyncTMDSRxNHdmiQuantizationSetting).	[re-agent]	low
+CODE:c86f	tmds_hdmi_quantization_setting_b	func	Called by 84b2; twin of c8e7.	[re-agent]	low
+EXTMEM:e129	g_stDisplayDPTx1LTInfo	var:StructDPTxLTInfo	Lane adjust bytes e12a-e12d, req e131/e132, LT state/result e133-e135 across 4 TP2 + 3 TP1 lane fns.	[re-agent]	high
+EXTMEM:e1eb	g_ucFontPointer0	var:u8	Returned by RTDFactoryOsdFuncGetOsdFontPointer(0) (717b).	[re-agent]	high
+EXTMEM:e1ec	g_ucFontPointer1	var:u8	Returned by 717b selector 1.	[re-agent]	high
+EXTMEM:e1ed	g_ucFontPointer2	var:u8	Written with item start values by 717b selectors 2..8.	[re-agent]	high
+EXTMEM:e1ea	g_ucOsdWidth	var:u8	Row stride added per row in OsdFuncClearOsd d192.	[re-agent]	med
+EXTMEM:de1a	g_stTMDSHdmiColorInfoA	var:StructDigitalColorInfo	Base inferred from de1b = +1 (colorimetry nibble) in 8324; Rx2/Rx3 unresolved.	[re-agent]	low
+EXTMEM:de17	g_stTMDSHdmiColorInfoB	var:StructDigitalColorInfo	Base inferred from de18 = +1 in 84b2; Rx2/Rx3 unresolved.	[re-agent]	low

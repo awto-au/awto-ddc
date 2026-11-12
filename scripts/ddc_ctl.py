@@ -9,6 +9,9 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import i2cbus  # noqa: E402
+
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = REPO / "tmp" / "logs" / "ddc_ctl.log"
 
@@ -102,6 +105,7 @@ def power_cmd(mons, val, name):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    ap.add_argument("--bus", type=int, help="only the monitor on this i2c bus (dev.py ddc passes the EDID-proven one)")
     sub.add_parser("list")
     for c in ("sleep", "wake"):
         sub.add_parser(c).add_argument("--monitor", default="all")
@@ -109,10 +113,14 @@ def main():
     b.add_argument("value", type=int)
     b.add_argument("--monitor", default="all")
     sub.add_parser("get").add_argument("code")
+    s = sub.add_parser("set")
+    s.add_argument("code")
+    s.add_argument("value", type=lambda value: int(value, 0))
     a = ap.parse_args()
 
+    i2cbus.dev_hint("ddc", "ddc_ctl.py")
     setup_logging()
-    mons = detect()
+    mons = [m for m in detect() if a.bus is None or m["bus"] == a.bus]
     if not mons:
         log.error("no monitors detected")
         return 2
@@ -128,6 +136,10 @@ def main():
             r = getvcp(m, a.code)
             print(f"{m['connector']:16} bus={m['bus']:<3} {r[2] if r else 'ERROR'}")
         return 0
+    if a.cmd == "set":
+        if not 0 <= a.value <= 0xffff:
+            ap.error("set value must be 0..65535")
+        return 0 if all(setvcp(m, a.code, a.value) for m in mons) else 1
     sel = select(mons, a.monitor)
     if not sel:
         return 2

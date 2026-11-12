@@ -17,10 +17,7 @@ Problems in the factory firmware and what we did:
   Flashed into all 3 EDID slots (DP + 2x HDMI). See `docs/edid-fix.md`, `scripts/make_edid.py`.
 - **DDC/CI controls hidden.** Caps string advertised only 1 VCP though the firmware answers brightness/
   contrast/input/power. Documented; control works today via `scripts/ddc_ctl.py`.
-- **Power-save shows a colour test pattern instead of sleeping; no host power-down.** Characterised; DPMS /
-  VCP 0xD6 behaviour documented (`docs/firmware-proposal.md`). Firmware-fix route noted, not yet applied.
-- **Dahua boot splash.** 2-colour OSD-drawn logo; awto replacement built (`scripts/make_logo.py`), volatile
-  OSD preview works; persistent flash deliberately BLOCKED until the glyph sector is located (brick risk).
+- **Power-save pattern, boot splash, DDC/CI controls:** handled by our own firmware, built on the Realtek RL6449 SDK (#7); status and open work in issues #7, #26, #38. Vendor-image patch routes are retired (`docs/history.md`).
 - **Flashing recovered + made safe.** Flash WP# is a scaler GPIO; writer releases WP#, erases, programs
   (rtdflash RTD2795 handshake), read-back verifies, re-protects to 0x9C — datasheet-timed, offline selftest.
 
@@ -38,6 +35,10 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 - `scripts/rtd_keywatch.py` — poll the ADC key registers to see which front-panel button is pressed.
 
 ## Flashing (FIRST write anything — dump twice, patch one 4 KB sector, read back, keep backups)
+- **Normal multi-monitor deployment:** flash one shared firmware image and then program each monitor's unique EDID:
+  `./dev.py deploy --unit N [--force] image.bin`. Do not rebuild firmware per serial. See `docs/deployment.md`.
+- `./dev.py edid --unit N [--force] [--bus N] image.bin` — retry only the per-monitor EDID step after a deployment;
+  explicit `--bus` is reserved for recovery when the shared image temporarily changed the reported serial.
 - `scripts/rtd_flash_sector.py <bus> <addr> <file4k>` — DRY-RUN by default (JEDEC + status + backup + compare);
   `--write` does backup → unprotect → erase → program → read-back verify → re-protect → reset;
   `--expect-current <file>` aborts unless the live sector matches. Backups land in `tmp/flash-backups/`.
@@ -61,10 +62,15 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 - Headless tool host: `scripts/rtd_headless/` — C host for the ISP plugin's version reads (see `docs/rtdtool-headless-feasibility.md`).
 
 ## Docs
-- `docs/firmware-proposal.md` — issues + fix routes (settings-patch vs firmware-patch), priority order, OSD design.
+- `docs/handover.md` — current state, units, decisions, branches, runbook, open decisions (start here when taking over).
+- `docs/osd.md` — OSD system overview (layers, fonts, inputs, tools, open work); start here for anything OSD.
+- `docs/firmware-proposal.md` — technical OSD design notes.
+- `docs/history.md` — superseded, refuted or wrong claims, one line each.
 - `docs/edid-fix.md` — the EDID rebuild (identity/size/conformance), patch plan, flash procedure + revert.
+- `docs/deployment.md` — one shared firmware image for all monitors, followed by guarded per-monitor EDID programming.
 - `docs/logo/` — awto monitor mark (red, house style) + boot-splash replacement (640x360): `-colour` (primary), plain = black/white fallback.
 - `docs/boot-logo.md`, `docs/reversing/realtek-rtd/{buttons,osd,db-bin-format}.md`, `docs/rtdtool-*.md`, `docs/monitors/`.
+- `docs/reversing/8051-reuse-playbook.md` — the compiler/library/Ghidra workflow and a staged plan for another 8051 target such as JMS539.
 
 ## Not in this repo
 - Vendor binaries, flash dumps, extracted TSVs, Ghidra projects: `~/vendors/realtek/analysis/` (helpers in its `scripts/`).

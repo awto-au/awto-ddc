@@ -12,3 +12,244 @@ CODE:fd87	osd_keyevt_handler_fd87	func	Switch on e151: 1->ee33(1), 2->ee33(3), 3
 CODE:eee4	osd_keyevt_handler_eee4	func	Switch on e151: 1/2 adjust value; 3/6 fcfe+0dc5, e150=0x10.	[guess]
 CODE:f184	osd_keyevt_handler_f184	func	Switch on e151: 1/2 value change; 3/6 fcfe.	[guess]
 CODE:f97a	osd_keyevt_handler_f97a	func	Switch on e151 (1,2,3,6).	[guess]
+CODE:db28	pwm_set_freq	func	PWM frequency: R7=0x10 selects PWM4, R4:R5 freq param; FF3A/FF3C/FF43/FF44/FF49 (issue #7).	[fw]
+CODE:e896	mcu_init_pwm_uart	func	Boot init; PWM_DUT_TYPE|=0x3f, PWM_VS_CTRL=0 (issue #7).	[fw]
+CODE:fb79	pwm_enable_ctrl	func	PWM_EN (FF48) read-modify-write, bit4 = PWM4 (issue #7).	[fw]
+CODE:c119	ScalerColorDCRGetAverage	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_COLORDCRGETAVERAGE, exact masked match.	[lib]
+CODE:0003	vec_SysEXINT0	func	ISR vector 0x03 (EX0): LJMP 0x2515. Standard 8051 vector layout.	[re-agent]	high
+CODE:000b	vec_SysTimerIntProc0	func	ISR vector 0x0B (Timer0): LJMP 0x0046.	[re-agent]	high
+CODE:0013	vec_SysEXINT1	func	ISR vector 0x13 (EX1): LJMP 0x2601.	[re-agent]	high
+CODE:001b	vec_SysTimerIntProc1	func	ISR vector 0x1B (Timer1): LJMP 0x00BF.	[re-agent]	high
+CODE:0023	vec_SysUartSerialPortIntProc	func	ISR vector 0x23 (serial): LJMP 0x256D.	[re-agent]	high
+CODE:002b	vec_SysTimerIntProc2	func	ISR vector 0x2B (Timer2): LJMP 0x00D9.	[re-agent]	high
+CODE:0046	SysTimerIntProc0	func	SDK SysTimer.c: TF0=0, reload TL0/TH0 from de59/de58, TR0=1, ++de20 compare de7d -> banked UserInterfaceTimer0InstantAccess_EXINT; backup SCA_INF_ADDR in e21f.	[re-agent]	high
+CODE:00bf	SysTimerIntProc1	func	SDK SysTimer.c: only the SCA_INF_ADDR backup (e220); instant timer 1 disabled in this build.	[re-agent]	high
+CODE:00d9	SysTimerIntProc2	func	SDK SysTimer.c: TF2=0, WDT_TEST latch (&0x7f|8), WATCHDOG_CNT1_VALUE&7>4 -> WATCHDOG_TIMER|=0x40, ++DATA 47:48 (g_usTimerCounter), banked timer event; backup e221.	[re-agent]	high
+CODE:2515	SysEXINT0	func	SDK SysInt.c SysEXINT0: backup SCA_INF_ADDR (e22b), banked DP/TMDS/HDCP int handlers, g_stPowerInfo power-status test selects TMDS vs TMDS-PS handler, restore.	[re-agent]	high
+CODE:2601	SysEXINT1	func	SDK SysInt.c SysEXINT1: backup (e22c), banked ScalerSyncDdcDetect_EXINT1 + GetDdcciStatus; status==0 -> ScalerDebugIntProc_EXINT1 (234a) else banked DdcciIntGetData.	[re-agent]	high
+CODE:256d	SysUartSerialPortIntProc	func	SDK SysInt.c: backup e22d, TI cleared, banked UserInterfaceUartIntHandler_SERIALPORT.	[re-agent]	high
+CODE:234a	ScalerDebugIntProc_EXINT1	func	SDK ScalerCommonDebug.c: IIC_STATUS/IIC_STATUS2 handling, writes 0xBD/0xBB/0xAF/0xA9, fills g_pucDdcciData (e161..), g_ucDdcciCommandNumber (e15f), g_bRunCommand.	[re-agent]	high
+CODE:1bc9	ScalerDebug	func	SDK ScalerCommonDebug.c ScalerDebug: switch on g_pucDdcciData[0]: 0x80 halt, 0x41 scaler read, 0x44/0x45 EEPROM read, 0x3A/0x3B xdata r/w, 0xBA/0xBB register set/get, default low-nibble write cmds. Called from main.	[re-agent]	high
+CODE:1f12	ScalerDebugSetRegisters	func	Command 0xBA (_SCALER_WRITE_REGISTERS_CMD): len>0x18 error 0xE1, checksum error 0xE2, writes bytes to xdata (dbbc:dbbd), replies via ScalerDebugSendData.	[re-agent]	high
+CODE:20fb	ScalerDebugGetRegisters	func	Command 0xBB (_SCALER_READ_REGISTERS_CMD): len/checksum checks, reads bytes from xdata address, builds reply with checksum, ScalerDebugSendData.	[re-agent]	high
+CODE:248e	ScalerDebugSendData	func	SDK ScalerCommonDebug.c: IIC_IRQ_CONTROL2|=0x60, push bytes to IIC_DATA_OUT while IIC_STATUS2 bit2 clear, ScalerTimerDelayXms(2) on full, timeout 0x01F4, then host-write disable.	[re-agent]	high
+CODE:0193	ScalerMcuHwIICWrite	func	SDK ScalerCommonMcu.c: I2CM_CR0/CR2/CR3/TD/SR, timeout 0x0258 (dbc4:dbc5), data count > 0x10 uses burst chunks, args (slave, sublen, subaddr, len, ptr). Called from ScalerDebug 0x44 write case.	[re-agent]	high
+CODE:23f4	c_startup_init	func	Keil C_STARTUP: clears IDATA 0xFF..0, XDATA d700..f6ff (0x2000), SP=0x81, walks init table at 0x1DBE, then banked call to main (0x10DD -> bank0 0xFC1E). Same body as reset_vector.	[re-agent]	high
+CODE:fc1e	main	func	SDK SysMain.c main: loop { SysMainSystemInitial (fb38); while(SysMainSytemPowerDetect) { 13 banked handler calls (0x060F..0x0657), ScalerDebug (1bc9) } }.	[re-agent]	high
+CODE:fb38	SysMainSystemInitial	func	SDK SysMain.c: ScalerMcuInitial (e896), 7 banked init thunks (0x065D..0x0681), SET_POWER_STATUS(AC_ON) in g_stPowerInfo (e23a low nibble =1/2 by NVRAM power flag via thunk 0x0687), e22e init.	[re-agent]	high
+CODE:fefe	SysMainSytemPowerDetect	func	SDK SysMain.c: returns _TRUE (SETB CY; RET) - power detect stubbed. SDK spelling kept.	[re-agent]	high
+CODE:d778	ScalerMcuHwIICRead	func	SDK ScalerCommonMcu.c: len > 0x18 -> fail, I2CM_* master read with 600-count timeout (dbc4:dbc5 = 0x0258), sub-address lengths 0/1/2, copies I2CM_TD bytes to buffer.	[re-agent]	high
+CODE:f344	ScalerMcuDdcciSendData	func	SDK ScalerCommonMcu.c: IIC_IRQ_CONTROL2|=0x60, load IIC_DATA_OUT while IIC_STATUS2 bit2 clear, banked ScalerTimerDelayXms(2) + timeout 0x01F4 (500), host-write disable.	[re-agent]	high
+CODE:ef94	ScalerMcuDdcciIntGetData_EXINT1	func	Vendor variant of SDK ScalerMcuDdcciIntGetData_EXINT1: IIC_STATUS bit1 (sub addr) / bit2 (data in) drain, 0x80-byte limit, extra custom-command hook (func 0x0A05). Buffer ptr passed as generic ptr R1:R2:R3.	[re-agent]	med
+CODE:fe66	ScalerMcuCacheInitial	func	SDK ScalerMcu.c: CACHE_OPTION&=0xFC (reset-bit toggle folded, common-bank off), CACHE_FUNCTION|=1.	[re-agent]	high
+CODE:fe93	ScalerMcuCacheControl	func	SDK ScalerCommonMcu.c: bit arg -> CACHE_FUNCTION bit0 set/clear.	[re-agent]	high
+CODE:fea2	ScalerMcuSarAdcClkSel	func	SDK ScalerCommonMcu.c: ADC_CLK_DIV = 4 (_EXT_XTAL_CLK) else 9.	[re-agent]	high
+CODE:fc52	ScalerMcu5usDelayCalc	func	SDK ScalerCommonMcu.c: EnumClkSel 2/1/0 -> DATA 0x44 (g_ucDelay5usN_Base) / 0x41 (g_ucDelayXusN_Base) = 0x1A/0x15, 3/6, 2/2.	[re-agent]	high
+CODE:fbe9	ScalerMcuFlashClockGroupSetting	func	SDK ScalerMcu.c: EnumClkSel 2 (M2PLL) / 1 (IOSC) / 0 (XTAL): MCU_CONTROL/MCU_CLK_CONTROL_1/MCU_CLOCK_CONTROL dividers, MCU_CONTROL bit1 = CPU source.	[re-agent]	high
+CODE:fcd6	ScalerMcuFlashClockGroupSetting_frag_fcd6	func	Keil common-code fragment of ScalerMcuFlashClockGroupSetting: MCU_CONTROL=(MCU_CONTROL&0xC1)|4, returns MCU_CLK_CONTROL_1&0xF0.	[re-agent]	low
+CODE:fcf3	ScalerMcuFlashClockGroupSetting_frag_fcf3	func	Keil common-code fragment of ScalerMcuFlashClockGroupSetting: MCU_CLOCK_CONTROL=(MCU_CLOCK_CONTROL&0xC3)|4.	[re-agent]	low
+CODE:f6a4	ScalerMcuHwIICInitial	func	SDK ScalerCommonMcu.c ScalerMcuHwIICInitial: I2CM_CR0 reset/enable, CR1/CR2/CR3/STR0..STR2/CCR loaded; vendor build reads values from tables indexed by g_ucHwI2cSettingIndex (dd22, stride 9).	[re-agent]	med
+CODE:fd45	ScalerMcuHwIICConfigSetting	func	SDK ScalerCommonMcu.c: g_ucHwI2cSettingIndex(dd22)=arg, ScalerMcuHwIICInitial (f6a4), ScalerMcuHwIICSetFreqDiv(GA_POWER_CTRL&8 xtal select) (fa1e).	[re-agent]	high
+CODE:fa1e	ScalerMcuHwIICSetFreqDiv	func	SDK ScalerCommonMcu.c: I2CM_CCR/STR1/STR2/STR3 from per-clock tables indexed by dd22; arg 0 = IOSC, 1 = external XTAL.	[re-agent]	med
+CODE:11b3	keil_memcpy_generic	func	Keil C51 lib: generic-pointer block copy dispatcher: len R6:R7 (0 -> return), src/dst type bytes R3/R5 in -2..1 index a 16-entry jump table at 0x1133.	[re-agent]	med
+CODE:11fb	keil_CLDPTR	func	Keil C51 lib ?C?CLDPTR: load char via generic ptr R3:R2:R1 (1 xdata, 0 idata, 0xFE pdata, else code); instruction-exact.	[re-agent]	high
+CODE:1214	keil_CLDOPTR	func	Keil C51 lib ?C?CLDOPTR: load char via generic ptr + offset (DPTR); same type dispatch as CLDPTR.	[re-agent]	high
+CODE:1241	keil_CSTPTR	func	Keil C51 lib ?C?CSTPTR: store A through generic ptr R3:R2:R1.	[re-agent]	high
+CODE:1275	keil_IMUL	func	Keil C51 lib ?C?IMUL: 16x16 multiply R6:R7 * R4:R5 -> R6:R7.	[re-agent]	high
+CODE:1287	keil_UIDIV	func	Keil C51 lib ?C?UIDIV: unsigned 16/16 divide (R6:R7 / R4:R5).	[re-agent]	high
+CODE:12dc	keil_SIDIV	func	Keil C51 lib ?C?SIDIV: signed 16/16 divide via UIDIV with sign fix (F0).	[re-agent]	high
+CODE:1312	keil_OFFXADD	func	Keil C51 lib ?C?OFFXADD: add A:B (16-bit) to big-endian word at xdata @DPTR.	[re-agent]	high
+CODE:13ed	keil_LMUL	func	Keil C51 lib ?C?LMUL: 32x32 multiply R4..R7 * R0..R3 (byte cross products).	[re-agent]	high
+CODE:1478	keil_ULDIV	func	Keil C51 lib ?C?ULDIV: unsigned 32/32 divide, byte-width fast paths + 24/32-step loops.	[re-agent]	high
+CODE:1517	keil_SLCMP	func	Keil C51 lib ?C?SLCMP: signed long compare (top bytes XOR 0x80).	[re-agent]	high
+CODE:152d	keil_ULCMP	func	Keil C51 lib ?C?ULCMP: unsigned long compare, byte-wise SUBB chain.	[re-agent]	high
+CODE:1565	keil_LSHL	func	Keil C51 lib ?C?LSHL: shift long R4..R7 left by count.	[re-agent]	high
+CODE:15ce	keil_LSTXDATA	func	Keil C51 lib ?C?LSTXDATA: store R4..R7 (long) at xdata @DPTR.	[re-agent]	high
+CODE:15da	keil_LSTKXDATA	func	Keil C51 lib ?C?LSTKXDATA: pops return address, copies 4 inline code bytes to xdata @DPTR (via 0x15F1), resumes after them.	[re-agent]	med
+CODE:15f1	keil_LSTKXDATA_byte	func	Helper of keil_LSTKXDATA: MOVC byte from code ptr -> MOVX @DPTR with DPTR/code-ptr swap.	[re-agent]	low
+CODE:160b	keil_DPTR_add_AxB	func	Keil C51 lib: DPTR += A*B (array/struct index scale), used before ICALL tables.	[re-agent]	low
+CODE:1617	keil_CCASE	func	Keil C51 lib ?C?CCASE: switch helper: inline table of 3-byte {addr_hi, addr_lo, value} entries; entry 0000 ends it and is followed by the default address; A = char value.	[re-agent]	high
+CODE:166a	keil_ICALL	func	Keil C51 lib ?C?ICALL: indirect call through R2:R1 (DPH:DPL, JMP @A+DPTR).	[re-agent]	high
+CODE:181a	keil_MEMSET	func	Keil C51 lib ?C?MEMSET-style memset: generic ptr R3:R2:R1, value R5, count R6:R7 (xdata/idata/pdata).	[re-agent]	high
+CODE:1846	keil_LNEG	func	Keil C51 lib ?C?LNEG: negate long R4..R7.	[re-agent]	high
+CODE:1a61	keil_FPDIV	func	Keil C51 lib ?C?FPDIV: IEEE float divide (26-step mantissa loop, uses FPGETOPN 0x1B73).	[re-agent]	med
+CODE:1b03	keil_FCASTI	func	Keil C51 lib ?C?FCASTI entry (B=0x10 bit count) of the int/long -> float conversion, shares body at 0x1B0D, LNEG for negatives.	[re-agent]	med
+CODE:1b3c	keil_CASTF	func	Keil C51 lib ?C?CASTF: float -> long conversion (exponent unpack, mantissa shift).	[re-agent]	med
+CODE:1b73	keil_FPGETOPN	func	Keil C51 lib float helper: split sign/exponent of the two operands (F0 = sign xor).	[re-agent]	low
+CODE:0429	bankcall_dispatch_b0	func	Banked call: pushes return stub (0x2000+0x10*current bank from DATA 49), pushes DPTR target, LJMP bank_enter_b0 (0x2000).	[re-agent]	high
+CODE:043b	bankcall_dispatch_b1	func	Banked call into bank 1 (bank_enter_b1 0x2010); same push sequence as 0x0429.	[re-agent]	high
+CODE:044d	bankcall_dispatch_b2	func	Banked call into bank 2 (bank_enter_b2 0x2020).	[re-agent]	high
+CODE:045f	bankcall_dispatch_b3	func	Banked call into bank 3 (bank_enter_b3 0x2030).	[re-agent]	high
+CODE:0471	bankcall_dispatch_b4	func	Banked call into bank 4 (bank_enter_b4 0x2040).	[re-agent]	high
+CODE:0483	bankcall_dispatch_b5	func	Banked call into bank 5 (bank_enter_b5 0x2050).	[re-agent]	high
+CODE:0495	bankcall_dispatch_b6	func	Banked call into bank 6 (bank_enter_b6 0x2060).	[re-agent]	high
+CODE:2000	bank_enter_b0	func	DATA 49 = 0, PBANK_SWITCH = 0, RET into pushed target; also used as the return stub (0x20X0) that restores the previous bank.	[re-agent]	high
+CODE:2010	bank_enter_b1	func	DATA 49 = 1, PBANK_SWITCH = 1, RET into pushed target / return stub.	[re-agent]	high
+CODE:2020	bank_enter_b2	func	DATA 49 = 2, PBANK_SWITCH = 2, RET into pushed target / return stub.	[re-agent]	high
+CODE:2030	bank_enter_b3	func	DATA 49 = 3, PBANK_SWITCH = 3, RET into pushed target / return stub.	[re-agent]	high
+CODE:2040	bank_enter_b4	func	DATA 49 = 4, PBANK_SWITCH = 4, RET into pushed target / return stub.	[re-agent]	high
+CODE:2050	bank_enter_b5	func	DATA 49 = 5, PBANK_SWITCH = 5, RET into pushed target / return stub.	[re-agent]	high
+CODE:2060	bank_enter_b6	func	DATA 49 = 6, PBANK_SWITCH = 6, RET into pushed target / return stub.	[re-agent]	high
+CODE:21f0	ScalerDebug_frag_iic_out_dbb7	func	Keil common fragment of ScalerDebug: IIC_IRQ_CONTROL2|=0x40, IIC_DATA_OUT=dbb7, returns (DDCCI_REMAIN_DATA&0x1F)^1 (loop test of cmds 0x41/0x44/0x45).	[re-agent]	med
+CODE:2208	ScalerDebug_frag_hwiic_read_args	func	Keil common fragment of ScalerDebug: IIC_IRQ_CONTROL2|=0x20, dbbe=1, dbbf=1 (HwIICRead length/pin args).	[re-agent]	low
+CODE:226f	ScalerDebug_frag_host_write_disable	func	Keil common fragment: IIC_IRQ_CONTROL2&=0xDF (host write enable clear) at end of ScalerDebug/IntProc paths.	[re-agent]	med
+CODE:ee33	osd_main_menu_select_item	func	Selects main-menu item N (arg 1..6): dbae=N, e13e=N-1, redraws the 6 rows via bb10, mode-specific footer via b44c. Called by the six per-item key handlers.	[re-agent]	med
+CODE:fda8	osd_keyevt_handler_fda8	func	Main-menu item 3 key handler: e151 1->ee33(2), 2->ee33(4), 3->fcfe, 0->c3ea (same pattern as fd66/fd87).	[re-agent]	med
+CODE:fdc9	osd_keyevt_handler_fdc9	func	Main-menu item 4 key handler: e151 1->ee33(3), 2->ee33(5), 3->fcfe, 0->c3ea.	[re-agent]	med
+CODE:fdea	osd_keyevt_handler_fdea	func	Main-menu item 5 key handler: e151 1->ee33(4), 2->ee33(6), 3->fcfe, 0->c3ea.	[re-agent]	med
+CODE:fe0b	osd_keyevt_handler_fe0b	func	Main-menu item 6 key handler: e151 1->ee33(5), 2->ee33(1), 3->fcfe, 0->c3ea (wraps to item 1).	[re-agent]	med
+CODE:fd23	osd_keyevt_handler_fd23	func	Sub-menu key handler: e151 1/2 -> f5b4, 3/0 -> c3ea + 0dc5, e150=0x10.	[re-agent]	low
+CODE:e7b1	osd_keyevt_handler_e7b1	func	Key handler on e151 0..3 (value adjust with f4c3 clamp, 0x0F15/0x0F6F/0x0CBD thunks).	[re-agent]	low
+CODE:f53c	osd_keyevt_handler_f53c	func	Key handler on e151: 1/2 adjust a 2-bit setting in e067 bits5:4, redraw via e974; 3/0 fcfe.	[re-agent]	low
+CODE:c6b1	osd_keycode_to_event_idx	func	Compares a 16-bit key code (pairs like B54A, F20D, B748, B24D, B649, B14E) and writes osd_key_event_idx (0..3); several copies per OSD state.	[re-agent]	med
+CODE:b44c	osd_text_render_b44c	func	Low-confidence: per-character loop with TRIPLE_BYTES_OPERATION/SHIFT_BITS_NUMBER shifter, 12-px cell width (0xC), dbed = style.	[re-agent]	low
+CODE:bb10	osd_text_render_bb10	func	Low-confidence: same character/shifter loop as b44c with a second parameter layout (dbb9.., dbdb...).	[re-agent]	low
+EXTMEM:e21f	g_ucBackup_TIMER0	var:u8	SCA_INF_ADDR backup in SysTimerIntProc0 (SDK SysTimer.c).	[re-agent]	high
+EXTMEM:e220	g_ucBackup_TIMER1	var:u8	SCA_INF_ADDR backup in SysTimerIntProc1.	[re-agent]	high
+EXTMEM:e221	g_ucBackup_TIMER2	var:u8	SCA_INF_ADDR backup in SysTimerIntProc2.	[re-agent]	high
+EXTMEM:e22b	g_ucBackup_EXINT0	var:u8	SCA_INF_ADDR backup in SysEXINT0 (SDK SysInt.c).	[re-agent]	high
+EXTMEM:e22c	g_ucBackup_EXINT1	var:u8	SCA_INF_ADDR backup in SysEXINT1.	[re-agent]	high
+EXTMEM:e22d	g_ucBackup_SERIAL	var:u8	SCA_INF_ADDR backup in SysUartSerialPortIntProc.	[re-agent]	high
+EXTMEM:de58	g_ucTimerCountHByte0	var:u8	Timer0 reload high byte (TH0 = de58 in SysTimerIntProc0).	[re-agent]	high
+EXTMEM:de59	g_ucTimerCountLByte0	var:u8	Timer0 reload low byte (TL0 = de59).	[re-agent]	high
+EXTMEM:de20	g_usTimerAxisCnt0	var:u16	Timer0 tick counter, ++ in SysTimerIntProc0 via keil_OFFXADD.	[re-agent]	high
+EXTMEM:de7d	g_usTimerEventPeriod0	var:u16	Timer0 event period compared with g_usTimerAxisCnt0.	[re-agent]	high
+EXTMEM:dd22	g_ucHwI2cSettingIndex	var:u8	Set by ScalerMcuHwIICConfigSetting (fd45); indexes the HW-IIC register tables (stride 9).	[re-agent]	high
+EXTMEM:e15f	g_ucDdcciCommandNumber	var:u8	Receive byte count in ScalerDebugIntProc_EXINT1.	[re-agent]	high
+EXTMEM:e160	g_enumDDCCIDebugMode	var:EnumDDCCIDebugMode	ScalerDebug runs only when == _DEBUG_MODE (0).	[re-agent]	high
+EXTMEM:e161	g_pucDdcciData	var:u8[32]	Debug/DDC-CI receive buffer: [0]=cmd (0x3A/0x3B/0x41/0xBA...), [1..5] args. Size from SDK (_SCALER_DEBUG_BUF_LEN 0x20).	[re-agent]	med
+INTMEM:47	g_usTimerCounter	var:u16	DATA 0x47:0x48, ++ in SysTimerIntProc2 (carry into 0x47).	[re-agent]	high
+INTMEM:44	g_ucDelay5usN_Base	var:u8	DATA 0x44, set by ScalerMcu5usDelayCalc; used as inner-loop count in delay loops.	[re-agent]	med
+INTMEM:41	g_ucDelayXusN_Base	var:u8	DATA 0x41, set by ScalerMcu5usDelayCalc.	[re-agent]	med
+CODE:221b	ScalerDebug_frag_store_len1_pin1_221b	func	Keil common fragment of ScalerDebug: *p=1; p[1]=1 (HwIIC length/pin args).	[re-agent]	low
+CODE:221e	ScalerDebug_frag_store_len1_pin1_221e	func	Keil common fragment of ScalerDebug: *p=1; p[1]=1 (second copy).	[re-agent]	low
+CODE:2225	ScalerDebug_frag_ret_data1	func	Keil common fragment: returns g_pucDdcciData[1] (e162).	[re-agent]	low
+CODE:222a	ScalerDebug_frag_nop_222a	func	Keil common fragment: identity return, body folded into callers.	[re-agent]	low
+CODE:222b	ScalerDebug_frag_nop_222b	func	Keil common fragment: identity return, body folded into callers.	[re-agent]	low
+CODE:2234	ScalerDebug_frag_inc_dbb6	func	Keil common fragment of ScalerDebug: ++dbb6 (0x41/0x44/0x45 reply-loop counter).	[re-agent]	low
+CODE:2240	ScalerDebug_frag_store_x3	func	Keil common fragment: p[1]=p[2]=p[3]=A (clears 3 locals).	[re-agent]	low
+CODE:2247	ScalerDebug_frag_dbxx_hi_a	func	Keil common fragment: computes high byte 0xDB-borrow of an XDATA 0xDBxx local address.	[re-agent]	low
+CODE:224b	ScalerDebug_frag_dbxx_hi_b	func	Keil common fragment: same 0xDBxx address-high computation, carry from caller.	[re-agent]	low
+CODE:2253	ScalerDebug_frag_clr_e249_ret_data1	func	Keil common fragment: e249=0, returns g_pucDdcciData[1].	[re-agent]	low
+CODE:2262	ScalerDebug_frag_store_pair	func	Keil common fragment: *p=A; p[1]=B.	[re-agent]	low
+CODE:2277	ScalerDebug_frag_ddcci_data_addr_a	func	Keil common fragment: high byte 0xE1 of &g_pucDdcciData[i] (E161..) minus carry.	[re-agent]	med
+CODE:227f	ScalerDebugGetRegisters_frag_reply_bb	func	Keil common fragment of ScalerDebugGetRegisters: dbbf=0xBB (reply command id).	[re-agent]	med
+CODE:2286	ScalerDebug_frag_ret_dbbb	func	Keil common fragment: returns dbbb (running checksum).	[re-agent]	low
+CODE:228d	ScalerDebugSetRegisters_frag_reply_ba	func	Keil common fragment of ScalerDebugSetRegisters: dbbf=0xBA (reply command id).	[re-agent]	med
+CODE:2294	ScalerDebug_frag_ddcci_data_addr_b	func	Keil common fragment: *(E1xx) load, high byte 0xE1 minus carry (g_pucDdcciData[i]).	[re-agent]	med
+CODE:d439	osd_page_build_main_menu	func	Builds the main OSD page: font/map setup thunks (OsdFuncApplyMap etc.), 6 menu rows, ends with ee33(1) (select item 1).	[re-agent]	med
+CODE:dd7c	osd_page_build_dd7c	func	OSD page builder (map/font setup thunks, 3 rows via b44c, e060-indexed cursor); entered from key handlers with osd_key_event_idx state.	[re-agent]	low
+CODE:f862	osd_page_build_f862	func	OSD page builder (a393 font ptr init, OsdFuncApplyMap, menu builder thunk 2, two e974 draws).	[re-agent]	low
+CODE:056d	bcall_b4_fea4	func	Banked-call trampoline: DPTR=0xFEA4 + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:0579	bcall_b5_f8cf	func	Banked-call trampoline: DPTR=0xF8CF + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:0585	bcall_b5_d930	func	Banked-call trampoline: DPTR=0xD930 + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:0597	bcall_b5_d715	func	Banked-call trampoline: DPTR=0xD715 + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:05a3	bcall_ScalerDpAuxJudgeHandler_EXINT0	func	Banked-call trampoline: DPTR=0xC6ED + LJMP bank4 dispatcher (0x04xx); target in bank 4 (named in that bank)	[re-agent]	high
+CODE:05a9	bcall_b4_fe7b	func	Banked-call trampoline: DPTR=0xFE7B + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:05af	bcall_b4_fd28	func	Banked-call trampoline: DPTR=0xFD28 + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:05b5	bcall_b5_fdda	func	Banked-call trampoline: DPTR=0xFDDA + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:05bb	bcall_b5_fde8	func	Banked-call trampoline: DPTR=0xFDE8 + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:05c1	bcall_b2_e5ba	func	Banked-call trampoline: DPTR=0xE5BA + LJMP bank2 dispatcher (0x04xx); target in bank 2	[re-agent]	high
+CODE:05c7	bcall_ScalerIRHWModeIntHandler_EXINT0	func	Banked-call trampoline: DPTR=0x4FC4 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:05cd	bcall_b4_fd69	func	Banked-call trampoline: DPTR=0xFD69 + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:05d3	bcall_b1_b02a	func	Banked-call trampoline: DPTR=0xB02A + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:05d9	bcall_b1_f5e3	func	Banked-call trampoline: DPTR=0xF5E3 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:05df	bcall_ddcci_i2c_slave_service	func	Banked-call trampoline: DPTR=0xC37F + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank)	[re-agent]	high
+CODE:05e5	bcall_b1_d65e	func	Banked-call trampoline: DPTR=0xD65E + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:060f	bcall_key_poll	label	Banked-call trampoline: DPTR=0x5F70 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0615	bcall_SysPowerHandler	label	Banked-call trampoline: DPTR=0xA587 + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:061b	bcall_b1_87b8	label	Banked-call trampoline: DPTR=0x87B8 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0621	bcall_SysAudioHandler	label	Banked-call trampoline: DPTR=0xED44 + LJMP bank3 dispatcher (0x04xx); target in bank 3 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0627	bcall_b5_dc9d	label	Banked-call trampoline: DPTR=0xDC9D + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:062d	bcall_b4_e386	label	Banked-call trampoline: DPTR=0xE386 + LJMP bank4 dispatcher (0x04xx); target in bank 4; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0633	bcall_b1_98c0	label	Banked-call trampoline: DPTR=0x98C0 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0639	bcall_b1_e878	label	Banked-call trampoline: DPTR=0xE878 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:063f	bcall_b6_6955	label	Banked-call trampoline: DPTR=0x6955 + LJMP bank6 dispatcher (0x04xx); target in bank 6; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0645	bcall_b4_feb6	label	Banked-call trampoline: DPTR=0xFEB6 + LJMP bank4 dispatcher (0x04xx); target in bank 4; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:064b	bcall_b1_f8f5	label	Banked-call trampoline: DPTR=0xF8F5 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0651	bcall_b5_f885	label	Banked-call trampoline: DPTR=0xF885 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0657	bcall_SysColorHandler	label	Banked-call trampoline: DPTR=0x67C5 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:065d	bcall_ScalerPinshareInitial	label	Banked-call trampoline: DPTR=0x4F38 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0663	bcall_b5_fd17	label	Banked-call trampoline: DPTR=0xFD17 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0669	bcall_b1_faa3	label	Banked-call trampoline: DPTR=0xFAA3 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:066f	bcall_b5_f8f3	label	Banked-call trampoline: DPTR=0xF8F3 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0675	bcall_b4_b212	label	Banked-call trampoline: DPTR=0xB212 + LJMP bank4 dispatcher (0x04xx); target in bank 4; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:067b	bcall_b1_db03	label	Banked-call trampoline: DPTR=0xDB03 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0681	bcall_ScalerIRHWModeInitial	label	Banked-call trampoline: DPTR=0x6315 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0687	bcall_b3_dc75	func	Banked-call trampoline: DPTR=0xDC75 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0753	bcall_b5_b9f0	label	Banked-call trampoline: DPTR=0xB9F0 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:07a7	bcall_b1_e49f	func	Banked-call trampoline: DPTR=0xE49F + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:07c5	bcall_b3_fb73	func	Banked-call trampoline: DPTR=0xFB73 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:07e3	bcall_b5_fb15	func	Banked-call trampoline: DPTR=0xFB15 + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:0801	bcall_b1_feda	func	Banked-call trampoline: DPTR=0xFEDA + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0807	bcall_b1_e1c0	func	Banked-call trampoline: DPTR=0xE1C0 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0849	bcall_ScalerGetDataPortBit	label	Banked-call trampoline: DPTR=0xF9DC + LJMP bank2 dispatcher (0x04xx); target in bank 2 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0855	bcall_ScalerTimerWaitForEvent	func	Banked-call trampoline: DPTR=0xD20D + LJMP bank5 dispatcher (0x04xx); target in bank 5 (named in that bank)	[re-agent]	high
+CODE:08a3	bcall_b5_fbca	label	Banked-call trampoline: DPTR=0xFBCA + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:08a9	bcall_b5_fd26	label	Banked-call trampoline: DPTR=0xFD26 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:08c7	bcall_b5_d2a0	label	Banked-call trampoline: DPTR=0xD2A0 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:08cd	bcall_b5_c6b8	label	Banked-call trampoline: DPTR=0xC6B8 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:08d3	bcall_b5_ea2e	label	Banked-call trampoline: DPTR=0xEA2E + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:08d9	bcall_b5_f557	label	Banked-call trampoline: DPTR=0xF557 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:09c3	bcall_ScalerRead	label	Banked-call trampoline: DPTR=0xBBD1 + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:09ed	bcall_ScalerMcuHwIICRead	label	Banked-call trampoline: DPTR=0xD778 + LJMP bank0 dispatcher (0x04xx); target in bank 0 (named in that bank); not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0a05	bcall_b5_f5e7	label	Banked-call trampoline: DPTR=0xF5E7 + LJMP bank5 dispatcher (0x04xx); target in bank 5; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0a0b	bcall_b6_6964	label	Banked-call trampoline: DPTR=0x6964 + LJMP bank6 dispatcher (0x04xx); target in bank 6; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0bf1	bcall_b4_fec8	func	Banked-call trampoline: DPTR=0xFEC8 + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:0c4b	bcall_ScalerMcuDdcciSendData	func	Banked-call trampoline: DPTR=0xF344 + LJMP bank0 dispatcher (0x04xx); target in bank 0 (named in that bank)	[re-agent]	high
+CODE:0c99	bcall_backlight_pwm_duty_set_inverted	func	Banked-call trampoline: DPTR=0xFAC7 + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank)	[re-agent]	high
+CODE:0cbd	bcall_b4_fdec	func	Banked-call trampoline: DPTR=0xFDEC + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:0cc3	bcall_b4_fee0	func	Banked-call trampoline: DPTR=0xFEE0 + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:0d71	bcall_b4_fee6	func	Banked-call trampoline: DPTR=0xFEE6 + LJMP bank4 dispatcher (0x04xx); target in bank 4	[re-agent]	high
+CODE:0db9	bcall_b0_fcfe	func	Banked-call trampoline: DPTR=0xFCFE + LJMP bank0 dispatcher (0x04xx); target in bank 0	[re-agent]	high
+CODE:0dc5	bcall_b3_f2b3	func	Banked-call trampoline: DPTR=0xF2B3 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0dd7	bcall_b6_51d6	label	Banked-call trampoline: DPTR=0x51D6 + LJMP bank6 dispatcher (0x04xx); target in bank 6; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0de9	bcall_b5_d04a	func	Banked-call trampoline: DPTR=0xD04A + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:0df5	bcall_b3_cd09	func	Banked-call trampoline: DPTR=0xCD09 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0e1f	bcall_b5_d0e2	func	Banked-call trampoline: DPTR=0xD0E2 + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:0e25	bcall_b5_b3cf	func	Banked-call trampoline: DPTR=0xB3CF + LJMP bank5 dispatcher (0x04xx); target in bank 5	[re-agent]	high
+CODE:0e43	bcall_OsdPaletteSelectPalette	func	Banked-call trampoline: DPTR=0x6582 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:0efd	bcall_b1_c9d7	label	Banked-call trampoline: DPTR=0xC9D7 + LJMP bank1 dispatcher (0x04xx); target in bank 1; not a Ghidra function in the export (bytes read from flash image)	[re-agent]	high
+CODE:0f03	bcall_b3_f7a5	func	Banked-call trampoline: DPTR=0xF7A5 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0f09	bcall_b1_a0c8	func	Banked-call trampoline: DPTR=0xA0C8 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0f15	bcall_b1_f60f	func	Banked-call trampoline: DPTR=0xF60F + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0f1b	bcall_b3_fb55	func	Banked-call trampoline: DPTR=0xFB55 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0f3f	bcall_b6_6961	func	Banked-call trampoline: DPTR=0x6961 + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0f45	bcall_b3_f6a1	func	Banked-call trampoline: DPTR=0xF6A1 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0f4b	bcall_b3_f668	func	Banked-call trampoline: DPTR=0xF668 + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:0f51	bcall_b1_fe05	func	Banked-call trampoline: DPTR=0xFE05 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0f57	bcall_b1_d939	func	Banked-call trampoline: DPTR=0xD939 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0f5d	bcall_b6_62cf	func	Banked-call trampoline: DPTR=0x62CF + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0f63	bcall_b1_4b00	func	Banked-call trampoline: DPTR=0x4B00 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:0f69	bcall_OsdFuncClearOsd	func	Banked-call trampoline: DPTR=0x59DF + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:0f6f	bcall_b6_667d	func	Banked-call trampoline: DPTR=0x667D + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0f75	bcall_b6_561e	func	Banked-call trampoline: DPTR=0x561E + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0f9f	bcall_panel_power_seq	func	Banked-call trampoline: DPTR=0x917C + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank)	[re-agent]	high
+CODE:0fab	bcall_osd_builder_splash	func	Banked-call trampoline: DPTR=0x8ECC + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank)	[re-agent]	high
+CODE:0fc3	bcall_OsdFuncApplyMap	func	Banked-call trampoline: DPTR=0x4528 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:0fc9	bcall_osd_fontdl_orient_enable	func	Banked-call trampoline: DPTR=0x97A5 + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank)	[re-agent]	high
+CODE:0fcf	bcall_OsdFuncBlending	func	Banked-call trampoline: DPTR=0x6694 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:0fd5	bcall_b6_6958	func	Banked-call trampoline: DPTR=0x6958 + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0fdb	bcall_osd_builder_menu_source	func	Banked-call trampoline: DPTR=0xF049 + LJMP bank2 dispatcher (0x04xx); target in bank 2 (named in that bank)	[re-agent]	high
+CODE:0fe1	bcall_b6_3c8c	func	Banked-call trampoline: DPTR=0x3C8C + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0fe7	bcall_b6_4d87	func	Banked-call trampoline: DPTR=0x4D87 + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0fed	bcall_b6_695e	func	Banked-call trampoline: DPTR=0x695E + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0ff3	bcall_b6_695b	func	Banked-call trampoline: DPTR=0x695B + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:0ff9	bcall_ScalerOsdGetHorizontalDelayStep	func	Banked-call trampoline: DPTR=0x6876 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:0fff	bcall_b6_68db	func	Banked-call trampoline: DPTR=0x68DB + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:1005	bcall_b1_e97a	func	Banked-call trampoline: DPTR=0xE97A + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:1017	bcall_ScalerOsdCommandByte	func	Banked-call trampoline: DPTR=0x6530 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:101d	bcall_b6_65eb	func	Banked-call trampoline: DPTR=0x65EB + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:1023	bcall_b6_6950	func	Banked-call trampoline: DPTR=0x6950 + LJMP bank6 dispatcher (0x04xx); target in bank 6	[re-agent]	high
+CODE:1029	bcall_ScalerColorHLWDDomainEnable	func	Banked-call trampoline: DPTR=0xEA52 + LJMP bank1 dispatcher (0x04xx); target in bank 1 (named in that bank)	[re-agent]	high
+CODE:102f	bcall_b3_fefe	func	Banked-call trampoline: DPTR=0xFEFE + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:1035	bcall_b1_fe41	func	Banked-call trampoline: DPTR=0xFE41 + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:103b	bcall_b1_eebe	func	Banked-call trampoline: DPTR=0xEEBE + LJMP bank1 dispatcher (0x04xx); target in bank 1	[re-agent]	high
+CODE:1041	bcall_ScalerOsdFontRotateCtrl	func	Banked-call trampoline: DPTR=0x5849 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:1047	bcall_ScalerOsdCompressionCtrl	func	Banked-call trampoline: DPTR=0x6767 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:104d	bcall_b3_feff	func	Banked-call trampoline: DPTR=0xFEFF + LJMP bank3 dispatcher (0x04xx); target in bank 3	[re-agent]	high
+CODE:1053	bcall_b2_feff	func	Banked-call trampoline: DPTR=0xFEFF + LJMP bank2 dispatcher (0x04xx); target in bank 2	[re-agent]	high
+CODE:1059	bcall_osd_sram_addr_port_setup	func	Banked-call trampoline: DPTR=0x66AB + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:105f	bcall_ScalerOsdBurstWriteDataPort	func	Banked-call trampoline: DPTR=0x64BB + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:1065	bcall_ScalerOsdCommandAllByte	func	Banked-call trampoline: DPTR=0x65D1 + LJMP bank6 dispatcher (0x04xx); target in bank 6 (named in that bank)	[re-agent]	high
+CODE:10dd	bcall_main	func	Banked-call trampoline: DPTR=0xFC1E + LJMP bank0 dispatcher (0x04xx); target in bank 0 (named in that bank)	[re-agent]	high

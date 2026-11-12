@@ -1,0 +1,5 @@
+vendor	package	url	notes
+hp	z32-4k-sp140661	https://ftp.hp.com/pub/softpaq/sp140501-141000/sp140661.exe	HP Z32 FW 1.02 NA (support.hp.com swd-v2 driverDetails)
+hp	z32-4k-sp140663	https://ftp.hp.com/pub/softpaq/sp140501-141000/sp140663.exe	HP Z32 FW 1.02 WW_APJ
+hp	e27k-g5-sp160105	https://ftp.hp.com/pub/softpaq/sp160001-160500/sp160105.exe	HP E27k G5 FW 1.0.6.0
+hp	z27k-g3-sp153134	https://ftp.hp.com/pub/softpaq/sp153001-153500/sp153134.exe	HP Z27k G3 FW 1.5.14.0

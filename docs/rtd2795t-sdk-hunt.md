@@ -48,7 +48,7 @@ Method: set of register addresses from SDK `RL64xx_Series_Common_RegCommonInclud
 
 - Files: `STD_FW_1P.Uv2` / `STD_FW_1P_BEACON.Uv2` (Keil v2 project), `Kernel/Common/{C_STARTUP,STARTUP,L51_bank}.a51`, `Kernel/Common/RL6432_Gen_Option.h` (and per-series), `Project/Header/RL6449_Project*.h|.lin`, `Pcb/RL6449/...`, `Panel/*.h` (100+ panels incl. eDP), `Kernel/Scaler/RL6449_Series_Scaler/Lib/{RL6449_Series_Lib.Uv2, Output/RL6449_FunctionLib.LIB 438 KB}`.
 - Register map header: `Kernel/Scaler/RL6449_Series_Common/Header/RL6449_Series_Common_RegCommonInclude.h` (paths follow the RL6432 pattern; fetched RL6449 copy 1 MB).
-- Build chain: Keil `C51.exe` + `BL51.exe` (banked, 6.x), `HexToBin.exe`, `Tool/build/auto_link.exe`, `Tool/precompile/pch_support.exe`, `Tool/FW analysis/FWProjectAnalysis.exe`; `BUILD.bat`, `keil_build.bat`.
+- Build chain (Keil C51/BL51, uVision batch): awto-sdcc `docs/keil-c51.md` ("SDK toolchain as shipped").
 - Not verified: that the RL6449 `.Uv2` + all libs are present (only RL6432 Beacon has an `Output/` tree); whether the `.LIB` kernel is source-less (ScalerFunction/Lib/Code C sources are present for OSD, so partial).
 - Fetch plan if proceeding: `~/vendors/realtek/sources/rtd-scaler-sdk-rl64xx/` (own directory, manifest + SHA-256, EULA/confidentiality note: leaked, "shall not be disclosed"). `git clone` is fine here (3791 files, 19 MB); also mirror Llong1/avita_rtd2776 (67 MB) for RL6410. Repo stays out of public repos/issues (vendor-binary/commercial rule: analysis OK, publishing the content or conclusions not).
 

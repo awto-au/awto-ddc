@@ -1,5 +1,7 @@
 # JXC 4K monitor: boot splash — format, draw path, awto replacement (static analysis)
 
+- Status 2026-11-11: our firmware has no boot logo (awto-ddc#144); power-on shows the console with the sync log. These notes cover the Dahua firmware splash.
+
 Scaler: RTD2795-class. Splash = two-colour black "Dahua" logo on white, drawn by THIS firmware's OSD
 engine (user-confirmed; no logo plugin in RTDCustomerTool, no separate boot-image chip).
 No splash bytes written to flash yet (EDID sectors only — `edid-fix.md`). Open work: awto-ddc#5.

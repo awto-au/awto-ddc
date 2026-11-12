@@ -1,3 +1,107 @@
 # ghidra_names_bank3.tsv - JXC 4K monitor firmware, bank 3 (flash 0x30000-0x3FFFF), 8051:BE:16:default
 # Format: address<TAB>name<TAB>type<TAB>comment<TAB>status   (status = confidence tag, see awto-dan docs/embedded/reversing/README.md)
 # No hand names yet; register labels come from re/regdb via scripts/regdb_ghidra_labels.py.
+CODE:d1c3	ScalerFlashWrite	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONFLASHWRITE, exact masked match.	[lib]
+CODE:e49b	ScalerMemoryCalculateNumberAndRemain	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module RL6449_SERIES_MEMORYFUNCTION, exact masked match.	[lib]
+CODE:ef2b	ScalerFlashRead	func	Realtek lib RTD-Scaler-TEST/RL6449_FunctionLib module SCALERCOMMONFLASHREAD, exact masked match.	[lib]
+CODE:e204	ScalerAudioD1DPAudioInitial	func	PB9 AUD_FREQUENY_TH 00 00 28 4C 5C 70, RS dec, I/P code; callee e813=D1SetAudioPLL, e958=D1DPSetDVCVolumeAdjustType; SDK ScalerAudio_SeptPhy.c ScalerAudioD1DPAudioInitial	[re-agent]	high
+CODE:e813	ScalerAudioD1SetAudioPLL	func	PB9_D1..D7 MN_SCLKG PLL power-down/M/WD/INSEL/power-up sequence; only caller e204; SDK RL6449_Series_Audio.c D1SetAudioPLL	[re-agent]	high
+CODE:e958	ScalerAudioD1DPSetDVCVolumeAdjustType	func	PB9_76 DVC_CTRL/PB9_77 DVC_VA + window size (PB9_78/79) inlined; SDK ScalerAudioD1DPSetDVCVolumeAdjustType	[re-agent]	high
+CODE:c7a7	ScalerAudioD2HDMIAudioInitial	func	P71 HDMI_AP data-port sequence (AFCR/WDCR0/PSCR/AAPNR..., I/P code 0/2, 7F/FF), first call e101=D2SetAudioPLL; SDK RL6449_Series_Audio.c	[re-agent]	high
+CODE:e101	ScalerAudioD2SetAudioPLL	func	P71 DPCR0 power down, M code, K code, VCO band, DPCR2/3, power up, CMP/latch/calibration; SDK D2SetAudioPLL	[re-agent]	high
+CODE:ded1	ScalerAudioD3SetAudioPLL	func	same as e101 on P72 page; first call in D3 initial; SDK D3SetAudioPLL (SeptPhy)	[re-agent]	high
+CODE:fec2	ScalerAudioDigitalAudioInitial	func	calls e204 (D1), c7a7 (D2), ded1 then falls into D3HDMIAudioInitial body (P72 page, Keil fall-through); SDK ScalerAudioDigitalAudioInitial	[re-agent]	high
+CODE:feec	ScalerAudioInitial	func	calls fec2 then DVC_EN/ZC_WIN/volume-type/gain regs = ScalerAudioDVCInitial fall-through; SDK ScalerAudioInitial	[re-agent]	med
+CODE:f00a	ScalerAudioADCInitial	func	AD_CTRL 0x48, REG_ADC_POWER C0, ADC_CTRL 0x39, AFE_GAIN 0x44/0x77 by IDCode, AD_GAIN 0x17, SPDIF_CS; SDK ScalerAudioADCInitial	[re-agent]	high
+CODE:f39f	ScalerAudioDACInitial	func	REG_DAC_POWER0, DA_CLK_CTRL=0x12, DAC_POWER1=0xF1, DA_GAIN L/R 0x57, MUX_ANA_OUT; SDK ScalerAudioDACInitial	[re-agent]	high
+CODE:f710	ScalerAudioDACSetOutputGain	func	REG_OUT_GAIN: type1 speaker <<4, type2 HP, type3 both; SDK ScalerAudioDACSetOutputGain	[re-agent]	high
+CODE:fe59	ScalerAudioDACSetVcmReady	func	REG_ANA_CTRL bit0 = bReady; SDK ScalerAudioDACSetVcmReady	[re-agent]	high
+CODE:f8ba	ScalerAudioDACNormalToDepop	func	VcmReady off, AOUT/HPOUT ctrl bit3 clear + bits7:6 set, VcmReady on, state=DEPOP; SDK ScalerAudioDACNormalToDepop	[re-agent]	high
+CODE:fbe2	ScalerAudioDACDepopToNormal	func	AOUT/HPOUT ctrl bit3 set, VcmReady off, state READY; SDK ScalerAudioDACDepopToNormal	[re-agent]	high
+CODE:f88e	ScalerAudioDACOutputEnable	func	VcmReady off, enable AOUT/HPOUT if REG_DAC_POWER0 bit5/bit4, VcmReady on; SDK ScalerAudioDACOutputEnable	[re-agent]	high
+CODE:fa25	ScalerAudioDACOutputSwitch	func	REG_DAC_POWER0 bits5:4 from output type (1 spk, 2 hp, 3 both, else none); SDK ScalerAudioDACOutputSwitch	[re-agent]	high
+CODE:fad6	ScalerAudioDACGetOutput	func	compares REG_DAC_POWER0 & 0x30 against 30/20/10; SDK ScalerAudioDACGetOutput	[re-agent]	high
+CODE:fe2b	ScalerAudioDACSetState	func	state byte e245 low 3 bits = state, bit3 = state-change flag; SDK ScalerAudioDACSetState	[re-agent]	high
+CODE:fedc	ScalerAudioDACGetState	func	returns e245 & 7; SDK GET_AUDIO_DAC_STATE	[re-agent]	high
+CODE:fee4	ScalerAudioDACClrStateChange	func	e245 &= ~0x08; SDK ScalerAudioDACClrStateChange	[re-agent]	high
+CODE:f3e9	ScalerAudioDisable	func	cancel 3 timer events, NormalToDepop, VcmReady off, DAC/ADC power down, DVC counter off, fa6d=DisableAudioPLL; SDK ScalerAudioDisable	[re-agent]	high
+CODE:fa6d	ScalerAudioDisableAudioPLL	func	power down ADC PLL (PBF_BD), D1 (PB9_D3), D2/D3 DPCR0 bit7 (P71/P72); SDK ScalerAudioDisableAudioPLL	[re-agent]	high
+CODE:ebb3	ScalerAudioSetADCAudioPLL	func	PBF_A0..C1 MN_SCLKG ADC PLL: DIVM 0x33, DIVS 8, OFFS, PWR sequence; SDK ScalerAudioSetADCAudioPLL	[re-agent]	high
+CODE:eb20	ScalerAudioSourceInputSwitch	func	source 1 digital: input port mux (fbac) else ADC path (ebb3), DA_MUTE, DVC_EN, REG_OUT_GAIN; SDK ScalerAudioSourceInputSwitch	[re-agent]	high
+CODE:fbac	ScalerAudioInputPortSwitch	func	MUX_DA_DVC_IN[2:0] and MUX_DIG_OUT = input port; SDK ScalerAudioInputPortSwitch	[re-agent]	high
+CODE:f7d5	ScalerAudioGetDigitalAudioPort	func	output type 0 MUX_DA_DVC_IN&7, 1 (MUX_DIG_OUT&0x70)>>4, 2 MUX_DIG_OUT&7; SDK ScalerAudioGetDigitalAudioPort	[re-agent]	high
+CODE:f833	ScalerAudioGetDigitalAudioPortMapping	func	switch on f7d5(DAC out) -> input port; SDK ScalerAudioGetDigitalAudioPortMapping	[re-agent]	high
+CODE:ecc2	ScalerAudioSamplingFreqDetect	func	port 5->f5f6 (D2), 6->f352 (D3), 4->f4c0 (D1) then type->packet switch; SDK ScalerAudioSamplingFreqDetect	[re-agent]	high
+CODE:f4c0	ScalerAudioD1SamplingFreqDetect	func	PB9_61 AUD_SAMPLE_CNT_0>>4, DA_CLK_CTRL[7:6] by freq class, store low nibble e213; SDK D1SamplingFreqDetect	[re-agent]	high
+CODE:f5f6	ScalerAudioD2SamplingFreqDetect	func	P71 data port 0x8B & 0x0F, DA_CLK_CTRL by freq class, store low nibble e215; SDK D2SamplingFreqDetect	[re-agent]	high
+CODE:f352	ScalerAudioD3SamplingFreqDetect	func	same on P72 page, store low nibble e217; SDK D3SamplingFreqDetect	[re-agent]	high
+CODE:f47b	ScalerAudioLPCMCheckData	func	port 5/6 HDMI_SR bit4 (P71/P72), port 4 DP_AUD_CTRL bits5:4 XOR test; SDK ScalerAudioLPCMCheckData	[re-agent]	high
+CODE:f742	ScalerAudioLPCMCheckInfo	func	P71/P72 data port 0x15 & 0xF0 in {0x00,0x10}; SDK ScalerAudioLPCMCheckInfo	[re-agent]	high
+CODE:f774	ScalerAudioDigitalOutputMute	func	port 5/6 AVMCR bit5 on P71/P72, port 4 DP_CHANNEL_EN (fe4a) = ~mute; SDK ScalerAudioDigitalOutputMute	[re-agent]	med
+CODE:f804	ScalerAudioWatchDogProc	func	per-port dispatch to D1 (f9b3) / D2 (fb37) / D3 (faf7) watchdog; SDK ScalerAudioWatchDogProc	[re-agent]	high
+CODE:f9b3	ScalerAudioD1WatchDogProc	func	DP_AWD_CTRL (PB9_39) 0xC0 on/off, AUD_BUFFER_CTRL (PB9_70) clear, FSM reset; SDK D1WatchDogProc	[re-agent]	high
+CODE:fb37	ScalerAudioD2WatchDogProc	func	P71 data port 0x31 WDCR0 mask F9 / 6, HDMI_SR 0x71CB; SDK D2WatchDogProc	[re-agent]	med
+CODE:faf7	ScalerAudioD3WatchDogProc	func	same as fb37 on P72; SDK D3WatchDogProc	[re-agent]	med
+CODE:fc30	ScalerAudioGetAudioDetected	func	port 4: PB9 FSM/BUFFER/AWD checks, 5/6: HDMI_SR 0x71CB/0x72CB bits; SDK ScalerAudioGetAudioDetected	[re-agent]	med
+CODE:e6c1	ScalerAudioD1DigitalDetectProc	func	f4c0 freq detect + PB9_50 AUD_FREQUENY_DET_0 bit5 handling + e958; vendor variant of SDK D1DigitalDetectProc	[re-agent]	med
+CODE:f53f	ScalerAudioD2DigitalDetectProc	func	f5f6 freq detect + 0x33 timer event + fd99 (P71 FIFO tracking); vendor variant of SDK D2DigitalDetectProc	[re-agent]	med
+CODE:e8b6	ScalerAudioDVCSetVolumeZCDTimeout	func	VOLUME_STEP_SIZE type, |DVC_GAIN - vol|/step+1, freq from ecc2, writes DVC_ZC_WIN_CTRL (f27d); SDK ScalerAudioDVCSetVolumeZCDTimeout	[re-agent]	high
+CODE:e9f7	ScalerAudioDVCSetMuteZCDTimeout	func	DB-gain step from DVC_EN[3:0], freq from ecc2, writes DVC_ZC_WIN_CTRL; SDK ScalerAudioDVCSetMuteZCDTimeout	[re-agent]	high
+CODE:eeb4	ScalerAudioDVCVolumeMute	func	AdjustType, ZCD timeout, read gain, mute: gain 0 and wait DVC_GAIN_DONE bit7 with timeout; SDK ScalerAudioDVCVolumeMute	[re-agent]	high
+CODE:fa00	ScalerAudioDVCVolumeAdjustType	func	DVC_EN[4:0]/DVC_VA_MSB/LSB per type (dB step 0x0F/1 or volume step 0x10/0x40); SDK ScalerAudioDVCVolumeAdjustType	[re-agent]	high
+CODE:fc4a	ScalerAudioDVCAdjustVolume	func	DVC_GAIN_MSB[5:0]/LSB then DVC_GAIN_READ_MSB bit6 double buffer; SDK ScalerAudioDVCAdjustVolume	[re-agent]	high
+CODE:fcdb	ScalerAudioDigitalAdjustVolume	func	e8b6 (ZCD timeout) then DVC AdjustVolume inline; SDK ScalerAudioDigitalAdjustVolume	[re-agent]	high
+CODE:fcf1	ScalerAudioDigitalVolumeMute	func	stores mute/volume args then calls eeb4; SDK ScalerAudioDigitalVolumeMute	[re-agent]	med
+CODE:f8e5	SysAudioMuteProc	func	amp mute (0555/055b interface) + volume mute via fcf1, ordering by bMute; SDK SysAudioMuteProc	[re-agent]	high
+CODE:f1a9	SysAudioPowerProc	func	switch on power action: ->normal fb90, ->off/ps mute+watchdog off+f3e9 ScalerAudioDisable+state; SDK SysAudioPowerProc	[re-agent]	high
+CODE:fb90	SysAudioInitial	func	feec (ScalerAudioInitial), eb20 (SourceInputSwitch), VcmReady on, DAC state initial(e245|9); SDK SysAudioInitial	[re-agent]	high
+CODE:f98b	SysAudioDpAudioSecDataResetProc	func	mute, watchdog off, f8ba NormalToDepop, state preparing, then ScalerDpSecDataReset (2040); SDK SysAudioDpAudioSecDataResetProc	[re-agent]	high
+CODE:ed44	SysAudioHandler	func	ddb2 (analog handler), fe8f (digital handler), audio state machine on e244 bits5:4 (1 preparing, 2 playback); SDK SysAudioHandler	[re-agent]	high
+CODE:ddb2	SysAudioAnalogAudioHandler	func	DAC state machine (fedc/fe2b/f8ba/f88e/fa25/fad6) + mute/state change; SDK SysAudioAnalogAudioHandler	[re-agent]	med
+CODE:fe8f	SysAudioDigitalAudioHandler	func	f774 output mute, e6c1/f53f/f352 per-port detect (D3 detect falls through); SDK SysAudioDigitalAudioHandler + ScalerAudioDigitalDetect	[re-agent]	med
+CODE:fd73	SysAudioChangeAudioState	func	e244 = (e244&0xCF)|(state<<4)|0x40 (state + state-change flag); SDK SysAudioChangeAudioState	[re-agent]	high
+CODE:feb9	SysAudioGetAudioState	func	returns (e244>>4)&3; SDK SysAudioGetAudioState	[re-agent]	high
+CODE:fe9a	ScalerAudioDVCGetVolumeMuteStatus	func	returns bit field of e245 (e245>>4); likely mute flag; hint only	[re-agent]	low
+CODE:d5db	ScalerFlashDetectFlashType	func	loops 0x4A flash table entries, ID check 1/2 via e617, result in e248 (g_ucFlashType, 0xFE=_FLASH_UNDETECT); SDK ScalerCommonNVRam.c	[re-agent]	high
+CODE:e617	ScalerFlashReadFlashIDCode	func	COMMON_INST_EN 0x46/0x47 op 0x9F, 0x5E/0x5F op 0x90/0xAB, reads READ_PORT0..2; SDK ScalerFlashReadFlashIDCode	[re-agent]	high
+CODE:f076	ScalerFlashErasePage	func	bank>=XDATA_BANK_START check, detect type if 0xFE, WREN (a7f8), INST_EN 0xB8/0xB9 erase op, WRDis (d966); SDK ScalerFlashErasePage	[re-agent]	high
+CODE:a7f8	ScalerFlashWREN	func	jump-table dispatch on g_ucFlashType; called with (page, bank) from f076 and d3bd; SDK ScalerFlashWREN (flash-type switch)	[re-agent]	med
+CODE:d966	ScalerFlashWRDis	func	jump-table dispatch on g_ucFlashType (<0x4A) default dae2; called after write/erase; SDK ScalerFlashWRDis	[re-agent]	med
+CODE:fd5e	ScalerFlashSetWRSR	func	INST_EN 0x68/0x88 (SST), op 0x01, ISP0=value, start; PORT86 WP pin around it; SDK ScalerFlashSetWRSR	[re-agent]	high
+CODE:fa49	ScalerFlashSet2ByteWRSR	func	INST_EN 0x70/0x90, op 0x01, ISP0/ISP1; SDK ScalerFlashSet2ByteWRSR	[re-agent]	high
+CODE:f861	ScalerFlashSet2ByteWRSRonebyone	func	INST_EN 0x68/0x88 op 0x01 then op 0x31; SDK ScalerFlashSet2ByteWRSRonebyone	[re-agent]	high
+CODE:fcad	ScalerFlashSet2ndWRSR	func	INST_EN 0x68/0x88, op 0x31, ISP0; SDK ScalerFlashSet2ndWRSR	[re-agent]	high
+CODE:fbfc	ScalerFlashSet3rdWRSR	func	INST_EN 0x68/0x88, op 0x11, ISP0; SDK ScalerFlashSet3rdWRSR	[re-agent]	high
+CODE:fc16	ScalerFlashSet4thWRSR	func	INST_EN 0x68/0x88, op 0x41, ISP0; SDK ScalerFlashSet4thWRSR	[re-agent]	high
+CODE:fcc4	ScalerFlashReadSR	func	COMMON_OP_CODE=op, INST_EN=0x43, returns READ_PORT0; SDK ScalerFlashReadSR	[re-agent]	high
+CODE:fde5	ScalerFlashSetWREN	func	COMMON_OP_CODE=op then INST_EN=0x21 (0x20 set by caller); SDK ScalerFlashSetWREN	[re-agent]	med
+CODE:da12	ScalerFlashWRProtect	func	SetWRSR (fd5e) with table value then SetWREN(WRDis op) from tFlashInformation, op codes disabled at end; SDK ScalerFlashWRProtect	[re-agent]	med
+CODE:aa12	ScalerFlashWREN_at25sf321_page	func	ucWRSR 0xE4/E8/EC/F8/A4 by page, ucWRSR1 0x40 = AT25SF321 case 0 of SDK ScalerFlashWREN	[re-agent]	med
+CODE:d43e	flash_wp_pin_release	func	PORT86_PIN_REG=1 (PCB_FLASH_WRITE_PROTECT disable) before WRSR sequences	[re-agent]	med
+CODE:d402	flash_cmd_end_wp_pin_assert	func	COMMON_OP_CODE=0xFF, PORT86_PIN_REG=0 (WP asserted) after WRSR sequences	[re-agent]	med
+CODE:d7a4	UserCommonFlashCalculateCheckSumData	func	bitwise CRC-8 network identical to SDK equations (bTempCRC0..7), result packed by d915; SDK UserCommonNVRamSystem.c	[re-agent]	high
+CODE:c177	UserCommonFlashSaveItem	func	scan items top-down by id, compare checksum (d7a4) and data, write 16-byte item, verify, move page when full; SDK UserCommonFlashSaveItem	[re-agent]	high
+CODE:dfef	UserCommonFlashLoadItem	func	scan items top-down by id, checksum check (d7a4), copy data; SDK UserCommonFlashLoadItem	[re-agent]	high
+CODE:fe09	UserCommonFlashSaveSystemData	func	c177 with item id 2 (SYSTEM_DATA), 13 bytes (StructSystemDataType size) at e1d8	[re-agent]	med
+CODE:fc63	UserCommonFlashWrite	func	copies bank/addr/len/ptr from dc6c.. into ScalerFlashWrite call; SDK UserCommonFlashWrite	[re-agent]	med
+CODE:fc7c	UserCommonFlashRead	func	same wrapper for ScalerFlashRead; SDK UserCommonFlashRead	[re-agent]	med
+CODE:c4df	RTDFlashMoveData	func	erase free page, copy newest valid items (checksum+id dedup), write page info with move count, checksum/version page; SDK RTD2014NVRamOsd.c RTDFlashMoveData	[re-agent]	high
+CODE:f0e1	RTDFlashGetFreePage	func	start page 0x0B end 0x0C, skips pages in use, uses last page and move count; SDK RTDFlashGetFreePage	[re-agent]	high
+CODE:edc1	RTDFlashInitialDataPage	func	get free page, erase, move count++, write page info (id, 3-byte count, crc); SDK RTDFlashInitialDataPage	[re-agent]	high
+CODE:daf9	RTDFlashInitialAddr	func	clear move count/last page, scan pages 0x0B..0x0C (f14b valid check), pick max move count, init missing pages (edc1, e2fa); SDK RTDFlashInitialAddr	[re-agent]	high
+CODE:f14b	RTDFlashIsPageInfoValid	func	reads 5-byte page info, checksum of 4 bytes via d7a4 vs byte 0; SDK RTDFlashIsPageInfoValid	[re-agent]	med
+CODE:f205	RTDFlashSearchPageAddr	func	scans items from page end down for first byte != 0xFF, returns item index; SDK RTDFlashSearchPageAddr	[re-agent]	high
+CODE:e2fa	RTDFlashSaveChecksumVersionCode	func	reads stored version/checksum, 5-way compare (0xFF = erased), writes missing or moves page (c4df); SDK RTDFlashSaveChecksumVersionCode	[re-agent]	high
+CODE:f90f	RTDFlashLoadChecksumVersioncode	func	two ScalerFlashRead calls at page offsets for checksum and version code; SDK RTDFlashLoadChecksumVersioncode	[re-agent]	med
+CODE:e76a	RTDFlashStartup	func	daf9 InitialAddr, load checksum/version, compare, restore defaults or load items (dfef); SDK RTDFlashStartup	[re-agent]	high
+EXTMEM:e248	g_ucFlashType	var:u8	compared with 0xFE (_FLASH_UNDETECT) in ScalerFlashWrite/ErasePage; written by d5db DetectFlashType	[re-agent]	high
+EXTMEM:e048	g_ucFlashLastPage	var:u8	init 0x0B (_SYSTEM_EEPROM_EMULATION_START_PAGE) in daf9; used by f0e1 GetFreePage	[re-agent]	high
+EXTMEM:e049	g_pucFlashPageArr	var:u8	page index of page id 0; <<4 is page address high byte in c177/dfef/e2fa	[re-agent]	med
+EXTMEM:e06e	g_pusFlashAddrArr	var:u16	item count of page id 0 (c177/dfef/f205 index (id*2)+0xE06E)	[re-agent]	med
+EXTMEM:e070	g_ulFlashMoveCount	var:u32	4-byte clear in daf9, 3-byte count written to page info (edc1, c4df)	[re-agent]	high
+EXTMEM:e244	g_stAudioInfo	var:u8	audio state bits5:4, state-change bit6, search index low nibble (field order differs from sdk_types StructAudioInfoType); SysAudioHandler ed44	[re-agent]	med
+EXTMEM:e245	g_stAudioDACInfo	var:u8	DAC state low 3 bits, state-change bit3 (fe2b/fedc/fee4)	[re-agent]	med
+EXTMEM:e213	g_stAudioD1DigtalInfo	var:u8	low nibble = D1 sampling freq (f4c0)	[re-agent]	med
+EXTMEM:e215	g_stAudioD2DigtalInfo	var:u8	low nibble = D2 sampling freq (f5f6)	[re-agent]	med
+EXTMEM:e217	g_stAudioD3DigtalInfo	var:u8	low nibble = D3 sampling freq (f352)	[re-agent]	med
+EXTMEM:e1d8	g_stSystemData	var:StructSystemDataType	fe09 saves 13 bytes from here as flash item 2 = SYSTEM_DATA; StructSystemDataType size 13	[re-agent]	med

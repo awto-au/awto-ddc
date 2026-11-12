@@ -1,0 +1,67 @@
+class	site	function	loop	header	reaches
+check	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:3662	ScalerDpRx1PhyCTS	while	(ucPhyCtsAutoMode != 0x00)	ScalerDebug,ScalerDpRx1PhyCtsTp1Check,ScalerDpRx1PhyCtsTp2Check,ScalerTimerDelayXms
+check	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:3963	ScalerDpRx1PhyCTS	while	(ucPhyCtsAutoMode == 0x05)	ScalerDebug,ScalerTimerDelayXms
+check	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4047	ScalerDpRx1PhyCTS	while	(GET_DP_RX1_PHY_CTS_FLG() == _TRUE)	ScalerDebug,ScalerDpRx1PhyCtsTp1Check,ScalerDpRx1PhyCtsTp2Check,ScalerTimerDelayXms
+check	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c:221	ScalerDisplayDPTxLinkSequence	do	((ucLTRetryNum < 5) && (bLTCheck != _SUCCESS))	ScalerDisplayDPTx1LinkTraining,ScalerDisplayDPTxLinkConfigCheck,ScalerTimerDelayXms
+check	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MDomain.c:106	ScalerMDomainControlDBApply	while	(pData[15] > 0)	ScalerTimerWaitForEvent
+check	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_MDomain.c:135	ScalerMDomainControlDBApply	while	(pData[15] > 0)	ScalerTimerWaitForEvent
+check	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:300	ScalerDpRx1ValidSignalDetection	do	((ucDpLaneCount == _DP_TWO_LANE) || (ucDpLaneCount == _DP_ONE_LANE))	ScalerDpRx1VBIOSMSACheck
+check	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:731	ScalerDpRx1VBIOSMSACheck	do	(ScalerDpRx1ChangeSrambleSeed() == _TRUE)	ScalerTimerDelayXms
+check	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c:194	ScalerDebugMessage	do	((g_bFwHalt != 0) && (AwtoMsgWait() != 0))	AwtoMsgWait
+check	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c:656	ScalerDebug	do	(ucHalt != 0)	ScalerDebugGetRegisters,ScalerDebugSetRegisters
+check	Kernel/Scaler/ScalerFunction/Code/ScalerAudio.c:768	ScalerAudioDVCVolumeMute	do	((ScalerGetBit(P8_A9_DVC_GAIN_DONE, _BIT7) != _BIT7) && (PDATA_WORD(1) < _DVC_VOLUME_MUTE_	ScalerTimerDelayXms
+check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:652	ScalerDisplayDPTx1LinkTraining	while	((GET_DISPLAY_DP_TX1_LT_RESULT() != _DISPLAY_DP_TX_TRAINING_PASS) && (GET_DISPLAY_DP_TX1_L	AwtoMsg0,ScalerDisplayDPTx1TrainPatternEnd
+check	Kernel/Scaler/ScalerFunction/Code/ScalerIDomain.c:222	ScalerIDomainVgipIVDelayIVstStepAdjust	do	((usInitialIVDelay != ScalerVgipGetCaptureVDelay()) && (ucSettingCounter > 0))	AwtoMsgV,ScalerGlobalIDomainDBApply
+check	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:320	ScalerMemoryFineTuneIVS2DVSDelay	while	(usRemainIVS2DVSDelay > usIVS2DVSChgLimit)	ScalerGlobalIDomainDBApply
+check	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:361	ScalerMemoryFineTuneIVS2DVSDelay	while	((usRemainIVS2DVSDelay > usIVS2DVSChgLimit) && ((usOldIVS2DVSDelay + usIVS2DVSChgLimit) < 	ScalerGlobalIDomainDBApply
+check	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:411	ScalerMemoryFineTuneIVS2DVSDelay	while	(usRemainIVS2DVSDelay > usIVS2DVSChgLimit)	ScalerGlobalIDomainDBApply
+check	Kernel/System/Code/SysMain.c:1295	main	while	(SysMainSytemPowerDetect() == _TRUE)	AwtoDiagMainPass,AwtoDiagTestCmd,AwtoGpioPoll,AwtoKeyPoll
+check	Kernel/User Common Function/Code/UserCommonAdjust.c:962	UserCommonAdjustVPosition	do	((shVDelay != ScalerVgipGetCaptureVDelay()) && (ucTimeoutCounter > 0))	ScalerGlobalIDomainDBApply
+check	User/RTD Factory/Code/RTDFactoryFunction.c:1994	RTDFactoryOsdFuncPutStringProp	while	(*(pucArray + pData[0]) != _END_)	ScalerTimerDelayXms
+check	User/RTD Series/RTD2014Osd/Code/RTD2014Key.c:1164	AwtoKeyPoll	while	(s_ucKeyQN != 0)	AwtoKeyRoute
+check	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c:1290	OsdPropPutString	do	(bNextLineFlag == _TRUE)	OsdPropFontDataToSram
+check	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c:1373	OsdPropPutString	while	((*(pucArray + ucElementCount) != _END_) && (*(pucArray + ucElementCount) != _NEXT_LINE))	OsdPropFontDataToSram
+main	Kernel/System/Code/SysMain.c:1288	main	do	(_TRUE)	AwtoDiagMainPass,AwtoDiagTestCmd,AwtoGpioPoll,AwtoKeyPoll
+bounded	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:3910	ScalerDpRx1PhyCTS	for	(usTemp = 0; usTemp <= 1000; usTemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4197	ScalerDpRx1PhyCTS	for	(usTemp = 0; usTemp <= 1000; usTemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c:972	ScalerDebugSendData	while	(ucIndex < (ucLen))	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonIOSC.c:123	ScalerIOSCTrimming	for	(chcTempInx = -1; chcTempInx < 2; chcTempInx++)	ScalerTimerPollingFlagProc
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3935	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3978	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4021	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4075	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4118	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4161	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4215	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4258	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4301	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4354	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4406	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4458	ScalerSyncHDMIDdcCheckBusy	for	(ustemp = 0; ustemp < usDebounceTimePeriod; ustemp++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:4784	ScalerSyncTMDSHPDToggleProc	for	(ucI = 1; ucI <= ucPortNum; ucI ++)	ScalerTMDSHotPlugHighProc
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c:1774	ScalerTimerEventProc	for	(ucDebounceCnt = 0; ucDebounceCnt < 10; ucDebounceCnt++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c:1877	ScalerTimerEventProc	for	(ucDebounceCnt = 0; ucDebounceCnt < 10; ucDebounceCnt++)	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonNVRam/ScalerCommonFlashWrite.c:141	ScalerFlashWrite	for	(ucPage = ucStartPage; ucPage <= ucEndPage; ucPage++)	ScalerFlashWRDis,ScalerFlashWREN
+bounded	Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonNVRam/ScalerCommonFlashWrite.c:162	ScalerFlashWrite	for	(usIndex = usCurrentAddr - usAddr; usIndex < (usCurrentAddr - usAddr) + usCurrentLength; u	ScalerFlashWREN
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:519	ScalerDpHotPlugHandler	for	(ucI = 1; ucI <= ucPortNum; ucI ++)	ScalerDpRx1AfterHpdToggleProc,ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:1682	ScalerDisplayDPTx1MeasureInputInfo	do	(ucTemp > 0)	ScalerTimerWaitForEvent
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:1027	ScalerMeasureAutoFuncWaitFinish	do	(--ucIvsCnt)	ScalerTimerWaitForEvent
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2036	ScalerDPLLFineTuneFrameSyncLineBuffer	while	(ucDebounceCnt > 0)	ScalerGlobalDDomainDBApply,ScalerMDomainDHtotalFinetune,ScalerMDomainGetDisplayActiveRegion
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3720	ScalerPLLDDR2PLLOutputCtrl	for	(ucDDRSel = _DDR2_DEV_SEQ_BEGIN; ucDDRSel < _DDR2_DEV_SEQ_END; ucDDRSel++)	ScalerTimerPollingFlagProc
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx2_SeptPhy.c:627	ScalerTMDSRx2HdmiWaitDeepColorPllLock	do	((ScalerGetDataPortBit(P71_C9_HDMI_AP, _P71_CA_PT_82_PORT_PAGE71_HDMI_DPC_SET2, _BIT1) != 	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3_SeptPhy.c:627	ScalerTMDSRx3HdmiWaitDeepColorPllLock	do	((ScalerGetDataPortBit(P72_C9_HDMI_AP, _P72_CA_PT_82_PORT_PAGE72_HDMI_DPC_SET2, _BIT1) != 	ScalerTimerDelayXms
+bounded	Kernel/Scaler/ScalerFunction/Lib/Code/ScalerOSD/SRAM/OsdFontLibraryRotation.c:59	ScalerOsdFontLibraryRotation	for	(ucIdx = 100; ucIdx > 0; ucIdx--)	ScalerTimerWaitForEvent
+bounded	Kernel/System/Code/SysSource.c:1530	SysSourceSwitchPort	do	(ucCount < _INPUT_PORT_VALID)	ScalerTimerActiveTimerEvent
+bounded	Kernel/System/Code/SysSource.c:2290	SysSourceSwitchPort	for	(pData[0] = 0; pData[0] < _INPUT_PORT_VALID; pData[0]++)	AwtoMsgV
+bounded	Kernel/System/Code/SysSource.c:2490	SysSourceSwitchPort	for	(pData[0] = 0; pData[0] < _INPUT_PORT_VALID; pData[0]++)	AwtoMsgV
+bounded	Kernel/System/Code/SysSource.c:2857	SysSourceSwitchPort	for	(ucTemp = 1; ucTemp <= _INPUT_PORT_VALID; ucTemp++)	AwtoMsgV
+bounded	Kernel/System/Code/SysSource.c:2948	SysSourceSwitchPort	for	(ucIndex = 0; ucIndex < _INPUT_PORT_VALID; ucIndex++)	AwtoMsgV
+bounded	Kernel/System/Code/SysSource.c:4186	SysSourceCableDetection	for	(ucI = 0; ucI < _INPUT_PORT_VALID; ucI++)	AwtoMsgV,ScalerTMDSHotPlugEvent,ScalerTimerDelayXms
+bounded	Kernel/System/Code/SysTimer.c:71	SysTimerHandler	for	(ucTimerEventIndex = 0; ucTimerEventIndex < _TIMER_EVENT_COUNT; ucTimerEventIndex++)	ScalerTimerEventProc,SysTimerEventProc,UserCommonInterfaceTimerEventProc
+bounded	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1610	UserCommonFlashSaveItem	for	(usAddrIndex = g_pusFlashAddrArr[ucPageID]; usAddrIndex <= ((_FLASH_PAGE_SIZE - _PAGE_INFO	RTDFlashMoveData
+bounded	User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c:1104	RTDFlashMoveData	for	(usAddrIndex = ((_FLASH_PAGE_SIZE - _PAGE_INFO_LENGTH) / _DATA_ITEM_LENGTH); usAddrIndex >	UserCommonFlashWrite
+bounded	User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c:1189	RTDFlashStartup	for	(ucPageID = _START_OF_PAGEID; ucPageID <= _END_OF_PAGEID; ucPageID++)	RTDFlashInitialDataPage
+bounded	User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c:1363	RTDFlashSaveOSDData	for	(ucItemOffset = 0; ucItemOffset < ((sizeof(StructOsdUserDataType) + (_DATA_ITEM_LENGTH - 2	UserCommonFlashSaveItem
+bounded	User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c:1448	RTDFlashRestoreBriCon	for	(ucSourceIndex = 0; ucSourceIndex < _SOURCE_AMOUNT; ucSourceIndex++)	RTDFlashSaveBriCon
+bounded	User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c:1517	RTDFlashRestoreColorSetting	for	(ucColorTempIndex = 0; ucColorTempIndex < _CT_COLORTEMP_AMOUNT; ucColorTempIndex++)	RTDFlashSaveColorSetting
+bounded	User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c:960	RTDFlashInitialAddr	for	(ucPageID = _START_OF_PAGEID; ucPageID <= _END_OF_PAGEID; ucPageID++)	RTDFlashInitialDataPage,RTDFlashSaveChecksumVersionCode

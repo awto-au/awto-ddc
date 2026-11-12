@@ -30,19 +30,18 @@ def main() -> int:
     a = ap.parse_args()
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (root / "tmp/logs/rtd_dbg_read.log").open("a")
+    import rtd_i2c_bridge as B
+    log = B.setup_logs("rtd_dbg_read", map=a.map).main     # decoded I2C + result lines; byte trace in .raw.log
     mp = Path(a.map).read_text(errors="replace") if Path(a.map).exists() else ""
     # only XDATA symbols ("D:" lines): 0x3A reads XDATA; DATA/IDATA variables are not reachable this way
     sym = {n: int(v, 16) for v, n in re.findall(r"^D:\s+([0-9A-F]{8})\s+(_\w+)", mp, re.M)}
-    import rtd_i2c_bridge as B
-    B.LOG = log
     dev = Real(a.bus, allow_write=True)                       # writes below are debug read commands only
     if a.halt:
         dev.write(DBG, 0x80, bytes([0x01]))
     try:
         for it in a.items:
             name, _, n = it.partition(":")
-            addr = int(name, 0) if re.match(r"^(0x)?[0-9a-fA-F]+$", name) else sym.get(name)
+            addr = int(name, 16) if re.match(r"^(0x)?[0-9a-fA-F]+$", name) else sym.get(name)   # bare hex = hex
             if addr is None:
                 print(f"{name}: not in map"); continue
             vals = []

@@ -1,0 +1,3 @@
+vendor	package	url	notes
+benq	display_quickit_win_v1_1_28_0	https://esupportdownload.benq.com/esupport/WORK%20&%20ENTERTAINMENT%20DISPLAY/Firmware/BL2485TC/Display%20Quickit%20for%20Win%20(Firmware%20upgrade%20tool)_V1.1.28.0_Windows_260714112625.zip	benq.com /api/esupport-tm/getFiles (type Firmware)
+benq	display_quickit_mac_v1_0_27_0	https://esupportdownload.benq.com/esupport/WORK%20&%20ENTERTAINMENT%20DISPLAY/Firmware/BL2486TC/Display%20Quickit%20for%20Mac%20(Firmware%20upgrade%20tool)_V1.0.27.0_Mac_261014165748.zip	benq.com /api/esupport-tm/getFiles (type Firmware)

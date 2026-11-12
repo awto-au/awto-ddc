@@ -1,0 +1,7 @@
+# cleanroom_lint allowlist: reviewed hits only. kind<TAB>value<TAB>reason (reviewer, date)
+# kind: ident (identifier) | code / prose (16-hex hit hash from the lint report)
+code	eef5ec3e6d468dd0	generic list of small integer literals (test parameters N=1,2,5) (coordinator, 2026-11-07)
+code	6d36ce9f32962390	generic list of small integer literals (test indices) (coordinator, 2026-11-07)
+code	5e2733a8ca573ce4	(x >> 8) & 0xff byte extraction idiom (coordinator, 2026-11-07)
+code	f297dcdf3b3886aa	generic list of small integer literals (test indices), next window (coordinator, 2026-11-07)
+code	d217b273bae36940	(x >> 8) & 0xff byte extraction idiom, next window (coordinator, 2026-11-07)

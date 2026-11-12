@@ -1,0 +1,84 @@
+match	class	reason	citation	vendor_value	note
+delay_ms@RL6449_Series_Mcu.c:1757#10	shortenable	settle after the VCCK poll; no datasheet value in the repo; unmeasured	SDK comment "Wait for VCCK_OFF Power On Stable"; #40 (vendor 10 ms = SDK POLLING_VCCK_OFF_STATUS, vendor 200 ms is PCB content, not ours)	10 ms (SDK) + 200 ms vendor-only
+delay_ms@RL6449_Series_Mcu.c:1757#1	required	granularity of the VCCK poll loop (<=20 iterations x 1 ms, exits when the flag reads back)	SDK macro POLLING_VCCK_OFF_STATUS	20 x 1 ms
+status_loop@RL6449_Series_Mcu.c:1757	required	bounded poll on the VCCK flag (exits early); bound 20 ms is a failure limit	SDK _VCCK_OFF_TIME_POLLING_POWER_ON	20 ms
+delay_ms@ScalerGlobal.c:140	shortenable	chip-reset settle, SDK comment only; no spec value; measure	SDK comment "For Delay 10 ms"
+delay_ms@ScalerCommonIOSC.c:68	unknown	IOSC trimming step; no comment, no spec	-
+poll@ScalerCommonIOSC.c:136	required	trim-done flag; SDK states ~440 us, bound 10 ms = 23x: tighten the bound (costs time only on failure)	SDK comment "time-cunsuming ~= 440us"
+poll@ScalerCommonIOSC.c:104	required	trim restart flag; exits early, bound only matters on failure	SDK
+delay_ms@RL6449_Series_Power.c:438	removable	power-cut OFF branch: waits 10 ms after PCB_DDR_POWER(_ON) and 10 ms after PCB_VCCK_OFF_POWER(_ON); both macros are no-ops on our board (SDK comment 'can't delete' is for boards that switch these rails); JEDEC DDR2 init needs >= 200 us after stable VDD (JESD79-2; spec not in ~/vendors) if the rail is ever switched	fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h:275-292; SDK comment	
+delay_ms@RL6449_Series_Power.c:428	removable	ScalerPowerGroupAPowerCut(_ON): PCB_DDR_POWER_RELEASE_TIME(_DDR_POWER_OFF_TIME) = 200 ms blind at every boot after PCB_DDR_POWER(_DDR_POWER_OFF); our board header makes PCB_DDR_POWER and PCB_VCCK_OFF_POWER no-ops (old fw never writes P9.6 / P8.1), so nothing is being released	fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h:275-292; docs/monitors/gpio-roles.md; sim: fires at fw 306 ms. Vendor 200 ms (bank 5 d2a0) is a different, PCB-content delay (#40, #41)	SDK default 200 ms; vendor d2a0 200 ms separate
+poll@ScalerPLL.c:3722	required	DDR2 PLL lock flag, exits early; the sim never sets the flag (2 expiries = 82 ms) so that time is a sim artifact	SDK
+delay_ms@RL6449_Series_PLL.c:322	unknown	CMU stable wait, no spec	SDK comment "Wait for CMU Stable"
+poll@RL6449_Series_PLL.c:328	required	PLL watchdog stable flag, bound 2 ms	SDK comment
+delay_ms@SysSource.c:3953	shortenable	cable-pin debounce before re-reading D1 pin, only when the status changed; no spec	SDK
+delay_ms@SysSource.c:4064	shortenable	cable-pin debounce before re-reading D2 pin, only when the status changed; no spec	SDK
+delay_ms@SysSource.c:4174	shortenable	cable-pin debounce before re-reading D3 pin, only when the status changed; no spec	SDK
+delay_ms@SysMain.c:282	removable	our #23 self-test (measures DelayXms, 200 x 5 us, bench) before PCB_PANEL_POWER every boot	#53 item 6, awto_diag.inc
+delay_us@SysMain.c:287	removable	part of the #23 self-test (200 x 5 us loop)	#53 item 6
+delay_ms@RTD2014UserInterface.c:1415	required	panel T1: wait for VDD rail ramp; datasheet T1 0.5-10 ms, value 10 = max; shorten only with a measured rail ramp	BOE MV270QUM-N50 spec 8.0 (~/vendors/boe), docs/monitors/panel-edid.md	SDK example 10 ms
+delay_ms@RTD2014UserInterface.c:1447	interrupt-or-poll	panel T3 inside the _BACKLIGHT_ON action (UserCommonInterface.c:1204): blind 550 ms, blocks the whole main loop (source search, OSD, keys); value is required by the datasheet (T4 >= 500 ms from valid video to backlight) but the same SDK code already runs it as a deferred timer event in the _PANEL_ON branch	BOE MV270QUM-N50 spec 8.0 T4 (>=500 ms); #40	
+delay_ms@RTD2014UserInterface.c:1457	shortenable	panel T4 in _BACKLIGHT_OFF and the power-off path: 250 ms between backlight off and DPTx stream disable; datasheet T5 needs >= 100 ms, so ~150 ms is margin; the whole step is removable if the stream is kept up across a mode change	BOE MV270QUM-N50 spec 8.0 T5 (>=100 ms)	
+delay_ms@RTD2014UserInterface.c:1467	required	panel off T5 (idle pattern before PHY/VDD off): datasheet T6 0-50 ms, recommend 0; value 20	BOE MV270QUM-N50 spec 8.0
+delay_ms@UserCommonInterface.c:1225	shortenable	_PANEL_POWER_ON_BL_TO_PWM: backlight enable to PWM set, SDK default 50 ms, no stated reason; candidate for a deferred timer event	SDK Project_Default, no comment
+delay_ms@UserCommonInterface.c:1277	shortenable	_PANEL_POWER_ON_BL_TO_PWM, same as above (other branch)	SDK
+delay_ms@UserCommonInterface.c:1348	shortenable	_PANEL_POWER_ON_BL_TO_PWM, same as above (other branch); fires again entering ACTIVE	SDK
+delay_ms@UserCommonInterface.c:1383	shortenable	_PANEL_POWER_OFF_PWM_TO_BL: PWM to minimum, then 50 ms before the backlight enable drops; _BACKLIGHT_OFF runs on every mode change (RTD2014UserInterface.c:662); SDK default, no stated reason; not a datasheet value	SDK Project_Default, no comment	
+delay_ms@UserCommonInterface.c:1357	unknown	10 ms after backlight on, only for the UNITED_RTD2785_C23 project type in the SDK; still linked here	SDK
+delay_ms@UserCommonInterface.c:919	shortenable	_PANEL_POWER_OFF_PWM_TO_BL 50 ms, same step in the _PANEL_OFF action	SDK Project_Default, no comment	
+delay_ms@UserCommonInterface.c:1098	shortenable	_PANEL_POWER_OFF_PWM_TO_BL 50 ms, power-off path only	SDK
+delay_ms@RL6449_Series_DisplayDPTx.c:294	removable	paid after every training attempt including the successful one (do-while); only needed between retries	SDK source RL6449_Series_DisplayDPTx.c ScalerDisplayDPTxLinkSequence
+delay_ms@RL6449_Series_DisplayDPTx.c:505	unknown	"Waiting for PHY initial" 10 ms; no spec	SDK comment
+delay_ms@ScalerDisplayDPTx.c:579	shortenable	"wait HW circuit complete the transition", 45 ms (one frame at the DP RX max); no flag named	SDK comment
+delay_ms@ScalerDisplayDPTx.c:206	unknown	10 ms in link config; no comment	-
+status_loop@RL6449_Series_DisplayDPTx.c:206	required	ScalerDisplayDPTxPollingHotPlug: polls HPD up to _PANEL_POWER_ON_T2 (250 ms), exits at HPD; datasheet T2 max 200 ms so the bound can be ~220 ms	BOE MV270QUM-N50 spec 8.0 (T2 0-200 ms); sim: HPD is not modelled, the sim spends the full bound
+delay_ms@ScalerTMDSRx2_SeptPhy.c:796	interrupt-or-poll	HDMI hot-plug: holds HPD low for the user-set time (GET_HDMI_HOTPLUG_TIME = nibble x 100 ms; 500 ms in the sim) as a blind wait that blocks the main loop; the HPD-high step can run as a deferred timer event like DP's _SCALER_TIMER_EVENT_DP_RX1_HOTPLUG_ASSERTED; HDMI floor of 100 ms assumed, spec not in ~/vendors	SDK macro GET_HDMI_HOTPLUG_TIME; #40	
+delay_ms@ScalerTMDSRx3_SeptPhy.c:796	interrupt-or-poll	HDMI hot-plug: holds HPD low for the user-set time (GET_HDMI_HOTPLUG_TIME = nibble x 100 ms; 500 ms in the sim) as a blind wait that blocks the main loop; the HPD-high step can run as a deferred timer event like DP's _SCALER_TIMER_EVENT_DP_RX1_HOTPLUG_ASSERTED; HDMI floor of 100 ms assumed, spec not in ~/vendors	SDK macro GET_HDMI_HOTPLUG_TIME; #40	
+delay_ms@ScalerTMDSRx2_SeptPhy.c:677	interrupt-or-poll	TMDS PreDetect: blind 6 ms after enabling the DDC-toggle IRQ; Dan 2026-11-06: make it interrupt-driven	#40 comments (2026-11-06)
+delay_ms@ScalerTMDSRx3_SeptPhy.c:677	interrupt-or-poll	same as Rx2 PreDetect (D3 port)	#40
+delay_ms@ScalerTMDSRx2_SeptPhy.c:729	interrupt-or-poll	PS pre-detect: "enough time for freq measure" (calculated), blind 5 ms; freq-detect done flag exists	SDK comment
+delay_ms@ScalerTMDSRx3_SeptPhy.c:729	interrupt-or-poll	same as Rx2 (D3 port)	SDK comment
+delay_ms@RL6449_Series_TMDSRx2.c:3623	interrupt-or-poll	"Delay for PHY Stable" 2 ms in the TMDS scan; replaced by a stub in the sim	SDK comment
+delay_ms@RL6449_Series_TMDSRx3.c:3626	interrupt-or-poll	same (D3 port)	SDK comment
+delay_ms@RL6449_Series_TMDSRx2.c:3335	interrupt-or-poll	blind 130 ms "at least 3 frames for HW auto update color depth"; a poll on the update flag exists next to it (3257 poll)	SDK comment
+delay_ms@RL6449_Series_TMDSRx3.c:3338	interrupt-or-poll	same (D3 port)	SDK comment
+delay_ms@RL6449_Series_TMDSRx2.c:3378	shortenable	"waiting for down sampling effect" 20 ms; no flag	SDK comment
+delay_ms@RL6449_Series_TMDSRx3.c:3381	shortenable	same (D3 port)	SDK comment
+delay_ms@ScalerCommonSync.c:8733	shortenable	"waiting for down sampling effect" 20 ms in the HDMI video setting	SDK comment
+delay_ms@ScalerCommonSync.c:9341	shortenable	same (D3 port)	SDK comment
+delay_ms@ScalerTMDSRx2_SeptPhy.c:101	shortenable	"waiting for down sampling effect" 20 ms (DVI path)	SDK comment
+delay_ms@ScalerTMDSRx3_SeptPhy.c:101	shortenable	same (D3 port)	SDK comment
+delay_ms@RL6449_Series_Measure.c:311	shortenable	"delay for measure reset" 20 ms, one frame at 50 Hz; sim measured 2 ms (Timer2 off at that point is not the cause: arg 20)	SDK comment
+delay_ms@ScalerMeasure.c:659	shortenable	"delay for measure reset" 20 ms, same as above	SDK comment
+delay_ms@ScalerCommonPower.c:68	required	"waiting for xtal stable" 6 ms	SDK comment; crystal start-up time is part of the crystal datasheet (not in repo)
+delay_ms@RL6449_Series_OsdHardwareCompression.c:106	shortenable	2 ms blind per OSD compression call; runs about 47 times/s with a picture up (sim, #40 steady-state wait); HW busy flag exists	SDK comment "OSD HW needs time to process it"
+delay_ms@RL6449_Series_OsdHardwareVLC.c:99	shortenable	2 ms blind per OSD VLC call, same comment	SDK comment
+wait_event@RL6449_Series_Measure.c:442	required	waits one IVS/DEN edge; returns as soon as the event fires, bound 90 ms; returns _FALSE at once if the domain is off	SDK ScalerTimerWaitForEvent
+poll@RL6449_Series_Measure.c:155	required	offline measure done flag; polled each main-loop pass in ACTIVE (sim: ~1.2 call/ms), exits early	SDK
+poll@RL6449_Series_TMDSRx2.c:3257	required	"polling 3 frames for packet signals", exits early, bound 130 ms	SDK comment
+poll@ScalerTMDSRx2_SeptPhy.c:141	required	"wait at least 1 frame" for TMDS video flag, exits early, bound 45 ms	SDK comment
+poll@ScalerTMDSRx2_SeptPhy.c:144	required	"wait for HW update DE flag", exits early, bound 20 ms	SDK comment
+poll@RL6449_Series_Global.c:308	required	D-domain double-buffer apply flag, bound 168 ms (> 1 frame at 24 Hz)	SDK comment
+poll@RL6449_Series_MDomain.c:258	required	display timing gen double-buffer apply flag, bound 168 ms	SDK comment
+poll@ScalerVGIP.c:734	required	VGIP double-buffer apply flag, bound 168 ms	SDK comment
+_PANEL_POWER_ON_T1	required	see delay row RTD2014UserInterface.c:1415	BOE MV270QUM-N50 spec 8.0 T1 0.5-10 ms
+_PANEL_POWER_ON_T2	shortenable	HPD poll bound; datasheet T2 max 200 ms, value 250	BOE MV270QUM-N50 spec 8.0 T2
+_PANEL_POWER_ON_T3	required	video valid to backlight on; datasheet T4 >= 500 ms, value 550; runs as a timer event (not CPU time), but gates the picture on screen	BOE MV270QUM-N50 spec 8.0 T4; docs/monitors/panel-edid.md
+_PANEL_POWER_OFF_T4	shortenable	backlight off to idle pattern; datasheet T5 >= 100 ms, value 250 (150 ms margin)	BOE MV270QUM-N50 spec 8.0 T5
+_PANEL_POWER_OFF_T5	required	idle pattern to VDD off; datasheet T6 0-50 ms (recommend 0), value 20	BOE MV270QUM-N50 spec 8.0 T6
+_PANEL_POWER_OFF_T6	required	minimum off time before the next power-on; datasheet T8 >= 1000 ms, value 1100	BOE MV270QUM-N50 spec 8.0 T8
+_SOURCE_DEFAULT_SEARCH_TIME_HDMI	shortenable	how long the search stays on a port before moving on; SDK default 2 s, no spec; gates time to picture when D2 is not the first port searched	#40
+_SOURCE_DEFAULT_SEARCH_TIME_DVI	shortenable	SDK default, no spec	#40
+_SOURCE_DEFAULT_SEARCH_TIME_DP	shortenable	SDK default 3 s, no spec	#40
+_SOURCE_DEFAULT_SEARCH_TIME_VGA	shortenable	SDK default, no spec; VGA not used on this board	#40
+_SOURCE_DEFAULT_SEARCH_TIME_ALL_PORT	shortenable	SDK default 2 s, no spec	#40
+_WAIT_TIME_TO_ACTIVE_HDMI	shortenable	debounce of a stable signal before ACTIVE; SDK default 100 ms, no spec	#40
+_WAIT_TIME_TO_ACTIVE_DVI	shortenable	SDK default, no spec	#40
+_WAIT_TIME_TO_ACTIVE_DP	shortenable	SDK default, no spec	#40
+_WAIT_TIME_TO_ACTIVE_VGA	shortenable	SDK default, no spec	#40
+_AWTO_INFO_POPUP_SEC	shortenable	our info popup time; #53 item 13	#53
+_TMDS_ACER_HPD_TIME	unknown	Acer-specific HPD time, SDK	-
+_TMDS_HDCP_2_2_HPD_TIME	unknown	HDCP 2.2 HPD time, SDK	-
+_TMDS_EDID_SWITCH_HPD_TIME	unknown	EDID switch HPD time, SDK	-
+_TIMER_WAIT_EVENT_TIMEOUT	required	bound of ScalerTimerWaitForEvent (SDK comment: unit ms)	SDK
+delay_ms@RL6449_Series_Power.c:446	removable	10 ms after PCB_VCCK_OFF_POWER(_VCCK_OFF_POWER_ON), a no-op on our board; SDK comment 'Wait for 1.1V stable, can't delete' applies to boards that switch the rail	fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h:275-292; SDK comment	

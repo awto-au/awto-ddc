@@ -1,0 +1,167 @@
+[
+ {
+  "id": "gigabyte-raw-bin-zip",
+  "vendor": "gigabyte",
+  "container": "zip -> single <MODEL>_<ver>.bin (raw SPI flash image, size multiple of 64 KiB banks)",
+  "image": "the .bin itself; sizes 640 KiB-2 MiB; header = banked 8051 (LJMP at 0, 8-byte vectors)",
+  "package_files_all": [
+   "*.bin"
+  ],
+  "obfuscation": "none seen (RTD27xx 8051 images entropy ~6.9)",
+  "notes": "Novatek/MStar/Realtek all ship this way; family from strings (RTDnnnn/NT68nnn) and DDC caps model()"
+ },
+ {
+  "id": "gigabyte-fwupd-sfx",
+  "vendor": "gigabyte",
+  "container": "zip -> <MODEL>_<ver>.exe (PE + appended 7z SFX) -> FWUPD/{F<ver>.bin, FA<ver>.bin, upd.xml, setup.iss, UpdFW_RTK.exe, RFlash.dll, RtHIDlib.dll, RTKCmd_x64.dll}",
+  "image": "FWUPD/F*.bin (main) and FA*.bin (second image, e.g. second scaler/USB-C MCU); upd.xml has <model>,<fw>,<fw_ver>,<exe>rtk",
+  "package_files_all": [
+   "UpdFW_RTK.exe",
+   "upd.xml"
+  ],
+  "obfuscation": "none for RTD2718/19/28/98; RTD2738/2739 images are not plain 8051 (entropy 7.1, no reset vector)",
+  "notes": "Updater talks to the monitor over USB HID (RtHIDlib.dll HID_i2cread/i2cwrite/readflash/writeflash/handshakeauth...), not GPU DDC"
+ },
+ {
+  "id": "gigabyte-fwupd-nested-updpack",
+  "vendor": "gigabyte",
+  "container": "zip -> .exe -> 7z -> setup.exe (InstallShield/NSIS) + FWUPD/UpdPack.exe (7z SFX) -> OSDSidekick + F*.bin + UpdFW_RTK/UpdFW_Nova",
+  "image": "F*.bin / M32U*.bin next to UpdFW_*.exe",
+  "package_files_all": [
+   "UpdFW_Nova.exe"
+  ],
+  "notes": "Nova = Novatek variant of the same updater pack; both in one package"
+ },
+ {
+  "id": "dell-nsis-upg",
+  "vendor": "dell",
+  "container": "zip -> Dell_<model>_FWUpdate_<ver>_Windows.exe (NSIS) -> Firmware Updater.exe (Sciter GUI) + plugins/{display,hub,pdc,tbt,webcam,audio,bridge,devices}.dll + <ver>/<model>_<ver>_<date>.upg",
+  "image": ".upg = Dell UPG container: big-endian length-prefixed header (UPG, 1.0.6, model, version, component list 'DISPLAY'...), per-chunk base64-url strings, then binary payload",
+  "package_files_all": [
+   "Firmware Updater.exe",
+   "*.upg"
+  ],
+  "obfuscation": "payload encrypted (random-looking, per-chunk key strings in header); key logic in Firmware Updater.exe, not cracked",
+  "notes": "plugins/display.dll has MStarISP and RealtekISP classes (scalar/realtek/realtek_isp.cpp), I2C channel select"
+ },
+ {
+  "id": "lenovo-rtdtool-fwupdate",
+  "vendor": "lenovo",
+  "container": "zip -> <pkg>/{LenovoFwUpdate.exe (Rust GUI), fwconfig.ini, FW/<hub>.bin, Scaler/{fwupdate.exe, Comm.dll, Comm/*.dll, PlugIn/{Flash.dat,WinIspPlugIn.dll}, IspSetting.ini, <MODEL>_<RTDnnnn>_Multipanel_<flashaddr>_<ver>.bin}}",
+  "image": "Scaler/*.bin = Realtek ISP image (RTDCustomerTool 'Reduce' image, flash address in name); FW/*.bin = RTS54xx hub/PD firmware",
+  "package_files_all": [
+   "fwupdate.exe",
+   "Comm.dll"
+  ],
+  "obfuscation": "none (8051 banked, entropy ~6.9)",
+  "notes": "Host side is RTDCustomerTool: Comm_{RealtekUSB,UsbHubI2C,TypeCUsb,TypeCI2C,Aux}.dll + IntelControlAPI; WinSignatureVerify.dll"
+ },
+ {
+  "id": "lenovo-pkg-monitor-isp",
+  "vendor": "lenovo",
+  "container": "zip -> LenovoFirmwareUpdateTool.exe + pkg/{fwconfig.ini, Monitor/{ISPTool.exe(.NET), fwconfig.ini, <model>.bin, Genesys/*.bin, Infineon/*.bin, Firmware upgrade sop.docx}}",
+  "image": "pkg/Monitor/*.bin",
+  "package_files_all": [
+   "LenovoFirmwareUpdateTool.exe"
+  ],
+  "obfuscation": "none seen",
+  "notes": "same package shape for P32p-30/P27h-30/P49w-30"
+ },
+ {
+  "id": "lenovo-multiisp-gl",
+  "vendor": "lenovo",
+  "container": "zip -> MultiIsp vN (update tool)/{Multi-ISP.exe, GlFlash_*.fl, GL Driver Installation.exe} + 'Scaler FW'/*.bin + 'HUB FW'/*.bin (Genesys hub)",
+  "image": "'Scaler FW'/*.bin",
+  "package_files_all": [
+   "Multi-ISP.exe"
+  ],
+  "obfuscation": "none",
+  "notes": "P27u-20, P40w-20"
+ },
+ {
+  "id": "hp-sp-exe-hpfwupdate",
+  "vendor": "hp",
+  "container": "spNNNNNN.exe (7z SFX) -> HPFwUpdate.exe + GLHub.dll + RvcLib.dll + rsa_{pub,pub_isp}.txt + rsa_verify/decrypt.exe + *Service_Header.bin (scaler) + GL35xx hub .bin",
+  "image": "*_Service_Header.bin (signed: RSA header; U28 = MStar, not Realtek)",
+  "package_files_all": [
+   "HPFwUpdate.exe"
+  ],
+  "obfuscation": "RSA signature header",
+  "notes": "transport GL hub USB (GLHub.dll/RvcLib.dll)"
+ },
+ {
+  "id": "dell-macos-pkg",
+  "vendor": "dell",
+  "container": "zip -> *_Mac.pkg (xar) -> component_*.pkg/Payload (gzip cpio) -> firmwareupdater.app (Sciter, libusb, libdisplay/libdevices/libwebcam dylibs) + <ver>/<model>_<ver>_ECN*.upg",
+  "image": ".upg (same encrypted UPG container as Windows)",
+  "package_files_all": [
+   "firmwareupdater",
+   "*.upg"
+  ],
+  "obfuscation": "encrypted payload",
+  "notes": "unpack_fw handles xar+cpio via 7z"
+ },
+ {
+  "id": "lg-osc-zipcrypto-images",
+  "vendor": "lg",
+  "container": "zip (ZipCrypto, per-model password string embedded in OSC macOS binary) -> images/{Scaler,PD,NXP,Hub}/*.bin + images.txt",
+  "image": "images/Scaler/<MODEL>_<RTD25xx|RTD27xx|MSTAR_MST9800>_V<ver>_<crc>_rev<N>_<date>.bin (raw SPI image; chip named in filename)",
+  "package_files_all": [
+   "images.txt"
+  ],
+  "obfuscation": "ZipCrypto only; scaler payload plain (RTD2595LT/2583UT/2785T images match RL6449 libs)",
+  "notes": "Fetch: lmu.lge.com/ExternalService/onscreencontrol/fw/<MODEL>/FWLatestVersion.txt -> same dir zip. Extract: scripts/fw_lg_unzip.py. NotAllowedPage = no fw for model."
+ },
+ {
+  "id": "asus-onekey-sop",
+  "vendor": "asus",
+  "container": "zip -> {OneKeyUpdate/*.exe (7z SFX) -> Scaler/ISPTool/*.bin, Hub/RTS54xx*.bin, PD/RTS5450M*.bin, MCU/} | USBFlashDriveUpdate/<MODEL>.bin | legacy V0xx: *.bin + SOP pdf",
+  "image": "Scaler/ISPTool/ASUS_<MODEL>_MCMnnn.bin; legacy ASUS_<MODEL>_Vnnn.bin (Novatek FALCON)",
+  "package_files_all": [
+   "ASUSFirmwareOneKeyUpdate.exe"
+  ],
+  "notes": "Source: rog.asus.com/support/webapi/ProductV2/GetPDBIOS?model=<slug>&m1id=<productGroupID from page JSON-LD> (only m1id needed); file host dlcdnets.asus.com/pub/ASUS/LCD Monitors/. Scalers seen: RTD2738/2739 (non-8051), Novatek, MStar; no RL6449."
+ },
+ {
+  "id": "samsung-fm-zip",
+  "vendor": "samsung",
+  "container": "zip -> single M-<code>-<ver>[<crc>].{bin,Bin,img} (MStar/Novatek) | Update_File.zip -> 2 bins | T-PTM*.zip = Tizen smart-monitor OS image (GB-sized, not scaler)",
+  "image": "the .bin/.img",
+  "package_files_all": [],
+  "notes": "Source: samsung.com/us/api/support/product/detail/<MODELCODE>.json (CDCttType=FM entries) -> org.downloadcenter.samsung.com/downloadfile/ContentsFile.aspx?CttFileID=..&CDCttType=FM. Unknown model code = 403."
+ },
+ {
+  "id": "benq-display-quickit",
+  "vendor": "benq",
+  "container": "zip -> BenQDisplayQuickit/{BenQDisplayQuickit.exe (.NET), Lib/BenQHubInfo*.sys (VLI/Realtek hub drivers), RhHubAPI.dll} | macOS dmg",
+  "image": "none bundled: scaler firmware downloaded per device (qotaapi.benq.com /api/v2/model/latestVersion, /api/external/v2/checkVerInfo; needs MAC+serial)",
+  "package_files_all": [
+   "BenQDisplayQuickit.exe"
+  ],
+  "notes": "Source: benq.com/api/esupport-tm/getFiles/<lang>/<model>/<langs> (type=Firmware)"
+ },
+ {
+  "id": "msi-firmware-update-utility",
+  "vendor": "msi",
+  "container": "zip -> MSI Firmware Update Utility (monitor firmware tool, no images)",
+  "image": "none bundled",
+  "package_files_all": [],
+  "notes": "Source: msi.com/api/v1/product/support/panel?product=<slug>&type=firmware&os=Win11 64; only 1 of 183 monitor slugs lists firmware (MAG-274QRF-QD-E2)."
+ },
+ {
+  "id": "viewsonic-display-portal",
+  "vendor": "viewsonic",
+  "container": "Display_Portal_win.zip (setup.exe) / Display_Portal_macOS.zip (pkg, Qt app)",
+  "image": "none bundled",
+  "package_files_all": [],
+  "notes": "App catalog + firmware update tool; backend displayportalcms.pmsdsolutions.com/api, monitorcontrolportal.pmsdsolutions.com"
+ },
+ {
+  "id": "aoc-g-menu",
+  "vendor": "aoc",
+  "container": "G-Menu Setup exe (host app, DDC/CI settings; no firmware)",
+  "image": "none",
+  "package_files_all": [],
+  "notes": "aoc.com/us product page #driversAndManuals -> /api/asset/<piId>?ext=..; no firmware category on U32G4ZMN."
+ }
+]
