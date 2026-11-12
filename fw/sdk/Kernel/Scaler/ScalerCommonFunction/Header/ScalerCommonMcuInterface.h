@@ -239,9 +239,6 @@ extern bit ScalerMcuPwmAdjustFrequency(BYTE ucPwmType, WORD usFrequency);
 extern void ScalerMcu5usDelayCalc(EnumClkSel enumClock);
 
 #if(_SW_IIC_SUPPORT == _ON)
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-extern bit ScalerMcuIICWritePolling(BYTE ucSlaveAddr);
-#endif
 extern bit ScalerMcuIICRead(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
 extern bit ScalerMcuIICWrite(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, WORD usLength, BYTE *pucWriteArray);
 #endif
@@ -249,9 +246,6 @@ extern bit ScalerMcuIICWrite(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubA
 #if(_HW_IIC_SUPPORT == _ON)
 extern void ScalerMcuHwIICConfigSetting(EnumHWIICParType enumParType);
 extern void ScalerMcuHwIICSetFreqDiv(EnumClkSel enumClock);
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-extern bit ScalerMcuHwIICWritePolling(BYTE ucSlaveAddr, BYTE ucSubAddrLength, BYTE ucHwIICPinNum);
-#endif
 extern bit ScalerMcuHwIICRead(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, BYTE ucDataLength, BYTE *pucReadArray, BYTE ucHwIICPinNum);
 extern bit ScalerMcuHwIICWrite(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, BYTE ucDataLength, BYTE *pucWriteArray, BYTE ucHwIICPinNum);
 #endif

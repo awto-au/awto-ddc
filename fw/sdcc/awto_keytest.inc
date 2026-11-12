@@ -1,6 +1,5 @@
 // #39 key panel + #85 key log, fed by the key reader (fw/sdcc/awto_keys.inc, #129). Inserted into RTD2014Key.c (keil2sdcc.py).
 // Layout of g_stAwtoKey: RL6449_Project.h, host: rtd_keywatch.py.
-#if(_AWTO_DIAG == _ON)
 typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_EXIT_KEY_MASK == AWTO_KM_MENU) && (_RIGHT_KEY_MASK == AWTO_KM_UP) &&
                               (_LEFT_KEY_MASK == AWTO_KM_DOWN) && (_MENU_KEY_MASK == AWTO_KM_AUTO) && (_KEY5_MASK == AWTO_KM_SOURCE)) ? 1 : -1];
 #ifdef _AWTO_NEW_SETTINGS
@@ -147,4 +146,3 @@ void AwtoKeyTestSet(BYTE ucOn)                  // 0 close, 1 open, 2 toggle (ke
 {
     AwtoDiagConsole(ucOn);
 }
-#endif

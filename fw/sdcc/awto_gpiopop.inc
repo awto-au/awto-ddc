@@ -1,6 +1,5 @@
 // Diagnostic input table on the console (panel 0): one row per input in fw/awto/inputs.tsv, drawn with the Spleen text layer.
 // The whole row is drawn once (console open); after that only the changed field of a changed input is written, at its exact column.
-#if(_AWTO_DIAG == _ON)
 #ifdef _AWTO_NEW_SETTINGS
 #define AWTO_G_ROWS         AWTO_IN_ROWS
 #define AWTO_G_LINES        (AWTO_G_ROWS + 3)           // title, header, rows, footer: 42 lines in the 5x8 font
@@ -479,6 +478,7 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         {
             return;                             // the redraw backfills it
         }
+        AWTO_WDT_FEED(AWTO_WDT_S_CONLINE);      // bounded: <= AWTO_SYNC_N lines (a map-full redraw backfills AWTO_LOG_REDRAW_N in one pass)
         AwtoConLogStart();
         AwtoSyncLine(s_ucConSyncSeq);
         if(s_bAwtoOver != 0)
@@ -516,5 +516,4 @@ void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)
 void AwtoConLogSync(void)
 {
 }
-#endif
 #endif

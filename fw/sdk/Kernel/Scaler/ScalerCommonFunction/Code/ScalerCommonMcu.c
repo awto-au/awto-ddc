@@ -172,9 +172,6 @@ void ScalerMcuIICSendNoAck(void);
 BYTE ScalerMcuIICGetByte(void);
 BYTE ScalerMcuIICSendByte(BYTE ucValue);
 bit ScalerMcuIICWriteStart(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr);
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-bit ScalerMcuIICWritePolling(BYTE ucSlaveAddr);
-#endif
 bit ScalerMcuIICRead(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, WORD usLength, BYTE *pucReadArray);
 bit ScalerMcuIICWrite(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, WORD usLength, BYTE *pucWriteArray);
 #endif
@@ -183,9 +180,6 @@ bit ScalerMcuIICWrite(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, WO
 void ScalerMcuHwIICConfigSetting(EnumHWIICParType enumParType);
 void ScalerMcuHwIICInitial(void);
 void ScalerMcuHwIICSetFreqDiv(EnumClkSel enumClock);
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-bit ScalerMcuHwIICWritePolling(BYTE ucSlaveAddr, BYTE ucSubAddrLength, BYTE ucHwIICPinNum);
-#endif
 bit ScalerMcuHwIICRead(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, BYTE ucDataLength, BYTE *pucReadArray, BYTE ucHwIICPinNum);
 bit ScalerMcuHwIICWrite(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAddr, BYTE ucDataLength, BYTE *pucWriteArray, BYTE ucHwIICPinNum);
 #endif
@@ -311,14 +305,11 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
             ucInput = _D0_INPUT_PORT;
 #elif((_D1_INPUT_PORT_TYPE != _D1_NO_PORT) && (_D1_DDC_CHANNEL_SEL == _DDC0))
             ucInput = _D1_INPUT_PORT;
-#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC0)) ||\
-      ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC0)))
+#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC0)) ||       ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC0)))
             ucInput = _D2_INPUT_PORT;
-#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC0)) ||\
-      ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC0)))
+#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC0)) ||       ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC0)))
             ucInput = _D3_INPUT_PORT;
-#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC0)) ||\
-      ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC0)))
+#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC0)) ||       ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC0)))
             ucInput = _D4_INPUT_PORT;
 #elif((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC0))
             ucInput = _D5_INPUT_PORT;
@@ -330,14 +321,11 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
             ucInput = _D0_INPUT_PORT;
 #elif((_D1_INPUT_PORT_TYPE != _D1_NO_PORT) && (_D1_DDC_CHANNEL_SEL == _DDC1))
             ucInput = _D1_INPUT_PORT;
-#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC1)) ||\
-      ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC1)))
+#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC1)) ||       ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC1)))
             ucInput = _D2_INPUT_PORT;
-#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC1)) ||\
-      ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC1)))
+#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC1)) ||       ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC1)))
             ucInput = _D3_INPUT_PORT;
-#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC1)) ||\
-      ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC1)))
+#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC1)) ||       ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC1)))
             ucInput = _D4_INPUT_PORT;
 #elif((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC1))
             ucInput = _D5_INPUT_PORT;
@@ -349,14 +337,11 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
             ucInput = _D0_INPUT_PORT;
 #elif((_D1_INPUT_PORT_TYPE != _D1_NO_PORT) && (_D1_DDC_CHANNEL_SEL == _DDC2))
             ucInput = _D1_INPUT_PORT;
-#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC2)) ||\
-      ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC2)))
+#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC2)) ||       ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC2)))
             ucInput = _D2_INPUT_PORT;
-#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC2)) ||\
-      ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC2)))
+#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC2)) ||       ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC2)))
             ucInput = _D3_INPUT_PORT;
-#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC2)) ||\
-      ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC2)))
+#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC2)) ||       ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC2)))
             ucInput = _D4_INPUT_PORT;
 #elif((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC2))
             ucInput = _D5_INPUT_PORT;
@@ -368,14 +353,11 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
             ucInput = _D0_INPUT_PORT;
 #elif((_D1_INPUT_PORT_TYPE != _D1_NO_PORT) && (_D1_DDC_CHANNEL_SEL == _DDC3))
             ucInput = _D1_INPUT_PORT;
-#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC3)) ||\
-      ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC3)))
+#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC3)) ||       ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC3)))
             ucInput = _D2_INPUT_PORT;
-#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC3)) ||\
-      ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC3)))
+#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC3)) ||       ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC3)))
             ucInput = _D3_INPUT_PORT;
-#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC3)) ||\
-      ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC3)))
+#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC3)) ||       ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC3)))
             ucInput = _D4_INPUT_PORT;
 #elif((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC3))
             ucInput = _D5_INPUT_PORT;
@@ -387,14 +369,11 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
             ucInput = _D0_INPUT_PORT;
 #elif((_D1_INPUT_PORT_TYPE != _D1_NO_PORT) && (_D1_DDC_CHANNEL_SEL == _DDC4))
             ucInput = _D1_INPUT_PORT;
-#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC4)) ||\
-      ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC4)))
+#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC4)) ||       ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC4)))
             ucInput = _D2_INPUT_PORT;
-#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC4)) ||\
-      ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC4)))
+#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC4)) ||       ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC4)))
             ucInput = _D3_INPUT_PORT;
-#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC4)) ||\
-      ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC4)))
+#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC4)) ||       ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC4)))
             ucInput = _D4_INPUT_PORT;
 #elif((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC4))
             ucInput = _D5_INPUT_PORT;
@@ -406,14 +385,11 @@ BYTE ScalerMcuDdcciGetInputPort_EXINT1(void)
             ucInput = _D0_INPUT_PORT;
 #elif((_D1_INPUT_PORT_TYPE != _D1_NO_PORT) && (_D1_DDC_CHANNEL_SEL == _DDC5))
             ucInput = _D1_INPUT_PORT;
-#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC5)) ||\
-      ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC5)))
+#elif(((_D2_INPUT_PORT_TYPE != _D2_NO_PORT) && (_D2_DDC_CHANNEL_SEL == _DDC5)) ||       ((_D2_INPUT_PORT_TYPE == _D2_DUAL_DVI_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC5)))
             ucInput = _D2_INPUT_PORT;
-#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC5)) ||\
-      ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC5)))
+#elif(((_D3_INPUT_PORT_TYPE != _D3_NO_PORT) && (_D3_DDC_CHANNEL_SEL == _DDC5)) ||       ((_D3_INPUT_PORT_TYPE == _D3_DUAL_DVI_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC5)))
             ucInput = _D3_INPUT_PORT;
-#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC5)) ||\
-      ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC5)))
+#elif(((_D4_INPUT_PORT_TYPE != _D4_NO_PORT) && (_D4_DDC_CHANNEL_SEL == _DDC5)) ||       ((_D4_INPUT_PORT_TYPE == _D4_DUAL_DVI_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC5)))
             ucInput = _D4_INPUT_PORT;
 #elif((_D5_INPUT_PORT_TYPE != _D5_NO_PORT) && (_D5_DDC_CHANNEL_SEL == _DDC5))
             ucInput = _D5_INPUT_PORT;
@@ -2125,24 +2101,6 @@ bit ScalerMcuIICWriteStart(BYTE ucSlaveAddr, BYTE ucSubAddrLength, WORD usSubAdd
     return _SUCCESS;
 }
 
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Polling internal write cycle finish
-// Input Value  : ucSlaveAddr  --> Slave address
-// Output Value : Polling result (Fail/Success)
-//--------------------------------------------------
-bit ScalerMcuIICWritePolling(BYTE ucSlaveAddr)
-{
-    if(ScalerMcuIICStart(ucSlaveAddr | _WRITE) == _FAIL)
-    {
-        return _FAIL;
-    }
-
-    ScalerMcuIICStop();
-
-    return _SUCCESS;
-}
-#endif
 
 //--------------------------------------------------
 // Description  : Read __data from the selected device by Software IIC
@@ -2331,122 +2289,6 @@ void ScalerMcuHwIICSetFreqDiv(EnumClkSel enumClock)
     }
 }
 
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Polling internal write cycle finish
-// Input Value  : ucSlaveAddr  --> Slave address
-// Output Value : Polling result (Fail/Success)
-//--------------------------------------------------
-bit ScalerMcuHwIICWritePolling(BYTE ucSlaveAddr, BYTE ucSubAddrLength, BYTE ucHwIICPinNum)
-{
-    BYTE ucSubAddress = 0x00;
-    BYTE ucLength = 0;
-    BYTE ucTimeOutCnt = _IIC_POLLING_TIME;
-
-    ScalerPinshareHwIICPin(ucHwIICPinNum);
-
-    // Reset(Block) IIC module
-    MCU_FF55_I2CM_CR0 &= ~_BIT7;
-
-    // Enable IIC module
-    MCU_FF55_I2CM_CR0 |= _BIT7;
-
-    // Set 1 byte for FRSIB
-    MCU_FF57_I2CM_CR2 &= ~(_BIT1 | _BIT0);
-
-    // Set no repeat start
-    MCU_FF58_I2CM_CR3 &= ~(_BIT4 | _BIT3);
-
-    // Wait I2C Fifo Clk Switch to Mcu Clk
-    while((MCU_FF5D_I2CM_SR & _BIT5) != _BIT5)
-    {
-        if(ucTimeOutCnt == 0)
-        {
-            // Reset(Block) IIC module
-            MCU_FF55_I2CM_CR0 &= ~_BIT7;
-
-            // Enable IIC module
-            MCU_FF55_I2CM_CR0 |= _BIT7;
-
-            return _FAIL;
-        }
-        else
-        {
-            ucTimeOutCnt--;
-
-            DELAY_5US();
-        }
-    }
-
-    // Load Slave Address to IIC Buffer
-    MCU_FF5E_I2CM_TD = ucSlaveAddr | _WRITE;
-
-    MCU_FF55_I2CM_CR0 &= ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1);
-
-    switch(ucSubAddrLength)
-    {
-        case 0:
-
-            break;
-
-        case 1:
-
-            // Set __data length
-            MCU_FF55_I2CM_CR0 |= ucLength << 1;
-
-            // Load Sub-Address to IIC Buffer
-            MCU_FF5E_I2CM_TD = (BYTE)(ucSubAddress);
-
-            break;
-
-        case 2:
-
-            // Set __data length
-            MCU_FF55_I2CM_CR0 |= (ucLength + 1) << 1;
-
-            // Load First Sub-Address to IIC Buffer
-            MCU_FF5E_I2CM_TD = ucSubAddress;
-
-            // Load Sub-Address to IIC Buffer
-            MCU_FF5E_I2CM_TD = ucSubAddress;
-
-            break;
-
-        default:
-
-            break;
-    }
-
-    // IIC command Start
-    MCU_FF55_I2CM_CR0 |= _BIT6;
-
-    // Wait until Master Transmit Complete
-    ucTimeOutCnt = _IIC_POLLING_TIME;
-
-    while((MCU_FF5D_I2CM_SR & 0x01) != 0x01)
-    {
-        ucTimeOutCnt--;
-
-        DELAY_5US();
-
-        if(ucTimeOutCnt == 0x00)
-        {
-            // Reset(Block) IIC module
-            MCU_FF55_I2CM_CR0 &= ~_BIT7;
-
-            // Enable IIC module
-            MCU_FF55_I2CM_CR0 |= _BIT7;
-
-            return _FAIL;
-        }
-    }
-
-    // Clear all flags
-    MCU_FF5D_I2CM_SR |= 0x07;
-
-    return _SUCCESS;
-}
-#endif // End of #if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
 
 //--------------------------------------------------
 // Description  : Read __data from the selected device by IIC

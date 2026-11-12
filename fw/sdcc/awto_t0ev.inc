@@ -75,13 +75,13 @@ void ScalerTimerWDCancelTimerEvent_EXINT0(EnumScalerWDTimerEventID enumEventID)
 }
 #endif
 
-#if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
+#if(_D1_DP_EXIST == _ON)
 extern volatile __xdata BYTE g_ucAwtoT0Test;
 #endif
 
 void AwtoT0EvFire(EnumScalerWDTimerEventID enumEventID)     // the SDK's WD event switch; Timer0 ISR context
 {
-#if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
+#if(_D1_DP_EXIST == _ON)
     while((g_ucAwtoT0Test == 4) && (enumEventID == _SCALER_WD_TIMER_EVENT_RX5_HDMI_RR_RETRY))
     {
     }                                           // test 9: stuck Timer0 handler (RX5 is never armed otherwise)
@@ -189,7 +189,7 @@ void AwtoT0EvClock(void)                        // end of ScalerTimerSetTimerCou
     }
 }
 
-#if((_AWTO_DIAG == _ON) && (_D1_DP_EXIST == _ON))
+#if(_D1_DP_EXIST == _ON)
 // Tests (sim: wdt_test.py t0_* / prio_*; unit 2 where it can): test cmd 0x2A + n -> n 0..5, 0x5A..0x5C -> 6..8, 0x24 -> 9.
 // 0 DP rebuild 30 ms, 1 / 2 HDMI RR D2 / D3 10 ms, 3 = 0 + 1 together, 4 / 5 = 0 / 1 with a forced PS reload and back while pending,
 // 6 / 7 = 0 / 1 armed and fired at the PS reload, 8 = RR D3 10, rebuild 30, RR D2 5 out of order, then RR D3 cancelled,

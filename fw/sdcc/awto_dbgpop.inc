@@ -1,5 +1,4 @@
 // Debug pop-up (#34): same window/font/colours as the input-info pop-up; hooked into OsdDispOsdMessage by keil2sdcc.py.
-#if(_AWTO_DIAG == _ON)
 #include <stddef.h>
 // Shared text layer for every awto diagnostic screen (debug lines, key test, GPIO inputs): ASCII rows composed in s_pcAwtoRow,
 // drawn with the menu's Spleen cells (ui_text); the SDK proportional font is not used here.
@@ -338,13 +337,11 @@ void AwtoOsdDebugLines(void)
     AwtoPutStr("x");
     AwtoPutNum(GET_INPUT_TIMING_VHEIGHT(), 1);
     AwtoPutStr(" ");
-#if(_AWTO_FREQ == _ON)
     if(g_stAwtoFreq.ucValid != 0)
     {
         AwtoPutMilli(g_stAwtoFreq.ulVFreqmHz);
     }
     else
-#endif
     {
         AwtoPutNum(usV / 10, 1);      // SDK 0.1 Hz value: no exact count yet
         AwtoPutStr(".");
@@ -361,14 +358,12 @@ void AwtoOsdDebugLines(void)
     AwtoPutNum(ucPwr, 1);
     AwtoDbgShow(_OSD_MESSAGE_ROW_START + 1, _PFONT_PAGE_1);
 
-#if(_AWTO_FREQ == _ON)
     if(g_stAwtoFreq.ucValid != 0)
     {
         AwtoPutStr("PCLK ");
         AwtoPutMilli(g_stAwtoFreq.ulPclkHz / 1000);
         AwtoPutStr(" ");
     }
-#endif
     AwtoPutStr("DCLK ");
     AwtoPutMilli(GET_D_CLK_FREQ());               // kHz
     AwtoDbgShow(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
@@ -376,14 +371,12 @@ void AwtoOsdDebugLines(void)
     AwtoPutStr("LOOP ");
     AwtoPutNum(g_stAwtoDiag.usLoopRate, 1);
     AwtoPutStr("/s");
-#if(_AWTO_FREQ == _ON)
     if(g_stAwtoFreq.ucValid != 0)
     {
         AwtoPutStr("  H ");
         AwtoPutMilli(g_stAwtoFreq.ulHFreqHz);
         AwtoPutStr("kHz");
     }
-#endif
     AwtoDbgShow(_OSD_MESSAGE_ROW_START + 3, _PFONT_PAGE_0);
 
     AwtoPutStr("FW ");
@@ -392,7 +385,6 @@ void AwtoOsdDebugLines(void)
     s_ucDbgAll = 0;
 }
 
-#if(_AWTO_SYNC_LOG == _ON)
 // #157 title row live part: "PANEL 0027.25h  UP 0000.42h  HOST 08:45:10" (+ " STALE"); s_pucConTitleH = hash per 2 cells on screen.
 #define AWTO_TITLE_COL      60                  // after "AWTO DIAGNOSTICS  FW <tag>" (tags up to 38 characters)
 #define AWTO_TITLE_N        48
@@ -481,9 +473,6 @@ void AwtoConTitlePoll(void)                     // every pass while the console 
     }
     AwtoConTitle(0);
 }
-#else
-#define AwtoConTitle(a)
-#endif
 
 // Title row at the top of the view (map row s_ucConFirst): the title bar window is fixed on screen, the map rolls under it.
 static void AwtoConTitleBar(void)
@@ -650,5 +639,4 @@ void AwtoProbeScroll(BYTE ucReset)
 {
     (void)ucReset;
 }
-#endif
 #endif

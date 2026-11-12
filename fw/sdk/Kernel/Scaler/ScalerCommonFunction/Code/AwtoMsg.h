@@ -16,7 +16,6 @@ __xdata unsigned char g_ucAwtoMsgOn;        // #74: 0 (reset value) = messages o
 unsigned char AwtoMsgWait(void)
 {
     AWTO_WDT_FEED(AWTO_WDT_S_MSG);          // bounded wait: AWTO_MSG_HOST_MS per message (#131)
-#if(_AWTO_DIAG == _ON)
     if((unsigned int)((WORD)AwtoMs() - s_usAwtoMsgT0) >= AWTO_MSG_HOST_MS)
     {
         g_bDebugMessageEven = _FALSE;       // host re-arms with 0x55 (rtd_diag resends it while idle)
@@ -24,7 +23,6 @@ unsigned char AwtoMsgWait(void)
         g_bDebugMessageStart = 0;
         return 0;
     }
-#endif
     return 1;
 }
 
@@ -46,9 +44,7 @@ void AwtoMsgV(unsigned int usId, unsigned long ulValue)
     g_pucAwtoMsgBuf[1] = usId >> 8;
     g_pucAwtoMsgBuf[2] = usId;
     g_pucAwtoMsgBuf[3] = 0;
-#if(_AWTO_DIAG == _ON)
     s_usAwtoMsgT0 = (WORD)AwtoMs();
-#endif
     ScalerDebugMessage(g_pucAwtoMsgBuf, ulValue);
 }
 

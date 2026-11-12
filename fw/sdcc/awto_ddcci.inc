@@ -23,9 +23,7 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     {
         return;                                 // KVM "switch to where we are": no re-search blank
     }
-#if(_AWTO_SW_LOG == _ON)
     AwtoSwArm(ucPort);
-#endif
     AwtoSwEvent(AWTO_SW_EV_CMD, ucWhy);
 #ifdef _AWTO_NEW_SETTINGS
     g_ucAwtoNvSwitch = 1;                       // #151 flush gate: not stable
@@ -108,7 +106,7 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
 #if(_AWTO_NET == _ON)
 #define AWTO_DDC_RX                     17      // #80 net op D0: source + len + 14 + checksum (16-byte engine buffer)
 #else
-#define AWTO_DDC_RX                     8       // longest request we take: set VCP = 7 bytes incl. source + checksum
+#define AWTO_DDC_RX                     14      // longest request we take: host time table write (#157) = 14 bytes incl. source + checksum
 #endif
 #define AWTO_DDC_CAP_CHUNK              10      // 16-byte engine buffer - 6 framing bytes
 
@@ -269,7 +267,6 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         return;
     }
 #endif
-#if(_AWTO_SYNC_LOG == _ON)
     if((pucRx[3] == AWTO_HT_VCP) && (pucRx[2] == 0xE7) && (ucLen >= 14) && (pucRx[4] == 0) && (pucRx[5] == 0))
     {
         AwtoHtSync(pucRx + 6);                  // #157 table write 51 8B E7 E9 00 00 time[4] ms[2] ofs chk: store, no reply
@@ -289,7 +286,6 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         AwtoDdcReply(pucR, pucTx);
         return;
     }
-#endif
 #ifdef _AWTO_NEW_SETTINGS
     if(AwtoDdcRegistry(pucR, pucRx, ucLen, pucTx) == _TRUE)     // #67: MCCS 2.2 on the settings registry (glue.inc)
     {

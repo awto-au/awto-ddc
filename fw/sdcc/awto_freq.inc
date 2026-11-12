@@ -1,6 +1,5 @@
 // Exact input frequencies (#34, #26), inserted into ScalerMeasure.c by keil2sdcc.py. Layout: RL6449_Project.h StAwtoFreq.
 // Called after each M-domain count (line-buffer fine-tune / frame-buffer path); host twin: scripts/rtd_proto.py exact_timing.
-#if(_AWTO_FREQ == _ON)
 __xdata StAwtoFreq g_stAwtoFreq;
 
 void AwtoFreqUpdate(void)
@@ -46,4 +45,3 @@ void AwtoFreqUpdate(void)
     g_stAwtoFreq.ulVFreqmHz = GET_DWORD_MUL_DIV(g_stAwtoFreq.ulPclkHz, 1000, (DWORD)g_stAwtoFreq.usIHTotal * g_stAwtoFreq.usIVTotal);
     g_stAwtoFreq.ucValid = 1;
 }
-#endif

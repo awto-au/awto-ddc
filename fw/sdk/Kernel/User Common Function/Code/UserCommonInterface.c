@@ -650,10 +650,6 @@ void UserCommonInterfaceUncallFunction(void)
         UserCommonFlashRead(0x00, 0x00, 1, pData);
 #endif
 
-#if(_SYSTEM_EEPROM_EMULATION_SUPPORT == _ON)
-        UserCommonEepromIICRead(0x00, 0x0000, 4, 16, pData, 0, 0);
-        UserCommonEepromIICWrite(0x00, 0x0000, 4, 16, pData, 0, 0, 16);
-#endif
 
 #if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _ON)
         SysSourceBgGetInputPort();

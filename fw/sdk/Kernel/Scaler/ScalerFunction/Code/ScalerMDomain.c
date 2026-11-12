@@ -227,7 +227,7 @@ bit ScalerMDomainControl(void)
     StructSDRAMDataInfo stFIFOScaling;
     memset(&stFIFOScaling, 0, sizeof(StructSDRAMDataInfo));
 
-    AwtoMeasEvent(1, 0, 0);
+    AWTO_MSTEP(1, 0, 0);
     AwtoFreqInvalidate();
     ScalerMDomainMemorySettings(&stFIFOScaling);
 
@@ -252,26 +252,26 @@ bit ScalerMDomainControl(void)
         case _FRAME_SYNC_LINE_BUFFER:
 
             // Initial M Domain Block
-    AwtoMeasEvent(2, 0, 0);
+    AWTO_MSTEP(2, 0, 0);
             ScalerMemoryInitial();
 
             // Set FIFO freq.
             ScalerMemorySetFIFOFreq(_FIFO_FREQ_LINE_BUFFER_SEL);
 
             // Set Initial Dt Value
-    AwtoMeasEvent(3, 0, 0);
+    AWTO_MSTEP(3, 0, 0);
             ScalerMemoryFrameSyncSetDt(_DT_TARGET_PERCENTAGE);
 
             // Set display Format
-    AwtoMeasEvent(4, 0, 0);
+    AWTO_MSTEP(4, 0, 0);
             ScalerMDomainSetDisplayFormat(_FRAME_SYNC_LINE_BUFFER);
 
             // Fine Tune DClk Offset
-    AwtoMeasEvent(5, 0, 0);
+    AWTO_MSTEP(5, 0, 0);
             ScalerDPLLFineTuneFrameSyncLineBuffer();
 
             // Adjust IVS/IHS for Position Range
-    AwtoMeasEvent(6, 0, 0);
+    AWTO_MSTEP(6, 0, 0);
             AwtoFreqUpdate();
             ScalerIDomainVgipAdjustIHVDelay();
 
@@ -353,13 +353,13 @@ bit ScalerMDomainControl(void)
 #endif
     {
         // Enable double buffer
-    AwtoMeasEvent(7, 0, 0);
+    AWTO_MSTEP(7, 0, 0);
         ScalerMDomainControlDBApply();
     }
 
     // Enable Spread Spectrum
     //ScalerPLLSetDPLLSSC(_DCLK_SPREAD_SPEED, _DCLK_SPREAD_RANGE);
-    AwtoMeasEvent(8, 0, 0);
+    AWTO_MSTEP(8, 0, 0);
     ScalerPLLSetDPLLSSC(GET_DCLK_SPREAD_SPEED_VALUE(), GET_DCLK_SPREAD_RANGE_VALUE());
 
 #if(_URGENT_EVENT_CHECK_MODE == _ON)
@@ -379,7 +379,7 @@ bit ScalerMDomainControl(void)
     }
 #endif
 
-    AwtoMeasEvent(9, 0, 0);
+    AWTO_MSTEP(9, 0, 0);
     ScalerTimerWaitForEvent(_EVENT_IVS);
 
 #if(_OD_SUPPORT == _ON)
@@ -391,7 +391,7 @@ bit ScalerMDomainControl(void)
 #endif
 
 #if(_MEMORY_TYPE_CONFIG != _NO_MEMORY)
-    AwtoMeasEvent(10, 0, 0);
+    AWTO_MSTEP(10, 0, 0);
     ScalerMemoryReset();
 #endif
 
@@ -402,7 +402,7 @@ bit ScalerMDomainControl(void)
 #endif
 
     // Clear Buffer Status
-    AwtoMeasEvent(14, 0, AWTO_MEAS_P0_02_0C());
+    AWTO_MSTEP(14, 0, AWTO_MEAS_P0_02_0C());
     ScalerSetByte(P0_02_STATUS0, 0xFF);
 
     // Clear Display Vsync timeout flag
@@ -417,7 +417,7 @@ bit ScalerMDomainControl(void)
 
     ScalerTimerWaitForEvent(_EVENT_IVS);
 
-    AwtoMeasEvent(11, 0, AWTO_MEAS_P0_02_0C());
+    AWTO_MSTEP(11, 0, AWTO_MEAS_P0_02_0C());
     if((ScalerMDomainMemoryCheck() == _FALSE) ||
        (ScalerMeasureInputActiveRegionChange() == _TRUE) ||
        (ScalerMDomainDisplayTimingGenCheck() == _FALSE))
@@ -428,7 +428,7 @@ bit ScalerMDomainControl(void)
     }
 
     // If M domain setup success, set I domain DB trigger event to IEN_STOP
-    AwtoMeasEvent(13, 0, AWTO_MEAS_P0_02_0C());
+    AWTO_MSTEP(13, 0, AWTO_MEAS_P0_02_0C());
     ScalerGlobalIDDomainDBSetTriggerEvent();
 
     // Update on-line measure result

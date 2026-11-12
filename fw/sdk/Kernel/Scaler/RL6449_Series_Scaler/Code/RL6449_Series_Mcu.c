@@ -1893,8 +1893,10 @@ void ScalerMcuDdcRamEnable(void)
     // VGA_DDC Debounce Enable, ADC DDC channel enable
     MCU_FF1B_ADC_DDC_ENABLE |= (_BIT1 | _BIT0);
 
+#if(_D0_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE)   // awto: no D0 port: DDC0 stays off, its RAM 0xE080 is XDATA (#165)
     // DDC0 Debounce Enable, DDC0 channel enable
     MCU_FF1E_DDC0_DDC_ENABLE |= (_BIT1 | _BIT0);
+#endif
 
     // DDC1 Debounce Enable, DDC1 channel enable
     MCU_FF2C_DDC1_DDC_ENABLE |= (_BIT1 | _BIT0);

@@ -1,5 +1,4 @@
 // Diag block functions (#23), inserted into SysMain.c by keil2sdcc.py. Layout: RL6449_Project.h StAwtoDiag.
-#if(_AWTO_DIAG == _ON)
 void AwtoDiagStage(unsigned char ucStage)
 {
     unsigned int usNow;
@@ -13,13 +12,11 @@ void AwtoDiagStage(unsigned char ucStage)
         while(usNow != g_usTimerCounter);
         g_stAwtoDiag.usStageMs[ucStage - 1] = usNow;
         g_stAwtoDiag.ucStage = ucStage;
-#if(_AWTO_SYNC_LOG == _ON)
         // stage 1 = AwtoSyncInit's line; stages without a sync.tsv row (5 / 7 / 8: the panel machine's lines state them) no line
         if((ucStage >= 2) && (AwtoSyncRow(AWTO_SYNC_EV_STAGE, ucStage) != 0))
         {
             AwtoSyncPush(AWTO_SYNC_EV_STAGE, ucStage, 0);
         }
-#endif
     }
 }
 
@@ -61,4 +58,3 @@ void AwtoDiagMainPass(void)
     AWTO_WDT_SHOW();
 }
 
-#endif

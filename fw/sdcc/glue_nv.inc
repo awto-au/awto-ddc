@@ -138,14 +138,15 @@ static void AwtoNvWrite(BYTE ucWhy)
     if((s_ucNvMaskW & AWTO_NV_AUX) != 0)
     {
         s_ucNvLen = set_aux_pack();
-        s_pucNvAux = set_aux_buf();
-        for(s_ucNvK = s_ucNvLen; s_ucNvK < AWTO_NV_AUX_ITEMS * 14; s_ucNvK++)
-        {
-            s_pucNvAux[s_ucNvK] = 0;
-        }
+        s_pucNvAux = set_aux_buf();                 // AWTO_SET_AUX_MAX B (#165): the last item is padded in pData
         for(s_ucNvK = 0; s_ucNvK < AWTO_NV_AUX_ITEMS; s_ucNvK++)
         {
-            UserCommonFlashSaveItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + s_ucNvK), s_pucNvAux + s_ucNvK * 14, 14);
+            s_ucNvA = s_ucNvK * 14;
+            for(s_ucNvB = 0; s_ucNvB < 14; s_ucNvB++)
+            {
+                pData[s_ucNvB] = ((s_ucNvA + s_ucNvB) < s_ucNvLen) ? s_pucNvAux[s_ucNvA + s_ucNvB] : 0;
+            }
+            UserCommonFlashSaveItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + s_ucNvK), pData, 14);
         }
     }
     s_ucNvFlushing = 0;
@@ -258,7 +259,7 @@ static void AwtoNvLoad(void)
     for(ucK = 0; (ucK < AWTO_NV_AUX_ITEMS) && (bOk == _TRUE); ucK++)
     {
         bOk = UserCommonFlashLoadItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + ucK), pData, 14);
-        memcpy(pucAux + ucK * 14, pData, 14);
+        memcpy(pucAux + ucK * 14, pData, ((AWTO_SET_AUX_MAX - ucK * 14) < 14) ? (AWTO_SET_AUX_MAX - ucK * 14) : 14);   // buffer = AWTO_SET_AUX_MAX B (#165)
     }
     s_ucNvSelPort = UserCommonNVRamGetSystemData(_SEARCH_PORT);
     s_ucNvSelScan = UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE);

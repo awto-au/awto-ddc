@@ -1503,10 +1503,6 @@ extern void UserCommonAdjustGlobalHueSat(SWORD shHue, WORD usSat);
 extern BYTE UserCommonNVRamGetSystemData(EnumSystemDataItemDataType enumDataType);
 extern void UserCommonNVRamSetSystemData(EnumSystemDataItemDataType enumDataType, BYTE ucValue);
 
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _ON)
-extern bit UserCommonEepromIICRead(BYTE ucSlaveAddr, DWORD ulSubAddr, BYTE ucSubAddrLength, DWORD ulLength, BYTE *pucReadArray, BYTE ucSWIICStatus, BYTE ucHwIICPinNum);
-extern bit UserCommonEepromIICWrite(BYTE ucSlaveAddr, DWORD ulSubAddr, BYTE ucSubAddrLength, DWORD ulLength, BYTE *pucWriteArray, BYTE ucSWIICStatus, BYTE ucHwIICPinNum, EnumEepromWriteSize enumWriteSize);
-#endif
 
 #if(_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
 //----------------------------------------------------------------------------------------

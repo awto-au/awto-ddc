@@ -154,7 +154,6 @@ extern __xdata unsigned char g_ucAwtoKeyHold;
 extern unsigned char AwtoKeyHold(void);
 #define AWTO_KEY_HOLD()                                         ((g_ucAwtoKeyHold != 0) ? AwtoKeyHold() : 0)
 #endif
-#define _AWTO_POPUP_ICON_AWTO                                   _ON     // _ON = awto mark (fw/sdcc/awto_icon_info.inc, scripts/osd_icon_encode.py), _OFF = SDK info bubble
 // #65 step 1 drops: _OFF = SDK __code compiled out (scripts/keil2sdcc_drops.py)
 #define _AWTO_FACTORY                                           _ON     // RTD factory menu (RTDFactoryMode/Function); Dan: kept (needed), port to open __code later
 #define _AWTO_GAMMA_ALL                                         _ON     // _OFF = 1.8/2.0/2.4 OSD gamma options alias the 2.2 LUT; Dan: all kept
@@ -165,17 +164,11 @@ extern unsigned char AwtoKeyHold(void);
 // _AWTO_FLASH_ALL: RL6449_Gen_Option.h (the Lib flash code sees it there too)
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
-#define _AWTO_DIAG                                              _ON
-#define _AWTO_DIAG_DELAYCAL                                     _ON     // _ON = delay calibration test inside the panel T3 wait (no added boot time, #53.6, docs/diag-block.md)
 // #54: busy-loop counts from the T3 measurement (the SDK constants are 112..127 % depending on __code placement)
-#define _AWTO_DELAY_SELFCAL                                     _ON
 #define AWTO_DELAY_TARGET_PCT                                   105     // shorter copy of each pair; health limit 90..125 %
 #define AWTO_DELAY_CAL_RCAP2H                                   0xE3    // M2PLL Timer2 reload (rtd_diag PERIOD); others keep the SDK counts
-#if(_AWTO_DELAY_SELFCAL == _ON)
 extern unsigned char g_ucAwtoCal5;
 extern unsigned char g_ucAwtoCalX;
-#endif
-#if(_AWTO_DIAG == _ON)
 typedef struct
 {
     unsigned char ucMagic0;                     // 'A'
@@ -347,6 +340,7 @@ extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_S_OSDSTR                                       11      // OsdPropPutString character
 #define AWTO_WDT_S_T3                                           12      // retired #162 (was the blocking panel T3 wait); id kept for old crash records
 #define AWTO_WDT_S_HPD                                          13      // retired #162 (was the blocking eDP HPD poll); id kept for old crash records
+#define AWTO_WDT_S_CONLINE                                      14      // AwtoConLogSync console log line (#165)
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
 extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke
@@ -525,27 +519,9 @@ extern void AwtoConLogEvent(unsigned char ucId, unsigned char ucVal, unsigned in
 extern void AwtoGpioConSet(unsigned char ucOn);
 extern void AwtoKeyConSet(unsigned char ucOn);
 #define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)
-#if(_AWTO_DIAG_DELAYCAL == _ON)
 extern void AwtoDiagT3Mark(unsigned char ucEnd);
-#else
-#define AwtoDiagT3Mark(e)
-#endif
 #define AWTO_DIAG_T2ISR()                                       do { if(++g_stAwtoDiag.usT2Isr == 0) { g_stAwtoHt.usUpHi++; } AWTO_LED_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
-#else
-#define AwtoDiagInit()
-#define AwtoOsdOfsInit()
-#define AwtoDiagStage(n)
-#define AwtoDiagMainPass()
-#define AwtoDiagTestCmd()
-#define AwtoDiagT3Mark(e)
-#define AWTO_DIAG_T2ISR()                                       AWTO_LED_T2ISR()
-#define AWTO_DIAG_EX1ISR()
-#error "_AWTO_DIAG off: the front keys are read by the input monitor (fw/sdcc/awto_gpio.inc, awto_keys.inc; #129)"
-#define AWTO_GPIO_TEST_ON()                                     0
-#define AwtoGpioPoll()
-#define AwtoGpioTestSet(n)
-#endif
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC __data FIFO fill, as the SDK 0xBB reply
@@ -559,9 +535,19 @@ extern void AwtoDiagT3Mark(unsigned char ucEnd);
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
     else if(ucAwtoCh == 0x02) { MCU_FF2E_DDC1_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x01) { MCU_FF20_DDC0_DDC_CONTROL_2 op; } } while(0)
 #endif
-// 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every AWTO_MEAS_PERIOD_MS from the first M-domain setup; layout in scripts/meas4k_dump.py.
-// Re-arm: write state byte (g_stAwtoMeas+3) = 0 over the debug slave, then change mode.
-#define _AWTO_MEAS4K                                            _ON
+// M-domain / DCLK fine-tune set-up steps: one sync log line each (AWTO_SYNC_EV_MSTEP, value = arg << 16 | val), every build (#165).
+// -D_AWTO_MEAS4K=_ON adds the 4K60 measurement ring (awto-ddc#26): Timer2 ISR samples scaler regs every AWTO_MEAS_PERIOD_MS from the
+// first M-domain setup, layout in scripts/meas4k_dump.py; re-arm: write state byte (g_stAwtoMeas+3) = 0 over the debug slave, change mode.
+#ifndef _AWTO_MEAS4K
+#define _AWTO_MEAS4K                                            _OFF    // opt-in (Dan 2026-11-12, #165): 974 B XDATA
+#endif
+#define AWTO_MEAS_RD(a)                                         (*((volatile __xdata unsigned char *)(a)))
+#define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(AWTO_R_WATCH_DOG_CTRL0) << 8) | AWTO_MEAS_RD(AWTO_R_STATUS0))
+#define AWTO_MSTEP_LAST                                         13      // step id of the last line of a set-up (memory + timing gen check OK)
+#define AWTO_MSTEP_MAX                                          19      // first set-up 15 lines x1.25: a set-up that never reaches LAST stops here, said in the log
+#define AWTO_MSTEP(id, arg, val)                                { AwtoMstep((id), (arg), (val)); AwtoMeasEvent((id), (arg), (val)); }
+extern void AwtoMstep(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
+extern __xdata unsigned char g_ucAwtoMstepN;   // step lines logged this boot; AWTO_MSTEP_MAX = done (write 0 over the debug slave to log the next set-up)
 #if(_AWTO_MEAS4K == _ON)
 #define AWTO_MEAS_PERIOD_MS                                     25
 #define AWTO_MEAS_WINDOW_MS                                     1000
@@ -602,19 +588,14 @@ extern __xdata StAwtoMeas g_stAwtoMeas;
 extern void AwtoMeasInit(void);
 extern void AwtoMeasEvent(unsigned char ucId, unsigned char ucArg, unsigned int usVal);
 extern void AwtoMeasT2Sample(void);
-#define AWTO_MEAS_RD(a)                                         (*((volatile __xdata unsigned char *)(a)))
 #define AWTO_MEAS_T2ISR()                                       do { if(g_stAwtoMeas.ucState == 1) { AwtoMeasT2Sample(); } } while(0)
-#define AWTO_MEAS_P0_02_0C()                                    (((unsigned int)AWTO_MEAS_RD(AWTO_R_WATCH_DOG_CTRL0) << 8) | AWTO_MEAS_RD(AWTO_R_STATUS0))
 #else
 #define AwtoMeasInit()
 #define AwtoMeasEvent(a, b, c)
 #define AWTO_MEAS_T2ISR()
-#define AWTO_MEAS_P0_02_0C()                                    0
 #endif
 // Exact input frequencies (#34, #26) from the input active-region count the M-domain set-up took (fw/sdcc/awto_freq.inc);
 // pop-ups show 3 decimals from these. The SDK's own 0.1 Hz / 0.1 kHz values and decisions are untouched.
-#define _AWTO_FREQ                                              _ON
-#if(_AWTO_FREQ == _ON)
 #define AWTO_XTAL_HZ                                            14318180UL      // board crystal, 4x NTSC colour burst; SDK _XTAL14318K = 14318 kHz
 typedef struct
 {
@@ -633,10 +614,6 @@ typedef struct
 extern __xdata StAwtoFreq g_stAwtoFreq;
 extern void AwtoFreqUpdate(void);
 #define AwtoFreqInvalidate()                                    (g_stAwtoFreq.ucValid = 0)
-#else
-#define AwtoFreqUpdate()
-#define AwtoFreqInvalidate()
-#endif
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON
@@ -732,7 +709,7 @@ extern __xdata unsigned char g_ucAwtoDdcciOn;
 // and debug cmd 0x3D (Transport B, EXINT1 ISR); SLIP-framed Ethernet; ARP, ICMP echo, UDP echo + service. Work only when a
 // transport raised g_ucAwtoNetRun (a host exchange): an idle link costs one XDATA byte test per pass.
 #ifndef _AWTO_NET
-#define _AWTO_NET                                               _ON
+#define _AWTO_NET                                               _OFF    // opt-in -D_AWTO_NET=_ON (Dan 2026-11-12, #165): 706 B XDATA, 4.8 KB code
 #endif
 #if(_AWTO_NET == _ON)
 #define AWTO_NET_RING                                           128     // bytes per direction; divides 256 (BYTE indices wrap)
@@ -774,8 +751,6 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #define AWTO_NET_POLL()
 #endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
-#define _AWTO_SW_LOG                                            _ON
-#if(_AWTO_SW_LOG == _ON)
 #define AWTO_SW_EVENTS                                          64      // #78: a wake logs ~45; repeats of the last event are dropped
 #define AWTO_SW_EV_MODE                                         0x01    // arg = new g_stModeInfo mode state
 #define AWTO_SW_EV_POWER                                        0x10    // arg = UserCommonInterfacePanelPowerAction event
@@ -896,17 +871,6 @@ extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long u
 extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
-#else
-#define AwtoSwEvent(a, b)
-#define AwtoPanelPinLog(w)
-#define AwtoSwRec(i, a)
-#define AWTO_PNL_LOG(id, arg, val)
-#define AwtoSysLog(a, w, m)
-#define AwtoSwMode(m)
-#define AWTO_BPROF(k)
-#define AwtoSwPoll()
-#define AWTO_SW_HPD(port, x)
-#endif
 // #139 sync / power-on log (fw/sdcc/awto_sync.inc): ring of stage events per episode (power on, switch, wake), on the console /
 // selector and over I2C at map symbol _g_stAwtoSync (host: scripts/sync_log.py, rtd_diag.py --sync). Bytes only (LE = BE layout).
 // GENERATED-BEGIN awto_port_cnt
@@ -914,10 +878,8 @@ extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // awto_gpio.inc: rising edges per counted input (wraps), read by the selector
-#define _AWTO_SYNC_LOG                                          _AWTO_SW_LOG
-#if(_AWTO_SYNC_LOG == _ON)
-#define AWTO_SYNC_N                                             52      // cold boot 37 lines in sim (awto-ddc#144) x1.25, a divisor of WRAP
-#define AWTO_SYNC_WRAP                                          208     // seq counts 0..207 (a multiple of AWTO_SYNC_N): entry = seq % N
+#define AWTO_SYNC_N                                             60      // cold boot 47 lines in sim (boot_sim, #165: + 15 set-up steps) x1.25 = 59, a divisor of WRAP
+#define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
 #define AWTO_SYNC_BACK(s, n)                                    ((unsigned char)(((s) >= (n)) ? ((s) - (n)) : ((s) + AWTO_SYNC_WRAP - (n))))
@@ -975,6 +937,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_REPEAT_LINES                                  2       // lines the repeat collapse compares (AwtoSyncSame back 2 and 3)
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
+#define AWTO_SYNC_EV_MSTEP                                      0xE0    // #165 M-domain / DCLK fine-tune step: arg = step (AWTO_MSTEP), value = arg << 16 | val
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
@@ -1098,22 +1061,6 @@ extern void AwtoConLogSync(void);
 // per pass: call only with work to do (console open, auto-open pending, selector open); a call every pass costs loop rate (#139)
 #define AWTO_OSD_SYNC_POLL()                                    { if((g_stAwtoSync.ucOpenReq != 0) || AWTO_KEY_TEST_ON() || \
                                                                      (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)) { AwtoOsdSyncPoll(); } }
-#else
-#define AWTO_OSD_SYNC_POLL()
-#define AWTO_SYNC_SW(id, arg)
-#define AwtoSyncInit()
-#define AWTO_SYNC_MARK()
-#define AWTO_NV_EV(k)
-#define AwtoSyncT2Start()
-#define AwtoSyncPush(i, a, v)
-#define AwtoSyncBegin(k, p)
-#define AwtoSyncDetect(p, k, a, t)
-#define AwtoSyncTiming()
-#define AwtoSyncFreq()
-#define AwtoSyncPoll()
-#define AWTO_SYNC_POLL()
-#define AWTO_PS_POLL_SITE()
-#endif
 // #144 power-on: mode INITIAL opens the console with the live power-on log (awto_osdcard.inc AwtoBootConsole), then
 // panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).
 #ifndef AWTO_PS_CABLE_SDK
@@ -1122,7 +1069,7 @@ extern void AwtoConLogSync(void);
 #ifndef _AWTO_BOOT_PANEL_EARLY
 #define _AWTO_BOOT_PANEL_EARLY                                  _ON
 #endif
-#if((_AWTO_SYNC_LOG == _ON) && (_AWTO_DIAG == _ON) && (_AWTO_BOOT_PANEL_EARLY == _ON))
+#if(_AWTO_BOOT_PANEL_EARLY == _ON)
 extern void AwtoBootConsole(void);
 #else
 #define AwtoBootConsole()
@@ -1149,7 +1096,7 @@ extern void AwtoBootConsole(void);
 #define AWTO_TMDS_HPD_LOW_MS                                    110     // HDMI 1.4b: a source reads HPD low >= 100 ms as unplug
 #define AWTO_SW_EV_HPD_RECOVER                                  0xB0    // arg = port pulled low
 #define AWTO_SW_EV_HPD_RECOVER_UP                               0xB1    // arg = port high again (AWTO_TMDS_HPD_LOW_MS later, no wait)
-#if((_AWTO_TMDS_HPD_RECOVER == _ON) && (_AWTO_SW_LOG == _ON))
+#if(_AWTO_TMDS_HPD_RECOVER == _ON)
 extern void AwtoTmdsStuck(void);
 extern void AwtoTmdsHpdTick(void);
 #define AWTO_TMDS_STUCK()                                       AwtoTmdsStuck()
@@ -1182,7 +1129,7 @@ extern __xdata unsigned char g_ucAwtoKeepIdle;
 #ifndef _AWTO_FAST_SWITCH
 #define _AWTO_FAST_SWITCH                                       _ON
 #endif
-#if((_AWTO_SW_LOG == _OFF) || (_AWTO_KEEP_IDLE_RX == _OFF))
+#if(_AWTO_KEEP_IDLE_RX == _OFF)
 #undef _AWTO_FAST_SWITCH
 #define _AWTO_FAST_SWITCH                                       _OFF
 #endif
@@ -1621,7 +1568,6 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // Eeprom Access Function Option
 //-------------------------------------------------
-#define _EEPROM_ACCESS_FUNCTION_SUPPORT                         _ON
 
 //-------------------------------------------------
 // System Eeprom Start Address for Kernel Data Option

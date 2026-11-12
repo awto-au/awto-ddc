@@ -1,6 +1,5 @@
 // Input monitor: one poller owns the value of every input in fw/awto/inputs.tsv (GPIO pads, ADCs, POWER, VGA front end, board IO,
 // decoded keys). A change is stored once, logged to the I2C-visible ring and marked for the console; nothing else samples or compares.
-#if(_AWTO_DIAG == _ON)
 #define AWTO_VGA_SYNC_REG          AWTO_R_HSYNC_TYPE_DETECTION_FLAG
 #define AWTO_VGA_POWER_REG         AWTO_R_ADC_POWER
 #define AWTO_VGA_COMPARE_REG       AWTO_R_ADC_COMPARE_FLAG
@@ -228,4 +227,3 @@ void AwtoGpioTestSet(BYTE ucOn)                 // menu "GPIO inputs", test cmd 
 {
     AwtoDiagConsole((ucOn != 0) ? AWTO_CON_GPIO : 0);
 }
-#endif

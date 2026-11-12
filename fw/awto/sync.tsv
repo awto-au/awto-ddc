@@ -140,6 +140,22 @@ DB	*	port	AUX command from source in power saving: no wake (wake: DPCD 600h = D0
 DE	*	portms	TMDS clock burst % in power saving: shorter than the hold, no wake
 DF	01	vport	refused: no cable on %
 DF	02	vport	no cable on %, no signal, another port cabled: auto search
+E0	01	-	M-domain set-up: start
+E0	02	-	M-domain set-up: memory initial
+E0	03	-	M-domain set-up: frame sync Dt set
+E0	04	-	M-domain set-up: display format (line buffer)
+E0	05	-	M-domain set-up: line buffer fine tune
+E0	06	-	M-domain set-up: VGIP IH / IV delay
+E0	07	-	M-domain set-up: double buffer apply
+E0	08	-	M-domain set-up: DPLL SSC set
+E0	09	-	M-domain set-up: IVS wait 1
+E0	0A	-	M-domain set-up: memory reset
+E0	0E	n	M-domain set-up: status cleared, IVS wait 2 next (WD ctrl0 x 256 + status0 = %)
+E0	0B	n	M-domain set-up: memory check (WD ctrl0 x 256 + status0 = %)
+E0	0D	n	M-domain set-up: memory + timing gen check OK (WD ctrl0 x 256 + status0 = %)
+E0	1F	n	DCLK fine tune: pass, debounce x 65536 + new offset = %
+E0	20	n	DCLK fine tune: final offset %
+E0	FF	n	M-domain set-up: step lines stop after % this boot (the first set-up did not finish; later passes not logged)
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %

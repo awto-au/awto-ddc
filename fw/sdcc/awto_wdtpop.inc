@@ -1,5 +1,5 @@
 // Watchdog panel of the diagnostic console (#131): last bite from g_stAwtoWdt; at the end of RTD2014OsdDisplay.c (after awto_dbgpop.inc).
-#if((_AWTO_DIAG == _ON) && (_AWTO_WDT == _ON) && defined(_AWTO_NEW_SETTINGS))
+#if((_AWTO_WDT == _ON) && (defined(_AWTO_NEW_SETTINGS)))
 #define AWTO_WDT_POP_COL    79                  // #144: right of the debug panel, below the console view
 #define AWTO_WDT_POP_ROW    52
 #define AWTO_WDT_POP_W      36

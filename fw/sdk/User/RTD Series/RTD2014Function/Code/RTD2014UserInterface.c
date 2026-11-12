@@ -1422,9 +1422,7 @@ void UserInterfaceInitial(void)
 {
     PCB_PWM_SETTING();
     RTDNVRamStartup();
-#if(_AWTO_DIAG == _ON)
     AwtoMsgLoad();
-#endif
 
     AwtoSetInit();
     UserCommonInterfaceDdcciSwitch(GET_OSD_DDCCI_STATUS(), UserCommonNVRamGetSystemData(_SEARCH_PORT));

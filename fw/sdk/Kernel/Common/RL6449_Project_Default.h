@@ -747,9 +747,6 @@
 //-------------------------------------------------
 // Eeprom Access Function Option
 //-------------------------------------------------
-#ifndef _EEPROM_ACCESS_FUNCTION_SUPPORT
-#define _EEPROM_ACCESS_FUNCTION_SUPPORT                         _OFF
-#endif
 
 #ifndef _EEPROM_KERNEL_START_ADDRESS
 #define _EEPROM_KERNEL_START_ADDRESS                            (_EEPROM_PAGE0_BANK0)

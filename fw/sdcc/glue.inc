@@ -398,13 +398,11 @@ BYTE ui_timing(struct AwtoUiTiming __xdata *pst)
     }
     pst->usW = GET_INPUT_TIMING_HWIDTH();
     pst->usH = GET_INPUT_TIMING_VHEIGHT();
-#if(_AWTO_FREQ == _ON)
     if(g_stAwtoFreq.ucValid != 0)
     {
         pst->ulVmHz = g_stAwtoFreq.ulVFreqmHz;     // exact: measured clock / (htotal x vtotal) (#34)
         return _TRUE;
     }
-#endif
     pst->ulVmHz = (DWORD)GET_INPUT_TIMING_VFREQ() * 100;
     return _TRUE;
 }

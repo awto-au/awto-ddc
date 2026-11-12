@@ -659,9 +659,7 @@
 // System Eeprom Check
 //-------------------------------------------------
 #if(_SYSTEM_EEPROM_EMULATION_SUPPORT == _OFF)
-#if(_EEPROM_ACCESS_FUNCTION_SUPPORT == _OFF)
-#warning "_EEPROM_ACCESS_FUNCTION_SUPPORT Should Be _ON!!!"
-#endif
+#error "no EEPROM on this board (awto #165): NVRAM needs _SYSTEM_EEPROM_EMULATION_SUPPORT _ON"
 #endif
 
 //-------------------------------------------------

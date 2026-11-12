@@ -1,4 +1,3 @@
-#if((_AWTO_DIAG == _ON) && (_AWTO_DIAG_DELAYCAL == _ON))      // awto: #53.6/#54 delay calibration at the first panel stream start; docs/diag-block.md
 // Timer2 snapshot (EA off) and counts since an arbitrary origin: whole ticks x reload period + TH2:TL2 offset.
 // A pending TF2 is an overflow whose tick the ISR has not counted yet.
 typedef struct
@@ -36,10 +35,8 @@ static unsigned long AwtoDiagT2Diff(__xdata StAwtoT2Snap *a, __xdata StAwtoT2Sna
 }
 
 static __xdata StAwtoT2Snap s_stSnapA, s_stSnapB, s_stT3A, s_stT3B;
-#if(_AWTO_DELAY_SELFCAL == _ON)
 unsigned char g_ucAwtoCal5;                                        // calibrated DELAY_5US / DELAY_XUS base counts, 0 = none yet
 unsigned char g_ucAwtoCalX;
-#endif
 
 // Snapshot pair around a body, EA off for the body (<= 100 us: the Timer2 ISR only runs later, TF2 holds one overflow);
 // result = raw counts minus the empty snapshot pair, never below 0. Bodies are unrolled: loop overhead would not cancel.
@@ -84,7 +81,6 @@ static void AwtoDiagDelayCal(void)
     AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
     AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
     AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
-#if(_AWTO_DELAY_SELFCAL == _ON)
     // #54: set the loop counts from this measurement: the shorter of each pair (main / _EXINT copy, they share the count)
     // lands at AWTO_DELAY_TARGET_PCT of nominal; then measure again, so the diag (and health's 90..125 % check) sees the result.
     {
@@ -110,7 +106,6 @@ static void AwtoDiagDelayCal(void)
             AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
         }
     }
-#endif
 }
 
 // #162 panel machine marks: 0 = stream start, 1 = backlight on. The first pair per boot sets usT3Wait64 (health) and
@@ -135,4 +130,3 @@ void AwtoDiagT3Mark(unsigned char ucEnd)
     AwtoSwEvent(AWTO_SW_EV_T3, 1);
     g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, ((unsigned int)RCAP2H << 8) | RCAP2L) >> 6);
 }
-#endif

@@ -1,6 +1,5 @@
 // #39 key test screen: rows of the same pop-up as the debug lines (awto_dbgpop.inc, #34); redrawn by AwtoKeyScan every
 // AWTO_KEY_REFRESH_MS while open. Inserted into RTD2014OsdDisplay.c after the debug lines (uses their AwtoPut* helpers).
-#if(_AWTO_DIAG == _ON)
 #ifdef _AWTO_NEW_SETTINGS
 static void AwtoPutKeys(BYTE ucMask)            // front keys left to right, space separated
 {
@@ -157,5 +156,4 @@ void AwtoOsdKeyLines(void)
 void AwtoOsdKeyLines(void)
 {
 }
-#endif
 #endif

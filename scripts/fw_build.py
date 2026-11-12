@@ -8,7 +8,7 @@ usage: fw_build.py --serial AWT26110003 [--skip-compile] [--common 0x5000]
                   between builds so a small edit rewrites few 4 KiB sectors (#12); missing/empty file = create it
   --src-patch F   JSON [{file, old, new}] applied to tmp/sdcc-port/src after `port` (measurement edits, no SDK change)
 Memory (SDK + board, awto-ddc#8):
-- XDATA window 0xD700-0xF6FF; fixed DDC RAM for D0-D3 at E080/E280/E480/E680 (+256 B each) splits it
+- XDATA window 0xD700-0xF6FF; fixed DDC RAM for D1-D3 at E280/E480/E680 (+256 B each) splits it
   into holes; module XSEG areas are distributed over the holes (sdld cannot split one area).
 - Code: common [0, COMMON) copied into every bank; BANK<n> linked at n*0x10000 + COMMON.
 Log: ./tmp/logs/fw_build.log
@@ -25,7 +25,8 @@ import msg_table as MT  # noqa: E402
 ROOT = repo_root()
 LOG = None
 XRAM = (0xD700, 0xF69C)                                       # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot (RL6449_Project.h)
-EDID_RAM = [(0xE080, 0xE180), (0xE280, 0xE380), (0xE480, 0xE580), (0xE680, 0xE780)]   # Mcu.c MCU_DDCRAM_D0..D3, 256 B each
+EDID_RAM = [(0xE280, 0xE380), (0xE480, 0xE580), (0xE680, 0xE780)]   # Mcu.c MCU_DDCRAM_D1..D3, 256 B each; D0 (0xE080) has no port: XDATA (#165)
+XDATA_FLOOR = 700         # free XDATA kept after placement: 10 % of the 7324 B pool, headroom for #162 work (Dan 2026-11-12, #165)
 BANK = 0x10000
 NBANKS = 14                                                   # banks 14-15 = data (#8)
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
@@ -125,7 +126,7 @@ def promote_layout(new: Path, tracked: Path):
         log(f"layout promoted: {tracked}")
 
 
-def split_xseg(asm_dir: Path):
+def split_xseg(asm_dir: Path, floor: int = XDATA_FLOOR):
     """Rename each module's XSEG to XSEG<k> so each hole gets a set of modules (first fit, largest first)."""
     hs = sorted(holes(), key=lambda h: h[0] - h[1])           # largest hole first = default XSEG/XISEG
     free = [b - a for a, b in hs]
@@ -148,6 +149,10 @@ def split_xseg(asm_dir: Path):
             asm.write_text(asm.read_text().replace("\t.area XSEG    (XDATA)", f"\t.area XSEG{k}   (XDATA)"))
             moved.append(asm)
     log(f"XDATA holes {[(hex(a), hex(b)) for a, b in hs]}; free after placement {free}")
+    pool = sum(b - a for a, b in hs)
+    log(f"XDATA free {sum(free)} B of {pool} B (floor {floor} B{'' if floor == XDATA_FLOOR else ', --xdata-floor'})")
+    if sum(free) < floor:
+        sys.exit(f"XDATA free {sum(free)} B < floor {floor} B (pool {pool} B, per hole {free}): free XDATA first (#165)")
     return hs, moved
 
 
@@ -234,6 +239,8 @@ def parse_args(argv=None):
                     help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper must remain common because callers pass bank-local literals)")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
+    ap.add_argument("--xdata-floor", type=int, default=XDATA_FLOOR, help="free XDATA required after placement (opt-in "
+                    "variant builds: 0 = must fit only)")
     ap.add_argument("--resid-end", default="0xc38", help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
@@ -295,7 +302,7 @@ def main() -> int:
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
-    hs, moved = split_xseg(bank_dir)
+    hs, moved = split_xseg(bank_dir, a.xdata_floor)
     if len(hs) - 1 > 4:                                      # crt_xinit.asm declares/clears XSEG1..4 only
         sys.exit(f"{len(hs)} XDATA holes: extend XSEG1..4 in fw/sdcc/crt_xinit.asm")
     for asm in moved:                                        # re-assemble modules whose XSEG was renamed

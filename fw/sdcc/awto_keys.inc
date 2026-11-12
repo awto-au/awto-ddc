@@ -1,7 +1,6 @@
 // #129 front keys: ONE reader (input monitor, awto_gpio.inc AwtoKeyMaskNow) -> AwtoKeyPoll (debounce, combos, repeat,
 // injected keys) -> ONE dispatcher AwtoKeyRoute (context by priority). Replaces the SDK key scan / key message / OperationTable path.
 // Inserted into RTD2014Key.c after awto_keytest.inc + awto_gpio.inc; AwtoKeyPoll runs where UserInterfaceKeyHandler ran.
-#if(_AWTO_DIAG == _ON)
 #if(_FREEZE_SUPPORT == _ON)
 #error "AwtoKeyRoute does not port the SDK freeze checks of RTDOsdSystemFlowProc"
 #endif
@@ -382,4 +381,3 @@ void AwtoKeyPoll(void)                          // main loop, right after AwtoGp
     g_stAwtoKey.ucFlags = s_ucKeyFlags | (AWTO_KEY_HELD_INJ() ? AWTO_KEY_F_INJ : 0);
     AwtoKeyShow();
 }
-#endif

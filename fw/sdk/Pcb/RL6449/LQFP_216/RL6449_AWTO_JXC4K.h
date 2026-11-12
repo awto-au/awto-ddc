@@ -47,7 +47,7 @@
 //--------------------------------------------------
 #define _D0_INPUT_PORT_TYPE                     _D0_NO_PORT
 #define _D0_DDC_CHANNEL_SEL                     _DDC0
-#define _D0_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
+#define _D0_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_NONE  // awto: no D0 port; 0xE080-0xE17F is XDATA (fw_build EDID_RAM, #165)
 #define _D0_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_USER
 #define _D0_DP_CONNECTOR_TYPE                   _DP_CONNECTOR_MINI
 #define _D0_DP_LINK_CLK_RATE                    _DP_HIGH_SPEED2_540MHZ
