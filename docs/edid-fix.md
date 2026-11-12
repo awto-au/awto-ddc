@@ -151,5 +151,5 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
 
 ## 4K60.000 preferred (2026-11-07, #26; branch wb-edid60)
 - Supersedes the 59.94/533.12 MHz DTD1 above: DTD1 = CTA 3840x2160@60.000 (594.000 MHz, 4400x2250, +H +V) = VIC 97, which is listed again (VIC 97, VIC 16).
-- Reason: 4K60.000 works on unit 3 after the keil2sdcc `~bit` fix (wb-vfreq); Dan prefers 60.000 for PC work, no 59.94 broadcast rates.
+- Reason: 4K60.000 works on unit 3 after the compiler `~bit` fix (wb-vfreq); Dan prefers 60.000 for PC work, no 59.94 broadcast rates.
 - Limits unchanged: 48-60 Hz, 15-135 kHz, 600 MHz, HF-VSDB 600 MHz. edid-decode -c PASS, 0 warnings.

@@ -29,7 +29,7 @@ Status: built, simulated, **never run on hardware** (wb-p14audio1). Hardware pla
 | `_LINE_IN_SUPPORT` | on (ADC init runs at boot) | **off** | ADC init writes P6_B0..B7 in the trace [fw]; line-in pins are GPIO on this board [hw] |
 | `_SLEEP_AUDIO_SUPPORT` | ? | off | no stand-alone audio; L1-L3 must be silent |
 | `_DVC_ADJUST_TYPE` | dB gain mode | default `_DB_GAIN` | P8_A0 = 0x8F, VA 0x0001 [fw] |
-- `PCB_AMP_MUTE`, `_DAC_*_SWAP` live in `fw/overlay`; the rest are SDK defaults.
+- `PCB_AMP_MUTE`, `_DAC_*_SWAP` live in `fw/sdk`; the rest are SDK defaults.
 
 ## Register sequence (Dahua firmware, 2160p60 sim, boot to ACTIVE) [fw]
 All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Dahua-firmware Ghidra names (= SDK names).
@@ -90,8 +90,8 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 ## Firmware wiring (what is where)
 | Item | Where |
 |---|---|
-| Options | `fw/overlay/Project/Header/RL6449_Project.h` (audio section) |
-| `PCB_AMP_MUTE` no-op | `fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` |
+| Options | `fw/sdk/Project/Header/RL6449_Project.h` (audio section) |
+| `PCB_AMP_MUTE` no-op | `fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` |
 | `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/awto/settings/glue.inc` |
 | Mapping + hold substitutions | `fw/awto/settings/rules.py` (SUBS into `UserAdjustAudioVolumeMapping`, `UserInterfaceGetAudioMuteStatus`) |
 | Registry rows | awto-rtdfw `settings/registry.tsv` rows 88-91 (branch `audio`; the firmware pins `audio-fw`, `fw/awto/clean_ref.txt`) |

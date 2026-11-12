@@ -24,5 +24,5 @@
 
 ## Follow-ups
 - EDID: use the datasheet primaries instead of the LTM270FL01 database label.
-- `fw/overlay/Panel/AWTO_LTM270FL01.h` name is provisional; rename once confirmed.
+- `fw/sdk/Panel/AWTO_LTM270FL01.h` name is provisional; rename once confirmed.
 - Power sequencing: datasheet section 4.8 (T1..T11) feeds the firmware panel power-on code.

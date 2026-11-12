@@ -1,6 +1,6 @@
 # Realtek SDK debug facilities (#37, #46 step 0a)
 
-State = working-base. Sources: `fw/overlay/Project/Header/RL6449_Project.h`, `fw/overlay/Kernel/Common/Debug.h`, `scripts/keil2sdcc.py` WRAPS, `fw/msg_enable.txt`.
+State = working-base. Sources: `fw/sdk/Project/Header/RL6449_Project.h`, `fw/sdk/Kernel/Common/Debug.h`, `fw/sdk` edits (docs/keil2sdcc-rules.md), `fw/msg_enable.txt`.
 Host side: main checkout `./dev.py` (diag, osd, dbg-read, dbg-write); debug slave 0x35 must stay at 100 kHz (#12).
 
 ## Facilities
@@ -13,7 +13,7 @@ Host side: main checkout `./dev.py` (diag, osd, dbg-read, dbg-write); debug slav
 | Factory mode menu | `_FACTORY_INCLUDE "RTDFactoryInclude.h"` | ON, linked (RTDFactoryMainMenu, MenuFactory in map); `_MODE_STATUS_FACTORY` has no entry action | service OSD (burn-in, white balance, ADC gain, panel timer); reachable as the OSD main-menu item next to Information/Picture | `osd_test.py --cmd menu\|left\|right` (key injection) | none to enable; verify only |
 | QC self-test | `_FACTORY_RTD_QC_SUPPORT` (QC_Option.h) | OFF | colour/OD/FRC block tests | none | `QC_Option.h` forces ~25 picture features `_OFF` (OD, gamma, dither, ICM...); 4751 of the 8507 message sites are QC; no RL6449 branch in the QC_Option.h include chain. Not built. |
 | `_AUTO_TEST_SUPPORT` | AT_Option.h | OFF | IIC slave 0x3E test channel, SysAutotestHandler | none | `ScalerMcuDdcciSwitchPort` sets slave 0x3E and returns early: takes the DDC channel from 0x35. Incompatible with the debug port. Not built. |
-| `_DP_DEBUG_MSG` | `fw/overlay/User/RTD Series/RTD2014Osd/Header/RTD2014Project.h` (`#undef` + `_ON`; SDK `User_Project_Option.h` defines it `_OFF`) | ON (#37) | DP info strings (power state, lanes, link rate, swing/pre-emphasis) on the input pop-up for a DP source, and on the power-saving screen per DP port (D1 here) | input-info event / wake from power saving | adds a bit-field byte to `g_stOsdInfo`: event/key/state offsets +1 (firmware reports them in diag 0x2C..0x2E, `rtd_proto.osd_offsets_*`); the DP block runs before the awto debug-pop-up hook, so the debug pop-up is not drawn while the mode is not ACTIVE |
+| `_DP_DEBUG_MSG` | `fw/sdk/User/RTD Series/RTD2014Osd/Header/RTD2014Project.h` (`#undef` + `_ON`; SDK `User_Project_Option.h` defines it `_OFF`) | ON (#37) | DP info strings (power state, lanes, link rate, swing/pre-emphasis) on the input pop-up for a DP source, and on the power-saving screen per DP port (D1 here) | input-info event / wake from power saving | adds a bit-field byte to `g_stOsdInfo`: event/key/state offsets +1 (firmware reports them in diag 0x2C..0x2E, `rtd_proto.osd_offsets_*`); the DP block runs before the awto debug-pop-up hook, so the debug pop-up is not drawn while the mode is not ACTIVE |
 | `_DEBUG_IIC_BY_USERINTERFACE` | Debug.h | OFF | `UserInterfaceDebugIIC` hook in 0x44/0x04 IIC pages; only reaches an LED driver (`_DEVICE_LED_DRIVER_TYPE`) | none | no LED driver on this board: nothing gained |
 
 ## Size (vs wb-4k-ft1 build, sticky layout, `_AWTO_FRC` image)

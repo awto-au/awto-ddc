@@ -25,7 +25,7 @@ Open work lives in GitHub issues (tracking #1, firmware #7). This file points to
 - **GPIO roles (#7)**, `docs/monitors/gpio-roles.md`, script `scripts/rtd_gpio_live.py` (live pin levels, monitor on vs DPMS standby) + 3 read-only code-reversing agents:
   - P7.2 panel power (rail) high-on; P8.5 backlight enable high-on; P8.4 power LED (LED1); P9.2 standby LED (probable); P9.1 = PWM4 backlight pin.
   - Unknown: P3.5/P3.6, P4.2, P8.6 (maybe WP#/CS), P7.3/P7.4; P8.1 (VCCK_OFF) never written by old firmware.
-- **Firmware board header** (`fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`): panel power and backlight enable now defined (SDK defaults were no-ops, the likely cause of the earlier blank unit); backlight PWM = PWM4, polarity untested (`_BACKLIGHT_PWM_INVERSE _OFF`); MHL/VCCK/DDR macros are no-ops. Panel header T3 = 550 ms (datasheets ask >= 500 ms backlight delay). Debug-message categories on via `fw/overlay/Kernel/Common/Debug.h`. FreeSync VSDB removed from the EDID generator.
+- **Firmware board header** (`fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`): panel power and backlight enable now defined (SDK defaults were no-ops, the likely cause of the earlier blank unit); backlight PWM = PWM4, polarity untested (`_BACKLIGHT_PWM_INVERSE _OFF`); MHL/VCCK/DDR macros are no-ops. Panel header T3 = 550 ms (datasheets ask >= 500 ms backlight delay). Debug-message categories on via `fw/sdk/Kernel/Common/Debug.h`. FreeSync VSDB removed from the EDID generator.
 - **Flasher**: second read now limited to the image region.
 - **Removed / deferred on purpose**: FreeSync + MHL (#21), audio (#22).
 
@@ -47,3 +47,9 @@ Open work lives in GitHub issues (tracking #1, firmware #7). This file points to
 - Pin-level reads in standby are unreliable for inputs (always-off domain reads 0); use output pins the firmware writes.
 - Flash rules: dump twice and compare first; never write without a backup in `~/vendors/realtek/analysis/dumps/`; unit 3 is the test unit.
 - Repo stays PRIVATE (Realtek SDK code, `re/regdb/`).
+
+## SDK source (awto-ddc#162)
+- `fw/sdk/` = the Realtek SDK files the RL6449 build compiles or includes (`fw/sdk_files.txt`), in SDCC form; it is our code. Edit it directly; our changes carry `// awto: <what> (#issue)`.
+- Build: `msg_tokenise.py port` (DebugMessage ids, build tag) -> `fw_compile.py` (compile) -> link. No build step patches the SDK; gate `rules` enforces it.
+- History: first commit = mechanical import of the mirror (`scripts/sdk_import.py`, run by hand to compare a new SDK drop), then the overlay merge, then the behaviour edits. What each removed rule did: `docs/keil2sdcc-rules.md`.
+- Bank layout: the tracked `fw/bank_layout.tsv` only (`fw_build.py` refuses a layout under `tmp/`).

@@ -73,7 +73,7 @@ The other 5 are the A0/A1 ADC bands below. Label pairing confirmed on unit 2 (#8
 - Seeds appended: `seeds_bank6.txt` (6 entries), `seeds_bank0.txt` (26 heuristic function starts from e151 xrefs)
 
 ## 6. Our firmware (#85, #39)
-- Decode = section 2 bands in `PCB_KEY_STATE` (`fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`); POWER = `P3_0` low. P3.0 = pin 71, pin-share 0 (GPIO in) in our header and live (`docs/monitors/pinshare-live-AWT26110003.tsv`).
+- Decode = section 2 bands in `PCB_KEY_STATE` (`fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h`); POWER = `P3_0` low. P3.0 = pin 71, pin-share 0 (GPIO in) in our header and live (`docs/monitors/pinshare-live-AWT26110003.tsv`).
 - SDK masks (roles swapped, keys6): SOURCE = `_KEY5_MASK` (handled in `RTDKeyMessageProc`, no SDK message), physical AUTO = `_MENU_KEY_MASK` 0x02, physical MENU = `_EXIT_KEY_MASK` 0x10, DOWN = `_LEFT`, UP = `_RIGHT`, POWER. Section 3 dispatch table is the Dahua firmware's, not ours.
 - Combos need keys on different ladders (A0: MENU UP AUTO; A1: SOURCE DOWN); two keys on one ladder give a mixed voltage that matches no band.
   - MENU + DOWN = #79 debug link toggle (also boot recovery, #67); physical MENU, i.e. the SDK exit mask

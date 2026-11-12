@@ -1,9 +1,9 @@
 # Firmware diag block (boot stage + timing), #23
 
-- Switch: `_AWTO_DIAG` in `fw/overlay/Project/Header/RL6449_Project.h` (`_ON` now). Off = every call site compiles to nothing.
+- Switch: `_AWTO_DIAG` in `fw/sdk/Project/Header/RL6449_Project.h` (`_ON` now). Off = every call site compiles to nothing.
 - Block: 48 B XDATA at `0xF6D0..0xF6FF`, `volatile __xdata __at(0xF6D0)`. `fw_build.py` `XRAM` end = `0xF6D0` so the linker never uses it.
 - Reader: `scripts/rtd_diag.py <bus> [--watch N]` over debug slave 0x35 (reads + staging only, no other writes). Sim: `fw_sim.py` prints it from sim XRAM.
-- Zeroed by `AwtoDiagInit()` at start of `main`; code in `fw/sdcc/awto_diag.inc` (inserted into `SysMain.c` by `keil2sdcc.py`).
+- Zeroed by `AwtoDiagInit()` at start of `main`; code in `fw/sdcc/awto_diag.inc` (`#include`d in `SysMain.c`, fw/sdk).
 
 ## Layout (SDCC little-endian: low byte at the lower address)
 | off | size | field |
@@ -52,7 +52,7 @@
 - Boot cost of bench + self-test (stage times of one boot each, same unit, 2026-11-06): stage 6 at 566 ms vs 554 ms, stage 8 at 711 ms vs 699 ms after removal = 12 ms. Stage 5 is 424 ms in both.
 
 ## Debug slave 0x35 read protocol (#38)
-- Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, inserted by `keil2sdcc.py` into `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.
+- Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, `#include`d in `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.
 - Cause of the old design's 1 MHz failures: the ISR only latched the command and held SCL (FE66 bit0); `ScalerDebug()` loaded FF26 one main-loop pass later (#12).
 - Now the ISR, at the STOP of the command write, resets the IIC data FIFO (FF2A bit6), loads FF26 and releases SCL, with no main-loop step.
 - Byte read (all versions): write `0x01 [hi]` (main loop, staging), write `0x3A [lo]`, read sub `0x08` x1.
