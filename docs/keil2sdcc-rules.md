@@ -4,7 +4,7 @@
 - Now `fw/sdk/` is the SDK as our source, in SDCC form. Every row below is a plain edit there, marked `// awto: <what> (#issue)`; `git log -- fw/sdk` shows import, overlay merge, then the edits.
 - The build only tokenises DebugMessage (`scripts/msg_tokenise.py`, ids pinned in `fw/msgids.tsv`) and compiles (`scripts/fw_compile.py`). Gate `rules` (`scripts/sdk_rules_lint.py`) fails if a patch path comes back.
 - Kind: `behaviour` = adds or changes what the firmware does (probes, awto calls, removed features, board/panel registration, config). `mechanical` = size switch or SDCC-only fix (defaults leave the SDK code in place).
-- Rows are the `// awto:` spots of a file with the same note (`spots` = how many). Tool of the migration: `scripts/sdk_own.py` (rules read from tag `wb-p14ui-ownbase`).
+- Rows are the `// awto:` spots of a file with the same note (`spots` = how many). Tool of the migration: `scripts/sdk_own.py` (deleted after the migration, in git history; rules read from tag `wb-p14ui-ownbase`).
 
 ## Mechanical import (kept in `scripts/sdk_import.py`, one-off, not part of the build)
 
