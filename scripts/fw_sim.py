@@ -378,10 +378,12 @@ class ChipReset(Dev):
         return float(0x10000 - r) if r else self.XTAL_CPM
 
     def advance(self, m) -> float:
-        """Bring clock / since up to now (threshold matches on the way); returns the clock (fw ms)."""
-        cyc = m.ticks // 12
+        """Bring clock / since up to now (threshold matches on the way); returns the clock (fw ms).
+        dw8051 core: real time from the CPU clock model (m.wall_ms); else machine cycles / Timer2 cycles per ms."""
+        wall = getattr(m, "wall_ms", None)
+        cyc = wall if wall is not None else m.ticks // 12
         if self._cyc is not None and cyc > self._cyc:
-            d = (cyc - self._cyc) / self._cpm(m)
+            d = (cyc - self._cyc) if wall is not None else (cyc - self._cyc) / self._cpm(m)
             self._threshold(m, self.since, self.since + d)
             self.clock += d
             self.since += d
@@ -394,7 +396,8 @@ class ChipReset(Dev):
         thr = ((m.rd(0xFFB0)[0] >> 4) << 8 | m.rd(0xFFAE)[0]) * self.TICK_MS
         k = int((self.since - thr) // self.CNT3_MS) + 1 if self.since >= thr else 0
         nxt = min(k * self.CNT3_MS + thr, ((m.rd(0xFFEA)[0] & 7) + 1) * self.CNT3_MS)
-        self.deadline = self._cyc + max(1, int((nxt - self.since) * self._cpm(m)) + 1)
+        wall = getattr(m, "wall_ms", None)
+        self.deadline = self._cyc + ((nxt - self.since) if wall is not None else max(1, int((nxt - self.since) * self._cpm(m)) + 1))
 
     def _threshold(self, m, t0: float, t1: float):
         thr = ((m.rd(0xFFB0)[0] >> 4) << 8 | m.rd(0xFFAE)[0]) * self.TICK_MS
@@ -433,8 +436,10 @@ class ChipReset(Dev):
         return False
 
     def tick(self, m):
-        cyc = m.ticks // 12
-        if self._cyc is not None and cyc - self._cyc < 4096 and cyc < self.deadline:     # look every 0.2 fw ms or at a deadline
+        wall = getattr(m, "wall_ms", None)
+        cyc = wall if wall is not None else m.ticks // 12
+        look = 0.2 if wall is not None else 4096          # look every 0.2 ms or at a deadline
+        if self._cyc is not None and cyc - self._cyc < look and cyc < self.deadline:
             return
         self.check(m)
 
@@ -1575,11 +1580,16 @@ def main() -> int:
     ap.add_argument("--legacy-banking", action="store_true",
                     help="breakpoint + ihx-reload bank model (slow; keeps the banked-call trail)")
     ap.add_argument("--instr", type=int, default=200_000_000, help="native mode: total instructions to run")
+    ap.add_argument("--cpu", choices=("dw8051", "8052"), help="fast core CPU model (default dw8051; env AWTO_SIM_CPU): dw8051 = DW8051 "
+                    "cycle table, CKCON MOVX stretch, dual DPTR, clock from the clock registers; 8052 = ucsim -t 52 classic cycles, fixed clock")
     ap.add_argument("--fast", action="store_true", help="in-process 8051 core (fastmachine.py) instead of ucsim; "
                     "same as AWTO_SIM_CORE=fast (isr-check / --serial stay on ucsim)")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     fast = a.fast or os.environ.get("AWTO_SIM_CORE") == "fast"
+    if a.cpu:
+        os.environ["AWTO_SIM_CPU"] = a.cpu
+    print(f"sim CPU model: {os.environ.get('AWTO_SIM_CPU', 'dw8051') if fast else '8052 (ucsim)'}", flush=True)
     if fast:
         global Machine
         import fastmachine

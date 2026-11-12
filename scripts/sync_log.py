@@ -100,6 +100,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{arg:02X}"
     if fmt == "ms":                                      # #150 NVRAM save timing
         return f"{v} ms"
+    if fmt == "wdt":                                     # #162 watchdog run-time: warning ms << 16 | reset ms
+        return f"warning {v >> 16} ms, reset {v & 0xFFFF} ms"
     if fmt == "n":                                       # #150 collapsed repeats
         return str(v)
     if fmt == "x":                                       # #150 wake-poll state (cable 2:0, EDID 5:3, AUX 6, DPCD 7, polls 23:8, TMDS 25:24)
@@ -123,20 +125,19 @@ def iso(t: float, ofs15: int, ms: bool = False) -> str:
 
 
 # ---- #157 host time: g_stAwtoHt (RL6449_Project.h StAwtoHt, BE words) ----------------------------------------------------
-HT_SIZE = 18
+HT_SIZE = 16
 DIAG_T2 = 0x16                                           # StAwtoDiag.usT2Isr (docs/diag-block.md)
 
 
 def ht_decode(b: bytes) -> dict:
     return dict(syncs=b[0], ofs=b[1] - 256 if b[1] >= 128 else b[1], frac=int.from_bytes(b[2:4], "big"),
                 epoch=int.from_bytes(b[4:8], "big"), fw=int.from_bytes(b[8:12], "big"),
-                drift=int.from_bytes(b[12:14], "big", signed=True), up_hi=int.from_bytes(b[14:16], "big"),
-                up_last=int.from_bytes(b[16:18], "big"))
+                drift=int.from_bytes(b[12:14], "big", signed=True), up_hi=int.from_bytes(b[14:16], "big"))
 
 
 def fw_now(ht: dict, t2: int) -> int:
-    """32-bit fw ms now: wrap count + a usT2Isr read after the struct"""
-    return ((ht["up_hi"] + (1 if t2 < ht["up_last"] else 0)) << 16) | t2
+    """32-bit fw ms now: high word bumped by the Timer2 ISR (AwtoMs) + a usT2Isr read after the struct"""
+    return (ht["up_hi"] << 16) | t2
 
 
 def host_time(ht: dict, fw32: int) -> str:

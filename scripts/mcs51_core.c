@@ -23,6 +23,9 @@ typedef struct {                /* public part, mirrored by fastmachine.Pub */
     uint32_t reason, bad_op, nbanks, nlvl;
     uint64_t serial_wr;         /* writes to SCON/SBUF (serial port not modelled) */
     uint32_t irq_tail, _pad;    /* 1: an IRQ was entered after the last instruction of the run (its cycle) */
+    uint64_t clk;               /* dw8051: CPU clock cycles elapsed (instruction cycles x clk_per_cycle) */
+    uint64_t fm_miss, fm_stall;
+    uint32_t dw, max_instr_clk; /* dw8051 mode on; longest single step in clk (instruction + IRQ entry) */
 } pub_t;
 
 typedef struct {
@@ -37,6 +40,18 @@ typedef struct {
     uint8_t was_reti, exf2_active, t2mode, t2ex_bit;
     uint32_t t0_edge, t1_edge, t2_edge, t2ex_edge;
     uint64_t opcount[256];      /* instructions executed per opcode (test coverage) */
+    /* dw8051 timing model (tables: scripts/dw8051_model.json, loaded by fastmachine.py via core_set_dw) */
+    int dw;
+    uint8_t dwcyc[256];         /* instruction cycles per opcode (databook table 2-4) */
+    uint8_t last_op;
+    int movx_base, irq_cycles, clk_per_cycle, div_slow, div_fast;
+    uint32_t tacc[3];           /* clk since the last count of timer 0 / 1 / 2 */
+    /* code fetch from the SPI flash (dw8051 mode): uncached while FDA0.0 = 0, else a set-associative line cache */
+    int fm, fm_line, fm_sets, fm_ways, fm_cmd, fm_byte, fm_common;
+    uint32_t fm_ratio;          /* CPU clk per flash clk, x256 (set from the clock registers by the host) */
+    uint32_t fm_last;           /* physical address of the last fetched byte + 1 (sequential read continues the command) */
+    uint32_t *fm_tag;           /* [sets * ways], 0xFFFFFFFF = empty; way 0 = most recently used */
+    uint8_t oplen[256];         /* instruction bytes per opcode */
 } core_t;
 
 #define S(a) c->sfr[(a) - 0x80]
@@ -44,8 +59,11 @@ typedef struct {
 #define PSW S(0xD0)
 #define BR S(0xF0)
 #define SP S(0x81)
-#define DPL S(0x82)
-#define DPH S(0x83)
+#define DPS S(0x86)
+#define CKCON S(0x8E)
+/* dw8051: DPS.0 selects DPTR1 (84h / 85h) for every DPTR instruction; SFR 82h / 83h stay DPTR0 */
+#define DPL S((c->dw && (DPS & 1)) ? 0x84 : 0x82)
+#define DPH S((c->dw && (DPS & 1)) ? 0x85 : 0x83)
 #define IE S(0xA8)
 #define IP S(0xB8)
 #define TCON S(0x88)
@@ -179,6 +197,8 @@ static inline void xwrite(core_t *c, uint16_t a, uint8_t v)
     c->xram[a] = v;
     if (a == 0xFFFF)
         set_bank(c, v & 0x0F);
+    if (a == 0xFDA1 && (v & 1) && c->fm_tag)
+        memset(c->fm_tag, 0xFF, (size_t)c->fm_sets * c->fm_ways * sizeof(uint32_t));      /* cache_reset */
     ev(c, EV_XW, a);
 }
 
@@ -330,7 +350,41 @@ static inline void tick_hw(core_t *c, int cyc)
     }
 }
 
+/* dw8051: timers count clk / div (CKCON T0M / T1M / T2M: 4 else 12); n = whole counts in these clk */
+static void tick_hw_dw(core_t *c, uint32_t clk)
+{
+    static const uint8_t m[3] = {0x08, 0x10, 0x20};
+    uint32_t n[3], mx = 0;
+    int i;
+    for (i = 0; i < 3; i++) {
+        uint32_t d = (CKCON & m[i]) ? c->div_fast : c->div_slow;
+        c->tacc[i] += clk;
+        n[i] = c->tacc[i] / d;
+        c->tacc[i] %= d;
+        if (n[i] > mx) mx = n[i];
+    }
+    while (mx > 0) {
+        if (n[0] >= mx) tick_t01(c, 0);
+        if (n[1] >= mx) tick_t01(c, 1);
+        if (!(TCON & 0x01) && !(S(0xB0) & 0x04)) TCON |= 0x02;
+        if (!(TCON & 0x04) && !(S(0xB0) & 0x08)) TCON |= 0x08;
+        if (n[2] >= mx) tick_t2(c);
+        mx--;
+    }
+}
+
 /* ---- interrupts ---- */
+static void irq_cost(core_t *c)        /* 8052 mode: 1 cycle, not seen by the timers (ucsim); dw8051: the LCALL to the vector */
+{
+    if (!c->dw) {
+        c->p.cycles += 1;
+        return;
+    }
+    c->p.cycles += c->irq_cycles;
+    c->p.clk += (uint64_t)c->irq_cycles * c->clk_per_cycle;
+    tick_hw_dw(c, c->irq_cycles * c->clk_per_cycle);
+}
+
 static const struct { uint8_t iem, src, srcm, vec, clr, exf2; } SRC[8] = {
     {0x01, 0x88, 0x02, 0x03, 1, 0}, {0x02, 0x88, 0x20, 0x0B, 1, 0}, {0x04, 0x88, 0x08, 0x13, 1, 0},
     {0x08, 0x88, 0x80, 0x1B, 1, 0}, {0x10, 0x98, 0x02, 0x23, 0, 0}, {0x10, 0x98, 0x01, 0x23, 0, 0},
@@ -357,7 +411,7 @@ static inline void irq(core_t *c)
             S(SRC[i].src) &= ~SRC[i].srcm;
         if (c->p.nlvl < 8)
             c->lvl[c->p.nlvl++] = pr;
-        c->p.cycles += 1;
+        irq_cost(c);
         push(c, c->p.pc & 0xFF);
         push(c, c->p.pc >> 8);
         c->p.pc = SRC[i].vec;
@@ -372,7 +426,7 @@ static inline void irq(core_t *c)
             return;
         if (c->p.nlvl < 8)
             c->lvl[c->p.nlvl++] = pr;
-        c->p.cycles += 1;
+        irq_cost(c);
         push(c, c->p.pc & 0xFF);
         push(c, c->p.pc >> 8);
         c->p.pc = 0x43;
@@ -415,6 +469,7 @@ static int step(core_t *c)
     int cyc = 1;
     uint16_t t;
     c->opcount[op]++;
+    c->last_op = op;
     switch (op) {
     case 0x00: break;
     case 0x01: case 0x21: case 0x41: case 0x61: case 0x81: case 0xA1: case 0xC1: case 0xE1:
@@ -586,10 +641,82 @@ core_t *core_new(const uint8_t *img, uint32_t len)
     return c;
 }
 
+/* dw8051 mode (DesignWare DW8051 databook v3.2a): per-opcode instruction cycles, MOVX = movx_base + CKCON[2:0],
+ * timers divide clk by div_slow / div_fast, an accepted IRQ costs irq_cycles; reset values CKCON = 1, DPS = 0 */
+void core_set_dw(core_t *c, int on, const uint8_t *cyc, int movx_base, int irq_cycles, int clk_per_cycle, int div_slow, int div_fast)
+{
+    int i, mx = 0;
+    c->dw = c->p.dw = on;
+    if (!on)
+        return;
+    memcpy(c->dwcyc, cyc, 256);
+    c->movx_base = movx_base;
+    c->irq_cycles = irq_cycles;
+    c->clk_per_cycle = clk_per_cycle;
+    c->div_slow = div_slow;
+    c->div_fast = div_fast;
+    for (i = 0; i < 256; i++)
+        if (c->dwcyc[i] > mx) mx = c->dwcyc[i];
+    if (movx_base + 7 > mx) mx = movx_base + 7;
+    c->p.max_instr_clk = (uint32_t)(mx + irq_cycles) * clk_per_cycle;
+    S(0x8E) = 0x01;
+}
+
+/* flash fetch model: line bytes, sets, ways, flash clk of a new read command (cmd + address + dummy), flash clk per byte,
+ * end of the common area (same physical bytes in every code bank); lens = bytes per opcode */
+void core_set_fetch(core_t *c, int line, int sets, int ways, int cmd, int byte, int common_end, const uint8_t *lens)
+{
+    free(c->fm_tag);
+    c->fm = line > 0;
+    c->fm_line = line; c->fm_sets = sets; c->fm_ways = ways; c->fm_cmd = cmd; c->fm_byte = byte; c->fm_common = common_end;
+    c->fm_ratio = 256;
+    c->fm_last = 0xFFFFFFFF;
+    c->fm_tag = c->fm ? malloc((size_t)sets * ways * sizeof(uint32_t)) : NULL;
+    if (c->fm_tag) memset(c->fm_tag, 0xFF, (size_t)sets * ways * sizeof(uint32_t));
+    if (lens) memcpy(c->oplen, lens, 256);
+}
+
+void core_set_fetch_ratio(core_t *c, uint32_t ratio_x256) { c->fm_ratio = ratio_x256; }
+
+/* CPU clk lost fetching `len` code bytes at pc: the base instruction cycles already hold one byte per cycle */
+static uint32_t fetch_stall(core_t *c, uint32_t pc, int len)
+{
+    uint32_t flash = 0, i;
+    int cached = c->xram[0xFDA0] & 1;
+    for (i = 0; i < (uint32_t)len; i++) {
+        uint32_t a = (pc + i) & 0xFFFF, ph = a < (uint32_t)c->fm_common ? a : (c->p.bank << 16) | a;
+        if (!cached) {
+            flash += (ph == c->fm_last ? 0 : c->fm_cmd) + c->fm_byte;
+            if (ph != c->fm_last) c->p.fm_miss++;
+            c->fm_last = ph + 1;
+        } else {
+            uint32_t line = ph / c->fm_line, set = line % c->fm_sets, *t = c->fm_tag + (size_t)set * c->fm_ways;
+            int w;
+            for (w = 0; w < c->fm_ways && t[w] != line; w++) ;
+            if (w == c->fm_ways) {                    /* miss: fill the line (LRU way out), then the byte is there */
+                flash += c->fm_cmd + c->fm_byte * c->fm_line;
+                c->p.fm_miss++;
+                w = c->fm_ways - 1;
+            }
+            for (; w > 0; w--) t[w] = t[w - 1];       /* move to front */
+            t[0] = line;
+            c->fm_last = 0xFFFFFFFF;
+        }
+    }
+    {
+        uint64_t clk = ((uint64_t)flash * c->fm_ratio + 255) >> 8;
+        uint64_t base = (uint64_t)len * c->clk_per_cycle;
+        uint32_t st = clk > base ? (uint32_t)(clk - base) : 0;
+        c->p.fm_stall += st;
+        return st;
+    }
+}
+
 void core_free(core_t *c)
 {
     if (c) {
         free(c->code);
+        free(c->fm_tag);
         free(c);
     }
 }
@@ -606,6 +733,9 @@ void core_reset(core_t *c)      /* ucsim cl_51core/cl_uc52 clear_sfr; RAM keeps 
     c->t2mode = T2_RELOAD;
     c->t2ex_bit = 1;
     c->t0_edge = c->t1_edge = c->t2_edge = c->t2ex_edge = 0;
+    memset(c->tacc, 0, sizeof c->tacc);
+    if (c->dw)
+        S(0x8E) = 0x01;
 }
 
 pub_t *core_pub(core_t *c) { return &c->p; }
@@ -648,10 +778,24 @@ int core_run(core_t *c, uint64_t n)
         }
         c->p.skip_pc = 0xFFFFFFFF;
         c->was_reti = 0;
+        uint32_t stall = 0;
+        if (c->dw && c->fm)
+            stall = fetch_stall(c, pc, c->oplen[c->cur[pc & 0xFFFF]]);
         int cyc = step(c);
         c->p.instr++;
-        c->p.cycles += cyc;
-        tick_hw(c, cyc);
+        if (c->dw) {
+            c->p.clk += stall;
+            tick_hw_dw(c, stall);
+            uint8_t op = c->last_op;
+            cyc = (op == 0xE0 || op == 0xE2 || op == 0xE3 || op == 0xF0 || op == 0xF2 || op == 0xF3) ?
+                  c->movx_base + (CKCON & 7) : c->dwcyc[op];
+            c->p.cycles += cyc;
+            c->p.clk += (uint64_t)cyc * c->clk_per_cycle;
+            tick_hw_dw(c, cyc * c->clk_per_cycle);
+        } else {
+            c->p.cycles += cyc;
+            tick_hw(c, cyc);
+        }
         uint64_t n0 = c->p.nirq;
         irq(c);
         c->p.irq_tail = c->p.nirq != n0;

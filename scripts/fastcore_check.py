@@ -7,6 +7,10 @@ usage: fastcore_check.py diff BIN MAP [--fine 5000000 --fine-step 100000 --coars
        fastcore_check.py gates BIN MAP         fw_sim --boot-check / --video-check, ucsim vs --fast: verdict + key lines
        fastcore_check.py gpio BIN MAP           gpio_shot.py --cmds 0x43 on both cores, PIL pixel compare
        fastcore_check.py speed BIN MAP          instr/s + boot-to-ACTIVE wall time (video devs, 1080p60), both cores
+       fastcore_check.py timing                 dw8051 timing model (scripts/dw8051_model.json): per-opcode cycles, MOVX stretch, timer
+         clk/12 and clk/4, dual DPTR, dual-clock model f_cpu per register state. No image, no ucsim.
+  --cpu: diff / diffbus / fuzz / gates compare against ucsim = classic 8052 cycle counts: they run in --cpu 8052 (the default there;
+  dw8051 is refused). timing runs in dw8051. The selected mode is logged on the first line (AWTO_SIM_CPU).
   diff: both cores from reset with the flash-port model (FlashPort on ucsim, FlashDev on the core; same IRAM seed);
   compares PC ACC B PSW DPTR SP R0-R7, code bank, instruction + clock counts, IRAM and SFR (hash + first differing byte)
   every --fine-step to --fine, then every --coarse-step to --coarse (XDATA hash there too); around the first
@@ -491,6 +495,85 @@ def run_proc(args: list[str], fast: bool, tag: str) -> tuple[int, str, float]:
     return rc, out, dt
 
 
+def cmd_timing(a) -> int:
+    """dw8051 timing model vs the databook tables in dw8051_model.json (instruction cycles, MOVX stretch, timer rates, DPS)."""
+    import json
+    mdl = json.loads(F.MODEL_JSON.read_text())
+    fails = []
+
+    def core(code: bytes):
+        c = F.Core(code + bytes(64))
+        c.set_dw(mdl)
+        c.reset()
+        return c
+    n = 0
+    for op in range(256):
+        if op == 0xA5:
+            continue
+        for md in (range(8) if op in (0xE0, 0xE2, 0xE3, 0xF0, 0xF2, 0xF3) else (1,)):
+            c = core(bytes([op, 0, 0]))
+            c.sfr[0x0E] = md                                  # CKCON (0x8E): MD2..0
+            c.sfr[0x20] = 1                                   # IE: nothing
+            c.run(1)
+            if op in (0xE0, 0xE2, 0xE3, 0xF0, 0xF2, 0xF3):
+                want = mdl["movx"]["base_cycles"] + md
+            else:
+                want = mdl["cycles"][op]
+            n += 1
+            if c.p.cycles != want or c.p.clk != want * mdl["clk_per_cycle"]:
+                fails.append(f"op {op:02X} md {md}: {c.p.cycles} cycles / {c.p.clk} clk, want {want}")
+    say(f"timing: {n} opcode / stretch cases checked")
+    # timers: NOPs only; Timer2 free-running reload mode; CKCON.T2M 0: clk/12, 1: clk/4
+    for t2m, div in ((0, mdl["timer_clk_div"]["slow"]), (1, mdl["timer_clk_div"]["fast"])):
+        c = core(bytes(1000))
+        c.sfr[0x0E] = t2m << 5
+        c.sfr[0x48] = 0x04                                    # T2CON (0xC8): TR2, reload mode
+        c.sfr[0x4A] = c.sfr[0x4C] = 0                         # RCAP2 / TL2 = 0 (counts up from 0)
+        c.sfr[0x4B] = c.sfr[0x4D] = 0
+        c.run(300)
+        got = c.sfr[0x4D] << 8 | c.sfr[0x4C]
+        want = c.p.clk // div
+        if got != want:
+            fails.append(f"Timer2 T2M={t2m}: count {got}, want clk {c.p.clk} / {div} = {want}")
+        say(f"timing: Timer2 T2M={t2m}: {c.p.clk} clk -> {got} counts (clk/{div})")
+    # dual DPTR: DPS.0 = 1 -> MOV DPTR,#0x1234 loads DPTR1 and leaves DPTR0
+    c = core(bytes([0x90, 0x12, 0x34, 0x90, 0xAB, 0xCD]))
+    c.sfr[0x02], c.sfr[0x03] = 0x11, 0x22                     # DPL0 / DPH0
+    c.sfr[0x06] = 1                                           # DPS (0x86)
+    c.run(1)
+    if (c.sfr[0x04], c.sfr[0x05], c.sfr[0x02], c.sfr[0x03]) != (0x34, 0x12, 0x11, 0x22):
+        fails.append(f"dual DPTR: DPL1/DPH1/DPL0/DPH0 = {[hex(x) for x in (c.sfr[0x04], c.sfr[0x05], c.sfr[0x02], c.sfr[0x03])]}")
+    c.sfr[0x06] = 0
+    c.run(1)
+    if (c.sfr[0x02], c.sfr[0x03], c.sfr[0x04], c.sfr[0x05]) != (0xCD, 0xAB, 0x34, 0x12):
+        fails.append("dual DPTR: DPS = 0 does not select DPTR0")
+    say("timing: dual DPTR checked")
+    # clock model: f_cpu from register cells (reset, crystal IN_DIV 1, M2PLL 351 MHz / 4, IOSC 28 MHz / 1)
+    from sim_clock import ClockModel, XTAL_HZ, IOSC_HZ
+
+    class Cells:
+        def __init__(self, v):
+            self.v = v
+
+        def rd(self, a):
+            return bytes([self.v.get(a, 0)])
+    cm = ClockModel()
+    cases = [({0xFFED: 0xC8, 0xFFEE: 0x04}, XTAL_HZ / 2, "reset: crystal / 2"),
+             ({0xFFED: 0x04, 0xFFEE: 0x04}, XTAL_HZ, "ScalerMcuFlashClockGroupSetting(_EXT_XTAL_CLK)"),
+             ({0xFFED: (4 << 2) | 0x02, 0xFFEE: 0x04, 0x01E0: 47, 0x01E1: 0}, XTAL_HZ * 49 / 2 / 4, "M2PLL 351 MHz, flash div 4"),
+             ({0xFFED: 0x04, 0xFFEE: 0x04, 0x0009: 0x08}, IOSC_HZ, "power saving: IOSC, div 1")]
+    for regs, want, name in cases:
+        cm.update(Cells(regs))
+        ok = abs(cm.f_cpu - want) < 1
+        say(f"timing: f_cpu {name}: {cm.f_cpu / 1e6:.3f} MHz ({cm.src})")
+        if not ok:
+            fails.append(f"f_cpu {name}: {cm.f_cpu}, want {want}")
+    for f_ in fails:
+        say(f"FAIL {f_}")
+    say(f"{'PASS' if not fails else 'FAIL'} fastcore_check timing: {len(fails)} failed")
+    return 1 if fails else 0
+
+
 def cmd_gates(a) -> int:
     ok = True
     for mode in ("--boot-check", "--video-check"):
@@ -557,9 +640,10 @@ def cmd_speed(a) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=("diff", "diffbus", "fuzz", "gates", "gpio", "speed"))
-    ap.add_argument("bin", type=Path)
-    ap.add_argument("map", type=Path)
+    ap.add_argument("what", choices=("diff", "diffbus", "fuzz", "gates", "gpio", "speed", "timing"))
+    ap.add_argument("bin", type=Path, nargs="?")
+    ap.add_argument("map", type=Path, nargs="?")
+    ap.add_argument("--cpu", choices=F.CPU_MODES, help="sim CPU model (default: 8052 for the ucsim lockstep modes, dw8051 for timing)")
     ap.add_argument("--fine", type=int, default=5_000_000)
     ap.add_argument("--fine-step", type=int, default=100_000)
     ap.add_argument("--coarse", type=int, default=30_000_000)
@@ -569,8 +653,15 @@ def main() -> int:
     ap.add_argument("--fuzz-instr", type=int, default=20000, help="fuzz: instructions per seed")
     ap.add_argument("--fuzz-step", type=int, default=50, help="fuzz: compare every N instructions")
     a = ap.parse_args()
-    say(f"=== fastcore_check {a.what} {a.bin}")
-    return {"diff": cmd_diff, "diffbus": cmd_diffbus, "fuzz": cmd_fuzz, "gates": cmd_gates, "gpio": cmd_gpio, "speed": cmd_speed}[a.what](a)
+    cpu = a.cpu or ("dw8051" if a.what == "timing" else "8052")
+    if a.what not in ("timing", "speed", "gpio") and cpu != "8052":
+        ap.error(f"{a.what} compares against ucsim (classic 8052 cycle counts): --cpu 8052 only")
+    if a.what != "timing" and not (a.bin and a.map):
+        ap.error("BIN MAP required")
+    os.environ["AWTO_SIM_CPU"] = cpu
+    say(f"=== fastcore_check {a.what} {a.bin}; sim CPU model {cpu}")
+    return {"diff": cmd_diff, "diffbus": cmd_diffbus, "fuzz": cmd_fuzz, "gates": cmd_gates, "gpio": cmd_gpio, "speed": cmd_speed,
+            "timing": cmd_timing}[a.what](a)
 
 
 if __name__ == "__main__":

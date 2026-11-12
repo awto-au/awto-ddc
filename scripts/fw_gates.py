@@ -39,6 +39,8 @@ LIMIT_OF = {"keys": 60, "wdt": 60, "rules": 30}   # 3x the cold run (keys 20 s, 
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
+SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
+CPU_OF = {"wdt": "8052"}      # wdt_test t0_arm_from_isr / prio_t0_vs_exint measure Timer0 events in ucsim cycles (m.ticks); not yet ported to the dw8051 clock (open item #162)
 NO_SIM = {"link", "pokes", "speed", "magic", "regs", "rules"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
@@ -97,7 +99,6 @@ def gates(b: Path, m: Path, ref, tree):
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
-    g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     if header(tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
@@ -106,6 +107,10 @@ def gates(b: Path, m: Path, ref, tree):
         g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
         g["regs"] = [*PY, f"{s}/gen_regnames.py", "--tree", tree, "--check"]
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
+        for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py")):      # #162: generated C tables current
+            if (Path(tree) / "scripts" / sc).is_file():
+                g[nm] = [*PY, f"{tree}/scripts/{sc}", "--check"]
+    g["dwmodel"] = [*PY, f"{s}/dw8051_model.py", "--check"]                            # #162: CPU timing tables current
     return {
         **g,
         "boot": [*PY, f"{s}/fw_sim.py", "--boot-check", b, m],
@@ -121,7 +126,7 @@ def run(name, cmd, out: Path, res: dict, log):
     last = [t0, ""]
     with out.open("w") as f:
         p = subprocess.Popen(list(map(str, cmd)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT,
-                             env=dict(os.environ, PYTHONHASHSEED="0", **({"AWTO_SIM_CORE": "fast"} if name not in NO_SIM else {})))
+                             env=dict(os.environ, PYTHONHASHSEED="0", **({"AWTO_SIM_CORE": "fast", "AWTO_SIM_CPU": CPU_OF.get(name, SIM_CPU)} if name not in NO_SIM else {})))
 
         def watch():
             while p.poll() is None:
@@ -175,7 +180,8 @@ def main() -> int:
     g = {k: v for k, v in g.items() if k not in sk}
     if a.speed:
         g["speed"] = [*PY, str(ROOT / "scripts/speed_bench.py"), b.with_suffix(""), "--label", a.speed]
-    log(f"=== gates {b.name}: {', '.join(g)}{'; SKIP ' + ', '.join(sk) if sk else ''} ===")
+    log(f"=== gates {b.name}: {', '.join(g)}{'; SKIP ' + ', '.join(sk) if sk else ''}; sim cpu {SIM_CPU}"
+        f"{' (' + ', '.join(f'{k}: {v}' for k, v in CPU_OF.items() if k in g) + ')' if any(k in g for k in CPU_OF) else ''} ===")
     res = {}
     # boot/isr/link first, one at a time: boot-check shares tmp/fwsim/<stem>/ with the health sims (a parallel run FAILed at
     # gsinit, 2026-11-07); then the rest (separate SimBus machines) in parallel

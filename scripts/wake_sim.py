@@ -40,10 +40,10 @@ D2_PIN, D3_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE2C, 0xFE69, 0xBADC, 0x00
 D1_PINS = (0xFE33,)    # FE33..FE35: D1 cable-status cells (deadport_sim.py NOCABLE_D1)
 PS_POLL_MS = 5          # RL6449_Project.h AWTO_PS_POLL_MS
 IOSC_KHZ = 28_000       # freq-detect reference in power saving (_INTERNAL_OSC_XTAL)
-# Event -> wake line (firmware ms). Cable: detection every AWTO_SLOW_MS 10 ms + SDK 10 ms debounce re-read + 1 PS pass
-# (8 ms worst, measured below) = 28 ms, x1.25 -> 35 ms. Latches / DPCD: 1 PS pass 8 ms + this test's sample step 2 ms
-# + 1 ms tick = 11 ms, x1.25 -> 13 ms. Over = FAIL.
-BOUND_CABLE_MS, BOUND_LATCH_MS = 35, 13
+# Event -> wake line (firmware ms). PS pass 16 ms: sim 13.2..15.9 (dw8051 model, #162), unit 2 15.6 (2026-11-12, ps_probe).
+# Cable: detection every AWTO_SLOW_MS 10 ms + SDK 10 ms debounce re-read + 1 PS pass = 36 ms, x1.25 -> 45 ms.
+# Latches / DPCD: 1 PS pass 16 ms + this test's sample step 2 ms + 1 ms tick = 19 ms, x1.25 -> 24 ms. Over = FAIL.
+BOUND_CABLE_MS, BOUND_LATCH_MS = 45, 24
 # TMDS: clock up after the last restart -> unstable latched -> restart -> stable 2 polls later (2 x (5 + 2) + 2 + 1 = 17 ms),
 # + hold AWTO_PS_TMDS_HOLD_MS 50 + the poll that sees it (5 + 2 + 1) = 75 ms, x1.25 -> 94 ms.
 BOUND_TMDS_MS = 94

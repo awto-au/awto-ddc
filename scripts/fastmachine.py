@@ -32,6 +32,16 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+CPU_MODES = ("dw8051", "8052")
+MODEL_JSON = HERE / "dw8051_model.json"
+
+
+def cpu_mode() -> str:
+    """AWTO_SIM_CPU (set by --cpu): dw8051 (default; gates, sim_live, tests) or 8052 (ucsim -t 52 compatible: classic 12-clock cycles)."""
+    m = os.environ.get("AWTO_SIM_CPU", "dw8051")
+    if m not in CPU_MODES:
+        raise SystemExit(f"AWTO_SIM_CPU={m!r}: want one of {CPU_MODES}")
+    return m
 sys.path.insert(0, str(HERE))
 from sdcc_overlay import repo_root  # noqa: E402
 
@@ -50,7 +60,9 @@ class Pub(ctypes.Structure):
                 ("pc", ctypes.c_uint32), ("bank", ctypes.c_uint32), ("nev", ctypes.c_uint32), ("skip_pc", ctypes.c_uint32),
                 ("ev", ctypes.c_uint32 * 16), ("reason", ctypes.c_uint32), ("bad_op", ctypes.c_uint32),
                 ("nbanks", ctypes.c_uint32), ("nlvl", ctypes.c_uint32), ("serial_wr", ctypes.c_uint64),
-                ("irq_tail", ctypes.c_uint32), ("_pad", ctypes.c_uint32)]
+                ("irq_tail", ctypes.c_uint32), ("_pad", ctypes.c_uint32),
+                ("clk", ctypes.c_uint64), ("fm_miss", ctypes.c_uint64), ("fm_stall", ctypes.c_uint64),
+                ("dw", ctypes.c_uint32), ("max_instr_clk", ctypes.c_uint32)]
 
 
 _LIB = None
@@ -78,6 +90,9 @@ def lib():
     L.core_opcount.restype, L.core_opcount.argtypes = vp, [vp]
     L.core_set_bank.argtypes = [vp, ctypes.c_uint]
     L.core_sfr_write.argtypes = [vp, ctypes.c_int, ctypes.c_int]
+    L.core_set_dw.argtypes = [vp, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    L.core_set_fetch.argtypes = [vp, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_char_p]
+    L.core_set_fetch_ratio.argtypes = [vp, ctypes.c_uint32]
     L.core_level.restype, L.core_level.argtypes = ctypes.c_int, [vp, ctypes.c_int]
     L.core_run.restype, L.core_run.argtypes = ctypes.c_int, [vp, ctypes.c_uint64]
     _LIB = L
@@ -119,6 +134,25 @@ class Core:
         self.hooks = mv(4, 4 * 8192)
         self.pch = memoryview((ctypes.c_uint16 * 65536).from_address(L.core_pchooks(self.h))).cast("B").cast("H")
         self.opcount = (ctypes.c_uint64 * 256).from_address(L.core_opcount(self.h))
+
+    def set_dw(self, mdl: dict | None):
+        """CPU timing mode: mdl = scripts/dw8051_model.json (DW8051, default) or None (8052: ucsim -t 52 classic cycles)."""
+        if mdl is None:
+            self.L.core_set_dw(self.h, 0, bytes(256), 0, 0, 0, 0, 0)
+        else:
+            td = mdl["timer_clk_div"]
+            self.L.core_set_dw(self.h, 1, bytes(mdl["cycles"]), mdl["movx"]["base_cycles"], mdl["irq_cycles"], mdl["clk_per_cycle"],
+                               td["slow"], td["fast"])
+
+    def set_fetch(self, mdl: dict | None):
+        """Flash code-fetch stall model (mdl["flash_fetch"]) or none."""
+        if mdl is None:
+            self.L.core_set_fetch(self.h, 0, 0, 0, 0, 0, 0, None)
+        else:
+            ff = mdl["flash_fetch"]
+            sets = int(os.environ.get("AWTO_SIM_FETCH_SETS", ff["sets"]))      # sensitivity runs only; the default is the JSON
+            self.L.core_set_fetch(self.h, ff["line_bytes"], sets, ff["ways"], ff["cmd_flash_clk"], ff["byte_flash_clk"],
+                                  ff["common_end"], bytes(mdl["oplen"]))
 
     def reset(self):
         self.L.core_reset(self.h)
@@ -181,6 +215,22 @@ class FastMachine:
         self.sym, self.where = S.parse_map(self.map_text, img, ncode)
         self.log = log or S._Null()
         self.core = Core(img)
+        self.cpu = cpu_mode()
+        self.dw = self.cpu == "dw8051"
+        self._avg_clk = 8.0                      # clk per instruction, last chunk (deadline caps)
+        self.wall_ms = None                      # real time from the CPU clock model (dw8051 only); None = Timer2 cycle time
+        self.clock = None
+        if self.dw:
+            import json
+            from sim_clock import ClockModel
+            mdl = json.loads(MODEL_JSON.read_text())
+            self.core.set_dw(mdl)
+            if os.environ.get("AWTO_SIM_FETCH", "on") != "off":      # off: no flash code-fetch stall (isolates the CPU / clock model)
+                self.core.set_fetch(mdl)
+            self.clock, self.wall_ms = ClockModel(), 0.0
+            self.devs.append(self.clock)
+        print(f"sim CPU model: {self.cpu}", file=sys.stderr) if not getattr(FastMachine, "_said", False) else None
+        FastMachine._said = True
         self.core.reset()
         self.core.iram[:] = ucsim_iram()
         self.p = self.core.p
@@ -205,6 +255,9 @@ class FastMachine:
         for d in self.devs:
             d.init(self)
         self._tickers = [d for d in self.devs if hasattr(d, "tick")]
+        if self.dw:
+            for a_ in self.clock.shared:
+                self.core.hook(1, a_, True)            # EV_XW: clock registers another dev may also hook
         self.core.hook(EV_SW, 0xCB, True)              # RCAP2H write: dilate the new reload at once (#138: Timer0 follows RCAP2)
 
     # ---- ucsim command subset ----
@@ -408,24 +461,34 @@ class FastMachine:
 
     def run(self, n: int) -> str:
         rem, self._stop, p, core = n, False, self.p, self.core
-        if self.t2_scale > 1 and self.instr - self._t2_at >= 100_000:
+        if self.t2_scale > 1 and not self.dw and self.instr - self._t2_at >= 100_000:
             self._t2_at = self.instr
             self._scale_t2()
         while True:
-            i0, c0 = p.instr, p.cycles
+            i0, c0, k0 = p.instr, p.cycles, p.clk
             n = max(rem, 1)
-            for d in self._tickers:                    # stop near a model deadline (hardware WDT IRQ / reset): <= 4 cycles per instr
-                left = getattr(d, "deadline", 0) - self.ticks // 12
+            for d in self._tickers:                    # stop near a model deadline (hardware WDT IRQ / reset)
+                if self.dw:                            # deadline in real ms; at most max_instr_clk per instruction
+                    left = (getattr(d, "deadline", 0) - self.wall_ms) * self.clock.f_cpu / 1000.0
+                    if 0 < left:
+                        n = min(n, max(1, int(left / self._avg_clk)))      # last chunk's clk per instruction: a worst-case cap would creep up on the deadline
+                    continue
+                left = getattr(d, "deadline", 0) - self.ticks // 12      # <= 4 cycles per instr
                 if 0 < left:
                     n = min(n, max(1, left // 4))
             r = core.run(n)
-            if self.t2_scale > 1 and r == R_EVENT and any(p.ev[i] == (EV_SW << 16 | 0xCB) for i in range(min(p.nev, 16))):
+            if self.t2_scale > 1 and not self.dw and r == R_EVENT and any(p.ev[i] == (EV_SW << 16 | 0xCB) for i in range(min(p.nev, 16))):
                 lo, hi = self.rd(0xCA, 2, "sfr")
                 tl, th = self.rd(0xCC, 2, "sfr")
                 self._scale_t2()                       # the firmware's next RCAP2 read sees the dilated reload, as Timer2 does
                 if (tl, th) == (lo, hi):               # SDK loads TL2/TH2 with the same count (ScalerTimerSetTimerCount)
                     self.wr(0xCC, self.rd(0xCA, 2, "sfr"), "sfr")
             di, dt = p.instr - i0, (p.cycles - c0) * 12
+            if self.dw:
+                self.wall_ms += (p.clk - k0) * 1000.0 / self.clock.f_cpu       # f_cpu as it was while these clk ran
+                if p.instr > i0:
+                    self._avg_clk = max(1.0, (p.clk - k0) / (p.instr - i0))
+                self.core.L.core_set_fetch_ratio(self.core.h, self.clock.ratio_x256)
             if r == R_EVENT and p.irq_tail and not self.EXACT:
                 dt -= 12                # ucsim: an event stop's "Simulated" ticks miss the IRQ entry cycle after it
             used = di if self.EXACT else max(1, dt // self._tpi)       # Machine: max(1, ticks // TICKS_PER_INSTR) per stop
@@ -442,6 +505,8 @@ class FastMachine:
                     d = self.hook.get((kind, a))
                     if d is not None:
                         getattr(d, "on_" + kind)(self, a)
+                    if self.dw and kind == "write" and a in self.clock.shared:
+                        self.clock.update(self)             # FFEE is ChipReset's hook too (one handler per address)
                 if rem <= 0 or self._stop:
                     return out
                 continue
