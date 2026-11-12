@@ -307,6 +307,95 @@ def selector(k):
     return sel
 
 
+PORT = {"D1": 0x04, "D2": 0x05, "D3": 0x06}                # Global.h _D1.._D3_INPUT_PORT
+ROW = {"Auto": 0, "D1": 1, "D2": 2, "D3": 3}                  # selector rows (fw/sdk Pcb port order)
+CABLED = {0xFE33: 1, 0xFE34: 1, 0xFE35: 0, 0xFE2C: 0}        # D1 DP pins 15 / 16 high + 17 low, D3 P9.4 low = cable (deadport_sim)
+MODE_ACTIVE, MODE_NOSIGNAL = 3, 5
+SWITCH_S = 6.0              # take -> settled: DP search 3 s (no DP source in the sim) + display setting ~1 s; x1.25 + key time
+
+
+def port_now(k):
+    m = k.m
+    pri = m.rd(m.addr("g_pucSourceSearchPriority"), 10)
+    return pri[m.rd(m.addr("g_ucSearchIndex"))[0] % 10]
+
+
+def live_ports(k, ports):
+    """Sim board: HDMI video on every port in `ports` (fw_sim models one source; D3 added here), every cable in."""
+    m, hdmi = k.m, k.s.bus.hdmi
+    live = {PORT[p] for p in ports}
+
+    def scan(m_, r):
+        if (r["a1"] & 255) not in live:
+            return {"val": 5}                                   # _SOURCE_NONE
+        m_.wr(m_.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))
+        return {"val": 3}                                       # _SOURCE_HDMI
+    for name, fn in (("ScalerTMDSNormalPreDetect", lambda m_, r: {"carry": (r["a1"] & 255) in live}), ("ScalerTMDSScanInputPort", scan)):
+        pc = m.sym["_" + name] & 0xFFFF
+        m.stubs[pc] = [e for e in m.stubs.get(pc, []) if e[1] != name]
+        m.stub(name, fn)
+    for a, v in CABLED.items():
+        m.wr(a, bytes([v]))
+
+
+def ring(k):
+    """every line still in the sync ring, decoded (sync.tsv beside the map)"""
+    import sync_log as SL
+    rows = SL.load_rows(SL.tsv_for(k.s.mapp))
+    _, lines = SL.decode(SL.read_ring(lambda a, n: k.m.rd(a, n), k.m.addr("g_stAwtoSync")), rows, whole=True)
+    return lines
+
+
+def take(k, frm, to, how):
+    """Selector switch frm -> to: SOURCE opens it on frm, SOURCE steps to `to`, the idle commit or AUTO takes it.
+    D1 is DP: no DP source in the sim, so a switch to D1 ends in no signal ON D1 (the switch itself is what is checked)."""
+    b = k.snap()
+    n0 = len(k.who)
+    k.tap("SOURCE")
+    opened = k.osd_state()
+    rows = []
+    while len(rows) < len(ROW) and (not rows or rows[-1] != ROW[to]):    # step until the highlight is on `to` (Auto when auto-scanning)
+        k.tap("SOURCE", ms=100, gap=150)
+        rows.append(k.args.get("AwtoSrcSet", [None])[-1])
+    if how == "idle":
+        k.wait(SRC_IDLE_MS + 500)
+    else:
+        k.tap("AUTO")
+    who = SYS_BY_SELECTOR_IDLE if how == "idle" else SYS_BY_SELECTOR
+    req = k.who[n0:]
+    k.check(f"selector {frm} -> {to} by {how}: one search request by the selector", opened != 0 and req.count((REQ_SEARCH, who)) == 1,
+            f"opened {opened}, rows stepped {rows}, requests {req}")
+    want = (MODE_ACTIVE,) if to != "D1" else (MODE_NOSIGNAL,)
+    t0 = k.s.ms()
+    while k.s.ms() - t0 < SWITCH_S * 1000 and not (port_now(k) == PORT[to] and k.s.bus.mode_state() in want):
+        k.wait(200)
+    k.wait(1000)                                                # a reopen would show within this
+    new = ring(k)
+    new = new[len(k.ring0):] if new[:len(k.ring0)] == k.ring0 else new[-20:]
+    k.ring0 = ring(k)
+    say("  ring:\n" + "\n".join("    " + ln for ln in new))
+    by = "no key for" if how == "idle" else "requested by input selector (accepted)"
+    k.check(f"selector {frm} -> {to} by {how}: ring lines (opened on {frm} / auto, switch to {to}, request by the selector)",
+            any(ln.endswith(f"input selector opened (SOURCE key) on {frm}") or ln.endswith("input selector opened (SOURCE key) on auto") for ln in new) and any(ln.endswith(f"switch to {to}") for ln in new)
+            and any("reset to search requested by input selector" in ln and by in ln for ln in new))
+    k.check(f"selector {frm} -> {to} by {how}: on {to} (mode {want[0]}), selector closed and not reopened",
+            port_now(k) == PORT[to] and k.s.bus.mode_state() in want and k.osd_state() != opened and k.delta(b, "AwtoSourceOpen") == 1,
+            f"port 0x{port_now(k):02X}, mode {k.s.bus.mode_state()} {k.s.ms() - t0:.0f} ms after the take, osd {k.osd_state()}, "
+            f"opens {k.delta(b, 'AwtoSourceOpen')}")
+
+
+def switches(k):
+    """Dan 2026-11-12 "cannot switch to input with cable": the selector takes ANOTHER input, by the idle commit and by AUTO."""
+    live_ports(k, ("D2", "D3"))
+    k.ring0 = ring(k)
+    k.wait(500)
+    st = k.m.rd(k.m.addr("g_stPortCableStatus"))[0]
+    k.check("switch board: D1 / D2 / D3 cabled", st & 0x70 == 0x70, f"cable status 0x{st:02X} (bit4 D1, bit5 D2, bit6 D3)")
+    for how in ("idle", "auto"):
+        for frm, to in (("D2", "D3"), ("D3", "D2"), ("D2", "D1"), ("D1", "D2")):
+            take(k, frm, to, how)
+
+
 def auto_select(k, how):
     """#132: AUTO with nothing open = auto source select through SysMachineRequest (who = AUTO key); the search finds D2 again."""
     b = k.snap()
@@ -438,6 +527,7 @@ def run(k):
     auto_select(k, "front")
     k.shot("auto_select_result")
     auto_select(k, "injected")
+    switches(k)
 
     dbg = k.m.addr("g_ucAwtoDbgLink")
     link0 = k.m.rd(dbg)[0]
@@ -476,6 +566,7 @@ def main():
     ap.add_argument("map", type=Path)
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--shots", type=Path, help="write PNG renders of the screens here")
+    ap.add_argument("--only", choices=("switch",), help="one section: switch = selector takes another input (idle commit / AUTO)")
     a = ap.parse_args()
     say(f"key_sim_test {a.bin.name}")
     s = R.Session(a.bin, a.map, a.mode)
@@ -485,7 +576,11 @@ def main():
         a.shots.mkdir(parents=True, exist_ok=True)
         k.shots = a.shots
     try:
-        run(k)
+        if a.only == "switch":
+            k.wait(1000)
+            switches(k)
+        else:
+            run(k)
     finally:
         s.bus.close()
     say(f"{'PASS' if k.fails == 0 else 'FAIL'} key_sim_test {a.bin.name}: {k.fails} failed")
