@@ -75,3 +75,38 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 - M2PLL early: `SysPowerMcuClock` after `ScalerMcuInitial`; crystal around the whole-chip reset (regdb HOST_CTRL soft_reset resets all registers but HOST_CTRL, incl. M2PLL); M2PLL again after IOSC trimming.
 - Gate `panel` (scripts/panel_sim.py): writes to VDD / backlight pins / PWM4 and DPTx link / stream / PHY calls only with `g_ucAwtoPanelOwn`; no blink; one link training per bring-up; T3 / T4+T5 / T6 kept; power off during display setting. Sim panel model: `fw_sim.EdpPanel` (HPD 115 ms after VDD, #78).
 - Measurements: #162 comment of 2026-11-12 (sim and unit 2 tables).
+
+## Step 3: system machine (wb-p14ui-s3, 2026-11-12)
+- Owner: `SysJudge.c` = one machine for power status + mode (decision 3). `SysMachineHandler` (requests, power transitions, the judge's transitions, pending mode reset, state check) at the old `SysPowerHandler` slot; `SysMachineWork` (measure, display setting, first-ACTIVE work) at the `SysModeHandler` slot. `SysPowerSwitch`, `SysModeResetState`, `SysModeDisplaySetting`, `SysModeSetFreeRun` stay as its actions.
+- One state `s_ucSysState` (`AWTO_SYS_*`, RL6449_Project.h). The SDK views (power status / target, mode state / reset target) follow it and are written only in `SysJudge.c` with `g_ucAwtoSysOwn` = 1.
+
+| state | SDK power / mode | leaves when |
+|---|---|---|
+| AC_ON | AC_ON / POWER OFF | NVRAM power request: on -> INITIAL (`AC_ON_TO_NORMAL`), off -> DOWN |
+| OFF | OFF / POWER OFF | power-on request -> INITIAL (`OFF_TO_NORMAL`) |
+| INITIAL | NORMAL / INITIAL | next pass -> SEARCH |
+| SEARCH | NORMAL / SEARCH | timing confirmed + supported -> DISPLAY; search done -> NOSIGNAL |
+| DISPLAY | NORMAL / DISPLAY SETTING | display set + panel video ready + active wait -> ACTIVE |
+| ACTIVE | NORMAL / ACTIVE | check fails -> HOLD (L1, `AwtoWakeHold`) or SEARCH; fast path -> FAST |
+| FAST | NORMAL / ACTIVE | unblank -> ACTIVE; timeout -> SEARCH; fast wake retry -> HOLD |
+| HOLD | NORMAL / ACTIVE | signal back -> FAST; released (L2 time, other cable, tries) -> SEARCH |
+| NOSUPPORT | NORMAL / NO SUPPORT | a reset or a failed check |
+| NOSIGNAL | NORMAL / NO SIGNAL | timing confirmed -> DISPLAY; cable reset -> SEARCH; OSD power-saving timer -> DOWN |
+| SAVING | SAVING / POWER SAVING | power-on request -> WAKE (`PS_TO_NORMAL`, or `FAKE_PS_TO_NORMAL`); off -> OFF |
+| WAKE | NORMAL / POWER SAVING | timing confirmed -> DISPLAY; search finds nothing -> power-saving request |
+| DOWN | kept | panel machine down (T4, T5) -> OFF (`NORMAL_TO_OFF`) / SAVING (`NORMAL_TO_PS`); power-on request -> back |
+
+- Requests: `SysMachineRequest(request, who)` only. Requesters: POWER key, front key in power saving, test cmd 0x3E, VCP D6 (glue and SDK DDC/CI), input select, selector, dead port, wake poll, SDK power-saving predetect, SDK cable reset, OSD power-saving timer, settings, SDK OSD, hold, fast path, judge timers, NVRAM at boot. `SysPowerSetTargetPowerStatus` / `SysModeSetResetTarget` are request wrappers. Outcomes: accepted, already, replaces, refused, kept (power saving / down / hold).
+- Power targets and mode resets wait in the SDK target fields until the handler takes them. Fast path / hold requests change the state at once: they do no scaler work.
+- SDK rule kept: a mode change waits while an SDK handler has not seen the last one (change flags). The state check after a failure forces the change, as in the SDK.
+- Logs (sync.tsv): 13 = `system: <old> -> <new>: <why> (N ms in <old>)`, 14 = `system: <request> requested by <who> (<outcome>)`. Name tables 15..19 use a direct row index. Mode lines (01) are logged at the transition. Power lines (C0, C9) are logged at the power transition. Row lookup is indexed by id (`tAwtoSyncIdRow`).
+- Removed: `SysPowerHandler`, `SysJudgeHandler`, `SysModeHandler`, `SysJudgeStateChangeEvent`, `SysJudgeModeResetProc`, `AwtoSwPoll` mode polling, the per-pass power compare, the judge-hold sub (`AWTO_FAST_JUDGE_HOLD`, `AWTO_WAKE_HOLD`), the direct target writes (keys, testcmd, VCP, wake poll, dead port, fastsw, hold, selector, settings, SysTimer, SysSource), and `g_ucSignalUnstable` / `g_ucIssueState`.
+- POWER off during display setting: DOWN runs no judge, so display setting no longer restarts during the power-down. POWER pressed again during DOWN calls it off.
+- POWER-key-on block (~700 ms, step 2 open item): the DP DC-on HPD toggle in `_DP_LONG_HPD_DELAY_MODE` = `ScalerTimerDelayXms(_DP_LONG_HPD_TIME)` (700 ms) with a cable on D1. Not in the sim (no D1 cable). `Scaler_Option.h`: timer-event mode always.
+- HDMI HPD recovery: the 110 ms low pulse no longer waits in the judge (`AwtoTmdsHpdTick`).
+- Panel machine (step 2 items 6, 7): a warm reset starts in T6, counted after the registry load. Off from VIDEO / T3 with the backlight never on skips T4. T6 counts from the VDD-off edge.
+- Hidden SDK branch: `_CUSTOMER` / `_CUS_MINDRAY` are undefined (0 == 0). The no-support timer reset to SEARCH; that stays, now explicit. `SysModeHandler` NOSUPPORT had a 1 s blocking delay; it went with the rewrite. The other compiled customer branches: to be filed (draft in the #162 step 3 comment).
+- XDATA: 2 B free (17 before). Locals in the machine are cut to one per function.
+- Console: no live log draw while a fast switch settles (`AWTO_CON_LIVE`); the lines stay in the ring and the OSD poll draws them after the unblank.
+- Gate `sysm` (scripts/sysm_sim.py): power / mode view changes only with `g_ucAwtoSysOwn`, unbroken transition chain, named states / requesters, each mode line after its transition, no request-less target; `--tree` lint (view setters only in SysJudge.c, actions only from the machine's files, old handlers gone).
+- Measurements: #162 comment of 2026-11-12 (step 3, sim and unit 2 tables).
