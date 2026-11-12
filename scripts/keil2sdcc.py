@@ -411,6 +411,17 @@ SUBS = [
                      f"#else\n    if(AwtoPsTmdsLive(0x7{n - 1}) != 0)\n#endif\n" + m.group(3) +
                      "#if(_AWTO_PS_WAKE == _OFF)  // [keil2sdcc] sub #144\n" + m.group(4) + "#endif\n"), 1)
     for n in (2, 3)
+] + [
+    # #144: in power saving the wake is AwtoPsWakePoll's. The SDK's DDC handshake (any SCL toggle: DDC/CI, 0x35 debug) is
+    # counted only; the freq check is our held TMDS trigger. DDC IRQ re-armed as the SDK does, EDID-read latch (bit0) kept.
+    (f"Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx{n}_SeptPhy.c",
+     rf"(bit ScalerTMDSRx{n}TMDSPSPreDetect\(void\)\n\{{\n)(.*?\n)(    return _FALSE;\n\}}\n)",
+     lambda m, n=n, r=r: (m.group(1) + "#if(_AWTO_PS_WAKE == _ON)  // [keil2sdcc] sub #144\n"
+                          f"    if(GET_TMDS_RX{n}_DDC_DETECTED() == _TRUE)\n    {{\n        CLR_TMDS_RX{n}_DDC_DETECTED();\n"
+                          f"        AwtoPsDdcSeen(_D{n}_INPUT_PORT);\n    }}\n"
+                          f"    if(({r} & _BIT3) != _BIT3)\n    {{\n        {r} = ({r} & ~_BIT0) | (_BIT3 | _BIT2);\n    }}\n"
+                          "    return _FALSE;\n#else\n" + m.group(2) + m.group(3)[:-2] + "#endif\n}\n"), 1)
+    for n, r in ((2, "MCU_FE69_DDC2_EDID_IRQ"), (3, "MCU_FE72_DDC3_EDID_IRQ"))
 ]
 # #144 no boot logo: mode INITIAL opens the console with the live power-on log (fw/sdcc/awto_osdcard.inc AwtoBootConsole);
 # the logo draw, its hold timer, art, tile maps, VLC loader cases and externs go. Same line count at INITIAL (warn keys).

@@ -430,12 +430,94 @@ static DWORD AwtoPsWakeState(void)
     return ulT | ((DWORD)g_usAwtoPsPolls << 8) | ucB;
 }
 
+bit AwtoPsWakeFire(BYTE ucT, BYTE ucI, WORD usVal);
+__xdata DWORD g_ulAwtoPsMs;                         // #144 ms in power status SAVING this episode (sum of poll gaps; test readout)
+__xdata BYTE g_ucAwtoPsWakes;                       // wakes from SAVING since boot, any path (test readout)
+__xdata WORD g_usAwtoPsTmdsLive;                    // polls with a TMDS clock live this episode, D2 + D3 (test readout)
+__xdata WORD g_usAwtoPsTmdsRun;                     // longest TMDS live run this episode, ms (test readout)
+__xdata WORD g_usAwtoPsDdc;                         // SDK DDC handshakes (SCL toggle) seen in SAVING since boot, gated (test readout)
+static __xdata WORD s_pusTmdsFirst[2];              // D2 / D3: AwtoSyncNow of the first live poll of the current run
+static __xdata WORD s_pusTmdsLast[2];               // D2 / D3: last live poll
+static __xdata BYTE s_ucTmdsRun;                    // bit i - 1: a run is open on port D1 + i
+static __xdata BYTE s_ucPsSaid;                     // bit i: short-run / DDC line already logged this sleep (D1 + i; DDC << 4)
+
+// SDK TMDS PS predetect (keil2sdcc sub): a DDC handshake (any SCL toggle on the port's DDC, e.g. a DDC/CI or 0x35 access)
+// is counted, never a wake; an EDID read still wakes through AWTO_WAKE_T_EDID. Line once per sleep.
+void AwtoPsDdcSeen(BYTE ucPort)
+{
+    BYTE ucBit = (BYTE)0x10 << (ucPort - _D1_INPUT_PORT);
+
+    if(g_usAwtoPsDdc != 0xFFFF)
+    {
+        g_usAwtoPsDdc++;
+    }
+    if((s_ucPsSaid & ucBit) == 0)
+    {
+        s_ucPsSaid |= ucBit;
+        AwtoSyncPush(AWTO_SYNC_EV_PS_DDC, ucPort, 0);
+    }
+}
+
+// TMDS wake: live at every restarted measurement for AWTO_PS_TMDS_HOLD_MS, no gap > AWTO_PS_TMDS_GAP_MS; 1 = woke
+static BYTE AwtoPsTmdsHold(BYTE ucI, WORD usNow)
+{
+    BYTE ucB = (BYTE)1 << (ucI - 1);
+    WORD usBase = (WORD)(0x70 + ucI) << 8;
+    WORD usRun;
+
+    if(AwtoPsTmdsLive(0x70 + ucI) != 0)
+    {
+        if(g_usAwtoPsTmdsLive != 0xFFFF)
+        {
+            g_usAwtoPsTmdsLive++;
+        }
+        if((s_ucTmdsRun & ucB) == 0)
+        {
+            s_ucTmdsRun |= ucB;
+            s_pusTmdsFirst[ucI - 1] = usNow;
+        }
+        s_pusTmdsLast[ucI - 1] = usNow;
+        usRun = usNow - s_pusTmdsFirst[ucI - 1];
+        if(usRun > g_usAwtoPsTmdsRun)
+        {
+            g_usAwtoPsTmdsRun = usRun;
+        }
+        if(usRun >= AWTO_PS_TMDS_HOLD_MS)
+        {
+            s_ucTmdsRun &= ~ucB;
+            return (AwtoPsWakeFire(AWTO_WAKE_T_TMDS, ucI, AwtoPsTmdsClk(usBase)) != 0) ? 1 : 0;
+        }
+        AwtoPsTmdsStart(usBase);                    // measure again: the next poll sees only a clock that is still there
+        return 0;
+    }
+    if(((s_ucTmdsRun & ucB) != 0) && ((WORD)(usNow - s_pusTmdsLast[ucI - 1]) > AWTO_PS_TMDS_GAP_MS))
+    {
+        s_ucTmdsRun &= ~ucB;                        // the clock went away before the hold: a burst, no wake
+        if((s_ucPsSaid & ((BYTE)1 << ucI)) == 0)
+        {
+            s_ucPsSaid |= (BYTE)1 << ucI;
+            AwtoSyncPush(AWTO_SYNC_EV_PS_BURST, _D1_INPUT_PORT + ucI, s_pusTmdsLast[ucI - 1] - s_pusTmdsFirst[ucI - 1]);
+        }
+    }
+    if(((s_ucWakeCable & ((BYTE)1 << ucI)) != 0) && ((s_ucTmdsRun & ucB) == 0) &&
+       (ScalerGetBit(usBase | 0xE6, (_BIT7 | _BIT2)) != _BIT7))
+    {
+        AwtoPsTmdsStart(usBase);                    // stopped, or unstable since the start (no clock): measure again
+    }
+    return 0;
+}
+
 void AwtoPsWakeArm(void)                              // power saving entered: baselines, latches cleared
 {
     BYTE ucI;
 
     g_usAwtoPsPolls = 0;
     g_usAwtoPsGap = 0;
+    g_ulAwtoPsMs = 0;
+    g_usAwtoPsTmdsLive = 0;
+    g_usAwtoPsTmdsRun = 0;
+    s_ucTmdsRun = 0;
+    s_ucPsSaid = 0;
     s_usWakeAt = AwtoSyncNow();
     AwtoPsTmdsStart(0x7100);                        // pre-PS stable latches must not count (SDK PS bounds are set by now)
     AwtoPsTmdsStart(0x7200);
@@ -468,7 +550,7 @@ bit AwtoPsWakeFire(BYTE ucT, BYTE ucI, WORD usVal)   // trigger AWTO_WAKE_T_*, p
     BYTE ucBit = (BYTE)1 << ucI;
     BYTE ucId = (ucT == AWTO_WAKE_T_UNPLUG) ? AWTO_SYNC_EV_UNPLUG : ((ucT == AWTO_WAKE_T_TMDS) ? AWTO_SYNC_EV_WAKE_TMDS : (AWTO_SYNC_EV_WAKE + ucT));
 
-    if((s_pucWakeUsed[ucT] & ucBit) != 0)
+    if(((s_pucWakeUsed[ucT] & ucBit) != 0) && (ucT != AWTO_WAKE_T_TMDS))     // TMDS: the hold is the gate
     {
         if((s_pucWakeSaid[ucT] & ucBit) == 0)
         {
@@ -497,6 +579,7 @@ void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL + AWTO_PS_
         return;                                     // woken (the SDK powers up on its next pass), or not due
     }
     s_usWakeAt = usNow;
+    g_ulAwtoPsMs += usGap;
     if((g_usAwtoPsPolls != 0) && (usGap > g_usAwtoPsGap))    // poll to poll: the arm -> first poll pass is PS entry work
     {
         g_usAwtoPsGap = usGap;
@@ -529,20 +612,11 @@ void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL + AWTO_PS_
             }
         }
     }
-    for(ucI = 1; ucI < 3; ucI++)                    // TMDS clock, HDMI D2 (P71) / D3 (P72); AwtoPsTmdsLive needs the cable
+    for(ucI = 1; ucI < 3; ucI++)                    // TMDS clock, HDMI D2 (P71) / D3 (P72): wakes only when held AWTO_PS_TMDS_HOLD_MS
     {
-        WORD usBase = (WORD)(0x70 + ucI) << 8;
-
-        if(AwtoPsTmdsLive(0x70 + ucI) != 0)
+        if(AwtoPsTmdsHold(ucI, usNow) != 0)
         {
-            if(AwtoPsWakeFire(AWTO_WAKE_T_TMDS, ucI, AwtoPsTmdsClk(usBase)) != 0)
-            {
-                return;
-            }
-        }
-        else if(((s_ucWakeCable & ((BYTE)1 << ucI)) != 0) && (ScalerGetBit(usBase | 0xE6, (_BIT7 | _BIT2)) != _BIT7))
-        {
-            AwtoPsTmdsStart(usBase);                // stopped, or unstable since the start (no clock): measure again
+            return;
         }
     }
     if((AwtoPsWakeAux() != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_AUX, 0, 0) != 0))          // index 0 = D1, the DP port
@@ -564,6 +638,10 @@ void AwtoSyncPoll(void)                             // power status changed (AWT
     BYTE ucP = GET_POWER_STATUS();
 
 #if(_AWTO_PS_WAKE == _ON)
+    if((ucP == _POWER_STATUS_NORMAL) && (g_ucAwtoSyncPwr == _POWER_STATUS_SAVING))
+    {
+        g_ucAwtoPsWakes++;
+    }
     if((ucP == _POWER_STATUS_NORMAL) && (g_ucAwtoPsWakeCon != 0))
     {
         g_ucAwtoPsWakeCon = 0;                        // episode begun by AwtoPsWakeFire: console + panel now (as at power-on)

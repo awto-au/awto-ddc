@@ -93,6 +93,8 @@ CD	*	port	AUX command from source: wake
 CE	*	port	DPCD 600h = D0 (source powers the link): wake
 D3	*	port	cable unplugged: wake
 D7	*	portmhz1	wake by TMDS clock, about % (IOSC reference)
+D8	*	port	DDC activity in power saving: no wake (SDK DDC handshake gated, counted)
+D9	*	portms	TMDS clock burst % in power saving: shorter than the hold, no wake
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %
