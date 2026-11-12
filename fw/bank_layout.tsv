@@ -1085,6 +1085,8 @@ const	___str_119	C	0x3e9c	44
 stub	_AwtoSourceClose	C	0x3ec8	8
 stub	_AwtoSourceIdle	C	0x3ed0	8
 stub	_AwtoSourceTake	C	0x3ed8	8
+stub	_AwtoConWrapLine	C	0x3ee0	8
+stub	_AwtoTextAt	C	0x3ee8	8
 const	___str_115	C	0x3f40	24
 const	___str_11	C	0x3f58	12
 const	___str_12	C	0x3f64	12
@@ -2057,10 +2059,10 @@ fn	_AwtoCardOpen	6	0x4884	368
 fn	_AwtoCardOpenW	6	0x49f4	404
 fn	_AwtoCardShow	6	0x4b88	12
 fn	_AwtoCardTxt	6	0x4b94	64
-fn	_AwtoConLogEnd	6	0x4bd4	180
+fn	_AwtoPutChar	6	0x4bd4	60
 fn	_AwtoConLogRoom	6	0x4c88	116
-fn	_AwtoConLogStart	6	0x4cfc	68
-fn	_AwtoConLogSync	6	0x4d40	300
+fn	_AwtoConLogEnd	6	0x4cfc	252
+fn	_AwtoConLogStart	6	0x4df8	84
 fn	_AwtoConLogTail	6	0x4e6c	200
 fn	_AwtoConRow	6	0x4f34	292
 fn	_AwtoConTitle	6	0x5058	788
@@ -2089,7 +2091,6 @@ fn	_AwtoPsField	6	0x60d8	132
 fn	_AwtoPsLbl	6	0x615c	48
 fn	_AwtoPsValue	6	0x618c	360
 fn	_AwtoPutAdc	6	0x62f4	156
-fn	_AwtoPutChar	6	0x6390	40
 fn	_AwtoPutClock	6	0x63b8	212
 fn	_AwtoPutCol	6	0x648c	24
 fn	_AwtoPutDpRate	6	0x64a4	100
@@ -2219,6 +2220,7 @@ fn	_vcp_set	6	0xa874	260
 const	_tAwtoCardS	6	0xa978	504
 const	_ua_close	6	0xab70	12
 fn	_AwtoBootConsole	6	0xab7c	76
+fn	_AwtoConLogSync	6	0xabc8	316
 fn	_ScalerDpRx1SignalDetectInitial	7	0x0000	284
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x011c	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x08a4	1528
@@ -2278,9 +2280,10 @@ fn	_AwtoInfoCard	8	0x50cc	916
 fn	_AwtoDiagTestCmd	8	0x5460	752
 fn	_AwtoSourceAuto	8	0x5750	48
 fn	_AwtoSrcRate	8	0x5788	456
-fn	_AwtoSyncTxt	8	0x5950	252
 fn	_AwtoBlDraw	8	0x5a4c	300
 fn	_AwtoBlKey	8	0x5b78	464
+fn	_AwtoConWrapLine	8	0x5d48	280
+fn	_AwtoSyncTxt	8	0x5e60	276
 fn	_AwtoOsdWdtLines	8	0x6038	928
 fn	_AwtoSyncConPoll	8	0x64a4	204
 fn	_AwtoSyncLine	8	0x7a1c	2156
@@ -2795,7 +2798,7 @@ fn	_AwtoHoldBlocksDisable	12	0x05d8	60
 fn	_st_aux_check	12	0x0614	76
 fn	_AwtoKeyStep	12	0x0668	596
 fn	_AwtoSourceKey	12	0x08bc	404
-fn	_AwtoConLogInit	12	0x0a50	292
+fn	_AwtoConLogInit	12	0x0a50	352
 fn	_SysMachineHandler	12	0x0cac	88
 fn	_set_ap_aspect	12	0x0d0c	48
 fn	_set_ap_debug_msgs	12	0x0d3c	32
