@@ -144,7 +144,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     {
         if(AWTO_KEY_TEST_ON())
         {
-            return;                             // console up: POWER must not switch the monitor off mid-test
+            AwtoKeyTestSet(0);                  // POWER always works: the console closes first (Dan, 2026-11-12)
         }
         if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
         {
@@ -170,17 +170,18 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         }
         return;
     }
-    if(AWTO_KEY_TEST_ON())                      // diagnostic console: UP / DOWN scroll, every other key is swallowed
-    {
-        if(ucK == AWTO_K_UP)
+    if(AWTO_KEY_TEST_ON())                      // console: UP / DOWN scroll; GPIO (key test) page swallows the rest,
+    {                                           // main page: any other key closes it and does its normal job
+        if((ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN))
         {
-            AwtoConScroll(-1);
+            AwtoConScroll((ucK == AWTO_K_UP) ? -1 : 1);
+            return;
         }
-        else if(ucK == AWTO_K_DOWN)
+        if(g_stAwtoGpio.ucOpen == AWTO_CON_GPIO)
         {
-            AwtoConScroll(1);
+            return;
         }
-        return;
+        AwtoKeyTestSet(0);
     }
 #ifdef _AWTO_NEW_SETTINGS
     if(menu_active() != 0)                      // awto menu: UP / DOWN repeat, SOURCE does nothing
