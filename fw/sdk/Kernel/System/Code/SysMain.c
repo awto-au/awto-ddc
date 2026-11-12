@@ -265,7 +265,7 @@ void SysMainSystemInitial(void)
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
     if(AwtoBootReason() == AWTO_BOOT_COLD)
     {
-        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);    // #162: VDD + T1 now; PHY / link once power is NORMAL
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_BOOT_COLD));    // #162: VDD + T1 now; PHY / link once power is NORMAL
     }
 #endif
     ScalerTimerInitialTimerEvent();
@@ -276,7 +276,7 @@ void SysMainSystemInitial(void)
     {
         UserCommonInterfacePanelBoot(1);
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
-        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_BOOT_WARM));
 #endif
     }
 

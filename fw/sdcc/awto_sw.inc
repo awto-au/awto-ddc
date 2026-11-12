@@ -7,7 +7,7 @@ static __xdata unsigned char s_ucAwtoUnstable;  // "source unstable" judge fails
 static __xdata unsigned char s_ucAwtoHpdPulses;
 #endif
 
-static void AwtoSwRec(unsigned char ucId, unsigned char ucArg)
+void AwtoSwRec(unsigned char ucId, unsigned char ucArg)     // switch log only (no ring line)
 {
     unsigned char ucN = g_stAwtoSw.ucN;
 
@@ -28,13 +28,6 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
 {
     AWTO_SYNC_SW(ucId, ucArg);                  // #139 sync log: its own ring, kept when this log is full
     AwtoSwRec(ucId, ucArg);
-}
-
-// #162 panel machine transition: switch log (no value) + ring line with the ms spent in the old state.
-void AwtoPanelLog(unsigned char ucArg, unsigned int usMs)
-{
-    AwtoSwRec(AWTO_SW_EV_PANEL, ucArg);
-    AwtoSyncPush(AWTO_SW_EV_PANEL, ucArg, usMs);
 }
 
 // #63 own frame: pattern generator or forced background on, so the panel's short T3 applies (AWTO_T3_OWN_PATTERN_MS)
@@ -89,27 +82,18 @@ void AwtoSwArm(unsigned char ucPort)
 }
 
 #if(_AWTO_PANEL_LOG == _ON)
-// #144 panel log: a real pin change logs the event (0..3) from the PCB macros; requests log in the panel machine.
+// #144 / #162 s3b: a pin written by the panel machine is logged by its transition line only; a write outside it (after boot pin
+// init) logs one line with the level and whether it was an edge (sync.tsv 12 02..33).
 static __xdata unsigned char s_ucAwtoPins;       // last written level: bit0 panel VDD, bit1 backlight (every write goes through the PCB macros)
 
-void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn)    // before the pin is written
+void AwtoPanelPinLog(unsigned char ucWhat)      // before the pin is written; bit 1 = backlight, bit 0 = level (no locals: XDATA)
 {
-    unsigned char ucBit = (ucBacklight != 0) ? 2 : 1;
-    unsigned char ucWas = ((s_ucAwtoPins & ucBit) != 0);
-
-    AwtoPanelForeign(AWTO_PNL_X_VDD + ucBacklight);
-    if(ucOn != 0)
+    if((g_ucAwtoPanelOwn == 0) && (g_stAwtoDiag.ucStage >= 5))
     {
-        s_ucAwtoPins |= ucBit;
+        AwtoSwEvent(AWTO_SW_EV_PANEL_X, (AWTO_PNL_X_VDD + (ucWhat >> 1)) | (((ucWhat & 1) != 0) ? AWTO_PNL_X_ON : 0) |
+                    ((((s_ucAwtoPins >> (ucWhat >> 1)) ^ ucWhat) & 1) ? 0 : AWTO_PNL_X_SAME));
     }
-    else
-    {
-        s_ucAwtoPins &= ~ucBit;
-    }
-    if((g_stAwtoDiag.ucStage >= 5) && (ucWas != (ucOn != 0)))      // boot-time pin init is not a panel change
-    {
-        AwtoSwEvent(AWTO_SW_EV_POWER, (ucBacklight != 0) ? ((ucOn != 0) ? _BACKLIGHT_ON : _BACKLIGHT_OFF) : ((ucOn != 0) ? _PANEL_ON : _PANEL_OFF));
-    }
+    s_ucAwtoPins = (s_ucAwtoPins & ~(1 << (ucWhat >> 1))) | ((ucWhat & 1) << (ucWhat >> 1));
 }
 #endif
 

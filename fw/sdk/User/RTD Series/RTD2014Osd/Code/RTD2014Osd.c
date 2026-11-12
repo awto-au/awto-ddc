@@ -183,7 +183,7 @@ void RTDOsdSystemFlowProc(void)
                     SET_OSD_POWER_SAVING_SHOW_DP_INFO(_FALSE);
 
                     OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
-                    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+                    UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_DPINFO));
                 }
 #endif
             }
@@ -217,13 +217,13 @@ void RTDOsdEventMsgProc(void)
     {
         case _OSDEVENT_SHOW_NOSIGNAL_MSG:
             OsdDispOsdMessage(_OSD_DISP_NOSIGNAL_MSG);
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_NOSIGNAL));
             ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
             break;
 
         case _OSDEVENT_SHOW_NOCABLE_MSG:
             OsdDispOsdMessage(_OSD_DISP_NOCABLE_MSG);
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_NOCABLE));
             ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
             break;
 
@@ -233,7 +233,7 @@ void RTDOsdEventMsgProc(void)
             ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
 
             OsdDispOsdMessage(_OSD_DISP_NOSUPPORT_MSG);
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_NOSUPPORT));
             ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
             break;
 
@@ -250,13 +250,13 @@ void RTDOsdEventMsgProc(void)
             g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
             AwtoSourceOpen();
 
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_SOURCE));
             break;
 
         case _OSDEVENT_SHOW_POWER_SAVING_EVENT_MSG:
             OsdDispDisableOsd();
             OsdDispOsdMessage(_OSD_DISP_POWER_SAVING_MSG);
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_PS));
             ScalerTimerActiveTimerEvent(SEC(2), _USER_TIMER_EVENT_GO_TO_POWER_SAVING);
             break;
 

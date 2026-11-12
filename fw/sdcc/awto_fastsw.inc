@@ -136,7 +136,7 @@ bit AwtoWakeHold(void)                          // judge check failed in ACTIVE:
     }
     ScalerDDomainBackgroundEnable(_ENABLE);
     ScalerGlobalWatchDog(_DISABLE);             // no free run: the display stays set up for the same timing
-    UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF);    // L1: returns at once; the machine keeps the eDP stream
+    UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_OFF, AWTO_PNL_BY_HOLD_L1));    // L1: returns at once; the machine keeps the eDP stream
     g_ucAwtoHold = SysSourceGetInputPort();
     s_ucAwtoHoldLevel = 1;
     s_usAwtoHoldSec = 0;
@@ -152,8 +152,9 @@ static void AwtoWakeRelease(BYTE ucWhy)         // to the SDK search; the panel 
     g_ucAwtoHold = 0;
     g_ucAwtoNoHold = 1;
     g_ucAwtoWakePending = 0;
-    AwtoSwEvent(AWTO_SW_EV_HOLD, ucWhy);
-    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_HOLD);
+    AwtoSwEvent(AWTO_SW_EV_HOLD, ucWhy);       // switch log; the ring line is the request's (who = the reason)
+    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH,
+                      (ucWhy == 2) ? AWTO_SYS_BY_HOLD : ((ucWhy == 4) ? AWTO_SYS_BY_HOLD_TRIES : AWTO_SYS_BY_HOLD_AUTO));
 }
 
 void AwtoWakePoll(void)                         // every pass while held
@@ -209,7 +210,7 @@ void AwtoWakePoll(void)                         // every pass while held
     SysMachineRequest(AWTO_SYS_REQ_FAST, AWTO_SYS_BY_HOLD_BACK);
     if(s_ucAwtoHoldLevel != 0)                  // still blanked: the backlight is back before the unblank
     {
-        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_HOLD_BACK));
         AwtoSwEvent(AWTO_SW_EV_HOLD, 6);
         s_ucAwtoHoldLevel = 0;
     }

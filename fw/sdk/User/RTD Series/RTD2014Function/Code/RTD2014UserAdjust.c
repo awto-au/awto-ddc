@@ -854,7 +854,7 @@ void UserAdjustFREESYNCODMeasure(void)
     UserAdjustBacklight(100);
 
     // Enable Backlight
-    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+    UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_FREESYNC_OD));
 
     // Disable OSD
     ScalerOsdDisableOsd();

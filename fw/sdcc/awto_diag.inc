@@ -13,10 +13,13 @@ void AwtoDiagStage(unsigned char ucStage)
         while(usNow != g_usTimerCounter);
         g_stAwtoDiag.usStageMs[ucStage - 1] = usNow;
         g_stAwtoDiag.ucStage = ucStage;
-        if(ucStage >= 2)
+#if(_AWTO_SYNC_LOG == _ON)
+        // stage 1 = AwtoSyncInit's line; stages without a sync.tsv row (5 / 7 / 8: the panel machine's lines state them) no line
+        if((ucStage >= 2) && (AwtoSyncRow(AWTO_SYNC_EV_STAGE, ucStage) != 0))
         {
-            AwtoSyncPush(AWTO_SYNC_EV_STAGE, ucStage, 0);      // stage 1 = AwtoSyncInit's line (the ring starts after it)
+            AwtoSyncPush(AWTO_SYNC_EV_STAGE, ucStage, 0);
         }
+#endif
     }
 }
 

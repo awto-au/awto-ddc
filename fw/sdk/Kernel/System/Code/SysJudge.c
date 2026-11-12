@@ -26,8 +26,9 @@
 //   written here only (g_ucAwtoSysOwn = 1 while writing; gate sysm).
 // - Requests: SysMachineRequest only (logged with who and outcome). Power targets and mode resets are kept in the SDK's
 //   target fields until SysMachineHandler takes them; fast path / hold requests change the state at once (no scaler work).
-// - Transitions: SysMachineGo only (line: old -> new, why, ms in old). Scaler work = SysPowerSwitch / SysModeResetState /
-//   SysModeDisplaySetting, run by the transition or by the state (SysMachineWork). No waits.
+// - Transitions: SysMachineGo only (line: old -> new, why, ms in old; the SDK mode text when the mode changes). Scaler work =
+//   SysPowerSwitch / SysModeResetState / SysModeDisplaySetting, run by the transition or by the state (SysMachineWork). No waits.
+//   A transition with an action logs first (SYS_AT, ring time = the transition), then the action, then SysMachineGo (#162 s3b).
 #if((_DP_MST_SUPPORT == _ON) || (_USB3_RETIMER_SUPPORT == _ON) || (_HP_SOURCE_SCAN_SUPPORT == _ON) || (_AIO_MODERN_STANDBY_SUPPORT == _ON) || (_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON))
 #error "awto-ddc#162 system machine: no fake power off (DP MST / Type-C), no HP source scan, no modern standby"
 #endif
@@ -38,6 +39,10 @@ static __xdata BYTE s_ucSysPwrBy;               // who asked for the pending pow
 static __xdata BYTE s_ucSysModeBy;              // who asked for the pending mode reset
 static __xdata DWORD s_ulSysEntry;              // AwtoMs() at the state's entry
 volatile __xdata BYTE g_ucAwtoSysOwn;           // volatile: the set and the clear around one view write both stay
+static bit s_bSysLogged;                        // SYS_AT pushed the line: the next SysMachineGo applies it without a line
+
+// line now, before the action (why | AWTO_SYS_WHY_AT); the SysMachineGo after the action applies the transition
+#define SYS_AT(n, w)                            SysMachineGo((n), (w) | AWTO_SYS_WHY_AT, _FALSE)
 
 // SDK mode state per machine state (DOWN keeps the mode it came from)
 static const __code BYTE tSysMode[AWTO_SYS_STATES] =
@@ -80,12 +85,24 @@ static bit SysMachineFlagsClear(void)
 //--------------------------------------------------
 static void SysMachineGo(BYTE ucNew, BYTE ucWhy, bit bModeEvent)
 {
-    AwtoSysLog((BYTE)((s_ucSysState << 4) | ucNew), ucWhy, AwtoMs() - s_ulSysEntry);
-    if(ucNew != s_ucSysState)
+    if(s_bSysLogged == _FALSE)                  // line + entry time at the transition (SYS_AT: before the action)
     {
-        s_ucSysState = ucNew;
-        s_ulSysEntry = AwtoMs();
+        g_ucAwtoSysOwn = 1;                     // console draw held (AWTO_CON_LIVE): line time = entry time
+        AwtoSysLog((BYTE)((s_ucSysState << 4) | ucNew), (ucWhy & AWTO_SYS_WHY_CODE) |
+                   (((tSysMode[ucNew] != _MODE_STATUS_NONE) && (tSysMode[ucNew] != GET_MODE_STATE())) ? AWTO_SYS_WHY_MODE : 0),
+                   AwtoMs() - s_ulSysEntry);
+        if(ucNew != s_ucSysState)
+        {
+            s_ulSysEntry = AwtoMs();
+        }
+        g_ucAwtoSysOwn = 0;
     }
+    s_bSysLogged = ((ucWhy & AWTO_SYS_WHY_AT) != 0);
+    if(s_bSysLogged == _TRUE)
+    {
+        return;
+    }
+    s_ucSysState = ucNew;
     g_ucAwtoSysOwn = 1;
     ucWhy = ((ucNew == AWTO_SYS_SAVING) && (GET_POWER_SWITCH_TO_FAKE_SAVING() == _TRUE)) ? _POWER_STATUS_NORMAL : tSysPower[ucNew];
     if((ucWhy != _POWER_STATUS_NONE) && (ucWhy != GET_POWER_STATUS()))      // ucWhy reused: the power status of the new state
@@ -121,9 +138,11 @@ void SysMachineInit(void)
     SET_TARGET_POWER_STATUS(_POWER_STATUS_NONE);
     SET_MODE_RESET_TARGET(_MODE_ACTION_NO_RESET_MODE);
     g_ucAwtoSysOwn = 0;
-    AwtoSwMode(_MODE_STATUS_POWER_OFF);         // the boot 'mode POWER OFF' line (was AwtoSwPoll's first-pass compare)
+    AwtoSwMode(_MODE_STATUS_POWER_OFF);         // switch log; the ring line is the RESET -> AC ON transition (ms since reset)
+    AwtoSysLog((AWTO_SYS_STATES << 4) | AWTO_SYS_AC_ON, AWTO_SYS_WHY_BOOT | AWTO_SYS_WHY_MODE,
+               (WORD)((WORD)AwtoMs() - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo)));
     s_ucSysState = AWTO_SYS_AC_ON;
-    s_ulSysEntry = 0;
+    s_ulSysEntry = AwtoMs();                    // AC ON counts from its line
     SysMachineRequest((UserCommonNVRamGetSystemData(_MONITOR_POWER_STATUS) == _ON) ? _POWER_STATUS_NORMAL : _POWER_STATUS_OFF, AWTO_SYS_BY_NVRAM);
 }
 
@@ -226,6 +245,7 @@ static void SysMachineReset(void)
     switch(ucR)
     {
         case _MODE_ACTION_RESET_TO_SEARCH:
+            SYS_AT(AWTO_SYS_SEARCH, s_ucSysModeBy);
             AwtoSwEvent(AWTO_SW_EV_PROBE, 1);
             SysModeResetState(_MODE_ACTION_RESET_TO_SEARCH);
             AwtoSwEvent(AWTO_SW_EV_PROBE, 2);
@@ -236,6 +256,7 @@ static void SysMachineReset(void)
         case _MODE_ACTION_RESET_TO_DISPLAY_SETTING:
             if(s_ucSysState == AWTO_SYS_ACTIVE)
             {
+                SYS_AT(AWTO_SYS_DISPLAY, s_ucSysModeBy);
                 SysModeResetState(ucR);
                 SysMachineGo(AWTO_SYS_DISPLAY, s_ucSysModeBy, _TRUE);
             }
@@ -248,6 +269,7 @@ static void SysMachineReset(void)
             break;
 
         case _MODE_ACTION_RESET_TO_NOSUPPORT:
+            SYS_AT(AWTO_SYS_NOSUPPORT, s_ucSysModeBy);
             SysModeResetState(_MODE_ACTION_RESET_TO_NOSUPPORT);
             ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_JUDGE_NOSUPPORT_STATE);
             SysMachineGo(AWTO_SYS_NOSUPPORT, s_ucSysModeBy, _TRUE);
@@ -279,6 +301,7 @@ static void SysMachinePowerStep(void)
     {
         if(GET_TARGET_POWER_STATUS() == _POWER_STATUS_NORMAL)         // called off: the panel level from before, the state from before
         {
+            SYS_AT(s_ucSysBack, AWTO_SYS_WHY_CALLED_OFF);
             UserCommonInterfacePanelPowerDown(_FALSE, _TRUE);
             SysMachineGo(s_ucSysBack, AWTO_SYS_WHY_CALLED_OFF, _FALSE);
         }
@@ -288,6 +311,7 @@ static void SysMachinePowerStep(void)
         }
         else if(GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF)
         {
+            SYS_AT(AWTO_SYS_OFF, AWTO_SYS_WHY_PANEL_DOWN);
             CLR_POWER_SWITCH_TO_FAKE_SAVING();
             SysPowerSwitch((s_ucSysBack == AWTO_SYS_AC_ON) ? _POWER_ACTION_AC_ON_TO_OFF : _POWER_ACTION_NORMAL_TO_OFF);
             UserCommonInterfacePanelPowerDown(_FALSE, _FALSE);
@@ -295,11 +319,13 @@ static void SysMachinePowerStep(void)
         }
         else if(s_ucSysBack == AWTO_SYS_AC_ON)
         {
+            SYS_AT(AWTO_SYS_AC_ON, AWTO_SYS_WHY_CALLED_OFF);
             UserCommonInterfacePanelPowerDown(_FALSE, _TRUE);     // SDK: no AC_ON -> SAVING switch
             SysMachineGo(AWTO_SYS_AC_ON, AWTO_SYS_WHY_CALLED_OFF, _FALSE);
         }
         else
         {
+            SYS_AT(AWTO_SYS_SAVING, AWTO_SYS_WHY_PANEL_DOWN);
             if(UserCommonInterfaceCheckFakeSaving() == _TRUE)
             {
                 SET_POWER_SWITCH_TO_FAKE_SAVING();
@@ -317,6 +343,11 @@ static void SysMachinePowerStep(void)
     {
         if(GET_TARGET_POWER_STATUS() == _POWER_STATUS_NORMAL)
         {
+            if(s_ucSysState == AWTO_SYS_OFF)
+            {
+                AwtoSyncBegin(AWTO_SYNC_K_POWER_KEY, SysSourceGetInputPort());     // the episode starts with its transition line
+            }
+            SYS_AT(AWTO_SYS_INITIAL, s_ucSysPwrBy);
             SysPowerSwitch((s_ucSysState == AWTO_SYS_AC_ON) ? _POWER_ACTION_AC_ON_TO_NORMAL : _POWER_ACTION_OFF_TO_NORMAL);
             SysMachineGo(AWTO_SYS_INITIAL, s_ucSysPwrBy, _TRUE);
         }
@@ -331,17 +362,20 @@ static void SysMachinePowerStep(void)
     {
         if(GET_TARGET_POWER_STATUS() == _POWER_STATUS_NORMAL)
         {
+            SYS_AT(AWTO_SYS_WAKE, s_ucSysPwrBy);
             SysPowerSwitch(_POWER_ACTION_PS_TO_NORMAL);
             SysMachineGo(AWTO_SYS_WAKE, s_ucSysPwrBy, _FALSE);
         }
         else if(GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF)
         {
+            SYS_AT(AWTO_SYS_OFF, s_ucSysPwrBy);
             SysPowerSwitch(_POWER_ACTION_PS_TO_OFF);
             SysMachineGo(AWTO_SYS_OFF, s_ucSysPwrBy, _TRUE);
         }
     }
     else if((s_ucSysState == AWTO_SYS_SAVING) && (GET_TARGET_POWER_STATUS() == _POWER_STATUS_NORMAL))         // fake saving: the scaler never went down
     {
+        SYS_AT(AWTO_SYS_WAKE, s_ucSysPwrBy);
         CLR_POWER_SWITCH_TO_FAKE_SAVING();
         SysPowerSwitch(_POWER_ACTION_FAKE_PS_TO_NORMAL);
         SysMachineGo(AWTO_SYS_WAKE, s_ucSysPwrBy, _FALSE);
@@ -584,6 +618,7 @@ static void SysMachineJudge(void)
     SET_MODE_RESET_TARGET(_MODE_ACTION_NO_RESET_MODE);
     g_ucAwtoSysOwn = 0;
 
+    SYS_AT(((s_ucSysState == AWTO_SYS_NOSIGNAL) || (s_ucSysState == AWTO_SYS_WAKE) || (s_ucSysState == AWTO_SYS_SAVING)) ? s_ucSysState : AWTO_SYS_SEARCH, ucWhy);
     SysModeResetState(_MODE_ACTION_RESET_TO_SEARCH);
 
 #if(_COLORIMETRY_SEAMLESS_CHANGE_SUPPORT == _ON)
@@ -755,7 +790,7 @@ void SysMachineWork(void)
                 ScalerGlobalFirstActiveProc(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort());
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 11);
                 UserCommonInterfaceOsdActiveProc();
-                UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+                UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_FIRST_ACTIVE));
                 AwtoSwCacheStore();
                 AwtoSwEvent(AWTO_SW_EV_PROBE, 12);
                 SysSourceFirstActiveProc();

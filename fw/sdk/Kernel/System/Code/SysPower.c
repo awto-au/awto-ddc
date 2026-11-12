@@ -280,14 +280,13 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
 {
     if(enumSwitch == _POWER_ACTION_OFF_TO_NORMAL)
     {
-        AwtoSyncBegin(AWTO_SYNC_K_POWER_KEY, SysSourceGetInputPort());     // before the INITIAL handler's lines
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
-        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);    // #162: panel up alongside INITIAL / SEARCH (console at INITIAL)
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_PWR_ON));    // #162: panel up alongside INITIAL / SEARCH (console at INITIAL)
 #endif
     }
     else if(enumSwitch == _POWER_ACTION_PS_TO_NORMAL)
     {
-        UserCommonInterfacePanelPowerAction(_PANEL_ON);        // #162: link trains during the search; backlight at ACTIVE / a card
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_ON, AWTO_PNL_BY_PWR_WAKE));    // #162: link trains during the search; backlight at ACTIVE / a card
     }
     AWTO_BPROF(0x40 + enumSwitch);
     switch(enumSwitch)
