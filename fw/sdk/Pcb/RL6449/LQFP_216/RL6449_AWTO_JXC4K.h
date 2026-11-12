@@ -246,8 +246,14 @@
 //-----------------------------------------------
 // Macro of Pcb GPIO ON/OFF Region Initial Setting
 //-----------------------------------------------
+#if(_AUDIO_SUPPORT == _ON)
+#define PCB_ON_REGION_GPIO_SETTING_POWER_AC_ON(){\
+                                                    AwtoAudioAmpBoot();\
+                                                }
+#else
 #define PCB_ON_REGION_GPIO_SETTING_POWER_AC_ON(){\
                                                 }
+#endif
 
 #define PCB_OFF_REGION_GPIO_SETTING_POWER_AC_PD_PS_ON()\
                                                 {\
@@ -401,7 +407,14 @@
 //-----------------------------------------------
 // Macro of PCB Audio AMP Control
 //-----------------------------------------------
+// P7.4 = speaker amp enable (1 = on), P7.3 = static low; both open-drain (pin-share 2), Dahua 1:ea99 / 5:d2a0 (gpio-ir.md s4) [fw]
+#define bAMP_EN                                 (MCU_FE1C_PORT74_PIN_REG) // Pin_161, P7.4
+#define bAMP_AUX                                (MCU_FE1B_PORT73_PIN_REG) // Pin_160, P7.3
+#if(_AUDIO_SUPPORT == _ON)
+#define PCB_AMP_MUTE(x)                         { AwtoAudioAmp(x); }
+#else
 #define PCB_AMP_MUTE(x)                         {}
+#endif
 
 ////////////////////////
 // Cable Status Macro //

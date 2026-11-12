@@ -1,7 +1,7 @@
 # Analog audio output (awto-ddc#93)
 
 Tags (#91): [fw] = seen in the Dahua firmware (decompile `~/vendors/realtek/analysis/jxc-4k/bank3`, or its sim trace `tmp/logs/trace_vendor_{2160p60,1080p60}.tsv.gz` = ordered register writes with values); [spec] = Realtek SDK source / register DB (`regdb/RTD2785TM-CG.tsv`); [hw] = measured on a unit; [guess]; [?] unknown.
-Status: built, simulated, **never run on hardware** (wb-p14audio1). Hardware plan at the end.
+Status: on unit 2 since 2026-11-13 (wb-p14ui-audio2): DAC + amp pins run, HDMI D2 audio plays through the DVC (register readback below); audible result: Dan's ears (#94). Hardware plan at the end.
 
 ## Summary
 - Our firmware compiled the Realtek SDK audio out (`_AUDIO_SUPPORT _OFF`, "no audio jacks", 2026-11-04). The Dahua firmware runs the SDK audio path into the embedded DAC. [fw]
@@ -10,10 +10,10 @@ Status: built, simulated, **never run on hardware** (wb-p14audio1). Hardware pla
 - Volume = DVC gain (P8_A5/A6), exactly like the Dahua firmware. DAC gain `DA_GAIN_L/R` stays 0 dB (0x57). [fw]
 
 ## Pins, jack
-- Output used: the **headphone out**, pins 109 AUDIO_HOUTL / 110 AUDIO_HOUTR (the Dahua firmware powers only hpout, section 3). 116/117 AUDIO_SOUTL/R (speaker/line out, aout) stay powered down; 115 AUDIO_REF. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`. Live on unit 3 all in audio mode (0x03). [hw]
-- That equals the SDK reference value (`ref` column), so it does not prove a jack. 113/114 LINE_INL/INR are GPIO inputs live (reference: line_in): line-in pins were deliberately switched away in the board config. [hw] [?: whether 109/110/116/117 reach a connector or an amp is unknown; look at the board / trace the pins]
-- Dan's observation (#3, #22): no speakers and no audio jack on the units; the Dahua datasheet lists 2 W x2 speakers, so parts may be unfitted. Until a connector or amp is found, the EDID audio blocks make the PC offer a sink that goes nowhere (the reason they were removed 2026-11-04). [?]
-- No amp-mute GPIO: no unlisted pin toggles with mute in the Dahua firmware (`docs/reversing/dahua-fw/register-audit.md`). `PCB_AMP_MUTE(x)` = no-op in our board header. [fw]
+- Outputs: option `AWTO_AUDIO_OUT` (RL6449_Project.h): SPEAKER = aout 116/117 AUDIO_SOUTL/R (feeds the speaker amp), HEADPHONE = hpout 109/110 AUDIO_HOUTL/R, BOTH (now, speaker test #94). 115 AUDIO_REF. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`; all in audio mode (0x03). [hw]
+- Dahua firmware picks the output from P4.5 (pin 113, jack input, `1:f69b`): low -> SPEAKER, high -> HEADPHONE; unit 2 reads P4.5 = 1 with no jack (2026-11-13) [hw], so its sim trace (06C0 = DF, HP only) is the no-jack-detected path; polarity [?].
+- Speakers: confirmed present by Dan (2026-11-13; earlier 'no speakers', #3/#22, was wrong).
+- Amp pins (one owner `fw/sdcc/awto_audio.inc`, as Dahua `5:d2a0` / `1:ea99`, `docs/reversing/dahua-fw/gpio-ir.md` s4): AC on P7.4 (pin 161) = 0; P7.3 (pin 160) = 0 `AWTO_AUDIO_AUX_MS` = 200 ms later (first main-loop poll + 200 ms); P7.4 = !mute when the speaker output is on (`PCB_AMP_MUTE` from `SysAudioMuteProc`), else 0. Ring lines `E3` (sync.tsv): amp on / off / aux low. [fw]
 - The SDK demo board uses P3.5 (pin 91) as AMP_MUTE; our pin 91 is DPTX_AUX_P (P3D5 output, live 0x01). Not the same function. [hw]
 
 ## Option set (SDK `RL6449_Project.h` names) and what the Dahua firmware uses
@@ -23,7 +23,7 @@ Status: built, simulated, **never run on hardware** (wb-p14audio1). Hardware pla
 | `_EMBEDDED_DAC_SUPPORT` | on | on | `ScalerAudioDACInitial` 3:f39f [fw] |
 | `_DAC_SPEAKER_OUTPUT_SUPPORT` / `_DAC_HP_OUTPUT_SUPPORT` | on / on | default on / on | REG_DAC_POWER0 ends 0xFF = bits 5,4 set [fw] |
 | `_DAC_SPEAKER_OUTPUT_SWAP` | on | on | REG_MUX_ANA_OUT = 0x50 (aout L/R crossed, hpout straight) [fw] |
-| `UserInterfaceGetAudioDACOutput()` | **headphone only** | headphone only (rules.py SUB) | after `ScalerAudioDACOutputSwitch` REG_DAC_POWER0 = DF (bit 5 aout off, bit 4 hpout on); the SDK default would return both [fw] |
+| `UserInterfaceGetAudioDACOutput()` | P4.5: speaker or headphone | `AWTO_AUDIO_OUT` (BOTH) | Dahua trace 06C0 = DF = headphone (P4.5 high in the sim) [fw]; ours 06C0 = FB on unit 2 [hw] |
 | `_DAC_DITHER_FUNCTION_LEVEL` | off | default off | DA_CTRL = 0x40 [fw] |
 | `_DIGITAL_DAC_AOUT/HPOUT_GAIN_DB`, `_LINE_IN_DAC_*_GAIN_DB` | 0 dB | default 0 dB | REG_OUT_GAIN = 0x00 twice [fw] |
 | `_LINE_IN_SUPPORT` | on (ADC init runs at boot) | **off** | ADC init writes P6_B0..B7 in the trace [fw]; line-in pins are GPIO on this board [hw] |
@@ -134,3 +134,15 @@ Rollback first: reflash `fw/images/AWT26110002-wb-p14swap10-be.bin` (or the tmp/
    - [ ] after wake (key press / signal back) sound returns on its own within ~1 s of the picture
    - [ ] check the main loop: DDC/CI and the front keys still respond while muting (400 ms ramp worst case)
 5. If silent: read the DAC state with the debug link (`rtd_reg_dump.py`: 06C0 = DF, 06C5, 06C7 = 00 then 08, 06C6 = C8, 06D1 = 01, 06D2 = 57/D7, 08A0 = 8F, 08A5/08A6 = volume gain, 6F01 = 02), and `pactl list sinks` for the monitor (is the stream running).
+
+## Unit 2 run, 2026-11-13 (wb-p14ui-audio2, HDMI D2 = host Intel HDMI-A-2, 4K60)
+- Host: no PipeWire HDMI sink (Intel card profile = analog only); tones go straight to ALSA `plughw:CARD=PCH,DEV=3` (ELD `awto-mon`: LPCM 2 ch, 32/44.1/48 kHz, 16/20/24 bit, FL/FR). `IEC958 Playback Switch` index 0 was off: set on. Tool: `scripts/audio_test.py` (tools-audio); log `tmp/logs/audio_test.log`.
+- Volume registry row `volume` = 100 % (VCP 0x62), `mute` = Off.
+- Readback during the 880 Hz both-channel tone (debug slave, MCU running) [hw]:
+  - 06C0 REG_DAC_POWER0 = FB (aout + hpout on), 06C1 = F1, 06C5 = 00, 06C6 REG_AOUT_CTRL = 08, 06C7 REG_HPOUT_CTRL = 08 (both unmuted, normal), 06C8 = 00 (0 dB)
+  - 06D0 = 40, 06D1 DA_MUTE = 01, 06D2/3 DA_GAIN = 57/57 (0 dB), 06D4 = 12, 06E0 = 50
+  - DVC: 08A0 = 8F, 08A5/A6 = 3F FF (0 dB, 100 %), 08A7 = 3F; 6F00 = 22, 6F01 = 02
+  - P7.3 = 0, P7.4 = 1, P4.5 = 1; SDK audio PLAYBACK, DAC READY, D2 audio detected 48 kHz, power NORMAL, mode ACTIVE
+  - Ring: + 213 ms amp off (P7.4 = 0), + 462 ms aux low (P7.3 = 0), + 1489 ms ACTIVE, + 1492 ms amp on (P7.4 = 1)
+- Same tones on the previous image (wb-p14ui-nvlog2, hpout only, P7.3/P7.4 never driven: both read 1) at 09:22:07-09:22:16.
+- `_DAC_SPEAKER_OUTPUT_SWAP _ON` crosses aout L/R as the Dahua firmware does (06E0 = 50); L/R placement unconfirmed until Dan reports which side the 440 Hz left tone came from. [?]

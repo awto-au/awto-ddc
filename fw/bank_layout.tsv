@@ -86,6 +86,7 @@ stub	_ScalerMemorySetFifoCapture	C	0x0fe8	8
 stub	_ScalerOsdDoubleFunction	C	0x0ff0	8
 stub	_ScalerAudioDigitalAdjustVolume	C	0x0ff8	8
 stub	_ScalerOsdHardwareVLC	C	0x1000	8
+stub	_AwtoAudioAmp	C	0x1008	8
 stub	_ScalerOsdSramBaseAddressSet	C	0x1010	8
 stub	_ScalerPinshareCBUSPinInitialReset	C	0x1018	8
 stub	_ScalerPowerIsolation	C	0x1020	8
@@ -861,6 +862,8 @@ stub	_SysSourceStableCheck	C	0x3300	8
 stub	_AwtoDiagInit	C	0x3308	8
 stub	_AwtoDiagMainPass	C	0x3310	8
 stub	_AwtoDiagStage	C	0x3318	8
+stub	_AwtoAudioAmpBoot	C	0x3320	8
+stub	_AwtoAudioPoll	C	0x3328	8
 stub	_AwtoSlowDue	C	0x3330	8
 stub	_AwtoSwArm	C	0x3338	8
 const	___str_102	C	0x3340	40
@@ -1741,7 +1744,7 @@ fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
 fn	_AwtoMsgV	4	0xaef8	252
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1344	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1347	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -2712,6 +2715,8 @@ fn	_AwtoDdcLive	11	0x6d10	152
 fn	_AwtoHtSync	11	0x6da8	940
 fn	_AwtoLedSet	11	0x7154	92
 fn	_AwtoNvEv	11	0x71b0	296
+fn	_AwtoAudioAmp	11	0x72d8	76
+fn	_AwtoAudioAmpBoot	11	0x7324	32
 fn	_AwtoMs	11	0x7370	88
 fn	_AwtoOwnFrame	11	0x74dc	32
 fn	_AwtoPanelForeign	11	0x74fc	28
@@ -2794,6 +2799,7 @@ fn	_hb_osd_gap	11	0xaaf4	132
 fn	_mode_dclk_khz	11	0xab78	28
 fn	_SysSourceSwitchPort	11	0xab94	752
 fn	_AwtoMstep	11	0xae84	136
+fn	_AwtoAudioPoll	11	0xaf0c	196
 const	_tCOLOR_CONV_RGB2YUV_ITU709	12	0x0000	32
 fn	_ScalerOsdGetOsdEnable	12	0x0054	20
 fn	_ScalerOsdSetTransparencyType	12	0x0068	20

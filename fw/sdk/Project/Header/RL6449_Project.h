@@ -1933,6 +1933,22 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
 #define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
 
+// awto DAC outputs powered (= EnumAudioDACOutput values): aout 116/117 feeds the speaker amp (P7.4), hpout 109/110 the jack
+#define AWTO_AUDIO_OUT_SPEAKER                                  1
+#define AWTO_AUDIO_OUT_HEADPHONE                                2
+#define AWTO_AUDIO_OUT_BOTH                                     3
+#define AWTO_AUDIO_OUT                                          AWTO_AUDIO_OUT_BOTH     // speaker test (#94): both powered
+#define AWTO_AUDIO_AMP_USED                                     ((AWTO_AUDIO_OUT & AWTO_AUDIO_OUT_SPEAKER) != 0)
+#define AWTO_AUDIO_AUX_MS                                       200     // P7.3 low this long after P7.4 = 0 (Dahua 5:d324, delay R7 = 0xC8) [fw]
+#define AWTO_SYNC_EV_AUDIO                                      0xE3    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
+#define AWTO_AUDIO_EV_AMP_ON                                    1       // P7.4 = 1 (unmute)
+#define AWTO_AUDIO_EV_AMP_OFF                                   2       // P7.4 = 0 (mute / AC on)
+#define AWTO_AUDIO_EV_AUX_LOW                                   3       // P7.3 = 0
+#define AWTO_AUDIO_EV_AMP_HP                                    4       // unmute with the speaker output off: P7.4 stays 0
+extern void AwtoAudioAmpBoot(void);                             // fw/sdcc/awto_audio.inc: the one owner of P7.3 / P7.4
+extern void AwtoAudioAmp(bit bMute);
+extern void AwtoAudioPoll(void);
+
 //-------------------------------------------------
 // Audio Line In Option
 //-------------------------------------------------

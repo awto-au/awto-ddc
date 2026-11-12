@@ -3990,7 +3990,7 @@ WORD UserInterfaceGetAudioVolume(void)
 //--------------------------------------------------
 EnumAudioDACOutput UserInterfaceGetAudioDACOutput(void)
 {
-    return _AUDIO_DAC_OUTPUT_HEADPHONE;
+    return (EnumAudioDACOutput)AWTO_AUDIO_OUT;     // awto option (RL6449_Project.h); Dahua fw picks it by the jack input P4.5
 }
 
 //--------------------------------------------------
@@ -4086,20 +4086,8 @@ void UserInterfaceAdjustAudioPowerProc(EnumPowerStatus enumPowStatus)
 //--------------------------------------------------
 void UserInterfaceAdjustAudioAmpMuteProc(bit bMute)
 {
-    bMute = bMute;
-
-#if(_EMBEDDED_DAC_SUPPORT == _ON)
-#if((_DAC_SPEAKER_OUTPUT_SUPPORT == _ON) && (_DAC_HP_OUTPUT_SUPPORT == _ON))
-    if(UserInterfaceGetAudioDACOutput() == _AUDIO_DAC_OUTPUT_BOTH)
-#elif(_DAC_SPEAKER_OUTPUT_SUPPORT == _ON)
-    if(UserInterfaceGetAudioDACOutput() == _AUDIO_DAC_OUTPUT_SPEAKER)
-#elif(_DAC_HP_OUTPUT_SUPPORT == _ON)
-    if(UserInterfaceGetAudioDACOutput() == _AUDIO_DAC_OUTPUT_HEADPHONE)
-#endif
-    {
-        PCB_AMP_MUTE(bMute);
-    }
-#endif
+    // awto: as Dahua 1:ea99, amp on = !mute only when the speaker output is powered; AwtoAudioAmp decides (AWTO_AUDIO_AMP_USED)
+    PCB_AMP_MUTE(bMute);
 }
 
 
