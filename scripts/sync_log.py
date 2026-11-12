@@ -5,8 +5,8 @@ usage: sync_log.py BUS --map MAP [--tsv TSV] [--serial SERIAL]      read over th
        (library) decode(raw, rows) -> (header dict, [lines]); load_rows(tsv); tsv_for(map)
 - Texts and value formats: the firmware tree's fw/awto/sync.tsv (one file for screen and host). Default TSV = the image's
   <map stem>.sync.tsv (wb_build.py copies it beside the image), else $AWTO_SYNC_TSV.
-- Ring layout (RL6449_Project.h StAwtoSync, bytes only): 12 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4};
-  version 1: N 24, seq wrap 240; version 2 (#29): N 32, wrap 224, power-on episode times = ms since reset.
+- Ring layout (RL6449_Project.h StAwtoSync, bytes only): 14 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4}.
+  Header byte 12 = N, byte 13 = seq wrap: read the header, then N x 8 B (read_ring); nothing is hardcoded here.
 - Host time (#157): images with g_stAwtoHt print every line with its host ISO 8601 time, from the latest DDC/CI time sync
   (scripts/host_time.py). Ring ms are 16 bit: unwrapped forward from anchors (episode start C0 carries fw ms bits 31..16,
   host-sync line D8 the full fw ms); `~` = forward and back-from-now disagree (a gap of 65.5 s or more hid a wrap).
@@ -25,8 +25,7 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sync_log.log"
-HDR, N, EV, WRAP = 12, 32, 8, 224         # AWTO_SYNC_N / AWTO_SYNC_WRAP (version 2): seq 0..223, entry = seq % N; read size
-GEOM = {1: (24, 240), 2: (32, 224)}       # ring version -> (N, WRAP)
+HDR, EV = 14, 8                           # header bytes, bytes per entry; N = header[12], seq wrap = header[13]
 D0 = 3                                                   # _D0_INPUT_PORT
 SRC = {2: "DVI", 3: "HDMI", 4: "DP"}
 DP_RATE = {0x06: "RBR", 0x0A: "HBR", 0x14: "HBR2", 0x1E: "HBR3"}
@@ -192,13 +191,22 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     return head + pre + before + value(row["fmt"], a, v) + after
 
 
+def read_ring(rd, addr: int):
+    """the whole ring at addr: header first, then HDR + N x EV (N from the header). rd(addr, n) -> bytes or None"""
+    h = rd(addr, HDR)
+    if h is None:
+        return None
+    h = bytes(h)
+    return h if h[:2] != b"SY" else rd(addr, HDR + h[12] * EV)
+
+
 def decode(raw: bytes, rows: list[dict], whole: bool = False):
     """whole=True: every entry still in the ring (all episodes), times relative to the current episode's t0"""
     h = dict(magic=raw[0:2], version=raw[2], seq=raw[3], ep_seq=raw[4], kind=raw[5], port=raw[6],
              t0=raw[7] << 8 | raw[8], done=raw[9], open_req=raw[10])
     if h["magic"] != b"SY":
         return h, []
-    n_, wrap = GEOM.get(h["version"], (N, WRAP))
+    n_, wrap = raw[12], raw[13]
     n = n_ if whole else (h["seq"] - h["ep_seq"]) % wrap
     lost = max(0, n - n_)
     evs = []
@@ -209,6 +217,7 @@ def decode(raw: bytes, rows: list[dict], whole: bool = False):
             continue                                     # never written (a young ring)
         evs.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
     h["lost"] = lost
+    h["n"], h["wrap"] = n_, wrap
     h["events"] = evs
     return h, [line(rows, ev, h["t0"]) for ev in evs]
 
@@ -273,7 +282,7 @@ def main() -> int:
         i2cbus.require_unit(a.bus, a.serial)
     rows = load_rows(a.tsv or tsv_for(a.map))
     io = B.Real(a.bus, allow_write=True, regread=True)
-    raw = X.read_blocks(io, sym(a.map, "g_stAwtoSync"), HDR + N * EV)
+    raw = read_ring(lambda ad, n: X.read_blocks(io, ad, n), sym(a.map, "g_stAwtoSync"))
     ht, t2 = read_ht(io, a.map) if raw is not None else (None, None)
     io.close()
     if raw is None:

@@ -62,7 +62,7 @@ def swlog(bus, say):
 def synclog(a, bus, say):
     """every line still in the sync ring, decoded with fw/awto/sync.tsv (a.sync_tsv or beside the map)"""
     rows = SL.load_rows(a.sync_tsv or SL.tsv_for(a.map))
-    _, lines = SL.decode(bus.xdata(SL.sym(a.map, "g_stAwtoSync"), SL.HDR + SL.N * SL.EV), rows, whole=True)
+    _, lines = SL.decode(SL.read_ring(bus.xdata, SL.sym(a.map, "g_stAwtoSync")), rows, whole=True)
     for ln in lines:
         say(f"  sync {ln}")
     return lines

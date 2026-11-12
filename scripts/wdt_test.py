@@ -427,7 +427,7 @@ class Runner:
             rows = SL.load_rows(SL.tsv_for(self.a.map_path))
             pa = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSyncPin\b", self.t.map_text, re.M)
             pin = SL.pin_line(X.read_blocks(self.t.io, int(pa.group(1), 16) & 0xFFFF, SL.EV), rows) if pa else None
-            raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+            raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
             _, lines = SL.decode(raw, rows) if raw else ({}, [])
             first = pin or (lines[0] if lines else None)               # #150: pinned copy survives a flooded ring
             got = first.split(" ms ", 1)[-1] if first else "(no line)"
@@ -543,7 +543,7 @@ class Runner:
         ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
         raw = None
         for _ in range(5):                               # flash-op silences: retry
-            raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+            raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
             if raw:
                 break
             self.t.wait(FLASH_OP_MS / 1000.0)
@@ -680,7 +680,7 @@ class Runner:
         import sync_log as SL
         import dbg_xdata as X
         ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
-        return X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+        return SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
 
     def ps_syms(self) -> dict:
         """#144 power-saving readouts of the image (missing symbol = not in this image)"""
@@ -753,7 +753,7 @@ class Runner:
                 hd = Path(DPMS_FILE).read_text().strip()     # user input wakes Mutter's outputs: the window is void then
                 txt.append(f"host dpms at the end of the window {hd}")
                 ok &= hd == "Off"
-                n_new = ((raw1[3] - raw0[3]) % SL.WRAP) if raw0 and raw1 else 0
+                n_new = ((raw1[3] - raw0[3]) % raw1[13]) if raw0 and raw1 else 0
                 lines = SL.decode(raw1, rows, whole=True)[1] if raw1 else []
                 new = lines[-n_new:] if n_new else []
                 for ln in new:
@@ -804,7 +804,7 @@ class Runner:
         import sync_log as SL
         import dbg_xdata as X
         ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
-        raw = X.read_blocks(self.t.io, ring, SL.HDR + SL.N * SL.EV)
+        raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
         return SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path)), whole=True)[1] if raw else []
 
     def c_baseline(self):

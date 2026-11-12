@@ -1416,7 +1416,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
             f"0x{k:04X} x{v} @ {msg_source(k)}" for k, v in msgs.most_common(8)))
         lines.append("PC histogram (200 samples): " + ", ".join(f"{k} {v}" for k, v in hist.most_common(6)))
     try:                                                                # 4K60 measurement ring (awto-ddc#26), if the image has it
-        raw = bytes(m.rd(m.addr("g_stAwtoMeas"), 1140))
+        raw = bytes(m.rd(m.addr("g_stAwtoMeas"), 16 + m.rd(m.addr("g_stAwtoMeas") + 7)[0] * 17 + 40 * 6))
         rawf = ROOT / "tmp/logs" / f"meas4k_{binp.stem}_{mode}.raw"
         rawf.write_bytes(raw)
         lines.append(f"meas4k ring -> {rawf.relative_to(ROOT)} (decode: scripts/meas4k_dump.py --file)")

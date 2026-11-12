@@ -153,7 +153,7 @@ def main() -> int:
                 import re
                 import sync_log as SL
                 ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", t.map_text, re.M).group(1), 16) & 0xFFFF
-                raw = X.read_blocks(t.io, ring, SL.HDR + SL.N * SL.EV)
+                raw = SL.read_ring(lambda ad, n: X.read_blocks(t.io, ad, n), ring)
                 out["ring"] = SL.decode(raw, SL.load_rows(SL.tsv_for(a.map)), whole=True)[1] if raw else []
                 for ln in out["ring"]:
                     say(f"  ring {ln}")

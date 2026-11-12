@@ -95,7 +95,7 @@ class Sim:
         return SL.fw_now(self.ht(), int.from_bytes(self.m.rd(0xF6D0 + SL.DIAG_T2, 2), "big"))
 
     def ring(self):
-        raw = bytes(self.m.rd(self.a_sync, SL.HDR + SL.N * SL.EV))
+        raw = bytes(SL.read_ring(self.m.rd, self.a_sync))
         return raw, SL.decode(raw, self.rows, whole=True)
 
     def send(self, t: dt.datetime) -> float:
@@ -147,7 +147,7 @@ def main() -> int:
     s.check(bool(m), "title live fields", m.group(0) if m else ti)
     s.check(bool(m) and m.group(3) == "--:--:--", "HOST before the first sync = --:--:--")
     raw, (h, _) = s.ring()
-    s.check(raw[0:2] == b"SY" and raw[2] in SL.GEOM, "ring header written by the firmware (#158)", raw[:12].hex(" "))
+    s.check(raw[0:2] == b"SY" and raw[2] == 3 and raw[12] * SL.EV + SL.HDR == len(raw), "ring header written by the firmware (#158)", raw[:SL.HDR].hex(" "))
     g = s.get()
     s.check(g is not None and g["max"] == 0, "get E9 before a sync: syncs 0", str(g))
 
@@ -166,7 +166,7 @@ def main() -> int:
     s.check(got is not None and 0 <= lag <= 1, "HOST ticks from the sync (0..1 s behind: 1 s refresh)",
             f"{hm.group(1) if hm else '-'} vs host {exp.time().isoformat('seconds')}")
     raw, (h, lines) = s.ring()
-    new = lines[-((h["seq"] - n0) % 224):] if h["seq"] != n0 else []
+    new = lines[-((h["seq"] - n0) % h["wrap"]):] if h["seq"] != n0 else []
     say("ring lines: " + " | ".join(new))
     s.check(any("host time 2026-11-12T08:45:10+11:00" in x for x in new), "ring: host time line")
     s.check(any("(fw +" in x and "first host sync since boot" in x for x in new), "ring: fw ms line (first sync)")
@@ -196,7 +196,7 @@ def main() -> int:
     s.bus.wait(0.2)
     raw, (h, _) = s.ring()
     g = s.get()
-    s.check(h["seq"] == n0, "sync 2 on time: no ring line", f"{(h['seq'] - n0) % 224} new")
+    s.check(h["seq"] == n0, "sync 2 on time: no ring line", f"{(h['seq'] - n0) % h["wrap"]} new")
     s.check(g is not None and g["max"] == 2 and abs(g["cur"] - (g["cur"] >> 15) * 65536) < 50, "get E9: syncs 2, |drift| < 50 ms", str(g))
 
     # sync 3: host 5 s ahead
@@ -204,7 +204,7 @@ def main() -> int:
     s.send(T0 + dt.timedelta(seconds=s.bus.now() - t_s + 5))
     s.bus.wait(0.2)
     raw, (h, lines) = s.ring()
-    new = lines[-((h["seq"] - n0) % 224):] if h["seq"] != n0 else []
+    new = lines[-((h["seq"] - n0) % h["wrap"]):] if h["seq"] != n0 else []
     say("ring lines: " + " | ".join(new))
     d = next((int(x.group(1)) for x in (re.search(r"drift \+(\d+) ms", y) for y in new) if x), None)
     s.check(len(new) == 3 and d is not None and 4950 <= d <= 5050, "sync 3 (+5 s): host / fw / drift lines", f"drift {d}")

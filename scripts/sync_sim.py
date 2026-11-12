@@ -30,6 +30,7 @@ import sync_log as S  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sync_sim.log"
 K_MENU, K_SOURCE, CON_CLOSE = 0x04, 0x05, 0x44     # injected MENU / SOURCE; test cmd 0x44 = console close (awto_testcmd.inc)
+POWER_KEY = 0x3E                                    # test cmd 0x3E = the POWER key (soft off / on, #151)
 SETTLE_S = 3.0      # a switch to ACTIVE + console open: AWTO_SYNC_OPEN_MS 2 s + one console draw (~0.3 s sim) x ~1.25
 RATE_S = 2.5        # usLoopRate covers the last ~1 s; 2.5 s = two full windows after a change
 
@@ -84,7 +85,7 @@ class Run:
         b.wait(wait)
 
     def episode(self, title):
-        h, lines = S.decode(self.m.rd(self.ring, S.HDR + S.N * S.EV), self.rows)
+        h, lines = S.decode(S.read_ring(self.m.rd, self.ring), self.rows)
         say(f"  {title}: episode {S.KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines, done {h['done']}, lost {h.get('lost', 0)}")
         for ln in lines:
             say(f"    {ln}")
@@ -154,6 +155,15 @@ def main():
             r.check(r.console() != 0, f"console open after the switch to D{port}")
             r.shot(f"{name}_console")
             r.cmd(CON_CLOSE, 0.5)
+        r.cmd(POWER_KEY, 1.5)                       # off, then on: the episode must hold the INITIAL handler's lines (#144)
+        r.cmd(POWER_KEY, 0.2)
+        r.s.bus.run_until_mode(3)
+        r.s.bus.wait(SETTLE_S)
+        h, lines = r.episode("power key on")
+        txt = "\n".join(lines)
+        r.check(h["kind"] == 4, "power key episode", f"kind {h['kind']}")
+        for want in ("mode INITIAL", "backlight on requested", "panel on requested", "mode ACTIVE"):
+            r.check(want in txt, f"power key log has '{want}' (episode began before the INITIAL handler)")
         d = C.decode(C.read(r.s.bus, r.caddr))
         say(f"  measured, watchdog: {C.ages(d)}")
         r.check(r.cr.resets == 0, "no chip reset (watchdog) over power-on, selector and two switches", f"resets {r.cr.resets}")

@@ -406,7 +406,7 @@ def _main() -> int:
         if not mp or not Path(mp).exists():
             print("--sync needs --map (the flashed image's .map; its .sync.tsv beside it)"); return 1
         w = IO = B.Real(a.bus, allow_write=True, regread=True)     # a debug read sets the address by a write
-        raw = X.read_blocks(w, S.sym(Path(mp), "g_stAwtoSync"), S.HDR + S.N * S.EV)
+        raw = S.read_ring(lambda ad, n: X.read_blocks(w, ad, n), S.sym(Path(mp), "g_stAwtoSync"))
         if raw is None:
             print("sync: read over 0x35 failed"); return 1
         S.set_map(Path(mp))                       # #29: boot reason PC as symbol + offset

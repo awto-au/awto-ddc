@@ -154,18 +154,18 @@ class Run:
 
     def ring_events(self):
         """[(id, arg, abs ms, value)] of the ring in seq order (sync_log layout)."""
-        raw = self.m.rd(self.ring, L.HDR + L.N * L.EV)
-        seq = raw[3]
+        raw = L.read_ring(self.m.rd, self.ring)
+        seq, n, wrap = raw[3], raw[12], raw[13]
         out = []
-        for k in range(L.N):
-            s = (seq - L.N + k) % L.WRAP
-            e = raw[L.HDR + L.EV * (s % L.N):L.HDR + L.EV * (s % L.N) + L.EV]
+        for k in range(n):
+            s = (seq - n + k) % wrap
+            e = raw[L.HDR + L.EV * (s % n):L.HDR + L.EV * (s % n) + L.EV]
             if e[0]:
                 out.append((e[0], e[1], e[2] << 8 | e[3], int.from_bytes(e[4:8], "big")))
         return out
 
     def lines(self):
-        return L.decode(self.m.rd(self.ring, L.HDR + L.N * L.EV), self.rows)[1]
+        return L.decode(L.read_ring(self.m.rd, self.ring), self.rows)[1]
 
     def sleep(self):
         """Force power saving (target = SAVING) and let it settle; returns the PS pass time (ms, diag heartbeat)."""
