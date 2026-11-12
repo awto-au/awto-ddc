@@ -79,13 +79,6 @@ static void AwtoVgaDiagPower(bit bOn)
     }
 }
 
-static WORD AwtoGpioNow(void)
-{
-    WORD usNow;
-    do { usNow = g_stAwtoDiag.usT2Isr; } while(usNow != g_stAwtoDiag.usT2Isr);
-    return usNow;
-}
-
 // Current value of input i. Table order puts the ADCs before the keys decoded from them.
 static BYTE AwtoInRead(BYTE ucI)
 {
@@ -118,11 +111,15 @@ static void AwtoGpioLog(BYTE ucId, BYTE ucVal, WORD usNow)
     AwtoConLogEvent(ucId, ucVal, usNow);           // the console's event log (does nothing when it is closed)
 }
 
+static void AwtoGpioLogNow(BYTE ucId, BYTE ucVal)   // own function: AwtoInScan reads const tables, a cross-bank call there fails the link gate
+{
+    AwtoGpioLog(ucId, ucVal, (WORD)AwtoMs());
+}
+
 // ucMode 0: poll (store, log, mark a change), 1: mark every input changed (console just opened), 2: take the values quietly.
 static void AwtoInScan(BYTE ucMode)
 {
     BYTE ucI, ucV, ucO, ucD;
-    WORD usNow = 0;
 
     s_ucVgaSync = ScalerGetByte(AWTO_VGA_SYNC_REG);
     s_ucVgaCmp = ScalerGetByte(AWTO_VGA_COMPARE_REG);
@@ -143,8 +140,7 @@ static void AwtoInScan(BYTE ucMode)
             }
             if((tAwtoInFlags[ucI] & 2) != 0)
             {
-                if(usNow == 0) usNow = AwtoGpioNow();
-                AwtoGpioLog(ucI, ucV, usNow);
+                AwtoGpioLogNow(ucI, ucV);
             }
             AWTO_PS_COUNT(ucI, ucV);              // #139 selector pulse rates (fw/awto/portsig.tsv cnt rows)
         }
@@ -179,24 +175,24 @@ void AwtoGpioPoll(void)
     if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING) return;  // panel off: no console work; it held off the wake poll (#144)
     AWTO_OSD_SYNC_POLL();                      // #139 selector fields, console sync lines / auto-open
     if(g_stAwtoGpio.ucOpen == 0) return;
-    if((WORD)(AwtoGpioNow() - s_usAwtoDbgDraw) >= AWTO_DBG_REFRESH_MS)
+    if((WORD)(((WORD)AwtoMs()) - s_usAwtoDbgDraw) >= AWTO_DBG_REFRESH_MS)
     {
-        s_usAwtoDbgDraw = AwtoGpioNow();
+        s_usAwtoDbgDraw = ((WORD)AwtoMs());
         AwtoOsdDebugLines();
     }
     if((GET_OSD_EVENT_MESSAGE() >= _OSDEVENT_SHOW_NOSIGNAL_MSG) &&
        (GET_OSD_EVENT_MESSAGE() <= _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG)) SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);
     if(g_stAwtoGpio.ucOpen != AWTO_CON_GPIO) return;        // the input table is on the GPIO page only
-    if((g_stAwtoGpio.ucDrawn == 0) && ((WORD)(AwtoGpioNow() - s_usAwtoGpioDraw) >= AWTO_KEY_RETRY_MS))
+    if((g_stAwtoGpio.ucDrawn == 0) && ((WORD)(((WORD)AwtoMs()) - s_usAwtoGpioDraw) >= AWTO_KEY_RETRY_MS))
     {
-        s_usAwtoGpioDraw = AwtoGpioNow();
+        s_usAwtoGpioDraw = ((WORD)AwtoMs());
         AwtoOsdGpioLines();                    // own text layer (Spleen), not the SDK message card
         return;
     }
     if((g_stAwtoGpio.ucDrawn != 0) && (g_stAwtoGpio.ucAny != 0) &&
-       ((WORD)(AwtoGpioNow() - s_usAwtoGpioDraw) >= AWTO_GPIO_REFRESH_MS))
+       ((WORD)(((WORD)AwtoMs()) - s_usAwtoGpioDraw) >= AWTO_GPIO_REFRESH_MS))
     {
-        s_usAwtoGpioDraw = AwtoGpioNow();
+        s_usAwtoGpioDraw = ((WORD)AwtoMs());
         AwtoOsdGpioLines();
     }
 }
@@ -224,7 +220,7 @@ void AwtoGpioConSet(BYTE ucOn)                 // console page (0 closed, AWTO_C
     if(ucOn != 0)
     {
         AwtoInScan(1);
-        s_usAwtoGpioDraw = AwtoGpioNow();
+        s_usAwtoGpioDraw = ((WORD)AwtoMs());
     }
 }
 

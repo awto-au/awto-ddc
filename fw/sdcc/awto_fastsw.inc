@@ -19,18 +19,6 @@ static __xdata BYTE s_ucAwtoFastFrameMs;
 static __xdata BYTE s_ucAwtoFastWatch;          // diagnostic: after a fast unblank, log the first M-domain error flags once
 static __xdata WORD s_usAwtoFastNextMs;         // next check, ms after the switch; 0 = flags not cleared yet
 
-static WORD AwtoFastNow(void)
-{
-    WORD usNow;
-
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
-    return usNow;
-}
-
 void AwtoSwCacheStore(void)
 {
     BYTE ucI = SysSourceGetInputPort() - _D1_INPUT_PORT;
@@ -62,7 +50,7 @@ static void AwtoSwFastGo(BYTE ucI, BYTE ucPort, BYTE ucType)
     SET_SOURCE_TYPE(g_ucSearchIndex, ucType);
     SET_SOURCE_JUDGE(g_ucSearchIndex, _TRUE);
     s_ucAwtoFastFrameMs = AwtoFastScalerApply(s_pstAwtoSwCache[ucI].pucScaler, ucType, ucPort);
-    s_usAwtoFastT0 = AwtoFastNow();
+    s_usAwtoFastT0 = ((WORD)AwtoMs());
     s_usAwtoFastNextMs = 0;
     s_ucAwtoFastWatch = 0;
     g_ucAwtoFastPending = ucPort;
@@ -172,7 +160,7 @@ bit AwtoWakeHold(void)                          // judge check failed in ACTIVE:
 
     if((g_stAwtoPower.ucL1 == 0) || (g_ucAwtoNoHold != 0) || (GET_MODE_STATE() != _MODE_STATUS_ACTIVE) || (g_ucAwtoFastPending != 0) ||
        (ucI >= 3) || (s_pstAwtoSwCache[ucI].ucValid == 0) || (AwtoFastScalerMatch(s_pstAwtoSwCache[ucI].pucScaler) != 0) ||
-       ((s_ucAwtoWoke != 0) && ((WORD)(AwtoFastNow() - s_usAwtoWokeMs) < AWTO_REHOLD_MS)))     // judge failed right after a fast wake: full path, no blink loop
+       ((s_ucAwtoWoke != 0) && ((WORD)(((WORD)AwtoMs()) - s_usAwtoWokeMs) < AWTO_REHOLD_MS)))     // judge failed right after a fast wake: full path, no blink loop
     {
         return _FALSE;
     }
@@ -182,7 +170,7 @@ bit AwtoWakeHold(void)                          // judge check failed in ACTIVE:
     g_ucAwtoHold = SysSourceGetInputPort();
     s_ucAwtoHoldLevel = 1;
     s_usAwtoHoldSec = 0;
-    s_usAwtoHoldMs = AwtoFastNow();
+    s_usAwtoHoldMs = ((WORD)AwtoMs());
     s_ucAwtoHoldTries = 0;
     AwtoSwEvent(AWTO_SW_EV_HOLD, 1);
     return _TRUE;
@@ -231,7 +219,7 @@ void AwtoWakePoll(void)                         // every pass while held
         AwtoSwEvent(AWTO_SW_EV_HOLD, 0x10);
         return;
     }
-    usNow = AwtoFastNow();
+    usNow = ((WORD)AwtoMs());
     if((WORD)(usNow - s_usAwtoHoldMs) < AWTO_HOLD_CHECK_MS)
     {
         return;
@@ -349,7 +337,7 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
         AwtoSwEvent(AWTO_SW_EV_FAST, 4);
         return;
     }
-    usDt = AwtoFastNow() - s_usAwtoFastT0;
+    usDt = ((WORD)AwtoMs()) - s_usAwtoFastT0;
     if(usDt < (WORD)s_ucAwtoFastFrameMs * AWTO_FAST_SETTLE_FRAMES)   // switch: 3 frames, the frame-sync phase jump is over
     {
         return;
@@ -382,7 +370,7 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
         g_ucAwtoFastPending = 0;
 #if(_AWTO_WAKE_HOLD == _ON)
         s_ucAwtoWoke = g_ucAwtoWakePending;
-        s_usAwtoWokeMs = AwtoFastNow();
+        s_usAwtoWokeMs = ((WORD)AwtoMs());
         g_ucAwtoWakePending = 0;
 #endif
         ScalerGlobalFirstActiveProc(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort());

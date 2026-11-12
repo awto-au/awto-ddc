@@ -23,6 +23,7 @@ fn	_ScalerOsdSramAddressSet	C	0x0dd0	20
 stub	_ScalerOsdVerticalStartSelect	C	0x0de4	8
 stub	_ScalerOsdWindow7SpecialFunction	C	0x0dec	8
 stub	_ScalerOsdWindowDisable	C	0x0df4	8
+stub	_UserInterfaceGetAudioReadyToPlayStatus	C	0x0dfc	8
 stub	_ScalerOsdWriteAllByte	C	0x0e04	8
 stub	_ScalerOsdWriteByte	C	0x0e0c	8
 stub	_ScalerAudioD1SetAudioPLL	C	0x0e14	8
@@ -83,6 +84,7 @@ stub	_ScalerMeasureInterlaceCheck	C	0x0fd8	8
 stub	_ScalerMemorySetFIFOFreq	C	0x0fe0	8
 stub	_ScalerMemorySetFifoCapture	C	0x0fe8	8
 stub	_ScalerOsdDoubleFunction	C	0x0ff0	8
+stub	_ScalerAudioDigitalAdjustVolume	C	0x0ff8	8
 stub	_ScalerOsdHardwareVLC	C	0x1000	8
 stub	_ScalerOsdSetTransparency	C	0x1008	8
 stub	_ScalerOsdSramBaseAddressSet	C	0x1010	8
@@ -120,7 +122,7 @@ stub	_AwtoBootConsole	C	0x1108	8
 stub	_AwtoKeyEnsure	C	0x1110	8
 stub	_AwtoKeyInject	C	0x1118	8
 stub	_AwtoKeyHold	C	0x1120	8
-stub	_AwtoKeyNow	C	0x1128	8
+stub	_AwtoMs	C	0x1128	8
 stub	_AwtoProbeSet	C	0x1130	8
 stub	_set_defaults	C	0x1138	8
 const	___str_93	C	0x1140	40
@@ -142,7 +144,7 @@ stub	_st_aux_check	C	0x1320	8
 stub	_st_store	C	0x1328	8
 const	___str_103	C	0x1330	28
 const	___str_110	C	0x134c	40
-const	___str_114	C	0x1374	24
+const	___str_118	C	0x1374	24
 const	___str_30	C	0x138c	28
 const	___str_141	C	0x13a8	12
 const	___str_142	C	0x13b4	12
@@ -167,7 +169,7 @@ const	___str_27	C	0x1628	12
 const	___str_28	C	0x1634	12
 const	___str_29	C	0x1640	12
 const	___str_138	C	0x164c	12
-const	___str_43	C	0x1658	8
+const	___str_44	C	0x1658	8
 const	___str_32	C	0x1660	8
 const	___str_35	C	0x1668	8
 stub	_osd_tc_cells	C	0x1670	8
@@ -220,15 +222,19 @@ const	___str_107	C	0x1820	12
 const	___str_133	C	0x182c	12
 stub	_OsdDispOsdMessage	C	0x1838	8
 stub	_AwtoKeyNoOsd	C	0x1840	8
+const	___str_45	C	0x1848	8
 stub	_AwtoKeyOsdTimeout	C	0x1850	8
 stub	_ScalerDpWDTimerEventProc_WDINT	C	0x1858	8
 stub	_AwtoKeyPoll	C	0x1860	8
 const	___str_89	C	0x1868	8
+const	___str_42	C	0x1870	16
 const	___str_90	C	0x1880	8
 stub	_osd_tc_bar	C	0x1888	8
+const	___str_43	C	0x1890	16
 stub	_AwtoCardShow	C	0x18a0	8
 stub	_AwtoInfoCard	C	0x18a8	8
 stub	_AwtoInfoLabel	C	0x18b0	8
+const	___str_145	C	0x18b8	12
 stub	_ui_port_state	C	0x18c8	8
 stub	_AwtoKeyPress	C	0x18d0	8
 stub	_ScalerTMDSHdmiReadRequestTimerEnable_WDINT	C	0x18d8	8
@@ -866,14 +872,12 @@ const	___str_125	C	0x33a8	12
 const	___str_126	C	0x33b4	16
 const	___str_127	C	0x33c4	12
 const	___str_128	C	0x33d0	12
-fn	_AwtoSwNow	C	0x33e0	32
 stub	_AwtoSwPoll	C	0x3400	8
 stub	_SysMainSystemInitial	C	0x3408	8
 stub	_SysMainSytemPowerDetect	C	0x3410	8
 const	___str_38	C	0x3418	20
 const	___str_39	C	0x342c	16
 const	___str_41	C	0x343c	8
-const	___str_42	C	0x3444	8
 stub	_AwtoDdcPortToVcp	C	0x344c	8
 stub	_AwtoDdcRegistry	C	0x3454	8
 stub	_AwtoDdcReply	C	0x345c	8
@@ -883,7 +887,6 @@ stub	_AwtoPutClock	C	0x3474	8
 stub	_AwtoPutHours	C	0x347c	8
 stub	_AwtoPutIso	C	0x3484	8
 stub	_AwtoHtSync	C	0x348c	8
-stub	_AwtoUpMs	C	0x3494	8
 const	___str_111	C	0x349c	44
 const	___str_13	C	0x34c8	8
 stub	_SysModeColorSpaceConvert	C	0x34d0	8
@@ -1050,7 +1053,7 @@ const	___str_15	C	0x3ce0	8
 const	___str_140	C	0x3ce8	12
 const	___str_10	C	0x3cf4	12
 stub	_AwtoPanelPinLog	C	0x3d00	8
-const	___str_118	C	0x3d0c	12
+const	___str_146	C	0x3d08	12
 stub	_osd_tc_scroll	C	0x3d18	8
 stub	_osd_tc_viewport	C	0x3d20	8
 stub	_AwtoConLogEvent	C	0x3d28	8
@@ -1065,7 +1068,8 @@ stub	_AwtoTxt	C	0x3d68	8
 stub	_ScalerSyncGetInputPixelClk	C	0x3d70	8
 fn	_ScalerTimerPollingFlagProc	C	0x3d78	200
 stub	_AwtoPanelReqArg	C	0x3e40	8
-const	___str_113	C	0x3f30	16
+const	___str_113	C	0x3e48	40
+const	___str_114	C	0x3e70	44
 const	___str_115	C	0x3f40	24
 const	___str_11	C	0x3f58	12
 const	___str_12	C	0x3f64	12
@@ -1163,7 +1167,6 @@ fn	_AwtoKeyEnsure	0	0x4d50	136
 fn	_AwtoKeyInject	0	0x4dd8	88
 fn	_AwtoKeyLog	0	0x4e78	180
 fn	_AwtoKeyMsgNote	0	0x4f74	68
-fn	_AwtoKeyNow	0	0x4fb8	32
 fn	_AwtoKeyOsdReset	0	0x4fd8	36
 fn	_ScalerSyncTMDSHPDToggleProc	0	0x4ffc	1352
 fn	_UserInterfaceAdjustAudioPowerProc	0	0x557c	8
@@ -1192,6 +1195,7 @@ fn	_ScalerTimerWDInitial	0	0x5a10	104
 fn	_ScalerMcuGpioInitial	0	0x5a78	176
 fn	_ScalerAudioDVCVolumeAdjustType	0	0x5b54	64
 fn	_ScalerAudioDVCVolumeMute	0	0x5b94	192
+fn	_ScalerAudioDigitalAdjustVolume	0	0x5c54	20
 fn	_ScalerAudioDigitalVolumeMute	0	0x5c68	32
 fn	_ScalerAudioDisable	0	0x5c88	76
 fn	_ScalerAudioGetSamplingFreqPacket	0	0x5cd4	96
@@ -1298,6 +1302,7 @@ fn	_UserCommonInterfaceDpAuxSet	0	0xabec	8
 fn	_UserCommonInterfaceGetHDCPKey	0	0xabf4	48
 fn	_UserCommonInterfaceOsdResetProc	0	0xac24	68
 fn	_UserCommonFlashSaveSystemData	0	0xac68	24
+fn	_ScalerAudioDVCSetVolumeZCDTimeout	0	0xac80	324
 fn	_SysPowerSwitch	0	0xadc4	532
 const	_tAwtoPal	1	0x0000	44
 const	_tAwtoStyle	1	0x002c	8
@@ -1324,6 +1329,7 @@ fn	_osd_tc_bar_off	1	0x52fc	8
 fn	_osd_tc_cells	1	0x5304	212
 fn	_AwtoNvMark	1	0x53d8	60
 fn	_set_nv_commit	1	0x5414	44
+fn	_set_ap_volume	1	0x5440	32
 fn	_osd_tc_place	1	0x5460	744
 fn	_osd_tc_vlc_begin	1	0x5748	92
 fn	_osd_tc_vlc_end	1	0x57a4	20
@@ -1349,9 +1355,12 @@ fn	_AwtoNvWrite	1	0x9884	424
 const	_tAwtoVolGain	1	0x9a2c	28
 fn	_OsdFuncSetPosition	1	0x9a48	60
 fn	_OsdFuncTransparency	1	0x9a84	8
+fn	_UserAdjustAudioMuteSwitch	1	0x9a8c	12
+fn	_UserAdjustAudioVolume	1	0x9a98	12
 fn	_OsdWindowDrawing	1	0x9ab8	120
 fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260
+fn	_set_ap_mute	1	0x9d38	52
 fn	_UserAdjustAudioVolumeMapping	1	0x9dac	28
 fn	_UserAdjustBrightness	1	0x9dc8	64
 fn	_UserAdjustContrast	1	0x9e08	496
@@ -1652,7 +1661,6 @@ fn	_UserInterfaceGetDpMSTCapablePort	4	0x84d8	8
 fn	_UserInterfaceTimerEventProc	4	0x84e0	208
 fn	_RTDFactoryOsdFuncDisableOsd	4	0x85b0	32
 fn	_ScalerColorSetYCCFullRange	4	0x85d0	20
-fn	_AwtoMsgV	4	0x85e4	236
 fn	_ScalerSyncCheckUrgentEvent	4	0x86d0	20
 fn	_ScalerSyncDpCheckUrgentHotPlugEventExist	4	0x86e4	24
 fn	_ScalerSyncTMDSScanInitial	4	0x86fc	28
@@ -1680,7 +1688,6 @@ fn	_SysModeClrModeStateChange	4	0x9254	12
 fn	_SysModeGetDisplaySettingReady	4	0x9260	16
 fn	_SysModeGetModeStateChange	4	0x9270	16
 fn	_SysModeHandler	4	0x9280	868
-fn	_AwtoFastNow	4	0x95e4	32
 fn	_AwtoL2LinkOff	4	0x962c	20
 fn	_AwtoL2LinkOn	4	0x9640	40
 fn	_AwtoRxPreDetect	4	0x9668	32
@@ -1721,6 +1728,7 @@ fn	_AwtoInStyle	4	0xad74	20
 fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
+fn	_AwtoMsgV	4	0xaef8	252
 const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1359	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
@@ -1873,8 +1881,6 @@ const	_tAwtoInSrc	6	0x013c	52
 const	___str_0	6	0x0170	24
 const	___str_25	6	0x0188	28
 const	___str_26	6	0x01a4	24
-const	___str_44	6	0x01c8	8
-const	___str_45	6	0x01d0	8
 const	___str_46	6	0x01d8	20
 const	___str_47	6	0x01ec	28
 const	___str_48	6	0x0208	20
@@ -1896,7 +1902,6 @@ const	___str_63	6	0x02e0	12
 const	___str_64	6	0x02ec	12
 const	___str_65	6	0x02f8	20
 const	___str_67	6	0x0314	12
-const	___str_68	6	0x0320	12
 const	___str_69	6	0x032c	8
 const	___str_70	6	0x0334	20
 const	___str_71	6	0x0348	12
@@ -2017,7 +2022,7 @@ fn	_AwtoNetXchgA	6	0x3334	572
 fn	_AwtoGpioConSet	6	0x3570	64
 fn	_AwtoGpioEnsure	6	0x35b0	92
 fn	_AwtoGpioLog	6	0x360c	96
-fn	_AwtoGpioNow	6	0x366c	32
+fn	_AwtoGpioLogNow	6	0x366c	32
 fn	_AwtoGpioPoll	6	0x368c	264
 fn	_AwtoGpioTestSet	6	0x3794	20
 fn	_AwtoInRead	6	0x37a8	276
@@ -2026,13 +2031,13 @@ fn	_AwtoKeyConSet	6	0x39f0	52
 fn	_AwtoKeyId	6	0x3a24	64
 fn	_AwtoKeyMaskNow	6	0x3a74	100
 fn	_AwtoKeyNoOsd	6	0x3ad8	112
+fn	_key_hold	6	0x3b48	60
 fn	_AwtoKeyPoll	6	0x3b90	280
 fn	_AwtoKeyPress	6	0x3ca8	28
 fn	_AwtoKeyShow	6	0x3cc4	304
 fn	_AwtoKeyShown	6	0x3df4	64
 fn	_AwtoKeyTestSet	6	0x3e34	8
 fn	_AwtoVgaDiagPower	6	0x3e3c	60
-fn	_key_hold	6	0x3e78	44
 fn	_key_inject	6	0x3ea4	8
 fn	_set_recovery_requested	6	0x3eac	136
 fn	_AwtoMenuForget	6	0x3f34	12
@@ -2104,7 +2109,7 @@ fn	_AwtoSourceRows	6	0x6228	1076
 fn	_AwtoSourceStep	6	0x665c	96
 fn	_AwtoSrcItem	6	0x66bc	12
 fn	_AwtoSrcLog	6	0x66c8	164
-fn	_AwtoSrcNow	6	0x676c	32
+const	___str_68	6	0x676c	20
 fn	_AwtoSrcPort	6	0x678c	28
 fn	_AwtoSrcPortFields	6	0x67a8	456
 fn	_AwtoSrcRateKey	6	0x6970	352
@@ -2632,7 +2637,7 @@ fn	_AwtoSyncInit	11	0x3ee0	72
 fn	_AwtoPsWakeCables	11	0x3f28	60
 fn	_AwtoPsAuxSeen	11	0x3f64	84
 fn	_AwtoBootValue	11	0x3fb8	84
-fn	_AwtoSyncNow	11	0x400c	68
+fn	_AwtoMs	11	0x400c	88
 fn	_AwtoPsWakeAux	11	0x4074	76
 fn	_AwtoSyncRow	11	0x40ec	60
 fn	_AwtoSyncStage	11	0x4128	188
@@ -2681,7 +2686,6 @@ fn	_ScalerSyncSetDdcForceNack	11	0x7d10	104
 fn	_ScalerSyncTMDSRx3HdmiVideoSetting	11	0x7d78	316
 fn	_AwtoPsTmdsLive	11	0x7eb4	92
 fn	_AwtoPsTmdsStable	11	0x7f10	60
-fn	_AwtoUpMs	11	0x7f50	116
 fn	_AwtoWdtLibPoke	11	0x7fd0	108
 fn	_AwtoPsPollSite	11	0x803c	28
 fn	_AwtoSyncSw	11	0x8058	120

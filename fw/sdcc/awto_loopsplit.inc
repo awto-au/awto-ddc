@@ -13,11 +13,7 @@ bit AwtoSlowDue(unsigned char ucSlot)
     unsigned int usNow;
     unsigned int usGap;
 
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
+    usNow = (WORD)AwtoMs();
     usGap = usNow - s_pusAwtoSlowLast[ucSlot];
     if(usGap < AWTO_SLOW_MS)
     {

@@ -17,7 +17,7 @@ unsigned char AwtoMsgWait(void)
 {
     AWTO_WDT_FEED(AWTO_WDT_S_MSG);          // bounded wait: AWTO_MSG_HOST_MS per message (#131)
 #if(_AWTO_DIAG == _ON)
-    if((unsigned int)(g_stAwtoDiag.usT2Isr - s_usAwtoMsgT0) >= AWTO_MSG_HOST_MS)
+    if((unsigned int)((WORD)AwtoMs() - s_usAwtoMsgT0) >= AWTO_MSG_HOST_MS)
     {
         g_bDebugMessageEven = _FALSE;       // host re-arms with 0x55 (rtd_diag resends it while idle)
         g_pucDdcciData[0] = 0;              // a stale 0x55 would re-enable it at the next message
@@ -47,7 +47,7 @@ void AwtoMsgV(unsigned int usId, unsigned long ulValue)
     g_pucAwtoMsgBuf[2] = usId;
     g_pucAwtoMsgBuf[3] = 0;
 #if(_AWTO_DIAG == _ON)
-    s_usAwtoMsgT0 = g_stAwtoDiag.usT2Isr;
+    s_usAwtoMsgT0 = (WORD)AwtoMs();
 #endif
     ScalerDebugMessage(g_pucAwtoMsgBuf, ulValue);
 }

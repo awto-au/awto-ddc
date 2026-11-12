@@ -233,18 +233,14 @@ void AwtoWdtProbe(BYTE ucTimer)
 
 // Main loop while AWTO_WDT_B_NEW: open the console (watchdog panel) once picture / no-signal state has settled AWTO_WDT_SHOW_MS.
 // Not through the info pop-up (ucDbgPopup): the pop-up repositions the OSD after the console opened (sim render, #131).
-static __xdata WORD s_usAwtoWdtSettled;         // 0 = not settled; else g_usTimerCounter | 1 when it settled
+static __xdata WORD s_usAwtoWdtSettled;         // 0 = not settled; else AwtoMs low word | 1 when it settled
 
 void AwtoWdtShow(void)
 {
     BYTE ucMode = GET_MODE_STATE();
     WORD usNow;
 
-    do
-    {
-        usNow = g_usTimerCounter;
-    }
-    while(usNow != g_usTimerCounter);
+    usNow = (WORD)AwtoMs();
     if((g_stAwtoDiag.ucStage < 8) || (SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) ||
        ((ucMode != _MODE_STATUS_ACTIVE) && (ucMode != _MODE_STATUS_NOSIGNAL) && (ucMode != _MODE_STATUS_NOSUPPORT)))
     {

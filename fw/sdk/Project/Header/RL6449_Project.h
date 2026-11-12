@@ -309,6 +309,11 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #ifndef AWTO_WDT_THR
 #define AWTO_WDT_THR                                            0x577   // warning at 1399 x 0.143 = 200.1 ms
 #endif
+#define AWTO_WDT_CNT3_XTAL                                      2048    // crystal clocks per CNT3 count (CNT2 / 2048 = 143 us)
+#define AWTO_WDT_CNT3_WRAP                                      4096    // CNT3 is 12 bit
+#define AWTO_WDT_WARN_MS                                        (((unsigned long)AWTO_WDT_THR * AWTO_WDT_CNT3_XTAL + _EXT_XTAL / 2) / _EXT_XTAL)
+#define AWTO_WDT_RESET_MS                                       (((unsigned long)AWTO_WDT_N * AWTO_WDT_CNT3_WRAP * AWTO_WDT_CNT3_XTAL + _EXT_XTAL / 2) / _EXT_XTAL)
+#define AWTO_WDT_N_BOOT_FIELD                                   (_BIT2 | _BIT1 | _BIT0)   // CNT1 N field at ScalerMcuInitial: N = 8 until ScalerTimerWDInitial
 #define AWTO_WDT_PROBE_THR                                      0x100   // probe: IRQ expected 36.6 ms after the clear, reset at 585.9 ms (N = 1)
 #define AWTO_WDT_PROBE_MS                                       1500    // probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s
 #define AWTO_WDT_FRAME                                          16      // WDT / Timer2 ISR: 2 B PC + 14 pushes (crash_sim_test checks)
@@ -528,7 +533,7 @@ extern void AwtoDiagPanelT3Wait(unsigned int usMs);
 #else
 #define AwtoDiagPanelT3Wait(ms)                                 ScalerTimerDelayXms(ms)
 #endif
-#define AWTO_DIAG_T2ISR()                                       do { g_stAwtoDiag.usT2Isr++; AWTO_LED_T2ISR(); } while(0)
+#define AWTO_DIAG_T2ISR()                                       do { if(++g_stAwtoDiag.usT2Isr == 0) { g_stAwtoHt.usUpHi++; } AWTO_LED_T2ISR(); } while(0)
 #define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
 #else
 #define AwtoDiagInit()
@@ -963,7 +968,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_PS_AUXCMD                                  0xDB    // arg = port: AUX command in power saving, no wake
 #define AWTO_SYNC_EV_PS_BURST                                   0xDE    // arg = port: TMDS clock live shorter than the hold, value ms (once per sleep)
 #define AWTO_SYNC_EV_HOST                                       0xD7    // #157 host time: arg = UTC offset (15 min, signed), value = unix s
-#define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoUpMs) at the sync
+#define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoMs) at the sync
 #define AWTO_SYNC_EV_DRIFT                                      0xD9    // #157 value = host - local tick, ms (signed)
 // #157 host time: DDC/CI table write (0xE7) to this VCP, offset 0: unix s BE x4, ms BE x2, UTC offset (15 min, signed)
 #define AWTO_HT_VCP                                             0xE9    // retired registry code (logo_ms, #144); get: max = syncs, cur = drift ms
@@ -977,13 +982,12 @@ typedef struct                                  // host-read (sync_log.py): nati
     signed char cOfs;                           // UTC offset, 15 min units
     unsigned int usFrac;                        // host ms within the second
     unsigned long ulEpoch;                      // host unix s at the sync
-    unsigned long ulFwMs;                       // AwtoUpMs() at the sync
+    unsigned long ulFwMs;                       // AwtoMs() at the sync
     int iDrift;                                 // host - local tick at the last sync, ms (clamped)
-    unsigned int usUpHi;                        // AwtoUpMs bits 31..16 (bits 15..0 = g_stAwtoDiag.usT2Isr)
-    unsigned int usUpLast;                      // usT2Isr at the last AwtoUpMs (wrap check)
+    unsigned int usUpHi;                        // AwtoMs bits 31..16, bumped by the Timer2 ISR (bits 15..0 = g_stAwtoDiag.usT2Isr)
 } StAwtoHt;
 extern __xdata StAwtoHt g_stAwtoHt;
-extern unsigned long AwtoUpMs(void);
+extern unsigned long AwtoMs(void);
 extern void AwtoHtSync(unsigned char *puc);
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE

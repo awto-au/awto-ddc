@@ -16,18 +16,6 @@ static __xdata WORD s_usAwtoKeyDraw;            // usT2Isr at the last redraw
 static __xdata BYTE s_pucAwtoKeyShown[6];       // A0 A1 P30 mask msg flags as last drawn (redraw on change only)
 static __xdata BYTE s_ucAwtoKeyShownN;          // ucCount as last drawn
 
-static WORD AwtoKeyNow(void)
-{
-    WORD usNow;
-
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
-    return usNow;
-}
-
 static void AwtoKeyEnsure(void)                 // lazy: XDATA is not cleared at start
 {
     BYTE __xdata *pucB = (BYTE __xdata *)&g_stAwtoKey;
@@ -54,7 +42,7 @@ static void AwtoKeyEnsure(void)                 // lazy: XDATA is not cleared at
 static void AwtoKeyLog(BYTE ucMask, BYTE ucMsg, BYTE ucFlags)
 {
     BYTE ucI = g_stAwtoKey.ucCount & (AWTO_KEY_LOG_N - 1);
-    WORD usNow = AwtoKeyNow();
+    WORD usNow = ((WORD)AwtoMs());
 
     g_stAwtoKey.pstLog[ucI].ucSeq = g_stAwtoKey.ucCount;
     g_stAwtoKey.pstLog[ucI].ucTickHi = (BYTE)(usNow >> 8);
@@ -105,17 +93,17 @@ static void AwtoKeyShow(void)                   // every AwtoKeyPoll: redraw the
     {
         SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);  // as the #67 menu (AwtoSetLoop): no SDK pop-up over the screen
     }
-    if((g_stAwtoKey.ucOpen != 0) && (g_stAwtoKey.ucDrawn == 0) && ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) >= AWTO_KEY_RETRY_MS))
+    if((g_stAwtoKey.ucOpen != 0) && (g_stAwtoKey.ucDrawn == 0) && ((WORD)(((WORD)AwtoMs()) - s_usAwtoKeyDraw) >= AWTO_KEY_RETRY_MS))
     {
-        s_usAwtoKeyDraw = AwtoKeyNow();         // open but never drawn (the first draw was skipped): draw again, every RETRY period
+        s_usAwtoKeyDraw = ((WORD)AwtoMs());         // open but never drawn (the first draw was skipped): draw again, every RETRY period
         AwtoOsdKeyLines();
         return;
     }
-    if((g_stAwtoKey.ucOpen == 0) || (g_stAwtoKey.ucDrawn == 0) || ((WORD)(AwtoKeyNow() - s_usAwtoKeyDraw) < AWTO_KEY_REFRESH_MS))
+    if((g_stAwtoKey.ucOpen == 0) || (g_stAwtoKey.ucDrawn == 0) || ((WORD)(((WORD)AwtoMs()) - s_usAwtoKeyDraw) < AWTO_KEY_REFRESH_MS))
     {
         return;
     }
-    s_usAwtoKeyDraw = AwtoKeyNow();
+    s_usAwtoKeyDraw = ((WORD)AwtoMs());
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);     // SDK pop-up / power-saving timers (seconds): every
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);      // refresh period, not every pass (each cancel walks
     ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);  // the timer table)
@@ -135,7 +123,7 @@ void AwtoKeyOsdReset(void)                      // a mode reset cleared the OSD 
     if(g_stAwtoKey.ucOpen != 0)
     {
         g_stAwtoKey.ucDrawn = 0;
-        s_usAwtoKeyDraw = AwtoKeyNow();
+        s_usAwtoKeyDraw = ((WORD)AwtoMs());
     }
 }
 
@@ -147,7 +135,7 @@ void AwtoKeyConSet(BYTE ucOn)                   // the console opens / closes th
     {
         g_stAwtoKey.ucOpen = 1;
         AwtoKeyShown();
-        s_usAwtoKeyDraw = AwtoKeyNow();
+        s_usAwtoKeyDraw = ((WORD)AwtoMs());
     }
     else
     {

@@ -396,7 +396,7 @@ static void AwtoPutHours(DWORD ulH100)          // hundredths of an hour -> hour
 
 static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-cell groups that changed (ucAll: every cell)
 {
-    DWORD ulUp = AwtoUpMs();
+    DWORD ulUp = AwtoMs();
     BYTE ucI, ucJ, ucH;
 
     s_usConTitleMs = (WORD)ulUp;
@@ -449,11 +449,7 @@ void AwtoConTitlePoll(void)                     // every pass while the console 
 {
     WORD usNow;
 
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
+    usNow = (WORD)AwtoMs();
     if(((WORD)(usNow - s_usConTitleMs) < AWTO_TITLE_MS) || (s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
     {
         return;

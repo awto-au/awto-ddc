@@ -37,9 +37,9 @@ void AwtoDiagTestCmd(void)
 {
     unsigned char ucCmd = g_stAwtoDiag.ucHold;
 
-    if((ucCmd != 0) && ((unsigned int)(g_stAwtoDiag.usT2Isr - s_usAwtoHoldCancel) >= AWTO_KEY_REFRESH_MS))
+    if((ucCmd != 0) && ((unsigned int)((WORD)AwtoMs() - s_usAwtoHoldCancel) >= AWTO_KEY_REFRESH_MS))
     {
-        s_usAwtoHoldCancel = g_stAwtoDiag.usT2Isr;                       // pending pop-up timeout (each draw re-arms it; seconds):
+        s_usAwtoHoldCancel = (WORD)AwtoMs();                       // pending pop-up timeout (each draw re-arms it; seconds):
         ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // every 80 ms, not every pass (a cancel walks the timer table)
     }
     ucCmd = g_stAwtoDiag.ucTestCmd;

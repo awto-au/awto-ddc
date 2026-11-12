@@ -18,14 +18,14 @@ void key_inject(BYTE ucKey)
 
 void key_hold(BYTE ucMask, WORD usMs)
 {
-    s_usAwtoKeyHoldT0 = g_usTimerCounter;
+    s_usAwtoKeyHoldT0 = (WORD)AwtoMs();
     s_usAwtoKeyHoldMs = usMs;
     g_ucAwtoKeyHold = ucMask & (AWTO_KM_POWER | AWTO_KM_AUTO | AWTO_KM_UP | AWTO_KM_DOWN | AWTO_KM_MENU | AWTO_KM_SOURCE);
 }
 
 BYTE AwtoKeyHold(void)                       // the key reader (AWTO_KEY_HOLD): the held mask until its time is up
 {
-    if((WORD)(g_usTimerCounter - s_usAwtoKeyHoldT0) >= s_usAwtoKeyHoldMs)
+    if((WORD)((WORD)AwtoMs() - s_usAwtoKeyHoldT0) >= s_usAwtoKeyHoldMs)
     {
         g_ucAwtoKeyHold = 0;
     }

@@ -69,11 +69,7 @@ static __xdata WORD s_usAwtoDbgLinkMs;
 
 void AwtoDbgLinkStart(BYTE ucMin)               // VCP AWTO_DBG_LINK_VCP, test cmd 0x3B; 0 = back to DDC/CI
 {
-    do
-    {
-        s_usAwtoDbgLinkMs = g_stAwtoDiag.usT2Isr;
-    }
-    while(s_usAwtoDbgLinkMs != g_stAwtoDiag.usT2Isr);
+    s_usAwtoDbgLinkMs = (WORD)AwtoMs();
     AwtoDbgLinkSet(ucMin);
 }
 
@@ -85,11 +81,7 @@ void AwtoDbgLinkPoll(void)                      // AWTO_DDCCI_POLL() while the d
     {
         return;                                 // until told back
     }
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
+    usNow = (WORD)AwtoMs();
     if((WORD)(usNow - s_usAwtoDbgLinkMs) < 1000)
     {
         return;

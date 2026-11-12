@@ -7,18 +7,6 @@ static __xdata unsigned char s_ucAwtoUnstable;  // "source unstable" judge fails
 static __xdata unsigned char s_ucAwtoHpdPulses;
 #endif
 
-static unsigned int AwtoSwNow(void)             // Timer2 ISR count = 1 per ms tick; g_usTimerCounter is rebased to 0
-{                                               // by ScalerTimerCheckTimerEvent near _EVENT_TIME_MAX (log showed the jumps)
-    unsigned int usNow;
-
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
-    return usNow;
-}
-
 void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
 {
     unsigned char ucN = g_stAwtoSw.ucN;
@@ -32,7 +20,7 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
     {
         g_stAwtoSw.stEv[ucN].ucId = ucId;
         g_stAwtoSw.stEv[ucN].ucArg = ucArg;
-        g_stAwtoSw.stEv[ucN].usMs = AwtoSwNow();
+        g_stAwtoSw.stEv[ucN].usMs = ((WORD)AwtoMs());
         g_stAwtoSw.ucN = ucN + 1;
     }
 }
@@ -44,7 +32,7 @@ static unsigned char s_ucAwtoSwReset;
 
 void AwtoSwMark(unsigned char ucK)      // logs AWTO_SW_EV_SLOW(k) when the code since the previous mark took >= AWTO_SW_SLOW_MS
 {
-    unsigned int usNow = AwtoSwNow();
+    unsigned int usNow = ((WORD)AwtoMs());
 
     if(GET_MODE_RESET_TARGET() != s_ucAwtoSwReset)    // which segment set a mode reset (#60)
     {
@@ -69,7 +57,7 @@ void AwtoSwArm(unsigned char ucPort)
     g_stAwtoSw.ucSeq++;
     g_stAwtoSw.ucPort = ucPort;
     g_stAwtoSw.ucN = 0;
-    g_stAwtoSw.usT0 = AwtoSwNow();
+    g_stAwtoSw.usT0 = ((WORD)AwtoMs());
 }
 
 #if(_AWTO_PANEL_LOG == _ON)

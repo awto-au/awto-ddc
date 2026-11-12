@@ -55,22 +55,6 @@ static WORD AwtoSyncWdtMs(void)                     // ms on the WDT counter sin
     return s_usAwtoBootMs + (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) * 586;
 }
 
-static WORD AwtoSyncNow(void)
-{
-    WORD usNow;
-
-    if(s_usAwtoT2Base == 0xFFFF)
-    {
-        return AwtoSyncWdtMs();
-    }
-    do
-    {
-        usNow = g_stAwtoDiag.usT2Isr;
-    }
-    while(usNow != g_stAwtoDiag.usT2Isr);
-    return usNow;
-}
-
 void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; value = WDT ms since the last poke (crystal: counts a halt)
 {
     WORD usC3;
@@ -94,7 +78,7 @@ void AwtoSyncMark(void)                             // ScalerMcuInitial, just be
 {
     WORD usNow = AwtoSyncWdtMs();
 
-    AwtoSyncPush(AWTO_SYNC_EV_INIT, 1, 0);
+    AwtoSyncPush(AWTO_SYNC_EV_INIT, 1, AWTO_WDT_N_BOOT_FIELD + 1);
     s_usAwtoBootMs = usNow;                         // carried over the clear that follows
 }
 
@@ -137,7 +121,7 @@ static void AwtoSyncPut(BYTE ucId, BYTE ucArg, DWORD ulVal)
 {
     BYTE ucN = g_stAwtoSync.ucSeq;
     BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucN)];
-    WORD usNow = AwtoSyncNow();
+    WORD usNow = (WORD)AwtoMs();
 
     puc[0] = ucId;
     puc[1] = ucArg;
@@ -192,30 +176,32 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
     }
 }
 
-// #157 fw ms since boot, 32 bit: usT2Isr + a wrap count. Called at least once per second (AwtoDiagMainPass): no wrap missed.
+// One time base for all our code: Timer2 ISR count (usT2Isr = low word, g_stAwtoHt.usUpHi = high word, both bumped in the ISR).
+// Before Timer2 runs it is the WDT-counter time (ring lines are re-based at the Timer2 start). SDK event table (g_usTimerCounter) is separate.
 __xdata StAwtoHt g_stAwtoHt;
 
-unsigned long AwtoUpMs(void)
+unsigned long AwtoMs(void)
 {
-    WORD usNow;
+    bit bEa;
+    WORD usHi;
+    WORD usLo;
 
-    do
+    if(s_usAwtoT2Base == 0xFFFF)
     {
-        usNow = g_stAwtoDiag.usT2Isr;
+        return AwtoSyncWdtMs();
     }
-    while(usNow != g_stAwtoDiag.usT2Isr);
-    if(usNow < g_stAwtoHt.usUpLast)
-    {
-        g_stAwtoHt.usUpHi++;
-    }
-    g_stAwtoHt.usUpLast = usNow;
-    return ((DWORD)g_stAwtoHt.usUpHi << 16) | usNow;
+    bEa = EA;
+    EA = 0;                                         // ISR bumps lo then hi: a read between them would be 65536 ms short
+    usLo = g_stAwtoDiag.usT2Isr;
+    usHi = g_stAwtoHt.usUpHi;
+    EA = bEa;
+    return ((DWORD)usHi << 16) | usLo;
 }
 
 // #157 DDC/CI host time (awto_ddcci.inc): RAM only. Ring lines at the first sync of this boot and on a drift over AWTO_HT_DRIFT_MS.
 void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, UTC offset (15 min, signed)
 {
-    DWORD ulNow = AwtoUpMs();
+    DWORD ulNow = AwtoMs();
     DWORD ulE = ((DWORD)puc[0] << 24) | ((DWORD)puc[1] << 16) | ((DWORD)puc[2] << 8) | puc[3];
     WORD usF = ((WORD)puc[4] << 8) | puc[5];
     long lS;
@@ -274,7 +260,7 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
         return;                                     // the same start again (DDC/CI select, then SysSourceSwitchInputPort)
     }
     g_stAwtoSync.ucEpSeq = g_stAwtoSync.ucSeq;
-    usNow = AwtoSyncNow();
+    usNow = (WORD)AwtoMs();
     g_stAwtoSync.ucT0Hi = (BYTE)(usNow >> 8);
     g_stAwtoSync.ucT0Lo = (BYTE)usNow;
     g_stAwtoSync.ucKind = ucKind;
@@ -290,7 +276,7 @@ void AwtoSyncBegin(BYTE ucKind, BYTE ucPort)
         AwtoSyncPush(AWTO_SYNC_EV_BOOT, AwtoBootReason(), AwtoBootValue());     // first line: why it is running (#29)
         AwtoSyncPush(AWTO_SYNC_EV_STAGE, 1, 0);
     }
-    AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((AwtoUpMs() >> 16) << 8) | ucPort);   // #157 anchor: fw ms bits 31..16 above the port
+    AwtoSyncPush(AWTO_SYNC_EV_BEGIN, ucKind, ((AwtoMs() >> 16) << 8) | ucPort);   // #157 anchor: fw ms bits 31..16 above the port
 }
 
 void AwtoSyncInit(void)                             // boot (before SysMainSystemInitial): the power-on episode
@@ -533,7 +519,7 @@ __xdata WORD g_usAwtoPsTmdsLive;                    // polls with a TMDS clock l
 __xdata WORD g_usAwtoPsTmdsRun;                     // longest TMDS live run this episode, ms (test readout)
 __xdata WORD g_usAwtoPsDdc;                         // SDK DDC handshakes (SCL toggle) seen in SAVING since boot, gated (test readout)
 __xdata WORD g_usAwtoPsAux;                         // SDK DP AUX toggles seen in SAVING since boot, gated (test readout)
-static __xdata WORD s_pusTmdsFirst[2];              // D2 / D3: AwtoSyncNow of the first live poll of the current run
+static __xdata WORD s_pusTmdsFirst[2];              // D2 / D3: AwtoMs of the first live poll of the current run
 static __xdata WORD s_pusTmdsLast[2];               // D2 / D3: last live poll
 static __xdata BYTE s_ucTmdsRun;                    // bit i - 1: a run is open on port D1 + i
 static __xdata BYTE s_ucPsSaid;                     // lines logged this sleep: bit 0 AUX cmd, bit i burst (D1 + i), bit 4 + i DDC, bit 7 SDK AUX
@@ -631,7 +617,7 @@ void AwtoPsWakeArm(void)                              // power saving entered: b
     g_usAwtoPsTmdsRun = 0;
     s_ucTmdsRun = 0;
     s_ucPsSaid = 0;
-    s_usWakeAt = AwtoSyncNow();
+    s_usWakeAt = (WORD)AwtoMs();
     AwtoPsTmdsStart(0x7100);                        // pre-PS stable latches must not count (SDK PS bounds are set by now)
     AwtoPsTmdsStart(0x7200);
     s_ucWakeArmed = 1;
@@ -692,7 +678,7 @@ void AwtoPsPollSite(void)                           // AWTO_PS_POLL_SITE: armed 
 void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL + AWTO_PS_POLL_SITE (between handlers); works every AWTO_PS_POLL_MS
 {
     BYTE ucI, ucNow, ucR, ucU;
-    WORD usNow = AwtoSyncNow();
+    WORD usNow = (WORD)AwtoMs();
     WORD usGap = usNow - s_usWakeAt;
 
     if((g_ucAwtoPsWakeCon != 0) || (usGap < AWTO_PS_POLL_MS))

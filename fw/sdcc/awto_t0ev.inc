@@ -42,7 +42,7 @@ void ScalerTimerWDInitial(void)
     EXIF &= ~_BIT4;
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT2;
     EX2 = 1;
-    AwtoSyncPush(AWTO_SYNC_EV_INIT, 3, AWTO_WDT_MODE);
+    AwtoSyncPush(AWTO_SYNC_EV_INIT, 3, (AWTO_WDT_WARN_MS << 16) | AWTO_WDT_RESET_MS);
 }
 
 void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventID enumEventID)

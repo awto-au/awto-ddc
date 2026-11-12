@@ -67,7 +67,7 @@ void ScalerMcuSetISPSlaveAddr(BYTE ucISPStatus);
 void ScalerMcuInitial(void)
 {
     // Clear Watchdog & Set CNT1 to Max
-    AWTO_SYNC_MARK(); MCU_FFEA_WATCHDOG_TIMER |= _BIT6 | _BIT2 | _BIT1 | _BIT0;
+    AWTO_SYNC_MARK(); MCU_FFEA_WATCHDOG_TIMER |= _BIT6 | AWTO_WDT_N_BOOT_FIELD;
 
     // First Mux(epll/m2pll) Select M2pll
     MCU_FFE9_MCU_CLK_CONTROL_1 &= ~_BIT4;

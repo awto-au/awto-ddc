@@ -63,7 +63,7 @@ static BYTE AwtoKeyId(BYTE ucM)                 // single key mask -> id; AWTO_K
 
 static BYTE AwtoKeyInfoUp(void)                 // the DOWN info pop-up is inside its fixed time
 {
-    return ((s_ucKeyInfo != 0) && (GET_OSD_STATE() == _MENU_NONE) && ((WORD)(AwtoKeyNow() - s_usKeyInfoAt) < AWTO_INFO_POPUP_MS)) ? 1 : 0;
+    return ((s_ucKeyInfo != 0) && (GET_OSD_STATE() == _MENU_NONE) && ((WORD)(((WORD)AwtoMs()) - s_usKeyInfoAt) < AWTO_INFO_POPUP_MS)) ? 1 : 0;
 }
 
 static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a key: the SDK OSD timeout restarts (ACTIVE only)
@@ -97,7 +97,7 @@ static void AwtoKeyNoOsd(BYTE ucK)              // nothing open: DOWN = input in
     {
         OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
         ScalerTimerActiveTimerEvent(SEC(AWTO_INFO_POPUP_MS / 1000), _USER_TIMER_EVENT_OSD_DISABLE);
-        s_usKeyInfoAt = AwtoKeyNow();
+        s_usKeyInfoAt = ((WORD)AwtoMs());
         s_ucKeyInfo = 1;
     }
 }
@@ -331,7 +331,7 @@ void AwtoKeyInject(BYTE ucMsg)                  // test cmd 0x01..0x05 / key_inj
 
 void AwtoKeyPoll(void)                          // main loop, right after AwtoGpioPoll (the values it reads)
 {
-    WORD usNow = AwtoKeyNow();
+    WORD usNow = ((WORD)AwtoMs());
     BYTE ucM;
 
     AwtoKeyEnsure();
