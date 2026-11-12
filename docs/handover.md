@@ -99,7 +99,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - OSD: `./dev.py osd ...`, `./dev.py menu ...`, `./dev.py settings list|get|set --unit 2`; catalogue `python3 scripts/osd_catalog.py <bin> --menu-dir <dir>`.
 - Build: `python scripts/wb_build.py --tree <worktree> --serial AWT26110002 --tag <tag>` (from this repo); gates `scripts/fw_gates.py` (below); speed `scripts/loop_rate.py`, sim `docs/speed-bench.tsv`.
 - Gates: `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` -> `tmp/fw/<tag>.gates.json` (image SHA-256, date, per-gate PASS/FAIL/SKIP + seconds, fw_gates commit, `complete`).
-  - Gates: boot, isr, link, h1080, h2160, menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes. `--only` runs a subset and marks the record partial (not flashable).
+  - Gates: boot, isr, link, h1080, h2160, menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes, portcfg (#81). `--only` runs a subset and marks the record partial (not flashable).
   - SKIP = image lacks the feature (map symbol) or the gate needs `--tree`; counted and printed, allowed by the flash check.
   - `dev.py flash|recover|deploy` refuse: no record, SHA-256 mismatch, partial record, any FAIL. Override `--force-ungated`.
   - Sims run with `AWTO_SIM_CORE=fast` (the ucsim default needs `ucsim_51` on PATH).

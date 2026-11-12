@@ -63,3 +63,14 @@ Already there: idle receivers stay powered (`_AWTO_KEEP_IDLE_RX`, #60) and the s
 - XDATA hole space after placement 402 -> 136 B; common end unchanged 0x3d78.
 - Power-on: 21 log lines; timing confirmed at 1184 ms but display setting starts at 4481 ms, after the 3 s boot logo (`logo_ms`).
 - `speed_bench.py` / `fw_profile.py` (native ucsim) no longer boot: the #131 watchdog bites (FFEE write) before stage 8 + heartbeat.
+
+## Port disable (#81, registry `d1_enable`..`d3_enable`, ids 36-38)
+Firmware: branch `wb-p14ui-portcfg` (`fw/sdcc/awto_port.inc`); rtdfw `portcfg` 348d5be. Gate `portcfg` (`scripts/portcfg_sim.py`).
+- Per-port settings block: `g_ucAwtoPortOff` (bit n = Dn); registry rows map to (field, port) in `tAwtoPortRow`. Owner: `AwtoPortBoot` (AwtoSetInit, after the settings load) and `AwtoPortSet`.
+- Disabled port: HPD held low (`PCB_Dn_HOTPLUG` gate; DP HPD requests above LOW dropped), EDID channel off (`ScalerMcuDdcRamEnable`, DDCn_DDC_ENABLE bit 0), receiver off (`ScalerGDIPhyPowerProc`), not searched / AUTO (`SysSourceHandler`, `SysSourceSwitchPort`), no fast path, no wake (logged once per trigger per sleep), not a dead-port way out.
+- Selector: row shown as `disabled`; taking it (or VCP 0x60 / menu Input / test cmd 0x31..0x33) enables it through the registry (NVRAM gate), then switches.
+- Refused (logged): disabling the input on screen (ACTIVE / display setting), the last enabled one. Not `risky`: nothing to revert.
+- Control: menu Input page, DDC/CI VCP 0xEC / 0xED / 0xEE (or paged id), `dev.py settings set d1_enable 0`, test cmds 0x06..0x08 off / 0x09..0x0B on.
+- Logs: sync.tsv E0 (`D1 disabled by setting (stored): HPD low, EDID off, receiver off, not searched` at boot, one line per change / refusal).
+- Limits: a disabled HDMI port is high from GPIO init until AwtoSetInit (chip reset / `ScalerMcuGpioInitial`; the setting is not known before the NVRAM load); D1 (DP) is low from reset. [guess] DDC channel bit 0 = 0 stops EDID replies (regdb: "MCU access enable"); with HPD low no source reads it.
+- Unit 2 (image wb-p14ui-portcfg2, 2026-11-12, `panel_unit.py --cold N --port D2`, ring ms from the power-up): D1 on: ACTIVE 1503 (first boot after the flash, 0 flaps), 5165 / 4948 ms with 45 / 44 HDMI predetect flaps and a `layout differed` each; D1 off (`dev.py settings set d1_enable 0`, stored at the gate): ACTIVE 1506 / 1504 / 1491 ms, 0 flaps, no `layout differed`; host DP-1 `disconnected`, EDID 0 B; boot line at +156 ms.
