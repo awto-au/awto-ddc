@@ -159,8 +159,8 @@ def read_timing(read, addr: dict) -> tuple[dict, dict | None, str]:
 
 
 # ---- symbols ---------------------------------------------------------------------------------------------------
-OSD_EVENTS = {"info": 10, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
-              "source-menu": 7, "save-bricon": 16, "save-sixcolor": 17, "dp-version": 18}
+OSD_EVENTS = {"info": 9, "nosignal": 1, "nocable": 2, "nosupport": 3, "failsafe": 4, "powersaving-msg": 5,
+              "source-menu": 7, "save-bricon": 15, "save-sixcolor": 16}      # EnumOSDEvenMassage (RTD2014Include.h)
 OSD_KEYS = {"menu": 0, "right": 1, "left": 2, "exit": 3}
 # g_stOsdInfo (StructOsdInfo, RTD2014Include.h): byte offsets of the fields the tools touch. The map has no member offsets and
 # _DP_DEBUG_MSG (#37) adds a bit-field byte in front of them, so: firmware self-report (diag block 0x2C..0x2E, images from #37 on)

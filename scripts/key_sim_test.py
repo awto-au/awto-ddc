@@ -2,10 +2,11 @@
 """Front-key path test in fw_sim (awto-ddc#129): physical presses through the ADC result cells, injected keys through the test cmd.
 
 usage: AWTO_SIM_CORE=fast key_sim_test.py BIN MAP [--mode 1080p60]
-- Boots to ACTIVE (HDMI D2), then per context: no OSD (DOWN info pop-up, UP selector), source selector (SOURCE opens, UP / DOWN
+- Boots to ACTIVE (HDMI D2), then per context: no OSD (DOWN info pop-up closes 6 s after opening whatever the keys, UP does nothing), source selector (SOURCE opens, UP / DOWN
   step through Auto + the board ports and wrap, rows redrawn per step, no repeat, MENU cancels; #134 text layer), awto menu (AUTO opens, DOWN moves, held DOWN repeats at the rate limit), diagnostic console
   (UP+DOWN opens with no single-key leak; main page: only MENU (closes) / POWER act; GPIO page: DOWN scrolls + repeats, AUTO / SOURCE swallowed, UP+DOWN closes), injected test cmd keys,
-  MENU+DOWN debug link with no DOWN leak, POWER off / on.
+  MENU acts at once and MENU+DOWN does nothing (no debug link, no DOWN leak), injected keys under the front-key rules (console main page; power
+  saving wakes only: wake_sim), POWER off / on.
 - Physical key = ADC_A0 (0xFF09) / ADC_A1 (0xFF0A) cell value in a fw/awto/inputs.tsv band; idle = regdb reset 0xF8; POWER = P3.0 low.
 - Actions are counted with call watches (fw_sim Machine.watch): the assertions name the function that must / must not run.
 Log: tmp/logs/key_sim_test.log
@@ -24,7 +25,7 @@ LOG = ROOT / "tmp/logs/key_sim_test.log"
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
 WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
-         "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "AwtoKeyDbgLink", "SysPowerSetTargetPowerStatus",
+         "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "SysPowerSetTargetPowerStatus",
          "AwtoPsField", "AwtoSrcPortFields")
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
@@ -102,6 +103,9 @@ class Keys:
 
     def console(self):
         return self.m.rd(self.gpio + 3)[0] | self.m.rd(self.key + 3)[0]
+
+    def osd_on(self):
+        return self.m.rd(self.osd_w)[0] != 0                    # the map width is 0 once the OSD is closed (the enable bit stays)
 
     def n(self, name):
         return self.hits.get(name, 0)
@@ -189,15 +193,29 @@ def run(k):
     w = k.m.rd(k.osd_w)[0]
     k.check("no OSD: DOWN -> info card on the text layer (#124)", k.delta(b, "AwtoKeyNoOsd") == 1 and k.delta(b, "OsdDispOsdMessage") >= 1
             and w == 28, f"{k.snap()}, map width {w}")
-    k.wait(5500)
-
-    b = k.snap()                                                # no OSD: UP = selector (SDK way in)
-    k.tap("UP")
-    st = k.osd_state()
-    k.check("no OSD: UP -> source selector (the one open path)", k.delta(b, "AwtoSourceOpen") == 1 and st != 0, f"osd state {st}")
+    k.wait(2000)
+    k.tap("UP")                                                 # keys while the pop-up is up do not move its close time
+    k.wait(2000)
     b = k.snap()
-    k.tap("MENU")
-    k.check("selector: MENU cancels", k.delta(b, "AwtoSourceKey") == 1 and k.osd_state() == 0, f"osd state {k.osd_state()}")
+    k.tap("DOWN")
+    k.check("info card: DOWN while it is up does not reopen it", k.delta(b, "OsdDispOsdMessage") == 0, f"{k.delta(b, 'OsdDispOsdMessage')}")
+    k.check("info card: still up before its 6 s", k.osd_on())
+    k.wait(1500)                                                # 2000 + 300 + 2000 + 300 + 300 + 1500 > 6 s after opening
+    k.check("info card: closed 6 s after opening (keys in between did not move it)", not k.osd_on())
+
+    b = k.snap()                                                # no OSD: UP does nothing (only SOURCE opens the selector)
+    k.tap("UP")
+    k.check("no OSD: UP does not open the selector", k.delta(b, "AwtoSourceOpen") == 0 and k.osd_state() == 0 and not k.osd_on(),
+            f"osd state {k.osd_state()}")
+    b = k.snap()
+    k.tap("SOURCE")
+    k.check("SOURCE opens the selector", k.delta(b, "AwtoSourceOpen") == 1 and k.osd_state() != 0, f"osd state {k.osd_state()}")
+    b = k.snap()
+    k.down("MENU")
+    k.wait(40)                                                  # debounce 20 ms < 40 ms < the 80 ms UP / DOWN combo window
+    k.check("selector: MENU acts at once (no combo wait)", k.delta(b, "AwtoSourceKey") == 1 and k.osd_state() == 0, f"osd state {k.osd_state()}")
+    k.adc()
+    k.wait(300)
 
     b = k.snap()                                                # SOURCE = selector; UP / DOWN step, no repeat
     k.tap("SOURCE")
@@ -269,8 +287,10 @@ def run(k):
     k.check("console main page: DOWN / UP / AUTO / SOURCE do nothing", k.console() != 0 and k.delta(b, "menu_open") == 0
             and k.delta(b, "AwtoSourceOpen") == 0 and k.menu() == 0 and k.delta(b, "AwtoKeyNoOsd") == 0, f"console {k.console()}")
     b = k.snap()
-    k.tap("MENU")
-    k.check("console main page: MENU closes it (no menu)", k.console() == 0 and k.menu() == 0, f"console {k.console()} menu {k.menu()}")
+    k.cmd(0x02)                                                 # injected keys follow the same page rules
+    k.check("console main page: injected UP does nothing", k.console() != 0 and k.delta(b, "AwtoKeyNoOsd") == 0)
+    k.cmd(0x04)
+    k.check("console main page: injected MENU closes it", k.console() == 0 and k.menu() == 0, f"console {k.console()} menu {k.menu()}")
     b = k.snap()
     k.cmd(0x43)                                                 # GPIO (key test) page: UP / DOWN scroll, the rest swallowed
     k.tap("DOWN")
@@ -307,17 +327,16 @@ def run(k):
     k.cmd(0x04)
     k.check("injected MENU closes the selector", k.osd_state() == 0)
 
-    b = k.snap()                                                # MENU + DOWN: debug link, DOWN does not leak first
+    dbg = k.m.addr("g_ucAwtoDbgLink")
+    link0 = k.m.rd(dbg)[0]
+    b = k.snap()                                                # MENU + DOWN: no combo any more; the debug link is not toggled
     k.down("DOWN")
     k.wait(30)
     k.down("MENU", "DOWN")
     k.wait(300)
     k.adc()
     k.wait(300)
-    k.check("MENU+DOWN -> debug link, no DOWN pop-up", k.delta(b, "AwtoKeyDbgLink") == 1 and k.delta(b, "AwtoKeyNoOsd") == 0,
-            str({n: k.delta(b, n) for n in ("AwtoKeyDbgLink", "AwtoKeyNoOsd")}))
-    k.tap("MENU", "DOWN", ms=300)
-    k.check("MENU+DOWN again -> debug link toggled back", k.delta(b, "AwtoKeyDbgLink") == 2)
+    k.check("MENU+DOWN: no debug link (DOWN acts alone, as the waiting key)", k.m.rd(dbg)[0] == link0)
     s.bus.dbg_link_on()
 
     b = k.snap()                                                # POWER: off, then on

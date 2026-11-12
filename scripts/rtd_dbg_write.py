@@ -4,7 +4,7 @@
 usage: rtd_dbg_write.py <bus> --serial AWT2611000N ADDR=VAL [ADDR=VAL ...]
   ADDR/VAL hex. SDK ScalerDebug cmds: 0x01 [hi] (stage), 0x03 [val] (stage), 0x3B [lo] -> ScalerSetByte.
   --serial must equal the EDID serial at 0x50 on that bus (i2cbus.require_unit).
-  Example: raise the input-info pop-up: OSD event byte g_stOsdInfo+5 (map) = _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG (10).
+  Example: raise the input-info pop-up: OSD event byte g_stOsdInfo+5 (map) = _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG (9).
 Log: ./tmp/logs/rtd_dbg_write.log (decoded I2C lines + one --label line per write)
      ./tmp/logs/rtd_dbg_write.raw.log (I2C byte trace)
 """

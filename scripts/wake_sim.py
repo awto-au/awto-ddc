@@ -34,6 +34,7 @@ import sync_log as L  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wake_sim.log"
+KEY_WAKE_MS = 250                           # one main-loop pass in power saving (AWTO_PS_POLL_MS 5, key poll 10 ms) x many: bound; expiry = FAIL
 PWR_NORMAL, PWR_SAVING, MODE_NOSIGNAL = 2, 3, 5     # Global.h EnumPowerStatus, MODE_NAMES
 D2_PIN, D3_PIN, DDC_D2, AUX_RX1, DPCD_600 = 0xFE32, 0xFE2C, 0xFE69, 0xBADC, 0x000600
 D1_PINS = (0xFE33,)    # FE33..FE35: D1 cable-status cells (deadport_sim.py NOCABLE_D1)
@@ -321,6 +322,12 @@ def main():
         r.check(re.search(r"\s_g_ucAwtoPsAuxWakeOff\b", r.m.map_text) is not None, "image: AUX command wake is off (#163)")
         r.wake_case("DP AUX command (logged, no wake)", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), None, 0)
         r.check(any("D1 AUX command from source in power saving: no wake" in x for x in r.lines()), "AUX command logged (line DB)")
+        r.check(r.sleep(), "injected key: power saving reached")
+        r.cmd(0x05, 0.0)                            # injected SOURCE: the front-key rule in power saving = wake only (#132)
+        woke, ms = r.until_wake(KEY_WAKE_MS)
+        r.check(woke, "injected SOURCE wakes the monitor (front-key rule)", f"{ms} ms")
+        r.watch(1500)
+        r.check(r.power() == PWR_NORMAL and r.bus.mode_state() != 0, "injected SOURCE: awake afterwards", f"power {r.power()}")
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
         r.poll_period()
         if "_AwtoPsTmdsLive" not in r.m.sym:
