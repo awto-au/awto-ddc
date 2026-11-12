@@ -56,7 +56,7 @@ void AwtoDiagTestCmd(void)
     {
         AwtoKeyTestSet(ucCmd == 0x41);
     }
-    else if((ucCmd == 0x43) || (ucCmd == 0x44))         // unused-GPIO live screen: open / close
+    else if((ucCmd == 0x43) || (ucCmd == 0x44))         // console GPIO page: open / close the console
     {
         AwtoGpioTestSet(ucCmd == 0x43);
     }

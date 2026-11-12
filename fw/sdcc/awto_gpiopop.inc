@@ -260,7 +260,7 @@ void AwtoOsdGpioLines(void)
     bit bAll = (g_stAwtoGpio.ucDrawn == 0);
     BYTE ucI;
 
-    if(AwtoConLost() != 0) return;
+    if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0)) return;
     AwtoPanel(0);
     if(bAll != 0)
     {
@@ -286,19 +286,38 @@ void AwtoOsdGpioLines(void)
     g_stAwtoGpio.ucRedraws++;
 }
 
-// Event log (right of the inputs panel, #144): one line per input change / sync line, newest above the "-----" marker.
+// Log pane (#144, #157): main page = sync / power lines, full width; GPIO page = input changes only (right of the table).
+// One line per entry, newest above the "-----" marker.
 static __xdata BYTE s_ucLogHead;
+static __xdata BYTE s_ucLogFull;                // 0 = first lap: rows below the head are blank, so lines are drawn unpadded
 
 static __xdata BYTE s_ucConSyncSeq;             // #139: sync ring seq the log has shown up to
+static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq
 
 void AwtoConLogInit(void)
 {
     s_ucLogHead = 0;
+    s_ucLogFull = 0;
     s_ucPanelCol = AWTO_LOG_COL;
     s_ucAwtoCols = AWTO_LOG_W;
     s_ucPanelRow = AWTO_LOG_HDR;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
+    if(s_ucConOpen == AWTO_CON_GPIO)
+    {
+        AwtoPutStr("INPUT CHANGES (NOT IN THE EVENT LOG)");
+        AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+#define AWTO_LOG_IN         g_stAwtoGpio.pstLog[s_ucLogI & (AWTO_GPIO_LOG_N - 1)]
+        for(s_ucLogI = g_stAwtoGpio.ucSeq - AWTO_GPIO_LOG_N; s_ucLogI != g_stAwtoGpio.ucSeq; s_ucLogI++)
+        {
+            if(AWTO_LOG_IN.ucSeq == s_ucLogI)       // an entry of this ring lap (zeroed slots carry another seq)
+            {
+                AwtoConLogEvent(AWTO_LOG_IN.ucId, AWTO_LOG_IN.ucVal, ((WORD)AWTO_LOG_IN.ucTickHi << 8) | AWTO_LOG_IN.ucTickLo);
+            }
+        }
+#undef AWTO_LOG_IN
+        return;
+    }
     AwtoTxt(AWTO_TXT_LOGHDR);
     AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
     s_ucConSyncSeq = (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq) <= AWTO_SYNC_N) ? g_stAwtoSync.ucEpSeq :
@@ -317,18 +336,27 @@ static void AwtoConLogStart(void)               // next log row: compose with Aw
 
 static void AwtoConLogEnd(void)
 {
+    if((s_ucLogFull == 0) && (s_ucAwtoLen < s_ucAwtoCols))
+    {
+        s_ucAwtoCols = (s_ucAwtoLen > 6) ? s_ucAwtoLen : 6;     // over a marker (6 cells) or a blank row
+    }
     AwtoTextLine(0, AWTO_T_STYLE_TEXT);
     s_ucLogHead = (s_ucLogHead + 1 >= AWTO_LOG_LINES) ? 0 : (s_ucLogHead + 1);
-    s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;      // marker on the next row: also blanks the oldest line
+    if(s_ucLogHead == 0)
+    {
+        s_ucLogFull = 1;
+    }
+    s_ucAwtoCols = (s_ucLogFull != 0) ? AWTO_LOG_W : 6;
+    s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;      // marker on the next row: also blanks the oldest line (after a wrap)
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
     AwtoTxt(AWTO_TXT_MARK);
     AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
 }
 
-void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)
+void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)    // GPIO page only: input changes never go into the event log
 {
-    if((s_ucConOpen == 0) || (AwtoConLost() != 0))
+    if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0))
     {
         return;
     }
@@ -337,17 +365,44 @@ void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)
     AwtoConLogEnd();
 }
 
+// #157 "host time <ISO>" + its "(fw +N ms, ...)" entry on one row: the fw entry's text without its "+ nnnnn ms " prefix.
+// XDATA, no locals: AwtoConLogSync sits on the deepest DATA overlay path (see AwtoPutIso).
+static __xdata BYTE s_ucLogL;
+
+static void AwtoConLogTail(void)
+{
+    s_ucLogL = s_ucAwtoLen;
+    AwtoSyncLine(s_ucConSyncSeq);
+    s_pcAwtoRow[s_ucLogL] = ' ';
+    for(s_ucLogI = s_ucLogL + 10; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // AwtoSyncLine prefix: '+', 5 digit field, " ms "
+    {
+        s_pcAwtoRow[s_ucLogI - 9] = s_pcAwtoRow[s_ucLogI];
+    }
+    s_ucAwtoLen = (s_ucAwtoLen > s_ucLogL + 10) ? (s_ucAwtoLen - 9) : (s_ucLogL + 1);
+    s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
+}
+
+#define AWTO_LOG_EV(s)      (g_stAwtoSync.stEv[AWTO_SYNC_IDX(s)].ucId)
 void AwtoConLogSync(void)                       // #139: new sync ring lines, one log row each (same decoder as the selector)
 {
     while(s_ucConSyncSeq != g_stAwtoSync.ucSeq)
     {
-        if((s_ucConOpen == 0) || (AwtoConLost() != 0))
+        if((s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
         {
             return;
+        }
+        if((AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOST) && (AWTO_SYNC_NEXT(s_ucConSyncSeq) == g_stAwtoSync.ucSeq))
+        {
+            return;                             // its fw line is pushed next (AwtoHtSync): both on one row then
         }
         AwtoConLogStart();
         AwtoSyncLine(s_ucConSyncSeq);
         s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
+        if((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOSTFW) &&
+           (AWTO_LOG_EV(AWTO_SYNC_BACK(s_ucConSyncSeq, 1)) == AWTO_SYNC_EV_HOST))
+        {
+            AwtoConLogTail();
+        }
         AwtoConLogEnd();
     }
 }

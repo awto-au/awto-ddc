@@ -458,7 +458,7 @@ typedef struct
     unsigned char ucMagic0;                     // 'G'
     unsigned char ucMagic1;                     // 'P'
     unsigned char ucVersion;                    // 4: value table + 5 B ring
-    unsigned char ucOpen;                       // diagnostic console open (sampling of VGA front end on)
+    unsigned char ucOpen;                       // console page (0 closed, AWTO_CON_*); VGA front end on for AWTO_CON_GPIO
     unsigned char ucDrawn;
     unsigned char ucSeq;                        // next transition sequence; ring index = seq & 31
     unsigned char ucRedraws;
@@ -480,6 +480,8 @@ extern __xdata unsigned char g_ucAwtoProbeCols;
 extern void AwtoProbeScroll(unsigned char ucReset);
 extern void AwtoProbeSet(unsigned char ucLines);
 extern void AwtoDiagConsole(unsigned char ucOn);
+#define AWTO_CON_MAIN                                           1       // AwtoDiagConsole page: event log (2 = toggle main)
+#define AWTO_CON_GPIO                                           3       // AwtoDiagConsole page: GPIO input table + its changes
 extern void AwtoConScroll(signed char cD);
 extern void AwtoConLogInit(void);
 extern void AwtoConLogEvent(unsigned char ucId, unsigned char ucVal, unsigned int usTick);

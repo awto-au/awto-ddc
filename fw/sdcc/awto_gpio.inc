@@ -185,6 +185,7 @@ void AwtoGpioPoll(void)
     }
     if((GET_OSD_EVENT_MESSAGE() >= _OSDEVENT_SHOW_NOSIGNAL_MSG) &&
        (GET_OSD_EVENT_MESSAGE() <= _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG)) SET_OSD_EVENT_MESSAGE(_OSDEVENT_NONE_MSG);
+    if(g_stAwtoGpio.ucOpen != AWTO_CON_GPIO) return;        // the input table is on the GPIO page only
     if((g_stAwtoGpio.ucDrawn == 0) && ((WORD)(AwtoGpioNow() - s_usAwtoGpioDraw) >= AWTO_KEY_RETRY_MS))
     {
         s_usAwtoGpioDraw = AwtoGpioNow();
@@ -220,26 +221,21 @@ BYTE AwtoKeyMaskLive(void)                     // one poll now, then the mask (b
     return AwtoKeyMaskNow();
 }
 
-void AwtoGpioConSet(BYTE ucOn)                 // the console opens / closes this panel's sampling (AwtoDiagConsole draws it)
+void AwtoGpioConSet(BYTE ucOn)                 // console page (0 closed, AWTO_CON_*); the GPIO page samples the VGA front end too
 {
     AwtoGpioEnsure();
     g_stAwtoGpio.ucDrawn = 0;
+    g_stAwtoGpio.ucOpen = ucOn;
+    AwtoVgaDiagPower(ucOn == AWTO_CON_GPIO);
     if(ucOn != 0)
     {
-        AwtoVgaDiagPower(1);
-        g_stAwtoGpio.ucOpen = 1;
         AwtoInScan(1);
         s_usAwtoGpioDraw = AwtoGpioNow();
     }
-    else
-    {
-        g_stAwtoGpio.ucOpen = 0;
-        AwtoVgaDiagPower(0);
-    }
 }
 
-void AwtoGpioTestSet(BYTE ucOn)                 // menu "GPIO inputs", test cmd 0x43 / 0x44: the diagnostic console
+void AwtoGpioTestSet(BYTE ucOn)                 // menu "GPIO inputs", test cmd 0x43 / 0x44: the console's GPIO page / close
 {
-    AwtoDiagConsole(ucOn);
+    AwtoDiagConsole((ucOn != 0) ? AWTO_CON_GPIO : 0);
 }
 #endif
