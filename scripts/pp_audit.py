@@ -301,8 +301,10 @@ def main() -> int:
         for p in base.rglob("*"):
             if p.suffix.lower() in (".c", ".h", ".inc") and p.is_file():
                 defined |= set(re.findall(r"^\s*#\s*define\s+(\w+)", p.read_text(errors="replace"), re.M))
+    cmdline = set()
     for _, cmd in js:
-        defined |= {x[2:].split("=")[0] for x in cmd if x.startswith("-D")}
+        cmdline |= {x[2:].split("=")[0] for x in cmd if x.startswith("-D")}
+    defined |= cmdline
     pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True)
     defined |= set(re.findall(r"^#define (\w+)", pre.stdout, re.M))
     for (_, defs) in [(0, d) for *_, d, _o in tu_info]:
@@ -425,7 +427,7 @@ def main() -> int:
             used.add(k)
         else:
             new.append(h)
-    stale = sorted(allow - used)
+    stale = sorted(k for k in allow - used if not (k[0] == "nodef" and k[2] in cmdline))     # opt-in -D build: its nodef rows idle
     by = defaultdict(int)
     for h in hits:
         by[h[0]] += 1
