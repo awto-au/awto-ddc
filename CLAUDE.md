@@ -11,6 +11,7 @@ Global rules apply (`~/.claude/CLAUDE.md`). Repo specifics:
 - **Exception (Dan, 2026-11-06):** RE review docs quoting Realtek lib / vendor disassembly may be committed under `re/lib-review/` (same PRIVATE condition; scrub before public).
 - Repo root in scripts: `$AWTO_DDC_REPO` → file-relative. Logs: `./tmp/logs/`.
 - Findings and open questions: GitHub issues (this repo; tracking issue #1), not chat.
+- **Only Dan closes issues (Dan, 2026-11-12):** agents never `gh issue close`; when done, comment `🤖 Ready to close:` + the evidence and add label `ready-to-close`. Review of past agent closes: awto-ddc#170.
 - Reversing conventions (confidence tags): awto-dan `docs/embedded/reversing/README.md`.
 - **Firmware = build on the Realtek RL6449 SDK (Dan, 2026-11-04):** we write board/panel/project/OSD/DDC layers;
   Realtek Kernel source and the FunctionLib *sources* are compiled with SDCC (Keil `.LIB`s can't be linked; AdvancedLib unused) (awto-sdcc#36). Compiler/Keil issues and docs live in awto-au/awto-sdcc. Board facts come from the old firmware (RE)
