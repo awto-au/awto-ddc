@@ -260,3 +260,4 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 1B	17	-	SDK power switch: AC ON -> OFF
 1B	18	-	SDK power switch: NORMAL -> OFF
 1B	19	-	SDK power switch: NORMAL -> POWER SAVING
+1B	1A	-	UP+DOWN wake (console + backlight)

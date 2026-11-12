@@ -1305,6 +1305,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AWTO_PNL_BY_USER_AC_OFF                                 0x17    // RTD2014UserInterface power switch
 #define AWTO_PNL_BY_USER_OFF                                    0x18
 #define AWTO_PNL_BY_USER_PS                                     0x19
+#define AWTO_PNL_BY_KEY_CONSOLE                                 0x1A    // UP+DOWN wake into the console (#132)
 #define AWTO_PWM_DARK                                           ((_BACKLIGHT_PWM_INVERSE == _ON) ? 0xFF : 0x00)    // 8-bit duty (_PWM_DUT_RESOLUTION) with the backlight dark
 extern __xdata unsigned char g_ucAwtoPanelOwn;     // 1 while the panel machine drives its pins (AwtoPanelPinLog flags other writers)
 extern void UserCommonInterfacePanelPowerTick(void);
