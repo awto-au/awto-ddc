@@ -857,10 +857,15 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xD7    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xD8    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
+#define AWTO_SYNC_EV_PS_AUXCMD                                  0xDB    // arg = port: AUX command in power saving, no wake (_AWTO_PS_AUX_WAKE off)
 #define AWTO_SYNC_EV_PS_BURST                                   0xD9    // arg = port: TMDS clock live shorter than the hold, value ms (once per sleep)
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON
+#endif
+// #144 test: an AUX command alone wakes (_ON, decision of task 4) or is only logged (_OFF: host DP idle AUX, DPCD 600h wakes)
+#ifndef _AWTO_PS_AUX_WAKE
+#define _AWTO_PS_AUX_WAKE                                       _ON
 #endif
 #define AWTO_WAKE_T_CABLE                                       0       // cable status not connected -> connected
 #define AWTO_WAKE_T_EDID                                        1       // DDCn_EDID_IRQ bit0: the source read the EDID

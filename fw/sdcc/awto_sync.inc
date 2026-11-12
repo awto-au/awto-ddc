@@ -440,7 +440,7 @@ __xdata WORD g_usAwtoPsAux;                         // SDK DP AUX toggles seen i
 static __xdata WORD s_pusTmdsFirst[2];              // D2 / D3: AwtoSyncNow of the first live poll of the current run
 static __xdata WORD s_pusTmdsLast[2];               // D2 / D3: last live poll
 static __xdata BYTE s_ucTmdsRun;                    // bit i - 1: a run is open on port D1 + i
-static __xdata BYTE s_ucPsSaid;                     // lines logged this sleep: bit i burst (D1 + i), bit 4 + i DDC, bit 7 AUX
+static __xdata BYTE s_ucPsSaid;                     // lines logged this sleep: bit 0 AUX cmd, bit i burst (D1 + i), bit 4 + i DDC, bit 7 SDK AUX
 
 // SDK TMDS PS predetect (keil2sdcc sub): a DDC handshake (any SCL toggle on the port's DDC, e.g. a DDC/CI or 0x35 access)
 // is counted, never a wake; an EDID read still wakes through AWTO_WAKE_T_EDID. Line once per sleep.
@@ -459,6 +459,9 @@ void AwtoPsDdcSeen(BYTE ucPort)
     }
 }
 
+#if(_AWTO_PS_AUX_WAKE == _OFF)
+__xdata BYTE g_ucAwtoPsAuxWakeOff;                  // marker in the map (D:) for wake_sim: no AUX-command wake
+#endif
 void AwtoPsAuxSeen(BYTE ucPort)                     // SDK DP PS predetect: AUX toggle counted, no wake; line once per sleep
 {
     if(g_usAwtoPsAux != 0xFFFF)
@@ -633,10 +636,18 @@ void AwtoPsWakePoll(void)                           // AWTO_SYNC_POLL + AWTO_PS_
             return;
         }
     }
+#if(_AWTO_PS_AUX_WAKE == _ON)
     if((AwtoPsWakeAux() != 0) && (AwtoPsWakeFire(AWTO_WAKE_T_AUX, 0, 0) != 0))          // index 0 = D1, the DP port
     {
         return;
     }
+#else
+    if((AwtoPsWakeAux() != 0) && ((s_ucPsSaid & _BIT0) == 0))    // logged once per sleep; DPCD 600h = D0 still wakes
+    {
+        s_ucPsSaid |= _BIT0;
+        AwtoSyncPush(AWTO_SYNC_EV_PS_AUXCMD, _D1_INPUT_PORT, 0);
+    }
+#endif
     ucNow = ScalerDpRx1GetDpcdInfo(0x00, 0x06, 0x00);
     ucR = s_ucWakeDpcd;
     s_ucWakeDpcd = ucNow;
