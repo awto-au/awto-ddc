@@ -23,7 +23,6 @@ nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_FRC	ours: dev.py build --frc 
 nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
 redef	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c	_DDCCI_BUFFER_SIZE	SDK clamp: tested before its own #undef/#define (32 vs _DDCCI_TXBUF_LENGTH), intended
 redef	fw/sdk/Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	_LAST_LINE_FINETUNE_ENABLE	SDK local disable around one block in ScalerPLL.c (#undef ... _DISABLE, restored _ENABLE at 2211), intended
-undef	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonNVRamCommonInclude.h	_AWTO_FLASH_ALL	BUG: Lib TUs do not include RL6449_Project.h, so g_ucFlashType is the constant MX25L8006E there while the project has the full table (_ON); fix pending (hidden customer issue)
 undef	fw/sdk/Kernel/System/Code/SysMain.c	_ALS_TYPE	ODM ambient-light option, absent in RL6449: undefined != _SENSER_NONE (0) = off, intended
 undef	fw/sdk/Kernel/System/Code/SysMain.c	_BACKLIGHT_SENSOR	ODM backlight-sensor option, absent: == _ON false = off, intended
 undef	fw/sdk/Kernel/System/Code/SysMain.c	_NEW_BACKLIGHT_SENSOR_FUN_EN	ODM backlight-sensor option, absent: == _ON false = off, intended

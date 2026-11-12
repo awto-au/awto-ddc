@@ -162,12 +162,7 @@ extern unsigned char AwtoKeyHold(void);
 #define _AWTO_TMDS_MEASURE_ACCEPT                               _OFF    // _ON = HDMI search accepts a port only once its timing measures (A/B for the predetect flaps, #162)
 #endif
 #define _AWTO_DP_PHYCTS                                         _ON     // DP PHY compliance (CTS) process; Dan: kept
-#define _AWTO_FLASH_ALL                                         _ON     // _OFF = MX25L8006E (JEDEC c22014) only; Dan: full table kept
-#if(_AWTO_FLASH_ALL == _ON)
-#define _AWTO_FLASH_IDX                                         g_ucFlashType
-#else
-#define _AWTO_FLASH_IDX                                         0
-#endif
+// _AWTO_FLASH_ALL: RL6449_Gen_Option.h (the Lib flash code sees it there too)
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
 #define _AWTO_DIAG                                              _ON

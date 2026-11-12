@@ -2499,7 +2499,6 @@ fn	_ScalerFlashWRDis	10	0x37d0	812
 fn	_ScalerColorSpaceLoadYuv2RgbTable	10	0x49cc	876
 fn	_ScalerColorWaitDDomainDBApply	10	0x4d38	8
 fn	_ScalerDpRx1DecodeErrorCountReset_WDINT	10	0x4d40	20
-fn	_ScalerFlashWrite	10	0x4d54	612
 fn	_ScalerFlashDetectFlashType	10	0x4fb8	624
 fn	_ScalerFlashErasePage	10	0x5228	132
 fn	_ScalerFlashReadFlashIDCode	10	0x52ac	536
@@ -2535,6 +2534,7 @@ fn	_nv_read_hdr	10	0xa764	100
 fn	_nv_scan	10	0xa7c8	552
 fn	_nv_slot_a	10	0xa9f0	28
 fn	_nv_slot_check	10	0xaa0c	164
+fn	_ScalerFlashWrite	10	0xaab0	884
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	11	0x0000	56
 fn	_AwtoWdtProbe	11	0x0038	196
 fn	_AwtoPsTmdsClk	11	0x00fc	260
