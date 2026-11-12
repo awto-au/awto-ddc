@@ -694,7 +694,9 @@ typedef enum
 //--------------------------------------------------
 // MACRO for Aspect Ratio Status
 //--------------------------------------------------
+#if((_AWTO_DEBUG_PORT == _OFF) && (_AWTO_DDCCI_ENGINES == 0))  // awto: DDC port in Realtek debug mode / spare engines (#13)
 #define GET_OSD_DDCCI_STATUS()                      (g_stOSDUserData.b1DDCCIStatus)
+#endif
 #define SET_OSD_DDCCI_STATUS(x)                     (g_stOSDUserData.b1DDCCIStatus = (x))
 
 //--------------------------------------------------
@@ -3006,7 +3008,6 @@ extern bit g_bForcePowSavStatus;
 extern StructOsdInfo g_stOsdInfo;
 extern WORD g_usAdjustValue;
 extern WORD g_usBackupValue;
-extern BYTE g_ucLogoTimerCounter;
 
 // __RTD_OSDFUNC__
 extern WORD g_usFontSelectStart;
@@ -3023,8 +3024,6 @@ extern BYTE g_ucFontPointer2;
 // Extern Tables from OsdFont.c
 //----------------------------------------------------------------------------------------
 // __RTD_OSDFONTVLC__
-extern BYTE __code tICON_REALTEK_1BIT_LOGO0[];
-extern BYTE __code tICON_REALTEK_1BIT_LOGO1[];
 
 //----------------------------------------------------------------------------------------
 // Extern Tables from OsdTable.c
@@ -3037,8 +3036,6 @@ extern BYTE __code tOSD_iKEY_RIGHT[];
 extern BYTE __code tOSD_iKEY_ENTER[];
 extern BYTE __code tOSD_iKEY_EXIT[];
 
-extern BYTE __code tiOSD_REALTEK_1BIT_LOGO0[];
-extern BYTE __code tiOSD_REALTEK_1BIT_LOGO1[];
 
 //****************************************************************************
 // FUNCTION EXTERN
@@ -3142,7 +3139,6 @@ extern void OsdDispAutoConfigProc(void);
 extern void OsdDisplayAutoBalanceProc(void);
 #endif
 
-extern void OsdDispShowLogo(void);
 extern void OsdDispShowInformation(void);
 extern void OsdDisplaySixColorGetOneColor(BYTE ucColor);
 extern void OsdDisplaySixColorSetOneColor(BYTE ucColor);

@@ -110,6 +110,7 @@ typedef struct
     BYTE b2LatencyStatus : 2;
     BYTE b1OsdDoubleSize :1;
     BYTE b3OsdDpMST : 3;
+    BYTE b1AwtoMsgOn : 1;  // awto: spare bit: debug messages switch (#74)
 //--------------------------------------------------------
 #if(_HDR10_SUPPORT == _ON)
     BYTE ucHdrMode;

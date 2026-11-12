@@ -342,16 +342,7 @@ void UserAdjustAudioVolume(BYTE ucVolume)
 //--------------------------------------------------
 WORD UserAdjustAudioVolumeMapping(BYTE ucVolume)
 {
-#if(_LINE_IN_SUPPORT == _ON)
-    if(UserInterfaceGetAudioSource() == _LINE_IN_AUDIO)
-    {
-        return (UserCommonAdjustPercentToRealValue(ucVolume, _LINE_IN_VOLUME_MAX, _LINE_IN_VOLUME_MIN, _LINE_IN_VOLUME_CENTER));
-    }
-    else
-#endif // End of #if(_LINE_IN_SUPPORT == _ON)
-    {
-        return (UserCommonAdjustPercentToRealValue(ucVolume, _DIGITAL_VOLUME_MAX, _DIGITAL_VOLUME_MIN, _DIGITAL_VOLUME_CENTER));
-    }
+    return AwtoAudioGain(ucVolume);  // awto: volume through our dB table (#93)
 }
 #endif // End of #if(_AUDIO_SUPPORT == _ON)
 

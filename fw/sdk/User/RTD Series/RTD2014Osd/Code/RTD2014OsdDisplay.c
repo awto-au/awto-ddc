@@ -259,7 +259,6 @@ void OsdDispOsdReset(void);
 void OsdDispResetDpCapabilitySwitch(void);
 #endif
 
-void OsdDispShowLogo(void);
 void OsdDispShowInformation(void);
 
 #if((_OSD_ROTATE_FUNCTION == _OSD_ROTATE_SOFTWARE) || (_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE))
@@ -544,7 +543,12 @@ BYTE OsdDispJudgeSourceType(void)
 //--------------------------------------------------
 void OsdDispDisableOsd(void)
 {
+    if(AwtoHoldBlocksDisable() == _TRUE)
+    {
+        return;
+    }  // awto: an OSD hold (debug pop-up) blocks the disable (#28)
     SET_OSD_STATE(_MENU_NONE);
+    AwtoMenuForget();  // awto: menu forgets a closed OSD (#67)
     SET_OSD_IN_FACTORY_MENU_STATUS(_FALSE);
     ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
     OsdFuncDisableOsd();
@@ -4092,168 +4096,21 @@ void OsdDispHotKeyOptionMenuSwitch(BYTE ucOption)
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-void OsdDispHotKeySourceMenuIcon(void)
-{
-    BYTE ucCol = 5;
-    OsdFuncClearOsd(ROW(6), COL(13), WIDTH(47), HEIGHT(1));
-    OsdPropPutStringCenter(ROW(6), COL(0), WIDTH(12), _PFONT_PAGE_1, _STRING_INPUT, COLOR(_CP_WHITE, _CP_BG), GET_OSD_LANGUAGE());
-
-    // Left & Right Arrow
-    OsdFontPut1Bit(ROW(3), COL(13), _iLEFT_00, COLOR(_CP_BLUE, _CP_BG));
-    OsdFontPut1Bit(ROW(3) + 1, COL(13), _iLEFT_00 + 1, COLOR(_CP_BLUE, _CP_BG));
-
-    OsdFontPut1Bit(ROW(3), COL(62), _iRIGHT_00, COLOR(_CP_BLUE, _CP_BG));
-    OsdFontPut1Bit(ROW(3) + 1, COL(62), _iRIGHT_00 + 1, COLOR(_CP_BLUE, _CP_BG));
-
-    if(GET_OSD_INPUT_PORT_OSD_ITEM() <= _OSD_INPUT_D1)
-    {
-        // auto
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_INPUT_AUTO);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 1)), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutStringCenter(ROW(6), COL(ucCol + (12 * 1) - 2), WIDTH(10), _PFONT_PAGE_1, _STRING_AUTO_SELECT, COLOR(_CP_BLUE, _CP_BG), GET_OSD_LANGUAGE());
-
-        // A0
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _A0_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 2)), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 2)), _PFONT_PAGE_1, _STRING_A0_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-
-
-        // D0
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _D0_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 3)), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 3)), _PFONT_PAGE_1, _STRING_D0_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-
-        // D1
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_DOWN_0, _D1_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 4)), (_1DYNAMIC_ICON_START + (4 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 4)), _PFONT_PAGE_1, _STRING_D1_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-    }
-    else if((GET_OSD_INPUT_PORT_OSD_ITEM() > _OSD_INPUT_D1) && (GET_OSD_INPUT_PORT_OSD_ITEM() <= _OSD_INPUT_D5))
-    {
-        // D2
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _D2_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 1)), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 1)), _PFONT_PAGE_1, _STRING_D2_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-
-        // D3
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _D3_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 2)), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 2)), _PFONT_PAGE_1, _STRING_D3_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-
-
-        // D4
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _D4_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 3)), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 3)), _PFONT_PAGE_1, _STRING_D4_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-
-        // D5
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_DOWN_0, _D5_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 4)), (_1DYNAMIC_ICON_START + (4 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 4)), _PFONT_PAGE_1, _STRING_D5_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-    }
-    else
-    {
-        // D6
-        OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _D6_INPUT_TYPE);
-        OsdFontPut1BitMainMenuIcon(ROW(2), COL(ucCol + (12 * 1)), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-        OsdPropPutString(ROW(6), COL(ucCol + (12 * 1)), _PFONT_PAGE_1, _STRING_D6_PORT, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-
-        // None
-        OsdFuncClearOsd(ROW(2), COL(3 + (12 * 2)), WIDTH(32), HEIGHT(4));
-    }
-}
+  // awto: removed; source selector: fw/sdcc/awto_osdcard.inc (#134)
 
 //--------------------------------------------------
 // Description  :
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-void OsdDispHotKeySourceMenu(void)
-{
-    OsdFuncDisableOsd();
-    OsdFuncApplyMap(WIDTH(64), HEIGHT(8), COLOR(_CP_WHITE, _CP_BG));
-
-#if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE)
-    ScalerOsdMapRotation(GET_OSD_ROTATE_STATUS(), _ENABLE, HEIGHT(8), _DISABLE, 0, _ENABLE);
-#endif
-
-    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
-    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
-
-    // Adjust Color Palette
-    OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
-
-    // Load Font & Icon
-    OsdFuncSet2BitIconOffset(_2BIT_ICON_OFFSET);
-
-    OsdFontVLCLoadFont(_FONT1_GLOBAL);
-
-    // Background window
-#if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_SOFTWARE)
-    if((GET_OSD_ROTATE_STATUS() == _OSD_ROTATE_DEGREE_90) ||
-       (GET_OSD_ROTATE_STATUS() == _OSD_ROTATE_DEGREE_270))
-    {
-        OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(12), g_ucOsdWidth, _CP_BLUE);
-        OsdWindowDrawingByFont(_OSD_WINDOW_0, ROW(0), COL(12), WIDTH(52), g_ucOsdWidth, _CP_LIGHTBLUE);
-    }
-    else
-#endif
-    {
-        OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(12), g_ucOsdHeight, _CP_BLUE);
-        OsdWindowDrawingByFont(_OSD_WINDOW_0, ROW(0), COL(12), WIDTH(52), g_ucOsdHeight, _CP_LIGHTBLUE);
-    }
-
-
-    // title
-    // icon
-    OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_INPUT);
-
-    OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-
-
-    // highligh window
-    if(GET_OSD_INPUT_PORT_OSD_ITEM() <= _OSD_INPUT_D1)
-    {
-        OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_1, ROW(0), COL(3 + (12 * (GET_OSD_INPUT_PORT_OSD_ITEM() + 1))), WIDTH(10), HEIGHT(8), _CP_LIGHTBLUE, _CP_ORANGE, _CP_BG);
-    }
-    else if((GET_OSD_INPUT_PORT_OSD_ITEM() > _OSD_INPUT_D1) && (GET_OSD_INPUT_PORT_OSD_ITEM() <= _OSD_INPUT_D5))
-    {
-        OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_1, ROW(0), COL(3 + (12 * ((GET_OSD_INPUT_PORT_OSD_ITEM() - 4) + 1))), WIDTH(10), HEIGHT(8), _CP_LIGHTBLUE, _CP_ORANGE, _CP_BG);
-    }
-    else
-    {
-        OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_1, ROW(0), COL(3 + (12 * ((GET_OSD_INPUT_PORT_OSD_ITEM() - 8) + 1))), WIDTH(10), HEIGHT(8), _CP_LIGHTBLUE, _CP_ORANGE, _CP_BG);
-    }
-
-    OsdDispHotKeySourceMenuIcon();
-
-    OsdDispSetPosition(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50);
-
-    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
-
-    OsdFuncEnableOsd();
-}
+  // awto: removed; source selector: fw/sdcc/awto_osdcard.inc (#134)
 
 //--------------------------------------------------
 // Description  :
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-void OsdDispHotKeySourceMenuSwitch(void)
-{
-    if(GET_OSD_INPUT_PORT_OSD_ITEM() <= _OSD_INPUT_D1)
-    {
-        OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_1, ROW(0), COL(3 + (12 * (GET_OSD_INPUT_PORT_OSD_ITEM() + 1))), WIDTH(10), HEIGHT(8), _CP_LIGHTBLUE, _CP_ORANGE, _CP_BG);
-    }
-    else if((GET_OSD_INPUT_PORT_OSD_ITEM() > _OSD_INPUT_D1) && (GET_OSD_INPUT_PORT_OSD_ITEM() <= _OSD_INPUT_D5))
-    {
-        OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_1, ROW(0), COL(3 + (12 * ((GET_OSD_INPUT_PORT_OSD_ITEM() - 4) + 1))), WIDTH(10), HEIGHT(8), _CP_LIGHTBLUE, _CP_ORANGE, _CP_BG);
-    }
-    else
-    {
-        OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_1, ROW(0), COL(3 + (12 * ((GET_OSD_INPUT_PORT_OSD_ITEM() - 8) + 1))), WIDTH(10), HEIGHT(8), _CP_LIGHTBLUE, _CP_ORANGE, _CP_BG);
-    }
-}
+  // awto: removed; source selector: fw/sdcc/awto_osdcard.inc (#134)
 
 //--------------------------------------------------
 // Description  :
@@ -4273,247 +4130,10 @@ void OsdDispPanelUniformityMsgSwitch(void)
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)
-{
-    OsdDispDisableOsd();
-
-    g_ucFontPointer0 = _OSD_PAGE_0_START;
-    g_ucFontPointer1 = _OSD_PAGE_1_START;
-    g_ucFontPointer2 = _OSD_PAGE_2_START;
-
-    OsdFuncApplyMap(WIDTH(36), HEIGHT(8), COLOR(_CP_WHITE, _CP_BG));
-
-#if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE)
-    ScalerOsdMapRotation(GET_OSD_ROTATE_STATUS(), _ENABLE, HEIGHT(8), _DISABLE, 0, _ENABLE);
-#endif
-
-    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
-    OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
-
-    // Adjust Color Palette
-    OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
-
-    // Load Font & Icon
-    OsdFuncSet2BitIconOffset(_2BIT_ICON_OFFSET);
-
-    OsdFontVLCLoadFont(_FONT1_GLOBAL);
-
-    // Background window Modify
-#if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_SOFTWARE)
-    if((GET_OSD_ROTATE_STATUS() == _OSD_ROTATE_DEGREE_90) ||
-       (GET_OSD_ROTATE_STATUS() == _OSD_ROTATE_DEGREE_270))
-    {
-        OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(12), HEIGHT(g_ucOsdWidth), _CP_BLUE);
-        OsdWindowDrawingByFont(_OSD_WINDOW_0, ROW(0), COL(12), WIDTH(g_ucOsdHeight - 12), HEIGHT(g_ucOsdWidth), _CP_LIGHTBLUE);
-    }
-    else
-#endif
-    {
-        if(enumMessage == _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG)
-        {
-            OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(g_ucOsdWidth), g_ucOsdHeight, _CP_LIGHTBLUE);
-        }
-        else
-        {
-            OsdWindowDrawingByFont(_OSD_WINDOW_1, ROW(0), COL(0), WIDTH(12), g_ucOsdHeight, _CP_BLUE);
-            OsdWindowDrawingByFont(_OSD_WINDOW_0, ROW(0), COL(12), WIDTH(g_ucOsdWidth - 12), g_ucOsdHeight, _CP_LIGHTBLUE);
-        }
-    }
-
-    //==== Show page item =======
-    switch(enumMessage)
-    {
-        case _OSD_DISP_NOSIGNAL_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_NO_SIGNAL);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_NO_SIGNAL_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_NO_SIGNAL_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            break;
-
-        case _OSD_DISP_NOCABLE_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_NO_CABLE);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_NO_CABLE_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_NO_CABLE_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            break;
-
-        case _OSD_DISP_NOSUPPORT_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_NO_SUPPORT);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_NO_SUPPORT_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_NO_SUPPORT_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            break;
-
-        case _OSD_DISP_FAIL_SAFE_MODE_MSG:
-            OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, _STRING_NO_SUPPORT, COLOR(_CP_WHITE, _CP_BG), GET_OSD_LANGUAGE());
-            break;
-
-        case _OSD_DISP_AUTO_CONFIG_MSG:
-            // itle
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_AUTO_ADJUST);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_AUTO_ADJUST_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_AUTO_ADJUST_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _ICON_AUTO_ADJUST_TEXT_2);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6 + 6), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-
-            break;
-
-        case _OSD_DISP_INPUT_SIGNAL_MSG:
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _MENU_INFORMATION);
-            OsdFontPut1BitMainMenuIcon(ROW(_OSD_MESSAGE_ROW_START), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-#if(_DP_DEBUG_MSG == _ON)
-            if(SysModeGetModeState() != _MODE_STATUS_ACTIVE)
-            {
-#if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
-                SET_OSD_POWER_SAVING_SHOW_DP_INFO_PORT(_D0_INPUT_PORT);
-                OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, _STRING_D0_PORT, COLOR(_CP_BLUE, _CP_LIGHTBLUE), _ENGLISH);
-                OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START +1), COL(_OSD_MESSAGE_CENTER_COL_START),  _PFONT_PAGE_1, _STRING_DP_INFO, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-                OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START +1), COL(_OSD_MESSAGE_CENTER_COL_START+10),  _PFONT_PAGE_1, _STRING_DP_INFO_2, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-#endif
-#if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-                SET_OSD_POWER_SAVING_SHOW_DP_INFO_PORT(_D1_INPUT_PORT);
-                OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START +3), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, _STRING_D1_PORT, COLOR(_CP_BLUE, _CP_LIGHTBLUE), _ENGLISH);
-                OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START +4), COL(_OSD_MESSAGE_CENTER_COL_START), _PFONT_PAGE_1, _STRING_DP_INFO, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-                OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START +4), COL(_OSD_MESSAGE_CENTER_COL_START+10),  _PFONT_PAGE_1, _STRING_DP_INFO_2, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-#endif
-#if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
-                SET_OSD_POWER_SAVING_SHOW_DP_INFO_PORT(_D2_INPUT_PORT);
-                OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START +6), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, _STRING_D2_PORT, COLOR(_CP_BLUE, _CP_LIGHTBLUE), _ENGLISH);
-                OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START +7), COL(_OSD_MESSAGE_CENTER_COL_START),  _PFONT_PAGE_1, _STRING_DP_INFO, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-                OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START +7), COL(_OSD_MESSAGE_CENTER_COL_START+10),  _PFONT_PAGE_1, _STRING_DP_INFO_2, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-#endif
-                break;
-            }
-#endif
-
-            OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_1, OsdDisplayGetSourcePortString(), COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
-            OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START + 1), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, _STRING_NOW_RESOLUTION, COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
-            OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START + 2), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, _STRING_HFREQPCLK, COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
-
-
-            switch(SysSourceGetSourceType())
-            {
-#if(_VGA_SUPPORT == _ON)
-                case _SOURCE_VGA:
-                    OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START + 3), COL(_OSD_MESSAGE_CENTER_COL_START - 1), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_0, OsdDisplayGetVGAModeString(g_stVGAModeUserData.b1IsPresetMode), COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
-                    OsdPropShowNumber(ROW(_OSD_MESSAGE_ROW_START + 3), COL(27), g_stVGAModeUserData.ucModeNumber, (_ALIGN_LEFT | _FORCE_SHOW_NUMBER_OFF | _SHOW_3), _PFONT_PAGE_1, COLOR(_CP_WHITE, _CP_BG));
-                    break;
-#endif
-#if(_DIGITAL_PORT_SUPPORT == _ON)
-#if(_DP_DEBUG_MSG == _ON)
-                case _SOURCE_DP:
-                    OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START + 5), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(9), _PFONT_PAGE_1, _STRING_DP_INFO, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-                    OsdPropPutString(ROW(_OSD_MESSAGE_ROW_START + 5), COL(_OSD_MESSAGE_CENTER_COL_START + 9),  _PFONT_PAGE_1, _STRING_DP_INFO_2, COLOR(_CP_GRAY, _CP_LIGHTBLUE), _ENGLISH);
-#endif
-
-                default:
-                    OsdPropPutStringCenter(ROW(_OSD_MESSAGE_ROW_START + 3), COL(_OSD_MESSAGE_CENTER_COL_START), WIDTH(_OSD_MESSAGE_CENTER_COL_END), _PFONT_PAGE_1, _STRING_HDCP_MODE, COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
-#if(_FREESYNC_SUPPORT == _ON)
-                    if (ScalerSyncGetFREESYNCEnable() == _TRUE)
-                    {
-                        SET_OSD_INFO_STRING_MODE(_PUT_STRING_CENTER);
-                        SET_OSD_INFO_STRING_MODE_LENGTH(_OSD_MESSAGE_CENTER_COL_END);
-                        OsdPropShowFreeSyncVFreqRange(ROW(_OSD_MESSAGE_ROW_START + 4), COL(_OSD_MESSAGE_CENTER_COL_START), _PFONT_PAGE_1, COLOR(_CP_WHITE, _CP_BG), _ENGLISH);
-                    }
-#endif
-
-                    break;
-#endif
-            }
-
-            break;
-
-        case _OSD_DISP_AUTO_COLOR_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _MENU_COLOR);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_AUTO_COLOR_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_AUTO_COLOR_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _ICON_AUTO_COLOR_TEXT_2);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6 + 6), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-
-            break;
-
-        case _OSD_DISP_POWER_SAVING_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_POWER_SAVING);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_POWER_SAVING_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_POWER_SAVING_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _ICON_POWER_SAVING_TEXT_2);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6 + 6), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-            break;
-        case _OSD_DISP_PANEL_UNIFORMITY_ONOFF_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_TRUN_OFF_PANEL_UNI_TEXT0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_TRUN_OFF_PANEL_UNI_TEXT1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3 + 6), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_YES);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(18), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _ICON_NO);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(27), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-
-            break;
-#if(_FREEZE_SUPPORT == _ON)
-        case _OSD_DISP_DISABLE_FREEZE_MSG:
-            // title
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_FREEZE);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            // icon
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_FREEZE_DISABLE_TEXT_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_FREEZE_DISABLE_TEXT_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _ICON_FREEZE_DISABLE_TEXT_2);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6 + 6), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-            break;
-#endif
-#if(_DP_MST_SUPPORT == _ON)
-        case _OSD_DISP_MST_WARNING_MSG:
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_0, _ICON_DP_MST);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(3), (_1DYNAMIC_ICON_START + (0 * 24)), _CP_WHITE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_1, _ICON_MST_WARNING_MSG_0);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14), (_1DYNAMIC_ICON_START + (1 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_2, _ICON_MST_WARNING_MSG_1);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6), (_1DYNAMIC_ICON_START + (2 * 24)), _CP_BLUE, _CP_BG);
-            OsdFontVLCDynamicLoadIcon(_ICON_POS_UP_3, _ICON_MST_WARNING_MSG_2);
-            OsdFontPut1BitMainMenuIcon(ROW(2), COL(14 + 6 + 6), (_1DYNAMIC_ICON_START + (3 * 24)), _CP_BLUE, _CP_BG);
-            break;
-#endif
-        default:
-            break;
-    }
-
-    OsdDispSetPosition(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50);
-
-    ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
-
-    OsdFuncEnableOsd();
-}
+#define AWTO_FW_TAG "@FW_TAG@"
+#include "awto_dbgpop.inc"  // awto: OSD text layer, cards and panels (#134)
+#include "awto_osdcard.inc"  // awto: OSD text layer, cards and panels (#134)
+  // awto: removed; message cards: fw/sdcc/awto_osdcard.inc (#124)
 
 #if(_VGA_SUPPORT == _ON)
 //--------------------------------------------------
@@ -4688,44 +4308,7 @@ void OsdDispResetDpCapabilitySwitch(void)
 }
 #endif
 
-//--------------------------------------------------
-// Description  : Logo showing function
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void OsdDispShowLogo(void)
-{
-    g_ucLogoTimerCounter = 0;
-
-    ScalerDDomainPatternGenAdjustColor(0, 0, 0);
-    ScalerDDomainPatternGenEnable(_ENABLE);
-    ScalerDDomainBackgroundEnable(_DISABLE);
-
-    OsdFuncDisableOsd();
-    OsdPaletteSelectPalette(_PALETTE_MAIN_MENU);
-    OsdFuncApplyMap(WIDTH(70), HEIGHT(10), COLOR(_LOGO_CP_WHITE, _LOGO_CP_BG));
-
-#if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE)
-    ScalerOsdMapRotation(GET_OSD_ROTATE_STATUS(), _ENABLE, g_ucOsdHeight, _DISABLE, 0, _ENABLE);
-#endif
-
-    OsdFuncBlending(_OSD_TRANSPARENCY_ONLY_WINDOW);
-    OsdFuncTransparency(_OSD_TRANSPARENCY_MAX);
-    OsdFontVLCLoadFont(_REALTEK_1BIT_LOGO0);
-    OsdFontVLCLoadFont(_REALTEK_1BIT_LOGO1);
-
-    OsdFontPut1BitTable(ROW(0), COL(0), tiOSD_REALTEK_1BIT_LOGO0, COLOR(_LOGO_CP_BG, _LOGO_CP_BG));
-    OsdFontPut1BitTable(ROW(0), COL(19), tiOSD_REALTEK_1BIT_LOGO1, COLOR(_LOGO_CP_BG, _LOGO_CP_BG));
-    OsdDispSetPosition(_POS_PERCENT, _OSD_POSITION_GLOBAL_A, 50, 50);
-    OsdWindowDrawing(_OSD_WINDOW_0, XSTART(1), YSTART(1), XEND(_LOGO_WINDOW_SIZE_X), YEND(_LOGO_WINDOW_SIZE_Y), _LOGO_CP_BLUE);
-    OsdFuncEnableOsd();
-
-#if(_INSTANT_TIMER_EVENT_0 == _ON)
-    ScalerTimer0SetTimerCount(16);
-#endif
-
-    SET_OSD_LOGO_ON(_ON);
-}
+  // awto: boot logo removed (#144)
 
 //--------------------------------------------------
 // Description  : OSD information function
@@ -5542,4 +5125,7 @@ void OsdDispAdvanceItemSelect(BYTE ucIndex)
     }
 }
 
+#include "awto_keypop.inc"  // awto: OSD text layer, cards and panels (#134)
+#include "awto_gpiopop.inc"  // awto: OSD text layer, cards and panels (#134)
+#include "awto_wdtpop.inc"  // awto: main-loop watchdog (#131)
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

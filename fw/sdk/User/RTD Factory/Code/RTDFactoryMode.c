@@ -20,6 +20,7 @@
 #define __FACTORY_MODE__
 
 #include "UserCommonInclude.h"
+#if(_AWTO_FACTORY == _ON)  // awto: size switch: factory menu (#65)
 
 //****************************************************************************
 // DEFINITIONS / MACROS
@@ -3231,3 +3232,8 @@ void RTDFactoryOsdPage1AdjustExit(void)
 }
 
 
+
+#else
+void RTDFactoryMenuOperation(void) {}
+void RTDFactoryMainMenu(void) {}
+#endif

@@ -26,7 +26,9 @@
 //--------------------------------------------------
 // Version Code of NVRam
 //--------------------------------------------------
+#if(!defined(_CHECKSUM))  // awto: NVRAM checksum from RL6449_Project.h (old data reloads defaults) (#8)
 #define _CHECKSUM                                   0x1A
+#endif
 #define _VERSION_CODE                               0x2A
 
 //--------------------------------------------------
@@ -160,7 +162,7 @@ __code StructOsdUserDataType g_stOSDDefaultData =
 #endif
 //--------------------------------------------------------
     0,                         // b1OsdDpD0PortVersion : 1;
-    0,                         // b1OsdDpD1PortVersion : 1;
+    _AWTO_DP_D1_VERSION,                         // b1OsdDpD1PortVersion /* awto: D1 DP version default _AWTO_DP_D1_VERSION (#28) */ : 1;
     _OFF,                      // b2OsdDpMST : 2;
     0,                         // b3OsdDispRotate : 3;
     0,                         // b1OsdDpVersionHotKeyDisp : 1;
@@ -1037,7 +1039,7 @@ void RTDFlashSaveChecksumVersionCode(BYTE ucChecksum, BYTE ucVersionCode)
 //--------------------------------------------------
 bit RTDFlashMoveData(BYTE ucPageID, BYTE *pucData)
 {
-    BYTE ucPrevPage = g_pucFlashPageArr[ucPageID];
+    BYTE ucPrevPage = g_pucFlashPageArr[ucPageID]; AWTO_NV_EV(5);  // awto: NVRAM save timing in the sync log (#150)
     BYTE ucFreePage = _SYSTEM_EEPROM_EMULATION_START_PAGE;
     BYTE ucItemIndex = 0;
     WORD usAddrIndex = 0;

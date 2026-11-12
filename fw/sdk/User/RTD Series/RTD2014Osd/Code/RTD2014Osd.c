@@ -45,7 +45,6 @@ StructOsdInfo g_stOsdInfo;
 
 WORD g_usAdjustValue;
 WORD g_usBackupValue;
-BYTE g_ucLogoTimerCounter;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -94,9 +93,9 @@ void RTDOsdSystemFlowProc(void)
                 UserAdjustFREESYNCODMeasure();
 #endif
 
-                OsdDispShowLogo();
-                UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
-                ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO);
+                AwtoBootConsole();  // awto: boot console instead of the logo (#144)
+                AWTO_BOOT_PANEL_ON();  // awto: boot panel power-on (#144)
+  // awto: boot logo removed (#144)
             }
 
             break;
@@ -219,102 +218,7 @@ void RTDOsdSystemFlowProc(void)
     UserCommonAdjustEmbeddedDpSwitch();
 #endif
 
-    if(GET_KEYMESSAGE() < _KEY_AMOUNT)
-    {
-        // hot key
-        if((SysModeGetModeState() == _MODE_STATUS_ACTIVE) ||
-           (SysModeGetModeState() == _MODE_STATUS_NOSUPPORT) ||
-           (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL) ||
-           (SysModeGetModeState() == _MODE_STATUS_POWER_SAVING))
-        {
-#if((_D0_INPUT_PORT_TYPE == _D0_DP_PORT) || (_D1_INPUT_PORT_TYPE == _D1_DP_PORT))
-            if((GET_OSD_STATE() != _MENU_NONE) &&
-               ((GET_KEYMESSAGE() == _LEFT_KEY_MESSAGE) || (GET_KEYMESSAGE() == _RIGHT_KEY_MESSAGE)) &&
-               (GET_OSD_STATE() != _MENU_HOTKEY_SOURCE))
-#else
-            if((GET_OSD_STATE() != _MENU_NONE) && ((GET_KEYMESSAGE() == _LEFT_KEY_MESSAGE) || (GET_KEYMESSAGE() == _RIGHT_KEY_MESSAGE)))
-#endif
-            {
-                SET_KEYREPEATENABLE();
-            }
-        }
-
-        if(GET_OSD_IN_FACTORY_MENU_STATUS() == _TRUE)
-        {
-            RTDFactoryMenuOperation();
-            ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
-        }
-        else
-        {
-#if(_FREEZE_SUPPORT == _ON)
-#if(_URGENT_EVENT_CHECK_MODE == _ON)
-            if(ScalerTimerSearchActiveTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG) == _TRUE)
-            {
-                return;
-            }
-#else
-            if(GET_FREEZE_DISABLE_MSG_STATE() == _ON)
-            {
-                return;
-            }
-#endif
-#endif
-            // back up previous OSD State
-            SET_OSD_STATE_PREVIOUS(GET_OSD_STATE());
-
-#if(_FREEZE_SUPPORT == _ON)
-            if(GET_OSD_FREEZE_STATUS() == _ON) // Confirm whether disable the freeze status
-            {
-                if(OsdFuncCheckFreezeDisable() == _TRUE)
-                {
-                    return;
-                }
-            }
-#endif
-
-            if((GET_OSD_STATE() >= _MENU_PICTURE) && (GET_OSD_STATE() <= _MENU_COLOR_PCM_SOFT_PROFT_ADJUST))
-            {
-                OsdDispMainMenuKeyInfo(GET_KEYMESSAGE(), _OSD_HIGHLIGHT);
-            }
-
-            (*OperationTable[GET_OSD_STATE()])();
-
-            if(GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE)
-            {
-                if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-                {
-                    if(GET_OSD_TIME_OUT() <= 10)
-                    {
-                        ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
-                    }
-                    else
-                    {
-                        ScalerTimerReactiveTimerEvent(SEC(GET_OSD_TIME_OUT()), _USER_TIMER_EVENT_OSD_DISABLE);
-                    }
-                }
-            }
-
-
-/*
-            if((GET_OSD_STATE() >= _MENU_NONE) &&
-                (GET_OSD_STATE() < _MENU_END) &&
-                ((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) || (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL)))
-            {
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
-                ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-            }
-            else//(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-            {
-                ScalerTimerReactiveTimerEvent(SEC(GET_OSD_TIME_OUT()), _USER_TIMER_EVENT_OSD_DISABLE);
-            }
-
-            if(GET_OSD_IN_FACTORY_MENU_STATUS())
-            {
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
-            }
-*/
-        }
-    }
+  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 }
 
 //--------------------------------------------------
@@ -359,9 +263,9 @@ void RTDOsdEventMsgProc(void)
             SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
             OsdFuncSetOsdItemFlag();
             g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-            OsdDispHotKeySourceMenu();
+            AwtoSourceOpen();  // awto: our source selector (#134)
 
-            ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
+  // awto: sleep rule in AwtoSourceOpen (AwtoSrcSleepArm) (#139)
             UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
             break;
 
@@ -417,8 +321,10 @@ void RTDOsdEventMsgProc(void)
 
             if(GET_OSD_STATE() == _MENU_NONE)
             {
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 9);  // awto: switch-log probe (#60)
                 OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
-                ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_DISABLE);
+                AwtoSwEvent(AWTO_SW_EV_PROBE, 10);  // awto: switch-log probe (#60)
+                ScalerTimerActiveTimerEvent(SEC(_AWTO_INFO_POPUP_SEC), _USER_TIMER_EVENT_OSD_DISABLE); /* awto: info pop-up time _AWTO_INFO_POPUP_SEC */
             }
             break;
 
@@ -510,116 +416,7 @@ void RTDOsdEventMsgProc(void)
 }
 
 
-void MenuNone(void)
-{
-    switch(GET_KEYMESSAGE())
-    {
-        case _MENU_KEY_MESSAGE:
-            if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-            {
-                SET_OSD_STATE(_MENU_PICTURE);
-                OsdFuncSetOsdItemFlag();
-                OsdDispMainMenu();
-            }
-            break;
-
-        case _RIGHT_KEY_MESSAGE:
-            // input source
-            CLR_KEYREPEATENABLE();
-
-            if(SysModeGetModeState() == _MODE_STATUS_POWER_SAVING)
-            {
-                SET_OSD_POWER_SAVING_SHOW_SOURCE(_TRUE);
-
-                if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
-                {
-                    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-                }
-            }
-            else if((SysModeGetModeState() == _MODE_STATUS_NOSUPPORT) || (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
-            {
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SHOW_CHANGE_SOURCE_MENU_MSG);
-            }
-            else if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-            {
-                SET_OSD_STATE(_MENU_HOTKEY_SOURCE);
-                OsdFuncSetOsdItemFlag();
-                g_usBackupValue = GET_OSD_INPUT_PORT_OSD_ITEM();
-                OsdDispHotKeySourceMenu();
-            }
-            break;
-
-        case _LEFT_KEY_MESSAGE:
-
-            if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
-            {
-                // active show input information
-                OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
-                ScalerTimerActiveTimerEvent(SEC(5), _USER_TIMER_EVENT_OSD_DISABLE);
-            }
-#if(_DP_DEBUG_MSG == _ON)
-            else if(SysModeGetModeState() == _MODE_STATUS_POWER_SAVING)
-            {
-                SET_OSD_POWER_SAVING_SHOW_DP_INFO(_TRUE);
-
-                if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
-                {
-                    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-                }
-            }
-            else
-            {
-                OsdDispOsdMessage(_OSD_DISP_INPUT_SIGNAL_MSG);
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-                ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
-            }
-
-#endif
-
-            break;
-
-        case _EXIT_KEY_MESSAGE:
-            // auto adjust
-#if(_VGA_SUPPORT == _ON)
-            if((SysModeGetModeState() == _MODE_STATUS_ACTIVE) && (GET_FAIL_SAFE_MODE() == _FALSE) && (SysSourceGetSourceType() == _SOURCE_VGA))
-            {
-#if(_FREEZE_SUPPORT == _ON)
-                if(GET_OSD_FREEZE_STATUS() == _ON)
-                {
-                    SET_OSD_FREEZE_STATUS(_OFF);
-                    UserCommonAdjustDisplayFreeze(GET_OSD_FREEZE_STATUS());
-                    OsdDispOsdMessage(_OSD_DISP_DISABLE_FREEZE_MSG);
-                    ScalerTimerActiveTimerEvent(SEC(1), _USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG);
-                }
-#endif
-
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_DO_AUTO_CONFIG_MSG);
-            }
-#endif
-            // ddcci
-            if(SysModeGetModeState() == _MODE_STATUS_POWER_SAVING)
-            {
-                SET_OSD_WAKE_UP_SWITCH_DDCCI_PORT(_TRUE);
-
-                if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
-                {
-                    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-                }
-            }
-            else if((SysModeGetModeState() == _MODE_STATUS_NOSUPPORT) || (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
-            {
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_WAKE_UP_SWITCH_DDCCI_PORT_MSG);
-            }
-
-            break;
-
-        default:
-            break;
-    }
-}
+  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 
 void MenuPicture(void)
 {
@@ -659,7 +456,7 @@ void MenuPicture(void)
             OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
             OsdDispMainMenuIconPage(_UP, _ICON_PAGE_PICTURE_0);
 
-            // OsdDispMainMenuKeyInfo(_KEY_INFO_BACK, _OSD_UNSELECT);
+            // AWTO_REALTEK_KEYINFO(_KEY_INFO_BACK, _OSD_UNSELECT);
             OsdDispSliderAndNumber(_MENU_PICTURE_BACKLIGHT, GET_OSD_BACKLIGHT());
             break;
 
@@ -1199,7 +996,7 @@ void MenuPictureBacklight(void)
             OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
             OsdDispMainMenuIconPage(_UP, _ICON_PAGE_MAIN_0);
             OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_PICTURE_0);
-            OsdDispMainMenuKeyInfo(_KEY_INFO_EXIT, _OSD_UNSELECT);
+            AWTO_REALTEK_KEYINFO(_KEY_INFO_EXIT, _OSD_UNSELECT);
             break;
 
         default:
@@ -10770,289 +10567,7 @@ void MenuHotKeyDdcci(void)
     }
 }
 
-void MenuHotKeySource(void)
-{
-    switch(GET_KEYMESSAGE())
-    {
-        case _MENU_KEY_MESSAGE:
-            if(GET_OSD_DP_VERSION_HOTKEY_DISP() == _OFF)
-            {
-                if(g_usBackupValue != GET_OSD_INPUT_PORT_OSD_ITEM())
-                {
-                    switch(GET_OSD_INPUT_PORT_OSD_ITEM())
-                    {
-                        case _OSD_INPUT_AUTO: // auto
-#if((_DP_MST_SUPPORT == _ON) && (_DP_MST_AUTO_SEARCH_SUPPORT == _OFF))
-                            if(GET_OSD_DP_MST() != _MST_OFF)
-                            {
-                                SET_OSD_DP_MST(_MST_OFF);
-                            }
-#endif
-                            SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if(UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType())
-                            {
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-
-                        case _OSD_INPUT_A0: // A0
-#if(_A0_INPUT_PORT_TYPE != _A0_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_A0_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-                            break;
-#else
-                            return;
-#endif
-
-
-                        case _OSD_INPUT_D0: // D0
-#if(_D0_INPUT_PORT_TYPE != _D0_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D0_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-#else
-                            return;
-#endif
-
-                        case _OSD_INPUT_D1:    // D1
-#if(_D1_INPUT_PORT_TYPE != _D1_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D1_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-#else
-                            return;
-#endif
-
-                        case _OSD_INPUT_D2:    // D2
-#if(_D2_INPUT_PORT_TYPE != _D2_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D2_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-#else
-                            return;
-#endif
-
-                        case _OSD_INPUT_D3:    // D3
-#if(_D3_INPUT_PORT_TYPE != _D3_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D3_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-#else
-                            return;
-#endif
-
-                        case _OSD_INPUT_D4:    // D4
-#if(_D4_INPUT_PORT_TYPE != _D4_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D4_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-#else
-                            return;
-#endif
-
-                        case _OSD_INPUT_D5:    // D5
-#if(_D5_INPUT_PORT_TYPE != _D5_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D5_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-
-                            break;
-#else
-                            return;
-#endif
-
-                        case _OSD_INPUT_D6:    // D6
-#if(_D6_INPUT_PORT_TYPE != _D6_NO_PORT)
-                            SET_FORCE_POW_SAV_STATUS(_FALSE);
-                            SysSourceSwitchInputPort(_D6_INPUT_PORT);
-                            SysSourceSetScanType(_SOURCE_SWITCH_FIXED_PORT);
-
-                            SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
-
-                            if((UserCommonNVRamGetSystemData(_SEARCH_PORT) != SysSourceGetInputPort()) ||
-                               (UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE) != SysSourceGetScanType()))
-                            {
-                                UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
-                                UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-                                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_SYSTEMDATA_MSG);
-                            }
-                            break;
-#else
-                            return;
-#endif
-
-                        default:
-                            break;
-                    }
-
-#if(_DP_MST_SUPPORT == _ON)
-                    UserCommonInterfaceMstRx0Rx1switch(UserCommonInterfaceGetDpMstCapablePort());
-                    RTDNVRamSaveOSDData();
-#endif
-                }
-                else
-                {
-                    if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) ||
-                       (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL) ||
-                       (SysModeGetModeState() == _MODE_STATUS_NOSUPPORT))
-                    {
-                        ScalerTimerReactiveTimerEvent(SEC(0), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-                    }
-                    else
-                    {
-                        OsdDispDisableOsd();
-                    }
-                }
-                SET_OSD_STATE(_MENU_NONE);
-            }
-
-            break;
-
-        case _RIGHT_KEY_MESSAGE:
-            SET_OSD_INPUT_PORT_OSD_ITEM(OsdDisplayDetOverRange(GET_OSD_INPUT_PORT_OSD_ITEM(), 8, 0, _ON));
-            OsdDispHotKeySourceMenuSwitch();
-            if((GET_OSD_INPUT_PORT_OSD_ITEM() == _OSD_INPUT_D2) ||
-               (GET_OSD_INPUT_PORT_OSD_ITEM() == _OSD_INPUT_D6) ||
-               (GET_OSD_INPUT_PORT_OSD_ITEM() == _OSD_INPUT_AUTO))
-            {
-                OsdDispHotKeySourceMenuIcon();
-            }
-
-            if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) ||
-               (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
-            {
-                ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-            }
-            SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
-
-            break;
-
-        case _LEFT_KEY_MESSAGE:
-
-            SET_OSD_INPUT_PORT_OSD_ITEM(OsdDisplayDetOverRange(GET_OSD_INPUT_PORT_OSD_ITEM(), 8, 0, _ON));
-            OsdDispHotKeySourceMenuSwitch();
-            if((GET_OSD_INPUT_PORT_OSD_ITEM() == _OSD_INPUT_D5) ||
-               (GET_OSD_INPUT_PORT_OSD_ITEM() == _OSD_INPUT_D1) ||
-               (GET_OSD_INPUT_PORT_OSD_ITEM() == _OSD_INPUT_D6))
-            {
-                OsdDispHotKeySourceMenuIcon();
-            }
-            if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) ||
-               (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL))
-            {
-                ScalerTimerReactiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-            }
-            SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
-
-            break;
-
-        case _EXIT_KEY_MESSAGE:
-            if(g_usBackupValue != GET_OSD_INPUT_PORT_OSD_ITEM())
-            {
-                SET_OSD_INPUT_PORT_OSD_ITEM(g_usBackupValue);
-                SET_OSD_EVENT_MESSAGE(_OSDEVENT_SAVE_NVRAM_OSDUSERDATA_MSG);
-            }
-
-            if((SysModeGetModeState() == _MODE_STATUS_POWER_SAVING) ||
-               (SysModeGetModeState() == _MODE_STATUS_NOSIGNAL) ||
-               (SysModeGetModeState() == _MODE_STATUS_NOSUPPORT))
-            {
-                ScalerTimerReactiveTimerEvent(SEC(0), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
-            }
-            else
-            {
-                OsdDispDisableOsd();
-            }
-
-            break;
-
-        default:
-            break;
-    }
-}
+  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 
 
 void MenuHotKeyDpOption(void)
@@ -11235,7 +10750,7 @@ void MenuPanelUniformityMsgAdjust(void)
             ScalerTimerWaitForEvent(_EVENT_DEN_STOP);
             OsdFuncDisableOsd();
             OsdFuncCloseWindow(_OSD_WINDOW_ALL);
-            OsdDispMainMenu();
+            AWTO_REALTEK_MENU_OPEN();  // awto: Realtek menu built out (#120)
 
             if(g_usBackupValue == _FROM_STATE_GAMMA)
             {
@@ -11367,274 +10882,7 @@ void MenuPanelUniformityMsgAdjust(void)
     }
 }
 
-void (* __code OperationTable[])(void) =
-{
-    MenuNone,
+  // awto: removed; keys: fw/sdcc/awto_keys.inc (#129)
 
-    // main
-    MenuPicture,
-    MenuDisplay,
-    MenuColor,
-    MenuAdvance,
-    MenuInput,
-    MenuAudio,
-    MenuOther,
-    MenuInformation,
-    MenuFactory,
-
-    // picture
-    MenuPictureBacklight,
-    MenuPictureBrightness,
-    MenuPictureContrast,
-    MenuPictureSharpness,
-
-    // display
-    MenuDisplayAuto,
-    MenuDisplayHPos,
-    MenuDisplayVPos,
-    MenuDisplayClock,
-    MenuDisplayPhase,
-    MenuDisplayDispRotate,
-    MenuDisplayLatency,
-    MenuDislayFreeze,
-
-    // color
-    MenuColorPanelUniformity,
-    MenuColorGamma,
-    MenuColorTemperature,
-    MenuColorEffect,
-    MenuColorDemo,
-    MenuColorFormat,
-    MenuColorPCM,
-    MenuColorHue,
-    MenuColorSaturation,
-
-    // advance
-    MenuAdvanceItem,
-
-    // input
-    MenuInputAuto,
-    MenuInputA0Port,
-    MenuInputD0Port,
-    MenuInputD1Port,
-    MenuInputD2Port,
-    MenuInputD3Port,
-    MenuInputD4Port,
-    MenuInputD5Port,
-    MenuInputD6Port,
-
-    // audio
-    MenuAudioVolume,
-    MenuAudioMute,
-    MenuAudioStandAlong,
-    MenuAudioAudioSource,
-    MenuAudioSoundMode,
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-    MenuAudioAudioSelfTest,
-#endif
-    // other
-    MenuOtherReset,
-    MenuOtherMenuTime,
-    MenuOtherOsdHPos,
-    MenuOtherOsdVPos,
-    MenuOtherLanguage,
-    MenuOtherTransparency,
-    MenuOtherRotate,
-
-    // picture adjust
-    MenuPictureBacklightAdjust,
-    MenuPictureBrightnessAdjust,
-    MenuPictureContrastAdjust,
-    MenuPictureSharpnessAdjust,
-
-    // display adjust
-    MenuDisplayHPosAdjust,
-    MenuDisplayVPosAdjust,
-    MenuDisplayClockAdjust,
-    MenuDisplayPhaseAdjust,
-    MenuDisplayDispRotateAdjust,
-    MenuDisplayLatencyAdjust,
-    MenuDisplayFreezeAdjust,
-
-    // color adjust
-    MenuColorPanelUniformityAdjust,
-    MenuColorGammaAdjust,
-    MenuColorColorTempAdjust,
-    MenuColorColorEffectAdjust,
-    MenuColorColorDemoAdjust,
-    MenuColorColorFormatAdjust,
-    MenuColorColorPCMAdjust,
-    MenuColorColorHueAdjust,
-    MenuColorColorSaturationAdjust,
-
-    // advance adjust
-    MenuAdvanceAspectAdjust,
-    MenuAdvanceOverScanAdjust,
-    MenuAdvanceOverDriveOnOff,
-    MenuAdvanceOverDriveGain,
-    MenuAdvanceDCRAdjust,
-    MenuAdvanceDdcciAdjust,
-    MenuAdvanceUltraVividAdjust,
-    MenuAdvanceDpOptionD0,
-    MenuAdvanceDpOptionD1,
-    MenuAdvanceDpOptionD2,
-    MenuAdvanceDpOptionD6,
-    MenuAdvanceDPMstAdjust,
-    MenuAdvanceDPEdidAdjust,
-    MenuAdvanceCloneAdjust,
-    MenuAdvanceFreeSyncAdjust,
-#if(_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-    MenuAdvanceTypeCModeD0,
-    MenuAdvanceTypeCModeD1,
-    MenuAdvanceTypeCModeD2,
-    MenuAdvanceTypeCModeD6,
-#endif
-
-#if(_HDR10_SUPPORT == _ON)
-    MenuAdvanceHdrMode,
-    MenuAdvanceHdrDarkEnhanceOnOff,
-    MenuAdvanceHdrSharpnessOnOff,
-    MenuAdvanceHdrContrast,
-    MenuAdvanceHdrColorEnhance,
-    MenuAdvanceHdrLightEnhance,
-#endif
-    MenuAdvanceEdidAdjust,
-    MenuAdvanceEdidDXAdjust,
-#if(_HDMI_MULTI_EDID_SUPPORT == _ON)
-    MenuAdvanceHDMIVersionAdjust,
-    MenuAdvanceDxHDMIVersionAdjust,
-#endif
-#if(_PIXEL_SHIFT_SUPPORT == _ON)
-    MenuAdvancePixelShifAdjust,
-#endif
-#if (_SDR_TO_HDR_SUPPORT == _ON)
-    MenuAdvanceSdrToHdrAdjust,
-#endif
-#if(_MOTION_BLUR_REDUCTION_SUPPORT == _ON)
-    MenuAdvanceMBRMode,
-    MenuAdvanceMBRDuty,
-    MenuAdvanceMBRPosition,
-    MenuAdvanceMBRModeAdjust,
-    MenuAdvanceMBRDutyAdjust,
-    MenuAdvanceMBRPositionAdjust,
-#endif
-
-    // Audio adjust
-    MenuAudioVolumeAdjust,
-    MenuAudioMuteOnOff,
-    MenuAudioStandAlongSelect,
-    MenuAudioAudioSourceSelect,
-    MenuAudioSoundModeSelect,
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-    MenuAudioAudioSelfTestSelect,
-#endif
-
-    // other adjust
-    MenuOtherMenuTimeAdjust,
-    MenuOtherOsdHPosAdjust,
-    MenuOtherOsdVPosAdjust,
-    MenuOtherLanguageAdjust,
-    MenuOtherTransparencyAdjust,
-    MenuOtherRotateAdjust,
-
-    // color temp user RGB
-    MenuColorColortempUserR,
-    MenuColorColortempUserG,
-    MenuColorColortempUserB,
-
-    // color temp user adjust RGB
-    MenuColorColortempUserAdjustR,
-    MenuColorColortempUserAdjustG,
-    MenuColorColortempUserAdjustB,
-
-    // color effect user adjust
-    MenuColorColorEffcUserR,
-    MenuColorColorEffcUserY,
-    MenuColorColorEffcUserG,
-    MenuColorColorEffcUserC,
-    MenuColorColorEffcUserB,
-    MenuColorColorEffcUserM,
-
-    MenuColorColorEffcUserRHue,
-    MenuColorColorEffcUserRSat,
-
-    MenuColorColorEffcUserYHue,
-    MenuColorColorEffcUserYSat,
-
-    MenuColorColorEffcUserGHue,
-    MenuColorColorEffcUserGSat,
-
-    MenuColorColorEffcUserCHue,
-    MenuColorColorEffcUserCSat,
-
-    MenuColorColorEffcUserBHue,
-    MenuColorColorEffcUserBSat,
-
-    MenuColorColorEffcUserMHue,
-    MenuColorColorEffcUserMSat,
-
-    // color effect user adjust Hue & Sat
-    MenuColorColorEffcUserRHueAdjust,
-    MenuColorColorEffcUserRSatAdjust,
-
-    MenuColorColorEffcUserYHueAdjust,
-    MenuColorColorEffcUserYSatAdjust,
-
-    MenuColorColorEffcUserGHueAdjust,
-    MenuColorColorEffcUserGSatAdjust,
-
-    MenuColorColorEffcUserCHueAdjust,
-    MenuColorColorEffcUserCSatAdjust,
-
-    MenuColorColorEffcUserBHueAdjust,
-    MenuColorColorEffcUserBSatAdjust,
-
-    MenuColorColorEffcUserMHueAdjust,
-    MenuColorColorEffcUserMSatAdjust,
-
-    MenuColorColorPCMSoftProftAdjust,
-
-    MenuAdvanceODOnOffAdjust,
-    MenuAdvanceODGainAdjust,
-
-    MenuAdvanceDpD0VersionAdjust,
-    MenuAdvanceDpD1VersionAdjust,
-    MenuAdvanceDpD2VersionAdjust,
-    MenuAdvanceDpD6VersionAdjust,
-
-#if(_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-    MenuAdvanceD0TypeCModeAdjust,
-    MenuAdvanceD1TypeCModeAdjust,
-    MenuAdvanceD2TypeCModeAdjust,
-    MenuAdvanceD6TypeCModeAdjust,
-#endif
-
-#if(_HDR10_SUPPORT == _ON)
-    MenuAdvanceHdrModeAdjust,
-    MenuAdvanceHdrDarkEnhanceOnOffAdjust,
-    MenuAdvanceHdrSharpnessOnOffAdjust,
-    MenuAdvanceHdrContrastAdjust,
-    MenuAdvanceHdrColorEnhanceAdjust,
-    MenuAdvanceHdrLightEnhanceAdjust,
-#endif
-#if(_OSD_LOCAL_DIMMING_SUPPORT == _ON)
-    MenuAdvanceHdrLDOnOff,
-    MenuAdvanceHdrLDSmoothAdj,
-    MenuAdvanceHdrLDOnOffAdjust,
-    MenuAdvanceHdrLDSmoothAdjAdjust,
-#endif
-
-    // ddcci
-    MenuHotKeyDdcci,
-
-    // hotkey source
-    MenuHotKeySource,
-
-    // hotkey dp version
-    MenuHotKeyDpOption,
-
-    // ask turn off/on panel uniformity msg
-    MenuPanelUniformityMsgAdjust,
-};
-
+#include "glue.inc"  // awto: settings registry / menu glue (#67)
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

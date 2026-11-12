@@ -20,6 +20,7 @@
 #define __FACTORY_FUNCTION__
 
 #include "UserCommonInclude.h"
+#if(_AWTO_FACTORY == _ON)  // awto: size switch: factory menu (#65)
 
 //****************************************************************************
 // DEFINITIONS / MACROS
@@ -3454,3 +3455,7 @@ void RTDFactoryOnePieceMark(void)
 }
 
 #endif // End of #if(_FACTORY_ONE_PIECE_MARK_SUPPORT == _ON)
+
+#else
+void RTDFactoryPanelUsedTimer(void) {}
+#endif

@@ -642,31 +642,6 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
 {
     switch(enumEventID)
     {
-        case _USER_TIMER_EVENT_KEY_REPEAT_ENABLE:
-            SET_KEYREPEATSTART();
-            break;
-
-        case _USER_TIMER_EVENT_KEY_SCAN_READY:
-            SET_KEYSCANREADY();
-            break;
-
-        case _USER_TIMER_EVENT_OSD_DISABLE_OSD_LOGO:
-            OsdDispDisableOsd();
-            SET_OSD_LOGO_ON(_OFF);
-
-#if(_INSTANT_TIMER_EVENT_0 == _ON)
-            ScalerTimer0SetTimerCount(_TIMER_OFF);
-#endif
-
-#if(_PANEL_POW_SEQ_FAST_MODE == _ON)
-            UserCommonInterfacePanelPowerAction(_BACKLIGHT_OFF);
-#else
-            UserCommonInterfacePanelPowerAction(_PANEL_OFF);
-#endif
-            ScalerDDomainBackgroundEnable(_ENABLE);
-            ScalerDDomainPatternGenEnable(_DISABLE);
-            break;
-
         case _USER_TIMER_EVENT_OSD_SHOW_NO_CABLE:
             SET_OSD_EVENT_MESSAGE(_OSDEVENT_SHOW_NOCABLE_MSG);
             break;
@@ -713,7 +688,7 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
 #endif
 
         case _USER_TIMER_EVENT_OSD_KEYINFO_UNHIGHLIGHT:
-            OsdDispMainMenuKeyInfo(_KEY_INFO_ALL, _OSD_UNHIGHLIGHT);
+            AWTO_REALTEK_KEYINFO(_KEY_INFO_ALL, _OSD_UNHIGHLIGHT);
             break;
 
         case _USER_TIMER_EVENT_OSD_SHOW_DP_VERSION_SELECT:
@@ -1443,7 +1418,7 @@ void UserInterfaceAdjustWaitPanelT2(void)
 //--------------------------------------------------
 void UserInterfaceAdjustWaitPanelT3(void)
 {
-    ScalerTimerDelayXms(_PANEL_POWER_ON_T3);
+    AwtoDiagPanelT3Wait(_PANEL_POWER_ON_T3) /* awto: T3 wait with the delay calibration inside (#53) */;
 }
 
 //--------------------------------------------------
@@ -1531,9 +1506,12 @@ void UserInterfaceInitial(void)
 {
     PCB_PWM_SETTING();
     RTDNVRamStartup();
+#if(_AWTO_DIAG == _ON)  // awto: load the debug-message switch from NVRAM (#74)
+    AwtoMsgLoad();
+#endif
 
+    AwtoSetInit();  // awto: settings registry / menu glue (#67)
     UserCommonInterfaceDdcciSwitch(GET_OSD_DDCCI_STATUS(), UserCommonNVRamGetSystemData(_SEARCH_PORT));
-    RTDKeyInitial();
     SET_PANELPOWERSTATUS(_PANEL_POWER_OFF_STATE);
 
     // Adjust Backlight
@@ -1648,7 +1626,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _OFF);
 
             // Save System Power Status Data.
-            UserCommonNVRamSaveSystemData();
+            UserCommonNVRamSaveSystemData(); AwtoNvFlush();  // awto: flush every dirty NVRAM item now (#151)
 
             break;
 
@@ -1668,7 +1646,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, _OFF);
 
             // Save System Power Status Data.
-            UserCommonNVRamSaveSystemData();
+            UserCommonNVRamSaveSystemData(); AwtoNvFlush();  // awto: flush every dirty NVRAM item now (#151)
 
             break;
 
@@ -1685,7 +1663,7 @@ void UserInterfacePowerSwitch(EnumPowerAction enumSwitch)
             UserInterfaceKeyPadLedControl(_LED_POWER_SAVING);
 
             // Panel pown down.
-            UserCommonInterfacePanelPowerAction(_PANEL_OFF);
+            UserCommonInterfacePanelPowerAction(_PANEL_OFF); AwtoNvFlush();  // awto: flush every dirty NVRAM item now (#151)
 
             break;
 
@@ -1847,7 +1825,7 @@ bit UserInterfaceGetActiveByPassStatus(void)
 //--------------------------------------------------
 bit UserInterfaceGetCableResetStatus(void)
 {
-    if((SysSourceGetCableStatusChange(UserCommonNVRamGetSystemData(_SEARCH_PORT)) == _TRUE) &&
+    if(AWTO_PS_CABLE_SDK() && (SysSourceGetCableStatusChange(UserCommonNVRamGetSystemData(_SEARCH_PORT)) == _TRUE) &&
        ((!(SysModeGetModeState() == _MODE_STATUS_SEARCH)) || (SysSourceGetCableDetect(UserCommonNVRamGetSystemData(_SEARCH_PORT)) == _TRUE)))
     {
         SET_FORCE_POW_SAV_STATUS(_FALSE);
@@ -3270,9 +3248,11 @@ void UserInterfaceAdjustOsdActiveProc(void)
     {
         UserCommonNVRamSetSystemData(_SEARCH_PORT, SysSourceGetInputPort());
         UserCommonNVRamSetSystemData(_SOURCE_SCAN_TYPE, SysSourceGetScanType());
-        UserCommonNVRamSaveSystemData();
+        AwtoSwEvent(AWTO_SW_EV_PROBE, 7);  // awto: switch-log probe (#60)
+        // awto #151: no save here (KVM / search switch)  // awto: no NVRAM save at the first ACTIVE after a switch (#151)
     }
 
+    AwtoSwEvent(AWTO_SW_EV_PROBE, 8);  // awto: switch-log probe (#60)
     if(UserInterfaceGetActiveByPassStatus() == _FALSE)
     {
         // DDCCI switch to active port
@@ -3296,6 +3276,7 @@ void UserInterfaceAdjustOsdActiveProc(void)
     UserCommonAdjustDisplayFreeze(GET_OSD_FREEZE_STATUS());
 #endif
 
+    AwtoSwEvent(AWTO_SW_EV_BLANK, 0);  // awto: switch-log: blank (#60)
     ScalerDDomainBackgroundEnable(_DISABLE);
 }
 
@@ -4129,7 +4110,7 @@ EnumAudioInputSource UserInterfaceGetAudioSource(void)
 //--------------------------------------------------
 bit UserInterfaceGetAudioMuteStatus(void)
 {
-    return GET_OSD_VOLUME_MUTE();
+    return (GET_OSD_VOLUME_MUTE() || AWTO_AUDIO_HOLD());  // awto: mute while the mode is not ACTIVE / DISPLAY_SETTING (#93)
 }
 
 //--------------------------------------------------
@@ -4180,13 +4161,7 @@ WORD UserInterfaceGetAudioVolume(void)
 //--------------------------------------------------
 EnumAudioDACOutput UserInterfaceGetAudioDACOutput(void)
 {
-#if((_DAC_SPEAKER_OUTPUT_SUPPORT == _ON) && (_DAC_HP_OUTPUT_SUPPORT == _ON))
-    return _AUDIO_DAC_OUTPUT_BOTH;
-#elif(_DAC_SPEAKER_OUTPUT_SUPPORT == _ON)
-    return _AUDIO_DAC_OUTPUT_SPEAKER;
-#elif(_DAC_HP_OUTPUT_SUPPORT == _ON)
-    return _AUDIO_DAC_OUTPUT_HEADPHONE;
-#endif
+    return _AUDIO_DAC_OUTPUT_HEADPHONE;  // awto: headphone output only (#93)
 }
 
 //--------------------------------------------------

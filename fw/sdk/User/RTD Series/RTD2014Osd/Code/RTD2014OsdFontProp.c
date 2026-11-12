@@ -1372,7 +1372,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
 
         while((*(pucArray + ucElementCount) != _END_) &&
               (*(pucArray + ucElementCount) != _NEXT_LINE))
-        {
+        { AWTO_WDT_FEED(AWTO_WDT_S_OSDSTR);  // awto: per character (string terminator bound) (#150)
             switch(*(pucArray + ucElementCount))
             {
                 case _END_:
@@ -2063,12 +2063,12 @@ BYTE *OsdPropGetStringTableAddress(BYTE ucString)
 
         // information
         case _STRING_HFREQPCLK:
-            OsdPropGetShowHFreqPClkStringAddress();
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
             break;
 
         case _STRING_VFREQUENCY:
-            OsdPropGetShowVFreqStringAddress();
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
             break;
 
@@ -2081,7 +2081,7 @@ BYTE *OsdPropGetStringTableAddress(BYTE ucString)
 
         case _STRING_HDCP_MODE:
 #if(_DIGITAL_PORT_SUPPORT == _ON)
-            OsdPropGetShowHDCPEnable(ScalerSyncHdcpCheckEnabled(SysSourceGetInputPort()));
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
 
 #endif
@@ -2109,7 +2109,7 @@ BYTE *OsdPropGetStringTableAddress(BYTE ucString)
             break;
 
         case _STRING_NOW_RESOLUTION:
-            OsdPropGetShowResolutionStringAddress();
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
             break;
 
@@ -2142,16 +2142,16 @@ BYTE *OsdPropGetStringTableAddress(BYTE ucString)
         case _STRING_D4_PORT:
         case _STRING_D5_PORT:
         case _STRING_D6_PORT:
-            OsdPropGetShowInputPortStringAddress(ucString - _STRIN_END);
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
             break;
 #if(_DP_DEBUG_MSG == _ON)
         case _STRING_DP_INFO:
-            OsdPropGetShowDpInfoStringAddress(_STRING_DP_INFO);
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
             break;
         case _STRING_DP_INFO_2:
-            OsdPropGetShowDpInfoStringAddress(_STRING_DP_INFO_2);
+  // awto: info pop-up string, no reader (#124)
             pucArray = g_pucModeInfoData;
             break;
 #endif
