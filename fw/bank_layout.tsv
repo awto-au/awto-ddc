@@ -2746,7 +2746,6 @@ fn	_AwtoDdcLive	11	0x3ba0	152
 fn	_AwtoPsTmdsStart	11	0x3c38	76
 fn	_AwtoPanelReqArg	11	0x3c84	88
 const	_tAwtoWakeDdc	11	0x3ce8	12
-fn	_AwtoSyncDetect	11	0x3cf8	340
 fn	_AwtoSyncFreq	11	0x3e4c	148
 fn	_AwtoSyncInit	11	0x3ee0	72
 fn	_AwtoPsWakeCables	11	0x3f28	60
@@ -2772,6 +2771,7 @@ fn	_AwtoSyncPoll	11	0x5674	264
 fn	_osd_tc_scroll	11	0x577c	336
 fn	_AwtoSyncT2Start	11	0x58cc	272
 fn	_AwtoPsWakePoll	11	0x59dc	604
+fn	_AwtoSyncDetect	11	0x5c38	608
 const	_tAwtoDdcReg	11	0x6458	12
 const	_tAwtoWakeAux	11	0x6464	8
 fn	_UserInterfaceGetAspectRatio	11	0x646c	180
@@ -2799,6 +2799,7 @@ fn	_ScalerSyncDdcDetect_EXINT1	11	0x7bf4	284
 fn	_ScalerSyncSetDdcForceNack	11	0x7d10	104
 fn	_ScalerSyncTMDSRx3HdmiVideoSetting	11	0x7d78	316
 fn	_AwtoPsTmdsLive	11	0x7eb4	92
+fn	_AwtoPsTmdsStable	11	0x7f10	60
 fn	_AwtoUpMs	11	0x7f50	116
 fn	_AwtoWdtLibPoke	11	0x7fd0	108
 fn	_AwtoPsPollSite	11	0x803c	28

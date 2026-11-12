@@ -96,7 +96,8 @@ A8	07	-	hold: fast wake retry
 A8	09	-	hold: auto search, other cable
 A8	10	-	hold: SDK reset
 B0	*	port	HPD pulse (TMDS recover)
-C1	*	portmhz1	TMDS clock % detected
+C1	*	port	TMDS predetect on (clock not measured yet)
+C6	*	portmhz1	TMDS clock % measured
 C2	*	portdp	DP link % detected
 C3	*	portsrc	scan done: %
 C4	*	port	signal lost

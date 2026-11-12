@@ -942,7 +942,8 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_K_WAKE                                        3
 #define AWTO_SYNC_K_POWER_KEY                                   4
 #define AWTO_SYNC_EV_BEGIN                                      0xC0    // arg kind, value port
-#define AWTO_SYNC_EV_TMDS                                       0xC1    // predetect on, HDMI: value = SDK TMDS clock, 0.1 MHz
+#define AWTO_SYNC_EV_TMDS                                       0xC1    // predetect on, HDMI (clock not measured yet)
+#define AWTO_SYNC_EV_TMDS_CLK                                   0xC6    // HDMI freq detector stable: value = measured TMDS clock, 0.1 MHz
 #define AWTO_SYNC_EV_DP                                         0xC2    // predetect on, DP: value = link rate << 8 | lanes (DPCD 100h / 101h)
 #define AWTO_SYNC_EV_SCAN                                       0xC3    // scan found a source: value = SDK source type
 #define AWTO_SYNC_EV_LOST                                       0xC4    // predetect off
