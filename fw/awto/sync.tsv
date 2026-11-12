@@ -16,14 +16,16 @@
 #   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
 #   ms    value in ms -> "12 ms" (#150)   n  value as a number (#150)   x  value in hex (#150)
 #   Texts may hold {NAME} or {NAME/DIV} = integer #define in RL6449_Project.h, resolved at generation and in the host copy.
-#   sys   arg = old << 4 | new state, value = why << 24 | ms in old -> "OFF -> INITIAL: POWER key (5230 ms in OFF)"; why bit 7 =
+#   sys   arg = old << 4 | new state, value = why << 24 | ms in old -> "OFF -> INITIAL (5230 ms): POWER key"; why bit 7 =
 #         the SDK mode changed: "; " + the new state's mode text (table 1A) is appended (#162 s3b: the old mode line's text)
 #   sysreq arg = request, value = who << 8 | outcome -> "power off requested by POWER key (accepted)"
 #   pby   value = panel requester (table 1B) -> "boot (cold power-up: panel early)" (#162 s3b)
-#   ms2   two % marks: value = first ms << 16 | second ms -> "32 ms" ... "87 ms" (#162 s3b)
+#   ms2   two % marks: value = second ms << 16 | first ms -> "87 ms" ... "32 ms" (#162 s3b; low word = ms in the old state)
 #   wdt   value = warning ms << 16 | reset ms -> "warning 200 ms, reset 586 ms" (live from AWTO_WDT_THR / AWTO_WDT_N)
 #   htime value = unix s, arg = UTC offset (15 min, signed) -> "2026-11-12T08:45:10+11:00" (#157)   sms  signed ms -> "+1234 ms" (#157)
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
+# Width: the console log wraps a line to a second row (under the text); gen_awto_sync.py fails a row whose worst case needs 3.
+# Machine lines read "<machine>: OLD -> NEW (N ms): what", N ms = the time in OLD.
 D0	01	-	boot: cold power-up (no valid canary in RAM)
 D0	02	pc	boot: watchdog bite, %
 D0	03	-	boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)
@@ -48,7 +50,7 @@ D4	08	ms	NVRAM flush: power off / saving entry (since the last poke %)
 D4	09	ms	NVRAM flush: menu / selector close (since the last poke %)
 D4	0A	ms	NVRAM flush: test cmd 0x3D (since the last poke %)
 D4	0B	ms	NVRAM flush: second BriCon / ColorProc item (since the last poke %)
-D4	0C	n	flash: type % detected by the SDK (tFlashInformation index; MX25L8006E = 24, 254 = not detected)
+D4	0C	n	flash: type % found by the SDK (tFlashInformation index: 24 = MX25L8006E, 254 = none)
 D5	*	n	(the {AWTO_SYNC_REPEAT_LINES} lines above repeated % more times)
 D6	*	portx	wake by the SDK source detect, not our poll (poll state %)
 D7	*	htime	host time %
@@ -67,31 +69,31 @@ C0	04	vport	power key on, %
 10	09	pby	backlight on requested by % (already on)
 10	0A	pby	backlight off requested by % (accepted)
 10	0B	pby	backlight off requested by % (already off)
-10	0C	pby	panel on requested by % (deferred: power off / saving is taking the panel down)
-10	0E	pby	backlight on requested by % (deferred: power off / saving is taking the panel down)
-10	0F	pby	backlight off requested by % (deferred: power off / saving is taking the panel down)
-11	01	ms	panel: OFF -> VDD: VDD on, T1 starts (% in OFF)
-11	12	ms	panel: VDD -> HPD: T1 done, power on, eDP-1 PHY on (% in VDD)
-11	1B	ms	panel: VDD -> T6: off before the PHY, VDD off (% in VDD)
-11	23	ms	panel: HPD -> LINK: eDP-1 HPD high, link training (% in HPD)
-11	2B	ms	panel: HPD -> T6: off, PHY and VDD off (% in HPD)
-11	34	ms2	panel: LINK -> VIDEO: eDP-1 link trained in %, stream on (% in LINK)
-11	45	ms	panel: VIDEO -> T3: backlight wanted, T3 counts from the stream start (% in VIDEO)
-11	49	ms	panel: VIDEO -> T4: off, T4 starts (% in VIDEO)
-11	54	ms	panel: T3 -> VIDEO: backlight no longer wanted (% in T3)
-11	56	ms	panel: T3 -> BL_PWM: T3 done, backlight pin on (% in T3)
-11	67	ms	panel: BL_PWM -> BL_ON: PWM duty set (% in BL_PWM)
-11	68	ms	panel: BL_PWM -> BL_OFF: backlight off wanted, PWM dark (% in BL_PWM)
-11	78	ms	panel: BL_ON -> BL_OFF: PWM dark (% in BL_ON)
-11	84	ms	panel: BL_OFF -> VIDEO: backlight pin off, stream kept (% in BL_OFF)
-11	89	ms	panel: BL_OFF -> T4: backlight pin off, T4 starts (% in BL_OFF)
-11	94	ms	panel: T4 -> VIDEO: on again, stream still on (% in T4)
-11	9A	ms	panel: T4 -> T5: T4 done, stream idle (% in T4)
-11	A4	ms	panel: T5 -> VIDEO: on again, stream on (% in T5)
-11	AB	ms	panel: T5 -> T6: T5 done, link and VDD off (% in T5)
-11	B0	ms	panel: T6 -> OFF: T6 done, VDD may come on again (% in T6)
-11	0B	ms	panel: OFF -> T6: warm reset, VDD went off at GPIO init: T6 first (% in OFF)
-11	4A	ms	panel: VIDEO -> T5: off, backlight never on: no T4, stream idle (% in VIDEO)
+10	0C	pby	panel on requested by % (deferred: power off / saving takes the panel down)
+10	0E	pby	backlight on requested by % (deferred: power off / saving takes the panel down)
+10	0F	pby	backlight off requested by % (deferred: power off / saving takes the panel down)
+11	01	ms	panel: OFF -> VDD (%): VDD on, T1 starts
+11	12	ms	panel: VDD -> HPD (%): T1 done, power on, eDP-1 PHY on
+11	1B	ms	panel: VDD -> T6 (%): off before the PHY, VDD off
+11	23	ms	panel: HPD -> LINK (%): eDP-1 HPD high, link training
+11	2B	ms	panel: HPD -> T6 (%): off, PHY and VDD off
+11	34	ms2	panel: LINK -> VIDEO (%): eDP-1 link trained in %, stream on
+11	45	ms	panel: VIDEO -> T3 (%): backlight wanted, T3 counts from the stream start
+11	49	ms	panel: VIDEO -> T4 (%): off, T4 starts
+11	54	ms	panel: T3 -> VIDEO (%): backlight no longer wanted
+11	56	ms	panel: T3 -> BL_PWM (%): T3 done, backlight pin on
+11	67	ms	panel: BL_PWM -> BL_ON (%): PWM duty set
+11	68	ms	panel: BL_PWM -> BL_OFF (%): backlight off wanted, PWM dark
+11	78	ms	panel: BL_ON -> BL_OFF (%): PWM dark
+11	84	ms	panel: BL_OFF -> VIDEO (%): backlight pin off, stream kept
+11	89	ms	panel: BL_OFF -> T4 (%): backlight pin off, T4 starts
+11	94	ms	panel: T4 -> VIDEO (%): on again, stream still on
+11	9A	ms	panel: T4 -> T5 (%): T4 done, stream idle
+11	A4	ms	panel: T5 -> VIDEO (%): on again, stream on
+11	AB	ms	panel: T5 -> T6 (%): T5 done, link and VDD off
+11	B0	ms	panel: T6 -> OFF (%): T6 done, VDD may come on again
+11	0B	ms	panel: OFF -> T6 (%): warm reset, VDD went off at GPIO init: T6 first
+11	4A	ms	panel: VIDEO -> T5 (%): off, backlight never on: no T4, stream idle
 11	*	harg	panel: state change % (not a listed transition)
 12	00	-	panel: no eDP-1 HPD within T2, link training anyway
 12	01	-	eDP-1: link training FAIL
@@ -172,13 +174,13 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 16	0B	-	no-signal cards: power-saving timer
 16	0C	-	settings (aspect / overscan / DP version)
 16	0D	-	SDK OSD (user adjust)
-16	0E	-	hold L2: released to the no-signal path (power-saving timers)
+16	0E	-	hold L2 released: no-signal path (power-saving timers)
 16	0F	-	hold: signal back, fast wake
 16	10	-	fast path taken (cached input)
 16	11	-	fast path: picture up
 16	12	-	fast path timeout: full path
 16	13	-	fast wake timeout: back to the hold
-16	14	-	judge timer: timing not confirmed in time (no signal)
+16	14	-	judge timer: timing not confirmed (no signal)
 16	15	-	judge timer: no support
 16	16	-	NVRAM power status at boot
 16	17	-	SDK
@@ -186,7 +188,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 16	19	-	target written without a request
 16	1A	-	hold: fast wakes used up
 16	1B	-	hold: auto search, other cable
-16	21	-	INITIAL pass done
+16	21	-	INITIAL done
 16	22	-	timing confirmed, supported
 16	24	-	search done, no source
 16	25	-	display set, panel video ready
@@ -220,18 +222,17 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 18	01	-	already
 18	02	-	replaces a pending request
 18	03	-	refused in this state
-18	04	-	kept until the state can take it
+18	04	-	kept until the state allows it
 19	00	-	 -> 
-19	01	-	: 
 19	02	-	 (
-19	03	-	 ms in 
+19	03	-	 ms): 
 19	04	-	 requested by 
 19	05	-	; 
 1A	00	-	monitor off, inputs not searched
 1A	01	-	monitor off, inputs not searched
 1A	02	-	scaler input side reset for a new search
-1A	03	-	looking for a source (cable, clock / link, stable timing)
-1A	04	-	programming the scaler for the timing
+1A	03	-	finding a source (cable, clock / link, stable timing)
+1A	04	-	scaler set-up for the timing
 1A	05	-	picture on screen
 1A	08	-	timing outside what scaler / panel accept
 1A	09	-	search found no source
@@ -242,7 +243,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 1B	04	-	power switch POWER SAVING -> NORMAL (wake)
 1B	05	-	our wake poll (console + backlight)
 1B	06	-	power off / saving: panel down first
-1B	07	-	power off / saving called off: level before it
+1B	07	-	power off / saving called off: previous level
 1B	08	-	display setting / ACTIVE gate: video wanted
 1B	09	-	display setting: backlight action off
 1B	0A	-	display setting: DCLK change

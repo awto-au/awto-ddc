@@ -911,7 +911,7 @@ static bit UserCommonInterfacePanelStep(void)
 #endif
             }
             AwtoDiagStage(7);
-            usIn = (WORD)((WORD)AwtoMs() - s_usPnlEntry);      // training time: the line's first value (sync.tsv 11 34, ms2)
+            usIn = (WORD)((WORD)AwtoMs() - s_usPnlEntry);      // training time: high word = the line's second ms (sync.tsv 11 34, ms2)
             ScalerDDomainBackgroundEnable(_ENABLE);   // fresh link: black until the scaler shows a picture (short T3)
             UserCommonInterfacePanelVideoOn();
             // the line after its action: training + stream (~100 ms) count to LINK, VIDEO starts at the stream start
@@ -997,8 +997,8 @@ static bit UserCommonInterfacePanelStep(void)
             {
                 return _FALSE;
             }
-            UserCommonInterfacePanelGo((ucT == AWTO_PNL_TGT_OFF) ? AWTO_PNL_T4 : AWTO_PNL_VIDEO, usNow);   // VIDEO: stream kept, no new T3
-            PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);
+            PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_OFF);    // T4 from the pin edge (a ms tick after usNow made VDD off 1 ms early)
+            UserCommonInterfacePanelGo((ucT == AWTO_PNL_TGT_OFF) ? AWTO_PNL_T4 : AWTO_PNL_VIDEO, (WORD)AwtoMs());   // VIDEO: stream kept
             if(ucT == AWTO_PNL_TGT_OFF)
             {
                 ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);

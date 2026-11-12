@@ -10,6 +10,8 @@ usage: gen_awto_sync.py [--check]
   The sync.tsv texts are also read by the host decoder (scripts/sync_log.py in awto-ddc main).
   Texts may hold {NAME} / {NAME/DIV}: the integer #define in RL6449_Project.h (resolve(); wb_build.py copies the resolved tsv for the host).
   --check: exit 1 when any block is out of date.
+  Line width (every run): each row's worst-case console line (longest name / value at every %, port prefix, time column)
+    must fit 2 rows of the main-page log (AWTO_LOG_W_MAIN cells, continuation at AWTO_LOG_TXT0: awto_dbgpop.inc); exit 1 if not.
 Log: tmp/logs/gen_awto_sync.log
 """
 import argparse
@@ -75,7 +77,7 @@ def rows(path: Path = TSV):
         if not ln.strip() or ln.startswith("#"):
             continue
         i, a, f, t = ln.split("\t")
-        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), fmt=parse_fmt(f), text=resolve(t)))
+        out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), a=a, f=f, fmt=parse_fmt(f), text=resolve(t)))
     assert len(out) < 255, "row index is one byte (0 = no row)"
     for t in out:                                    # one value per line; ms2 has two
         n, two = t["text"].count("%"), (t["fmt"] & 0x7F) == FMTS["ms2"]
@@ -185,9 +187,20 @@ def text_block(r):
         "    }",
         "    while((*pc != 0) && (*pc != 1))             // AwtoPutChar inlined: no call, so the packer keeps the table in this bank",
         "    {",
-        "        if(s_ucAwtoLen < s_ucAwtoCols)",
+        "        if(s_bAwtoSkip != 0)",
+        "        {",
+        "            if(--s_ucLogI == 0)                 // second pass of a wrapped console line: dropped",
+        "            {",
+        "                s_bAwtoSkip = 0;",
+        "            }",
+        "        }",
+        "        else if(s_ucAwtoLen < s_ucAwtoCols)",
         "        {",
         "            s_pcAwtoRow[s_ucAwtoLen++] = *pc;",
+        "        }",
+        "        else if(s_bAwtoWrap != 0)",
+        "        {",
+        "            s_bAwtoOver = 1;                    // main-page log: the line takes two rows (AwtoConWrapLine)",
         "        }",
         "        pc++;",
         "    }",
@@ -261,6 +274,141 @@ def cnt_block(cnts):
     return "\n".join(L)
 
 
+# ---- console line width (Dan 2026-11-12: no line clipped): worst case per row vs the console log row ---------------------
+DBGPOP = ROOT / "fw/sdcc/awto_dbgpop.inc"
+OSDCARD = ROOT / "fw/sdcc/awto_osdcard.inc"
+GLOBAL_H = ROOT / "fw/sdk/Kernel/Common/Global.h"
+DEF_RE = re.compile(r"^#define[ \t]+(\w+)[ \t]+([^/\n]+?)[ \t]*(?://.*)?$", re.M)
+DW = 10                                              # digits of a 32-bit ring value (every value field is a DWORD)
+
+
+def c_int(name: str, path: Path) -> int:
+    """integer value of a #define in path (a plain expression of other #defines there)"""
+    defs = dict(DEF_RE.findall(path.read_text()))
+
+    def ev(n, depth=0):
+        if n not in defs or depth > 8:
+            raise SystemExit(f"{n}: no integer #define in {path.name}")
+        e = re.sub(r"\b(0x[0-9A-Fa-f]+|\d+)U?L?\b", lambda m: str(int(m.group(1), 0)), defs[n])
+        e = re.sub(r"\b[A-Za-z_]\w*\b", lambda m: str(ev(m.group(0), depth + 1)), e)
+        if not re.fullmatch(r"[\d\s()+\-*/]+", e):
+            raise SystemExit(f"{n} = {defs[n]}: not a plain integer expression")
+        return int(eval(e.replace("/", "//")))       # noqa: S307 (digits and + - * / only)
+    return ev(name)
+
+
+def card(name: str) -> str:
+    """text AWTO_CT_<name> of tAwtoCardS (port names, units, DP rates the formats print)"""
+    t = OSDCARD.read_text()
+    lit = t[t.index("tAwtoCardS[] ="):]
+    parts = "".join(re.findall(r'"((?:[^"\\]|\\.)*)"', lit[:lit.index(";")])).split("\\0")
+    base, _, k = name.partition("+")
+    return parts[c_int("AWTO_CT_" + base, OSDCARD) + int(k or 0)]
+
+
+def names(r: list, ident: int) -> list:
+    return [x["text"] for x in r if x["id"] == ident] + ["FF"]      # an arg without a row prints in hex
+
+
+def sep(r: list, k: int) -> list:
+    return [next(x["text"] for x in r if x["id"] == AWTO_SEP and x["arg"] == k)]
+
+
+AWTO_SEP = 0x19
+
+
+def value_segs(f: str, r: list, port: list) -> list:
+    """segments (each a list of alternative strings) a fmt prints at its %: AwtoSyncLine, every value at its widest"""
+    def num(n):
+        return ["9" * n]
+    hz, mhz = card("HZ"), card("HZ+2")
+    return {
+        "-": [], "vport": [["auto", *port]], "res": [num(5), ["x"], num(5)],
+        "mhz1": [num(DW - 1), ["."], num(1), [mhz]], "hz1": [num(DW - 1), ["."], num(1), [hz]],
+        "hz3": [num(DW - 3), ["."], num(3), [hz]], "mhz3": [num(DW - 3), ["."], num(3), [mhz]],
+        "dp": [[card("RBR"), card("RBR+1"), card("RBR+2"), card("HBR3"), "FF"], [" x"], num(3)],
+        "src": [["HDMI", "DP", "DVI", "9" * DW]], "harg": [num(2)],
+        "pc": [["STALL TEST, PC ", "STALL, PC "], ["FF", "C"], [":"], num(4)],
+        "ms": [num(DW), [" ms"]], "n": [num(DW)], "x": [num(6)],
+        "htime": [["2106-02-07T06:28:15+31:45"]], "sms": [["-", "+"], num(DW), [" ms"]],
+        "wdt": [["warning "], num(5), [" ms, reset "], num(5), [" ms"]],
+        "sys": [names(r, 0x15), sep(r, 0), names(r, 0x15), sep(r, 2), num(len(str(c_int("AWTO_SYS_MS_MAX", HEADER)))),
+                sep(r, 3), names(r, 0x16), ["", sep(r, 5)[0]], ["", *names(r, 0x1A)]],
+        "sysreq": [names(r, 0x17), sep(r, 4), names(r, 0x16), sep(r, 2), names(r, 0x18), [")"]],
+        "pby": [names(r, 0x1B)],
+    }[f]
+
+
+def segments(x: dict, r: list, port: list) -> list:
+    """a row's console line as segments: leading space + time column, port prefix, text with each % expanded"""
+    f = x["f"][4:] if x["f"].startswith("port") else x["f"]
+    seg = [[" +99999 ms "]] + ([[p + " " for p in port]] if x["f"].startswith("port") else [])
+    parts = x["text"].split("%")
+    for k, p in enumerate(parts):
+        seg.append([p])
+        if k + 1 < len(parts):
+            seg += [num5ms()] if f == "ms2" else value_segs(f, r, port)
+    return seg
+
+
+def num5ms():
+    return ["99999 ms"]                             # ms2: two 16-bit ms values
+
+
+def seg_len(seg: list) -> tuple:
+    """(longest length, longest run without a space) over every choice of alternatives (upper bounds)"""
+    n = run = best = 0
+    for alts in seg:
+        n += max(len(a) for a in alts)
+        nxt = 0
+        for a in alts:
+            if " " in a:
+                best = max(best, run + a.index(" "), max(len(w) for w in a.split(" ")))
+                nxt = max(nxt, len(a) - a.rindex(" ") - 1)
+            else:
+                nxt = max(nxt, run + len(a))
+        run = nxt
+        best = max(best, run)
+    return n, best
+
+
+def console_rows(n: int, word: int, w: int, txt0: int) -> int:
+    """rows a line of n cells takes: AwtoConWrapLine breaks at the last space before the edge (a run of at most word - 1
+    cells moves down), the continuation starts at txt0 (under the text); 3 = does not fit in two"""
+    if n <= w:
+        return 1
+    return 2 if txt0 + n - (w - word) - 1 <= w else 3
+
+
+def line_check(r: list) -> int:
+    """every row's worst-case line in at most 2 rows of the main-page log; the host time line + its fw tail in one row
+    (AwtoConLogTail moves cells, no wrap there). Returns the number of failures; widths read from the firmware."""
+    w, txt0 = c_int("AWTO_LOG_W_MAIN", DBGPOP), c_int("AWTO_LOG_TXT0", DBGPOP)
+    dmax = max(int(n) for n in re.findall(r"^#define\s+_D(\d)_INPUT_PORT\b", GLOBAL_H.read_text(), re.M))
+    port = [card("DP"), card("HDMI") + str(dmax), card("PORT") + str(dmax)]
+    bad, rep = 0, []
+    for x in r:
+        if x["id"] in NAME_IDS:
+            continue
+        n, word = seg_len(segments(x, r, port))
+        k = console_rows(n, word, w, txt0)
+        rep.append((n, k, x))
+        if k > 2:
+            bad += 1
+            log(f"LINE TOO LONG {x['id']:02X} {x['a']}: worst case {n} cells, more than 2 rows of {w}: {x['text']}")
+    host = next(x for x in r if x["id"] == 0xD7)
+    for fw in (x for x in r if x["id"] == 0xD8):
+        n = seg_len(segments(host, r, port))[0] + 1 + seg_len(segments(fw, r, port)[1:])[0]
+        if n > w:
+            bad += 1
+            log(f"LINE TOO LONG D7 + D8 {fw['a']} (one row, AwtoConLogTail): worst case {n} cells > {w}")
+    rep.sort(key=lambda t: -t[0])
+    log(f"console log row {w} cells, text at {txt0}: {sum(k == 1 for _, k, _ in rep)} rows fit one row, "
+        f"{sum(k == 2 for _, k, _ in rep)} wrap to two, {bad} fail; widest: " +
+        ", ".join(f"{x['id']:02X} {x['a']} {n}" for n, _, x in rep[:8]))
+    return bad
+
+
 def patch(path: Path, name: str, block: str):
     b, e = f"GENERATED-BEGIN {name}", f"GENERATED-END {name}"
     t = path.read_text()
@@ -287,7 +435,8 @@ def main():
                 path.write_text(new)
             log(f"{path.name} {name}: {'out of date' if a.check else 'rewritten'}")
     log(f"{len(r)} sync rows; {stale} block(s) changed")
-    return 1 if (a.check and stale) else 0
+    bad = line_check(r)
+    return 1 if (a.check and stale) or bad else 0
 
 
 if __name__ == "__main__":

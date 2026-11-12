@@ -143,7 +143,7 @@
 ^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1281	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
 ^unreachable code$	Kernel/System/Code/SysPower.c	749	ok	OK-HARMLESS: trailing return after a switch in which all cases return
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	963	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1001	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1000	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	365	ok	OK-HARMLESS: bUncall is a local =_FALSE: SDK "uncall" block that only forces link of otherwise unused functions; never meant to run
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	367	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	3897	ok	OK-CONFIG: _DP_TX_EDID case empty (config) so it merges with default
