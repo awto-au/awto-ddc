@@ -64,7 +64,7 @@ Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits
 CTA-861 rev 3 extension:
 - header flags `0xB1`: underscan, YCC444+422, 1 native DTD (base DTD1). **Basic-audio bit CLEARED** (was `0xF1`) — see audio note.
 - VDB (18 VICs): 97 96 95 94 93 (4K 60/50/30/25/24), 16 31 32 33 34 (1080p), 4 19 60 61 62 (720p), 1 2 3 (SD). Deduped: removed second VIC 16 and VIC 76. No native flag (VIC 97 cannot carry one; native = base DTD1).
-- **NO Audio / Speaker-Allocation block** — units have no speakers (Dan 2026-11-04). Removed the LPCM-2ch ADB and FL/FR SADB; header basic-audio bit cleared so the OS doesn't route sound to a dead endpoint.
+- Audio (awto-ddc#93, supersedes the 2026-11-04 removal): ADB `23 09 07 07` (LPCM 2 ch, 32/44.1/48 kHz, 16/20/24 bit) + SADB `83 01 00 00` (FL/FR), header flags `0xF1` (basic audio). The firmware now drives the embedded DAC (`docs/audio.md`).
 - Colorimetry Data Block (ext tag `0x05`, bytes `E3 05 06 20`): xvYCC709 + sYCC601 + sRGB colorimetry bit (CTA-861-H). No BT.2020 (panel is ~99% sRGB IPS/PLS, not wide-gamut). sRGB bit set on edid-decode's recommendation (clears the "set the sRGB bit" interop warning).
 - HDR Static Metadata Data Block (ext tag `0x06`, bytes `E3 06 01 01`): EOTF = Traditional-gamma SDR only; Static Metadata Type 1. **NO PQ/HLG** — ~300 cd/m2 SDR panel, not real HDR10; advertising HDR10 would be a false claim.
 - VCDB `0xCA`: YCC + RGB quantization selectable; IT/CE always underscanned (matches header underscan bit).
@@ -86,7 +86,7 @@ After (both `awto-dp.bin` and `awto-hdmi.bin`): `EDID conformity: PASS`, zero fa
 - Panel is **IPS/PLS**, not VA — Dan visual confirm 2026-11-04 (stable off-axis, corner/edge glow). Earlier VA assumption was wrong.
 - Chromaticity: **standard sRGB / BT.709** primaries — the choice for a ~99%-sRGB IPS panel with no measured panel primaries: R 0.640,0.330 G 0.300,0.600 B 0.150,0.060 W 0.3127,0.3290 (D65). Bytes `ee91a3544c99260f5054` (edid-decode's exact sRGB reference encoding). Gamma 2.20 (`0x17=0x78`), 10bpc kept (DP). Replaces the prior Samsung-VA guess (`cd01a6554c9c260e5054`, R 0.651/0.332 G 0.300/0.610 B 0.148/0.055).
 - sRGB-default feature bit RE-SET (`0x18`: `0x3f` DP / `0x27` HDMI): chromaticities now equal the sRGB standard, so "default colour space = sRGB" is legitimate. edid-decode does NOT emit the "sRGB signalled but chromaticities don't match" warning (it only fires when the bit is set but primaries differ).
-- Kept CTA Colorimetry DB (sRGB + xvYCC709 + sYCC601; no BT.2020) and HDR Static Metadata DB (SDR EOTF only, no PQ/HLG). Audio still REMOVED (no speakers): no Audio/Speaker-Allocation block, basic-audio header bit cleared.
+- Kept CTA Colorimetry DB (sRGB + xvYCC709 + sYCC601; no BT.2020) and HDR Static Metadata DB (SDR EOTF only, no PQ/HLG). Audio was removed here; restored by #93 (see the Audio line above).
 - Identity/size/timings unchanged: AWT / awto-mon / AWT26110001, 597x336 mm, native DTD 3840x2160@60 533.12 MHz, deduped mode list.
 - Both variants `edid-decode -c` PASS (zero failures; only the benign "VIC 97 and first DTD not identical" warning).
 - Re-flashed to card1-DP-4 (`/dev/i2c-20`) 2026-11-04T13:13+1100: live sector (prior VA EDID) vs new patched = 24 bytes differ (all in-slot: feature byte + changed chroma bytes + base checksum, x3 slots), `--expect-current` matched (0 differ). SR started `0x9c`, WP# released, unprotect -> SR `0x00`, erase + 16 pages programmed, VERIFY OK (0 mismatches), re-protected to `0x9c` with WP# re-asserted. Live `/sys/class/drm/card1-DP-4/edid` decodes with sRGB primaries (Red 0.6396/0.3300), sRGB-default bit set, Colorimetry+HDR blocks, no audio, conformity PASS.
@@ -144,3 +144,17 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
   ESN reads all-0xFF (unprogrammed) on both factory units. Confirmed via `rtd_flash_sector.py <bus> --read-id`.
 - Flash ceremony: a standalone no-op dry-run is pointless. `--write` already does backup -> blank-check ->
   program -> read-back verify -> abort-on-mismatch -> re-protect. One --write is the safe path; skip the separate dry-run.
+
+## Input EDID revision for the firmware build (2026-11-07, #26; branch wb-edid; NOT in the ISP-flashed sector)
+- Applies to the EDIDs compiled into our firmware (`scripts/fw_edid_tables.py` -> `make_edid.py`), all 3 input ports.
+- DTD1 (preferred) = vendor's 3840x2160 @59.982 Hz, 533.12 MHz CVT-RB (4000x2222, +H -V), image size 597x336.
+- Removed: VIC 97 and 93-96 (4K24/25/30/50), 4K30 DTD, 1080p50, all 24/25/30/50 Hz and 59.94 VICs, DTD3 2560x1440.
+- Kept: VIC 16 + DTD2 1080p60 only. Basis: mode sweep (#26) - only exact-60.0 Hz modes work; the rest NOSUPPORT or garble (DDR bug).
+- Range limits 48-60 Hz V, 15-135 kHz H, 540 MHz; HF-VSDB max TMDS 540 MHz (0x6C), SCDC + scrambling kept (needed >340 MHz); HDMI feature byte `0x2F` (RGB; was `0x27` = monochrome type).
+- edid-decode -c: PASS, one warning "VIC 16 and the first DTD are not identical" (benign: first VIC vs 4K DTD1).
+- Est./std timings (640x480, 1440x900 ...) unchanged, unverified on firmware.
+
+## 4K60.000 preferred (2026-11-07, #26; branch wb-edid60)
+- Supersedes the 59.94/533.12 MHz DTD1 above: DTD1 = CTA 3840x2160@60.000 (594.000 MHz, 4400x2250, +H +V) = VIC 97, which is listed again (VIC 97, VIC 16).
+- Reason: 4K60.000 works on unit 3 after the compiler `~bit` fix (wb-vfreq); Dan prefers 60.000 for PC work, no 59.94 broadcast rates.
+- Limits unchanged: 48-60 Hz, 15-135 kHz, 600 MHz, HF-VSDB 600 MHz. edid-decode -c PASS, 0 warnings.

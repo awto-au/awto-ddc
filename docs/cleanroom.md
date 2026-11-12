@@ -7,7 +7,7 @@ Plan, inventory and step list: #65 (scoping comment). Dan's decisions: #65 comme
 | Tree | Side | Holds |
 |---|---|---|
 | `/mnt/2tb/git/awto-rtdfw` | clean | `awto/include` (interfaces), `awto/<mod>/` (code), `facts/` (generated). LOCAL git only: no remote, no push until Dan says so |
-| awto-ddc (this repo, private) | spec | SDK port, keil2sdcc, overlay, regdb, RE, traces, `specs/`, tooling, `fw/awto/<mod>/rules.py`, the boundary shim |
+| awto-ddc (this repo, private) | spec | SDK port (`fw/sdk`, our source since #162), regdb, RE, traces, `specs/`, tooling, `fw/awto/boundary.py`, the boundary shim |
 
 ## Modules (wave A specs/briefs)
 | Module | Step | Spec | Source of truth | Status |
@@ -141,8 +141,11 @@ Every number in a spec (and its code comment) carries one:
    (WRAPS compile-out under `_AWTO_NEW_<MOD>`, INSERTS/SUBS as needed) and shim entries; build; `fw_gates`;
    flash unit 3 under its lock; health; then units 1 and 2.
 6. Subsystem done: Opus final review; tick the step on #65.
-- Gap: `fw_build.py` does not compile awto-rtdfw sources yet; the mixed-build hook (sources list per `fw/awto/<mod>/`) is the
-  integrator's first task (follow-up issue).
+- Mixed build (#68): `fw_compile.py awto` (run by `fw_build.py` every build) compiles `$AWTO_RTDFW_REPO/awto/<mod>/**/*.c`
+  with the SDK flags, seeing only `awto/include` + `facts` (+ `fw/sdcc` shims), to `tmp/sdcc-port/asm/awto_<mod>_<file>.asm`.
+  - Every SDK compile gets `-D_AWTO_NEW_<MOD>` per module directory with sources: WRAPS conditions use `!defined(_AWTO_NEW_<MOD>)`.
+  - `fw/awto/awto_shim/sdk_boundary.c` is compiled with the project flags (SDK headers visible), one `#ifdef _AWTO_NEW_<MOD>` block per module.
+  - Unreferenced clean functions are dropped by `sdcc_bank` dead-chunk pruning like any other code: reach them through the shim.
 - FunctionLib modules drop out of the link by themselves once our code defines the symbol (`fw_build.py` `select_lib`).
 - Last step: SDK-free build gate (`RTD_SDK=/nonexistent`).
 

@@ -3,6 +3,7 @@
 State of awto-ddc after the 2026-11-04..11-09 session. Point form; every item names its issue, doc or path. Supersedes the 2026-11-05 handover (retired in `history.md`).
 Tracking: #1 (umbrella), #7 (own firmware), #41 (Dahua RE), #65 (clean-room), #67 (settings/menu), #85 (keys), #87/#89/#90 (OSD). Global rules: `~/.claude/CLAUDE.md`; repo rules: `CLAUDE.md`.
 Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (RE only); **Realtek SDK** = source our images are built from; **awto menu** = our menu (#67).
+- 2026-11-13: firmware line `wb-p14ui` (87ab7c7) merged into `main`; `fw/overlay/` and `keil2sdcc.py` are gone, `fw/sdk/` (+ `fw/sdk-parked/`) is the source (section "SDK source" at the end). `wb-p14ui` stays the firmware line: agents branch from it. Sections 4-9 are the 2026-11-09 state.
 
 ## 1. Read first
 - Hardware tests go on **unit 2 only** (lower left). Units 1 and 3 are Dan's working screens: no flash, reset, DDC traffic or layout change. Enforced by `scripts/devices.json` (`test` flag; `dev.py` refuses without `--force`).
@@ -17,9 +18,9 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 ## 2. Units and desk
 | unit | serial | connector (bus) | image | notes |
 |---|---|---|---|---|
-| 2 (test) | AWT26110002 | Intel HDMI-A-2 (i2c-11, D2) + Intel DP-1 (i2c-15, D1) | **wb-p14keys5** | lower left; relay Sonoff `so-th-1` (`scripts/power_cycle.py --relay so-th-1`); `osd_timeout` 0; settings were wiped by the recover (defaults) |
-| 3 | AWT26110003 | NVIDIA DP-4 (AUX i2c-21) | wb-p14swap10 | Dan's primary, bottom middle; no relay now; NVIDIA DP AUX is slow |
-| 1 | AWT26110001 | NVIDIA HDMI-A-3 (i2c-18, D3) | wb-p14swap10 | bottom right; one health run 10/11 (main loop 2 s after boot), not re-checked |
+| 2 (test) | AWT26110002 | Intel HDMI-A-2 (i2c-11, D2) + Intel DP-1 (i2c-15, D1) | **wb-p14ui-audit1** (2026-11-13) | lower left; the only unit for tests; relay Sonoff `so-th-1` (`scripts/power_cycle.py --relay so-th-1`); `osd_timeout` 0 |
+| 3 | AWT26110003 | NVIDIA DP-4 (AUX i2c-21) | wb-p14ui28 | Dan's primary, bottom middle; **hands off**; NVIDIA DP AUX is slow |
+| 1 | AWT26110001 | NVIDIA HDMI-A-3 (i2c-18, D3) | wb-p14ui28 | bottom right; **hands off** |
 | Philips 288E2 | UK52307000611 | NVIDIA DP-2 | MStar, not Realtek | top; never touch (`docs/monitors/README.md`) |
 - Layout: DP-2 at (0,0); bottom row HDMI-2 | DP-4 (primary) | HDMI-3. DP-1 is mirrored into HDMI-2 (test mode, gives unit 2 a live D1): `./dev.py mode --unit 2 --dp off` removes it. Watcher: `scripts/desk_layout.py watch` (pid `tmp/desk_layout_watch.pid`); `desk_layout.py check`.
 - Bus numbers change on re-enumeration and recabling: tools find the bus by EDID serial; never pick by number.
@@ -83,10 +84,10 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 ## 5. Worktrees and branches (awto-ddc)
 | worktree | branch | purpose |
 |---|---|---|
-| `/mnt/2tb/git/awto-ddc` | main | tools + docs; local commits ahead of origin until pushed |
+| `/mnt/2tb/git/awto-ddc` | main | tools + docs + firmware (wb-p14ui merged 2026-11-13); local commits ahead of origin until pushed |
+| `awto-ddc-ui` | wb-p14ui | the firmware line (all three units run it); agents branch `wb-p14ui-<topic>` from it, host tools `tools-<topic>` from main |
 | `awto-ddc-swap` | wb-p14swap | the image line on units 1/3 (wake, KVM, menu, IP-over-DDC, dead-port guard) |
 | `awto-ddc-keys` | wb-p14keys | #85/#39 keys (keys5 on unit 2; keys6 uncommitted) |
-| `awto-ddc-ui` | wb-p14ui | #87 menu redesign (merges keys5) |
 | `awto-ddc-audio` | wb-p14audio | #94 audio, unmerged |
 | (no worktree) | wb-p14pf | #83 pre-fill |
 | `awto-ddc-crt` | wb-no-crtmod0 | drops crt_mod0.c (library `%0` guard), to fold in |
@@ -129,3 +130,9 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Found only in chat and now recorded: Philips 288E2 is MStar (`docs/monitors/README.md`); OSD is display-side and independent of the picture clock (`docs/reversing/realtek-rtd/osd.md`); two Realtek SDK bugs (#100, `re/lib-review/realtek-sdk-bugs.md`); CEC (#101); recovery stub idea (#102); keys6 and #87 state (#85, #87 comments); flasher follow-ups (#71); RE plan (#41); invalid regression figures (awto-sdcc#25); wrong key labels, naming and test-unit changes (`history.md`); `buttons.md` section 3 corrected; new memory `blame-code-not-hardware`.
 - Answered in chat on 2026-11-04 and filed then: Linux-loader/EDID analysis (#4, #8, `docs/edid-fix.md`).
 - Not verifiable from the transcript: "45g for ddc?" (2026-11-07 message) and "30hz is fine" (2026-11-07); no action recorded.
+
+## SDK source (awto-ddc#162)
+- `fw/sdk/` = the Realtek SDK files the RL6449 build compiles or includes (`fw/sdk_files.txt`), in SDCC form; it is our code. Edit it directly; our changes carry `// awto: <what> (#issue)`.
+- Build: `msg_tokenise.py port` (DebugMessage ids, build tag) -> `fw_compile.py` (compile) -> link. No build step patches the SDK; gate `rules` enforces it.
+- History: first commit = mechanical import of the mirror (`scripts/sdk_import.py`, run by hand to compare a new SDK drop), then the overlay merge, then the behaviour edits. What each removed rule did: `docs/keil2sdcc-rules.md`.
+- Bank layout: the tracked `fw/bank_layout.tsv` only (`fw_build.py` refuses a layout under `tmp/`).

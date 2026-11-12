@@ -5,9 +5,11 @@ usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
   writes DIR/awto-dp.bin and DIR/awto-hdmi.bin (default DIR: $VENDORS/realtek/analysis/edid)
   then runs `edid-decode -c` on each if installed and prints the result.
   --serial sets the per-unit serial text in the 0xFF descriptor (default AWT26110001).
+  Also writes DIR/awto-hdmi-d3.bin: = awto-hdmi.bin except the port tag (PORT_VSDB). Name + serial are the same on every
+  port (the host keys monitor identity on them: mutter layout, dev.py serial guard); only the tag tells D1/D2/D3 apart.
 Design + per-port rationale: docs/edid-fix.md.  Log: ./tmp/logs/make_edid.log
 """
-import shutil, subprocess, sys
+import os, shutil, subprocess, sys
 from pathlib import Path
 
 OUT_DEFAULT = Path("/mnt/2tb/vendors/realtek/analysis/edid")
@@ -44,15 +46,11 @@ def dtd(clk10k, ha, hb, hfp, hsw, va, vb, vfp, vsw, hpol, vpol):
         0, 0, f])
 
 
-# 3840x2160 @60.000 Hz EXACTLY VIC 97 (CTA standard): 594.00 MHz, htotal 4400 (fp176 sw88 bp296),
-# vtotal 2250 (fp8 sw10 bp72), +H +V. Identical to VIC 97 so edid-decode emits no "VIC/DTD differ"
-# warning; 594 MHz < 600 MHz range limit, standard 4K60 every GPU/panel link supports. (Was a 533.12 MHz
-# reduced-blanking DTD @59.98 Hz — our own choice, not a factory constraint; dropped for 100% clean decode.)
+# 3840x2160 @60.000 Hz = CTA VIC 97 exactly: 594.00 MHz, htotal 4400 (fp176 sw88 bp296), vtotal 2250
+# (fp8 sw10 bp72), +H +V. Works on our firmware since the ~bit fix (wb-vfreq, #26); PC use, no 59.94 broadcast rates.
 DTD_4K = dtd(59400, 3840, 560, 176, 88, 2160, 90, 8, 10, 1, 1)
 # VIC 16 exact: 148.5 MHz, htotal 2200 (88/44/148), vtotal 1125 (4/5/36), +H +V
 DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
-# CVT-RB 2560x1440: 241.7 MHz, htotal 2720 (48/32/80), vtotal 1481 (3/5/33), +H -V... as in original (+/+)
-DTD_1440 = dtd(24170, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 1)
 
 # Chromaticity: standard sRGB / BT.709 primaries. Panel is IPS/PLS (Dan visual confirm 2026-11-04:
 # stable off-axis, corner glow), ~99% sRGB; no measured panel primaries, so the honest choice is the
@@ -81,7 +79,7 @@ def base_block(port, serial=SERIAL_TXT):
     # Feature byte. sRGB-default bit (0x04) SET: chromaticities are exactly sRGB, so "default colour
     # space = sRGB" is legitimate (edid-decode only complains when the bit is set but primaries differ).
     # 1.4: preferred=DTD1, continuous freq, RGB+YCbCr444/422; 1.3: RGB, preferred, GTF.
-    b[24] = 0x3F if port == "dp" else 0x27
+    b[24] = 0x3F if port == "dp" else 0x2F
     b[25:35] = CHROMA                              # standard sRGB primaries (see CHROMA note)
     b[35:38] = bytes.fromhex("210800")             # est. timings 640x480, 800x600, 1024x768
     # ratio codes: 0=16:10 1=4:3 2=5:4 3=16:9; unused slots = 0x0101
@@ -91,41 +89,68 @@ def base_block(port, serial=SERIAL_TXT):
     b[54:72] = DTD_4K
     b[72:90] = text_desc(0xFC, MODEL_TXT)
     b[90:108] = text_desc(0xFF, serial)
-    # range limits (type 0x01 = range limits only; GTF is deprecated in 1.4): 24-60 Hz V (24p modes), 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
-    b[108:126] = bytes([0, 0, 0, 0xFD, 0, 24, 60, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
+    # range limits (type 0x01 = range limits only; GTF is deprecated in 1.4): 48-60 Hz V, 15-135 kHz H, <=600 MHz pixel clock (byte = MHz/10)
+    b[108:126] = bytes([0, 0, 0, 0xFD, 0, 48, 60, 15, 135, 60, 0x01 if port == "dp" else 0x00, 0x0A] + [0x20] * 6)
     b[126] = 1
     b[127] = cksum(b[:127])
     return bytes(b)
 
 
-VICS = [97, 96, 95, 94, 93, 16, 31, 32, 33, 34, 4, 19, 60, 61, 62, 1, 2, 3]
+# Port tag (#28): CTA vendor-specific data block, OUI AWTO_OUI (unregistered, not used by any known vendor), payload
+# "AWTO" + port number (1 = D1 DP, 2 = D2 HDMI, 3 = D3 HDMI). Read by dev.py port.
+AWTO_OUI = 0xA770D0
+PORT_TAG = {"dp": 1, "hdmi": 2, "hdmi-d3": 3}
+
+
+def port_vsdb(port):
+    pl = AWTO_OUI.to_bytes(3, "little") + b"AWTO" + bytes([PORT_TAG[port]])
+    return bytes([(3 << 5) | len(pl)]) + pl
+
+
+# Production (#26 sweep 2026-11-07, test EDID on HDMI + DP): every listed rate ACTIVE in line-buffer mode. Left out:
+# 1080p24 / 23.976 (NOSIGNAL / SEARCH via FRC) and the vendor 533.12 MHz 4K DTD (i915 HDMI prunes it).
+VICS = [97, 96, 95, 94, 93, 16, 31, 34, 33, 4, 19, 62, 61, 60, 1, 2, 3]
+# TEST profile (EDID_PROFILE=test, sweep only, never a production unit): every mode removed on 2026-11-07, for the mode sweep
+# (#26): 4K 60/50/30/25/24 (+ x1000/1001), 1080p 60/50/30/25/24, 720p 60/50/24/25/30, SD 640x480 / 480p; DTDs 4K 533.12 MHz
+# (vendor 59.982), 2560x1600 and 1920x1200 CVT-RB, 2560x1440. Colorimetry + HDR blocks left out to make room for 4 DTDs.
+TEST = os.environ.get("EDID_PROFILE") == "test"
+VICS_TEST = [97, 96, 95, 94, 93, 16, 31, 34, 33, 32, 4, 19, 60, 61, 62, 1, 2, 3]
+DTDS_RB = (dtd(26850, 2560, 160, 48, 32, 1600, 46, 3, 6, 1, 0)       # 2560x1600@60 CVT-RB
+           + dtd(24150, 2560, 160, 48, 32, 1440, 41, 3, 5, 1, 0)     # 2560x1440@60 CVT-RB
+           + dtd(15400, 1920, 160, 48, 32, 1200, 35, 3, 6, 1, 0))    # 1920x1200@60 CVT-RB
+DTDS_TEST = dtd(53312, 3840, 160, 48, 32, 2160, 62, 3, 5, 1, 0) + DTDS_RB   # + vendor 4K 59.982 (htotal 4000, vtotal 2222)
 
 
 def cta_block(port):
     d = bytearray()
-    vdb = bytes(v for v in VICS)
+    vdb = bytes(v for v in (VICS_TEST if TEST else VICS))
     d += bytes([(2 << 5) | len(vdb)]) + vdb
-    # NO Audio Data Block / Speaker Allocation Block: these units have no speakers (Dan 2026-11-04).
-    # The CTA header "basic audio" bit is also cleared so the OS does not route sound to a dead endpoint.
+    # Audio (#93): Audio Data Block = one Short Audio Descriptor, Linear PCM 2 ch, 32/44.1/48 kHz, 16/20/24 bit;
+    # Speaker Allocation Block = FL/FR. Header basic-audio bit set (b[3] below). The units' embedded DAC drives the audio pins.
+    d += bytes([(1 << 5) | 3, (1 << 3) | (2 - 1), 0b00000111, 0b00000111])
+    d += bytes([(4 << 5) | 3, 0x01, 0x00, 0x00])
     # Colorimetry Data Block (ext tag 0x05): byte1 0x06 = xvYCC709 + sYCC601 extended-gamut YCC;
     # byte2 0x20 = sRGB colorimetry (CTA-861-H) — the panel covers sRGB, and setting it is what
     # edid-decode recommends to avoid interop issues. BT.2020 is NOT advertised (~99% sRGB VA panel).
-    d += bytes([(7 << 5) | 3, 0x05, 0x06, 0x20])
+    if not TEST:
+        d += bytes([(7 << 5) | 3, 0x05, 0x06, 0x20])
     # HDR Static Metadata Data Block (ext tag 0x06): EOTF = Traditional gamma SDR only (bit0); Static
     # Metadata Type 1 supported. NO PQ(SMPTE2084)/HLG — this is a ~300 cd/m2 SDR VA panel, not HDR10.
-    d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
+    if not TEST:
+        d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
     d += bytes([(7 << 5) | 2, 0x00, 0xCA])                 # VCDB: QY+QS (YCC/RGB quant selectable), IT/CE underscan
-    if port == "hdmi":
+    if port.startswith("hdmi"):
         # HDMI 1.4 VSDB: PA 1.0.0.0, DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
         d += bytes([(3 << 5) | 7, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x18, 0x44])
-        # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5), SCDC present + LTE_340Mcsc scrambling
+        # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5; i915 rejects the 533.12 MHz DTD as CLOCK_RANGE with 540), SCDC present + LTE_340Mcsc scrambling
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
         # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue
-    dtds = DTD_1080 + DTD_1440
+    d += port_vsdb(port)
+    dtds = DTDS_TEST if TEST else DTDS_RB                  # 1080p60 = VIC 16
     b = bytearray(128)
     b[0], b[1] = 0x02, 0x03
     b[2] = 4 + len(d)
-    b[3] = 0x80 | 0x20 | 0x10 | 1                          # underscan, YCbCr444/422, 1 native DTD (base DTD1); basic-audio bit CLEARED (no speakers)
+    b[3] = 0x80 | 0x40 | 0x20 | 0x10 | 1                   # underscan, basic audio, YCbCr444/422, 1 native DTD (base DTD1)
     b[4:4 + len(d)] = d
     o = 4 + len(d)
     b[o:o + len(dtds)] = dtds
@@ -147,7 +172,7 @@ def main():
     assert len(serial) <= 13, "serial text must fit the 13-byte 0xFF descriptor"
     out.mkdir(parents=True, exist_ok=True)
     rc = 0
-    for port in ("dp", "hdmi"):
+    for port in ("dp", "hdmi", "hdmi-d3"):
         e = build(port, serial)
         assert len(e) == 256 and sum(e[:128]) % 256 == 0 and sum(e[128:]) % 256 == 0
         p = out / f"awto-{port}.bin"

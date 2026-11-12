@@ -307,6 +307,7 @@ def main():
         cframe = {c: {mem: (0 if any(n in keep_static for n in cmembers[c]) else
                             sum(frame[n][mem] for n in cmembers[c])) for mem in MEMS} for c in cnodes}
         off = {c: ZERO() for c in cnodes}
+        pred = {}                                 # DATA critical path (logged: what sets the region size)
         indeg = defaultdict(int)
         for c in cnodes:
             for t in cedges[c]:
@@ -315,12 +316,21 @@ def main():
         while q:
             c = q.pop()
             for t in cedges[c]:
+                if off[c]["d"] + cframe[c]["d"] > off[t]["d"]:
+                    pred[t] = c
                 for mem in MEMS:
                     off[t][mem] = max(off[t][mem], off[c][mem] + cframe[c][mem])
                 indeg[t] -= 1
                 if indeg[t] == 0:
                     q.append(t)
         region_size[name] = {mem: max([off[c][mem] + cframe[c][mem] for c in cnodes] or [0]) for mem in MEMS}
+        if cnodes and name == "main":
+            c = max(cnodes, key=lambda k: off[k]["d"] + cframe[k]["d"])
+            path = []
+            while c is not None:
+                path.append(f"{'/'.join(str(x[-1] if isinstance(x, tuple) else x) for x in cmembers[c])}:{cframe[c]['d']}")
+                c = pred.get(c)
+            log(f"  main DATA path ({region_size[name]['d']} B): " + " <- ".join(path))
         for c in cnodes:
             for n in cmembers[c]:
                 if n not in keep_static:          # non-cyclic SCC = single node

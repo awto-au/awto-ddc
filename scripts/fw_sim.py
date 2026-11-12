@@ -2,6 +2,8 @@
 """Run the banked firmware image in ucsim with a bank-switch model, to see how far init gets.
 
 usage: fw_sim.py --serial AWT26110003 [--budget 3000000] [--max-switches 2000]
+  Default = ucsim's own banker (native). --legacy-banking predates the lcall+data stubs (target/bank in r0-r2 at
+  __bs_call; now r0 = bank, dptr = target): it no longer reads them correctly.
   ucsim has no RL6449 bank register: breakpoints on __bs_call (bank = r2) and __bs_ret (bank = r1) load
   that bank's 64 KiB image (common area identical in every bank, so the swap is exact). Peripherals are
   not modelled (XDATA/SFR reads return RAM contents), so a wait-for-hardware loop shows up as a stall.

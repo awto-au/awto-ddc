@@ -1,4 +1,4 @@
-/* Keil C51 -> SDCC compatibility, force-included by scripts/keil2sdcc.py. Tracking: awto-ddc#8.
+/* Keil C51 -> SDCC compatibility, force-included by scripts/fw_compile.py. Tracking: awto-ddc#8.
  * Only keywords that are never ordinary identifiers in the SDK are macros here; `code`/`data`
  * are rewritten in declarator position by the port script instead. */
 #ifndef KEIL_COMPAT_H

@@ -1,15 +1,15 @@
 # Firmware diag block (boot stage + timing), #23
 
-- Switch: `_AWTO_DIAG` in `fw/overlay/Project/Header/RL6449_Project.h` (`_ON` now). Off = every call site compiles to nothing.
+- Switch: `_AWTO_DIAG` in `fw/sdk/Project/Header/RL6449_Project.h` (`_ON` now). Off = every call site compiles to nothing.
 - Block: 48 B XDATA at `0xF6D0..0xF6FF`, `volatile __xdata __at(0xF6D0)`. `fw_build.py` `XRAM` end = `0xF6D0` so the linker never uses it.
 - Reader: `scripts/rtd_diag.py <bus> [--watch N]` over debug slave 0x35 (reads + staging only, no other writes). Sim: `fw_sim.py` prints it from sim XRAM.
-- Zeroed by `AwtoDiagInit()` at start of `main`; code in `fw/sdcc/awto_diag.inc` (inserted into `SysMain.c` by `keil2sdcc.py`).
+- Zeroed by `AwtoDiagInit()` at start of `main`; code in `fw/sdcc/awto_diag.inc` (`#include`d in `SysMain.c`, fw/sdk).
 
 ## Layout (SDCC little-endian: low byte at the lower address)
 | off | size | field |
 |---|---|---|
 | 0x00 | 2 | magic `'A' 'D'` |
-| 0x02 | 1 | version (1) |
+| 0x02 | 1 | version: 1 = byte reads only; 2 = debug slave also answers 0x3C block read (`_AWTO_DBGISR`) |
 | 0x03 | 1 | stage, last reached (monotonic) |
 | 0x04 | 16 | 8 x u16 `g_usTimerCounter` (1 ms) at first entry of stage 1..8 |
 | 0x14 | 2 | main-loop heartbeat |
@@ -23,7 +23,11 @@
 | 0x22 | 2 | `DELAY_XUS_EXINT(100)`, raw counts |
 | 0x24 | 2 | 10 x `DELAY_5US_EXINT()`, raw counts |
 | 0x26 | 2 | whole panel T3 wait (calibration included), Timer2 counts / 64 |
-| 0x28 | 8 | spare |
+| 0x28 | 1 | test command (#33): 0x01-0x05 key messages: menu role (AUTO key) / UP / DOWN / exit role (MENU key) / SOURCE, 0x10+n OSD event n, 0x20 debug pop-up, 0x41/0x42 key test screen open/close (#39); cleared when applied |
+| 0x29 | 1 | debug pop-up pending (#34): 1 = next input-info pop-up draws the debug lines; test cmd 0x20 sets it + raises event 10 |
+| 0x2A | 2 | main-loop passes in the last ~1 s (u16, target byte order) |
+| 0x2C | 3 | `g_stOsdInfo` byte offsets of `usOsdState`, `ucOsdEventMsg`, `ucOsdKeyMessage` (`offsetof`, set at boot by `AwtoOsdOfsInit`; #37). `_DP_DEBUG_MSG` on = 4, 6, 7; off = 3, 5, 6; 0 = image without the report. Host: `rtd_proto.osd_offsets_from_diag` |
+| 0x2F | 1 | `ucHold`: #28 held test visuals, bit1 debug pop-up / console (test cmd 0x26); 0x27 clears |
 
 ## Stages (temporal order; timestamp 0 before Timer2 runs)
 1 BOOT start of main | 2 GPIO init done (inside `ScalerMcuInitial`) | 3 `ScalerMcuInitial` done | 4 pin-share done | 5 main loop first pass | 6 panel power on | 7 DPTx link start | 8 DPTx link done.
@@ -47,3 +51,17 @@
 - `ScalerTimerDelayXms(10)` = 9.847 ms (started at an arbitrary phase); 200 x `ScalerDelay5us()` (N=26) = 1094 us = 5.47 us per call incl. Timer2 ISR time.
 - Micro-bench, 1000 iterations, EA off (empty `djnz` loop 1216 raw counts): `mov a,dir` 2.11 cycles, `movx a,@dptr` 2.00, `mov a,@r0` 1.00, `djnz` 3.65 (cycles at the expected 87.7 MHz, 4 clocks per cycle).
 - Cycle model of `delay_cal_check.py` runs ~20 % fast against this (N=26 loop: 81 cycles = 3.7 us model, 5.5 us measured with ISR).
+
+## Debug slave 0x35 read protocol (#38)
+- Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, `#include`d in `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.
+- Cause of the old design's 1 MHz failures: the ISR only latched the command and held SCL (FE66 bit0); `ScalerDebug()` loaded FF26 one main-loop pass later (#12).
+- Now the ISR, at the STOP of the command write, resets the IIC data FIFO (FF2A bit6), loads FF26 and releases SCL, with no main-loop step.
+- Byte read (all versions): write `0x01 [hi]` (main loop, staging), write `0x3A [lo]`, read sub `0x08` x1.
+- Block read (version >= 2): write `0x3C [lo, hi, len, seq]`, then ONE read transaction `[0x08]` + repeated start + `len + 1` bytes: data, then checksum `(seq + lo + hi + sum(data)) & 0xFF`.
+  - The host verifies the checksum and retries (3 tries): at 1 MHz a reply raced by the ISR returns the previous reply (stale, wrong seq) or garbage.
+  - `len` clamped to `_AWTO_DBGISR_BLK_MAX` (24 data + 1 checksum in the IIC data FIFO; the SDK 0xBB reply fills 27); the ISR also stops filling at FF29 bit2 (FIFO full).
+  - Host chunks reads at `dbg_xdata.BLK_MAX` = 24. 48 B diag block = 4 transfers (byte path: 97).
+  - 0x3C overwrites the staged hi byte (g_pucDdcciData[2]); byte-path callers stage `0x01` themselves each time.
+  - Unused by the SDK: main-loop `ScalerDebug()` has no 0x3C case (low nibble 0xC matches no default case).
+  - Tried and dropped: FF29 bit7 (iic_force_scl_l, stretch SCL while the FIFO is empty in a read) wedged the DDC bus (EDID silent, power cycle needed) (#38).
+- Host picks the path from the version byte: `dbg_xdata.probe` (rtd_diag), `check_diag` (unit_health); version 1 or unreadable -> byte path.

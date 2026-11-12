@@ -12,12 +12,13 @@ usage: rtd_diag.py <bus> [--watch N | --messages [--secs S] | --release | --trac
   0x2A); write 0x25 [0x00] + read 9 = FA F5 len v3 v2 v1 v0 c1 c2; per 15-char chunk k write 0x25 [k] + read n+1 (text
   + checksum k+0x0F+sum); write 0x2A (end, reply 0xF7, releases fw); on exit write 0x2F. Only these staging/read cmds.
   --release: send 0x2A + 0x2F only; frees a firmware left halted by a killed --messages run (reads then echo one byte).
-  Text starting 0x01 = token: bytes 1-2 big-endian id -> fw/msgids.tsv (id, category, file:line, text).
+  Text starting 0x01 = token: bytes 1-2 big-endian id -> the table inside the flashed image (--serial/--table,
+  scripts/msg_table.py, #56), else fw/msgids.tsv (id, category, file:line, text).
 Block layout, little-endian (SDCC; low byte first), from fw/sdk/Project/Header/RL6449_Project.h StAwtoDiag:
   00 'A' 'D' | 02 version | 03 stage | 04..13 u16 stage ms[8] | 14 hb u16 | 16 t2 isr u16 | 18 ex1 isr u16
   | 1A ucDelay5usN | 1B u16 10 ticks of ScalerTimerDelayXms, counts/4 | 1D u16 10 x DELAY_5US raw counts | 1F RCAP2H
   | 20 u16 DELAY_XUS(100) | 22 u16 DELAY_XUS_EXINT(100) | 24 u16 10 x DELAY_5US_EXINT | 26 u16 panel T3 wait total, counts/64
-  | 28 trace seq | 29 WDT_TEST (FFEB) at boot, bit7 = watchdog reset | 2A u16 trace id[3], [2] newest (--trace; ids in tmp/sdcc-port/trace_ids.tsv)
+  | 28 u8 test cmd | 29 u8 dbg popup | 2A u16 loop/s | 2C u8x3 g_stOsdInfo offsets state,event,key (#37) | 2F hold
   Delay-calibration counts are raw Timer2 counts (EA off, overhead of an empty snapshot pair subtracted); fw/sdcc/awto_delaycal.inc.
 Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, MCU div 1, 14.318 MHz xtal):
   M2PLL: 701582 / 96 = 7308 -> reload 0xE373, 7309 counts per 1 ms tick; xtal (initial mode): 14318 / 12 = 1193
@@ -58,6 +59,7 @@ CAL_T3_MS, CAL_T3_TOL_MS = 550, 1.5  # panel T3 (_PANEL_POWER_ON_T3): ScalerTime
 IDLE_POLL_S = 0.002   # a status read is ~0.3 ms at 100 kHz; 2 ms bounds the stall added per message (fw halts until fetched)
 MSG_ENABLE, MSG_FETCH, MSG_END, MSG_DONE = 0x55, 0x25, 0x2A, 0x2F
 ST_NONE, ST_PENDING = 0xFC, 0xF1
+REARM_S = 0.5   # idle re-enable period: a re-arm after a 100 ms fw timeout loses < 0.5 s of messages (they stay in the fw ring)
 LOG = None
 
 
@@ -206,11 +208,13 @@ def _fetch_message(io):
 MSG_SECS = 60.0     # default --messages run length: an interactive look, not a daemon; expiry = clean release, rc 0
 
 
-def messages(io, root: Path, secs: float | None = MSG_SECS) -> int:
-    ids = load_msgids(root)
+def messages(io, root: Path, secs: float | None = MSG_SECS, serial=None, table=None) -> int:
+    import msg_table
+    ids, src = msg_table.load_ids(root, serial, table)      # image table (#56) first, fw/msgids.tsv last
+    print(f"message ids: {len(ids)} from {src}", flush=True); log(f"message ids: {len(ids)} from {src}")
     if not io.write(DEV8, MSG_ENABLE, b"\x5a"):
         print("enable failed (no ACK from 0x35)"); return 1
-    t0 = time.monotonic()
+    t0 = t_en = time.monotonic()
     try:
         while secs is None or time.monotonic() - t0 < secs:
             st = io.read(DEV8, READ_SUB, 1)
@@ -218,6 +222,8 @@ def messages(io, root: Path, secs: float | None = MSG_SECS) -> int:
                 print("read failed"); return 1
             if st[0] != ST_PENDING:
                 time.sleep(IDLE_POLL_S)
+                if time.monotonic() - t_en > REARM_S:      # fw drops a host silent for 100 ms (#56): re-arm
+                    io.write(DEV8, MSG_ENABLE, b"\x5a"); t_en = time.monotonic()
                 continue
             m = fetch_message(io)
             if m is None:
@@ -383,6 +389,8 @@ def _main() -> int:
     ap.add_argument("--release", action="store_true", help="send end (0x2A) + stop (0x2F), retried, to un-halt the firmware")
     ap.add_argument("--secs", type=float, default=MSG_SECS, metavar="S",
                     help=f"--messages stops after S seconds (default {MSG_SECS:g}; 0 = until interrupted)")
+    ap.add_argument("--serial", help="--messages: take the id table from this unit's flashed image (tmp/fw/<serial>-flashed.json)")
+    ap.add_argument("--table", type=Path, help="--messages: id table block or firmware image (scripts/msg_table.py)")
     ap.add_argument("--trace", action="store_true", help="poll the function-entry trace ring (fw/trace_files.txt)")
     ap.add_argument("--ids", help="trace id TSV of the flashed image (default tmp/sdcc-port/trace_ids.tsv)")
     ap.add_argument("--safe", action="store_true", help="read the safe-boot/WDT-canary block (0xF6B0)")
@@ -429,7 +437,7 @@ def _main() -> int:
     if a.messages:
         for sig in (signal.SIGTERM, signal.SIGHUP):             # terminal closed / killed: run the finally (release)
             signal.signal(sig, lambda *_: sys.exit(0))
-        return messages(io, root, a.secs or None)
+        return messages(io, root, a.secs or None, a.serial, a.table)
     if a.trace:
         return trace(io, root, a.be, a.ids)
     if a.hold or a.unhold:
