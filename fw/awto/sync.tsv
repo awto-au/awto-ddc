@@ -48,7 +48,7 @@ D4	08	ms	NVRAM flush: power off / saving entry (since the last poke %)
 D4	09	ms	NVRAM flush: menu / selector close (since the last poke %)
 D4	0A	ms	NVRAM flush: test cmd 0x3D (since the last poke %)
 D4	0B	ms	NVRAM flush: second BriCon / ColorProc item (since the last poke %)
-D4	0C	n	flash: type % detected (tFlashInformation index; MX25L8006E = 24, 254 = not detected yet)
+D4	0C	n	flash: type % detected by the SDK (tFlashInformation index; MX25L8006E = 24, 254 = not detected)
 D5	*	n	(the {AWTO_SYNC_REPEAT_LINES} lines above repeated % more times)
 D6	*	portx	wake by the SDK source detect, not our poll (poll state %)
 D7	*	htime	host time %

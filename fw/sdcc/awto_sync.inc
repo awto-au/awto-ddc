@@ -84,6 +84,11 @@ static WORD AwtoSyncWdtMs(void)                     // ms on the WDT counter sin
     return s_usAwtoBootMs + (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) * 586;
 }
 
+#if(_AWTO_FLASH_ALL == _ON)
+extern BYTE g_ucFlashType;                          // ScalerCommonNVRam.c: the SDK detects it at its first flash write
+static __xdata BYTE s_ucAwtoFlashLogged = 0xFF;     // type last logged (0xFF: none yet; no table entry has it)
+#endif
+
 void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; value = WDT ms since the last poke (crystal: counts a halt)
 {
     WORD usC3;
@@ -98,6 +103,13 @@ void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; val
     {
         return;                                     // boot-time flash ops would push the boot lines out of the 32-line ring
     }
+#if(_AWTO_FLASH_ALL == _ON)
+    if(g_ucFlashType != s_ucAwtoFlashLogged)        // first NVRAM step after the SDK's detection: the type it found, once
+    {
+        s_ucAwtoFlashLogged = g_ucFlashType;
+        AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_FLASH_TYPE, g_ucFlashType);
+    }
+#endif
     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & ~_BIT7) | _BIT3;     // latch, no clear
     usC3 = (((WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE)) << 5) | (AWTO_XFR(AWTO_R_WATCHDOG_CNT23_VALUE) >> 3);
     AwtoSyncPush(AWTO_SYNC_EV_NV, ucStep, (WORD)(((DWORD)usC3 * 9375) >> 16) + (WORD)(AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) * 586);

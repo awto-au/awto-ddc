@@ -1,9 +1,5 @@
 // Diag block functions (#23), inserted into SysMain.c by keil2sdcc.py. Layout: RL6449_Project.h StAwtoDiag.
 #if(_AWTO_DIAG == _ON)
-#if(_AWTO_FLASH_ALL == _ON)
-extern BYTE g_ucFlashType;                          // ScalerCommonNVRam.c (this TU has no NVRAM header)
-extern void ScalerFlashDetectFlashType(void);
-#endif
 void AwtoDiagStage(unsigned char ucStage)
 {
     unsigned int usNow;
@@ -23,13 +19,6 @@ void AwtoDiagStage(unsigned char ucStage)
         {
             AwtoSyncPush(AWTO_SYNC_EV_STAGE, ucStage, 0);
         }
-#if(_AWTO_FLASH_ALL == _ON)
-        if(ucStage == 6)                            // the SDK detects the flash type at its first write: detect now (same result), log it
-        {
-            ScalerFlashDetectFlashType();
-            AwtoSyncPush(AWTO_SYNC_EV_NV, AWTO_NV_LOG_FLASH_TYPE, g_ucFlashType);
-        }
-#endif
 #endif
     }
 }
