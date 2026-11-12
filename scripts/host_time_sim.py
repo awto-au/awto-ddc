@@ -7,13 +7,16 @@ usage: AWTO_SIM_CORE=fast host_time_sim.py BIN [--map MAP]
 - Sync 1 (2026-11-12T08:45:10.250+11:00): HOST ticks from it; ring D7 "host time ..." + D8 "(fw +N ms, first ...)"; the
   console log pane shows the line; get VCP E9 = syncs 1, drift 0; sync_log.stamp puts the host time on the lines.
 - Sync 2 on time: no ring line, syncs 2, |drift| small. Sync 3 5 s ahead: D7 + D8 (drift) + D9 "drift +5xxx ms".
-- Changed cells only: OSD writes of one idle title tick vs the full title draw. STALE: last sync moved 200 s back.
-  UP: wrap count + 32 (2 097 152 ms) shows as 0000.58h.
+- Changed cells only: OSD writes of one idle title tick vs the full title draw; no other row written in that second.
+  STALE: last sync moved 200 s back. UP: wrap count + 32 (2 097 152 ms) shows as 0000.58h.
+- Pages (images with AWTO_CON_GPIO, map symbol _AwtoConLogTail): main = event log, host time + fw ms on one row, no GPIO table;
+  test cmd 0x43 = GPIO page (table + input changes, no sync lines); text + PNG of both: --out (default tmp/console_pages).
 Exit 1 on a failed check. Log: tmp/logs/host_time_sim.log
 """
 from __future__ import annotations
 
 import argparse
+import collections
 import datetime as dt
 import re
 import sys
@@ -25,6 +28,8 @@ import ddc_sim as D  # noqa: E402
 import fw_sim as S  # noqa: E402
 import host_time as HT  # noqa: E402
 import osd_model as M  # noqa: E402
+import osd_render as R  # noqa: E402
+import osd_test as T  # noqa: E402
 import sync_log as SL  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +37,7 @@ LOG = ROOT / "tmp/logs/host_time_sim.log"
 VCP = 0xE9
 OFS = 44                                                    # +11:00 in 15 min units (AEDT)
 T0 = dt.datetime(2026, 11, 12, 8, 45, 10, 250000, dt.timezone(dt.timedelta(hours=11)))
+CMD_S = 1.0         # test cmd -> console page drawn: one full draw (~0.3 s sim, boot_sim) x ~3
 CON_S = 4.0         # console auto-open after ACTIVE: settled + one pass (sync_sim sees it within 1 s) x4 for the boot console
 TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25
 
@@ -102,11 +108,25 @@ class Sim:
     def get(self):
         return self.mccs.get(VCP)
 
+    def cmd(self, c: int):
+        self.m.wr(self.m.addr("g_stAwtoDiag") + T.TESTCMD_OFF, bytes([c]))   # RAM: the DDC/CI engine owns the host channel here
+        self.bus.wait(CMD_S)
+
+    def dump(self, out: Path, name: str) -> list[str]:
+        """Text of the shown rows -> out/name.txt, render -> out/name.png"""
+        t = self.text()
+        out.mkdir(parents=True, exist_ok=True)
+        (out / f"{name}.txt").write_text("\n".join(r.rstrip() for r in t) + "\n")
+        R.render_snap(self.model.snapshot(self.m, 0), "black", 1).save(out / f"{name}.png")
+        say(f"  page {name}: {out / name}.txt / .png")
+        return t
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
     ap.add_argument("--map", type=Path)
+    ap.add_argument("--out", type=Path, default=ROOT / "tmp/console_pages")
     a = ap.parse_args()
     mapp = a.map or a.bin.with_suffix(".map")
     if " _g_stAwtoHt " not in mapp.read_text(errors="replace"):
@@ -151,6 +171,11 @@ def main() -> int:
     s.check(sum(("host time" in x) or ("(fw +" in x) for x in new) == 2, "ring: 2 entries for the first sync")
     scr = s.text()
     s.check(any("host time 2026-11-12T08:45:10+11:00" in r for r in scr), "console log pane shows the host time line")
+    pages = "_AwtoConLogTail" in mapp.read_text(errors="replace")
+    if pages:
+        s.check(any("host time 2026-11-12T08:45:10+11:00 (fw +" in r and "first host sync since boot)" in r for r in scr),
+                "main page: host time and fw ms on one row", next((r.strip() for r in scr if "host time" in r), ""))
+        s.check(not any("GPIO INPUT" in r for r in scr), "main page: no GPIO table")
     g = s.get()
     s.check(g is not None and g["max"] == 1 and g["cur"] == 0, "get E9: syncs 1, drift 0", str(g))
     st = SL.stamp(h, lines, s.ht(), int.from_bytes(s.m.rd(0xF6D0 + SL.DIAG_T2, 2), "big"))
@@ -193,8 +218,13 @@ def main() -> int:
     s.bus.wait(1.0)
     s.model.trace_on = False
     cells = sorted({ad - fs for w, ad, _ in s.model.trace if (w >> 2) & 3 == M.SRAM_FONT and fs <= ad < fs + 120})
-    say(f"title cells written in 1 s idle (one tick): {cells} ({len(s.model.trace)} OSD data writes in all)")
+    rows = collections.Counter((ad - fs) // 120 for w, ad, _ in s.model.trace if (w >> 2) & 3 == M.SRAM_FONT and ad >= fs)
+    say(f"title cells written in 1 s idle (one tick): {cells} ({len(s.model.trace)} OSD data writes in all, per map row "
+        f"{dict(sorted(rows.items()))})")
     s.check(0 < len(cells) <= 8 and all(c >= 60 for c in cells), "idle tick redraws only changed title cells (not 48)", str(cells))
+    if pages:
+        s.check(set(rows) <= {0} and len(s.model.trace) <= 3 * 8, "idle 1 s: no OSD write outside the changed title cells",
+                f"{len(s.model.trace)} writes, rows {sorted(rows)}")
 
     # STALE: the last sync 200 s ago
     fw = s.fw32()
@@ -212,6 +242,18 @@ def main() -> int:
     ti = s.title()
     s.check(exp in ti, f"UP hour meter from the 32-bit ms count ({fw} ms)", ti[60:])
     say(f"title: {ti!r}")
+
+    if pages:                                           # both pages: text + PNG; the GPIO page has no sync lines
+        main_t = s.dump(a.out, f"{a.bin.stem}.main")
+        s.check(any("EVENT LOG" in r for r in main_t[:4]), "main page: event log heading")
+        s.cmd(0x43)
+        g = s.dump(a.out, f"{a.bin.stem}.gpio")
+        s.check(any("GPIO INPUT DIAGNOSTICS" in r for r in g[:4]) and any("INPUT CHANGES" in r for r in g[:4]),
+                "GPIO page (test cmd 0x43): table + input change list", g[2].strip() if len(g) > 2 else "")
+        s.check("AWTO DIAGNOSTICS  FW " in g[0], "GPIO page: title row")
+        s.check(not any(("host time" in r) or ("mode ACTIVE" in r) for r in g), "GPIO page: no sync / power lines")
+        s.cmd(0x44)
+        s.check(s.m.rd(s.m.addr("g_stAwtoGpio") + 3)[0] == 0, "test cmd 0x44 closes the console")
     say(f"=== {a.bin.name}: {'ALL PASS' if not s.fails else f'{s.fails} FAIL'} ===")
     return 1 if s.fails else 0
 

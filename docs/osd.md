@@ -45,10 +45,14 @@ Never write bare "vendor": say which one.
 ### Our parts
 - Diagnostic console (#89, #128; #34 closed)
   - Code: `awto_dbgpop.inc` (`AwtoDiagConsole`), `awto_keytest.inc`, `awto_gpio.inc` in `awto-ddc-ui/fw/sdcc/`.
-  - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `sync_console`), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42 (key test panel), 0x43 / 0x44 (GPIO panel). Closed by UP+DOWN. Host: `scripts/osd_test.py`.
+  - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `sync_console`), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42: main page. Menu "GPIO inputs" / test cmd 0x43: GPIO page. Closed by UP+DOWN, 0x44. Host: `scripts/osd_test.py`.
   - Look: green on black (palette 1..4 set in `awto_dbgpop.inc`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
   - Grid 120 columns x 63 map rows; 50 rows shown (1920 x 1836 px on the 3840 x 2160 panel), UP / DOWN scroll (`AwtoConScroll`).
-  - Shown: inputs panel (left), event + sync log (right, 47 lines, live: drawn at each sync push). Below the view: key test, debug, watchdog panels.
+  - Pages (#157; `AwtoDiagConsole(AWTO_CON_MAIN / AWTO_CON_GPIO)`, a page change redraws the map):
+    - Main (power-on, auto-open, UP+DOWN): title row + sync / power event log, cols 1..118, 47 lines, live at each sync push. Host time + its fw ms on one row.
+    - GPIO: input table (left) + the input-change list (right, backfilled from the 32-entry change ring). Input changes never go into the event log.
+  - Title row on both: `AWTO DIAGNOSTICS  FW <tag>` + PANEL / UP / HOST, 1 s refresh, only changed 2-cell groups written.
+  - Below the view on both (UP / DOWN scroll): key test, debug, watchdog panels. Debug rows are written only when their text changed and only while in view.
   - Power-on in the sim: `scripts/boot_sim.py` (PNGs at set times, console survives display setting).
   - Inputs panel: rows from `fw/awto/inputs.tsv` through `scripts/gen_awto_inputs.py` (generated `AWTO_IN_*`); unlogged inputs red with a legend.
   - Owns the OSD only while its map is in place: an SDK pop-up or mode reset releases it (`AwtoConLost`).
