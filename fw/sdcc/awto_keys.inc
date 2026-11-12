@@ -120,7 +120,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         if(bRep == 0)                           // power saving: a key press (front or injected) wakes and is used up (#85)
         {
             SET_FORCE_POW_SAV_STATUS(_FALSE);
-            SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+            SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_KEY_WAKE);
         }
         return;
     }
@@ -134,11 +134,11 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         {
             SET_OSD_STATE(_MENU_NONE);
             SET_OSD_IN_FACTORY_MENU_STATUS(_FALSE);
-            SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+            SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_KEY);
         }
         else
         {
-            SysPowerSetTargetPowerStatus(_POWER_STATUS_OFF);
+            SysMachineRequest(_POWER_STATUS_OFF, AWTO_SYS_BY_KEY);
         }
         return;
     }

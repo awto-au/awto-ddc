@@ -1348,7 +1348,7 @@ void SysSourceJudge(void)
 
                             CLR_SOURCE_PREDETECT(g_ucSearchIndex);
 
-                            SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
 
                             return;
                         }
@@ -1416,7 +1416,7 @@ void SysSourceJudge(void)
 
                 if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
                 {
-                    SET_TARGET_POWER_STATUS(_POWER_STATUS_NORMAL);
+                    SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_SDK_DETECT);
                 }
             }
 
@@ -1484,7 +1484,7 @@ void SysSourceJudge(void)
 
                 if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
                 {
-                    SET_TARGET_POWER_STATUS(_POWER_STATUS_NORMAL);
+                    SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_SDK_DETECT);
                 }
             }
 

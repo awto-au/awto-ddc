@@ -186,7 +186,7 @@ void SysDpCableDetection(void)
 
                             ScalerDpMstFakeOffDoneProc();
 
-                            SET_TARGET_POWER_STATUS(_POWER_STATUS_OFF);
+                            SysMachineRequest(_POWER_STATUS_OFF, AWTO_SYS_BY_SDK);
                         }
                     }
 
@@ -270,7 +270,7 @@ void SysDpCableDetection(void)
 
                         ScalerDpMstFakeOffDoneProc();
 
-                        SET_TARGET_POWER_STATUS(_POWER_STATUS_OFF);
+                        SysMachineRequest(_POWER_STATUS_OFF, AWTO_SYS_BY_SDK);
                     }
                 }
 
@@ -400,7 +400,7 @@ void SysDpCableDetection(void)
 
                         ScalerDpMstFakeOffDoneProc();
 
-                        SET_TARGET_POWER_STATUS(_POWER_STATUS_OFF);
+                        SysMachineRequest(_POWER_STATUS_OFF, AWTO_SYS_BY_SDK);
                     }
                 }
 

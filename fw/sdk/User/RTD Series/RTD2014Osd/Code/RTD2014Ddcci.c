@@ -1080,17 +1080,17 @@ void RTDDdcciSetVCPFeature(void)
                 if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 5)
                 {
                     SET_FORCE_POW_SAV_STATUS(_FALSE);
-                    SysPowerSetTargetPowerStatus(_POWER_STATUS_OFF);
+                    SysMachineRequest(_POWER_STATUS_OFF, AWTO_SYS_BY_VCP);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 4)
                 {
                     SET_FORCE_POW_SAV_STATUS(_TRUE);
-                    SysPowerSetTargetPowerStatus(_POWER_STATUS_SAVING);
+                    SysMachineRequest(_POWER_STATUS_SAVING, AWTO_SYS_BY_VCP);
                 }
                 else if(g_pucDdcciRxBuf[_DDCCI_SET_LOW_BYTE] == 1)
                 {
                     SET_FORCE_POW_SAV_STATUS(_FALSE);
-                    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+                    SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_VCP);
                 }
 
                 break;

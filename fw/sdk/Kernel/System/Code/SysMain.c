@@ -108,13 +108,12 @@ void main(void)
             AWTO_LP(1);
             AWTO_SW_MARK(1);
             AWTO_PS_POLL_SITE();
-            SysPowerHandler();
+            SysMachineHandler();                    // #162 step 3: power + mode transitions (was SysPowerHandler + SysJudgeHandler)
             UserCommonInterfacePanelPowerTick();    // #162 panel machine: right after the power switch (PHY needs power NORMAL)
             AWTO_SW_FAST_POLL();
             AWTO_LP(2);
             AWTO_SW_MARK(2);
             AWTO_PS_POLL_SITE();
-            SysJudgeHandler();
 
 #if(_ALS_TYPE != _SENSER_NONE)
             SysMainAlsHandler();            
@@ -139,7 +138,7 @@ void main(void)
             AWTO_LP(5);
             AWTO_SW_MARK(5);
             AWTO_PS_POLL_SITE();
-            SysModeHandler();
+            SysMachineWork();                       // #162 step 3: the state's scaler work (was SysModeHandler)
 
 #if(_MHL_SUPPORT == _ON)
             SysMHLMscHandler();
@@ -264,12 +263,22 @@ void SysMainSystemInitial(void)
 
     AwtoDiagStage(4);
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
-    UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);    // #162: VDD + T1 now; PHY / link once power is NORMAL
+    if(AwtoBootReason() == AWTO_BOOT_COLD)
+    {
+        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);    // #162: VDD + T1 now; PHY / link once power is NORMAL
+    }
 #endif
     ScalerTimerInitialTimerEvent();
 
     AWTO_BPROF(0x30);
     UserCommonInterfaceInitial();
+    if(AwtoBootReason() != AWTO_BOOT_COLD)  // #162: warm reset = VDD went off at GPIO init: T6 (registry, loaded now) first
+    {
+        UserCommonInterfacePanelBoot(1);
+#if(_AWTO_BOOT_PANEL_EARLY == _ON)
+        UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
+#endif
+    }
 
     AWTO_BPROF(0x31);
     ScalerMcuDdcRamEnable();
@@ -299,17 +308,7 @@ void SysMainSystemInitial(void)
 #endif
 
     AWTO_BPROF(0x34);
-    SET_POWER_STATUS(_POWER_STATUS_AC_ON);
-
-    if(UserCommonNVRamGetSystemData(_MONITOR_POWER_STATUS) == _ON)
-    {
-        SET_TARGET_POWER_STATUS(_POWER_STATUS_NORMAL);
-    }
-    else
-    {
-        SET_TARGET_POWER_STATUS(_POWER_STATUS_OFF);
-    }
-    SET_MODE_STATE(_MODE_STATUS_POWER_OFF);
+    SysMachineInit();                       // #162 step 3: AC_ON, power target from NVRAM (a request)
 }
 
 //--------------------------------------------------

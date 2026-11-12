@@ -884,12 +884,16 @@ extern void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn);
 #define AwtoPanelPinLog(b, o)
 #endif
 extern void AwtoPanelLog(unsigned char ucArg, unsigned int usMs);
+extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
+extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 #else
 #define AwtoSwEvent(a, b)
 #define AwtoPanelPinLog(b, o)
 #define AwtoPanelLog(a, m)
+#define AwtoSysLog(a, w, m)
+#define AwtoSwMode(m)
 #define AWTO_BPROF(k)
 #define AwtoSwPoll()
 #define AWTO_SW_HPD(port, x)
@@ -1068,14 +1072,14 @@ extern void AwtoPsWakeReset(void);
 extern unsigned char AwtoPsTmdsLive(unsigned char ucPage);    // TMDS freq detector live (our wake poll)
 extern void AwtoPsDdcSeen(unsigned char ucPort);
 extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS predetect: AUX toggle counted, no wake (keil2sdcc sub)              // SDK TMDS PS predetect: DDC handshake counted, no wake (keil2sdcc sub)
-#define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } \
-                                                                  else if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
+// #162 step 3: power status changes are logged by the system machine (AwtoSyncPoll at the transition); per pass only the wake poll
+#define AWTO_SYNC_POLL()                                        { if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
 // between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
 // one call per site, the compares in AwtoPsPollSite: 14 sites in main, which is in the full common area (#157 merge)
 extern void AwtoPsPollSite(void);
 #define AWTO_PS_POLL_SITE()                                     AwtoPsPollSite()
 #else
-#define AWTO_SYNC_POLL()                                        { if(GET_POWER_STATUS() != g_ucAwtoSyncPwr) { AwtoSyncPoll(); } }
+#define AWTO_SYNC_POLL()
 #define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoSyncCon;  // 0 = no console auto-open (sim / tests); the setting is registry sync_console
@@ -1133,12 +1137,16 @@ extern void AwtoBootConsole(void);
 #define AWTO_TMDS_STUCK_N                                       3       // one search round ~180 ms: pulse ~0.55 s into a stuck link
 #define AWTO_TMDS_HPD_MAX                                       2
 #define AWTO_TMDS_HPD_LOW_MS                                    110     // HDMI 1.4b: a source reads HPD low >= 100 ms as unplug
-#define AWTO_SW_EV_HPD_RECOVER                                  0xB0    // arg = port pulsed
+#define AWTO_SW_EV_HPD_RECOVER                                  0xB0    // arg = port pulled low
+#define AWTO_SW_EV_HPD_RECOVER_UP                               0xB1    // arg = port high again (AWTO_TMDS_HPD_LOW_MS later, no wait)
 #if((_AWTO_TMDS_HPD_RECOVER == _ON) && (_AWTO_SW_LOG == _ON))
 extern void AwtoTmdsStuck(void);
+extern void AwtoTmdsHpdTick(void);
 #define AWTO_TMDS_STUCK()                                       AwtoTmdsStuck()
+#define AWTO_TMDS_HPD_TICK()                                    AwtoTmdsHpdTick()
 #else
 #define AWTO_TMDS_STUCK()
+#define AWTO_TMDS_HPD_TICK()
 #endif
 // #60: _ON = ScalerSyncInterfaceSwitch leaves the other ports powered (PHY, Z0, TMDS MAC): the idle receiver stays locked
 #ifndef _AWTO_KEEP_IDLE_RX
@@ -1199,14 +1207,10 @@ extern __xdata unsigned char g_ucAwtoWakePending;
 extern __xdata unsigned char g_ucAwtoNoHold;
 extern bit AwtoWakeHold(void);
 extern void AwtoWakePoll(void);
-#define AWTO_WAKE_HOLD()                                        AwtoWakeHold()
 #define AWTO_FAST_SETTLE_FRAMES                                 ((g_ucAwtoWakePending != 0) ? 1 : 3)   // wake: same port, no mux jump
-#define AWTO_FAST_JUDGE_HOLD()                                  ((g_ucAwtoFastPending != 0) || (g_ucAwtoHold != 0))
 #define AWTO_WAKE_POLL()                                        { if(g_ucAwtoHold != 0) { AwtoWakePoll(); } }
 #else
-#define AWTO_WAKE_HOLD()                                        _FALSE
 #define AWTO_FAST_SETTLE_FRAMES                                 3
-#define AWTO_FAST_JUDGE_HOLD()                                  (g_ucAwtoFastPending != 0)     // AwtoSwFastPoll does the judge's checks meanwhile
 #define AWTO_WAKE_POLL()
 #endif
 #if(_AWTO_SW_MARKS == _ON)
@@ -1225,8 +1229,6 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AwtoSwCacheStore()
 #define AwtoSwFastPoll()
 #define AWTO_SW_FAST_POLL()                                     AWTO_DEAD_PORT_POLL()
-#define AWTO_FAST_JUDGE_HOLD()                                  _FALSE
-#define AWTO_WAKE_HOLD()                                        _FALSE
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF
 #endif
@@ -1265,6 +1267,82 @@ extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
 extern unsigned char AwtoOwnFrame(void);
+extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
+// #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.
+// The SDK views (power status / target, mode state / reset target) are written there only (gate sysm). docs/design-162.md.
+#define AWTO_SYS_AC_ON                                          0       // boot: power AC_ON, mode POWER OFF
+#define AWTO_SYS_OFF                                            1
+#define AWTO_SYS_INITIAL                                        2       // power NORMAL, one pass before the search
+#define AWTO_SYS_SEARCH                                         3
+#define AWTO_SYS_DISPLAY                                        4       // display setting
+#define AWTO_SYS_ACTIVE                                         5
+#define AWTO_SYS_FAST                                           6       // mode ACTIVE: cached switch / fast wake in flight (AwtoSwFastPoll)
+#define AWTO_SYS_HOLD                                           7       // mode ACTIVE: signal lost, L1 hold (backlight off, set-up kept)
+#define AWTO_SYS_NOSUPPORT                                      8
+#define AWTO_SYS_NOSIGNAL                                       9
+#define AWTO_SYS_SAVING                                         10      // power SAVING (or fake saving), mode POWER SAVING
+#define AWTO_SYS_WAKE                                           11      // power NORMAL after a wake, mode still POWER SAVING: search
+#define AWTO_SYS_DOWN                                           12      // OFF / SAVING requested: panel down first (T4, T5), mode kept
+#define AWTO_SYS_STATES                                         13      // state count (and "no state")
+#define AWTO_SYS_REQ_MODE                                       0x10    // request = AWTO_SYS_REQ_MODE | EnumModeAction; power = EnumPowerStatus
+#define AWTO_SYS_REQ_FAST                                       0x20    // fast path taken (ACTIVE / HOLD -> FAST)
+#define AWTO_SYS_REQ_HOLD                                       0x21    // fast wake failed (FAST -> HOLD)
+#define AWTO_SYS_REQ_ACTIVE                                     0x22    // fast path unblanked (FAST -> ACTIVE)
+#define AWTO_SYS_BY_KEY                                         0x01    // who / why codes: texts in fw/awto/sync.tsv id 16
+#define AWTO_SYS_BY_KEY_WAKE                                    0x02
+#define AWTO_SYS_BY_TESTCMD                                     0x03
+#define AWTO_SYS_BY_VCP                                         0x04
+#define AWTO_SYS_BY_INPUT                                       0x05
+#define AWTO_SYS_BY_SELECTOR                                    0x06
+#define AWTO_SYS_BY_DEADPORT                                    0x07
+#define AWTO_SYS_BY_WAKEPOLL                                    0x08
+#define AWTO_SYS_BY_SDK_DETECT                                  0x09
+#define AWTO_SYS_BY_CABLE                                       0x0A
+#define AWTO_SYS_BY_OSD_PS                                      0x0B
+#define AWTO_SYS_BY_SETTINGS                                    0x0C
+#define AWTO_SYS_BY_SDK_OSD                                     0x0D
+#define AWTO_SYS_BY_HOLD                                        0x0E
+#define AWTO_SYS_BY_HOLD_BACK                                   0x0F
+#define AWTO_SYS_BY_FAST                                        0x10
+#define AWTO_SYS_BY_FAST_DONE                                   0x11
+#define AWTO_SYS_BY_FAST_FAIL                                   0x12
+#define AWTO_SYS_BY_FAST_RETRY                                  0x13
+#define AWTO_SYS_BY_TIMER_NOSIGNAL                              0x14
+#define AWTO_SYS_BY_TIMER_NOSUPPORT                             0x15
+#define AWTO_SYS_BY_NVRAM                                       0x16
+#define AWTO_SYS_BY_SDK                                         0x17
+#define AWTO_SYS_BY_WAKE_EMPTY                                  0x18
+#define AWTO_SYS_BY_DIRECT                                      0x19    // power target found without a request (host / sim poke)
+#define AWTO_SYS_WHY_INITIAL                                    0x21
+#define AWTO_SYS_WHY_TIMING                                     0x22
+#define AWTO_SYS_WHY_NO_SOURCE                                  0x24
+#define AWTO_SYS_WHY_READY                                      0x25
+#define AWTO_SYS_WHY_UNSTABLE                                   0x26    // 0x26..0x2A: SysMachineCheck reasons, in its order
+#define AWTO_SYS_WHY_HV                                         0x27
+#define AWTO_SYS_WHY_INTERLACE                                  0x28
+#define AWTO_SYS_WHY_MEMORY                                     0x29
+#define AWTO_SYS_WHY_EDP                                        0x2A
+#define AWTO_SYS_WHY_HOLD                                       0x2B
+#define AWTO_SYS_WHY_PANEL_DOWN                                 0x2C
+#define AWTO_SYS_WHY_CALLED_OFF                                 0x2D
+#define AWTO_SYS_OK                                             0       // request outcomes (sync.tsv id 18)
+#define AWTO_SYS_ALREADY                                        1
+#define AWTO_SYS_REPLACES                                       2
+#define AWTO_SYS_REFUSED                                        3
+#define AWTO_SYS_KEPT                                           4       // kept until the state can take it
+#define AWTO_SYS_MS_MAX                                         0xFFFFFFUL     // transition line: ms in the old state, 24 bits (4.6 h)
+#define AWTO_SW_EV_SYS                                          0x13    // transition: arg old << 4 | new; ring value why << 24 | ms in old
+#define AWTO_SW_EV_SYS_REQ                                      0x14    // request: arg request; ring value who << 8 | outcome
+#define AWTO_SYNC_EV_SYS_STATE                                  0x15    // sync.tsv name tables for the sys / sysreq fmts (never pushed)
+#define AWTO_SYNC_EV_SYS_WHY                                    0x16
+#define AWTO_SYNC_EV_SYS_REQNAME                                0x17
+#define AWTO_SYNC_EV_SYS_OUTCOME                                0x18
+#define AWTO_SYNC_EV_SYS_SEP                                    0x19    // separators of the two line formats (no string literals in that TU)
+extern volatile __xdata unsigned char g_ucAwtoSysOwn;       // 1 while the machine writes the SDK power / mode views (gate sysm)
+extern void SysMachineInit(void);
+extern void SysMachineHandler(void);
+extern void SysMachineWork(void);
+extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)

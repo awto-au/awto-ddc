@@ -39,7 +39,7 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     {
         SysSourceSwitchInputPort(ucPort);
         AwtoSwEvent(AWTO_SW_EV_PROBE, 6);
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_INPUT);
     }
 }
 
@@ -60,8 +60,8 @@ void AwtoDeadPortPoll(void)                     // #84: fixed port, no cable on 
     AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 2, ucCur);
     SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
     SET_FORCE_POW_SAV_STATUS(_FALSE);
-    SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
-    SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+    SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_DEADPORT);
+    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_DEADPORT);
 }
 
 #if(_AWTO_DBG_SWAP == _ON)

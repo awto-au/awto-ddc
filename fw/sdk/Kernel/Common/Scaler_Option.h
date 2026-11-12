@@ -780,10 +780,8 @@ typedef enum
 //--------------------------------------------------
 // DP HPD Implementation Mode
 //--------------------------------------------------
-#if((_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON) || (_DP_MST_AUTO_SEARCH_SUPPORT == _ON) || (_TWO_CHIP_DATA_EXCHANGE_MODE != _DATA_EXCHANGE_MODE_NONE))
+// awto-ddc#162 step 3: always the timer-event mode. The delay mode blocks the main pass for the HPD low time
+// (ScalerDpHotPlugHandler: ScalerTimerDelayXms(_DP_LONG_HPD_TIME) at POWER on with a DP cable on D1).
 #define _DP_LONG_HPD_MODE                           _DP_LONG_HPD_TIMEREVENT_MODE
-#else
-#define _DP_LONG_HPD_MODE                           _DP_LONG_HPD_DELAY_MODE
-#endif
 
 #endif // End of #ifndef __SCALER_OPTION_H__

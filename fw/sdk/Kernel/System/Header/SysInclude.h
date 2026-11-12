@@ -579,13 +579,13 @@ extern StructUsbHubInfo g_stD6UsbHubInfo;
 //****************************************************************************
 // FUNCTION EXTERN
 //****************************************************************************
-// __SYSTEM_JUDGE__
-extern void SysJudgeHandler(void);
-extern bit SysJudgeStateChangeEvent(EnumModeStatus enumModeState);
+// __SYSTEM_JUDGE__ (#162 step 3: the system machine, RL6449_Project.h SysMachine*)
+extern bit SysJudgeCheckStatus(void);
 
 
-// __SYSTEM_MODE__
-extern void SysModeHandler(void);
+// __SYSTEM_MODE__ (actions of the system machine)
+extern bit SysModeDisplaySetting(void);
+extern WORD SysJudgeGetActiveWaitTime(void);
 extern bit SysModeGetDisplaySettingReady(void);
 extern bit SysModeGetTimingConfirm(void);
 extern bit SysModeGetActiveReady(void);
@@ -605,7 +605,8 @@ extern void SysMHLMscHandler(void);
 
 // __SYSTEM_POWER__
 extern void SysPowerInitial(void);
-extern void SysPowerHandler(void);
+extern void SysPowerSwitch(EnumPowerAction enumSwitch);
+extern void SysPowerIdleProc(void);
 extern BYTE SysPowerGetPowerStatus(void);
 extern void SysPowerMcuClock(BYTE ucClockSel);
 

@@ -113,31 +113,52 @@ void AwtoPanelPinLog(unsigned char ucBacklight, unsigned char ucOn)    // before
 }
 #endif
 
-void AwtoSwPoll(void)                           // once per main-loop pass: mode-state changes
+// #162 step 3 system machine transition: switch log (no value) + ring line (why << 24 | ms in the old state, 24 bits).
+void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs)
 {
-    unsigned char ucMode = GET_MODE_STATE();
+    AwtoSwRec(AWTO_SW_EV_SYS, ucArg);
+    AwtoSyncPush(AWTO_SW_EV_SYS, ucArg, ((DWORD)ucWhy << 24) | ((ulMs > AWTO_SYS_MS_MAX) ? AWTO_SYS_MS_MAX : ulMs));
+}
 
-    AWTO_SYNC_POLL();
-    if(ucMode != g_stAwtoSw.ucLastMode)
-    {
-        g_stAwtoSw.ucLastMode = ucMode;
-        AwtoSwEvent(AWTO_SW_EV_MODE, ucMode);
+void AwtoSwMode(unsigned char ucMode)           // the system machine changed the SDK mode state (at the transition)
+{
+    g_stAwtoSw.ucLastMode = ucMode;
+    AwtoSwEvent(AWTO_SW_EV_MODE, ucMode);
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)
-        if(ucMode == _MODE_STATUS_ACTIVE)
-        {
-            s_ucAwtoUnstable = 0;
-            s_ucAwtoHpdPulses = 0;
-        }
-#endif
+    if(ucMode == _MODE_STATUS_ACTIVE)
+    {
+        s_ucAwtoUnstable = 0;
+        s_ucAwtoHpdPulses = 0;
     }
+#endif
+}
+
+void AwtoSwPoll(void)                           // once per main-loop pass: the power-saving wake poll (#144)
+{
+    AWTO_SYNC_POLL();
 }
 
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)
+static __xdata unsigned char s_ucAwtoHpdLow;    // port whose HPD is held low by the recovery, 0 = none
+static __xdata unsigned int s_usAwtoHpdLowAt;
+
+static void AwtoTmdsHpd(BYTE ucPort, BYTE ucHigh)
+{
+    if(ucPort == _D2_INPUT_PORT)
+    {
+        PCB_D2_HOTPLUG((ucHigh != 0) ? _D2_HOT_PLUG_HIGH : _D2_HOT_PLUG_LOW);
+    }
+    else
+    {
+        PCB_D3_HOTPLUG((ucHigh != 0) ? _D3_HOT_PLUG_HIGH : _D3_HOT_PLUG_LOW);
+    }
+}
+
 void AwtoTmdsStuck(void)                        // judge: source unstable. Host lost its SCDC set-up (chip reset, #78): one HPD pulse
 {
     BYTE ucPort = SysSourceGetInputPort();
 
-    if(((ucPort != _D2_INPUT_PORT) && (ucPort != _D3_INPUT_PORT)) || (++s_ucAwtoUnstable < AWTO_TMDS_STUCK_N))
+    if((s_ucAwtoHpdLow != 0) || ((ucPort != _D2_INPUT_PORT) && (ucPort != _D3_INPUT_PORT)) || (++s_ucAwtoUnstable < AWTO_TMDS_STUCK_N))
     {
         return;
     }
@@ -148,17 +169,18 @@ void AwtoTmdsStuck(void)                        // judge: source unstable. Host 
     }
     s_ucAwtoHpdPulses++;
     AwtoSwEvent(AWTO_SW_EV_HPD_RECOVER, ucPort);
-    if(ucPort == _D2_INPUT_PORT)
+    AwtoTmdsHpd(ucPort, 0);                     // #162: no wait here; AwtoTmdsHpdTick raises it after AWTO_TMDS_HPD_LOW_MS
+    s_ucAwtoHpdLow = ucPort;
+    s_usAwtoHpdLowAt = (WORD)AwtoMs();
+}
+
+void AwtoTmdsHpdTick(void)                      // system machine, each pass
+{
+    if((s_ucAwtoHpdLow != 0) && ((WORD)((WORD)AwtoMs() - s_usAwtoHpdLowAt) >= AWTO_TMDS_HPD_LOW_MS))
     {
-        PCB_D2_HOTPLUG(_D2_HOT_PLUG_LOW);
-        ScalerTimerDelayXms(AWTO_TMDS_HPD_LOW_MS);
-        PCB_D2_HOTPLUG(_D2_HOT_PLUG_HIGH);
-    }
-    else
-    {
-        PCB_D3_HOTPLUG(_D3_HOT_PLUG_LOW);
-        ScalerTimerDelayXms(AWTO_TMDS_HPD_LOW_MS);
-        PCB_D3_HOTPLUG(_D3_HOT_PLUG_HIGH);
+        AwtoTmdsHpd(s_ucAwtoHpdLow, 1);
+        AwtoSwEvent(AWTO_SW_EV_HPD_RECOVER_UP, s_ucAwtoHpdLow);
+        s_ucAwtoHpdLow = 0;
     }
 }
 #endif

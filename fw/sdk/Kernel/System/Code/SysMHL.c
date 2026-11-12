@@ -85,7 +85,7 @@ void SysMHLMscHandler(void)
             {
                 if(SysSourceGetSourceType() != _SOURCE_NONE)
                 {
-                    SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
                 }
             }
 
@@ -136,7 +136,7 @@ void SysMHLMscHandler(void)
             {
                 if(SysSourceGetSourceType() != _SOURCE_NONE)
                 {
-                    SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
                 }
             }
 
@@ -187,7 +187,7 @@ void SysMHLMscHandler(void)
             {
                 if(SysSourceGetSourceType() != _SOURCE_NONE)
                 {
-                    SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
                 }
             }
 
@@ -238,7 +238,7 @@ void SysMHLMscHandler(void)
             {
                 if(SysSourceGetSourceType() != _SOURCE_NONE)
                 {
-                    SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
                 }
             }
 
@@ -290,7 +290,7 @@ void SysMHLMscHandler(void)
             {
                 if(SysSourceGetSourceType() != _SOURCE_NONE)
                 {
-                    SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
                 }
             }
 
@@ -341,7 +341,7 @@ void SysMHLMscHandler(void)
             {
                 if(SysSourceGetSourceType() != _SOURCE_NONE)
                 {
-                    SET_MODE_RESET_TARGET(_MODE_ACTION_RESET_TO_SEARCH);
+                    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SDK);
                 }
             }
 

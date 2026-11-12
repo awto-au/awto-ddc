@@ -2,7 +2,8 @@
 # (awto-ddc scripts/sync_log.py, rtd_diag.py --sync) reads this file, so screen and host print the same line.
 # id	arg	fmt	text
 # id: event id (hex). Mirrored switch-log ids (RL6449_Project.h AWTO_SW_EV_*): 01 mode, 10 panel power, 11 / 12 panel machine, 90 probe,
-#   A0 fast path, A8 hold, B0 HPD pulse. Own ids C0..CF (AWTO_SYNC_EV_*; CB..CF = #144 power-saving wake). Only rows listed here are logged (mirror filter).
+#   A0 fast path, A8 hold, B0 / B1 HPD pulse; 13 / 14 system machine transition / request (#162 step 3), 15..18 their name
+#   tables (state, who / why, request, outcome, 19 separators: looked up by the sys / sysreq fmts, never logged themselves). Own ids C0..CF (AWTO_SYNC_EV_*; CB..CF = #144 power-saving wake). Only rows listed here are logged (mirror filter).
 # arg: hex value, or * = any (first matching row wins: put * rows last).
 # fmt: how the event's value / arg is printed at the % in text:
 #   -     no value          port  "Dn " prefix from arg (port byte, D0 = 3)     vport  value = port byte -> "Dn" (0xFF = auto)
@@ -12,6 +13,8 @@
 #   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
 #   ms    value in ms -> "12 ms" (#150)   n  value as a number (#150)   x  value in hex (#150)
 #   Texts may hold {NAME} or {NAME/DIV} = integer #define in RL6449_Project.h, resolved at generation and in the host copy.
+#   sys   arg = old << 4 | new state, value = why << 24 | ms in old -> "OFF -> INITIAL: POWER key (5230 ms in OFF)"
+#   sysreq arg = request, value = who << 8 | outcome -> "power off requested by POWER key (accepted)"
 #   wdt   value = warning ms << 16 | reset ms -> "warning 200 ms, reset 586 ms" (live from AWTO_WDT_THR / AWTO_WDT_N)
 #   htime value = unix s, arg = UTC offset (15 min, signed) -> "2026-11-12T08:45:10+11:00" (#157)   sms  signed ms -> "+1234 ms" (#157)
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
@@ -92,6 +95,8 @@ C0	04	vport	power key on, %
 11	A4	ms	panel: T5 -> VIDEO: on again, stream on (% in T5)
 11	AB	ms	panel: T5 -> T6: T5 done, link and VDD off (% in T5)
 11	B0	ms	panel: T6 -> OFF: T6 done, VDD may come on again (% in T6)
+11	0B	ms	panel: OFF -> T6: warm reset, VDD went off at GPIO init: T6 first (% in OFF)
+11	4A	ms	panel: VIDEO -> T5: off, backlight never on: no T4, stream idle (% in VIDEO)
 11	*	harg	panel: state change % (not a listed transition)
 12	00	-	panel: no eDP-1 HPD within T2, link training anyway
 12	01	-	eDP-1: link training FAIL
@@ -99,6 +104,8 @@ C0	04	vport	power key on, %
 12	03	-	backlight pin written outside the panel machine
 12	04	-	backlight PWM written outside the panel machine
 12	05	-	panel request deferred: power off / saving is taking the panel down
+13	*	sys	system: %
+14	*	sysreq	system: %
 90	01	-	reset to search
 90	0E	-	display setting
 90	14	-	judge: source unstable
@@ -120,6 +127,7 @@ A8	07	-	hold: fast wake retry
 A8	09	-	hold: auto search, other cable
 A8	10	-	hold: SDK reset
 B0	*	port	HPD pulse (TMDS recover)
+B1	*	port	HPD high again after {AWTO_TMDS_HPD_LOW_MS} ms (TMDS recover)
 C1	*	port	TMDS predetect on (clock not measured yet)
 C6	*	portmhz1	TMDS clock % measured
 C2	*	portdp	DP link % detected
@@ -149,3 +157,78 @@ CF	03	vport	wake suppressed (AUX command, once per sleep): %
 CF	04	vport	wake suppressed (DPCD 600h, once per sleep): %
 CF	05	vport	wake suppressed (cable unplug, once per sleep): %
 CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
+# #162 step 3 name tables (looked up by row index, never logged): at the end, so the per-event row scan stops before them
+15	00	-	AC ON
+15	01	-	OFF
+15	02	-	INITIAL
+15	03	-	SEARCH
+15	04	-	DISPLAY SETTING
+15	05	-	ACTIVE
+15	06	-	FAST SWITCH
+15	07	-	HOLD L1
+15	08	-	NO SUPPORT
+15	09	-	NO SIGNAL
+15	0A	-	POWER SAVING
+15	0B	-	WAKE SEARCH
+15	0C	-	POWER DOWN
+16	01	-	POWER key
+16	02	-	front key in power saving
+16	03	-	test cmd 0x3E (POWER key)
+16	04	-	DDC/CI VCP D6 power mode
+16	05	-	input select (KVM / VCP 0x60 / menu / test cmd)
+16	06	-	input selector
+16	07	-	dead port: auto search
+16	08	-	our wake poll
+16	09	-	SDK power-saving source detect
+16	0A	-	SDK cable reset (search port cable changed)
+16	0B	-	no-signal cards: power-saving timer
+16	0C	-	settings (aspect / overscan / DP version)
+16	0D	-	SDK OSD (user adjust)
+16	0E	-	hold released (L2 time / other cable / fast wakes used up)
+16	0F	-	hold: signal back, fast wake
+16	10	-	fast path taken (cached input)
+16	11	-	fast path: picture up
+16	12	-	fast path timeout: full path
+16	13	-	fast wake timeout: back to the hold
+16	14	-	judge timer: timing not confirmed in time (no signal)
+16	15	-	judge timer: no support (search again)
+16	16	-	NVRAM power status at boot
+16	17	-	SDK
+16	18	-	wake search found no source
+16	19	-	target written without a request
+16	21	-	INITIAL pass done
+16	22	-	timing confirmed, supported
+16	24	-	search done, no source
+16	25	-	display set, panel video ready
+16	26	-	judge: source unstable
+16	27	-	judge: timing change
+16	28	-	judge: interlace change
+16	29	-	judge: memory / timing gen
+16	2A	-	judge: eDP unstable
+16	2B	-	signal lost: L1 hold (backlight off, set-up kept)
+16	2C	-	panel down (T4 / T5 done)
+16	2D	-	power off / saving called off
+17	01	-	power off
+17	02	-	power on
+17	03	-	power saving
+17	11	-	reset to search
+17	12	-	display setting again
+17	13	-	display setting again (no forced background)
+17	14	-	no support
+17	15	-	no signal
+17	16	-	power-saving reset
+17	17	-	power-off reset
+17	18	-	factory mode
+17	20	-	fast switch
+17	21	-	back to the hold
+17	22	-	fast path done
+18	00	-	accepted
+18	01	-	already
+18	02	-	replaces a pending request
+18	03	-	refused in this state
+18	04	-	kept until the state can take it
+19	00	-	 -> 
+19	01	-	: 
+19	02	-	 (
+19	03	-	 ms in 
+19	04	-	 requested by 

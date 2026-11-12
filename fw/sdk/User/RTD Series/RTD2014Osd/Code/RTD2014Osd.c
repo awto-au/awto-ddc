@@ -263,7 +263,7 @@ void RTDOsdEventMsgProc(void)
         case _OSDEVENT_GO_TO_POWER_SAVING_EVENT_MSG:
 
             OsdDispDisableOsd();
-            SysPowerSetTargetPowerStatus(_POWER_STATUS_SAVING);
+            SysMachineRequest(_POWER_STATUS_SAVING, AWTO_SYS_BY_OSD_PS);
             break;
 
 #if(_VGA_SUPPORT == _ON)

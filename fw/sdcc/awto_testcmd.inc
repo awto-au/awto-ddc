@@ -188,11 +188,11 @@ void AwtoDiagTestCmd(void)
         if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
         {
             SET_OSD_STATE(_MENU_NONE);
-            SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+            SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_TESTCMD);
         }
         else
         {
-            SysPowerSetTargetPowerStatus(_POWER_STATUS_OFF);
+            SysMachineRequest(_POWER_STATUS_OFF, AWTO_SYS_BY_TESTCMD);
         }
     }
     else if(ucCmd == 0x34)                              // #78 arm the switch log only (wake / power-level timing)

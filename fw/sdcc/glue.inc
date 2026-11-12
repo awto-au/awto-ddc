@@ -547,7 +547,7 @@ void set_ap_aspect(BYTE ucId, int iV)
     SET_OSD_ASPECT_RATIO_TYPE((BYTE)iV);
     if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
     {
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_DISPLAY_SETTING);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_SETTINGS);
     }
 }
 
@@ -557,7 +557,7 @@ void set_ap_overscan(BYTE ucId, int iV)
     SET_OSD_OVERSCAN_STATUS((BYTE)iV);
     if(SysModeGetModeState() == _MODE_STATUS_ACTIVE)
     {
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_DISPLAY_SETTING);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_SETTINGS);
     }
 }
 
@@ -588,12 +588,12 @@ void set_ap_power_mode(BYTE ucId, int iV)          // MCCS 0xD6: on, or any off 
     if(iV == 0)
     {
         SET_FORCE_POW_SAV_STATUS(_FALSE);
-        SysPowerSetTargetPowerStatus(_POWER_STATUS_NORMAL);
+        SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_VCP);
     }
     else
     {
         SET_FORCE_POW_SAV_STATUS(_TRUE);
-        SysPowerSetTargetPowerStatus(_POWER_STATUS_SAVING);
+        SysMachineRequest(_POWER_STATUS_SAVING, AWTO_SYS_BY_VCP);
     }
 }
 
@@ -630,7 +630,7 @@ void set_ap_dp_version(BYTE ucId, int iV)
     UserCommonInterfaceDpVersionSwitch(_D1_INPUT_PORT, UserInterfaceGetDPVersion(_D1_INPUT_PORT), UserCommonInterfaceGetDpMstCapablePort());
     if(SysSourceGetInputPort() == _D1_INPUT_PORT)
     {
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_SETTINGS);
     }
 #endif
 }

@@ -32,7 +32,7 @@ def repo_root() -> Path:
 ROOT = repo_root()
 TSV = ROOT / "fw/awto/sync.tsv"
 LOG = ROOT / "tmp/logs/gen_awto_sync.log"
-FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16}
+FMTS = {"-": 0, "vport": 1, "res": 2, "mhz1": 3, "hz1": 4, "hz3": 5, "mhz3": 6, "dp": 7, "src": 8, "harg": 9, "pc": 10, "ms": 11, "n": 12, "x": 13, "htime": 14, "sms": 15, "wdt": 16, "sys": 17, "sysreq": 18}
 PORT_FLAG = 0x80                                     # fmt bit7: "Dn " prefix from arg
 
 
@@ -88,23 +88,51 @@ def arr(name, vals, per=16):
 
 def rows_block(r):
     n = len(r)
+    ids = [x["id"] for x in r]
+    assert all(ids.index(i) + ids.count(i) == len(ids) - ids[::-1].index(i) for i in set(ids)), "rows of one id must be adjacent"
+    first = [0] * 256                                 # #162 step 3: row + 1 of the id's first row, so a lookup scans only that id
+    for k, i in enumerate(ids):
+        if first[i] == 0:
+            first[i] = k + 1
     return "\n".join([
         f"#define AWTO_SYNC_ROWS {n}",
         arr("tAwtoSyncRowId", [f"0x{x['id']:02X}" for x in r]),
         arr("tAwtoSyncRowArg", [f"0x{x['arg']:02X}" for x in r]),
+        arr("tAwtoSyncIdRow", [str(v) for v in first], 32),
         "BYTE AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged",
         "{",
-        "    BYTE ucI;",
+        "    BYTE ucI = tAwtoSyncIdRow[ucId];",
         "",
-        "    for(ucI = 0; ucI < AWTO_SYNC_ROWS; ucI++)",
+        "    if(ucI == 0)",
         "    {",
-        "        if((tAwtoSyncRowId[ucI] == ucId) && ((tAwtoSyncRowArg[ucI] == 0xFF) || (tAwtoSyncRowArg[ucI] == ucArg)))",
+        "        return 0;",
+        "    }",
+        "    for(ucI--; (ucI < AWTO_SYNC_ROWS) && (tAwtoSyncRowId[ucI] == ucId); ucI++)",
+        "    {",
+        "        if((tAwtoSyncRowArg[ucI] == 0xFF) || (tAwtoSyncRowArg[ucI] == ucArg))",
         "        {",
         "            return ucI + 1;",
         "        }",
         "    }",
         "    return 0;",
         "}"])
+
+
+NAME_IDS = range(0x15, 0x1A)                         # #162 step 3 name tables (state, who / why, request, outcome, separators)
+NAME_ARGS = 64                                       # args per name table: direct row index, no row scan per name (console draws in PS)
+
+
+def names_block(r):
+    tab = [0] * (len(NAME_IDS) * NAME_ARGS)
+    for k, x in enumerate(r):
+        if x["id"] in NAME_IDS:
+            assert x["arg"] < NAME_ARGS, f"name table {x['id']:02X}: arg {x['arg']:02X} >= {NAME_ARGS}"
+            tab[(x["id"] - NAME_IDS.start) * NAME_ARGS + x["arg"]] = k + 1
+    return "\n".join([
+        f"#define AWTO_SYNC_NAME_FIRST 0x{NAME_IDS.start:02X}",
+        f"#define AWTO_SYNC_NAME_IDS {len(NAME_IDS)}",
+        f"#define AWTO_SYNC_NAME_ARGS {NAME_ARGS}",
+        arr("tAwtoSyncNameRow", [str(v) for v in tab], 32)])
 
 
 def text_block(r):
@@ -149,7 +177,8 @@ def text_block(r):
         "        pc++;",
         "    }",
         "    return tAwtoSyncFmt[ucRow];",
-        "}"])
+        "}",
+        names_block(r)])
 
 
 PS_TSV = ROOT / "fw/awto/portsig.tsv"

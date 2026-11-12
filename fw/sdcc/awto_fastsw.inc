@@ -10,7 +10,6 @@ typedef struct
     BYTE pucScaler[AWTO_FAST_SCALER_BYTES];
 } StAwtoSwCache;
 
-extern bit SysJudgeCheckStatus(void);           // SysJudge.c, no header prototype
 static __xdata StAwtoSwCache s_pstAwtoSwCache[3];
 __xdata BYTE g_ucAwtoFastPending;
 static __xdata WORD s_usAwtoFastT0;
@@ -112,7 +111,7 @@ static bit AwtoRxRescan(BYTE ucPort, BYTE ucType)  // held port: receiver set up
     return (ScalerTMDSScanInputPort(ucPort, GET_INPUTPORT_TYPE(g_ucSearchIndex)) == ucType);
 }
 
-// #78 signal lost in ACTIVE = hold the set-up (judge held, mode stays ACTIVE), L1 backlight off (panel machine request);
+// #78 signal lost in ACTIVE = hold the set-up (system machine state HOLD, mode stays ACTIVE), L1 backlight off (panel request);
 // after usL2Sec the SDK path takes over (search, no signal, power-saving timers; #162 Dan 2026-11-12). Signal back on the
 // held port = the fast path (cache) with a backlight-on request before the unblank. Settings: g_stAwtoPower (test cmds 0x36..0x39).
 __xdata StAwtoPower g_stAwtoPower = {1, 1, AWTO_L2_SEC};
@@ -154,7 +153,7 @@ static void AwtoWakeRelease(BYTE ucWhy)         // to the SDK search; the panel 
     g_ucAwtoNoHold = 1;
     g_ucAwtoWakePending = 0;
     AwtoSwEvent(AWTO_SW_EV_HOLD, ucWhy);
-    SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_HOLD);
 }
 
 void AwtoWakePoll(void)                         // every pass while held
@@ -207,6 +206,7 @@ void AwtoWakePoll(void)                         // every pass while held
     g_ucAwtoHold = 0;
     g_ucAwtoWakePending = 1;
     AwtoSwFastGo(ucI, SysSourceGetInputPort(), s_pstAwtoSwCache[ucI].ucSourceType);
+    SysMachineRequest(AWTO_SYS_REQ_FAST, AWTO_SYS_BY_HOLD_BACK);
     if(s_ucAwtoHoldLevel != 0)                  // still blanked: the backlight is back before the unblank
     {
         UserCommonInterfacePanelPowerAction(_BACKLIGHT_ON);
@@ -249,6 +249,7 @@ unsigned char AwtoSwFast(unsigned char ucPort)  // _TRUE = fast path taken, no m
     }
     AwtoSwFastGo(ucI, ucPort, ucType);
     AwtoSwEvent(AWTO_SW_EV_FAST, 0);
+    SysMachineRequest(AWTO_SYS_REQ_FAST, AWTO_SYS_BY_FAST);
     return _TRUE;
 }
 
@@ -313,6 +314,7 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
         ScalerGlobalFirstActiveProc(GET_SOURCE_TYPE(g_ucSearchIndex), SysSourceGetInputPort());
         UserCommonInterfaceOsdActiveProc();     // NVRAM search port, DDC/CI (debug slave) to the new port, info pop-up, unblank
         s_ucAwtoFastWatch = 1;
+        SysMachineRequest(AWTO_SYS_REQ_ACTIVE, AWTO_SYS_BY_FAST_DONE);
         return;
     }
     if(usDt >= (WORD)s_ucAwtoFastFrameMs * 8)   // still failing 8 frames after the switch: full path
@@ -328,12 +330,13 @@ void AwtoSwFastPoll(void)                       // once per main-loop pass: fini
             ScalerDDomainBackgroundEnable(_ENABLE);
             AwtoSwEvent(AWTO_SW_EV_FAST_WHY, ucWhy);
             AwtoSwEvent(AWTO_SW_EV_HOLD, 7);
+            SysMachineRequest(AWTO_SYS_REQ_HOLD, AWTO_SYS_BY_FAST_RETRY);
             return;
         }
 #endif
         AwtoSwEvent(AWTO_SW_EV_FAST, 5);
         AwtoSwEvent(AWTO_SW_EV_FAST_WHY, ucWhy);
-        SysModeSetResetTarget(_MODE_ACTION_RESET_TO_SEARCH);
+        SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, AWTO_SYS_BY_FAST_FAIL);
         return;
     }
     AwtoFastScalerClearStatus(_FALSE);          // re-lock still settling: clear the flags again, check one frame later

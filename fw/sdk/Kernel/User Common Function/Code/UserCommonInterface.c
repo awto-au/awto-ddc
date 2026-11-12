@@ -763,6 +763,7 @@ static __xdata WORD s_usPnlEntry;               // (WORD)AwtoMs() at the state's
 static __xdata WORD s_usPnlVideo;               // (WORD)AwtoMs() at the stream start: T3 counts from here
 static __xdata BYTE s_ucPnlDown;                // power switch waiting for the panel: 0 none, else 1 + the level to restore
 __xdata BYTE g_ucAwtoPanelOwn;                  // 1 while the machine drives its pins (AwtoPanelForeign)
+static bit s_bPnlLit;                           // backlight pin was on since the stream started (T4 applies)
 
 static WORD UserCommonInterfacePanelSince(WORD usFrom)
 {
@@ -820,11 +821,18 @@ static void UserCommonInterfacePanelVideoOn(void)
     ScalerDisplayDPTxStreamHanlder(_ENABLE);
     ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_VIDEO_PATTERN);
     s_usPnlVideo = (WORD)AwtoMs();
+    s_bPnlLit = _FALSE;
     AwtoDiagStage(8);
     AwtoDiagT3Mark(0);                          // first T3 of the boot: diag T3 length, delay calibration (#53)
 }
 
-static void UserCommonInterfacePanelVddOff(BYTE ucPhy, WORD usNow)
+static void UserCommonInterfacePanelStreamOff(void)
+{
+    ScalerDisplayDPTxStreamHanlder(_DISABLE);
+    ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_IDLE_PATTERN);
+}
+
+static void UserCommonInterfacePanelVddOff(BYTE ucPhy)
 {
     if(ucPhy != 0)
     {
@@ -832,7 +840,7 @@ static void UserCommonInterfacePanelVddOff(BYTE ucPhy, WORD usNow)
         ScalerDisplayDPTxAnalogPhyConrol(_DISABLE);
     }
     PCB_PANEL_POWER(_PANEL_CONTROL_OFF);
-    UserCommonInterfacePanelGo(AWTO_PNL_T6, usNow);
+    UserCommonInterfacePanelGo(AWTO_PNL_T6, (WORD)AwtoMs());     // T6 counts from the VDD-off edge (after SSC / PHY off)
 }
 
 // One step per call while a state's condition holds; returns _FALSE when the machine must wait (time or target).
@@ -859,7 +867,7 @@ static bit UserCommonInterfacePanelStep(void)
             // (power status NORMAL, after SysPowerSwitch): at cold boot VDD runs ahead of it. Expiry: PHY on, HPD read.
             if(ucT == AWTO_PNL_TGT_OFF)
             {
-                UserCommonInterfacePanelVddOff(_FALSE, usNow);
+                UserCommonInterfacePanelVddOff(_FALSE);
                 return _TRUE;
             }
             if((usIn < _PANEL_POWER_ON_T1) || (SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL))
@@ -875,7 +883,7 @@ static bit UserCommonInterfacePanelStep(void)
             // T2 what: HPD high, read once per tick; bound = panel T2 (registry PANEL_T2). Expiry: train anyway (SDK) + line.
             if(ucT == AWTO_PNL_TGT_OFF)
             {
-                UserCommonInterfacePanelVddOff(_TRUE, usNow);
+                UserCommonInterfacePanelVddOff(_TRUE);
                 return _TRUE;
             }
             if(ScalerDisplayDPTxHotPlugHigh() == _FALSE)
@@ -912,7 +920,18 @@ static bit UserCommonInterfacePanelStep(void)
             if(ucT == AWTO_PNL_TGT_OFF)
             {
                 ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
-                UserCommonInterfacePanelGo(AWTO_PNL_T4, usNow);
+                if(s_bPnlLit == _FALSE)         // backlight never on since the stream start: T4 has nothing to cover
+                {
+                    UserCommonInterfacePanelStreamOff();
+                    UserCommonInterfacePanelGo(AWTO_PNL_T5, usNow);
+                }
+                else                            // T4 counts from the backlight-off (this state's entry from BL_OFF)
+                {
+                    WORD usOff = s_usPnlEntry;
+
+                    UserCommonInterfacePanelGo(AWTO_PNL_T4, usNow);
+                    s_usPnlEntry = usOff;
+                }
                 return _TRUE;
             }
             return _FALSE;
@@ -928,6 +947,7 @@ static bit UserCommonInterfacePanelStep(void)
                 return _FALSE;
             }
             AwtoDiagT3Mark(1);
+            s_bPnlLit = _TRUE;
             PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
             ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
             UserCommonInterfacePanelGo(AWTO_PNL_BL_PWM, usNow);
@@ -989,8 +1009,7 @@ static bit UserCommonInterfacePanelStep(void)
             {
                 return _FALSE;
             }
-            ScalerDisplayDPTxStreamHanlder(_DISABLE);
-            ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_IDLE_PATTERN);
+            UserCommonInterfacePanelStreamOff();
             UserCommonInterfacePanelGo(AWTO_PNL_T5, usNow);
             return _TRUE;
 
@@ -1006,7 +1025,7 @@ static bit UserCommonInterfacePanelStep(void)
             {
                 return _FALSE;
             }
-            UserCommonInterfacePanelVddOff(_TRUE, usNow);
+            UserCommonInterfacePanelVddOff(_TRUE);
             return _TRUE;
 
         case AWTO_PNL_T6:
@@ -1018,6 +1037,20 @@ static bit UserCommonInterfacePanelStep(void)
             }
             UserCommonInterfacePanelGo(AWTO_PNL_OFF, usNow);
             return _TRUE;
+    }
+}
+
+//--------------------------------------------------
+// Description  : Boot (before the boot request): after a warm reset the panel VDD was on until GPIO init switched it off,
+//                so T6 counts from now; a cold power-up had VDD off for longer than T6
+// Input Value  : ucWarm --> 1 = not a cold power-up (AwtoBootReason)
+// Output Value : None
+//--------------------------------------------------
+void UserCommonInterfacePanelBoot(BYTE ucWarm)
+{
+    if(ucWarm != 0)
+    {
+        UserCommonInterfacePanelGo(AWTO_PNL_T6, (WORD)AwtoMs());
     }
 }
 

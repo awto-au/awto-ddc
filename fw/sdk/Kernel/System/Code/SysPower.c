@@ -45,7 +45,6 @@ StructPowerInfoType g_stPowerInfo;
 // FUNCTION DECLARATIONS
 //****************************************************************************
 void SysPowerInitial(void);
-void SysPowerHandler(void);
 void SysPowerSwitch(EnumPowerAction enumSwitch);
 
 #if(_SYSTEM_LOW_POWER_IDLE_SUPPORT == _ON)
@@ -270,184 +269,6 @@ void SysPowerInitial(void)
     ///////////////////////////////////////
 
     SysPowerIsolation(_POWER_ACTION_AC_ON_INITIAL);
-}
-
-//--------------------------------------------------
-// Description  : Power Handler Process
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void SysPowerHandler(void)
-{
-    // #162: NORMAL -> OFF / SAVING waits until the panel machine has the panel down (T4 / T5 are its timer steps)
-    bit bUp = ((GET_POWER_STATUS() == _POWER_STATUS_NORMAL) || (GET_POWER_STATUS() == _POWER_STATUS_AC_ON));
-
-    if(UserCommonInterfacePanelPowerDown(bUp && ((GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF) ||
-                                                 (GET_TARGET_POWER_STATUS() == _POWER_STATUS_SAVING)), bUp) == _FALSE)
-    {
-        return;
-    }
-
-    // The process will deal with all kinds of power changing by power action flag.
-    switch(GET_TARGET_POWER_STATUS())
-    {
-        case _POWER_STATUS_NORMAL:
-
-            switch(GET_POWER_STATUS())
-            {
-                case _POWER_STATUS_OFF:
-
-                    if(SysPowerCheckNormal() == _TRUE)
-                    {
-                        SysPowerSwitch(_POWER_ACTION_OFF_TO_NORMAL);
-                    }
-                    else
-                    {
-                        SysPowerSwitch(_POWER_ACTION_OFF_TO_FAKE_OFF);
-                    }
-                    break;
-
-                case _POWER_STATUS_SAVING:
-
-                    SysPowerSwitch(_POWER_ACTION_PS_TO_NORMAL);
-
-#if(_AIO_MODERN_STANDBY_SUPPORT == _ON)
-                    if(UserInterfaceGetAIOModernStandbyMode() == _AIO_MODERN_STANDBY_MODE_ENABLE)
-                    {
-                        SET_AIO_MODERN_STANDBY_MODE();
-                        ScalerTimerReactiveTimerEvent(SEC(0.5), _SYSTEM_TIMER_EVENT_AIO_MODERN_STANDBY_MODE_TIMEOUT);
-                    }
-                    else
-                    {
-                        CLR_AIO_MODERN_STANDBY_MODE();
-                        ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_AIO_MODERN_STANDBY_MODE_TIMEOUT);
-                    }
-#endif
-                    break;
-
-                case _POWER_STATUS_AC_ON:
-                    SysPowerSwitch(_POWER_ACTION_AC_ON_TO_NORMAL);
-                    break;
-
-                case _POWER_STATUS_NORMAL:
-
-                    if((GET_MODE_STATE() == _MODE_STATUS_POWER_OFF) || (GET_POWER_SWITCH_TO_FAKE_OFF() == _TRUE))
-                    {
-                        CLR_POWER_SWITCH_TO_FAKE_OFF();
-                        ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_POWER_FAKE_OFF_TO_OFF);
-                        SysPowerSwitch(_POWER_ACTION_FAKE_OFF_TO_NORMAL);
-                    }
-                    else if(GET_POWER_SWITCH_TO_FAKE_SAVING() == _TRUE)
-                    {
-                        CLR_POWER_SWITCH_TO_FAKE_SAVING();
-                        SysPowerSwitch(_POWER_ACTION_FAKE_PS_TO_NORMAL);
-
-#if(_AIO_MODERN_STANDBY_SUPPORT == _ON)
-                        if(UserInterfaceGetAIOModernStandbyMode() == _AIO_MODERN_STANDBY_MODE_ENABLE)
-                        {
-                            SET_AIO_MODERN_STANDBY_MODE();
-                            ScalerTimerReactiveTimerEvent(SEC(0.5), _SYSTEM_TIMER_EVENT_AIO_MODERN_STANDBY_MODE_TIMEOUT);
-                        }
-                        else
-                        {
-                            CLR_AIO_MODERN_STANDBY_MODE();
-                            ScalerTimerCancelTimerEvent(_SYSTEM_TIMER_EVENT_AIO_MODERN_STANDBY_MODE_TIMEOUT);
-                        }
-#endif
-                    }
-
-                    break;
-
-                default:
-                    break;
-            }
-
-            SET_POWER_STATUS(_POWER_STATUS_NORMAL);
-
-            break;
-
-        case _POWER_STATUS_OFF:
-
-            CLR_POWER_SWITCH_TO_FAKE_SAVING();
-
-            // Clear Mode change flag
-            CLR_MODE_STATE_CHANGE_MODE();
-
-            switch(GET_POWER_STATUS())
-            {
-                case _POWER_STATUS_SAVING:
-                    SysPowerSwitch(_POWER_ACTION_PS_TO_OFF);
-                    SET_POWER_STATUS(_POWER_STATUS_OFF);
-                    break;
-
-                case _POWER_STATUS_AC_ON:
-                    SysPowerSwitch(_POWER_ACTION_AC_ON_TO_OFF);
-                    SET_POWER_STATUS(_POWER_STATUS_OFF);
-                    break;
-
-                case _POWER_STATUS_NORMAL:
-
-                    if(SysPowerCheckFakeOff() == _FALSE)
-                    {
-                        CLR_POWER_SWITCH_TO_FAKE_OFF();
-                        SysPowerSwitch(_POWER_ACTION_NORMAL_TO_OFF);
-                        SET_POWER_STATUS(_POWER_STATUS_OFF);
-                    }
-                    else
-                    {
-                        SET_POWER_SWITCH_TO_FAKE_OFF();
-                        SysPowerSwitch(_POWER_ACTION_NORMAL_TO_FAKE_OFF);
-                    }
-                    break;
-
-                default:
-                    break;
-            }
-
-            break;
-
-        case _POWER_STATUS_SAVING:
-
-            CLR_POWER_SWITCH_TO_FAKE_SAVING();
-
-            switch(GET_POWER_STATUS())
-            {
-                case _POWER_STATUS_NORMAL:
-
-                    if(UserCommonInterfaceCheckFakeSaving() == _TRUE)
-                    {
-                        SET_POWER_SWITCH_TO_FAKE_SAVING();
-                        SysPowerSwitch(_POWER_ACTION_NORMAL_TO_FAKE_PS);
-                    }
-                    else
-                    {
-                        SysPowerSwitch(_POWER_ACTION_NORMAL_TO_PS);
-                        SET_POWER_STATUS(_POWER_STATUS_SAVING);
-                    }
-
-                    break;
-
-                default:
-                    break;
-            }
-
-            break;
-
-        default:
-            break;
-    }
-
-    // Clear power action to avoid repeat calls in next circle.
-    SET_TARGET_POWER_STATUS(_POWER_STATUS_NONE);
-
-#if(_SYSTEM_LOW_POWER_IDLE_SUPPORT == _ON)
-    // Flash go into idle mode to reduce overall system power consumption under power saving and power off status.
-    if(((GET_POWER_STATUS() == _POWER_STATUS_SAVING) || (GET_POWER_STATUS() == _POWER_STATUS_OFF)) && (UserCommonInterfaceGetRunDdcciCommand() == _FALSE))
-    {
-        // Call operation function to make Flash into idle mode.
-        SysPowerIdleProc();
-    }
-#endif
 }
 
 //--------------------------------------------------
@@ -1154,13 +975,7 @@ void SysPowerSystemClockSelect(BYTE ucClockSel)
 //--------------------------------------------------
 void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus)
 {
-    // When OFF to Fake OFF & DC Key ON in One Main Loop, Clr Fake OFF Flag
-    if((GET_POWER_SWITCH_TO_FAKE_OFF() == _TRUE) && (enumPorStatus == _POWER_STATUS_NORMAL))
-    {
-        CLR_POWER_SWITCH_TO_FAKE_OFF();
-    }
-
-    SET_TARGET_POWER_STATUS(enumPorStatus);
+    SysMachineRequest(enumPorStatus, AWTO_SYS_BY_SDK);     // #162 step 3: a request to the system machine
 }
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
