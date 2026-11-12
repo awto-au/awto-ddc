@@ -12,6 +12,7 @@ Log: tmp/logs/sync_log.log
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -176,6 +177,12 @@ def main() -> int:
         log("sync: read over 0x35 failed")
         return 1
     h, lines = decode(bytes(raw), rows)
+    if h["magic"] != b"SY":                              # #158: wrong map (not the running image) reads another address
+        st = ROOT / f"tmp/fw/{a.serial}-flash-state.json" if a.serial else None
+        img = json.loads(st.read_text()).get("image") if st and st.exists() else "? (pass --serial)"
+        log(f"sync: header {bytes(raw[:HDR]).hex(' ')} has no 'SY' magic at {a.map.name}'s g_stAwtoSync: the map is not the "
+            f"running image's? flash-state image {img}")
+        return 2
     log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
     for ln in lines:
         log("  " + ln)
