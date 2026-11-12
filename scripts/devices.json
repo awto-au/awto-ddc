@@ -14,8 +14,8 @@
     "2": {
       "serial": "AWT26110002",
       "input": "HDMI",
-      "connector": "card1-HDMI-A-2",
-      "gdctl": "HDMI-2",
+      "connector": "card1-DP-1",
+      "gdctl": "DP-1",
       "connector_dp": "card1-DP-1",
       "gdctl_dp": "DP-1",
       "be": true,
@@ -26,8 +26,8 @@
     "3": {
       "serial": "AWT26110003",
       "input": "DP",
-      "connector": "card2-DP-4",
-      "gdctl": "DP-4",
+      "connector": "card1-HDMI-A-2",
+      "gdctl": "HDMI-2",
       "be": true,
       "relay": null,
       "test": false,
