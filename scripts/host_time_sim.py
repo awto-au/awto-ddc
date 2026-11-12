@@ -101,9 +101,10 @@ class Sim:
     def send(self, t: dt.datetime) -> float:
         e = int(t.timestamp())
         ms = int(round((t.timestamp() - e) * 1000))
+        t_send = self.bus.now()
         self.mccs.tx(HT.packet(t.timestamp(), OFS)[1:-1], reply=False)    # host_time.py's own encoding (len, chk: Mccs.tx)
         say(f"sent host time {t.isoformat(timespec='milliseconds')} (unix {e}.{ms:03d}) at fw {self.bus.now():.3f} s")
-        return self.bus.now() - D.REPLY_S                  # the request landed before the reply wait
+        return t_send                                      # fw time the request was queued (not the end of the reply wait)
 
     def get(self):
         return self.mccs.get(VCP)
@@ -138,6 +139,7 @@ def main() -> int:
     t_end = s.bus.now() + CON_S
     while "AWTO DIAGNOSTICS" not in s.title() and s.bus.now() < t_end:
         s.bus.wait(0.25)
+    s.bus.wait(TICK_S)                                      # console draw done: a request queued mid-draw is served late
     ti = s.title()
     say(f"title: {ti!r}")
     s.check("AWTO DIAGNOSTICS  FW " in ti, "console open, title FW tag")
