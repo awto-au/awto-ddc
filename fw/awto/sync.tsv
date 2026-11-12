@@ -18,14 +18,14 @@ D0	02	pc	boot: watchdog bite, %
 D0	03	-	boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)
 D0	04	-	boot: watchdog probe reset (test cmd 0x49 / 0x4F)
 D0	05	-	boot: hardware watchdog reset, no capture (an early warning IRQ came)
-D1	01	-	stage 1: main
-D1	02	-	stage 2: GPIO init done
-D1	03	-	stage 3: MCU init done (M2PLL, flash clock, banks, Timer2)
-D1	04	-	stage 4: pin-share done
-D1	05	-	stage 5: panel VDD on
-D1	06	-	stage 6: first main-loop pass
-D1	07	-	stage 7: DPTx link
-D1	08	-	stage 8: DPTx video stream
+D1	01	-	boot: main() entered
+D1	02	-	boot: GPIO set up
+D1	03	-	boot: MCU set up (M2PLL clock, flash clock, code banks, Timer2 tick)
+D1	04	-	boot: pin functions set
+D1	05	-	boot: panel VDD switched on (panel power sequence started)
+D1	06	-	boot: first main-loop pass
+D1	07	-	boot: eDP-1 panel link trained
+D1	08	-	boot: eDP-1 video stream to the panel running
 D2	01	-	MCU init: crystal clock, watchdog N = 8
 D2	02	-	Timer2 1 ms tick running
 D2	03	-	watchdog run-time: warning 1025 ms, reset 1172 ms
@@ -50,14 +50,14 @@ C0	01	-	power on
 C0	02	vport	switch to %
 C0	03	vport	wake on %
 C0	04	vport	power key on, %
-01	00	-	mode INITIAL
-01	01	-	mode SEARCH
-01	02	-	mode DISPLAY SETTING
-01	03	-	mode ACTIVE
-01	04	-	mode NO SUPPORT
-01	05	-	mode NO SIGNAL
-01	06	-	mode POWER SAVING
-01	07	-	mode POWER OFF
+01	00	-	mode INITIAL: power on, scaler input side reset for a new search
+01	01	-	mode SEARCH: looking for a source (cable, clock / link, stable timing)
+01	02	-	mode DISPLAY SETTING: timing confirmed, programming scaler + eDP-1 panel link
+01	03	-	mode ACTIVE: picture on screen
+01	04	-	mode NO SUPPORT: timing outside what scaler / panel accept
+01	05	-	mode NO SIGNAL: search found no source
+01	06	-	mode POWER SAVING: no signal, low power, waiting for a wake
+01	07	-	mode POWER OFF: monitor off, inputs not searched
 10	00	-	panel on
 10	01	-	panel off
 10	02	-	backlight on
