@@ -1,4 +1,4 @@
-# #162 design: one owner per resource (draft for Dan, 2026-11-12)
+# #162 design: one owner per resource (decided by Dan, 2026-11-12)
 
 Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, transitions T1-T9), boot profile (#144, unit 2 fb4), SDK now our source in `fw/sdk` (`git diff sdk-import-3d38340 -- fw/sdk` = our edits).
 
@@ -15,8 +15,7 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 | Panel VDD / eDP-1 link / backlight / PWM | `PanelPowerAction` rewritten as a non-blocking machine: OFF → VDD (T1) → HPD (≤T2) → LINK → VIDEO → T3 → BL_ON, and back (T4, T5, T6) | early raw VDD, INITIAL `_BACKLIGHT_ON`, display-setting `_PANEL_ON`, ACTIVE `_BACKLIGHT_ON`, OSD-event BL on, L1 pin, L2 link, `AWTO_BL_OFF_OR_BLANK`, T3 sub | **A** |
 | Output timing (free-run / frame-sync, DCLK) | SDK `SysModeSetFreeRun` + `ScalerMDomainControl` (unchanged) | — | keep |
 | OSD (console, cards, selector, menu, GPIO page) | one OSD owner: screen stack + `show/hide/replace`; mode resets no longer call `OsdDispDisableOsd`; console survives input changes (output stays free-run) | m4-m6 redraw patches, `AwtoConLost`, `AwtoMenuForget`, `AwtoHoldBlocksDisable`, SDK OSD timers/hot-key menus | **A** |
-| Power status (OFF / NORMAL / SAVING) | SDK `SysPower` (kept); every caller uses `SysPowerSetTargetPowerStatus` | direct target writes in fastsw / wake poll / testcmd | **B** |
-| Mode (search … active) | SDK `SysMode`/`SysJudge` (kept); our code uses its API only | hold-judge sub, `AwtoSwPoll` mode polling (machine logs itself) | **B** |
+| Power status + mode (OFF / NORMAL / SAVING; INITIAL … ACTIVE, NO SIGNAL, PS) | one machine of ours replacing SysPower + SysMode + SysJudge (decision 3); scaler functions are its actions | SDK SysPower/SysMode/SysJudge, direct target writes in fastsw / wake poll / testcmd, hold-judge sub, `AwtoSwPoll` mode polling | **A** |
 | Input selection / KVM / search order / cache / fast path | one source model; `AwtoInputSelect` the only entry; #84 = invariant (no uncabled target) | fixed-port workarounds, selector fragments, deadport poll | **A** |
 | Signal-loss hold (L1 backlight off / L2 link off / L3 PS) | decision 4 | | — |
 | Power-saving wake | our poll is the only decider (SDK predetects removed); poll runs from a Timer0 event every 5 ms, not 14 main-loop sites; triggers: cable, EDID read, DPCD 600h / link training, TMDS clock (AUX logged only, #163) | SDK PS predetect paths, `AWTO_PS_POLL_SITE` x14 | **A** |
@@ -38,10 +37,10 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 5. Source model + hold decision (C10, C11).
 6. NVRAM finish (C7), log ring / formatter (C13).
 
-## Decisions for Dan
-1. Panel: **A** own non-blocking machine (recommended) / B thin wrapper / C reorder only.
-2. OSD: **A** single owner, console survives input changes (recommended) / B pin flag inside the SDK model.
-3. Mode / power: **B** keep the SDK machines, ours via their API only (recommended) / A rewrite as one table machine.
-4. Signal-loss hold: keep L1 (backlight off, ~270-300 ms back) and fold L2 / L3 into the SDK's NOSIGNAL → power-saving timers (recommended) / keep L1-L3 as today / drop the hold (SDK path only, ~2.5 s back).
-5. Wake poll driven by Timer0 every 5 ms instead of main-loop sites (recommended) / keep sites.
-6. Order as above, or another first step.
+## Decisions (Dan, 2026-11-12)
+1. Panel: own non-blocking machine (A).
+2. OSD: one owner; console survives input changes (A).
+3. Mode + power: **rewrite SysPower + SysMode + SysJudge as one machine of ours** (A; not the recommended B). Scaler functions (`ScalerGlobalResetProc`, measure, M-domain, free-run) stay as the machine's actions.
+4. Signal-loss hold: keep L1 (backlight off, fast return) inside the new owners; L2 / L3 fold into the machine's NO SIGNAL → power-saving timers.
+5. Wake poll: Timer0 event every 5 ms; the 14 main-loop sites go.
+6. Order: time base → panel machine + M2PLL early → mode/power machine → OSD owner → wake → source model → NVRAM / log.
