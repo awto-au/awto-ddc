@@ -38,12 +38,12 @@ def one(mp: Path):
         r = run("scripts/sync_log.py", BUS, "--serial", SERIAL, "--map", mp, limit=30)
         run("scripts/dbg_link.py", "off", BUS, limit=30)
         txt = r.stdout
-        if re.search(r"mode ACTIVE|-> ACTIVE: ", txt):            # old images | #162 s3b system transition
+        if re.search(r"mode ACTIVE|-> ACTIVE[:( ]", txt):        # old images | #162 s3b system transition
             break
     ms = lambda pat: next((int(m.group(1)) for ln in txt.splitlines() if (m := re.search(r"\+\s*(\d+) ms " + pat, ln))), None)
     lost = len(re.findall(r"D2 signal lost", txt)) + sum(int(x) for x in re.findall(r"repeated (\d+) more", txt))
-    return dict(off=ms("(mode POWER OFF|system: RESET -> AC ON)"), search=ms("(mode SEARCH|system: .* -> SEARCH: )"),
-                active=ms("(mode ACTIVE|system: .* -> ACTIVE: )"), flaps=lost)
+    return dict(off=ms("(mode POWER OFF|system: RESET -> AC ON)"), search=ms("(mode SEARCH|system: .* -> SEARCH[:( ])"),
+                active=ms("(mode ACTIVE|system: .* -> ACTIVE[:( ])"), flaps=lost)
 
 
 def main():

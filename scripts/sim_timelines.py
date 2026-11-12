@@ -19,12 +19,12 @@ TEXT_MASK = re.compile(r"^(watchdog run-time:|MCU init: crystal clock, watchdog 
 SIM_LIMIT_S = 300          # one sim: gates run each in 5-25 s; 12x margin, expiry = FAIL
 # old | #162 s3b texts (stage / mode / pin-edge lines folded into the machine lines): either side of an A/B
 MILESTONES = (("panel VDD on", r"panel VDD switched on|^panel: OFF -> VDD"), ("first main-loop pass", r"first main-loop pass"),
-              ("console opened", r"console opened"), ("eDP link trained", r"eDP-1 panel link trained|-> VIDEO: eDP-1 link trained"),
-              ("stream running", r"video stream to the panel running|-> VIDEO: eDP-1 link trained"),
-              ("backlight on (pin)", r"^backlight on$|-> BL_PWM: "), ("mode INITIAL", r"^mode INITIAL|^system: .* -> INITIAL: "),
-              ("mode SEARCH", r"^mode SEARCH|^system: .* -> SEARCH: "),
-              ("display setting", r"^display setting$|^system: .* -> DISPLAY SETTING: "),
-              ("mode ACTIVE", r"^mode ACTIVE|^system: .* -> ACTIVE: "), ("backlight pin edges", None))
+              ("console opened", r"console opened"), ("eDP link trained", r"eDP-1 panel link trained|-> VIDEO \(\d+ ms\): eDP-1 link trained"),
+              ("stream running", r"video stream to the panel running|-> VIDEO \(\d+ ms\): eDP-1 link trained"),
+              ("backlight on (pin)", r"^backlight on$|-> BL_PWM \("), ("mode INITIAL", r"^mode INITIAL|^system: .* -> INITIAL \("),
+              ("mode SEARCH", r"^mode SEARCH|^system: .* -> SEARCH \("),
+              ("display setting", r"^display setting$|^system: .* -> DISPLAY SETTING \("),
+              ("mode ACTIVE", r"^mode ACTIVE|^system: .* -> ACTIVE \("), ("backlight pin edges", None))
 PIN_EDGE = re.compile(r"^backlight (on|off)$|backlight pin (on|off)")
 
 

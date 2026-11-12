@@ -6,7 +6,7 @@ usage: AWTO_SIM_CORE=fast sync_sim.py BIN MAP [--mode 1080p60] [--out tmp/sync]
                                                           works on images without #139 (A/B)
 - Boot with the console auto-open ON (firmware default): the power-on episode opens the console once settled.
   Checks: ring magic, power-on lines (-> ACTIVE, backlight pin on, timing), console opened by itself, no chip reset.
-  #162 s3b: the SDK mode is in the system transition line ('system: A -> B: ...'), the backlight pin in the panel machine's.
+  #162 s3b: the SDK mode is in the system transition line ('system: A -> B (N ms): why; mode'), the backlight pin in the panel machine's.
 - Console closed, selector opened (SOURCE): PNG; loop rate with the selector open vs closed (diag usLoopRate).
 - Test cmd 0x33 (D3, no source in the sim) then 0x32 (back to D2): switch episodes decoded by scripts/sync_log.py
   (the host decoder), console auto-open on each; PNG per episode.
@@ -130,7 +130,7 @@ def main():
         h, lines = r.episode("power-on")
         txt = "\n".join(lines)
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
-        for want in ("power on", "-> ACTIVE: ", "backlight pin on", "timing ", "console opened"):
+        for want in ("power on", "-> ACTIVE (", "backlight pin on", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
         r.check(r.console() != 0, "console opened by itself after power-on")
         r.shot("poweron_console")
@@ -144,7 +144,7 @@ def main():
         sel = r.loop_rate()
         say(f"  measured, sim loop rate: idle ACTIVE {idle}/s, selector open {sel}/s")
         r.cmd(K_MENU, 1.0)
-        for port, c, name, want in ((3, 0x33, "switch_d3", "-> NO SIGNAL: "), (2, 0x32, "switch_d2", "-> ACTIVE: ")):
+        for port, c, name, want in ((3, 0x33, "switch_d3", "-> NO SIGNAL ("), (2, 0x32, "switch_d2", "-> ACTIVE (")):
             r.cmd(c, 0.2)
             if port == 2:
                 r.s.bus.run_until_mode(3)
@@ -164,7 +164,7 @@ def main():
         txt = "\n".join(lines)
         r.check(h["kind"] == 4, "power key episode", f"kind {h['kind']}")
         # #162 step 2: the panel machine's first step ('panel: OFF -> VDD') replaces the display-setting 'panel on requested'
-        for want in ("system: OFF -> INITIAL: ", "backlight on requested by ", ("panel on requested", "panel: OFF -> VDD"), "-> ACTIVE: "):
+        for want in ("system: OFF -> INITIAL (", "backlight on requested by ", ("panel on requested", "panel: OFF -> VDD"), "-> ACTIVE ("):
             alt = want if isinstance(want, tuple) else (want,)
             r.check(any(w in txt for w in alt), f"power key log has '{' or '.join(alt)}' (episode began before the INITIAL handler)")
         d = C.decode(C.read(r.s.bus, r.caddr))

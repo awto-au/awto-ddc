@@ -217,7 +217,12 @@ class SimTarget:
         tl, th, rl, rh = *m.rd(0xCC, 2, "sfr"), *m.rd(0xCA, 2, "sfr")
         cnt, rc = th << 8 | tl, rh << 8 | rl
         frac = min(max((cnt - rc) / (0x10000 - rc), 0.0), 1.0) if rc else 0.0
-        return self.bus.diag_t2() + (1 if m.rd(0xC8, 1, "sfr")[0] & 0x80 else 0) + frac
+        v = self.bus.diag_t2() + (1 if m.rd(0xC8, 1, "sfr")[0] & 0x80 else 0) + frac
+        last = getattr(self, "_fw_last", v)            # a reload change (PS reload) can put the fraction < 1 ms back:
+        if 0 < (last - v) % 65536 < 1.0:               # a step back made `(now - t0) % 65536` huge and ended waits at once
+            return last
+        self._fw_last = v
+        return v
 
     def watch(self, name: str, fn):
         """fn(regs) at each entry of _name (no change to the run); a name missing from the map raises."""

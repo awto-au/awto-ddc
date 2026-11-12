@@ -3,7 +3,8 @@
 
 usage: sync_log.py BUS --map MAP [--tsv TSV] [--serial SERIAL]      read over the debug slave 0x35 and print the episode
        (library) decode(raw, rows) -> (header dict, [lines]); load_rows(tsv); tsv_for(map)
-- Texts and value formats: the firmware tree's fw/awto/sync.tsv (one file for screen and host). Default TSV = the image's
+- Texts and value formats: the firmware tree's fw/awto/sync.tsv (one file for screen and host; the console wraps a long line
+  to a second row, the host prints it on one). Default TSV = the image's
   <map stem>.sync.tsv (wb_build.py copies it beside the image), else $AWTO_SYNC_TSV.
 - Ring layout (RL6449_Project.h StAwtoSync, bytes only): 14 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4}.
   Header byte 12 = N, byte 13 = seq wrap: read the header, then N x 8 B (read_ring); nothing is hardcoded here.
@@ -196,7 +197,7 @@ def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
     if fmt == "sys":
         old, why = name(rows, SYS_STATE, a >> 4), v >> 24
         mode = f"; {name(rows, SYS_MODE, a & 0x0F)}" if why & WHY_MODE else ""        # s3b: the SDK mode changed
-        return f"{old} -> {name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, why & WHY_CODE)} ({v & SYS_MS_MAX} ms in {old}){mode}"
+        return f"{old} -> {name(rows, SYS_STATE, a & 0x0F)} ({v & SYS_MS_MAX} ms): {name(rows, SYS_WHY, why & WHY_CODE)}{mode}"
     return f"{name(rows, SYS_REQ, a)} requested by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
 
 
@@ -208,9 +209,9 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     if row is None:
         return head + f"event {i:02X} {a:02X}"
     pre = f"D{a - D0} " if row["port"] else ""
-    if row["fmt"] == "ms2":                              # #162 s3b: two values, two % (first ms << 16 | second ms)
+    if row["fmt"] == "ms2":                              # #162 s3b: two values, two % (second ms << 16 | first ms)
         p0, p1, p2 = row["text"].split("%")
-        return head + pre + f"{p0}{v >> 16} ms{p1}{v & 0xFFFF} ms{p2}"
+        return head + pre + f"{p0}{v & 0xFFFF} ms{p1}{v >> 16} ms{p2}"
     before, _, after = row["text"].partition("%")
     val = (sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
            name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else value(row["fmt"], a, v))
