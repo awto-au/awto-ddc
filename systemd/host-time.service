@@ -1,0 +1,14 @@
+[Unit]
+Description=Host time to monitor unit 2 over DDC/CI every 60 s (awto-ddc#157)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=AWTO_DDC_REPO=/mnt/2tb/git/awto-ddc
+ExecStart=/usr/bin/python3 /mnt/2tb/git/awto-ddc/scripts/host_time.py --unit 2 --loop 60
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=graphical-session.target

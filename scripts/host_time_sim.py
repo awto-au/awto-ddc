@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddc_sim as D  # noqa: E402
 import fw_sim as S  # noqa: E402
+import host_time as HT  # noqa: E402
 import osd_model as M  # noqa: E402
 import sync_log as SL  # noqa: E402
 
@@ -94,7 +95,7 @@ class Sim:
     def send(self, t: dt.datetime) -> float:
         e = int(t.timestamp())
         ms = int(round((t.timestamp() - e) * 1000))
-        self.mccs.tx(bytes([0xE7, VCP, 0, 0]) + e.to_bytes(4, "big") + ms.to_bytes(2, "big") + bytes([OFS]), reply=False)
+        self.mccs.tx(HT.packet(t.timestamp(), OFS)[1:-1], reply=False)    # host_time.py's own encoding (len, chk: Mccs.tx)
         say(f"sent host time {t.isoformat(timespec='milliseconds')} (unix {e}.{ms:03d}) at fw {self.bus.now():.3f} s")
         return self.bus.now() - D.REPLY_S                  # the request landed before the reply wait
 
