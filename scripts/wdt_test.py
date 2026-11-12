@@ -33,6 +33,8 @@ CNT3_MS = 4096 * 2048 / 14318.18          # regdb CNT3 12 bit x 2048 XTAL clocks
 TICK_MS = 2048 / 14318.18
 N, THR = 2, 0xC00                          # RL6449_Project.h AWTO_WDT_N / AWTO_WDT_THR (read from --header if given)
 CMD_MS = 100                               # test cmd written -> consumed: one main-loop pass (sim ~0.1 s, crash_sim_test)
+NV_IDLE_MS = 4200                          # boot -> first NVRAM flush done: ACTIVE stable 3 s + flush ~0.3 s, x1.25
+ARM_WAIT_MS = 1400                         # test cmd -> Timer0 event armed: a pass held by a chained NVRAM erase + program ~1.1 s (#150) x1.25
 POLL_S = 0.020                             # unit reset poll period (cost above)
 RETURN_S = 5.0                             # monitor back after a reset (memory rule monitor-wait-5s)
 PROBE_SPIN_MS = 1500                       # AWTO_WDT_PROBE_MS: the probe gives up and restores the watchdog
@@ -932,13 +934,18 @@ class Runner:
         self.fired.clear(); self.armed.clear()
         self.t.cmd(cmd)
         t0 = self.t.fw_ms()
-        while len(self.fired) < len(want) and (self.t.fw_ms() - t0) % 65536 < budget_ms + CMD_MS:
+        # the event budget counts from the arm (the test cmd runs in the main loop): a pass held by an NVRAM flush (CPU halted
+        # by the flash op, #150, up to ARM_WAIT_MS) only delays the arm; dt is judged from the arm anyway
+        while len(self.fired) < len(want) and ((self.t.fw_ms() - t0) % 65536 < ARM_WAIT_MS + CMD_MS if not self.armed else
+                                               (self.t.fw_ms() - self.armed[0]) % 65536 < budget_ms):
             self.t.m.run(5_000)
         out = []
         for k, (name, ms) in enumerate(want):
             f = self.fired[k] if k < len(self.fired) else (None, None)
             dt = None if f[1] is None or not self.armed else (f[1] - self.armed[0]) % 65536
             out.append((name, ms, f[0], dt))
+        if self.armed:
+            self.say(f"  armed {(self.armed[0] - t0) % 65536:.1f} ms after the cmd")
         return out
 
     def _judge(self, case, label, res):
@@ -952,9 +959,12 @@ class Runner:
     def c_t0_timing(self):
         if not self._sim("t0_timing"):
             return
-        # after the reboot in `clear`: the mode reads ACTIVE at the transition now (#162 step 3, no polling lag), before the
-        # SDK's first-ACTIVE RR D2 cancel / re-arm (~0.7-1.2 s in, as t0_arm_from_isr): 1.5 s (1.2 x 1.25) first
-        self.t.run_ms(1500)
+        # after the reboot in `clear`: the boot's first NVRAM flush (ACTIVE stable 3 s + the flush, glue_nv.inc) halts the CPU
+        # and Timer0 with it (#150); wait until no item is dirty: 3.3 s x1.25 ~ 4.2 s, then judge (expiry = run anyway, logged)
+        a, t0 = self.t.m.addr("g_stAwtoNv") + 1, self.t.fw_ms()            # StAwtoNv.ucMask
+        while self.t.m.rd(a)[0] != 0 and (self.t.fw_ms() - t0) % 65536 < NV_IDLE_MS:
+            self.t.run_ms(50)
+        self.say(f"  NVRAM dirty mask {self.t.m.rd(a)[0]:02X} after {(self.t.fw_ms() - t0) % 65536:.0f} ms")
         bad, txt = 0, []
         for cmd, label, want in ((0x2A, "M2PLL", [("RX1_DP_REBUILD_PHY", 30)]), (0x2B, "M2PLL", [("RX2_HDMI_RR_RETRY", 10)]),
                                  (0x2C, "M2PLL", [("RX3_HDMI_RR_RETRY", 10)]), (0x5A, "PS reload", [("RX1_DP_REBUILD_PHY", 30)]),
