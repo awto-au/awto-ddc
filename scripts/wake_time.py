@@ -23,8 +23,6 @@ import sw_timeline as T  # noqa: E402
 DIAG_T2 = 22                # StAwtoDiag.usT2Isr offset (RL6449_Project.h)
 WAKE_LIMIT_S = 6.0          # full-path wake: 1.0-1.2 s mode ACTIVE at cold boot (#63) + search 3 s worst; expiry = logged FAIL
 POLL_S = 0.05               # log poll while waking: 50 ms resolution on the stop condition only (event times are firmware ms)
-MUTTER = ["busctl", "--user", "set-property", "org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig",
-          "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", "i"]
 PICTURE = {(0x80, 0)}                    # UNBLANK (blank event arg 0); the SDK path turns the backlight on in the same ms
 
 
@@ -49,9 +47,12 @@ def arm(io, sw: int, diag: int) -> float:
     return t_host
 
 
-def dpms(conn: str, on: bool, limit_s: float = 3.0) -> float:
-    """Mutter PowerSaveMode; returns host time when sysfs dpms reached the state (limit: one modeset ~0.3 s x ~10)."""
-    subprocess.run(MUTTER + ["0" if on else "3"], check=True, timeout=5)
+def dpms(conn: str, on: bool, limit_s: float = 3.0, guard_s: float = 60.0) -> float:
+    """Mutter PowerSaveMode; returns host time when sysfs dpms reached the state (limit: one modeset ~0.3 s x ~10).
+    off arms the host_dpms guard: screens forced on after guard_s if this tool dies (#159)."""
+    import host_dpms as H
+    if not (H.on() if on else H.off(guard_s)):
+        raise SystemExit("dpms: PowerSaveMode set failed")
     t0 = time.monotonic()
     want = "On" if on else "Off"
     p = Path("/sys/class/drm") / conn / "dpms"
@@ -101,7 +102,7 @@ def main() -> int:
     try:
         for run in range(a.runs):
             t_arm = arm(io, sw, diag)
-            t_off = dpms(a.conn, False)
+            t_off = dpms(a.conn, False, guard_s=1.25 * (a.off_s + WAKE_LIMIT_S) + 10)   # +10: arm + decode reads
             time.sleep(a.off_s)     # the off period under test (no-signal / power-saving depth)
             t_cmd = time.monotonic()
             t_on = dpms(a.conn, True)
@@ -123,7 +124,8 @@ def main() -> int:
                 rc = 1
             time.sleep(4.0)         # > AWTO_REHOLD_MS (3 s): the next off may hold again; one info pop-up is 6 s, not counted
     finally:
-        subprocess.run(MUTTER + ["0"], timeout=5)
+        import host_dpms as H
+        H.on()                  # also cancels the guard
         io.close()
     return rc
 

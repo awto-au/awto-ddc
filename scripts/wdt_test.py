@@ -54,6 +54,7 @@ HOLD_S = 60.0         # hold case: power saving must hold this long with host ou
 # hold case overall bound: host off -> mode 6 PS_S 29 + silent PS_STATUS_S + HOLD_S 69 + host wake WAKE_S 9 + reads / record
 # ~10 s = 117 s worst, x1.25 -> 146 s. Expiry: log the step + elapsed, host outputs on, process exit 3 (no hang).
 HOLD_LIMIT_S = 146.0
+HOST_OFF_GUARD_S = 1.25 * HOLD_LIMIT_S   # host outputs off at most this long (longest case x1.25); expiry -> guard turns them on
 QUIET_LOG_S = 10.0    # progress line while bus 11 is silent (no output for 60 s = hung, by the host-tool rule)
 MODE_POLL_S = 1.0     # hold case: sparse mode poll; every 0x35 access toggles the D2 DDC SCL (SDK DDC-handshake wake, #144)
 # host on -> ACTIVE: measured 863 ms from NOSIGNAL (wd6); from power saving add the #144 wake + boot of the panel path ~2 s;
@@ -571,11 +572,8 @@ class Runner:
 
     def host_dpms(self, on: bool) -> str:
         """host outputs on / off (Mutter PowerSaveMode 0 / 3, approved autonomous test); returns the connector dpms state"""
-        import subprocess
-        subprocess.run(["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.DisplayConfig", "--object-path",
-                        "/org/gnome/Mutter/DisplayConfig", "--method", "org.freedesktop.DBus.Properties.Set",
-                        "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", f"<int32 {0 if on else 3}>"],
-                       capture_output=True, text=True, timeout=GDBUS_S)
+        import host_dpms as H                  # off arms a detached guard: a hung / killed test can't leave the screens off (#159)
+        H.on() if on else H.off(HOST_OFF_GUARD_S)
         end = time.monotonic() + DPMS_S
         st = ""
         while time.monotonic() < end:

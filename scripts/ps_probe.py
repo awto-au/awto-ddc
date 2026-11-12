@@ -112,11 +112,8 @@ def main() -> int:
         return rows
 
     def dpms(on):
-        import subprocess
-        subprocess.run(["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.DisplayConfig", "--object-path",
-                        "/org/gnome/Mutter/DisplayConfig", "--method", "org.freedesktop.DBus.Properties.Set",
-                        "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", f"<int32 {0 if on else 3}>"],
-                       capture_output=True, text=True, timeout=W.GDBUS_S)
+        import host_dpms as H                  # off arms the guard (#159)
+        H.on() if on else H.off(W.HOST_OFF_GUARD_S)
 
     out = {"serial": t.serial, "time": time.strftime('%Y-%m-%dT%H:%M:%S%z'), "map": str(a.map)}
     out["active"] = sample("ACTIVE")
