@@ -327,6 +327,11 @@ INSERTS = [
 ] + [   # stage 8 = backlight on: the DPTx branch of _BACKLIGHT_ON (first PCB_BACKLIGHT_POWER after the stream set-up)
     ("Kernel/User Common Function/Code/UserCommonInterface.c", r"^\s*PCB_BACKLIGHT_POWER\(_LIGHT_CONTROL_ON\);",
      "    AwtoDiagStage(8);", r"^\s*// Set Video Stream parameter")
+] + [   # #144: a unit-2 power-saving pass (IOSC) is ~3x the poll period: the wake poll is due-checked between every handler
+    ("Kernel/System/Code/SysMain.c", rf"^\s*{fn}\(\);", "            AWTO_PS_POLL_SITE();", r"^void main\(void\)$")
+    for fn in ("AwtoGpioPoll", "UserInterfaceKeyHandler", "AwtoDiagTestCmd", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler",
+               "SysSourceHandler", "SysModeHandler", "SysDpRxHandler", "SysTMDSRxHandler", "ScalerHdcp2Handler",
+               "UserCommonInterfaceOsdHandler", "UserCommonDdcciHandler", "SysColorHandler")
 ]
 
 # Block substitutions: (SDK-relative file, regex (DOTALL), replacement fn(match) -> text, expected count).
@@ -395,6 +400,36 @@ SUBS = [
     ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c",
      r"(bit ScalerDpRx1FifoCheck\(EnumDpFifoCheckCondition enumFifoCheckCondition\)\n\{.*?)ScalerTimerDelayXms\(_DP_TWO_FRAME_TIME_MAX\);",
      lambda m: m.group(1) + "ScalerTimerDelayXms(AWTO_DP_TWO_FRAMES());  // [keil2sdcc] sub", 1),
+] + [
+    # #144: TMDS power-saving predetect without its reset + 5 ms wait + disable; the wake poll runs the detector every
+    # AWTO_PS_POLL_MS (awto_sync.inc AwtoPsTmdsLive, same criterion). The wait was the whole power-saving main pass.
+    (f"Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx{n}_SeptPhy.c",
+     r"(    // Reset Freq\. Detect Counter\(Toggle\).*?ScalerTimerDelayXms\(5\);\n\n    // Detect Freq\. Measure Stable\n)"
+     r"(    if\(\(ScalerGetBit\(P7\d_E6_HDMI_FREQDET_CTRL[^\n]*\n)(.*?// Disable Freq\. Detection\n)"
+     r"(        ScalerSetBit\(P7\d_E6_HDMI_FREQDET_CTRL, ~_BIT7, 0x00\);\n)",
+     lambda m, n=n: ("#if(_AWTO_PS_WAKE == _OFF)  // [keil2sdcc] sub #144\n" + m.group(1) + m.group(2) +
+                     f"#else\n    if(AwtoPsTmdsLive(0x7{n - 1}) != 0)\n#endif\n" + m.group(3) +
+                     "#if(_AWTO_PS_WAKE == _OFF)  // [keil2sdcc] sub #144\n" + m.group(4) + "#endif\n"), 1)
+    for n in (2, 3)
+] + [
+    # #144: in power saving the wake is AwtoPsWakePoll's. The SDK's DDC handshake (any SCL toggle: DDC/CI, 0x35 debug) is
+    # counted only; the freq check is our held TMDS trigger. DDC IRQ re-armed as the SDK does, EDID-read latch (bit0) kept.
+    (f"Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx{n}_SeptPhy.c",
+     rf"(bit ScalerTMDSRx{n}TMDSPSPreDetect\(void\)\n\{{\n)(.*?\n)(    return _FALSE;\n\}}\n)",
+     lambda m, n=n, r=r: (m.group(1) + "#if(_AWTO_PS_WAKE == _ON)  // [keil2sdcc] sub #144\n"
+                          f"    if(GET_TMDS_RX{n}_DDC_DETECTED() == _TRUE)\n    {{\n        CLR_TMDS_RX{n}_DDC_DETECTED();\n"
+                          f"        AwtoPsDdcSeen(_D{n}_INPUT_PORT);\n    }}\n"
+                          f"    if(({r} & _BIT3) != _BIT3)\n    {{\n        {r} = ({r} & ~_BIT0) | (_BIT3 | _BIT2);\n    }}\n"
+                          "    return _FALSE;\n#else\n" + m.group(2) + m.group(3)[:-2] + "#endif\n}\n"), 1)
+    for n, r in ((2, "MCU_FE69_DDC2_EDID_IRQ"), (3, "MCU_FE72_DDC3_EDID_IRQ"))
+] + [
+    # #144: the DP PS predetect's AUX toggle (first AUX activity in power saving) is counted only; our AUX / DPCD 600h
+    # triggers and the SDK's link-training checks still wake
+    ("Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c",
+     r"(bit ScalerDpRx1PSPreDetect\(void\)\n\{.*?)(    if\(GET_DP_RX1_PS_AUX_TOGGLE\(\) == _TRUE\)\n    \{\n        \(\(void\)0\);\n\n        return _TRUE;\n    \}\n)",
+     lambda m: (m.group(1) + "#if(_AWTO_PS_WAKE == _ON)  // [keil2sdcc] sub #144 (same line count: warn_policy sites)\n"
+                "    if(GET_DP_RX1_PS_AUX_TOGGLE() == _TRUE) { CLR_DP_RX1_PS_AUX_TOGGLE(); AwtoPsAuxSeen(_D1_INPUT_PORT); }\n#else\n"
+                "    if(GET_DP_RX1_PS_AUX_TOGGLE() == _TRUE) { return _TRUE; }\n#endif\n\n"), 1),
 ]
 # #144 no boot logo: mode INITIAL opens the console with the live power-on log (fw/sdcc/awto_osdcard.inc AwtoBootConsole);
 # the logo draw, its hold timer, art, tile maps, VLC loader cases and externs go. Same line count at INITIAL (warn keys).
