@@ -81,6 +81,104 @@ def expand_inc(text):
 
 # ---- marker -> `// awto: ...` ----
 DESC = [   # (regex on the code part of the line, description, default issue)
+    (r"_RL6449_AWTO_JXC4K\b", "our board id 0x4F", "7"),
+    (r"RL6449_AWTO_JXC4K\.h", "include our board", "7"),
+    (r"_AWTO_LTM270FL01\b", "our panel id 0x3D", "7"),
+    (r"AWTO_LTM270FL01\.h", "include our panel", "7"),
+    (r"_AWTO_DP_PHYCTS", "size switch: DP PHY compliance test code", "65"),
+    (r"_AWTO_FLASH_ALL", "size switch: one flash chip, detection and table dropped", "65"),
+    (r"_AWTO_GAMMA_ALL", "size switch: demo gamma tables alias the 2.2 table", "65"),
+    (r"_AWTO_FACTORY", "size switch: factory menu", "65"),
+    (r"_AWTO_DDCRAM_DEFINER", "DDC RAM arrays defined here, extern hidden (one __at per array)", "8"),
+    (r"_AWTO_POPUP_ICON_AWTO == _OFF", "our info mark replaces the SDK bubble", "46"),
+    (r"_AWTO_DEBUG_PORT == _OFF\) && \(_AWTO_DDCCI_ENGINES", "DDC port in Realtek debug mode / spare engines", "13"),
+    (r"!defined\(_CHECKSUM\)", "NVRAM checksum from RL6449_Project.h (old data reloads defaults)", "8"),
+    (r"awto_dbgport\.inc", "debug IIC engine follows the active port", "28"),
+    (r"_AWTO_DBG_FOLLOW", "debug IIC engine follows the active port", "28"),
+    (r"AwtoMsg\.h", "tokenised message functions live in the debug module", "26"),
+    (r"awto_dbgisr\.inc", "debug slave answers in the EXINT1 ISR", "38"),
+    (r"awto_delaycal\.inc", "delay calibration", "53"),
+    (r"g_ucAwtoCal(5|X)", "M2PLL re-entry keeps the calibrated delay counts", "54"),
+    (r"_AWTO_FAST_BOOT == _OFF", "fast boot: no waits for rails this board never switches", "63"),
+    (r"_AWTO_SCDC_KEEP", "keep SCDC 0x20 across a TMDS initial (host 1/40 ratio)", "78"),
+    (r"AWTO_IDLE_RX_OFF", "idle receivers stay powered (AWTO_IDLE_RX_OFF)", "60"),
+    (r"AWTO_IDLE_TMDS_OFF", "idle TMDS MAC stays powered", "60"),
+    (r"AWTO_WDT_FEED\(AWTO_WDT_S_HPD", "watchdog feed per ms in the eDP HPD poll", "150"),
+    (r"AWTO_WDT_FEED\(AWTO_WDT_S_(WREN|WRDIS|WRPROT)\)", "watchdog feed instead of the SDK flash poke", "138"),
+    (r"AWTO_WDT_FEED\(AWTO_WDT_S_(DELAY|POLL|EVENT)\)", "watchdog feed per ms in a bounded wait", "131"),
+    (r"AwtoWdtLibPoke", "watchdog poke in a flash loop", "150"),
+    (r"AWTO_NV_EV\(", "NVRAM save timing in the sync log", "150"),
+    (r"AWTO_NV_ITEM_WR", "NVRAM item write notes the flush gate", "151"),
+    (r"AwtoNvFlush", "flush every dirty NVRAM item now", "151"),
+    (r"no save here", "no NVRAM save at the first ACTIVE after a switch", "151"),
+    (r"AwtoT0EvClock", "restart the pending Timer0 tick at the new clock", "138"),
+    (r"AwtoT0EvIsr", "Timer0 event scheduler tick", "138"),
+    (r"AWTO_T0EV_EXINT0", "Timer0 event flag test in EXINT0", "138"),
+    (r"event table in awto_t0ev", "WD-timer event table replaced by the Timer0 scheduler", "138"),
+    (r"awto_t0ev|WD-timer", "WD-timer events on Timer0", "138"),
+    (r"AWTO_SYNC_MARK", "boot log clock carried over the WDT counter clear", "29"),
+    (r"AWTO_DP_FRAME_SET|AWTO_DP_TWO_FRAMES|awto_dpframe", "DP Rx1 two-frame waits = 2 x the measured frame", "60"),
+    (r"AWTO_SW_MARK\((3\d)\)", "DP Rx1 scan step mark", "60"),
+    (r"AWTO_SW_MARK", "slow-segment mark", "60"),
+    (r"AwtoMeasEvent|AWTO_MEAS_T2ISR|awto_meas4k", "4K60 measurement ring", "26"),
+    (r"AwtoFreq|awto_freq\.inc", "exact input frequencies", "34"),
+    (r"awto_fastsw_scaler", "fast switch: scaler side", "60"),
+    (r"awto_fastsw", "cached fast input switch", "60"),
+    (r"AwtoDiagStage\(2\)", "boot stage 2", "34"),
+    (r"AwtoDiagStage\((3|4)\)", "boot stage", "63"),
+    (r"AwtoDiagStage\((5|7|8)\)", "eDP power-up stage", "63"),
+    (r"ucDebounceCnt = 1", "DHtotal fine-tune: one pass, no debounce loop", "26"),
+    (r"_LAST_LINE_FINETUNE_ENABLE", "last-line fine-tune off for this function only", "26"),
+    (r"_AWTO_PS_WAKE == _ON", "power-saving wake: counted, not returned", "144"),
+    (r"_AWTO_PS_WAKE == _OFF", "power-saving wake: SDK predetect wait kept only without _AWTO_PS_WAKE", "144"),
+    (r"AWTO_DIAG_EX1ISR|AWTO_DIAG_T2ISR", "diag hook in the ISR", "23"),
+    (r"AwtoSwEvent\(AWTO_SW_EV_PROBE, (2[0-3])\)", "switch-log probe: which SysJudgeCheckStatus check failed", "60"),
+    (r"AWTO_TMDS_STUCK", "pulse the HDMI HPD of a stuck TMDS port", "78"),
+    (r"AwtoSwEvent\(AWTO_SW_EV_PROBE, (24|26|27)\)", "switch-log probe: eDP panel-on phase", "78"),
+    (r"AwtoSwEvent\(AWTO_SW_EV_POWER", "switch-log: panel power action", "60"),
+    (r"AwtoSwEvent\(AWTO_SW_EV_BLANK", "switch-log: blank", "60"),
+    (r"AwtoSwEvent\(AWTO_SW_EV_PROBE", "switch-log probe", "60"),
+    (r"AwtoSyncBegin|AwtoSyncDetect|AwtoSyncTiming|AwtoSyncFreq|AwtoSyncInit|awto_sync\.inc", "sync / power-on log", "139"),
+    (r"AwtoSwCacheStore", "store the fast-switch cache at the first ACTIVE", "60"),
+    (r"AwtoSwPoll|AWTO_SW_FAST_POLL|AWTO_SW_POLL_MARKS|awto_sw\.inc", "switch timeline poll", "60"),
+    (r"AWTO_PS_POLL_SITE", "power-saving wake poll between handlers", "144"),
+    (r"AWTO_LP\(|awto_loopprof", "main-loop cost profile", "75"),
+    (r"awto_loopsplit|AWTO_SLOW_DUE_CABLE", "main-loop split: cable detection every AWTO_SLOW_MS", "75"),
+    (r"AWTO_FAST_JUDGE_HOLD|AWTO_SLOW_DUE_JUDGE", "main-loop split + L1/L2 hold in the judge check", "78"),
+    (r"awto_led\.inc", "power LED", "23"),
+    (r"awto_diag\.inc|AwtoDiagInit|AwtoDiagMainPass|AwtoDiagTestCmd", "boot-stage / timing diagnostics", "23"),
+    (r"AwtoMeasInit", "4K60 measurement ring init", "26"),
+    (r"awto_wdtpop|awto_wdt\.inc|AwtoWdtInit", "main-loop watchdog", "131"),
+    (r"AwtoGpioPoll", "GPIO change poll", "39"),
+    (r"AwtoKeyPoll", "one key path", "129"),
+    (r"AWTO_SET_LOOP|AwtoSetInit|glue\.inc|glue_key\.inc", "settings registry / menu glue", "67"),
+    (r"AWTO_DDCCI_POLL|awto_ddcci\.inc", "KVM input select + DDC/CI engines", "60"),
+    (r"AWTO_NET_POLL|awto_net\.inc", "IP over DDC", "80"),
+    (r"awto_testcmd|awto_keytest|awto_gpio\.inc|awto_keys\.inc", "key / test / GPIO code", "129"),
+    (r"awto_dbgpop|awto_osdcard|awto_keypop|awto_gpiopop", "OSD text layer, cards and panels", "134"),
+    (r"AWTO_BL_OFF_OR_BLANK", "backlight off becomes a blank", "60"),
+    (r"AWTO_KEY_OSD_RESET", "key panels follow an OSD reset", "129"),
+    (r"_AWTO_HDMI_HPD_TOGGLE", "no HDMI hot-plug pulse on an input switch", "60"),
+    (r"AwtoAudioGain", "volume through our dB table", "93"),
+    (r"AWTO_AUDIO_HOLD", "mute while the mode is not ACTIVE / DISPLAY_SETTING", "93"),
+    (r"_AUDIO_DAC_OUTPUT_HEADPHONE", "headphone output only", "93"),
+    (r"_AWTO_DIAG == _ON", "load the debug-message switch from NVRAM", "74"),
+    (r"b1AwtoMsgOn", "spare bit: debug messages switch", "74"),
+    (r"#define (_DP_1|_HDMI_1|_HDMI_2)\b", "our ports: D1 DP, D2 / D3 HDMI", "60"),
+    (r"AwtoBootConsole", "boot console instead of the logo", "144"),
+    (r"AWTO_BOOT_PANEL_ON", "boot panel power-on", "144"),
+    (r"AwtoSourceOpen", "our source selector", "134"),
+    (r"AWTO_REALTEK_MENU_OPEN", "Realtek menu built out", "120"),
+    (r"AWTO_REALTEK_KEYINFO", "Realtek menu key legend built out", "120"),
+    (r"AwtoMenuForget", "menu forgets a closed OSD", "67"),
+    (r"^\s*\}\s*$", "an OSD hold (debug pop-up) blocks the disable", "28"),
+    (r"^\s*#endif\s*$", "early panel VDD (AwtoPanelVddEarly)", "63"),
+    (r"AwtoInputSelect", "input select through the fast path", "60"),
+    (r"_AWTO_ICON|tAWTO_ICON", "icon table stub", "117"),
+    (r"AWTO_PS_CABLE_SDK", "power-saving cable wake is ours", "144"),
+    (r"AwtoPsTmdsLive|AwtoPsDdcSeen|AwtoPsAuxSeen", "power-saving wake counted by AwtoPsWakePoll", "144"),
+    (r"_AWTO_DIAG_DEFINER", "diag block defined in SysMain.c, extern elsewhere", "23"),
+    (r"AwtoHoldBlocksDisable", "an OSD hold blocks the disable", "28"),
 ]
 MISSING = Counter()
 MARK = re.compile(r"[ \t]*//\s*\[keil2sdcc\]\s*(insert|sub|wrap|dropped pragma)?\s*(.*)$")
@@ -104,6 +202,12 @@ def convert_markers(text):
         m = MARK.search(ln)
         if m:
             code = ln[:m.start()]
+            if not code.strip() and not re.sub(r"#\d+", "", m.group(2)).strip(" :;,.") and out:                  # marker alone: the line above says what
+                prev = re.sub(r"^\s*//\s*awto\s*#?(\d+)?:?\s*", "", out[-1])
+                iss = re.findall(r"#(\d+)", m.group(2))
+                ln = f"{code}// awto: {prev.strip()}" + (f" (#{iss[0]})" if iss else "")
+                out.append(ln)
+                continue
             d, iss = describe(code, m.group(1) or "edit", m.group(2))
             ln = f"{code}  // awto: {d}" + (f" (#{iss})" if iss else "")
         out.append(ln)
@@ -132,13 +236,21 @@ def prep_rules(old):
     old.INSERTS[:] = [(r[0], msg_anchor(r[1], ids), replace_inc(r[2])) + tuple(r[3:]) for r in old.INSERTS]
     new = []
     for f, rx, fn, want in old.SUBS:
-        rx = msg_anchor(rx, ids)
+        rx = msg_anchor(rx, ids).replace(r"\(\(void\)0\);", r"DebugMessage\w+\([^;]*\);")   # a dropped message was ((void)0)
         if callable(fn):
             fn = (lambda m, fn=fn: replace_inc(fn(m)))
         new.append((f, rx, fn, want))
     old.SUBS[:] = new
 
 
+GLOBAL_NOTE = {   # pattern part -> what the edit does
+    "_INTERNAL_AUDIO_TEST_SUPPORT": "audio test build (-D_AWTO_AUDIO_TEST)",
+    "b1OsdDpD1PortVersion": "D1 DP version default _AWTO_DP_D1_VERSION (#28)",
+    "_FRC_SUPPORT == _ON": "FRC memory BW also with the CheckMDomain debug messages (#37)",
+    "SEC\\(3\\)": "info pop-up time _AWTO_INFO_POPUP_SEC",
+    "_PANEL_POWER_ON_T3": "T3 wait with the delay calibration inside (#53)",
+    "g_bFwHalt": "host-silence timeout of the debug wait (#56)",
+}
 GLOBAL = ("_INTERNAL_AUDIO_TEST_SUPPORT", "b1OsdDpD1PortVersion", "_FRC_SUPPORT == _ON", "SEC\\(3\\)", "_PANEL_POWER_ON_T3", "g_bFwHalt")
 
 
@@ -164,7 +276,7 @@ def rule_files(old):
 
 # ---- check ----
 def strip(t):
-    return [re.sub(r"//.*$", "", l).rstrip() for l in t.split("\n")]
+    return [re.sub(r"/\*.*?\*/", "", re.sub(r"//.*$", "", l)).rstrip() for l in t.split("\n")]
 
 
 def new_port(old, rel):
@@ -179,7 +291,8 @@ def check(old, rels):
         n = re.sub(r'(#define AWTO_FW_TAG )"[^"]*"', r'\1"T"', n)
         b = re.sub(r'(#define AWTO_FW_TAG )"[^"]*"', r'\1"T"', b)
         sb, sn = strip(b), strip(n)
-        if [l.strip() for l in sb if l.strip()] != [l.strip() for l in sn if l.strip()]:
+        nz = lambda ls: ["".join(l.split()) for l in ls if l.strip()]
+        if nz(sb) != nz(sn):
             import difflib
             d = [l for l in difflib.unified_diff(sb, sn, "base", "new", lineterm="", n=0)][:14]
             bad.append(rel)
@@ -226,7 +339,8 @@ def main():
                 continue
             t = rd(p); t0 = t
             for rx, rep in global_rules(old):
-                t, k = rx.subn(rep, t)
+                note = next(v for k_, v in GLOBAL_NOTE.items() if k_ in rx.pattern)
+                t, k = rx.subn(lambda m, rep=rep, note=note: (rep(m) if callable(rep) else m.expand(rep)) + f" /* awto: {note} */", t)
                 n[(rx.pattern[:36], str(p.relative_to(FWSDK)))] += k
             if t != t0:
                 wr(p, t)

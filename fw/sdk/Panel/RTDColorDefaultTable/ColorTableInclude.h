@@ -423,26 +423,37 @@ BYTE __code * __code tGAMMA_TABLE[] =
 #define USER_MAX_GAMMAS                  22
 #endif
 #else
+#if(_AWTO_GAMMA_ALL == _ON)  // awto: size switch: demo gamma tables alias the 2.2 table (#65)
 BYTE __code tLUTGAMMA_18_TABLE[] =
 {
 #include "Gamma/Gamma18.h"
 };
+#endif
 
+#if(_AWTO_GAMMA_ALL == _ON)  // awto: size switch: demo gamma tables alias the 2.2 table (#65)
 BYTE __code tLUTGAMMA_20_TABLE[] =
 {
 #include "Gamma/Gamma20.h"
 };
+#endif
 
 BYTE __code tLUTGAMMA_22_TABLE[] =
 {
 #include "Gamma/Gamma22.h"
 };
 
+#if(_AWTO_GAMMA_ALL == _ON)  // awto: size switch: demo gamma tables alias the 2.2 table (#65)
 BYTE __code tLUTGAMMA_24_TABLE[] =
 {
 #include "Gamma/Gamma24.h"
 };
+#endif
 
+#if(_AWTO_GAMMA_ALL == _OFF)  // awto: size switch: demo gamma tables alias the 2.2 table (#65)
+#define tLUTGAMMA_18_TABLE tLUTGAMMA_22_TABLE
+#define tLUTGAMMA_20_TABLE tLUTGAMMA_22_TABLE
+#define tLUTGAMMA_24_TABLE tLUTGAMMA_22_TABLE
+#endif
 BYTE __code * __code tGAMMA_TABLE[] =
 {
     tLUTGAMMA_18_TABLE,

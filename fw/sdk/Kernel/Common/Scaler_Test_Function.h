@@ -121,7 +121,11 @@
 //--------------------------------------------------
 // Audio Test by Internal Audio Generator
 //--------------------------------------------------
-#define _INTERNAL_AUDIO_TEST_SUPPORT                            _OFF
+#ifdef _AWTO_AUDIO_TEST
+#define _INTERNAL_AUDIO_TEST_SUPPORT _ON
+#else
+#define _INTERNAL_AUDIO_TEST_SUPPORT _OFF
+#endif /* awto: audio test build (-D_AWTO_AUDIO_TEST) */
 
 #if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
 #warning "_INTERNAL_AUDIO_TEST_SUPPORT is _ON!!!"
