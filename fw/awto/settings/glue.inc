@@ -231,6 +231,12 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     }
     s_ucVpEnd = ucEnd;
     usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
+    if(ucFirst == 0)
+    {
+        ScalerSetBit(0x3A18, ~_BIT7, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
+        s_ucVpFirst = 0;
+        return 0;
+    }
     ScalerSetBit(0x3A18, ~(_BIT7 | _BIT6), _BIT7);                              // special function on, 0 = roll-up
     ScalerSetByte(0x3A19, ucFirst);
     ScalerSetBit(0x3A1B, 0x0F, (BYTE)((usFs >> 8) << 4));
