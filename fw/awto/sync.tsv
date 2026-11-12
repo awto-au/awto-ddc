@@ -114,7 +114,7 @@ D3	*	port	cable unplugged: wake
 DC	*	portmhz1	wake by TMDS clock, about % (IOSC reference)
 DD	*	port	DDC activity in power saving: no wake (SDK DDC handshake gated, counted)
 DA	*	port	DP AUX activity in power saving: no wake (SDK AUX toggle gated, counted)
-DB	*	port	AUX command from source in power saving: no wake (AUX wake off, #144 test)
+DB	*	port	AUX command from source in power saving: no wake (wake: DPCD 600h = D0 or link training)
 DE	*	portms	TMDS clock burst % in power saving: shorter than the hold, no wake
 DF	01	vport	refused: no cable on %
 DF	02	vport	no cable on %, no signal, another port cabled: auto search

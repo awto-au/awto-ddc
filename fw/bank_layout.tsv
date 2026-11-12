@@ -2768,10 +2768,10 @@ fn	_AwtoNvEv	11	0x4b88	228
 fn	_AwtoHtSync	11	0x4c6c	940
 fn	_AwtoSyncBegin	11	0x5018	340
 fn	_AwtoPsTmdsHold	11	0x516c	712
-fn	_AwtoPsWakePoll	11	0x5434	576
 fn	_AwtoSyncPoll	11	0x5674	264
 fn	_osd_tc_scroll	11	0x577c	336
 fn	_AwtoSyncT2Start	11	0x58cc	272
+fn	_AwtoPsWakePoll	11	0x59dc	604
 const	_tAwtoDdcReg	11	0x6458	12
 const	_tAwtoWakeAux	11	0x6464	8
 fn	_UserInterfaceGetAspectRatio	11	0x646c	180
