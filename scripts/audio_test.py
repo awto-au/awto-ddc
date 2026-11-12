@@ -5,6 +5,12 @@ usage: audio_test.py host                       ELD + IEC958 switch of the Intel
        audio_test.py regs --map MAP             one decoded line per audio register / SDK state (debug slave 0x35, MCU runs)
        audio_test.py tones --map MAP [--secs 3] host unmute, then left / right / both sine (3 s each), regs read during 'both'
        audio_test.py poke --map MAP ADDR=VAL..  XDATA write over the debug slave (cmd 0x3B, MCU runs), read back
+       audio_test.py rd --map MAP ADDR[+N]..    XDATA reads (registers are XDATA-mapped)
+       audio_test.py dpoke --map MAP IDX=VAL..  HDMI D2 audio data port write (71C9 index, 71CA data), read back
+       audio_test.py tone --chan left|right|both [--hz N] [--secs 4]   one tone, start / end logged
+       audio_test.py gen --map MAP [--secs 4] MUX..   audio-test image only: chip sine generator (VCP 0x63) for --secs per REG_MUX_ANA_OUT
+                                                value (hex), 3 s off between; 06E0 restored to its value before; times logged
+       audio_test.py dport --map MAP IDX..      HDMI D2 audio data port page 71: index -> 71C9, read 71CA (restores the index)
 - Plays straight to ALSA plughw:<card>,<dev> of the HDMI pcm whose ELD names our monitor: never the PipeWire default sink
   (the Intel card's PipeWire profile is analog only; that HDMI pcm is free).
 - Caller holds unit_lock (AWT26110002). Units 1 / 3 hands off: bus and serial are fixed to unit 2.
@@ -37,6 +43,35 @@ REGDB = ROOT / "re/regdb/RTD2795T-CG.tsv.gz"
 REGS = (0x06C0, 0x06C1, 0x06C5, 0x06C6, 0x06C7, 0x06C8, 0x06D0, 0x06D1, 0x06D2, 0x06D3, 0x06D4, 0x06E0,
         0x08A0, 0x08A1, 0x08A2, 0x08A5, 0x08A6, 0x08A7, 0x6F00, 0x6F01)
 PORTS = {"P7.3 (amp aux, pin 160)": 0xFE1B, "P7.4 (amp enable, pin 161)": 0xFE1C, "P4.5 (jack input, pin 113)": 0xFE05}
+DPORT_IDX, DPORT_DATA = 0x71C9, 0x71CA           # P71_C9_HDMI_AP / P71_CA_HDMI_DP (D2 HDMI audio data port)
+DPORT_NAMES = {0x03: "HDMI_AFCR", 0x05: "HDMI_MAGCR1", 0x06: "HDMI_MAGCR2", 0x07: "HDMI_MAG_M_FINAL", 0x08: "HDMI_MAG_L_FINAL",
+               0x09: "HDMI_MAG_R_FINAL", 0x30: "HDMI_AVMCR", 0x31: "HDMI_WDCR0"}
+MUX_ANA_OUT = 0x06E0                            # REG_MUX_ANA_OUT
+GEN_VCP = 0x63                                  # audio-test image: chip sine generator on / off (fw/sdcc/awto_ddcci.inc)
+GEN_GAP_S = 3.0                                 # silence between generator runs: Dan tells them apart
+REGS_READ_S = 1.0                               # one regs() pass over the debug slave (~0.6 s measured 2026-11-13)
+DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retries; 10 s = stall
+
+
+AMP_WAIT_S = 1.5                                # unmute: SDK pass + DVC ramp (<= 400 ms, _DVC_VOLUME_MUTE_TIMER) + amp; x1.25 + ddc
+
+
+def amp_wait(u, rio):
+    """Seconds until P7.4 reads 1 (amp on), None on expiry."""
+    t0 = time.monotonic()
+    while time.monotonic() - t0 < AMP_WAIT_S:
+        v = u.rd(rio, PORTS["P7.4 (amp enable, pin 161)"])
+        if v and v[0] & 1:
+            return time.monotonic() - t0
+    return None
+
+
+def ddc_vcp(code: int, val: int) -> None:
+    r = subprocess.run(["ddcutil", "--bus", str(BUS), "--noverify", "setvcp", f"{code:02X}", str(val)], capture_output=True,
+                       text=True, timeout=DDC_LIMIT_S)
+    say(f"ddcutil --bus {BUS} setvcp {code:02X} {val}: rc {r.returncode} {r.stderr.strip()[:120]}")
+
+
 AUDIO_STATE = ("POWER_OFF", "PREPARING", "PLAYBACK", "?")         # Global.h EnumAudioState
 DAC_STATE = ("OFF", "INITIAL", "CHARGE", "DEPOP", "READY", "?", "?", "?")   # EnumAudioDACState
 FREQ = {0: "none", 1: "32k", 2: "44.1k", 3: "48k", 4: "64k", 5: "88.2k", 6: "96k", 7: "128k", 8: "176.4k", 9: "192k"}
@@ -224,15 +259,25 @@ def tones(a, u: Unit) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke"))
+    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen"))
     ap.add_argument("--map", type=Path)
     ap.add_argument("--secs", type=float, default=3.0)
+    ap.add_argument("--chan", choices=("left", "right", "both", "silence"), default="both")
+    ap.add_argument("--hz", type=int, default=440)
     ap.add_argument("pokes", nargs="*")
     a = ap.parse_args()
     say(f"audio_test {a.cmd} {' '.join(a.pokes)} (map {a.map})")
     if a.cmd == "host":
         host(False)
         return 0
+    if a.cmd == "tone":
+        dev = host(True)
+        ch = {"left": (1, 0), "right": (0, 1), "both": (1, 1), "silence": (0, 0)}[a.chan]
+        p = tone_wav(a.chan, a.hz, ch, a.secs)
+        say(f"TONE {a.chan.upper()} {a.hz} Hz START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s) -> {dev}")
+        r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
+        say(f"TONE {a.chan.upper()} {a.hz} Hz END {time.strftime('%H:%M:%S')} rc {r.returncode} {r.stderr.strip()[:160]}")
+        return r.returncode
     if not a.map:
         raise SystemExit("--map required")
     u = Unit(a.map)
@@ -248,6 +293,68 @@ def main() -> int:
                 r = u.rd(rio, ad)
                 say(f"poke {ad:04X} {u.names.get(ad, '')}: {b.hex() if b else '?'} -> {v:02X} (write {'ok' if ok else 'NAK'}), "
                     f"read back {r.hex() if r else '?'}")
+        u.session(go)
+        return 0
+    if a.cmd == "rd":
+        def go(rio):
+            for x in a.pokes:
+                ad, n = (x.split("+") + ["1"])[:2]
+                v = u.rd(rio, int(ad, 16), int(n))
+                say(f"rd {ad.upper()} {u.names.get(int(ad, 16), '')}: {v.hex(' ') if v else 'read failed'}")
+        u.session(go)
+        return 0
+    if a.cmd == "dport":
+        def go(rio):
+            old = u.rd(rio, DPORT_IDX)
+            for x in a.pokes:
+                i = int(x, 16)
+                ok = u.wr(rio, DPORT_IDX, i)
+                v = u.rd(rio, DPORT_DATA)
+                say(f"dport 71C9 idx {i:02X} {DPORT_NAMES.get(i, '')}: {v.hex() if v and ok else 'failed'}")
+            if old:
+                u.wr(rio, DPORT_IDX, old[0])
+        u.session(go)
+        return 0
+    if a.cmd == "gen":
+        mux0 = u.session(lambda rio: u.rd(rio, MUX_ANA_OUT))
+        try:
+            for k, x in enumerate(a.pokes):
+                if k:
+                    time.sleep(GEN_GAP_S)
+                u.session(lambda rio: u.wr(rio, MUX_ANA_OUT, int(x, 16)))
+                ddc_vcp(GEN_VCP, 1)
+                t_amp = u.session(lambda rio: amp_wait(u, rio))
+                note = f"amp on {t_amp * 1000:.0f} ms after the VCP" if t_amp is not None else ""
+                if t_amp is None:               # generator path leaves the amp off (#94): force it for the ear test
+                    ok = u.session(lambda rio: u.wr(rio, PORTS["P7.4 (amp enable, pin 161)"], 1) and
+                                   (u.rd(rio, PORTS["P7.4 (amp enable, pin 161)"]) or b"\0")[0] & 1)
+                    note = f"amp NOT on within {AMP_WAIT_S} s: P7.4 forced 1 by debug poke ({'ok' if ok else 'FAILED'})"
+                say(f"GEN sine (chip generator) START {time.strftime('%H:%M:%S')}, 06E0 = {x.upper()} ({a.secs:.0f} s), {note}")
+                time.sleep(min(1.0, a.secs / 3))
+                u.session(lambda rio: u.regs(rio, f"generator on, 06E0 = {x}"))
+                time.sleep(max(0.0, a.secs - min(1.0, a.secs / 3) - REGS_READ_S))
+                ddc_vcp(GEN_VCP, 0)
+                say(f"GEN sine END {time.strftime('%H:%M:%S')}")
+        finally:
+            ddc_vcp(GEN_VCP, 0)
+            if mux0:
+                u.session(lambda rio: u.wr(rio, MUX_ANA_OUT, mux0[0]))
+                say(f"06E0 restored to {mux0[0]:02X}")
+        return 0
+    if a.cmd == "dpoke":
+        def go(rio):
+            old = u.rd(rio, DPORT_IDX)
+            for x in a.pokes:
+                i, v = (int(y, 16) for y in x.split("="))
+                ok = u.wr(rio, DPORT_IDX, i)
+                b = u.rd(rio, DPORT_DATA)
+                ok = ok and u.wr(rio, DPORT_IDX, i) and u.wr(rio, DPORT_DATA, v)
+                u.wr(rio, DPORT_IDX, i)
+                r = u.rd(rio, DPORT_DATA)
+                say(f"dpoke 71CA idx {i:02X} {DPORT_NAMES.get(i, '')}: {b.hex() if b else '?'} -> {v:02X} "
+                    f"(write {'ok' if ok else 'NAK'}), read back {r.hex() if r else '?'}")
+            if old:
+                u.wr(rio, DPORT_IDX, old[0])
         u.session(go)
         return 0
     return tones(a, u)
