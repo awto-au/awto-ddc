@@ -625,6 +625,12 @@ static inline void irq(core_t *c)
     int cur, i;
     if (c->was_reti || !(ie & 0x80))
         return;
+    {   /* no enabled source flag set and no EXINT2: the scan below would find nothing (one mask, not 8 branches) */
+        uint8_t tc = S(0x88), sc = S(0x98), t2 = S(0xC8);
+        unsigned pend = (tc >> 1 & 1) | (tc >> 4 & 2) | (tc >> 1 & 4) | (tc >> 4 & 8) | ((sc & 3) ? 0x10 : 0) | ((t2 & 0xC0) ? 0x20 : 0);
+        if (!(pend & ie) && !((S(0xE8) & 0x01) && (S(0x91) & 0x10)))
+            return;
+    }
     cur = c->p.nlvl ? c->lvl[c->p.nlvl - 1] : -1;
     for (i = 0; i < 8; i++) {
         int pr;
