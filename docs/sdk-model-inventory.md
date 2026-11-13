@@ -172,13 +172,13 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 14 | RTD2014UserInterface.c | `AwtoSwEvent` probes 7,8, BLANK before `ScalerDDomainBackgroundEnable(DISABLE)` in `AdjustOsdActiveProc`; `AwtoSetInit` | OSD/ACTIVE | #60 #67 |
 | 15 | RTD2014Osd.c | probes 9, 10 in the one-time message | OSD | #60 |
 | 16 | RTD2014OsdDisplay.c | `AwtoHoldBlocksDisable` guard in `OsdDispDisableOsd`; `AwtoMenuForget`; `AWTO_FW_TAG` + dbgpop, osdcard, keypop, gpiopop, wdtpop, settings glue | OSD | #28 #34 #124 #134 |
-| 17 | RTD2014Key.c | awto_testcmd, keytest, gpio, keys, glue_key | keys | #129 |
+| 17 | RTD2014Key.c | code in fw/test/testcmd.c, fw/keys/keytest.c + keys.c + keyinject.c, fw/input/inputs.c | keys | #129 |
 | 18 | RTD2014Ddcci.c | awto_ddcci, awto_net | DDC/CI | #60 #80 |
 | 19 | ScalerCommonMcu.c | `awto_delaycal.inc`; M2PLL re-entry keeps calibrated counts (sub) | timers | #53 #54 |
 | 20 | SysTimer.c / SysInt.c | `AWTO_DIAG_T2ISR`, `AWTO_DIAG_EX1ISR`, `AWTO_MEAS_T2ISR` | ISRs | #23 #26 |
 | 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
-| 23 | rtdfw glue: `fw/settings/settings_glue.c`, `fw/osd/text_layer.c`, `fw/nvram/flash_io.c`, `fw/nvram/nv_gate.c`, RTD2014Key.c end `glue_key.inc` | settings glue | settings | #67 |
+| 23 | rtdfw glue: `fw/settings/settings_glue.c`, `fw/osd/text_layer.c`, `fw/nvram/flash_io.c`, `fw/nvram/nv_gate.c`, `fw/keys/keyinject.c` | settings glue | settings | #67 |
 | 24 | wdt rules.py | `awto_wdt.inc` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |
 | 25 | ScalerCommonTimerFunction.c end | `awto_t0ev.inc` | timers | #138 |
 
@@ -433,7 +433,7 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
 |---|---|---|---|---|
 | fw/settings/settings_glue.c + fw/osd/text_layer.c + fw/nvram/flash_io.c | 820 | rtdfw settings platform: flash shim (`fl_*`), `osd_tc_*` text layer, `ui_port_state/timing`, `set_ap_*` appliers (backlight, volume, input_mode, search, dp, power_mode, osd…), `AwtoSetLoop` | text layer lives here but is used by the console (dbgpop); `set_ap_power` placeholder (inert power rows) | R#162: split text layer out; appliers keep |
 | fw/nvram/nv_gate.c | 474 | #151 SDK-store hook, flush gate, aux block, commit/card | `AwtoNvDefer/Flush/Commit`; flags from DDC/CI/switch | keep; NVRAM owner per Dan 11-12 |
-| settings/glue_key.inc | 34 | key hook for menu | duplicates routing in keys | merge into keys |
+| fw/keys/keyinject.c | 34 | key hook for menu | duplicates routing in keys | merge into keys |
 | settings/rules.py | 70 | inserts+subs (audio, NV, ACTIVE no-save) | | keep |
 | wdt/rules.py | 86 | WDT/Timer0/NV poke subs | | keep |
 | gamma/arith/dataport/reg rules.py | 12/5/5/2 | clean-room module hooks | | keep (#65) |

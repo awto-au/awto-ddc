@@ -187,5 +187,4 @@ BYTE RTDIRKeyScan(void)
 }
 #endif // End of #if(_IR_SUPPORT == _IR_HW_SUPPORT)
 
-#include "glue_key.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

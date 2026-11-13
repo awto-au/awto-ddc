@@ -1,4 +1,6 @@
-// #67 settings library key hooks (integrator-owned, private): inserted into RTD2014Key.c by fw/awto/settings/rules.py.
+#include "UserCommonInclude.h"
+
+// #67 settings library key hooks (integrator-owned, private).
 #ifdef _AWTO_NEW_SETTINGS
 BYTE set_recovery_requested(void)            // no key recovery (#132): defaults by DDC/CI VCP 0x04, debug link by VCP 0xE3
 {

@@ -163,7 +163,7 @@ Abbreviations in the table:
 | `RL6449_Project.h:463`; `fw/keys/keys.c:308` | UP / DOWN wait for combo partner | 80 ms | project header | our choice: "two-finger press skew; longer feels slow"; no measurement cited -> UNKNOWN | UNKNOWN | UNKNOWN | sends PRESS |
 | `RL6449_Project.h:464`; `fw/keys/keys.c:315` | first key repeat | 500 ms | project header | SDK SEC(0.5) | 500 ms | 1.00 | repeat |
 | `RL6449_Project.h:465`; `fw/keys/keys.c:314` | key repeat rate | 100 ms | project header | our choice: 10 steps/s so a 0..100 slider takes 10 s | n/a | n/a | repeat |
-| `glue_key.inc:28` `s_usAwtoKeyHoldMs` | injected key hold | host value | host | host command | n/a | n/a | key released |
+| `fw/keys/keyinject.c:30` `s_usAwtoKeyHoldMs` | injected key hold | host value | host | host command | n/a | n/a | key released |
 | `RL6449_Project.h:834` `AWTO_SLOW_MS`; `awto_loopsplit.inc:18` | slow main-loop checks | 10 ms | project header | "latency <= 10 ms + 1 pass (limit 50 ms, #75)" | 50 ms limit | 0.20 | next pass |
 | `RL6449_Project.h:871` `AWTO_SW_SLOW_MS`; `awto_sw.inc:66` | stall log threshold | 20 ms | project header | "7x a 4K60 pass (2.7 ms)" | 2.7 ms | 7.4 | logs a slow-mark line |
 | `RL6449_Project.h:1175` `AWTO_TMDS_HPD_LOW_MS`; `awto_sw.inc:162` | HDMI HPD low pulse (non-blocking) | 110 ms | project header | comment: HDMI 1.4b, a source reads HPD low >= 100 ms as unplug | 100 ms | 1.10 | HPD high again |
