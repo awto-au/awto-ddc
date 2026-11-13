@@ -1425,7 +1425,7 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //--------------------------------------------------
 // Panel Option
 //--------------------------------------------------
-#define _PANEL_TYPE                                             _AWTO_LTM270FL01
+#define _PANEL_TYPE                                             _AWTO_M280DCA_E3B
 #define _PANEL_POW_SEQ_FAST_MODE                                _ON
 
 //--------------------------------------------------

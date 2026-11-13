@@ -53,7 +53,7 @@
 #include "27_MULTIPANEL_DP_21_5_WUXGA.h"
 #include "28_LG_LED_DP_17_QHD.h"
 #include "29_LG_LED_DP_34_WFHD.h"
-#include "AWTO_LTM270FL01.h"
+#include "AWTO_M280DCA_E3B.h"
 #include "30_AUO_eDP_27_UHD.h"
 #include "31_AUO_VBO_27_WUXGA_FREESYNC.h"
 #include "66_AUO_VBO_M250HTN01_0.h"

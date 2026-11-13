@@ -33,7 +33,7 @@ DPTX_FNS = ("ScalerDisplayDPTxLinkSequence", "ScalerDisplayDPTxStreamHanlder", "
 POWER_KEY, K_SOURCE = 0x3E, 0x05                             # test cmds (awto_testcmd.inc): POWER key, injected SOURCE
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE = 2, 3
-# Panel times: registry defaults in fw/sdk/Panel/AWTO_LTM270FL01.h (read from --tree when given); T3 own frame = registry
+# Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given); T3 own frame = registry
 # PANEL_T3_OWN default (RL6449_Project.h AWTO_T3_OWN_PATTERN_MS).
 PANEL = {"T3_OWN": 20, "T4": 250, "T5": 20, "T6": 1100}
 # Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off incl. T4 + T5 + flash
@@ -54,7 +54,7 @@ def say(s):
 
 
 def panel_times(tree):
-    h = Path(tree) / "fw/sdk/Panel/AWTO_LTM270FL01.h" if tree else None
+    h = Path(tree) / "fw/sdk/Panel/AWTO_M280DCA_E3B.h" if tree else None
     if h and h.is_file():
         for k, v in re.findall(r"#define\s+_PANEL_POWER_(?:ON|OFF)_(T[3-6])\s+(\d+)", h.read_text()):
             if k in PANEL:
@@ -306,7 +306,7 @@ def main():
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
     ap.add_argument("--mode", default="1080p60")
-    ap.add_argument("--tree", help="worktree: panel T-values from fw/sdk/Panel/AWTO_LTM270FL01.h")
+    ap.add_argument("--tree", help="worktree: panel T-values from fw/sdk/Panel/AWTO_M280DCA_E3B.h")
     ap.add_argument("--report", action="store_true", help="timeline only, no verdict (old images)")
     a = ap.parse_args()
     panel_times(a.tree)
