@@ -269,7 +269,9 @@ def main() -> int:
         run("edid", [py, "scripts/fw_edid_tables.py", "--serial", a.serial])
         # #162: conditionals that pick a branch silently (undefined names, never-defined #ifdef, ...): fw/pp_audit_allow.tsv
         run("pp", [py, "scripts/pp_audit.py", "--check"])     # TIMEOUT pp: 3x the worst run (commit message)
-        run("asm", [py, "scripts/fw_compile.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
+        for f in ASM.glob("*.asm"):                           # only this build's modules get linked: a stale one (a file no
+            f.unlink()                                        # longer compiled) rode along until the new linker caught it
+        run("asm",[py, "scripts/fw_compile.py", "compile", "STD_FW_1P.Uv2", "--target", "RL6449_Project", "--asm"])
         run("asm", [py, "scripts/fw_compile.py", "compile", LIB_UV2, "--asm"])
         # #66: every policy row must still match a warning of this build (stale rows fail), every warning a row
         run("edid", [py, "scripts/warn_policy_check.py", WORK_DIR / "warnings-STD_FW_1P.txt",
