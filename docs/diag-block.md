@@ -3,7 +3,7 @@
 - Switch: `_AWTO_DIAG` in `fw/sdk/Project/Header/RL6449_Project.h` (`_ON` now). Off = every call site compiles to nothing.
 - Block: 48 B XDATA at `0xF6D0..0xF6FF`, `volatile __xdata __at(0xF6D0)`. `fw_build.py` `XRAM` end = `0xF6D0` so the linker never uses it.
 - Reader: `scripts/rtd_diag.py <bus> [--watch N]` over debug slave 0x35 (reads + staging only, no other writes). Sim: `fw_sim.py` prints it from sim XRAM.
-- Zeroed by `AwtoDiagInit()` at start of `main`; code in `fw/sdcc/awto_diag.inc` (`#include`d in `SysMain.c`, fw/sdk).
+- Zeroed by `AwtoDiagInit()` at start of `main`; code in `fw/diag/diag.c`.
 
 ## Layout (SDCC little-endian: low byte at the lower address)
 | off | size | field |

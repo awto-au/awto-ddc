@@ -14,7 +14,7 @@ poll@RL6449_Series_PLL.c:328	required	PLL watchdog stable flag, bound 2 ms	SDK c
 delay_ms@SysSource.c:3953	shortenable	cable-pin debounce before re-reading D1 pin, only when the status changed; no spec	SDK
 delay_ms@SysSource.c:4064	shortenable	cable-pin debounce before re-reading D2 pin, only when the status changed; no spec	SDK
 delay_ms@SysSource.c:4174	shortenable	cable-pin debounce before re-reading D3 pin, only when the status changed; no spec	SDK
-delay_ms@SysMain.c:282	removable	our #23 self-test (measures DelayXms, 200 x 5 us, bench) before PCB_PANEL_POWER every boot	#53 item 6, awto_diag.inc
+delay_ms@SysMain.c:282	removable	our #23 self-test (measures DelayXms, 200 x 5 us, bench) before PCB_PANEL_POWER every boot	#53 item 6, fw/diag/diag.c
 delay_us@SysMain.c:287	removable	part of the #23 self-test (200 x 5 us loop)	#53 item 6
 delay_ms@RTD2014UserInterface.c:1415	required	panel T1: wait for VDD rail ramp; datasheet T1 0.5-10 ms, value 10 = max; shorten only with a measured rail ramp	BOE MV270QUM-N50 spec 8.0 (~/vendors/boe), docs/monitors/panel-edid.md	SDK example 10 ms
 delay_ms@RTD2014UserInterface.c:1447	interrupt-or-poll	panel T3 inside the _BACKLIGHT_ON action (UserCommonInterface.c:1204): blind 550 ms, blocks the whole main loop (source search, OSD, keys); value is required by the datasheet (T4 >= 500 ms from valid video to backlight) but the same SDK code already runs it as a deferred timer event in the _PANEL_ON branch	BOE MV270QUM-N50 spec 8.0 T4 (>=500 ms); #40	

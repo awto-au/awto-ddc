@@ -1,4 +1,6 @@
-// Diag block functions (#23), inserted into SysMain.c by keil2sdcc.py. Layout: RL6449_Project.h StAwtoDiag.
+#include "SysInclude.h"
+
+// Diag block functions (#23). Layout: RL6449_Project.h StAwtoDiag.
 void AwtoDiagStage(unsigned char ucStage)
 {
     unsigned int usNow;
