@@ -84,7 +84,7 @@ static const struct setting __code tab[SET_COUNT] = {
     { 70, 2, 2,  9, 0x09, 17, 200, 1, 20, 0x00, 0, 1274u, 0xFFFFu},  /* panel_t3_own */
     { 71, 2, 2,  9, 0x09, 0, 1000, 10, 250, 0x00, 0, 1289u, 0xFFFFu},  /* panel_t4 */
     { 72, 2, 2,  9, 0x09, 0, 500, 10, 20, 0x00, 0, 1307u, 0xFFFFu},  /* panel_t5 */
-    { 73, 2, 2,  9, 0x09, 500, 5000, 100, 1100, 0x00, 0, 1326u, 0xFFFFu},  /* panel_t6 */
+    { 73, 2, 2,  9, 0x09, 500, 5000, 100, 900, 0x00, 0, 1326u, 0xFFFFu},  /* panel_t6 */
     { 74, 2, 2,  9, 0x29, 0, 200, 1, 0, 0x00, 0, 1339u, 0xFFFFu},  /* bl_pwm_ms */
     { 84, 0, 0, 10, 0x69, 0, 1, 1, 1, 0x00, 0, 1349u, 0xFFFFu},  /* debug_link */
     { 85, 0, 0, 10, 0x83, 0, 1, 1, 0, 0xF0, 7, 1360u, 0xFFFFu},  /* debug_msgs */
