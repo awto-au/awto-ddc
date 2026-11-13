@@ -10,10 +10,12 @@ usage: audio_test.py host                       ELD + IEC958 switch of the Intel
        audio_test.py tone --chan left|right|both [--hz N] [--secs 4]   one tone, start / end logged
        audio_test.py gen --map MAP [--secs 4] MUX..   audio-test image only: chip sine generator (VCP 0x63) for --secs per REG_MUX_ANA_OUT
                                                 value (hex), 3 s off between; 06E0 restored to its value before; times logged
+       audio_test.py outs --map MAP [--secs 4]  ear matrix: one both-channel 440 Hz tone per output set-up (OUTS), 3 s gaps;
+                                                outputs selected by the per-output mute bits + P7.4 (SDK leaves those alone)
        audio_test.py dport --map MAP IDX..      HDMI D2 audio data port page 71: index -> 71C9, read 71CA (restores the index)
 - Plays straight to ALSA plughw:<card>,<dev> of the HDMI pcm whose ELD names our monitor: never the PipeWire default sink
   (the Intel card's PipeWire profile is analog only; that HDMI pcm is free).
-- Caller holds unit_lock (AWT26110002). Units 1 / 3 hands off: bus and serial are fixed to unit 2.
+- Caller holds unit_lock for --serial. The EDID serial on --bus must match (i2cbus.require_unit) before any debug-slave access.
 Log: ./tmp/logs/audio_test.log (every step, ISO time).
 """
 from __future__ import annotations
@@ -33,7 +35,7 @@ ROOT = repo_root()
 sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/audio_test.log"
 OUT = ROOT / "tmp/audio"
-BUS, SERIAL = 11, "AWT26110002"                 # unit 2, Intel HDMI-A-2 (scripts/devices.json)
+BUS, SERIAL = 11, "AWT26110003"                 # test unit (scripts/devices.json "test"), Intel HDMI-A-2; --bus / --serial
 MON_NAME = "awto-mon"                           # EDID product name in the ELD
 RATE = 48000                                    # Hz; LPCM in our SAD (32 / 44.1 / 48 kHz)
 TONES = (("left", 440, (1, 0)), ("right", 660, (0, 1)), ("both", 880, (1, 1)))
@@ -53,6 +55,13 @@ REGS_READ_S = 1.0                               # one regs() pass over the debug
 DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retries; 10 s = stall
 
 
+AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
+OUT_ON, OUT_MUTED = 0x08, 0xC8
+OUTS = (("aout + hpout, amp P7.4 = 1 (as flashed)", OUT_ON, OUT_ON, 1),
+        ("hpout only, amp P7.4 = 1", OUT_MUTED, OUT_ON, 1),
+        ("hpout only, amp P7.4 = 0 (Dahua no-jack path: P4.5 = 1 -> headphone)", OUT_MUTED, OUT_ON, 0),
+        ("aout only, amp P7.4 = 1 (Dahua speaker path: P4.5 = 0)", OUT_ON, OUT_MUTED, 1),
+        ("aout only, amp P7.4 = 0", OUT_ON, OUT_MUTED, 0))
 AMP_WAIT_S = 1.5                                # unmute: SDK pass + DVC ramp (<= 400 ms, _DVC_VOLUME_MUTE_TIMER) + amp; x1.25 + ddc
 
 
@@ -181,6 +190,8 @@ class Unit:
             except SystemExit:
                 pass
         self.names = reg_names()
+        import i2cbus
+        i2cbus.require_unit(BUS, SERIAL, None)  # SystemExit on another monitor
 
     def session(self, fn):
         import dbg_link
@@ -258,14 +269,18 @@ def tones(a, u: Unit) -> int:
 
 
 def main() -> int:
+    global BUS, SERIAL
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen"))
+    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen", "outs"))
     ap.add_argument("--map", type=Path)
+    ap.add_argument("--bus", type=int, default=BUS)
+    ap.add_argument("--serial", default=SERIAL)
     ap.add_argument("--secs", type=float, default=3.0)
     ap.add_argument("--chan", choices=("left", "right", "both", "silence"), default="both")
     ap.add_argument("--hz", type=int, default=440)
     ap.add_argument("pokes", nargs="*")
     a = ap.parse_args()
+    BUS, SERIAL = a.bus, a.serial
     say(f"audio_test {a.cmd} {' '.join(a.pokes)} (map {a.map})")
     if a.cmd == "host":
         host(False)
@@ -314,6 +329,24 @@ def main() -> int:
             if old:
                 u.wr(rio, DPORT_IDX, old[0])
         u.session(go)
+        return 0
+    if a.cmd == "outs":
+        dev = host(True)
+        p = tone_wav("both", a.hz, (1, 1), a.secs)
+        amp = PORTS["P7.4 (amp enable, pin 161)"]
+        try:
+            for k, (what, ao, hp, en) in enumerate(OUTS):
+                if k:
+                    time.sleep(GEN_GAP_S)
+                u.session(lambda rio: (u.wr(rio, AOUT_CTRL, ao), u.wr(rio, HPOUT_CTRL, hp), u.wr(rio, amp, en)))
+                rb = u.session(lambda rio: [u.rd(rio, x) for x in (AOUT_CTRL, HPOUT_CTRL, amp)])
+                say(f"OUT {k + 1} START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s, {a.hz} Hz both channels): {what}; "
+                    f"read back 06C6 {rb[0].hex() if rb[0] else '?'} 06C7 {rb[1].hex() if rb[1] else '?'} P7.4 {rb[2][0] & 1 if rb[2] else '?'}")
+                r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
+                say(f"OUT {k + 1} END {time.strftime('%H:%M:%S')} rc {r.returncode}")
+        finally:
+            u.session(lambda rio: (u.wr(rio, AOUT_CTRL, OUT_ON), u.wr(rio, HPOUT_CTRL, OUT_ON), u.wr(rio, amp, 1)))
+            say("outputs restored: 06C6 = 08, 06C7 = 08, P7.4 = 1")
         return 0
     if a.cmd == "gen":
         mux0 = u.session(lambda rio: u.rd(rio, MUX_ANA_OUT))
