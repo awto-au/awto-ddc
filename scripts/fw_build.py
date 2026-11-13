@@ -185,6 +185,12 @@ def main() -> int:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (ROOT / "tmp/logs/fw_build.log").open("a")
     py = sys.executable
+    if "--dual-dptr" in T.CFLAGS_EXTRA:
+        from fw_dual_dptr_check import check_compiler
+        try:
+            check_compiler(T.tool("sdcc"), T.CFLAGS_EXTRA)
+        except ValueError as e:
+            sys.exit(str(e))
     log(f"byte order: {'BIG-endian (--big-endian, Keil order)' if T.BIG_ENDIAN else 'little-endian (default)'}, lib {T.LIB}")
     if not a.skip_compile:
         run("port", [py, "scripts/keil2sdcc.py", "port"])
@@ -216,6 +222,14 @@ def main() -> int:
     out = ROOT / "tmp/fw" / a.serial
     out.mkdir(parents=True, exist_ok=True)
     rels = sorted(bank_dir.glob("*.rel"))
+    if "--dual-dptr" in T.CFLAGS_EXTRA:
+        from fw_dual_dptr_check import check_link_inputs
+        try:
+            checked = check_link_inputs(rels)
+        except ValueError as e:
+            sys.exit(f"dual-DPTR ISR check failed:\n{e}")
+        for handler in checked:
+            log(f"dual-DPTR ISR: {handler}")
     used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.M)})
     xsegs = {int(m) for r in rels for m in re.findall(r"^A XSEG(\d+) ", r.read_text(errors="replace"), re.M)}
     # trunk sdld: area base = -a (asxxxx 5.50; -b gone); a base for an undefined area is an error
