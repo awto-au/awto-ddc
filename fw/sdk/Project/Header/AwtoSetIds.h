@@ -32,6 +32,7 @@
 #define AWTO_SET_ASPECT               30
 #define AWTO_SET_OVERSCAN             31
 #define AWTO_SET_DISP_ROTATE          32
+#define AWTO_SET_MIRROR               117
 #define AWTO_SET_LATENCY              33
 #define AWTO_SET_FREEZE               34
 #define AWTO_SET_INPUT                3
@@ -141,7 +142,6 @@
 #define AWTO_SET_DEF_SA_MAGENTA_SAT   100
 #define AWTO_SET_DEF_ASPECT           0
 #define AWTO_SET_DEF_OVERSCAN         1
-#define AWTO_SET_DEF_DISP_ROTATE      0
 #define AWTO_SET_DEF_LATENCY          0
 #define AWTO_SET_DEF_DP_VERSION       1
 #define AWTO_SET_DEF_DP_EDID          0
@@ -166,6 +166,6 @@
 #define AWTO_SET_DEF_SSC              0
 #define AWTO_SET_DEF_PANEL_HOURS      0
 #define AWTO_SET_DEF_PANEL_MIN        0
-#define AWTO_SET_SCHEMA              0x0273
-#define AWTO_SET_AUX_MAX             52
+#define AWTO_SET_SCHEMA              0x5EE9
+#define AWTO_SET_AUX_MAX             54
 #endif

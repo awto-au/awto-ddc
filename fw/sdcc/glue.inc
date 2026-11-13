@@ -155,7 +155,7 @@ static __code BYTE tAwtoStyle[5] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SUR
 #define AWTO_BAR_ACCENT             AWTO_PAL_ACCENT
 
 static BYTE s_ucVpRows;                          // viewport rows (0 = the whole map is shown)
-static BYTE s_ucVpFirst;                         // first map row shown
+static BYTE s_ucVpFirst;                         // first view row shown (logical; rotated 180 the map rows are mirrored)
 static BYTE s_ucVpEnd;                           // map row that currently holds the end-of-rows marker
 
 // OSD blend, one owner for every awto screen (menu, selector, cards, backlight bar, console, GPIO page) (awto-ddc#176):
@@ -167,6 +167,44 @@ static void AwtoOsdBlend(void)
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
 }
 
+// OSD orientation, one owner for every awto screen (#165). Rotate 180: glyphs downloaded turned by the VLC decoder (FRAME_CTRL_0B),
+// the map written in reverse (osd_tc_cells), windows, position and the viewport mirrored (osd_tc_bar / _place / _scroll).
+// Not the chip's auto rotation (FRAME_CTRL_41): with double size it showed boxes without text on unit 3 (SDK: they exclude each other).
+// Mirror modes: no OSD mirror in hardware; the OSD stays upright.
+static BYTE s_ucAwtoOsdRot = _OSD_ROTATE_DEGREE_0;
+
+static void AwtoOsdOrient(BYTE ucRows)
+{
+    BYTE ucWant = _OSD_ROTATE_DEGREE_0;
+
+#if(_DISPLAY_ROTATION_SUPPORT == _ON)
+    if(GET_OSD_DISP_ROTATE() == _DISP_ROTATE_180)
+    {
+        ucWant = _OSD_ROTATE_DEGREE_180;
+    }
+#endif
+    if(ucWant != s_ucAwtoOsdRot)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_ROT, (ucWant == _OSD_ROTATE_DEGREE_180) ? AWTO_ROT_OSD_180 : AWTO_ROT_OSD_UPRIGHT, 0);
+    }
+    s_ucAwtoOsdRot = ucWant;
+    AwtoOsdRoll(0);
+    ScalerOsdMapRotation(_OSD_ROTATE_DEGREE_0, _ENABLE, ucRows, _DISABLE, 0, _ENABLE);    // chip auto rotation off (undoes rot3 images)
+}
+
+// FRAME_CTRL_18 special function: roll-up (viewport scroll) on / off.
+void AwtoOsdRoll(BYTE ucOn)
+{
+    if(ucOn != 0)
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);
+    }
+    else
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);
+    }
+}
+
 void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
     BYTE ucI;
@@ -176,7 +214,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
     OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);             // roll-up (viewport scroll) off
+    AwtoOsdOrient(HEIGHT(ucLines));                                                            // also: roll-up (viewport scroll) off
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
@@ -207,7 +245,8 @@ void osd_tc_rowh(BYTE ucRh)
 BYTE osd_tc_scroll(BYTE ucFirst)
 {
     WORD usFs;
-    BYTE ucEnd;
+    BYTE ucPs;                                       // first map row shown; rotated 180 the view [first, first + rows) is map rows
+    BYTE ucEnd;                                      // [H - rows - first, H - first) (osd_tc_cells writes row r at H - 1 - r)
 
     if(s_ucVpRows == 0)
     {
@@ -217,11 +256,13 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     {
         ucFirst = g_ucOsdHeight - s_ucVpRows;
     }
-    while((ucFirst != 0) && ((WORD)ucFirst * g_ucOsdWidth + g_usFontSelectStart > 4095))
+    ucPs = (s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180) ? (g_ucOsdHeight - s_ucVpRows - ucFirst) : ucFirst;
+    while((ucPs != 0) && ((WORD)ucPs * g_ucOsdWidth + g_usFontSelectStart > 4095))
     {
-        ucFirst--;
+        ucPs--;
     }
-    ucEnd = ucFirst + s_ucVpRows;
+    ucFirst = (s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180) ? (g_ucOsdHeight - s_ucVpRows - ucPs) : ucPs;
+    ucEnd = ucPs + s_ucVpRows;
     if(s_ucVpEnd < g_ucOsdHeight)
     {
         ScalerOsdCommandAllByte(s_ucVpEnd, 0x80, osd_rh - 1, g_ucOsdWidth);    // the old marker row is a text row again
@@ -231,18 +272,17 @@ BYTE osd_tc_scroll(BYTE ucFirst)
         ScalerOsdCommandByte(ucEnd, _OSD_BYTE0, 0x00);                         // end-of-rows marker: the view stops here
     }
     s_ucVpEnd = ucEnd;
-    usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
-    if(ucFirst == 0)
+    s_ucVpFirst = ucFirst;
+    usFs = g_usFontSelectStart + (WORD)ucPs * g_ucOsdWidth;
+    if(ucPs == 0)
     {
-        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
-        s_ucVpFirst = 0;
-        return 0;
+        AwtoOsdRoll(0);                                                                         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
+        return ucFirst;
     }
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);                              // special function on, 0 = roll-up
-    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucFirst);
+    AwtoOsdRoll(1);                                                                             // special function on, 0 = roll-up
+    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucPs);
     ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)((usFs >> 8) << 4));
     ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)usFs);
-    s_ucVpFirst = ucFirst;
     return ucFirst;
 }
 
@@ -258,6 +298,19 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
     BYTE ucB0 = 0x40 | osd_cw;                   // 1 bit font, cell width = the loaded font's pixel width
     BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
 
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // row r cell c -> row H-1-r cell W-1-c: write the run backwards from its last cell
+    {
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)(g_ucOsdHeight - 1 - ucRow) * g_ucOsdWidth +
+                         (g_ucOsdWidth - ucCell - ucN), _OSD_WITHOUT_DB);
+        pucTiles += ucN;
+        while(ucN-- != 0)
+        {
+            ScalerOsdDataPort(ucB0);
+            ScalerOsdDataPort(*--pucTiles);
+            ScalerOsdDataPort(ucB2);
+        }
+        return;
+    }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
     while(ucN-- != 0)                              // one address, then B0 B1 B2 per cell (the word address increments by itself)
     {
@@ -269,6 +322,18 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
 
 void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour)
 {
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // inclusive px, mirrored inside the map box
+    {
+        WORD usW = (WORD)g_ucOsdWidth * osd_cw - 1;
+        WORD usH = (WORD)((s_ucVpRows != 0) ? s_ucVpRows : g_ucOsdHeight) * osd_rh - 1;   // the box shown (viewport rows)
+        WORD usT = usW - usX0;
+
+        usX0 = usW - usX1;
+        usX1 = usT;
+        usT = usH - usY0;
+        usY0 = usH - usY1;
+        usY1 = usT;
+    }
     OsdWindowDrawing(ucWin, usX0, usY0, usX1, usY1, (ucColour == 0) ? AWTO_BAR_SURFACE : AWTO_BAR_ACCENT);
 }
 
@@ -286,6 +351,11 @@ void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
     for(ucI = 0; ucI < 8; ucI++)
     {
         ScalerSetByte(AWTO_R_FRAME_CTRL_0F + ucI, pucMap[ucI]);
+    }
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)     // glyphs land rotated, as ScalerOsdHardwareVLC does for 180
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_0B, ~(AWTO_F_FRAME_CTRL_0B_F_DL_SWAP | AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN | AWTO_F_FRAME_CTRL_0B_ROTATION),
+                     (_OSD_ROTATE_CW180 | _OSD_ROTATE_HARDWARE_ROTATION_ENABLE | _OSD_ROTATE_NORMAL));
     }
     ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN);
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 9, _OSD_WITHOUT_DB);
@@ -305,6 +375,7 @@ void osd_tc_vlc_end(void)
     // immediately truncates/corrupts glyph SRAM; Realtek's loader waits 2 ms here for the same reason.
     ScalerTimerDelayXms(2);
     ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), 0x00);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_0B, ~(AWTO_F_FRAME_CTRL_0B_F_DL_SWAP | AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN | AWTO_F_FRAME_CTRL_0B_ROTATION), _OSD_ROTATE_NORMAL);
 }
 
 // Own placement: the SDK OsdDispSetPosition assumes 12 x 18 cells, so rows x 36 above the panel height wraps to an off-screen position.
@@ -316,6 +387,11 @@ void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
     WORD usY = 0;
     BYTE ucStep = (ScalerOsdGetHorizontalDelayStep() == _OSD_HORIZONTAL_DELAY_STEP_1_PIXEL) ? 1 : 4;
 
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // the box sits where the upright one would, turned with the panel
+    {
+        ucH = 100 - ucH;
+        ucV = 100 - ucV;
+    }
     SET_OSD_DOUBLE_SIZE(ucBig);
     ScalerOsdDoubleFunction(ucBig, ucBig);
     if(ucBig != 0)
@@ -355,7 +431,7 @@ void osd_tc_show(BYTE ucOn)
 void osd_tc_close(void)
 {
     g_ucAwtoMenuOn = 0;
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);              // viewport roll-up off: the next screen starts at row 0
+    AwtoOsdRoll(0);                                                                             // viewport roll-up off: the next screen starts at row 0
     s_ucVpRows = 0;
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
@@ -552,6 +628,35 @@ void set_ap_aspect(BYTE ucId, int iV)
     {
         SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_SETTINGS);
     }
+}
+
+// #165 Rotate (disp_rotate 0 / 180) + Mirror (mirror Off / Horizontal / Vertical): one owner. Flip bits H = 1, V = 2 (= mirror
+// option index); effective = (Rotate 180 ? H | V : 0) XOR mirror -> SDK b3OsdDispRotate, read at the next display setting. One E4 line.
+void set_ap_rotate(BYTE ucId, int iV)
+{
+    BYTE ucRot = (BYTE)((ucId == AWTO_SET_DISP_ROTATE) ? iV : set_get(AWTO_SET_DISP_ROTATE));
+    BYTE ucMir = (BYTE)((ucId == AWTO_SET_MIRROR) ? iV : set_get(AWTO_SET_MIRROR)) & AWTO_FLIP_HV;
+    BYTE ucFlip = ((ucRot != 0) ? AWTO_FLIP_HV : 0) ^ ucMir;
+    BYTE ucWhat = AWTO_ROT_NOT_BUILT;
+#if(_DISPLAY_ROTATION_SUPPORT == _ON)
+    static __code BYTE tFlipToSdk[4] = {_DISP_ROTATE_0, _DISP_ROTATE_HOR_MIRROR, _DISP_ROTATE_VER_MIRROR, _DISP_ROTATE_180};
+
+    if(GET_OSD_DISP_ROTATE() == tFlipToSdk[ucFlip])
+    {
+        ucWhat = AWTO_ROT_ALREADY;
+    }
+    else
+    {
+        SET_OSD_DISP_ROTATE(tFlipToSdk[ucFlip]);
+        ucWhat = AWTO_ROT_STORED;
+        if((set_in_boot() == _FALSE) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
+        {
+            ucWhat = AWTO_ROT_APPLIED;
+            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_SETTINGS);
+        }
+    }
+#endif
+    AwtoSyncPush(AWTO_SYNC_EV_ROT, (ucWhat << 2) | ucFlip, ((DWORD)ucRot << 8) | ucMir);
 }
 
 void set_ap_overscan(BYTE ucId, int iV)

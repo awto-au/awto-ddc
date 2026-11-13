@@ -996,6 +996,26 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
 #define AWTO_SYNC_EV_MSTEP                                      0xE2    // #165 M-domain / DCLK fine-tune step: arg = step (AWTO_MSTEP), value = arg << 16 | val
+#define AWTO_SYNC_EV_MEM                                        0xE3    // #165 memory work mode (test cmds 0x0C / 0x0D): arg AWTO_MEM_LOG_* or AWTO_MEM_LOG_SEL + memory select
+#define AWTO_MEM_LOG_FORCE                                      0x01    // frame buffer forced, display setting re-run
+#define AWTO_MEM_LOG_RELEASE                                    0x02    // back to the SDK choice, display setting re-run
+#define AWTO_MEM_LOG_ALREADY_FORCED                             0x03
+#define AWTO_MEM_LOG_ALREADY_SDK                                0x04
+#define AWTO_MEM_LOG_STORED                                     0x05    // not ACTIVE: takes effect at the next display setting
+#define AWTO_MEM_LOG_NO_FRC                                     0x06    // _AWTO_FRC off: frame buffer not built
+#define AWTO_MEM_LOG_SEL                                        0x10    // + _FRAME_SYNC_LINE_BUFFER.._FREE_RUN_NO_INPUT: memory select changed (display setting)
+#define AWTO_SYNC_EV_ROT                                        0xE4    // #165 picture orientation (set_ap_rotate): arg = what << 2 | flip, value = rotate << 8 | mirror
+#define AWTO_FLIP_HV                                            0x03    // flip bits: 1 = left-right (H), 2 = top-bottom (V); both = 180
+#define AWTO_ROT_APPLIED                                        0       // what: display re-set now
+#define AWTO_ROT_STORED                                         1       // not ACTIVE / boot: applies at the next display setting
+#define AWTO_ROT_ALREADY                                        2
+#define AWTO_ROT_NOT_BUILT                                      3       // image without _AWTO_ROTATION: stored only
+#define AWTO_ROT_OSD_180                                        0x20    // E4 arg: awto OSD now rotated 180 with the picture (glue.inc AwtoOsdOrient)
+#define AWTO_ROT_OSD_UPRIGHT                                    0x21    // E4 arg: awto OSD upright again
+extern void AwtoOsdRoll(unsigned char ucOn);    // FRAME_CTRL_18 roll-up on / off, the 180 setting while the OSD is rotated (glue.inc)
+#define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
+#define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
+extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
@@ -1370,6 +1390,7 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_BY_KEY_CONSOLE                                 0x1D    // UP+DOWN in power saving: wake into the console (#132)
 #define AWTO_SYS_BY_SELECTOR_IDLE                               0x1E    // selector: highlighted input taken after AWTO_SRC_IDLE_COMMIT_MS (#132)
 #define AWTO_SYS_BY_SELECTOR_RESET                              0x1F    // selector closed by the SDK OSD reset: its highlighted choice taken (#132)
+#define AWTO_SYS_BY_MEMTEST                                     0x20    // test cmd 0x0C / 0x0D: memory work mode changed (#165)
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24
@@ -1485,8 +1506,11 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-// FRC: off by default (#8); K2S_SDCC_EXTRA=-D_AWTO_FRC turns it on (4K60 work, #26)
-#ifdef _AWTO_FRC
+// FRC (frame buffer): build option, off by default (#8); -D _AWTO_FRC=_ON (wb_build.py / dev.py build --frc) turns it on (#165)
+#ifndef _AWTO_FRC
+#define _AWTO_FRC                                               _OFF
+#endif
+#if(_AWTO_FRC == _ON)
 #define _FRC_SUPPORT                                            _ON
 #else
 #define _FRC_SUPPORT                                            _OFF
@@ -1495,7 +1519,30 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // Display Rotation Option
 //-------------------------------------------------
+// Build option (#165): -D _AWTO_ROTATION=_ON = 180 + H / V mirror through the frame buffer (needs _AWTO_FRC=_ON), freeze off;
+// -D _AWTO_FREEZE=_ON = freeze instead. GEN_II cannot have both (Project_Config_Check.h). Menu rows disp_rotate / mirror (set_ap_rotate).
+#ifndef _AWTO_ROTATION
+#define _AWTO_ROTATION                                          _OFF
+#endif
+#ifndef _AWTO_FREEZE
+#define _AWTO_FREEZE                                            _OFF
+#endif
+#if((_AWTO_ROTATION == _ON) || (_AWTO_FREEZE == _ON))
+#if(_AWTO_FRC != _ON)
+#error "_AWTO_ROTATION / _AWTO_FREEZE need the frame buffer: -D _AWTO_FRC=_ON"
+#endif
+#endif
+#if((_AWTO_ROTATION == _ON) && (_AWTO_FREEZE == _ON))
+#error "_AWTO_ROTATION and _AWTO_FREEZE are exclusive (GEN_II rotation)"
+#endif
+#if(_AWTO_ROTATION == _ON)
+#define _DISPLAY_ROTATION_SUPPORT                               _ON
+#define _DISPLAY_HOR_MIRROR_SUPPORT                             _ON
+#define _DISPLAY_VER_MIRROR_SUPPORT                             _ON
+#else
 #define _DISPLAY_ROTATION_SUPPORT                               _OFF
+#endif
+#define _FREEZE_SUPPORT                                         _AWTO_FREEZE
 
 //--------------------------------------------------
 // Aspect Ratio Option
@@ -1940,7 +1987,7 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define AWTO_AUDIO_OUT                                          AWTO_AUDIO_OUT_BOTH     // speaker test (#94): both powered
 #define AWTO_AUDIO_AMP_USED                                     ((AWTO_AUDIO_OUT & AWTO_AUDIO_OUT_SPEAKER) != 0)
 #define AWTO_AUDIO_AUX_MS                                       200     // P7.3 low this long after P7.4 = 0 (Dahua 5:d324, delay R7 = 0xC8) [fw]
-#define AWTO_SYNC_EV_AUDIO                                      0xE3    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
+#define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // P7.4 = 1 (unmute)
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // P7.4 = 0 (mute / AC on)
 #define AWTO_AUDIO_EV_AUX_LOW                                   3       // P7.3 = 0
@@ -1948,6 +1995,10 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 extern void AwtoAudioAmpBoot(void);                             // fw/sdcc/awto_audio.inc: the one owner of P7.3 / P7.4
 extern void AwtoAudioAmp(bit bMute);
 extern void AwtoAudioPoll(void);
+#define AWTO_AUDIO_TEST_STEPS                                   7       // test build: ear-test steps (awto_audio.inc), VCP 0x63
+#define AWTO_AUDIO_TEST_START                                   0x10    // VCP 0x63 value + n (1..7): step n set up; E5 arg = value
+#define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n done, outputs / amp / volume restored
+extern void AwtoAudioTestStep(unsigned char ucV);
 
 //-------------------------------------------------
 // Audio Line In Option

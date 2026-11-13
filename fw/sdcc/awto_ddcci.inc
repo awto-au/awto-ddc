@@ -235,7 +235,11 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
     // settings/DDC implementation (0xE1 is the registry value mailbox).
     if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == 0x63))
     {
-        if(pucRx[5] == 0)
+        if(pucRx[5] >= AWTO_AUDIO_TEST_START)
+        {
+            AwtoAudioTestStep(pucRx[5]);            // #94 ear-test step (awto_audio.inc)
+        }
+        else if(pucRx[5] == 0)
         {
             SysAudioInternalGenTestProc(_OFF);
         }

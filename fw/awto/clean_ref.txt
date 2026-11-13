@@ -1,1 +1,1 @@
-aa74554   # awto-rtdfw commit compiled into the image (git archive); osd-transp2: osd_transparency default 50 %, type 11 (awto-ddc#176), on ui 078b75c
+7211ab4   # awto-rtdfw commit compiled into the image (git archive); rotate: Rotate 0 / 180 + Mirror row (awto-ddc#165), on ui aa74554

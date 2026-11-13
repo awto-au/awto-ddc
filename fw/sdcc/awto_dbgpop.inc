@@ -71,7 +71,7 @@ static bit AwtoConLost(void)
         return 0;
     }
     s_ucConOpen = 0;
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);            // the new map must not be shifted by our roll-up
+    AwtoOsdRoll(0);                                                                            // the new map must not be shifted by our roll-up
     g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     AwtoGpioConSet(0);
     AwtoKeyConSet(0);
@@ -607,7 +607,7 @@ void AwtoProbeScroll(BYTE ucReset)
 {
     if(s_ucAwtoProbeOpen == 0) return;
     s_ucAwtoScroll = (ucReset != 0) ? 0 : (s_ucAwtoScroll + 1);
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);
+    AwtoOsdRoll(1);
     ScalerSetByte(AWTO_R_FRAME_CTRL_19, s_ucAwtoScroll);
     ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
     ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));

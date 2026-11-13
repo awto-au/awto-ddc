@@ -168,16 +168,59 @@ E1	08	vport	wake on % suppressed: input disabled (once per trigger per sleep)
 E1	09	vport	disable % requested: already disabled
 E1	0A	vport	enable % requested: already enabled
 E1	0B	vport	fixed search on disabled %: auto search
-E3	01	-	speaker amp on (P7.4 = 1)
-E3	02	-	speaker amp off (P7.4 = 0)
-E3	03	-	amp aux pin low (P7.3 = 0)
-E3	04	-	unmute, speaker output off: amp stays off (P7.4 = 0)
+E5	01	-	speaker amp on (P7.4 = 1)
+E5	02	-	speaker amp off (P7.4 = 0)
+E5	03	-	amp aux pin low (P7.3 = 0)
+E5	04	-	unmute, speaker output off: amp stays off (P7.4 = 0)
+E5	11	-	audio test 1/7: speaker out + headphone out, amp on (as built) - 440 Hz both
+E5	12	-	audio test 2/7: headphone out only, amp on - 440 Hz both
+E5	13	-	audio test 3/7: headphone out only, amp off (Dahua path, no jack) - 440 Hz both
+E5	14	-	audio test 4/7: speaker out only, amp on (Dahua speaker path) - 440 Hz both
+E5	15	-	audio test 5/7: speaker out only, amp off - 440 Hz both
+E5	16	-	audio test 6/7: both outs, amp on, volume -16.5 dB (Dahua default) - 440 Hz both
+E5	17	-	audio test 7/7: both outs, amp on, volume -6 dB - 440 Hz both
+E5	31	-	audio test 1/7 done
+E5	32	-	audio test 2/7 done
+E5	33	-	audio test 3/7 done
+E5	34	-	audio test 4/7 done
+E5	35	-	audio test 5/7 done
+E5	36	-	audio test 6/7 done
+E5	37	-	audio test 7/7 done
 E2	01	-	M-domain set-up: start
 E2	09	-	M-domain set-up: IVS wait 1
 E2	0B	n	M-domain set-up: memory check (WD ctrl0 x 256 + status0 = %)
 E2	0D	n	M-domain set-up: memory + timing gen check OK (WD ctrl0 x 256 + status0 = %)
 E2	20	n	DCLK fine tune: final offset %
 E2	FF	n	M-domain set-up: step lines stop after % this boot (the first set-up did not finish; later passes not logged)
+E3	01	-	frame buffer forced (test cmd 0x0C): display setting re-run
+E3	02	-	memory mode back to the SDK choice (test cmd 0x0D): display setting re-run
+E3	03	-	frame buffer requested: already forced
+E3	04	-	SDK memory choice requested: already
+E3	05	n	memory force % stored (not ACTIVE): next display setting
+E3	06	-	frame buffer refused: FRC not built (_AWTO_FRC off)
+E3	10	n	memory select: frame-sync line buffer (force %)
+E3	11	n	memory select: frame-sync frame buffer (force %)
+E3	12	n	memory select: free-run frame buffer (force %)
+E3	13	n	memory select: M/N frame-sync frame buffer (force %)
+E3	14	n	memory select: free run, no input (force %)
+E4	00	-	picture normal: display re-set
+E4	01	-	picture mirrored left-right: display re-set
+E4	02	-	picture mirrored top-bottom: display re-set
+E4	03	-	picture rotated 180: display re-set
+E4	04	-	picture normal: stored, applies at the next display setting
+E4	05	-	picture mirrored left-right: stored, applies at the next display setting
+E4	06	-	picture mirrored top-bottom: stored, applies at the next display setting
+E4	07	-	picture rotated 180: stored, applies at the next display setting
+E4	08	-	picture normal: already in effect
+E4	09	-	picture mirrored left-right: already in effect
+E4	0A	-	picture mirrored top-bottom: already in effect
+E4	0B	-	picture rotated 180: already in effect
+E4	0C	-	picture normal: not built (no _AWTO_ROTATION): stored only
+E4	0D	-	picture mirrored left-right: not built (no _AWTO_ROTATION): stored only
+E4	0E	-	picture mirrored top-bottom: not built (no _AWTO_ROTATION): stored only
+E4	0F	-	picture rotated 180: not built (no _AWTO_ROTATION): stored only
+E4	20	-	OSD rotated 180 with the picture
+E4	21	-	OSD upright
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %
@@ -243,6 +286,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 16	1D	-	UP+DOWN in power saving: wake into the console
 16	1E	-	input selector: no key for {AWTO_SRC_IDLE_COMMIT_MS/1000} s (idle commit)
 16	1F	-	input selector closed by a mode reset: its highlighted input
+16	20	-	test cmd 0x0C / 0x0D (memory mode)
 17	01	-	power off
 17	02	-	power on
 17	03	-	power saving

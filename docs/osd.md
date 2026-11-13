@@ -100,6 +100,7 @@ Never write bare "vendor": say which one.
   - 0x41 / 0x42 key test, 0x43 / 0x44 GPIO panel.
   - 0x28 / 0x29 = debug messages on / off (NVRAM, #74).
   - 0x31..0x33 = input D1..D3 (#60).
+  - 0x0C = frame buffer forced at the current timing (memory work mode, display setting re-run; FRC image only, else a "refused" line), 0x0D = back to the SDK choice (#165). RAM only. Sync log E3: one line per request and per memory-select change. Host: `scripts/mem_mode.py` (tools-frc) reads the DDR PHY flags before / after.
 - Menu mailbox (`_vcp_box`, debug slave 0x35) and DDC/CI VCP 0xE0..0xE5 (0xE4 = menu command / state): [settings.md](settings.md), host `scripts/menu_cli.py`, `./dev.py settings|menu`.
 - VCP 0xCA (OSD button control) may inject keys via the vendor path [?, buttons.md].
 
