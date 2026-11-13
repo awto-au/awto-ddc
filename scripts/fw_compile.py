@@ -148,6 +148,10 @@ def keil_compat():
     return _KC
 
 
+# module:func list (awto-sdcc scripts/fl_iram_select.py; regenerate after source changes that move DATA frames, #205)
+FAR_LOCALS = ROOT / "fw/far_locals_select.txt"
+
+
 # Our firmware sources by subsystem (#196, scripts/fw_dirs.py): compiled with the SDK project's flags, defines and include path.
 def our_dirs():
     return FD.our_dirs(ROOT)
@@ -177,6 +181,8 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd += FILE_FLAGS.get(c.name, [])
     cmd += [f"-D_AWTO_NEW_{m.upper()}" for m in awto_modules()]   # per-module WRAPS compile-out (#68)
     cmd += T.CFLAGS_EXTRA                                      # --big-endian when AWTO_SDCC_BE=1
+    if FAR_LOCALS.is_file():                                  # #205: locals in XDATA for the listed functions (DATA overlay kept)
+        cmd += ["--far-locals", "--select-far-locals", str(FAR_LOCALS)]
     cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
 
