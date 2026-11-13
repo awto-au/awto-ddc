@@ -6,7 +6,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - 2026-11-13: firmware line `wb-p14ui` (87ab7c7) merged into `main`; `fw/overlay/` and `keil2sdcc.py` are gone, `fw/sdk/` (+ `fw/sdk-parked/`) is the source (section "SDK source" at the end). `wb-p14ui` stays the firmware line: agents branch from it. Sections 4-9 are the 2026-11-09 state.
 
 ## 1. Read first
-- Hardware tests go on **unit 2 only** (lower left). Units 1 and 3 are Dan's working screens: no flash, reset, DDC traffic or layout change. Enforced by `scripts/devices.json` (`test` flag; `dev.py` refuses without `--force`).
+- Hardware tests go on **unit 3 only** (top monitor, Intel HDMI-A-2; Dan 2026-11-13). Units 1 and 2 are Dan's working screens: no flash, reset, DDC traffic or layout change. Enforced by `scripts/devices.json` (`test` flag; `dev.py` refuses without `--force`).
 - Debug link (slave 0x35) OFF before any flash (`scripts/dbg_link.py off 11`); it has a 10 min timer that expired mid-flash on 2026-11-08 (#71).
 - Waiting for a monitor to come back after reset/flash/power cycle: **5 s** max, then report failed.
 - Host layout changes: temporary only (`gdctl set`, never `--persistent`), at most 2 per test (Fedora "keep changes" dialog).
@@ -18,11 +18,11 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 ## 2. Units and desk
 | unit | serial | connector (bus) | image | notes |
 |---|---|---|---|---|
-| 2 (test) | AWT26110002 | Intel HDMI-A-2 (i2c-11, D2) + Intel DP-1 (i2c-15, D1) | **wb-p14ui-audit1** (2026-11-13) | lower left; the only unit for tests; relay Sonoff `so-th-1` (`scripts/power_cycle.py --relay so-th-1`); `osd_timeout` 0 |
-| 3 | AWT26110003 | NVIDIA DP-4 (AUX i2c-21) | wb-p14ui28 | Dan's primary, bottom middle; **hands off**; NVIDIA DP AUX is slow |
+| 2 | AWT26110002 | Intel DP-1 (i2c-15, D1) | wb-p14ui-audit1 | lower left; **hands off** (working screen); relay Sonoff `so-th-1` feeds this unit, not the test unit (`scripts/power_cycle.py --relay so-th-1`) |
+| 3 (test) | AWT26110003 | Intel HDMI-A-2 (i2c-11) | see `tmp/fw/AWT26110003-flashed.json` | top monitor; the only unit for tests; `disp_rotate` 180 kept (set again after any flash that erases NVRAM; `scripts/devices.json`); recovery after #177 |
 | 1 | AWT26110001 | NVIDIA HDMI-A-3 (i2c-18, D3) | wb-p14ui28 | bottom right; **hands off** |
 | Philips 288E2 | UK52307000611 | NVIDIA DP-2 | MStar, not Realtek | top; never touch (`docs/monitors/README.md`) |
-- Layout: DP-2 at (0,0); bottom row HDMI-2 | DP-4 (primary) | HDMI-3. DP-1 is mirrored into HDMI-2 (test mode, gives unit 2 a live D1): `./dev.py mode --unit 2 --dp off` removes it. Watcher: `scripts/desk_layout.py watch` (pid `tmp/desk_layout_watch.pid`); `desk_layout.py check`.
+- Layout and connectors per unit: `scripts/devices.json` (single source). Watcher: `scripts/desk_layout.py watch` (pid `tmp/desk_layout_watch.pid`); `desk_layout.py check`.
 - Bus numbers change on re-enumeration and recabling: tools find the bus by EDID serial; never pick by number.
 - Recabling history: 2026-11-08 11:42 Dan moved unit 2 to HDMI-2, unit 3 to DP-4.
 - Images: `tmp/fw/<serial>-<tag>-be.bin` (+ .map); every flashed image is archived in `build-debris/images/` (gitignored, `fw_archive.py`; before 2026-11-12 committed in `fw/images/`). `tmp/fw/<serial>-flashed.json` = what runs.
@@ -95,7 +95,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 | older lines | wb-p14kvm, wb-p14net, wb-osd67(+net), wb-p14sw, wb-sc3, wb-keilcompat, wb-mixed*, wb-port*, wb-ddrinit, wb-msgtable, wb-p14new, wb-vfreq | merged or superseded; prune with `scripts/worktree_prune.py` / `branch_prune.py` after review (they archive images first) |
 
 ## 6. Runbook
-- Health: `./dev.py health --unit 2`. Flash: debug link off, then `./dev.py flash --unit 2 <image>` (incremental, burst). Needs a gate record: run `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` first (see Gates below); archived `build-debris/images/` images pass; `--force-ungated` overrides (ALERT line in the unit log). Wedged: `scripts/hass_power.py cycle --unit 2` (mains via Home Assistant; `power_cycle.py --relay so-th-1` needs the relay's own API, #152), then `./dev.py recover --unit 2 --bus 11` or `./dev.py flash --unit 2 --bus 11 --full --write-mode byte <image>`; after a wipe wake with `ddcutil --bus 11 setvcp D6 01`.
+- Health: `./dev.py health --unit 2`. Flash: debug link off, then `./dev.py flash --unit 2 <image>` (incremental, burst). Needs a gate record: run `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` first (see Gates below); archived `build-debris/images/` images pass; `--force-ungated` overrides (ALERT line in the unit log). Wedged: `scripts/hass_power.py cycle --unit <n>` (mains via Home Assistant; the `so-th-1` relay feeds unit 2, not test unit 3; `power_cycle.py --relay so-th-1` needs the relay's own API, #152), then `./dev.py recover --unit 2 --bus 11` or `./dev.py flash --unit 2 --bus 11 --full --write-mode byte <image>`; after a wipe wake with `ddcutil --bus 11 setvcp D6 01`.
 - Key presses: `scripts/dbg_link.py on 11 --minutes 10`, then in the keys worktree `python3 scripts/rtd_keywatch.py 11 --log --map <map> --serial AWT26110002 --secs 180` (`--open` / `--close` = key test screen); link off afterwards.
 - Inputs: `./dev.py mode --unit 2 --dp mirror|off`; `scripts/kvm.py dp|hdmi1 --units 2`; `scripts/kvm_demo.py`.
 - OSD: `./dev.py osd ...`, `./dev.py menu ...`, `./dev.py settings list|get|set --unit 2`; catalogue `python3 scripts/osd_catalog.py <bin> --menu-dir <dir>`.
@@ -110,7 +110,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 
 ## 7. Open decisions for Dan
 1. Power LED: what do the LEDs do now? Add the drive (#95)?
-2. Audio: is there a jack/amp? Flash `wb-p14audio1` on unit 2 only if yes (#94).
+2. Audio: is there a jack/amp? Flash `wb-p14audio1` on the test unit (3) only if yes (#94).
 3. Build the claims register + lint (#91)?
 4. Re-run the keil-compat regression with the working harness (awto-sdcc#25)?
 5. Recovery stub (#102) and CEC (#101): pursue or park?

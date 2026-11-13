@@ -4,6 +4,7 @@
 - Live docs and open issues hold current state only. Newest first, sections per area.
 
 ## 4K60 / display path (#26, #55)
+- 2026-11-07 | DDR read-error bug parked; frame-buffer (FRC) path unusable | DDR frame buffer works: 4K60 frame memory clean, mirror H/V and rotate 180 verified by Dan on unit 3 (2026-11-13, images wb-p14ui-ddrinit, wb-p14ui-rot1) | #26, #165
 - 2026-11-07 | P0_37, DPLL offset (+-10 %), static M-domain/FRC/DPLL config, DDR for the line buffer, memory select (frame-sync line buffer) as cause of 4K60 NOSUPPORT | all equal the vendor in the failing state; M1 FIFO flag returns within a frame with firmware frozen | #26
 - 2026-11-07 | IVS2DVS phase and fine-tune passes as cause | ruled out on hardware | #26
 - 2026-11-07 | HDMI 2.0 RX link errors at 594 MHz (lanes 1/2) as cause | refuted: offline config diff, live SCDC and 6 PHY trials; SCDC errors equal on the vendor firmware | #55

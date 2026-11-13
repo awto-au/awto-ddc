@@ -2,9 +2,7 @@
 
 - **Not the panel (2026-11-13):** Dan photographed the panel label: Innolux M280DCA-E3B rev C1, see [panel-innolux-m280dca-e3b.md](panel-innolux-m280dca-e3b.md). Kept for the history of the guess.
 
-Panel's own EDID (597 x 336 mm) supports the 27" size: [panel-edid.md](panel-edid.md). Service menu names Innolux M280DCA-E3B (28"): [panel-innolux-m280dca-e3b.md](panel-innolux-m280dca-e3b.md). Model still unresolved.
-
-Status: candidate only, not confirmed (size + measured active area match; many 27" 16:9 panels do). Best candidate is BOE MV270QUM-N20 (#3, panel-edid.md).
+- The 597 x 336 mm in the panel TCON's EDID was a template value, not the glass size ([panel-edid.md](panel-edid.md), #3).
 **Datasheet NOT obtained.** Only reseller/database listings read. Panelook is behind a slider CAPTCHA
 (playwrong fetch fails; alt host `huasun.panelook.com` has a bad cert). alldatasheet.com has a "LTM270FL01"
 PDF entry but it is a Samsung "PRODUCT SELECTION GUIDE" (28 pp, 3.3 MB), not the panel spec; PDF not fetched.
