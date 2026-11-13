@@ -8,6 +8,13 @@
 
 Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits a 594 MHz VIC 97 DTD1 (ab8c4c9, not flashed); decided to go back to the vendor DTD1 3840x2160@59.982, 533.12 MHz and drop VIC 97 (#26, 2026-11-07).
 
+## Current: panel size + primaries from the datasheet (2026-11-13, #3, branch `wb-p14ui-panel`)
+- Panel = Innolux M280DCA-E3B rev C1 (label photo, Dan 2026-11-13): 28.0", active 620.928 x 341.28 mm (`docs/monitors/panel-innolux-m280dca-e3b.md`).
+- The 597 x 336 mm (27") size in every EDID below was **ours and wrong**: copied from the panel TCON's template EDID (`docs/monitors/panel-edid.md`) and a glass measurement (336 mm) that does not match the datasheet.
+- Now (`scripts/make_edid.py`, all 3 ports, all serials): DTD image size 621 x 341 mm, base max image 62 x 34 cm; primaries from datasheet 5.2 typical R 0.678/0.312 G 0.267/0.617 B 0.146/0.061 W 0.313/0.329 (bytes `b4 a5 ad 4f 44 9e 25 0f 50 54`); sRGB-default feature bit cleared (`0x3B` DP / `0x2B` HDMI), since the primaries are not sRGB.
+- Everything else byte-identical: 20 bytes differ per EDID (0x15-0x16 size, 0x18 features, 0x19-0x1F chroma, 2 per DTD x 4, 2 checksums). `edid-decode -c` PASS, same warnings as before.
+- Sections below are history: their size and sRGB statements are superseded.
+
 ## Files
 - Builder: `scripts/make_edid.py` (stdlib; runs `edid-decode -c` on its output)
 - EDIDs: `~/vendors/realtek/analysis/edid/awto-dp.bin`, `awto-hdmi.bin` (256 B each)
@@ -127,9 +134,7 @@ Pre: the DDC bus number changes across reboots; resolve it from `ddcutil detect 
 - Last resort: full 1 MiB re-flash from `dumps/jxc-4k-flash-bus20.bin` with RTDTool / `rtd-2660` flow.
 
 ## Size measurement + which unit is flashed (2026-11-04)
-- Active-area height measured on the glass = 336 mm, ±2-3 mm (actual lit pixels). 333-339 all = 27.0" real 16:9
-  (not 28.0"=350, not 23.8"=296). EDID size field is cm-granular (59x33 cm) so ±3mm doesn't change it. 597x336 stands.
-  Closest catalogued panel by size: Samsung LTM270FL01 596.16x335.34 mm (PLS/eDP) — within tolerance, and now consistent with the IPS/PLS visual confirm.
+- Superseded 2026-11-13: the 336 mm glass measurement and the 27" / LTM270FL01 conclusion were wrong; the panel is the 28" Innolux M280DCA-E3B (341.28 mm active height). See "Current" at the top.
 - All three units flashed to AWT:awto-mon (IPS/sRGB build), each a distinct serial. Bus numbers shift on
   re-enumeration — map by DRM connector, not bus. Mapping at 2026-11-04T13:18+1100:
 
