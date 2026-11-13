@@ -91,7 +91,6 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 | `awto-ddc-keys` | wb-p14keys | #85/#39 keys (keys5 on unit 2; keys6 uncommitted) |
 | `awto-ddc-audio` | wb-p14audio | #94 audio, unmerged |
 | (no worktree) | wb-p14pf | #83 pre-fill |
-| `awto-ddc-crt` | wb-no-crtmod0 | drops crt_mod0.c (library `%0` guard), to fold in |
 | older lines | wb-p14kvm, wb-p14net, wb-osd67(+net), wb-p14sw, wb-sc3, wb-keilcompat, wb-mixed*, wb-port*, wb-ddrinit, wb-msgtable, wb-p14new, wb-vfreq | merged or superseded; prune with `scripts/worktree_prune.py` / `branch_prune.py` after review (they archive images first) |
 
 ## 6. Runbook

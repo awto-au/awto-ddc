@@ -383,7 +383,7 @@ def main():
                     c = cls_of(s, rhs)
                     big = c in ("u32", "s32", "u16", "s16", "u8", "s8", None)
                     risk = "MED" if c in ("u32", "s32", "u16", "s16", None) else "LOW"
-                    add("DIV_VAR", s, ln, risk, "partly (crt_mod0: x%0=x; 8-bit DIV AB inline as Keil)", "library (crt)", None)
+                    add("DIV_VAR", s, ln, risk, "partly (library --keil-div: Keil y == 0 results; 8-bit DIV AB inline as Keil)", "library (crt)", None)
             # ---- pragmas handled elsewhere ----
         # ---- line-based classes ----
         for ln, line in enumerate(s.clean.split("\n"), 1):

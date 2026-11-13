@@ -290,16 +290,9 @@ def main() -> int:
                                                                          if (ROOT / "tmp/sdcc-port/pin_common.txt").exists() else "") if x)) else []),
                  *(["--resid-end", a.resid_end] if a.resid_end else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
-    # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    # crt_mod0 (x % 0 = x) is a Keil-register (--sdcccall 3) version only; / and memcpy come from the library (#204)
-    if T.SDCCCALL != "3":
-        sys.exit("fw_build: the C runtime overrides (fw/sdcc/crt_*.c) need AWTO_SDCCCALL=3 (Keil registers)")
-    crts = ("crt_mod0",)
-    for c in crts:
-        run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
-                     ROOT / f"fw/sdcc/{c}.c"])
+    # / % * memcpy: library only (#204); % by 0 = Keil's result via the _keil entries (--keil-div)
     for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm", ROOT / "fw/sdcc/a5_probe.asm",
-                  *(bank_dir / f"{c}.asm" for c in crts), ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
+                  ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr*.asm"))):
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])

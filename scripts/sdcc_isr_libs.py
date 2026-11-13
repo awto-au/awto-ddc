@@ -8,7 +8,7 @@ Why: __mullong/__divulong/... keep arg 2+ in fixed XDATA (`<fn>_PARM_n`) and sta
 between main's PARM store and the call corrupts main's result.
 Method:
 - ISR roots = chunks with `reti` (sdcc_bank.Chunk.isr); closure over lcall/ljmp = ISR-reachable chunks.
-- Helpers called there that have a library source (device/lib/<name>.c, or fw/sdcc/crt_mod0.c) and keep state
+- Helpers called there that have a library source (device/lib/<name>.c) and keep state
   are compiled with the library flags; every global they define gets `_isr` (`__mullong_isr_PARM_2`).
 - In ISR-reachable chunks only, those symbols are renamed. Chunks reachable from ISR AND main/address-taken
   are NOT rewritten and are reported (tmp/sdcc-port/isr_libs.json). Log: tmp/logs/sdcc_isr_libs.log
@@ -26,7 +26,7 @@ import sdcc_tools as T  # noqa: E402
 
 ROOT = repo_root()
 LIBSRC = T.LIBSRC
-OURS = {"__modulong": "fw/sdcc/crt_mod0.c", "__moduint": "fw/sdcc/crt_mod0.c"}   # our overrides of lib symbols
+OURS = {}   # our overrides of lib symbols (none since #204)
 # mcs51-large Makefile: CFLAGS + MODELFLAGS + --opt-code-speed
 LIBFLAGS = ["-mmcs51", "--model-large", "--std-c23", "--opt-code-speed", *T.CFLAGS_EXTRA]
 CC_TIMEOUT = 60           # one tiny lib file compiles in < 2 s; stall = broken input
