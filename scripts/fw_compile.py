@@ -170,7 +170,8 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     if awto_alias_header():
         cmd.append(f"-Wp-include,{awto_alias_header()}")
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
-    cmd += [f"-I{d}" for d in our_dirs()]                     # fw/<subsystem>/*.h (#196)
+    cmd += [f"-I{d}" for d in our_dirs() if any(d.glob("*.h"))]   # fw/<subsystem>/*.h (#196); header dirs only: sdcc 440cfd2
+                                                              # crashes on a cpp line > 4 KB (SDCCutil.c cmd[4096])
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
     cmd += FILE_FLAGS.get(c.name, [])
