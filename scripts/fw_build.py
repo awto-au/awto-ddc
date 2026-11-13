@@ -298,7 +298,7 @@ def main() -> int:
     for c in crts:
         run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])
-    for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
+    for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm", ROOT / "fw/sdcc/a5_probe.asm",
                   *(bank_dir / f"{c}.asm" for c in crts), ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr*.asm"))):
         (bank_dir / extra.name).write_text(extra.read_text())

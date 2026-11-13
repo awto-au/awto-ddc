@@ -23,7 +23,7 @@ TESTCMD_OFF = 0x28
 sys.path.insert(0, str(HERE))
 from rtd_proto import OSD_EVENTS as EVENTS, event_cmd, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20,
-            "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23, "demo-log": 0x3A, "fff4-probe": 0x35,
+            "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23, "demo-log": 0x3A, "fff4-probe": 0x35, "a5-probe": 0x21,
             "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30, "defaults": 0x40,
             "keytest": 0x41, "keytest-off": 0x42, "gpio": 0x43, "gpio-off": 0x44, "probe": 0x45, "probe-off": 0x46, "scale1": 0x4A, "scale2": 0x4B, "scroll": 0x47, "scroll-reset": 0x48,
             # diagnostic-screen font n (osd_font_load index): 0x60 + n; probe-N = limit probe with N numbered lines (0x80 + N)

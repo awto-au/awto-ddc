@@ -95,6 +95,35 @@ static void AwtoFff4Probe(void)
     g_pucAwtoFff4Probe[6] = AWTO_FFF4_DONE;
 }
 
+// Reserved opcode 0xA5 on the DW8051 (fw/sdcc/a5_probe.asm): 4 cases x 20 B capture + the two bytes DPTR0 / DPTR1 point at
+#define AWTO_TC_A5_PROBE                        0x21
+#define AWTO_A5_MARK0                           80      // a5_probe.asm MARK0 / MARK1
+#define AWTO_A5_VAL0                            0xC0
+#define AWTO_A5_VAL1                            0xC1
+__xdata BYTE g_pucAwtoA5Probe[AWTO_A5_MARK0 + 2];
+extern void AwtoA5Run0(void);
+extern void AwtoA5Run1(void);
+extern void AwtoA5Run2(void);
+extern void AwtoA5Run3(void);
+
+static void AwtoA5Probe(void)
+{
+    BYTE ucI;
+
+    for(ucI = 0; ucI < AWTO_A5_MARK0; ucI++)
+    {
+        g_pucAwtoA5Probe[ucI] = 0;
+    }
+    g_pucAwtoA5Probe[AWTO_A5_MARK0] = AWTO_A5_VAL0;
+    g_pucAwtoA5Probe[AWTO_A5_MARK0 + 1] = AWTO_A5_VAL1;
+    EA = 0;
+    AwtoA5Run0();
+    AwtoA5Run1();
+    AwtoA5Run2();
+    AwtoA5Run3();
+    EA = 1;
+}
+
 static void AwtoDemoLog(void)                   // each main pass while lines are left
 {
     if((s_ucAwtoDemoN == 0) || ((unsigned int)((WORD)AwtoMs() - s_usAwtoDemoAt) < AWTO_DEMO_MS))
@@ -285,6 +314,10 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd == AWTO_TC_MEM_FRAME) || (ucCmd == AWTO_TC_MEM_SDK))   // #165 frame buffer forced / SDK choice
     {
         AwtoMemForce(ucCmd == AWTO_TC_MEM_FRAME);
+    }
+    else if(ucCmd == AWTO_TC_A5_PROBE)                  // reserved opcode 0xA5 (a5_probe.asm)
+    {
+        AwtoA5Probe();
     }
     else if(ucCmd == AWTO_TC_FFF4_PROBE)                // FFF4 vs direct scaler access
     {
