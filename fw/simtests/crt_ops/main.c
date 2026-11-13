@@ -1,4 +1,4 @@
-/* % and / written as C operators (compiler-generated helper calls) through fw/sdcc/crt_mod0.c and crt_divulong.c at the
+/* % and / written as C operators (compiler-generated helper calls) through fw/sdcc/crt_mod0.c (%) and the library (/) at the
  * current AWTO_SDCCCALL level (0/1/2): unsigned + signed 16/32-bit, * too (library), edge cases, divisor 0, constant divisors.
  * Vectors: scripts/crt_ops_vec.py -> vec.h. Self-checking: bad != 0 hangs before the sentinel (harness: TIMEOUT). Operands volatile. */
 #include "sim.h"

@@ -33,7 +33,7 @@
   - `ScalerTimerPollingFlagProc(n)` and `ScalerTimerWaitForEvent` use `<=` bounds, so they run n+1 ticks.
   - The wait-event bound is 91 ticks; the poll bound is n+1 ticks.
 - **Dahua firmware RE.** I found no delay value in the code whose cited source is the Dahua firmware. The only Dahua-derived numbers in the scope are panel timing registers.
-- **Not delays.** The djnz loops in `crt_xinit.asm` and `crt_divulong.c` are data-copy loops.
+- **Not delays.** The djnz loops in `crt_xinit.asm` are data-copy loops.
 
 Abbreviations in the table:
 - **SDK-lit** = a literal in Realtek source with no stated reason.

@@ -241,7 +241,7 @@ def parse_args(argv=None):
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--xdata-floor", type=int, default=XDATA_FLOOR, help="free XDATA required after placement (opt-in "
                     "variant builds: 0 = must fit only)")
-    ap.add_argument("--resid-end", default="0xccc", help="passed to sdcc_bank: common bytes kept for vectors/library before "
+    ap.add_argument("--resid-end", default="0xcec", help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
     if a.layout and Path(os.path.normpath(ROOT / a.layout)).is_relative_to(ROOT / "tmp"):
@@ -291,10 +291,10 @@ def main() -> int:
                  *(["--resid-end", a.resid_end] if a.resid_end else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # C runtime overrides (lib % never returns on divisor 0): compile to asm, linked ahead of mcs51.lib
-    # crt_mod0/crt_divulong/crt_memcpy are Keil-register (--sdcccall 3) versions only; the level-0 versions are deleted (awto-sdcc#7 C5)
+    # crt_mod0 (x % 0 = x) is a Keil-register (--sdcccall 3) version only; / and memcpy come from the library (#204)
     if T.SDCCCALL != "3":
         sys.exit("fw_build: the C runtime overrides (fw/sdcc/crt_*.c) need AWTO_SDCCCALL=3 (Keil registers)")
-    crts = ("crt_mod0", "crt_divulong", "crt_memcpy")
+    crts = ("crt_mod0",)
     for c in crts:
         run("bank", [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "-S", "-o", bank_dir / f"{c}.asm",
                      ROOT / f"fw/sdcc/{c}.c"])
