@@ -165,5 +165,5 @@ Rollback first: reflash `fw/images/AWT26110002-wb-p14swap10-be.bin` (or the tmp/
 
 ## Unit 3 ear test, 2026-11-13 (wb-p14ui-rotdef1, HDMI D2 = host Intel HDMI-A-2 -> ALSA PCH device 3, volume 100 %)
 - `./dev.py sound-test --unit 3 --freqs 200,1000,4000` (3 s per tone, 3 s between steps); every step + tone line came on the console; aplay rc 0 x 18.
-- Times (AEST, +11:00 local): step 1 13:37:30-13:37:39, step 2 13:37:42-13:37:51, step 3 13:37:54-13:38:03, step 4 13:38:06-13:38:16, step 5 13:38:19-13:38:28, step 6 13:38:31-13:38:40; tones 200 / 1000 / 4000 Hz at +0 / +3 / +6 s of each step.
+- Times (+11:00): step 1 13:37:30-13:37:39, step 2 13:37:42-13:37:51, step 3 13:37:54-13:38:03, step 4 13:38:06-13:38:16, step 5 13:38:19-13:38:28, step 6 13:38:31-13:38:40; tones 200 / 1000 / 4000 Hz at +0 / +3 / +6 s of each step.
 - Heard per step: Dan's answer pending (#94); it picks `AWTO_AUDIO_GAIN_MAX` (steps 4-6) and whether P7.4 gates the speaker (step 2).
