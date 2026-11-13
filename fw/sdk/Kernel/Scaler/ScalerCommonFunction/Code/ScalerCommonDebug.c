@@ -476,7 +476,12 @@ void ScalerDebugIntProc_EXINT1(void)
                 }
 #endif
 
-#include "awto_dbgisr.inc"
+#if(_AWTO_DBGISR == _ON)
+                if(AwtoDbgIsrCmd_EXINT1() == _TRUE)
+                {
+                    return;
+                }
+#endif
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
                 d_isr_g_bRunCommand = _TRUE;
             }

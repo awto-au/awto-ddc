@@ -8,7 +8,7 @@ usage:
   ddcnet.py svc --ip ADDR info | get ID.. | set ID=V.. | msgs [--follow]         UDP service client (through the TAP)
 - Transport B `dbg` (default): debug slave 0x35 cmd 0x3D, ISR-answered, 25 B reply. Transport A `ddcci`: DDC/CI 0x37 op D0/D1.
 - --sim BIN: fw_sim (MAP beside BIN); B through fw_sim.SimBus, A through SimDdcci (IIC_1 engine model, FE86..).
-- Firmware side: fw/net/net.c + fw/sdcc/awto_dbgisr.inc + fw/ddcci/ddcci.c (wb-p14net).
+- Firmware side: fw/net/net.c + fw/diag/dbgisr.c + fw/ddcci/ddcci.c (wb-p14net).
 Log: ./tmp/logs/ddcnet.log (decoded, one line per step / exchange run), ./tmp/logs/ddcnet.raw.log (bytes)
 """
 from __future__ import annotations

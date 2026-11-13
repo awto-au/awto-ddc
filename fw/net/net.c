@@ -1,7 +1,7 @@
 #include "UserCommonInclude.h"
 
 // #80 IP over DDC, main-loop side (docs/ip-over-ddc.md).
-// Link: g_stAwtoNet rings; Transport B lives in the EXINT1 ISR (awto_dbgisr.inc), Transport A = AwtoNetXchgA (DDC/CI op D0).
+// Link: g_stAwtoNet rings; Transport B lives in the EXINT1 ISR (fw/diag/dbgisr.c), Transport A = AwtoNetXchgA (DDC/CI op D0).
 // Stack: SLIP-framed Ethernet frames; config ethertype 0x88B5 (host sets MAC + IP), ARP, IPv4 ICMP echo, UDP 7 echo,
 // UDP AWTO_NET_PORT service (settings by registry id #67, message ring #56). One frame buffer: RX decode -> reply -> TX encode.
 #if(_AWTO_NET == _ON)

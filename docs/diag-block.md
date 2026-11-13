@@ -53,7 +53,7 @@
 - Cycle model of `delay_cal_check.py` runs ~20 % fast against this (N=26 loop: 81 cycles = 3.7 us model, 5.5 us measured with ISR).
 
 ## Debug slave 0x35 read protocol (#38)
-- Reference: `scripts/dbg_xdata.py` (host), `fw/sdcc/awto_dbgisr.inc` (ISR block, `#include`d in `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.
+- Reference: `scripts/dbg_xdata.py` (host), `fw/diag/dbgisr.c` (`AwtoDbgIsrCmd_EXINT1`, called from `ScalerDebugIntProc_EXINT1`), switch `_AWTO_DBGISR` in `RL6449_Project.h`.
 - Cause of the old design's 1 MHz failures: the ISR only latched the command and held SCL (FE66 bit0); `ScalerDebug()` loaded FF26 one main-loop pass later (#12).
 - Now the ISR, at the STOP of the command write, resets the IIC data FIFO (FF2A bit6), loads FF26 and releases SCL, with no main-loop step.
 - Byte read (all versions): write `0x01 [hi]` (main loop, staging), write `0x3A [lo]`, read sub `0x08` x1.

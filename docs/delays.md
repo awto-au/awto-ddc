@@ -120,9 +120,9 @@ Abbreviations in the table:
 | RL6449_Series_DP_INT.c:994 `WDTimerEventProc_WDINT` | AUX | 150 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
 | ScalerDPRx1_INT_SeptPhy.c:1170,1196,1819 | Tp2 check, FLD band | 2x25 us + 5 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
 | ScalerCommonSync.c:3669,3712 `DdcDetect_EXINT1` | DDC detect | 2 x 30 us (60 us); debounce loop `g_usDDCDebounceCnt` (:3559) | SDK | SDK comment "Debounce 300us" | 300 us | UNKNOWN (count is a runtime value) | continues |
-| `awto_dbgisr.inc:21,142`; DELAY_30US_EXINT calls | debug slave reply tail | 2 x 30 us | our code | copied from the SDK debug handler -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
+| `fw/diag/dbgisr.c:21,142`; DELAY_30US_EXINT calls | debug slave reply tail | 2 x 30 us | our code | copied from the SDK debug handler -> UNKNOWN | UNKNOWN | UNKNOWN | continues |
 | ScalerCommonDebug.c:213-606 | debug DDC out-FIFO loops | bounded by `_DATA_OUT_COUNT` 5 passes | `ScalerCommonDebug.c:27` | SDK | n/a | n/a | exits |
-| ScalerCommonDebug.c:403; awto_dbgisr.inc:129 | IIC status wait inside the interrupt | no time bound (status bit only) | SDK / ours | n/a | n/a | n/a | unbounded in principle |
+| ScalerCommonDebug.c:403; fw/diag/dbgisr.c:129 | IIC status wait inside the interrupt | no time bound (status bit only) | SDK / ours | n/a | n/a | n/a | unbounded in principle |
 | **OTHER SDK WAITS (linked)** | | | | | | | |
 | ScalerAudio.c:770-773 | DVC mute: `DelayXms(1)` loop until gain done | bound 400 | `_DVC_VOLUME_MUTE_TIMER` `RL6449_Project_Default.h:1985` | SDK default | UNKNOWN | UNKNOWN | continues |
 | RL6449_Series_Audio.c:837,1384 and ScalerAudio_SeptPhy.c:1358 | audio PLL | 2 ms, comment "Delay 2000us" | SDK | SDK comment | 2 ms | 1.00 | continues |
@@ -230,7 +230,7 @@ Abbreviations in the table:
   - `AWTO_PS_TMDS_HOLD_MS` 50
   - `AWTO_MEAS_PERIOD_MS` 25
   - `osd_timeout` default 30 s
-  - the `DELAY_30US_EXINT` steps in `awto_dbgisr.inc`
+  - the `DELAY_30US_EXINT` steps in `fw/diag/dbgisr.c`
 - **SDK literals with no datasheet or spec cited**, effectively all of these:
   - the `ScalerTimerDelayXms` constants (2 / 3 / 6 / 10 / 20 / 30 / 45 / 130 ms)
   - the poll bounds (10 / 20 / 40 / 45 / 50 / 100 / 130 / 180 ms)

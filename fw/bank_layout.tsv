@@ -1104,6 +1104,7 @@ stub	_AwtoKeyConSet	C	0x3ca8	8
 stub	_AwtoConLost	C	0x3cb0	8
 stub	_AwtoNvEv	C	0x3cb8	8
 stub	_AwtoPortCable	C	0x3cc0	8
+stub	_AwtoDbgIsrCmd_EXINT1	C	0x3cc8	8
 const	___str_144	C	0x3cd4	12
 const	___str_15	C	0x3ce0	8
 const	___str_140	C	0x3ce8	12
@@ -1453,7 +1454,7 @@ fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260
 fn	_set_ap_mute	1	0x9d38	52
 fn	_AwtoNvGroup	1	0x9d6c	56
-const	_set_ap_rotate_tFlipToSdk_10000_1389	1	0x9da4	8
+const	_set_ap_rotate_tFlipToSdk_10000_1390	1	0x9da4	8
 fn	_UserAdjustAudioVolumeMapping	1	0x9dac	28
 fn	_UserAdjustBrightness	1	0x9dc8	64
 fn	_UserAdjustContrast	1	0x9e08	496
@@ -1821,7 +1822,7 @@ fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
 fn	_AwtoMsgV	4	0xaef8	252
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1370	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1371	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -3318,3 +3319,4 @@ fn	_ScalerFRCCheckDoubleFrameBuffer	13	0x19a8	616
 fn	_ScalerFRCIVS2DVSDelayMargin	13	0x1c10	12
 fn	_ScalerRotationCheckStatus	13	0x1c1c	44
 fn	_ScalerRotationCheckVideoCompensation	13	0x1c48	96
+fn	_AwtoDbgIsrCmd_EXINT1	13	0x1ca8	492

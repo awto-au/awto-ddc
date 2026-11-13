@@ -563,6 +563,9 @@ extern void AwtoDiagT3Mark(unsigned char ucEnd);
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC __data FIFO fill, as the SDK 0xBB reply
+extern bit AwtoDbgIsrCmd_EXINT1(void);                          // fw/diag/dbgisr.c: debug-slave commands answered in the EXINT1 ISR
+extern unsigned char isr_g_pucDdcciData[];                      // ScalerCommonDebug.c (no SDK header declares them)
+extern unsigned char isr_g_ucDdcciCommandNumber;
 // Debug slave 0x35 on the DDC of the active port, not fixed _PCB_DEBUG_DDC (#28): D1 -> DDC1 (DP AUX), D2 -> DDC2, D3 -> DDC3.
 // SCL hold/release of the debug protocol follow FF22 (fw/diag/dbgport.c).
 #ifndef _AWTO_DBG_FOLLOW

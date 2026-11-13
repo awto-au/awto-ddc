@@ -258,7 +258,7 @@ class FlashDev(Dev):
 
 
 class IicSlave(Dev):
-    """Debug slave 0x35 (SDK ScalerDebugIntProc_EXINT1 + fw/sdcc/awto_dbgisr.inc) on the DDC channel FF22[2:0] selects.
+    """Debug slave 0x35 (SDK ScalerDebugIntProc_EXINT1 + fw/diag/dbgisr.c) on the DDC channel FF22[2:0] selects.
     FF24 SUB_IN, FF25 DATA_IN (rx FIFO head), FF26 DATA_OUT (tx FIFO), FF27 STATUS (bit1 SUB_I, bit2 D_IN_I, bit4 stop;
     write 0 clears), FF29 STATUS2 (bit1 rx empty, bit2 tx full), FF2A IRQ_CONTROL2 (bit6 reset FIFO), DDCn_CONTROL_2 bit0
     SCL hold (SCL: FF22 channel -> register, regdb). The host bus sits on one channel (SimBus ddc): FF22 elsewhere = NAK."""

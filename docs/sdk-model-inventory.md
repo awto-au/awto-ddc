@@ -160,7 +160,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 2 | RL6449_Series_Mcu.c | `_AWTO_DDCRAM_DEFINER`; `fw/diag/dbgport.c` before `ScalerMcuDdcciSwitchPort` | DDC/CI | #28 |
 | 3 | Pcb_List.h, User_Pcb_Include.h, User_Panel_List.h, User_Panel_Include.h | our board id 0x4F, panel id 0x3D includes | board/panel | #7 |
 | 4 | ScalerPLL.c (3), ScalerMDomain.c (14 `AwtoMeasEvent`), ScalerMeasure.c, SysTimer.c T2 ISR `AWTO_MEAS_T2ISR` | 4K60 measurement ring; DHtotal debounce forced one pass; last-line finetune off | measure | #26 |
-| 5 | ScalerCommonDebug.c | `AwtoMsg.h` include; `awto_dbgisr.inc` in EXINT1 ISR | debug link | #26 #38 |
+| 5 | ScalerCommonDebug.c | `AwtoMsg.h` include; `AwtoDbgIsrCmd_EXINT1` (fw/diag/dbgisr.c) call in EXINT1 ISR | debug link | #26 #38 |
 | 6 | SysMain.c (before `main`) | `awto_led`, `awto_diag`, `awto_sw`, `awto_sync`, `awto_meas4k`, `awto_loopsplit`, `awto_loopprof`, `awto_wdt` | all | various |
 | 7 | SysMain.c `SysMainSystemInitial` / `main` | `AwtoDiagInit`, `AwtoMeasInit`, `AwtoSyncInit`, `AwtoWdtInit`; stage 3, 4; **`AwtoPanelVddEarly()`** (after stage 4) | boot/panel | #23 #63 #139 |
 | 8 | SysMain.c main loop | `AwtoSwPoll`, `AwtoDiagMainPass`, `AwtoGpioPoll`, `AwtoDiagTestCmd`, `AWTO_SW_FAST_POLL`, `AWTO_SW_POLL_MARKS` (x2), `AWTO_SET_LOOP`, DDCCI poll, `AWTO_NET_POLL`, `AWTO_LP(0..10)`, `AWTO_SW_MARK(0..10)` | poll sites | #60 #67 #75 #80 |
