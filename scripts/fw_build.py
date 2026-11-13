@@ -241,7 +241,7 @@ def parse_args(argv=None):
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--xdata-floor", type=int, default=XDATA_FLOOR, help="free XDATA required after placement (opt-in "
                     "variant builds: 0 = must fit only)")
-    ap.add_argument("--resid-end", default="0xcec", help="passed to sdcc_bank: common bytes kept for vectors/library before "
+    ap.add_argument("--resid-end", default="0xd1c", help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
     if a.layout and Path(os.path.normpath(ROOT / a.layout)).is_relative_to(ROOT / "tmp"):

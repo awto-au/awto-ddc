@@ -321,7 +321,11 @@ void AwtoNvLoad(void)
 
     for(ucK = 0; (ucK < AWTO_NV_AUX_ITEMS) && (bOk == _TRUE); ucK++)
     {
-        bOk = UserCommonFlashLoadItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + ucK), pData, 14);
+        // a bit result tested, not assigned: `_Bool = bit-returning call` compiled to bOk = 0 (aux never loaded, settings lost at boot)
+        if(UserCommonFlashLoadItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + ucK), pData, 14) == _FALSE)
+        {
+            bOk = _FALSE;
+        }
         memcpy(pucAux + ucK * 14, pData, ((AWTO_SET_AUX_MAX - ucK * 14) < 14) ? (AWTO_SET_AUX_MAX - ucK * 14) : 14);   // buffer = AWTO_SET_AUX_MAX B (#165)
     }
     s_ucNvSelPort = UserCommonNVRamGetSystemData(_SEARCH_PORT);
