@@ -1,6 +1,8 @@
 # Boards: main (scaler) board and power supply (photos 2026-11-13)
 
-- Source: 25 photos by Dan, 2026-11-13 08:45–10:18 (+11:00). Originals: `docs/photos/Photos-1-001.zip` (untracked, 27 MB); reduced copies used here: `photos/` (`scripts/doc_photos.py`).
+- Source: 25 photos by Dan, 2026-11-13 08:45–10:18 (+11:00).
+  - Full size: [photos/full/](photos/full/) (all 25, pixels unchanged, GPS EXIF removed: `scripts/doc_photos.py --full`).
+  - Reduced copies used inline here: `photos/` (`scripts/doc_photos.py`); full-size source per reduced copy in [Photo index](#photo-index).
 - Unit photographed: not recorded [?].
 - Tags: [photo] = read clearly; [photo?] = partly readable, best guess; not visible = says so.
 - Not photographed yet: scaler and flash (under the heatsink), keypad board, enclosure label, PSU IC101 marking, a sharp crystal shot.
@@ -32,7 +34,7 @@
 |---|---|---|
 | keypad, 12-pin | IR_CTRL, 5V, POWER, LEDR, LEDG, GND, LEFT, RIGHT, AUTO, MENU, UP, DOWN | keypad board (ribbon fitted); IR comes in here (no IR receiver on the main board) ([photo](photos/main-keypad-header.jpg)) |
 | aux, 4-pin | PWM1, SCL/PWM3, SDA/PWM5, 5V/GND | nothing plugged in |
-| speaker CN4, 4-pin | R−, R+, L+, L− | **no cable plugged in the photos**; no speakers in any photo ([photo](photos/main-speaker-header.jpg)) |
+| speaker CN4, 4-pin | R−, R+, L+, L− | speakers (fitted in the monitor, unplugged for the photos, Dan 2026-11-13) ([photo](photos/main-speaker-header.jpg)) |
 | backlight control, 6-pin | VCC, VCC, ADJ, EN, GND, GND | PSU CN102 (12 V in + BL enable/PWM) ([photo](photos/main-bl-header.jpg)) |
 | power pads | VCC, VCC, GND, GND | unpopulated (alternative power input) |
 | panel, 51-pin micro-coax | VCC ×~10, GND, TX0–TX7 (labelled TXn/En: V-by-One or eDP), AUX_P1/N1, HPD1, AUX_P2/N2, HPD2, VB1_SCL, VB1_SDA | panel ([photo](photos/main-panel-connector.jpg)) |
@@ -79,5 +81,24 @@
 | panel M280DCA-E3B rev C1, eDP, 12 V | confirmed: label, sticker `EDP` / `屏12V`, jumper on 12V |
 | speaker amp on P7.4 (enable) / P7.3 (mute), fed from aout 116/117 ([audio.md](../audio.md)) | traces under the heatsink; consistent with the PAM8006A (stereo in, shutdown and mute pins) |
 | P4.5 (pin 113) = jack detect | no jack fitted; possible empty jack footprint by DP2 |
-| speakers fitted | none in the photos and CN4 unplugged, yet unit 3 plays sound (2026-11-13): photographed unit or speaker cabling differs [?] |
+| speakers fitted | yes (Dan 2026-11-13): fitted, just not in the photos; CN4 unplugged for the photos |
 | backlight driver on the main board | no: main-board boost section unpopulated; OB3363HP on the PSU drives 2 strings |
+
+## Photo index
+| full size | reduced copy |
+|---|---|
+| [20261113_084510](photos/full/20261113_084510.jpg) | main-top |
+| [20261113_084706](photos/full/20261113_084706.jpg) | main-bottom |
+| [20261113_084555](photos/full/20261113_084555.jpg) | main-amp-pam8006a |
+| [20261113_084709](photos/full/20261113_084709.jpg) | main-sticker |
+| [20261113_084731](photos/full/20261113_084731.jpg) | main-keypad-header |
+| [20261113_084737](photos/full/20261113_084737.jpg) | main-panel-connector |
+| [20261113_084745](photos/full/20261113_084745.jpg) | main-speaker-header |
+| [20261113_084758](photos/full/20261113_084758.jpg) | main-bl-header |
+| [20261113_084514](photos/full/20261113_084514.jpg) | main-io-empty-footprint |
+| [20261113_085447](photos/full/20261113_085447.jpg) | panel-label |
+| [20261113_101631](photos/full/20261113_101631.jpg) | psu-top |
+| [20261113_101529](photos/full/20261113_101529.jpg) | psu-bottom |
+| [20261113_101545](photos/full/20261113_101545.jpg) | psu-connectors |
+| [20261113_101750](photos/full/20261113_101750.jpg) | psu-led-driver-ob3363 |
+| 084508, 084522, 084528, 084609, 084633, 101533, 101537, 101558, 101603, 101626, 101800 | none (other angles; all in [photos/full/](photos/full/)) |

@@ -2,7 +2,7 @@
 
 Status: evidence review, 2026-11-10. This report distinguishes a product/platform
 match from an exact PCB match.
-- 2026-11-13: boards photographed ([boards.md](boards.md)). Main board sticker `N16UPH0WN2P1200A0001`, PSU `PL3461` / `900-01-00284`; no JXC / Dahua / LM27-F410 marking; amp PAM8006A; no headphone jack fitted. The LM27-F410 match stays unconfirmed.
+- 2026-11-13: boards photographed ([boards.md](boards.md)). Main board sticker `N16UPH0WN2P1200A0001`, PSU `PL3461` / `900-01-00284`; no JXC / Dahua / LM27-F410 marking; amp PAM8006A; no headphone jack fitted; speakers are fitted (Dan, 2026-11-13; unplugged for the photos), so the "no fitted speakers" points below are superseded. The LM27-F410 match stays unconfirmed.
 
 ## Conclusion
 
