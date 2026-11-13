@@ -124,8 +124,8 @@
 //--------------------------------------------------
 // Macro of DP Rx Interlace info
 //--------------------------------------------------
-#define GET_DP_RX1_INTERLACE_VTOTAL_NUMBER()            (d_g_bDpRx1InterlaceVtotalNum)
-#define SET_DP_RX1_INTERLACE_VTOTAL_NUMBER(x)           (d_g_bDpRx1InterlaceVtotalNum = (x))
+#define GET_DP_RX1_INTERLACE_VTOTAL_NUMBER()            (g_bDpRx1InterlaceVtotalNum)
+#define SET_DP_RX1_INTERLACE_VTOTAL_NUMBER(x)           (g_bDpRx1InterlaceVtotalNum = (x))
 
 //--------------------------------------------------
 // Macro of DP Mst to sst V-Front Porch Setting
@@ -176,7 +176,7 @@ extern WORD g_usDpRx1MstToSstVfrontporch;
 
 extern BYTE g_ucDpRx1MSAFailMacRsetCount;
 extern bit d_g_bDpRx1SourceRDErrorCount;
-extern bit d_g_bDpRx1InterlaceVtotalNum;
+extern __xdata _Bool g_bDpRx1InterlaceVtotalNum;
 extern bit d_g_bDpRx1Tp1Initial;
 extern BYTE g_ucDpRx1LTPatternSet;
 

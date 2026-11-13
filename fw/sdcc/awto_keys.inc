@@ -93,7 +93,7 @@ static void AwtoKeyNoOsd(BYTE ucK)              // nothing open, a picture: UP /
 static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 {
     BYTE ucMode;
-    bit d_bRep = ((ucEv & 0x7F) == AWTO_KEV_REPEAT);
+    _Bool bRep = ((ucEv & 0x7F) == AWTO_KEV_REPEAT);
 
     if((ucEv & 0x7F) == AWTO_KEV_RELEASE)
     {
@@ -101,7 +101,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     }
     if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
     {
-        if(d_bRep == 0)                           // power saving: a key press (front or injected) wakes and is used up (#85)
+        if(bRep == 0)                           // power saving: a key press (front or injected) wakes and is used up (#85)
         {
             SET_FORCE_POW_SAV_STATUS(_FALSE);
             if((ucEv & 0x7F) == AWTO_KEV_COMBO)
@@ -139,7 +139,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         AwtoKeyTestSet(2);                      // UP+DOWN: diagnostic console
         return;
     }
-    if(AWTO_KEY_TEST_ON() && (ucK == AWTO_K_SOURCE) && (d_bRep == 0) && (g_ucAwtoConAuto != 0) && (g_stAwtoGpio.ucOpen != AWTO_CON_GPIO))
+    if(AWTO_KEY_TEST_ON() && (ucK == AWTO_K_SOURCE) && (bRep == 0) && (g_ucAwtoConAuto != 0) && (g_stAwtoGpio.ucOpen != AWTO_CON_GPIO))
     {                                           // #132: a console that opened by itself (settled episode) never traps SOURCE:
         AwtoKeyTestSet(0);                      // it closes, the selector opens below (its log pane shows the same lines)
         AwtoSyncPush(AWTO_SYNC_EV_SEL, AWTO_SEL_EV_CON_CLOSE, 0xFF);
@@ -162,11 +162,11 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 #ifdef _AWTO_NEW_SETTINGS
     if(menu_active() != 0)                      // awto menu: UP / DOWN repeat; SOURCE closes it from any page (#132, save rule of menu_close)
     {
-        if((ucK == AWTO_K_SOURCE) && (d_bRep == 0))
+        if((ucK == AWTO_K_SOURCE) && (bRep == 0))
         {
             menu_close();
         }
-        else if((ucK != AWTO_K_SOURCE) && ((d_bRep == 0) || (ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN)))
+        else if((ucK != AWTO_K_SOURCE) && ((bRep == 0) || (ucK == AWTO_K_UP) || (ucK == AWTO_K_DOWN)))
         {
             menu_key(ucK);
         }
@@ -175,7 +175,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 #endif
     if((GET_OSD_STATE() == _MENU_HOTKEY_BACKLIGHT) && (ucK != AWTO_K_UP) && (ucK != AWTO_K_DOWN))
     {
-        if(d_bRep != 0)
+        if(bRep != 0)
         {
             return;
         }
@@ -183,12 +183,12 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     }
     if(ucK == AWTO_K_SOURCE)                    // SOURCE: the input selector, with nothing open and the monitor on; in it: next item
     {
-        if((d_bRep == 0) && (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE))
+        if((bRep == 0) && (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE))
         {
             AwtoSourceKey(ucK);
             return;
         }
-        if((d_bRep == 0) && (GET_OSD_STATE() == _MENU_NONE) && (SysPowerGetPowerStatus() != _POWER_STATUS_OFF)
+        if((bRep == 0) && (GET_OSD_STATE() == _MENU_NONE) && (SysPowerGetPowerStatus() != _POWER_STATUS_OFF)
 #ifdef _AWTO_NEW_SETTINGS
            && (g_ucAwtoMenuOn == 0)
 #endif
@@ -202,7 +202,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 #ifdef _AWTO_NEW_SETTINGS
     if(((ucK == AWTO_K_MENU) || (ucK == AWTO_K_AUTO)) && (GET_OSD_STATE() == _MENU_NONE) && (GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE))
     {                                           // #132 nothing open: MENU = the awto menu, AUTO = auto source select
-        if((d_bRep == 0) && ((ucMode == _MODE_STATUS_ACTIVE) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT)))
+        if((bRep == 0) && ((ucMode == _MODE_STATUS_ACTIVE) || (ucMode == _MODE_STATUS_NOSIGNAL) || (ucMode == _MODE_STATUS_NOSUPPORT)))
         {
             if(ucK == AWTO_K_MENU)
             {
@@ -217,7 +217,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     }
 #endif
     // SDK OSD states: repeat only UP / DOWN with an SDK OSD other than the selector up (as the SDK's hot-key block)
-    if((d_bRep != 0) && ((GET_OSD_STATE() == _MENU_NONE) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
+    if((bRep != 0) && ((GET_OSD_STATE() == _MENU_NONE) || (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE) ||
                        ((ucK != AWTO_K_UP) && (ucK != AWTO_K_DOWN)) ||
                        ((ucMode != _MODE_STATUS_ACTIVE) && (ucMode != _MODE_STATUS_NOSUPPORT) &&
                         (ucMode != _MODE_STATUS_NOSIGNAL) && (ucMode != _MODE_STATUS_POWER_SAVING))))

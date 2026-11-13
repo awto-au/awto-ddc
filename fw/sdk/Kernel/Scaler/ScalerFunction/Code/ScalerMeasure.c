@@ -47,7 +47,7 @@ StructTimingInfo g_stSingleInputTimingData;
 #endif
 
 DWORD g_ulInputActiveRegionBackUp;
-bit d_g_bInputTimingDoubleCheck = _FALSE;
+__xdata _Bool g_bInputTimingDoubleCheck = _FALSE;
 
 #if((_MEASURE_ADJUSTED_IHF_SUPPORT == _ON) || (_MEASURE_ADJUSTED_IVF_SUPPORT == _ON))
 DWORD g_ulActiveRegionCount;

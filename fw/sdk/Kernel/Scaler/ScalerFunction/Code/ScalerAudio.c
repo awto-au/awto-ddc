@@ -46,7 +46,7 @@
 StructAudioDACInfo g_stAudioDACInfo;
 #endif
 
-bit d_g_bAudioDVCMuteCtrlStatus;
+__xdata _Bool g_bAudioDVCMuteCtrlStatus;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

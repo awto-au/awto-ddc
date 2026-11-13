@@ -67,7 +67,7 @@ EnumDDCCIDebugMode g_enumDDCCIDebugMode = _DEBUG_MODE;
 bit d_g_bDebugMessageEven = _FALSE;
 WORD g_usFilterPro;
 bit d_g_bFwHalt = _FALSE;
-bit d_g_bDebugMessageStart = _FALSE;
+__xdata _Bool g_bDebugMessageStart = _FALSE;
 BYTE idata g_pucDebugMessageBUF[4];
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
@@ -179,7 +179,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
         }
     }
 
-    d_g_bDebugMessageStart = 0;
+    g_bDebugMessageStart = 0;
     d_g_bFwHalt = 1;
 
     MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
@@ -295,16 +295,16 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                             MCU_FF26_IIC_DATA_OUT = ucCheckSum;
                         }
                         while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != g_pucDebugMessageBUF[0]) && ((ucCnt++) < _DATA_OUT_COUNT));
-                        d_g_bDebugMessageStart = 1;
+                        g_bDebugMessageStart = 1;
                     }
 
                     break;
 
                 case 0x2A: // Debug Message End
 
-                    if(d_g_bDebugMessageStart == _TRUE)
+                    if(g_bDebugMessageStart == _TRUE)
                     {
-                        d_g_bDebugMessageStart = 0; // Debug Message End
+                        g_bDebugMessageStart = 0; // Debug Message End
                         d_g_bFwHalt = 0;
                         do
                         {
@@ -366,7 +366,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
     }
     while((d_g_bFwHalt != 0) && (AwtoMsgWait() != 0)); /* awto: host-silence timeout of the debug wait (#56) */
 
-    d_g_bDebugMessageStart = 0;
+    g_bDebugMessageStart = 0;
     d_g_bFwHalt = 0;
 }
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
@@ -606,7 +606,7 @@ void ScalerDebug(void)
                         while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != 0x01) && ((ucCnt++) < _DATA_OUT_COUNT));
 
                         MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xDF;
-                        d_g_bDebugMessageStart = 0;
+                        g_bDebugMessageStart = 0;
                         d_g_bFwHalt = _FALSE;
                         d_g_bDebugMessageEven = 0;
                         break;

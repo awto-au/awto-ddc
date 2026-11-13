@@ -50,13 +50,13 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 BYTE xdata pData_EXINT[6];
-bit d_g_bPsWakeupHpd;
+__xdata _Bool g_bPsWakeupHpd;
 WORD g_usInputPixelClk;
 WORD g_usTmdsOffLineMeasureClk;
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
 BYTE g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE;
-bit d_g_bDpRx0NormalLTSetPhyFinish = _FALSE;
+__xdata _Bool g_bDpRx0NormalLTSetPhyFinish = _FALSE;
 bit d_g_bDpRx1NormalLTSetPhyFinish = _FALSE;
 
 #if(_D0_DP_EXIST == _ON)
@@ -68,18 +68,18 @@ bit g_bDpRx0HdcpCheckEnable;
 #if(_D1_DP_EXIST == _ON)
 bit d_g_bDpMSTRx1BackupLinkStatusFlg_INT;
 BYTE g_pucDpRx1LinkStatusBackup_INT[3];
-bit d_g_bDpRx1HdcpCheckEnable;
+__xdata _Bool g_bDpRx1HdcpCheckEnable;
 #endif
 
 #if(_DP_SUPPORT == _ON)
-bit d_g_bDpMstDCOffHPDToggleHoldFlag;
-bit d_g_bDpDCOffHPDToggleFlag;
+__xdata _Bool g_bDpMstDCOffHPDToggleHoldFlag;
+__xdata _Bool g_bDpDCOffHPDToggleFlag;
 StructDpCableStatus g_stDpCableStatus;
 #endif
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 
-bit d_g_bDpDCOffHPDHigh = 0;
+__xdata _Bool g_bDpDCOffHPDHigh = 0;
 BYTE g_ucDigitalSwitch;
 BYTE g_ucHDMIHotPlug;
 
@@ -124,7 +124,7 @@ StructDpAuxSetting g_stDpAuxSetting =
 };
 
 BYTE g_ucDpIrqTime_10us;
-bit d_g_bDpIllegalIdlePatternCheck = _FALSE;
+__xdata _Bool g_bDpIllegalIdlePatternCheck = _FALSE;
 
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
 volatile BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
@@ -168,7 +168,7 @@ bit g_bFREESYNCSPDInfoReceive;
 bit g_bFREESYNCGetIVFInfo;
 #endif
 
-bit d_g_bDigitalColorInfoChangeReset;
+__xdata _Bool g_bDigitalColorInfoChangeReset;
 
 #if(((_D0_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF)) || ((_HDMI_SUPPORT == _ON) && (_TMDS_PAGE2_COMBO_EXIST == _ON)))
 StructDigitalColorInfo g_stTMDSRx0ColorInfo;

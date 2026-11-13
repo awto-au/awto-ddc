@@ -1126,14 +1126,14 @@ BYTE UserCommonFlashCalculateCheckSumData(BYTE *pucData, BYTE ucLength)
     bit bTempCRC6 = 0;
     bit bTempCRC7 = 0;
 
-    bit d_bLastCRC0 = 0;
-    bit d_bLastCRC1 = 0;
-    bit d_bLastCRC2 = 0;
-    bit d_bLastCRC3 = 0;
-    bit d_bLastCRC4 = 0;
-    bit d_bLastCRC5 = 0;
-    bit d_bLastCRC6 = 0;
-    bit d_bLastCRC7 = 0;
+    _Bool bLastCRC0 = 0;
+    _Bool bLastCRC1 = 0;
+    _Bool bLastCRC2 = 0;
+    _Bool bLastCRC3 = 0;
+    _Bool bLastCRC4 = 0;
+    _Bool bLastCRC5 = 0;
+    _Bool bLastCRC6 = 0;
+    _Bool bLastCRC7 = 0;
 
     for(ucIndex = 0; ucIndex < ucLength; ucIndex++)
     {
@@ -1147,26 +1147,26 @@ BYTE UserCommonFlashCalculateCheckSumData(BYTE *pucData, BYTE ucLength)
         bDataBit6 = (bit)(ucData & _BIT6);
         bDataBit7 = (bit)(ucData & _BIT7);
 
-        bTempCRC0 = bDataBit7 ^ bDataBit6 ^ bDataBit0 ^ d_bLastCRC7 ^ d_bLastCRC6 ^ d_bLastCRC0;
-        bTempCRC1 = bDataBit6 ^ bDataBit1 ^ bDataBit0 ^ d_bLastCRC6 ^ d_bLastCRC1 ^ d_bLastCRC0;
-        bTempCRC2 = bDataBit6 ^ bDataBit2 ^ bDataBit1 ^ bDataBit0 ^ d_bLastCRC6 ^ d_bLastCRC2 ^ d_bLastCRC1 ^ d_bLastCRC0;
-        bTempCRC3 = bDataBit7 ^ bDataBit3 ^ bDataBit2 ^ bDataBit1 ^ d_bLastCRC7 ^ d_bLastCRC3 ^ d_bLastCRC2 ^ d_bLastCRC1;
-        bTempCRC4 = bDataBit4 ^ bDataBit3 ^ bDataBit2 ^ d_bLastCRC4 ^ d_bLastCRC3 ^ d_bLastCRC2;
-        bTempCRC5 = bDataBit5 ^ bDataBit4 ^ bDataBit3 ^ d_bLastCRC5 ^ d_bLastCRC4 ^ d_bLastCRC3;
-        bTempCRC6 = bDataBit6 ^ bDataBit5 ^ bDataBit4 ^ d_bLastCRC6 ^ d_bLastCRC5 ^ d_bLastCRC4;
-        bTempCRC7 = bDataBit7 ^ bDataBit6 ^ bDataBit5 ^ d_bLastCRC7 ^ d_bLastCRC6 ^ d_bLastCRC5;
+        bTempCRC0 = bDataBit7 ^ bDataBit6 ^ bDataBit0 ^ bLastCRC7 ^ bLastCRC6 ^ bLastCRC0;
+        bTempCRC1 = bDataBit6 ^ bDataBit1 ^ bDataBit0 ^ bLastCRC6 ^ bLastCRC1 ^ bLastCRC0;
+        bTempCRC2 = bDataBit6 ^ bDataBit2 ^ bDataBit1 ^ bDataBit0 ^ bLastCRC6 ^ bLastCRC2 ^ bLastCRC1 ^ bLastCRC0;
+        bTempCRC3 = bDataBit7 ^ bDataBit3 ^ bDataBit2 ^ bDataBit1 ^ bLastCRC7 ^ bLastCRC3 ^ bLastCRC2 ^ bLastCRC1;
+        bTempCRC4 = bDataBit4 ^ bDataBit3 ^ bDataBit2 ^ bLastCRC4 ^ bLastCRC3 ^ bLastCRC2;
+        bTempCRC5 = bDataBit5 ^ bDataBit4 ^ bDataBit3 ^ bLastCRC5 ^ bLastCRC4 ^ bLastCRC3;
+        bTempCRC6 = bDataBit6 ^ bDataBit5 ^ bDataBit4 ^ bLastCRC6 ^ bLastCRC5 ^ bLastCRC4;
+        bTempCRC7 = bDataBit7 ^ bDataBit6 ^ bDataBit5 ^ bLastCRC7 ^ bLastCRC6 ^ bLastCRC5;
 
-        d_bLastCRC0 = bTempCRC0;
-        d_bLastCRC1 = bTempCRC1;
-        d_bLastCRC2 = bTempCRC2;
-        d_bLastCRC3 = bTempCRC3;
-        d_bLastCRC4 = bTempCRC4;
-        d_bLastCRC5 = bTempCRC5;
-        d_bLastCRC6 = bTempCRC6;
-        d_bLastCRC7 = bTempCRC7;
+        bLastCRC0 = bTempCRC0;
+        bLastCRC1 = bTempCRC1;
+        bLastCRC2 = bTempCRC2;
+        bLastCRC3 = bTempCRC3;
+        bLastCRC4 = bTempCRC4;
+        bLastCRC5 = bTempCRC5;
+        bLastCRC6 = bTempCRC6;
+        bLastCRC7 = bTempCRC7;
     }
 
-    ucResult = (((BYTE)d_bLastCRC0) + (((BYTE)d_bLastCRC1) << 1) + (((BYTE)d_bLastCRC2) << 2) + (((BYTE)d_bLastCRC3) << 3) + (((BYTE)d_bLastCRC4) << 4) + (((BYTE)d_bLastCRC5) << 5) + (((BYTE)d_bLastCRC6) << 6) + (((BYTE)d_bLastCRC7) << 7));
+    ucResult = (((BYTE)bLastCRC0) + (((BYTE)bLastCRC1) << 1) + (((BYTE)bLastCRC2) << 2) + (((BYTE)bLastCRC3) << 3) + (((BYTE)bLastCRC4) << 4) + (((BYTE)bLastCRC5) << 5) + (((BYTE)bLastCRC6) << 6) + (((BYTE)bLastCRC7) << 7));
 
     return ucResult;
 }
@@ -1182,8 +1182,8 @@ BYTE UserCommonFlashCalculateCheckSumData(BYTE *pucData, BYTE ucLength)
 // dropped pragma (Keil only)
 bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE ucLength)
 {
-    bit d_bNeedSave = _TRUE;
-    bit d_bSaveFlag = _TRUE;
+    _Bool bNeedSave = _TRUE;
+    _Bool bSaveFlag = _TRUE;
     BYTE ucReadPageID = 0;
     BYTE ucItemIndex = 0;
     BYTE ucChecksum = 0;
@@ -1232,7 +1232,7 @@ bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE 
                 // Same item has been saved last time
                 if(ucItemIndex >= ucLength)
                 {
-                    d_bNeedSave = _FALSE;
+                    bNeedSave = _FALSE;
                 }
 
                 break;
@@ -1241,7 +1241,7 @@ bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE 
     }
 
     // Same item is saved last time, do not need save again here
-    if(d_bNeedSave == _FALSE)
+    if(bNeedSave == _FALSE)
     {
         return _TRUE;
     }
@@ -1306,13 +1306,13 @@ bit UserCommonFlashSaveItem(EnumFlashItemIDType enumItemID, BYTE *pucData, BYTE 
         UserCommonFlashRead(_SYSTEM_EEPROM_EMULATION_FLASH_BANK, usPageAddr + g_pusFlashAddrArr[ucPageID] * _DATA_ITEM_LENGTH, 1, &ucReadPageID);
         if((ucChecksum != pucWholeItem[15]) || (ucReadPageID != LOBYTE(enumItemID)))
         {
-            d_bSaveFlag = _FALSE;
+            bSaveFlag = _FALSE;
         }
     }
 #endif
     g_pusFlashAddrArr[ucPageID]++;
 
-    if(d_bSaveFlag == _FALSE)
+    if(bSaveFlag == _FALSE)
     {
         DebugMessageSystem("FlashSaveItem : Fail",0);
         return _FALSE;

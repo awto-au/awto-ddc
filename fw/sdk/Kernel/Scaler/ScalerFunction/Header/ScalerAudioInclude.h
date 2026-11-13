@@ -57,8 +57,8 @@
 #define CLR_AUDIO_DAC_STATE_CHANGE()                (g_stAudioDACInfo.b1AudioDACStateChange = _FALSE)
 #endif
 
-#define GET_AUDIO_DVC_MUTE_CTRL_STATUS()            (d_g_bAudioDVCMuteCtrlStatus)
-#define SET_AUDIO_DVC_MUTE_CTRL_STATUS(x)           (d_g_bAudioDVCMuteCtrlStatus = (x))
+#define GET_AUDIO_DVC_MUTE_CTRL_STATUS()            (g_bAudioDVCMuteCtrlStatus)
+#define SET_AUDIO_DVC_MUTE_CTRL_STATUS(x)           (g_bAudioDVCMuteCtrlStatus = (x))
 
 
 //****************************************************************************

@@ -438,14 +438,14 @@
 //--------------------------------------------------
 // MACRO for OSD Fail Safe Mode
 //--------------------------------------------------
-#define GET_FAIL_SAFE_MODE()                           (d_g_bFailSafeMode)
-#define SET_FAIL_SAFE_MODE(x)                          (d_g_bFailSafeMode = (x))
+#define GET_FAIL_SAFE_MODE()                           (g_bFailSafeMode)
+#define SET_FAIL_SAFE_MODE(x)                          (g_bFailSafeMode = (x))
 
 //--------------------------------------------------
 // MACRO for Force SetPwmDuty flag
 //--------------------------------------------------
-#define GET_FORCESETPWMDUTY_FLAG()                     (d_g_bForceSetPwmDuty)
-#define SET_FORCESETPWMDUTY_FLAG(x)                    (d_g_bForceSetPwmDuty = (x))
+#define GET_FORCESETPWMDUTY_FLAG()                     (g_bForceSetPwmDuty)
+#define SET_FORCESETPWMDUTY_FLAG(x)                    (g_bForceSetPwmDuty = (x))
 
 //--------------------------------------------------
 // // MACRO for VGA Mode Adjust H Position
@@ -1213,8 +1213,8 @@ extern StructCalibrationInfo g_stCalibrationInfo;
 extern BYTE g_ucDigitalHPosition;
 extern BYTE g_ucDigitalVPosition;
 extern StructPanelPowerInfo g_stPanelPowerInfo;
-extern bit d_g_bFailSafeMode;
-extern bit d_g_bForceSetPwmDuty;
+extern __xdata _Bool g_bFailSafeMode;
+extern __xdata _Bool g_bForceSetPwmDuty;
 
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonAuto.c

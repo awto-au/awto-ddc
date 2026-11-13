@@ -69,6 +69,20 @@ def c_name(label: str, funcs: set):
     return None, label[1:]
 
 
+def isr_refs(asm_dir: Path) -> set:
+    """Labels referenced by code reachable from an interrupt handler (sdcc_bank chunks: reti roots, lcall/ljmp closure)."""
+    from sdcc_bank import Module
+    funcs = {c.name: c for p in sorted(asm_dir.glob("*.asm")) if not p.name.startswith("__")
+             for c in Module(p).chunks if c.area == "CSEG"}
+    seen, st = set(), [n for n, c in funcs.items() if c.isr]
+    while st:
+        n = st.pop()
+        if n in seen or n not in funcs:
+            continue
+        seen.add(n); st.extend(funcs[n].calls)
+    return {r for n in seen for r in funcs[n].refs} | {w for n in seen for l in funcs[n].lines for w in re.findall(r"\b_\w+", l)}
+
+
 def addr_of(map_text: str) -> dict:
     return {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^\s+([0-9A-F]{8})\s+(_\w+)\s", map_text, re.M)}
 
@@ -112,7 +126,7 @@ def body_span(text: str, fn: str):
 def main() -> int:
     global LOG
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["report", "check", "rename"])
+    ap.add_argument("mode", choices=["report", "check", "rename", "to-xdata"])
     ap.add_argument("--asm", default=str(ROOT / "tmp/sdcc-port/asm_ovl"))
     ap.add_argument("--map", default=str(ROOT / "tmp/fw/AWT26110003/fw.map"))
     a = ap.parse_args()
@@ -130,14 +144,48 @@ def main() -> int:
         rows.append((area, mod, fn, cn, size, not SKIP.search(lab)))
 
     if a.mode == "report":
-        tot = defaultdict(int)
+        tot, isr = defaultdict(int), isr_refs(Path(a.asm))
         for area, mod, fn, cn, size, named in sorted(rows, key=lambda r: (r[0], addr.get("_" + r[3], 999), r[1])):
             ad = addr.get("_" + cn) if fn is None else None
-            log(f"{area:5} {('0x%02X' % ad) if ad is not None else '  -  '} {size:3} {mod:32} {(fn + ':') if fn else ''}{cn}")
+            lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
+            hot = "ISR" if any(r == lab or r.startswith(lab + "_") for r in isr) else "   "
+            log(f"{area:5} {('0x%02X' % ad) if ad is not None else '  -  '} {size:3} {hot} {mod:32} {(fn + ':') if fn else ''}{cn}")
             tot[area] += size
         for blk in re.findall(r"^(DDOVL\w*|SSEG|BSEG_BYTES|BIT_BANK|DSEG|ISEG)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
             log(f"area {blk[0]:10} at 0x{int(blk[1], 16):02X} size {int(blk[2], 16)}")
         log(f"totals (BSEG in bits): {dict(tot)}")
+        return 0
+
+    if a.mode == "to-xdata":                                       # bits no ISR code uses -> __xdata _Bool (#201)
+        isr = isr_refs(Path(a.asm))
+        files = {p: p.read_text(errors="replace") for p in src_files()}
+        n_moved = 0
+        for area, mod, fn, cn, size, named in rows:
+            lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
+            if area != "BSEG" or not named or any(r == lab or r.startswith(lab + "_") for r in isr):
+                continue
+            base = cn[len(PREFIX[area]):] if cn.startswith(PREFIX[area]) else cn
+            hit = False
+            for p, t in files.items():
+                if fn is None:
+                    t2 = re.sub(r"\b((?:static|extern)\s+)?((?:volatile\s+)?)bit(\s+)" + re.escape(cn) + r"\b",
+                                lambda m: f"{m.group(1) or ''}{m.group(2)}__xdata _Bool{m.group(3)}{base}", t) if p.suffix != ".py" else t
+                    t2 = word(cn).sub(base, t2) if p.suffix != ".asm" else t2
+                    t2 = word("_" + cn).sub("_" + base, t2) if p.suffix in (".asm", ".py") else t2
+                else:
+                    sp = body_span(t, fn) if p.suffix in (".c", ".inc") else None
+                    if not sp:
+                        continue
+                    body = re.sub(r"\bbit(\s+)" + re.escape(cn) + r"\b", lambda m: f"_Bool{m.group(1)}{base}", t[sp[0]:sp[1]])
+                    t2 = t[:sp[0]] + word(cn).sub(base, body) + t[sp[1]:]
+                if t2 != t:
+                    files[p] = t2; hit = True
+            n_moved += hit
+            log(f"to-xdata {(fn + ':') if fn else ''}{cn} -> {base}" + ("" if hit else "  NOT FOUND"))
+        for p, t in files.items():
+            if t != p.read_text(errors="replace"):
+                p.write_text(t)
+        log(f"to-xdata: {n_moved} bits moved")
         return 0
 
     bad = []

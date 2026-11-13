@@ -36,7 +36,7 @@ extern volatile WORD __data d_g_usMeasureCounter;
 #endif
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-extern volatile bit d_g_bWDTimer2Update;
+extern volatile __xdata _Bool g_bWDTimer2Update;
 #endif
 
 #if(_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON)

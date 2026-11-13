@@ -20,7 +20,7 @@ unsigned char AwtoMsgWait(void)
     {
         d_g_bDebugMessageEven = _FALSE;       // host re-arms with 0x55 (rtd_diag resends it while idle)
         g_pucDdcciData[0] = 0;              // a stale 0x55 would re-enable it at the next message
-        d_g_bDebugMessageStart = 0;
+        g_bDebugMessageStart = 0;
         return 0;
     }
     return 1;

@@ -94,7 +94,7 @@ BYTE __data d_g_ucDelay5usI_EXINT = 1;
 BYTE __data d_g_ucDelayXus_Counter = 1;
 BYTE __data d_g_ucDelayXus_Counter_EXINT = 1;
 
-bit d_g_bRunDdcciCommand = _FAIL;
+__xdata _Bool g_bRunDdcciCommand = _FAIL;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
 bit g_bReceiveDdcciCmdNotFinish = _FAIL;
 #endif

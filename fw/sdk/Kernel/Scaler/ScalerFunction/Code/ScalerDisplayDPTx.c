@@ -45,7 +45,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit d_g_bDptxSscEn = 0;
+__xdata _Bool g_bDptxSscEn = 0;
 
 #if(_DISPLAY_DP_TX_PORT_1 == _ON)
 StructDownStreamInfo g_stDisplayDPTx1Info;

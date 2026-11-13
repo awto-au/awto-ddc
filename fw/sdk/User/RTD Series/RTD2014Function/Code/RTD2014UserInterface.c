@@ -1851,7 +1851,7 @@ BYTE UserInterfaceGetHpSourceSwitchOsdEventTime(BYTE ucSourceScanType)
 //--------------------------------------------------
 bit UserInterfaceGetOverScanStatus(void)
 {
-    bit d_bDoOverScan = _FALSE;
+    _Bool bDoOverScan = _FALSE;
     BYTE ucTemp = 0;
     WORD __code tusOverscanEnTable[][3] =
     {
@@ -1889,7 +1889,7 @@ bit UserInterfaceGetOverScanStatus(void)
             // Interlaced and YUV Timing Always do overscan
             if(GET_INPUT_TIMING_INTERLACE_FLG() == _TRUE)
             {
-                d_bDoOverScan = _TRUE;
+                bDoOverScan = _TRUE;
                 break;
             }
 
@@ -1904,7 +1904,7 @@ bit UserInterfaceGetOverScanStatus(void)
                    (abs(GET_INPUT_TIMING_HWIDTH() - tusOverscanEnTable[ucTemp][1]) < 2) &&
                    (GET_INPUT_TIMING_VHEIGHT() == tusOverscanEnTable[ucTemp][2]))
                 {
-                    d_bDoOverScan = _TRUE;
+                    bDoOverScan = _TRUE;
                     break;
                 }
 
@@ -1934,7 +1934,7 @@ bit UserInterfaceGetOverScanStatus(void)
             // Interlaced and YUV Timing Always do overscan
             if(GET_INPUT_TIMING_INTERLACE_FLG() == _TRUE)
             {
-                d_bDoOverScan = _TRUE;
+                bDoOverScan = _TRUE;
                 break;
             }
 
@@ -1949,7 +1949,7 @@ bit UserInterfaceGetOverScanStatus(void)
                    (abs(GET_INPUT_TIMING_HWIDTH() - tusOverscanEnTable[ucTemp][1]) < 2) &&
                    (GET_INPUT_TIMING_VHEIGHT() == tusOverscanEnTable[ucTemp][2]))
                 {
-                    d_bDoOverScan = _TRUE;
+                    bDoOverScan = _TRUE;
                     break;
                 }
 
@@ -1959,7 +1959,7 @@ bit UserInterfaceGetOverScanStatus(void)
             break;
     }
 
-    return d_bDoOverScan;
+    return bDoOverScan;
 }
 #endif // End of #if(_OVERSCAN_SUPPORT == _ON)
 

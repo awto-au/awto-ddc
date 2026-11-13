@@ -34,9 +34,9 @@ static __xdata char s_pcAwtoRow[AWTO_T_MAXCOLS];  // #157: glyphs converted in p
 __xdata BYTE g_ucAwtoDiagSmall;                  // 0 = diagnostic screens at 2x size (default), 1 = 1x (test cmd 0x4B / 0x4A)
 static BYTE s_ucAwtoLen;
 static BYTE s_ucAwtoCols;
-static bit d_s_bAwtoWrap;                         // main-page log line: a full row sets d_s_bAwtoOver (AwtoConWrapLine draws two rows)
-static bit d_s_bAwtoOver;
-static bit d_s_bAwtoSkip;                         // second pass of a wrapped line: the first s_ucLogI characters are dropped
+static __xdata _Bool s_bAwtoWrap;                         // main-page log line: a full row sets s_bAwtoOver (AwtoConWrapLine draws two rows)
+static __xdata _Bool s_bAwtoOver;
+static __xdata _Bool s_bAwtoSkip;                         // second pass of a wrapped line: the first s_ucLogI characters are dropped
 static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index; wrap: skip count
 
 // One diagnostic console (AwtoDiagConsole), #144: 120 x 50 shown, Spleen 8x16 at 2x (1920 x 1836 px on the 4K panel).
@@ -152,20 +152,20 @@ static void AwtoTextShow(void)
 
 static void AwtoPutChar(char c)
 {
-    if(d_s_bAwtoSkip != 0)
+    if(s_bAwtoSkip != 0)
     {
         if(--s_ucLogI == 0)
         {
-            d_s_bAwtoSkip = 0;
+            s_bAwtoSkip = 0;
         }
     }
     else if(s_ucAwtoLen < s_ucAwtoCols)
     {
         s_pcAwtoRow[s_ucAwtoLen++] = c;
     }
-    else if(d_s_bAwtoWrap != 0)
+    else if(s_bAwtoWrap != 0)
     {
-        d_s_bAwtoOver = 1;
+        s_bAwtoOver = 1;
     }
 }
 

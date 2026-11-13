@@ -55,13 +55,13 @@
 #define SET_DIGITAL_PORT_SWITCH_TO_D6()                         (g_ucDigitalSwitch |= _BIT6)
 #define CLR_DIGITAL_PORT_SWITCH_TO_D6()                         (g_ucDigitalSwitch &= ~_BIT6)
 
-#define GET_DP_DC_OFF_HPD_HIGH()                                (d_g_bDpDCOffHPDHigh)
-#define SET_DP_DC_OFF_HPD_HIGH()                                (d_g_bDpDCOffHPDHigh = _TRUE)
-#define CLR_DP_DC_OFF_HPD_HIGH()                                (d_g_bDpDCOffHPDHigh = _FALSE)
+#define GET_DP_DC_OFF_HPD_HIGH()                                (g_bDpDCOffHPDHigh)
+#define SET_DP_DC_OFF_HPD_HIGH()                                (g_bDpDCOffHPDHigh = _TRUE)
+#define CLR_DP_DC_OFF_HPD_HIGH()                                (g_bDpDCOffHPDHigh = _FALSE)
 
-#define GET_PS_WAKEUP_HPD_TOGGLE()                              (d_g_bPsWakeupHpd)
-#define SET_PS_WAKEUP_HPD_TOGGLE()                              (d_g_bPsWakeupHpd = _TRUE)
-#define CLR_PS_WAKEUP_HPD_TOGGLE()                              (d_g_bPsWakeupHpd = _FALSE)
+#define GET_PS_WAKEUP_HPD_TOGGLE()                              (g_bPsWakeupHpd)
+#define SET_PS_WAKEUP_HPD_TOGGLE()                              (g_bPsWakeupHpd = _TRUE)
+#define CLR_PS_WAKEUP_HPD_TOGGLE()                              (g_bPsWakeupHpd = _FALSE)
 
 #define GET_HDMI_HOTPLUG_TOGGLE()                               ((g_ucHDMIHotPlug & _BIT7) >> 7)
 #define SET_HDMI_HOTPLUG_TOGGLE()                               (g_ucHDMIHotPlug |= _BIT7)
@@ -77,16 +77,16 @@
 #define GET_DP_AUX_ADJR_SETTING()                               (g_stDpAuxSetting.b4DpAuxAdjrSet)
 #define SET_DP_AUX_ADJR_SETTING(x)                              (g_stDpAuxSetting.b4DpAuxAdjrSet = (x))
 
-#define GET_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD()                  (d_g_bDpMstDCOffHPDToggleHoldFlag)
-#define SET_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD()                  (d_g_bDpMstDCOffHPDToggleHoldFlag = _TRUE)
-#define CLR_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD()                  (d_g_bDpMstDCOffHPDToggleHoldFlag = _FALSE)
+#define GET_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD()                  (g_bDpMstDCOffHPDToggleHoldFlag)
+#define SET_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD()                  (g_bDpMstDCOffHPDToggleHoldFlag = _TRUE)
+#define CLR_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD()                  (g_bDpMstDCOffHPDToggleHoldFlag = _FALSE)
 
 //--------------------------------------------------
 // Macro of Digital color info change
 //--------------------------------------------------
-#define GET_DIGITAL_COLOR_INFO_CHANGE_RESET()                   (d_g_bDigitalColorInfoChangeReset)
-#define SET_DIGITAL_COLOR_INFO_CHANGE_RESET()                   (d_g_bDigitalColorInfoChangeReset = _TRUE)
-#define CLR_DIGITAL_COLOR_INFO_CHANGE_RESET()                   (d_g_bDigitalColorInfoChangeReset = _FALSE)
+#define GET_DIGITAL_COLOR_INFO_CHANGE_RESET()                   (g_bDigitalColorInfoChangeReset)
+#define SET_DIGITAL_COLOR_INFO_CHANGE_RESET()                   (g_bDigitalColorInfoChangeReset = _TRUE)
+#define CLR_DIGITAL_COLOR_INFO_CHANGE_RESET()                   (g_bDigitalColorInfoChangeReset = _FALSE)
 
 
 #if(_DP_SUPPORT == _ON)
@@ -96,16 +96,16 @@
 #define GET_DP_IRQ_TIME_10US()                                  (g_ucDpIrqTime_10us)
 #define SET_DP_IRQ_TIME_10US(x)                                 (g_ucDpIrqTime_10us = (x))
 
-#define GET_DP_DC_OFF_HPD_TOGGLE_FLAG()                         (d_g_bDpDCOffHPDToggleFlag)
-#define SET_DP_DC_OFF_HPD_TOGGLE_FLAG()                         (d_g_bDpDCOffHPDToggleFlag = 1)
-#define CLR_DP_DC_OFF_HPD_TOGGLE_FLAG()                         (d_g_bDpDCOffHPDToggleFlag = 0)
+#define GET_DP_DC_OFF_HPD_TOGGLE_FLAG()                         (g_bDpDCOffHPDToggleFlag)
+#define SET_DP_DC_OFF_HPD_TOGGLE_FLAG()                         (g_bDpDCOffHPDToggleFlag = 1)
+#define CLR_DP_DC_OFF_HPD_TOGGLE_FLAG()                         (g_bDpDCOffHPDToggleFlag = 0)
 
 //--------------------------------------------------
 // Definitions of DP Illegal Idle Pattern Check
 //--------------------------------------------------
-#define GET_DP_ILLEGAL_IDLE_PATTERN_CHECK()                     (d_g_bDpIllegalIdlePatternCheck)
-#define SET_DP_ILLEGAL_IDLE_PATTERN_CHECK()                     (d_g_bDpIllegalIdlePatternCheck = _TRUE)
-#define CLR_DP_ILLEGAL_IDLE_PATTERN_CHECK()                     (d_g_bDpIllegalIdlePatternCheck = _FALSE)
+#define GET_DP_ILLEGAL_IDLE_PATTERN_CHECK()                     (g_bDpIllegalIdlePatternCheck)
+#define SET_DP_ILLEGAL_IDLE_PATTERN_CHECK()                     (g_bDpIllegalIdlePatternCheck = _TRUE)
+#define CLR_DP_ILLEGAL_IDLE_PATTERN_CHECK()                     (g_bDpIllegalIdlePatternCheck = _FALSE)
 #endif
 
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)
@@ -296,17 +296,17 @@
 //****************************************************************************
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 extern BYTE g_ucDigitalSwitch;
-extern bit d_g_bDpDCOffHPDHigh;
+extern __xdata _Bool g_bDpDCOffHPDHigh;
 extern BYTE g_ucHDMIHotPlug;
-extern bit d_g_bDigitalColorInfoChangeReset;
-extern bit d_g_bPsWakeupHpd;
+extern __xdata _Bool g_bDigitalColorInfoChangeReset;
+extern __xdata _Bool g_bPsWakeupHpd;
 #if(_DP_SUPPORT == _ON)
 extern StructDPMarginLinkInfo g_stDpMarginLink;
 extern StructDpAuxSetting g_stDpAuxSetting;
 extern BYTE g_ucDpIrqTime_10us;
-extern bit d_g_bDpIllegalIdlePatternCheck;
-extern bit d_g_bDpMstDCOffHPDToggleHoldFlag;
-extern bit d_g_bDpDCOffHPDToggleFlag;
+extern __xdata _Bool g_bDpIllegalIdlePatternCheck;
+extern __xdata _Bool g_bDpMstDCOffHPDToggleHoldFlag;
+extern __xdata _Bool g_bDpDCOffHPDToggleFlag;
 #endif
 
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)

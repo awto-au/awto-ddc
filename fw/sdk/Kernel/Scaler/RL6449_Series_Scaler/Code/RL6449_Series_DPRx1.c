@@ -43,7 +43,7 @@
 //****************************************************************************
 bit d_g_bDpRx1PSAuxToggle = _FALSE;
 
-bit d_g_bDpRx1AuxCommandNoReply = _FALSE;
+__xdata _Bool g_bDpRx1AuxCommandNoReply = _FALSE;
 
 BYTE g_ucDpRx1LinkStatus01;
 BYTE g_ucDpRx1LinkStatus23;

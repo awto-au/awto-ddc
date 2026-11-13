@@ -25,9 +25,9 @@
 //----------------------------------------------------------------------------
 // Macro of Dp Link Training Information
 //----------------------------------------------------------------------------
-#define GET_DP_RX1_AUX_COMMAND_NO_REPLY()               (d_g_bDpRx1AuxCommandNoReply)
-#define SET_DP_RX1_AUX_COMMAND_NO_REPLY()               (d_g_bDpRx1AuxCommandNoReply = _TRUE)
-#define CLR_DP_RX1_AUX_COMMAND_NO_REPLY()               (d_g_bDpRx1AuxCommandNoReply = _FALSE)
+#define GET_DP_RX1_AUX_COMMAND_NO_REPLY()               (g_bDpRx1AuxCommandNoReply)
+#define SET_DP_RX1_AUX_COMMAND_NO_REPLY()               (g_bDpRx1AuxCommandNoReply = _TRUE)
+#define CLR_DP_RX1_AUX_COMMAND_NO_REPLY()               (g_bDpRx1AuxCommandNoReply = _FALSE)
 
 #define GET_DP_RX1_PHY_CTS_FLG()                        (!((bit)ScalerGetBit(P7A_25_KOFFSET_01, _BIT5)))
 #define SET_DP_RX1_PHY_CTS_FLG()                        (ScalerSetBit(P7A_25_KOFFSET_01, ~_BIT5, 0x00))
@@ -169,7 +169,7 @@
 //****************************************************************************
 extern bit d_g_bDpRx1PSAuxToggle;
 
-extern bit d_g_bDpRx1AuxCommandNoReply;
+extern __xdata _Bool g_bDpRx1AuxCommandNoReply;
 
 extern BYTE g_ucDpRx1LinkStatus01;
 extern BYTE g_ucDpRx1LinkStatus23;

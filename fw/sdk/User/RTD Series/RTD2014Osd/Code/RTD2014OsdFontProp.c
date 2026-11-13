@@ -919,7 +919,7 @@ BYTE OsdPropGetFontPointer(BYTE ucPointerSelect)
 //--------------------------------------------------
 BYTE OsdPropVideoResolution(void)
 {
-    bit d_bVideoTiming = _FALSE;
+    _Bool bVideoTiming = _FALSE;
     BYTE ucI = 0;
 
     if(GET_INPUT_TIMING_VFREQ() > 620)
@@ -929,14 +929,14 @@ BYTE OsdPropVideoResolution(void)
 
     if(GET_INPUT_TIMING_INTERLACE_FLG() == _TRUE)
     {
-        d_bVideoTiming = _TRUE;
+        bVideoTiming = _TRUE;
     }
 #if(_VGA_SUPPORT == _ON)
     else if(SysSourceGetSourceType() == _SOURCE_VGA)
     {
         if(GET_VGA_COLOR_FORMAT_STATUS() == _COLOR_SPACE_YPBPR)
         {
-            d_bVideoTiming = _TRUE;
+            bVideoTiming = _TRUE;
         }
     }
 #endif
@@ -946,11 +946,11 @@ BYTE OsdPropVideoResolution(void)
 #if(_DIGITAL_PORT_SUPPORT == _ON)
         if(ScalerSyncHdcpCheckEnabled(SysSourceGetInputPort()) == _HDCP_NONE)
         {
-            d_bVideoTiming = _FALSE;
+            bVideoTiming = _FALSE;
         }
         else
         {
-            d_bVideoTiming = _TRUE;
+            bVideoTiming = _TRUE;
         }
 #endif
     }
@@ -960,7 +960,7 @@ BYTE OsdPropVideoResolution(void)
     {
         if(ScalerColorGetColorSpaceRGB(ScalerColorGetColorSpace()) == _FALSE)
         {
-            d_bVideoTiming = _TRUE;
+            bVideoTiming = _TRUE;
         }
     }
 #endif
@@ -969,12 +969,12 @@ BYTE OsdPropVideoResolution(void)
     {
         if(ScalerColorGetColorSpaceRGB(ScalerColorGetColorSpace()) == _FALSE)
         {
-            d_bVideoTiming = _TRUE;
+            bVideoTiming = _TRUE;
         }
     }
 #endif
 
-    if(d_bVideoTiming == _TRUE)
+    if(bVideoTiming == _TRUE)
     {
         for(ucI = 1; ucI < 8; ucI++)
         {
@@ -1271,8 +1271,8 @@ void OsdPropFontDataToSram(BYTE ucFptsSelect, BYTE *ucpArray, BYTE ucRotateType)
 void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, BYTE ucColor, BYTE ucLanguage)
 {
     BYTE *pucArray = OsdPropGetStringTableAddress(ucString);
-    bit d_bCenterFlag = _FALSE;
-    bit d_bNextLineFlag = _FALSE;
+    _Bool bCenterFlag = _FALSE;
+    _Bool bNextLineFlag = _FALSE;
     BYTE pucpTemp[27] = {0};
     BYTE ucElementCount = 0;
     BYTE ucColBackup = ucCol;
@@ -1289,7 +1289,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
 
     do
     {
-        d_bNextLineFlag = _FALSE;
+        bNextLineFlag = _FALSE;
         memset(pData, 0x00, _DATA_ITEM_LENGTH);
         ucElementCount = 0;
 
@@ -1361,7 +1361,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
 
             if(pData[9] != 0)// left-aligned
             {
-                d_bCenterFlag = _TRUE;
+                bCenterFlag = _TRUE;
             }
         }
         ucElementCount = pData[1] = pData[0] = 0;
@@ -1390,7 +1390,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
                             pData[2] = _;
                         }
 
-                        if(d_bCenterFlag == _TRUE)
+                        if(bCenterFlag == _TRUE)
                         {
                             pData[2] = _;
                         }
@@ -1432,7 +1432,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
                         {
                             pData[3] = tOSD_TABLE_LANGUAGE_FONT_WIDTH[0][pData[2] + PDATA_WORD(6)];
 
-                            if(d_bCenterFlag == _TRUE)
+                            if(bCenterFlag == _TRUE)
                             {
                                 pData[3] = pData[9];
                             }
@@ -1449,7 +1449,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
                         {
                             pData[3] = tOSD_TABLE_LANGUAGE_FONT_WIDTH[ucLanguage + 1][pData[2] + PDATA_WORD(6) - _GLOBAL_FONT_END - _GLOBAL_FONT_END_OFFSET];
 
-                            if(d_bCenterFlag == _TRUE)
+                            if(bCenterFlag == _TRUE)
                             {
                                 pData[3] = pData[9];
                             }
@@ -1467,7 +1467,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
                         {
                             ucElementCount++;
 
-                            if(d_bCenterFlag == _TRUE)
+                            if(bCenterFlag == _TRUE)
                             {
                                 ucElementCount = 0;
                             }
@@ -1660,7 +1660,7 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
             pData[4]++;
 
             // Only shift for the first word
-            d_bCenterFlag = _FALSE;
+            bCenterFlag = _FALSE;
 
         }// End of while(*(pArray + stringcnt) != _END_)
 
@@ -1696,10 +1696,10 @@ void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, 
             pucArray += ucElementCount + 1;
             ucRow++;
 
-            d_bNextLineFlag = _TRUE;
+            bNextLineFlag = _TRUE;
         }
 
-    }while(d_bNextLineFlag == _TRUE);
+    }while(bNextLineFlag == _TRUE);
 
     CLR_OSD_INFO_STRING_MODE();
     CLR_OSD_INFO_STRING_MODE_LENGTH();

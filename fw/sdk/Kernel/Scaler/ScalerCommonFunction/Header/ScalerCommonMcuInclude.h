@@ -251,8 +251,8 @@
 //--------------------------------------------------
 // MACRO for RUN DDCCI Command
 //--------------------------------------------------
-#define GET_RUN_DDCCI_COMMAND()             (d_g_bRunDdcciCommand)
-#define SET_RUN_DDCCI_COMMAND(x)            (d_g_bRunDdcciCommand = (x))
+#define GET_RUN_DDCCI_COMMAND()             (g_bRunDdcciCommand)
+#define SET_RUN_DDCCI_COMMAND(x)            (g_bRunDdcciCommand = (x))
 
 //--------------------------------------------------
 // MACRO for Receive DDCCI Command
@@ -312,7 +312,7 @@ extern BYTE __data d_g_ucDelay5usI;
 extern BYTE __data d_g_ucDelay5usI_EXINT;
 extern BYTE __data d_g_ucDelayXus_Counter;
 extern BYTE __data d_g_ucDelayXus_Counter_EXINT;
-extern bit d_g_bRunDdcciCommand;
+extern __xdata _Bool g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
 extern bit g_bReceiveDdcciCmdNotFinish;
 #endif

@@ -77,9 +77,9 @@
 //--------------------------------------------------
 // Macro of input timing info Double Check
 //--------------------------------------------------
-#define GET_INPUT_TIMING_DOUBLE_CHECK()                (d_g_bInputTimingDoubleCheck)
-#define SET_INPUT_TIMING_DOUBLE_CHECK()                (d_g_bInputTimingDoubleCheck = _TRUE)
-#define CLR_INPUT_TIMING_DOUBLE_CHECK()                (d_g_bInputTimingDoubleCheck = _FALSE)
+#define GET_INPUT_TIMING_DOUBLE_CHECK()                (g_bInputTimingDoubleCheck)
+#define SET_INPUT_TIMING_DOUBLE_CHECK()                (g_bInputTimingDoubleCheck = _TRUE)
+#define CLR_INPUT_TIMING_DOUBLE_CHECK()                (g_bInputTimingDoubleCheck = _FALSE)
 
 
 //****************************************************************************
@@ -90,7 +90,7 @@ extern StructAutoActiveData g_stActiveRegion;
 extern StructMeasureSyncData g_stMeasureSyncHV;
 extern StructTimingInfo g_stInputTimingData;
 
-extern bit d_g_bInputTimingDoubleCheck;
+extern __xdata _Bool g_bInputTimingDoubleCheck;
 
 //****************************************************************************
 // INTERFACE FUNCTIONS

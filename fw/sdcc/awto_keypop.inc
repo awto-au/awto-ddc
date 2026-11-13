@@ -102,13 +102,13 @@ void AwtoOsdKeyLines(void)
 {
     BYTE ucK;
 
-    bit d_bFirst = (g_stAwtoKey.ucDrawn == 0);
+    _Bool bFirst = (g_stAwtoKey.ucDrawn == 0);
 
     g_stAwtoKey.ucDrawn = 1;
     g_stAwtoKey.ucRedraws++;
     if(AwtoConLost() != 0) return;
     AwtoPanel(1);
-    if(d_bFirst != 0)
+    if(bFirst != 0)
     {
         AwtoPutCol(1);
         AwtoPutStr("KEY TEST");
