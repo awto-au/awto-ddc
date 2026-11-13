@@ -235,7 +235,7 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
     // #94 ear-test steps / tone announce (dev.py sound-test): VCP 0x63 is unused by the AWTO registry; before the registry
     if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_AUDIO_TEST_VCP) && ((pucRx[4] != 0) || (pucRx[5] >= AWTO_AUDIO_TEST_START)))
     {
-        AwtoAudioTestStep(pucRx[4], pucRx[5]);  // awto_audio.inc
+        AwtoAudioTestStep(pucRx[4], pucRx[5]);  // fw/audio/amp.c
         return;
     }
 #endif

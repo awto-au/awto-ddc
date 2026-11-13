@@ -259,7 +259,7 @@ static void AwtoTextLine(BYTE ucLine, BYTE ucStyle)
     s_ucAwtoLen = 1;
 }
 
-// Stack canary hit (AwtoStackCheck, awto_wdt.inc): a small red box, nothing else drawn after it.
+// Stack canary hit (AwtoStackCheck, fw/diag/wdt.c): a small red box, nothing else drawn after it.
 #define AWTO_FATAL_COLS     30
 #define AWTO_FATAL_LINES    2
 void AwtoStackFatal(BYTE ucHigh)
@@ -1773,7 +1773,7 @@ static void AwtoSyncConPoll(void)
 }
 
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
-// #144 power-on, mode INITIAL (RTD2014Osd.c, before the panel comes on), and a source-event wake (awto_sync.inc): the
+// #144 power-on, mode INITIAL (RTD2014Osd.c, before the panel comes on), and a source-event wake (fw/log/sync.c): the
 // console with the live log, no logo.
 // The auto-open request stays: at the settled mode AwtoSyncConPoll reopens it if display setting took the OSD.
 void AwtoBootConsole(void)
