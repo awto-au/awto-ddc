@@ -3,12 +3,12 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   110u
+#define SET_COUNT   109u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x0273u    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 89u
-#define SET_TEXT_LEN 1886u
-#define SET_AUX_MAX 52u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
+#define SET_SCHEMA  0x60D5u    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 88u
+#define SET_TEXT_LEN 1875u
+#define SET_AUX_MAX 50u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -83,8 +83,7 @@
 #define SET_ID_OSD_ROTATE           63u
 #define SET_ID_PANEL_T1             67u
 #define SET_ID_PANEL_T2             68u
-#define SET_ID_PANEL_T3             69u
-#define SET_ID_PANEL_T3_OWN         70u
+#define SET_ID_BL_ON_DELAY          117u
 #define SET_ID_PANEL_T4             71u
 #define SET_ID_PANEL_T5             72u
 #define SET_ID_PANEL_T6             73u

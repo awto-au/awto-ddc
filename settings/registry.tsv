@@ -2,7 +2,8 @@
 # set_table, OSD menu pages (with settings/pages.tsv), DDC/CI VCP map, NVRAM record + schema, host table, docs/settings.md.
 # - id: stable, never reused (NVRAM key, VCP paged id, docs anchor). 1..255 (the NVRAM record keys are one byte).
 # - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120); 65 logo,
-#   66 logo_ms (boot logo removed, the console shows the power-on log, awto-ddc#144).
+#   66 logo_ms (boot logo removed, the console shows the power-on log, awto-ddc#144); 69 panel_t3, 70 panel_t3_own
+#   (backlight no longer waits for video: 117 bl_on_delay, Dan 2026-11-13, awto-ddc#162).
 # - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
 # - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
 #   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
@@ -90,12 +91,11 @@
 63	osd_rotate	enum	none	osd	nv,inert,sdk	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
 67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [sdk-value]
 68	panel_t2	int	ms	panel	nv,risky,reboot	0	1000	10	250	auto	-	-	T2 VDD to link	-	[sdk-value]
-69	panel_t3	int	ms	panel	nv,risky	300	2000	10	550	auto	0xEB	-	T3 video to BL	-	host video; >= 500 ms per 27-inch 4K eDP datasheets
-70	panel_t3_own	int	ms	panel	nv,risky	17	200	1	20	auto	-	-	T3 own pattern	-	background frame: one 60 Hz frame minimum
+117	bl_on_delay	int	ms	panel	nv	0	1000	10	0	auto	-	-	Backlight on delay	-	backlight wanted (boot on M2PLL, POWER on, wake: from VDD on) -> pin on; not gated by video; 0 = at once (Dan, datasheet T8 not followed)
 71	panel_t4	int	ms	panel	nv,risky	0	1000	10	250	auto	-	-	T4 BL to link off	-	[sdk-value]
 72	panel_t5	int	ms	panel	nv,risky	0	500	10	20	auto	-	-	T5 link to VDD off	-	[sdk-value]
 73	panel_t6	int	ms	panel	nv,risky	500	5000	100	1100	auto	-	-	T6 off to on	-	minimum VDD off time [sdk-value]
-74	bl_pwm_ms	int	ms	panel	nv,risky,inert	0	200	1	0	auto	-	-	BL to PWM	-	enable pin to PWM duty; no such wait yet (0 = today)
+74	bl_pwm_ms	int	ms	panel	nv,risky	0	200	1	0	auto	-	-	BL to PWM	-	backlight pin on -> PWM duty; 0 = same step (Dan: pin + PWM at once)
 84	debug_link	bool	none	debug	nv,risky,reboot,inert	0	1	1	1	auto	-	-	Debug link	-	debug slave 0x35 on the main IIC engine; always on today (DDC/CI 0x37 runs on the spare engines, #60)
 85	debug_msgs	bool	none	debug	nv,live,sdk	0	1	1	0	auto	0xF0	debug_msgs	Debug messages	-	(#74)
 86	msg_log	bool	none	debug	live	0	1	1	0	-	-	msg_log	Message log	-	on-screen log (#56)
