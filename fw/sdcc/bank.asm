@@ -5,18 +5,18 @@
 ; Like Keil ?B_SWITCH: the callee returns into the caller bank's restore entry (2 B on the stack per level).
 	.module	awto_bank
 	.globl	__bs_call
-	.globl	__bs_cur
+	.globl	_d_bs_cur
 	.globl	__bs_ret		; for scripts/fw_sim.py breakpoints
 	.globl	__bs_keil		; marker: images with these stubs use the Keil register ABI (scripts/fw_sim.py)
 	.globl	__bs_call_sw, __bs_ret_sw	; just after the 0xFFFF write (A = new bank): fw_sim switches here
 
 	.area	DSEG	(DATA)
-__bs_cur:	.ds	1		; current bank shadow; written before 0xFFFF so an ISR restores the target bank
+_d_bs_cur:	.ds	1		; current bank shadow; written before 0xFFFF so an ISR restores the target bank
 
 	.area	CSEG	(CODE)
 __bs_keil = .
 __bs_call:				; r0 = bank, dptr = target (set by the stub)
-	mov	a,__bs_cur		; push &__bs_rtab[cur] (4 B per entry): target's ret -> restore entry of the caller's bank
+	mov	a,_d_bs_cur		; push &__bs_rtab[cur] (4 B per entry): target's ret -> restore entry of the caller's bank
 	rl	a
 	rl	a
 	add	a,#__bs_rtab
@@ -26,7 +26,7 @@ __bs_call:				; r0 = bank, dptr = target (set by the stub)
 	push	acc
 	push	dpl			; our ret -> target (lo, hi)
 	push	dph
-	mov	__bs_cur,r0		; written before 0xFFFF so an ISR restores the target bank
+	mov	_d_bs_cur,r0		; written before 0xFFFF so an ISR restores the target bank
 	mov	dptr,#0xFFFF
 	mov	a,r0
 	movx	@dptr,a			; bank switched; this code is identical in every bank
@@ -67,7 +67,7 @@ __bs_rtab:				; entry k: r1 = k, then restore (banks 0-15)
 	mov	a,#15
 	sjmp	__bs_ret
 __bs_ret:				; a = caller bank; returns in R1-R7/C untouched (mov/movx leave C alone)
-	mov	__bs_cur,a
+	mov	_d_bs_cur,a
 	mov	dptr,#0xFFFF
 	movx	@dptr,a
 __bs_ret_sw:

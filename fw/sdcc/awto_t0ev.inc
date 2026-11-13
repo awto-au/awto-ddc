@@ -265,8 +265,8 @@ void AwtoT0EvTestIsr(void)                      // SysEXINT0 entry while g_ucAwt
     else if(g_ucAwtoT0Test == 2)
     {
         g_ucAwtoT0Test = 0;
-        usT0 = g_usTimerCounter;                // Timer2 (high) keeps ticking: spin 2..3 ms
-        while((WORD)(g_usTimerCounter - usT0) < 3)
+        usT0 = d_g_usTimerCounter;                // Timer2 (high) keeps ticking: spin 2..3 ms
+        while((WORD)(d_g_usTimerCounter - usT0) < 3)
         {
         }
     }

@@ -58,16 +58,16 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit g_bRunCommand = _FALSE;
+bit d_g_bRunCommand = _FALSE;
 BYTE g_pucDdcciData[_SCALER_DEBUG_BUF_LEN];
 BYTE g_ucDdcciCommandNumber;
 EnumDDCCIDebugMode g_enumDDCCIDebugMode = _DEBUG_MODE;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-bit g_bDebugMessageEven = _FALSE;
+bit d_g_bDebugMessageEven = _FALSE;
 WORD g_usFilterPro;
-bit g_bFwHalt = _FALSE;
-bit g_bDebugMessageStart = _FALSE;
+bit d_g_bFwHalt = _FALSE;
+bit d_g_bDebugMessageStart = _FALSE;
 BYTE idata g_pucDebugMessageBUF[4];
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
@@ -137,10 +137,10 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 
     if(g_pucDdcciData[0] == 0x55)
     {
-        g_bDebugMessageEven = _TRUE;
+        d_g_bDebugMessageEven = _TRUE;
     }
 
-    if(g_bDebugMessageEven == _FALSE)
+    if(d_g_bDebugMessageEven == _FALSE)
     {
         return;
     }
@@ -179,8 +179,8 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
         }
     }
 
-    g_bDebugMessageStart = 0;
-    g_bFwHalt = 1;
+    d_g_bDebugMessageStart = 0;
+    d_g_bFwHalt = 1;
 
     MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
     MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40; // Reset IIC Data Buffer
@@ -193,7 +193,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 
     do
     {
-        if(g_bRunCommand == _TRUE)
+        if(d_g_bRunCommand == _TRUE)
         {
             MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
             ucCnt = 0;
@@ -295,17 +295,17 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                             MCU_FF26_IIC_DATA_OUT = ucCheckSum;
                         }
                         while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != g_pucDebugMessageBUF[0]) && ((ucCnt++) < _DATA_OUT_COUNT));
-                        g_bDebugMessageStart = 1;
+                        d_g_bDebugMessageStart = 1;
                     }
 
                     break;
 
                 case 0x2A: // Debug Message End
 
-                    if(g_bDebugMessageStart == _TRUE)
+                    if(d_g_bDebugMessageStart == _TRUE)
                     {
-                        g_bDebugMessageStart = 0; // Debug Message End
-                        g_bFwHalt = 0;
+                        d_g_bDebugMessageStart = 0; // Debug Message End
+                        d_g_bFwHalt = 0;
                         do
                         {
                             MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40;
@@ -325,8 +325,8 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                     }
                     while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != 0x01) && ((ucCnt++) < _DATA_OUT_COUNT));
 
-                    g_bDebugMessageEven = 0;
-                    g_bFwHalt = 0;
+                    d_g_bDebugMessageEven = 0;
+                    d_g_bFwHalt = 0;
                     MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xBF;
                     break;
 
@@ -334,7 +334,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                     break;
             }
 
-            g_bRunCommand = 0;
+            d_g_bRunCommand = 0;
             g_ucDdcciCommandNumber = 0;
 
             MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xDF;
@@ -364,10 +364,10 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 #endif
         }
     }
-    while((g_bFwHalt != 0) && (AwtoMsgWait() != 0)); /* awto: host-silence timeout of the debug wait (#56) */
+    while((d_g_bFwHalt != 0) && (AwtoMsgWait() != 0)); /* awto: host-silence timeout of the debug wait (#56) */
 
-    g_bDebugMessageStart = 0;
-    g_bFwHalt = 0;
+    d_g_bDebugMessageStart = 0;
+    d_g_bFwHalt = 0;
 }
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
@@ -382,7 +382,7 @@ void ScalerDebugIntProc_EXINT1(void)
 
     MCU_FF29_IIC_STATUS2 &= 0xCF;
 
-    if(g_bRunCommand == _FALSE)
+    if(d_g_bRunCommand == _FALSE)
     {
         ucTempBuf = MCU_FF27_IIC_STATUS;
 
@@ -465,20 +465,20 @@ void ScalerDebugIntProc_EXINT1(void)
                     }
                 }
 
-                if((g_pucDdcciData[0] == 0x2F) && (g_bDebugMessageEven == _TRUE))
+                if((g_pucDdcciData[0] == 0x2F) && (d_g_bDebugMessageEven == _TRUE))
                 {
-                    g_bDebugMessageEven = _FALSE;
-                    g_bFwHalt = _FALSE;
+                    d_g_bDebugMessageEven = _FALSE;
+                    d_g_bFwHalt = _FALSE;
                 }
-                else if((g_pucDdcciData[0] == 0x55) && (g_bDebugMessageEven != _TRUE))
+                else if((g_pucDdcciData[0] == 0x55) && (d_g_bDebugMessageEven != _TRUE))
                 {
-                    g_bDebugMessageEven = _TRUE;
+                    d_g_bDebugMessageEven = _TRUE;
                 }
 #endif
 
 #include "awto_dbgisr.inc"
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
-                g_bRunCommand = _TRUE;
+                d_g_bRunCommand = _TRUE;
             }
         }
     }
@@ -504,7 +504,7 @@ void ScalerDebug(void)
     {
         do
         {
-            if(g_bRunCommand == _TRUE)
+            if(d_g_bRunCommand == _TRUE)
             {
                 ucCnt = 0;
 
@@ -606,9 +606,9 @@ void ScalerDebug(void)
                         while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != 0x01) && ((ucCnt++) < _DATA_OUT_COUNT));
 
                         MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xDF;
-                        g_bDebugMessageStart = 0;
-                        g_bFwHalt = _FALSE;
-                        g_bDebugMessageEven = 0;
+                        d_g_bDebugMessageStart = 0;
+                        d_g_bFwHalt = _FALSE;
+                        d_g_bDebugMessageEven = 0;
                         break;
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
@@ -734,7 +734,7 @@ void ScalerDebug(void)
                         break;
                 }
 
-                g_bRunCommand = 0;
+                d_g_bRunCommand = 0;
                 g_ucDdcciCommandNumber = 0;
 
                 // Host write Enable

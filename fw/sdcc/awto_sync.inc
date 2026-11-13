@@ -238,7 +238,7 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
 }
 
 // One time base for all our code: Timer2 ISR count (usT2Isr = low word, g_stAwtoHt.usUpHi = high word, both bumped in the ISR).
-// Before Timer2 runs it is the WDT-counter time (ring lines are re-based at the Timer2 start). SDK event table (g_usTimerCounter) is separate.
+// Before Timer2 runs it is the WDT-counter time (ring lines are re-based at the Timer2 start). SDK event table (d_g_usTimerCounter) is separate.
 __xdata StAwtoHt g_stAwtoHt;
 
 unsigned long AwtoMs(void)

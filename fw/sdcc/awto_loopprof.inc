@@ -17,7 +17,7 @@ void AwtoLpMark(unsigned char ucK)
     do
     {
         ucF = TF2;
-        usTick = g_usTimerCounter;
+        usTick = d_g_usTimerCounter;
         do
         {
             ucH = TH2;

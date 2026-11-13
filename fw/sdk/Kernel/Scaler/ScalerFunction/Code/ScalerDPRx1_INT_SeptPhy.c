@@ -464,7 +464,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
     {
         if((GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_NORMAL_TRAINING_PATTERN_1_FAIL) &&
            (GET_DP_RX1_LINK_TRAINING_STATUS() != _DP_FAKE_TRAINING_PATTERN_1_FAIL) &&
-           (g_bDpRx1Tp1Initial == _FALSE))
+           (d_g_bDpRx1Tp1Initial == _FALSE))
         {
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x03, 0x00);
             ScalerDpRx1SetDpcdValue_EXINT0(0x00, 0x01, 0x04, 0x00);
@@ -480,7 +480,7 @@ BYTE ScalerDpRx1Tp1Check_EXINT0(EnumDpLinkTrainingType enumDpLtType)
             SET_DP_RX_D1_LANE2_MARGIN_LINK_HBR_RBR();
             SET_DP_RX_D1_LANE3_MARGIN_LINK_HBR_RBR();
 #endif
-            g_bDpRx1Tp1Initial = _TRUE;
+            d_g_bDpRx1Tp1Initial = _TRUE;
         }
 
         pucDpPhyLinkTrainingLevel[0] = ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x03);

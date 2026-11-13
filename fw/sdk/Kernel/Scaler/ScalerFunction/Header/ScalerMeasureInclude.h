@@ -96,9 +96,9 @@
 //--------------------------------------------------
 // Macro of input timing info Double Check
 //--------------------------------------------------
-#define GET_INPUT_TIMING_DOUBLE_CHECK()              (g_bInputTimingDoubleCheck)
-#define SET_INPUT_TIMING_DOUBLE_CHECK()              (g_bInputTimingDoubleCheck = _TRUE)
-#define CLR_INPUT_TIMING_DOUBLE_CHECK()              (g_bInputTimingDoubleCheck = _FALSE)
+#define GET_INPUT_TIMING_DOUBLE_CHECK()              (d_g_bInputTimingDoubleCheck)
+#define SET_INPUT_TIMING_DOUBLE_CHECK()              (d_g_bInputTimingDoubleCheck = _TRUE)
+#define CLR_INPUT_TIMING_DOUBLE_CHECK()              (d_g_bInputTimingDoubleCheck = _FALSE)
 
 #if((_MEASURE_ADJUSTED_IHF_SUPPORT == _ON) || (_MEASURE_ADJUSTED_IVF_SUPPORT == _ON))
 //--------------------------------------------------
@@ -134,7 +134,7 @@ extern StructTimingInfo g_stSingleInputTimingData;
 #endif
 
 extern DWORD g_ulInputActiveRegionBackUp;
-extern bit g_bInputTimingDoubleCheck;
+extern bit d_g_bInputTimingDoubleCheck;
 
 #if((_MEASURE_ADJUSTED_IHF_SUPPORT == _ON) || (_MEASURE_ADJUSTED_IVF_SUPPORT == _ON))
 extern DWORD g_ulActiveRegionCount;

@@ -41,9 +41,9 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit g_bDpRx1PSAuxToggle = _FALSE;
+bit d_g_bDpRx1PSAuxToggle = _FALSE;
 
-bit g_bDpRx1AuxCommandNoReply = _FALSE;
+bit d_g_bDpRx1AuxCommandNoReply = _FALSE;
 
 BYTE g_ucDpRx1LinkStatus01;
 BYTE g_ucDpRx1LinkStatus23;

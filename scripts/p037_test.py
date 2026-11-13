@@ -91,7 +91,7 @@ def main() -> int:
                 break
         else:
             log("never reached P0_02=01 state; P0_02 history (ms,val): " + str(hist)); proc.wait(); return 1
-        d.write(DBG, 0x80, bytes([0x01]))              # pause main (SDK g_bFwHalt); reads/writes still serviced
+        d.write(DBG, 0x80, bytes([0x01]))              # pause main (SDK d_g_bFwHalt); reads/writes still serviced
         log(f"froze main at P0_02={p:02x}")
 
         def burst(tag, n=25):

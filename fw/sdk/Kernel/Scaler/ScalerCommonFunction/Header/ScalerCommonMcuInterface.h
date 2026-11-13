@@ -45,8 +45,8 @@
 //--------------------------------------------------
 // MACRO for RUN DDCCI Command
 //--------------------------------------------------
-#define GET_RUN_DDCCI_COMMAND()                        (g_bRunDdcciCommand)
-#define SET_RUN_DDCCI_COMMAND(x)                       (g_bRunDdcciCommand = (x))
+#define GET_RUN_DDCCI_COMMAND()                        (d_g_bRunDdcciCommand)
+#define SET_RUN_DDCCI_COMMAND(x)                       (d_g_bRunDdcciCommand = (x))
 
 //--------------------------------------------------
 // MACRO for Receive DDCCI Command
@@ -67,8 +67,8 @@
 // Macros of 5us Delay
 //--------------------------------------------------
 #define ScalerDelay5us()                               {\
-                                                           g_ucDelay5usI = g_ucDelay5usN_Base;\
-                                                           while(--g_ucDelay5usI) {};\
+                                                           d_g_ucDelay5usI = d_g_ucDelay5usN_Base;\
+                                                           while(--d_g_ucDelay5usI) {};\
                                                        }
 
 //--------------------------------------------------
@@ -115,14 +115,14 @@
 // INTERFACE VARIABLE DECLARATIONS
 //****************************************************************************
 
-extern BYTE __data g_ucDelay5usN_Base;
-extern BYTE __data g_ucDelayXusN_Base;
-extern BYTE __data g_ucDelay5usI;
-extern BYTE __data g_ucDelay5usI_EXINT;
-extern BYTE __data g_ucDelayXus_Counter;
-extern BYTE __data g_ucDelayXus_Counter_EXINT;
+extern BYTE __data d_g_ucDelay5usN_Base;
+extern BYTE __data d_g_ucDelayXusN_Base;
+extern BYTE __data d_g_ucDelay5usI;
+extern BYTE __data d_g_ucDelay5usI_EXINT;
+extern BYTE __data d_g_ucDelayXus_Counter;
+extern BYTE __data d_g_ucDelayXus_Counter_EXINT;
 
-extern bit g_bRunDdcciCommand;
+extern bit d_g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
 extern bit g_bReceiveDdcciCmdNotFinish;
 #endif

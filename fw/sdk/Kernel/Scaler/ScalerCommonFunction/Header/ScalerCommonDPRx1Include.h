@@ -50,9 +50,9 @@
 #define SET_DP_RX1_CRC_CALCULATE()                      (g_ucDpRx1Info |= _BIT5)
 #define CLR_DP_RX1_CRC_CALCULATE()                      (g_ucDpRx1Info &= ~_BIT5)
 
-#define GET_DP_RX1_PS_AUX_TOGGLE()                      (g_bDpRx1PSAuxToggle)
-#define SET_DP_RX1_PS_AUX_TOGGLE()                      (g_bDpRx1PSAuxToggle = _TRUE)
-#define CLR_DP_RX1_PS_AUX_TOGGLE()                      (g_bDpRx1PSAuxToggle = _FALSE)
+#define GET_DP_RX1_PS_AUX_TOGGLE()                      (d_g_bDpRx1PSAuxToggle)
+#define SET_DP_RX1_PS_AUX_TOGGLE()                      (d_g_bDpRx1PSAuxToggle = _TRUE)
+#define CLR_DP_RX1_PS_AUX_TOGGLE()                      (d_g_bDpRx1PSAuxToggle = _FALSE)
 
 #if(_DP_ILLEGAL_IDLE_PATTERN_CHECK_SUPPORT == _ON)
 //----------------------------------------------------------------------------
@@ -66,9 +66,9 @@
 //--------------------------------------------------
 // Macro of Dp Error Count Read Record
 //--------------------------------------------------
-#define GET_DP_RX1_SOURCE_READ_ERROR_COUNT()            (g_bDpRx1SourceRDErrorCount)
-#define SET_DP_RX1_SOURCE_READ_ERROR_COUNT()            (g_bDpRx1SourceRDErrorCount = _TRUE)
-#define CLR_DP_RX1_SOURCE_READ_ERROR_COUNT()            (g_bDpRx1SourceRDErrorCount = _FALSE)
+#define GET_DP_RX1_SOURCE_READ_ERROR_COUNT()            (d_g_bDpRx1SourceRDErrorCount)
+#define SET_DP_RX1_SOURCE_READ_ERROR_COUNT()            (d_g_bDpRx1SourceRDErrorCount = _TRUE)
+#define CLR_DP_RX1_SOURCE_READ_ERROR_COUNT()            (d_g_bDpRx1SourceRDErrorCount = _FALSE)
 
 #if(_DP_ULTRA_HDR_SUPPORT == _ON)
 #define GET_DP_RX1_RSV0_DETECTING()                     (g_stDPRx1InfoFrameRSV0Ctrl.b1RSV0PacketDetecting)
@@ -124,8 +124,8 @@
 //--------------------------------------------------
 // Macro of DP Rx Interlace info
 //--------------------------------------------------
-#define GET_DP_RX1_INTERLACE_VTOTAL_NUMBER()            (g_bDpRx1InterlaceVtotalNum)
-#define SET_DP_RX1_INTERLACE_VTOTAL_NUMBER(x)           (g_bDpRx1InterlaceVtotalNum = (x))
+#define GET_DP_RX1_INTERLACE_VTOTAL_NUMBER()            (d_g_bDpRx1InterlaceVtotalNum)
+#define SET_DP_RX1_INTERLACE_VTOTAL_NUMBER(x)           (d_g_bDpRx1InterlaceVtotalNum = (x))
 
 //--------------------------------------------------
 // Macro of DP Mst to sst V-Front Porch Setting
@@ -175,9 +175,9 @@ extern WORD g_usDpRx1MstToSstVfrontporch;
 #endif
 
 extern BYTE g_ucDpRx1MSAFailMacRsetCount;
-extern bit g_bDpRx1SourceRDErrorCount;
-extern bit g_bDpRx1InterlaceVtotalNum;
-extern bit g_bDpRx1Tp1Initial;
+extern bit d_g_bDpRx1SourceRDErrorCount;
+extern bit d_g_bDpRx1InterlaceVtotalNum;
+extern bit d_g_bDpRx1Tp1Initial;
 extern BYTE g_ucDpRx1LTPatternSet;
 
 #if(_DP_ILLEGAL_IDLE_PATTERN_CHECK_SUPPORT == _ON)

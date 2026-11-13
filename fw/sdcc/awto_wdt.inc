@@ -89,7 +89,7 @@ void AwtoWdtInit(void)
     }
     AwtoWdtSeal();
     g_stAwtoWdt.ucBoot = ucNew;
-    g_stAwtoWdt.ucPassHi = 0;                   // g_usTimerCounter starts at 0 with Timer2 (ScalerMcuInitial)
+    g_stAwtoWdt.ucPassHi = 0;                   // d_g_usTimerCounter starts at 0 with Timer2 (ScalerMcuInitial)
     g_stAwtoWdt.ucPassLo = 0;
     g_stAwtoWdt.ucMaxPass = 0;
     g_stAwtoWdt.ucMaxPoke = 0;
@@ -114,7 +114,7 @@ DWORD AwtoBootValue(void)                       // bite: cause << 24 | bank << 1
 static void AwtoWdtBite(BYTE ucSp, BYTE ucBank, BYTE ucCause)
 {
     __idata BYTE *pucF = (__idata BYTE *)(BYTE)(ucSp - AWTO_WDT_FRAME);
-    WORD usAge = g_usTimerCounter - AWTO_WDT_PASS_AT();
+    WORD usAge = d_g_usTimerCounter - AWTO_WDT_PASS_AT();
 
     EA = 0;
     if(AwtoWdtValid() == _FALSE)
@@ -142,8 +142,8 @@ static void AwtoWdtBite(BYTE ucSp, BYTE ucBank, BYTE ucCause)
     g_stAwtoWdt.ucMode = GET_MODE_STATE();
     g_stAwtoWdt.ucHbHi = (BYTE)(g_stAwtoDiag.usHeartbeat >> 8);
     g_stAwtoWdt.ucHbLo = (BYTE)g_stAwtoDiag.usHeartbeat;
-    g_stAwtoWdt.ucUpHi = (BYTE)(g_usTimerCounter >> 8);
-    g_stAwtoWdt.ucUpLo = (BYTE)g_usTimerCounter;
+    g_stAwtoWdt.ucUpHi = (BYTE)(d_g_usTimerCounter >> 8);
+    g_stAwtoWdt.ucUpLo = (BYTE)d_g_usTimerCounter;
     g_stAwtoWdt.ucPassAgeHi = (BYTE)(usAge >> 8);
     g_stAwtoWdt.ucPassAgeLo = (BYTE)usAge;
     AwtoWdtSeal();
@@ -219,12 +219,12 @@ void AwtoWdtProbe(BYTE ucTimer)
     EA = 1;
     do
     {
-        usT0 = g_usTimerCounter;
+        usT0 = d_g_usTimerCounter;
     }
-    while(usT0 != g_usTimerCounter);
+    while(usT0 != d_g_usTimerCounter);
     do
     {
-        usNow = g_usTimerCounter;
+        usNow = d_g_usTimerCounter;
     }
     while((WORD)(usNow - usT0) < AWTO_WDT_PROBE_MS);
     g_stAwtoWdt.ucProbe = (g_stAwtoWdt.ucProbe & ~AWTO_WDT_P_ARMED) | AWTO_WDT_P_NORESET | (((AWTO_EICON & _BIT3) != 0) ? AWTO_WDT_P_WDTI : 0);

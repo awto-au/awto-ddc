@@ -105,7 +105,7 @@ BYTE fl_erase(DWORD ulA)
 }
 
 //---- time, keys, status ----
-WORD set_now_ms(void)                          // monotonic: g_usTimerCounter is rebased to 0 by ScalerTimerCheckTimerEvent (#132)
+WORD set_now_ms(void)                          // monotonic: d_g_usTimerCounter is rebased to 0 by ScalerTimerCheckTimerEvent (#132)
 {
     return (WORD)AwtoMs();
 }

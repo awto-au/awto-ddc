@@ -452,13 +452,13 @@ void SysTimerIntProc2(void) __interrupt(5)
 
 #if(_SYSTEM_TIMER_QUARTER_RESOLUTION == _OFF)
 
-    g_bNotifyTimer2Int = _TRUE;
+    d_g_bNotifyTimer2Int = _TRUE;
 
     // Timer Counter
-    g_usTimerCounter += 1;
+    d_g_usTimerCounter += 1;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-    g_usMeasureCounter += 1;
+    d_g_usMeasureCounter += 1;
 #endif
 
 #else
@@ -467,13 +467,13 @@ void SysTimerIntProc2(void) __interrupt(5)
     {
         g_ucTimerQuarterCount = 0;
 
-        g_bNotifyTimer2Int = _TRUE;
+        d_g_bNotifyTimer2Int = _TRUE;
 
         // Timer Counter
-        g_usTimerCounter += 1;
+        d_g_usTimerCounter += 1;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-        g_usMeasureCounter += 1;
+        d_g_usMeasureCounter += 1;
 #endif
     }
     else

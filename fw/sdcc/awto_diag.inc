@@ -7,9 +7,9 @@ void AwtoDiagStage(unsigned char ucStage)
     {
         do
         {
-            usNow = g_usTimerCounter;
+            usNow = d_g_usTimerCounter;
         }
-        while(usNow != g_usTimerCounter);
+        while(usNow != d_g_usTimerCounter);
         g_stAwtoDiag.usStageMs[ucStage - 1] = usNow;
         g_stAwtoDiag.ucStage = ucStage;
         // stage 1 = AwtoSyncInit's line; stages without a sync.tsv row (5 / 7 / 8: the panel machine's lines state them) no line
@@ -44,9 +44,9 @@ void AwtoDiagMainPass(void)
     g_stAwtoDiag.usHeartbeat++;
     do
     {
-        usNow = g_usTimerCounter;
+        usNow = d_g_usTimerCounter;
     }
-    while(usNow != g_usTimerCounter);
+    while(usNow != d_g_usTimerCounter);
     AWTO_WDT_PASS(usNow);
     if((unsigned int)(usNow - usLastMs) >= 1000)
     {

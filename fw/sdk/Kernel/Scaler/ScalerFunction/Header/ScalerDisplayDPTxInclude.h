@@ -33,8 +33,8 @@
 #define _DISPLAY_DP_TX_AUX_DIFF_MODE                                0
 #define _DISPLAY_DP_TX_AUX_SINGLE_MODE                              1
 
-#define GET_DISPLAY_DP_TX_SSCG_CONFIG()                             (g_bDptxSscEn)
-#define SET_DISPLAY_DP_TX_SSCG_CONFIG(x)                            (g_bDptxSscEn = (x))
+#define GET_DISPLAY_DP_TX_SSCG_CONFIG()                             (d_g_bDptxSscEn)
+#define SET_DISPLAY_DP_TX_SSCG_CONFIG(x)                            (d_g_bDptxSscEn = (x))
 
 #if(_DISPLAY_DP_TX_PORT_1 == _ON)
 #define GET_DISPLAY_DP_TX1_HPD_DEBOUNCE_LEVEL()                     (ScalerGetBit(P9C_70_HPD_CTRL, _BIT2) >> 2)
@@ -423,7 +423,7 @@ typedef enum
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern bit g_bDptxSscEn;
+extern bit d_g_bDptxSscEn;
 
 #if(_DISPLAY_DP_TX_PORT_1 == _ON)
 extern StructDownStreamInfo g_stDisplayDPTx1Info;

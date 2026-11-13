@@ -65,8 +65,8 @@ WORD g_usDpRx1MstToSstVfrontporch;
 #endif
 
 BYTE g_ucDpRx1MSAFailMacRsetCount;
-bit g_bDpRx1SourceRDErrorCount = _FALSE;
-bit g_bDpRx1InterlaceVtotalNum;
+bit d_g_bDpRx1SourceRDErrorCount = _FALSE;
+bit d_g_bDpRx1InterlaceVtotalNum;
 
 #if(_DP_ILLEGAL_IDLE_PATTERN_CHECK_SUPPORT == _ON)
 bit g_bDpRx1SourceTypeJudge = _FALSE;

@@ -1044,8 +1044,8 @@ typedef enum
 //--------------------------------------------------
 // MACRO for Factory Power Saving Case
 //--------------------------------------------------
-#define GET_FORCE_POW_SAV_STATUS()                  (g_bForcePowSavStatus)
-#define SET_FORCE_POW_SAV_STATUS(x)                 (g_bForcePowSavStatus = (x))
+#define GET_FORCE_POW_SAV_STATUS()                  (d_g_bForcePowSavStatus)
+#define SET_FORCE_POW_SAV_STATUS(x)                 (d_g_bForcePowSavStatus = (x))
 
 //--------------------------------------------------
 // Definitions of OSD Number ROW COL
@@ -2986,7 +2986,7 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 // __RTD_DDCCI__
-extern bit g_bForcePowSavStatus;
+extern bit d_g_bForcePowSavStatus;
 
 
 // __RTD_OSD__

@@ -1160,9 +1160,9 @@ typedef enum
 #define GET_DP_EMBEDDED_SWITCH_EVENT()          (g_bDpEmbeddedSwitchEvent)
 #define SET_DP_EMBEDDED_SWITCH_EVENT(x)         (g_bDpEmbeddedSwitchEvent = (x))
 
-#define GET_DP_AUTO_SEARCH_SWITCH()             (g_bDpAutoSearchSwitch)
-#define SET_DP_AUTO_SEARCH_SWITCH()             (g_bDpAutoSearchSwitch = _TRUE)
-#define CLR_DP_AUTO_SEARCH_SWITCH()             (g_bDpAutoSearchSwitch = _FALSE)
+#define GET_DP_AUTO_SEARCH_SWITCH()             (d_g_bDpAutoSearchSwitch)
+#define SET_DP_AUTO_SEARCH_SWITCH()             (d_g_bDpAutoSearchSwitch = _TRUE)
+#define CLR_DP_AUTO_SEARCH_SWITCH()             (d_g_bDpAutoSearchSwitch = _FALSE)
 
 #define GET_DCLK_SPREAD_SPEED_VALUE()           (g_uDclkSpreadSpeed)
 #define SET_DCLK_SPREAD_SPEED_VALUE(x)          (g_uDclkSpreadSpeed  = (x))
@@ -4147,7 +4147,7 @@ extern bit g_bD6SwitchPowerStatus;
 extern BYTE g_ucDpEmbeddedSwitchSelect;
 extern BYTE g_ucDpEmbeddedSwitchTarget;
 extern bit g_bDpEmbeddedSwitchEvent;
-extern bit g_bDpAutoSearchSwitch;
+extern bit d_g_bDpAutoSearchSwitch;
 extern BYTE g_uDclkSpreadSpeed;
 extern BYTE g_uDclkSpreadRange;
 

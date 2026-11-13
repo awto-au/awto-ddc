@@ -725,7 +725,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                             SET_DP_RX_D1_LANE2_MARGIN_LINK_HBR_RBR();
                             SET_DP_RX_D1_LANE3_MARGIN_LINK_HBR_RBR();
 #endif
-                            g_bDpRx1Tp1Initial = _TRUE;
+                            d_g_bDpRx1Tp1Initial = _TRUE;
                         }
                     }
 
@@ -763,7 +763,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                 case _DP_TRAINING_PATTERN_2:
                 case _DP_TRAINING_PATTERN_3:
 
-                    g_bDpRx1Tp1Initial = _FALSE;
+                    d_g_bDpRx1Tp1Initial = _FALSE;
 
                     if((GET_DP_RX1_FAKE_LINK_TRAINING() == _FALSE) &&
                        ((GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_1_PASS) ||
@@ -801,7 +801,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
                 case _DP_TRAINING_PATTERN_END:
 
-                    g_bDpRx1Tp1Initial = _FALSE;
+                    d_g_bDpRx1Tp1Initial = _FALSE;
 
                     if((GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_LINK_TRAINING_PASS) || (GET_DP_RX1_LINK_TRAINING_STATUS() == _DP_NORMAL_TRAINING_PATTERN_END_REBUILD_PHY))
                     {

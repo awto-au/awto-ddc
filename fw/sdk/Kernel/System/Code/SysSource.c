@@ -158,7 +158,7 @@ BYTE g_ucDpEmbeddedSwitchTarget = _NO_INPUT_PORT;
 bit g_bDpEmbeddedSwitchEvent = _DISABLE;
 #endif
 
-bit g_bDpAutoSearchSwitch = _DISABLE;
+bit d_g_bDpAutoSearchSwitch = _DISABLE;
 #endif
 
 //****************************************************************************

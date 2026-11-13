@@ -28,15 +28,15 @@
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern volatile bit g_bNotifyTimer2Int;
-extern volatile WORD __data g_usTimerCounter;
+extern volatile bit d_g_bNotifyTimer2Int;
+extern volatile WORD __data d_g_usTimerCounter;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-extern volatile WORD __data g_usMeasureCounter;
+extern volatile WORD __data d_g_usMeasureCounter;
 #endif
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-extern volatile bit g_bWDTimer2Update;
+extern volatile bit d_g_bWDTimer2Update;
 #endif
 
 #if(_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON)

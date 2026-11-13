@@ -54,7 +54,7 @@ StructDisplayInfo g_stMDomainOutputData;
 StructFRCFIFOInfo g_stMDomainFRCFIFOData;
 
 #if(_ASPECT_ORIGINAL_MODE_SUPPORT == _ON)
-bit g_bAspectOriginMode = 0;
+bit d_g_bAspectOriginMode = 0;
 #endif
 
 WORD g_usDVFreq;

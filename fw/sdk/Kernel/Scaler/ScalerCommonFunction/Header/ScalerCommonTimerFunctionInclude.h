@@ -51,19 +51,19 @@
 // Definitions of Timer counter setting
 //--------------------------------------------------
 #define LOAD_TIMER_COUNTER(pusCounter)               {\
-                                                         g_bNotifyTimer2Int = _FALSE;\
-                                                         *(pusCounter) = g_usTimerCounter;\
-                                                         if(g_bNotifyTimer2Int == _TRUE)\
+                                                         d_g_bNotifyTimer2Int = _FALSE;\
+                                                         *(pusCounter) = d_g_usTimerCounter;\
+                                                         if(d_g_bNotifyTimer2Int == _TRUE)\
                                                          {\
-                                                             *(pusCounter) = g_usTimerCounter;\
+                                                             *(pusCounter) = d_g_usTimerCounter;\
                                                          }\
                                                      }
 #define STORE_TIMER_COUNTER(x)                       {\
-                                                         g_bNotifyTimer2Int = _FALSE;\
-                                                         g_usTimerCounter = (x);\
-                                                         if(g_bNotifyTimer2Int == _TRUE)\
+                                                         d_g_bNotifyTimer2Int = _FALSE;\
+                                                         d_g_usTimerCounter = (x);\
+                                                         if(d_g_bNotifyTimer2Int == _TRUE)\
                                                          {\
-                                                             g_usTimerCounter = (x);\
+                                                             d_g_usTimerCounter = (x);\
                                                          }\
                                                      }
 

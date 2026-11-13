@@ -1,5 +1,5 @@
 // #75 main-loop split, inserted into SysMain.c by keil2sdcc.py: slow checks run when AWTO_SLOW_MS have passed.
-// Time base = Timer2 ISR count (1 per ms tick); g_usTimerCounter is rebased by the timer-event code.
+// Time base = Timer2 ISR count (1 per ms tick); d_g_usTimerCounter is rebased by the timer-event code.
 #if(_AWTO_LOOP_SPLIT == _ON)
 __xdata StAwtoLoop g_stAwtoLoop;
 static __xdata unsigned int s_pusAwtoSlowLast[AWTO_SLOW_SLOTS];

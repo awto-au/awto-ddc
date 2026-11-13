@@ -34,8 +34,8 @@ CYCLES_PER_US = 87.7 / 4            # DW8051: MCU clock 87.7 MHz (M2PLL 350.8 / 
 # TOL_STAGE / TOL_ACTIVE: sim stage times shift by <= 1 tick when code moves (2 ms); the ACTIVE time is polled every 20 k instr (~5 ms).
 TOL_REF, TOL_NOM, TOL_STAGE, TOL_ACTIVE = 0.05, (0.70, 1.10), 2, 5
 MAX_STEPS = 400_000                 # DELAY_XUS(1000) is 250 x 21 iterations = 5.3 k steps; guard against a runaway
-DELAY_VARS = {"base5": "g_ucDelay5usN_Base", "basex": "g_ucDelayXusN_Base", "i5": "g_ucDelay5usI", "i5e": "g_ucDelay5usI_EXINT",
-              "cx": "g_ucDelayXus_Counter", "cxe": "g_ucDelayXus_Counter_EXINT"}
+DELAY_VARS = {"base5": "d_g_ucDelay5usN_Base", "basex": "d_g_ucDelayXusN_Base", "i5": "d_g_ucDelay5usI", "i5e": "d_g_ucDelay5usI_EXINT",
+              "cx": "d_g_ucDelayXus_Counter", "cxe": "d_g_ucDelayXus_Counter_EXINT"}
 ALLOW_FN = ("ScalerMcu5usDelayCalc", "AwtoDiag", "GSINIT")     # writes the bases / the calibration test / C initialisers
 LOG = None
 

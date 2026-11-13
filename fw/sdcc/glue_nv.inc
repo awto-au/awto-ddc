@@ -311,19 +311,19 @@ void AwtoNvCommitSel(void)                          // the selector took a choic
 static void AwtoNvLoad(void)
 {
     BYTE ucK;
-    bit bOk = _TRUE;
+    bit d_bOk = _TRUE;
     BYTE __xdata *pucAux = set_aux_buf();
 
-    for(ucK = 0; (ucK < AWTO_NV_AUX_ITEMS) && (bOk == _TRUE); ucK++)
+    for(ucK = 0; (ucK < AWTO_NV_AUX_ITEMS) && (d_bOk == _TRUE); ucK++)
     {
-        bOk = UserCommonFlashLoadItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + ucK), pData, 14);
+        d_bOk = UserCommonFlashLoadItem((EnumFlashItemIDType)(AWTO_NV_AUX_ID + ucK), pData, 14);
         memcpy(pucAux + ucK * 14, pData, ((AWTO_SET_AUX_MAX - ucK * 14) < 14) ? (AWTO_SET_AUX_MAX - ucK * 14) : 14);   // buffer = AWTO_SET_AUX_MAX B (#165)
     }
     s_ucNvSelPort = UserCommonNVRamGetSystemData(_SEARCH_PORT);
     s_ucNvSelScan = UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE);
     s_ucNvSelItem = GET_OSD_INPUT_PORT_OSD_ITEM();
     s_ucNvOn = 1;                                   // from here SDK saves are deferred
-    if(bOk == _TRUE)
+    if(d_bOk == _TRUE)
     {
         set_aux_unpack(AWTO_SET_AUX_MAX);
     }

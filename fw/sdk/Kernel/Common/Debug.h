@@ -323,12 +323,12 @@ extern void AwtoMsgV(unsigned int usId, unsigned long ulValue);
 #define DEBUG_TIMER_SAMPLE_START_MS(EnumDebugTimeCursor)\
                                                     {\
                                                         g_ucTimerCursorUsedMS &= ~(1U << ((EnumDebugTimeCursor) % _DEBUG_TIME_CURSOR_END));\
-                                                        g_pstTimerCursorMS[(EnumDebugTimeCursor) % _DEBUG_TIME_CURSOR_END].usCounter_Start = g_usMeasureCounter;\
+                                                        g_pstTimerCursorMS[(EnumDebugTimeCursor) % _DEBUG_TIME_CURSOR_END].usCounter_Start = d_g_usMeasureCounter;\
                                                     }
 
 #define DEBUG_TIMER_SAMPLE_END_MS(EnumDebugTimeCursor)\
                                                     {\
-                                                        g_pstTimerCursorMS[(EnumDebugTimeCursor) % _DEBUG_TIME_CURSOR_END].usCounter_End = g_usMeasureCounter;\
+                                                        g_pstTimerCursorMS[(EnumDebugTimeCursor) % _DEBUG_TIME_CURSOR_END].usCounter_End = d_g_usMeasureCounter;\
                                                         g_ucTimerCursorUsedMS |= (1U << ((EnumDebugTimeCursor) % _DEBUG_TIME_CURSOR_END));\
                                                     }
 

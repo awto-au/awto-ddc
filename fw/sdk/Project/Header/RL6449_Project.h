@@ -197,11 +197,11 @@ typedef struct
     unsigned char ucMagic1;                     // 'D'
     unsigned char ucVersion;                    // 1; 2 = debug slave block read 0x3C (#38)
     unsigned char ucStage;                      // last stage reached (1..8, monotonic)
-    unsigned int usStageMs[8];                  // g_usTimerCounter (1 ms) at first entry of stage n
+    unsigned int usStageMs[8];                  // d_g_usTimerCounter (1 ms) at first entry of stage n
     unsigned int usHeartbeat;                   // main-loop passes
     unsigned int usT2Isr;                       // Timer2 ISR entries
     unsigned int usEx1Isr;                      // EXINT1 (DDC-CI/debug) ISR entries
-    unsigned char ucDelay5usN;                  // g_ucDelay5usN_Base seen by the self-test
+    unsigned char ucDelay5usN;                  // d_g_ucDelay5usN_Base seen by the self-test
     unsigned int usDelayXms10;                  // 10 ticks of ScalerTimerDelayXms, Timer2 counts / 4
     unsigned int usDelay5us10;                  // 10 x ScalerDelay5us(), raw Timer2 counts, EA off
     unsigned char ucRcap2h;                     // RCAP2H at the test: tells XTAL from M2PLL reload
@@ -249,13 +249,13 @@ typedef struct
     unsigned char ucMode;                       // mode state (_MODE_STATUS_*)
     unsigned char ucHbHi;                       // g_stAwtoDiag.usHeartbeat
     unsigned char ucHbLo;
-    unsigned char ucUpHi;                       // g_usTimerCounter, ms (wraps at 65.5 s)
+    unsigned char ucUpHi;                       // d_g_usTimerCounter, ms (wraps at 65.5 s)
     unsigned char ucUpLo;
     unsigned char ucPassAgeHi;                  // ms since the last main-loop pass, at the warning (wraps at 65.5 s)
     unsigned char ucPassAgeLo;
     unsigned char ucCheck;                      // AWTO_WDT_SEED ^ bytes 0..24: record valid
     unsigned char ucBoot;                       // live from here (not in ucCheck): AWTO_WDT_B_*
-    unsigned char ucPassHi;                     // g_usTimerCounter at the last main-loop pass
+    unsigned char ucPassHi;                     // d_g_usTimerCounter at the last main-loop pass
     unsigned char ucPassLo;
     unsigned char ucMaxPass;                    // longest main-loop pass this boot, x32 ms (255 = 8.1 s or more)
     unsigned char ucMaxPoke;                    // longest gap between watchdog pokes this boot, x32 CNT3 = 4.58 ms (255: >= 586 ms)
@@ -332,7 +332,7 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_FRAME                                          16      // WDT / Timer2 ISR: 2 B PC + 14 pushes (crash_sim_test checks)
 #define AWTO_XFR(a)                                             (*(volatile __xdata unsigned char *)(a))
 #if(_AWTO_WDT == _ON)
-extern __data unsigned char _bs_cur;           // fw/sdcc/bank.asm bank shadow
+extern __data unsigned char d_bs_cur;           // fw/sdcc/bank.asm bank shadow
 extern void AwtoWdtInit(void);
 extern unsigned char AwtoBootReason(void);
 extern unsigned long AwtoBootValue(void);
@@ -342,7 +342,7 @@ extern void AwtoWdtProbe(unsigned char ucTimer);
 extern bit AwtoWdtValid(void);
 extern void AwtoOsdWdtLines(void);
 extern void ScalerTimerWDInitial(void);
-#define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, _bs_cur)
+#define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, d_bs_cur)
 // clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
 #define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT; \
                                                                      ucG_ = ((AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) != 0) ? 0xFF : (AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE); \
@@ -366,7 +366,7 @@ extern void ScalerTimerWDInitial(void);
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
 extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke
-// g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
+// d_g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
 #define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
 #define AWTO_WDT_FEED(site)                                     AWTO_WDT_POKE(site) // inside a bounded loop (docs/watchdog.md table)
 #define AWTO_WDT_PASS(usNow)                                    do { unsigned int usG_ = (usNow) - AWTO_WDT_PASS_AT(); \
@@ -894,7 +894,7 @@ typedef struct
     unsigned char ucSeq;                        // +1 per arm
     unsigned char ucPort;                       // armed for this port (_Dn_INPUT_PORT)
     unsigned char ucN;                          // events recorded since the arm (max AWTO_SW_EVENTS)
-    unsigned int usT0;                          // g_usTimerCounter at the arm
+    unsigned int usT0;                          // d_g_usTimerCounter at the arm
     unsigned char ucLastMode;
     unsigned char ucHpdLow[4];                  // HPD-low writes per port D0..D3 since boot (wraps)
     unsigned char ucHoldBlocks;                 // SDK OSD paths stopped by a held visual (#28), wraps

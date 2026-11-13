@@ -56,7 +56,7 @@ bit ScalerTimerPollingDataBitFlagProc(WORD usTimeout, WORD usRegister, BYTE ucVa
     WORD usTimeElapsed = 0;
     WORD usPreviousTime = 0;
 
-    usPreviousTime = g_usTimerCounter;
+    usPreviousTime = d_g_usTimerCounter;
 
     do
     {
@@ -65,10 +65,10 @@ bit ScalerTimerPollingDataBitFlagProc(WORD usTimeout, WORD usRegister, BYTE ucVa
             return _TRUE;
         }
 
-        if(usPreviousTime != g_usTimerCounter)
+        if(usPreviousTime != d_g_usTimerCounter)
         {
             usTimeElapsed++;
-            usPreviousTime = g_usTimerCounter;
+            usPreviousTime = d_g_usTimerCounter;
         }
     }
     while(usTimeElapsed <= usTimeout);

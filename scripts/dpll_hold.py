@@ -53,7 +53,7 @@ def main() -> int:
             break
     else:
         log("no failed 4K pass seen; aborting"); proc.wait(); return 1
-    d.write(DBG, 0x80, bytes([0x01]))                           # pause main (g_bFwHalt); debug reads/writes still serviced
+    d.write(DBG, 0x80, bytes([0x01]))                           # pause main (d_g_bFwHalt); debug reads/writes still serviced
     c4o, c5o = rd(d, 0x01C4), rd(d, 0x01C5)
     log(f"froze main at P0_02={p:02x}; original C4={f2(c4o)} C5={f2(c5o)}")
 

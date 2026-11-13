@@ -321,7 +321,7 @@ def main() -> int:
     ap.add_argument("--host-mode", help="WxH@HZ instead of gdctl")
     ap.add_argument("--sim", nargs=2, type=Path, metavar=("BIN", "MAP"),
                     help="run against the firmware simulator (fw_sim.SimBus), no hardware; host mode defaults to 1920x1080@60")
-    ap.add_argument("--ffwd", action="store_true", help="sim: fast-forward ScalerTimerDelayXms spins (off: it moves g_usTimerCounter "
+    ap.add_argument("--ffwd", action="store_true", help="sim: fast-forward ScalerTimerDelayXms spins (off: it moves d_g_usTimerCounter "
                     "without Timer2, so the delay-cal T3 check reads 593 vs 550 ms)")
     ap.add_argument("--sim-port", default="D2", choices=("D2", "D3"),
                     help="sim: HDMI input carrying the source; the host reads 0x35 on that port's DDC (#28)")

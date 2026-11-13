@@ -925,7 +925,7 @@ class Runner:
 
     def _ip_restore(self):
         """IP back once no interrupt is active (main context, as the SDK changes it): restoring it inside EXINT0 flips
-        ScalerTimerPollingFlagProc_EXINT0 to its g_usTimerCounter branch while Timer2 cannot preempt -> endless poll"""
+        ScalerTimerPollingFlagProc_EXINT0 to its d_g_usTimerCounter branch while Timer2 cannot preempt -> endless poll"""
         if self._ip_back is None:
             return
         k = 0

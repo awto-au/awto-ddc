@@ -341,20 +341,20 @@ static BYTE AwtoSyncTxt(WORD usRow, BYTE ucPart)   // text after ucPart (0..2) v
     }
     while((*pc != 0) && (*pc != 1))             // AwtoPutChar inlined: no call, so the packer keeps the table in this bank
     {
-        if(s_bAwtoSkip != 0)
+        if(d_s_bAwtoSkip != 0)
         {
             if(--s_ucLogI == 0)                 // second pass of a wrapped console line: dropped
             {
-                s_bAwtoSkip = 0;
+                d_s_bAwtoSkip = 0;
             }
         }
         else if(s_ucAwtoLen < s_ucAwtoCols)
         {
             s_pcAwtoRow[s_ucAwtoLen++] = *pc;
         }
-        else if(s_bAwtoWrap != 0)
+        else if(d_s_bAwtoWrap != 0)
         {
-            s_bAwtoOver = 1;                    // main-page log: the line takes two rows (AwtoConWrapLine)
+            d_s_bAwtoOver = 1;                    // main-page log: the line takes two rows (AwtoConWrapLine)
         }
         pc++;
     }
@@ -1158,14 +1158,14 @@ static void AwtoInfoCard(void)
     BYTE ucPort = SysSourceGetInputPort();
     BYTE ucRow = AWTO_CARD_ROW0;
     BYTE ucV;
-    bit bActive = (SysModeGetModeState() == _MODE_STATUS_ACTIVE);
-    bit bDp = AwtoPortIsDp(ucPort);
+    bit d_bActive = (SysModeGetModeState() == _MODE_STATUS_ACTIVE);
+    bit d_bDp = AwtoPortIsDp(ucPort);
 
-    AwtoCardOpen(AWTO_CARD_ROW0 + (bActive ? 6 : 2) + (bDp ? 2 : 0) + 1, AWTO_CT_INFO);
+    AwtoCardOpen(AWTO_CARD_ROW0 + (d_bActive ? 6 : 2) + (d_bDp ? 2 : 0) + 1, AWTO_CT_INFO);
     AwtoInfoLabel(AWTO_CT_INPUT);
     AwtoPortName(ucPort);
     AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
-    if(bActive == 0)
+    if(d_bActive == 0)
     {
         AwtoInfoLabel(AWTO_CT_STATUS);
         AwtoCardTxt(AWTO_CT_STATE + ui_port_state(ucPort - _D1_INPUT_PORT));
@@ -1227,7 +1227,7 @@ static void AwtoInfoCard(void)
         AwtoTextLine(ucRow++, AWTO_T_STYLE_TEXT);
     }
 #if(_DP_SUPPORT == _ON)
-    if(bDp != 0)
+    if(d_bDp != 0)
     {
         AwtoInfoLabel(AWTO_CT_DPLINK);
         AwtoPutNum(ScalerDpGetLaneCount(ucPort), 1);

@@ -924,6 +924,7 @@ stub	_SysMainSystemInitial	C	0x3408	8
 stub	_SysMainSytemPowerDetect	C	0x3410	8
 const	___str_38	C	0x3418	20
 const	___str_39	C	0x342c	16
+stub	_AwtoFff4Probe	C	0x343c	8
 stub	_UserCommonInterfacePanelPowerTick	C	0x3444	8
 stub	_AwtoDdcPortToVcp	C	0x344c	8
 stub	_AwtoDdcRegistry	C	0x3454	8
@@ -2157,6 +2158,7 @@ const	_pent	6	0x5518	120
 fn	_AwtoConLogTail	6	0x55a0	200
 fn	_AwtoConRow	6	0x5668	292
 fn	_AwtoConTitle	6	0x578c	788
+fn	_AwtoFff4Probe	6	0x5aa0	88
 fn	_AwtoConTitlePoll	6	0x5b00	76
 fn	_AwtoDbgShow	6	0x5b4c	92
 fn	_AwtoDiagConsole	6	0x5ba8	200

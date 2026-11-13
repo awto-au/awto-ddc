@@ -14,7 +14,7 @@ static void AwtoDiagT2Snap(__xdata StAwtoT2Snap *p)
     do
     {
         p->ucF = TF2;
-        p->usTick = g_usTimerCounter;
+        p->usTick = d_g_usTimerCounter;
         do
         {
             p->ucH = TH2;
@@ -26,7 +26,7 @@ static void AwtoDiagT2Snap(__xdata StAwtoT2Snap *p)
     EA = ucEa;
 }
 
-// Counts from snapshot a to b (tick difference mod 65536, so a g_usTimerCounter wrap is harmless).
+// Counts from snapshot a to b (tick difference mod 65536, so a d_g_usTimerCounter wrap is harmless).
 static unsigned long AwtoDiagT2Diff(__xdata StAwtoT2Snap *a, __xdata StAwtoT2Snap *b, unsigned int usRcap)
 {
     unsigned int usTicks = (unsigned int)((b->usTick + b->ucF) - (a->usTick + a->ucF));
@@ -61,7 +61,7 @@ static void AwtoDiagDelayCal(void)
     unsigned int usRcap;
     unsigned char ucEa = EA;
 
-    g_stAwtoDiag.ucDelay5usN = g_ucDelay5usN_Base;
+    g_stAwtoDiag.ucDelay5usN = d_g_ucDelay5usN_Base;
     g_stAwtoDiag.ucRcap2h = RCAP2H;
     usRcap = ((unsigned int)RCAP2H << 8) | RCAP2L;
 
@@ -93,13 +93,13 @@ static void AwtoDiagDelayCal(void)
 
         if((RCAP2H == AWTO_DELAY_CAL_RCAP2H) && (usMin5 != 0) && (usMinX != 0))      // M2PLL clock only (the counts are per clock)
         {
-            ulN = ((unsigned long)g_ucDelay5usN_Base * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usMin5) - 1) / (100UL * usMin5);
+            ulN = ((unsigned long)d_g_ucDelay5usN_Base * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usMin5) - 1) / (100UL * usMin5);
             g_ucAwtoCal5 = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
-            ulN = ((unsigned long)g_ucDelayXusN_Base * AWTO_DELAY_TARGET_PCT * usNomX + (100UL * usMinX) - 1) / (100UL * usMinX);
+            ulN = ((unsigned long)d_g_ucDelayXusN_Base * AWTO_DELAY_TARGET_PCT * usNomX + (100UL * usMinX) - 1) / (100UL * usMinX);
             g_ucAwtoCalX = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
-            g_ucDelay5usN_Base = g_ucAwtoCal5;
-            g_ucDelayXusN_Base = g_ucAwtoCalX;
-            g_stAwtoDiag.ucDelay5usN = g_ucDelay5usN_Base;
+            d_g_ucDelay5usN_Base = g_ucAwtoCal5;
+            d_g_ucDelayXusN_Base = g_ucAwtoCalX;
+            g_stAwtoDiag.ucDelay5usN = d_g_ucDelay5usN_Base;
             AWTO_CAL_RUN(g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
             AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
             AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));

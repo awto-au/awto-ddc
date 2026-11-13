@@ -50,14 +50,14 @@
 // VARIABLE DECLARATIONS
 //****************************************************************************
 BYTE xdata pData_EXINT[6];
-bit g_bPsWakeupHpd;
+bit d_g_bPsWakeupHpd;
 WORD g_usInputPixelClk;
 WORD g_usTmdsOffLineMeasureClk;
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
 BYTE g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE;
-bit g_bDpRx0NormalLTSetPhyFinish = _FALSE;
-bit g_bDpRx1NormalLTSetPhyFinish = _FALSE;
+bit d_g_bDpRx0NormalLTSetPhyFinish = _FALSE;
+bit d_g_bDpRx1NormalLTSetPhyFinish = _FALSE;
 
 #if(_D0_DP_EXIST == _ON)
 bit g_bDpMSTRx0BackupLinkStatusFlg_INT;
@@ -66,20 +66,20 @@ bit g_bDpRx0HdcpCheckEnable;
 #endif
 
 #if(_D1_DP_EXIST == _ON)
-bit g_bDpMSTRx1BackupLinkStatusFlg_INT;
+bit d_g_bDpMSTRx1BackupLinkStatusFlg_INT;
 BYTE g_pucDpRx1LinkStatusBackup_INT[3];
-bit g_bDpRx1HdcpCheckEnable;
+bit d_g_bDpRx1HdcpCheckEnable;
 #endif
 
 #if(_DP_SUPPORT == _ON)
-bit g_bDpMstDCOffHPDToggleHoldFlag;
-bit g_bDpDCOffHPDToggleFlag;
+bit d_g_bDpMstDCOffHPDToggleHoldFlag;
+bit d_g_bDpDCOffHPDToggleFlag;
 StructDpCableStatus g_stDpCableStatus;
 #endif
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 
-bit g_bDpDCOffHPDHigh = 0;
+bit d_g_bDpDCOffHPDHigh = 0;
 BYTE g_ucDigitalSwitch;
 BYTE g_ucHDMIHotPlug;
 
@@ -124,17 +124,17 @@ StructDpAuxSetting g_stDpAuxSetting =
 };
 
 BYTE g_ucDpIrqTime_10us;
-bit g_bDpIllegalIdlePatternCheck = _FALSE;
+bit d_g_bDpIllegalIdlePatternCheck = _FALSE;
 
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
-volatile BYTE __data g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
-BYTE __data g_ucDpRxHpdIrqAssertT2EventDelay5usI;
+volatile BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
+BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelay5usI;
 
 #if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
 volatile bit g_bDpD0HpdIrqAssertT2Event = _FALSE;
 #endif
 #if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-volatile bit g_bDpD1HpdIrqAssertT2Event = _FALSE;
+volatile bit d_g_bDpD1HpdIrqAssertT2Event = _FALSE;
 #endif
 #if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
 volatile bit g_bDpD2HpdIrqAssertT2Event = _FALSE;
@@ -168,7 +168,7 @@ bit g_bFREESYNCSPDInfoReceive;
 bit g_bFREESYNCGetIVFInfo;
 #endif
 
-bit g_bDigitalColorInfoChangeReset;
+bit d_g_bDigitalColorInfoChangeReset;
 
 #if(((_D0_HDMI_SUPPORT == _ON) && (_TMDS_COMBO_EXIST == _OFF)) || ((_HDMI_SUPPORT == _ON) && (_TMDS_PAGE2_COMBO_EXIST == _ON)))
 StructDigitalColorInfo g_stTMDSRx0ColorInfo;

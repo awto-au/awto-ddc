@@ -164,8 +164,8 @@
 //--------------------------------------------------
 
 #if(_ASPECT_ORIGINAL_MODE_SUPPORT == _ON)
-#define GET_ASPECT_ORIGIN_MODE()                        (g_bAspectOriginMode)
-#define SET_ASPECT_ORIGIN_MODE(x)                       (g_bAspectOriginMode = (x))
+#define GET_ASPECT_ORIGIN_MODE()                        (d_g_bAspectOriginMode)
+#define SET_ASPECT_ORIGIN_MODE(x)                       (d_g_bAspectOriginMode = (x))
 #endif
 
 //--------------------------------------------------
@@ -265,7 +265,7 @@ typedef enum
 extern DWORD g_ulDClkFreq;
 
 #if(_ASPECT_ORIGINAL_MODE_SUPPORT == _ON)
-extern bit g_bAspectOriginMode;
+extern bit d_g_bAspectOriginMode;
 #endif
 
 extern WORD g_usDVFreq;

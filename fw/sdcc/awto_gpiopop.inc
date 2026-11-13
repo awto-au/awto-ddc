@@ -256,18 +256,18 @@ static void AwtoTableStatic(void)
 
 void AwtoOsdGpioLines(void)
 {
-    bit bAll = (g_stAwtoGpio.ucDrawn == 0);
+    bit d_bAll = (g_stAwtoGpio.ucDrawn == 0);
     BYTE ucI;
 
     if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0)) return;
     AwtoPanel(0);
-    if(bAll != 0)
+    if(d_bAll != 0)
     {
         AwtoTableStatic();
     }
     for(ucI = 0; ucI < AWTO_G_ROWS; ucI++)
     {
-        if(bAll != 0)
+        if(d_bAll != 0)
         {
             AwtoInRowFull(ucI);
         }
@@ -334,8 +334,8 @@ static void AwtoConLogStart(void)               // next log row: compose with Aw
     s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;
     s_pcAwtoRow[0] = ' ';
     s_ucAwtoLen = 1;
-    s_bAwtoWrap = (s_ucConOpen == AWTO_CON_MAIN);
-    s_bAwtoOver = 0;
+    d_s_bAwtoWrap = (s_ucConOpen == AWTO_CON_MAIN);
+    d_s_bAwtoOver = 0;
 }
 
 // Main page: 1 = the next log row is in view (rolled up one row if it was below); 0 = map end, full redraw requested.
@@ -355,13 +355,13 @@ static bit AwtoConLogRoom(void)
     return 0;
 }
 
-// Main-page log line wider than a row (s_bAwtoOver): the row is drawn up to its last space, the line composed again with that
+// Main-page log line wider than a row (d_s_bAwtoOver): the row is drawn up to its last space, the line composed again with that
 // part dropped and the rest continued on the next row at the text column. Two rows at most (gen_awto_sync.py checks the
 // texts). No locals: under AwtoConLogSync (deep DATA path), the second AwtoSyncLine is one level down only.
 static void AwtoConWrapLine(void)
 {
-    s_bAwtoWrap = 0;
-    s_bAwtoOver = 0;
+    d_s_bAwtoWrap = 0;
+    d_s_bAwtoOver = 0;
     if(AWTO_LOG_ROW0 + s_ucLogHead + 1 >= s_ucConFirst + AWTO_VIEW_ROWS)
     {
         if((AWTO_LOG_ROW0 + s_ucLogHead + 1 >= AWTO_CON_ROWS) || (osd_tc_scroll(s_ucConFirst + 1) == s_ucConFirst))
@@ -389,17 +389,17 @@ static void AwtoConWrapLine(void)
         s_pcAwtoRow[s_ucAwtoLen] = ' ';
     }
     s_ucPanelRow++;
-    s_bAwtoSkip = 1;
+    d_s_bAwtoSkip = 1;
     AwtoSyncLine(s_ucConSyncSeq);
-    s_bAwtoSkip = 0;
-    s_bAwtoOver = 1;                            // AwtoConLogSync: one wrapped line per call (each costs two compositions)
+    d_s_bAwtoSkip = 0;
+    d_s_bAwtoOver = 1;                            // AwtoConLogSync: one wrapped line per call (each costs two compositions)
 }
 
 static void AwtoConLogEnd(void)
 {
     if(s_ucConOpen == AWTO_CON_MAIN)            // terminal: rows only go down; a long line takes two (AwtoConWrapLine)
     {
-        s_bAwtoWrap = 0;
+        d_s_bAwtoWrap = 0;
         AwtoTextLine(0, AWTO_T_STYLE_TEXT);
         if(s_ucPanelRow != AWTO_LOG_ROW0 + s_ucLogHead)
         {
@@ -445,7 +445,7 @@ void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)    // GPIO page only: i
 // XDATA, no locals: AwtoConLogSync sits on the deepest DATA overlay path (see AwtoPutIso).
 static void AwtoConLogTail(void)
 {
-    s_bAwtoWrap = 0;                            // fits one row (gen_awto_sync.py): cells are moved below, no wrap
+    d_s_bAwtoWrap = 0;                            // fits one row (gen_awto_sync.py): cells are moved below, no wrap
     s_ucLogI = s_ucAwtoLen;
     AwtoSyncLine(s_ucConSyncSeq);
     s_pcAwtoRow[s_ucLogI] = ' ';
@@ -481,7 +481,7 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         AWTO_WDT_FEED(AWTO_WDT_S_CONLINE);      // bounded: <= AWTO_SYNC_N lines (a map-full redraw backfills AWTO_LOG_REDRAW_N in one pass)
         AwtoConLogStart();
         AwtoSyncLine(s_ucConSyncSeq);
-        if(s_bAwtoOver != 0)
+        if(d_s_bAwtoOver != 0)
         {
             AwtoConWrapLine();
         }
@@ -492,9 +492,9 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
             AwtoConLogTail();
         }
         AwtoConLogEnd();
-        if(s_bAwtoOver != 0)
+        if(d_s_bAwtoOver != 0)
         {
-            s_bAwtoOver = 0;
+            d_s_bAwtoOver = 0;
             return;                             // the rest next pass: a burst of wide lines bit the watchdog (con_wrap_sim)
         }
     }

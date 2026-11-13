@@ -4,7 +4,7 @@
 usage: msg_nohost_sim.py BIN MAP   (needs a build with DebugMessage on; reuses fw_sim.SimBus)
   case A: boot, no host: ring filled (seq > 0), heartbeat advances.
   case B: host enables the channel (0x55 0x5A) early in boot, then never reads: boot still reaches the main loop,
-          the firmware drops the host after AWTO_MSG_HOST_MS (g_bDebugMessageEven off), later messages go to the ring only.
+          the firmware drops the host after AWTO_MSG_HOST_MS (d_g_bDebugMessageEven off), later messages go to the ring only.
 Log: ./tmp/logs/msg_nohost_sim.log
 """
 import struct, sys, time

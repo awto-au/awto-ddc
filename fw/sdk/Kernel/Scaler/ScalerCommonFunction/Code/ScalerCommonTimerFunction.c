@@ -255,7 +255,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-volatile bit g_bNotifyTimer2Int = _FALSE;
+volatile bit d_g_bNotifyTimer2Int = _FALSE;
 StructTimerEventTableType g_pstTimerEvent[_TIMER_EVENT_COUNT];
 
 #if(_RECORD_TIMER_SUPPORT == _ON)
@@ -263,14 +263,14 @@ WORD g_usTimerRecordStartTime;
 #endif
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
-volatile bit g_bWDTimer2Update = _FALSE;
+volatile bit d_g_bWDTimer2Update = _FALSE;
 // awto #138: event table in awto_t0ev.inc
 #endif
 
-volatile WORD __data g_usTimerCounter;
+volatile WORD __data d_g_usTimerCounter;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-volatile WORD __data g_usMeasureCounter;
+volatile WORD __data d_g_usMeasureCounter;
 #endif
 
 #if(_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON)
@@ -462,14 +462,14 @@ void ScalerTimerWDEventProc_WDINT(void)
         // Latch Current Count
         MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-        g_bWDTimer2Update = _FALSE;
+        d_g_bWDTimer2Update = _FALSE;
 
         // Backup Register Value
         ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
         ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
         // Timer 2 Interrupt and Change Latched Value
-        if(g_bWDTimer2Update == _TRUE)
+        if(d_g_bWDTimer2Update == _TRUE)
         {
             // Backup Register Value
             ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -637,14 +637,14 @@ void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventI
             // Latch Current Count
             MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-            g_bWDTimer2Update = _FALSE;
+            d_g_bWDTimer2Update = _FALSE;
 
             // Backup Register Value
             ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
             ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
             // Timer 2 Interrupt and Change Latched Value
-            if(g_bWDTimer2Update == _TRUE)
+            if(d_g_bWDTimer2Update == _TRUE)
             {
                 // Backup Register Value
                 ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -673,14 +673,14 @@ void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventI
                 // Latch Current Count
                 MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-                g_bWDTimer2Update = _FALSE;
+                d_g_bWDTimer2Update = _FALSE;
 
                 // Backup Register Value
                 ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
                 ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
                 // Timer 2 Interrupt and Change Latched Value
-                if(g_bWDTimer2Update == _TRUE)
+                if(d_g_bWDTimer2Update == _TRUE)
                 {
                     // Backup Register Value
                     ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -726,14 +726,14 @@ void ScalerTimerWDActivateTimerEvent_EXINT0(WORD usTime, EnumScalerWDTimerEventI
                     // Latch Current Count
                     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-                    g_bWDTimer2Update = _FALSE;
+                    d_g_bWDTimer2Update = _FALSE;
 
                     // Backup Register Value
                     ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
                     ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
                     // Timer 2 Interrupt and Change Latched Value
-                    if(g_bWDTimer2Update == _TRUE)
+                    if(d_g_bWDTimer2Update == _TRUE)
                     {
                         // Backup Register Value
                         ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -795,14 +795,14 @@ void ScalerTimerWDActivateTimerEvent_WDINT(WORD usTime, EnumScalerWDTimerEventID
             // Latch Current Count
             MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-            g_bWDTimer2Update = _FALSE;
+            d_g_bWDTimer2Update = _FALSE;
 
             // Backup Register Value
             ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
             ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
             // Timer 2 Interrupt and Change Latched Value
-            if(g_bWDTimer2Update == _TRUE)
+            if(d_g_bWDTimer2Update == _TRUE)
             {
                 // Backup Register Value
                 ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -831,14 +831,14 @@ void ScalerTimerWDActivateTimerEvent_WDINT(WORD usTime, EnumScalerWDTimerEventID
                 // Latch Current Count
                 MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-                g_bWDTimer2Update = _FALSE;
+                d_g_bWDTimer2Update = _FALSE;
 
                 // Backup Register Value
                 ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
                 ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
                 // Timer 2 Interrupt and Change Latched Value
-                if(g_bWDTimer2Update == _TRUE)
+                if(d_g_bWDTimer2Update == _TRUE)
                 {
                     // Backup Register Value
                     ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -884,14 +884,14 @@ void ScalerTimerWDActivateTimerEvent_WDINT(WORD usTime, EnumScalerWDTimerEventID
                     // Latch Current Count
                     MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-                    g_bWDTimer2Update = _FALSE;
+                    d_g_bWDTimer2Update = _FALSE;
 
                     // Backup Register Value
                     ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
                     ucWDTimeLSB = MCU_FFAB_WATCHDOG_CNT23_VALUE;
 
                     // Timer 2 Interrupt and Change Latched Value
-                    if(g_bWDTimer2Update == _TRUE)
+                    if(d_g_bWDTimer2Update == _TRUE)
                     {
                         // Backup Register Value
                         ucWDTimeMSB = MCU_FFAC_WATCHDOG_CNT3_VALUE;
@@ -1381,7 +1381,7 @@ void ScalerTimerSetTimerCount(EnumScalerTimerOperationMode enumOperationMode)
     RCAP2L = pucTimercounter[2];
     RCAP2H = pucTimercounter[3];
 
-    g_bNotifyTimer2Int = _FALSE;
+    d_g_bNotifyTimer2Int = _FALSE;
 
     // Enable interrupt of Timer2
     ET2 = _ENABLE;
@@ -1476,7 +1476,7 @@ void ScalerTimerAddTimerCounter(void)
 
     if(((MCU_FFED_MCU_CONTROL & 0x3C) >> 2) == _FLASH_CLK_PS_FAST_DIV)
     {
-        if(g_bNotifyTimer2Int == _TRUE)
+        if(d_g_bNotifyTimer2Int == _TRUE)
         {
             usOffset = _TIMER_COUNT_TEMP_PS_FAST1 - 1;
         }
@@ -1489,7 +1489,7 @@ void ScalerTimerAddTimerCounter(void)
     }
     else
     {
-        if(g_bNotifyTimer2Int == _TRUE)
+        if(d_g_bNotifyTimer2Int == _TRUE)
         {
             usOffset = _IDLE_TIME - 1;
         }
@@ -2539,13 +2539,13 @@ WORD ScalerTimerCheckTimerEvent(WORD usTime)
 //--------------------------------------------------
 WORD ScalerTimerGetTimerCounter(void)
 {
-    WORD usPresentTime = g_usTimerCounter;
+    WORD usPresentTime = d_g_usTimerCounter;
 
     // When get counter,timer interrupt maybe change counter.
     // Get twice to avoid it.
-    if(abs(g_usTimerCounter - usPresentTime) > 0x7F)
+    if(abs(d_g_usTimerCounter - usPresentTime) > 0x7F)
     {
-        usPresentTime = g_usTimerCounter;
+        usPresentTime = d_g_usTimerCounter;
     }
 
     return usPresentTime;
@@ -2593,13 +2593,13 @@ void ScalerTimerDelayXms(WORD usNum)
             return;
         }
 
-        g_bNotifyTimer2Int = _FALSE;
+        d_g_bNotifyTimer2Int = _FALSE;
 
         while(_TRUE)
         {
-            if(g_bNotifyTimer2Int == _TRUE)
+            if(d_g_bNotifyTimer2Int == _TRUE)
             {
-                g_bNotifyTimer2Int = _FALSE; AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
+                d_g_bNotifyTimer2Int = _FALSE; AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
 
                 if(--usNum)
                 {
@@ -2626,7 +2626,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
     WORD usTimeElapsed = 0;
     WORD usPreviousTime = 0;
 
-    usPreviousTime = g_usTimerCounter;
+    usPreviousTime = d_g_usTimerCounter;
 
     do
     {
@@ -2635,10 +2635,10 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
             return _TRUE;
         }
 
-        if(usPreviousTime != g_usTimerCounter)
+        if(usPreviousTime != d_g_usTimerCounter)
         {
             usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_POLL);
-            usPreviousTime = g_usTimerCounter;
+            usPreviousTime = d_g_usTimerCounter;
         }
     }
     while(usTimeElapsed <= usTimeout);
@@ -2677,7 +2677,7 @@ BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucB
     }
     else
     {
-        WORD usPreviousTime = g_usTimerCounter;
+        WORD usPreviousTime = d_g_usTimerCounter;
 
         do
         {
@@ -2686,10 +2686,10 @@ BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucB
                 return _TRUE;
             }
 
-            if(usPreviousTime != g_usTimerCounter)
+            if(usPreviousTime != d_g_usTimerCounter)
             {
                 usTimeElapsed++;
-                usPreviousTime = g_usTimerCounter;
+                usPreviousTime = d_g_usTimerCounter;
             }
         }
         while(usTimeElapsed <= ucTimeout);
@@ -2717,7 +2717,7 @@ WORD ScalerTimerTimer2Count_EXINT0(WORD usTimer)
         // Latch Current Counter and not clear any WD timer counter
         MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-        g_bWDTimer2Update = _TRUE;
+        d_g_bWDTimer2Update = _TRUE;
 
         // Add to Prevent INT Lock Reset
         if((MCU_FFAD_WATCHDOG_CNT1_VALUE & 0x07) > 0x04)
@@ -2726,7 +2726,7 @@ WORD ScalerTimerTimer2Count_EXINT0(WORD usTimer)
             CLR_MCU_WATCH_DOG();
         }
 #endif
-        g_bNotifyTimer2Int = _TRUE;
+        d_g_bNotifyTimer2Int = _TRUE;
 
         usTimer += 1;
     }
@@ -2766,7 +2766,7 @@ BYTE ScalerTimerPollingFlagProc_WDINT(BYTE ucTimeout, WORD usRegister, BYTE ucBi
     }
     else
     {
-        WORD usPreviousTime = g_usTimerCounter;
+        WORD usPreviousTime = d_g_usTimerCounter;
 
         do
         {
@@ -2775,10 +2775,10 @@ BYTE ScalerTimerPollingFlagProc_WDINT(BYTE ucTimeout, WORD usRegister, BYTE ucBi
                 return _TRUE;
             }
 
-            if(usPreviousTime != g_usTimerCounter)
+            if(usPreviousTime != d_g_usTimerCounter)
             {
                 usTimeElapsed++;
-                usPreviousTime = g_usTimerCounter;
+                usPreviousTime = d_g_usTimerCounter;
             }
         }
         while(usTimeElapsed <= ucTimeout);
@@ -2806,7 +2806,7 @@ WORD ScalerTimerTimer2Count_WDINT(WORD usTimer)
         // Latch Current Counter and not clear any WD timer counter
         MCU_FFEB_WDT_TEST = (MCU_FFEB_WDT_TEST & (~_BIT7)) | _BIT3;
 
-        g_bWDTimer2Update = _TRUE;
+        d_g_bWDTimer2Update = _TRUE;
 
         // Add to Prevent INT Lock Reset
         if((MCU_FFAD_WATCHDOG_CNT1_VALUE & 0x07) > 0x04)
@@ -2815,7 +2815,7 @@ WORD ScalerTimerTimer2Count_WDINT(WORD usTimer)
             CLR_MCU_WATCH_DOG();
         }
 #endif
-        g_bNotifyTimer2Int = _TRUE;
+        d_g_bNotifyTimer2Int = _TRUE;
 
         usTimer += 1;
     }

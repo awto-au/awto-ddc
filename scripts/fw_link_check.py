@@ -28,8 +28,8 @@ Finding kinds (key = kind|src|detail, address-free so two images can be diffed):
   kind_stale             --asm .rst disagrees with this map (area address or kind vs --layout): not this image's build tree
 Chunk kinds: the linked .rst in --asm (an area of data directives only = const, never disassembled), else --layout.
 Proofs (one `proven` log line each, no finding), all from this image + its .rst:
-  bank switch   __bs_call/__bs_ret: `mov __bs_cur,Rn` .. `mov a,Rn; movx @dptr(=0xFFFF),a`, Rn untouched in between
-                (an ISR between the two writes saves/restores __bs_cur = the bank being entered); Keil-ABI __bs_ret: the same via A
+  bank switch   __bs_call/__bs_ret: `mov _d_bs_cur,Rn` .. `mov a,Rn; movx @dptr(=0xFFFF),a`, Rn untouched in between
+                (an ISR between the two writes saves/restores _d_bs_cur = the bank being entered); Keil-ABI __bs_ret: the same via A
   bank read     `movx a,@0xFFFF` (GET_CURRENT_BANK_NUMBER) in bank-n code: every const it references, and every entry of a
                 pointer table it references, is in bank n or common; in common code: all common (it reads the caller's bank)
   DMA callee    gptr_const_xbank where the caller also reads 0xFFFF (the DMA bank argument) and the callee's call closure has
@@ -295,15 +295,15 @@ def writes_rn(x, n):
 
 
 def switch_proof(im):
-    """([(lo, hi)] proven bank-switch routines, [problems]). Proof per routine: `mov __bs_cur,Rn` precedes
+    """([(lo, hi)] proven bank-switch routines, [problems]). Proof per routine: `mov _d_bs_cur,Rn` precedes
     `mov dptr,#0xFFFF; mov a,Rn; movx @dptr,a` (the routine's last insn before its _sw label) and Rn is not written in
-    between: an ISR taken between the two writes pushes the restore entry of __bs_cur = the bank being entered."""
+    between: an ISR taken between the two writes pushes the restore entry of _d_bs_cur = the bank being entered."""
     ranges, bad = [], []
-    cur = im.dsyms.get("__bs_cur")
+    cur = im.dsyms.get("_d_bs_cur")
     for lo_s, hi_s in (("__bs_call", "__bs_call_sw"), ("__bs_ret", "__bs_ret_sw")):
         lo, hi = im.gsyms.get(lo_s), im.gsyms.get(hi_s)
         if lo is None or hi is None or cur is None or not 0 < hi - lo < 64:
-            bad.append(f"{lo_s}: __bs_cur/{lo_s}/{hi_s} missing from the map")
+            bad.append(f"{lo_s}: _d_bs_cur/{lo_s}/{hi_s} missing from the map")
             continue
         ins = list(d8051.disasm(im.img[lo:hi], base=lo))
         st = [k for k, x in enumerate(ins) if len(x.raw) == 2 and x.raw[0] & 0xF8 == 0x88 and x.raw[1] == cur]
@@ -311,13 +311,13 @@ def switch_proof(im):
         n = ins[st[0]].raw[0] & 7 if len(st) == 1 else None
         ok = (n is not None and w >= 2 and ins[w].text == "MOVX @DPTR,A" and ins[w - 1].raw == bytes([0xE8 | n])
               and ins[w - 2].dptr == BANK_REG and st[0] < w - 2 and not any(writes_rn(x, n) for x in ins[st[0] + 1:w]))
-        # Keil-ABI __bs_ret (sdcccall 3, R1-R7 kept): `mov __bs_cur,a; mov dptr,#0xFFFF; movx @dptr,a`, A untouched between
+        # Keil-ABI __bs_ret (sdcccall 3, R1-R7 kept): `mov _d_bs_cur,a; mov dptr,#0xFFFF; movx @dptr,a`, A untouched between
         ok = ok or (w >= 2 and ins[w].text == "MOVX @DPTR,A" and ins[w - 1].dptr == BANK_REG
                     and ins[w - 2].raw == bytes([0xF5, cur]))
         if ok:
             ranges.append((lo, hi))
         else:
-            bad.append(f"{lo_s}: no `mov __bs_cur,Rn .. mov dptr,#0xFFFF; mov a,Rn; movx @dptr,a` sequence")
+            bad.append(f"{lo_s}: no `mov _d_bs_cur,Rn .. mov dptr,#0xFFFF; mov a,Rn; movx @dptr,a` sequence")
     return ranges, bad
 
 
@@ -586,7 +586,7 @@ def check(im, xdata=(), regnames=None, proven=None):
                             add("fnptr_banked", src, f"mov dptr,#{fc['name']}", i.addr)
     sw, sw_bad = switch_proof(im)
     for lo, hi in sw:
-        proven.append(f"bank switch  0x{lo:04x}-0x{hi:04x}: __bs_cur written before 0xFFFF from the same register")
+        proven.append(f"bank switch  0x{lo:04x}-0x{hi:04x}: _d_bs_cur written before 0xFFFF from the same register")
     for c, at in writes:
         if c["reg"] == "C" and any(lo <= at < hi for lo, hi in sw):
             continue

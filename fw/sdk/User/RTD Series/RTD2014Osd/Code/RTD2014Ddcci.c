@@ -82,7 +82,7 @@ BYTE g_ucDdcciNewControlValue = 1;
 BYTE g_ucDdcciActiveValue;
 BYTE g_ucColorTempUnSupport;
 
-bit g_bForcePowSavStatus = _FALSE;
+bit d_g_bForcePowSavStatus = _FALSE;
 
 //****************************************************************************
 // FUNCTION DECLARATIONS

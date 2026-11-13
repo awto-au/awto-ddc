@@ -97,12 +97,12 @@ class Img:
 
 
 def switch(im, good=True):
-    """common __bs_call/__bs_ret at 0x400 (fw/sdcc/bank.asm shape); good=False writes 0xFFFF before __bs_cur."""
-    call = [(b"\x88\x14", "mov __bs_cur,r0"), (b"\xa9\x82", "mov r1,dpl"), (b"\x90\xff\xff", "mov dptr,#0xFFFF"),
+    """common __bs_call/__bs_ret at 0x400 (fw/sdcc/bank.asm shape); good=False writes 0xFFFF before _d_bs_cur."""
+    call = [(b"\x88\x14", "mov _d_bs_cur,r0"), (b"\xa9\x82", "mov r1,dpl"), (b"\x90\xff\xff", "mov dptr,#0xFFFF"),
             (b"\xe8", "mov a,r0"), (b"\xf0", "movx @dptr,a")]
     if not good:
         call = [call[2], call[3], call[4], call[0], call[1]]
-    ret = [(b"\x89\x14", "mov __bs_cur,r1"), (b"\x90\xff\xff", "mov dptr,#0xFFFF"), (b"\xe9", "mov a,r1"), (b"\xf0", "movx @dptr,a")]
+    ret = [(b"\x89\x14", "mov _d_bs_cur,r1"), (b"\x90\xff\xff", "mov dptr,#0xFFFF"), (b"\xe9", "mov a,r1"), (b"\xf0", "movx @dptr,a")]
     tail = [(b"\x22", "ret")]
     body = call + tail + ret + tail
     p = 0x400
@@ -113,7 +113,7 @@ def switch(im, good=True):
     im.map += area("CSEG", 0x400, p - 0x400) + "".join(
         f"C:   {a:08X}  {s}\n" for s, a in (("__bs_call", 0x400), ("__bs_call_sw", 0x400 + n1), ("__bs_ret", 0x400 + n1 + 1),
                                            ("__bs_ret_sw", 0x400 + n2)))
-    im.map += "     00000014  __bs_cur                           awto_bank\n"
+    im.map += "     00000014  _d_bs_cur                           awto_bank\n"
 
 
 def stub(im, name, a, target, bank):
@@ -184,7 +184,7 @@ def main():
     assert F == {"gptr_const_xbank"}, F
     F, _ = bank_image(isr_push_all=False)                     # ISR does not save R3-R7 before reaching a stub
     assert F == {"isr_reach_stub"}, F
-    F, _ = bank_image(switch_ok=False)                        # 0xFFFF written before __bs_cur
+    F, _ = bank_image(switch_ok=False)                        # 0xFFFF written before _d_bs_cur
     assert "bank_reg_access" in F and "isr_reach_stub" in F, F
     F, P = bank_image(ptr_caller=True)                        # pointer param: the caller's tables count too
     assert "bank_reg_access" in F, (F, P)

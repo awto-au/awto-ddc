@@ -116,8 +116,8 @@
 BYTE g_ucDigitalHPosition;
 BYTE g_ucDigitalVPosition;
 StructPanelPowerInfo g_stPanelPowerInfo;
-bit g_bFailSafeMode = 0;
-bit g_bForceSetPwmDuty = 0;
+bit d_g_bFailSafeMode = 0;
+bit d_g_bForceSetPwmDuty = 0;
 #if(_VGA_SUPPORT == _ON)
 BYTE g_ucVgaCheckCounter;
 #endif
@@ -760,8 +760,8 @@ static __xdata BYTE s_ucPnlBl;                  // backlight sub-state AWTO_PNL_
 static __xdata WORD s_usPnlBlAt;                // (WORD)AwtoMs() at the backlight sub-state's entry / when wanted
 static __xdata BYTE s_ucPnlDown;                // power switch waiting for the panel: 0 none, else 1 + the level to restore
 __xdata BYTE g_ucAwtoPanelOwn;                  // 1 while the machine drives its pins (AwtoPanelForeign)
-static bit s_bPnlLit;                           // backlight pin was on since the stream started (T4 applies)
-static bit s_bPnlWant;                          // backlight wanted and allowed: the on-delay counts from s_usPnlBlAt
+static bit d_s_bPnlLit;                           // backlight pin was on since the stream started (T4 applies)
+static bit d_s_bPnlWant;                          // backlight wanted and allowed: the on-delay counts from s_usPnlBlAt
 
 static WORD UserCommonInterfacePanelSince(WORD usFrom)
 {
@@ -817,7 +817,7 @@ static WORD UserCommonInterfacePanelVideoOn(void)
 {
     ScalerDisplayDPTxStreamHanlder(_ENABLE);
     ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_VIDEO_PATTERN);
-    s_bPnlLit = (s_ucPnlBl != AWTO_PNL_BL_DARK);
+    d_s_bPnlLit = (s_ucPnlBl != AWTO_PNL_BL_DARK);
     return (WORD)AwtoMs();
 }
 
@@ -852,19 +852,19 @@ static void UserCommonInterfacePanelBlStep(void)
 {
     WORD usNow = (WORD)AwtoMs();
     WORD usIn = (WORD)(usNow - s_usPnlBlAt);
-    bit bWant = ((s_ucPnlTarget == AWTO_PNL_TGT_BL) && (s_ucPnlState >= AWTO_PNL_VDD) && (s_ucPnlState <= AWTO_PNL_VIDEO));
+    bit d_bWant = ((s_ucPnlTarget == AWTO_PNL_TGT_BL) && (s_ucPnlState >= AWTO_PNL_VDD) && (s_ucPnlState <= AWTO_PNL_VIDEO));
 
     switch(s_ucPnlBl)
     {
         case AWTO_PNL_BL_DARK:
-            if(bWant == _FALSE)
+            if(d_bWant == _FALSE)
             {
-                s_bPnlWant = _FALSE;
+                d_s_bPnlWant = _FALSE;
                 return;
             }
-            if(s_bPnlWant == _FALSE)
+            if(d_s_bPnlWant == _FALSE)
             {
-                s_bPnlWant = _TRUE;
+                d_s_bPnlWant = _TRUE;
                 s_usPnlBlAt = usNow;
                 usIn = 0;
             }
@@ -873,8 +873,8 @@ static void UserCommonInterfacePanelBlStep(void)
                 return;
             }
             UserCommonInterfacePanelBlGo(AWTO_PNL_BL_PIN, (AWTO_BL_ON_DELAY_MS != 0) ? AWTO_PNL_BL_DELAYED : 0, usNow);
-            s_bPnlWant = _FALSE;
-            s_bPnlLit = _TRUE;
+            d_s_bPnlWant = _FALSE;
+            d_s_bPnlLit = _TRUE;
             PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
             ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
             usIn = 0;
@@ -882,7 +882,7 @@ static void UserCommonInterfacePanelBlStep(void)
 
         case AWTO_PNL_BL_PIN:
             // what: backlight pin on -> PWM duty; registry bl_pwm_ms (0 = same step, Dan). Expiry: user duty.
-            if(bWant == _FALSE)
+            if(d_bWant == _FALSE)
             {
                 UserCommonInterfacePanelBlGo(AWTO_PNL_BL_DIM, 0, usNow);
                 PCB_BACKLIGHT_PWM(AWTO_PWM_DARK);
@@ -898,7 +898,7 @@ static void UserCommonInterfacePanelBlStep(void)
             return;
 
         case AWTO_PNL_BL_LIT:
-            if(bWant != _FALSE)
+            if(d_bWant != _FALSE)
             {
                 return;
             }
@@ -1004,7 +1004,7 @@ static bit UserCommonInterfacePanelStep(void)
             {
                 return _FALSE;
             }
-            if(s_bPnlLit == _FALSE)             // backlight never on since the stream start: T4 has nothing to cover
+            if(d_s_bPnlLit == _FALSE)             // backlight never on since the stream start: T4 has nothing to cover
             {
                 UserCommonInterfacePanelGo(AWTO_PNL_T5, usNow);
                 ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_OFF);
@@ -1081,7 +1081,7 @@ void UserCommonInterfacePanelBoot(void)
     PCB_BACKLIGHT_POWER(_LIGHT_CONTROL_ON);
     ScalerDisplayDPTxPowerSequenceProc(_DPTX_POWER_SEQUENCE_BACKLIGHT_ON);
     g_ucAwtoPanelOwn = 0;
-    s_bPnlLit = _TRUE;
+    d_s_bPnlLit = _TRUE;
 }
 
 //--------------------------------------------------

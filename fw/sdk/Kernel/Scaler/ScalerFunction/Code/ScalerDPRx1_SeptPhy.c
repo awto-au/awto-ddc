@@ -49,7 +49,7 @@ BYTE g_pucDpMacRx1MstStMuxBackup[5];
 StructDpLinkInfo g_stDpRx1LinkInfo;
 #endif
 
-bit g_bDpRx1Tp1Initial = _FALSE;
+bit d_g_bDpRx1Tp1Initial = _FALSE;
 BYTE g_ucDpRx1LTPatternSet;
 BYTE g_ucDpRx1Tp1PermitSwingLevel0;
 

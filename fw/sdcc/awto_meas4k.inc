@@ -21,7 +21,7 @@ void AwtoMeasT2Sample(void)
     __xdata StAwtoMeasRec *pR;
     unsigned int usNow;
 
-    usNow = g_usTimerCounter;
+    usNow = d_g_usTimerCounter;
     if((signed int)(usNow - g_stAwtoMeas.usNextMs) < 0)
     {
         return;
@@ -67,9 +67,9 @@ void AwtoMeasEvent(unsigned char ucId, unsigned char ucArg, unsigned int usVal)
     {
         do
         {
-            usNow = g_usTimerCounter;
+            usNow = d_g_usTimerCounter;
         }
-        while(usNow != g_usTimerCounter);
+        while(usNow != d_g_usTimerCounter);
         g_stAwtoMeas.ucNSamp = 0;
         g_stAwtoMeas.ucNEv = 0;
         g_stAwtoMeas.pSampWr = &g_stAwtoMeas.stSamp[0];
@@ -82,9 +82,9 @@ void AwtoMeasEvent(unsigned char ucId, unsigned char ucArg, unsigned int usVal)
     {
         do
         {
-            usNow = g_usTimerCounter;
+            usNow = d_g_usTimerCounter;
         }
-        while(usNow != g_usTimerCounter);
+        while(usNow != d_g_usTimerCounter);
         pE = &g_stAwtoMeas.stEv[g_stAwtoMeas.ucNEv];
         pE->usMs = usNow;
         pE->ucId = ucId;

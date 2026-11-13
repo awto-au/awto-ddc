@@ -39,7 +39,7 @@ static __xdata BYTE s_ucSysPwrBy;               // who asked for the pending pow
 static __xdata BYTE s_ucSysModeBy;              // who asked for the pending mode reset
 static __xdata DWORD s_ulSysEntry;              // AwtoMs() at the state's entry
 volatile __xdata BYTE g_ucAwtoSysOwn;           // volatile: the set and the clear around one view write both stay
-static bit s_bSysLogged;                        // SYS_AT pushed the line: the next SysMachineGo applies it without a line
+static bit d_s_bSysLogged;                        // SYS_AT pushed the line: the next SysMachineGo applies it without a line
 
 // line now, before the action (why | AWTO_SYS_WHY_AT); the SysMachineGo after the action applies the transition
 #define SYS_AT(n, w)                            SysMachineGo((n), (w) | AWTO_SYS_WHY_AT, _FALSE)
@@ -124,7 +124,7 @@ static bit SysMachineFlagsClear(void)
 //--------------------------------------------------
 static void SysMachineGo(BYTE ucNew, BYTE ucWhy, bit bModeEvent)
 {
-    if(s_bSysLogged == _FALSE)                  // line + entry time at the transition (SYS_AT: before the action)
+    if(d_s_bSysLogged == _FALSE)                  // line + entry time at the transition (SYS_AT: before the action)
     {
         g_ucAwtoSysOwn = 1;                     // console draw held (AWTO_CON_LIVE): line time = entry time
         AwtoSysLog((BYTE)((s_ucSysState << 4) | ucNew), (ucWhy & AWTO_SYS_WHY_CODE) |
@@ -136,8 +136,8 @@ static void SysMachineGo(BYTE ucNew, BYTE ucWhy, bit bModeEvent)
         }
         g_ucAwtoSysOwn = 0;
     }
-    s_bSysLogged = ((ucWhy & AWTO_SYS_WHY_AT) != 0);
-    if(s_bSysLogged == _TRUE)
+    d_s_bSysLogged = ((ucWhy & AWTO_SYS_WHY_AT) != 0);
+    if(d_s_bSysLogged == _TRUE)
     {
         return;
     }

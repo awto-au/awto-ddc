@@ -7,7 +7,7 @@ usage: sw_timeline.py <bus> --serial S --map MAP [--to D1|D2|D3] [--runs N] [--s
     debug slave is linked onto --read-bus for the read (dbg_link on/off: DDC/CI owns the active port, #79).
   --read-only: decode the current log only. Host side per run: kernel drm uevents (udevadm monitor) and mutter journal lines.
   Events (RL6449_Project.h AWTO_SW_EV_*): 01 mode state, 10 panel power action, 20 T3 wait start/end, 40 switch cmd,
-  50/51/52 held-visual guards. Times = firmware g_usTimerCounter ms relative to the arm (usT0).
+  50/51/52 held-visual guards. Times = firmware d_g_usTimerCounter ms relative to the arm (usT0).
 Log: ./tmp/logs/sw_timeline.log (one decoded line per event)
 """
 import argparse
