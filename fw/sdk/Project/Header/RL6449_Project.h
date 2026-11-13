@@ -768,7 +768,7 @@ extern __xdata unsigned char g_ucAwtoDdcciOn;
 #else
 #define AWTO_DDCCI_POLL_ON()                                    (1)
 #endif
-// #80 IP over DDC (fw/sdcc/awto_net.inc, docs/ip-over-ddc.md): byte rings fed by DDC/CI op 0xD0 (Transport A, polled engine)
+// #80 IP over DDC (fw/net/net.c, docs/ip-over-ddc.md): byte rings fed by DDC/CI op 0xD0 (Transport A, polled engine)
 // and debug cmd 0x3D (Transport B, EXINT1 ISR); SLIP-framed Ethernet; ARP, ICMP echo, UDP echo + service. Work only when a
 // transport raised g_ucAwtoNetRun (a host exchange): an idle link costs one XDATA byte test per pass.
 #ifndef _AWTO_NET

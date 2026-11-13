@@ -296,7 +296,7 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         return;
     }
 #ifdef _AWTO_NEW_SETTINGS
-    if(AwtoDdcRegistry(pucR, pucRx, ucLen, pucTx) == _TRUE)     // #67: MCCS 2.2 on the settings registry (glue.inc)
+    if(AwtoDdcRegistry(pucR, pucRx, ucLen, pucTx) == _TRUE)     // #67: MCCS 2.2 on the settings registry (fw/settings/settings_glue.c)
     {
         return;
     }

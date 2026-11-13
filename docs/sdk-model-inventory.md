@@ -173,7 +173,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 15 | RTD2014Osd.c | probes 9, 10 in the one-time message | OSD | #60 |
 | 16 | RTD2014OsdDisplay.c | `AwtoHoldBlocksDisable` guard in `OsdDispDisableOsd`; `AwtoMenuForget`; `AWTO_FW_TAG` + dbgpop, osdcard, keypop, gpiopop, wdtpop, settings glue | OSD | #28 #34 #124 #134 |
 | 17 | RTD2014Key.c | code in fw/test/testcmd.c, fw/keys/keytest.c + keys.c + keyinject.c, fw/input/inputs.c | keys | #129 |
-| 18 | RTD2014Ddcci.c | awto_ddcci, awto_net | DDC/CI | #60 #80 |
+| 18 | RTD2014Ddcci.c | code in fw/input/ports.c, fw/ddcci/ddcci.c, fw/net/net.c | DDC/CI | #60 #80 |
 | 19 | ScalerCommonMcu.c | `awto_delaycal.inc`; M2PLL re-entry keeps calibrated counts (sub) | timers | #53 #54 |
 | 20 | SysTimer.c / SysInt.c | `AWTO_DIAG_T2ISR`, `AWTO_DIAG_EX1ISR`, `AWTO_MEAS_T2ISR` | ISRs | #23 #26 |
 | 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
@@ -295,7 +295,7 @@ Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PAN
 
 ### 3.6 Cross-cutting
 - Timers/WDT: SDK event table + ours (§1.6); WDT feeds from SDK waits (subs) and ours.
-- DDC/CI: SDK `UserCommonDdcciHandler` (engine 0), our spare-engine poll (fw/ddcci/ddcci.c), debug slave in EXINT1 (awto_dbgisr), IP-over-DDC (awto_net), debug-port follow (awto_dbgport). KVM/debug cannot share a channel (#79).
+- DDC/CI: SDK `UserCommonDdcciHandler` (engine 0), our spare-engine poll (fw/ddcci/ddcci.c), debug slave in EXINT1 (awto_dbgisr), IP-over-DDC (fw/net/net.c), debug-port follow (awto_dbgport). KVM/debug cannot share a channel (#79).
 - Keys: one reader and dispatcher after #129.
 
 ---

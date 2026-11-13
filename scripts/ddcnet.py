@@ -8,7 +8,7 @@ usage:
   ddcnet.py svc --ip ADDR info | get ID.. | set ID=V.. | msgs [--follow]         UDP service client (through the TAP)
 - Transport B `dbg` (default): debug slave 0x35 cmd 0x3D, ISR-answered, 25 B reply. Transport A `ddcci`: DDC/CI 0x37 op D0/D1.
 - --sim BIN: fw_sim (MAP beside BIN); B through fw_sim.SimBus, A through SimDdcci (IIC_1 engine model, FE86..).
-- Firmware side: fw/sdcc/awto_net.inc + awto_dbgisr.inc + awto_ddcci.inc (wb-p14net).
+- Firmware side: fw/net/net.c + fw/sdcc/awto_dbgisr.inc + fw/ddcci/ddcci.c (wb-p14net).
 Log: ./tmp/logs/ddcnet.log (decoded, one line per step / exchange run), ./tmp/logs/ddcnet.raw.log (bytes)
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ B_IN_SAFE = 12                 # default: whole write (sub + 15) fits the 16-byt
 XCHG_TRIES = 4                 # per exchange: a failed write/read/checksum is retried with the same seq (fw dedups)
 END, ESC, ESC_END, ESC_ESC = 0xC0, 0xDB, 0xDC, 0xDD
 ETH_CFG = 0x88B5               # local experimental ethertype: host -> monitor config (MAC + IP)
-PORT = 5577                    # awto_net.inc AWTO_NET_PORT
+PORT = 5577                    # fw/net/net.c AWTO_NET_PORT
 NET = "10.235"                 # host-only subnet, not the house LAN (docs/ip-over-ddc.md "Addresses")
 LOG = None
 

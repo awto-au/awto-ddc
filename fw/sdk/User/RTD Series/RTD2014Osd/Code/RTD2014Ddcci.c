@@ -102,7 +102,6 @@ void RTDDdcciColorReset(void);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_net.inc"
 void UserDdcciHandler(void)
 {
     if(GET_OSD_DDCCI_STATUS() == _ON)
