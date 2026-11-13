@@ -281,6 +281,8 @@ def main() -> int:
     ap.add_argument("--secs", type=float, default=3.0)
     ap.add_argument("--chan", choices=("left", "right", "both", "silence"), default="both")
     ap.add_argument("--hz", type=int, default=440)
+    ap.add_argument("--freqs", help="steps: comma list of tone Hz played in turn per step, e.g. 200,1000,4000")
+    ap.add_argument("--only", help="steps: comma list of step numbers to run (default all)")
     ap.add_argument("pokes", nargs="*")
     a = ap.parse_args()
     BUS, SERIAL = a.bus, a.serial
@@ -335,7 +337,9 @@ def main() -> int:
         return 0
     if a.cmd == "steps":
         dev = host(True)
-        p = tone_wav("both", a.hz, (1, 1), a.secs)
+        freqs = [int(f) for f in a.freqs.split(",")] if a.freqs else [a.hz]
+        waves = [(hz, tone_wav("both", hz, (1, 1), a.secs)) for hz in freqs]
+        only = [int(s) for s in a.only.split(",")] if a.only else list(range(1, STEPS + 1))
         osd = [sys.executable, str(ROOT / "scripts/osd_test.py"), str(BUS), "--serial", SERIAL, "--map", str(a.map), "--cmd"]
         import dbg_link
         with dbg_link.linked(BUS, 2):
@@ -343,12 +347,14 @@ def main() -> int:
         say(f"console open (test cmd 0x26, held): rc {r.returncode} {r.stderr.strip()[:120]}")
         say(f"STEPS START {time.strftime('%H:%M:%S')}: {STEPS} ear-test steps, {a.secs:.0f} s tone each, {GEN_GAP_S:.0f} s gap")
         try:
-            for n in range(1, STEPS + 1):
-                if n > 1:
+            for i, n in enumerate(only):
+                if i:
                     time.sleep(GEN_GAP_S)
                 ddc_vcp(GEN_VCP, STEP_START + n)
                 say(f"STEP {n}/{STEPS} START {time.strftime('%H:%M:%S')} (console line 'audio test {n}/{STEPS}: ...')")
-                r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
+                for hz, p in waves:
+                    say(f"  STEP {n} {hz} Hz START {time.strftime('%H:%M:%S')}")
+                    r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
                 ddc_vcp(GEN_VCP, STEP_DONE + n)
                 say(f"STEP {n}/{STEPS} END {time.strftime('%H:%M:%S')} aplay rc {r.returncode}")
         finally:
