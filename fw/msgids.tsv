@@ -83,7 +83,7 @@
 192f	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10786	Get YCC LIMIT RANGE	0
 193d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9229	Get Pixel Repetition 0	0
 19a0	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:423	Audio D1: WatchDog	0
-1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4310	ucIndex if Drr user define timing 	0
+1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4298	ucIndex if Drr user define timing 	0
 1a4a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4333	Pixel Repetition Not Received and not Pixel repetition 0	0
 1ad2	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7371	Get Color Space YUV422	0
 1ada	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8165	Get Colorimetry 709	0

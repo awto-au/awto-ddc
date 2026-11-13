@@ -127,9 +127,7 @@
 #define _INTERNAL_AUDIO_TEST_SUPPORT _OFF
 #endif /* awto: audio test build (-D_AWTO_AUDIO_TEST) */
 
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-#warning "_INTERNAL_AUDIO_TEST_SUPPORT is _ON!!!"
-#endif
+// awto: no #warning for the opt-in test build (the build tag names it; warn gate rows follow the default build)
 
 
 ///////////////

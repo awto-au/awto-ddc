@@ -168,6 +168,10 @@ E1	08	vport	wake on % suppressed: input disabled (once per trigger per sleep)
 E1	09	vport	disable % requested: already disabled
 E1	0A	vport	enable % requested: already enabled
 E1	0B	vport	fixed search on disabled %: auto search
+E3	01	-	speaker amp on (P7.4 = 1)
+E3	02	-	speaker amp off (P7.4 = 0)
+E3	03	-	amp aux pin low (P7.3 = 0)
+E3	04	-	unmute, speaker output off: amp stays off (P7.4 = 0)
 E2	01	-	M-domain set-up: start
 E2	09	-	M-domain set-up: IVS wait 1
 E2	0B	n	M-domain set-up: memory check (WD ctrl0 x 256 + status0 = %)

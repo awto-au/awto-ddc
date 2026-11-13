@@ -210,4 +210,3 @@
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	512	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	514	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6206	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4093	ok	OK-HARMLESS: SDK empty power-process branches (_POWER_STATUS_NORMAL/SAVING: "Add User interface function"), audio on (docs/audio.md)
