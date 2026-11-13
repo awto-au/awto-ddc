@@ -1999,6 +1999,7 @@ extern bit SysMachineOffOrGoing(void);
 #define _DAC_OUTPUT_SWITCH_SUPPORT                              _OFF
 #define AWTO_AUDIO_OUT_DEFAULT                                  _AUDIO_DAC_OUTPUT_SPEAKER
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
+#define AWTO_SYNC_EV_DEMO                                       0xE6    // test cmd 0x3A demo log: 01 start, 02 end (sync.tsv)
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, P7.3 AMP_MUTE = 0
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step

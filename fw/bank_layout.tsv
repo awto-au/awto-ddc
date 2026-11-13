@@ -2098,7 +2098,7 @@ fn	_AwtoDdcReply	6	0x286c	196
 fn	_AwtoDdcciPoll	6	0x2930	624
 fn	_AwtoDeadPortPoll	6	0x2ba0	180
 fn	_AwtoConLogSync	6	0x2c54	380
-fn	_AwtoDemoLog	6	0x2dd0	164
+fn	_AwtoDemoLog	6	0x2dd0	200
 fn	_AwtoPortBoot	6	0x3cb8	184
 fn	_AwtoPortCable	6	0x3d70	48
 fn	_AwtoPortEnableId	6	0x3da0	68

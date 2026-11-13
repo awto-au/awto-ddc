@@ -115,6 +115,8 @@ class Sim:
         t = self.text()
         if not t or "AWTO DIAGNOSTICS" not in t[0]:
             say(f"  {name}: console not open (title {t[0].strip()[:40] if t else '-'!r}), nothing to compare")
+            if want_wraps:                               # the wrap phases must see the console (they passed silently before)
+                self.check(False, f"{name}: console open for the wrap check", t[0].strip()[:40] if t else "-")
             return
         out.mkdir(parents=True, exist_ok=True)
         (out / f"{name}.txt").write_text("\n".join(r.rstrip() for r in t) + "\n")
@@ -194,6 +196,8 @@ def main() -> int:
     s.check(s.until(lambda: s.power() == PWR_NORMAL, WAKE_S), "SOURCE key: woke (power NORMAL)", f"mode {s.bus.mode_state()}")
     s.bus.wait(DRAW_S)
     s.phase("5-wake", out)
+    s.cmd(0x26)                                         # console (the wake leaves the input selector up)
+    s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], 4.0)
     s.inject(LONG)
     s.bus.wait(DRAW_S)
     s.phase("6-long-lines", out, want_wraps=len(LONG))
@@ -202,6 +206,9 @@ def main() -> int:
         s.bus.wait(0.1)
     s.bus.wait(2 * DRAW_S)                              # the redraw is a console open (map clear, font load) + the backfill
     s.phase("7-map-end", out, want_wraps=len(LONG))
+    s.cmd(0x3A)                                         # demo log: 100 lines 5ms apart (test cmd 0x3A), a burst with wraps
+    s.bus.wait(2.5)                                     # 100 lines x ~13 ms on unit 3 = 1.3 s, x1.25, + the draw backlog
+    s.phase("8-demo-log", out)                         # burst: every line whole, the newest 20 on screen
     bites = [x for x in s.ring() if "watchdog bite" in x]
     s.check(not bites, "no watchdog bite while the console drew the bursts (one wrapped line per AwtoConLogSync call)", str(bites[:1]))
     say(f"{'PASS' if s.fails == 0 else 'FAIL'} con_wrap_sim {a.bin.name}: {s.fails} failed (pages: {out})")

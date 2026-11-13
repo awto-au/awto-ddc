@@ -326,7 +326,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep):%
 1A	01	-	monitor off, inputs not searched
 1A	02	-	scaler input side reset for a new search
 1A	03	-	searching for inputs
-1A	04	-	scaler set-up for the timing
+1A	04	-	scaler timing set
 1A	05	-	picture on screen
 1A	08	-	timing outside what scaler / panel accept
 1A	09	-	search found no source
@@ -357,3 +357,5 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep):%
 1B	18	-	SDK power switch:NORMAL->OFF
 1B	19	-	SDK power switch:NORMAL->POWER SAVING
 1B	1A	-	UP+DOWN wake (console + backlight)
+E6	01	-	demo log start (test cmd 0x3A):100 sample lines, made-up values, nothing really happened
+E6	02	-	demo log end

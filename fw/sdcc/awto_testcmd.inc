@@ -90,6 +90,10 @@ static void AwtoDemoLog(void)                   // each main pass while lines ar
     s_ucAwtoDemoN--;
     AwtoSyncPush(tAwtoDemoId[s_ucAwtoDemoN % AWTO_DEMO_KINDS], tAwtoDemoArg[s_ucAwtoDemoN % AWTO_DEMO_KINDS],
                  tAwtoDemoVal[s_ucAwtoDemoN % AWTO_DEMO_KINDS]);
+    if(s_ucAwtoDemoN == 0)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_DEMO, 2, 0);
+    }
 }
 
 void AwtoDiagTestCmd(void)
@@ -195,6 +199,7 @@ void AwtoDiagTestCmd(void)
     {
         AwtoDiagConsole(1);
         g_ucAwtoConAuto = 0;
+        AwtoSyncPush(AWTO_SYNC_EV_DEMO, 1, 0);
         s_ucAwtoDemoN = AWTO_DEMO_LINES;
         s_usAwtoDemoAt = (WORD)AwtoMs();
     }
