@@ -12,6 +12,8 @@ usage: audio_test.py host                       ELD + IEC958 switch of the Intel
                                                 value (hex), 3 s off between; 06E0 restored to its value before; times logged
        audio_test.py outs --map MAP [--secs 4]  ear matrix: one both-channel 440 Hz tone per output set-up (OUTS), 3 s gaps;
                                                 outputs selected by the per-output mute bits + P7.4 (SDK leaves those alone)
+       audio_test.py steps --map MAP [--secs 4]  test build: diagnostics console held open, then firmware ear-test steps 1..7
+                                                (VCP 0x63 = 0x10 + n: console line "audio test n/7: ...", host tone, 0x30 + n: done line)
        audio_test.py dport --map MAP IDX..      HDMI D2 audio data port page 71: index -> 71C9, read 71CA (restores the index)
 - Plays straight to ALSA plughw:<card>,<dev> of the HDMI pcm whose ELD names our monitor: never the PipeWire default sink
   (the Intel card's PipeWire profile is analog only; that HDMI pcm is free).
@@ -55,6 +57,7 @@ REGS_READ_S = 1.0                               # one regs() pass over the debug
 DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retries; 10 s = stall
 
 
+STEPS, STEP_START, STEP_DONE = 7, 0x10, 0x30     # firmware ear-test steps (RL6449_Project.h AWTO_AUDIO_TEST_*)
 AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
 OUT_ON, OUT_MUTED = 0x08, 0xC8
 OUTS = (("aout + hpout, amp P7.4 = 1 (as flashed)", OUT_ON, OUT_ON, 1),
@@ -271,7 +274,7 @@ def tones(a, u: Unit) -> int:
 def main() -> int:
     global BUS, SERIAL
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen", "outs"))
+    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen", "outs", "steps"))
     ap.add_argument("--map", type=Path)
     ap.add_argument("--bus", type=int, default=BUS)
     ap.add_argument("--serial", default=SERIAL)
@@ -329,6 +332,28 @@ def main() -> int:
             if old:
                 u.wr(rio, DPORT_IDX, old[0])
         u.session(go)
+        return 0
+    if a.cmd == "steps":
+        dev = host(True)
+        p = tone_wav("both", a.hz, (1, 1), a.secs)
+        osd = [sys.executable, str(ROOT / "scripts/osd_test.py"), str(BUS), "--serial", SERIAL, "--map", str(a.map), "--cmd"]
+        import dbg_link
+        with dbg_link.linked(BUS, 2):
+            r = subprocess.run(osd + ["debug"], capture_output=True, text=True, timeout=DDC_LIMIT_S)
+        say(f"console open (test cmd 0x26, held): rc {r.returncode} {r.stderr.strip()[:120]}")
+        say(f"STEPS START {time.strftime('%H:%M:%S')}: {STEPS} ear-test steps, {a.secs:.0f} s tone each, {GEN_GAP_S:.0f} s gap")
+        try:
+            for n in range(1, STEPS + 1):
+                if n > 1:
+                    time.sleep(GEN_GAP_S)
+                ddc_vcp(GEN_VCP, STEP_START + n)
+                say(f"STEP {n}/{STEPS} START {time.strftime('%H:%M:%S')} (console line 'audio test {n}/{STEPS}: ...')")
+                r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
+                ddc_vcp(GEN_VCP, STEP_DONE + n)
+                say(f"STEP {n}/{STEPS} END {time.strftime('%H:%M:%S')} aplay rc {r.returncode}")
+        finally:
+            ddc_vcp(GEN_VCP, STEP_DONE + STEPS)      # last step's restore again (idempotent): outputs, amp, user volume
+        say("steps done; console stays open (clear: osd_test.py ... --cmd clear)")
         return 0
     if a.cmd == "outs":
         dev = host(True)
