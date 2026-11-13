@@ -9,7 +9,7 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
   --cmd: write the firmware test byte (g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
     injected after the key scan, 0x10+n = event n (n<16; n>=16 at 0x70+n-16). Visuals someone is asked to look at stay up until cleared (#28):
       debug = 0x26           debug pop-up (console), held             clear    = 0x27  every held visual away
-      demo-log = 0x3A  console + 100 demo log lines 5ms apart (real line types, sample values)
+      demo-log = 0x3A  console + 100 log lines 'line N test 1234567890...' 5ms apart (every third wraps)
       timed (old images): debug-6s = 0x20 (pop-up, _AWTO_INFO_POPUP_SEC, #34). Boot logo cmds 0x21 / 0x24 / 0x25: gone (#144).
     0x22/0x23 = message log on/off (wb-msgtable, #56). An image older than #28 ignores 0x26 / 0x27.
     Held state: g_stAwtoDiag + 0x2F (bit1 pop-up). Works for keys (the direct key write is overwritten).

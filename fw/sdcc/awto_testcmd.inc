@@ -60,25 +60,12 @@ static void AwtoMemForce(BYTE ucOn)
 
 static __xdata unsigned int s_usAwtoHoldCancel;  // usT2Isr at the last OSD_DISABLE cancel
 
-// test cmd 0x3A: demo log, AWTO_DEMO_LINES lines AWTO_DEMO_MS apart (Dan 2026-11-13: console scroll / wrap); real rows, sample values
+// test cmd 0x3A: demo log, AWTO_DEMO_LINES lines AWTO_DEMO_MS apart (Dan 2026-11-13: console scroll / wrap): "line N test 1234567890...",
+// short / medium / long in turn (the long one wraps)
 #define AWTO_DEMO_LINES                         100
 #define AWTO_DEMO_MS                            5
-#define AWTO_DEMO_KINDS                         10
-static __xdata unsigned char s_ucAwtoDemoN;     // lines still to push
+static __xdata unsigned char s_ucAwtoDemoN;     // lines still to push (0 = idle: XDATA is zeroed at boot)
 static __xdata unsigned int s_usAwtoDemoAt;     // AwtoMs() of the last push
-static const __code unsigned char tAwtoDemoId[AWTO_DEMO_KINDS] = {0x13, 0xC6, 0xC3, 0xC5, 0x13, 0xC7, 0xC8, 0x11, 0xD4, 0x10};
-static const __code unsigned char tAwtoDemoArg[AWTO_DEMO_KINDS] = {0x23, 0x05, 0x05, 0x05, 0x34, 0x05, 0x05, 0x34, 0x20, 0x0F};
-static const __code unsigned long tAwtoDemoVal[AWTO_DEMO_KINDS] = {
-    0xA10001DBUL,                               // INITIAL->SEARCH 475ms, why INITIAL done + mode text
-    1540UL,                                     // TMDS clock 154.0MHz
-    3UL,                                        // scan done:HDMI
-    (3840UL << 16) | 2160UL,                    // timing 3840x2160
-    0x9E0002A5UL,                               // SEARCH->DISPLAY SETTING 677ms, why idle commit (long) + mode text
-    59991UL,                                    // refresh 59.991Hz
-    593915UL,                                   // pixel clock 593.915MHz
-    (33UL << 16) | 87UL,                        // panel LINK->VIDEO
-    (0x1FUL << 27) | (2UL << 19) | (32UL << 9) | 8UL,   // NVRAM wrote 32B (all groups) in 2 programs
-    0x01UL};                                    // backlight off by boot (deferred: the long one)
 
 static void AwtoDemoLog(void)                   // each main pass while lines are left
 {
@@ -88,12 +75,7 @@ static void AwtoDemoLog(void)                   // each main pass while lines ar
     }
     s_usAwtoDemoAt = (WORD)AwtoMs();
     s_ucAwtoDemoN--;
-    AwtoSyncPush(tAwtoDemoId[s_ucAwtoDemoN % AWTO_DEMO_KINDS], tAwtoDemoArg[s_ucAwtoDemoN % AWTO_DEMO_KINDS],
-                 tAwtoDemoVal[s_ucAwtoDemoN % AWTO_DEMO_KINDS]);
-    if(s_ucAwtoDemoN == 0)
-    {
-        AwtoSyncPush(AWTO_SYNC_EV_DEMO, 2, 0);
-    }
+    AwtoSyncPush(AWTO_SYNC_EV_DEMO, 1 + (s_ucAwtoDemoN % 3), AWTO_DEMO_LINES - s_ucAwtoDemoN);     // line 1..100
 }
 
 void AwtoDiagTestCmd(void)
@@ -199,7 +181,6 @@ void AwtoDiagTestCmd(void)
     {
         AwtoDiagConsole(1);
         g_ucAwtoConAuto = 0;
-        AwtoSyncPush(AWTO_SYNC_EV_DEMO, 1, 0);
         s_ucAwtoDemoN = AWTO_DEMO_LINES;
         s_usAwtoDemoAt = (WORD)AwtoMs();
     }

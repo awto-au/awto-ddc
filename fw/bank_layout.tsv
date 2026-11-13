@@ -2063,8 +2063,6 @@ const	_mn_s9	6	0x09e0	36
 const	_caps	6	0x0a04	376
 const	_id2idx	6	0x0b7c	124
 const	___str_67	6	0x0bf8	20
-const	_tAwtoDemoId	6	0x0c0c	16
-const	_tAwtoDemoVal	6	0x0c1c	48
 const	_pinfo	6	0x0c68	52
 const	_ptitle	6	0x0c9c	36
 const	_tab	6	0x0cc0	2160
@@ -2153,7 +2151,6 @@ fn	_AwtoConLogRoom	6	0x539c	116
 fn	_AwtoConLogStart	6	0x5410	84
 fn	_AwtoMemForce	6	0x5464	180
 const	_pent	6	0x5518	120
-const	_tAwtoDemoArg	6	0x5590	16
 fn	_AwtoConLogTail	6	0x55a0	200
 fn	_AwtoConRow	6	0x5668	292
 fn	_AwtoConTitle	6	0x578c	788

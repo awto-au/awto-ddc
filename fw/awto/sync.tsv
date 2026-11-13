@@ -357,5 +357,6 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep):%
 1B	18	-	SDK power switch:NORMAL->OFF
 1B	19	-	SDK power switch:NORMAL->POWER SAVING
 1B	1A	-	UP+DOWN wake (console + backlight)
-E6	01	-	demo log start (test cmd 0x3A):100 sample lines, made-up values, nothing really happened
-E6	02	-	demo log end
+E6	01	n	line % test 1234567890
+E6	02	n	line % test 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890
+E6	03	n	line % test 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890

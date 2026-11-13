@@ -208,7 +208,7 @@ def main() -> int:
     s.phase("7-map-end", out, want_wraps=len(LONG))
     s.cmd(0x3A)                                         # demo log: 100 lines 5ms apart (test cmd 0x3A), a burst with wraps
     s.bus.wait(2.5)                                     # 100 lines x ~13 ms on unit 3 = 1.3 s, x1.25, + the draw backlog
-    s.phase("8-demo-log", out)                         # burst: every line whole, the newest 20 on screen
+    s.phase("8-demo-log", out, want_wraps=2)           # burst; every third demo line wraps
     bites = [x for x in s.ring() if "watchdog bite" in x]
     s.check(not bites, "no watchdog bite while the console drew the bursts (one wrapped line per AwtoConLogSync call)", str(bites[:1]))
     say(f"{'PASS' if s.fails == 0 else 'FAIL'} con_wrap_sim {a.bin.name}: {s.fails} failed (pages: {out})")
