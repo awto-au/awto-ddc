@@ -1982,7 +1982,7 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 // Audio DAC Option
 //-------------------------------------------------
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
-#define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
+#define _DAC_SPEAKER_OUTPUT_SWAP                                _OFF // SDK default; _ON writes 06E0 = 0x50 = both aout from DAC_R (docs/audio.md)
 
 // awto: DAC output fixed, set once at DAC start: aout 116/117 -> speaker amp (unit 3 ear test 2026-11-13 [hw]: hpout alone
 // silent); hpout unused; no jack switching, so no per-pass output check (#94)
