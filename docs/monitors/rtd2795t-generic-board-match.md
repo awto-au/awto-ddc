@@ -1,8 +1,8 @@
 # RTD2795T board-family and generic-board match
 
 Status: evidence review, 2026-11-10. This report distinguishes a product/platform
-match from an exact PCB match. No board photograph, PCB silkscreen, schematic, BOM,
-or independent firmware image is presently available for a copper-level comparison.
+match from an exact PCB match.
+- 2026-11-13: boards photographed ([boards.md](boards.md)). Main board sticker `N16UPH0WN2P1200A0001`, PSU `PL3461` / `900-01-00284`; no JXC / Dahua / LM27-F410 marking; amp PAM8006A; no headphone jack fitted. The LM27-F410 match stays unconfirmed.
 
 ## Conclusion
 

@@ -83,7 +83,7 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - Cheap alternative: CH341A programmer + wbcbz7 DLL
 
 ## Next
-- [ ] Open monitor, read scaler part number and SPI flash chip
+- [ ] Open monitor, read scaler part number and SPI flash chip: boards photographed 2026-11-13 ([boards.md](boards.md)); scaler and flash are under the heatsink, still to do
 - [ ] Try DDC/AUX ISP read with the vendor tool (Windows, outside this box)
 - [ ] Dump flash before any write
 
