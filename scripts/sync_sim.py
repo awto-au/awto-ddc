@@ -130,7 +130,7 @@ def main():
         h, lines = r.episode("power-on")
         txt = "\n".join(lines)
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
-        for want in ("power on", "-> ACTIVE:", "backlight on at once", "timing ", "console opened"):
+        for want in ("power on", "->ACTIVE:", "backlight on at once", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
         r.check(r.console() != 0, "console opened by itself after power-on")
         r.shot("poweron_console")
@@ -144,7 +144,7 @@ def main():
         sel = r.loop_rate()
         say(f"  measured, sim loop rate: idle ACTIVE {idle}/s, selector open {sel}/s")
         r.cmd(K_MENU, 1.0)
-        for port, c, name, want in ((3, 0x33, "switch_d3", "-> NO SIGNAL:"), (2, 0x32, "switch_d2", "-> ACTIVE:")):
+        for port, c, name, want in ((3, 0x33, "switch_d3", "->NO SIGNAL:"), (2, 0x32, "switch_d2", "->ACTIVE:")):
             r.cmd(c, 0.2)
             if port == 2:
                 r.s.bus.run_until_mode(3)
@@ -163,8 +163,8 @@ def main():
         h, lines = r.episode("power key on")
         txt = "\n".join(lines)
         r.check(h["kind"] == 4, "power key episode", f"kind {h['kind']}")
-        # #162 step 2: the panel machine's first step ('panel: in OFF for N ms -> VDD') replaces the display-setting 'panel on requested'
-        for want in ("system: in OFF for ", "backlight on requested by ", ("panel on requested", "-> VDD: VDD on"), "-> ACTIVE:"):
+        # #162 step 2: the panel machine's first step ('panel: in OFF for N ms->VDD') replaces the display-setting 'panel on requested'
+        for want in ("system: in OFF for ", "backlight on requested by ", ("panel on requested", "->VDD: VDD on"), "->ACTIVE:"):
             alt = want if isinstance(want, tuple) else (want,)
             r.check(any(w in txt for w in alt), f"power key log has '{' or '.join(alt)}' (episode began before the INITIAL handler)")
         d = C.decode(C.read(r.s.bus, r.caddr))

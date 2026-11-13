@@ -394,7 +394,7 @@ def console_rows(n: int, word: int, w: int, txt0: int) -> int:
     return 2 if txt0 + n - (w - word) - 1 <= w else 3
 
 
-def line_check(r: list) -> int:
+def line_check(r: list, wraps: bool = False) -> int:
     """every row's worst-case line in at most 2 rows of the main-page log; the host time line + its fw tail in one row
     (AwtoConLogTail moves cells, no wrap there). Returns the number of failures; widths read from the firmware."""
     w, txt0 = c_int("AWTO_LOG_W_MAIN", DBGPOP), c_int("AWTO_LOG_TXT0", DBGPOP)
@@ -417,6 +417,10 @@ def line_check(r: list) -> int:
             bad += 1
             log(f"LINE TOO LONG D7 + D8 {fw['a']} (one row, AwtoConLogTail): worst case {n} cells > {w}")
     rep.sort(key=lambda t: -t[0])
+    if wraps:                                     # --wraps: list the rows that wrap to two console rows
+        for n, k, x in rep:
+            if k == 2:
+                log(f"WRAP {x['id']:02X} {x['a']} worst case {n} cells: {x['text']}")
     log(f"console log row {w} cells, text at {txt0}: {sum(k == 1 for _, k, _ in rep)} rows fit one row, "
         f"{sum(k == 2 for _, k, _ in rep)} wrap to two, {bad} fail; widest: " +
         ", ".join(f"{x['id']:02X} {x['a']} {n}" for n, _, x in rep[:8]))
@@ -434,6 +438,7 @@ def patch(path: Path, name: str, block: str):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--wraps", action="store_true", help="list the rows whose worst-case line wraps to two console rows")
     a = ap.parse_args()
     r = rows()
     s, cnts = port_sigs()
@@ -449,7 +454,7 @@ def main():
                 path.write_text(new)
             log(f"{path.name} {name}: {'out of date' if a.check else 'rewritten'}")
     log(f"{len(r)} sync rows; {stale} block(s) changed")
-    bad = line_check(r)
+    bad = line_check(r, a.wraps)
     return 1 if (a.check and stale) or bad else 0
 
 

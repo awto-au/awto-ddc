@@ -52,7 +52,7 @@ def pins_colour(p35, p36, edges):
 
 def judge_lines(lines, check):
     """transition / LED line order (ring lines of all phases, in order)"""
-    trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"system: in (.+?) for \d+ ms -> (.+?):", x))]
+    trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"system: in (.+?) for \d+ ms->(.+?):", x))]
     leds = {i: (m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"LED: (.+?) \((.+?)\)$", x))}
     check(bool(leds), f"LED lines logged ({len(leds)})")
     led, bad, named = None, [], []

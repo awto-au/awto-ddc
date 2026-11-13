@@ -215,7 +215,7 @@ def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
     if fmt == "sys":
         old, why = name(rows, SYS_STATE, a >> 4), v >> 24
         mode = f"; {name(rows, SYS_MODE, a & 0x0F)}" if why & WHY_MODE else ""        # s3b: the SDK mode changed
-        return f"in {old} for {v & SYS_MS_MAX} ms -> {name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, why & WHY_CODE)}{mode}"
+        return f"in {old} for {v & SYS_MS_MAX} ms->{name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, why & WHY_CODE)}{mode}"
     return f"{name(rows, SYS_REQ, a)} requested by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
 
 

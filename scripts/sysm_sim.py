@@ -159,7 +159,7 @@ class Run:
         for x in new:
             say(f"    {x}")
         self.phase_lines.setdefault(title, []).extend(new)
-        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: in .+? for \d+ ms -> (.+?):", x))), None)
+        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: in .+? for \d+ ms->(.+?):", x))), None)
         LED.sample(self.m, self.led, st, self.phase if self.phase != "boot" else "cold boot",
                    self.m.addr("g_ucAwtoLedMode") if self.led_addr else None, self.led_check, self.led_table)
         return new
@@ -214,14 +214,14 @@ class Run:
         self.stable_detect(False)
         self.bus.wait(HOLD_MS / 1000)
         lost = self.ring_lines("signal lost")
-        self.check(any("-> HOLD L1" in x for x in lost), "signal lost: system ACTIVE -> HOLD L1 (mode stays ACTIVE)")
+        self.check(any("->HOLD L1:" in x for x in lost), "signal lost: system ACTIVE -> HOLD L1 (mode stays ACTIVE)")
         self.phase = "signal back"
         self.signal = True
         self.stable_detect(True)
         self.step("signal back", None, lambda: self.bus.mode_state() == MODE_ACTIVE, HOLD_MS, "signal back: ACTIVE")
         self.bus.wait(SETTLE_MS / 1000)
         back = self.ring_lines("signal back")
-        self.check(any("in HOLD L1 for " in x and "-> FAST SWITCH:" in x for x in back) and any("in FAST SWITCH for " in x and "-> ACTIVE:" in x for x in back),
+        self.check(any("in HOLD L1 for " in x and "->FAST SWITCH:" in x for x in back) and any("in FAST SWITCH for " in x and "->ACTIVE:" in x for x in back),
                    "signal back: HOLD L1 -> FAST SWITCH -> ACTIVE")
         self.step("power saving", lambda: self.mccs.set(0xD6, 4), lambda: self.power() == PWR_SAVING, PS_MS, "VCP D6 = 4: power saving")
         self.bus.wait(0.3)
@@ -250,8 +250,8 @@ class Run:
         # signal still on the port: the SDK takes fake power saving (mode POWER SAVING, power status kept NORMAL)
         self.step("no support PS", None, lambda: self.bus.mode_state() == MODE_PS, NOSUP_PS_MS, "NO SUPPORT -> OSD power saving (mode)")
         ns = self.ring_lines("no support")
-        self.check(any("-> NO SUPPORT" in x for x in ns), "no support: system transition into NO SUPPORT logged")
-        self.check(not any("in NO SUPPORT for " in x and "-> SEARCH:" in x for x in ns), "no support: no NO SUPPORT -> SEARCH loop")
+        self.check(any("->NO SUPPORT:" in x for x in ns), "no support: system transition into NO SUPPORT logged")
+        self.check(not any("in NO SUPPORT for " in x and "->SEARCH:" in x for x in ns), "no support: no NO SUPPORT -> SEARCH loop")
 
     def judge(self):
         ev = self.events
@@ -270,17 +270,17 @@ class Run:
         self.check(first is not None and not outside, "every power / mode view change after the machine's init is the machine's",
                    "; ".join(f"{t} {ph} {w} {o:02X}->{n:02X}" for t, ph, w, o, n, _ in outside[:6]))
         trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines)
-                 if (m := re.search(r"system: in (.+?) for \d+ ms -> (.+?): ", x))]
+                 if (m := re.search(r"system: in (.+?) for \d+ ms->(.+?): ", x))]
         broken = [(a, b) for (_, _, a2), (_, b, _) in zip(trans, trans[1:]) for a, b in [(a2, b)] if a != b]
         self.check(trans and not broken, f"transition chain unbroken ({len(trans)} transitions)", str(broken[:4]))
-        unnamed = [x for x in lines if re.search(r"system: in [0-9A-F]{2} for |-> [0-9A-F]{2}: |ms -> [^:]+: [0-9A-F]{2}\b|requested by [0-9A-F]{2} ", x)]
+        unnamed = [x for x in lines if re.search(r"system: in [0-9A-F]{2} for |->[0-9A-F]{2}: |ms->[^:]+: [0-9A-F]{2}\b|requested by [0-9A-F]{2} ", x)]
         self.check(not unnamed, "every state / who / request has a name (no hex code in a system line)", str(unnamed[:3]))
         texts = {r["arg"]: r["text"] for r in self.rows if r["id"] == L.SYS_MODE}     # mode text per state index
         names = {r["text"]: r["arg"] for r in self.rows if r["id"] == L.SYS_STATE}
         bad, mode = [], None
         for i, a, b in trans:
             x = lines[i]
-            why = x.split(f"-> {b}: ", 1)[1]                              # after 'in OLD for N ms -> NEW: '
+            why = x.split(f"->{b}: ", 1)[1]                              # after 'in OLD for N ms -> NEW: '
             tail = why[why.index("; "):] if "; " in why else ""
             new = STATE_MODE.get(b, mode)                                    # POWER DOWN keeps the mode before it
             want = f"; {texts.get(names.get(b), '?')}" if new != mode else ""
