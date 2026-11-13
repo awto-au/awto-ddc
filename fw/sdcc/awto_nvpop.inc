@@ -31,14 +31,14 @@ static void AwtoPutNvFlush(void)
     {
         AwtoPutStr("nothing changed, no flash write (");
         AwtoPutNvF();
-        AwtoPutStr(" ms)");
+        AwtoPutStr("ms)");
         return;
     }
     AwtoPutStr("wrote ");
     s_usAwtoNvF = (WORD)(s_ulAwtoLnV >> 9) & AWTO_NV_LOG_B_MAX;
     s_usAwtoNvM = AWTO_NV_LOG_B_MAX;
     AwtoPutNvF();
-    AwtoPutStr(" B");
+    AwtoPutStr("B");
     s_ucAwtoNvG = 0;
     AwtoPutNvG(AWTO_NV_LOG_G_SYS, "system data");
     AwtoPutNvG(AWTO_NV_LOG_G_OSD, "OSD data");
@@ -57,5 +57,5 @@ static void AwtoPutNvFlush(void)
     s_usAwtoNvF = (WORD)s_ulAwtoLnV & AWTO_NV_LOG_MS_MAX;
     s_usAwtoNvM = AWTO_NV_LOG_MS_MAX;
     AwtoPutNvF();
-    AwtoPutStr(" ms");
+    AwtoPutStr("ms");
 }

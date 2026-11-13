@@ -378,10 +378,10 @@ def take(k, frm, to, how):
     new = new[len(k.ring0):] if new[:len(k.ring0)] == k.ring0 else new[-20:]
     k.ring0 = ring(k)
     say("  ring:\n" + "\n".join("    " + ln for ln in new))
-    by = "no key for" if how == "idle" else "requested by input selector (accepted)"
+    by = "no key for" if how == "idle" else "by input selector (accepted)"
     k.check(f"selector {frm} -> {to} by {how}: ring lines (opened on {frm} / auto, switch to {to}, request by the selector)",
             any(ln.endswith(f"input selector opened (SOURCE key) on {frm}") or ln.endswith("input selector opened (SOURCE key) on auto") for ln in new) and any(ln.endswith(f"switch to {to}") for ln in new)
-            and any("reset to search requested by input selector" in ln and by in ln for ln in new))
+            and any("reset to search by input selector" in ln and by in ln for ln in new))
     k.check(f"selector {frm} -> {to} by {how}: one search (no kept reset searching again after display setting)",
             not any(("in DISPLAY SETTING for " in ln and "->SEARCH:" in ln) for ln in new))
     return new

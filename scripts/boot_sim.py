@@ -86,7 +86,7 @@ class Run:
             say(f"    {ln}")
         first = lines[0].split(" ms ", 1)[1] if lines else ""
         self.check(first.startswith(want) and sym in first, f"{tag}: first line is the boot reason", first)
-        st = [ln for ln in lines[1:] if " boot: " in ln]       # milestone lines (sync.tsv D1 rows), after the reason
+        st = [ln for ln in lines[1:] if " boot:" in ln]       # milestone lines (sync.tsv D1 rows), after the reason
         want = sum(1 for r in self.rows if r["id"] == 0xD1)     # s3b: panel stages 5 / 7 / 8 have no row (the panel machine's lines)
         self.check(len(st) >= want, f"{tag}: boot stage lines", f"{len(st)} of {want}")
         ms = [int(ln[1:].split("ms")[0]) for ln in lines]
@@ -176,7 +176,7 @@ def main():
         r.check(r.cr.resets == 0, "no chip reset (watchdog)", f"resets {r.cr.resets}")
         if "_AwtoBootReason" in r.mt:               # #29: reason line first, boot stages with ms since reset
             S.set_map(a.map)
-            r.reason("cold", "boot: cold power-up", lines)
+            r.reason("cold", "boot:cold power-up", lines)
             if a.bite:
                 T = __import__("osd_test")
                 ad = T.diag_addr(a.map) + T.TESTCMD_OFF
@@ -189,7 +189,7 @@ def main():
                     r.m.run(STEP); used += STEP
                 r.check(r.bus.run_until_mode(3), "ACTIVE again after the bite")
                 r.bus.wait(AFTER_MS / 1000.0)
-                r.reason("bite", "boot: watchdog bite, STALL TEST, PC ", r.episode()[1], "AwtoWdtHang+")
+                r.reason("bite", "boot:watchdog bite, STALL TEST, PC ", r.episode()[1], "AwtoWdtHang+")
     finally:
         r.bus.close()
     say(f"{'PASS' if r.fails == 0 else 'FAIL'} boot_sim {a.bin.name}: {r.fails} failed")

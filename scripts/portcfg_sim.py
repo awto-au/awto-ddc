@@ -126,12 +126,12 @@ def main() -> int:
         if a.control:
             say(f"control (D1 on): ACTIVE in {t} s, scanned {[hex(p) for p in scans]}, D1 HPD writes {hpd.log}")
             return 0
-        check("boot: ACTIVE on D3", t is not None, f"mode {bus.mode_state()} port 0x{port_now():02X} at {bus.now():.2f} s")
-        check("boot: stored-off line", "boot" in whys(), f"lines {whys()}")
-        check("boot: D1 HPD never high", 1 not in hpd.log, f"FE02 writes {hpd.log}")
-        check("boot: D1 never scanned", D1 not in scans, f"scanned ports {[hex(p) for p in scans]}")
-        check("boot: DDC1 EDID channel off", (bus.xdata(DDC1_DDC_ENABLE)[0] & DDC_EN) == 0, f"0x{bus.xdata(DDC1_DDC_ENABLE)[0]:02X}")
-        check("boot: mask", off_mask() == 1 << (D1 - 3), f"g_ucAwtoPortOff 0x{off_mask():02X}")
+        check("boot:ACTIVE on D3", t is not None, f"mode {bus.mode_state()} port 0x{port_now():02X} at {bus.now():.2f} s")
+        check("boot:stored-off line", "boot" in whys(), f"lines {whys()}")
+        check("boot:D1 HPD never high", 1 not in hpd.log, f"FE02 writes {hpd.log}")
+        check("boot:D1 never scanned", D1 not in scans, f"scanned ports {[hex(p) for p in scans]}")
+        check("boot:DDC1 EDID channel off", (bus.xdata(DDC1_DDC_ENABLE)[0] & DDC_EN) == 0, f"0x{bus.xdata(DDC1_DDC_ENABLE)[0]:02X}")
+        check("boot:mask", off_mask() == 1 << (D1 - 3), f"g_ucAwtoPortOff 0x{off_mask():02X}")
 
         close_console()
         n_scan, n_hpd = len(scans), len(hpd.log)

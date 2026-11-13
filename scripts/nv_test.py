@@ -348,7 +348,7 @@ class Run:
         got = {n: self.t.box.get_row(T.BY_NAME[n]) for n in want}
         pw = self.t.box.get_row(T.BY_NAME["power_on"])
         ok = rc == 0 and got == want and pw == 0 and nv["flush"] == 0     # flushes 0: really a new boot
-        self.row("persist", "PASS" if ok else "FAIL", f"after soft off + {how} reboot: {got} (want {want}), power_on {pw} "
+        self.row("persist", "PASS" if ok else "FAIL", f"after soft off + {how} reboot:{got} (want {want}), power_on {pw} "
                  f"(off before the cycle: stays off); {show(self.t.nv())}")
         self.t.cmd(0x3E)                                 # on
         self.t.wait(8.0)
@@ -357,14 +357,15 @@ class Run:
 
 
     def flush_lines(self) -> list[tuple[int, int, str, int, int]]:
-        """(arg, value, decoded line, ring ms, seq) of every D4 flush-result entry in the ring (all episodes), oldest first"""
+        """(why arg, result value, "why | result" lines, ring ms, seq) of every D4 flush pair in the ring (all episodes), oldest first"""
         import sync_log as S
         rows = S.load_rows(S.tsv_for(self.t.mapp))
         h, _ = S.decode(self.t.ring(), rows, whole=True)
-        out = []
-        for k, ev in enumerate(h.get("events", [])):
-            if ev[0] == 0xD4 and 0x11 <= ev[1] <= 0x17:
-                out.append((ev[1], ev[3], S.line(rows, ev, h["t0"]).split(" ms ", 1)[1], ev[2], k))
+        out, evs = [], h.get("events", [])
+        for k, ev in enumerate(evs):                     # why line (11..17), then its result line (20, fmt nvw)
+            if ev[0] == 0xD4 and 0x11 <= ev[1] <= 0x17 and k + 1 < len(evs) and evs[k + 1][:2] == (0xD4, 0x20):
+                txt = " | ".join(S.line(rows, e, h["t0"]).split(" ms ", 1)[1] for e in (ev, evs[k + 1]))
+                out.append((ev[1], evs[k + 1][3], txt, ev[2], k))
         return out
 
     def new_flush(self, before: list, s: float):
@@ -405,7 +406,7 @@ class Run:
         self.t.box.call(3, 2, 0)
         self.t.box.call(3, 6, 0)                         # close, nothing changed
         ln = self.new_flush(b1, 1.0)                     # logged by the next settings service (20 ms) x margin
-        ok = bool(ln) and ln[0] == 0x14 and "): nothing changed, no flash write" in ln[2]
+        ok = bool(ln) and ln[0] == 0x14 and "| NVRAM nothing changed, no flash write" in ln[2]
         res.append(("no change", ok, ln[2] if ln else "no flush line within 1 s"))
         b2 = self.flush_lines()
         e0 = self.t.nv()

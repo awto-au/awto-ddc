@@ -145,13 +145,13 @@ def case(u, frm, to, how, seen):
           f"mode {u.mode()} ({'settled %.2f s' % settled if settled is not None else 'not settled'}, "
           f"{time.monotonic() - t0:.1f} s after the take); opened on item {opened}")
     K.say("  ring:\n" + "\n".join("    " + ln.strip() for ln in new))
-    if closed is None and any(f"input selector: {to} refused, no cable" in ln for ln in new):   # still open + its line (old lines may re-show)
+    if closed is None and any(f"input selector:{to} refused, no cable" in ln for ln in new):   # still open + its line (old lines may re-show)
         u.check(f"{frm} -> {to} by {how}: no cable on {to}: refused with its line, selector still open", u.osd() == SEL_STATE)
         u.press(K.K_MENU, "MENU (cancel)", lambda: u.osd() != SEL_STATE)
         return ring_new(u, seen)[0]
     u.check(f"{frm} -> {to} by {how}: switched (port {to}, ACTIVE or no signal), ring has the switch + request lines",
             settled is not None and any(ln.rstrip().endswith(f"switch to {to}") for ln in new)
-            and any("requested by input selector" in ln for ln in new), f"port {name(u.port())} mode {u.mode()}")
+            and any("by input selector" in ln for ln in new), f"port {name(u.port())} mode {u.mode()}")
     if was_off:
         u.check(f"{frm} -> {to} by {how}: {to} was disabled: enabled by the take (line + mask bit clear)",
                 any(f"{to} enabled by the input selector" in ln for ln in new) and not u.off(to))

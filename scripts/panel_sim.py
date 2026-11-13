@@ -41,7 +41,7 @@ PANEL = {"T4": 250, "T5": 20, "T6": 900}
 # frequency set) x1.25 = 5 ms.
 # Cold boot: request right after pin share + timer-event init, both after the M2PLL switch (SysMainSystemInitial): ~1 ms x5.
 BL_AFTER_VDD_MS, BL_AFTER_M2PLL_MS = 5, 5
-M2PLL_LINE = (0xD1, 0x03)                                    # sync.tsv 'boot: MCU set up (M2PLL clock, ...)'
+M2PLL_LINE = (0xD1, 0x03)                                    # sync.tsv 'boot:MCU set up (M2PLL clock, ...)'
 # Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off = T4 + T5 + T6 + flash
 # flush, sim worst x1.25 (#54); signal-loss hold: L1 needs one judge run (10 ms slow path) + a pass; settle 1 s.
 BOOT_INSTR = 160_000_000
@@ -158,7 +158,7 @@ class Run:
         say(f"  ring ({title}): {len(new)} new lines")
         for x in new:
             say(f"    {x}")
-        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: in .+? for \d+ ms->(.+?):", x))), None)
+        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system:in .+? for \d+ms->(.+?):", x))), None)
         LED.sample(self.m, self.led, st, self.phase, self.led_addr, self.led_check, self.led_table)
         return new
 
@@ -174,7 +174,7 @@ class Run:
 
     def scenario(self):
         ok = self.bus.run_until_mode(MODE_ACTIVE, BOOT_INSTR)
-        self.check(ok, "cold boot: ACTIVE")
+        self.check(ok, "cold boot:ACTIVE")
         self.bus.dbg_link_on()
         self.bus.wait(SETTLE_MS / 1000)
         self.ring_lines("cold boot")
@@ -289,11 +289,11 @@ class Run:
         self.edge_lines(self.events)                 # all writes: boot pin init gives the level before the first edge
 
     def m2pll_check(self):
-        """cold boot: the first backlight pin-on line within BL_AFTER_M2PLL_MS of the M2PLL line (ring ms, same clock)"""
+        """cold boot:the first backlight pin-on line within BL_AFTER_M2PLL_MS of the M2PLL line (ring ms, same clock)"""
         m = next((ms for i, a, ms, _ in self.ring_ev if (i, a) == M2PLL_LINE), None)
         b = next((ms for i, a, ms, _ in self.ring_ev if i == 0x11 and a in EDGE_LINES[("BL pin", 1)]), None)
         d = None if m is None or b is None else ((b - m) & 0xFFFF)
-        self.check(d is not None and d <= BL_AFTER_M2PLL_MS, f"cold boot: backlight pin <= {BL_AFTER_M2PLL_MS} ms after the M2PLL switch line",
+        self.check(d is not None and d <= BL_AFTER_M2PLL_MS, f"cold boot:backlight pin <= {BL_AFTER_M2PLL_MS} ms after the M2PLL switch line",
                    f"M2PLL @{m}, backlight pin @{b}, {d} ms")
 
     def edge_lines(self, ev):

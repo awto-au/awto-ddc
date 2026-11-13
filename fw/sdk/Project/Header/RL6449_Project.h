@@ -158,6 +158,8 @@ extern void AwtoNvCommitSel(void);                              // source select
 // Flush result line (AWTO_SYNC_EV_NV, arg AWTO_NV_LOG_ARG(why), fmt nvw): value = deltas across the flush, saturating
 // [31:27] items written by group (AWTO_NV_LOG_G_*) | [26:25] erases | [24:19] programs | [18:9] bytes | [8:0] ms (AwtoMs tick)
 #define AWTO_NV_LOG_ARG(why)                                    (0x10 + (why))
+#define AWTO_NV_LOG_RESULT                                      0x20    // the flush result line after the why line (fmt nvw)
+#define AWTO_NV_LOG_SNAP2                                       0x21    // second line of the outside-the-gate write (why SNAP)
 #define AWTO_NV_LOG_G_SYS                                       0x01    // SDK system data
 #define AWTO_NV_LOG_G_OSD                                       0x02    // SDK OSD user data (2 items)
 #define AWTO_NV_LOG_G_COLOUR                                    0x04    // SDK BriCon / ColorProc / SixColor items

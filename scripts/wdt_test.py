@@ -669,7 +669,7 @@ class Runner:
                 time.sleep(0.05)
             txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
             ok &= t_act is not None
-            wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by" in ln]
+            wake = [ln for ln in self.ring_lines() if ":wake" in ln or "wake by" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
             same, why = self.same_boot(d0, None, time.monotonic())
             d1 = self.rec()
@@ -792,7 +792,7 @@ class Runner:
             txt.append(f"host dpms {st}; ACTIVE {t_act if t_act is None else round(t_act * 1000)} ms after the host wake")
             ok &= t_act is not None
             step[0] = "ring + record"
-            wake = [ln for ln in self.ring_lines() if ": wake" in ln or "wake by" in ln]
+            wake = [ln for ln in self.ring_lines() if ":wake" in ln or "wake by" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
             same, why = self.same_boot(d0, None, time.monotonic())
             d1 = self.rec()

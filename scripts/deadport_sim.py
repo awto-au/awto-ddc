@@ -99,7 +99,7 @@ def run_case(a, case: str, say) -> bool:
         sw = swlog(bus, say)
         sl = synclog(a, bus, say)
         want = 3 if case == "cmd" else 1                       # switch-log 0xB8 arg; sync.tsv DF row (vcp, cmd), E0 06 (sel, #132)
-        text = {"vcp": "refused: no cable on D2", "sel": "input selector: D2 refused, no cable; stays open"}.get(case)
+        text = {"vcp": "refused:no cable on D2", "sel": "input selector:D2 refused, no cable; stays open"}.get(case)
         lines = (not any(ln.endswith(text) for ln in sl)) if text else (not any("auto search" in ln for ln in sl))
         if (0xB8, want) not in sw or lines:
             say(f"{case}: FAIL log line missing (switch-log 0xB8 arg {want}, sync log {text or 'auto search'})")

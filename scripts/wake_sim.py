@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""#144 task 4 in fw_sim: wake from power saving on source events (cable plug, EDID read, DP AUX command, DPCD 600h = D0).
+"""#144 task 4 in fw_sim:wake from power saving on source events (cable plug, EDID read, DP AUX command, DPCD 600h = D0).
 
 usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
 - Boot to ACTIVE on D2, switch to D3 (test cmd 0x33: fixed port, no source), force power saving (g_stPowerInfo target).
 - Each step forces power saving again, injects one event, and checks wake / no wake within the bound:
-  D2 unplug (wake, "D2 cable unplugged: wake", #138 task 6), D2 plug (wake, "D2 cable plugged in: wake"), sleep with every
+  D2 unplug (wake, "D2 cable unplugged:wake", #138 task 6), D2 plug (wake, "D2 cable plugged in:wake"), sleep with every
   cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
   D2 EDID read latch (wake), the same latch again (no wake, "wake suppressed"), DP AUX rx latch (no wake, logged: #163),
   DPCD 600h = D0 (wake).
@@ -344,8 +344,8 @@ def main():
         while r.bus.mode_state() != MODE_NOSIGNAL and (r.t2() - t0) & 0xFFFF < 5000:
             r.m.run(200_000)
         r.check(r.bus.mode_state() == MODE_NOSIGNAL, "D3 fixed: NO SIGNAL")
-        r.wake_case("D2 cable unplugged", lambda: r.m.wr(D2_PIN, b"\x01"), "D2 cable unplugged: wake", BOUND_CABLE_MS)
-        r.wake_case("D2 cable plugged in", lambda: r.m.wr(D2_PIN, b"\x00"), "D2 cable plugged in: wake", BOUND_CABLE_MS)
+        r.wake_case("D2 cable unplugged", lambda: r.m.wr(D2_PIN, b"\x01"), "D2 cable unplugged:wake", BOUND_CABLE_MS)
+        r.wake_case("D2 cable plugged in", lambda: r.m.wr(D2_PIN, b"\x00"), "D2 cable plugged in:wake", BOUND_CABLE_MS)
         st = r.model.snapshot(r.m, 0.0)
         img = np.array(R.render_snap(st, "black", 1))
         Image.fromarray(img).resize((R.PANEL_W // 2, R.PANEL_H // 2), Image.BOX).save(a.out / "wake_cable_console.png")
@@ -358,16 +358,16 @@ def main():
         r.wake_case("D2 unplug again (no picture since)", lambda: r.m.wr(D2_PIN, b"\x01"), None, 0)
         r.wake_case("D2 plug again (no picture since)", lambda: r.m.wr(D2_PIN, b"\x00"), None, 0)
         sup = [x for x in r.lines() if "suppressed (cable" in x]
-        r.check(any("cable unplug, once per sleep): D2" in x for x in sup) and any("(cable, once per sleep): D2" in x for x in sup),
+        r.check(any("cable unplug, once per sleep):D2" in x for x in sup) and any("(cable, once per sleep):D2" in x for x in sup),
                 "repeat plug / unplug: suppressed once per direction", str(sup))
-        r.wake_case("D2 EDID read", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), "D2 EDID read by source: wake",
+        r.wake_case("D2 EDID read", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), "D2 EDID read by source:wake",
                     BOUND_LATCH_MS)
         r.wake_case("D2 EDID read again (no picture since)", lambda: r.m.wr(DDC_D2, bytes([r.m.rd(DDC_D2)[0] | 1])), None, 0)
-        r.check(any("wake suppressed (EDID read, once per sleep): D2" in x for x in r.lines()), "suppression logged once",
+        r.check(any("wake suppressed (EDID read, once per sleep):D2" in x for x in r.lines()), "suppression logged once",
                 str([x for x in r.lines() if "suppressed" in x]))
         r.check(re.search(r"\s_g_ucAwtoPsAuxWakeOff\b", r.m.map_text) is not None, "image: AUX command wake is off (#163)")
         r.wake_case("DP AUX command (logged, no wake)", lambda: r.m.wr(AUX_RX1, bytes([r.m.rd(AUX_RX1)[0] | 1])), None, 0)
-        r.check(any("D1 AUX command from source in power saving: no wake" in x for x in r.lines()), "AUX command logged (line DB)")
+        r.check(any("D1 AUX command from source in power saving:no wake" in x for x in r.lines()), "AUX command logged (line DB)")
         r.check(r.sleep(), "injected key: power saving reached")
         r.cmd(0x05, 0.0)                            # injected SOURCE: the front-key rule in power saving = wake only (#132)
         woke, ms = r.until_wake(KEY_WAKE_MS)
@@ -399,7 +399,7 @@ def main():
             r.until_wake(4 * BOUND_TMDS_MS)
             r.watch(300)
             n1 = sum(1 for e in r.ring_events() if e[0] == 0xDC)
-            r.check(n1 == n0 + 1, "D2 TMDS clock still on (no picture since): wakes again", f"TMDS wake lines {n0} -> {n1}")
+            r.check(n1 == n0 + 1, "D2 TMDS clock still on (no picture since):wakes again", f"TMDS wake lines {n0} -> {n1}")
             r.fd.set_clock(r.m, 0x71, None)
             r.burst_case()
         if r.pass_ms:

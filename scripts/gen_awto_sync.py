@@ -331,7 +331,7 @@ def value_segs(f: str, r: list, port: list) -> list:
     """segments (each a list of alternative strings) a fmt prints at its %: AwtoSyncLine, every value at its widest"""
     def num(n):
         return ["9" * n]
-    hz, mhz = card("HZ"), card("HZ+2")
+    hz, mhz = "Hz", "MHz"                         # log lines: unit right after the number (Dan 2026-11-13)
     return {
         "-": [], "vport": [["auto", *port]], "res": [num(5), ["x"], num(5)],
         "mhz1": [num(DW - 1), ["."], num(1), [mhz]], "hz1": [num(DW - 1), ["."], num(1), [hz]],
@@ -339,17 +339,17 @@ def value_segs(f: str, r: list, port: list) -> list:
         "dp": [[card("RBR"), card("RBR+1"), card("RBR+2"), card("HBR3"), "FF"], [" x"], num(3)],
         "src": [["HDMI", "DP", "DVI", "9" * DW]], "harg": [num(2)],
         "pc": [["STALL TEST, PC ", "STALL, PC "], ["FF", "C"], [":"], num(4)],
-        "ms": [num(DW), [" ms"]], "n": [num(DW)], "x": [num(6)],
-        "htime": [["2106-02-07T06:28:15+31:45"]], "sms": [["-", "+"], num(DW), [" ms"]],
-        "wdt": [["warning "], num(5), [" ms, reset "], num(5), [" ms"]],
+        "ms": [num(DW), ["ms"]], "n": [num(DW)], "x": [num(6)],
+        "htime": [["2106-02-07T06:28:15+31:45"]], "sms": [["-", "+"], num(DW), ["ms"]],
+        "wdt": [["warning "], num(5), ["ms, reset "], num(5), ["ms"]],
         "sys": [sep(r, 6), names(r, 0x15), sep(r, 7), num(len(str(c_int("AWTO_SYS_MS_MAX", HEADER)))), sep(r, 8), names(r, 0x15),
                 sep(r, 9), names(r, 0x16), ["", sep(r, 5)[0]], ["", *names(r, 0x1A)]],
         "sysreq": [names(r, 0x17), sep(r, 4), names(r, 0x16), sep(r, 2), names(r, 0x18), [")"]],
         "pby": [names(r, 0x1B)],
         "sname": [names(r, 0x15)],
-        "nvw": [["nothing changed, no flash write (", "wrote "], ["511+", "1023+"], [" ms)", " B"],
+        "nvw": [["nothing changed, no flash write (", "wrote "], ["511+", "1023+"], ["ms)", "B"],
                 ["", " (system data, OSD data, colour, panel time, awto settings)"], [" in "], ["63+"], [" programs, "],
-                ["3+"], [" erases, "], ["511+"], [" ms"]],
+                ["3+"], [" erases, "], ["511+"], ["ms"]],
     }[f]
 
 

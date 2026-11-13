@@ -3,7 +3,7 @@
 - LedWatch: fw_sim Dev on the P3 SFR (0xB0): every P3.5 / P3.6 level change, with sim time and phase.
 - Rule (Dan 2026-11-12): on colour (1, 0) in AC ON .. NO SIGNAL / WAKE SEARCH; standby colour breathing in POWER SAVING
   (P3.5 = 0, P3.6 toggling); both off in OFF. POWER DOWN shows its target (the next state) at once, as the Dahua power switch.
-- judge_lines: after every 'system: A -> B' line the 'LED: ...' lines up to the next transition leave B's colour; each LED
+- judge_lines: after every 'system:A -> B' line the 'LED:...' lines up to the next transition leave B's colour; each LED
   line names the state it was set for. sample: pins + g_ucAwtoLedMode at a checkpoint against the current state.
 """
 import re
@@ -52,8 +52,8 @@ def pins_colour(p35, p36, edges):
 
 def judge_lines(lines, check):
     """transition / LED line order (ring lines of all phases, in order)"""
-    trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"system: in (.+?) for \d+ ms->(.+?):", x))]
-    leds = {i: (m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"LED: (.+?) \((.+?)\)$", x))}
+    trans = [(i, m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"system:in (.+?) for \d+ms->(.+?):", x))]
+    leds = {i: (m.group(1), m.group(2)) for i, x in enumerate(lines) if (m := re.search(r"LED:(.+?) \((.+?)\)$", x))}
     check(bool(leds), f"LED lines logged ({len(leds)})")
     led, bad, named = None, [], []
     for i in sorted(k for k in leds if not trans or k < trans[0][0]):

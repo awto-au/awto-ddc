@@ -6,7 +6,7 @@ usage: AWTO_SIM_CORE=fast sync_sim.py BIN MAP [--mode 1080p60] [--out tmp/sync]
                                                           works on images without #139 (A/B)
 - Boot with the console auto-open ON (firmware default): the power-on episode opens the console once settled.
   Checks: ring magic, power-on lines (-> ACTIVE, backlight on at once, timing), console opened by itself, no chip reset.
-  #162 s3b: the SDK mode is in the system transition line ('system: A -> B (N ms): why; mode'), the backlight pin in the panel machine's.
+  #162 s3b: the SDK mode is in the system transition line ('system:A -> B (N ms): why; mode'), the backlight pin in the panel machine's.
 - Console closed, selector opened (SOURCE): PNG; loop rate with the selector open vs closed (diag usLoopRate).
 - Test cmd 0x33 (D3, no source in the sim) then 0x32 (back to D2): switch episodes decoded by scripts/sync_log.py
   (the host decoder), console auto-open on each; PNG per episode.
@@ -163,8 +163,8 @@ def main():
         h, lines = r.episode("power key on")
         txt = "\n".join(lines)
         r.check(h["kind"] == 4, "power key episode", f"kind {h['kind']}")
-        # #162 step 2: the panel machine's first step ('panel: in OFF for N ms->VDD') replaces the display-setting 'panel on requested'
-        for want in ("system: in OFF for ", "backlight on requested by ", ("panel on requested", "->VDD: VDD on"), "->ACTIVE:"):
+        # #162 step 2: the panel machine's first step ('panel:in OFF for N ms->VDD') replaces the display-setting 'panel on requested'
+        for want in ("system:in OFF for ", "backlight on by ", ("panel on by", "->VDD:VDD on"), "->ACTIVE:"):
             alt = want if isinstance(want, tuple) else (want,)
             r.check(any(w in txt for w in alt), f"power key log has '{' or '.join(alt)}' (episode began before the INITIAL handler)")
         d = C.decode(C.read(r.s.bus, r.caddr))

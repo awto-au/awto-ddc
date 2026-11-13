@@ -117,7 +117,7 @@ def time_gaps(rows: list) -> list:
     bad = []
     for kind in ("panel", "system"):
         tr = [(t, m.group(1), m.group(3), int(m.group(2)) if m.group(2) else None) for t, x in rows
-              if (m := re.match(rf"{kind}: in (.+?) for (\d+) ms->(.+?):", x))]
+              if (m := re.match(rf"{kind}: in (.+?) for (\d+)ms->(.+?):", x))]
         for (t1, a1, b1, _), (t2, a2, b2, n2) in zip(tr, tr[1:]):
             if b1 != a2 or a1 == b1 or (a1, b1) == ("VIDEO", "T4") or n2 is None:
                 continue                         # gap / A -> A (entry kept) / T4 counts from the backlight-off
@@ -131,7 +131,7 @@ def facts(txt: str) -> dict:
     ms = lambda pat: next((t for t, x in rows if re.search(pat, x)), None)
     bl = [(t, "off" if "pin off" in x else "on") for t, x in rows if re.search(r"backlight pin (on|off)|backlight on at once", x)]
     blink = sum(1 for a, b in zip(bl, bl[1:]) if a[1] == "off" and b[1] == "on")
-    video = ms(r"->VIDEO: eDP-1 link trained")
+    video = ms(r"->VIDEO:eDP-1 link trained")
     blon = next((t for t, x in bl if x == "on"), None)
     gaps = time_gaps(rows)
     act = [i for i, (_, x) in enumerate(rows) if re.search(r"->ACTIVE:", x)]
@@ -169,7 +169,7 @@ def main():
     ap.add_argument("--no-flash", action="store_true")
     ap.add_argument("--unit", type=int, default=UNIT, choices=(2, 3), help="test unit (scripts/devices.json); both run on bus 11 (HDMI-2)")
     ap.add_argument("--bus", type=int, default=BUS, help="unit 2 bus of the port it runs on (D2 HDMI-2 = 11 by default; 0 = try 11, 15)")
-    ap.add_argument("--port", help="cold boot: wait for ACTIVE on this port (e.g. D2), not the first ACTIVE")
+    ap.add_argument("--port", help="cold boot:wait for ACTIVE on this port (e.g. D2), not the first ACTIVE")
     ap.add_argument("--wait", type=float, default=BOOT_WAIT_S, help="cold boot -> ACTIVE poll limit, s (characterising slow HDMI scans)")
     a = ap.parse_args()
     globals()["BUS"] = a.bus

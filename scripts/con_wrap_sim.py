@@ -173,7 +173,7 @@ def main() -> int:
     say(f"=== con_wrap_sim {a.bin.name} (text column {TXT0}) ===")
     s = Sim(a.bin, mapp)
     out = a.out / a.bin.stem
-    s.check(s.bus.run_until_mode(MODE_ACTIVE, 160_000_000), "cold boot: ACTIVE")
+    s.check(s.bus.run_until_mode(MODE_ACTIVE, 160_000_000), "cold boot:ACTIVE")
     s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], 4.0)
     s.bus.wait(DRAW_S)
     s.phase("1-cold-boot", out)

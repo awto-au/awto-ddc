@@ -85,13 +85,13 @@ def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "res":
         return f"{v >> 16}x{v & 0xFFFF}"
     if fmt == "mhz1":
-        return tenths(v) + " MHz"
+        return tenths(v) + "MHz"
     if fmt == "hz1":
-        return tenths(v) + " Hz"
+        return tenths(v) + "Hz"
     if fmt == "hz3":
-        return milli(v) + " Hz"
+        return milli(v) + "Hz"
     if fmt == "mhz3":
-        return milli(v) + " MHz"
+        return milli(v) + "MHz"
     if fmt == "dp":
         r = (v >> 8) & 0xFF
         return f"{DP_RATE.get(r, f'{r:02X}')} x{v & 0xFF}"
@@ -100,9 +100,9 @@ def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "harg":
         return f"{arg:02X}"
     if fmt == "ms":                                      # #150 NVRAM save timing
-        return f"{v} ms"
-    if fmt == "wdt":                                     # #162 watchdog run-time: warning ms << 16 | reset ms
-        return f"warning {v >> 16} ms, reset {v & 0xFFFF} ms"
+        return f"{v}ms"
+    if fmt == "wdt":                                     # #162 watchdog run-time:warning ms << 16 | reset ms
+        return f"warning {v >> 16}ms, reset {v & 0xFFFF}ms"
     if fmt == "n":                                       # #150 collapsed repeats
         return str(v)
     if fmt == "x":                                       # #150 wake-poll state (cable 2:0, EDID 5:3, AUX 6, DPCD 7, polls 23:8, TMDS 25:24)
@@ -111,7 +111,7 @@ def value(fmt: str, arg: int, v: int) -> str:
     if fmt == "htime":                                   # #157 host unix s, arg = UTC offset (15 min, signed)
         return iso(v, arg - 256 if arg >= 128 else arg)
     if fmt == "sms":                                     # #157 signed ms
-        return f"{v - (1 << 32) if v >= 1 << 31 else v:+d} ms"
+        return f"{v - (1 << 32) if v >= 1 << 31 else v:+d}ms"
     if fmt == "nvw":                                     # #151 NVRAM flush result
         return nv_flush(v)
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
@@ -132,10 +132,10 @@ def nv_flush(v: int) -> str:
         return f"{x}+" if x >= mx else str(x)
     ms, by, pr, er, g = v & 0x1FF, (v >> 9) & 0x3FF, (v >> 19) & 0x3F, (v >> 25) & 3, v >> 27
     if v >> 19 == 0:
-        return f"nothing changed, no flash write ({f(ms, 0x1FF)} ms)"
+        return f"nothing changed, no flash write ({f(ms, 0x1FF)}ms)"
     grp = ", ".join(n for k, n in enumerate(NV_GROUPS) if g >> k & 1)
-    return (f"wrote {f(by, 0x3FF)} B" + (f" ({grp})" if grp else "") + f" in {f(pr, 0x3F)} program{'' if pr == 1 else 's'}, "
-            f"{f(er, 3)} erase{'' if er == 1 else 's'}, {f(ms, 0x1FF)} ms")
+    return (f"wrote {f(by, 0x3FF)}B" + (f" ({grp})" if grp else "") + f" in {f(pr, 0x3F)} program{'' if pr == 1 else 's'}, "
+            f"{f(er, 3)} erase{'' if er == 1 else 's'}, {f(ms, 0x1FF)}ms")
 
 
 def iso(t: float, ofs15: int, ms: bool = False) -> str:
@@ -215,8 +215,8 @@ def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
     if fmt == "sys":
         old, why = name(rows, SYS_STATE, a >> 4), v >> 24
         mode = f"; {name(rows, SYS_MODE, a & 0x0F)}" if why & WHY_MODE else ""        # s3b: the SDK mode changed
-        return f"in {old} for {v & SYS_MS_MAX} ms->{name(rows, SYS_STATE, a & 0x0F)}: {name(rows, SYS_WHY, why & WHY_CODE)}{mode}"
-    return f"{name(rows, SYS_REQ, a)} requested by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
+        return f"in {old} for {v & SYS_MS_MAX}ms->{name(rows, SYS_STATE, a & 0x0F)}:{name(rows, SYS_WHY, why & WHY_CODE)}{mode}"
+    return f"{name(rows, SYS_REQ, a)} by {name(rows, SYS_WHY, (v >> 8) & 0xFF)} ({name(rows, SYS_OUT, v & 0xFF)})"
 
 
 def line(rows: list[dict], ev: tuple, t0: int) -> str:
@@ -229,7 +229,7 @@ def line(rows: list[dict], ev: tuple, t0: int) -> str:
     pre = f"D{a - D0} " if row["port"] else ""
     if row["fmt"] == "ms2":                              # #162 s3b: two values, two % (second ms << 16 | first ms)
         p0, p1, p2 = row["text"].split("%")
-        return head + pre + f"{p0}{v & 0xFFFF} ms{p1}{v >> 16} ms{p2}"
+        return head + pre + f"{p0}{v & 0xFFFF}ms{p1}{v >> 16}ms{p2}"
     before, _, after = row["text"].partition("%")
     val = (sys_value(rows, row["fmt"], a, v) if row["fmt"] in ("sys", "sysreq") else
            name(rows, PNL_BY, v & 0xFF) if row["fmt"] == "pby" else

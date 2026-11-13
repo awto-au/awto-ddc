@@ -209,7 +209,7 @@ def main() -> int:
     raw, (h, lines) = s.ring()
     new = lines[-((h["seq"] - n0) % h["wrap"]):] if h["seq"] != n0 else []
     say("ring lines: " + " | ".join(new))
-    d = next((int(x.group(1)) for x in (re.search(r"drift \+(\d+) ms", y) for y in new) if x), None)
+    d = next((int(x.group(1)) for x in (re.search(r"drift \+(\d+)ms", y) for y in new) if x), None)
     s.check(len(new) == 3 and d is not None and 4950 <= d <= 5050, "sync 3 (+5 s): host / fw / drift lines", f"drift {d}")
     s.check(any("host sync after a drift" in x for x in new), "ring: fw line says drift")
     g = s.get()

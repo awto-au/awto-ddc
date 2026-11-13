@@ -198,7 +198,7 @@ def rows(u):
     u.key(K_AUTO, settle=0.5)
     t = u.until(lambda: u.mode() == MODE_ACTIVE, SEARCH_S)
     txt = u.ring()
-    req = [ln for ln in txt.splitlines() if "AUTO key: auto source select" in ln]
+    req = [ln for ln in txt.splitlines() if "AUTO key:auto source select" in ln]
     u.check("nothing open: AUTO = auto source select, picture back", t is not None and bool(req),
             f"ACTIVE after {t} s; {req[-1].strip() if req else 'no request line'}")
     say("  ring after AUTO:\n" + "\n".join("    " + ln for ln in txt.splitlines()[-12:]))
