@@ -130,6 +130,7 @@ FILE_FLAGS = {
     "ScalerCommonIOSC.c": ["--noinduction"],   # trunk r17139 ICE validateOpType @ SDCCopt.c (awto-sdcc#3)
     # GCSE temps of the WD-ISR handlers spill to DATA (sloc, 23 B); direct RAM is the binding limit (#8)
     "ScalerCommonTimerFunction.c": ["--nogcse"],
+    "t0ev.c": ["--nogcse"],                     # was compiled inside ScalerCommonTimerFunction.c (#196): same flags
 }
 
 
