@@ -2,6 +2,7 @@
  * Semantics follow ucsim 0.9.12 -t 52 (sim/ucsim/src/sims/s51.src in awto-sdcc) so runs are comparable:
  * - cycles: machine cycles per instruction as ucsim ticks them; an accepted interrupt adds 1 cycle (not seen by timers)
  * - timers 0/1 (modes 0-3), timer 2 (reload/capture/baud/down/clock-out), EX0/EX1 level+edge from the P3 latch
+ * - dw8051: timers counted lazily (at the next TFx deadline, a timer SFR access, a run exit; awto-ddc#183)
  * - interrupt poll order EX0 T0 EX1 T1 TI RI TF2 EXF2 then DW8051 int2 (EIE.0/EXIF.4/EIP.0, 43h), 2 priority levels (IP/EIP),
  *   no IRQ after RETI or an IE / IP / EIE / EIP write (DW8051 databook v3.2a pp. 3-44..3-47; serial 1, int3..5, wdti, pfi
  *   not modelled: unused here)
@@ -46,6 +47,8 @@ typedef struct {
     uint8_t last_op;
     int movx_base, irq_cycles, clk_per_cycle, div_slow, div_fast;
     uint32_t tacc[3];           /* clk since the last count of timer 0 / 1 / 2 */
+    uint64_t tnow, tclk, tnext; /* dw8051 lazy timers: clk elapsed, clk the timers are counted up to, next TFx deadline */
+    int tslow;                  /* dw8051: per-instruction tick (counter mode, level INTx, pending T2EX edge) */
     /* code fetch from the SPI flash (dw8051 mode): uncached while FDA0.0 = 0, else a set-associative line cache */
     int fm, fm_line, fm_sets, fm_ways, fm_cmd, fm_byte, fm_common;
     uint32_t fm_ratio;          /* CPU clk per flash clk, x256 (set from the clock registers by the host) */
@@ -99,6 +102,8 @@ static void set_bank(core_t *c, unsigned b)
         c->cur = c->code + ((size_t)b << 16);
 }
 
+static void sfr_store_raw(core_t *c, int a, uint8_t v);
+
 static void t2_write(core_t *c, int a)
 {
     uint8_t n = T2CON;
@@ -125,7 +130,25 @@ static void t2_write(core_t *c, int a)
         c->t2_edge = c->t2ex_edge = 0;
 }
 
+/* SFRs the timers read or write (TCON TMOD TL0-TH1 CKCON P1 P3 T2CON T2MOD RCAP2L/H TL2 TH2): count up to now first */
+static const uint8_t TSFR[128] = {[0x08] = 1, [0x09] = 1, [0x0A] = 1, [0x0B] = 1, [0x0C] = 1, [0x0D] = 1, [0x0E] = 1,
+                                  [0x10] = 1, [0x30] = 1, [0x48] = 1, [0x49] = 1, [0x4A] = 1, [0x4B] = 1, [0x4C] = 1, [0x4D] = 1};
+static void timers_catch_up(core_t *c);
+static void timers_sched(core_t *c);
+#define TSYNC(c, a) do { if ((c)->dw && TSFR[(a) - 0x80]) timers_catch_up(c); } while (0)
+
 static void sfr_store(core_t *c, int a, uint8_t v)
+{
+    if (c->dw && TSFR[a - 0x80]) {
+        timers_catch_up(c);
+        sfr_store_raw(c, a, v);
+        timers_sched(c);
+        return;
+    }
+    sfr_store_raw(c, a, v);
+}
+
+static void sfr_store_raw(core_t *c, int a, uint8_t v)
 {
     uint8_t o = S(a);
     switch (a) {
@@ -155,6 +178,7 @@ static inline uint8_t dread(core_t *c, uint8_t a)
     if (a < 0x80)
         return c->iram[a];
     ev(c, EV_SR, a);
+    TSYNC(c, a);
     return S(a);
 }
 
@@ -170,7 +194,10 @@ static inline void dwrite(core_t *c, uint8_t a, uint8_t v)
 
 static inline uint8_t dget(core_t *c, uint8_t a)      /* no read event (bit write RMW) */
 {
-    return a < 0x80 ? c->iram[a] : S(a);
+    if (a < 0x80)
+        return c->iram[a];
+    TSYNC(c, a);
+    return S(a);
 }
 
 static inline int bit_read(core_t *c, uint8_t b)
@@ -373,6 +400,207 @@ static void tick_hw_dw(core_t *c, uint32_t clk)
     }
 }
 
+/* ---- dw8051 lazy timers: same counts as tick_hw_dw, applied at a TFx deadline, a timer SFR access or a run exit ----
+ * tick_hw_dw(a); tick_hw_dw(b) == tick_hw_dw(a + b) while no timer input changes, except counter mode, level INTx and a
+ * pending T2EX edge: those keep the per-instruction tick (tslow). */
+static inline uint32_t tdiv(core_t *c, int i)
+{
+    static const uint8_t m[3] = {0x08, 0x10, 0x20};
+    return (CKCON & m[i]) ? c->div_fast : c->div_slow;
+}
+
+static int tslow_now(core_t *c)
+{
+    uint8_t tcon = TCON, p3 = S(0xB0), t2 = T2CON;
+    return (!(tcon & 0x01) && !(p3 & 0x04)) || (!(tcon & 0x04) && !(p3 & 0x08)) || (TMOD & 0x44) || (t2 & 0x02) ||
+           ((t2 & 0x08) && c->t2ex_edge && c->t2mode != T2_DOWN);
+}
+
+/* timer 0 / 1 in timer (not counter) mode: n counts at once */
+static void adv_t01(core_t *c, int id, uint64_t n)
+{
+    uint8_t tmod = id ? TMOD >> 4 : TMOD & 15;
+    int mode = tmod & 3;
+    uint8_t trm = id ? 0x40 : 0x10, tfm = id ? 0x80 : 0x20;
+    uint8_t *tl = &S(id ? 0x8B : 0x8A), *th = &S(id ? 0x8D : 0x8C);
+    if (id == 1 && mode == 3)
+        return;
+    if (mode == 3) {             /* TL0 with TR0 (+ gate), TH0 with TR1 */
+        if ((TCON & trm) && !((tmod & 8) && !(S(0xB0) & 0x04))) {
+            if (n >= 256u - *tl) TCON |= tfm;
+            *tl = (uint8_t)(*tl + n);
+        }
+        if (TCON & 0x40) {
+            if (n >= 256u - *th) TCON |= 0x80;
+            *th = (uint8_t)(*th + n);
+        }
+        return;
+    }
+    if (!(TCON & trm) || ((tmod & 8) && !(S(0xB0) & (id ? 0x08 : 0x04))))
+        return;
+    if (mode == 0) {             /* TL keeps bits 7:5 until its first carry, then counts 0..31 */
+        uint64_t c1 = 32 - (*tl & 0x1F), r, carries;
+        if (n < c1) { *tl = (uint8_t)(*tl + n); return; }
+        r = n - c1;
+        carries = 1 + r / 32;
+        *tl = (uint8_t)(r % 32);
+        if (carries >= 256u - *th) TCON |= tfm;
+        *th = (uint8_t)(*th + carries);
+    } else if (mode == 1) {
+        uint64_t v = (uint64_t)(*th << 8 | *tl) + n;
+        if (v >= 0x10000) TCON |= tfm;
+        *tl = (uint8_t)v; *th = (uint8_t)(v >> 8);
+    } else {
+        uint64_t f = 256u - *tl;
+        if (n < f) { *tl = (uint8_t)(*tl + n); return; }
+        TCON |= tfm;
+        *tl = (uint8_t)(*th + (n - f) % (256u - *th));
+    }
+}
+
+/* 16-bit up count of m increments, reload from RCAP2 at each overflow; returns the overflows */
+static uint64_t t2_up(core_t *c, uint64_t m)
+{
+    uint64_t v = (uint64_t)(S(0xCD) << 8 | S(0xCC)), f = 0x10000 - v, rc = S(0xCB) << 8 | S(0xCA), r, ov;
+    if (m < f) { v += m; ov = 0; }
+    else { r = m - f; ov = 1 + r / (0x10000 - rc); v = rc + r % (0x10000 - rc); }
+    S(0xCC) = (uint8_t)v; S(0xCD) = (uint8_t)(v >> 8);
+    return ov;
+}
+
+/* down-count counts to the first underflow (value < RCAP2 -> FFFF); 0 = never (RCAP2 = 0) */
+static uint64_t t2_down_first(core_t *c)
+{
+    uint32_t v = S(0xCD) << 8 | S(0xCC), rc = S(0xCB) << 8 | S(0xCA);
+    if (!rc) return 0;
+    return v >= rc ? v - rc + 1 : v ? 1 : 0x10001 - rc;
+}
+
+/* timer 2 in timer (not counter) mode, no pending T2EX edge: n counts at once */
+static void adv_t2(core_t *c, uint64_t n)
+{
+    uint64_t ov;
+    if (!(T2CON & 0x04))
+        return;
+    switch (c->t2mode) {
+    case T2_RELOAD:
+        if (t2_up(c, n)) T2CON |= 0x80;
+        return;
+    case T2_CAPTURE: {
+        uint64_t v = (uint64_t)(S(0xCD) << 8 | S(0xCC)) + n;
+        if (v >= 0x10000) T2CON |= 0x80;
+        S(0xCC) = (uint8_t)v; S(0xCD) = (uint8_t)(v >> 8);
+        return;
+    }
+    case T2_BAUD:
+    case T2_CLKOUT:
+        ov = t2_up(c, 6 * n);
+        if (c->t2mode == T2_CLKOUT && (ov & 1)) S(0x90) ^= 0x01;
+        return;
+    case T2_DOWN:
+        if (c->t2ex_bit)
+            ov = t2_up(c, n);
+        else {
+            uint64_t k1 = t2_down_first(c), v = S(0xCD) << 8 | S(0xCC), rc = S(0xCB) << 8 | S(0xCA);
+            if (!k1 || n < k1) { v = (v - n) & 0xFFFF; ov = 0; }
+            else { ov = 1 + (n - k1) / (0x10000 - rc); v = 0xFFFF - (n - k1) % (0x10000 - rc); }
+            S(0xCC) = (uint8_t)v; S(0xCD) = (uint8_t)(v >> 8);
+        }
+        if (ov) T2CON |= 0x80;
+        if (ov & 1) S(0x90) ^= 0x40;
+        return;
+    default:
+        return;
+    }
+}
+
+/* counts until the next TF0 / TF1 that is clear now; 0 = none */
+static uint64_t t01_due(core_t *c, int id)
+{
+    uint8_t tmod = id ? TMOD >> 4 : TMOD & 15;
+    int mode = tmod & 3;
+    uint8_t trm = id ? 0x40 : 0x10, tfm = id ? 0x80 : 0x20, tl = S(id ? 0x8B : 0x8A), th = S(id ? 0x8D : 0x8C);
+    uint64_t k = 0;
+    if (id == 1 && mode == 3)
+        return 0;
+    if (mode == 3) {
+        if (!(TCON & 0x20) && (TCON & trm) && !((tmod & 8) && !(S(0xB0) & 0x04))) k = 256u - tl;
+        if (!(TCON & 0x80) && (TCON & 0x40) && (!k || 256u - th < k)) k = 256u - th;
+        return k;
+    }
+    if ((TCON & tfm) || !(TCON & trm) || ((tmod & 8) && !(S(0xB0) & (id ? 0x08 : 0x04))))
+        return 0;
+    if (mode == 0) return 32u - (tl & 0x1F) + 32u * (255u - th);
+    if (mode == 1) return 0x10000u - (th << 8 | tl);
+    return 256u - tl;
+}
+
+static uint64_t t2_due(core_t *c)
+{
+    if ((T2CON & 0x80) || !(T2CON & 0x04))
+        return 0;
+    switch (c->t2mode) {
+    case T2_RELOAD: case T2_CAPTURE:
+        return 0x10000u - (S(0xCD) << 8 | S(0xCC));
+    case T2_DOWN:
+        return c->t2ex_bit ? 0x10000u - (S(0xCD) << 8 | S(0xCC)) : t2_down_first(c);
+    default:
+        return 0;
+    }
+}
+
+/* tnext = clk at which the next clear TFx gets set; timers must be counted up to tnow */
+static void timers_sched(core_t *c)
+{
+    uint64_t k[3], nx = UINT64_MAX;
+    int i;
+    c->tslow = tslow_now(c);
+    if (c->tslow) {
+        c->tnext = 0;
+        return;
+    }
+    k[0] = t01_due(c, 0); k[1] = t01_due(c, 1); k[2] = t2_due(c);
+    for (i = 0; i < 3; i++)
+        if (k[i]) {
+            uint64_t t = c->tnow + k[i] * tdiv(c, i) - c->tacc[i];
+            if (t < nx) nx = t;
+        }
+    c->tnext = nx;
+}
+
+/* count the timers up to tnow, then set the next deadline */
+static void timers_catch_up(core_t *c)
+{
+    uint64_t p = c->tnow - c->tclk;
+    if (p && !c->tslow) {
+        uint64_t n[3];
+        int i;
+        for (i = 0; i < 3; i++) {
+            uint64_t d = tdiv(c, i), t = c->tacc[i] + p;
+            n[i] = t / d;
+            c->tacc[i] = (uint32_t)(t % d);
+        }
+        if (n[0]) adv_t01(c, 0, n[0]);
+        if (n[1]) adv_t01(c, 1, n[1]);
+        if (n[2]) adv_t2(c, n[2]);
+    }
+    c->tclk = c->tnow;
+    timers_sched(c);
+}
+
+/* after the clk of an instruction, a flash stall or an IRQ entry */
+static inline void timers_advance(core_t *c, uint32_t clk)
+{
+    c->tnow += clk;
+    if (c->tslow) {
+        tick_hw_dw(c, clk);
+        c->tclk = c->tnow;
+        if (!tslow_now(c))
+            timers_sched(c);
+    } else if (c->tnow >= c->tnext)
+        timers_catch_up(c);
+}
+
 /* ---- interrupts ---- */
 static void irq_cost(core_t *c)        /* 8052 mode: 1 cycle, not seen by the timers (ucsim); dw8051: the LCALL to the vector */
 {
@@ -382,7 +610,7 @@ static void irq_cost(core_t *c)        /* 8052 mode: 1 cycle, not seen by the ti
     }
     c->p.cycles += c->irq_cycles;
     c->p.clk += (uint64_t)c->irq_cycles * c->clk_per_cycle;
-    tick_hw_dw(c, c->irq_cycles * c->clk_per_cycle);
+    timers_advance(c, c->irq_cycles * c->clk_per_cycle);
 }
 
 static const struct { uint8_t iem, src, srcm, vec, clr, exf2; } SRC[8] = {
@@ -407,8 +635,11 @@ static inline void irq(core_t *c)
         pr = (IP & SRC[i].iem) ? 1 : 0;
         if (cur >= 0 && pr <= cur)
             continue;
-        if (SRC[i].clr)
+        if (SRC[i].clr) {
+            if (c->dw) timers_catch_up(c);         /* a TFx already set hides its deadline: count before clearing */
             S(SRC[i].src) &= ~SRC[i].srcm;
+            if (c->dw) timers_sched(c);
+        }
         if (c->p.nlvl < 8)
             c->lvl[c->p.nlvl++] = pr;
         irq_cost(c);
@@ -734,6 +965,7 @@ void core_reset(core_t *c)      /* ucsim cl_51core/cl_uc52 clear_sfr; RAM keeps 
     c->t2ex_bit = 1;
     c->t0_edge = c->t1_edge = c->t2_edge = c->t2ex_edge = 0;
     memset(c->tacc, 0, sizeof c->tacc);
+    c->tclk = c->tnow;
     if (c->dw)
         S(0x8E) = 0x01;
 }
@@ -762,7 +994,19 @@ void core_sfr_write(core_t *c, int a, int v) { sfr_store(c, a, (uint8_t)v); }   
 
 int core_level(core_t *c, int i) { return i < (int)c->p.nlvl ? c->lvl[i] : -1; }
 
+static int core_run_(core_t *c, uint64_t n);
+
+/* timers counted up to date at entry and exit: the host reads and writes SFRs directly between runs */
 int core_run(core_t *c, uint64_t n)
+{
+    int r;
+    if (c->dw) timers_catch_up(c);
+    r = core_run_(c, n);
+    if (c->dw) timers_catch_up(c);
+    return r;
+}
+
+static int core_run_(core_t *c, uint64_t n)
 {
     uint64_t end = c->p.instr + n;
     c->p.nev = 0;
@@ -784,14 +1028,16 @@ int core_run(core_t *c, uint64_t n)
         int cyc = step(c);
         c->p.instr++;
         if (c->dw) {
-            c->p.clk += stall;
-            tick_hw_dw(c, stall);
             uint8_t op = c->last_op;
             cyc = (op == 0xE0 || op == 0xE2 || op == 0xE3 || op == 0xF0 || op == 0xF2 || op == 0xF3) ?
                   c->movx_base + (CKCON & 7) : c->dwcyc[op];
             c->p.cycles += cyc;
-            c->p.clk += (uint64_t)cyc * c->clk_per_cycle;
-            tick_hw_dw(c, cyc * c->clk_per_cycle);
+            c->p.clk += stall + (uint64_t)cyc * c->clk_per_cycle;
+            if (c->tslow) {
+                timers_advance(c, stall);
+                timers_advance(c, cyc * c->clk_per_cycle);
+            } else
+                timers_advance(c, stall + cyc * c->clk_per_cycle);
         } else {
             c->p.cycles += cyc;
             tick_hw(c, cyc);
