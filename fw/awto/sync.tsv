@@ -250,6 +250,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 16	1D	-	UP+DOWN in power saving: wake into the console
 16	1E	-	input selector: no key for {AWTO_SRC_IDLE_COMMIT_MS/1000} s (idle commit)
 16	1F	-	input selector closed by a mode reset: its highlighted input
+16	20	-	test cmd 0x0C / 0x0D (memory mode)
 17	01	-	power off
 17	02	-	power on
 17	03	-	power saving

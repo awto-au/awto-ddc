@@ -55,7 +55,7 @@ static void AwtoMemForce(BYTE ucOn)
     }
     AwtoSyncPush(AWTO_SYNC_EV_MEM, (ucOn != 0) ? AWTO_MEM_LOG_FORCE : AWTO_MEM_LOG_RELEASE, 0);
     g_ucAwtoMstepN = 0;                                 // log the M-domain steps of this set-up too
-    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_TESTCMD);
+    SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_MEMTEST);
 }
 
 static __xdata unsigned int s_usAwtoHoldCancel;  // usT2Isr at the last OSD_DISABLE cancel

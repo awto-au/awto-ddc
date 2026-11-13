@@ -1381,6 +1381,7 @@ extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 #define AWTO_SYS_BY_KEY_CONSOLE                                 0x1D    // UP+DOWN in power saving: wake into the console (#132)
 #define AWTO_SYS_BY_SELECTOR_IDLE                               0x1E    // selector: highlighted input taken after AWTO_SRC_IDLE_COMMIT_MS (#132)
 #define AWTO_SYS_BY_SELECTOR_RESET                              0x1F    // selector closed by the SDK OSD reset: its highlighted choice taken (#132)
+#define AWTO_SYS_BY_MEMTEST                                     0x20    // test cmd 0x0C / 0x0D: memory work mode changed (#165)
 #define AWTO_SYS_WHY_INITIAL                                    0x21
 #define AWTO_SYS_WHY_TIMING                                     0x22
 #define AWTO_SYS_WHY_NO_SOURCE                                  0x24
