@@ -434,7 +434,7 @@ def main() -> int:
                 ddc_vcp(VCP_VOLUME, vol0, f"volume back to {vol0} % (read {vol1})")
             else:
                 say(f"volume {vol1} % unchanged (before {vol0} %)")
-        say(f"STEPS END {time.strftime('%H:%M:%S')}: {bad} aplay failure(s); console stays open (clear: osd_test.py ... --cmd clear)")
+        say(f"STEPS END {time.strftime('%H:%M:%S')}: {bad} aplay failure(s); console stays open (clear: ./dev.py diag-clear --unit N)")
         return 1 if bad else 0
     if a.cmd == "outs":
         dev = host(True)
