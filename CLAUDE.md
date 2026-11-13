@@ -2,7 +2,7 @@
 
 Global rules apply (`~/.claude/CLAUDE.md`). Repo specifics:
 
-- Taking over: `docs/handover.md` (state, units, decisions, runbook). Hardware tests on unit 2 only (`scripts/devices.json` `test` flag); debug link off before any flash.
+- Taking over: `docs/handover.md` (state, units, decisions, runbook). Hardware tests on the `test` unit in `scripts/devices.json` only (unit 3, top monitor, since 2026-11-13); debug link off before any flash.
 - Writes to a monitor's flash/ISP are never default; `--allow-write` style flags stay opt-in.
   - Dump twice and compare only before the FIRST write over vendor firmware; keep that one original per unit in `~/vendors/realtek/analysis/dumps/`.
   - Reflashing our own builds: `rtd_flash_image.py ... --write --no-backup`. Never keep dumps of our own builds (Dan, 2026-11-05).
