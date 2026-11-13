@@ -1,4 +1,6 @@
-# Panel candidate: Samsung LTM270FL01 (JXC/Dahua 27" 4K, RTD2795T)
+# Ruled out: Samsung LTM270FL01
+
+- **Not the panel (2026-11-13):** Dan photographed the panel label: Innolux M280DCA-E3B rev C1, see [panel-innolux-m280dca-e3b.md](panel-innolux-m280dca-e3b.md). Kept for the history of the guess.
 
 Panel's own EDID (597 x 336 mm) supports the 27" size: [panel-edid.md](panel-edid.md). Service menu names Innolux M280DCA-E3B (28"): [panel-innolux-m280dca-e3b.md](panel-innolux-m280dca-e3b.md). Model still unresolved.
 

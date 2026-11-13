@@ -1,8 +1,9 @@
-# Panel candidate: Innolux M280DCA-E3B (JXC/Dahua 4K, RTD2795T)
+# Panel: Innolux M280DCA-E3B rev C1 (JXC/Dahua 4K, RTD2795T)
 
-- Name source: service menu reads `M280DCA-E3B` (Dan, 2026-11-05).
+- **Confirmed 2026-11-13 by Dan from a photo of the panel label: Innolux M280DCA-E3B, revision C1.** The Samsung LTM270FL01 (`panel-samsung-ltm270fl01.md`) is NOT the panel; the 27" EDID size was wrong.
+- Name source before: service menu reads `M280DCA-E3B` (Dan, 2026-11-05).
 - Datasheet: `~/vendors/innolux/M280DCA-E3B/M280DCA-E3B_spec_v0.0_20190311.pdf` (Innolux tentative spec Ver0.0, 2019-03-11).
-- Status: name from the service menu only. Panel EDID (read 2026-11-05, #3) says 597 x 336 mm (27"), which does not match this 28" part; see [panel-edid.md](panel-edid.md). Samsung LTM270FL01 is the size match.
+- Status (superseded 2026-11-13, see above): name from the service menu only. Panel EDID (read 2026-11-05, #3) says 597 x 336 mm (27"), which does not match this 28" part; see [panel-edid.md](panel-edid.md). Samsung LTM270FL01 is the size match.
 
 ## Spec (datasheet)
 | Item | Value |
