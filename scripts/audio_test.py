@@ -11,7 +11,7 @@ usage: audio_test.py host                       ELD + IEC958 switch of the pcm t
        audio_test.py gen --map MAP [--secs 4] MUX..   audio-test image only: chip sine generator (VCP 0x63) for --secs per REG_MUX_ANA_OUT
                                                 value (hex), 3 s off between; 06E0 restored to its value before; times logged
        audio_test.py outs --map MAP [--secs 4]  ear matrix: one both-channel 440 Hz tone per amp set-up (OUTS), 3 s gaps;
-                                                hpout (amp feed) by its mute bits + P7.4 (SDK leaves those alone)
+                                                aout (amp feed) by its mute bits + P7.4 (SDK leaves those alone)
        audio_test.py steps --map MAP [--secs 3] [--only 1,3] [--freqs 200,1000,4000]   (dev.py sound-test)
                                                 diagnostics console held open, then firmware ear-test steps 1..6: VCP 0x63 =
                                                 0x10 + n (console "audio test n/6: ..."), per tone 0x8000 | Hz (console "audio
@@ -49,7 +49,7 @@ APLAY_LIMIT_S = 1.25                            # x tone length: aplay runs the 
 REGDB = ROOT / "re/regdb/RTD2795T-CG.tsv.gz"
 REGS = (0x06C0, 0x06C1, 0x06C5, 0x06C6, 0x06C7, 0x06C8, 0x06D0, 0x06D1, 0x06D2, 0x06D3, 0x06D4, 0x06E0,
         0x08A0, 0x08A1, 0x08A2, 0x08A5, 0x08A6, 0x08A7, 0x6F00, 0x6F01)
-PORTS = {"P7.3 (amp aux, pin 160)": 0xFE1B, "P7.4 (amp enable, pin 161)": 0xFE1C, "P4.5 (jack input, pin 113)": 0xFE05}
+PORTS = {"P7.3 (AMP_MUTE, 1 = muted, pin 160)": 0xFE1B, "P7.4 (amp enable, pin 161)": 0xFE1C, "P4.5 (jack input, pin 113)": 0xFE05}
 DPORT_IDX, DPORT_DATA = 0x71C9, 0x71CA           # P71_C9_HDMI_AP / P71_CA_HDMI_DP (D2 HDMI audio data port)
 DPORT_NAMES = {0x03: "HDMI_AFCR", 0x05: "HDMI_MAGCR1", 0x06: "HDMI_MAGCR2", 0x07: "HDMI_MAG_M_FINAL", 0x08: "HDMI_MAG_L_FINAL",
                0x09: "HDMI_MAG_R_FINAL", 0x30: "HDMI_AVMCR", 0x31: "HDMI_WDCR0"}
@@ -65,16 +65,16 @@ DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retri
 
 
 STEPS, STEP_START, STEP_DONE = 6, 0x10, 0x30     # firmware ear-test steps (RL6449_Project.h AWTO_AUDIO_TEST_*)
-STEP_WHAT = ("hpout only, P7.3 low", "hpout only, P7.3 HIGH", "aout only, P7.3 low", "aout only, P7.3 HIGH",
-             "hpout + aout, P7.3 low", "hpout + aout, P7.3 HIGH")          # all: amp P7.4 on, DVC -6 dB (awto_audio.inc)
-STEP_SETTLE_S = 0.25                            # step set-up -> first tone: fw writes output / P7.3 / gain at once (one main-loop
+STEP_WHAT = ("aout, P7.4 on, P7.3 low, -6 dB", "aout, P7.4 OFF, P7.3 low, -6 dB", "aout, P7.4 on, P7.3 low, -16.5 dB (Dahua default)",
+             "aout, P7.4 on, P7.3 low, -3 dB", "aout, P7.4 on, P7.3 low, 0 dB", "aout, P7.4 on, P7.3 HIGH (AMP_MUTE check), -6 dB")
+STEP_SETTLE_S = 0.25                            # step set-up -> first tone: fw writes P7.4 / P7.3 / gain at once (one main-loop
                                                 # pass ~3.4 ms + DVC zero-cross ramp); 0.25 s so the console line shows first
 DVC_GAIN = (0x08A5, 0x08A6)                     # DVC_GAIN_MSB / LSB: double-buffered, applied by DVC_GAIN_READ_MSB bit 6
 DVC_LATCH, DVC_LATCH_BIT = 0x08A7, 0x40         # (ScalerAudioDVCAdjustVolume); read back = the applied gain, 0 while muted
 AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
 OUT_ON, OUT_MUTED = 0x08, 0xC8
-OUTS = (("hpout, amp P7.4 = 1 (as flashed: hpout feeds the amp)", OUT_MUTED, OUT_ON, 1),    # aout unused in the fw (#94)
-        ("hpout, amp P7.4 = 0", OUT_MUTED, OUT_ON, 0))
+OUTS = (("aout, amp P7.4 = 1 (as flashed: aout feeds the amp)", OUT_ON, OUT_MUTED, 1),    # hpout unused in the fw (#94)
+        ("aout, amp P7.4 = 0", OUT_ON, OUT_MUTED, 0))
 AMP_WAIT_S = 1.5                                # unmute: SDK pass + DVC ramp (<= 400 ms, _DVC_VOLUME_MUTE_TIMER) + amp; x1.25 + ddc
 
 
@@ -234,7 +234,7 @@ class Unit:
         self.X, self.B, self.mp = X, B, mp
         self.sym = {n: xsym(mp, n) for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_stAudioD2DigtalInfo",
                                               "g_stPowerInfo", "g_stModeInfo")}
-        for n in ("g_ulAwtoAudioT0", "g_ucAwtoAudioAux"):
+        for n in ("g_ucAwtoAudioTestN",):
             try:
                 self.sym[n] = xsym(mp, n)
             except SystemExit:
@@ -291,9 +291,9 @@ class Unit:
         if got["g_stModeInfo"] is not None:
             say(f"  power {got['g_stPowerInfo'] >> 4 if got['g_stPowerInfo'] is not None else '?'} (2 = NORMAL), "
                 f"mode {got['g_stModeInfo'] & 0x1F} (3 = ACTIVE)")
-        if "g_ucAwtoAudioAux" in self.sym:
-            v = self.rd(rio, self.sym["g_ucAwtoAudioAux"])
-            say(f"  awto amp owner: P7.3 driven low = {None if v is None else v[0]}")
+        if "g_ucAwtoAudioTestN" in self.sym:
+            v = self.rd(rio, self.sym["g_ucAwtoAudioTestN"])
+            say(f"  ear-test step held: {None if v is None else v[0]} (0 = none)")
         return got
 
 

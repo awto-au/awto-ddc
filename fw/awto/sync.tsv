@@ -168,21 +168,21 @@ E1	08	vport	wake on % suppressed: input disabled (once per trigger per sleep)
 E1	09	vport	disable % requested: already disabled
 E1	0A	vport	enable % requested: already enabled
 E1	0B	vport	fixed search on disabled %: auto search
-E5	01	-	speaker amp on (P7.4 = 1)
-E5	02	-	speaker amp off (P7.4 = 0)
-E5	03	-	amp aux pin low (P7.3 = 0)
-E5	11	-	audio test 1/6: hpout only, P7.3 low, amp on, -6 dB
-E5	12	-	audio test 2/6: hpout only, P7.3 HIGH, amp on, -6 dB
-E5	13	-	audio test 3/6: aout only, P7.3 low, amp on, -6 dB
-E5	14	-	audio test 4/6: aout only, P7.3 HIGH, amp on, -6 dB
-E5	15	-	audio test 5/6: hpout + aout, P7.3 low, amp on, -6 dB
-E5	16	-	audio test 6/6: hpout + aout, P7.3 HIGH, amp on, -6 dB
-E5	31	-	audio test 1/6 done: hpout, P7.3 low, user volume back
-E5	32	-	audio test 2/6 done: hpout, P7.3 low, user volume back
-E5	33	-	audio test 3/6 done: hpout, P7.3 low, user volume back
-E5	34	-	audio test 4/6 done: hpout, P7.3 low, user volume back
-E5	35	-	audio test 5/6 done: hpout, P7.3 low, user volume back
-E5	36	-	audio test 6/6 done: hpout, P7.3 low, user volume back
+E5	01	-	speaker amp on: P7.4 = 1, AMP_MUTE P7.3 = 0
+E5	02	-	speaker amp off: P7.4 = 0, AMP_MUTE P7.3 = 1
+E5	04	n	unmute while audio test step % is held: P7.4 / AMP_MUTE P7.3 as that step sets them
+E5	11	-	audio test 1/6: aout, P7.4 on, P7.3 low, -6 dB
+E5	12	-	audio test 2/6: aout, P7.4 OFF, P7.3 low, -6 dB
+E5	13	-	audio test 3/6: aout, P7.4 on, P7.3 low, -16.5 dB (Dahua default)
+E5	14	-	audio test 4/6: aout, P7.4 on, P7.3 low, -3 dB
+E5	15	-	audio test 5/6: aout, P7.4 on, P7.3 low, 0 dB
+E5	16	-	audio test 6/6: aout, P7.4 on, P7.3 HIGH (AMP_MUTE check), -6 dB
+E5	31	-	audio test 1/6 end, back to default: aout, P7.4 on, P7.3 low, your volume
+E5	32	-	audio test 2/6 end, back to default: aout, P7.4 on, P7.3 low, your volume
+E5	33	-	audio test 3/6 end, back to default: aout, P7.4 on, P7.3 low, your volume
+E5	34	-	audio test 4/6 end, back to default: aout, P7.4 on, P7.3 low, your volume
+E5	35	-	audio test 5/6 end, back to default: aout, P7.4 on, P7.3 low, your volume
+E5	36	-	audio test 6/6 end, back to default: aout, P7.4 on, P7.3 low, your volume
 E5	40	n	audio test (no step): % Hz
 E5	41	n	audio test 1: % Hz
 E5	42	n	audio test 2: % Hz

@@ -121,7 +121,6 @@ void main(void)
 #endif
 
 #if(_AUDIO_SUPPORT == _ON)
-            AwtoAudioPoll();                        // #94 P7.3 low 200 ms after P7.4 = 0 (awto_audio.inc)
             SysAudioHandler();
 #endif
             AWTO_SW_POLL_MARKS();
