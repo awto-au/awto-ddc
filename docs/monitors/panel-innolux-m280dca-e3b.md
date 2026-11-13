@@ -49,6 +49,6 @@ Datasheet (source = monitor, sink = panel). Firmware: `UserCommonInterfacePanelS
 | T10 | video end -> VDD off | 0 / 500 | T5 (+ SSC / PHY off) | 20 | - | ok |
 | T11 | VDD off (10 %) -> VDD on | 1000 / - | T6 (from the VDD-off edge) | 1100 | VDD decay not measured | ok if decay to 10 % < 100 ms |
 
-- T3_OWN 20 ms (#63, backlight on behind the scaler's own black frame) is below the datasheet T8 minimum. Datasheet note 2: backlight before LCD operation may show a momentarily abnormal screen. Proposal (not applied, Dan decides): T3_OWN >= 200 ms (+~165 ms to backlight on at boot / wake).
+- T8 is deliberately NOT followed (Dan, 2026-11-13, repeated decision): backlight on immediately after power-up once the MCU is on the M2PLL clock, not gated by video or T3/T3_OWN. Accepted risk per datasheet note 2: a momentarily abnormal screen.
 - T6 vs T11: datasheet counts from VDD at 10 %; firmware from the switch edge. Margin 100 ms; the VDD decay time is not measured.
 - Not in the datasheet: `_PANEL_POWER_ON_BL_TO_PWM` 50, `_PANEL_POWER_OFF_PWM_TO_BL` 50 (SDK defaults, Panel_Default.h; external LED driver).
