@@ -3990,7 +3990,7 @@ WORD UserInterfaceGetAudioVolume(void)
 //--------------------------------------------------
 EnumAudioDACOutput UserInterfaceGetAudioDACOutput(void)
 {
-    return _AUDIO_DAC_OUTPUT_SPEAKER;       // awto: speaker only, headphone out dropped (RL6449_Project.h, #94); Dahua fw picks by P4.5
+    return _AUDIO_DAC_OUTPUT_HEADPHONE;     // awto: hpout feeds the speaker amp, aout unused (RL6449_Project.h, #94); Dahua fw picks by P4.5
 }
 
 //--------------------------------------------------
@@ -4086,7 +4086,7 @@ void UserInterfaceAdjustAudioPowerProc(EnumPowerStatus enumPowStatus)
 //--------------------------------------------------
 void UserInterfaceAdjustAudioAmpMuteProc(bit bMute)
 {
-    // awto: as Dahua 1:ea99 (speaker path), amp on = !mute (AwtoAudioAmp, awto_audio.inc)
+    // awto: amp on = !mute (AwtoAudioAmp, awto_audio.inc); the amp is fed from hpout here
     PCB_AMP_MUTE(bMute);
 }
 

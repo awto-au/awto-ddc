@@ -11,7 +11,7 @@ usage: audio_test.py host                       ELD + IEC958 switch of the pcm t
        audio_test.py gen --map MAP [--secs 4] MUX..   audio-test image only: chip sine generator (VCP 0x63) for --secs per REG_MUX_ANA_OUT
                                                 value (hex), 3 s off between; 06E0 restored to its value before; times logged
        audio_test.py outs --map MAP [--secs 4]  ear matrix: one both-channel 440 Hz tone per amp set-up (OUTS), 3 s gaps;
-                                                speaker out (aout) by its mute bits + P7.4 (SDK leaves those alone)
+                                                hpout (amp feed) by its mute bits + P7.4 (SDK leaves those alone)
        audio_test.py steps --map MAP [--secs 3] [--only 1,3] [--freqs 200,1000,4000]   (dev.py sound-test)
                                                 diagnostics console held open, then firmware ear-test steps 1..6: VCP 0x63 =
                                                 0x10 + n (console "audio test n/6: ..."), per tone 0x8000 | Hz (console "audio
@@ -65,12 +65,12 @@ DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retri
 
 
 STEPS, STEP_START, STEP_DONE = 6, 0x10, 0x30     # firmware ear-test steps (RL6449_Project.h AWTO_AUDIO_TEST_*)
-STEP_WHAT = ("speaker, amp on, user volume", "speaker, amp OFF (P7.4 = 0), user volume", "speaker, amp on, -16.5 dB (Dahua default)",
-             "speaker, amp on, -6 dB (= volume 100 now)", "speaker, amp on, -3 dB", "speaker, amp on, 0 dB (DVC maximum)")
+STEP_WHAT = ("hpout -> amp, amp on, user volume", "hpout -> amp, amp OFF (P7.4 = 0), user volume", "hpout -> amp, amp on, -16.5 dB (Dahua default)",
+             "hpout -> amp, amp on, -6 dB (= volume 100 now)", "hpout -> amp, amp on, -3 dB", "hpout -> amp, amp on, 0 dB (DVC maximum)")
 AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
 OUT_ON, OUT_MUTED = 0x08, 0xC8
-OUTS = (("aout, amp P7.4 = 1 (as flashed, Dahua speaker path)", OUT_ON, OUT_MUTED, 1),    # hpout dropped from the fw (#94)
-        ("aout, amp P7.4 = 0", OUT_ON, OUT_MUTED, 0))
+OUTS = (("hpout, amp P7.4 = 1 (as flashed: hpout feeds the amp)", OUT_MUTED, OUT_ON, 1),    # aout unused in the fw (#94)
+        ("hpout, amp P7.4 = 0", OUT_MUTED, OUT_ON, 0))
 AMP_WAIT_S = 1.5                                # unmute: SDK pass + DVC ramp (<= 400 ms, _DVC_VOLUME_MUTE_TIMER) + amp; x1.25 + ddc
 
 

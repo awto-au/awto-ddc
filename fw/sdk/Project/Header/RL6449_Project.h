@@ -1984,9 +1984,9 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
 #define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
 
-// awto: speaker output only (aout 116/117 -> amp, P7.4 on unmute, as the Dahua speaker path); headphone out (hpout 109/110)
-// dropped: Dan 2026-11-13 "it definitely does not work" (#94)
-#define _DAC_HP_OUTPUT_SUPPORT                                  _OFF
+// awto: aout 116/117 unused (Dan 2026-11-13: no sound from it); hpout 109/110 feeds the speaker amp, P7.4 on when unmuted (#94)
+#define _DAC_SPEAKER_OUTPUT_SUPPORT                             _OFF
+#define _DAC_HP_OUTPUT_SUPPORT                                  _ON
 #define AWTO_AUDIO_AUX_MS                                       200     // P7.3 low this long after P7.4 = 0 (Dahua 5:d324, delay R7 = 0xC8) [fw]
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // P7.4 = 1 (unmute)
