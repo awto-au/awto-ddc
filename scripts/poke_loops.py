@@ -154,6 +154,9 @@ def main() -> int:
     bodies = {}
     stems = {q.stem for q in asm.glob("*.asm")}           # compiled files only (other chip families share names)
     files = [q for q in sorted(src.rglob("*.c")) if q.stem in stems] + sorted(src.rglob("Code/*.h"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import fw_dirs                                        # our fw/<subsystem>/*.c and the remaining fw/sdcc/*.inc (#196)
+    files += [q for q in fw_dirs.our_files(a.tree, ("*.c",)) if q.stem in stems] + sorted((a.tree / "fw/sdcc").glob("*.inc"))
     for p in files:
         t = strip_pp_off(strip_comments(p.read_text(errors="replace")))
         for m in FN_RX.finditer(t):
@@ -161,7 +164,7 @@ def main() -> int:
             if name in KEYW or name not in linked:
                 continue
             j = m.end() - 1
-            bodies.setdefault(name, (p.relative_to(src), t.count("\n", 0, j) + 1, t[j:block_end(t, j)]))
+            bodies.setdefault(name, (p.relative_to(src) if p.is_relative_to(src) else p.relative_to(a.tree), t.count("\n", 0, j) + 1, t[j:block_end(t, j)]))
     helpers = {n for n, (_, _, b) in bodies.items() if POKE_RX.search(b)}
     reach = set(helpers)                                   # functions that reach a helper (linked graph)
     changed = True

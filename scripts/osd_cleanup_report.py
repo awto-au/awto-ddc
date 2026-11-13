@@ -80,6 +80,9 @@ def sources(tree: Path):
     for d in (tree / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code", tree / "tmp/sdcc-port/src/User/RTD Factory/Code"):
         files += sorted(d.glob("*.c"))
     files += sorted((tree / "fw/sdcc").glob("*.inc"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import fw_dirs
+    files += fw_dirs.our_files(tree)
     return [(f, f.read_text(errors="replace").splitlines()) for f in files if f.exists()]
 
 

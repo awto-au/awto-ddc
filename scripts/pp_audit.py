@@ -297,7 +297,8 @@ def main() -> int:
     scans = {f: scan_file(f) for f in ours}
     # every #define in our trees + the -D flags + compiler predefines
     defined = set()
-    for base in (SDK, ROOT / "fw/sdk-parked", ROOT / "fw/sdcc", SRC, ROOT / "fw/awto"):   # parked sources count (#165)
+    import fw_dirs
+    for base in (SDK, ROOT / "fw/sdk-parked", ROOT / "fw/sdcc", SRC, ROOT / "fw/awto", *fw_dirs.our_dirs(ROOT)):   # parked sources count (#165)
         for p in base.rglob("*"):
             if p.suffix.lower() in (".c", ".h", ".inc") and p.is_file():
                 defined |= set(re.findall(r"^\s*#\s*define\s+(\w+)", p.read_text(errors="replace"), re.M))

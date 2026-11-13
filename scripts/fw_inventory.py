@@ -44,6 +44,7 @@ ORIGINS = [      # (origin, regex on the SDK-relative source path), first match 
     ("Kernel/Scaler drivers", r"^Kernel/"),
     ("Pcb/Panel/Project", r"^(Pcb|Panel|Project)/"),
     ("Ours: fw/sdcc", r"^fw/sdcc/"),
+    ("Ours: fw/<subsystem>", r"^fw/(osd|nvram|keys|power|input|log|test|diag|dp|timer|meas|ddcci|net|audio)/"),
 ]
 STEP_RULES = [   # (step, regex on "origin|module|symbol"), first match wins; heuristic: the inventory review fixes misfiles
     ("15 Awto* port", r"\|_?Awto"),
@@ -80,7 +81,10 @@ def log(s: str) -> None:
 def source_index(sdk: Path) -> dict:
     """stem (as compiled: asm/rel name) -> source path relative to its tree root; RL6449 copies preferred."""
     idx = {}
-    roots = [(sdk, ""), (ROOT / "fw" / "sdk", ""), (ROOT / "fw" / "sdcc", "fw/sdcc/")]
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import fw_dirs
+    roots = [(sdk, ""), (ROOT / "fw" / "sdk", ""), (ROOT / "fw" / "sdcc", "fw/sdcc/"),
+             *((d, f"fw/{d.name}/") for d in fw_dirs.our_dirs(ROOT))]
     for base, prefix in roots:
         if not base.exists():
             continue
