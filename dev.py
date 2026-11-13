@@ -956,6 +956,11 @@ def cmd_osd(extra: list[str]) -> int:
     return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
 
 
+@command("clear the OSD diagnostics console (= osd clear, test cmd 0x27)", args="[--unit N] [--map F]", kind="action")
+def cmd_diag_clear(extra: list[str]) -> int:
+    return cmd_osd([*extra, "clear"])
+
+
 @command("speaker ear test (#94): diagnostics console opened, firmware ear-test steps (VCP 0x63: speaker + amp, no amp, "
          "volume levels), each step's console line then its tones (each frequency announced on the console), volume checked after; "
          "times in tmp/logs/audio_test.log",
