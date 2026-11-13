@@ -7,16 +7,19 @@ __xdata BYTE g_ucAwtoAudioAux;                  // 1 = P7.3 driven low
 __xdata BYTE g_ucAwtoAudioTestN;                // ear-test step 1..AWTO_AUDIO_TEST_STEPS in force, 0 = none (RAM only)
 
 // #94 ear-test steps (dev.py sound-test, VCP 0x63): output matrix {hpout, aout, both} x {P7.3 low, high}, amp on, DVC -6 dB.
-// The output goes through UserInterfaceGetAudioDACOutput (the SDK re-checks it every pass and would undo a direct 06C0 write);
-// held until the step's DONE.
+// Output written directly (06C0 power + per-output mute); the SDK no longer re-checks it; held until the step's DONE.
+#define AWTO_AUDIO_OUT_ON                       AWTO_F_REG_AOUT_CTRL_REG_AOUT_NORM     // normal mode, L/R unmuted (HPOUT_CTRL: same bits)
+#define AWTO_AUDIO_OUT_MUTED                    (AWTO_F_REG_AOUT_CTRL_REG_MUTE_AOUT_L | AWTO_F_REG_AOUT_CTRL_REG_MUTE_AOUT_R | AWTO_AUDIO_OUT_ON)
 static __code BYTE tAwtoAudioTestOut[AWTO_AUDIO_TEST_STEPS] = {_AUDIO_DAC_OUTPUT_HEADPHONE, _AUDIO_DAC_OUTPUT_HEADPHONE,
                                                                _AUDIO_DAC_OUTPUT_SPEAKER, _AUDIO_DAC_OUTPUT_SPEAKER,
                                                                _AUDIO_DAC_OUTPUT_BOTH, _AUDIO_DAC_OUTPUT_BOTH};
 static __code BYTE tAwtoAudioTestAux[AWTO_AUDIO_TEST_STEPS] = {0, 1, 0, 1, 0, 1};     // P7.3 per step
 
-BYTE AwtoAudioDacOutput(void)
+static void AwtoAudioOutSet(BYTE ucOut)
 {
-    return (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestOut[g_ucAwtoAudioTestN - 1] : AWTO_AUDIO_OUT_DEFAULT;
+    ScalerAudioDACOutputSwitch((EnumAudioDACOutput)ucOut);      // 06C0 aout / hpout power
+    ScalerSetByte(AWTO_R_REG_AOUT_CTRL, ((ucOut & _AUDIO_DAC_OUTPUT_SPEAKER) != 0) ? AWTO_AUDIO_OUT_ON : AWTO_AUDIO_OUT_MUTED);
+    ScalerSetByte(AWTO_R_REG_HPOUT_CTRL, ((ucOut & _AUDIO_DAC_OUTPUT_HEADPHONE) != 0) ? AWTO_AUDIO_OUT_ON : AWTO_AUDIO_OUT_MUTED);
 }
 
 void AwtoAudioAmpBoot(void)
@@ -59,7 +62,7 @@ WORD AwtoAudioTestGain(void)
     return (g_ucAwtoAudioTestN != 0) ? AWTO_AUDIO_TEST_GAIN : 0;
 }
 
-// VCP 0x63 = AWTO_AUDIO_TEST_START + n: step n set up (output via the SDK's DAC switch: mute, re-charge ~0.6 s, unmute);
+// VCP 0x63 = AWTO_AUDIO_TEST_START + n: step n set up (output, P7.3, gain at once);
 // AWTO_AUDIO_TEST_DONE + n: default output, P7.3 low, user volume; high byte AWTO_AUDIO_TEST_HZ_FLAG: tone frequency (15 bit Hz)
 // announced. One console line each (sync.tsv E5).
 void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
@@ -77,6 +80,7 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
     }
     AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ucLo, 0);          // "audio test n/6: <output>, P7.3 ..." / "... done"
     g_ucAwtoAudioTestN = ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? ucN : 0;
+    AwtoAudioOutSet((g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestOut[ucN - 1] : AWTO_AUDIO_OUT_DEFAULT);
     bAMP_AUX = (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestAux[ucN - 1] : 0;
     if(UserInterfaceGetAudioReadyToPlayStatus() == _TRUE)   // playing: gain now; else the SDK unmute applies it
     {

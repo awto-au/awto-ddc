@@ -264,8 +264,13 @@ void SysAudioAnalogAudioHandler(void)
     if((ScalerAudioDACGetState() != _AUDIO_DAC_OFF) && (ScalerAudioDACGetState() != _AUDIO_DAC_INITIAL) && (ScalerAudioDACGetState() != _AUDIO_DAC_CHARGE))
     {
         // User want to change DAC Input / Output
+#if(_DAC_OUTPUT_SWITCH_SUPPORT == _ON)
         if((ScalerAudioGetAudioInputPortChanged(UserInterfaceGetAudioSource(), SysSourceGetInputPort()) == _TRUE) ||
            (ScalerAudioDACGetOutput() != UserInterfaceGetAudioDACOutput()))
+#else
+        // awto: output fixed, chosen once at DAC start (_AUDIO_DAC_CHARGE); no runtime output check (#94)
+        if(ScalerAudioGetAudioInputPortChanged(UserInterfaceGetAudioSource(), SysSourceGetInputPort()) == _TRUE)
+#endif
         {
 #if((_SLEEP_AUDIO_SUPPORT == _ON) && (_LINE_IN_SUPPORT == _ON) && ((_PS_AUDIO_INPUT == _PS_AUDIO_BOTH) || (_PS_AUDIO_INPUT == _PS_AUDIO_LINE_IN)))
             if(SysAudioGetSleepAudioStatusForLineIn() == _FALSE)
@@ -277,6 +282,7 @@ void SysAudioAnalogAudioHandler(void)
                 SysAudioChangeAudioState(_AUDIO_STATUS_PREPARING);
             }
 
+#if(_DAC_OUTPUT_SWITCH_SUPPORT == _ON)
             if(ScalerAudioDACGetOutput() != UserInterfaceGetAudioDACOutput())
             {
                 DebugMessageAudio("Audio Dac Switch Output", ScalerAudioDACGetOutput());
@@ -288,6 +294,7 @@ void SysAudioAnalogAudioHandler(void)
                 ScalerAudioDACSetState(_AUDIO_DAC_CHARGE);
             }
             else
+#endif
             {
 #if(_LINE_IN_SUPPORT == _ON)
                 DebugMessageAudio("Audio Switch Input", ScalerAudioGetInputSource());

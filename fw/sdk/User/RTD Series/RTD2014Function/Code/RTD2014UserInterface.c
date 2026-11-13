@@ -3990,7 +3990,7 @@ WORD UserInterfaceGetAudioVolume(void)
 //--------------------------------------------------
 EnumAudioDACOutput UserInterfaceGetAudioDACOutput(void)
 {
-    return (EnumAudioDACOutput)AwtoAudioDacOutput();   // awto: hpout -> amp, or the ear-test step's output (#94); Dahua fw picks by P4.5
+    return AWTO_AUDIO_OUT_DEFAULT;          // awto: fixed hpout -> amp, read once at DAC start (#94); Dahua fw picks by P4.5
 }
 
 //--------------------------------------------------

@@ -1863,6 +1863,11 @@
 #define _DAC_HP_OUTPUT_SUPPORT                                  _ON // Should be _OFF if the related pinout is used as GPIO funtion
 #endif
 
+// awto: _OFF = output chosen once at DAC start, no per-pass output compare / switch in SysAudioAnalogAudioHandler (#94)
+#ifndef _DAC_OUTPUT_SWITCH_SUPPORT
+#define _DAC_OUTPUT_SWITCH_SUPPORT                              _ON
+#endif
+
 #ifndef _DAC_SPEAKER_OUTPUT_SWAP
 #define _DAC_SPEAKER_OUTPUT_SWAP                                _OFF
 #endif

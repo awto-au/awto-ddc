@@ -1984,10 +1984,10 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
 #define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
 
-// awto: DAC output = AwtoAudioDacOutput() (awto_audio.inc): hpout 109/110 -> speaker amp by default (Dan 2026-11-13: aout gave
-// no sound); ear-test steps pick hpout / aout / both, so both outputs stay built (SDK defaults _DAC_*_OUTPUT_SUPPORT _ON) (#94)
+// awto: DAC output fixed, set once at DAC start: hpout 109/110 -> speaker amp (Dan 2026-11-13: aout gave no sound); no jack
+// switching, so no per-pass output check; ear-test steps write hpout / aout / both directly (both stay built, SDK defaults) (#94)
+#define _DAC_OUTPUT_SWITCH_SUPPORT                              _OFF
 #define AWTO_AUDIO_OUT_DEFAULT                                  _AUDIO_DAC_OUTPUT_HEADPHONE
-extern unsigned char AwtoAudioDacOutput(void);                  // EnumAudioDACOutput for UserInterfaceGetAudioDACOutput
 #define AWTO_AUDIO_AUX_MS                                       200     // P7.3 low this long after P7.4 = 0 (Dahua 5:d324, delay R7 = 0xC8) [fw]
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // P7.4 = 1 (unmute)

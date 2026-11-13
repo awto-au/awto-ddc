@@ -67,8 +67,8 @@ DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retri
 STEPS, STEP_START, STEP_DONE = 6, 0x10, 0x30     # firmware ear-test steps (RL6449_Project.h AWTO_AUDIO_TEST_*)
 STEP_WHAT = ("hpout only, P7.3 low", "hpout only, P7.3 HIGH", "aout only, P7.3 low", "aout only, P7.3 HIGH",
              "hpout + aout, P7.3 low", "hpout + aout, P7.3 HIGH")          # all: amp P7.4 on, DVC -6 dB (awto_audio.inc)
-STEP_SETTLE_S = 1.25                            # step set-up -> first tone: SDK DAC switch = re-charge 0.5 s + depop 0.1 s +
-                                                # unmute ramp <= 0.4 s (SysAudio.c / _DVC_VOLUME_MUTE_TIMER) = 1.0 s, x1.25
+STEP_SETTLE_S = 0.25                            # step set-up -> first tone: fw writes output / P7.3 / gain at once (one main-loop
+                                                # pass ~3.4 ms + DVC zero-cross ramp); 0.25 s so the console line shows first
 DVC_GAIN = (0x08A5, 0x08A6)                     # DVC_GAIN_MSB / LSB: double-buffered, applied by DVC_GAIN_READ_MSB bit 6
 DVC_LATCH, DVC_LATCH_BIT = 0x08A7, 0x40         # (ScalerAudioDVCAdjustVolume); read back = the applied gain, 0 while muted
 AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
@@ -414,7 +414,7 @@ def main() -> int:
                 held = n
                 ddc_vcp(GEN_VCP, STEP_START + n, f"step {n} set up")
                 say(f"STEP {n}/{STEPS} START {time.strftime('%H:%M:%S')}: {STEP_WHAT[n - 1]} (console 'audio test {n}/{STEPS}: ...'); "
-                    f"{STEP_SETTLE_S} s for the DAC switch")
+                    f"{STEP_SETTLE_S} s settle")
                 time.sleep(STEP_SETTLE_S)
                 for hz, p in waves:
                     ddc_vcp(GEN_VCP, HZ_FLAG | hz, f"announce {hz} Hz")
