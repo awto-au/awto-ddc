@@ -2745,7 +2745,6 @@ BYTE __code tFONT1_ICON_POSITION[] =
 };
 #endif
 
-#include "awto_icon_info.inc"
 #if(_AWTO_REALTEK_MENU != _ON)
 BYTE __code tAWTO_ICON_NONE[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 #endif

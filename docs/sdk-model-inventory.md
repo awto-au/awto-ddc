@@ -156,7 +156,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 ### 2.3 INSERTS (line before anchor), grouped. Anchors in keil2sdcc.py:143-336.
 | # | where (SDK file:function) | inserted | area | issue |
 |---|---|---|---|---|
-| 1 | RTD2014OsdFontDynamicIcon_1.c | `awto_icon_info.inc` | OSD icon | #46 |
+| 1 | RTD2014OsdFontDynamicIcon_1.c | `fw/osd/mark_icon.c` | OSD icon | #46 |
 | 2 | RL6449_Series_Mcu.c | `_AWTO_DDCRAM_DEFINER`; `awto_dbgport.inc` before `ScalerMcuDdcciSwitchPort` | DDC/CI | #28 |
 | 3 | Pcb_List.h, User_Pcb_Include.h, User_Panel_List.h, User_Panel_Include.h | our board id 0x4F, panel id 0x3D includes | board/panel | #7 |
 | 4 | ScalerPLL.c (3), ScalerMDomain.c (14 `AwtoMeasEvent`), ScalerMeasure.c, SysTimer.c T2 ISR `AWTO_MEAS_T2ISR` | 4K60 measurement ring; DHtotal debounce forced one pass; last-line finetune off | measure | #26 |

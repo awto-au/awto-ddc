@@ -422,6 +422,7 @@ extern void AwtoDiagTestCmd(void);
 extern bit AwtoHoldBlocksDisable(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
+extern unsigned char __code tFONT1_ICON_INFORMATION[];          // awto mark main-menu icon: fw/osd/mark_icon.c (osd_icon_encode.py)
 // #39 key test screen + press log (fw/sdcc/awto_keytest.inc, awto_keypop.inc): read over debug slave 0x35 at map symbol _g_stAwtoKey
 // (host: scripts/rtd_keywatch.py --log). Bytes only, so the layout is the same in LE and BE images.
 #define AWTO_KEY_LOG_N                                          16      // press-log entries (ring, newest at index (ucCount - 1) % 16)
