@@ -20,7 +20,7 @@ ROOT = repo_root()
 SECTOR, BANK = 4096, 0x10000
 BUILD_TIMEOUT = 600          # full build ~100 s cold (port 15 s, compile ~70 s, link ~5 s); 3x + margin, awto-dan#53
 EDITS = {
-    "panel": [{"file": "Panel/AWTO_LTM270FL01.h", "old": "_PANEL_DH_START                         48",
+    "panel": [{"file": "Panel/AWTO_M280DCA_E3B.h", "old": "_PANEL_DH_START                         48",
                "new": "_PANEL_DH_START                         50"}],
     "osd": [{"file": "User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c",
              "old": "void OsdFuncEnableOsd(void)\n{\n    ScalerOsdEnableOsd();",

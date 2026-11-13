@@ -1,5 +1,9 @@
 # Panel EDID and DPCD (read from the panel over eDP AUX)
 
+> **Panel = Innolux M280DCA-E3B rev C1** (label photo, Dan 2026-11-13; `panel-innolux-m280dca-e3b.md`): 28.0", active 620.928 x 341.28 mm. Everything below that names a 27" part (BOE MV270QUM-N20, Innolux M270DCA-E5B, Samsung LTM270FL01) is ruled out.
+> - The 597 x 336 mm size and the BOE-like primaries in this AUX EDID are a TCON template (`MST` / `AGERA`, 2018), not this panel's data.
+> - Our input EDIDs copied 597 x 336 mm from here: wrong, ours. Fixed to 621 x 341 mm + datasheet primaries (branch `wb-p14ui-panel`, #3).
+
 - Read 2026-11-05 on unit AWT26110001 with `scripts/rtd_panel_aux.py` (scaler DPTX TX1 AUX, page 9D; MCU halted, reset after). Raw: `tmp/regs/AWT26110001-panel-aux-20261105-134943.*`. Issue #3.
 - Separate from the monitor's input-side EDIDs (`jxc-4k-edid.bin`, flash 0x138d8..).
 
@@ -20,10 +24,10 @@
 - Sink OUI / device ID (0x400..0x40B): all zero.
 
 ## Reading
-- 597 x 336 mm = 27" class; matches measured 336 mm and LTM270FL01 (596.16 x 335.34); not M280DCA-E3B (620.9 x 341.3).
+- 597 x 336 mm = 27" class: template value; the panel is the 28" M280DCA-E3B (620.9 x 341.3). Not a source for our EDID.
 - Timing equals the M280DCA-E3B datasheet typical (533.28 MHz, 4000 x 2222), so timing does not separate the candidates.
 - `MST` / `AGERA` is not a panel-maker ID; no model string in the EDID.
-- Use for firmware panel header: DTD above, 10 bpc, 4-lane HBR2.
+- Firmware panel header uses: timing (equals the M280DCA-E3B typical), 10 bpc, 4-lane HBR2. Not the size or primaries.
 
 ## Candidate: Innolux M270DCA-E5B (panelook overview, pasted by Dan 2026-11-05)
 - 27.0" LCM, a-Si TFT, AAS (IPS family), 3840x2160, active 596.736 x 335.664 mm (EDID: 597 x 336), 350 cd/m2, 1000:1, 10-bit (1.07B), 99% sRGB.
@@ -63,7 +67,7 @@
 - Red, blue and white match N20 to the EDID's resolution; green x is off (0.307 vs 0.288) but inside N20's tolerance (0.258..0.318). N10's red (0.642/0.340) does not match.
 - N20: 350 cd/m2 typ, CR 1000, sRGB 99%/100%, 8-bit + A-FRC, 4-lane eDP 5.4 Gbps, active 596.736 x 335.664 mm; timing fCLK 444/533/551 MHz, tHP 3950/4000/4088, tHB 110/160/248, tVP 2213/2222/2290, tVB 53/62/130 (same as N50 and N10).
 - N20 dates from the 2017-2018 spec history, which fits the EDID's week 51 / 2018; N50 (2021) and Innolux E5B (2023) do not.
-- Status: BOE MV270QUM-N20 is the best candidate (colour + date + size + timing); N10 is ruled out by colour; not confirmed by label or marking.
+- Status (superseded 2026-11-13): the primaries match N20 because the TCON template carries N20-class values; the label says Innolux M280DCA-E3B.
 - Not found: any MST7554 controller datasheet / register manual.
 
 ## Apple cross-check (2026-11-06, issue #3)
@@ -71,4 +75,4 @@
 - Sources: https://en.wikipedia.org/wiki/Apple_displays, https://www.panelook.com/LM270QQ1-SDC1_LG_Display_27.0_Assembly_parameter_32963.html, https://support.apple.com/en-us/111963.
 - Dan's "Apple panel" idea likely comes from the shared 27" 16:9 active area (596.736 x 335.664 mm); not evidence of the same part.
 - Panelook lists a BOE MV270QUM-N20 datasheet "for HP" (Ver.A_ES8.0, 2020-03-24, 28 pp): N20 is a branded-OEM part, no Apple listing found. https://www.panelook.com/MV270QUM-N20_BOE_27.0_LCM_overview_31937.html
-- Best candidate unchanged: BOE MV270QUM-N20.
+- Superseded 2026-11-13: panel is Innolux M280DCA-E3B (label).

@@ -9,7 +9,7 @@
 - Content wanted (from Dan): every input with the active one marked; firmware version; current settings
   (brightness/contrast/colour/input/power); detected timing (res/refresh/H+V freq/pixel clock); link/lanes;
   HDR; signal-present; (temps if any sensor exists).
-- **Panel identity on the tech-info page:** size 597x336 mm / 27.0"; native 3840x2160@60, eDP 4-lane HBR2. Panel maker/model unconfirmed: best candidate BOE MV270QUM-N20 (#3, `docs/monitors/panel-edid.md`); the earlier Samsung LTM270FL01 guess is retired (`docs/history.md`).
+- **Panel identity on the tech-info page:** Innolux M280DCA-E3B rev C1 (label, 2026-11-13), 28.0", active 620.9 x 341.3 mm; native 3840x2160@60, eDP 4-lane HBR2 (#3, `docs/monitors/panel-innolux-m280dca-e3b.md`). The 27" candidates (Samsung LTM270FL01, BOE MV270QUM-N20) are retired (`docs/history.md`).
   - Panel model is NOT in the EDID; the OSD string stays generic until #3 is settled.
 - Buttons: ADC key ladder on ADC_A0..A1 (AD_KEY1 FF09, AD_KEY2 FF0A), thresholds in `RL6449_AWTO_JXC4K.h` PCB_KEY_STATE; see `docs/reversing/realtek-rtd/buttons.md`.
 - Two build routes for the OSD: (host-driven) push glyphs into OSD RAM over ISP while firmware runs — no

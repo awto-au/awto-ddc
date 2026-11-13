@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the awto-identity EDIDs (256 B = base + CTA-861 ext) for the JXC 28in 4K panel.
+"""Build the awto-identity EDIDs (256 B = base + CTA-861 ext) for the JXC 4K monitor (Innolux M280DCA-E3B 28" panel).
 
 usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
   writes DIR/awto-dp.bin and DIR/awto-hdmi.bin (default DIR: $VENDORS/realtek/analysis/edid)
@@ -16,7 +16,7 @@ OUT_DEFAULT = Path("/mnt/2tb/vendors/realtek/analysis/edid")
 MFR, PRODUCT, SERIAL32 = "AWT", 0x0001, 0   # serial text lives in the 0xFF descriptor
 SERIAL_TXT, MODEL_TXT = "AWT26110001", "awto-mon"
 WEEK, YEAR = 44, 2026
-W_MM, H_MM = 597, 336   # measured active area (Dan 2026-11-04): 336 mm high -> 27.0" 16:9, square pixels
+W_MM, H_MM = 621, 341   # M280DCA-E3B active area 620.928 x 341.28 mm (datasheet; panel label, #3)
 
 
 def pnp(s):
@@ -52,12 +52,18 @@ DTD_4K = dtd(59400, 3840, 560, 176, 88, 2160, 90, 8, 10, 1, 1)
 # VIC 16 exact: 148.5 MHz, htotal 2200 (88/44/148), vtotal 1125 (4/5/36), +H +V
 DTD_1080 = dtd(14850, 1920, 280, 88, 44, 1080, 45, 4, 5, 1, 1)
 
-# Chromaticity: standard sRGB / BT.709 primaries. Panel is IPS/PLS (Dan visual confirm 2026-11-04:
-# stable off-axis, corner glow), ~99% sRGB; no measured panel primaries, so the honest choice is the
-# sRGB standard, not a VA-gamut guess.
-#   R 0.640,0.330  G 0.300,0.600  B 0.150,0.060  W 0.3127,0.3290 (D65).  Encoding: docs/edid-fix.md.
-# These are exactly edid-decode's sRGB reference bytes, so the sRGB-default feature bit (0x04) is set.
-CHROMA = bytes.fromhex("ee91a3544c99260f5054")
+# Chromaticity: M280DCA-E3B datasheet 5.2 typical (CIE 1931): R 0.678,0.312  G 0.267,0.617  B 0.146,0.061  W 0.313,0.329.
+# Not sRGB (panel is DCI-P3 90%), so the sRGB-default feature bit (0x04) is clear. Encoding: x * 1024, 10 bit.
+PRIMARIES = (0.678, 0.312, 0.267, 0.617, 0.146, 0.061, 0.313, 0.329)   # Rx Ry Gx Gy Bx By Wx Wy
+
+
+def chroma(xy):
+    q = [round(v * 1024) for v in xy]
+    lo = [((q[i] & 3) << 2) | (q[i + 1] & 3) for i in range(0, 8, 2)]
+    return bytes([(lo[0] << 4) | lo[1], (lo[2] << 4) | lo[3]] + [v >> 2 for v in q])
+
+
+CHROMA = chroma(PRIMARIES)
 
 
 def std_timing(x, ratio, hz):
@@ -76,11 +82,10 @@ def base_block(port, serial=SERIAL_TXT):
     b[20] = (0x80 | (3 << 4) | 5) if port == "dp" else 0x81   # 1.4 DP: 10 bpc + DP; 1.3: digital, DFP 1.x
     b[21], b[22] = W_MM // 10, H_MM // 10
     b[23] = 0x78                                   # gamma 2.20
-    # Feature byte. sRGB-default bit (0x04) SET: chromaticities are exactly sRGB, so "default colour
-    # space = sRGB" is legitimate (edid-decode only complains when the bit is set but primaries differ).
+    # Feature byte, sRGB-default bit (0x04) clear: primaries are the panel's, not sRGB.
     # 1.4: preferred=DTD1, continuous freq, RGB+YCbCr444/422; 1.3: RGB, preferred, GTF.
-    b[24] = 0x3F if port == "dp" else 0x2F
-    b[25:35] = CHROMA                              # standard sRGB primaries (see CHROMA note)
+    b[24] = 0x3B if port == "dp" else 0x2B
+    b[25:35] = CHROMA                              # panel primaries (see PRIMARIES)
     b[35:38] = bytes.fromhex("210800")             # est. timings 640x480, 800x600, 1024x768
     # ratio codes: 0=16:10 1=4:3 2=5:4 3=16:9; unused slots = 0x0101
     std = [(1920, 3), (1440, 0), (1400, 1), (1280, 2), (1280, 1), (1280, 3)]
@@ -131,11 +136,11 @@ def cta_block(port):
     d += bytes([(4 << 5) | 3, 0x01, 0x00, 0x00])
     # Colorimetry Data Block (ext tag 0x05): byte1 0x06 = xvYCC709 + sYCC601 extended-gamut YCC;
     # byte2 0x20 = sRGB colorimetry (CTA-861-H) — the panel covers sRGB, and setting it is what
-    # edid-decode recommends to avoid interop issues. BT.2020 is NOT advertised (~99% sRGB VA panel).
+    # edid-decode recommends to avoid interop issues. BT.2020 is NOT advertised (panel: DCI-P3 90%, not BT.2020).
     if not TEST:
         d += bytes([(7 << 5) | 3, 0x05, 0x06, 0x20])
     # HDR Static Metadata Data Block (ext tag 0x06): EOTF = Traditional gamma SDR only (bit0); Static
-    # Metadata Type 1 supported. NO PQ(SMPTE2084)/HLG — this is a ~300 cd/m2 SDR VA panel, not HDR10.
+    # Metadata Type 1 supported. NO PQ(SMPTE2084)/HLG — this is a 300 cd/m2 SDR panel, not HDR10.
     if not TEST:
         d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
     d += bytes([(7 << 5) | 2, 0x00, 0xCA])                 # VCDB: QY+QS (YCC/RGB quant selectable), IT/CE underscan

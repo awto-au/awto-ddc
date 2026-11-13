@@ -13,7 +13,7 @@
 ^comparison is always false due to limited range of data type$	User/RTD Factory/Code/RTDFactoryFunction.c	2812	ok	(bit)x == _BIT1 always false in Keil too; callers pass _FORCE_SHOW_NUMBER_OFF only
 ^comparison is always false due to limited range of data type$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1092	ok	BYTE > 0xFF always false in Keil too; same behaviour
 # Reviewed 2026-11-05 (#26): optimizer-fold 110 / unreachable 126. 16 BUG sites (non-volatile ISR flags) fixed by the volatile bit rule of scripts/sdk_import.py, no entry
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	725	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_LTM270FL01 panel) is constant; RBR/HBR table else-branch dead
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DisplayDPTx.c	725	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 (AWTO_M280DCA_E3B panel) is constant; RBR/HBR table else-branch dead
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DP_INT.c	868	ok	OK-CONFIG: bReturnValueD0 is a local bit only assigned in D0-DP code that is compiled out; D0==_TRUE folds false, D1 term still tested
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	2130	ok	OK-HARMLESS: local ucpllo is set to 1 on the only path reaching it; fold is correct (no ISR/HW involvement)
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	467	ok	OK-CONFIG: _D1_DP_LINK_CLK_RATE is constant (=0x14 HBR2); one arm of the link-rate if/else is dead

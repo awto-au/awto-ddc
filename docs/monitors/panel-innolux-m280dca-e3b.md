@@ -3,7 +3,7 @@
 - **Confirmed 2026-11-13 by Dan from a photo of the panel label: Innolux M280DCA-E3B, revision C1.** The Samsung LTM270FL01 (`panel-samsung-ltm270fl01.md`) is NOT the panel; the 27" EDID size was wrong.
 - Name source before: service menu reads `M280DCA-E3B` (Dan, 2026-11-05).
 - Datasheet: `~/vendors/innolux/M280DCA-E3B/M280DCA-E3B_spec_v0.0_20190311.pdf` (Innolux tentative spec Ver0.0, 2019-03-11).
-- Status (superseded 2026-11-13, see above): name from the service menu only. Panel EDID (read 2026-11-05, #3) says 597 x 336 mm (27"), which does not match this 28" part; see [panel-edid.md](panel-edid.md). Samsung LTM270FL01 is the size match.
+- The 597 x 336 mm (27") in our input EDIDs was ours and wrong (copied from the TCON template EDID, [panel-edid.md](panel-edid.md)); fixed to 621 x 341 mm + datasheet primaries (`docs/edid-fix.md` "Current").
 
 ## Spec (datasheet)
 | Item | Value |
@@ -14,16 +14,41 @@
 | Pixel clock | 480 / 533.28 / 560 MHz (min/typ/max) |
 | Htotal | 3980 / 4000 / 4020 |
 | Vtotal | 2200 / 2222 / 3520 |
-| Frame rate | 40 / 60 / 62.5 Hz; FreeSync functional only |
+| Frame rate | 40 / 60 / 62.5 Hz; FreeSync functional only (#21) |
 | Optics | 300 cd/m2 typ, CR 1000 typ, 178/178 deg, DCI-P3 90% typ, AG25 3H |
 | Backlight | WLED, 30k h, external driver (4 pins x 65 mA) |
-| Primaries (CIE1931) | Gx 0.267, Gy 0.617, Bx 0.146, By 0.061, W 0.313/0.329 (values in parentheses in the spec) |
+| Primaries (CIE1931) | Rx 0.678, Ry 0.312, Gx 0.267, Gy 0.617, Bx 0.146, By 0.061 (tentative, in parentheses in the spec; +-0.03), W 0.313/0.329 |
 
 ## Match against live registers (#7, unit 1 rip)
 - HBR2 x4 on TX1, 10 bpc, Htotal 4000 (= typ), Vtotal 2251 (in range), ~540 MHz (in range): consistent.
-- Not consistent: measured picture height ~336 mm vs 341.28 mm active (docs/edid-fix.md); re-measure the lit area.
+- The 2026-11-04 glass measurement (~336 mm height) does not match 341.28 mm active; the label + datasheet win (re-measure if it matters).
 
-## Follow-ups
-- EDID: use the datasheet primaries instead of the LTM270FL01 database label.
-- `fw/sdk/Panel/AWTO_LTM270FL01.h` name is provisional; rename once confirmed.
-- Power sequencing: datasheet section 4.8 (T1..T11) feeds the firmware panel power-on code.
+## FreeSync / adaptive sync (#21)
+- Datasheet frame rate 40 / 60 / 62.5 Hz (min/typ/max); Vtotal up to 3520 lines = 40 Hz at 533 MHz / 4000. "FreeSync: functional only" (no optical/cosmetic guarantee).
+- So a re-added FreeSync range is at most 40-62.5 Hz. Today: EDID range 48-60 Hz, panel header 59.0-61.0 Hz; no change made.
+
+## Firmware
+- Panel header `fw/sdk/Panel/AWTO_M280DCA_E3B.h` (`_AWTO_M280DCA_E3B`; renamed from AWTO_LTM270FL01.h 2026-11-13, image byte-identical).
+- Input EDIDs: size + primaries from this datasheet (`scripts/make_edid.py`).
+
+## Power sequence: datasheet 4.8 vs the firmware panel machine (checked 2026-11-13, no value changed)
+Datasheet (source = monitor, sink = panel). Firmware: `UserCommonInterfacePanelStep` (UserCommonInterface.c), defaults in the panel header = registry `PANEL_T*`.
+
+| datasheet | what | min / max ms | firmware | value ms | measured | verdict |
+|---|---|---|---|---|---|---|
+| T1 | VDD 10 % -> 90 % rise | 0.5 / 10 | T1: VDD on -> PHY / HPD read | 10 | rise not measured (board) | ok: wait >= max rise |
+| T2 | VDD -> panel black video | 10 / 200 | (sink) | - | - | panel side |
+| T3 | VDD -> HPD high | 15 / 200 | T2: HPD wait bound | 250 | VDD -> HPD 115 ms unit 3 (#78); unit 2 cold boot HPD seen 78 ms after PHY (PHY gated by power NORMAL) (#162 s2-7) | ok: bound = 1.25 x 200 |
+| T4 | HPD -> link training | - / - | LINK step | - | - | no limit |
+| T5 | link training | - / - | `ScalerDisplayDPTxLinkSequence` | - | ~32 ms (#162) | no limit |
+| T6 | training end -> valid video | - / 100 | stream start after training + Mvid measure | - | link 380 -> stream 434 = 54 ms (unit 2, s2-7) | ok |
+| T7 | valid video -> panel shows it | 0 / 50 | (sink) | - | - | panel side |
+| T8 | valid video -> LED on | 200 / - | T3 (registry PANEL_T3) | 550 | - | ok |
+| T8 | same, own black frame | 200 / - | T3_OWN (registry PANEL_T3_OWN) | 20 | stream 434 -> backlight pin 471 = 37 ms (unit 2, s2-7) | **below min** |
+| T9 | LED off -> video idle | 200 / - | T4 | 250 | - | ok |
+| T10 | video end -> VDD off | 0 / 500 | T5 (+ SSC / PHY off) | 20 | - | ok |
+| T11 | VDD off (10 %) -> VDD on | 1000 / - | T6 (from the VDD-off edge) | 1100 | VDD decay not measured | ok if decay to 10 % < 100 ms |
+
+- T8 is deliberately NOT followed (Dan, 2026-11-13, repeated decision): backlight on immediately after power-up once the MCU is on the M2PLL clock, not gated by video or T3/T3_OWN. Accepted risk per datasheet note 2: a momentarily abnormal screen.
+- T6 vs T11: datasheet counts from VDD at 10 %; firmware from the switch edge. Margin 100 ms; the VDD decay time is not measured.
+- Not in the datasheet: `_PANEL_POWER_ON_BL_TO_PWM` 50, `_PANEL_POWER_OFF_PWM_TO_BL` 50 (SDK defaults, Panel_Default.h; external LED driver).

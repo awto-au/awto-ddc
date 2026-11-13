@@ -140,7 +140,7 @@
 | `Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` | behaviour | settings are flash-emulated (#53.3) |  | 1 |
 | `Pcb/User_Pcb_Include.h` | behaviour | include our board | #7 | 1 |
 | `Project/Header/RL6449_Project.h` | behaviour | DP-out port only; eDP panel uses ScalerDisplayDPTx (independent) |  | 1 |
-| `Project/Header/RL6449_Project.h` | behaviour | Samsung LTM270FL01, eDP HBR2 x4 on TX1 (fw/sdk/Panel/AWTO_LTM270FL01.h, #7) |  | 1 |
+| `Project/Header/RL6449_Project.h` | behaviour | Samsung LTM270FL01, eDP HBR2 x4 on TX1 (fw/sdk/Panel/AWTO_M280DCA_E3B.h, #7) |  | 1 |
 | `Project/Header/RL6449_Project.h` | behaviour | board = 1 DP + 2 HDMI + eDP panel (Dan, awto-ddc#7). Placeholder until our own PCB header. |  | 1 |
 | `Project/Header/RL6449_Project.h` | behaviour | cut (Dan 2026-11-04, #8) |  | 8 |
 | `Project/Header/RL6449_Project.h` | behaviour | needed by EEPROM emulation |  | 2 |

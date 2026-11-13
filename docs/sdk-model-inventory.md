@@ -111,7 +111,7 @@ Status var: `GET_PANELPOWERSTATUS()` ∈ {`_PANEL_POWER_OFF_STATE`, `_WAITING_FO
 | `_BACKLIGHT_OFF` | any | PWM 0, backlight off (SDK ~300 ms) | `_PANEL_BACKLIGHT_OFF` |
 | `_PANEL_OFF` | ≠ OFF_STATE | PWM 0, BL off, DPTx BL-off seq, **T4 250**, stream disable, idle pattern, **T5 20**, SSC off, PHY off, VDD off, timer **T6 1100** | OFF_STATE |
 
-- Values (registry `PANEL_T1..T6`, defaults AWTO_LTM270FL01.h:47-53): T1 10, T2 250, T3 550, T4 250, T5 20, T6 1100; plus `PANEL_T3_OWN` default 20 ms (T3 when the scaler shows its own black pattern, fast boot) - this is `AWTO_T3_OWN_PATTERN_MS`, used in `AwtoDiagPanelT3Wait` [code RL6449_Project.h]. Measured on unit 3: VDD→HPD 115 ms, HPD→link 33 ms [issue #78].
+- Values (registry `PANEL_T1..T6`, defaults AWTO_M280DCA_E3B.h:47-53): T1 10, T2 250, T3 550, T4 250, T5 20, T6 1100; plus `PANEL_T3_OWN` default 20 ms (T3 when the scaler shows its own black pattern, fast boot) - this is `AWTO_T3_OWN_PATTERN_MS`, used in `AwtoDiagPanelT3Wait` [code RL6449_Project.h]. Measured on unit 3: VDD→HPD 115 ms, HPD→link 33 ms [issue #78].
 - Entry points today (see §3): SysMode (DISPLAY_SETTING, ACTIVE), `UserInterfacePowerSwitch`, RTDOsd (INITIAL boot, lines 200/235/241/251), RTD2014UserAdjust:857, SysSource via `SysModeSetUpDisplayInitialization`, `UserCommonInterface.c` (the `_BACKLIGHT_OFF` sub), our L1/L2 hold, the AWTO wake paths.
 
 ### 1.5 OSD ownership
@@ -213,7 +213,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | Project/Header/RL6449_Project.h | 1790 | the central macro file (see 2.6) |
 | Project/Header/AwtoSetIds.h, AwtoRegs.h | 117, 87 | generated ids / reg names |
 | Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h (+_PINSHARE.h) | 600 + 374 | our board; `PCB_LED_*`, `PCB_KEY_STATE` bands (A0/A1/P3.0), `PCB_PANEL_POWER`, backlight pin |
-| Panel/AWTO_LTM270FL01.h | 74 | eDP HBR2 x4 TX1; T1-T6 `AWTO_SET(PANEL_Tn)` |
+| Panel/AWTO_M280DCA_E3B.h | 74 | eDP HBR2 x4 TX1; T1-T6 `AWTO_SET(PANEL_Tn)` |
 | Kernel/Common/Project.h | 3 | Beacon-only PCB/panel redefinition guard |
 | Kernel/Common/Debug.h | ~43 | all debug categories ON |
 | User/RTD Series/RTD2014Osd/Header/RTD2014Project.h | 2 | `_OSD_ROTATE_OFF`; `_DP_DEBUG_MSG` ON |

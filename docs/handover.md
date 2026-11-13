@@ -30,6 +30,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 ## 3. Decisions by Dan (still in force)
 - 4K60.000 is the preferred mode; all frequencies with 3 decimals everywhere (menu `info_vfreq` still 0.1 Hz: #87).
 - Production EDID adopted; interlace kept; HDCP via Realtek's key table (#44, low).
+- Panel = Innolux M280DCA-E3B rev C1, 28" (label photo 2026-11-13, #3; `docs/monitors/panel-innolux-m280dca-e3b.md`). The 27" / 597 x 336 mm EDID size was ours and wrong; EDID now 621 x 341 mm + datasheet primaries. Panel T-values and limits: change only with Dan's OK (datasheet check in the panel doc).
 - Divide by zero never hangs (guard in every build; Keil values via `--keil-div`).
 - Clean-room tree is local only (`/mnt/2tb/git/awto-rtdfw`, no remote); the lint is the only gate (#65).
 - OSD: always VLC-compress glyph data when the chip can decode it, encoded in a Python build step. Font: fixed 24x36 per char at 1x scale, 2 bpp. Text white on black, decorations red. Menu: **AUTO opens, MENU goes back**, UP/DOWN move, SOURCE = next input.

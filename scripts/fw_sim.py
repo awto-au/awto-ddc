@@ -1270,7 +1270,7 @@ def decision_stubs(m: "Machine") -> dict:
 def panel_consts() -> dict:
     """Panel / project limits the checks compare against (fw/overlay, same names as the SDK macros)."""
     out = {}
-    for f in ("Panel/AWTO_LTM270FL01.h", "Project/Header/RL6449_Project.h"):
+    for f in ("Panel/AWTO_M280DCA_E3B.h", "Project/Header/RL6449_Project.h"):
         for mt in re.finditer(r"^#define\s+(_PANEL_\w+|_OOR_\w+|_INPUTCLOCK_RANG_HDMI|_FAIL_SAVE_\w+)\s+\(?(\d+)\)?", (ROOT / "fw/sdk" / f).read_text(), re.M):
             out[mt.group(1)] = int(mt.group(2))
     return out

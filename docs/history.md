@@ -33,6 +33,7 @@
 - 2026-11-05 | debug slave 0x35 usable at 1 MHz | NAKs intermittently (2 of 4 diag reads failed); 100 kHz only. ISP slave 0x4A is clean at 1 MHz | `docs/flash-burst.md`, #12
 
 ## Docs retired
+- 2026-11-13 | panel = 27" (597 x 336 mm, BOE MV270QUM-N20 / Samsung LTM270FL01); input EDID size 597 x 336 mm + sRGB primaries | panel label (Dan's photo): Innolux M280DCA-E3B rev C1, 28"; the 597 x 336 mm was ours (copied from the TCON template EDID); EDID now 621 x 341 mm + datasheet primaries | #3
 - 2026-11-04 | panel = Samsung LTM270FL01 (closest by size) | panel EDID read over eDP AUX (MST/AGERA, 2018); best candidate BOE MV270QUM-N20, unconfirmed | #3
 - 2026-11-07 | `docs/handover.md` (2026-11-05 snapshot: unit table, "verify the flash lights the panel", Keil-vs-SDCC pending, P8.5 backlight) | all items done or superseded; state lives in issues #7, #26, #38 | git history
 - 2026-11-07 | `docs/firmware-proposal.md` patch routes A/B and EDID-fail list | firmware is our own build on the SDK (#7); EDID failures fixed (`docs/edid-fix.md`) | #7

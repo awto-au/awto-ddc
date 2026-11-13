@@ -153,9 +153,9 @@ def fmt_lines(info: dict) -> list:
         L.append(("kv", f"FLASH|{dbn or fl.get('jedec', '?')}"))
 
     L.append(("h", "PANEL"))
-    L.append(("kv", "MODEL|SAMSUNG LTM270FL01"))
-    L.append(("kv", "SIZE|597 x 336 MM / 27.0 IN"))
-    L.append(("kv", "TYPE|PLS (IPS-CLASS)"))
+    L.append(("kv", "MODEL|INNOLUX M280DCA-E3B C1"))
+    L.append(("kv", "SIZE|620.9 x 341.3 MM / 28.0 IN"))
+    L.append(("kv", "TYPE|A-SI TFT, NORMALLY BLACK"))
     sz = e.get("size_mm") if isinstance(e, dict) else None
     if sz:
         L.append(("kv", f"EDID SIZE|{sz[0]} x {sz[1]} MM"))
@@ -488,7 +488,7 @@ def selftest():
         cell = ML.words_to_cell(w, 0)
         assert len(cell) == FNT.CELL_H
     info = {"edid": {"timing": {"preferred": "3840x2160", "refresh_hz": 60.0, "pixel_clock_mhz": 533.0,
-                                "h_total": 4400, "v_total": 2020}, "size_mm": [597, 336]},
+                                "h_total": 4400, "v_total": 2020}, "size_mm": [621, 341]},
             "ddc": {"firmware_level": {"current": 0x0101}, "controller_type": {"current": 0x0b05},
                     "capabilities": {"features": {"60": "DP-1"}}},
             "isp": {"scaler": {"name": "RTD2795T-family", "product_code": "0xcf2", "version_nibble": 1},

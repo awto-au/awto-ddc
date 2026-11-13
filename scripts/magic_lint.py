@@ -25,7 +25,7 @@ XFR_RE = re.compile(r"\b0[xX]F[EF][0-9A-Fa-f]{2}\b")
 PAL_RE = re.compile(r"ScalerOsdSetColorPalette\s*\(([^;]*)\)\s*;")
 OVERLAY_OURS = ["fw/sdk/Project/Header/RL6449_Project.h", "fw/sdk/Project/Header/AwtoSetIds.h",
                 "fw/sdk/Kernel/Common/Debug.h", "fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/AwtoMsg.h",
-                "fw/sdk/Panel/AWTO_LTM270FL01.h", "fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h",
+                "fw/sdk/Panel/AWTO_M280DCA_E3B.h", "fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h",
                 "fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K_PINSHARE.h"]
 
 
