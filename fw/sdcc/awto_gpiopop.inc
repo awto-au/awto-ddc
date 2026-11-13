@@ -441,7 +441,7 @@ void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)    // GPIO page only: i
     AwtoConLogEnd();
 }
 
-// #157 "host time <ISO>" + its "(fw +N ms, ...)" entry on one row: the fw entry's text without its "+ nnnnn ms " prefix.
+// #157 "host time <ISO>" + its "(fw +N ms, ...)" entry on one row: the fw entry's text without its "nnnnn:" prefix.
 // XDATA, no locals: AwtoConLogSync sits on the deepest DATA overlay path (see AwtoPutIso).
 static void AwtoConLogTail(void)
 {
@@ -449,11 +449,11 @@ static void AwtoConLogTail(void)
     s_ucLogI = s_ucAwtoLen;
     AwtoSyncLine(s_ucConSyncSeq);
     s_pcAwtoRow[s_ucLogI] = ' ';
-    for(s_ucLogI += AWTO_LOG_TIME_W; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // drop the AwtoSyncLine time column
+    for(s_ucLogI += s_ucAwtoLnTw; s_ucLogI < s_ucAwtoLen; s_ucLogI++)      // drop the AwtoSyncLine time column
     {
-        s_pcAwtoRow[s_ucLogI - (AWTO_LOG_TIME_W - 1)] = s_pcAwtoRow[s_ucLogI];
+        s_pcAwtoRow[s_ucLogI - (s_ucAwtoLnTw - 1)] = s_pcAwtoRow[s_ucLogI];
     }
-    s_ucAwtoLen = s_ucLogI - (AWTO_LOG_TIME_W - 1);     // max(len, start + time column) - (time column - 1)
+    s_ucAwtoLen = s_ucLogI - (s_ucAwtoLnTw - 1);        // max(len, start + time column) - (time column - 1)
     s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
 }
 

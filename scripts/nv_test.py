@@ -364,7 +364,7 @@ class Run:
         out, evs = [], h.get("events", [])
         for k, ev in enumerate(evs):                     # why line (11..17), then its result line (20, fmt nvw)
             if ev[0] == 0xD4 and 0x11 <= ev[1] <= 0x17 and k + 1 < len(evs) and evs[k + 1][:2] == (0xD4, 0x20):
-                txt = " | ".join(S.line(rows, e, h["t0"]).split(" ms ", 1)[1] for e in (ev, evs[k + 1]))
+                txt = " | ".join(S.line(rows, e, h["t0"]).split(":", 1)[1] for e in (ev, evs[k + 1]))
                 out.append((ev[1], evs[k + 1][3], txt, ev[2], k))
         return out
 

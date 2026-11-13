@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sim_timelines.log"
 SIMS = ("boot_sim", "wake_sim", "sync_sim", "key_sim_test")
-LINE = re.compile(r"^\s*\+\s*(\d+) ms (.*)$")
+LINE = re.compile(r"^\s*(\d+):(.*)$")
 TEXT_MASK = re.compile(r"^(watchdog run-time:|MCU init:crystal clock, watchdog N).*")      # texts #162 step 1 made live: compare by prefix
 SIM_LIMIT_S = 300          # one sim: gates run each in 5-25 s; 12x margin, expiry = FAIL
 # old | #162 s3b texts (stage / mode / pin-edge lines folded into the machine lines): either side of an A/B
@@ -53,7 +53,7 @@ def table(sim, pa: Path, la, pb: Path, lb):
     for p, ls in ((pa, la), (pb, lb)):
         out = ROOT / "tmp/sim_timelines" / f"{p.stem}.{sim}.lines.txt"
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text("".join(f"+{t:6d} ms {x}\n" for t, x in ls))
+        out.write_text("".join(f"{t}:{x}\n" for t, x in ls))
         say(f"  {sim}: {len(ls)} lines -> {out}")
     say(f"  {sim} milestones (first match, ms): {pa.stem} | {pb.stem}")
     for name, pat in MILESTONES:

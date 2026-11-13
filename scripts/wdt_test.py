@@ -437,7 +437,7 @@ class Runner:
             raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
             _, lines = SL.decode(raw, rows) if raw else ({}, [])
             first = pin or (lines[0] if lines else None)               # #150: pinned copy survives a flooded ring
-            got = first.split(" ms ", 1)[-1] if first else "(no line)"
+            got = first.split(":", 1)[-1] if first else "(no line)"
             want = self.WANT.get(label.split("-")[0], "boot:")
             self.reasons = getattr(self, "reasons", []) + [(want, got)]
             self.say(f"  first sync line after {label}: {got}")

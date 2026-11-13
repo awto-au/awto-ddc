@@ -84,12 +84,12 @@ class Run:
         """#29: first line = the reason; boot milestone lines (>= 6) present, times (ms since reset) never step back; PNG."""
         for ln in lines[:16]:
             say(f"    {ln}")
-        first = lines[0].split(" ms ", 1)[1] if lines else ""
+        first = lines[0].split(":", 1)[1] if lines else ""
         self.check(first.startswith(want) and sym in first, f"{tag}: first line is the boot reason", first)
-        st = [ln for ln in lines[1:] if " boot:" in ln]       # milestone lines (sync.tsv D1 rows), after the reason
+        st = [ln for ln in lines[1:] if ":boot:" in ln]       # milestone lines (sync.tsv D1 rows), after the reason
         want = sum(1 for r in self.rows if r["id"] == 0xD1)     # s3b: panel stages 5 / 7 / 8 have no row (the panel machine's lines)
         self.check(len(st) >= want, f"{tag}: boot stage lines", f"{len(st)} of {want}")
-        ms = [int(ln[1:].split("ms")[0]) for ln in lines]
+        ms = [int(ln.split(":", 1)[0]) for ln in lines]
         # 1 ms slack: the WDT-counter time (before Timer2) and the Timer2 time meet with integer-ms truncation
         self.check(all(b >= a - 1 for a, b in zip(ms, ms[1:])), f"{tag}: line times never step back (> 1 ms)", str(ms[:12]))
         self.shot(f"boot_reason_{tag}")

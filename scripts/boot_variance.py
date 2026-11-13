@@ -40,7 +40,7 @@ def one(mp: Path):
         txt = r.stdout
         if re.search(r"mode ACTIVE|-> ACTIVE[:( ]", txt):        # old images | #162 s3b system transition
             break
-    ms = lambda pat: next((int(m.group(1)) for ln in txt.splitlines() if (m := re.search(r"\+\s*(\d+) ms " + pat, ln))), None)
+    ms = lambda pat: next((int(m.group(1)) for ln in txt.splitlines() if (m := re.search(r"(?:^|\s)(\d+):" + pat, ln))), None)
     lost = len(re.findall(r"D2 signal lost", txt)) + sum(int(x) for x in re.findall(r"repeated (\d+) more", txt))
     return dict(off=ms(r"(mode POWER OFF|system:in RESET for \d+ms->AC ON)"), search=ms("(mode SEARCH|system:.*->SEARCH:)"),
                 active=ms("(mode ACTIVE|system:.*->ACTIVE:)"), flaps=lost)

@@ -122,20 +122,20 @@ class Sim:
         groups, cur = [], None
         for r in t[1:]:
             r = r[LOG_COL:]                                   # the log pane starts at map column AWTO_LOG_COL
-            if r.startswith(" +"):
+            if re.match(r" *\d+:", r):
                 cur = [r]
                 groups.append(cur)
             elif cur is not None and r.startswith(" " * TXT0) and r.strip():
                 cur.append(r)
             else:
                 cur = None
-        ring = [norm(x[10:]) for x in self.ring()]          # host line: "+nnnnn ms " then the text
+        ring = [norm(x.split(":", 1)[1]) for x in self.ring()]   # host line: "nnnnn:" then the text
         bad, wraps = [], 0
         for g in groups:
             if len(g) > 2:
                 bad.append(f"{len(g)} rows: {g[0].strip()[:60]}")
                 continue
-            body = g[0][TXT0:].rstrip()
+            body = g[0].split(":", 1)[1].rstrip()                 # time column "ms:" is not padded
             if len(g) == 2:
                 wraps += 1
                 cont = g[1][TXT0:].rstrip()
@@ -148,8 +148,9 @@ class Sim:
         for g in groups:
             say("    " + " / ".join(x.rstrip() for x in g))
         self.check(not bad, f"{name}: every console line whole (one or two rows, the ring's text)", "; ".join(bad[:3]))
-        shown = {norm(g[0][TXT0:].rstrip() + (" " + g[1][TXT0:].rstrip() if len(g) == 2 else "")) for g in groups}
-        shown |= {norm(g[0][TXT0:].rstrip() + g[1][TXT0:].rstrip()) for g in groups if len(g) == 2}
+        head = lambda g: g[0].split(":", 1)[1].rstrip()              # first row after its "ms:" time column
+        shown = {norm(head(g) + (" " + g[1][TXT0:].rstrip() if len(g) == 2 else "")) for g in groups}
+        shown |= {norm(head(g) + g[1][TXT0:].rstrip()) for g in groups if len(g) == 2}
         newest = ring[-min(len(groups), 20):] if groups else []
         miss = [x for x in newest if x not in shown and not x.startswith("(fw +")]   # D8 sits on the host time row
         self.check(groups and not miss, f"{name}: the newest {len(newest)} ring lines are on the console", "; ".join(miss[:3]))

@@ -451,9 +451,10 @@ static void AwtoSyncName(BYTE ucId, BYTE ucArg)    // no locals: XDATA is full (
     AwtoPutHex2(ucArg);
 }
 
-// One sync-ring entry as a log line: "+  260 ms D2 timing 3840x2160" (texts and formats: fw/awto/sync.tsv).
+// One sync-ring entry as a log line: "260:D2 timing 3840x2160" (texts and formats: fw/awto/sync.tsv).
 static __xdata DWORD s_ulAwtoLnV;               // #157: value + time in XDATA (DATA overlay path depth, see AwtoPutIso)
 static __xdata WORD s_usAwtoLnMs;
+static __xdata BYTE s_ucAwtoLnTw;              // width of the line's time column "ms:" (AwtoConLogTail drops it)
 
 static void AwtoPutNvFlush(void);              // #151 fmt nvw: awto_nvpop.inc (last in this file: no string renumbering)
 #define ulV s_ulAwtoLnV
@@ -467,13 +468,10 @@ static void AwtoSyncLine(BYTE ucSeq)
     ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
     usMs = (((WORD)puc[2] << 8) | puc[3]) - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
 
-    AwtoPutChar('+');
-    for(ucFmt = (usMs < 10) ? 4 : (usMs < 100) ? 3 : (usMs < 1000) ? 2 : (usMs < 10000) ? 1 : 0; ucFmt != 0; ucFmt--)
-    {
-        AwtoPutChar(' ');                       // not AwtoPutCol: a skipped pass (AwtoConWrapLine) does not move the row length
-    }
+    s_ucAwtoLnTw = s_ucAwtoLen;                 // time column "ms:" (Dan: no unit, no pad); its width for AwtoConLogTail
     AwtoPutNum(usMs, 1);
-    AwtoPutStr(" ms ");
+    AwtoPutChar(':');
+    s_ucAwtoLnTw = s_ucAwtoLen - s_ucAwtoLnTw;
     if(ucRow == 0)
     {
         AwtoPutStr("event ");

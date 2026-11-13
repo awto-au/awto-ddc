@@ -15,6 +15,7 @@ usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
 - Unit 2 only (keymap_unit.Unit checks the serial). Ends on D2 fixed (settings_cli set input 1), debug link off.
 Log: tmp/logs/selector_switch_unit.log
 """
+import re
 import argparse
 import json
 import os
@@ -105,7 +106,7 @@ def name(p):
 
 def ring_new(u, before):
     """ring lines without sync_log's host-time column (it changes every read), and the ones not in `before`"""
-    lines = [ln.strip().split(" ", 1)[-1] for ln in u.ring(whole=True).splitlines() if " ms " in ln]
+    lines = [ln.strip().split(None, 1)[-1] for ln in u.ring(whole=True).splitlines() if re.match(r"\S+\s+\d+:", ln.strip())]
     return lines, [ln for ln in lines if ln not in before]
 
 

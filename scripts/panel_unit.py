@@ -127,7 +127,7 @@ def time_gaps(rows: list) -> list:
 
 
 def facts(txt: str) -> dict:
-    rows = [(int(m.group(1)), m.group(2).strip()) for m in re.finditer(r"\+\s*(\d+) ms (.*)", txt)]
+    rows = [(int(m.group(1)), m.group(2).strip()) for m in re.finditer(r"(?m)^(?:\S+\s+)?(\d+):(.*)$", txt)]
     ms = lambda pat: next((t for t, x in rows if re.search(pat, x)), None)
     bl = [(t, "off" if "pin off" in x else "on") for t, x in rows if re.search(r"backlight pin (on|off)|backlight on at once", x)]
     blink = sum(1 for a, b in zip(bl, bl[1:]) if a[1] == "off" and b[1] == "on")
