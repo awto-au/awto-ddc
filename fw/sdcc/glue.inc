@@ -554,6 +554,35 @@ void set_ap_aspect(BYTE ucId, int iV)
     }
 }
 
+// #165 Rotate (disp_rotate 0 / 180) + Mirror (mirror Off / Horizontal / Vertical): one owner. Flip bits H = 1, V = 2 (= mirror
+// option index); effective = (Rotate 180 ? H | V : 0) XOR mirror -> SDK b3OsdDispRotate, read at the next display setting. One E4 line.
+void set_ap_rotate(BYTE ucId, int iV)
+{
+    BYTE ucRot = (BYTE)((ucId == AWTO_SET_DISP_ROTATE) ? iV : set_get(AWTO_SET_DISP_ROTATE));
+    BYTE ucMir = (BYTE)((ucId == AWTO_SET_MIRROR) ? iV : set_get(AWTO_SET_MIRROR)) & AWTO_FLIP_HV;
+    BYTE ucFlip = ((ucRot != 0) ? AWTO_FLIP_HV : 0) ^ ucMir;
+    BYTE ucWhat = AWTO_ROT_NOT_BUILT;
+#if(_DISPLAY_ROTATION_SUPPORT == _ON)
+    static __code BYTE tFlipToSdk[4] = {_DISP_ROTATE_0, _DISP_ROTATE_HOR_MIRROR, _DISP_ROTATE_VER_MIRROR, _DISP_ROTATE_180};
+
+    if(GET_OSD_DISP_ROTATE() == tFlipToSdk[ucFlip])
+    {
+        ucWhat = AWTO_ROT_ALREADY;
+    }
+    else
+    {
+        SET_OSD_DISP_ROTATE(tFlipToSdk[ucFlip]);
+        ucWhat = AWTO_ROT_STORED;
+        if((set_in_boot() == _FALSE) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
+        {
+            ucWhat = AWTO_ROT_APPLIED;
+            SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_DISPLAY_SETTING, AWTO_SYS_BY_SETTINGS);
+        }
+    }
+#endif
+    AwtoSyncPush(AWTO_SYNC_EV_ROT, (ucWhat << 2) | ucFlip, ((DWORD)ucRot << 8) | ucMir);
+}
+
 void set_ap_overscan(BYTE ucId, int iV)
 {
     ucId = ucId;

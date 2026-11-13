@@ -3,6 +3,7 @@
 0111	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:888	6. DisplayPLL Charge Pump icp =	1
 0137	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7523	Get Colorimetry YCC_SMPTE_170M	0
 0137	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7533	Get Colorimetry YCC_SMPTE_170M	0
+0148	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:69	R_OV	1
 01ce	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:2007	_LAST_LINE_TARGET too close to DHtotal boundary !!! Double check _LAST_LINE_TARGET.	1
 01d3	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:607	DDEN Period	1
 01db	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8612	Get Color Space YUV444	0
@@ -10,6 +11,7 @@
 021f	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:610	_DHTotal_over_panel	1
 021f	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:626	_DHTotal_over_panel	1
 0231	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7987	Get Color Space YUV420	0
+024a	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:67	R_IV	1
 02a0	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4134	DFE Abnormal 	0
 030d	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:909	DCLK	0
 0350	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:3559	Mode table edge phase	0
@@ -147,6 +149,7 @@
 2c38	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7462	Get Pixel Repetition Error	0
 2d7e	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:1101	7. DP HDCP Long HPD	0
 2dc9	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1928	VSC change: Color Space, _COLOR_SPACE_YCBCR422	0
+2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	1
 2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:766	FrameTrack-DVT-Error	1
 2df5	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:274	VBIOS_Link_Rate_MST	0
 2e31	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2272	MBR: bLightCtrl	0
@@ -666,6 +669,7 @@ b717	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4248	CDR 
 b738	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10706	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
 b747	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1704	4. FRC BW	1
 b781	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:2217	P Code	0
+b7e4	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:64	R_Type	1
 b849	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5998	DP MST2SST : Fifo Underflow --> QD882 Case	0
 b852	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1737	00. DP Power Saving Audio : Idle Pattern Case	0
 b8be	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9015	Get RGB RESERVED RANGE	0
@@ -716,6 +720,7 @@ c36d	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3738	7.
 c459	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7646	Get Colorimetry EXT_YCC_ADOBEYCC601	0
 c478	Measure	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c:611	Final setting in measure fail	1
 c47e	Analog	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2825	APLL Clock	0
+c4e0	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:65	R_Size	1
 c4eb	MemoryPhaseCal	Kernel/Scaler/ScalerFunction/Code/ScalerSync.c:631	CRC PASS	0
 c506	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:561	7. DtMin	1
 c53a	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4214	7. PPPPProgressive	0
@@ -813,6 +818,7 @@ dd94	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8252	Get Col
 dd96	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7693	Get Colorimetry EXT_RGB_ITUR_BT2020	0
 de0b	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4957	7. DP Rebuild PHY	0
 de27	Audio	Kernel/System/Code/SysAudio.c:399	Audio Dac Ready	0
+de82	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:66	R-IH	1
 dea9	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1590	False : D1 DP Audio Buffer	0
 dec4	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8773	Get Colorimetry 709	0
 df0b	System	Kernel/User Common Function/Code/UserCommonInterface.c:4646	OSD -- Reset	1

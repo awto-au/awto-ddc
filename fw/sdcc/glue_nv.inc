@@ -386,7 +386,6 @@ int set_sdk_get(BYTE ucId)
         case AWTO_SET_SA_MAGENTA_SAT:   return g_stSixColorData.ucSixColorSaturationM;
         case AWTO_SET_ASPECT:           return g_stOSDUserData.b3AspectRatio;
         case AWTO_SET_OVERSCAN:         return g_stOSDUserData.b1OverScan;
-        case AWTO_SET_DISP_ROTATE:      return g_stOSDUserData.b3OsdDispRotate;
         case AWTO_SET_LATENCY:          return g_stOSDUserData.b2LatencyStatus;
         case AWTO_SET_DP_VERSION:       return g_stOSDUserData.b2OsdDpD1PortVersion;
         case AWTO_SET_DP_EDID:          return UserCommonNVRamGetSystemData(_EDID_D1_SELECT);
@@ -492,7 +491,6 @@ void set_sdk_put(BYTE ucId, int iV)                // the field, then its item d
         case AWTO_SET_SA_MAGENTA_SAT:   g_stSixColorData.ucSixColorSaturationM = ucV; AwtoNvMark(AWTO_NV_SIX); return;
         case AWTO_SET_ASPECT:           g_stOSDUserData.b3AspectRatio = ucV; break;
         case AWTO_SET_OVERSCAN:         g_stOSDUserData.b1OverScan = ucV; break;
-        case AWTO_SET_DISP_ROTATE:      g_stOSDUserData.b3OsdDispRotate = ucV; break;
         case AWTO_SET_LATENCY:          g_stOSDUserData.b2LatencyStatus = ucV; break;
         case AWTO_SET_DP_VERSION:       g_stOSDUserData.b2OsdDpD1PortVersion = ucV; break;
         case AWTO_SET_COLOUR_FORMAT:    g_stOSDUserData.b3DVIRGBYUV = ucV; g_stOSDUserData.b3VGARGBYUV = ucV; break;

@@ -185,6 +185,22 @@ E3	11	n	memory select: frame-sync frame buffer (force %)
 E3	12	n	memory select: free-run frame buffer (force %)
 E3	13	n	memory select: M/N frame-sync frame buffer (force %)
 E3	14	n	memory select: free run, no input (force %)
+E4	00	-	picture normal: display re-set
+E4	01	-	picture mirrored left-right: display re-set
+E4	02	-	picture mirrored top-bottom: display re-set
+E4	03	-	picture rotated 180: display re-set
+E4	04	-	picture normal: stored, applies at the next display setting
+E4	05	-	picture mirrored left-right: stored, applies at the next display setting
+E4	06	-	picture mirrored top-bottom: stored, applies at the next display setting
+E4	07	-	picture rotated 180: stored, applies at the next display setting
+E4	08	-	picture normal: already in effect
+E4	09	-	picture mirrored left-right: already in effect
+E4	0A	-	picture mirrored top-bottom: already in effect
+E4	0B	-	picture rotated 180: already in effect
+E4	0C	-	picture normal: not built (no _AWTO_ROTATION): stored only
+E4	0D	-	picture mirrored left-right: not built (no _AWTO_ROTATION): stored only
+E4	0E	-	picture mirrored top-bottom: not built (no _AWTO_ROTATION): stored only
+E4	0F	-	picture rotated 180: not built (no _AWTO_ROTATION): stored only
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %

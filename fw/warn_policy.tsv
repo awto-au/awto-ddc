@@ -197,6 +197,10 @@
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1812	ok	OK-CONFIG: _MEMORY_ACCESS_TYPE is _LINE_MODE on RL6449: the frame-access else branch is dead	_AWTO_FRC
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1847	ok	OK-CONFIG: GET_OD_STIRCT_CONDITION() is _FALSE with _OD_SUPPORT off: the OD read-width branch folds	_AWTO_FRC
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1849	ok	OK-CONFIG: same OD branch (usHWidth = DHtotal), dead with OD off	_AWTO_FRC
+# Reviewed 2026-11-13 (#165): rotation build sites (-D _AWTO_ROTATION=_ON)
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c	67	ok	OK-HARMLESS: ScalerMemorySetFifoCapture: both rotation branches are commented-out register writes, the if folds to nothing	_AWTO_ROTATION
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1803	ok	OK-CONFIG: Realtek SDK menu rotate icon page 1: _DISP_ROTATE_HOR_MIRROR (2) > 3 is constant false (only 0 / 180 / H / V built)	_AWTO_ROTATION
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1809	ok	OK-CONFIG: same, _DISP_ROTATE_VER_MIRROR (3) > 3	_AWTO_ROTATION
 # Reviewed 2026-11-05 (#26): SDK Lib sources (RL6449_Series_Lib.Uv2) - no bugs
 ^non\-pointer\ type\ cast\ to\ generic\ pointer	Kernel/Scaler/RL6449_Series_Scaler/Lib/Code/RL6449_Series_Color/RL6449_Series_ColorPCM.c	68	ok	OK-SAME: WORD from ScalerColorPCMGetTableAddress ((WORD)code ptr) cast to BYTE*: tag 0x00 in SDCC but pointer is only passed to ScalerBurstWrite which uses low 16 bits + separate bank; never dereferenced; Keil same
 ^conditional\ flow\ changed\ by\ optimizer:\ s	Kernel/Scaler/RL6449_Series_Scaler/Lib/Code/RL6449_Series_Color/RL6449_Series_ColorSixColorAdjustDell.c	140	ok	OK-HARMLESS: ucLastIndex is dead (never read, only ucNextIndex used); optimizer drops it; ucNextIndex asm correct

@@ -1004,6 +1004,12 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_MEM_LOG_STORED                                     0x05    // not ACTIVE: takes effect at the next display setting
 #define AWTO_MEM_LOG_NO_FRC                                     0x06    // _AWTO_FRC off: frame buffer not built
 #define AWTO_MEM_LOG_SEL                                        0x10    // + _FRAME_SYNC_LINE_BUFFER.._FREE_RUN_NO_INPUT: memory select changed (display setting)
+#define AWTO_SYNC_EV_ROT                                        0xE4    // #165 picture orientation (set_ap_rotate): arg = what << 2 | flip, value = rotate << 8 | mirror
+#define AWTO_FLIP_HV                                            0x03    // flip bits: 1 = left-right (H), 2 = top-bottom (V); both = 180
+#define AWTO_ROT_APPLIED                                        0       // what: display re-set now
+#define AWTO_ROT_STORED                                         1       // not ACTIVE / boot: applies at the next display setting
+#define AWTO_ROT_ALREADY                                        2
+#define AWTO_ROT_NOT_BUILT                                      3       // image without _AWTO_ROTATION: stored only
 #define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
 #define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
@@ -1510,7 +1516,30 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // Display Rotation Option
 //-------------------------------------------------
+// Build option (#165): -D _AWTO_ROTATION=_ON = 180 + H / V mirror through the frame buffer (needs _AWTO_FRC=_ON), freeze off;
+// -D _AWTO_FREEZE=_ON = freeze instead. GEN_II cannot have both (Project_Config_Check.h). Menu rows disp_rotate / mirror (set_ap_rotate).
+#ifndef _AWTO_ROTATION
+#define _AWTO_ROTATION                                          _OFF
+#endif
+#ifndef _AWTO_FREEZE
+#define _AWTO_FREEZE                                            _OFF
+#endif
+#if((_AWTO_ROTATION == _ON) || (_AWTO_FREEZE == _ON))
+#if(_AWTO_FRC != _ON)
+#error "_AWTO_ROTATION / _AWTO_FREEZE need the frame buffer: -D _AWTO_FRC=_ON"
+#endif
+#endif
+#if((_AWTO_ROTATION == _ON) && (_AWTO_FREEZE == _ON))
+#error "_AWTO_ROTATION and _AWTO_FREEZE are exclusive (GEN_II rotation)"
+#endif
+#if(_AWTO_ROTATION == _ON)
+#define _DISPLAY_ROTATION_SUPPORT                               _ON
+#define _DISPLAY_HOR_MIRROR_SUPPORT                             _ON
+#define _DISPLAY_VER_MIRROR_SUPPORT                             _ON
+#else
 #define _DISPLAY_ROTATION_SUPPORT                               _OFF
+#endif
+#define _FREEZE_SUPPORT                                         _AWTO_FREEZE
 
 //--------------------------------------------------
 // Aspect Ratio Option
