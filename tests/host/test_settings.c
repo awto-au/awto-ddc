@@ -112,7 +112,7 @@ int main(int argc, char **argv)
     /* 1. empty flash -> defaults, load result 0 */
     boot();
     CHECK(set_load_result() == 0, "load result %u", set_load_result());
-    CHECK(set_get(SET_ID_BRIGHTNESS) == 44 && set_get(SET_ID_PANEL_T3) == 550, "defaults");
+    CHECK(set_get(SET_ID_BRIGHTNESS) == 44 && set_get(SET_ID_PANEL_T4) == 250, "defaults");
     CHECK(ap_calls > 10, "apply_all ran %d", ap_calls);
 
     /* 2. clamp + step + save + reload */
@@ -141,11 +141,11 @@ int main(int argc, char **argv)
     CHECK(set_get(SET_ID_CONTRAST) == 78, "save after cut: %d", set_get(SET_ID_CONTRAST));
 
     /* 5. risky: auto-revert, confirm, never saved while pending */
-    CHECK(set_put(SET_ID_PANEL_T3, 1000, 1) && set_pending() == SET_ID_PANEL_T3, "pending");
+    CHECK(set_put(SET_ID_PANEL_T4, 1000, 1) && set_pending() == SET_ID_PANEL_T4, "pending");
     now_ms += SET_CONFIRM_MS; set_service();
-    CHECK(set_get(SET_ID_PANEL_T3) == 550 && set_pending() == 0, "reverted %d", set_get(SET_ID_PANEL_T3));
-    set_put(SET_ID_PANEL_T3, 900, 1); set_confirm(); now_ms += SET_SAVE_MS; set_service(); boot();
-    CHECK(set_get(SET_ID_PANEL_T3) == 900, "confirmed + saved %d", set_get(SET_ID_PANEL_T3));
+    CHECK(set_get(SET_ID_PANEL_T4) == 250 && set_pending() == 0, "reverted %d", set_get(SET_ID_PANEL_T4));
+    set_put(SET_ID_PANEL_T4, 900, 1); set_confirm(); now_ms += SET_SAVE_MS; set_service(); boot();
+    CHECK(set_get(SET_ID_PANEL_T4) == 900, "confirmed + saved %d", set_get(SET_ID_PANEL_T4));
 
     /* 6. never all inputs off */
     CHECK(set_put(SET_ID_D1_ENABLE, 0, 0), "d1 off"); set_confirm();
@@ -154,9 +154,9 @@ int main(int argc, char **argv)
 
     /* 7. recovery: keys held -> defaults; a short press does nothing */
     keys_down = 1; boot(); keys_down = 0;
-    CHECK(set_load_result() == 2 && set_get(SET_ID_PANEL_T3) == 550 && set_get(SET_ID_D1_ENABLE) == 1, "recovery");
+    CHECK(set_load_result() == 2 && set_get(SET_ID_PANEL_T4) == 250 && set_get(SET_ID_D1_ENABLE) == 1, "recovery");
     boot();
-    CHECK(set_get(SET_ID_PANEL_T3) == 550, "recovery saved");
+    CHECK(set_get(SET_ID_PANEL_T4) == 250, "recovery saved");
 
     /* 8. VCP */
     CHECK(vcp_get(0x10, &cur, &max, &type) && cur == 44 && max == 100, "vcp 0x10 %u/%u", cur, max);
@@ -229,15 +229,15 @@ int main(int argc, char **argv)
     key(MK_MENU); key(MK_LEFT); key(MK_MENU);
     CHECK(set_get(SET_ID_BRIGHTNESS) == 43, "edit set %d", set_get(SET_ID_BRIGHTNESS));
     key(MK_EXIT);
-    /* Panel timing > T3: risky countdown, Exit = undo */
+    /* Panel timing > T4: risky countdown, Exit = undo */
     for (k = 0; k < 20 && !strstr(grid[2 + menu_cursor()], "Panel timing"); k++) key(MK_RIGHT);
     key(MK_MENU);
-    for (k = 0; k < 20 && !strstr(grid[2 + menu_cursor() ], "T3 video"); k++) key(MK_RIGHT);
+    for (k = 0; k < 20 && !strstr(grid[2 + menu_cursor() ], "T4 BL to"); k++) key(MK_RIGHT);
     key(MK_MENU); key(MK_RIGHT); key(MK_MENU);
-    CHECK(set_pending() == SET_ID_PANEL_T3 && find_line("Keep new value") >= 0, "risky prompt");
+    CHECK(set_pending() == SET_ID_PANEL_T4 && find_line("Keep new value") >= 0, "risky prompt");
     if (dump) { char fn[256]; FILE *f; snprintf(fn, sizeof fn, "%s/risky.txt", dump); f = fopen(fn, "w"); if (f) { screen(f); fclose(f); } }
     key(MK_EXIT);
-    CHECK(set_pending() == 0 && set_get(SET_ID_PANEL_T3) == 550, "risky undo");
+    CHECK(set_pending() == 0 && set_get(SET_ID_PANEL_T4) == 250, "risky undo");
     key(MK_EXIT); key(MK_EXIT);
     CHECK(!menu_active() && !shown, "menu closed");
     /* timeout */
@@ -253,7 +253,7 @@ int main(int argc, char **argv)
         CHECK(menu_cmd(MO_SELECT, SET_ID_CONTRAST) && menu_diag.item_id == SET_ID_CONTRAST && menu_diag.cursor == 2, "select contrast");
         CHECK((uint16_t)(menu_diag.redraw_lo | menu_diag.redraw_hi << 8) != r0, "redraw counter moves");
         CHECK(menu_cmd(MO_SET, 61) && set_get(SET_ID_CONTRAST) == 61 && menu_diag.val_lo == 61, "set via command");
-        CHECK(!menu_cmd(MO_SELECT, SET_ID_PANEL_T3), "select an item of another page refused");
+        CHECK(!menu_cmd(MO_SELECT, SET_ID_PANEL_T4), "select an item of another page refused");
         CHECK(menu_cmd(MO_OPEN, 1) && menu_diag.item_page == 2 && menu_diag.item_id == 0, "colour page: sub-page entry first");
         CHECK(menu_cmd(MO_KEY, MK_MENU) && menu_diag.page == 2 && menu_diag.parent == 1 && injected == MK_MENU, "key into sub-page");
         CHECK(menu_cmd(MO_BACK, 0) && menu_diag.page == 1 && menu_diag.cursor == 0, "back");
