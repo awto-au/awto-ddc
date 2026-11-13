@@ -5,7 +5,7 @@ usage: fw_variants.py [--serial AWT26110002] [--only NAME,...] [--keep]
 - Each variant: a detached git worktree of HEAD in tmp/variants/<name> (compile cache shared through the git common dir),
   fw_build.py with K2S_SDCC_EXTRA = its -D flags and --xdata-floor 0 (an opt-in build must fit, not keep the floor).
 - Variants (VARIANTS): meas4k (-D_AWTO_MEAS4K=_ON), net (-D_AWTO_NET=_ON), both.
-- Compiler = the rolled one (wb_build.py): awto-sdcc 440cfd2, BE, --sdcccall 3. Commit first: uncommitted edits are not built.
+- Compiler = the rolled one (wb_build.py): awto-sdcc /usr/local, BE, --sdcccall 3. Commit first: uncommitted edits are not built.
 - One PASS / FAIL line per variant with XDATA free; exit 1 if any fails. --keep leaves the worktrees (default: removed).
 Log: ./tmp/logs/fw_variants.log (+ tmp/logs/fw_variants_<name>.out = fw_build output)
 """
@@ -23,7 +23,7 @@ def repo_root() -> Path:
 
 ROOT = repo_root()
 VARIANTS = {"meas4k": ["-D_AWTO_MEAS4K=_ON"], "net": ["-D_AWTO_NET=_ON"], "both": ["-D_AWTO_MEAS4K=_ON", "-D_AWTO_NET=_ON"]}
-SDCC = "/mnt/2tb/git/awto-sdcc-kc/tmp/install-440cfd2"
+SDCC = "/usr/local"
 BUILD_TIMEOUT = 300        # whole fw_build: 76 s cold, ~45 s cached (2026-11-12) x3 cold + worktree checkout; fw_build has stall guards
 LOG = None
 
@@ -59,7 +59,7 @@ def main() -> int:
         if r.returncode:
             say(f"FAIL {n}: worktree: {r.stderr.strip()[-200:]}"); fails += 1; continue
         env = dict(os.environ, AWTO_DDC_REPO=str(wt), AWTO_SDCC_BE="1", AWTO_SDCCCALL="3", AWTO_SDCC_BIN=f"{SDCC}/bin",
-                   AWTO_SDCC_SRC="/mnt/2tb/git/awto-sdcc-kc", AWTO_FW_TAG=f"var-{n}", K2S_SDCC_EXTRA=" ".join(VARIANTS[n]))
+                   AWTO_SDCC_SRC="/usr/local/share/sdcc/awto-src", AWTO_FW_TAG=f"var-{n}", K2S_SDCC_EXTRA=" ".join(VARIANTS[n]))
         out = ROOT / f"tmp/logs/fw_variants_{n}.out"
         t0 = time.monotonic()
         try:

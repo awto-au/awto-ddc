@@ -1,12 +1,13 @@
 """SDCC tool paths: awto-sdcc (SourceForge trunk + our fixes), never the distro package.
 
-$AWTO_SDCC_BIN, else ~/opt/awto-sdcc/bin (installed by awto-sdcc scripts/build.py).
+$AWTO_SDCC_BIN, else /usr/local/bin (awto-sdcc main, installed by the sdcc session; stamp + library sources in share/sdcc).
 Distro sdcc changes under us on OS upgrades (Fedora 45: 4.5.0 -> 4.6.0, 2026-11-05) -> not used.
 """
 import os, sys
 from pathlib import Path
 
-BIN = Path(os.environ.get("AWTO_SDCC_BIN") or Path.home() / "opt/awto-sdcc/bin")
+BIN = Path(os.environ.get("AWTO_SDCC_BIN") or "/usr/local/bin")
+SHARE = BIN.parent / "share/sdcc"
 # AWTO_SDCC_BE=1: Keil byte order (--big-endian, awto-sdcc#5, ddc#15); needs the BE compiler in AWTO_SDCC_BIN
 BIG_ENDIAN = os.environ.get("AWTO_SDCC_BE") == "1"
 # AWTO_SDCCCALL=1|2: register calling convention (awto-sdcc#2, needs awto/regcall(-be) compiler + matching -scN lib in
@@ -18,7 +19,7 @@ CFLAGS_EXTRA = (["--big-endian"] if BIG_ENDIAN else []) + (["--sdcccall", SDCCCA
 LIB = BIN.parent / ("share/sdcc/lib/mcs51-large" + ("-be" if BIG_ENDIAN else "") + (f"-sc{SDCCCALL}" if SDCCCALL != "0" else ""))
 LINK_LIBS = ["--nostdlib", f"-L{LIB}", "-lmcs51"]       # mcs51 port default libs = {"mcs51"} (sdcc src/mcs51/main.c)
 # ISR lib clones are compiled from this source tree (the BE branch carries the BE lib code)
-LIBSRC = Path(os.environ.get("AWTO_SDCC_SRC") or ("/mnt/2tb/git/awto-sdcc-be" if BIG_ENDIAN else "/mnt/2tb/git/awto-sdcc")) / "device/lib"
+LIBSRC = Path(os.environ.get("AWTO_SDCC_SRC") or SHARE / "awto-src") / "device/lib"
 
 
 def tool(name: str) -> str:
@@ -32,7 +33,7 @@ def tool(name: str) -> str:
 def stamp() -> dict:
     """Which compiler built an image: install path, `sdcc --version`, fork commit (<install>/awto-sdcc-commit.txt, written by awto-sdcc scripts/build.py)."""
     import subprocess
-    f = BIN.parent / "awto-sdcc-commit.txt"
+    f = next((x for x in (SHARE / "awto-sdcc-commit.txt", BIN.parent / "awto-sdcc-commit.txt") if x.exists()), SHARE / "awto-sdcc-commit.txt")
     ver = subprocess.run([tool("sdcc"), "--version"], capture_output=True, text=True, timeout=10).stdout.splitlines()
     return {"install": str(BIN.parent), "version": ver[0] if ver else "?", "commit": f.read_text().strip() if f.exists() else "unstamped"}
 
@@ -41,7 +42,7 @@ def check_install() -> dict:
     """Refuse a stale or wrong install (awto-sdcc#7 audit: images were built with a pre-fix compiler).
     - $AWTO_SDCC_EXPECT=<commit prefix>: the stamp must start with it.
     - stamped install: the compiler/library sources (src/, device/) of the fork tree $AWTO_SDCC_SRC must be identical to the stamped commit; `dirty` stamps fail.
-    - unstamped install (e.g. ~/opt/awto-sdcc): allowed, recorded as `unstamped`."""
+    - unstamped install: allowed, recorded as `unstamped`."""
     import subprocess
     st = stamp()
     exp = os.environ.get("AWTO_SDCC_EXPECT")
@@ -52,6 +53,8 @@ def check_install() -> dict:
     if st["commit"].endswith("dirty"):
         sys.exit(f"compiler install {st['install']} was built from a dirty tree ({st['commit']}): rebuild from a commit")
     src = LIBSRC.parent.parent
+    if not (src / ".git").exists():                         # the install's own source copy (share/sdcc/awto-src) is the stamped commit
+        return st
     sha = st["commit"].split()[0]
     r = subprocess.run(["git", "-C", str(src), "diff", "--quiet", sha, "HEAD", "--", "src", "device"], capture_output=True, timeout=30)
     if r.returncode:

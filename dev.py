@@ -306,7 +306,7 @@ def cmd_selftest(_extra: list[str]) -> int:
 # --------------------------------------------------------------------------
 # awto-ddc: firmware build + test-unit loop (#26). Units: scripts/devices.json.
 # --------------------------------------------------------------------------
-SDCC_BE_BIN = "/mnt/2tb/git/awto-sdcc-be/tmp/be-install/bin"     # awto-sdcc big-endian install
+SDCC_BE_BIN = "/usr/local/bin"     # awto-sdcc main (= wb_build.py SDCC_INSTALL)
 FW = TMP / "fw"
 BOOT_PORTS = {"DP": "_D1_INPUT_PORT", "HDMI": "_D2_INPUT_PORT"}               # debug port before first ACTIVE (#28)
 MODES = {"1080p50": "1920x1080@50.000", "1080p60": "1920x1080@60.000", "4k30": "3840x2160@30.000",
@@ -604,7 +604,7 @@ def cmd_build(extra: list[str]) -> int:
         defs.append("-D_AWTO_AUDIO_TEST")
     if BOOT_PORTS.get(u["input"]):
         defs.append(f"-D_AWTO_BOOT_PORT={BOOT_PORTS[u['input']]}")
-    env = {"AWTO_SDCC_BE": "1" if u["be"] else "0", "AWTO_SDCC_BIN": SDCC_BE_BIN, "K2S_SDCC_EXTRA": " ".join(defs)}
+    env = {"AWTO_SDCC_BE": "1" if u["be"] else "0", "AWTO_SDCC_BIN": SDCC_BE_BIN, "AWTO_SDCCCALL": "3", "K2S_SDCC_EXTRA": " ".join(defs)}
     rc = _py("fw_build.py", "--serial", u["serial"], env=env)
     if rc:
         return rc

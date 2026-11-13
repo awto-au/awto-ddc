@@ -2,7 +2,7 @@
 """Build a work-branch firmware image with the rolled compiler setup and file it as tmp/fw/<serial>-<tag>-be.{bin,map}.
 
 usage: wb_build.py --tree /mnt/2tb/git/awto-ddc-p14sc3 --serial AWT26110003 --tag wb-p14kc2 [-D NAME=VAL ...]
-- Compiler = the one the rolled images use: awto-sdcc 440cfd2 (keil-compat), BE, --sdcccall 3 (awto-sdcc#36).
+- Compiler = /usr/local (awto-sdcc main a5c0ac90e8, keil-compat), BE, --sdcccall 3, far locals off (awto-sdcc#36, ddc#204).
   The install's stamp (awto-sdcc-commit.txt) must start with SDCC_COMMIT and the tree must use --keil-compat
   (fw_compile refuses a compiler without it). A default-env fw_build gives an LE image (byte-swapped diag, #75).
 - -D: extra defines (K2S_SDCC_EXTRA), e.g. -D _AWTO_LOOP_PROF=_ON.
@@ -14,9 +14,9 @@ Log: ./tmp/logs/wb_build.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_bu
 import argparse, json, os, re, shutil, subprocess, sys, time
 from pathlib import Path
 
-SDCC_INSTALL = Path("/mnt/2tb/git/awto-sdcc-kc/tmp/install-440cfd2")
-SDCC_COMMIT = "440cfd2d55"
-SDCC_SRC = "/mnt/2tb/git/awto-sdcc-kc"          # ISR lib clones (sdcc_isr_libs) compile from this tree's device/lib
+SDCC_INSTALL = Path("/usr/local")
+SDCC_COMMIT = "a5c0ac90e8"
+SDCC_SRC = str(SDCC_INSTALL / "share/sdcc/awto-src")   # ISR lib clones (sdcc_isr_libs) compile from this tree's device/lib
 SDCCCALL = "3"
 
 
@@ -30,8 +30,10 @@ def repo_root() -> Path:
 
 
 def stamp(bin_dir: Path) -> str:
-    f = bin_dir.parent / "awto-sdcc-commit.txt"
-    return f.read_text().strip() if f.exists() else "unstamped"
+    for f in (bin_dir.parent / "share/sdcc/awto-sdcc-commit.txt", bin_dir.parent / "awto-sdcc-commit.txt"):
+        if f.exists():
+            return f.read_text().strip()
+    return "unstamped"
 
 
 def main() -> int:

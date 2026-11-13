@@ -136,8 +136,8 @@ def cmd_linked():
     log(f"linked: {len(rows)} modules, {sum(per.values())} B -> {OUT / 'linked.tsv'}")
 
 
-BUILD_ENV = dict(AWTO_SDCC_BE="1", AWTO_SDCCCALL="3", AWTO_SDCC_BIN="/mnt/2tb/git/awto-sdcc-kc/tmp/install-440cfd2/bin",
-                 AWTO_SDCC_SRC="/mnt/2tb/git/awto-sdcc-kc", K2S_SDCC_EXTRA="-D_AWTO_AUDIT_NOP=1")   # = wb_build.py rolled compiler
+BUILD_ENV = dict(AWTO_SDCC_BE="1", AWTO_SDCCCALL="3", AWTO_SDCC_BIN="/usr/local/bin",
+                 AWTO_SDCC_SRC="/usr/local/share/sdcc/awto-src", K2S_SDCC_EXTRA="-D_AWTO_AUDIT_NOP=1")   # = wb_build.py rolled compiler
 BUILD_TIMEOUT = 240                 # whole fw_build: 76 s measured cold (2026-11-12) x3 backstop; fw_build has per-step stall guards
 
 

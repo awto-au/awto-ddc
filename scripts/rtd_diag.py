@@ -53,7 +53,9 @@ CAL_ROWS = (("d5us10", "DELAY_5US", 10, 5.0, 0.97, 1.50),
             ("xus100", "DELAY_XUS(100)", 1, 100.0, 0.97, 1.50),
             ("xusisr100", "DELAY_XUS_EXINT(100)", 1, 100.0, 0.97, 1.50),
             ("d5isr10", "DELAY_5US_EXINT", 10, 5.0, 0.97, 1.50))
-CAL_TICK_TOL = 0.005                # 10 ticks vs the reload period: both from Timer2, a miss means a lost tick or wrong reload
+# 10 ticks vs the reload period: catches a lost / extra tick (+-10 %) or a wrong reload. Half a tick: the snapshots follow
+# the Timer2 ISR return, so per-tick ISR length (~50 us, code-dependent) lands in the result (#54)
+CAL_TICK_TOL = 0.05
 CAL_T3_FAST_MAX_MS = 100   # fast boot (#63): 20 ms own-pattern T3 + the ~40 ms delay test inside it, x~1.5
 CAL_T3_MS, CAL_T3_TOL_MS = 550, 1.5  # panel T3 (_PANEL_POWER_ON_T3): ScalerTimerDelayXms granularity 1 tick + 64-count resolution
 IDLE_POLL_S = 0.002   # a status read is ~0.3 ms at 100 kHz; 2 ms bounds the stall added per message (fw halts until fetched)
