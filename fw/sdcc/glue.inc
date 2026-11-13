@@ -155,7 +155,7 @@ static __code BYTE tAwtoStyle[5] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SUR
 #define AWTO_BAR_ACCENT             AWTO_PAL_ACCENT
 
 static BYTE s_ucVpRows;                          // viewport rows (0 = the whole map is shown)
-static BYTE s_ucVpFirst;                         // first map row shown
+static BYTE s_ucVpFirst;                         // first view row shown (logical; rotated 180 the map rows are mirrored)
 static BYTE s_ucVpEnd;                           // map row that currently holds the end-of-rows marker
 
 // OSD blend, one owner for every awto screen (menu, selector, cards, backlight bar, console, GPIO page) (awto-ddc#176):
@@ -168,7 +168,7 @@ static void AwtoOsdBlend(void)
 }
 
 // OSD orientation, one owner for every awto screen (#165). Rotate 180: glyphs downloaded turned by the VLC decoder (FRAME_CTRL_0B),
-// the map written in reverse (osd_tc_cells), windows and position mirrored (osd_tc_bar / _place); no viewport while rotated.
+// the map written in reverse (osd_tc_cells), windows, position and the viewport mirrored (osd_tc_bar / _place / _scroll).
 // Not the chip's auto rotation (FRAME_CTRL_41): with double size it showed boxes without text on unit 3 (SDK: they exclude each other).
 // Mirror modes: no OSD mirror in hardware; the OSD stays upright.
 static BYTE s_ucAwtoOsdRot = _OSD_ROTATE_DEGREE_0;
@@ -245,7 +245,8 @@ void osd_tc_rowh(BYTE ucRh)
 BYTE osd_tc_scroll(BYTE ucFirst)
 {
     WORD usFs;
-    BYTE ucEnd;
+    BYTE ucPs;                                       // first map row shown; rotated 180 the view [first, first + rows) is map rows
+    BYTE ucEnd;                                      // [H - rows - first, H - first) (osd_tc_cells writes row r at H - 1 - r)
 
     if(s_ucVpRows == 0)
     {
@@ -255,15 +256,13 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     {
         ucFirst = g_ucOsdHeight - s_ucVpRows;
     }
-    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)
+    ucPs = (s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180) ? (g_ucOsdHeight - s_ucVpRows - ucFirst) : ucFirst;
+    while((ucPs != 0) && ((WORD)ucPs * g_ucOsdWidth + g_usFontSelectStart > 4095))
     {
-        ucFirst = 0;                                 // no roll-up while the OSD is rotated (AwtoOsdRoll): the view stays at the top
+        ucPs--;
     }
-    while((ucFirst != 0) && ((WORD)ucFirst * g_ucOsdWidth + g_usFontSelectStart > 4095))
-    {
-        ucFirst--;
-    }
-    ucEnd = ucFirst + s_ucVpRows;
+    ucFirst = (s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180) ? (g_ucOsdHeight - s_ucVpRows - ucPs) : ucPs;
+    ucEnd = ucPs + s_ucVpRows;
     if(s_ucVpEnd < g_ucOsdHeight)
     {
         ScalerOsdCommandAllByte(s_ucVpEnd, 0x80, osd_rh - 1, g_ucOsdWidth);    // the old marker row is a text row again
@@ -273,24 +272,23 @@ BYTE osd_tc_scroll(BYTE ucFirst)
         ScalerOsdCommandByte(ucEnd, _OSD_BYTE0, 0x00);                         // end-of-rows marker: the view stops here
     }
     s_ucVpEnd = ucEnd;
-    usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
-    if(ucFirst == 0)
+    s_ucVpFirst = ucFirst;
+    usFs = g_usFontSelectStart + (WORD)ucPs * g_ucOsdWidth;
+    if(ucPs == 0)
     {
         AwtoOsdRoll(0);                                                                         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
-        s_ucVpFirst = 0;
-        return 0;
+        return ucFirst;
     }
     AwtoOsdRoll(1);                                                                             // special function on, 0 = roll-up
-    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucFirst);
+    ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucPs);
     ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)((usFs >> 8) << 4));
     ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)usFs);
-    s_ucVpFirst = ucFirst;
     return ucFirst;
 }
 
 void osd_tc_viewport(BYTE ucRows)
 {
-    s_ucVpRows = ((ucRows < g_ucOsdHeight) && (s_ucAwtoOsdRot != _OSD_ROTATE_DEGREE_180)) ? ucRows : 0;   // rotated: whole map
+    s_ucVpRows = (ucRows < g_ucOsdHeight) ? ucRows : 0;
     s_ucVpFirst = 0;
     osd_tc_scroll(0);
 }
@@ -327,7 +325,7 @@ void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucC
     if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // inclusive px, mirrored inside the map box
     {
         WORD usW = (WORD)g_ucOsdWidth * osd_cw - 1;
-        WORD usH = (WORD)g_ucOsdHeight * osd_rh - 1;
+        WORD usH = (WORD)((s_ucVpRows != 0) ? s_ucVpRows : g_ucOsdHeight) * osd_rh - 1;   // the box shown (viewport rows)
         WORD usT = usW - usX0;
 
         usX0 = usW - usX1;
