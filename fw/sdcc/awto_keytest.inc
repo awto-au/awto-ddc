@@ -82,7 +82,7 @@ static void AwtoKeyShow(void)                   // every AwtoKeyPoll: redraw the
     {
         return;                                 // panel off: a redraw only holds off the wake poll (#144)
     }
-    if((g_stAwtoKey.ucOpen != 0) && ((g_stAwtoDiag.ucHold & AWTO_HOLD_POPUP) == 0))
+    if((g_stAwtoKey.ucOpen != 0) && ((isr_g_stAwtoDiag.ucHold & AWTO_HOLD_POPUP) == 0))
     {
         g_stAwtoKey.ucOpen = 0;                 // test cmd 0x27 (clear holds) took the screen away
         g_stAwtoKey.ucDrawn = 0;

@@ -1,6 +1,6 @@
 // #60 input-switch timeline (RL6449_Project.h StAwtoSw): events in Timer2 ms ticks; test cmd 0x31..0x33 arms it
 // (fixed port D1..D3), 0x30 = auto search again. Host: scripts/sw_timeline.py. Inserted into SysMain.c by keil2sdcc.py.
-__xdata StAwtoSw g_stAwtoSw;
+__xdata StAwtoSw isr_g_stAwtoSw;
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)
 static __xdata unsigned char s_ucAwtoUnstable;  // "source unstable" judge fails since the last ACTIVE (TMDS ports)
 static __xdata unsigned char s_ucAwtoHpdPulses;
@@ -8,18 +8,18 @@ static __xdata unsigned char s_ucAwtoHpdPulses;
 
 void AwtoSwRec(unsigned char ucId, unsigned char ucArg)     // switch log only (no ring line)
 {
-    unsigned char ucN = g_stAwtoSw.ucN;
+    unsigned char ucN = isr_g_stAwtoSw.ucN;
 
-    if((ucN != 0) && (g_stAwtoSw.stEv[ucN - 1].ucId == ucId) && (g_stAwtoSw.stEv[ucN - 1].ucArg == ucArg))
+    if((ucN != 0) && (isr_g_stAwtoSw.stEv[ucN - 1].ucId == ucId) && (isr_g_stAwtoSw.stEv[ucN - 1].ucArg == ucArg))
     {
         return;                                 // #78: measure-retry probes repeat every ~8 ms; the first one carries the time
     }
     if(ucN < AWTO_SW_EVENTS)
     {
-        g_stAwtoSw.stEv[ucN].ucId = ucId;
-        g_stAwtoSw.stEv[ucN].ucArg = ucArg;
-        g_stAwtoSw.stEv[ucN].usMs = ((WORD)AwtoMs());
-        g_stAwtoSw.ucN = ucN + 1;
+        isr_g_stAwtoSw.stEv[ucN].ucId = ucId;
+        isr_g_stAwtoSw.stEv[ucN].ucArg = ucArg;
+        isr_g_stAwtoSw.stEv[ucN].usMs = ((WORD)AwtoMs());
+        isr_g_stAwtoSw.ucN = ucN + 1;
     }
 }
 
@@ -32,7 +32,7 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
 // A panel pin or the backlight PWM written outside the panel machine (after boot pin init): logged, for the sim gate too.
 void AwtoPanelForeign(unsigned char ucWhat)
 {
-    if((g_ucAwtoPanelOwn == 0) && (g_stAwtoDiag.ucStage >= 5))
+    if((g_ucAwtoPanelOwn == 0) && (isr_g_stAwtoDiag.ucStage >= 5))
     {
         AwtoSwEvent(AWTO_SW_EV_PANEL_X, ucWhat);
     }
@@ -66,11 +66,11 @@ void AwtoSwMark(unsigned char ucK)      // logs AWTO_SW_EV_SLOW(k) when the code
 
 void AwtoSwArm(unsigned char ucPort)
 {
-    g_stAwtoSw.ucMagic = 'S';
-    g_stAwtoSw.ucSeq++;
-    g_stAwtoSw.ucPort = ucPort;
-    g_stAwtoSw.ucN = 0;
-    g_stAwtoSw.usT0 = ((WORD)AwtoMs());
+    isr_g_stAwtoSw.ucMagic = 'S';
+    isr_g_stAwtoSw.ucSeq++;
+    isr_g_stAwtoSw.ucPort = ucPort;
+    isr_g_stAwtoSw.ucN = 0;
+    isr_g_stAwtoSw.usT0 = ((WORD)AwtoMs());
 }
 
 #if(_AWTO_PANEL_LOG == _ON)
@@ -80,7 +80,7 @@ static __xdata unsigned char s_ucAwtoPins;       // last written level: bit0 pan
 
 void AwtoPanelPinLog(unsigned char ucWhat)      // before the pin is written; bit 1 = backlight, bit 0 = level (no locals: XDATA)
 {
-    if((g_ucAwtoPanelOwn == 0) && (g_stAwtoDiag.ucStage >= 5))
+    if((g_ucAwtoPanelOwn == 0) && (isr_g_stAwtoDiag.ucStage >= 5))
     {
         AwtoSwEvent(AWTO_SW_EV_PANEL_X, (AWTO_PNL_X_VDD + (ucWhat >> 1)) | (((ucWhat & 1) != 0) ? AWTO_PNL_X_ON : 0) |
                     ((((s_ucAwtoPins >> (ucWhat >> 1)) ^ ucWhat) & 1) ? 0 : AWTO_PNL_X_SAME));
@@ -98,7 +98,7 @@ void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs)
 
 void AwtoSwMode(unsigned char ucMode)           // the system machine changed the SDK mode state (at the transition)
 {
-    g_stAwtoSw.ucLastMode = ucMode;
+    isr_g_stAwtoSw.ucLastMode = ucMode;
     AwtoSwEvent(AWTO_SW_EV_MODE, ucMode);
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)
     if(ucMode == _MODE_STATUS_ACTIVE)

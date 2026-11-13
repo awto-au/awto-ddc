@@ -27,7 +27,7 @@ LOG = ROOT / "tmp/logs/ps_probe.log"
 # regdb RTD2795T-CG: MCU_CLK_DIV_R, MCU_CLK_CONTROL_1, MCU_CONTROL (flash div), MCU_CLOCK_CONTROL (mcu div), CACHE_FUNCTION / OPTION,
 # SCA_WR_INTRVL, SCA_INF_PERIOD
 REGS = "FFBD,FFE9,FFED,FFEE,FDA0,FDA1,FFF1,FFFB"
-SYMS = "g_usAwtoPsPolls:2,g_usAwtoPsGap:2,g_ucAwtoPsWakeCon,g_ucAwtoSyncPwr,g_stPowerInfo:2"
+SYMS = "g_usAwtoPsPolls:2,g_usAwtoPsGap:2,g_ucAwtoPsWakeCon,g_ucAwtoSyncPwr,isr_g_stPowerInfo:2"
 
 
 def main() -> int:

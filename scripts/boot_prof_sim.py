@@ -2,7 +2,7 @@
 """Boot profile in the sim (#144 / #162): the probe times of boot_prof.py (unit) for a sim cold boot, ring ms since reset.
 
 usage: AWTO_SIM_CORE=fast boot_prof_sim.py BIN MAP [--mode 1080p60|2160p60] [--unit-ref]
-- Runs from reset to ACTIVE (+ settle), decodes g_stAwtoSw (sw log; ms since Timer2 start + the ring time of the Timer2 start).
+- Runs from reset to ACTIVE (+ settle), decodes isr_g_stAwtoSw (sw log; ms since Timer2 start + the ring time of the Timer2 start).
 - --unit-ref: prints the unit-2 m15 cold boot (tmp/logs/coldboot-m15.txt milestones) next to the sim values.
 Log: tmp/logs/boot_prof_sim.log
 """
@@ -49,7 +49,7 @@ def main():
         for ln in lines:
             say(f"  {ln}")
         t2 = next((int(ln[1:].split("ms")[0]) for ln in lines if "Timer2 1 ms tick" in ln), 0)
-        raw = m.rd(T.sym(a.map, "g_stAwtoSw"), 12 + 4 * T.N_EV)
+        raw = m.rd(T.sym(a.map, "isr_g_stAwtoSw"), 12 + 4 * T.N_EV)
         hdr, evs = T.decode(raw)
         say(f"sw log: {hdr['n']} events; ring offset of Timer2 start {t2} ms; sim CPU {getattr(m, 'cpu', 'ucsim')}")
         prev = 0

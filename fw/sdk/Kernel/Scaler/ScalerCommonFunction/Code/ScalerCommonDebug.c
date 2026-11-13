@@ -58,15 +58,15 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit d_g_bRunCommand = _FALSE;
-BYTE g_pucDdcciData[_SCALER_DEBUG_BUF_LEN];
-BYTE g_ucDdcciCommandNumber;
+bit d_isr_g_bRunCommand = _FALSE;
+BYTE isr_g_pucDdcciData[_SCALER_DEBUG_BUF_LEN];
+BYTE isr_g_ucDdcciCommandNumber;
 EnumDDCCIDebugMode g_enumDDCCIDebugMode = _DEBUG_MODE;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
-bit d_g_bDebugMessageEven = _FALSE;
-WORD g_usFilterPro;
-bit d_g_bFwHalt = _FALSE;
+bit d_isr_g_bDebugMessageEven = _FALSE;
+WORD isr_g_usFilterPro;
+bit d_isr_g_bFwHalt = _FALSE;
 __xdata _Bool g_bDebugMessageStart = _FALSE;
 BYTE idata g_pucDebugMessageBUF[4];
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
@@ -135,12 +135,12 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
     BYTE ucCheckSum = 0;
     BYTE ucIndex = 0;
 
-    if(g_pucDdcciData[0] == 0x55)
+    if(isr_g_pucDdcciData[0] == 0x55)
     {
-        d_g_bDebugMessageEven = _TRUE;
+        d_isr_g_bDebugMessageEven = _TRUE;
     }
 
-    if(d_g_bDebugMessageEven == _FALSE)
+    if(d_isr_g_bDebugMessageEven == _FALSE)
     {
         return;
     }
@@ -153,11 +153,11 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
         return;
     }
 
-    if((g_usFilterPro & 0xF800) == 0xC800)
+    if((isr_g_usFilterPro & 0xF800) == 0xC800)
     {
         if((pucArray1[0] >= '0') && (pucArray1[0] <= '9'))
         {
-            if((g_usFilterPro & (1 << (pucArray1[0] - '0'))) == 0)
+            if((isr_g_usFilterPro & (1 << (pucArray1[0] - '0'))) == 0)
             {
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40; // Reset IIC Data Buffer
@@ -168,7 +168,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
         }
         else
         {
-            if((g_usFilterPro & (_BIT2 << 8)) == 0)
+            if((isr_g_usFilterPro & (_BIT2 << 8)) == 0)
             {
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40; // Reset IIC Data Buffer
@@ -180,7 +180,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
     }
 
     g_bDebugMessageStart = 0;
-    d_g_bFwHalt = 1;
+    d_isr_g_bFwHalt = 1;
 
     MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
     MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40; // Reset IIC Data Buffer
@@ -193,17 +193,17 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 
     do
     {
-        if(d_g_bRunCommand == _TRUE)
+        if(d_isr_g_bRunCommand == _TRUE)
         {
             MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
             ucCnt = 0;
 
-            switch(g_pucDdcciData[0])
+            switch(isr_g_pucDdcciData[0])
             {
                 case 0x20: // Handshake Setting
                 case 0x55:
 
-                    if(g_pucDdcciData[1] == 0x5A)
+                    if(isr_g_pucDdcciData[1] == 0x5A)
                     {
                         do
                         {
@@ -212,7 +212,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                         }
                         while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != 0x01) && ((ucCnt++) < _DATA_OUT_COUNT));
                     }
-                    else if(g_pucDdcciData[1] == 0xA5)
+                    else if(isr_g_pucDdcciData[1] == 0xA5)
                     {
                         do
                         {
@@ -235,7 +235,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 
                 case 0x25: // Debug Message Start
 
-                    if(g_pucDdcciData[1] == 0)
+                    if(isr_g_pucDdcciData[1] == 0)
                     {
                         do
                         {
@@ -279,8 +279,8 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                         do
                         {
                             MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40;
-                            ucIndex = (g_pucDdcciData[1] - 1) * 15;
-                            ucCheckSum = g_pucDdcciData[1] + 0x0F;
+                            ucIndex = (isr_g_pucDdcciData[1] - 1) * 15;
+                            ucCheckSum = isr_g_pucDdcciData[1] + 0x0F;
                             g_pucDebugMessageBUF[0] = 1;
 
                             do
@@ -290,7 +290,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                                 ucIndex++;
                                 g_pucDebugMessageBUF[0] = g_pucDebugMessageBUF[0] + 1;
                             }
-                            while((ucIndex < (g_pucDdcciData[1] * 15)) && (pucArray1[ucIndex] != 0));
+                            while((ucIndex < (isr_g_pucDdcciData[1] * 15)) && (pucArray1[ucIndex] != 0));
 
                             MCU_FF26_IIC_DATA_OUT = ucCheckSum;
                         }
@@ -305,7 +305,7 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                     if(g_bDebugMessageStart == _TRUE)
                     {
                         g_bDebugMessageStart = 0; // Debug Message End
-                        d_g_bFwHalt = 0;
+                        d_isr_g_bFwHalt = 0;
                         do
                         {
                             MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x40;
@@ -325,8 +325,8 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                     }
                     while(((MCU_FF35_DDCCI_REMAIN_DATA & 0x1F) != 0x01) && ((ucCnt++) < _DATA_OUT_COUNT));
 
-                    d_g_bDebugMessageEven = 0;
-                    d_g_bFwHalt = 0;
+                    d_isr_g_bDebugMessageEven = 0;
+                    d_isr_g_bFwHalt = 0;
                     MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xBF;
                     break;
 
@@ -334,8 +334,8 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
                     break;
             }
 
-            d_g_bRunCommand = 0;
-            g_ucDdcciCommandNumber = 0;
+            d_isr_g_bRunCommand = 0;
+            isr_g_ucDdcciCommandNumber = 0;
 
             MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xDF;
 
@@ -364,10 +364,10 @@ void ScalerDebugMessage(BYTE *pucArray1, DWORD ulArray2)
 #endif
         }
     }
-    while((d_g_bFwHalt != 0) && (AwtoMsgWait() != 0)); /* awto: host-silence timeout of the debug wait (#56) */
+    while((d_isr_g_bFwHalt != 0) && (AwtoMsgWait() != 0)); /* awto: host-silence timeout of the debug wait (#56) */
 
     g_bDebugMessageStart = 0;
-    d_g_bFwHalt = 0;
+    d_isr_g_bFwHalt = 0;
 }
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
@@ -382,7 +382,7 @@ void ScalerDebugIntProc_EXINT1(void)
 
     MCU_FF29_IIC_STATUS2 &= 0xCF;
 
-    if(d_g_bRunCommand == _FALSE)
+    if(d_isr_g_bRunCommand == _FALSE)
     {
         ucTempBuf = MCU_FF27_IIC_STATUS;
 
@@ -391,8 +391,8 @@ void ScalerDebugIntProc_EXINT1(void)
             // Clear SUB_I Flag
             MCU_FF27_IIC_STATUS = 0xBD;
 
-            g_ucDdcciCommandNumber = 0;
-            g_pucDdcciData[0] = MCU_FF24_IIC_SUB_IN;
+            isr_g_ucDdcciCommandNumber = 0;
+            isr_g_pucDdcciData[0] = MCU_FF24_IIC_SUB_IN;
 
             // Host write Enable
             MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xDF;
@@ -403,21 +403,21 @@ void ScalerDebugIntProc_EXINT1(void)
             while((MCU_FF29_IIC_STATUS2 & _BIT1) == 0)
             {
                 // Avoid buffer overflow
-                if((g_ucDdcciCommandNumber + 1) < sizeof(g_pucDdcciData))
+                if((isr_g_ucDdcciCommandNumber + 1) < sizeof(isr_g_pucDdcciData))
                 {
-                    g_ucDdcciCommandNumber++;
+                    isr_g_ucDdcciCommandNumber++;
                 }
                 else
                 {
                     // Reset __data buffer
                     MCU_FF2A_IIC_IRQ_CONTROL2 |= _BIT6;
 
-                    g_ucDdcciCommandNumber = 0;
+                    isr_g_ucDdcciCommandNumber = 0;
 
                     break;
                 }
 
-                g_pucDdcciData[g_ucDdcciCommandNumber] = MCU_FF25_IIC_DATA_IN;
+                isr_g_pucDdcciData[isr_g_ucDdcciCommandNumber] = MCU_FF25_IIC_DATA_IN;
             }
 
             // Clear D_IN_I Flag
@@ -428,7 +428,7 @@ void ScalerDebugIntProc_EXINT1(void)
         {
             MCU_FF27_IIC_STATUS = 0xAF;
 
-            if(g_ucDdcciCommandNumber > 0)
+            if(isr_g_ucDdcciCommandNumber > 0)
             {
 // Hold Scl Pin
 #if(_AWTO_DBG_FOLLOW == _ON)
@@ -453,32 +453,32 @@ void ScalerDebugIntProc_EXINT1(void)
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
-                if(g_pucDdcciData[0] == 0x55)
+                if(isr_g_pucDdcciData[0] == 0x55)
                 {
-                    if(g_pucDdcciData[1] == 0x00)
+                    if(isr_g_pucDdcciData[1] == 0x00)
                     {
-                        g_usFilterPro = 0;
+                        isr_g_usFilterPro = 0;
                     }
                     else
                     {
-                        g_usFilterPro = ((g_pucDdcciData[1] << 8) + g_pucDdcciData[2]);
+                        isr_g_usFilterPro = ((isr_g_pucDdcciData[1] << 8) + isr_g_pucDdcciData[2]);
                     }
                 }
 
-                if((g_pucDdcciData[0] == 0x2F) && (d_g_bDebugMessageEven == _TRUE))
+                if((isr_g_pucDdcciData[0] == 0x2F) && (d_isr_g_bDebugMessageEven == _TRUE))
                 {
-                    d_g_bDebugMessageEven = _FALSE;
-                    d_g_bFwHalt = _FALSE;
+                    d_isr_g_bDebugMessageEven = _FALSE;
+                    d_isr_g_bFwHalt = _FALSE;
                 }
-                else if((g_pucDdcciData[0] == 0x55) && (d_g_bDebugMessageEven != _TRUE))
+                else if((isr_g_pucDdcciData[0] == 0x55) && (d_isr_g_bDebugMessageEven != _TRUE))
                 {
-                    d_g_bDebugMessageEven = _TRUE;
+                    d_isr_g_bDebugMessageEven = _TRUE;
                 }
 #endif
 
 #include "awto_dbgisr.inc"
                 MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
-                d_g_bRunCommand = _TRUE;
+                d_isr_g_bRunCommand = _TRUE;
             }
         }
     }
@@ -504,14 +504,14 @@ void ScalerDebug(void)
     {
         do
         {
-            if(d_g_bRunCommand == _TRUE)
+            if(d_isr_g_bRunCommand == _TRUE)
             {
                 ucCnt = 0;
 
-                switch(g_pucDdcciData[0])
+                switch(isr_g_pucDdcciData[0])
                 {
                     case 0x80:
-                        ucHalt = g_pucDdcciData[1];
+                        ucHalt = isr_g_pucDdcciData[1];
                         break;
 
                     case 0x41:
@@ -519,7 +519,7 @@ void ScalerDebug(void)
 
                         // CScalerRead
                         MCU_FFF3_SCA_INF_CONTROL |= 0x20;
-                        MCU_FFF4_SCA_INF_ADDR = g_pucDdcciData[1];
+                        MCU_FFF4_SCA_INF_ADDR = isr_g_pucDdcciData[1];
                         ucResult = MCU_FFF5_SCA_INF_DATA;
 
                         do
@@ -535,7 +535,7 @@ void ScalerDebug(void)
                         MCU_FF2A_IIC_IRQ_CONTROL2 |= 0x20;
 
 #if(_DEBUG_IIC_BY_USERINTERFACE == _ON)
-                        if(UserInterfaceDebugIIC(_READ, g_pucDdcciData, &ucResult) == _FALSE)
+                        if(UserInterfaceDebugIIC(_READ, isr_g_pucDdcciData, &ucResult) == _FALSE)
 #endif
                         {
 #if(_PCB_SYS_EEPROM_IIC == _SW_IIC_PIN_GPIO)
@@ -546,17 +546,17 @@ void ScalerDebug(void)
                         #endif
 
 #if(_EEPROM_TYPE == _EEPROM_24LC16)
-                            ScalerMcuIICRead(g_pucDdcciData[2], 1, g_pucDdcciData[1], 1, &ucResult);
+                            ScalerMcuIICRead(isr_g_pucDdcciData[2], 1, isr_g_pucDdcciData[1], 1, &ucResult);
 #elif(_EEPROM_TYPE == _EEPROM_24WC64)
-                            ScalerMcuIICRead(g_pucDdcciData[2], 2, ((g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)g_pucDdcciData[1]) & 0x00FF), 1, &ucResult);
+                            ScalerMcuIICRead(isr_g_pucDdcciData[2], 2, ((isr_g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)isr_g_pucDdcciData[1]) & 0x00FF), 1, &ucResult);
 #endif
 
 #elif(_PCB_SYS_EEPROM_IIC != _NO_IIC_PIN) // Else of #if(_PCB_SYS_EEPROM_IIC == _SW_IIC_PIN_GPIO)
 
 #if(_EEPROM_TYPE == _EEPROM_24LC16)
-                            ScalerMcuHwIICRead(g_pucDdcciData[2], 1, g_pucDdcciData[1], 1, &ucResult, _PCB_SYS_EEPROM_IIC);
+                            ScalerMcuHwIICRead(isr_g_pucDdcciData[2], 1, isr_g_pucDdcciData[1], 1, &ucResult, _PCB_SYS_EEPROM_IIC);
 #elif(_EEPROM_TYPE == _EEPROM_24WC64)
-                            ScalerMcuHwIICRead(g_pucDdcciData[2], 2, ((g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)g_pucDdcciData[1]) & 0x00FF), 1, &ucResult, _PCB_SYS_EEPROM_IIC);
+                            ScalerMcuHwIICRead(isr_g_pucDdcciData[2], 2, ((isr_g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)isr_g_pucDdcciData[1]) & 0x00FF), 1, &ucResult, _PCB_SYS_EEPROM_IIC);
 #endif
 
 #endif  // End of #if(_PCB_SYS_EEPROM_IIC == _SW_IIC_PIN_GPIO)
@@ -577,9 +577,9 @@ void ScalerDebug(void)
 #if((_PCB_SYS_EEPROM_IIC != _NO_IIC_PIN) && (_PCB_SYS_EEPROM_IIC != _SW_IIC_PIN_GPIO))
 
 #if(_EEPROM_TYPE == _EEPROM_24LC16)
-                        ScalerMcuHwIICRead(g_pucDdcciData[2], 1, g_pucDdcciData[1], 1, &ucResult, _NO_IIC_PIN);
+                        ScalerMcuHwIICRead(isr_g_pucDdcciData[2], 1, isr_g_pucDdcciData[1], 1, &ucResult, _NO_IIC_PIN);
 #elif(_EEPROM_TYPE == _EEPROM_24WC64)
-                        ScalerMcuHwIICRead(g_pucDdcciData[2], 2, ((g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)g_pucDdcciData[1]) & 0x00FF), 1, &ucResult, _NO_IIC_PIN);
+                        ScalerMcuHwIICRead(isr_g_pucDdcciData[2], 2, ((isr_g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)isr_g_pucDdcciData[1]) & 0x00FF), 1, &ucResult, _NO_IIC_PIN);
 #endif
 
 #endif // End of #if(_PCB_SYS_EEPROM_IIC != _NO_IIC_PIN) && (_PCB_SYS_EEPROM_IIC != _SW_IIC_PIN_GPIO)
@@ -607,19 +607,19 @@ void ScalerDebug(void)
 
                         MCU_FF2A_IIC_IRQ_CONTROL2 &= 0xDF;
                         g_bDebugMessageStart = 0;
-                        d_g_bFwHalt = _FALSE;
-                        d_g_bDebugMessageEven = 0;
+                        d_isr_g_bFwHalt = _FALSE;
+                        d_isr_g_bDebugMessageEven = 0;
                         break;
 #endif // End of #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 
                     case 0x3A:
                         // Read flash(if the address is max than 0xFF00, read mcu register)
-                        MCU_FF26_IIC_DATA_OUT = ScalerGetByte((g_pucDdcciData[2] << 8) + g_pucDdcciData[1]);
+                        MCU_FF26_IIC_DATA_OUT = ScalerGetByte((isr_g_pucDdcciData[2] << 8) + isr_g_pucDdcciData[1]);
                         break;
 
                     case 0x3B:
                         // Write flash(if the address is max than 0xFF00, write mcu register)
-                        ScalerSetByte((g_pucDdcciData[2] << 8) + g_pucDdcciData[1], g_pucDdcciData[3]);
+                        ScalerSetByte((isr_g_pucDdcciData[2] << 8) + isr_g_pucDdcciData[1], isr_g_pucDdcciData[3]);
                         break;
 
 #if(_CODE_DIGITAL_SIGNATURE_SUPPORT != _SIGNATURE_TYPE_OFF)
@@ -640,40 +640,40 @@ void ScalerDebug(void)
                         break;
 
                     default:
-                        switch(g_pucDdcciData[0] & 0x0F) // Write command
+                        switch(isr_g_pucDdcciData[0] & 0x0F) // Write command
                         {
                             case 0x00:
 
-                                // ScalerSetByte(g_pucDdcciData[2], g_pucDdcciData[1]);
+                                // ScalerSetByte(isr_g_pucDdcciData[2], isr_g_pucDdcciData[1]);
                                 // MCU_FFF3_SCA_INF_CONTROL |= 0x20;
-                                // MCU_FFF4_SCA_INF_ADDR = g_pucDdcciData[2];
-                                // MCU_FFF5_SCA_INF_DATA = g_pucDdcciData[1];
+                                // MCU_FFF4_SCA_INF_ADDR = isr_g_pucDdcciData[2];
+                                // MCU_FFF5_SCA_INF_DATA = isr_g_pucDdcciData[1];
 
                                 MCU_FFF3_SCA_INF_CONTROL |= 0x20;
                                 MCU_FFF4_SCA_INF_ADDR = 0x9F;
                                 usAddress = MCU_FFF5_SCA_INF_DATA;
-                                usAddress = (usAddress << 8) + g_pucDdcciData[2];
-                                ScalerSetByte(usAddress, g_pucDdcciData[1]);
+                                usAddress = (usAddress << 8) + isr_g_pucDdcciData[2];
+                                ScalerSetByte(usAddress, isr_g_pucDdcciData[1]);
                                 break;
 
                             case 0x01:
                             case 0x02: // For RTD & I2c Device
-                                g_pucDdcciData[2] = g_pucDdcciData[1];
+                                isr_g_pucDdcciData[2] = isr_g_pucDdcciData[1];
                                 break;
 
                             case 0x06:
                             case 0x03: // For I2c Device
-                                g_pucDdcciData[3] = g_pucDdcciData[1];
+                                isr_g_pucDdcciData[3] = isr_g_pucDdcciData[1];
                                 break;
 
                             case 0x05:
-                                g_pucDdcciData[4] = g_pucDdcciData[1];
+                                isr_g_pucDdcciData[4] = isr_g_pucDdcciData[1];
                                 break;
 
                             case 0x04: // For I2c Device
 
 #if(_DEBUG_IIC_BY_USERINTERFACE == _ON)
-                                if(UserInterfaceDebugIIC(_WRITE, g_pucDdcciData, &ucResult) == _FALSE)
+                                if(UserInterfaceDebugIIC(_WRITE, isr_g_pucDdcciData, &ucResult) == _FALSE)
 #endif
                                 {
                                     // Disable EEPROM Write Protect
@@ -687,17 +687,17 @@ void ScalerDebug(void)
                                 #endif
 
 #if(_EEPROM_TYPE == _EEPROM_24LC16)
-                                    ScalerMcuIICWrite(g_pucDdcciData[2], 1, g_pucDdcciData[1], 1, g_pucDdcciData + 3);
+                                    ScalerMcuIICWrite(isr_g_pucDdcciData[2], 1, isr_g_pucDdcciData[1], 1, isr_g_pucDdcciData + 3);
 #elif(_EEPROM_TYPE == _EEPROM_24WC64)
-                                    ScalerMcuIICWrite(g_pucDdcciData[2], 2, ((g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)g_pucDdcciData[1]) & 0x00FF), 1, g_pucDdcciData + 3);
+                                    ScalerMcuIICWrite(isr_g_pucDdcciData[2], 2, ((isr_g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)isr_g_pucDdcciData[1]) & 0x00FF), 1, isr_g_pucDdcciData + 3);
 #endif
 
 #elif(_PCB_SYS_EEPROM_IIC != _NO_IIC_PIN)  // Else of #if(_PCB_SYS_EEPROM_IIC == _SW_IIC_PIN_GPIO)
 
 #if(_EEPROM_TYPE == _EEPROM_24LC16)
-                                    ScalerMcuHwIICWrite(g_pucDdcciData[2], 1, g_pucDdcciData[1], 1, g_pucDdcciData + 3, _PCB_SYS_EEPROM_IIC);
+                                    ScalerMcuHwIICWrite(isr_g_pucDdcciData[2], 1, isr_g_pucDdcciData[1], 1, isr_g_pucDdcciData + 3, _PCB_SYS_EEPROM_IIC);
 #elif(_EEPROM_TYPE == _EEPROM_24WC64)
-                                    ScalerMcuHwIICWrite(g_pucDdcciData[2], 2, ((g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)g_pucDdcciData[1]) & 0x00FF), 1, g_pucDdcciData + 3, _PCB_SYS_EEPROM_IIC);
+                                    ScalerMcuHwIICWrite(isr_g_pucDdcciData[2], 2, ((isr_g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)isr_g_pucDdcciData[1]) & 0x00FF), 1, isr_g_pucDdcciData + 3, _PCB_SYS_EEPROM_IIC);
 #endif
 
 #endif  // End of #if(_PCB_SYS_EEPROM_IIC == _SW_IIC_PIN_GPIO)
@@ -716,9 +716,9 @@ void ScalerDebug(void)
 #if((_PCB_SYS_EEPROM_IIC != _NO_IIC_PIN) && (_PCB_SYS_EEPROM_IIC != _SW_IIC_PIN_GPIO))
 
 #if(_EEPROM_TYPE == _EEPROM_24LC16)
-                                ScalerMcuHwIICWrite(g_pucDdcciData[2], 1, g_pucDdcciData[1], 1, g_pucDdcciData + 3, _NO_IIC_PIN);
+                                ScalerMcuHwIICWrite(isr_g_pucDdcciData[2], 1, isr_g_pucDdcciData[1], 1, isr_g_pucDdcciData + 3, _NO_IIC_PIN);
 #elif(_EEPROM_TYPE == _EEPROM_24WC64)
-                                ScalerMcuHwIICWrite(g_pucDdcciData[2], 2, ((g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)g_pucDdcciData[1]) & 0x00FF), 1, g_pucDdcciData + 3, _NO_IIC_PIN);
+                                ScalerMcuHwIICWrite(isr_g_pucDdcciData[2], 2, ((isr_g_pucDdcciData[4] << 8) & 0xFF00) + (((WORD)isr_g_pucDdcciData[1]) & 0x00FF), 1, isr_g_pucDdcciData + 3, _NO_IIC_PIN);
 #endif
 
 #endif // End of #if(_PCB_SYS_EEPROM_IIC != _NO_IIC_PIN) && (_PCB_SYS_EEPROM_IIC != _SW_IIC_PIN_GPIO)
@@ -734,8 +734,8 @@ void ScalerDebug(void)
                         break;
                 }
 
-                d_g_bRunCommand = 0;
-                g_ucDdcciCommandNumber = 0;
+                d_isr_g_bRunCommand = 0;
+                isr_g_ucDdcciCommandNumber = 0;
 
                 // Host write Enable
                 MCU_FF2A_IIC_IRQ_CONTROL2 &= (~_BIT5);
@@ -882,9 +882,9 @@ void ScalerDebugGetRegisters(void)
     BYTE pucDdcciOutData[_SCALER_DEBUG_BUF_LEN];
 
     // read date
-    ucLen = g_pucDdcciData[3];
-    bAutoIncrease = (bit)g_pucDdcciData[4];
-    usAddress = ((WORD)g_pucDdcciData[1] << 8) + g_pucDdcciData[2];
+    ucLen = isr_g_pucDdcciData[3];
+    bAutoIncrease = (bit)isr_g_pucDdcciData[4];
+    usAddress = ((WORD)isr_g_pucDdcciData[1] << 8) + isr_g_pucDdcciData[2];
 
     memset(pucDdcciOutData, 0, sizeof(pucDdcciOutData));
 
@@ -900,11 +900,11 @@ void ScalerDebugGetRegisters(void)
     ucChecksum = 0;
     for(ucIndex = 1; ucIndex < 5; ucIndex++)
     {
-        ucChecksum += g_pucDdcciData[ucIndex];
+        ucChecksum += isr_g_pucDdcciData[ucIndex];
     }
 
     // Check sum Error
-    if(ucChecksum != g_pucDdcciData[5])
+    if(ucChecksum != isr_g_pucDdcciData[5])
     {
         pucDdcciOutData[0] = _SCALER_READ_REGISTERS_CMD;
         pucDdcciOutData[1] = _SCALER_DEBUG_CHECKSUM_ERROR;
@@ -943,9 +943,9 @@ void ScalerDebugSetRegisters(void)
     BYTE pucDdcciOutData[_SCALER_DEBUG_BUF_LEN];
 
     // Write date
-    ucLen = g_pucDdcciData[3];
-    bAutoIncrease = (bit)g_pucDdcciData[4];
-    usAddress = ((WORD)g_pucDdcciData[1] << 8) + g_pucDdcciData[2];
+    ucLen = isr_g_pucDdcciData[3];
+    bAutoIncrease = (bit)isr_g_pucDdcciData[4];
+    usAddress = ((WORD)isr_g_pucDdcciData[1] << 8) + isr_g_pucDdcciData[2];
 
     memset(pucDdcciOutData, 0, sizeof(pucDdcciOutData));
 
@@ -961,11 +961,11 @@ void ScalerDebugSetRegisters(void)
     ucChecksum = 0;
     for(ucIndex = 1; ucIndex < (ucLen + 5); ucIndex++)
     {
-        ucChecksum += g_pucDdcciData[ucIndex];
+        ucChecksum += isr_g_pucDdcciData[ucIndex];
     }
 
     // Check sum Error
-    if(ucChecksum != g_pucDdcciData[5 + ucLen])
+    if(ucChecksum != isr_g_pucDdcciData[5 + ucLen])
     {
         pucDdcciOutData[0] = _SCALER_WRITE_REGISTERS_CMD;
         pucDdcciOutData[1] = _SCALER_DEBUG_CHECKSUM_ERROR;
@@ -976,7 +976,7 @@ void ScalerDebugSetRegisters(void)
     // Checksum OK do write option
     for(ucIndex = 0; ucIndex < ucLen; ucIndex++)
     {
-        ScalerSetByte(usAddress, g_pucDdcciData[5 + ucIndex]);
+        ScalerSetByte(usAddress, isr_g_pucDdcciData[5 + ucIndex]);
         if(bAutoIncrease == _TRUE)
         {
             usAddress++;

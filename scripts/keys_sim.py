@@ -85,7 +85,7 @@ class Keys:
         self.s, self.m = s, s.bus.m
         self.base = self.m.addr("g_stAwtoKey")
         self.menu_on = self.m.addr("g_ucAwtoMenuOn")
-        self.mode_a = s.bus.addr("g_stModeInfo")
+        self.mode_a = s.bus.addr("isr_g_stModeInfo")
 
     def put(self, a0, a1, p3):
         self.m.wr(0xFF09, bytes([a0]))

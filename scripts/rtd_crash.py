@@ -2,7 +2,7 @@
 """Watchdog crash record v2 (awto-ddc#131, #138, docs/watchdog.md): read, decode, clear over the firmware debug slave 0x35.
 
 usage: rtd_crash.py BUS --map MAP --serial SERIAL [--clear] [--snap]
-- Reads the 32 B `_g_stAwtoWdt` (address from the map; 0xF6B0 in #131 images) with the 0x3C block read, prints one decoded line:
+- Reads the 32 B `_isr_g_stAwtoWdt` (address from the map; 0xF6B0 in #131 images) with the 0x3C block read, prints one decoded line:
   cause, bites / other warm resets, PC as bank:addr + symbol+offset (map), registers, heartbeat, uptime, pass age; live: max
   pass, max gap between watchdog pokes, the unit-2 probe result (test cmd 0x49 / 0x4F).
 - --clear: writes 0 to the magic byte (debug write 0x01 hi, 0x03 value, 0x3B lo); the record is invalid until the next bite.
@@ -142,9 +142,9 @@ def clear(io, addr: int) -> bool:
 
 
 def map_addr(map_text: str) -> int:
-    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoWdt\b", map_text, re.M)
+    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stAwtoWdt\b", map_text, re.M)
     if not m:
-        raise SystemExit("_g_stAwtoWdt not in this map: image without the #131 watchdog")
+        raise SystemExit("_isr_g_stAwtoWdt not in this map: image without the #131 watchdog")
     return int(m.group(1), 16) & 0xFFFF
 
 

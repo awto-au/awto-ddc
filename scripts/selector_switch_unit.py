@@ -8,7 +8,7 @@ usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
 - Every key waits for its effect (OSD state / item byte), never a fixed settle. Per case: port + mode after, the new ring lines.
 - A target with no cable must be refused with its ring line (#84), then MENU cancels. No video on D1 (host DP-1 off): no signal
   on D1 counts as switched; the way back is taken before the SDK's power-saving card (debug slave silent in power saving).
-- A target disabled by its setting (#81 d1..d3_enable, g_ucAwtoPortOff): the take must enable it (ring line "<port> enabled by
+- A target disabled by its setting (#81 d1..d3_enable, isr_g_ucAwtoPortOff): the take must enable it (ring line "<port> enabled by
   the input selector", mask bit clear) and then switch. The run ends with each port's enable as it was at the start.
 - The debug slave follows the port with a signal: D1 (DP) with host video answers on DP-1's bus (15), not HDMI-2's (11).
   follow() moves the reads to whichever of BUSES has the diag magic (after a take, at each case start, at the end).
@@ -48,7 +48,7 @@ class Unit(K.Unit):
         super().__init__(mp)
         import settings_cli as C
         self.pri, self.sidx = C.xaddr(self.mt, "g_pucSourceSearchPriority"), C.xaddr(self.mt, "g_ucSearchIndex")
-        self.off_a = C.xaddr(self.mt, "g_ucAwtoPortOff") if "_g_ucAwtoPortOff" in self.mt else None   # #81 images only
+        self.off_a = C.xaddr(self.mt, "isr_g_ucAwtoPortOff") if "_isr_g_ucAwtoPortOff" in self.mt else None   # #81 images only
 
     def follow(self):
         """reads on the bus whose 0x35 answers (the debug slave moves with the port that has a signal); True = moved"""

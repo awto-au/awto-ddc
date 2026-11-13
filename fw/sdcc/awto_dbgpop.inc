@@ -76,7 +76,7 @@ static bit AwtoConLost(void)
     }
     s_ucConOpen = 0;
     AwtoOsdRoll(0);                                                                            // the new map must not be shifted by our roll-up
-    g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
+    isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     AwtoGpioConSet(0);
     AwtoKeyConSet(0);
     return 1;
@@ -108,9 +108,9 @@ static void AwtoPanel(BYTE ucP)
 
 void AwtoOsdOfsInit(void)
 {
-    g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
-    g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
-    g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
+    isr_g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
+    isr_g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
+    isr_g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
 }
 
 
@@ -316,7 +316,7 @@ void AwtoOsdDebugLines(void)
         return;
     }
     if(AwtoConLost() != 0) return;
-    g_stAwtoDiag.ucDbgPopup = 0;
+    isr_g_stAwtoDiag.ucDbgPopup = 0;
     if((s_ucConOpen != AWTO_CON_GPIO) || ((s_ucDbgAll == 0) && (s_ucConFirst + AWTO_VIEW_ROWS <= tAwtoPanelRow[2])))
     {
         return;                        // main page has no panel; below the view: the next refresh after a scroll
@@ -372,7 +372,7 @@ void AwtoOsdDebugLines(void)
     AwtoDbgShow(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
 
     AwtoPutStr("LOOP ");
-    AwtoPutNum(g_stAwtoDiag.usLoopRate, 1);
+    AwtoPutNum(isr_g_stAwtoDiag.usLoopRate, 1);
     AwtoPutStr("/s");
     if(g_stAwtoFreq.ucValid != 0)
     {
@@ -427,15 +427,15 @@ static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-c
     AwtoPutStr("  UP ");
     AwtoPutHours(ulUp / 36000);
     AwtoPutStr("  HOST ");
-    if(g_stAwtoHt.ucSyncs == 0)
+    if(isr_g_stAwtoHt.ucSyncs == 0)
     {
         AwtoPutStr("--:--:--");
     }
     else
     {
-        s_ulAwtoT = (g_stAwtoHt.ulEpoch + (long)g_stAwtoHt.cOfs * 900 + (ulUp - g_stAwtoHt.ulFwMs + g_stAwtoHt.usFrac) / 1000) % 86400;
+        s_ulAwtoT = (isr_g_stAwtoHt.ulEpoch + (long)isr_g_stAwtoHt.cOfs * 900 + (ulUp - isr_g_stAwtoHt.ulFwMs + isr_g_stAwtoHt.usFrac) / 1000) % 86400;
         AwtoPutClock();
-        if((ulUp - g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)
+        if((ulUp - isr_g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)
         {
             AwtoPutStr(" STALE");
         }
@@ -530,13 +530,13 @@ void AwtoDiagConsole(BYTE ucOn)
     {
         return;
     }
-    g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;       // before the disable: a hold blocks it
+    isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;       // before the disable: a hold blocks it
     if(ucOn != 0)
     {
         menu_close();
         OsdDispDisableOsd();
         s_ucConOpen = ucOn;
-        g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
+        isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
         AwtoGpioConSet(ucOn);
         AwtoKeyConSet(ucOn == AWTO_CON_GPIO);   // key test / debug / watchdog panels: GPIO page only (main page = terminal)
         AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
@@ -604,7 +604,7 @@ void AwtoProbeSet(BYTE ucLines)
         if(s_ucAwtoProbeOpen != 0)
         {
             s_ucAwtoProbeOpen = 0;
-            g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
+            isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
             osd_tc_close();
         }
         return;
@@ -617,7 +617,7 @@ void AwtoProbeSet(BYTE ucLines)
     s_ucAwtoScroll = 0;
     s_ucAwtoConCols = ucCols;
     s_ucAwtoConRows = ucLines + 1;
-    g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
+    isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
     AwtoTextOpen(ucCols, ucLines, 0, 1);
     for(ucR = 0; ucR < ucLines; ucR++)
     {
@@ -640,14 +640,14 @@ void AwtoProbeScroll(BYTE ucReset)
 #else
 void AwtoOsdOfsInit(void)
 {
-    g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
-    g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
-    g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
+    isr_g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
+    isr_g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
+    isr_g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
 }
 
 void AwtoOsdDebugLines(void)
 {
-    g_stAwtoDiag.ucDbgPopup = 0;
+    isr_g_stAwtoDiag.ucDbgPopup = 0;
 }
 
 void AwtoDiagConsole(BYTE ucOn)

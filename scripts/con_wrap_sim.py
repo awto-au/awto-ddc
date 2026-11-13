@@ -64,7 +64,7 @@ class Sim:
         self.m = self.bus.m
         self.mccs = D.Mccs(self.bus, self.eng)
         self.rows = SL.load_rows(SL.tsv_for(mapp))
-        self.a_sync, self.a_pwr = self.m.addr("g_stAwtoSync"), self.m.addr("g_stPowerInfo")
+        self.a_sync, self.a_pwr = self.m.addr("g_stAwtoSync"), self.m.addr("isr_g_stPowerInfo")
         self.fails = 0
         self.base = None
 
@@ -86,7 +86,7 @@ class Sim:
                 for r in rows]
 
     def cmd(self, c: int):
-        self.m.wr(self.m.addr("g_stAwtoDiag") + T.TESTCMD_OFF, bytes([c]))
+        self.m.wr(self.m.addr("isr_g_stAwtoDiag") + T.TESTCMD_OFF, bytes([c]))
 
     def power(self) -> int:
         return self.m.rd(self.a_pwr)[0] >> 4

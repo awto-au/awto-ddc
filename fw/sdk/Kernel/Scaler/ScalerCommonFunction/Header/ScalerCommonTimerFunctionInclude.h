@@ -51,19 +51,19 @@
 // Definitions of Timer counter setting
 //--------------------------------------------------
 #define LOAD_TIMER_COUNTER(pusCounter)               {\
-                                                         d_g_bNotifyTimer2Int = _FALSE;\
-                                                         *(pusCounter) = d_g_usTimerCounter;\
-                                                         if(d_g_bNotifyTimer2Int == _TRUE)\
+                                                         d_isr_g_bNotifyTimer2Int = _FALSE;\
+                                                         *(pusCounter) = d_isr_g_usTimerCounter;\
+                                                         if(d_isr_g_bNotifyTimer2Int == _TRUE)\
                                                          {\
-                                                             *(pusCounter) = d_g_usTimerCounter;\
+                                                             *(pusCounter) = d_isr_g_usTimerCounter;\
                                                          }\
                                                      }
 #define STORE_TIMER_COUNTER(x)                       {\
-                                                         d_g_bNotifyTimer2Int = _FALSE;\
-                                                         d_g_usTimerCounter = (x);\
-                                                         if(d_g_bNotifyTimer2Int == _TRUE)\
+                                                         d_isr_g_bNotifyTimer2Int = _FALSE;\
+                                                         d_isr_g_usTimerCounter = (x);\
+                                                         if(d_isr_g_bNotifyTimer2Int == _TRUE)\
                                                          {\
-                                                             d_g_usTimerCounter = (x);\
+                                                             d_isr_g_usTimerCounter = (x);\
                                                          }\
                                                      }
 

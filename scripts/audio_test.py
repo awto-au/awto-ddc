@@ -235,7 +235,7 @@ class Unit:
         import rtd_i2c_bridge as B
         self.X, self.B, self.mp = X, B, mp
         self.sym = {n: xsym(mp, n) for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_stAudioD2DigtalInfo",
-                                              "g_stPowerInfo", "g_stModeInfo")}
+                                              "isr_g_stPowerInfo", "isr_g_stModeInfo")}
         for n in ("g_ucAwtoAudioTestN",):
             try:
                 self.sym[n] = xsym(mp, n)
@@ -280,7 +280,7 @@ class Unit:
             g = (got[0x08A5] << 8 | got[0x08A6]) & 0x3FFF
             db = 20 * math.log10(g / 0x3FFF) if g else float("-inf")
             say(f"  DVC gain set 0x{g:04X} = {db:.1f} dB (0x3FFF = 0 dB, 0 = silent)")
-        for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_stAudioD2DigtalInfo", "g_stPowerInfo", "g_stModeInfo"):
+        for n in ("g_stAudioInfo", "g_stAudioDACInfo", "g_stAudioD2DigtalInfo", "isr_g_stPowerInfo", "isr_g_stModeInfo"):
             v = self.rd(rio, self.sym[n])
             got[n] = None if v is None else v[0]
         if got["g_stAudioInfo"] is not None:
@@ -290,9 +290,9 @@ class Unit:
         if got["g_stAudioD2DigtalInfo"] is not None:
             d = got["g_stAudioD2DigtalInfo"]
             say(f"  D2 HDMI audio: detected {d >> 4 & 1}, sampling {FREQ.get(d & 0xF, d & 0xF)}")
-        if got["g_stModeInfo"] is not None:
-            say(f"  power {got['g_stPowerInfo'] >> 4 if got['g_stPowerInfo'] is not None else '?'} (2 = NORMAL), "
-                f"mode {got['g_stModeInfo'] & 0x1F} (3 = ACTIVE)")
+        if got["isr_g_stModeInfo"] is not None:
+            say(f"  power {got['isr_g_stPowerInfo'] >> 4 if got['isr_g_stPowerInfo'] is not None else '?'} (2 = NORMAL), "
+                f"mode {got['isr_g_stModeInfo'] & 0x1F} (3 = ACTIVE)")
         if "g_ucAwtoAudioTestN" in self.sym:
             v = self.rd(rio, self.sym["g_ucAwtoAudioTestN"])
             say(f"  ear-test step held: {None if v is None else v[0]} (0 = none)")

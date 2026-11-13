@@ -51,13 +51,13 @@
 //****************************************************************************
 BYTE xdata pData_EXINT[6];
 __xdata _Bool g_bPsWakeupHpd;
-WORD g_usInputPixelClk;
+WORD isr_g_usInputPixelClk;
 WORD g_usTmdsOffLineMeasureClk;
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
-BYTE g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE;
+BYTE isr_g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE;
 __xdata _Bool g_bDpRx0NormalLTSetPhyFinish = _FALSE;
-bit d_g_bDpRx1NormalLTSetPhyFinish = _FALSE;
+bit d_isr_g_bDpRx1NormalLTSetPhyFinish = _FALSE;
 
 #if(_D0_DP_EXIST == _ON)
 bit g_bDpMSTRx0BackupLinkStatusFlg_INT;
@@ -66,7 +66,7 @@ bit g_bDpRx0HdcpCheckEnable;
 #endif
 
 #if(_D1_DP_EXIST == _ON)
-bit d_g_bDpMSTRx1BackupLinkStatusFlg_INT;
+bit d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT;
 BYTE g_pucDpRx1LinkStatusBackup_INT[3];
 __xdata _Bool g_bDpRx1HdcpCheckEnable;
 #endif
@@ -80,7 +80,7 @@ StructDpCableStatus g_stDpCableStatus;
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 
 __xdata _Bool g_bDpDCOffHPDHigh = 0;
-BYTE g_ucDigitalSwitch;
+BYTE isr_g_ucDigitalSwitch;
 BYTE g_ucHDMIHotPlug;
 
 #if(_DP_HDMI_COMPATIBLE_MODE == _ON)
@@ -127,14 +127,14 @@ BYTE g_ucDpIrqTime_10us;
 __xdata _Bool g_bDpIllegalIdlePatternCheck = _FALSE;
 
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
-volatile BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
+volatile BYTE __data d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
 BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelay5usI;
 
 #if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
 volatile bit g_bDpD0HpdIrqAssertT2Event = _FALSE;
 #endif
 #if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-volatile bit d_g_bDpD1HpdIrqAssertT2Event = _FALSE;
+volatile bit d_isr_g_bDpD1HpdIrqAssertT2Event = _FALSE;
 #endif
 #if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
 volatile bit g_bDpD2HpdIrqAssertT2Event = _FALSE;
@@ -223,7 +223,7 @@ StructFreeSyncIIInfo g_stFreeSyncIISetting;
 #endif
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
-WORD g_usDDCDebounceCnt;
+WORD isr_g_usDDCDebounceCnt;
 
 #if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
 StructTmdsZ0ToggleFlag g_stTmdsToggleZ0Flag;
@@ -2004,7 +2004,7 @@ void ScalerSyncDpMarginLinkCapabilitySwitchProc(void)
            ((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == _BIT7) && (ScalerDpRx1GetDpcdInfo(0x00, 0x22, 0x01) < _D1_DP_LINK_CLK_RATE)))
 #else
         if(((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == 0x00) && (ScalerDpRx1GetDpcdInfo(0x00, 0x00, 0x01) < _D1_DP_LINK_CLK_RATE)) ||
-           ((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == _BIT7) && (g_ucDpRx1DPCD02201hValue < _D1_DP_LINK_CLK_RATE)))
+           ((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == _BIT7) && (isr_g_ucDpRx1DPCD02201hValue < _D1_DP_LINK_CLK_RATE)))
 #endif
         {
             if(_D1_DP_LINK_CLK_RATE >= _DP_HIGH_SPEED2_540MHZ)
@@ -2021,7 +2021,7 @@ void ScalerSyncDpMarginLinkCapabilitySwitchProc(void)
             ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _D1_DP_LINK_CLK_RATE);
 #else
             // When Define Extended Rx Cap Should Set DPCD 0x02201
-            g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
+            isr_g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
 #endif
             DebugMessageRx1("Flag Clear_Hotplug Event_D1", _D1_DP_LINK_CLK_RATE);
         }
@@ -3556,7 +3556,7 @@ void ScalerSyncDdcDetectDebounce_EXINT1(void)
     WORD usDebounceCnt = 0;
 
     // Debounce 300us
-    for(usDebounceCnt = 0; usDebounceCnt < g_usDDCDebounceCnt; usDebounceCnt++) {};
+    for(usDebounceCnt = 0; usDebounceCnt < isr_g_usDDCDebounceCnt; usDebounceCnt++) {};
 }
 #pragma restore
 
@@ -3804,7 +3804,7 @@ BYTE ScalerSyncDdcDetect_EXINT1(void)
 void ScalerSyncTMDSScanInitial(BYTE ucInputPort)
 {
     // Set Power normal DDC Debounce Counter
-    g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_NORMAL;
+    isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_NORMAL;
 
     ScalerTMDSInitial(ucInputPort);
 

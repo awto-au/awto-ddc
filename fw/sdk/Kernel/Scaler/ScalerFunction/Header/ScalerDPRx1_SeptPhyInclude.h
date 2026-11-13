@@ -24,29 +24,29 @@
 //--------------------------------------------------
 // Macro of DP Lane Mapping
 //--------------------------------------------------
-#define GET_DP_RX1_PCB_LANE0_MAPPING()                  (g_stDpRx1LanesMapping.b2Lane0Mapping)
-#define SET_DP_RX1_PCB_LANE0_MAPPING(x)                 (g_stDpRx1LanesMapping.b2Lane0Mapping = (x))
+#define GET_DP_RX1_PCB_LANE0_MAPPING()                  (isr_g_stDpRx1LanesMapping.b2Lane0Mapping)
+#define SET_DP_RX1_PCB_LANE0_MAPPING(x)                 (isr_g_stDpRx1LanesMapping.b2Lane0Mapping = (x))
 
-#define GET_DP_RX1_PCB_LANE1_MAPPING()                  (g_stDpRx1LanesMapping.b2Lane1Mapping)
-#define SET_DP_RX1_PCB_LANE1_MAPPING(x)                 (g_stDpRx1LanesMapping.b2Lane1Mapping = (x))
+#define GET_DP_RX1_PCB_LANE1_MAPPING()                  (isr_g_stDpRx1LanesMapping.b2Lane1Mapping)
+#define SET_DP_RX1_PCB_LANE1_MAPPING(x)                 (isr_g_stDpRx1LanesMapping.b2Lane1Mapping = (x))
 
-#define GET_DP_RX1_PCB_LANE2_MAPPING()                  (g_stDpRx1LanesMapping.b2Lane2Mapping)
-#define SET_DP_RX1_PCB_LANE2_MAPPING(x)                 (g_stDpRx1LanesMapping.b2Lane2Mapping = (x))
+#define GET_DP_RX1_PCB_LANE2_MAPPING()                  (isr_g_stDpRx1LanesMapping.b2Lane2Mapping)
+#define SET_DP_RX1_PCB_LANE2_MAPPING(x)                 (isr_g_stDpRx1LanesMapping.b2Lane2Mapping = (x))
 
-#define GET_DP_RX1_PCB_LANE3_MAPPING()                  (g_stDpRx1LanesMapping.b2Lane3Mapping)
-#define SET_DP_RX1_PCB_LANE3_MAPPING(x)                 (g_stDpRx1LanesMapping.b2Lane3Mapping = (x))
+#define GET_DP_RX1_PCB_LANE3_MAPPING()                  (isr_g_stDpRx1LanesMapping.b2Lane3Mapping)
+#define SET_DP_RX1_PCB_LANE3_MAPPING(x)                 (isr_g_stDpRx1LanesMapping.b2Lane3Mapping = (x))
 
-#define GET_DP_RX1_PCB_LANE0_PN_SWAP()                  (g_stDpRx1LanesMapping.b1Lane0PNSwap)
-#define SET_DP_RX1_PCB_LANE0_PN_SWAP(x)                 (g_stDpRx1LanesMapping.b1Lane0PNSwap = (x))
+#define GET_DP_RX1_PCB_LANE0_PN_SWAP()                  (isr_g_stDpRx1LanesMapping.b1Lane0PNSwap)
+#define SET_DP_RX1_PCB_LANE0_PN_SWAP(x)                 (isr_g_stDpRx1LanesMapping.b1Lane0PNSwap = (x))
 
-#define GET_DP_RX1_PCB_LANE1_PN_SWAP()                  (g_stDpRx1LanesMapping.b1Lane1PNSwap)
-#define SET_DP_RX1_PCB_LANE1_PN_SWAP(x)                 (g_stDpRx1LanesMapping.b1Lane1PNSwap = (x))
+#define GET_DP_RX1_PCB_LANE1_PN_SWAP()                  (isr_g_stDpRx1LanesMapping.b1Lane1PNSwap)
+#define SET_DP_RX1_PCB_LANE1_PN_SWAP(x)                 (isr_g_stDpRx1LanesMapping.b1Lane1PNSwap = (x))
 
-#define GET_DP_RX1_PCB_LANE2_PN_SWAP()                  (g_stDpRx1LanesMapping.b1Lane2PNSwap)
-#define SET_DP_RX1_PCB_LANE2_PN_SWAP(x)                 (g_stDpRx1LanesMapping.b1Lane2PNSwap = (x))
+#define GET_DP_RX1_PCB_LANE2_PN_SWAP()                  (isr_g_stDpRx1LanesMapping.b1Lane2PNSwap)
+#define SET_DP_RX1_PCB_LANE2_PN_SWAP(x)                 (isr_g_stDpRx1LanesMapping.b1Lane2PNSwap = (x))
 
-#define GET_DP_RX1_PCB_LANE3_PN_SWAP()                  (g_stDpRx1LanesMapping.b1Lane3PNSwap)
-#define SET_DP_RX1_PCB_LANE3_PN_SWAP(x)                 (g_stDpRx1LanesMapping.b1Lane3PNSwap = (x))
+#define GET_DP_RX1_PCB_LANE3_PN_SWAP()                  (isr_g_stDpRx1LanesMapping.b1Lane3PNSwap)
+#define SET_DP_RX1_PCB_LANE3_PN_SWAP(x)                 (isr_g_stDpRx1LanesMapping.b1Lane3PNSwap = (x))
 
 //----------------------------------------------------------------------------
 // Macro of HDCP Information
@@ -97,8 +97,8 @@
 //--------------------------------------------------
 // Macro of DP Lane Mapping
 //--------------------------------------------------
-#define GET_DP_RX1_LANE_MAPPING_MODE()                  (g_stDpRx1LanesMapping.b1LaneMappingMode)
-#define SET_DP_RX1_LANE_MAPPING_MODE(x)                 (g_stDpRx1LanesMapping.b1LaneMappingMode = (x))
+#define GET_DP_RX1_LANE_MAPPING_MODE()                  (isr_g_stDpRx1LanesMapping.b1LaneMappingMode)
+#define SET_DP_RX1_LANE_MAPPING_MODE(x)                 (isr_g_stDpRx1LanesMapping.b1LaneMappingMode = (x))
 
 #if(_DP_MST_SUPPORT == _ON)
 #define GET_DP_RX1_CHECK_AUX_CH_NO_POWER_DEBOUNCE()     (g_stDpRx1MiscInfo.b1DpCheckAuxChNoPowerDebounce)
@@ -132,7 +132,7 @@
 //****************************************************************************
 extern BYTE g_ucDpRx1PhyCtsCtrl;
 extern EnumHDCPType g_enumDpRx1HdcpMode;
-extern StructDpLanesMapping g_stDpRx1LanesMapping;
+extern StructDpLanesMapping isr_g_stDpRx1LanesMapping;
 
 #if(_DP_MST_SUPPORT == _ON)
 extern StructDPRxMiscInfo g_stDpRx1MiscInfo;
@@ -143,8 +143,8 @@ extern BYTE g_pucDpRx1MstTimeSlotBackup[13];
 extern StructDpLinkInfo g_stDpRx1LinkInfo;
 #endif
 
-extern WORD g_pusDpRx1ClockCount[4];
-extern WORD g_pusDpRx1ClockCount1[4];
+extern WORD isr_g_pusDpRx1ClockCount[4];
+extern WORD isr_g_pusDpRx1ClockCount1[4];
 extern BYTE g_ucDpRx1Tp1PermitSwingLevel0;
 
 

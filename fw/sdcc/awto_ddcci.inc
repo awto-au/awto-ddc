@@ -287,9 +287,9 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         pucTx[4] = AWTO_HT_VCP;
         pucTx[5] = 0x00;
         pucTx[6] = 0x00;
-        pucTx[7] = g_stAwtoHt.ucSyncs;
-        pucTx[8] = (BYTE)((WORD)g_stAwtoHt.iDrift >> 8);
-        pucTx[9] = (BYTE)g_stAwtoHt.iDrift;
+        pucTx[7] = isr_g_stAwtoHt.ucSyncs;
+        pucTx[8] = (BYTE)((WORD)isr_g_stAwtoHt.iDrift >> 8);
+        pucTx[9] = (BYTE)isr_g_stAwtoHt.iDrift;
         AwtoDdcReply(pucR, pucTx);
         return;
     }

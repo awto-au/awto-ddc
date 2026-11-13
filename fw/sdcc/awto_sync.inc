@@ -95,7 +95,7 @@ void AwtoNvEv(BYTE ucStep)                          // #150 NVRAM save step; val
         g_stAwtoNv.usErase++;
     }
 #endif
-    if(g_stAwtoDiag.ucStage < 8)
+    if(isr_g_stAwtoDiag.ucStage < 8)
     {
         return;                                     // boot-time flash ops would push the boot lines out of the 32-line ring
     }
@@ -130,7 +130,7 @@ void AwtoSyncT2Start(void)                          // every Timer2 reload (Awto
     {
         return;
     }
-    usBase = AwtoSyncWdtMs() - g_stAwtoDiag.usT2Isr;  // ms since reset at usT2Isr = 0
+    usBase = AwtoSyncWdtMs() - isr_g_stAwtoDiag.usT2Isr;  // ms since reset at usT2Isr = 0
     s_usAwtoT2Base = 0;
     for(ucS = g_stAwtoSync.ucEpSeq; ucS != g_stAwtoSync.ucSeq; ucS = AWTO_SYNC_NEXT(ucS))
     {
@@ -237,9 +237,9 @@ void AwtoSyncPush(BYTE ucId, BYTE ucArg, DWORD ulVal)
     }
 }
 
-// One time base for all our code: Timer2 ISR count (usT2Isr = low word, g_stAwtoHt.usUpHi = high word, both bumped in the ISR).
-// Before Timer2 runs it is the WDT-counter time (ring lines are re-based at the Timer2 start). SDK event table (d_g_usTimerCounter) is separate.
-__xdata StAwtoHt g_stAwtoHt;
+// One time base for all our code: Timer2 ISR count (usT2Isr = low word, isr_g_stAwtoHt.usUpHi = high word, both bumped in the ISR).
+// Before Timer2 runs it is the WDT-counter time (ring lines are re-based at the Timer2 start). SDK event table (d_isr_g_usTimerCounter) is separate.
+__xdata StAwtoHt isr_g_stAwtoHt;
 
 unsigned long AwtoMs(void)
 {
@@ -253,8 +253,8 @@ unsigned long AwtoMs(void)
     }
     bEa = EA;
     EA = 0;                                         // ISR bumps lo then hi: a read between them would be 65536 ms short
-    usLo = g_stAwtoDiag.usT2Isr;
-    usHi = g_stAwtoHt.usUpHi;
+    usLo = isr_g_stAwtoDiag.usT2Isr;
+    usHi = isr_g_stAwtoHt.usUpHi;
     EA = bEa;
     return ((DWORD)usHi << 16) | usLo;
 }
@@ -273,26 +273,26 @@ void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, U
     {
         return;                                     // not a ms field: not ours
     }
-    if(g_stAwtoHt.ucSyncs != 0)
+    if(isr_g_stAwtoHt.ucSyncs != 0)
     {
-        lS = (long)(ulE - g_stAwtoHt.ulEpoch);
+        lS = (long)(ulE - isr_g_stAwtoHt.ulEpoch);
         lD = ((lS > AWTO_HT_GAP_S) || (lS < -AWTO_HT_GAP_S)) ? 0x7FFFFFFFL :
-             (lS * 1000 + (long)usF - (long)g_stAwtoHt.usFrac - (long)(ulNow - g_stAwtoHt.ulFwMs));
+             (lS * 1000 + (long)usF - (long)isr_g_stAwtoHt.usFrac - (long)(ulNow - isr_g_stAwtoHt.ulFwMs));
         ucWhy = ((lD > AWTO_HT_DRIFT_MS) || (lD < -AWTO_HT_DRIFT_MS)) ? 2 : 0;
-        if(g_stAwtoHt.ucSyncs != 0xFF)
+        if(isr_g_stAwtoHt.ucSyncs != 0xFF)
         {
-            g_stAwtoHt.ucSyncs++;
+            isr_g_stAwtoHt.ucSyncs++;
         }
     }
     else
     {
-        g_stAwtoHt.ucSyncs = 1;
+        isr_g_stAwtoHt.ucSyncs = 1;
     }
-    g_stAwtoHt.ulEpoch = ulE;
-    g_stAwtoHt.usFrac = usF;
-    g_stAwtoHt.cOfs = (signed char)puc[6];
-    g_stAwtoHt.ulFwMs = ulNow;
-    g_stAwtoHt.iDrift = (lD > 32767) ? 32767 : ((lD < -32767) ? -32767 : (int)lD);
+    isr_g_stAwtoHt.ulEpoch = ulE;
+    isr_g_stAwtoHt.usFrac = usF;
+    isr_g_stAwtoHt.cOfs = (signed char)puc[6];
+    isr_g_stAwtoHt.ulFwMs = ulNow;
+    isr_g_stAwtoHt.iDrift = (lD > 32767) ? 32767 : ((lD < -32767) ? -32767 : (int)lD);
     if(ucWhy != 0)
     {
         AwtoSyncPush(AWTO_SYNC_EV_HOST, puc[6], ulE);

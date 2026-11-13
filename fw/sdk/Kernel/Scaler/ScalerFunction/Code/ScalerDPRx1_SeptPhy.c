@@ -37,7 +37,7 @@
 #if(_D1_DP_EXIST == _ON)
 BYTE g_ucDpRx1PhyCtsCtrl;
 EnumHDCPType g_enumDpRx1HdcpMode;
-StructDpLanesMapping g_stDpRx1LanesMapping;
+StructDpLanesMapping isr_g_stDpRx1LanesMapping;
 
 #if(_DP_MST_SUPPORT == _ON)
 StructDPRxMiscInfo g_stDpRx1MiscInfo;
@@ -660,7 +660,7 @@ void ScalerDpRx1CalculateLinkRate(EnumDpLaneCount enumDpLaneCount)
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
             ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, ucLinkRate);
 #else
-            g_ucDpRx1DPCD02201hValue = ucLinkRate;
+            isr_g_ucDpRx1DPCD02201hValue = ucLinkRate;
 #endif
 
 #else // Else of #if(_D1_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
@@ -685,7 +685,7 @@ void ScalerDpRx1CalculateLinkRate(EnumDpLaneCount enumDpLaneCount)
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
             ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, ucLinkRate);
 #else
-            g_ucDpRx1DPCD02201hValue = ucLinkRate;
+            isr_g_ucDpRx1DPCD02201hValue = ucLinkRate;
 #endif
 
 #endif // End of #if(_D1_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
@@ -706,7 +706,7 @@ void ScalerDpRx1CalculateLinkRate(EnumDpLaneCount enumDpLaneCount)
             ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _D1_DP_LINK_CLK_RATE);
 #else
             // When Define Extended Rx Cap Should Set DPCD 0x02201
-            g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
+            isr_g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
 #endif
         }
     }
@@ -1019,7 +1019,7 @@ EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpd
            ((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == _BIT7) && (ScalerDpRx1GetDpcdInfo(0x00, 0x22, 0x01) < _D1_DP_LINK_CLK_RATE)))
 #else
         if(((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == 0x00) && (ScalerDpRx1GetDpcdInfo(0x00, 0x00, 0x01) < _D1_DP_LINK_CLK_RATE)) ||
-           ((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == _BIT7) && (g_ucDpRx1DPCD02201hValue < _D1_DP_LINK_CLK_RATE)))
+           ((ScalerDpRx1GetDpcdBitInfo(0x00, 0x00, 0x0E, _BIT7) == _BIT7) && (isr_g_ucDpRx1DPCD02201hValue < _D1_DP_LINK_CLK_RATE)))
 #endif
         {
             if(_D1_DP_LINK_CLK_RATE >= _DP_HIGH_SPEED2_540MHZ)
@@ -1036,7 +1036,7 @@ EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpd
             ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _D1_DP_LINK_CLK_RATE);
 #else
             // When Define Extended Rx Cap Should Set DPCD 0x02201
-            g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
+            isr_g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
 #endif
             DebugMessageRx1("Flag Clear_Hotplug Event_D1", _D1_DP_LINK_CLK_RATE);
         }
@@ -3425,15 +3425,15 @@ void ScalerDpRx1AdjustLaneFLDBand(BYTE ucDpRx1LaneNumber, WORD usVCOBandDiff)
 
     if(ScalerGetBit(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6)
     {
-        g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
+        isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
 
-        if(g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] < g_pusDpRx1ClockCount[ucDpRx1LaneNumber])
+        if(isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] < isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber])
         {
-            ucBestVCOBand = ucAutoVCOBand + (((g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - g_pusDpRx1ClockCount1[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
+            ucBestVCOBand = ucAutoVCOBand + (((isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
         }
         else
         {
-            ucBestVCOBand = ucAutoVCOBand - ((g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] - g_pusDpRx1ClockCount[ucDpRx1LaneNumber]) / usVCOBandDiff);
+            ucBestVCOBand = ucAutoVCOBand - ((isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber]) / usVCOBandDiff);
         }
     }
     else
@@ -4640,7 +4640,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
     {
         case _DP_LINK_HBR2:
 
-            if((abs(g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0x2710)) > (0x2710 >> 4))
+            if((abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0x2710)) > (0x2710 >> 4))
             {
                 return _TRUE;
             }
@@ -4649,7 +4649,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
 
         case _DP_LINK_HBR:
 
-            if((abs(g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0x1388)) > (0x1388 >> 4))
+            if((abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0x1388)) > (0x1388 >> 4))
             {
                 return _TRUE;
             }
@@ -4659,7 +4659,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
         default:
         case _DP_LINK_RBR:
 
-            if((abs(g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0xBB8)) > (0xBB8 >> 4))
+            if((abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - 0xBB8)) > (0xBB8 >> 4))
             {
                 return _TRUE;
             }
@@ -4698,7 +4698,7 @@ bit ScalerDpRx1MeasureLaneCDRClk(BYTE ucDpLinkRate, BYTE ucDpRx1LaneNumber)
 
     usCDRClockCount = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
 
-    if(abs(g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - usCDRClockCount) > (g_pusDpRx1ClockCount[ucDpRx1LaneNumber] >> 7))
+    if(abs(isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - usCDRClockCount) > (isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] >> 7))
     {
         return _FALSE;
     }

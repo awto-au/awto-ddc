@@ -218,17 +218,17 @@
 //--------------------------------------------------
 // Macro of Timer Event Structure
 //--------------------------------------------------
-#define GET_EVENT_VALID(x)                      (g_pstTimerEvent[x].enumEventID != _SCALER_TIMER_EVENT_INVALID)
-#define CLR_EVENT_VALID(x)                      (g_pstTimerEvent[x].enumEventID = _SCALER_TIMER_EVENT_INVALID)
+#define GET_EVENT_VALID(x)                      (isr_g_pstTimerEvent[x].enumEventID != _SCALER_TIMER_EVENT_INVALID)
+#define CLR_EVENT_VALID(x)                      (isr_g_pstTimerEvent[x].enumEventID = _SCALER_TIMER_EVENT_INVALID)
 
-#define GET_EVENT_ID(x)                         (g_pstTimerEvent[x].enumEventID)
-#define SET_EVENT_ID(x, y)                      (g_pstTimerEvent[x].enumEventID = (y))
+#define GET_EVENT_ID(x)                         (isr_g_pstTimerEvent[x].enumEventID)
+#define SET_EVENT_ID(x, y)                      (isr_g_pstTimerEvent[x].enumEventID = (y))
 
-#define GET_EVENT_TIME(x)                       (g_pstTimerEvent[x].usTime)
-#define SET_EVENT_TIME(x, y)                    (g_pstTimerEvent[x].usTime = (y))
+#define GET_EVENT_TIME(x)                       (isr_g_pstTimerEvent[x].usTime)
+#define SET_EVENT_TIME(x, y)                    (isr_g_pstTimerEvent[x].usTime = (y))
 
-#define GET_EVENT_RESUME_TIME(x)                (g_pstTimerEvent[x].usTime)
-#define SET_EVENT_RESUME_TIME(x, y)             (g_pstTimerEvent[x].usTime = (y))
+#define GET_EVENT_RESUME_TIME(x)                (isr_g_pstTimerEvent[x].usTime)
+#define SET_EVENT_RESUME_TIME(x, y)             (isr_g_pstTimerEvent[x].usTime = (y))
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
 //--------------------------------------------------
@@ -255,8 +255,8 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-volatile bit d_g_bNotifyTimer2Int = _FALSE;
-StructTimerEventTableType g_pstTimerEvent[_TIMER_EVENT_COUNT];
+volatile bit d_isr_g_bNotifyTimer2Int = _FALSE;
+StructTimerEventTableType isr_g_pstTimerEvent[_TIMER_EVENT_COUNT];
 
 #if(_RECORD_TIMER_SUPPORT == _ON)
 WORD g_usTimerRecordStartTime;
@@ -267,7 +267,7 @@ volatile __xdata _Bool g_bWDTimer2Update = _FALSE;
 // awto #138: event table in awto_t0ev.inc
 #endif
 
-volatile WORD __data d_g_usTimerCounter;
+volatile WORD __data d_isr_g_usTimerCounter;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 volatile WORD __data d_g_usMeasureCounter;
@@ -1381,7 +1381,7 @@ void ScalerTimerSetTimerCount(EnumScalerTimerOperationMode enumOperationMode)
     RCAP2L = pucTimercounter[2];
     RCAP2H = pucTimercounter[3];
 
-    d_g_bNotifyTimer2Int = _FALSE;
+    d_isr_g_bNotifyTimer2Int = _FALSE;
 
     // Enable interrupt of Timer2
     ET2 = _ENABLE;
@@ -1476,7 +1476,7 @@ void ScalerTimerAddTimerCounter(void)
 
     if(((MCU_FFED_MCU_CONTROL & 0x3C) >> 2) == _FLASH_CLK_PS_FAST_DIV)
     {
-        if(d_g_bNotifyTimer2Int == _TRUE)
+        if(d_isr_g_bNotifyTimer2Int == _TRUE)
         {
             usOffset = _TIMER_COUNT_TEMP_PS_FAST1 - 1;
         }
@@ -1489,7 +1489,7 @@ void ScalerTimerAddTimerCounter(void)
     }
     else
     {
-        if(d_g_bNotifyTimer2Int == _TRUE)
+        if(d_isr_g_bNotifyTimer2Int == _TRUE)
         {
             usOffset = _IDLE_TIME - 1;
         }
@@ -2539,13 +2539,13 @@ WORD ScalerTimerCheckTimerEvent(WORD usTime)
 //--------------------------------------------------
 WORD ScalerTimerGetTimerCounter(void)
 {
-    WORD usPresentTime = d_g_usTimerCounter;
+    WORD usPresentTime = d_isr_g_usTimerCounter;
 
     // When get counter,timer interrupt maybe change counter.
     // Get twice to avoid it.
-    if(abs(d_g_usTimerCounter - usPresentTime) > 0x7F)
+    if(abs(d_isr_g_usTimerCounter - usPresentTime) > 0x7F)
     {
-        usPresentTime = d_g_usTimerCounter;
+        usPresentTime = d_isr_g_usTimerCounter;
     }
 
     return usPresentTime;
@@ -2593,13 +2593,13 @@ void ScalerTimerDelayXms(WORD usNum)
             return;
         }
 
-        d_g_bNotifyTimer2Int = _FALSE;
+        d_isr_g_bNotifyTimer2Int = _FALSE;
 
         while(_TRUE)
         {
-            if(d_g_bNotifyTimer2Int == _TRUE)
+            if(d_isr_g_bNotifyTimer2Int == _TRUE)
             {
-                d_g_bNotifyTimer2Int = _FALSE; AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
+                d_isr_g_bNotifyTimer2Int = _FALSE; AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
 
                 if(--usNum)
                 {
@@ -2626,7 +2626,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
     WORD usTimeElapsed = 0;
     WORD usPreviousTime = 0;
 
-    usPreviousTime = d_g_usTimerCounter;
+    usPreviousTime = d_isr_g_usTimerCounter;
 
     do
     {
@@ -2635,10 +2635,10 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
             return _TRUE;
         }
 
-        if(usPreviousTime != d_g_usTimerCounter)
+        if(usPreviousTime != d_isr_g_usTimerCounter)
         {
             usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_POLL);
-            usPreviousTime = d_g_usTimerCounter;
+            usPreviousTime = d_isr_g_usTimerCounter;
         }
     }
     while(usTimeElapsed <= usTimeout);
@@ -2677,7 +2677,7 @@ BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucB
     }
     else
     {
-        WORD usPreviousTime = d_g_usTimerCounter;
+        WORD usPreviousTime = d_isr_g_usTimerCounter;
 
         do
         {
@@ -2686,10 +2686,10 @@ BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucB
                 return _TRUE;
             }
 
-            if(usPreviousTime != d_g_usTimerCounter)
+            if(usPreviousTime != d_isr_g_usTimerCounter)
             {
                 usTimeElapsed++;
-                usPreviousTime = d_g_usTimerCounter;
+                usPreviousTime = d_isr_g_usTimerCounter;
             }
         }
         while(usTimeElapsed <= ucTimeout);
@@ -2726,7 +2726,7 @@ WORD ScalerTimerTimer2Count_EXINT0(WORD usTimer)
             CLR_MCU_WATCH_DOG();
         }
 #endif
-        d_g_bNotifyTimer2Int = _TRUE;
+        d_isr_g_bNotifyTimer2Int = _TRUE;
 
         usTimer += 1;
     }
@@ -2766,7 +2766,7 @@ BYTE ScalerTimerPollingFlagProc_WDINT(BYTE ucTimeout, WORD usRegister, BYTE ucBi
     }
     else
     {
-        WORD usPreviousTime = d_g_usTimerCounter;
+        WORD usPreviousTime = d_isr_g_usTimerCounter;
 
         do
         {
@@ -2775,10 +2775,10 @@ BYTE ScalerTimerPollingFlagProc_WDINT(BYTE ucTimeout, WORD usRegister, BYTE ucBi
                 return _TRUE;
             }
 
-            if(usPreviousTime != d_g_usTimerCounter)
+            if(usPreviousTime != d_isr_g_usTimerCounter)
             {
                 usTimeElapsed++;
-                usPreviousTime = d_g_usTimerCounter;
+                usPreviousTime = d_isr_g_usTimerCounter;
             }
         }
         while(usTimeElapsed <= ucTimeout);
@@ -2815,7 +2815,7 @@ WORD ScalerTimerTimer2Count_WDINT(WORD usTimer)
             CLR_MCU_WATCH_DOG();
         }
 #endif
-        d_g_bNotifyTimer2Int = _TRUE;
+        d_isr_g_bNotifyTimer2Int = _TRUE;
 
         usTimer += 1;
     }

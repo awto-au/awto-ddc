@@ -4,7 +4,7 @@
 usage: boot_prof.py BUS --serial S --map MAP [--power-key] [--main /mnt/2tb/git/awto-ddc]
 - --power-key: test cmd 0x3E twice (soft off, wait OFF_S, soft on, wait ON_S); the second press re-arms the log, so the
   printout is the POWER-key power-on path (times relative to that press).
-- Run after a cold boot (hass_power.py cycle): links the debug slave (dbg_link), reads g_stAwtoSw, prints
+- Run after a cold boot (hass_power.py cycle): links the debug slave (dbg_link), reads isr_g_stAwtoSw, prints
   `+ms  (delta)  event`. Probe sites: AWTO_BPROF(k) in fw/sdk (SysMain.c, SysPower.c, UserCommonInterface.c, RTD2014Osd.c), RL6449_Project.h.
 - Uses sw_timeline.py / dbg_link.py of the main repo (--main or $AWTO_DDC_MAIN).
 Log: ./tmp/logs/boot_prof.log
@@ -58,7 +58,7 @@ def main() -> int:
     import sw_timeline as T  # noqa: E402
 
     i2cbus.require_unit(a.bus, a.serial)
-    base = T.sym(a.map, "g_stAwtoSw")
+    base = T.sym(a.map, "isr_g_stAwtoSw")
     raw = None
     with dbg_link.linked(a.bus, 2):
         rio = B.Real(a.bus, allow_write=a.power_key, regread=True)

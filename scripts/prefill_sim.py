@@ -4,7 +4,7 @@
 usage: prefill_sim.py BIN MAP [--mode 2160p60] [--secs 12] [--no-switch]
   DP is modelled at the ScalerDp* dispatch level (as fw_sim_dp.py), armed only after ACTIVE on D2 (else the boot search
   could pick D1): PreDetect / StableDetect true for D1; ScanInputPort(D1) returns DP and, like the SDK scan, writes the
-  shared globals (g_usInputPixelClk = D1's clock, g_stColorInfo byte 0 changed) so the restore is tested.
+  shared globals (isr_g_usInputPixelClk = D1's clock, isr_g_stColorInfo byte 0 changed) so the restore is tested.
   PASS: D1 cache valid 2 after --secs, one background scan, on-screen pixel clock / colour info / P31_00 / P0_28 bit5 /
   FF22 / mode / port unchanged; then test cmd 0x31 takes the fast path (switch log 0xA0 arg 0), ACTIVE on D1, P31_00 0x40.
 Log: tmp/logs/prefill_sim.log
@@ -29,7 +29,7 @@ def port_now(bus) -> int:
 
 
 def snap(bus) -> dict:
-    return {"pclk": bus.xdata(bus.addr("g_usInputPixelClk"), 2).hex(), "color": bus.xdata(bus.addr("g_stColorInfo"), 8).hex(),
+    return {"pclk": bus.xdata(bus.addr("isr_g_usInputPixelClk"), 2).hex(), "color": bus.xdata(bus.addr("isr_g_stColorInfo"), 8).hex(),
             "P31_00": bus.xdata(0x3100)[0] & 0xF0, "P0_28.5": bus.xdata(0x0028)[0] & 0x20, "FF22": bus.xdata(0xFF22)[0],
             "mode": bus.mode_state(), "port": port_now(bus)}
 
@@ -56,9 +56,9 @@ def main() -> int:
         if not armed[0] or (r["a1"] & 255) != D1:
             return {"val": 5}
         scans.append(round(bus.now(), 3))
-        m_.wr(m_.addr("g_usInputPixelClk"), bus.hdmi.PCLK.to_bytes(2, "big"))
-        c = m_.rd(m_.addr("g_stColorInfo"), 1)[0]
-        m_.wr(m_.addr("g_stColorInfo"), bytes([c ^ 0x5A]))
+        m_.wr(m_.addr("isr_g_usInputPixelClk"), bus.hdmi.PCLK.to_bytes(2, "big"))
+        c = m_.rd(m_.addr("isr_g_stColorInfo"), 1)[0]
+        m_.wr(m_.addr("isr_g_stColorInfo"), bytes([c ^ 0x5A]))
         return {"val": SOURCE_DP}
     m.stub("ScalerDpNormalPreDetect", lambda m_, r: {"carry": int(armed[0] and (r["a1"] & 255) == D1)})
     m.stub("ScalerDpScanInputPort", scan)
@@ -74,7 +74,7 @@ def main() -> int:
         bus.wait(a.secs)
         after = snap(bus)
         v = list(bus.xdata(cache, 3 * CACHE_ENTRY)[0::CACHE_ENTRY])
-        _, evs = T.decode(bus.xdata(bus.addr("g_stAwtoSw"), 12 + 4 * T.N_EV), bus.be)
+        _, evs = T.decode(bus.xdata(bus.addr("isr_g_stAwtoSw"), 12 + 4 * T.N_EV), bus.be)
         pf = [g for _, i, g in evs if i == 0xB9]
         same = {k: (before[k], after[k]) for k in before if before[k] != after[k]}
         ok = v[0] == 2 and len(scans) == 1 and not same and pf[-1:] == [1] and set(pf[:-1]) <= {2}    # tries before the arm: pre-detect false
@@ -83,7 +83,7 @@ def main() -> int:
         if not a.no_switch:
             bus.m.wr(TESTCMD, bytes([0x31]))
             bus.wait(1.5)
-            _, evs = T.decode(bus.xdata(bus.addr("g_stAwtoSw"), 12 + 4 * T.N_EV), bus.be)
+            _, evs = T.decode(bus.xdata(bus.addr("isr_g_stAwtoSw"), 12 + 4 * T.N_EV), bus.be)
             fast = [g for _, i, g in evs if i == 0xA0]
             s2 = snap(bus)
             for ms, i, g in evs[-16:]:

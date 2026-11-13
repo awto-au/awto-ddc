@@ -18,8 +18,8 @@ unsigned char AwtoMsgWait(void)
     AWTO_WDT_FEED(AWTO_WDT_S_MSG);          // bounded wait: AWTO_MSG_HOST_MS per message (#131)
     if((unsigned int)((WORD)AwtoMs() - s_usAwtoMsgT0) >= AWTO_MSG_HOST_MS)
     {
-        d_g_bDebugMessageEven = _FALSE;       // host re-arms with 0x55 (rtd_diag resends it while idle)
-        g_pucDdcciData[0] = 0;              // a stale 0x55 would re-enable it at the next message
+        d_isr_g_bDebugMessageEven = _FALSE;       // host re-arms with 0x55 (rtd_diag resends it while idle)
+        isr_g_pucDdcciData[0] = 0;              // a stale 0x55 would re-enable it at the next message
         g_bDebugMessageStart = 0;
         return 0;
     }
@@ -36,7 +36,7 @@ void AwtoMsgV(unsigned int usId, unsigned long ulValue)
     g_pstAwtoMsgRing[g_ucAwtoMsgHead].ulValue = ulValue;
     g_ucAwtoMsgHead = (g_ucAwtoMsgHead + 1 >= AWTO_MSG_RING) ? 0 : g_ucAwtoMsgHead + 1;
     g_usAwtoMsgSeq++;
-    if((d_g_bDebugMessageEven == _FALSE) && (g_pucDdcciData[0] != 0x55))
+    if((d_isr_g_bDebugMessageEven == _FALSE) && (isr_g_pucDdcciData[0] != 0x55))
     {
         return;                             // host channel off: no bus access, no wait
     }

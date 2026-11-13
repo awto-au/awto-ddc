@@ -1,9 +1,9 @@
 // #81 per-port settings block: the one owner of a port's enable state (RL6449_Project.h AWTO_PORT_*). Inserted into RTD2014Ddcci.c.
-// - State: g_ucAwtoPortOff, one bit per port (AWTO_PORT_BIT). Changed only by AwtoPortBoot / AwtoPortSet; every line E1 (sync.tsv).
+// - State: isr_g_ucAwtoPortOff, one bit per port (AWTO_PORT_BIT). Changed only by AwtoPortBoot / AwtoPortSet; every line E1 (sync.tsv).
 // - Rows: tAwtoPortRow maps a registry row to (field, port). A new per-port field = a new row kind + its bitmask.
 // - Readers: PCB_Dn_HOTPLUG (HPD), ScalerMcuDdcRamEnable (EDID), ScalerGDIPhyPowerProc (receiver), SysSource (search), fast-switch
 //   cache, wake poll, selector state.
-__xdata BYTE g_ucAwtoPortOff;                   // 0 at reset: all on until the settings load (AwtoPortBoot)
+__xdata BYTE isr_g_ucAwtoPortOff;                   // 0 at reset: all on until the settings load (AwtoPortBoot)
 
 #ifdef _AWTO_NEW_SETTINGS
 extern unsigned char set_put(unsigned char ucId, int iV, unsigned char ucNow);
@@ -54,7 +54,7 @@ static void AwtoPortSet(BYTE ucPort, BYTE ucOn, BYTE ucWhy)
 {
     BYTE ucBit = AWTO_PORT_BIT(ucPort);
 
-    if(((g_ucAwtoPortOff & ucBit) == 0) == (ucOn != 0))
+    if(((isr_g_ucAwtoPortOff & ucBit) == 0) == (ucOn != 0))
     {
         AwtoSyncPush(AWTO_SYNC_EV_PORT, (ucOn != 0) ? AWTO_PORT_WHY_ALREADY_ON : AWTO_PORT_WHY_ALREADY_OFF, ucPort);
         return;
@@ -62,7 +62,7 @@ static void AwtoPortSet(BYTE ucPort, BYTE ucOn, BYTE ucWhy)
     AwtoSyncPush(AWTO_SYNC_EV_PORT, ucWhy, ucPort);
     if(ucOn != 0)
     {
-        g_ucAwtoPortOff &= ~ucBit;
+        isr_g_ucAwtoPortOff &= ~ucBit;
         ScalerMcuDdcRamEnable();
         ScalerGDIPhyPowerProc(ucPort, _POWER_ACTION_OFF_TO_NORMAL);
         if(ucPort == _D1_INPUT_PORT)
@@ -79,7 +79,7 @@ static void AwtoPortSet(BYTE ucPort, BYTE ucOn, BYTE ucWhy)
         }
         return;
     }
-    g_ucAwtoPortOff |= ucBit;
+    isr_g_ucAwtoPortOff |= ucBit;
     if(ucPort == _D1_INPUT_PORT)
     {
         PCB_D1_HOTPLUG(_D1_HOT_PLUG_LOW);
@@ -113,7 +113,7 @@ void AwtoPortBoot(void)
         ucPort = tAwtoPortRow[ucR][2];
         if((tAwtoPortRow[ucR][1] == AWTO_PF_ENABLE) && (set_get(tAwtoPortRow[ucR][0]) == 0))
         {
-            g_ucAwtoPortOff |= AWTO_PORT_BIT(ucPort);
+            isr_g_ucAwtoPortOff |= AWTO_PORT_BIT(ucPort);
             AwtoSyncPush(AWTO_SYNC_EV_PORT, AWTO_PORT_WHY_BOOT, ucPort);
         }
     }
@@ -145,7 +145,7 @@ unsigned char set_veto(unsigned char ucId, int iV)
         AwtoSyncPush(AWTO_SYNC_EV_PORT, AWTO_PORT_WHY_ON_SCREEN, ucPort);
         return 1;
     }
-    if((g_ucAwtoPortOff | AWTO_PORT_BIT(ucPort)) == (AWTO_PORT_BIT(_D1_INPUT_PORT) | AWTO_PORT_BIT(_D2_INPUT_PORT) | AWTO_PORT_BIT(_D3_INPUT_PORT)))
+    if((isr_g_ucAwtoPortOff | AWTO_PORT_BIT(ucPort)) == (AWTO_PORT_BIT(_D1_INPUT_PORT) | AWTO_PORT_BIT(_D2_INPUT_PORT) | AWTO_PORT_BIT(_D3_INPUT_PORT)))
     {
         AwtoSyncPush(AWTO_SYNC_EV_PORT, AWTO_PORT_WHY_LAST, ucPort);
         return 1;

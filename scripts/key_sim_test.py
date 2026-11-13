@@ -328,7 +328,7 @@ def live_ports(k, ports):
     def scan(m_, r):
         if (r["a1"] & 255) not in live:
             return {"val": 5}                                   # _SOURCE_NONE
-        m_.wr(m_.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))
+        m_.wr(m_.addr("isr_g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))
         return {"val": 3}                                       # _SOURCE_HDMI
     for name, fn in (("ScalerTMDSNormalPreDetect", lambda m_, r: {"carry": (r["a1"] & 255) in live}), ("ScalerTMDSScanInputPort", scan)):
         pc = m.sym["_" + name] & 0xFFFF

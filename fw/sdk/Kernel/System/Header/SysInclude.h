@@ -38,51 +38,51 @@
 //--------------------------------------------------
 // Power action
 //--------------------------------------------------
-#define GET_TARGET_POWER_STATUS()               (g_stPowerInfo.b4PowerAction)
-#define SET_TARGET_POWER_STATUS(x)              (g_stPowerInfo.b4PowerAction = (x))
+#define GET_TARGET_POWER_STATUS()               (isr_g_stPowerInfo.b4PowerAction)
+#define SET_TARGET_POWER_STATUS(x)              (isr_g_stPowerInfo.b4PowerAction = (x))
 
 //--------------------------------------------------
 // Power status
 //--------------------------------------------------
-#define GET_POWER_STATUS()                      (g_stPowerInfo.b4PowerStatus)
-#define SET_POWER_STATUS(x)                     (g_stPowerInfo.b4PowerStatus = (x))
+#define GET_POWER_STATUS()                      (isr_g_stPowerInfo.b4PowerStatus)
+#define SET_POWER_STATUS(x)                     (isr_g_stPowerInfo.b4PowerStatus = (x))
 
 //--------------------------------------------------
 // Power Isolation flag
 //--------------------------------------------------
-#define GET_POWER_ISO_A_FLG()                   ((bit)(g_stPowerInfo.b1IsolationAFlag))
-#define SET_POWER_ISO_A_FLG()                   (g_stPowerInfo.b1IsolationAFlag = 1)
-#define CLR_POWER_ISO_A_FLG()                   (g_stPowerInfo.b1IsolationAFlag = 0)
+#define GET_POWER_ISO_A_FLG()                   ((bit)(isr_g_stPowerInfo.b1IsolationAFlag))
+#define SET_POWER_ISO_A_FLG()                   (isr_g_stPowerInfo.b1IsolationAFlag = 1)
+#define CLR_POWER_ISO_A_FLG()                   (isr_g_stPowerInfo.b1IsolationAFlag = 0)
 
-#define GET_POWER_ISO_B_FLG()                   ((bit)(g_stPowerInfo.b1IsolationBFlag))
-#define SET_POWER_ISO_B_FLG()                   (g_stPowerInfo.b1IsolationBFlag = 1)
-#define CLR_POWER_ISO_B_FLG()                   (g_stPowerInfo.b1IsolationBFlag = 0)
+#define GET_POWER_ISO_B_FLG()                   ((bit)(isr_g_stPowerInfo.b1IsolationBFlag))
+#define SET_POWER_ISO_B_FLG()                   (isr_g_stPowerInfo.b1IsolationBFlag = 1)
+#define CLR_POWER_ISO_B_FLG()                   (isr_g_stPowerInfo.b1IsolationBFlag = 0)
 
-#define GET_POWER_ISO_C_FLG()                   ((bit)(g_stPowerInfo.b1IsolationCFlag))
-#define SET_POWER_ISO_C_FLG()                   (g_stPowerInfo.b1IsolationCFlag = 1)
-#define CLR_POWER_ISO_C_FLG()                   (g_stPowerInfo.b1IsolationCFlag = 0)
+#define GET_POWER_ISO_C_FLG()                   ((bit)(isr_g_stPowerInfo.b1IsolationCFlag))
+#define SET_POWER_ISO_C_FLG()                   (isr_g_stPowerInfo.b1IsolationCFlag = 1)
+#define CLR_POWER_ISO_C_FLG()                   (isr_g_stPowerInfo.b1IsolationCFlag = 0)
 
-#define GET_POWER_ISO_D_FLG()                   ((bit)(g_stPowerInfo.b1IsolationDFlag))
-#define SET_POWER_ISO_D_FLG()                   (g_stPowerInfo.b1IsolationDFlag = 1)
-#define CLR_POWER_ISO_D_FLG()                   (g_stPowerInfo.b1IsolationDFlag = 0)
+#define GET_POWER_ISO_D_FLG()                   ((bit)(isr_g_stPowerInfo.b1IsolationDFlag))
+#define SET_POWER_ISO_D_FLG()                   (isr_g_stPowerInfo.b1IsolationDFlag = 1)
+#define CLR_POWER_ISO_D_FLG()                   (isr_g_stPowerInfo.b1IsolationDFlag = 0)
 
-#define GET_POWER_ISO_E_FLG()                   ((bit)(g_stPowerInfo.b1IsolationEFlag))
-#define SET_POWER_ISO_E_FLG()                   (g_stPowerInfo.b1IsolationEFlag = 1)
-#define CLR_POWER_ISO_E_FLG()                   (g_stPowerInfo.b1IsolationEFlag = 0)
+#define GET_POWER_ISO_E_FLG()                   ((bit)(isr_g_stPowerInfo.b1IsolationEFlag))
+#define SET_POWER_ISO_E_FLG()                   (isr_g_stPowerInfo.b1IsolationEFlag = 1)
+#define CLR_POWER_ISO_E_FLG()                   (isr_g_stPowerInfo.b1IsolationEFlag = 0)
 
 //--------------------------------------------------
 // Power status Switch to Fake Saving
 //--------------------------------------------------
-#define GET_POWER_SWITCH_TO_FAKE_SAVING()       ((bit)(g_stPowerInfo.b1PowerSwitchtoFakeSaving))
-#define SET_POWER_SWITCH_TO_FAKE_SAVING()       (g_stPowerInfo.b1PowerSwitchtoFakeSaving = 1)
-#define CLR_POWER_SWITCH_TO_FAKE_SAVING()       (g_stPowerInfo.b1PowerSwitchtoFakeSaving = 0)
+#define GET_POWER_SWITCH_TO_FAKE_SAVING()       ((bit)(isr_g_stPowerInfo.b1PowerSwitchtoFakeSaving))
+#define SET_POWER_SWITCH_TO_FAKE_SAVING()       (isr_g_stPowerInfo.b1PowerSwitchtoFakeSaving = 1)
+#define CLR_POWER_SWITCH_TO_FAKE_SAVING()       (isr_g_stPowerInfo.b1PowerSwitchtoFakeSaving = 0)
 
 //--------------------------------------------------
 // Power status Switch to Off
 //--------------------------------------------------
-#define GET_POWER_SWITCH_TO_FAKE_OFF()          ((bit)(g_stPowerInfo.b1PowerSwitchtoFakeOff))
-#define SET_POWER_SWITCH_TO_FAKE_OFF()          (g_stPowerInfo.b1PowerSwitchtoFakeOff = 1)
-#define CLR_POWER_SWITCH_TO_FAKE_OFF()          (g_stPowerInfo.b1PowerSwitchtoFakeOff = 0)
+#define GET_POWER_SWITCH_TO_FAKE_OFF()          ((bit)(isr_g_stPowerInfo.b1PowerSwitchtoFakeOff))
+#define SET_POWER_SWITCH_TO_FAKE_OFF()          (isr_g_stPowerInfo.b1PowerSwitchtoFakeOff = 1)
+#define CLR_POWER_SWITCH_TO_FAKE_OFF()          (isr_g_stPowerInfo.b1PowerSwitchtoFakeOff = 0)
 
 //--------------------------------------------------
 // Source.c Related MACRO
@@ -239,57 +239,57 @@
 //--------------------------------------------------
 // Mode.c Related MACRO
 //--------------------------------------------------
-#define GET_MODE_STATE()                        (g_stModeInfo.b5ModeState)
-#define SET_MODE_STATE(x)                       (g_stModeInfo.b5ModeState = (x))
+#define GET_MODE_STATE()                        (isr_g_stModeInfo.b5ModeState)
+#define SET_MODE_STATE(x)                       (isr_g_stModeInfo.b5ModeState = (x))
 
-#define GET_MODE_DISPLAY_SETTING_READY()        (bit)(g_stModeInfo.b1DisplaySettingReady)
-#define SET_MODE_DISPLAY_SETTING_READY()        (g_stModeInfo.b1DisplaySettingReady = _TRUE)
-#define CLR_MODE_DISPLAY_SETTING_READY()        (g_stModeInfo.b1DisplaySettingReady = _FALSE)
+#define GET_MODE_DISPLAY_SETTING_READY()        (bit)(isr_g_stModeInfo.b1DisplaySettingReady)
+#define SET_MODE_DISPLAY_SETTING_READY()        (isr_g_stModeInfo.b1DisplaySettingReady = _TRUE)
+#define CLR_MODE_DISPLAY_SETTING_READY()        (isr_g_stModeInfo.b1DisplaySettingReady = _FALSE)
 
-#define GET_MODE_TIMING_CONFIRM()               (bit)(g_stModeInfo.b1TimingConfirm)
-#define SET_MODE_TIMING_CONFIRM()               (g_stModeInfo.b1TimingConfirm = _TRUE)
-#define CLR_MODE_TIMING_CONFIRM()               (g_stModeInfo.b1TimingConfirm = _FALSE)
+#define GET_MODE_TIMING_CONFIRM()               (bit)(isr_g_stModeInfo.b1TimingConfirm)
+#define SET_MODE_TIMING_CONFIRM()               (isr_g_stModeInfo.b1TimingConfirm = _TRUE)
+#define CLR_MODE_TIMING_CONFIRM()               (isr_g_stModeInfo.b1TimingConfirm = _FALSE)
 
-#define GET_MODE_STATE_CHANGE_OTHERS()          (bit)(g_stModeInfo.b1ModeStateChangedForOthers)
-#define SET_MODE_STATE_CHANGE_OTHERS()          (g_stModeInfo.b1ModeStateChangedForOthers = _TRUE)
-#define CLR_MODE_STATE_CHANGE_OTHERS()          (g_stModeInfo.b1ModeStateChangedForOthers = _FALSE)
+#define GET_MODE_STATE_CHANGE_OTHERS()          (bit)(isr_g_stModeInfo.b1ModeStateChangedForOthers)
+#define SET_MODE_STATE_CHANGE_OTHERS()          (isr_g_stModeInfo.b1ModeStateChangedForOthers = _TRUE)
+#define CLR_MODE_STATE_CHANGE_OTHERS()          (isr_g_stModeInfo.b1ModeStateChangedForOthers = _FALSE)
 
-#define GET_MODE_STATE_CHANGE_SOURCE()          (bit)(g_stModeInfo.b1ModeStateChangedForSource)
-#define SET_MODE_STATE_CHANGE_SOURCE()          (g_stModeInfo.b1ModeStateChangedForSource = _TRUE)
-#define CLR_MODE_STATE_CHANGE_SOURCE()          (g_stModeInfo.b1ModeStateChangedForSource = _FALSE)
+#define GET_MODE_STATE_CHANGE_SOURCE()          (bit)(isr_g_stModeInfo.b1ModeStateChangedForSource)
+#define SET_MODE_STATE_CHANGE_SOURCE()          (isr_g_stModeInfo.b1ModeStateChangedForSource = _TRUE)
+#define CLR_MODE_STATE_CHANGE_SOURCE()          (isr_g_stModeInfo.b1ModeStateChangedForSource = _FALSE)
 
-#define GET_MODE_STATE_CHANGE_MODE()            (bit)(g_stModeInfo.b1ModeStateChangedForMode)
-#define SET_MODE_STATE_CHANGE_MODE()            (g_stModeInfo.b1ModeStateChangedForMode = _TRUE)
-#define CLR_MODE_STATE_CHANGE_MODE()            (g_stModeInfo.b1ModeStateChangedForMode = _FALSE)
+#define GET_MODE_STATE_CHANGE_MODE()            (bit)(isr_g_stModeInfo.b1ModeStateChangedForMode)
+#define SET_MODE_STATE_CHANGE_MODE()            (isr_g_stModeInfo.b1ModeStateChangedForMode = _TRUE)
+#define CLR_MODE_STATE_CHANGE_MODE()            (isr_g_stModeInfo.b1ModeStateChangedForMode = _FALSE)
 
 #if(_MHL_SUPPORT == _ON)
-#define GET_MODE_STATE_CHANGE_MHL()             (bit)(g_stModeInfo.b1ModeStateChangedForMHL)
-#define SET_MODE_STATE_CHANGE_MHL()             (g_stModeInfo.b1ModeStateChangedForMHL = _TRUE)
-#define CLR_MODE_STATE_CHANGE_MHL()             (g_stModeInfo.b1ModeStateChangedForMHL = _FALSE)
+#define GET_MODE_STATE_CHANGE_MHL()             (bit)(isr_g_stModeInfo.b1ModeStateChangedForMHL)
+#define SET_MODE_STATE_CHANGE_MHL()             (isr_g_stModeInfo.b1ModeStateChangedForMHL = _TRUE)
+#define CLR_MODE_STATE_CHANGE_MHL()             (isr_g_stModeInfo.b1ModeStateChangedForMHL = _FALSE)
 #else
 #define GET_MODE_STATE_CHANGE_MHL()             (bit)(_FALSE)
 #define SET_MODE_STATE_CHANGE_MHL()             {}
 #define CLR_MODE_STATE_CHANGE_MHL()             {}
 #endif
 
-#define GET_MODE_STATE_CHANGE_OSD()             (bit)(g_stModeInfo.b1ModeStateChangedForOsd)
-#define SET_MODE_STATE_CHANGE_OSD()             (g_stModeInfo.b1ModeStateChangedForOsd = _TRUE)
-#define CLR_MODE_STATE_CHANGE_OSD()             (g_stModeInfo.b1ModeStateChangedForOsd = _FALSE)
+#define GET_MODE_STATE_CHANGE_OSD()             (bit)(isr_g_stModeInfo.b1ModeStateChangedForOsd)
+#define SET_MODE_STATE_CHANGE_OSD()             (isr_g_stModeInfo.b1ModeStateChangedForOsd = _TRUE)
+#define CLR_MODE_STATE_CHANGE_OSD()             (isr_g_stModeInfo.b1ModeStateChangedForOsd = _FALSE)
 
-#define GET_MODE_RESET_TARGET()                 (g_stModeInfo.b4ModeResetFlag)
-#define SET_MODE_RESET_TARGET(x)                (g_stModeInfo.b4ModeResetFlag = (x))
+#define GET_MODE_RESET_TARGET()                 (isr_g_stModeInfo.b4ModeResetFlag)
+#define SET_MODE_RESET_TARGET(x)                (isr_g_stModeInfo.b4ModeResetFlag = (x))
 
-#define GET_MODE_NO_WAIT_FOR_ACTIVE()           (bit)(g_stModeInfo.b1NoWaitForActive)
-#define SET_MODE_NO_WAIT_FOR_ACTIVE()           (g_stModeInfo.b1NoWaitForActive = _TRUE)
-#define CLR_MODE_NO_WAIT_FOR_ACTIVE()           (g_stModeInfo.b1NoWaitForActive = _FALSE)
+#define GET_MODE_NO_WAIT_FOR_ACTIVE()           (bit)(isr_g_stModeInfo.b1NoWaitForActive)
+#define SET_MODE_NO_WAIT_FOR_ACTIVE()           (isr_g_stModeInfo.b1NoWaitForActive = _TRUE)
+#define CLR_MODE_NO_WAIT_FOR_ACTIVE()           (isr_g_stModeInfo.b1NoWaitForActive = _FALSE)
 
-#define GET_MODE_ACTIVE_READY()                 (bit)(g_stModeInfo.b1ActiveReady)
-#define SET_MODE_ACTIVE_READY()                 (g_stModeInfo.b1ActiveReady = _TRUE)
-#define CLR_MODE_ACTIVE_READY()                 (g_stModeInfo.b1ActiveReady = _FALSE)
+#define GET_MODE_ACTIVE_READY()                 (bit)(isr_g_stModeInfo.b1ActiveReady)
+#define SET_MODE_ACTIVE_READY()                 (isr_g_stModeInfo.b1ActiveReady = _TRUE)
+#define CLR_MODE_ACTIVE_READY()                 (isr_g_stModeInfo.b1ActiveReady = _FALSE)
 
-#define GET_FIRST_AUTOK_STATUS()                (bit)(g_stModeInfo.b1AutokReady)
-#define SET_FIRST_AUTOK_STATUS()                (g_stModeInfo.b1AutokReady = _TRUE)
-#define CLR_FIRST_AUTOK_STATUS()                (g_stModeInfo.b1AutokReady = _FALSE)
+#define GET_FIRST_AUTOK_STATUS()                (bit)(isr_g_stModeInfo.b1AutokReady)
+#define SET_FIRST_AUTOK_STATUS()                (isr_g_stModeInfo.b1AutokReady = _TRUE)
+#define CLR_FIRST_AUTOK_STATUS()                (isr_g_stModeInfo.b1AutokReady = _FALSE)
 
 //--------------------------------------------------
 // Audio.c Related MACRO
@@ -524,11 +524,11 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 // __SYSTEM_MODE__
-extern StructModeInfoType g_stModeInfo;
+extern StructModeInfoType isr_g_stModeInfo;
 
 
 // __SYSTEM_POWER__
-extern StructPowerInfoType g_stPowerInfo;
+extern StructPowerInfoType isr_g_stPowerInfo;
 
 
 // __SYSTEM_SOURCE__

@@ -158,12 +158,12 @@ def probe(u: dict, maps: dict, host: tuple[int, int, float]) -> dict:
     from p037_test import rd, wr
     bus = dev._bus(u)
     dbg = H.Dbg(B.Real(bus, allow_write=True))
-    base = maps["g_stAwtoDiag"]
+    base = maps["isr_g_stAwtoDiag"]
     hdr = dbg.read(base, 4)
     dbg.block = X.block_supported(hdr)
     r = {"stage": hdr[3]}
-    r["ms"] = H.decode_mode(dbg.read(maps["g_stModeInfo"], 1))
-    r["ps"] = H.decode_power(dbg.read(maps["g_stPowerInfo"], 1))[1]
+    r["ms"] = H.decode_mode(dbg.read(maps["isr_g_stModeInfo"], 1))
+    r["ps"] = H.decode_power(dbg.read(maps["isr_g_stPowerInfo"], 1))[1]
     t, x, note = P.read_timing(dbg.read, maps)
     # 3 decimals from the active-region count (#34); "~" = SDK 0.1 Hz value (no count for this timing yet)
     r["timing"] = (f"{t['hwidth']}x{t['vheight']}@{x['vfreq_mhz'] / 1000:.3f}" if x else

@@ -1072,7 +1072,7 @@ static void AwtoSyncConPoll(void)
         return;
     }
     if((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) || (GET_OSD_STATE() != _MENU_NONE) || (g_ucAwtoMenuOn != 0) || AWTO_KEY_TEST_ON() ||
-       (g_stAwtoDiag.ucHold != 0))
+       (isr_g_stAwtoDiag.ucHold != 0))
     {
         return;
     }

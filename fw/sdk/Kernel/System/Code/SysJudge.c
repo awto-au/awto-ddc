@@ -86,7 +86,7 @@ static void SysMachineLed(BYTE ucState)
     {
         ucLed = (GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF) ? AWTO_LED_OFF : AWTO_LED_BREATHE;
     }
-    if(ucLed != g_ucAwtoLedMode)
+    if(ucLed != isr_g_ucAwtoLedMode)
     {
         AwtoLedSet(ucLed, ucState);
     }

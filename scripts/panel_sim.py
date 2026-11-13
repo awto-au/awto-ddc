@@ -33,7 +33,7 @@ VDD, BL, BL_EN_N, PWM4 = 0xFE1A, 0xFE25, 0xFE2A, 0xFF50      # RL6449_AWTO_JXC4K
 DPTX_FNS = ("ScalerDisplayDPTxLinkSequence", "ScalerDisplayDPTxStreamHanlder", "ScalerDisplayDPTxPhyInitial",
             "ScalerDisplayDPTxAnalogPhyConrol", "ScalerDisplayDPTxSSCSet")
 POWER_KEY, K_SOURCE = 0x3E, 0x05                             # test cmds (awto_testcmd.inc): POWER key, injected SOURCE
-PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
+PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowerStatus (isr_g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE = 2, 3
 # Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given).
 PANEL = {"T4": 250, "T5": 20, "T6": 900}
@@ -88,10 +88,10 @@ class Run:
         self.bus = S.SimBus(a.bin, a.map, "panel-" + a.bin.stem, None, boot=False, devs=[PinWatch(self), w1c, self.led], video=a.mode)
         self.m = self.bus.m
         mt = self.m.map_text
-        self.led_addr = self.m.addr("g_ucAwtoLedMode") if re.search(r"\s_g_ucAwtoLedMode\b", mt) else None
+        self.led_addr = self.m.addr("isr_g_ucAwtoLedMode") if re.search(r"\s_g_ucAwtoLedMode\b", mt) else None
         self.led_table = []
         self.own = self.m.addr("g_ucAwtoPanelOwn") if re.search(r"\s_g_ucAwtoPanelOwn\b", mt) else None
-        self.pwr = self.m.addr("g_stPowerInfo")
+        self.pwr = self.m.addr("isr_g_stPowerInfo")
         self.diag = T.diag_addr(a.map)
         self.ring = L.sym(a.map, "g_stAwtoSync")
         self.rows = L.load_rows(L.tsv_for(a.map))

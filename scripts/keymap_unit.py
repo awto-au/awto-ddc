@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/keymap_unit.log"
 BUS, SERIAL, UNIT = 11, "AWT26110002", 2        # unit 2 (scripts/devices.json); units 1 / 3 are hands off
-TESTCMD_OFF, OSD_OFS = 0x28, 44                 # g_stAwtoDiag: test cmd byte, offset of usOsdState in g_stOsdInfo
+TESTCMD_OFF, OSD_OFS = 0x28, 44                 # isr_g_stAwtoDiag: test cmd byte, offset of usOsdState in g_stOsdInfo
 K_AUTO, K_UP, K_DOWN, K_MENU, K_SOURCE = 1, 2, 3, 4, 5      # test cmd = key message + 1
 KM_UP, KM_DOWN = 0x04, 0x08                     # RL6449_Project.h AWTO_KM_UP / AWTO_KM_DOWN (key_hold mask)
 MODE_ACTIVE = 3
@@ -54,9 +54,9 @@ class Unit:
         self.io = Real(BUS, allow_write=True)
         self.box = C.Box(self.io, self.mt)
         x = lambda n: C.xaddr(self.mt, n)                       # noqa: E731
-        self.diag, self.osdi, self.md = x("g_stAwtoDiag"), x("g_stOsdInfo"), x("menu_diag")
+        self.diag, self.osdi, self.md = x("isr_g_stAwtoDiag"), x("g_stOsdInfo"), x("menu_diag")
         self.gpio, self.key_a, self.ud = x("g_stAwtoGpio"), x("g_stAwtoKey"), x("g_stOSDUserData")
-        self.mode_a, self.pwr_a, self.menu_on = x("g_stModeInfo"), x("g_stPowerInfo"), x("g_ucAwtoMenuOn")
+        self.mode_a, self.pwr_a, self.menu_on = x("isr_g_stModeInfo"), x("isr_g_stPowerInfo"), x("g_ucAwtoMenuOn")
         self.fails = 0
 
     def rd(self, a, n=1):

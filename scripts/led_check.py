@@ -4,7 +4,7 @@
 - Rule (Dan 2026-11-12): on colour (1, 0) in AC ON .. NO SIGNAL / WAKE SEARCH; standby colour breathing in POWER SAVING
   (P3.5 = 0, P3.6 toggling); both off in OFF. POWER DOWN shows its target (the next state) at once, as the Dahua power switch.
 - judge_lines: after every 'system:A -> B' line the 'LED:...' lines up to the next transition leave B's colour; each LED
-  line names the state it was set for. sample: pins + g_ucAwtoLedMode at a checkpoint against the current state.
+  line names the state it was set for. sample: pins + isr_g_ucAwtoLedMode at a checkpoint against the current state.
 """
 import re
 
@@ -77,7 +77,7 @@ def judge_lines(lines, check):
 
 
 def sample(m, watch, state, phase, mode_addr, check, table):
-    """pins and g_ucAwtoLedMode now vs the current system state (state name from the last transition line)"""
+    """pins and isr_g_ucAwtoLedMode now vs the current system state (state name from the last transition line)"""
     v = m.rd(P3, 1, "sfr")[0]
     p35, p36 = v >> 5 & 1, v >> 6 & 1
     edges = watch.edges.get(phase, 0)
@@ -86,11 +86,11 @@ def sample(m, watch, state, phase, mode_addr, check, table):
     want = STATE_LED.get(state)
     table.append((phase, state, want, p35, p36, edges, mode))
     check(got == want and (mode is None or mode == want),
-          f"LED pins in {phase} ({state}): want {want}", f"P3.5 {p35} P3.6 {p36}, {edges} P3.6 edges, g_ucAwtoLedMode {mode}")
+          f"LED pins in {phase} ({state}): want {want}", f"P3.5 {p35} P3.6 {p36}, {edges} P3.6 edges, isr_g_ucAwtoLedMode {mode}")
 
 
 def print_table(say, table):
-    say("  LED per state (phase, state, want, P3.5, P3.6, P3.6 edges in phase, g_ucAwtoLedMode):")
+    say("  LED per state (phase, state, want, P3.5, P3.6, P3.6 edges in phase, isr_g_ucAwtoLedMode):")
     for ph, st, w, a, b, e, mo in table:
         say(f"    {ph:16s} {st:16s} {w!s:26s} {a} {b} {e:5d} {mo}")
 

@@ -176,7 +176,7 @@ def run(kind: str, img_path: Path, map_path: Path | None, mode: str, max_instr: 
         m = S.Machine(img, map_path, "trace-" + tag, log, [*devs, lg])
         m.t2_scale = S.T2_SCALE
         S.video_stubs(m, hdmi)
-        state_addr = m.addr("g_stModeInfo")
+        state_addr = m.addr("isr_g_stModeInfo")
     for a, d in taken.items():                                      # source-model addresses: log, then the model
         if a in ranges:
             lg.chain[a] = d

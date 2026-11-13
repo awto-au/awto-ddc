@@ -2,7 +2,7 @@
 """Wake time (#78): host DPMS off -> on, firmware switch log (StAwtoSw) decoded per phase, ms from the host's DPMS-on.
 
 usage: wake_time.py <bus> --serial S --map MAP [--off-s 3] [--runs N] [--label L]
-- Arms g_stAwtoSw from the host (XDATA writes over 0x35: ucN = 0, usT0 = Timer2 count), so any image with the #60 log works.
+- Arms isr_g_stAwtoSw from the host (XDATA writes over 0x35: ucN = 0, usT0 = Timer2 count), so any image with the #60 log works.
 - DPMS via Mutter PowerSaveMode (busctl; 3 = off, 0 = on): every monitor of this desktop blanks for --off-s.
 - Host timestamps: busctl call, then the connector's sysfs dpms "On". Firmware ms are mapped by the arm's host time.
 - Ends when the log shows UNBLANK / BACKLIGHT_ON after the DPMS-on, or WAKE_LIMIT_S passes.
@@ -84,7 +84,7 @@ def main() -> int:
         lf.write(line + "\n")
 
     i2cbus.require_unit(a.bus, a.serial)
-    sw, diag = sym(a.map, "g_stAwtoSw"), sym(a.map, "g_stAwtoDiag")
+    sw, diag = sym(a.map, "isr_g_stAwtoSw"), sym(a.map, "isr_g_stAwtoDiag")
     io = B.Real(a.bus, allow_write=True, regread=True)
     rc = 0
     if a.watch_s is not None:

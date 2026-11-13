@@ -741,7 +741,7 @@ def video_stubs(m: "Machine", hdmi: HdmiInput, port: str = "D2"):
     def scan(m, r):
         if (r["a1"] & 255) != src:
             return {"val": SOURCE_NONE}
-        m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
+        m.wr(m.addr("isr_g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # SET_INPUT_PIXEL_CLK (0.1 MHz)
         return {"val": SOURCE_HDMI}
     m.stub("ScalerTMDSScanInputPort", scan)
 
@@ -1040,10 +1040,10 @@ class SimBus:
             video_stubs(self.m, self.hdmi, port)
             self.m.t2_scale = T2_SCALE
         self.ddc = PORT_DDC[port] if video else None
-        self.diag_base = self.m.sym.get("_g_stAwtoDiag", 0xF6D0)
+        self.diag_base = self.m.sym.get("_isr_g_stAwtoDiag", 0xF6D0)
         self.ffwd_ms = 0
         if ffwd:
-            mt = re.search(r"^\s+([0-9A-F]{8})\s+_d_g_usTimerCounter\s", self.m.map_text, re.M)    # DATA (IRAM) global
+            mt = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_g_usTimerCounter\s", self.m.map_text, re.M)    # DATA (IRAM) global
             if mt:
                 self._tc_addr = int(mt.group(1), 16)
                 self.m.stub("ScalerTimerDelayXms", self._delay_ffwd)
@@ -1070,9 +1070,9 @@ class SimBus:
         self.m.wr(0xFF22, bytes([(self.m.rd(0xFF22)[0] & 0xF8) | (self.ddc if self.ddc is not None else PORT_DDC["D2"])]))
 
     def _delay_ffwd(self, m, r):
-        """Idle fast-forward: ScalerTimerDelayXms(ms) is a spin on d_g_usTimerCounter (87 % of a main-loop pass in
-        speed_bench). Skip the spin and advance what the Timer2 ISR would have: d_g_usTimerCounter (IRAM, u16) and the diag
-        T2 ISR count (the health time base), by ms ticks. Timer events compare d_g_usTimerCounter, so they fire as before."""
+        """Idle fast-forward: ScalerTimerDelayXms(ms) is a spin on d_isr_g_usTimerCounter (87 % of a main-loop pass in
+        speed_bench). Skip the spin and advance what the Timer2 ISR would have: d_isr_g_usTimerCounter (IRAM, u16) and the diag
+        T2 ISR count (the health time base), by ms ticks. Timer events compare d_isr_g_usTimerCounter, so they fire as before."""
         ms = r["a1"] & 0xFFFF
         if ms == 0 or ms > 1000:                     # out of the range the SDK uses per call: run it for real
             return None
@@ -1086,10 +1086,10 @@ class SimBus:
         return {}
 
     def mode_state(self) -> int:
-        return self.m.rd(self.addr("g_stModeInfo"))[0] & 0x1F
+        return self.m.rd(self.addr("isr_g_stModeInfo"))[0] & 0x1F
 
     def run_until_mode(self, mode: int = 3, max_instr: int = 150_000_000, chunk: int = 1_000_000) -> bool:
-        """Let the firmware run (no host traffic) until g_stModeInfo reaches `mode` (3 = ACTIVE); False when the budget is out."""
+        """Let the firmware run (no host traffic) until isr_g_stModeInfo reaches `mode` (3 = ACTIVE); False when the budget is out."""
         used = 0
         while used < max_instr:
             if self.mode_state() == mode:
@@ -1259,7 +1259,7 @@ def decision_stubs(m: "Machine") -> dict:
             od = m_.rd(m_.addr("g_stMDomainOutputData"), 20)
             c[1] = {"P0_02": m_.rd(0x0002)[0], "P0_0C": m_.rd(0x000C)[0], "P0_0D": m_.rd(0x000D)[0], "P0_28": m_.rd(0x0028)[0],
                     "P30_00": m_.rd(0x3000)[0], "P31_05": m_.rd(0x3105)[0], "P31_06": m_.rd(0x3106)[0],
-                    "pixclk": be("g_usInputPixelClk", 2), "dclk": be("g_ulDClkFreq", 4), "dvf": be("g_usDVFreq", 2),
+                    "pixclk": be("isr_g_usInputPixelClk", 2), "dclk": be("g_ulDClkFreq", 4), "dvf": be("g_usDVFreq", 2),
                     "info": m_.rd(m_.addr("g_stMDomainInfo"), 3).hex(), "out": [int.from_bytes(od[i:i + 2], "big") for i in range(0, 20, 2)],
                     "in": m_.rd(m_.addr("g_stMDomainInputData"), 17).hex(), "tin": m_.rd(m_.addr("g_stInputTimingData"), 17).hex()}
         return f
@@ -1370,7 +1370,7 @@ def ddr_trace(binp: Path, mapp: Path, mode: str, max_instr: int, log, vendor: Pa
     for fn in DDR_FNS:
         if "_" + fn in m.sym:
             m.stub(fn, lambda m_, r, fn=fn: calls.append((m_.instr, fn)) or None)
-    ma, last, done, tl = m.addr("g_stModeInfo"), None, 0, []
+    ma, last, done, tl = m.addr("isr_g_stModeInfo"), None, 0, []
     while done < max_instr:
         m.run(1_000_000); done += 1_000_000
         ms = m.rd(ma)[0] & 0x1F
@@ -1442,7 +1442,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
         msgs[r["a1"]] += 1                                   # watch only: AwtoMsg0/AwtoMsgV(id, value)
     for fn in ("AwtoMsg0", "AwtoMsgV"):
         m.stub(fn, am)
-    ma = m.addr("g_stModeInfo")
+    ma = m.addr("isr_g_stModeInfo")
     timeline, done, last = [], 0, None
     while done < max_instr:
         m.run(1_000_000); done += 1_000_000

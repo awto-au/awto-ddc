@@ -182,7 +182,7 @@ def osd_offsets_from_diag(diag3: bytes) -> dict | None:
     if len(diag3) < 3 or diag3[1] == 0:
         return None
     return dict(zip(OSD_OFS_LEGACY, diag3[:3]))
-TESTCMD = ("g_stAwtoDiag", 0x28)                               # firmware test-command byte (awto-ddc#33)
+TESTCMD = ("isr_g_stAwtoDiag", 0x28)                               # firmware test-command byte (awto-ddc#33)
 _CTYPE = {"unsigned char": 1, "unsigned int": 2, "unsigned long": 4, "char": 1, "int": 2}
 
 

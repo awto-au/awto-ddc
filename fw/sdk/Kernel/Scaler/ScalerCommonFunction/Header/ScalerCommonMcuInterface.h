@@ -67,8 +67,8 @@
 // Macros of 5us Delay
 //--------------------------------------------------
 #define ScalerDelay5us()                               {\
-                                                           d_g_ucDelay5usI = d_g_ucDelay5usN_Base;\
-                                                           while(--d_g_ucDelay5usI) {};\
+                                                           d_isr_g_ucDelay5usI = d_isr_g_ucDelay5usN_Base;\
+                                                           while(--d_isr_g_ucDelay5usI) {};\
                                                        }
 
 //--------------------------------------------------
@@ -115,12 +115,12 @@
 // INTERFACE VARIABLE DECLARATIONS
 //****************************************************************************
 
-extern BYTE __data d_g_ucDelay5usN_Base;
-extern BYTE __data d_g_ucDelayXusN_Base;
-extern BYTE __data d_g_ucDelay5usI;
-extern BYTE __data d_g_ucDelay5usI_EXINT;
-extern BYTE __data d_g_ucDelayXus_Counter;
-extern BYTE __data d_g_ucDelayXus_Counter_EXINT;
+extern BYTE __data d_isr_g_ucDelay5usN_Base;
+extern BYTE __data d_isr_g_ucDelayXusN_Base;
+extern BYTE __data d_isr_g_ucDelay5usI;
+extern BYTE __data d_isr_g_ucDelay5usI_EXINT;
+extern BYTE __data d_isr_g_ucDelayXus_Counter;
+extern BYTE __data d_isr_g_ucDelayXus_Counter_EXINT;
 
 extern __xdata _Bool g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)

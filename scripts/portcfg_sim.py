@@ -9,7 +9,7 @@ usage: portcfg_sim.py BIN MAP [--secs 10]
   --control: D1 left on, boot only: prints the D1 scans / HPD writes the checks below must not see.
   Checks:
     boot     line "D1 disabled by setting (stored)", ACTIVE on D3, D1 HPD (FE02) never written high, D1 never scanned
-             (SysSourceScanPortInitial), DDC1 channel enable bit (DDC1_DDC_ENABLE bit 0) clear, g_ucAwtoPortOff = D1 bit
+             (SysSourceScanPortInitial), DDC1 channel enable bit (DDC1_DDC_ENABLE bit 0) clear, isr_g_ucAwtoPortOff = D1 bit
     auto     AUTO key: auto search again, ACTIVE on D3, D1 still never scanned or raised
     veto     test cmd 0x08 (disable D3, on screen): refused line, mask unchanged
     select   SOURCE, UP (row D1), AUTO: line "D1 enabled by the input selector", mask clear, DDC1 bit set
@@ -27,7 +27,7 @@ import sync_log as SL  # noqa: E402
 
 D1, D2, D3 = 4, 5, 6                    # Global.h _D1.._D3_INPUT_PORT
 SET_D1_ENABLE = 36                      # registry id d1_enable (AwtoSetIds.h)
-TESTCMD = 0xF6F8                        # g_stAwtoDiag + 0x28
+TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag + 0x28
 TC_D1_OFF, TC_D3_OFF = 0x06, 0x08       # awto_testcmd.inc AWTO_TC_PORT_OFF + port index
 HPD_D1 = 0xFE02                         # bD1_HPD = MCU_FE02_PORT42_PIN_REG (board header)
 DDC1_DDC_ENABLE, DDC_EN = 0xFF2C, 0x01  # regdb DDC1_DDC_ENABLE bit 0 ddc1_ddc_en
@@ -106,7 +106,7 @@ def main() -> int:
         return pri[bus.xdata(bus.addr("g_ucSearchIndex"))[0] % 10]
 
     def off_mask():
-        return bus.xdata(bus.addr("g_ucAwtoPortOff"))[0]
+        return bus.xdata(bus.addr("isr_g_ucAwtoPortOff"))[0]
 
     def whys(since=0):
         return [WHY.get(w, w) for w, _ in lines[since:]]
@@ -131,7 +131,7 @@ def main() -> int:
         check("boot:D1 HPD never high", 1 not in hpd.log, f"FE02 writes {hpd.log}")
         check("boot:D1 never scanned", D1 not in scans, f"scanned ports {[hex(p) for p in scans]}")
         check("boot:DDC1 EDID channel off", (bus.xdata(DDC1_DDC_ENABLE)[0] & DDC_EN) == 0, f"0x{bus.xdata(DDC1_DDC_ENABLE)[0]:02X}")
-        check("boot:mask", off_mask() == 1 << (D1 - 3), f"g_ucAwtoPortOff 0x{off_mask():02X}")
+        check("boot:mask", off_mask() == 1 << (D1 - 3), f"isr_g_ucAwtoPortOff 0x{off_mask():02X}")
 
         close_console()
         n_scan, n_hpd = len(scans), len(hpd.log)

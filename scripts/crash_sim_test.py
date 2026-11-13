@@ -91,7 +91,7 @@ class Run:
 
     def reboot(self):
         bus, used = self.s.bus, 0
-        while bus.mode_state() == 3 and used < BOOT_LEAVE_INSTR:       # g_stModeInfo is RAM: ACTIVE stays until init rewrites it
+        while bus.mode_state() == 3 and used < BOOT_LEAVE_INSTR:       # isr_g_stModeInfo is RAM: ACTIVE stays until init rewrites it
             self.m.run(STEP); used += STEP
         if not bus.run_until_mode(3):
             raise SystemExit("no ACTIVE after the watchdog reset")

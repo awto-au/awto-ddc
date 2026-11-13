@@ -14,7 +14,7 @@ static void AwtoDiagT2Snap(__xdata StAwtoT2Snap *p)
     do
     {
         p->ucF = TF2;
-        p->usTick = d_g_usTimerCounter;
+        p->usTick = d_isr_g_usTimerCounter;
         do
         {
             p->ucH = TH2;
@@ -26,7 +26,7 @@ static void AwtoDiagT2Snap(__xdata StAwtoT2Snap *p)
     EA = ucEa;
 }
 
-// Counts from snapshot a to b (tick difference mod 65536, so a d_g_usTimerCounter wrap is harmless).
+// Counts from snapshot a to b (tick difference mod 65536, so a d_isr_g_usTimerCounter wrap is harmless).
 static unsigned long AwtoDiagT2Diff(__xdata StAwtoT2Snap *a, __xdata StAwtoT2Snap *b, unsigned int usRcap)
 {
     unsigned int usTicks = (unsigned int)((b->usTick + b->ucF) - (a->usTick + a->ucF));
@@ -61,15 +61,15 @@ static void AwtoDiagDelayCal(void)
     unsigned int usRcap;
     unsigned char ucEa = EA;
 
-    g_stAwtoDiag.ucDelay5usN = d_g_ucDelay5usN_Base;
-    g_stAwtoDiag.ucRcap2h = RCAP2H;
+    isr_g_stAwtoDiag.ucDelay5usN = d_isr_g_ucDelay5usN_Base;
+    isr_g_stAwtoDiag.ucRcap2h = RCAP2H;
     usRcap = ((unsigned int)RCAP2H << 8) | RCAP2L;
 
     ScalerTimerDelayXms(1);                                       // align to a tick edge: the next 10 ticks are exact
     AwtoDiagT2Snap(&s_stSnapA);
     ScalerTimerDelayXms(10);
     AwtoDiagT2Snap(&s_stSnapB);
-    g_stAwtoDiag.usDelayXms10 = (unsigned int)((AwtoDiagT2Diff(&s_stSnapA, &s_stSnapB, usRcap)) >> 2);
+    isr_g_stAwtoDiag.usDelayXms10 = (unsigned int)((AwtoDiagT2Diff(&s_stSnapA, &s_stSnapB, usRcap)) >> 2);
 
     EA = 0;
     AwtoDiagT2Snap(&s_stSnapA);
@@ -77,33 +77,33 @@ static void AwtoDiagDelayCal(void)
     EA = ucEa;
     ulOvh = AwtoDiagT2Diff(&s_stSnapA, &s_stSnapB, usRcap);
 
-    AWTO_CAL_RUN(g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
-    AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
-    AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
-    AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
+    AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
+    AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
+    AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
+    AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
     // #54: set the loop counts from this measurement: the shorter of each pair (main / _EXINT copy, they share the count)
     // lands at AWTO_DELAY_TARGET_PCT of nominal; then measure again, so the diag (and health's 90..125 % check) sees the result.
     {
         unsigned long ulPer = 0x10000UL - usRcap;                 // Timer2 counts per 1 ms tick
         unsigned int usNom5 = (unsigned int)(ulPer * 50 / 1000);  // 10 x 5 us
         unsigned int usNomX = (unsigned int)(ulPer * 100 / 1000); // 100 us
-        unsigned int usMin5 = (g_stAwtoDiag.usDelay5us10 < g_stAwtoDiag.usDelay5usIsr10) ? g_stAwtoDiag.usDelay5us10 : g_stAwtoDiag.usDelay5usIsr10;
-        unsigned int usMinX = (g_stAwtoDiag.usDelayXus100 < g_stAwtoDiag.usDelayXusIsr100) ? g_stAwtoDiag.usDelayXus100 : g_stAwtoDiag.usDelayXusIsr100;
+        unsigned int usMin5 = (isr_g_stAwtoDiag.usDelay5us10 < isr_g_stAwtoDiag.usDelay5usIsr10) ? isr_g_stAwtoDiag.usDelay5us10 : isr_g_stAwtoDiag.usDelay5usIsr10;
+        unsigned int usMinX = (isr_g_stAwtoDiag.usDelayXus100 < isr_g_stAwtoDiag.usDelayXusIsr100) ? isr_g_stAwtoDiag.usDelayXus100 : isr_g_stAwtoDiag.usDelayXusIsr100;
         unsigned long ulN;
 
         if((RCAP2H == AWTO_DELAY_CAL_RCAP2H) && (usMin5 != 0) && (usMinX != 0))      // M2PLL clock only (the counts are per clock)
         {
-            ulN = ((unsigned long)d_g_ucDelay5usN_Base * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usMin5) - 1) / (100UL * usMin5);
+            ulN = ((unsigned long)d_isr_g_ucDelay5usN_Base * AWTO_DELAY_TARGET_PCT * usNom5 + (100UL * usMin5) - 1) / (100UL * usMin5);
             g_ucAwtoCal5 = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
-            ulN = ((unsigned long)d_g_ucDelayXusN_Base * AWTO_DELAY_TARGET_PCT * usNomX + (100UL * usMinX) - 1) / (100UL * usMinX);
+            ulN = ((unsigned long)d_isr_g_ucDelayXusN_Base * AWTO_DELAY_TARGET_PCT * usNomX + (100UL * usMinX) - 1) / (100UL * usMinX);
             g_ucAwtoCalX = (ulN < 1) ? 1 : ((ulN > 255) ? 255 : (unsigned char)ulN);
-            d_g_ucDelay5usN_Base = g_ucAwtoCal5;
-            d_g_ucDelayXusN_Base = g_ucAwtoCalX;
-            g_stAwtoDiag.ucDelay5usN = d_g_ucDelay5usN_Base;
-            AWTO_CAL_RUN(g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
-            AWTO_CAL_RUN(g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
-            AWTO_CAL_RUN(g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
-            AWTO_CAL_RUN(g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
+            d_isr_g_ucDelay5usN_Base = g_ucAwtoCal5;
+            d_isr_g_ucDelayXusN_Base = g_ucAwtoCalX;
+            isr_g_stAwtoDiag.ucDelay5usN = d_isr_g_ucDelay5usN_Base;
+            AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelay5us10, AWTO_X10(DELAY_5US()));
+            AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelayXus100, DELAY_XUS(100));
+            AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelayXusIsr100, DELAY_XUS_EXINT(100));
+            AWTO_CAL_RUN(isr_g_stAwtoDiag.usDelay5usIsr10, AWTO_X10(DELAY_5US_EXINT()));
         }
     }
 }
@@ -112,7 +112,7 @@ static void AwtoDiagDelayCal(void)
 // runs the calibration once at the stream start (it was inside the blocking T3 wait before; ~40 ms, open item #162).
 void AwtoDiagT3Mark(unsigned char ucEnd)
 {
-    if((TR2 == _OFF) || (g_stAwtoDiag.usT3Wait64 != 0))         // as ScalerTimerDelayXms: no tick, no measurement
+    if((TR2 == _OFF) || (isr_g_stAwtoDiag.usT3Wait64 != 0))         // as ScalerTimerDelayXms: no tick, no measurement
     {
         return;
     }
@@ -120,7 +120,7 @@ void AwtoDiagT3Mark(unsigned char ucEnd)
     {
         AwtoSwEvent(AWTO_SW_EV_T3, 0);
         AwtoDiagT2Snap(&s_stT3A);
-        if(g_stAwtoDiag.usDelayXms10 == 0)
+        if(isr_g_stAwtoDiag.usDelayXms10 == 0)
         {
             AwtoDiagDelayCal();
         }
@@ -128,5 +128,5 @@ void AwtoDiagT3Mark(unsigned char ucEnd)
     }
     AwtoDiagT2Snap(&s_stT3B);
     AwtoSwEvent(AWTO_SW_EV_T3, 1);
-    g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, ((unsigned int)RCAP2H << 8) | RCAP2L) >> 6);
+    isr_g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, ((unsigned int)RCAP2H << 8) | RCAP2L) >> 6);
 }

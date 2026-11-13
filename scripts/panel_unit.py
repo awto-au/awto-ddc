@@ -35,7 +35,7 @@ OFF_S = 1.8            # soft off -> power OFF: PWM->BL 50 + T4 250 + T5 20 + T6
                        # + one ring poll 0.2 s = 0.74 s, x1.25 ~ 1 s; expiry = press again
 PRESSES = 3            # a press with the console open can go to closing it (AwtoKeyRoute); 3 = at most two such
 POLL_S = 0.5           # ring poll: one read ~0.1 s; boot is seconds
-TESTCMD = 0xF6F8       # g_stAwtoDiag + 0x28 (dbg_link.py TESTCMD)
+TESTCMD = 0xF6F8       # isr_g_stAwtoDiag + 0x28 (dbg_link.py TESTCMD)
 POWER_KEY = 0x3E
 PWR_OFF, PWR_NORMAL = 1, 2             # Global.h EnumPowerStatus
 MODE_ACTIVE, MODE_POWER_OFF = 3, 7     # fw_sim.MODE_NAMES
@@ -82,12 +82,12 @@ def xsym(mp: Path, name: str) -> int:
 
 
 def press_until(mp: Path, want: tuple, wait_s: float, what: str) -> bool:
-    """POWER press (test cmd 0x3E) until (power status, mode) == want, read live (g_stPowerInfo high nibble, g_stModeInfo
+    """POWER press (test cmd 0x3E) until (power status, mode) == want, read live (isr_g_stPowerInfo high nibble, isr_g_stModeInfo
     & 0x1F as fw_sim); a press can go to closing the console (AwtoKeyRoute): at most PRESSES presses."""
     import dbg_link
     import dbg_xdata as X
     import rtd_i2c_bridge as B
-    pa, ma = xsym(mp, "g_stPowerInfo"), xsym(mp, "g_stModeInfo")
+    pa, ma = xsym(mp, "isr_g_stPowerInfo"), xsym(mp, "isr_g_stModeInfo")
     with dbg_link.linked(BUS, 2):
         rio = B.Real(BUS, allow_write=True, regread=True)
         try:

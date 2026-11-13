@@ -2,12 +2,12 @@
 """Input-switch timeline (#60): switch a unit's input over debug slave 0x35 and decode the firmware's StAwtoSw log.
 
 usage: sw_timeline.py <bus> --serial S --map MAP [--to D1|D2|D3] [--runs N] [--settle-s 8] [--read-only]
-  --to: test cmd 0x31..0x33 (fixed port, as VCP 0x60), then read g_stAwtoSw once the unit is ACTIVE again or --settle-s passed.
+  --to: test cmd 0x31..0x33 (fixed port, as VCP 0x60), then read isr_g_stAwtoSw once the unit is ACTIVE again or --settle-s passed.
   --vcp: switch with DDC/CI VCP 0x60 (raw 0x37 on <bus>, as kvm.py) instead of the test cmd; after the settle the
     debug slave is linked onto --read-bus for the read (dbg_link on/off: DDC/CI owns the active port, #79).
   --read-only: decode the current log only. Host side per run: kernel drm uevents (udevadm monitor) and mutter journal lines.
   Events (RL6449_Project.h AWTO_SW_EV_*): 01 mode state, 10 panel power action, 20 T3 wait start/end, 40 switch cmd,
-  50/51/52 held-visual guards. Times = firmware d_g_usTimerCounter ms relative to the arm (usT0).
+  50/51/52 held-visual guards. Times = firmware d_isr_g_usTimerCounter ms relative to the arm (usT0).
 Log: ./tmp/logs/sw_timeline.log (one decoded line per event)
 """
 import argparse
@@ -139,7 +139,7 @@ def main() -> int:
         print(line); lf.write(line + "\n")
 
     i2cbus.require_unit(a.bus, a.serial)
-    base = sym(a.map, "g_stAwtoSw")
+    base = sym(a.map, "isr_g_stAwtoSw")
     if a.vcp:
         if a.read_only or a.runs != 1:
             sys.exit("--vcp: one switch per call (the log is read over a re-linked debug slave)")

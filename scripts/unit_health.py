@@ -40,7 +40,7 @@ TIMING_VFREQ_TOL = 5                           # 0.1 Hz units (0.5 Hz): SDK valu
 TIMING_EXACT_TOL_MHZ = 10
 TIMING_EXACT_TOL_REL = 0.0025
 HDIAG_STAGE = 8
-MAP_SYMS = ("g_stAwtoDiag", "g_stModeInfo", "g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
+MAP_SYMS = ("isr_g_stAwtoDiag", "isr_g_stModeInfo", "isr_g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
 MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop")   # awto_freq.inc (#34); awto_loopsplit.inc (#75)
 RETRY_TRIES = 2
 
@@ -298,11 +298,11 @@ def check_delaycal(rep, d: Dbg, base: int, sim: bool = False) -> bool:
 
 def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = False) -> int:
     """All checks, each independent: a failed read marks that check FAIL and the rest still run."""
-    base = maps["g_stAwtoDiag"]
+    base = maps["isr_g_stAwtoDiag"]
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
              ("main loop", lambda: check_rate(rep, d, base, wait, window=SIM_RATE_WINDOW_S if sim else RATE_WINDOW_S,
                                               loop_addr=maps.get("g_stAwtoLoop"))),
-             ("mode state", lambda: check_state(rep, d, maps["g_stModeInfo"], maps["g_stPowerInfo"])),
+             ("mode state", lambda: check_state(rep, d, maps["isr_g_stModeInfo"], maps["isr_g_stPowerInfo"])),
              ("input timing", lambda: check_timing(rep, d, maps, host)),
              ("pins", lambda: check_pins(rep, d)),
              ("osd", lambda: check_osd(rep, d, maps["g_stOsdInfo"], base, maps["osd_ofs"], wait)),
@@ -321,7 +321,7 @@ def main() -> int:
     ap.add_argument("--host-mode", help="WxH@HZ instead of gdctl")
     ap.add_argument("--sim", nargs=2, type=Path, metavar=("BIN", "MAP"),
                     help="run against the firmware simulator (fw_sim.SimBus), no hardware; host mode defaults to 1920x1080@60")
-    ap.add_argument("--ffwd", action="store_true", help="sim: fast-forward ScalerTimerDelayXms spins (off: it moves d_g_usTimerCounter "
+    ap.add_argument("--ffwd", action="store_true", help="sim: fast-forward ScalerTimerDelayXms spins (off: it moves d_isr_g_usTimerCounter "
                     "without Timer2, so the delay-cal T3 check reads 593 vs 550 ms)")
     ap.add_argument("--sim-port", default="D2", choices=("D2", "D3"),
                     help="sim: HDMI input carrying the source; the host reads 0x35 on that port's DDC (#28)")

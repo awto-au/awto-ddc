@@ -38,13 +38,13 @@
 // Macros of 5us Delay
 //--------------------------------------------------
 #define DELAY_5US()                         {\
-                                                d_g_ucDelay5usI = (d_g_ucDelay5usN_Base);\
-                                                while(--d_g_ucDelay5usI) {};\
+                                                d_isr_g_ucDelay5usI = (d_isr_g_ucDelay5usN_Base);\
+                                                while(--d_isr_g_ucDelay5usI) {};\
                                             }
 
 #define DELAY_5US_EXINT()                   {\
-                                                d_g_ucDelay5usI_EXINT = (d_g_ucDelay5usN_Base);\
-                                                while(--d_g_ucDelay5usI_EXINT) {};\
+                                                d_isr_g_ucDelay5usI_EXINT = (d_isr_g_ucDelay5usN_Base);\
+                                                while(--d_isr_g_ucDelay5usI_EXINT) {};\
                                             }
 
 #define DELAY_10US()                        {\
@@ -184,32 +184,32 @@
                                             }
 
 #define DELAY_XUS_BASE()                    {\
-                                                d_g_ucDelay5usI = (d_g_ucDelayXusN_Base);\
-                                                while(--d_g_ucDelay5usI) {};\
+                                                d_isr_g_ucDelay5usI = (d_isr_g_ucDelayXusN_Base);\
+                                                while(--d_isr_g_ucDelay5usI) {};\
                                             }
 
 #define DELAY_XUS_BASE_EXINT()              {\
-                                                d_g_ucDelay5usI_EXINT = (d_g_ucDelayXusN_Base);\
-                                                while(--d_g_ucDelay5usI_EXINT) {};\
+                                                d_isr_g_ucDelay5usI_EXINT = (d_isr_g_ucDelayXusN_Base);\
+                                                while(--d_isr_g_ucDelay5usI_EXINT) {};\
                                             }
 
 // Delay 50~1000 us
 #define DELAY_XUS(N)                        {\
-                                                d_g_ucDelayXus_Counter = (N) >> 2;\
+                                                d_isr_g_ucDelayXus_Counter = (N) >> 2;\
                                                 do\
                                                 {\
                                                     DELAY_XUS_BASE();\
                                                 }\
-                                                while(--d_g_ucDelayXus_Counter);\
+                                                while(--d_isr_g_ucDelayXus_Counter);\
                                             }
 
 #define DELAY_XUS_EXINT(N)                  {\
-                                                d_g_ucDelayXus_Counter_EXINT = (N) >> 2;\
+                                                d_isr_g_ucDelayXus_Counter_EXINT = (N) >> 2;\
                                                 do\
                                                 {\
                                                     DELAY_XUS_BASE_EXINT();\
                                                 }\
-                                                while(--d_g_ucDelayXus_Counter_EXINT);\
+                                                while(--d_isr_g_ucDelayXus_Counter_EXINT);\
                                             }
 
 //--------------------------------------------------
@@ -306,12 +306,12 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 
-extern BYTE __data d_g_ucDelay5usN_Base;
-extern BYTE __data d_g_ucDelayXusN_Base;
-extern BYTE __data d_g_ucDelay5usI;
-extern BYTE __data d_g_ucDelay5usI_EXINT;
-extern BYTE __data d_g_ucDelayXus_Counter;
-extern BYTE __data d_g_ucDelayXus_Counter_EXINT;
+extern BYTE __data d_isr_g_ucDelay5usN_Base;
+extern BYTE __data d_isr_g_ucDelayXusN_Base;
+extern BYTE __data d_isr_g_ucDelay5usI;
+extern BYTE __data d_isr_g_ucDelay5usI_EXINT;
+extern BYTE __data d_isr_g_ucDelayXus_Counter;
+extern BYTE __data d_isr_g_ucDelayXus_Counter_EXINT;
 extern __xdata _Bool g_bRunDdcciCommand;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
 extern bit g_bReceiveDdcciCmdNotFinish;

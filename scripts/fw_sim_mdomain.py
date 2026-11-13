@@ -64,7 +64,7 @@ def main() -> int:
     for fn in FNS:
         if "_" + fn in m.sym:
             m.stub(fn, lambda m_, r, fn=fn: rows.append(f"{m_.instr:>10} " + snapshot(m_, fn)) or None)
-    ma, last, done, tl = m.addr("g_stModeInfo"), None, 0, []
+    ma, last, done, tl = m.addr("isr_g_stModeInfo"), None, 0, []
     while done < a.max_instr:
         m.run(1_000_000)
         done += 1_000_000

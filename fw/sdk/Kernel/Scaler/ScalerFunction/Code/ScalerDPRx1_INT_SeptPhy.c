@@ -1826,15 +1826,15 @@ void ScalerDpRx1AdjustLaneFLDBand_EXINT0(BYTE ucDpRx1LaneNumber, WORD usVCOBandD
 
     if(ScalerGetBit_EXINT(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6)
     {
-        g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte_EXINT(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte_EXINT(PB0_54_DP_SIG_DET_4));
+        isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] = ((((WORD)ScalerGetByte_EXINT(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte_EXINT(PB0_54_DP_SIG_DET_4));
 
-        if(g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] < g_pusDpRx1ClockCount[ucDpRx1LaneNumber])
+        if(isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] < isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber])
         {
-            ucBestVCOBand = ucAutoVCOBand + (((g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - g_pusDpRx1ClockCount1[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
+            ucBestVCOBand = ucAutoVCOBand + (((isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber]) / usVCOBandDiff) + 1);
         }
         else
         {
-            ucBestVCOBand = ucAutoVCOBand - ((g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] - g_pusDpRx1ClockCount[ucDpRx1LaneNumber]) / usVCOBandDiff);
+            ucBestVCOBand = ucAutoVCOBand - ((isr_g_pusDpRx1ClockCount1[ucDpRx1LaneNumber] - isr_g_pusDpRx1ClockCount[ucDpRx1LaneNumber]) / usVCOBandDiff);
         }
     }
     else

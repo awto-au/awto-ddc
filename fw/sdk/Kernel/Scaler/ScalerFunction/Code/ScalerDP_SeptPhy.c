@@ -1190,7 +1190,7 @@ void ScalerDpTimerEventProc(EnumScalerTimerEventID enumEventID)
                     ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _DP_LINK_HBR);
 #else
                     // When Define Extended Rx Cap Should Set DPCD 0x02201
-                    g_ucDpRx1DPCD02201hValue = _DP_LINK_HBR;
+                    isr_g_ucDpRx1DPCD02201hValue = _DP_LINK_HBR;
 #endif
 
                     ScalerDpRx1SetHotPlugEvent(_DP_HBR2_MARGIN_LINK_HPD_EVENT);

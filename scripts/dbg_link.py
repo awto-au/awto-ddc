@@ -25,9 +25,9 @@ import i2cbus  # noqa: E402
 LOG = i2cbus.ROOT / "tmp/logs/dbg_link.log"
 DBG, DDCCI = 0x35, 0x37
 VCP_LINK, MAGIC = 0xE3, 0xA5            # RL6449_Project.h AWTO_DBG_LINK_VCP / _MAGIC
-TESTCMD = 0xF6F8                        # g_stAwtoDiag (0xF6D0) + 0x28
+TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag (0xF6D0) + 0x28
 CMD_BACK = 0x3B
-DIAG_MAGIC = 0xF6D0                     # g_stAwtoDiag.ucMagic[2] = 'AD' (docs/diag-block.md)
+DIAG_MAGIC = 0xF6D0                     # isr_g_stAwtoDiag.ucMagic[2] = 'AD' (docs/diag-block.md)
 MCCS_WAIT_S = 0.050                     # MCCS 2.2: host waits 50 ms after a set before the next transaction
 # swap = one main-loop pass (~1 ms); worst case the loop is blocked by the input-info pop-up draw, 375 ms (#60 phase
 # table). 1.25 x 375 ms / 50 ms -> 10 probes. Expiry: "no link" logged with the elapsed time, exit 1.

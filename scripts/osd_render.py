@@ -6,7 +6,7 @@ usage: osd_render.py BIN MAP [--mode 1080p60|2160p60] [--at WHEN ...] [--do MS:A
   WHEN  = sim ms after the firmware reaches ACTIVE (e.g. 500), or `end` (last action + 1 s). Several --at give several
           PNGs (NAME_<when>.png). Power-on screens (no logo since #144, the console): scripts/boot_sim.py.
   ACTION = osd_test.py name: events (info nosignal ...), keys (menu right left exit), debug, clear, ...
-          written to the firmware test byte (g_stAwtoDiag + 0x28) over the simulated debug slave (osd_test --cmd).
+          written to the firmware test byte (isr_g_stAwtoDiag + 0x28) over the simulated debug slave (osd_test --cmd).
   --video: a frame every --every ms of sim time from 0 to --until (frames downscaled by --vscale), mp4 via ffmpeg
           (image sequence in OUT_frames/ when ffmpeg is missing).
 Model: scripts/osd_model.py (gaps listed there). Timing: ms = firmware Timer2 ms (sim runs ~3x time-dilated, see fw_sim).

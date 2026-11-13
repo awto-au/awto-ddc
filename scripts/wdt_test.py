@@ -66,7 +66,7 @@ NVSAVE_GAP_MS = 1000                       # between saves: one save + its OSD e
 # 0x35 is silent while the MCU is halted on a flash op: a save's ops (sector erase 200 + WRSR 40 + 16 x 3 ms program, MX25L8006E
 # max) = 288 ms x 1.25 -> reads retried for 360 ms
 FLASH_OP_MS = 360
-TESTCMD_OFF = 0x28                         # g_stAwtoDiag + 0x28 (osd_test.TESTCMD_OFF)
+TESTCMD_OFF = 0x28                         # isr_g_stAwtoDiag + 0x28 (osd_test.TESTCMD_OFF)
 
 
 def warn_ms():
@@ -118,14 +118,14 @@ CASES = [
 ]
 EVENT_IDS = {"RX1_DP_REBUILD_PHY": 1, "RX2_HDMI_RR_RETRY": 4, "RX3_HDMI_RR_RETRY": 5, "RX5_HDMI_RR_RETRY": 7}   # enum order, this build
 SHARED = (   # prio_inversion: data shared between contexts and its guard (fw/sdcc/awto_t0ev.inc)
-    ("s_pusAwtoT0Ms[]", "Timer0 ISR (dec), EXINT0 (arm, cancel), main (cancel, test arm)",
+    ("isr_s_pusAwtoT0Ms[]", "Timer0 ISR (dec), EXINT0 (arm, cancel), main (cancel, test arm)",
      "Timer0: EA off per element; main: __critical; EXINT0: no guard needed (Timer0 same or lower level cannot preempt it)"),
     ("TR0 / TH0 / TL0", "Timer0 ISR (reload, stop), EXINT0 (start), main (clock rescale)",
      "stop check + TR0 = 0 under EA off; main under __critical; reload in the ISR (EXINT0 high in PS may start: only if TR0 = 0)"),
-    ("s_usAwtoT0Rl", "Timer0 ISR, arm (start), clock rescale", "written with TR0 handling, same guards as TR0"),
-    ("g_stAwtoWdt live bytes", "main pass (pass time, max), pokes (max poke: main, bounded loops), WDT IRQ (capture reads)",
+    ("isr_s_usAwtoT0Rl", "Timer0 ISR, arm (start), clock rescale", "written with TR0 handling, same guards as TR0"),
+    ("isr_g_stAwtoWdt live bytes", "main pass (pass time, max), pokes (max poke: main, bounded loops), WDT IRQ (capture reads)",
      "single bytes; the capture runs with EA off and never returns"),
-    ("g_ucAwtoT0Test / Arms", "main (test cmd), EXINT0 hook", "single bytes (tests only)"),
+    ("isr_g_ucAwtoT0Test / Arms", "main (test cmd), EXINT0 hook", "single bytes (tests only)"),
 )
 
 
@@ -185,7 +185,7 @@ class SimTarget:
 
     def reboot(self):
         used = 0
-        while self.bus.mode_state() == 3 and used < 20_000_000:      # g_stModeInfo is RAM: ACTIVE stays until init rewrites it
+        while self.bus.mode_state() == 3 and used < 20_000_000:      # isr_g_stModeInfo is RAM: ACTIVE stays until init rewrites it
             self.m.run(200_000); used += 200_000
         if not self.bus.run_until_mode(3):
             raise SystemExit("sim: no ACTIVE after the reset")
@@ -271,7 +271,7 @@ class UnitTarget:
             raise SystemExit(f"bus rate {i2cbus.rate_khz()} kHz; 0x35 runs at 100 kHz only")
         self.logs = B.setup_logs("wdt_test", map=str(mapp), detail=True)   # decoded I2C -> wdt_test.detail.log, bytes -> .raw.log
         self.map_text = mapp.read_text(errors="replace")
-        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoDiag\b", self.map_text, re.M)
+        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stAwtoDiag\b", self.map_text, re.M)
         self.diag = int(m.group(1), 16) & 0xFFFF if m else 0xF6D0
         self.serial = u["serial"]
         self.link()
@@ -317,7 +317,7 @@ class UnitTarget:
 
     def mode(self) -> int | None:
         import dbg_xdata as X
-        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stModeInfo\b", self.map_text, re.M)
+        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stModeInfo\b", self.map_text, re.M)
         b = X.read_bytes(self.io, int(m.group(1), 16) & 0xFFFF, 1) if m else None
         return b[0] & 0x1F if b else None
 
@@ -925,7 +925,7 @@ class Runner:
 
     def _ip_restore(self):
         """IP back once no interrupt is active (main context, as the SDK changes it): restoring it inside EXINT0 flips
-        ScalerTimerPollingFlagProc_EXINT0 to its d_g_usTimerCounter branch while Timer2 cannot preempt -> endless poll"""
+        ScalerTimerPollingFlagProc_EXINT0 to its d_isr_g_usTimerCounter branch while Timer2 cannot preempt -> endless poll"""
         if self._ip_back is None:
             return
         k = 0
@@ -1013,8 +1013,8 @@ class Runner:
         self.t.run_ms(2)
 
     def _mode(self, c: int, want: int):
-        """EXINT0 test-hook mode by test cmd; returns once g_ucAwtoT0Test reads want"""
-        a = self.t.m.addr("g_ucAwtoT0Test")
+        """EXINT0 test-hook mode by test cmd; returns once isr_g_ucAwtoT0Test reads want"""
+        a = self.t.m.addr("isr_g_ucAwtoT0Test")
         self.t.cmd(c)
         t0 = self.t.fw_ms()
         while self.t.m.rd(a)[0] != want and (self.t.fw_ms() - t0) % 65536 < 3 * CMD_MS:
@@ -1072,7 +1072,7 @@ class Runner:
         def ip81():
             hit.clear()
             t.unwatch("AwtoT0EvIsr")
-            ta = t.m.addr("g_ucAwtoT0Test")
+            ta = t.m.addr("isr_g_ucAwtoT0Test")
 
             def trig(r):
                 if not hit:

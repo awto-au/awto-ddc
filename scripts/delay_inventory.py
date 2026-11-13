@@ -262,7 +262,7 @@ PRIM = [   # (kind, regex on callee name)
     ("wait_event", r"_ScalerTimerWaitFor\w+"),
 ]
 US_RE = re.compile(r"\b(DELAY_(\d+)US(_EXINT)?|ScalerDelay5us|DELAY_XUS(_EXINT)?)\s*\(([^)]*)\)")
-STATUS_TOK = re.compile(r"ScalerGet\w*Bit|MCU_F[0-9A-F]{3}|\bP[0-9A-F]{1,2}_[0-9A-F]{2}_|GET_\w+\(\)|d_g_usTimerCounter|\bT[FH]2\b|"
+STATUS_TOK = re.compile(r"ScalerGet\w*Bit|MCU_F[0-9A-F]{3}|\bP[0-9A-F]{1,2}_[0-9A-F]{2}_|GET_\w+\(\)|d_isr_g_usTimerCounter|\bT[FH]2\b|"
                         r"usTimeElapsed|TimeOut|_DATA_OUT_COUNT|ScalerVgipGet\w*|ucHalt|ucPhyCtsAutoMode")
 COUNT_TOK = re.compile(r"(\w+\[?\d*\]?)\s*(?:--|\+\+)?\s*(?:>|<=|<|>=)\s*(\w+)|--\s*(\w+)\s*>\s*0|\((\w+)--\s*>\s*0\)")
 
@@ -424,7 +424,7 @@ def extract_sites(fns, ctx, live, defs: Eval, build: Path):
                 else:
                     v = int(m.group(2))
                 rows.append(dict(base, kind="delay_us", addr=f"0x{ins[0][0]:x}" if ins else "", value=v if v is not None else "",
-                                 units="us", mode="blind", bound="", expiry="none: counted loop, nominal (d_g_ucDelay5usN_Base calibrated)",
+                                 units="us", mode="blind", bound="", expiry="none: counted loop, nominal (d_isr_g_ucDelay5usN_Base calibrated)",
                                  args=m.group(0), in_loop=("yes" if ins and in_loop(fn, ins[0][0]) else "no")))
             elif re.match(r"(?:while|for)\s*\(", text) or re.match(r"while\s*\(", text):
                 row = loop_row(fn, base, text, ins)

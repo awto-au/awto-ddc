@@ -59,7 +59,7 @@ class Sim:
         self.m = self.bus.m
         self.mccs = D.Mccs(self.bus, self.eng)
         self.rows = SL.load_rows(SL.tsv_for(mapp))
-        self.a_ht, self.a_sync = self.m.addr("g_stAwtoHt"), self.m.addr("g_stAwtoSync")
+        self.a_ht, self.a_sync = self.m.addr("isr_g_stAwtoHt"), self.m.addr("g_stAwtoSync")
         self.fails = 0
         self.base = None                                    # glyph id of ' ' (ids = ASCII - 0x20 + base, font.c font_ids)
 
@@ -114,7 +114,7 @@ class Sim:
         return self.mccs.get(VCP)
 
     def cmd(self, c: int):
-        self.m.wr(self.m.addr("g_stAwtoDiag") + T.TESTCMD_OFF, bytes([c]))   # RAM: the DDC/CI engine owns the host channel here
+        self.m.wr(self.m.addr("isr_g_stAwtoDiag") + T.TESTCMD_OFF, bytes([c]))   # RAM: the DDC/CI engine owns the host channel here
         self.bus.wait(CMD_S)
 
     def dump(self, out: Path, name: str) -> list[str]:
@@ -134,8 +134,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/console_pages")
     a = ap.parse_args()
     mapp = a.map or a.bin.with_suffix(".map")
-    if " _g_stAwtoHt " not in mapp.read_text(errors="replace"):
-        say(f"SKIP {a.bin.name}: no _g_stAwtoHt (image without #157)")
+    if " _isr_g_stAwtoHt " not in mapp.read_text(errors="replace"):
+        say(f"SKIP {a.bin.name}: no _isr_g_stAwtoHt (image without #157)")
         return 0
     say(f"=== host_time_sim {a.bin.name} ===")
     s = Sim(a.bin, mapp)
@@ -161,7 +161,7 @@ def main() -> int:
     s.bus.wait(TICK_S)
     ht = s.ht()
     s.check(ht["syncs"] == 1 and ht["epoch"] == int(T0.timestamp()) and ht["frac"] == 250 and ht["ofs"] == OFS,
-            "g_stAwtoHt stored", str(ht))
+            "isr_g_stAwtoHt stored", str(ht))
     exp = T0 + dt.timedelta(seconds=s.bus.now() - t_s)
     ti = s.title()
     hm = re.search(r"HOST (\d\d:\d\d:\d\d)", ti)

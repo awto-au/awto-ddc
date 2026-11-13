@@ -21,7 +21,7 @@ import dbg_xdata  # noqa: E402
 
 LOG = S.ROOT / "tmp/logs/swap_sim.log"
 DEV8 = 0x6A
-TESTCMD = 0xF6F8            # g_stAwtoDiag (0xF6D0, RL6449_Project.h) + 0x28
+TESTCMD = 0xF6F8            # isr_g_stAwtoDiag (0xF6D0, RL6449_Project.h) + 0x28
 CMD_S = 0.05                # test cmd = main-loop pass (~1 ms) + an OSD draw can block it 375 ms: 50 ms covers the idle sim
 PARK = 1                    # RL6449_Project.h AWTO_DBG_PARK_CH (DDC0)
 

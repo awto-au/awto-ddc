@@ -16,8 +16,8 @@ import fw_sim as S
 import rtd_proto as P
 
 DEV8 = 0x6A
-TESTCMD = 0xF6F8                       # g_stAwtoDiag + 0x28
-HOLD = 0xF6FF                          # g_stAwtoDiag + 0x2F
+TESTCMD = 0xF6F8                       # isr_g_stAwtoDiag + 0x28
+HOLD = 0xF6FF                          # isr_g_stAwtoDiag + 0x2F
 
 
 def wr(bus, addr: int, val: int) -> bool:
@@ -58,14 +58,14 @@ def main() -> int:
         bus.wait(a.secs)
         hold = bus.xdata(HOLD)[0]
         blocks, evs = -1, []
-        if "_g_stAwtoSw" in bus.m.sym or True:
+        if "_isr_g_stAwtoSw" in bus.m.sym or True:
             try:
-                sw = bus.addr("g_stAwtoSw")
+                sw = bus.addr("isr_g_stAwtoSw")
                 raw = bus.xdata(sw, 12 + 4 * 40)
                 blocks = raw[11]
                 evs = [(raw[12 + 4 * i], raw[13 + 4 * i], int.from_bytes(raw[14 + 4 * i:16 + 4 * i], "big")) for i in range(min(raw[3], 40))]
             except Exception as e:                             # image without the #60 log
-                say(f"no g_stAwtoSw: {e!r}")
+                say(f"no isr_g_stAwtoSw: {e!r}")
         say("events (id arg ms): " + " ".join(f"{i:02x}/{g:02x}@{t}" for i, g, t in evs[-16:]))
         say(f"disable calls at: {where}")
         want = 0x01 if cmd == 0x24 else 0x02

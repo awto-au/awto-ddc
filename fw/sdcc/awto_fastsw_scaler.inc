@@ -18,7 +18,7 @@ void AwtoFastScalerSave(BYTE __xdata *pucBuf)
 
     memcpy(&pstS->stTiming, &g_stInputTimingData, sizeof(StructTimingInfo));
     memcpy(&pstS->stSync, &g_stMeasureSyncHV, sizeof(StructMeasureSyncData));
-    memcpy(&pstS->stColor, &g_stColorInfo, sizeof(StructColorInfo));
+    memcpy(&pstS->stColor, &isr_g_stColorInfo, sizeof(StructColorInfo));
     pstS->usPixelClk = GET_INPUT_PIXEL_CLK();
     pstS->ucFcSrc = ScalerGetByte(P31_00_FC_INPUT_SEL_P01) & 0xF0;
     pstS->pucIvs2Dvs[0] = ScalerGetByte(P0_3D_IV_DV_DELAY_CLK_FINE);
@@ -81,7 +81,7 @@ BYTE AwtoFastScalerMatch(BYTE __xdata *pucBuf) // 0 = same geometry, rate and co
     {
         return 7;
     }
-    if(AwtoFastSameBytes((BYTE __xdata *)&pstS->stColor, (BYTE __xdata *)&g_stColorInfo, sizeof(StructColorInfo)) == _FALSE)
+    if(AwtoFastSameBytes((BYTE __xdata *)&pstS->stColor, (BYTE __xdata *)&isr_g_stColorInfo, sizeof(StructColorInfo)) == _FALSE)
     {
         return 8;
     }

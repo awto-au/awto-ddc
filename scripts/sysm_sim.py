@@ -6,8 +6,8 @@ Scenario (dw8051 core): cold boot -> ACTIVE; POWER off / on (test cmd 0x3E); POW
 (test cmd 0x33, no source) and back to D2 (0x32); signal lost (L1 hold) and back; power saving by DDC/CI VCP D6 = 4; SOURCE-key wake;
 unsupported timing (UserCommonInterfaceCheckNoSupport forced true, D3 -> D2): NO SUPPORT kept, then the OSD's power saving (SDK path).
 FAIL (gate):
-- a firmware write that changes the power status / power target (g_stPowerInfo) or the mode state / mode reset target
-  (g_stModeInfo) without g_ucAwtoSysOwn = 1 (after the machine's init);
+- a firmware write that changes the power status / power target (isr_g_stPowerInfo) or the mode state / mode reset target
+  (isr_g_stModeInfo) without g_ucAwtoSysOwn = 1 (after the machine's init);
 - a 'system:in A for N ms -> B' line whose A is not the B of the line before (chain broken), or a state name missing (hex in the line);
 - a transition line whose SDK mode text ('; <text>', sync.tsv 1A, #162 s3b) is missing although the mode changed, present
   although it did not, or not the new state's text; the first line not 'RESET -> AC ON' with the POWER OFF text;
@@ -33,7 +33,7 @@ from ddc_sim import DdcEngine, Mccs  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sysm_sim.log"
 POWER_KEY, K_SOURCE, SEL_D2, SEL_D3 = 0x3E, 0x05, 0x32, 0x33     # test cmds (awto_testcmd.inc)
-PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                        # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
+PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                        # Global.h EnumPowerStatus (isr_g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE, MODE_NOSUPPORT, MODE_NOSIGNAL, MODE_PS = 2, 3, 4, 5, 6
 STATE_MODE = {"AC ON": 7, "OFF": 7, "INITIAL": 0, "SEARCH": 1, "DISPLAY SETTING": 2, "ACTIVE": 3, "FAST SWITCH": 3, "HOLD L1": 3,
               "NO SUPPORT": 4, "NO SIGNAL": 5, "POWER SAVING": 6, "WAKE SEARCH": 6}       # POWER DOWN keeps the mode before it
@@ -60,7 +60,7 @@ def say(s):
 
 class StateWatch(S.Dev):
     """Firmware writes to the SDK power / mode views: a change of the watched bits is recorded with the owner flag."""
-    MASK = {0: 0xFF, 1: 0x1F, 2: 0xF0}          # g_stPowerInfo byte 0 (target | status); g_stModeInfo byte 0 bits 4..0, byte 1 bits 7..4
+    MASK = {0: 0xFF, 1: 0x1F, 2: 0xF0}          # isr_g_stPowerInfo byte 0 (target | status); isr_g_stModeInfo byte 0 bits 4..0, byte 1 bits 7..4
 
     def __init__(self, run, pwr, mode):
         self.run, self.cell = run, {pwr: ("power", 0), mode: ("mode", 1), mode + 1: ("reset", 2)}
@@ -85,7 +85,7 @@ class Run:
         mp = Path(a.map).read_text(errors="replace")
         self.has_own = re.search(r"\s_g_ucAwtoSysOwn\b", mp) is not None
         m0 = S.SimBus(a.bin, a.map, "sysm-probe", None, boot=False, video=a.mode).m        # addresses before the watch device exists
-        pwr, mode = m0.addr("g_stPowerInfo"), m0.addr("g_stModeInfo")
+        pwr, mode = m0.addr("isr_g_stPowerInfo"), m0.addr("isr_g_stModeInfo")
         self.own = m0.addr("g_ucAwtoSysOwn") if self.has_own else None
         m0.close() if hasattr(m0, "close") else None
         w1c = S.W1C({0xFE69: 0x01, 0xFFE5: 0x01, 0xFE72: 0x01, 0xB7DC: 0x01, 0xBADC: 0x01})    # wake latches as wake_sim.py: no stale latch
@@ -161,7 +161,7 @@ class Run:
         self.phase_lines.setdefault(title, []).extend(new)
         st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system:in .+? for \d+ms->(.+?):", x))), None)
         LED.sample(self.m, self.led, st, self.phase if self.phase != "boot" else "cold boot",
-                   self.m.addr("g_ucAwtoLedMode") if self.led_addr else None, self.led_check, self.led_table)
+                   self.m.addr("isr_g_ucAwtoLedMode") if self.led_addr else None, self.led_check, self.led_table)
         return new
 
     def led_check(self, ok, what, detail=""):

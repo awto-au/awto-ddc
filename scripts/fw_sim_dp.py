@@ -30,7 +30,7 @@ def stubs(m, case: str, pclk: int, calls: list):
 
     def scan_tmds(m_, r):
         if case == "hdmi-dpidle" and (r["a1"] & 255) == D2:
-            m_.wr(m_.addr("g_usInputPixelClk"), pclk.to_bytes(2, "big"))
+            m_.wr(m_.addr("isr_g_usInputPixelClk"), pclk.to_bytes(2, "big"))
             return {"val": SOURCE_HDMI}
         return {"val": SOURCE_NONE}
 
@@ -39,7 +39,7 @@ def stubs(m, case: str, pclk: int, calls: list):
 
     def scan_dp(m_, r):
         if case == "dp" and (r["a1"] & 255) == D1:
-            m_.wr(m_.addr("g_usInputPixelClk"), pclk.to_bytes(2, "big"))
+            m_.wr(m_.addr("isr_g_usInputPixelClk"), pclk.to_bytes(2, "big"))
             return {"val": SOURCE_DP}
         return {"val": SOURCE_NONE}
     m.stub("ScalerTMDSNormalPreDetect", pre_tmds)
@@ -61,7 +61,7 @@ def run_case(binp: Path, mapp: Path, case: str, mode: str, max_instr: int, log) 
     calls: list[int] = []
     stubs(m, case, hdmi.PCLK, calls)
     m.t2_scale = S.T2_SCALE
-    ma, timeline, done, last = m.addr("g_stModeInfo"), [], 0, None
+    ma, timeline, done, last = m.addr("isr_g_stModeInfo"), [], 0, None
     while done < max_instr:
         m.run(1_000_000); done += 1_000_000
         ms = m.rd(ma)[0] & 0x1F

@@ -58,7 +58,7 @@ def main() -> int:
         raise SystemExit("keyboard control needs the VS Code terminal")
     i2cbus.require_unit(args.bus, args.serial)
     B.setup_logs("pacman_cli", map=args.map)
-    diag = C.xaddr(Path(args.map).read_text(errors="replace"), "g_stAwtoDiag")
+    diag = C.xaddr(Path(args.map).read_text(errors="replace"), "isr_g_stAwtoDiag")
     testcmd = diag + TESTCMD_OFFSET
     dev = B.Real(args.bus, allow_write=True)
     fd = sys.stdin.fileno()

@@ -130,9 +130,9 @@
                                                                                                     g_stDpRx0MiscInfo.b1DpMstEnableBackup = _FALSE;\
                                                                                                     g_stDpRx1MiscInfo.b1DpMstEnableBackup = _FALSE;\
                                                                                                 }
-#define GET_DP_DPCD_02200H_STATUS()                                                             ((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? g_ucDpRx0DPCD02200hValue : g_ucDpRx1DPCD02200hValue)
-#define GET_DP_DPCD_02201H_STATUS()                                                             ((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? g_ucDpRx0DPCD02201hValue : g_ucDpRx1DPCD02201hValue)
-#define GET_DP_DPCD_02210H_STATUS()                                                             ((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? g_ucDpRx0DPCD02210hValue : g_ucDpRx1DPCD02210hValue)
+#define GET_DP_DPCD_02200H_STATUS()                                                             ((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? g_ucDpRx0DPCD02200hValue : isr_g_ucDpRx1DPCD02200hValue)
+#define GET_DP_DPCD_02201H_STATUS()                                                             ((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? g_ucDpRx0DPCD02201hValue : isr_g_ucDpRx1DPCD02201hValue)
+#define GET_DP_DPCD_02210H_STATUS()                                                             ((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? g_ucDpRx0DPCD02210hValue : isr_g_ucDpRx1DPCD02210hValue)
 
 #if(_DP_TX_SUPPORT == _ON)
 //--------------------------------------------------
@@ -293,9 +293,9 @@
 #define CLR_DP_MST_VBIOS_BACKUP_INFO()                                                          {\
                                                                                                     g_stDpRx1MiscInfo.b1DpMstEnableBackup = _FALSE;\
                                                                                                 }
-#define GET_DP_DPCD_02200H_STATUS()                                                             (g_ucDpRx1DPCD02200hValue)
-#define GET_DP_DPCD_02201H_STATUS()                                                             (g_ucDpRx1DPCD02201hValue)
-#define GET_DP_DPCD_02210H_STATUS()                                                             (g_ucDpRx1DPCD02210hValue)
+#define GET_DP_DPCD_02200H_STATUS()                                                             (isr_g_ucDpRx1DPCD02200hValue)
+#define GET_DP_DPCD_02201H_STATUS()                                                             (isr_g_ucDpRx1DPCD02201hValue)
+#define GET_DP_DPCD_02210H_STATUS()                                                             (isr_g_ucDpRx1DPCD02210hValue)
 
 #if(_DP_TX_SUPPORT == _ON)
 #define GET_DP_RX_HDCP_AUTH_ENCRYPTION()                                                        (ScalerDpRx1HdcpCheckValid())

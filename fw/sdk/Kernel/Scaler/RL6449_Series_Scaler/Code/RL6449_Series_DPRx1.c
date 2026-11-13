@@ -41,7 +41,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-bit d_g_bDpRx1PSAuxToggle = _FALSE;
+bit d_isr_g_bDpRx1PSAuxToggle = _FALSE;
 
 __xdata _Bool g_bDpRx1AuxCommandNoReply = _FALSE;
 
@@ -51,17 +51,17 @@ BYTE g_ucDpRx1LinkRequest01;
 BYTE g_ucDpRx1LinkRequest23;
 BYTE g_ucDpRx1Temp;
 BYTE g_pucDpRx1Backup[3];
-BYTE g_ucDpRx1Info;
+BYTE isr_g_ucDpRx1Info;
 BYTE g_ucDpRx1LinkRate;
 BYTE g_ucDpRx1LaneCount;
 BYTE g_ucDpRx1TrainingPatternSet;
 BYTE g_ucDpRx1AuxAddressBackup;
 
-BYTE g_pucDpRx1LEBound[4];
+BYTE isr_g_pucDpRx1LEBound[4];
 BYTE g_pucDpRx1Tap1MinTemp[4];
-BYTE g_pucDpRx1Tap1Max[4];
+BYTE isr_g_pucDpRx1Tap1Max[4];
 BYTE g_pucDpRx1LEMinTemp[4];
-BYTE g_pucDpRx1LEMax[4];
+BYTE isr_g_pucDpRx1LEMax[4];
 BYTE g_ucDpRx1EQCRC;
 BYTE g_ucRx1AuxTemp;
 BYTE g_ucRx1AuxTemp_EXINT;
@@ -82,8 +82,8 @@ StructDPRxHDCPAuthInfo g_stDpRx1HDCPAuthInfo;
 BYTE g_pucDPRx1Caps[3];
 #endif
 
-WORD g_pusDpRx1ClockCount[4];
-WORD g_pusDpRx1ClockCount1[4];
+WORD isr_g_pusDpRx1ClockCount[4];
+WORD isr_g_pusDpRx1ClockCount1[4];
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -434,7 +434,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x00, enumDpVersion);
 #else
-        g_ucDpRx1DPCD02200hValue = enumDpVersion;
+        isr_g_ucDpRx1DPCD02200hValue = enumDpVersion;
 #endif
 
         // Set EXTENDED_RECEIVER_CAPABILITY_FIELD_PRESENT bit
@@ -445,7 +445,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x10, 0x08);
 #else
-        g_ucDpRx1DPCD02210hValue = 0x08;
+        isr_g_ucDpRx1DPCD02210hValue = 0x08;
 #endif
 
 #else
@@ -453,7 +453,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x10, 0x00);
 #else
-        g_ucDpRx1DPCD02210hValue = 0x00;
+        isr_g_ucDpRx1DPCD02210hValue = 0x00;
 #endif
 
 #endif
@@ -470,7 +470,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _D1_DP_LINK_CLK_RATE);
 #else
-        g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
+        isr_g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
 #endif
 
         // _BIT7 = 1: Always IEEE OUI Support Under DP1.2
@@ -554,7 +554,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x00, _DP_VERSION_1_4);
 #else
-        g_ucDpRx1DPCD02200hValue = _DP_VERSION_1_4;
+        isr_g_ucDpRx1DPCD02200hValue = _DP_VERSION_1_4;
 #endif
 
         // Set EXTENDED_RECEIVER_CAPABILITY_FIELD_PRESENT bit
@@ -572,7 +572,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _D1_DP_LINK_CLK_RATE);
 #else
-        g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
+        isr_g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
 #endif
 
         // _BIT7 = 1: Always IEEE OUI Support Under DP1.2
@@ -656,7 +656,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x00, _DP_VERSION_1_4);
 #else
-        g_ucDpRx1DPCD02200hValue = _DP_VERSION_1_4;
+        isr_g_ucDpRx1DPCD02200hValue = _DP_VERSION_1_4;
 #endif
 
         // Set EXTENDED_RECEIVER_CAPABILITY_FIELD_PRESENT bit
@@ -674,7 +674,7 @@ void ScalerDpRx1ChangeDpcdVersion(EnumDpVersionType enumDpVersion, EnumDPMSTPort
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT == _ON)
         ScalerDpRx1SetDpcdValue(0x00, 0x22, 0x01, _D1_DP_LINK_CLK_RATE);
 #else
-        g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
+        isr_g_ucDpRx1DPCD02201hValue = _D1_DP_LINK_CLK_RATE;
 #endif
 
 #if(_DP_SINK_VER11_OUI_SUPPORT == _ON)
@@ -1247,81 +1247,81 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Select to Lane1
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Select to Lane2
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Select to Lane3
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
-        g_pucDpRx1LEBound[0] = 20;
-        g_pucDpRx1LEBound[1] = 20;
-        g_pucDpRx1LEBound[2] = 20;
-        g_pucDpRx1LEBound[3] = 20;
+        isr_g_pucDpRx1LEBound[0] = 20;
+        isr_g_pucDpRx1LEBound[1] = 20;
+        isr_g_pucDpRx1LEBound[2] = 20;
+        isr_g_pucDpRx1LEBound[3] = 20;
 
-        while(((g_pucDpRx1LEMax[0] > 15) && (g_pucDpRx1Tap1Max[0] < 4) && (g_pucDpRx1LEBound[0] > 15)) ||
-              ((g_pucDpRx1LEMax[1] > 15) && (g_pucDpRx1Tap1Max[1] < 4) && (g_pucDpRx1LEBound[1] > 15)) ||
-              ((g_pucDpRx1LEMax[2] > 15) && (g_pucDpRx1Tap1Max[2] < 4) && (g_pucDpRx1LEBound[2] > 15)) ||
-              ((g_pucDpRx1LEMax[3] > 15) && (g_pucDpRx1Tap1Max[3] < 4) && (g_pucDpRx1LEBound[3] > 15)))
+        while(((isr_g_pucDpRx1LEMax[0] > 15) && (isr_g_pucDpRx1Tap1Max[0] < 4) && (isr_g_pucDpRx1LEBound[0] > 15)) ||
+              ((isr_g_pucDpRx1LEMax[1] > 15) && (isr_g_pucDpRx1Tap1Max[1] < 4) && (isr_g_pucDpRx1LEBound[1] > 15)) ||
+              ((isr_g_pucDpRx1LEMax[2] > 15) && (isr_g_pucDpRx1Tap1Max[2] < 4) && (isr_g_pucDpRx1LEBound[2] > 15)) ||
+              ((isr_g_pucDpRx1LEMax[3] > 15) && (isr_g_pucDpRx1Tap1Max[3] < 4) && (isr_g_pucDpRx1LEBound[3] > 15)))
         {
-            if(g_pucDpRx1Tap1Max[0] < 4)
+            if(isr_g_pucDpRx1Tap1Max[0] < 4)
             {
-                g_pucDpRx1LEBound[0]--;
-                ScalerSetBit(P7A_A2_L0_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[0] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_A3_L0_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[0] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[0]--;
+                ScalerSetBit(P7A_A2_L0_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[0] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_A3_L0_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[0] & _BIT4) << 3));
             }
 
-            if(g_pucDpRx1Tap1Max[1] < 4)
+            if(isr_g_pucDpRx1Tap1Max[1] < 4)
             {
-                g_pucDpRx1LEBound[1]--;
-                ScalerSetBit(P7A_B2_L1_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[1] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_B3_L1_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[1] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[1]--;
+                ScalerSetBit(P7A_B2_L1_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[1] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_B3_L1_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[1] & _BIT4) << 3));
             }
 
-            if(g_pucDpRx1Tap1Max[2] < 4)
+            if(isr_g_pucDpRx1Tap1Max[2] < 4)
             {
-                g_pucDpRx1LEBound[2]--;
-                ScalerSetBit(P7A_C2_L2_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[2] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_C3_L2_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[2] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[2]--;
+                ScalerSetBit(P7A_C2_L2_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[2] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_C3_L2_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[2] & _BIT4) << 3));
             }
 
-            if(g_pucDpRx1Tap1Max[3] < 4)
+            if(isr_g_pucDpRx1Tap1Max[3] < 4)
             {
-                g_pucDpRx1LEBound[3]--;
-                ScalerSetBit(P7A_D2_L3_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[3] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_D3_L3_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[3] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[3]--;
+                ScalerSetBit(P7A_D2_L3_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[3] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_D3_L3_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[3] & _BIT4) << 3));
             }
 
             // Start to Record Tap0 Max/Min
@@ -1338,44 +1338,44 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Select to Lane1
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Select to Lane2
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Select to Lane3
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
         }
 
         // Disable DFE Adapt
@@ -1521,29 +1521,29 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
     {
         case _DP_LINK_HBR2:
 
-            g_pusDpRx1ClockCount[0] = 0x2710; // ideal 5.4G
-            g_pusDpRx1ClockCount[1] = 0x2710; // ideal 5.4G
-            g_pusDpRx1ClockCount[2] = 0x2710; // ideal 5.4G
-            g_pusDpRx1ClockCount[3] = 0x2710; // ideal 5.4G
+            isr_g_pusDpRx1ClockCount[0] = 0x2710; // ideal 5.4G
+            isr_g_pusDpRx1ClockCount[1] = 0x2710; // ideal 5.4G
+            isr_g_pusDpRx1ClockCount[2] = 0x2710; // ideal 5.4G
+            isr_g_pusDpRx1ClockCount[3] = 0x2710; // ideal 5.4G
 
             break;
 
         case _DP_LINK_HBR:
 
-            g_pusDpRx1ClockCount[0] = 0x1388; // ideal 2.7G
-            g_pusDpRx1ClockCount[1] = 0x1388; // ideal 2.7G
-            g_pusDpRx1ClockCount[2] = 0x1388; // ideal 2.7G
-            g_pusDpRx1ClockCount[3] = 0x1388; // ideal 2.7G
+            isr_g_pusDpRx1ClockCount[0] = 0x1388; // ideal 2.7G
+            isr_g_pusDpRx1ClockCount[1] = 0x1388; // ideal 2.7G
+            isr_g_pusDpRx1ClockCount[2] = 0x1388; // ideal 2.7G
+            isr_g_pusDpRx1ClockCount[3] = 0x1388; // ideal 2.7G
 
             break;
 
         default:
         case _DP_LINK_RBR:
 
-            g_pusDpRx1ClockCount[0] = 0xBB8; // ideal 1.62G
-            g_pusDpRx1ClockCount[1] = 0xBB8; // ideal 1.62G
-            g_pusDpRx1ClockCount[2] = 0xBB8; // ideal 1.62G
-            g_pusDpRx1ClockCount[3] = 0xBB8; // ideal 1.62G
+            isr_g_pusDpRx1ClockCount[0] = 0xBB8; // ideal 1.62G
+            isr_g_pusDpRx1ClockCount[1] = 0xBB8; // ideal 1.62G
+            isr_g_pusDpRx1ClockCount[2] = 0xBB8; // ideal 1.62G
+            isr_g_pusDpRx1ClockCount[3] = 0xBB8; // ideal 1.62G
 
             break;
     }
@@ -1634,9 +1634,9 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
 
     if((usVCOBandScan != 0) && (ScalerGetBit(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6))
     {
-        g_pusDpRx1ClockCount1[_D1_DP_LANE0] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
+        isr_g_pusDpRx1ClockCount1[_D1_DP_LANE0] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
 
-        usVCOBandDiff = (abs(usVCOBandScan - g_pusDpRx1ClockCount1[_D1_DP_LANE0]) >> 2);
+        usVCOBandDiff = (abs(usVCOBandScan - isr_g_pusDpRx1ClockCount1[_D1_DP_LANE0]) >> 2);
     }
     else
     {
@@ -1734,10 +1734,10 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
     // CDR Clock Measure //
     ///////////////////////
 
-    g_pusDpRx1ClockCount[0] = 0;
-    g_pusDpRx1ClockCount[1] = 0;
-    g_pusDpRx1ClockCount[2] = 0;
-    g_pusDpRx1ClockCount[3] = 0;
+    isr_g_pusDpRx1ClockCount[0] = 0;
+    isr_g_pusDpRx1ClockCount[1] = 0;
+    isr_g_pusDpRx1ClockCount[2] = 0;
+    isr_g_pusDpRx1ClockCount[3] = 0;
 
     // [5] ln_ck_sel = 1'b1 -> DP CDR Clock
     // [4:0] DP_XTAL_CYCLE = 5'b00011 -> XTAL Counter Cycles = 1000
@@ -1766,7 +1766,7 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
 
     if(ScalerGetBit(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6)
     {
-        g_pusDpRx1ClockCount[0] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
+        isr_g_pusDpRx1ClockCount[0] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
     }
     else
     {
@@ -1774,20 +1774,20 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
         {
             case _DP_LINK_HBR2:
 
-                g_pusDpRx1ClockCount[0] = 0x2710;
+                isr_g_pusDpRx1ClockCount[0] = 0x2710;
 
                 break;
 
             case _DP_LINK_HBR:
 
-                g_pusDpRx1ClockCount[0] = 0x1388;
+                isr_g_pusDpRx1ClockCount[0] = 0x1388;
 
                 break;
 
             default:
             case _DP_LINK_RBR:
 
-                g_pusDpRx1ClockCount[0] = 0xBB8;
+                isr_g_pusDpRx1ClockCount[0] = 0xBB8;
 
                 break;
         }
@@ -1796,9 +1796,9 @@ void ScalerDpRx1RebuildPhy(BYTE ucDpLinkRate, BYTE ucDpcdLane)
     // [7] DP_SIG_DET_EN = 0 -> Disable Signal Detection
     ScalerSetBit(PB0_50_DP_SIG_DET_0, ~_BIT7, 0x00);
 
-    g_pusDpRx1ClockCount[3] = g_pusDpRx1ClockCount[0];
-    g_pusDpRx1ClockCount[2] = g_pusDpRx1ClockCount[0];
-    g_pusDpRx1ClockCount[1] = g_pusDpRx1ClockCount[0];
+    isr_g_pusDpRx1ClockCount[3] = isr_g_pusDpRx1ClockCount[0];
+    isr_g_pusDpRx1ClockCount[2] = isr_g_pusDpRx1ClockCount[0];
+    isr_g_pusDpRx1ClockCount[1] = isr_g_pusDpRx1ClockCount[0];
 }
 
 //--------------------------------------------------
@@ -3073,81 +3073,81 @@ void ScalerDpRx1PhyCtsTp2SetPhy(void)
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Select to Lane1
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Select to Lane2
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Select to Lane3
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
         // Read Back LE Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-        g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
         // Read Back Tap1 Max
         ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-        g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+        isr_g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
-        g_pucDpRx1LEBound[0] = 18;
-        g_pucDpRx1LEBound[1] = 18;
-        g_pucDpRx1LEBound[2] = 18;
-        g_pucDpRx1LEBound[3] = 18;
+        isr_g_pucDpRx1LEBound[0] = 18;
+        isr_g_pucDpRx1LEBound[1] = 18;
+        isr_g_pucDpRx1LEBound[2] = 18;
+        isr_g_pucDpRx1LEBound[3] = 18;
 
-        while(((g_pucDpRx1LEMax[0] > 15) && (g_pucDpRx1Tap1Max[0] < 4) && (g_pucDpRx1LEBound[0] > 15)) ||
-              ((g_pucDpRx1LEMax[1] > 15) && (g_pucDpRx1Tap1Max[1] < 4) && (g_pucDpRx1LEBound[1] > 15)) ||
-              ((g_pucDpRx1LEMax[2] > 15) && (g_pucDpRx1Tap1Max[2] < 4) && (g_pucDpRx1LEBound[2] > 15)) ||
-              ((g_pucDpRx1LEMax[3] > 15) && (g_pucDpRx1Tap1Max[3] < 4) && (g_pucDpRx1LEBound[3] > 15)))
+        while(((isr_g_pucDpRx1LEMax[0] > 15) && (isr_g_pucDpRx1Tap1Max[0] < 4) && (isr_g_pucDpRx1LEBound[0] > 15)) ||
+              ((isr_g_pucDpRx1LEMax[1] > 15) && (isr_g_pucDpRx1Tap1Max[1] < 4) && (isr_g_pucDpRx1LEBound[1] > 15)) ||
+              ((isr_g_pucDpRx1LEMax[2] > 15) && (isr_g_pucDpRx1Tap1Max[2] < 4) && (isr_g_pucDpRx1LEBound[2] > 15)) ||
+              ((isr_g_pucDpRx1LEMax[3] > 15) && (isr_g_pucDpRx1Tap1Max[3] < 4) && (isr_g_pucDpRx1LEBound[3] > 15)))
         {
-            if(g_pucDpRx1Tap1Max[0] < 4)
+            if(isr_g_pucDpRx1Tap1Max[0] < 4)
             {
-                g_pucDpRx1LEBound[0]--;
-                ScalerSetBit(P7A_A2_L0_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[0] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_A3_L0_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[0] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[0]--;
+                ScalerSetBit(P7A_A2_L0_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[0] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_A3_L0_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[0] & _BIT4) << 3));
             }
 
-            if(g_pucDpRx1Tap1Max[1] < 4)
+            if(isr_g_pucDpRx1Tap1Max[1] < 4)
             {
-                g_pucDpRx1LEBound[1]--;
-                ScalerSetBit(P7A_B2_L1_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[1] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_B3_L1_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[1] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[1]--;
+                ScalerSetBit(P7A_B2_L1_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[1] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_B3_L1_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[1] & _BIT4) << 3));
             }
 
-            if(g_pucDpRx1Tap1Max[2] < 4)
+            if(isr_g_pucDpRx1Tap1Max[2] < 4)
             {
-                g_pucDpRx1LEBound[2]--;
-                ScalerSetBit(P7A_C2_L2_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[2] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_C3_L2_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[2] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[2]--;
+                ScalerSetBit(P7A_C2_L2_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[2] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_C3_L2_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[2] & _BIT4) << 3));
             }
 
-            if(g_pucDpRx1Tap1Max[3] < 4)
+            if(isr_g_pucDpRx1Tap1Max[3] < 4)
             {
-                g_pucDpRx1LEBound[3]--;
-                ScalerSetBit(P7A_D2_L3_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((g_pucDpRx1LEBound[3] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
-                ScalerSetBit(P7A_D3_L3_INIT_1, ~_BIT7, ((g_pucDpRx1LEBound[3] & _BIT4) << 3));
+                isr_g_pucDpRx1LEBound[3]--;
+                ScalerSetBit(P7A_D2_L3_LIMIT_INIT, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), ((isr_g_pucDpRx1LEBound[3] & (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4));
+                ScalerSetBit(P7A_D3_L3_INIT_1, ~_BIT7, ((isr_g_pucDpRx1LEBound[3] & _BIT4) << 3));
             }
 
             // Start to Record Tap0 Max/Min
@@ -3164,44 +3164,44 @@ void ScalerDpRx1PhyCtsTp2SetPhy(void)
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[0] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Select to Lane1
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT6);
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[1] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Select to Lane2
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), _BIT7);
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[2] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Select to Lane3
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT7 | _BIT6), (_BIT7 | _BIT6));
 
             // Read Back LE Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT3);
-            g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1LEMax[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
 
             // Read Back Tap1 Max
             ScalerSetBit(P7A_F2_COEF_3, ~(_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1), _BIT2);
-            g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
+            isr_g_pucDpRx1Tap1Max[3] = (ScalerGetByte(P7A_F3_COEF_4) & 0x1F);
         }
 
         // [1] reg_en_eqen_manual_l0 = 1'b0 --> DFE Adaptation Off
@@ -3371,15 +3371,15 @@ void ScalerDpRx1PhyCtsTp2SetPhy(void)
     // Target Freq.
     if((g_ucDpRx1PhyCtsCtrl & 0xC0) == 0x80)
     {
-        g_pusDpRx1ClockCount[0] = 0x2710; // 5.4G
+        isr_g_pusDpRx1ClockCount[0] = 0x2710; // 5.4G
     }
     else if((g_ucDpRx1PhyCtsCtrl & 0xC0) == 0x40)
     {
-        g_pusDpRx1ClockCount[0] = 0x1388; // 2.7G
+        isr_g_pusDpRx1ClockCount[0] = 0x1388; // 2.7G
     }
     else
     {
-        g_pusDpRx1ClockCount[0] = 0xBB8; // 1.62G
+        isr_g_pusDpRx1ClockCount[0] = 0xBB8; // 1.62G
     }
 
     // [5] ln_ck_sel = 1'b1 -> CDR Clock
@@ -3478,36 +3478,36 @@ void ScalerDpRx1PhyCtsTp2SetPhy(void)
     // Measure Done
     if((ScalerGetBit(PB0_50_DP_SIG_DET_0, _BIT6) == _BIT6) && (usVCOAutoBandAdd4 != 0))
     {
-        g_pusDpRx1ClockCount1[0] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
+        isr_g_pusDpRx1ClockCount1[0] = ((((WORD)ScalerGetByte(PB0_53_DP_SIG_DET_3)) << 8) | ScalerGetByte(PB0_54_DP_SIG_DET_4));
 
-        usVCOBandDiff = (abs(usVCOAutoBandAdd4 - g_pusDpRx1ClockCount1[0]) >> 2);
+        usVCOBandDiff = (abs(usVCOAutoBandAdd4 - isr_g_pusDpRx1ClockCount1[0]) >> 2);
 
-        if(g_pusDpRx1ClockCount1[0] < g_pusDpRx1ClockCount[0])
+        if(isr_g_pusDpRx1ClockCount1[0] < isr_g_pusDpRx1ClockCount[0])
         {
             switch(g_ucDpRx1PhyCtsCtrl & 0x30)
             {
                 default:
                 case 0x00: // Lane0 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_36_ANA_CDR_11) & 0x7F) + (((g_pusDpRx1ClockCount[0] - g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
+                    ucBestVCOBand = (ScalerGetByte(P7A_36_ANA_CDR_11) & 0x7F) + (((isr_g_pusDpRx1ClockCount[0] - isr_g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
 
                     break;
 
                 case 0x10: // Lane1 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_37_ANA_CDR_12) & 0x7F) + (((g_pusDpRx1ClockCount[0] - g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
+                    ucBestVCOBand = (ScalerGetByte(P7A_37_ANA_CDR_12) & 0x7F) + (((isr_g_pusDpRx1ClockCount[0] - isr_g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
 
                     break;
 
                 case 0x20: // Lane2 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_38_ANA_CDR_13) & 0x7F) + (((g_pusDpRx1ClockCount[0] - g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
+                    ucBestVCOBand = (ScalerGetByte(P7A_38_ANA_CDR_13) & 0x7F) + (((isr_g_pusDpRx1ClockCount[0] - isr_g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
 
                     break;
 
                 case 0x30: // Lane3 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_39_ANA_CDR_14) & 0x7F) + (((g_pusDpRx1ClockCount[0] - g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
+                    ucBestVCOBand = (ScalerGetByte(P7A_39_ANA_CDR_14) & 0x7F) + (((isr_g_pusDpRx1ClockCount[0] - isr_g_pusDpRx1ClockCount1[0]) / usVCOBandDiff) + 1);
 
                     break;
             }
@@ -3519,25 +3519,25 @@ void ScalerDpRx1PhyCtsTp2SetPhy(void)
                 default:
                 case 0x00: // Lane0 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_36_ANA_CDR_11) & 0x7F) - ((g_pusDpRx1ClockCount1[0] - g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
+                    ucBestVCOBand = (ScalerGetByte(P7A_36_ANA_CDR_11) & 0x7F) - ((isr_g_pusDpRx1ClockCount1[0] - isr_g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
 
                     break;
 
                 case 0x10: // Lane1 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_37_ANA_CDR_12) & 0x7F) - ((g_pusDpRx1ClockCount1[0] - g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
+                    ucBestVCOBand = (ScalerGetByte(P7A_37_ANA_CDR_12) & 0x7F) - ((isr_g_pusDpRx1ClockCount1[0] - isr_g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
 
                     break;
 
                 case 0x20: // Lane2 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_38_ANA_CDR_13) & 0x7F) - ((g_pusDpRx1ClockCount1[0] - g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
+                    ucBestVCOBand = (ScalerGetByte(P7A_38_ANA_CDR_13) & 0x7F) - ((isr_g_pusDpRx1ClockCount1[0] - isr_g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
 
                     break;
 
                 case 0x30: // Lane3 VCO Adjust
 
-                    ucBestVCOBand = (ScalerGetByte(P7A_39_ANA_CDR_14) & 0x7F) - ((g_pusDpRx1ClockCount1[0] - g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
+                    ucBestVCOBand = (ScalerGetByte(P7A_39_ANA_CDR_14) & 0x7F) - ((isr_g_pusDpRx1ClockCount1[0] - isr_g_pusDpRx1ClockCount[0]) / usVCOBandDiff);
 
                     break;
             }

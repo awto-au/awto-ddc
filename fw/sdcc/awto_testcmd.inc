@@ -1,5 +1,5 @@
 // #33: 0x01..0x05 = key messages 0..4 = menu role (physical AUTO) / UP / DOWN / exit role (physical MENU) / SOURCE; logged as injected, #39), 0x41/0x42 = key test screen open/close (#39), 0x10+n = OSD event n (n<16; 0x70+n-16 above), 0x20 = debug pop-up (#34).
-// 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (g_stAwtoDiag.ucHold):
+// 0x22/0x23: on-screen message log on/off (#56); 0x28/0x29 debug messages on/off, NVRAM (#74). #28 holds (isr_g_stAwtoDiag.ucHold):
 // 0x26 debug pop-up held, 0x27 clear all holds (0x21 / 0x24 / 0x25 were the boot logo, #144). #60: 0x31..0x33 switch to D1..D3 (fixed port),
 // 0x30 auto search, 0x06..0x08 / 0x09..0x0B D1..D3 off / on (#81), 0x40 settings defaults (#67), 0x3D one store write, 0x3E POWER key (#151). 0x50+n directly holds EnumOSDDispMsg n for visual review. 0x0C / 0x0D frame buffer forced / SDK memory choice (#165). 0x2A..0x2F Timer0 events (#138).
 // Inserted into RTD2014Key.c (OSD macros).
@@ -23,12 +23,12 @@ bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: th
         return _TRUE;                            // #67 / #88: the source search resets the SDK OSD every few seconds; the awto menu closes itself
     }
 #endif
-    if(g_stAwtoDiag.ucHold == 0)
+    if(isr_g_stAwtoDiag.ucHold == 0)
     {
         return _FALSE;
     }
     AwtoSwEvent(AWTO_SW_EV_HOLD_BLOCK, SysModeGetModeState());
-    g_stAwtoSw.ucHoldBlocks++;
+    isr_g_stAwtoSw.ucHoldBlocks++;
     return _TRUE;
 }
 
@@ -108,7 +108,7 @@ static void AwtoDemoLog(void)                   // each main pass while lines ar
 
 void AwtoDiagTestCmd(void)
 {
-    unsigned char ucCmd = g_stAwtoDiag.ucHold;
+    unsigned char ucCmd = isr_g_stAwtoDiag.ucHold;
 
     if((ucCmd != 0) && ((unsigned int)((WORD)AwtoMs() - s_usAwtoHoldCancel) >= AWTO_KEY_REFRESH_MS))
     {
@@ -116,12 +116,12 @@ void AwtoDiagTestCmd(void)
         ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // every 80 ms, not every pass (a cancel walks the timer table)
     }
     AwtoDemoLog();
-    ucCmd = g_stAwtoDiag.ucTestCmd;
+    ucCmd = isr_g_stAwtoDiag.ucTestCmd;
     if(ucCmd == 0)
     {
         return;
     }
-    g_stAwtoDiag.ucTestCmd = 0;
+    isr_g_stAwtoDiag.ucTestCmd = 0;
     if(ucCmd <= 5)
     {
         AwtoKeyInject(ucCmd - 1);                       // routed by the next AwtoKeyPoll (#129)
@@ -165,7 +165,7 @@ void AwtoDiagTestCmd(void)
     }
     else if((ucCmd == 0x25) || ((ucCmd >= 0x5D) && (ucCmd <= 0x5F)))   // EXINT0 hook: 25 off, 5D arm, 5E 2 ms spin, 5F stuck
     {
-        g_ucAwtoT0Test = (ucCmd == 0x25) ? 0 : (ucCmd - 0x5C);
+        isr_g_ucAwtoT0Test = (ucCmd == 0x25) ? 0 : (ucCmd - 0x5C);
     }
 #endif
     else if((ucCmd >= 0x60) && (ucCmd <= 0x6F))         // diagnostic screen font: 0x60 + font index (osd_font_load)
@@ -198,7 +198,7 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd >= 0x50) && (ucCmd <= 0x59))         // every compiled user-visible OSD message, held for review
     {
         OsdDispOsdMessage((EnumOSDDispMsg)(ucCmd - 0x50));
-        g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
+        isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
     }
     else if((ucCmd == 0x20) || (ucCmd == 0x26))         // debug pop-up: the diagnostic console
     {
@@ -214,11 +214,11 @@ void AwtoDiagTestCmd(void)
     }
     else if(ucCmd == 0x27)
     {
-        unsigned char ucWas = g_stAwtoDiag.ucHold;
+        unsigned char ucWas = isr_g_stAwtoDiag.ucHold;
 
         AwtoDiagConsole(0);
 
-        g_stAwtoDiag.ucHold = 0;                     // first: OsdDispDisableOsd is blocked while a hold is set
+        isr_g_stAwtoDiag.ucHold = 0;                     // first: OsdDispDisableOsd is blocked while a hold is set
         if((ucWas & AWTO_HOLD_POPUP) != 0)
         {
             OsdDispDisableOsd();

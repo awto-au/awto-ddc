@@ -61,29 +61,29 @@
 #define AWTO_LED_ON                                             1
 #define AWTO_LED_BREATHE                                        2
 #define AWTO_SW_EV_LED                                          0x1C    // LED change: arg AWTO_LED_*, ring value = system state (AWTO_SYS_*)
-extern volatile __xdata unsigned char g_ucAwtoLedMode;
-extern volatile __xdata unsigned char g_ucAwtoLedPhase;
-extern volatile __xdata unsigned char g_ucAwtoLedLevel;
-extern volatile __xdata unsigned char g_ucAwtoLedTick;
-extern volatile __xdata unsigned char g_ucAwtoLedUp;
+extern volatile __xdata unsigned char isr_g_ucAwtoLedMode;
+extern volatile __xdata unsigned char isr_g_ucAwtoLedPhase;
+extern volatile __xdata unsigned char isr_g_ucAwtoLedLevel;
+extern volatile __xdata unsigned char isr_g_ucAwtoLedTick;
+extern volatile __xdata unsigned char isr_g_ucAwtoLedUp;
 extern volatile __xdata unsigned char g_ucAwtoLedPins;  // P3 pin levels (MCU_FFE3, bus value) once per main-loop pass: debug-readable
 extern void AwtoLedSet(unsigned char ucMode, unsigned char ucState);    // SysMachineLed only
 extern void SysMachineLedBoot(void);
 // Timer2 ticks each millisecond.  The accumulator produces 1 kHz pulse-density PWM;
 // brightness moves one step every 16 ms for an approximately 8.2 s breathe cycle.
 #define AWTO_LED_T2ISR()                                        do { \
-                                                                    if(g_ucAwtoLedMode == AWTO_LED_BREATHE) { \
-                                                                        g_ucAwtoLedPhase += g_ucAwtoLedLevel; \
+                                                                    if(isr_g_ucAwtoLedMode == AWTO_LED_BREATHE) { \
+                                                                        isr_g_ucAwtoLedPhase += isr_g_ucAwtoLedLevel; \
                                                                         bLED_ON = 0; \
-                                                                        bLED_STANDBY = (g_ucAwtoLedPhase < g_ucAwtoLedLevel); \
-                                                                        if(++g_ucAwtoLedTick >= 16) { \
-                                                                            g_ucAwtoLedTick = 0; \
-                                                                            if(g_ucAwtoLedUp != 0) { \
-                                                                                if(g_ucAwtoLedLevel >= 254) { g_ucAwtoLedLevel = 255; g_ucAwtoLedUp = 0; } \
-                                                                                else { ++g_ucAwtoLedLevel; } \
+                                                                        bLED_STANDBY = (isr_g_ucAwtoLedPhase < isr_g_ucAwtoLedLevel); \
+                                                                        if(++isr_g_ucAwtoLedTick >= 16) { \
+                                                                            isr_g_ucAwtoLedTick = 0; \
+                                                                            if(isr_g_ucAwtoLedUp != 0) { \
+                                                                                if(isr_g_ucAwtoLedLevel >= 254) { isr_g_ucAwtoLedLevel = 255; isr_g_ucAwtoLedUp = 0; } \
+                                                                                else { ++isr_g_ucAwtoLedLevel; } \
                                                                             } else { \
-                                                                                if(g_ucAwtoLedLevel <= 1) { g_ucAwtoLedLevel = 0; g_ucAwtoLedUp = 1; } \
-                                                                                else { --g_ucAwtoLedLevel; } \
+                                                                                if(isr_g_ucAwtoLedLevel <= 1) { isr_g_ucAwtoLedLevel = 0; isr_g_ucAwtoLedUp = 1; } \
+                                                                                else { --isr_g_ucAwtoLedLevel; } \
                                                                             } \
                                                                         } \
                                                                     } \
@@ -102,7 +102,7 @@ extern __xdata unsigned char g_ucAwtoMenuOn;                    // our menu on s
 extern void menu_close(void);                                   // awto-rtdfw menu.c: closes it (saves an edit in progress)
 extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
-#define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
+#define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(isr_g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
 extern unsigned int AwtoAudioGain(unsigned char ucV);          // volume % -> DVC gain (glue.inc)
 #define AWTO_AUDIO_HOLD()                                       ((SysModeGetModeState() != _MODE_STATUS_ACTIVE) && (SysModeGetModeState() != _MODE_STATUS_DISPLAY_SETTING))
 extern void AwtoMenuForget(void);
@@ -197,11 +197,11 @@ typedef struct
     unsigned char ucMagic1;                     // 'D'
     unsigned char ucVersion;                    // 1; 2 = debug slave block read 0x3C (#38)
     unsigned char ucStage;                      // last stage reached (1..8, monotonic)
-    unsigned int usStageMs[8];                  // d_g_usTimerCounter (1 ms) at first entry of stage n
+    unsigned int usStageMs[8];                  // d_isr_g_usTimerCounter (1 ms) at first entry of stage n
     unsigned int usHeartbeat;                   // main-loop passes
     unsigned int usT2Isr;                       // Timer2 ISR entries
     unsigned int usEx1Isr;                      // EXINT1 (DDC-CI/debug) ISR entries
-    unsigned char ucDelay5usN;                  // d_g_ucDelay5usN_Base seen by the self-test
+    unsigned char ucDelay5usN;                  // d_isr_g_ucDelay5usN_Base seen by the self-test
     unsigned int usDelayXms10;                  // 10 ticks of ScalerTimerDelayXms, Timer2 counts / 4
     unsigned int usDelay5us10;                  // 10 x ScalerDelay5us(), raw Timer2 counts, EA off
     unsigned char ucRcap2h;                     // RCAP2H at the test: tells XTAL from M2PLL reload
@@ -219,9 +219,9 @@ typedef struct
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
-volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
+volatile __xdata __at(0xF6D0) StAwtoDiag isr_g_stAwtoDiag;
 #else
-extern volatile __xdata __at(0xF6D0) StAwtoDiag g_stAwtoDiag;
+extern volatile __xdata __at(0xF6D0) StAwtoDiag isr_g_stAwtoDiag;
 #endif
 // Watchdog + crash canary (#131, #138, docs/watchdog.md): 32 B at 0xF6B0, outside the linker XDATA range (fw_build.py XRAM end),
 // so neither the crt nor AwtoDiagInit clears it. Bytes only: same layout in LE and BE images (host: scripts/rtd_crash.py).
@@ -245,17 +245,17 @@ typedef struct
     unsigned char ucDpl;
     unsigned char ucRetHi;                      // top word of the interrupted stack (a caller's return address, if any)
     unsigned char ucRetLo;
-    unsigned char ucStage;                      // g_stAwtoDiag.ucStage
+    unsigned char ucStage;                      // isr_g_stAwtoDiag.ucStage
     unsigned char ucMode;                       // mode state (_MODE_STATUS_*)
-    unsigned char ucHbHi;                       // g_stAwtoDiag.usHeartbeat
+    unsigned char ucHbHi;                       // isr_g_stAwtoDiag.usHeartbeat
     unsigned char ucHbLo;
-    unsigned char ucUpHi;                       // d_g_usTimerCounter, ms (wraps at 65.5 s)
+    unsigned char ucUpHi;                       // d_isr_g_usTimerCounter, ms (wraps at 65.5 s)
     unsigned char ucUpLo;
     unsigned char ucPassAgeHi;                  // ms since the last main-loop pass, at the warning (wraps at 65.5 s)
     unsigned char ucPassAgeLo;
     unsigned char ucCheck;                      // AWTO_WDT_SEED ^ bytes 0..24: record valid
     unsigned char ucBoot;                       // live from here (not in ucCheck): AWTO_WDT_B_*
-    unsigned char ucPassHi;                     // d_g_usTimerCounter at the last main-loop pass
+    unsigned char ucPassHi;                     // d_isr_g_usTimerCounter at the last main-loop pass
     unsigned char ucPassLo;
     unsigned char ucMaxPass;                    // longest main-loop pass this boot, x32 ms (255 = 8.1 s or more)
     unsigned char ucMaxPoke;                    // longest gap between watchdog pokes this boot, x32 CNT3 = 4.58 ms (255: >= 586 ms)
@@ -263,9 +263,9 @@ typedef struct
 } StAwtoWdt;
 typedef char AwtoWdtSizeCheck[(sizeof(StAwtoWdt) == 32) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
-volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
+volatile __xdata __at(0xF6B0) StAwtoWdt isr_g_stAwtoWdt;
 #else
-extern volatile __xdata __at(0xF6B0) StAwtoWdt g_stAwtoWdt;
+extern volatile __xdata __at(0xF6B0) StAwtoWdt isr_g_stAwtoWdt;
 #endif
 // Reset-vector snapshot (#29 / #138): crt_rtd_startup copies these before any init, 20 B no-init at 0xF69C (rtd_crash.py --snap).
 // 'R' 'S', SFRs EICON PCON EXIF CKCON IE EIE IP EIP, XFRs FFEA FFEB FFAA FFAB FFAC FFAD FFE0 FFED FFEE, P0_01. Reset-cause search.
@@ -346,7 +346,7 @@ extern void ScalerTimerWDInitial(void);
 // clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
 #define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT; \
                                                                      ucG_ = ((AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) != 0) ? 0xFF : (AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE); \
-                                                                     if(ucG_ > g_stAwtoWdt.ucMaxPoke) { g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); \
+                                                                     if(ucG_ > isr_g_stAwtoWdt.ucMaxPoke) { isr_g_stAwtoWdt.ucMaxPoke = ucG_; g_ucAwtoPokeSite = (site); \
                                                                          g_ucAwtoPokeFrom = g_ucAwtoPokeLast; } g_ucAwtoPokeLast = (site); } while(0)
 // poke sites (g_ucAwtoPokeSite: which one ended the longest gap; rtd_crash.py SITES)
 #define AWTO_WDT_S_PASS                                         1       // main-loop pass
@@ -366,19 +366,19 @@ extern void ScalerTimerWDInitial(void);
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
 extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke
-// d_g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
-#define AWTO_WDT_PASS_AT()                                      ((((unsigned int)g_stAwtoWdt.ucPassHi) << 8) | g_stAwtoWdt.ucPassLo)
+// d_isr_g_usTimerCounter steps back to 0 when ScalerTimerCheckTimerEvent rebases its event table: a negative gap counts 0
+#define AWTO_WDT_PASS_AT()                                      ((((unsigned int)isr_g_stAwtoWdt.ucPassHi) << 8) | isr_g_stAwtoWdt.ucPassLo)
 #define AWTO_WDT_FEED(site)                                     AWTO_WDT_POKE(site) // inside a bounded loop (docs/watchdog.md table)
 #define AWTO_WDT_PASS(usNow)                                    do { unsigned int usG_ = (usNow) - AWTO_WDT_PASS_AT(); \
                                                                      usG_ = (usG_ >= 0x8000) ? 0 : (((usG_ >> 5) > 0xFF) ? 0xFF : (usG_ >> 5)); \
-                                                                     if((unsigned char)usG_ > g_stAwtoWdt.ucMaxPass) { g_stAwtoWdt.ucMaxPass = (unsigned char)usG_; } \
-                                                                     g_stAwtoWdt.ucPassHi = (unsigned char)((usNow) >> 8); g_stAwtoWdt.ucPassLo = (unsigned char)(usNow); \
-                                                                     g_stAwtoWdt.ucProbe &= ~AWTO_WDT_P_EARLY; AWTO_WDT_POKE(AWTO_WDT_S_PASS); } while(0)
+                                                                     if((unsigned char)usG_ > isr_g_stAwtoWdt.ucMaxPass) { isr_g_stAwtoWdt.ucMaxPass = (unsigned char)usG_; } \
+                                                                     isr_g_stAwtoWdt.ucPassHi = (unsigned char)((usNow) >> 8); isr_g_stAwtoWdt.ucPassLo = (unsigned char)(usNow); \
+                                                                     isr_g_stAwtoWdt.ucProbe &= ~AWTO_WDT_P_EARLY; AWTO_WDT_POKE(AWTO_WDT_S_PASS); } while(0)
 // After a bite the console opens by itself once the screen has been settled this long: the SDK's mode pop-up is drawn within
 // one main-loop pass of the mode change (sim max pass < 4 checks = 800 ms) x 1.25; expiry = open the console (AwtoWdtShow)
 #define AWTO_WDT_SHOW_MS                                        1000
 extern void AwtoWdtShow(void);
-#define AWTO_WDT_SHOW()                                         do { if((g_stAwtoWdt.ucBoot & AWTO_WDT_B_NEW) != 0) { AwtoWdtShow(); } } while(0)
+#define AWTO_WDT_SHOW()                                         do { if((isr_g_stAwtoWdt.ucBoot & AWTO_WDT_B_NEW) != 0) { AwtoWdtShow(); } } while(0)
 #else
 #define AWTO_WDT_IRQ()
 #define AWTO_WDT_POKE(site)
@@ -392,8 +392,8 @@ extern void AwtoT0EvIsr(void);
 extern void AwtoT0EvClock(void);
 extern void AwtoT0EvTest(unsigned char ucHow);
 extern void AwtoT0EvTestIsr(void);
-extern volatile __xdata unsigned char g_ucAwtoT0Test;
-#define AWTO_T0EV_EXINT0()                                      do { if(g_ucAwtoT0Test != 0) { AwtoT0EvTestIsr(); } } while(0)
+extern volatile __xdata unsigned char isr_g_ucAwtoT0Test;
+#define AWTO_T0EV_EXINT0()                                      do { if(isr_g_ucAwtoT0Test != 0) { AwtoT0EvTestIsr(); } } while(0)
 #define AWTO_MSG_RING                                           40      // on-screen message log entries (#56)
 typedef struct
 {
@@ -433,7 +433,7 @@ extern void AwtoOsdOfsInit(void);
 typedef struct                                  // 8 B
 {
     unsigned char ucSeq;                        // = ucCount at the time
-    unsigned char ucTickHi;                     // g_stAwtoDiag.usT2Isr (1 ms), high byte first
+    unsigned char ucTickHi;                     // isr_g_stAwtoDiag.usT2Isr (1 ms), high byte first
     unsigned char ucTickLo;
     unsigned char ucA0;                         // raw ADC_A0 (0xFF09)
     unsigned char ucA1;                         // raw ADC_A1 (0xFF0A)
@@ -542,8 +542,8 @@ extern void AwtoGpioConSet(unsigned char ucOn);
 extern void AwtoKeyConSet(unsigned char ucOn);
 #define AWTO_GPIO_TEST_ON()                                     (g_stAwtoGpio.ucOpen != 0)
 extern void AwtoDiagT3Mark(unsigned char ucEnd);
-#define AWTO_DIAG_T2ISR()                                       do { if(++g_stAwtoDiag.usT2Isr == 0) { g_stAwtoHt.usUpHi++; } AWTO_LED_T2ISR(); } while(0)
-#define AWTO_DIAG_EX1ISR()                                      (g_stAwtoDiag.usEx1Isr++)
+#define AWTO_DIAG_T2ISR()                                       do { if(++isr_g_stAwtoDiag.usT2Isr == 0) { isr_g_stAwtoHt.usUpHi++; } AWTO_LED_T2ISR(); } while(0)
+#define AWTO_DIAG_EX1ISR()                                      (isr_g_stAwtoDiag.usEx1Isr++)
 // Debug slave 0x35 answers 0x3A / 0x3C in the EXINT1 ISR (#38, docs/diag-block.md); diag version 2 = this is on.
 #define _AWTO_DBGISR                                            _ON
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC __data FIFO fill, as the SDK 0xBB reply
@@ -663,10 +663,10 @@ extern unsigned char AwtoPortCable(unsigned char ucPort);
 // #81 per-port settings block (fw/sdcc/awto_port.inc): one bit per port per field, bit n = Dn (AWTO_PORT_BIT). Field today: enable.
 // Disabled port: HPD held low (PCB_Dn_HOTPLUG), EDID channel off (ScalerMcuDdcRamEnable), receiver off (ScalerGDIPhyPowerProc),
 // skipped by the search / AUTO (SysSourceHandler, SysSourceSwitchPort), the fast-switch cache and the wake poll.
-extern __xdata unsigned char g_ucAwtoPortOff;
+extern __xdata unsigned char isr_g_ucAwtoPortOff;
 #define AWTO_PORT_BIT(port)                                     ((unsigned char)(1 << ((port) - _D0_INPUT_PORT)))
-#define AWTO_PORT_OFF(port)                                     ((g_ucAwtoPortOff & AWTO_PORT_BIT(port)) != 0)
-#define AWTO_PORT_HPD(n, x)                                     ((x) & (~g_ucAwtoPortOff >> (n)) & 1)   // PCB_Dn_HOTPLUG (x = 0 / 1): high only when on; no branch
+#define AWTO_PORT_OFF(port)                                     ((isr_g_ucAwtoPortOff & AWTO_PORT_BIT(port)) != 0)
+#define AWTO_PORT_HPD(n, x)                                     ((x) & (~isr_g_ucAwtoPortOff >> (n)) & 1)   // PCB_Dn_HOTPLUG (x = 0 / 1): high only when on; no branch
 #define AWTO_PORT_RX_ACTION(port, a)                            ((AWTO_PORT_OFF(port) && ((a) != _POWER_ACTION_NORMAL_TO_OFF) && ((a) != _POWER_ACTION_AC_ON_TO_OFF) && \
                                                                   ((a) != _POWER_ACTION_PS_TO_OFF)) ? _POWER_ACTION_SWITCH_INTERFACE_TO_OFF : (a))
 #define AWTO_PORT_WHY_BOOT                                      0x01    // sync.tsv E1 rows: why a port changed (arg)
@@ -801,7 +801,7 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #endif
 // #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
 #define AWTO_SW_EVENTS                                          64      // #78: a wake logs ~45; repeats of the last event are dropped
-#define AWTO_SW_EV_MODE                                         0x01    // arg = new g_stModeInfo mode state
+#define AWTO_SW_EV_MODE                                         0x01    // arg = new isr_g_stModeInfo mode state
 #define AWTO_SW_EV_POWER                                        0x10    // arg = UserCommonInterfacePanelPowerAction event
 #define AWTO_SW_EV_T3                                           0x20    // arg 0 = T3 wait start, 1 = end
 #define AWTO_SW_EV_CMD                                          0x40    // arg = switch command (test cmd 0x30..0x33)
@@ -839,7 +839,7 @@ extern void AwtoLpMark(unsigned char ucK);
 #define AWTO_SLOW_SLOTS                                         2
 typedef struct
 {
-    unsigned int usFastRate;                    // main-loop passes in the last ~1 s (= g_stAwtoDiag.usLoopRate)
+    unsigned int usFastRate;                    // main-loop passes in the last ~1 s (= isr_g_stAwtoDiag.usLoopRate)
     unsigned int usSlowRate;                    // AWTO_SLOW_JUDGE runs in the last ~1 s (~1000 / AWTO_SLOW_MS)
     unsigned int usSlowRuns;                    // AWTO_SLOW_JUDGE runs, free-running
     unsigned int usMaxGapMs;                    // longest gap between two AWTO_SLOW_JUDGE runs in the last ~1 s
@@ -894,13 +894,13 @@ typedef struct
     unsigned char ucSeq;                        // +1 per arm
     unsigned char ucPort;                       // armed for this port (_Dn_INPUT_PORT)
     unsigned char ucN;                          // events recorded since the arm (max AWTO_SW_EVENTS)
-    unsigned int usT0;                          // d_g_usTimerCounter at the arm
+    unsigned int usT0;                          // d_isr_g_usTimerCounter at the arm
     unsigned char ucLastMode;
     unsigned char ucHpdLow[4];                  // HPD-low writes per port D0..D3 since boot (wraps)
     unsigned char ucHoldBlocks;                 // SDK OSD paths stopped by a held visual (#28), wraps
     StAwtoSwEv stEv[AWTO_SW_EVENTS];
 } StAwtoSw;
-extern __xdata StAwtoSw g_stAwtoSw;
+extern __xdata StAwtoSw isr_g_stAwtoSw;
 extern void AwtoSwEvent(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSwArm(unsigned char ucPort);
 extern void AwtoSwPoll(void);
@@ -919,7 +919,7 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
-#define AWTO_SW_HPD(port, x)                                    (g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
+#define AWTO_SW_HPD(port, x)                                    (isr_g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 // #139 sync / power-on log (fw/sdcc/awto_sync.inc): ring of stage events per episode (power on, switch, wake), on the console /
 // selector and over I2C at map symbol _g_stAwtoSync (host: scripts/sync_log.py, rtd_diag.py --sync). Bytes only (LE = BE layout).
 // GENERATED-BEGIN awto_port_cnt
@@ -936,7 +936,7 @@ typedef struct                                  // 8 B
 {
     unsigned char ucId;                         // AWTO_SW_EV_* (mirrored) or AWTO_SYNC_EV_*
     unsigned char ucArg;                        // port byte for port events
-    unsigned char ucMsHi;                       // g_stAwtoDiag.usT2Isr (1 ms) at the event
+    unsigned char ucMsHi;                       // isr_g_stAwtoDiag.usT2Isr (1 ms) at the event
     unsigned char ucMsLo;
     unsigned char pucVal[4];                    // value, high byte first (fw/awto/sync.tsv fmt)
 } StAwtoSyncEv;
@@ -1040,9 +1040,9 @@ typedef struct                                  // host-read (sync_log.py): nati
     unsigned long ulEpoch;                      // host unix s at the sync
     unsigned long ulFwMs;                       // AwtoMs() at the sync
     int iDrift;                                 // host - local tick at the last sync, ms (clamped)
-    unsigned int usUpHi;                        // AwtoMs bits 31..16, bumped by the Timer2 ISR (bits 15..0 = g_stAwtoDiag.usT2Isr)
+    unsigned int usUpHi;                        // AwtoMs bits 31..16, bumped by the Timer2 ISR (bits 15..0 = isr_g_stAwtoDiag.usT2Isr)
 } StAwtoHt;
-extern __xdata StAwtoHt g_stAwtoHt;
+extern __xdata StAwtoHt isr_g_stAwtoHt;
 extern unsigned long AwtoMs(void);
 extern void AwtoHtSync(unsigned char *puc);
 // #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode

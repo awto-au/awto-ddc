@@ -87,12 +87,12 @@ StructHwI2cSettingData __code tHwI2cSetting[] =
 
 BYTE idata g_ucDdcciCountEXINT;
 
-BYTE __data d_g_ucDelay5usN_Base = 1;
-BYTE __data d_g_ucDelayXusN_Base = 1;
-BYTE __data d_g_ucDelay5usI = 1;
-BYTE __data d_g_ucDelay5usI_EXINT = 1;
-BYTE __data d_g_ucDelayXus_Counter = 1;
-BYTE __data d_g_ucDelayXus_Counter_EXINT = 1;
+BYTE __data d_isr_g_ucDelay5usN_Base = 1;
+BYTE __data d_isr_g_ucDelayXusN_Base = 1;
+BYTE __data d_isr_g_ucDelay5usI = 1;
+BYTE __data d_isr_g_ucDelay5usI_EXINT = 1;
+BYTE __data d_isr_g_ucDelayXus_Counter = 1;
+BYTE __data d_isr_g_ucDelayXus_Counter_EXINT = 1;
 
 __xdata _Bool g_bRunDdcciCommand = _FAIL;
 #if(_DDCCI_AUTO_SWITCH_SUPPORT == _ON)
@@ -1841,18 +1841,18 @@ void ScalerMcu5usDelayCalc(EnumClkSel enumClock)
 
     if(enumClock == _M2PLL_CLK)
     {
-        d_g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;
-        d_g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;
+        d_isr_g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;
+        d_isr_g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;
     }
     else if(enumClock == _IOSC_CLK)
     {
-        d_g_ucDelay5usN_Base = _IOSC_DELAY6US_CNT;
-        d_g_ucDelayXusN_Base = _IOSC_DELAY4US_CNT;
+        d_isr_g_ucDelay5usN_Base = _IOSC_DELAY6US_CNT;
+        d_isr_g_ucDelayXusN_Base = _IOSC_DELAY4US_CNT;
     }
     else // For Xtal
     {
-        d_g_ucDelay5usN_Base = _XTAL_DELAY6US_CNT;
-        d_g_ucDelayXusN_Base = _XTAL_DELAY4US_CNT;
+        d_isr_g_ucDelay5usN_Base = _XTAL_DELAY6US_CNT;
+        d_isr_g_ucDelayXusN_Base = _XTAL_DELAY4US_CNT;
     }
 }
 

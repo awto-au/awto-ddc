@@ -48,7 +48,7 @@ def main() -> int:
     if a.map is None:
         a.map = Path(json.loads((ROOT / f"tmp/fw/{u['serial']}-flashed.json").read_text())["image"]).with_suffix(".map")
     mp = a.map.read_text(errors="replace")
-    diag, mode_a, sw = mapsym(mp, "g_stAwtoDiag") or 0xF6D0, mapsym(mp, "g_stModeInfo"), mapsym(mp, "g_stAwtoSw")
+    diag, mode_a, sw = mapsym(mp, "isr_g_stAwtoDiag") or 0xF6D0, mapsym(mp, "isr_g_stModeInfo"), mapsym(mp, "isr_g_stAwtoSw")
     lf = (ROOT / "tmp/logs/cold_boot.log").open("a", buffering=1)
     tsv = ROOT / "tmp/logs/cold_boot.tsv"
     if not tsv.exists():

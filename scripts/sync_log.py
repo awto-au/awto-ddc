@@ -8,7 +8,7 @@ usage: sync_log.py BUS --map MAP [--tsv TSV] [--serial SERIAL]      read over th
   <map stem>.sync.tsv (wb_build.py copies it beside the image), else $AWTO_SYNC_TSV.
 - Ring layout (RL6449_Project.h StAwtoSync, bytes only): 14 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4}.
   Header byte 12 = N, byte 13 = seq wrap: read the header, then N x 8 B (read_ring); nothing is hardcoded here.
-- Host time (#157): images with g_stAwtoHt print every line with its host ISO 8601 time, from the latest DDC/CI time sync
+- Host time (#157): images with isr_g_stAwtoHt print every line with its host ISO 8601 time, from the latest DDC/CI time sync
   (scripts/host_time.py). Ring ms are 16 bit: unwrapped forward from anchors (episode start C0 carries fw ms bits 31..16,
   host-sync line D8 the full fw ms); `~` = forward and back-from-now disagree (a gap of 65.5 s or more hid a wrap).
 Log: tmp/logs/sync_log.log
@@ -143,7 +143,7 @@ def iso(t: float, ofs15: int, ms: bool = False) -> str:
     return dt.datetime.fromtimestamp(t, tz).isoformat(timespec="milliseconds" if ms else "seconds")
 
 
-# ---- #157 host time: g_stAwtoHt (RL6449_Project.h StAwtoHt, BE words) ----------------------------------------------------
+# ---- #157 host time: isr_g_stAwtoHt (RL6449_Project.h StAwtoHt, BE words) ----------------------------------------------------
 HT_SIZE = 16
 DIAG_T2 = 0x16                                           # StAwtoDiag.usT2Isr (docs/diag-block.md)
 
@@ -280,9 +280,9 @@ def read_ht(io, map_path: Path):
     """(ht dict, usT2Isr read after it) over 0x35; (None, None) on an image without #157"""
     import dbg_xdata as X
     mt = map_path.read_text(errors="replace")
-    if " _g_stAwtoHt " not in mt:
+    if " _isr_g_stAwtoHt " not in mt:
         return None, None
-    b = X.read_blocks(io, sym(map_path, "g_stAwtoHt"), HT_SIZE)
+    b = X.read_blocks(io, sym(map_path, "isr_g_stAwtoHt"), HT_SIZE)
     d = X.read_blocks(io, 0xF6D0, DIAG_T2 + 2)           # diag block: fixed address (RL6449_Project.h)
     if b is None or d is None:
         return None, None

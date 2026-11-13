@@ -23,55 +23,55 @@
 //--------------------------------------------------
 // Macro of Color Space
 //--------------------------------------------------
-#define GET_COLOR_SPACE()                           (g_stColorInfo.b3ColorSpace)
-#define SET_COLOR_SPACE(x)                          (g_stColorInfo.b3ColorSpace = (x))
-#define CLR_COLOR_SPACE()                           (g_stColorInfo.b3ColorSpace = 0)
+#define GET_COLOR_SPACE()                           (isr_g_stColorInfo.b3ColorSpace)
+#define SET_COLOR_SPACE(x)                          (isr_g_stColorInfo.b3ColorSpace = (x))
+#define CLR_COLOR_SPACE()                           (isr_g_stColorInfo.b3ColorSpace = 0)
 #define GET_COLOR_SPACE_RGB(x)                      (((x) == _COLOR_SPACE_RGB) || ((x) == _COLOR_SPACE_Y_ONLY) || ((x) == _COLOR_SPACE_RAW))
 
 //--------------------------------------------------
 // Macro of Colorimetry Data
 //--------------------------------------------------
-#define GET_COLORIMETRY()                           (g_stColorInfo.b4Colorimetry)
-#define SET_COLORIMETRY(x)                          (g_stColorInfo.b4Colorimetry = (x))
-#define CLR_COLORIMETRY()                           (g_stColorInfo.b4Colorimetry = 0)
+#define GET_COLORIMETRY()                           (isr_g_stColorInfo.b4Colorimetry)
+#define SET_COLORIMETRY(x)                          (isr_g_stColorInfo.b4Colorimetry = (x))
+#define CLR_COLORIMETRY()                           (isr_g_stColorInfo.b4Colorimetry = 0)
 
 //--------------------------------------------------
 // Macro of Extended Colorimetry
 //--------------------------------------------------
-#define GET_EXT_COLORIMETRY()                       (g_stColorInfo.b5ExtColorimetry)
-#define SET_EXT_COLORIMETRY(x)                      (g_stColorInfo.b5ExtColorimetry = (x))
-#define CLR_EXT_COLORIMETRY()                       (g_stColorInfo.b5ExtColorimetry = 0)
+#define GET_EXT_COLORIMETRY()                       (isr_g_stColorInfo.b5ExtColorimetry)
+#define SET_EXT_COLORIMETRY(x)                      (isr_g_stColorInfo.b5ExtColorimetry = (x))
+#define CLR_EXT_COLORIMETRY()                       (isr_g_stColorInfo.b5ExtColorimetry = 0)
 
 //--------------------------------------------------
 // Macro of Color Depth
 //--------------------------------------------------
-#define GET_COLOR_DEPTH()                           (g_stColorInfo.b5ColorDepth)
-#define SET_COLOR_DEPTH(x)                          (g_stColorInfo.b5ColorDepth = (x))
-#define CLR_COLOR_DEPTH()                           (g_stColorInfo.b5ColorDepth = 0)
+#define GET_COLOR_DEPTH()                           (isr_g_stColorInfo.b5ColorDepth)
+#define SET_COLOR_DEPTH(x)                          (isr_g_stColorInfo.b5ColorDepth = (x))
+#define CLR_COLOR_DEPTH()                           (isr_g_stColorInfo.b5ColorDepth = 0)
 
 //--------------------------------------------------
 // Macro of RGB Quantization Range
 //--------------------------------------------------
-#define GET_COLOR_RGB_QUANTIZATION_RANGE()          (g_stColorInfo.b2RgbQuantizationRange)
-#define SET_COLOR_RGB_QUANTIZATION_RANGE(x)         (g_stColorInfo.b2RgbQuantizationRange = (x))
+#define GET_COLOR_RGB_QUANTIZATION_RANGE()          (isr_g_stColorInfo.b2RgbQuantizationRange)
+#define SET_COLOR_RGB_QUANTIZATION_RANGE(x)         (isr_g_stColorInfo.b2RgbQuantizationRange = (x))
 
 //--------------------------------------------------
 // Macro of RGB Limit Range User
 //--------------------------------------------------
-#define GET_COLOR_RGB_LIMIT_RANGE_USER()            (g_stColorInfo.b1RgbLimitRangeUser)
-#define SET_COLOR_RGB_LIMIT_RANGE_USER(x)           (g_stColorInfo.b1RgbLimitRangeUser = (x))
+#define GET_COLOR_RGB_LIMIT_RANGE_USER()            (isr_g_stColorInfo.b1RgbLimitRangeUser)
+#define SET_COLOR_RGB_LIMIT_RANGE_USER(x)           (isr_g_stColorInfo.b1RgbLimitRangeUser = (x))
 
 //--------------------------------------------------
 // Macro of YCC Quantization Range
 //--------------------------------------------------
-#define GET_COLOR_YCC_QUANTIZATION_RANGE()          (g_stColorInfo.b2YccQuantizationRange)
-#define SET_COLOR_YCC_QUANTIZATION_RANGE(x)         (g_stColorInfo.b2YccQuantizationRange = (x))
+#define GET_COLOR_YCC_QUANTIZATION_RANGE()          (isr_g_stColorInfo.b2YccQuantizationRange)
+#define SET_COLOR_YCC_QUANTIZATION_RANGE(x)         (isr_g_stColorInfo.b2YccQuantizationRange = (x))
 
 //--------------------------------------------------
 // Macro of YCC Full Range User
 //--------------------------------------------------
-#define GET_COLOR_YCC_FULL_RANGE_USER()             (g_stColorInfo.b1YccFullRangeUser)
-#define SET_COLOR_YCC_FULL_RANGE_USER(x)            (g_stColorInfo.b1YccFullRangeUser = (x))
+#define GET_COLOR_YCC_FULL_RANGE_USER()             (isr_g_stColorInfo.b1YccFullRangeUser)
+#define SET_COLOR_YCC_FULL_RANGE_USER(x)            (isr_g_stColorInfo.b1YccFullRangeUser = (x))
 
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
@@ -92,7 +92,7 @@ typedef struct
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern StructColorInfo g_stColorInfo;
+extern StructColorInfo isr_g_stColorInfo;
 
 //****************************************************************************
 // FUNCTION EXTERN

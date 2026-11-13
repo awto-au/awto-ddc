@@ -43,10 +43,10 @@ def main():
     p3 = m.rd(0xB0, 1, "sfr")[0]
     a0, a1 = m.rd(0xFF09, 2)
     try:
-        pw = m.rd(m.addr("g_stPowerInfo"))[0]
+        pw = m.rd(m.addr("isr_g_stPowerInfo"))[0]
     except fw_sim.SimError:
         pw = -1
-    say(f"{a.bin.name}: boot key mask 0x{key:02X}, ADC A0=0x{a0:02X} A1=0x{a1:02X}, P3=0x{p3:02X}, g_stPowerInfo[0]=0x{pw & 0xFF:02X}, mode {bus.mode_state()}")
+    say(f"{a.bin.name}: boot key mask 0x{key:02X}, ADC A0=0x{a0:02X} A1=0x{a1:02X}, P3=0x{p3:02X}, isr_g_stPowerInfo[0]=0x{pw & 0xFF:02X}, mode {bus.mode_state()}")
     times = []
     orig = C.Box.call
 

@@ -624,7 +624,7 @@ def cmd_speed(a) -> int:
         m = cls(img, a.map, "fc-speed", None, devs)
         S.video_stubs(m, hdmi)
         m.t2_scale = S.T2_SCALE
-        ma, t1, ms, n = m.addr("g_stModeInfo"), time.monotonic(), 0, 0
+        ma, t1, ms, n = m.addr("isr_g_stModeInfo"), time.monotonic(), 0, 0
         while n < 150_000_000:
             m.run(1_000_000); n += 1_000_000
             ms = m.rd(ma)[0] & 0x1F

@@ -47,8 +47,8 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructTMDSCtrlInfo g_stTMDSRx2CtrlInfo;
-WORD g_usTMDSRx2ClkCount;
+StructTMDSCtrlInfo isr_g_stTMDSRx2CtrlInfo;
+WORD isr_g_usTMDSRx2ClkCount;
 
 BYTE g_pucTMDSRx2LEMax[3];
 BYTE g_pucTMDSRx2LEMin[3];
@@ -56,7 +56,7 @@ BYTE g_pucTMDSRx2Tap0Min[3];
 BYTE g_pucTMDSRx2Tap0Max[3];
 BYTE g_ucTMDSRx2Tap0Init;
 BYTE g_pucTMDSRx2Tap1Max[3];
-BYTE g_ucTMDSRx2ClkIRQ;
+BYTE isr_g_ucTMDSRx2ClkIRQ;
 BYTE g_ucTMDSRx2Z0Status;
 BYTE g_ucTMDSRx2SlaveAddr;
 
@@ -322,7 +322,7 @@ void ScalerTMDSRx2Initial(void)
 void ScalerTMDSRx2InterruptInitial(void)
 {
     // Enable INT Clock Check
-    g_ucTMDSRx2ClkIRQ = _ENABLE;
+    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
     if(ScalerGetBit(P71_E6_HDMI_FREQDET_CTRL, _BIT1) == 0x00)
     {
@@ -1989,7 +1989,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 #endif
 
     // Freq. Stable Into IRQ
-    if(((ScalerGetByte_EXINT(P71_EF_HDMI_ERROR_TH) & 0xC0) == 0xC0) && (g_ucTMDSRx2ClkIRQ == _ENABLE))
+    if(((ScalerGetByte_EXINT(P71_EF_HDMI_ERROR_TH) & 0xC0) == 0xC0) && (isr_g_ucTMDSRx2ClkIRQ == _ENABLE))
     {
         // Disable Freq Stable IRQ
         ScalerSetBit_EXINT(P71_EF_HDMI_ERROR_TH, ~(_BIT7 | _BIT6), _BIT6);
@@ -2063,21 +2063,21 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
             ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT6, 0x00);
         }
 
-        if((GET_TMDS_RX2_PHY_SET() == _FALSE) || ((bit)ScalerTMDSRx2CheckCDRStable_EXINT0(g_usTMDSRx2ClkCount) == _FALSE))
+        if((GET_TMDS_RX2_PHY_SET() == _FALSE) || ((bit)ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE))
         {
-            g_usTMDSRx2ClkCount = ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS);
+            isr_g_usTMDSRx2ClkCount = ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS);
 
             // If Measure Divider = /2 then CLK x 2
             ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
             if(ScalerGetBit_EXINT(P71_CA_HDMI_DP, _BIT6) == _BIT6)
             {
-                // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 * 2 / g_usTMDSRx2ClkCount
-                SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) * 2 / 100) / g_usTMDSRx2ClkCount);
+                // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 * 2 / isr_g_usTMDSRx2ClkCount
+                SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) * 2 / 100) / isr_g_usTMDSRx2ClkCount);
             }
             else
             {
-                // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 / g_usTMDSRx2ClkCount
-                SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) / 100) / g_usTMDSRx2ClkCount);
+                // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 / isr_g_usTMDSRx2ClkCount
+                SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) / 100) / isr_g_usTMDSRx2ClkCount);
             }
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
@@ -2112,7 +2112,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
                     ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, _BIT1);
 
                     // Check CDR Stable
-                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL mode need modify
+                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL mode need modify
                     {
                         SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
 
@@ -2124,7 +2124,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
                         // Disable Packed Pixel Mode
                         ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
 
-                        if((ScalerTMDSRx2CheckCDRStable_EXINT0(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
+                        if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
                         {
                             bMHLFail = _TRUE;
                         }
@@ -2142,7 +2142,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
                     // Disable Packed Pixel Mode
                     ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
 
-                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
+                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
                     {
                         bMHLFail = _TRUE;
                     }
@@ -2201,13 +2201,13 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
     }
 
     // Freq. Unstable Into IRQ
-    if(((ScalerGetByte_EXINT(P71_E6_HDMI_FREQDET_CTRL) & 0x06) == 0x06) && (g_ucTMDSRx2ClkIRQ == _ENABLE))
+    if(((ScalerGetByte_EXINT(P71_E6_HDMI_FREQDET_CTRL) & 0x06) == 0x06) && (isr_g_ucTMDSRx2ClkIRQ == _ENABLE))
     {
         // Clear Unstable IRQ Flag
         ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~_BIT2, _BIT2);
 
         // Ensure Freq really unstable
-        if((abs(g_usTMDSRx2ClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (g_usTMDSRx2ClkCount >> 6)) ||
+        if((abs(isr_g_usTMDSRx2ClkCount - ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS)) > (isr_g_usTMDSRx2ClkCount >> 6)) ||
            (abs(GET_INPUT_PIXEL_CLK() - ((GET_TMDS_OFFLINE_MEASURE_CLK() << 3) / GET_COLOR_DEPTH())) > (GET_INPUT_PIXEL_CLK() >> 6)))
         {
             // Set Display M1 output force to background color and free run mode
@@ -2482,7 +2482,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
             ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 
             // Detect 3 Channel CDR Stable
-            if((bit)ScalerTMDSRx2CheckCDRStable_EXINT(g_usTMDSRx2ClkCount) == _TRUE)
+            if((bit)ScalerTMDSRx2CheckCDRStable_EXINT(isr_g_usTMDSRx2ClkCount) == _TRUE)
             {
                 // Disable Rising to Falling IRQ, Set IRQ Status Falling to Rising edge IRQ
                 ScalerSetBit_EXINT(P71_23_HDMI_CTRL_23, ~(_BIT6 | _BIT2 | _BIT1), (_BIT2 | _BIT1));
@@ -2582,7 +2582,7 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
 {
     // Disable INT Clock Check
-    g_ucTMDSRx2ClkIRQ = _DISABLE;
+    isr_g_ucTMDSRx2ClkIRQ = _DISABLE;
 
 #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
 
@@ -2599,7 +2599,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
                     DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED));
 
                     // Enable INT Clock Check
-                    g_ucTMDSRx2ClkIRQ = _ENABLE;
+                    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                     return _FALSE;
                 }
@@ -2615,7 +2615,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
                     DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED));
 
                     // Enable INT Clock Check
-                    g_ucTMDSRx2ClkIRQ = _ENABLE;
+                    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                     return _FALSE;
                 }
@@ -2625,7 +2625,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
             default:
 
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
                 break;
@@ -2641,7 +2641,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
             if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED) * 4)) > (usClkCount >> 6))
             {
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
             }
@@ -2649,7 +2649,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
             if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_BLUE) * 4)) > (usClkCount >> 6))
             {
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
             }
@@ -2657,7 +2657,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
             if(abs(usClkCount - (ScalerTMDSRx2MeasureClk(_CLK_SOURCE_GREEN) * 4)) > (usClkCount >> 6))
             {
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
             }
@@ -2671,7 +2671,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
                 DebugMessageRx2("R Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_RED));
 
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
             }
@@ -2681,7 +2681,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
                 DebugMessageRx2("B Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_BLUE));
 
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
             }
@@ -2691,7 +2691,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
                 DebugMessageRx2("G Channel CDR Unstable", ScalerTMDSRx2MeasureClk(_CLK_SOURCE_GREEN));
 
                 // Enable INT Clock Check
-                g_ucTMDSRx2ClkIRQ = _ENABLE;
+                isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
                 return _FALSE;
             }
@@ -2699,7 +2699,7 @@ bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount)
     }
 
     // Enable INT Clock Check
-    g_ucTMDSRx2ClkIRQ = _ENABLE;
+    isr_g_ucTMDSRx2ClkIRQ = _ENABLE;
 
     return _TRUE;
 }
@@ -3519,7 +3519,7 @@ void ScalerTMDSRx2HdmiWatchDog(BYTE ucWDType, bit bEnable)
 void ScalerTMDSRx2PowerSavingProc(void)
 {
     // Set Power Saving DDC Debounce Counter
-    g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_PS;
+    isr_g_usDDCDebounceCnt = _TMDS_DDC_DEBOUNCE_PS;
 
     ScalerTMDSRx2FreqDetectDisable();
 
@@ -3565,7 +3565,7 @@ void ScalerTMDSRx2FreqDetectDisable(void)
     ScalerSetBit(P71_EF_HDMI_ERROR_TH, ~_BIT7, 0x00);
 
     // Clear TMDS Clk Count
-    g_usTMDSRx2ClkCount = 0;
+    isr_g_usTMDSRx2ClkCount = 0;
 
     // Clear PHY SET flag
     CLR_TMDS_RX2_PHY_SET();
@@ -3633,14 +3633,14 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-        if((ScalerTMDSRx2CheckCDRStable(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE) ||
+        if((ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE) ||
            ((GET_D2_TMDS_MODE() == _TMDS_MHL_MODE) && (ScalerMHLRx2DetectClkMode() == _FALSE)) ||
            (ScalerTMDSRx2TMDSVideoDetect(_WAIT) == _TMDS_VIDEO_DATA_NONE))
 
 #else
 
         // Detect MHL Mode
-        if((ScalerTMDSRx2CheckCDRStable(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE) ||
+        if((ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE) ||
            ((GET_D2_TMDS_MODE() == _TMDS_MHL_MODE) && (ScalerMHLRx2DetectClkMode() == _FALSE)))
 
 #endif
@@ -3649,9 +3649,9 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
 #if(_D2_HDMI_2_0_SUPPORT == _ON)
 
-        if((ScalerTMDSRx2CheckCDRStable(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE) || (ScalerTMDSRx2TMDSVideoDetect(_WAIT) == _TMDS_VIDEO_DATA_NONE))
+        if((ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE) || (ScalerTMDSRx2TMDSVideoDetect(_WAIT) == _TMDS_VIDEO_DATA_NONE))
 #else
-        if((ScalerTMDSRx2CheckCDRStable(g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE))
+        if((ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerTMDSRx2CheckDataDFE() == _FALSE))
 #endif
 
 #endif // End of #if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
@@ -3859,7 +3859,7 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
 
                 SET_INPUT_PIXEL_CLK((GET_INPUT_PIXEL_CLK() << 3) / GET_COLOR_DEPTH());
 
-                if(ScalerTMDSRx2HdmiDeepColorProc(g_usTMDSRx2ClkCount) == _FALSE)
+                if(ScalerTMDSRx2HdmiDeepColorProc(isr_g_usTMDSRx2ClkCount) == _FALSE)
                 {
                     // Restore Input Pixel clk
                     SET_INPUT_PIXEL_CLK(usInputPixelClk);
@@ -4156,7 +4156,7 @@ bit ScalerTMDSRx2TMDSStableDetect(BYTE ucSourceType)
         return _FALSE;
     }
 
-    if(ScalerTMDSRx2CheckCDRStable(g_usTMDSRx2ClkCount) == _FALSE)
+    if(ScalerTMDSRx2CheckCDRStable(isr_g_usTMDSRx2ClkCount) == _FALSE)
     {
         DebugMessageRx2("CDR Unstable!!", ucSourceType);
         return _FALSE;

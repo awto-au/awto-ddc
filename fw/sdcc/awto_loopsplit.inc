@@ -1,5 +1,5 @@
 // #75 main-loop split, inserted into SysMain.c by keil2sdcc.py: slow checks run when AWTO_SLOW_MS have passed.
-// Time base = Timer2 ISR count (1 per ms tick); d_g_usTimerCounter is rebased by the timer-event code.
+// Time base = Timer2 ISR count (1 per ms tick); d_isr_g_usTimerCounter is rebased by the timer-event code.
 #if(_AWTO_LOOP_SPLIT == _ON)
 __xdata StAwtoLoop g_stAwtoLoop;
 static __xdata unsigned int s_pusAwtoSlowLast[AWTO_SLOW_SLOTS];
@@ -32,10 +32,10 @@ bit AwtoSlowDue(unsigned char ucSlot)
     if((unsigned int)(usNow - s_usAwtoWinMs) >= 1000)
     {
         g_stAwtoLoop.usSlowRate = g_stAwtoLoop.usSlowRuns - s_usAwtoWinRuns;
-        g_stAwtoLoop.usFastRate = g_stAwtoDiag.usHeartbeat - s_usAwtoWinHb;
+        g_stAwtoLoop.usFastRate = isr_g_stAwtoDiag.usHeartbeat - s_usAwtoWinHb;
         g_stAwtoLoop.usMaxGapMs = s_usAwtoWinGap;
         s_usAwtoWinRuns = g_stAwtoLoop.usSlowRuns;
-        s_usAwtoWinHb = g_stAwtoDiag.usHeartbeat;
+        s_usAwtoWinHb = isr_g_stAwtoDiag.usHeartbeat;
         s_usAwtoWinMs = usNow;
         s_usAwtoWinGap = 0;
     }

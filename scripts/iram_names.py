@@ -18,7 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 
 ROOT = repo_root()
-PREFIX = {"DSEG": "d_", "BSEG": "d_", "ISEG": "i_"}
+PREFIX = {"DSEG": "d_", "BSEG": "d_", "ISEG": "i_", "XSEG": "", "XISEG": "", "XABS": ""}
+XRAM = (0xD700, 0xF700)                                     # RL6449 XRAM (fw.mem EXTERNAL RAM + no-init top to 0xF6FF)
+ISR = "isr_"                                                # after the space prefix: used by ISR and main code
 STORE = re.compile(r"^\s+\.area\s+(\w+)")
 LABEL = re.compile(r"^(\w+)::?")
 DS = re.compile(r"^\s*\.ds\s+(\w+)")
@@ -47,6 +49,11 @@ def objects(asm_dir: Path):
                 area, lab = m.group(1), None
                 continue
             if area not in PREFIX:
+                continue
+            m = re.match(r"^(_\w+)\s*=\s*(0x[0-9a-fA-F]+)\s*$", l)    # __at() object: `_isr_g_stAwtoDiag = 0xf6d0`
+            if m:
+                if XRAM[0] <= int(m.group(2), 16) < XRAM[1]:              # variables only, not __at() hardware registers
+                    out.append((area, p.stem, m.group(1), 0))
                 continue
             m = LABEL.match(l)
             if m:
@@ -81,6 +88,33 @@ def isr_refs(asm_dir: Path) -> set:
             continue
         seen.add(n); st.extend(funcs[n].calls)
     return {r for n in seen for r in funcs[n].refs} | {w for n in seen for l in funcs[n].lines for w in re.findall(r"\b_\w+", l)}
+
+
+def shared_refs(asm_dir: Path) -> set:
+    """Labels referenced both by ISR-reachable and by main-reachable (main + address-taken) code."""
+    from sdcc_bank import Module
+    funcs = {c.name: c for p in sorted(asm_dir.glob("*.asm")) if not p.name.startswith("__")
+             for c in Module(p).chunks if c.area == "CSEG"}
+
+    def reach(roots):
+        seen, st = set(), list(roots)
+        while st:
+            n = st.pop()
+            if n in seen or n not in funcs:
+                continue
+            seen.add(n); st.extend(funcs[n].calls)
+        return seen
+    isr = reach([n for n, c in funcs.items() if c.isr])
+    main = reach(["_main", *{r for c in funcs.values() for r in c.refs if r in funcs}])
+    refs = lambda S: {w for n in S for l in funcs[n].lines for w in re.findall(r"\b_\w+", l)}
+    return refs(isr) & refs(main - isr)
+
+
+def base_of(cn: str) -> str:
+    for pre in ("d_", "i_"):
+        if cn.startswith(pre):
+            cn = cn[len(pre):]
+    return cn[len(ISR):] if cn.startswith(ISR) else cn
 
 
 def addr_of(map_text: str) -> dict:
@@ -146,6 +180,8 @@ def main() -> int:
     if a.mode == "report":
         tot, isr = defaultdict(int), isr_refs(Path(a.asm))
         for area, mod, fn, cn, size, named in sorted(rows, key=lambda r: (r[0], addr.get("_" + r[3], 999), r[1])):
+            if not PREFIX[area]:
+                continue                                           # XDATA: names checked, not listed
             ad = addr.get("_" + cn) if fn is None else None
             lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
             hot = "ISR" if any(r == lab or r.startswith(lab + "_") for r in isr) else "   "
@@ -188,10 +224,13 @@ def main() -> int:
         log(f"to-xdata: {n_moved} bits moved")
         return 0
 
-    bad = []
+    bad, sh = [], shared_refs(Path(a.asm))
     for area, mod, fn, cn, size, named in rows:
-        if named and not cn.startswith(PREFIX[area]):
-            bad.append((area, mod, fn, cn))
+        lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
+        is_sh = any(r == lab or r.startswith(lab + "_") or r.startswith(lab + "+") for r in sh)
+        want = PREFIX[area] + (ISR if is_sh else "") + base_of(cn)
+        if named and cn != want:
+            bad.append((area, mod, fn, cn, want))
     if a.mode == "check":
         placed = {r[3] for r in rows}
         for p in src_files():
@@ -200,17 +239,16 @@ def main() -> int:
             for n in set(re.findall(r"\b([di]_\w+)", p.read_text(errors="replace"))):
                 pass                                               # prefixed-but-not-placed: needs the C decl scan (#189 step 2)
         for b in bad:
-            log(f"UNPREFIXED {b[0]} {b[1]} {(b[2] + ':') if b[2] else ''}{b[3]}")
-        log(f"check: {len(rows)} IRAM objects, {len(bad)} without the d_/i_ prefix")
+            log(f"MISNAMED {b[0]} {b[1]} {(b[2] + ':') if b[2] else ''}{b[3]} (want {b[4]})")
+        log(f"check: {len(rows)} objects, {len(bad)} not named by placement (d_ / i_ space, isr_ shared with an ISR)")
         return 1 if bad else 0
 
     # rename
     files = {p: p.read_text(errors="replace") for p in src_files()}
-    glob_names = sorted({(PREFIX[b[0]], b[3]) for b in bad if b[2] is None})
-    loc = sorted({(PREFIX[b[0]], b[2], b[3]) for b in bad if b[2] is not None})
+    glob_names = sorted({(b[3], b[4]) for b in bad if b[2] is None})
+    loc = sorted({(b[3], b[4], b[2]) for b in bad if b[2] is not None})
     changed = defaultdict(int)
-    for pre, n in glob_names:
-        new = pre + n.lstrip("_") if n.startswith("_") else pre + n
+    for n, new in glob_names:
         rx = word(n)
         asm_rx = word("_" + n)                                      # asm / map / Python spellings carry the C underscore
         for p, t in files.items():
@@ -221,7 +259,7 @@ def main() -> int:
             if t2 != t:
                 changed[p] += 1; files[p] = t2
         log(f"rename {n} -> {new}")
-    for pre, fn, n in loc:
+    for n, new, fn in loc:
         hit = False
         for p, t in files.items():
             if p.suffix not in (".c", ".inc"):
@@ -230,10 +268,10 @@ def main() -> int:
             if not sp:
                 continue
             body = t[sp[0]:sp[1]]
-            b2 = word(n).sub(pre + n, body)
+            b2 = word(n).sub(new, body)
             if b2 != body:
                 files[p] = t[:sp[0]] + b2 + t[sp[1]:]; changed[p] += 1; hit = True
-        log(f"rename {fn}:{n} -> {pre + n}" + ("" if hit else "  NOT FOUND"))
+        log(f"rename {fn}:{n} -> {new}" + ("" if hit else "  NOT FOUND"))
     for p, t in files.items():
         if changed.get(p):
             p.write_text(t)

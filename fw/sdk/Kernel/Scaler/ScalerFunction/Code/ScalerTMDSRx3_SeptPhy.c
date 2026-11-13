@@ -312,7 +312,7 @@ void ScalerTMDSRx3PSIntHandler_EXINT0(void)
             ScalerSetBit_EXINT(P72_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
 
             // Detect 3 Channel CDR Stable
-            if((bit)ScalerTMDSRx3CheckCDRStable_EXINT(g_usTMDSRx3ClkCount) == _TRUE)
+            if((bit)ScalerTMDSRx3CheckCDRStable_EXINT(isr_g_usTMDSRx3ClkCount) == _TRUE)
             {
                 // Disable Rising to Falling IRQ, Set IRQ Status Falling to Rising edge IRQ
                 ScalerSetBit_EXINT(P72_23_HDMI_CTRL_23, ~(_BIT6 | _BIT2 | _BIT1), (_BIT2 | _BIT1));

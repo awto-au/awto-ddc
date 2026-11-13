@@ -8,7 +8,7 @@ usage: deadport_sim.py BIN MAP [--case vcp|sel|cmd|all] [--mode 1080p60] [--secs
   cmd  test cmd 0x32 (switch to D2, fixed port; test cmds are not refused).
        PASS: back to ACTIVE on D3 within --secs (guard: fixed port, no cable, no signal -> auto search).
   Each case also needs its log line: switch-log 0xB8 (vcp / sel: arg 1, cmd: arg 3) and the sync-log line (sync.tsv DF; sel: E0 06).
-  Prints the switch log (g_stAwtoSw) decoded with sw_timeline.name.
+  Prints the switch log (isr_g_stAwtoSw) decoded with sw_timeline.name.
 Log: tmp/logs/deadport_sim.log
 """
 import argparse
@@ -22,7 +22,7 @@ import ddc_sim as DD  # noqa: E402
 import sync_log as SL  # noqa: E402
 
 D3 = 6                                  # Global.h _D3_INPUT_PORT
-TESTCMD = 0xF6F8                        # g_stAwtoDiag + 0x28
+TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag + 0x28
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8     # key ADC cells (key_sim_test.py KEY_ADC band centres below)
 KEY_SOURCE, KEY_DOWN, KEY_UP, KEY_AUTO, KEY_MENU = (A1, 0x80), (A1, 0x38), (A0, 0x38), (A0, 0x80), (A0, 0xD0)
 NOCABLE_D1 = {0xFE33: 0, 0xFE34: 1, 0xFE35: 1}     # cable status = !bD1_CONNECT (SysSource.c); unit 3 cabled reads 01 01 00
@@ -52,7 +52,7 @@ def tap(bus, key, ms=150, gap=0.4):
 
 
 def swlog(bus, say):
-    raw = bus.xdata(bus.addr("g_stAwtoSw"), 12 + 4 * T.N_EV)
+    raw = bus.xdata(bus.addr("isr_g_stAwtoSw"), 12 + 4 * T.N_EV)
     hdr, evs = T.decode(raw, bus.be) if hasattr(T, "decode") else (None, [])
     for ms, i, g in evs[-40:]:
         say(f"  +{ms:6d} ms  {T.name(i, g)}")

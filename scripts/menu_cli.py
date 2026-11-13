@@ -40,7 +40,7 @@ FIELDS = ["magic", "version", "open", "page", "cursor", "item_id", "item_page", 
 READS = 5                # torn-read retries: the firmware updates the struct from its main loop, the host reads async
 SETTLE_S = 0.25          # HOLD only (sim): no state change to wait for until the long-press time is up
 KEY_S = 0.47             # KEY: wait for menu_diag.seq to move. Same bound as settings_cli.MAILBOX_S (one OSD draw class)
-TESTCMD_OFF = 0x28        # g_stAwtoDiag.ucTestCmd: 1..4 inject the physical AUTO/UP/DOWN/MENU roles
+TESTCMD_OFF = 0x28        # isr_g_stAwtoDiag.ucTestCmd: 1..4 inject the physical AUTO/UP/DOWN/MENU roles
 
 
 def keyboard_action(key: bytes) -> str | None:
@@ -143,7 +143,7 @@ class Menu:
     def __init__(self, box: C.Box, map_text: str, sim: bool):
         self.box, self.sim = box, sim
         self.addr = C.xaddr(map_text, "menu_diag")
-        self.diag = C.xaddr(map_text, "g_stAwtoDiag")
+        self.diag = C.xaddr(map_text, "isr_g_stAwtoDiag")
 
     def state(self) -> dict:
         for _ in range(READS):

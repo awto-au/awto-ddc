@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_sim as S  # noqa: E402
 
 ROOT, NCODE, COMMON_END = S.ROOT, 7, 0x28C6
-POWER_NORMAL = 2                # vendor g_stPowerInfo high nibble: 2 = NORMAL, 3 = SAVING (SysSourceDetectPort cae0/cad2 branches)
+POWER_NORMAL = 2                # vendor isr_g_stPowerInfo high nibble: 2 = NORMAL, 3 = SAVING (SysSourceDetectPort cae0/cad2 branches)
 VENDOR_IMG = Path.home() / "vendors/realtek/analysis/dumps/jxc-4k-flash-AWT26110003-20261104-201610.bin"
 
 
@@ -83,9 +83,9 @@ def vendor_stubs(m, hdmi):
     stub_at(m, 5, 0xFCE9, "ScalerTMDSNormalPreDetect", pre)
 
     def scan(m, r):
-        if r["r"][7] != D2 or (m.rd(m.addr("g_stPowerInfo"))[0] >> 4) != POWER_NORMAL:     # PS: no scan, SysSourceJudge wakes the power
+        if r["r"][7] != D2 or (m.rd(m.addr("isr_g_stPowerInfo"))[0] >> 4) != POWER_NORMAL:     # PS: no scan, SysSourceJudge wakes the power
             return {"r7": S.SOURCE_NONE}
-        m.wr(m.addr("g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # Keil: big-endian
+        m.wr(m.addr("isr_g_usInputPixelClk"), hdmi.PCLK.to_bytes(2, "big"))        # Keil: big-endian
         return {"r7": S.SOURCE_HDMI}
     stub_at(m, 5, 0xF97B, "ScalerTMDSScanInputPort", scan)
     stub_at(m, 5, 0xF85F, "ScalerTMDSStableDetect", lambda m, r: {"carry": r["r"][7] == D2, "r7": int(r["r"][7] == D2)})   # (port R7, source type R5)
@@ -112,7 +112,7 @@ def main() -> int:
     a = ap.parse_args()
     log = (ROOT / f"tmp/logs/fw_sim_vendor_{a.mode}.log").open("w", buffering=1)
     m, _ = vendor_machine(Path(a.img), a.mode, log)
-    ma = m.addr("g_stModeInfo")
+    ma = m.addr("isr_g_stModeInfo")
     done, last = 0, None
     while done < a.max_instr:
         m.run(1_000_000); done += 1_000_000

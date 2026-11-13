@@ -93,7 +93,7 @@ def main() -> int:
     i2cbus.require_unit(a.bus, a.serial)
     ins = load_inputs(a.inputs)
     mp = a.map.read_text(errors="replace")
-    base, diag = symbol(mp, "g_stAwtoGpio"), symbol(mp, "g_stAwtoDiag")
+    base, diag = symbol(mp, "g_stAwtoGpio"), symbol(mp, "isr_g_stAwtoDiag")
     logs = B.setup_logs("gpio_diag", map=str(a.map))
     io = B.Real(a.bus, allow_write=True)
     try:

@@ -94,7 +94,7 @@ def log_mode(a, root, io=None):
     if wr:
         v = 0x41 if "--open" in a else 0x42
         d = X.diag_base if hasattr(X, "diag_base") else None
-        mdiag = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoDiag\b", mp, re.M)
+        mdiag = re.search(r"^D:\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", mp, re.M)
         tc = (int(mdiag.group(1), 16) if mdiag else 0xF6D0) + 0x28
         ok = io.write(X.DEV8, 0x01, bytes([tc >> 8])) and io.write(X.DEV8, 0x03, bytes([v])) and io.write(X.DEV8, 0x3B, bytes([tc & 0xFF]))
         say(f"test cmd 0x{v:02X} (key test screen {'open' if v == 0x41 else 'close'}) {'sent' if ok else 'NAK'}")

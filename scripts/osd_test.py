@@ -6,13 +6,13 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
   Keys   (g_stOsdInfo.ucOsdKeyMessage): menu right left exit
   Offsets/values: RTD2014Include.h (EnumOsdEvent order, _*_KEY_MESSAGE); address from the image's map.
   Writes via rtd_dbg_write.py (debug slave 0x35, EDID-serial guarded). Field offsets: rtd_proto.osd_offsets_from_map (_DP_DEBUG_MSG moves them, #37; unit_health cross-checks the firmware's own report).
-  --cmd: write the firmware test byte (g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
+  --cmd: write the firmware test byte (isr_g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
     injected after the key scan, 0x10+n = event n (n<16; n>=16 at 0x70+n-16). Visuals someone is asked to look at stay up until cleared (#28):
       debug = 0x26           debug pop-up (console), held             clear    = 0x27  every held visual away
       demo-log = 0x3A  console + 100 log lines 'line N test 1234567890...' 5ms apart (every third wraps)
       timed (old images): debug-6s = 0x20 (pop-up, _AWTO_INFO_POPUP_SEC, #34). Boot logo cmds 0x21 / 0x24 / 0x25: gone (#144).
     0x22/0x23 = message log on/off (wb-msgtable, #56). An image older than #28 ignores 0x26 / 0x27.
-    Held state: g_stAwtoDiag + 0x2F (bit1 pop-up). Works for keys (the direct key write is overwritten).
+    Held state: isr_g_stAwtoDiag + 0x2F (bit1 pop-up). Works for keys (the direct key write is overwritten).
 Log: ./tmp/logs/rtd_dbg_write.log
 """
 import argparse, re, subprocess, sys
@@ -45,9 +45,9 @@ def osdinfo_addr(map_path: Path) -> int:
 
 
 def diag_addr(map_path: Path) -> int:
-    m = re.search(r"([0-9A-F]{8})\s+_g_stAwtoDiag\b", map_path.read_text(errors="replace"))
+    m = re.search(r"([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", map_path.read_text(errors="replace"))
     if not m:
-        sys.exit(f"_g_stAwtoDiag not in {map_path}")
+        sys.exit(f"_isr_g_stAwtoDiag not in {map_path}")
     return int(m.group(1), 16) & 0xFFFF
 
 

@@ -39,7 +39,7 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-StructModeInfoType g_stModeInfo;
+StructModeInfoType isr_g_stModeInfo;
 // ModeInfo bit[0:4] -- Mode State
 // ModeInfo bit[5] -- Display Ready
 // ModeInfo bit[6] -- Timing Confirm

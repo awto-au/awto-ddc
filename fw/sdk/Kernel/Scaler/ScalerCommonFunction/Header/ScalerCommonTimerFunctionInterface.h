@@ -28,8 +28,8 @@
 //****************************************************************************
 // VARIABLE EXTERN
 //****************************************************************************
-extern volatile bit d_g_bNotifyTimer2Int;
-extern volatile WORD __data d_g_usTimerCounter;
+extern volatile bit d_isr_g_bNotifyTimer2Int;
+extern volatile WORD __data d_isr_g_usTimerCounter;
 
 #if(_DEBUG_MESSAGE_SUPPORT == _ON)
 extern volatile WORD __data d_g_usMeasureCounter;

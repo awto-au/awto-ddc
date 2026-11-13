@@ -270,9 +270,9 @@
 //--------------------------------------------------
 // Macro of Input Pixel Clk (Unit in 0.1MHz)
 //--------------------------------------------------
-#define GET_INPUT_PIXEL_CLK()                               (g_usInputPixelClk)
-#define SET_INPUT_PIXEL_CLK(x)                              (g_usInputPixelClk = (x))
-#define CLR_INPUT_PIXEL_CLK()                               (g_usInputPixelClk = 0)
+#define GET_INPUT_PIXEL_CLK()                               (isr_g_usInputPixelClk)
+#define SET_INPUT_PIXEL_CLK(x)                              (isr_g_usInputPixelClk = (x))
+#define CLR_INPUT_PIXEL_CLK()                               (isr_g_usInputPixelClk = 0)
 
 //--------------------------------------------------
 // Macro of Input Pixel Clk (Unit in 0.1MHz)
@@ -285,33 +285,33 @@
 //--------------------------------------------------
 // Macro of Digital Input Port Switch
 //--------------------------------------------------
-#define GET_DIGITAL_PORT_SWITCH_TO_D0()                     ((g_ucDigitalSwitch & _BIT5) >> 5)
-#define SET_DIGITAL_PORT_SWITCH_TO_D0()                     (g_ucDigitalSwitch |= _BIT5)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D0()                     (g_ucDigitalSwitch &= ~_BIT5)
+#define GET_DIGITAL_PORT_SWITCH_TO_D0()                     ((isr_g_ucDigitalSwitch & _BIT5) >> 5)
+#define SET_DIGITAL_PORT_SWITCH_TO_D0()                     (isr_g_ucDigitalSwitch |= _BIT5)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D0()                     (isr_g_ucDigitalSwitch &= ~_BIT5)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D1()                     ((g_ucDigitalSwitch & _BIT4) >> 4)
-#define SET_DIGITAL_PORT_SWITCH_TO_D1()                     (g_ucDigitalSwitch |= _BIT4)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D1()                     (g_ucDigitalSwitch &= ~_BIT4)
+#define GET_DIGITAL_PORT_SWITCH_TO_D1()                     ((isr_g_ucDigitalSwitch & _BIT4) >> 4)
+#define SET_DIGITAL_PORT_SWITCH_TO_D1()                     (isr_g_ucDigitalSwitch |= _BIT4)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D1()                     (isr_g_ucDigitalSwitch &= ~_BIT4)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D2()                     ((g_ucDigitalSwitch & _BIT3) >> 3)
-#define SET_DIGITAL_PORT_SWITCH_TO_D2()                     (g_ucDigitalSwitch |= _BIT3)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D2()                     (g_ucDigitalSwitch &= ~_BIT3)
+#define GET_DIGITAL_PORT_SWITCH_TO_D2()                     ((isr_g_ucDigitalSwitch & _BIT3) >> 3)
+#define SET_DIGITAL_PORT_SWITCH_TO_D2()                     (isr_g_ucDigitalSwitch |= _BIT3)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D2()                     (isr_g_ucDigitalSwitch &= ~_BIT3)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D3()                     ((g_ucDigitalSwitch & _BIT2) >> 2)
-#define SET_DIGITAL_PORT_SWITCH_TO_D3()                     (g_ucDigitalSwitch |= _BIT2)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D3()                     (g_ucDigitalSwitch &= ~_BIT2)
+#define GET_DIGITAL_PORT_SWITCH_TO_D3()                     ((isr_g_ucDigitalSwitch & _BIT2) >> 2)
+#define SET_DIGITAL_PORT_SWITCH_TO_D3()                     (isr_g_ucDigitalSwitch |= _BIT2)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D3()                     (isr_g_ucDigitalSwitch &= ~_BIT2)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D4()                     ((g_ucDigitalSwitch & _BIT1) >> 1)
-#define SET_DIGITAL_PORT_SWITCH_TO_D4()                     (g_ucDigitalSwitch |= _BIT1)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D4()                     (g_ucDigitalSwitch &= ~_BIT1)
+#define GET_DIGITAL_PORT_SWITCH_TO_D4()                     ((isr_g_ucDigitalSwitch & _BIT1) >> 1)
+#define SET_DIGITAL_PORT_SWITCH_TO_D4()                     (isr_g_ucDigitalSwitch |= _BIT1)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D4()                     (isr_g_ucDigitalSwitch &= ~_BIT1)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D5()                     ((g_ucDigitalSwitch & _BIT0) >> 0)
-#define SET_DIGITAL_PORT_SWITCH_TO_D5()                     (g_ucDigitalSwitch |= _BIT0)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D5()                     (g_ucDigitalSwitch &= ~_BIT0)
+#define GET_DIGITAL_PORT_SWITCH_TO_D5()                     ((isr_g_ucDigitalSwitch & _BIT0) >> 0)
+#define SET_DIGITAL_PORT_SWITCH_TO_D5()                     (isr_g_ucDigitalSwitch |= _BIT0)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D5()                     (isr_g_ucDigitalSwitch &= ~_BIT0)
 
-#define GET_DIGITAL_PORT_SWITCH_TO_D6()                     ((g_ucDigitalSwitch & _BIT6) >> 6)
-#define SET_DIGITAL_PORT_SWITCH_TO_D6()                     (g_ucDigitalSwitch |= _BIT6)
-#define CLR_DIGITAL_PORT_SWITCH_TO_D6()                     (g_ucDigitalSwitch &= ~_BIT6)
+#define GET_DIGITAL_PORT_SWITCH_TO_D6()                     ((isr_g_ucDigitalSwitch & _BIT6) >> 6)
+#define SET_DIGITAL_PORT_SWITCH_TO_D6()                     (isr_g_ucDigitalSwitch |= _BIT6)
+#define CLR_DIGITAL_PORT_SWITCH_TO_D6()                     (isr_g_ucDigitalSwitch &= ~_BIT6)
 
 #define GET_DP_DC_OFF_HPD_HIGH()                            (g_bDpDCOffHPDHigh)
 #define SET_DP_DC_OFF_HPD_HIGH()                            (g_bDpDCOffHPDHigh = _TRUE)
@@ -625,9 +625,9 @@
 #define SET_DP_RX0_BACKUP_PD_LINK_STATUS_FLG()              (g_bDpMSTRx0BackupLinkStatusFlg_INT = _TRUE)
 #define CLR_DP_RX0_BACKUP_PD_LINK_STATUS_FLG()              (g_bDpMSTRx0BackupLinkStatusFlg_INT = _FALSE)
 
-#define GET_DP_RX1_BACKUP_PD_LINK_STATUS_FLG()              (d_g_bDpMSTRx1BackupLinkStatusFlg_INT)
-#define SET_DP_RX1_BACKUP_PD_LINK_STATUS_FLG()              (d_g_bDpMSTRx1BackupLinkStatusFlg_INT = _TRUE)
-#define CLR_DP_RX1_BACKUP_PD_LINK_STATUS_FLG()              (d_g_bDpMSTRx1BackupLinkStatusFlg_INT = _FALSE)
+#define GET_DP_RX1_BACKUP_PD_LINK_STATUS_FLG()              (d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT)
+#define SET_DP_RX1_BACKUP_PD_LINK_STATUS_FLG()              (d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT = _TRUE)
+#define CLR_DP_RX1_BACKUP_PD_LINK_STATUS_FLG()              (d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT = _FALSE)
 
 //--------------------------------------------------
 // Definitions of DP Marginal Link
@@ -1200,17 +1200,17 @@
 // Macro of DP Timer2 IRQ Delay Counter
 //--------------------------------------------------
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
-#define DP_RX_HPD_IRQ_ASSERT_T2_DELAY_INITIAL()             (d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter = ((WORD)((95 - GET_DP_IRQ_TIME_10US()) * 10) >> 2))
+#define DP_RX_HPD_IRQ_ASSERT_T2_DELAY_INITIAL()             (d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter = ((WORD)((95 - GET_DP_IRQ_TIME_10US()) * 10) >> 2))
 #define DP_RX_HPD_IRQ_ASSERT_T2_DELAY()                     {\
-                                                                if(d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter > 0)\
+                                                                if(d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter > 0)\
                                                                 {\
                                                                     ScalerSyncDpAuxManualModeSetting_EXINT(_DP_AUX_MANUAL_MODE_SET);\
                                                                     do\
                                                                     {\
-                                                                        d_g_ucDpRxHpdIrqAssertT2EventDelay5usI = d_g_ucDelay5usN_Base;\
+                                                                        d_g_ucDpRxHpdIrqAssertT2EventDelay5usI = d_isr_g_ucDelay5usN_Base;\
                                                                         while(--d_g_ucDpRxHpdIrqAssertT2EventDelay5usI) {};\
                                                                     }\
-                                                                    while(--d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter);\
+                                                                    while(--d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter);\
                                                                     ScalerSyncDpAuxManualModeSetting_EXINT(_DP_AUX_MANUAL_MODE_RECOVER);\
                                                                 }\
                                                             }
@@ -1228,12 +1228,12 @@
 #endif
 
 #if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-#define GET_DP_D1_HPD_IRQ_ASSERT_T2_EVENT()                 (d_g_bDpD1HpdIrqAssertT2Event)
+#define GET_DP_D1_HPD_IRQ_ASSERT_T2_EVENT()                 (d_isr_g_bDpD1HpdIrqAssertT2Event)
 #define SET_DP_D1_HPD_IRQ_ASSERT_T2_EVENT()                 {\
-                                                                d_g_bDpD1HpdIrqAssertT2Event = _TRUE;\
+                                                                d_isr_g_bDpD1HpdIrqAssertT2Event = _TRUE;\
                                                                 DP_RX_HPD_IRQ_ASSERT_T2_DELAY_INITIAL();\
                                                             }
-#define CLR_DP_D1_HPD_IRQ_ASSERT_T2_EVENT()                 (d_g_bDpD1HpdIrqAssertT2Event = _FALSE)
+#define CLR_DP_D1_HPD_IRQ_ASSERT_T2_EVENT()                 (d_isr_g_bDpD1HpdIrqAssertT2Event = _FALSE)
 #endif
 
 #if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
@@ -1883,11 +1883,11 @@ typedef struct
 // VARIABLE EXTERN
 //****************************************************************************
 extern BYTE xdata pData_EXINT[6];
-extern WORD g_usInputPixelClk;
+extern WORD isr_g_usInputPixelClk;
 extern WORD g_usTmdsOffLineMeasureClk;
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
-extern BYTE g_ucDigitalSwitch;
+extern BYTE isr_g_ucDigitalSwitch;
 extern __xdata _Bool g_bDpDCOffHPDHigh;
 extern BYTE g_ucHDMIHotPlug;
 extern __xdata _Bool g_bDigitalColorInfoChangeReset;
@@ -1975,7 +1975,7 @@ extern WORD g_usSyncDpCountD10P2LowerBound1000HBR2;
 #endif
 
 extern bit g_bDpMSTRx0BackupLinkStatusFlg_INT;
-extern bit d_g_bDpMSTRx1BackupLinkStatusFlg_INT;
+extern bit d_isr_g_bDpMSTRx1BackupLinkStatusFlg_INT;
 extern BYTE g_pucDpRx0LinkStatusBackup_INT[3];
 extern BYTE g_pucDpRx1LinkStatusBackup_INT[3];
 extern StructDPCapSwitchInfo g_stDpCapSwitch;
@@ -2005,14 +2005,14 @@ extern bit g_bDpRx1HdcpHandshakeWOCap;
 #endif
 
 #if(_DP_IRQ_HPD_MODE == _DP_IRQ_HPD_T2_MODE)
-extern volatile BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
+extern volatile BYTE __data d_isr_g_ucDpRxHpdIrqAssertT2EventDelayXus_Counter;
 extern BYTE __data d_g_ucDpRxHpdIrqAssertT2EventDelay5usI;
 
 #if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
 extern volatile bit g_bDpD0HpdIrqAssertT2Event;
 #endif
 #if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-extern volatile bit d_g_bDpD1HpdIrqAssertT2Event;
+extern volatile bit d_isr_g_bDpD1HpdIrqAssertT2Event;
 #endif
 #if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
 extern volatile bit g_bDpD2HpdIrqAssertT2Event;
@@ -2051,7 +2051,7 @@ extern StructHDR10PortSettingInfo g_stHDR10PortSettingInfo;
 #endif
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))
-extern WORD g_usDDCDebounceCnt;
+extern WORD isr_g_usDDCDebounceCnt;
 
 #if(_TMDS_TOGGLE_HPD_Z0_FOR_ACER == _ON)
 extern StructTmdsZ0ToggleFlag g_stTmdsToggleZ0Flag;

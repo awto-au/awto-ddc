@@ -45,16 +45,16 @@
 //--------------------------------------------------
 #define GET_DP_RX0_LINK_TRAINING_STATUS()               (g_ucDpRx0LTStatus)
 #define SET_DP_RX0_LINK_TRAINING_STATUS(x)              (g_ucDpRx0LTStatus = (x))
-#define GET_DP_RX1_LINK_TRAINING_STATUS()               (g_ucDpRx1LTStatus)
-#define SET_DP_RX1_LINK_TRAINING_STATUS(x)              (g_ucDpRx1LTStatus = (x))
+#define GET_DP_RX1_LINK_TRAINING_STATUS()               (isr_g_ucDpRx1LTStatus)
+#define SET_DP_RX1_LINK_TRAINING_STATUS(x)              (isr_g_ucDpRx1LTStatus = (x))
 
 #define GET_DP_RX0_NORMAL_LINK_TRAINING_SETPHY_FINISH() ((bit)g_bDpRx0NormalLTSetPhyFinish)
 #define SET_DP_RX0_NORMAL_LINK_TRAINING_SETPHY_FINISH() (g_bDpRx0NormalLTSetPhyFinish = _TRUE)
 #define CLR_DP_RX0_NORMAL_LINK_TRAINING_SETPHY_FINISH() (g_bDpRx0NormalLTSetPhyFinish = _FALSE)
 
-#define GET_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() ((bit)d_g_bDpRx1NormalLTSetPhyFinish)
-#define SET_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() (d_g_bDpRx1NormalLTSetPhyFinish = _TRUE)
-#define CLR_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() (d_g_bDpRx1NormalLTSetPhyFinish = _FALSE)
+#define GET_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() ((bit)d_isr_g_bDpRx1NormalLTSetPhyFinish)
+#define SET_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() (d_isr_g_bDpRx1NormalLTSetPhyFinish = _TRUE)
+#define CLR_DP_RX1_NORMAL_LINK_TRAINING_SETPHY_FINISH() (d_isr_g_bDpRx1NormalLTSetPhyFinish = _FALSE)
 
 
 //--------------------------------------------------
@@ -149,9 +149,9 @@ typedef enum
 // VARIABLE EXTERN
 //****************************************************************************
 extern BYTE g_ucDpRx0LTStatus;
-extern BYTE g_ucDpRx1LTStatus;
+extern BYTE isr_g_ucDpRx1LTStatus;
 extern __xdata _Bool g_bDpRx0NormalLTSetPhyFinish;
-extern bit d_g_bDpRx1NormalLTSetPhyFinish;
+extern bit d_isr_g_bDpRx1NormalLTSetPhyFinish;
 
 //****************************************************************************
 // FUNCTION EXTERN

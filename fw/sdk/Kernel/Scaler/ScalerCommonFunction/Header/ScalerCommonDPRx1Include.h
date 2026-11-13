@@ -35,24 +35,24 @@
 //----------------------------------------------------------------------------
 // Macro of Dp Link Training Information
 //----------------------------------------------------------------------------
-#define GET_DP_RX1_FAKE_LINK_TRAINING()                 ((g_ucDpRx1Info & _BIT7) >> 7)
-#define SET_DP_RX1_FAKE_LINK_TRAINING()                 (g_ucDpRx1Info |= _BIT7)
-#define CLR_DP_RX1_FAKE_LINK_TRAINING()                 (g_ucDpRx1Info &= ~_BIT7)
+#define GET_DP_RX1_FAKE_LINK_TRAINING()                 ((isr_g_ucDpRx1Info & _BIT7) >> 7)
+#define SET_DP_RX1_FAKE_LINK_TRAINING()                 (isr_g_ucDpRx1Info |= _BIT7)
+#define CLR_DP_RX1_FAKE_LINK_TRAINING()                 (isr_g_ucDpRx1Info &= ~_BIT7)
 
-#define GET_DP_RX1_VALID_VIDEO_CHECK()                  ((g_ucDpRx1Info & _BIT6) >> 6)
-#define SET_DP_RX1_VALID_VIDEO_CHECK()                  (g_ucDpRx1Info |= _BIT6)
+#define GET_DP_RX1_VALID_VIDEO_CHECK()                  ((isr_g_ucDpRx1Info & _BIT6) >> 6)
+#define SET_DP_RX1_VALID_VIDEO_CHECK()                  (isr_g_ucDpRx1Info |= _BIT6)
 #define CLR_DP_RX1_VALID_VIDEO_CHECK()                  {\
                                                             ScalerTimerCancelTimerEvent(_SCALER_TIMER_EVENT_DP_RX1_VALID_SIGNAL_DETECT_CHECK);\
-                                                            (g_ucDpRx1Info &= ~_BIT6);\
+                                                            (isr_g_ucDpRx1Info &= ~_BIT6);\
                                                         }
 
-#define GET_DP_RX1_CRC_CALCULATE()                      ((g_ucDpRx1Info & _BIT5) >> 5)
-#define SET_DP_RX1_CRC_CALCULATE()                      (g_ucDpRx1Info |= _BIT5)
-#define CLR_DP_RX1_CRC_CALCULATE()                      (g_ucDpRx1Info &= ~_BIT5)
+#define GET_DP_RX1_CRC_CALCULATE()                      ((isr_g_ucDpRx1Info & _BIT5) >> 5)
+#define SET_DP_RX1_CRC_CALCULATE()                      (isr_g_ucDpRx1Info |= _BIT5)
+#define CLR_DP_RX1_CRC_CALCULATE()                      (isr_g_ucDpRx1Info &= ~_BIT5)
 
-#define GET_DP_RX1_PS_AUX_TOGGLE()                      (d_g_bDpRx1PSAuxToggle)
-#define SET_DP_RX1_PS_AUX_TOGGLE()                      (d_g_bDpRx1PSAuxToggle = _TRUE)
-#define CLR_DP_RX1_PS_AUX_TOGGLE()                      (d_g_bDpRx1PSAuxToggle = _FALSE)
+#define GET_DP_RX1_PS_AUX_TOGGLE()                      (d_isr_g_bDpRx1PSAuxToggle)
+#define SET_DP_RX1_PS_AUX_TOGGLE()                      (d_isr_g_bDpRx1PSAuxToggle = _TRUE)
+#define CLR_DP_RX1_PS_AUX_TOGGLE()                      (d_isr_g_bDpRx1PSAuxToggle = _FALSE)
 
 #if(_DP_ILLEGAL_IDLE_PATTERN_CHECK_SUPPORT == _ON)
 //----------------------------------------------------------------------------
@@ -153,9 +153,9 @@ extern bit g_bDpRx1SignaldetectINTHappened;
 #endif
 
 #if(_HW_DP_DPCD_EXT_CAP_PHYSICAL_ADDRESS_SUPPORT != _ON)
-extern BYTE g_ucDpRx1DPCD02200hValue;
-extern BYTE g_ucDpRx1DPCD02201hValue;
-extern BYTE g_ucDpRx1DPCD02210hValue;
+extern BYTE isr_g_ucDpRx1DPCD02200hValue;
+extern BYTE isr_g_ucDpRx1DPCD02201hValue;
+extern BYTE isr_g_ucDpRx1DPCD02210hValue;
 #endif
 
 #if(_DP_VSC_SDP_EXT_FOR_COLORIMETRY_SUPPORT == _ON)

@@ -2,7 +2,7 @@
 """Power LED on unit 2 (awto-ddc#95): LED mode + P3 pin levels per power state, read over the debug slave.
 
 usage: led_unit.py TAG          (TAG = tmp/fw/AWT26110002-<tag>-be; image already flashed; caller holds unit_lock)
-- Reads g_ucAwtoLedMode and g_ucAwtoLedPins (MCU_FFE3 copy per main-loop pass; the debug slave reads 0 at FFE3 itself).
+- Reads isr_g_ucAwtoLedMode and g_ucAwtoLedPins (MCU_FFE3 copy per main-loop pass; the debug slave reads 0 at FFE3 itself).
 - States: ACTIVE; power saving (ddcutil VCP D6 = 4 on bus 11); wake (VCP D6 = 1); POWER off / on (test cmd 0x3E).
 - --host-off: host outputs off (host_dpms.py, guarded) around the power-saving sample: the host's live TMDS clock wakes the
   unit about 0.4 s after D6 = 4 (#144 wake by TMDS clock), so without it the sample lands in WAKE SEARCH.
@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/led_unit.log"
 OUT = ROOT / "tmp/logs/led_unit"
 BUS, SERIAL = 11, "AWT26110002"                  # unit 2 HDMI-2 (scripts/devices.json); units 1 / 3 hands off
-TESTCMD, POWER_KEY = 0xF6F8, 0x3E                # g_stAwtoDiag + 0x28 (dbg_link.py TESTCMD), test cmd POWER key
+TESTCMD, POWER_KEY = 0xF6F8, 0x3E                # isr_g_stAwtoDiag + 0x28 (dbg_link.py TESTCMD), test cmd POWER key
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3        # Global.h EnumPowerStatus
 MODE_ACTIVE = 3
 POLL_S = 0.3                                     # one xdata read ~0.1 s
@@ -50,7 +50,7 @@ class Unit:
         import dbg_xdata as X
         import rtd_i2c_bridge as B
         self.X, self.B = X, B
-        self.a = {n: xsym(mp, n) for n in ("g_stPowerInfo", "g_stModeInfo", "g_ucAwtoLedMode", "g_ucAwtoLedPins")}
+        self.a = {n: xsym(mp, n) for n in ("isr_g_stPowerInfo", "isr_g_stModeInfo", "isr_g_ucAwtoLedMode", "g_ucAwtoLedPins")}
 
     def rd(self, rio, n):
         v = self.X.read_bytes(rio, self.a[n], 1)
@@ -73,7 +73,7 @@ class Unit:
     def wait(self, rio, pwr, mode, limit, what):
         t0 = time.monotonic()
         while time.monotonic() - t0 < limit:
-            p, m = self.rd(rio, "g_stPowerInfo"), self.rd(rio, "g_stModeInfo")
+            p, m = self.rd(rio, "isr_g_stPowerInfo"), self.rd(rio, "isr_g_stModeInfo")
             if p is not None and m is not None and p >> 4 == pwr and (mode is None or m & 0x1F == mode):
                 say(f"  {what}: reached after {time.monotonic() - t0:.1f} s")
                 return True
@@ -88,14 +88,14 @@ class Unit:
             v = self.rd(rio, "g_ucAwtoLedPins")
             pins.append(None if v is None else (v >> 5 & 1, v >> 6 & 1))
             time.sleep(SAMPLE_S)
-        mode = LED.MODE_LED.get(self.rd(rio, "g_ucAwtoLedMode"), "?")
+        mode = LED.MODE_LED.get(self.rd(rio, "isr_g_ucAwtoLedMode"), "?")
         want = LED.STATE_LED[state]
         p35 = sorted({p[0] for p in pins if p})
         p36 = sorted({p[1] for p in pins if p})
         ok = mode == want and {LED.ON: (p35 == [1] and p36 == [0]), LED.OFF: (p35 == [0] and p36 == [0]),
                                LED.BREATHE: (p35 == [0] and p36 == [0, 1])}[want]
         table.append((state, want, mode, p35, p36, ok))
-        say(f"  {'PASS' if ok else 'FAIL'} {state}: want {want}; g_ucAwtoLedMode {mode}, P3.5 {p35}, P3.6 {p36} ({SAMPLES} reads)")
+        say(f"  {'PASS' if ok else 'FAIL'} {state}: want {want}; isr_g_ucAwtoLedMode {mode}, P3.5 {p35}, P3.6 {p36} ({SAMPLES} reads)")
 
 
 def ddc(vcp: str, val: str):

@@ -615,14 +615,14 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             {
                 if(g_ucDpRx1AuxAddressBackup == 0x00)
                 {
-                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, g_ucDpRx1DPCD02200hValue);
+                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02200hValue);
                     g_ucDpRx1AuxAddressBackup++;
                     pData_EXINT[1]--;
                 }
 
                 if((pData_EXINT[1] > 0) && (g_ucDpRx1AuxAddressBackup == 0x01))
                 {
-                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, g_ucDpRx1DPCD02201hValue);
+                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02201hValue);
                     g_ucDpRx1AuxAddressBackup++;
                     pData_EXINT[1]--;
                 }
@@ -636,7 +636,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                     }
 
                     // Set DPCD 02210h[3] = 1 --> VSC_SDP_EXTENSION_FOR_COLORIMETRY_SUPPORTED
-                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, g_ucDpRx1DPCD02210hValue);
+                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02210hValue);
 
                     for(pData_EXINT[2] = pData_EXINT[2]; pData_EXINT[2] <= pData_EXINT[1]; pData_EXINT[2]++)
                     {
@@ -656,7 +656,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
                 if(g_ucDpRx1AuxAddressBackup == 0x10)
                 {
                     // Set DPCD 02210h[3] = 1 --> VSC_SDP_EXTENSION_FOR_COLORIMETRY_SUPPORTED
-                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, g_ucDpRx1DPCD02210hValue);
+                    ScalerSetByte_EXINT(PBA_D9_AUX_TX_DATA, isr_g_ucDpRx1DPCD02210hValue);
 
                     g_ucDpRx1AuxAddressBackup++;
                     pData_EXINT[1]--;

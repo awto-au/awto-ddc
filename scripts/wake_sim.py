@@ -2,7 +2,7 @@
 """#144 task 4 in fw_sim:wake from power saving on source events (cable plug, EDID read, DP AUX command, DPCD 600h = D0).
 
 usage: AWTO_SIM_CORE=fast wake_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot]
-- Boot to ACTIVE on D2, switch to D3 (test cmd 0x33: fixed port, no source), force power saving (g_stPowerInfo target).
+- Boot to ACTIVE on D2, switch to D3 (test cmd 0x33: fixed port, no source), force power saving (isr_g_stPowerInfo target).
 - Each step forces power saving again, injects one event, and checks wake / no wake within the bound:
   D2 unplug (wake, "D2 cable unplugged:wake", #138 task 6), D2 plug (wake, "D2 cable plugged in:wake"), sleep with every
   cable in (no wake: no edge), unplug / plug again in the same episode (suppressed, once per direction),
@@ -130,7 +130,7 @@ class Run:
         self.bus = S.SimBus(a.bin, a.map, "wake-" + a.bin.stem, None, boot=False, devs=[self.model, w1c, self.fd], video=a.mode)
         self.m = self.bus.m
         self.diag = T.diag_addr(a.map)
-        self.pwr = self.m.addr("g_stPowerInfo")
+        self.pwr = self.m.addr("isr_g_stPowerInfo")
         self.ring = L.sym(a.map, "g_stAwtoSync")
         self.rows = L.load_rows(L.tsv_for(a.map))
         self.gpio = self.m.addr("g_stAwtoGpio")

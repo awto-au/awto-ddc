@@ -58,7 +58,7 @@ def dump(io, lo: int, hi: int, mt: str) -> dict:
 
 def testcmd(io, mt: str, cmd: int) -> bool:
     from osd_test import TESTCMD_OFF
-    a = sym(mt, "g_stAwtoDiag") + TESTCMD_OFF
+    a = sym(mt, "isr_g_stAwtoDiag") + TESTCMD_OFF
     return (io.write(0x6A, 0x01, bytes([a >> 8])) and io.write(0x6A, 0x03, bytes([cmd]))
             and io.write(0x6A, 0x3B, bytes([a & 0xFF])))
 

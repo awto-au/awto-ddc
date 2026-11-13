@@ -11,7 +11,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import i2cbus  # noqa: E402
 
-A, BASE = 0x35, 0xF6D0          # BASE = g_stAwtoDiag (docs/diag-block.md)
+A, BASE = 0x35, 0xF6D0          # BASE = isr_g_stAwtoDiag (docs/diag-block.md)
 
 
 def main() -> int:

@@ -105,7 +105,7 @@ BYTE fl_erase(DWORD ulA)
 }
 
 //---- time, keys, status ----
-WORD set_now_ms(void)                          // monotonic: d_g_usTimerCounter is rebased to 0 by ScalerTimerCheckTimerEvent (#132)
+WORD set_now_ms(void)                          // monotonic: d_isr_g_usTimerCounter is rebased to 0 by ScalerTimerCheckTimerEvent (#132)
 {
     return (WORD)AwtoMs();
 }
@@ -136,7 +136,7 @@ int set_status(BYTE ucId)
         case AWTO_SET_INFO_MODE:
             return SysModeGetModeState();
         case AWTO_SET_INFO_LOOP:
-            return g_stAwtoDiag.usLoopRate;
+            return isr_g_stAwtoDiag.usLoopRate;
         case AWTO_SET_INFO_SCHEMA:
             return AWTO_SET_SCHEMA;
         default:
@@ -911,7 +911,7 @@ void AwtoSetInit(void)                             // UserInterfaceInitial, afte
 
 void AwtoSetLoop(void)                             // main loop (AWTO_SET_LOOP: every pass while our menu is up, else every 20 ms)
 {
-    g_usAwtoSetLast = g_stAwtoDiag.usT2Isr;
+    g_usAwtoSetLast = isr_g_stAwtoDiag.usT2Isr;
     if(s_ucAwtoSetBooted == 0)
     {
         s_ucAwtoSetBooted = 1;
