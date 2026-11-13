@@ -44,7 +44,7 @@ Never write bare "vendor": say which one.
 
 ### Our parts
 - Diagnostic console (#89, #128; #34 closed)
-  - Code: `fw/osd/console.c` (`AwtoDiagConsole`), `awto_keytest.inc`, `awto_gpio.inc` in `awto-ddc-ui/fw/sdcc/`.
+  - Code: `fw/osd/console.c` (`AwtoDiagConsole`), `fw/keys/keytest.c`, `fw/input/inputs.c`.
   - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `sync_console`), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42: main page. Menu "GPIO inputs" / test cmd 0x43: GPIO page. Closed by UP+DOWN, 0x44. Host: `scripts/osd_test.py`.
   - Look: green on black (palette 1..4 set in `fw/osd/console.c`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
   - Grid 120 columns x 63 map rows; 50 rows shown (1920 x 1836 px on the 3840 x 2160 panel), UP / DOWN scroll (`AwtoConScroll`).
@@ -64,7 +64,7 @@ Never write bare "vendor": say which one.
   - Look target: #89 (white on black, red decorations, decided 2026-11-08); not yet built.
   - Doc (generated): [settings.md](settings.md).
 - Key test panel (#39, open)
-  - Shown in the console; `AwtoKeyTestSet` (`awto_keytest.inc`).
+  - Shown in the console; `AwtoKeyTestSet` (`fw/keys/keytest.c`).
   - Live ADC key values + decoded key; host log reader `scripts/rtd_keywatch.py`.
   - Key routing: #129.
 

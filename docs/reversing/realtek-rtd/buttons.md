@@ -88,7 +88,7 @@ Dahua code detail: `docs/reversing/dahua-fw/keys.md`.
   - Combo release: once two keys were down, no key message and no SOURCE until all keys are up (a hand lets go of one key first). The first key of a combo still sends its message on press.
 - awto roles (Dan, 2026-11-08), key block / key test screen / press log keep the physical names:
   - AUTO = open the awto menu, enter, edit, confirm (SDK menu role, mask 0x02, message 0); MENU = back, close, undo (SDK exit role, mask 0x10, message 3); UP / DOWN = move or change; SOURCE = next input.
-  - Swap lives in `PCB_KEY_STATE` only; `AWTO_KM_MENU` = 0x10, `AWTO_KM_AUTO` = 0x02 (checked against the SDK masks at compile time in `awto_keytest.inc`).
+  - Swap lives in `PCB_KEY_STATE` only; `AWTO_KM_MENU` = 0x10, `AWTO_KM_AUTO` = 0x02 (checked against the SDK masks at compile time in `RTD2014Key.c`).
   - Consumers of the SDK menu / exit messages: awto menu (`AwtoMenuKeyHook`, `menu_key`), #67 risky confirm (AUTO = keep, MENU = undo), SDK menu (AUTO opens it when `menu_select` = Vendor, MENU backs out); host injection (`key_inject`, test cmd 0x01..0x04, `menu_cli key`) stays by SDK role: `menu` = open / enter, `exit` = back.
   - Left on the physical MENU key: debug-link and recovery chord (MENU + DOWN = SDK `_EXIT_KEY_MASK | _LEFT_KEY_MASK`; maintenance chords, named by the label on the bezel). Pressing MENU first sends a back message, harmless with no menu up.
   - Unchanged: UP + DOWN key screen (physical pair), any key wakes from power saving (mask != 0).

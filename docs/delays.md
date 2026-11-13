@@ -159,10 +159,10 @@ Abbreviations in the table:
 | `AWTO_WDT_SHOW_MS` `RL6449_Project.h:377`; `awto_wdt.inc:255` | console opens after a bite | 1000 ms | project header | comment: sim max pass 800 ms x 1.25 | 800 ms | 1.25 | console opens |
 | SPI-flash halts (not code) | erase 200 ms, WRSR 40 ms, page program 3 ms | n/a | MX25L8006E datasheet, `docs/watchdog.md` | datasheet maxima | n/a | n/a | CPU halted; `FFEA[5]` freezes the counter |
 | **OUR OWN TIMED LOGIC (fw/sdcc, project header)** | | | | | | | |
-| `RL6449_Project.h:462` `AWTO_KEY_SAMPLE_MS`; `awto_keys.inc:374` | key debounce: two equal samples | 10 ms | project header | SDK key scan SEC(0.01) | 10 ms | 1.00 | sample accepted |
-| `RL6449_Project.h:463`; `awto_keys.inc:300` | UP / DOWN wait for combo partner | 80 ms | project header | our choice: "two-finger press skew; longer feels slow"; no measurement cited -> UNKNOWN | UNKNOWN | UNKNOWN | sends PRESS |
-| `RL6449_Project.h:464`; `awto_keys.inc:307` | first key repeat | 500 ms | project header | SDK SEC(0.5) | 500 ms | 1.00 | repeat |
-| `RL6449_Project.h:465`; `awto_keys.inc:306` | key repeat rate | 100 ms | project header | our choice: 10 steps/s so a 0..100 slider takes 10 s | n/a | n/a | repeat |
+| `RL6449_Project.h:462` `AWTO_KEY_SAMPLE_MS`; `fw/keys/keys.c:382` | key debounce: two equal samples | 10 ms | project header | SDK key scan SEC(0.01) | 10 ms | 1.00 | sample accepted |
+| `RL6449_Project.h:463`; `fw/keys/keys.c:308` | UP / DOWN wait for combo partner | 80 ms | project header | our choice: "two-finger press skew; longer feels slow"; no measurement cited -> UNKNOWN | UNKNOWN | UNKNOWN | sends PRESS |
+| `RL6449_Project.h:464`; `fw/keys/keys.c:315` | first key repeat | 500 ms | project header | SDK SEC(0.5) | 500 ms | 1.00 | repeat |
+| `RL6449_Project.h:465`; `fw/keys/keys.c:314` | key repeat rate | 100 ms | project header | our choice: 10 steps/s so a 0..100 slider takes 10 s | n/a | n/a | repeat |
 | `glue_key.inc:28` `s_usAwtoKeyHoldMs` | injected key hold | host value | host | host command | n/a | n/a | key released |
 | `RL6449_Project.h:834` `AWTO_SLOW_MS`; `awto_loopsplit.inc:18` | slow main-loop checks | 10 ms | project header | "latency <= 10 ms + 1 pass (limit 50 ms, #75)" | 50 ms limit | 0.20 | next pass |
 | `RL6449_Project.h:871` `AWTO_SW_SLOW_MS`; `awto_sw.inc:66` | stall log threshold | 20 ms | project header | "7x a 4K60 pass (2.7 ms)" | 2.7 ms | 7.4 | logs a slow-mark line |

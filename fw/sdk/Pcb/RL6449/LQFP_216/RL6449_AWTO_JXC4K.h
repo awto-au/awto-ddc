@@ -580,7 +580,7 @@
 #define PCB_ADKEY2()                            (AD_KEY2)
 
 // Keys left to right: SOURCE MENU DOWN UP AUTO POWER. Band decode (ADC A0 / A1, POWER = P3.0 low): only fw/awto/inputs.tsv,
-// read by the input monitor (fw/sdcc/awto_gpio.inc); keys from there: fw/sdcc/awto_keys.inc (#129). No PCB_KEY_STATE: the SDK key scan is gone.
+// read by the input monitor (fw/input/inputs.c); keys from there: fw/keys/keys.c (#129). No PCB_KEY_STATE: the SDK key scan is gone.
 // Combos need one key per ladder (A0 + A1), else the voltages mix.
 
 #endif // End of #if(_PCB_TYPE == _RL6449_AWTO_JXC4K)

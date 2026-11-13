@@ -1,21 +1,15 @@
-// #39 key panel + #85 key log, fed by the key reader (fw/sdcc/awto_keys.inc, #129). Inserted into RTD2014Key.c (keil2sdcc.py).
-// Layout of g_stAwtoKey: RL6449_Project.h, host: rtd_keywatch.py.
-typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_EXIT_KEY_MASK == AWTO_KM_MENU) && (_RIGHT_KEY_MASK == AWTO_KM_UP) &&
-                              (_LEFT_KEY_MASK == AWTO_KM_DOWN) && (_MENU_KEY_MASK == AWTO_KM_AUTO) && (_KEY5_MASK == AWTO_KM_SOURCE)) ? 1 : -1];
-#ifdef _AWTO_NEW_SETTINGS
-#define AWTO_KEY_HELD_INJ()                     (g_ucAwtoKeyHold != 0)
-#else
-#define AWTO_KEY_HELD_INJ()                     0
-#endif
+#include "UserCommonInclude.h"
+#include "keys.h"
 
-extern void osd_tc_close(void);
+// #39 key panel + #85 key log, fed by the key reader (fw/keys/keys.c, #129).
+// Layout of g_stAwtoKey: RL6449_Project.h, host: rtd_keywatch.py.
 __xdata StAwtoKey g_stAwtoKey;
 static __xdata BYTE s_ucAwtoKeyPend;            // log index + 1 of the press still waiting for its key message
 static __xdata WORD s_usAwtoKeyDraw;            // usT2Isr at the last redraw
 static __xdata BYTE s_pucAwtoKeyShown[6];       // A0 A1 P30 mask msg flags as last drawn (redraw on change only)
 static __xdata BYTE s_ucAwtoKeyShownN;          // ucCount as last drawn
 
-static void AwtoKeyEnsure(void)                 // lazy: XDATA is not cleared at start
+void AwtoKeyEnsure(void)                        // lazy: XDATA is not cleared at start
 {
     BYTE __xdata *pucB = (BYTE __xdata *)&g_stAwtoKey;
     WORD usI;
@@ -38,7 +32,7 @@ static void AwtoKeyEnsure(void)                 // lazy: XDATA is not cleared at
     }
 }
 
-static void AwtoKeyLog(BYTE ucMask, BYTE ucMsg, BYTE ucFlags)
+void AwtoKeyLog(BYTE ucMask, BYTE ucMsg, BYTE ucFlags)
 {
     BYTE ucI = g_stAwtoKey.ucCount & (AWTO_KEY_LOG_N - 1);
     WORD usNow = ((WORD)AwtoMs());
@@ -55,7 +49,7 @@ static void AwtoKeyLog(BYTE ucMask, BYTE ucMsg, BYTE ucFlags)
     g_stAwtoKey.ucCount++;
 }
 
-static void AwtoKeyMsgNote(BYTE ucMsg)          // the key message of the press logged last
+void AwtoKeyMsgNote(BYTE ucMsg)                 // the key message of the press logged last
 {
     g_stAwtoKey.ucMsg = ucMsg;
     if(s_ucAwtoKeyPend != 0)
@@ -76,7 +70,7 @@ static void AwtoKeyShown(void)                  // the values the screen is abou
     s_ucAwtoKeyShownN = g_stAwtoKey.ucCount;
 }
 
-static void AwtoKeyShow(void)                   // every AwtoKeyPoll: redraw the console's key panel when a shown value changed
+void AwtoKeyShow(void)                          // every AwtoKeyPoll: redraw the console's key panel when a shown value changed
 {
     if(SysPowerGetPowerStatus() == _POWER_STATUS_SAVING)
     {

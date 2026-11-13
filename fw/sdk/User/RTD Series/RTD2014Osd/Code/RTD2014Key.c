@@ -42,6 +42,9 @@
 #define _POWER_RIGHT_KEY_MASK                       (_POWER_KEY_MASK | _RIGHT_KEY_MASK)
 #define _POWER_MENU_KEY_MASK                        (_POWER_KEY_MASK | _MENU_KEY_MASK)
 #define _POWER_LEFT_RIGHT_KEY_MASK                  (_POWER_KEY_MASK | _LEFT_KEY_MASK | _RIGHT_KEY_MASK)
+// SDK masks = AWTO_KM_* of the key reader (fw/keys/keys.c)
+typedef char AwtoKeyMaskCheck[((_POWER_KEY_MASK == AWTO_KM_POWER) && (_EXIT_KEY_MASK == AWTO_KM_MENU) && (_RIGHT_KEY_MASK == AWTO_KM_UP) &&
+                              (_LEFT_KEY_MASK == AWTO_KM_DOWN) && (_MENU_KEY_MASK == AWTO_KM_AUTO) && (_KEY5_MASK == AWTO_KM_SOURCE)) ? 1 : -1];
 
 //--------------------------------------------------
 // Definitions of IR Key Code
@@ -184,8 +187,5 @@ BYTE RTDIRKeyScan(void)
 }
 #endif // End of #if(_IR_SUPPORT == _IR_HW_SUPPORT)
 
-#include "awto_keytest.inc"
-#include "awto_gpio.inc"
-#include "awto_keys.inc"
 #include "glue_key.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

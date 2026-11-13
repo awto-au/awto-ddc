@@ -1,11 +1,19 @@
-// #129 front keys: ONE reader (input monitor, awto_gpio.inc AwtoKeyMaskNow) -> AwtoKeyPoll (debounce, combos, repeat,
+#include "UserCommonInclude.h"
+#include "keys.h"
+
+// #129 front keys: ONE reader (input monitor, fw/input/inputs.c AwtoKeyMaskNow) -> AwtoKeyPoll (debounce, combos, repeat,
 // injected keys) -> ONE dispatcher AwtoKeyRoute (context by priority). Replaces the SDK key scan / key message / OperationTable path.
-// Inserted into RTD2014Key.c after awto_keytest.inc + awto_gpio.inc; AwtoKeyPoll runs where UserInterfaceKeyHandler ran.
+// AwtoKeyPoll runs where UserInterfaceKeyHandler ran.
 #if(_FREEZE_SUPPORT == _ON)
 #error "AwtoKeyRoute does not port the SDK freeze checks of RTDOsdSystemFlowProc"
 #endif
 #ifndef AWTO_KEY_HOLD
 #define AWTO_KEY_HOLD()                         0
+#endif
+#ifdef _AWTO_NEW_SETTINGS
+#define AWTO_KEY_HELD_INJ()                     (g_ucAwtoKeyHold != 0)
+#else
+#define AWTO_KEY_HELD_INJ()                     0
 #endif
 // key ids = SDK key messages (menu.h MK_*), test cmd 0x01..0x05 - 1. Inside the menu / selector (Dan 2026-11-08, kept #132):
 // AUTO = enter / take, MENU = back / cancel. Nothing open (#132): MENU opens the menu, AUTO = auto source select.

@@ -167,7 +167,7 @@
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c` | behaviour | input select through the fast path | #60 | 7 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Ddcci.c` | behaviour | our ports: D1 DP, D2 / D3 HDMI | #60 | 3 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Key.c` | behaviour | key / test / GPIO code | #129 | 4 |
-| `User/RTD Series/RTD2014Osd/Code/RTD2014Key.c` | behaviour | removed; keys: fw/sdcc/awto_keys.inc | #129 | 1 |
+| `User/RTD Series/RTD2014Osd/Code/RTD2014Key.c` | behaviour | removed; keys: fw/keys/keys.c | #129 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Key.c` | behaviour | settings registry / menu glue | #67 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c` | behaviour | D1 DP version default _AWTO_DP_D1_VERSION (#28) */ : 1; |  | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014NVRamOsd.c` | behaviour | NVRAM checksum from RL6449_Project.h (old data reloads defaults) | #8 | 1 |
@@ -178,7 +178,7 @@
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | boot panel power-on | #144 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | info pop-up time _AWTO_INFO_POPUP_SEC |  | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | our source selector | #134 | 1 |
-| `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | removed; keys: fw/sdcc/awto_keys.inc | #129 | 4 |
+| `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | removed; keys: fw/keys/keys.c | #129 | 4 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | settings registry / menu glue | #67 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | sleep rule in AwtoSourceOpen (AwtoSrcSleepArm) | #139 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c` | behaviour | switch-log probe | #60 | 2 |

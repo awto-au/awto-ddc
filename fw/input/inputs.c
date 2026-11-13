@@ -1,3 +1,5 @@
+#include "UserCommonInclude.h"
+
 // Input monitor: one poller owns the value of every input in fw/awto/inputs.tsv (GPIO pads, ADCs, POWER, VGA front end, board IO,
 // decoded keys). A change is stored once, logged to the I2C-visible ring and marked for the console; nothing else samples or compares.
 #define AWTO_VGA_SYNC_REG          AWTO_R_HSYNC_TYPE_DETECTION_FLAG
@@ -24,7 +26,6 @@ static __xdata BYTE s_ucVgaSync;
 static __xdata BYTE s_ucVgaCmp;
 #define AWTO_DBG_REFRESH_MS    500             // debug panel values (loop rate, clocks) change slowly: twice a second
 #define AWTO_KEY_BAND(v, lo, hi)                (((lo) <= (v)) && ((v) < (hi)))     // key0 / key1 rows: lo <= ADC < hi
-extern void osd_tc_close(void);
 
 // GENERATED-BEGIN awto_inputs
 // kind 0 bit, 1 analog (deadband), 2 byte; src: see awto_gpio.inc AwtoInRead; flags bit0 = screen row, bit1 = logged in the ring
@@ -197,7 +198,7 @@ void AwtoGpioPoll(void)
 }
 
 // Front keys as AWTO_KM_* bits, from the values the poller holds (the only band decode: inputs.tsv key0 / key1 / p30 rows).
-static BYTE AwtoKeyMaskNow(void)
+BYTE AwtoKeyMaskNow(void)
 {
     BYTE ucM = 0;
 

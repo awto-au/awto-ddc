@@ -55,7 +55,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
 - Triggers (who sets the target power status):
   - SDK: SysMode `SET_TARGET_POWER_STATUS(SAVING)` when `SOURCE_SWITCH_FINISH && UserInterfaceGetIntoPSStatus` in mode POWER_SAVING; and `(NORMAL)` on `UserInterfaceGetCableResetStatus`.
   - SDK: `SysSourceDetectPort` PS predetect true → NORMAL (SysSource.c ~1418/1486).
-  - Ours: the key POWER edge (awto_keys.inc → power-target calls); `AwtoPsWakeFire` (awto_sync.inc); `AwtoWakeRelease(3)` L3 → SAVING; VCP 0xD6 `set_ap_power_mode`; `AwtoSourceOpen` sleep rule (#139); test cmd 0x3E; the debug link/KVM clears `FORCE_POW_SAV`.
+  - Ours: the key POWER edge (fw/keys/keys.c → power-target calls); `AwtoPsWakeFire` (awto_sync.inc); `AwtoWakeRelease(3)` L3 → SAVING; VCP 0xD6 `set_ap_power_mode`; `AwtoSourceOpen` sleep rule (#139); test cmd 0x3E; the debug link/KVM clears `FORCE_POW_SAV`.
 - LED: `PCB_LED_*` macros → `AwtoLedSetMode` (awto_led.inc: ON/OFF/BREATHE on P3.5/P3.6).
 
 ### 1.2 SysMode / SysJudge (SysJudge.c:`SysJudgeHandler`, SysMode.c:`SysModeHandler`/`SysModeResetState`)
@@ -282,7 +282,7 @@ Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PAN
 |---|---|
 | SDK: `SysPowerHandler` | target ≠ status |
 | SDK sets target: SysMode (PS entry/cable reset), SysSource PS predetect, `UserInterfacePowerSwitch` |
-| ours: key POWER (awto_keys.inc), `AwtoPsWakeFire`, `AwtoWakeRelease(3)`, VCP 0xD6 `set_ap_power_mode`, selector sleep rule, test cmd 0x3E, debug link / KVM `SET_FORCE_POW_SAV_STATUS(FALSE)`, `AwtoInputSelect` |
+| ours: key POWER (fw/keys/keys.c), `AwtoPsWakeFire`, `AwtoWakeRelease(3)`, VCP 0xD6 `set_ap_power_mode`, selector sleep rule, test cmd 0x3E, debug link / KVM `SET_FORCE_POW_SAV_STATUS(FALSE)`, `AwtoInputSelect` |
 
 ### 3.5 NVRAM
 | path | note |
@@ -609,7 +609,7 @@ Blocking waits are listed with their durations. "Log:" lists every line that rea
 8. SEARCH: continues as T6 (source change): `SysSourceHandler` search; `AwtoSyncDetect` lines; display setting (T7 steps), then ACTIVE. Cold boot ends at `mode ACTIVE` (01 03) at ~1.8-1.9 s on unit 2 [issue #162 m4: 1822 ms].
 
 ### T2. POWER key on (from POWER OFF)
-1. `AwtoKeyPoll` (awto_keys.inc, SysMain.c): debounce → `AwtoKeyRoute(POWER, PRESS)`. Console is closed first if open (`AwtoKeyTestSet(0)`). `SysPowerGetPowerStatus() == OFF` → `SysPowerSetTargetPowerStatus(NORMAL)`.
+1. `AwtoKeyPoll` (fw/keys/keys.c, SysMain.c): debounce → `AwtoKeyRoute(POWER, PRESS)`. Console is closed first if open (`AwtoKeyTestSet(0)`). `SysPowerGetPowerStatus() == OFF` → `SysPowerSetTargetPowerStatus(NORMAL)`.
 2. Next pass: `AwtoSwPoll` → `AWTO_SYNC_POLL` → `AwtoSyncPoll`: NORMAL after OFF → `AwtoSyncBegin(POWER_KEY, port)`. LOG: `power key on, <port>` (C0 04).
 3. `SysPowerHandler`: target NORMAL, status OFF → `SysPowerSwitch(OFF_TO_NORMAL)`: same work as T1 step 4 (powerboard, LDO, `ScalerSyncPowerProc`, LED on, `OsdPowerOnInitial`, memory on, `SysSourceInfoReset`, `SysModeSetFreeRun`), plus `UserCommonNVRamSetSystemData(_MONITOR_POWER_STATUS, ON)` and `UserCommonNVRamSaveSystemData()`. The save is deferred by the `AwtoNvDefer` hook (NV: dirty; written by the flush gate, not at the key press).
 4. `SysJudgeHandler`: POWER_OFF → INITIAL (LOG: `mode INITIAL`). `RTDOsdSystemFlowProc`: `AwtoBootConsole` + `AWTO_BOOT_PANEL_ON` exactly as T1 step 6 (panel status was set to OFF_STATE by the power-off panel-off; if the T6 timer (1100 ms) from the power-off is still running, `_BACKLIGHT_ON` first blocks in `ScalerTimerWaitForActiveTimerEvent(PANEL_POWER_OFF)` for the remainder).
@@ -657,7 +657,7 @@ Triggers (each entry shows which code decides and what is logged):
 | DPCD 600h = D0 | ours | the poll reads the INT-backed latch | `DPCD 600h = D0 (source powers the link): wake` (CE) |
 | TMDS clock (D2/D3) | ours | `AwtoPsTmdsLive` (freq-detect E6 started/done/stable EF) in the poll; TMDS detectors owned by the poll in PS | `Dn wake by TMDS clock, about x MHz (IOSC reference)` (DC); a short burst: `TMDS clock burst … no wake` (DE) |
 | once per sleep | ours | per-trigger latch (`AwtoPsWakeFire` suppress) | `wake suppressed (<trigger>, once per sleep): Dn` (CF 01-06) |
-| key press | ours | `AwtoKeyRoute` wake rule (awto_keys.inc:131): front key in SAVING sets the target NORMAL and consumes the press; UP also sets `SHOW_SOURCE` | `mode…`; keys log in `g_stAwtoKey` (not in sync.tsv) |
+| key press | ours | `AwtoKeyRoute` wake rule (fw/keys/keys.c): front key in SAVING sets the target NORMAL and consumes the press; UP also sets `SHOW_SOURCE` | `mode…`; keys log in `g_stAwtoKey` (not in sync.tsv) |
 | SDK source detect | SDK | `SysSourceDetectPort` PS predetect true (current search port: TMDS clock detection or DDC detect, DP AUX toggle) → `SET_TARGET_POWER_STATUS(NORMAL)` | `wake on <port>` (C0 03) + `wake by the SDK source detect, not our poll (poll state …)` (D6) |
 | SDK cable reset | SDK | `UserInterfaceGetCableResetStatus` (only when power is NORMAL, gated) | n/a in PS |
 | host commands | ours | VCP 0xD6 `set_ap_power_mode`; `AwtoInputSelect` clears `FORCE_POW_SAV` | per T6 |

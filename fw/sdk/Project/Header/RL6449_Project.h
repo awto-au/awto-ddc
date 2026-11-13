@@ -427,7 +427,7 @@ extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
 #define AWTO_FW_TAG                                             "@FW_TAG@"      // build tag: msg_tokenise substitutes it in fw/sdk only (console title)
 extern unsigned char __code tFONT1_ICON_INFORMATION[];          // awto mark main-menu icon: fw/osd/mark_icon.c (osd_icon_encode.py)
-// #39 key test screen + press log (fw/sdcc/awto_keytest.inc, fw/osd/console.c): read over debug slave 0x35 at map symbol _g_stAwtoKey
+// #39 key test screen + press log (fw/keys/keytest.c, fw/osd/console.c): read over debug slave 0x35 at map symbol _g_stAwtoKey
 // (host: scripts/rtd_keywatch.py --log). Bytes only, so the layout is the same in LE and BE images.
 #define AWTO_KEY_LOG_N                                          16      // press-log entries (ring, newest at index (ucCount - 1) % 16)
 #define AWTO_KEY_REFRESH_MS                                     80      // screen redraw period: 100 ms (10 Hz floor) / 1.25
@@ -473,7 +473,7 @@ typedef struct
     StAwtoKeyEntry pstLog[AWTO_KEY_LOG_N];
 } StAwtoKey;
 extern __xdata StAwtoKey g_stAwtoKey;
-// #129 keys (fw/sdcc/awto_keys.inc): input monitor values -> AwtoKeyPoll (debounce, combos, repeat) -> AwtoKeyRoute (one dispatcher)
+// #129 keys (fw/keys/keys.c): input monitor values -> AwtoKeyPoll (debounce, combos, repeat) -> AwtoKeyRoute (one dispatcher)
 #define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
 #define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
@@ -536,7 +536,8 @@ typedef struct
     StAwtoInEntry pstLog[AWTO_GPIO_LOG_N];
 } StAwtoGpio;
 extern __xdata StAwtoGpio g_stAwtoGpio;
-extern void AwtoGpioPoll(void);
+extern void AwtoGpioPoll(void);                         // fw/input/inputs.c
+extern unsigned char AwtoKeyMaskNow(void);              // front keys as AWTO_KM_* bits (the key reader's one source)
 extern void AwtoGpioTestSet(unsigned char ucOn);
 extern void AwtoOsdGpioLines(void);
 extern __xdata unsigned char g_ucAwtoDiagFont;
@@ -939,7 +940,7 @@ extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_PS_CNT_N                                           1       // inputs whose rising edges are counted (fw/awto/portsig.tsv cnt rows)
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
-extern __xdata unsigned char g_pucAwtoInCnt[];   // awto_gpio.inc: rising edges per counted input (wraps), read by the selector
+extern __xdata unsigned char g_pucAwtoInCnt[];   // fw/input/inputs.c: rising edges per counted input (wraps), read by the selector
 #define AWTO_SYNC_N                                             60      // >= cold boot 38 lines x1.25 (boot_sim, #165) and cold boot + power off 50 lines on the console (con_wrap_sim); divides WRAP
 #define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
