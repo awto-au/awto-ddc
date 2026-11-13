@@ -92,7 +92,7 @@
 70	panel_t3_own	int	ms	panel	nv,risky	17	200	1	20	auto	-	-	T3 own pattern	-	logo / background frame: one 60 Hz frame minimum
 71	panel_t4	int	ms	panel	nv,risky	0	1000	10	250	auto	-	-	T4 BL to link off	-	[vendor-value]
 72	panel_t5	int	ms	panel	nv,risky	0	500	10	20	auto	-	-	T5 link to VDD off	-	[vendor-value]
-73	panel_t6	int	ms	panel	nv,risky	500	5000	100	1100	auto	-	-	T6 off to on	-	minimum VDD off time [vendor-value]
+73	panel_t6	int	ms	panel	nv,risky	500	5000	100	900	auto	-	-	T6 off to on	-	minimum VDD off time: datasheet T11 >= 1000 ms - 10 % (delay rule)
 74	bl_pwm_ms	int	ms	panel	nv,risky,inert	0	200	1	0	auto	-	-	BL to PWM	-	enable pin to PWM duty; no such wait yet (0 = today)
 84	debug_link	bool	none	debug	nv,risky,reboot,inert	0	1	1	1	auto	-	-	Debug link	-	debug slave 0x35 on the main IIC engine; always on today (DDC/CI 0x37 runs on the spare engines, #60)
 85	debug_msgs	bool	none	debug	nv,live	0	1	1	0	auto	0xF0	debug_msgs	Debug messages	-	(#74)
