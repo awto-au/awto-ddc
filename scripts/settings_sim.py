@@ -7,7 +7,7 @@ usage: settings_sim.py BIN [--map MAP] [--out tmp/osd67] [--mode 1080p60] [--no-
   front keys (osd_test key injection) and rendered to OUT/menu_<group>.png (+ main, edit, risky prompt); then host
   sets via the mailbox (settings_cli.Box), save.
   Boot 2 (same flash): the values are read back; test command 0x40 restores the defaults.
-  Flash model: AwtoFlIo (fw/awto/settings/glue.inc) is stubbed with a Python NOR model (program clears bits, 4 KiB erase).
+  Flash model: AwtoFlIo (fw/nvram/flash_io.c) is stubbed with a Python NOR model (program clears bits, 4 KiB erase).
 Exit 1 on any failed check. Log: ./tmp/logs/settings_sim.log; report OUT/settings_sim.json
 """
 from __future__ import annotations

@@ -10594,5 +10594,4 @@ void MenuPanelUniformityMsgAdjust(void)
 }
 
 
-#include "glue.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

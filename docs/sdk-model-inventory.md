@@ -117,7 +117,7 @@ Status var: `GET_PANELPOWERSTATUS()` ∈ {`_PANEL_POWER_OFF_STATE`, `_WAITING_FO
 ### 1.5 OSD ownership
 - The SDK path runs: `UserCommonInterfaceOsdHandler` → `UserOsdHandler` = `RTDOsdSystemFlowProc` (per-mode: INITIAL → our boot console + panel; SEARCH/ACTIVE → LED) + `RTDOsdEventMsgProc` (timer-event driven: no-signal, no-cable, power-saving cards, info pop-up at ACTIVE `_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG`, 6 s `_AWTO_INFO_POPUP_SEC`).
 - Resets: every `SysModeResetState` and `UserInterfaceAdjustOsdResetProc` → `OsdDispDisableOsd`. Our hook `AwtoHoldBlocksDisable` (awto_testcmd.inc:17) blocks it only for the #28 debug pop-up holds, not for the console. [code]
-- Ours on the OSD engine: the text layer `osd_tc_*` (glue.inc 160-360) used by console (dbgpop, osdcard `AwtoDiagConsole`), cards (`OsdDispOsdMessage` SDK body removed), source selector (`AwtoSourceOpen/Key`), key/GPIO/WDT panels, awto menu (rtdfw settings/menu.c, osd/ui.c).
+- Ours on the OSD engine: the text layer `osd_tc_*` (fw/osd/text_layer.c) used by console (dbgpop, osdcard `AwtoDiagConsole`), cards (`OsdDispOsdMessage` SDK body removed), source selector (`AwtoSourceOpen/Key`), key/GPIO/WDT panels, awto menu (rtdfw settings/menu.c, osd/ui.c).
 - Console release rule: "owns the OSD only while its map is in place: an SDK pop-up or mode reset releases it (`AwtoConLost`)" [docs/osd.md]. Each time the SDK mode path resets the OSD (display setting → `OsdDispDisableOsd`), the console is lost → m4/m5/m6 patches (re-apply view registers, redraw once settled, view at row 0).
 - Remaining SDK OSD pieces: input-info card flows (`_OSDEVENT_*`), OSD timeout timers (`_USER_TIMER_EVENT_OSD_DISABLE` etc.), `OsdDispDisableOsd`, hot-key menus (DDC/CI, DP version), factory menu (`_AWTO_FACTORY`), `GET_OSD_STATE()` machine (partly; `OperationTable` removed #129).
 
@@ -130,7 +130,7 @@ Status var: `GET_PANELPOWERSTATUS()` ∈ {`_PANEL_POWER_OFF_STATE`, `_WAITING_FO
 ### 1.7 NVRAM
 - SDK: EEPROM emulation in flash bank 15 pages 11-12 (`UserCommonFlashSaveItem`, `RTDFlashMoveData`, page erase every ~239 writes). 95 fields in 6 structs (System 27, OSD 49, BriCon 2, ColorProc 3, SixColor 12, PanelUsedTime 2). `_CHECKSUM` 0xA3 (ours; change = defaults reload). SDK `RTDNVRamStartup` loads/recovers at boot; `AwtoMsgLoad` is added after it.
 - SDK save call sites: `UserCommonNVRamSaveSystemData()` in `UserInterfacePowerSwitch`, `UserInterfaceAdjustOsdActiveProc` (search port at ACTIVE: now no-save sub), OSD adjusts.
-- Now (#151, nv2): all SDK item saves deferred by hook (`AwtoNvDefer`); flush gate in glue_nv.inc: ACTIVE stable 3 s + DDC/CI idle 500 ms + 2 s since last change; forced after 30 s; immediate on power off / power-saving entry (`AwtoNvFlush()` subs in `UserInterfacePowerSwitch`). Registry (rtdfw settings) = RAM view of SDK fields; 36 awto-only rows in an aux block (SDK items 0x40-0x43); legacy rtdfw record (nvram.c) read once for import. Input saved only on selector/menu close.
+- Now (#151, nv2): all SDK item saves deferred by hook (`AwtoNvDefer`); flush gate in fw/nvram/nv_gate.c: ACTIVE stable 3 s + DDC/CI idle 500 ms + 2 s since last change; forced after 30 s; immediate on power off / power-saving entry (`AwtoNvFlush()` subs in `UserInterfacePowerSwitch`). Registry (rtdfw settings) = RAM view of SDK fields; 36 awto-only rows in an aux block (SDK items 0x40-0x43); legacy rtdfw record (nvram.c) read once for import. Input saved only on selector/menu close.
 - Flash ops halt the CPU (> 1 s for chained erase+program: the #150 bite).
 
 ---
@@ -178,7 +178,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 20 | SysTimer.c / SysInt.c | `AWTO_DIAG_T2ISR`, `AWTO_DIAG_EX1ISR`, `AWTO_MEAS_T2ISR` | ISRs | #23 #26 |
 | 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
-| 23 | rtdfw glue: RTD2014Osd.c end `glue.inc`, RTD2014Key.c end `glue_key.inc` | settings glue | settings | #67 |
+| 23 | rtdfw glue: `fw/settings/settings_glue.c`, `fw/osd/text_layer.c`, `fw/nvram/flash_io.c`, `fw/nvram/nv_gate.c`, RTD2014Key.c end `glue_key.inc` | settings glue | settings | #67 |
 | 24 | wdt rules.py | `awto_wdt.inc` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |
 | 25 | ScalerCommonTimerFunction.c end | `awto_t0ev.inc` | timers | #138 |
 
@@ -245,7 +245,7 @@ Main loop (SysMain.c): 14 `AWTO_PS_POLL_SITE` + `AWTO_SYNC_POLL()` (inside `Awto
 | ours: fast unblank | `AwtoSwFastPoll` | `ScalerDDomainBackgroundEnable`, `UserCommonInterfaceOsdActiveProc` | fast switch |
 | ours: LED | awto_led.inc | power LED P3.5/P3.6 (through PCB_LED_*) | power status |
 | ours: T3 wait | awto_delaycal.inc:`AwtoDiagPanelT3Wait` | blocking inside T3 | panel on |
-| ours: PWM/backlight level | glue.inc:`set_ap_backlight` | PWM | menu / VCP |
+| ours: PWM/backlight level | fw/settings/settings_glue.c:`set_ap_backlight` | PWM | menu / VCP |
 | ours: probes | `AwtoSwEvent(24/26/27)`, `AwtoDiagStage(5/7/8)` | log only | |
 
 Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PANEL_ON` + ACTIVE `_BACKLIGHT_ON` = four entry points for one bring-up; three different "backlight off" ways (SDK BL_OFF 300 ms, blank, pin-only L1).
@@ -288,7 +288,7 @@ Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PAN
 | path | note |
 |---|---|
 | SDK `UserCommonNVRamSaveSystemData`, `RTDFlashSaveOSDData`, `UserCommonFlashSaveItem` | now deferred by hook |
-| ours: `AwtoNvDefer` / flush gate (glue_nv.inc), `AwtoNvFlush()` at power transitions, `AwtoNvCommitSel`, `AwtoSaveCard` | |
+| ours: `AwtoNvDefer` / flush gate (fw/nvram/nv_gate.c), `AwtoNvFlush()` at power transitions, `AwtoNvCommitSel`, `AwtoSaveCard` | |
 | ours: registry `set_sdk_put` / aux items 0x40-0x43; legacy record read (`set_load_legacy`) | |
 | SDK boot/recovery writes still allowed (`s_ucNvOn == 0`) | |
 | `AwtoMsgLoad`/`b1AwtoMsgOn` debug flag in OSD struct (#74) | |
@@ -431,8 +431,8 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
 ### 7.2 `fw/awto/**` and glue
 | item | lines | purpose / entry | notes | verdict |
 |---|---|---|---|---|
-| settings/glue.inc | 820 | rtdfw settings platform: flash shim (`fl_*`), `osd_tc_*` text layer, `ui_port_state/timing`, `set_ap_*` appliers (backlight, volume, input_mode, search, dp, power_mode, osd…), `AwtoSetLoop` | text layer lives here but is used by the console (dbgpop); `set_ap_power` placeholder (inert power rows) | R#162: split text layer out; appliers keep |
-| settings/glue_nv.inc | 474 | #151 SDK-store hook, flush gate, aux block, commit/card | `AwtoNvDefer/Flush/Commit`; flags from DDC/CI/switch | keep; NVRAM owner per Dan 11-12 |
+| fw/settings/settings_glue.c + fw/osd/text_layer.c + fw/nvram/flash_io.c | 820 | rtdfw settings platform: flash shim (`fl_*`), `osd_tc_*` text layer, `ui_port_state/timing`, `set_ap_*` appliers (backlight, volume, input_mode, search, dp, power_mode, osd…), `AwtoSetLoop` | text layer lives here but is used by the console (dbgpop); `set_ap_power` placeholder (inert power rows) | R#162: split text layer out; appliers keep |
+| fw/nvram/nv_gate.c | 474 | #151 SDK-store hook, flush gate, aux block, commit/card | `AwtoNvDefer/Flush/Commit`; flags from DDC/CI/switch | keep; NVRAM owner per Dan 11-12 |
 | settings/glue_key.inc | 34 | key hook for menu | duplicates routing in keys | merge into keys |
 | settings/rules.py | 70 | inserts+subs (audio, NV, ACTIVE no-save) | | keep |
 | wdt/rules.py | 86 | WDT/Timer0/NV poke subs | | keep |
@@ -704,7 +704,7 @@ Back:
 ### T9. Menu / console / selector open-close (OSD ownership changes)
 Opening:
 - Console: `AwtoBootConsole` (T1/T2/T5, from the INITIAL mode hook and the wake), `AwtoDiagConsole(AWTO_CON_MAIN/GPIO)` (UP+DOWN via `AwtoKeyRoute`, test cmds 0x20/0x26/0x41/0x43, auto-open `AwtoSyncConPoll` at the settled mode, watchdog-bite auto-open `awto_wdt.inc`). Effects: D-domain background ON at boot open, OSD map written (`osd_tc_open`), position/viewport (`osd_tc_place`, `osd_tc_viewport`), enable (`osd_tc_show`). LOG: `console opened (sync log)` (CA).
-- Awto menu: `AWTO_REALTEK_MENU_OPEN`/`menu_open` on AUTO (glue.inc 781-786 / `AwtoKeyRoute`), then `AwtoSetLoop` per pass; SDK OSD state stays `_MENU_NONE`, so SDK timers can still close it (`OsdDispDisableOsd` is intercepted by `AwtoMenuForget`).
+- Awto menu: `AWTO_REALTEK_MENU_OPEN`/`menu_open` on AUTO (fw/settings/settings_glue.c / `AwtoKeyRoute`), then `AwtoSetLoop` per pass; SDK OSD state stays `_MENU_NONE`, so SDK timers can still close it (`OsdDispDisableOsd` is intercepted by `AwtoMenuForget`).
 - Selector: `AwtoSourceKeyOpen`/`AwtoSourceOpen` (SOURCE key, UP, no-signal event). Sets `GET_OSD_STATE() == _MENU_HOTKEY_SOURCE`; sleep rule `AwtoSrcSleepArm`; per-port rows polled every `AWTO_SRC_POLL_MS`.
 - Cards: `OsdDispOsdMessage` (our body) for no-signal/no-cable/no-support/power saving/input info (6 s `_AWTO_INFO_POPUP_SEC`), skipped at ACTIVE while the console is open.
 Closing / losing:

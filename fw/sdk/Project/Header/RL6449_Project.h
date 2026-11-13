@@ -96,17 +96,17 @@ extern void SysMachineLedBoot(void);
 #include "AwtoSetIds.h"
 extern int set_get(unsigned char ucId);
 #define AWTO_SET(n)                                             set_get(AWTO_SET_##n)
-extern void AwtoSetInit(void);                                  // hooks: fw/awto/settings/glue*.inc
+extern void AwtoSetInit(void);                                  // hooks: fw/settings/settings_glue.c
 extern void AwtoSetLoop(void);
 extern __xdata unsigned char g_ucAwtoMenuOn;                    // our menu on screen: service every pass
 extern void menu_close(void);                                   // awto-rtdfw menu.c: closes it (saves an edit in progress)
 extern __xdata unsigned int g_usAwtoSetLast;
 #define AWTO_SET_LOOP_MS                                        20      // settings / mailbox service period (derived: below key-repeat 0.5 s and host polling)
 #define AWTO_SET_LOOP()                                         { if((g_ucAwtoMenuOn != 0) || ((unsigned int)(isr_g_stAwtoDiag.usT2Isr - g_usAwtoSetLast) >= AWTO_SET_LOOP_MS)) { AwtoSetLoop(); } }
-extern unsigned int AwtoAudioGain(unsigned char ucV);          // volume % -> DVC gain (glue.inc)
+extern unsigned int AwtoAudioGain(unsigned char ucV);          // volume % -> DVC gain (fw/settings/settings_glue.c)
 #define AWTO_AUDIO_HOLD()                                       ((SysModeGetModeState() != _MODE_STATUS_ACTIVE) && (SysModeGetModeState() != _MODE_STATUS_DISPLAY_SETTING))
 extern void AwtoMenuForget(void);
-// #151 one store: the SDK EEPROM emulation. SDK saves are deferred (item dirty) and written by the flush gate (glue.inc)
+// #151 one store: the SDK EEPROM emulation. SDK saves are deferred (item dirty) and written by the flush gate (fw/nvram/nv_gate.c)
 typedef struct
 {
     unsigned char ucMagic;                                      // 'N' once AwtoSetInit ran
@@ -126,6 +126,8 @@ extern __xdata StAwtoNv g_stAwtoNv;
 extern __xdata unsigned char g_ucAwtoNvDdc;                     // a DDC/CI request since the last service
 extern __xdata unsigned char g_ucAwtoNvInDdc;                   // inside the DDC/CI handler now
 extern __xdata unsigned char g_ucAwtoNvSwitch;                  // an input switch since the last service
+extern void AwtoNvLoad(void);                                   // AwtoSetInit: aux rows, stored input
+extern void AwtoNvService(void);                                // AwtoSetLoop: the flush gate
 extern void AwtoNvFlush(void);                                  // power-off / saving entry: write all dirty items now
 extern void AwtoNvCommitSel(void);                              // source selector choice: input saved at the gate, card
 #define AWTO_NV_SYS                                             0x01
@@ -1022,9 +1024,10 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_ROT_STORED                                         1       // not ACTIVE / boot: applies at the next display setting
 #define AWTO_ROT_ALREADY                                        2
 #define AWTO_ROT_NOT_BUILT                                      3       // image without _AWTO_ROTATION: stored only
-#define AWTO_ROT_OSD_180                                        0x20    // E4 arg: awto OSD now rotated 180 with the picture (glue.inc AwtoOsdOrient)
+#define AWTO_ROT_OSD_180                                        0x20    // E4 arg: awto OSD now rotated 180 with the picture (fw/osd/text_layer.c AwtoOsdOrient)
 #define AWTO_ROT_OSD_UPRIGHT                                    0x21    // E4 arg: awto OSD upright again
-extern void AwtoOsdRoll(unsigned char ucOn);    // FRAME_CTRL_18 roll-up on / off, the 180 setting while the OSD is rotated (glue.inc)
+extern void AwtoOsdRoll(unsigned char ucOn);    // FRAME_CTRL_18 roll-up on / off, the 180 setting while the OSD is rotated (fw/osd/text_layer.c)
+extern void AwtoOsdBlend(void);                                // OSD blend + osd_transparency, every awto screen (fw/osd/text_layer.c)
 #define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
 #define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot

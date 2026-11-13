@@ -964,7 +964,7 @@ class Runner:
     def c_t0_timing(self):
         if not self._sim("t0_timing"):
             return
-        # after the reboot in `clear`: the boot's first NVRAM flush (ACTIVE stable 3 s + the flush, glue_nv.inc) halts the CPU
+        # after the reboot in `clear`: the boot's first NVRAM flush (ACTIVE stable 3 s + the flush, fw/nvram/nv_gate.c) halts the CPU
         # and Timer0 with it (#150); wait until no item is dirty: 3.3 s x1.25 ~ 4.2 s, then judge (expiry = run anyway, logged)
         a, t0 = self.t.m.addr("g_stAwtoNv") + 1, self.t.fw_ms()            # StAwtoNv.ucMask
         while self.t.m.rd(a)[0] != 0 and (self.t.fw_ms() - t0) % 65536 < NV_IDLE_MS:

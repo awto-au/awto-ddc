@@ -89,7 +89,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 - Gain at ACTIVE in the Dahua sim: DVC_GAIN = 0x098C (P8_A5/A6) = 0.149 = -16.5 dB. [fw, unverified] Its volume mapping constants (user bank) are not identified. [?]
 - Samples-per-ramp is derived from the detected sampling rate (`ScalerAudioDVCSetMuteZCDTimeout`); rate detect writes `DA_CLK_CTRL` 92 (no audio) / 12 / 52 depending on rate. [fw, unverified]
 
-## Our volume mapping (`AwtoAudioGain`, fw/sdcc/glue.inc)
+## Our volume mapping (`AwtoAudioGain`, fw/settings/settings_glue.c)
 - Registry `volume` 0..100 % -> DVC_GAIN (14 bit, linear, 0x3FFF = 0 dB, 1/16384 steps [spec]).
 - Dahua-like (Dan 2026-11-13): 50 % = `AWTO_AUDIO_GAIN_DAHUA_50` 0x098C (-16.5 dB, the Dahua default) [fw, unverified]; 100 % = `AWTO_AUDIO_GAIN_MAX`, now -6 dB (0x1FFF): cap until the ear test (steps 4-6) shows a cleaner maximum.
 - Points per 10 %, even in dB: 0 % = silence, 10 % = -40 dB, 10..50 % 5.9 dB / step, 50..100 % 2.1 dB / step; linear in gain between points. Table `tAwtoVolGain`. [guess: shape; Dahua mapping constants not identified]
@@ -117,7 +117,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 |---|---|
 | Options | `fw/sdk/Project/Header/RL6449_Project.h` (audio section) |
 | `PCB_AMP_MUTE` no-op | `fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` |
-| `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/sdcc/glue.inc` |
+| `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/settings/settings_glue.c` |
 | Amp pins, ear-test steps | `fw/sdcc/awto_audio.inc`; VCP 0x63 in `fw/sdcc/awto_ddcci.inc` |
 | Mapping + hold substitutions | `fw/awto/settings/rules.py` (SUBS into `UserAdjustAudioVolumeMapping`, `UserInterfaceGetAudioMuteStatus`) |
 | Registry rows | awto-rtdfw `settings/registry.tsv` rows 88-91 (branch `audio`; the firmware pins `audio-fw`, `fw/awto/clean_ref.txt`) |

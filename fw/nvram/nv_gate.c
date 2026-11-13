@@ -1,3 +1,6 @@
+#include "UserCommonInclude.h"
+
+#if(_OSD_TYPE == _REALTEK_2014_OSD)
 // #151 one store: the Realtek SDK EEPROM emulation (bank 15 pages 11-12) holds every stored setting.
 // - Registry rows with an SDK field (flag sdk) read / write that field: set_sdk_get / set_sdk_put (one RAM copy).
 // - Registry rows without one (aux block, settings.c set_aux_*): items AWTO_NV_AUX_ID.. in the same store.
@@ -19,6 +22,8 @@ static __xdata BYTE s_ucNvSelPort, s_ucNvSelScan, s_ucNvSelItem;   // the input 
 static __xdata BYTE s_ucNvBriId, s_ucNvCtId;
 static __xdata BYTE s_pucNvBri[4], s_pucNvCt[6];
 
+extern int set_put(BYTE ucId, int iV, BYTE ucNow);
+extern WORD set_now_ms(void);
 extern BYTE __xdata *set_aux_buf(void);
 extern BYTE set_aux_pack(void);
 extern void set_aux_unpack(BYTE ucLen);
@@ -210,7 +215,7 @@ static __xdata WORD s_usNvEl;
 #define AWTO_NV_AGE(a)                  { a = ((a) > 60000 - s_usNvEl) ? 60000 : ((a) + s_usNvEl); }   // saturating ms
 
 // AwtoSetLoop (<= AWTO_SET_LOOP_MS apart): gate inputs, then a write when it opens
-static void AwtoNvService(void)
+void AwtoNvService(void)
 {
     s_usNvEl = set_now_ms() - s_usNvPrev;
     s_usNvPrev += s_usNvEl;
@@ -308,7 +313,7 @@ void AwtoNvCommitSel(void)                          // the selector took a choic
 }
 
 // boot (AwtoSetInit, after RTDNVRamStartup): aux block from its items, else the old registry record once
-static void AwtoNvLoad(void)
+void AwtoNvLoad(void)
 {
     BYTE ucK;
     _Bool bOk = _TRUE;
@@ -529,3 +534,4 @@ void set_ap_sdk_sys(BYTE ucId, int iV)             // stored SDK system data: re
     iV = iV;
 }
 #endif
+#endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

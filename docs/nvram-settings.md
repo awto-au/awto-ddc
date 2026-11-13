@@ -15,7 +15,7 @@
 | AUX | SDK items 0x40-0x43 (same store) | aux block: check byte + 36 registry rows without an SDK field (bool / enum 1 B, int 2 B LE), 52 B | the flush gate only |
 | REG (retired) | flash 0xFD000-0xFEFFF | old registry record: read once at the first boot of the #151 layout, never written | - |
 
-- Gate (glue_nv.inc, RL6449_Project.h AWTO_NV_*): write when ACTIVE stable 3 s, no DDC/CI for 500 ms and 2 s since the last change (no debounce after a menu / selector close: 'Saving to memory' card), forced after 30 s dirty, at once at power off / power-saving entry. DDC/CI handlers only mark dirty. Counters: g_stAwtoNv (scripts/nv_test.py).
+- Gate (fw/nvram/nv_gate.c, RL6449_Project.h AWTO_NV_*): write when ACTIVE stable 3 s, no DDC/CI for 500 ms and 2 s since the last change (no debounce after a menu / selector close: 'Saving to memory' card), forced after 30 s dirty, at once at power off / power-saving entry. DDC/CI handlers only mark dirty. Counters: g_stAwtoNv (scripts/nv_test.py).
 
 ## SDK item ids (store SDK)
 

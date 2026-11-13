@@ -3,7 +3,7 @@
 
 usage: AWTO_SIM_CORE=fast nv_test.py --sim BIN [--map MAP] [--cases a,b]
        nv_test.py --unit 2 --map MAP [--cases a,b] [--reboot mains|isp]
-- Store: the Realtek SDK EEPROM emulation only; SDK item saves are deferred and written by the gate (glue_nv.inc).
+- Store: the Realtek SDK EEPROM emulation only; SDK item saves are deferred and written by the gate (fw/nvram/nv_gate.c).
 - Counters: g_stAwtoNv (RL6449_Project.h StAwtoNv, big-endian words): mask, why, in-DDC flash ops, deferred, flushes,
   items programmed, flash halt ops, gate inputs (stable ms, DDC/CI idle ms), erases, bytes programmed (images before
   the flush line: 16 B, erases / bytes absent).

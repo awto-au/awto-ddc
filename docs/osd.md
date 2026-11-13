@@ -21,7 +21,7 @@ Never write bare "vendor": say which one.
 
 ### Text layer (`osd_tc_*`): the one text path for our screens
 - API: `awto-rtdfw-ui` `awto/include/osd.h` (`osd_tc_open`, `osd_tc_rowh`, `osd_tc_cells`, `osd_tc_bar`, `osd_tc_place`, `osd_tc_show`, `osd_tc_close`, `osd_tc_viewport`, `osd_tc_scroll`, `osd_tc_vlc_*`).
-- Implementation: `awto-ddc-ui` `fw/awto/settings/glue.inc`, section "text layer on the OSD engine".
+- Implementation: `fw/osd/text_layer.c`.
 - Grid: one map row per text row; cell width and row height come from the loaded font (`osd_cw` / `osd_rh`).
 - Viewport + hardware scroll: `osd_tc_viewport` fixes the shown height; `osd_tc_scroll` rolls the view (0x3A18..0x3A1C). Limits: [Limits](#limits).
 - Placement: `osd_tc_place` (own code, not the SDK): cell size from the loaded font, clamped at 0.
