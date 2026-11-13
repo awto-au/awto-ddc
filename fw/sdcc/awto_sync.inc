@@ -358,7 +358,7 @@ void AwtoSyncInit(void)                             // boot (before SysMainSyste
     g_stAwtoSync.ucT0Lo = 0;
 }
 
-// Switch-log events (awto_sw.inc AwtoSwEvent) that have a sync.tsv row go into the ring too.
+// Switch-log events (fw/log/swlog.c AwtoSwEvent) that have a sync.tsv row go into the ring too.
 void AwtoSyncSw(BYTE ucId, BYTE ucArg)
 {
     if((ucId == AWTO_SW_EV_HOLD) && (ucArg == 5))

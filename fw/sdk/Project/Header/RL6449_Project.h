@@ -815,7 +815,7 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #else
 #define AWTO_NET_POLL()
 #endif
-// #60 input-switch timeline (fw/sdcc/awto_sw.inc): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
+// #60 input-switch timeline (fw/log/swlog.c): mode-state changes, panel power actions, T3 wait in ms; HPD-low counters.
 #define AWTO_SW_EVENTS                                          64      // #78: a wake logs ~45; repeats of the last event are dropped
 #define AWTO_SW_EV_MODE                                         0x01    // arg = new isr_g_stModeInfo mode state
 #define AWTO_SW_EV_POWER                                        0x10    // arg = UserCommonInterfacePanelPowerAction event

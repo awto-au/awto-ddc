@@ -1,5 +1,7 @@
+#include "SysInclude.h"
+
 // #60 input-switch timeline (RL6449_Project.h StAwtoSw): events in Timer2 ms ticks; test cmd 0x31..0x33 arms it
-// (fixed port D1..D3), 0x30 = auto search again. Host: scripts/sw_timeline.py. Inserted into SysMain.c by keil2sdcc.py.
+// (fixed port D1..D3), 0x30 = auto search again. Host: scripts/sw_timeline.py.
 __xdata StAwtoSw isr_g_stAwtoSw;
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)
 static __xdata unsigned char s_ucAwtoUnstable;  // "source unstable" judge fails since the last ACTIVE (TMDS ports)

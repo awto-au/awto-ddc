@@ -25,7 +25,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
     - By code, both are no-ops when the panel status is `_BACKLIGHT_ON_ALREADY`. The only extra effects are the probe/stage log lines (24/26/27, `AwtoDiagStage(5/7)` re-fire).
     - So the eDP retrain at +1609 and the second backlight-on at +1758 in #162 are NOT explained by the SDK `_PANEL_ON`/`_BACKLIGHT_ON` code alone. Candidates: a DPTx stream/format re-enable inside `SysModeSetUpDisplayCapture` or `ScalerDisplay*`, or the status not being ALREADY at that moment. Open until #162 step 2 (boot profile).
 - **Hidden drivers of resources outside the obvious modules:**
-  - `AwtoTmdsStuck` (awto_sw.inc:104) pulses the D2/D3 HDMI HPD pins with a blocking `ScalerTimerDelayXms(110)`, called from the SysJudge hook.
+  - `AwtoTmdsStuck` (fw/log/swlog.c:104) pulses the D2/D3 HDMI HPD pins with a blocking `ScalerTimerDelayXms(110)`, called from the SysJudge hook.
   - `AwtoL2LinkOn/Off`, `PCB_BACKLIGHT_POWER_PIN` and `ScalerGlobalWatchDog` are called straight from awto_fastsw.inc.
   - awto_sync.inc's `AwtoPsWakePoll` makes power-status wake decisions.
   - fw/test/testcmd.c can drive input, power, NVRAM and keys.
@@ -238,7 +238,7 @@ Main loop (SysMain.c): 14 `AWTO_PS_POLL_SITE` + `AWTO_SYNC_POLL()` (inside `Awto
 | SysMode ACTIVE | SysMode.c:`SysModeHandler` | `_BACKLIGHT_ON` | first active |
 | SDK power actions | UserInterface.c:`UserInterfacePowerSwitch` | `_PANEL_OFF` | power status change |
 | SDK OSD | RTD2014Osd.c:200/235/241/251, RTD2014UserAdjust.c:857 | `_BACKLIGHT_ON` | key/OSD events |
-| **ours: raw early VDD** | awto_sw.inc:`AwtoPanelVddEarly` (SysMainSystemInitial) | `PCB_PANEL_POWER` only, no SDK state | boot |
+| **ours: raw early VDD** | fw/log/swlog.c:`AwtoPanelVddEarly` (SysMainSystemInitial) | `PCB_PANEL_POWER` only, no SDK state | boot |
 | **ours: boot panel** | RTD2014Osd.c:96 `AWTO_BOOT_PANEL_ON` | full `_BACKLIGHT_ON` at INITIAL | mode INITIAL |
 | ours: blank instead of BL off | `AWTO_BL_OFF_OR_BLANK` x3 | `ScalerDDomainBackgroundEnable` | mode reset / display setting |
 | **ours: L1/L2 hold** | awto_fastsw.inc:`AwtoWakeHold/AwtoWakePoll/AwtoL2LinkOff/On/AwtoHoldBacklightSdk` | `PCB_BACKLIGHT_POWER_PIN` direct, eDP stream/SSC/PHY off/on direct, SDK `_BACKLIGHT_OFF` at release | judge failure in ACTIVE |
@@ -336,7 +336,7 @@ Table in §1.4. Second drivers marked in §3.1.
 `SEARCH_PORT_INITIAL → SEARCH_TIME_INITIAL → DetectPort (predetect, scan) → Judge → (timing) → next port when time elapsed → SOURCE_SWITCH_FINISH`. AWTO+: fixed-port scan type set by `AwtoInputSelect`/selector, which makes "all ports searched" mean one port; no cable guard in this tree (#84 branch only).
 
 ---
-## 5. Fast switch / KVM / hold model (awto_fastsw.inc, awto_fastsw_scaler.inc, awto_sw.inc, fw/ddcci/ddcci.c)
+## 5. Fast switch / KVM / hold model (awto_fastsw.inc, awto_fastsw_scaler.inc, fw/log/swlog.c, fw/ddcci/ddcci.c)
 State machine (as coded, `_AWTO_FAST_SWITCH` and `_AWTO_WAKE_HOLD` ON, `_AWTO_KEEP_IDLE_RX` ON):
 ```
 ACTIVE(port P, cache[P] valid)
@@ -388,7 +388,7 @@ Known misbehaviour and gaps:
 | C11 | KVM input select vs search: fixed port without cable | #84 (absent from this tree) |
 | C12 | Debug slave vs DDC/CI on one DDC channel | #79 (resolved by park/swap; still `_AWTO_DDCCI_ENGINES`/FIXCH config) |
 | C13 | Log formats/time bases differ (GPIO ring vs sync ring, `ms` vs `MS`); crash record 16-bit ms not convertible | #146, #157 |
-| C14 | Time bases: SDK `g_usTimerCounter` rebases near max (jumps seen) → we count `usT2Isr`; PS Timer2 rate unknown on IOSC | awto_sw.inc:`AwtoSwNow` comment; #144 |
+| C14 | Time bases: SDK `g_usTimerCounter` rebases near max (jumps seen) → we count `usT2Isr`; PS Timer2 rate unknown on IOSC | fw/log/swlog.c:`AwtoSwNow` comment; #144 |
 | C15 | `kvm_prefill`, `d*_enable`, `search_order`, `power levels` rows inert vs UI shows them | #81, #151 listing (48 nv rows inert) |
 | C16 | Key press in ACTIVE re-arms OSD disable timer (SDK) → info pop-up never closes with timeout ≤ 10 s | #132 q6 |
 

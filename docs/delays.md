@@ -165,8 +165,8 @@ Abbreviations in the table:
 | `RL6449_Project.h:465`; `fw/keys/keys.c:314` | key repeat rate | 100 ms | project header | our choice: 10 steps/s so a 0..100 slider takes 10 s | n/a | n/a | repeat |
 | `fw/keys/keyinject.c:30` `s_usAwtoKeyHoldMs` | injected key hold | host value | host | host command | n/a | n/a | key released |
 | `RL6449_Project.h:834` `AWTO_SLOW_MS`; `fw/diag/loopsplit.c:18` | slow main-loop checks | 10 ms | project header | "latency <= 10 ms + 1 pass (limit 50 ms, #75)" | 50 ms limit | 0.20 | next pass |
-| `RL6449_Project.h:871` `AWTO_SW_SLOW_MS`; `awto_sw.inc:66` | stall log threshold | 20 ms | project header | "7x a 4K60 pass (2.7 ms)" | 2.7 ms | 7.4 | logs a slow-mark line |
-| `RL6449_Project.h:1175` `AWTO_TMDS_HPD_LOW_MS`; `awto_sw.inc:162` | HDMI HPD low pulse (non-blocking) | 110 ms | project header | comment: HDMI 1.4b, a source reads HPD low >= 100 ms as unplug | 100 ms | 1.10 | HPD high again |
+| `RL6449_Project.h:871` `AWTO_SW_SLOW_MS`; `fw/log/swlog.c:66` | stall log threshold | 20 ms | project header | "7x a 4K60 pass (2.7 ms)" | 2.7 ms | 7.4 | logs a slow-mark line |
+| `RL6449_Project.h:1175` `AWTO_TMDS_HPD_LOW_MS`; `fw/log/swlog.c:162` | HDMI HPD low pulse (non-blocking) | 110 ms | project header | comment: HDMI 1.4b, a source reads HPD low >= 100 ms as unplug | 100 ms | 1.10 | HPD high again |
 | `RL6449_Project.h:1067` `AWTO_PS_POLL_MS`; `awto_sync.inc:754` | power-saving wake poll | 5 ms | project header | SDK's own freq-measure wait (5 ms) | 5 ms | 1.00 | next poll |
 | `AWTO_PS_TMDS_HOLD_MS`; `awto_sync.inc:644` | TMDS wake hold | 50 ms | project header | "about 10 SDK stable windows" | UNKNOWN | UNKNOWN | wake |
 | `AWTO_PS_TMDS_GAP_MS`; `awto_sync.inc:652` | gap ends a TMDS run | 15 ms (3 x poll) | project header | derived | 15 ms | 1.00 | run ends |
