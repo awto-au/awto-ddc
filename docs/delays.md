@@ -180,9 +180,9 @@ Abbreviations in the table:
 | `AWTO_MSG_HOST_MS` (`AwtoMsg.h:5`), `AwtoMsgWait` | host-silence limit for the debug wait | 100 ms | `AwtoMsg.h:5` | comment: poll gap 2 ms + fetch about 5 ms, x20 | 5 ms | 20.0 | channel off, message stays in the ring |
 | `AWTO_HT_STALE_MS` 180000; `AWTO_HT_DRIFT_MS` 1000; `AWTO_HT_GAP_S` | host-time stale / drift | as listed | project header | Dan: 3 minutes without a sync (host sends every 60 s); drift 1 s | 60 s period | 3.0 | marks the host time stale |
 | `AWTO_SET_LOOP_MS` 20; `AWTO_NV_EL_MAX_MS` 100 | settings service period; gate aging cap | 20 ms; 100 ms | `RL6449_Project.h:104,150` | derived: below key repeat 0.5 s; 5 x 20 | n/a | n/a | service call |
-| `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`awto_meas4k.inc:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | UNKNOWN reason | UNKNOWN | UNKNOWN | window ends |
+| `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`fw/meas/meas4k.c:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | UNKNOWN reason | UNKNOWN | UNKNOWN | window ends |
 | `fw/ddcci/ddcci.c:86` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
-| `awto_diag.inc:12,49`; `awto_meas4k.inc:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
+| `awto_diag.inc:12,49`; `fw/meas/meas4k.c:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
 | `awto_delaycal.inc:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
 | `awto_t0ev.inc:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
 | `fw/settings/settings_glue.c` `set_wait_ms`; `awto-rtdfw settings.c:271-273` | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |

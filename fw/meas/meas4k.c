@@ -1,4 +1,6 @@
-// 4K60 measurement ring (awto-ddc#26), inserted into SysMain.c by keil2sdcc.py. Layout: RL6449_Project.h StAwtoMeas.
+#include "SysInclude.h"
+
+// 4K60 measurement ring (awto-ddc#26). Layout: RL6449_Project.h StAwtoMeas.
 #if(_AWTO_MEAS4K == _ON)
 __xdata StAwtoMeas g_stAwtoMeas;
 

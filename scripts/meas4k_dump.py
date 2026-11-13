@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dump + decode the 4K60 measurement ring (awto-ddc#26): firmware side fw/sdcc/awto_meas4k.inc, layout RL6449_Project.h StAwtoMeas.
+"""Dump + decode the 4K60 measurement ring (awto-ddc#26): firmware side fw/meas/meas4k.c, layout RL6449_Project.h StAwtoMeas.
 
 usage: meas4k_dump.py --unit N [--map F] [--tag NAME]     live: block reads (0x3C) over debug slave 0x35
        meas4k_dump.py --file RAW [--tag NAME]             decode a saved raw ring (or a sim dump)
