@@ -184,6 +184,15 @@ void ScalerMDomainMemorySettings(StructSDRAMDataInfo *pstFIFOSize)
 
     // Select Memory Configuration Type
     SET_MEMORY_SELECT(ScalerMDomainMemorySelectConfirm());
+    {
+        static __xdata BYTE s_ucAwtoMemSel = _FRAME_SYNC_LINE_BUFFER;  // one sync line per change of the memory select
+
+        if(GET_MEMORY_SELECT() != s_ucAwtoMemSel)
+        {
+            s_ucAwtoMemSel = GET_MEMORY_SELECT();
+            AwtoSyncPush(AWTO_SYNC_EV_MEM, AWTO_MEM_LOG_SEL + s_ucAwtoMemSel, g_ucAwtoMemForce);
+        }
+    }
 
     // Calculate Dclk and DVtotal
     ScalerMDomainCalculateDclkDVtotal(GET_MEMORY_SELECT());
@@ -506,6 +515,11 @@ EnumMemoryWorkMode ScalerMDomainMemoryConfig(void)
         }
 
         if(GET_MEMORY_DVF_SELECT() == _PANEL_TYP_FRAME_RATE_FREE_RUN)
+        {
+            ucMemoryConfig = _MEMORY_WORK_MODE;
+        }
+
+        if(g_ucAwtoMemForce != 0)                   // test cmd 0x0C (#165): frame buffer at the current timing
         {
             ucMemoryConfig = _MEMORY_WORK_MODE;
         }

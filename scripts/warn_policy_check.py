@@ -4,7 +4,9 @@
 usage: warn_policy_check.py WARNINGS.txt [WARNINGS.txt ...] [--policy fw/warn_policy.tsv] [--prune]
   WARNINGS.txt = fw_compile's tmp/sdcc-port/warnings-<uv2>.txt of every compile of the build (project + Lib)
   --prune  rewrite the policy without the rows no warning matches (comments kept)
-Exit 1 if a row is unused (without --prune; only reported when K2S_SDCC_EXTRA is set) or a warning matches no row. Log: tmp/logs/warn_policy_check.log
+Exit 1 if a row is unused (without --prune; only reported when K2S_SDCC_EXTRA is set) or a warning matches no row.
+  Optional 6th column `build` = a -D option (e.g. _AWTO_FRC): the row's site exists only in that build; the default build
+  does not count it unused (#165). Log: tmp/logs/warn_policy_check.log
 """
 import argparse, fnmatch, os, re, sys, time
 from pathlib import Path
@@ -37,6 +39,7 @@ def main() -> int:
                 sites.add((os.path.relpath(p, src) if p.startswith(src) else p, m.group(2), m.group(4)))
     lines = Path(a.policy).read_text().splitlines()
     rows = [(i, (l.split("\t") + [""] * 5)[:5]) for i, l in enumerate(lines) if l.strip() and not l.startswith("#")]
+    opt = {i for i, l in enumerate(lines) if l.strip() and not l.startswith("#") and (l.split("\t") + [""] * 6)[5].strip()}
     hits = {i: 0 for i, _ in rows}
     unmatched = []
     for rel, ln, text in sorted(sites):
@@ -56,6 +59,9 @@ def main() -> int:
         Path(a.policy).write_text("\n".join(l for i, l in enumerate(lines) if i not in set(dead)) + "\n")
         log(f"pruned {len(dead)} rows from {a.policy}")
         dead = []
+    if dead and not os.environ.get("K2S_SDCC_EXTRA", "").strip() and opt & set(dead):
+        log(f"default build: {len(opt & set(dead))} unused row(s) belong to a -D build option (column 6), not fatal")
+        dead = [i for i in dead if i not in opt]
     if dead and os.environ.get("K2S_SDCC_EXTRA", "").strip():   # rows are tuned to the default build; -D builds only report them
         log(f"K2S_SDCC_EXTRA set (non-default build): {len(dead)} unused row(s) reported, not fatal")
         dead = []

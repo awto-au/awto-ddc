@@ -173,6 +173,7 @@ static void AwtoSyncPut(BYTE ucId, BYTE ucArg, DWORD ulVal)
 // port's predetect flapping in NO SIGNAL) is counted in ucSpare and written once as "the 2 lines above x N".
 // #165 the first M-domain set-up of a boot, step by step (was the _AWTO_MEAS4K event table): AWTO_MSTEP call sites
 __xdata BYTE g_ucAwtoMstepN;
+__xdata BYTE g_ucAwtoMemForce;                   // test cmds 0x0C / 0x0D (#165 step 2)
 
 void AwtoMstep(BYTE ucId, BYTE ucArg, WORD usVal)
 {

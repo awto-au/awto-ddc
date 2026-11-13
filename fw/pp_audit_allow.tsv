@@ -19,7 +19,6 @@ nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_USB3_RETIMER_CTS_FLOW_SUP
 nodef	fw/sdk/Kernel/Common/Scaler_Test_Function.h	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test -D
 nodef	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_CUSTOM_SYSTEM_DEFAULT_DATA	SDK hook for a customer default-data table, unset: SDK defaults, intended
 nodef	fw/sdk/Kernel/User Common Function/Header/UserCommonInclude.h	_CUSTOM_CLOCK_BIAS_VALUE	SDK hook, unset: SDK default bias, intended
-nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_FRC	ours: dev.py build --frc -D
 nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
 redef	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c	_DDCCI_BUFFER_SIZE	SDK clamp: tested before its own #undef/#define (32 vs _DDCCI_TXBUF_LENGTH), intended
 redef	fw/sdk/Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	_LAST_LINE_FINETUNE_ENABLE	SDK local disable around one block in ScalerPLL.c (#undef ... _DISABLE, restored _ENABLE at 2211), intended

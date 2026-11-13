@@ -996,6 +996,17 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SYNC_EV_REPEAT                                     0xD5    // #150 the 2 lines above repeated value times (collapsed)
 #define AWTO_SYNC_EV_SDKWAKE                                    0xD6    // #150 wake from power saving not by our poll: arg port, value poll state
 #define AWTO_SYNC_EV_MSTEP                                      0xE2    // #165 M-domain / DCLK fine-tune step: arg = step (AWTO_MSTEP), value = arg << 16 | val
+#define AWTO_SYNC_EV_MEM                                        0xE3    // #165 memory work mode (test cmds 0x0C / 0x0D): arg AWTO_MEM_LOG_* or AWTO_MEM_LOG_SEL + memory select
+#define AWTO_MEM_LOG_FORCE                                      0x01    // frame buffer forced, display setting re-run
+#define AWTO_MEM_LOG_RELEASE                                    0x02    // back to the SDK choice, display setting re-run
+#define AWTO_MEM_LOG_ALREADY_FORCED                             0x03
+#define AWTO_MEM_LOG_ALREADY_SDK                                0x04
+#define AWTO_MEM_LOG_STORED                                     0x05    // not ACTIVE: takes effect at the next display setting
+#define AWTO_MEM_LOG_NO_FRC                                     0x06    // _AWTO_FRC off: frame buffer not built
+#define AWTO_MEM_LOG_SEL                                        0x10    // + _FRAME_SYNC_LINE_BUFFER.._FREE_RUN_NO_INPUT: memory select changed (display setting)
+#define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
+#define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
+extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
@@ -1485,8 +1496,11 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-// FRC: off by default (#8); K2S_SDCC_EXTRA=-D_AWTO_FRC turns it on (4K60 work, #26)
-#ifdef _AWTO_FRC
+// FRC (frame buffer): build option, off by default (#8); -D _AWTO_FRC=_ON (wb_build.py / dev.py build --frc) turns it on (#165)
+#ifndef _AWTO_FRC
+#define _AWTO_FRC                                               _OFF
+#endif
+#if(_AWTO_FRC == _ON)
 #define _FRC_SUPPORT                                            _ON
 #else
 #define _FRC_SUPPORT                                            _OFF
