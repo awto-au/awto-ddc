@@ -47,8 +47,8 @@ void AwtoAudioPoll(void)
 #ifdef _AWTO_AUDIO_TEST
 // #94 ear tests (test build): VCP 0x63 = AWTO_AUDIO_TEST_START + n sets up step n, AWTO_AUDIO_TEST_DONE + n restores;
 // one console line each (sync.tsv E5). Outputs by the per-output mute bits (the SDK only watches the power bits).
-#define AWTO_AUDIO_OUT_ON                       0x08    // REG_AOUT/HPOUT_CTRL: normal mode, L/R unmuted
-#define AWTO_AUDIO_OUT_MUTED                    (0xC0 | AWTO_AUDIO_OUT_ON)
+#define AWTO_AUDIO_OUT_ON                       AWTO_F_REG_AOUT_CTRL_REG_AOUT_NORM     // normal mode, L/R unmuted (HPOUT_CTRL: same bits)
+#define AWTO_AUDIO_OUT_MUTED                    (AWTO_F_REG_AOUT_CTRL_REG_MUTE_AOUT_L | AWTO_F_REG_AOUT_CTRL_REG_MUTE_AOUT_R | AWTO_AUDIO_OUT_ON)
 #define AWTO_AUDIO_GAIN_DAHUA_50                0x098C  // Dahua fw DVC gain at its default volume 50 (sim trace, -16.5 dB) [fw]
 #define AWTO_AUDIO_GAIN_M6DB                    0x1FFF  // -6 dB
 static __code BYTE tAwtoAudioTestAout[AWTO_AUDIO_TEST_STEPS] = {AWTO_AUDIO_OUT_ON, AWTO_AUDIO_OUT_MUTED, AWTO_AUDIO_OUT_MUTED, AWTO_AUDIO_OUT_ON, AWTO_AUDIO_OUT_ON, AWTO_AUDIO_OUT_ON, AWTO_AUDIO_OUT_ON};
@@ -67,14 +67,14 @@ void AwtoAudioTestStep(BYTE ucV)
     if((ucV & 0xF0) == AWTO_AUDIO_TEST_START)
     {
         AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ucV, 0);       // "audio test n/7: <set-up>" before the sound
-        ScalerSetByte(P6_C6_REG_AOUT_CTRL, tAwtoAudioTestAout[ucN]);
-        ScalerSetByte(P6_C7_REG_HPOUT_CTRL, tAwtoAudioTestHpout[ucN]);
+        ScalerSetByte(AWTO_R_REG_AOUT_CTRL, tAwtoAudioTestAout[ucN]);
+        ScalerSetByte(AWTO_R_REG_HPOUT_CTRL, tAwtoAudioTestHpout[ucN]);
         bAMP_EN = tAwtoAudioTestAmp[ucN];
         ScalerAudioDigitalAdjustVolume((tAwtoAudioTestGain[ucN] != 0) ? tAwtoAudioTestGain[ucN] : UserInterfaceGetAudioVolume());
         return;
     }
-    ScalerSetByte(P6_C6_REG_AOUT_CTRL, AWTO_AUDIO_OUT_ON);
-    ScalerSetByte(P6_C7_REG_HPOUT_CTRL, AWTO_AUDIO_OUT_ON);
+    ScalerSetByte(AWTO_R_REG_AOUT_CTRL, AWTO_AUDIO_OUT_ON);
+    ScalerSetByte(AWTO_R_REG_HPOUT_CTRL, AWTO_AUDIO_OUT_ON);
     bAMP_EN = 1;
     ScalerAudioDigitalAdjustVolume(UserInterfaceGetAudioVolume());
     AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ucV, 0);           // "audio test n/7 done"
