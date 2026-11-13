@@ -16,6 +16,8 @@ usage: audio_test.py host                       ELD + IEC958 switch of the pcm t
                                                 diagnostics console held open, then firmware ear-test steps 1..6: VCP 0x63 =
                                                 0x10 + n (console "audio test n/6: ..."), per tone 0x8000 | Hz (console "audio
                                                 test n: <Hz> Hz") + the tone, 0x30 + n (done line); VCP 0x62 volume checked after
+       audio_test.py save --map MAP --tag TAG [--note N]   06C0+48 and 08A0+16 -> tmp/regs/<serial>-audio-<TAG>-<stamp>.json
+                                                (pages format; scripts/audio_regs_doc.py --ours)
        audio_test.py dport --map MAP IDX..      HDMI D2 audio data port page 71: index -> 71C9, read 71CA (restores the index)
 - Plays straight to ALSA plughw:<card>,<dev>: the card of the unit's GPU (--connector, default devices.json for --serial), the pcm
   whose ELD names our monitor with the connector's type (HDMI / DP); never the PipeWire default sink (HDMI pcms are free there).
@@ -321,7 +323,7 @@ def tones(a, u: Unit) -> int:
 def main() -> int:
     global BUS, SERIAL, CONNECTOR
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen", "outs", "steps"))
+    ap.add_argument("cmd", choices=("host", "regs", "tones", "poke", "rd", "dport", "dpoke", "tone", "gen", "outs", "steps", "save"))
     ap.add_argument("--map", type=Path)
     ap.add_argument("--bus", type=int, default=BUS)
     ap.add_argument("--serial", default=SERIAL)
@@ -331,6 +333,8 @@ def main() -> int:
     ap.add_argument("--hz", type=int, default=440)
     ap.add_argument("--freqs", help="steps: comma list of tone Hz played in turn per step, e.g. 200,1000,4000")
     ap.add_argument("--only", help="steps: comma list of step numbers to run (default all)")
+    ap.add_argument("--tag", help="save: image tag for the file name")
+    ap.add_argument("--note", default="", help="save: free text stored in the json")
     ap.add_argument("pokes", nargs="*")
     a = ap.parse_args()
     BUS, SERIAL, CONNECTOR = a.bus, a.serial, a.connector
@@ -376,6 +380,23 @@ def main() -> int:
                 v = u.rd(rio, int(ad, 16), int(n))
                 say(f"rd {ad.upper()} {u.names.get(int(ad, 16), '')}: {v.hex(' ') if v else 'read failed'}")
         u.session(go)
+        return 0
+    if a.cmd == "save":
+        import json
+        blocks = ((0x06C0, 48), (0x08A0, 16))       # DAC page 06 C0.., DVC page 08 A0.. (docs/audio-registers.md)
+        got = u.session(lambda rio: [u.rd(rio, ad, n) for ad, n in blocks])
+        if any(g is None for g in got):
+            say("save: read failed, nothing written")
+            return 1
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        out = ROOT / "tmp/regs" / f"{SERIAL}-audio-{a.tag}-{stamp}.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        pages = {}
+        for (ad, _), g in zip(blocks, got):
+            pages.setdefault(f"{ad >> 8:02X}", {})[f"{ad & 0xFF:02X}"] = g.hex(" ")
+        out.write_text(json.dumps({"serial": SERIAL, "bus": BUS, "time": __import__("datetime").datetime.now().astimezone().isoformat(timespec="seconds"),
+                                   "image": f"{SERIAL}-{a.tag}-be", "note": a.note, "pages": pages}, indent=1) + "\n")
+        say(f"save: {out}")
         return 0
     if a.cmd == "dport":
         def go(rio):

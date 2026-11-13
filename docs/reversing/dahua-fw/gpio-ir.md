@@ -103,14 +103,18 @@ Evidence: bank 0 `d8c4` jump table at 0:d8d7 (raw bytes, index -> handler), bank
 ## 4. P7.3, P7.4, P4.5 (pins 160, 161, 113)
 | pin | port | Dahua access | role |
 |---|---|---|---|
-| 160 | P7.3 (0xFE1B, open-drain, pin-share 2) | one write: 0 at init (5:d2a0, 200 ms after P7.4 = 0); never read, never written again | static low output after AC on. Role [?] |
+| 160 | P7.3 (0xFE1B, open-drain, pin-share 2) | one write: 0 at init (5:d2a0, 200 ms after P7.4 = 0); never read, never written again | static low output after AC on. Role: speaker amp mute / standby, active high [hw: unit 3 ear test 2026-11-13] |
 | 161 | P7.4 (0xFE1C, open-drain) | 0 at init; `1:ea99` (value below) | speaker amplifier enable / mute line [fw+x] |
 | 113 | P4.5 (0xFE05, input, mode 0) | read in `1:f69b` only | headphone-jack select input [fw+x]: low -> output SPEAKER (1), high -> HEADPHONE (2); polarity and switch type [?] |
 
 - `ea99(bMute)` (SDK `UserInterfaceAdjustAudioAmpMuteProc`): P7.4 = `!bMute` when `f69b()` is 3 (BOTH) or 1 (SPEAKER), else 0. Caller: `3:f8e5 SysAudioMuteProc` via thunk 0x055b (mute at f8ea, unmute at f8ff). The SDK version writes `PCB_AMP_MUTE(bMute)` only for the same two outputs. [fw+x]
 - This corrects `register-audit.md` ("no audio-mute GPIO exists"). Audio itself is out of scope (Dan).
 - P7.3: SDK RL6432 boards use P7.3 / P7.4 as MHL VBUS / TMDS switch (not this board). P7.3 role [?]. Settles: poke 0xFE1B on unit 3 (`scripts/rtd_reg_poke.py`) and watch audio, USB, LEDs, picture; probe pin 160 (expect ~0 V on unit 1).
-- Ours: neither driven. Unit 3 (our firmware) reads P7.3 = 1 (released) in the 'after-4k60' and 'u3dark' captures; Dahua unit 1 reads 0. A measured difference. [hw]
+- Ours (before 2026-11-13): neither driven. Unit 3 (our firmware) read P7.3 = 1 (released) in the 'after-4k60' and 'u3dark' captures; Dahua unit 1 reads 0. A measured difference. [hw]
+- P7.3 settled (unit 3, Dan's ears, 2026-11-13, image wb-p14ui-outmx3, `docs/audio.md`): aout + P7.4 = 1 + P7.3 low = sound; the same with P7.3 high = silent (steps 4 / 6 vs 3 / 5). P7.3 = AMP_MUTE, high = muted. [hw]
+  - Dahua writes it low once at AC on and never again: amp muting there is P7.4 only. Ours (`bAMP_MUTE`, awto_audio.inc): P7.3 = mute, P7.4 = !mute, both from `PCB_AMP_MUTE`.
+  - Dahua ON dumps: unit 1 (140945) P7.3 = 0, unit 3 (161803) P7.3 = 1 (as / rc0 1 / 1); the unit 3 capture state is unknown [?].
+- P4.5 / output: Dahua register dumps of both units (`tmp/regs/AWT26110001-20261105-121355.json`, `AWT26110003-20261105-180523.json`) show 06C0 = EF, 06C6 = 08, 06C7 = C8 = aout only. GPIO-on dumps read P4.5 = 0 (unit 1, 140945) and 1 (unit 3, 161803; another capture). Aout is the speaker path on both; P4.5 polarity still [?]. [hw]
 
 ## 5. Output pins the Dahua firmware drives, compared with our header (`gpio_audit.tsv`)
 | pin | port | Dahua | our header / behaviour | difference |
