@@ -201,6 +201,8 @@ E4	0C	-	picture normal: not built (no _AWTO_ROTATION): stored only
 E4	0D	-	picture mirrored left-right: not built (no _AWTO_ROTATION): stored only
 E4	0E	-	picture mirrored top-bottom: not built (no _AWTO_ROTATION): stored only
 E4	0F	-	picture rotated 180: not built (no _AWTO_ROTATION): stored only
+E4	20	-	OSD rotated 180 with the picture
+E4	21	-	OSD upright
 CF	01	vport	wake suppressed (cable, once per sleep): %
 CF	02	vport	wake suppressed (EDID read, once per sleep): %
 CF	03	vport	wake suppressed (AUX command, once per sleep): %

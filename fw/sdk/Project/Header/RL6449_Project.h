@@ -1010,6 +1010,9 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_ROT_STORED                                         1       // not ACTIVE / boot: applies at the next display setting
 #define AWTO_ROT_ALREADY                                        2
 #define AWTO_ROT_NOT_BUILT                                      3       // image without _AWTO_ROTATION: stored only
+#define AWTO_ROT_OSD_180                                        0x20    // E4 arg: awto OSD now rotated 180 with the picture (glue.inc AwtoOsdOrient)
+#define AWTO_ROT_OSD_UPRIGHT                                    0x21    // E4 arg: awto OSD upright again
+extern void AwtoOsdRoll(unsigned char ucOn);    // FRAME_CTRL_18 roll-up on / off, the 180 setting while the OSD is rotated (glue.inc)
 #define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
 #define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot

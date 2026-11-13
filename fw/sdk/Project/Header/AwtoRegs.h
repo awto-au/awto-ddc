@@ -26,6 +26,10 @@
 #define AWTO_R_DISP_M1_FIFO_STATUS                      0x05B0
 #define AWTO_R_DISP_PG_R_CTRL                           0x07F0
 #define AWTO_F_DISP_PG_R_CTRL_PG_ENABLE                 0x80
+#define AWTO_R_FRAME_CTRL_0B                            0x3A0B
+#define AWTO_F_FRAME_CTRL_0B_F_DL_SWAP                  0xC0
+#define AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN               0x04
+#define AWTO_F_FRAME_CTRL_0B_ROTATION                   0x01
 #define AWTO_R_FRAME_CTRL_0F                            0x3A0F
 #define AWTO_R_FRAME_CTRL_17                            0x3A17
 #define AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA          0x02

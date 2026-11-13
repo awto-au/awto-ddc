@@ -167,6 +167,48 @@ static void AwtoOsdBlend(void)
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
 }
 
+// OSD orientation, one owner for every awto screen (#165): Rotate 180 -> chip OSD auto rotation 180 (map + font library,
+// ScalerOsdMapRotation, as the SDK's hardware-rotate menu) + glyph downloads rotated by the VLC decoder (osd_tc_vlc_begin).
+// Mirror modes: FRAME_CTRL_41 rotates CW / CCW / 180 only, no mirror: the OSD stays upright. Roll-up is off while rotated (AwtoOsdRoll).
+static BYTE s_ucAwtoOsdRot = _OSD_ROTATE_DEGREE_0;
+
+static void AwtoOsdOrient(BYTE ucRows)
+{
+    BYTE ucWant = _OSD_ROTATE_DEGREE_0;
+
+#if(_DISPLAY_ROTATION_SUPPORT == _ON)
+    if(GET_OSD_DISP_ROTATE() == _DISP_ROTATE_180)
+    {
+        ucWant = _OSD_ROTATE_DEGREE_180;
+    }
+#endif
+    if(ucWant != s_ucAwtoOsdRot)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_ROT, (ucWant == _OSD_ROTATE_DEGREE_180) ? AWTO_ROT_OSD_180 : AWTO_ROT_OSD_UPRIGHT, 0);
+    }
+    s_ucAwtoOsdRot = ucWant;
+    AwtoOsdRoll(0);                                  // 180: the SDK's FRAME_CTRL_18 setting (special + pop-on), even when no rotation change
+    ScalerOsdMapRotation(ucWant, _ENABLE, ucRows, _DISABLE, 0, _ENABLE);
+}
+
+// FRAME_CTRL_18 special function: roll-up (viewport scroll) on / off; while rotated 180 always the SDK's 180 setting (no roll-up).
+void AwtoOsdRoll(BYTE ucOn)
+{
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN),
+                     (AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN));
+    }
+    else if(ucOn != 0)
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);
+    }
+    else
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);
+    }
+}
+
 void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
     BYTE ucI;
@@ -176,7 +218,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
     OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);             // roll-up (viewport scroll) off
+    AwtoOsdOrient(HEIGHT(ucLines));                                                            // also: roll-up (viewport scroll) off
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
     s_ucVpEnd = ucLines;
@@ -217,6 +259,10 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     {
         ucFirst = g_ucOsdHeight - s_ucVpRows;
     }
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)
+    {
+        ucFirst = 0;                                 // no roll-up while the OSD is rotated (AwtoOsdRoll): the view stays at the top
+    }
     while((ucFirst != 0) && ((WORD)ucFirst * g_ucOsdWidth + g_usFontSelectStart > 4095))
     {
         ucFirst--;
@@ -234,11 +280,11 @@ BYTE osd_tc_scroll(BYTE ucFirst)
     usFs = g_usFontSelectStart + (WORD)ucFirst * g_ucOsdWidth;
     if(ucFirst == 0)
     {
-        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
+        AwtoOsdRoll(0);                                                                         // top: roll-up off (roll-up at row 0 showed a blank OSD on unit 2, Dan 2026-11-12)
         s_ucVpFirst = 0;
         return 0;
     }
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);                              // special function on, 0 = roll-up
+    AwtoOsdRoll(1);                                                                             // special function on, 0 = roll-up
     ScalerSetByte(AWTO_R_FRAME_CTRL_19, ucFirst);
     ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)((usFs >> 8) << 4));
     ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)usFs);
@@ -287,6 +333,11 @@ void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
     {
         ScalerSetByte(AWTO_R_FRAME_CTRL_0F + ucI, pucMap[ucI]);
     }
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)     // glyphs land rotated, as ScalerOsdHardwareVLC does for 180
+    {
+        ScalerSetBit(AWTO_R_FRAME_CTRL_0B, ~(AWTO_F_FRAME_CTRL_0B_F_DL_SWAP | AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN | AWTO_F_FRAME_CTRL_0B_ROTATION),
+                     (_OSD_ROTATE_CW180 | _OSD_ROTATE_HARDWARE_ROTATION_ENABLE | _OSD_ROTATE_NORMAL));
+    }
     ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN);
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontTableStart + usTile * 9, _OSD_WITHOUT_DB);
 }
@@ -305,6 +356,7 @@ void osd_tc_vlc_end(void)
     // immediately truncates/corrupts glyph SRAM; Realtek's loader waits 2 ms here for the same reason.
     ScalerTimerDelayXms(2);
     ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), 0x00);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_0B, ~(AWTO_F_FRAME_CTRL_0B_F_DL_SWAP | AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN | AWTO_F_FRAME_CTRL_0B_ROTATION), _OSD_ROTATE_NORMAL);
 }
 
 // Own placement: the SDK OsdDispSetPosition assumes 12 x 18 cells, so rows x 36 above the panel height wraps to an off-screen position.
@@ -355,7 +407,7 @@ void osd_tc_show(BYTE ucOn)
 void osd_tc_close(void)
 {
     g_ucAwtoMenuOn = 0;
-    ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN, 0x00);              // viewport roll-up off: the next screen starts at row 0
+    AwtoOsdRoll(0);                                                                             // viewport roll-up off: the next screen starts at row 0
     s_ucVpRows = 0;
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
