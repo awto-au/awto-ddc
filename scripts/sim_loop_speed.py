@@ -36,7 +36,9 @@ def one(S, binp: Path, mapp: Path, window: float) -> tuple:
     bus.wait(window)
     host = time.perf_counter() - t0
     p = m.p                                              # exactness: these must match between cores
-    return host, m.p.instr - i0, bus.now() - s0, f"cycles {p.cycles} clk {p.clk} nirq {p.nirq} fm_miss {p.fm_miss} fm_stall {p.fm_stall}"
+    stubs = sum(m.stub_hits.values())                   # incl. observer hooks: a stub that starts doing work shows here
+    return host, m.p.instr - i0, bus.now() - s0, (f"cycles {p.cycles} clk {p.clk} nirq {p.nirq} fm_miss {p.fm_miss} "
+                                                  f"fm_stall {p.fm_stall} stub_hits {stubs}")
 
 
 def main() -> int:

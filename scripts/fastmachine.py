@@ -390,15 +390,16 @@ class FastMachine:
 
     # ---- stubs ----
     def stub(self, name: str, fn):
-        """As Machine.stub. PC hook in every bank, bank filtered in _do_stub, as ucsim's bank-blind breakpoint: each stop
-        splits a run() and so changes how many instructions run(n) executes (Machine accounting)."""
+        """As Machine.stub. PC hook only in the stub's bank (every bank for common code), as _restub: a bank-blind hook
+        stopped on every other bank's code at that address and _do_stub dropped the stop (#183: 3,266 of 7,015 stops
+        in a 10 s main-loop window, 0 stub calls)."""
         v = self.sym.get("_" + name)
         if v is None:
             raise self._S().SimError(f"_{name} not in the map")
         bank, pc = v >> 16, v & 0xFFFF
         common = v < getattr(self.where, "cend", 0)
         self.stubs.setdefault(pc, []).append((None if common else bank, name, fn))
-        self.core.pch[pc] = 0xFFFF
+        self.core.pch[pc] |= 0xFFFF if common else 1 << bank
 
     def watch(self, name: str):
         self.stub(name, lambda m, r: None)
