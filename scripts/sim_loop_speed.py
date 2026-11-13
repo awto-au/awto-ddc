@@ -35,7 +35,8 @@ def one(S, binp: Path, mapp: Path, window: float) -> tuple:
     i0, s0, t0 = m.p.instr, bus.now(), time.perf_counter()
     bus.wait(window)
     host = time.perf_counter() - t0
-    return host, m.p.instr - i0, bus.now() - s0
+    p = m.p                                              # exactness: these must match between cores
+    return host, m.p.instr - i0, bus.now() - s0, f"cycles {p.cycles} clk {p.clk} nirq {p.nirq} fm_miss {p.fm_miss} fm_stall {p.fm_stall}"
 
 
 def main() -> int:
@@ -54,9 +55,9 @@ def main() -> int:
     import fw_sim as S                                    # noqa: E402  (the measured checkout's core)
     say(f"=== {binp.name}: core {core}, window {a.window} s sim, {a.runs} runs")
     for n in range(a.runs):
-        host, ins, sim = one(S, binp, mapp, a.window)
+        host, ins, sim, cnt = one(S, binp, mapp, a.window)
         say(f"run {n + 1}: window host {host:.2f} s, {ins} instr, {ins / host / 1e6:.2f} M instr/s, "
-            f"sim {sim:.2f} s, sim/host {sim / host:.3f}")
+            f"sim {sim:.2f} s, sim/host {sim / host:.3f}; {cnt}")
     return 0
 
 
