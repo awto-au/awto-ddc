@@ -886,7 +886,6 @@ bit ScalerMeasureAutoFuncWaitFinish(void)
 //                stInputTimingData --> input timing data
 // Output Value : None
 //--------------------------------------------------
-#include "awto_freq.inc"
 void ScalerMeasureUpdateInputTimingData(StructMeasureSyncData *pstMeasureSyncHV, StructAutoActiveData *pstActiveRegion)
 {
     // Update measure result

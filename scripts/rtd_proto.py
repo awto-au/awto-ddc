@@ -97,7 +97,7 @@ def parse_raw(line: str) -> Txn | None:
 # took (g_ulInputActiveRegionBackUp, measure clocks from the first to the last active pixel): resolution 1 in ~1.4 M at 4K.
 XTAL_HZ = 14_318_180                       # board crystal (4x NTSC colour burst); SDK _XTAL14318K = 14318 kHz
 MEAS_HZ = XTAL_HZ * 49 // 2 // 4           # _MEASURE_CLK: M2PLL (M 49, N 2, O 1) / P40_07 divider 4 = 87.699 MHz
-TIMING_SYMS = ("g_stMDomainInputData", "g_ulInputActiveRegionBackUp")   # + g_stAwtoFreq in images with fw/sdcc/awto_freq.inc
+TIMING_SYMS = ("g_stMDomainInputData", "g_ulInputActiveRegionBackUp")   # + g_stAwtoFreq in images with fw/meas/freq.c
 AWTO_FREQ_SYM, AWTO_FREQ_LEN = "g_stAwtoFreq", 30
 STALE_TOL = 0.01                           # exact vs SDK VFreq: SDK error <= 0.2 % at 4K (1 HS count); 1 % apart = other timing
 

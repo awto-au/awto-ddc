@@ -41,7 +41,7 @@ TIMING_EXACT_TOL_MHZ = 10
 TIMING_EXACT_TOL_REL = 0.0025
 HDIAG_STAGE = 8
 MAP_SYMS = ("isr_g_stAwtoDiag", "isr_g_stModeInfo", "isr_g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
-MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop")   # awto_freq.inc (#34); fw/diag/loopsplit.c (#75)
+MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop")   # fw/meas/freq.c (#34); fw/diag/loopsplit.c (#75)
 RETRY_TRIES = 2
 
 

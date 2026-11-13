@@ -633,7 +633,7 @@ extern void AwtoMeasT2Sample(void);
 #define AwtoMeasEvent(a, b, c)
 #define AWTO_MEAS_T2ISR()
 #endif
-// Exact input frequencies (#34, #26) from the input active-region count the M-domain set-up took (fw/sdcc/awto_freq.inc);
+// Exact input frequencies (#34, #26) from the input active-region count the M-domain set-up took (fw/meas/freq.c);
 // pop-ups show 3 decimals from these. The SDK's own 0.1 Hz / 0.1 kHz values and decisions are untouched.
 #define AWTO_XTAL_HZ                                            14318180UL      // board crystal, 4x NTSC colour burst; SDK _XTAL14318K = 14318 kHz
 typedef struct

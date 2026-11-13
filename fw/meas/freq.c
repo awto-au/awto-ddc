@@ -1,4 +1,6 @@
-// Exact input frequencies (#34, #26), inserted into ScalerMeasure.c by keil2sdcc.py. Layout: RL6449_Project.h StAwtoFreq.
+#include "ScalerFunctionInclude.h"
+
+// Exact input frequencies (#34, #26). Layout: RL6449_Project.h StAwtoFreq.
 // Called after each M-domain count (line-buffer fine-tune / frame-buffer path); host twin: scripts/rtd_proto.py exact_timing.
 __xdata StAwtoFreq g_stAwtoFreq;
 
