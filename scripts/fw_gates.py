@@ -17,7 +17,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL/SKIP line per gate; exit 1 if any fails.
-SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbols), or the gate needs --tree and none was given.
+SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbols), or the gate needs a tree (--tree, default this repo) without the file.
   wdt cases the image does not implement report SKIP inside wdt_test; they are counted in the gate's note.
 Record: tmp/fw/<stem>.gates.json = image SHA-256, date, per-gate result + seconds, fw_gates git commit, complete (no --only).
   `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
@@ -175,7 +175,8 @@ def main() -> int:
     ap.add_argument("--against", default="", help="ignored (#66: link findings must be 0, no baseline)")
     ap.add_argument("--speed", default="")
     ap.add_argument("--only", default="")
-    ap.add_argument("--tree", default="", help="worktree the image was built in (its bank_layout.tsv + asm_bank)")
+    # default = this repo: without a tree, wdt / conwrap use stale built-in constants and the static gates drop out
+    ap.add_argument("--tree", default=str(ROOT), help="worktree the image was built in (its bank_layout.tsv + asm_bank); default this repo")
     a = ap.parse_args()
     (ROOT / "tmp/logs/fw_gates").mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/fw_gates.log").open("a", buffering=1)
