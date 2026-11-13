@@ -527,22 +527,25 @@ void set_ap_contrast(BYTE ucId, int iV)
 
 //---- audio (docs/audio.md): DVC digital gain, mute; the SDK SysAudio state machine does the unmute/mute sequencing ----
 #if(_AUDIO_SUPPORT == _ON)
-// volume % -> DVC_GAIN (linear, 0x3FFF = 0 dB): -4 dB per 10 %, 0 % = silence, linear between the points [guess: taste]
-static __code unsigned int tAwtoVolGain[11] = {0, 164, 260, 412, 652, 1034, 1638, 2597, 4115, 6522, 10337};
+// volume % -> DVC_GAIN (linear, 0x3FFF = 0 dB), Dahua-like (#94): 50 % = AWTO_AUDIO_GAIN_DAHUA_50 (-16.5 dB), 100 % = AWTO_AUDIO_GAIN_MAX;
+// dB-even per 10 %: 10..50 % from -40 dB (5.9 dB / step), 50..100 % 2.1 dB / step; 0 % = silence, linear between the points
+static __code unsigned int tAwtoVolGain[11] = {0, 164, 322, 633, 1244, AWTO_AUDIO_GAIN_DAHUA_50, 3113, 3965, 5049, 6431, AWTO_AUDIO_GAIN_MAX};
 
 unsigned int AwtoAudioGain(unsigned char ucV)
 {
     unsigned int usA;
-    unsigned int usB;
 
+    usA = AwtoAudioTestGain();                  // ear-test step held (dev.py sound-test): its level
+    if(usA != 0)
+    {
+        return usA;
+    }
     if(ucV >= 100)
     {
-        return 0x3FFF;
+        return AWTO_AUDIO_GAIN_MAX;
     }
-
     usA = tAwtoVolGain[ucV / 10];
-    usB = (ucV < 90) ? tAwtoVolGain[ucV / 10 + 1] : 0x3FFF;
-    return usA + (unsigned int)(((unsigned long)(usB - usA) * (ucV % 10)) / 10);
+    return usA + (unsigned int)(((unsigned long)(tAwtoVolGain[ucV / 10 + 1] - usA) * (ucV % 10)) / 10);
 }
 #endif
 

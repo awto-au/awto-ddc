@@ -100,6 +100,8 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Inputs: `./dev.py mode --unit 2 --dp mirror|off`; `scripts/kvm.py dp|hdmi1 --units 2`; `scripts/kvm_demo.py`.
 - OSD: `./dev.py osd ...`, `./dev.py menu ...`, `./dev.py settings list|get|set --unit 2`; catalogue `python3 scripts/osd_catalog.py <bin> --menu-dir <dir>`.
 - Build: `python scripts/wb_build.py --tree <worktree> --serial AWT26110002 --tag <tag>` (from this repo); gates `scripts/fw_gates.py` (below); speed `scripts/loop_rate.py`, sim `docs/speed-bench.tsv`.
+  - Default build = FRC + rotation 180 / mirror + OSD rotation (2026-11-13, #165); `-D _AWTO_FREEZE=_ON` = freeze instead, `-D _AWTO_FRC=_OFF` = line buffer only.
+- Speaker ear test: `./dev.py sound-test --unit 3 [--only 1,2] [--freqs 200,1000,4000]` (docs/audio.md, #94).
 - Gates: `python scripts/fw_gates.py tmp/fw/<tag> --tree <worktree>` -> `tmp/fw/<tag>.gates.json` (image SHA-256, date, per-gate PASS/FAIL/SKIP + seconds, fw_gates commit, `complete`).
   - Gates: boot, isr, link, h1080, h2160, menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes, portcfg (#81). `--only` runs a subset and marks the record partial (not flashable).
   - SKIP = image lacks the feature (map symbol) or the gate needs `--tree`; counted and printed, allowed by the flash check.

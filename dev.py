@@ -588,15 +588,18 @@ def _flashed(u: dict) -> dict:
     return json.loads(f.read_text()) if f.exists() else {}
 
 
-@command("build firmware for a unit; frozen to tmp/fw/<serial>-<commit>[-frc][-audio-test]-be.*",
-         args="[--unit N] [--frc] [--audio-test]", kind="action")
+@command("build firmware for a unit (FRC + rotation by default); frozen to tmp/fw/<serial>-<commit>[-freeze|-nofrc][-audio-test]-be.*",
+         args="[--unit N] [--freeze | --no-frc] [--audio-test]", kind="action")
 def cmd_build(extra: list[str]) -> int:
     n, u = _unit(extra)
     disk_guard.prune_fw(FW)
     disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
-    frc = _flag(extra, "--frc")
+    freeze, nofrc = _flag(extra, "--freeze"), _flag(extra, "--no-frc")   # FRC + rotation are the default (#165)
+    if freeze and nofrc:
+        raise SystemExit("build: --freeze needs the frame buffer, --no-frc removes it; nothing done")
     audio_test = _flag(extra, "--audio-test")
-    defs = ["-D_AWTO_FRC"] if frc else []
+    defs = ["-D_AWTO_FREEZE=_ON"] if freeze else ["-D_AWTO_FRC=_OFF"] if nofrc else []
+    opt = "-freeze" if freeze else "-nofrc" if nofrc else ""
     if audio_test:
         defs.append("-D_AWTO_AUDIO_TEST")
     if BOOT_PORTS.get(u["input"]):
@@ -607,12 +610,13 @@ def cmd_build(extra: list[str]) -> int:
         return rc
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=REPO).returncode else ""
-    tag = f"{u['serial']}-{commit}{dirty}{'-frc' if frc else ''}{'-audio-test' if audio_test else ''}-be"
+    tag = f"{u['serial']}-{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}-be"
     out = FW / u["serial"]
     for src, ext in ((out / "fw.bin", "bin"), (out / "fw.map", "map"), (TMP / "sdcc-port/trace_ids.tsv", "ids.tsv")):
         shutil.copy2(src, FW / f"{tag}.{ext}")
     (FW / f"{u['serial']}-last.txt").write_text(tag)
-    log(f"image tmp/fw/{tag}.bin (unit {n}{', FRC' if frc else ''}{', internal audio test' if audio_test else ''})", "ALERT")
+    log(f"image tmp/fw/{tag}.bin (unit {n}{', freeze' if freeze else ', no FRC' if nofrc else ''}"
+        f"{', internal audio test' if audio_test else ''})", "ALERT")
     return 0
 
 
@@ -950,6 +954,27 @@ def cmd_osd(extra: list[str]) -> int:
     mp = _fwmap(u, given)
     b = _live_bus(u)
     return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
+
+
+@command("speaker ear test (#94): diagnostics console opened, firmware ear-test steps (VCP 0x63: speaker + amp, no amp, "
+         "volume levels), each step's console line then its tones (each frequency announced on the console), volume checked after; "
+         "times in tmp/logs/audio_test.log",
+         args="[--unit N] [--only 1,2,..] [--freqs 200,1000,4000] [--secs S] [--map F]", kind="action")
+def cmd_sound_test(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    more = []
+    for flag, pat in (("--only", r"\d+(,\d+)*"), ("--freqs", r"\d+(,\d+)*"), ("--secs", r"\d+(\.\d+)?")):
+        v = _opt(extra, flag)
+        if v is None:
+            continue
+        if v is True or not re.fullmatch(pat, str(v)):
+            raise SystemExit(f"sound-test: {flag} needs a value like {pat}; nothing done")
+        more += [flag, v]
+    _done(extra, "sound-test")
+    b = _live_bus(u)        # DDC/CI (VCP 0x63) must answer; audio_test swaps the debug link in only to open the console
+    return _py("audio_test.py", "steps", "--bus", b, "--serial", u["serial"], "--connector", u.get("_conn", u["connector"]),
+               "--map", _fwmap(u, given), *more)
 
 
 @command("settings registry (#67) on a unit or the sim: list | get NAME | set NAME VALUE | defaults | save | rows "

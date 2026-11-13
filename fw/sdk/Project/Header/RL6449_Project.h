@@ -1506,9 +1506,9 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // FRC Option
 //-------------------------------------------------
-// FRC (frame buffer): build option, off by default (#8); -D _AWTO_FRC=_ON (wb_build.py / dev.py build --frc) turns it on (#165)
+// FRC (frame buffer): on by default (Dan 2026-11-13, #165); -D _AWTO_FRC=_OFF = line buffer only (no rotation / freeze)
 #ifndef _AWTO_FRC
-#define _AWTO_FRC                                               _OFF
+#define _AWTO_FRC                                               _ON
 #endif
 #if(_AWTO_FRC == _ON)
 #define _FRC_SUPPORT                                            _ON
@@ -1519,17 +1519,21 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 //-------------------------------------------------
 // Display Rotation Option
 //-------------------------------------------------
-// Build option (#165): -D _AWTO_ROTATION=_ON = 180 + H / V mirror through the frame buffer (needs _AWTO_FRC=_ON), freeze off;
-// -D _AWTO_FREEZE=_ON = freeze instead. GEN_II cannot have both (Project_Config_Check.h). Menu rows disp_rotate / mirror (set_ap_rotate).
-#ifndef _AWTO_ROTATION
-#define _AWTO_ROTATION                                          _OFF
-#endif
+// Default (Dan 2026-11-13, #165): 180 + H / V mirror through the frame buffer, OSD turned with it (menu rows disp_rotate / mirror).
+// Build option -D _AWTO_FREEZE=_ON = freeze instead (rotation off: GEN_II cannot have both, Project_Config_Check.h).
 #ifndef _AWTO_FREEZE
 #define _AWTO_FREEZE                                            _OFF
 #endif
+#ifndef _AWTO_ROTATION
+#if((_AWTO_FREEZE == _ON) || (_AWTO_FRC != _ON))
+#define _AWTO_ROTATION                                          _OFF
+#else
+#define _AWTO_ROTATION                                          _ON
+#endif
+#endif
 #if((_AWTO_ROTATION == _ON) || (_AWTO_FREEZE == _ON))
 #if(_AWTO_FRC != _ON)
-#error "_AWTO_ROTATION / _AWTO_FREEZE need the frame buffer: -D _AWTO_FRC=_ON"
+#error "_AWTO_ROTATION / _AWTO_FREEZE need the frame buffer (_AWTO_FRC _ON)"
 #endif
 #endif
 #if((_AWTO_ROTATION == _ON) && (_AWTO_FREEZE == _ON))
@@ -1980,25 +1984,32 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
 #define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
 
-// awto DAC outputs powered (= EnumAudioDACOutput values): aout 116/117 feeds the speaker amp (P7.4), hpout 109/110 the jack
-#define AWTO_AUDIO_OUT_SPEAKER                                  1
-#define AWTO_AUDIO_OUT_HEADPHONE                                2
-#define AWTO_AUDIO_OUT_BOTH                                     3
-#define AWTO_AUDIO_OUT                                          AWTO_AUDIO_OUT_BOTH     // speaker test (#94): both powered
-#define AWTO_AUDIO_AMP_USED                                     ((AWTO_AUDIO_OUT & AWTO_AUDIO_OUT_SPEAKER) != 0)
+// awto: speaker output only (aout 116/117 -> amp, P7.4 on unmute, as the Dahua speaker path); headphone out (hpout 109/110)
+// dropped: Dan 2026-11-13 "it definitely does not work" (#94)
+#define _DAC_HP_OUTPUT_SUPPORT                                  _OFF
 #define AWTO_AUDIO_AUX_MS                                       200     // P7.3 low this long after P7.4 = 0 (Dahua 5:d324, delay R7 = 0xC8) [fw]
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // P7.4 = 1 (unmute)
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // P7.4 = 0 (mute / AC on)
 #define AWTO_AUDIO_EV_AUX_LOW                                   3       // P7.3 = 0
-#define AWTO_AUDIO_EV_AMP_HP                                    4       // unmute with the speaker output off: P7.4 stays 0
+#define AWTO_AUDIO_EV_AMP_TEST_OFF                              4       // unmute during an ear-test step without the amp: P7.4 stays 0
 extern void AwtoAudioAmpBoot(void);                             // fw/sdcc/awto_audio.inc: the one owner of P7.3 / P7.4
 extern void AwtoAudioAmp(bit bMute);
 extern void AwtoAudioPoll(void);
-#define AWTO_AUDIO_TEST_STEPS                                   7       // test build: ear-test steps (awto_audio.inc), VCP 0x63
-#define AWTO_AUDIO_TEST_START                                   0x10    // VCP 0x63 value + n (1..7): step n set up; E5 arg = value
-#define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n done, outputs / amp / volume restored
-extern void AwtoAudioTestStep(unsigned char ucV);
+#define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST builds)
+#define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (awto_audio.inc), VCP 0x63 (dev.py sound-test)
+#define AWTO_AUDIO_TEST_START                                   0x10    // VCP 0x63 value + n (1..6): step n set up; E5 arg = value
+#define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n done, amp / user volume restored
+#define AWTO_AUDIO_TEST_HZ                                      0x40    // E5 arg + n: "audio test n: <Hz> Hz" (VCP 0x63 = 0x8000 | Hz)
+#define AWTO_AUDIO_TEST_HZ_FLAG                                 0x80    // VCP 0x63 value high byte bit 7: tone frequency announce
+extern void AwtoAudioTestStep(unsigned char ucHi, unsigned char ucLo);
+extern unsigned int AwtoAudioTestGain(void);                    // ear-test step gain, 0 = none (AwtoAudioGain)
+// DVC gain (14 bit linear, 0x3FFF = 0 dB): volume curve ends + ear-test levels (#94)
+#define AWTO_AUDIO_GAIN_DAHUA_50                                0x098C  // -16.5 dB: Dahua fw DVC gain at its default volume 50 (sim trace) [fw]
+#define AWTO_AUDIO_GAIN_M6DB                                    0x1FFF  // -6 dB
+#define AWTO_AUDIO_GAIN_M3DB                                    0x2D4E  // -3 dB
+#define AWTO_AUDIO_GAIN_0DB                                     0x3FFF  // 0 dB, DVC maximum
+#define AWTO_AUDIO_GAIN_MAX                                     AWTO_AUDIO_GAIN_M6DB    // volume 100 %: default cap until the ear test picks a cleaner one
 
 //-------------------------------------------------
 // Audio Line In Option

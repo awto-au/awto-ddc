@@ -229,17 +229,19 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
     g_ucAwtoNvDdc = 1;                          // #151 flush gate: DDC/CI busy
 #endif
     pucTx[0] = 0x6E;
-#ifdef _AWTO_AUDIO_TEST
-    // Test builds only: 0x63 is unused by the AWTO registry.  Handle it before
-    // the registry so the internal generator remains reachable with the new
-    // settings/DDC implementation (0xE1 is the registry value mailbox).
-    if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == 0x63))
+#if(_AUDIO_SUPPORT == _ON)
+    // #94 ear-test steps / tone announce (dev.py sound-test): VCP 0x63 is unused by the AWTO registry; before the registry
+    if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_AUDIO_TEST_VCP) && ((pucRx[4] != 0) || (pucRx[5] >= AWTO_AUDIO_TEST_START)))
     {
-        if(pucRx[5] >= AWTO_AUDIO_TEST_START)
-        {
-            AwtoAudioTestStep(pucRx[5]);            // #94 ear-test step (awto_audio.inc)
-        }
-        else if(pucRx[5] == 0)
+        AwtoAudioTestStep(pucRx[4], pucRx[5]);  // awto_audio.inc
+        return;
+    }
+#endif
+#ifdef _AWTO_AUDIO_TEST
+    // Test builds only (-D _AWTO_AUDIO_TEST): VCP 0x63 = 0 / 1..0x0F internal sine generator off / on, get = generator state
+    if((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_AUDIO_TEST_VCP))
+    {
+        if(pucRx[5] == 0)
         {
             SysAudioInternalGenTestProc(_OFF);
         }
@@ -250,7 +252,7 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
         }
         return;
     }
-    if((pucRx[2] == 0x01) && (ucLen >= 5) && (pucRx[3] == 0x63))
+    if((pucRx[2] == 0x01) && (ucLen >= 5) && (pucRx[3] == AWTO_AUDIO_TEST_VCP))
     {
         pucTx[1] = 0x88;
         pucTx[2] = 0x02;

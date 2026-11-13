@@ -1,7 +1,7 @@
 # Analog audio output (awto-ddc#93)
 
 Tags (#91): [fw] = seen in the Dahua firmware (decompile `~/vendors/realtek/analysis/jxc-4k/bank3`, or its sim trace `tmp/logs/trace_vendor_{2160p60,1080p60}.tsv.gz` = ordered register writes with values); [spec] = Realtek SDK source / register DB (`regdb/RTD2785TM-CG.tsv`); [hw] = measured on a unit; [guess]; [?] unknown.
-Status: on unit 2 since 2026-11-13 (wb-p14ui-audio2): DAC + amp pins run, HDMI D2 audio plays through the DVC (register readback below); audible result: Dan's ears (#94). Hardware plan at the end.
+Status: speaker output only since 2026-11-13 (headphone out dropped, Dan: "it definitely does not work"); DAC + amp pins run, HDMI D2 audio plays through the DVC (register readback below); audible result: Dan's ears (#94), ear test `./dev.py sound-test` (below).
 
 ## Summary
 - Our firmware compiled the Realtek SDK audio out (`_AUDIO_SUPPORT _OFF`, "no audio jacks", 2026-11-04). The Dahua firmware runs the SDK audio path into the embedded DAC. [fw]
@@ -10,10 +10,10 @@ Status: on unit 2 since 2026-11-13 (wb-p14ui-audio2): DAC + amp pins run, HDMI D
 - Volume = DVC gain (P8_A5/A6), exactly like the Dahua firmware. DAC gain `DA_GAIN_L/R` stays 0 dB (0x57). [fw]
 
 ## Pins, jack
-- Outputs: option `AWTO_AUDIO_OUT` (RL6449_Project.h): SPEAKER = aout 116/117 AUDIO_SOUTL/R (feeds the speaker amp), HEADPHONE = hpout 109/110 AUDIO_HOUTL/R, BOTH (now, speaker test #94). 115 AUDIO_REF. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`; all in audio mode (0x03). [hw]
+- Output: speaker only = aout 116/117 AUDIO_SOUTL/R (feeds the speaker amp); `UserInterfaceGetAudioDACOutput` returns SPEAKER, `_DAC_HP_OUTPUT_SUPPORT _OFF` (hpout 109/110 AUDIO_HOUTL/R unpowered; Dan 2026-11-13: no sound from it). `AWTO_AUDIO_OUT` (speaker / headphone / both) removed. 115 AUDIO_REF. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`; all in audio mode (0x03). [hw]
 - Dahua firmware picks the output from P4.5 (pin 113, jack input, `1:f69b`): low -> SPEAKER, high -> HEADPHONE; unit 2 reads P4.5 = 1 with no jack (2026-11-13) [hw], so its sim trace (06C0 = DF, HP only) is the no-jack-detected path; polarity [?].
 - Speakers: confirmed present by Dan (2026-11-13; earlier 'no speakers', #3/#22, was wrong).
-- Amp pins (one owner `fw/sdcc/awto_audio.inc`, as Dahua `5:d2a0` / `1:ea99`, `docs/reversing/dahua-fw/gpio-ir.md` s4): AC on P7.4 (pin 161) = 0; P7.3 (pin 160) = 0 `AWTO_AUDIO_AUX_MS` = 200 ms later (first main-loop poll + 200 ms); P7.4 = !mute when the speaker output is on (`PCB_AMP_MUTE` from `SysAudioMuteProc`), else 0. Ring lines `E3` (sync.tsv): amp on / off / aux low. [fw]
+- Amp pins (one owner `fw/sdcc/awto_audio.inc`, as Dahua `5:d2a0` / `1:ea99`, `docs/reversing/dahua-fw/gpio-ir.md` s4): AC on P7.4 (pin 161) = 0; P7.3 (pin 160) = 0 `AWTO_AUDIO_AUX_MS` = 200 ms later (first main-loop poll + 200 ms); P7.4 = !mute (`PCB_AMP_MUTE` from `SysAudioMuteProc`, Dahua speaker path). Ring lines `E5` (sync.tsv): amp on / off / aux low. [fw]
 - The SDK demo board uses P3.5 (pin 91) as AMP_MUTE; our pin 91 is DPTX_AUX_P (P3D5 output, live 0x01). Not the same function. [hw]
 
 ## Option set (SDK `RL6449_Project.h` names) and what the Dahua firmware uses
@@ -21,9 +21,9 @@ Status: on unit 2 since 2026-11-13 (wb-p14ui-audio2): DAC + amp pins run, HDMI D
 |---|---|---|---|
 | `_AUDIO_SUPPORT` | on | on | audio code present [fw] |
 | `_EMBEDDED_DAC_SUPPORT` | on | on | `ScalerAudioDACInitial` 3:f39f [fw] |
-| `_DAC_SPEAKER_OUTPUT_SUPPORT` / `_DAC_HP_OUTPUT_SUPPORT` | on / on | default on / on | REG_DAC_POWER0 ends 0xFF = bits 5,4 set [fw] |
+| `_DAC_SPEAKER_OUTPUT_SUPPORT` / `_DAC_HP_OUTPUT_SUPPORT` | on / on | on / **off** | REG_DAC_POWER0 ends 0xFF = bits 5,4 set [fw]; ours: hpout dropped (#94) |
 | `_DAC_SPEAKER_OUTPUT_SWAP` | on | on | REG_MUX_ANA_OUT = 0x50 (aout L/R crossed, hpout straight) [fw] |
-| `UserInterfaceGetAudioDACOutput()` | P4.5: speaker or headphone | `AWTO_AUDIO_OUT` (BOTH) | Dahua trace 06C0 = DF = headphone (P4.5 high in the sim) [fw]; ours 06C0 = FB on unit 2 [hw] |
+| `UserInterfaceGetAudioDACOutput()` | P4.5: speaker or headphone | SPEAKER | Dahua trace 06C0 = DF = headphone (P4.5 high in the sim) [fw]; ours was 06C0 = FB (both, unit 2) [hw] |
 | `_DAC_DITHER_FUNCTION_LEVEL` | off | default off | DA_CTRL = 0x40 [fw] |
 | `_DIGITAL_DAC_AOUT/HPOUT_GAIN_DB`, `_LINE_IN_DAC_*_GAIN_DB` | 0 dB | default 0 dB | REG_OUT_GAIN = 0x00 twice [fw] |
 | `_LINE_IN_SUPPORT` | on (ADC init runs at boot) | **off** | ADC init writes P6_B0..B7 in the trace [fw]; line-in pins are GPIO on this board [hw] |
@@ -81,18 +81,34 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 - Gain at ACTIVE in the Dahua sim: DVC_GAIN = 0x098C (P8_A5/A6) = 0.149 = -16.5 dB. [fw] Its volume mapping constants (user bank) are not identified. [?]
 - Samples-per-ramp is derived from the detected sampling rate (`ScalerAudioDVCSetMuteZCDTimeout`); rate detect writes `DA_CLK_CTRL` 92 (no audio) / 12 / 52 depending on rate. [fw]
 
-## Our volume mapping (`AwtoAudioGain`, fw/awto/settings/glue.inc)
+## Our volume mapping (`AwtoAudioGain`, fw/sdcc/glue.inc)
 - Registry `volume` 0..100 % -> DVC_GAIN (14 bit, linear, 0x3FFF = 0 dB, 1/16384 steps [spec]).
-- 0 % = 0 (silence), 10 % = 164 (-40 dB), then -4 dB per 10 % (x0.631), linear interpolation between the 10 % points, 100 % = 0x3FFF. 50 % = 1034 (0x040A) = -24 dB, 90 % = 10337 = -4 dB. [guess: taste; Dahua default is -16.5 dB] The sim trace of this image writes DVC_GAIN 04 0A at ACTIVE (default 50 %).
-- Why not the SDK mapping: `UserCommonAdjustPercentToRealValue` is linear in gain: 50 % would be -6 dB and 10 % -20 dB (steep, hard to set low). Change the table `tAwtoVolGain` to tune.
-- `DA_GAIN_L/R` (DAC, 0.75 dB steps) are not used for volume; the register field range (7 bit, -65.25..0 dB) would also work but the SDK/Dahua path ramps through the DVC (click-free).
+- Dahua-like (Dan 2026-11-13): 50 % = `AWTO_AUDIO_GAIN_DAHUA_50` 0x098C (-16.5 dB, the Dahua default) [fw]; 100 % = `AWTO_AUDIO_GAIN_MAX`, now -6 dB (0x1FFF): cap until the ear test (steps 4-6) shows a cleaner maximum.
+- Points per 10 %, even in dB: 0 % = silence, 10 % = -40 dB, 10..50 % 5.9 dB / step, 50..100 % 2.1 dB / step; linear in gain between points. Table `tAwtoVolGain`. [guess: shape; Dahua mapping constants not identified]
+- Why not the SDK mapping: `UserCommonAdjustPercentToRealValue` is linear in gain: 50 % would be -6 dB and 10 % -20 dB (steep, hard to set low).
+- `DA_GAIN_L/R` (DAC, 0.75 dB steps) are not used for volume; the SDK/Dahua path ramps through the DVC (click-free).
+
+## Ear test (`./dev.py sound-test`, scripts/audio_test.py `steps`)
+- `./dev.py sound-test [--unit N] [--only 1,2,..] [--freqs 200,1000,4000] [--secs S]`: opens the diagnostics console (test cmd 0x26, held), then per step: VCP 0x63 = 0x10 + n (console `audio test n/6: ...`), per tone VCP 0x63 = 0x8000 | Hz (console `audio test n: <Hz> Hz`) + the host tone (both channels, ALSA pcm of the unit's connector), VCP 0x63 = 0x30 + n (`... done`). VCP 0x62 volume read before / after, set back if it moved. Times: `tmp/logs/audio_test.log`.
+- Steps (firmware `tAwtoAudioTestAmp` / `tAwtoAudioTestGain`, awto_audio.inc; held until done, the SDK unmute / volume mapping keep them):
+
+| n | amp P7.4 | DVC gain |
+|---|---|---|
+| 1 | on | user volume |
+| 2 | off | user volume |
+| 3 | on | -16.5 dB (0x098C, Dahua default) |
+| 4 | on | -6 dB (0x1FFF, volume 100 % now) |
+| 5 | on | -3 dB (0x2D4E) |
+| 6 | on | 0 dB (0x3FFF) |
+- In every image (VCP 0x63 is unused by the registry); the chip sine generator (VCP 0x63 = 0 / 1) stays in `-D _AWTO_AUDIO_TEST` builds.
 
 ## Firmware wiring (what is where)
 | Item | Where |
 |---|---|
 | Options | `fw/sdk/Project/Header/RL6449_Project.h` (audio section) |
 | `PCB_AMP_MUTE` no-op | `fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` |
-| `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/awto/settings/glue.inc` |
+| `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/sdcc/glue.inc` |
+| Amp pins, ear-test steps | `fw/sdcc/awto_audio.inc`; VCP 0x63 in `fw/sdcc/awto_ddcci.inc` |
 | Mapping + hold substitutions | `fw/awto/settings/rules.py` (SUBS into `UserAdjustAudioVolumeMapping`, `UserInterfaceGetAudioMuteStatus`) |
 | Registry rows | awto-rtdfw `settings/registry.tsv` rows 88-91 (branch `audio`; the firmware pins `audio-fw`, `fw/awto/clean_ref.txt`) |
 | MCCS | VCP 0x62 volume 0..100; VCP 0x8D mute: 1 = muted, 2 = unmuted (registry enum `Off=2|On=1`) |
