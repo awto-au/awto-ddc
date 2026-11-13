@@ -3,7 +3,7 @@
 
 usage: gen_awto_sync.py [--check]
   Rewrites the blocks between `GENERATED-BEGIN <name>` / `GENERATED-END <name>` markers in:
-    fw/sdcc/awto_sync.inc     awto_sync_rows: event filter / row lookup (id, arg) -> row (SysMain translation unit)
+    fw/log/sync.c             awto_sync_rows: event filter / row lookup (id, arg) -> row
     fw/osd/console.c          awto_sync_text: per-row format + text, one table + one reader (awto-sdcc#39: same bank)
                               awto_port_sigs: one row per port signal (source, columns, labels)
     RL6449_Project.h          awto_port_cnt: edge counters the input monitor keeps for `cnt` signals
@@ -442,7 +442,7 @@ def main():
     r = rows()
     s, cnts = port_sigs()
     stale = 0
-    for path, name, blk in ((ROOT / "fw/sdcc/awto_sync.inc", "awto_sync_rows", rows_block(r)),
+    for path, name, blk in ((ROOT / "fw/log/sync.c", "awto_sync_rows", rows_block(r)),
                             (OSDCARD, "awto_sync_text", text_block(r)),
                             (OSDCARD, "awto_port_sigs", ps_block(s)),
                             (ROOT / "fw/sdk/Project/Header/RL6449_Project.h", "awto_port_cnt", cnt_block(cnts))):

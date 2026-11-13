@@ -35,7 +35,7 @@
   - `51 8B E7 E9 00 00 t3 t2 t1 t0 mH mL ofs chk`: unix s BE, ms within the second BE (0..999), UTC offset in 15 min (signed).
   - 14 bytes: fits only images with the 17-byte request buffer (`_AWTO_NET` on, the default); otherwise dropped.
   - E9 = the retired logo_ms code (#144): no row reads it; a table write cannot hit a row by accident.
-- Firmware (`awto_sync.inc` AwtoHtSync): stores unix s, ms, offset and the fw ms at receipt (`g_stAwtoHt`, RAM only).
+- Firmware (`fw/log/sync.c` AwtoHtSync): stores unix s, ms, offset and the fw ms at receipt (`g_stAwtoHt`, RAM only).
   - No flash, no dirty flag (not a setting). The NVRAM flush gate counts it as DDC/CI (busy 500 ms): one per 60 s.
   - fw ms = `AwtoUpMs()`: usT2Isr (1 ms) + a wrap count, 32 bit (49.7 days).
   - Ring: `host time <ISO>` + `(fw +N ms, first host sync since boot)` at the first sync of a boot; on |drift| > 1 s also

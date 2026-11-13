@@ -167,9 +167,9 @@ Abbreviations in the table:
 | `RL6449_Project.h:834` `AWTO_SLOW_MS`; `fw/diag/loopsplit.c:18` | slow main-loop checks | 10 ms | project header | "latency <= 10 ms + 1 pass (limit 50 ms, #75)" | 50 ms limit | 0.20 | next pass |
 | `RL6449_Project.h:871` `AWTO_SW_SLOW_MS`; `fw/log/swlog.c:66` | stall log threshold | 20 ms | project header | "7x a 4K60 pass (2.7 ms)" | 2.7 ms | 7.4 | logs a slow-mark line |
 | `RL6449_Project.h:1175` `AWTO_TMDS_HPD_LOW_MS`; `fw/log/swlog.c:162` | HDMI HPD low pulse (non-blocking) | 110 ms | project header | comment: HDMI 1.4b, a source reads HPD low >= 100 ms as unplug | 100 ms | 1.10 | HPD high again |
-| `RL6449_Project.h:1067` `AWTO_PS_POLL_MS`; `awto_sync.inc:754` | power-saving wake poll | 5 ms | project header | SDK's own freq-measure wait (5 ms) | 5 ms | 1.00 | next poll |
-| `AWTO_PS_TMDS_HOLD_MS`; `awto_sync.inc:644` | TMDS wake hold | 50 ms | project header | "about 10 SDK stable windows" | UNKNOWN | UNKNOWN | wake |
-| `AWTO_PS_TMDS_GAP_MS`; `awto_sync.inc:652` | gap ends a TMDS run | 15 ms (3 x poll) | project header | derived | 15 ms | 1.00 | run ends |
+| `RL6449_Project.h:1067` `AWTO_PS_POLL_MS`; `fw/log/sync.c:754` | power-saving wake poll | 5 ms | project header | SDK's own freq-measure wait (5 ms) | 5 ms | 1.00 | next poll |
+| `AWTO_PS_TMDS_HOLD_MS`; `fw/log/sync.c:644` | TMDS wake hold | 50 ms | project header | "about 10 SDK stable windows" | UNKNOWN | UNKNOWN | wake |
+| `AWTO_PS_TMDS_GAP_MS`; `fw/log/sync.c:652` | gap ends a TMDS run | 15 ms (3 x poll) | project header | derived | 15 ms | 1.00 | run ends |
 | `AWTO_HOLD_CHECK_MS`; `awto_fastsw.inc:173` | receiver check while held | 10 ms | project header | wake latency <= 10 ms + 1 pass; UNKNOWN reason | UNKNOWN | UNKNOWN | next check |
 | `AWTO_REHOLD_MS`; `awto_fastsw.inc:133` | no new hold after a fast wake | 3000 ms | project header | no source stated -> UNKNOWN | UNKNOWN | UNKNOWN | hold allowed |
 | `AWTO_L2_SEC`; `AWTO_HOLD_AUTO_SEC`; `AWTO_HOLD_TRIES` (`RL6449_Project.h:1230-1234`) | hold levels | 60 s; 5 s; 4 tries | project header | L2 = Dan 2026-11-08; the others are our choice, no reason cited | UNKNOWN | UNKNOWN | to SDK search |

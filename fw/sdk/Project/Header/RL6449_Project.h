@@ -936,7 +936,7 @@ extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long u
 extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (isr_g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
-// #139 sync / power-on log (fw/sdcc/awto_sync.inc): ring of stage events per episode (power on, switch, wake), on the console /
+// #139 sync / power-on log (fw/log/sync.c): ring of stage events per episode (power on, switch, wake), on the console /
 // selector and over I2C at map symbol _g_stAwtoSync (host: scripts/sync_log.py, rtd_diag.py --sync). Bytes only (LE = BE layout).
 // GENERATED-BEGIN awto_port_cnt
 #define AWTO_PS_CNT_N                                           1       // inputs whose rising edges are counted (fw/awto/portsig.tsv cnt rows)
@@ -1062,7 +1062,7 @@ typedef struct                                  // host-read (sync_log.py): nati
 extern __xdata StAwtoHt isr_g_stAwtoHt;
 extern unsigned long AwtoMs(void);
 extern void AwtoHtSync(unsigned char *puc);
-// #144 power-saving wake triggers (awto_sync.inc AwtoPsWakePoll), each once per port per sleep episode
+// #144 power-saving wake triggers (fw/log/sync.c AwtoPsWakePoll), each once per port per sleep episode
 #ifndef _AWTO_PS_WAKE
 #define _AWTO_PS_WAKE                                           _ON
 #endif

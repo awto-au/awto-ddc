@@ -1,6 +1,8 @@
+#include "SysInclude.h"
+
 // #139 sync / power-on log: a small I2C-readable ring of stage events (RL6449_Project.h StAwtoSync), one episode per
 // power-on / input switch / wake. Texts: fw/awto/sync.tsv (scripts/gen_awto_sync.py); host decoder: scripts/sync_log.py.
-// Also the port getters the selector rows read (stage, DDC activity, idle TMDS clock). Inserted into SysMain.c after awto_sw.inc.
+// Also the port getters the selector rows read (stage, DDC activity, idle TMDS clock).
 extern WORD g_usTmdsOffLineMeasureClk;              // ScalerCommonSync.c: SDK TMDS clock at freq-stable, 0.1 MHz
 __xdata StAwtoSync g_stAwtoSync;
 static __xdata BYTE s_pucAwtoSyncDet[3];          // D1..D3: last predetect (bit0) | source type << 1 seen by the port detect

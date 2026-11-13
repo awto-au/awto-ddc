@@ -27,7 +27,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
 - **Hidden drivers of resources outside the obvious modules:**
   - `AwtoTmdsStuck` (fw/log/swlog.c:104) pulses the D2/D3 HDMI HPD pins with a blocking `ScalerTimerDelayXms(110)`, called from the SysJudge hook.
   - `AwtoL2LinkOn/Off`, `PCB_BACKLIGHT_POWER_PIN` and `ScalerGlobalWatchDog` are called straight from awto_fastsw.inc.
-  - awto_sync.inc's `AwtoPsWakePoll` makes power-status wake decisions.
+  - fw/log/sync.c's `AwtoPsWakePoll` makes power-status wake decisions.
   - fw/test/testcmd.c can drive input, power, NVRAM and keys.
 - **Time bases: at least six.** `g_usTimerCounter` (SDK, rebased near `_EVENT_TIME_MAX`), `usT2Isr` (g_stAwtoDiag), `AwtoUpMs` (32-bit), `AwtoSyncNow`, `AwtoFastNow`, `AwtoSrcNow`, plus Timer0 event ms. [code]
 - **Logs: at least four parallel rings/streams.** `g_stAwtoSw` (switch events), `AwtoSync` ring (+ `AwtoSyncPush` stage lines), `g_stAwtoDiag` stages, tokenised `AwtoMsg`/`DebugMessage`, and the GPIO change ring. #146: two line formats on the console. [code, issue]
@@ -55,7 +55,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
 - Triggers (who sets the target power status):
   - SDK: SysMode `SET_TARGET_POWER_STATUS(SAVING)` when `SOURCE_SWITCH_FINISH && UserInterfaceGetIntoPSStatus` in mode POWER_SAVING; and `(NORMAL)` on `UserInterfaceGetCableResetStatus`.
   - SDK: `SysSourceDetectPort` PS predetect true → NORMAL (SysSource.c ~1418/1486).
-  - Ours: the key POWER edge (fw/keys/keys.c → power-target calls); `AwtoPsWakeFire` (awto_sync.inc); `AwtoWakeRelease(3)` L3 → SAVING; VCP 0xD6 `set_ap_power_mode`; `AwtoSourceOpen` sleep rule (#139); test cmd 0x3E; the debug link/KVM clears `FORCE_POW_SAV`.
+  - Ours: the key POWER edge (fw/keys/keys.c → power-target calls); `AwtoPsWakeFire` (fw/log/sync.c); `AwtoWakeRelease(3)` L3 → SAVING; VCP 0xD6 `set_ap_power_mode`; `AwtoSourceOpen` sleep rule (#139); test cmd 0x3E; the debug link/KVM clears `FORCE_POW_SAV`.
 - LED: `PCB_LED_*` macros → `AwtoLedSetMode` (awto_led.inc: ON/OFF/BREATHE on P3.5/P3.6).
 
 ### 1.2 SysMode / SysJudge (SysJudge.c:`SysJudgeHandler`, SysMode.c:`SysModeHandler`/`SysModeResetState`)
@@ -513,7 +513,7 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
 - /mnt/2tb/git/awto-ddc-ui/scripts/keil2sdcc.py
 - /mnt/2tb/git/awto-ddc-ui/fw/overlay/Project/Header/RL6449_Project.h
 - /mnt/2tb/git/awto-ddc-ui/fw/sdcc/awto_fastsw.inc
-- /mnt/2tb/git/awto-ddc-ui/fw/sdcc/awto_sync.inc
+- /mnt/2tb/git/awto-ddc-ui/fw/log/sync.c
 - /mnt/2tb/git/awto-ddc-ui/tmp/sdcc-port/src/Kernel/User Common Function/Code/UserCommonInterface.c
 
 
@@ -650,7 +650,7 @@ Triggers (each entry shows which code decides and what is logged):
 
 | trigger | decider | functions in order | LOG |
 |---|---|---|---|
-| cable plug (any port) | ours | `AwtoPsWakePoll` (awto_sync.inc:669; every 5 ms, 14 sites) → `AwtoPsWakeFire(T=cable)` → `SysPowerSetTargetPowerStatus(NORMAL)` (+ the console request) | `Dn cable plugged in: wake` (CB) |
+| cable plug (any port) | ours | `AwtoPsWakePoll` (fw/log/sync.c:669; every 5 ms, 14 sites) → `AwtoPsWakeFire(T=cable)` → `SysPowerSetTargetPowerStatus(NORMAL)` (+ the console request) | `Dn cable plugged in: wake` (CB) |
 | cable unplug | ours | same, cable edge down. SDK no longer wakes on search-port unplug (`AWTO_PS_CABLE_SDK` sub). | `Dn cable unplugged: wake` (D3) |
 | EDID read (HDMI) | ours | `GET_TMDS_RXn_DDC_DETECTED` counted in the cut-down `ScalerTMDSRxnTMDSPSPreDetect`; EDID-IRQ latch (bit0) read by the poll | `Dn EDID read by source: wake` (CC); counted-only SCL toggle: `DDC activity in power saving: no wake` (DD) |
 | DP AUX command | ours | AUX toggle counted by the cut-down `ScalerDpRx1PSPreDetect` (`AwtoPsAuxSeen`); the poll reads the AUX registers (B7DC-DD / BADC-DD) | `DP AUX activity…: no wake` (DA); an AUX command alone: DB, no wake (`_AWTO_PS_AUX_WAKE` OFF, #163) |
