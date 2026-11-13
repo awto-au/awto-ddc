@@ -2,8 +2,8 @@
 """FastMachine: fw_sim.Machine on an in-process 8051 core (scripts/mcs51_core.c via ctypes) instead of the ucsim subprocess.
 
 Select:
-- env `AWTO_SIM_CORE=fast` -> fw_sim.Machine is FastMachine (SimBus, osd_render, sim_live, gpio_shot, tests unchanged)
-- `fw_sim.py --fast ...` (boot-check / video-check / ddr-trace); default stays ucsim
+- default (AWTO_SIM_CORE unset or fast): fw_sim.Machine is FastMachine (SimBus, osd_render, sim_live, gpio_shot, tests unchanged)
+- fw_sim default (boot-check / video-check / ddr-trace and every sim); ucsim only as a cross-check: `fw_sim.py --xcheck-ucsim` or AWTO_SIM_CORE=ucsim
 - library: `fastmachine.FastMachine(img, map_path, tag, log, devs)`, same arguments as fw_sim.Machine
 Core (mcs51_core.c):
 - ucsim 0.9.12 -t 52 semantics: cycle counts, timers 0/1/2, IRQ poll order + 2 levels, no IRQ after RETI / IE write

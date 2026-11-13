@@ -1008,7 +1008,7 @@ class Machine:
 
 
 UcsimMachine = Machine
-if os.environ.get("AWTO_SIM_CORE", "ucsim") == "fast":      # in-process 8051 core (scripts/fastmachine.py); default ucsim
+if os.environ.get("AWTO_SIM_CORE", "fast") != "ucsim":      # in-process DW8051 core (scripts/fastmachine.py) by default; ucsim only on request
     import fastmachine
     Machine = fastmachine.bind(sys.modules[__name__])
 
@@ -1632,11 +1632,11 @@ def main() -> int:
     ap.add_argument("--instr", type=int, default=200_000_000, help="native mode: total instructions to run")
     ap.add_argument("--cpu", choices=("dw8051", "8052"), help="fast core CPU model (default dw8051; env AWTO_SIM_CPU): dw8051 = DW8051 "
                     "cycle table, CKCON MOVX stretch, dual DPTR, clock from the clock registers; 8052 = ucsim -t 52 classic cycles, fixed clock")
-    ap.add_argument("--fast", action="store_true", help="in-process 8051 core (fastmachine.py) instead of ucsim; "
-                    "same as AWTO_SIM_CORE=fast (isr-check / --serial stay on ucsim)")
+    ap.add_argument("--xcheck-ucsim", action="store_true", help="cross-check only: run ucsim instead of the in-process DW8051 core "
+                    "(the default and the gates' core; same as AWTO_SIM_CORE=ucsim)")
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    fast = a.fast or os.environ.get("AWTO_SIM_CORE") == "fast"
+    fast = not (a.xcheck_ucsim or os.environ.get("AWTO_SIM_CORE") == "ucsim")
     if a.cpu:
         os.environ["AWTO_SIM_CPU"] = a.cpu
     print(f"sim CPU model: {os.environ.get('AWTO_SIM_CPU', 'dw8051') if fast else '8052 (ucsim)'}", flush=True)
@@ -1644,6 +1644,8 @@ def main() -> int:
         global Machine
         import fastmachine
         os.environ["AWTO_SIM_CORE"] = "fast"                 # modules importing fw_sim later bind to it too
+    else:
+        os.environ["AWTO_SIM_CORE"] = "ucsim"
         Machine = fastmachine.bind(sys.modules[__name__])
     for mode in ("boot_check", "isr_check"):
         if getattr(a, mode):

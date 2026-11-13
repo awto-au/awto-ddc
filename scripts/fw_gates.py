@@ -46,7 +46,7 @@ SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {"wdt": "8052"}      # wdt_test t0_arm_from_isr / prio_t0_vs_exint measure Timer0 events in ucsim cycles (m.ticks); not yet ported to the dw8051 clock (open item #162)
-NO_SIM = {"link", "pokes", "speed", "magic", "regs", "rules"}   # every other gate runs a sim: AWTO_SIM_CORE=fast (in-process core; the ucsim default needs ucsim_51 on PATH)
+NO_SIM = {"link", "pokes", "speed", "magic", "regs", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),

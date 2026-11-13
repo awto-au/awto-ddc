@@ -60,5 +60,6 @@ ___sdcc_external_startup:
 	movx	a,@dptr			; FFEA[7] / FFE9[7] / FF3A[6] ORed, all 1; never cleared (docs/watchdog.md)
 	orl	a,#0xC7
 	movx	@dptr,a
-	mov	dpl,#0			; 0 = let SDCC initialise RAM
+	mov	dpl,#0			; 0 = let SDCC initialise RAM (crtstart before awto-sdcc#18 reads dpl)
+	mov	r7,#0			; same, Keil convention (sc3 crtstart reads r7, awto-sdcc#18; #92)
 	ret
