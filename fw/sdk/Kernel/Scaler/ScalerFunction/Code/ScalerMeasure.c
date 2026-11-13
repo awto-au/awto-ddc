@@ -382,7 +382,6 @@ void ScalerMeasureInitialSetting(EnumSourceTypeDef enumSourceType, EnumSourceSea
 // Input Value  : None
 // Output Value : _TRUE if HV timing Changed
 //--------------------------------------------------
-#include "awto_fastsw_scaler.inc"
 bit ScalerMeasureTimingChange(EnumSourceTypeDef enumSourceType, EnumSourceSearchPort enumSourceSearchPort)
 {
     bit bTimingChangeStatus = _FALSE;

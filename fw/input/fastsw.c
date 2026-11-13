@@ -1,5 +1,7 @@
-// #60 cached fast input switch, system half. Inserted into SysSource.c by keil2sdcc.py; RL6449_Project.h _AWTO_FAST_SWITCH.
-// - Cache per port D1..D3 (scaler half: fw/sdcc/awto_fastsw_scaler.inc), stored at each full-path first ACTIVE.
+#include "SysInclude.h"
+
+// #60 cached fast input switch, system half. RL6449_Project.h _AWTO_FAST_SWITCH.
+// - Cache per port D1..D3 (scaler half: fw/input/fastsw_scaler.c), stored at each full-path first ACTIVE.
 // - Taken only in ACTIVE, target timing + colour = what is on screen, target receiver stable; I/M/D-domain set-up kept.
 // - Unblank once the new port's off-line measure matches the cache; mismatch / timeout = full path (reset to SEARCH).
 #if(_AWTO_FAST_SWITCH == _ON)
@@ -108,7 +110,7 @@ static bit AwtoRxRescan(BYTE ucPort, BYTE ucType)  // held port: receiver set up
         return (ScalerDpScanInputPort(ucPort) == ucType);
     }
 #endif
-    return (ScalerTMDSScanInputPort(ucPort, GET_INPUTPORT_TYPE(g_ucSearchIndex)) == ucType);
+    return (ScalerTMDSScanInputPort(ucPort, AWTO_INPUTPORT_TYPE(g_ucSearchIndex)) == ucType);
 }
 
 // #78 signal lost in ACTIVE = hold the set-up (system machine state HOLD, mode stays ACTIVE), L1 backlight off (panel request);

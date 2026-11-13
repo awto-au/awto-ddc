@@ -170,11 +170,11 @@ Abbreviations in the table:
 | `RL6449_Project.h:1067` `AWTO_PS_POLL_MS`; `fw/log/sync.c:754` | power-saving wake poll | 5 ms | project header | SDK's own freq-measure wait (5 ms) | 5 ms | 1.00 | next poll |
 | `AWTO_PS_TMDS_HOLD_MS`; `fw/log/sync.c:644` | TMDS wake hold | 50 ms | project header | "about 10 SDK stable windows" | UNKNOWN | UNKNOWN | wake |
 | `AWTO_PS_TMDS_GAP_MS`; `fw/log/sync.c:652` | gap ends a TMDS run | 15 ms (3 x poll) | project header | derived | 15 ms | 1.00 | run ends |
-| `AWTO_HOLD_CHECK_MS`; `awto_fastsw.inc:173` | receiver check while held | 10 ms | project header | wake latency <= 10 ms + 1 pass; UNKNOWN reason | UNKNOWN | UNKNOWN | next check |
-| `AWTO_REHOLD_MS`; `awto_fastsw.inc:133` | no new hold after a fast wake | 3000 ms | project header | no source stated -> UNKNOWN | UNKNOWN | UNKNOWN | hold allowed |
+| `AWTO_HOLD_CHECK_MS`; `fw/input/fastsw.c:173` | receiver check while held | 10 ms | project header | wake latency <= 10 ms + 1 pass; UNKNOWN reason | UNKNOWN | UNKNOWN | next check |
+| `AWTO_REHOLD_MS`; `fw/input/fastsw.c:133` | no new hold after a fast wake | 3000 ms | project header | no source stated -> UNKNOWN | UNKNOWN | UNKNOWN | hold allowed |
 | `AWTO_L2_SEC`; `AWTO_HOLD_AUTO_SEC`; `AWTO_HOLD_TRIES` (`RL6449_Project.h:1230-1234`) | hold levels | 60 s; 5 s; 4 tries | project header | L2 = Dan 2026-11-08; the others are our choice, no reason cited | UNKNOWN | UNKNOWN | to SDK search |
-| `awto_fastsw.inc:280` `AWTO_FAST_SETTLE_FRAMES` (`RL6449_Project.h:1249-1252`) | fast switch settle | 3 frames; 1 for a wake | project header | comment "frame-sync phase jump is over" | n/a | n/a | unblank |
-| `awto_fastsw.inc:321` | fast path gives up | 8 frames | code literal | UNKNOWN | UNKNOWN | UNKNOWN | full path |
+| `fw/input/fastsw.c:280` `AWTO_FAST_SETTLE_FRAMES` (`RL6449_Project.h:1249-1252`) | fast switch settle | 3 frames; 1 for a wake | project header | comment "frame-sync phase jump is over" | n/a | n/a | unblank |
+| `fw/input/fastsw.c:321` | fast path gives up | 8 frames | code literal | UNKNOWN | UNKNOWN | UNKNOWN | full path |
 | `AWTO_SRC_POLL_MS` 250; `AWTO_SRC_DDC_POLLS` 12; `AWTO_SRC_SLEEP_SEC` 60; `AWTO_SRC_IDLE_COMMIT_MS` 2000 (`RL6449_Project.h:691-692,1095,1097`) | selector refresh; DDC "live"; sleep; idle commit | 250 ms; 3 s (12 polls); 60 s; 2000 ms | project header | refresh = human reading (4 Hz); DDC: HDCP Ri every 2 s x 1.25 = 2.5 s rounded up to 3 s; sleep = L2 60 s; idle commit = Dan 2026-11-12 (#132) | 2.5 s (DDC) | 1.20 (DDC) | field compare / sleep / commit |
 | `AWTO_KEY_REFRESH_MS` 80; `AWTO_KEY_RETRY_MS` 250; `AWTO_GPIO_REFRESH_MS` 20; `AWTO_DBG_REFRESH_MS` 500; `AWTO_TITLE_MS` 1000 | screen redraw periods | as listed | project header | 80 = 100 ms (10 Hz floor) / 1.25; 250 = one draw about 175 ms in the sim; 1000 = Dan | 100 ms (key refresh) | 0.80 | redraw |
 | `AWTO_MSG_HOST_MS` (`AwtoMsg.h:5`), `AwtoMsgWait` | host-silence limit for the debug wait | 100 ms | `AwtoMsg.h:5` | comment: poll gap 2 ms + fetch about 5 ms, x20 | 5 ms | 20.0 | channel off, message stays in the ring |

@@ -1223,7 +1223,7 @@ extern __xdata unsigned char g_ucAwtoKeepIdle;
 #define AWTO_IDLE_RX_OFF(port)                                  { if(g_ucAwtoKeepIdle == 0) { ScalerGDIPhyPowerProc((port), _POWER_ACTION_SWITCH_INTERFACE_TO_OFF); } }
 #endif
 // #60: _ON = a switch to a port whose cached timing matches the screen skips search / measure / display setting
-// (fw/sdcc/awto_fastsw.inc); needs the switch log (timer) and idle receivers kept powered
+// (fw/input/fastsw.c); needs the switch log (timer) and idle receivers kept powered
 #ifndef _AWTO_FAST_SWITCH
 #define _AWTO_FAST_SWITCH                                       _ON
 #endif
@@ -1242,7 +1242,7 @@ extern __xdata unsigned char g_ucAwtoFastPending;      // port being brought up 
 #define AWTO_CON_LIVE()                                         ((g_ucAwtoFastPending == 0) && (g_ucAwtoPanelOwn == 0) && (g_ucAwtoSysOwn == 0))
 #define AWTO_SW_EV_FAST_WHY                                     0xA1    // at a fast-path timeout: 1 measure busy, 2 watchdog, 4 FIFO / HV error, 8 receiver unstable, 0x10 timing change, 0x20 judge check
 #define AWTO_SW_EV_FAST_FLAGS                                   0xA2    // first M-domain error after a fast unblank: P0_02 bits 6,5,1,0, bit7 = watchdog P0_0C.0
-// #78 power levels (fw/sdcc/awto_fastsw.inc AwtoWakeHold): L1 backlight off at signal loss, L2 panel off, L3 SDK power saving
+// #78 power levels (fw/input/fastsw.c AwtoWakeHold): L1 backlight off at signal loss, L2 panel off, L3 SDK power saving
 #ifndef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _ON
 #endif
@@ -1283,6 +1283,10 @@ extern void AwtoFastScalerClearStatus(unsigned char ucFirst);
 extern unsigned char AwtoFastScalerApply(unsigned char __xdata *pucBuf, unsigned char ucSourceType, unsigned char ucPort);
 extern unsigned char AwtoFastScalerMeasureOk(void);
 extern unsigned char AwtoFastScalerStatus(void);
+extern bit ScalerMeasureWatchdogStatus(void);                   // ScalerMeasure.c (no SDK header declares it)
+extern unsigned char __code tINPUT_PORT_TYPE[];                 // SysSource.c tables behind its local GET_INPUTPORT_TYPE
+extern unsigned char g_pucSourceSearchPriority[];
+#define AWTO_INPUTPORT_TYPE(x)                                  (tINPUT_PORT_TYPE[g_pucSourceSearchPriority[x]])   // = SysSource.c GET_INPUTPORT_TYPE
 #else
 #define AwtoSwCacheStore()
 #define AwtoSwFastPoll()

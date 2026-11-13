@@ -3493,7 +3493,6 @@ BYTE SysSourceGetAudioPlaybackPort(void)
 // Input Value  : ucInputPort --> Input Port(A0,A1,D0,D1,V1)
 // Output Value : None
 //--------------------------------------------------
-#include "awto_fastsw.inc"
 void SysSourceSwitchInputPort(BYTE ucInputPort)
 {
 #if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))

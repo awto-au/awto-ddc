@@ -1,5 +1,7 @@
+#include "ScalerFunctionInclude.h"
+
 // #60 fast switch, scaler half: per-port snapshot of timing, sync reference, colour info, path0 source, pixel clock as an
-// opaque AWTO_FAST_SCALER_BYTES buffer (system half: fw/sdcc/awto_fastsw.inc). Inserted into ScalerMeasure.c by keil2sdcc.py.
+// opaque AWTO_FAST_SCALER_BYTES buffer (system half: fw/input/fastsw.c).
 #if(_AWTO_FAST_SWITCH == _ON)
 typedef struct
 {

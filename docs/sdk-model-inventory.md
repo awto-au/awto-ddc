@@ -26,7 +26,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
     - So the eDP retrain at +1609 and the second backlight-on at +1758 in #162 are NOT explained by the SDK `_PANEL_ON`/`_BACKLIGHT_ON` code alone. Candidates: a DPTx stream/format re-enable inside `SysModeSetUpDisplayCapture` or `ScalerDisplay*`, or the status not being ALREADY at that moment. Open until #162 step 2 (boot profile).
 - **Hidden drivers of resources outside the obvious modules:**
   - `AwtoTmdsStuck` (fw/log/swlog.c:104) pulses the D2/D3 HDMI HPD pins with a blocking `ScalerTimerDelayXms(110)`, called from the SysJudge hook.
-  - `AwtoL2LinkOn/Off`, `PCB_BACKLIGHT_POWER_PIN` and `ScalerGlobalWatchDog` are called straight from awto_fastsw.inc.
+  - `AwtoL2LinkOn/Off`, `PCB_BACKLIGHT_POWER_PIN` and `ScalerGlobalWatchDog` are called straight from fw/input/fastsw.c.
   - fw/log/sync.c's `AwtoPsWakePoll` makes power-status wake decisions.
   - fw/test/testcmd.c can drive input, power, NVRAM and keys.
 - **Time bases: at least six.** `g_usTimerCounter` (SDK, rebased near `_EVENT_TIME_MAX`), `usT2Isr` (g_stAwtoDiag), `AwtoUpMs` (32-bit), `AwtoSyncNow`, `AwtoFastNow`, `AwtoSrcNow`, plus Timer0 event ms. [code]
@@ -165,7 +165,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 7 | SysMain.c `SysMainSystemInitial` / `main` | `AwtoDiagInit`, `AwtoMeasInit`, `AwtoSyncInit`, `AwtoWdtInit`; stage 3, 4; **`AwtoPanelVddEarly()`** (after stage 4) | boot/panel | #23 #63 #139 |
 | 8 | SysMain.c main loop | `AwtoSwPoll`, `AwtoDiagMainPass`, `AwtoGpioPoll`, `AwtoDiagTestCmd`, `AWTO_SW_FAST_POLL`, `AWTO_SW_POLL_MARKS` (x2), `AWTO_SET_LOOP`, DDCCI poll, `AWTO_NET_POLL`, `AWTO_LP(0..10)`, `AWTO_SW_MARK(0..10)` | poll sites | #60 #67 #75 #80 |
 | 9 | SysMain.c main loop | **`AWTO_PS_POLL_SITE()` x 14** before each of: AwtoGpioPoll, KeyHandler(AwtoKeyPoll), AwtoDiagTestCmd, SysPowerHandler, SysJudge, SysTimer, SysSource, SysMode, SysDpRx, SysTMDSRx, Hdcp2, OsdHandler, DdcciHandler, SysColor | wake poll between handlers | #144 |
-| 10 | SysSource.c | `AwtoSyncBegin` in `SysSourceSwitchInputPort`; `AwtoSyncDetect` end of `SysSourceDetectPort`; `awto_fastsw.inc` before `SysSourceSwitchInputPort`; `AWTO_SW_MARK(20-23)`; probe 19 | input | #60 #139 |
+| 10 | SysSource.c | `AwtoSyncBegin` in `SysSourceSwitchInputPort`; `AwtoSyncDetect` end of `SysSourceDetectPort`; `fw/input/fastsw.c` before `SysSourceSwitchInputPort`; `AWTO_SW_MARK(20-23)`; probe 19 | input | #60 #139 |
 | 11 | SysMode.c | `AwtoSyncTiming`, `AwtoSyncFreq`, probes 4,5,11,12,14-18, `AwtoSwCacheStore` at ACTIVE | mode | #60 #139 |
 | 12 | SysJudge.c | probes 1,2,3,20-23; `AWTO_TMDS_STUCK()` | judge | #60 #78 |
 | 13 | UserCommonInterface.c `PanelPowerAction` | `AwtoSwEvent(POWER)` at switch; probes 24/26/27; stages 5,7,8 (both `_PANEL_ON` and `_BACKLIGHT_ON` paths); `AWTO_KEY_OSD_RESET()` in `OsdResetProc` | panel/log | #63 #78 |
@@ -241,7 +241,7 @@ Main loop (SysMain.c): 14 `AWTO_PS_POLL_SITE` + `AWTO_SYNC_POLL()` (inside `Awto
 | **ours: raw early VDD** | fw/log/swlog.c:`AwtoPanelVddEarly` (SysMainSystemInitial) | `PCB_PANEL_POWER` only, no SDK state | boot |
 | **ours: boot panel** | RTD2014Osd.c:96 `AWTO_BOOT_PANEL_ON` | full `_BACKLIGHT_ON` at INITIAL | mode INITIAL |
 | ours: blank instead of BL off | `AWTO_BL_OFF_OR_BLANK` x3 | `ScalerDDomainBackgroundEnable` | mode reset / display setting |
-| **ours: L1/L2 hold** | awto_fastsw.inc:`AwtoWakeHold/AwtoWakePoll/AwtoL2LinkOff/On/AwtoHoldBacklightSdk` | `PCB_BACKLIGHT_POWER_PIN` direct, eDP stream/SSC/PHY off/on direct, SDK `_BACKLIGHT_OFF` at release | judge failure in ACTIVE |
+| **ours: L1/L2 hold** | fw/input/fastsw.c:`AwtoWakeHold/AwtoWakePoll/AwtoL2LinkOff/On/AwtoHoldBacklightSdk` | `PCB_BACKLIGHT_POWER_PIN` direct, eDP stream/SSC/PHY off/on direct, SDK `_BACKLIGHT_OFF` at release | judge failure in ACTIVE |
 | ours: fast unblank | `AwtoSwFastPoll` | `ScalerDDomainBackgroundEnable`, `UserCommonInterfaceOsdActiveProc` | fast switch |
 | ours: LED | awto_led.inc | power LED P3.5/P3.6 (through PCB_LED_*) | power status |
 | ours: T3 wait | awto_delaycal.inc:`AwtoDiagPanelT3Wait` | blocking inside T3 | panel on |
@@ -336,7 +336,7 @@ Table in §1.4. Second drivers marked in §3.1.
 `SEARCH_PORT_INITIAL → SEARCH_TIME_INITIAL → DetectPort (predetect, scan) → Judge → (timing) → next port when time elapsed → SOURCE_SWITCH_FINISH`. AWTO+: fixed-port scan type set by `AwtoInputSelect`/selector, which makes "all ports searched" mean one port; no cable guard in this tree (#84 branch only).
 
 ---
-## 5. Fast switch / KVM / hold model (awto_fastsw.inc, awto_fastsw_scaler.inc, fw/log/swlog.c, fw/ddcci/ddcci.c)
+## 5. Fast switch / KVM / hold model (fw/input/fastsw.c, fw/input/fastsw_scaler.c, fw/log/swlog.c, fw/ddcci/ddcci.c)
 State machine (as coded, `_AWTO_FAST_SWITCH` and `_AWTO_WAKE_HOLD` ON, `_AWTO_KEEP_IDLE_RX` ON):
 ```
 ACTIVE(port P, cache[P] valid)
@@ -512,7 +512,7 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
 ### Critical Files for Implementation
 - /mnt/2tb/git/awto-ddc-ui/scripts/keil2sdcc.py
 - /mnt/2tb/git/awto-ddc-ui/fw/overlay/Project/Header/RL6449_Project.h
-- /mnt/2tb/git/awto-ddc-ui/fw/sdcc/awto_fastsw.inc
+- /mnt/2tb/git/awto-ddc-ui/fw/input/fastsw.c
 - /mnt/2tb/git/awto-ddc-ui/fw/log/sync.c
 - /mnt/2tb/git/awto-ddc-ui/tmp/sdcc-port/src/Kernel/User Common Function/Code/UserCommonInterface.c
 
@@ -543,7 +543,7 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
 - The OSD is drawn by the display side from on-chip OSD SRAM, on the scaler's display clock. It uses neither the input clock nor the DDR. [docs/reversing/realtek-rtd/osd.md §"OSD vs the picture path": [guess], consistent with the no-signal screen] [issue #26 #36: faults on the input→display crossing do not affect the OSD or the panel link]
 - So the OSD depends on: D-domain timing generator + DCLK (DPLL), the DPTx stream/link, and panel power. It does not depend on the input receiver or the I/M domain.
 - The eDP link is not touched by any mode-flow step. [code]
-  - Every caller of `ScalerDisplayDPTx*` (link sequence, PHY init, stream enable, SSC set, analog PHY) is in `UserCommonInterfacePanelPowerAction` or in our `AwtoL2LinkOff/On` (awto_fastsw.inc). I grepped the port: there are no other callers.
+  - Every caller of `ScalerDisplayDPTx*` (link sequence, PHY init, stream enable, SSC set, analog PHY) is in `UserCommonInterfacePanelPowerAction` or in our `AwtoL2LinkOff/On` (fw/input/fastsw.c). I grepped the port: there are no other callers.
   - `ScalerPLLSetDPLLRefPLL` (the DPTx link CMU, RL6449_Series_PLL.c) returns at once when the DPTx PHY is already powered (P38_A0 bit4). It uses the fixed link rate (`_PANEL_DPTX_LINK_RATE` HBR2), never the pixel clock.
   - `ScalerPLLSetDPLLReset`, which can power down the DPTx PLL, is called only from RL6449_Series_Power.c:709 (power-up). So a DCLK change does not touch the link.
   - Conclusion [code]: by the SDK's own design, a change of timing or DCLK needs **no eDP retrain**. The DPLL (pixel clock) relocks on its own.
@@ -679,7 +679,7 @@ B. Full path (refused or SDK-initiated):
 5. `SysJudgeHandler` → DISPLAY_SETTING (`mode DISPLAY SETTING`, 01 02): `SysModeDisplaySetting` (§10.1 steps 4-6) with the FAST_MODE `_PANEL_ON` (no-op when the panel is up) and `AwtoSyncFreq`. LOG: `display setting` (90 0E).
 6. `SysJudgeHandler` DISPLAY_SETTING → ACTIVE after `JUDGE_ACTIVE_STATE` timer (HDMI/DP 100 ms) and `ReadyForActive` (panel status READY/ALREADY). `SysModeHandler` ACTIVE first pass: `ScalerGlobalFirstActiveProc`, `UserCommonInterfaceOsdActiveProc` (NVRAM search-port set in RAM only, DDC/CI to the new port, info-card event, **unblank**), `_BACKLIGHT_ON`, `AwtoSwCacheStore`, `SysSourceFirstActiveProc`. LOG: `mode ACTIVE` (01 03), `UNBLANK` (switch log only).
 - Timing: unit 2/3 full path about 1 s (HDMI/DP) [issue #60/#83]; KVM fast path 79-96 ms.
-C. Fast path T6a (`AwtoSwFast`, awto_fastsw.inc:294): refusal codes as in §5 (LOG: `fast path refused: no cache` / `receiver unstable` / `timing field %`). If taken: `AwtoSwFastGo` (D-domain background ON, search index/type set, scaler snapshot applied, pending), then per pass `AwtoSwFastPoll` (3 frames, clear flags, 1 frame, measure/stable/judge checks) → `ScalerGlobalFirstActiveProc` + `UserCommonInterfaceOsdActiveProc` (unblank). No mode change (mode stays ACTIVE), no panel/link/DOM change, OSD untouched until the active proc. LOG: `fast path taken` (A0 00), or `fast path timeout: full path` (A0 05) → SEARCH reset.
+C. Fast path T6a (`AwtoSwFast`, fw/input/fastsw.c:294): refusal codes as in §5 (LOG: `fast path refused: no cache` / `receiver unstable` / `timing field %`). If taken: `AwtoSwFastGo` (D-domain background ON, search index/type set, scaler snapshot applied, pending), then per pass `AwtoSwFastPoll` (3 frames, clear flags, 1 frame, measure/stable/judge checks) → `ScalerGlobalFirstActiveProc` + `UserCommonInterfaceOsdActiveProc` (unblank). No mode change (mode stays ACTIVE), no panel/link/DOM change, OSD untouched until the active proc. LOG: `fast path taken` (A0 00), or `fast path timeout: full path` (A0 05) → SEARCH reset.
 D. Selector choice: `AwtoSourceKey` → `AwtoInputSelect`-like switch; the choice is stored (selector-only NV: `AwtoNvCommitSel`, card "Saving to memory", LOG D4 14 after the flush). KVM/auto-search/UP-DOWN steps are not stored.
 E. Cable unplug on the displayed port: signal loss → T8. Cable plug on the idle port: `SysSourceCableDetection` updates `g_stPortCableStatus` every pass; auto search picks it up when the search runs; in a hold it is the `AwtoWakePoll` "another cabled port" rule after 5 s (`hold: auto search, other cable`).
 F. Known failure [issue #84, not in this tree]: EXIT/next input or VCP 0x60 to an uncabled port → fixed-port SEARCH → NOSIGNAL (2 s) → power saving (9.8 s) and never back.
@@ -735,5 +735,5 @@ Closing / losing:
 - /mnt/2tb/git/awto-ddc-ui/tmp/sdcc-port/src/Kernel/User Common Function/Code/UserCommonInterface.c
 - /mnt/2tb/git/awto-ddc-ui/tmp/sdcc-port/src/Kernel/System/Code/SysMode.c
 - /mnt/2tb/git/awto-ddc-ui/tmp/sdcc-port/src/Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c
-- /mnt/2tb/git/awto-ddc-ui/fw/sdcc/awto_fastsw.inc
+- /mnt/2tb/git/awto-ddc-ui/fw/input/fastsw.c
 - /mnt/2tb/git/awto-ddc-ui/fw/awto/sync.tsv
