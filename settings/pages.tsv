@@ -4,7 +4,7 @@
 picture	Picture	-	backlight, brightness, contrast
 colour	Colour	-	gamma, colour temperature, user RGB
 sixaxis	Six-axis colour	colour	per-colour hue / saturation
-display	Display	-	aspect, overscan
+display	Display	-	aspect, overscan, rotate, mirror
 input	Input	-	input select, search, per-input enable, search times
 kvm	KVM switching	-	fast input switch (awto-ddc#60)
 signal	Signal	-	DP version, EDID, HDCP, colour depth, 4:2:0 (awto-ddc#59)

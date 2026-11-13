@@ -3,12 +3,12 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   110u
+#define SET_COUNT   111u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x0273u    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 89u
-#define SET_TEXT_LEN 1886u
-#define SET_AUX_MAX 52u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
+#define SET_SCHEMA  0x5EE9u    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 90u
+#define SET_TEXT_LEN 1910u
+#define SET_AUX_MAX 53u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -40,6 +40,7 @@
 #define SET_ID_ASPECT               30u
 #define SET_ID_OVERSCAN             31u
 #define SET_ID_DISP_ROTATE          32u
+#define SET_ID_MIRROR               117u
 #define SET_ID_LATENCY              33u
 #define SET_ID_FREEZE               34u
 #define SET_ID_INPUT                3u
@@ -164,11 +165,12 @@
 #define AP_PORT                 25u
 #define AP_POWER                26u
 #define AP_POWER_MODE           27u
-#define AP_SDK_LANGUAGE         28u
-#define AP_SDK_SYS              29u
-#define AP_SEARCH_TIME          30u
-#define AP_USER_RGB             31u
-#define AP_VOLUME               32u
+#define AP_ROTATE               28u
+#define AP_SDK_LANGUAGE         29u
+#define AP_SDK_SYS              30u
+#define AP_SEARCH_TIME          31u
+#define AP_USER_RGB             32u
+#define AP_VOLUME               33u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -198,6 +200,7 @@ void set_ap_overscan(uint8_t id, int16_t v);
 void set_ap_port(uint8_t id, int16_t v);
 void set_ap_power(uint8_t id, int16_t v);
 void set_ap_power_mode(uint8_t id, int16_t v);
+void set_ap_rotate(uint8_t id, int16_t v);
 void set_ap_sdk_language(uint8_t id, int16_t v);
 void set_ap_sdk_sys(uint8_t id, int16_t v);
 void set_ap_search_time(uint8_t id, int16_t v);
