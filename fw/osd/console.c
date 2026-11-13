@@ -1,17 +1,707 @@
-// AWTO user-facing OSD screens on the awto text layer (awto_dbgpop.inc helpers, menu font and colours), inserted into
-// RTD2014OsdDisplay.c after awto_dbgpop.inc. The SDK timers and OSD states drive them as before; only the drawing is ours.
+#include "UserCommonInclude.h"
+#include <stddef.h>
+
+// awto OSD screens on the text layer: diagnostic console, debug pop-up (#34), message cards (#124), source selector (#134),
+// backlight bar (#132), key test (#39), GPIO table (#139), watchdog panel (#131), NVRAM flush line (#151).
+#if(_OSD_TYPE == _REALTEK_2014_OSD)
+//---- debug pop-up + shared text helpers ----
+// Shared text layer for every awto diagnostic screen (debug lines, key test, GPIO inputs): ASCII rows composed in s_pcAwtoRow,
+// drawn with the menu's Spleen cells (ui_text); the SDK proportional font is not used here.
+#ifdef _AWTO_NEW_SETTINGS
+extern void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont);
+extern void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour);
+extern void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig);
+extern void osd_tc_place_corner(WORD usLeft, WORD usBottom, BYTE ucBig);
+extern void osd_tc_close(void);
+extern void menu_close(void);
+extern void osd_font_load(BYTE ucFont);
+extern BYTE ui_font_selected(void);
+extern BYTE __xdata osd_cw;
+extern BYTE __xdata osd_rh;
+extern void osd_tc_viewport(BYTE ucRows);
+extern BYTE osd_tc_scroll(BYTE ucFirst);
+extern BYTE osd_font_glyph(char c);
+extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle);
+
+#ifndef AWTO_HOLD_POPUP
+#define AWTO_HOLD_POPUP     0x02                // same value as awto_testcmd.inc (another translation unit)
+#endif
+#define AWTO_T_MAXCOLS      118                 // widest text row: the console log (cols 1..118); probe clamped to this
+#define AWTO_T_STYLE_TEXT   0
+#define AWTO_T_STYLE_ONACC  2
+#define AWTO_T_STYLE_ACCENT 3
+#define AWTO_T_STYLE_ALERT  4                   // red: an input that is not in the I2C ring
+__xdata BYTE g_ucAwtoProbeCols;                  // limit probe columns = 4 * (test cmd 0xC0 + n); 0 = 36
+__xdata BYTE g_ucAwtoProbeLines;                 // limit probe line count (test cmd 0x80 + n); 0 = 24
+__xdata BYTE g_ucAwtoDiagFont;                  // 0 = default (console Spleen 8x16, probe 5x8); else 1 + osd_font_load index (cmd 0x60 + n)
+#define AwtoDiagFont(d)     ((g_ucAwtoDiagFont != 0) ? (g_ucAwtoDiagFont - 1) : (d))
+static __xdata char s_pcAwtoRow[AWTO_T_MAXCOLS];  // #157: glyphs converted in place (no tile copy)
+__xdata BYTE g_ucAwtoDiagSmall;                  // 0 = diagnostic screens at 2x size (default), 1 = 1x (test cmd 0x4B / 0x4A)
+static BYTE s_ucAwtoLen;
+static BYTE s_ucAwtoCols;
+static __xdata _Bool s_bAwtoWrap;                         // main-page log line: a full row sets s_bAwtoOver (AwtoConWrapLine draws two rows)
+static __xdata _Bool s_bAwtoOver;
+static __xdata _Bool s_bAwtoSkip;                         // second pass of a wrapped line: the first s_ucLogI characters are dropped
+static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index; wrap: skip count
+
+// One diagnostic console (AwtoDiagConsole), #144: 120 x 50 shown, Spleen 8x16 at 2x (1920 x 1836 px on the 4K panel).
+// Pages: main (power-on, auto-open) = title + sync / power event log, full width; GPIO (#157) = input table + input changes.
+// Main page = terminal: lines added at the bottom, the map rolls up (hardware roll-up). GPIO page: key test, debug,
+// watchdog below the view (UP / DOWN scroll). Map 120 x 63: cols x rows + rows + 1 < 8192 (docs/osd.md).
+#define AWTO_CON_COLS       120
+#define AWTO_PANEL_ACTIVE_W_MM  597             // Innolux M280DCA-E3B active width (docs/monitors/panel-innolux-m280dca-e3b.md)
+#define AWTO_CON_EDGE_MM    10                  // console box from the left and bottom edges (Dan 2026-11-13)
+#define AWTO_CON_EDGE_PX    ((WORD)((DWORD)_PANEL_DH_WIDTH * AWTO_CON_EDGE_MM / AWTO_PANEL_ACTIVE_W_MM))   // 64 px
+#define AWTO_CON_ROWS       62                  // map rows (+ the pad row AwtoTextOpen adds)
+#define AWTO_VIEW_ROWS      50                  // rows shown at a time; UP / DOWN scroll the view over the map
+#define AWTO_CON_FONT       0                   // osd_font_load index: Spleen 8x16 (8 x 18 cell)
+#define AWTO_LOG_COL        ((s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table
+#define AWTO_LOG_W_MAIN     (AWTO_T_MAXCOLS - 1)                     // main-page log row (cells, incl. the leading space)
+#define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : AWTO_LOG_W_MAIN)
+#define AWTO_LOG_TIME_W     6                   // AwtoSyncLine time column "nnnnn:" (left padded)
+#define AWTO_LOG_TXT0       (1 + AWTO_LOG_TIME_W)                   // text column: a wrapped line continues here (gen_awto_sync.py)
+#define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
+#define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
+#define AWTO_LOG_LINES      (AWTO_VIEW_ROWS - AWTO_LOG_ROW0)
+#define AWTO_LOG_REDRAW_N   ((AWTO_CON_ROWS - AWTO_LOG_ROW0) / 2)   // lines a map-full redraw backfills (2 rows each at most)
+static __xdata BYTE s_ucConOpen;                // 0 closed, else the page: AWTO_CON_MAIN / AWTO_CON_GPIO
+static BYTE s_ucPanelCol;
+static BYTE s_ucPanelRow;
+static const __code BYTE tAwtoPanelCol[3] = {1, 1, 40};
+static const __code BYTE tAwtoPanelRow[3] = {2, 52, 52};
+static const __code BYTE tAwtoPanelW[3] = {60, 36, 36};
+
+// The console owns the OSD only while its map is the one in place. A mode reset or an SDK pop-up replaces the map: then drawing
+// (field writes at console positions) would corrupt that screen, so the console lets go (no OSD change) and returns 1.
+static bit AwtoConLost(void)
+{
+    if((s_ucConOpen == 0) || ((g_ucOsdWidth == AWTO_CON_COLS) && (g_ucOsdHeight == AWTO_CON_ROWS + 1)))
+    {
+        return 0;
+    }
+    s_ucConOpen = 0;
+    AwtoOsdRoll(0);                                                                            // the new map must not be shifted by our roll-up
+    isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
+    AwtoGpioConSet(0);
+    AwtoKeyConSet(0);
+    return 1;
+}
+
+static __xdata BYTE s_ucConFirst;               // first map row shown (hardware roll-up)
+static __xdata BYTE s_ucConRedraw;              // main page: map full, AwtoOsdSyncPoll redraws (next main-loop pass)
+
+void AwtoConScroll(signed char cD)              // GPIO page UP / DOWN (main page scrolls itself, as a terminal)
+{
+    BYTE ucN;
+
+    if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0))
+    {
+        return;
+    }
+    ucN = (cD < 0) ? ((s_ucConFirst != 0) ? (s_ucConFirst - 1) : 0) : (s_ucConFirst + 1);
+    s_ucConFirst = osd_tc_scroll(ucN);
+}
+
+static void AwtoPanel(BYTE ucP)
+{
+    s_ucPanelCol = tAwtoPanelCol[ucP];
+    s_ucPanelRow = tAwtoPanelRow[ucP];
+    s_ucAwtoCols = tAwtoPanelW[ucP];
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+}
+
+void AwtoOsdOfsInit(void)
+{
+    isr_g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
+    isr_g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
+    isr_g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
+}
+
+
+// Grid + frame/surface windows (+ optional title bar), centred, 2x; the OSD stays off until AwtoTextShow.
+static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar)   // ucView: rows shown (0 = all, no scrolling)
+{
+    BYTE ucWin;
+
+    ucLines++;
+    ucWin = (ucView != 0) ? (ucView + 1) : ucLines;                         // one blank pad row: the frame border covers the last 2 px of a full-height row
+    s_ucAwtoCols = ucCols;
+    s_pcAwtoRow[0] = ' ';              // every row starts one cell in, clear of the frame
+    s_ucAwtoLen = 1;
+    osd_tc_open(ucCols, ucLines, AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe font
+    UserCommonInterfacePanelPowerTick();        // #162: map clear and font load are the long parts of a console open (boot,
+                                                // wake): panel steps due meanwhile (T3, backlight-to-PWM) are not held up
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_TEXT, AWTO_RGB_PHOSPHOR_GREEN);       // diagnostic look: green on black, title bar reversed
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_DIM, AWTO_RGB_PHOSPHOR_DIM);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_BG, AWTO_RGB_BLACK);
+    ScalerOsdSetColorPalette(AWTO_PAL_DIAG_ALERT, AWTO_RGB_ALERT_RED);
+    UserCommonInterfacePanelPowerTick();
+    if(ucView != 0)
+    {
+        osd_tc_viewport(ucWin);
+    }
+    osd_tc_bar(0, 0, 0, (WORD)ucCols * osd_cw - 1, (WORD)ucWin * osd_rh - 1, 1);   // frame (accent)
+    osd_tc_bar(1, 2, 2, (WORD)ucCols * osd_cw - 3, (WORD)ucWin * osd_rh - 3, 0);  // surface
+    if(bTitleBar != 0)
+    {
+        osd_tc_bar(2, 2, 2, (WORD)ucCols * osd_cw - 3, osd_rh - 1, 1);              // one row high title bar
+    }
+    osd_tc_place_corner(AWTO_CON_EDGE_PX, AWTO_CON_EDGE_PX, (g_ucAwtoDiagSmall == 0) ? 1 : 0);   // lower left (Dan 2026-11-13)
+}
+
+static void AwtoTextShow(void)
+{
+    OsdFuncEnableOsd();                // not osd_tc_show: that would flag the settings menu as open
+}
+
+static void AwtoPutChar(char c)
+{
+    if(s_bAwtoSkip != 0)
+    {
+        if(--s_ucLogI == 0)
+        {
+            s_bAwtoSkip = 0;
+        }
+    }
+    else if(s_ucAwtoLen < s_ucAwtoCols)
+    {
+        s_pcAwtoRow[s_ucAwtoLen++] = c;
+    }
+    else if(s_bAwtoWrap != 0)
+    {
+        s_bAwtoOver = 1;
+    }
+}
+
+static void AwtoPutCol(BYTE ucCol)
+{
+    while(s_ucAwtoLen < ucCol)
+    {
+        AwtoPutChar(' ');
+    }
+}
+
+static void AwtoPutStr(const char *s)
+{
+    while(*s != 0)
+    {
+        AwtoPutChar(*s++);
+    }
+}
+
+// Digits low first into the row, then reversed in place: no digit buffer (10 B XDATA), no extra local (deep DATA path).
+static void AwtoPutNum(unsigned long ulV, BYTE ucMin)
+{
+    BYTE ucN = s_ucAwtoLen;
+
+    do                                          // ucMin counts the digits put (not the row length: a skipped pass drops them)
+    {
+        AwtoPutChar('0' + (ulV % 10));
+        ulV /= 10;
+        if(ucMin != 0)
+        {
+            ucMin--;
+        }
+    }
+    while(ulV != 0);
+    for(; ucMin != 0; ucMin--)
+    {
+        AwtoPutChar('0');
+    }
+    for(ucMin = s_ucAwtoLen; (BYTE)(ucN + 1) < ucMin; ucN++)
+    {
+        ucMin--;
+        s_pcAwtoRow[ucN] ^= s_pcAwtoRow[ucMin];
+        s_pcAwtoRow[ucMin] ^= s_pcAwtoRow[ucN];
+        s_pcAwtoRow[ucN] ^= s_pcAwtoRow[ucMin];
+    }
+}
+
+static void AwtoPutHex2(BYTE ucV)
+{
+    AwtoPutChar("0123456789ABCDEF"[ucV >> 4]);
+    AwtoPutChar("0123456789ABCDEF"[ucV & 15]);
+}
+
+// ulV in thousandths -> "int.ddd" (#34: every frequency with 3 decimals)
+static void AwtoPutMilli(unsigned long ulV)
+{
+    AwtoPutNum(ulV / 1000, 1);
+    AwtoPutChar('.');
+    AwtoPutNum(ulV % 1000, 3);
+}
+
+static void AwtoPutVolt(BYTE ucRaw)                 // 8 bit ADC code on a 3.3 V reference
+{
+    AwtoPutMilli(((unsigned long)ucRaw * 3300 + 127) / 255);
+    AwtoPutChar('V');
+}
+
+// Generic text write: ucN characters of pc at map row ucRow, column ucCol. pc is overwritten with the glyph ids.
+static void AwtoTextAt(BYTE ucRow, BYTE ucCol, char __xdata *pc, BYTE ucN, BYTE ucStyle)
+{
+    BYTE ucI;
+
+    for(ucI = 0; ucI < ucN; ucI++)
+    {
+        pc[ucI] = osd_font_glyph(pc[ucI]);
+    }
+    osd_tc_cells(ucRow, ucCol, (BYTE __xdata *)pc, ucN, ucStyle);
+}
+
+// Draw the composed row on text line ucLine, padded to the full width so the previous text of that line is overwritten.
+static void AwtoTextLine(BYTE ucLine, BYTE ucStyle)
+{
+    AwtoPutCol(s_ucAwtoCols);
+    AwtoTextAt(s_ucPanelRow + ucLine, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoCols, ucStyle);
+    s_pcAwtoRow[0] = ' ';              // next row: leading space (the draw left glyph ids)
+    s_ucAwtoLen = 1;
+}
+
+// Stack canary hit (AwtoStackCheck, awto_wdt.inc): a small red box, nothing else drawn after it.
+#define AWTO_FATAL_COLS     30
+#define AWTO_FATAL_LINES    2
+void AwtoStackFatal(BYTE ucHigh)
+{
+    AwtoTextOpen(AWTO_FATAL_COLS, AWTO_FATAL_LINES, 0, 0);
+    s_ucPanelRow = 0;
+    s_ucPanelCol = 0;
+    AwtoPutStr("Fatal error: Stack Error!!");
+    AwtoTextLine(0, AWTO_T_STYLE_ALERT);
+    AwtoPutStr("SP high 0x");
+    AwtoPutHex2(ucHigh);
+    AwtoPutStr(" guard 0x");
+    AwtoPutHex2(AWTO_STACK_GUARD);
+    AwtoTextLine(1, AWTO_T_STYLE_ALERT);
+    AwtoTextShow();
+}
+
+// Field update: text composed with AwtoPut* since AwtoFieldBegin is written at exactly row ucRow, column ucCol (nothing else touched).
+static void AwtoFieldBegin(void)
+{
+    s_ucAwtoLen = 0;
+}
+
+static void AwtoFieldEnd(BYTE ucRow, BYTE ucCol, BYTE ucStyle)
+{
+    AwtoTextAt(s_ucPanelRow + ucRow, s_ucPanelCol + ucCol, s_pcAwtoRow, s_ucAwtoLen, ucStyle);
+    s_pcAwtoRow[0] = ' ';              // rows start with the leading space the field just overwrote
+    s_ucAwtoLen = 1;
+}
+
+// Pop-up rows keep their SDK message-card row numbers: row _OSD_MESSAGE_ROW_START + n is text line n + 1 (line 0 = title).
+static void AwtoShowLine(BYTE ucRow, BYTE ucPage)
+{
+    ucPage = ucPage;
+    AwtoTextLine(ucRow - _OSD_MESSAGE_ROW_START + 1, AWTO_T_STYLE_TEXT);
+}
+
+// Rotate-xor hash of s_pcAwtoRow[ucFrom..ucTo): "did this text change" without a copy of it (XDATA).
+static BYTE AwtoRowHash(BYTE ucFrom, BYTE ucTo)
+{
+    BYTE ucH = ucTo - ucFrom;
+
+    while(ucFrom < ucTo)
+    {
+        ucH = (BYTE)((ucH << 3) | (ucH >> 5)) ^ (BYTE)s_pcAwtoRow[ucFrom++];
+    }
+    return ucH;
+}
+
+// Debug panel (#157): a row is written only when its text changed (hash per row); below the view only on the console open.
+static __xdata BYTE s_pucDbgH[5];
+static __xdata BYTE s_ucDbgAll;                 // 1 = draw every row (console open)
+
+static void AwtoDbgShow(BYTE ucRow, BYTE ucPage)
+{
+    BYTE ucN = ucRow - _OSD_MESSAGE_ROW_START;
+    BYTE ucH = AwtoRowHash(0, s_ucAwtoLen);
+
+    if((s_ucDbgAll == 0) && (ucH == s_pucDbgH[ucN]))
+    {
+        s_pcAwtoRow[0] = ' ';
+        s_ucAwtoLen = 1;
+        return;
+    }
+    s_pucDbgH[ucN] = ucH;
+    AwtoShowLine(ucRow, ucPage);
+}
+
+void AwtoOsdDebugLines(void)
+{
+    BYTE ucPort, ucMode, ucPwr;
+    WORD usV;                                      // 0.1 Hz
+
+    if(s_ucConOpen == 0)
+    {
+        AwtoDiagConsole(1);            // an SDK-triggered debug pop-up opens the console (which draws this panel)
+        return;
+    }
+    if(AwtoConLost() != 0) return;
+    isr_g_stAwtoDiag.ucDbgPopup = 0;
+    if((s_ucConOpen != AWTO_CON_GPIO) || ((s_ucDbgAll == 0) && (s_ucConFirst + AWTO_VIEW_ROWS <= tAwtoPanelRow[2])))
+    {
+        return;                        // main page has no panel; below the view: the next refresh after a scroll
+    }
+    ucPort = SysSourceGetInputPort();
+    ucMode = SysModeGetModeState();
+    ucPwr = SysPowerGetPowerStatus();
+    usV = GET_INPUT_TIMING_VFREQ();
+    AwtoPanel(2);
+    if(s_ucDbgAll != 0)
+    {
+        AwtoPutCol(1);
+        AwtoPutStr("DEBUG");
+        AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+    }
+
+    AwtoPutStr((ucPort >= _D0_PORT) ? "D" : "A");
+    AwtoPutNum((ucPort >= _D0_PORT) ? (ucPort - _D0_PORT) : 0, 1);
+    AwtoPutStr(" ");
+    AwtoPutNum(GET_INPUT_TIMING_HWIDTH(), 1);
+    AwtoPutStr("x");
+    AwtoPutNum(GET_INPUT_TIMING_VHEIGHT(), 1);
+    AwtoPutStr(" ");
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutMilli(g_stAwtoFreq.ulVFreqmHz);
+    }
+    else
+    {
+        AwtoPutNum(usV / 10, 1);      // SDK 0.1 Hz value: no exact count yet
+        AwtoPutStr(".");
+        AwtoPutNum(usV % 10, 1);
+    }
+    AwtoPutStr("Hz");
+    AwtoDbgShow(_OSD_MESSAGE_ROW_START, _PFONT_PAGE_0);
+
+    AwtoPutStr(ucMode == _MODE_STATUS_ACTIVE ? "ACTIVE" : (ucMode == _MODE_STATUS_NOSIGNAL ? "NOSIG" : (ucMode == _MODE_STATUS_POWER_SAVING ? "PSAVE" : "MODE")));
+    AwtoPutStr(" ");
+    AwtoPutNum(ucMode, 1);
+    AwtoPutStr("  PWR ");
+    AwtoPutStr(ucPwr == _POWER_STATUS_NORMAL ? "ON" : (ucPwr == _POWER_STATUS_SAVING ? "SAVE" : (ucPwr == _POWER_STATUS_OFF ? "OFF" : "AC")));
+    AwtoPutNum(ucPwr, 1);
+    AwtoDbgShow(_OSD_MESSAGE_ROW_START + 1, _PFONT_PAGE_1);
+
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutStr("PCLK ");
+        AwtoPutMilli(g_stAwtoFreq.ulPclkHz / 1000);
+        AwtoPutStr(" ");
+    }
+    AwtoPutStr("DCLK ");
+    AwtoPutMilli(GET_D_CLK_FREQ());               // kHz
+    AwtoDbgShow(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
+
+    AwtoPutStr("LOOP ");
+    AwtoPutNum(isr_g_stAwtoDiag.usLoopRate, 1);
+    AwtoPutStr("/s");
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutStr("  H ");
+        AwtoPutMilli(g_stAwtoFreq.ulHFreqHz);
+        AwtoPutStr("kHz");
+    }
+    AwtoDbgShow(_OSD_MESSAGE_ROW_START + 3, _PFONT_PAGE_0);
+
+    AwtoPutStr("FW ");
+    AwtoPutStr(AWTO_FW_TAG);
+    AwtoDbgShow(_OSD_MESSAGE_ROW_START + 4, _PFONT_PAGE_1);
+    s_ucDbgAll = 0;
+}
+
+// #157 title row live part: "PANEL 0027.25h  UP 0000.42h  HOST 08:45:10" (+ " STALE"); s_pucConTitleH = hash per 2 cells on screen.
+#define AWTO_TITLE_COL      70                  // after " AWTO DIAGNOSTICS  FW <tag>  <port>  SN <serial>" (tags up to ~21 characters)
+#define AWTO_TITLE_N        48
+static __xdata BYTE s_pucConTitleH[AWTO_TITLE_N / 2];
+static __xdata WORD s_usConTitleMs;
+
+// Time formatters keep their values in XDATA: they sit on the deepest DATA overlay path (flash save -> sync line).
+static __xdata DWORD s_ulAwtoT;                 // AwtoPutClock input: seconds of the day
+
+static void AwtoPutClock(void)                  // s_ulAwtoT -> hh:mm:ss
+{
+    AwtoPutNum(s_ulAwtoT / 3600, 2);
+    AwtoPutChar(':');
+    AwtoPutNum((s_ulAwtoT / 60) % 60, 2);
+    AwtoPutChar(':');
+    AwtoPutNum(s_ulAwtoT % 60, 2);
+}
+
+static void AwtoPutHours(DWORD ulH100)          // hundredths of an hour -> hour meter "0027.25h"
+{
+    AwtoPutNum(ulH100 / 100, 4);
+    AwtoPutChar('.');
+    AwtoPutNum(ulH100 % 100, 2);
+    AwtoPutChar('h');
+}
+
+static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-cell groups that changed (ucAll: every cell)
+{
+    DWORD ulUp = AwtoMs();
+    BYTE ucI, ucJ, ucH;
+
+    s_usConTitleMs = (WORD)ulUp;
+    s_ucAwtoCols = AWTO_TITLE_N;
+    AwtoFieldBegin();
+    AwtoPutStr("PANEL ");
+    AwtoPutHours((DWORD)GET_PANEL_TIME_HOUR() * 100 + (WORD)GET_PANEL_TIME_MIN() * 100 / 60);
+    AwtoPutStr("  UP ");
+    AwtoPutHours(ulUp / 36000);
+    AwtoPutStr("  HOST ");
+    if(isr_g_stAwtoHt.ucSyncs == 0)
+    {
+        AwtoPutStr("--:--:--");
+    }
+    else
+    {
+        s_ulAwtoT = (isr_g_stAwtoHt.ulEpoch + (long)isr_g_stAwtoHt.cOfs * 900 + (ulUp - isr_g_stAwtoHt.ulFwMs + isr_g_stAwtoHt.usFrac) / 1000) % 86400;
+        AwtoPutClock();
+        if((ulUp - isr_g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)
+        {
+            AwtoPutStr(" STALE");
+        }
+    }
+    AwtoPutCol(AWTO_TITLE_N);
+    for(ucI = 0; ucI < AWTO_TITLE_N; ucI = ucJ)
+    {
+        for(ucJ = ucI; ucJ < AWTO_TITLE_N; ucJ += 2)    // hash before the draw: AwtoTextAt turns the run into glyph ids
+        {
+            ucH = AwtoRowHash(ucJ, ucJ + 2);
+            if((ucAll == 0) && (ucH == s_pucConTitleH[ucJ >> 1]))
+            {
+                break;
+            }
+            s_pucConTitleH[ucJ >> 1] = ucH;
+        }
+        if(ucJ != ucI)
+        {
+            AwtoTextAt(s_ucConFirst, AWTO_TITLE_COL + ucI, s_pcAwtoRow + ucI, ucJ - ucI, AWTO_T_STYLE_ONACC);
+        }
+        else
+        {
+            ucJ += 2;
+        }
+    }
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+}
+
+void AwtoConTitlePoll(void)                     // every pass while the console is open (AwtoOsdSyncPoll)
+{
+    WORD usNow;
+
+    usNow = (WORD)AwtoMs();
+    if(((WORD)(usNow - s_usConTitleMs) < AWTO_TITLE_MS) || (s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
+    {
+        return;
+    }
+    AwtoConTitle(0);
+}
+
+// Title row at the top of the view (map row s_ucConFirst): the title bar window is fixed on screen, the map rolls under it.
+static void AwtoPortName(BYTE ucPort);          // source selector section
+
+// Title serial: the EDID of the port in use, descriptor tag 0xFF (up to 13 characters, 0x0A ends it); '-' if none.
+// XDATA, no locals: AwtoConTitleBar also runs under AwtoConLogSync (deep DATA path); inline (no new stub in full common).
+static __xdata BYTE s_ucAwtoSnI, s_ucAwtoSnJ;
+static BYTE __xdata *__xdata s_pucAwtoSn;
+
+static void AwtoConTitleBar(void)
+{
+    s_ucAwtoCols = AWTO_T_MAXCOLS;              // covers a log row (cols 1..AWTO_T_MAXCOLS - 1) rolled under it
+    s_ucPanelCol = 0;
+    s_ucPanelRow = s_ucConFirst;
+    s_ucAwtoLen = 1;
+    if(s_ucConOpen == AWTO_CON_GPIO)            // own screen, menu "GPIO inputs" only (Dan 2026-11-12)
+    {
+        AwtoPutStr("GPIO INPUTS  FW ");
+        AwtoPutStr(AWTO_FW_TAG);
+        AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+        return;
+    }
+    AwtoPutStr(" AWTO DIAGNOSTICS  FW ");      // Dan 2026-11-13: a space before AWTO, the port in use and the serial
+    AwtoPutStr(AWTO_FW_TAG);
+    AwtoPutStr("  ");
+    AwtoPortName(SysSourceGetInputPort());
+    AwtoPutStr("  SN ");
+    s_pucAwtoSn = (SysSourceGetInputPort() == _D1_INPUT_PORT) ? MCU_DDCRAM_D1 : (SysSourceGetInputPort() == _D3_INPUT_PORT) ? MCU_DDCRAM_D3 : MCU_DDCRAM_D2;
+    for(s_ucAwtoSnI = 54; s_ucAwtoSnI <= 108; s_ucAwtoSnI += 18)        // the four 18-byte descriptors of the base block
+    {
+        if((s_pucAwtoSn[s_ucAwtoSnI] == 0) && (s_pucAwtoSn[s_ucAwtoSnI + 1] == 0) && (s_pucAwtoSn[s_ucAwtoSnI + 3] == 0xFF))
+        {
+            break;
+        }
+    }
+    for(s_ucAwtoSnJ = 5; (s_ucAwtoSnI <= 108) && (s_ucAwtoSnJ < 18) && (s_pucAwtoSn[s_ucAwtoSnI + s_ucAwtoSnJ] != 0x0A); s_ucAwtoSnJ++)
+    {
+        AwtoPutChar(s_pucAwtoSn[s_ucAwtoSnI + s_ucAwtoSnJ]);
+    }
+    AwtoTextLine(0, AWTO_T_STYLE_ONACC);
+    AwtoConTitle(1);
+}
+
+// The console: 0 close, AWTO_CON_MAIN / AWTO_CON_GPIO open that page (another page open: drawn anew), 2 toggle the main page.
+void AwtoDiagConsole(BYTE ucOn)
+{
+    if(ucOn == 2)
+    {
+        ucOn = (s_ucConOpen == 0) ? AWTO_CON_MAIN : 0;
+    }
+    if(ucOn == s_ucConOpen)
+    {
+        return;
+    }
+    isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;       // before the disable: a hold blocks it
+    if(ucOn != 0)
+    {
+        menu_close();
+        OsdDispDisableOsd();
+        s_ucConOpen = ucOn;
+        isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
+        AwtoGpioConSet(ucOn);
+        AwtoKeyConSet(ucOn == AWTO_CON_GPIO);   // key test / debug / watchdog panels: GPIO page only (main page = terminal)
+        AwtoTextOpen(AWTO_CON_COLS, AWTO_CON_ROWS, AWTO_VIEW_ROWS, 1);
+        s_ucConFirst = 0;
+        AwtoConTitleBar();
+        if(ucOn == AWTO_CON_GPIO)
+        {
+            AwtoOsdGpioLines();
+            g_stAwtoKey.ucDrawn = 0;
+            AwtoOsdKeyLines();
+            s_ucDbgAll = 1;
+            AwtoOsdDebugLines(); AwtoOsdWdtLines();     // #131 watchdog panel
+        }
+        AwtoConLogInit();
+        s_ucConRedraw = 0;                      // after the backfill: AwtoConLogInit caps a map-full redraw
+        UserCommonInterfacePanelPowerTick();
+        AwtoTextShow();
+    }
+    else
+    {
+        s_ucConOpen = 0;
+        s_ucConRedraw = 0;
+        AwtoGpioConSet(0);
+        AwtoKeyConSet(0);
+        osd_tc_close();
+    }
+}
+
+// Limit probe / generic console (test cmd 0x45 open, 0x46 close, 0x80 + n lines, 0xC0 + n columns = 4 * n, 0x47 / 0x48 hardware scroll
+// step / reset): cols x lines numbered rows in the font chosen with cmd 0x60 + font. Rows go straight to the cell map (osd_tc_cells).
+static __xdata BYTE s_ucAwtoProbeOpen;
+static __xdata BYTE s_ucAwtoScroll;
+static __xdata BYTE s_ucAwtoConCols;
+static __xdata BYTE s_ucAwtoConRows;
+
+static void AwtoConRow(BYTE ucR, BYTE ucCols, BYTE ucStyle)
+{
+    BYTE ucC, ucI;
+
+    for(ucC = 0; ucC < ucCols; ucC++)
+    {
+        if(ucC == 0) ucI = ' ';
+        else if(ucC == 1) ucI = '0' + (ucR / 10) % 10;
+        else if(ucC == 2) ucI = '0' + ucR % 10;
+        else if(ucC == 3) ucI = ' ';
+        else
+        {
+            ucI = (ucR + ucC) % 36;
+            ucI = (ucI < 10) ? ('0' + ucI) : ('A' + ucI - 10);
+        }
+        s_pcAwtoRow[ucC] = osd_font_glyph(ucI);
+    }
+    osd_tc_cells(ucR, 0, (BYTE __xdata *)s_pcAwtoRow, ucCols, ucStyle);
+}
+
+void AwtoProbeSet(BYTE ucLines)
+{
+    BYTE ucR;
+    BYTE ucCols = (g_ucAwtoProbeCols != 0) ? g_ucAwtoProbeCols : 36;
+
+    if(ucCols > AWTO_T_MAXCOLS) ucCols = AWTO_T_MAXCOLS;
+
+    if(ucLines == 0)
+    {
+        if(s_ucAwtoProbeOpen != 0)
+        {
+            s_ucAwtoProbeOpen = 0;
+            isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
+            osd_tc_close();
+        }
+        return;
+    }
+    menu_close();
+    AwtoKeyTestSet(0);
+    AwtoGpioTestSet(0);
+    OsdDispDisableOsd();
+    s_ucAwtoProbeOpen = 1;
+    s_ucAwtoScroll = 0;
+    s_ucAwtoConCols = ucCols;
+    s_ucAwtoConRows = ucLines + 1;
+    isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;
+    AwtoTextOpen(ucCols, ucLines, 0, 1);
+    for(ucR = 0; ucR < ucLines; ucR++)
+    {
+        AwtoConRow(ucR, ucCols, (ucR == 0) ? AWTO_T_STYLE_ONACC : AWTO_T_STYLE_TEXT);
+    }
+    AwtoTextShow();
+}
+
+// Hardware roll-up experiment (regdb 0x3A18 bit7 special enable, bit6 = 0 roll-up; 0x3A19 row base 0, 0x3A1B/0x3A1C font select base 0):
+// start the displayed map one row further down per step.
+void AwtoProbeScroll(BYTE ucReset)
+{
+    if(s_ucAwtoProbeOpen == 0) return;
+    s_ucAwtoScroll = (ucReset != 0) ? 0 : (s_ucAwtoScroll + 1);
+    AwtoOsdRoll(1);
+    ScalerSetByte(AWTO_R_FRAME_CTRL_19, s_ucAwtoScroll);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_1B, (BYTE)~AWTO_F_FRAME_CTRL_1B_FS_BASE0, (BYTE)(((g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols) >> 8) << 4));
+    ScalerSetByte(AWTO_R_FRAME_CTRL_1C, (BYTE)(g_usFontSelectStart + (WORD)s_ucAwtoScroll * s_ucAwtoConCols));
+}
+#else
+void AwtoOsdOfsInit(void)
+{
+    isr_g_stAwtoDiag.ucOsdOfsState = offsetof(StructOsdInfo, usOsdState);
+    isr_g_stAwtoDiag.ucOsdOfsEvent = offsetof(StructOsdInfo, ucOsdEventMsg);
+    isr_g_stAwtoDiag.ucOsdOfsKey = offsetof(StructOsdInfo, ucOsdKeyMessage);
+}
+
+void AwtoOsdDebugLines(void)
+{
+    isr_g_stAwtoDiag.ucDbgPopup = 0;
+}
+
+void AwtoDiagConsole(BYTE ucOn)
+{
+    (void)ucOn;
+}
+
+void AwtoProbeSet(BYTE ucLines)
+{
+    (void)ucLines;
+}
+
+void AwtoProbeScroll(BYTE ucReset)
+{
+    (void)ucReset;
+}
+#endif
+
+//---- user-facing screens: SDK timers and OSD states drive them as before; only the drawing is ours ----
 // - Message cards (#124): OsdDispOsdMessage (the SDK body is removed by keil2sdcc), incl. the ACTIVE input-info card.
 // - Source selector (#134): one row per board port + Auto. Backlight bar (#132): UP / DOWN with a picture.
 #if(!defined(_AWTO_NEW_SETTINGS))
-#error "awto_osdcard.inc draws on the awto text layer (awto_dbgpop.inc, _AWTO_NEW_SETTINGS)"
+#error "console.c draws on the awto text layer (_AWTO_NEW_SETTINGS)"
 #endif
 #if((_FREEZE_SUPPORT == _ON) || (_DP_MST_SUPPORT == _ON))
-#error "awto_osdcard.inc: no card text for the freeze / DP MST messages"
+#error "console.c: no card text for the freeze / DP MST messages"
 #endif
 
-// Board ports from the PCB config (type = port << 4 | kind). ui_port_state (glue.inc) knows D1..D3 only.
+// Board ports from the PCB config (type = port << 4 | kind). ui_port_state (fw/settings/settings_glue.c) knows D1..D3 only.
 #if((_D0_INPUT_PORT_TYPE != _D0_NO_PORT) || (_D4_INPUT_PORT_TYPE != _D4_NO_PORT) || (_D5_INPUT_PORT_TYPE != _D5_NO_PORT) || (_D6_INPUT_PORT_TYPE != _D6_NO_PORT))
-#error "source selector: ui_port_state (glue.inc) covers D1..D3 only"
+#error "source selector: ui_port_state covers D1..D3 only"
 #endif
 extern BYTE ui_port_state(BYTE ucI);
 static const __code BYTE tAwtoSrcType[] = {
@@ -454,7 +1144,7 @@ static void AwtoSyncName(BYTE ucId, BYTE ucArg)    // no locals: XDATA is full (
 static __xdata DWORD s_ulAwtoLnV;               // #157: value + time in XDATA (DATA overlay path depth, see AwtoPutIso)
 static __xdata WORD s_usAwtoLnMs;
 
-static void AwtoPutNvFlush(void);              // #151 fmt nvw: awto_nvpop.inc (last in this file: no string renumbering)
+static void AwtoPutNvFlush(void);              // #151 fmt nvw: NVRAM flush section (last in this file)
 #define ulV s_ulAwtoLnV
 #define usMs s_usAwtoLnMs
 static void AwtoSyncLine(BYTE ucSeq)
@@ -1329,3 +2019,846 @@ void OsdDispOsdMessage(EnumOSDDispMsg enumMessage)  // replaces the SDK body (ke
     }
     AwtoCardShow();
 }
+
+//---- #39 key test screen: rows of the debug pop-up; redrawn by AwtoKeyScan every AWTO_KEY_REFRESH_MS while open ----
+#ifdef _AWTO_NEW_SETTINGS
+static void AwtoPutKeys(BYTE ucMask)            // front keys left to right, space separated
+{
+    if(ucMask == 0)
+    {
+        AwtoPutStr("NONE");
+        return;
+    }
+    if((ucMask & AWTO_KM_SOURCE) != 0)
+    {
+        AwtoPutStr("SOURCE ");
+    }
+    if((ucMask & AWTO_KM_MENU) != 0)
+    {
+        AwtoPutStr("MENU ");
+    }
+    if((ucMask & AWTO_KM_DOWN) != 0)
+    {
+        AwtoPutStr("DOWN ");
+    }
+    if((ucMask & AWTO_KM_UP) != 0)
+    {
+        AwtoPutStr("UP ");
+    }
+    if((ucMask & AWTO_KM_AUTO) != 0)
+    {
+        AwtoPutStr("AUTO ");
+    }
+    if((ucMask & AWTO_KM_POWER) != 0)
+    {
+        AwtoPutStr("POWER");
+    }
+}
+
+static void AwtoPutKeyMsg(BYTE ucMsg)            // one call per literal: a ?: chain of string literals printed garbage (keys2 render)
+{
+    if(ucMsg == _EXIT_KEY_MESSAGE)
+    {
+        AwtoPutStr("MENU");
+    }
+    else if(ucMsg == _RIGHT_KEY_MESSAGE)
+    {
+        AwtoPutStr("UP");
+    }
+    else if(ucMsg == _LEFT_KEY_MESSAGE)
+    {
+        AwtoPutStr("DOWN");
+    }
+    else if(ucMsg == _MENU_KEY_MESSAGE)
+    {
+        AwtoPutStr("AUTO");
+    }
+    else if(ucMsg == AWTO_KEY_MSG_SOURCE)
+    {
+        AwtoPutStr("SOURCE");
+    }
+    else
+    {
+        AwtoPutStr("NONE");
+    }
+}
+
+static void AwtoPutAdc(BYTE ucCh, BYTE ucRaw)   // "A0 7C 15 0.484FS": raw hex, 5-bit code, fraction of full scale (reference not in the regdb)
+{
+    AwtoPutChar('A');
+    AwtoPutNum(ucCh, 1);
+    AwtoPutStr(" ");
+    AwtoPutHex2(ucRaw);
+    AwtoPutStr(" ");
+    AwtoPutNum(ucRaw >> 3, 2);
+    AwtoPutStr(" ");
+    AwtoPutMilli((WORD)ucRaw * 125 / 32);       // R / 256 in thousandths
+    AwtoPutStr("FS");
+}
+
+static BYTE AwtoKeyLetter(BYTE ucI)             // press log entry -> S M D U A P (lower case = injected), '-' = combo, ' ' = empty
+{
+    BYTE ucMask = g_stAwtoKey.pstLog[ucI].ucMask;
+    BYTE ucMsg = g_stAwtoKey.pstLog[ucI].ucMsg;
+    BYTE ucL = ' ';
+
+    if(ucMask == 0)
+    {
+        ucL = (ucMsg == _EXIT_KEY_MESSAGE) ? 'M' : (ucMsg == _RIGHT_KEY_MESSAGE) ? 'U' : (ucMsg == _LEFT_KEY_MESSAGE) ? 'D' :
+              (ucMsg == _MENU_KEY_MESSAGE) ? 'A' : (ucMsg == AWTO_KEY_MSG_SOURCE) ? 'S' : ' ';
+    }
+    else
+    {
+        ucL = (ucMask == AWTO_KM_SOURCE) ? 'S' : (ucMask == AWTO_KM_MENU) ? 'M' : (ucMask == AWTO_KM_DOWN) ? 'D' :
+              (ucMask == AWTO_KM_UP) ? 'U' : (ucMask == AWTO_KM_AUTO) ? 'A' : (ucMask == AWTO_KM_POWER) ? 'P' : '-';
+    }
+    if(((g_stAwtoKey.pstLog[ucI].ucFlags & AWTO_KEY_F_INJ) != 0) && (ucL >= 'A') && (ucL <= 'Z'))
+    {
+        ucL += 'a' - 'A';
+    }
+    return ucL;
+}
+
+void AwtoOsdKeyLines(void)
+{
+    BYTE ucK;
+
+    _Bool bFirst = (g_stAwtoKey.ucDrawn == 0);
+
+    g_stAwtoKey.ucDrawn = 1;
+    g_stAwtoKey.ucRedraws++;
+    if(AwtoConLost() != 0) return;
+    AwtoPanel(1);
+    if(bFirst != 0)
+    {
+        AwtoPutCol(1);
+        AwtoPutStr("KEY TEST");
+        AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+    }
+
+    AwtoPutAdc(0, g_stAwtoKey.ucA0);
+    AwtoShowLine(_OSD_MESSAGE_ROW_START, _PFONT_PAGE_0);
+    AwtoPutAdc(1, g_stAwtoKey.ucA1);
+    AwtoPutStr(" P30 ");                         // the POWER pin: 1 idle, 0 = pressed
+    AwtoPutNum(g_stAwtoKey.ucP30 & AWTO_KEY_F_P30, 1);
+    AwtoShowLine(_OSD_MESSAGE_ROW_START + 1, _PFONT_PAGE_1);
+
+    AwtoPutStr("KEY ");
+    AwtoPutKeys(g_stAwtoKey.ucMask);
+    AwtoShowLine(_OSD_MESSAGE_ROW_START + 2, _PFONT_PAGE_2);
+
+    AwtoPutStr("MSG ");
+    AwtoPutKeyMsg(g_stAwtoKey.ucMsg);
+    AwtoPutStr(" R");
+    AwtoPutNum(g_stAwtoKey.ucFlags & 0x01, 1);
+    AwtoPutNum((g_stAwtoKey.ucFlags >> 1) & 0x01, 1);
+    AwtoPutStr(" H");
+    AwtoPutNum((g_stAwtoKey.ucFlags >> 2) & 0x01, 1);
+    if((g_stAwtoKey.ucFlags & AWTO_KEY_F_INJ) != 0)
+    {
+        AwtoPutStr(" INJ");
+    }
+    AwtoShowLine(_OSD_MESSAGE_ROW_START + 3, _PFONT_PAGE_0);
+
+    AwtoPutStr("LAST");
+    for(ucK = AWTO_KEY_LAST_N; ucK != 0; ucK--)      // oldest left, newest right
+    {
+        AwtoPutStr(" ");
+        AwtoPutChar(AwtoKeyLetter((g_stAwtoKey.ucCount - ucK) & (AWTO_KEY_LOG_N - 1)));
+    }
+    AwtoShowLine(_OSD_MESSAGE_ROW_START + 4, _PFONT_PAGE_1);
+
+    AwtoPutStr("N ");
+    AwtoPutNum(g_stAwtoKey.ucCount, 1);
+    AwtoPutStr(" CLOSE UP DOWN");
+    AwtoShowLine(_OSD_MESSAGE_ROW_START + 5, _PFONT_PAGE_2);
+}
+#else
+void AwtoOsdKeyLines(void)
+{
+}
+#endif
+
+//---- GPIO table ----
+// Diagnostic input table on the console (panel 0): one row per input in fw/awto/inputs.tsv, drawn with the Spleen text layer.
+// The whole row is drawn once (console open); after that only the changed field of a changed input is written, at its exact column.
+#ifdef _AWTO_NEW_SETTINGS
+#define AWTO_G_ROWS         AWTO_IN_ROWS
+#define AWTO_G_LINES        (AWTO_G_ROWS + 3)           // title, header, rows, footer: 42 lines in the 5x8 font
+#define AWTO_G_L_FIRST      2
+#define AWTO_TCOL_NAME      1
+#define AWTO_TCOL_PIN       8
+#define AWTO_TCOL_STATE     12
+#define AWTO_TCOL_RAW       15
+#define AWTO_TCOL_VALUE     20
+#define AWTO_TCOL_DESC      28
+
+// GENERATED-BEGIN awto_inputs
+// kind 0 bit, 1 analog (deadband), 2 byte; src: see awto_gpio.inc AwtoInRead; flags bit0 = screen row, bit1 = logged in the ring
+static const __code BYTE tAwtoInKindS[AWTO_IN_N] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0,
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0};
+static const __code BYTE tAwtoInPinS[AWTO_IN_N] = {
+    65, 66, 67, 68, 69, 70, 74, 75, 94, 95, 96, 71,
+    55, 56, 57, 58, 59, 60, 61, 62, 63, 194, 113, 1,
+    14, 97, 198, 204, 206, 207, 208, 196, 159, 161, 184, 185,
+    201, 202, 190, 0, 0, 0, 0, 0};
+static const __code BYTE tAwtoInFlagsS[AWTO_IN_N] = {
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3,
+    3, 3, 3, 3, 1, 1, 1, 3, 3, 3, 3, 3,
+    3, 3, 3, 2, 2, 2, 2, 2};
+
+static void AwtoInName(BYTE ucI)
+{
+    switch(ucI)
+    {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            AwtoPutStr("GPIO"); break;
+        case 8:
+            AwtoPutStr("ADC0"); break;
+        case 9:
+            AwtoPutStr("ADC1"); break;
+        case 10:
+            AwtoPutStr("ADC2"); break;
+        case 11:
+            AwtoPutStr("POWER"); break;
+        case 12:
+            AwtoPutStr("AVS"); break;
+        case 13:
+            AwtoPutStr("AHS"); break;
+        case 14:
+            AwtoPutStr("BM"); break;
+        case 15:
+            AwtoPutStr("BP"); break;
+        case 16:
+            AwtoPutStr("GM"); break;
+        case 17:
+            AwtoPutStr("GP"); break;
+        case 18:
+            AwtoPutStr("SOG"); break;
+        case 19:
+            AwtoPutStr("RM"); break;
+        case 20:
+            AwtoPutStr("RP"); break;
+        case 21:
+            AwtoPutStr("IR"); break;
+        case 22:
+            AwtoPutStr("HPSEL"); break;
+        case 23:
+            AwtoPutStr("H2HPD"); break;
+        case 24:
+            AwtoPutStr("H1HPD"); break;
+        case 25:
+            AwtoPutStr("DPHPD"); break;
+        case 26:
+            AwtoPutStr("H2CBL"); break;
+        case 27:
+            AwtoPutStr("H1CBL"); break;
+        case 28:
+            AwtoPutStr("DPS17"); break;
+        case 29:
+            AwtoPutStr("DPS15"); break;
+        case 30:
+            AwtoPutStr("DPS16"); break;
+        case 31:
+            AwtoPutStr("BLEN"); break;
+        case 32:
+            AwtoPutStr("PNLPW"); break;
+        case 33:
+            AwtoPutStr("MUTE"); break;
+        case 34:
+            AwtoPutStr("PWR1"); break;
+        case 35:
+            AwtoPutStr("PWR2"); break;
+        case 36:
+            AwtoPutStr("PWR3"); break;
+        case 37:
+            AwtoPutStr("PWR4"); break;
+        case 38:
+            AwtoPutStr("FLWP"); break;
+        case 39:
+            AwtoPutStr("SOURCE"); break;
+        case 40:
+            AwtoPutStr("MENU"); break;
+        case 41:
+            AwtoPutStr("DOWN"); break;
+        case 42:
+            AwtoPutStr("UP"); break;
+        case 43:
+            AwtoPutStr("AUTO"); break;
+        default: break;
+    }
+}
+
+static void AwtoInText(BYTE ucI)
+{
+    switch(ucI)
+    {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 11:
+            AwtoPutStr("DIGITAL"); break;
+        case 8:
+        case 9:
+        case 10:
+            AwtoPutStr("VOLT"); break;
+        case 12:
+        case 13:
+        case 18:
+            AwtoPutStr("SYNC"); break;
+        case 14:
+        case 15:
+        case 16:
+        case 17:
+        case 19:
+        case 20:
+            AwtoPutStr("CMP"); break;
+        case 21:
+        case 22:
+        case 23:
+        case 24:
+        case 25:
+        case 26:
+        case 27:
+        case 28:
+        case 29:
+        case 30:
+            AwtoPutStr("IN"); break;
+        case 31:
+        case 32:
+        case 33:
+        case 34:
+        case 35:
+        case 36:
+        case 37:
+        case 38:
+            AwtoPutStr("OUT"); break;
+        default: break;
+    }
+}
+
+#define AWTO_TXT_DESCHDR       44
+#define AWTO_TXT_LOGHDR        45
+#define AWTO_TXT_MS            46
+#define AWTO_TXT_MARK          47
+static const __code char tAwtoTxtS[] = "spare pad, high-Z input\0key ladder A0: MENU UP AUTO\0key ladder A1: SOURCE DOWN\0spare ADC, 3.3 V full scale\0front POWER key, 1 = pressed\0analog VGA vertical sync\0analog VGA horizontal sync\0VGA blue- compare flag\0VGA blue+ compare flag\0VGA green- compare flag\0VGA green+ compare flag\0VGA sync on green\0VGA red- compare flag\0VGA red+ compare flag\0IR receiver, idle high\0speaker / headphone select\0HDMI-2 hot-plug output\0HDMI-1 hot-plug output\0DisplayPort hot-plug output\0HDMI-2 cable detect, 0 = cable\0HDMI-1 cable detect, 0 = cable\0DP connector pin 17 (AUX-)\0DP connector pin 15 (AUX+)\0DP connector pin 16 (GND)\0backlight enable, 0 = on\0panel power enable, 1 = on\0speaker amp, 1 = enabled\0power-state output P8.4\0power-state output P8.5\0power-state open drain P9.7\0power-state open drain PA.0\0SPI flash write protect\0\0DESCRIPTION\0EVENT LOG\0 MS  \0-----\0";
+static const __code WORD tAwtoTxtOffS[48] = {0, 0, 0, 0, 0, 0, 0, 0, 24, 52, 79, 107, 136, 161, 188, 211, 234, 258, 282, 300, 322, 344, 367, 394, 417, 440, 468, 499, 530, 557, 584, 610, 635, 662, 687, 711, 735, 763, 791, 815, 815, 815, 815, 815, 816, 828, 838, 844};
+static void AwtoTxt(BYTE ucI)                  // input description (0..AWTO_IN_N-1) or AWTO_TXT_*
+{
+    const __code char *pc = &tAwtoTxtS[tAwtoTxtOffS[ucI]];
+
+    while(*pc != 0)
+    {
+        AwtoPutChar(*pc);
+        pc++;
+    }
+}
+// GENERATED-END awto_inputs
+
+static BYTE AwtoInStyle(BYTE ucI)               // red = not in the I2C ring (inputs.tsv log = n)
+{
+    return ((tAwtoInFlagsS[ucI] & 2) != 0) ? AWTO_T_STYLE_TEXT : AWTO_T_STYLE_ALERT;
+}
+
+static void AwtoInRowFull(BYTE ucI)
+{
+    BYTE ucV = g_stAwtoGpio.ucIn[ucI];
+    BYTE ucK = tAwtoInKindS[ucI];
+
+    AwtoPutCol(AWTO_TCOL_NAME); AwtoInName(ucI);
+    AwtoPutCol(AWTO_TCOL_PIN); AwtoPutNum(tAwtoInPinS[ucI], 1);
+    AwtoPutCol(AWTO_TCOL_STATE);
+    if(ucK == 0) AwtoPutNum(ucV, 1); else AwtoPutChar('-');
+    AwtoPutCol(AWTO_TCOL_RAW);
+    if(ucK == 1) AwtoPutNum(ucV, 3); else if(ucK == 2) AwtoPutHex2(ucV); else AwtoPutChar('-');
+    AwtoPutCol(AWTO_TCOL_VALUE);
+    if(ucK == 1) AwtoPutVolt(ucV); else AwtoInText(ucI);
+    AwtoPutCol(AWTO_TCOL_DESC); AwtoTxt(ucI);
+    AwtoTextLine(AWTO_G_L_FIRST + ucI, AwtoInStyle(ucI));
+}
+
+static void AwtoInRowField(BYTE ucI)
+{
+    BYTE ucV = g_stAwtoGpio.ucIn[ucI];
+    BYTE ucK = tAwtoInKindS[ucI];
+
+    AwtoFieldBegin();
+    if(ucK == 0)
+    {
+        AwtoPutNum(ucV, 1);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_STATE, AwtoInStyle(ucI));
+    }
+    else if(ucK == 1)
+    {
+        AwtoPutNum(ucV, 3);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_RAW, AwtoInStyle(ucI));
+        AwtoFieldBegin();
+        AwtoPutVolt(ucV);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_VALUE, AwtoInStyle(ucI));
+    }
+    else
+    {
+        AwtoPutHex2(ucV);
+        AwtoFieldEnd(AWTO_G_L_FIRST + ucI, AWTO_TCOL_RAW, AwtoInStyle(ucI));
+    }
+}
+
+static void AwtoTableStatic(void)
+{
+    AwtoPutCol(1); AwtoPutStr("GPIO INPUT DIAGNOSTICS");
+    AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+    AwtoPutCol(AWTO_TCOL_NAME); AwtoPutStr("INPUT");
+    AwtoPutCol(AWTO_TCOL_PIN); AwtoPutStr("PIN");
+    AwtoPutCol(AWTO_TCOL_STATE); AwtoPutStr("S");
+    AwtoPutCol(AWTO_TCOL_RAW); AwtoPutStr("RAW");
+    AwtoPutCol(AWTO_TCOL_VALUE); AwtoPutStr("VALUE");
+    AwtoPutCol(AWTO_TCOL_DESC); AwtoTxt(AWTO_TXT_DESCHDR);
+    AwtoTextLine(1, AWTO_T_STYLE_ACCENT);
+    AwtoPutCol(1); AwtoPutStr("I2C 44 CLOSE");
+    AwtoTextLine(AWTO_G_L_FIRST + AWTO_G_ROWS, AWTO_T_STYLE_ACCENT);
+    AwtoPutCol(1); AwtoPutStr("RED = NOT IN THE I2C CHANGE LOG");
+    AwtoTextLine(AWTO_G_L_FIRST + AWTO_G_ROWS + 1, AWTO_T_STYLE_ALERT);
+}
+
+void AwtoOsdGpioLines(void)
+{
+    _Bool bAll = (g_stAwtoGpio.ucDrawn == 0);
+    BYTE ucI;
+
+    if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0)) return;
+    AwtoPanel(0);
+    if(bAll != 0)
+    {
+        AwtoTableStatic();
+    }
+    for(ucI = 0; ucI < AWTO_G_ROWS; ucI++)
+    {
+        if(bAll != 0)
+        {
+            AwtoInRowFull(ucI);
+        }
+        else if((g_stAwtoGpio.ucDirty[ucI >> 3] & ((BYTE)1 << (ucI & 7))) != 0)
+        {
+            AwtoInRowField(ucI);
+        }
+    }
+    for(ucI = 0; ucI < (AWTO_IN_N + 7) / 8; ucI++)
+    {
+        g_stAwtoGpio.ucDirty[ucI] = 0;
+    }
+    g_stAwtoGpio.ucAny = 0;
+    g_stAwtoGpio.ucDrawn = 1;
+    g_stAwtoGpio.ucRedraws++;
+}
+
+// Log pane (#144, #157): main page = sync / power lines, full width; GPIO page = input changes only (right of the table).
+// One line per entry, newest above the "-----" marker.
+static __xdata BYTE s_ucLogHead;
+static __xdata BYTE s_ucLogFull;                // 0 = first lap: rows below the head are blank, so lines are drawn unpadded
+
+static __xdata BYTE s_ucConSyncSeq;             // #139: sync ring seq the log has shown up to
+
+void AwtoConLogInit(void)
+{
+    s_ucLogHead = 0;
+    s_ucLogFull = 0;
+    s_ucPanelCol = AWTO_LOG_COL;
+    s_ucAwtoCols = AWTO_LOG_W;
+    s_ucPanelRow = AWTO_LOG_HDR;
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+    if(s_ucConOpen == AWTO_CON_GPIO)
+    {
+        AwtoPutStr("INPUT CHANGES (NOT IN THE EVENT LOG)");
+        AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+#define AWTO_LOG_IN         g_stAwtoGpio.pstLog[s_ucLogI & (AWTO_GPIO_LOG_N - 1)]
+        for(s_ucLogI = g_stAwtoGpio.ucSeq - AWTO_GPIO_LOG_N; s_ucLogI != g_stAwtoGpio.ucSeq; s_ucLogI++)
+        {
+            if(AWTO_LOG_IN.ucSeq == s_ucLogI)       // an entry of this ring lap (zeroed slots carry another seq)
+            {
+                AwtoConLogEvent(AWTO_LOG_IN.ucId, AWTO_LOG_IN.ucVal, ((WORD)AWTO_LOG_IN.ucTickHi << 8) | AWTO_LOG_IN.ucTickLo);
+            }
+        }
+#undef AWTO_LOG_IN
+        return;
+    }
+    AwtoTxt(AWTO_TXT_LOGHDR);
+    AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+    s_ucConSyncSeq = (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, g_stAwtoSync.ucEpSeq) <= AWTO_SYNC_N) ? g_stAwtoSync.ucEpSeq :
+                     AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, AWTO_SYNC_N);   // backfill the current episode (what the ring still has)
+    if((s_ucConRedraw != 0) && (AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, s_ucConSyncSeq) > AWTO_LOG_REDRAW_N))
+    {
+        s_ucConSyncSeq = AWTO_SYNC_BACK(g_stAwtoSync.ucSeq, AWTO_LOG_REDRAW_N);   // map-full redraw: fits even if every line wraps
+    }
+    AwtoConLogSync();
+}
+
+static void AwtoConLogStart(void)               // next log row: compose with AwtoPut*, then AwtoConLogEnd
+{
+    s_ucPanelCol = AWTO_LOG_COL;
+    s_ucAwtoCols = AWTO_LOG_W;
+    s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+    s_bAwtoWrap = (s_ucConOpen == AWTO_CON_MAIN);
+    s_bAwtoOver = 0;
+}
+
+// Main page: 1 = the next log row is in view (rolled up one row if it was below); 0 = map end, full redraw requested.
+static bit AwtoConLogRoom(void)
+{
+    if((s_ucConOpen != AWTO_CON_MAIN) || (AWTO_LOG_ROW0 + s_ucLogHead < s_ucConFirst + AWTO_VIEW_ROWS))
+    {
+        return 1;
+    }
+    if((AWTO_LOG_ROW0 + s_ucLogHead < AWTO_CON_ROWS) && (osd_tc_scroll(s_ucConFirst + 1) != s_ucConFirst))
+    {
+        s_ucConFirst++;
+        AwtoConTitleBar();                      // title over the new top row (its log line scrolls off)
+        return 1;
+    }
+    s_ucConRedraw = 1;                          // roll-up limit (map rows, 12-bit base): redraw from the ring
+    return 0;
+}
+
+// Main-page log line wider than a row (s_bAwtoOver): the row is drawn up to its last space, the line composed again with that
+// part dropped and the rest continued on the next row at the text column. Two rows at most (gen_awto_sync.py checks the
+// texts). No locals: under AwtoConLogSync (deep DATA path), the second AwtoSyncLine is one level down only.
+static void AwtoConWrapLine(void)
+{
+    s_bAwtoWrap = 0;
+    s_bAwtoOver = 0;
+    if(AWTO_LOG_ROW0 + s_ucLogHead + 1 >= s_ucConFirst + AWTO_VIEW_ROWS)
+    {
+        if((AWTO_LOG_ROW0 + s_ucLogHead + 1 >= AWTO_CON_ROWS) || (osd_tc_scroll(s_ucConFirst + 1) == s_ucConFirst))
+        {
+            s_ucConRedraw = 1;                  // map end: the row is clipped until the redraw (next pass) shows the line
+            return;
+        }
+        s_ucConFirst++;                         // title bar redrawn by AwtoConLogEnd (the row buffer is in use here)
+    }
+    s_ucLogI = s_ucAwtoLen;                     // s_ucLogI = characters to drop on the second pass (free: tail lines never wrap)
+    while((--s_ucLogI > AWTO_LOG_TXT0) && (s_pcAwtoRow[s_ucLogI] != ' '))
+    {
+    }
+    if(s_ucLogI <= AWTO_LOG_TXT0)
+    {
+        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucAwtoLen, AWTO_T_STYLE_TEXT);    // no space: break at the edge
+        s_ucLogI = s_ucAwtoLen - 1;
+    }
+    else
+    {
+        AwtoTextAt(s_ucPanelRow, s_ucPanelCol, s_pcAwtoRow, s_ucLogI, AWTO_T_STYLE_TEXT);       // the space is dropped too
+    }
+    for(s_ucAwtoLen = 0; s_ucAwtoLen < AWTO_LOG_TXT0; s_ucAwtoLen++)
+    {
+        s_pcAwtoRow[s_ucAwtoLen] = ' ';
+    }
+    s_ucPanelRow++;
+    s_bAwtoSkip = 1;
+    AwtoSyncLine(s_ucConSyncSeq);
+    s_bAwtoSkip = 0;
+    s_bAwtoOver = 1;                            // AwtoConLogSync: one wrapped line per call (each costs two compositions)
+}
+
+static void AwtoConLogEnd(void)
+{
+    if(s_ucConOpen == AWTO_CON_MAIN)            // terminal: rows only go down; a long line takes two (AwtoConWrapLine)
+    {
+        s_bAwtoWrap = 0;
+        AwtoTextLine(0, AWTO_T_STYLE_TEXT);
+        if(s_ucPanelRow != AWTO_LOG_ROW0 + s_ucLogHead)
+        {
+            s_ucLogHead++;
+            if(s_ucPanelRow + 1 == s_ucConFirst + AWTO_VIEW_ROWS)
+            {
+                AwtoConTitleBar();              // AwtoConWrapLine may have rolled the map up under the title
+            }
+        }
+        s_ucLogHead++;
+        return;
+    }
+    if((s_ucLogFull == 0) && (s_ucAwtoLen < s_ucAwtoCols))
+    {
+        s_ucAwtoCols = (s_ucAwtoLen > 6) ? s_ucAwtoLen : 6;     // over a marker (6 cells) or a blank row
+    }
+    AwtoTextLine(0, AWTO_T_STYLE_TEXT);
+    s_ucLogHead = (s_ucLogHead + 1 >= AWTO_LOG_LINES) ? 0 : (s_ucLogHead + 1);
+    if(s_ucLogHead == 0)
+    {
+        s_ucLogFull = 1;
+    }
+    s_ucAwtoCols = (s_ucLogFull != 0) ? AWTO_LOG_W : 6;
+    s_ucPanelRow = AWTO_LOG_ROW0 + s_ucLogHead;      // marker on the next row: also blanks the oldest line (after a wrap)
+    s_pcAwtoRow[0] = ' ';
+    s_ucAwtoLen = 1;
+    AwtoTxt(AWTO_TXT_MARK);
+    AwtoTextLine(0, AWTO_T_STYLE_ACCENT);
+}
+
+void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)    // GPIO page only: input changes never go into the event log
+{
+    if((s_ucConOpen != AWTO_CON_GPIO) || (AwtoConLost() != 0))
+    {
+        return;
+    }
+    AwtoConLogStart();
+    AwtoPutNum(usTick, 5); AwtoTxt(AWTO_TXT_MS); AwtoInName(ucId); AwtoPutChar(' '); AwtoPutChar(' '); AwtoPutNum(ucVal, 1);
+    AwtoConLogEnd();
+}
+
+// #157 "host time <ISO>" + its "(fw +N ms, ...)" entry on one row: the fw entry's text without its "nnnnn:" prefix.
+// XDATA, no locals: AwtoConLogSync sits on the deepest DATA overlay path (see AwtoPutIso).
+static void AwtoConLogTail(void)
+{
+    s_bAwtoWrap = 0;                            // fits one row (gen_awto_sync.py): cells are moved below, no wrap
+    s_ucLogI = s_ucAwtoLen;
+    AwtoSyncLine(s_ucConSyncSeq);
+    s_pcAwtoRow[s_ucLogI] = ' ';
+    for(s_ucLogI += AWTO_LOG_TIME_W; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // drop the AwtoSyncLine time column
+    {
+        s_pcAwtoRow[s_ucLogI - (AWTO_LOG_TIME_W - 1)] = s_pcAwtoRow[s_ucLogI];
+    }
+    s_ucAwtoLen = s_ucLogI - (AWTO_LOG_TIME_W - 1);     // max(len, start + time column) - (time column - 1)
+    s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
+}
+
+#define AWTO_LOG_EV(s)      (g_stAwtoSync.stEv[AWTO_SYNC_IDX(s)].ucId)
+void AwtoConLogSync(void)                       // #139: new sync ring lines, one log row each (same decoder as the selector)
+{
+    if(AWTO_CON_LIVE() == _FALSE)
+    {
+        return;                                 // #162 s3: a fast switch's frame checks first; the OSD poll draws the lines after
+    }
+    while(s_ucConSyncSeq != g_stAwtoSync.ucSeq)
+    {
+        if((s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
+        {
+            return;
+        }
+        if((AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOST) && (AWTO_SYNC_NEXT(s_ucConSyncSeq) == g_stAwtoSync.ucSeq))
+        {
+            return;                             // its fw line is pushed next (AwtoHtSync): both on one row then
+        }
+        if(AwtoConLogRoom() == 0)
+        {
+            return;                             // the redraw backfills it
+        }
+        AWTO_WDT_FEED(AWTO_WDT_S_CONLINE);      // bounded: <= AWTO_SYNC_N lines (a map-full redraw backfills AWTO_LOG_REDRAW_N in one pass)
+        AwtoConLogStart();
+        AwtoSyncLine(s_ucConSyncSeq);
+        if(s_bAwtoOver != 0)
+        {
+            AwtoConWrapLine();
+        }
+        s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
+        if((s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_LOG_EV(s_ucConSyncSeq) == AWTO_SYNC_EV_HOSTFW) &&
+           (AWTO_LOG_EV(AWTO_SYNC_BACK(s_ucConSyncSeq, 1)) == AWTO_SYNC_EV_HOST))
+        {
+            AwtoConLogTail();
+        }
+        AwtoConLogEnd();
+        if(s_bAwtoOver != 0)
+        {
+            s_bAwtoOver = 0;
+            return;                             // the rest next pass: a burst of wide lines bit the watchdog (con_wrap_sim)
+        }
+    }
+}
+#else
+void AwtoOsdGpioLines(void)
+{
+}
+
+void AwtoConLogInit(void)
+{
+}
+
+void AwtoConLogEvent(BYTE ucId, BYTE ucVal, WORD usTick)
+{
+    (void)ucId; (void)ucVal; (void)usTick;
+}
+
+void AwtoConLogSync(void)
+{
+}
+#endif
+
+//---- watchdog panel of the diagnostic console (#131): last bite from isr_g_stAwtoWdt ----
+#if((_AWTO_WDT == _ON) && (defined(_AWTO_NEW_SETTINGS)))
+#define AWTO_WDT_POP_COL    79                  // #144: right of the debug panel, below the console view
+#define AWTO_WDT_POP_ROW    52
+#define AWTO_WDT_POP_W      36
+
+static void AwtoWdtPutWord(BYTE ucHi, BYTE ucLo)
+{
+    AwtoPutHex2(ucHi);
+    AwtoPutHex2(ucLo);
+}
+
+void AwtoOsdWdtLines(void)
+{
+    BYTE ucOk = AwtoWdtValid();
+    BYTE ucC = isr_g_stAwtoWdt.ucCause;
+
+    s_ucPanelCol = AWTO_WDT_POP_COL;
+    s_ucPanelRow = AWTO_WDT_POP_ROW;
+    s_ucAwtoCols = AWTO_WDT_POP_W;
+    s_ucAwtoLen = 1;
+    AwtoPutStr("WATCHDOG");
+    if(ucOk != 0)
+    {
+        AwtoPutStr("  BITES ");
+        AwtoPutNum(isr_g_stAwtoWdt.ucBites, 1);
+        AwtoPutStr(" WARM ");
+        AwtoPutNum(isr_g_stAwtoWdt.ucWarm, 1);
+    }
+    AwtoTextLine(0, ((isr_g_stAwtoWdt.ucBoot & AWTO_WDT_B_NEW) != 0) ? AWTO_T_STYLE_ALERT : AWTO_T_STYLE_ACCENT);
+    isr_g_stAwtoWdt.ucBoot &= ~AWTO_WDT_B_NEW;      // shown
+    if((ucOk == 0) || (isr_g_stAwtoWdt.ucBites == 0))
+    {
+        AwtoPutStr("NO BITE RECORDED");
+        AwtoTextLine(1, AWTO_T_STYLE_TEXT);
+    }
+    else
+    {
+        AwtoPutStr(((ucC & 0x3F) == AWTO_WDT_C_STALL) ? "STALL" : "?");
+        AwtoPutStr(((ucC & AWTO_WDT_C_TMODE) != 0) ? " TMODE" : "");
+        AwtoPutStr(((ucC & AWTO_WDT_C_TEST) != 0) ? " TEST" : "");
+        AwtoPutStr("  PASS AGE ");
+        AwtoPutNum(((WORD)isr_g_stAwtoWdt.ucPassAgeHi << 8) | isr_g_stAwtoWdt.ucPassAgeLo, 1);
+        AwtoPutStr("MS");
+        AwtoTextLine(1, AWTO_T_STYLE_TEXT);
+        AwtoPutStr("PC ");
+        if(isr_g_stAwtoWdt.ucPcHi >= 0x50)
+        {
+            AwtoPutHex2(isr_g_stAwtoWdt.ucBank);
+        }
+        else
+        {
+            AwtoPutStr("C");
+        }
+        AwtoPutChar(':');
+        AwtoWdtPutWord(isr_g_stAwtoWdt.ucPcHi, isr_g_stAwtoWdt.ucPcLo);
+        AwtoPutStr(" TOP ");
+        AwtoWdtPutWord(isr_g_stAwtoWdt.ucRetHi, isr_g_stAwtoWdt.ucRetLo);
+        AwtoPutStr(" SP ");
+        AwtoPutHex2(isr_g_stAwtoWdt.ucSp);
+        AwtoTextLine(2, AWTO_T_STYLE_TEXT);
+        AwtoPutStr("A ");
+        AwtoPutHex2(isr_g_stAwtoWdt.ucAcc);
+        AwtoPutStr(" B ");
+        AwtoPutHex2(isr_g_stAwtoWdt.ucB);
+        AwtoPutStr(" PSW ");
+        AwtoPutHex2(isr_g_stAwtoWdt.ucPsw);
+        AwtoPutStr(" DPTR ");
+        AwtoWdtPutWord(isr_g_stAwtoWdt.ucDph, isr_g_stAwtoWdt.ucDpl);
+        AwtoTextLine(3, AWTO_T_STYLE_TEXT);
+        AwtoPutStr("HB ");
+        AwtoPutNum(((WORD)isr_g_stAwtoWdt.ucHbHi << 8) | isr_g_stAwtoWdt.ucHbLo, 1);
+        AwtoPutStr(" UP ");
+        AwtoPutNum(((WORD)isr_g_stAwtoWdt.ucUpHi << 8) | isr_g_stAwtoWdt.ucUpLo, 1);
+        AwtoPutStr("MS ST ");
+        AwtoPutNum(isr_g_stAwtoWdt.ucStage, 1);
+        AwtoPutStr(" MODE ");
+        AwtoPutNum(isr_g_stAwtoWdt.ucMode, 1);
+        AwtoTextLine(4, AWTO_T_STYLE_TEXT);
+    }
+    AwtoPutStr("THIS BOOT ");
+    AwtoPutStr(((isr_g_stAwtoWdt.ucBoot & AWTO_WDT_B_COLD) != 0) ? "COLD" : ((isr_g_stAwtoWdt.ucBoot & AWTO_WDT_B_AFTER) != 0) ? "BITE" :
+               ((isr_g_stAwtoWdt.ucBoot & AWTO_WDT_B_HWWDT) != 0) ? "HW WDT" : "WARM");
+    AwtoPutStr(" MAX PASS ");                   // x32 ms; poke gap x32 CNT3 = 4.58 ms (RL6449_Project.h)
+    AwtoPutNum((WORD)isr_g_stAwtoWdt.ucMaxPass << 5, 1);
+    AwtoPutStr(" POKE ");
+    AwtoPutNum(((WORD)isr_g_stAwtoWdt.ucMaxPoke * 293) >> 6, 1);
+    AwtoPutStr("MS AT ");
+    AwtoPutNum(g_ucAwtoPokeSite, 1);            // AWTO_WDT_S_* (#150)
+    AwtoTextLine(5, AWTO_T_STYLE_TEXT);
+    AwtoPutStr("PROBE ");
+    AwtoPutHex2(isr_g_stAwtoWdt.ucProbe);           // AWTO_WDT_P_*: 01 timer 02 armed 04 IRQ 08 reset 10 no reset
+    AwtoTextLine(6, AWTO_T_STYLE_TEXT);
+}
+#elif(_AWTO_WDT == _ON)
+void AwtoOsdWdtLines(void)
+{
+}
+#endif
+
+//---- #151 fmt nvw: the NVRAM flush result line (AwtoSyncLine case 22) ----
+// Fields: RL6449_Project.h AWTO_NV_LOG_*; host copy: scripts/sync_log.py nv_flush. No locals (DATA path).
+static __xdata WORD s_usAwtoNvF, s_usAwtoNvM;
+static __xdata BYTE s_ucAwtoNvG;
+
+static void AwtoPutNvF(void)                    // field s_usAwtoNvF; "+" when saturated (at s_usAwtoNvM)
+{
+    AwtoPutNum(s_usAwtoNvF, 1);
+    if(s_usAwtoNvF >= s_usAwtoNvM)
+    {
+        AwtoPutChar('+');
+    }
+}
+
+static void AwtoPutNvG(BYTE ucBit, const char *pcName)
+{
+    if(((BYTE)(s_ulAwtoLnV >> 27) & ucBit) != 0)
+    {
+        AwtoPutStr((s_ucAwtoNvG != 0) ? ", " : " (");
+        AwtoPutStr(pcName);
+        s_ucAwtoNvG = 1;
+    }
+}
+
+static void AwtoPutNvFlush(void)
+{
+    s_usAwtoNvF = (WORD)s_ulAwtoLnV & AWTO_NV_LOG_MS_MAX;
+    s_usAwtoNvM = AWTO_NV_LOG_MS_MAX;
+    if((s_ulAwtoLnV >> 19) == 0)                // no item, program or erase
+    {
+        AwtoPutStr("nothing changed, no flash write (");
+        AwtoPutNvF();
+        AwtoPutStr("ms)");
+        return;
+    }
+    AwtoPutStr("wrote ");
+    s_usAwtoNvF = (WORD)(s_ulAwtoLnV >> 9) & AWTO_NV_LOG_B_MAX;
+    s_usAwtoNvM = AWTO_NV_LOG_B_MAX;
+    AwtoPutNvF();
+    AwtoPutStr("B");
+    s_ucAwtoNvG = 0;
+    AwtoPutNvG(AWTO_NV_LOG_G_SYS, "system data");
+    AwtoPutNvG(AWTO_NV_LOG_G_OSD, "OSD data");
+    AwtoPutNvG(AWTO_NV_LOG_G_COLOUR, "colour");
+    AwtoPutNvG(AWTO_NV_LOG_G_PANEL, "panel time");
+    AwtoPutNvG(AWTO_NV_LOG_G_AUX, "awto settings");
+    AwtoPutStr((s_ucAwtoNvG != 0) ? ") in " : " in ");
+    s_usAwtoNvF = (WORD)(s_ulAwtoLnV >> 19) & AWTO_NV_LOG_PR_MAX;
+    s_usAwtoNvM = AWTO_NV_LOG_PR_MAX;
+    AwtoPutNvF();
+    AwtoPutStr((s_usAwtoNvF == 1) ? " program, " : " programs, ");
+    s_usAwtoNvF = (WORD)(s_ulAwtoLnV >> 25) & AWTO_NV_LOG_ER_MAX;
+    s_usAwtoNvM = AWTO_NV_LOG_ER_MAX;
+    AwtoPutNvF();
+    AwtoPutStr((s_usAwtoNvF == 1) ? " erase, " : " erases, ");
+    s_usAwtoNvF = (WORD)s_ulAwtoLnV & AWTO_NV_LOG_MS_MAX;
+    s_usAwtoNvM = AWTO_NV_LOG_MS_MAX;
+    AwtoPutNvF();
+    AwtoPutStr("ms");
+}
+
+#endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

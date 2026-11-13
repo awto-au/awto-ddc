@@ -35,7 +35,7 @@ Never write bare "vendor": say which one.
 - Font SRAM size (12288 words) is the SDK constant, not read back from hardware; see [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
 
 ### Realtek SDK engine (RTD2014 demo OSD, compiled into our image)
-- Ours on the text layer (`fw/sdcc/awto_osdcard.inc` in awto-ddc-ui): message cards and the input-info card (`OsdDispOsdMessage`, SDK body removed, #124), source selector (`AwtoSourceOpen` / `AwtoSourceKey`, SDK hot-key source menu removed, #134). SDK timers and OSD states still drive them.
+- Ours on the text layer (`fw/osd/console.c`): message cards and the input-info card (`OsdDispOsdMessage`, SDK body removed, #124), source selector (`AwtoSourceOpen` / `AwtoSourceKey`, SDK hot-key source menu removed, #134). SDK timers and OSD states still drive them.
 - Still SDK-drawn: DDC/CI and DP-version hot-key menus (proportional font, `OsdPropPutString*`, `tFONT1_GLOBAL`, VLC icons).
 - DDC/CI and DP-version hot-key menus: no normal entry point left (#122).
 - Source: Realtek SDK `RTD2014*Osd*.c`, rewritten by `scripts/keil2sdcc.py` (generated output in `tmp/sdcc-port/src`); drawn by `OsdDispOsdMessage` and the OSD state machine.
@@ -44,9 +44,9 @@ Never write bare "vendor": say which one.
 
 ### Our parts
 - Diagnostic console (#89, #128; #34 closed)
-  - Code: `awto_dbgpop.inc` (`AwtoDiagConsole`), `awto_keytest.inc`, `awto_gpio.inc` in `awto-ddc-ui/fw/sdcc/`.
+  - Code: `fw/osd/console.c` (`AwtoDiagConsole`), `awto_keytest.inc`, `awto_gpio.inc` in `awto-ddc-ui/fw/sdcc/`.
   - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `sync_console`), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42: main page. Menu "GPIO inputs" / test cmd 0x43: GPIO page. Closed by UP+DOWN, 0x44. Host: `scripts/osd_test.py`.
-  - Look: green on black (palette 1..4 set in `awto_dbgpop.inc`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
+  - Look: green on black (palette 1..4 set in `fw/osd/console.c`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
   - Grid 120 columns x 63 map rows; 50 rows shown (1920 x 1836 px on the 3840 x 2160 panel), UP / DOWN scroll (`AwtoConScroll`).
   - Pages (#157; `AwtoDiagConsole(AWTO_CON_MAIN / AWTO_CON_GPIO)`, a page change redraws the map):
     - Main (power-on, auto-open, UP+DOWN): title row + sync / power event log, cols 1..118, 47 lines, live at each sync push. Host time + its fw ms on one row.

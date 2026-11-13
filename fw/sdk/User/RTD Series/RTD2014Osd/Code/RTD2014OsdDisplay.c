@@ -3963,9 +3963,6 @@ void OsdDispPanelUniformityMsgSwitch(void)
 // Input Value  :
 // Output Value :
 //--------------------------------------------------
-#define AWTO_FW_TAG "@FW_TAG@"
-#include "awto_dbgpop.inc"
-#include "awto_osdcard.inc"
 
 #if(_VGA_SUPPORT == _ON)
 //--------------------------------------------------
@@ -4956,8 +4953,4 @@ void OsdDispAdvanceItemSelect(BYTE ucIndex)
     }
 }
 
-#include "awto_keypop.inc"
-#include "awto_gpiopop.inc"
-#include "awto_wdtpop.inc"
-#include "awto_nvpop.inc"
 #endif//#if(_OSD_TYPE == _REALTEK_2014_OSD)

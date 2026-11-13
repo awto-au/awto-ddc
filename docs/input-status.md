@@ -3,7 +3,7 @@
 Firmware: branch `wb-p14ui-sync` (`/mnt/2tb/git/awto-ddc-sync`); rtdfw branch `ui-sync` (`/mnt/2tb/git/awto-rtdfw-sync`, registry row 110).
 Sim test: `scripts/sync_sim.py`; selector checks in `scripts/key_sim_test.py`; host decoder `scripts/sync_log.py`, `rtd_diag.py --sync`.
 
-## Selector (fw/sdcc/awto_osdcard.inc)
+## Selector (fw/osd/console.c)
 - Stays open until AUTO (take) or MENU (cancel). No SDK OSD timeout, no close by an earlier card's pending timer.
 - No picture (no signal / no cable / power saving / no support): `AWTO_SRC_SLEEP_SEC` (60 s) without a key, then the SDK power-saving card (2 s) and power saving. No-signal / no-cable cards do not replace an open selector.
 - A mode reset (signal lost, cable change) still closes it (SDK `UserInterfaceAdjustOsdResetProc`).

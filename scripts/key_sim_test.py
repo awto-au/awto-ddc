@@ -146,7 +146,7 @@ class Keys:
         self.fails += 0 if ok else 1
 
 
-SRC_COLS = 46               # awto_osdcard.inc AWTO_SRC_COLS (#139: per-port status lines)
+SRC_COLS = 46               # fw/osd/console.c AWTO_SRC_COLS (#139: per-port status lines)
 OSD_TIMEOUT_S = 30          # an SDK OSD timeout > 10 s (RTD2014Key: <= 10 = never); registry osd_timeout default is 30
 OSD_TIMEOUT_OFF = 4         # StructOSDUserDataType.ucOsdTimeout (RTD2014NVRamOsd.h: usBackLight, ucOsdHPos, ucOsdVPos first)
 SDK_PSAVE_S = 3 + 2         # SDK no-signal way in: power-saving card after 3 s, power saving 2 s later (RTD2014Osd.c)

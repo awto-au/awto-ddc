@@ -422,8 +422,9 @@ extern void AwtoDiagTestCmd(void);
 extern bit AwtoHoldBlocksDisable(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);
+#define AWTO_FW_TAG                                             "@FW_TAG@"      // build tag: msg_tokenise substitutes it in fw/sdk only (console title)
 extern unsigned char __code tFONT1_ICON_INFORMATION[];          // awto mark main-menu icon: fw/osd/mark_icon.c (osd_icon_encode.py)
-// #39 key test screen + press log (fw/sdcc/awto_keytest.inc, awto_keypop.inc): read over debug slave 0x35 at map symbol _g_stAwtoKey
+// #39 key test screen + press log (fw/sdcc/awto_keytest.inc, fw/osd/console.c): read over debug slave 0x35 at map symbol _g_stAwtoKey
 // (host: scripts/rtd_keywatch.py --log). Bytes only, so the layout is the same in LE and BE images.
 #define AWTO_KEY_LOG_N                                          16      // press-log entries (ring, newest at index (ucCount - 1) % 16)
 #define AWTO_KEY_REFRESH_MS                                     80      // screen redraw period: 100 ms (10 Hz floor) / 1.25
@@ -961,7 +962,7 @@ typedef struct
     unsigned char ucT0Hi;                       // usT2Isr at its start
     unsigned char ucT0Lo;
     unsigned char ucDone;                       // mode reached ACTIVE / NOSIGNAL / NOSUPPORT / POWER SAVING since the start
-    unsigned char ucOpenReq;                    // console auto-open pending (awto_osdcard.inc AwtoSyncConPoll); AWTO_SYNC_OPEN_KEY = by UP+DOWN
+    unsigned char ucOpenReq;                    // console auto-open pending (fw/osd/console.c AwtoSyncConPoll); AWTO_SYNC_OPEN_KEY = by UP+DOWN
     unsigned char ucSpare;                      // #150: repeats of the last line pair not yet written (AwtoSyncPush)
     unsigned char ucN;                          // AWTO_SYNC_N: entries in the ring (hosts size the read from this)
     unsigned char ucWrap;                       // AWTO_SYNC_WRAP
@@ -1082,7 +1083,7 @@ extern void AwtoHtSync(unsigned char *puc);
 #else
 #define AWTO_PS_CABLE_SDK()                                     _TRUE
 #endif
-// selector stage codes (AwtoSyncStage): texts in awto_osdcard.inc tAwtoCardS from AWTO_CT_STAGE
+// selector stage codes (AwtoSyncStage): texts in fw/osd/console.c tAwtoCardS from AWTO_CT_STAGE
 #define AWTO_SYNC_ST_IDLE                                       0
 #define AWTO_SYNC_ST_SEARCH                                     1
 #define AWTO_SYNC_ST_SCAN                                       2
@@ -1151,7 +1152,7 @@ extern void AwtoConLogSync(void);
 // per pass: call only with work to do (console open, auto-open pending, selector open); a call every pass costs loop rate (#139)
 #define AWTO_OSD_SYNC_POLL()                                    { if((g_stAwtoSync.ucOpenReq != 0) || AWTO_KEY_TEST_ON() || \
                                                                      (GET_OSD_STATE() == _MENU_HOTKEY_SOURCE)) { AwtoOsdSyncPoll(); } }
-// #144 power-on: mode INITIAL opens the console with the live power-on log (awto_osdcard.inc AwtoBootConsole), then
+// #144 power-on: mode INITIAL opens the console with the live power-on log (fw/osd/console.c AwtoBootConsole), then
 // panel + backlight on so it shows while the input syncs. _OFF: the panel comes on at display setting (no boot console).
 #ifndef AWTO_PS_CABLE_SDK
 #define AWTO_PS_CABLE_SDK()                                     _TRUE   // no #144 wake poll (sync log off)

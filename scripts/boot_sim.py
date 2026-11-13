@@ -28,7 +28,7 @@ import sync_log as S  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_sim.log"
-CON_COLS, CON_MAP_ROWS = 120, 63      # awto_dbgpop.inc AWTO_CON_COLS, AWTO_CON_ROWS + pad row
+CON_COLS, CON_MAP_ROWS = 120, 63      # fw/osd/console.c AWTO_CON_COLS, AWTO_CON_ROWS + pad row
 AFTER_MS = 300                        # after ACTIVE: the console has had display setting + active proc behind it
 BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
 STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)

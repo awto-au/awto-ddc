@@ -179,11 +179,11 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3392	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	418	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	455	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4291	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4448	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4792	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4680	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4550	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4288	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4445	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4789	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4677	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4547	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1090	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1094	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	458	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead

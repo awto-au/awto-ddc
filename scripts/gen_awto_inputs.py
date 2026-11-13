@@ -5,7 +5,7 @@ usage: gen_awto_inputs.py [--check]
   Rewrites the blocks between `GENERATED-BEGIN awto_inputs` / `GENERATED-END awto_inputs` markers in:
     fw/sdk/Project/Header/RL6449_Project.h   (counts + index defines)
     fw/sdcc/awto_gpio.inc                        (tables for the poller)
-    fw/sdcc/awto_gpiopop.inc                     (tables + name / label functions for the screen)
+    fw/osd/console.c                             (tables + name / label functions for the screen)
   --check: exit 1 when any block is out of date (for tests / gates).
 Log: tmp/logs/gen_awto_inputs.log
 """
@@ -150,7 +150,7 @@ def main():
     r = rows()
     targets = [(ROOT / "fw/sdk/Project/Header/RL6449_Project.h", header_block(r)),
                (ROOT / "fw/sdcc/awto_gpio.inc", table_block(r, ("Kind", "Src", "A", "B", "Addr", "Flags"))),
-               (ROOT / "fw/sdcc/awto_gpiopop.inc", table_block(r, ("Kind", "Pin", "Flags"), "S") + "\n\n" + names_block(r))]
+               (ROOT / "fw/osd/console.c", table_block(r, ("Kind", "Pin", "Flags"), "S") + "\n\n" + names_block(r))]
     stale = 0
     for path, blk in targets:
         new, old = patch(path, blk)

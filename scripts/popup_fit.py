@@ -7,7 +7,7 @@ usage: popup_fit.py [--list] [--tree DIR]
   A row is OK when its width stays under LIMIT_PX (BYTE, with margin) and so inside the 24-cell text area. A row over it wraps: the
   byte sum overflows, the centring pad goes wrong and the map spills into the next row.
   A font page holds the glyph cells of its two rows (page 0 40 cells, 1 56, 2 48): a page over capacity wraps and overwrites.
-  Rows below = the WORST CASE of every format string in fw/sdcc/awto_keypop.inc (key screen) and awto_dbgpop.inc (debug pop-up),
+  Rows below = the WORST CASE of every format string in fw/osd/console.c (key screen, debug pop-up),
   built from the same glyph mapping as AwtoPutChar (anything else prints '?'). Glyph widths come from the SDK font width table
   of the ported tree (tmp/sdcc-port/src ... FontWidthTable.h). Exit 1 when a row does not fit. Log: tmp/logs/popup_fit.log
 """
@@ -70,7 +70,7 @@ def width(w, idx, s):
 # page capacity (cells): the SDK keeps one dynamic glyph cell per 12 px of text per page; rows (0,3) page 0, (1,4) page 1, (2,5) page 2;
 # a page that runs out wraps its pointer and overwrites the first row's cells (RTD2014Include.h _OSD_PAGE_n_START/_END)
 PAGE_CELLS = {0: 0x27 - 0x00 + 1, 1: 0x5F - 0x28 + 1, 2: 0xF0 - 0xC1 + 1}
-# (screen, row, page, worst-case text) mirroring the C format strings (fw/sdcc/awto_keypop.inc / awto_dbgpop.inc).
+# (screen, row, page, worst-case text) mirroring the C format strings (fw/osd/console.c).
 # A0 / A1 ladders hold one key each, so at most 3 keys are down: one of MENU UP AUTO, one of SOURCE DOWN, and POWER.
 ROWS = [
     ("key", "A0", 0, "A0 FF 31 0.996FS"),

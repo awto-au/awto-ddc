@@ -30,8 +30,8 @@ import sync_log as SL  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
-LOG_COL = 1            # awto_dbgpop.inc AWTO_LOG_COL (main page)
-TXT0 = 11              # text column (awto_dbgpop.inc AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
+LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
+TXT0 = 11              # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
 POWER_KEY, K_SOURCE = 0x3E, 0x05
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3
 MODE_ACTIVE = 3
@@ -165,14 +165,14 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
     ap.add_argument("--map", type=Path)
-    ap.add_argument("--tree", type=Path, help="worktree: AWTO_LOG_TXT0 from fw/sdcc/awto_dbgpop.inc")
+    ap.add_argument("--tree", type=Path, help="worktree: AWTO_LOG_TXT0 from fw/osd/console.c")
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/len/con_wrap")
     a = ap.parse_args()
     global TXT0
     if a.tree:
         sys.path.insert(0, str(a.tree / "scripts"))
         import gen_awto_sync as G                       # noqa: E402
-        TXT0 = G.c_int("AWTO_LOG_TXT0", a.tree / "fw/sdcc/awto_dbgpop.inc")
+        TXT0 = G.c_int("AWTO_LOG_TXT0", a.tree / "fw/osd/console.c")
     mapp = a.map or a.bin.with_suffix(".map")
     say(f"=== con_wrap_sim {a.bin.name} (text column {TXT0}) ===")
     s = Sim(a.bin, mapp)

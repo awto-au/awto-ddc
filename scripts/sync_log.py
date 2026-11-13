@@ -126,7 +126,7 @@ NV_GROUPS = ("system data", "OSD data", "colour", "panel time", "awto settings")
 
 
 def nv_flush(v: int) -> str:
-    """#151 fmt nvw (firmware copy: awto_osdcard.inc AwtoPutNvFlush): groups << 27 | erases << 25 | programs << 19 |
+    """#151 fmt nvw (firmware copy: fw/osd/console.c AwtoPutNvFlush): groups << 27 | erases << 25 | programs << 19 |
     bytes << 9 | ms; each field saturates at its max ("+")"""
     def f(x, mx):
         return f"{x}+" if x >= mx else str(x)

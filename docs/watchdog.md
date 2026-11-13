@@ -1,6 +1,6 @@
 # Watchdog, crash canary and boot reason (#131, #138, #29)
 
-- Firmware: `awto-ddc-wdt2` branch `wb-p14ui-wdt2` (from wb-p14ui 1c82a51). Files: `fw/sdcc/awto_wdt.inc`, `awto_t0ev.inc`, `awto_wdtpop.inc`,
+- Firmware: `awto-ddc-wdt2` branch `wb-p14ui-wdt2` (from wb-p14ui 1c82a51). Files: `fw/sdcc/awto_wdt.inc`, `awto_t0ev.inc`, `fw/osd/console.c`,
   `crt_rtd_startup.asm`, `fw/awto/wdt/rules.py`, `RL6449_Project.h` (`StAwtoWdt`, `AWTO_WDT_*`).
 - Host: `scripts/wdt_test.py` (sim + unit 2 runner), `wdt_sim.py` (boot gaps, Timer0 events, loop rate), `crash_sim_test.py`, `poke_loops.py`
   (static loop check, table `re/poke_loops.tsv`), `rtd_crash.py` (record v2, `--snap`), `sync_log.py` (boot reason line), `fw_sim.py` `ChipReset`.

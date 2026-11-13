@@ -179,7 +179,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
 | 23 | rtdfw glue: RTD2014Osd.c end `glue.inc`, RTD2014Key.c end `glue_key.inc` | settings glue | settings | #67 |
-| 24 | wdt rules.py | `awto_wdt.inc` (SysMain.c), `AwtoWdtInit` before EA, `awto_wdtpop.inc` | watchdog | #131 |
+| 24 | wdt rules.py | `awto_wdt.inc` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |
 | 25 | ScalerCommonTimerFunction.c end | `awto_t0ev.inc` | timers | #138 |
 
 ### 2.4 SUBS (keil2sdcc.py:341-532 + wdt/settings rules.py)
@@ -254,10 +254,10 @@ Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PAN
 | path | what | owner |
 |---|---|---|
 | SDK message/state machine | `RTDOsdSystemFlowProc/EventMsgProc`, `_USER_TIMER_EVENT_OSD_*`, `OsdDispDisableOsd` | SDK |
-| cards | awto_osdcard.inc:`OsdDispOsdMessage` (SDK body removed) | ours, called by SDK events |
+| cards | fw/osd/console.c:`OsdDispOsdMessage` (SDK body removed) | ours, called by SDK events |
 | source selector | `AwtoSourceOpen/Key/Step`, `AwtoOsdSyncPoll` | ours, opened by SDK no-signal/wake event and keys |
 | console (boot/diag) | `AwtoBootConsole` (SDK INITIAL hook), `AwtoDiagConsole`, `AwtoSyncConPoll` auto-open, test cmds, UP+DOWN | ours |
-| key/GPIO/WDT panels | awto_keypop/gpiopop/wdtpop | ours |
+| key/GPIO/WDT panels | fw/osd/console.c | ours |
 | awto menu | rtdfw settings/menu.c + ui.c; `AwtoMenuForget`, `AwtoSetLoop` | ours |
 | SDK hot-key DDC/CI + DP-version menus, factory menu, `AWTO_REALTEK_MENU_OPEN` | RTD2014Osd.c | SDK (reachable by test cmd only) |
 | OSD teardown | every mode reset → `OsdDispDisableOsd` | SDK, takes the console (`AwtoConLost`) |
@@ -629,7 +629,7 @@ Blocking waits are listed with their durations. "Log:" lists every line that rea
 SDK chain, with our changes marked:
 1. Search finds nothing: `SysJudgeHandler` SEARCH → NOSIGNAL when `SOURCE_SWITCH_FINISH`. LOG: `mode NO SIGNAL` (01 05). (In the hold model the judge-failed-in-ACTIVE case goes to the L1/L2/L3 path instead; see T8.)
 2. `RTDOsdSystemFlowProc` (NOSIGNAL change): `ScalerTimerActiveTimerEvent(SEC(2), …SHOW_NO_SIGNAL or SHOW_NO_CABLE)` depending on the cable of the NVRAM search port.
-3. After 2 s: `_OSDEVENT_SHOW_NOSIGNAL_MSG` / `…NOCABLE…`: `OsdDispOsdMessage` (our card, awto_osdcard.inc) + `PanelPowerAction(_BACKLIGHT_ON)` (backlight on if it was blanked/off) + timer SEC(3) `SHOW_POWER_SAVING`. In the selector case `AwtoSourceOpen` arms its own sleep rule instead of the 3 s timer (#139 sub).
+3. After 2 s: `_OSDEVENT_SHOW_NOSIGNAL_MSG` / `…NOCABLE…`: `OsdDispOsdMessage` (our card, fw/osd/console.c) + `PanelPowerAction(_BACKLIGHT_ON)` (backlight on if it was blanked/off) + timer SEC(3) `SHOW_POWER_SAVING`. In the selector case `AwtoSourceOpen` arms its own sleep rule instead of the 3 s timer (#139 sub).
 4. After 3 s: `_OSDEVENT_SHOW_POWER_SAVING_EVENT_MSG`: `OsdDispDisableOsd()` (kills the console/selector), `OsdDispOsdMessage(POWER_SAVING)` card, `_BACKLIGHT_ON`, timer SEC(2) `GO_TO_POWER_SAVING`.
 5. After 2 s: `_OSDEVENT_GO_TO_POWER_SAVING_EVENT_MSG`: `OsdDispDisableOsd()`, `SysPowerSetTargetPowerStatus(SAVING)`. (Alternative route: `SysModeHandler` in POWER_SAVING sets the target when `SOURCE_SWITCH_FINISH && UserInterfaceGetIntoPSStatus()`; that is FALSE while any OSD is enabled.)
 6. `SysPowerHandler` (NORMAL → SAVING, `UserCommonInterfaceCheckFakeSaving` false) → `SysPowerSwitch(NORMAL_TO_PS)`:

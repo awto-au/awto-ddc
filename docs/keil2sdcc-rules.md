@@ -187,8 +187,8 @@
 | `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | boot logo removed | #144 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | main-loop watchdog | #131 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | menu forgets a closed OSD | #67 | 1 |
-| `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | removed; message cards: fw/sdcc/awto_osdcard.inc | #124 | 1 |
-| `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | removed; source selector: fw/sdcc/awto_osdcard.inc | #134 | 3 |
+| `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | removed; message cards: fw/osd/console.c | #124 | 1 |
+| `User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c` | behaviour | removed; source selector: fw/osd/console.c | #134 | 3 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c` | behaviour | early panel VDD (AwtoPanelVddEarly) | #63 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c` | behaviour | no input icons (the selector is text) | #134 | 1 |
 | `User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c` | behaviour | our info mark replaces the SDK bubble | #46 | 1 |

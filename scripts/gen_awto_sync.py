@@ -4,14 +4,14 @@
 usage: gen_awto_sync.py [--check]
   Rewrites the blocks between `GENERATED-BEGIN <name>` / `GENERATED-END <name>` markers in:
     fw/sdcc/awto_sync.inc     awto_sync_rows: event filter / row lookup (id, arg) -> row (SysMain translation unit)
-    fw/sdcc/awto_osdcard.inc  awto_sync_text: per-row format + text, one table + one reader (awto-sdcc#39: same bank)
+    fw/osd/console.c          awto_sync_text: per-row format + text, one table + one reader (awto-sdcc#39: same bank)
                               awto_port_sigs: one row per port signal (source, columns, labels)
     RL6449_Project.h          awto_port_cnt: edge counters the input monitor keeps for `cnt` signals
   The sync.tsv texts are also read by the host decoder (scripts/sync_log.py in awto-ddc main).
   Texts may hold {NAME} / {NAME/DIV}: the integer #define in RL6449_Project.h (resolve(); wb_build.py copies the resolved tsv for the host).
   --check: exit 1 when any block is out of date.
   Line width (every run): each row's worst-case console line (longest name / value at every %, port prefix, time column)
-    must fit 2 rows of the main-page log (AWTO_LOG_W_MAIN cells, continuation at AWTO_LOG_TXT0: awto_dbgpop.inc); exit 1 if not.
+    must fit 2 rows of the main-page log (AWTO_LOG_W_MAIN cells, continuation at AWTO_LOG_TXT0: fw/osd/console.c); exit 1 if not.
 Log: tmp/logs/gen_awto_sync.log
 """
 import argparse
@@ -285,8 +285,7 @@ def cnt_block(cnts):
 
 
 # ---- console line width (Dan 2026-11-12: no line clipped): worst case per row vs the console log row ---------------------
-DBGPOP = ROOT / "fw/sdcc/awto_dbgpop.inc"
-OSDCARD = ROOT / "fw/sdcc/awto_osdcard.inc"
+DBGPOP = OSDCARD = ROOT / "fw/osd/console.c"
 GLOBAL_H = ROOT / "fw/sdk/Kernel/Common/Global.h"
 DEF_RE = re.compile(r"^#define[ \t]+(\w+)[ \t]+([^/\n]+?)[ \t]*(?://.*)?$", re.M)
 DW = 10                                              # digits of a 32-bit ring value (every value field is a DWORD)
@@ -444,8 +443,8 @@ def main():
     s, cnts = port_sigs()
     stale = 0
     for path, name, blk in ((ROOT / "fw/sdcc/awto_sync.inc", "awto_sync_rows", rows_block(r)),
-                            (ROOT / "fw/sdcc/awto_osdcard.inc", "awto_sync_text", text_block(r)),
-                            (ROOT / "fw/sdcc/awto_osdcard.inc", "awto_port_sigs", ps_block(s)),
+                            (OSDCARD, "awto_sync_text", text_block(r)),
+                            (OSDCARD, "awto_port_sigs", ps_block(s)),
                             (ROOT / "fw/sdk/Project/Header/RL6449_Project.h", "awto_port_cnt", cnt_block(cnts))):
         new, old = patch(path, name, blk)
         if new != old:

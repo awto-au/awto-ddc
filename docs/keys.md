@@ -1,7 +1,7 @@
 # Front keys
 
 Code: `fw/sdcc/awto_keys.inc` (`AwtoKeyPoll` debounce / combo / repeat, `AwtoKeyRoute` the one dispatcher), reader `fw/sdcc/awto_gpio.inc`,
-selector + backlight bar `fw/sdcc/awto_osdcard.inc`, menu `awto-rtdfw awto/settings/menu.c`.
+selector + backlight bar `fw/osd/console.c`, menu `awto-rtdfw awto/settings/menu.c`.
 Decisions: awto-ddc#132 (Dan, 2026-11-12). Key names are the printed ones, left to right: SOURCE, MENU, DOWN, UP, AUTO, POWER.
 
 ## Reader
