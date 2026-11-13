@@ -222,7 +222,7 @@ def sys_value(rows: list[dict], fmt: str, a: int, v: int) -> str:
 def line(rows: list[dict], ev: tuple, t0: int) -> str:
     i, a, ms, v = ev
     dt = (ms - t0) & 0xFFFF
-    head = f"{dt}:"
+    head = f"{dt:5d}:"
     row = next((r for r in rows if r["id"] == i and (r["arg"] is None or r["arg"] == a)), None)
     if row is None:
         return head + f"event {i:02X} {a:02X}"

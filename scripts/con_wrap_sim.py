@@ -135,7 +135,7 @@ class Sim:
             if len(g) > 2:
                 bad.append(f"{len(g)} rows: {g[0].strip()[:60]}")
                 continue
-            body = g[0].split(":", 1)[1].rstrip()                 # time column "ms:" is not padded
+            body = g[0].split(":", 1)[1].rstrip()                 # after the "nnnnn:" time column
             if len(g) == 2:
                 wraps += 1
                 cont = g[1][TXT0:].rstrip()
@@ -148,7 +148,7 @@ class Sim:
         for g in groups:
             say("    " + " / ".join(x.rstrip() for x in g))
         self.check(not bad, f"{name}: every console line whole (one or two rows, the ring's text)", "; ".join(bad[:3]))
-        head = lambda g: g[0].split(":", 1)[1].rstrip()              # first row after its "ms:" time column
+        head = lambda g: g[0].split(":", 1)[1].rstrip()              # first row after its "nnnnn:" time column
         shown = {norm(head(g) + (" " + g[1][TXT0:].rstrip() if len(g) == 2 else "")) for g in groups}
         shown |= {norm(head(g) + g[1][TXT0:].rstrip()) for g in groups if len(g) == 2}
         newest = ring[-min(len(groups), 20):] if groups else []

@@ -49,7 +49,7 @@ static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ri
 #define AWTO_LOG_COL        ((s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table
 #define AWTO_LOG_W_MAIN     (AWTO_T_MAXCOLS - 1)                     // main-page log row (cells, incl. the leading space)
 #define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : AWTO_LOG_W_MAIN)
-#define AWTO_LOG_TIME_W     6                   // AwtoSyncLine time column "nnnnn:" at its widest (it is not padded)
+#define AWTO_LOG_TIME_W     6                   // AwtoSyncLine time column "nnnnn:" (left padded)
 #define AWTO_LOG_TXT0       (1 + AWTO_LOG_TIME_W)                   // text column: a wrapped line continues here (gen_awto_sync.py)
 #define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
 #define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)

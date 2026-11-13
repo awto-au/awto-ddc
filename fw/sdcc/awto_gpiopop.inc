@@ -449,11 +449,11 @@ static void AwtoConLogTail(void)
     s_ucLogI = s_ucAwtoLen;
     AwtoSyncLine(s_ucConSyncSeq);
     s_pcAwtoRow[s_ucLogI] = ' ';
-    for(s_ucLogI += s_ucAwtoLnTw; s_ucLogI < s_ucAwtoLen; s_ucLogI++)      // drop the AwtoSyncLine time column
+    for(s_ucLogI += AWTO_LOG_TIME_W; s_ucLogI < s_ucAwtoLen; s_ucLogI++)    // drop the AwtoSyncLine time column
     {
-        s_pcAwtoRow[s_ucLogI - (s_ucAwtoLnTw - 1)] = s_pcAwtoRow[s_ucLogI];
+        s_pcAwtoRow[s_ucLogI - (AWTO_LOG_TIME_W - 1)] = s_pcAwtoRow[s_ucLogI];
     }
-    s_ucAwtoLen = s_ucLogI - (s_ucAwtoLnTw - 1);        // max(len, start + time column) - (time column - 1)
+    s_ucAwtoLen = s_ucLogI - (AWTO_LOG_TIME_W - 1);     // max(len, start + time column) - (time column - 1)
     s_ucConSyncSeq = AWTO_SYNC_NEXT(s_ucConSyncSeq);
 }
 
