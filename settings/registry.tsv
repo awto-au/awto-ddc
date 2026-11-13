@@ -46,7 +46,7 @@
 24	sa_magenta_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Magenta sat	-	[sdk-ui]
 30	aspect	enum	none	display	nv,sdk	0	5	1	0	auto	0xFE	aspect	Aspect ratio	Full|16:9|4:3|5:4|Original|User	display re-set when active [sdk-ui]
 31	overscan	bool	none	display	nv,sdk	0	1	1	1	auto	0xFF	overscan	Overscan	-	video timings only [sdk-ui]
-32	disp_rotate	enum	none	display	nv,sdk	0	1	1	0	auto	-	rotate	Rotate	0|180	picture 180 deg via the frame buffer (rotation build); 90 / 270 not on this chip; display re-set when active (awto-ddc#165) [sdk-ui]
+32	disp_rotate	enum	none	display	nv	0	1	1	0	auto	-	rotate	Rotate	0|180	picture 180 deg via the frame buffer (rotation build); 90 / 270 not on this chip; display re-set when active; registry-stored, the owner writes the SDK field (awto-ddc#165) [sdk-ui]
 117	mirror	enum	none	display	nv	0	2	1	0	auto	-	rotate	Mirror	Off|Horizontal|Vertical	same owner as Rotate: effective = Rotate 180 (H+V) XOR mirror; rotation build only (awto-ddc#165)
 33	latency	enum	none	display	nv,inert,sdk	0	2	1	0	auto	-	-	Latency	Low|Mid|High	[sdk-ui]
 34	freeze	bool	none	display	inert	0	1	1	0	-	-	-	Freeze	-	[sdk-ui]

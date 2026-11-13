@@ -35,7 +35,7 @@ static const struct setting __code tab[SET_COUNT] = {
     { 24, 2, 4,  2, 0xA1, 0, 200, 1, 100, 0x00, 0, 392u, 0xFFFFu},  /* sa_magenta_sat */
     { 30, 1, 0,  3, 0x81, 0, 5, 1, 0, 0xFE, 1, 404u, 0x01A1u},  /* aspect */
     { 31, 0, 0,  3, 0x81, 0, 1, 1, 1, 0xFF, 24, 449u, 0xFFFFu},  /* overscan */
-    { 32, 1, 0,  3, 0x81, 0, 1, 1, 0, 0x00, 28, 458u, 0x01D1u},  /* disp_rotate */
+    { 32, 1, 0,  3, 0x01, 0, 1, 1, 0, 0x00, 28, 458u, 0x01D1u},  /* disp_rotate */
     {117, 1, 0,  3, 0x01, 0, 2, 1, 0, 0x00, 28, 471u, 0x01DEu},  /* mirror */
     { 33, 1, 0,  3, 0xA1, 0, 2, 1, 0, 0x00, 0, 502u, 0x01FEu},  /* latency */
     { 34, 0, 0,  3, 0x20, 0, 1, 1, 0, 0x00, 0, 523u, 0xFFFFu},  /* freeze */
