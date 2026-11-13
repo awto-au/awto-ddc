@@ -67,6 +67,34 @@ static __xdata unsigned int s_usAwtoHoldCancel;  // usT2Isr at the last OSD_DISA
 static __xdata unsigned char s_ucAwtoDemoN;     // lines still to push (0 = idle: XDATA is zeroed at boot)
 static __xdata unsigned int s_usAwtoDemoAt;     // AwtoMs() of the last push
 
+// Does a direct scaler register access change MCU_FFF4_SCA_INF_ADDR (the "Burst Write Bug" backup in every ISR)?
+#define AWTO_TC_FFF4_PROBE                      0x35
+#define AWTO_FFF4_MARK                          0xA5    // a value no probed register's low address byte has
+#define AWTO_FFF4_DONE                          0x5A    // [6]: the probe ran
+__xdata BYTE g_pucAwtoFff4Probe[8];             // [0] FFF4 at entry, [1] after writing the mark, [2] after a P0_01 read,
+                                                // [3] after a P0_02 read, [4] after a P3A_18 same-value write, [5] FFF3, [6] AWTO_FFF4_DONE
+static void AwtoFff4Probe(void)
+{
+    BYTE ucSave = MCU_FFF4_SCA_INF_ADDR;
+    BYTE ucV;
+
+    EA = 0;
+    g_pucAwtoFff4Probe[0] = ucSave;
+    MCU_FFF4_SCA_INF_ADDR = AWTO_FFF4_MARK;
+    g_pucAwtoFff4Probe[1] = MCU_FFF4_SCA_INF_ADDR;
+    ucV = ScalerGetByte(AWTO_R_HOST_CTRL);
+    g_pucAwtoFff4Probe[2] = MCU_FFF4_SCA_INF_ADDR;
+    ucV = ScalerGetByte(AWTO_R_STATUS0);
+    g_pucAwtoFff4Probe[3] = MCU_FFF4_SCA_INF_ADDR;
+    ucV = ScalerGetByte(AWTO_R_FRAME_CTRL_18);
+    ScalerSetByte(AWTO_R_FRAME_CTRL_18, ucV);
+    g_pucAwtoFff4Probe[4] = MCU_FFF4_SCA_INF_ADDR;
+    g_pucAwtoFff4Probe[5] = MCU_FFF3_SCA_INF_CONTROL;
+    MCU_FFF4_SCA_INF_ADDR = ucSave;
+    EA = 1;
+    g_pucAwtoFff4Probe[6] = AWTO_FFF4_DONE;
+}
+
 static void AwtoDemoLog(void)                   // each main pass while lines are left
 {
     if((s_ucAwtoDemoN == 0) || ((unsigned int)((WORD)AwtoMs() - s_usAwtoDemoAt) < AWTO_DEMO_MS))
@@ -257,6 +285,10 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd == AWTO_TC_MEM_FRAME) || (ucCmd == AWTO_TC_MEM_SDK))   // #165 frame buffer forced / SDK choice
     {
         AwtoMemForce(ucCmd == AWTO_TC_MEM_FRAME);
+    }
+    else if(ucCmd == AWTO_TC_FFF4_PROBE)                // FFF4 vs direct scaler access
+    {
+        AwtoFff4Probe();
     }
     else if(ucCmd == 0x34)                              // #78 arm the switch log only (wake / power-level timing)
     {
