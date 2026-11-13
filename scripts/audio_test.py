@@ -66,7 +66,7 @@ DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retri
 
 STEPS, STEP_START, STEP_DONE = 6, 0x10, 0x30     # firmware ear-test steps (RL6449_Project.h AWTO_AUDIO_TEST_*)
 STEP_WHAT = ("speaker, amp on, user volume", "speaker, amp OFF (P7.4 = 0), user volume", "speaker, amp on, -16.5 dB (Dahua default)",
-             "speaker, amp on, -6 dB (volume 100 % now)", "speaker, amp on, -3 dB", "speaker, amp on, 0 dB (DVC maximum)")
+             "speaker, amp on, -6 dB (= volume 100 now)", "speaker, amp on, -3 dB", "speaker, amp on, 0 dB (DVC maximum)")
 AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
 OUT_ON, OUT_MUTED = 0x08, 0xC8
 OUTS = (("aout, amp P7.4 = 1 (as flashed, Dahua speaker path)", OUT_ON, OUT_MUTED, 1),    # hpout dropped from the fw (#94)
@@ -103,9 +103,12 @@ def ddc_vcp(code: int, val: int, what: str = "") -> bool:
 def ddc_get(code: int) -> int | None:
     r = subprocess.run(["ddcutil", "--bus", str(BUS), "getvcp", f"{code:02X}", "--terse"], capture_output=True, text=True,
                        timeout=DDC_LIMIT_S)
-    m = re.search(r"VCP \S+ C (\d+) \d+", r.stdout)
-    say(f"getvcp {code:02X} on bus {BUS}: " + (m.group(1) if m else f"failed rc {r.returncode} {(r.stdout + r.stderr).strip()[:120]}"))
-    return int(m.group(1)) if m else None
+    m = re.search(r"VCP \S+ C (\d+) \d+", r.stdout)                     # continuous: current, max
+    v = int(m.group(1)) if m else None
+    if m is None and (m := re.search(r"VCP \S+ CNC x\S+ x\S+ x([0-9a-fA-F]+) x([0-9a-fA-F]+)", r.stdout)):
+        v = int(m.group(1), 16) << 8 | int(m.group(2), 16)              # non-continuous: mh ml sh sl, current = sh:sl
+    say(f"getvcp {code:02X} on bus {BUS}: " + (str(v) if v is not None else f"failed rc {r.returncode} {(r.stdout + r.stderr).strip()[:120]}"))
+    return v
 
 
 AUDIO_STATE = ("POWER_OFF", "PREPARING", "PLAYBACK", "?")         # Global.h EnumAudioState
