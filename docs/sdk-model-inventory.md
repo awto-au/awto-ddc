@@ -176,7 +176,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 18 | RTD2014Ddcci.c | code in fw/input/ports.c, fw/ddcci/ddcci.c, fw/net/net.c | DDC/CI | #60 #80 |
 | 19 | ScalerCommonMcu.c | `fw/diag/delaycal.c`; M2PLL re-entry keeps calibrated counts (sub) | timers | #53 #54 |
 | 20 | SysTimer.c / SysInt.c | `AWTO_DIAG_T2ISR`, `AWTO_DIAG_EX1ISR`, `AWTO_MEAS_T2ISR` | ISRs | #23 #26 |
-| 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
+| 21 | ScalerDPRx1_SeptPhy.c | `fw/dp/dpframe.c`; `AWTO_SW_MARK(30-37)` | DP | #60 |
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
 | 23 | rtdfw glue: `fw/settings/settings_glue.c`, `fw/osd/text_layer.c`, `fw/nvram/flash_io.c`, `fw/nvram/nv_gate.c`, `fw/keys/keyinject.c` | settings glue | settings | #67 |
 | 24 | wdt rules.py | `fw/diag/wdt.c` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |

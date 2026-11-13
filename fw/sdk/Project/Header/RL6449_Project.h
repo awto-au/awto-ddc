@@ -845,7 +845,16 @@ extern void AwtoLpMark(unsigned char ucK);
 #define AWTO_LP(k)
 #endif
 #ifndef _AWTO_DP_FRAME_WAIT
-#define _AWTO_DP_FRAME_WAIT                                     _ON     // #60: DP Rx1 two-frame waits from the measured frame (fw/sdcc/awto_dpframe.inc)
+#define _AWTO_DP_FRAME_WAIT                                     _ON     // #60: DP Rx1 two-frame waits from the measured frame (fw/dp/dpframe.c)
+#endif
+#if(_AWTO_DP_FRAME_WAIT == _ON)
+extern void AwtoDpFrameSet(unsigned long ulVBs2BsCount);
+extern unsigned int AwtoDpTwoFramesMs(void);
+#define AWTO_DP_TWO_FRAMES()                                    AwtoDpTwoFramesMs()
+#define AWTO_DP_FRAME_SET(n)                                    AwtoDpFrameSet(n)
+#else
+#define AWTO_DP_TWO_FRAMES()                                    _DP_TWO_FRAME_TIME_MAX
+#define AWTO_DP_FRAME_SET(n)
 #endif
 #ifndef _AWTO_LOOP_SPLIT
 #define _AWTO_LOOP_SPLIT                                        _ON     // #75: slow checks every AWTO_SLOW_MS, not every pass (fw/diag/loopsplit.c)

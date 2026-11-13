@@ -3949,7 +3949,6 @@ bit ScalerDpRx1DecodeCheck(void)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_dpframe.inc"
 bit ScalerDpRx1DisplayFormatSetting(void)
 {
     BYTE ucOddFlg = 0;
