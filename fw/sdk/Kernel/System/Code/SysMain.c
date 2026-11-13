@@ -74,7 +74,6 @@ void SysMainStartUserCode(BYTE ucBankAddress);
 #include "awto_sw.inc"
 #include "awto_sync.inc"
 #include "awto_meas4k.inc"
-#include "awto_wdt.inc"
 #include "awto_audio.inc"
 void main(void)
 {

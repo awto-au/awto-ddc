@@ -373,6 +373,8 @@ extern void ScalerTimerWDInitial(void);
 extern volatile __xdata unsigned char g_ucAwtoStackHigh;      // highest stack byte written since boot (IRAM address)
 extern volatile __xdata unsigned char g_ucAwtoStackFatal;     // 1 = canary hit, main halted on the fatal screen
 void AwtoStackFatal(unsigned char ucHigh);
+extern void AwtoStackPaint(void);
+extern void AwtoStackCheck(void);
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
 extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke

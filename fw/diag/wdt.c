@@ -1,4 +1,6 @@
-// Watchdog + crash canary (#131, #138, docs/watchdog.md), inserted into SysMain.c (fw/awto/wdt/rules.py). Record: RL6449_Project.h StAwtoWdt.
+#include "SysInclude.h"
+
+// Watchdog + crash canary (#131, #138, docs/watchdog.md). Record: RL6449_Project.h StAwtoWdt.
 // One hardware watchdog: pokes in the main-loop pass and bounded loops; the WDT threshold IRQ (int2, high priority) captures.
 #if(_AWTO_WDT == _ON)
 __sfr __at(0xD8) AWTO_EICON;                    // DW8051 EICON: bit 3 WDTI = core watchdog interrupt input flag (databook)

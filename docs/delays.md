@@ -155,8 +155,8 @@ Abbreviations in the table:
 | same | hardware reset (CNT1 = N = 1) | 585.9 ms | project header | register arithmetic: 4096 x 2048 / 14.318 MHz | n/a | n/a | chip reset |
 | same | early match marker | 439.4 ms (CNT3 0xC00) | doc | register arithmetic | n/a | n/a | marker only |
 | `AWTO_WDT_N_BOOT_FIELD` | boot reset period until `ScalerTimerWDInitial` | N = 8 x 585.9 = 4687 ms | `RL6449_Project.h:~316` | SDK boot value | n/a | n/a | chip reset |
-| `AWTO_WDT_PROBE_THR/MS` `RL6449_Project.h:328-329`; `awto_wdt.inc:222-229` | test probes 0x49 / 0x4F | 36.6 ms threshold, spin 1500 ms | project header | comment: N+1 wraps (1172 ms) x 1.25 -> 1.5 s | 1172 ms | 1.28 | test ends |
-| `AWTO_WDT_SHOW_MS` `RL6449_Project.h:377`; `awto_wdt.inc:255` | console opens after a bite | 1000 ms | project header | comment: sim max pass 800 ms x 1.25 | 800 ms | 1.25 | console opens |
+| `AWTO_WDT_PROBE_THR/MS` `RL6449_Project.h:328-329`; `fw/diag/wdt.c:222-229` | test probes 0x49 / 0x4F | 36.6 ms threshold, spin 1500 ms | project header | comment: N+1 wraps (1172 ms) x 1.25 -> 1.5 s | 1172 ms | 1.28 | test ends |
+| `AWTO_WDT_SHOW_MS` `RL6449_Project.h:377`; `fw/diag/wdt.c:255` | console opens after a bite | 1000 ms | project header | comment: sim max pass 800 ms x 1.25 | 800 ms | 1.25 | console opens |
 | SPI-flash halts (not code) | erase 200 ms, WRSR 40 ms, page program 3 ms | n/a | MX25L8006E datasheet, `docs/watchdog.md` | datasheet maxima | n/a | n/a | CPU halted; `FFEA[5]` freezes the counter |
 | **OUR OWN TIMED LOGIC (fw/sdcc, project header)** | | | | | | | |
 | `RL6449_Project.h:462` `AWTO_KEY_SAMPLE_MS`; `fw/keys/keys.c:382` | key debounce: two equal samples | 10 ms | project header | SDK key scan SEC(0.01) | 10 ms | 1.00 | sample accepted |
@@ -182,7 +182,7 @@ Abbreviations in the table:
 | `AWTO_SET_LOOP_MS` 20; `AWTO_NV_EL_MAX_MS` 100 | settings service period; gate aging cap | 20 ms; 100 ms | `RL6449_Project.h:104,150` | derived: below key repeat 0.5 s; 5 x 20 | n/a | n/a | service call |
 | `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`awto_meas4k.inc:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | UNKNOWN reason | UNKNOWN | UNKNOWN | window ends |
 | `fw/ddcci/ddcci.c:86` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
-| `awto_diag.inc:12,49`; `awto_meas4k.inc:70,85`; `awto_wdt.inc:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
+| `awto_diag.inc:12,49`; `awto_meas4k.inc:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
 | `awto_delaycal.inc:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
 | `awto_t0ev.inc:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
 | `fw/settings/settings_glue.c` `set_wait_ms`; `awto-rtdfw settings.c:271-273` | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |
@@ -276,7 +276,7 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
 - **Rare or maintenance**
   - Audio PLL 2 / 3 ms, DVC mute poll up to 400 ms.
   - Settings boot-recovery hold up to 1000 ms (`awto-rtdfw settings.c:271`).
-  - Watchdog probe spin 1500 ms (test command only, `awto_wdt.inc:222-229`).
+  - Watchdog probe spin 1500 ms (test command only, `fw/diag/wdt.c:222-229`).
   - `awto_t0ev.inc:238-269` test delays.
 - **Non-blocking since #162**: the panel T1..T6 machine, the HDMI HPD recovery pulse, and the source/judge timer events. None of these block.
 - **Interrupt-context blind spins over 1 ms**

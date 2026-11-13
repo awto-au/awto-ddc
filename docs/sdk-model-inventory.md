@@ -179,7 +179,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
 | 23 | rtdfw glue: `fw/settings/settings_glue.c`, `fw/osd/text_layer.c`, `fw/nvram/flash_io.c`, `fw/nvram/nv_gate.c`, `fw/keys/keyinject.c` | settings glue | settings | #67 |
-| 24 | wdt rules.py | `awto_wdt.inc` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |
+| 24 | wdt rules.py | `fw/diag/wdt.c` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |
 | 25 | ScalerCommonTimerFunction.c end | `awto_t0ev.inc` | timers | #138 |
 
 ### 2.4 SUBS (keil2sdcc.py:341-532 + wdt/settings rules.py)
@@ -703,7 +703,7 @@ Back:
 
 ### T9. Menu / console / selector open-close (OSD ownership changes)
 Opening:
-- Console: `AwtoBootConsole` (T1/T2/T5, from the INITIAL mode hook and the wake), `AwtoDiagConsole(AWTO_CON_MAIN/GPIO)` (UP+DOWN via `AwtoKeyRoute`, test cmds 0x20/0x26/0x41/0x43, auto-open `AwtoSyncConPoll` at the settled mode, watchdog-bite auto-open `awto_wdt.inc`). Effects: D-domain background ON at boot open, OSD map written (`osd_tc_open`), position/viewport (`osd_tc_place`, `osd_tc_viewport`), enable (`osd_tc_show`). LOG: `console opened (sync log)` (CA).
+- Console: `AwtoBootConsole` (T1/T2/T5, from the INITIAL mode hook and the wake), `AwtoDiagConsole(AWTO_CON_MAIN/GPIO)` (UP+DOWN via `AwtoKeyRoute`, test cmds 0x20/0x26/0x41/0x43, auto-open `AwtoSyncConPoll` at the settled mode, watchdog-bite auto-open `fw/diag/wdt.c`). Effects: D-domain background ON at boot open, OSD map written (`osd_tc_open`), position/viewport (`osd_tc_place`, `osd_tc_viewport`), enable (`osd_tc_show`). LOG: `console opened (sync log)` (CA).
 - Awto menu: `AWTO_REALTEK_MENU_OPEN`/`menu_open` on AUTO (fw/settings/settings_glue.c / `AwtoKeyRoute`), then `AwtoSetLoop` per pass; SDK OSD state stays `_MENU_NONE`, so SDK timers can still close it (`OsdDispDisableOsd` is intercepted by `AwtoMenuForget`).
 - Selector: `AwtoSourceKeyOpen`/`AwtoSourceOpen` (SOURCE key, UP, no-signal event). Sets `GET_OSD_STATE() == _MENU_HOTKEY_SOURCE`; sleep rule `AwtoSrcSleepArm`; per-port rows polled every `AWTO_SRC_POLL_MS`.
 - Cards: `OsdDispOsdMessage` (our body) for no-signal/no-cable/no-support/power saving/input info (6 s `_AWTO_INFO_POPUP_SEC`), skipped at ACTIVE while the console is open.
