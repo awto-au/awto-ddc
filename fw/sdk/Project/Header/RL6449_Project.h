@@ -420,7 +420,8 @@ extern void AwtoMsgLoad(void);
 extern void AwtoDiagInit(void);
 extern void AwtoDiagStage(unsigned char ucStage);
 extern void AwtoDiagMainPass(void);
-extern void AwtoDiagTestCmd(void);
+extern void AwtoDiagTestCmd(void);                     // fw/test/testcmd.c
+#define AWTO_HOLD_POPUP                                         0x02    // isr_g_stAwtoDiag.ucHold: debug pop-up held (#28)
 extern bit AwtoHoldBlocksDisable(void);
 extern void AwtoOsdDebugLines(void);
 extern void AwtoOsdOfsInit(void);

@@ -92,7 +92,7 @@ Never write bare "vendor": say which one.
 
 ## 3. Inputs to the OSD
 - Front keys: physical order SOURCE, MENU, DOWN, UP, AUTO, POWER (POWER = digital P3.0, others on ADC A0 / A1). Decode, ADC bands: [reversing/realtek-rtd/buttons.md](reversing/realtek-rtd/buttons.md). #85: firmware uses the SDK reference decode, not the JXC ladder; fix open. #129: one input poller and one dispatcher (in progress).
-- Test command byte (`fw/sdcc/awto_testcmd.inc`, host `scripts/osd_test.py`):
+- Test command byte (`fw/test/testcmd.c`, host `scripts/osd_test.py`):
   - 0x01..0x05 = key messages menu (AUTO) / UP / DOWN / exit (MENU) / SOURCE, injected.
   - 0x10+n = OSD event n.
   - 0x20 / 0x26 = debug pop-up (console), 0x27 = clear holds.

@@ -30,7 +30,7 @@ import sync_log as S  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sync_sim.log"
-K_MENU, K_SOURCE, CON_CLOSE = 0x04, 0x05, 0x44     # injected MENU / SOURCE; test cmd 0x44 = console close (awto_testcmd.inc)
+K_MENU, K_SOURCE, CON_CLOSE = 0x04, 0x05, 0x44     # injected MENU / SOURCE; test cmd 0x44 = console close (fw/test/testcmd.c)
 POWER_KEY = 0x3E                                    # test cmd 0x3E = the POWER key (soft off / on, #151)
 SETTLE_S = 3.0      # a switch to ACTIVE + console open: AWTO_SYNC_OPEN_MS 2 s + one console draw (~0.3 s sim) x ~1.25
 RATE_S = 2.5        # usLoopRate covers the last ~1 s; 2.5 s = two full windows after a change

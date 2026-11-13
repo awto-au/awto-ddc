@@ -28,7 +28,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
   - `AwtoTmdsStuck` (awto_sw.inc:104) pulses the D2/D3 HDMI HPD pins with a blocking `ScalerTimerDelayXms(110)`, called from the SysJudge hook.
   - `AwtoL2LinkOn/Off`, `PCB_BACKLIGHT_POWER_PIN` and `ScalerGlobalWatchDog` are called straight from awto_fastsw.inc.
   - awto_sync.inc's `AwtoPsWakePoll` makes power-status wake decisions.
-  - awto_testcmd.inc can drive input, power, NVRAM and keys.
+  - fw/test/testcmd.c can drive input, power, NVRAM and keys.
 - **Time bases: at least six.** `g_usTimerCounter` (SDK, rebased near `_EVENT_TIME_MAX`), `usT2Isr` (g_stAwtoDiag), `AwtoUpMs` (32-bit), `AwtoSyncNow`, `AwtoFastNow`, `AwtoSrcNow`, plus Timer0 event ms. [code]
 - **Logs: at least four parallel rings/streams.** `g_stAwtoSw` (switch events), `AwtoSync` ring (+ `AwtoSyncPush` stage lines), `g_stAwtoDiag` stages, tokenised `AwtoMsg`/`DebugMessage`, and the GPIO change ring. #146: two line formats on the console. [code, issue]
 - Power saving: the "~2 s main pass" on tmds1 was a measurement error (sampled before power status SAVING). Real pass 15.6 ms on IOSC (~3.1x slower MCU clock); poll every 5.9-6.0 ms with the 14 poll sites (#144 comments, tmds3). [issue]
@@ -116,7 +116,7 @@ Status var: `GET_PANELPOWERSTATUS()` ∈ {`_PANEL_POWER_OFF_STATE`, `_WAITING_FO
 
 ### 1.5 OSD ownership
 - The SDK path runs: `UserCommonInterfaceOsdHandler` → `UserOsdHandler` = `RTDOsdSystemFlowProc` (per-mode: INITIAL → our boot console + panel; SEARCH/ACTIVE → LED) + `RTDOsdEventMsgProc` (timer-event driven: no-signal, no-cable, power-saving cards, info pop-up at ACTIVE `_OSDEVENT_ACTIVE_DO_ONE_TIME_MSG`, 6 s `_AWTO_INFO_POPUP_SEC`).
-- Resets: every `SysModeResetState` and `UserInterfaceAdjustOsdResetProc` → `OsdDispDisableOsd`. Our hook `AwtoHoldBlocksDisable` (awto_testcmd.inc:17) blocks it only for the #28 debug pop-up holds, not for the console. [code]
+- Resets: every `SysModeResetState` and `UserInterfaceAdjustOsdResetProc` → `OsdDispDisableOsd`. Our hook `AwtoHoldBlocksDisable` (fw/test/testcmd.c) blocks it only for the #28 debug pop-up holds, not for the console. [code]
 - Ours on the OSD engine: the text layer `osd_tc_*` (fw/osd/text_layer.c) used by console (dbgpop, osdcard `AwtoDiagConsole`), cards (`OsdDispOsdMessage` SDK body removed), source selector (`AwtoSourceOpen/Key`), key/GPIO/WDT panels, awto menu (rtdfw settings/menu.c, osd/ui.c).
 - Console release rule: "owns the OSD only while its map is in place: an SDK pop-up or mode reset releases it (`AwtoConLost`)" [docs/osd.md]. Each time the SDK mode path resets the OSD (display setting → `OsdDispDisableOsd`), the console is lost → m4/m5/m6 patches (re-apply view registers, redraw once settled, view at row 0).
 - Remaining SDK OSD pieces: input-info card flows (`_OSDEVENT_*`), OSD timeout timers (`_USER_TIMER_EVENT_OSD_DISABLE` etc.), `OsdDispDisableOsd`, hot-key menus (DDC/CI, DP version), factory menu (`_AWTO_FACTORY`), `GET_OSD_STATE()` machine (partly; `OperationTable` removed #129).

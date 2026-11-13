@@ -1,4 +1,4 @@
-; What the RL6449 DW8051 does with the reserved 8051 opcode 0xA5 (test cmd 0x21, awto_testcmd.inc; asked by Dan via the sdcc session).
+; What the RL6449 DW8051 does with the reserved 8051 opcode 0xA5 (test cmd 0x21, fw/test/testcmd.c; asked by Dan via the sdcc session).
 ; _AwtoA5RunN: known registers, `.db 0xA5` + 1-byte markers (inc rN: a byte eaten by A5 = a missing increment), capture.
 ; Capture (17 B + 0x5A) at _g_pucAwtoA5Probe + 20 * N: R7..R0 (bank 0), DPH1, DPL1, DPH, DPL, DPS, SP, PSW, B, A.
 ; Caller: EA off; buf[80] / buf[81] = marker bytes DPTR0 / DPTR1 point at. Clobbers every register (Keil ABI: caller saves).

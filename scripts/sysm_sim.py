@@ -32,7 +32,7 @@ from ddc_sim import DdcEngine, Mccs  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sysm_sim.log"
-POWER_KEY, K_SOURCE, SEL_D2, SEL_D3 = 0x3E, 0x05, 0x32, 0x33     # test cmds (awto_testcmd.inc)
+POWER_KEY, K_SOURCE, SEL_D2, SEL_D3 = 0x3E, 0x05, 0x32, 0x33     # test cmds (fw/test/testcmd.c)
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                        # Global.h EnumPowerStatus (isr_g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE, MODE_NOSUPPORT, MODE_NOSIGNAL, MODE_PS = 2, 3, 4, 5, 6
 STATE_MODE = {"AC ON": 7, "OFF": 7, "INITIAL": 0, "SEARCH": 1, "DISPLAY SETTING": 2, "ACTIVE": 3, "FAST SWITCH": 3, "HOLD L1": 3,

@@ -22,7 +22,7 @@ import settings_cli as C  # noqa: E402
 
 LOG = ROOT / "tmp/logs/osdt_unit.log"
 CHIP = "RTD2795T-CG"
-TC_CLEAR, TC_CONSOLE, TC_GPIO, TC_GPIO_CLOSE, TC_INFO = 0x27, 0x20, 0x43, 0x44, 0x55   # fw/sdcc/awto_testcmd.inc
+TC_CLEAR, TC_CONSOLE, TC_GPIO, TC_GPIO_CLOSE, TC_INFO = 0x27, 0x20, 0x43, 0x44, 0x55   # fw/test/testcmd.c
 TYPE_WIN_CHAR_BG = 3                            # FRAME_CTRL_0A alpha_blend_type 11 (01 showed nothing: backgrounds are char cells)
 OVERLAY_PORT_EN = 0x01                          # OVERLAY_CTRL overlay_port_en: the OSD is on screen
 # screen shown (overlay_port_en) after the key: console open = map clear + font load, the longest; 1.2 s if unmeasured x1.25.

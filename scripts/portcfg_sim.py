@@ -28,7 +28,7 @@ import sync_log as SL  # noqa: E402
 D1, D2, D3 = 4, 5, 6                    # Global.h _D1.._D3_INPUT_PORT
 SET_D1_ENABLE = 36                      # registry id d1_enable (AwtoSetIds.h)
 TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag + 0x28
-TC_D1_OFF, TC_D3_OFF = 0x06, 0x08       # awto_testcmd.inc AWTO_TC_PORT_OFF + port index
+TC_D1_OFF, TC_D3_OFF = 0x06, 0x08       # fw/test/testcmd.c AWTO_TC_PORT_OFF + port index
 HPD_D1 = 0xFE02                         # bD1_HPD = MCU_FE02_PORT42_PIN_REG (board header)
 DDC1_DDC_ENABLE, DDC_EN = 0xFF2C, 0x01  # regdb DDC1_DDC_ENABLE bit 0 ddc1_ddc_en
 EV_PORT = 0xE1                          # sync.tsv E1: arg = AWTO_PORT_WHY_* (E0 = the input selector)

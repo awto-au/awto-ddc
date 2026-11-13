@@ -2,7 +2,7 @@
 """Render every OSD card, the source selector, the console and the awto menu in one fw_sim boot (awto-ddc#124, #134).
 
 usage: AWTO_SIM_CORE=fast card_shot.py BIN MAP [--out DIR] [--prefix new_] [--mode 1080p60] [--only NAME,...]
-- One boot, then per shot: test command bytes (fw/sdcc/awto_testcmd.inc), a wait, a snapshot, then clear (0x27) and MENU.
+- One boot, then per shot: test command bytes (fw/test/testcmd.c), a wait, a snapshot, then clear (0x27) and MENU.
 - Per shot: DIR/<prefix><name>.png = panel at 1/2 size (centring), DIR/<prefix><name>_crop.png = the OSD box at 1x.
 - Checks logged per shot: OSD on, box centre vs panel centre (px), box size. A shot whose OSD is off is flagged.
 - --bg grey,white,black,bars: one render per test picture (name_<bg>.png when several); --opaque: also name_<bg>_opaque.png

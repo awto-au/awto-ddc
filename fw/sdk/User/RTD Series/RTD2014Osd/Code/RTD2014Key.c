@@ -122,7 +122,6 @@ BYTE RTDIRKeyScan(void);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_testcmd.inc"
 
 
 #if(_IR_SUPPORT == _IR_HW_SUPPORT)

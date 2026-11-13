@@ -32,7 +32,7 @@ LOG = ROOT / "tmp/logs/panel_sim.log"
 VDD, BL, BL_EN_N, PWM4 = 0xFE1A, 0xFE25, 0xFE2A, 0xFF50      # RL6449_AWTO_JXC4K.h P7.2 / P8.5 / P9.2; Project_Option.h PWM4 duty
 DPTX_FNS = ("ScalerDisplayDPTxLinkSequence", "ScalerDisplayDPTxStreamHanlder", "ScalerDisplayDPTxPhyInitial",
             "ScalerDisplayDPTxAnalogPhyConrol", "ScalerDisplayDPTxSSCSet")
-POWER_KEY, K_SOURCE = 0x3E, 0x05                             # test cmds (awto_testcmd.inc): POWER key, injected SOURCE
+POWER_KEY, K_SOURCE = 0x3E, 0x05                             # test cmds (fw/test/testcmd.c): POWER key, injected SOURCE
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowerStatus (isr_g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE = 2, 3
 # Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given).
