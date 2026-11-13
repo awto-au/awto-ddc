@@ -294,7 +294,7 @@ void SysPowerSwitch(EnumPowerAction enumSwitch)
     }
     else if(enumSwitch == _POWER_ACTION_PS_TO_NORMAL)
     {
-        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_ON, AWTO_PNL_BY_PWR_WAKE));    // #162: link trains during the search; backlight at ACTIVE / a card
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_PWR_WAKE));    // #162: backlight once VDD is up (Dan 2026-11-13); link trains during the search
     }
     AWTO_BPROF(0x40 + enumSwitch);
     switch(enumSwitch)

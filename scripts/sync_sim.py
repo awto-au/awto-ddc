@@ -5,7 +5,7 @@ usage: AWTO_SIM_CORE=fast sync_sim.py BIN MAP [--mode 1080p60] [--out tmp/sync]
        AWTO_SIM_CORE=fast sync_sim.py --rate BIN MAP     loop rate only (console auto-open off): idle ACTIVE, selector open;
                                                           works on images without #139 (A/B)
 - Boot with the console auto-open ON (firmware default): the power-on episode opens the console once settled.
-  Checks: ring magic, power-on lines (-> ACTIVE, backlight pin on, timing), console opened by itself, no chip reset.
+  Checks: ring magic, power-on lines (-> ACTIVE, backlight on at once, timing), console opened by itself, no chip reset.
   #162 s3b: the SDK mode is in the system transition line ('system: A -> B (N ms): why; mode'), the backlight pin in the panel machine's.
 - Console closed, selector opened (SOURCE): PNG; loop rate with the selector open vs closed (diag usLoopRate).
 - Test cmd 0x33 (D3, no source in the sim) then 0x32 (back to D2): switch episodes decoded by scripts/sync_log.py
@@ -130,7 +130,7 @@ def main():
         h, lines = r.episode("power-on")
         txt = "\n".join(lines)
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
-        for want in ("power on", "-> ACTIVE (", "backlight pin on", "timing ", "console opened"):
+        for want in ("power on", "-> ACTIVE (", "backlight on at once", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
         r.check(r.console() != 0, "console opened by itself after power-on")
         r.shot("poweron_console")

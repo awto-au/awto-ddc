@@ -10,7 +10,7 @@ usage: panel_unit.py TAG [--cold 3] [--power-key 1] [--switch 0] [--no-flash]   
   ('-> ACTIVE (', also the fast path's 'FAST SWITCH -> ACTIVE'). D1 = the DP-1 mirror (host layout untouched). On D1 the debug
   slave follows the DP port, so that episode is read back whole from D2 (<tag>-switchN-whole.txt).
 - Per run (ring ms of the episode): POWER OFF / SEARCH / ACTIVE (system transitions), predetect flaps, backlight pin edges (panel
-  machine lines '-> BL_PWM' / 'backlight pin off', #162 s3b), blinks (a backlight off then on again in one episode), link trainings,
+  machine lines 'backlight on at once' / 'backlight pin on|off', #162 s3b), blinks (a backlight off then on again in one episode), link trainings,
   stream -> backlight on, lines 'outside the panel machine', machine lines whose time != the previous line + their '(N ms)'.
 Ring text per run: tmp/logs/panel_unit/<tag>-<run>.txt. Log: tmp/logs/panel_unit.log
 """
@@ -129,7 +129,7 @@ def time_gaps(rows: list) -> list:
 def facts(txt: str) -> dict:
     rows = [(int(m.group(1)), m.group(2).strip()) for m in re.finditer(r"\+\s*(\d+) ms (.*)", txt)]
     ms = lambda pat: next((t for t, x in rows if re.search(pat, x)), None)
-    bl = [(t, "on" if "backlight pin on" in x else "off") for t, x in rows if re.search(r"backlight pin (on|off)", x)]
+    bl = [(t, "off" if "pin off" in x else "on") for t, x in rows if re.search(r"backlight pin (on|off)|backlight on at once", x)]
     blink = sum(1 for a, b in zip(bl, bl[1:]) if a[1] == "off" and b[1] == "on")
     video = ms(r"-> VIDEO \(\d+ ms\): eDP-1 link trained")
     blon = next((t for t, x in bl if x == "on"), None)

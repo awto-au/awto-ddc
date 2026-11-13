@@ -7,10 +7,12 @@ panel's T6; signal lost (L1 hold) and back; power saving (target SAVING) and a S
 Recorded: every write to the panel VDD pin (FE1A), backlight pins (FE25 / FE2A), backlight PWM4 duty (FF50), and every call of
 the DPTx link / stream / PHY functions, each with the firmware's g_ucAwtoPanelOwn (1 = written by the panel machine).
 FAIL (gate): a write or call outside the machine after its first step; a firmware 'outside the panel machine' line; a
-backlight blink (pin off -> on with no panel-off between); a link training outside a panel bring-up; backlight on sooner than
-T3 after the stream start; VDD off sooner than T4 + T5 after backlight off; VDD on sooner than T6 after VDD off;
-#162 s3b: a VDD / backlight pin edge by the machine without its transition line (OFF -> VDD, * -> T6, T3 -> BL_PWM,
-BL_OFF -> VIDEO / T4) at the edge's time (+-LINE_SLACK_MS), or such a line without an edge (the lines are the pin record).
+backlight blink (pin off -> on with no panel-off between); a link training outside a panel bring-up; backlight pin on with VDD
+off, or later than BL_AFTER_VDD_MS after a VDD on (Dan 2026-11-13: backlight at once, no T3 wait; registry bl_on_delay default 0);
+cold boot: backlight pin later than BL_AFTER_M2PLL_MS after the M2PLL line (D1 03); VDD off sooner than T4 + T5 after backlight off;
+VDD on sooner than T6 after VDD off;
+#162 s3b: a VDD / backlight pin edge by the machine without its line (OFF -> VDD, * -> T6, backlight pin on (11 C1 / D1) / off
+(11 CC)) at the edge's time (+-LINE_SLACK_MS), or such a line without an edge (the lines are the pin record).
 --report: print the timeline only (old images have no owner flag; nothing is judged). Log: tmp/logs/panel_sim.log
 """
 import argparse
@@ -33,9 +35,13 @@ DPTX_FNS = ("ScalerDisplayDPTxLinkSequence", "ScalerDisplayDPTxStreamHanlder", "
 POWER_KEY, K_SOURCE = 0x3E, 0x05                             # test cmds (awto_testcmd.inc): POWER key, injected SOURCE
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowerStatus (g_stPowerInfo high nibble)
 MODE_DS, MODE_ACTIVE = 2, 3
-# Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given); T3 own frame = registry
-# PANEL_T3_OWN default (RL6449_Project.h AWTO_T3_OWN_PATTERN_MS).
-PANEL = {"T3_OWN": 20, "T4": 250, "T5": 20, "T6": 900}
+# Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given).
+PANEL = {"T4": 250, "T5": 20, "T6": 900}
+# Backlight on (Dan 2026-11-13): pin in the same machine step as VDD on (bl_on_delay 0): sim 1-4 ms (VDD line, pin log, PWM
+# frequency set) x1.25 = 5 ms.
+# Cold boot: request right after pin share + timer-event init, both after the M2PLL switch (SysMainSystemInitial): ~1 ms x5.
+BL_AFTER_VDD_MS, BL_AFTER_M2PLL_MS = 5, 5
+M2PLL_LINE = (0xD1, 0x03)                                    # sync.tsv 'boot: MCU set up (M2PLL clock, ...)'
 # Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off = T4 + T5 + T6 + flash
 # flush, sim worst x1.25 (#54); signal-loss hold: L1 needs one judge run (10 ms slow path) + a pass; settle 1 s.
 BOOT_INSTR = 160_000_000
@@ -43,7 +49,7 @@ BOOT_INSTR = 160_000_000
 OFF_MS, ON_MS, SETTLE_MS, HOLD_MS, PS_MS, WAKE_MS = 1810, 3000, 1000, 1500, 3000, 5500
 STEP = 20_000
 LINE_SLACK_MS = 3      # pin edge -> its transition line: the line is pushed right after the action (pin, DPTx call), ~1 ms x3
-EDGE_LINES = {("VDD pin", 1): (0x01,), ("VDD pin", 0): (0x1B, 0x2B, 0xAB), ("BL pin", 1): (0x56,), ("BL pin", 0): (0x84, 0x89)}
+EDGE_LINES = {("VDD pin", 1): (0x01,), ("VDD pin", 0): (0x1B, 0x2B, 0xAB), ("BL pin", 1): (0xC1, 0xC2, 0xD1), ("BL pin", 0): (0xCC,)}
 
 
 def say(s):
@@ -56,7 +62,7 @@ def say(s):
 def panel_times(tree):
     h = Path(tree) / "fw/sdk/Panel/AWTO_M280DCA_E3B.h" if tree else None
     if h and h.is_file():
-        for k, v in re.findall(r"#define\s+_PANEL_POWER_(?:ON|OFF)_(T[3-6])\s+(\d+)", h.read_text()):
+        for k, v in re.findall(r"#define\s+_PANEL_POWER_(?:ON|OFF)_(T[4-6])\s+(\d+)", h.read_text()):
             if k in PANEL:
                 PANEL[k] = int(v)
     return PANEL
@@ -209,7 +215,7 @@ class Run:
         self.phase = "signal back"
         self.signal = True
         self.stable_detect(True)
-        ok, ms = self.until(lambda: self.bus.mode_state() == MODE_ACTIVE and self.panel_state() == 7, HOLD_MS)
+        ok, ms = self.until(lambda: self.bus.mode_state() == MODE_ACTIVE and self.bl_lit(), HOLD_MS)
         self.bus.wait(SETTLE_MS / 1000)
         self.check(ok and self.bus.mode_state() == MODE_ACTIVE, "signal back: ACTIVE, backlight on", f"{ms} ms")
         self.ring_lines("signal back")
@@ -227,11 +233,11 @@ class Run:
         self.bus.wait(SETTLE_MS / 1000)
         self.ring_lines("wake")
 
-    def panel_state(self):
+    def bl_lit(self):
         try:
-            return self.m.rd(self.m.addr("s_ucPnlState"))[0]
+            return self.m.rd(self.m.addr("s_ucPnlBl"))[0] == 2      # AWTO_PNL_BL_LIT
         except S.SimError:
-            return 7                                 # static: not in the map; the ring lines carry it
+            return True                              # static: not in the map; the ring lines carry it
 
     def judge(self):
         ev = self.events
@@ -259,11 +265,18 @@ class Run:
         per = {ph: sum(1 for _, p in links if p == ph) for ph in ("boot", "power on", "power on 2", "signal lost", "signal back", "wake")}
         self.check(per["boot"] == 1 and per["power on"] == 1 and per["power on 2"] == 1 and per["signal lost"] == 0 and per["signal back"] == 0 and per["wake"] <= 1,
                    "eDP link trained once per panel bring-up (none at display setting, none in the L1 hold)", str(per))
-        vid = [t for t, ph, w, v, _ in ev if w == "DPTx StreamHanlder" and v == 1]      # stream start (fw ms)
         blon = [t for t, ph, v in bl if v == 1]
-        gaps = [b - max(v for v in vid if v <= b) for b in blon if any(v <= b for v in vid)]
-        self.check(gaps and min(gaps) >= PANEL["T3_OWN"], f"backlight on >= T3 ({PANEL['T3_OWN']} ms own frame) after the stream start",
-                   f"stream -> backlight {gaps} ms")
+        vdd_all = [(t, v) for t, _, w, v, _ in self.events if w == "VDD pin"]   # incl. GPIO init (VDD default on)
+        lvl = lambda t: next((v for tv, v in reversed(vdd_all) if tv <= t), 0)
+        self.check(blon and all(lvl(t) == 1 for t in blon), "backlight pin on only with VDD on", str([t for t in blon if lvl(t) != 1][:4]))
+        late = []                                    # every VDD on (a bring-up, backlight wanted in every phase here): pin follows at once
+        for tv, ph, v in vdd:
+            if v == 1:
+                b = next((t for t in blon if t >= tv), None)
+                if b is None or b - tv > BL_AFTER_VDD_MS:
+                    late.append(f"{ph} VDD@{tv} -> BL {'never' if b is None else f'+{b - tv}'}")
+        self.check(not late, f"backlight pin on <= {BL_AFTER_VDD_MS} ms after each VDD on (no T3 wait)", "; ".join(late[:4]))
+        self.m2pll_check()
         offs = []                                    # backlight off -> the VDD off that follows with no backlight on between
         for x in (x for x in bl if x[2] == 0):
             v = next((y for y in vdd if y[0] >= x[0] and y[2] == 0), None)
@@ -274,6 +287,14 @@ class Run:
         t6 = [(b[0] - a[0]) for a, b in zip(vdd, vdd[1:]) if a[2] == 0 and b[2] == 1]
         self.check(all(x >= PANEL["T6"] for x in t6), f"VDD on >= T6 ({PANEL['T6']} ms) after VDD off", str(t6))
         self.edge_lines(self.events)                 # all writes: boot pin init gives the level before the first edge
+
+    def m2pll_check(self):
+        """cold boot: the first backlight pin-on line within BL_AFTER_M2PLL_MS of the M2PLL line (ring ms, same clock)"""
+        m = next((ms for i, a, ms, _ in self.ring_ev if (i, a) == M2PLL_LINE), None)
+        b = next((ms for i, a, ms, _ in self.ring_ev if i == 0x11 and a in EDGE_LINES[("BL pin", 1)]), None)
+        d = None if m is None or b is None else ((b - m) & 0xFFFF)
+        self.check(d is not None and d <= BL_AFTER_M2PLL_MS, f"cold boot: backlight pin <= {BL_AFTER_M2PLL_MS} ms after the M2PLL switch line",
+                   f"M2PLL @{m}, backlight pin @{b}, {d} ms")
 
     def edge_lines(self, ev):
         """#162 s3b: the machine's transition lines are the pin record: one line per machine pin edge, at the edge's time"""

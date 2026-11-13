@@ -1,1 +1,1 @@
-954226c   # awto-rtdfw commit compiled into the image (git archive); rotate + panel_t6 900 (delay rule)
+4c7a072   # awto-rtdfw commit compiled into the image (git archive); rotate + bl-on-delay merged, panel_t6 900

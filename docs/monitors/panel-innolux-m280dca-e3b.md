@@ -28,6 +28,8 @@
 - So a re-added FreeSync range is at most 40-62.5 Hz. Today: EDID range 48-60 Hz, panel header 59.0-61.0 Hz; no change made.
 
 ## Firmware
+- Panel header limits = datasheet (2026-11-13): Htotal 3980 / 4000 / 4020 (was 4000 / 7040), pixel clock 480 / 533 / 560 MHz (was 160 / 600).
+  - Consequence (sim, fw_sim_vfreq, 2026-11-13): line-buffer frame sync keeps Vtotal 2250 and scales the DCLK with the input rate, so only ~53-62.5 Hz inputs fit; 1080p50, 2160p50, 1080p30, 1080p24 now NO SUPPORT (before: shown at DCLK 450 / 270 / 216 MHz, below the panel's 480 MHz min). 1080p60, 2160p60, 2160p59.94 unchanged.
 - Panel header `fw/sdk/Panel/AWTO_M280DCA_E3B.h` (`_AWTO_M280DCA_E3B`; renamed from AWTO_LTM270FL01.h 2026-11-13, image byte-identical).
 - Input EDIDs: size + primaries from this datasheet (`scripts/make_edid.py`).
 
@@ -43,13 +45,12 @@ Datasheet (source = monitor, sink = panel). Firmware: `UserCommonInterfacePanelS
 | T5 | link training | - / - | `ScalerDisplayDPTxLinkSequence` | - | ~32 ms (#162) | no limit |
 | T6 | training end -> valid video | - / 100 | stream start after training + Mvid measure | - | link 380 -> stream 434 = 54 ms (unit 2, s2-7) | ok |
 | T7 | valid video -> panel shows it | 0 / 50 | (sink) | - | - | panel side |
-| T8 | valid video -> LED on | 200 / - | T3 (registry PANEL_T3) | 550 | - | ok |
-| T8 | same, own black frame | 200 / - | T3_OWN (registry PANEL_T3_OWN) | 20 | stream 434 -> backlight pin 471 = 37 ms (unit 2, s2-7) | **below min** |
+| T8 | valid video -> LED on | 200 / - | none: backlight on with VDD (registry `bl_on_delay`, default 0) | 0 | - | **not followed (Dan)** |
 | T9 | LED off -> video idle | 200 / - | T4 | 250 | - | ok |
 | T10 | video end -> VDD off | 0 / 500 | T5 (+ SSC / PHY off) | 20 | - | ok |
 | T11 | VDD off (10 %) -> VDD on | 1000 / - | T6 (from the VDD-off edge), done before power off / saving completes | 900 | VDD decay not measured | datasheet - 10 % (delay rule, Dan 2026-11-13) |
 
-- T8 is deliberately NOT followed (Dan, 2026-11-13, repeated decision): backlight on immediately after power-up once the MCU is on the M2PLL clock, not gated by video or T3/T3_OWN. Accepted risk per datasheet note 2: a momentarily abnormal screen.
+- T8 is deliberately NOT followed (Dan, 2026-11-13, repeated decision): backlight on with PWM 100 % at boot right after GPIO / pin set-up on the M2PLL clock, then the user brightness once settings load; on POWER on / wake with VDD on. Not gated by video. Accepted risk per datasheet note 2: a momentarily abnormal screen. Firmware: design-162.md "Backlight at once"; registry T3 rows retired.
 - T6 vs T11: datasheet counts from VDD at 10 %; firmware from the switch edge; VDD decay time not measured.
 - Panel VDD default on: GPIO init drives it on, so a warm reset never cuts it; T6 runs at power-down / saving, not at the next power-on.
 - Not in the datasheet: `_PANEL_POWER_ON_BL_TO_PWM` 50, `_PANEL_POWER_OFF_PWM_TO_BL` 50 (SDK defaults, Panel_Default.h; external LED driver).

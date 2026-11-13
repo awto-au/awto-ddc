@@ -196,6 +196,7 @@ extern WORD g_pusFlashAddrArr[_END_OF_PAGEID - _START_OF_PAGEID + 1];
 //----------------------------------------------------------------------------------------
 
 extern StructOsdUserDataType g_stOSDUserData;
+extern __code StructOsdUserDataType g_stOSDDefaultData;
 extern StructBriConDataType g_stBriConData;
 extern StructColorProcDataType g_stColorProcData;
 extern __code StructColorProcDataType tColorTempDefaultData[];

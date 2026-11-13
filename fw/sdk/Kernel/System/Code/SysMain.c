@@ -256,14 +256,16 @@ void SysMainSystemInitial(void)
 #endif
 
     AwtoDiagStage(4);
-    UserCommonInterfacePanelBoot();         // VDD on since GPIO init (default on): T1 now; PHY / link once power is NORMAL
+    ScalerTimerInitialTimerEvent();         // before the backlight on: the pin arms the panel-time timer event
+    UserCommonInterfacePanelBoot();         // VDD on since GPIO init (default on); PHY / link once power is NORMAL
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
+    // #162: backlight now, on M2PLL (Dan 2026-11-13: no T3 wait), cold and warm boot
     UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, (AwtoBootReason() == AWTO_BOOT_COLD) ? AWTO_PNL_BY_BOOT_COLD : AWTO_PNL_BY_BOOT_WARM));
 #endif
-    ScalerTimerInitialTimerEvent();
 
     AWTO_BPROF(0x30);
     UserCommonInterfaceInitial();
+    UserCommonInterfacePanelBootDuty();     // settings loaded: user brightness replaces the boot 100 %
 
     AWTO_BPROF(0x31);
     ScalerMcuDdcRamEnable();

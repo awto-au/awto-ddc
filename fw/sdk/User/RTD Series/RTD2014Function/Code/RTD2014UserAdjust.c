@@ -83,6 +83,7 @@ bit g_bTypeCPortControllerPowerOffFlag = _FALSE;
 // Adjust Backlight
 //-------------------------------------------------------
 void UserAdjustBacklight(WORD usBacklight);
+WORD UserAdjustBacklightDuty(void);
 
 //-------------------------------------------------------
 // Dp Load Edid Related
@@ -244,6 +245,17 @@ void UserAdjustBacklight(WORD usBacklight)
 
     // Adjust backlight by changing PWM duty: through the panel machine (#162), applied while the backlight is on
     UserCommonInterfacePanelPwm(usBacklight);
+}
+
+//--------------------------------------------------
+// Description  : Duty for the panel machine's backlight on: the user value; the SDK default while the NVRAM is not loaded
+//                (cold boot: backlight on right after the M2PLL switch, before RTDNVRamStartup; the field is still 0)
+// Input Value  : None
+// Output Value : PWM duty (not inverted)
+//--------------------------------------------------
+WORD UserAdjustBacklightDuty(void)
+{
+    return (GET_OSD_BACKLIGHT() != 0) ? GET_OSD_BACKLIGHT() : g_stOSDDefaultData.usBackLight;
 }
 
 //----------------------------------------------------------------------------

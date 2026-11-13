@@ -9,7 +9,6 @@
 #define AWTO_R_STATUS0                                  0x0002
 #define AWTO_R_WATCH_DOG_CTRL0                          0x000C
 #define AWTO_R_VIDEO_DISPLAY_CONTROL_REG                0x0028
-#define AWTO_F_VIDEO_DISPLAY_CONTROL_REG_FORCE_BG_EN    0x20
 #define AWTO_R_IV_DV_DELAY_CLK_FINE                     0x003D
 #define AWTO_R_IVS2DVS_DLY_LINE_H                       0x003E
 #define AWTO_R_IVS2DVS_DLY_LINE_L                       0x0040
@@ -24,8 +23,6 @@
 #define AWTO_R_DCLK_FINE_TUNE_OFFSET_LSB                0x01C5
 #define AWTO_R_CAP_M1_FIFO_STATUS                       0x052B
 #define AWTO_R_DISP_M1_FIFO_STATUS                      0x05B0
-#define AWTO_R_DISP_PG_R_CTRL                           0x07F0
-#define AWTO_F_DISP_PG_R_CTRL_PG_ENABLE                 0x80
 #define AWTO_R_FRAME_CTRL_0B                            0x3A0B
 #define AWTO_F_FRAME_CTRL_0B_F_DL_SWAP                  0xC0
 #define AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN               0x04

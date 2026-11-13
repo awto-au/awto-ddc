@@ -21,11 +21,11 @@ SIM_LIMIT_S = 300          # one sim: gates run each in 5-25 s; 12x margin, expi
 MILESTONES = (("panel VDD on", r"panel VDD switched on|^panel: OFF -> VDD"), ("first main-loop pass", r"first main-loop pass"),
               ("console opened", r"console opened"), ("eDP link trained", r"eDP-1 panel link trained|-> VIDEO \(\d+ ms\): eDP-1 link trained"),
               ("stream running", r"video stream to the panel running|-> VIDEO \(\d+ ms\): eDP-1 link trained"),
-              ("backlight on (pin)", r"^backlight on$|-> BL_PWM \("), ("mode INITIAL", r"^mode INITIAL|^system: .* -> INITIAL \("),
+              ("backlight on (pin)", r"^backlight on$|-> BL_PWM \(|backlight on at once|backlight pin on,"), ("mode INITIAL", r"^mode INITIAL|^system: .* -> INITIAL \("),
               ("mode SEARCH", r"^mode SEARCH|^system: .* -> SEARCH \("),
               ("display setting", r"^display setting$|^system: .* -> DISPLAY SETTING \("),
               ("mode ACTIVE", r"^mode ACTIVE|^system: .* -> ACTIVE \("), ("backlight pin edges", None))
-PIN_EDGE = re.compile(r"^backlight (on|off)$|backlight pin (on|off)")
+PIN_EDGE = re.compile(r"^backlight (on|off)$|backlight pin (on|off)|backlight on (at once)")
 
 
 def say(s):
