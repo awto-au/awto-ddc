@@ -10,7 +10,6 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.check_output(
     ["git", "rev-parse", "--show-toplevel"], text=True).strip())
-RCBE = Path("/mnt/2tb/git/awto-sdcc-rcbe/tmp")
 STALL = 300             # fw_build is silent inside a step (asm step <= 240 s own timeout); backstop only
 
 
@@ -27,10 +26,10 @@ def main() -> int:
     a = ap.parse_args()
     tag = a.tag or f"sc{a.level}"
     if not a.bin:
-        sys.exit("--bin is required: name the compiler install explicitly (e.g. .../awto-sdcc-rcbe/tmp/install-<commit>); it must be stamped by awto-sdcc scripts/build.py")
+        sys.exit("--bin is required: name the compiler install explicitly (e.g. /usr/local); it must be stamped by awto-sdcc scripts/build.py")
     inst = a.bin
     env = dict(os.environ, AWTO_DDC_REPO=str(ROOT), AWTO_SDCC_BE="1", AWTO_SDCCCALL=a.level,
-               AWTO_SDCC_BIN=f"{inst}/bin", AWTO_SDCC_SRC=os.environ.get("AWTO_SDCC_SRC", "/mnt/2tb/git/awto-sdcc-rcbe"))
+               AWTO_SDCC_BIN=f"{inst}/bin", AWTO_SDCC_SRC=os.environ.get("AWTO_SDCC_SRC", f"{inst}/share/sdcc/awto-src"))   # the install's own library sources
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (ROOT / "tmp/logs/regcall_build.log").open("a")
     log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} build {tag} bin={inst}\n")

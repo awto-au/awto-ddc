@@ -71,11 +71,11 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Done: keys, register/I2C/GPIO audit, IR. Plan for the rest (panel/video constants first: eDP swing, T-values), rule "one cheap agent at a time": #41 comment 2026-11-09. Docs: `docs/reversing/dahua-fw/{keys,register-audit,gpio-ir}.md`; `re/jxc-4k/*.tsv` (names_gpio_ir.tsv not merged into the bank names).
 - Realtek SDK bugs found (FRC DHF overwrite, DPLL 16-bit overflow): `re/lib-review/realtek-sdk-bugs.md`, #100; fixes held.
 
-### 4.7 Compiler (awto-sdcc, `/mnt/2tb/git/awto-sdcc`, branch `awto/keil-compat`)
-- 16 issues fixed 2026-11-08 (#12 mixed-ABI link refusal, #15 #16 struct args, #3, #6 `--sloc-xdata` opt-in, #14 #17 #19, ICEs #21 #23 #27 #29 #30 #31 #33, #13); install `/mnt/2tb/git/awto-sdcc-kc/tmp/install-9e65f99`. Firmware built with it is code-identical to the pinned compiler (4 builds, gates pass).
-- **Pinned in `scripts/wb_build.py` is still `install-440cfd2`.** Bump only after the keys/ui builds finish, and only after awto-ddc#92 (`mov r7,#0` in `crt_rtd_startup.asm`) lands, otherwise the awto-sdcc#18 branch (`awto/crtstart-r7-18`, unmerged) would skip RAM init on warm reset.
-- Open: #11 (small-be-sc3 IRAM), #18, #32, #46 (DPRx1.c 70 s under load), #49, #50. Earlier "keil-compat flags on" regression figures are invalid (flags never reached sdcc): re-run with `one_test.py --flags` (awto-sdcc#25 comment).
-- 12 upstream bug-report drafts: `/mnt/2tb/git/awto-sdcc-kc/tmp/upstream/*.md` (+ `3.patch`); send only after Dan's 3 checks.
+### 4.7 Compiler (awto-sdcc, `/mnt/2tb/git/awto-sdcc`)
+- Build compiler: `/usr/local` = awto-sdcc main a5c0ac90e8 (stamp + library sources in `/usr/local/share/sdcc/`), BE, `--sdcccall 3`, far locals off; defaults in `scripts/sdcc_tools.py` / `scripts/wb_build.py` (switch: cc0e855, A/B on #204).
+- `--far-locals`: image boot-loops in the sim (15 gates fail); sdcc session bisecting (awto-sdcc#104).
+- Old A/B reference: `~/opt/awto-sdcc-440cfd2` (`--bin ~/opt/awto-sdcc-440cfd2/bin --src ~/opt/awto-sdcc-440cfd2/share/sdcc/awto-src --expect ''`).
+- Open: #11 (small-be-sc3 IRAM), #18, #32, #46 (DPRx1.c 70 s under load), #49, #50.
 - Catalogue and docs live in awto-sdcc: `docs/keil-vs-sdcc.md`, `keil-c51.md`, `keil-abi.md`; awto-ddc holds stubs.
 
 ### 4.8 Clean-room (#65, #68, #69, #70)
