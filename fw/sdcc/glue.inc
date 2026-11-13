@@ -25,6 +25,7 @@ extern BYTE menu_active(void);
 extern void vcp_box_service(void);
 extern __xdata struct { BYTE ucMagic, cmd; } vcp_box;   // awto-rtdfw vcp.c: first two bytes (magic, cmd)
 extern void osd_font_load(BYTE ucFont);
+extern BYTE osd_font_cw(BYTE ucFont);
 
 BYTE ui_font_selected(void)
 {
@@ -205,9 +206,9 @@ void AwtoOsdRoll(BYTE ucOn)
     }
 }
 
-__xdata BYTE g_ucAwtoMapCw;                     // OsdFuncApplyMap blanks: the font about to load (AwtoTextOpen), 0 = SDK 12 px
-
-void osd_tc_open(BYTE ucChars, BYTE ucLines)
+// Map + palette + font: blank cells get the font's width (a part-written row keeps blanks; at Rotate 180, map mirrored, they
+// come before its text, and blanks of another width shifted it sideways, Dan's photo 2026-11-13).
+void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont)
 {
     BYTE ucI;
 
@@ -215,7 +216,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     OsdFuncDisableOsd();
     OsdFuncCloseWindow(_OSD_WINDOW_ALL);
     SET_OSD_DOUBLE_SIZE(GET_OSD_NVRAM_DOUBLE_SIZE());
-    OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0));
+    OsdFuncApplyMap(WIDTH(ucChars), HEIGHT(ucLines), COLOR(0, 0), osd_font_cw(ucFont));
     AwtoOsdOrient(HEIGHT(ucLines));                                                            // also: roll-up (viewport scroll) off
     s_ucVpRows = 0;
     s_ucVpFirst = 0;
@@ -226,6 +227,7 @@ void osd_tc_open(BYTE ucChars, BYTE ucLines)
     {
         ScalerOsdSetColorPalette(ucI + AWTO_PAL_FIRST, tAwtoPal[ucI][0], tAwtoPal[ucI][1], tAwtoPal[ucI][2]);
     }
+    osd_font_load(ucFont);
 }
 
 extern BYTE __xdata osd_cw;
@@ -297,7 +299,7 @@ void osd_tc_viewport(BYTE ucRows)
 
 void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYTE ucStyle)
 {
-    BYTE ucB0 = 0x40 | osd_cw;                   // 1 bit font, cell width = the loaded font's pixel width
+    BYTE ucB0 = AWTO_OSD_CHAR_1BIT_W(osd_cw);   // 1 bit font, cell width = the loaded font's pixel width
     BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
 
     if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // row r cell c -> row H-1-r cell W-1-c: write the run backwards from its last cell

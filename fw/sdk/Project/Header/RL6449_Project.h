@@ -1345,7 +1345,11 @@ extern void UserCommonInterfacePanelPowerTick(void);
 extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
-extern __xdata unsigned char g_ucAwtoMapCw;                       // OsdFuncApplyMap blank cell width (0 = SDK 12 px), glue.inc
+// OSD character command byte 0 (docs/reversing/realtek-rtd/osd-limits.md): [7:6] type 01 = 1-bit font, [4:0] cell width px
+#define AWTO_OSD_CHAR_1BIT                                      0x40
+#define AWTO_OSD_CHAR_1BIT_W(w)                                 ((unsigned char)(AWTO_OSD_CHAR_1BIT | (w)))
+#define AWTO_OSD_SDK_CELL_W                                     12      // SDK menu font cell width (OsdFuncApplyMap's blanks)
+#define AWTO_OSD_SDK_CELL_W_ROT90                               18      // the same font turned 90 / 270
 extern void UserCommonInterfacePanelBoot(void);
 extern void UserCommonInterfacePanelBootDuty(void);
 // #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.

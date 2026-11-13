@@ -50,7 +50,7 @@ BYTE g_ucFontPointer2 = _OSD_PAGE_2_START;
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor);
+void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor, BYTE ucCellW);
 void OsdFuncSetPosition(EnumOsdPositionType enumOsdPositionType, WORD usX, WORD usY);
 void OsdFuncTransparency(BYTE ucTrans);
 void OsdFuncBlending(BYTE ucType);
@@ -89,7 +89,7 @@ void OsdFuncSetHdmiPortVersion(EnumSourceSearchPort enumSearchPort,BYTE ucValue)
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor)
+void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor, BYTE ucCellW)   // ucCellW: blank cells match the font loaded next
 {
     BYTE ucI = 0;
     BYTE ucTmp = 17; // Row Height = 18
@@ -124,12 +124,12 @@ void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor)
     if((GET_OSD_ROTATE_STATUS() == _OSD_ROTATE_DEGREE_90) ||
        (GET_OSD_ROTATE_STATUS() == _OSD_ROTATE_DEGREE_270))
     {
-        ucTmp = 0x4E;  // 18 Pixel
+        ucTmp = AWTO_OSD_CHAR_1BIT_W(AWTO_OSD_SDK_CELL_W_ROT90);
     }
     else
 #endif
     {
-        ucTmp = (g_ucAwtoMapCw != 0) ? (0x40 | g_ucAwtoMapCw) : 0x4C;   // 12 Pixel; an awto text screen: its font's width (blanks match it)
+        ucTmp = AWTO_OSD_CHAR_1BIT_W(ucCellW);
     }
 
     ScalerOsdCharCommandAllByteSeries(g_usFontSelectStart, ucTmp, 0, ucColor, (WORD)ucWidth * ucHeight);

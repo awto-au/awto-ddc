@@ -1409,6 +1409,7 @@ fn	_ScalerScalingUpdateFIFOScalingSize	1	0x42c8	3132
 fn	_osd_tc_place	1	0x4f04	852
 fn	_osd_tc_vlc_begin	1	0x5258	112
 fn	_osd_tc_bar_off	1	0x52fc	8
+fn	_osd_tc_open	1	0x5304	196
 fn	_AwtoNvMark	1	0x53d8	60
 fn	_set_ap_volume	1	0x5440	32
 fn	_osd_tc_cells	1	0x5460	460
@@ -1445,7 +1446,7 @@ fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260
 fn	_set_ap_mute	1	0x9d38	52
 fn	_AwtoNvGroup	1	0x9d6c	56
-const	_set_ap_rotate_tFlipToSdk_10000_2747	1	0x9da4	8
+const	_set_ap_rotate_tFlipToSdk_10000_2748	1	0x9da4	8
 fn	_UserAdjustAudioVolumeMapping	1	0x9dac	28
 fn	_UserAdjustBrightness	1	0x9dc8	64
 fn	_UserAdjustContrast	1	0x9e08	496
@@ -1460,7 +1461,6 @@ fn	_SysSourceSetScanType	1	0xa388	20
 fn	_UserCommonAdjust10bitPanelCompensate	1	0xa39c	132
 fn	_UserCommonAdjustPercentToRealValue	1	0xa420	644
 fn	_UserCommonAdjustRealValueToPercent	1	0xa6a4	460
-fn	_osd_tc_open	1	0xa870	164
 fn	_set_nv_commit	1	0xa914	84
 fn	_UserAdjustBacklightDuty	1	0xa968	28
 fn	_bars	1	0xa990	268

@@ -3051,7 +3051,7 @@ extern void RTDKeyInitial(void);
 // Extern functions from OsdFunc.c
 //----------------------------------------------------------------------------------------
 // __RTD_OSDFUNC__
-extern void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor);
+extern void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor, BYTE ucCellW);
 extern void OsdFuncSetPosition(EnumOsdPositionType enumOsdPositionType, WORD usX, WORD usY);
 extern void OsdFuncTransparency(BYTE ucTrans);
 extern void OsdFuncBlending(BYTE ucType);

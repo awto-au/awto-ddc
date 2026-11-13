@@ -2949,7 +2949,7 @@ void OsdDispMainMenu(void)
 
     OsdFuncDisableOsd();
 
-    OsdFuncApplyMap(WIDTH(_OSD_MAIN_MENU_WIDTH), HEIGHT(_OSD_MAIN_MENU_HEIGHT), COLOR(_CP_WHITE, _CP_BG));
+    OsdFuncApplyMap(WIDTH(_OSD_MAIN_MENU_WIDTH), HEIGHT(_OSD_MAIN_MENU_HEIGHT), COLOR(_CP_WHITE, _CP_BG), AWTO_OSD_SDK_CELL_W);
 
 //20140304 Abel
 #if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE)
@@ -4203,7 +4203,7 @@ void OsdDispOsdRotateSwitch(void)
 {
     OsdFuncDisableOsd();
 
-    OsdFuncApplyMap(WIDTH(44), HEIGHT(22), COLOR(_CP_WHITE, _CP_BG));
+    OsdFuncApplyMap(WIDTH(44), HEIGHT(22), COLOR(_CP_WHITE, _CP_BG), AWTO_OSD_SDK_CELL_W);
 
 //20140304 Abel
 #if(_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE)

@@ -3,14 +3,13 @@
 // Shared text layer for every awto diagnostic screen (debug lines, key test, GPIO inputs): ASCII rows composed in s_pcAwtoRow,
 // drawn with the menu's Spleen cells (ui_text); the SDK proportional font is not used here.
 #ifdef _AWTO_NEW_SETTINGS
-extern void osd_tc_open(BYTE ucChars, BYTE ucLines);
+extern void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont);
 extern void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour);
 extern void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig);
 extern void osd_tc_place_corner(WORD usLeft, WORD usBottom, BYTE ucBig);
 extern void osd_tc_close(void);
 extern void menu_close(void);
 extern void osd_font_load(BYTE ucFont);
-extern BYTE osd_font_cw(BYTE ucFont);
 extern BYTE ui_font_selected(void);
 extern BYTE __xdata osd_cw;
 extern BYTE __xdata osd_rh;
@@ -125,18 +124,13 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     s_ucAwtoCols = ucCols;
     s_pcAwtoRow[0] = ' ';              // every row starts one cell in, clear of the frame
     s_ucAwtoLen = 1;
-    // map blanks of this font's width: a part-written row keeps blanks, and at Rotate 180 (map mirrored) they come before
-    // its text; 12 px SDK blanks there shifted it sideways (Dan's photo, 2026-11-13)
-    g_ucAwtoMapCw = osd_font_cw(AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));
-    osd_tc_open(ucCols, ucLines);
-    g_ucAwtoMapCw = 0;
+    osd_tc_open(ucCols, ucLines, AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe font
     UserCommonInterfacePanelPowerTick();        // #162: map clear and font load are the long parts of a console open (boot,
                                                 // wake): panel steps due meanwhile (T3, backlight-to-PWM) are not held up
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_TEXT, AWTO_RGB_PHOSPHOR_GREEN);       // diagnostic look: green on black, title bar reversed
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_DIM, AWTO_RGB_PHOSPHOR_DIM);
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_BG, AWTO_RGB_BLACK);
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_ALERT, AWTO_RGB_ALERT_RED);
-    osd_font_load(AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));     // console / probe
     UserCommonInterfacePanelPowerTick();
     if(ucView != 0)
     {

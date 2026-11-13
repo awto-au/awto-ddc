@@ -109,8 +109,7 @@ static void AwtoCardOpenW(BYTE ucCols, BYTE ucLines, BYTE ucTitle)
 {
     WORD usW, usH;
 
-    osd_tc_open(ucCols, ucLines);
-    osd_font_load(ui_font_selected());
+    osd_tc_open(ucCols, ucLines, ui_font_selected());
     usW = (WORD)ucCols * osd_cw;
     usH = (WORD)ucLines * osd_rh;
     osd_tc_bar(AWTO_WIN_FRAME, 0, 0, usW - 1, usH - 1, 1);
