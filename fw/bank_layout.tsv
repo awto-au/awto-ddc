@@ -170,6 +170,7 @@ const	___str_27	C	0x1628	12
 const	___str_28	C	0x1634	12
 const	___str_29	C	0x1640	12
 const	___str_138	C	0x164c	12
+stub	_AwtoDemoLog	C	0x1658	8
 const	___str_32	C	0x1660	8
 const	___str_35	C	0x1668	8
 stub	_osd_tc_cells	C	0x1670	8
@@ -2062,6 +2063,8 @@ const	_mn_s9	6	0x09e0	36
 const	_caps	6	0x0a04	376
 const	_id2idx	6	0x0b7c	124
 const	___str_67	6	0x0bf8	20
+const	_tAwtoDemoId	6	0x0c0c	16
+const	_tAwtoDemoVal	6	0x0c1c	48
 const	_pinfo	6	0x0c68	52
 const	_ptitle	6	0x0c9c	36
 const	_tab	6	0x0cc0	2160
@@ -2095,6 +2098,7 @@ fn	_AwtoDdcReply	6	0x286c	196
 fn	_AwtoDdcciPoll	6	0x2930	624
 fn	_AwtoDeadPortPoll	6	0x2ba0	180
 fn	_AwtoConLogSync	6	0x2c54	380
+fn	_AwtoDemoLog	6	0x2dd0	164
 fn	_AwtoPortBoot	6	0x3cb8	184
 fn	_AwtoPortCable	6	0x3d70	48
 fn	_AwtoPortEnableId	6	0x3da0	68
@@ -2149,6 +2153,7 @@ fn	_AwtoConLogRoom	6	0x539c	116
 fn	_AwtoConLogStart	6	0x5410	84
 fn	_AwtoMemForce	6	0x5464	180
 const	_pent	6	0x5518	120
+const	_tAwtoDemoArg	6	0x5590	16
 fn	_AwtoConLogTail	6	0x55a0	200
 fn	_AwtoConRow	6	0x5668	292
 fn	_AwtoConTitle	6	0x578c	788
@@ -2386,8 +2391,8 @@ fn	_AwtoPutNvG	8	0x6414	92
 const	___str_148	8	0x6470	40
 fn	_AwtoSyncConPoll	8	0x64a4	228
 fn	_AwtoSyncLine	8	0x6588	2424
-fn	_AwtoDiagTestCmd	8	0x8288	792
 const	_tAwtoSyncTxtOff	8	0x85a0	660
+fn	_AwtoDiagTestCmd	8	0x8834	856
 const	_font_blob_spleen	8	0x908c	1300
 const	_font_blob_spleen5	8	0x95a0	916
 const	_font_blob_spleen6	8	0x9934	1000

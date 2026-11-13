@@ -9,6 +9,7 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
   --cmd: write the firmware test byte (g_stAwtoDiag + 0x28, awto-ddc#33) instead: 1..4 = menu/right/left/exit key
     injected after the key scan, 0x10+n = event n (n<16; n>=16 at 0x70+n-16). Visuals someone is asked to look at stay up until cleared (#28):
       debug = 0x26           debug pop-up (console), held             clear    = 0x27  every held visual away
+      demo-log = 0x3A  console + 100 demo log lines 5ms apart (real line types, sample values)
       timed (old images): debug-6s = 0x20 (pop-up, _AWTO_INFO_POPUP_SEC, #34). Boot logo cmds 0x21 / 0x24 / 0x25: gone (#144).
     0x22/0x23 = message log on/off (wb-msgtable, #56). An image older than #28 ignores 0x26 / 0x27.
     Held state: g_stAwtoDiag + 0x2F (bit1 pop-up). Works for keys (the direct key write is overwritten).
@@ -22,7 +23,7 @@ TESTCMD_OFF = 0x28
 sys.path.insert(0, str(HERE))
 from rtd_proto import OSD_EVENTS as EVENTS, event_cmd, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20,
-            "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23,
+            "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23, "demo-log": 0x3A,
             "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30, "defaults": 0x40,
             "keytest": 0x41, "keytest-off": 0x42, "gpio": 0x43, "gpio-off": 0x44, "probe": 0x45, "probe-off": 0x46, "scale1": 0x4A, "scale2": 0x4B, "scroll": 0x47, "scroll-reset": 0x48,
             # diagnostic-screen font n (osd_font_load index): 0x60 + n; probe-N = limit probe with N numbered lines (0x80 + N)
