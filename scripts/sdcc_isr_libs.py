@@ -50,11 +50,38 @@ def isr_name(n: str, sfx: str = "_isr") -> str:
     return f"{m.group(1)}{sfx}_PARM_{m.group(2)}" if m else n + sfx
 
 
+def lib_dirs() -> list:
+    """Source dirs in the linked library's build order: VPATH of LIBSRC/<lib>/Makefile.in, then device/lib (awto-sdcc#80)."""
+    mk, dirs = LIBSRC / T.LIB.name / "Makefile.in", []
+    m = re.search(r"^VPATH\s*=\s*(.*)$", mk.read_text(), re.M) if mk.exists() else None
+    for d in (m.group(1).split(":") if m else []):
+        d = d.strip().replace("$(srcdir)", str(LIBSRC / T.LIB.name)).replace("$(std_lib_dirs)", str(LIBSRC))
+        if "$(" not in d:
+            dirs.append(Path(d).resolve())
+    return dirs + ([LIBSRC.resolve()] if LIBSRC.resolve() not in dirs else [])
+
+
+DIRS = None
+
+
 def src_of(sym: str):
+    """C source to clone, or None: not in the library, or an asm helper with no RAM state (the shared copy is safe)."""
+    global DIRS
     if sym in OURS:
         return ROOT / OURS[sym]
-    p = LIBSRC / f"{sym[1:]}.c"                     # asm `__mullong` = C `_mullong` = _mullong.c
-    return p if p.exists() else None
+    DIRS = DIRS or lib_dirs()
+    for d in DIRS:                                  # first dir with the stem wins, as make's VPATH
+        for ext in (".s", ".asm", ".c"):
+            p = d / f"{sym[1:]}{ext}"               # asm `__mullong` = C `_mullong` = _mullong.c
+            if not p.exists():
+                continue
+            if ext == ".c":
+                return p
+            if stateful(p.read_text()):
+                sys.exit(f"{p}: stateful asm helper reached from an ISR; cloning asm is not supported")
+            log(f"{sym}: {p} (asm, no RAM state): shared copy")
+            return None
+    return None
 
 
 def compile_lib(src: Path, out: Path) -> str:

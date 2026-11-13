@@ -41,7 +41,7 @@ def main() -> int:
     ap.add_argument("--tag", required=True)
     ap.add_argument("-D", dest="defs", action="append", default=[])
     ap.add_argument("--bin", type=Path, default=SDCC_INSTALL / "bin")
-    ap.add_argument("--src", default=SDCC_SRC)
+    ap.add_argument("--src", help="default: <install>/share/sdcc/awto-src if the install has it, else SDCC_SRC")
     ap.add_argument("--level", default=SDCCCALL)
     ap.add_argument("--expect", default=SDCC_COMMIT, help="install stamp prefix ('' = no check)")
     ap.add_argument("--flags", default="", help="extra sdcc flags")
@@ -62,6 +62,9 @@ def main() -> int:
     if a.expect and not st.startswith(a.expect):
         say(f"REFUSED: compiler {a.bin} stamp {st!r}, expected {a.expect} (pass --expect '' for an A/B with another install)")
         return 2
+    own = a.bin.parent / "share/sdcc/awto-src"          # newer installs ship their library sources (awto-sdcc#80)
+    a.src = a.src or str(own if own.is_dir() else SDCC_SRC)
+    say(f"library sources {a.src}")
     env = dict(os.environ, AWTO_SDCC_BE="1", AWTO_SDCC_BIN=str(a.bin), AWTO_SDCCCALL=a.level, AWTO_FW_TAG=a.tag,
                AWTO_SDCC_SRC=a.src, K2S_SDCC_EXTRA=" ".join([*(f"-D{d}" for d in a.defs), *a.flags.split()]))
     out = a.tree / f"tmp/logs/build_{a.tag}_{a.serial}.out"
