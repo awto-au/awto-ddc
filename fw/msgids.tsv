@@ -609,7 +609,7 @@ a87f	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2545	New offset	0
 a87f	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2552	New offset	0
 a8c7	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:989	active region count	0
 a8dc	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4303	Color Info Changed	0
-a9ec	System	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c:1969	######    F/W START    ######	1
+a9ec	System	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c:1968	######    F/W START    ######	1
 aa8d	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:530	7.Calculated Min	1
 aa99	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9271	Get Pixel Repetition 6	0
 aae3	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5521	7. DP Fifo Fail	0

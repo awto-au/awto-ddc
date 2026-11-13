@@ -1,3 +1,5 @@
+#include "ScalerFunctionInclude.h"
+
 #if(_AWTO_DBG_FOLLOW == _ON)
 // #28: debug IIC engine follows the active port (SDK: fixed _DEBUG_DDC_CHANNEL_SEL). Called from ScalerMcuDdcciSwitchPort's debug branch.
 // #79 runtime swap (_AWTO_DBG_SWAP): the active port's DDC belongs to DDC/CI (IIC_1, 0x37) unless g_ucAwtoDbgLink != 0;
@@ -5,7 +7,7 @@
 #if(_AWTO_DBG_SWAP == _ON)
 __xdata BYTE g_ucAwtoDbgLink;               // 0 = DDC/CI on the active port (default), 1 = debug slave 0x35 there
 __xdata WORD g_usAwtoDbgLinkSec;            // debug link seconds left (0 = until told back)
-__xdata BYTE g_ucAwtoDdcciCh = AWTO_DBG_PARK_CH;    // IIC_1 channel wanted (fw/sdcc/awto_ddcci.inc re-inits with it)
+__xdata BYTE g_ucAwtoDdcciCh = AWTO_DBG_PARK_CH;    // IIC_1 channel wanted (fw/ddcci/ddcci.c re-inits with it)
 static __xdata BYTE s_ucAwtoDbgPort = _D2_INPUT_PORT;
 #endif
 
@@ -31,7 +33,7 @@ static void AwtoDbgSetFF22(BYTE ucCh)
     MCU_FF28_IIC_IRQ_CONTROL = ucIrq;
 }
 
-static void AwtoDbgSelectChannel(BYTE ucInputPort)
+void AwtoDbgSelectChannel(BYTE ucInputPort)
 {
     BYTE ucCh = 0x03;                       // DDC2 (_PCB_DEBUG_DDC) for ports without their own DDC
 #if((_AWTO_DBG_SWAP == _ON) && (_AWTO_DDCCI_ENGINES == 3))

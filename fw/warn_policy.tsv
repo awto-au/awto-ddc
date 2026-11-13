@@ -22,18 +22,18 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c	824	ok	OK-HARMLESS: switch(ucDpcdLane&0x1F): case _DP_FOUR_LANE shares body with default, SDCC drops the redundant compare; same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1_INT.c	102	ok	OK-HARMLESS: switch(g_ucDpRx1LaneCount): FOUR_LANE and default share body; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_LDO.c	57	ok	OK-CONFIG: all cases of switch(enumPorStatus) are empty for this config; whole switch folds to nothing
-^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1343	ok	OK-CONFIG: _DEBUG_MESSAGE_SUPPORT==_ON (awto bring-up, Debug.h) forces enumMode=_DEBUG_MODE so enumMode==_DDCCI_MODE is false; main debug engine stays in debug mode
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1346	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1352	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1363	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1365	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1373	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1380	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1388	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1396	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1404	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1412	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
-^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1420	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1342	ok	OK-CONFIG: _DEBUG_MESSAGE_SUPPORT==_ON (awto bring-up, Debug.h) forces enumMode=_DEBUG_MODE so enumMode==_DDCCI_MODE is false; main debug engine stays in debug mode
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1345	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1351	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1362	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1364	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1372	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1379	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1387	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1395	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1403	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1411	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
+^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Mcu.c	1419	ok	OK-CONFIG: SDK main-engine DDCCI_MODE body dead because debug-mode is forced; AWTO spare engines provide DDC/CI
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Measure.c	933	ok	OK-CONFIG: DP/default cases empty for this config; switch(ucSourceType) merges them into default
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	112	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulMacClk arms dead
 ^unreachable code$	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_PLL.c	116	ok	OK-CONFIG: _PANEL_DPTX_LINK_RATE==HBR2 constant; RBR/HBR ulMacClk arms dead

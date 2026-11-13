@@ -261,7 +261,7 @@ unsigned long AwtoMs(void)
     return ((DWORD)usHi << 16) | usLo;
 }
 
-// #157 DDC/CI host time (awto_ddcci.inc): RAM only. Ring lines at the first sync of this boot and on a drift over AWTO_HT_DRIFT_MS.
+// #157 DDC/CI host time (fw/ddcci/ddcci.c): RAM only. Ring lines at the first sync of this boot and on a drift over AWTO_HT_DRIFT_MS.
 void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, UTC offset (15 min, signed)
 {
     DWORD ulNow = AwtoMs();

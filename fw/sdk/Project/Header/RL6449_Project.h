@@ -564,7 +564,7 @@ extern void AwtoDiagT3Mark(unsigned char ucEnd);
 #define _AWTO_DBGISR                                            _ON
 #define _AWTO_DBGISR_BLK_MAX                                    24      // max bytes per 0x3C read: IIC __data FIFO fill, as the SDK 0xBB reply
 // Debug slave 0x35 on the DDC of the active port, not fixed _PCB_DEBUG_DDC (#28): D1 -> DDC1 (DP AUX), D2 -> DDC2, D3 -> DDC3.
-// SCL hold/release of the debug protocol follow FF22 (fw/sdcc/awto_dbgport.inc, keil2sdcc SUBS).
+// SCL hold/release of the debug protocol follow FF22 (fw/diag/dbgport.c).
 #ifndef _AWTO_DBG_FOLLOW
 #define _AWTO_DBG_FOLLOW                                        _ON
 #endif
@@ -572,6 +572,7 @@ extern void AwtoDiagT3Mark(unsigned char ucEnd);
 #define AWTO_DBG_SCL(op)                                        do { BYTE ucAwtoCh = MCU_FF22_IIC_CH_SEL & 0x07; \
     if(ucAwtoCh == 0x03) { MCU_FE66_DDC2_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x04) { MCU_FE6F_DDC3_DDC_CONTROL_2 op; } \
     else if(ucAwtoCh == 0x02) { MCU_FF2E_DDC1_DDC_CONTROL_2 op; } else if(ucAwtoCh == 0x01) { MCU_FF20_DDC0_DDC_CONTROL_2 op; } } while(0)
+extern void AwtoDbgSelectChannel(unsigned char ucInputPort);   // ScalerMcuDdcciSwitchPort's debug branch
 #endif
 // M-domain set-up phases of the first set-up per boot (start, IVS wait 1, DCLK final offset, memory check, check OK): one sync log
 // line each (AWTO_SYNC_EV_MSTEP, value = arg << 16 | val), every build; the other steps only in the ring below (#165).

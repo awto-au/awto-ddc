@@ -1318,7 +1318,6 @@ void ScalerMcuDdcDebounceSel(EnumClkSel enumClock)
 //                ucInputPort --> Input Port Type
 // Output Value : None
 //--------------------------------------------------
-#include "awto_dbgport.inc"
 void ScalerMcuDdcciSwitchPort(EnumDDCCIDebugMode enumMode, BYTE ucInputPort)
 {
 #if(_AUTO_TEST_SUPPORT == _ON)
