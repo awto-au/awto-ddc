@@ -1,6 +1,6 @@
 # IP over DDC (#80)
 
-- Firmware: branch `wb-p14net` (worktree `/mnt/2tb/git/awto-ddc-net`), `fw/sdcc/awto_net.inc`, ISR block in `fw/sdcc/awto_dbgisr.inc`, D0 dispatch in `fw/sdcc/awto_ddcci.inc`, switch `_AWTO_NET` in `RL6449_Project.h`.
+- Firmware: branch `wb-p14net` (worktree `/mnt/2tb/git/awto-ddc-net`), `fw/sdcc/awto_net.inc`, ISR block in `fw/sdcc/awto_dbgisr.inc`, D0 dispatch in `fw/ddcci/ddcci.c`, switch `_AWTO_NET` in `RL6449_Project.h`.
 - Host: `scripts/ddcnet.py` (loopback, stack, daemon, svc). Decoded log lines: `rtd_proto` (`net 0x3D` / `net DDC/CI D0` runs).
 
 ## Link

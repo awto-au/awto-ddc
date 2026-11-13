@@ -181,7 +181,7 @@ Abbreviations in the table:
 | `AWTO_HT_STALE_MS` 180000; `AWTO_HT_DRIFT_MS` 1000; `AWTO_HT_GAP_S` | host-time stale / drift | as listed | project header | Dan: 3 minutes without a sync (host sends every 60 s); drift 1 s | 60 s period | 3.0 | marks the host time stale |
 | `AWTO_SET_LOOP_MS` 20; `AWTO_NV_EL_MAX_MS` 100 | settings service period; gate aging cap | 20 ms; 100 ms | `RL6449_Project.h:104,150` | derived: below key repeat 0.5 s; 5 x 20 | n/a | n/a | service call |
 | `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`awto_meas4k.inc:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | UNKNOWN reason | UNKNOWN | UNKNOWN | window ends |
-| `awto_ddcci.inc:84` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
+| `fw/ddcci/ddcci.c:86` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
 | `awto_diag.inc:12,49`; `awto_meas4k.inc:70,85`; `awto_wdt.inc:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
 | `awto_delaycal.inc:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
 | `awto_t0ev.inc:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |

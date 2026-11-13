@@ -13,7 +13,7 @@ Tags: [code] read in source. [issue] taken from an issue or comment. [inferred] 
 ---
 ## 0. Findings that change the picture
 - **The #84 dead-port guard and the #83 D1 pre-fill are NOT in wb-p14ui.** They live on `wb-p14swap` (194116a) and `wb-p14pf`. Commit b721714 says "its base #84 dead-port guard 194116a not taken". [code: no `AwtoDeadPortPoll` or `AwtoPrefillPoll` anywhere in fw/ or the port; branch --contains]
-  - Today `AwtoInputSelect` (awto_ddcci.inc:4) accepts a port with no cable. EXIT/UP "next input" and VCP 0x60 therefore have the #84 failure again: fixed port, no cable, NOSIGNAL, power saving, never back.
+  - Today `AwtoInputSelect` (fw/ddcci/ddcci.c:12) accepts a port with no cable. EXIT/UP "next input" and VCP 0x60 therefore have the #84 failure again: fixed port, no cable, NOSIGNAL, power saving, never back.
   - The registry row `kvm_prefill` is inert (only toggled by test cmd 0x3D).
 - **Early panel bring-up is two separate SDK-path calls plus one raw GPIO** [code]:
   - (a) `AwtoPanelVddEarly()` is inserted in `SysMainSystemInitial` after stage 4. It does a raw `PCB_PANEL_POWER(ON)` plus logging, with no wait and **no SDK panel-state change**. The SDK panel status stays `_PANEL_POWER_OFF_STATE`.
@@ -267,7 +267,7 @@ Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PAN
 |---|---|---|
 | SDK auto/fixed search | SysSource.c:`SysSourceHandler/SwitchPort/DetectPort/Judge` | mode SEARCH/NOSIGNAL |
 | SDK switch + reset | `SysSourceSwitchInputPort` + `SysModeSetResetTarget(RESET_TO_SEARCH)` | OSD selector, SDK hot-key |
-| **ours: `AwtoInputSelect`** | awto_ddcci.inc:4 (VCP 0x60, menu input row, test cmds 0x31-0x33, selector) | fixed port; fast path first |
+| **ours: `AwtoInputSelect`** | fw/ddcci/ddcci.c:12 (VCP 0x60, menu input row, test cmds 0x31-0x33, selector) | fixed port; fast path first |
 | ours: fast path | `AwtoSwFast/Go/Poll` | cached switch (§5) |
 | ours: hold wake | `AwtoWakePoll` → `AwtoRxRescan`, `AwtoSwFastGo`, `AwtoWakeRelease` → `SysModeSetResetTarget(SEARCH)` | L1/L2 |
 | ours: selector | `AwtoSourceKey` | keys |
@@ -295,7 +295,7 @@ Duplicates: boot INITIAL `_BACKLIGHT_ON` + early raw VDD + display-setting `_PAN
 
 ### 3.6 Cross-cutting
 - Timers/WDT: SDK event table + ours (§1.6); WDT feeds from SDK waits (subs) and ours.
-- DDC/CI: SDK `UserCommonDdcciHandler` (engine 0), our spare-engine poll (awto_ddcci), debug slave in EXINT1 (awto_dbgisr), IP-over-DDC (awto_net), debug-port follow (awto_dbgport). KVM/debug cannot share a channel (#79).
+- DDC/CI: SDK `UserCommonDdcciHandler` (engine 0), our spare-engine poll (fw/ddcci/ddcci.c), debug slave in EXINT1 (awto_dbgisr), IP-over-DDC (awto_net), debug-port follow (awto_dbgport). KVM/debug cannot share a channel (#79).
 - Keys: one reader and dispatcher after #129.
 
 ---
@@ -336,7 +336,7 @@ Table in §1.4. Second drivers marked in §3.1.
 `SEARCH_PORT_INITIAL → SEARCH_TIME_INITIAL → DetectPort (predetect, scan) → Judge → (timing) → next port when time elapsed → SOURCE_SWITCH_FINISH`. AWTO+: fixed-port scan type set by `AwtoInputSelect`/selector, which makes "all ports searched" mean one port; no cable guard in this tree (#84 branch only).
 
 ---
-## 5. Fast switch / KVM / hold model (awto_fastsw.inc, awto_fastsw_scaler.inc, awto_sw.inc, awto_ddcci.inc)
+## 5. Fast switch / KVM / hold model (awto_fastsw.inc, awto_fastsw_scaler.inc, awto_sw.inc, fw/ddcci/ddcci.c)
 State machine (as coded, `_AWTO_FAST_SWITCH` and `_AWTO_WAKE_HOLD` ON, `_AWTO_KEEP_IDLE_RX` ON):
 ```
 ACTIVE(port P, cache[P] valid)
@@ -666,7 +666,7 @@ Triggers (each entry shows which code decides and what is logged):
 - Known facts [issue #144]: sim wakes 9-30 ms; unit 2 real host test: the poll ran 1-3 times in the whole PS period, so the SDK detect won both times (wd8 1474 ms, tmds1 1539 ms to ACTIVE). Two wake paths coexist.
 
 ### T6. Source change (KVM / selector / auto-search / cable / VCP 0x60)
-Entry points: `AwtoInputSelect(port, why)` (awto_ddcci.inc:4) for VCP 0x60, menu input row, test cmds 0x31-0x33 and the selector; SDK auto-search by `SysSourceHandler`; SDK cable reset; front key (SOURCE/UP) → `AwtoSourceKeyOpen`.
+Entry points: `AwtoInputSelect(port, why)` (fw/ddcci/ddcci.c:12) for VCP 0x60, menu input row, test cmds 0x31-0x33 and the selector; SDK auto-search by `SysSourceHandler`; SDK cable reset; front key (SOURCE/UP) → `AwtoSourceKeyOpen`.
 A. `AwtoInputSelect`:
 1. Returns for ports other than D1-D3, and for "switch to the current ACTIVE port" with why 0x60. **No cable check in this tree** (#84 guard absent).
 2. `AwtoSwArm`, `AwtoSwEvent(CMD, why)`, `g_ucAwtoNvSwitch = 1` (NV flush gate: not stable), `AwtoSyncBegin(SWITCH, port)`, `SET_FORCE_POW_SAV_STATUS(FALSE)`, `SysSourceSetScanType(FIXED_PORT)`. LOG: `switch to <port>` (C0 02).

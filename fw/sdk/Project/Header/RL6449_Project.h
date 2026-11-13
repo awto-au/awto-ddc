@@ -654,7 +654,7 @@ extern void AwtoFreqUpdate(void);
 // Debug port: DDC on the active port speaks the Realtek debug protocol (slave 0x35) instead of DDC/CI (0x37),
 // so RTDCustomerTool / our CLI get live register access (#13). DDC/CI (ddcutil) is off while this is _ON.
 #define _AWTO_DEBUG_PORT                                        _ON
-// #60 KVM: DDC/CI 0x37 on the spare IIC engines, polled (fw/sdcc/awto_ddcci.inc); 0 = off, 1 = IIC_1 following the active
+// #60 KVM: DDC/CI 0x37 on the spare IIC engines, polled (fw/ddcci/ddcci.c); 0 = off, 1 = IIC_1 following the active
 // port, 3 = IIC_1..3 fixed on DDC1/2/3 (every host can switch). The main engine then never enters DDC/CI mode (both would ACK 0x6E)
 #ifndef _AWTO_DDCCI_PARK
 #define _AWTO_DDCCI_PARK                                        0       // bisect (kvm1 dead on unit 3): 1 = IIC_1 polled but parked on channel 7 (no DDC)
@@ -670,7 +670,7 @@ extern void AwtoFreqUpdate(void);
 #endif
 #define AWTO_XB(a)                                              (*(volatile __xdata unsigned char *)(a))
 extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
-// awto: dead-port guard hook, called from AWTO_SW_FAST_POLL (#84); fw/sdcc/awto_ddcci.inc. Switch-log arg 1 = port with no cable refused (VCP 0x60, menu row, selector),
+// awto: dead-port guard hook, called from AWTO_SW_FAST_POLL (#84); fw/ddcci/ddcci.c. Switch-log arg 1 = port with no cable refused (VCP 0x60, menu row, selector),
 // 3 = fixed port without cable in NOSIGNAL / PS while another port is cabled -> auto search, normal, SEARCH
 #define AWTO_SW_EV_DEADPORT                                     0xB8
 extern unsigned char AwtoPortCable(unsigned char ucPort);

@@ -2,7 +2,7 @@
 """DDC/CI (MCCS 2.2) against the firmware in fw_sim, the way ddcutil talks to the monitor (awto-ddc#60, #67).
 
 usage: ddc_sim.py BIN [--map MAP] [--mode 1080p60]
-  Model: the spare IIC engine IIC_1 (0xFE86..0xFE8F, fw/sdcc/awto_ddcci.inc), polled by the firmware's main loop:
+  Model: the spare IIC engine IIC_1 (0xFE86..0xFE8F, fw/ddcci/ddcci.c), polled by the firmware's main loop:
   a host write lands as SUB_IN (source 0x51) + data FIFO with STATUS bit1/bit2; replies are the DATA_OUT bytes written
   after a buffer reset (IRQ2 bit6). Checks: capabilities (whole string, parsed), getvcp of every listed code, setvcp
   10 / 12 / 14 / E6 read back, save (0x0C), unsupported code -> result 01, bad checksum -> no reply.

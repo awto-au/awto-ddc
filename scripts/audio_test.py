@@ -56,7 +56,7 @@ DPORT_IDX, DPORT_DATA = 0x71C9, 0x71CA           # P71_C9_HDMI_AP / P71_CA_HDMI_
 DPORT_NAMES = {0x03: "HDMI_AFCR", 0x05: "HDMI_MAGCR1", 0x06: "HDMI_MAGCR2", 0x07: "HDMI_MAG_M_FINAL", 0x08: "HDMI_MAG_L_FINAL",
                0x09: "HDMI_MAG_R_FINAL", 0x30: "HDMI_AVMCR", 0x31: "HDMI_WDCR0"}
 MUX_ANA_OUT = 0x06E0                            # REG_MUX_ANA_OUT
-GEN_VCP = 0x63                                  # ear-test steps; -D _AWTO_AUDIO_TEST image: chip sine generator (fw/sdcc/awto_ddcci.inc)
+GEN_VCP = 0x63                                  # ear-test steps; -D _AWTO_AUDIO_TEST image: chip sine generator (fw/ddcci/ddcci.c)
 VCP_VOLUME = 0x62
 HZ_FLAG = 0x8000                                # VCP 0x63 value: tone frequency announce (RL6449_Project.h AWTO_AUDIO_TEST_HZ_FLAG)
 MCCS_GAP_S = 0.05                               # MCCS: host waits >= 50 ms between DDC/CI messages

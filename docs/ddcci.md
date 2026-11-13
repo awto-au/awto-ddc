@@ -1,6 +1,6 @@
 # DDC/CI (MCCS 2.2) on our firmware
 
-- Transport: DDC/CI 0x37 on the spare IIC engine IIC_1, polled from the main loop (`fw/sdcc/awto_ddcci.inc`, #60);
+- Transport: DDC/CI 0x37 on the spare IIC engine IIC_1, polled from the main loop (`fw/ddcci/ddcci.c`, #60);
   the debug slave 0x35 stays on the main engine. kvm2e config: `-D _AWTO_DDCCI_FIXCH=2 -D _AWTO_DBG_FOLLOW=_OFF`.
 - Content: the settings registry (#67). `AwtoDdcRegistry` hands get / set / save / capabilities to awto-rtdfw `vcp.c`.
   Codes, values and the capabilities string: [settings.md](settings.md) (generated, column VCP).
@@ -19,7 +19,7 @@
 | E2 / E3 | schema (read) / 1 confirm risky, 2 save, 3 all defaults | vcp.c |
 | E4 / E5 | menu command (op << 8 \| arg, awto-rtdfw menu.h) / cursor item (read) | vcp.c |
 | E6..FF | direct manufacturer codes of our rows (fast switch, panel T3, ...); free: E8, F5 (retired rows) | rows |
-| E9 | host time (#157): table write (0xE7) = set; get: max = syncs since boot, cur = drift ms (int16) | awto_ddcci.inc |
+| E9 | host time (#157): table write (0xE7) = set; get: max = syncs since boot, cur = drift ms (int16) | fw/ddcci/ddcci.c |
 
 ## Tests
 - Offline: `scripts/ddc_sim.py BIN` (IIC_1 engine model in fw_sim; also the `ddc` gate of `scripts/fw_gates.py`).

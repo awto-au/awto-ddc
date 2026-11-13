@@ -255,7 +255,7 @@ void AwtoDiagTestCmd(void)
     }
     else if((ucCmd >= 0x31) && (ucCmd <= 0x33))      // #60 switch to D1/D2/D3, fixed port, as VCP 0x60 (RTD2014Ddcci.c)
     {
-        AwtoInputSelect(_D0_INPUT_PORT + (ucCmd - 0x30), ucCmd);     // fw/sdcc/awto_ddcci.inc, shared with VCP 0x60
+        AwtoInputSelect(_D0_INPUT_PORT + (ucCmd - 0x30), ucCmd);     // fw/ddcci/ddcci.c, shared with VCP 0x60
     }
     else if((ucCmd == 0x22) || (ucCmd == 0x23))      // #56: on-screen message log on / off
     {

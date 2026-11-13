@@ -7,7 +7,7 @@ usage: dbg_link.py on|off|state|expiry BUS [--minutes N]
   to 0x37, then 0x35 is re-probed after each MCCS wait. Exit 0 = linked ("swapped" / "already"), 1 = no link.
 - off: test cmd 0x3B over 0x35 (back to DDC/CI); then 0x37 must ACK.
 - expiry: test of the firmware timeout: 0x37 back within 1.25 x --minutes (checked once per second).
-- Firmware: fw/sdcc/awto_dbgport.inc + awto_ddcci.inc (wb-p14swap); sim check: scripts/swap_sim.py.
+- Firmware: fw/sdcc/awto_dbgport.inc + fw/ddcci/ddcci.c (wb-p14swap); sim check: scripts/swap_sim.py.
 - dev.py wraps every debug-slave command in on/off (`linked`), so it does not matter which side owns the DDC.
 Log: ./tmp/logs/dbg_link.log
 """

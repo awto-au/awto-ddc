@@ -4,7 +4,7 @@
 usage: swap_sim.py BIN [--map MAP] [--mode 1080p60]
   Checks (host on D2's DDC): after boot FF22 parked (7) and IIC_1 (FE86) on DDC2, 0x35 NAKs; setvcp E3 A50A -> FF22 on DDC2,
   IIC_1 parked, 0x35 answers, 600 s left; test cmd 0x3B -> back; test cmd 0x3C -> on, 0 s (until told back); 0x3B -> back.
-  DDC/CI engine model: scripts/ddc_sim.py. Firmware: fw/sdcc/awto_dbgport.inc, awto_ddcci.inc (wb-p14swap).
+  DDC/CI engine model: scripts/ddc_sim.py. Firmware: fw/sdcc/awto_dbgport.inc, fw/ddcci/ddcci.c (wb-p14swap).
 Exit 1 on a failed check. Log: ./tmp/logs/swap_sim.log
 """
 from __future__ import annotations

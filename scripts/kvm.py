@@ -7,7 +7,7 @@ usage: kvm.py <D1|D2|D3|dp|hdmi1|hdmi2|next|here> [--units 1,2,3] [--ddcutil] [-
 - next: getvcp 0x60 on the first unit, then the next of D1 -> D2 -> D3 -> D1 for every unit.
 - here: each unit gets its own current input back (getvcp, then setvcp the same value; the firmware ignores a switch to
   where it is): times a parallel all-monitor command without losing a single-cable unit's picture or its DDC/CI.
-- Firmware side: fw/sdcc/awto_ddcci.inc (wb-p14kvm). With _AWTO_DDCCI_ENGINES 1 only the host on the active port reaches 0x37.
+- Firmware side: fw/ddcci/ddcci.c (wb-p14kvm). With _AWTO_DDCCI_ENGINES 1 only the host on the active port reaches 0x37.
 Log: ./tmp/logs/kvm.log (one decoded line per monitor + the wall time)
 """
 from __future__ import annotations

@@ -118,7 +118,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 | Options | `fw/sdk/Project/Header/RL6449_Project.h` (audio section) |
 | `PCB_AMP_MUTE` no-op | `fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` |
 | `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/settings/settings_glue.c` |
-| Amp pins, ear-test steps | `fw/sdcc/awto_audio.inc`; VCP 0x63 in `fw/sdcc/awto_ddcci.inc` |
+| Amp pins, ear-test steps | `fw/sdcc/awto_audio.inc`; VCP 0x63 in `fw/ddcci/ddcci.c` |
 | Mapping + hold substitutions | `fw/awto/settings/rules.py` (SUBS into `UserAdjustAudioVolumeMapping`, `UserInterfaceGetAudioMuteStatus`) |
 | Registry rows | awto-rtdfw `settings/registry.tsv` rows 88-91 (branch `audio`; the firmware pins `audio-fw`, `fw/awto/clean_ref.txt`) |
 | MCCS | VCP 0x62 volume 0..100; VCP 0x8D mute: 1 = muted, 2 = unmuted (registry enum `Off=2|On=1`) |

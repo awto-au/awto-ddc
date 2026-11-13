@@ -72,6 +72,8 @@ def tus():
             c = (uv2.parent / f).resolve()
             if c.exists():
                 out.append((c, FC.sdcc_cmd(c, uv2.parent, defines, incs, model)))
+        if uv2_rel == "STD_FW_1P.Uv2":
+            out += [(c, FC.sdcc_cmd(c, uv2.parent, defines, incs, model)) for c in FC.our_sources()]   # fw/<subsystem>/*.c (#196)
     srcs = FC.awto_sources()                       # clean tree + shim: the flags of fw_compile.cmd_awto
     uv2 = SRC / "STD_FW_1P.Uv2"
     _, defines, incs, model = FC.parse_uv2(uv2, "RL6449_Project")

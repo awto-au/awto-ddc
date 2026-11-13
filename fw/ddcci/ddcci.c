@@ -1,6 +1,8 @@
+#include "UserCommonInclude.h"
+
 // #60 KVM: one input-select entry (test cmds 0x31..0x33, DDC/CI VCP 0x60) + DDC/CI 0x37 on the spare IIC engines, polled
 // from the main loop (no IRQ: the SDK EXINT1 ISR only serves the main engine, which stays in debug mode 0x35).
-// Recipe: SDK ScalerMcuDdcciIntGetData_EXINT1 / ScalerMcuDdcciSendData on the IIC_n copy of FF22..FF2B. Inserted into RTD2014Ddcci.c.
+// Recipe: SDK ScalerMcuDdcciIntGetData_EXINT1 / ScalerMcuDdcciSendData on the IIC_n copy of FF22..FF2B.
 BYTE AwtoPortCable(BYTE ucPort)                 // #84: cable status of a board port (D1..D3)
 {
     return (ucPort == _D1_INPUT_PORT) ? GET_D1_CABLE_STATUS() : (ucPort == _D2_INPUT_PORT) ? GET_D2_CABLE_STATUS() :
