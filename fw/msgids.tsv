@@ -225,7 +225,7 @@
 3e0d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9391	Get Colorimetry Extended	0
 3e0d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9424	Get Colorimetry Extended	0
 3e24	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7448	Get Pixel Repetition 8	0
-3e5d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2711	- IIC Write Time Out: Transmit	0
+3e5d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2710	- IIC Write Time Out: Transmit	0
 3f9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1582	False : D1 DP Audio Tracking Disable	0
 3fb2	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10514	Get Pixel Repetition Error	0
 3fd3	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1713	4. OD bit	1
@@ -315,8 +315,8 @@
 5816	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2752	MST Fake Interlace	0
 5852	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8244	Get Colorimetry EXT_YCC_XVYCC601	0
 58b3	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10690	Get Colorimetry EXT_YCC_SYCC601	0
-592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2508	- IIC Write Time Out: FIFO Clock	0
-592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2609	- IIC Write Time Out: FIFO Clock	0
+592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2507	- IIC Write Time Out: FIFO Clock	0
+592d	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2608	- IIC Write Time Out: FIFO Clock	0
 5969	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10444	Get Pixel Repetition 0	0
 59b8	Audio	Kernel/System/Code/SysAudio.c:527	Sleep Audio Playback Index	0
 5a12	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7399	Get Pixel Repetition 1	0
@@ -400,7 +400,7 @@
 6d4c	System	Kernel/System/Code/SysSource.c:1482	7. Source Judge HP Case	1
 6d7b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1540	_COLORIMETRY_EXT_YCC_ITUR_BT601	0
 6db7	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1752	4.OD use BW	1
-6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2681	- IIC Write Time Out: Burst Mode	0
+6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2680	- IIC Write Time Out: Burst Mode	0
 6dfd	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2740	eDP Tx2 LT2 Lane or PN Fail	1
 6e46	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4210	7. IIIIIInterLace Vtotal	0
 6e77	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:798	False : D2 HDMI Audio Tracking Disable	0

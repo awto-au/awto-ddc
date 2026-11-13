@@ -34,7 +34,7 @@
 - 6..8 are marked in both the `_PANEL_ON` and `_BACKLIGHT_ON` paths of `UserCommonInterfacePanelPowerAction`; stage 8 comes BEFORE the T3 wait (backlight path).
 
 ## Delay calibration (`_AWTO_DIAG_DELAYCAL`, default `_ON`; #53.6, #54)
-- Runs once per boot inside the panel T3 wait: `UserInterfaceAdjustWaitPanelT3` -> `AwtoDiagPanelT3Wait(550)` (keil2sdcc rule; code `fw/sdcc/awto_delaycal.inc`, inserted into `ScalerCommonMcu.c` because only scaler files see `DELAY_XUS`).
+- Runs once per boot inside the panel T3 wait: `UserInterfaceAdjustWaitPanelT3` -> `AwtoDiagPanelT3Wait(550)` (keil2sdcc rule; code `fw/diag/delaycal.c`, includes `ScalerCommonFunctionInclude.h` for `DELAY_XUS`).
 - The wait ends at the same tick as `ScalerTimerDelayXms(550)`: tick counter at entry + 550, polled; the test time is part of it, so boot time is unchanged. Whole wait measured with Timer2 (0x26).
 - Interrupts live (as the SDK has them at T3); EA off only inside each measured body (<= ~100 us), Timer2 TF2 holds the overflow. Overhead of an empty snapshot pair subtracted. Bodies are unrolled x10 where a loop would add overhead.
 - 10 ticks are measured from a tick edge (`ScalerTimerDelayXms(1)` first): exact vs the reload period.

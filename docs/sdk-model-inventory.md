@@ -174,7 +174,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 16 | RTD2014OsdDisplay.c | `AwtoHoldBlocksDisable` guard in `OsdDispDisableOsd`; `AwtoMenuForget`; `AWTO_FW_TAG` + dbgpop, osdcard, keypop, gpiopop, wdtpop, settings glue | OSD | #28 #34 #124 #134 |
 | 17 | RTD2014Key.c | code in fw/test/testcmd.c, fw/keys/keytest.c + keys.c + keyinject.c, fw/input/inputs.c | keys | #129 |
 | 18 | RTD2014Ddcci.c | code in fw/input/ports.c, fw/ddcci/ddcci.c, fw/net/net.c | DDC/CI | #60 #80 |
-| 19 | ScalerCommonMcu.c | `awto_delaycal.inc`; M2PLL re-entry keeps calibrated counts (sub) | timers | #53 #54 |
+| 19 | ScalerCommonMcu.c | `fw/diag/delaycal.c`; M2PLL re-entry keeps calibrated counts (sub) | timers | #53 #54 |
 | 20 | SysTimer.c / SysInt.c | `AWTO_DIAG_T2ISR`, `AWTO_DIAG_EX1ISR`, `AWTO_MEAS_T2ISR` | ISRs | #23 #26 |
 | 21 | ScalerDPRx1_SeptPhy.c | `awto_dpframe.inc`; `AWTO_SW_MARK(30-37)` | DP | #60 |
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
@@ -244,7 +244,7 @@ Main loop (SysMain.c): 14 `AWTO_PS_POLL_SITE` + `AWTO_SYNC_POLL()` (inside `Awto
 | **ours: L1/L2 hold** | fw/input/fastsw.c:`AwtoWakeHold/AwtoWakePoll/AwtoL2LinkOff/On/AwtoHoldBacklightSdk` | `PCB_BACKLIGHT_POWER_PIN` direct, eDP stream/SSC/PHY off/on direct, SDK `_BACKLIGHT_OFF` at release | judge failure in ACTIVE |
 | ours: fast unblank | `AwtoSwFastPoll` | `ScalerDDomainBackgroundEnable`, `UserCommonInterfaceOsdActiveProc` | fast switch |
 | ours: LED | awto_led.inc | power LED P3.5/P3.6 (through PCB_LED_*) | power status |
-| ours: T3 wait | awto_delaycal.inc:`AwtoDiagPanelT3Wait` | blocking inside T3 | panel on |
+| ours: T3 wait | fw/diag/delaycal.c:`AwtoDiagPanelT3Wait` | blocking inside T3 | panel on |
 | ours: PWM/backlight level | fw/settings/settings_glue.c:`set_ap_backlight` | PWM | menu / VCP |
 | ours: probes | `AwtoSwEvent(24/26/27)`, `AwtoDiagStage(5/7/8)` | log only | |
 
@@ -533,7 +533,7 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
   - The backlight pin goes on at ACTIVE (`_BACKLIGHT_ON`).
   - Our boot call (`_BACKLIGHT_ON` at INITIAL) therefore runs the SDK's ACTIVE step early and inline, and brings up VDD, link and backlight before display setting. That is the second driver.
 - `UserInterfaceGetIntoPSStatus()` returns FALSE while the OSD is enabled (RTD2014UserInterface.c:1859). An open console, selector or card blocks the SDK from entering power saving. [code]
-- `AwtoDiagPanelT3Wait` cuts T3 to `AWTO_T3_OWN_PATTERN_MS` (registry `PANEL_T3_OWN`, default 20 ms) when the pattern generator (P7_F0 bit7) or forced background (P0_28 bit5) is on. Otherwise T3 is the registry value (default 550 ms). [code, awto_delaycal.inc:118]
+- `AwtoDiagPanelT3Wait` cuts T3 to `AWTO_T3_OWN_PATTERN_MS` (registry `PANEL_T3_OWN`, default 20 ms) when the pattern generator (P7_F0 bit7) or forced background (P0_28 bit5) is on. Otherwise T3 is the registry value (default 550 ms). [code, fw/diag/delaycal.c:118]
   - The boot console enables the background first, so the boot T3 is about 20 ms.
   - A wake does the same (`AwtoBootConsole` → background on).
 

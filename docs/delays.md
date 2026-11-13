@@ -104,7 +104,7 @@ Abbreviations in the table:
 | ScalerTMDSRx2_SeptPhy.c:191 and ScalerTMDSRx3_SeptPhy.c:191 | video-detect re-arm | 45 ms | SDK | "1 frame" comment | UNKNOWN | UNKNOWN | re-poll |
 | `ScalerTMDSRx2_SeptPhy.c:562` (and Rx3 :562) | HDMI read-request retry on Timer0 | 10 ms | SDK; `awto_t0ev.inc:218` | SDK | n/a | n/a | retry event |
 | **busy-wait macros (main context)** | | | | | | | |
-| `ScalerCommonMcuInclude.h:40-215`; counts set at `ScalerCommonMcu.c:1844-1849`; our calibration `awto_delaycal.inc:88-99` | `DELAY_5US`, `DELAY_XUS(n)` and relatives | loop counts set so the shorter copy of each pair lands at 105 % of nominal | `AWTO_DELAY_TARGET_PCT` `RL6449_Project.h:188`, valid only at `AWTO_DELAY_CAL_RCAP2H 0xE3` | measured (T3 measurement, #54, diag block). Realtek's own count is 112..127 % depending on code placement. Health limit 90..125 %. | nominal us | 1.05 | n/a |
+| `ScalerCommonMcuInclude.h:40-215`; counts set at `ScalerCommonMcu.c:1844-1849`; our calibration `fw/diag/delaycal.c:88-99` | `DELAY_5US`, `DELAY_XUS(n)` and relatives | loop counts set so the shorter copy of each pair lands at 105 % of nominal | `AWTO_DELAY_TARGET_PCT` `RL6449_Project.h:188`, valid only at `AWTO_DELAY_CAL_RCAP2H 0xE3` | measured (T3 measurement, #54, diag block). Realtek's own count is 112..127 % depending on code placement. Health limit 90..125 %. | nominal us | 1.05 | n/a |
 | RL6449_Series_DPRx1.c:1201-1759 `RebuildPhy` | PHY rebuild steps | 905 us total (5x85 + 300 + 3x25 + 3x5 + 2x45) | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
 | DPRx1.c:2832-2954 `PhyCtsTp1SetPhy` / :3060-3609 `Tp2SetPhy` / :3920-4230 `PhyCTS` | CTS PHY steps | 370 / 815 / 165 us | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
 | ScalerPLL.c:309-317, 1406-1410, 2761-2765, 3689-3706, 3727-3743, 3769, 3843 | PLL power-up and reset steps | M2PLL 150 + 5 + 1000 us; DPLL cascade 155 us; MPLL 2x150 + 2x5 us; DDR2 ctrl 2x150 + 2x85 us; DDR2 output 3x85 us; DDR2 freq 2x150 us | SDK | "Wait for M2PLL Stable (1ms)" comment at :317; others UNKNOWN | 1000 us (:317) | 1.00 (:317) | continues |
@@ -183,7 +183,7 @@ Abbreviations in the table:
 | `AWTO_MEAS_PERIOD_MS` 25; `AWTO_MEAS_WINDOW_MS` 1000 (`fw/meas/meas4k.c:29,52`) | 4K measurement sampling | 25 ms; 1000 ms | project header | UNKNOWN reason | UNKNOWN | UNKNOWN | window ends |
 | `fw/ddcci/ddcci.c:86` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
 | `fw/diag/diag.c:12,49`; `fw/meas/meas4k.c:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
-| `awto_delaycal.inc:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
+| `fw/diag/delaycal.c:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
 | `awto_t0ev.inc:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
 | `fw/settings/settings_glue.c` `set_wait_ms`; `awto-rtdfw settings.c:271-273` | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |
 | **NVRAM GATE (`RL6449_Project.h:146-150`; `fw/nvram/nv_gate.c` `AwtoNvService`)** | | | | | | | |
@@ -257,7 +257,7 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
   - `ScalerPLL.c:2802` 2 ms.
   - `ScalerPLL.c:3731` DDR2 poll, up to 40 ms.
   - `RL6449_Series_PLL.c:322,328,348` 2 ms each.
-  - `awto_delaycal.inc:68,70` about 11 ms, plus the loop calibration after the first stream start.
+  - `fw/diag/delaycal.c:68,70` about 11 ms, plus the loop calibration after the first stream start.
 - **Display / DPTx bring-up**
   - `RL6449_Series_DisplayDPTx.c:284` 5 ms x 5 attempts.
   - `RL6449_Series_DisplayDPTx.c:495` 10 ms.
@@ -294,7 +294,7 @@ Scope note: awto-ddc has uncommitted changes (docs/nvram-settings.md, docs/speed
 
 | file:line | value in code | source value + where it comes from | margin (%) | comment / justification quoted | firmware or host |
 |---|---|---|---|---|---|
-| /mnt/2tb/git/awto-ddc/fw/sdk/Project/Header/RL6449_Project.h:188 and /mnt/2tb/git/awto-ddc/fw/sdcc/awto_delaycal.inc:85-98 | AWTO_DELAY_TARGET_PCT 105 (busy-loop counts recalculated so delays land at 105 % of nominal) | nominal Timer2-derived delay (10 x 5 us, 100 us) from the Timer2 tick | +5 | "shorter copy of each pair; health limit 90..125 %" / "lands at AWTO_DELAY_TARGET_PCT of nominal" | firmware |
+| /mnt/2tb/git/awto-ddc/fw/sdk/Project/Header/RL6449_Project.h:188 and /mnt/2tb/git/awto-ddc/fw/diag/delaycal.c:85-98 | AWTO_DELAY_TARGET_PCT 105 (busy-loop counts recalculated so delays land at 105 % of nominal) | nominal Timer2-derived delay (10 x 5 us, 100 us) from the Timer2 tick | +5 | "shorter copy of each pair; health limit 90..125 %" / "lands at AWTO_DELAY_TARGET_PCT of nominal" | firmware |
 | /mnt/2tb/git/awto-ddc/fw/sdk/Project/Header/RL6449_Project.h:316, 321, 325 | AWTO_WDT_THR 0x577, warning at 200.1 ms | measured worst poke gap 160 ms (wd8, unit 2, /mnt/2tb/git/awto-ddc/docs/watchdog.md:215). The earlier 133 ms gives 166.25 ms (docs/watchdog.md:198), also x1.25 | +25 | "Warning = 1.25 x the measured worst poke gap" / "warning at 1399 x 0.143 = 200.1 ms" | firmware |
 | RL6449_Project.h:329 | AWTO_WDT_PROBE_MS 1500 | N+1 wraps = 1172 ms (CNT1 wrap, docs/watchdog.md:56) | +28 | "probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s" (1172 x 1.25 = 1465, rounded up to 1500) | firmware |
 | RL6449_Project.h:377 (comment at 376) | AWTO_WDT_SHOW_MS 1000 | sim max main-loop pass 800 ms (sim, <4 checks) | +25 | "sim max pass < 4 checks = 800 ms) x 1.25" | firmware |

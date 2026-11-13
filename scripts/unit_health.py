@@ -286,7 +286,7 @@ def check_osd(rep, d, osd_addr, diag_addr, hint, wait=time.sleep) -> bool:
 
 
 def check_delaycal(rep, d: Dbg, base: int, sim: bool = False) -> bool:
-    """Delay calibration the firmware ran inside the panel T3 wait (fw/sdcc/awto_delaycal.inc): tick, busy loops, T3 length."""
+    """Delay calibration the firmware ran inside the panel T3 wait (fw/diag/delaycal.c): tick, busy loops, T3 length."""
     import rtd_diag
     blk = bytearray(48)
     blk[0x1A:0x28] = d.read(base + 0x1A, 14)          # ucDelay5usN .. usT3Wait64 only

@@ -19,7 +19,7 @@ Block layout, little-endian (SDCC; low byte first), from fw/sdk/Project/Header/R
   | 1A ucDelay5usN | 1B u16 10 ticks of ScalerTimerDelayXms, counts/4 | 1D u16 10 x DELAY_5US raw counts | 1F RCAP2H
   | 20 u16 DELAY_XUS(100) | 22 u16 DELAY_XUS_EXINT(100) | 24 u16 10 x DELAY_5US_EXINT | 26 u16 panel T3 wait total, counts/64
   | 28 u8 test cmd | 29 u8 dbg popup | 2A u16 loop/s | 2C u8x3 g_stOsdInfo offsets state,event,key (#37) | 2F hold
-  Delay-calibration counts are raw Timer2 counts (EA off, overhead of an empty snapshot pair subtracted); fw/sdcc/awto_delaycal.inc.
+  Delay-calibration counts are raw Timer2 counts (EA off, overhead of an empty snapshot pair subtracted); fw/diag/delaycal.c.
 Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, MCU div 1, 14.318 MHz xtal):
   M2PLL: 701582 / 96 = 7308 -> reload 0xE373, 7309 counts per 1 ms tick; xtal (initial mode): 14318 / 12 = 1193
   -> reload 0xFB56, 1194 counts per tick. RCAP2H in the block selects the row.

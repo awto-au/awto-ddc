@@ -1813,7 +1813,6 @@ bit ScalerMcuPwmAdjustFrequency(BYTE ucPwmType, WORD usFrequency)
 // Input Value  : Clock --> _M2PLL_CLK/_IOSC_CLK
 // Output Value : ucValue --> N
 //--------------------------------------------------
-#include "awto_delaycal.inc"
 void ScalerMcu5usDelayCalc(EnumClkSel enumClock)
 {
     BYTE ucMcuDiv = 0;

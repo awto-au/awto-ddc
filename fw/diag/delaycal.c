@@ -1,3 +1,5 @@
+#include "ScalerCommonFunctionInclude.h"
+
 // Timer2 snapshot (EA off) and counts since an arbitrary origin: whole ticks x reload period + TH2:TL2 offset.
 // A pending TF2 is an overflow whose tick the ISR has not counted yet.
 typedef struct
