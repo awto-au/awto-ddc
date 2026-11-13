@@ -10,7 +10,8 @@ Status (2026-11-13): aout unused, hpout feeds the speaker amp (Dan: "the speaker
 - Volume = DVC gain (P8_A5/A6), exactly like the Dahua firmware. DAC gain `DA_GAIN_L/R` stays 0 dB (0x57). [fw]
 
 ## Pins, jack
-- Output: hpout 109/110 AUDIO_HOUTL/R = the speaker amp's feed [hw: Dan's ears, 2026-11-13]; aout 116/117 AUDIO_SOUTL/R unused (no sound; dead or unconnected [?]). `UserInterfaceGetAudioDACOutput` returns HEADPHONE, `_DAC_SPEAKER_OUTPUT_SUPPORT _OFF`. `AWTO_AUDIO_OUT` removed. 115 AUDIO_REF. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`; all in audio mode (0x03). [hw]
+- Output: `UserInterfaceGetAudioDACOutput` = `AwtoAudioDacOutput()` (awto_audio.inc): default `AWTO_AUDIO_OUT_DEFAULT` = hpout 109/110 AUDIO_HOUTL/R as the amp feed [guess: Dan 2026-11-13, aout gave no sound]; ear-test steps pick hpout / aout 116/117 / both. Both `_DAC_*_OUTPUT_SUPPORT` stay on (SDK defaults). Which pin pair feeds the amp on unit 3: open (ear test below). 115 AUDIO_REF.
+- The SDK owns 06C0: `SysAudioAnalogAudioHandler` compares the 06C0 power bits with `UserInterfaceGetAudioDACOutput()` every pass and on a mismatch mutes, re-charges and switches back (06C0 = DB, 06C6 = C8 within seconds). Direct 06C0 / 06C6 pokes are not valid tests; set the output in firmware (ear-test steps). Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`; all in audio mode (0x03). [hw]
 - Dahua firmware picks the output from P4.5 (pin 113, jack input, `1:f69b`): low -> SPEAKER, high -> HEADPHONE; unit 2 reads P4.5 = 1 with no jack (2026-11-13) [hw], so its sim trace (06C0 = DF, HP only) is the no-jack-detected path; polarity [?].
 - Speakers: confirmed present by Dan (2026-11-13; earlier 'no speakers', #3/#22, was wrong).
 - Amp pins (one owner `fw/sdcc/awto_audio.inc`, as Dahua `5:d2a0` / `1:ea99`, `docs/reversing/dahua-fw/gpio-ir.md` s4): AC on P7.4 (pin 161) = 0; P7.3 (pin 160) = 0 `AWTO_AUDIO_AUX_MS` = 200 ms later (first main-loop poll + 200 ms); P7.4 = !mute (`PCB_AMP_MUTE` from `SysAudioMuteProc`). Ring lines `E5` (sync.tsv): amp on / off / aux low. [fw]
@@ -21,9 +22,9 @@ Status (2026-11-13): aout unused, hpout feeds the speaker amp (Dan: "the speaker
 |---|---|---|---|
 | `_AUDIO_SUPPORT` | on | on | audio code present [fw] |
 | `_EMBEDDED_DAC_SUPPORT` | on | on | `ScalerAudioDACInitial` 3:f39f [fw] |
-| `_DAC_SPEAKER_OUTPUT_SUPPORT` / `_DAC_HP_OUTPUT_SUPPORT` | on / on | **off** / on | REG_DAC_POWER0 ends 0xFF = bits 5,4 set [fw]; ours: aout unused, hpout -> amp (#94) |
+| `_DAC_SPEAKER_OUTPUT_SUPPORT` / `_DAC_HP_OUTPUT_SUPPORT` | on / on | on / on | REG_DAC_POWER0 ends 0xFF = bits 5,4 set [fw] |
 | `_DAC_SPEAKER_OUTPUT_SWAP` | on | on | REG_MUX_ANA_OUT = 0x50 (aout L/R crossed, hpout straight) [fw] |
-| `UserInterfaceGetAudioDACOutput()` | P4.5: speaker or headphone | HEADPHONE (= amp feed) | Dahua trace 06C0 = DF = headphone (P4.5 high in the sim) [fw]; ours was 06C0 = FB (both, unit 2) [hw] |
+| `UserInterfaceGetAudioDACOutput()` | P4.5: speaker or headphone | `AwtoAudioDacOutput()`: hpout, or the ear-test step's | Dahua trace 06C0 = DF = headphone (P4.5 high in the sim) [fw]; ours was 06C0 = FB (both, unit 2) [hw] |
 | `_DAC_DITHER_FUNCTION_LEVEL` | off | default off | DA_CTRL = 0x40 [fw] |
 | `_DIGITAL_DAC_AOUT/HPOUT_GAIN_DB`, `_LINE_IN_DAC_*_GAIN_DB` | 0 dB | default 0 dB | REG_OUT_GAIN = 0x00 twice [fw] |
 | `_LINE_IN_SUPPORT` | on (ADC init runs at boot) | **off** | ADC init writes P6_B0..B7 in the trace [fw]; line-in pins are GPIO on this board [hw] |
@@ -90,16 +91,18 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 
 ## Ear test (`./dev.py sound-test`, scripts/audio_test.py `steps`)
 - `./dev.py sound-test [--unit N] [--only 1,2,..] [--freqs 200,1000,4000] [--secs S]`: opens the diagnostics console (test cmd 0x26, held), then per step: VCP 0x63 = 0x10 + n (console `audio test n/6: ...`), per tone VCP 0x63 = 0x8000 | Hz (console `audio test n: <Hz> Hz`) + the host tone (both channels, ALSA pcm of the unit's connector), VCP 0x63 = 0x30 + n (`... done`). VCP 0x62 volume read before / after, set back if it moved. Times: `tmp/logs/audio_test.log`.
-- Steps (firmware `tAwtoAudioTestAmp` / `tAwtoAudioTestGain`, awto_audio.inc; held until done, the SDK unmute / volume mapping keep them):
+- Steps (firmware `tAwtoAudioTestOut` / `tAwtoAudioTestAux`, awto_audio.inc; output through the SDK DAC switch, held until done; amp P7.4 on when unmuted, DVC -6 dB; host waits 1.25 s after set-up for the switch):
 
-| n | amp P7.4 | DVC gain |
+| n | output (06C0 bits 5 / 4) | P7.3 |
 |---|---|---|
-| 1 | on | user volume |
-| 2 | off | user volume |
-| 3 | on | -16.5 dB (0x098C, Dahua default) |
-| 4 | on | -6 dB (0x1FFF, volume 100 % now) |
-| 5 | on | -3 dB (0x2D4E) |
-| 6 | on | 0 dB (0x3FFF) |
+| 1 | hpout only | low |
+| 2 | hpout only | high |
+| 3 | aout only | low |
+| 4 | aout only | high |
+| 5 | hpout + aout | low |
+| 6 | hpout + aout | high |
+- Done: default output (hpout), P7.3 low, user volume.
+- DVC gain pokes: 08A5 / 08A6 are double-buffered; `audio_test.py poke` now latches them (08A7 bit 6, as `ScalerAudioDVCAdjustVolume`). Read back = the applied gain, 00 00 while the SDK holds the DVC muted (no stream). The 14:17-14:18 pokes read 00 for that reason (P7.4 = 0 at the time: muted).
 - In every image (VCP 0x63 is unused by the registry); the chip sine generator (VCP 0x63 = 0 / 1) stays in `-D _AWTO_AUDIO_TEST` builds.
 
 ## Firmware wiring (what is where)
@@ -167,3 +170,10 @@ Rollback first: reflash `fw/images/AWT26110002-wb-p14swap10-be.bin` (or the tmp/
 - `./dev.py sound-test --unit 3 --freqs 200,1000,4000` (3 s per tone, 3 s between steps); every step + tone line came on the console; aplay rc 0 x 18.
 - Times (+11:00): step 1 13:37:30-13:37:39, step 2 13:37:42-13:37:51, step 3 13:37:54-13:38:03, step 4 13:38:06-13:38:16, step 5 13:38:19-13:38:28, step 6 13:38:31-13:38:40; tones 200 / 1000 / 4000 Hz at +0 / +3 / +6 s of each step.
 - Heard per step: Dan's answer pending (#94); it picks `AWTO_AUDIO_GAIN_MAX` (steps 4-6) and whether P7.4 gates the speaker (step 2).
+
+## Unit 3 ear test, 2026-11-13 (wb-p14ui-rotdef3: hpout only -> amp, aout off; Dan's ears, +11:00)
+- Full sound-test 13:56:07-13:57:17 and 14:08:38-14:09:49 (steps: amp on / off, -16.5 / -6 / -3 / 0 dB): silent in every step. State: hpout -> amp, P7.4 = 1, P7.3 = 0.
+- Live poke P7.3 = 1 (stays), hpout only, amp on; tones 14:10:22 and 14:17:08-14:17:18: silent.
+- Pokes 06C0 = FB / 06C6 = 08 (aout + hpout): not valid, the SDK switched back to 06C0 = DB / 06C6 = C8 within seconds, also during PLAYBACK (14:18:15 -> 14:18:23).
+- Compare unit 2 (audible, Dan): wb-p14ui-audio2 (06C0 = FB aout + hpout, both unmuted, DVC 0 dB, P7.3 = 0, P7.4 = 1): voice test "Correct sides", then clipping. wb-p14ui-nvlog2 (hpout only, P7.3 / P7.4 never driven, both read 1): audible.
+- Next: output matrix image wb-p14ui-outmx1 (steps above).

@@ -65,8 +65,12 @@ DDC_LIMIT_S = 10                                # ddcutil setvcp ~1 s with retri
 
 
 STEPS, STEP_START, STEP_DONE = 6, 0x10, 0x30     # firmware ear-test steps (RL6449_Project.h AWTO_AUDIO_TEST_*)
-STEP_WHAT = ("hpout -> amp, amp on, user volume", "hpout -> amp, amp OFF (P7.4 = 0), user volume", "hpout -> amp, amp on, -16.5 dB (Dahua default)",
-             "hpout -> amp, amp on, -6 dB (= volume 100 now)", "hpout -> amp, amp on, -3 dB", "hpout -> amp, amp on, 0 dB (DVC maximum)")
+STEP_WHAT = ("hpout only, P7.3 low", "hpout only, P7.3 HIGH", "aout only, P7.3 low", "aout only, P7.3 HIGH",
+             "hpout + aout, P7.3 low", "hpout + aout, P7.3 HIGH")          # all: amp P7.4 on, DVC -6 dB (awto_audio.inc)
+STEP_SETTLE_S = 1.25                            # step set-up -> first tone: SDK DAC switch = re-charge 0.5 s + depop 0.1 s +
+                                                # unmute ramp <= 0.4 s (SysAudio.c / _DVC_VOLUME_MUTE_TIMER) = 1.0 s, x1.25
+DVC_GAIN = (0x08A5, 0x08A6)                     # DVC_GAIN_MSB / LSB: double-buffered, applied by DVC_GAIN_READ_MSB bit 6
+DVC_LATCH, DVC_LATCH_BIT = 0x08A7, 0x40         # (ScalerAudioDVCAdjustVolume); read back = the applied gain, 0 while muted
 AOUT_CTRL, HPOUT_CTRL = 0x06C6, 0x06C7           # REG_AOUT_CTRL / REG_HPOUT_CTRL: bits 7:6 mute L/R, bit 3 normal mode
 OUT_ON, OUT_MUTED = 0x08, 0xC8
 OUTS = (("hpout, amp P7.4 = 1 (as flashed: hpout feeds the amp)", OUT_MUTED, OUT_ON, 1),    # aout unused in the fw (#94)
@@ -357,6 +361,12 @@ def main() -> int:
                 r = u.rd(rio, ad)
                 say(f"poke {ad:04X} {u.names.get(ad, '')}: {b.hex() if b else '?'} -> {v:02X} (write {'ok' if ok else 'NAK'}), "
                     f"read back {r.hex() if r else '?'}")
+            if any(int(pk.split("=")[0], 16) in DVC_GAIN for pk in a.pokes):    # DVC gain is double-buffered: latch it
+                l0 = u.rd(rio, DVC_LATCH)
+                ok = l0 is not None and u.wr(rio, DVC_LATCH, l0[0] | DVC_LATCH_BIT)
+                g = u.rd(rio, DVC_GAIN[0], 2)
+                say(f"DVC gain latched (08A7 bit 6: {'ok' if ok else 'FAILED'}); applied gain 08A5/08A6 = {g.hex(' ') if g else '?'} "
+                    f"(stays 00 00 while the SDK holds the DVC muted: no stream / P7.4 = 0)")
         u.session(go)
         return 0
     if a.cmd == "rd":
@@ -403,7 +413,9 @@ def main() -> int:
                     time.sleep(GEN_GAP_S)
                 held = n
                 ddc_vcp(GEN_VCP, STEP_START + n, f"step {n} set up")
-                say(f"STEP {n}/{STEPS} START {time.strftime('%H:%M:%S')}: {STEP_WHAT[n - 1]} (console 'audio test {n}/{STEPS}: ...')")
+                say(f"STEP {n}/{STEPS} START {time.strftime('%H:%M:%S')}: {STEP_WHAT[n - 1]} (console 'audio test {n}/{STEPS}: ...'); "
+                    f"{STEP_SETTLE_S} s for the DAC switch")
+                time.sleep(STEP_SETTLE_S)
                 for hz, p in waves:
                     ddc_vcp(GEN_VCP, HZ_FLAG | hz, f"announce {hz} Hz")
                     say(f"  STEP {n} TONE {hz} Hz START {time.strftime('%H:%M:%S')} (console 'audio test {n}: {hz} Hz')")

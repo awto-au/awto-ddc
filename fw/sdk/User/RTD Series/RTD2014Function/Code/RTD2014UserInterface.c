@@ -3990,7 +3990,7 @@ WORD UserInterfaceGetAudioVolume(void)
 //--------------------------------------------------
 EnumAudioDACOutput UserInterfaceGetAudioDACOutput(void)
 {
-    return _AUDIO_DAC_OUTPUT_HEADPHONE;     // awto: hpout feeds the speaker amp, aout unused (RL6449_Project.h, #94); Dahua fw picks by P4.5
+    return (EnumAudioDACOutput)AwtoAudioDacOutput();   // awto: hpout -> amp, or the ear-test step's output (#94); Dahua fw picks by P4.5
 }
 
 //--------------------------------------------------

@@ -1984,26 +1984,27 @@ extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
 #define _EMBEDDED_DAC_SUPPORT                                   _ON
 #define _DAC_SPEAKER_OUTPUT_SWAP                                _ON  // Dahua fw: REG_MUX_ANA_OUT = 0x50 (aout L/R swapped), docs/audio.md [fw]
 
-// awto: aout 116/117 unused (Dan 2026-11-13: no sound from it); hpout 109/110 feeds the speaker amp, P7.4 on when unmuted (#94)
-#define _DAC_SPEAKER_OUTPUT_SUPPORT                             _OFF
-#define _DAC_HP_OUTPUT_SUPPORT                                  _ON
+// awto: DAC output = AwtoAudioDacOutput() (awto_audio.inc): hpout 109/110 -> speaker amp by default (Dan 2026-11-13: aout gave
+// no sound); ear-test steps pick hpout / aout / both, so both outputs stay built (SDK defaults _DAC_*_OUTPUT_SUPPORT _ON) (#94)
+#define AWTO_AUDIO_OUT_DEFAULT                                  _AUDIO_DAC_OUTPUT_HEADPHONE
+extern unsigned char AwtoAudioDacOutput(void);                  // EnumAudioDACOutput for UserInterfaceGetAudioDACOutput
 #define AWTO_AUDIO_AUX_MS                                       200     // P7.3 low this long after P7.4 = 0 (Dahua 5:d324, delay R7 = 0xC8) [fw]
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // P7.4 = 1 (unmute)
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // P7.4 = 0 (mute / AC on)
 #define AWTO_AUDIO_EV_AUX_LOW                                   3       // P7.3 = 0
-#define AWTO_AUDIO_EV_AMP_TEST_OFF                              4       // unmute during an ear-test step without the amp: P7.4 stays 0
 extern void AwtoAudioAmpBoot(void);                             // fw/sdcc/awto_audio.inc: the one owner of P7.3 / P7.4
 extern void AwtoAudioAmp(bit bMute);
 extern void AwtoAudioPoll(void);
 #define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST builds)
 #define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (awto_audio.inc), VCP 0x63 (dev.py sound-test)
 #define AWTO_AUDIO_TEST_START                                   0x10    // VCP 0x63 value + n (1..6): step n set up; E5 arg = value
-#define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n done, amp / user volume restored
+#define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n done: default output, P7.3 low, user volume
 #define AWTO_AUDIO_TEST_HZ                                      0x40    // E5 arg + n: "audio test n: <Hz> Hz" (VCP 0x63 = 0x8000 | Hz)
 #define AWTO_AUDIO_TEST_HZ_FLAG                                 0x80    // VCP 0x63 value high byte bit 7: tone frequency announce
 extern void AwtoAudioTestStep(unsigned char ucHi, unsigned char ucLo);
 extern unsigned int AwtoAudioTestGain(void);                    // ear-test step gain, 0 = none (AwtoAudioGain)
+#define AWTO_AUDIO_TEST_GAIN                                    AWTO_AUDIO_GAIN_M6DB    // every ear-test step: DVC -6 dB
 // DVC gain (14 bit linear, 0x3FFF = 0 dB): volume curve ends + ear-test levels (#94)
 #define AWTO_AUDIO_GAIN_DAHUA_50                                0x098C  // -16.5 dB: Dahua fw DVC gain at its default volume 50 (sim trace) [fw]
 #define AWTO_AUDIO_GAIN_M6DB                                    0x1FFF  // -6 dB
