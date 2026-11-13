@@ -142,8 +142,7 @@ static void bars(void)
 
 void ui_open(void)
 {
-    osd_tc_open(UI_CHARS, UI_LINES);
-    osd_font_load(ui_font_selected());
+    osd_tc_open(UI_CHARS, UI_LINES, ui_font_selected());
     bars();
     hl_line = 0xFF;
     last_ctx = 0xFF;

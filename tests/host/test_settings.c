@@ -69,7 +69,7 @@ void key_hold(uint8_t mask, uint16_t ms) { held_mask = mask; held_ms = ms; }
 static char grid[MENU_ROWS][MENU_COLS + 1];
 static uint8_t gfg[MENU_ROWS];
 static int glyphs, shown, osd_cols;
-void osd_tc_open(uint8_t cols, uint8_t rows) { osd_cols = cols; memset(grid, ' ', sizeof grid); (void)rows; }
+void osd_tc_open(uint8_t cols, uint8_t rows, uint8_t font) { osd_cols = cols; memset(grid, ' ', sizeof grid); (void)rows; (void)font; }
 void osd_tc_glyph(uint16_t id, const uint8_t *b) { (void)b; if (id < OSD_FONT_N) glyphs++; }
 void osd_tc_row(uint8_t r, const char *s, uint8_t n, uint8_t fg, uint8_t bg)
 {
