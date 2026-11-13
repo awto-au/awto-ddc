@@ -23,9 +23,10 @@
 #define _PANEL_DH_WIDTH                         3840
 #define _PANEL_DH_END                           3888
 
+// Htotal min / typ / max = datasheet 3980 / 4000 / 4020 (panel-innolux-m280dca-e3b.md)
 #define _PANEL_DH_TOTAL                         4000
-#define _PANEL_DH_TOTAL_MAX                     7040
-#define _PANEL_DH_TOTAL_MIN                     4000
+#define _PANEL_DH_TOTAL_MAX                     4020
+#define _PANEL_DH_TOTAL_MIN                     3980
 
 // DV start/total/min/max: old fw compiled constants (bank1 CE2A struct init, bank2 ACDF clamp), #26
 #define _PANEL_DV_START                         6
@@ -39,10 +40,10 @@
 #define _PANEL_DH_SYNC_WIDTH                    8
 #define _PANEL_DV_SYNC_HEIGHT                   2
 
-// MHz: 4000 x 2222 x 60 Hz = 533.3
+// MHz: 4000 x 2222 x 60 Hz = 533.3; min / max = datasheet 480 / 560
 #define _PANEL_PIXEL_CLOCK                      533
-#define _PANEL_PIXEL_CLOCK_MAX                  600
-#define _PANEL_PIXEL_CLOCK_MIN                  160
+#define _PANEL_PIXEL_CLOCK_MAX                  560
+#define _PANEL_PIXEL_CLOCK_MIN                  480
 
 #define _PANEL_POWER_ON_T1                      10
 #define _PANEL_POWER_ON_T2                      250

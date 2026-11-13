@@ -29,13 +29,6 @@ void AwtoSwEvent(unsigned char ucId, unsigned char ucArg)
     AwtoSwRec(ucId, ucArg);
 }
 
-// #63 own frame: pattern generator or forced background on, so the panel's short T3 applies (AWTO_T3_OWN_PATTERN_MS)
-unsigned char AwtoOwnFrame(void)
-{
-    return ((ScalerGetByte(AWTO_R_DISP_PG_R_CTRL) & AWTO_F_DISP_PG_R_CTRL_PG_ENABLE) != 0) ||
-           ((ScalerGetByte(AWTO_R_VIDEO_DISPLAY_CONTROL_REG) & AWTO_F_VIDEO_DISPLAY_CONTROL_REG_FORCE_BG_EN) != 0);
-}
-
 // A panel pin or the backlight PWM written outside the panel machine (after boot pin init): logged, for the sim gate too.
 void AwtoPanelForeign(unsigned char ucWhat)
 {

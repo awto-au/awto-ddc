@@ -132,11 +132,11 @@
 ^conditional flow changed by optimizer	Kernel/System/Code/SysColor.c	65	ok	OK-CONFIG: _COLOR_IP_DCC_HISTOGRAM/_DCR/seamless/MBR off: ACTIVE case empty equals default
 ^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1291	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
 ^unreachable code$	Kernel/System/Code/SysPower.c	757	ok	OK-HARMLESS: trailing return after a switch in which all cases return
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	959	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	996	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	878	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	917	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	365	ok	OK-HARMLESS: bUncall is a local =_FALSE: SDK "uncall" block that only forces link of otherwise unused functions; never meant to run
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	367	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	3895	ok	OK-CONFIG: _DP_TX_EDID case empty (config) so it merges with default
+^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	3912	ok	OK-CONFIG: _DP_TX_EDID case empty (config) so it merges with default
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2815	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2814	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	637	ok	OK-HARMLESS: timer-event switch: cases sharing code merged by the optimizer (#162 removed the two panel timer events)

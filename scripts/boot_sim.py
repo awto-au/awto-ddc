@@ -7,7 +7,8 @@ usage: AWTO_SIM_CORE=fast boot_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot] 
   boot_active.png (mode ACTIVE), boot_after_ds.png (ACTIVE + AFTER_MS: after display setting).
 - Checks: no logo symbols in the map; console open before display setting with the 120 x 63 map; the same console still
   open at ACTIVE (one "console opened" line: it survived display setting); power-on log lines; no chip reset.
-- Prints power-on -> ACTIVE (sync ring) and first-console / backlight-on times.
+- Prints power-on -> ACTIVE (sync ring) and first-console / backlight-on times; the backlight lines' chain (11 C0..DF) is timed
+  like the panel and system lines.
 - #29 (images with AwtoBootReason): first line = boot reason, stage lines, times since reset; cold boot and, with --bite
   (default), after a 0x4C watchdog bite. PNGs boot_reason_cold.png / boot_reason_bite.png.
 Log: tmp/logs/boot_sim.log
@@ -96,8 +97,10 @@ class Run:
     def machine_times(self, evs):
         """#162 s3b: a machine line's ring time is its transition: line B -> C ('B -> C (N ms)') comes N ms after line A -> B
         (console open: a live draw between an action and its line shows here). Panel (11) and system (13) lines."""
-        for eid, name in ((0x11, "panel"), (0x13, "system")):
-            tr = [(ms, a, v) for i, a, ms, v in evs if i == eid]
+        for eid, name in ((0x11, "panel"), (0x11, "backlight"), (0x13, "system")):
+            tr = [(ms, a, v) for i, a, ms, v in evs if i == eid and (eid != 0x11 or (a >= 0xC0) == (name == "backlight"))]
+            if name == "backlight":              # backlight sub-state lines (11 C0..DF): arg = C0 | old << 2 | new (+ 10 delayed)
+                tr = [(ms, ((a >> 2 & 3) << 4) | (a & 3), v) for ms, a, v in tr]
             bad = []
             for (t1, a1, _), (t2, a2, v2) in zip(tr, tr[1:]):
                 if (a1 & 0x0F) != (a2 >> 4) or (a1 >> 4) == (a1 & 0x0F) or (eid == 0x11 and a1 == 0x49):
@@ -164,7 +167,7 @@ def main():
         r.check(txt.count("console opened") == 1, "one 'console opened' line (survived display setting, no reopen)",
                 f"{txt.count('console opened')}")
         r.check("0.0 MHz" not in txt and "TMDS predetect on (clock not measured yet)" in txt, "HDMI scan: predetect line without a clock value, no 0.0 MHz line")
-        for want in ("power on", "backlight pin on", "timing ", "-> DISPLAY SETTING (", "-> ACTIVE ("):
+        for want in ("power on", "backlight on at once", "timing ", "-> DISPLAY SETTING (", "-> ACTIVE ("):
             r.check(want in txt, f"power-on log has '{want}'")
         r.machine_times(h["events"])
         r.bus.dbg_link_on()                         # #79 images: 0x35 parked off the host port until this

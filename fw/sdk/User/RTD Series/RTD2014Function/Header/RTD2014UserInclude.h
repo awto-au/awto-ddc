@@ -218,6 +218,7 @@ extern void UserAdjustFREESYNCODMeasure(void);
 // Adjust Backlight
 //-------------------------------------------------------
 extern void UserAdjustBacklight(WORD usBacklight);
+extern WORD UserAdjustBacklightDuty(void);
 
 //-------------------------------------------------------
 // Dp Load Edid Related

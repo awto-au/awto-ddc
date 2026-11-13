@@ -1,1 +1,1 @@
-aa74554   # awto-rtdfw commit compiled into the image (git archive); osd-transp2: osd_transparency default 50 %, type 11 (awto-ddc#176), on ui 078b75c
+3a2129b   # awto-rtdfw commit compiled into the image (git archive); bl-on-delay: bl_on_delay row 117, panel_t3 / panel_t3_own retired (awto-ddc#162), on ui aa74554

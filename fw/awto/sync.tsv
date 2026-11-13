@@ -82,15 +82,7 @@ C0	04	vport	power key on, %
 11	23	ms	panel: HPD -> LINK (%): eDP-1 HPD high, link training
 11	2B	ms	panel: HPD -> T6 (%): off, PHY and VDD off
 11	34	ms2	panel: LINK -> VIDEO (%): eDP-1 link trained in %, stream on
-11	45	ms	panel: VIDEO -> T3 (%): backlight wanted, T3 counts from the stream start
-11	49	ms	panel: VIDEO -> T4 (%): off, T4 starts
-11	54	ms	panel: T3 -> VIDEO (%): backlight no longer wanted
-11	56	ms	panel: T3 -> BL_PWM (%): T3 done, backlight pin on
-11	67	ms	panel: BL_PWM -> BL_ON (%): PWM duty set
-11	68	ms	panel: BL_PWM -> BL_OFF (%): backlight off wanted, PWM dark
-11	78	ms	panel: BL_ON -> BL_OFF (%): PWM dark
-11	84	ms	panel: BL_OFF -> VIDEO (%): backlight pin off, stream kept
-11	89	ms	panel: BL_OFF -> T4 (%): backlight pin off, T4 starts
+11	49	ms	panel: VIDEO -> T4 (%): off, backlight dark: T4 counts from the backlight pin off
 11	94	ms	panel: T4 -> VIDEO (%): on again, stream still on
 11	9A	ms	panel: T4 -> T5 (%): T4 done, stream idle
 11	A4	ms	panel: T5 -> VIDEO (%): on again, stream on
@@ -98,6 +90,12 @@ C0	04	vport	power key on, %
 11	B0	ms	panel: T6 -> OFF (%): T6 done, VDD may come on again
 11	0B	ms	panel: OFF -> T6 (%): warm reset, VDD went off at GPIO init: T6 first
 11	4A	ms	panel: VIDEO -> T5 (%): off, backlight never on: no T4, stream idle
+11	C1	-	panel: backlight on at once (Dan: no T3 wait): pin on
+11	D1	ms	panel: backlight pin on, % after wanted (menu: backlight on delay)
+11	C6	ms	panel: backlight PWM duty set, % after the pin
+11	C7	ms	panel: backlight off wanted % after the pin, PWM dark
+11	CB	ms	panel: backlight off wanted, PWM dark (% lit)
+11	CC	ms	panel: backlight pin off, % after PWM dark
 11	*	harg	panel: state change % (not a listed transition)
 12	00	-	panel: no eDP-1 HPD within T2, link training anyway
 12	01	-	eDP-1: link training FAIL

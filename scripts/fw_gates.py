@@ -9,7 +9,8 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   conwrap: con_wrap_sim (#162: console lines whole, a wide line on two rows; widest lines + map end, no watchdog bite).
   nvlog: nv_test --sim flushlog (#151: NVRAM flush line per close / power off, "wrote N B ..." vs "nothing changed").
   sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
-  panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; T3..T6 kept.
+  panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
+    pin at once after VDD on / the M2PLL switch (Dan 2026-11-13, no T3); T4..T6 kept.
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
   magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
   regs: gen_regnames.py --check (AwtoRegs.h matches the names our code uses).

@@ -26,7 +26,7 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 ## Boot (from the profile, 1955 ms mains → ACTIVE)
 - M2PLL switch first in `SysMainSystemInitial`: ~390 ms of init runs on the 14.318 MHz crystal today.
 - Profile and cut `UserInterfaceInitial` (219 ms) and HDCP key + DP init (121 ms).
-- Panel machine starts at power-on and runs alongside the SDK's power-on, INITIAL and SEARCH; console drawn while the link trains; backlight at T3 after link up. No step blocks the main pass.
+- Panel machine starts at power-on and runs alongside the SDK's power-on, INITIAL and SEARCH; console drawn while the link trains; backlight on with VDD (2026-11-13, section "Backlight at once"). No step blocks the main pass.
 - Expected (to be measured, not promised): picture-ready path no longer waits ~0.5 s for the panel; init ~2-3x faster on M2PLL.
 
 ## Order (each step: sim first, then unit 2)
@@ -58,11 +58,7 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 | VDD | VDD pin on | T1 and power status NORMAL | registry PANEL_T1 |
 | HPD | DPTx power seq, PHY on | HPD high (one read per tick), or T2 (line 12 00, train anyway) | PANEL_T2 |
 | LINK | link training, background on, stream on | one step | - |
-| VIDEO | - | target BL (-> T3) / off (-> T4) | - |
-| T3 | - | T3 since the stream start | PANEL_T3_OWN with own frame, else PANEL_T3 |
-| BL_PWM | backlight pin on | backlight-to-PWM | `_PANEL_POWER_ON_BL_TO_PWM` |
-| BL_ON | PWM = user duty | target < BL | - |
-| BL_OFF | PWM dark | PWM-to-backlight, then pin off -> VIDEO (stream kept) or T4 | `_PANEL_POWER_OFF_PWM_TO_BL` |
+| VIDEO | - | off (-> T4, or T5 if the backlight was never on) | - |
 | T4 | DPTx BL-off seq | T4, then stream idle | PANEL_T4 |
 | T5 | - | T5, then SSC / PHY / VDD off | PANEL_T5 |
 | T6 | - | T6 | PANEL_T6 |
@@ -75,6 +71,18 @@ Input: `docs/sdk-model-inventory.md` (state machines, hooks, collisions C1-C16, 
 - M2PLL early: `SysPowerMcuClock` after `ScalerMcuInitial`; crystal around the whole-chip reset (regdb HOST_CTRL soft_reset resets all registers but HOST_CTRL, incl. M2PLL); M2PLL again after IOSC trimming.
 - Gate `panel` (scripts/panel_sim.py): writes to VDD / backlight pins / PWM4 and DPTx link / stream / PHY calls only with `g_ucAwtoPanelOwn`; no blink; one link training per bring-up; T3 / T4+T5 / T6 kept; power off during display setting. Sim panel model: `fw_sim.EdpPanel` (HPD 115 ms after VDD, #78).
 - Measurements: #162 comment of 2026-11-12 (sim and unit 2 tables).
+
+- Backlight: own sub-state beside the link states since 2026-11-13 (section "Backlight at once"); T3 / BL_PWM / BL_ON / BL_OFF (5..8) retired.
+
+## Backlight at once (wb-p14ui-blnow, 2026-11-13)
+- Dan's rule: backlight pin + PWM duty right after the M2PLL switch at cold boot, and at POWER on / wake as soon as VDD is on; not gated by HPD, link, video or T3. Panel datasheet T8 (>= 200 ms video -> LED) deliberately not followed.
+- Sub-state `s_ucPnlBl` (`AWTO_PNL_BL_*`): DARK -> PIN (pin on) -> LIT (PWM duty) -> DIM (PWM dark) -> DARK (pin off). Stepped each tick before the link step (`UserCommonInterfacePanelBlStep`).
+- Wanted = target BL and link state VDD .. VIDEO. Wait: registry `bl_on_delay` (id 117, default 0) from wanted to the pin; `bl_pwm_ms` (id 74, default 0) pin -> PWM. Before the registry load both read 0; the duty is the SDK default until the NVRAM load (`UserAdjustBacklightDuty`).
+- Going down: backlight dark first (DIM, `_PANEL_POWER_OFF_PWM_TO_BL`), then T4 from the pin-off edge, T5, VDD off, T6. Off before the stream (VDD / HPD): VDD off right after the pin off.
+- Cold boot: request after pin share + `ScalerTimerInitialTimerEvent` (the pin arms the panel-time timer event). Wake (PS_TO_NORMAL) requests the backlight too (was video only).
+- SDK status: READY at VIDEO (no T3), ALREADY with the backlight lit.
+- Registry: `panel_t3` (69) / `panel_t3_own` (70) retired, nothing reads them; `AwtoOwnFrame` gone. Lines: 11 C1 "panel: backlight on at once (Dan: no T3 wait): pin on", D1 (after a non-zero delay), C6 PWM set, C7 / CB PWM dark, CC pin off.
+- Gates: panel_sim (pin on only with VDD on, <= 5 ms after each VDD on, cold boot <= 5 ms after the M2PLL line, pin lines C1 / D1 / CC), boot_sim / sync_sim (line "backlight on at once", backlight line chain timed).
 
 ## Step 3: system machine (wb-p14ui-s3, 2026-11-12)
 - Owner: `SysJudge.c` = one machine for power status + mode (decision 3). `SysMachineHandler` (requests, power transitions, the judge's transitions, pending mode reset, state check) at the old `SysPowerHandler` slot; `SysMachineWork` (measure, display setting, first-ACTIVE work) at the `SysModeHandler` slot. `SysPowerSwitch`, `SysModeResetState`, `SysModeDisplaySetting`, `SysModeSetFreeRun` stay as its actions.

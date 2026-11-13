@@ -255,13 +255,14 @@ void SysMainSystemInitial(void)
 #endif
 
     AwtoDiagStage(4);
+    ScalerTimerInitialTimerEvent();         // before the backlight on: the pin arms the panel-time timer event
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
     if(AwtoBootReason() == AWTO_BOOT_COLD)
     {
-        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_BOOT_COLD));    // #162: VDD + T1 now; PHY / link once power is NORMAL
+        // #162: VDD and backlight now, on M2PLL (Dan 2026-11-13: no T3 wait); PHY / link once power is NORMAL
+        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_BOOT_COLD));
     }
 #endif
-    ScalerTimerInitialTimerEvent();
 
     AWTO_BPROF(0x30);
     UserCommonInterfaceInitial();

@@ -75,8 +75,7 @@
 #define AWTO_SET_OSD_ROTATE           63
 #define AWTO_SET_PANEL_T1             67
 #define AWTO_SET_PANEL_T2             68
-#define AWTO_SET_PANEL_T3             69
-#define AWTO_SET_PANEL_T3_OWN         70
+#define AWTO_SET_BL_ON_DELAY          117
 #define AWTO_SET_PANEL_T4             71
 #define AWTO_SET_PANEL_T5             72
 #define AWTO_SET_PANEL_T6             73
@@ -166,6 +165,6 @@
 #define AWTO_SET_DEF_SSC              0
 #define AWTO_SET_DEF_PANEL_HOURS      0
 #define AWTO_SET_DEF_PANEL_MIN        0
-#define AWTO_SET_SCHEMA              0x0273
-#define AWTO_SET_AUX_MAX             52
+#define AWTO_SET_SCHEMA              0x60D5
+#define AWTO_SET_AUX_MAX             50
 #endif

@@ -1252,10 +1252,13 @@ extern unsigned char AwtoFastScalerStatus(void);
 #undef _AWTO_WAKE_HOLD
 #define _AWTO_WAKE_HOLD                                         _OFF
 #endif
+// Backlight on (Dan 2026-11-13): wanted -> pin on after bl_on_delay, pin -> PWM duty after bl_pwm_ms; defaults 0 = at once
 #ifdef _AWTO_NEW_SETTINGS
-#define AWTO_T3_OWN_PATTERN_MS                                  AWTO_SET(PANEL_T3_OWN)      // #67 registry, default 20
+#define AWTO_BL_ON_DELAY_MS                                     AWTO_SET(BL_ON_DELAY)       // #67 registry, default 0
+#define AWTO_BL_TO_PWM_MS                                       AWTO_SET(BL_PWM_MS)         // #67 registry, default 0
 #else
-#define AWTO_T3_OWN_PATTERN_MS                                  20      // one 60 Hz frame (16.7 ms) + margin before backlight on
+#define AWTO_BL_ON_DELAY_MS                                     0
+#define AWTO_BL_TO_PWM_MS                                       0
 #endif
 // #162 panel machine (UserCommonInterface.c): the one driver of panel VDD, eDP-1 PHY / link / stream, backlight pin and PWM.
 // Callers request (UserCommonInterfacePanelPowerAction); UserCommonInterfacePanelPowerTick() steps it, never waits. docs/design-162.md.
@@ -1263,14 +1266,16 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AWTO_PNL_VDD                                            1       // VDD on: T1, then the PHY once power status is NORMAL
 #define AWTO_PNL_HPD                                            2       // PHY on: HPD read each tick, bound T2
 #define AWTO_PNL_LINK                                           3       // link training (one step)
-#define AWTO_PNL_VIDEO                                          4       // stream on, backlight off
-#define AWTO_PNL_T3                                             5       // backlight wanted: T3 from the stream start
-#define AWTO_PNL_BL_PWM                                         6       // backlight pin on: backlight-to-PWM time
-#define AWTO_PNL_BL_ON                                          7       // PWM duty set
-#define AWTO_PNL_BL_OFF                                         8       // PWM dark: PWM-to-backlight time, then the pin off
-#define AWTO_PNL_T4                                             9       // backlight off: T4, then the stream idle
+#define AWTO_PNL_VIDEO                                          4       // stream on (backlight: its own sub-state)
+#define AWTO_PNL_T4                                             9       // backlight off: T4, then the stream idle (5..8 retired: T3 / BL states)
 #define AWTO_PNL_T5                                             10      // stream idle: T5, then link / PHY / VDD off
 #define AWTO_PNL_T6                                             11      // VDD off: T6 before VDD may come on again
+#define AWTO_PNL_BL_DARK                                        0       // backlight sub-state (beside VDD .. VIDEO): pin off
+#define AWTO_PNL_BL_PIN                                         1       // pin on: bl_pwm_ms, then the PWM duty
+#define AWTO_PNL_BL_LIT                                         2       // PWM duty set
+#define AWTO_PNL_BL_DIM                                         3       // PWM dark: PWM-to-backlight time, then the pin off
+#define AWTO_PNL_BL_ARG(o, n)                                   (0xC0 | ((o) << 2) | (n))   // line 11 arg of a backlight change
+#define AWTO_PNL_BL_DELAYED                                     0x10    // + arg: pin on after a non-zero bl_on_delay
 #define AWTO_PNL_TGT_OFF                                        0       // request levels: panel off
 #define AWTO_PNL_TGT_VIDEO                                      1       // VDD + link + stream, backlight off
 #define AWTO_PNL_TGT_BL                                         2       // all on
@@ -1317,7 +1322,6 @@ extern void UserCommonInterfacePanelPowerTick(void);
 extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
-extern unsigned char AwtoOwnFrame(void);
 extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
 // #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.
 // The SDK views (power status / target, mode state / reset target) are written there only (gate sysm). docs/design-162.md.
