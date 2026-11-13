@@ -27,6 +27,7 @@ typedef struct {                /* public part, mirrored by fastmachine.Pub */
     uint64_t clk;               /* dw8051: CPU clock cycles elapsed (instruction cycles x clk_per_cycle) */
     uint64_t fm_miss, fm_stall;
     uint32_t dw, max_instr_clk; /* dw8051 mode on; longest single step in clk (instruction + IRQ entry) */
+    uint32_t sp_max, sp_wrap;   /* stack high-water (highest SP after a push); pushes that wrapped SP 0xFF -> 0x00 */
 } pub_t;
 
 typedef struct {
@@ -233,6 +234,10 @@ static inline void push(core_t *c, uint8_t v)
 {
     SP = SP + 1;
     c->iram[SP] = v;
+    if (SP > c->p.sp_max)
+        c->p.sp_max = SP;
+    if (SP == 0)
+        c->p.sp_wrap++;
 }
 
 static inline uint8_t pop(core_t *c)

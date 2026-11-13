@@ -21,6 +21,8 @@ FUNC = re.compile(r"^;\s+function (\w+)\s*$")
 CALL = re.compile(r"^\s+(lcall|ljmp)\s+(\w+)\s*$")
 TRAMP = 2                                       # caller-bank restore entry kept while the callee runs (bank.asm)
 TRANSIENT = 2                                   # target address inside __bs_call, once at the deepest point
+ISR_ENTRY = 2                                   # PC pushed by the interrupt
+HIGH = ("_SysEXINT0", "_SysTimerIntProc2")      # IP 0x81 / 0xA0: each is high in one IP state
 
 
 def main() -> int:
@@ -68,7 +70,7 @@ def main() -> int:
         if f in memo:
             return memo[f]
         if f in stack:
-            cyc.add(f); return 0
+            cyc.add(f); return 0, []                     # #174: was a bare 0
         best, path = 0, []
         targets = calls.get(f, [])
         for t, cost in targets:
@@ -87,9 +89,13 @@ def main() -> int:
     main_d, main_p = depth("_main")
     isr_d = {f: depth(f) for f in isr}
     worst_isr = max(isr_d.items(), key=lambda kv: kv[1][0]) if isr_d else ("-", (0, []))
-    total = main_d + 2 + worst_isr[1][0] + TRANSIENT      # interrupt at the deepest main point, mid-trampoline
+    # two levels: in each IP state one of HIGH is high and may interrupt any other (low) handler (sdcc_isr_libs PRIO_CLASS)
+    nest = max([(isr_d[h][0] + max([isr_d[l][0] for l in isr_d if l != h] or [0]) + ISR_ENTRY, h)
+                for h in HIGH if h in isr_d] or [(worst_isr[1][0], worst_isr[0])])
+    total = main_d + ISR_ENTRY + nest[0] + TRANSIENT       # nested interrupts at the deepest main point, mid-trampoline
     res = {"main": main_d, "main_path": main_p[:40], "isr": {k: v[0] for k, v in isr_d.items()},
-           "worst_isr": worst_isr[0], "worst_isr_path": worst_isr[1][1][:40], "total": total,
+           "worst_isr": worst_isr[0], "worst_isr_path": worst_isr[1][1][:40], "nested_high": nest[1],
+           "isr_nested": nest[0], "total": total,
            "cycles": sorted(cyc)[:20], "limit": a.limit}
     txt = json.dumps(res, indent=1)
     print(txt); log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n{txt}\n")

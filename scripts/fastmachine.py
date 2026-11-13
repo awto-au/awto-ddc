@@ -62,7 +62,8 @@ class Pub(ctypes.Structure):
                 ("nbanks", ctypes.c_uint32), ("nlvl", ctypes.c_uint32), ("serial_wr", ctypes.c_uint64),
                 ("irq_tail", ctypes.c_uint32), ("_pad", ctypes.c_uint32),
                 ("clk", ctypes.c_uint64), ("fm_miss", ctypes.c_uint64), ("fm_stall", ctypes.c_uint64),
-                ("dw", ctypes.c_uint32), ("max_instr_clk", ctypes.c_uint32)]
+                ("dw", ctypes.c_uint32), ("max_instr_clk", ctypes.c_uint32),
+                ("sp_max", ctypes.c_uint32), ("sp_wrap", ctypes.c_uint32)]
 
 
 _LIB = None
@@ -237,6 +238,8 @@ class FastMachine:
         self.ticks, self.instr, self._stop, self.last_out = 0, 0, False, ""
         self._tpi = S.TICKS_PER_INSTR
         self.stubs, self.stub_hits = {}, {}
+        import atexit
+        atexit.register(self._stack_report)
         self.t2_scale, self._t2_set, self._t2_at = 1, -1, -10**9
         self.keil = ncode is not None or S.keil_abi(self.sym)
         self.ret_pc = ret_pc if ret_pc is not None else S.sw_ret(img, self.sym["__bs_call_sw"])
@@ -551,7 +554,20 @@ class FastMachine:
             m = 0xFFFF
         self.core.pch[pc] = m
 
+    def _stack_report(self):
+        """One line per sim run: stack high-water (fw_stack.py is the static bound). Log: tmp/logs/sim_stack.log"""
+        try:
+            p, log = self.core.p, repo_root() / "tmp/logs/sim_stack.log"
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with log.open("a") as f:
+                f.write(f"{self.tag} {Path(sys.argv[0]).name} sp_max 0x{p.sp_max:02X} sp_wrap {p.sp_wrap} instr {p.instr}\n")
+        except Exception:
+            pass                                    # report only; never fail a sim run over it
+
     def close(self):
+        import atexit
+        self._stack_report()
+        atexit.unregister(self._stack_report)
         self.core.free()
 
 
