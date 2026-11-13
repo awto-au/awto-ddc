@@ -824,7 +824,7 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #define AWTO_SW_EV_PANEL_X                                      0x12    // #162 arg AWTO_PNL_X_*: HPD timeout, link fail, a pin / PWM write outside the machine
 #define AWTO_SW_EV_BLANK                                        0x80    // backlight kept on, picture blanked instead (#60 step 2); arg = site
 #ifndef _AWTO_LOOP_PROF
-#define _AWTO_LOOP_PROF                                         _OFF    // -D_AWTO_LOOP_PROF=_ON: per-handler main-loop cost (fw/sdcc/awto_loopprof.inc)
+#define _AWTO_LOOP_PROF                                         _OFF    // -D_AWTO_LOOP_PROF=_ON: per-handler main-loop cost (fw/diag/loopprof.c)
 #endif
 #define AWTO_LP_SLOTS                                           12
 typedef struct
@@ -845,7 +845,7 @@ extern void AwtoLpMark(unsigned char ucK);
 #define _AWTO_DP_FRAME_WAIT                                     _ON     // #60: DP Rx1 two-frame waits from the measured frame (fw/sdcc/awto_dpframe.inc)
 #endif
 #ifndef _AWTO_LOOP_SPLIT
-#define _AWTO_LOOP_SPLIT                                        _ON     // #75: slow checks every AWTO_SLOW_MS, not every pass (fw/sdcc/awto_loopsplit.inc)
+#define _AWTO_LOOP_SPLIT                                        _ON     // #75: slow checks every AWTO_SLOW_MS, not every pass (fw/diag/loopsplit.c)
 #endif
 #define AWTO_SLOW_MS                                            10      // detection latency <= 10 ms + 1 pass (limit 50 ms, #75)
 #define AWTO_SLOW_JUDGE                                         0       // SysJudgeCheckStatus (48.6 % of an ACTIVE pass, #75)

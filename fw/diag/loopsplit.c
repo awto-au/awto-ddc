@@ -1,4 +1,6 @@
-// #75 main-loop split, inserted into SysMain.c by keil2sdcc.py: slow checks run when AWTO_SLOW_MS have passed.
+#include "SysInclude.h"
+
+// #75 main-loop split: slow checks run when AWTO_SLOW_MS have passed.
 // Time base = Timer2 ISR count (1 per ms tick); d_isr_g_usTimerCounter is rebased by the timer-event code.
 #if(_AWTO_LOOP_SPLIT == _ON)
 __xdata StAwtoLoop g_stAwtoLoop;

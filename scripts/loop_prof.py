@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Main-loop cost per handler from g_stAwtoLoopProf (image built with -D_AWTO_LOOP_PROF=_ON, fw/sdcc/awto_loopprof.inc).
+"""Main-loop cost per handler from g_stAwtoLoopProf (image built with -D_AWTO_LOOP_PROF=_ON, fw/diag/loopprof.c).
 
 usage: loop_prof.py <bus> --serial S --map MAP [--secs 3] [--label L] [--ps-only]
   Arms (ucReset=1), waits --secs, reads the block: one line per slot = us per pass and share of the pass.

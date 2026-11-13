@@ -1,4 +1,6 @@
-// Main-loop cost per handler (#60 / main-loop split), inserted into SysMain.c by keil2sdcc.py; off unless _AWTO_LOOP_PROF.
+#include "SysInclude.h"
+
+// Main-loop cost per handler (#60 / main-loop split); off unless _AWTO_LOOP_PROF.
 // AWTO_LP(k) before handler k closes the previous segment; host: scripts/loop_prof.py (Timer2 counts -> us per pass).
 #if(_AWTO_LOOP_PROF == _ON)
 __xdata StAwtoLoopProf g_stAwtoLoopProf;
