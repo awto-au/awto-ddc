@@ -36,7 +36,9 @@ def repo_root() -> Path:
 
 ROOT = repo_root()
 SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))
-TAINTED = [ROOT / "fw" / "sdk", ROOT / "fw" / "sdcc"]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fw_dirs  # noqa: E402
+TAINTED = [ROOT / "fw" / "sdk", ROOT / "fw" / "sdcc", *fw_dirs.our_dirs(ROOT)]
 CLEAN = Path(os.environ.get("AWTO_RTDFW_REPO", "/mnt/2tb/git/awto-rtdfw"))
 CACHE = ROOT / "tmp" / "cleanroom" / "sdk_index.npz"
 ALLOW = ROOT / "specs" / "lint_allow.tsv"

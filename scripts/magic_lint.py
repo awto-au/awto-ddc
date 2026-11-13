@@ -8,7 +8,7 @@ Flags in our files (comments stripped):
   - bare 0xFE00-0xFFFE literal (XFR address; 0xFFFF is a sentinel)
   - numeric literal arguments of ScalerOsdSetColorPalette (use AWTO_PAL_* / AWTO_RGB_*)
 Allow-list: scripts/magic_allow.tsv  `file-suffix<TAB>line-substring<TAB>reason`, every entry needs a reason.
-Our files: fw/sdcc/awto_*.inc, fw/sdcc/glue*.inc, fw/awto/**, awto-marked fw/sdk headers; the generated AwtoRegs.h is the one place addresses live.
+Our files: fw/sdcc/awto_*.inc, fw/sdcc/glue*.inc, fw/<subsystem>/ (scripts/fw_dirs.py), fw/awto/**, awto-marked fw/sdk headers; the generated AwtoRegs.h is the one place addresses live.
 Log: ./tmp/logs/magic_lint.log
 """
 import argparse
@@ -46,7 +46,9 @@ def our_files(root):
     for sub in ("*.inc", "*.c", "*.h"):
         fs += sorted((root / "fw/awto").rglob(sub))
     fs += [root / p for p in OVERLAY_OURS if (root / p).is_file()]
-    return fs
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import fw_dirs
+    return fs + fw_dirs.our_files(root)
 
 
 def strip(line, in_block):

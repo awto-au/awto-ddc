@@ -75,6 +75,7 @@ CLEAN = _resolve_clean()
 # SDK name -> clean symbol macros and functions kept in common memory: fw/awto/boundary.py
 sys.path.insert(0, str(ROOT / "fw" / "awto"))
 from boundary import ALIASES, PIN_COMMON  # noqa: E402
+import fw_dirs as FD  # noqa: E402
 
 
 
@@ -146,6 +147,15 @@ def keil_compat():
     return _KC
 
 
+# Our firmware sources by subsystem (#196, scripts/fw_dirs.py): compiled with the SDK project's flags, defines and include path.
+def our_dirs():
+    return FD.our_dirs(ROOT)
+
+
+def our_sources():
+    return FD.our_files(ROOT, ("*.c",))
+
+
 def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd = [SDCC, "-mmcs51", {0: "--model-small", 1: "--model-medium", 2: "--model-large"}.get(model, "--model-large"),
            "--std-sdcc11", "--opt-code-size",                 # flash is the constraint (Dan: smallest)
@@ -160,6 +170,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     if awto_alias_header():
         cmd.append(f"-Wp-include,{awto_alias_header()}")
     cmd += [f"-I{(uv2dir / i).resolve()}" for i in incs]
+    cmd += [f"-I{d}" for d in our_dirs()]                     # fw/<subsystem>/*.h (#196)
     cmd += [f"-I{c.parent}"]
     cmd += [f"-D{d}" for d in defines]
     cmd += FILE_FLAGS.get(c.name, [])
@@ -251,7 +262,7 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
                 tmp.replace(hit)                             # entry visible only when complete (.msg first)
             STATS["cache_miss"] += 1
     pp.unlink(missing_ok=True)
-    return str(c.relative_to(SRC)), rc, msg
+    return str(c.relative_to(SRC) if c.is_relative_to(SRC) else c.relative_to(ROOT)), rc, msg
 
 
 # ---------------- clean-room mixed build (#65, #68) ----------------
@@ -345,6 +356,8 @@ def cmd_compile(uv2_rel, jobs, only, target):
     missing = [c for c in cs if not c.exists()]
     parked = [c for c in missing if (ROOT / "fw/sdk-parked" / c.relative_to(SRC.resolve())).exists()]
     cs = [c for c in cs if c.exists()]
+    if uv2_rel == "STD_FW_1P.Uv2":
+        cs += our_sources()                                   # #196: our .c files beside the SDK project
     log(f"compile {uv2_rel}: {len(cs)} C files ({len(parked)} parked in fw/sdk-parked, {len(missing) - len(parked)} missing), "
         f"defines {defines}, model {model}")
     if len(missing) > len(parked):                       # a project file in neither tree: a lost source, not a parked one (#165)

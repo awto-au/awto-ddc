@@ -71,7 +71,6 @@ void SysMainStartUserCode(BYTE ucBankAddress);
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-#include "awto_led.inc"
 #include "awto_diag.inc"
 #include "awto_sw.inc"
 #include "awto_sync.inc"

@@ -1,3 +1,5 @@
+#include "SysInclude.h"
+
 // awto two-colour power LED (awto-ddc#95): bLED_ON (P3.5) on colour, bLED_STANDBY (P3.6) standby colour, breathing by the
 // Timer2 ISR (AWTO_LED_T2ISR). Only caller: the system machine (SysJudge.c SysMachineLed), on a colour change.
 volatile __xdata unsigned char isr_g_ucAwtoLedMode;
