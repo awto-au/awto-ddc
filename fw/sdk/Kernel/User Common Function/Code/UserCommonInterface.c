@@ -1045,17 +1045,16 @@ static bit UserCommonInterfacePanelStep(void)
 }
 
 //--------------------------------------------------
-// Description  : Boot (before the boot request): after a warm reset the panel VDD was on until GPIO init switched it off,
-//                so T6 counts from now; a cold power-up had VDD off for longer than T6
-// Input Value  : ucWarm --> 1 = not a cold power-up (AwtoBootReason)
+// Description  : Boot (before any panel request): GPIO init left VDD on (default on), so the machine starts at VDD with
+//                video wanted; T1 counts from here. A power-off at boot takes it down through T4..T6 like any power-down.
+// Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void UserCommonInterfacePanelBoot(BYTE ucWarm)
+void UserCommonInterfacePanelBoot(void)
 {
-    if(ucWarm != 0)
-    {
-        UserCommonInterfacePanelGo(AWTO_PNL_T6, (WORD)AwtoMs());
-    }
+    AwtoDiagStage(5);
+    UserCommonInterfacePanelGo(AWTO_PNL_VDD, (WORD)AwtoMs());
+    s_ucPnlTarget = AWTO_PNL_TGT_VIDEO;
 }
 
 //--------------------------------------------------
@@ -1147,7 +1146,7 @@ bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp)
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_PANEL_OFF, AWTO_PNL_BY_PWR_DOWN));
             s_ucPnlDown = ucKeep + 1;
         }
-        return ((s_ucPnlState == AWTO_PNL_OFF) || (s_ucPnlState == AWTO_PNL_T6));
+        return (s_ucPnlState == AWTO_PNL_OFF);  // T6 done before power off / saving completes: no off-time left for the next power-on
     }
     if((s_ucPnlDown != 0) && (bUp != 0))        // switch called off (target withdrawn): back to the level before it
     {

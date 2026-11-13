@@ -1,1 +1,1 @@
-7211ab4   # awto-rtdfw commit compiled into the image (git archive); rotate: Rotate 0 / 180 + Mirror row (awto-ddc#165), on ui aa74554
+954226c   # awto-rtdfw commit compiled into the image (git archive); rotate + panel_t6 900 (delay rule)

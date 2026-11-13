@@ -256,23 +256,14 @@ void SysMainSystemInitial(void)
 #endif
 
     AwtoDiagStage(4);
+    UserCommonInterfacePanelBoot();         // VDD on since GPIO init (default on): T1 now; PHY / link once power is NORMAL
 #if(_AWTO_BOOT_PANEL_EARLY == _ON)
-    if(AwtoBootReason() == AWTO_BOOT_COLD)
-    {
-        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_BOOT_COLD));    // #162: VDD + T1 now; PHY / link once power is NORMAL
-    }
+    UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, (AwtoBootReason() == AWTO_BOOT_COLD) ? AWTO_PNL_BY_BOOT_COLD : AWTO_PNL_BY_BOOT_WARM));
 #endif
     ScalerTimerInitialTimerEvent();
 
     AWTO_BPROF(0x30);
     UserCommonInterfaceInitial();
-    if(AwtoBootReason() != AWTO_BOOT_COLD)  // #162: warm reset = VDD went off at GPIO init: T6 (registry, loaded now) first
-    {
-        UserCommonInterfacePanelBoot(1);
-#if(_AWTO_BOOT_PANEL_EARLY == _ON)
-        UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_BOOT_WARM));
-#endif
-    }
 
     AWTO_BPROF(0x31);
     ScalerMcuDdcRamEnable();

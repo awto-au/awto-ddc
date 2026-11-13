@@ -26,14 +26,13 @@ sys.path.insert(0, str(ROOT / "scripts"))
 LOG = ROOT / "tmp/logs/panel_unit.log"
 OUT = ROOT / "tmp/logs/panel_unit"
 BUS, SERIAL, UNIT = 11, "AWT26110002", 2
-AUTO_BUSES = (11, 15)                         # --bus 0: HDMI-2 (D2), DP-1 (D1) connector buses of unit 2      # unit 2 (scripts/devices.json); units 1 / 3 are hands off
+AUTO_BUSES = (11, 15)                         # --bus 0: HDMI-2 (D2), DP-1 (D1) connector buses of unit 2      # --unit: 2 or 3 (scripts/devices.json)
 # --bus: the debug slave follows the active port (D1 = DP-1 connector bus); every read checks the EDID serial (sync_log --serial)
 BOOT_WAIT_S = 6.0      # cold boot -> ACTIVE: s1-5 2.47 s worst with HDMI predetect flaps (#162), x2.4 = 6 s; expiry = run FAIL
 KEY_WAIT_S = 6.0       # POWER-key on -> ACTIVE: s1-5 sim / unit < 2.5 s (#144 boot profile), x2.4; expiry = run FAIL
 SWITCH_WAIT_S = 4.0    # input switch -> picture: full path ~1 s (#60 / #83), DP search time 3 s worst x1.25 ~ 4 s; expiry = run FAIL
-OFF_S = 1.0            # soft off -> power OFF: PWM->BL 50 + T4 250 + T5 20 + NVRAM flush (<= 216 ms stall, #150) = 0.54 s
+OFF_S = 1.8            # soft off -> power OFF: PWM->BL 50 + T4 250 + T5 20 + T6 900 + NVRAM flush (<= 216 ms stall, #150) = 1.44 s x1.25
                        # + one ring poll 0.2 s = 0.74 s, x1.25 ~ 1 s; expiry = press again
-T6_S = 1.4             # then the panel's T6 (1.1 s, registry PANEL_T6) x1.25, so the soft on meets a panel past T6
 PRESSES = 3            # a press with the console open can go to closing it (AwtoKeyRoute); 3 = at most two such
 POLL_S = 0.5           # ring poll: one read ~0.1 s; boot is seconds
 TESTCMD = 0xF6F8       # g_stAwtoDiag + 0x28 (dbg_link.py TESTCMD)
@@ -168,11 +167,13 @@ def main():
     ap.add_argument("--power-key", type=int, default=1)
     ap.add_argument("--switch", type=int, default=0, help="input switches D1 then D2 (kvm.py, VCP 0x60)")
     ap.add_argument("--no-flash", action="store_true")
+    ap.add_argument("--unit", type=int, default=UNIT, choices=(2, 3), help="test unit (scripts/devices.json); both run on bus 11 (HDMI-2)")
     ap.add_argument("--bus", type=int, default=BUS, help="unit 2 bus of the port it runs on (D2 HDMI-2 = 11 by default; 0 = try 11, 15)")
     ap.add_argument("--port", help="cold boot: wait for ACTIVE on this port (e.g. D2), not the first ACTIVE")
     ap.add_argument("--wait", type=float, default=BOOT_WAIT_S, help="cold boot -> ACTIVE poll limit, s (characterising slow HDMI scans)")
     a = ap.parse_args()
     globals()["BUS"] = a.bus
+    globals()["UNIT"], globals()["SERIAL"] = a.unit, f"AWT2611000{a.unit}"
     b = ROOT / f"tmp/fw/{SERIAL}-{a.tag}-be.bin"
     mp = b.with_suffix(".map")
     if not a.no_flash:
@@ -190,7 +191,6 @@ def main():
     for n in range(a.power_key):
         if not press_until(mp, (PWR_OFF, MODE_POWER_OFF), OFF_S, "power OFF"):
             return 1
-        time.sleep(T6_S)
         ok = press_until(mp, (PWR_NORMAL, MODE_ACTIVE), KEY_WAIT_S, "power key on -> ACTIVE")
         d = report(a.tag, f"key{n + 1}", ring(mp))
         (OUT / f"{a.tag}-key{n + 1}-whole.txt").write_text(ring(mp, whole=True))      # off episode + on episode

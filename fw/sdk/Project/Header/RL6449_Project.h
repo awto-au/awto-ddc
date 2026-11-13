@@ -1338,7 +1338,7 @@ extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
 extern unsigned char AwtoOwnFrame(void);
-extern void UserCommonInterfacePanelBoot(unsigned char ucWarm);
+extern void UserCommonInterfacePanelBoot(void);
 // #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.
 // The SDK views (power status / target, mode state / reset target) are written there only (gate sysm). docs/design-162.md.
 #define AWTO_SYS_AC_ON                                          0       // boot: power AC_ON, mode POWER OFF
@@ -1428,6 +1428,7 @@ extern void SysMachineInit(void);
 extern void SysMachineHandler(void);
 extern void SysMachineWork(void);
 extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
+extern bit SysMachineOffOrGoing(void);
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2
 #define _AWTO_INFO_POPUP_SEC                                    6       // input-info pop-up on-screen time (SDK: 3)

@@ -35,12 +35,12 @@ PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3                    # Global.h EnumPowe
 MODE_DS, MODE_ACTIVE = 2, 3
 # Panel times: registry defaults in fw/sdk/Panel/AWTO_M280DCA_E3B.h (read from --tree when given); T3 own frame = registry
 # PANEL_T3_OWN default (RL6449_Project.h AWTO_T3_OWN_PATTERN_MS).
-PANEL = {"T3_OWN": 20, "T4": 250, "T5": 20, "T6": 1100}
-# Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off incl. T4 + T5 + flash
-# flush ~0.6 s x2; signal-loss hold: L1 needs one judge run (10 ms slow path) + a pass; settle 1 s.
+PANEL = {"T3_OWN": 20, "T4": 250, "T5": 20, "T6": 900}
+# Phase bounds (firmware ms; expiry = FAIL): cold boot to ACTIVE sim ~0.9 s (s2-1) x ~2; power off = T4 + T5 + T6 + flash
+# flush, sim worst x1.25 (#54); signal-loss hold: L1 needs one judge run (10 ms slow path) + a pass; settle 1 s.
 BOOT_INSTR = 160_000_000
 # Wake: SDK auto search after PS_TO_NORMAL = DP dwell 3 s (D1) + HDMI 2 s worst, sim 4.2 s seen (s2-2) x1.25 -> 5.5 s.
-OFF_MS, ON_MS, SETTLE_MS, HOLD_MS, PS_MS, WAKE_MS = 1500, 3000, 1000, 1500, 3000, 5500
+OFF_MS, ON_MS, SETTLE_MS, HOLD_MS, PS_MS, WAKE_MS = 1810, 3000, 1000, 1500, 3000, 5500
 STEP = 20_000
 LINE_SLACK_MS = 3      # pin edge -> its transition line: the line is pushed right after the action (pin, DPTx call), ~1 ms x3
 EDGE_LINES = {("VDD pin", 1): (0x01,), ("VDD pin", 0): (0x1B, 0x2B, 0xAB), ("BL pin", 1): (0x56,), ("BL pin", 0): (0x84, 0x89)}
@@ -186,7 +186,7 @@ class Run:
         self.ring_lines("power on")
         self.phase = "off in DS"                     # POWER off while display setting asks for video: power-down wins (no ping-pong)
         self.cmd(POWER_KEY)
-        self.bus.wait((PANEL["T6"] + 200) / 1000)
+        self.until(lambda: self.power() == PWR_OFF, OFF_MS)   # T6 runs inside power-down: a press before OFF calls it off
         self.cmd(POWER_KEY)
         ok, _ = self.until(lambda: self.bus.mode_state() == MODE_DS, ON_MS)
         self.check(ok, "POWER on again: DISPLAY SETTING reached")

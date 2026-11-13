@@ -670,6 +670,7 @@ stub	_RTDFactorySSCEnter	C	0x27ac	8
 stub	_RTDFactorySSCExit	C	0x27b4	8
 stub	_RTDFactorySSCLeft	C	0x27bc	8
 stub	_RTDFactorySSCRight	C	0x27c4	8
+stub	_SysMachineOffOrGoing	C	0x27cc	8
 stub	_ScalerAudioDACInitial	C	0x27d4	8
 stub	_ScalerAudioDACOutputEnable	C	0x27dc	8
 stub	_ScalerAudioDACOutputSwitch	C	0x27e4	8
@@ -1434,7 +1435,7 @@ fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260
 fn	_set_ap_mute	1	0x9d38	52
 fn	_AwtoNvGroup	1	0x9d6c	56
-const	_set_ap_rotate_tFlipToSdk_10000_2741	1	0x9da4	8
+const	_set_ap_rotate_tFlipToSdk_10000_2742	1	0x9da4	8
 fn	_UserAdjustAudioVolumeMapping	1	0x9dac	28
 fn	_UserAdjustBrightness	1	0x9dc8	64
 fn	_UserAdjustContrast	1	0x9e08	496
@@ -1802,7 +1803,7 @@ fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
 fn	_AwtoMsgV	4	0xaef8	252
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1357	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1358	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -2851,7 +2852,6 @@ fn	_UserCommonInterfaceCheckFakeSaving	11	0x9ea4	16
 fn	_UserCommonInterfaceGetDVMaxMinFreq	11	0x9eb4	144
 fn	_UserCommonInterfaceLoadEmbeddedEdidData	11	0x9f44	44
 fn	_UserCommonInterfaceLoadEmbeddedEdidDataByPort	11	0x9f70	216
-fn	_UserCommonInterfacePanelBoot	11	0xa048	20
 fn	_UserCommonInterfacePanelGo	11	0xa05c	128
 fn	_UserCommonInterfacePanelPowerDown	11	0xa0dc	120
 fn	_UserCommonInterfacePanelPowerTick	11	0xa154	44
@@ -2872,6 +2872,7 @@ fn	_hb_burst	11	0xadf4	316
 fn	_hb_osd_gap	11	0xaf30	132
 fn	_mode_dclk_khz	11	0xafb4	28
 const	_tAwtoAudioTestGain	11	0xafd0	16
+fn	_UserCommonInterfacePanelBoot	11	0xafe0	28
 const	_tCOLOR_CONV_RGB2YUV_ITU709	12	0x0000	32
 fn	_ScalerOsdGetOsdEnable	12	0x0054	20
 fn	_ScalerOsdSetTransparencyType	12	0x0068	20
@@ -3201,6 +3202,7 @@ fn	_ScalerDpRx1PSPreDetect	12	0x2668	128
 fn	_ScalerDpCheckDCOffHpdToggle	12	0x26e8	8
 fn	_ScalerDpEdidSwitch	12	0x26f0	16
 fn	_ScalerDpSetHotPlugEvent	12	0x2700	16
+fn	_SysMachineOffOrGoing	12	0x2710	40
 fn	_ScalerDisplayDPTx1EnhanceFramingMode	12	0x2740	36
 fn	_ScalerGlobalGetIRQControl	12	0x2764	12
 fn	_ScalerGlobalSetIRQControl	12	0x2770	12

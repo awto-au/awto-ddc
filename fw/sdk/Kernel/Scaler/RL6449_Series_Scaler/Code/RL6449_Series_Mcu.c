@@ -1764,7 +1764,7 @@ void ScalerMcuGpioInitial(void)
     PCB_DDR_POWER(_DDR_POWER_ON);
 
     PCB_REGULATOR_5V_OUT(_REGULATOR_5V_OFF);
-    PCB_PANEL_POWER(_PANEL_CONTROL_OFF);
+    PCB_PANEL_POWER(_PANEL_CONTROL_ON);         // panel VDD default on (Dan 2026-11-13): a warm reset never cuts it; off-time runs at power-down
     PCB_BACKLIGHT_POWER_PIN(_LIGHT_CONTROL_OFF);
     PCB_LED_AC_ON_INITIAL();
 

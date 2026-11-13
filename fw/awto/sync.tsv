@@ -96,7 +96,6 @@ C0	04	vport	power key on, %
 11	A4	ms	panel: T5 -> VIDEO (%): on again, stream on
 11	AB	ms	panel: T5 -> T6 (%): T5 done, link and VDD off
 11	B0	ms	panel: T6 -> OFF (%): T6 done, VDD may come on again
-11	0B	ms	panel: OFF -> T6 (%): warm reset, VDD went off at GPIO init: T6 first
 11	4A	ms	panel: VIDEO -> T5 (%): off, backlight never on: no T4, stream idle
 11	*	harg	panel: state change % (not a listed transition)
 12	00	-	panel: no eDP-1 HPD within T2, link training anyway
@@ -326,7 +325,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 1A	09	-	search found no source
 1A	0A	-	no signal, low power, waiting for a wake
 1B	01	-	boot (cold power-up: panel early)
-1B	02	-	boot (warm reset: after T6)
+1B	02	-	boot (warm reset: VDD kept on)
 1B	03	-	power switch OFF -> NORMAL
 1B	04	-	power switch POWER SAVING -> NORMAL (wake)
 1B	05	-	our wake poll (console + backlight)

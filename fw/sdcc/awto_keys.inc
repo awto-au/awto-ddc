@@ -122,7 +122,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
         {
             AwtoKeyTestSet(0);                  // POWER always works: the console closes first (Dan, 2026-11-12)
         }
-        if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
+        if(SysMachineOffOrGoing() == _TRUE)     // pressed again during power-down: calls it off (back on)
         {
             SET_OSD_STATE(_MENU_NONE);
             SET_OSD_IN_FACTORY_MENU_STATUS(_FALSE);

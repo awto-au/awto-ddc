@@ -218,7 +218,7 @@ void AwtoDiagTestCmd(void)
 #endif
     else if(ucCmd == 0x3E)                              // #151 test: the POWER key (soft off / on; off flushes the store)
     {
-        if(SysPowerGetPowerStatus() == _POWER_STATUS_OFF)
+        if(SysMachineOffOrGoing() == _TRUE)
         {
             SET_OSD_STATE(_MENU_NONE);
             SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_TESTCMD);

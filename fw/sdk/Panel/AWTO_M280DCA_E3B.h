@@ -50,7 +50,7 @@
 
 #define _PANEL_POWER_OFF_T4                     250
 #define _PANEL_POWER_OFF_T5                     20
-#define _PANEL_POWER_OFF_T6                     1100
+#define _PANEL_POWER_OFF_T6                     900                        // datasheet T11 >= 1000 ms - 10 % (delay rule)
 #ifdef _AWTO_NEW_SETTINGS                       // #67: power sequence from the settings registry (values above = registry defaults)
 #undef _PANEL_POWER_ON_T1
 #undef _PANEL_POWER_ON_T2

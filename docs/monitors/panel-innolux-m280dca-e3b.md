@@ -47,8 +47,9 @@ Datasheet (source = monitor, sink = panel). Firmware: `UserCommonInterfacePanelS
 | T8 | same, own black frame | 200 / - | T3_OWN (registry PANEL_T3_OWN) | 20 | stream 434 -> backlight pin 471 = 37 ms (unit 2, s2-7) | **below min** |
 | T9 | LED off -> video idle | 200 / - | T4 | 250 | - | ok |
 | T10 | video end -> VDD off | 0 / 500 | T5 (+ SSC / PHY off) | 20 | - | ok |
-| T11 | VDD off (10 %) -> VDD on | 1000 / - | T6 (from the VDD-off edge) | 1100 | VDD decay not measured | ok if decay to 10 % < 100 ms |
+| T11 | VDD off (10 %) -> VDD on | 1000 / - | T6 (from the VDD-off edge), done before power off / saving completes | 900 | VDD decay not measured | datasheet - 10 % (delay rule, Dan 2026-11-13) |
 
 - T8 is deliberately NOT followed (Dan, 2026-11-13, repeated decision): backlight on immediately after power-up once the MCU is on the M2PLL clock, not gated by video or T3/T3_OWN. Accepted risk per datasheet note 2: a momentarily abnormal screen.
-- T6 vs T11: datasheet counts from VDD at 10 %; firmware from the switch edge. Margin 100 ms; the VDD decay time is not measured.
+- T6 vs T11: datasheet counts from VDD at 10 %; firmware from the switch edge; VDD decay time not measured.
+- Panel VDD default on: GPIO init drives it on, so a warm reset never cuts it; T6 runs at power-down / saving, not at the next power-on.
 - Not in the datasheet: `_PANEL_POWER_ON_BL_TO_PWM` 50, `_PANEL_POWER_OFF_PWM_TO_BL` 50 (SDK defaults, Panel_Default.h; external LED driver).

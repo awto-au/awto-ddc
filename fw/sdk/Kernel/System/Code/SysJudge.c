@@ -191,6 +191,12 @@ void SysMachineInit(void)
 // Input Value  : ucReq --> EnumPowerStatus / AWTO_SYS_REQ_MODE | EnumModeAction / AWTO_SYS_REQ_FAST.. ; ucBy --> AWTO_SYS_BY_*
 // Output Value : None
 //--------------------------------------------------
+// POWER toggle input: off, or a power-off in progress (T4..T6 still running): the next press means "on"
+bit SysMachineOffOrGoing(void)
+{
+    return ((s_ucSysState == AWTO_SYS_OFF) || ((s_ucSysState == AWTO_SYS_DOWN) && (GET_TARGET_POWER_STATUS() == _POWER_STATUS_OFF)));
+}
+
 void SysMachineRequest(BYTE ucReq, BYTE ucBy)
 {
     BYTE ucOut = AWTO_SYS_OK;                   // the one local: XDATA is full (#162 step 3)
