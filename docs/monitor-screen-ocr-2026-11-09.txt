@@ -1,0 +1,57 @@
+Monitor screenshot transcription
+===============================
+
+Source: user-supplied photograph in ChatGPT, transcribed visually on 2026-11-09.
+Purpose: make the screenshot text available to the agent on Selwyn via awto-ddc.
+The original image is not included.
+
+Accuracy notes:
+- Best-effort visual OCR, not a verified device log.
+- The upper portion visibly contains fragmented/concatenated text. This
+  transcription preserves approximate row order and spacing, without attempting
+  to repair it into intended messages.
+- 0/O, 1/I, 5/S and 6/G may be confused throughout. [text?] marks especially
+  uncertain readings; unmarked text can still contain OCR errors.
+- The lower table (AVS through RP) is clearer than the upper portion.
+- A blue panel with a white monitor icon is visible to the left.
+
+Approximate screen text
+-----------------------
+
+.00SYNC00SYNCAVS55-00S
+00CMP   RM6 2   -00C MPAHS
+YNCB    P5  8   -    00CMPSO
+56-0    0S  Y   N    CGM59-0
+0CMP    RP  6   3    -00CMPC
+G61-    00  S   Y    NC00SYN
+0CMP    RM  6   2    -00CMPS
+HG 0    I2  C        44 CLOS
+CAVS    55  -   0    0SYNCBP
+YNCG    M5  9   -    00CMPRM
+[EEBM?] 57  -   00C  MPGP60
+58-00C  MP  S   0G6  1-00SY
+62-0    0C  M   PAH  S56-00
+-00CM   PR  P   63-  00CMPC
+NC      00  S   YNC  AVS55-
+SYNC    GM  5   9-0  0CMPRM
+HG 0I2  C 4 4        CLOSEEB
+AVS     55  -   00   SYNC
+AHS     56  -   00   SYNC
+BM      57  -   00   CMP
+BP      58  -   00   CMP
+GM      59  -   00   CMP
+GP      60  -   00   CMP
+SOG     61  -   00   SYNC
+RM      62  -   00   CMP
+RP      63  -   00   CMP
+CHG 0           I2C 44 CLOSE
+
+Additional uncertain readings
+-----------------------------
+
+- The row transcribed as "[EEBM?]" may begin with F rather than E.
+- "HG 0I2" may contain a digit 1 rather than I.
+- The footer reads approximately "CHG 0   I2C 44 CLOSE"; I2C may render
+  as "I 2C" in the photograph.
+- Some apparent dots/hyphens and spaces may be display artifacts.
+- No cause of the fragmented display has been established from this image.
