@@ -134,6 +134,91 @@ def _nudge_safe(nudge) -> None:
         log(f"GMBUS nudge failed: {e}")
 
 
+# #167: a NAK mid-burst can leave the SPI engine busy (reg 0x60 go bit stuck); retries on the same ISP session then fail.
+ENGINE_GO = 0x01                                     # reg 0x60 bit0: command go / busy
+ISP_EN = 0x80                                        # reg 0x6F bit7: ISP enable (MCU halted)
+RESET_ISP_LIMIT_S = 5.0                              # ISP answering again after the 0xEE reset: no datasheet figure; the
+                                                     # 5 s monitor-return bound; expiry raises (flash stays failed)
+RESET_POLL_S = 0.02
+RECOVERIES = {"clear": 0, "reset": 0}
+
+
+def _engine_idle(isp) -> bool:
+    try:
+        return not isp.read(0x60) & ENGINE_GO
+    except OSError:
+        return False
+
+
+def recover_isp(isp, why: str, force_reset: bool = False) -> None:
+    """Stuck SPI engine: clear the go bit (MCU stays halted); still busy -> scaler reset, ISP re-entry, JEDEC, WP release."""
+    if not force_reset:
+        try:
+            isp.write(0x60, 0x00)
+        except OSError:
+            pass
+        if _engine_idle(isp):
+            RECOVERIES["clear"] += 1
+            log(f"recover ({why}): reg 0x60 cleared, SPI engine idle"); return
+    t0 = time.monotonic()
+    try:
+        isp.write(0xEE, 0x02)
+    except OSError:
+        pass                                         # the reset can cut its own ACK
+    while True:
+        try:
+            isp.write(0x6F, ISP_EN)
+            if isp.read(0x6F) & ISP_EN and _engine_idle(isp):
+                break
+        except OSError:
+            pass
+        if time.monotonic() - t0 > RESET_ISP_LIMIT_S:
+            raise TimeoutError(f"recover ({why}): ISP not back {RESET_ISP_LIMIT_S} s after the scaler reset")
+        time.sleep(RESET_POLL_S)
+    jid = isp.common(T_READ, 0x9F, nr=3).to_bytes(3, "big")
+    if jid != JEDEC_OK:
+        raise RuntimeError(f"recover ({why}): JEDEC {jid.hex()} != {JEDEC_OK.hex()} after the ISP re-entry")
+    sr = isp.status()
+    if sr & SR_PROT:
+        isp.release_wp(); isp.unprotect(sr)
+    RECOVERIES["reset"] += 1
+    log(f"recover ({why}): scaler reset + ISP re-entry in {time.monotonic() - t0:.2f} s, JEDEC ok, status 0x{isp.status():02x}")
+
+
+def _recover_if_stuck(isp, why: str) -> None:
+    forced = INJECT.take_reset()
+    if forced or not _engine_idle(isp):
+        recover_isp(isp, why, force_reset=forced)
+
+
+class _Inject:
+    """Test hook (#167): $AWTO_FLASH_INJECT = JSON file {"sector": "0x20000", "fail": N, "reset": M}. The first N programs of
+    that sector raise like a burst NAK; the next M recoveries take the reset path. Counts are spent in the file (survive a rerun)."""
+    def __init__(self):
+        self.path = Path(os.environ["AWTO_FLASH_INJECT"]) if os.environ.get("AWTO_FLASH_INJECT") else None
+
+    def _spend(self, key: str, sector: int | None = None) -> bool:
+        if not self.path or not self.path.is_file():
+            return False
+        import json
+        d = json.loads(self.path.read_text())
+        if d.get(key, 0) <= 0 or (sector is not None and int(d["sector"], 0) != sector):
+            return False
+        d[key] -= 1
+        self.path.write_text(json.dumps(d))
+        log(f"INJECT {key} (left {d[key]})")
+        return True
+
+    def take_fail(self, sector: int) -> bool:
+        return self._spend("fail", sector)
+
+    def take_reset(self) -> bool:
+        return self._spend("reset")
+
+
+INJECT = _Inject()
+
+
 def write_sector(isp, addr, new, crc_ok=False, nudge=lambda: None):
     """erase+program+verify; on mismatch re-read once (read-path glitch), else redo, up to SECTOR_TRIES.
     Timeout/OSError (bus dropped to bit-bang) nudge GMBUS first, then retry like a verify failure (#50.1)."""
@@ -144,6 +229,7 @@ def write_sector(isp, addr, new, crc_ok=False, nudge=lambda: None):
             PH["retries"] = PH.get("retries", 0) + 1
             if not isinstance(e, RuntimeError):
                 _nudge_safe(nudge)
+            _recover_if_stuck(isp, f"0x{addr:06x} try {n}")
             try:
                 with phase("verify"):
                     same = isp.read_flash(addr, SECTOR) == new
@@ -181,6 +267,9 @@ def erase_sector(isp, addr):
 def program_verify(isp, addr, new, crc_ok):
     """Program an erased sector and verify it; RuntimeError on mismatch."""
     with phase("program"):
+        if INJECT.take_fail(addr):
+            isp._byte_sector = addr                  # as a real burst failure: the redo runs in byte mode
+            raise RuntimeError(f"page 0x{addr:06x} burst failed at +0x00: injected (#167 test)")
         isp.program_setup()
         for off in range(0, SECTOR, PAGE):
             pg = new[off:off + PAGE]
@@ -281,6 +370,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     for i in diff:
         state.sectors[i] = None
     state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
+    global INCOMPLETE
+    INCOMPLETE = True                                 # from the first erase until the final CRC: never reset into this
     t0 = time.monotonic()
     guard = StopGuard()
     try:
@@ -314,6 +405,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 log(f"0x{s:06x}: {e!r}; redo sector alone (erase+program+verify)")
                 if not isinstance(e, RuntimeError):
                     _nudge_safe(nudge)
+                _recover_if_stuck(isp, f"0x{s:06x}")
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             dt = time.monotonic() - ts
@@ -358,7 +450,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     if guard.stop:
         log("stop request deferred to the end of the run (erase-all mode: erased sectors must be written first)")
     state.save(image=tag, image_size=len(img), source="write", commit=commit)
-    log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}")
+    INCOMPLETE = False
+    log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}; ISP recoveries {RECOVERIES}")
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
     if reprot is not None:
         isp.reprotect(reprot)
@@ -473,6 +566,8 @@ def summary(diff: list[int], nimg: int, t_write: float, t_total: float) -> None:
 
 
 DONE = ""                                             # one-line result, logged last by main()
+INCOMPLETE = False                                    # program() failed mid-image: MCU stays halted, no reset (#167)
+RC_INCOMPLETE = 10                                    # dev.py reruns once in a fresh ISP session
 
 
 def main() -> int:
@@ -498,7 +593,12 @@ def main() -> int:
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
                     help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
+    ap.add_argument("--direct", action="store_true", help="allow --write outside dev.py flash (both #167 failures were direct runs)")
     a = ap.parse_args()
+    if a.write and not os.environ.get("AWTO_VIA_DEV") and not a.direct:
+        print("refuse: --write runs through ./dev.py flash (unit guard, 1 MHz bus, retry on an incomplete image, #167); "
+              "--direct to override", file=sys.stderr)
+        return 2
     with unit_lock.held(a.serial, "rtd_flash_image"):            # one work stream per unit (#65)
         return flash_main(a)
 
@@ -548,10 +648,17 @@ def flash_main(a) -> int:
             f"Bring it to an active input, or rerun at 100 kHz (#71)")
         return 5
     except Exception as e:
-        log(f"ERROR: {e!r}. Flash NOT re-protected. Revert: rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write")
+        again = f"./dev.py flash --unit <n> {a.image}" if a.no_backup else f"rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write"
+        if INCOMPLETE:
+            log(f"ERROR: {e!r}. Image INCOMPLETE: MCU left halted in ISP (no reset into a partial image). Rerun: {again}")
+            return RC_INCOMPLETE
+        log(f"ERROR: {e!r}. Flash NOT re-protected. Rerun: {again}")
         return 7
     finally:
-        if entered:
+        if entered and INCOMPLETE:
+            log("no scaler reset: image incomplete, MCU stays halted in ISP until the rerun")
+            unit_log(a.serial, f"ISP held (image incomplete) after {time.monotonic() - t_isp:.1f} s")
+        elif entered:
             try:
                 isp.write(0xEE, 0x02)
             except OSError:

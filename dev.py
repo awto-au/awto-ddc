@@ -683,10 +683,16 @@ def cmd_flash(extra: list[str]) -> int:
             *(["--identity", identity] if identity else [])]
     # rc 5 = read gate refused before any erase: 1 MHz ISP reads corrupt in the low-power state (unit 3, D1
     # NOSIGNAL -> POWER_OFF, #71). rtd_flash_image's exit reset reboots the unit at full clock: retry 1 MHz once, then 100 kHz
+    FLASH_RC_INCOMPLETE = 10                # rtd_flash_image.RC_INCOMPLETE
     for attempt in (1, 2, 3):
         with (contextlib.nullcontext(100) if attempt == 3 else i2cbus.fast_bus(bus)) as khz:  # 1 MHz only around ISP
             log(f"flash: bus {bus} at {khz} kHz" + (f" (attempt {attempt})" if attempt > 1 else ""))
             rc = _py("rtd_flash_image.py", *args, shield=True)
+        if rc == FLASH_RC_INCOMPLETE and attempt == 1:     # #167: MCU held in ISP on a partial image; a fresh ISP session recovers
+            log("flash: image incomplete, MCU held in ISP; rerun once in a fresh ISP session", "WARN")
+            if not identity:                    # EDID is silent while the MCU is halted; attempt 1 proved this bus
+                args += ["--identity", f"dev.py: EDID serial {u['serial']} checked on bus {bus} by attempt 1; MCU held in ISP since"]
+            continue
         if rc != 5 or (attempt == 2 and khz <= 100):
             break
         log(f"flash: read path unstable at {khz} kHz, nothing erased; "
