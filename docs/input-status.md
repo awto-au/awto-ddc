@@ -65,7 +65,7 @@ Already there: idle receivers stay powered (`_AWTO_KEEP_IDLE_RX`, #60) and the s
 - `speed_bench.py` / `fw_profile.py` (native ucsim) no longer boot: the #131 watchdog bites (FFEE write) before stage 8 + heartbeat.
 
 ## Port disable (#81, registry `d1_enable`..`d3_enable`, ids 36-38)
-Firmware: branch `wb-p14ui-portcfg` (`fw/sdcc/awto_port.inc`); rtdfw `portcfg` 348d5be. Gate `portcfg` (`scripts/portcfg_sim.py`).
+Firmware: branch `wb-p14ui-portcfg` (`fw/input/ports.c`); rtdfw `portcfg` 348d5be. Gate `portcfg` (`scripts/portcfg_sim.py`).
 - Per-port settings block: `g_ucAwtoPortOff` (bit n = Dn); registry rows map to (field, port) in `tAwtoPortRow`. Owner: `AwtoPortBoot` (AwtoSetInit, after the settings load) and `AwtoPortSet`.
 - Disabled port: HPD held low (`PCB_Dn_HOTPLUG` gate; DP HPD requests above LOW dropped), EDID channel off (`ScalerMcuDdcRamEnable`, DDCn_DDC_ENABLE bit 0), receiver off (`ScalerGDIPhyPowerProc`), not searched / AUTO (`SysSourceHandler`, `SysSourceSwitchPort`), no fast path, no wake (logged once per trigger per sleep), not a dead-port way out.
 - Selector: row shown as `disabled`; taking it (or VCP 0x60 / menu Input / test cmd 0x31..0x33) enables it through the registry (NVRAM gate), then switches.

@@ -674,7 +674,7 @@ extern void AwtoInputSelect(unsigned char ucPort, unsigned char ucWhy);
 // 3 = fixed port without cable in NOSIGNAL / PS while another port is cabled -> auto search, normal, SEARCH
 #define AWTO_SW_EV_DEADPORT                                     0xB8
 extern unsigned char AwtoPortCable(unsigned char ucPort);
-// #81 per-port settings block (fw/sdcc/awto_port.inc): one bit per port per field, bit n = Dn (AWTO_PORT_BIT). Field today: enable.
+// #81 per-port settings block (fw/input/ports.c): one bit per port per field, bit n = Dn (AWTO_PORT_BIT). Field today: enable.
 // Disabled port: HPD held low (PCB_Dn_HOTPLUG), EDID channel off (ScalerMcuDdcRamEnable), receiver off (ScalerGDIPhyPowerProc),
 // skipped by the search / AUTO (SysSourceHandler, SysSourceSwitchPort), the fast-switch cache and the wake poll.
 extern __xdata unsigned char isr_g_ucAwtoPortOff;

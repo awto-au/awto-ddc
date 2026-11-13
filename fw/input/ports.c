@@ -1,4 +1,6 @@
-// #81 per-port settings block: the one owner of a port's enable state (RL6449_Project.h AWTO_PORT_*). Inserted into RTD2014Ddcci.c.
+#include "UserCommonInclude.h"
+
+// #81 per-port settings block: the one owner of a port's enable state (RL6449_Project.h AWTO_PORT_*).
 // - State: isr_g_ucAwtoPortOff, one bit per port (AWTO_PORT_BIT). Changed only by AwtoPortBoot / AwtoPortSet; every line E1 (sync.tsv).
 // - Rows: tAwtoPortRow maps a registry row to (field, port). A new per-port field = a new row kind + its bitmask.
 // - Readers: PCB_Dn_HOTPLUG (HPD), ScalerMcuDdcRamEnable (EDID), ScalerGDIPhyPowerProc (receiver), SysSource (search), fast-switch
