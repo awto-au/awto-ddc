@@ -158,7 +158,7 @@ class Run:
         say(f"  ring ({title}): {len(new)} new lines")
         for x in new:
             say(f"    {x}")
-        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: .+? -> (.+?) \(\d+ ms\)", x))), None)
+        st = next((m.group(1) for x in reversed(self.lines_seen) if (m := re.search(r"system: in .+? for \d+ ms -> (.+?):", x))), None)
         LED.sample(self.m, self.led, st, self.phase, self.led_addr, self.led_check, self.led_table)
         return new
 

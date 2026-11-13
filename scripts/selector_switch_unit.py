@@ -156,7 +156,7 @@ def case(u, frm, to, how, seen):
         u.check(f"{frm} -> {to} by {how}: {to} was disabled: enabled by the take (line + mask bit clear)",
                 any(f"{to} enabled by the input selector" in ln for ln in new) and not u.off(to))
     u.check(f"{frm} -> {to} by {how}: one search (no kept reset searching again after display setting)",
-            not any("DISPLAY SETTING -> SEARCH" in ln for ln in new))
+            not any(("in DISPLAY SETTING for " in ln and "-> SEARCH:" in ln) for ln in new))
     return seen
 
 

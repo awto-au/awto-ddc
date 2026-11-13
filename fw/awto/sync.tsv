@@ -16,7 +16,7 @@
 #   pc    value = cause << 24 | bank << 16 | PC -> "STALL, PC 0B:FFD0" (#29 boot reason)
 #   ms    value in ms -> "12 ms" (#150)   n  value as a number (#150)   x  value in hex (#150)
 #   Texts may hold {NAME} or {NAME/DIV} = integer #define in RL6449_Project.h, resolved at generation and in the host copy.
-#   sys   arg = old << 4 | new state, value = why << 24 | ms in old -> "OFF -> INITIAL (5230 ms): POWER key"; why bit 7 =
+#   sys   arg = old << 4 | new state, value = why << 24 | ms in old -> "in OFF for 5230 ms -> INITIAL: POWER key"; why bit 7 =
 #         the SDK mode changed: "; " + the new state's mode text (table 1A) is appended (#162 s3b: the old mode line's text)
 #   sysreq arg = request, value = who << 8 | outcome -> "power off requested by POWER key (accepted)"
 #   pby   value = panel requester (table 1B) -> "boot (cold power-up: panel early)" (#162 s3b)
@@ -28,7 +28,7 @@
 #         bytes << 9 | ms -> "wrote 32 B (OSD data, panel time) in 2 programs, 0 erases, 4 ms" / "nothing changed, no flash write (3 ms)"
 # A fmt with a port prefix is written port+<fmt> (port prefix from arg, value from the value).
 # Width: the console log wraps a line to a second row (under the text); gen_awto_sync.py fails a row whose worst case needs 3.
-# Machine lines read "<machine>: OLD -> NEW (N ms): what", N ms = the time in OLD.
+# Machine lines read "<machine>: in OLD for N ms -> NEW: what" (Dan 2026-11-13).
 D0	01	-	boot: cold power-up (no valid canary in RAM)
 D0	02	pc	boot: watchdog bite, %
 D0	03	-	boot: warm reset, no capture (host ISP 0xEE, or a hardware watchdog reset with interrupts off)
@@ -76,19 +76,19 @@ C0	04	vport	power key on, %
 10	0C	pby	panel on requested by % (deferred: power off / saving takes the panel down)
 10	0E	pby	backlight on requested by % (deferred: power off / saving takes the panel down)
 10	0F	pby	backlight off requested by % (deferred: power off / saving takes the panel down)
-11	01	ms	panel: OFF -> VDD (%): VDD on, T1 starts
-11	12	ms	panel: VDD -> HPD (%): T1 done, power on, eDP-1 PHY on
-11	1B	ms	panel: VDD -> T6 (%): off before the PHY, VDD off
-11	23	ms	panel: HPD -> LINK (%): eDP-1 HPD high, link training
-11	2B	ms	panel: HPD -> T6 (%): off, PHY and VDD off
-11	34	ms2	panel: LINK -> VIDEO (%): eDP-1 link trained in %, stream on
-11	49	ms	panel: VIDEO -> T4 (%): off, backlight dark: T4 counts from the backlight pin off
-11	94	ms	panel: T4 -> VIDEO (%): on again, stream still on
-11	9A	ms	panel: T4 -> T5 (%): T4 done, stream idle
-11	A4	ms	panel: T5 -> VIDEO (%): on again, stream on
-11	AB	ms	panel: T5 -> T6 (%): T5 done, link and VDD off
-11	B0	ms	panel: T6 -> OFF (%): T6 done, VDD may come on again
-11	4A	ms	panel: VIDEO -> T5 (%): off, backlight never on: no T4, stream idle
+11	01	ms	panel: in OFF for % -> VDD: VDD on, T1 starts
+11	12	ms	panel: in VDD for % -> HPD: T1 done, power on, eDP-1 PHY on
+11	1B	ms	panel: in VDD for % -> T6: off before the PHY, VDD off
+11	23	ms	panel: in HPD for % -> LINK: eDP-1 HPD high, link training
+11	2B	ms	panel: in HPD for % -> T6: off, PHY and VDD off
+11	34	ms2	panel: in LINK for % -> VIDEO: eDP-1 link trained in %, stream on
+11	49	ms	panel: in VIDEO for % -> T4: off, backlight dark: T4 counts from the backlight pin off
+11	94	ms	panel: in T4 for % -> VIDEO: on again, stream still on
+11	9A	ms	panel: in T4 for % -> T5: T4 done, stream idle
+11	A4	ms	panel: in T5 for % -> VIDEO: on again, stream on
+11	AB	ms	panel: in T5 for % -> T6: T5 done, link and VDD off
+11	B0	ms	panel: in T6 for % -> OFF: T6 done, VDD may come on again
+11	4A	ms	panel: in VIDEO for % -> T5: off, backlight never on: no T4, stream idle
 11	C1	-	panel: backlight on at once (Dan: no T3 wait): pin on
 11	C2	-	panel: backlight on at once at boot, PWM full (Dan: as early as possible)
 11	CA	ms	panel: backlight PWM: user brightness, settings loaded % after the boot full duty
@@ -315,6 +315,10 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep): %
 19	03	-	 ms): 
 19	04	-	 requested by 
 19	05	-	; 
+19	06	-	in 
+19	07	-	 for 
+19	08	-	 ms -> 
+19	09	-	: 
 1A	00	-	monitor off, inputs not searched
 1A	01	-	monitor off, inputs not searched
 1A	02	-	scaler input side reset for a new search

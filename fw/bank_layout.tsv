@@ -2358,7 +2358,7 @@ fn	_AwtoSourceReset	8	0x01fc	92
 const	___str_149	8	0x0258	40
 const	___str_150	8	0x0280	12
 const	_tAwtoSyncNameRow	8	0x0290	468
-const	_tAwtoSyncTxtS	8	0x0614	12244
+const	_tAwtoSyncTxtS	8	0x0614	12676
 fn	_AwtoInfoCard	8	0x50cc	916
 const	_tAwtoSyncFmt	8	0x5460	332
 fn	_AwtoSourceAuto	8	0x5750	48

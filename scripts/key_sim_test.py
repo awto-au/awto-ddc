@@ -383,7 +383,7 @@ def take(k, frm, to, how):
             any(ln.endswith(f"input selector opened (SOURCE key) on {frm}") or ln.endswith("input selector opened (SOURCE key) on auto") for ln in new) and any(ln.endswith(f"switch to {to}") for ln in new)
             and any("reset to search requested by input selector" in ln and by in ln for ln in new))
     k.check(f"selector {frm} -> {to} by {how}: one search (no kept reset searching again after display setting)",
-            not any("DISPLAY SETTING -> SEARCH" in ln for ln in new))
+            not any(("in DISPLAY SETTING for " in ln and "-> SEARCH:" in ln) for ln in new))
     return new
     k.check(f"selector {frm} -> {to} by {how}: on {to} (mode {want[0]}), selector closed and not reopened",
             port_now(k) == PORT[to] and k.s.bus.mode_state() in want and k.osd_state() != opened and k.delta(b, "AwtoSourceOpen") == 1,
@@ -430,7 +430,7 @@ def quick(k):
     say("  ring:\n" + "\n".join("    " + ln for ln in new))
     k.check("selector opened during a switch: its choice (D3) is taken, opened twice (no reopen), no second search",
             port_now(k) == PORT["D3"] and k.s.bus.mode_state() == MODE_ACTIVE and k.delta(b, "AwtoSourceOpen") == 2
-            and not any("DISPLAY SETTING -> SEARCH" in ln for ln in new) and any(ln.endswith("switch to D3") for ln in new),
+            and not any(("in DISPLAY SETTING for " in ln and "-> SEARCH:" in ln) for ln in new) and any(ln.endswith("switch to D3") for ln in new),
             f"port 0x{port_now(k):02X} mode {k.s.bus.mode_state()} opens {k.delta(b, 'AwtoSourceOpen')}")
     k.wait(1000)                                                # main loop blocked ~150 ms after ACTIVE: a press then is not sampled
     take(k, "D3", "D2", "idle")
