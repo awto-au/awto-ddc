@@ -415,6 +415,25 @@ void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
     OsdFuncSetPosition(_OSD_POSITION_GLOBAL_A, usX, usY);
 }
 
+// Box at usLeft px from the viewer's left edge and usBottom px from the bottom edge (Rotate 180: the panel's top right)
+void osd_tc_place_corner(WORD usLeft, WORD usBottom, BYTE ucBig)
+{
+    DWORD ulW = (DWORD)g_ucOsdWidth * osd_cw * (ucBig + 1);
+    DWORD ulH = (DWORD)((s_ucVpRows != 0) ? s_ucVpRows : g_ucOsdHeight) * osd_rh * (ucBig + 1);
+    WORD usX = usLeft;
+    WORD usY = ((DWORD)_PANEL_DV_HEIGHT > ulH + usBottom) ? (WORD)((DWORD)_PANEL_DV_HEIGHT - ulH - usBottom) : 0;
+    BYTE ucStep = (ScalerOsdGetHorizontalDelayStep() == _OSD_HORIZONTAL_DELAY_STEP_1_PIXEL) ? 1 : 4;
+
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)
+    {
+        usX = ((DWORD)_PANEL_DH_WIDTH > ulW + usLeft) ? (WORD)((DWORD)_PANEL_DH_WIDTH - ulW - usLeft) : 0;
+        usY = usBottom;
+    }
+    SET_OSD_DOUBLE_SIZE(ucBig);
+    ScalerOsdDoubleFunction(ucBig, ucBig);
+    OsdFuncSetPosition(_OSD_POSITION_GLOBAL_A, usX / ucStep / (ucBig + 1), usY / (ucBig + 1));
+}
+
 void osd_tc_show(BYTE ucOn)
 {
     g_ucAwtoMenuOn = (ucOn != 0);

@@ -1380,6 +1380,7 @@ fn	_ScalerFRCWaitWriteFrameBufFinish	0	0xab7c	216
 const	_tAwtoPal	1	0x0000	44
 const	_tAwtoStyle	1	0x002c	8
 fn	_ScalerFRCOneFrameCtrl	1	0x0034	2100
+fn	_osd_tc_place_corner	1	0x0868	660
 fn	_ScalerOsdDataPort	1	0x2378	12
 fn	_ScalerOsdBurstWriteDataPort	1	0x2384	56
 fn	_ScalerOsdDrawWindow	1	0x23bc	1024
@@ -1443,7 +1444,7 @@ fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260
 fn	_set_ap_mute	1	0x9d38	52
 fn	_AwtoNvGroup	1	0x9d6c	56
-const	_set_ap_rotate_tFlipToSdk_10000_2743	1	0x9da4	8
+const	_set_ap_rotate_tFlipToSdk_10000_2747	1	0x9da4	8
 fn	_UserAdjustAudioVolumeMapping	1	0x9dac	28
 fn	_UserAdjustBrightness	1	0x9dc8	64
 fn	_UserAdjustContrast	1	0x9e08	496
@@ -1464,7 +1465,7 @@ fn	_UserAdjustBacklightDuty	1	0xa968	28
 fn	_bars	1	0xa990	268
 fn	_ui_highlight	1	0xaa9c	196
 fn	_set_in_boot	1	0xac54	12
-fn	_AwtoTextOpen	1	0xac60	516
+fn	_AwtoTextOpen	1	0xac60	540
 fn	_AwtoNvSnap	1	0xaf60	148
 fn	_set_nv_dirty	1	0xaff4	12
 fn	_ScalerColor420To422D2D3Enable	2	0x0068	60

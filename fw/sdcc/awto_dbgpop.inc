@@ -6,6 +6,7 @@
 extern void osd_tc_open(BYTE ucChars, BYTE ucLines);
 extern void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour);
 extern void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig);
+extern void osd_tc_place_corner(WORD usLeft, WORD usBottom, BYTE ucBig);
 extern void osd_tc_close(void);
 extern void menu_close(void);
 extern void osd_font_load(BYTE ucFont);
@@ -43,6 +44,9 @@ static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ri
 // Main page = terminal: lines added at the bottom, the map rolls up (hardware roll-up). GPIO page: key test, debug,
 // watchdog below the view (UP / DOWN scroll). Map 120 x 63: cols x rows + rows + 1 < 8192 (docs/osd.md).
 #define AWTO_CON_COLS       120
+#define AWTO_PANEL_ACTIVE_W_MM  597             // Innolux M280DCA-E3B active width (docs/monitors/panel-innolux-m280dca-e3b.md)
+#define AWTO_CON_EDGE_MM    10                  // console box from the left and bottom edges (Dan 2026-11-13)
+#define AWTO_CON_EDGE_PX    ((WORD)((DWORD)_PANEL_DH_WIDTH * AWTO_CON_EDGE_MM / AWTO_PANEL_ACTIVE_W_MM))   // 64 px
 #define AWTO_CON_ROWS       62                  // map rows (+ the pad row AwtoTextOpen adds)
 #define AWTO_VIEW_ROWS      50                  // rows shown at a time; UP / DOWN scroll the view over the map
 #define AWTO_CON_FONT       0                   // osd_font_load index: Spleen 8x16 (8 x 18 cell)
@@ -139,7 +143,7 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     {
         osd_tc_bar(2, 2, 2, (WORD)ucCols * osd_cw - 3, osd_rh - 1, 1);              // one row high title bar
     }
-    osd_tc_place(50, 50, (g_ucAwtoDiagSmall == 0) ? 1 : 0);
+    osd_tc_place_corner(AWTO_CON_EDGE_PX, AWTO_CON_EDGE_PX, (g_ucAwtoDiagSmall == 0) ? 1 : 0);   // lower left (Dan 2026-11-13)
 }
 
 static void AwtoTextShow(void)
