@@ -166,7 +166,7 @@ stub	_AwtoSrcSleepArm	C	0x1550	8
 fn	_AwtoSwEvent	C	0x1558	180
 const	___str_129	C	0x160c	12
 const	___str_130	C	0x1618	16
-const	___str_27	C	0x1628	12
+stub	_AwtoStackFatal	C	0x1628	8
 const	___str_28	C	0x1634	12
 const	___str_29	C	0x1640	12
 const	___str_138	C	0x164c	12
@@ -219,6 +219,7 @@ const	___str_139	C	0x17f4	16
 const	___str_137	C	0x1804	12
 const	___str_37	C	0x1810	8
 stub	_AwtoDeadPortPoll	C	0x1818	8
+stub	_AwtoA5Probe	C	0x1820	8
 const	___str_133	C	0x182c	12
 stub	_OsdDispOsdMessage	C	0x1838	8
 stub	_AwtoKeyNoOsd	C	0x1840	8
@@ -889,7 +890,7 @@ stub	_SysDpRxHandler	C	0x31b8	8
 stub	_SysDpSourceKeepDetectingCheck	C	0x31c0	8
 const	___str_108	C	0x31c8	24
 const	___str_33	C	0x31e0	20
-const	___str_34	C	0x31f4	16
+const	___str_2	C	0x31f4	16
 const	___str_134	C	0x3204	12
 stub	_AwtoSyncMark	C	0x3210	8
 stub	_AwtoSyncT2Start	C	0x3218	8
@@ -1103,7 +1104,6 @@ stub	_AwtoKeyConSet	C	0x3ca8	8
 stub	_AwtoConLost	C	0x3cb0	8
 stub	_AwtoNvEv	C	0x3cb8	8
 stub	_AwtoPortCable	C	0x3cc0	8
-const	___str_1	C	0x3cc8	12
 const	___str_144	C	0x3cd4	12
 const	___str_15	C	0x3ce0	8
 const	___str_140	C	0x3ce8	12
@@ -1142,6 +1142,7 @@ stub	_set_confirm	C	0x3f20	8
 stub	_st_apply	C	0x3f28	8
 stub	_st_clampv	C	0x3f30	8
 stub	_st_cur	C	0x3f38	8
+const	___str_122	C	0x3f40	24
 const	___str_11	C	0x3f58	12
 const	___str_12	C	0x3f64	12
 const	___str_14	C	0x3f70	12
@@ -1150,13 +1151,13 @@ const	___str_16	C	0x3f88	8
 const	___str_17	C	0x3f90	12
 const	___str_18	C	0x3f9c	12
 const	___str_19	C	0x3fa8	12
-const	___str_2	C	0x3fb4	8
+const	___str_25	C	0x3fb4	8
 const	___str_20	C	0x3fbc	8
 const	___str_21	C	0x3fc4	12
 const	___str_22	C	0x3fd0	8
 const	___str_23	C	0x3fd8	8
 const	___str_24	C	0x3fe0	20
-const	___str_3	C	0x3ff4	8
+const	___str_26	C	0x3ff4	8
 const	___str_4	C	0x3ffc	8
 const	___str_5	C	0x4004	8
 const	___str_6	C	0x400c	8
@@ -1173,7 +1174,7 @@ stub	_AwtoTmdsHpdTick	C	0x4064	8
 stub	_AwtoTmdsStuck	C	0x406c	8
 const	___str_112	C	0x4074	44
 const	___str_116	C	0x40a0	24
-const	___str_122	C	0x40b8	16
+const	___str_3	C	0x40b8	16
 const	___str_31	C	0x40c8	28
 const	___str_40	C	0x40e4	16
 fn	_main	C	0x40f4	252
@@ -1190,9 +1191,15 @@ stub	_UserCommonInterfacePanelBlStep	C	0x4594	8
 stub	_UserCommonInterfacePanelBootDuty	C	0x459c	8
 const	___str_41	C	0x45a4	16
 const	___str_44	C	0x45b4	16
-const	___str_117	C	0x45c4	24
+const	___str_27	C	0x45c4	20
 const	___str_107	C	0x45dc	28
 const	___str_115	C	0x45f8	44
+const	___str_1	C	0x4624	32
+const	___str_117	C	0x4644	40
+const	___str_34	C	0x466c	28
+fn	_AwtoStackCheck	C	0x4698	124
+fn	_AwtoStackDeepTest	C	0x4714	28
+fn	_AwtoStackPaint	C	0x4730	32
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerAudioD1DigitalDetectProc	0	0x0010	332
 fn	_ScalerAudioD1LoadInitialICode	0	0x015c	16
@@ -1446,7 +1453,7 @@ fn	_AwtoAudioGain	1	0x9b30	260
 fn	_set_apply_call	1	0x9c34	260
 fn	_set_ap_mute	1	0x9d38	52
 fn	_AwtoNvGroup	1	0x9d6c	56
-const	_set_ap_rotate_tFlipToSdk_10000_2748	1	0x9da4	8
+const	_set_ap_rotate_tFlipToSdk_10000_2749	1	0x9da4	8
 fn	_UserAdjustAudioVolumeMapping	1	0x9dac	28
 fn	_UserAdjustBrightness	1	0x9dc8	64
 fn	_UserAdjustContrast	1	0x9e08	496
@@ -1814,7 +1821,7 @@ fn	_AwtoConLost	4	0xad88	56
 fn	_osd_tc_close	4	0xadc0	80
 fn	_AwtoT0EvTestIsr	4	0xae10	232
 fn	_AwtoMsgV	4	0xaef8	252
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1359	5	0x0000	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1360	5	0x0000	92
 fn	_ScalerOsdCircuitActivated	5	0x005c	76
 fn	_ScalerOsdEnableOsd	5	0x00a8	24
 fn	_ScalerOsdFontLibraryRotation	5	0x00c0	28
@@ -1972,8 +1979,6 @@ const	_tAwtoInFlags	6	0x00e4	52
 const	_tAwtoInKind	6	0x0118	52
 const	_tAwtoInSrc	6	0x014c	52
 const	___str_0	6	0x0180	24
-const	___str_25	6	0x0198	28
-const	___str_26	6	0x01b4	24
 const	___str_51	6	0x01cc	12
 const	___str_52	6	0x01d8	8
 const	___str_53	6	0x01e0	12
@@ -1993,7 +1998,6 @@ const	___str_66	6	0x02a4	20
 const	___str_68	6	0x02c4	20
 const	___str_70	6	0x02e0	20
 const	___str_71	6	0x02f4	12
-const	___str_72	6	0x0300	12
 const	___str_73	6	0x030c	20
 const	___str_74	6	0x0320	12
 const	___str_75	6	0x032c	8
@@ -2183,6 +2187,7 @@ fn	_AwtoPsField	6	0x680c	132
 fn	_AwtoPsLbl	6	0x6890	48
 fn	_AwtoPsValue	6	0x68c0	360
 fn	_AwtoPutAdc	6	0x6a28	156
+fn	_AwtoA5Probe	6	0x6ac4	56
 fn	_AwtoPutClock	6	0x6b00	212
 fn	_AwtoPutCol	6	0x6bd4	24
 fn	_AwtoPutDpRate	6	0x6bec	100
@@ -2309,6 +2314,7 @@ fn	_ScalerTMDSRx2HotPlugHighProc	6	0xae98	80
 fn	_ScalerTMDSRx3HotPlugHighProc	6	0xaee8	80
 fn	_AwtoSwCacheValid	6	0xaf38	64
 fn	_AwtoPutChar	6	0xaf78	76
+const	___str_72	6	0xafc4	20
 fn	_ScalerDpRx1SignalDetectInitial	7	0x0000	284
 fn	_ScalerDpRx1Tp1SetPhy_EXINT0	7	0x011c	1928
 fn	_ScalerDpRx1Tp2SetPhy_EXINT0	7	0x08a4	1528
@@ -2370,9 +2376,12 @@ const	___str_150	8	0x55ac	40
 const	___str_158	8	0x55d4	20
 fn	_osd_font_cw	8	0x55e8	32
 fn	_AwtoConWrapLine	8	0x5608	296
+const	___str_165	8	0x5730	16
+const	___str_166	8	0x5740	16
 fn	_AwtoSourceAuto	8	0x5750	48
-const	___str_147	8	0x5780	8
 fn	_AwtoSrcRate	8	0x5788	456
+const	___str_167	8	0x5950	16
+fn	_AwtoStackFatal	8	0x5960	84
 fn	_AwtoSrcItemPort	8	0x5a30	20
 fn	_AwtoBlDraw	8	0x5a4c	300
 fn	_AwtoBlKey	8	0x5b78	464
@@ -2397,6 +2406,7 @@ const	_tAwtoSyncTxtOff	8	0x85a0	660
 fn	_AwtoDiagTestCmd	8	0x8834	856
 fn	_AwtoInfoCard	8	0x8b8c	1004
 fn	_AwtoSourceTake	8	0x8f78	236
+const	___str_153	8	0x9064	40
 const	_font_blob_spleen	8	0x908c	1300
 const	_font_blob_spleen5	8	0x95a0	916
 const	_font_blob_spleen6	8	0x9934	1000
@@ -2412,7 +2422,7 @@ fn	_AwtoSyncName	8	0xace4	132
 fn	_AwtoBlClose	8	0xad68	8
 fn	_AwtoSourceIdle	8	0xad70	12
 const	___str_151	8	0xad7c	12
-const	___str_153	8	0xad88	16
+const	___str_147	8	0xad88	16
 fn	_SysMainSytemPowerDetect	8	0xad98	8
 fn	_osd_font_load	8	0xada0	156
 fn	_font_blob	8	0xae3c	288
