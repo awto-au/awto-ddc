@@ -167,9 +167,10 @@ static void AwtoOsdBlend(void)
     OsdFuncTransparency(GET_OSD_TRANSPARENCY_STATUS());
 }
 
-// OSD orientation, one owner for every awto screen (#165): Rotate 180 -> chip OSD auto rotation 180 (map + font library,
-// ScalerOsdMapRotation, as the SDK's hardware-rotate menu) + glyph downloads rotated by the VLC decoder (osd_tc_vlc_begin).
-// Mirror modes: FRAME_CTRL_41 rotates CW / CCW / 180 only, no mirror: the OSD stays upright. Roll-up is off while rotated (AwtoOsdRoll).
+// OSD orientation, one owner for every awto screen (#165). Rotate 180: glyphs downloaded turned by the VLC decoder (FRAME_CTRL_0B),
+// the map written in reverse (osd_tc_cells), windows and position mirrored (osd_tc_bar / _place); no viewport while rotated.
+// Not the chip's auto rotation (FRAME_CTRL_41): with double size it showed boxes without text on unit 3 (SDK: they exclude each other).
+// Mirror modes: no OSD mirror in hardware; the OSD stays upright.
 static BYTE s_ucAwtoOsdRot = _OSD_ROTATE_DEGREE_0;
 
 static void AwtoOsdOrient(BYTE ucRows)
@@ -187,19 +188,14 @@ static void AwtoOsdOrient(BYTE ucRows)
         AwtoSyncPush(AWTO_SYNC_EV_ROT, (ucWant == _OSD_ROTATE_DEGREE_180) ? AWTO_ROT_OSD_180 : AWTO_ROT_OSD_UPRIGHT, 0);
     }
     s_ucAwtoOsdRot = ucWant;
-    AwtoOsdRoll(0);                                  // 180: the SDK's FRAME_CTRL_18 setting (special + pop-on), even when no rotation change
-    ScalerOsdMapRotation(ucWant, _ENABLE, ucRows, _DISABLE, 0, _ENABLE);
+    AwtoOsdRoll(0);
+    ScalerOsdMapRotation(_OSD_ROTATE_DEGREE_0, _ENABLE, ucRows, _DISABLE, 0, _ENABLE);    // chip auto rotation off (undoes rot3 images)
 }
 
-// FRAME_CTRL_18 special function: roll-up (viewport scroll) on / off; while rotated 180 always the SDK's 180 setting (no roll-up).
+// FRAME_CTRL_18 special function: roll-up (viewport scroll) on / off.
 void AwtoOsdRoll(BYTE ucOn)
 {
-    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)
-    {
-        ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN),
-                     (AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN));
-    }
-    else if(ucOn != 0)
+    if(ucOn != 0)
     {
         ScalerSetBit(AWTO_R_FRAME_CTRL_18, ~(AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN | AWTO_F_FRAME_CTRL_18_POP_ON_EN), AWTO_F_FRAME_CTRL_18_OSD_SPECIAL_EN);
     }
@@ -294,7 +290,7 @@ BYTE osd_tc_scroll(BYTE ucFirst)
 
 void osd_tc_viewport(BYTE ucRows)
 {
-    s_ucVpRows = (ucRows < g_ucOsdHeight) ? ucRows : 0;
+    s_ucVpRows = ((ucRows < g_ucOsdHeight) && (s_ucAwtoOsdRot != _OSD_ROTATE_DEGREE_180)) ? ucRows : 0;   // rotated: whole map
     s_ucVpFirst = 0;
     osd_tc_scroll(0);
 }
@@ -304,6 +300,19 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
     BYTE ucB0 = 0x40 | osd_cw;                   // 1 bit font, cell width = the loaded font's pixel width
     BYTE ucB2 = tAwtoStyle[ucStyle] << 4;         // foreground; transparent background
 
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // row r cell c -> row H-1-r cell W-1-c: write the run backwards from its last cell
+    {
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)(g_ucOsdHeight - 1 - ucRow) * g_ucOsdWidth +
+                         (g_ucOsdWidth - ucCell - ucN), _OSD_WITHOUT_DB);
+        pucTiles += ucN;
+        while(ucN-- != 0)
+        {
+            ScalerOsdDataPort(ucB0);
+            ScalerOsdDataPort(*--pucTiles);
+            ScalerOsdDataPort(ucB2);
+        }
+        return;
+    }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
     while(ucN-- != 0)                              // one address, then B0 B1 B2 per cell (the word address increments by itself)
     {
@@ -315,6 +324,18 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
 
 void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour)
 {
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // inclusive px, mirrored inside the map box
+    {
+        WORD usW = (WORD)g_ucOsdWidth * osd_cw - 1;
+        WORD usH = (WORD)g_ucOsdHeight * osd_rh - 1;
+        WORD usT = usW - usX0;
+
+        usX0 = usW - usX1;
+        usX1 = usT;
+        usT = usH - usY0;
+        usY0 = usH - usY1;
+        usY1 = usT;
+    }
     OsdWindowDrawing(ucWin, usX0, usY0, usX1, usY1, (ucColour == 0) ? AWTO_BAR_SURFACE : AWTO_BAR_ACCENT);
 }
 
@@ -368,6 +389,11 @@ void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig)
     WORD usY = 0;
     BYTE ucStep = (ScalerOsdGetHorizontalDelayStep() == _OSD_HORIZONTAL_DELAY_STEP_1_PIXEL) ? 1 : 4;
 
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // the box sits where the upright one would, turned with the panel
+    {
+        ucH = 100 - ucH;
+        ucV = 100 - ucV;
+    }
     SET_OSD_DOUBLE_SIZE(ucBig);
     ScalerOsdDoubleFunction(ucBig, ucBig);
     if(ucBig != 0)
