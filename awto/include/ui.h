@@ -44,6 +44,7 @@ uint8_t ui_fmt_vfreq(char __xdata *dst, uint32_t vmhz);   /* "59.994 Hz" (3 deci
 
 /* selectable fixed menu fonts (0 Spleen, 1 Tamzen; awto/osd/font.c, generated data) */
 void osd_font_load(uint8_t font);
+uint8_t osd_font_cw(uint8_t font);
 uint8_t ui_font_selected(void);                         /* integrator: saved OSD font setting */
 uint8_t osd_font_glyph(char c);
 

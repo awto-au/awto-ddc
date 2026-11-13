@@ -39,6 +39,11 @@ static void font_blob(const uint8_t __code *b, uint16_t tile)
 
 uint8_t __xdata osd_cw = 8, osd_rh = 18;       /* cell width / row height of the loaded font */
 
+uint8_t osd_font_cw(uint8_t font)             /* cell width of a font before it is loaded (the map's blanks match it) */
+{
+    return font_cw[(font < OSD_FONT_N) ? font : 0];
+}
+
 void osd_font_load(uint8_t font)
 {
     if (font >= OSD_FONT_N)
