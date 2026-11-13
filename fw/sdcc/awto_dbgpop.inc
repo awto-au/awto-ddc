@@ -254,6 +254,24 @@ static void AwtoTextLine(BYTE ucLine, BYTE ucStyle)
     s_ucAwtoLen = 1;
 }
 
+// Stack canary hit (AwtoStackCheck, awto_wdt.inc): a small red box, nothing else drawn after it.
+#define AWTO_FATAL_COLS     30
+#define AWTO_FATAL_LINES    2
+void AwtoStackFatal(BYTE ucHigh)
+{
+    AwtoTextOpen(AWTO_FATAL_COLS, AWTO_FATAL_LINES, 0, 0);
+    s_ucPanelRow = 0;
+    s_ucPanelCol = 0;
+    AwtoPutStr("Fatal error: Stack Error!!");
+    AwtoTextLine(0, AWTO_T_STYLE_ALERT);
+    AwtoPutStr("SP high 0x");
+    AwtoPutHex2(ucHigh);
+    AwtoPutStr(" guard 0x");
+    AwtoPutHex2(AWTO_STACK_GUARD);
+    AwtoTextLine(1, AWTO_T_STYLE_ALERT);
+    AwtoTextShow();
+}
+
 // Field update: text composed with AwtoPut* since AwtoFieldBegin is written at exactly row ucRow, column ucCol (nothing else touched).
 static void AwtoFieldBegin(void)
 {

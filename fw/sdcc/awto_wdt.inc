@@ -55,6 +55,56 @@ void AwtoWdtLibPoke(BYTE ucSite)                // the FunctionLib flash read / 
 }
 
 // Once per reset, before EA: classify the boot, keep the record, reset the live counters.
+volatile __xdata unsigned char g_ucAwtoStackHigh;
+volatile __xdata unsigned char g_ucAwtoStackFatal;
+
+void AwtoStackPaint(void)                      // main entry, EA still off: every byte above SP gets the paint
+{
+    __idata BYTE *pucP = (__idata BYTE *)(BYTE)(SP + 1);
+
+    g_ucAwtoStackHigh = SP;
+    g_ucAwtoStackFatal = 0;
+    do
+    {
+        *pucP = AWTO_STACK_PAINT;
+    }
+    while(pucP++ != (__idata BYTE *)AWTO_STACK_TOP);
+}
+
+void AwtoStackCheck(void)                      // every main pass: O(1) normally (the mark only moves up)
+{
+    BYTE ucH = g_ucAwtoStackHigh;
+
+    while((ucH < AWTO_STACK_TOP) && ((ucH < SP) || (*(__idata BYTE *)(BYTE)(ucH + 1) != AWTO_STACK_PAINT)))
+    {
+        ucH++;
+    }
+    g_ucAwtoStackHigh = ucH;
+    if(ucH >= AWTO_STACK_GUARD)
+    {
+        g_ucAwtoStackFatal = 1;
+        AwtoStackFatal(ucH);                    // drawn from the top of the main loop: the stack is shallow here
+        for(;;)
+        {
+            AWTO_WDT_FEED(AWTO_WDT_S_STACK);    // the message stays up; ISRs (debug link) keep running
+        }
+    }
+}
+
+void AwtoStackDeepTest(void)                   // test cmd AWTO_TC_STACK_DEEP: zero bytes pushed into the guard zone, SP restored
+{
+    BYTE ucSave = SP;
+
+    while(SP < AWTO_STACK_GUARD)
+    {
+        __asm
+            clr a
+            push acc
+        __endasm;
+    }
+    SP = ucSave;
+}
+
 void AwtoWdtInit(void)
 {
     BYTE ucOld = isr_g_stAwtoWdt.ucBoot;

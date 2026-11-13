@@ -82,6 +82,7 @@ void SysMainStartUserCode(BYTE ucBankAddress);
 #include "awto_audio.inc"
 void main(void)
 {
+    AwtoStackPaint();
     AwtoWdtInit();
     do
     {
@@ -92,6 +93,7 @@ void main(void)
 
         while(SysMainSytemPowerDetect() == _TRUE)
         {
+            AwtoStackCheck();
             AWTO_LP(0);
             AWTO_SW_MARK(0);
             AwtoSwPoll();

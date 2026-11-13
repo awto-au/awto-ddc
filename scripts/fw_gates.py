@@ -114,6 +114,8 @@ def gates(b: Path, m: Path, ref, tree):
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
+    if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
+        g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]
     g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", *(["--tree", tree] if tree else [])]   # no line clipped
     if header(tree):
         g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]

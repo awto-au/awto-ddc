@@ -315,6 +315,11 @@ void AwtoDiagTestCmd(void)
     {
         AwtoMemForce(ucCmd == AWTO_TC_MEM_FRAME);
     }
+    else if(ucCmd == AWTO_TC_STACK_DEEP)                // stack canary test: deep recursion; the next main pass shows the fatal box
+    {
+        extern void AwtoStackDeepTest(void);
+        AwtoStackDeepTest();
+    }
     else if(ucCmd == AWTO_TC_A5_PROBE)                  // reserved opcode 0xA5 (a5_probe.asm)
     {
         AwtoA5Probe();

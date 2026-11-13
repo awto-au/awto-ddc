@@ -215,7 +215,7 @@ typedef struct
     unsigned char ucOsdOfsState;                // offsetof(StructOsdInfo, usOsdState): g_stOsdInfo layout moves with _DP_DEBUG_MSG (#37)
     unsigned char ucOsdOfsEvent;                // offsetof(StructOsdInfo, ucOsdEventMsg)
     unsigned char ucOsdOfsKey;                  // offsetof(StructOsdInfo, ucOsdKeyMessage)
-    unsigned char ucHold;                       // #28 held test visuals: bit1 debug pop-up / console (0x26); 0x27 clears; bit0 free (was the logo)
+    unsigned char ucHold;                       // #28 held test visuals: bit1 debug pop-up / console (0x26); 0x27 clears; bit0 free
 } StAwtoDiag;
 typedef char AwtoDiagSizeCheck[(sizeof(StAwtoDiag) == 48) ? 1 : -1];
 #ifdef _AWTO_DIAG_DEFINER
@@ -360,9 +360,17 @@ extern void ScalerTimerWDInitial(void);
 #define AWTO_WDT_S_FREAD                                        9       // ScalerFlashRead
 #define AWTO_WDT_S_FWRITE                                       10      // ScalerFlashWrite sector part
 #define AWTO_WDT_S_OSDSTR                                       11      // OsdPropPutString character
-#define AWTO_WDT_S_T3                                           12      // retired #162 (was the blocking panel T3 wait); id kept for old crash records
-#define AWTO_WDT_S_HPD                                          13      // retired #162 (was the blocking eDP HPD poll); id kept for old crash records
 #define AWTO_WDT_S_CONLINE                                      14      // AwtoConLogSync console log line (#165)
+#define AWTO_WDT_S_STACK                                        15      // halted after a stack canary hit (AwtoStackCheck)
+// Stack canary (#203): free stack (SP at main entry .. 0xFF) painted at boot; the main loop advances a high-water mark over
+// overwritten bytes; reaching the guard zone (last 16 B: a push past 0xFF wraps into register bank 0) is fatal.
+#define AWTO_STACK_TOP                                          0xFF
+#define AWTO_STACK_GUARD                                        0xF0
+#define AWTO_STACK_PAINT                                        0x5C
+#define AWTO_TC_STACK_DEEP                                      0x3F    // test cmd: recurse into the guard zone
+extern volatile __xdata unsigned char g_ucAwtoStackHigh;      // highest stack byte written since boot (IRAM address)
+extern volatile __xdata unsigned char g_ucAwtoStackFatal;     // 1 = canary hit, main halted on the fatal screen
+void AwtoStackFatal(unsigned char ucHigh);
 extern volatile __xdata unsigned char g_ucAwtoPokeSite;
 extern volatile __xdata unsigned char g_ucAwtoPokeFrom;    // site of the poke that started that gap (#150)
 extern volatile __xdata unsigned char g_ucAwtoPokeLast;    // site of the last poke
@@ -1027,7 +1035,7 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_SYNC_EV_HOSTFW                                     0xD8    // #157 arg 1 first sync / 2 drift, value = fw ms (AwtoMs) at the sync
 #define AWTO_SYNC_EV_DRIFT                                      0xD9    // #157 value = host - local tick, ms (signed)
 // #157 host time: DDC/CI table write (0xE7) to this VCP, offset 0: unix s BE x4, ms BE x2, UTC offset (15 min, signed)
-#define AWTO_HT_VCP                                             0xE9    // retired registry code (logo_ms, #144); get: max = syncs, cur = drift ms
+#define AWTO_HT_VCP                                             0xE9    // host time VCP (#157); get: max = syncs, cur = drift ms
 #define AWTO_HT_STALE_MS                                        180000  // Dan: HOST marked stale after 3 min without a sync (host sends every 60 s)
 #define AWTO_HT_DRIFT_MS                                        1000    // Dan: a ring line when the local tick and the host differ by more
 #define AWTO_HT_GAP_S                                           2000000 // syncs further apart (23 days): drift not computed (ms must fit a long)
@@ -1289,7 +1297,7 @@ extern unsigned char AwtoFastScalerStatus(void);
 #define AWTO_PNL_HPD                                            2       // PHY on: HPD read each tick, bound T2
 #define AWTO_PNL_LINK                                           3       // link training (one step)
 #define AWTO_PNL_VIDEO                                          4       // stream on (backlight: its own sub-state)
-#define AWTO_PNL_T4                                             9       // backlight off: T4, then the stream idle (5..8 retired: T3 / BL states)
+#define AWTO_PNL_T4                                             9       // backlight off: T4, then the stream idle
 #define AWTO_PNL_T5                                             10      // stream idle: T5, then link / PHY / VDD off
 #define AWTO_PNL_T6                                             11      // VDD off: T6 before VDD may come on again
 #define AWTO_PNL_BL_DARK                                        0       // backlight sub-state (beside VDD .. VIDEO): pin off
