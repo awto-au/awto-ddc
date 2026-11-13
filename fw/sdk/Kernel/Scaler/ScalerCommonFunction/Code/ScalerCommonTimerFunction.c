@@ -264,7 +264,7 @@ WORD g_usTimerRecordStartTime;
 
 #if(_WD_TIMER_INT_SUPPORT == _ON)
 volatile __xdata _Bool g_bWDTimer2Update = _FALSE;
-// awto #138: event table in awto_t0ev.inc
+// awto #138: event table in fw/timer/t0ev.c
 #endif
 
 volatile WORD __data d_isr_g_usTimerCounter;
@@ -2834,5 +2834,4 @@ void ScalerTimerWaitForActiveTimerEvent(EnumScalerTimerEventID enumEventID)
     ScalerTimerDelayXms(ScalerTimerGetEventRemainTime(enumEventID));
     ScalerTimerCancelTimerEvent(enumEventID);
 }
-#include "awto_t0ev.inc"
 

@@ -78,7 +78,7 @@ def boot(a) -> int:
     return fails
 
 
-# test cmd -> (case, [(event ID name, ms)]): fw/sdcc/awto_t0ev.inc AwtoT0EvTest
+# test cmd -> (case, [(event ID name, ms)]): fw/timer/t0ev.c AwtoT0EvTest
 EVENT_CASES = ((0x2A, "M2PLL", [("RX1_DP_REBUILD_PHY", 30)]), (0x2B, "M2PLL", [("RX2_HDMI_RR_RETRY", 10)]),
                (0x2C, "M2PLL", [("RX3_HDMI_RR_RETRY", 10)]),
                (0x2D, "two pending", [("RX2_HDMI_RR_RETRY", 10), ("RX1_DP_REBUILD_PHY", 30)]),

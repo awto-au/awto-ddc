@@ -399,7 +399,7 @@ extern void AwtoWdtShow(void);
 #define AWTO_WDT_SHOW()
 #define AwtoOsdWdtLines()
 #endif
-// #138: WD-timer protocol events on Timer0 (fw/sdcc/awto_t0ev.inc, appended to ScalerCommonTimerFunction.c)
+// #138: WD-timer protocol events on Timer0 (fw/timer/t0ev.c)
 extern void AwtoT0EvIsr(void);
 extern void AwtoT0EvClock(void);
 extern void AwtoT0EvTest(unsigned char ucHow);

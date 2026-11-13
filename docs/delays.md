@@ -102,7 +102,7 @@ Abbreviations in the table:
 | `*MeasureClk`, `FLDBandFineTune_EXINT0`: TMDSRx2.c:691,728,2850,2906 and Rx3.c:694,731,2853,2909 | 5 us steps | 5 us each | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
 | TMDS timer events: TMDSRx2.c:3994,4200 and Rx3.c:3997,4203 | format reset wait | 130 ms | SDK-lit | UNKNOWN | UNKNOWN | UNKNOWN | event fires |
 | ScalerTMDSRx2_SeptPhy.c:191 and ScalerTMDSRx3_SeptPhy.c:191 | video-detect re-arm | 45 ms | SDK | "1 frame" comment | UNKNOWN | UNKNOWN | re-poll |
-| `ScalerTMDSRx2_SeptPhy.c:562` (and Rx3 :562) | HDMI read-request retry on Timer0 | 10 ms | SDK; `awto_t0ev.inc:218` | SDK | n/a | n/a | retry event |
+| `ScalerTMDSRx2_SeptPhy.c:562` (and Rx3 :562) | HDMI read-request retry on Timer0 | 10 ms | SDK; `fw/timer/t0ev.c:218` | SDK | n/a | n/a | retry event |
 | **busy-wait macros (main context)** | | | | | | | |
 | `ScalerCommonMcuInclude.h:40-215`; counts set at `ScalerCommonMcu.c:1844-1849`; our calibration `fw/diag/delaycal.c:88-99` | `DELAY_5US`, `DELAY_XUS(n)` and relatives | loop counts set so the shorter copy of each pair lands at 105 % of nominal | `AWTO_DELAY_TARGET_PCT` `RL6449_Project.h:188`, valid only at `AWTO_DELAY_CAL_RCAP2H 0xE3` | measured (T3 measurement, #54, diag block). Realtek's own count is 112..127 % depending on code placement. Health limit 90..125 %. | nominal us | 1.05 | n/a |
 | RL6449_Series_DPRx1.c:1201-1759 `RebuildPhy` | PHY rebuild steps | 905 us total (5x85 + 300 + 3x25 + 3x5 + 2x45) | SDK | UNKNOWN | UNKNOWN | UNKNOWN | continues |
@@ -143,7 +143,7 @@ Abbreviations in the table:
 | SysDP.c:257,304 and ScalerDPRx1_SeptPhy.c:4925 | DP hotplug / link-status IRQ | 100 ms | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
 | ScalerDP_SeptPhy.c:594 | DP HPD sequence | table | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
 | ScalerDPRx1_SeptPhy.c:5391 | HDCP long hotplug | 1 s | SDK | SDK | UNKNOWN | UNKNOWN | event fires |
-| RL6449_Series_DP_INT.c:822 | DP rebuild PHY on Timer0 | 30 ms | SDK; `awto_t0ev.inc:219` | SDK | UNKNOWN | UNKNOWN | event fires |
+| RL6449_Series_DP_INT.c:822 | DP rebuild PHY on Timer0 | 30 ms | SDK; `fw/timer/t0ev.c:219` | SDK | UNKNOWN | UNKNOWN | event fires |
 | SysAudio.c:358,377,394 | DAC VCM initial 0.1 s; charge 0.5 s; depop 0.1 s | | SysAudio.c:30-31; `RL6449_Project_Default.h:1880` | SDK | UNKNOWN | UNKNOWN | state step |
 | RTD2014Osd.c:138-243 | no-signal / no-cable pop-up | 2 s | SDK | SDK | UNKNOWN | UNKNOWN | pop-up |
 | RTD2014Osd.c:204,210,220 | power-saving pop-up | 3 s | SDK | SDK | UNKNOWN | UNKNOWN | pop-up |
@@ -184,7 +184,7 @@ Abbreviations in the table:
 | `fw/ddcci/ddcci.c:86` | debug-link minute countdown | 1000 ms steps | code | n/a | n/a | n/a | link back to DDC/CI |
 | `fw/diag/diag.c:12,49`; `fw/meas/meas4k.c:70,85`; `fw/diag/wdt.c:224` | spin to the next 1 ms tick | up to 1 ms | code | tick alignment | 1 tick | 1.00 | continues |
 | `fw/diag/delaycal.c:68,70` | calibration: align 1 tick, then `DelayXms(10)` | about 11 ms once per boot, after the first stream start | code | measurement method | n/a | n/a | continues |
-| `awto_t0ev.inc:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
+| `fw/timer/t0ev.c:238-269` | Timer0 event test commands | `DelayXms(2)`, `ucMs/6`, `ucMs/3`, `ucMs*1.25`, 2..3 ms spin | code | test-only, host-triggered | n/a | n/a | test ends |
 | `fw/settings/settings_glue.c` `set_wait_ms`; `awto-rtdfw settings.c:271-273` | boot recovery hold | `DelayXms(10)` loop for up to 1000 ms | `settings.h:74` `SET_RECOVERY_MS` | derived: "longer than a key bounce, short enough to hold at power-on" | n/a | n/a | defaults restored if held |
 | **NVRAM GATE (`RL6449_Project.h:146-150`; `fw/nvram/nv_gate.c` `AwtoNvService`)** | | | | | | | |
 | `AWTO_NV_STABLE_MS` | ACTIVE with no switch / sync / training | 3000 ms | project header | Dan | n/a | n/a | write allowed |
@@ -277,7 +277,7 @@ All of these are `ScalerTimerDelayXms` or a poll, which spin and poke the watchd
   - Audio PLL 2 / 3 ms, DVC mute poll up to 400 ms.
   - Settings boot-recovery hold up to 1000 ms (`awto-rtdfw settings.c:271`).
   - Watchdog probe spin 1500 ms (test command only, `fw/diag/wdt.c:222-229`).
-  - `awto_t0ev.inc:238-269` test delays.
+  - `fw/timer/t0ev.c:238-269` test delays.
 - **Non-blocking since #162**: the panel T1..T6 machine, the HDMI HPD recovery pulse, and the source/judge timer events. None of these block.
 - **Interrupt-context blind spins over 1 ms**
   - `ScalerTMDSRx2SetPhy_EXINT0` and `ScalerTMDSRx3SetPhy_EXINT0`: 5.5 ms per call.
@@ -305,7 +305,7 @@ Scope note: awto-ddc has uncommitted changes (docs/nvram-settings.md, docs/speed
 | RL6449_Project.h:1278 (fallback when no registry; registry at 1276) | AWTO_T3_OWN_PATTERN_MS 20 | one 60 Hz frame = 16.7 ms | +20 | "one 60 Hz frame (16.7 ms) + margin before backlight on" | firmware |
 | /mnt/2tb/git/awto-rtdfw/settings/registry.tsv:92 and /mnt/2tb/git/awto-rtdfw/awto/settings/set_table.c:85 | panel_t3_own default 20 (range min 17) | one 60 Hz frame, 16.7 ms (min 17 is the rounded frame) | +20 (+18 vs the 17 minimum) | "logo / background frame: one 60 Hz frame minimum" (no margin text; the margin wording is only in RL6449_Project.h:1278) | firmware (registry default) |
 | /mnt/2tb/git/awto-ddc/fw/dp/dpframe.c:8, 11, 13 | two-frame wait = 2 x (floor(frame ms) + 1) + 1 ms, capped at SDK _DP_TWO_FRAME_TIME_MAX (2 x 45 ms) | 2 x measured frame period (VBs2Bs) | +5.0 at 60 Hz (35 ms vs 33.3 ms); +2.3 at 23 Hz (89 ms vs 87.0 ms, cap 90) | "2 frames + 1 ms tick margin, never above the SDK's 23 Hz worst case"; line 4 "ms per frame (rounded up)"; line 2 "The SDK waits _DP_TWO_FRAME_TIME_MAX (2 x 45 ms, sized for 23 Hz)" | firmware |
-| /mnt/2tb/git/awto-ddc/fw/sdcc/awto_t0ev.inc:250 | ScalerTimerDelayXms(ucMs + (ucMs >> 2)) | requested event time ucMs | +25 | "the event fires inside (x1.25), still at the PS reload" (test hook, ucHow 6/7) | firmware (test code) |
+| /mnt/2tb/git/awto-ddc/fw/timer/t0ev.c:250 | ScalerTimerDelayXms(ucMs + (ucMs >> 2)) | requested event time ucMs | +25 | "the event fires inside (x1.25), still at the PS reload" (test hook, ucHow 6/7) | firmware (test code) |
 | RL6449_Project.h:568 | AWTO_MSTEP_MAX 7 (a count of log lines, not time) | 5 lines for the first set-up | +40 (count) | "first set-up 5 lines x1.25" | firmware |
 | RL6449_Project.h:928 | AWTO_SYNC_N 60 (ring slots, not time) | 50 lines on the console (con_wrap_sim); 38 lines x 1.25 = 47.5 (boot_sim) | +20 vs 50 | ">= cold boot 38 lines x1.25 (boot_sim, #165) and cold boot + power off 50 lines on the console" | firmware |
 | RL6449_Project.h:1433 | _AWTO_INFO_POPUP_SEC 6 | SDK value 3 s | +100 (deviation, no margin wording) | "input-info pop-up on-screen time (SDK: 3)" | firmware |

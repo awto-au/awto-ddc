@@ -117,7 +117,7 @@ CASES = [
      "reset; bites unchanged, warm + 1, boot WARM"),
 ]
 EVENT_IDS = {"RX1_DP_REBUILD_PHY": 1, "RX2_HDMI_RR_RETRY": 4, "RX3_HDMI_RR_RETRY": 5, "RX5_HDMI_RR_RETRY": 7}   # enum order, this build
-SHARED = (   # prio_inversion: data shared between contexts and its guard (fw/sdcc/awto_t0ev.inc)
+SHARED = (   # prio_inversion: data shared between contexts and its guard (fw/timer/t0ev.c)
     ("isr_s_pusAwtoT0Ms[]", "Timer0 ISR (dec), EXINT0 (arm, cancel), main (cancel, test arm)",
      "Timer0: EA off per element; main: __critical; EXINT0: no guard needed (Timer0 same or lower level cannot preempt it)"),
     ("TR0 / TH0 / TL0", "Timer0 ISR (reload, stop), EXINT0 (start), main (clock rescale)",

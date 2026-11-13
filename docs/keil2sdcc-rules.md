@@ -46,7 +46,7 @@
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c` | behaviour | idle TMDS MAC stays powered | #60 | 2 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c` | behaviour | idle receivers stay powered (AWTO_IDLE_RX_OFF) | #60 | 60 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c` | behaviour | WD-timer event table replaced by the Timer0 scheduler | #138 | 1 |
-| `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c` | behaviour | WD-timer functions in fw/sdcc/awto_t0ev.inc | #138 | 1 |
+| `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c` | behaviour | WD-timer functions in fw/timer/t0ev.c | #138 | 1 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c` | behaviour | restart the pending Timer0 tick at the new clock | #138 | 1 |
 | `Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonTimerFunction.c` | behaviour | watchdog feed per ms in a bounded wait | #131 | 2 |
 | `Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h` | mechanical | DDC RAM arrays defined here, extern hidden (one __at per array) | #8 | 2 |

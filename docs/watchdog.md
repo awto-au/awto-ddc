@@ -1,6 +1,6 @@
 # Watchdog, crash canary and boot reason (#131, #138, #29)
 
-- Firmware: `awto-ddc-wdt2` branch `wb-p14ui-wdt2` (from wb-p14ui 1c82a51). Files: `fw/diag/wdt.c`, `awto_t0ev.inc`, `fw/osd/console.c`,
+- Firmware: `awto-ddc-wdt2` branch `wb-p14ui-wdt2` (from wb-p14ui 1c82a51). Files: `fw/diag/wdt.c`, `fw/timer/t0ev.c`, `fw/osd/console.c`,
   `crt_rtd_startup.asm`, `fw/awto/wdt/rules.py`, `RL6449_Project.h` (`StAwtoWdt`, `AWTO_WDT_*`).
 - Host: `scripts/wdt_test.py` (sim + unit 2 runner), `wdt_sim.py` (boot gaps, Timer0 events, loop rate), `crash_sim_test.py`, `poke_loops.py`
   (static loop check, table `re/poke_loops.tsv`), `rtd_crash.py` (record v2, `--snap`), `sync_log.py` (boot reason line), `fw_sim.py` `ChipReset`.
@@ -68,7 +68,7 @@
 - Sim (`wdt_sim.py boot`, wd5): clears at 0 (startup), 39.6 ms (ScalerMcuInitial), 51 ms (WDInitial), then pokes; worst gap before the first
   main-loop pass 39.6 ms of the 4687 ms period in force. Times before Timer2 are the ucsim 12-clock model (DW8051: 4): upper bounds.
 
-## Timer0 event scheduler (task 2, `awto_t0ev.inc`)
+## Timer0 event scheduler (task 2, `fw/timer/t0ev.c`)
 
 - The SDK's WD-timer jobs (DP Rx1 rebuild PHY 30 ms, HDMI read-request retry D2 / D3 10 ms; HDCP2 SKE and Type-C PD compiled out) on Timer0.
   Same function names (`ScalerTimerWDActivateTimerEvent_EXINT0`, `ScalerTimerWDCancelTimerEvent[_EXINT0]`): no SDK call site changes.

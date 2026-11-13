@@ -123,7 +123,7 @@ Status var: `GET_PANELPOWERSTATUS()` ∈ {`_PANEL_POWER_OFF_STATE`, `_WAITING_FO
 
 ### 1.6 Timers
 - SDK: Timer2, 1 ms tick → `g_usTimerCounter` (16-bit, rebased) and the event table (`ScalerTimerActive/Reactive/Cancel/SearchTimerEvent`, `SysTimerHandler` runs events in main). Blocking: `ScalerTimerDelayXms` (waits on `g_bNotifyTimer2Int`), `ScalerTimerPollingFlagProc`, `ScalerTimerWaitForEvent`, `ScalerTimerWaitForActiveTimerEvent`. All three delay/poll/wait loops now feed the WDT per ms (SUBS #131).
-- SDK WD-timer events (DP rebuild PHY, HDMI RR) were on the WD counter; replaced by our Timer0 scheduler (`awto_t0ev.inc`, same function names; `_INSTANT_TIMER_EVENT_0` is OFF: Timer0 boot-logo fade gone). 1 ms ticks while an event is pending.
+- SDK WD-timer events (DP rebuild PHY, HDMI RR) were on the WD counter; replaced by our Timer0 scheduler (`fw/timer/t0ev.c`, same function names; `_INSTANT_TIMER_EVENT_0` is OFF: Timer0 boot-logo fade gone). 1 ms ticks while an event is pending.
 - Our pollers (non-SDK-event): `AwtoSlowDue` (10 ms), `AwtoWakePoll` (10 ms hold check), `AwtoPsWakePoll` (5 ms), key debounce/repeat, NV flush gate, console refresh, selector poll `AWTO_SRC_POLL_MS`, host-time clock. Each uses its own time base (§0).
 - Watchdog: one hardware WDT (FFEA/FFE9/FF3A). The SDK "disable" line is removed (it never worked). Warning IRQ (int2) 200.1 ms, reset 585.9 ms. SPI-flash ops halt the CPU and stop the counter (FFEA bit5). ~15 feed sites (`AWTO_WDT_FEED(site)`), `AWTO_WDT_PASS` in `AwtoDiagMainPass`. [docs/watchdog.md, #150]
 
@@ -180,7 +180,7 @@ Rule sources in `scripts/keil2sdcc.py` (RULES 62-115, WRAPS 120-133, INSERTS 143
 | 22 | ScalerMcu.c, ScalerMDomain.c, ScalerMeasure.c | `AwtoDiagStage(2)`, `awto_freq` calls | log | #34 |
 | 23 | rtdfw glue: `fw/settings/settings_glue.c`, `fw/osd/text_layer.c`, `fw/nvram/flash_io.c`, `fw/nvram/nv_gate.c`, `fw/keys/keyinject.c` | settings glue | settings | #67 |
 | 24 | wdt rules.py | `fw/diag/wdt.c` (SysMain.c), `AwtoWdtInit` before EA, `fw/osd/console.c` | watchdog | #131 |
-| 25 | ScalerCommonTimerFunction.c end | `awto_t0ev.inc` | timers | #138 |
+| 25 | ScalerCommonTimerFunction.c end | `fw/timer/t0ev.c` | timers | #138 |
 
 ### 2.4 SUBS (keil2sdcc.py:341-532 + wdt/settings rules.py)
 | area | substitution | issue |

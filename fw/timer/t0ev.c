@@ -1,5 +1,7 @@
+#include "ScalerCommonFunctionInclude.h"
+
 // #138: WD-timer protocol events (DP rebuild PHY, HDMI RR retry) on Timer0, so the WD counter is only a watchdog (docs/watchdog.md).
-// Appended to ScalerCommonTimerFunction.c (fw/awto/wdt/rules.py); the SDK's WD-timer block there is #if 0. Same function names
+// Replaces the SDK's WD-timer block in ScalerCommonTimerFunction.c (#if 0 there). Same function names
 // (ScalerTimerWDEventProc_WDINT gone: the WD IRQ is the watchdog warning, SysTimerWDIntProc -> AwtoWdtIrq).
 // 1 ms ticks while an event is pending. Timer0 counts what Timer2 counts (same MCU clock, both /12: SDK _TIMER01_* = _TIMER2_*).
 #if((_SYSTEM_LOW_POWER_IDLE_SUPPORT == _ON) || (_SYSTEM_TIMER_QUARTER_RESOLUTION == _ON))
