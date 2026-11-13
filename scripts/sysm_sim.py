@@ -297,7 +297,9 @@ class Run:
 
 def lint(tree: Path, r: Run):
     sdk = tree / "fw/sdk"
-    src = [p for p in sdk.rglob("*") if p.suffix in (".c", ".h")] + list((tree / "fw/sdcc").glob("*.inc"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import fw_dirs
+    src = [p for p in sdk.rglob("*") if p.suffix in (".c", ".h")] + fw_dirs.our_files(tree)
     owned, calls, old = [], [], []
     for p in src:
         rel = str(p.relative_to(sdk)) if sdk in p.parents else str(p.relative_to(tree))
@@ -324,7 +326,7 @@ def main():
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
     ap.add_argument("--mode", default="1080p60")
-    ap.add_argument("--tree", type=Path, help="worktree: static checks of its fw/sdk + fw/sdcc")
+    ap.add_argument("--tree", type=Path, help="worktree: static checks of its fw/sdk + fw/<subsystem>")
     ap.add_argument("--report", action="store_true", help="timeline only, no verdict (old images)")
     ap.add_argument("--out", type=Path, help="unused (sim_timelines passes it to every sim)")
     a = ap.parse_args()

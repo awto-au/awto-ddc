@@ -7,6 +7,8 @@
   line names the state it was set for. sample: pins + isr_g_ucAwtoLedMode at a checkpoint against the current state.
 """
 import re
+import sys
+from pathlib import Path
 
 P3 = 0xB0
 ON, BREATHE, OFF = "on colour", "standby colour breathing", "off"
@@ -95,7 +97,7 @@ def print_table(say, table):
         say(f"    {ph:16s} {st:16s} {w!s:26s} {a} {b} {e:5d} {mo}")
 
 
-PIN_FILES = ("fw/sdcc/awto_led.inc", "fw/sdk/Project/Header/RL6449_Project.h")     # AwtoLedSet, AWTO_LED_T2ISR
+PIN_FILES = ("fw/power/led.c", "fw/sdk/Project/Header/RL6449_Project.h")     # AwtoLedSet, AWTO_LED_T2ISR
 SET_FILES = ("fw/sdk/Kernel/System/Code/SysJudge.c",)
 SDK_BOARDS = "fw/sdk/Pcb/"                                                        # other boards' headers: not built
 
@@ -103,7 +105,9 @@ SDK_BOARDS = "fw/sdk/Pcb/"                                                      
 def lint(tree):
     """one LED owner in the tree: [file:line] of a pin write / AwtoLedSet call / SDK LED call outside it"""
     bad = []
-    files = [p for p in (tree / "fw/sdk").rglob("*") if p.suffix in (".c", ".h")] + list((tree / "fw/sdcc").glob("*.inc"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import fw_dirs
+    files = [p for p in (tree / "fw/sdk").rglob("*") if p.suffix in (".c", ".h")] + fw_dirs.our_files(tree)
     for p in files:
         rel = str(p.relative_to(tree))
         if rel.startswith(SDK_BOARDS) and "AWTO" not in p.name:

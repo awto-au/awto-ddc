@@ -1104,7 +1104,6 @@ stub	_AwtoKeyConSet	C	0x3ca8	8
 stub	_AwtoConLost	C	0x3cb0	8
 stub	_AwtoNvEv	C	0x3cb8	8
 stub	_AwtoPortCable	C	0x3cc0	8
-stub	_AwtoDbgIsrCmd_EXINT1	C	0x3cc8	8
 const	___str_144	C	0x3cd4	12
 const	___str_15	C	0x3ce0	8
 const	___str_140	C	0x3ce8	12
@@ -1201,6 +1200,7 @@ const	___str_34	C	0x466c	28
 fn	_AwtoStackCheck	C	0x4698	124
 fn	_AwtoStackDeepTest	C	0x4714	28
 fn	_AwtoStackPaint	C	0x4730	32
+fn	_AwtoDbgIsrCmd_EXINT1	C	0x4750	492
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerAudioD1DigitalDetectProc	0	0x0010	332
 fn	_ScalerAudioD1LoadInitialICode	0	0x015c	16
@@ -3319,4 +3319,3 @@ fn	_ScalerFRCCheckDoubleFrameBuffer	13	0x19a8	616
 fn	_ScalerFRCIVS2DVSDelayMargin	13	0x1c10	12
 fn	_ScalerRotationCheckStatus	13	0x1c1c	44
 fn	_ScalerRotationCheckVideoCompensation	13	0x1c48	96
-fn	_AwtoDbgIsrCmd_EXINT1	13	0x1ca8	492
