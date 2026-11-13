@@ -2025,10 +2025,10 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, P7.3 AMP_MUTE = 0
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step
-extern void AwtoAudioAmpBoot(void);                             // fw/sdcc/awto_audio.inc: the one owner of P7.3 AMP_MUTE / P7.4
+extern void AwtoAudioAmpBoot(void);                             // fw/audio/amp.c: the one owner of P7.3 AMP_MUTE / P7.4
 extern void AwtoAudioAmp(bit bMute);
 #define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST builds)
-#define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (awto_audio.inc), VCP 0x63 (dev.py sound-test)
+#define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (fw/audio/amp.c), VCP 0x63 (dev.py sound-test)
 #define AWTO_AUDIO_TEST_START                                   0x10    // VCP 0x63 value + n (1..6): step n set up; E5 arg = value
 #define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n end: amp on, unmuted, user volume
 #define AWTO_AUDIO_TEST_HZ                                      0x40    // E5 arg + n: "audio test n: <Hz> Hz" (VCP 0x63 = 0x8000 | Hz)

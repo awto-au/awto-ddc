@@ -1,5 +1,7 @@
+#include "SysInclude.h"
+
 // awto speaker amp pins (awto-ddc#94, docs/audio.md): the one owner of P7.4 (amp enable) and P7.3 (AMP_MUTE, high = muted).
-// Unit 3 ear test 2026-11-13: aout 116/117 feeds the amp, P7.3 high silences it [hw]. P7.4 = !mute as Dahua 1:ea99 [fw].
+// aout 116/117 feeds the amp; P7.4 = !mute as Dahua 1:ea99 (evidence: docs/audio.md).
 // Callers: PCB_ON_REGION_GPIO_SETTING_POWER_AC_ON (boot), PCB_AMP_MUTE (SysAudioMuteProc), VCP 0x63 (ear tests).
 #if(_AUDIO_SUPPORT == _ON)
 __xdata BYTE g_ucAwtoAudioTestN;                // ear-test step 1..AWTO_AUDIO_TEST_STEPS in force, 0 = none (RAM only)

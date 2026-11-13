@@ -4086,7 +4086,7 @@ void UserInterfaceAdjustAudioPowerProc(EnumPowerStatus enumPowStatus)
 //--------------------------------------------------
 void UserInterfaceAdjustAudioAmpMuteProc(bit bMute)
 {
-    // awto: amp on = !mute (AwtoAudioAmp, awto_audio.inc); the amp is fed from hpout here
+    // awto: amp on = !mute (AwtoAudioAmp, fw/audio/amp.c); the amp is fed from hpout here
     PCB_AMP_MUTE(bMute);
 }
 

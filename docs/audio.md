@@ -14,7 +14,7 @@ Status (2026-11-13): aout 116/117 feeds the speaker amp, P7.3 = AMP_MUTE (high =
 - Stock SDK: `SysAudioAnalogAudioHandler` compares the 06C0 power bits with `UserInterfaceGetAudioDACOutput()` every pass and on a mismatch mutes, re-charges and switches back; that undid the 06C0 = FB / 06C6 = 08 pokes (back to DB / C8 within seconds). Ours: `_DAC_OUTPUT_SWITCH_SUPPORT _OFF` (no jack switching); the input-port-changed mute stays. Chip pins: RL6449 LQFP216, `docs/monitors/pinshare-live-AWT26110003.tsv`; all in audio mode (0x03). [hw]
 - Dahua firmware picks the output from P4.5 (pin 113, jack input, `1:f69b`): low -> SPEAKER, high -> HEADPHONE [fw, unverified]. Its register dumps of units 1 and 3 both show aout only; GPIO dumps read P4.5 = 0 (unit 1) and 1 (unit 3, another capture); the sim trace (06C0 = DF, HP only) is the P4.5-high path. Polarity [?].
 - Speakers: confirmed present by Dan (2026-11-13; earlier 'no speakers', #3/#22, was wrong).
-- Amp pins (one owner `fw/sdcc/awto_audio.inc`, `docs/reversing/dahua-fw/gpio-ir.md` s4): P7.4 (pin 161) amp enable = !mute (Dahua `1:ea99`) [fw, unverified]; P7.3 (pin 160) `bAMP_MUTE` = mute, high = muted [hw: unit 3 matrix steps 4 / 6 silent]. Both from `PCB_AMP_MUTE` (`SysAudioMuteProc`); AC on: P7.4 = 0, P7.3 = 1. Dahua instead writes P7.3 = 0 once, 200 ms after AC on, and never again [fw, unverified]. Ring lines `E5` (sync.tsv): amp on / off. P7.4 off = silent [hw: unit 3 amp1 step 2, Dan 2026-11-13] -> P7.4 = amp enable, high = on.
+- Amp pins (one owner `fw/audio/amp.c`, `docs/reversing/dahua-fw/gpio-ir.md` s4): P7.4 (pin 161) amp enable = !mute (Dahua `1:ea99`) [fw, unverified]; P7.3 (pin 160) `bAMP_MUTE` = mute, high = muted [hw: unit 3 matrix steps 4 / 6 silent]. Both from `PCB_AMP_MUTE` (`SysAudioMuteProc`); AC on: P7.4 = 0, P7.3 = 1. Dahua instead writes P7.3 = 0 once, 200 ms after AC on, and never again [fw, unverified]. Ring lines `E5` (sync.tsv): amp on / off. P7.4 off = silent [hw: unit 3 amp1 step 2, Dan 2026-11-13] -> P7.4 = amp enable, high = on.
 - Amp IC: **PAM8006A** (stereo class-D, DC volume control) next to speaker header CN4 [photo, [boards.md](monitors/boards.md)].
 - The SDK demo board uses P3.5 (pin 91) as AMP_MUTE; our pin 91 is DPTX_AUX_P (P3D5 output, live 0x01). Not the same function. [hw]
 
@@ -98,7 +98,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 
 ## Ear test (`./dev.py sound-test`, scripts/audio_test.py `steps`)
 - `./dev.py sound-test [--unit N] [--only 1,2,..] [--freqs 200,1000,4000] [--secs S]`: opens the diagnostics console (test cmd 0x26, held), then per step: VCP 0x63 = 0x10 + n (console `audio test n/6: ...`), per tone VCP 0x63 = 0x8000 | Hz (console `audio test n: <Hz> Hz`) + the host tone (both channels, ALSA pcm of the unit's connector), VCP 0x63 = 0x30 + n (`... done`). VCP 0x62 volume read before / after, set back if it moved. Times: `tmp/logs/audio_test.log`.
-- Steps (firmware `tAwtoAudioTestAmp` / `tAwtoAudioTestMute` / `tAwtoAudioTestGain`, awto_audio.inc; aout; held until the step's end, also through SDK unmutes, E5 04 line):
+- Steps (firmware `tAwtoAudioTestAmp` / `tAwtoAudioTestMute` / `tAwtoAudioTestGain`, fw/audio/amp.c; aout; held until the step's end, also through SDK unmutes, E5 04 line):
 
 | n | P7.4 | P7.3 | DVC gain |
 |---|---|---|---|
@@ -118,7 +118,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 | Options | `fw/sdk/Project/Header/RL6449_Project.h` (audio section) |
 | `PCB_AMP_MUTE` no-op | `fw/sdk/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h` |
 | `set_ap_volume`, `set_ap_mute`, `AwtoAudioGain` | `fw/settings/settings_glue.c` |
-| Amp pins, ear-test steps | `fw/sdcc/awto_audio.inc`; VCP 0x63 in `fw/ddcci/ddcci.c` |
+| Amp pins, ear-test steps | `fw/audio/amp.c`; VCP 0x63 in `fw/ddcci/ddcci.c` |
 | Mapping + hold substitutions | `fw/awto/settings/rules.py` (SUBS into `UserAdjustAudioVolumeMapping`, `UserInterfaceGetAudioMuteStatus`) |
 | Registry rows | awto-rtdfw `settings/registry.tsv` rows 88-91 (branch `audio`; the firmware pins `audio-fw`, `fw/awto/clean_ref.txt`) |
 | MCCS | VCP 0x62 volume 0..100; VCP 0x8D mute: 1 = muted, 2 = unmuted (registry enum `Off=2|On=1`) |
