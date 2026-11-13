@@ -129,7 +129,7 @@ void OsdFuncApplyMap(BYTE ucWidth, BYTE ucHeight, BYTE ucColor)
     else
 #endif
     {
-        ucTmp = 0x4C;  // 12 Pixel
+        ucTmp = (g_ucAwtoMapCw != 0) ? (0x40 | g_ucAwtoMapCw) : 0x4C;   // 12 Pixel; an awto text screen: its font's width (blanks match it)
     }
 
     ScalerOsdCharCommandAllByteSeries(g_usFontSelectStart, ucTmp, 0, ucColor, (WORD)ucWidth * ucHeight);

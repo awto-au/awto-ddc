@@ -1345,6 +1345,7 @@ extern void UserCommonInterfacePanelPowerTick(void);
 extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
+extern __xdata unsigned char g_ucAwtoMapCw;                       // OsdFuncApplyMap blank cell width (0 = SDK 12 px), glue.inc
 extern void UserCommonInterfacePanelBoot(void);
 extern void UserCommonInterfacePanelBootDuty(void);
 // #162 step 3 system machine (SysJudge.c): one state for power status + mode, one request entry (SysMachineRequest), one driver.

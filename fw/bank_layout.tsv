@@ -219,11 +219,10 @@ const	___str_139	C	0x17f4	16
 const	___str_137	C	0x1804	12
 const	___str_37	C	0x1810	8
 stub	_AwtoDeadPortPoll	C	0x1818	8
-const	___str_107	C	0x1820	12
 const	___str_133	C	0x182c	12
 stub	_OsdDispOsdMessage	C	0x1838	8
 stub	_AwtoKeyNoOsd	C	0x1840	8
-const	___str_45	C	0x1848	8
+stub	_osd_font_cw	C	0x1848	8
 stub	_AwtoKeyOsdTimeout	C	0x1850	8
 stub	_ScalerDpWDTimerEventProc_WDINT	C	0x1858	8
 stub	_AwtoKeyPoll	C	0x1860	8
@@ -245,6 +244,7 @@ stub	_ScalerDisplayDPTxPhyInitial	C	0x18f0	8
 stub	_OsdFuncApplyMap	C	0x18f8	8
 stub	_OsdFuncBlending	C	0x1900	8
 stub	_AwtoKeyStep	C	0x1908	8
+const	___str_45	C	0x1910	16
 const	___str_47	C	0x1920	12
 const	___str_120	C	0x192c	12
 const	___str_121	C	0x1938	16
@@ -1141,7 +1141,6 @@ stub	_set_confirm	C	0x3f20	8
 stub	_st_apply	C	0x3f28	8
 stub	_st_clampv	C	0x3f30	8
 stub	_st_cur	C	0x3f38	8
-const	___str_115	C	0x3f40	24
 const	___str_11	C	0x3f58	12
 const	___str_12	C	0x3f64	12
 const	___str_14	C	0x3f70	12
@@ -1191,6 +1190,8 @@ stub	_UserCommonInterfacePanelBootDuty	C	0x459c	8
 const	___str_41	C	0x45a4	16
 const	___str_44	C	0x45b4	16
 const	___str_117	C	0x45c4	24
+const	___str_107	C	0x45dc	28
+const	___str_115	C	0x45f8	44
 const	_tDDR2_PLL_PHASE	0	0x0000	16
 fn	_ScalerAudioD1DigitalDetectProc	0	0x0010	332
 fn	_ScalerAudioD1LoadInitialICode	0	0x015c	16
@@ -1465,7 +1466,7 @@ fn	_UserAdjustBacklightDuty	1	0xa968	28
 fn	_bars	1	0xa990	268
 fn	_ui_highlight	1	0xaa9c	196
 fn	_set_in_boot	1	0xac54	12
-fn	_AwtoTextOpen	1	0xac60	540
+fn	_AwtoTextOpen	1	0xac60	644
 fn	_AwtoNvSnap	1	0xaf60	148
 fn	_set_nv_dirty	1	0xaff4	12
 fn	_ScalerColor420To422D2D3Enable	2	0x0068	60
@@ -1736,7 +1737,7 @@ fn	_OsdDispOsdMessage	4	0x7550	1512
 fn	_AwtoT0EvFire	4	0x7df8	64
 fn	_AwtoT0EvClock	4	0x7f10	256
 fn	_AwtoPortSkipSearch	4	0x8010	64
-fn	_OsdFuncApplyMap	4	0x807c	284
+fn	_OsdFuncApplyMap	4	0x8050	304
 fn	_OsdFuncBlending	4	0x8198	24
 fn	_OsdFuncCloseWindow	4	0x81b0	8
 fn	_OsdFuncDisableOsd	4	0x81b8	24
@@ -1989,7 +1990,6 @@ const	___str_64	6	0x0284	12
 const	___str_65	6	0x0290	20
 const	___str_66	6	0x02a4	20
 const	___str_68	6	0x02c4	20
-const	___str_69	6	0x02d8	8
 const	___str_70	6	0x02e0	20
 const	___str_71	6	0x02f4	12
 const	___str_72	6	0x0300	12
@@ -2064,6 +2064,7 @@ const	_mn_s9	6	0x09e0	36
 const	_caps	6	0x0a04	376
 const	_id2idx	6	0x0b7c	124
 const	___str_67	6	0x0bf8	20
+const	___str_69	6	0x0c0c	20
 const	_pinfo	6	0x0c68	52
 const	_ptitle	6	0x0c9c	36
 const	_tab	6	0x0cc0	2160
@@ -2098,6 +2099,7 @@ fn	_AwtoDdcciPoll	6	0x2930	624
 fn	_AwtoDeadPortPoll	6	0x2ba0	180
 fn	_AwtoConLogSync	6	0x2c54	380
 fn	_AwtoDemoLog	6	0x2dd0	200
+fn	_AwtoConTitleBar	6	0x2e98	348
 fn	_AwtoPortBoot	6	0x3cb8	184
 fn	_AwtoPortCable	6	0x3d70	48
 fn	_AwtoPortEnableId	6	0x3da0	68
@@ -2155,7 +2157,6 @@ const	_pent	6	0x5518	120
 fn	_AwtoConLogTail	6	0x55a0	200
 fn	_AwtoConRow	6	0x5668	292
 fn	_AwtoConTitle	6	0x578c	788
-fn	_AwtoConTitleBar	6	0x5aa0	96
 fn	_AwtoConTitlePoll	6	0x5b00	76
 fn	_AwtoDbgShow	6	0x5b4c	92
 fn	_AwtoDiagConsole	6	0x5ba8	200
@@ -2359,11 +2360,14 @@ fn	_ScalerTMDSRx3ReadRequestProc_EXINT0	7	0xadfc	64
 fn	_AwtoPutNvFlush	8	0x0000	504
 fn	_AwtoSourceReset	8	0x01fc	92
 const	___str_149	8	0x0258	40
-const	___str_150	8	0x0280	12
+const	___str_163	8	0x0280	16
 const	_tAwtoSyncNameRow	8	0x0290	468
 const	_tAwtoSyncTxtS	8	0x0614	12676
 fn	_AwtoInfoCard	8	0x50cc	916
 const	_tAwtoSyncFmt	8	0x5460	332
+const	___str_150	8	0x55ac	40
+const	___str_158	8	0x55d4	20
+fn	_osd_font_cw	8	0x55e8	32
 fn	_AwtoSourceAuto	8	0x5750	48
 const	___str_147	8	0x5780	8
 fn	_AwtoSrcRate	8	0x5788	456
@@ -2377,12 +2381,12 @@ const	___str_154	8	0x5f90	16
 const	___str_155	8	0x5fa0	12
 const	___str_156	8	0x5fac	16
 const	___str_157	8	0x5fbc	20
-const	___str_158	8	0x5fd0	12
 const	___str_159	8	0x5fdc	12
 const	___str_160	8	0x5fe8	16
 const	___str_161	8	0x5ff8	16
 const	___str_162	8	0x6008	16
 const	___str_152	8	0x6018	16
+const	___str_164	8	0x6028	16
 fn	_AwtoOsdWdtLines	8	0x6038	928
 fn	_AwtoPutNvF	8	0x63d8	60
 fn	_AwtoPutNvG	8	0x6414	92

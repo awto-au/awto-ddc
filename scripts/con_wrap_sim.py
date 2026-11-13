@@ -76,10 +76,11 @@ class Sim:
         st = self.model.snapshot(self.m, 0)
         rows = M.layout_rows(st, M.frame_geometry(st))
         cs = rows[0]["chars"] if rows else []
-        if self.base is None and len(cs) > 4 and all(c["kind"] == "1bit" for c in cs[1:5]):
-            b = cs[1]["id"] - (ord("A") - 0x20)
-            if [c["id"] - b + 0x20 for c in cs[2:5]] == [ord(x) for x in "WTO"]:
-                self.base = b
+        for k in range(1, 4) if self.base is None else ():         # title " AWTO..." at column 1 or 2 (a leading space)
+            if len(cs) > k + 3 and all(c["kind"] == "1bit" for c in cs[k:k + 4]):
+                b = cs[k]["id"] - (ord("A") - 0x20)
+                if [c["id"] - b + 0x20 for c in cs[k + 1:k + 4]] == [ord(x) for x in "WTO"]:
+                    self.base = b
         b = self.base or 0
         return ["".join(chr(c["id"] - b + 0x20) if c["kind"] == "1bit" and 0 <= c["id"] - b < 95 else " " for c in r["chars"])
                 for r in rows]

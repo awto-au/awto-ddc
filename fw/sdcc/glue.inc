@@ -205,6 +205,8 @@ void AwtoOsdRoll(BYTE ucOn)
     }
 }
 
+__xdata BYTE g_ucAwtoMapCw;                     // OsdFuncApplyMap blanks: the font about to load (AwtoTextOpen), 0 = SDK 12 px
+
 void osd_tc_open(BYTE ucChars, BYTE ucLines)
 {
     BYTE ucI;

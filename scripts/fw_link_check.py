@@ -449,10 +449,11 @@ def check(im, xdata=(), regnames=None, proven=None):
         for x in nxt:
             if x.text.startswith(("RET", "LJMP", "SJMP", "AJMP", "JMP")):
                 break
-            if x.text.startswith("LCALL") and x.target is not None and x.target in stub_lo:
-                tgt, bank, tc = stubs[stub_lo[x.target]]
-                if bank != reg:
-                    gx.append((c, own[0], tc, bank, at))
+            if x.text.startswith("LCALL"):               # the first call takes the pointer; a later call does not (it was a direct
+                if x.target is not None and x.target in stub_lo:     # common call, then a byte-arg stub: false finding, 2026-11-13)
+                    tgt, bank, tc = stubs[stub_lo[x.target]]
+                    if bank != reg:
+                        gx.append((c, own[0], tc, bank, at))
                 break
     sp_read = re.compile(r"^MOV (A|R[0-7]|DPL|DPH|B),SP$")
     for sa, (tgt, bank, tc) in stubs.items():

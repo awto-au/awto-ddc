@@ -10,6 +10,7 @@ extern void osd_tc_place_corner(WORD usLeft, WORD usBottom, BYTE ucBig);
 extern void osd_tc_close(void);
 extern void menu_close(void);
 extern void osd_font_load(BYTE ucFont);
+extern BYTE osd_font_cw(BYTE ucFont);
 extern BYTE ui_font_selected(void);
 extern BYTE __xdata osd_cw;
 extern BYTE __xdata osd_rh;
@@ -124,7 +125,11 @@ static void AwtoTextOpen(BYTE ucCols, BYTE ucLines, BYTE ucView, bit bTitleBar) 
     s_ucAwtoCols = ucCols;
     s_pcAwtoRow[0] = ' ';              // every row starts one cell in, clear of the frame
     s_ucAwtoLen = 1;
+    // map blanks of this font's width: a part-written row keeps blanks, and at Rotate 180 (map mirrored) they come before
+    // its text; 12 px SDK blanks there shifted it sideways (Dan's photo, 2026-11-13)
+    g_ucAwtoMapCw = osd_font_cw(AwtoDiagFont((ucView != 0) ? AWTO_CON_FONT : 3));
     osd_tc_open(ucCols, ucLines);
+    g_ucAwtoMapCw = 0;
     UserCommonInterfacePanelPowerTick();        // #162: map clear and font load are the long parts of a console open (boot,
                                                 // wake): panel steps due meanwhile (T3, backlight-to-PWM) are not held up
     ScalerOsdSetColorPalette(AWTO_PAL_DIAG_TEXT, AWTO_RGB_PHOSPHOR_GREEN);       // diagnostic look: green on black, title bar reversed
@@ -390,7 +395,7 @@ void AwtoOsdDebugLines(void)
 }
 
 // #157 title row live part: "PANEL 0027.25h  UP 0000.42h  HOST 08:45:10" (+ " STALE"); s_pucConTitleH = hash per 2 cells on screen.
-#define AWTO_TITLE_COL      60                  // after "AWTO DIAGNOSTICS  FW <tag>" (tags up to 38 characters)
+#define AWTO_TITLE_COL      70                  // after " AWTO DIAGNOSTICS  FW <tag>  <port>  SN <serial>" (tags up to ~21 characters)
 #define AWTO_TITLE_N        48
 static __xdata BYTE s_pucConTitleH[AWTO_TITLE_N / 2];
 static __xdata WORD s_usConTitleMs;
@@ -479,6 +484,13 @@ void AwtoConTitlePoll(void)                     // every pass while the console 
 }
 
 // Title row at the top of the view (map row s_ucConFirst): the title bar window is fixed on screen, the map rolls under it.
+static void AwtoPortName(BYTE ucPort);          // awto_osdcard.inc
+
+// Title serial: the EDID of the port in use, descriptor tag 0xFF (up to 13 characters, 0x0A ends it); '-' if none.
+// XDATA, no locals: AwtoConTitleBar also runs under AwtoConLogSync (deep DATA path); inline (no new stub in full common).
+static __xdata BYTE s_ucAwtoSnI, s_ucAwtoSnJ;
+static BYTE __xdata *__xdata s_pucAwtoSn;
+
 static void AwtoConTitleBar(void)
 {
     s_ucAwtoCols = AWTO_T_MAXCOLS;              // covers a log row (cols 1..AWTO_T_MAXCOLS - 1) rolled under it
@@ -492,8 +504,23 @@ static void AwtoConTitleBar(void)
         AwtoTextLine(0, AWTO_T_STYLE_ONACC);
         return;
     }
-    AwtoPutStr("AWTO DIAGNOSTICS  FW ");
+    AwtoPutStr(" AWTO DIAGNOSTICS  FW ");      // Dan 2026-11-13: a space before AWTO, the port in use and the serial
     AwtoPutStr(AWTO_FW_TAG);
+    AwtoPutStr("  ");
+    AwtoPortName(SysSourceGetInputPort());
+    AwtoPutStr("  SN ");
+    s_pucAwtoSn = (SysSourceGetInputPort() == _D1_INPUT_PORT) ? MCU_DDCRAM_D1 : (SysSourceGetInputPort() == _D3_INPUT_PORT) ? MCU_DDCRAM_D3 : MCU_DDCRAM_D2;
+    for(s_ucAwtoSnI = 54; s_ucAwtoSnI <= 108; s_ucAwtoSnI += 18)        // the four 18-byte descriptors of the base block
+    {
+        if((s_pucAwtoSn[s_ucAwtoSnI] == 0) && (s_pucAwtoSn[s_ucAwtoSnI + 1] == 0) && (s_pucAwtoSn[s_ucAwtoSnI + 3] == 0xFF))
+        {
+            break;
+        }
+    }
+    for(s_ucAwtoSnJ = 5; (s_ucAwtoSnI <= 108) && (s_ucAwtoSnJ < 18) && (s_pucAwtoSn[s_ucAwtoSnI + s_ucAwtoSnJ] != 0x0A); s_ucAwtoSnJ++)
+    {
+        AwtoPutChar(s_pucAwtoSn[s_ucAwtoSnI + s_ucAwtoSnJ]);
+    }
     AwtoTextLine(0, AWTO_T_STYLE_ONACC);
     AwtoConTitle(1);
 }
