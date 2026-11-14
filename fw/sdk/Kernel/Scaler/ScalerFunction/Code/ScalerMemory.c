@@ -54,7 +54,6 @@ void ScalerMemorySetScalingCoef(BYTE __code *pucAddress1, BYTE __code *pucAddres
 void ScalerMemoryInitial(void);
 
 #if(_LAST_LINE_FINETUNE_ENABLE == _ENABLE)
-void ScalerMemoryCompensateDtForLastLine(DWORD ulTargetLastLine, DWORD ulCurrentLastLine);
 #endif
 
 void ScalerMemoryUpdateIVS2DVSLineDelay(DWORD ulCompsIVS2DVSpixel);
@@ -164,29 +163,6 @@ void ScalerMemoryInitial(void)
 }
 
 #if(_LAST_LINE_FINETUNE_ENABLE == _ENABLE)
-//--------------------------------------------------
-// Description  : Compensate Last Line Fine Tune
-// Input Value  : Target Last Line, Current Last Line
-// Output Value : None
-//--------------------------------------------------
-void ScalerMemoryCompensateDtForLastLine(DWORD ulTargetLastLine, DWORD ulCurrentLastLine)
-{
-    DWORD ulCompsIVS2DVSpixel = 0;
-
-    // Get Initial Dt Fine Tune Value
-    PDATA_DWORD(0) = ScalerMemoryGetIVS2DVSDelayPixel();
-
-    DebugMessageFS("Original Dt", PDATA_DWORD(0));
-
-    // Compensate Dt = Original Dt + ((Target Last Line - Current Last Line) * DVHeight / DVTotal * IVHeight / DVHeight * IHTotal / DHTotal) / 2
-    ulCompsIVS2DVSpixel = (SDWORD)PDATA_DWORD(0) + ((((SDWORD)ulTargetLastLine - (SDWORD)ulCurrentLastLine) * g_stMDomainInputData.usVHeight / g_stMDomainOutputData.usVTotal * g_stMDomainInputData.usHTotal / g_stMDomainOutputData.usHTotal) >> 1);
-
-    DebugMessageFS("Last Line Difference", ((SDWORD)ulTargetLastLine - (SDWORD)ulCurrentLastLine));
-    DebugMessageFS("Dt Compensate Value", (((SDWORD)ulTargetLastLine - (SDWORD)ulCurrentLastLine) * g_stMDomainInputData.usVHeight / g_stMDomainOutputData.usVTotal * g_stMDomainInputData.usHTotal / g_stMDomainOutputData.usHTotal) >> 1);
-
-    DebugMessageFS("Compensated Dt", ulCompsIVS2DVSpixel);
-    ScalerMemoryUpdateIVS2DVSLineDelay(ulCompsIVS2DVSpixel);
-}
 #endif
 
 //--------------------------------------------------

@@ -95,7 +95,6 @@ void ScalerDpRx1DecodeErrorCountReset_WDINT(void);
 #endif
 
 void ScalerDpRx1DecodeErrorCountReset(void);
-WORD ScalerDpRx1GetDecodeErrorCount(BYTE ucDpRx1LaneNumber);
 void ScalerDpRx1ValidSignalDetection(void);
 BYTE ScalerDpRx1LinkRateDetect(void);
 bit ScalerDpRx1LinkRateCheck(BYTE ucDpLinkRate);
@@ -210,18 +209,6 @@ void ScalerDpRx1DecodeErrorCountReset(void)
     ScalerSetBit(PB0_08_BIST_PATTERN_SEL, ~(_BIT2 | _BIT1 | _BIT0), _BIT1);
 }
 
-//--------------------------------------------------
-// Description  : Get 8b10b Error Count value
-// Input Value  : Lane
-// Output Value : Error Count
-//--------------------------------------------------
-WORD ScalerDpRx1GetDecodeErrorCount(BYTE ucDpRx1LaneNumber)
-{
-    // Select Lane
-    ScalerSetBit(PB0_08_BIST_PATTERN_SEL, ~(_BIT4 | _BIT3), (ucDpRx1LaneNumber << 3));
-
-    return ((((WORD)ScalerGetByte(PB0_0B_BIST_PATTERN3)) << 8) | ScalerGetByte(PB0_0C_BIST_PATTERN4));
-}
 
 //--------------------------------------------------
 // Description  : Check Valid Video Data

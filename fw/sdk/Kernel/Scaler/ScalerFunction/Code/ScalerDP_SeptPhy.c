@@ -41,17 +41,14 @@
 #if(_DP_SUPPORT == _ON)
 void ScalerDpEdidSwitch(BYTE ucInputPort);
 void ScalerDpFakeLinkTrainingSetting(BYTE ucInputPort);
-EnumDpPowerState ScalerDpGetPowerStatus(BYTE ucInputPort);
 EnumDpLaneCount ScalerDpGetLaneCount(BYTE ucInputPort);
 EnumDpLinkRate ScalerDpGetLinkRate(BYTE ucInputPort);
 EnumDpVoltageSwingLevel ScalerDpGetLaneVoltageSwingLv(BYTE ucInputPort, EnumDpLane enumDpLane);
 EnumDpPreEmphasisLevel ScalerDpGetLanePreEmpLv(BYTE ucInputPort, EnumDpLane enumDpLane);
-bit ScalerDpGetSrcMstEnable(BYTE ucInputPort);
 void ScalerDpSetHotPlugEvent(BYTE ucInputPort, EnumDpHotPlugAssertType enumHpdType);
 void ScalerDpHotPlugHandler(void);
 void ScalerDpJudgeHPDToggle(EnumPowerAction enumPowerAction);
 void ScalerDpInitial(BYTE ucInputPort, EnumDpVersionType enumDpVersion, EnumDpLaneCount enumDpLaneCount, EnumDPMSTPort enumDpRxMstPort, EnumFreeSyncSupport enumFreeSyncSupport);
-void ScalerDpLaneCountSwitch(BYTE ucInputPort, EnumDpLaneCount enumDpLaneCount);
 void ScalerDpLowPowerProc(void);
 void ScalerDpResetProc(void);
 void ScalerDpTimerEventProc(EnumScalerTimerEventID enumEventID);
@@ -59,7 +56,6 @@ void ScalerDpVersionSwitch(BYTE ucInputPort, EnumDpVersionType enumDpVersion, En
 bit ScalerDpCheckDCOffHpdToggle(EnumPowerAction enumPowerAction);
 void ScalerDpHDCPUnplugReset(BYTE ucInputPort);
 void ScalerDpMainLinkQualityManagement(BYTE ucInputPort);
-StructDpRxErrorCount ScalerDpRxGetErrorCount(BYTE ucInputPort);
 
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
 void ScalerDpRestoreFakeLTLaneCount(EnumSourceSearchPort enumSourceSearchPort);
@@ -149,56 +145,6 @@ void ScalerDpFakeLinkTrainingSetting(BYTE ucInputPort)
 #endif
 }
 
-//--------------------------------------------------
-// Description  : Get DP Power Status (DPCD 00600h)
-// Input Value  : DP Input Port
-// Output Value : DP Power Status
-//--------------------------------------------------
-EnumDpPowerState ScalerDpGetPowerStatus(BYTE ucInputPort)
-{
-    switch(ucInputPort)
-    {
-#if(_D0_DP_EXIST == _ON)
-
-        case _D0_INPUT_PORT:
-
-#if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))
-
-        case _D6_INPUT_PORT:
-#endif
-            if(ScalerDpRx0GetDpcdBitInfo(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == _BIT1)
-            {
-                return _DP_POWER_DOWN;
-            }
-            else if(ScalerDpRx0GetDpcdBitInfo(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == (_BIT2 | _BIT0))
-            {
-                return _DP_POWER_DOWN_WITH_AUX;
-            }
-
-            return _DP_POWER_NORMAL;
-#endif
-
-#if(_D1_DP_EXIST == _ON)
-
-        case _D1_INPUT_PORT:
-
-            if(ScalerDpRx1GetDpcdBitInfo(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == _BIT1)
-            {
-                return _DP_POWER_DOWN;
-            }
-            else if(ScalerDpRx1GetDpcdBitInfo(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == (_BIT2 | _BIT0))
-            {
-                return _DP_POWER_DOWN_WITH_AUX;
-            }
-
-            return _DP_POWER_NORMAL;
-#endif
-
-        default:
-
-            return _DP_POWER_NORMAL;
-    }
-}
 
 //--------------------------------------------------
 // Description  : Get DP Lane Count (DPCD 00101h)
@@ -328,51 +274,6 @@ EnumDpPreEmphasisLevel ScalerDpGetLanePreEmpLv(BYTE ucInputPort, EnumDpLane enum
     }
 }
 
-//--------------------------------------------------
-// Description  : Get DP Source MST enable (DPCD 00111h[0])
-// Input Value  : DP Input Port
-// Output Value : _TRUE --> MST enable, _FALSE --> SST
-//--------------------------------------------------
-bit ScalerDpGetSrcMstEnable(BYTE ucInputPort)
-{
-    switch(ucInputPort)
-    {
-#if(_D0_DP_EXIST == _ON)
-
-        case _D0_INPUT_PORT:
-
-#if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))
-
-        case _D6_INPUT_PORT:
-#endif
-            if(ScalerDpRx0GetDpcdBitInfo(0x00, 0x01, 0x11, _BIT0) == _BIT0)
-            {
-                return _TRUE;
-            }
-            else
-            {
-                return _FALSE;
-            }
-#endif
-
-#if(_D1_DP_EXIST == _ON)
-
-        case _D1_INPUT_PORT:
-
-            if(ScalerDpRx1GetDpcdBitInfo(0x00, 0x01, 0x11, _BIT0) == _BIT0)
-            {
-                return _TRUE;
-            }
-            else
-            {
-                return _FALSE;
-            }
-#endif
-        default:
-
-            return _FALSE;
-    }
-}
 
 //--------------------------------------------------
 // Description  : Dp HotPlug Event for interface
@@ -822,58 +723,6 @@ void ScalerDpInitial(BYTE ucInputPort, EnumDpVersionType enumDpVersion, EnumDpLa
     }
 }
 
-//--------------------------------------------------
-// Description  : DP Lane Switch
-// Input Value  : DP input port, DP Lane Count
-// Output Value : None
-//--------------------------------------------------
-void ScalerDpLaneCountSwitch(BYTE ucInputPort, EnumDpLaneCount enumDpLaneCount)
-{
-    switch(ucInputPort)
-    {
-#if(_D0_DP_EXIST == _ON)
-        case _D0_INPUT_PORT:
-
-            if(enumDpLaneCount > _D0_DP_MAIN_LINK_LANES)
-            {
-                enumDpLaneCount = _D0_DP_MAIN_LINK_LANES;
-            }
-
-            SET_DP_RX_D0_PORT_TARGET_LANE_COUNT(enumDpLaneCount);
-            SET_DP_RX_CAPABILITY_SWITCHED();
-            break;
-#endif
-
-#if(_D1_DP_EXIST == _ON)
-        case _D1_INPUT_PORT:
-
-            if(enumDpLaneCount > _D1_DP_MAIN_LINK_LANES)
-            {
-                enumDpLaneCount = _D1_DP_MAIN_LINK_LANES;
-            }
-
-            SET_DP_RX_D1_PORT_TARGET_LANE_COUNT(enumDpLaneCount);
-            SET_DP_RX_CAPABILITY_SWITCHED();
-            break;
-#endif
-
-#if((_D6_INPUT_PORT_TYPE == _D6_DP_PORT) && (_D6_INPUT_PORT_SWITCH_FROM == _SWITCH_FROM_D0))
-        case _D6_INPUT_PORT:
-
-            if(enumDpLaneCount > _D6_DP_MAIN_LINK_LANES)
-            {
-                enumDpLaneCount = _D6_DP_MAIN_LINK_LANES;
-            }
-
-            SET_DP_RX_D6_PORT_TARGET_LANE_COUNT(enumDpLaneCount);
-            SET_DP_RX_CAPABILITY_SWITCHED();
-            break;
-#endif
-
-        default:
-            break;
-    }
-}
 
 //--------------------------------------------------
 // Description  : DP Low Power Process
@@ -1336,38 +1185,6 @@ void ScalerDpMainLinkQualityManagement(BYTE ucInputPort)
     ucInputPort = ucInputPort;
 }
 
-//--------------------------------------------------
-// Description  : Read DP Rx Error Count
-// Input Value  : DP Input Port
-// Output Value : DP 4 Lane Error Count & Valid Flag
-//--------------------------------------------------
-StructDpRxErrorCount ScalerDpRxGetErrorCount(BYTE ucInputPort)
-{
-    StructDpRxErrorCount stDpRxErrorCount;
-    stDpRxErrorCount.usDpRxLane0ErrorCount = 0;
-    stDpRxErrorCount.usDpRxLane1ErrorCount = 0;
-    stDpRxErrorCount.usDpRxLane2ErrorCount = 0;
-    stDpRxErrorCount.usDpRxLane3ErrorCount = 0;
-
-    switch(ucInputPort)
-    {
-#if(_D0_DP_EXIST == _ON)
-        case _D0_INPUT_PORT:
-
-            return ScalerDpRx0GetErrorCount();
-#endif
-
-#if(_D1_DP_EXIST == _ON)
-        case _D1_INPUT_PORT:
-
-            return ScalerDpRx1GetErrorCount();
-#endif
-
-        default:
-
-            return stDpRxErrorCount;
-    }
-}
 
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
 //--------------------------------------------------

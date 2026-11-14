@@ -506,8 +506,6 @@ extern bit UserInterfaceGetCableResetStatus(void);
 extern bit UserInterfaceGetForcePSStatus(void);
 extern bit UserInterfaceGetIntoPSStatus(void);
 extern EnumUserForceFakePS UserInterfaceGetFakePSStatus(void);
-extern EnumUserForceFakePowerOff UserInterfaceGetFakePowerOffStatus(void);
-extern bit UserInterfaceGetNVRamDataStatus(EnumNvramCheckType enumNvramCheckType);
 extern bit UserInterfaceGetDisplaySettingBacklightAction(void);
 
 extern EnumColorSpace UserInterfaceGetColorFormat(void);

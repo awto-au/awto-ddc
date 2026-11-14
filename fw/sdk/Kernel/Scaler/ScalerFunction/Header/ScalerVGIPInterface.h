@@ -30,16 +30,13 @@
 // INTERFACE FUNCTIONS
 //****************************************************************************
 extern WORD ScalerVgipGetCaptureVStartPosition(void);
-extern WORD ScalerVgipGetCaptureVHeight(void);
 extern WORD ScalerVgipGetCaptureVDelay(void);
 extern void ScalerVgipSetCaptureVDelay(WORD usIVSDelay);
 extern WORD ScalerVgipGetCaptureHStartPosition(void);
 
 #if(_OVERSCAN_SUPPORT == _ON)
-extern WORD ScalerVgipGetCaptureHWidth(void);
 #endif
 
-extern WORD ScalerVgipGetCaptureHDelay(void);
 extern void ScalerVgipSetCaptureHDelay(WORD usIHSDelay);
 
 extern bit ScalerVgipGetDigitalCaptureStatus(void);

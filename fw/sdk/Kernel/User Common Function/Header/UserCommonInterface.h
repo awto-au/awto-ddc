@@ -187,10 +187,7 @@ extern void UserCommonInterfaceNVRamRestoreHDCP(void);
 
 #if(_DP_SUPPORT == _ON)
 extern void UserCommonInterfaceDpAuxSet(void);
-extern StructDpRxErrorCount UserCommonInterfaceDpRxGetErrorCount(BYTE ucInputPort);
 extern EnumDPMSTPort UserCommonInterfaceGetDpMstCapablePort(void);
-extern EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverWrite(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray);
-extern EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverRead(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray);
 #endif
 #endif // End of #if(_DIGITAL_PORT_SUPPORT == _ON)
 
@@ -391,8 +388,6 @@ extern bit UserInterfaceGetCableResetStatus(void);
 extern bit UserInterfaceGetForcePSStatus(void);
 extern bit UserInterfaceGetIntoPSStatus(void);
 extern EnumUserForceFakePS UserInterfaceGetFakePSStatus(void);
-extern EnumUserForceFakePowerOff UserInterfaceGetFakePowerOffStatus(void);
-extern bit UserInterfaceGetNVRamDataStatus(EnumNvramCheckType enumNvramCheckType);
 extern bit UserInterfaceGetDisplaySettingBacklightAction(void);
 
 extern EnumColorSpace UserInterfaceGetColorFormat(void);

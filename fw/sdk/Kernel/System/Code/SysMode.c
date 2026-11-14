@@ -61,7 +61,6 @@ void SysModeResetState(BYTE ucResetTarget);
 void SysModeSetFreeRun(void);
 bit SysModeGetModeStateChange(void);
 void SysModeClrModeStateChange(void);
-void SysModeSetResetTarget(EnumModeAction enumResetTarget);
 void SysModeColorSpaceConvert(EnumColorSpace enumColorFormat, EnumDBApply enumDBApply);
 void SysModeDisplayTimingInitial(void);
 bit SysModeCheckToDisableGlobalDoubleBuffer(void);
@@ -489,18 +488,6 @@ void SysModeClrModeStateChange(void)
 }
 
 
-//--------------------------------------------------
-// Description  : Set Reset Status for User
-// Input Value  : Target Reset State
-// Output Value : None
-//--------------------------------------------------
-void SysModeSetResetTarget(EnumModeAction enumResetTarget)
-{
-    if(enumResetTarget != _MODE_ACTION_NONE)
-    {
-        SysMachineRequest(AWTO_SYS_REQ_MODE | enumResetTarget, AWTO_SYS_BY_SDK_OSD);    // #162 step 3: a request
-    }
-}
 
 //--------------------------------------------------
 // Description  : Let User Specify Which Color Space is used

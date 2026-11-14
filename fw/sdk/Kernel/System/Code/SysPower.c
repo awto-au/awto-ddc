@@ -54,7 +54,6 @@ void SysPowerIdleProc(void);
 BYTE SysPowerGetPowerStatus(void);
 void SysPowerSystemClockSelect(BYTE ucClockSel);
 void SysPowerMcuClock(BYTE ucClockSel);
-void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus);
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 #if(_AWTO_HDCP == _ON)
@@ -69,8 +68,6 @@ void SysPowerLoadDPTxHDCPKey(void);
 void SysPowerIsolation(EnumPowerAction enumSwitch);
 void SysPowerRecoverIsolationAreaData(void);
 bit SysPowerCheckFakeSaving(void);
-bit SysPowerCheckFakeOff(void);
-bit SysPowerCheckNormal(void);
 
 #if(_MHL_PS_WITHOUT_POWERCUT_SUPPORT == _ON)
 void SysPowerMHLPowerCutProc(void);
@@ -975,15 +972,6 @@ void SysPowerSystemClockSelect(BYTE ucClockSel)
 #endif
     }
 }
-//--------------------------------------------------
-// Description  : Set Power Action for other layer
-// Input Value  : ucAction    --> Power Action
-// Output Value : None
-//--------------------------------------------------
-void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus)
-{
-    SysMachineRequest(enumPorStatus, AWTO_SYS_BY_SDK);     // #162 step 3: a request to the system machine
-}
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
 #if(_AWTO_HDCP == _ON)
@@ -1275,68 +1263,7 @@ bit SysPowerCheckFakeSaving(void)
     return _FALSE;
 }
 
-//--------------------------------------------------
-// Description  : Check Whether go to Fake Off Mode
-// Input Value  : None
-// Output Value : _TRUE => Fake Off
-//--------------------------------------------------
-bit SysPowerCheckFakeOff(void)
-{
-    if(UserInterfaceGetFakePowerOffStatus() == _USER_FORCE_FAKE_POWER_OFF)
-    {
-        return _TRUE;
-    }
 
-    // If Power Action Switch Normal to Fake OFF, Else Power Action Switch Fake Off to OFF
-    if(GET_POWER_SWITCH_TO_FAKE_OFF() != _TRUE)
-    {
-#if(_DP_MST_SUPPORT == _ON)
-        if(ScalerSyncDpFakePowerOffCheck(SysSourceGetInputPort()) == _TRUE)
-        {
-            ScalerTimerActiveTimerEvent(_POWER_FAKE_OFF_TO_OFF_TIMEOUT, _SYSTEM_TIMER_EVENT_POWER_FAKE_OFF_TO_OFF);
-
-            return _TRUE;
-        }
-#endif
-
-#if(_USB3_RETIMER_SUPPORT == _ON)
-        if((UserCommonPortControllerGetUsbPDStatus() == _USB3_PD_ENABLE) && (ScalerTypeCSearchCcAttach() == _TYPE_C_ATTACH))
-        {
-            return _TRUE;
-        }
-#endif
-    }
-    else
-    {
-#if(_DP_MST_SUPPORT == _ON)
-        if(GET_DP_RX_MST_DC_OFF_HPD_TOGGLE_HOLD() == _TRUE)
-        {
-            return _TRUE;
-        }
-        else
-#endif
-        {
-#if(_USB3_RETIMER_SUPPORT == _ON)
-            if((UserCommonPortControllerGetUsbPDStatus() == _USB3_PD_ENABLE) && (ScalerTypeCSearchCcAttach() == _TYPE_C_ATTACH))
-            {
-                return _TRUE;
-            }
-#endif
-        }
-    }
-
-    return _FALSE;
-}
-
-//--------------------------------------------------
-// Description  : Check Whther go to Power Normal Mode
-// Input Value  : None
-// Output Value : _TRUE => Power Normal
-//--------------------------------------------------
-bit SysPowerCheckNormal(void)
-{
-    return (!GET_POWER_SWITCH_TO_FAKE_OFF());
-}
 
 #if(_MHL_PS_WITHOUT_POWERCUT_SUPPORT == _ON)
 //--------------------------------------------------

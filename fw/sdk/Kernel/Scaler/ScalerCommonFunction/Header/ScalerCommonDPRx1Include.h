@@ -205,7 +205,6 @@ extern void ScalerDpRx1DecodeErrorCountReset_WDINT(void);
 #endif
 
 void ScalerDpRx1DecodeErrorCountReset(void);
-extern WORD ScalerDpRx1GetDecodeErrorCount(BYTE ucDpRx1LaneNumber);
 extern void ScalerDpRx1ValidSignalDetection(void);
 extern WORD ScalerDpRx1SignalDetectMeasureCount(BYTE ucDpLaneSel, EnumDpMeasureTarget enumDpMeasureTarget, EnumDpMeasurePeriod enumDpMeasurePeriod);
 extern bit ScalerDpRx1SignalCheck(BYTE ucDpLinkRate, BYTE ucDpcdLane);

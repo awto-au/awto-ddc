@@ -51,9 +51,9 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TimerFunction.c	65	ok	OK-CONFIG: _OD_SUPPORT/_FRC_SUPPORT off: _EVENT_DEN_START arm equals the default arm (ByReg), compare removed
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c	3101	ok	OK-HARMLESS: local ucDivS is only assigned just before break, so ucDivS==0 is always true when tested; pData[15]==254 guard stays
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c	3104	ok	OK-HARMLESS: same as TMDSRx2: ucDivS is only set immediately before break
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	524	ok	OK-HARMLESS: switch(enumDpMeasurePeriod): 2000_CYCLE shares body with default; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	601	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	669	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	511	ok	OK-HARMLESS: switch(enumDpMeasurePeriod): 2000_CYCLE shares body with default; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	588	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c	656	ok	OK-HARMLESS: switch(ucDpcdLane): default and _DP_FOUR_LANE share body; same dispatch
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	1663	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	1668	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	3117	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
@@ -104,8 +104,7 @@
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	564	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	628	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	633	ok	OK-CONFIG: MCU_SET_BYTE_WITH_CKCON(...,_CKCON_MCU_SLOW_CYCLE): _CKCON_MCU_SLOW_CYCLE==_CKCON_MOVX_DEFAULT_CYCLE (0) because _LOCAL_DIMMING_SUPPORT is off, so the CKCON-slowing else arm is dead (same as Keil build with this config)
-^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	4483	ok	OK-HARMLESS: trailing return after a switch in which every case returns
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	4926	ok	OK-HARMLESS: switch(ucSourceType) cases empty for this config and merge into default
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c	4251	ok	OK-HARMLESS: switch(ucSourceType) cases empty for this config and merge into default
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	240	ok	OK-CONFIG: _PANEL_DPTX_LT_TPS3 / 0x14>=0x14 constant (HBR2 panel) so outer else dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	253	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c	257	ok	OK-CONFIG: _PANEL_DPTX_LANE_NUMBER==4 constant; 2- and 1-lane arms dead
@@ -115,46 +114,38 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	284	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	908	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_INT_SeptPhy.c	996	ok	OK-HARMLESS: lane-count switch: _DP_FOUR_LANE shares body with default; compare dropped, same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1357	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1512	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	3487	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	4207	ok	OK-HARMLESS: both arms are ((void)0) debug stubs; ScalerDpRx1InterlaceCheck() call (writes usDpVtotal) is kept
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7158	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	7191	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c	1270	ok	OK-CONFIG: _DP_MST_SUPPORT off: NORMAL_TO_FAKE_OFF case empty, equals default
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	218	ok	OK-CONFIG: _VSU_INI_PHASE_LINES==_VSU_4_LINE constant; 3-line arm dead
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	565	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	567	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	569	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1356	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	1511	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	3486	ok	OK-HARMLESS: lane-count switch: default and _DP_FOUR_LANE share body; same dispatch
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c	4206	ok	OK-HARMLESS: both arms are ((void)0) debug stubs; ScalerDpRx1InterlaceCheck() call (writes usDpVtotal) is kept
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c	1119	ok	OK-CONFIG: _DP_MST_SUPPORT off: NORMAL_TO_FAKE_OFF case empty, equals default
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	194	ok	OK-CONFIG: _VSU_INI_PHASE_LINES==_VSU_4_LINE constant; 3-line arm dead
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	541	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	543	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	545	ok	OK-CONFIG: GET_D_DOMAIN_REQUEST() is (_1_LINE_AFTER_DVS) for RL6449, so the _7_LINES_BEFORE_DEN block is dead
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1018	ok	OK-CONFIG: bForceFreqDown only set under _IMD_DOMAIN_ULTRA_HIGH_SPEED_SUPPORT (off); local stays _FALSE
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1021	ok	OK-CONFIG: freq-down arm dead for same reason (bForceFreqDown always _FALSE)
 ^conditional flow changed by optimizer	Kernel/System/Code/SysColor.c	65	ok	OK-CONFIG: _COLOR_IP_DCC_HISTOGRAM/_DCR/seamless/MBR off: ACTIVE case empty equals default
-^conditional flow changed by optimizer	Kernel/System/Code/SysPower.c	1291	ok	OK-CONFIG: if body empty (_DP_MST_SUPPORT and _USB3_RETIMER_SUPPORT off); condition on bit field removed, no side effect
-^unreachable code$	Kernel/System/Code/SysPower.c	757	ok	OK-HARMLESS: trailing return after a switch in which all cases return
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	878	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	917	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	1081	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
-^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	365	ok	OK-HARMLESS: bUncall is a local =_FALSE: SDK "uncall" block that only forces link of otherwise unused functions; never meant to run
-^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	367	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	Kernel/User Common Function/Code/UserCommonInterface.c	3936	ok	OK-CONFIG: _DP_TX_EDID case empty (config) so it merges with default
+^unreachable code$	Kernel/System/Code/SysPower.c	754	ok	OK-HARMLESS: trailing return after a switch in which all cases return
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	542	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	581	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
+^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	745	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2815	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2814	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	637	ok	OK-HARMLESS: timer-event switch: cases sharing code merged by the optimizer (#162 removed the two panel timer events)
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1368	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1374	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1726	ok	OK-CONFIG: _VGA_SUPPORT off: remaining cases empty, merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2549	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3511	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3574	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3578	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4067	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4072	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	635	ok	OK-HARMLESS: timer-event switch: cases sharing code merged by the optimizer (#162 removed the two panel timer events)
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1366	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1372	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2491	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3453	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3516	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3520	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4009	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4014	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
 # Reviewed 2026-11-05 (#26): FRC-off build sites (-D _AWTO_FRC=_OFF since FRC is the default, 2026-11-13)
 # Reviewed 2026-11-13 (#165): FRC sites (default build, ScalerFRC.c unparked)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c	192	ok	OK-HARMLESS: switch(GET_MEMORY_SELECT()) in ScalerFRCIVS2DVSDelay: `default:` shares the _MN_FRAME_SYNC_MEMORY body, jump table reshaped
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1812	ok	OK-CONFIG: _MEMORY_ACCESS_TYPE is _LINE_MODE on RL6449: the frame-access else branch is dead
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1847	ok	OK-CONFIG: GET_OD_STIRCT_CONDITION() is _FALSE with _OD_SUPPORT off: the OD read-width branch folds
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1849	ok	OK-CONFIG: same OD branch (usHWidth = DHtotal), dead with OD off
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1682	ok	OK-CONFIG: GET_OD_STIRCT_CONDITION() is _FALSE with _OD_SUPPORT off: the OD read-width branch folds
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1684	ok	OK-CONFIG: same OD branch (usHWidth = DHtotal), dead with OD off
 # Reviewed 2026-11-13 (#165): rotation sites (default build)
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c	67	ok	OK-HARMLESS: ScalerMemorySetFifoCapture: both rotation branches are commented-out register writes, the if folds to nothing
 # Reviewed 2026-11-05 (#26): SDK Lib sources (RL6449_Series_Lib.Uv2) - no bugs
@@ -166,16 +157,16 @@
 ^Cast\ of\ pointer\ to\ integer\ type\ that\ can	Kernel/Scaler/ScalerCommonFunction/Lib/Code/ScalerCommonReg/ScalerCommonBurstWrite.c	76	ok	OK-SAME: (WORD)generic ptr takes the 16-bit address (tag byte dropped, asm: ADRM=ptr+1 hi, ADRL=ptr+2 lo); bank passed separately via ucBankNum; Keil identical; tag unused
 ^non\-pointer\ type\ cast\ to\ generic\ pointer	Kernel/Scaler/ScalerFunction/Lib/Code/ScalerColor/ScalerColorPCMInputGammaLoadTable.c	58	ok	OK-SAME: WORD from ScalerColorPCMGetTableAddress ((WORD)code ptr) cast to BYTE*: tag 0x00 in SDCC but pointer is only passed to ScalerBurstWrite which uses low 16 bits + separate bank; never dereferenced; Keil same
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDebug.c	648	ok	OK-CONFIG: _HW_IIC_SUPPORT _OFF (#53.3): debug IIC read/write cases (0x44/0x45) compiled out, switch folds
-^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	570	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c	546	ok	OK-CONFIG: DebugMessageFS("Dt max") enabled by cat:FS (#37) sits in the dead _7_LINES_BEFORE_DEN block (GET_D_DOMAIN_REQUEST() is _1_LINE_AFTER_DVS, see 565-569); message 0xD60F never fires
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Power.c	435	ok	OK-CONFIG: _AWTO_FAST_BOOT: Group A power-cut OFF branch empty (PCB_DDR_POWER / PCB_VCCK_OFF_POWER are no-ops on our board, the 2 x 10 ms rail waits removed); the condition only reads two status bits
 ^unreachable code$	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonNVRam.c	*	ok	dead flash-type cases: g_ucFlashType is the constant _FLASH_MX25L8006E while _AWTO_FLASH_ALL is _OFF (#65)
+^unreachable code$	Kernel/System/Code/SysSource.c	3294	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/System/Code/SysSource.c	3296	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^unreachable code$	Kernel/System/Code/SysSource.c	3298	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^unreachable code$	Kernel/System/Code/SysSource.c	3299	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
+^unreachable code$	Kernel/System/Code/SysSource.c	3297	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	512	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	514	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	746	ok	OK-CONFIG: FRC off -> switch(ucMemorySel) has only the line-buffer case, merges with default	_AWTO_FRC=_OFF
-^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	928	ok	OK-CONFIG: same switch(ucMemorySel), FRC off	_AWTO_FRC=_OFF
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	744	ok	OK-CONFIG: FRC off -> switch(ucMemorySel) has only the line-buffer case, merges with default	_AWTO_FRC=_OFF
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	926	ok	OK-CONFIG: same switch(ucMemorySel), FRC off	_AWTO_FRC=_OFF
 ^#warning "_FRC_SUPPORT Should Be _ON!!!"$	Kernel/Common/Project_Config_Check.h	98	ok	TEMP KNOWN WRONG: _ASPECT_ORIGINAL_MODE_SUPPORT needs FRC; FRC ON wedged unit 3, fix pending (#26)	_AWTO_FRC=_OFF
 ^conditional flow changed by optimizer	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: rotation off -> ucWant is always upright, the 180 / upright ternary is constant	_AWTO_FRC=_OFF
 ^unreachable code$	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: same line, the 180 branch of the constant ternary	_AWTO_FRC=_OFF

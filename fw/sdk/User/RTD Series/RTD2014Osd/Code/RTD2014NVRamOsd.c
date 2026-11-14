@@ -351,7 +351,6 @@ bit RTDFlashMoveData(BYTE ucPageID, BYTE *pucData);
 
 void RTDFlashStartup(void);
 void RTDFlashWholeRestore(void);
-void RTDFlashRestoreBacklight(void);
 void RTDFlashLoadOSDData(void);
 void RTDFlashSaveOSDData(void);
 void RTDFlashRestoreOSDData(void);
@@ -361,7 +360,6 @@ void RTDFlashRestoreBriCon(void);
 void RTDFlashLoadColorSetting(BYTE ucColorTempType);
 void RTDFlashSaveColorSetting(BYTE ucColorTempType);
 void RTDFlashRestoreColorSetting(void);
-void RTDFlashRestoreUserColorSetting(void);
 void RTDFlashLoadSixColorData(void);
 void RTDFlashSaveSixColorData(void);
 void RTDFlashRestoreSixColorData(void);
@@ -1277,33 +1275,6 @@ void RTDFlashWholeRestore(void)
     RTDFlashRestorePanelUsedTimeData();
 }
 
-//--------------------------------------------------
-// Description  : Restore default backlight
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void RTDFlashRestoreBacklight(void)
-{
-    BYTE ucItemOffset = 0;
-
-    SET_OSD_BACKLIGHT(g_stOSDDefaultData.usBackLight);
-
-    for(ucItemOffset = 0; ucItemOffset < ((sizeof(StructOsdUserDataType) + (_DATA_ITEM_LENGTH - 2) - 1) / (_DATA_ITEM_LENGTH - 2)); ucItemOffset++)
-    {
-        // Here we check the total item number, it could not be smaller than the osd structure
-        if(ucItemOffset > (_FLASH_ITEMID_OSD_DATA_END - _FLASH_ITEMID_OSD_DATA_START + 1))
-        {
-            break;
-        }
-
-        if(UserCommonFlashLoadItem((_FLASH_ITEMID_OSD_DATA_START + ucItemOffset), pData, 1) == _FALSE)
-        {
-            return;
-        }
-    }
-
-    RTDFlashSaveOSDData();
-}
 
 //--------------------------------------------------
 // Description  : Load OSD __data from Flash
@@ -1525,23 +1496,6 @@ void RTDFlashRestoreColorSetting(void)
     }
 }
 
-//--------------------------------------------------
-// Description  : Restore default color settings
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void RTDFlashRestoreUserColorSetting(void)
-{
-    StructColorProcDataType stUserColorTemp = {0};
-
-    if(UserCommonFlashLoadItem(_FLASH_ITEMID_COLORPROC5_USER, pData, 1) == _TRUE)
-    {
-        stUserColorTemp = g_stColorProcData;
-        g_stColorProcData = tColorTempDefaultData[_CT_USER];
-        RTDFlashSaveColorSetting(_CT_USER);
-        g_stColorProcData = stUserColorTemp;
-    }
-}
 
 //--------------------------------------------------
 // Description  : Load six color __data from Flash

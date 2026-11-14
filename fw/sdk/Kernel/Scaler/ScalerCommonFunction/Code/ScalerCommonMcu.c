@@ -122,14 +122,12 @@ BYTE g_ucHwI2cSettingIndex = _HW_IIC_SPEED;
 // FUNCTION DECLARATIONS
 //****************************************************************************
 void ScalerMcuCacheControl(bit bControl);
-void ScalerMcuDdcciSendData(BYTE *pucWriteArray);
 
 #if((_DP_MST_SUPPORT == _ON) && (_DP_TX_SUPPORT == _ON))
 void ScalerMcuDdcciSetData(BYTE *pucReadArray, BYTE ucLength, EnumDdcciCmdSrc enumDdcciCmdSrc);
 #endif
 
 #if(_DDCCI_CODE_REDUCTION == _OFF)
-BYTE ScalerMcuDdcciGetBufferSize(void);
 
 #if(_DEBUG_MESSAGE_SUPPORT == _OFF)
 #if((_HDMI_FREESYNC_SUPPORT == _ON) && (_HDMI_FREESYNC_CAPABILITY_SWITCH_METHOD == _MCCS_SWITCH_MODE))
@@ -157,7 +155,6 @@ void ScalerMcuSarAdcClkSel(EnumClkSel enumClock);
 
 #if(_PWM_FUNCTION_SUPPORT == _ON)
 void ScalerMcuPwmClockSel(EnumClkSel enumClock);
-void ScalerMcuPwmAdjustResetByDvs(BYTE ucPwmType, bit bStatus);
 bit ScalerMcuPwmAdjustFrequency(BYTE ucPwmType, WORD usFrequency);
 #endif
 
@@ -216,45 +213,6 @@ void ScalerMcuCacheControl(bit bControl)
     }
 }
 
-//--------------------------------------------------
-// Description  : Send DDC Data
-// Input Value  : pWriteArray --> Data to be sent
-//                usTimeOutCnt --> Timeout
-// Output Value : None
-//--------------------------------------------------
-void ScalerMcuDdcciSendData(BYTE *pucWriteArray)
-{
-    WORD usTimeOutCnt = _DDCCI_TIMEOUT_LIMIT;
-    BYTE ucDdcciCount = 0;
-
-    // Enable mcu write
-    MCU_FF2A_IIC_IRQ_CONTROL2 |= (_BIT6 | _BIT5);
-
-    while(ucDdcciCount < ((pucWriteArray[_DDCCI_LENGTH] & 0x7F) + 3))
-    {
-        // Load __data to DDC-CI buffer until buffer full
-        if((MCU_FF29_IIC_STATUS2 & _BIT2) == 0)
-        {
-            MCU_FF26_IIC_DATA_OUT = pucWriteArray[ucDdcciCount++];
-
-            usTimeOutCnt = _DDCCI_TIMEOUT_LIMIT;
-        }
-        else
-        {
-            ScalerTimerDelayXms(2);
-
-            usTimeOutCnt--;
-        }
-
-        if(usTimeOutCnt == 0)
-        {
-            break;
-        }
-    }
-
-    // Disable mcu write
-    MCU_FF2A_IIC_IRQ_CONTROL2 &= ~_BIT5;
-}
 
 #if((_DP_MST_SUPPORT == _ON) && (_DP_TX_SUPPORT == _ON))
 //--------------------------------------------------
@@ -272,15 +230,6 @@ void ScalerMcuDdcciSetData(BYTE *pucReadArray, BYTE ucLength, EnumDdcciCmdSrc en
 #endif
 
 #if(_DDCCI_CODE_REDUCTION == _OFF)
-//--------------------------------------------------
-// Description  : Get DDC Buffer Size
-// Input Value  : None
-// Output Value : DDCCI Buffer Size
-//--------------------------------------------------
-BYTE ScalerMcuDdcciGetBufferSize(void)
-{
-    return _DDCCI_BUFFER_SIZE;
-}
 
 #if(_DEBUG_MESSAGE_SUPPORT == _OFF)
 #if((_HDMI_FREESYNC_SUPPORT == _ON) && (_HDMI_FREESYNC_CAPABILITY_SWITCH_METHOD == _MCCS_SWITCH_MODE))
@@ -1548,52 +1497,6 @@ void ScalerMcuPwmClockSel(EnumClkSel enumClock)
 #endif // End of #if((_PWM5_EN == _ON) || (_PWM5_PSAV_EN == _ON) || (_PWM5_PDOW_EN == _ON))
 }
 
-//--------------------------------------------------
-// Description  : Adjust PWM reset by DVS
-// Input Value  : ucPwmType --> _BACKLIGHT_PWM/_AUDIO_VOLUME...
-//                bStatus --> _ENABLE or _DISABLE
-// Output Value : None
-//--------------------------------------------------
-void ScalerMcuPwmAdjustResetByDvs(BYTE ucPwmType, bit bStatus)
-{
-    BYTE ucMask = 0;
-
-    switch(ucPwmType)
-    {
-        case _PWM0:
-            ucMask = _BIT0;
-            break;
-        case _PWM1:
-            ucMask = _BIT1;
-            break;
-        case _PWM2:
-            ucMask = _BIT2;
-            break;
-        case _PWM3:
-            ucMask = _BIT3;
-            break;
-        case _PWM4:
-            ucMask = _BIT4;
-            break;
-        case _PWM5:
-            ucMask = _BIT5;
-            break;
-        default:
-            break;
-    }
-
-    if(ucMask != 0)
-    {
-        if(bStatus == _ENABLE)
-        {
-            MCU_FF47_PWM_VS_CTRL |= ucMask;
-        }
-        else
-        {
-            MCU_FF47_PWM_VS_CTRL &= ~ucMask;
-        }
-    }
-}
 
 //--------------------------------------------------
 // Description  : PWM Clock Switch.

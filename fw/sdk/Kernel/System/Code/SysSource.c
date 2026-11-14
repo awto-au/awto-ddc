@@ -178,8 +178,6 @@ BYTE SysSourceGetSourceType(void);
 BYTE SysSourceGetInputPort(void);
 BYTE SysSourceGetSpecificInputPort(BYTE ucIndex);
 BYTE SysSourceGetInputPortType(BYTE ucInputPort);
-BYTE SysSourceGetJudge(BYTE ucInputPort);
-bit SysSourceGetPreDetect(BYTE ucInputPort);
 
 #if((_SLEEP_AUDIO_SUPPORT == _ON) && ((_DP_SUPPORT == _ON) && ((_PS_AUDIO_INPUT == _PS_AUDIO_BOTH) || (_PS_AUDIO_INPUT == _PS_AUDIO_DP))))
 BYTE SysSourceGetAudioPlaybackPort(void);
@@ -3456,25 +3454,7 @@ BYTE SysSourceGetInputPortType(BYTE ucInputPort)
     return GET_INPUTPORT_TYPE(SysSourceConvertSearchPort(ucInputPort));
 }
 
-//--------------------------------------------------
-// Description  : Get Source Judge
-// Input Value  : Input Port
-// Output Value : ucInputPort --> Input Port Type
-//--------------------------------------------------
-BYTE SysSourceGetJudge(BYTE ucInputPort)
-{
-    return GET_SOURCE_JUDGE(SysSourceConvertSearchPort(ucInputPort));
-}
 
-//--------------------------------------------------
-// Description  : Get Source predetect status
-// Input Value  : Input Port
-// Output Value : _TRUE if pre-detect passed
-//--------------------------------------------------
-bit SysSourceGetPreDetect(BYTE ucInputPort)
-{
-    return GET_SOURCE_PREDETECT(SysSourceConvertSearchPort(ucInputPort));
-}
 
 #if((_SLEEP_AUDIO_SUPPORT == _ON) && ((_DP_SUPPORT == _ON) && ((_PS_AUDIO_INPUT == _PS_AUDIO_BOTH) || (_PS_AUDIO_INPUT == _PS_AUDIO_DP))))
 //--------------------------------------------------

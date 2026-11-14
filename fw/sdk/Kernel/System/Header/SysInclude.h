@@ -591,7 +591,6 @@ extern bit SysModeGetTimingConfirm(void);
 extern bit SysModeGetActiveReady(void);
 extern void SysModeResetState(BYTE ucResetTarget);
 extern void SysModeSetFreeRun(void);
-extern void SysModeSetResetTarget(EnumModeAction enumResetTarget);
 
 // __SYSTEM_TEST__
 #if(_DISPLAY_SETTING_TEST == _ON)

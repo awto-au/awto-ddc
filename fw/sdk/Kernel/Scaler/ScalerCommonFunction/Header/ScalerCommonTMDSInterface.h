@@ -29,7 +29,6 @@
 // INTERFACE FUNCTIONS
 //****************************************************************************
 #if(_HDMI_SUPPORT == _ON)
-extern BYTE ScalerTMDSHdmiGetAVIInfo(BYTE ucInputPort, EnumAviInfoContent enumContent);
 extern void ScalerTMDSSetPsWakeupHpdToggle(BYTE ucInputPort);
 #if((_HDMI_2_0_SUPPORT == _ON) && (_TMDS_HDMI_2_0_SCDC_RR_CTS_SUPPORT == _ON))
 extern void ScalerTMDSHDMI2HPDRRIRQEnable(BYTE ucInputPort, bit bEnable);

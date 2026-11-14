@@ -61,7 +61,6 @@ extern void ScalerVgipModifyPolarity(EnumSourceTypeDef enumSourceType);
 extern WORD ScalerVgipGetCaptureVStartPosition(void);
 extern void ScalerVgipSetCaptureVStartPosition(WORD usIVstart);
 
-extern WORD ScalerVgipGetCaptureVHeight(void);
 extern void ScalerVgipSetCaptureVHeight(WORD usIVheight);
 
 extern WORD ScalerVgipGetCaptureVDelay(void);
@@ -71,12 +70,10 @@ extern WORD ScalerVgipGetCaptureHStartPosition(void);
 extern void ScalerVgipSetCaptureHStartPosition(WORD usIHstart);
 
 #if(_OVERSCAN_SUPPORT == _ON)
-extern WORD ScalerVgipGetCaptureHWidth(void);
 #endif
 
 extern void ScalerVgipSetCaptureHWidth(WORD usIHwidth);
 
-extern WORD ScalerVgipGetCaptureHDelay(void);
 extern void ScalerVgipSetCaptureHDelay(WORD usIHSDelay);
 
 extern void ScalerVgipVsBypassEnable(bit bEnable);

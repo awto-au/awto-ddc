@@ -416,8 +416,6 @@ extern BYTE ScalerSyncDdcDetect_EXINT1(void);
 extern void ScalerSyncTMDSScanInitial(BYTE ucInputPort);
 
 #if(_HDMI_SUPPORT == _ON)
-extern void ScalerSyncTMDSEdidSwitch(BYTE ucPortSelect);
-extern bit ScalerSyncHDMIDdcCheckBusy(BYTE ucInputPort, EnumTMDSDdcDebounceType enumTmdsDdcDebounceType, BYTE ucDebounceTimeScale, WORD usDebounceTimePeriod);
 #endif
 extern void ScalerSyncTMDSHPDToggleProc(void);
 #endif
@@ -433,12 +431,8 @@ extern void ScalerSyncInterfaceSwitch(BYTE ucInputPort, BYTE ucPortType, BYTE uc
 extern void ScalerSyncBgInterfaceSwitch(BYTE ucInputPort, BYTE ucInputPortType, BYTE ucDetectPort, BYTE ucDetectPortType, BYTE ucSourceSearchDelayMode);
 #endif
 extern void ScalerSyncSetDdcForceNack(BYTE ucInputPort, bit bSelect);
-extern bit ScalerSyncGetDdcForceNackStatus(BYTE ucInputPort);
 
 #if(_DIGITAL_PORT_SUPPORT == _ON)
-extern bit ScalerSyncDigitalGetColorimetryChanged(EnumSourceSearchPort enumSourceSearchPort);
-extern bit ScalerSyncDigitalGetColorimetryExtChanged(EnumSourceSearchPort enumSourceSearchPort);
-extern bit ScalerSyncDigitalGetQuantizationChanged(EnumSourceSearchPort enumSourceSearchPort);
 extern void ScalerSyncDigitalClrColorimetryChanged(EnumSourceSearchPort enumSourceSearchPort);
 extern void ScalerSyncDigitalClrColorimetryExtChanged(EnumSourceSearchPort enumSourceSearchPort);
 extern void ScalerSyncDigitalClrQuantizationChanged(EnumSourceSearchPort enumSourceSearchPort);

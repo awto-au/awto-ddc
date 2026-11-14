@@ -157,7 +157,6 @@ extern bit d_isr_g_bDpRx1NormalLTSetPhyFinish;
 // FUNCTION EXTERN
 //****************************************************************************
 extern void ScalerSyncSetDdcForceNack(BYTE ucInputPort, bit bSelect);
-extern bit ScalerSyncGetDdcForceNackStatus(BYTE ucInputPort);
 
 #if(_HW_FLASH_ACCESS_METHOD == _XDATA_MAP_ACCESS)
 extern bit ScalerSyncVGAUseEmbeddedEDID(void);

@@ -202,10 +202,8 @@ __at(0x30) extern BYTE __data g_ucBankOffset;
 // INTERFACE FUNCTIONS
 //****************************************************************************
 extern void ScalerMcuCacheControl(bit bControl);
-extern void ScalerMcuDdcciSendData(BYTE *pucWriteArray);
 
 #if(_DDCCI_CODE_REDUCTION == _OFF)
-extern BYTE ScalerMcuDdcciGetBufferSize(void);
 
 #if(_DEBUG_MESSAGE_SUPPORT == _OFF)
 #if((_HDMI_FREESYNC_SUPPORT == _ON) && (_HDMI_FREESYNC_CAPABILITY_SWITCH_METHOD == _MCCS_SWITCH_MODE))
@@ -232,7 +230,6 @@ extern void ScalerMcuSarAdcClkSel(EnumClkSel enumClock);
 
 #if(_PWM_FUNCTION_SUPPORT == _ON)
 extern void ScalerMcuPwmClockSel(EnumClkSel enumClock);
-extern void ScalerMcuPwmAdjustResetByDvs(BYTE ucPwmType, bit bStatus);
 extern bit ScalerMcuPwmAdjustFrequency(BYTE ucPwmType, WORD usFrequency);
 #endif
 

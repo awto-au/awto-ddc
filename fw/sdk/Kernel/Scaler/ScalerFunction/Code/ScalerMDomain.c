@@ -98,7 +98,6 @@ void ScalerMDomainSetScaling(const StructSDRAMDataInfo *pstFIFOScaling);
 BYTE ScalerMDomainMemorySelectConfirm(void);
 void ScalerMDomainSetMemoryDataBit(BYTE ucColorDepth);
 
-WORD ScalerMDomainGetVerticalAdjustLimit(EnumSourceTypeDef enumSourceTypeDef);
 DWORD ScalerMDomainGetDisplayActiveRegion(void);
 bit ScalerMDomainDisplayTimingGenCheck(void);
 
@@ -121,7 +120,6 @@ WORD ScalerMDomainGetODMemoryBW(void);
 #endif
 
 #if((((_FRC_SUPPORT == _ON) && (_OD_SUPPORT == _ON)) || (_DISP_LATENCY_ADJUST_SUPPORT == _ON)) || ((_FRC_SUPPORT == _ON) && (_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON))) /* awto: FRC memory BW also with the CheckMDomain debug messages (#37) */
-WORD ScalerMDomainGetFRCMemorySpace(void);
 WORD ScalerMDomainGetFRCMemoryBW(EnumFRCBWType enumFRCBWType, WORD usHWidth);
 #endif
 void ScalerMDomainSetDBOsdFlow(void);
@@ -1388,131 +1386,6 @@ void ScalerMDomainSetMemoryDataBit(BYTE ucColorDepth)
     }
 }
 
-//--------------------------------------------------
-// Description  : Calculate I/D domain V adjust limitation
-// Input Value  : input source type
-// Output Value : vertical adjust limit for IV delay
-//--------------------------------------------------
-WORD ScalerMDomainGetVerticalAdjustLimit(EnumSourceTypeDef enumSourceTypeDef)
-{
-    WORD usAdjustLimit = 0x0001;
-
-    enumSourceTypeDef = enumSourceTypeDef;
-
-    // Calculate I-domain limitation; Safe New V-Delay value must larger than DEN falling edge position plus 3 lines
-#if(_VGA_SUPPORT == _ON)
-    if(enumSourceTypeDef == _SOURCE_VGA)
-    {
-        if(GET_INPUT_TIMING_VTOTAL() > (GET_INPUT_TIMING_VHEIGHT() + ScalerVgaTopGetCaptureVStartPosition() + 3))
-        {
-            usAdjustLimit = (GET_INPUT_TIMING_VTOTAL() - (GET_INPUT_TIMING_VHEIGHT() + ScalerVgaTopGetCaptureVStartPosition() + 3));
-        }
-    }
-    else
-#endif
-    {
-        if(GET_INPUT_TIMING_VTOTAL() > (GET_INPUT_TIMING_VHEIGHT() + ScalerVgipGetCaptureVStartPosition() + 3))
-        {
-            usAdjustLimit = (GET_INPUT_TIMING_VTOTAL() - (GET_INPUT_TIMING_VHEIGHT() + ScalerVgipGetCaptureVStartPosition() + 3));
-        }
-    }
-
-#if((_PANEL_STYLE == _PANEL_DPTX) || (_PANEL_STYLE == _PANEL_VBO))
-
-    // Check D-domain limitation only for non-free-run case
-    if(GET_MEMORY_SELECT() != _FREE_RUN_MEMORY)
-    {
-        // Calculate D-domain limitation
-        WORD usDdomainLimit = (WORD)((DWORD)(GET_MDOMAIN_OUTPUT_VTOTAL() - GET_MDOMAIN_OUTPUT_VHEIGHT() - GET_MDOMAIN_OUTPUT_VSTART()) * GET_MDOMAIN_INPUT_VTOTAL() / GET_MDOMAIN_OUTPUT_VTOTAL() - 1);
-
-        if(usDdomainLimit < usAdjustLimit)
-        {
-            usAdjustLimit = usDdomainLimit;
-        }
-
-        // Update adjust limit for MN tracking
-        if(GET_MEMORY_SELECT() == _MN_FRAME_SYNC_MEMORY)
-        {
-            switch(GET_MEMORY_DVF_SELECT())
-            {
-                case _3_IVF:
-                    usAdjustLimit /= 3;
-                    break;
-
-                case _2_5_IVF:
-                    usAdjustLimit = (usAdjustLimit * 2 / 5);
-
-                    // For 2 successive IVS
-                    usAdjustLimit /= 2;
-                    break;
-
-                case _2_IVF:
-                    usAdjustLimit /= 2;
-                    break;
-
-                default:
-                    break;
-            }
-        }
-
-        // Keep at least one line for adjusting V-Position; otherwise take 2 lines as margin
-        if(usAdjustLimit < 0x0003)
-        {
-            usAdjustLimit = 0x0001;
-        }
-        else
-        {
-            usAdjustLimit -= 0x0002;
-        }
-    }
-#endif
-
-    // Avoid Lost Frame-Sync DVS
-    if(GET_MEMORY_DVF_SELECT() == _1_IVF)
-    {
-        WORD usIvs2dvsDelay = ((((WORD)ScalerGetByte(P0_3E_IVS2DVS_DLY_LINE_H) & 0x01F) << 8) | ScalerGetByte(P0_40_IVS2DVS_DLY_LINE_L));
-        WORD usIvs2dvsDelayLimit = 0;
-        WORD usIvDelay = 0;
-
-#if(_FORMAT_CONVERSION_SUPPORT == _ON)
-        if(ScalerFmtCnvFtoPGetStatus() == _TRUE)
-        {
-            usIvs2dvsDelay = usIvs2dvsDelay << 1;
-        }
-#endif
-
-#if(_VGA_SUPPORT == _ON)
-        if(enumSourceTypeDef == _SOURCE_VGA)
-        {
-            usIvDelay = ScalerVgaTopGetCaptureVDelay();
-        }
-        else
-#endif
-        {
-            usIvDelay = ScalerVgipGetCaptureVDelay();
-        }
-
-        // Check IVS_Delay change from larger to smaller
-        if((GET_INPUT_TIMING_VTOTAL() - usIvDelay) < (usIvs2dvsDelay + 4)) // 4 line margin
-        {
-            usIvs2dvsDelayLimit = ((usIvs2dvsDelay + 4) - (GET_INPUT_TIMING_VTOTAL() - usIvDelay));
-
-            if(usIvDelay > usIvs2dvsDelayLimit)
-            {
-                usIvs2dvsDelayLimit = usIvDelay - usIvs2dvsDelayLimit;
-
-                if(usIvs2dvsDelayLimit < usAdjustLimit)
-                {
-                    usAdjustLimit = usIvs2dvsDelayLimit;
-                }
-            }
-        }
-    }
-
-    DebugMessageScaler("V adj. limit", usAdjustLimit);
-
-    return usAdjustLimit;
-}
 
 //--------------------------------------------------
 // Description  : Measure Display Active Region in Display Setting
@@ -1671,7 +1544,6 @@ void ScalerMDomainODConfig(void)
 
 #if(_FRC_SUPPORT == _ON)
         case _MEMORY_WORK_MODE:
-            g_stMDomainFRCFIFOData.usFRCSpace = ScalerMDomainGetFRCMemorySpace();
             PDATA_WORD(0) = MINOF(GET_MDOMAIN_INPUT_HWIDTH(), GET_MDOMAIN_OUTPUT_HWIDTH());
             PDATA_WORD(0) = MINOF(PDATA_WORD(0), GET_FIFO_HWIDTH());
             g_stMDomainFRCFIFOData.usFRCBW = ScalerMDomainGetFRCMemoryBW(_FRC_BW_FOR_OD, PDATA_WORD(0));
@@ -1779,43 +1651,6 @@ WORD ScalerMDomainGetODMemoryBW(void)
 #endif
 
 #if((((_FRC_SUPPORT == _ON) && (_OD_SUPPORT == _ON)) || (_DISP_LATENCY_ADJUST_SUPPORT == _ON)) || ((_FRC_SUPPORT == _ON) && (_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON))) /* awto: FRC memory BW also with the CheckMDomain debug messages (#37) */
-//--------------------------------------------------
-// Description  : Calculate FRC use memory space
-// Input Value  : IVheight and IHwidth
-// Output Value : FRC use memory space, unit: row
-//--------------------------------------------------
-WORD ScalerMDomainGetFRCMemorySpace(void)
-{
-    WORD usMemoryFRCSpace = 0;
-    DWORD ulLineStep = 0;
-    WORD usHwidth = 0;
-    WORD usVheight = 0;
-
-    //-----------------------------------------
-    // Column = Column_per_bank * memory_bank
-    // Row = Total memory unit / column
-    //-----------------------------------------
-    usHwidth = ((g_stMDomainInputData.usHWidth < g_stMDomainOutputData.usHWidth) ? g_stMDomainInputData.usHWidth : g_stMDomainOutputData.usHWidth);
-    usHwidth = (usHwidth < GET_FIFO_HWIDTH()) ? usHwidth : GET_FIFO_HWIDTH();
-    usVheight = ((g_stMDomainInputData.usVHeight < g_stMDomainOutputData.usVHeight) ? g_stMDomainInputData.usVHeight : g_stMDomainOutputData.usVHeight);
-
-    ulLineStep = ScalerMemoryCalculateFrameLineTotalPixel(_MEMORY_ACCESS_TYPE, usHwidth, usVheight);
-
-    if(_MEMORY_ACCESS_TYPE == _LINE_MODE)
-    {
-        // 10*row
-        usMemoryFRCSpace = (ulLineStep * usVheight * 10 / (_MEMORY_COL_PER_BANK * _MEMORY_BANK));
-    }
-    else
-    {
-        // 10*row
-        usMemoryFRCSpace = (ulLineStep * 10 / (_MEMORY_COL_PER_BANK * _MEMORY_BANK));
-    }
-
-    // unit:row
-    usMemoryFRCSpace = (usMemoryFRCSpace % 10) ? (usMemoryFRCSpace / 10 + 1) : (usMemoryFRCSpace / 10);
-    return usMemoryFRCSpace;
-}
 
 //--------------------------------------------------
 // Description  : Calculate FRC use memory BW

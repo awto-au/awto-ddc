@@ -222,7 +222,6 @@ void ScalerSyncGetDidExtDbAddress(WORD *pusDidDataBlockAddr, BYTE *pucDdcRamAddr
 void ScalerSyncDpMeasureCountInitial(void);
 #endif
 
-WORD ScalerSyncGetDpRxPortEdidBw(EnumDpEdidPort enumDpEdidPort);
 #endif
 
 #if(_ADC_SUPPORT == _ON)
@@ -476,33 +475,6 @@ void ScalerSyncDpMeasureCountInitial(void)
 }
 #endif
 
-//--------------------------------------------------
-// Description  : Get Dp Rx Port Edid Bw
-// Input Value  : enumDpEdidPort --> Dp Rx EDID port
-// Output Value : Edid Native Bw, Unit: 0.01M
-//--------------------------------------------------
-WORD ScalerSyncGetDpRxPortEdidBw(EnumDpEdidPort enumDpEdidPort)
-{
-    switch(enumDpEdidPort)
-    {
-        case _D0_DP_EDID:
-
-#if((_D0_DDC_CHANNEL_SEL == _DDC0) && (_D0_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE))
-            return (((WORD)MCU_DDCRAM_D0[0x37] << 8) | MCU_DDCRAM_D0[0x36]);
-#endif
-
-        case _D1_DP_EDID:
-
-#if((_D1_DDC_CHANNEL_SEL == _DDC1) && (_D1_EMBEDDED_DDCRAM_MAX_SIZE != _EDID_SIZE_NONE))
-            return (((WORD)MCU_DDCRAM_D1[0x37] << 8) | MCU_DDCRAM_D1[0x36]);
-#endif
-
-        default:
-            break;
-    }
-
-    return 0;
-}
 
 #endif
 

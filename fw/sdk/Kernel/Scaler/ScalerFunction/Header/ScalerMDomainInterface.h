@@ -127,7 +127,6 @@ extern bit ScalerMDomainControl(void);
 extern void ScalerMDomainSetDisplayFormat(BYTE ucMemorySel);
 extern void ScalerMDomainCheckDisplayFormat(void);
 
-extern WORD ScalerMDomainGetVerticalAdjustLimit(EnumSourceTypeDef enumSourceTypeDef);
 extern bit ScalerMDomainDisplayTimingGenCheck(void);
 
 extern BYTE ScalerMDomainGetColorDepth(void);

@@ -84,7 +84,6 @@ void ScalerAudioDACSetVcmReady(bit bReady);
 void ScalerAudioDACNormalToDepop(void);
 void ScalerAudioDACDepopToNormal(void);
 void ScalerAudioDACOutputEnable(void);
-EnumAudioDACOutput ScalerAudioDACGetOutput(void);
 void ScalerAudioDACSetOutputGain(EnumAudioDACOutput enumOutputType, EnumAudioDacOutputGain enumOutputGain);
 #endif
 
@@ -606,28 +605,6 @@ void ScalerAudioDACOutputEnable(void)
     ScalerAudioDACSetVcmReady(_ON);
 }
 
-//--------------------------------------------------
-// Description  : Get Current DAC Output Channel
-// Input Value  : None
-// Output Value : EnumAudioDACOutput
-//--------------------------------------------------
-EnumAudioDACOutput ScalerAudioDACGetOutput(void)
-{
-    if(ScalerGetBit(P6_C0_REG_DAC_POWER0, (_BIT5 | _BIT4)) == (_BIT5 | _BIT4))
-    {
-        return _AUDIO_DAC_OUTPUT_BOTH;
-    }
-    else if(ScalerGetBit(P6_C0_REG_DAC_POWER0, (_BIT5 | _BIT4)) == _BIT5)
-    {
-        return _AUDIO_DAC_OUTPUT_SPEAKER;
-    }
-    else if(ScalerGetBit(P6_C0_REG_DAC_POWER0, (_BIT5 | _BIT4)) == _BIT4)
-    {
-        return _AUDIO_DAC_OUTPUT_HEADPHONE;
-    }
-
-    return _AUDIO_DAC_OUTPUT_NONE;
-}
 
 //--------------------------------------------------
 // Description  : Set DAC Output Gain

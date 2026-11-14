@@ -387,8 +387,6 @@ bit UserInterfaceGetCableResetStatus(void);
 bit UserInterfaceGetForcePSStatus(void);
 bit UserInterfaceGetIntoPSStatus(void);
 EnumUserForceFakePS UserInterfaceGetFakePSStatus(void);
-EnumUserForceFakePowerOff UserInterfaceGetFakePowerOffStatus(void);
-bit UserInterfaceGetNVRamDataStatus(EnumNvramCheckType enumNvramCheckType);
 bit UserInterfaceGetDisplaySettingBacklightAction(void);
 
 EnumColorSpace UserInterfaceGetColorFormat(void);
@@ -1392,10 +1390,6 @@ void UserInterfaceUncallFunction(void)
 #endif
 #endif
 
-#if(_DP_SUPPORT == _ON)
-        UserCommonInterfaceDpGetEdidNativeTimingBw(_NO_PORT_EDID);
-#endif
-
 #if(_FORCE_D_DOMAIN_DB_APPLY == _ON)
 #if((_HW_GLOBAL_DB_TYPE == _GLOBAL_DB_GEN_II) || (_HW_GLOBAL_DB_TYPE == _GLOBAL_DB_GEN_III))
         UserCommonInterfaceForceUsingDDomainDB();
@@ -1705,59 +1699,7 @@ EnumUserForceFakePS UserInterfaceGetFakePSStatus(void)
     return _USER_FORCE_POWER_SAVING;
 }
 
-//--------------------------------------------------
-// Description  : User Setting Fake Power Status
-// Input Value  : None
-// Output Value : _USER_FORCE_FAKE_POWER_OFF ==> Fake Power Off
-//                _USER_FORCE_POWER_OFF ==> Power off
-//--------------------------------------------------
-EnumUserForceFakePowerOff UserInterfaceGetFakePowerOffStatus(void)
-{
-    return _USER_FORCE_POWER_OFF;
-}
 
-//--------------------------------------------------
-// Description  : Check Whther ADC Data is Reasonable
-// Input Value  : LOAD or SAVE
-// Output Value : _TRUE => Reasonable
-//--------------------------------------------------
-bit UserInterfaceGetNVRamDataStatus(EnumNvramCheckType enumNvramCheckType)
-{
-    switch(enumNvramCheckType)
-    {
-#if(_VGA_SUPPORT == _ON)
-        case _CHECK_ADC_LOAD:
-
-            if(g_stAdcData.ucAdcPGA >= 0xF0)
-            {
-                // Assign Prefered Value
-                g_stAdcData.ucAdcPGA = 8;
-            }
-
-            break;
-
-        case _CHECK_ADC_SAVE:
-
-            if(g_stAdcData.ucAdcPGA >= 0xF0)
-            {
-                return _FAIL;
-            }
-            break;
-#endif
-
-        case _CHECK_SYSTEM_DATA_LOAD:
-        case _CHECK_SYSTEM_DATA_SAVE:
-        case _CHECK_MODE_USER_DATA_LOAD:
-        case _CHECK_MODE_USER_DATA_SAVE:
-
-            break;
-
-        default:
-            break;
-    }
-
-    return _SUCCESS;
-}
 
 //--------------------------------------------------
 // Description  : Get backlight staus when performing display setting

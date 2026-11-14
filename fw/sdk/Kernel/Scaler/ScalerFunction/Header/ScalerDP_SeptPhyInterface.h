@@ -32,21 +32,17 @@
 #if(_DP_SUPPORT == _ON)
 extern void ScalerDpEdidSwitch(BYTE ucInputPort);
 
-extern EnumDpPowerState ScalerDpGetPowerStatus(BYTE ucInputPort);
 extern EnumDpLaneCount ScalerDpGetLaneCount(BYTE ucInputPort);
 extern EnumDpLinkRate ScalerDpGetLinkRate(BYTE ucInputPort);
 extern EnumDpVoltageSwingLevel ScalerDpGetLaneVoltageSwingLv(BYTE ucInputPort, EnumDpLane enumDpLane);
 extern EnumDpPreEmphasisLevel ScalerDpGetLanePreEmpLv(BYTE ucInputPort, EnumDpLane enumDpLane);
-extern bit ScalerDpGetSrcMstEnable(BYTE ucInputPort);
 extern void ScalerDpSetHotPlugEvent(BYTE ucInputPort, EnumDpHotPlugAssertType enumHpdType);
 extern void ScalerDpHotPlugHandler(void);
 extern void ScalerDpJudgeHPDToggle(EnumPowerAction enumPowerAction);
 extern void ScalerDpInitial(BYTE ucInputPort, EnumDpVersionType enumDpVersion, EnumDpLaneCount enumDpLaneCount, EnumDPMSTPort enumDpRxMstPort, EnumFreeSyncSupport enumFreeSyncSupport);
-extern void ScalerDpLaneCountSwitch(BYTE ucInputPort, EnumDpLaneCount enumDpLaneCount);
 extern void ScalerDpVersionSwitch(BYTE ucInputPort, EnumDpVersionType enumDpVersion, EnumDPMSTPort enumDpRxMstPort);
 extern void ScalerDpHDCPUnplugReset(BYTE ucInputPort);
 extern void ScalerDpMainLinkQualityManagement(BYTE ucInputPort);
-extern StructDpRxErrorCount ScalerDpRxGetErrorCount(BYTE ucInputPort);
 
 #if(_DP_RX_MI_DONGLE_SUPPORT == _ON)
 extern void ScalerDpRestoreFakeLTLaneCount(EnumSourceSearchPort enumSourceSearchPort);

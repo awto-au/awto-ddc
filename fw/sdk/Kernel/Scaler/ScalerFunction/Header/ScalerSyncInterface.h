@@ -28,5 +28,4 @@
 // INTERFACE FUNCTIONS
 //****************************************************************************
 #if(_DP_SUPPORT == _ON)
-extern WORD ScalerSyncGetDpRxPortEdidBw(EnumDpEdidPort enumDpEdidPort);
 #endif

@@ -267,7 +267,6 @@ extern void ScalerDpRx1DfpDeviceDetailConfig(void);
 #endif
 
 #endif
-extern StructDpRxErrorCount ScalerDpRx1GetErrorCount(void);
 
 #endif // End of #if(_D1_DP_EXIST == _ON)
 

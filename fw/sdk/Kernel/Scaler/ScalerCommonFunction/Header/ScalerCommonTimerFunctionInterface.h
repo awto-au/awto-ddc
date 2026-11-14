@@ -85,7 +85,6 @@ extern bit ScalerTimerCheckEventValid(BYTE ucEventIndex);
 extern void ScalerTimerActiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEventID);
 extern void ScalerTimerReactiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEventID);
 extern void ScalerTimerCancelTimerEvent(EnumScalerTimerEventID enumEventID);
-extern WORD ScalerTimerGetEventRemainTime(EnumScalerTimerEventID enumEventID);
 extern bit ScalerTimerSearchActiveTimerEvent(EnumScalerTimerEventID enumEventID);
 
 #if((_DDCCI_CODE_REDUCTION == _OFF) && (_DEBUG_MESSAGE_SUPPORT == _OFF) && (_DDCCI_AUTO_SWITCH_SUPPORT == _ON))
@@ -101,5 +100,4 @@ extern void ScalerTimerDelayXms(WORD usNum);
 extern BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucBit, bit bSuccess);
 #endif
 
-extern void ScalerTimerWaitForActiveTimerEvent(EnumScalerTimerEventID enumEventID);
 

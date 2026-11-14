@@ -343,7 +343,6 @@ bit ScalerTimerCheckEventValid(BYTE ucEventIndex);
 void ScalerTimerActiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEventID);
 void ScalerTimerReactiveTimerEvent(WORD usTime, EnumScalerTimerEventID enumEventID);
 void ScalerTimerCancelTimerEvent(EnumScalerTimerEventID enumEventID);
-WORD ScalerTimerGetEventRemainTime(EnumScalerTimerEventID enumEventID);
 bit ScalerTimerSearchActiveTimerEvent(EnumScalerTimerEventID enumEventID);
 
 #if((_DP_SUPPORT == _ON) || (_TMDS_HDCP_2_2_SUPPORT == _ON) || ((_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON) && (_PORT_CONTROLLER_EMBEDDED_SUPPORT == _ON)))
@@ -367,7 +366,6 @@ WORD ScalerTimerTimer2Count_EXINT0(WORD usTimer);
 BYTE ScalerTimerPollingFlagProc_WDINT(BYTE ucTimeout, WORD usRegister, BYTE ucBit, bit bSuccess);
 WORD ScalerTimerTimer2Count_WDINT(WORD usTimer);
 #endif
-void ScalerTimerWaitForActiveTimerEvent(EnumScalerTimerEventID enumEventID);
 
 //****************************************************************************
 // FUNCTION DEFINITIONS
@@ -2388,34 +2386,6 @@ void ScalerTimerCancelTimerEvent(EnumScalerTimerEventID enumEventID)
     }
 }
 
-//--------------------------------------------------
-// Description  : Get Event Remain Time
-// Input Value  : ucEventID --> Event which has been activated
-// Output Value : Event ID Time
-//--------------------------------------------------
-WORD ScalerTimerGetEventRemainTime(EnumScalerTimerEventID enumEventID)
-{
-    BYTE ucEventIndex = 0;
-    WORD usTime = 0;
-
-    for(ucEventIndex = 0; ucEventIndex < _TIMER_EVENT_COUNT; ucEventIndex++)
-    {
-        if(ScalerTimerGetEventID(ucEventIndex) == enumEventID)
-        {
-            if(GET_EVENT_VALID(ucEventIndex) == _TRUE)
-            {
-                if(ScalerTimerGetEventTime(ucEventIndex) > ScalerTimerGetTimerCounter())
-                {
-                    usTime = (ScalerTimerGetEventTime(ucEventIndex) - ScalerTimerGetTimerCounter());
-                }
-
-                break;
-            }
-        }
-    }
-
-    return usTime;
-}
 
 //--------------------------------------------------
 // Description  : Search a timer event
@@ -2824,14 +2794,4 @@ WORD ScalerTimerTimer2Count_WDINT(WORD usTimer)
 }
 #endif
 
-//--------------------------------------------------
-// Description  : Check if Event is Valid
-// Input Value  : ucEventID --> Event which has been activated
-// Output Value : None
-//--------------------------------------------------
-void ScalerTimerWaitForActiveTimerEvent(EnumScalerTimerEventID enumEventID)
-{
-    ScalerTimerDelayXms(ScalerTimerGetEventRemainTime(enumEventID));
-    ScalerTimerCancelTimerEvent(enumEventID);
-}
 

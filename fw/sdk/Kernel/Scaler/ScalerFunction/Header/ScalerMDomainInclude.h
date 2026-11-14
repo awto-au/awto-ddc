@@ -304,7 +304,6 @@ extern WORD ScalerMDomainODCalculateMemoryUseBW(BYTE ucODbit);
 #endif
 
 #if((((_FRC_SUPPORT == _ON) && (_OD_SUPPORT == _ON)) || (_DISP_LATENCY_ADJUST_SUPPORT == _ON)) || ((_FRC_SUPPORT == _ON) && (_DEBUG_MESSAGE_CHECK_MDOMAIN == _ON))) /* awto: FRC memory BW also with the CheckMDomain debug messages (#37) */
-extern WORD ScalerMDomainGetFRCMemorySpace(void);
 extern WORD ScalerMDomainGetFRCMemoryBW(EnumFRCBWType enumFRCBWType, WORD usHWidth);
 #endif
 extern void ScalerMDomainSetDBOsdFlow(void);

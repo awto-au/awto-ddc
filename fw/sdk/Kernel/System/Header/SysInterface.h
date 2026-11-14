@@ -48,7 +48,6 @@ extern bit SysModeGetTimingConfirm(void);
 extern void SysModeClrModeStateChange(void);
 extern void SysModeSetFreeRun(void);
 extern bit SysModeGetModeStateChange(void);
-extern void SysModeSetResetTarget(EnumModeAction enumResetTarget);
 extern void SysModeColorSpaceConvert(EnumColorSpace enumColorFormat, EnumDBApply enumDBApply);
 extern void SysModeSetupIDomainIniValue(void);
 extern void SysModeDisplayTimingInitial(void);
@@ -67,7 +66,6 @@ extern WORD SysModeFreeSyncDpGetDDCRamAddress(EnumSourceSearchPort enumSearchPor
 // Extern functions from SysPower.c
 //----------------------------------------------------------------------------------------
 extern BYTE SysPowerGetPowerStatus(void);
-extern void SysPowerSetTargetPowerStatus(EnumPowerStatus enumPorStatus);
 
 //----------------------------------------------------------------------------------------
 // Extern functions from SysSource.c
@@ -76,8 +74,6 @@ extern BYTE SysSourceGetSourceType(void);
 extern BYTE SysSourceGetInputPort(void);
 extern BYTE SysSourceGetSpecificInputPort(BYTE ucIndex);
 extern BYTE SysSourceGetInputPortType(BYTE ucInputPort);
-extern BYTE SysSourceGetJudge(BYTE ucInputPort);
-extern bit SysSourceGetPreDetect(BYTE ucInputPort);
 
 extern void SysSourceSwitchInputPort(BYTE ucInputPort);
 

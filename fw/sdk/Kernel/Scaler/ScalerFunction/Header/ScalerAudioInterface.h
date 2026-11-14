@@ -52,7 +52,6 @@ extern void ScalerAudioDACSetVcmReady(bit bReady);
 extern void ScalerAudioDACNormalToDepop(void);
 extern void ScalerAudioDACDepopToNormal(void);
 extern void ScalerAudioDACOutputEnable(void);
-extern EnumAudioDACOutput ScalerAudioDACGetOutput(void);
 #endif
 
 extern bit ScalerAudioDVCGetVolumeMuteStatus(void);

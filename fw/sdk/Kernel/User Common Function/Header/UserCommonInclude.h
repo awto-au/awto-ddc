@@ -1317,11 +1317,8 @@ extern EnumDDCCIDebugMode UserInterfaceGetDdcciMode(void);
 #if(_DP_SUPPORT == _ON)
 extern void UserCommonInterfaceDpAuxSet(void);
 extern void UserCommonInterfaceDpVersionSwitch(BYTE ucInputPort, EnumDpVersionType enumDpVersion, EnumDPMSTPort enumDpRxMstPort);
-extern void UserCommonInterfaceDPSwitchAllPortDpVersion(void);
-extern StructDpRxErrorCount UserCommonInterfaceDpRxGetErrorCount(BYTE ucInputPort);
 extern EnumDPMSTPort UserCommonInterfaceGetDpMstCapablePort(void);
 extern void UserCommonInterfaceMstRx0Rx1switch(EnumDPMSTPort enumMstCapablePort);
-extern WORD UserCommonInterfaceDpGetEdidNativeTimingBw(EnumDpEdidPort enumDpEdidPort);
 #endif
 
 #if(_DP_TX_BLOCK_CONTROL_BEFORE_STREAM_OUTPUT == _ON)
@@ -1386,12 +1383,6 @@ extern void UserCommonAdjustEmbeddedDpSwitch(void);
 #endif
 
 #if(_TRANSLATOR_SUPPORT == _OFF)
-extern WORD UserCommonAdjustGetHPositionRange(BYTE ucPar);
-extern WORD UserCommonAdjustGetHPositionHBiasValue(void);
-extern WORD UserCommonAdjustGetVPositionRange(BYTE ucPar);
-extern WORD UserCommonAdjustGetVPositionVBiasValue(void);
-extern void UserCommonAdjustHPosition(BYTE ucUserHPosition);
-extern void UserCommonAdjustVPosition(BYTE ucUserVPosition);
 #endif
 
 #if(_VGA_SUPPORT == _ON)
@@ -1725,8 +1716,6 @@ extern void UserCommonFlashRestoreTxHDCP2(WORD usAddr, BYTE ucLength, BYTE *pucB
 #endif // End of #if(_HDCP_2_2_SUPPORT == _ON)
 
 #if(_DP_SUPPORT == _ON)
-extern EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverWrite(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray);
-extern EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverRead(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray);
 #endif
 
 #endif // End of #if(_DIGITAL_PORT_SUPPORT == _ON)
@@ -1754,15 +1743,9 @@ extern void UserCommonFlashWRProtect(void);
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonDdcciFunction.c
 //----------------------------------------------------------------------------------------
-extern void UserCommonDdcciInitTx(void);
-extern void UserCommonDdcciInitRx(void);
-extern BYTE UserCommonDdcciCalCheckSum(void);
 #if((_GAMMA_IN_FLASH_BANK == _ON) && (BEACON_GAMMA_TYPE != Gamma_default)) 
 extern BYTE UserCommonDdcciCalRxCheckSum(void); // for beacon gamma auto adjust function
 #endif
-extern void UserCommonDdcciSetVCPReplyValue(BYTE ucTypeOpcode, WORD usMax, WORD usPresent);
-extern void UserCommonDdcciGetTimingReport(void);
-extern void UserCommonDdcciGetCapabilitiesRequest(void);
 
 //----------------------------------------------------------------------------------------
 // Extern functions from UserCommonDisplayCalibration.c
@@ -1795,7 +1778,6 @@ extern void UserCommonInterfaceFreeSyncSupportSwitch(void);
 extern void UserCommonInterfaceLoadEmbeddedEdidData(void);
 #if(_DP_SUPPORT == _ON)
 extern void UserCommonInterfaceDPSwitchEdid(BYTE ucSelectedPort);
-extern void UserCommonInterfaceDPSwitchAllPortEdid(void);
 #endif
 #endif
 

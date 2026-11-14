@@ -30,7 +30,6 @@
 // INTERFACE FUNCTIONS
 //****************************************************************************
 extern void ScalerMcuInitial(void);
-extern BYTE ScalerMcuDdcciGetInputPort(void);
 extern void ScalerMcuFlashClockGroupSetting(EnumClkSel enumClock);
 extern void ScalerMcuPwmControl(EnumPowerStatus enumPowStatus);
 

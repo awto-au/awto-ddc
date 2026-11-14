@@ -65,7 +65,6 @@ bit ScalerTMDSYUV420SupportCheck(BYTE ucInputPort);
 
 #endif
 
-void ScalerTMDSFreqDetectDisable(void);
 void ScalerTMDSFirstActiveProc(BYTE ucInputPort, BYTE ucSourceType);
 bit ScalerTMDSHdcpEnabled(BYTE ucInputPort);
 
@@ -387,21 +386,6 @@ bit ScalerTMDSYUV420SupportCheck(BYTE ucInputPort)
 }
 #endif // End of #if(_HDMI_SUPPORT == _ON)
 
-//--------------------------------------------------
-// Description  : TMDS Freq. Detection IRQ Disable and Clear Clock Counter
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void ScalerTMDSFreqDetectDisable(void)
-{
-#if(_D2_TMDS_SUPPORT == _ON)
-    ScalerTMDSRx2FreqDetectDisable();
-#endif
-
-#if(_D3_TMDS_SUPPORT == _ON)
-    ScalerTMDSRx3FreqDetectDisable();
-#endif
-}
 
 //--------------------------------------------------
 // Description  : Process Required when Switched to Active State

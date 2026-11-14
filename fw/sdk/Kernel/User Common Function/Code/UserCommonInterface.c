@@ -125,7 +125,6 @@ BYTE g_ucVgaCheckCounter;
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-void UserCommonInterfaceUncallFunction(void);
 void UserCommonInterfaceOsdPowerOnInitial(void);
 bit UserCommonInterfaceGetDisplaySettingBacklightAction(void);
 void UserCommonInterfacePanelPowerAction(BYTE ucReq);
@@ -187,7 +186,6 @@ void UserCommonInterfaceLoadEmbeddedEdidData(void);
 void UserCommonInterfaceLoadEmbeddedEdidDataByPort(EnumInputPortEdid enumInputPort);
 #if(_DP_SUPPORT == _ON)
 void UserCommonInterfaceDPSwitchEdid(BYTE ucSelectedPort);
-void UserCommonInterfaceDPSwitchAllPortEdid(void);
 #endif
 #endif
 
@@ -246,12 +244,7 @@ void UserCommonInterfaceNVRamRestoreHDCP(void);
 #if(_DP_SUPPORT == _ON)
 void UserCommonInterfaceDpAuxSet(void);
 void UserCommonInterfaceDpVersionSwitch(BYTE ucInputPort, EnumDpVersionType enumDpVersion, EnumDPMSTPort enumDpRxMstPort);
-void UserCommonInterfaceDPSwitchAllPortDpVersion(void);
-StructDpRxErrorCount UserCommonInterfaceDpRxGetErrorCount(BYTE ucInputPort);
 EnumDPMSTPort UserCommonInterfaceGetDpMstCapablePort(void);
-WORD UserCommonInterfaceDpGetEdidNativeTimingBw(EnumDpEdidPort enumDpEdidPort);
-EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverWrite(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray);
-EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverRead(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray);
 #endif
 
 #endif // End of #if(_DIGITAL_PORT_SUPPORT == _ON)
@@ -350,331 +343,6 @@ void UserCommonInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID);
 void UserCommonInterfaceOledAdjustBackLight(BYTE value);
 #endif
 
-//****************************************************************************
-// FUNCTION DEFINITIONS
-//****************************************************************************
-//--------------------------------------------------
-// Description  : Uncall Function
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserCommonInterfaceUncallFunction(void)
-{
-    bit bUncall = _FALSE;
-
-    if(bUncall == _TRUE)
-    {
-        SysStartUpCheck();
-
-        UserCommonAdjust10bitPanelCompensate(0);
-
-        ScalerSyncSetDdcForceNack(_D2_INPUT_PORT, _OFF);
-
-        ScalerSyncGetDdcForceNackStatus(_D2_INPUT_PORT);
-
-#if(_HDMI_MULTI_EDID_SUPPORT == _ON)
-        UserCommonInterfaceHDMISwitchEdid(_D2_INPUT_PORT, _EDID_INDEX_0);
-#if((_HDMI_FREESYNC_SUPPORT == _ON) || (_HDMI_HDR10_SUPPORT == _ON))
-        UserCommonInterfaceHDMISwitchAllPortEdid();
-#endif
-#endif
-
-#if((_EMBEDDED_EDID_SUPPORT == _ON) && (_DP_SUPPORT == _ON))
-        UserCommonInterfaceDPSwitchEdid(_D0_INPUT_PORT);
-        UserCommonInterfaceDPSwitchAllPortEdid();
-#if((_DP_FREESYNC_SUPPORT == _ON) || (_DP_HDR10_SUPPORT == _ON))
-        UserCommonInterfaceDPSwitchAllPortEdid();
-#endif
-#endif
-
-#if(_FLASH_WRITE_FUNCTION_SUPPORT == _ON)
-#if(_HW_PC99_SUPPORT == _ON)
-        UserCommonInterfacePC99EDIDWriteCommandData();
-#endif
-        UserCommonFlashErasePage(0x00, 0x00);
-        UserCommonFlashWrite(0x00, 0x00, 1, &pData[0]);
-#endif
-
-#if(_FLASH_PARTITION_TYPE == _FLASH_PARTITION_USER)
-        SysMainStartUserCode(0);
-#endif
-
-        SysModeSetResetTarget(_MODE_ACTION_NONE);
-        SysSourceSwitchInputPort(UserCommonNVRamGetSystemData(_SEARCH_PORT));
-        SysSourceSetScanType(UserCommonNVRamGetSystemData(_SOURCE_SCAN_TYPE));
-        SysSourceGetCableDetect(UserCommonNVRamGetSystemData(_SEARCH_PORT));
-        SysSourceGetJudge(_D0_INPUT_PORT);
-        SysSourceGetPreDetect(_D0_INPUT_PORT);
-
-        ScalerTimerSearchActiveTimerEvent(0);
-        UserCommonInterfaceGetDisplaySettingBacklightAction();
-
-#if(_HDMI_SUPPORT == _ON)
-        ScalerTMDSHdmiGetAVIInfo(UserCommonNVRamGetSystemData(_SEARCH_PORT), _AVI_INFO_COLOR_SPACE);
-#endif
-
-#if(_DIGITAL_PORT_SUPPORT == _ON)
-        ScalerSyncHdcpCheckEnabled(UserCommonNVRamGetSystemData(_SEARCH_PORT));
-        ScalerSyncDigitalGetColorimetryChanged(_D0_INPUT_PORT);
-        ScalerSyncDigitalGetColorimetryExtChanged(_D0_INPUT_PORT);
-        ScalerSyncDigitalGetQuantizationChanged(_D0_INPUT_PORT);
-        ScalerSyncDigitalClrColorimetryChanged(_D0_INPUT_PORT);
-        ScalerSyncDigitalClrColorimetryExtChanged(_D0_INPUT_PORT);
-        ScalerSyncDigitalClrQuantizationChanged(_D0_INPUT_PORT);
-#endif
-
-#if(_VGA_SUPPORT == _ON)
-        ScalerSyncProcGetSyncPad();
-#endif
-
-        UserCommonAdjustRealValueToPercent(0, 0, 0, 0);
-        UserCommonAdjustPercentToRealValue(0, 0, 0, 0);
-
-#if(_AUDIO_SUPPORT == _ON)
-        ScalerAudioSamplingFreqDetect(_D0_INPUT_PORT);
-#endif
-
-#if(_DP_SUPPORT == _ON)
-        ScalerDpVersionSwitch(_D0_INPUT_PORT, _DP_VERSION_1_1, _DP_MST_NO_PORT);
-        ScalerDpLaneCountSwitch(_D0_INPUT_PORT, _DP_LINK_4_LANE);
-        ScalerDpEdidSwitch(_D0_INPUT_PORT);
-        ScalerDpGetPowerStatus(_D0_INPUT_PORT);
-        ScalerDpGetLaneCount(_D0_INPUT_PORT);
-        ScalerDpGetLinkRate(_D0_INPUT_PORT);
-        ScalerDpGetLaneVoltageSwingLv(_D0_INPUT_PORT, _DP_LANE_0);
-        ScalerDpGetLanePreEmpLv(_D0_INPUT_PORT, _DP_LANE_0);
-        ScalerDpGetSrcMstEnable(_D0_INPUT_PORT);
-        UserCommonInterfaceDpVersionSwitch(_D0_INPUT_PORT, _DP_VERSION_1_1, _DP_MST_NO_PORT);
-        UserCommonInterfaceDpRxGetErrorCount(_D0_INPUT_PORT);
-        UserCommonInterfaceDPSwitchAllPortDpVersion();
-        UserCommonInterfaceDpTxAuxI2COverWrite(0x50, 16, pData);
-        UserCommonInterfaceDpTxAuxI2COverRead(0x50, 16, pData);
-
-#if(_DP_MST_SUPPORT == _ON)
-        UserCommonInterfaceMstRx0Rx1switch(_DP_MST_NO_PORT);
-#endif
-
-#endif
-
-#if(_DP_TX_SUPPORT == _ON)
-        ScalerDpTxGetDownstreamHPDStatus();
-#endif
-
-#if(_FREESYNC_SUPPORT == _ON)
-        UserCommonInterfaceFreeSyncSupportSwitch();
-#endif
-
-        UserCommonInterfaceDdcciSwitch(_DDCCI_MODE, _D0_INPUT_PORT);
-
-        SysSourceGetSourceType();
-
-#if((_EMBEDDED_EDID_SUPPORT == _ON) && (_WRITE_EDID_LOCATION_BY_USER_SUPPORT == _ON))
-        UserInterfaceGetEmbeddedEDIDData(_A0_INPUT_PORT_EDID);
-#endif
-
-#if(_TRANSLATOR_SUPPORT == _OFF)
-        ScalerDDomainPatternGenEnable(_DISABLE);
-        ScalerDDomainPatternGenAdjustColor(0x00, 0x00, 0x00);
-
-#if(_AUDIO_SUPPORT == _ON)
-        UserInterfaceGetAudioMuteStatus();
-#endif
-
-#if(_OD_SUPPORT == _ON)
-        ScalerODGetStatus();
-        ScalerODGetDeltaGain();
-        ScalerODGetSupportStatus();
-#endif
-
-#if(_FRC_SUPPORT == _OFF)
-        ScalerGlobalGetDBStatus();
-#endif
-
-#if(((_DDR3_PHASE_CALIBRATION == _ON) && (_MEMORY_PHASE_CALIBRATION_MODE == _MEMORY_PHASE_CALIBRATION_FRC_MODE)) && (_DDR3_PHASE_CHECK == _ON))
-        ScalerDDR3PhaseCalibrationFRCMode();
-#endif
-
-        UserCommonAdjustHPosition(0);
-        UserCommonAdjustVPosition(0);
-
-        ScalerOsdDoubleFunction(0, 0);
-        ScalerOsdMapRotation(0, 0, 0, 0, 0, 0);
-        ScalerOsdPositionCorrectSupport();
-
-        UserCommonInterfaceAdjustActiveByPassColorProc();
-#endif // End of #if(_TRANSLATOR_SUPPORT == _OFF)
-
-#if(_DP_SUPPORT == _ON)
-        UserCommonInterfaceDpAuxSet();
-#endif
-
-#if(_D0_TMDS_SUPPORT == _ON)
-        ScalerTMDSHotPlugEvent(_D0_INPUT_PORT);
-#endif
-
-#if(_D1_TMDS_SUPPORT == _ON)
-        ScalerTMDSHotPlugEvent(_D1_INPUT_PORT);
-#endif
-
-#if(_D2_TMDS_SUPPORT == _ON)
-        ScalerTMDSHotPlugEvent(_D2_INPUT_PORT);
-#endif
-
-#if(_D3_TMDS_SUPPORT == _ON)
-        ScalerTMDSHotPlugEvent(_D3_INPUT_PORT);
-#endif
-
-#if(_D4_TMDS_SUPPORT == _ON)
-        ScalerTMDSHotPlugEvent(_D4_INPUT_PORT);
-#endif
-
-#if(_D5_TMDS_SUPPORT == _ON)
-        ScalerTMDSHotPlugEvent(_D5_INPUT_PORT);
-#endif
-
-#if(_D0_HDMI_SUPPORT == _ON)
-        ScalerSyncTMDSEdidSwitch(_D0_INPUT_PORT);
-        ScalerSyncHDMIDdcCheckBusy(_D0_INPUT_PORT, _DELAY_30US_TIMESCALE, 1, 1500);
-#endif
-
-#if(_D1_HDMI_SUPPORT == _ON)
-        ScalerSyncTMDSEdidSwitch(_D1_INPUT_PORT);
-        ScalerSyncHDMIDdcCheckBusy(_D1_INPUT_PORT, _DELAY_30US_TIMESCALE, 1, 1500);
-#endif
-
-#if(_D2_HDMI_SUPPORT == _ON)
-        ScalerSyncTMDSEdidSwitch(_D2_INPUT_PORT);
-        ScalerSyncHDMIDdcCheckBusy(_D2_INPUT_PORT, _DELAY_30US_TIMESCALE, 1, 1500);
-#endif
-
-#if(_D3_HDMI_SUPPORT == _ON)
-        ScalerSyncTMDSEdidSwitch(_D3_INPUT_PORT);
-        ScalerSyncHDMIDdcCheckBusy(_D3_INPUT_PORT, _DELAY_30US_TIMESCALE, 1, 1500);
-#endif
-
-#if(_D4_HDMI_SUPPORT == _ON)
-        ScalerSyncTMDSEdidSwitch(_D4_INPUT_PORT);
-        ScalerSyncHDMIDdcCheckBusy(_D4_INPUT_PORT, _DELAY_30US_TIMESCALE, 1, 1500);
-#endif
-
-#if(_D5_HDMI_SUPPORT == _ON)
-        ScalerSyncTMDSEdidSwitch(_D5_INPUT_PORT);
-        ScalerSyncHDMIDdcCheckBusy(_D5_INPUT_PORT, _DELAY_30US_TIMESCALE, 1, 1500);
-#endif
-
-#if(_DP_TYPE_C_CONNECTOR_SUPPORT == _ON)
-        UserCommonInterfaceTypeCU3ModeSwitch(_D0_INPUT_PORT);
-        UserCommonInterfaceTypeCU3ModeAllPortCapabilitySwitch();
-#if(_TYPE_C_PIN_ASSIGNMENT_E_SUPPORT_SWITCH_SUPPORT == _ON)
-        UserCommonInterfaceTypeCPinAssignmentESupportSwitch(_D0_INPUT_PORT);
-#endif
-#endif
-
-#if(_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
-        SysTypeCGetPortControllerPowerRole(_D0_INPUT_PORT);
-        SysTypeCGetPartnerPdoCnt(_D0_INPUT_PORT, _TYPE_C_POWER_SRC);
-        SysTypeCGetPartnerPdo(_D0_INPUT_PORT, _TYPE_C_POWER_SRC, 0);
-        SysTypeCGetPdoStatus(_D0_INPUT_PORT, &pData[0], &pData[1]);
-        SysTypeCGetCcAttach(_D0_INPUT_PORT);
-        SysTypeCGetAltModeReady(_D0_INPUT_PORT);
-        SysTypeCGetPinAssignment(_D0_INPUT_PORT);
-
-#if((_TYPE_C_PORT_CTRL_MODAL_OPERATION_SUPPORT == _ON) && (_TYPE_C_VENDOR_ALT_MODE == _TYPE_C_LENOVO_ALT_MODE))
-        SysTypeCGetLenovoAltModeReady(_D0_INPUT_PORT);
-        SysTypeCGetLenovoDeviceType(_D0_INPUT_PORT);
-#endif
-
-#if((_TYPE_C_PORT_CTRL_MODAL_OPERATION_SUPPORT == _ON) && (_TYPE_C_VENDOR_ALT_MODE == _TYPE_C_HP_ALT_MODE))
-        SysTypeCGetHpAltModeReady(_D0_INPUT_PORT);
-#endif
-
-#if((_USB_HUB_RTS5411_SERIES_SUPPORT == _ON) && (_DP_TYPE_C_HUB_COMMUNICATION_SUPPORT == _ON))
-        UserCommonUsbHubGetDspInfo(_HUB_DSP0);
-#endif
-#endif // End of #if(_DP_TYPE_C_PORT_CTRL_SUPPORT == _ON)
-
-#if(_TYPE_C_PMIC_HW_IIC_SUPPORT == _ON)
-        ScalerTypeCPmicIICRead(0, 0, 0, 0, pData);
-#endif
-
-#if(_HW_FLASH_ACCESS_METHOD == _XDATA_MAP_ACCESS)
-        ScalerSyncVGAUseEmbeddedEDID();
-        ScalerSyncVGADdcCheckBusyAndForceNack();
-#endif
-
-#if(_EFUSE_SUPPORT == _ON)
-        ScalerEfuseGetData(_EFUSE_NONE, 1, &pData[0]);
-#endif
-
-#if(_HW_IIC_SUPPORT == _ON)
-        ScalerMcuHwIICConfigSetting(_HW_IIC_SPEED);
-#endif
-
-#if(_PWM_FUNCTION_SUPPORT == _ON)
-        ScalerMcuPwmAdjustResetByDvs(_PWM0, _DISABLE);
-#endif
-
-        UserInterfaceGetFreeSyncEnable(_D0_INPUT_PORT);
-
-#if(_FREESYNC_II_SUPPORT == _ON)
-        UserCommonHDRGetFreesynIIStatus();
-        UserCommonHDRGetFreeSyncIILDDisable();
-        UserCommonHDRGetFreeSyncIIEOTFType();
-#endif
-
-#if(_RGB_QUANTIZATION_RANGE_SUPPORT == _ON)
-        UserCommonInterfaceGetRGBQuantizationLimitRangeStatus(_RGB_QUANTIZATION_FULL_RANGE);
-#endif
-
-#if(_TRANSLATOR_SUPPORT == _ON)
-#if(_FREESYNC_SUPPORT == _ON)
-        ScalerFreeSyncGetFreeSyncInfo(_D0_INPUT_PORT, _SPD_INFO_FREESYNC_ENABLE);
-#endif
-#endif
-
-#if(_TWO_CHIP_DATA_EXCHANGE_MODE != _DATA_EXCHANGE_MODE_NONE)
-        UserCommonDataExchangeReadReply(pData, 0);
-        UserCommonInterfaceDataExchangeAllDataReset();
-        UserCommonDataExchangeSendDataUser(_DATA_EXCHAGNE_CMD_NONE, pData, 0);
-        UserCommonDataExchangeGetDataUser(_DATA_EXCHAGNE_CMD_NONE, pData, 0);
-        UserCommonDataExchangeGetDataKernel(_DATA_EXCHAGNE_CMD_NONE, pData, 0);
-        UserCommonDataExchangeInit();
-        UserCommonDataExchangeGetEvent();
-#endif
-
-#if(_GLOBAL_DIMMING_SUPPORT == _ON)
-        UserCommonGlobalDimmingEnable(_DISABLE);
-#endif
-
-#if(_FLASH_READ_FUNCTION_SUPPORT == _ON)
-        UserCommonFlashRead(0x00, 0x00, 1, pData);
-#endif
-
-
-#if(_SOURCE_BACKGROUND_DETECT_SUPPORT == _ON)
-        SysSourceBgGetInputPort();
-        SysSourceBgGetJudge();
-#endif
-
-#if(_MOTION_BLUR_REDUCTION_SUPPORT == _ON)
-        UserCommonInterfaceMbrStrobeBacklightCtrl(_LIGHT_CONTROL_OFF);
-#endif
-        ScalerMcuDdcISPChannelCtrl(_NO_DDC, _DISABLE);
-
-#if(_HP_SOURCE_SCAN_SUPPORT == _ON)
-        SysSourceHpGetSourceJudge();
-        SysSourceHpGetTargetSourceType(0x00);
-        SysSourceHpGetTargetSearchTimes();
-        SysSourceHpGetSwitchPortNoCable();
-        SysSourceHpGetTargetPortNoSignal();
-#endif
-
-#if(_SOURCE_AUTO_SEARCH_STYLE == _SOURCE_POLLING_EIZO_STYLE)
-        SysSourceEizoSetPowerSavingSupport(_ON);
-        SysSourceGetSourceSwitchFinish();
-#endif
-    }
-}
 
 //--------------------------------------------------
 // Description  : User initial LUT/Latch/SRAM tabled ata
@@ -763,10 +431,6 @@ __xdata BYTE g_ucAwtoPanelOwn;                  // 1 while the machine drives it
 static __xdata _Bool s_bPnlLit;                           // backlight pin was on since the stream started (T4 applies)
 static __xdata _Bool s_bPnlWant;                          // backlight wanted and allowed: the on-delay counts from s_usPnlBlAt
 
-static WORD UserCommonInterfacePanelSince(WORD usFrom)
-{
-    return (WORD)((WORD)AwtoMs() - usFrom);
-}
 
 // usAt: the transition time (the step's start). Called before the step's action, so the line's ring time is the transition
 // time; console lines are drawn after the tick (AWTO_CON_LIVE), so no draw delays the action (#162 s3b).
@@ -2889,29 +2553,6 @@ void UserCommonInterfaceDPSwitchEdid(BYTE ucSelectedPort)
     }
 }
 
-//--------------------------------------------------
-// Description  : Switch DP ports Embedded EDID Data
-// Input Value  : void
-// Output Value : None
-//--------------------------------------------------
-void UserCommonInterfaceDPSwitchAllPortEdid(void)
-{
-#if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
-    UserCommonInterfaceDPSwitchEdid(_D0_INPUT_PORT);
-#endif
-
-#if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-    UserCommonInterfaceDPSwitchEdid(_D1_INPUT_PORT);
-#endif
-
-#if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
-    UserCommonInterfaceDPSwitchEdid(_D2_INPUT_PORT);
-#endif
-
-#if(_D6_INPUT_PORT_TYPE == _D6_DP_PORT)
-    UserCommonInterfaceDPSwitchEdid(_D6_INPUT_PORT);
-#endif
-}
 #endif // End of #if(_DP_SUPPORT == _ON)
 
 #endif // End of #if(_EMBEDDED_EDID_SUPPORT == _ON)
@@ -3825,34 +3466,6 @@ void UserCommonInterfaceDpVersionSwitch(BYTE ucInputPort, EnumDpVersionType enum
     }
 #endif
 }
-//--------------------------------------------------
-// Description  : Switch all DP ports Dp Version
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserCommonInterfaceDPSwitchAllPortDpVersion(void)
-{
-#if(_D0_INPUT_PORT_TYPE == _D0_DP_PORT)
-    UserCommonInterfaceDpVersionSwitch(_D0_INPUT_PORT, UserInterfaceGetDPVersion(_D0_INPUT_PORT), UserInterfaceGetDpMSTCapablePort());
-#endif
-
-#if(_D1_INPUT_PORT_TYPE == _D1_DP_PORT)
-    UserCommonInterfaceDpVersionSwitch(_D1_INPUT_PORT, UserInterfaceGetDPVersion(_D1_INPUT_PORT), UserInterfaceGetDpMSTCapablePort());
-#endif
-
-#if(_D2_INPUT_PORT_TYPE == _D2_DP_PORT)
-    UserCommonInterfaceDpVersionSwitch(_D2_INPUT_PORT, UserInterfaceGetDPVersion(_D2_INPUT_PORT), UserInterfaceGetDpMSTCapablePort());
-#endif
-}
-//--------------------------------------------------
-// Description  : Read DP Rx Error Count
-// Input Value  : DP Input Port
-// Output Value : DP 4 Lane Error Count & Valid Flag
-//--------------------------------------------------
-StructDpRxErrorCount UserCommonInterfaceDpRxGetErrorCount(BYTE ucInputPort)
-{
-    return ScalerDpRxGetErrorCount(ucInputPort);
-}
 
 //--------------------------------------------------
 // Description  : Get MST capable port
@@ -3926,111 +3539,8 @@ EnumDPMSTPort UserCommonInterfaceGetDpMstCapablePort(void)
     return _DP_MST_NO_PORT;
 }
 
-//--------------------------------------------------
-// Description  : Get Dp Port Edid Native Timing BW
-// Input Value  : enumDpEdidPort --> Dp Edid Port
-// Output Value : Bw, Unit: 0.01M
-//--------------------------------------------------
-WORD UserCommonInterfaceDpGetEdidNativeTimingBw(EnumDpEdidPort enumDpEdidPort)
-{
-    switch(enumDpEdidPort)
-    {
-        case _D0_DP_EDID:
-        case _D1_DP_EDID:
 
-            return ScalerSyncGetDpRxPortEdidBw(enumDpEdidPort);
 
-        case _DP_TX_EDID:
-
-#if(_DP_TX_SUPPORT == _ON)
-            return ScalerDpTxGetDownStreamEdidBw();
-#endif
-
-        default:
-
-            break;
-    }
-
-    return 0;
-}
-
-//--------------------------------------------------
-// Description  : DP Tx I2CoverAux Write
-// Input Value  : ucSlaveAddress --> SlaveAddress of I2CoverAux Write
-//                ucLength --> Length of I2CoverAux Write
-//                pWriteArray --> Data of I2CoverAux Write
-// Output Value : EnumDpAuxStatus --> Native Aux Write Sucessful
-//--------------------------------------------------
-EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverWrite(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray)
-{
-    ucSlaveAddress = ucSlaveAddress;
-    ucLength = ucLength;
-    pucDataArray = pucDataArray;
-
-#if(_DP_TX_SUPPORT == _ON)
-    while(ucLength > 16)
-    {
-        ucLength = ucLength - 16;
-
-        if(ScalerDpTxAuxI2CoverWrite(ucSlaveAddress, 16, pucDataArray, 1) == _FALSE)
-        {
-            return _DP_AUX_FAIL;
-        }
-        else
-        {
-            pucDataArray = pucDataArray + 16;
-        }
-    }
-
-    if(ScalerDpTxAuxI2CoverWrite(ucSlaveAddress, ucLength, pucDataArray, 0) == _FALSE)
-    {
-        return _DP_AUX_FAIL;
-    }
-
-    return _DP_AUX_PASS;
-#else
-    return _DP_AUX_FAIL;
-#endif
-}
-
-//--------------------------------------------------
-// Description  : DP Tx I2CoverAux Read
-// Input Value  : ucSlaveAddress --> SlaveAddress of I2CoverAux Read
-//                ucLength --> Length of I2CoverAux Read
-//                pWriteArray --> Data of I2CoverAux Read
-// Output Value : EnumDpAuxStatus --> Native Aux Write Sucessful
-//--------------------------------------------------
-EnumDpAuxStatus UserCommonInterfaceDpTxAuxI2COverRead(BYTE ucSlaveAddress, BYTE ucLength, BYTE *pucDataArray)
-{
-    ucSlaveAddress = ucSlaveAddress;
-    ucLength = ucLength;
-    pucDataArray = pucDataArray;
-
-#if(_DP_TX_SUPPORT == _ON)
-    while(ucLength > 16)
-    {
-        ucLength = ucLength - 16;
-
-        if(ScalerDpTxAuxI2CoverRead(ucSlaveAddress, 16, pucDataArray, 1) == _FALSE)
-        {
-            return _DP_AUX_FAIL;
-        }
-        else
-        {
-            pucDataArray = pucDataArray + 16;
-        }
-    }
-
-    if(ScalerDpTxAuxI2CoverRead(ucSlaveAddress, ucLength, pucDataArray, 0) == _FALSE)
-    {
-        return _DP_AUX_FAIL;
-    }
-
-    return _DP_AUX_PASS;
-#else
-    return _DP_AUX_FAIL;
-#endif
-}
 #endif // End of #if(_DP_SUPPORT == _ON)
 #endif // End of #if(_DIGITAL_PORT_SUPPORT == _ON)
 
@@ -4091,7 +3601,6 @@ void UserCommonInterfaceOsdHandler(void)
 void UserCommonInterfaceInitial(void)
 {
     // Call Uncalled Function for Compile Warning
-    UserCommonInterfaceUncallFunction();
     UserInterfaceUncallFunction();
 
     // Flash write protect

@@ -169,7 +169,6 @@
 extern void ScalerMemoryInitial(void);
 
 #if(_LAST_LINE_FINETUNE_ENABLE == _ENABLE)
-extern void ScalerMemoryCompensateDtForLastLine(DWORD ulTargetLastLine, DWORD ulCurrentLastLine);
 #endif
 
 extern void ScalerMemoryUpdateIVS2DVSLineDelay(DWORD ulCompsIVS2DVSpixel);

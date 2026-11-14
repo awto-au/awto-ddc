@@ -54,7 +54,6 @@ extern void ScalerTMDSHdmi2FormatResetEvent(EnumScalerTimerEventID enumEventID);
 
 #endif
 
-extern void ScalerTMDSFreqDetectDisable(void);
 extern void ScalerTMDSFirstActiveProc(BYTE ucInputPort, BYTE ucSourceType);
 extern bit ScalerTMDSHdcpEnabled(BYTE ucInputPort);
 extern void ScalerTMDSHotPlugEvent(BYTE ucPortSelect);

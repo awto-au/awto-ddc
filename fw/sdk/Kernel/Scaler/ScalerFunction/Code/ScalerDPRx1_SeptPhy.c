@@ -221,7 +221,6 @@ void ScalerDpRx1DfpDeviceDetailConfig(void);
 #endif
 
 #endif
-StructDpRxErrorCount ScalerDpRx1GetErrorCount(void);
 
 #endif // #End of #if(_D1_DP_EXIST == _ON)
 
@@ -7141,89 +7140,5 @@ void ScalerDpRx1DfpDeviceDetailConfig(void)
 
 #endif
 
-//--------------------------------------------------
-// Description  : Read DP Rx Error Count
-// Input Value  : DP Input Port
-// Output Value : DP 4 Lane Error Count & Valid Flag
-//--------------------------------------------------
-StructDpRxErrorCount ScalerDpRx1GetErrorCount(void)
-{
-    StructDpRxErrorCount stDpRxErrorCount;
-
-    if((ScalerDpRx1CDRCheck(ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00), (ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0x1F)) == _FALSE) ||
-       (ScalerDpRx1SignalCheck(ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00), (ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0x1F)) == _FALSE))
-    {
-        DebugMessageSystem("Rx Fail to Report Valid Error Counter", 0x00);
-
-        switch(ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0x1F)
-        {
-            case _DP_ONE_LANE:
-
-                stDpRxErrorCount.usDpRxLane0ErrorCount = 0x7FFF;
-                stDpRxErrorCount.usDpRxLane1ErrorCount = 0;
-                stDpRxErrorCount.usDpRxLane2ErrorCount = 0;
-                stDpRxErrorCount.usDpRxLane3ErrorCount = 0;
-
-                break;
-
-            case _DP_TWO_LANE:
-
-                stDpRxErrorCount.usDpRxLane0ErrorCount = 0x7FFF;
-                stDpRxErrorCount.usDpRxLane1ErrorCount = 0x7FFF;
-                stDpRxErrorCount.usDpRxLane2ErrorCount = 0;
-                stDpRxErrorCount.usDpRxLane3ErrorCount = 0;
-
-                break;
-
-            default:
-            case _DP_FOUR_LANE:
-
-                stDpRxErrorCount.usDpRxLane0ErrorCount = 0x7FFF;
-                stDpRxErrorCount.usDpRxLane1ErrorCount = 0x7FFF;
-                stDpRxErrorCount.usDpRxLane2ErrorCount = 0x7FFF;
-                stDpRxErrorCount.usDpRxLane3ErrorCount = 0x7FFF;
-
-                break;
-        }
-    }
-    else
-    {
-        switch(ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0x1F)
-        {
-            case _DP_ONE_LANE:
-
-                stDpRxErrorCount.usDpRxLane0ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE0);
-                stDpRxErrorCount.usDpRxLane1ErrorCount = 0;
-                stDpRxErrorCount.usDpRxLane2ErrorCount = 0;
-                stDpRxErrorCount.usDpRxLane3ErrorCount = 0;
-
-                break;
-
-            case _DP_TWO_LANE:
-
-                stDpRxErrorCount.usDpRxLane0ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE0);
-                stDpRxErrorCount.usDpRxLane1ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE1);
-                stDpRxErrorCount.usDpRxLane2ErrorCount = 0;
-                stDpRxErrorCount.usDpRxLane3ErrorCount = 0;
-
-                break;
-
-            default:
-            case _DP_FOUR_LANE:
-
-                stDpRxErrorCount.usDpRxLane0ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE0);
-                stDpRxErrorCount.usDpRxLane1ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE1);
-                stDpRxErrorCount.usDpRxLane2ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE2);
-                stDpRxErrorCount.usDpRxLane3ErrorCount = ScalerDpRx1GetDecodeErrorCount(_D1_DP_LANE3);
-
-                break;
-        }
-    }
-
-    // Reset Error Counter
-    ScalerDpRx1DecodeErrorCountReset();
-
-    return stDpRxErrorCount;
-}
 #endif // End of #if(_D1_DP_EXIST == _ON)
 

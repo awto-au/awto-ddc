@@ -41,7 +41,6 @@
 // FUNCTION DECLARATIONS
 //****************************************************************************
 #if(_HDMI_SUPPORT == _ON)
-BYTE ScalerTMDSHdmiGetAVIInfo(BYTE ucInputPort, EnumAviInfoContent enumContent);
 void ScalerTMDSSetPsWakeupHpdToggle(BYTE ucInputPort);
 
 #if((_HDMI_2_0_SUPPORT == _ON) && (_TMDS_HDMI_2_0_SCDC_RR_CTS_SUPPORT == _ON))
@@ -112,87 +111,6 @@ void ScalerTMDSRx5GetHDR10Data(BYTE *pucHDRData);
 // FUNCTION DEFINITIONS
 //****************************************************************************
 #if(_HDMI_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Get HDMI AVI Info Contents
-// Input Value  : Content of Interest
-// Output Value : Content Value
-//--------------------------------------------------
-BYTE ScalerTMDSHdmiGetAVIInfo(BYTE ucInputPort, EnumAviInfoContent enumContent)
-{
-    ucInputPort = ucInputPort;
-
-    switch(ucInputPort)
-    {
-#if(_D0_HDMI_SUPPORT == _ON)
-        case _D0_INPUT_PORT:
-
-#if(_D0_INPUT_PORT_TMDS_MAC_PAGE == _PAGE2)
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#else
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#endif
-
-#endif
-
-#if(_D1_HDMI_SUPPORT == _ON)
-        case _D1_INPUT_PORT:
-
-#if(_D1_INPUT_PORT_TMDS_MAC_PAGE == _PAGE2)
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#else
-            return ScalerTMDSRx1HdmiGetAVIInfo(enumContent);
-#endif
-
-#endif
-
-#if(_D2_HDMI_SUPPORT == _ON)
-        case _D2_INPUT_PORT:
-
-#if(_D2_INPUT_PORT_TMDS_MAC_PAGE == _PAGE2)
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#else
-            return ScalerTMDSRx2HdmiGetAVIInfo(enumContent);
-#endif
-
-#endif
-
-#if(_D3_HDMI_SUPPORT == _ON)
-        case _D3_INPUT_PORT:
-
-#if(_D3_INPUT_PORT_TMDS_MAC_PAGE == _PAGE2)
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#else
-            return ScalerTMDSRx3HdmiGetAVIInfo(enumContent);
-#endif
-
-#endif
-
-#if(_D4_HDMI_SUPPORT == _ON)
-        case _D4_INPUT_PORT:
-
-#if(_D4_INPUT_PORT_TMDS_MAC_PAGE == _PAGE2)
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#else
-            return ScalerTMDSRx4HdmiGetAVIInfo(enumContent);
-#endif
-
-#endif
-
-#if(_D5_HDMI_SUPPORT == _ON)
-        case _D5_INPUT_PORT:
-
-#if(_D5_INPUT_PORT_TMDS_MAC_PAGE == _PAGE2)
-            return ScalerTMDSRx0HdmiGetAVIInfo(enumContent);
-#else
-            return ScalerTMDSRx5HdmiGetAVIInfo(enumContent);
-#endif
-
-#endif
-
-        default:
-            return _FALSE;
-    }
-}
 
 //--------------------------------------------------
 // Description  : Get HDMI AVI Info Contents

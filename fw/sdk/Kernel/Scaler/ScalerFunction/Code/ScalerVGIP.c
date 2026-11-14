@@ -49,7 +49,6 @@ void ScalerVgipModifyPolarity(EnumSourceTypeDef enumSourceType);
 WORD ScalerVgipGetCaptureVStartPosition(void);
 void ScalerVgipSetCaptureVStartPosition(WORD usIVstart);
 
-WORD ScalerVgipGetCaptureVHeight(void);
 void ScalerVgipSetCaptureVHeight(WORD usIVheight);
 
 WORD ScalerVgipGetCaptureVDelay(void);
@@ -59,12 +58,10 @@ WORD ScalerVgipGetCaptureHStartPosition(void);
 void ScalerVgipSetCaptureHStartPosition(WORD usIHstart);
 
 #if(_OVERSCAN_SUPPORT == _ON)
-WORD ScalerVgipGetCaptureHWidth(void);
 #endif
 
 void ScalerVgipSetCaptureHWidth(WORD usIHwidth);
 
-WORD ScalerVgipGetCaptureHDelay(void);
 void ScalerVgipSetCaptureHDelay(WORD usIHSDelay);
 
 void ScalerVgipVsBypassEnable(bit bEnable);
@@ -242,33 +239,6 @@ void ScalerVgipSetCaptureVStartPosition(WORD usIVstart)
 #endif
 }
 
-//--------------------------------------------------
-// Description  : Get Capture V-Height Position
-// Input Value  : None
-// Output Value : Capture Start
-//--------------------------------------------------
-WORD ScalerVgipGetCaptureVHeight(void)
-{
-    // IVheight[12]: P0_16[7]
-    // IVheight[11:8]: P0_18[7:4]
-    // IVheight[7:0]: P0_1B[7:0]
-    WORD usIVheight = ((((WORD)(ScalerGetByte(P0_18_M1_IPV_ACT_STA_H) & 0xF0) << 4) | ScalerGetByte(P0_1B_M1_IPV_ACT_LEN_L)));
-
-#if(_HW_VGIP_V_HEIGHT_BIT_WIDTH == _13_BIT)
-    usIVheight |= ((WORD)(ScalerGetByte(P0_16_M1_IPH_ACT_WID_H) & _BIT7) << 5);
-#endif
-
-#if(_FORMAT_CONVERSION_SUPPORT == _ON)
-    if(ScalerFmtCnvFtoPGetStatus() == _TRUE)
-    {
-        return (usIVheight << 1);
-    }
-    else
-#endif
-    {
-        return usIVheight;
-    }
-}
 
 //--------------------------------------------------
 // Description  : Set Capture V-Height Position
@@ -462,24 +432,6 @@ void ScalerVgipSetCaptureHStartPosition(WORD usIHstart)
 }
 
 #if(_OVERSCAN_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  : Get Capture H Width
-// Input Value  : None
-// Output Value : H capture Width
-//--------------------------------------------------
-WORD ScalerVgipGetCaptureHWidth(void)
-{
-    // IHwidth[12]: P0_16[0]
-    // IHwidth[11:8]: P0_14[7:4]
-    // IHwidth[7:0]: P0_17[7:0]
-    WORD usIHwidth = ((((WORD)ScalerGetByte(P0_14_M1_IPH_ACT_STA_H) & 0xF0) << 4) | ScalerGetByte(P0_17_M1_IPH_ACT_WID_L));
-
-#if(_HW_VGIP_H_WIDTH_BIT_WIDTH == _13_BIT)
-    usIHwidth |= ((WORD)ScalerGetBit(P0_16_M1_IPH_ACT_WID_H, _BIT0) << 12);
-#endif
-
-    return usIHwidth;
-}
 #endif
 
 //--------------------------------------------------
@@ -526,29 +478,6 @@ void ScalerVgipSetCaptureHWidth(WORD usIHwidth)
 #endif
 }
 
-//--------------------------------------------------
-// Description  : Get Capture H Delay
-// Input Value  : None
-// Output Value : H Delay
-//--------------------------------------------------
-WORD ScalerVgipGetCaptureHDelay(void)
-{
-    // IHdelay[9]: P0_1E[2]
-    // IHdelay[8]: P0_1E[0]
-    // IHwidth[7:0]: P0_1D[7:0]
-    WORD usIHSDelay = ((((WORD)ScalerGetByte(P0_1E_M1_VGIP_HV_DELAY) & _BIT2) << 7) | (((WORD)ScalerGetByte(P0_1E_M1_VGIP_HV_DELAY) & _BIT0) << 8) | ScalerGetByte(P0_1D_M1_IHS_DELAY));
-
-#if(_FORMAT_CONVERSION_SUPPORT == _ON)
-    if(ScalerFmtCnvFtoPGetStatus() == _TRUE)
-    {
-        return (usIHSDelay << 1);
-    }
-    else
-#endif
-    {
-        return usIHSDelay;
-    }
-}
 
 //--------------------------------------------------
 // Description  : Set Capture V Delay
