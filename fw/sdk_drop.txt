@@ -2,3 +2,9 @@
 # path (as in STD_FW_1P.Uv2, without .\)	reason. Originals: /mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST + git history.
 Kernel/Scaler/ScalerFunction/Code/ScalerDDomain.c	2/2 functions unlinked
 Kernel/Scaler/ScalerFunction/Code/ScalerReg.c	1/1 unlinked
+User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c	SDK menu icons; only the stripped SDK menu used them
+User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_2.c	SDK menu icons
+User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	SDK proportional font (we use the text layer)
+User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontTable.c	SDK font tables
+User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontVLC.c	SDK VLC font
+User/RTD Series/RTD2014Osd/Code/RTD2014OsdPropPutStringFontTable.c	SDK string font table

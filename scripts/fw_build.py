@@ -167,7 +167,10 @@ def select_lib():
     lib = sorted((ASM / Path(LIB_UV2).parent).rglob("*.asm"))
     globl = lambda t: set(re.findall(r"^\s+\.globl\s+(\w+)", t, re.M))
     defs = lambda t: globl(t) & set(re.findall(r"^(\w+)::?\s*$", t, re.M))     # SDCC: `_f:` + .globl
-    refs = lambda t: globl(t) - defs(t)
+    # sdcc emits no .globl for an extern only used as an operand (`mov dptr,#_g_ucColAMax`): those count as refs too
+    ops = lambda t: set(re.findall(r"\b(_[A-Za-z]\w*)\b", "\n".join(l for l in t.splitlines() if not l.lstrip().startswith(";"))))
+    labels = lambda t: set(re.findall(r"^(\w+)::?", t, re.M))
+    refs = lambda t: (globl(t) | ops(t)) - defs(t) - labels(t)
     lib_def = {}
     for p in lib:
         for d in defs(p.read_text(errors="replace")):
@@ -317,6 +320,9 @@ def main() -> int:
     wl += [f"-Wl-a{n}=0x{v:x}" for n, v in sorted(pins.items())]
     wl += [f"-Wl-aXSEG{k}=0x{hs[k][0]:x}" for k in range(1, len(hs)) if k in xsegs]
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
+    if pins and a.resid_end:    # XINIT floats to the first module that declares it, which can be after the stubs: pin it
+        xi = sum(int(m, 16) for r in rels for m in re.findall(r"^A XINIT size (\w+)", r.read_text(errors="replace"), re.M))
+        wl += [f"-Wl-aXINIT=0x{(int(a.resid_end, 0) - xi) & ~3:x}"]       # last bytes of the residual area (#209)
     cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",
            # --xram-size = all holes: sdld's -M summary sums every XDATA area (check_xdata checks each hole); libs: sdcc_link
            "--xram-loc", hex(hs[0][0]), "--xram-size", hex(sum(b - a for a, b in hs)), "--iram-size", "256",

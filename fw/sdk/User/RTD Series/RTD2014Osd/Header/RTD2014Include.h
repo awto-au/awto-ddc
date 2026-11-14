@@ -3059,17 +3059,11 @@ extern void OsdFuncBlending(BYTE ucType);
 extern void OsdFuncCloseWindow(EnumOsdWindowsType enumWinIndex);
 extern void OsdFuncDisableOsd(void);
 extern void OsdFuncEnableOsd(void);
-extern void OsdFuncChangeIconColor1Bit(BYTE ucRow, BYTE ucItem, BYTE ucWidth ,BYTE ucHeight, BYTE ucColor);
-extern void OsdFuncChangeColor1Bit(BYTE ucRow, BYTE ucCol, BYTE ucWidth ,BYTE ucHeight, BYTE ucColor, BYTE ucFontSelectFrom);
-extern void OsdFuncSet2BitIconOffset(BYTE ucOffset);
-extern void OsdFuncClearOsd(BYTE ucRow, BYTE ucCol, BYTE ucWidth ,BYTE ucHeight);
 
 #if(_SIX_COLOR_SUPPORT == _ON)
 extern void OsdFuncSixColorAdjust(void);
 #endif
 
-extern void OsdFuncColorFormatAdjust(void);
-extern void OsdFuncColorPcmAdjust(void);
 extern void OsdFuncSetOsdItemFlag(void);
 
 #if(_FREEZE_SUPPORT == _ON)
@@ -3085,53 +3079,22 @@ extern void OsdFuncSetHdmiPortVersion(EnumSourceSearchPort enumSearchPort,BYTE u
 // Extern functions from OsdDisplay.c
 //----------------------------------------------------------------------------------------
 // __RTD_OSDDISPLAY__
-extern WORD OsdDispDetOverRange(WORD usValue, WORD usMax, WORD usMin, bit bCycle);
-extern BYTE OsdDispJudgeSourceType(void);
 
 extern void OsdDispDisableOsd(void);
-extern void OsdDispSetPosition(BYTE ucType,EnumOsdPositionType enumOsdPositionType, WORD usHPos, WORD usVPos);
 
-extern void OsdDispMainMenuItemIndication(BYTE ucItem, BYTE ucAmount, BYTE ucState);
-extern void OsdDispMainMenuItemIndication2(BYTE ucItem, BYTE ucAmount, BYTE ucState);
-extern void OsdDispMainMenuKeyInfo(BYTE ucItem, BYTE ucState);
-extern void OsdDispClearSelectColor(BYTE ucUpDown);
 extern void OsdDispMainSubString(BYTE ucState);
-extern void OsdDispMainOptionIcon(BYTE ucIconPos, BYTE ucIcon, BYTE ucColor);
-extern void OsdDispMainMenuIconString(BYTE ucIconPos, WORD usIcon, BYTE ucColor);
-extern void OsdDispMainMenuIconPage(BYTE ucUpDown, BYTE ucState);
 
-extern void OsdDispMainMenuArrow(BYTE ucUpDown, BYTE ucLeftRight, BYTE ucState);
-extern void OsdDispMainMenuOptionSetting(BYTE ucItem, BYTE ucSelectState, BYTE ucOption);
-extern void OsdDispMainMenuItemSelection(BYTE ucIconPos, BYTE ucState);
-extern void OsdDispClearArrow(BYTE ucUpDown);
-extern void OsdDispMainMenuSubSelect(BYTE ucItem, WORD usOsdState, WORD usOsdStatePrevious);
-extern void OsdDispMainMenuCursor(WORD usOsdState, WORD usOsdStatePrevious, bit bInSubsidiary);
-extern void OsdDispMainMenu(void);
 
-extern void OsdDispSliderAndNumber(WORD usOsdState, WORD usValue);
-extern WORD OsdDisplayDetOverRange(WORD usValue, WORD usMax, WORD usMin, bit bCycle);
-extern void OsdDispOsdReset(void);
-extern void OsdDispClearSliderAndNumber(void);
-extern void OsdDispPanelUniformityMsgSwitch(void);
 extern void OsdDispOsdMessage(EnumOSDDispMsg enumMessage);
 #if(_VGA_SUPPORT == _ON)
 extern void OsdDispAutoConfigProc(void);
 extern void OsdDisplayAutoBalanceProc(void);
 #endif
 
-extern void OsdDispShowInformation(void);
-extern void OsdDisplaySixColorGetOneColor(BYTE ucColor);
-extern void OsdDisplaySixColorSetOneColor(BYTE ucColor);
 
 #if((_OSD_ROTATE_FUNCTION == _OSD_ROTATE_SOFTWARE) || (_OSD_ROTATE_FUNCTION == _OSD_ROTATE_HARDWARE))
 extern void OsdDispOsdRotateSwitch(void);
 #endif
-extern void OsdDispAdvanceMenuReDraw(bit bRedrawLevel);
-extern bit OsdDispAdvanceItemCheck(BYTE ucIndex);
-extern bit OsdDispAdvanceItemCountbyKeyMessage(void);
-extern BYTE OsdDispAdvanceIconGet(BYTE ucIndex);
-extern void OsdDispAdvanceItemSwitch(BYTE ucIndex);
-extern void OsdDispAdvanceItemSelect(BYTE ucIndex);
 
 //----------------------------------------------------------------------------------------
 // Extern functions from OsdFont.c

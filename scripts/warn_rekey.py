@@ -43,12 +43,13 @@ def main() -> int:
     ap.add_argument("--base", default="HEAD")
     ap.add_argument("--policy", type=Path, default=ROOT / "fw/warn_policy.tsv")
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--only", help="rows of this file glob only (rows already re-keyed for other files stay)")
     a = ap.parse_args()
     rows = a.policy.read_text().splitlines()
     old_cache, new_cache, moved, gone = {}, {}, 0, 0
     for i, row in enumerate(rows):
         c = row.split("\t")
-        if row.startswith("#") or len(c) < 4 or not c[2].isdigit():
+        if row.startswith("#") or len(c) < 4 or not c[2].isdigit() or (a.only and c[1] != a.only):
             continue
         p = resolve(c[1])
         n = int(c[2])
