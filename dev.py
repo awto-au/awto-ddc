@@ -115,7 +115,7 @@ _USE_COLOR = (
 def _stamp() -> str:
     # Local zone incl. DST (AEST +1000 / AEDT +1100). Never hardcode the
     # offset and never use UTC here: a human reads these live.
-    return datetime.now().astimezone().strftime("%H:%M:%S.%f%z")
+    return datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S.%f%z")   # ISO 8601 with the date: logs span nights
 
 
 def log(msg: str, level: str = "INFO") -> None:
