@@ -76,7 +76,7 @@
 81	wake_d1	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D1	-
 82	wake_d2	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D2	-
 83	wake_d3	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D3	-
-57	osd_timeout	int	s	osd	nv	0	120	5	30	auto	0xEA	-	Menu timeout	-	0 = never; vendor 10..60, <=10 never [vendor-ui]
+57	osd_timeout	int	s	osd	nv	0	120	5	30	auto	0xEA	-	Menu timeout	-	0 = never; any other value times out, a key restarts it (awto-ddc#132 q6) [vendor-ui]
 58	osd_hpos	int	percent	osd	nv,live	0	100	1	50	auto	-	osd_pos	Menu H position	-	[vendor-ui]
 59	osd_vpos	int	percent	osd	nv,live	0	100	1	50	auto	-	osd_pos	Menu V position	-	[vendor-ui]
 60	osd_scale	enum	none	osd	nv,live	0	1	1	1	auto	0xF4	osd_scale	Menu size	1x|2x
