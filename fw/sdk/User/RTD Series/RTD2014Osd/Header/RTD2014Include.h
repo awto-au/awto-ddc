@@ -3112,9 +3112,6 @@ extern void OsdDispSliderAndNumber(WORD usOsdState, WORD usValue);
 extern WORD OsdDisplayDetOverRange(WORD usValue, WORD usMax, WORD usMin, bit bCycle);
 extern void OsdDispOsdReset(void);
 extern void OsdDispClearSliderAndNumber(void);
-extern void OsdDispHotKeySourceMenuIcon(void);
-extern void OsdDispHotKeySourceMenu(void);
-extern void OsdDispHotKeySourceMenuSwitch(void);
 extern void OsdDispPanelUniformityMsgSwitch(void);
 extern void OsdDispOsdMessage(EnumOSDDispMsg enumMessage);
 #if(_VGA_SUPPORT == _ON)

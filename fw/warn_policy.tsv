@@ -168,22 +168,22 @@
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6320	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6342	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6366	ok	OK-HARMLESS: switch(GET_PORT_TYPE(..)): HDMI/MHL cases empty and merged with default; DP case kept
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1167	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1171	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1163	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1165	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2931	ok	OK-HARMLESS: ucTest local =0: SDK dead "uncall" block in OsdDispMainMenu
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2933	ok	OK-HARMLESS: body of dead ucTest block
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3336	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3359	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3392	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	418	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	455	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4288	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4445	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4789	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4677	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4547	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1164	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1168	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1160	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1162	ok	OK-CONFIG: _DISP_ROTATE_AMOUNT<=4 constant true: block ends with break, code after it dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2928	ok	OK-HARMLESS: ucTest local =0: SDK dead "uncall" block in OsdDispMainMenu
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	2930	ok	OK-HARMLESS: body of dead ucTest block
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3333	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3356	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	3389	ok	OK-CONFIG: local ucDone is always _FALSE here because the _MST_AUTO_SEARCH branch is compiled out; fold is correct
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	415	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	452	ok	OK-CONFIG: _HDMI_D2/_HDMI_D3 > 0x12 is a constant false for this PCB port map
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4285	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4442	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4786	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4674	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	4544	ok	OK-HARMLESS: OSD item/port switch: cases emptied by config merge with default
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1090	ok	OK-HARMLESS: else-if branch reduces to nothing because its inner ucPointer>0xFF test is constant false
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontProp.c	1094	ok	OK-HARMLESS: ucPointer is BYTE and _OSD_PAGE_INFORMATION_END is 0xFF so ucPointer>0xFF is never true (same under Keil)
 ^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdFunc.c	458	ok	OK-CONFIG: DVI port cases empty/absent for our D1-D3 port types; color-format code dead
@@ -200,8 +200,8 @@
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c	1849	ok	OK-CONFIG: same OD branch (usHWidth = DHtotal), dead with OD off
 # Reviewed 2026-11-13 (#165): rotation sites (default build)
 ^conditional flow changed by optimizer	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c	67	ok	OK-HARMLESS: ScalerMemorySetFifoCapture: both rotation branches are commented-out register writes, the if folds to nothing
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1803	ok	OK-CONFIG: Realtek SDK menu rotate icon page 1: _DISP_ROTATE_HOR_MIRROR (2) > 3 is constant false (only 0 / 180 / H / V built)
-^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1809	ok	OK-CONFIG: same, _DISP_ROTATE_VER_MIRROR (3) > 3
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1800	ok	OK-CONFIG: Realtek SDK menu rotate icon page 1: _DISP_ROTATE_HOR_MIRROR (2) > 3 is constant false (only 0 / 180 / H / V built)
+^unreachable code$	User/RTD Series/RTD2014Osd/Code/RTD2014OsdDisplay.c	1806	ok	OK-CONFIG: same, _DISP_ROTATE_VER_MIRROR (3) > 3
 # Reviewed 2026-11-05 (#26): SDK Lib sources (RL6449_Series_Lib.Uv2) - no bugs
 ^non\-pointer\ type\ cast\ to\ generic\ pointer	Kernel/Scaler/RL6449_Series_Scaler/Lib/Code/RL6449_Series_Color/RL6449_Series_ColorPCM.c	68	ok	OK-SAME: WORD from ScalerColorPCMGetTableAddress ((WORD)code ptr) cast to BYTE*: tag 0x00 in SDCC but pointer is only passed to ScalerBurstWrite which uses low 16 bits + separate bank; never dereferenced; Keil same
 ^conditional\ flow\ changed\ by\ optimizer:\ s	Kernel/Scaler/RL6449_Series_Scaler/Lib/Code/RL6449_Series_Color/RL6449_Series_ColorSixColorAdjustDell.c	140	ok	OK-HARMLESS: ucLastIndex is dead (never read, only ucNextIndex used); optimizer drops it; ucNextIndex asm correct
@@ -220,3 +220,5 @@
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	512	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonNVRamSystem.c	514	ok	OK-CONFIG: _AWTO_HDMI_HPD_TOGGLE _OFF (#60 step 3): the HDMI hot-plug toggle set-up is dead by design
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Osd/Code/RTD2014Osd.c	6206	ok	OK-HARMLESS: #120 AWTO_REALTEK_KEYINFO is empty with the Realtek menu built out; this handler is unreferenced and not linked
+^conditional flow changed by optimizer	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: rotation off -> ucWant is always upright, the 180 / upright ternary is constant	_AWTO_FRC=_OFF
+^unreachable code$	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: same line, the 180 branch of the constant ternary	_AWTO_FRC=_OFF

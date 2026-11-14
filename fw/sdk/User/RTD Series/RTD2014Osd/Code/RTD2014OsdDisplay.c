@@ -239,9 +239,6 @@ void OsdDispSliderAndNumber(WORD usOsdState, WORD usValue);
 WORD OsdDisplayDetOverRange(WORD usValue, WORD usMax, WORD usMin, bit bCycle);
 void OsdDisplaySixColorGetOneColor(BYTE ucColor);
 void OsdDisplaySixColorSetOneColor(BYTE ucColor);
-void OsdDispHotKeySourceMenuIcon(void);
-void OsdDispHotKeySourceMenu(void);
-void OsdDispHotKeySourceMenuSwitch(void);
 void OsdDispPanelUniformityMsgSwitch(void);
 void OsdDispOsdMessage(EnumOSDDispMsg enumMessage);
 

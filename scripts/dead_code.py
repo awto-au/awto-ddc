@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Compiled but not linked: functions the compiler emitted (tmp/sdcc-port/asm, before any pruning) with no CH_ area in the map.
 
-usage: dead_code.py MAP [--asm DIR] [--tsv OUT]
-  MAP: the image's map (tmp/fw/<tag>.map). DIR: the same build's full compiler output (default tmp/sdcc-port/asm).
-  Per source module: functions compiled, not linked. Unused in THIS build configuration only: check the other
-  variants (freeze / no-FRC / audio test) before deleting source.
+usage: dead_code.py MAP [VARIANT.map ...] [--asm DIR] [--tsv OUT]
+  MAP: the default image's map; DIR: that build's full compiler output (default tmp/sdcc-port/asm).
+  VARIANT.map: maps of the opt-in builds (freeze / no-FRC / audio test / meas4k / net); linked in any = used.
+  Per source module: functions compiled, not linked anywhere.
 Log: ./tmp/logs/dead_code.log
 """
 import argparse, os, re, sys, time
@@ -24,11 +24,13 @@ def say(s):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("map", type=Path)
+    ap.add_argument("map", type=Path, nargs="+", help="default build's map first; more maps (variants) count as linked too")
     ap.add_argument("--asm", type=Path, default=ROOT / "tmp/sdcc-port/asm")
     ap.add_argument("--tsv", type=Path, default=ROOT / "tmp/logs/dead_code.tsv")
     a = ap.parse_args()
-    linked = set(re.findall(r"^CH_(\w+)\s+[0-9A-F]{8}\s+[0-9A-F]{8} =", a.map.read_text(errors="replace"), re.M))
+    linked = set()
+    for mp in a.map:                                     # linked in any build (default + variants) = used
+        linked |= set(re.findall(r"^CH_(\w+)\s+[0-9A-F]{8}\s+[0-9A-F]{8} =", mp.read_text(errors="replace"), re.M))
     per = defaultdict(lambda: [0, []])                   # module -> functions compiled, names not linked
     for p in sorted(a.asm.glob("*.asm")):
         t = p.read_text(errors="replace")
@@ -41,7 +43,7 @@ def main() -> int:
     rows = sorted(per.items(), key=lambda kv: -len(kv[1][1]))
     n_all, n_dead = sum(r[0] for _, r in rows), sum(len(r[1]) for _, r in rows)
     whole = [m for m, r in rows if r[0] and len(r[1]) == r[0]]
-    say(f"{a.map.name}: {n_all} functions compiled, {n_dead} not linked ({100 * n_dead // max(n_all, 1)} %) in "
+    say(f"{' + '.join(m.name for m in a.map)}: {n_all} functions compiled, {n_dead} not linked ({100 * n_dead // max(n_all, 1)} %) in "
         f"{sum(1 for _, r in rows if r[1])} files; {len(whole)} files with nothing linked")
     for mod, r in rows[:30]:
         if r[1]:
