@@ -385,38 +385,6 @@ void RTDOsdEventMsgProc(void)
 
 
 #if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-void MenuAudioAudioSelfTest(void)
-{
-    switch(GET_KEYMESSAGE())
-    {
-        case _MENU_KEY_MESSAGE:
-            SET_OSD_STATE(_MENU_AUDIO_AUDIO_SELF_TEST_SELECT);
-            OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _INSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_ON_OFF, _SELECT, _OFF);
-            g_usBackupValue = _OFF;
-            break;
-
-        case _RIGHT_KEY_MESSAGE:
-            break;
-
-        case _LEFT_KEY_MESSAGE:
-            SET_OSD_STATE(_MENU_AUDIO_SOUND_MODE);
-            OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_CLEAR);
-            break;
-
-        case _EXIT_KEY_MESSAGE:
-            SET_OSD_STATE(_MENU_AUDIO);
-            OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdDispClearSelectColor(_DOWN);
-            OsdDispMainMenuIconPage(_UP, _ICON_PAGE_MAIN_1);
-            OsdDispMainMenuIconPage(_DOWN, _ICON_PAGE_AUDIO_0);
-            break;
-
-        default:
-            break;
-    }
-}
 #endif
 
 
@@ -1587,47 +1555,6 @@ void MenuAdvanceMBRPositionAdjust(void)
 
 
 #if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-void MenuAudioAudioSelfTestSelect(void)
-{
-    switch(GET_KEYMESSAGE())
-    {
-        case _MENU_KEY_MESSAGE:
-        case _EXIT_KEY_MESSAGE:
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-            if(ScalerAudioGetInternalAudioGenEnable(SysSourceGetInputPort()) == _ENABLE)
-                SysAudioInternalGenTestProc(_OFF);
-#endif
-            SET_OSD_STATE(_MENU_AUDIO_AUDIO_SELF_TEST);
-            OsdDispMainMenuCursor(GET_OSD_STATE(), GET_OSD_STATE_PREVIOUS(), _OUTSUBSET);
-            OsdDispMainMenuOptionSetting(_OPTION_ON_OFF, _UNSELECT, _OFF);
-            break;
-
-        case _RIGHT_KEY_MESSAGE:
-            if(g_usBackupValue == _ON)
-            {
-                g_usBackupValue = _OFF;
-                OsdDispMainMenuOptionSetting(_OPTION_ON_OFF, _SELECT, _OFF);
-                SysAudioInternalGenTestProc(_OFF);
-            }
-            break;
-
-        case _LEFT_KEY_MESSAGE:
-            if(g_usBackupValue == _OFF)
-            {
-                g_usBackupValue = _ON;
-                OsdDispMainMenuOptionSetting(_OPTION_ON_OFF, _SELECT, _ON);
-
-#if(_INTERNAL_AUDIO_TEST_SUPPORT == _ON)
-                SysAudioInternalGenTestProc(_ON);
-                SysAudioMuteProc(_OFF);
-#endif
-            }
-            break;
-
-        default:
-            break;
-    }
-}
 #endif
 
 
