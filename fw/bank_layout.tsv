@@ -922,10 +922,8 @@ fn	_ScalerOsdGetDoubleFunctionV	0	0x0050	24
 fn	_ScalerOsdGlobalDoubleBuffer	0	0x0068	28
 fn	_ScalerFRCCompareIHFandDHF	0	0x0084	1292
 fn	_ScalerFRCControl	0	0x0590	924
-fn	_ScalerFRCDisplayCtrl	0	0x092c	2608
 fn	_ScalerFRCInitial	0	0x135c	252
 fn	_ScalerFRCInputCtrl	0	0x1458	2144
-fn	_ScalerFRCOneFrameCtrl	0	0x1cb8	1716
 fn	_ScalerMDomainControlDBApply	0	0x236c	728
 fn	_ScalerMemoryCalculateLineStepAndBlockStep	0	0x2644	148
 fn	_ScalerMemoryFrameSyncSetDt	0	0x26d8	2652
@@ -961,7 +959,7 @@ fn	_ScalerMDomainSetDisplayTimingGen	0	0x622c	936
 fn	_ScalerMeasureSetInputRegionCount	0	0x65d4	32
 fn	_ScalerMemoryAddressConversion	0	0x65f4	84
 fn	_ScalerMemoryCalculateFrameLineTotalPixel	0	0x6648	628
-fn	_ScalerMemoryFineTuneIVS2DVSDelay	0	0x68bc	2036
+fn	_ScalerFRCOneFrameCtrl	0	0x68bc	2000
 fn	_ScalerMemoryFrameTracking	0	0x70b0	1652
 fn	_ScalerMemoryGetDtMaxMin	0	0x7724	1928
 fn	_ScalerMemoryGetMNRatio	0	0x7eac	64
@@ -987,6 +985,8 @@ fn	_SysModeSetUpDisplayInitialization	0	0x9a98	84
 fn	_UserCommonInterfaceGetDisplaySettingBacklightAction	0	0x9aec	12
 fn	_dp_wr16	0	0x9af8	48
 fn	_AwtoMstep	0	0x9b28	144
+fn	_ScalerFRCDisplayCtrl	0	0x9bb8	2744
+fn	_ScalerMemoryFineTuneIVS2DVSDelay	0	0xa670	2124
 const	_tPALETTE_MAIN_MENU	1	0x0000	56
 const	_tPALETTE_RTD_LOGO	1	0x0038	56
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	1	0x0070	108
@@ -1085,7 +1085,6 @@ fn	_OsdFuncCloseWindow	1	0x25f0	8
 fn	_OsdFuncDisableOsd	1	0x25f8	8
 fn	_OsdFuncSetPosition	1	0x2600	60
 fn	_OsdFuncTransparency	1	0x263c	8
-fn	_OsdPaletteLoadPigment	1	0x2644	136
 fn	_OsdPaletteSelectPalette	1	0x26cc	36
 fn	_OsdWindowDrawing	1	0x26f0	116
 fn	_RTDFactoryOsdChangColorTemp	1	0x2764	40
@@ -1102,6 +1101,7 @@ fn	_RTDFactoryResetPanelTimeLeft	1	0x2c50	16
 fn	_ScalerDpEdidSwitch	1	0x2c60	16
 fn	_UserCommonInterfaceDPSwitchEdid	1	0x2c70	20
 fn	_nv_read_at	1	0x2c84	120
+fn	_mn_num	1	0x2cfc	272
 fn	_osd_font_glyph	1	0x2e10	44
 fn	_bars	1	0x2e3c	240
 fn	_fill_blank	1	0x2f2c	32
@@ -1134,7 +1134,7 @@ fn	_mn_go	1	0x45f4	32
 fn	_mn_key	1	0x4614	304
 fn	_mn_move	1	0x4744	184
 fn	_mn_n_entries	1	0x47fc	60
-fn	_mn_num	1	0x4838	232
+fn	_OsdPaletteLoadPigment	1	0x4838	176
 fn	_mn_put	1	0x4920	84
 fn	_mn_scroll	1	0x4974	80
 fn	_mn_sync	1	0x49c4	308
@@ -1412,7 +1412,6 @@ fn	_ScalerDpRx1DecodeErrorCountReset	3	0x0be0	20
 fn	_ScalerDpRx1FakeLTProtect	3	0x0bf4	64
 fn	_ScalerDpRx1HDCPUnplugReset	3	0x0c34	32
 fn	_ScalerDpRx1HpdIrqAssert	3	0x0c54	64
-fn	_ScalerDpRx1InterlaceCheck	3	0x0c94	2820
 fn	_ScalerDpRx1LinkRateCheck	3	0x1798	172
 fn	_ScalerDpRx1MSACheck	3	0x1844	616
 fn	_ScalerDpRx1SetHotPlugEvent	3	0x1aac	48
@@ -1589,7 +1588,6 @@ fn	_AwtoPsWakeArm	3	0x8e68	176
 fn	_AwtoPsWakeCables	3	0x8f18	52
 fn	_AwtoPsWakeFire	3	0x8f4c	372
 fn	_AwtoPsWakePoll	3	0x90c0	576
-fn	_AwtoPsWakeState	3	0x9300	212
 fn	_AwtoSyncBegin	3	0x93d4	332
 fn	_AwtoSyncDetect	3	0x9520	568
 fn	_AwtoSyncFreq	3	0x9758	120
@@ -1597,6 +1595,8 @@ fn	_AwtoSyncPoll	3	0x97d0	200
 fn	_AwtoSyncPush	3	0x9898	552
 fn	_AwtoTmdsIdleKhz	3	0x9ac0	208
 fn	_ScalerTimerWDCancelTimerEvent	3	0x9b90	44
+fn	_ScalerDpRx1InterlaceCheck	3	0x9bbc	2920
+fn	_AwtoPsWakeState	3	0xa724	252
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -1821,7 +1821,7 @@ fn	_RTDFlashLoadColorSetting	5	0x1b1c	108
 fn	_RTDFlashLoadOSDData	5	0x1b88	216
 fn	_RTDFlashLoadPanelUsedTimeData	5	0x1c60	68
 fn	_RTDFlashLoadSixColorData	5	0x1ca4	88
-fn	_RTDFlashMoveData	5	0x1cfc	1384
+fn	_ScalerFlashReadFlashIDCode	5	0x1cfc	612
 fn	_RTDFlashRestoreBriCon	5	0x2264	96
 fn	_RTDFlashRestoreColorSetting	5	0x22c4	96
 fn	_RTDFlashRestoreOSDData	5	0x2324	84
@@ -1917,7 +1917,7 @@ fn	_ScalerFlashRead	5	0x61d0	128
 fn	_ScalerFlashWrite	5	0x6250	756
 fn	_ScalerFlashDetectFlashType	5	0x6544	616
 fn	_ScalerFlashErasePage	5	0x67ac	140
-fn	_ScalerFlashReadFlashIDCode	5	0x6838	584
+fn	_nv_slot_check	5	0x6838	448
 fn	_ScalerFlashReadSR	5	0x6a80	28
 fn	_ScalerFlashSet2ByteWRSR	5	0x6a9c	68
 fn	_ScalerFlashSet2ByteWRSRonebyone	5	0x6ae0	100
@@ -1942,7 +1942,6 @@ fn	_nv_hdr_seq	5	0x945c	24
 fn	_nv_read_hdr	5	0x9474	92
 fn	_nv_scan	5	0x94d0	452
 fn	_nv_slot_a	5	0x9694	28
-fn	_nv_slot_check	5	0x96b0	416
 fn	_set_aux_buf	5	0x9850	12
 fn	_AwtoSourceIdle	5	0x985c	12
 fn	_AwtoFl	5	0x9868	88
@@ -1953,6 +1952,7 @@ fn	_set_ap_colour_temp	5	0x9ab4	56
 fn	_set_ap_factory_menu	5	0x9aec	36
 fn	_AwtoNvEv	5	0x9b10	288
 fn	_AwtoWdtLibPoke	5	0x9c30	108
+fn	_RTDFlashMoveData	5	0x9c9c	1456
 const	_tSD_H_COEF_128_TAPS	6	0x0000	136
 const	_tSD_SU_COEF_128_TAPS	6	0x0088	136
 const	_tSD_V_COEF_64_TAPS	6	0x0110	72
@@ -2625,12 +2625,12 @@ fn	_AwtoTmdsHpdTick	9	0x9300	68
 fn	_AwtoTmdsStuck	9	0x9344	104
 fn	_AwtoSyncMark	9	0x93ac	48
 fn	_AwtoSyncT2Start	9	0x93dc	272
-fn	_AwtoT0EvClock	9	0x94ec	180
 fn	_AwtoT0EvFire	9	0x95a0	64
 fn	_AwtoT0EvIsr	9	0x95e0	236
 fn	_AwtoT0EvTest	9	0x96cc	1112
 fn	_ScalerTimerWDInitial	9	0x9b24	100
 fn	_AwtoWdtProbe	9	0x9b88	156
+fn	_AwtoT0EvClock	9	0x9c24	216
 const	_font_blob_spleen	10	0x0000	1300
 const	_font_blob_spleen5	10	0x0514	916
 const	_font_blob_spleen6	10	0x08a8	1000
@@ -3116,7 +3116,6 @@ fn	_key_hold	10	0x83ec	52
 fn	_AwtoKeyId	10	0x8420	56
 fn	_AwtoKeyNoOsd	10	0x8458	28
 fn	_AwtoKeyMsgNote	10	0x8474	68
-fn	_AwtoSlowDue	10	0x84b8	272
 fn	_AwtoNvCommitSel	10	0x85c8	48
 fn	_AwtoNvTestWrite	10	0x85f8	40
 fn	_AwtoTo255	10	0x8620	24
@@ -3151,4 +3150,5 @@ fn	_AwtoOsdOrient	10	0x8d24	104
 fn	_AwtoBootReason	10	0x8d8c	52
 fn	_AwtoBootValue	10	0x8dc0	84
 fn	_AwtoWdtShow	10	0x8e14	144
-fn	_font_blob	10	0x8ea4	276
+fn	_font_blob	10	0x8ea4	296
+fn	_AwtoSlowDue	10	0x8fcc	296
