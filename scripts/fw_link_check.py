@@ -21,6 +21,8 @@ Finding kinds (key = kind|src|detail, address-free so two images can be diffed):
                          tables are not all in the reader's bank)
   const_ptr_gptr_xbank   asm (post-bank pass, --asm): address of a banked const passed to a function that reads generic pointers
                          (__gptrget) and sits in another bank: it reads its OWN bank at that address (#46: boot logo tile map)
+  code_const_xbank      linked .rst symbol references reach a direct MOVC reader in an incompatible bank (#149, #205)
+  code_const_source     --require-rst requested but linked listings are absent; ROM pointer checks cannot run
   stack_arg_via_stub     function reads stack-passed args via SP/_bp but is reached through a bank stub (+4 B between args and
                          callee, #11): must be common or share its callers' bank
   isr_reach_stub         stub reachable from an ISR, and the ISR register / bank-switch proof fails
@@ -85,7 +87,9 @@ class Rst:
 
     def __init__(self, asm_dir):
         self.areas, self.by_name, self.lit = {}, defaultdict(set), set()
+        self.names = {}                                      # full CH symbol (map areas/names may be truncated)
         self.syms_at, self.sig = {}, {}                       # abs insn addr -> symbols in its # operand; fn -> C params
+        self.data_syms_at = {}                               # symbolic ROM pointer table entries (.dw / split .db)
         for f in sorted(Path(asm_dir).glob("*.rst")):
             cur = None
             for l in f.read_text(errors="replace").splitlines():
@@ -110,6 +114,10 @@ class Rst:
                     continue
                 if src.startswith("."):
                     cur[3] |= bool(DATA_DIR.match(src))
+                    if a is not None and re.match(r"^\.(db|byte|dw|word)\b", src, re.I):
+                        syms = set(re.findall(r"(?<![\w$])(_\w+)", src))
+                        if syms:
+                            self.data_syms_at[a] = syms
                     continue
                 cur[2] = True
                 if a is not None and LIT_IMM.search(src):
@@ -123,6 +131,7 @@ class Rst:
     def _close(self, cur):
         if cur and cur[0].startswith("CH_") and cur[1] is not None and (cur[2] or cur[3]):
             self.areas[(cur[0][:32], cur[1])] = "fn" if cur[2] else "const"
+            self.names[(cur[0][:32], cur[1])] = cur[0][2:]
             self.by_name[cur[0][:32]].add(cur[1])
 
 
@@ -147,7 +156,9 @@ class Image:
             if an.startswith("ST"):
                 kind, name = "stub", (a["syms"][0][0] if a["syms"] else an)
             elif an.startswith("CH"):
-                name = a["syms"][0][0] if a["syms"] else an
+                name = a["syms"][0][0] if a["syms"] else an[2:]
+                if self.rst:
+                    name = self.rst.names.get((an[:32], a['addr']), name)
                 lk = self.kinds.get(name[:32]) or self.kinds.get(an[2:34]) or self.kinds.get(an[2:])
                 kind = lk
                 if self.rst:
@@ -182,10 +193,11 @@ class Image:
             for k in self.chunks:
                 if k["kind"] == "const":
                     self._cbn[k["name"][:32]].append(k)
-            self._sa = sorted(self.rst.syms_at)
+            self._const_syms = {**self.rst.syms_at, **self.rst.data_syms_at}
+            self._sa = sorted(self._const_syms)
         out = []
         for a in self._sa[bisect.bisect_left(self._sa, c["addr"]):bisect.bisect_left(self._sa, c["addr"] + c["size"])]:
-            for s in self.rst.syms_at[a]:
+            for s in self._const_syms[a]:
                 out += self._cbn.get(s[:32], [])
         return out
 
@@ -195,6 +207,16 @@ class Image:
             return None
         s = self.rst.sig.get(c["area"][:32])
         return None if s is None else "*" in s
+
+    def code_ptr_params(self, c):
+        """Pointer params that may carry ROM addresses; explicitly RAM-qualified pointers cannot."""
+        if not self.rst or not c['area'].startswith('CH'):
+            return None
+        s = self.rst.sig.get(c['area'][:32])
+        if s is None:
+            return None
+        return any('*' in p and not re.search(r'\b__(?:xdata|data|idata|pdata)\b[^*]*\*', p)
+                   for p in s.split(','))
 
     def const_starts(self):
         if not hasattr(self, "_cst"):
@@ -741,6 +763,82 @@ def equiv(good, bad):
     return F
 
 
+def code_const_reads(im):
+    """Check symbolic const references in the *linked* image, including __code pointer parameters.
+
+    MOVC uses the active bank, never the bank encoded in a symbol's map address. Unlike the
+    numeric DPTR heuristics, symbol identity survives overlapping bank offsets, split address
+    loads and spills. For a pointer-taking MOVC reader, conservatively include its callers'
+    const references, walking through pointer-taking wrappers to a fixed point. Common code
+    inherits its caller's bank; a banked reader keeps its own bank across common callers.
+
+    This is a placement constraint, not an alias proof: all consts referenced by a pointer
+    supplier must be readable in the consumer's context. DMA-only consumers have no MOVC
+    and impose no constraint. Unnamed/runtime pointers and global pointer stores are outside
+    this check (as are MOVC @A+PC switch tables, which do not read a passed pointer).
+    """
+    if not im.rst:
+        return []
+    fns = {c['addr']: c for c in im.chunks if c['kind'] == 'fn'}
+    callers, readers = defaultdict(set), []
+    refs = {a: im.sym_consts(c) for a, c in fns.items()}
+    for a, c in fns.items():
+        movc = False
+        for it in sweep(im.code(c), a & 0xFFFF):
+            if it[0] != 'i':
+                continue
+            x = it[1]
+            movc |= x.text == 'MOVC A,@A+DPTR'
+            if x.target is None or not x.text.startswith(('LCALL', 'ACALL', 'LJMP', 'AJMP')):
+                continue
+            tc = im.find(c['reg'] if c['reg'] != 'C' else 0, x.target)
+            if tc and tc['kind'] == 'stub':
+                t = stub_target(im.code(tc))
+                tc = im.find(t[1], t[0]) if t else None
+            if tc and tc['addr'] in fns and tc is not c:
+                callers[tc['addr']].add(a)
+        # Residual CSEG is a library aggregate, not a single function/signature. Its
+        # generic-pointer helpers are covered by the existing gptr checks.
+        if movc and c['area'].startswith('CH'):
+            readers.append(c)
+    out, emitted = [], set()
+    for reader in readers:
+        todo = [(reader['addr'], reader['reg'])]
+        seen = set()
+        while todo:
+            a, bank = todo.pop()
+            if (a, bank) in seen:
+                continue
+            seen.add((a, bank))
+            c = fns[a]
+            # Pointer-table targets must be readable too. Follow symbolic entries,
+            # never guess targets from coincident 16-bit values in another bank.
+            pending, const_seen = list(refs[a]), set()
+            while pending:
+                k = pending.pop()
+                if k['addr'] in const_seen:
+                    continue
+                const_seen.add(k['addr'])
+                pending += im.sym_consts(k)
+                if k['reg'] == 'C' or k['reg'] == bank:
+                    continue
+                key_ = (reader['addr'], a, k['addr'], bank)
+                if key_ in emitted:
+                    continue
+                emitted.add(key_)
+                out.append(dict(kind='code_const_xbank', src=reader['name'], addr=reader['addr'],
+                                det=f"MOVC in region {bank}: {c['name']} supplies {k['name']} "
+                                    f"(bank {k['reg']}); place the constant and reader together or in common"))
+            # No pointer parameter: its callers cannot supply this reader's pointer.
+            # An unknown signature is deliberately not evidence of safety.
+            if im.code_ptr_params(c) is False:
+                continue
+            for ca in callers[a]:
+                cr = fns[ca]['reg']
+                todo.append((ca, cr if bank == 'C' else bank))
+    return out
+
+
 def asm_const_ptr(im, asm_dir):
     """const_ptr_gptr_xbank from the post-bank asm: `mov a|dptr|rN,#_tK` (K a banked const) followed within 30 lines by the call that
     consumes it; the callee reads generic pointers (calls __gptrget) and lives in another bank than K (and is not common)."""
@@ -854,7 +952,7 @@ def xdata_ranges(areas):
     return [(a["addr"], a["addr"] + a["size"]) for a in areas.values() if "XDATA" in a["attr"] and a["size"]]
 
 
-def run(bin_path, map_path, layout, common, log=print, asm_dir=None):
+def run(bin_path, map_path, layout, common, log=print, asm_dir=None, require_rst=False):
     im = Image(bin_path, map_path, layout, common, asm_dir)
     xd = xdata_ranges(im.areas)
     log(f"{bin_path}: {len(im.img)} B, {len(im.chunks)} chunks "
@@ -863,6 +961,10 @@ def run(bin_path, map_path, layout, common, log=print, asm_dir=None):
         f"xdata {[(hex(a), hex(b)) for a, b in xd]}")
     proven = []
     F = check(im, xd, d8051.load_regnames(), proven)
+    F += code_const_reads(im)
+    if require_rst and not im.rst:
+        F.append(dict(kind='code_const_source', src='image', addr=0,
+                      det='linked .rst listings required for ROM constant validation; rebuild or supply --asm'))
     if im.unknown:
         F.append(dict(kind="kind_source", src="image", addr=0,
                       det=f"{len(im.unknown)} CH areas have no kind from --asm .rst or --layout, not checked (e.g. {im.unknown[0]})"))
@@ -894,13 +996,14 @@ def main():
     ap.add_argument("--asm", default=str(REPO / "tmp/sdcc-port/asm_bank"),
                     help="post-bank asm dir of THIS image's build (const_ptr_gptr_xbank; skipped when absent)")
     ap.add_argument("--save", default="", help="write finding keys here")
+    ap.add_argument("--require-rst", action="store_true", help="fail if linked listings needed for ROM pointer checks are absent")
     a = ap.parse_args()
     (REPO / "tmp/logs").mkdir(parents=True, exist_ok=True)
     lf = (REPO / "tmp/logs/fw_link_check.log").open("a")
 
     def log(s):
         print(s); lf.write(s + "\n"); lf.flush()
-    im, F = run(a.bin, a.map, a.layout, a.common, log, a.asm)
+    im, F = run(a.bin, a.map, a.layout, a.common, log, a.asm, a.require_rst)
     if a.equiv_bin:
         gim = Image(a.equiv_bin, a.equiv_map, a.equiv_layout, a.common)
         F += equiv(gim, im)

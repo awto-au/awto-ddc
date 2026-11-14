@@ -90,6 +90,7 @@ def skips(b: Path, m: Path, tree) -> dict:
 def gates(b: Path, m: Path, ref, tree):
     s = str(ROOT / "scripts")
     link = [*PY, f"{s}/fw_link_check.py", "--bin", b, "--map", m,
+            "--require-rst",
             "--save", ROOT / "tmp/logs/fw_gates" / f"{b.stem}.link-findings.txt"]
     if tree:
         link += ["--layout", Path(tree) / "fw/bank_layout.tsv", "--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
