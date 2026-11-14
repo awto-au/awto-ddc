@@ -158,9 +158,9 @@
 //--------------------------------------------------
 #define _PWM_DUT_RESOLUTION                     _PWM_8BIT
 
-// Backlight PWM = PWM4 on pin 195 (P9.1, live pin-share mode 3), docs/monitors/gpio-roles.md; polarity untested
+// Backlight PWM = PWM4 on pin 195 (P9.1, live pin-share mode 3), docs/monitors/gpio-roles.md; active low: higher duty = dimmer (seen on unit 3, Dan 2026-11-14)
 #define _BACKLIGHT_PWM                          _PWM4
-#define _BACKLIGHT_PWM_INVERSE                  _OFF
+#define _BACKLIGHT_PWM_INVERSE                  _ON
 
 #define _PWM0_EN                                _OFF
 #define _PWM1_EN                                _OFF

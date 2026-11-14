@@ -48,3 +48,4 @@ undef	fw/sdk/Panel/RTDColorDefaultTable/ColorTableInclude.h	_USER_ADJUST_GAMMA_F
 undef	fw/sdk/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
 undef	fw/sdk/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_2.c	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
 value	fw/sdk/Kernel/Common/Pcb_Config_Check.h	PCB_EMBEDDED_LDO_DETECT	RL6369-only check, outer #if false for RL6449: never evaluated
+family	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c	_BACKLIGHT_PWM_INVERSE == _ENABLE	_ON vs _ENABLE: both 1 by design; factory backlight-sensor blocks, not compiled here
