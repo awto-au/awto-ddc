@@ -12,7 +12,7 @@ usage: fw_compile.py compile <uv2> [--target T] [--jobs N] [--only SUBSTR] [--as
 - Output: tmp/sdcc-port/{obj,asm,logs}, report.json. Log: tmp/logs/fw_compile.log
 - Called by fw_build.py; edits to the SDK sources go in fw/sdk, never here.
 """
-import fnmatch, hashlib, json, os, re, subprocess, sys, time
+import fnmatch, hashlib, json, os, re, subprocess, sys, threading, time
 import isostamp  # noqa: E402
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -81,6 +81,16 @@ import fw_dirs as FD  # noqa: E402
 
 
 # ---------------- uVision2 project ----------------
+SDK_DROP = ROOT / "fw/sdk_drop.txt"
+
+
+def sdk_drop() -> set[str]:
+    """SDK sources taken out of the build (#209: nothing linked in any variant); originals in the upstream SDK mirror."""
+    if not SDK_DROP.is_file():
+        return set()
+    return {l.split("\t")[0].strip() for l in SDK_DROP.read_text().splitlines() if l.strip() and not l.startswith("#")}
+
+
 def parse_uv2(uv2: Path, target=None):
     """C files + C51DEF + INCC5 + memory model of ONE target. Multi-target projects: groups/files whose
     `Options T,G,F` block has IncBld=0 are excluded for target T (only that target is ever built)."""
@@ -105,11 +115,13 @@ def parse_uv2(uv2: Path, target=None):
             if b and re.search(r"^\s*IncBld=0", b, re.M):
                 return True
         return False
+    drop = sdk_drop()
     files, nth = [], Counter()
     for m in re.finditer(r"^File (\d+),(\d+),<([^>]+)>", txt, re.M):
         g = int(m.group(1)); nth[g] += 1
-        if m.group(2) == "1" and not excluded(g, nth[g]):
-            files.append(m.group(3).replace("\\", "/"))
+        f = m.group(3).replace("\\", "/")
+        if m.group(2) == "1" and not excluded(g, nth[g]) and f.removeprefix("./") not in drop:
+            files.append(f)
     defs = re.search(r"C51DEF \((.*)\)", tb)
     incs = re.search(r"INCC5 \((.*)\)", tb)
     defines = [d.replace(" ", "") for d in defs.group(1).split(",")] if defs and defs.group(1) else []
@@ -201,6 +213,7 @@ def _run_stage(cmd, **kw):
 
 
 _CCACHE_ENV = None
+_CCACHE_LOCK = threading.Lock()
 
 
 def ccache_env() -> dict:
@@ -209,17 +222,19 @@ def ccache_env() -> dict:
     parent / tmp/ccache), size-capped. Absolute paths kept (no CCACHE_BASEDIR): .asm source comments and warning paths
     stay as the parsers expect; worktrees therefore don't share entries."""
     global _CCACHE_ENV
-    if _CCACHE_ENV is None:
-        h = hashlib.sha256()
-        for tool in ("sdcc", "sdcpp", "sdas8051"):
-            h.update((Path(SDCC).resolve().parent / tool).read_bytes())
-        r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True)
-        top = Path(r.stdout.strip()).parent if r.returncode == 0 else ROOT
-        _CCACHE_ENV = dict(os.environ, CCACHE_DIR=os.environ.get("CCACHE_DIR", str(top / "tmp/ccache")),
-                           CCACHE_COMPILERTYPE="other", CCACHE_COMPILERCHECK=f"string:{h.hexdigest()}",
-                           CCACHE_MAXSIZE="20G", CCACHE_NOHASHDIR="1")
-        if FAR_LOCALS.is_file():                              # the list changes codegen: in the key
-            _CCACHE_ENV["CCACHE_EXTRAFILES"] = str(FAR_LOCALS)
+    with _CCACHE_LOCK:                                        # compile threads: build once, publish only when complete
+        if _CCACHE_ENV is None:
+            h = hashlib.sha256()
+            for tool in ("sdcc", "sdcpp", "sdas8051"):
+                h.update((Path(SDCC).resolve().parent / tool).read_bytes())
+            r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True)
+            top = Path(r.stdout.strip()).parent if r.returncode == 0 else ROOT
+            env = dict(os.environ, CCACHE_DIR=os.environ.get("CCACHE_DIR", str(top / "tmp/ccache")),
+                       CCACHE_COMPILERTYPE="other", CCACHE_COMPILERCHECK=f"string:{h.hexdigest()}",
+                       CCACHE_MAXSIZE="20G", CCACHE_NOHASHDIR="1")
+            if FAR_LOCALS.is_file():                          # the list changes codegen: in the key
+                env["CCACHE_EXTRAFILES"] = str(FAR_LOCALS)
+            _CCACHE_ENV = env
     return _CCACHE_ENV
 
 

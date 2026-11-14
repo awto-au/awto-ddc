@@ -1,0 +1,4 @@
+# SDK sources out of the build (#209): no function linked in the default build or any variant (scripts/dead_code.py).
+# path (as in STD_FW_1P.Uv2, without .\)	reason. Originals: /mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST + git history.
+Kernel/Scaler/ScalerFunction/Code/ScalerDDomain.c	2/2 functions unlinked
+Kernel/Scaler/ScalerFunction/Code/ScalerReg.c	1/1 unlinked
