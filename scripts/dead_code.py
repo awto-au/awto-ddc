@@ -31,7 +31,7 @@ def main() -> int:
     a = ap.parse_args()
     linked = set()
     for mp in a.map:                                     # linked in any build (default + variants) = used
-        linked |= set(re.findall(r"^CH_(\w+)\s+[0-9A-F]{8}\s+[0-9A-F]{8} =", mp.read_text(errors="replace"), re.M))
+        linked |= set(re.findall(r"^(CH_\w+)\s+[0-9A-F]{8}\s+[0-9A-F]{8} =", mp.read_text(errors="replace"), re.M))
     per = defaultdict(lambda: [0, []])                   # module -> functions compiled, names not linked
     for p in sorted(a.asm.glob("*.asm")):
         t = p.read_text(errors="replace")
@@ -39,7 +39,7 @@ def main() -> int:
         mod = src.group(1).split("/sdcc-port/src/")[-1].split("/awto-ddc/")[-1] if src else p.stem
         for f in re.findall(r"^;\s+function\s+(\w+)", t, re.M):
             per[mod][0] += 1
-            if f not in linked:
+            if ("CH_" + f)[:32] not in linked:            # the map cuts area names to 32 characters
                 per[mod][1].append(f)
     rows = sorted(per.items(), key=lambda kv: -len(kv[1][1]))
     n_all, n_dead = sum(r[0] for _, r in rows), sum(len(r[1]) for _, r in rows)
