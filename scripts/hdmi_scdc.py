@@ -8,6 +8,7 @@ usage: hdmi_scdc.py <bus>
 Log: ./tmp/logs/hdmi_scdc.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
 import argparse, os, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -51,7 +52,7 @@ def main() -> int:
                 f"{(st >> 1) & 1}{(st >> 2) & 1}{(st >> 3) & 1})  errors {cnt}")
     finally:
         fd.close()
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}"
+    line = f"{isostamp.now()} {line}"
     print(line)
     with open(logd / "hdmi_scdc.log", "a") as f:
         f.write(line + "\n")

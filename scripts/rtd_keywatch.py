@@ -15,6 +15,7 @@ key masks: RL6449_Project.h AWTO_KM_<name>.
 Log: ./tmp/logs/rtd_keywatch.log
 """
 import os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -87,7 +88,7 @@ def log_mode(a, root, io=None):
     lf = (root / "tmp" / "logs" / "rtd_keywatch.log").open("a", buffering=1)
 
     def say(s):
-        line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+        line = isostamp.now() + " " + s
         print(line, flush=True)
         lf.write(line + "\n")
 

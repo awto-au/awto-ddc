@@ -9,6 +9,7 @@ Exit 1 if a row is unused (without --prune; only reported when K2S_SDCC_EXTRA is
   does not count it unused (#165). Log: tmp/logs/warn_policy_check.log
 """
 import argparse, fnmatch, os, re, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -28,7 +29,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/warn_policy_check.log").open("a")
 
     def log(s):
-        print(s); lf.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+        print(s); lf.write(f"{isostamp.now()} {s}\n")
     src = str(ROOT / "tmp/sdcc-port/src")
     sites = set()
     for w in a.warnings:

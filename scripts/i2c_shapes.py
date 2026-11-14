@@ -5,6 +5,7 @@ usage: i2c_shapes.py <bus>   (a sane result starts 41 44 02 'AD' v2; 6e 6e.. = s
 Reads: the staging writes are 0x01/0x3A/0x3C read commands only. Log: ./tmp/logs/i2c_shapes.log
 """
 import sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -25,7 +26,7 @@ def main() -> int:
             r = " ".join(f"{x:02x}" for x in f())
         except OSError as e:
             r = f"ERR {e}"
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} bus {b.bus} ({i2cbus.adapter_name(b.bus)}) {name}: {r}"
+        line = f"{isostamp.now()} bus {b.bus} ({i2cbus.adapter_name(b.bus)}) {name}: {r}"
         print(line); log.write(line + "\n")
 
     def stage():

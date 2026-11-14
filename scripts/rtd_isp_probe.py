@@ -11,6 +11,7 @@ Protocol + tags: docs/reversing/realtek-rtd/README.md
 Log: ./tmp/logs/rtd_isp_probe.log
 """
 import os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,7 +34,7 @@ LOG = None
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line)
     LOG.write(line + "\n"); LOG.flush()
 

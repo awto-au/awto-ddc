@@ -7,6 +7,7 @@ usage: freeze_dump.py --unit N --bus B --serial S [--pages 00,01,...|vendor]
   Out: tmp/regs/<serial>-<ts>-4k-frozen.json (same layout as rtd_reg_dump.py; unread regs = -1). Log: tmp/logs/freeze_dump.log
 """
 import argparse, json, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -28,7 +29,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/freeze_dump.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); lf.write(line + "\n"); lf.flush()
 
     pages = sorted(json.load(VENDOR.open())["pages"]) if a.pages == "vendor" else a.pages.upper().split(",")
@@ -62,7 +63,7 @@ def main() -> int:
     d.write(DBG, 0x80, bytes([0x00])); log("resumed main")
     ts = time.strftime("%Y%m%d-%H%M%S")
     fn = ROOT / f"tmp/regs/{a.serial}-{ts}-4k-frozen.json"
-    fn.write_text(json.dumps({"serial": a.serial, "bus": a.bus, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+    fn.write_text(json.dumps({"serial": a.serial, "bus": a.bus, "time": isostamp.now(),
                               "note": "frozen failed 4K60 pass, read via 0x35", "pages": out, "ports": {}}))
     log(f"wrote {fn}")
     proc.wait()

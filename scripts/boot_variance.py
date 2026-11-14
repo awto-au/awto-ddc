@@ -8,6 +8,7 @@ usage: boot_variance.py TAG [TAG ...] [--runs 3] [--unit 2]      (TAG = tmp/fw/A
 Log: tmp/logs/boot_variance.log
 """
 import argparse, re, statistics, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +21,7 @@ POLL_S = 0.5                              # ring poll: one read ~0.1 s; boot is 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

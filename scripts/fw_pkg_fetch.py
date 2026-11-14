@@ -14,6 +14,7 @@ Log: tmp/logs/fw_pkg_fetch.log
 Timeouts: connect/read 30 s per socket op (stall guard; downloads are < 50 MB on a LAN-class link).
 """
 import hashlib, json, os, shutil, subprocess, sys, time, urllib.request
+import isostamp  # noqa: E402
 from pathlib import Path
 
 PW_REPO = "/mnt/2tb/git/awto-play"
@@ -54,7 +55,7 @@ def main():
     log = (root / "tmp/logs/fw_pkg_fetch.log").open("a")
 
     def out(s):
-        s = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        s = f"{isostamp.now()} {s}"
         print(s, flush=True); log.write(s + "\n"); log.flush()
 
     rows = [l.rstrip("\n").split("\t") for l in lst.read_text().splitlines()[1:] if l.strip()]
@@ -97,7 +98,7 @@ def main():
             dest.rename(dest.with_suffix(dest.suffix + ".bad")); continue
         mpath = vroot / vendor / "sources" / "manifest.json"
         man = json.loads(mpath.read_text()) if mpath.exists() else []
-        man.append(dict(package=pkg, file=name, url=url, fetched=time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        man.append(dict(package=pkg, file=name, url=url, fetched=isostamp.now(),
                         size=n, sha256=h.hexdigest(), magic=head[:4].hex(), notes=notes))
         mpath.write_text(json.dumps(man, indent=1))
         rpath = vroot / vendor / "README.md"

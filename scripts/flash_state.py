@@ -9,6 +9,7 @@ Writers: after every verified sector (saved every SAVE_EVERY and at exit), after
 Hardware CRC8 (FF75, poly 0x07 init 0): docs/flash-crc.md.
 """
 import hashlib, json, os, random, subprocess, time
+import isostamp  # noqa: E402
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -47,7 +48,7 @@ def crc8(data: bytes, crc: int = 0) -> int:
 
 
 def now_iso() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    return isostamp.now()
 
 
 def git_commit(repo: Path) -> str:

@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,7 +43,7 @@ RES_NAMES = {3: "ACTIVE", 4: "NOSUPPORT", 5: "NOSIGNAL", 6: "POWERSAVE"}
 
 
 def say(lf, s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     lf.write(line + "\n")
     lf.flush()

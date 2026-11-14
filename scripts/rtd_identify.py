@@ -10,6 +10,7 @@ Reuses rtd_isp_probe.Isp / rtd_flash_sector.Rtd for the ISP engine. Flash DB: re
 Log: ./tmp/logs/rtd_identify.log
 """
 import argparse, glob, json, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -24,7 +25,7 @@ EDID_TIMEOUT = 10     # edid-decode on 128-256 B: instant; expiry -> field error
 
 
 def log(s):   # file only: stdout is reserved for the report / JSON
-    P.LOG.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n"); P.LOG.flush()
+    P.LOG.write(f"{isostamp.now()} {s}\n"); P.LOG.flush()
 
 
 def run(cmd, timeout, data=None):

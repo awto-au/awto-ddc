@@ -8,6 +8,7 @@ usage: sdcc_size_probe.py [--n 40] [--jobs 16] [--sdcc BIN] VARIANT=FLAGS ...
 Log: tmp/logs/sdcc_size_probe.log; objects in tmp/sizeprobe/<variant>/
 """
 import argparse, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -35,7 +36,7 @@ def main() -> int:
     logf = (K.ROOT / "tmp/logs/sdcc_size_probe.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line); logf.write(line + "\n"); logf.flush()
     uv2 = K.SRC / UV2
     files, defines, incs, model = K.parse_uv2(uv2, TARGET)

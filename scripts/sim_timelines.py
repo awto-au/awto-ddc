@@ -9,6 +9,7 @@ usage: sim_timelines.py BIN_A BIN_B [--tol-ms 1] [--sims boot_sim wake_sim ...] 
 Log: tmp/logs/sim_timelines.log
 """
 import argparse, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +32,7 @@ PIN_EDGE = re.compile(r"^backlight (on|off)$|backlight pin (on|off)|backlight on
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

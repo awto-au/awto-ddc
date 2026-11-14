@@ -17,6 +17,7 @@ usage: cleanroom_lint.py [--tree /mnt/2tb/git/awto-rtdfw] [--rebuild] [--where] 
 from __future__ import annotations
 
 import argparse, hashlib, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -76,7 +77,7 @@ _H = {}
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, file=sys.stderr)
     if LOG:
         LOG.write(line + "\n"); LOG.flush()

@@ -8,6 +8,7 @@ usage: power_cycle.py --relay NAME [--on | --off] [--off-s S]
 Log: ./tmp/logs/power_cycle.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
 import argparse, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -40,7 +41,7 @@ def main() -> int:
     f = (root / "tmp/logs/power_cycle.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); f.write(line + "\n"); f.flush()
     try:
         if not a.on:

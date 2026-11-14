@@ -11,6 +11,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -27,7 +28,7 @@ def main() -> int:
     lf = (root / "tmp/logs/warn_shift.log").open("a")
 
     def say(s):
-        print(s); lf.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+        print(s); lf.write(f"{isostamp.now()} {s}\n")
 
     warns = defaultdict(list)                           # file -> [(line, text)]
     for ln in (a.tree / "tmp/sdcc-port/warnings.txt").read_text(errors="replace").splitlines():

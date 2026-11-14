@@ -18,6 +18,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -205,7 +206,7 @@ def main() -> int:
     rows.sort(key=lambda r: (order[r[0]], r[1]))
     lines = ["class\tsite\tfunction\tloop\theader\treaches"] + ["\t".join(r) for r in rows]
     with LOG.open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} poke_loops {a.tree}: helpers {sorted(helpers)}\n")
+        f.write(f"{isostamp.now()} poke_loops {a.tree}: helpers {sorted(helpers)}\n")
         for ln in lines:
             f.write(ln + "\n")
     if a.out:

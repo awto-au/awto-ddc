@@ -7,6 +7,7 @@ Use: loop_rate.py --unit 3 [--runs 3] [--boots 1] [--label TEXT]
 - Log: tmp/logs/loop_rate.log; one TSV row per call in tmp/logs/loop_rate.tsv.
 """
 import argparse, os, re, statistics, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 
@@ -36,7 +37,7 @@ def main() -> int:
     rates = []
     with (logs / "loop_rate.log").open("a") as log:
         def out(s):
-            line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+            line = f"{isostamp.now()} {s}"
             print(line, flush=True)
             log.write(line + "\n")
             log.flush()
@@ -73,7 +74,7 @@ def main() -> int:
         spread = f"{min(warm):.1f}..{max(warm):.1f}" if warm else "-"
         out(f"SUMMARY unit {a.unit} {a.label}: steady median {med:.1f}/s, range {spread}, n={len(warm)} windows")
     with (logs / "loop_rate.tsv").open("a") as t:
-        t.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')}\t{a.unit}\t{a.label}\t{med:.1f}\t{warm}\n")
+        t.write(f"{isostamp.now()}\t{a.unit}\t{a.label}\t{med:.1f}\t{warm}\n")
     return 0 if warm else 1
 
 

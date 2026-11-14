@@ -18,6 +18,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,7 +46,7 @@ PORT = re.compile(r"\b(DP-1|HDMI-\d+|Input D\d+|D\d)\b")
 
 def say(s: str):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

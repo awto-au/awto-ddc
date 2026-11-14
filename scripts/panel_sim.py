@@ -19,6 +19,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -55,7 +56,7 @@ EDGE_LINES = {("VDD pin", 1): (0x01,), ("VDD pin", 0): (0x1B, 0x2B, 0xAB), ("BL 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

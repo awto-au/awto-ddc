@@ -7,6 +7,7 @@ usage: freeze_trials.py --unit N --bus B --serial S [--only T1,T2] [--n 30]
   Candidates = registers that differ from the vendor 4K60 dump and are config (regs_diff4k.py). Log: tmp/logs/freeze_trials.log
 """
 import argparse, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -64,7 +65,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/freeze_trials.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); lf.write(line + "\n"); lf.flush()
 
     i2cbus.require_unit(a.bus, a.serial)

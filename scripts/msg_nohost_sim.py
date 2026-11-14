@@ -8,6 +8,7 @@ usage: msg_nohost_sim.py BIN MAP   (needs a build with DebugMessage on; reuses f
 Log: ./tmp/logs/msg_nohost_sim.log
 """
 import struct, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 import os
@@ -45,7 +46,7 @@ def main() -> int:
         r = run(binp, mapp, early)
         good = r["seq"] > 0 and r["stage"] >= 8 and r["hb_after_boot"] > 20 and r["active"]
         line = f"{'PASS' if good else 'FAIL'} {name}: {r}"
-        print(line); lg.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n")
+        print(line); lg.write(f"{isostamp.now()} {line}\n")
         rc |= 0 if good else 1
     return rc
 

@@ -11,6 +11,7 @@ macro bodies for bit-typed macros, regex call graph for ISR reachability. Not a 
 typedef'd-through-struct types are unknown -> those operands are skipped (under-count, never over-claimed as handled).
 """
 import os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -37,7 +38,7 @@ LOG = open(LOGF, "w")
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line)
     LOG.write(line + "\n"); LOG.flush()
 

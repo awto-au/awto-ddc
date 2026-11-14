@@ -29,6 +29,7 @@ Log: ./tmp/logs/rtd_flash_image.log
 from __future__ import annotations
 
 import argparse, os, random, signal, sys, time
+import isostamp  # noqa: E402
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,7 +50,7 @@ DUMPS = Path.home() / "vendors/realtek/analysis/dumps"
 def unit_log(serial: str, s: str) -> None:
     """ISP enter/exit into the per-monitor log Dan watches (dev.py writes the rest there)."""
     with (F.repo_root() / f"tmp/logs/unit-{serial}.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} [rtd_flash_image] {s}\n")
+        f.write(f"{isostamp.now()} [rtd_flash_image] {s}\n")
 
 
 def log(s):

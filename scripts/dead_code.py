@@ -8,6 +8,7 @@ usage: dead_code.py MAP [VARIANT.map ...] [--asm DIR] [--tsv OUT]
 Log: ./tmp/logs/dead_code.log
 """
 import argparse, os, re, sys, time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -18,7 +19,7 @@ LOG = ROOT / "tmp/logs/dead_code.log"
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s)
 
 

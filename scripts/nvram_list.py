@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -504,7 +505,7 @@ def build(sdk, sizes, reg, live_s, live_r, hdr_extra: str) -> tuple[str, str]:
               f"{sum(1 for r in nv if 'sdk' in r['flags'])} on SDK fields, aux block {aux_bytes(nv)} B); "
               f"duplicates: {len(sdk_dups)} SDK fields <-> "
               f"{len(reg_dups)} registry rows; inert: {len(inert_all)} rows ({len(inert_nv)} of them nv)")
-    today = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    today = isostamp.now()
 
     # ---- markdown
     m = [f"# NVRAM settings: every stored field\n",
@@ -614,7 +615,7 @@ def main() -> int:
         bus, serial = find_bus(a.unit)
         live_sdk(bus, map_text, sdk, sizes, be)
         live_r = live_registry(bus, serial, map_text, reg)
-        extra = (f"- Live values: unit {a.unit} ({serial}, bus {bus}), image `{mp.name}`, read {time.strftime('%Y-%m-%dT%H:%M:%S%z')}. "
+        extra = (f"- Live values: unit {a.unit} ({serial}, bus {bus}), image `{mp.name}`, read {isostamp.now()}. "
                  "SDK = RAM copies (loaded from flash at boot, plus runtime changes); BriCon / ColorProc show only the "
                  "copy of the current source / last colour temperature. REG = registry value over the VCP mailbox. "
                  "Flash contents were not read (no read-only path).")

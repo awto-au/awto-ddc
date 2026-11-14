@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,7 +34,7 @@ SEARCH_S = 5.0                                  # auto search -> ACTIVE: HDMI se
 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)

@@ -11,6 +11,7 @@ Settle 200 ms after each step: flags returned within ~0.5 s of a clear (#26), 20
 Log: tmp/logs/ddr_sweep.log; maps: tmp/ddr_sweep/<cmd>-<name>-<ts>.json
 """
 import argparse, json, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,7 +34,7 @@ class Phy:
         self.d, self.lf = d, lf
 
     def log(self, s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True)
         self.lf.write(line + "\n")
         self.lf.flush()

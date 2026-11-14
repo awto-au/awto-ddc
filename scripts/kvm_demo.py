@@ -7,6 +7,7 @@ usage: kvm_demo.py [--unit 2] [--rounds 3] [--hold-s 4]
 Log: ./tmp/logs/kvm_demo.log
 """
 import argparse, os, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -16,7 +17,7 @@ STEP_LIMIT_S = 15   # one kvm.py / osd call: worst seen ~0.7 s + bus scan; 15 s 
 
 
 def log(s: str):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

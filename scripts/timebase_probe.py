@@ -14,6 +14,7 @@ import argparse
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -29,7 +30,7 @@ RELAY_S = 5.0           # HA REST call + relay on, normally < 0.5 s (hass_power 
 
 def say(s: str) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

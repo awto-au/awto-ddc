@@ -10,6 +10,7 @@ usage: fw_variants.py [--serial AWT26110002] [--only NAME,...] [--keep]
 Log: ./tmp/logs/fw_variants.log (+ tmp/logs/fw_variants_<name>.out = fw_build output)
 """
 import argparse, os, re, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 
@@ -29,7 +30,7 @@ LOG = None
 
 
 def say(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

@@ -15,6 +15,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -31,7 +32,7 @@ WAIT_S = 40
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:

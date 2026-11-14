@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -30,7 +31,7 @@ RUN_TMO_S = 300     # one image: longest regression image runs ~15 s on ucsim (a
 def say(s: str):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

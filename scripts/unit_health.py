@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -147,7 +148,7 @@ class Report:
         line = f"{'PASS' if ok else 'FAIL'}  {name:<14} {detail}"
         print(line, flush=True)
         if self.log:
-            self.log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n")
+            self.log.write(f"{isostamp.now()} {line}\n")
             self.log.flush()
         return ok
 
@@ -156,7 +157,7 @@ class Report:
         line = f"HEALTH {label}: {len(self.rows) - len(bad)}/{len(self.rows)} PASS, {retries} bus retries" + (f", FAIL: {', '.join(bad)}" if bad else "")
         print(line, flush=True)
         if self.log:
-            self.log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n")
+            self.log.write(f"{isostamp.now()} {line}\n")
             self.log.flush()
         return 1 if bad else 0
 

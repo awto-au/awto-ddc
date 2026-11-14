@@ -12,6 +12,7 @@ usage: wb_build.py --tree /mnt/2tb/git/awto-ddc-p14sc3 --serial AWT26110003 --ta
 Log: ./tmp/logs/wb_build.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_build output)
 """
 import argparse, json, os, re, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 SDCC_INSTALL = Path("/usr/local")
@@ -57,7 +58,7 @@ def main() -> int:
     log = (root / "tmp/logs/wb_build.log").open("a")
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line); log.write(line + "\n"); log.flush()
 
     st = stamp(a.bin)

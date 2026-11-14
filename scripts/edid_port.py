@@ -10,6 +10,7 @@ Exit 0 = tagged port found, 1 = no tag / no EDID. Log: ./tmp/logs/edid_port.log
 import argparse
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -51,7 +52,7 @@ def main() -> int:
     lf = (root / "tmp/logs/edid_port.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line); lf.write(line + "\n")
 
     i2cbus.require_unit(a.bus, a.serial)

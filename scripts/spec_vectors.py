@@ -10,6 +10,7 @@ Log: tmp/logs/spec_vectors.log
 from __future__ import annotations
 
 import argparse, os, random, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 M32 = 0xFFFFFFFF
@@ -88,7 +89,7 @@ def main() -> int:
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     with (root / "tmp/logs/spec_vectors.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} arith {len(rows)} rows, osdgap {len(gaps)} rows -> {a.out}\n")
+        f.write(f"{isostamp.now()} arith {len(rows)} rows, osdgap {len(gaps)} rows -> {a.out}\n")
     print(f"arith {len(rows)}, osdgap {len(gaps)} -> {a.out}")
     return 0
 

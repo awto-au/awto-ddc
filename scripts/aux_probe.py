@@ -22,6 +22,7 @@ import re
 import struct
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -251,7 +252,7 @@ def main() -> int:
     ulog = (root / f"tmp/logs/unit-{a.serial}.log").open("a")
 
     def unit(s):
-        ulog.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} [aux_probe] {s}\n"); ulog.flush(); P.log(s)
+        ulog.write(f"{isostamp.now()} [aux_probe] {s}\n"); ulog.flush(); P.log(s)
 
     i2cbus.require_unit(a.bus, a.serial)
     port, pb, ps, pf = adapter_port_and_pci(a.bus)

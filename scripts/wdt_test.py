@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -135,7 +136,7 @@ class Log:
         self.f = LOG.open("a")
 
     def __call__(self, s: str):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True)
         self.f.write(line + "\n"); self.f.flush()
 

@@ -13,6 +13,7 @@ usage: sim_test.py [name ...]     (no names = all tests; all run even after a fa
 Log: tmp/logs/sim_test.log; scratch: tmp/simtest/<name>/{A,B}.  Exit 0 only if every test PASSes.
 """
 import json, os, re, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -43,7 +44,7 @@ LOG = None
 
 
 def log(s, echo=False):
-    LOG.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n"); LOG.flush()
+    LOG.write(f"{isostamp.now()} {s}\n"); LOG.flush()
     if echo:
         print(s)
 

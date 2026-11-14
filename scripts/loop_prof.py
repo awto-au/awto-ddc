@@ -11,6 +11,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -53,7 +54,7 @@ def report(io, base: int, say, serial: str, label: str, secs: float) -> int:
     for name, u in sorted(zip(SLOTS, us), key=lambda x: -x[1]):
         say(f"  {u:8.1f} us  {100 * u / tot:5.1f} %  {name}")
     with (ROOT / "tmp/logs/loop_prof.tsv").open("a") as t:
-        t.write("\t".join([time.strftime('%Y-%m-%dT%H:%M:%S%z'), serial, label, f"{tot:.0f}"] + [f"{u:.1f}" for u in us]) + "\n")
+        t.write("\t".join([isostamp.now(), serial, label, f"{tot:.0f}"] + [f"{u:.1f}" for u in us]) + "\n")
     return 0
 
 
@@ -70,7 +71,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/loop_prof.log").open("a", buffering=1)
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line); lf.write(line + "\n")
 
     base = base_of(a.map.read_text(errors="replace"))

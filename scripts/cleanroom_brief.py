@@ -9,6 +9,7 @@ Log: tmp/logs/cleanroom_brief.log
 from __future__ import annotations
 
 import argparse, re, sys, tempfile, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -44,7 +45,7 @@ def main() -> int:
     (a.out.write_text(text) if a.out else sys.stdout.write(text))
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     with (ROOT / "tmp/logs/cleanroom_brief.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} brief {a.mod}: {len(text)} chars -> {a.out or 'stdout'}\n")
+        f.write(f"{isostamp.now()} brief {a.mod}: {len(text)} chars -> {a.out or 'stdout'}\n")
     return 0
 
 

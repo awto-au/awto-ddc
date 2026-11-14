@@ -11,6 +11,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,7 +62,7 @@ ITEMS = [
 
 def log(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

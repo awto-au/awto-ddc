@@ -6,6 +6,7 @@ names and pins) and a 32-entry change ring (5 B: seq, tick, input id, value). `s
 reading the 16-byte header and the ring only when its sequence moves. `open`/`close` drive the console through the test-command byte.
 """
 import argparse, os, re, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -133,7 +134,7 @@ def main() -> int:
                 shown = f"{val} ({val * 3.3 / 255:.3f}V)" if kind == "analog" else str(val)
                 line = f"seq={seq:03d} tick={(hi << 8 | lo):05d}ms input={label(ins, idx)} value={shown}"
                 print(line, flush=True)
-                logs.main.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n"); logs.main.flush()
+                logs.main.write(f"{isostamp.now()} {line}\n"); logs.main.flush()
                 last = (last + 1) & 0xFF
             last = cur
         return 0

@@ -10,6 +10,7 @@ usage: isp_read_check.py <bus> --serial AWT2611000N [--kib 64] [--chunk 256]
 import argparse
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -53,7 +54,7 @@ def main() -> int:
     ulog = (root / f"tmp/logs/unit-{a.serial}.log").open("a")
 
     def unit(s):
-        ulog.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} [isp_read_check] {s}\n"); ulog.flush(); P.log(s)
+        ulog.write(f"{isostamp.now()} [isp_read_check] {s}\n"); ulog.flush(); P.log(s)
 
     i2cbus.require_unit(a.bus, a.serial, "isp_read_check: caller-proven bus (EDID silent)" if a.integrity else None)
     if a.fast:

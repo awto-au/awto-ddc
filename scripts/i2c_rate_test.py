@@ -13,6 +13,7 @@ Refuses to run while another tool owns the unit (rtd_flash_image/osd_test/rtd_di
 Log: ./tmp/logs/i2c_rate_test.log (one line per batch), ./tmp/logs/i2c_rate_test.raw.log (every failure).
 """
 import argparse, errno, os, statistics, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -146,7 +147,7 @@ def batch(bus, khz: int, n: int, ref: bytes, vol: set, gap_s: float, raw) -> dic
         except ReadFail as f:
             classes[f.cls] = classes.get(f.cls, 0) + 1
             fails.append(f.cls)
-            raw.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {khz} kHz read {k}: {f.cls} {f.detail}\n")
+            raw.write(f"{isostamp.now()} {khz} kHz read {k}: {f.cls} {f.detail}\n")
             if f.cls == "timeout":
                 i2cbus.gmbus_nudge(bus.bus)
             time.sleep(SETTLE_S)
@@ -156,7 +157,7 @@ def batch(bus, khz: int, n: int, ref: bytes, vol: set, gap_s: float, raw) -> dic
         if bad:
             stale = [i for i in bad if i > 0 and b[i] == ref[i - 1]]
             classes["garbled"] = classes.get("garbled", 0) + 1
-            raw.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {khz} kHz read {k}: garbled positions "
+            raw.write(f"{isostamp.now()} {khz} kHz read {k}: garbled positions "
                       f"{[f'{i:#04x}:{ref[i]:02x}->{b[i]:02x}' for i in bad]} stale(prev byte)={len(stale)}/{len(bad)}\n")
             continue
         ok += 1
@@ -178,7 +179,7 @@ def main() -> int:
     log, raw = open(LOGS / "i2c_rate_test.log", "a"), open(LOGS / "i2c_rate_test.raw.log", "a")
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); log.write(line + "\n"); log.flush()
 
     busy = others_running()

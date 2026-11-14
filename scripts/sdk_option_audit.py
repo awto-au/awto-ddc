@@ -16,6 +16,7 @@ usage: sdk_option_audit.py opts            -> tmp/audit/options.tsv (name, value
 Needs a built tree (fw_build.py) in this checkout. Log: tmp/logs/sdk_option_audit.log
 """
 import os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -33,7 +34,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

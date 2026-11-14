@@ -6,6 +6,7 @@ Item = 16 B (_DATA_ITEM_LENGTH): id, 14 data, checksum. Per page: item count per
 Log: ./tmp/logs/nv_items.log
 """
 import os, sys, time
+import isostamp  # noqa: E402
 from collections import Counter
 from pathlib import Path
 
@@ -36,7 +37,7 @@ def crc(data: bytes) -> int:
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s)
 
 

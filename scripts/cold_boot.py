@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -55,7 +56,7 @@ def main() -> int:
         tsv.write_text("time\tlabel\timage\trun\tedid_s\tdbg_s\tstage8_s\tactive_s\tstages_ms\tlogo_ms\tvdd_ms\tbl_on_ms\tuevents\n")
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line); lf.write(line + "\n")
 
     def pc(*args):
@@ -112,7 +113,7 @@ def main() -> int:
             f"ACTIVE {res.get('active', -1):.3f} s after relay on; fw stages ms {stages}; logo draw {logo} ms (T2 ticks), "
             f"VDD {ev(0x70)}, backlight on {ev(0x10, 2)}, T3 {ev(0x20, 0)}..{ev(0x20, 1)}; drm uevents {len(ue)}")
         with tsv.open("a") as f:
-            f.write("\t".join(map(str, [time.strftime("%Y-%m-%dT%H:%M:%S%z"), a.label, a.map.stem, run,
+            f.write("\t".join(map(str, [isostamp.now(), a.label, a.map.stem, run,
                                         *(f"{res.get(k, -1):.3f}" for k in ("edid", "dbg", "stage8", "active")),
                                         stages, logo, ev(0x70), ev(0x10, 2), len(ue)])) + "\n")
     return 0

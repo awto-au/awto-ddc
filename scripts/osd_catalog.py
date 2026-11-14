@@ -7,6 +7,7 @@ usage: osd_catalog.py BIN [--menu-dir DIR] [--out DIR] [--mode 1080p60|2160p60]
 Log: ./tmp/logs/osd_catalog.log
 """
 import argparse, html, os, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -50,7 +51,7 @@ def cpu_ticks(pid: int) -> int:
 
 
 def log(s: str):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

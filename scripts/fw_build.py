@@ -14,6 +14,7 @@ Memory (SDK + board, awto-ddc#8):
 Log: ./tmp/logs/fw_build.log
 """
 import argparse, json, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,7 +40,7 @@ SEL = ROOT / "tmp/sdcc-port/asm_sel"
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

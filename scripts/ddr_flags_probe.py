@@ -6,6 +6,7 @@ usage: ddr_flags_probe.py --unit N --bus B --serial S [--n 20] [--clear]
   Run only at steady ACTIVE, never during a modeset. Log: tmp/logs/ddr_flags_probe.log
 """
 import argparse, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -31,7 +32,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/ddr_flags_probe.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); lf.write(line + "\n"); lf.flush()
 
     i2cbus.require_unit(a.bus, a.serial)

@@ -10,6 +10,7 @@ usage: flash_layout_measure.py [--serial AWT26110003] [--layout fw/bank_layout.t
 Log: tmp/logs/flash_layout_measure.log, result tmp/meas/result.json, images tmp/meas/<mode>_<edit>.bin
 """
 import argparse, hashlib, json, os, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,7 +37,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True); LOG.write(line + "\n"); LOG.flush()
 
 

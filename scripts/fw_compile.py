@@ -13,6 +13,7 @@ usage: fw_compile.py compile <uv2> [--target T] [--jobs N] [--only SUBSTR] [--as
 - Called by fw_build.py; edits to the SDK sources go in fw/sdk, never here.
 """
 import fnmatch, hashlib, json, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -44,7 +45,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line)
     LOG.write(line + "\n"); LOG.flush()
 
@@ -375,7 +376,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
         rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".rel")
         for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
             seg[m.group(1)] += int(m.group(2), 16)
-    rep = {"uv2": uv2_rel, "when": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "ok": len(ok), "fail": len(bad),
+    rep = {"uv2": uv2_rel, "when": isostamp.now(), "ok": len(ok), "fail": len(bad),
            "missing": [str(m) for m in missing], "segments": dict(seg), "hist": hist.most_common(),
            "per_file": per_file, "warn_hist": whist.most_common(), "warn_files": len(wfile),
            "warn_unreviewed": unreviewed}

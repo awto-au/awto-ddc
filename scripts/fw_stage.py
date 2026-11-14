@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -31,7 +32,7 @@ def main() -> int:
                         "--only", "boot,isr,link"], capture_output=True, text=True, timeout=GATES_LIMIT_S)
     out = r.stdout.strip().splitlines()[-4:]
     with (REPO / "tmp/logs/fw_stage.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {stem.name} gates rc={r.returncode}\n" + "\n".join(out) + "\n")
+        f.write(f"{isostamp.now()} {stem.name} gates rc={r.returncode}\n" + "\n".join(out) + "\n")
     print(f"{stem}.bin", *out, sep="\n")
     return r.returncode
 

@@ -15,6 +15,7 @@ import argparse
 import os
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -36,7 +37,7 @@ ON_S = 6.0    # power-key on -> ACTIVE took < 2.5 s before this work; 6 s = 2.4x
 
 def say(s: str) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

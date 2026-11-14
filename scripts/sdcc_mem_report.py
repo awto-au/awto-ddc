@@ -9,6 +9,7 @@ usage: sdcc_mem_report.py [--asm DIR] [--top N] [--kind global|local|all]
 Output: table to stdout + tmp/sdcc-port/mem_report.json. Log: tmp/logs/sdcc_mem_report.log. Tracking: #8.
 """
 import json, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -68,7 +69,7 @@ def main():
     tot = defaultdict(int)
     for it in items:
         tot[(it["area"], it["kind"])] += it["size"]
-    out(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {asm_dir}: {len(items)} allocations")
+    out(f"{isostamp.now()} {asm_dir}: {len(items)} allocations")
     for (ar, k), v in sorted(tot.items()):
         out(f"  {ar:6s} {k:7s} {v:6d} {'bits' if ar == 'BSEG' else 'B'}")
     by_mod = defaultdict(int)

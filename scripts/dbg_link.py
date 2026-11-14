@@ -17,6 +17,7 @@ import argparse
 import contextlib
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,7 +37,7 @@ DEFAULT_MIN = 10                        # firmware falls back to DDC/CI by itsel
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:

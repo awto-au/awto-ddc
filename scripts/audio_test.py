@@ -27,6 +27,7 @@ Log: ./tmp/logs/audio_test.log (every step, ISO time).
 from __future__ import annotations
 
 import argparse, gzip, math, os, re, struct, subprocess, sys, time, wave
+import isostamp  # noqa: E402
 from pathlib import Path
 
 
@@ -124,7 +125,7 @@ FREQ = {0: "none", 1: "32k", 2: "44.1k", 3: "48k", 4: "64k", 5: "88.2k", 6: "96k
 
 def say(s: str) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)

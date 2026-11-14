@@ -16,6 +16,7 @@ Host lookup order (load_ids): table in the flashed image (tmp/fw/<serial>-flashe
 -> fw/msgids.tsv. Log: ./tmp/logs/msg_table.log
 """
 import argparse, hashlib, json, struct, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -178,7 +179,7 @@ def main() -> int:
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     lg = (root / "tmp/logs/msg_table.log").open("a")
-    say = lambda t: (print(t), lg.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {t}\n"))
+    say = lambda t: (print(t), lg.write(f"{isostamp.now()} {t}\n"))
     if a.cmd == "build":
         blk = build(rows_from_tsv(Path(a.tsv or root / "fw/msgids.tsv").read_text()))
         info = parse(blk)

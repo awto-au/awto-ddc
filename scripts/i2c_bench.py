@@ -7,6 +7,7 @@ Window: 3 s per combo = >=60 transactions at the ~50 ms/64 B seen on DP AUX; eno
 Stops a combo after 3 consecutive errors (logs errno). Log: ./tmp/logs/i2c_bench.log
 """
 import os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -26,7 +27,7 @@ def main() -> int:
     def out(s):
         print(s); log.write(s + "\n"); log.flush()
 
-    out(f"# {time.strftime('%Y-%m-%dT%H:%M:%S%z')} window={WINDOW_S}s")
+    out(f"# {isostamp.now()} window={WINDOW_S}s")
     for bus in map(int, sys.argv[1:]):
         fd = i2cbus.Bus(bus)
         for addr, reg, label in TARGETS:

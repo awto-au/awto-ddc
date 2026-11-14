@@ -26,6 +26,7 @@ Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, M
 Log: ./tmp/logs/rtd_diag.log (decoded), ./tmp/logs/rtd_diag.raw.log (I2C trace). Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
 import argparse, os, signal, struct, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -66,7 +67,7 @@ LOG = None
 
 
 def log(s: str) -> None:
-    LOG.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n"); LOG.flush()
+    LOG.write(f"{isostamp.now()} {s}\n"); LOG.flush()
 
 
 def read_block(io) -> bytes | None:
@@ -237,7 +238,7 @@ def messages(io, root: Path, secs: float | None = MSG_SECS, serial=None, table=N
                 label = f"{loc} {txt}" if loc else f"#{mid}"
             else:
                 label = text.decode("latin-1")
-            line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {label} = {val}"
+            line = f"{isostamp.now()} {label} = {val}"
             print(line, flush=True); log(line)
         log(f"messages: --secs {secs:g} reached")
         return 0
@@ -356,14 +357,14 @@ def trace(io, root: Path, be: bool, ids: str | None) -> int:
                 if fails == 1:
                     log(f"trace read failed after {n} reads; last ring {last}")
                 if fails >= TRACE_DEAD:
-                    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} chip stopped answering ({fails} failed reads); last ring: {last}"
+                    line = f"{isostamp.now()} chip stopped answering ({fails} failed reads); last ring: {last}"
                     print(line, flush=True); log(line); return 1
                 continue
             fails, n = 0, n + 1
             seq, ids = b[0], struct.unpack_from((">" if be else "<") + "3H", b, 2)
             ring = (seq, tuple(names.get(i, f"#{i:04X}") for i in ids))
             if ring != last:
-                line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} seq {seq:3d}  " + " > ".join(ring[1])
+                line = f"{isostamp.now()} seq {seq:3d}  " + " > ".join(ring[1])
                 print(line, flush=True); log(line)
                 last = ring
     except KeyboardInterrupt:
@@ -478,7 +479,7 @@ def _main() -> int:
         tl = timing_line(io, root, a.map)
         if tl:
             txt += "\n" + tl
-        print(f"--- {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n{txt}", flush=True)
+        print(f"--- {isostamp.now()}\n{txt}", flush=True)
         log(txt)
         prev, tprev = d, t
         if not a.watch:

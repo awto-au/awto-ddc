@@ -7,6 +7,7 @@ Paths: debug slave 0x35 ScalerGetByte (0x3A) / ScalerSetByte (0x3B) with 0xPPRR 
 Log: ./tmp/logs/p037_test.log (one line per P0_02 change / P0_37 write burst)
 """
 import argparse, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -43,7 +44,7 @@ def main() -> int:
     t0 = time.monotonic()
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} +{(time.monotonic() - t0) * 1000:7.1f}ms {s}"
+        line = f"{isostamp.now()} +{(time.monotonic() - t0) * 1000:7.1f}ms {s}"
         print(line); lf.write(line + "\n"); lf.flush()
 
     i2cbus.require_unit(a.bus, a.serial)

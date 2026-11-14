@@ -11,6 +11,7 @@ Log: ./tmp/logs/unifdef_opt.log (one line per file: directives resolved / simpli
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,7 +19,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

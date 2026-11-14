@@ -6,6 +6,7 @@ usage: stack_canary_sim.py BIN [MAP]
 Log: tmp/logs/stack_canary_sim.log
 """
 import os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
@@ -25,7 +26,7 @@ PASS_OFF = 0x14
 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)

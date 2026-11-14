@@ -16,6 +16,7 @@ Raw line format (parse_raw): `<ts> REAL write dev=0x35 reg 0x3b f8` / `REAL read
 from __future__ import annotations
 
 import atexit, os, re, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 from types import SimpleNamespace as NS
 from typing import NamedTuple
@@ -28,7 +29,7 @@ def repo_root() -> Path:
 
 
 def now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    return isostamp.now()
 
 
 class Txn(NamedTuple):

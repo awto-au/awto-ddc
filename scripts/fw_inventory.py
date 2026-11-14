@@ -13,6 +13,7 @@ Log: tmp/logs/fw_inventory.log
 from __future__ import annotations
 
 import argparse, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -72,7 +73,7 @@ LOG = None
 
 
 def log(s: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, file=sys.stderr)
     if LOG:
         LOG.write(line + "\n"); LOG.flush()

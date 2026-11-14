@@ -25,6 +25,7 @@ Report: tmp/logs/trace_equiv_<tag>.txt (log line per run in tmp/logs/trace_equiv
 from __future__ import annotations
 
 import argparse, csv, gzip, re, sys, time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -289,7 +290,7 @@ def main() -> int:
     head = f"trace_equiv ref {a.ref} ours {a.ours} rules {[str(p) for p in a.rules]}: {'PASS' if not fails else f'FAIL ({fails})'}"
     out.write_text(head + "\n" + "\n".join(L) + "\n")
     with (ROOT / "tmp/logs/trace_equiv.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {head} -> {out}\n")
+        f.write(f"{isostamp.now()} {head} -> {out}\n")
     print(head, "->", out)
     return 1 if fails else 0
 

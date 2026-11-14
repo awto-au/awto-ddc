@@ -17,6 +17,7 @@ Cycle model [likely, docs/reversing/realtek-rtd/mcu-8051.md]: DW8051, 4 clocks p
 Log: tmp/logs/delay_cal_check.log   Exit 1 on any FAIL.
 """
 import argparse, os, re, select, struct, sys, time
+import isostamp  # noqa: E402
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -42,7 +43,7 @@ LOG = None
 
 def log(s):
     print(s, flush=True)
-    LOG.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n"); LOG.flush()
+    LOG.write(f"{isostamp.now()} {s}\n"); LOG.flush()
 
 
 def dw_cycles(op: int, n: int) -> int:

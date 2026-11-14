@@ -24,6 +24,7 @@ import queue
 import sys
 import threading
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -261,7 +262,7 @@ class Watch:
 def make_emit(lg):
     def emit(s: str):
         print(s, flush=True)
-        lg.main.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+        lg.main.write(f"{isostamp.now()} {s}\n")
     return emit
 
 

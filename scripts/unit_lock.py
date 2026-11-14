@@ -14,6 +14,7 @@ Log: tmp/logs/unit_lock.log
 from __future__ import annotations
 
 import argparse, os, socket, subprocess, sys, time
+import isostamp  # noqa: E402
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -37,7 +38,7 @@ SESSION_COMM = ("claude", "node")
 def log(s: str) -> None:
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     with (ROOT / "tmp/logs/unit_lock.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+        f.write(f"{isostamp.now()} {s}\n")
 
 
 def alive(pid: int) -> bool:
@@ -78,7 +79,7 @@ def read(serial: str) -> dict | None:
 def _create(serial: str, owner: str, pid: int, tool: str) -> bool:
     LOCKS.mkdir(parents=True, exist_ok=True)
     body = (f"owner={owner}\npid={pid}\nhost={socket.gethostname()}\ntool={tool}\n"
-            f"since={time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n")
+            f"since={isostamp.now()}\n")
     try:
         fd = os.open(LOCKS / serial, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
     except FileExistsError:

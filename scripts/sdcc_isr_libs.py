@@ -16,6 +16,7 @@ Priority: EXINT0 (IP=0x81) and Timer2 (IP=0xA0) are each high in one IP state, s
 where another class reaches the same helper; all other ISRs share `_isr`.
 """
 import argparse, json, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -36,7 +37,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

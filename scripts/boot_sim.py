@@ -16,6 +16,7 @@ Log: tmp/logs/boot_sim.log
 import argparse
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -40,7 +41,7 @@ LOGO_SYMS = ("_OsdDispShowLogo", "_AwtoLogoDraw", "_tICON_REALTEK_1BIT_LOGO0", "
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

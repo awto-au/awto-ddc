@@ -10,6 +10,7 @@ ISR entry = 2 (PC) + its pushes. Indirect calls (__sdcc_call_dptr) -> any addres
 Recursion/cycles reported, not followed. Log: tmp/logs/fw_stack.log
 """
 import argparse, json, re, sys, time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -98,7 +99,7 @@ def main() -> int:
            "isr_nested": nest[0], "total": total,
            "cycles": sorted(cyc)[:20], "limit": a.limit}
     txt = json.dumps(res, indent=1)
-    print(txt); log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n{txt}\n")
+    print(txt); log.write(f"{isostamp.now()}\n{txt}\n")
     return 1 if a.limit and total > a.limit else 0
 
 

@@ -9,6 +9,7 @@ Log: tmp/logs/branch_status.log
 import argparse
 import subprocess
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 
@@ -52,7 +53,7 @@ def main() -> int:
     print(text)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z") + f" base {a.base} main {a.main}\n{text}\n")
+        f.write(isostamp.now() + f" base {a.base} main {a.main}\n{text}\n")
     return 0
 
 

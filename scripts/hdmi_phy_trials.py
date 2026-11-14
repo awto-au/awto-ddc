@@ -7,6 +7,7 @@ usage: hdmi_phy_trials.py --unit N --bus B --serial S [--only P1,P2] [--n 12]
   restore. Log: tmp/logs/hdmi_phy_trials.log; frozen PHY pages 7A-7C: tmp/regs/<serial>-<ts>-phy-frozen.json
 """
 import argparse, json, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -40,7 +41,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/hdmi_phy_trials.log").open("a")
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); lf.write(line + "\n"); lf.flush()
 
     i2cbus.require_unit(a.bus, a.serial)
@@ -93,7 +94,7 @@ def main() -> int:
     log(f"SCDC cfg 0x{cfg:02x} scrambler status {scr & 1} flags 0x{st:02x}")
     pages = {f"{pg:02X}": [rd(d, (pg << 8) | i) if True else None for i in range(256)] for pg in (0x7B,)}
     out = ROOT / f"tmp/regs/{a.serial}-{time.strftime('%Y%m%d-%H%M%S')}-phy-frozen.json"
-    out.write_text(json.dumps({"serial": a.serial, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "pages": pages}))
+    out.write_text(json.dumps({"serial": a.serial, "time": isostamp.now(), "pages": pages}))
     log(f"7B page dumped: {out.name}")
     rate("baseline0")
 

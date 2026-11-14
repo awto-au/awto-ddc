@@ -11,6 +11,7 @@ usage: rtd_panel_aux.py <bus> --serial AWT2611000N [--edid-blocks 2]
 Log: ./tmp/logs/rtd_panel_aux.log
 """
 import argparse, json, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -68,7 +69,7 @@ def main() -> int:
     (root / "tmp/regs").mkdir(parents=True, exist_ok=True)
     P.LOG = (root / "tmp/logs/rtd_panel_aux.log").open("a")
     P.log(f"=== panel aux bus={a.bus} serial={a.serial} ===")
-    res = {"serial": a.serial, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    res = {"serial": a.serial, "time": isostamp.now()}
     base = root / "tmp/regs" / f"{a.serial}-panel-aux-{time.strftime('%Y%m%d-%H%M%S')}"
     o = Osd(a.bus)
     o.enter()

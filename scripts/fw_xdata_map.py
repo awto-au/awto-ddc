@@ -9,6 +9,7 @@ usage: fw_xdata_map.py <image.bin> [--banks N] [--bucket 0x100]
 Log: tmp/logs/fw_xdata_map.log
 """
 import os, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import Counter
 from pathlib import Path
 
@@ -37,7 +38,7 @@ def main():
 
     def out(s):
         print(s); log.write(s + "\n")
-    out(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a[0]} banks={banks}")
+    out(f"{isostamp.now()} {a[0]} banks={banks}")
     hits = Counter()
     end = min(len(img), banks * 0x10000)
     for i in range(end - 2):

@@ -19,6 +19,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -47,7 +48,7 @@ DDCUTIL_LIMIT_S = 1.7
 
 
 def log(line: str) -> None:
-    s = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}"
+    s = f"{isostamp.now()} {line}"
     print(s)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:

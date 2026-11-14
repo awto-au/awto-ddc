@@ -16,6 +16,7 @@ import argparse
 import json
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -47,7 +48,7 @@ def main() -> int:
     lf = LOG.open("a", buffering=1)
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); lf.write(line + "\n")
 
     t = W.UnitTarget(a.unit, a.map, say)
@@ -115,7 +116,7 @@ def main() -> int:
         import host_dpms as H                  # off arms the guard (#159)
         H.on() if on else H.off(W.HOST_OFF_GUARD_S)
 
-    out = {"serial": t.serial, "time": time.strftime('%Y-%m-%dT%H:%M:%S%z'), "map": str(a.map)}
+    out = {"serial": t.serial, "time": isostamp.now(), "map": str(a.map)}
     out["active"] = sample("ACTIVE")
     if not a.no_ps:
         try:

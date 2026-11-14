@@ -6,6 +6,7 @@ Registers are plain XDATA in this model (no peripheral side effects): the value 
 Log: tmp/logs/fw_boot_reg.log
 """
 import argparse, re, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -24,7 +25,7 @@ def main() -> int:
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     lf = (ROOT / "tmp/logs/fw_boot_reg.log").open("a")
-    lf.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a.bin}\n")
+    lf.write(f"{isostamp.now()} {a.bin}\n")
     img, binp = Path(a.bin).read_bytes(), Path(a.bin)
     sym, _where = fw_sim.parse_map(Path(a.map).read_text(errors="replace"), img)
     gsinit = sym.get("__sdcc_gsinit_startup")

@@ -20,6 +20,7 @@ Method (awto-ddc#8):
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
 """
 import argparse, json, os, re, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -50,7 +51,7 @@ ASM_TIMEOUT = 30          # one sdas8051 run: largest module assembles in < 2 s;
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

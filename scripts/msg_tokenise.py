@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from collections import Counter
 from pathlib import Path
 
@@ -38,7 +39,7 @@ LOG = None
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line)
     LOG.write(line + "\n"); LOG.flush()
 

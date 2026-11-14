@@ -27,6 +27,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -42,7 +43,7 @@ UCSIM_ANSWER_S = 120            # one ucsim command: a 1 M-instruction step is ~
 
 def say(s: str):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(s, flush=True)

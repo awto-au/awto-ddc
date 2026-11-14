@@ -7,6 +7,7 @@ usage: kc_asm_classify.py RUN_A RUN_B [--rename '_keil'] [--show N]
 Log: tmp/logs/kc_asm_classify.log
 """
 import argparse, difflib, os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -49,7 +50,7 @@ def main() -> int:
         lines += [f"--- {k[1]}"] + [l for l in difflib.unified_diff(A[k], B[k], lineterm="", n=1)][2:]
     for l in lines:
         print(l)
-    log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} " + lines[0] + "\n")
+    log.write(f"{isostamp.now()} " + lines[0] + "\n")
     return 0
 
 

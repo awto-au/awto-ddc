@@ -12,6 +12,7 @@ Register addresses by regdb name (re/regdb). Keys / reads: keymap_unit.Unit. Log
 import argparse
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,7 +33,7 @@ SHOW_LIMIT_S = 1.5
 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)

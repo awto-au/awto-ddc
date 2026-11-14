@@ -46,6 +46,7 @@ Monitor MCU is stopped while in ISP; the final 0xEE=0x02 resets the scaler (as r
 Log: ./tmp/logs/rtd_flash_sector.log
 """
 import argparse, os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -92,7 +93,7 @@ DETAIL = None               # per-operation lines (erase timings); None = main l
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     LOG.write(line + "\n"); LOG.flush()
 
@@ -100,7 +101,7 @@ def log(s):
 def dlog(s):
     if DETAIL is None:
         return log(s)
-    DETAIL.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}\n")
+    DETAIL.write(f"{isostamp.now()} {s}\n")
 
 
 class Rtd(Isp):

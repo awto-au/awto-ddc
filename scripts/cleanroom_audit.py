@@ -10,6 +10,7 @@ usage: cleanroom_audit.py [--projects ~/.claude/projects] [--match -mnt-2tb-git-
 from __future__ import annotations
 
 import argparse, json, os, re, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 FORBIDDEN_PATHS = ["/mnt/2tb/git_mirror", "RTD-Scaler", "Kingdomwhisky", "/mnt/2tb/git/awto-ddc", "awto-au/awto-ddc",
@@ -82,7 +83,7 @@ def main() -> int:
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (root / "tmp/logs/cleanroom_audit.txt").write_text("\n".join(hits) + ("\n" if hits else ""))
     with (root / "tmp/logs/cleanroom_audit.log").open("a") as f:
-        f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {len(files)} transcripts, {len(hits)} hits\n")
+        f.write(f"{isostamp.now()} {len(files)} transcripts, {len(hits)} hits\n")
     for h in hits[:100]:
         print(h)
     print(f"{len(files)} transcripts, {len(hits)} hits")

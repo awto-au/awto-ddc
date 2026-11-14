@@ -9,6 +9,7 @@ Log: ./tmp/logs/rtd_dbg_write.log (decoded I2C lines + one --label line per writ
      ./tmp/logs/rtd_dbg_write.raw.log (I2C byte trace)
 """
 import argparse, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,7 +39,7 @@ def main() -> int:
         ok = w.write(DEV8, 0x01, bytes([ad >> 8])) and w.write(DEV8, 0x03, bytes([v])) \
             and w.write(DEV8, 0x3B, bytes([ad & 0xFF]))
         line = f"{a.label + ': ' if a.label else ''}0x{ad:04X} <- 0x{v:02X} {'ok' if ok else 'NO ACK'} (bus {a.bus})"
-        print(line); log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n")
+        print(line); log.write(f"{isostamp.now()} {line}\n")
         if not ok:
             return 1
     return 0

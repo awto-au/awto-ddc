@@ -14,6 +14,7 @@ import io
 import sys
 import threading
 import time
+import isostamp  # noqa: E402
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -32,7 +33,7 @@ SIM_MS = 150             # firmware time advanced per frame: long enough for the
 
 def log(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

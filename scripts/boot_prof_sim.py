@@ -7,6 +7,7 @@ usage: AWTO_SIM_CORE=fast boot_prof_sim.py BIN MAP [--mode 1080p60|2160p60] [--u
 Log: tmp/logs/boot_prof_sim.log
 """
 import argparse, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -28,7 +29,7 @@ UNIT = {"main()": 109, "first main-loop pass": 522, "mode SEARCH": 1028, "mode A
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s, flush=True)
 
 

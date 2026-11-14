@@ -6,6 +6,7 @@ usage: regcall_build.py LEVEL [--bin DIR] [--serial S] [--tag NAME] [--layout fw
 Result: tmp/runs/<tag>/{fw.bin,fw.map,fw.ihx,build.json,sdcc_bank.log tail,size.txt}. Log: tmp/logs/regcall_build.log
 """
 import argparse, os, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.check_output(
@@ -32,7 +33,7 @@ def main() -> int:
                AWTO_SDCC_BIN=f"{inst}/bin", AWTO_SDCC_SRC=os.environ.get("AWTO_SDCC_SRC", f"{inst}/share/sdcc/awto-src"))   # the install's own library sources
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (ROOT / "tmp/logs/regcall_build.log").open("a")
-    log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} build {tag} bin={inst}\n")
+    log.write(f"{isostamp.now()} build {tag} bin={inst}\n")
     p = subprocess.Popen([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *(["--layout", a.layout] if a.layout else []), *(["--cluster", a.cluster] if a.cluster else []),
                           *(["--cluster-weights", a.cluster_weights] if a.cluster_weights else []),
                           *(["--pin-common", a.pin_common] if a.pin_common else [])], cwd=ROOT, env=env,

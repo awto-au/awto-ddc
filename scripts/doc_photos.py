@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 
@@ -27,7 +28,7 @@ LOG = REPO / "tmp/logs/doc_photos.log"
 
 
 def log(msg: str) -> None:
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {msg}"
+    line = f"{isostamp.now()} {msg}"
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

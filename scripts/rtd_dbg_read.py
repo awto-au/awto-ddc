@@ -9,6 +9,7 @@ usage: rtd_dbg_read.py <bus> <addr|symbol>[:len] ... [--map tmp/fw/AWT26110003/f
 Log: ./tmp/logs/rtd_dbg_read.log
 """
 import argparse, os, re, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -51,7 +52,7 @@ def main() -> int:
                 r = dev.read(DBG, 0x08, 1) if ok else None
                 vals.append(f"{r[0]:02x}" if r else "--")
             line = f"{name} @0x{addr:04x}: {' '.join(vals)}"
-            print(line); log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {line}\n")
+            print(line); log.write(f"{isostamp.now()} {line}\n")
     finally:
         if a.halt:
             dev.write(DBG, 0x80, bytes([0x00]))

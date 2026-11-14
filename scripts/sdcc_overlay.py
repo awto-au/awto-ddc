@@ -17,6 +17,7 @@ Method (awto-ddc#8):
 Log: tmp/logs/sdcc_overlay.log, report tmp/sdcc-port/overlay.json
 """
 import json, os, re, shutil, subprocess, sys, time
+import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
 
@@ -48,7 +49,7 @@ FUNC_HDR = re.compile(r"^;\s+function (\w+)\s*$")
 
 
 def log(s):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line); LOG.write(line + "\n"); LOG.flush()
 
 

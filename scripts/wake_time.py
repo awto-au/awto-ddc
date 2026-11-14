@@ -12,6 +12,7 @@ import argparse
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -79,7 +80,7 @@ def main() -> int:
     lf = (root / "tmp/logs/wake_time.log").open("a", buffering=1)
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line)
         lf.write(line + "\n")
 

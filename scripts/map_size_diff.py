@@ -10,6 +10,7 @@ import argparse
 import re
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,7 +40,7 @@ def main() -> int:
     ap.add_argument("--min", type=int, default=1, help="smallest |delta| listed")
     a = ap.parse_args()
     old, new = areas(a.old), areas(a.new)
-    out = [f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {a.old} -> {a.new}"]
+    out = [f"{isostamp.now()} {a.old} -> {a.new}"]
     tot = {}
     for n in sorted(set(old) | set(new)):
         o, w = old.get(n, 0), new.get(n, 0)

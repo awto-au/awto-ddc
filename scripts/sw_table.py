@@ -7,6 +7,7 @@ usage: sw_table.py --hdmi-bus 11 --dp-bus 15 --serial S --map MAP [--runs 5] [--
 - Ends on D2; send 0x30 (auto search) afterwards. Log: ./tmp/logs/sw_table.log; one TSV row per run in tmp/logs/sw_table.tsv.
 """
 import argparse, re, statistics, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,7 +49,7 @@ def main() -> int:
     tsv = (ROOT / "tmp/logs/sw_table.tsv").open("a", buffering=1)
 
     def say(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line); lf.write(line + "\n")
 
     res, unb, phs = {"D1": [], "D2": []}, {"D1": [], "D2": []}, {"D1": [], "D2": []}
@@ -65,7 +66,7 @@ def main() -> int:
             unb[to].append(ub)
             phs[to].append(phases(out))
             say(f"{a.label} run {run + 1} to {to}: ACTIVE at {ms} ms, unblank at {ub} ms")
-            tsv.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')}\t{a.label}\t{to}\t{run + 1}\t{ms}\t{ub}\n")
+            tsv.write(f"{isostamp.now()}\t{a.label}\t{to}\t{run + 1}\t{ms}\t{ub}\n")
     for to, v in res.items():
         ok = [x for x in v if x is not None]
         say(f"SUMMARY {a.label} to {to}: {v} median {statistics.median(ok) if ok else None} ms")

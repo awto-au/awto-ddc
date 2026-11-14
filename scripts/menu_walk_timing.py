@@ -8,6 +8,7 @@ usage: menu_walk_timing.py BIN MAP [--polls 300]
 Needs the main tree's sim tools: AWTO_DDC_MAIN (default /mnt/2tb/git/awto-ddc). Log: ./tmp/logs/menu_walk_timing.log
 """
 import argparse, os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts"
@@ -22,7 +23,7 @@ LOG = ROOT / "tmp/logs/menu_walk_timing.log"
 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")

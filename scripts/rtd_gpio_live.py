@@ -9,6 +9,7 @@ usage: rtd_gpio_live.py <bus> --serial AWT2611000N --label on|standby
 Log: ./tmp/logs/rtd_gpio_live.log
 """
 import argparse, csv, json, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -56,7 +57,7 @@ def main() -> int:
     P.log(f"=== gpio live bus={a.bus} serial={a.serial} label={a.label} ===")
     table = pins()
     o = Osd(a.bus)
-    res = {"serial": a.serial, "label": a.label, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "pins": {}}
+    res = {"serial": a.serial, "label": a.label, "time": isostamp.now(), "pins": {}}
     o.enter()
     try:
         saved = [o.rd(r) for r in RC]

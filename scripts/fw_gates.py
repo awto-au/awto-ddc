@@ -33,6 +33,7 @@ import subprocess
 import sys
 import threading
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -182,7 +183,7 @@ def main() -> int:
     lf = (ROOT / "tmp/logs/fw_gates.log").open("a", buffering=1)
 
     def log(s):
-        line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+        line = f"{isostamp.now()} {s}"
         print(line, flush=True); lf.write(line + "\n")
 
     stem = Path(a.stem)
@@ -239,7 +240,7 @@ def write_record(b: Path, rec: dict, tree, complete: bool) -> None:
     def git(*x):
         return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True).stdout.strip()
     doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
-           "date": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "complete": complete, "tree": str(tree or ""),
+           "date": isostamp.now(), "complete": complete, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
            "gates": rec}
     out = b.with_suffix(".gates.json")

@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -51,7 +52,7 @@ ACTIVE_MS = 1000       # steady-state window after ACTIVE: ~300 main-loop passes
 
 
 def log(s: str):
-    line = f"{time.strftime('%Y-%m-%dT%H:%M:%S%z')} {s}"
+    line = f"{isostamp.now()} {s}"
     print(line)
     if LOGF:
         LOGF.write(line + "\n")

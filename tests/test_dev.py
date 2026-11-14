@@ -87,7 +87,7 @@ def test_unknown_command_exits_2():
 # --- logging conventions (Tier A) ------------------------------------------
 
 LINE = re.compile(
-    r"^\d{2}:\d{2}:\d{2}\.\d{6}[+-]\d{4}\s+"     # local time WITH offset
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}\s+"   # ISO 8601 local, offset +HH:MM
     r"(FATAL|ERROR|WARN|INFO|DEBUG|ALERT)\s+"    # level
     r"\[[^\]]+\]\s"                              # [origin]
 )

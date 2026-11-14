@@ -9,6 +9,7 @@ usage: warn_rekey.py [--base REV] [--policy fw/warn_policy.tsv] [--write]
 Log: ./tmp/logs/warn_rekey.log
 """
 import argparse, os, subprocess, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
@@ -18,7 +19,7 @@ LOG = ROOT / "tmp/logs/warn_rekey.log"
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s + "\n")
+        f.write(isostamp.now() + " " + s + "\n")
     print(s)
 
 

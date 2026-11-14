@@ -14,6 +14,7 @@ usage: rtd_reg_dump.py <bus> --serial AWT2611000N [--pages 00,01,38,39,9C,9E] [-
 Log: ./tmp/logs/rtd_reg_dump.log
 """
 import argparse, json, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -65,7 +66,7 @@ def main() -> int:
         out = json.loads(f.read_text())
     else:
         f = root / "tmp/regs" / f"{a.serial}-{time.strftime('%Y%m%d-%H%M%S')}.json"
-        out = {"serial": a.serial, "bus": a.bus, "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "pages": {}, "ports": {}}
+        out = {"serial": a.serial, "bus": a.bus, "time": isostamp.now(), "pages": {}, "ports": {}}
 
     def save() -> None:   # after every page/port: an interrupted run keeps what it read
         tmp = f.with_suffix(".part")

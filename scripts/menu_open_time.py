@@ -7,6 +7,7 @@ usage: menu_open_time.py BIN MAP
 """
 import sys
 import time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -41,7 +42,7 @@ def main():
     line = f"{b.name}: menu open {(t1 - t0) * 1000:.0f} ms, font load {(nxt - hits['osd_font_load']) * 1000:.0f} ms (osd_font_load {hits['osd_font_load']:.3f} s, next step {nxt:.3f} s)"
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
-        f.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + line + "\n")
+        f.write(isostamp.now() + " " + line + "\n")
     print(line)
     bus.close()
 

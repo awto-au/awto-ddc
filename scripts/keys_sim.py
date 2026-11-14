@@ -13,6 +13,7 @@ Last line: RESULT PASS | RESULT FAIL <check names>. Needs the main tree's sim to
 Log: ./tmp/logs/keys_sim.log
 """
 import argparse, contextlib, importlib.util, io as _io, os, sys, time
+import isostamp  # noqa: E402
 from pathlib import Path
 
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts"
@@ -51,7 +52,7 @@ WORST, WHERE, CUR = {}, {}, ["boot"]      # CUR[0] = the check being run (worst-
 
 def say(s):
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = time.strftime("%Y-%m-%dT%H:%M:%S%z ") + s
+    line = isostamp.now() + " " + s
     print(line, flush=True)
     with LOG.open("a") as f:
         f.write(line + "\n")
