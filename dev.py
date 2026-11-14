@@ -112,10 +112,13 @@ _USE_COLOR = (
 )
 
 
+_ISO_START = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
+
+
 def _stamp() -> str:
     # Local zone incl. DST (AEST +1000 / AEDT +1100). Never hardcode the
     # offset and never use UTC here: a human reads these live.
-    return datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S.%f%z")   # ISO 8601 with the date: logs span nights
+    return datetime.now().astimezone().isoformat(timespec="milliseconds")   # 2026-11-15T00:38:13.275+11:00 (awto rule)
 
 
 def log(msg: str, level: str = "INFO") -> None:
@@ -545,6 +548,8 @@ def _py(script: str, *args, env: dict | None = None, shield: bool = False) -> in
             p.send_signal(signal.SIGTERM)
 
     def out(line: str) -> None:
+        if line.strip() and not _ISO_START.match(line):     # tool lines without their own date get one (display rule)
+            line = f"{_stamp()}  {line}"
         try:
             sys.stdout.write(line)
             sys.stdout.flush()
