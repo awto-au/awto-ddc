@@ -32,7 +32,7 @@
 ### Connectors (bottom silkscreen) [photo]
 | header | pins | goes to |
 |---|---|---|
-| keypad, 12-pin | IR_CTRL, 5V, POWER, LEDR, LEDG, GND, LEFT, RIGHT, AUTO, MENU, UP, DOWN | keypad board (ribbon fitted); IR comes in here (no IR receiver on the main board) ([photo](photos/main-keypad-header.jpg)) |
+| keypad, 12-pin | IR_CTRL, 5V, POWER, LEDR, LEDG, GND, LEFT, RIGHT, AUTO, MENU, UP, DOWN | keypad board (ribbon fitted); IR comes in here (no IR receiver on the main board) ([photo](photos/main-keypad-header.jpg)). Keypad board: one LED fitted (blue, lights on unit 3); the second LED position is empty (Dan, 2026-11-14). Firmware drives both lines (`bLED_ON` P3.5, `bLED_STANDBY` P3.6, fw/power/led.c) |
 | aux, 4-pin | PWM1, SCL/PWM3, SDA/PWM5, 5V/GND | nothing plugged in |
 | speaker CN4, 4-pin | R−, R+, L+, L− | speakers (fitted in the monitor, unplugged for the photos, Dan 2026-11-13) ([photo](photos/main-speaker-header.jpg)) |
 | backlight control, 6-pin | VCC, VCC, ADJ, EN, GND, GND | PSU CN102 (12 V in + BL enable/PWM) ([photo](photos/main-bl-header.jpg)) |
