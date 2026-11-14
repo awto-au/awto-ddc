@@ -75,7 +75,7 @@ static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a 
     }
     if((GET_OSD_IN_FACTORY_MENU_STATUS() == _FALSE) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
-        if(GET_OSD_TIME_OUT() <= 10)
+        if(GET_OSD_TIME_OUT() == 0)                // 0 = never; any other value times out after a key too (#132 q6, not SDK's <= 10)
         {
             ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);
         }
