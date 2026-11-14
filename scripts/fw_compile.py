@@ -182,7 +182,7 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd += [f"-D_AWTO_NEW_{m.upper()}" for m in awto_modules()]   # per-module WRAPS compile-out (#68)
     cmd += T.CFLAGS_EXTRA                                      # --big-endian when AWTO_SDCC_BE=1
     if FAR_LOCALS.is_file():                                  # #205: locals in XDATA for the listed functions (DATA overlay kept)
-        cmd += ["--far-locals", "--select-far-locals", str(FAR_LOCALS)]
+        cmd += ["--far-locals", f"--select-far-locals={FAR_LOCALS}"]    # one token: a bare path is a 2nd source to ccache
     cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
 
@@ -199,76 +199,38 @@ def _run_stage(cmd, **kw):
         return f"TIMEOUT after {COMPILE_TIMEOUT}s", 124
 
 
-def _cache_dir() -> Path | None:
-    """Compile cache shared by every worktree (one-file change = one compile): $AWTO_SDCC_CACHE, else the main checkout's
-    tmp/sdcc-cache (git common dir's parent); AWTO_SDCC_CACHE=off disables it."""
-    env = os.environ.get("AWTO_SDCC_CACHE")
-    if env == "off":
-        return None
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True)
-    return Path(r.stdout.strip()).parent / "tmp/sdcc-cache" if r.returncode == 0 else ROOT / "tmp/sdcc-cache"
+_CCACHE_ENV = None
 
 
-CACHE = _cache_dir()
-_COMPILER_ID = None
-STATS = Counter()                              # cache_hit / cache_miss per compile run
-
-
-def _compiler_id() -> str:
-    """Compiler identity in the cache key: size + mtime of every file in the install's bin and libexec dirs."""
-    global _COMPILER_ID
-    if _COMPILER_ID is None:
-        inst = Path(SDCC).resolve().parent.parent
-        parts = [f"{p.relative_to(inst)}:{p.stat().st_size}:{p.stat().st_mtime_ns}"
-                 for d in ("bin", "libexec") for p in sorted((inst / d).rglob("*")) if p.is_file()]
-        _COMPILER_ID = hashlib.sha256("\n".join(parts).encode()).hexdigest()
-    return _COMPILER_ID
-
-
-def _cache_key(pp: bytes, args: list) -> str:
-    """Preprocessed source (worktree root replaced, so all worktrees share entries) + compiler flags (paths stripped) +
-    compiler identity + output kind/name."""
-    root = str(ROOT).encode()
-    h = hashlib.sha256(pp.replace(root, b"@ROOT@"))
-    h.update("\0".join(a.replace(str(ROOT), "@ROOT@") for a in args).encode())
-    h.update(_compiler_id().encode())
-    return h.hexdigest()
+def ccache_env() -> dict:
+    """ccache for sdcc (awto-sdcc docs/compile-cache.md, #208): key = content hash of sdcc + sdcpp + sdas8051 (sdcc -c runs
+    all three), headers via ccache's -E, flags via the command line. One cache for every worktree (git common dir's
+    parent / tmp/ccache), size-capped. Absolute paths kept (no CCACHE_BASEDIR): .asm source comments and warning paths
+    stay as the parsers expect; worktrees therefore don't share entries."""
+    global _CCACHE_ENV
+    if _CCACHE_ENV is None:
+        h = hashlib.sha256()
+        for tool in ("sdcc", "sdcpp", "sdas8051"):
+            h.update((Path(SDCC).resolve().parent / tool).read_bytes())
+        r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True)
+        top = Path(r.stdout.strip()).parent if r.returncode == 0 else ROOT
+        _CCACHE_ENV = dict(os.environ, CCACHE_DIR=os.environ.get("CCACHE_DIR", str(top / "tmp/ccache")),
+                           CCACHE_COMPILERTYPE="other", CCACHE_COMPILERCHECK=f"string:{h.hexdigest()}",
+                           CCACHE_MAXSIZE="20G", CCACHE_NOHASHDIR="1")
+        if FAR_LOCALS.is_file():                              # the list changes codegen: in the key
+            _CCACHE_ENV["CCACHE_EXTRAFILES"] = str(FAR_LOCALS)
+    return _CCACHE_ENV
 
 
 def compile_one(c: Path, uv2dir: Path, defines, incs, model):
-    """Two stages: cpp (-E to a .i file), then the compiler proper on that file (--c1mode). In one `sdcc` run the cpp
-    and the compiler write the same stderr concurrently and their lines interleave, splitting warning text (#51.7, #47).
-    Message = cpp output, then compiler output. Stage 2 runs in the output dir with a bare -o: --c1mode names the
-    .module from the -o path (bare = same name as a normal run)."""
+    """One `ccache sdcc` per file (-S: .asm for the overlay pass, else -c: .rel). sdcc >= awto-sdcc#122 runs sdcpp to
+    completion first, so cpp and compiler warnings no longer interleave. AWTO_SDCC_CACHE=off: plain sdcc."""
     rel_dir = uv2dir.relative_to(SRC)
     out = WORK / ("asm" if ASM_MODE else "obj") / rel_dir / (c.stem + (".asm" if ASM_MODE else ".rel"))
     out.parent.mkdir(parents=True, exist_ok=True)
-    pp = out.with_suffix(".i")
-    base = sdcc_cmd(c, uv2dir, defines, incs, model)
-    msg, rc = _run_stage(base + ["-E", "-o", str(pp), str(c)])
-    if rc == 0:
-        c1 = base + ["--c1mode"] + ([] if ASM_MODE else ["-c"]) + ["-o", out.name]
-        key = _cache_key(pp.read_bytes(), c1) if CACHE else None
-        hit = CACHE / f"{key}{out.suffix}" if key else None
-        if hit and hit.exists() and hit.with_suffix(".msg").exists():
-            root = str(ROOT).encode()
-            out.write_bytes(hit.read_bytes().replace(b"@ROOT@", root))
-            msg += hit.with_suffix(".msg").read_text(errors="replace").replace("@ROOT@", str(ROOT))
-            STATS["cache_hit"] += 1
-        else:
-            with open(pp, "rb") as fh:
-                m2, rc = _run_stage(c1, stdin=fh, cwd=out.parent)
-            msg += m2
-            if hit and rc == 0:                              # only successful compiles are cached (msg = c1 stage)
-                CACHE.mkdir(parents=True, exist_ok=True)
-                tmp = hit.with_name(hit.name + f".{os.getpid()}")
-                tmp.write_bytes(out.read_bytes().replace(str(ROOT).encode(), b"@ROOT@"))
-                hit.with_suffix(".msg").write_text(m2.replace(str(ROOT), "@ROOT@"))
-                tmp.replace(hit)                             # entry visible only when complete (.msg first)
-            STATS["cache_miss"] += 1
-    pp.unlink(missing_ok=True)
+    cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + (["-S"] if ASM_MODE else ["-c"]) + ["-o", str(out), str(c)]
+    off = os.environ.get("AWTO_SDCC_CACHE") == "off"
+    msg, rc = _run_stage(cmd if off else ["ccache"] + cmd, env=None if off else ccache_env())
     return str(c.relative_to(SRC) if c.is_relative_to(SRC) else c.relative_to(ROOT)), rc, msg
 
 
@@ -332,8 +294,9 @@ def cmd_awto(jobs):
     def one(j):
         c, out, cmd = j
         try:
-            r = subprocess.run(cmd + ["-S", "-o", str(out), str(c)], capture_output=True, text=True, errors="replace",
-                               timeout=COMPILE_TIMEOUT)
+            off = os.environ.get("AWTO_SDCC_CACHE") == "off"
+            r = subprocess.run(([] if off else ["ccache"]) + cmd + ["-S", "-o", str(out), str(c)], capture_output=True,
+                               text=True, errors="replace", timeout=COMPILE_TIMEOUT, env=None if off else ccache_env())
             return c, r.returncode, r.stdout + r.stderr
         except subprocess.TimeoutExpired:
             return c, 124, f"TIMEOUT after {COMPILE_TIMEOUT}s"
@@ -418,7 +381,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
            "warn_unreviewed": unreviewed}
     log("segment bytes: " + ", ".join(f"{k}={v}" for k, v in seg.most_common() if v))
     (WORK / "report.json").write_text(json.dumps(rep, indent=1))
-    log(f"compiled in {time.time() - t0:.0f}s: ok {len(ok)} fail {len(bad)}; cache {STATS['cache_hit']} hit / {STATS['cache_miss']} miss ({CACHE or 'off'})")
+    log(f"compiled in {time.time() - t0:.0f}s: ok {len(ok)} fail {len(bad)}; ccache {'off' if os.environ.get('AWTO_SDCC_CACHE') == 'off' else ccache_env()['CCACHE_DIR']}")
     print_hist(rep)
     for u in unreviewed:
         log(f"WARN-GATE unreviewed: {u}")
