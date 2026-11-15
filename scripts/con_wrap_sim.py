@@ -33,6 +33,8 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
 LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
 TXT0 = 11              # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
+_CON = (ROOT / "fw/osd/console.c").read_text()
+ROW_W = int(re.search(r"^#define AWTO_CON_COLS\s+(\d+)", _CON, re.M).group(1)) - 3   # AWTO_LOG_W_MAIN = COLS - 3 cells
 POWER_KEY, K_SOURCE = 0x3E, 0x05
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3
 MODE_ACTIVE = 3
@@ -112,6 +114,13 @@ class Sim:
             seq = (seq + 1) % wrap
         self.m.wr(self.a_sync + 3, bytes([seq]))
         say(f"  injected {len(evs)} widest lines: " + " | ".join(SL.line(self.rows, (i, a, 0, v), 0) for i, a, v in evs))
+
+    def long_wraps(self) -> int:
+        """LONG lines wider than a log row (" nnnnn:" + text > ROW_W): only those must wrap at this console width"""
+        txt = [x.split(":", 1)[1] for x in self.ring()[-len(LONG):]]
+        n = sum(1 for x in txt if 7 + len(x.rstrip()) > ROW_W)
+        say(f"  long lines: {[len(x.rstrip()) for x in txt]} chars, row {ROW_W} cells: {n} must wrap")
+        return n
 
     def phase(self, name: str, out: Path, want_wraps: int = 0):
         t = self.text()
@@ -202,12 +211,12 @@ def main() -> int:
     s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], 4.0)
     s.inject(LONG)
     s.bus.wait(DRAW_S)
-    s.phase("6-long-lines", out, want_wraps=len(LONG))
+    s.phase("6-long-lines", out, want_wraps=s.long_wraps())
     for _ in range(10):                                 # 30 lines of two rows: past the map end (62 rows), redraw from the ring
         s.inject(LONG)
         s.bus.wait(0.1)
     s.bus.wait(2 * DRAW_S)                              # the redraw is a console open (map clear, font load) + the backfill
-    s.phase("7-map-end", out, want_wraps=len(LONG))
+    s.phase("7-map-end", out, want_wraps=s.long_wraps())
     s.cmd(0x3A)                                         # demo log: 100 lines 5ms apart (test cmd 0x3A), a burst with wraps
     s.bus.wait(2.5)                                     # 100 lines x ~13 ms on unit 3 = 1.3 s, x1.25, + the draw backlog
     s.phase("8-demo-log", out, want_wraps=2)           # burst; every third demo line wraps

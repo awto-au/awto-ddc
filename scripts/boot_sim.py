@@ -5,7 +5,7 @@ usage: AWTO_SIM_CORE=fast boot_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot] 
 - Runs from reset (console default on) to ACTIVE + AFTER_MS. Records OSD grid size, console flag and mode per step.
 - PNGs: <out>/boot_<ms>ms.png at each --at (fw ms since power-on, default 300 1000), boot_console_first.png (first OSD on),
   boot_active.png (mode ACTIVE), boot_after_ds.png (ACTIVE + AFTER_MS: after display setting).
-- Checks: no logo symbols in the map; console open before display setting with the 120 x 63 map; the same console still
+- Checks: no logo symbols in the map; console open before display setting with the AWTO_CON_COLS x AWTO_CON_ROWS+1 map; the same console still
   open at ACTIVE (one "console opened" line: it survived display setting); power-on log lines; no chip reset.
 - Prints power-on -> ACTIVE (sync ring) and first-console / backlight-on times; the backlight lines' chain (11 C0..DF) is timed
   like the panel and system lines.
@@ -14,6 +14,7 @@ usage: AWTO_SIM_CORE=fast boot_sim.py BIN MAP [--mode 1080p60] [--out tmp/boot] 
 Log: tmp/logs/boot_sim.log
 """
 import argparse
+import re
 import sys
 import time
 import isostamp  # noqa: E402
@@ -29,7 +30,12 @@ import sync_log as S  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_sim.log"
-CON_COLS, CON_MAP_ROWS = 120, 63      # fw/osd/console.c AWTO_CON_COLS, AWTO_CON_ROWS + pad row
+def _con_int(name: str) -> int:
+    m = re.search(rf"^#define {name}\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.M)
+    return int(m.group(1))
+
+
+CON_COLS, CON_MAP_ROWS = _con_int("AWTO_CON_COLS"), _con_int("AWTO_CON_ROWS") + 1   # fw/osd/console.c (+ pad row)
 AFTER_MS = 300                        # after ACTIVE: the console has had display setting + active proc behind it
 BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
 STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)

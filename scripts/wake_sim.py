@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 import fw_sim as S  # noqa: E402
+from boot_sim import CON_COLS  # noqa: E402  (fw/osd/console.c AWTO_CON_COLS)
 import osd_model as M  # noqa: E402
 import osd_render as R  # noqa: E402
 import osd_test as T  # noqa: E402
@@ -294,7 +295,7 @@ def _updown_case(self):
     img = np.array(R.render_snap(st, "black", 1))
     Image.fromarray(img).resize((R.PANEL_W // 2, R.PANEL_H // 2), Image.BOX).save(self.a.out / "wake_updown_console.png")
     say(f"  png {self.a.out / 'wake_updown_console.png'}")
-    self.check(sm["en"] and sm["cols"] == 120 and self.m.rd(self.gpio + 3)[0] != 0, "UP+DOWN: console on screen after the wake",
+    self.check(sm["en"] and sm["cols"] == CON_COLS and self.m.rd(self.gpio + 3)[0] != 0, "UP+DOWN: console on screen after the wake",
                f"OSD {'on' if sm['en'] else 'OFF'}, grid {sm['cols']}x{sm['rows']}, console {self.m.rd(self.gpio + 3)[0]}")
     req = [e for e in self.ring_events() if e[0] == SYS_REQ_EV and (e[3] >> 8) & 0xFF == SYS_BY_KEY_CONSOLE]
     self.check(bool(req), "UP+DOWN: request line names the key (who = UP+DOWN in power saving)",
@@ -353,7 +354,7 @@ def main():
         sm = M.summary(st)
         say(f"  png {a.out / 'wake_cable_console.png'} (OSD {'on' if sm['en'] else 'OFF'}, grid {sm['cols']}x{sm['rows']}, "
             f"console {r.m.rd(r.gpio + 3)[0]})")
-        r.check(sm["en"] and sm["cols"] == 120 and r.m.rd(r.gpio + 3)[0] != 0, "console on screen after the cable wake")
+        r.check(sm["en"] and sm["cols"] == CON_COLS and r.m.rd(r.gpio + 3)[0] != 0, "console on screen after the cable wake")
         r.wake_case("sleep again, cables in, no edge", lambda: None, None, 0)
         # same episode (no picture since): each direction has woken once; a second unplug / plug is suppressed
         r.wake_case("D2 unplug again (no picture since)", lambda: r.m.wr(D2_PIN, b"\x01"), None, 0)

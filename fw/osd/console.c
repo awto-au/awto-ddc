@@ -26,7 +26,8 @@ extern void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE u
 #ifndef AWTO_HOLD_POPUP
 #define AWTO_HOLD_POPUP     0x02                // same value as awto_testcmd.inc (another translation unit)
 #endif
-#define AWTO_T_MAXCOLS      118                 // widest text row: the console log (cols 1..118); probe clamped to this
+#define AWTO_CON_COLS       136                 // console map columns (map limits: see the console block below)
+#define AWTO_T_MAXCOLS      (AWTO_CON_COLS - 2) // widest text row: the console log (cols 1..COLS-2); probe clamped to this
 #define AWTO_T_STYLE_TEXT   0
 #define AWTO_T_STYLE_ONACC  2
 #define AWTO_T_STYLE_ACCENT 3
@@ -44,15 +45,14 @@ static __xdata _Bool s_bAwtoOver;
 static __xdata _Bool s_bAwtoSkip;                         // second pass of a wrapped line: the first s_ucLogI characters are dropped
 static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ring seq; host-time row: shift index; wrap: skip count
 
-// One diagnostic console (AwtoDiagConsole), #144: 120 x 50 shown, Spleen 8x16 at 2x (1920 x 1836 px on the 4K panel).
+// One diagnostic console (AwtoDiagConsole), #144: 136 x 50 shown, Spleen 8x16 at 2x (2176 x 1836 px on the 4K panel).
 // Pages: main (power-on, auto-open) = title + sync / power event log, full width; GPIO (#157) = input table + input changes.
 // Main page = terminal: lines added at the bottom, the map rolls up (hardware roll-up). GPIO page: key test, debug,
-// watchdog below the view (UP / DOWN scroll). Map 120 x 63: cols x rows + rows + 1 < 8192 (docs/osd.md).
-#define AWTO_CON_COLS       120
+// watchdog below the view (UP / DOWN scroll). Map 136 x 58: cols x rows + rows + 1 < 8192 (docs/osd.md); 8 rows roll-up room (Dan, #157).
 #define AWTO_PANEL_ACTIVE_W_MM  597             // Innolux M280DCA-E3B active width (docs/monitors/panel-innolux-m280dca-e3b.md)
 #define AWTO_CON_EDGE_MM    10                  // console box from the left and bottom edges (Dan 2026-11-13)
 #define AWTO_CON_EDGE_PX    ((WORD)((DWORD)_PANEL_DH_WIDTH * AWTO_CON_EDGE_MM / AWTO_PANEL_ACTIVE_W_MM))   // 64 px
-#define AWTO_CON_ROWS       62                  // map rows (+ the pad row AwtoTextOpen adds)
+#define AWTO_CON_ROWS       57                  // map rows (+ the pad row AwtoTextOpen adds)
 #define AWTO_VIEW_ROWS      50                  // rows shown at a time; UP / DOWN scroll the view over the map
 #define AWTO_CON_FONT       0                   // osd_font_load index: Spleen 8x16 (8 x 18 cell)
 #define AWTO_LOG_COL        ((s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table

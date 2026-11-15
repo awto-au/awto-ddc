@@ -1520,7 +1520,6 @@ fn	_UserCommonNVRamSetSystemData	3	0x5da4	584
 fn	_AwtoAudioAmpBoot	3	0x5fec	20
 fn	_set_get	3	0x6000	84
 fn	_AwtoBootConsole	3	0x6054	92
-fn	_AwtoCardCentre	3	0x60b0	140
 fn	_AwtoCardShow	3	0x613c	12
 fn	_AwtoSaveCard	3	0x6148	36
 fn	_AwtoSourceAuto	3	0x616c	48
@@ -1588,6 +1587,7 @@ fn	_AwtoPsWakeArm	3	0x8e68	176
 fn	_AwtoPsWakeCables	3	0x8f18	52
 fn	_AwtoPsWakeFire	3	0x8f4c	372
 fn	_AwtoPsWakePoll	3	0x90c0	576
+fn	_AwtoCardCentre	3	0x9300	160
 fn	_AwtoSyncBegin	3	0x93d4	332
 fn	_AwtoSyncDetect	3	0x9520	568
 fn	_AwtoSyncFreq	3	0x9758	120
