@@ -101,7 +101,7 @@
 __code StructOsdUserDataType g_stOSDDefaultData =
 {
 #if(_PWM_DUT_RESOLUTION == _PWM_8BIT)
-    0x0080,                   // usBackLight;
+    _BACKLIGHT_CENTER,        // usBackLight; 127 = 50 % (Dan 2026-11-15)
 #else
     0x0800,                   // usBackLight;
 #endif
