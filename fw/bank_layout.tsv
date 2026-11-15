@@ -2417,7 +2417,7 @@ fn	_AwtoSrcStyle	8	0x8ab4	24
 fn	_AwtoStackFatal	8	0x8acc	84
 fn	_AwtoLnAbs	8	0x8b20	688
 fn	_AwtoPutWall	8	0x8dd0	448
-const	___str_27	8	0x8f90	20
+const	___str_27	8	0x8f90	32
 fn	_AwtoSyncName	8	0x94ec	140
 fn	_AwtoSyncTxt	8	0x9578	288
 fn	_AwtoTxt	8	0x9698	64

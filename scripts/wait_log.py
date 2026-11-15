@@ -2,7 +2,7 @@
 """Blocking-wait log of the running image (awto-ddc#216): every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call.
 
 usage: wait_log.py BUS --serial S --map MAP [--min-ms N]
-  Waits that end inside the same ms are only counted.
+  Waits under 2 ms (and not expired) are only counted.
   Reads g_stAwtoWait (fw/log/sync.c, struct in RL6449_Project.h) over the debug link: the newest AWTO_WAIT_N waits, oldest first,
   with fw time at the start, ms waited, kind and argument (ms asked / register polled / event type). TIMEOUT = the poll or
   event expired. Callers per argument: scripts/sim_waits.py (offline, return addresses).
@@ -88,7 +88,7 @@ def main() -> int:
         return 1
     total, quick, rows = decode(raw)
     say(f"stack: highest SP inside a wait 0x{raw[2]:02X} (guard 0xF0, {0xF0 - raw[2]} B below it; includes the logger's own frame)")
-    say(f"{a.map.name}: {total} waits >= 1 ms or expired + {quick} that answered at once (quick wraps at 256), last {len(rows)} shown")
+    say(f"{a.map.name}: {total} waits >= 2 ms or expired + {quick} that answered under 2 ms (quick wraps at 256), last {len(rows)} shown")
     table = chunk_table(a.map)
     for end, kind, tmo, arg, dur, pc, bank in rows:
         if dur < a.min_ms:

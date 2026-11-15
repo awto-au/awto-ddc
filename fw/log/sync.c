@@ -276,9 +276,9 @@ void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0, un
         g_stAwtoWait.ucSpMax = SP;
     }
 
-    if((usDur == 0) && ((ucKind & AWTO_WAIT_TIMEOUT) == 0))
+    if((usDur < 2) && ((ucKind & AWTO_WAIT_TIMEOUT) == 0))
     {
-        g_stAwtoWait.ucQuick++;                 // answered inside the same ms (idle polls fire every 10 ms): counted, not logged
+        g_stAwtoWait.ucQuick++;                 // under 2 ms (a 1 ms measure poll every ~100 ms floods the ring): counted, not logged
         return;
     }
     g_stAwtoWait.stEv[ucI].usMs = usNow;
