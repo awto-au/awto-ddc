@@ -121,7 +121,7 @@
 107	info_hfreq	int	none	info	ro	0	30000	1	0	-	-	-	H freq	-	measured horizontal frequency, 0.1 kHz (shown as kHz); was on the Realtek menu Information page (awto-ddc#120)
 108	info_pclk	int	none	info	ro	0	30000	1	0	-	-	-	Pixel clock	-	input pixel clock, 0.1 MHz (shown as MHz); was on the Realtek menu Information page (awto-ddc#120)
 109	info_hdcp	enum	none	info	ro	0	1	1	0	-	-	-	HDCP	Off|On	HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120)
-110	sync_console	bool	none	osd	nv,live	0	1	1	1	auto	-	-	Sync log console	-	the diagnostic console opens by itself with the sync log after a power-on / input switch / wake (awto-ddc#139); read when it would open
+110	console_mode	enum	none	osd	nv,live	0	2	1	1	auto	-	-	Diagnostic console	Off|Until signal|Always	the diagnostic console (sync log) opens by itself after a power-on / input switch / wake (awto-ddc#139): Off = never; Until signal = closes 3 s after the picture is on (any key closes it at once; no signal keeps it open); Always = stays open (awto-ddc#218). Was bool sync_console: stored 0 / 1 keep their meaning
 111	power_on	bool	none	service	nv,sdk	0	1	1	1	auto	-	sdk_sys	Power on	-	power key state over a power cut; was Realtek SDK system data (awto-ddc#151)
 112	dp_lanes	int	none	service	nv,reboot,sdk	1	4	1	4	auto	-	sdk_sys	DP lanes	-	D1 main-link lanes [sdk-value]
 113	dp_irq_10us	int	none	service	nv,reboot,sdk	0	95	1	75	auto	-	sdk_sys	DP IRQ HPD x10 us	-	DP IRQ HPD pulse width [sdk-value]

@@ -109,13 +109,13 @@ static const struct setting __code tab[SET_COUNT] = {
     {107, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1645u, 0xFFFFu},  /* info_hfreq */
     {108, 2, 0, 14, 0x10, 0, 30000, 1, 0, 0x00, 0, 1652u, 0xFFFFu},  /* info_pclk */
     {109, 1, 0, 14, 0x10, 0, 1, 1, 0, 0x00, 0, 1664u, 0x0685u},  /* info_hdcp */
-    {110, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1676u, 0xFFFFu},  /* sync_console */
-    {111, 0, 0, 13, 0x81, 0, 1, 1, 1, 0x00, 30, 1693u, 0xFFFFu},  /* power_on */
-    {112, 2, 0, 13, 0xC1, 1, 4, 1, 4, 0x00, 30, 1702u, 0xFFFFu},  /* dp_lanes */
-    {113, 2, 0, 13, 0xC1, 0, 95, 1, 75, 0x00, 30, 1711u, 0xFFFFu},  /* dp_irq_10us */
-    {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 30, 1729u, 0xFFFFu},  /* ssc */
-    {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 30, 1745u, 0xFFFFu},  /* panel_hours */
-    {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 30, 1757u, 0xFFFFu},  /* panel_min */
+    {110, 1, 0,  8, 0x03, 0, 2, 1, 1, 0x00, 0, 1676u, 0x069Fu},  /* console_mode */
+    {111, 0, 0, 13, 0x81, 0, 1, 1, 1, 0x00, 30, 1719u, 0xFFFFu},  /* power_on */
+    {112, 2, 0, 13, 0xC1, 1, 4, 1, 4, 0x00, 30, 1728u, 0xFFFFu},  /* dp_lanes */
+    {113, 2, 0, 13, 0xC1, 0, 95, 1, 75, 0x00, 30, 1737u, 0xFFFFu},  /* dp_irq_10us */
+    {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 30, 1755u, 0xFFFFu},  /* ssc */
+    {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 30, 1771u, 0xFFFFu},  /* panel_hours */
+    {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 30, 1783u, 0xFFFFu},  /* panel_min */
 };
 
 static const uint8_t __code id2idx[119] = {
@@ -152,9 +152,10 @@ static const char __code txt[] =
     "Audio source\0""Analog\0""Digital\0""Factory reset\0""Colour reset\0""Power mode\0""On\0""Standby\0"
     "Suspend\0""Off\0""Off hard\0""Factory menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0"
     "V freq\0""Mode state\0""Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0"
-    "Sync log console\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0""Spread spectrum\0""Panel hours\0"
-    "Panel minutes\0""Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0"
-    "Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0""Information\0";
+    "Diagnostic console\0""Off\0""Until signal\0""Always\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0"
+    "Spread spectrum\0""Panel hours\0""Panel minutes\0""Picture\0""Colour\0""Six-axis colour\0""Display\0"
+    "Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0"
+    "Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
 static const uint8_t __code vopt[16][3] = {
@@ -247,7 +248,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {96, 6, 0x0C},  /* Service */
     {102, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1771u, 1779u, 1786u, 1802u, 1810u, 1816u, 1830u, 1837u, 1843u, 1847u, 1860u, 1866u, 1872u, 1879u, 1887u};
+static const uint16_t __code ptitle[SET_PAGES] = {1797u, 1805u, 1812u, 1828u, 1836u, 1842u, 1856u, 1863u, 1869u, 1873u, 1886u, 1892u, 1898u, 1905u, 1913u};
 
 uint8_t set_idx(uint8_t id)
 {
