@@ -1197,7 +1197,6 @@ fn	_AwtoConWrapLine	1	0x6b2c	296
 fn	_AwtoDiagConsole	1	0x6c54	168
 fn	_AwtoProbeScroll	1	0x6cfc	136
 fn	_AwtoProbeSet	1	0x6d84	164
-fn	_AwtoSrcLog	1	0x6e28	160
 fn	_AwtoTableStatic	1	0x6ec8	160
 fn	_AwtoTextAt	1	0x6f68	108
 fn	_AwtoTextLine	1	0x6fd4	72
@@ -1238,6 +1237,7 @@ fn	_AwtoHtSync	1	0x8970	984
 fn	_AwtoDiagTestCmd	1	0x8d48	840
 fn	_AwtoOsdBlend	1	0x9090	20
 fn	_AwtoOsdRoll	1	0x90a4	28
+fn	_AwtoSrcLog	1	0x90c0	172
 fn	_osd_tc_bar_off	1	0x9208	8
 fn	_osd_tc_cells	1	0x9210	472
 fn	_osd_tc_close	1	0x93e8	76
@@ -2406,7 +2406,8 @@ fn	_AwtoSrcSet	8	0x8a34	24
 fn	_AwtoSrcSigs	8	0x8a4c	104
 fn	_AwtoSrcStyle	8	0x8ab4	24
 fn	_AwtoStackFatal	8	0x8acc	84
-fn	_AwtoSyncLine	8	0x8b20	2508
+fn	_AwtoLnAbs	8	0x8b20	688
+fn	_AwtoPutWall	8	0x8dd0	448
 fn	_AwtoSyncName	8	0x94ec	140
 fn	_AwtoSyncTxt	8	0x9578	288
 fn	_AwtoTxt	8	0x9698	64
@@ -2425,6 +2426,7 @@ fn	_AwtoWdtIrq	8	0x9be4	80
 fn	_AwtoWdtSeal	8	0x9c34	36
 fn	_AwtoWdtValid	8	0x9c58	72
 fn	_AwtoConAutoClose	8	0x9ca0	156
+fn	_AwtoSyncLine	8	0x9d3c	2632
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268

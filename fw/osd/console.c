@@ -58,7 +58,7 @@ static __xdata BYTE s_ucLogI;                   // GPIO page backfill: change-ri
 #define AWTO_LOG_COL        ((s_ucConOpen == AWTO_CON_GPIO) ? 62 : 1)    // log pane: main page full width, GPIO page right of the table
 #define AWTO_LOG_W_MAIN     (AWTO_T_MAXCOLS - 1)                     // main-page log row (cells, incl. the leading space)
 #define AWTO_LOG_W          ((s_ucConOpen == AWTO_CON_GPIO) ? 57 : AWTO_LOG_W_MAIN)
-#define AWTO_LOG_TIME_W     6                   // AwtoSyncLine time column "nnnnn:" (left padded)
+#define AWTO_LOG_TIME_W     13                  // AwtoSyncLine time column on the main console: "HH:MM:SS.mmm:" (host time) or ms since boot, right aligned
 #define AWTO_LOG_TXT0       (1 + AWTO_LOG_TIME_W)                   // text column: a wrapped line continues here (gen_awto_sync.py)
 #define AWTO_LOG_HDR        2                   // heading row, then lines to the bottom of the view
 #define AWTO_LOG_ROW0       (AWTO_LOG_HDR + 1)
@@ -1147,6 +1147,77 @@ static __xdata WORD s_usAwtoLnMs;
 static void AwtoPutNvFlush(void);              // #151 fmt nvw: NVRAM flush section (last in this file)
 #define ulV s_ulAwtoLnV
 #define usMs s_usAwtoLnMs
+// #157 (Dan 2026-11-15): the main console shows host wall time "HH:MM:SS.mmm" once a host sync is known. Ring times are 16 bit:
+// the lines are chained forward from the anchors (episode start, host-sync fw ms) like scripts/sync_log.py unwrap(); a line
+// drawn out of order with no anchor in reach is taken from now (age < 65 s assumed) and marked '~'. Statics in XDATA: this sits
+// on the deepest DATA overlay path (see AwtoPutIso).
+static __xdata DWORD s_ulLnAbs;                 // fw ms (32 bit) of the line composed last
+static __xdata WORD s_usLnT;                    // its ring time
+static __xdata WORD s_usLnTn;                   // ring time of the line being composed
+static __xdata WORD s_usLnBack;
+#define AWTO_LN_BACK_MS     256
+static __xdata BYTE s_ucLnCur;                  // its ring sequence number
+static __xdata BYTE s_ucLnSeq;
+static __xdata BYTE s_ucLnOk;                   // s_ulLnAbs / s_ucLnSeq valid
+static __xdata BYTE s_ucLnSure;                 // 0 = taken from now, not chained from an anchor
+static __xdata BYTE s_ucLnWide = 1;             // 0 only while the selector's narrow log pane composes (AwtoSrcLog)
+static __xdata long s_lLnD;
+static __xdata long s_lLnS;
+static __xdata long s_lLnR;
+
+static void AwtoLnAbs(void)                     // s_ulLnAbs / s_ucLnSure for the entry s_ucLnCur
+{
+    BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(s_ucLnCur)];
+
+    s_usLnTn = ((WORD)puc[2] << 8) | puc[3];
+    if(puc[0] == AWTO_SYNC_EV_BEGIN)            // value bits 23..8 = fw ms bits 31..16 (a power-on line before Timer2: negative)
+    {
+        s_ulLnAbs = ((DWORD)(((WORD)puc[5] << 8) | puc[6]) << 16) | s_usLnTn;
+        if(((puc[5] | puc[6]) == 0) && (s_usLnTn >= 0x8000))
+        {
+            s_ulLnAbs -= 0x10000;
+        }
+        s_ucLnSure = 1;
+    }
+    else if(puc[0] == AWTO_SYNC_EV_HOSTFW)
+    {
+        s_ulLnAbs = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
+        s_ucLnSure = 1;
+    }
+    else if((s_ucLnOk != 0) && (s_ucLnCur == AWTO_SYNC_NEXT(s_ucLnSeq)))
+    {
+        s_usLnT = s_usLnTn - s_usLnT;           // ms since the previous line
+        s_usLnBack = (WORD)(0 - s_usLnT);       // a step back of <= AWTO_LN_BACK_MS = lines re-based at the Timer2 start (sync_log.py step())
+        s_ulLnAbs = ((s_usLnBack != 0) && (s_usLnBack <= AWTO_LN_BACK_MS)) ? (s_ulLnAbs - s_usLnBack) : (s_ulLnAbs + s_usLnT);
+    }
+    else
+    {
+        s_ulLnAbs = AwtoMs();                   // one reading: two could straddle a 16-bit wrap
+        s_ulLnAbs -= (WORD)((WORD)s_ulLnAbs - s_usLnTn);
+        s_ucLnSure = 0;
+    }
+    s_usLnT = s_usLnTn;
+    s_ucLnSeq = s_ucLnCur;
+    s_ucLnOk = 1;
+}
+
+static void AwtoPutWall(void)                   // s_ulLnAbs -> "HH:MM:SS.mmm" (host clock, s_ulAwtoT = its seconds of the day)
+{
+    s_lLnD = (long)(s_ulLnAbs - isr_g_stAwtoHt.ulFwMs) + (long)isr_g_stAwtoHt.usFrac;    // ms after the sync's host second
+    s_lLnS = s_lLnD / 1000;
+    s_lLnR = s_lLnD % 1000;
+    if(s_lLnR < 0)
+    {
+        s_lLnR += 1000;
+        s_lLnS--;
+    }
+    s_lLnS = (s_lLnS + (long)isr_g_stAwtoHt.ulEpoch + (long)isr_g_stAwtoHt.cOfs * 900) % 86400;
+    s_ulAwtoT = (s_lLnS < 0) ? (DWORD)(s_lLnS + 86400) : (DWORD)s_lLnS;
+    AwtoPutClock();
+    AwtoPutChar('.');
+    AwtoPutNum((WORD)s_lLnR, 3);
+}
+
 static void AwtoSyncLine(BYTE ucSeq)
 {
     BYTE __xdata *puc = (BYTE __xdata *)&g_stAwtoSync.stEv[AWTO_SYNC_IDX(ucSeq)];
@@ -1156,12 +1227,29 @@ static void AwtoSyncLine(BYTE ucSeq)
     ulV = ((DWORD)puc[4] << 24) | ((DWORD)puc[5] << 16) | ((WORD)puc[6] << 8) | puc[7];
     usMs = (((WORD)puc[2] << 8) | puc[3]) - (((WORD)g_stAwtoSync.ucT0Hi << 8) | g_stAwtoSync.ucT0Lo);
 
-    for(ucFmt = (usMs < 10) ? 4 : (usMs < 100) ? 3 : (usMs < 1000) ? 2 : (usMs < 10000) ? 1 : 0; ucFmt != 0; ucFmt--)
+    if(s_ucLnWide != 0)
     {
-        AwtoPutChar(' ');                       // left pad to 5 digits (Dan); not AwtoPutCol: a skipped pass does not move the length
+        s_ucLnCur = ucSeq;
+        AwtoLnAbs();
     }
-    AwtoPutNum(usMs, 1);
-    AwtoPutChar(':');                           // time column "nnnnn:" (no '+', no unit)
+    if((s_ucLnWide != 0) && (isr_g_stAwtoHt.ucSyncs != 0))
+    {
+        AwtoPutWall();
+        AwtoPutChar((s_ucLnSure != 0) ? ':' : '~');
+    }
+    else
+    {
+        for(ucFmt = (s_ucLnWide != 0) ? 7 : 0; ucFmt != 0; ucFmt--)
+        {
+            AwtoPutChar(' ');                   // main console before the first host sync: ms since boot, right aligned in the wall-time width
+        }
+        for(ucFmt = (usMs < 10) ? 4 : (usMs < 100) ? 3 : (usMs < 1000) ? 2 : (usMs < 10000) ? 1 : 0; ucFmt != 0; ucFmt--)
+        {
+            AwtoPutChar(' ');                   // left pad to 5 digits (Dan); not AwtoPutCol: a skipped pass does not move the length
+        }
+        AwtoPutNum(usMs, 1);
+        AwtoPutChar(':');                       // time column "nnnnn:" (no '+', no unit)
+    }
     if(ucRow == 0)
     {
         AwtoPutStr("event ");
@@ -1427,6 +1515,7 @@ static void AwtoSrcLog(void)                    // the last AWTO_SRC_LOGN lines 
     {
         ucN = AWTO_SRC_LOGN;
     }
+    s_ucLnWide = 0;                             // the 46-cell pane keeps "nnnnn:"
     for(ucL = 0; ucL < AWTO_SRC_LOGN; ucL++)
     {
         if(ucL < ucN)
@@ -1435,6 +1524,7 @@ static void AwtoSrcLog(void)                    // the last AWTO_SRC_LOGN lines 
         }
         AwtoTextLine(AWTO_SRC_LOGHDR + 1 + ucL, AWTO_T_STYLE_DIM);
     }
+    s_ucLnWide = 1;
 }
 
 static void AwtoSourceRows(void)                // Auto, then each port with its state, signals, stage and rate; the log

@@ -207,7 +207,8 @@ def main() -> int:
 
     # sync 3: host 5 s ahead
     n0 = h["seq"]
-    s.send(T0 + dt.timedelta(seconds=s.bus.now() - t_s + 5))
+    sent3 = T0 + dt.timedelta(seconds=s.bus.now() - t_s + 5)
+    s.send(sent3)
     s.bus.wait(0.2)
     raw, (h, lines) = s.ring()
     new = lines[-((h["seq"] - n0) % h["wrap"]):] if h["seq"] != n0 else []
@@ -217,6 +218,12 @@ def main() -> int:
     s.check(any("host sync after a drift" in x for x in new), "ring: fw line says drift")
     g = s.get()
     s.check(g is not None and 4950 <= g["cur"] <= 5050, "get E9: drift ~ +5000 ms", str(g))
+    row = next((r for r in s.text() if "drift +" in r), "")
+    mt = re.search(r"\b(\d\d):(\d\d):(\d\d)\.(\d{3})([:~])", row)                 # #157: main console time column = host wall time
+    got = (int(mt.group(1)) * 3600 + int(mt.group(2)) * 60 + int(mt.group(3))) + int(mt.group(4)) / 1000 if mt else None
+    want = sent3.hour * 3600 + sent3.minute * 60 + sent3.second + sent3.microsecond / 1e6
+    s.check(got is not None and abs(got - want) < 0.5 and mt.group(5) == ":", "console line time column = host wall time HH:MM:SS.mmm (chained from the anchor)",
+            f"{row.strip()[:40]!r} vs sent {sent3.time().isoformat('milliseconds')}")
 
     # changed cells only: OSD writes in one idle tick vs the whole title
     s.bus.wait(TICK_S)
