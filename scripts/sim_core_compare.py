@@ -47,7 +47,7 @@ def main() -> int:
     ap.add_argument("gen", type=Path)
     ap.add_argument("--old", type=Path, required=True)
     ap.add_argument("--new", type=Path, default=ROOT)
-    ap.add_argument("--runner", type=Path, default=Path("/mnt/2tb/git/awto-sdcc-next/scripts/dw8051_run.py"))
+    ap.add_argument("--runner", type=Path, default=Path("/mnt/2tb/git/awto-sdcc/scripts/dw8051_run.py"))
     ap.add_argument("--jobs", type=int, default=8)
     a = ap.parse_args()
     imgs = sorted(a.gen.glob("*.ihx"))

@@ -167,7 +167,7 @@ allow and every permission mode, including auto mode.
       "Read(//mnt/2tb/git/awto-rtdfw/**)", "Edit(//mnt/2tb/git/awto-rtdfw/**)", "Write(//mnt/2tb/git/awto-rtdfw/**)",
       "Bash(git status)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git add:*)", "Bash(git commit:*)",
       "Bash(git switch:*)", "Bash(git branch:*)",
-      "Bash(/home/dan/opt/awto-sdcc/bin/sdcc:*)", "Bash(gcc:*)", "Bash(make:*)", "Bash(python3 tests/host/:*)"
+      "Bash(/usr/local/bin/sdcc:*)", "Bash(gcc:*)", "Bash(make:*)", "Bash(python3 tests/host/:*)"
     ],
     "deny": [
       "Read(//mnt/2tb/git_mirror/**)", "Edit(//mnt/2tb/git_mirror/**)",
