@@ -75,8 +75,10 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Realtek SDK bugs found (FRC DHF overwrite, DPLL 16-bit overflow): `re/lib-review/realtek-sdk-bugs.md`, #100; fixes held.
 
 ### 4.7 Compiler (awto-sdcc, `/mnt/2tb/git/awto-sdcc`)
-- Build compiler: `/usr/local` = awto-sdcc main a5c0ac90e8 (stamp + library sources in `/usr/local/share/sdcc/`), BE, `--sdcccall 3`, far locals off; defaults in `scripts/sdcc_tools.py` / `scripts/wb_build.py` (switch: cc0e855, A/B on #204).
-- `--far-locals`: image boot-loops in the sim (15 gates fail); sdcc session bisecting (awto-sdcc#104).
+- Build compiler: `/usr/local` (stamp + library sources in `/usr/local/share/sdcc/`); the pin is `SDCC_COMMIT` in `scripts/wb_build.py`, a different stamp refuses the build. BE, `--sdcccall 3`. The sdcc session asks before it swaps `/usr/local` (Dan runs the sudo).
+- Far locals on, for the functions in `fw/far_locals_select.txt` (#205); `AWTO_FAR_LOCALS=all|off|list` for trials (all-on measured: +8 KB code, no gain).
+- Placement: `#pragma place group(g)` / `bank(n)` before a definition (awto-sdcc#141, docs/place-pragma.md there). `scripts/place_rules.py` rewrites the compiler's PLACE_g areas back to CSEG / CONST with a `;@place` marker right after the compile; `scripts/sdcc_bank.py` puts a group in one bank (hard error when it does not fit or splits). Example: the font group in awto-rtdfw `font.c`. `common` leaves no mark: `--pin-common`.
+- Chip facts (banks, common, reserved ranges, XDATA, IRAM): `fw/rl6449_memory.toml`, read through `scripts/chip_mem.py` (#149).
 - Old A/B reference: `~/opt/awto-sdcc-440cfd2` (`--bin ~/opt/awto-sdcc-440cfd2/bin --src ~/opt/awto-sdcc-440cfd2/share/sdcc/awto-src --expect ''`).
 - Open: #11 (small-be-sc3 IRAM), #18, #32, #46 (DPRx1.c 70 s under load), #49, #50.
 - Catalogue and docs live in awto-sdcc: `docs/keil-vs-sdcc.md`, `keil-c51.md`, `keil-abi.md`; awto-ddc holds stubs.

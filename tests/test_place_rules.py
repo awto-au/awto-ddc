@@ -1,4 +1,4 @@
-"""AWTO_PLACE source markers + group placement (#149). Run: python3 -m pytest tests/test_place_rules.py"""
+"""#pragma place: asm normalising, ;@place markers, group placement (#149). Run: python3 -m pytest tests/test_place_rules.py"""
 import io, sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,45 +12,72 @@ import sdcc_layout as L  # noqa: E402
 
 SB.LOG = io.StringIO()
 
-SRC = """\
-AWTO_PLACE(group=font)  /* reader */
-static void font_blob(const uint8_t __code *b, uint16_t tile)
-{
-}
-AWTO_PLACE(group=font)
-static const uint8_t __code font_blob_spleen[4] = { 1, 2, 3, 4 };
-AWTO_PLACE(bank=3) // pinned
-BYTE __code tTab[] = { 0 };
-AWTO_PLACE(common)
-void IsrHelper(void);
+# compiler output of `#pragma place group(font)` on a function, a table, and `bank(5)` on a table (awto-sdcc#141)
+ASM = """\
+\t.area CSEG    (CODE)
+\t.area PLACE_font(CODE)
+;\t -----------------------------------------
+;\t function font_blob
+;\t -----------------------------------------
+_font_blob:
+\tret
+\t.area CSEG    (CODE)
+_other:
+\tret
+\t.area CSEG    (CODE)
+\t.area CONST   (CODE)
+\t.area PLACE_font(CODE)
+_blob:
+\t.db #0x01\t; 1
+\t.area CSEG    (CODE)
+\t.area CONST   (CODE)
+\t.area BANK5(CODE)
+_pinned:
+\t.db #0x02\t; 2
+\t.area CSEG    (CODE)
 """
 
 
-def test_scan_markers():
-    r = PR.scan_text(SRC, "x.c")
-    assert [(x["sym"], x.get("group"), x.get("bank"), x.get("common")) for x in r] == [
-        ("_font_blob", "font", None, None), ("_font_blob_spleen", "font", None, None),
-        ("_tTab", None, 3, None), ("_IsrHelper", None, None, True)]
+def test_normalise_rewrites_sections():
+    out, n = PR.normalise_text(ASM)
+    assert n == 3
+    assert "PLACE_" not in out and "BANK5" not in out
+    assert out.count(";@place group=font") == 2 and out.count(";@place bank=5") == 1
+    lines = out.split("\n")
+    i = lines.index(";@place group=font")                      # function section: CSEG, marker, then its body
+    assert lines[i - 1].split()[:2] == [".area", "CSEG"] and "_font_blob:" in lines[i:i + 6]
+    k = [x for x, l in enumerate(lines) if l == ";@place group=font"][1]   # table: CONST, marker, label
+    assert lines[k - 1].split()[:2] == [".area", "CONST"] and lines[k + 1] == "_blob:"
 
 
-@pytest.mark.parametrize("bad, msg", [
-    ("AWTO_PLACE(group=a)\n\n\n\n\nint x;\n", "not followed by a definition"),
-    ("AWTO_PLACE(colour=red)\nint x;\n", "use group="),
-    ("AWTO_PLACE(bank=x)\nint x;\n", "not a bank number"),
-    ("AWTO_PLACE(common, bank=2)\nint x;\n", "common together with bank"),
-])
-def test_bad_markers(bad, msg):
-    with pytest.raises(PR.PlaceError, match=msg):
-        PR.scan_text(bad, "x.c")
+def test_normalise_leaves_plain_asm(tmp_path):
+    f = tmp_path / "a.asm"
+    f.write_text("\t.area CSEG    (CODE)\n_x:\n\tret\n")
+    assert PR.normalise(f) == 0 and f.read_text() == "\t.area CSEG    (CODE)\n_x:\n\tret\n"
 
 
-def test_duplicate_marker(tmp_path):
-    f = tmp_path / "a.c"
-    f.write_text("AWTO_PLACE(group=a)\nint x;\n")
-    g = tmp_path / "b.c"
-    g.write_text("AWTO_PLACE(bank=1)\nint x;\n")
-    with pytest.raises(PR.PlaceError, match="already placed"):
-        PR.scan([f, g])
+def test_banker_reads_markers(tmp_path):
+    f = tmp_path / "m.asm"
+    f.write_text(PR.normalise_text(ASM)[0])
+    m = SB.Module(f)
+    tag = {c.name: (c.group, c.pin, c.area) for c in m.chunks}
+    assert tag["_font_blob"] == ("font", None, "CSEG")
+    assert tag["_blob"] == ("font", None, "CONST")
+    assert tag["_pinned"] == (None, 5, "CONST")
+    assert tag["_other"] == (None, None, "CSEG")
+    funcs = {c.name: c for c in m.chunks if c.area == "CSEG"}
+    consts = {c.name: c for c in m.chunks if c.area == "CONST"}
+    pl = SB.load_place(funcs, consts)
+    assert sorted(c.name for c in pl["groups"]["font"]) == ["_blob", "_font_blob"]
+    assert [(c.name, b) for c, b in pl["pins"]] == [("_pinned", 5)]
+
+
+def test_pin_to_a_data_bank_refused(tmp_path):
+    f = tmp_path / "m.asm"
+    f.write_text(PR.normalise_text(ASM.replace("BANK5", "BANK15"))[0])
+    m = SB.Module(f)
+    with pytest.raises(SystemExit, match="not a code bank"):
+        SB.load_place({c.name: c for c in m.chunks if c.area == "CSEG"}, {c.name: c for c in m.chunks if c.area == "CONST"})
 
 
 def ch(name, bank, size=100, area="CSEG"):
@@ -58,8 +85,8 @@ def ch(name, bank, size=100, area="CSEG"):
 
 
 def place(groups, pins=()):
-    labels = {("fn" if c.area == "CSEG" else "const", c.name): "AWTO_PLACE test" for g in groups.values() for c in g}
-    labels.update({("fn" if c.area == "CSEG" else "const", c.name): "AWTO_PLACE test" for c, _ in pins})
+    labels = {("fn" if c.area == "CSEG" else "const", c.name): "#pragma place test" for g in groups.values() for c in g}
+    labels.update({("fn" if c.area == "CSEG" else "const", c.name): "#pragma place test" for c, _ in pins})
     return {"groups": groups, "pins": list(pins), "labels": labels}
 
 
@@ -90,6 +117,6 @@ def test_split_group_fails():
 def test_fixed_group_member_no_room_names_rule():
     it = L.Item("const", "_big", 5000, 0, "m")
     it.fixed = True
-    with pytest.raises(SystemExit, match=r"AWTO_PLACE group=font.*no room for _big .*bank 0: 4096 B free"):
+    with pytest.raises(SystemExit, match=r"#pragma place group\(font\).*no room for _big .*bank 0: 4096 B free"):
         L.assign([it], L.Layout(), 0, 0x100, 2, 4096, log=lambda *_: None,
-                 labels={it.key: "AWTO_PLACE group=font (x.c:1) [group 5000 B -> bank 0]"})
+                 labels={it.key: "#pragma place group(font) (x.c:1) [group 5000 B -> bank 0]"})

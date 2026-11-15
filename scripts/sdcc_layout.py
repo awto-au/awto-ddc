@@ -127,7 +127,7 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
     """Place every item; returns (placed: key -> (region, offset, slot), moved: key -> new region).
     items: list[Item] with .region = wanted region (C or bank). A kept row needs the same region.
     reserve: {bank: bytes} kept free at the top of that bank (fixed data block, scripts/msg_table.py).
-    labels: {key: why it is fixed} (AWTO_PLACE rules), named when a fixed item finds no room."""
+    labels: {key: why it is fixed} (#pragma place rules), named when a fixed item finds no room."""
     regs = {"C": Region("C", common_lo, common_hi)}
     for b in range(nbanks):
         regs[b] = Region(b, 0, bank_cap - (reserve or {}).get(b, 0))

@@ -1,1 +1,1 @@
-4552d13   # awto-rtdfw commit compiled into the image (git archive); branch rotate (not on main), + AWTO_PLACE(group=font), brightness default 50 %, console_mode
+e6422a7   # awto-rtdfw commit compiled into the image (git archive); branch rotate (not on main), + AWTO_PLACE(group=font), brightness default 50 %, console_mode

@@ -14,6 +14,7 @@ usage: fw_compile.py compile <uv2> [--target T] [--jobs N] [--only SUBSTR] [--as
 """
 import fnmatch, hashlib, json, os, re, subprocess, sys, threading, time
 import isostamp  # noqa: E402
+import place_rules as PR  # noqa: E402
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -252,6 +253,8 @@ def compile_one(c: Path, uv2dir: Path, defines, incs, model):
     cmd = sdcc_cmd(c, uv2dir, defines, incs, model) + (["-S"] if ASM_MODE else ["-c"]) + ["-o", str(out), str(c)]
     off = os.environ.get("AWTO_SDCC_CACHE") == "off"
     msg, rc = _run_stage(cmd if off else ["ccache"] + cmd, env=None if off else ccache_env())
+    if ASM_MODE and rc == 0:
+        PR.normalise(out)                                    # #pragma place sections -> CSEG / CONST + marker (awto-ddc#149)
     return str(c.relative_to(SRC) if c.is_relative_to(SRC) else c.relative_to(ROOT)), rc, msg
 
 
@@ -318,6 +321,8 @@ def cmd_awto(jobs):
             off = os.environ.get("AWTO_SDCC_CACHE") == "off"
             r = subprocess.run(([] if off else ["ccache"]) + cmd + ["-S", "-o", str(out), str(c)], capture_output=True,
                                text=True, errors="replace", timeout=COMPILE_TIMEOUT, env=None if off else ccache_env())
+            if r.returncode == 0:
+                PR.normalise(out)                            # #pragma place sections -> CSEG / CONST + marker (awto-ddc#149)
             return c, r.returncode, r.stdout + r.stderr
         except subprocess.TimeoutExpired:
             return c, 124, f"TIMEOUT after {COMPILE_TIMEOUT}s"

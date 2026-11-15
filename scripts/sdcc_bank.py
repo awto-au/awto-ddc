@@ -30,7 +30,7 @@ import sdcc_tools as T  # noqa: E402
 import sdcc_layout as L  # noqa: E402
 import sdcc_cluster as SC  # noqa: E402
 import msg_table as MT  # noqa: E402
-import place_rules as PR  # noqa: E402
+import place_rules as PR  # noqa: E402   (the ;@place marker format)
 
 ROOT = repo_root()
 LOG = None
@@ -126,6 +126,8 @@ class Chunk:
         self.common = False
         self.bank = None         # None = common
         self.size = 0
+        self.group = None        # #pragma place group(g): chunks of one group share a bank (awto-ddc#149)
+        self.pin = None          # #pragma place bank(n)
 
     def finish(self):
         """Derive ISR flag, call targets and symbol refs once the body is complete."""
@@ -158,11 +160,16 @@ class Module:
     def parse(self, lines):
         """Split CSEG at function starts (incl. their preceding comment block) and CONST at labels."""
         out, area, cur, pending_cmt = self.head, None, None, []
+        pending_place = None                                 # (kind, value) of the ;@place marker before the next chunk
         # SDCC emits `arN = rbank0+N` inside the first fn using it; drop_dead must not take it along (#17)
         equ = list(dict.fromkeys(l for l in lines if AR_EQU.match(l)))
         lines = [l for l in lines if not AR_EQU.match(l)]
         self.head.extend(equ)
         for line in lines:
+            mk = PR.MARK.match(line)
+            if mk:
+                pending_place = (mk.group(1), mk.group(2))   # place_rules.normalise: the definition that follows is placed
+                continue
             if line.startswith("\t.area"):
                 area = line.split()[1]
                 if cur is not None:
@@ -181,6 +188,12 @@ class Module:
                 if lab and (area == "CONST" or cur is None):
                     cur = Chunk(area, lab.group(1), pending_cmt + [line], self)
                     pending_cmt = []
+                    if pending_place:
+                        if pending_place[0] == "group":
+                            cur.group = pending_place[1]
+                        else:
+                            cur.pin = int(pending_place[1])
+                        pending_place = None
                     self.chunks.append(cur)
                     continue
                 if cur is None:
@@ -285,32 +298,21 @@ def load_weights(path, funcs):
     return out
 
 
-def load_place(asm_dir, funcs, consts):
-    """AWTO_PLACE rules (#149) -> groups {name: [chunk]}, pins [(chunk, bank | 'C')], labels {(kind, name): text}."""
-    try:
-        rules = PR.scan(PR.sources(asm_dir))
-    except PR.PlaceError as e:
-        sys.exit(f"AWTO_PLACE: {e}")
+def load_place(funcs, consts):
+    """#pragma place tags (Chunk.group / .pin, from the ;@place markers) -> groups {name: [chunk]}, pins [(chunk, bank)],
+    labels {(kind, name): text for an error naming the rule}. `common` leaves no mark (the compiler emits plain CSEG): --pin-common."""
     groups, pins, labels = defaultdict(list), [], {}
-    for r in rules:
-        c = funcs.get(r["sym"]) or consts.get(r["sym"])
-        if c is None:
-            sys.exit(f"AWTO_PLACE: {r['where']}: {r['sym']} is not compiled into any module (dead, renamed or #if'd out)")
+    for c in [*funcs.values(), *consts.values()]:
         key = ("fn" if c.area == "CSEG" else "const", c.name)
-        if "group" in r:
-            groups[r["group"]].append(c)
-            labels[key] = f"AWTO_PLACE group={r['group']} ({r['where']})"
-        if "bank" in r or "common" in r:
-            pins.append((c, "C" if "common" in r else r["bank"]))
-            labels[key] = f"AWTO_PLACE {'common' if 'common' in r else 'bank=%d' % r['bank']} ({r['where']})"
-        if "common" in r:
-            c.common = True
-    for c, b in pins:
-        if b != "C" and not 0 <= b < L.CM.CODE_BANKS:
-            sys.exit(f"AWTO_PLACE: {labels[('fn' if c.area == 'CSEG' else 'const', c.name)]}: bank {b} is not a code bank "
-                     f"(0..{L.CM.CODE_BANKS - 1}, fw/rl6449_memory.toml)")
-    log(f"AWTO_PLACE: {len(rules)} rules, {len(groups)} groups ({', '.join(f'{g}:{len(v)}' for g, v in groups.items())}), "
-        f"{len(pins)} pins")
+        if c.group:
+            groups[c.group].append(c)
+            labels[key] = f"#pragma place group({c.group}) ({c.module.name})"
+        if c.pin is not None:
+            if not 0 <= c.pin < L.CM.CODE_BANKS:
+                sys.exit(f"#pragma place bank({c.pin}) ({c.module.name}): not a code bank (0..{L.CM.CODE_BANKS - 1}, fw/rl6449_memory.toml)")
+            pins.append((c, c.pin))
+            labels[key] = f"#pragma place bank({c.pin}) ({c.module.name})"
+    log(f"#pragma place: {len(groups)} groups ({', '.join(f'{g}:{len(v)}' for g, v in groups.items())}), {len(pins)} pins")
     return {"groups": dict(groups), "pins": pins, "labels": labels}
 
 
@@ -322,7 +324,7 @@ def apply_place(place, stage):
     for g, cs in place["groups"].items():
         pb = {pinned[id(c)] for c in cs if id(c) in pinned}
         if len(pb) > 1:
-            sys.exit(f"AWTO_PLACE group={g}: members pinned to different places {sorted(map(str, pb))}")
+            sys.exit(f"#pragma place group({g}): members pinned to different places {sorted(map(str, pb))}")
         if pb:
             want = pb.pop()
         else:
@@ -336,7 +338,7 @@ def apply_place(place, stage):
             c.common, c.bank = (True, None) if want == "C" else (False, want)
             k = ("fn" if c.area == "CSEG" else "const", c.name)
             place["labels"][k] = place["labels"][k].split(" [")[0] + f" [group {tot} B -> {'common' if want == 'C' else 'bank %d' % want}]"
-        log(f"AWTO_PLACE group={g} -> {'common' if want == 'C' else 'bank %d' % want} ({stage}): "
+        log(f"#pragma place group({g}) -> {'common' if want == 'C' else 'bank %d' % want} ({stage}): "
             f"{len(cs)} items, {tot} B; moved here: {was or 'none'}")
 
 
@@ -347,7 +349,7 @@ def check_place(place, region_of):
         for c in cs:
             where[region_of(c)].append(c.name)
         if len(where) > 1:
-            sys.exit(f"AWTO_PLACE group={g} split across regions: { {str(k): v for k, v in where.items()} }")
+            sys.exit(f"#pragma place group({g}) split across regions: { {str(k): v for k, v in where.items()} }")
 
 
 def main() -> int:
@@ -402,7 +404,7 @@ def main() -> int:
         if n not in funcs:
             sys.exit(f"--pin-common: no function {n}")
         funcs[n].common = True
-    place = load_place(src, funcs, consts)
+    place = load_place(funcs, consts)
     for c in funcs.values():
         if c.common:
             for r in c.refs:
