@@ -15,6 +15,7 @@ static __code BYTE tAwtoPal[AWTO_PAL_N][3] = {
 static __code BYTE tAwtoStyle[5] = {AWTO_PAL_ACCENT, AWTO_PAL_GREY, AWTO_PAL_SURFACE, AWTO_PAL_ACCENT, AWTO_PAL_ALERT};      // style 4 = palette 4: only the diagnostic console uses it (alert)
 #define AWTO_BAR_SURFACE            AWTO_PAL_SURFACE
 #define AWTO_BAR_ACCENT             AWTO_PAL_ACCENT
+#define AWTO_OSD_WIN_MIN_PX         2           // narrowest window drawn as asked; end == start runs to the line end (photo 2026-11-15)
 
 static BYTE s_ucVpRows;                          // viewport rows (0 = the whole map is shown)
 static BYTE s_ucVpFirst;                         // first view row shown (logical; rotated 180 the map rows are mirrored)
@@ -187,6 +188,14 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
 
 void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour)
 {
+    if(usX1 <= usX0)                                 // end == start: the window runs to the line end (1 % backlight bar)
+    {
+        usX1 = usX0 + AWTO_OSD_WIN_MIN_PX - 1;
+    }
+    if(usY1 <= usY0)
+    {
+        usY1 = usY0 + AWTO_OSD_WIN_MIN_PX - 1;
+    }
     if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)      // inclusive px, mirrored inside the map box
     {
         WORD usW = (WORD)g_ucOsdWidth * osd_cw - 1;

@@ -139,7 +139,7 @@ class Keys:
             say(f"  png {path}")
 
     def backlight(self):
-        b = self.m.rd(self.m.addr("g_stOSDUserData"), 2)            # StructOSDUserDataType.usBackLight (first field, SDK raw 30..255)
+        b = self.m.rd(self.m.addr("g_stOSDUserData"), 2)            # StructOSDUserDataType.usBackLight (first field, SDK raw 0..255)
         return b[0] << 8 | b[1]
 
     def check(self, what, ok, detail=""):

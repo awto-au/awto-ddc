@@ -1047,7 +1047,7 @@ class SimBus:
             if mt:
                 self._tc_addr = int(mt.group(1), 16)
                 self.m.stub("ScalerTimerDelayXms", self._delay_ffwd)
-        self.t2_abs, self._t2_last = 0, None
+        self.t2_abs, self._t2_last, self.t2_back = 0, None, []     # t2_back: torn reads skipped (abs ms, ms short)
         self.naks = 0
         if boot:
             self.boot()
@@ -1147,7 +1147,11 @@ class SimBus:
     def _t2(self) -> int:
         t = self.diag_t2()
         if self._t2_last is not None:
-            self.t2_abs += (t - self._t2_last) & 0xFFFF
+            d = (t - self._t2_last) & 0xFFFF
+            if d >= 0x8000:                                  # torn read mid-ISR (low byte wrapped, high not yet): skip the sample
+                self.t2_back.append((self.t2_abs, 0x10000 - d))
+                return self.t2_abs
+            self.t2_abs += d
         self._t2_last = t
         return self.t2_abs
 

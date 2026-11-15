@@ -131,7 +131,7 @@
 #else
 #define _BACKLIGHT_MAX                              4095
 #endif
-#define _BACKLIGHT_MIN                              30
+#define _BACKLIGHT_MIN                              0       // full range: OB3363T DIM duty 0..100 %, no minimum (datasheet DS_3363TA0 p7); 0 % = off
 #define _BACKLIGHT_CENTER                           (((_BACKLIGHT_MAX - _BACKLIGHT_MIN) / 2) + _BACKLIGHT_MIN)
 
 //--------------------------------------------------

@@ -1239,7 +1239,6 @@ fn	_AwtoHtSync	1	0x8970	984
 fn	_AwtoDiagTestCmd	1	0x8d48	840
 fn	_AwtoOsdBlend	1	0x9090	20
 fn	_AwtoOsdRoll	1	0x90a4	28
-fn	_osd_tc_bar	1	0x90c0	328
 fn	_osd_tc_bar_off	1	0x9208	8
 fn	_osd_tc_cells	1	0x9210	472
 fn	_osd_tc_close	1	0x93e8	76
@@ -1253,6 +1252,7 @@ fn	_osd_tc_viewport	1	0x9bb8	32
 fn	_osd_tc_vlc_begin	1	0x9bd8	108
 fn	_osd_tc_vlc_end	1	0x9c44	28
 fn	_osd_tc_vlc_put	1	0x9c60	44
+fn	_osd_tc_bar	1	0x9c8c	404
 const	_g_stSystemDefaultData	2	0x0000	20
 fn	_ScalerAudioD1GetAudioDetected	2	0x0014	124
 fn	_ScalerAudioGetAudioDetected	2	0x0090	48
