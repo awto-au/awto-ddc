@@ -1280,7 +1280,6 @@ fn	_ScalerTMDSNormalPreDetect	2	0x3940	28
 fn	_ScalerTMDSScanInputPort	2	0x395c	32
 fn	_ScalerTMDSStableDetect	2	0x397c	44
 fn	_ScalerTMDSRx2CheckCDRStable	2	0x39a8	528
-fn	_ScalerTMDSRx2HdmiPacketDetect	2	0x3bb8	392
 fn	_ScalerTMDSRx2HdmiSetDeepColorPll	2	0x3d40	1952
 fn	_ScalerTMDSRx2HdmiWatchDog	2	0x44e0	264
 fn	_ScalerTMDSRx2MeasureClk	2	0x45e8	164
@@ -1377,6 +1376,7 @@ fn	_set_ap_search_time	2	0x9958	76
 fn	_AwtoPsAuxSeen	2	0x99a4	72
 fn	_AwtoHoldBlocksDisable	2	0x99ec	60
 fn	_UserOsdHandler	2	0x9a28	72
+fn	_ScalerTMDSRx2HdmiPacketDetect	2	0x9a70	424
 const	_tSysLed	3	0x0000	20
 const	_tSysMode	3	0x0014	20
 const	_tSysPower	3	0x0028	20
