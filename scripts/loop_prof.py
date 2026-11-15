@@ -20,7 +20,7 @@ import i2cbus
 import rtd_i2c_bridge as B
 
 SLOTS = ["key+diag+testcmd", "SysPowerHandler", "SysJudgeHandler", "SysTimerHandler", "SysSourceHandler", "SysModeHandler",
-         "SysDpRxHandler", "SysTMDSRxHandler", "HDCP2 / MST", "OSD handler", "DDC/CI handler", "colour + ScalerDebug"]
+         "SysDpRxHandler", "SysTMDSRxHandler", "HDCP2 / MST", "OSD handler", "DDC/CI handler", "panel tick (AWTO_LP 12)", "colour + ScalerDebug"]
 PS_ONLY_OFF = 7 + 4 * len(SLOTS)          # StAwtoLoopProf.ucPsOnly
 ROOT = Path(__file__).resolve().parent.parent
 

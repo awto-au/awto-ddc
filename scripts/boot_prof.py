@@ -28,7 +28,9 @@ BOOT_PROBES = {0x30: "TimerEvent init done, UserCommonInterfaceInitial next", 0x
                0x35: "SysPowerInitial: whole chip reset done", 0x36: "SysPowerInitial: IOSC trimming done",
                0x37: "SysPowerInitial: LDO done, EDID load next", 0x38: "SysPowerInitial: EDID loaded, HDCP key next",
                0x39: "SysPowerInitial: HDCP key + DP D0 init done", 0x3A: "SysPowerInitial: DP init done",
-               0x3B: "OSD flow: mode INITIAL entered (console + panel next)", 0x3C: "UserInterfaceInitial done (NVRAM load)"}
+               0x3B: "OSD flow: mode INITIAL entered (console + panel next)", 0x3C: "UserInterfaceInitial done (NVRAM load)",
+               0x3D: "OSD flow: AwtoBootConsole returned", 0x3E: "OSD flow: RTDOsdSystemFlowProc returned",
+               0x3F: "OSD flow: RTDOsdEventMsgProc returned"}
 
 
 OFF_S = 4.0   # soft off: panel off sequence + T6 (panel_t6 in the registry) + settle; fw ms scale is 100s of ms, 4 s = ample

@@ -194,6 +194,7 @@ void main(void)
             AWTO_PS_POLL_SITE();
             AWTO_SET_LOOP();
             UserCommonInterfacePanelPowerTick();    // before the OSD handler's long draws (boot console): T3 / PWM steps due now
+            AWTO_LP(12);                            // profile: the panel tick has its own slot (#216)
             UserCommonInterfaceOsdHandler();
 
 #if(_DDCCI_CODE_REDUCTION == _OFF)

@@ -832,7 +832,7 @@ extern unsigned char AwtoNetXchgA(unsigned char *pucQ, unsigned char ucN, unsign
 #ifndef _AWTO_LOOP_PROF
 #define _AWTO_LOOP_PROF                                         _OFF    // -D_AWTO_LOOP_PROF=_ON: per-handler main-loop cost (fw/diag/loopprof.c)
 #endif
-#define AWTO_LP_SLOTS                                           12
+#define AWTO_LP_SLOTS                                           13
 typedef struct
 {
     unsigned char ucReset;                      // host writes 1: zeroed at the next pass start

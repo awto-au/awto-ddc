@@ -63,8 +63,18 @@ void RTDOsdEventMsgProc(void);
 //--------------------------------------------------
 void UserOsdHandler(void)
 {
+    BYTE ucBoot = ((SysModeGetModeState() == _MODE_STATUS_INITIAL) && (SysModeGetModeStateChange() == _TRUE));   // the one pass probed (#216)
+
     RTDOsdSystemFlowProc();
+    if(ucBoot != 0)
+    {
+        AWTO_BPROF(0x3E);
+    }
     RTDOsdEventMsgProc();
+    if(ucBoot != 0)
+    {
+        AWTO_BPROF(0x3F);
+    }
 }
 
 //--------------------------------------------------
@@ -95,6 +105,7 @@ void RTDOsdSystemFlowProc(void)
 
                 AWTO_BPROF(0x3B);
                 AwtoBootConsole();      // #162: the panel is the panel machine's, requested at the power switch
+                AWTO_BPROF(0x3D);
             }
 
             break;

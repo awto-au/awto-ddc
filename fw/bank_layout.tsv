@@ -1283,7 +1283,6 @@ fn	_ScalerTMDSRx3Hdcp1p4AksvClear	2	0x5070	12
 fn	_ScalerTMDSRx3MeasureClk	2	0x507c	164
 fn	_ScalerTMDSRx3TMDSStableDetect	2	0x5120	612
 fn	_RTDOsdSystemFlowProc	2	0x5384	212
-fn	_UserOsdHandler	2	0x5458	12
 fn	_UserInterfaceGetAudioMuteStatus	2	0x5464	36
 fn	_UserInterfaceGetCableResetStatus	2	0x5488	60
 fn	_UserInterfaceGetForcePSStatus	2	0x54c4	12
@@ -1368,6 +1367,7 @@ fn	_AwtoRxStable	2	0x9934	36
 fn	_set_ap_search_time	2	0x9958	76
 fn	_AwtoPsAuxSeen	2	0x99a4	72
 fn	_AwtoHoldBlocksDisable	2	0x99ec	60
+fn	_UserOsdHandler	2	0x9a28	72
 const	_tSysLed	3	0x0000	20
 const	_tSysMode	3	0x0014	20
 const	_tSysPower	3	0x0028	20
