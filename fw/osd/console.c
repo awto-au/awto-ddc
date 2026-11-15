@@ -1872,6 +1872,10 @@ void AwtoBootConsole(void)
     {
         return;
     }
+    if((g_stAwtoSync.ucOpenReq != AWTO_SYNC_OPEN_KEY) && (AWTO_SET(CONSOLE_MODE) == AWTO_CON_MODE_UNTIL))
+    {
+        return;                                 // #216: not before the picture (its draw holds the input search 343 ms); the settled-episode open draws it from the ring
+    }
     ScalerDDomainBackgroundEnable(_ENABLE);    // black frame under the OSD: also the short T3 (own pattern) at panel on
     AwtoSyncPush(AWTO_SYNC_EV_CONSOLE, 0, 0);
     s_ucConOpen = 0;                            // wake: power saving lost the OSD of a console left open; draw it anew

@@ -1519,7 +1519,7 @@ fn	_UserCommonInterfacePanelVideoOn	3	0x5d80	36
 fn	_UserCommonNVRamSetSystemData	3	0x5da4	584
 fn	_AwtoAudioAmpBoot	3	0x5fec	20
 fn	_set_get	3	0x6000	84
-fn	_AwtoBootConsole	3	0x6054	92
+fn	_AwtoBootConsole	3	0x6054	116
 fn	_AwtoCardShow	3	0x613c	12
 fn	_AwtoSaveCard	3	0x6148	36
 fn	_AwtoSourceAuto	3	0x616c	48
@@ -2224,7 +2224,6 @@ const	___str_23	8	0x03bc	8
 const	___str_24	8	0x03c4	12
 const	___str_25	8	0x03d0	8
 const	___str_26	8	0x03d8	8
-const	___str_27	8	0x03e0	12
 const	___str_28	8	0x03ec	12
 const	___str_29	8	0x03f8	12
 const	___str_3	8	0x0404	16
@@ -2408,6 +2407,7 @@ fn	_AwtoSrcStyle	8	0x8ab4	24
 fn	_AwtoStackFatal	8	0x8acc	84
 fn	_AwtoLnAbs	8	0x8b20	688
 fn	_AwtoPutWall	8	0x8dd0	448
+const	___str_27	8	0x8f90	20
 fn	_AwtoSyncName	8	0x94ec	140
 fn	_AwtoSyncTxt	8	0x9578	288
 fn	_AwtoTxt	8	0x9698	64

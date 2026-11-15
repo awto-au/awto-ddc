@@ -36,6 +36,7 @@ def _con_int(name: str) -> int:
 
 
 CON_COLS, CON_MAP_ROWS = _con_int("AWTO_CON_COLS"), _con_int("AWTO_CON_ROWS") + 1   # fw/osd/console.c (+ pad row)
+SET_ID_CONSOLE_MODE, CON_ALWAYS = 110, 2     # registry id 110 console_mode, value Always
 AFTER_MS = 300                        # after ACTIVE: the console has had display setting + active proc behind it
 BUDGET_INSTR = 160_000_000            # sim boot to ACTIVE takes ~75 M instructions (boot1); x2 margin; expiry = FAIL
 STEP = 100_000                        # instructions per sample (~1-2 ms of fw time)
@@ -56,6 +57,8 @@ class Run:
         self.a, self.fails = a, 0
         self.s = R.Session(a.bin, a.map, a.mode)
         self.bus, self.m = self.s.bus, self.s.bus.m
+        if a.console == "always":
+            self.m.stub("set_get", lambda m_, r: {"val": CON_ALWAYS} if (r["a1"] & 0xFF) == SET_ID_CONSOLE_MODE else None)
         self.rows = S.load_rows(S.tsv_for(a.map))
         self.ring = S.sym(a.map, "g_stAwtoSync")
         self.gpio = self.m.addr("g_stAwtoGpio")
@@ -129,6 +132,8 @@ def main():
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/boot")
     ap.add_argument("--at", type=float, nargs="*", default=[300.0, 1000.0])
     ap.add_argument("--bite", action=argparse.BooleanOptionalAction, default=True, help="#29: 0x4C bite, reboot, reason line")
+    ap.add_argument("--console", choices=["until", "always"], default="until",
+                    help="registry console_mode: until = the image default (console after the picture, #216), always = open at power-on (#144)")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     say(f"boot_sim {a.bin.name}")
@@ -167,9 +172,13 @@ def main():
             say(f"    {ln}")
         txt = "\n".join(lines)
         r.check(h.get("lost", 0) == 0, "ring holds every power-on line (none overwritten)", f"{len(lines)} lines in {h['n']} slots, lost {h.get('lost', 0)}")
-        r.check(first_con is not None, "console shown during power-on", f"first at {first_con:.0f} ms" if first_con else "never")
-        r.check(con_at_ds is not None and con_at_ds[:2] == (CON_COLS, CON_MAP_ROWS) and con_at_ds[2] != 0,
-                f"console ({CON_COLS} x {CON_MAP_ROWS} map) open when display setting starts", str(con_at_ds))
+        if a.console == "always":
+            r.check(first_con is not None, "console shown during power-on", f"first at {first_con:.0f} ms" if first_con else "never")
+            r.check(con_at_ds is not None and con_at_ds[:2] == (CON_COLS, CON_MAP_ROWS) and con_at_ds[2] != 0,
+                    f"console ({CON_COLS} x {CON_MAP_ROWS} map) open when display setting starts", str(con_at_ds))
+        else:                                       # #216: the picture first; the settled-episode open draws the console from the ring
+            r.check(con_at_ds is not None and con_at_ds[2] == 0, "Until signal: no console when display setting starts", str(con_at_ds))
+            r.check(first_con is None, "Until signal: no console before the picture (ACTIVE)", f"first at {first_con:.0f} ms" if first_con else "never")
         r.check(st[1:4] == (CON_COLS, CON_MAP_ROWS, st[3]) and st[3] != 0 and st[4], "console open after display setting", str(st))
         r.check(txt.count("console opened") == 1, "one 'console opened' line (survived display setting, no reopen)",
                 f"{txt.count('console opened')}")

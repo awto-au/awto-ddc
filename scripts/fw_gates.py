@@ -9,7 +9,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   conmode: console_mode_sim (#218: console Off / Until signal closes 3 s after ACTIVE or on a key / Always).
   conwrap: con_wrap_sim (#162: console lines whole, a wide line on two rows; widest lines + map end, no watchdog bite).
   nvlog: nv_test --sim flushlog (#151: NVRAM flush line per close / power off, "wrote N B ..." vs "nothing changed").
-  sync: sync_sim (#139). bootsim: boot_sim (#144, #29; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
+  sync: sync_sim (#139). bootsim: boot_sim (#144, #29, #216: Until signal = console after the picture; bootsim_always: console at power-on; `boot` is the fw_sim --boot-check). wake: wake_sim (#144 task 4). pokes: poke_loops TREE (static, #138).
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
     pin at once after VDD on / the M2PLL switch (Dan 2026-11-13, no T3); T4..T6 kept.
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
@@ -55,6 +55,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "wdt": ("_AwtoWdtHang",),
     "sync": ("_g_stAwtoSync",),
     "bootsim": ("_g_stAwtoSync",),
+    "bootsim_always": ("_g_stAwtoSync",),
     "wake": ("_AwtoPsWakeFire",),
     "htime": ("_isr_g_stAwtoHt",),
     "conmode": ("_g_ucAwtoConAuto",),
@@ -110,6 +111,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["wdt"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
     g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
+    g["bootsim_always"] = [*PY, f"{s}/boot_sim.py", b, m, "--console", "always", "--no-bite", "--out", out / "boot_always"]   # #144: console at power-on
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
