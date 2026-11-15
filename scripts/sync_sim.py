@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sync_sim.log"
 K_MENU, K_SOURCE, CON_CLOSE = 0x04, 0x05, 0x44     # injected MENU / SOURCE; test cmd 0x44 = console close (fw/test/testcmd.c)
 POWER_KEY = 0x3E                                    # test cmd 0x3E = the POWER key (soft off / on, #151)
+CON_LOOK_S = 1.5                                # after ACTIVE: the console that opened itself is up (closes at 3 s, AWTO_CON_HOLD_MS)
 SETTLE_S = 3.0      # a switch to ACTIVE + console open: AWTO_SYNC_OPEN_MS 2 s + one console draw (~0.3 s sim) x ~1.25
 RATE_S = 2.5        # usLoopRate covers the last ~1 s; 2.5 s = two full windows after a change
 
@@ -127,13 +128,15 @@ def main():
     r = Run(a)
     try:
         r.s.boot(sync_console=True)
-        r.s.bus.wait(SETTLE_S)
+        r.s.bus.wait(CON_LOOK_S)
+        con_open = r.console() != 0                 # Until signal closes it 3 s after ACTIVE (#218): look before that
+        r.s.bus.wait(max(SETTLE_S - CON_LOOK_S, 0.0))
         h, lines = r.episode("power-on")
         txt = "\n".join(lines)
         r.check(h["magic"] == b"SY" and h["kind"] == 1, "ring: power-on episode", f"magic {h['magic']!r} kind {h['kind']}")
         for want in ("power on", "->ACTIVE:", "backlight on at once", "timing ", "console opened"):
             r.check(want in txt, f"power-on log has '{want}'")
-        r.check(r.console() != 0, "console opened by itself after power-on")
+        r.check(con_open, "console opened by itself after power-on")
         r.shot("poweron_console")
         r.cmd(CON_CLOSE, 1.0)
         r.check(r.console() == 0, "console closed (test cmd 0x44)")

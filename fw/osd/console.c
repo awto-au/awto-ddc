@@ -2767,7 +2767,7 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
     {
         return;                                 // #162 s3: a fast switch's frame checks first; the OSD poll draws the lines after
     }
-    while(s_ucConSyncSeq != g_stAwtoSync.ucSeq)
+    if(s_ucConSyncSeq != g_stAwtoSync.ucSeq)    // one line per main-loop pass (Dan): the backlog of an open catches up over the next passes, no 100+ ms draw
     {
         if((s_ucConOpen != AWTO_CON_MAIN) || (AwtoConLost() != 0))
         {
@@ -2795,11 +2795,7 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
             AwtoConLogTail();
         }
         AwtoConLogEnd();
-        if(s_bAwtoOver != 0)
-        {
-            s_bAwtoOver = 0;
-            return;                             // the rest next pass: a burst of wide lines bit the watchdog (con_wrap_sim)
-        }
+        s_bAwtoOver = 0;
     }
 }
 #else
