@@ -10,7 +10,10 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Debug link (slave 0x35) OFF before any flash (`scripts/dbg_link.py off 11`); it has a 10 min timer that expired mid-flash on 2026-11-08 (#71).
 - Waiting for a monitor to come back after reset/flash/power cycle: **5 s** max, then report failed.
 - Host layout changes: temporary only (`gdctl set`, never `--persistent`), at most 2 per test (Fedora "keep changes" dialog).
-- GitHub writes: `/mnt/2tb/git/awto-dan/scripts/gh_claudia.py gh|git ...` (bot identity). Both repos (awto-ddc, awto-sdcc) are PRIVATE: no scrub checks. awto-ddc stays private permanently (Realtek confidential code, `CLAUDE.md`).
+- GitHub writes: `/mnt/2tb/git/awto-dan/scripts/gh_claudia.py gh|git ...` (bot identity). awto-ddc is public (Dan, 2026-11-13): scrub secrets and binaries; awto-sdcc is private (`CLAUDE.md`).
+- Before writing a new function or researching how the chip does X: grep the stripped SDK code (#209).
+  - Ported to SDCC, as before the strip: tag `pre-strip-209`, local worktree `/mnt/2tb/git/awto-ddc-prestrip`. Recreate with `git worktree add --detach ../awto-ddc-prestrip pre-strip-209`.
+  - Realtek original (Keil): `/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST`. Whole files dropped: `fw/sdk_drop.txt`.
 - Findings go into issues, not chat. Facts carry tags ([fw] [guess] [?] ...); a guess is never written as a fact (#91).
 - Agents: cheap by default (Haiku/Sonnet), narrow briefs, one at a time for RE (memory `re-slow-cheap`). Opus only when asked. Stop an agent after its report: it re-sends "waiting on background work" notices that cost tokens.
 - The API weekly limit was hit on 2026-11-08 (an agent died with partial work); resets 2026-11-11 05:00 (Australia/Melbourne).
