@@ -163,6 +163,9 @@ def keil_compat():
 
 # module:func list (awto-sdcc scripts/fl_iram_select.py; regenerate after source changes that move DATA frames, #205)
 FAR_LOCALS = ROOT / "fw/far_locals_select.txt"
+FAR_MODE = os.environ.get("AWTO_FAR_LOCALS", "list")    # list (default) | all (every function, #205 trial) | off
+if FAR_MODE not in ("list", "all", "off"):
+    sys.exit(f"AWTO_FAR_LOCALS={FAR_MODE!r}: list | all | off")
 
 
 # Our firmware sources by subsystem (#196, scripts/fw_dirs.py): compiled with the SDK project's flags, defines and include path.
@@ -194,7 +197,9 @@ def sdcc_cmd(c: Path, uv2dir: Path, defines, incs, model):
     cmd += FILE_FLAGS.get(c.name, [])
     cmd += [f"-D_AWTO_NEW_{m.upper()}" for m in awto_modules()]   # per-module WRAPS compile-out (#68)
     cmd += T.CFLAGS_EXTRA                                      # --big-endian when AWTO_SDCC_BE=1
-    if FAR_LOCALS.is_file():                                  # #205: locals in XDATA for the listed functions (DATA overlay kept)
+    if FAR_MODE == "all":                                     # #205: locals in XDATA for every function
+        cmd += ["--far-locals"]
+    elif FAR_MODE == "list" and FAR_LOCALS.is_file():         # the listed functions only (DATA overlay kept)
         cmd += ["--far-locals", f"--select-far-locals={FAR_LOCALS}"]    # one token: a bare path is a 2nd source to ccache
     cmd += os.environ.get("K2S_SDCC_EXTRA", "").split()      # experiments, e.g. --max-allocs-per-node N
     return cmd
@@ -232,7 +237,7 @@ def ccache_env() -> dict:
             env = dict(os.environ, CCACHE_DIR=os.environ.get("CCACHE_DIR", str(top / "tmp/ccache")),
                        CCACHE_COMPILERTYPE="other", CCACHE_COMPILERCHECK=f"string:{h.hexdigest()}",
                        CCACHE_MAXSIZE="20G", CCACHE_NOHASHDIR="1")
-            if FAR_LOCALS.is_file():                          # the list changes codegen: in the key
+            if FAR_MODE == "list" and FAR_LOCALS.is_file():   # the list changes codegen: in the key
                 env["CCACHE_EXTRAFILES"] = str(FAR_LOCALS)
             _CCACHE_ENV = env
     return _CCACHE_ENV
