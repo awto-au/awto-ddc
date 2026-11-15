@@ -45,9 +45,14 @@ Never write bare "vendor": say which one.
 ### Our parts
 - Diagnostic console (#89, #128; #34 closed)
   - Code: `fw/osd/console.c` (`AwtoDiagConsole`), `fw/keys/keytest.c`, `fw/input/inputs.c`.
-  - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `sync_console`), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42: main page. Menu "GPIO inputs" / test cmd 0x43: GPIO page. Closed by UP+DOWN, 0x44. Host: `scripts/osd_test.py`.
+  - Opened at power-on (mode INITIAL, `AwtoBootConsole`, #144: replaces the boot logo), by itself after a switch / wake (#139, registry `console_mode`, see below), by UP+DOWN, test cmd 0x20 / 0x26, 0x41 / 0x42: main page. Menu "GPIO inputs" / test cmd 0x43: GPIO page. Closed by UP+DOWN, 0x44. Host: `scripts/osd_test.py`.
   - Look: green on black (palette 1..4 set in `fw/osd/console.c`); font Spleen 8x16 (font 0, 8 x 18 cells) at 2x; 0x60+n picks a font, 0x4A / 0x4B = 1x / 2x.
-  - Grid 120 columns x 63 map rows; 50 rows shown (1920 x 1836 px on the 3840 x 2160 panel), UP / DOWN scroll (`AwtoConScroll`).
+  - Grid 136 columns x 58 map rows (136 * 58 + 59 < 8192, #157); 50 rows shown (2176 x 1836 px on the 3840 x 2160 panel); the other 8 rows are roll-up room (a new log line scrolls one row; a full redraw when they run out). UP / DOWN scroll on the GPIO page (`AwtoConScroll`).
+  - Registry `console_mode` (id 110, #218; was bool `sync_console`, stored 0 / 1 keep their meaning), menu OSD page:
+    - Off: never opens by itself.
+    - Until signal (default): opens at power-on / switch / wake; closes `AWTO_CON_HOLD_MS` (3 s) after the picture is on (mode ACTIVE; log line `closed 3s after the picture came`); any key closes it at once (SOURCE then opens the selector; every other key only dismisses it; log line `closed by a key`). No signal / no support / searching keeps it open.
+    - Always: stays open (SOURCE still closes it for the selector, #132).
+    - A console opened on purpose (UP+DOWN, test cmd 0x20 / 0x26) never closes by itself. Test: `scripts/console_mode_sim.py` (gate `conmode`).
   - Pages (#157; `AwtoDiagConsole(AWTO_CON_MAIN / AWTO_CON_GPIO)`, a page change redraws the map):
     - Main (power-on, auto-open, UP+DOWN): title row + sync / power event log, cols 1..118, 47 lines, live at each sync push. Host time + its fw ms on one row.
     - GPIO: input table (left) + the input-change list (right, backfilled from the 32-entry change ring). Input changes never go into the event log.

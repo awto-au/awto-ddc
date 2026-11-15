@@ -1016,6 +1016,12 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
 #define AWTO_SEL_EV_RESET                                       0x09    // closed by the SDK OSD reset (mode reset / signal back), nothing to take
 #define AWTO_SEL_EV_CON_CLOSE                                   0x0A    // SOURCE closed a console that opened by itself, for the selector
+#define AWTO_SEL_EV_CON_KEY                                     0x0B    // a key closed a console that opened by itself (console_mode Until signal)
+#define AWTO_SEL_EV_CON_DONE                                    0x0C    // AWTO_CON_HOLD_MS after the picture came: the console that opened by itself closed itself
+#define AWTO_CON_MODE_OFF                                       0       // registry console_mode (id 110): never opens by itself
+#define AWTO_CON_MODE_UNTIL                                     1       // opens, closes AWTO_CON_HOLD_MS after ACTIVE (default); no picture keeps it open
+#define AWTO_CON_MODE_ALWAYS                                    2       // stays open
+#define AWTO_CON_HOLD_MS                                        3000    // Dan 2026-11-15 (#218): last lines of the episode readable before it closes
 #define AWTO_SYNC_EV_WAKE_OFF                                   0xCF    // arg = trigger + 1, value = port: wake suppressed
 #define AWTO_SYNC_EV_BOOT                                       0xD0    // arg = AWTO_BOOT_* (first line of the power-on episode)
 #define AWTO_SYNC_EV_STAGE                                      0xD1    // arg = diag stage 1..8

@@ -158,6 +158,8 @@ E0	07	-	input selector:take ignored, DP version pop-up up
 E0	08	x	input selector:item % is no port of this board; stays open
 E0	09	vport	input selector closed by a mode reset (SDK OSD reset):% kept
 E0	0A	-	console (opened by itself) closed by SOURCE:input selector next
+E0	0B	-	console (opened by itself) closed by a key
+E0	0C	-	console (opened by itself) closed {AWTO_CON_HOLD_MS/1000}s after the picture came
 E1	01	vport	% disabled by setting (stored):HPD low, EDID off, receiver off, not searched
 E1	02	vport	% disabled by setting:HPD low, EDID off, receiver off, not searched
 E1	03	vport	% enabled by setting:HPD up, EDID on, receiver on, searched

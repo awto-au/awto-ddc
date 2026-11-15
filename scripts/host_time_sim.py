@@ -75,6 +75,7 @@ class Sim:
         if not self.bus.run_until_mode(3):
             raise SystemExit("never reached ACTIVE")
         say(f"ACTIVE at fw {self.bus.now():.3f} s")
+        self.cmd(0x26)                    # console opened on purpose: console_mode Until signal closes only the one that opened itself (#218)
 
     def text(self) -> list[str]:
         st = self.model.snapshot(self.m, 0)

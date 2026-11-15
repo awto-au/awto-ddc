@@ -1216,7 +1216,6 @@ fn	_AwtoKeyInject	1	0x7ec4	88
 fn	_AwtoKeyOsdTimeout	1	0x7f1c	64
 fn	_AwtoKeyPoll	1	0x7f5c	256
 fn	_AwtoKeyPress	1	0x805c	28
-fn	_AwtoKeyRoute	1	0x8078	676
 fn	_AwtoKeyStep	1	0x831c	516
 fn	_AwtoKeyConSet	1	0x8520	48
 fn	_AwtoKeyEnsure	1	0x8550	136
@@ -1253,6 +1252,7 @@ fn	_osd_tc_vlc_begin	1	0x9bd8	108
 fn	_osd_tc_vlc_end	1	0x9c44	28
 fn	_osd_tc_vlc_put	1	0x9c60	44
 fn	_osd_tc_bar	1	0x9c8c	404
+fn	_AwtoKeyRoute	1	0x9e20	724
 const	_g_stSystemDefaultData	2	0x0000	20
 fn	_ScalerAudioD1GetAudioDetected	2	0x0014	124
 fn	_ScalerAudioGetAudioDetected	2	0x0090	48
@@ -2424,6 +2424,7 @@ fn	_AwtoWdtInit	8	0x9b44	160
 fn	_AwtoWdtIrq	8	0x9be4	80
 fn	_AwtoWdtSeal	8	0x9c34	36
 fn	_AwtoWdtValid	8	0x9c58	72
+fn	_AwtoConAutoClose	8	0x9ca0	156
 const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
