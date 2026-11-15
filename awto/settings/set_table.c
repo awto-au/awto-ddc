@@ -6,7 +6,7 @@
 
 static const struct setting __code tab[SET_COUNT] = {
     /* id type unit group flags min max step def vcp apply label opts */
-    {  1, 2, 1,  0, 0x83, 0, 100, 1, 44, 0x10, 2, 0u, 0xFFFFu},  /* brightness */
+    {  1, 2, 1,  0, 0x83, 0, 100, 1, 50, 0x10, 2, 0u, 0xFFFFu},  /* brightness */
     {  5, 2, 1,  0, 0x83, 0, 100, 1, 50, 0xF3, 3, 10u, 0xFFFFu},  /* black_level */
     {  2, 2, 1,  0, 0x83, 0, 100, 1, 50, 0x12, 6, 21u, 0xFFFFu},  /* contrast */
     {  6, 2, 4,  0, 0xA1, 0, 4, 1, 2, 0x87, 0, 30u, 0xFFFFu},  /* sharpness */

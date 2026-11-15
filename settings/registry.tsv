@@ -18,7 +18,7 @@
 # - options: enum labels, '|' separated; label=N gives the VCP value of that option (default: the option index).
 # - provenance: [sdk-ui] = item, range and default of the Realtek SDK (demo) menu, walked in the sim (#65, #67).
 # id	name	type	unit	group	flags	min	max	step	default	nv_slot	vcp	apply	label	options	note
-1	brightness	int	percent	picture	nv,live,sdk	0	100	1	44	auto	0x10	backlight	Backlight	-	panel PWM duty 30..255; 44 % = Realtek SDK default 128 [sdk-ui]
+1	brightness	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0x10	backlight	Backlight	-	panel PWM duty 0..255 (0 % = off, driver has no minimum); 50 % = raw 127 (Dan 2026-11-15)
 5	black_level	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0xF3	black_level	Brightness	-	digital offset (Realtek SDK 'Brightness') [sdk-ui]
 2	contrast	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0x12	contrast	Contrast	-	[sdk-ui]
 6	sharpness	int	step	picture	nv,inert,sdk	0	4	1	2	auto	0x87	-	Sharpness	-	Realtek SDK item, scaler sharpness not built [sdk-ui]
