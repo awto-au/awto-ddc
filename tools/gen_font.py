@@ -110,7 +110,7 @@ def emit_blob(out, name, tiles):
     data = b"".join(tiles)
     chunks = osd_vlc.encode_chunks(data, TILE_BYTES, limit=4096)
     joined = b"".join(blob for _, _, blob in chunks)
-    out.append("AWTO_PLACE(group=font)  /* read by font_blob() via movc: same bank (awto-ddc#149) */")
+    out.append("#pragma place group(font)  /* read by font_blob() via movc: same bank (awto-ddc#149) */")
     out.append(f"static const uint8_t __code font_blob_{name}[{len(joined)}] = {{")
     for k in range(0, len(joined), 16):
         out.append("    " + ", ".join(f"0x{x:02X}" for x in joined[k:k + 16]) + ",")

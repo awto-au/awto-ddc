@@ -9,7 +9,4 @@
 #define __idata
 #endif
 
-/* placement intent for the awto-ddc build (scripts/place_rules.py, awto-ddc#149); nothing for the compiler */
-#define AWTO_PLACE(...)
-
 #endif

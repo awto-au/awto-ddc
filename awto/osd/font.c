@@ -18,7 +18,7 @@ uint8_t osd_font_glyph(char c)
 }
 
 /* one blob = [8-byte value map][2-byte BE length N][N stream bytes] */
-AWTO_PLACE(group=font)  /* reads the blobs via movc: same bank (awto-ddc#149) */
+#pragma place group(font)                   /* reads the blobs via movc: same bank (awto-ddc#149) */
 static void font_blob(const uint8_t __code *b, uint16_t tile)
 {
     uint16_t n = (uint16_t)b[8] << 8 | b[9], o = 10;
