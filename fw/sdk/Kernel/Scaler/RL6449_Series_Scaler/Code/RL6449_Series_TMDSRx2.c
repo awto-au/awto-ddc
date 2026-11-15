@@ -3258,6 +3258,8 @@ bit ScalerTMDSRx2HdmiSetDeepColorPll(WORD usTMDSClkCount, BYTE ucColorDepth)
 //--------------------------------------------------
 void ScalerTMDSRx2HdmiPacketDetect(bit bWait)
 {
+    BYTE ucFrame = 0;
+
     if(bWait == _WAIT)
     {
         // Polling 3 frame for detect Packet signals
@@ -3338,8 +3340,12 @@ void ScalerTMDSRx2HdmiPacketDetect(bit bWait)
         }
 #endif
 
-        // Wait at least 3 frame for HW auto update color depth value
-        ScalerTimerDelayXms(130);
+        // 3 input frames for the HW colour depth update: 3 Vsyncs (W1C P71_A4 bit 3), 45 ms cap each (1 frame at 24 Hz + margin); #216
+        for(ucFrame = 0; ucFrame < 3; ucFrame++)
+        {
+            ScalerSetBit(P71_A4_TMDS_CTRL, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), _BIT3);
+            ScalerTimerPollingFlagProc(45, P71_A4_TMDS_CTRL, _BIT3, _TRUE);
+        }
 
         CLR_HDMI_RX2_PACKET_DETECTING();
     }
