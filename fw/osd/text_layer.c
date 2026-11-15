@@ -247,7 +247,7 @@ void osd_tc_vlc_end(void)
 {
     // The RTD2795 decoder flushes its final decoded words after the last stream byte. Clearing compression
     // immediately truncates/corrupts glyph SRAM; Realtek's loader waits 2 ms here for the same reason.
-    ScalerTimerDelayXms(2);
+    ScalerTimerDelayXmsQuiet(2);
     ScalerSetBit(AWTO_R_FRAME_CTRL_17, ~(AWTO_F_FRAME_CTRL_17_DECODE_NOCOM_DATA | AWTO_F_FRAME_CTRL_17_OSD_COMPRESSION_EN), 0x00);
     ScalerSetBit(AWTO_R_FRAME_CTRL_0B, ~(AWTO_F_FRAME_CTRL_0B_F_DL_SWAP | AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN | AWTO_F_FRAME_CTRL_0B_ROTATION), _OSD_ROTATE_NORMAL);
 }

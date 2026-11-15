@@ -38,5 +38,6 @@ extern volatile WORD __data d_g_usMeasureCounter;
 // FUNCTION EXTERN
 //****************************************************************************
 extern void ScalerTimerDelayXms(WORD usNum);
+extern void ScalerTimerDelayXmsQuiet(WORD usNum);
 extern bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess);
 

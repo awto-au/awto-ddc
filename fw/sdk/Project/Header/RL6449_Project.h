@@ -747,14 +747,20 @@ extern void AwtoDdcciDebugLink(unsigned char ucPort, unsigned char ucOn);
 #endif
 #if(_AWTO_DDCCI_ENGINES != 0)
 extern void AwtoDdcciPoll(void);
+extern __xdata unsigned char g_ucAwtoDdcDef;
+extern void AwtoWaitPump(void);       // #216: Get-VCP / capabilities answered inside a blocking wait (fw/ddcci/ddcci.c)
+#define AWTO_PUMP_SP_MAX                                        0xB0    // pump runs only with SP at or below; its Get path peaked 0xED from 0xBE (47 B), so 0xB0 stays under the 0xDB the rest of the firmware reaches (waits seen up to 0xA5)
 #if(_AWTO_DDCCI_NOPOLL == 1)
 #define AWTO_DDCCI_POLL()                                       // bisect: engine __code linked, never called
+#define AWTO_WAIT_PUMP()
 #define AWTO_DDCCI_FOLLOW(ch)
 #elif(_AWTO_DDCCI_ENGINES == 3)
-#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(AWTO_R_IIC_1_SET_SLAVE) != AWTO_DDCCI_WR_ADDR) || ((AWTO_XB(AWTO_R_IIC_1_STATUS) | AWTO_XB(AWTO_R_IIC_2_STATUS) | AWTO_XB(AWTO_R_IIC_3_STATUS)) & AWTO_IIC_ATTN)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(AWTO_R_IIC_1_SET_SLAVE) != AWTO_DDCCI_WR_ADDR) || (g_ucAwtoDdcDef != 0) || ((AWTO_XB(AWTO_R_IIC_1_STATUS) | AWTO_XB(AWTO_R_IIC_2_STATUS) | AWTO_XB(AWTO_R_IIC_3_STATUS)) & AWTO_IIC_ATTN)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#define AWTO_WAIT_PUMP()                                        { if(((AWTO_XB(AWTO_R_IIC_1_STATUS) | AWTO_XB(AWTO_R_IIC_2_STATUS) | AWTO_XB(AWTO_R_IIC_3_STATUS)) & AWTO_IIC_ATTN) != 0) { AwtoWaitPump(); } }
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
-#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(AWTO_R_IIC_1_SET_SLAVE) != AWTO_DDCCI_WR_ADDR) || (AWTO_XB(AWTO_R_IIC_1_STATUS) & AWTO_IIC_ATTN)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#define AWTO_DDCCI_POLL()                                       { if((AWTO_XB(AWTO_R_IIC_1_SET_SLAVE) != AWTO_DDCCI_WR_ADDR) || (g_ucAwtoDdcDef != 0) || (AWTO_XB(AWTO_R_IIC_1_STATUS) & AWTO_IIC_ATTN)) { AwtoDdcciPoll(); } AWTO_DBG_LINK_POLL(); }
+#define AWTO_WAIT_PUMP()                                        { if((AWTO_XB(AWTO_R_IIC_1_STATUS) & AWTO_IIC_ATTN) != 0) { AwtoWaitPump(); } }
 #if((_AWTO_DDCCI_PARK == 1) || (_AWTO_DDCCI_FIXCH != 0))
 #define AWTO_DDCCI_FOLLOW(ch)
 #else
@@ -763,6 +769,7 @@ extern void AwtoDdcciPoll(void);
 #endif
 #else
 #define AWTO_DDCCI_POLL()
+#define AWTO_WAIT_PUMP()
 #define AWTO_DDCCI_FOLLOW(ch)
 #endif
 #if((_AWTO_DEBUG_PORT == _ON) || (_AWTO_DDCCI_ENGINES != 0))
@@ -966,6 +973,7 @@ typedef struct
 {
     unsigned char ucTotal;                      // logged waits (>= 1 ms or expired) up to AWTO_WAIT_N, then N..2N-1; entry (total - 1) % AWTO_WAIT_N is the newest
     unsigned char ucQuick;                      // waits that ended inside the same ms: counted only, wraps
+    unsigned char ucSpMax;                      // highest SP seen inside AwtoWaitLog (called from a wait function): stack depth at a wait
     StAwtoWaitEv stEv[AWTO_WAIT_N];
 } StAwtoWait;
 extern __xdata StAwtoWait g_stAwtoWait;

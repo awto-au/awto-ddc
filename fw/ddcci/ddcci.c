@@ -120,6 +120,9 @@ static __code BYTE tAwtoIicCh[3] = {0x02, 0x03, 0x04};             // DDC1 (D1 D
 static __code char tAwtoDdcCaps[] = "(prot(monitor)type(LCD)model(awto)cmds(01 02 03 F3)vcp(10 60(0F 11 12) D6)mccs_ver(2.2))";
 static __xdata BYTE s_ppucAwtoDdcRx[_AWTO_DDCCI_ENGINES][AWTO_DDC_RX];
 static __xdata BYTE s_pucAwtoDdcN[_AWTO_DDCCI_ENGINES];
+__xdata BYTE g_ucAwtoDdcDef;                                  // 1 while a pumped request waits for the main loop (AWTO_DDCCI_POLL runs the poll)
+static __xdata BYTE s_pucAwtoDdcDef[_AWTO_DDCCI_ENGINES];     // #216: length of a request the wait pump received but left for the main loop (0 = none)
+static __xdata BYTE s_ucAwtoPump;                             // 1 while AwtoWaitPump runs (not re-entrant)
 
 static BYTE AwtoDdcPortToVcp(BYTE ucPort)
 {
@@ -152,22 +155,12 @@ static __xdata WORD s_usAwtoDdcCur;
 static __xdata WORD s_usAwtoDdcMax;
 static __xdata BYTE s_ucAwtoDdcType;
 
-// MCCS get / set / save / capabilities from the registry (awto-rtdfw vcp.c). _TRUE = handled (replied or no reply due)
-static bit AwtoDdcRegistry(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen, BYTE *pucTx)
+// MCCS get VCP / capabilities chunk from the registry; read-only, also called from the wait pump
+static bit AwtoDdcRegGet(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen, BYTE *pucTx)
 {
     BYTE ucI;
     WORD usOff;
 
-    if((pucRx[2] == 0x03) && (ucLen >= 7))      // set VCP: 51 84 03 vcp hi lo chk; no reply
-    {
-        vcp_set(pucRx[3], ((WORD)pucRx[4] << 8) | pucRx[5]);
-        return _TRUE;
-    }
-    if((pucRx[2] == 0x0C) && (ucLen >= 4))      // save current settings: 51 81 0C chk
-    {
-        set_nv_commit(0);                       // #151: a flag; the gate writes after this handler
-        return _TRUE;
-    }
     if((pucRx[2] == 0x01) && (ucLen >= 5))      // get VCP -> 6E 88 02 rc vcp type maxH maxL curH curL chk
     {
         pucTx[3] = 0x00;
@@ -208,6 +201,22 @@ static bit AwtoDdcRegistry(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen,
         return _TRUE;
     }
     return _FALSE;
+}
+
+// MCCS get / set / save / capabilities from the registry (awto-rtdfw vcp.c). _TRUE = handled (replied or no reply due)
+static bit AwtoDdcRegistry(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen, BYTE *pucTx)
+{
+    if((pucRx[2] == 0x03) && (ucLen >= 7))      // set VCP: 51 84 03 vcp hi lo chk; no reply
+    {
+        vcp_set(pucRx[3], ((WORD)pucRx[4] << 8) | pucRx[5]);
+        return _TRUE;
+    }
+    if((pucRx[2] == 0x0C) && (ucLen >= 4))      // save current settings: 51 81 0C chk
+    {
+        set_nv_commit(0);                       // #151: a flag; the gate writes after this handler
+        return _TRUE;
+    }
+    return AwtoDdcRegGet(pucR, pucRx, ucLen, pucTx);
 }
 #endif
 
@@ -400,74 +409,160 @@ void AwtoDdcciDebugLink(BYTE ucPort, BYTE ucOn)
 }
 #endif
 
+// Receive half of the poll: engine ucE's FIFO into its buffer. Returns the length of a complete request (consumed from the engine,
+// frame in s_ppucAwtoDdcRx[ucE]) or 0. No call into the request handlers: the wait pump shares it (#216: overlay / stack budget).
+static BYTE AwtoDdcRxFrame(BYTE ucE)
+{
+    BYTE ucN;
+    BYTE ucK;
+    BYTE ucDone = 0;
+    BYTE *pucRx = s_ppucAwtoDdcRx[ucE];
+    volatile __xdata BYTE *pucR = (volatile __xdata BYTE *)tAwtoIicBase[ucE];
+
+    ucN = s_pucAwtoDdcN[ucE];
+    if(pucR[AWTO_IIC_SLAVE] != AWTO_DDCCI_WR_ADDR)        // first pass, or the SDK's ScalerMcuDdcciInitial parked IIC_1 at 0x3D
+    {
+#if(_AWTO_DDCCI_ENGINES == 3)
+        AwtoDdcEngineInit(pucR, tAwtoIicCh[ucE]);
+#else
+#if(_AWTO_DBG_SWAP == _ON)
+        AwtoDdcEngineInit(pucR, g_ucAwtoDdcciCh);       // #79: AwtoDbgSelectChannel owns the channel
+#else
+        AwtoDdcEngineInit(pucR, (_AWTO_DDCCI_FIXCH != 0) ? _AWTO_DDCCI_FIXCH : (_AWTO_DDCCI_PARK == 1) ? 0x07 : (AWTO_XB(AWTO_R_IIC_CH_SEL) & AWTO_F_IIC_CH_SEL_CH_SEL));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
+#endif
+#endif
+        ucN = 0;
+    }
+    if((pucR[AWTO_IIC_STATUS] & _BIT1) != 0)
+    {
+        ucN = 0;
+        pucRx[ucN++] = pucR[AWTO_IIC_SUB_IN];
+        pucR[AWTO_IIC_STATUS] &= ~_BIT1;
+    }
+    if((pucR[AWTO_IIC_STATUS] & _BIT2) != 0)
+    {
+        for(ucK = 0; (ucK < 16) && ((pucR[AWTO_IIC_STATUS2] & _BIT1) == 0); ucK++)      // 16 = buffer depth (a missing engine reads junk)
+        {
+            if(ucN < AWTO_DDC_RX)
+            {
+                pucRx[ucN] = pucR[AWTO_IIC_DATA_IN];
+            }
+            else
+            {
+                ucK = pucR[AWTO_IIC_DATA_IN];
+                ucK = 16;                   // too long for us: drop the packet
+            }
+            ucN++;
+        }
+        if(ucN > AWTO_DDC_RX)
+        {
+            ucN = 0;
+            pucR[AWTO_IIC_IRQ2] |= _BIT6;
+        }
+        else if((ucN >= 2) && (ucN == (pucRx[1] & 0x7F) + 3))
+        {
+            pucR[AWTO_IIC_IRQ2] |= _BIT6;   // request consumed; a reply (if any) reloads the buffer
+            ucDone = ucN;
+            ucN = 0;
+        }
+    }
+    s_pucAwtoDdcN[ucE] = ucN;
+    return ucDone;
+}
+
+static void AwtoDdcRxDone(BYTE ucE)         // after the request ran (the reply is loaded): clear the engine's event flags
+{
+    volatile __xdata BYTE *pucR = (volatile __xdata BYTE *)tAwtoIicBase[ucE];
+
+    pucR[AWTO_IIC_STATUS] &= ~(_BIT4 | _BIT0);
+    pucR[AWTO_IIC_STATUS2] &= ~(_BIT5 | _BIT4);
+}
+
 void AwtoDdcciPoll(void)                        // AWTO_DDCCI_POLL(): only when an engine flags data or lost its set-up
 {
     BYTE ucE;
-    BYTE ucN;
-    BYTE ucK;
-    BYTE *pucRx;
+    BYTE ucLen;
     volatile __xdata BYTE *pucR;
 
     for(ucE = 0; ucE < _AWTO_DDCCI_ENGINES; ucE++)
     {
         pucR = (volatile __xdata BYTE *)tAwtoIicBase[ucE];
-        pucRx = s_ppucAwtoDdcRx[ucE];
-        ucN = s_pucAwtoDdcN[ucE];
-        if(pucR[AWTO_IIC_SLAVE] != AWTO_DDCCI_WR_ADDR)        // first pass, or the SDK's ScalerMcuDdcciInitial parked IIC_1 at 0x3D
+        ucLen = s_pucAwtoDdcDef[ucE];
+        if(ucLen != 0)                          // a request the wait pump took but could not answer
         {
-#if(_AWTO_DDCCI_ENGINES == 3)
-            AwtoDdcEngineInit(pucR, tAwtoIicCh[ucE]);
-#else
-#if(_AWTO_DBG_SWAP == _ON)
-            AwtoDdcEngineInit(pucR, g_ucAwtoDdcciCh);       // #79: AwtoDbgSelectChannel owns the channel
-#else
-            AwtoDdcEngineInit(pucR, (_AWTO_DDCCI_FIXCH != 0) ? _AWTO_DDCCI_FIXCH : (_AWTO_DDCCI_PARK == 1) ? 0x07 : (AWTO_XB(AWTO_R_IIC_CH_SEL) & AWTO_F_IIC_CH_SEL_CH_SEL));     // MCU_FF22_IIC_CH_SEL      // follows the debug engine (#28)
-#endif
-#endif
-            ucN = 0;
+            s_pucAwtoDdcDef[ucE] = 0;
+            g_ucAwtoDdcDef = 0;
         }
-        if((pucR[AWTO_IIC_STATUS] & _BIT1) != 0)
+        else
         {
-            ucN = 0;
-            pucRx[ucN++] = pucR[AWTO_IIC_SUB_IN];
-            pucR[AWTO_IIC_STATUS] &= ~_BIT1;
+            ucLen = AwtoDdcRxFrame(ucE);
         }
-        if((pucR[AWTO_IIC_STATUS] & _BIT2) != 0)
+        if(ucLen != 0)
         {
-            for(ucK = 0; (ucK < 16) && ((pucR[AWTO_IIC_STATUS2] & _BIT1) == 0); ucK++)      // 16 = buffer depth (a missing engine reads junk)
-            {
-                if(ucN < AWTO_DDC_RX)
-                {
-                    pucRx[ucN] = pucR[AWTO_IIC_DATA_IN];
-                }
-                else
-                {
-                    ucK = pucR[AWTO_IIC_DATA_IN];
-                    ucK = 16;                   // too long for us: drop the packet
-                }
-                ucN++;
-            }
-            if(ucN > AWTO_DDC_RX)
-            {
-                ucN = 0;
-                pucR[AWTO_IIC_IRQ2] |= _BIT6;
-            }
-            else if((ucN >= 2) && (ucN == (pucRx[1] & 0x7F) + 3))
-            {
-                pucR[AWTO_IIC_IRQ2] |= _BIT6;   // request consumed; a reply (if any) reloads the buffer
 #ifdef _AWTO_NEW_SETTINGS
-                g_ucAwtoNvInDdc = 1;            // #151: a flash op in here would be counted (g_stAwtoNv.ucInDdc)
+            g_ucAwtoNvInDdc = 1;                // #151: a flash op in here would be counted (g_stAwtoNv.ucInDdc)
 #endif
-                AwtoDdcRequest(pucR, pucRx, ucN);
+            AwtoDdcRequest(pucR, s_ppucAwtoDdcRx[ucE], ucLen);
 #ifdef _AWTO_NEW_SETTINGS
-                g_ucAwtoNvInDdc = 0;
+            g_ucAwtoNvInDdc = 0;
 #endif
-                ucN = 0;
-            }
         }
-        pucR[AWTO_IIC_STATUS] &= ~(_BIT4 | _BIT0);
-        pucR[AWTO_IIC_STATUS2] &= ~(_BIT5 | _BIT4);
-        s_pucAwtoDdcN[ucE] = ucN;
+        AwtoDdcRxDone(ucE);
     }
+}
+
+#ifdef _AWTO_NEW_SETTINGS
+// Wait pump (#216): Get-VCP and capabilities answered from inside a blocking wait; they only read. _TRUE = handled (or dropped by
+// checksum, like AwtoDdcRequest); _FALSE = left for the main loop (Set, save, table, mailbox: they draw, flash or switch input).
+static bit AwtoDdcPumpGet(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
+{
+    BYTE pucTx[16];
+    BYTE ucI;
+    BYTE ucSum = 0x6E;
+
+    if(((pucRx[2] != 0x01) || (ucLen < 5)) && ((pucRx[2] != 0xF3) || (ucLen < 6)))
+    {
+        return _FALSE;
+    }
+    for(ucI = 0; ucI < ucLen; ucI++)
+    {
+        ucSum ^= pucRx[ucI];
+    }
+    if(ucSum != 0)
+    {
+        return _TRUE;                           // bad checksum: no reply, the host retries
+    }
+    pucTx[0] = 0x6E;
+    return AwtoDdcRegGet(pucR, pucRx, ucLen, pucTx);
+}
+#endif
+
+void AwtoWaitPump(void)                         // called from the blocking waits when an engine flags data
+{
+#ifdef _AWTO_NEW_SETTINGS
+    BYTE ucE;
+    BYTE ucLen;
+
+    if((s_ucAwtoPump != 0) || (SP > AWTO_PUMP_SP_MAX))
+    {
+        return;                                 // not re-entrant; too little stack left for the reply path
+    }
+    s_ucAwtoPump = 1;
+    for(ucE = 0; ucE < _AWTO_DDCCI_ENGINES; ucE++)
+    {
+        if(s_pucAwtoDdcDef[ucE] != 0)
+        {
+            continue;                           // one deferred request per engine; the FIFO keeps what comes next
+        }
+        ucLen = AwtoDdcRxFrame(ucE);
+        if((ucLen != 0) && (AwtoDdcPumpGet((volatile __xdata BYTE *)tAwtoIicBase[ucE], s_ppucAwtoDdcRx[ucE], ucLen) == _FALSE))
+        {
+            s_pucAwtoDdcDef[ucE] = ucLen;
+            g_ucAwtoDdcDef = 1;
+        }
+        AwtoDdcRxDone(ucE);
+    }
+    s_ucAwtoPump = 0;
+#endif
 }
 #endif

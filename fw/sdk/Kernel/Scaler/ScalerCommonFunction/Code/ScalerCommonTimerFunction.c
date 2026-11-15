@@ -357,6 +357,7 @@ WORD ScalerTimerGetTimerCounter(void);
 BYTE ScalerTimerGetEventID(BYTE ucEventIndex);
 void ScalerTimerInitialTimerEvent(void);
 void ScalerTimerDelayXms(WORD usNum);
+void ScalerTimerDelayXmsQuiet(WORD usNum);
 bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess);
 #if((_HDCP_2_2_SUPPORT == _ON) || (_TYPE_C_PMIC_HW_IIC_SUPPORT == _ON))
 BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucBit, bit bSuccess);
@@ -2561,7 +2562,6 @@ void ScalerTimerDelayXms(WORD usNum)
     AWTO_WAIT_CALLER(usPc, ucBk);
     if(usNum != 0)
     {
-        WORD usAsked = usNum;
         WORD usT0 = (WORD)AwtoMs();
 
         // Avoid dead lock under timer2 interrupt function disable condition
@@ -2570,23 +2570,31 @@ void ScalerTimerDelayXms(WORD usNum)
             return;
         }
 
-        d_isr_g_bNotifyTimer2Int = _FALSE;
-
-        while(_TRUE)
+        // Deadline on the ms clock, not a count of Timer2 ticks seen here: the pump below can take more than 1 ms (#216)
+        while((WORD)((WORD)AwtoMs() - usT0) < usNum)
         {
-            if(d_isr_g_bNotifyTimer2Int == _TRUE)
-            {
-                d_isr_g_bNotifyTimer2Int = _FALSE; AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
+            AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
+            AWTO_WAIT_PUMP();
+        }
+        AwtoWaitLog(AWTO_WAIT_DELAY | (ucBk << AWTO_WAIT_BANK_SHIFT), usNum, usT0, usPc);
+    }
+}
 
-                if(--usNum)
-                {
-                }
-                else
-                {
-                    AwtoWaitLog(AWTO_WAIT_DELAY | (ucBk << AWTO_WAIT_BANK_SHIFT), usAsked, usT0, usPc);
-                    return;
-                }
-            }
+//--------------------------------------------------
+// Description  : Timer Delay without the DDC/CI wait pump: for the OSD hardware-VLC paths, whose call closure must read no code
+//                (a pump reply reads the registry tables from another bank, scripts/fw_link_check.py DMA callee, #216)
+// Input Value  : usNum --> Delay in ms
+// Output Value : None
+//--------------------------------------------------
+void ScalerTimerDelayXmsQuiet(WORD usNum)
+{
+    WORD usT0 = (WORD)AwtoMs();
+
+    if((usNum != 0) && (TR2 != _OFF))
+    {
+        while((WORD)((WORD)AwtoMs() - usT0) < usNum)
+        {
+            AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
         }
     }
 }
@@ -2624,6 +2632,8 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
             usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_POLL);
             usPreviousTime = d_isr_g_usTimerCounter;
         }
+
+        AWTO_WAIT_PUMP();
     }
     while(usTimeElapsed <= usTimeout);
 

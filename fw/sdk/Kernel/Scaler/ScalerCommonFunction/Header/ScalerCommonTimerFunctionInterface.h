@@ -95,6 +95,7 @@ extern WORD ScalerTimerGetTimerCounter(void);
 extern BYTE ScalerTimerGetEventID(BYTE ucEventIndex);
 extern void ScalerTimerInitialTimerEvent(void);
 extern void ScalerTimerDelayXms(WORD usNum);
+extern void ScalerTimerDelayXmsQuiet(WORD usNum);
 
 #if((_HDCP_2_2_SUPPORT == _ON) || (_TYPE_C_PMIC_HW_IIC_SUPPORT == _ON))
 extern BYTE ScalerTimerPollingFlagProc_EXINT0(BYTE ucTimeout, WORD usRegister, BYTE ucBit, bit bSuccess);

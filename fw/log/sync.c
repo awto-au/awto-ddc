@@ -271,6 +271,11 @@ void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0, un
     unsigned int usDur = usNow - usT0;
     unsigned char ucI = g_stAwtoWait.ucTotal % AWTO_WAIT_N;
 
+    if(SP > g_stAwtoWait.ucSpMax)
+    {
+        g_stAwtoWait.ucSpMax = SP;
+    }
+
     if((usDur == 0) && ((ucKind & AWTO_WAIT_TIMEOUT) == 0))
     {
         g_stAwtoWait.ucQuick++;                 // answered inside the same ms (idle polls fire every 10 ms): counted, not logged

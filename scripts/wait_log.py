@@ -15,7 +15,7 @@ from pathlib import Path
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/wait_log.log"
 N = 120                     # AWTO_WAIT_N
-HDR = 2                     # ucTotal, ucQuick
+HDR = 3                     # ucTotal, ucQuick, ucSpMax
 EV = 8                      # sizeof StAwtoWaitEv: usMs(2) ucKind(1) usArg(2) ucDur(1) usPc(2), big-endian image
 KINDS = {0: "delay", 1: "poll", 2: "event"}
 EVENTS = {0x01: "IVS", 0x02: "IEN_START", 0x04: "IEN_STOP", 0x08: "DVS", 0x10: "DEN_START", 0x20: "DEN_STOP"}  # EnumWaitEventType bits
@@ -87,6 +87,7 @@ def main() -> int:
         say("wait log read failed")
         return 1
     total, quick, rows = decode(raw)
+    say(f"stack: highest SP inside a wait 0x{raw[2]:02X} (guard 0xF0, {0xF0 - raw[2]} B below it; includes the logger's own frame)")
     say(f"{a.map.name}: {total} waits >= 1 ms or expired + {quick} that answered at once (quick wraps at 256), last {len(rows)} shown")
     table = chunk_table(a.map)
     for end, kind, tmo, arg, dur, pc, bank in rows:

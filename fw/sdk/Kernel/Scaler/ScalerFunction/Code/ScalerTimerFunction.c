@@ -90,6 +90,8 @@ bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent)
             break;
     }
 
+    AWTO_WAIT_PUMP();                      // before the status is cleared: never between an event and the caller's next write (#216)
+
     // Clear status (status register will be cleared after write)
     ScalerTimerClrEventStatus(enumEvent);
 
@@ -108,6 +110,8 @@ bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent)
             usTimeElapsed++; AWTO_WDT_FEED(AWTO_WDT_S_EVENT);
             usPreviousTime = d_isr_g_usTimerCounter;
         }
+
+        AWTO_WAIT_PUMP();
     }
     while(usTimeElapsed <= _TIMER_WAIT_EVENT_TIMEOUT);
 

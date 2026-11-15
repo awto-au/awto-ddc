@@ -531,8 +531,11 @@ stub	_ScalerSyncTMDSRx3HdmiColorimetrySetting	C	0x1e70	8
 stub	_ScalerSyncTMDSRx3HdmiQuantizationSetting	C	0x1e78	8
 stub	_ScalerTimerActiveTimerEvent	C	0x1e80	8
 fn	_ScalerTimerCancelTimerEvent	C	0x1e88	76
+const	_tAwtoIicBase	C	0x1ed4	12
+stub	_AwtoDdcPumpGet	C	0x1ee0	8
+stub	_AwtoDdcRxDone	C	0x1ee8	8
+stub	_AwtoDdcRxFrame	C	0x1ef0	8
 stub	_ScalerTimerInitialTimerEvent	C	0x1f34	8
-stub	_AwtoWaitLog	C	0x1fd0	8
 stub	_ScalerTimerReactiveTimerEvent	C	0x1fec	8
 stub	_ScalerDpRx1CDRCheck	C	0x1ff4	8
 stub	_ScalerDpRx1ChangeHdcpDpcdCapability	C	0x1ffc	8
@@ -595,6 +598,7 @@ stub	_ScalerTMDSRx2TMDSVideoDetectEvent	C	0x26c4	8
 stub	_ScalerTMDSRx3HdmiGetAVIInfo	C	0x26cc	8
 stub	_ScalerTMDSRx3HdmiGetColorDepth	C	0x26d4	8
 stub	_ScalerTMDSRx3TMDSVideoDetect	C	0x26dc	8
+stub	_ScalerTimerDelayXmsQuiet	C	0x26e4	8
 stub	_ScalerVgipCaptureEnable	C	0x26ec	8
 stub	_ScalerVgipGetDigitalCaptureStatus	C	0x26f4	8
 stub	_ScalerVgipSetCaptureHDelay	C	0x26fc	8
@@ -915,7 +919,9 @@ stub	_osd_tc_vlc_end	C	0x3b60	8
 stub	_osd_tc_vlc_put	C	0x3b68	8
 fn	_ScalerTimerPollingFlagProc	C	0x3b70	476
 fn	_ScalerTimerDelayXms	C	0x3d4c	332
-fn	_ScalerTimerWaitForEvent	C	0x3e98	360
+fn	_AwtoWaitPump	C	0x3e98	180
+fn	_AwtoWaitLog	C	0x4000	244
+fn	_ScalerTimerWaitForEvent	C	0x40f4	392
 fn	_ScalerOsdFontLibraryRotation	0	0x0000	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x001c	28
 fn	_ScalerOsdGetDoubleFunctionH	0	0x0038	24
@@ -1050,7 +1056,6 @@ const	___str_116	1	0x17cc	20
 const	___str_117	1	0x17e0	40
 const	___str_118	1	0x1808	44
 const	_tAwtoDdcCaps	1	0x1834	96
-const	_tAwtoIicBase	1	0x1894	12
 const	_tAwtoPal	1	0x18a0	44
 const	_tAwtoStyle	1	0x18cc	12
 fn	_ScalerOsdAddrMsb	1	0x18d8	24
@@ -1085,6 +1090,7 @@ fn	_OsdFuncCloseWindow	1	0x25f0	8
 fn	_OsdFuncDisableOsd	1	0x25f8	8
 fn	_OsdFuncSetPosition	1	0x2600	60
 fn	_OsdFuncTransparency	1	0x263c	8
+fn	_AwtoDdcRxDone	1	0x2644	72
 fn	_OsdPaletteSelectPalette	1	0x26cc	36
 fn	_OsdWindowDrawing	1	0x26f0	116
 fn	_RTDFactoryOsdChangColorTemp	1	0x2764	40
@@ -1215,6 +1221,8 @@ fn	_AwtoKeyInject	1	0x7ec4	88
 fn	_AwtoKeyOsdTimeout	1	0x7f1c	64
 fn	_AwtoKeyPoll	1	0x7f5c	256
 fn	_AwtoKeyPress	1	0x805c	28
+fn	_AwtoDdcPumpGet	1	0x8078	176
+fn	_AwtoDdcRxFrame	1	0x8128	464
 fn	_AwtoKeyStep	1	0x831c	516
 fn	_AwtoKeyConSet	1	0x8520	48
 fn	_AwtoKeyEnsure	1	0x8550	136
@@ -1253,6 +1261,7 @@ fn	_osd_tc_vlc_end	1	0x9c44	28
 fn	_osd_tc_vlc_put	1	0x9c60	44
 fn	_osd_tc_bar	1	0x9c8c	404
 fn	_AwtoKeyRoute	1	0x9e20	724
+fn	_AwtoDdcRegGet	1	0xa0f4	956
 const	_g_stSystemDefaultData	2	0x0000	20
 fn	_ScalerAudioD1GetAudioDetected	2	0x0014	124
 fn	_ScalerAudioGetAudioDetected	2	0x0090	48
@@ -1597,7 +1606,7 @@ fn	_AwtoTmdsIdleKhz	3	0x9ac0	208
 fn	_ScalerTimerWDCancelTimerEvent	3	0x9b90	44
 fn	_ScalerDpRx1InterlaceCheck	3	0x9bbc	2920
 fn	_AwtoPsWakeState	3	0xa724	252
-fn	_AwtoWaitLog	3	0xa820	228
+fn	_ScalerTimerDelayXmsQuiet	3	0xa820	152
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -1962,7 +1971,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1269	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1271	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2432,7 +2441,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1294	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1296	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116

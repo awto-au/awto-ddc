@@ -96,7 +96,7 @@ void ScalerOsdHardwareVLC(BYTE *pucArray, WORD usVLCTableSize, BYTE ucBankNum, W
 
     // OSD HW needs time to process it and then write decompressed __data into SRAM.
     // The value 1ms is enough at all.
-    ScalerTimerDelayXms(2);
+    ScalerTimerDelayXmsQuiet(2);
 
     // osd compression disable
     ScalerSetBit(P3A_17_FRAME_CTRL_17, ~(_BIT1 | _BIT0), (_OSD_DECODE_COMPRESSED | _OSD_COMPRESSION_DISABLE));

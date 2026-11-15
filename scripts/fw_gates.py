@@ -106,6 +106,8 @@ def gates(b: Path, m: Path, ref, tree):
         g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]
     if " _vcp_box" in mt and " _AwtoDdcciPoll" in mt:
         g["ddc"] = [*PY, f"{s}/ddc_sim.py", b, "--map", m]
+        if " _AwtoWaitPump" in mt:                 # #216: Get-VCP answered inside a blocking wait, Set left to the main loop
+            g["pump"] = [*PY, f"{s}/pump_sim.py", b, "--map", m]
     out = ROOT / "tmp/fw_gates" / b.stem             # own PNG/json dir per image (gates run in parallel)
     g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m]
     g["wdt"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
