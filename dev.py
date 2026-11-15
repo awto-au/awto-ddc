@@ -649,6 +649,31 @@ def _layout_watch() -> None:
     log(f"layout watcher started (pid {pr.pid}, tmp/logs/desk_layout.log)")
 
 
+def _settings_snapshot(u: dict, bus: int):
+    """Stored settings of the running image by name -> tmp/settings/<serial>-<stamp>.json (awto-ddc#219); None when there is no
+    running image to ask (a failure only warns: the flash goes on)."""
+    tag = _flashed(u).get("tag", "")
+    m = FW / f"{tag}.map"
+    if not tag or not m.is_file():
+        log("flash: no settings snapshot (no map for the image on the unit)", "WARN")
+        return None
+    out = REPO / "tmp/settings" / f"{u['serial']}-{time.strftime('%Y%m%d-%H%M%S')}.json"
+    tbl = FW / f"{tag}.settings_table.py"
+    rc = _py("settings_keep.py", "snapshot", "--bus", str(bus), "--serial", u["serial"], "--map", str(m),
+             *(["--table", str(tbl)] if tbl.is_file() else []), "--out", str(out))
+    if rc:
+        log("flash: settings snapshot failed; stored settings are not protected against a registry change in this flash", "WARN")
+        return None
+    return out
+
+
+def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path) -> None:
+    rc = _py("settings_keep.py", "restore", "--bus", str(bus), "--serial", u["serial"], "--map", str(m),
+             *(["--table", str(tbl)] if tbl.is_file() else []), "--snapshot", str(snap))
+    if rc:
+        log(f"flash: settings restore incomplete (rc {rc}); snapshot {snap} kept: settings_keep.py restore --snapshot {snap}", "WARN")
+
+
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
          args="[--unit N] [--full] [--any-image] [--force-ungated] [--verify crc|readback] [--write-mode byte|burst] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
@@ -676,6 +701,7 @@ def cmd_flash(extra: list[str]) -> int:
         identity = "dev.py caller: bus resolved for this unit before the flash (or by its own relay cycle)"
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
+    keep = _settings_snapshot(u, bus)       # #219: stored settings by name, restored after the flash if a registry change reset them
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
     fj = FW / f"{u['serial']}-flashed.json"
@@ -710,6 +736,8 @@ def cmd_flash(extra: list[str]) -> int:
         fj.write_text(json.dumps({"tag": tag, "image": str(img)}))
         if _py("fw_archive.py", img):      # every flashed image kept in build-debris/images; failure doesn't fail the flash
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
+        if keep:
+            _settings_restore(u, bus, keep, FW / f"{tag}.map", FW / f"{tag}.settings_table.py")
     return rc
 
 

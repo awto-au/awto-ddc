@@ -67,7 +67,7 @@ def _resolve_clean():
         import shutil
         shutil.rmtree(dst, ignore_errors=True)
         dst.mkdir(parents=True)
-        tar = subprocess.run(["git", "-C", str(repo), "archive", ref, "awto", "facts"], capture_output=True, check=True).stdout
+        tar = subprocess.run(["git", "-C", str(repo), "archive", ref, "awto", "facts", "settings"], capture_output=True, check=True).stdout
         subprocess.run(["tar", "-x", "-C", str(dst)], input=tar, check=True)
         (dst / ".ref").write_text(ref)
     return dst
