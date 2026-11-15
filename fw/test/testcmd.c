@@ -315,6 +315,10 @@ void AwtoDiagTestCmd(void)
     {
         AwtoMemForce(ucCmd == AWTO_TC_MEM_FRAME);
     }
+    else if(ucCmd == AWTO_TC_HOST_TIME)                // #157 host time over the debug link (DDC/CI is off while it is on)
+    {
+        AwtoHtSync(isr_g_stAwtoHt.aucPend);
+    }
     else if(ucCmd == AWTO_TC_STACK_DEEP)                // stack canary test: deep recursion; the next main pass shows the fatal box
     {
         extern void AwtoStackDeepTest(void);

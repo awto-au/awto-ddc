@@ -1047,6 +1047,7 @@ extern void AwtoOsdRoll(unsigned char ucOn);    // FRAME_CTRL_18 roll-up on / of
 extern void AwtoOsdBlend(void);                                // OSD blend + osd_transparency, every awto screen (fw/osd/text_layer.c)
 #define AWTO_TC_MEM_FRAME                                       0x0C    // test cmd: force memory work mode (frame buffer) for the current timing
 #define AWTO_TC_MEM_SDK                                         0x0D    // test cmd: back to the SDK's choice (line buffer at 4K60)
+#define AWTO_TC_HOST_TIME                                       0x0E    // test cmd: AwtoHtSync(isr_g_stAwtoHt.aucPend) (#157 over 0x35)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
@@ -1071,6 +1072,7 @@ typedef struct                                  // host-read (sync_log.py): nati
     unsigned long ulFwMs;                       // AwtoMs() at the sync
     int iDrift;                                 // host - local tick at the last sync, ms (clamped)
     unsigned int usUpHi;                        // AwtoMs bits 31..16, bumped by the Timer2 ISR (bits 15..0 = isr_g_stAwtoDiag.usT2Isr)
+    unsigned char aucPend[7];                   // host time written over 0x35 (debug link on: no DDC/CI), applied by AWTO_TC_HOST_TIME
 } StAwtoHt;
 extern __xdata StAwtoHt isr_g_stAwtoHt;
 extern unsigned long AwtoMs(void);

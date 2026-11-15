@@ -321,6 +321,7 @@ def main() -> int:
     ap.add_argument("--tsv", type=Path)
     ap.add_argument("--serial", help="EDID serial the bus must belong to (i2cbus.require_unit)")
     ap.add_argument("--whole", action="store_true", help="every entry still in the ring (all episodes), times vs the current episode")
+    ap.add_argument("--delta", action="store_true", help="add a +ms column: time since the previous line (#216 boot timing)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import dbg_xdata as X        # noqa: E402
@@ -346,7 +347,13 @@ def main() -> int:
     log(ht_line(ht, t2))
     lines = stamp(h, lines, ht, t2)
     log(f"sync episode: {KINDS.get(h['kind'], h['kind'])}, {len(lines)} lines" + (f", {h['lost']} older lines overwritten" if h.get("lost") else ""))
+    prev = None
     for ln in lines:
+        m = re.match(r"^\s*(\d+):", ln) if a.delta else None
+        if m:
+            ms = int(m.group(1))
+            ln = f"{'+' + str(ms - prev) if prev is not None else '':>6} " + ln
+            prev = ms
         log("  " + ln)
     return 0
 
