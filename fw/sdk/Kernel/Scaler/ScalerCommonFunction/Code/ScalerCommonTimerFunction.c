@@ -2557,6 +2557,9 @@ void ScalerTimerDelayXms(WORD usNum)
 {
     if(usNum != 0)
     {
+        WORD usAsked = usNum;
+        WORD usT0 = (WORD)AwtoMs();
+
         // Avoid dead lock under timer2 interrupt function disable condition
         if(TR2 == _OFF)
         {
@@ -2576,6 +2579,7 @@ void ScalerTimerDelayXms(WORD usNum)
                 }
                 else
                 {
+                    AwtoWaitLog(AWTO_WAIT_DELAY, usAsked, usT0);
                     return;
                 }
             }
@@ -2595,6 +2599,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
 {
     WORD usTimeElapsed = 0;
     WORD usPreviousTime = 0;
+    WORD usT0 = (WORD)AwtoMs();
 
     usPreviousTime = d_isr_g_usTimerCounter;
 
@@ -2602,6 +2607,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
     {
         if(((bit)ScalerGetBit(usRegister, ucBit) ^ bSuccess) == _FALSE)
         {
+            AwtoWaitLog(AWTO_WAIT_POLL, usRegister, usT0);
             return _TRUE;
         }
 
@@ -2613,6 +2619,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
     }
     while(usTimeElapsed <= usTimeout);
 
+    AwtoWaitLog(AWTO_WAIT_POLL | AWTO_WAIT_TIMEOUT, usRegister, usT0);
     return _FALSE;
 }
 

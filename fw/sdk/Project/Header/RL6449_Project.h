@@ -947,6 +947,27 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 #define AWTO_PNL_LOG(id, arg, val)                              { AwtoSyncPush((id), (arg), (val)); AwtoSwRec((id), (arg)); }
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
+// #216 blocking-wait log: every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call, newest last, wraps. Host: scripts/wait_log.py.
+#define AWTO_WAIT_N                                             120     // a cold boot logs ~115 waits >= 1 ms (unit 3, HDMI 4K60); ucTotal counts all
+#define AWTO_WAIT_DELAY                                         0       // arg = ms asked
+#define AWTO_WAIT_POLL                                          1       // arg = register polled
+#define AWTO_WAIT_EVENT                                         2       // arg = event type
+#define AWTO_WAIT_TIMEOUT                                       0x80    // kind bit: poll / event expired
+typedef struct
+{
+    unsigned int usMs;                          // fw ms (AwtoMs low word) when the wait ended
+    unsigned char ucKind;                       // AWTO_WAIT_* | AWTO_WAIT_TIMEOUT
+    unsigned int usArg;
+    unsigned char ucDur;                        // ms waited, saturates at 255
+} StAwtoWaitEv;
+typedef struct
+{
+    unsigned char ucTotal;                      // logged waits (>= 1 ms or expired) up to AWTO_WAIT_N, then N..2N-1; entry (total - 1) % AWTO_WAIT_N is the newest
+    unsigned char ucQuick;                      // waits that ended inside the same ms: counted only, wraps
+    StAwtoWaitEv stEv[AWTO_WAIT_N];
+} StAwtoWait;
+extern __xdata StAwtoWait g_stAwtoWait;
+extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0);   // usT0 = AwtoMs low word at the wait's start
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (isr_g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 // #139 sync / power-on log (fw/log/sync.c): ring of stage events per episode (power on, switch, wake), on the console /

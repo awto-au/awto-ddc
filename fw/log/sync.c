@@ -263,6 +263,26 @@ unsigned long AwtoMs(void)
     return ((DWORD)usHi << 16) | usLo;
 }
 
+__xdata StAwtoWait g_stAwtoWait;
+
+void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0)      // #216: one entry per blocking wait, written when it ends
+{
+    unsigned int usNow = (WORD)AwtoMs();
+    unsigned int usDur = usNow - usT0;
+    unsigned char ucI = g_stAwtoWait.ucTotal % AWTO_WAIT_N;
+
+    if((usDur == 0) && ((ucKind & AWTO_WAIT_TIMEOUT) == 0))
+    {
+        g_stAwtoWait.ucQuick++;                 // answered inside the same ms (idle polls fire every 10 ms): counted, not logged
+        return;
+    }
+    g_stAwtoWait.stEv[ucI].usMs = usNow;
+    g_stAwtoWait.stEv[ucI].ucKind = ucKind;
+    g_stAwtoWait.stEv[ucI].usArg = usArg;
+    g_stAwtoWait.stEv[ucI].ucDur = (usDur > 255) ? 255 : (unsigned char)usDur;
+    g_stAwtoWait.ucTotal = (g_stAwtoWait.ucTotal + 1 == 2 * AWTO_WAIT_N) ? AWTO_WAIT_N : g_stAwtoWait.ucTotal + 1;   // >= N = ring full, index stays total % N
+}
+
 // #157 DDC/CI host time (fw/ddcci/ddcci.c): RAM only. Ring lines at the first sync of this boot and on a drift over AWTO_HT_DRIFT_MS.
 void AwtoHtSync(BYTE *puc)                          // unix s BE x4, ms BE x2, UTC offset (15 min, signed)
 {
