@@ -25,11 +25,12 @@ import msg_table as MT  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
-XRAM = (0xD700, 0xF69C)                                       # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot (RL6449_Project.h)
-EDID_RAM = [(0xE280, 0xE380), (0xE480, 0xE580), (0xE680, 0xE780)]   # Mcu.c MCU_DDCRAM_D1..D3, 256 B each; D0 (0xE080) has no port: XDATA (#165)
+import chip_mem as CM  # noqa: E402
+XRAM = CM.XRAM                                                # fw/rl6449_memory.toml (#149 a)
+EDID_RAM = CM.DDC_RAM
 XDATA_FLOOR = 700         # free XDATA kept after placement: 10 % of the 7324 B pool, headroom for #162 work (Dan 2026-11-12, #165)
-BANK = 0x10000
-NBANKS = 14                                                   # banks 14-15 = data (#8)
+BANK = CM.BANK_SIZE
+NBANKS = CM.CODE_BANKS
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
 # bank 5 s, link 20 s (first runs 2026-11-04). 3x cold worst case per awto-dan#53.
 TIMEOUT = {"port": 60, "edid": 60, "pp": 180, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
@@ -194,7 +195,7 @@ def select_lib():
     log(f"lib: {len(take)}/{len(lib)} modules selected: {', '.join(q.stem for q in take)}")
 
 
-VEC_END = 0x53                                                # vectors 0..9 (0x03 + 8n, 3 B each)
+VEC_END = CM.VECTORS_END
 
 
 def write_vectors(bank_dir: Path):
@@ -233,7 +234,7 @@ def parse_args(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--serial", required=True)
     ap.add_argument("--skip-compile", action="store_true")
-    ap.add_argument("--common", type=lambda x: int(x, 0), default=0x5000)
+    ap.add_argument("--common", type=lambda x: int(x, 0), default=CM.COMMON_END)
     ap.add_argument("--layout", default="fw/bank_layout.tsv",
                     help="sticky layout (default: the tracked, proven one); '' = no layout, first-fit packing")
     ap.add_argument("--cluster", choices=["module", "fn"], default="",
@@ -245,7 +246,7 @@ def parse_args(argv=None):
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
     ap.add_argument("--xdata-floor", type=int, default=XDATA_FLOOR, help="free XDATA required after placement (opt-in "
                     "variant builds: 0 = must fit only)")
-    ap.add_argument("--resid-end", default="0xd1c", help="passed to sdcc_bank: common bytes kept for vectors/library before "
+    ap.add_argument("--resid-end", default=hex(CM.RESID_END), help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
     if a.layout and Path(os.path.normpath(ROOT / a.layout)).is_relative_to(ROOT / "tmp"):

@@ -21,7 +21,7 @@ VARIANTS = {                                           # map name -> -D defines
     "audio": ["_AWTO_AUDIO_TEST"],
     "mn": ["_AWTO_MEAS4K=_ON", "_AWTO_NET=_ON"],
 }
-FRESH = "--cluster fn --cluster-weights fw/cluster_weights.json --resid-end 0xd1c --xdata-floor 0"  # maps only, never flashed
+FRESH = "--cluster fn --cluster-weights fw/cluster_weights.json --xdata-floor 0"  # maps only, never flashed; resid_end from fw/rl6449_memory.toml
 
 
 def say(s):

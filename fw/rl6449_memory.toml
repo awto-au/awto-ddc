@@ -1,0 +1,25 @@
+# RL6449 (RTD2795T) memory map: chip facts the build places code and data against (#149 a).
+# Read through scripts/chip_mem.py only. Placement intent (pins, groups) lives in the C source: AWTO_PLACE(...).
+
+[code]
+bank_size   = 0x10000      # DW8051 64 KB window, whole window banked
+banks       = 16           # 1 MB flash
+code_banks  = 14           # banks 0-13 hold code; 14-15 = data (#8)
+common_end  = 0x5000       # [0, common_end) copied into every bank image
+vectors_end = 0x53         # vectors 0..9 (0x03 + 8n, 3 B each)
+resid_end   = 0xd1c        # common bytes kept for vectors / HOME / GSINIT / library / XINIT before pinned areas (#209)
+bank_reg    = 0xFFFF       # XDATA bank-select register
+
+[[code.reserved]]          # fixed debug-message block, never code (#56)
+name = "msg"
+addr = 0xDA000
+size = 0x6000
+
+[xdata]
+pool = [0xD700, 0xF69C]    # SDK XDATA end 0xF700 less the 48 B diag block, 32 B watchdog record, 20 B reset snapshot (RL6449_Project.h)
+# DDC RAM per port (Mcu.c MCU_DDCRAM_D1..D3, 256 B each), hardware-owned; D0 (0xE080) has no port: XDATA (#165)
+ddc_ram = [[0xE280, 0xE380], [0xE480, 0xE580], [0xE680, 0xE780]]
+
+[iram]
+direct_end = 0x80          # direct addressing above 0x7F hits SFRs
+iseg_base  = 0x80

@@ -12,7 +12,8 @@ Used by sdcc_bank.py (--layout); fw_build.py pins every slot with `-a<area>=<add
 from collections import defaultdict
 from pathlib import Path
 
-BANK_SIZE = 0x10000
+import chip_mem as CM  # noqa: E402
+BANK_SIZE = CM.BANK_SIZE
 
 
 def pad_slot(size, div=32, minpad=4):

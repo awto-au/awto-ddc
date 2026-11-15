@@ -47,9 +47,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import d8051  # noqa: E402
 
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
-BANK = 0x10000
+import chip_mem as CM  # noqa: E402
+BANK = CM.BANK_SIZE
 TERM = ("RET", "RETI", "LJMP", "SJMP", "AJMP", "JMP @A+DPTR")
-BANK_REG = 0xFFFF
+BANK_REG = CM.BANK_REG
 FLOW = ("RET", "LJMP", "SJMP", "AJMP", "LCALL", "ACALL", "JMP")
 
 

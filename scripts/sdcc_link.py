@@ -15,8 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_tools as T  # noqa: E402
 
 LINK_TIMEOUT = 120          # full firmware link ~20 s (2026-11-04); stall guard, awto-dan#53
-DIRECT_END = 0x80           # direct addressing above 0x7F hits SFRs
-ISEG_BASE = 0x80
+import chip_mem as CM  # noqa: E402
+DIRECT_END = CM.DIRECT_END
+ISEG_BASE = CM.ISEG_BASE
 
 
 def rel_sizes(rels):

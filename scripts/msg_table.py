@@ -22,11 +22,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root  # noqa: E402
 
-MSG_ADDR = 0xDA000
-MSG_SIZE = 0x6000
-MSG_BANK = 13                       # MSG_ADDR // 0x10000
+import chip_mem as CM  # noqa: E402
+MSG_ADDR, MSG_SIZE = CM.RESERVED["msg"]       # fw/rl6449_memory.toml (#56, #149 a)
+MSG_BANK = MSG_ADDR // CM.BANK_SIZE
 MAGIC, VERSION, HDR = b"AMSG", 1, 32
-assert MSG_ADDR + MSG_SIZE == (MSG_BANK + 1) * 0x10000
+assert MSG_ADDR + MSG_SIZE == (MSG_BANK + 1) * CM.BANK_SIZE   # block ends at the top of its bank
 _ESC = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\"}
 
 

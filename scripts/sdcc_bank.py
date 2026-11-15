@@ -42,7 +42,7 @@ SAVE = re.compile(r"^\s+(push\b|movx\s+@|mov\s+(a?r[0-7]|@r[01]),\s*(a|dpl|dph|b
 CALLJ = re.compile(r"^\s+(lcall|ljmp|acall)\s+(\w+)")
 SCAN_MAX = 30             # lines from an address load to its consumer; longer = give up (stays common)
 AR_EQU = re.compile(r"^\s*(ar[0-7]|rbank0)\s*=")
-BANK_SIZE = 0x10000
+BANK_SIZE = L.BANK_SIZE
 MSG_RESERVE = {MT.MSG_BANK: MT.MSG_SIZE}   # top of one bank = fixed debug-message block (#56), never code
 HOT_BANKS = 3             # helper called from at least this many other banks
 HOT_SIZE = 384            # and its banked callee closure no larger than this
