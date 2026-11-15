@@ -1007,6 +1007,16 @@ def cmd_settings(extra: list[str]) -> int:
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
+@command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139); --whole = all episodes",
+         args="[--unit N] [--map F] [--whole] [--delta]", kind="action")
+def cmd_synclog(extra: list[str]) -> int:
+    flags = [f for f in ("--whole", "--delta") if _flag(extra, f)]
+    given = _opt(extra, "--map")
+    n, u = _unit(extra)
+    b = _live_bus(u)
+    return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
+
+
 @command("our OSD menu over I2C (#67): keyboard uses the computer arrows; state | key K | hold KEYS MS | open PAGE | "
          "select ITEM | set ITEM V | get ITEM | back | close | walk (every page + item checked against the registry; "
          "--png DIR renders pages in the sim)",

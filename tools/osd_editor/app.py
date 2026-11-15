@@ -13,17 +13,19 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame, QHB
                                QSizePolicy, QSpinBox, QStackedWidget, QToolBar, QVBoxLayout, QWidget)
 
 import model as M
+from monitor import MonitorPage
 
 ROOT = Path(__file__).resolve().parents[2]
 CSS = """
 * { font-family: monospace; font-size: 12px; color: #d8d8d8; }
 QMainWindow, QWidget#root { background: #141414; }
-QFrame#panel, QListWidget, QScrollArea, QSpinBox, QComboBox { background: #1e1e1e; border: 1px solid #2a2a2a; }
+QFrame#panel, QListWidget, QScrollArea, QSpinBox, QComboBox, QPlainTextEdit, QTableWidget { background: #1e1e1e; border: 1px solid #2a2a2a; }
 QToolBar { background: #141414; border: none; spacing: 6px; }
 QPushButton, QToolButton { background: #1e1e1e; border: 1px solid #2a2a2a; padding: 4px 10px; }
 QPushButton:hover, QToolButton:hover { background: #2a2a2a; }
 QPushButton:checked, QToolButton:checked { background: #3a1a1a; border-color: #ff3030; }
 QScrollArea > QWidget > QWidget { background: #1e1e1e; }
+QHeaderView::section { background: #1e1e1e; border: 1px solid #2a2a2a; }
 QStatusBar { background: #141414; } QStatusBar::item { border: none; }
 """
 
@@ -280,6 +282,8 @@ class Window(QMainWindow):
         self.glyphs, self.screens = GlyphPage(), ScreensPage()
         self.stack.addWidget(self.glyphs)
         self.stack.addWidget(self.screens)
+        self.monitor = MonitorPage()
+        self.stack.addWidget(self.monitor)
         root = QWidget()
         root.setObjectName("root")
         lay = QVBoxLayout(root)
@@ -312,7 +316,7 @@ class Window(QMainWindow):
             a.triggered.connect(fn)
         tb.addSeparator()
         self.nav = []
-        for i, txt in enumerate(("glyphs", "screens")):
+        for i, txt in enumerate(("glyphs", "screens", "monitor")):
             a = tb.addAction(txt)
             a.setCheckable(True)
             a.triggered.connect(lambda _=False, i=i: self.go(i))

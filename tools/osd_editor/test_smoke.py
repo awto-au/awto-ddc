@@ -1,5 +1,6 @@
 """Offscreen smoke test: QT_QPA_PLATFORM=offscreen tools/osd_editor/.venv/bin/python tools/osd_editor/test_smoke.py"""
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ import numpy as np  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 import app as A  # noqa: E402
+import monitor as MON  # noqa: E402
 import model as M  # noqa: E402
 
 ROOT = A.ROOT
@@ -41,6 +43,75 @@ def roundtrip(bpp, geom, win):
     print(f"ok {bpp} bpp {geom}: {n} tiles, {b['font_words']} words ({b['pct']:.1f} %), raw {b['raw']} B, vlc {b['vlc']} B")
 
 
+class FakeBackend:
+    """canned script output; records every argv (no hardware, no subprocess)"""
+
+    def __init__(self):
+        self.calls = []
+
+    def run(self, argv):
+        a = [str(x) for x in argv]
+        self.calls.append(a)
+        if "settings" in a and "list" in a:
+            return 0, "\n".join(f"{r['name']} = x (raw {r['default'] + (1 if r['type'] == 'int' and r['name'] == 'brightness' else 0)})"
+                                for r in MON.T.ROWS if r["type"] != "action") + "\n"
+        if "synclog" in a:
+            return 0, ("2026-11-15T10:00:00+10:00 sync episode: power on, 4 lines\n"
+                       "2026-11-15T10:00:00+10:00      0:power on\n2026-11-15T10:00:00+10:00     40:panel on\n"
+                       "2026-11-15T10:00:00+10:00    390:input lock D2\n2026-11-15T10:00:00+10:00    420:backlight on\n")
+        if "health" in a:
+            return 0, "diag ok\nPASS\n"
+        return 0, "ok\n"
+
+
+def monitor_test(app, win):
+    fb = FakeBackend()
+    logf = ROOT / "tmp" / "osdedit" / "monitor_test.log"
+    logf.unlink(missing_ok=True)
+    pg = MON.MonitorPage(fb, logf)
+    win.stack.addWidget(pg)
+    win.stack.setCurrentWidget(pg)
+    assert pg.writable() and pg.n() == "3", pg.n()
+    pg.get_all()
+    pg.wait_idle()
+    app.processEvents()
+    assert fb.calls[-1][-5:] == ["settings", "list", "--unit", "3"][-4:] or fb.calls[-1][2:] == ["settings", "list", "--unit", "3"]
+    assert pg.rows["brightness"].w.value() == 51 and pg.rows["gamma"].w.currentIndex() == 0
+    pg.rows["brightness"].w.setValue(60)
+    pg.rows["gamma"].w.setCurrentIndex(3)
+    pg.set_row(pg.rows["brightness"])
+    pg.set_row(pg.rows["gamma"])
+    pg.save()
+    pg.inp.setCurrentText("D2")
+    pg.input_select()
+    pg.host_time()
+    pg.health()
+    pg.sync_log()
+    pg.wait_idle()
+    app.processEvents()
+    sent = [" ".join(c[1:]) for c in fb.calls]
+    for want in ("settings set brightness 60", "settings set gamma 3", "settings save", "kvm.py D2 --units 3",
+                 "host_time.py --unit 3 --once", "health", "synclog --whole"):
+        assert any(want in x for x in sent), (want, sent)
+    assert pg.sync.rowCount() == 4
+    assert [pg.sync.item(i, 0).text() for i in range(4)] == ["", "+40", "+350", "+30"]
+    assert pg.sync.item(2, 0).foreground().color().name() == "#ff5050" and pg.sync.item(1, 0).foreground().color().name() != "#ff5050"
+    log = logf.read_text().splitlines()
+    iso = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d unit 3 ")
+    assert sum(bool(iso.match(x)) for x in log) >= 8 and any("health: ok, PASS" in x for x in log), log
+    n = len(fb.calls)
+    pg.unit.setCurrentIndex(0)                                     # unit 1: working screen, read-only
+    assert not pg.writable() and not pg.rows["brightness"].btn.isEnabled()
+    pg.run("probe", ["x"], None)
+    assert len(fb.calls) == n
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    pg.unit.setCurrentIndex(2)
+    win.resize(1400, 900)
+    app.processEvents()
+    win.grab().save(str(SHOTS / "editor_monitor.png"))
+    print("ok monitor page: get/set/save/input/host time/health/sync log through the fake backend,", len(log), "log lines")
+
+
 def main():
     app = QApplication([])
     win = A.Window()
@@ -65,6 +136,7 @@ def main():
     app.processEvents()
     win.grab().save(str(SHOTS / "editor_screens.png"))
     print("screens loaded:", len(win.screens.rows))
+    monitor_test(app, win)
     print("PASS")
 
 
