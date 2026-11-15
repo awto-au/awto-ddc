@@ -1339,26 +1339,30 @@ void ScalerFRCWaitWriteFrameBufFinish(void)
 {
     if(GET_MEMORY_CONFIG() == _MEMORY_WORK_MODE)
     {
+        // Single-buffer capture (cap_db_en = 0): the block select never toggles, the polls below would only expire (2 x 51 ms, #216)
+        if(ScalerGetBit(P5_27_CAP_M1_DDR_CTRL1, _BIT5) != 0x00)
+        {
 #if(_DISPLAY_ROTATION_SUPPORT == _ON)
-        if(GET_ROT_TYPE() != _ROT_DISABLE)
-        {
-            // Get FRC Capture Block Index
-            pData[0] = ScalerGetBit((P5_2A_CAP_M1_STATUS), _BIT6);
+            if(GET_ROT_TYPE() != _ROT_DISABLE)
+            {
+                // Get FRC Capture Block Index
+                pData[0] = ScalerGetBit((P5_2A_CAP_M1_STATUS), _BIT6);
 
-            // Wait Write Data
-            ScalerTimerPollingFlagProc(50, P5_2A_CAP_M1_STATUS, _BIT6, ((~pData[0]) & _BIT6));
-            ScalerTimerPollingFlagProc(50, P5_2A_CAP_M1_STATUS, _BIT6, ((pData[0]) & _BIT6));
-            ScalerTimerPollingFlagProc(50, P5_2A_CAP_M1_STATUS, _BIT6, ((~pData[0]) & _BIT6));
-        }
-        else
+                // Wait Write Data
+                ScalerTimerPollingFlagProc(50, P5_2A_CAP_M1_STATUS, _BIT6, ((~pData[0]) & _BIT6));
+                ScalerTimerPollingFlagProc(50, P5_2A_CAP_M1_STATUS, _BIT6, ((pData[0]) & _BIT6));
+                ScalerTimerPollingFlagProc(50, P5_2A_CAP_M1_STATUS, _BIT6, ((~pData[0]) & _BIT6));
+            }
+            else
 #endif
-        {
-            // Get FRC Capture Block Index
-            pData[0] = ScalerGetBit((P5_2A_CAP_M1_STATUS), _BIT6);
+            {
+                // Get FRC Capture Block Index
+                pData[0] = ScalerGetBit((P5_2A_CAP_M1_STATUS), _BIT6);
 
-            // Wait Write Data
-            ScalerTimerPollingFlagProc(50, (P5_2A_CAP_M1_STATUS), _BIT6, ((~pData[0]) & _BIT6));
-            ScalerTimerPollingFlagProc(50, (P5_2A_CAP_M1_STATUS), _BIT6, ((pData[0]) & _BIT6));
+                // Wait Write Data
+                ScalerTimerPollingFlagProc(50, (P5_2A_CAP_M1_STATUS), _BIT6, ((~pData[0]) & _BIT6));
+                ScalerTimerPollingFlagProc(50, (P5_2A_CAP_M1_STATUS), _BIT6, ((pData[0]) & _BIT6));
+            }
         }
 
         ScalerTimerWaitForEvent(_EVENT_IEN_STOP);
