@@ -55,9 +55,14 @@ bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent);
 //--------------------------------------------------
 bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent)
 {
+    WORD usPc;
+    BYTE ucBk;
     WORD usTimeElapsed = 0;
     WORD usPreviousTime = 0;
-    WORD usT0 = (WORD)AwtoMs();
+    WORD usT0;
+
+    AWTO_WAIT_CALLER(usPc, ucBk);
+    usT0 = (WORD)AwtoMs();
 
     switch(enumEvent)
     {
@@ -94,7 +99,7 @@ bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent)
     {
         if(ScalerTimerGetEventStatus(enumEvent) == enumEvent)
         {
-            AwtoWaitLog(AWTO_WAIT_EVENT, (WORD)enumEvent, usT0);
+            AwtoWaitLog(AWTO_WAIT_EVENT | (ucBk << AWTO_WAIT_BANK_SHIFT), (WORD)enumEvent, usT0, usPc);
             return _TRUE;
         }
 
@@ -106,7 +111,7 @@ bit ScalerTimerWaitForEvent(EnumWaitEventType enumEvent)
     }
     while(usTimeElapsed <= _TIMER_WAIT_EVENT_TIMEOUT);
 
-    AwtoWaitLog(AWTO_WAIT_EVENT | AWTO_WAIT_TIMEOUT, (WORD)enumEvent, usT0);
+    AwtoWaitLog(AWTO_WAIT_EVENT | AWTO_WAIT_TIMEOUT | (ucBk << AWTO_WAIT_BANK_SHIFT), (WORD)enumEvent, usT0, usPc);
     return _FALSE;
 }
 

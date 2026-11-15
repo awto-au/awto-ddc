@@ -2555,6 +2555,10 @@ void ScalerTimerInitialTimerEvent(void)
 //--------------------------------------------------
 void ScalerTimerDelayXms(WORD usNum)
 {
+    WORD usPc;
+    BYTE ucBk;
+
+    AWTO_WAIT_CALLER(usPc, ucBk);
     if(usNum != 0)
     {
         WORD usAsked = usNum;
@@ -2579,7 +2583,7 @@ void ScalerTimerDelayXms(WORD usNum)
                 }
                 else
                 {
-                    AwtoWaitLog(AWTO_WAIT_DELAY, usAsked, usT0);
+                    AwtoWaitLog(AWTO_WAIT_DELAY | (ucBk << AWTO_WAIT_BANK_SHIFT), usAsked, usT0, usPc);
                     return;
                 }
             }
@@ -2597,17 +2601,21 @@ void ScalerTimerDelayXms(WORD usNum)
 //----------------------------------------------------------------------
 bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit bSuccess)
 {
+    WORD usPc;
+    BYTE ucBk;
     WORD usTimeElapsed = 0;
     WORD usPreviousTime = 0;
-    WORD usT0 = (WORD)AwtoMs();
+    WORD usT0;
 
+    AWTO_WAIT_CALLER(usPc, ucBk);
+    usT0 = (WORD)AwtoMs();
     usPreviousTime = d_isr_g_usTimerCounter;
 
     do
     {
         if(((bit)ScalerGetBit(usRegister, ucBit) ^ bSuccess) == _FALSE)
         {
-            AwtoWaitLog(AWTO_WAIT_POLL, usRegister, usT0);
+            AwtoWaitLog(AWTO_WAIT_POLL | (ucBk << AWTO_WAIT_BANK_SHIFT), usRegister, usT0, usPc);
             return _TRUE;
         }
 
@@ -2619,7 +2627,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
     }
     while(usTimeElapsed <= usTimeout);
 
-    AwtoWaitLog(AWTO_WAIT_POLL | AWTO_WAIT_TIMEOUT, usRegister, usT0);
+    AwtoWaitLog(AWTO_WAIT_POLL | AWTO_WAIT_TIMEOUT | (ucBk << AWTO_WAIT_BANK_SHIFT), usRegister, usT0, usPc);
     return _FALSE;
 }
 

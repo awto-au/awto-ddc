@@ -21,15 +21,26 @@ COMMON_END = 0x5000       # fw/rl6449_memory.toml common_end: below it the addre
 BANK_SIZE = 0x10000
 
 
-def chunk_table(map_path: Path):
-    """sorted flat address -> name of every code chunk start in the map: globals (`_name`) and statics (area `s_CH_<name>`)"""
-    rows = []
-    for l in map_path.read_text(errors="replace").splitlines():
-        m = re.match(r"^C:\s+([0-9A-F]{8})\s+(?:s_CH_|s_ST_|_)(\w+)", l)
-        if m:
-            rows.append((int(m.group(1), 16), m.group(2)))
-    rows.sort()
-    return [r[0] for r in rows], [r[1] for r in rows]
+from wait_log import chunk_table  # noqa: E402
+
+
+def check_ring(bus, map_path, starts, names, rows):
+    """g_stAwtoWait (the firmware's own log: caller pc + bank per wait >= 1 ms) against the callers watched here"""
+    import wait_log as W
+    hit = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoWait\b", map_path.read_text(errors="replace"), re.M)
+    sym = int(hit.group(1), 16) if hit else None
+    if sym is None:
+        return ["ring check: no g_stAwtoWait in the map; skipped"]
+    raw = bytes(bus.m.rd(sym, W.HDR + W.EV * W.N, "xram"))
+    total, quick, ring = W.decode(raw)
+    got = collections.Counter()
+    for end, kind, tmo, arg, dur, pc, bank in ring:
+        flat = pc if pc < COMMON_END else bank * BANK_SIZE + pc
+        i = bisect.bisect_right(starts, flat) - 1
+        got[(W.KINDS[kind], names[i] if i >= 0 else "?")] += 1
+    want = collections.Counter((k.replace("DelayXms", "delay").replace("PollingFlagProc", "poll").replace("WaitForEvent", "event"), who) for _, k, _, who in rows)
+    bad = [(k, n, want[k]) for k, n in got.items() if n > want[k] and k[1] != '_bs_rtab']
+    return [f"ring check: {sum(got.values())} logged waits, callers not seen by the watch: {bad if bad else 'none'}"]
 
 
 def main() -> int:
@@ -73,6 +84,7 @@ def main() -> int:
         out.append(f"{kind}: {sum(v[0] for v in per.values())} calls" + (f", {total} ms in all" if kind == "DelayXms" else ""))
         for who, (n, ms) in sorted(per.items(), key=lambda x: (-x[1][1], -x[1][0]))[:a.top]:
             out.append(f"   {n:4d} calls" + (f"  {ms:5d} ms" if kind == "DelayXms" else "          ") + f"  {who}")
+    out += check_ring(bus, a.map, starts, names, rows)
     with LOG.open("a") as f:
         f.write(isostamp.now() + " " + "\n".join(out) + "\n")
     print("\n".join(out))

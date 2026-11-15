@@ -334,7 +334,7 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_FRAME                                          16      // WDT / Timer2 ISR: 2 B PC + 14 pushes (crash_sim_test checks)
 #define AWTO_XFR(a)                                             (*(volatile __xdata unsigned char *)(a))
 #if(_AWTO_WDT == _ON)
-extern __data unsigned char d_bs_cur;           // fw/sdcc/bank.asm bank shadow
+extern __data unsigned char d_isr_bs_cur;           // fw/sdcc/bank.asm bank shadow
 extern void AwtoWdtInit(void);
 extern unsigned char AwtoBootReason(void);
 extern unsigned long AwtoBootValue(void);
@@ -344,7 +344,7 @@ extern void AwtoWdtProbe(unsigned char ucTimer);
 extern bit AwtoWdtValid(void);
 extern void AwtoOsdWdtLines(void);
 extern void ScalerTimerWDInitial(void);
-#define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, d_bs_cur)
+#define AWTO_WDT_IRQ()                                          AwtoWdtIrq(SP, d_isr_bs_cur)
 // clr_wdt latches the old counters: FFAC = CNT3[11:5], FFAD = CNT1 -> the gap this poke ended, for ucMaxPoke + the site (#150)
 #define AWTO_WDT_POKE(site)                                     do { unsigned char ucG_; AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT; \
                                                                      ucG_ = ((AWTO_XFR(AWTO_R_WATCHDOG_CNT1_VALUE) & AWTO_F_WATCHDOG_CNT1_VALUE_WDT_CNT1_VALUE) != 0) ? 0xFF : (AWTO_XFR(AWTO_R_WATCHDOG_CNT3_VALUE) & AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE); \
@@ -953,12 +953,14 @@ extern void AwtoSwMode(unsigned char ucMode);
 #define AWTO_WAIT_POLL                                          1       // arg = register polled
 #define AWTO_WAIT_EVENT                                         2       // arg = event type
 #define AWTO_WAIT_TIMEOUT                                       0x80    // kind bit: poll / event expired
+#define AWTO_WAIT_BANK_SHIFT                                    3       // kind bits 6:3 = bank of the caller (0xFFFF pc < common_end: common)
 typedef struct
 {
     unsigned int usMs;                          // fw ms (AwtoMs low word) when the wait ended
     unsigned char ucKind;                       // AWTO_WAIT_* | AWTO_WAIT_TIMEOUT
     unsigned int usArg;
     unsigned char ucDur;                        // ms waited, saturates at 255
+    unsigned int usPc;                          // return address of the wait call (caller; with the bank, a map lookup)
 } StAwtoWaitEv;
 typedef struct
 {
@@ -967,7 +969,11 @@ typedef struct
     StAwtoWaitEv stEv[AWTO_WAIT_N];
 } StAwtoWait;
 extern __xdata StAwtoWait g_stAwtoWait;
-extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0);   // usT0 = AwtoMs low word at the wait's start
+extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0, unsigned int usPc);   // usT0 = AwtoMs low word at the wait's start
+// First statement of a wait function placed in common (called without a bank stub, nothing pushed yet): the caller's return
+// address from the 8051 stack and the bank it runs in.
+#define AWTO_WAIT_CALLER(pc, bk)                                { __idata unsigned char *p_ = (__idata unsigned char *)SP; \
+                                                                  (pc) = ((unsigned int)p_[0] << 8) | p_[-1]; (bk) = d_isr_bs_cur; }
 #define AWTO_BPROF(k)                                           AwtoSwEvent(AWTO_SW_EV_PROBE, (k))   // #144 boot profile sites
 #define AWTO_SW_HPD(port, x)                                    (isr_g_stAwtoSw.ucHpdLow[port] += ((x) == 0))   // counter only (ISRs too); no branch (constant x)
 // #139 sync / power-on log (fw/log/sync.c): ring of stage events per episode (power on, switch, wake), on the console /

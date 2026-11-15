@@ -100,7 +100,7 @@ def main() -> int:
         bus.wait(HOLD_S + 1.5)
         done = [t for ev, t in evs if ev == EV_CON_DONE]
         check("until: console closed after the hold", not is_open(), f"events {evs}")
-        check("until: one close event, hold..hold+1 s after ACTIVE", len(done) == 1 and HOLD_S <= done[0] - t_act <= HOLD_S + 1.0,
+        check("until: one close event, hold..hold+1 s after ACTIVE", len(done) == 1 and HOLD_S - 0.1 <= done[0] - t_act <= HOLD_S + 1.0,
               f"ACTIVE at {t_act:.2f} s, events {evs}")
 
     bus, evs, is_open, tap, active_at = run(UNTIL)

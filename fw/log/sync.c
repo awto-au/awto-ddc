@@ -265,7 +265,7 @@ unsigned long AwtoMs(void)
 
 __xdata StAwtoWait g_stAwtoWait;
 
-void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0)      // #216: one entry per blocking wait, written when it ends
+void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0, unsigned int usPc)      // #216: one entry per blocking wait, written when it ends
 {
     unsigned int usNow = (WORD)AwtoMs();
     unsigned int usDur = usNow - usT0;
@@ -279,6 +279,7 @@ void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int usT0)   
     g_stAwtoWait.stEv[ucI].usMs = usNow;
     g_stAwtoWait.stEv[ucI].ucKind = ucKind;
     g_stAwtoWait.stEv[ucI].usArg = usArg;
+    g_stAwtoWait.stEv[ucI].usPc = usPc;
     g_stAwtoWait.stEv[ucI].ucDur = (usDur > 255) ? 255 : (unsigned char)usDur;
     g_stAwtoWait.ucTotal = (g_stAwtoWait.ucTotal + 1 == 2 * AWTO_WAIT_N) ? AWTO_WAIT_N : g_stAwtoWait.ucTotal + 1;   // >= N = ring full, index stays total % N
 }

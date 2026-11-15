@@ -532,7 +532,6 @@ stub	_ScalerSyncTMDSRx3HdmiQuantizationSetting	C	0x1e78	8
 stub	_ScalerTimerActiveTimerEvent	C	0x1e80	8
 fn	_ScalerTimerCancelTimerEvent	C	0x1e88	76
 stub	_ScalerTimerInitialTimerEvent	C	0x1f34	8
-fn	_ScalerTimerDelayXms	C	0x1f3c	148
 stub	_AwtoWaitLog	C	0x1fd0	8
 stub	_ScalerTimerReactiveTimerEvent	C	0x1fec	8
 stub	_ScalerDpRx1CDRCheck	C	0x1ff4	8
@@ -596,7 +595,6 @@ stub	_ScalerTMDSRx2TMDSVideoDetectEvent	C	0x26c4	8
 stub	_ScalerTMDSRx3HdmiGetAVIInfo	C	0x26cc	8
 stub	_ScalerTMDSRx3HdmiGetColorDepth	C	0x26d4	8
 stub	_ScalerTMDSRx3TMDSVideoDetect	C	0x26dc	8
-stub	_ScalerTimerWaitForEvent	C	0x26e4	8
 stub	_ScalerVgipCaptureEnable	C	0x26ec	8
 stub	_ScalerVgipGetDigitalCaptureStatus	C	0x26f4	8
 stub	_ScalerVgipSetCaptureHDelay	C	0x26fc	8
@@ -915,7 +913,9 @@ stub	_AwtoWdtIrq	C	0x3b50	8
 stub	_AwtoWdtProbe	C	0x3b58	8
 stub	_osd_tc_vlc_end	C	0x3b60	8
 stub	_osd_tc_vlc_put	C	0x3b68	8
-fn	_ScalerTimerPollingFlagProc	C	0x3b70	224
+fn	_ScalerTimerPollingFlagProc	C	0x3b70	476
+fn	_ScalerTimerDelayXms	C	0x3d4c	332
+fn	_ScalerTimerWaitForEvent	C	0x3e98	360
 fn	_ScalerOsdFontLibraryRotation	0	0x0000	28
 fn	_ScalerOsdFontWindowVericalAlignemnt	0	0x001c	28
 fn	_ScalerOsdGetDoubleFunctionH	0	0x0038	24
@@ -987,7 +987,6 @@ fn	_dp_wr16	0	0x9af8	48
 fn	_AwtoMstep	0	0x9b28	144
 fn	_ScalerFRCDisplayCtrl	0	0x9bb8	2744
 fn	_ScalerMemoryFineTuneIVS2DVSDelay	0	0xa670	2124
-fn	_ScalerTimerWaitForEvent	0	0xaebc	260
 const	_tPALETTE_MAIN_MENU	1	0x0000	56
 const	_tPALETTE_RTD_LOGO	1	0x0038	56
 const	_tFACTORY_PAGE_1_SELECT_ITEM_TABLE	1	0x0070	108
@@ -1598,7 +1597,7 @@ fn	_AwtoTmdsIdleKhz	3	0x9ac0	208
 fn	_ScalerTimerWDCancelTimerEvent	3	0x9b90	44
 fn	_ScalerDpRx1InterlaceCheck	3	0x9bbc	2920
 fn	_AwtoPsWakeState	3	0xa724	252
-fn	_AwtoWaitLog	3	0xa820	204
+fn	_AwtoWaitLog	3	0xa820	228
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16

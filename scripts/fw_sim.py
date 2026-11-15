@@ -168,7 +168,7 @@ def parse_map(mp: str, img: bytes, ncode: int | None = None):
     return sym, where
 
 
-BS_TRAMP = ("__bs_call", "__bs_call_sw", "__bs_ret", "__bs_ret_sw", "_d_bs_cur", "__bs_keil")   # bank.asm labels, not stubs
+BS_TRAMP = ("__bs_call", "__bs_call_sw", "__bs_ret", "__bs_ret_sw", "_d_isr_bs_cur", "__bs_keil")   # bank.asm labels, not stubs
 
 
 def keil_abi(sym: dict) -> bool:
@@ -1489,24 +1489,24 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
 
 
 def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_instr: int = 60_000_000) -> int:
-    """An interrupt taken with logical bank k (= _d_bs_cur, the bank the code thinks it is in) returns with bank register
-    == _d_bs_cur == k and SP as before. Timer2 comes by itself; EXINT1 (IE1) is forced once per bank seen.
-    Flow: vector stop -> note (_d_bs_cur, SP, return PC) -> tbreak at the return PC -> compare."""
+    """An interrupt taken with logical bank k (= _d_isr_bs_cur, the bank the code thinks it is in) returns with bank register
+    == _d_isr_bs_cur == k and SP as before. Timer2 comes by itself; EXINT1 (IE1) is forced once per bank seen.
+    Flow: vector stop -> note (_d_isr_bs_cur, SP, return PC) -> tbreak at the return PC -> compare."""
     img = binp.read_bytes()
     mp = mapp.read_text(errors="replace")
     sym, where = parse_map(mp, img)
-    m = re.search(r"^\s+([0-9A-F]{8})\s+_d_bs_cur\s", mp, re.M)
+    m = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_bs_cur\s", mp, re.M)
     if not m:
-        print("FAIL isr-check: _d_bs_cur not in map"); return 1
+        print("FAIL isr-check: _d_isr_bs_cur not in map"); return 1
     cur = int(m.group(1), 16)
     flash = FlashPort(img)
     s = open_native(img, ROOT / "tmp/fwsim" / f"{binp.stem}.{os.getpid()}", log, flash, VECTORS)
-    # trampoline switch window: _d_bs_cur is already the target, the bank register not yet (written at the movx). An IRQ
-    # whose return PC lies inside is consistent (ISR code is common; its own stubs restore _d_bs_cur's bank); skip the compare.
+    # trampoline switch window: _d_isr_bs_cur is already the target, the bank register not yet (written at the movx). An IRQ
+    # whose return PC lies inside is consistent (ISR code is common; its own stubs restore _d_isr_bs_cur's bank); skip the compare.
     windows = []
     for a, b in ((sym["__bs_call"], sym["__bs_call_sw"]), (sym["__bs_ret"], sym["__bs_ret_sw"])):
         for i in range(a, b - 1):
-            if img[i + 1] == cur & 0xFF and img[i] in (0xF5, 0x88, 0x89, 0x8A, 0x8B):     # mov _d_bs_cur,A / Rn
+            if img[i + 1] == cur & 0xFF and img[i] in (0xF5, 0x88, 0x89, 0x8A, 0x8B):     # mov _d_isr_bs_cur,A / Rn
                 windows.append((i + 2, b)); break
 
     def logical():
@@ -1535,7 +1535,7 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
             if any(a <= pc < b for a, b in windows):
                 bank = lg = pending[0]                  # in the switch window (see above): only SP is compared
             if not (bank == lg == pending[0]) or spv != pending[1]:
-                bad.append(f"vector 0x{pending[3]:02x} in logical bank {pending[0]}: back with bank reg {bank}, _d_bs_cur {lg}, "
+                bad.append(f"vector 0x{pending[3]:02x} in logical bank {pending[0]}: back with bank reg {bank}, _d_isr_bs_cur {lg}, "
                            f"SP 0x{spv:02x} (was 0x{pending[1]:02x}) at pc 0x{pc:04x}")
             seen[pending[0]] += 1; pending = None; irqs += 1
             if lg not in injected:                      # main-context point in this bank: force EXINT1 once

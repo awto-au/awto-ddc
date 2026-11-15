@@ -59,7 +59,7 @@ def objects(asm_dir: Path):
             m = LABEL.match(l)
             if m:
                 lab = m.group(1)
-                l = l[m.end():]                                     # `_d_bs_cur:\t.ds\t1` (label and storage on one line)
+                l = l[m.end():]                                     # `_d_isr_bs_cur:\t.ds\t1` (label and storage on one line)
             m = DS.match(l)
             if m and lab:
                 out.append((area, p.stem, lab, int(m.group(1), 0)))
