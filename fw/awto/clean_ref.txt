@@ -1,1 +1,1 @@
-79d0858   # awto-rtdfw commit compiled into the image (git archive); rotate + bl-on-delay merged, panel_t6 900
+2dc86b1   # awto-rtdfw commit compiled into the image (git archive); branch rotate (not on main), + AWTO_PLACE(group=font)

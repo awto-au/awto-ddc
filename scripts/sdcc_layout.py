@@ -123,10 +123,11 @@ class Region:
             cur += self.placed[k][1]
 
 
-def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fill_target=0.80, reserve=None):
+def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fill_target=0.80, reserve=None, labels=None):
     """Place every item; returns (placed: key -> (region, offset, slot), moved: key -> new region).
     items: list[Item] with .region = wanted region (C or bank). A kept row needs the same region.
-    reserve: {bank: bytes} kept free at the top of that bank (fixed data block, scripts/msg_table.py)."""
+    reserve: {bank: bytes} kept free at the top of that bank (fixed data block, scripts/msg_table.py).
+    labels: {key: why it is fixed} (AWTO_PLACE rules), named when a fixed item finds no room."""
     regs = {"C": Region("C", common_lo, common_hi)}
     for b in range(nbanks):
         regs[b] = Region(b, 0, bank_cap - (reserve or {}).get(b, 0))
@@ -175,6 +176,9 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
             if off is not None:
                 done = rid
                 break
+        if done is None and (labels or {}).get(it.key):
+            raise SystemExit(f"{labels[it.key]}: no room for {it.key[1]} ({it.slot} B) in "
+                             f"{'common' if it.region == 'C' else 'bank %s' % it.region}: {regs[it.region].free()} B free")
         if done is None:
             raise SystemExit(f"layout: no room for {it.key} ({it.slot} B) in any region; free: "
                              f"{ {k: v.free() for k, v in regs.items()} }")

@@ -30,6 +30,7 @@ import sdcc_tools as T  # noqa: E402
 import sdcc_layout as L  # noqa: E402
 import sdcc_cluster as SC  # noqa: E402
 import msg_table as MT  # noqa: E402
+import place_rules as PR  # noqa: E402
 
 ROOT = repo_root()
 LOG = None
@@ -284,6 +285,71 @@ def load_weights(path, funcs):
     return out
 
 
+def load_place(asm_dir, funcs, consts):
+    """AWTO_PLACE rules (#149) -> groups {name: [chunk]}, pins [(chunk, bank | 'C')], labels {(kind, name): text}."""
+    try:
+        rules = PR.scan(PR.sources(asm_dir))
+    except PR.PlaceError as e:
+        sys.exit(f"AWTO_PLACE: {e}")
+    groups, pins, labels = defaultdict(list), [], {}
+    for r in rules:
+        c = funcs.get(r["sym"]) or consts.get(r["sym"])
+        if c is None:
+            sys.exit(f"AWTO_PLACE: {r['where']}: {r['sym']} is not compiled into any module (dead, renamed or #if'd out)")
+        key = ("fn" if c.area == "CSEG" else "const", c.name)
+        if "group" in r:
+            groups[r["group"]].append(c)
+            labels[key] = f"AWTO_PLACE group={r['group']} ({r['where']})"
+        if "bank" in r or "common" in r:
+            pins.append((c, "C" if "common" in r else r["bank"]))
+            labels[key] = f"AWTO_PLACE {'common' if 'common' in r else 'bank=%d' % r['bank']} ({r['where']})"
+        if "common" in r:
+            c.common = True
+    for c, b in pins:
+        if b != "C" and not 0 <= b < L.CM.CODE_BANKS:
+            sys.exit(f"AWTO_PLACE: {labels[('fn' if c.area == 'CSEG' else 'const', c.name)]}: bank {b} is not a code bank "
+                     f"(0..{L.CM.CODE_BANKS - 1}, fw/rl6449_memory.toml)")
+    log(f"AWTO_PLACE: {len(rules)} rules, {len(groups)} groups ({', '.join(f'{g}:{len(v)}' for g, v in groups.items())}), "
+        f"{len(pins)} pins")
+    return {"groups": dict(groups), "pins": pins, "labels": labels}
+
+
+def apply_place(place, stage):
+    """Pins first; each group then goes to its pinned bank, else the bank most of its bytes are in (sticky)."""
+    for c, b in place["pins"]:
+        c.common, c.bank = (True, None) if b == "C" else (False, b)
+    pinned = {id(c): b for c, b in place["pins"]}
+    for g, cs in place["groups"].items():
+        pb = {pinned[id(c)] for c in cs if id(c) in pinned}
+        if len(pb) > 1:
+            sys.exit(f"AWTO_PLACE group={g}: members pinned to different places {sorted(map(str, pb))}")
+        if pb:
+            want = pb.pop()
+        else:
+            w = defaultdict(int)
+            for c in cs:
+                w["C" if c.common else c.bank] += c.size
+            want = max(w, key=lambda b: (w[b], b == "C", -(b if b != "C" else 0)))
+        tot = sum(c.size for c in cs)
+        was = {c.name: ("C" if c.common else c.bank) for c in cs if ("C" if c.common else c.bank) != want}
+        for c in cs:
+            c.common, c.bank = (True, None) if want == "C" else (False, want)
+            k = ("fn" if c.area == "CSEG" else "const", c.name)
+            place["labels"][k] = place["labels"][k].split(" [")[0] + f" [group {tot} B -> {'common' if want == 'C' else 'bank %d' % want}]"
+        log(f"AWTO_PLACE group={g} -> {'common' if want == 'C' else 'bank %d' % want} ({stage}): "
+            f"{len(cs)} items, {tot} B; moved here: {was or 'none'}")
+
+
+def check_place(place, region_of):
+    """Hard error: a group whose members did not all end up in one region."""
+    for g, cs in place["groups"].items():
+        where = defaultdict(list)
+        for c in cs:
+            where[region_of(c)].append(c.name)
+        if len(where) > 1:
+            sys.exit(f"AWTO_PLACE group={g} split across regions: { {str(k): v for k, v in where.items()} }")
+
+
 def main() -> int:
     global LOG
     ap = argparse.ArgumentParser()
@@ -336,6 +402,7 @@ def main() -> int:
         if n not in funcs:
             sys.exit(f"--pin-common: no function {n}")
         funcs[n].common = True
+    place = load_place(src, funcs, consts)
     for c in funcs.values():
         if c.common:
             for r in c.refs:
@@ -502,6 +569,9 @@ def main() -> int:
         for c in m.chunks:
             if c.common:
                 c.bank = None
+    apply_place(place, "after bank choice")
+    placed_by_rule = {(("fn" if c.area == "CSEG" else "const"), c.name) for g in place["groups"].values() for c in g} | \
+        {(("fn" if c.area == "CSEG" else "const"), c.name) for c, _ in place["pins"]}
     def slot_items(fixed_consts):
         its = []
         for m in mods:
@@ -509,7 +579,7 @@ def main() -> int:
                 if c.size:
                     kind = "fn" if c.area == "CSEG" else "const"
                     it = L.Item(kind, c.name, c.size, "C" if c.bank is None else c.bank, m.name)
-                    it.fixed = fixed_consts and kind == "const"
+                    it.fixed = (fixed_consts and kind == "const") or (kind, c.name) in placed_by_rule
                     its.append(it)
         return its
 
@@ -522,7 +592,8 @@ def main() -> int:
             st = L.Item("stub", nm, STUB_SIZE, "C", "", slot=STUB_SIZE)
             st.fixed = True
             its.append(st)
-        placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE)
+        placed, rehomed = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE,
+                                   labels=place["labels"])
         for (kind, name), rid in rehomed.items():
             if kind == "fn" and rid != "C":
                 funcs[name].bank = rid
@@ -624,6 +695,7 @@ def main() -> int:
     log(f"common consts: {sum(c.common for c in consts.values())}; consts moved to user bank: {moved}; "
         f"kept common (address escapes, #16): {len(stopped)}: {', '.join(sorted(stopped))}")
     log(f"in own bank, address escapes (not moved, unchanged): {len(stay_escape)}: {', '.join(sorted(stay_escape))}")
+    apply_place(place, "after const placement")
 
     # stubs: cross-bank / common->banked calls and every address-taken banked fn. fn -> (module, bank)
     stubs = {}
@@ -652,8 +724,10 @@ def main() -> int:
             st = L.Item("stub", f_, STUB_SIZE, "C", mn, slot=STUB_SIZE)
             st.fixed = True
             its.append(st)
-        placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE)
+        placed, _ = L.assign(its, lay, a.resid_end, a.common_max, a.banks, cap, log, reserve=MSG_RESERVE,
+                             labels=place["labels"])
         apply_placed(placed)
+        check_place(place, lambda c: placed[("fn" if c.area == "CSEG" else "const", c.name)][0])
         placed_slot = {("ST" if k[0] == "stub" else "CH") + k[1]: v[2] for k, v in placed.items()}
         lay.header.update({"common": hex(a.common_max), "resid_end": hex(a.resid_end), "slot_pad": "size+4+size/32,4B"})
         for (kind, name), (rid, off, sl) in placed.items():

@@ -5,3 +5,4 @@ code	6d36ce9f32962390	generic list of small integer literals (test indices) (coo
 code	5e2733a8ca573ce4	(x >> 8) & 0xff byte extraction idiom (coordinator, 2026-11-07)
 code	f297dcdf3b3886aa	generic list of small integer literals (test indices), next window (coordinator, 2026-11-07)
 code	d217b273bae36940	(x >> 8) & 0xff byte extraction idiom, next window (coordinator, 2026-11-07)
+ident	AWTO_PLACE	our placement marker (awto-ddc#149), defined in both trees; not an SDK name (2026-11-15)

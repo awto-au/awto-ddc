@@ -18,4 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Placement intent read by scripts/place_rules.py (#149): AWTO_PLACE(group=<g> | bank=<n> | common) above a definition */
+#define AWTO_PLACE(...)
+
 #endif
