@@ -21,6 +21,7 @@ Finding kinds (key = kind|src|detail, address-free so two images can be diffed):
                          tables are not all in the reader's bank)
   const_ptr_gptr_xbank   asm (post-bank pass, --asm): address of a banked const passed to a function that reads generic pointers
                          (__gptrget) and sits in another bank: it reads its OWN bank at that address (#46: boot logo tile map)
+  const_ptr_code_xbank   same, callee reads __code pointers (movc a,@a+dptr): #149 (c), font_blob vs its blobs
   stack_arg_via_stub     function reads stack-passed args via SP/_bp but is reached through a bank stub (+4 B between args and
                          callee, #11): must be common or share its callers' bank
   isr_reach_stub         stub reachable from an ISR, and the ISR register / bank-switch proof fails
@@ -742,15 +743,21 @@ def equiv(good, bad):
 
 
 def asm_const_ptr(im, asm_dir):
-    """const_ptr_gptr_xbank from the post-bank asm: `mov a|dptr|rN,#_tK` (K a banked const) followed within 30 lines by the call that
-    consumes it; the callee reads generic pointers (calls __gptrget) and lives in another bank than K (and is not common)."""
+    """const_ptr_gptr_xbank / const_ptr_code_xbank from the post-bank asm: `mov a|dptr|rN,#_tK` (K a banked const) followed within
+    30 lines by the call that consumes it; the callee reads generic pointers (__gptrget) or code pointers (movc a,@a+dptr) and
+    lives in another bank than K (and is not common)."""
     F = []
     d = Path(asm_dir)
     if not d.is_dir():
         return F
     where = {c["name"]: c for c in im.chunks if c["kind"] in ("fn", "const")}
+    by_area = {}                                             # statics: no map symbol, only their area CH_<name> (32-char cut)
+    for c in im.chunks:
+        if c["kind"] in ("fn", "const") and c["area"].startswith("CH_"):
+            by_area.setdefault(c["area"], []).append(c)
+    look = lambda s: where.get(s) or (lambda v: v[0] if v and len(v) == 1 else None)(by_area.get(("CH" + s)[:32]))
     texts = {f: f.read_text(errors="replace").splitlines() for f in sorted(d.glob("*.asm"))}
-    reader, bodies = set(), {}
+    reader, creader = set(), set()
     for f, ls in texts.items():
         cur = None
         for l in ls:
@@ -759,6 +766,8 @@ def asm_const_ptr(im, asm_dir):
                 cur = m.group(1)
             elif cur and re.match(r"^\s+[la]call\s+__gptrget", l):
                 reader.add(cur)
+            elif cur and re.match(r"^\s+movc\s+a,\s*@a\+dptr", l):
+                creader.add(cur)
     imm = re.compile(r"^\s+mov\s+(?:a|dptr|r[0-7]|ar[0-7]),\s*#\(?(_\w+)")
     call = re.compile(r"^\s+[lj]call\s+(?:__bs)?(_\w+)|^\s+ljmp\s+(?:__bs)?(_\w+)")
     for f, ls in texts.items():
@@ -769,17 +778,23 @@ def asm_const_ptr(im, asm_dir):
                 cur = m.group(1)
                 continue
             m = imm.match(l)
-            if not m or cur is None or m.group(1) not in where or where[m.group(1)]["kind"] != "const":
+            k = look(m.group(1)) if m and cur else None
+            if k is None or k["kind"] != "const":
                 continue
-            k = where[m.group(1)]
             for l2 in ls[i + 1:i + 31]:
+                if re.match(r"^\s+movc\s+a,\s*@a\+dptr", l2):
+                    break                                    # the caller reads K itself (its own bank), not the callee
                 c2 = re.match(r"^\s+lcall\s+(?:__bs)?(_\w+)", l2)
                 if c2:
                     cal = c2.group(1)
-                    fc = where.get(cal)
-                    if cal in reader and fc and fc["reg"] != "C" and k["reg"] != "C" and fc["reg"] != k["reg"]:
+                    fc = look(cal)
+                    xb = fc and fc["reg"] != "C" and k["reg"] != "C" and fc["reg"] != k["reg"]
+                    if xb and cal in reader:
                         F.append(dict(kind="const_ptr_gptr_xbank", src=cur, addr=k["addr"],
                                       det=f"{m.group(1)} (bank {k['reg']}) passed to gptr reader {cal} (bank {fc['reg']})"))
+                    elif xb and cal in creader:
+                        F.append(dict(kind="const_ptr_code_xbank", src=cur, addr=k["addr"],
+                                      det=f"{m.group(1)} (bank {k['reg']}) passed to movc reader {cal} (bank {fc['reg']})"))
                     break
                 if re.match(r"^\s+(ret|reti)\b", l2):
                     break
