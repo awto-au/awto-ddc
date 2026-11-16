@@ -326,10 +326,13 @@ def frame_geometry(st: OsdState) -> dict:
                 hd2=r(FRAME + 4) << 2 | r(FRAME + 5) >> 6 | (r(FRAME + 6) & 3) << 10, vd2=r(FRAME + 3) << 3 | (r(FRAME + 5) >> 3 & 7),
                 fhb=(r(FRAME + 0x27) >> 4) << 8 | r(FRAME + 0x28), fvb=(r(FRAME + 0x27) & 15) << 8 | r(FRAME + 0x29), font_base=(r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
                 row_base=r(FRAME + 0x19), blend_type=r(FRAME + 0x0A) >> 2 & 3, zone=r(FRAME + 2) >> 1 & 3,
-                su_on=int(not r(FRAME + 0xC0) & 0x80), fb_shift=(r(FRAME + 0x5C) << 4 | r(FRAME + 0x5D) & 15) if r(FRAME + 0x5E) & 0x80 else 0)
+                su_on=int(not r(FRAME + 0xC0) & 0x80), big=r(FRAME + 0x43) >> 6 & 1, fb_shift=(r(FRAME + 0x5C) << 4 | r(FRAME + 0x5D) & 15) if r(FRAME + 0x5E) & 0x80 else 0)
 
 
 def glyph_bits(st: OsdState, g: dict, gid: int) -> np.ndarray:
+    if g.get("big"):                                   # 24x36 mode (3A43[6]): 36 words per glyph, rows of 24 px read row-major [guess, QC data decodes jumbled]
+        by = bytes(b for k in range(36) for b in st.font.get(g["font_base"] + 36 * gid + k, [0, 0, 0]))
+        return np.array(osd_vlc.unpack_unit(by, 2 * GW, 2 * GH, 1), bool)
     base = g["font_base"] + 9 * gid
     by = bytes(b for k in range(9) for b in st.font.get(base + k, [0, 0, 0]))
     return tile(by, 0)
@@ -506,12 +509,13 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
         for row in rows:
             x = 0
             for ch in row["chars"]:
-                cw = {"1bit": ch["width"] if 0 < ch["width"] < GW else GW, "2bit": GW}.get(ch["kind"], ch["width"] or GW)   # = the advance below
+                gw = 2 * GW if g.get("big") else GW
+                cw = {"1bit": ch["width"] if 0 < ch["width"] < gw else gw, "2bit": GW}.get(ch["kind"], ch["width"] or GW)   # = the advance below
                 cell(fx + x * sx, fy + y * sy, cw, row["h"])
                 if ch["kind"] == "1bit":
                     bits = glyph_bits(st, g, ch["id"])
-                    w = ch["width"] if 0 < ch["width"] < GW else GW
-                    c0 = {0: (GW - w + 1) // 2, 1: 0, 2: GW - w}.get(g["zone"], 0)
+                    w = ch["width"] if 0 < ch["width"] < gw else gw
+                    c0 = {0: (gw - w + 1) // 2, 1: 0, 2: gw - w}.get(g["zone"], 0)
                     bits = bits[:, c0:c0 + w]
                     fg, bgc = st.pal[ch["fg"]], ch["bg"]
                     px, py = fx + x * sx, fy + y * sy
