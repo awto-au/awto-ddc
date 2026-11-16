@@ -49,10 +49,10 @@ def main() -> int:
     ap.add_argument("--wait", type=float, default=4.0, help="sim seconds after the command (the QC run waits for many frames)")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
-    s = R.Session(a.bin, a.map, "1080p60")
-    s.boot()
     tiles = []
     for n in (int(x) for x in a.frames.split(",")):
+        s = R.Session(a.bin, a.map, "1080p60")          # fresh boot per frame: after a rotated frame the MCU stays in the run and NAKs
+        s.boot()
         C.send(s, TC + n)
         s.bus.wait(a.wait)
         st = s.snap()

@@ -276,7 +276,10 @@ def decode_window(win: dict, i: int) -> dict | None:
     y1 = (w[2][0] & 15) << 8 | w[2][2]
     return dict(i=i, en=en, x0=x0, y0=y0, x1=x1, y1=y1, color=(w[3][0] >> 5 & 1) << 5 | w[3][1] & 0x1F,
                 blend=w[3][2] >> 7 & 1, eff_en=w[3][2] >> 4 & 1, eff_opt=w[3][2] >> 1 & 7,
-                bor=(w[0][0] >> 6 & 1) << 5 | (w[0][1] & 15), sha=(w[0][0] >> 7 & 1) << 5 | (w[0][1] >> 4))
+                bor=(w[0][0] >> 6 & 1) << 5 | (w[0][1] & 15), sha=(w[0][0] >> 7 & 1) << 5 | (w[0][1] >> 4),
+                eff_w=(w[0][0] >> 3 & 7) + 1, eff_h=(w[0][0] & 7) + 1, gra=w[3][2] >> 6 & 1, gdir=w[3][2] >> 5 & 1,
+                gpol=(w[0][2] >> 7 & 1, w[0][2] >> 6 & 1, w[0][2] >> 5 & 1), gstep=(w[0][2] >> 3 & 3) + 1,
+                gen=(w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1))
 
 
 def decode_char(w: list[int]) -> dict:
@@ -420,8 +423,32 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     higher = {3: st.reg(FRAME + 7) & 1, 4: st.reg(FRAME + 7) >> 1 & 1, 2: st.reg(FRAME + 8) >> 7, 9: st.reg(FRAME + 8) >> 6 & 1, 8: st.reg(FRAME + 8) >> 5 & 1}
 
     def draw_win(w):
-        rect(ox + w["x0"] * sx, oy + w["y0"] * sy, ox + (w["x1"] + 1) * sx, oy + (w["y1"] + 1) * sy, st.pal[w["color"]],
-             a_win if w["blend"] else 0.0)
+        X0, Y0, X1, Y1 = ox + w["x0"] * sx, oy + w["y0"] * sy, ox + (w["x1"] + 1) * sx, oy + (w["y1"] + 1) * sy
+        a = a_win if w["blend"] else 0.0
+        if w["gra"] and X1 > X0 and Y1 > Y0:             # gradient [register doc, approximation: 8 levels, gra_step px per level]
+            n = (X1 - X0) if not w["gdir"] else (Y1 - Y0)
+            base = st.pal[w["color"]]
+            for k in range(0, n, w["gstep"] * (sx if not w["gdir"] else sy)):
+                lv = min(k // (w["gstep"] * (sx if not w["gdir"] else sy)), 31) * 8
+                c = tuple(max(0, min(255, base[j] + ((lv if w["gpol"][j] else -lv) if w["gen"][j] else 0))) for j in range(3))
+                m = w["gstep"] * (sx if not w["gdir"] else sy)
+                if not w["gdir"]:
+                    rect(X0 + k, Y0, min(X0 + k + m, X1), Y1, c, a)
+                else:
+                    rect(X0, Y0 + k, X1, min(Y0 + k + m, Y1), c, a)
+            return
+        rect(X0, Y0, X1, Y1, st.pal[w["color"]], a)
+        if w["eff_en"]:                                   # shadow types 0..3 / 3D button 4,5 [register doc, approximation]
+            ew, eh = w["eff_w"] * sx, w["eff_h"] * sy
+            sh, bo = st.pal[w["sha"]], st.pal[w["bor"]]
+            if w["eff_opt"] >= 4:                         # 3D: sha = left/top edge, bor = right/bottom edge, inside the window
+                rect(X0, Y0, X1, Y0 + eh, sh, a)
+                rect(X0, Y0, X0 + ew, Y1, sh, a)
+                rect(X0, Y1 - eh, X1, Y1, bo, a)
+                rect(X1 - ew, Y0, X1, Y1, bo, a)
+            else:                                         # shadow: bar right + below (bor colour border)
+                rect(X1, Y0 + eh, X1 + ew, Y1 + eh, sh, a)
+                rect(X0 + ew, Y1, X1 + ew, Y1 + eh, sh, a)
 
     for w in wins:
         if not higher.get(w["i"]):
