@@ -29,3 +29,11 @@ Builds on `osd.md` (ports, windows) and `osd-font-download.md` (VLC, char words)
 - Validated: boot logo shape and colour of image wb-port3 = what Dan sees on unit 3 (2026-11-07, "looks correct"). Scale and position not compared yet.
 - Pop-up text: prop-font glyph bursts (27 B from XRAM, FFFC bit5) read all zeros in the sim (source buffer 0xEA37 empty), so info/debug pop-up text rows render blank; icon, windows and menu are fine. Cause not found yet.
 - Not modelled: window border/shadow/gradient, 2-/4-bit fonts, font B, rotation, alpha direction (255 assumed opaque), FB-shift, pipeline position offsets.
+
+## Blank command and glyph repeat [sdk] (#226 audit, 2026-11-16)
+- Blank = one 3-byte char-map word: B0 = type (`_OSD_BLANK_FONT` / `_OSD_BLANK_ALIGN`, `enum & 3`), B1 = pixel length (BLANK_FONT 4..255, ALIGN 0..255), B2 = background colour (6 bit) [sdk `ScalerOsdBlankFont`, `SRAM/OsdBlankFont.c`]. A 1920 px empty span = 8 words (24 B), not 160 glyph entries.
+- No glyph-repeat command in the SDK API (no function or field for "this glyph N times"): a fill is N map words. Not found in regdb either.
+
+## Font SRAM read-back on unit 3 [measured 2026-11-16]
+- `rtd_osd.py 11 [disable] wr:0x3A33=0x10 osdw:font:A=.. osdr:font:A` at A = 0x0000, 0x0FFF, 0x1000, 0x1FFF, 0x2000, 0x2FFF, 0x3000, 0x3FFF, 0x4000, 0x7FFF, each read twice (OSD on, then `disable` first): every font read returns 00 00 00.
+- Window SRAM (`osdw:win:0x0100`, `0x0101`) writes and reads back correctly (11 22 33, 44 55 66, both reads): the read path works, font SRAM read-back does not. The SRAM size cannot be measured this way; the 12288 words stay the SDK constant, and the 8192 question needs the display-fetch test (visible map markers), see #226.
