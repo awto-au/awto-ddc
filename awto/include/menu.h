@@ -1,5 +1,6 @@
 /* menu.h: our OSD menu (awto-ddc#67). Pages and items come from the settings registry (settings.h); no per-item code.
- * Keys (front panel): Menu = enter / edit / confirm, Right / Left = move or change, Exit = back / revert. */
+ * menu_key (MK_*): MK_MENU enter / edit / confirm (front AUTO), MK_RIGHT / MK_LEFT move or change (UP / DOWN),
+ * MK_EXIT back / revert (front MENU). Front SOURCE: the integrator calls menu_close (awto-ddc#132). */
 #ifndef AWTO_MENU_H
 #define AWTO_MENU_H
 
@@ -7,9 +8,9 @@
 
 enum menu_key { MK_MENU = 0, MK_RIGHT = 1, MK_LEFT = 2, MK_EXIT = 3 };
 
-#define MENU_COLS 40             /* grid: 40 x 18 cells of 12 x 18 px (480 x 324 px, 2x = 960 x 648) */
-#define MENU_ROWS 18
-#define MENU_LIST 14             /* item lines per screen (rows 2..15), the rest scrolls */
+#define MENU_COLS 40             /* grid: 40 x 20 characters of 16 x 36 presented px (640 x 720 at 2x), see ui.h */
+#define MENU_ROWS 20
+#define MENU_LIST 14             /* item lines per screen (lines 3..16), the rest scrolls */
 
 void    menu_open(void);
 void    menu_close(void);

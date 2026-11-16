@@ -60,7 +60,7 @@ static int ap_calls, last_ap_id, last_ap_v;
 #define AP(n) void set_ap_##n(uint8_t id, int16_t v) { ap_calls++; last_ap_id = id; last_ap_v = v; }
 AP(aspect) AP(backlight) AP(black_level) AP(colour_temp) AP(contrast) AP(debug_msgs) AP(debug_popup) AP(dp_edid)
 AP(dp_version) AP(factory_menu) AP(gamma) AP(input_mode) AP(input_select) AP(msg_log) AP(osd_pos) AP(osd_scale)
-AP(osd_transparency) AP(overscan) AP(power) AP(power_mode) AP(sdk_language) AP(search_time) AP(user_rgb) AP(vendor_menu)
+AP(mute) AP(volume) AP(osd_transparency) AP(overscan) AP(power) AP(power_mode) AP(sdk_language) AP(search_time) AP(user_rgb) AP(vendor_menu)
 static int injected = -1, held_mask, held_ms;
 void key_inject(uint8_t k) { injected = k; menu_key(k); }   /* the firmware routes the key back into menu_key */
 void key_hold(uint8_t mask, uint16_t ms) { held_mask = mask; held_ms = ms; }
@@ -69,7 +69,7 @@ void key_hold(uint8_t mask, uint16_t ms) { held_mask = mask; held_ms = ms; }
 static char grid[MENU_ROWS][MENU_COLS + 1];
 static uint8_t gfg[MENU_ROWS];
 static int glyphs, shown, osd_cols;
-void osd_tc_open(uint8_t cols, uint8_t rows) { osd_cols = cols; memset(grid, ' ', sizeof grid); (void)rows; }
+void osd_tc_open(uint8_t cols, uint8_t rows, uint8_t font) { osd_cols = cols; memset(grid, ' ', sizeof grid); (void)rows; (void)font; }
 void osd_tc_glyph(uint16_t id, const uint8_t *b) { (void)b; if (id < OSD_FONT_N) glyphs++; }
 void osd_tc_row(uint8_t r, const char *s, uint8_t n, uint8_t fg, uint8_t bg)
 {
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
     /* 1. empty flash -> defaults, load result 0 */
     boot();
     CHECK(set_load_result() == 0, "load result %u", set_load_result());
-    CHECK(set_get(SET_ID_BRIGHTNESS) == 44 && set_get(SET_ID_PANEL_T3) == 550, "defaults");
+    CHECK(set_get(SET_ID_BRIGHTNESS) == 44 && set_get(SET_ID_PANEL_T4) == 250, "defaults");
     CHECK(ap_calls > 10, "apply_all ran %d", ap_calls);
 
     /* 2. clamp + step + save + reload */
@@ -141,11 +141,11 @@ int main(int argc, char **argv)
     CHECK(set_get(SET_ID_CONTRAST) == 78, "save after cut: %d", set_get(SET_ID_CONTRAST));
 
     /* 5. risky: auto-revert, confirm, never saved while pending */
-    CHECK(set_put(SET_ID_PANEL_T3, 1000, 1) && set_pending() == SET_ID_PANEL_T3, "pending");
+    CHECK(set_put(SET_ID_PANEL_T4, 1000, 1) && set_pending() == SET_ID_PANEL_T4, "pending");
     now_ms += SET_CONFIRM_MS; set_service();
-    CHECK(set_get(SET_ID_PANEL_T3) == 550 && set_pending() == 0, "reverted %d", set_get(SET_ID_PANEL_T3));
-    set_put(SET_ID_PANEL_T3, 900, 1); set_confirm(); now_ms += SET_SAVE_MS; set_service(); boot();
-    CHECK(set_get(SET_ID_PANEL_T3) == 900, "confirmed + saved %d", set_get(SET_ID_PANEL_T3));
+    CHECK(set_get(SET_ID_PANEL_T4) == 250 && set_pending() == 0, "reverted %d", set_get(SET_ID_PANEL_T4));
+    set_put(SET_ID_PANEL_T4, 900, 1); set_confirm(); now_ms += SET_SAVE_MS; set_service(); boot();
+    CHECK(set_get(SET_ID_PANEL_T4) == 900, "confirmed + saved %d", set_get(SET_ID_PANEL_T4));
 
     /* 6. never all inputs off */
     CHECK(set_put(SET_ID_D1_ENABLE, 0, 0), "d1 off"); set_confirm();
@@ -154,14 +154,19 @@ int main(int argc, char **argv)
 
     /* 7. recovery: keys held -> defaults; a short press does nothing */
     keys_down = 1; boot(); keys_down = 0;
-    CHECK(set_load_result() == 2 && set_get(SET_ID_PANEL_T3) == 550 && set_get(SET_ID_D1_ENABLE) == 1, "recovery");
+    CHECK(set_load_result() == 2 && set_get(SET_ID_PANEL_T4) == 250 && set_get(SET_ID_D1_ENABLE) == 1, "recovery");
     boot();
-    CHECK(set_get(SET_ID_PANEL_T3) == 550, "recovery saved");
+    CHECK(set_get(SET_ID_PANEL_T4) == 250, "recovery saved");
 
     /* 8. VCP */
     CHECK(vcp_get(0x10, &cur, &max, &type) && cur == 44 && max == 100, "vcp 0x10 %u/%u", cur, max);
     CHECK(vcp_set(0x10, 66) && set_get(SET_ID_BRIGHTNESS) == 66, "vcp set 0x10");
     CHECK(vcp_get(0x60, &cur, &max, &type) && cur == 0x11, "vcp 0x60 = D2 HDMI 0x11: %x", cur);
+    CHECK(vcp_get(0x62, &cur, &max, &type) && cur == 50 && max == 100, "vcp 0x62 volume %u/%u", cur, max);
+    CHECK(vcp_set(0x62, 30) && set_get(SET_ID_VOLUME) == 30, "vcp 0x62 set");
+    CHECK(vcp_set(0x8D, 1) && set_get(SET_ID_MUTE) == 1, "vcp 0x8D = 1 muted -> option On");
+    CHECK(vcp_get(0x8D, &cur, &max, &type) && cur == 1, "vcp 0x8D reads 1 muted: %u", cur);
+    CHECK(vcp_set(0x8D, 2) && set_get(SET_ID_MUTE) == 0, "vcp 0x8D = 2 unmuted -> option Off");
     CHECK(vcp_set(0x60, 0x0F) && set_get(SET_ID_INPUT) == 0, "vcp 0x60 D1");
     CHECK(vcp_set(0x60, 0x33) && set_get(SET_ID_INPUT) == 0, "vcp 0x60 unknown value ignored");
     vcp_set(VCP_SEL, SET_ID_PANEL_T6);
@@ -224,15 +229,15 @@ int main(int argc, char **argv)
     key(MK_MENU); key(MK_LEFT); key(MK_MENU);
     CHECK(set_get(SET_ID_BRIGHTNESS) == 43, "edit set %d", set_get(SET_ID_BRIGHTNESS));
     key(MK_EXIT);
-    /* Panel timing > T3: risky countdown, Exit = undo */
+    /* Panel timing > T4: risky countdown, Exit = undo */
     for (k = 0; k < 20 && !strstr(grid[2 + menu_cursor()], "Panel timing"); k++) key(MK_RIGHT);
     key(MK_MENU);
-    for (k = 0; k < 20 && !strstr(grid[2 + menu_cursor() ], "T3 video"); k++) key(MK_RIGHT);
+    for (k = 0; k < 20 && !strstr(grid[2 + menu_cursor() ], "T4 BL to"); k++) key(MK_RIGHT);
     key(MK_MENU); key(MK_RIGHT); key(MK_MENU);
-    CHECK(set_pending() == SET_ID_PANEL_T3 && find_line("Keep new value") >= 0, "risky prompt");
+    CHECK(set_pending() == SET_ID_PANEL_T4 && find_line("Keep new value") >= 0, "risky prompt");
     if (dump) { char fn[256]; FILE *f; snprintf(fn, sizeof fn, "%s/risky.txt", dump); f = fopen(fn, "w"); if (f) { screen(f); fclose(f); } }
     key(MK_EXIT);
-    CHECK(set_pending() == 0 && set_get(SET_ID_PANEL_T3) == 550, "risky undo");
+    CHECK(set_pending() == 0 && set_get(SET_ID_PANEL_T4) == 250, "risky undo");
     key(MK_EXIT); key(MK_EXIT);
     CHECK(!menu_active() && !shown, "menu closed");
     /* timeout */
@@ -248,7 +253,7 @@ int main(int argc, char **argv)
         CHECK(menu_cmd(MO_SELECT, SET_ID_CONTRAST) && menu_diag.item_id == SET_ID_CONTRAST && menu_diag.cursor == 2, "select contrast");
         CHECK((uint16_t)(menu_diag.redraw_lo | menu_diag.redraw_hi << 8) != r0, "redraw counter moves");
         CHECK(menu_cmd(MO_SET, 61) && set_get(SET_ID_CONTRAST) == 61 && menu_diag.val_lo == 61, "set via command");
-        CHECK(!menu_cmd(MO_SELECT, SET_ID_PANEL_T3), "select an item of another page refused");
+        CHECK(!menu_cmd(MO_SELECT, SET_ID_PANEL_T4), "select an item of another page refused");
         CHECK(menu_cmd(MO_OPEN, 1) && menu_diag.item_page == 2 && menu_diag.item_id == 0, "colour page: sub-page entry first");
         CHECK(menu_cmd(MO_KEY, MK_MENU) && menu_diag.page == 2 && menu_diag.parent == 1 && injected == MK_MENU, "key into sub-page");
         CHECK(menu_cmd(MO_BACK, 0) && menu_diag.page == 1 && menu_diag.cursor == 0, "back");

@@ -5,3 +5,5 @@ tmp/
 *.lst
 *.sym
 *.rst
+tmp/
+__pycache__/

@@ -3,11 +3,12 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   101u
+#define SET_COUNT   110u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x10D2u    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 86u
-#define SET_TEXT_LEN 1768u
+#define SET_SCHEMA  0x501Bu    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 89u
+#define SET_TEXT_LEN 1925u
+#define SET_AUX_MAX 52u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -39,6 +40,7 @@
 #define SET_ID_ASPECT               30u
 #define SET_ID_OVERSCAN             31u
 #define SET_ID_DISP_ROTATE          32u
+#define SET_ID_MIRROR               117u
 #define SET_ID_LATENCY              33u
 #define SET_ID_FREEZE               34u
 #define SET_ID_INPUT                3u
@@ -76,16 +78,13 @@
 #define SET_ID_OSD_HPOS             58u
 #define SET_ID_OSD_VPOS             59u
 #define SET_ID_OSD_SCALE            60u
+#define SET_ID_OSD_FONT             106u
 #define SET_ID_OSD_TRANSPARENCY     61u
 #define SET_ID_LANGUAGE             62u
 #define SET_ID_OSD_ROTATE           63u
-#define SET_ID_MENU_SELECT          64u
-#define SET_ID_LOGO                 65u
-#define SET_ID_LOGO_MS              66u
 #define SET_ID_PANEL_T1             67u
 #define SET_ID_PANEL_T2             68u
-#define SET_ID_PANEL_T3             69u
-#define SET_ID_PANEL_T3_OWN         70u
+#define SET_ID_BL_ON_DELAY          118u
 #define SET_ID_PANEL_T4             71u
 #define SET_ID_PANEL_T5             72u
 #define SET_ID_PANEL_T6             73u
@@ -94,6 +93,8 @@
 #define SET_ID_DEBUG_MSGS           85u
 #define SET_ID_MSG_LOG              86u
 #define SET_ID_DEBUG_POPUP          87u
+#define SET_ID_KEY_TEST             104u
+#define SET_ID_GPIO_TEST            105u
 #define SET_ID_VOLUME               88u
 #define SET_ID_MUTE                 89u
 #define SET_ID_AUDIO_STANDALONE     90u
@@ -102,7 +103,6 @@
 #define SET_ID_COLOUR_RESET         102u
 #define SET_ID_POWER_MODE           103u
 #define SET_ID_FACTORY_MENU         92u
-#define SET_ID_VENDOR_MENU          93u
 #define SET_ID_INFO_INPUT           95u
 #define SET_ID_INFO_HRES            96u
 #define SET_ID_INFO_VRES            97u
@@ -110,6 +110,16 @@
 #define SET_ID_INFO_MODE            99u
 #define SET_ID_INFO_LOOP            100u
 #define SET_ID_INFO_SCHEMA          101u
+#define SET_ID_INFO_HFREQ           107u
+#define SET_ID_INFO_PCLK            108u
+#define SET_ID_INFO_HDCP            109u
+#define SET_ID_CONSOLE_MODE         110u
+#define SET_ID_POWER_ON             111u
+#define SET_ID_DP_LANES             112u
+#define SET_ID_DP_IRQ_10US          113u
+#define SET_ID_SSC                  114u
+#define SET_ID_PANEL_HOURS          115u
+#define SET_ID_PANEL_MIN            116u
 
 #define SET_PAGE_PICTURE          0u
 #define SET_PAGE_COLOUR           1u
@@ -120,11 +130,11 @@
 #define SET_PAGE_SIGNAL           6u
 #define SET_PAGE_POWER            7u
 #define SET_PAGE_OSD              8u
-#define SET_PAGE_BOOT             9u
-#define SET_PAGE_PANEL            10u
-#define SET_PAGE_DEBUG            11u
-#define SET_PAGE_AUDIO            12u
-#define SET_PAGE_SYSTEM           13u
+#define SET_PAGE_PANEL            9u
+#define SET_PAGE_DEBUG            10u
+#define SET_PAGE_AUDIO            11u
+#define SET_PAGE_SYSTEM           12u
+#define SET_PAGE_SERVICE          13u
 #define SET_PAGE_INFO             14u
 
 #define AP_ASPECT               1u
@@ -140,19 +150,26 @@
 #define AP_DP_VERSION           11u
 #define AP_FACTORY_MENU         12u
 #define AP_GAMMA                13u
-#define AP_INPUT_MODE           14u
-#define AP_INPUT_SELECT         15u
-#define AP_MSG_LOG              16u
-#define AP_OSD_POS              17u
-#define AP_OSD_SCALE            18u
-#define AP_OSD_TRANSPARENCY     19u
-#define AP_OVERSCAN             20u
-#define AP_POWER                21u
-#define AP_POWER_MODE           22u
-#define AP_SDK_LANGUAGE         23u
-#define AP_SEARCH_TIME          24u
-#define AP_USER_RGB             25u
-#define AP_VENDOR_MENU          26u
+#define AP_GPIO_TEST            14u
+#define AP_INPUT_MODE           15u
+#define AP_INPUT_SELECT         16u
+#define AP_KEY_TEST             17u
+#define AP_MSG_LOG              18u
+#define AP_MUTE                 19u
+#define AP_OSD_FONT             20u
+#define AP_OSD_POS              21u
+#define AP_OSD_SCALE            22u
+#define AP_OSD_TRANSPARENCY     23u
+#define AP_OVERSCAN             24u
+#define AP_PORT                 25u
+#define AP_POWER                26u
+#define AP_POWER_MODE           27u
+#define AP_ROTATE               28u
+#define AP_SDK_LANGUAGE         29u
+#define AP_SDK_SYS              30u
+#define AP_SEARCH_TIME          31u
+#define AP_USER_RGB             32u
+#define AP_VOLUME               33u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -168,18 +185,25 @@ void set_ap_dp_edid(uint8_t id, int16_t v);
 void set_ap_dp_version(uint8_t id, int16_t v);
 void set_ap_factory_menu(uint8_t id, int16_t v);
 void set_ap_gamma(uint8_t id, int16_t v);
+void set_ap_gpio_test(uint8_t id, int16_t v);
 void set_ap_input_mode(uint8_t id, int16_t v);
 void set_ap_input_select(uint8_t id, int16_t v);
+void set_ap_key_test(uint8_t id, int16_t v);
 void set_ap_msg_log(uint8_t id, int16_t v);
+void set_ap_mute(uint8_t id, int16_t v);
+void set_ap_osd_font(uint8_t id, int16_t v);
 void set_ap_osd_pos(uint8_t id, int16_t v);
 void set_ap_osd_scale(uint8_t id, int16_t v);
 void set_ap_osd_transparency(uint8_t id, int16_t v);
 void set_ap_overscan(uint8_t id, int16_t v);
+void set_ap_port(uint8_t id, int16_t v);
 void set_ap_power(uint8_t id, int16_t v);
 void set_ap_power_mode(uint8_t id, int16_t v);
+void set_ap_rotate(uint8_t id, int16_t v);
 void set_ap_sdk_language(uint8_t id, int16_t v);
+void set_ap_sdk_sys(uint8_t id, int16_t v);
 void set_ap_search_time(uint8_t id, int16_t v);
 void set_ap_user_rgb(uint8_t id, int16_t v);
-void set_ap_vendor_menu(uint8_t id, int16_t v);
+void set_ap_volume(uint8_t id, int16_t v);
 
 #endif
