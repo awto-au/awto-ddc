@@ -134,3 +134,7 @@ Region 0 = row commands at word 0.., then character words from `fs_base` (rows' 
 - [guess] hw rotation (`0x3A0B`) changes decoded glyph orientation; the firmware writes `0x3A0B` via `osd_fontdl_orient_enable bank1:0x97a5`, so the blob data may be stored pre-rotated. Check cell orientation before concluding the grid is wrong.
 - Fix needed in `scripts/glyph_decode.py`: use each blob's own 8-byte header map and a 10-byte header skip (earlier run used zero/identity/rank maps and started at the header, giving noise).
 - Scratch (not committed): `awto-ddc/tmp/sigscan.py` (header signature scan: 16 nibbles all distinct + plausible BE length), `vlcdec.py` (decoder + sheet renderer).
+
+## Realtek QC icons rendered (2026-11-16, awto-ddc#227)
+- `img/qc-osd-patterns.png` (from `scripts/qc_osd_patterns.py`): the QC test's glyph data decoded: `tQCFONT_GLOBAL` (blank + digits 0..9, 1 bpp), `tQCFONT_2BITBROOK` (48 glyphs, 8 x 6 icon), `tQCFONT_4BITLUFFY` (77 glyphs, 11 x 7 icon, palette indexes 0..15 of `tPALETTE_QC` [guess]). 2 / 4 bpp glyphs are decoded as bit planes (see above).
+- `img/osd-lines-scope-model.png` (from `scripts/osd_lines_view.py`): the OSD line renderer's 384 x 216 scope trace as the OSD model paints it from the uploaded tiles; model output, not a hardware capture.
