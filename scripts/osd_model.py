@@ -291,6 +291,8 @@ def decode_char(w: list[int]) -> dict:
         c0 = (b0 >> 5 & 1) << 3 | (b0 & 1) << 2 | b2 >> 6
         c1 = (b0 >> 4 & 1) << 3 | (b2 & 7)
         return dict(kind=kind, id=b1, width=GW, cols=(c0, c1, b2 >> 3 & 7, b0 >> 1 & 7), fg=c1, bg=c0)
+    if kind == "blank":                                  # SDK OsdBlankFont: B0 = type, B1 = pixel length, B2 = background colour (6 bit)
+        return dict(kind=kind, id=0, width=b1, fg=0, bg=b2 & 0x3F)
     return dict(kind=kind, id=b1 + (256 if kind == "1bit" and b0 & 0x20 else 0), width=b0 & 0x1F, fg=b2 >> 4, bg=b2 & 15)
 
 
@@ -303,8 +305,11 @@ def frame_geometry(st: OsdState) -> dict:
     fv = (r(FRAME + 0x24) & 15) << 8 | r(FRAME + 0x26)
     return dict(en=r(FRAME + 2) & 1, sx=2 if r(FRAME + 0x0A) & 2 else 1, sy=2 if r(FRAME + 0x0A) & 1 else 1,
                 hd=hd, vd=vd, step=step, fh=fh, fv=fv,
-                fs_base=((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if (r(FRAME + 0x18) & 0xC0) == 0x80 else  # roll-up: font-select base 0
-                ((r(FRAME + 0x0D) >> 4) << 8 | r(FRAME + 0x0C)), font_base=(r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
+                fs_base=((r(FRAME + 0x1B) >> 4) << 8 | r(FRAME + 0x1C)) if ((r(FRAME + 0x18) & 0xC0) == 0x80 or r(FRAME + 0x18) & 0x08) else  # roll-up / two fonts: font-select base 0
+                ((r(FRAME + 0x0D) >> 4) << 8 | r(FRAME + 0x0C)),
+                two=r(FRAME + 0x18) >> 3 & 1, row_base1=r(FRAME + 0x1A), fs_base1=(r(FRAME + 0x1B) & 15) << 8 | r(FRAME + 0x1D),
+                hd2=r(FRAME + 4) << 2 | r(FRAME + 5) >> 6 | (r(FRAME + 6) & 3) << 10, vd2=r(FRAME + 3) << 3 | (r(FRAME + 5) >> 3 & 7),
+                fhb=(r(FRAME + 0x27) >> 4) << 8 | r(FRAME + 0x28), fvb=(r(FRAME + 0x27) & 15) << 8 | r(FRAME + 0x29), font_base=(r(FRAME + 0x17) >> 3 & 7) << 12 | r(FRAME + 0x0E) << 4 | r(FRAME + 0x0D) & 15,
                 row_base=r(FRAME + 0x19), blend_type=r(FRAME + 0x0A) >> 2 & 3, zone=r(FRAME + 2) >> 1 & 3,
                 su_on=int(not r(FRAME + 0xC0) & 0x80), fb_shift=(r(FRAME + 0x5C) << 4 | r(FRAME + 0x5D) & 15) if r(FRAME + 0x5E) & 0x80 else 0)
 
@@ -315,18 +320,31 @@ def glyph_bits(st: OsdState, g: dict, gid: int) -> np.ndarray:
     return tile(by, 0)
 
 
+def _planes(st: OsdState, base: int, n: int) -> np.ndarray:
+    """n bit planes, each stored like a 1 bpp glyph (9 words), MSB plane first; pixel value = planes read MSB-first.
+    Evidence: Realtek's own QC 2 / 4 bpp icons (awto-ddc#227, docs/reversing/realtek-rtd/osd-font-download.md); not yet seen on a unit."""
+    v = np.zeros((GH, GW), np.uint8)
+    for k in range(n):
+        by = bytes(b for w in range(9) for b in st.font.get(base + 9 * k + w, [0, 0, 0]))
+        v = (v << 1) | tile(by, 0).astype(np.uint8)
+    return v
+
+
 def glyph_levels2(st: OsdState, g: dict, gid: int) -> np.ndarray:
-    """2-bit glyph: 18 words, row-major 12 px, 2 bits per px MSB first, 24-bit words stored low byte first (osd_vlc.pack_unit).
-    Address = font_base + 9 * char_sel_2bit_offset + 18 * id [derived from the 3A21/3A22 field text; not seen on hardware]."""
+    """2-bit glyph: 18 words at font_base + 18 * (char_sel_2bit_offset + id) [QC: offset 16, id 0 = tile 32]."""
     off2 = (st.reg(FRAME + 0x21) >> 1 & 1) << 8 | st.reg(FRAME + 0x22)
-    base = g["font_base"] + 9 * off2 + 18 * gid
-    by = bytes(b for k in range(18) for b in st.font.get(base + k, [0, 0, 0]))
-    return np.array(osd_vlc.unpack_unit(by, GW, GH, 2), np.uint8)
+    return _planes(st, g["font_base"] + 18 * (off2 + gid), 2)
 
 
-def layout_rows(st: OsdState, g: dict) -> list[dict]:
-    """Font A map: row commands from row_base (B0 bit7 = row present, B1 = height-1, B2 = char count), chars from fs_base."""
-    rows, a, ca = [], g["row_base"], g["fs_base"]
+def glyph_levels4(st: OsdState, g: dict, gid: int) -> np.ndarray:
+    """4-bit glyph: 36 words at font_base + 36 * (char_sel_4bit_offset + id) [QC: offset 0, ICON_4BIT(0) = 38]."""
+    off4 = (st.reg(FRAME + 0x21) & 1) << 8 | st.reg(FRAME + 0x23)
+    return _planes(st, g["font_base"] + 36 * (off4 + gid), 4)
+
+
+def layout_rows(st: OsdState, g: dict, rb: int | None = None, cb: int | None = None) -> list[dict]:
+    """A font map: row commands from row_base (B0 bit7 = row present, B1 = height-1, B2 = char count), chars from fs_base."""
+    rows, a, ca = [], g["row_base"] if rb is None else rb, g["fs_base"] if cb is None else cb
     for _ in range(255):
         rc = st.font.get(a)
         if rc is None or not rc[0] & 0x80:
@@ -418,35 +436,51 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
             v = vid[y0:y1, x0:x1]
             v[cov[y0:y1, x0:x1]] = a_cbg
 
-    for row in layout_rows(st, g):
-        x = 0
-        for ch in row["chars"]:
-            cw = {"1bit": ch["width"] if 0 < ch["width"] < GW else GW, "2bit": GW}.get(ch["kind"], ch["width"] or GW)   # = the advance below
-            cell(fx + x * sx, fy + y * sy, cw, row["h"])
-            if ch["kind"] == "1bit":
-                bits = glyph_bits(st, g, ch["id"])
-                w = ch["width"] if 0 < ch["width"] < GW else GW
-                c0 = {0: (GW - w + 1) // 2, 1: 0, 2: GW - w}.get(g["zone"], 0)
-                bits = bits[:, c0:c0 + w]
-                fg, bgc = st.pal[ch["fg"]], ch["bg"]
-                px, py = fx + x * sx, fy + y * sy
-                if bits.size:
-                    for val, rgb, solid, a in ((1, fg, True, a_fg), (0, st.pal[bgc], bgc != 0, a_cbg)):   # bg index 0 = transparent [spec osd-font-download.md]
-                        if solid:
-                            paint(px, py, np.kron(bits == val, np.ones((sy, sx), bool)), rgb, a)
-                x += w
-            elif ch["kind"] == "2bit":
-                lv = glyph_levels2(st, g, ch["id"])
-                px, py = fx + x * sx, fy + y * sy
-                for v in range(4):
-                    ci = ch["cols"][v]
-                    if ci == 0:                                  # colour index 0 = transparent (as the 1-bit background) [spec]
-                        continue
-                    paint(px, py, np.kron(lv == v, np.ones((sy, sx), bool)), st.pal[ci], a_fg)
-                x += GW
-            else:
-                x += ch["width"] or GW
-        y += row["h"]
+    def draw_rows(rows, fx, fy):
+        y = 0
+        for row in rows:
+            x = 0
+            for ch in row["chars"]:
+                cw = {"1bit": ch["width"] if 0 < ch["width"] < GW else GW, "2bit": GW}.get(ch["kind"], ch["width"] or GW)   # = the advance below
+                cell(fx + x * sx, fy + y * sy, cw, row["h"])
+                if ch["kind"] == "1bit":
+                    bits = glyph_bits(st, g, ch["id"])
+                    w = ch["width"] if 0 < ch["width"] < GW else GW
+                    c0 = {0: (GW - w + 1) // 2, 1: 0, 2: GW - w}.get(g["zone"], 0)
+                    bits = bits[:, c0:c0 + w]
+                    fg, bgc = st.pal[ch["fg"]], ch["bg"]
+                    px, py = fx + x * sx, fy + y * sy
+                    if bits.size:
+                        for val, rgb, solid, a in ((1, fg, True, a_fg), (0, st.pal[bgc], bgc != 0, a_cbg)):   # bg index 0 = transparent [spec osd-font-download.md]
+                            if solid:
+                                paint(px, py, np.kron(bits == val, np.ones((sy, sx), bool)), rgb, a)
+                    x += w
+                elif ch["kind"] == "blank":                          # SDK OsdBlankFont: B1 = pixel length, B2 = background colour
+                    bw = ch["width"] or GW
+                    if ch["bg"] != 0:
+                        paint(fx + x * sx, fy + y * sy, np.ones((row["h"] * sy, bw * sx), bool), st.pal[ch["bg"]], a_cbg)
+                    x += bw
+                elif ch["kind"] == "4bit":                           # bit planes; palette index = pixel value, 0 transparent [guess, QC palette sets 0]
+                    lv = glyph_levels4(st, g, ch["id"])
+                    px, py = fx + x * sx, fy + y * sy
+                    for v in range(1, 16):
+                        paint(px, py, np.kron(lv == v, np.ones((sy, sx), bool)), st.pal[v], a_fg)
+                    x += GW
+                elif ch["kind"] == "2bit":
+                    lv = glyph_levels2(st, g, ch["id"])
+                    px, py = fx + x * sx, fy + y * sy
+                    for v in range(4):
+                        ci = ch["cols"][v]
+                        if ci == 0:                                  # colour index 0 = transparent (as the 1-bit background) [spec]
+                            continue
+                        paint(px, py, np.kron(lv == v, np.ones((sy, sx), bool)), st.pal[ci], a_fg)
+                    x += GW
+                else:
+                    x += ch["width"] or GW
+            y += row["h"]
+    draw_rows(layout_rows(st, g), fx, fy)
+    if g["two"]:                                              # second map: its own origin (hd2 / vd2) and font delay
+        draw_rows(layout_rows(st, g, g["row_base1"], g["fs_base1"]), g["hd2"] * g["step"] * sx + g["fhb"] * sx, g["vd2"] * sy + g["fvb"] * sy)
     for w in wins:
         if higher.get(w["i"]):
             draw_win(w)
