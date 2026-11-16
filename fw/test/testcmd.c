@@ -248,7 +248,11 @@ void AwtoDiagTestCmd(void)
         return;
     }
     isr_g_stAwtoDiag.ucTestCmd = 0;
-    if(ucCmd <= 5)
+    if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
+    {
+        AwtoOsdDemo(ucCmd - AWTO_TC_OSD_DEMO);
+    }
+    else if(ucCmd <= 5)
     {
         AwtoKeyInject(ucCmd - 1);                       // routed by the next AwtoKeyPoll (#129)
     }

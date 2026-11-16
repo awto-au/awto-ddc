@@ -1093,6 +1093,10 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
 #define AWTO_SYNC_EV_OSDP                                       0xE8    // #226 OSD SRAM probe (test cmd 0x0F): arg 1 done (value = addresses written), 3 refused (OSD on)
 #define AWTO_TC_OSD_SRAM_PROBE                                  0x0F    // test cmd: write / read back markers in the OSD font + map SRAM (M1 and M2) from the MCU
+#define AWTO_SYNC_EV_ODEMO                                      0xE9    // #226 OSD window demo (test cmds 0xA0..0xA5): arg = case, value = window
+#define AWTO_TC_OSD_DEMO                                        0xA0    // test cmd: + 0..4 = demo group, + 5 = close
+extern void AwtoOsdDemo(unsigned char ucGroup);
+extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)

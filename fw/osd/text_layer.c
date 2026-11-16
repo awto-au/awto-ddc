@@ -211,6 +211,27 @@ void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucC
     OsdWindowDrawing(ucWin, usX0, usY0, usX1, usY1, (ucColour == 0) ? AWTO_BAR_SURFACE : AWTO_BAR_ACCENT);
 }
 
+void osd_tc_win_draw(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1)     // g_stOsdWindow as the caller set it (#226 demo): no minimum width, mirrored for Rotate 180 like osd_tc_bar
+{
+    if(s_ucAwtoOsdRot == _OSD_ROTATE_DEGREE_180)
+    {
+        WORD usW = (WORD)g_ucOsdWidth * osd_cw - 1;
+        WORD usH = (WORD)((s_ucVpRows != 0) ? s_ucVpRows : g_ucOsdHeight) * osd_rh - 1;
+        WORD usT = usW - usX0;
+
+        usX0 = usW - usX1;
+        usX1 = usT;
+        usT = usH - usY0;
+        usY0 = usH - usY1;
+        usY1 = usT;
+    }
+    SET_OSD_WINDOW_NUMBER(ucWin);
+    SET_OSD_WINDOW_ENABLE(_ENABLE);
+    SET_OSD_WINDOW_BLEND_ENABLE(_ENABLE);
+    ScalerTimerWaitForEvent(_EVENT_DVS);
+    ScalerOsdDrawWindow(usX0, usY0, usX1, usY1);
+}
+
 void osd_tc_bar_off(BYTE ucWin)
 {
     ScalerOsdWindowDisable((EnumOsdWindowsType)ucWin);
