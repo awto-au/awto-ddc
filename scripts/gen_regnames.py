@@ -26,6 +26,9 @@ HEADER = "fw/sdk/Project/Header/AwtoRegs.h"
 REGDB = "re/regdb/RTD2795T-CG.tsv.gz"
 EXTRA = {"IIC_2_CH_SEL": 0xFE94, "IIC_2_STATUS": 0xFE99,      # IIC_2 / IIC_3 engines: SDK header only, not in the 2795T regdb
          "IIC_3_CH_SEL": 0xFEA3, "IIC_3_STATUS": 0xFEA8}
+EXTRA.update({f"DISP_PG_{n}_SUB": 0x87F0 + i for i, n in enumerate(                  # D-domain pattern generator, sub path: SDK P87_F0..FD; names from the
+    ["R_CTRL", "G_CTRL", "B_CTRL", "R_INITIAL", "G_INITIAL", "B_INITIAL", "PIXEL_DELTA_H", "LINE_DELTA_H", "PIXEL_STEP_H", "LINE_STEP_H"])})   # RTD2797UPM-CG regdb
+EXTRA.update({"DISP_PG_DELTA_H_STEP_M_SUB": 0x87FA, "D_PG_CTRL_0_SUB": 0x87FB, "D_PG_INITIAL_M_STEP_L_SUB": 0x87FC, "D_PG_INITIAL_L_CTRL_SUB": 0x87FD})
 USE_RE =re.compile(r"\bAWTO_([RFI])_([A-Z0-9_]+)\b")
 
 
