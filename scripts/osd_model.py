@@ -422,6 +422,21 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     wins = [w for i in range(26) if (w := decode_window(st.win, i)) and w["en"]]
     higher = {3: st.reg(FRAME + 7) & 1, 4: st.reg(FRAME + 7) >> 1 & 1, 2: st.reg(FRAME + 8) >> 7, 9: st.reg(FRAME + 8) >> 6 & 1, 8: st.reg(FRAME + 8) >> 5 & 1}
 
+    def draw_grid(w, X0, Y0, X1, Y1, a):                  # grid line fields WIN2..4_ADR7/8 (regdb); pitch um -> px assumes the QC panel pitch 993 [guess]
+        if not 2 <= w["i"] <= 4:
+            return
+        g7 = st.win.get(0x183 + 7 * (w["i"] - 2), [0, 0, 0])
+        g8 = st.win.get(0x184 + 7 * (w["i"] - 2), [0, 0, 0])
+        if not g8[0] & 1:
+            return
+        width, col, hen, ven, off = (g7[0] >> 6) + 1, g7[0] & 0x3F, g7[1] >> 7 & 1, g7[1] >> 6 & 1, g7[1] & 0x3F
+        pitch = max(1, round(((g8[0] >> 1) << 8 | g7[2]) / 993))
+        c = st.pal[col]
+        for k in range(off, Y1 - Y0, pitch * sy) if hen else ():
+            rect(X0, Y0 + k, X1, min(Y0 + k + width * sy, Y1), c, a)
+        for k in range(off, X1 - X0, pitch * sx) if ven else ():
+            rect(X0 + k, Y0, min(X0 + k + width * sx, X1), Y1, c, a)
+
     def draw_win(w):
         X0, Y0, X1, Y1 = ox + w["x0"] * sx, oy + w["y0"] * sy, ox + (w["x1"] + 1) * sx, oy + (w["y1"] + 1) * sy
         a = a_win if w["blend"] else 0.0
@@ -438,6 +453,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                     rect(X0, Y0 + k, X1, min(Y0 + k + m, Y1), c, a)
             return
         rect(X0, Y0, X1, Y1, st.pal[w["color"]], a)
+        draw_grid(w, X0, Y0, X1, Y1, a)
         if w["eff_en"]:                                   # shadow types 0..3 / 3D button 4,5 [register doc, approximation]
             ew, eh = w["eff_w"] * sx, w["eff_h"] * sy
             sh, bo = st.pal[w["sha"]], st.pal[w["bor"]]
