@@ -1,7 +1,7 @@
 #include "UserCommonInclude.h"
 
 // #228: Realtek's D-domain pattern generator test (RL6449_Series_QC_Color_DDomain.c ScalerQCDDomainPatternGenOn / Off, 12-bit mode),
-// test cmds 0xB2 on / 0xB3 off. Main set P7 F0..FF + sub set P87 F0..FD (sub names: gen_regnames EXTRA, from the RTD2797UPM regdb). The picture is the scaler's own
+// test cmds 0xB2 on / 0xB3 off. Main set P7 F0..FF + sub set P87 F0..FD (sub names from the RTD2797UPM regdb, merged by gen_regnames). The picture is the scaler's own
 // R / G / B ramp generator; the QC then compares its CRC, which we do not.
 #define AWTO_DPG_R_CTRL                         0x8D            // QC value: enable + gradient setup, see the regdb DISP_PG_*_CTRL fields
 #define AWTO_DPG_GB_CTRL                        0x0D
@@ -49,7 +49,7 @@ void AwtoDpgTest(unsigned char ucOn)
     AWTO_XFR(AWTO_R_DISP_PG_PIXEL_DELTA_H_SUB) = AWTO_DPG_PIXEL_DELTA_H;
     AWTO_XFR(AWTO_R_DISP_PG_LINE_DELTA_H_SUB) = AWTO_DPG_LINE_DELTA_H;
     AWTO_XFR(AWTO_R_DISP_PG_PIXEL_STEP_H_SUB) = AWTO_DPG_PIXEL_STEP_H;
-    AWTO_XFR(AWTO_R_DISP_PG_LINE_STEP_H_SUB) = AWTO_DPG_LINE_STEP_H;
+    AWTO_XFR(AWTO_R_DISP_PG_LINE_STEP_H_SBU) = AWTO_DPG_LINE_STEP_H;      // sic: the regdb / SDK name
     AWTO_XFR(AWTO_R_DISP_PG_DELTA_H_STEP_M_SUB) = AWTO_DPG_ZERO;
     AWTO_XFR(AWTO_R_D_PG_CTRL_0_SUB) = AWTO_DPG_ZERO;
     AWTO_XFR(AWTO_R_D_PG_INITIAL_M_STEP_L_SUB) = AWTO_DPG_ZERO;

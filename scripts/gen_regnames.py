@@ -26,9 +26,6 @@ HEADER = "fw/sdk/Project/Header/AwtoRegs.h"
 REGDB = "re/regdb/RTD2795T-CG.tsv.gz"
 EXTRA = {"IIC_2_CH_SEL": 0xFE94, "IIC_2_STATUS": 0xFE99,      # IIC_2 / IIC_3 engines: SDK header only, not in the 2795T regdb
          "IIC_3_CH_SEL": 0xFEA3, "IIC_3_STATUS": 0xFEA8}
-EXTRA.update({f"DISP_PG_{n}_SUB": 0x87F0 + i for i, n in enumerate(                  # D-domain pattern generator, sub path: SDK P87_F0..FD; names from the
-    ["R_CTRL", "G_CTRL", "B_CTRL", "R_INITIAL", "G_INITIAL", "B_INITIAL", "PIXEL_DELTA_H", "LINE_DELTA_H", "PIXEL_STEP_H", "LINE_STEP_H"])})   # RTD2797UPM-CG regdb
-EXTRA.update({"DISP_PG_DELTA_H_STEP_M_SUB": 0x87FA, "D_PG_CTRL_0_SUB": 0x87FB, "D_PG_INITIAL_M_STEP_L_SUB": 0x87FC, "D_PG_INITIAL_L_CTRL_SUB": 0x87FD})
 USE_RE =re.compile(r"\bAWTO_([RFI])_([A-Z0-9_]+)\b")
 
 
@@ -44,7 +41,25 @@ def tree_root(arg):
         return Path(__file__).resolve().parent.parent
 
 
+SIBLINGS = ["RTD2797UPM-CG", "RTD2785TM-CG", "RTD2775TM-CG", "RTD2776B-CG", "RTD2537T-CG", "RTD2525AR-CG"]   # same register map family; fill what the 2795T regdb lacks
+
+
 def load(db):
+    regs, fields = load_one(db)
+    for sib in SIBLINGS:
+        sregs, sfields = load_one(str(Path(db).with_name(sib + ".tsv.gz")))
+        have = {r["name"] for r in regs.values()}
+        for k, r in sregs.items():                      # only new names at new addresses: the 2795T names never change
+            if k not in regs and r["name"] not in have:
+                regs[k] = r
+                fields[k] = sfields.get(k, [])
+                have.add(r["name"])
+    for name, addr in EXTRA.items():
+        regs.setdefault((addr, ""), {"name": name, "page": f"{addr >> 8:02X}", "addr": addr, "port": ""})
+    return regs, fields
+
+
+def load_one(db):
     regs = {}                    # (address, port_idx) -> {name, page, addr, port}
     fields = defaultdict(list)   # (address, port_idx) -> [(FIELD, hi, lo)]
     with gzip.open(db, "rt") as f:
@@ -56,8 +71,6 @@ def load(db):
                 regs[key] = {"name": r["register"].upper(), "page": r["page"].upper(), "addr": key[0], "port": r["port_idx"]}
             elif r["field"].lower() not in ("reserved", "dummy"):
                 fields[key].append((re.sub(r"\W", "_", r["field"]).upper(), int(r["bit_high"]), int(r["bit_low"])))
-    for name, addr in EXTRA.items():
-        regs[(addr, "")] = {"name": name, "page": f"{addr >> 8:02X}", "addr": addr, "port": ""}
     return regs, fields
 
 

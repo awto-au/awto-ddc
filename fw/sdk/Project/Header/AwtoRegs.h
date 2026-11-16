@@ -76,7 +76,7 @@
 #define AWTO_R_DISP_PG_PIXEL_DELTA_H_SUB                0x87F6
 #define AWTO_R_DISP_PG_LINE_DELTA_H_SUB                 0x87F7
 #define AWTO_R_DISP_PG_PIXEL_STEP_H_SUB                 0x87F8
-#define AWTO_R_DISP_PG_LINE_STEP_H_SUB                  0x87F9
+#define AWTO_R_DISP_PG_LINE_STEP_H_SBU                  0x87F9
 #define AWTO_R_DISP_PG_DELTA_H_STEP_M_SUB               0x87FA
 #define AWTO_R_D_PG_CTRL_0_SUB                          0x87FB
 #define AWTO_R_D_PG_INITIAL_M_STEP_L_SUB                0x87FC
