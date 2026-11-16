@@ -46,6 +46,7 @@ def main() -> int:
     ap.add_argument("map", type=Path)
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/scratch/qc_frames")
     ap.add_argument("--frames", default=",".join(str(i) for i in range(len(NAMES))))
+    ap.add_argument("--bg", default="grey", help="picture under the OSD: grey, checker or bars (bars shows the blending)")
     ap.add_argument("--wait", type=float, default=4.0, help="sim seconds after the command (the QC run waits for many frames)")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
@@ -56,8 +57,8 @@ def main() -> int:
         C.send(s, TC + n)
         s.bus.wait(a.wait)
         st = s.snap()
-        img = np.array(R.render_snap(st, "grey", 1, False))
-        mask = np.any(img != R.background("grey", R.PANEL_W, R.PANEL_H), axis=2)
+        img = np.array(R.render_snap(st, a.bg, 1, False))
+        mask = np.any(img != R.background(a.bg, R.PANEL_W, R.PANEL_H), axis=2)
         info = M.summary(st)
         name = NAMES[n] if n < len(NAMES) else f"frame {n}"
         if not mask.any():
@@ -65,7 +66,7 @@ def main() -> int:
             continue
         ys, xs = np.nonzero(mask)
         crop = img[max(0, ys.min() - 8):ys.max() + 9, max(0, xs.min() - 8):xs.max() + 9]
-        p = a.out / f"qc_{n:02d}.png"
+        p = a.out / (f"qc_{n:02d}.png" if a.bg == "grey" else f"qc_{n:02d}_{a.bg}.png")
         Image.fromarray(crop).save(p)
         say(f"{n} {name}: box {xs.max() - xs.min() + 1}x{ys.max() - ys.min() + 1} at ({xs.min()},{ys.min()}), {info['nwin']} windows, "
             f"blend type {info['blend_type']}, map {info['cols']}x{info['rows']} -> {p}")

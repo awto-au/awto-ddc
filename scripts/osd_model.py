@@ -571,6 +571,9 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     for w in wins:
         if higher.get(w["i"]):
             draw_win(w)
+    if st.reg(FRAME + 9) & 0x80:                              # specific colour blending (ScalerOsdSpecificColorBlending): this LUT index blends [SDK, guess: any element]
+        idx = (st.reg(FRAME + 8) >> 2 & 3) << 4 | st.reg(FRAME + 9) & 15
+        vid[cov & (osd == np.array(st.pal[idx], np.uint8)).all(axis=2)] = t
     k = vid[cov][:, None]
     img[cov] = (osd[cov] * (1.0 - k) + img[cov] * k + 0.5).astype(np.uint8)
     return img
