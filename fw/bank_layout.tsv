@@ -536,6 +536,7 @@ stub	_AwtoDdcPumpGet	C	0x1ee0	8
 stub	_AwtoDdcRxDone	C	0x1ee8	8
 stub	_AwtoDdcRxFrame	C	0x1ef0	8
 stub	_AwtoEdidPoll	C	0x1ef8	8
+stub	_gamma_enable	C	0x1f00	8
 stub	_ScalerTimerInitialTimerEvent	C	0x1f34	8
 stub	_ScalerTimerReactiveTimerEvent	C	0x1fec	8
 stub	_ScalerDpRx1CDRCheck	C	0x1ff4	8
@@ -3167,3 +3168,4 @@ fn	_AwtoBootValue	10	0x8dc0	84
 fn	_AwtoWdtShow	10	0x8e14	144
 fn	_font_blob	10	0x8ea4	296
 fn	_AwtoSlowDue	10	0x8fcc	296
+fn	_gamma_enable	11	0x0000	28
