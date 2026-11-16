@@ -1,0 +1,130 @@
+# Settings registry: the single source (awto/include/settings.h). Generated from it by awto-ddc scripts/settings_gen.py:
+# set_table, OSD menu pages (with settings/pages.tsv), DDC/CI VCP map, NVRAM record + schema, host table, docs/settings.md.
+# - id: stable, never reused (NVRAM key, VCP paged id, docs anchor). 1..255 (the NVRAM record keys are one byte).
+# - retired ids (never reuse): 64 menu_select, 93 vendor_menu (Realtek SDK menu built out, awto-ddc#120); 65 logo,
+#   66 logo_ms (boot logo removed, the console shows the power-on log, awto-ddc#144); 69 panel_t3, 70 panel_t3_own
+#   (backlight no longer waits for video: 118 bl_on_delay, Dan 2026-11-13, awto-ddc#162).
+# - type: bool | enum | int | action. unit: none percent ms s step hz dhz (0.1 Hz).
+# - flags: nv (saved), live (applied on every change, else on confirm), risky (can blank or cut access: auto-revert
+#   unless confirmed), reboot (takes effect after a restart), ro (status, read from the firmware), inert (stored only:
+#   the firmware has no reader yet: Realtek SDK menu items not built, and our rows whose owner is still to wire it),
+#   factory (factory page only), sdk (value lives in a Realtek SDK store field: stored in the SDK store, one RAM copy;
+#   nv rows without sdk go into the integrator's own items of the same store, awto-ddc#151).
+# - nv_slot: auto = position in the NVRAM record (id-tagged, so slots may move). vcp: MCCS code, or a manufacturer
+#   code 0xE6..0xFF (0xE0..0xE5 are the paged pair 0xE0 id / 0xE1 value, schema, command, menu), or '-';
+#   every row is reachable through the paged pair. The DDC/CI capabilities string is generated from this column.
+#   0xE9 = host time (table write, awto-ddc#157, firmware awto_ddcci.inc): never a row code.
+# - apply: set_ap_<apply>(id, value) pushes it to the firmware; '-' = the owner reads the value when it needs it.
+# - options: enum labels, '|' separated; label=N gives the VCP value of that option (default: the option index).
+# - provenance: [sdk-ui] = item, range and default of the Realtek SDK (demo) menu, walked in the sim (#65, #67).
+# id	name	type	unit	group	flags	min	max	step	default	nv_slot	vcp	apply	label	options	note
+1	brightness	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0x10	backlight	Backlight	-	panel PWM duty 0..255 (0 % = off, driver has no minimum); 50 % = raw 127 (Dan 2026-11-15)
+5	black_level	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0xF3	black_level	Brightness	-	digital offset (Realtek SDK 'Brightness') [sdk-ui]
+2	contrast	int	percent	picture	nv,live,sdk	0	100	1	50	auto	0x12	contrast	Contrast	-	[sdk-ui]
+6	sharpness	int	step	picture	nv,inert,sdk	0	4	1	2	auto	0x87	-	Sharpness	-	Realtek SDK item, scaler sharpness not built [sdk-ui]
+7	gamma	enum	none	colour	nv,live,sdk	0	4	1	0	auto	0xF2	gamma	Gamma	Off|1.8|2.0|2.2|2.4	[sdk-ui]
+8	colour_temp	enum	none	colour	nv,live,sdk	0	5	1	2	auto	0x14	colour_temp	Colour temp	9300K=0x08|7500K=0x06|6500K=0x05|5800K=0x04|sRGB=0x01|User=0x0B	MCCS 0x14 (5800K reported as 5000K); presets 9300K..sRGB give equal gains today [sdk-ui]
+9	user_red	int	step	colour	nv,live,sdk	0	255	1	128	auto	0x16	user_rgb	User red	-	used when Colour temp = User [sdk-ui]
+10	user_green	int	step	colour	nv,live,sdk	0	255	1	128	auto	0x18	user_rgb	User green	-	[sdk-ui]
+11	user_blue	int	step	colour	nv,live,sdk	0	255	1	128	auto	0x1A	user_rgb	User blue	-	[sdk-ui]
+12	colour_effect	enum	none	colour	nv,inert,sdk	0	5	1	0	auto	-	-	Colour effect	Standard|Game|Movie|Photo|Vivid|User	[sdk-ui]
+25	colour_demo	enum	none	colour	nv,inert	0	5	1	0	auto	-	-	Colour demo	Off|Type 1|Type 2|Type 3|Type 4|Type 5	[sdk-ui]
+26	pcm	enum	none	colour	nv,inert,sdk	0	1	1	1	auto	-	-	PCM	User|Native	[sdk-ui]
+27	hue	int	percent	colour	nv,inert,sdk	0	100	1	50	auto	-	-	Hue	-	[sdk-ui]
+28	saturation	int	percent	colour	nv,inert,sdk	0	100	1	50	auto	-	-	Saturation	-	[sdk-ui]
+29	uniformity	bool	none	colour	nv,inert,sdk	0	1	1	0	auto	-	-	Uniformity	-	Realtek SDK default On (blocks Gamma there); ours Off [sdk-ui]
+13	sa_red_hue	int	step	sixaxis	nv,inert,sdk	0	100	1	50	auto	-	-	Red hue	-	[sdk-ui]
+14	sa_red_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Red sat	-	[sdk-ui]
+15	sa_yellow_hue	int	step	sixaxis	nv,inert,sdk	0	100	1	50	auto	-	-	Yellow hue	-	[sdk-ui]
+16	sa_yellow_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Yellow sat	-	[sdk-ui]
+17	sa_green_hue	int	step	sixaxis	nv,inert,sdk	0	100	1	50	auto	-	-	Green hue	-	[sdk-ui]
+18	sa_green_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Green sat	-	[sdk-ui]
+19	sa_cyan_hue	int	step	sixaxis	nv,inert,sdk	0	100	1	50	auto	-	-	Cyan hue	-	[sdk-ui]
+20	sa_cyan_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Cyan sat	-	[sdk-ui]
+21	sa_blue_hue	int	step	sixaxis	nv,inert,sdk	0	100	1	50	auto	-	-	Blue hue	-	[sdk-ui]
+22	sa_blue_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Blue sat	-	[sdk-ui]
+23	sa_magenta_hue	int	step	sixaxis	nv,inert,sdk	0	100	1	50	auto	-	-	Magenta hue	-	[sdk-ui]
+24	sa_magenta_sat	int	step	sixaxis	nv,inert,sdk	0	200	1	100	auto	-	-	Magenta sat	-	[sdk-ui]
+30	aspect	enum	none	display	nv,sdk	0	5	1	0	auto	0xFE	aspect	Aspect ratio	Full|16:9|4:3|5:4|Original|User	display re-set when active [sdk-ui]
+31	overscan	bool	none	display	nv,sdk	0	1	1	1	auto	0xFF	overscan	Overscan	-	video timings only [sdk-ui]
+32	disp_rotate	enum	none	display	nv	0	1	1	0	auto	-	rotate	Rotate	0|180	picture 180 deg via the frame buffer (rotation build); 90 / 270 not on this chip; display re-set when active; registry-stored, the owner writes the SDK field (awto-ddc#165) [sdk-ui]
+117	mirror	enum	none	display	nv	0	2	1	0	auto	-	rotate	Mirror	Off|Horizontal|Vertical	same owner as Rotate: effective = Rotate 180 (H+V) XOR mirror; rotation build only (awto-ddc#165)
+33	latency	enum	none	display	nv,inert,sdk	0	2	1	0	auto	-	-	Latency	Low|Mid|High	[sdk-ui]
+34	freeze	bool	none	display	inert	0	1	1	0	-	-	-	Freeze	-	[sdk-ui]
+3	input	enum	none	input	-	0	2	1	1	auto	0x60	input_select	Input	D1 DP=0x0F|D2 HDMI=0x11|D3 HDMI=0x12	fixed input (switch now); not stored: an input switch writes no flash (awto-ddc#151)
+35	input_mode	enum	none	input	-	0	1	1	0	auto	0xEF	input_mode	Search	Auto|Fixed	Auto = search in group; not stored, boot = Auto (awto-ddc#151) [sdk-ui]
+36	d1_enable	bool	none	input	nv	0	1	1	1	auto	0xEC	port	D1 DP enable	-	off = HPD low, EDID off, receiver off, not searched / auto-selected / woken on; refused for the input on screen and the last enabled one; selecting the port enables it (awto-ddc#81)
+37	d2_enable	bool	none	input	nv	0	1	1	1	auto	0xED	port	D2 HDMI enable	-	as D1 (per-port settings block, awto-ddc fw/sdcc/awto_port.inc)
+38	d3_enable	bool	none	input	nv	0	1	1	1	auto	0xEE	port	D3 HDMI enable	-	as D1
+39	search_order	enum	none	input	nv,inert	0	5	1	3	auto	0xFC	-	Search order	D1 D2 D3|D1 D3 D2|D2 D1 D3|D2 D3 D1|D3 D1 D2|D3 D2 D1	owner: source search (#60)
+40	search_hdmi_ms	int	ms	input	nv,risky	500	10000	100	2000	auto	-	search_time	HDMI search	-	per-port search time, cable in [sdk-value]
+41	search_dp_ms	int	ms	input	nv,risky	1000	10000	100	3000	auto	-	search_time	DP search	-	[sdk-value]
+42	nocable_hdmi_ms	int	ms	input	nv,risky	500	10000	100	2000	auto	-	search_time	HDMI no cable	-	per-port search time, no cable [sdk-value]
+43	nocable_dp_ms	int	ms	input	nv,risky	1000	10000	100	3000	auto	-	search_time	DP no cable	-	[sdk-value]
+44	fast_switch	bool	none	kvm	nv,live	0	1	1	1	auto	0xE6	-	Fast switch	-	cached same-timing switch (#60); read by the switch path
+45	keep_idle_rx	bool	none	kvm	nv,reboot	0	1	1	1	auto	0xE7	-	Keep idle inputs	-	idle receivers stay powered and locked (#60); owner: switch path
+46	kvm_prefill	bool	none	kvm	nv,inert	0	1	1	0	auto	-	-	Pre-fill cache	-	fill the fast-switch timing cache of idle inputs (#60); owner: switch path
+48	dp_version	enum	none	signal	nv,sdk	0	2	1	1	auto	0xF1	dp_version	DP version	1.1|1.2|1.3	D1 capability; HBR2 needs 1.2 [sdk-ui]
+49	dp_edid	enum	none	signal	nv,sdk	0	2	1	0	auto	0xFD	dp_edid	DP EDID	1080p|1440p|2160p60	Realtek SDK DP resolution list [sdk-ui]
+50	edid_pref	enum	none	signal	nv,reboot,inert	0	2	1	0	auto	-	-	EDID preferred	3840x2160@60|2560x1440@60|1920x1080@60	owner: EDID tables (fw-edid)
+51	hdcp	bool	none	signal	nv,reboot,inert	0	1	1	1	auto	-	-	HDCP	-	owner: HDCP (#65 step 13)
+52	colour_depth	enum	none	signal	nv,reboot,inert	0	2	1	0	auto	-	-	Colour depth	Auto|8 bpc|10 bpc	EDID deep-colour advert (#59); owner: EDID tables
+53	hdmi_420	bool	none	signal	nv,reboot,inert	0	1	1	0	auto	-	-	HDMI 4:2:0	-	4K60 YCbCr 4:2:0 10 bpc advert (#59); owner: EDID tables
+54	colour_format	enum	none	signal	nv,inert,sdk	0	1	1	0	auto	-	-	Colour format	RGB|YUV	Realtek SDK: VGA/DVI only [sdk-ui]
+55	clone	bool	none	signal	nv,inert,sdk	0	1	1	0	auto	-	-	Clone	-	no DP TX on this board [sdk-ui]
+56	ddcci	bool	none	signal	nv,reboot,sdk	0	1	1	1	auto	-	-	DDC/CI	-	DDC/CI 0x37 on the spare IIC engines (#60), MCCS 2.2 from this registry [sdk-ui]
+75	pwr_l1_en	bool	none	power	nv	0	1	1	1	auto	0xF6	power	L1 backlight off	-	no signal / DPMS: backlight off
+76	pwr_l1_ms	int	ms	power	nv,inert	0	30000	100	0	auto	0xF7	power	L1 delay	-	0 = immediately
+77	pwr_l2_en	bool	none	power	nv	0	1	1	1	auto	0xF8	power	L2 panel off	-
+78	pwr_l2_s	int	s	power	nv	0	3600	10	60	auto	0xF9	power	L2 delay	-
+79	pwr_l3_en	bool	none	power	nv	0	1	1	1	auto	0xFA	power	L3 deep sleep	-
+80	pwr_l3_s	int	s	power	nv,inert	0	7200	30	600	auto	0xFB	power	L3 delay	-
+81	wake_d1	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D1	-
+82	wake_d2	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D2	-
+83	wake_d3	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D3	-
+57	osd_timeout	int	s	osd	nv,sdk	0	120	5	30	auto	0xEA	-	Menu timeout	-	0 = never; any other value times out, a key restarts it (awto-ddc#132 q6) [sdk-ui]
+58	osd_hpos	int	percent	osd	nv,live,sdk	0	100	1	50	auto	-	osd_pos	Menu H position	-	[sdk-ui]
+59	osd_vpos	int	percent	osd	nv,live,sdk	0	100	1	50	auto	-	osd_pos	Menu V position	-	[sdk-ui]
+60	osd_scale	enum	none	osd	nv,live,sdk	0	1	1	0	auto	0xF4	osd_scale	Menu size	1x|2x
+106	osd_font	enum	none	osd	nv,live	0	1	1	0	auto	-	osd_font	Menu font	Spleen|Tamzen	native fixed bitmap fonts; no resampling
+61	osd_transparency	int	percent	osd	nv,live,sdk	0	100	1	50	auto	-	osd_transparency	Transparency	-	every awto screen: windows + character background blend (type 11), glyphs opaque; chip level pct x 255 / 100 (50 -> 127 of 255) (awto-ddc#176)
+62	language	enum	none	osd	nv,sdk	0	1	1	0	auto	-	sdk_language	Realtek menu language	English|Chinese-T	Realtek SDK menu strings only [sdk-ui]
+63	osd_rotate	enum	none	osd	nv,inert,sdk	0	3	1	0	auto	-	-	Menu rotate	0|90|270|180	[sdk-ui]
+67	panel_t1	int	ms	panel	nv,risky,reboot	0	100	1	10	auto	-	-	T1 VDD rise	-	Realtek SDK example value, no datasheet [sdk-value]
+68	panel_t2	int	ms	panel	nv,risky,reboot	0	1000	10	250	auto	-	-	T2 VDD to link	-	[sdk-value]
+118	bl_on_delay	int	ms	panel	nv	0	1000	10	0	auto	-	-	Backlight on delay	-	backlight wanted (boot on M2PLL, POWER on, wake: from VDD on) -> pin on; not gated by video; 0 = at once (Dan, datasheet T8 not followed)
+71	panel_t4	int	ms	panel	nv,risky	0	1000	10	250	auto	-	-	T4 BL to link off	-	[sdk-value]
+72	panel_t5	int	ms	panel	nv,risky	0	500	10	20	auto	-	-	T5 link to VDD off	-	[sdk-value]
+73	panel_t6	int	ms	panel	nv,risky	500	5000	100	900	auto	-	-	T6 off to on	-	minimum VDD off time: datasheet T11 >= 1000 ms - 10 % (delay rule)
+74	bl_pwm_ms	int	ms	panel	nv,risky	0	200	1	0	auto	-	-	BL to PWM	-	backlight pin on -> PWM duty; 0 = same step (Dan: pin + PWM at once)
+84	debug_link	bool	none	debug	nv,risky,reboot,inert	0	1	1	1	auto	-	-	Debug link	-	debug slave 0x35 on the main IIC engine; always on today (DDC/CI 0x37 runs on the spare engines, #60)
+85	debug_msgs	bool	none	debug	nv,live,sdk	0	1	1	0	auto	0xF0	debug_msgs	Debug messages	-	(#74)
+86	msg_log	bool	none	debug	live	0	1	1	0	-	-	msg_log	Message log	-	on-screen log (#56)
+87	debug_popup	action	none	debug	-	0	1	1	0	-	-	debug_popup	Debug pop-up	-	(#34)
+104	key_test	action	none	debug	-	0	1	1	0	-	-	key_test	Key test	-	front-button diagnostic screen; UP+DOWN closes it (#39, #85)
+105	gpio_test	action	none	debug	-	0	1	1	0	-	-	gpio_test	GPIO inputs	-	live screen for unused GPIO inputs; I2C transition ring at _g_stAwtoGpio
+88	volume	int	percent	audio	nv,live,sdk	0	100	1	50	auto	0x62	volume	Volume	-	DVC digital gain via dB table (awto-ddc docs/audio.md); VCP 0x62 [sdk-ui]
+89	mute	enum	none	audio	nv,live,sdk	0	1	1	0	auto	0x8D	mute	Mute	Off=2|On=1	MCCS 0x8D: 1 = muted, 2 = unmuted; DVC ramp mute, unmute only with signal [sdk-ui]
+90	audio_standalone	bool	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Stand alone	-	no line-in pin muxed and no power-save audio (L1-L3 mute) in this build: stored only (awto-ddc docs/audio.md) [sdk-ui]
+91	audio_source	enum	none	audio	nv,inert,sdk	0	1	1	0	auto	-	-	Audio source	Analog|Digital	no line-in pin muxed and no power-save audio (L1-L3 mute) in this build: stored only (awto-ddc docs/audio.md) [sdk-ui]
+4	factory_reset	action	none	system	-	0	1	1	0	-	0x04	defaults	Factory reset	-	MCCS 0x04; also the boot key combination
+102	colour_reset	action	none	system	-	0	1	1	0	-	0x08	colour_reset	Colour reset	-	MCCS 0x08: Colour and Six-axis pages to defaults
+103	power_mode	enum	none	power	live	0	4	1	0	-	0xD6	power_mode	Power mode	On=0x01|Standby=0x02|Suspend=0x03|Off=0x04|Off hard=0x05	MCCS 0xD6 (DPM); get = the firmware power state; standby..off -> power saving
+92	factory_menu	action	none	system	-	0	1	1	0	-	-	factory_menu	Factory menu	-	Realtek SDK factory menu [sdk-ui]
+95	info_input	enum	none	info	ro	0	2	1	0	-	-	-	Input	D1 DP|D2 HDMI|D3 HDMI
+96	info_hres	int	none	info	ro	0	8192	1	0	-	-	-	H active	-
+97	info_vres	int	none	info	ro	0	8192	1	0	-	-	-	V active	-
+98	info_vfreq	int	dhz	info	ro	0	2400	1	0	-	-	-	V freq	-
+99	info_mode	int	none	info	ro	0	15	1	0	-	-	-	Mode state	-	firmware mode state number
+100	info_loop	int	none	info	ro	0	30000	1	0	-	-	-	Loop rate /s	-
+101	info_schema	int	none	info	ro	0	32767	1	0	-	-	-	Settings schema	-
+107	info_hfreq	int	none	info	ro	0	30000	1	0	-	-	-	H freq	-	measured horizontal frequency, 0.1 kHz (shown as kHz); was on the Realtek menu Information page (awto-ddc#120)
+108	info_pclk	int	none	info	ro	0	30000	1	0	-	-	-	Pixel clock	-	input pixel clock, 0.1 MHz (shown as MHz); was on the Realtek menu Information page (awto-ddc#120)
+109	info_hdcp	enum	none	info	ro	0	1	1	0	-	-	-	HDCP	Off|On	HDCP active on the current input; was on the Realtek menu Information page (awto-ddc#120)
+110	console_mode	enum	none	osd	nv,live	0	2	1	1	auto	-	-	Diagnostic console	Off|Until signal|Always	the diagnostic console (sync log) opens by itself after a power-on / input switch / wake (awto-ddc#139): Off = never; Until signal = closes 3 s after the picture is on (any key closes it at once; no signal keeps it open); Always = stays open (awto-ddc#218). Was bool sync_console: stored 0 / 1 keep their meaning
+111	power_on	bool	none	service	nv,sdk	0	1	1	1	auto	-	sdk_sys	Power on	-	power key state over a power cut; was Realtek SDK system data (awto-ddc#151)
+112	dp_lanes	int	none	service	nv,reboot,sdk	1	4	1	4	auto	-	sdk_sys	DP lanes	-	D1 main-link lanes [sdk-value]
+113	dp_irq_10us	int	none	service	nv,reboot,sdk	0	95	1	75	auto	-	sdk_sys	DP IRQ HPD x10 us	-	DP IRQ HPD pulse width [sdk-value]
+114	ssc	int	none	service	nv,reboot,sdk	0	15	1	0	auto	-	sdk_sys	Spread spectrum	-	dot-clock spread range [sdk-value]
+115	panel_hours	int	none	service	nv,sdk	0	32767	1	0	auto	-	sdk_sys	Panel hours	-	backlight-on time; stored with the next save or at power-off / saving entry (awto-ddc#151)
+116	panel_min	int	none	service	nv,sdk	0	59	1	0	auto	-	sdk_sys	Panel minutes	-

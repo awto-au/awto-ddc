@@ -1,0 +1,9 @@
+.brief-*.md
+tmp/
+*.rel
+*.asm
+*.lst
+*.sym
+*.rst
+tmp/
+__pycache__/
