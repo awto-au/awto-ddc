@@ -8,8 +8,7 @@
 // palette, loaded through our hardware-VLC path (osd_tc_vlc_*). Map A = 32 x 14 cells (rows from 0, chars from 23), map B = 55 x 7
 // (rows from 15, chars from 471); font base 856. Shows: digits (1 bit), the Brook skull x 4 (2 bit, map A row 8), the Luffy skull x 5
 // (4 bit, map B). Not rotated with the picture (unit 3 is Rotate 180): the pattern appears turned. Sync line E9 0x50 / 0x51.
-extern void osd_tc_show(BYTE ucOn);
-extern void osd_tc_close(void);
+// osd_tc_* prototypes: RL6449_Project.h
 
 #define AWTO_QC_MAP_WORDS                       856                 // _OSD_MAP_FONT_BASE_ADDRESS: the map ends where the fonts begin
 #define AWTO_QC_1BIT_TILES                      32                  // _1BIT_FONT_ICON_SIZE (tiles of 9 words)

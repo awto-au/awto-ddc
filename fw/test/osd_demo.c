@@ -9,11 +9,7 @@
 //   0xA3 shadow / border / 3D button types
 //   0xA4 saturated + reversed gradient, window priority (overlap)
 //   0xA5 close
-extern void osd_tc_open(BYTE ucChars, BYTE ucLines, BYTE ucFont);
-extern void osd_tc_place(BYTE ucH, BYTE ucV, BYTE ucBig);
-extern void osd_tc_show(BYTE ucOn);
-extern void osd_tc_close(void);
-extern void osd_tc_bar(BYTE ucWin, WORD usX0, WORD usY0, WORD usX1, WORD usY1, BYTE ucColour);
+// osd_tc_* prototypes: RL6449_Project.h
 
 #define AWTO_DEMO_CHARS                         48                  // 48 x 12 = 576 px wide
 #define AWTO_DEMO_LINES                         20                  // 20 x 18 = 360 px high

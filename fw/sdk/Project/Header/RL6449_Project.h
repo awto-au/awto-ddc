@@ -1099,6 +1099,11 @@ extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
+extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
+extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);
+extern void osd_tc_show(unsigned char ucOn);
+extern void osd_tc_close(void);
+extern void osd_tc_bar(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1, unsigned char ucColour);
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
