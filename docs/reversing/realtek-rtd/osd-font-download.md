@@ -100,7 +100,7 @@ Prefix code, 16 symbols + END. Codes are read first-bit-first.
 - Pixel order within a glyph: row-major, 12 px per row, 2 rows per word (24 bits). Within a word, the 3 stored bytes (B0,B1,B2) are read B2 first (px 0-7), then B1 (px 8-15), then B0 (px 16-23). Within a byte MSB = leftmost. Pixel 1 = foreground [oss floppes: black=1; ORTD2662 same]. Decoded byte order in stream: B0,B1,B2 (each triplet).
 - Equivalent nibble picture [oss ORTD2662 comment]: row 2i = B2.hi, B2.lo, B1.hi; row 2i+1 = B1.lo, B0.hi, B0.lo.
 - Bits per pixel [spec + oss]: 1 bpp = fg/bg index (4 bit each) into the 64-entry LUT; 2 bpp and 4 bpp fonts exist, selected per character (char word fontSize: 0 = 1 bit, 1 = 4 bit, 3 = 2 bit [oss]); 2/4 bpp char index offsets at `0x3A21[1:0]`/`0x3A22` (2-bit offset[8:0]) and `0x3A21[0]`/`0x3A23` (4-bit offset[8:0]); `0x3A07[2]` f4b_color_sel (4-bit font background from byte2[1:0] or byte0[3:0]).
-- 2 bpp / 4 bpp glyph size in words: 18 / 36 [derived from 216 px x bpp / 24; guess, not measured]. Bit packing inside those words unknown.
+- 2 bpp / 4 bpp glyph size in words: 18 / 36 [derived from 216 px x bpp / 24; matches the QC fonts: 48 x 54 B and 77 x 108 B]. **Packing [derived from Realtek's QC icons 2026-11-16, awto-ddc#227, not yet confirmed on hardware]: bpp bit planes, each stored like a 1 bpp glyph (9 words), MSB plane first; pixel value = the planes read MSB-first.** The 2-bit `tQCFONT_2BITBROOK` and 4-bit `tQCFONT_4BITLUFFY` icons decode to clean pictures this way (`scripts/qc_osd_patterns.py`) and to noise with row-major packed pixels (`osd_vlc.pack_unit` / `unpack_unit`, `osd_model.glyph_levels2`: both assume the row-major layout and need to follow).
 - 24x36 mode: `0x3A43[6]` font_24x36_en [spec]; 24x36 1 bpp = 864 bits = 36 words [derived]. In that mode `0x3A21`/`0x3A23` offset bit8/bit7 must be 0 [spec].
 - 2x scale: `0x3A0A[1:0]` doubles all OSD (windows + chars) [spec]; firmware boot runs 2x.
 - Glyph address = `font_base + words_per_glyph * index` [oss, 9 words at 1 bpp]. Firmware boot value `font_base=0x3F1`, `fs_base=0x019` [osd.md measured].
@@ -130,7 +130,7 @@ Region 0 = row commands at word 0.., then character words from `fs_base` (rows' 
 ## 8. Open / unknown
 - [?] Which blob and which grid dims form the power-on splash (blob D `0x23B41` is the likely logo; map word contents decide ordering).
 - [?] How the firmware passes the 8 map bytes (data port words 5-7 vs registers): decide with a live capture of `0x90-0x92` writes, or static search for data-port writes near `bank6:0x4272`.
-- [?] 2 bpp / 4 bpp bit packing; row-command width encoding; first ~100 glyphs of blob D (different cell format?).
+- [derived] 2 bpp / 4 bpp bit packing = bit planes (see above); [?] row-command width encoding; first ~100 glyphs of blob D (different cell format?).
 - [guess] hw rotation (`0x3A0B`) changes decoded glyph orientation; the firmware writes `0x3A0B` via `osd_fontdl_orient_enable bank1:0x97a5`, so the blob data may be stored pre-rotated. Check cell orientation before concluding the grid is wrong.
 - Fix needed in `scripts/glyph_decode.py`: use each blob's own 8-byte header map and a 10-byte header skip (earlier run used zero/identity/rank maps and started at the header, giving noise).
 - Scratch (not committed): `awto-ddc/tmp/sigscan.py` (header signature scan: 16 nibbles all distinct + plausible BE length), `vlcdec.py` (decoder + sheet renderer).

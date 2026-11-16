@@ -10,7 +10,7 @@ Format (docs/reversing/realtek-rtd/osd-font-download.md section 2-3; byte-identi
 - encoder: value map = nibble values by descending frequency (ties: lower value first); data bits are padded with 1s to a
   byte boundary, then one END byte (the vendor stream layout)
 - tile (unit) = w x h px at bpp bits, row-major, MSB-first, 24-bit words stored low byte first [1 bpp 12x18: osd-font-download.md
-  section 5; 2 / 4 bpp: derived, not yet seen on hardware]
+  section 5; 2 / 4 bpp: row-major packing is NOT what Realtek's own QC icons use: they are bit planes (qc_osd_patterns.py glyphs(), #227); these helpers still do row-major]
 Log: tmp/logs/osd_vlc.log
 """
 import os
