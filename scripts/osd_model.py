@@ -267,6 +267,17 @@ def win_base(i: int) -> int:
     return 0x100 + 4 * i if i < 10 else 0x200 + 4 * (i - 10)
 
 
+def sat_adr4(i: int) -> int:
+    """Word of WIN<i>_ADR4 (saturated colour R, G, B bytes; regdb): windows 1..4 have none."""
+    if i == 0:
+        return 336
+    if 5 <= i <= 9:
+        return 346 + 2 * (i - 5)
+    if 10 <= i <= 17:
+        return 356 + 2 * (i - 10)
+    return 672 + 10 * (i - 18) if i >= 18 else 0
+
+
 def decode_window(win: dict, i: int) -> dict | None:
     w = [win.get(win_base(i) + k, [0, 0, 0]) for k in range(4)]
     en = w[3][2] & 1
@@ -279,7 +290,8 @@ def decode_window(win: dict, i: int) -> dict | None:
                 bor=(w[0][0] >> 6 & 1) << 5 | (w[0][1] & 15), sha=(w[0][0] >> 7 & 1) << 5 | (w[0][1] >> 4),
                 eff_w=(w[0][0] >> 3 & 7) + 1, eff_h=(w[0][0] & 7) + 1, gra=w[3][2] >> 6 & 1, gdir=w[3][2] >> 5 & 1,
                 gpol=(w[0][2] >> 7 & 1, w[0][2] >> 6 & 1, w[0][2] >> 5 & 1), gstep=(w[0][2] >> 3 & 3) + 1,
-                gen=(w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1))
+                gen=(w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1), gsat=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 4 & 1,
+                grev=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 3 & 1, satc=tuple(win.get(sat_adr4(i), [0, 0, 0])) if sat_adr4(i) else None)
 
 
 def decode_char(w: list[int]) -> dict:
@@ -445,7 +457,17 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
             base = st.pal[w["color"]]
             for k in range(0, n, w["gstep"] * (sx if not w["gdir"] else sy)):
                 lv = min(k // (w["gstep"] * (sx if not w["gdir"] else sy)), 31) * 8
-                c = tuple(max(0, min(255, base[j] + ((lv if w["gpol"][j] else -lv) if w["gen"][j] else 0))) for j in range(3))
+                c = []
+                for j in range(3):
+                    v = base[j] + ((lv if w["gpol"][j] else -lv) if w["gen"][j] else 0)
+                    if w["gsat"] and w["satc"] and w["gen"][j]:       # saturated colour = the end value; reversed = bounce back [register doc, guess]
+                        e = w["satc"][j]
+                        span = abs(e - base[j]) or 1
+                        d = abs(v - base[j])
+                        d = (span - abs(d % (2 * span) - span)) if w["grev"] else min(d, span)
+                        v = base[j] + (d if e >= base[j] else -d)
+                    c.append(max(0, min(255, v)))
+                c = tuple(c)
                 m = w["gstep"] * (sx if not w["gdir"] else sy)
                 if not w["gdir"]:
                     rect(X0 + k, Y0, min(X0 + k + m, X1), Y1, c, a)
