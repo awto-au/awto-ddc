@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Review every git worktree of a repo (read only): merged into main? ahead / behind? dirty? age?
 
-usage: worktree_review.py [REPO ...]   (default: /mnt/2tb/git/awto-ddc /mnt/2tb/git/awto-rtdfw)
+usage: worktree_review.py [REPO ...]   (default: /mnt/2tb/git/awto-ddc)
   Per worktree: path, branch (or detached sha), last commit date + subject, ahead / behind main, tracked changes, untracked files,
   class: MERGED (HEAD is an ancestor of main, clean: removable), MERGED-DIRTY (merged but local changes), AHEAD (commits not in
   main), DETACHED (no branch), MISSING (directory gone: `git worktree prune`).
@@ -76,7 +76,7 @@ def review(repo: str) -> list[list[str]]:
 
 
 def main() -> int:
-    repos = sys.argv[1:] or ["/mnt/2tb/git/awto-ddc", "/mnt/2tb/git/awto-rtdfw"]
+    repos = sys.argv[1:] or ["/mnt/2tb/git/awto-ddc"]
     rows = []
     for r in repos:
         rows += review(r)

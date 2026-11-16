@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import settings_cli as C  # noqa: E402
 import settings_table as T  # noqa: E402
 
-RTDFW = Path(os.environ.get("AWTO_RTDFW_REPO", "/mnt/2tb/git/awto-rtdfw"))
+RTDFW = Path(os.environ.get("AWTO_RTDFW_REPO") or ROOT / "fw/rtdfw")
 
 
 def test_rows_sane():

@@ -52,25 +52,10 @@ def log(s):
 
 
 def _resolve_clean():
-    """Clean tree for the mixed build: $AWTO_RTDFW_REPO as is (live dir), else the commit in fw/awto/clean_ref.txt exported
-    to tmp/clean-pin (HEAD of awto-rtdfw may be ahead of what links; the pin moves by an explicit edit of the file)."""
+    """The rtdfw tree (settings registry, menu, OSD UI, arith / gamma / dataport): fw/rtdfw in this repo (imported 2026-11-16,
+    no clean-room separation any more); $AWTO_RTDFW_REPO overrides it."""
     env = os.environ.get("AWTO_RTDFW_REPO")
-    if env:
-        return Path(env)
-    repo = Path("/mnt/2tb/git/awto-rtdfw")
-    refp = ROOT / "fw" / "awto" / "clean_ref.txt"
-    if not refp.exists() or not repo.is_dir():
-        return repo
-    ref = refp.read_text().split("#")[0].strip()
-    dst = ROOT / "tmp" / "clean-pin"
-    if not (dst / ".ref").exists() or (dst / ".ref").read_text() != ref:
-        import shutil
-        shutil.rmtree(dst, ignore_errors=True)
-        dst.mkdir(parents=True)
-        tar = subprocess.run(["git", "-C", str(repo), "archive", ref, "awto", "facts", "settings"], capture_output=True, check=True).stdout
-        subprocess.run(["tar", "-x", "-C", str(dst)], input=tar, check=True)
-        (dst / ".ref").write_text(ref)
-    return dst
+    return Path(env) if env else ROOT / "fw" / "rtdfw"
 
 
 CLEAN = _resolve_clean()

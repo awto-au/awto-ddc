@@ -14,7 +14,7 @@ Status 2026-11-16. Code: `fw/sdk/Kernel/System/Code/SysJudge.c` (system machine)
 | 80 | `pwr_l3_s` | inert (L3 delay) |
 | 81-83 | `wake_d1..d3` | inert |
 
-- Registry source: awto-rtdfw `settings/registry.tsv` + `awto/settings/set_table.c` (commit 98a05f1 on branch `rotate`, local only; pinned in `fw/awto/clean_ref.txt`).
+- Registry source: `fw/rtdfw/settings/registry.tsv` -> generated `fw/rtdfw/awto/settings/set_table.c` (`scripts/settings_gen.py`).
 
 ## Sleep requests: one gate
 

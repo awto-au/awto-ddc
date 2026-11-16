@@ -102,8 +102,7 @@ def main() -> int:
             dst.write_text("\n".join((ln if ln.startswith("#") else mod.resolve(ln, mod.HEADER)) for ln in (a.tree / "fw/awto/sync.tsv").read_text().splitlines()) + "\n")
         else:
             shutil.copy2(a.tree / "fw/awto/sync.tsv", dst)
-    pin = root / "tmp/clean-pin"
-    rtdfw = os.environ.get("AWTO_RTDFW_REPO") or (str(pin) if (pin / "settings/registry.tsv").is_file() else None)   # the registry this image was built from (live dir, else the pinned export): its host settings table
+    rtdfw = os.environ.get("AWTO_RTDFW_REPO") or str(a.tree / "fw/rtdfw")   # the registry this image was built from (live dir, else the pinned export): its host settings table
     if rtdfw:
         subprocess.run([sys.executable, str(root / "scripts/settings_gen.py"), "--rtdfw", rtdfw, "--host-out",
                         str(root / "tmp/fw" / f"{a.serial}-{a.tag}-be.settings_table.py")], check=True)

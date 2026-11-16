@@ -1,4 +1,6 @@
-# Clean-room process (awto-ddc#65)
+# Clean-room process (awto-ddc#65) - ENDED 2026-11-16
+
+- Dan 2026-11-16: "there is no clean room required". The clean tree (former repo `awto-rtdfw`, 91 commits) is imported with its history under `fw/rtdfw/` (settings registry, menu, OSD UI, arith / gamma / dataport, facts). Build and tools read `fw/rtdfw` (`$AWTO_RTDFW_REPO` overrides); `fw/awto/clean_ref.txt` and `tmp/clean-pin` are gone. Everything below is the history of the process.
 
 Goal: replace every Realtek SDK line our firmware links with code written from specs by people (agents) who never saw the SDK.
 Plan, inventory and step list: #65 (scoping comment). Dan's decisions: #65 comments of 2026-11-07.

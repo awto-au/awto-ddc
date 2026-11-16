@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Clean-room leak gate: does the clean tree share identifiers, code n-grams or comment prose with the vendor SDK? (#65)
 
-usage: cleanroom_lint.py [--tree /mnt/2tb/git/awto-rtdfw] [--rebuild] [--where] [--structural]
+usage: cleanroom_lint.py [--tree fw/rtdfw] [--rebuild] [--where] [--structural]
   Index (cached, tmp/cleanroom/sdk_index.npz; rebuilt when the SDK HEAD, tainted file set or this script changes):
     - identifiers: every distinctive identifier in SDK code (len >= 4, not all-lowercase, not a C/SDCC keyword)
     - code n-grams: 6 consecutive code tokens (comments dropped, numbers by value) with >= 2 content tokens (identifiers of 2+ chars, numbers > 1)
@@ -40,7 +40,7 @@ SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scal
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fw_dirs  # noqa: E402
 TAINTED = [ROOT / "fw" / "sdk", ROOT / "fw" / "sdcc", *fw_dirs.our_dirs(ROOT)]
-CLEAN = Path(os.environ.get("AWTO_RTDFW_REPO", "/mnt/2tb/git/awto-rtdfw"))
+CLEAN = Path(os.environ.get("AWTO_RTDFW_REPO") or ROOT / "fw/rtdfw")
 CACHE = ROOT / "tmp" / "cleanroom" / "sdk_index.npz"
 ALLOW = ROOT / "specs" / "lint_allow.tsv"
 SRC_EXT = {".c", ".h", ".asm", ".s", ".a51", ".inc"}
