@@ -2,7 +2,7 @@
 """Drop ONE host output (its logical monitor) for N seconds, then put the layout back exactly as it was.
 
 usage: host_output_drop.py UNIT [--hold-s N]
-  UNIT = devices.json unit number (its gdctl connector, e.g. 3 -> HDMI-2). Default hold 20 s.
+  UNIT = devices.json unit number (its gdctl connector, e.g. 3 -> HDMI-2). Default hold 5 s (monitor-wait limit).
   The restore args are taken from `gdctl show` BEFORE the drop (dev.gdctl_set_args with the monitor's own current mode =
   every logical monitor unchanged), so the layout returns to the same positions; no keep-changes dialog (temporary set).
   The restore runs in a finally block and on SIGTERM / SIGINT; a primary or only monitor is refused (dev.gdctl_set_args).
@@ -41,7 +41,7 @@ def gdctl_set(args: list[str]) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("unit")
-    ap.add_argument("--hold-s", type=float, default=20.0)
+    ap.add_argument("--hold-s", type=float, default=5.0)
     a = ap.parse_args()
     spec = importlib.util.spec_from_file_location("awto_dev", ROOT / "dev.py")
     dev = importlib.util.module_from_spec(spec)

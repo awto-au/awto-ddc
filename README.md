@@ -62,7 +62,7 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 - Headless tool host: `scripts/rtd_headless/` — C host for the ISP plugin's version reads (see `docs/rtdtool-headless-feasibility.md`).
 
 ## Docs
-- `docs/handover.md` — current state, units, decisions, branches, runbook, open decisions (start here when taking over).
+- `docs/history.md` — superseded beliefs; its last section is the former handover (frozen 2026-11-16). Current state: open issues, `docs/power-levels.md`, `./dev.py --help`.
 - `docs/osd.md` — OSD system overview (layers, fonts, inputs, tools, open work); start here for anything OSD.
 - `docs/firmware-proposal.md` — technical OSD design notes.
 - `docs/history.md` — superseded, refuted or wrong claims, one line each.
