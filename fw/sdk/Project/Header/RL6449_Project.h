@@ -1096,6 +1096,8 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_SYNC_EV_ODEMO                                      0xE9    // #226 OSD window demo (test cmds 0xA0..0xA5): arg = case, value = window
 #define AWTO_TC_OSD_DEMO                                        0xA0    // test cmd: + 0..4 = demo group, + 5 = close
 extern void AwtoOsdDemo(unsigned char ucGroup);
+#define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
+extern void AwtoQcOsd(unsigned char ucOn);
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)

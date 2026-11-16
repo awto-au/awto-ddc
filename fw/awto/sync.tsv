@@ -168,6 +168,8 @@ E9	42	n	OSD demo gradient window %:R + G, saturated colour mode
 E9	43	n	OSD demo gradient window %:R + G, reversed colour mode
 E9	44	n	OSD demo overlap windows %:4, 5, 6 drawn in that order, overlapping
 E9	FF	-	OSD demo closed
+E9	50	-	Realtek QC OSD pattern on:digits, 2-bit skull x 4 (map A), 4-bit skull x 5 (map B)
+E9	51	-	Realtek QC OSD pattern off
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake

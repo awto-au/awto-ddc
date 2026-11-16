@@ -248,7 +248,11 @@ void AwtoDiagTestCmd(void)
         return;
     }
     isr_g_stAwtoDiag.ucTestCmd = 0;
-    if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
+    if((ucCmd == AWTO_TC_QC_OSD) || (ucCmd == AWTO_TC_QC_OSD + 1))     // #227 Realtek QC OSD pattern (0xB0.. is the probe-columns range below)
+    {
+        AwtoQcOsd(ucCmd == AWTO_TC_QC_OSD);
+    }
+    else if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
     {
         AwtoOsdDemo(ucCmd - AWTO_TC_OSD_DEMO);
     }
