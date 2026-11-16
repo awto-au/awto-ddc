@@ -114,6 +114,7 @@ void AwtoSwMode(unsigned char ucMode)           // the system machine changed th
 void AwtoSwPoll(void)                           // once per main-loop pass: the power-saving wake poll (#144)
 {
     AWTO_SYNC_POLL();
+    AWTO_EDID_POLL();
 }
 
 #if(_AWTO_TMDS_HPD_RECOVER == _ON)

@@ -45,6 +45,7 @@ typedef struct
     WORD usL1Ms, usL2S, usL3S;
 } StAwtoPwrCfg;
 __xdata StAwtoPwrCfg g_stAwtoPwrCfg;
+__xdata BYTE g_ucAwtoSleepOk = 1;                  // pwr_l3_en
 
 
 //---- time, keys, status ----
@@ -344,6 +345,10 @@ void set_ap_power_mode(BYTE ucId, int iV)          // MCCS 0xD6: on, or any off 
         SET_FORCE_POW_SAV_STATUS(_FALSE);
         SysMachineRequest(_POWER_STATUS_NORMAL, AWTO_SYS_BY_VCP);
     }
+    else if(g_ucAwtoSleepOk == 0)
+    {
+        SysMachineRequest(_POWER_STATUS_SAVING, AWTO_SYS_BY_VCP);       // logged as ignored; the force-saving flag stays clear
+    }
     else
     {
         SET_FORCE_POW_SAV_STATUS(_TRUE);
@@ -500,11 +505,11 @@ void set_ap_power(BYTE ucId, int iV)               // placeholder store (see StA
 {
     switch(ucId)
     {
-        case AWTO_SET_PWR_L1_EN: g_stAwtoPwrCfg.ucL1En = (BYTE)iV; break;
-        case AWTO_SET_PWR_L2_EN: g_stAwtoPwrCfg.ucL2En = (BYTE)iV; break;
-        case AWTO_SET_PWR_L3_EN: g_stAwtoPwrCfg.ucL3En = (BYTE)iV; break;
+        case AWTO_SET_PWR_L1_EN: g_stAwtoPwrCfg.ucL1En = (BYTE)iV; AWTO_PWR_L1(iV); break;
+        case AWTO_SET_PWR_L2_EN: g_stAwtoPwrCfg.ucL2En = (BYTE)iV; AWTO_PWR_L2(iV); break;
+        case AWTO_SET_PWR_L3_EN: g_stAwtoPwrCfg.ucL3En = (BYTE)iV; g_ucAwtoSleepOk = (iV != 0); break;
         case AWTO_SET_PWR_L1_MS: g_stAwtoPwrCfg.usL1Ms = (WORD)iV; break;
-        case AWTO_SET_PWR_L2_S: g_stAwtoPwrCfg.usL2S = (WORD)iV; break;
+        case AWTO_SET_PWR_L2_S: g_stAwtoPwrCfg.usL2S = (WORD)iV; AWTO_PWR_L2S(iV); break;
         case AWTO_SET_PWR_L3_S: g_stAwtoPwrCfg.usL3S = (WORD)iV; break;
         default:
             if((ucId >= AWTO_SET_WAKE_D1) && (ucId <= AWTO_SET_WAKE_D3))

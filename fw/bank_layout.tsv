@@ -535,6 +535,7 @@ const	_tAwtoIicBase	C	0x1ed4	12
 stub	_AwtoDdcPumpGet	C	0x1ee0	8
 stub	_AwtoDdcRxDone	C	0x1ee8	8
 stub	_AwtoDdcRxFrame	C	0x1ef0	8
+stub	_AwtoEdidPoll	C	0x1ef8	8
 stub	_ScalerTimerInitialTimerEvent	C	0x1f34	8
 stub	_ScalerTimerReactiveTimerEvent	C	0x1fec	8
 stub	_ScalerDpRx1CDRCheck	C	0x1ff4	8
@@ -1607,6 +1608,7 @@ fn	_ScalerTimerWDCancelTimerEvent	3	0x9b90	44
 fn	_ScalerDpRx1InterlaceCheck	3	0x9bbc	2920
 fn	_AwtoPsWakeState	3	0xa724	252
 fn	_ScalerTimerDelayXmsQuiet	3	0xa820	152
+fn	_AwtoEdidPoll	3	0xa8b8	180
 const	_tDDR2_PLL_PHASE	4	0x0000	16
 const	_tAwtoAudioTestAmp	4	0x0010	12
 const	_tAwtoAudioTestGain	4	0x001c	16
@@ -1751,11 +1753,11 @@ fn	_SysSourceClearDetectingEvent	4	0x975c	44
 fn	_SysSourceScanPortInitial	4	0x9788	176
 fn	_SysTimerEventProc	4	0x9838	96
 fn	_UserCommonInterfaceOsdActiveProc	4	0x9898	12
-fn	_AwtoAudioAmp	4	0x98a4	144
 fn	_AwtoAudioTestGain	4	0x9934	64
 fn	_AwtoAudioTestStep	4	0x9974	256
 fn	_ScalerComputeDwordMulDiv	4	0x9a74	104
 fn	_AwtoAudioGain	4	0x9adc	196
+fn	_AwtoAudioAmp	4	0x9ba0	220
 const	_g_stOSDDefaultData	5	0x0000	28
 const	_g_stSixColorDefaultData	5	0x001c	16
 const	_tBriConDefaultData	5	0x002c	24
@@ -1847,7 +1849,6 @@ fn	_RTDFlashSearchPageAddr	5	0x26e0	140
 fn	_RTDFlashStartup	5	0x276c	220
 fn	_RTDFlashWholeRestore	5	0x2848	24
 fn	_UserAdjustBacklightDuty	5	0x2860	28
-fn	_UserInterfaceTimerEventProc	5	0x287c	88
 fn	_RTDFactoryDetOverRange	5	0x28d4	76
 fn	_RTDFactoryOsdDispNumber	5	0x2920	4112
 fn	_RTDFactoryOsdFuncClearOsdFontAll	5	0x3930	24
@@ -1928,6 +1929,7 @@ fn	_ScalerFlashWrite	5	0x6250	756
 fn	_ScalerFlashDetectFlashType	5	0x6544	616
 fn	_ScalerFlashErasePage	5	0x67ac	140
 fn	_nv_slot_check	5	0x6838	448
+fn	_UserInterfaceTimerEventProc	5	0x69f8	104
 fn	_ScalerFlashReadSR	5	0x6a80	28
 fn	_ScalerFlashSet2ByteWRSR	5	0x6a9c	68
 fn	_ScalerFlashSet2ByteWRSRonebyone	5	0x6ae0	100
@@ -1971,7 +1973,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1271	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1274	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2441,7 +2443,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1296	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1297	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
@@ -3129,6 +3131,7 @@ fn	_key_hold	10	0x83ec	52
 fn	_AwtoKeyId	10	0x8420	56
 fn	_AwtoKeyNoOsd	10	0x8458	28
 fn	_AwtoKeyMsgNote	10	0x8474	68
+fn	_set_ap_power_mode	10	0x84b8	68
 fn	_AwtoNvCommitSel	10	0x85c8	48
 fn	_AwtoNvTestWrite	10	0x85f8	40
 fn	_AwtoTo255	10	0x8620	24
@@ -3144,8 +3147,7 @@ fn	_set_ap_osd_font	10	0x8740	16
 fn	_set_ap_osd_pos	10	0x8750	28
 fn	_set_ap_osd_scale	10	0x876c	20
 fn	_set_ap_overscan	10	0x8780	32
-fn	_set_ap_power	10	0x87a0	164
-fn	_set_ap_power_mode	10	0x8844	56
+fn	_set_ap_power	10	0x87a0	208
 fn	_set_ap_sdk_language	10	0x887c	24
 fn	_AwtoSwPoll	10	0x8894	16
 fn	_AwtoPsDdcSeen	10	0x88a4	92

@@ -1091,6 +1091,7 @@ extern void AwtoOsdBlend(void);                                // OSD blend + os
 #define AWTO_TC_HOST_TIME                                       0x0E    // test cmd: AwtoHtSync(isr_g_stAwtoHt.aucPend) (#157 over 0x35)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
+#define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUXCMD                                  0xDB    // arg = port: AUX command in power saving, no wake
@@ -1199,12 +1200,15 @@ extern void AwtoPsDdcSeen(unsigned char ucPort);
 extern void AwtoPsAuxSeen(unsigned char ucPort);              // SDK DP PS predetect: AUX toggle counted, no wake (keil2sdcc sub)              // SDK TMDS PS predetect: DDC handshake counted, no wake (keil2sdcc sub)
 // #162 step 3: power status changes are logged by the system machine (AwtoSyncPoll at the transition); per pass only the wake poll
 #define AWTO_SYNC_POLL()                                        { if(g_ucAwtoSyncPwr == _POWER_STATUS_SAVING) { AwtoPsWakePoll(); } }
+extern void AwtoEdidPoll(void);
+#define AWTO_EDID_POLL()                                        AwtoEdidPoll()
 // between main-loop handlers (keil2sdcc): armed (AwtoSyncPoll saw SAVING) and still SAVING; the poll returns unless due
 // one call per site, the compares in AwtoPsPollSite: 14 sites in main, which is in the full common area (#157 merge)
 extern void AwtoPsPollSite(void);
 #define AWTO_PS_POLL_SITE()                                     AwtoPsPollSite()
 #else
 #define AWTO_SYNC_POLL()
+#define AWTO_EDID_POLL()
 #define AWTO_PS_POLL_SITE()
 #endif
 extern __xdata unsigned char g_ucAwtoConAuto;  // the open console opened itself: SOURCE closes it for the selector (#132)
@@ -1503,6 +1507,7 @@ extern void UserCommonInterfacePanelBootDuty(void);
 #define AWTO_SYS_REFUSED                                        3
 #define AWTO_SYS_KEPT                                           4       // kept until the state can take it
 #define AWTO_SYS_DROPPED                                        5       // pending search reset dropped: the no-signal search confirmed a timing first (#132)
+#define AWTO_SYS_IGNORED                                        6       // power saving request ignored: pwr_l3_en off (Dan 2026-11-16)
 #define AWTO_SYS_MS_MAX                                         0xFFFFFFUL     // transition line: ms in the old state, 24 bits (4.6 h)
 #define AWTO_SW_EV_SYS                                          0x13    // transition: arg old << 4 | new; ring value why << 24 | ms in old
 #define AWTO_SW_EV_SYS_REQ                                      0x14    // request: arg request; ring value who << 8 | outcome
@@ -1518,6 +1523,16 @@ extern void SysMachineInit(void);
 extern void SysMachineHandler(void);
 extern void SysMachineWork(void);
 extern void SysMachineRequest(unsigned char ucReq, unsigned char ucBy);
+#if(_AWTO_WAKE_HOLD == _ON)
+#define AWTO_PWR_L1(v)                                          { g_stAwtoPower.ucL1 = ((v) != 0); }       // pwr_l1_en: signal lost in ACTIVE -> hold with the backlight off
+#define AWTO_PWR_L2(v)                                          { g_stAwtoPower.ucL2 = ((v) != 0); }       // pwr_l2_en: the hold ends after pwr_l2_s
+#define AWTO_PWR_L2S(v)                                         { g_stAwtoPower.usL2Sec = (unsigned int)(v); }
+#else
+#define AWTO_PWR_L1(v)
+#define AWTO_PWR_L2(v)
+#define AWTO_PWR_L2S(v)
+#endif
+extern __xdata unsigned char g_ucAwtoSleepOk;      // pwr_l3_en: 0 = every power saving request is ignored (logged)
 extern bit SysMachineOffOrGoing(void);
 // D1 DPCD default: SDK OSD default is DP 1.1 = HBR max (4K60 pruned by the host); vendor runs 4K60 over DP = HBR2 (#28)
 #define _AWTO_DP_D1_VERSION                                     _DP_VER_1_DOT_2

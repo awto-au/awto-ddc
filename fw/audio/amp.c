@@ -29,9 +29,11 @@ void AwtoAudioAmp(bit bMute)
         AwtoSyncPush(AWTO_SYNC_EV_AUDIO, AWTO_AUDIO_EV_AMP_TEST, g_ucAwtoAudioTestN);
         return;
     }
+    BYTE ucSame = (bAMP_EN == ((bMute == _ON) ? 0 : 1)) && (bAMP_MUTE == ((bMute == _ON) ? 1 : 0));
+
     bAMP_EN = (bMute == _ON) ? 0 : 1;
     bAMP_MUTE = (bMute == _ON) ? 1 : 0;
-    AwtoSyncPush(AWTO_SYNC_EV_AUDIO, (bMute == _ON) ? AWTO_AUDIO_EV_AMP_OFF : AWTO_AUDIO_EV_AMP_ON, 0);
+    AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ((bMute == _ON) ? AWTO_AUDIO_EV_AMP_OFF : AWTO_AUDIO_EV_AMP_ON) + ((ucSame != 0) ? 4 : 0), 0);   // repeat = "already", never dropped
 }
 
 // Ear-test gain while a step is held, else 0 (AwtoAudioGain: user volume)

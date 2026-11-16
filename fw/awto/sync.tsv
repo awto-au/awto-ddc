@@ -138,6 +138,7 @@ C8	*	portmhz3	pixel clock %
 CA	*	-	console opened (sync log)
 CB	*	port	cable plugged in:wake
 CC	*	port	EDID read by source:wake
+E7	*	port	EDID read by source:awake, no wake needed
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake
@@ -171,8 +172,10 @@ E1	08	vport	wake on % suppressed:input disabled (once per trigger per sleep)
 E1	09	vport	disable % requested:already disabled
 E1	0A	vport	enable % requested:already enabled
 E1	0B	vport	fixed search on disabled %:auto search
-E5	01	-	speaker amp on:P7.4 = 1, AMP_MUTE P7.3 = 0
-E5	02	-	speaker amp off:P7.4 = 0, AMP_MUTE P7.3 = 1
+E5	01	-	audio on:amp P7.4 = 1, AMP_MUTE P7.3 = 0
+E5	02	-	audio off:amp P7.4 = 0, AMP_MUTE P7.3 = 1
+E5	05	-	audio on:already on, no change (SDK unmute again)
+E5	06	-	audio off:already off, no change (SDK mute again)
 E5	04	n	unmute while audio test step % is held:P7.4 / AMP_MUTE P7.3 as that step sets them
 E5	11	-	audio test 1/6:aout, P7.4 on, P7.3 low, -6dB
 E5	12	-	audio test 2/6:aout, P7.4 OFF, P7.3 low, -6dB
@@ -315,6 +318,7 @@ CF	06	vport	wake suppressed (TMDS clock, once per sleep):%
 18	03	-	refused in this state
 18	04	-	kept until the state allows it
 18	05	-	dropped:the no-signal search found a timing first
+18	06	-	IGNORED:power saving is off in the settings (L3 deep sleep), the monitor stays on
 19	00	-	->
 19	02	-	 (
 19	03	-	 ms):

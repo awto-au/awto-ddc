@@ -643,6 +643,11 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
             break;
 
         case _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING:
+            if(g_ucAwtoSleepOk == 0)
+            {
+                SysMachineRequest(_POWER_STATUS_SAVING, AWTO_SYS_BY_OSD_PS);    // logged as ignored: the no-signal card stays
+                break;
+            }
             SET_OSD_EVENT_MESSAGE(_OSDEVENT_SHOW_POWER_SAVING_EVENT_MSG);
             break;
 

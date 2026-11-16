@@ -215,7 +215,11 @@ void SysMachineRequest(BYTE ucReq, BYTE ucBy)
     }
     if(ucReq < AWTO_SYS_REQ_MODE)               // power target
     {
-        if(((ucReq == _POWER_STATUS_OFF) && (s_ucSysState == AWTO_SYS_OFF)) || ((ucReq == _POWER_STATUS_SAVING) && (s_ucSysState == AWTO_SYS_SAVING)) ||
+        if((ucReq == _POWER_STATUS_SAVING) && (g_ucAwtoSleepOk == 0))
+        {
+            ucOut = AWTO_SYS_IGNORED;           // pwr_l3_en off: the monitor stays on, the request is logged and dropped
+        }
+        else if(((ucReq == _POWER_STATUS_OFF) && (s_ucSysState == AWTO_SYS_OFF)) || ((ucReq == _POWER_STATUS_SAVING) && (s_ucSysState == AWTO_SYS_SAVING)) ||
            ((ucReq == _POWER_STATUS_NORMAL) && (s_ucSysState >= AWTO_SYS_INITIAL) && (s_ucSysState <= AWTO_SYS_WAKE) && (s_ucSysState != AWTO_SYS_SAVING)) ||
            (ucReq == GET_TARGET_POWER_STATUS()))
         {
