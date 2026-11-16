@@ -38,8 +38,8 @@ BLOB_FILES = [
     SDK / "RTD Factory/Code/RTDFactoryFunction.c",
     SDK / "RTD Series/RTD2014Osd/Code/RTD2014OsdFontTable.c",
 ]
-HEX_FONTS = [("Spleen 8x16 (awto menu default)", Path("/mnt/2tb/git/awto-rtdfw-ui/awto/osd/spleen-8x16.hex"), 8, 16),
-             ("Tamzen 8x15 (awto menu option)", Path("/mnt/2tb/git/awto-rtdfw-ui/awto/osd/tamzen-8x15.hex"), 8, 15)]
+HEX_FONTS = [("Spleen 8x16 (awto menu default)", ROOT / "fw/rtdfw/awto/osd/spleen-8x16.hex", 8, 16),
+             ("Tamzen 8x15 (awto menu option)", ROOT / "fw/rtdfw/awto/osd/tamzen-8x15.hex", 8, 15)]
 PAGE_W, PAGE_MAX_H, SCALE = 3840, 7000, 3
 BG, FG, PANEL = (24, 24, 24), (230, 230, 230), (255, 255, 255)
 FONT = ImageFont.load_default(size=22)
@@ -200,7 +200,7 @@ def main():
 
     fpanels = [hex_font_panel(*f) for f in HEX_FONTS if f[1].exists()]
     names = pack(fpanels, "awto_fonts", out, "awto menu fonts")
-    sections.append(("awto menu fonts (Spleen, Tamzen)", names, "awto-rtdfw-ui awto/osd/*.hex"))
+    sections.append(("awto menu fonts (Spleen, Tamzen)", names, "fw/rtdfw/awto/osd/*.hex"))
 
     body = "\n".join(
         f"<section><h2>{html.escape(t)}</h2><p>{html.escape(s)}</p>" + "".join(f'<a href="{n}"><img src="{n}"></a>' for n in ns) + "</section>"

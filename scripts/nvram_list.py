@@ -9,7 +9,7 @@ usage: nvram_list.py [--unit N --map MAP] [--doc docs/nvram-settings.md] [--no-d
     (b) registry values through the firmware VCP mailbox: the same GET a DDC/CI host does (no set, no save).
     Flash contents are NOT read: no firmware read path over the debug slave, ISP resets the unit, and the archived
     images are code only (0x00000-0xDFFFF).
-  Sources: $AWTO_SDK_SRC (default awto-ddc-ui/tmp/sdcc-port/src), $AWTO_RTDFW_UI (default awto-rtdfw-ui).
+  Sources: $AWTO_SDK_SRC (default awto-ddc-ui/tmp/sdcc-port/src), $AWTO_RTDFW_UI (default fw/rtdfw).
   Bitfield layout rule (SDCC, checked against the live bytes): LSB first, never straddling a byte, a non-bitfield
   member starts a new byte, WORD members big-endian in a --big-endian build.
 Log: ./tmp/logs/nvram_list.log
@@ -35,7 +35,7 @@ def repo_root() -> Path:
 
 ROOT = repo_root()
 SDK = Path(os.environ.get("AWTO_SDK_SRC") or ROOT.parent / "awto-ddc-ui/tmp/sdcc-port/src")
-UI = Path(os.environ.get("AWTO_RTDFW_UI") or ROOT.parent / "awto-rtdfw-ui")
+UI = Path(os.environ.get("AWTO_RTDFW_UI") or ROOT / "fw/rtdfw")
 LOG = ROOT / "tmp/logs/nvram_list.log"
 
 OSD_H = SDK / "User/RTD Series/RTD2014Osd/Header/RTD2014NVRamOsd.h"

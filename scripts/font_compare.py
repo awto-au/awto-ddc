@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RTDFW = Path("/mnt/2tb/git/awto-rtdfw-ui")
+RTDFW = Path(__file__).resolve().parents[1] / "fw/rtdfw"
 GEN = RTDFW / "tools/gen_font.py"
 OUT = ROOT / "tmp/font-comparison.png"
 FONT_DIR = ROOT / "tmp/font-candidates"
