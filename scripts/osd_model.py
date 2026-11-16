@@ -521,9 +521,31 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                 else:
                     x += ch["width"] or GW
             y += row["h"]
-    draw_rows(layout_rows(st, g), fx, fy)
+    rot = (st.reg(FRAME + 0x41) >> 4 & 3) if st.reg(FRAME + 0x41) & 1 else None     # auto rotation: 0 CCW, 1 CW, 2 180 (3A41 [5:4] / [0])
+    rk = {0: 1, 1: -1, 2: 2}.get(rot)
+
+    def rotated(rows, fx, fy):                              # the engine rotates map + font SRAM; the sim does not, so rotate the drawn map [approximation]
+        if rk is None:
+            return draw_rows(rows, fx, fy)
+        o0, c0, v0 = osd.copy(), cov.copy(), vid.copy()
+        draw_rows(rows, fx, fy)
+        ch = (cov != c0) | (osd != o0).any(axis=2)
+        if not ch.any():
+            return
+        ys, xs = np.nonzero(ch)
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        so, sc, sv = osd[y0:y1, x0:x1].copy(), cov[y0:y1, x0:x1].copy(), vid[y0:y1, x0:x1].copy()
+        osd[y0:y1, x0:x1], cov[y0:y1, x0:x1], vid[y0:y1, x0:x1] = o0[y0:y1, x0:x1], c0[y0:y1, x0:x1], v0[y0:y1, x0:x1]
+        so, sc, sv = np.rot90(so, rk), np.rot90(sc, rk), np.rot90(sv, rk)
+        h, w = sc.shape
+        h, w = min(h, H - y0), min(w, W - x0)
+        m = sc[:h, :w]
+        osd[y0:y0 + h, x0:x0 + w][m] = so[:h, :w][m]
+        cov[y0:y0 + h, x0:x0 + w] |= m
+        vid[y0:y0 + h, x0:x0 + w][m] = sv[:h, :w][m]
+    rotated(layout_rows(st, g), fx, fy)
     if g["two"]:                                              # second map: its own origin (hd2 / vd2) and font delay
-        draw_rows(layout_rows(st, g, g["row_base1"], g["fs_base1"]), g["hd2"] * g["step"] * sx + g["fhb"] * sx, g["vd2"] * sy + g["fvb"] * sy)
+        rotated(layout_rows(st, g, g["row_base1"], g["fs_base1"]), g["hd2"] * g["step"] * sx + g["fhb"] * sx, g["vd2"] * sy + g["fvb"] * sy)
     for w in wins:
         if higher.get(w["i"]):
             draw_win(w)
