@@ -1098,6 +1098,8 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);
+#define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
+extern void AwtoDpgTest(unsigned char ucOn);
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
 extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);

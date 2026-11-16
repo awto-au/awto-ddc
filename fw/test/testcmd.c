@@ -252,6 +252,10 @@ void AwtoDiagTestCmd(void)
     {
         AwtoQcOsd(ucCmd == AWTO_TC_QC_OSD);
     }
+    else if((ucCmd == AWTO_TC_DPG) || (ucCmd == AWTO_TC_DPG + 1))
+    {
+        AwtoDpgTest(ucCmd == AWTO_TC_DPG);
+    }
     else if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
     {
         AwtoOsdDemo(ucCmd - AWTO_TC_OSD_DEMO);
