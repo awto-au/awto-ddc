@@ -172,9 +172,13 @@ OSD_INFO_SIZE_LEGACY = 15                                       # sizeof(StructO
 
 
 def osd_offsets_from_map(map_text: str) -> dict:
-    """Size = gap to the next symbol (the DP-info function used before is gone since #124)."""
-    m = re.search(r"^\w:\s+([0-9A-F]{8})\s+_g_stOsdInfo\s.*\n\w:\s+([0-9A-F]{8})\s", map_text, re.M)
-    shift = 1 if m and int(m[2], 16) - int(m[1], 16) > OSD_INFO_SIZE_LEGACY else 0
+    """Size = gap to the next higher XDATA symbol address (sorted: the symbol after it in the listing may be in another section)."""
+    m = re.search(r"^\w:\s+([0-9A-F]{8})\s+_g_stOsdInfo\s", map_text, re.M)
+    if not m:
+        return dict(OSD_OFS_LEGACY)
+    at = int(m[1], 16)
+    nxt = min((a for a in (int(x, 16) for x in re.findall(r"^D:\s+([0-9A-F]{8})\s+_\w+", map_text, re.M)) if a > at), default=None)
+    shift = 1 if nxt is not None and nxt - at > OSD_INFO_SIZE_LEGACY else 0
     return {k: v + shift for k, v in OSD_OFS_LEGACY.items()}
 
 

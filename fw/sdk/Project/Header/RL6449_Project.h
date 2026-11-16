@@ -1091,6 +1091,8 @@ extern void AwtoOsdBlend(void);                                // OSD blend + os
 #define AWTO_TC_HOST_TIME                                       0x0E    // test cmd: AwtoHtSync(isr_g_stAwtoHt.aucPend) (#157 over 0x35)
 extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig returns _MEMORY_WORK_MODE (FRC builds); RAM only, 0 at boot
 #define AWTO_SYNC_EV_WAKE_TMDS                                  0xDC    // arg = port: a TMDS clock woke the monitor, value = clock 0.1 MHz (IOSC ref)
+#define AWTO_SYNC_EV_OSDP                                       0xE8    // #226 OSD SRAM probe (test cmd 0x0F): arg 1 done (value = addresses written), 3 refused (OSD on)
+#define AWTO_TC_OSD_SRAM_PROBE                                  0x0F    // test cmd: write / read back markers in the OSD font + map SRAM (M1 and M2) from the MCU
 #define AWTO_SYNC_EV_EDID                                       0xE7    // arg = port: the source read the EDID (awake; the power saving reads are the wake lines)
 #define AWTO_SYNC_EV_PS_DDC                                     0xDD    // arg = port: SDK DDC handshake in power saving, gated (once per sleep)
 #define AWTO_SYNC_EV_PS_AUX                                     0xDA    // arg = port: SDK DP AUX toggle in power saving, gated (once per sleep)

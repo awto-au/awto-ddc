@@ -15,6 +15,13 @@
 #define AWTO_R_IVS2DVS_DLY_TUNE_ODD                     0x0041
 #define AWTO_R_LAST_LINE_L                              0x0045
 #define AWTO_R_HSYNC_TYPE_DETECTION_FLAG                0x004E
+#define AWTO_R_OSD_DATA_PORT                            0x0092
+#define AWTO_R_OSD_MISC_PORT                            0x0093
+#define AWTO_F_OSD_MISC_PORT_DB_ENABLE                  0x80
+#define AWTO_F_OSD_MISC_PORT_SRAM_READ_SELECT           0x20
+#define AWTO_R_OSD_WRITE_OPTION                         0x0094
+#define AWTO_F_OSD_WRITE_OPTION_BYTESEL                 0xE0
+#define AWTO_F_OSD_WRITE_OPTION_SRAM_SEL                0x0C
 #define AWTO_R_ADC_POWER                                0x00C6
 #define AWTO_R_ADC_COMPARE_FLAG                         0x00CD
 #define AWTO_R_ADC_SOG_CTRL                             0x00D4
@@ -23,6 +30,8 @@
 #define AWTO_R_DCLK_FINE_TUNE_OFFSET_LSB                0x01C5
 #define AWTO_R_CAP_M1_FIFO_STATUS                       0x052B
 #define AWTO_R_DISP_M1_FIFO_STATUS                      0x05B0
+#define AWTO_R_FRAME_CTRL_02                            0x3A02
+#define AWTO_F_FRAME_CTRL_02_OSD_EN                     0x01
 #define AWTO_R_FRAME_CTRL_0B                            0x3A0B
 #define AWTO_F_FRAME_CTRL_0B_F_DL_SWAP                  0xC0
 #define AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN               0x04
@@ -38,6 +47,8 @@
 #define AWTO_R_FRAME_CTRL_1B                            0x3A1B
 #define AWTO_F_FRAME_CTRL_1B_FS_BASE0                   0xF0
 #define AWTO_R_FRAME_CTRL_1C                            0x3A1C
+#define AWTO_R_FRAME_CTRL_33                            0x3A33
+#define AWTO_F_FRAME_CTRL_33_SRAM_READ_EN               0x10
 #define AWTO_R_CAP_M2_FIFO_STATUS                       0x452B
 #define AWTO_R_DISP_M2_FIFO_STATUS                      0x45B0
 #define AWTO_R_PB7_AUX_IRQ_STATUS                       0xB7DC

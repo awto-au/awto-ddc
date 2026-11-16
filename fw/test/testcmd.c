@@ -32,6 +32,103 @@ bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: th
     return _TRUE;
 }
 
+// #226 OSD SRAM probe, on the MCU through the SDK write path (not over I2C): per address read M1 and M2 (0x0093[5] sram_read_select),
+// write the marker <addr hi>, <addr lo>, B2 to both, read M1 / M2 again, put zeros back. An address that is not all zero before
+// (live OSD data) is only read. OSD must be off (0x3A33[4] sram_read_en reads only with the OSD off; the 2nd read is the right one).
+#define AWTO_OSDP_N                             13
+#define AWTO_OSDP_MARK_B2                       0xA5
+typedef struct
+{
+    BYTE ucState;                                       // 0 idle, 2 done, 3 refused (OSD on)
+    BYTE ucCircuit;                                     // OSD circuit enable (0x3A02[0]) before the probe
+    WORD ausAddr[AWTO_OSDP_N];
+    BYTE aucOrig[AWTO_OSDP_N][6];                       // M1 B0..B2, M2 B0..B2 before
+    BYTE aucMark[AWTO_OSDP_N][6];                       // the same after the marker write
+    BYTE aucSkip[AWTO_OSDP_N];                          // 1 = not all zero before: read only
+} StAwtoOsdProbe;
+__xdata StAwtoOsdProbe g_stAwtoOsdProbe;
+static const __code WORD tAwtoOsdProbeAddr[AWTO_OSDP_N] = {0x0000, 0x0800, 0x0FFF, 0x1000, 0x1FFF, 0x2000, 0x2FFF, 0x3000, 0x3FFF, 0x4000, 0x5000, 0x6000, 0x7FFF};
+
+static void AwtoOsdProbeRead(WORD usAddr, BYTE ucSel, BYTE *pucOut)
+{
+    BYTE ucP;
+    BYTE ucPlane;
+
+    ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_SRAM_READ_SELECT, (ucSel != 0) ? AWTO_F_OSD_MISC_PORT_SRAM_READ_SELECT : 0x00);
+    for(ucP = 0; ucP < 3; ucP++)
+    {
+        ucPlane = (ucP == 0) ? _OSD_BYTE0 : ((ucP == 1) ? _OSD_BYTE1 : _OSD_BYTE2);
+        ScalerOsdAddrSet(_OSD_SRAM, ucPlane, usAddr, _OSD_WITHOUT_DB);
+        ScalerGetByte(AWTO_R_OSD_DATA_PORT);                 // first read discarded
+        ScalerOsdAddrSet(_OSD_SRAM, ucPlane, usAddr, _OSD_WITHOUT_DB);
+        pucOut[ucP] = ScalerGetByte(AWTO_R_OSD_DATA_PORT);
+    }
+}
+
+static void AwtoOsdSramProbe(void)
+{
+    BYTE ucI;
+    BYTE ucS;
+    BYTE ucK;
+    BYTE ucMisc;
+    BYTE ucWrote = 0;
+    bit bCircuit = (ScalerGetBit(AWTO_R_FRAME_CTRL_02, AWTO_F_FRAME_CTRL_02_OSD_EN) != 0x00);
+    WORD usA;
+
+    if(ScalerOsdGetOsdEnable() == _TRUE)
+    {
+        g_stAwtoOsdProbe.ucState = 3;
+        AwtoSyncPush(AWTO_SYNC_EV_OSDP, 3, 0);
+        return;
+    }
+    ScalerOsdCircuitActivated(_ENABLE);                     // the SDK activates the OSD circuit before any SRAM access (waits 2 DVS); no-op when on
+    ucMisc = ScalerGetByte(AWTO_R_OSD_MISC_PORT);
+    ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_DB_ENABLE, 0x00);        // global double buffer off: writes latch at once
+    ScalerSetBit(AWTO_R_FRAME_CTRL_33, ~AWTO_F_FRAME_CTRL_33_SRAM_READ_EN, AWTO_F_FRAME_CTRL_33_SRAM_READ_EN);      // sram_read_en
+    for(ucI = 0; ucI < AWTO_OSDP_N; ucI++)
+    {
+        usA = tAwtoOsdProbeAddr[ucI];
+        g_stAwtoOsdProbe.ausAddr[ucI] = usA;
+        for(ucS = 0; ucS < 2; ucS++)
+        {
+            AwtoOsdProbeRead(usA, ucS, &g_stAwtoOsdProbe.aucOrig[ucI][ucS * 3]);
+        }
+        g_stAwtoOsdProbe.aucSkip[ucI] = 0;
+        for(ucK = 0; ucK < 6; ucK++)
+        {
+            g_stAwtoOsdProbe.aucSkip[ucI] |= g_stAwtoOsdProbe.aucOrig[ucI][ucK];
+        }
+        if(g_stAwtoOsdProbe.aucSkip[ucI] != 0)
+        {
+            g_stAwtoOsdProbe.aucSkip[ucI] = 1;
+            continue;
+        }
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usA, _OSD_WITHOUT_DB);
+        ScalerSetByte(AWTO_R_OSD_DATA_PORT, HIBYTE(usA));
+        ScalerSetByte(AWTO_R_OSD_DATA_PORT, LOBYTE(usA));
+        ScalerSetByte(AWTO_R_OSD_DATA_PORT, AWTO_OSDP_MARK_B2);
+        for(ucS = 0; ucS < 2; ucS++)
+        {
+            AwtoOsdProbeRead(usA, ucS, &g_stAwtoOsdProbe.aucMark[ucI][ucS * 3]);
+        }
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usA, _OSD_WITHOUT_DB);
+        ScalerSetByte(AWTO_R_OSD_DATA_PORT, 0x00);           // zeros back (it was all zero)
+        ScalerSetByte(AWTO_R_OSD_DATA_PORT, 0x00);
+        ScalerSetByte(AWTO_R_OSD_DATA_PORT, 0x00);
+        ucWrote++;
+    }
+    ScalerSetBit(AWTO_R_FRAME_CTRL_33, ~AWTO_F_FRAME_CTRL_33_SRAM_READ_EN, 0x00);
+    ScalerSetBit(AWTO_R_OSD_WRITE_OPTION, ~(AWTO_F_OSD_WRITE_OPTION_BYTESEL | AWTO_F_OSD_WRITE_OPTION_SRAM_SEL), 0x00);   // byte select reset, address indicator = window registers
+    ScalerSetByte(AWTO_R_OSD_MISC_PORT, ucMisc);
+    if(bCircuit == _FALSE)
+    {
+        ScalerOsdCircuitActivated(_DISABLE);                // back as found
+    }
+    g_stAwtoOsdProbe.ucState = 2;
+    g_stAwtoOsdProbe.ucCircuit = bCircuit;
+    AwtoSyncPush(AWTO_SYNC_EV_OSDP, 1, ucWrote);
+}
+
 // #165 step 2: memory work mode for the current timing; one sync line per request (E3), one per resulting select change
 static void AwtoMemForce(BYTE ucOn)
 {
@@ -323,6 +420,10 @@ void AwtoDiagTestCmd(void)
     {
         extern void AwtoStackDeepTest(void);
         AwtoStackDeepTest();
+    }
+    else if(ucCmd == AWTO_TC_OSD_SRAM_PROBE)            // #226 OSD SRAM markers from the MCU
+    {
+        AwtoOsdSramProbe();
     }
     else if(ucCmd == AWTO_TC_A5_PROBE)                  // reserved opcode 0xA5 (a5_probe.asm)
     {

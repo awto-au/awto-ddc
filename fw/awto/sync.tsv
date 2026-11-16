@@ -139,6 +139,8 @@ CA	*	-	console opened (sync log)
 CB	*	port	cable plugged in:wake
 CC	*	port	EDID read by source:wake
 E7	*	port	EDID read by source:awake, no wake needed
+E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
+E8	03	-	OSD SRAM probe refused:the OSD is on
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake
