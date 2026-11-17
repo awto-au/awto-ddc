@@ -7,6 +7,10 @@ Status: design only; nothing built. Prototypes today are test cmds, not screensa
 - Two screensavers, run by the scaler firmware itself (no host):
   - **Pac-Man**: `fw/test/pacman_classic.c` (+ sound `pacman_sound.c`), test cmds 0xB7 / 0xB8 / 0xB9 today.
   - **Scope**: OSD line renderer `tools/osd_lines` (384 x 216, 12 x 18 tiles, `docs/reversing/realtek-rtd/osd-font-download.md`), a waveform screen.
+- **Scope 2** (Dan, 2026-11-17, reference photo of a bench scope): red graticule with minor ticks on the centre axes, green pulse trace, two dotted vertical cursors, 100 / 90 / 10 / 0 % marks on the left, readouts on top (frequency, delta t), scale labels at the bottom (volts per div, time per div). Scope 1 (`scope_saver.c`) stays as is.
+  - Two colours per tile: 2-bit glyphs (planes: graticule, trace), 256 glyph ids -> 28 x 9 tiles (336 x 162 px); the one-band canvas is reused per plane (XDATA floor).
+  - Text from a small pixel font drawn into the canvas; numbers from the waveform shown.
+  - Mode enum gets a `Scope 2` entry; Alternate cycles all three.
 - Trigger: **both** no signal and idle timeout with a live picture.
 - Selection: **both** a settings-menu choice (Off / Pac-Man / Scope) and an Alternate choice (switch every few minutes).
 
