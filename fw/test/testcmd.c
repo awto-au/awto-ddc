@@ -256,9 +256,9 @@ void AwtoDiagTestCmd(void)
     {
         AwtoDpgTest(ucCmd == AWTO_TC_DPG);
     }
-    else if((ucCmd >= AWTO_TC_PACMAN) && (ucCmd <= AWTO_TC_PACMAN + 2))
+    else if((ucCmd >= AWTO_TC_PACMAN_FULL) && (ucCmd <= AWTO_TC_PACMAN_FULL + 2))
     {
-        AwtoPacman((ucCmd == AWTO_TC_PACMAN) ? 1 : ((ucCmd == AWTO_TC_PACMAN + 1) ? 2 : 0));        // 1 = draw, 2 = next frame, 0 = off
+        AwtoPacmanFull((ucCmd == AWTO_TC_PACMAN_FULL) ? 1 : ((ucCmd == AWTO_TC_PACMAN_FULL + 1) ? 2 : 0));
     }
     else if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
     {

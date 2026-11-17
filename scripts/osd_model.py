@@ -426,7 +426,7 @@ def layout_rows(st: OsdState, g: dict, rb: int | None = None, cb: int | None = N
         if rc is None or not rc[0] & 0x80:
             break
         n = rc[2]
-        rows.append(dict(h=(rc[1] & 0x1F) + 1, n=n, chars=[decode_char(st.font.get(ca + k, [0, 0, 0])) for k in range(n)]))
+        rows.append(dict(h=(rc[1] & 0x3F) + 1, n=n, chars=[decode_char(st.font.get(ca + k, [0, 0, 0])) for k in range(n)]))
         a, ca = a + 1, ca + n
     return rows
 

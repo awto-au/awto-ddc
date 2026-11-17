@@ -172,9 +172,9 @@ E9	50	-	Realtek QC OSD pattern on:digits, 2-bit skull x 4 (map A), 4-bit skull x
 E9	51	-	Realtek QC OSD pattern off
 E9	60	-	Realtek QC D-domain pattern generator on (12-bit ramp, #228)
 E9	61	-	Realtek QC D-domain pattern generator off
-E9	70	-	Pac-Man OSD prototype drawn (maze, frame 0 next)
-E9	71	n	Pac-Man OSD frame %:cell updates applied
-E9	72	-	Pac-Man OSD off
+E9	73	-	Full-screen Pac-Man drawn (80 x 60 cells, 24x36 glyphs at 2x)
+E9	74	n	Full-screen Pac-Man step %:cell updates applied
+E9	75	-	Full-screen Pac-Man off
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake
