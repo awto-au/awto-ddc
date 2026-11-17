@@ -69,6 +69,7 @@ static void PsStart(BYTE ucTrack)
     PsStop();
     SysAudioInternalGenTestProc(_ON);
     SysAudioMuteProc(_OFF);
+    AwtoAudioAmp(_OFF);                         // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
     s_ucPsRun = (ucTrack >= AWTO_PS_TRACKS) ? 2 : 1;
     s_ucPsTrack = ucTrack;
     s_usPsPos = (ucTrack == 0) ? AWTO_PS_OFF_INTRO : ((ucTrack == 1) ? AWTO_PS_OFF_WAKA : AWTO_PS_OFF_DEATH);
