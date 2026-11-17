@@ -54,6 +54,30 @@ def sudo(cmd):
     return r
 
 
+def vermagic_release(text: str) -> str:
+    """Kernel release a module was built for: the first word of modinfo's vermagic line ("7.3.4-300.fc45.x86_64 SMP preempt ...")."""
+    words = text.split()
+    return words[0] if words else ""
+
+
+def ko_matches_kernel() -> bool:
+    """False when the built module is missing or was built for another kernel (insmod then fails with 'Invalid module format')."""
+    if not KO.exists():
+        return False
+    r = subprocess.run(["modinfo", "-F", "vermagic", str(KO)], capture_output=True, text=True, timeout=T_SUDO)
+    return r.returncode == 0 and vermagic_release(r.stdout) == os.uname().release
+
+
+def ensure_built() -> int:
+    """Build for the running kernel unless the .ko already matches it; 0 = ready. A kernel update therefore needs no manual step."""
+    if ko_matches_kernel():
+        return 0
+    log(f"module missing or built for another kernel (running {os.uname().release}): rebuilding")
+    if KO.exists():
+        run(["make", "-C", str(SRC), "clean"], T_MAKE)
+    return run(["make", "-C", str(SRC)], T_MAKE).returncode
+
+
 def status():
     if not PARAM.exists():
         log("status: module not loaded (100 kHz, i915 default)")
@@ -70,7 +94,7 @@ def main():
     ap.add_argument("--adapter", type=int, default=11)
     a = ap.parse_args()
     if a.cmd == "build":
-        sys.exit(run(["make", "-C", str(SRC)], T_MAKE).returncode)
+        sys.exit(ensure_built())
     if a.cmd == "status":
         status()
     elif a.cmd == "unload":
@@ -80,7 +104,7 @@ def main():
     else:
         if a.khz not in (50, 100, 400, 1000):
             sys.exit("khz must be 50|100|400|1000")
-        if not KO.exists() and run(["make", "-C", str(SRC)], T_MAKE).returncode:
+        if ensure_built():
             sys.exit(1)
         if PARAM.exists():
             sudo(["rmmod", "gmbus_rate"])
