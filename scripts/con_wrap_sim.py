@@ -29,6 +29,8 @@ import osd_render as R  # noqa: E402
 import osd_test as T  # noqa: E402
 import sync_log as SL  # noqa: E402
 
+ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
+ROTATE_SETTLE_S = 6.0           # fw time for the display re-set after Rotate changes (saver_sim.py)
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
 LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
@@ -188,6 +190,9 @@ def main() -> int:
     s = Sim(a.bin, mapp)
     out = a.out / a.bin.stem
     s.check(s.bus.run_until_mode(MODE_ACTIVE, 160_000_000), "cold boot:ACTIVE")
+    s.mccs.set(0xE0, ROW_DISP_ROTATE)       # the registry default is Rotate 180; these text checks read the upright console
+    s.mccs.set(0xE1, 0)
+    s.bus.wait(ROTATE_SETTLE_S)
     s.until(lambda: "AWTO DIAGNOSTICS" in (s.text() or [""])[0], 4.0)
     s.bus.wait(DRAW_S)
     s.phase("1-cold-boot", out)

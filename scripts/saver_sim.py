@@ -97,6 +97,9 @@ def main() -> int:
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng])
     sess.boot()
     ddc = D.Mccs(sess.bus, eng)
+    ddc.set(0xE0, ROW_DISP_ROTATE)                  # the registry default is Rotate 180: the upright renders need Rotate 0
+    ddc.set(0xE1, 0)
+    sess.bus.wait(ROTATE_SETTLE_S)
     fails = 0
     for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4)):
         base = lit(sess.snap())
