@@ -598,8 +598,8 @@ def _flashed(u: dict) -> dict:
     return json.loads(f.read_text()) if f.exists() else {}
 
 
-@command("build firmware for a unit (FRC + rotation by default); frozen to tmp/fw/<serial>-<commit>[-freeze|-nofrc][-audio-test]-be.*",
-         args="[--unit N] [--freeze | --no-frc] [--audio-test]", kind="action")
+@command("build firmware for a unit (FRC + rotation by default); frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
+         args="[--unit N] [--freeze | --no-frc] [--audio-test] [--tag T] [--force]", kind="action")
 def cmd_build(extra: list[str]) -> int:
     n, u = _unit(extra)
     disk_guard.prune_fw(FW)
@@ -608,25 +608,20 @@ def cmd_build(extra: list[str]) -> int:
     if freeze and nofrc:
         raise SystemExit("build: --freeze needs the frame buffer, --no-frc removes it; nothing done")
     audio_test = _flag(extra, "--audio-test")
-    defs = ["-D_AWTO_FREEZE=_ON"] if freeze else ["-D_AWTO_FRC=_OFF"] if nofrc else []
+    defs = ["_AWTO_FREEZE=_ON"] if freeze else ["_AWTO_FRC=_OFF"] if nofrc else []
     opt = "-freeze" if freeze else "-nofrc" if nofrc else ""
     if audio_test:
-        defs.append("-D_AWTO_AUDIO_TEST")
-    if BOOT_PORTS.get(u["input"]):
-        defs.append(f"-D_AWTO_BOOT_PORT={BOOT_PORTS[u['input']]}")
-    env = {"AWTO_SDCC_BE": "1" if u["be"] else "0", "AWTO_SDCC_BIN": SDCC_BE_BIN, "AWTO_SDCCCALL": "3", "K2S_SDCC_EXTRA": " ".join(defs)}
-    rc = _py("fw_build.py", "--serial", u["serial"], env=env)
-    if rc:
-        return rc
+        defs.append("_AWTO_AUDIO_TEST")
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=REPO).returncode else ""
-    tag = f"{u['serial']}-{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}-be"
-    out = FW / u["serial"]
-    for src, ext in ((out / "fw.bin", "bin"), (out / "fw.map", "map"), (TMP / "sdcc-port/trace_ids.tsv", "ids.tsv")):
-        if src.exists() or ext != "ids.tsv":        # trace_ids.tsv is gone since the fw/sdk build (#162, fw/msgids.tsv)
-            shutil.copy2(src, FW / f"{tag}.{ext}")
-    (FW / f"{u['serial']}-last.txt").write_text(tag)
-    log(f"image tmp/fw/{tag}.bin (unit {n}{', freeze' if freeze else ', no FRC' if nofrc else ''}"
+    tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
+    # one build path (Dan 2026-11-18): scripts/wb_build.py is the engine (rolled compiler + stamp check, BE, sdcccall 3, sync.tsv and settings table filed beside the map)
+    rc = _py("wb_build.py", "--tree", str(REPO), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)])
+    if rc:
+        return rc
+    name = f"{u['serial']}-{tag}-be"
+    (FW / f"{u['serial']}-last.txt").write_text(name)
+    log(f"image tmp/fw/{name}.bin (unit {n}{', freeze' if freeze else ', no FRC' if nofrc else ''}"
         f"{', internal audio test' if audio_test else ''})", "ALERT")
     return 0
 
