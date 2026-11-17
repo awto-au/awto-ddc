@@ -23,7 +23,6 @@ extern void osd_tc_close(void);
 #define AWTO_PC_B                               2
 #define AWTO_PC_DELTA_BYTES                     5                   // cell index lo, hi, B0, B1, B2
 #define AWTO_PC_SU_FACTOR                       13                  // scale-up ratio = 64 / 13 = 4.9: 432 lines -> 2126 of the 2160 panel lines
-#define AWTO_PC_SU_START                        0
 #define AWTO_PC_POS_OFFSET_H                    0x3B                // as the QC pattern
 #define AWTO_PC_POS_OFFSET_V                    0x04
 #define AWTO_PC_POS_H                           274                 // hd units of 4 panel px: (3840 - 1646) / 2 centres the maze
@@ -34,11 +33,16 @@ extern void osd_tc_close(void);
 #define AWTO_PC_SND_WAKA                        1
 #define AWTO_PC_SND_DEATH                       2
 #define AWTO_PC_SND_STOP                        4
+#define AWTO_PC_BLOCK_BYTES                     27                  // one glyph plane: 9 words x 3 bytes (1-bit glyph = 1 block, 2-bit glyph = 2 blocks, MSB plane first)
+#define AWTO_PC_BLOCK_ROT_BYTES                 18                  // the visible 12 of its 18 rows (6 words); the rest is padding
+#define AWTO_PC_BLOCK_ROT_WORDS                 6
+#define AWTO_PC_PX_PER_HD                       4                   // OSD horizontal position unit: 4 panel px
 #define AWTO_PC_ARG_ON                          0x73
 #define AWTO_PC_ARG_STEP                        0x74
 #define AWTO_PC_ARG_OFF                         0x75
 
 static __xdata WORD s_usStep;
+static __xdata BYTE s_ucPcRot;                                          // 1 = drawn turned 180 (display Rotate 180, docs/osd-rotation.md)
 __xdata BYTE g_ucAwtoPcFactor = AWTO_PC_SU_FACTOR;      // scale-up factor (0 = off), host-settable for tuning
 __xdata WORD g_usAwtoPcPosH = AWTO_PC_POS_H;            // WORD: the centred position is above 255
 __xdata WORD g_usAwtoPcPosV;
@@ -100,15 +104,19 @@ static void PcWord(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
 
 static void PcMaze(void)
 {
-    WORD usI;
+    WORD usC;
+    WORD usSrc;
     BYTE ucB;
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_PC_FS_BASE, _OSD_WITHOUT_DB);        // the data port counts words: one address set for all cells
-    for(usI = 0; usI < (WORD)AWTO_PC_CELLS * AWTO_PC_RGB; usI++)
+    for(usC = 0; usC < AWTO_PC_CELLS; usC++)
     {
-        PC_KICK(usI);
-        ucB = PcCell(usI);
-        ScalerOsdDataPort(ucB);
+        PC_KICK(usC);
+        usSrc = (s_ucPcRot != 0) ? AwtoOsdRotCell(usC, AWTO_PC_CELLS) : usC;            // turned map: the cell at the mirrored place
+        for(ucB = 0; ucB < AWTO_PC_RGB; ucB++)
+        {
+            ScalerOsdDataPort(PcCell((WORD)AWTO_PC_RGB * usSrc + ucB));
+        }
     }
 }
 
@@ -127,6 +135,10 @@ static void PcStep(WORD usStep)
         ucB0 = PcDelta(usO + 2);
         ucB1 = PcDelta(usO + 3);
         ucB2 = PcDelta(usO + 4);
+        if(s_ucPcRot != 0)
+        {
+            usPos = AwtoOsdRotCell(usPos, AWTO_PC_CELLS);
+        }
         PcWord(AWTO_PC_FS_BASE + usPos, ucB0, ucB1, ucB2);
     }
 }
@@ -135,6 +147,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
 {
     WORD usI;
     BYTE ucB;
+    BYTE ucK;
     BYTE ucEv;
 
     if(ucCmd == 0)
@@ -175,6 +188,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
         return;
     }
     osd_tc_close();                                                         // our own OSD off, windows closed
+    s_ucPcRot = AwtoOsdRot180();
     AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);
@@ -191,11 +205,21 @@ void AwtoPacmanClassic(BYTE ucCmd)
     PcWord(AWTO_PC_ROWS, AWTO_PC_ZERO, AWTO_PC_ZERO, AWTO_PC_ZERO);        // end of the row commands
     PcMaze();
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_PC_FONT_BASE, _OSD_WITHOUT_DB);
-    for(usI = 0; usI < AWTO_PC_GLYPH_BYTES; usI++)
+    for(usI = 0; usI < AWTO_PC_GLYPH_BYTES; usI += AWTO_PC_BLOCK_BYTES)             // per glyph plane block
     {
-        PC_KICK(usI);
-        ucB = PcGlyph(usI);
-        ScalerOsdDataPort(ucB);
+        for(ucK = 0; ucK < AWTO_PC_BLOCK_BYTES; ucK++)
+        {
+            PC_KICK(usI + ucK);
+            if((s_ucPcRot != 0) && (ucK < AWTO_PC_BLOCK_ROT_BYTES))                // turned: the 12 visible rows turned 180 inside the glyph
+            {
+                ucB = AwtoOsdRevByte(PcGlyph(usI + AwtoOsdRotSrc(ucK, AWTO_PC_BLOCK_ROT_WORDS)));
+            }
+            else
+            {
+                ucB = PcGlyph(usI + ucK);
+            }
+            ScalerOsdDataPort(ucB);
+        }
     }
     SET_OSD_MAPA_COL_MAX(AWTO_PC_COLS);
     ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_PC_ZERO, AWTO_PC_FS_BASE, AWTO_PC_FONT_BASE);
@@ -207,8 +231,8 @@ void AwtoPacmanClassic(BYTE ucCmd)
     ScalerOsdPosition(_OSD_POSITION_FONT_A, AWTO_PC_ZERO, AWTO_PC_ZERO);
     if(g_ucAwtoPcFactor != AWTO_PC_ZERO)                                    // scale-up engine over the whole map (ScalerQC_OSDScaleUp sequence)
     {
-        ScalerOsdScaleUpHorSize(AWTO_PC_SU_START, (WORD)AWTO_PC_COLS * AWTO_PC_TILE_W);
-        ScalerOsdScaleUpVerSize(AWTO_PC_SU_START, (WORD)AWTO_PC_ROWS * AWTO_PC_ROW_H);
+        ScalerOsdScaleUpHorSize(g_usAwtoPcPosH * AWTO_PC_PX_PER_HD, (WORD)AWTO_PC_COLS * AWTO_PC_TILE_W);     // the window is in display coordinates: it starts where the OSD starts
+        ScalerOsdScaleUpVerSize(g_usAwtoPcPosV, (WORD)AWTO_PC_ROWS * AWTO_PC_ROW_H);
         ScalerOsdScaleUpVerFactor(g_ucAwtoPcFactor);
         ScalerOsdScaleUpHorFactor(g_ucAwtoPcFactor);
         ScalerOsdScaleUpBoundaryCodition(_OSD_SCALING_BOUNDARY_NEIGHTBOOR);

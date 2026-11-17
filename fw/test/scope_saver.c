@@ -24,6 +24,8 @@ extern void osd_tc_close(void);
 #define AWTO_SC_FS_BASE                         (AWTO_SC_ROWS + 1)
 #define AWTO_SC_FONT_BASE                       (AWTO_SC_FS_BASE + AWTO_SC_CELLS)
 #define AWTO_SC_GLYPH_WORDS                     9
+#define AWTO_SC_WORD_BYTES                      3
+#define AWTO_SC_PX_PER_HD                       4                   // OSD horizontal position unit: 4 panel px
 #define AWTO_SC_ROW_B0                          0x80
 #define AWTO_SC_CHAR_B0                         0x40                // 1-bit char command
 #define AWTO_SC_CHAR_W                          AWTO_SC_TILE_W      // B0[4:0] = glyph width
@@ -39,7 +41,6 @@ extern void osd_tc_close(void);
 #define AWTO_SC_FG_G                            255
 #define AWTO_SC_FG_B                            96
 #define AWTO_SC_SU_FACTOR                       7                   // scale-up ratio 64 / 7 = 9.14: 384 x 216 -> 3511 x 1975 of the 3840 x 2160 panel
-#define AWTO_SC_SU_START                        0
 #define AWTO_SC_POS_OFFSET_H                    0x3B                // as the QC pattern and Pac-Man
 #define AWTO_SC_POS_OFFSET_V                    0x04
 #define AWTO_SC_POS_H                           41                  // hd units of 4 panel px: (3840 - 3511) / 2 / 4
@@ -73,6 +74,7 @@ __xdata uint8_t g_aucScPix[OSD_BITMAP_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata uint8_t g_aucScDirty[OSD_DIRTY_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata osd_canvas g_scCv;           // shared with scope_saver2.c: one saver runs at a time, XDATA floor
 static __xdata BYTE s_ucPhase;
+static __xdata BYTE s_ucRot;                                            // 1 = drawn turned 180 (display Rotate 180)
 static __xdata BYTE s_ucCol;                                            // next column of the frame being drawn
 static __xdata BYTE s_ucShown;
 static __xdata WORD s_usCell0;                                          // first cell (global tile index) of the band being drawn
@@ -91,12 +93,27 @@ static void ScUpload(BYTE ucTile)
     WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_SC_COLS;
     const uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
 
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * usCell, _OSD_WITHOUT_DB);
-    for(ucK = 0; ucK < AWTO_SC_GLYPH_WORDS; ucK++)                      // canonical bytes c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py)
+    if(s_ucRot != 0)                                                    // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
     {
-        ScalerOsdDataPort(pucB[3 * ucK + 2]);
-        ScalerOsdDataPort(pucB[3 * ucK + 1]);
-        ScalerOsdDataPort(pucB[3 * ucK]);
+        usCell = AwtoOsdRotCell(usCell, AWTO_SC_CELLS);
+    }
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * usCell, _OSD_WITHOUT_DB);
+    for(ucK = 0; ucK < AWTO_SC_GLYPH_WORDS; ucK++)                      // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py)
+    {
+        if(s_ucRot != 0)
+        {
+            WORD usW = (WORD)(AWTO_SC_GLYPH_WORDS - 1 - ucK) * AWTO_SC_WORD_BYTES;
+
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW]));
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW + 1]));
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW + 2]));
+        }
+        else
+        {
+            ScalerOsdDataPort(pucB[AWTO_SC_WORD_BYTES * ucK + 2]);
+            ScalerOsdDataPort(pucB[AWTO_SC_WORD_BYTES * ucK + 1]);
+            ScalerOsdDataPort(pucB[AWTO_SC_WORD_BYTES * ucK]);
+        }
     }
 }
 
@@ -218,6 +235,7 @@ BYTE AwtoScopeSaver(BYTE ucCmd)                                         // cmd 2
         return 1;
     }
     osd_tc_close();
+    s_ucRot = AwtoOsdRot180();
     AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);
@@ -245,8 +263,8 @@ BYTE AwtoScopeSaver(BYTE ucCmd)                                         // cmd 2
     ScalerOsdPosition(_OSD_POSITION_GLOBAL_A, AWTO_SC_POS_H, AWTO_SC_POS_V);
     ScalerOsdReferenceDelay(_OSD_A, _OSD_FIRST_DELAY);
     ScalerOsdPosition(_OSD_POSITION_FONT_A, AWTO_SC_ZERO, AWTO_SC_ZERO);
-    ScalerOsdScaleUpHorSize(AWTO_SC_SU_START, AWTO_SC_W);
-    ScalerOsdScaleUpVerSize(AWTO_SC_SU_START, AWTO_SC_H);
+    ScalerOsdScaleUpHorSize(AWTO_SC_POS_H * AWTO_SC_PX_PER_HD, AWTO_SC_W);       // the window is in display coordinates: it starts where the OSD starts
+    ScalerOsdScaleUpVerSize(AWTO_SC_POS_V, AWTO_SC_H);
     ScalerOsdScaleUpVerFactor(AWTO_SC_SU_FACTOR);
     ScalerOsdScaleUpHorFactor(AWTO_SC_SU_FACTOR);
     ScalerOsdScaleUpBoundaryCodition(_OSD_SCALING_BOUNDARY_NEIGHTBOOR);

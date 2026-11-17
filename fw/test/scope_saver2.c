@@ -28,6 +28,8 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_FONT_BASE                       (AWTO_S2_FS_BASE + AWTO_S2_CELLS)
 #define AWTO_S2_GLYPH_WORDS                     9                                   // per plane
 #define AWTO_S2_PLANES                          2
+#define AWTO_S2_WORD_BYTES                      3
+#define AWTO_S2_PX_PER_HD                       4                                   // OSD horizontal position unit: 4 panel px
 #define AWTO_S2_PLANE_TRACE                     0                                   // MSB plane first
 #define AWTO_S2_PLANE_GRID                      1
 #define AWTO_S2_ROW_B0                          0x80
@@ -45,7 +47,6 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_GRN_G                           235
 #define AWTO_S2_GRN_B                           170
 #define AWTO_S2_SU_FACTOR                       6                                   // ratio 64 / 6 = 10.67: 336 x 162 -> 3584 x 1728 of 3840 x 2160
-#define AWTO_S2_SU_START                        0
 #define AWTO_S2_POS_OFFSET_H                    0x3B
 #define AWTO_S2_POS_OFFSET_V                    0x04
 #define AWTO_S2_POS_H                           32                                  // hd units of 4 panel px: (3840 - 3584) / 2 / 4
@@ -120,6 +121,7 @@ static __code char s_cSTime[] = "1ns";
 static __xdata WORD s_usFrame;
 static __xdata BYTE s_ucCol;
 static __xdata BYTE s_ucStage;
+static __xdata BYTE s_ucRot;                                                        // 1 = drawn turned 180 (display Rotate 180)
 static __xdata WORD s_usX0;                                                         // pulse start x
 static __xdata BYTE s_ucSpread;                                                     // px per table step
 static __xdata WORD s_usX10;                                                        // cursor x positions (10 % / 90 % points of the rising edge)
@@ -142,12 +144,27 @@ static void S2Upload(BYTE ucTile)
     WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_S2_COLS;
     const uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
 
+    if(s_ucRot != 0)                                                                // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
+    {
+        usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
+    }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FONT_BASE + (WORD)usCell * (AWTO_S2_PLANES * AWTO_S2_GLYPH_WORDS) + (WORD)s_ucPlane * AWTO_S2_GLYPH_WORDS, _OSD_WITHOUT_DB);
     for(ucK = 0; ucK < AWTO_S2_GLYPH_WORDS; ucK++)                                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0
     {
-        ScalerOsdDataPort(pucB[3 * ucK + 2]);
-        ScalerOsdDataPort(pucB[3 * ucK + 1]);
-        ScalerOsdDataPort(pucB[3 * ucK]);
+        if(s_ucRot != 0)
+        {
+            WORD usW = (WORD)(AWTO_S2_GLYPH_WORDS - 1 - ucK) * AWTO_S2_WORD_BYTES;
+
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW]));
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW + 1]));
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW + 2]));
+        }
+        else
+        {
+            ScalerOsdDataPort(pucB[AWTO_S2_WORD_BYTES * ucK + 2]);
+            ScalerOsdDataPort(pucB[AWTO_S2_WORD_BYTES * ucK + 1]);
+            ScalerOsdDataPort(pucB[AWTO_S2_WORD_BYTES * ucK]);
+        }
     }
 }
 
@@ -430,6 +447,7 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
         return 1;
     }
     osd_tc_close();
+    s_ucRot = AwtoOsdRot180();
     AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);
@@ -459,8 +477,8 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
     ScalerOsdPosition(_OSD_POSITION_GLOBAL_A, AWTO_S2_POS_H, AWTO_S2_POS_V);
     ScalerOsdReferenceDelay(_OSD_A, _OSD_FIRST_DELAY);
     ScalerOsdPosition(_OSD_POSITION_FONT_A, AWTO_S2_ZERO, AWTO_S2_ZERO);
-    ScalerOsdScaleUpHorSize(AWTO_S2_SU_START, AWTO_S2_W);
-    ScalerOsdScaleUpVerSize(AWTO_S2_SU_START, AWTO_S2_H);
+    ScalerOsdScaleUpHorSize(AWTO_S2_POS_H * AWTO_S2_PX_PER_HD, AWTO_S2_W);          // the window is in display coordinates: it starts where the OSD starts
+    ScalerOsdScaleUpVerSize(AWTO_S2_POS_V, AWTO_S2_H);
     ScalerOsdScaleUpVerFactor(AWTO_S2_SU_FACTOR);
     ScalerOsdScaleUpHorFactor(AWTO_S2_SU_FACTOR);
     ScalerOsdScaleUpBoundaryCodition(_OSD_SCALING_BOUNDARY_NEIGHTBOOR);

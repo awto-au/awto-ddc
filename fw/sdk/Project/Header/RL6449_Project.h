@@ -1098,6 +1098,10 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);
+extern BYTE AwtoOsdRot180(void);                                                // fw/osd/osd_rot.c (docs/osd-rotation.md): 1 = display Rotate 180, the OSD must be drawn turned
+extern BYTE AwtoOsdRevByte(BYTE ucB);
+extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
+extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);

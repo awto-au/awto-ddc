@@ -27,8 +27,8 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 - Glyphs (`gen_pacman_classic.py`): 1-bit walls (autotiled, double-line rule), dots, power pellet, text, Pac-Man frames and death frames 0..10; 2-bit ghosts (body, eye white, pupil), frightened, eyes, cherry.
 - One char command per cell: 1-bit = `0x4C | id bit 8 << 5`, id, `fg << 4 | bg`; 2-bit = type `0x80` + four colours packed over B0 / B2 (see `osd_model.py` `decode_char`). Palette 12 entries.
 - SRAM: row commands from 0, end word, char commands from `AWTO_PC_FS_BASE`, glyph words from `AWTO_PC_FONT_BASE`; 2-bit glyphs at 18 words x (2-bit offset + id), MSB plane first.
-- Scale-up: ratio 64 / `AWTO_PC_SU_FACTOR` (13 -> 4.9): 432 lines -> 2126 of 2160. Position `g_usAwtoPcPosH` (WORD, hd units of 4 panel px) / `g_usAwtoPcPosV`.
-- Rotation: unit 3 runs Rotate 180 with OSD rotation, so the map is not turned by us.
+- Scale-up: ratio 64 / `AWTO_PC_SU_FACTOR` (13 -> 4.9): 432 lines -> 2126 of 2160; the scale-up window start = the OSD position (`docs/osd-rotation.md`). Position `g_usAwtoPcPosH` (WORD, hd units of 4 panel px) / `g_usAwtoPcPosV`.
+- Rotation: display Rotate 180 does not turn the OSD; the loader turns map and glyphs itself (`docs/osd-rotation.md`).
 
 ## How a frame is made
 
@@ -94,6 +94,6 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 ## Open
 
-- [hw] Photo 2026-11-18: on unit 3 the maze is scaled to full height but not across the width (a narrow strip); horizontal scale-up is not working on the unit while the sim shows it correct. Cause not found.
+- [hw] Photo 2026-11-18: maze scaled to full height but not across the width, and upside down. Cause: scale-up window start 0 (the window is in display coordinates) and the OSD not turned with the display. Fixed in code, unit check pending.
 - Audio: permanent build + key-click tone (#229); K calibration; amp gate length by ear.
 - Panel boot constants named (diag stages, boot probe ids): not done.
