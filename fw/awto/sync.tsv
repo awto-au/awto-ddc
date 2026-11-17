@@ -175,6 +175,7 @@ E9	83	-	Pac-Man sound:calibration tone, S code 32
 E9	84	-	Pac-Man sound stopped
 E9	85	-	Pac-Man sound track done
 E9	86	n	Pac-Man sound unavailable (no -D _AWTO_AUDIO_TEST build), cmd %
+E9	87	-	alert tone (1 s, HDMI audio test generator)
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake

@@ -30,6 +30,8 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_NOW_STOP                     0
 #define AWTO_SAVER_NOW_SELECTED                 1
 #define AWTO_SAVER_NOW_FLASH                    5
+#define AWTO_SAVER_NOW_ALERT                    6                   // 1 s alert tone on the speaker (no screen)
+#define AWTO_SAVER_SND_ALERT                    5                   // AwtoPmSound(cmd): alert
 #define AWTO_SAVER_RUN_SHIFT                    4
 
 __xdata BYTE g_ucAwtoSaverMode;
@@ -131,6 +133,10 @@ void AwtoSaverPoll(void)                                            // main loop
         if(ucReq == AWTO_SAVER_NOW_STOP)
         {
             AwtoSaverStop();
+        }
+        else if(ucReq == AWTO_SAVER_NOW_ALERT)
+        {
+            AwtoPmSound(AWTO_SAVER_SND_ALERT);
         }
         else if(ucReq == AWTO_SAVER_NOW_FLASH)
         {

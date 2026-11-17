@@ -266,7 +266,7 @@ void AwtoDiagTestCmd(void)
     {
         AwtoScopeSaver((ucCmd == AWTO_TC_SCOPE) ? 1 : ((ucCmd == AWTO_TC_SCOPE + 1) ? 2 : 0));
     }
-    else if((ucCmd >= AWTO_TC_PACMAN_SND) && (ucCmd <= AWTO_TC_PACMAN_SND + 4))   // Pac-Man sound (0xB7..0xB9 are the full-screen Pac-Man)
+    else if((ucCmd >= AWTO_TC_PACMAN_SND) && (ucCmd <= AWTO_TC_PACMAN_SND + 5))   // Pac-Man sound (0xB7..0xB9 are the full-screen Pac-Man)
     {
         AwtoPmSound(ucCmd - AWTO_TC_PACMAN_SND);
     }

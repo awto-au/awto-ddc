@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import numpy as np  # noqa: E402
 import osd_render as R  # noqa: E402
 import ddc_sim as D  # noqa: E402
+import audio_sim as A  # noqa: E402
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/saver_sim.log"
@@ -29,6 +30,10 @@ ROTATE_SETTLE_S = 6.0           # fw time for the display re-set after Rotate ch
 SHRINK = 8                      # box shrink factor before comparing
 ROT_MAX_DIFF = 8.0              # mean abs difference allowed between the turned upright render and the rotated render (of 255); the scope 1 trace is animated, its phase differs between the two runs
 ROT_BETTER = 1.5               # the turned comparison must beat the unturned one by this factor
+VCP_ALERT = 6                   # screensaver_now option "Alert tone"
+ALERT_TONE_S = 0.9              # audible time: the 1 s track (pacman_sound.py ALERT) has 100 ms of rests between the notes
+ALERT_TOL_S = 0.15              # one 10 ms tick per note plus the 1 ms firmware timer: well inside
+ALERT_OBSERVE_S = 3.0           # fw time to observe: the tone must end by itself
 STOP_S = 3.0                    # fw time for the stop: served by the main loop after the frame in progress (scope 2: up to ~2 s)
 
 
@@ -86,6 +91,25 @@ def rotated_check(a) -> int:
     return fails
 
 
+def alert_check(a) -> int:
+    """VCP 0xEB = 6 plays the 1 s alert tone: the audio tap hears ~1 s of tone, and the generator is off afterwards."""
+    eng = D.DdcEngine()
+    tap = A.AudioTap(lambda: sess.bus.now() if tap.armed else 0.0)
+    tap.armed = False
+    sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng, tap])
+    sess.boot()
+    ddc = D.Mccs(sess.bus, eng)
+    tap.armed = True
+    t0 = sess.bus.now()
+    ddc.set(VCP_SAVER, VCP_ALERT)
+    sess.bus.wait(ALERT_OBSERVE_S)
+    info = A.write_wav(a.out / "alert.wav", tap.events, t0, sess.bus.now())
+    ok = abs(info["tone_s"] - ALERT_TONE_S) <= ALERT_TOL_S
+    say(f"{'PASS' if ok else 'FAIL'} VCP 0xEB = {VCP_ALERT} (alert): tone {info['tone_s']:.2f} s (expect {ALERT_TONE_S} +- {ALERT_TOL_S})")
+    sess.bus.close()
+    return 0 if ok else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bin", type=Path, nargs="?", default=ROOT / "tmp/fw/AWT26110003-sv1-be.bin")
@@ -123,6 +147,7 @@ def main() -> int:
         say(f"{'PASS' if ok else 'FAIL'} VCP 0x{VCP_SAVER:02X} = 0: screen after stop has {bright} lit samples of 5184")
     sess.bus.close()
     fails += rotated_check(a)
+    fails += alert_check(a)
     return 1 if fails else 0
 
 

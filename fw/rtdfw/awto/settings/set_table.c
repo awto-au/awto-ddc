@@ -118,7 +118,7 @@ static const struct setting __code tab[SET_COUNT] = {
     {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 33, 1783u, 0xFFFFu},  /* panel_min */
     {119, 1, 0,  8, 0x03, 0, 4, 1, 0, 0x00, 29, 1797u, 0x0711u},  /* screensaver */
     {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1845u, 0xFFFFu},  /* screensaver_s */
-    {121, 1, 0,  8, 0x02, 0, 5, 1, 0, 0xEB, 30, 1862u, 0x0756u},  /* screensaver_now */
+    {121, 1, 0,  8, 0x02, 0, 6, 1, 0, 0xEB, 30, 1862u, 0x0756u},  /* screensaver_now */
 };
 
 static const uint8_t __code id2idx[122] = {
@@ -158,8 +158,8 @@ static const char __code txt[] =
     "Diagnostic console\0""Off\0""Until signal\0""Always\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0"
     "Spread spectrum\0""Panel hours\0""Panel minutes\0""Screensaver\0""Off\0""Pac-Man\0""Scope\0""Scope 2\0"
     "Alternate\0""Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0""Scope\0""Scope 2\0"
-    "Flash warning\0""Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0"
-    "Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0""Information\0";
+    "Flash warning\0""Alert tone\0""Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0"
+    "Signal\0""Power\0""OSD\0""Panel timing\0""Debug\0""Audio\0""System\0""Service\0""Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
 static const uint8_t __code vopt[16][3] = {
@@ -181,12 +181,12 @@ static const uint8_t __code vopt[16][3] = {
     {91, 4, 0x05},
 };
 
-/* DDC/CI capabilities (373 chars), from the vcp column; read by set_caps_at only */
+/* DDC/CI capabilities (376 chars), from the vcp column; read by set_caps_at only */
 static const char __code caps[] =
     "(prot(monitor)type(LCD)model(awto-mon)cmds(01 02 03 0C F3)vcp(02 04 08 10 12 14(08 06 05 04 01 0B) 1"
     "6 18 1A 60(0F 11 12) 62 87 8D(02 01) C8 C9 D6(01 02 03 04 05) DF E0 E1 E2 E3 E4 E5 E6 E7 EA EB(00 01"
-    " 02 03 04 05) EC ED EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 FA FB F"
-    "C(00 01 02 03 04 05) FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
+    " 02 03 04 05 06) EC ED EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 FA F"
+    "B FC(00 01 02 03 04 05) FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
 
 static const uint8_t __code vcode[36][2] = {
     {0x04, 89},
@@ -254,7 +254,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {99, 6, 0x0C},  /* Service */
     {105, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1928u, 1936u, 1943u, 1959u, 1967u, 1973u, 1987u, 1994u, 2000u, 2004u, 2017u, 2023u, 2029u, 2036u, 2044u};
+static const uint16_t __code ptitle[SET_PAGES] = {1939u, 1947u, 1954u, 1970u, 1978u, 1984u, 1998u, 2005u, 2011u, 2015u, 2028u, 2034u, 2040u, 2047u, 2055u};
 
 uint8_t set_idx(uint8_t id)
 {
@@ -345,7 +345,7 @@ int16_t set_opt_from_vcp(uint8_t idx, uint8_t vcpv)
 
 uint16_t set_caps_len(void)
 {
-    return 373u;
+    return 376u;
 }
 
 char set_caps_at(uint16_t i)

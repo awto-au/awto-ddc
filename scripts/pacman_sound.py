@@ -49,7 +49,10 @@ DEATH = ([(1000 - 30 * i, 20) for i in range(18)]
          + [(560 - 16 * i, 34) for i in range(14)]
          + [(0, 60), (420, 50), (0, 50), (380, 80)])
 
-TRACKS = [("intro", False), ("waka", True), ("death", False)]
+# Alert (flash warning / "I need you"): rising bip - bip - long beep, 1000 ms. (Hz, ms) steps
+ALERT = [(880, 150), (0, 50), (1175, 150), (0, 50), (1568, 600)]
+
+TRACKS = [("intro", False), ("waka", True), ("death", False), ("alert", False)]
 
 
 def note_hz(name: str) -> float:
@@ -83,7 +86,7 @@ def steps(track: str):
             ms = n16 * SIXTEENTH_MS
             out += [(note_hz(name), ms - PS_GAP_TICKS * PS_TICK_MS), (0, PS_GAP_TICKS * PS_TICK_MS)]
         return out
-    return {"waka": WAKA, "death": DEATH}[track]
+    return {"waka": WAKA, "death": DEATH, "alert": ALERT}[track]
 
 
 def encode(track: str, k_hz: float):

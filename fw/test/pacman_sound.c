@@ -10,7 +10,12 @@
 #define AWTO_PS_SC_MASK                         0x7F
 #define AWTO_PS_TICK_MS                         10
 #define AWTO_PS_CAL_SC                          32      // calibration tone: sc 32 = 48 kHz sample rate
-#define AWTO_PS_TRACKS                          3
+#define AWTO_PS_TRACKS                          4       // intro, waka, death, alert (data tracks)
+#define AWTO_PS_TRACK_ALERT                     3
+#define AWTO_PS_TRACK_CAL                       0xFF    // calibration tone: no data track
+#define AWTO_PS_CMD_CAL                         3       // AwtoPmSound(cmd): 0..2 = tracks, 3 calibration, 4 stop, 5 alert
+#define AWTO_PS_CMD_STOP                        4
+#define AWTO_PS_CMD_ALERT                       5
 #define AWTO_PS_NOTE_BYTES                      2
 #define AWTO_PS_GAP_MS                          4       // amp muted while the audio PLL divider changes (the pitch step was a click): by ear, not measured; Dan 2026-11-18 "a bit clicky at the change of sounds"
 #define AWTO_PS_MS_HALF                         0x8000  // WORD ms difference below this = the time has passed
@@ -20,6 +25,7 @@
 #define AWTO_PS_EV_STOP                         0x84
 #define AWTO_PS_EV_DONE                         0x85
 #define AWTO_PS_EV_NA                           0x86
+#define AWTO_PS_EV_ALERT                        0x87
 #include "pacman_sound_data.inc"
 
 #pragma place bank(11)                      // leaf reader in the data's bank (a const read in a function that calls banked code trips the link check)
@@ -76,9 +82,9 @@ static void PsStart(BYTE ucTrack)
     SysAudioInternalGenTestProc(_ON);
     SysAudioMuteProc(_OFF);
     AwtoAudioAmp(_OFF);                         // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
-    s_ucPsRun = (ucTrack >= AWTO_PS_TRACKS) ? 2 : 1;
+    s_ucPsRun = (ucTrack == AWTO_PS_TRACK_CAL) ? 2 : 1;
     s_ucPsTrack = ucTrack;
-    s_usPsPos = (ucTrack == 0) ? AWTO_PS_OFF_INTRO : ((ucTrack == 1) ? AWTO_PS_OFF_WAKA : AWTO_PS_OFF_DEATH);
+    s_usPsPos = (ucTrack == 0) ? AWTO_PS_OFF_INTRO : ((ucTrack == 1) ? AWTO_PS_OFF_WAKA : ((ucTrack == 2) ? AWTO_PS_OFF_DEATH : AWTO_PS_OFF_ALERT));
     s_usPsAt = (WORD)AwtoMs();
     s_usPsDur = 0;
     if(s_ucPsRun == 2)
@@ -130,13 +136,23 @@ void AwtoPmSoundPoll(void)                      // each main pass
 #endif
 }
 
-void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..4
+void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5
 {
 #ifdef _AWTO_AUDIO_TEST
-    if(ucCmd <= AWTO_PS_TRACKS)
+    if(ucCmd == AWTO_PS_CMD_ALERT)
+    {
+        PsStart(AWTO_PS_TRACK_ALERT);
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_ALERT, 0);
+    }
+    else if(ucCmd == AWTO_PS_CMD_CAL)
+    {
+        PsStart(AWTO_PS_TRACK_CAL);
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_CAL, 0);
+    }
+    else if(ucCmd < AWTO_PS_CMD_CAL)
     {
         PsStart(ucCmd);
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, (ucCmd < AWTO_PS_TRACKS) ? (AWTO_PS_EV_START + ucCmd) : AWTO_PS_EV_CAL, 0);
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_START + ucCmd, 0);
     }
     else
     {

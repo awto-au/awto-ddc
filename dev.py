@@ -720,6 +720,7 @@ def cmd_flash(extra: list[str]) -> int:
         log(f"flash: byte mode on DP AUX bus {bus} is ~90 s per sector (#177): using burst", "WARN")
         wmode = "burst"
     log(f"flash: bus {bus} kind {kind}, write mode {wmode}, budget {max_min} min (checked before the first erase)")
+    _py("alert.py", "--bus", str(bus), "--wait")           # #229: 1 s tone first (finished before the MCU is halted); old firmware: logged
     _py("flash_screen.py", "show", "--bus", str(bus))   # #232: warning screen (huge Pac-Man) from the running firmware; old firmware: logged, flash goes on
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
@@ -1073,6 +1074,13 @@ def cmd_settings(extra: list[str]) -> int:
     n, u = _unit(extra)
     b = _live_bus(u)
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
+
+
+@command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone",
+         args="[--unit N] [--wait]", kind="action")
+def cmd_alert(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    return _py("alert.py", "--bus", str(_live_bus(u)), *(["--wait"] if _flag(extra, "--wait") else []))
 
 
 @command("boot / sync log ring of a running unit, decoded (scripts/sync_log.py, #139); --whole = all episodes",
