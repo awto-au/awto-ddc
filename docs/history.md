@@ -168,7 +168,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
   - Gates: boot, isr, link, h1080, h2160, menu, ddc, keys, crash, wdt, sync, bootsim, wake, pokes, portcfg (#81). `--only` runs a subset and marks the record partial (not flashable).
   - SKIP = image lacks the feature (map symbol) or the gate needs `--tree`; counted and printed, allowed by the flash check.
   - `dev.py flash|recover|deploy` refuse: no record, SHA-256 mismatch, partial record, any FAIL. Override `--force-ungated`.
-  - Sims run with `AWTO_SIM_CORE=fast` (the ucsim default needs `ucsim_51` on PATH).
+  - Sims use the fast in-process core by default (`docs/sim.md`); ucsim only as a cross-check.
   - Cold times per gate: awto-ddc commit message of the gate-record change.
 - Logs: `tmp/logs/` (`unit-<serial>.log` per monitor, `dev.log`, tool logs); decoded one line per action, raw to `*.raw.log`.
 
