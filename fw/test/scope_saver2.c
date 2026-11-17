@@ -73,6 +73,9 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_FONT_H                          7
 #define AWTO_S2_FONT_ADV                        6
 #define AWTO_S2_COUNTER0                        1129500UL                           // counter readout start (Hz-ish, shown as xxxx.xxx kHz)
+#define AWTO_S2_STAGE_GRID                      0
+#define AWTO_S2_STAGE_FIRST                     1
+#define AWTO_S2_STAGE_RUN                       2
 #define AWTO_S2_ARG_ON                          0x7B
 #define AWTO_S2_ARG_FRAME                       0x7C
 #define AWTO_S2_ARG_OFF                         0x7D
@@ -115,6 +118,8 @@ static __code char s_cSVolt[] = ">200mV";
 static __code char s_cSTime[] = "1ns";
 
 static __xdata WORD s_usFrame;
+static __xdata BYTE s_ucCol;
+static __xdata BYTE s_ucStage;
 static __xdata WORD s_usX0;                                                         // pulse start x
 static __xdata BYTE s_ucSpread;                                                     // px per table step
 static __xdata WORD s_usX10;                                                        // cursor x positions (10 % / 90 % points of the rising edge)
@@ -352,20 +357,6 @@ static void S2Pass(BYTE ucCol, BYTE ucBand, BYTE ucPlane)
     }
 }
 
-static void S2Frame(BYTE ucPlane)
-{
-    BYTE ucC;
-    BYTE ucB;
-
-    for(ucC = 0; ucC < AWTO_S2_COLS; ucC++)
-    {
-        for(ucB = 0; ucB < AWTO_S2_BANDS; ucB++)
-        {
-            S2Pass(ucC, ucB, ucPlane);
-        }
-    }
-}
-
 static void S2Params(void)                                                          // pulse position / edge speed of this frame, cursors on its 10 % / 90 % points
 {
     WORD usX;
@@ -392,24 +383,51 @@ static void S2Params(void)                                                      
     }
 }
 
-void AwtoScopeSaver2(BYTE ucCmd)
+BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2 draws one column (3 bands) of the current plane, returns 1 when a trace frame is complete
 {
     WORD usI;
+    BYTE ucB;
 
     if(ucCmd == 0)
     {
         osd_tc_close();
         ScalerOsdScaleUpOnOff(_DISABLE);
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_OFF, 0);
-        return;
+        return 1;
     }
     if(ucCmd == 2)
     {
-        s_usFrame++;
-        S2Params();
-        S2Frame(AWTO_S2_PLANE_TRACE);
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_FRAME, (BYTE)s_usFrame);
-        return;
+        if((s_ucStage != AWTO_S2_STAGE_GRID) && (s_ucCol == 0))
+        {
+            s_usFrame++;
+            S2Params();
+        }
+        for(ucB = 0; ucB < AWTO_S2_BANDS; ucB++)
+        {
+            S2Pass(s_ucCol, ucB, (s_ucStage == AWTO_S2_STAGE_GRID) ? AWTO_S2_PLANE_GRID : AWTO_S2_PLANE_TRACE);
+        }
+        s_ucCol++;
+        if(s_ucCol < AWTO_S2_COLS)
+        {
+            return 0;
+        }
+        s_ucCol = 0;
+        if(s_ucStage == AWTO_S2_STAGE_GRID)                             // graticule plane done (once): the first trace frame is drawn hidden
+        {
+            s_ucStage = AWTO_S2_STAGE_FIRST;
+            return 0;
+        }
+        if(s_ucStage == AWTO_S2_STAGE_FIRST)
+        {
+            s_ucStage = AWTO_S2_STAGE_RUN;
+            osd_tc_show(1);
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_ON, 0);
+        }
+        else
+        {
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_FRAME, (BYTE)s_usFrame);
+        }
+        return 1;
     }
     osd_tc_close();
     AwtoOsdTestReset();
@@ -449,9 +467,7 @@ void AwtoScopeSaver2(BYTE ucCmd)
     ScalerOsdScaleUpOnOff(_ENABLE);
     osd_canvas_init(&g_scCv, 1, AWTO_S2_BAND_ROWS, g_aucScPix, AWTO_S2_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_S2_BAND_ROWS));
     s_usFrame = 0;
-    S2Params();
-    S2Frame(AWTO_S2_PLANE_GRID);
-    S2Frame(AWTO_S2_PLANE_TRACE);
-    osd_tc_show(1);
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_ON, 0);
+    s_ucCol = 0;
+    s_ucStage = AWTO_S2_STAGE_GRID;                                     // drawn column by column (cmd 2): graticule plane, first trace frame, then shown
+    return 0;
 }

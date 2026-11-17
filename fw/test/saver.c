@@ -6,8 +6,8 @@
 // Starts: no signal for AWTO_SAVER_NOSIG_MS with a mode set; idle with a picture for screensaver_s; DDC/CI / test cmd now.
 // Stops: a key, a DDC/CI command (not VCP 0xEB), mode no longer the one that started it, VCP 0xEB = 0.
 extern void AwtoPacmanClassic(BYTE ucCmd);
-extern void AwtoScopeSaver(BYTE ucCmd);
-extern void AwtoScopeSaver2(BYTE ucCmd);
+extern BYTE AwtoScopeSaver(BYTE ucCmd);
+extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 
 #define AWTO_SAVER_OFF                          0
 #define AWTO_SAVER_PACMAN                       1
@@ -21,8 +21,8 @@ extern void AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_NOSIG_MS                     10000UL             // no signal this long: the source search has ended (SDK search + hold are ~4 s; start = 2.5x)
 #define AWTO_SAVER_ALT_MS                       120000UL            // Alternate: one saver for 2 min, then the other
 #define AWTO_SAVER_PACMAN_MS                    125UL               // Pac-Man step period (pacman_unit.py: 8 steps/s)
-#define AWTO_SAVER_SCOPE2_MS                    500UL               // scope 2 frame period (84 passes of the trace plane; unit measurement pending)
-#define AWTO_SAVER_SCOPE_MS                     250UL               // scope frame period (a frame is 64 passes of tile uploads; measured on the unit, awto-ddc docs/screensaver.md)
+#define AWTO_SAVER_SCOPE2_MS                    100UL               // pause between scope 2 frames (a frame is drawn one column per main pass)
+#define AWTO_SAVER_SCOPE_MS                     100UL               // pause between scope frames
 #define AWTO_SAVER_MS_PER_S                     1000UL
 #define AWTO_SAVER_ARG_START                    0x79                // sync line E9: value = what (run << 4 | why)
 #define AWTO_SAVER_ARG_STOP                     0x7A
@@ -36,6 +36,7 @@ __xdata BYTE g_ucAwtoSaverRun;                                       // AWTO_SAV
 __xdata BYTE g_ucAwtoSaverWhy;
 #define AWTO_SAVER_REQ_NONE                     0xFF
 static __xdata BYTE s_ucReq = AWTO_SAVER_REQ_NONE;                  // set by the DDC/CI apply, served by AwtoSaverPoll: a draw on the DDC handler's stack overflows IRAM and blocks DDC for its whole length
+static __xdata BYTE s_ucMid;                                        // a scope frame is part drawn
 static __xdata unsigned long s_ulAct;                               // last key / DDC activity
 static __xdata unsigned long s_ulTick;                              // last frame
 static __xdata unsigned long s_ulSwap;                              // run started / last swap (Alternate)
@@ -79,6 +80,7 @@ static void SaverDraw(BYTE ucRun)
     }
     s_ulTick = AwtoMs();
     s_ulSwap = s_ulTick;
+    s_ucMid = 1;                                                    // a scope starts with its first frame, drawn hidden
 }
 
 void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: PACMAN / SCOPE / ALTERNATE
@@ -138,21 +140,23 @@ void AwtoSaverPoll(void)                                            // main loop
             SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE2 : AWTO_SAVER_PACMAN));
             return;
         }
-        if((ulNow - s_ulTick) >= ((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_PACMAN_MS : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE_MS : AWTO_SAVER_SCOPE2_MS)))
+        if(g_ucAwtoSaverRun != AWTO_SAVER_PACMAN)                   // scopes: one column per pass until the frame is complete, then a pause
+        {
+            if((s_ucMid == 0) && ((ulNow - s_ulTick) < ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE_MS : AWTO_SAVER_SCOPE2_MS)))
+            {
+                return;
+            }
+            s_ucMid = (BYTE)(((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AwtoScopeSaver(2) : AwtoScopeSaver2(2)) == 0);
+            if(s_ucMid == 0)
+            {
+                s_ulTick = ulNow;
+            }
+            return;
+        }
+        if((ulNow - s_ulTick) >= AWTO_SAVER_PACMAN_MS)
         {
             s_ulTick = ulNow;
-            if(g_ucAwtoSaverRun == AWTO_SAVER_PACMAN)
-            {
-                AwtoPacmanClassic(2);
-            }
-            else if(g_ucAwtoSaverRun == AWTO_SAVER_SCOPE)
-            {
-                AwtoScopeSaver(2);
-            }
-            else
-            {
-                AwtoScopeSaver2(2);
-            }
+            AwtoPacmanClassic(2);
         }
         return;
     }

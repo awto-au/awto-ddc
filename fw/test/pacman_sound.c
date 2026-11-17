@@ -12,6 +12,8 @@
 #define AWTO_PS_CAL_SC                          32      // calibration tone: sc 32 = 48 kHz sample rate
 #define AWTO_PS_TRACKS                          3
 #define AWTO_PS_NOTE_BYTES                      2
+#define AWTO_PS_GAP_MS                          4       // amp muted while the audio PLL divider changes (the pitch step was a click): by ear, not measured; Dan 2026-11-18 "a bit clicky at the change of sounds"
+#define AWTO_PS_MS_HALF                         0x8000  // WORD ms difference below this = the time has passed
 #define AWTO_PS_SCAPR_SLC                       0x80    // SCAPR bit 7 = S1 div 2, as the SDK 48 kHz code 0xA0
 #define AWTO_PS_EV_START                        0x80    // sync E9: + track
 #define AWTO_PS_EV_CAL                          0x83
@@ -32,6 +34,8 @@ static __xdata BYTE s_ucPsTrack;
 static __xdata WORD s_usPsPos;
 static __xdata WORD s_usPsAt;                   // AwtoMs low word at the current note's start
 static __xdata WORD s_usPsDur;                  // current note length, ms
+static __xdata WORD s_usPsGateAt;               // AwtoMs low word at which the amp opens after a pitch change
+static __xdata BYTE s_ucPsGate;                 // 1 = the amp is muted for a pitch change and opens at s_usPsGateAt
 
 static WORD PsBase(void)
 {
@@ -46,13 +50,16 @@ static void PsNote(BYTE ucNote)
     if(ucSc == 0)
     {
         bAMP_MUTE = 1;                          // rest: gate at the amp, no DVC ramp (that blocks up to 400 ms)
+        s_ucPsGate = 0;
         return;
     }
+    bAMP_MUTE = 1;                              // gate the amp: the divider change and the PLL relock are not heard
     ScalerSetDataPortBit(usBase, AWTO_I_PORT_PAGE71_HDMI_AFCR, (BYTE)~AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW,
                          ((ucNote & AWTO_PS_OCT_FLAG) != 0) ? 0x00 : AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW);
     ScalerSetDataPortByte(usBase, AWTO_I_PORT_PAGE71_HDMI_SCAPR, AWTO_PS_SCAPR_SLC | ucSc);
     ScalerSetDataPortBit(usBase, AWTO_I_PORT_PAGE71_HDMI_CMCR, (BYTE)~AWTO_F_PORT_PAGE71_HDMI_CMCR_DBDCB, AWTO_F_PORT_PAGE71_HDMI_CMCR_DBDCB);
-    bAMP_MUTE = 0;
+    s_usPsGateAt = (WORD)AwtoMs() + AWTO_PS_GAP_MS;
+    s_ucPsGate = 1;                             // AwtoPmSoundPoll opens the amp after the gap
 }
 
 static void PsStop(void)
@@ -60,6 +67,7 @@ static void PsStop(void)
     if(s_ucPsRun != 0)
     {
         s_ucPsRun = 0;
+        s_ucPsGate = 0;
         SysAudioInternalGenTestProc(_OFF);
     }
 }
@@ -88,6 +96,11 @@ void AwtoPmSoundPoll(void)                      // each main pass
 #ifdef _AWTO_AUDIO_TEST
     BYTE ucDur;
 
+    if((s_ucPsGate != 0) && ((WORD)((WORD)AwtoMs() - s_usPsGateAt) < AWTO_PS_MS_HALF))
+    {
+        s_ucPsGate = 0;
+        bAMP_MUTE = 0;
+    }
     if((s_ucPsRun != 1) || ((WORD)((WORD)AwtoMs() - s_usPsAt) < s_usPsDur))
     {
         return;

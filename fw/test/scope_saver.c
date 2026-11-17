@@ -73,6 +73,8 @@ __xdata uint8_t g_aucScPix[OSD_BITMAP_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata uint8_t g_aucScDirty[OSD_DIRTY_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata osd_canvas g_scCv;           // shared with scope_saver2.c: one saver runs at a time, XDATA floor
 static __xdata BYTE s_ucPhase;
+static __xdata BYTE s_ucCol;                                            // next column of the frame being drawn
+static __xdata BYTE s_ucShown;
 static __xdata WORD s_usCell0;                                          // first cell (global tile index) of the band being drawn
 
 static void ScWord(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
@@ -174,10 +176,9 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
     }
 }
 
-void AwtoScopeSaver(BYTE ucCmd)
+BYTE AwtoScopeSaver(BYTE ucCmd)                                         // cmd 2 draws one column (2 bands) and returns 1 when it completed a frame: the saver calls it once per main pass
 {
     WORD usI;
-    BYTE ucC;
     BYTE ucB;
 
     if(ucCmd == 0)
@@ -185,21 +186,36 @@ void AwtoScopeSaver(BYTE ucCmd)
         osd_tc_close();
         ScalerOsdScaleUpOnOff(_DISABLE);
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SC_ARG_OFF, 0);
-        return;
+        return 1;
     }
-    if(ucCmd == 2)                                                      // next frame
+    if(ucCmd == 2)                                                      // next column
     {
-        s_ucPhase += AWTO_SC_PH_STEP;
-        for(ucC = 0; ucC < AWTO_SC_COLS; ucC++)
+        if(s_ucCol == 0)
         {
-            AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;     // a frame is 64 passes: kick per column pair
-            for(ucB = 0; ucB < AWTO_SC_BANDS; ucB++)
-            {
-                ScPass(ucC, ucB);
-            }
+            s_ucPhase += AWTO_SC_PH_STEP;
         }
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SC_ARG_FRAME, s_ucPhase);
-        return;
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        for(ucB = 0; ucB < AWTO_SC_BANDS; ucB++)
+        {
+            ScPass(s_ucCol, ucB);
+        }
+        s_ucCol++;
+        if(s_ucCol < AWTO_SC_COLS)
+        {
+            return 0;
+        }
+        s_ucCol = 0;
+        if(s_ucShown == 0)                                              // the first frame was drawn hidden: show the OSD now
+        {
+            s_ucShown = 1;
+            osd_tc_show(1);
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SC_ARG_ON, 0);
+        }
+        else
+        {
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SC_ARG_FRAME, s_ucPhase);
+        }
+        return 1;
     }
     osd_tc_close();
     AwtoOsdTestReset();
@@ -237,7 +253,7 @@ void AwtoScopeSaver(BYTE ucCmd)
     ScalerOsdScaleUpOnOff(_ENABLE);
     osd_canvas_init(&g_scCv, 1, AWTO_SC_BAND_ROWS, g_aucScPix, sizeof(g_aucScPix), g_aucScDirty, sizeof(g_aucScDirty));
     s_ucPhase = 0;
-    AwtoScopeSaver(2);                                                  // first frame before the OSD is shown
-    osd_tc_show(1);
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SC_ARG_ON, 0);
+    s_ucCol = 0;
+    s_ucShown = 0;                                                      // the first frame is drawn column by column (cmd 2), then the OSD is shown
+    return 0;
 }
