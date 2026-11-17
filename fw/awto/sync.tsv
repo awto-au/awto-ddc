@@ -142,14 +142,7 @@ E7	*	port	EDID read by source:awake, no wake needed
 E8	01	n	OSD SRAM probe done:% addresses written and read back from M1 / M2 on the MCU, results in g_stAwtoOsdProbe
 E8	03	-	OSD SRAM probe refused:the OSD is on
 E9	01	n	OSD demo #215 window %:x0 = x1 (vertical, zero width) at x 100, y 40..140
-E9	02	n	OSD demo #215 window %:y0 = y1 (horizontal, zero height) at y 200, x 150..300
-E9	03	n	OSD demo #215 window %:x0 = x1 and y0 = y1 (a point) at 400, 100
-E9	04	n	OSD demo #215 window %:end before start in x (x1 = x0 - 1) at x 480
-E9	05	n	OSD demo #215 window %:end before start in y (y1 = y0 - 1) at y 300
 E9	11	n	OSD demo gradient window %:horizontal, no R / G / B enabled (flat)
-E9	12	n	OSD demo gradient window %:horizontal, B, step 2, level 2
-E9	13	n	OSD demo gradient window %:horizontal, B up, step 3, level 3
-E9	14	n	OSD demo gradient window %:vertical, G, step 4, level 4
 E9	15	n	OSD demo gradient window %:vertical, G up, step 4, level 5
 E9	16	n	OSD demo gradient window %:vertical, G + B, step 4, level 6
 E9	20	n	OSD demo grid window %:width 0, colour 4, horizontal + vertical, pitch 10000
