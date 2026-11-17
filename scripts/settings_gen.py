@@ -8,7 +8,7 @@ usage: settings_gen.py [--rtdfw DIR] [--tree DIR] [--check]
          scripts/settings_table.py                     (host: dev.py settings get|set|list)
          docs/settings.md                              (the list for people)
   --check: write nothing, exit 1 when any output differs from what is on disk (gate).
-  --host-out P: only the host table, to P (wb_build: tmp/fw/<stem>.settings_table.py, the image's registry); host tools
+  --host-out P: only the host table, to P (dev.py build: tmp/fw/<stem>.settings_table.py, the image's registry); host tools
   load it instead of scripts/settings_table.py when $AWTO_SETTINGS_TABLE names it (fw_gates sets it per image).
   Schema = CRC-16 of the NV rows' (id, type, min, max): it changes when a stored row changes meaning; the record is
   id-tagged, so rows that still exist keep their values across it.

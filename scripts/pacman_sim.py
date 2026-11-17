@@ -2,7 +2,7 @@
 """Pac-Man demo with sound in the firmware simulator -> MP4 (video: OSD model render, audio: audio_sim tap). Nothing touches hardware.
 
 usage: pacman_sim.py [BIN MAP] [--steps N] [--out DIR] [--k-hz HZ] [--fps F] [--scale S] [--tag TAG]
-  - BIN / MAP default: tmp/fw/AWT26110003-simav-be.{bin,map} = `python scripts/wb_build.py --tree . --serial AWT26110003 --tag simav -D _AWTO_AUDIO_TEST`.
+  - BIN / MAP default: tmp/fw/AWT26110003-simav-be.{bin,map} = `./dev.py build --tree . --serial AWT26110003 --tag simav -D _AWTO_AUDIO_TEST`.
   - Sequence (test cmds): 0xB7 maze + 0xBA intro at t = 0 (the other way round the draw kills the intro: it calls OsdFuncDisableOsd, which turns the generator off), then from the end of the intro 0xBB waka loop and one 0xB8 step per
     frame period (one cmd per main pass: a cmd sent right after another is lost, so they sit a pass or a frame apart) (--fps, default 8 = pacman_unit.py), 0xBE stop after the last step. Video frame k = OSD state at firmware time T0 + k / fps.
   - Audio = audio_sim.py model of the generator / amp writes over the same firmware clock (T0 .. end), so sound and picture stay in sync.
@@ -65,7 +65,7 @@ def main() -> int:
     a = ap.parse_args()
     binp, mapp = a.bin, a.map or a.bin.with_suffix(".map")
     if not binp.exists():
-        sys.exit(f"{binp} missing: build it with wb_build.py ... --tag simav -D _AWTO_AUDIO_TEST")
+        sys.exit(f"{binp} missing: build it with dev.py build ... --tag simav -D _AWTO_AUDIO_TEST")
     frames_dir = a.out / "frames"
     if frames_dir.exists():
         shutil.rmtree(frames_dir)

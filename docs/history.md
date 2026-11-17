@@ -130,7 +130,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Realtek SDK bugs found (FRC DHF overwrite, DPLL 16-bit overflow): `re/lib-review/realtek-sdk-bugs.md`, #100; fixes held.
 
 ### 4.7 Compiler (awto-sdcc, `/mnt/2tb/git/awto-sdcc`)
-- Build compiler: `/usr/local` (stamp + library sources in `/usr/local/share/sdcc/`); the pin is `SDCC_COMMIT` in `scripts/wb_build.py`, a different stamp refuses the build. BE, `--sdcccall 3`. The sdcc session asks before it swaps `/usr/local` (Dan runs the sudo).
+- Build compiler: `/usr/local` (stamp + library sources in `/usr/local/share/sdcc/`); the pin is `SDCC_COMMIT` in `dev.py build`, a different stamp refuses the build. BE, `--sdcccall 3`. The sdcc session asks before it swaps `/usr/local` (Dan runs the sudo).
 - Far locals on, for the functions in `fw/far_locals_select.txt` (#205); `AWTO_FAR_LOCALS=all|off|list` for trials (all-on measured: +8 KB code, no gain).
 - Placement: `#pragma place group(g)` / `bank(n)` before a definition (awto-sdcc#141, docs/place-pragma.md there). `scripts/place_rules.py` rewrites the compiler's PLACE_g areas back to CSEG / CONST with a `;@place` marker right after the compile; `scripts/sdcc_bank.py` puts a group in one bank (hard error when it does not fit or splits). Example: the font group in awto-rtdfw `font.c`. `common` leaves no mark: `--pin-common`.
 - Chip facts (banks, common, reserved ranges, XDATA, IRAM): `fw/rl6449_memory.toml`, read through `scripts/chip_mem.py` (#149).
@@ -158,7 +158,7 @@ Terms (no bare "vendor"): **Dahua firmware** = the monitor's original firmware (
 - Key presses: `scripts/dbg_link.py on 11 --minutes 10`, then in the keys worktree `python3 scripts/rtd_keywatch.py 11 --log --map <map> --serial AWT26110002 --secs 180` (`--open` / `--close` = key test screen); link off afterwards.
 - Inputs: `./dev.py mode --unit 2 --dp mirror|off`; `scripts/kvm.py dp|hdmi1 --units 2`; `scripts/kvm_demo.py`.
 - OSD: `./dev.py osd ...`, `./dev.py menu ...`, `./dev.py settings list|get|set --unit 2`; catalogue `python3 scripts/osd_catalog.py <bin> --menu-dir <dir>`.
-- Build: `python scripts/wb_build.py --tree <worktree> --serial AWT26110002 --tag <tag>` (from this repo); gates `scripts/fw_gates.py` (below); speed `scripts/loop_rate.py`, sim `docs/speed-bench.tsv`.
+- Build: `./dev.py build --tree <worktree> --serial AWT26110002 --tag <tag>` (from this repo); gates `scripts/fw_gates.py` (below); speed `scripts/loop_rate.py`, sim `docs/speed-bench.tsv`.
   - Default build = FRC + rotation 180 / mirror + OSD rotation (2026-11-13, #165); `-D _AWTO_FREEZE=_ON` = freeze instead, `-D _AWTO_FRC=_OFF` = line buffer only.
 - Blocking waits (#216): every Delay / Poll / WaitForEvent >= 2 ms or expired is logged with its caller: `scripts/wait_log.py <bus> --serial S --map M` (ring `g_stAwtoWait`, 120 entries, highest SP inside a wait); offline callers `scripts/sim_waits.py`; stack high-water `scripts/stack_high.py`.
   - Pump: inside the three waits `AWTO_WAIT_PUMP()` answers DDC/CI Get-VCP / capabilities (`AwtoWaitPump`, fw/ddcci/ddcci.c); Set / save / table / mailbox are deferred to the main-loop poll. Runs only with SP <= `AWTO_PUMP_SP_MAX`; the OSD hardware-VLC paths use `ScalerTimerDelayXmsQuiet` (link gate: no code reads in the DMA closure). Gate `pump` (`scripts/pump_sim.py`); live check `scripts/ddc_probe.py <bus> --serial S --cycle`.

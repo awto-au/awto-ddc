@@ -5,7 +5,7 @@ usage: fw_variants.py [--serial AWT26110002] [--only NAME,...] [--keep]
 - Each variant: a detached git worktree of HEAD in tmp/variants/<name> (compile cache shared through the git common dir),
   fw_build.py with K2S_SDCC_EXTRA = its -D flags and --xdata-floor 0 (an opt-in build must fit, not keep the floor).
 - Variants (VARIANTS): meas4k (-D_AWTO_MEAS4K=_ON), net (-D_AWTO_NET=_ON), both.
-- Compiler = the rolled one (wb_build.py): awto-sdcc /usr/local, BE, --sdcccall 3. Commit first: uncommitted edits are not built.
+- Compiler = the rolled one (dev.py build): awto-sdcc /usr/local, BE, --sdcccall 3. Commit first: uncommitted edits are not built.
 - One PASS / FAIL line per variant with XDATA free; exit 1 if any fails. --keep leaves the worktrees (default: removed).
 Log: ./tmp/logs/fw_variants.log (+ tmp/logs/fw_variants_<name>.out = fw_build output)
 """

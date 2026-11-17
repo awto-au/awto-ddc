@@ -88,7 +88,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 ## Run
 
-- Build: `python scripts/wb_build.py --tree . --serial AWT26110003 --tag pc -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-pc-be`.
+- Build: `./dev.py build --tree . --serial AWT26110003 --tag pc -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-pc-be`.
 - Unit 3: `./dev.py flash --unit 3 tmp/fw/AWT26110003-pc-be.bin`; start `ddcutil --bus 11 setvcp EB 2`, stop `setvcp EB 0` (`docs/screensaver.md`); or test cmds 0xB7 / 0xB8 / 0xB9 (`scripts/pacman_unit.py`).
 - Sim: `python scripts/pacman_sim.py --game --steps 260` -> `tmp/pacman_sim/pacman.mp4`; `python scripts/saver_sim.py` for the DDC start / stop check.
 

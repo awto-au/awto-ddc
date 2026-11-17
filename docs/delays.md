@@ -9,7 +9,7 @@
 
 ## How I decided what is compiled, and what the snapshot is
 
-- **Build chain.** `scripts/wb_build.py` calls `scripts/fw_build.py`, which calls `scripts/fw_compile.py`.
+- **Build chain.** `dev.py build` calls `scripts/fw_build.py`, which calls `scripts/fw_compile.py`.
   - `fw_compile.py` compiles the C files listed in `fw/sdk/STD_FW_1P.Uv2` (target `RL6449_Project`) plus the Lib Uv2.
   - `fw_compile.py awto` compiles every `awto-rtdfw/awto/*/**.c` module (arith, dataport, gamma, nvram, reg, settings) plus the shim `fw/awto/awto_shim/sdk_boundary.c`, with `-D_AWTO_NEW_<MOD>`.
   - `fw/sdcc/*.inc` are our code, pulled into the SDK translation units.

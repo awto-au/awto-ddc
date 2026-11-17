@@ -32,14 +32,14 @@ def say(s):
 
 
 def build(serial: str, tag: str, defines: list[str], fw_args: str | None) -> Path:
-    cmd = [sys.executable, str(ROOT / "scripts/wb_build.py"), "--tree", str(ROOT), "--serial", serial, "--tag", tag]
+    cmd = [sys.executable, str(ROOT / "dev.py"), "build", "--tree", str(ROOT), "--serial", serial, "--tag", tag]
     for d in defines:
         cmd += ["-D", d]
     if fw_args:
         cmd += ["--fw-args", fw_args]
     out = ROOT / f"tmp/logs/dead_code_maps.{tag}.out"
     say(f"build {tag}: {' '.join(defines) or 'default'} -> {out.relative_to(ROOT)}")
-    with out.open("w") as f:                           # wb_build has its own stall guard
+    with out.open("w") as f:                           # dev.py build has its own stall guard
         rc = subprocess.run(cmd, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT).returncode
     if rc:
         raise SystemExit(f"build {tag} failed rc={rc}: see {out}")
@@ -55,7 +55,7 @@ def main() -> int:
         shutil.rmtree(DC, ignore_errors=True)
         DC.mkdir(parents=True)
         for name, defs in VARIANTS.items():
-            layout = ROOT / f"fw/bank_layout.dc-{name}.tsv"   # wb_build refuses tmp/ layouts; deleted after
+            layout = ROOT / f"fw/bank_layout.dc-{name}.tsv"   # dev.py build refuses tmp/ layouts; deleted after
             layout.unlink(missing_ok=True)
             try:
                 m = build(a.serial, f"dc-{name}", defs, f"--layout {layout.relative_to(ROOT)} {FRESH}")

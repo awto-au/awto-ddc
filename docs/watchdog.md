@@ -227,7 +227,7 @@
 ### TMDS-clock wake and the PS poll period (tmds1, #144 q7, Dan 2026-11-12)
 
 - Branch `wb-p14ui-tmds` (worktree `awto-ddc-tmds`), image `AWT26110002-wb-p14ui-tmds1-be`. Build: `AWTO_RTDFW_REPO=/mnt/2tb/git/awto-rtdfw-ui`
-  `wb_build.py ... -D _AWTO_AUDIO_TEST` (the pinned clean ref lacks the ui font symbols; layout = `fw/bank_layout.tsv`, was wdt2 `tmp/layout_sync3.tsv`).
+  `dev.py build ... -D _AWTO_AUDIO_TEST` (the pinned clean ref lacks the ui font symbols; layout = `fw/bank_layout.tsv`, was wdt2 `tmp/layout_sync3.tsv`).
 - Why the poll ran 3 times on unit 2 (wd8): the only wait in a power-saving pass was the SDK's TMDS PS predetect (`ScalerTMDSRx2/3TMDSPSPreDetect`:
   reset the freq detector, `ScalerTimerDelayXms(5)`, read, disable). Sim wd8: PS pass 24 k instr / 6 ms, 5 of them that wait; console redraws
   (`AwtoGpioPoll` 93 k instr every 500 ms, `AwtoKeyShow`) the other long passes. Unit 2 PS pass length itself not measured (host_sleep now reads it).

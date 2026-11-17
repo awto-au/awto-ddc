@@ -2,7 +2,7 @@
 """Screensaver check in the firmware simulator (docs/screensaver.md): DDC/CI VCP 0xEB starts / stops Pac-Man and the scope; PNGs of each.
 
 usage: saver_sim.py [BIN MAP] [--out DIR]
-  - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (wb_build.py --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
+  - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
   - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2): wait, render, then = 0 (stop), render. PASS = font SRAM written and something on screen when started,
     OSD closed (no window cells drawn) after stop. Exit 1 on a FAIL.
 Log: ./tmp/logs/saver_sim.log

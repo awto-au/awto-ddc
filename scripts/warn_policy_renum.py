@@ -2,7 +2,7 @@
 """Renumber fw/warn_policy.tsv rows whose file:line moved after code was inserted into a ported SDK file.
 
 usage: warn_policy_renum.py BUILD_LOG [--policy PATH]
-  BUILD_LOG = a wb_build log with `WARN-GATE unreviewed: FILE:LINE: TEXT` lines (tmp/logs/build_<tag>_<serial>.out in the tree).
+  BUILD_LOG = a dev.py build log with `WARN-GATE unreviewed: FILE:LINE: TEXT` lines (tmp/logs/build_<tag>_<serial>.out in the tree).
   Each unreviewed warning is matched to the policy row of the same file whose pattern matches the text and whose line is nearest;
   that row's line number is rewritten. Warnings with no matching row are listed and left alone (they need a real review).
 Log: tmp/logs/warn_policy_renum.log

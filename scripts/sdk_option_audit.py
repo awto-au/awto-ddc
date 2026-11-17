@@ -7,12 +7,12 @@ usage: sdk_option_audit.py opts            -> tmp/audit/options.tsv (name, value
        sdk_option_audit.py measure         -> linked code / XDATA bytes of tmp/fw/AWT26110002/fw.map
        sdk_option_audit.py toggle TAG NAME[,NAME..] [TAG NAME..]   one fw_build per TAG with NAME(s) _ON -> _OFF
        sdk_option_audit.py patch TAG FILE.json                     one fw_build with a src-patch (trial edits)
-  toggle / patch append tmp/audit/toggles.tsv (code, xdata, free bytes per XDATA hole); builds = wb_build's compiler.
+  toggle / patch append tmp/audit/toggles.tsv (code, xdata, free bytes per XDATA hole); builds = dev.py build's compiler.
 - opts: sdcc -E -dD on a probe that includes SysInclude.h with the RL6449_Project target flags (same cmd as
   fw_compile); the active definition = last #define before end (no later #undef). Values from `#if` in the
   probe, so derived expressions (_MHL_SUPPORT = port types ...) are evaluated, not grepped.
 - modules: code / XDATA area sizes of tmp/sdcc-port/asm_bank/_size/*.rel (before the bank step drops dead chunks).
-- Toggle deltas include the image tag string: compare toggles with each other, not with a wb_build image.
+- Toggle deltas include the image tag string: compare toggles with each other, not with a dev.py build image.
 Needs a built tree (fw_build.py) in this checkout. Log: tmp/logs/sdk_option_audit.log
 """
 import os, re, subprocess, sys, time
@@ -138,7 +138,7 @@ def cmd_linked():
 
 
 BUILD_ENV = dict(AWTO_SDCC_BE="1", AWTO_SDCCCALL="3", AWTO_SDCC_BIN="/usr/local/bin",
-                 AWTO_SDCC_SRC="/usr/local/share/sdcc/awto-src", K2S_SDCC_EXTRA="-D_AWTO_AUDIT_NOP=1")   # = wb_build.py rolled compiler
+                 AWTO_SDCC_SRC="/usr/local/share/sdcc/awto-src", K2S_SDCC_EXTRA="-D_AWTO_AUDIT_NOP=1")   # = dev.py build rolled compiler
 BUILD_TIMEOUT = 240                 # whole fw_build: 76 s measured cold (2026-11-12) x3 backstop; fw_build has per-step stall guards
 
 

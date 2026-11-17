@@ -309,7 +309,7 @@ def cmd_selftest(_extra: list[str]) -> int:
 # --------------------------------------------------------------------------
 # awto-ddc: firmware build + test-unit loop (#26). Units: scripts/devices.json.
 # --------------------------------------------------------------------------
-SDCC_BE_BIN = "/usr/local/bin"     # awto-sdcc main (= wb_build.py SDCC_INSTALL)
+SDCC_BE_BIN = "/usr/local/bin"     # awto-sdcc main (= dev.py build SDCC_INSTALL)
 FW = TMP / "fw"
 BOOT_PORTS = {"DP": "_D1_INPUT_PORT", "HDMI": "_D2_INPUT_PORT"}               # debug port before first ACTIVE (#28)
 MODES = {"1080p50": "1920x1080@50.000", "1080p60": "1920x1080@60.000", "4k30": "3840x2160@30.000",
@@ -598,10 +598,12 @@ def _flashed(u: dict) -> dict:
     return json.loads(f.read_text()) if f.exists() else {}
 
 
-@command("build firmware for a unit (FRC + rotation by default); frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
-         args="[--unit N] [--freeze | --no-frc] [--audio-test] [--tag T] [--force]", kind="action")
+@command("build firmware (the only build entry; engine scripts/fwimage.py): FRC + rotation by default; frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
+         args="[--unit N | --serial S] [--tree DIR] [--freeze | --no-frc] [--audio-test] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
+         kind="action")
 def cmd_build(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    serial = _opt(extra, "--serial")
+    n, u = (0, {"serial": serial}) if serial else _unit(extra)
     disk_guard.prune_fw(FW)
     disk_guard.require_free("build", disk_guard.BUILD_FREE_MB)
     freeze, nofrc = _flag(extra, "--freeze"), _flag(extra, "--no-frc")   # FRC + rotation are the default (#165)
@@ -612,11 +614,18 @@ def cmd_build(extra: list[str]) -> int:
     opt = "-freeze" if freeze else "-nofrc" if nofrc else ""
     if audio_test:
         defs.append("_AWTO_AUDIO_TEST")
-    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
-    dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=REPO).returncode else ""
+    defs += [extra[i + 1] for i, x in enumerate(extra) if x == "-D" and i + 1 < len(extra)]
+    tree = Path(_opt(extra, "--tree") or REPO)
+    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True).stdout.strip()
+    dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree).returncode else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
-    # one build path (Dan 2026-11-18): scripts/wb_build.py is the engine (rolled compiler + stamp check, BE, sdcccall 3, sync.tsv and settings table filed beside the map)
-    rc = _py("wb_build.py", "--tree", str(REPO), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)])
+    args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
+    for o in ("--bin", "--src", "--level", "--expect", "--flags", "--fw-args"):     # compiler A/B and layout experiments (fwimage.py options)
+        v = _opt(extra, o)
+        if isinstance(v, str):
+            args += [o, v]
+    import fwimage
+    rc = fwimage.main(args)
     if rc:
         return rc
     name = f"{u['serial']}-{tag}-be"

@@ -8,7 +8,7 @@ usage: gen_awto_sync.py [--check]
                               awto_port_sigs: one row per port signal (source, columns, labels)
     RL6449_Project.h          awto_port_cnt: edge counters the input monitor keeps for `cnt` signals
   The sync.tsv texts are also read by the host decoder (scripts/sync_log.py in awto-ddc main).
-  Texts may hold {NAME} / {NAME/DIV}: the integer #define in RL6449_Project.h (resolve(); wb_build.py copies the resolved tsv for the host).
+  Texts may hold {NAME} / {NAME/DIV}: the integer #define in RL6449_Project.h (resolve(); dev.py build copies the resolved tsv for the host).
   --check: exit 1 when any block is out of date.
   Line width (every run): each row's worst-case console line (longest name / value at every %, port prefix, time column)
     must fit 2 rows of the main-page log (AWTO_LOG_W_MAIN cells, continuation at AWTO_LOG_TXT0: fw/osd/console.c); exit 1 if not.

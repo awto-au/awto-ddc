@@ -29,7 +29,7 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 ## Build / run (scripts, firmware)
 - `scripts/pacman_sound.py`: note tables -> `fw/test/pacman_sound_data.inc` (pairs `{sc | 0x80 octave, 10 ms ticks}`, 0 = rest, 0 ticks = end) + `tmp/pacman_sound/{intro,waka,death}.wav` (square by default, `--wave sine` = what the chip plays). Test: `tests/test_pacman_sound.py`.
 - `fw/test/pacman_sound.c`: non-blocking player (`AwtoPmSoundPoll` each main pass, schedule on `AwtoMs`). Test cmds `AWTO_TC_PACMAN_SND` 0xBA intro, 0xBB waka (loops), 0xBC death, 0xBD calibration tone, 0xBE stop. Sync log E9 80..86. Without `-D _AWTO_AUDIO_TEST` the cmds log E9 66.
-- Build: `python scripts/wb_build.py --tree . --serial AWT26110003 --tag snd1 -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-snd1-be`.
+- Build: `./dev.py build --tree . --serial AWT26110003 --tag snd1 -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-snd1-be`.
 - Simulator (`scripts/fw_sim.py`) models no audio hardware (`docs/audio.md`): the gates prove build, link and boot only.
 
 ## Unverified
@@ -38,7 +38,7 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 - Whether the amp passes the generator level cleanly (known low-frequency distortion, `docs/audio.md`); DVC gain is whatever the user volume sets.
 
 ## Simulator video with sound (no hardware)
-- Run: `python scripts/wb_build.py --tree . --serial AWT26110003 --tag simav -D _AWTO_AUDIO_TEST`, then `python scripts/pacman_sim.py [--steps N] [--out DIR] [--k-hz HZ]` (defaults: 120 steps, `tmp/pacman_sim`). Output: `pacman.mp4` (H.264 yuv420p + AAC, 8 fps, 1920x1080), `pacman.wav`, `frames/`, `events.tsv`. Log `tmp/logs/pacman_sim.log`. Test: `tests/test_audio_sim.py`.
+- Run: `./dev.py build --tree . --serial AWT26110003 --tag simav -D _AWTO_AUDIO_TEST`, then `python scripts/pacman_sim.py [--steps N] [--out DIR] [--k-hz HZ]` (defaults: 120 steps, `tmp/pacman_sim`). Output: `pacman.mp4` (H.264 yuv420p + AAC, 8 fps, 1920x1080), `pacman.wav`, `frames/`, `events.tsv`. Log `tmp/logs/pacman_sim.log`. Test: `tests/test_audio_sim.py`.
 - Sequence: 0xB7 maze, 0xBA intro, 0xBB waka from the end of the intro, one 0xB8 per frame (1/8 s firmware time), 0xBE stop. Video frame k = OSD state at T0 + k / 8; the WAV spans the same clock.
 - Order matters: `OsdFuncDisableOsd` (inside the 0xB7 draw) calls `SysAudioInternalGenTestProc(_OFF)`: 0xB7 after 0xBA silences the intro (player keeps writing, generator off) [spec, seen in the sim]. Applies to the unit too.
 - Modelled (`scripts/audio_sim.py`, device `AudioTap`): writes to the HDMI audio block data port (D2 `0x71C9` / D3 `0x72C9`: AFCR idx 3, CMCR idx 16, SCAPR idx 18) and the amp pins (P7.4 `0xFE1C`, P7.3 `0xFE1B`), stamped with the firmware Timer2 clock; the index write preloads the data cell (shadow per index, regdb reset values) so the SDK read-modify-writes work. Addresses numeric from `re/regdb/RTD2795T-CG.tsv.gz`.

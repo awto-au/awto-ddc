@@ -2,7 +2,7 @@
 """Scope screensaver (fw/test/scope_saver.c) in the firmware simulator -> PNG frames + MP4. Nothing touches hardware.
 
 usage: scope_sim.py [BIN MAP] [--frames N] [--out DIR] [--fps F] [--scale S]
-  - BIN / MAP default: tmp/fw/AWT26110003-sc1-be.{bin,map} (wb_build.py --tree . --serial AWT26110003 --tag sc1).
+  - BIN / MAP default: tmp/fw/AWT26110003-sc1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sc1).
   - Test cmds: 0xB4 draw, then 0xB5 per frame (one cmd per main pass), 0xB6 off.
 Log: ./tmp/logs/scope_sim.log
 """

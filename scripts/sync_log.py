@@ -5,7 +5,7 @@ usage: sync_log.py BUS --map MAP [--tsv TSV] [--serial SERIAL]      read over th
        (library) decode(raw, rows) -> (header dict, [lines]); load_rows(tsv); tsv_for(map)
 - Texts and value formats: the firmware tree's fw/awto/sync.tsv (one file for screen and host; the console wraps a long line
   to a second row, the host prints it on one). Default TSV = the image's
-  <map stem>.sync.tsv (wb_build.py copies it beside the image), else $AWTO_SYNC_TSV.
+  <map stem>.sync.tsv (dev.py build copies it beside the image), else $AWTO_SYNC_TSV.
 - Ring layout (RL6449_Project.h StAwtoSync, bytes only): 14 B header, N x 8 B entries {id, arg, ms hi, ms lo, value BE x4}.
   Header byte 12 = N, byte 13 = seq wrap: read the header, then N x 8 B (read_ring); nothing is hardcoded here.
 - Host time (#157): images with isr_g_stAwtoHt print every line with its host ISO 8601 time, from the latest DDC/CI time sync

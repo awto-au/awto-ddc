@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Build a work-branch firmware image with the rolled compiler setup and file it as tmp/fw/<serial>-<tag>-be.{bin,map}.
+"""Firmware image build engine (internal): used only by `./dev.py build`; there is no command line here (Dan 2026-11-18: everything via dev.py).
+Builds an image with the rolled compiler setup and files it as tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}.
 
-usage: wb_build.py --tree /mnt/2tb/git/awto-ddc-p14sc3 --serial AWT26110003 --tag wb-p14kc2 [-D NAME=VAL ...]
+usage: ./dev.py build [--unit N | --serial S] [--tree DIR] --tag T [-D NAME=VAL ...] [--audio-test] [--force]   (options below are dev.py build options)
 - Compiler = /usr/local (awto-sdcc main 9a0e583022, keil-compat), BE, --sdcccall 3, far locals per fw/far_locals_select.txt (awto-sdcc#36, ddc#205).
   The install's stamp (awto-sdcc-commit.txt) must start with SDCC_COMMIT and the tree must use --keil-compat
   (fw_compile refuses a compiler without it). A default-env fw_build gives an LE image (byte-swapped diag, #75).
@@ -9,7 +10,7 @@ usage: wb_build.py --tree /mnt/2tb/git/awto-ddc-p14sc3 --serial AWT26110003 --ta
 - --fw-args: more fw_build args; fresh layout = `--layout <missing file> --cluster fn --cluster-weights fw/cluster_weights.json`.
 - --bin/--src/--level/--flags/--expect: compiler A/B (install bin dir, its source tree for the ISR lib clones, --sdcccall,
   extra flags, stamp prefix; --expect '' skips the stamp check, for unstamped installs).
-Log: ./tmp/logs/wb_build.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_build output)
+Log: ./tmp/logs/fwimage.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_build output)
 """
 import argparse, json, os, re, shutil, subprocess, sys, time
 import isostamp  # noqa: E402
@@ -37,8 +38,8 @@ def stamp(bin_dir: Path) -> str:
     return "unstamped"
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="dev.py build")
     ap.add_argument("--tree", type=Path, required=True)
     ap.add_argument("--serial", required=True)
     ap.add_argument("--tag", required=True)
@@ -49,13 +50,13 @@ def main() -> int:
     ap.add_argument("--expect", default=SDCC_COMMIT, help="install stamp prefix ('' = no check)")
     ap.add_argument("--flags", default="", help="extra sdcc flags")
     ap.add_argument("--fw-args", default="", help="more fw_build args (fresh layout: '--layout NEW.tsv --cluster fn ...')")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     if re.search(r"--layout\s+(\./)?tmp/", a.fw_args):
         ap.error("--layout under tmp/ is refused: the build uses the tracked fw/bank_layout.tsv only")
     root = repo_root()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     (a.tree / "tmp/logs").mkdir(parents=True, exist_ok=True)
-    log = (root / "tmp/logs/wb_build.log").open("a")
+    log = (root / "tmp/logs/fwimage.log").open("a")
 
     def say(s):
         line = f"{isostamp.now()} {s}"
@@ -111,4 +112,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit("fwimage.py is internal: run ./dev.py build")
