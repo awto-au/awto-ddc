@@ -33,8 +33,6 @@ import osd_render as R  # noqa: E402
 import osd_test as T  # noqa: E402
 import sync_log as SL  # noqa: E402
 
-ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
-ROTATE_SETTLE_S = 6.0           # fw time for the display re-set after Rotate changes (saver_sim.py)
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/host_time_sim.log"
 VCP = 0xE9
@@ -77,9 +75,6 @@ class Sim:
         if not self.bus.run_until_mode(3):
             raise SystemExit("never reached ACTIVE")
         say(f"ACTIVE at fw {self.bus.now():.3f} s")
-        self.mccs.set(0xE0, ROW_DISP_ROTATE)       # the registry default is Rotate 180; these text checks read the upright console
-        self.mccs.set(0xE1, 0)
-        self.bus.wait(ROTATE_SETTLE_S)
         self.cmd(0x26)                    # console opened on purpose: console_mode Until signal closes only the one that opened itself (#218)
 
     def text(self) -> list[str]:
