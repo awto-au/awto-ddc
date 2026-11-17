@@ -1,6 +1,8 @@
 # Pac-Man sound (speaker path, no input audio)
 
-Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = arithmetic on [spec]; [guess]; [hw] = measured on a unit. Nothing below is [hw] yet.
+Overview of the whole Pac-Man demo and how the audio works: `docs/pacman.md`. Hardware status 2026-11-18: Dan heard the sound on unit 3 (good; clicky at pitch changes, amp gate added).
+
+Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = arithmetic on [spec]; [guess]; [hw] = measured on a unit. The sections below were written before the first unit listening test; see `docs/pacman.md` for current status.
 
 ## Sources the chip can produce without an audio stream
 | Source | Registers (regdb) | Verdict |
