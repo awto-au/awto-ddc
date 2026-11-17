@@ -61,6 +61,7 @@ def main() -> int:
     ap.add_argument("--fps", type=float, default=8.0)
     ap.add_argument("--scale", type=int, default=2, help="panel 3840x2160 / scale = video size (2 = 1920x1080)")
     ap.add_argument("--bg", default="black")
+    ap.add_argument("--game", action="store_true", help="the firmware plays the sounds itself from the game events (pacman_classic.c): only draw (0xB7), step (0xB8), off (0xB9)")
     a = ap.parse_args()
     binp, mapp = a.bin, a.map or a.bin.with_suffix(".map")
     if not binp.exists():
@@ -80,13 +81,20 @@ def main() -> int:
     period = 1.0 / a.fps
     intro_s = sum(ms for _, ms in PS.steps("intro")) / 1000.0
     k_waka = math.ceil(intro_s / period)                # first frame after the intro
-    total = k_waka + a.steps + 2
+    total = (a.steps + 3) if a.game else (k_waka + a.steps + 2)
     t0 = sess.bus.now()
     for k in range(total):
         sess.bus.wait(max(0.0, t0 + k * period - sess.bus.now()))
         st = sess.snap()
         R.render_snap(st, a.bg, a.scale).save(frames_dir / f"f{k:04d}.png")
-        if k == 0:
+        if a.game:
+            if k == 0:
+                send(sess, TC_DRAW)
+            elif k <= a.steps:
+                send(sess, TC_STEP)
+            elif k == a.steps + 1:
+                send(sess, TC_OFF)
+        elif k == 0:
             send(sess, TC_DRAW)                         # maze first: OsdFuncDisableOsd (inside the draw) switches the audio generator off
             sess.bus.wait(PASS_S)
             send(sess, TC_INTRO)
