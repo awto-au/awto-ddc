@@ -267,6 +267,22 @@ def win_base(i: int) -> int:
     return 0x100 + 4 * i if i < 10 else 0x200 + 4 * (i - 10)
 
 
+_WINNAME = ["WIN0", "WIN1", "WIN2", "WIN3", "WIN4", "WIN5", "WIN6", "WIN7", "WIN8", "WIN9"] + [f"WIN4_{k}" for k in range(1, 9)] + [f"WIN5_{k}" for k in range(1, 9)]
+_ADR = {}
+
+
+def win_adr(i: int, n: int) -> int | None:
+    """Word address of WIN<i>_ADR<n> from the regdb (None = this window has no such word)."""
+    if not _ADR:
+        import csv
+        import gzip
+        with gzip.open(Path(__file__).resolve().parent.parent / "re/regdb/RTD2795T-CG.tsv.gz", "rt") as f:
+            for r in csv.DictReader(f, delimiter="\t"):
+                if r["kind"] == "REG" and r["register"].startswith("WIN") and r["register"].endswith("_LSB") and "_ADR" in r["register"]:
+                    _ADR[r["register"][:-4]] = int(r["port_idx"])
+    return _ADR.get(f"{_WINNAME[i]}_ADR{n}")
+
+
 def sat_adr4(i: int) -> int:
     """Word of WIN<i>_ADR4 (saturated colour R, G, B bytes; regdb): windows 1..4 have none."""
     if i == 0:
@@ -312,7 +328,23 @@ def describe_window(st: OsdState, w: dict) -> list[str]:
         out.append(f"{EFF_NAMES[w['eff_opt']]} {w['eff_w']}px")
     if w["blend"]:
         out.append("blend")
+    ex = window_extras(st, w["i"])
+    if ex["cb"]:
+        out.append(f"chess {ex['cb'][0]}/{ex['cb'][1]} {ex['pix']}px")
+    if ex["round"]:
+        out.append(f"round {ex['round'][0]}px")
+    if ex["gray"]:
+        out.append("gray")
     return out
+
+
+def window_extras(st: OsdState, i: int) -> dict:
+    """Chessboard colours (ADR5), pixel step (ADR9), gray level (ADR9 bit 1), rounded corners (ADR10) of window i."""
+    g = lambda n: st.win.get(win_adr(i, n), [0, 0, 0]) if win_adr(i, n) else [0, 0, 0]
+    a5, a9, a10 = g(5), g(9), g(10)
+    cb = (a5[1] & 0x3F, a5[2] & 0x3F) if a5[0] & 0x80 else None
+    rd = ((4 << (a10[0] >> 1 & 3)), tuple(a10[0] >> b & 1 for b in (6, 5, 4, 3))) if a10[0] & 1 else None   # size code -> 4 << n px [guess]; corners UL, LL, UR, LR
+    return dict(cb=cb, pix=max(a9[1], 1), gray=a9[0] >> 1 & 1, round=rd)
 
 
 def decode_char(w: list[int]) -> dict:
@@ -498,7 +530,29 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                 else:
                     rect(X0, Y0 + k, X1, min(Y0 + k + m, Y1), c, a)
             return
-        rect(X0, Y0, X1, Y1, st.pal[w["color"]], a)
+        ex = window_extras(st, w["i"])
+        col = st.pal[w["color"]]
+        if ex["gray"]:                                     # gray level function: luma of the window colour [register doc, guess]
+            lum = int(0.299 * col[0] + 0.587 * col[1] + 0.114 * col[2])
+            col = (lum, lum, lum)
+        if ex["cb"] and X1 > X0 and Y1 > Y0:               # chessboard: two palette colours in squares of pix_step px [register doc, guess]
+            stp = ex["pix"] * sx
+            for yy in range(Y0, Y1, stp):
+                for xx in range(X0, X1, stp):
+                    rect(xx, yy, min(xx + stp, X1), min(yy + stp, Y1), st.pal[ex["cb"][((xx - X0) // stp + (yy - Y0) // stp) & 1]], a)
+        elif ex["round"] and X1 > X0 and Y1 > Y0:           # rounded corners: quarter-circle mask of the given radius on the enabled corners
+            r = ex["round"][0] * sx
+            hh, ww = Y1 - Y0, X1 - X0
+            yy, xx = np.mgrid[0:hh, 0:ww]
+            mk = np.ones((hh, ww), bool)
+            for (cy, cx), on in zip(((0, 0), (hh, 0), (0, ww), (hh, ww)), ex["round"][1]):
+                if on:
+                    ccy, ccx = (r if cy == 0 else hh - r), (r if cx == 0 else ww - r)
+                    inside = ((yy < r) if cy == 0 else (yy >= hh - r)) & ((xx < r) if cx == 0 else (xx >= ww - r))
+                    mk &= ~(inside & ((yy - ccy) ** 2 + (xx - ccx) ** 2 > r * r))
+            paint(X0, Y0, mk, col, a)
+        else:
+            rect(X0, Y0, X1, Y1, col, a)
         draw_grid(w, X0, Y0, X1, Y1, a)
         if w["eff_en"]:                                   # shadow types 0..3 / 3D button 4,5 [register doc, approximation]
             ew, eh = w["eff_w"] * sx, w["eff_h"] * sy
