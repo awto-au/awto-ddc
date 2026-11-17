@@ -38,6 +38,8 @@ def main() -> int:
     ap.add_argument("--serial", required=True)
     ap.add_argument("--map", required=True, type=Path)
     ap.add_argument("--words", type=int, default=12288)
+    ap.add_argument("--sel", type=int, default=0, choices=(0, 1), help="SRAM read select: 0 = M1, 1 = M2")
+    ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--pre-cmd", type=lambda x: int(x, 0), default=None, help="test cmd sent first (0xB2 = QC pattern); its run settles for PRE_S")
     a = ap.parse_args()
     import dbg_link, dbg_xdata as X, i2cbus, qc_osd_patterns as Q, osd_vlc as V  # noqa: E401
@@ -48,13 +50,14 @@ def main() -> int:
 
     def sym(n):
         return int(re.search(r"^\S*\s+([0-9A-F]{8})\s+_?" + n + r"\b", txt, re.M).group(1), 16) & 0xFFFF
-    diag, dump, addr = sym("isr_g_stAwtoDiag") + 0x28, sym("g_aucQcDump"), sym("g_usQcDumpAddr")
+    diag, dump, addr, selad = sym("isr_g_stAwtoDiag") + 0x28, sym("g_aucQcDump"), sym("g_usQcDumpAddr"), sym("g_ucQcDumpSel")
     mem = bytearray()
     with dbg_link.linked(a.bus, 8):
         io = B.Real(a.bus, allow_write=True, regread=True)
         try:
             def wr(ad, v):
                 return io.write(0x6A, 0x01, bytes([ad >> 8])) and io.write(0x6A, 0x03, bytes([v])) and io.write(0x6A, 0x3B, bytes([ad & 0xFF]))
+            wr(selad, a.sel)
             if a.pre_cmd is not None:
                 wr(diag, a.pre_cmd)
                 time.sleep(PRE_S)
@@ -76,7 +79,7 @@ def main() -> int:
                 mem += bytes(raw[8:8 + 3 * CHUNK])
         finally:
             io.close()
-    out = ROOT / "tmp/scratch/font_sram.bin"
+    out = a.out or ROOT / f"tmp/scratch/font_sram_m{a.sel + 1}.bin"
     out.write_bytes(bytes(mem))
     say(f"{len(mem) // 3} words -> {out}")
     words = [bytes(mem[i:i + 3]) for i in range(0, len(mem), 3)]
