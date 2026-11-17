@@ -57,7 +57,7 @@ class FakeBackend:
             rc, text, self.fail = self.fail[0], self.fail[1], None
             return rc, text
         if "ddc" in a and "get" in a:
-            return 0, "HDMI-A-2         bus=11  " + {"0x62": "VCP 62 C 37 100", "0x8D": "VCP 8D SNC x01"}[a[a.index("get") + 1]] + "\n"
+            return 0, "HDMI-A-2         bus=11  " + {"0x62": "VCP 62 CNC x00 x64 x00 x25", "0x8D": "VCP 8D CNC x00 x01 x00 x01"}[a[a.index("get") + 1]] + "\n"
         if "settings" in a and "list" in a:
             return 0, "\n".join(f"{r['name']} = x (raw {r['default'] + (1 if r['type'] == 'int' and r['name'] == 'brightness' else 0)})"
                                 for r in MON.T.ROWS if r["type"] != "action") + "\n"

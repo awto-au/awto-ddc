@@ -37,7 +37,7 @@ SAVER_NOW = (("Stop", 0), ("Selected", 1), ("Pac-Man", 2), ("Scope", 3), ("Scope
 QUICK_ROWS = ("volume", "mute", "disp_rotate")           # registry rows reused as widgets in the Quick group
 VCP_ROW = {"volume": VCP_VOLUME, "mute": VCP_MUTE}       # quick rows written through DDC/CI, the rest through the mailbox
 VALUE_RE = re.compile(r"(?:^|\s)(\w+) = .* \(raw (-?\d+)\)\s*$")
-VCP_GET_RE = re.compile(r"VCP\s+([0-9A-Fa-f]{2})\s+(C|SNC)\s+(x?[0-9A-Fa-f]+)")   # dev.py ddc get (ddcutil --brief)
+VCP_GET_RE = re.compile(r"VCP\s+([0-9A-Fa-f]{2})\s+(C|SNC|CNC)\s+((?:x?[0-9A-Fa-f]+\s*){1,4})")   # dev.py ddc get (ddcutil --brief)
 STEP_RE = re.compile(r"(?:^|\s)(\d{1,5}):(?!\d)")        # sync_log line: "<ms since episode start>:text"
 
 
@@ -483,7 +483,9 @@ class MonitorPage(QWidget):
         if not m:
             return ", reply not understood"
         name = next(n for n, c in VCP_ROW.items() if c.lower() == "0x" + m.group(1).lower())
-        raw = int(m.group(3).lstrip("x"), 16 if m.group(2) == "SNC" else 10)
+        f = m.group(3).split()
+        hx = [int(x.lstrip("x"), 16) for x in f]
+        raw = {"C": lambda: int(f[0]), "SNC": lambda: hx[0], "CNC": lambda: hx[2] << 8 | hx[3] if len(hx) == 4 else -1}[m.group(2)]()
         r = self.quick[name].r
         if r["option_vcp"]:
             if raw not in r["option_vcp"]:

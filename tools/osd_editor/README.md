@@ -25,4 +25,4 @@ PySide6 viewer/editor on top of `scripts/` (VLC codec: `scripts/osd_vlc.py` via 
 ## Not done
 - palette editing / .pal files, char-map (screen layout) editing, OsdEdit .txt export (byte format differs, see docs/osd-editor-spec.md)
 - 2 / 4 bpp tile packing in the glyph editor is row-major; `osd_model.py` draws bit planes (#227): exports are not hardware-verified
-- monitor page not checked in a real window; screensaver value 5 (Flash warning) is not in the registry options or the DDC/CI capabilities string
+- monitor page not checked in a real window; screensaver value 5 (Flash warning) is not in the registry options or the capabilities string (unit 3 reports max 5 for VCP 0xEB)
