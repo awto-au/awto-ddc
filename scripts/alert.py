@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 import isostamp  # noqa: E402
+from ddcutil_run import ddc as _ddc  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -22,9 +23,6 @@ VCP_SAVER = 0xEB
 VCP_ALERT = 6                   # screensaver_now option "Alert tone" (registry row 121)
 TONE_S = 1.0                    # the track length (scripts/pacman_sound.py ALERT: 150+50+150+50+600 ms)
 TAIL_S = 0.3                    # + the main-loop pass that starts it (<= 0.1 s) and the DDC write time, with margin
-DDC_TRIES = 4                   # DDC/CI is back ~0.1 s after the debug link goes off; 4 x 0.5 s = 2 s at most
-DDC_RETRY_S = 0.5
-DDC_LIMIT_S = 20                # ddcutil's own retry budget for a busy unit; expiry = no tone, the caller goes on
 
 
 def say(s: str) -> None:
@@ -33,18 +31,6 @@ def say(s: str) -> None:
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)
-
-
-def _ddc(bus: int, *args: str):
-    for _ in range(DDC_TRIES):
-        try:
-            r = subprocess.run(["ddcutil", "--bus", str(bus), *args], capture_output=True, text=True, timeout=DDC_LIMIT_S)
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        if r.returncode == 0:
-            return r
-        time.sleep(DDC_RETRY_S)
-    return None
 
 
 def alert(bus: int, wait: bool = False) -> bool:

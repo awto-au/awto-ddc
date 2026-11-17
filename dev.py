@@ -763,10 +763,11 @@ def cmd_flash(extra: list[str]) -> int:
 
 def _unit_settings(u: dict, bus: int, m: Path) -> None:
     """Settings this unit always has (devices.json `settings`, e.g. unit 3: disp_rotate 180, its panel is mounted turned): set after every flash,
-    whatever the snapshot restore did. Other units keep the registry defaults."""
+    whatever the snapshot restore did, over DDC/CI (back before the debug link is). Other units keep the registry defaults."""
+    import ddcutil_run
     for name, value in (u.get("settings") or {}).items():
-        rc = _dbg_py(bus, "settings_cli.py", "--bus", str(bus), "--serial", u["serial"], "--map", str(m), "set", name, str(value))
-        log(f"flash: unit setting {name} = {value}: " + ("ok" if rc == 0 else f"FAILED rc {rc} (set it by hand)"), "INFO" if rc == 0 else "WARN")
+        ok = ddcutil_run.set_row(bus, name, str(value))
+        log(f"flash: unit setting {name} = {value}: " + ("ok" if ok else "FAILED (set it by hand)"), "INFO" if ok else "WARN")
 
 
 # whole-flash budget (rtd_flash_image --max-min), projected from a timed dry page BEFORE the first erase; over = refuse

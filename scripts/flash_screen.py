@@ -19,6 +19,7 @@ import subprocess
 import sys
 import time
 import isostamp  # noqa: E402
+from ddcutil_run import ddc as _ddc  # noqa: E402
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -32,9 +33,6 @@ VCP_FLASH_SCREEN = 5            # screensaver_now value "Flash warning" (registr
 VCP_PAGED_ID, VCP_PAGED_VAL = 0xE0, 0xE1
 ROW_DISP_ROTATE = 32            # registry row id of disp_rotate
 DRAW_WAIT_S = 0.6               # firmware draws in one main-loop pass: ~330 cells + 90 glyphs of data port writes (~0.1 s) after the DDC write; 6 x
-DDC_TRIES = 4                   # DDC/CI is back ~0.1 s after the debug link goes off (dev.py log: "DDC/CI 0x37 back after 52..102 ms"); 4 x 0.5 s = 2 s at most
-DDC_RETRY_S = 0.5
-DDC_LIMIT_S = 20                # ddcutil retries a busy unit for up to ~10 s; expiry = the screen is skipped, the flash goes on
 MOUTH_EVERY = 2                 # sectors per mouth toggle (24 cell writes each)
 ENV_IFACE = "AWTO_FLASH_IFACE"
 ENV_OFF = "AWTO_FLASH_SCREEN_OFF"   # =1: never show (a flash from an image whose screen layout differs from this script)
@@ -55,18 +53,6 @@ def say(s: str) -> None:
     with LOG.open("a") as f:
         f.write(line + "\n")
     print(line, flush=True)
-
-
-def _ddc(bus: int, *args: str):
-    for _ in range(DDC_TRIES):
-        try:
-            r = subprocess.run(["ddcutil", "--bus", str(bus), *args], capture_output=True, text=True, timeout=DDC_LIMIT_S)
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        if r.returncode == 0:
-            return r
-        time.sleep(DDC_RETRY_S)
-    return None
 
 
 def _vcp_max(bus: int) -> int:
