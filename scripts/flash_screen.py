@@ -127,7 +127,10 @@ def main() -> int:
     ap.add_argument("--bus", type=int, required=True)
     ap.add_argument("--ticks", type=int, default=8)
     a = ap.parse_args()
-    return (0 if show(a.bus) else 1) if a.cmd == "show" else test(a.bus, a.ticks)
+    if a.cmd == "show":
+        show(a.bus)                                         # not shown = logged, not an error: the flash goes on
+        return 0
+    return test(a.bus, a.ticks)
 
 
 if __name__ == "__main__":
