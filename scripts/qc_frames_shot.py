@@ -40,6 +40,40 @@ def say(s: str) -> None:
     print(line, flush=True)
 
 
+def spleen(size: str = "6x12") -> dict:
+    """Spleen hex font (fw/rtdfw/awto/osd/spleen-<size>.hex): codepoint -> rows (one byte per row)."""
+    out = {}
+    for ln in (ROOT / f"fw/rtdfw/awto/osd/spleen-{size}.hex").read_text().splitlines():
+        if ln and not ln.startswith("#") and ":" in ln:
+            cp, bits = ln.split(":")
+            out[int(cp, 16)] = [int(bits[i:i + 2], 16) for i in range(0, len(bits), 2)]
+    return out
+
+
+def put_text(img: np.ndarray, x: int, y: int, text: str, font: dict, fg=(0, 0, 0), bg=(255, 255, 255)) -> None:
+    w, h = 6, 12
+    for k, ch in enumerate(text):
+        rows = font.get(ord(ch), font.get(63, [0] * h))
+        for r in range(h):
+            for c in range(w):
+                yy, xx = y + r, x + k * w + c
+                if 0 <= yy < img.shape[0] and 0 <= xx < img.shape[1]:
+                    img[yy, xx] = fg if (rows[r] >> (7 - c)) & 1 else bg
+
+
+def label_windows(img: np.ndarray, st, font: dict) -> np.ndarray:
+    g = M.frame_geometry(st)
+    out = img.copy()
+    for i in range(26):
+        w = M.decode_window(st.win, i)
+        if not w or not w["en"] or w["x1"] <= w["x0"] or w["y1"] <= w["y0"]:
+            continue
+        x, y = (g["hd"] * g["step"] + w["x0"]) * g["sx"], (g["vd"] + w["y0"]) * g["sy"]
+        for k, line in enumerate(M.describe_window(st, w)):
+            put_text(out, x + 2, y + 2 + k * 12, line, font)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bin", type=Path)
@@ -47,6 +81,7 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/scratch/qc_frames")
     ap.add_argument("--frames", default=",".join(str(i) for i in range(len(NAMES))))
     ap.add_argument("--bg", default="grey", help="picture under the OSD: grey, checker or bars (bars shows the blending)")
+    ap.add_argument("--labels", action="store_true", help="write a description (window, colour, effects) on every window, in our Spleen font")
     ap.add_argument("--wait", type=float, default=4.0, help="sim seconds after the command (the QC run waits for many frames)")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
@@ -65,8 +100,10 @@ def main() -> int:
             say(f"{n} {name}: OSD off / nothing drawn (windows {info['nwin']}, en {info['en']})")
             continue
         ys, xs = np.nonzero(mask)
+        if a.labels:
+            img = label_windows(img, st, spleen())
         crop = img[max(0, ys.min() - 8):ys.max() + 9, max(0, xs.min() - 8):xs.max() + 9]
-        p = a.out / (f"qc_{n:02d}.png" if a.bg == "grey" else f"qc_{n:02d}_{a.bg}.png")
+        p = a.out / (f"qc_{n:02d}.png" if a.bg == "grey" else f"qc_{n:02d}_{a.bg}.png").replace(".png", "_lbl.png" if a.labels else ".png")
         Image.fromarray(crop).save(p)
         say(f"{n} {name}: box {xs.max() - xs.min() + 1}x{ys.max() - ys.min() + 1} at ({xs.min()},{ys.min()}), {info['nwin']} windows, "
             f"blend type {info['blend_type']}, map {info['cols']}x{info['rows']} -> {p}")

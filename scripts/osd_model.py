@@ -294,6 +294,27 @@ def decode_window(win: dict, i: int) -> dict | None:
                 grev=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 3 & 1, satc=tuple(win.get(sat_adr4(i), [0, 0, 0])) if sat_adr4(i) else None)
 
 
+EFF_NAMES = ["shadow1", "shadow2", "shadow3", "shadow4", "3D1", "3D2", "rsv", "border"]
+
+
+def describe_window(st: OsdState, w: dict) -> list[str]:
+    """Short label lines for a decoded window: index, colour, and every effect the model knows (for annotated renders)."""
+    out = [f"W{w['i']} c{w['color']}"]
+    if w["gra"]:
+        ch = "".join(("RGB"[j] + ("+" if w["gpol"][j] else "-")) for j in range(3) if w["gen"][j]) or "flat"
+        out.append(f"grad {'V' if w['gdir'] else 'H'} {ch} s{w['gstep']}" + (" sat" if w["gsat"] else "") + (" rev" if w["grev"] else ""))
+    if 2 <= w["i"] <= 4:
+        g7 = st.win.get(0x183 + 7 * (w["i"] - 2), [0, 0, 0])
+        g8 = st.win.get(0x184 + 7 * (w["i"] - 2), [0, 0, 0])
+        if g8[0] & 1:
+            out.append(f"grid {'H' if g7[1] >> 7 & 1 else ''}{'V' if g7[1] >> 6 & 1 else ''} w{(g7[0] >> 6) + 1}")
+    if w["eff_en"]:
+        out.append(f"{EFF_NAMES[w['eff_opt']]} {w['eff_w']}px")
+    if w["blend"]:
+        out.append("blend")
+    return out
+
+
 def decode_char(w: list[int]) -> dict:
     """Char command [B0, B1, B2].
     1-bit: B0[7:6]=01, B0[5] = id bit 8 (font 256..511), B0[4:0] = width px; B2 = fg<<4|bg [SDK].
