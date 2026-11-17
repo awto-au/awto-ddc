@@ -67,11 +67,11 @@ def render_snap(st: M.OsdState, bg: str, scale: int = 1, opaque: bool = False) -
 
 
 class Session:
-    def __init__(self, binp: Path, mapp: Path, mode: str):
+    def __init__(self, binp: Path, mapp: Path, mode: str, devs=()):
         self.binp, self.mapp, self.mode = binp, mapp, mode
         self.model = M.OsdModel()
         self.model.img = binp.read_bytes()
-        self.bus = S.SimBus(binp, mapp, "osdr-" + binp.stem, None, boot=False, devs=[self.model], video=mode)
+        self.bus = S.SimBus(binp, mapp, "osdr-" + binp.stem, None, boot=False, devs=[self.model, *devs], video=mode)
         self.diag = T.diag_addr(mapp)
         self.t0 = None
 
