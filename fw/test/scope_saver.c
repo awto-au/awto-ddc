@@ -74,7 +74,6 @@ __xdata uint8_t g_aucScPix[OSD_BITMAP_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata uint8_t g_aucScDirty[OSD_DIRTY_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata osd_canvas g_scCv;           // shared with scope_saver2.c: one saver runs at a time, XDATA floor
 static __xdata BYTE s_ucPhase;
-static __xdata BYTE s_ucRot;                                            // 1 = drawn turned 180 (display Rotate 180)
 static __xdata BYTE s_ucCol;                                            // next column of the frame being drawn
 static __xdata BYTE s_ucShown;
 static __xdata WORD s_usCell0;                                          // first cell (global tile index) of the band being drawn
@@ -93,14 +92,14 @@ static void ScUpload(BYTE ucTile)
     WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_SC_COLS;
     const uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
 
-    if(s_ucRot != 0)                                                    // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
+    if(g_ucAwtoOsdRot != 0)                                                    // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
     {
         usCell = AwtoOsdRotCell(usCell, AWTO_SC_CELLS);
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * usCell, _OSD_WITHOUT_DB);
     for(ucK = 0; ucK < AWTO_SC_GLYPH_WORDS; ucK++)                      // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py)
     {
-        if(s_ucRot != 0)
+        if(g_ucAwtoOsdRot != 0)
         {
             WORD usW = (WORD)(AWTO_SC_GLYPH_WORDS - 1 - ucK) * AWTO_SC_WORD_BYTES;
 
@@ -235,7 +234,7 @@ BYTE AwtoScopeSaver(BYTE ucCmd)                                         // cmd 2
         return 1;
     }
     osd_tc_close();
-    s_ucRot = AwtoOsdRot180();
+    g_ucAwtoOsdRot = AwtoOsdRot180();
     AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);

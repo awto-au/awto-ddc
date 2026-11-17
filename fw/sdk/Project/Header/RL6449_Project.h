@@ -1098,6 +1098,7 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);
+extern __xdata BYTE g_ucAwtoOsdRot;                                                    // latched copy of AwtoOsdRot180() for the screen being drawn
 extern BYTE AwtoOsdRot180(void);                                                // fw/osd/osd_rot.c (docs/osd-rotation.md): 1 = display Rotate 180, the OSD must be drawn turned
 extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);

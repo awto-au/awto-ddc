@@ -990,6 +990,7 @@ stub	_AwtoOsdRevByte	C	0x42f4	8
 stub	_AwtoOsdRot180	C	0x42fc	8
 stub	_AwtoOsdRotCell	C	0x4304	8
 stub	_FsByte	C	0x430c	8
+stub	_FsCellId	C	0x4314	8
 stub	_osd_clear	C	0x4334	8
 stub	_osd_line	C	0x433c	8
 stub	_osd_mark_all_dirty	C	0x4344	8
@@ -3270,11 +3271,13 @@ fn	_AwtoOsdTestReset	11	0x0638	64
 fn	_S2Grid	11	0x0884	668
 fn	_S2Params	11	0x0b20	276
 fn	_S2Pass	11	0x0c34	204
-const	_g_aucFsGlyph	11	0x0d00	60
+const	_g_aucFsTitle	11	0x0d00	36
+fn	_FsTitle	11	0x0d24	12
 fn	_S2Px	11	0x0d44	64
-fn	_FsByte	11	0x0d84	12
+fn	_FsByte	11	0x0d84	20
 fn	_S2Trace	11	0x0df0	908
 fn	_S2Uint	11	0x117c	132
+fn	_FsCellId	11	0x1200	140
 fn	_S2Word	11	0x1360	56
 fn	_S2Y	11	0x1398	36
 fn	_AwtoScopeSaver	11	0x13bc	580
@@ -3283,6 +3286,7 @@ fn	_PcDeltaB	11	0x1c78	20
 const	_g_aucPsData	11	0x1c8c	264
 fn	_PsByte	11	0x1d94	20
 const	_g_pcDeltaB	11	0x1da8	7432
+const	_g_aucFsGlyph	11	0x3ab0	2512
 fn	_ScalerOsd2FontFunction	12	0x0000	28
 fn	_ScalerOsdDrawGridLine	12	0x001c	308
 const	_g_qcBrook	12	0x0150	1260
@@ -3345,7 +3349,6 @@ fn	_cursor_x	13	0x0f40	208
 fn	_ScUpload	13	0x1010	640
 fn	_osd_line	13	0x12c4	948
 fn	_PsStart	13	0x1678	124
-fn	_AwtoFlashScreen	13	0x16f4	460
 fn	_FsWord	13	0x18c0	56
 fn	_ScY	13	0x18f8	152
 fn	_cursor_init	13	0x1990	380
@@ -3368,3 +3371,4 @@ fn	_osd_mark_all_dirty	13	0x25f8	220
 fn	_ScPass	13	0x26d4	1800
 fn	_AwtoSaverPoll	13	0x2ddc	644
 fn	_AwtoPacmanClassic	13	0x3060	788
+fn	_AwtoFlashScreen	13	0x3374	800

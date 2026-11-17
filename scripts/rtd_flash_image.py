@@ -522,7 +522,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             RUN.written = k + 1
-            FSCR.tick(isp, k)                           # #232: mouth open / shut on the warning screen, best effort
+            FSCR.tick(isp, k, {"bank": s // BANK, "nbank": FLASH // BANK - 1, "sec": k + 1, "nsec": len(diff), "pct": (k + 1) * 100 // len(diff),
+                               "bad": getattr(isp, "burst_fails", 0), "recov": RECOVERIES})    # #232: progress + mouth on the warning screen, best effort
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")

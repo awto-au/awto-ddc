@@ -714,13 +714,13 @@ def cmd_flash(extra: list[str]) -> int:
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
     keep = _settings_snapshot(u, bus)       # #219: stored settings by name, restored after the flash if a registry change reset them
-    _py("flash_screen.py", "show", "--bus", str(bus))   # #232: warning screen (huge Pac-Man) from the running firmware; old firmware: logged, flash goes on
     kind = i2cbus.bus_kind(bus, u.get("bus_kind"))
     wmode = wmode if isinstance(wmode, str) else u.get("write_mode", "burst")
     if kind == "dp-aux" and wmode == "byte":
         log(f"flash: byte mode on DP AUX bus {bus} is ~90 s per sector (#177): using burst", "WARN")
         wmode = "burst"
     log(f"flash: bus {bus} kind {kind}, write mode {wmode}, budget {max_min} min (checked before the first erase)")
+    _py("flash_screen.py", "show", "--bus", str(bus))   # #232: warning screen (huge Pac-Man) from the running firmware; old firmware: logged, flash goes on
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
     fj = FW / f"{u['serial']}-flashed.json"
@@ -738,6 +738,7 @@ def cmd_flash(extra: list[str]) -> int:
     for attempt in (1, 2, 3):
         with (contextlib.nullcontext(100) if attempt == 3 else i2cbus.fast_bus(bus)) as khz:  # 1 MHz only around ISP
             log(f"flash: bus {bus} at {khz} kHz" + (f" (attempt {attempt})" if attempt > 1 else ""))
+            os.environ["AWTO_FLASH_IFACE"] = f"{kind} {khz} KHZ {wmode}".upper().replace("_", "-")   # row 2 of the warning screen: bus type, ISP speed, write mode
             rc = _py("rtd_flash_image.py", *args, shield=True)
         if rc == FLASH_RC_INCOMPLETE and attempt == 1:     # #167: MCU held in ISP on a partial image; a fresh ISP session recovers
             log("flash: image incomplete, MCU held in ISP; rerun once in a fresh ISP session", "WARN")

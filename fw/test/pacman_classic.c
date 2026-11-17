@@ -42,7 +42,6 @@ extern void osd_tc_close(void);
 #define AWTO_PC_ARG_OFF                         0x75
 
 static __xdata WORD s_usStep;
-static __xdata BYTE s_ucPcRot;                                          // 1 = drawn turned 180 (display Rotate 180, docs/osd-rotation.md)
 __xdata BYTE g_ucAwtoPcFactor = AWTO_PC_SU_FACTOR;      // scale-up factor (0 = off), host-settable for tuning
 __xdata WORD g_usAwtoPcPosH = AWTO_PC_POS_H;            // WORD: the centred position is above 255
 __xdata WORD g_usAwtoPcPosV;
@@ -112,7 +111,7 @@ static void PcMaze(void)
     for(usC = 0; usC < AWTO_PC_CELLS; usC++)
     {
         PC_KICK(usC);
-        usSrc = (s_ucPcRot != 0) ? AwtoOsdRotCell(usC, AWTO_PC_CELLS) : usC;            // turned map: the cell at the mirrored place
+        usSrc = (g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usC, AWTO_PC_CELLS) : usC;            // turned map: the cell at the mirrored place
         for(ucB = 0; ucB < AWTO_PC_RGB; ucB++)
         {
             ScalerOsdDataPort(PcCell((WORD)AWTO_PC_RGB * usSrc + ucB));
@@ -135,7 +134,7 @@ static void PcStep(WORD usStep)
         ucB0 = PcDelta(usO + 2);
         ucB1 = PcDelta(usO + 3);
         ucB2 = PcDelta(usO + 4);
-        if(s_ucPcRot != 0)
+        if(g_ucAwtoOsdRot != 0)
         {
             usPos = AwtoOsdRotCell(usPos, AWTO_PC_CELLS);
         }
@@ -188,7 +187,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
         return;
     }
     osd_tc_close();                                                         // our own OSD off, windows closed
-    s_ucPcRot = AwtoOsdRot180();
+    g_ucAwtoOsdRot = AwtoOsdRot180();
     AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);
@@ -210,7 +209,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
         for(ucK = 0; ucK < AWTO_PC_BLOCK_BYTES; ucK++)
         {
             PC_KICK(usI + ucK);
-            if((s_ucPcRot != 0) && (ucK < AWTO_PC_BLOCK_ROT_BYTES))                // turned: the 12 visible rows turned 180 inside the glyph
+            if((g_ucAwtoOsdRot != 0) && (ucK < AWTO_PC_BLOCK_ROT_BYTES))                // turned: the 12 visible rows turned 180 inside the glyph
             {
                 ucB = AwtoOsdRevByte(PcGlyph(usI + AwtoOsdRotSrc(ucK, AWTO_PC_BLOCK_ROT_WORDS)));
             }

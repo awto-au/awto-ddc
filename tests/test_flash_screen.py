@@ -1,4 +1,4 @@
-"""scripts/flash_screen.py mirrors constants of fw/test/flash_screen.c (#232): they must agree."""
+"""scripts/flash_screen.py and scripts/gen_flash_screen.py mirror constants of fw/test/flash_screen.c (#232): they must agree."""
 import re
 import sys
 from pathlib import Path
@@ -6,26 +6,41 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 import flash_screen as FS  # noqa: E402
+import gen_flash_screen as L  # noqa: E402
 
 
-def c_define(name: str) -> int:
-    m = re.search(rf"#define\s+{name}\s+(\S+)", (ROOT / "fw/test/flash_screen.c").read_text())
+def c_define(name: str, text: str | None = None) -> int:
+    src = text if text is not None else (ROOT / "fw/test/flash_screen.c").read_text()
+    m = re.search(rf"#define\s+{name}\s+(\S+)", src)
     assert m, name
-    return eval(m.group(1), {}, {})       # numbers / simple shifts of numbers only
+    return eval(m.group(1), {}, {})       # numbers / simple expressions of numbers only
 
 
-def test_cell_word():
-    assert FS.FS_CHAR_WORD == c_define("AWTO_FS_CHAR_WORD")
+def test_layout_matches_generated_header():
+    inc = (ROOT / "fw/test/flash_screen_data.inc").read_text()
+    for name, val in (("COLS", L.COLS), ("ROWS", L.ROWS), ("PM_COLS", L.PM_COLS), ("PM_ROWS", L.PM_ROWS), ("PM_COL0", L.PM_COL0),
+                      ("PM_ROW0", L.PM_ROW0), ("PM_OPEN", L.PM_OPEN), ("PM_CLOSED", L.PM_CLOSED), ("GLYPHS", L.GLYPHS)):
+        assert c_define(f"AWTO_FS_{name}", inc) == val, name
+
+
+def test_char_commands():
     assert FS.CHAR_B0 == c_define("AWTO_FS_CHAR_B0")
-    assert FS.CHAR_B2 == ((c_define("AWTO_FS_FG") << c_define("AWTO_FS_FG_SHIFT")) | c_define("AWTO_FS_BG"))
+    assert FS.BG == c_define("AWTO_FS_BG") and FS.YELLOW == c_define("AWTO_FS_YELLOW") and FS.WHITE == c_define("AWTO_FS_WHITE")
+    assert FS.FG_SHIFT == c_define("AWTO_FS_FG_SHIFT")
+    assert FS.CHAR_WORD == L.ROWS + 1 == c_define("AWTO_FS_ROWS", (ROOT / "fw/test/flash_screen_data.inc").read_text()) + 1
+
+
+def test_generated_file_current():
+    assert (ROOT / "fw/test/flash_screen_data.inc").read_text() == L.text()
 
 
 def test_vcp_value():
     reg = [r for r in (ROOT / "fw/rtdfw/settings/registry.tsv").read_text().splitlines() if r.startswith("121\t")][0].split("\t")
-    options = reg[14].split("|")
-    assert options[FS.VCP_FLASH_SCREEN] == "Flash warning"
+    assert reg[14].split("|")[FS.VCP_FLASH_SCREEN] == "Flash warning"
     assert reg[11] == f"0x{FS.VCP_SAVER:02X}"
 
 
-def test_glyph_ids():
-    assert (FS.GLYPH_OPEN, FS.GLYPH_CLOSED) == (0, 1)       # glyph 0 = open, 1 = closed (gen_flash_screen.py)
+def test_text_rows_fit():
+    info = {"bank": 14, "nbank": 14, "sec": 224, "nsec": 224, "pct": 100, "iface": "DP-AUX 1000 KHZ BURST", "bad": 12, "recov": 3}
+    for t in FS.rows_text(info):
+        assert len(t) <= L.COLS and all(ch in L.FONT_CHARS for ch in t.upper()), t

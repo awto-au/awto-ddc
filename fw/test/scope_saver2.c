@@ -121,7 +121,6 @@ static __code char s_cSTime[] = "1ns";
 static __xdata WORD s_usFrame;
 static __xdata BYTE s_ucCol;
 static __xdata BYTE s_ucStage;
-static __xdata BYTE s_ucRot;                                                        // 1 = drawn turned 180 (display Rotate 180)
 static __xdata WORD s_usX0;                                                         // pulse start x
 static __xdata BYTE s_ucSpread;                                                     // px per table step
 static __xdata WORD s_usX10;                                                        // cursor x positions (10 % / 90 % points of the rising edge)
@@ -144,14 +143,14 @@ static void S2Upload(BYTE ucTile)
     WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_S2_COLS;
     const uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
 
-    if(s_ucRot != 0)                                                                // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
+    if(g_ucAwtoOsdRot != 0)                                                                // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
     {
         usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FONT_BASE + (WORD)usCell * (AWTO_S2_PLANES * AWTO_S2_GLYPH_WORDS) + (WORD)s_ucPlane * AWTO_S2_GLYPH_WORDS, _OSD_WITHOUT_DB);
     for(ucK = 0; ucK < AWTO_S2_GLYPH_WORDS; ucK++)                                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0
     {
-        if(s_ucRot != 0)
+        if(g_ucAwtoOsdRot != 0)
         {
             WORD usW = (WORD)(AWTO_S2_GLYPH_WORDS - 1 - ucK) * AWTO_S2_WORD_BYTES;
 
@@ -447,7 +446,7 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
         return 1;
     }
     osd_tc_close();
-    s_ucRot = AwtoOsdRot180();
+    g_ucAwtoOsdRot = AwtoOsdRot180();
     AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);
