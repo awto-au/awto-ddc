@@ -13,3 +13,4 @@ tools/gmbus_rate/modules.order
 
 # built firmware images + maps (fw_archive.py; not tracked: Dan 2026-11-12, image commits were noise)
 /build-debris/
+.claude/worktrees/
