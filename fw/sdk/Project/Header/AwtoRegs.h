@@ -76,6 +76,13 @@
 #define AWTO_R_OSD_SU_CRTL                              0x3AC0
 #define AWTO_R_CAP_M2_FIFO_STATUS                       0x452B
 #define AWTO_R_DISP_M2_FIFO_STATUS                      0x45B0
+#define AWTO_R_P71_HDMI_AP                              0x71C9
+#define AWTO_I_PORT_PAGE71_HDMI_AFCR                    3
+#define AWTO_I_PORT_PAGE71_HDMI_CMCR                    16
+#define AWTO_I_PORT_PAGE71_HDMI_SCAPR                   18
+#define AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW         0x80
+#define AWTO_F_PORT_PAGE71_HDMI_CMCR_DBDCB              0x10
+#define AWTO_R_P72_HDMI_AP                              0x72C9
 #define AWTO_R_PB7_AUX_IRQ_STATUS                       0xB7DC
 #define AWTO_F_PB7_AUX_IRQ_STATUS_AUX_RX_INT            0x01
 #define AWTO_R_PBA_AUX_IRQ_STATUS                       0xBADC

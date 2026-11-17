@@ -242,6 +242,7 @@ void AwtoDiagTestCmd(void)
         ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_DISABLE);      // every 80 ms, not every pass (a cancel walks the timer table)
     }
     AwtoDemoLog();
+    AwtoPmSoundPoll();
     ucCmd = isr_g_stAwtoDiag.ucTestCmd;
     if(ucCmd == 0)
     {
@@ -259,6 +260,10 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd >= AWTO_TC_PACMAN) && (ucCmd <= AWTO_TC_PACMAN + 2))
     {
         AwtoPacmanClassic((ucCmd == AWTO_TC_PACMAN) ? 1 : ((ucCmd == AWTO_TC_PACMAN + 1) ? 2 : 0));
+    }
+    else if((ucCmd >= AWTO_TC_PACMAN_SND) && (ucCmd <= AWTO_TC_PACMAN_SND + 4))   // Pac-Man sound (0xB7..0xB9 are the full-screen Pac-Man)
+    {
+        AwtoPmSound(ucCmd - AWTO_TC_PACMAN_SND);
     }
     else if((ucCmd >= AWTO_TC_OSD_DEMO) && (ucCmd <= AWTO_TC_OSD_DEMO + 5))   // #226 OSD window demo (first: 0xC0.. is the probe-columns range below)
     {

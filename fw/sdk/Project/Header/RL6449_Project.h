@@ -1103,6 +1103,9 @@ extern void AwtoOsdTestReset(void);                                             
 extern void AwtoDpgTest(unsigned char ucOn);
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
 extern void AwtoPacmanClassic(unsigned char ucCmd);
+#define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop (needs -D _AWTO_AUDIO_TEST)
+extern void AwtoPmSound(unsigned char ucCmd);
+extern void AwtoPmSoundPoll(void);
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
 extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);
