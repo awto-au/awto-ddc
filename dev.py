@@ -714,6 +714,7 @@ def cmd_flash(extra: list[str]) -> int:
         log(f"flash: bus {bus} given by caller ({identity}); rtd_flash_image checks the EDID serial, silent EDID accepted")
     bus = int(bus or _bus(u))
     keep = _settings_snapshot(u, bus)       # #219: stored settings by name, restored after the flash if a registry change reset them
+    _py("flash_screen.py", "show", "--bus", str(bus))   # #232: warning screen (huge Pac-Man) from the running firmware; old firmware: logged, flash goes on
     kind = i2cbus.bus_kind(bus, u.get("bus_kind"))
     wmode = wmode if isinstance(wmode, str) else u.get("write_mode", "burst")
     if kind == "dp-aux" and wmode == "byte":

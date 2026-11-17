@@ -101,7 +101,7 @@ def main() -> int:
     ddc.set(0xE1, 0)
     sess.bus.wait(ROTATE_SETTLE_S)
     fails = 0
-    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4)):
+    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4), ("flash", 5)):
         base = lit(sess.snap())
         ddc.set(VCP_SAVER, val)
         sess.bus.wait(RUN_S)

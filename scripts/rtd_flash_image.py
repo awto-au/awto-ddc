@@ -48,6 +48,7 @@ import flash_state as S  # noqa: E402
 import i2cbus  # noqa: E402
 import unit_lock  # noqa: E402
 import disk_guard  # noqa: E402
+import flash_screen as FSCR  # noqa: E402
 from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
 
 FLASH = 1 << 20
@@ -521,6 +522,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             RUN.written = k + 1
+            FSCR.tick(isp, k)                           # #232: mouth open / shut on the warning screen, best effort
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
@@ -563,6 +565,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
     INCOMPLETE = False
     log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}; ISP recoveries {RECOVERIES}")
     RUN.complete = True
+    FSCR.clear(isp)                                     # #232: OSD off, the new firmware starts with an empty OSD
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
     if reprot is not None:
         isp.reprotect(reprot)

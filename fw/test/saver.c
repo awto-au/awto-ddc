@@ -14,6 +14,7 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_SCOPE                        2
 #define AWTO_SAVER_SCOPE2                       3
 #define AWTO_SAVER_ALTERNATE                    4
+#define AWTO_SAVER_FLASH                        5                   // flash warning screen (VCP 0xEB = 5 only, never selected / alternated)
 #define AWTO_SAVER_WHY_NONE                     0
 #define AWTO_SAVER_WHY_NOSIG                    1
 #define AWTO_SAVER_WHY_IDLE                     2
@@ -28,6 +29,7 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_ARG_STOP                     0x7A
 #define AWTO_SAVER_NOW_STOP                     0
 #define AWTO_SAVER_NOW_SELECTED                 1
+#define AWTO_SAVER_NOW_FLASH                    5
 #define AWTO_SAVER_RUN_SHIFT                    4
 
 __xdata BYTE g_ucAwtoSaverMode;
@@ -65,6 +67,10 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoScopeSaver2(0);
     }
+    else if(g_ucAwtoSaverRun == AWTO_SAVER_FLASH)
+    {
+        AwtoFlashScreen(0);
+    }
     g_ucAwtoSaverRun = ucRun;
     if(ucRun == AWTO_SAVER_PACMAN)
     {
@@ -78,6 +84,10 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoScopeSaver2(1);
     }
+    else if(ucRun == AWTO_SAVER_FLASH)
+    {
+        AwtoFlashScreen(1);
+    }
     s_ulTick = AwtoMs();
     s_ulSwap = s_ulTick;
     s_ucMid = 1;                                                    // a scope starts with its first frame, drawn hidden
@@ -85,7 +95,7 @@ static void SaverDraw(BYTE ucRun)
 
 void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: PACMAN / SCOPE / ALTERNATE
 {
-    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE) || (ucWhich == AWTO_SAVER_SCOPE2)) ? ucWhich : AWTO_SAVER_PACMAN;
+    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE) || (ucWhich == AWTO_SAVER_SCOPE2) || (ucWhich == AWTO_SAVER_FLASH)) ? ucWhich : AWTO_SAVER_PACMAN;
 
     g_ucAwtoSaverWhy = ucWhy;
     SaverDraw(ucRun);
@@ -122,6 +132,10 @@ void AwtoSaverPoll(void)                                            // main loop
         {
             AwtoSaverStop();
         }
+        else if(ucReq == AWTO_SAVER_NOW_FLASH)
+        {
+            AwtoSaverStart(AWTO_SAVER_FLASH, AWTO_SAVER_WHY_NOW);
+        }
         else
         {
             AwtoSaverStart((ucReq == AWTO_SAVER_NOW_SELECTED) ? ((g_ucAwtoSaverMode == AWTO_SAVER_OFF) ? AWTO_SAVER_ALTERNATE : g_ucAwtoSaverMode) : (BYTE)(ucReq - 1), AWTO_SAVER_WHY_NOW);
@@ -139,6 +153,10 @@ void AwtoSaverPoll(void)                                            // main loop
         {
             SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE2 : AWTO_SAVER_PACMAN));
             return;
+        }
+        if(g_ucAwtoSaverRun == AWTO_SAVER_FLASH)
+        {
+            return;                                                 // static: the host flasher swaps the glyph over ISP
         }
         if(g_ucAwtoSaverRun != AWTO_SAVER_PACMAN)                   // scopes: one column per pass until the frame is complete, then a pause
         {
