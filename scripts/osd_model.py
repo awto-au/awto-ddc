@@ -306,7 +306,7 @@ def decode_window(win: dict, i: int) -> dict | None:
                 bor=(w[0][0] >> 6 & 1) << 5 | (w[0][1] & 15), sha=(w[0][0] >> 7 & 1) << 5 | (w[0][1] >> 4),
                 eff_w=(w[0][0] >> 3 & 7) + 1, eff_h=(w[0][0] & 7) + 1, gra=w[3][2] >> 6 & 1, gdir=w[3][2] >> 5 & 1,
                 gpol=(w[0][2] >> 7 & 1, w[0][2] >> 6 & 1, w[0][2] >> 5 & 1), gstep=(w[0][2] >> 3 & 3) + 1,
-                gen=(w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1), gsat=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 4 & 1,
+                gen=(w[0][2] >> 2 & 1, w[0][2] >> 1 & 1, w[0][2] & 1), gsat=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 4 & 1, lvext=win.get(win_base(i) + 3, [0, 0, 0])[0] & 1,
                 grev=win.get(win_base(i) + 3, [0, 0, 0])[0] >> 3 & 1, satc=tuple(win.get(sat_adr4(i), [0, 0, 0])) if sat_adr4(i) else None)
 
 
@@ -335,6 +335,8 @@ def describe_window(st: OsdState, w: dict) -> list[str]:
         out.append(f"round {ex['round'][0]}px")
     if ex["gray"]:
         out.append("gray")
+    if ex["mask"] is not None:
+        out.append("mask " + ("OR" if ex["mask"] else "AND"))
     return out
 
 
@@ -344,7 +346,8 @@ def window_extras(st: OsdState, i: int) -> dict:
     a5, a9, a10 = g(5), g(9), g(10)
     cb = (a5[1] & 0x3F, a5[2] & 0x3F) if a5[0] & 0x80 else None
     rd = ((4 << (a10[0] >> 1 & 3)), tuple(a10[0] >> b & 1 for b in (6, 5, 4, 3))) if a10[0] & 1 else None   # size code -> 4 << n px [guess]; corners UL, LL, UR, LR
-    return dict(cb=cb, pix=max(a9[1], 1), gray=a9[0] >> 1 & 1, round=rd)
+    mk = (a9[0] >> 3 & 1) if a9[0] & 4 else None
+    return dict(cb=cb, pix=max(a9[1], 1), gray=a9[0] >> 1 & 1, round=rd, mask=mk)
 
 
 def decode_char(w: list[int]) -> dict:
@@ -471,6 +474,8 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     osd = np.zeros((H, W, 3), np.uint8)
     cov = np.zeros((H, W), bool)
     vid = np.zeros((H, W), np.float32)                       # video share of the OSD pixel
+    kind = np.zeros((H, W), np.uint8)                        # 1 font foreground, 2 character background, 3 window (for highlight / window 6, 7 functions)
+    masks = []                                               # special colour mask windows: applied to the video at the end
 
     def rect(x0, y0, x1, y1, rgb, a):
         x0, y0, x1, y1 = max(x0, 0), max(y0, 0), min(x1, W), min(y1, H)
@@ -478,14 +483,16 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
             osd[y0:y1, x0:x1] = rgb
             cov[y0:y1, x0:x1] = True
             vid[y0:y1, x0:x1] = a
+            kind[y0:y1, x0:x1] = 3
 
-    def paint(px, py, mk, rgb, a):
+    def paint(px, py, mk, rgb, a, k=1):
         ys, xs = py + np.arange(mk.shape[0])[:, None], px + np.arange(mk.shape[1])[None, :]
         ok = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W) & mk
         yy, xx = np.broadcast_to(ys, mk.shape)[ok], np.broadcast_to(xs, mk.shape)[ok]
         osd[yy, xx] = rgb
         cov[yy, xx] = True
         vid[yy, xx] = a
+        kind[yy, xx] = k
 
     wins = [w for i in range(26) if (w := decode_window(st.win, i)) and w["en"]]
     higher = {3: st.reg(FRAME + 7) & 1, 4: st.reg(FRAME + 7) >> 1 & 1, 2: st.reg(FRAME + 8) >> 7, 9: st.reg(FRAME + 8) >> 6 & 1, 8: st.reg(FRAME + 8) >> 5 & 1}
@@ -511,10 +518,14 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
         if w["gra"] and X1 > X0 and Y1 > Y0:             # gradient [register doc, approximation: 8 levels, gra_step px per level]
             n = (X1 - X0) if not w["gdir"] else (Y1 - Y0)
             base = st.pal[w["color"]]
-            for k in range(0, n, w["gstep"] * (sx if not w["gdir"] else sy)):
-                lv = min(k // (w["gstep"] * (sx if not w["gdir"] else sy)), 31) * 8
+            a6, a8, a9 = (st.win.get(win_adr(w["i"], q) or -1, [0, 0, 0]) for q in (6, 8, 9))
+            stp = a8[1] if (a9[0] & 0x10 and a8[1]) else w["gstep"]          # ADR9[4] step extension: ADR8 MSB = px per level [register doc]
+            lvl = [a6[j] for j in range(3)] if w["lvext"] else [8, 8, 8]      # ADR3[0] level extension: per-channel level ADR6 [register doc, guess: value per step]
+            for k in range(0, n, stp * (sx if not w["gdir"] else sy)):
+                li = min(k // (stp * (sx if not w["gdir"] else sy)), 255 if w["lvext"] else 31)
                 c = []
                 for j in range(3):
+                    lv = li * lvl[j]
                     v = base[j] + ((lv if w["gpol"][j] else -lv) if w["gen"][j] else 0)
                     if w["gsat"] and w["satc"] and w["gen"][j]:       # saturated colour = the end value; reversed = bounce back [register doc, guess]
                         e = w["satc"][j]
@@ -524,7 +535,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                         v = base[j] + (d if e >= base[j] else -d)
                     c.append(max(0, min(255, v)))
                 c = tuple(c)
-                m = w["gstep"] * (sx if not w["gdir"] else sy)
+                m = stp * (sx if not w["gdir"] else sy)
                 if not w["gdir"]:
                     rect(X0 + k, Y0, min(X0 + k + m, X1), Y1, c, a)
                 else:
@@ -532,6 +543,9 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
             return
         ex = window_extras(st, w["i"])
         col = st.pal[w["color"]]
+        if ex["mask"] is not None and X1 > X0 and Y1 > Y0:   # special colour mask: window colour AND / OR the video, no OSD pixel
+            masks.append((X0, Y0, X1, Y1, col, ex["mask"]))
+            return
         if ex["gray"]:                                     # gray level function: luma of the window colour [register doc, guess]
             lum = int(0.299 * col[0] + 0.587 * col[1] + 0.114 * col[2])
             col = (lum, lum, lum)
@@ -597,12 +611,12 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                     if bits.size:
                         for val, rgb, solid, a in ((1, fg, True, a_fg), (0, st.pal[bgc], bgc != 0, a_cbg)):   # bg index 0 = transparent [spec osd-font-download.md]
                             if solid:
-                                paint(px, py, np.kron(bits == val, np.ones((sy, sx), bool)), rgb, a)
+                                paint(px, py, np.kron(bits == val, np.ones((sy, sx), bool)), rgb, a, 1 if val == 1 else 2)
                     x += w
                 elif ch["kind"] == "blank":                          # SDK OsdBlankFont: B1 = pixel length, B2 = background colour
                     bw = ch["width"] or GW
                     if ch["bg"] != 0:
-                        paint(fx + x * sx, fy + y * sy, np.ones((row["h"] * sy, bw * sx), bool), st.pal[ch["bg"]], a_cbg)
+                        paint(fx + x * sx, fy + y * sy, np.ones((row["h"] * sy, bw * sx), bool), st.pal[ch["bg"]], a_cbg, 2)
                     x += bw
                 elif ch["kind"] == "4bit":                           # bit planes; palette index = pixel value, 0 transparent [guess, QC palette sets 0]
                     lv = glyph_levels4(st, g, ch["id"])
@@ -650,11 +664,41 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
     for w in wins:
         if higher.get(w["i"]):
             draw_win(w)
+    def rect_of(i):
+        w = decode_window(st.win, i)
+        return None if not w or not w["en"] else (max(ox + w["x0"] * sx, 0), max(oy + w["y0"] * sy, 0), min(ox + (w["x1"] + 1) * sx, W), min(oy + (w["y1"] + 1) * sy, H))
+    for k, (ra, rb, wi) in enumerate(((0x2A, 0x2B, 10), (0x2D, 0x2E, 11), (0x30, 0x31, 12))):   # highlight (ScalerOsdWindowHighlightFunction): font colours inside windows 4-1..4-3
+        r_ = rect_of(wi)
+        if r_ and st.reg(FRAME + ra) & 0x40 and r_[2] > r_[0] and r_[3] > r_[1]:
+            sl = (slice(r_[1], r_[3]), slice(r_[0], r_[2]))
+            osd[sl][kind[sl] == 1] = st.pal[st.reg(FRAME + ra) & 0x3F]
+            osd[sl][kind[sl] == 2] = st.pal[st.reg(FRAME + rb) & 0x3F]
+    for win, en, typ in ((6, st.reg(FRAME + 0x21) >> 6 & 1, st.reg(FRAME + 0x21) >> 2 & 3), (7, st.reg(FRAME + 9) >> 5 & 3 == 1, st.reg(FRAME + 0x21) >> 4 & 3)):   # window 6 / 7 blending functions
+        r_ = rect_of(win)
+        if en and r_ and r_[2] > r_[0] and r_[3] > r_[1]:
+            sl = (slice(r_[1], r_[3]), slice(r_[0], r_[2]))
+            fgv, bgv = ((0.0, 0.0), (0.0, t), (t, 0.0), (t, t))[typ]          # NO_BLENDING_BOTH / _FOREGROUND / _BACKGROUND / BLENDING_BOTH [SDK enum order]
+            vv = vid[sl]
+            vv[kind[sl] == 1] = fgv
+            vv[kind[sl] == 2] = bgv
+    m7 = st.reg(FRAME + 9) >> 5 & 3
+    r7 = rect_of(7)
+    if m7 in (2, 3) and r7 and r7[2] > r7[0] and r7[3] > r7[1]:              # window 7 mask region: 2 = OSD appears only inside, 3 = hidden inside (all / font only)
+        inside = np.zeros((H, W), bool)
+        inside[r7[1]:r7[3], r7[0]:r7[2]] = True
+        if m7 == 2:
+            cov &= inside
+        else:
+            cov &= ~(inside & ((kind == 1) | (kind == 2) | (st.reg(FRAME + 7) >> 3 & 1 == 0)))
     if st.reg(FRAME + 9) & 0x80:                              # specific colour blending (ScalerOsdSpecificColorBlending): this LUT index blends [SDK, guess: any element]
         idx = (st.reg(FRAME + 8) >> 2 & 3) << 4 | st.reg(FRAME + 9) & 15
         vid[cov & (osd == np.array(st.pal[idx], np.uint8)).all(axis=2)] = t
     k = vid[cov][:, None]
     img[cov] = (osd[cov] * (1.0 - k) + img[cov] * k + 0.5).astype(np.uint8)
+    for X0, Y0, X1, Y1, col, opt in masks:
+        X0, Y0, X1, Y1 = max(X0, 0), max(Y0, 0), min(X1, W), min(Y1, H)
+        cc = np.array(col, np.uint8)
+        img[Y0:Y1, X0:X1] = (img[Y0:Y1, X0:X1] | cc) if opt else (img[Y0:Y1, X0:X1] & cc)
     return img
 
 
