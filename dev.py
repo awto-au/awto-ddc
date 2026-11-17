@@ -724,8 +724,7 @@ def cmd_flash(extra: list[str]) -> int:
         log(f"flash: byte mode on DP AUX bus {bus} is ~90 s per sector (#177): using burst", "WARN")
         wmode = "burst"
     log(f"flash: bus {bus} kind {kind}, write mode {wmode}, budget {max_min} min (checked before the first erase)")
-    _py("alert.py", "--bus", str(bus), "--wait")           # #229: 1 s tone first (finished before the MCU is halted); old firmware: logged
-    _py("flash_screen.py", "show", "--bus", str(bus))   # #232: warning screen (huge Pac-Man) from the running firmware; old firmware: logged, flash goes on
+    _flash_warn(bus)
     # #52.12: from here the flash holds an unknown mix; the old tag/map must not be used by dbg/osd/health.
     # tag "" -> _fwmap/_diag find nothing; image stays so `recover` can retry it.
     fj = FW / f"{u['serial']}-flashed.json"
@@ -768,6 +767,13 @@ def cmd_flash(extra: list[str]) -> int:
             _settings_restore(u, bus, keep, FW / f"{tag}.map", FW / f"{tag}.settings_table.py")
         _unit_settings(u, bus, FW / f"{tag}.map")
     return rc
+
+
+def _flash_warn(bus: int) -> None:
+    """Before the ISP session: 1 s alert tone (finished before the MCU is halted, #229), then the warning screen from the running firmware (#232).
+    Old firmware: both are logged and skipped, the flash goes on."""
+    _py("alert.py", "--bus", str(bus), "--wait")
+    _py("flash_screen.py", "show", "--bus", str(bus))
 
 
 def _unit_settings(u: dict, bus: int, m: Path) -> None:

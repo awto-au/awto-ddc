@@ -21,6 +21,8 @@ def dev(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "REPO", tmp_path)
     monkeypatch.setattr(m, "TMP", tmp_path / "tmp")
     monkeypatch.setattr(m, "FW", tmp_path / "tmp" / "fw")
+    monkeypatch.setattr(m, "_flash_warn", lambda bus: None)                   # no ddcutil / tone / screen from a test
+    monkeypatch.setattr(m, "_unit_settings", lambda u, bus, mp: None)         # no DDC/CI write to a unit from a test
     monkeypatch.setattr(m, "LOGS", tmp_path / "tmp" / "logs")
     monkeypatch.setattr(m, "LOG", tmp_path / "tmp" / "logs" / "dev.log")
     import json
