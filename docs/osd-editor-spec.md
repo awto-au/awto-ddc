@@ -53,7 +53,7 @@ Own words. Source of facts: running the vendor GUI under Wine (2026-11-08), its 
 | feature | status |
 |---|---|
 | 1 bpp 12x18 tile, 27 B, VLC encode / decode | have: `font_compare.py` (main), `osd_logo_encode.py` (branches; byte-identical to SDK blobs), `glyph_decode.py` |
-| 2 / 4 bpp, 24x36 | pack layout [derived], `font_compare.Variant`; hardware bit order not measured; `osd_model.py` does not draw them |
+| 2 / 4 bpp, 24x36 | pack layout [derived], `font_compare.Variant`; hardware bit order not measured; the editor packs row-major, `osd_model.py` draws 2 / 4 bpp as bit planes (QC icons, #227): the two layouts differ |
 | tile editor, paste, shifts, flips, Inv | editor: pixel paint, undo, 1/2/4 bpp, 12x18 and 24x36; shifts / flips / Inv not done |
 | text stamp from a font | editor: TTF import of ASCII range; free text stamp not done |
 | PNG / SVG import | editor: sheet sliced into tiles; `make_logo.py` / `osd_logo_big.py` do logo art |
@@ -68,4 +68,14 @@ Own words. Source of facts: running the vendor GUI under Wine (2026-11-08), its 
 
 ## 6. Open points
 - Hardware check of 2 / 4 bpp word packing and the 24x36 mode (`0x3A43[6]`) before they ship in an image.
-- Decide the END-code convention for blobs the hardware loader reads (SDK has END; 2523V does not).
+- Decide the END-code convention for blobs the hardware loader reads (SDK has END; 2523V does not). `osd_vlc.decode(need_end=False)` reads both.
+- Editor 2 / 4 bpp tile packing (row-major) vs the bit-plane layout the model draws (#227).
+
+## 7. Monitor page (#217)
+- Backend limits (`monitor.py LIMIT_S`) = 3x the slowest call on unit 3, 2026-11-18, idle unit, `dev.py` incl. debug-link swap:
+  - settings list 6.4 s -> 20 s; settings get / set 1.3 s -> 4 s; health 4.3 s -> 13 s; synclog --whole 1.0 s -> 4 s;
+  - host_time --once 1.5 s -> 5 s; `dev.py ddc` get / set (ddcutil) 0.2 s -> 5 s (scripts' own DDC_S); kvm 10 s (not measured).
+- Expiry: TERM (dev.py turns the debug link off), kill after 2 s, banner + log line with limit and elapsed.
+- No answer (`no bus with EDID serial`, `DDC communication failed`): red banner, other calls stay usable.
+- Live refresh: every 15 s, only when no call is pending (a list takes 6.4 s); touched or dragged rows keep the widget value.
+- Quick group: screensaver start / stop = `dev.py ddc set 0xEB v` (0 stop, 1 selected, 2 Pac-Man, 3 Scope, 4 Scope 2, 5 Flash warning), volume 0x62, mute 0x8D (1 muted, 2 unmuted), rotate = registry row `disp_rotate` through the mailbox.

@@ -47,11 +47,17 @@ class FakeBackend:
     """canned script output; records every argv (no hardware, no subprocess)"""
 
     def __init__(self):
-        self.calls = []
+        self.calls, self.limits, self.fail = [], [], None
 
-    def run(self, argv):
+    def run(self, argv, limit_s):
         a = [str(x) for x in argv]
         self.calls.append(a)
+        self.limits.append(limit_s)
+        if self.fail:
+            rc, text, self.fail = self.fail[0], self.fail[1], None
+            return rc, text
+        if "ddc" in a and "get" in a:
+            return 0, "HDMI-A-2         bus=11  " + {"0x62": "VCP 62 CNC x00 x64 x00 x25", "0x8D": "VCP 8D CNC x00 x01 x00 x01"}[a[a.index("get") + 1]] + "\n"
         if "settings" in a and "list" in a:
             return 0, "\n".join(f"{r['name']} = x (raw {r['default'] + (1 if r['type'] == 'int' and r['name'] == 'brightness' else 0)})"
                                 for r in MON.T.ROWS if r["type"] != "action") + "\n"
@@ -62,6 +68,103 @@ class FakeBackend:
         if "health" in a:
             return 0, "diag ok\nPASS\n"
         return 0, "ok\n"
+
+
+def settle(app, pg):
+    pg.wait_idle()
+    app.processEvents()
+
+
+def quick_test(app, pg, fb):
+    """Quick group, read-only rows, enum labels, refresh vs drag, limits, error banner"""
+    pg.unit.setCurrentIndex(2)
+    n = len(fb.calls)
+    pg.saver.setCurrentIndex(4)                                    # Scope 2
+    pg.saver_start()
+    pg.saver_stop()
+    pg.saver.setCurrentText("Flash warning")
+    pg.saver_start()
+    pg.quick["volume"].w.setValue(33)
+    pg.set_row(pg.quick["volume"])
+    pg.quick["mute"].w.setCurrentIndex(1)                          # On -> VCP 0x8D = 1
+    pg.set_row(pg.quick["mute"])
+    pg.quick["disp_rotate"].w.setCurrentIndex(0)
+    pg.set_row(pg.quick["disp_rotate"])
+    settle(app, pg)
+    sent = [" ".join(c[2:]) for c in fb.calls[n:]]
+    assert sent == ["ddc set 0xEB 4 --unit 3", "ddc set 0xEB 0 --unit 3", "ddc set 0xEB 5 --unit 3", "ddc set 0x62 33 --unit 3",
+                    "ddc set 0x8D 1 --unit 3", "settings set disp_rotate 0 --unit 3"], sent
+    assert pg.rows["volume"].w.value() == 33 and pg.rows["mute"].w.currentIndex() == 1       # main rows follow
+    pg.quick_get()
+    settle(app, pg)
+    assert pg.quick["volume"].w.value() == 37 and pg.quick["mute"].w.currentIndex() == 1
+    # read-only rows stay disabled on the writable unit; enum rows show the option label
+    ro = [sr for sr in pg.rows.values() if sr.read_only]
+    assert ro and all(not sr.w.isEnabled() and not sr.btn.isEnabled() for sr in ro), ro
+    assert pg.rows["gamma"].label_of(3).strip("( )") == pg.rows["gamma"].r["options"][3]
+    assert [h for h, _ in pg.headers] and all(any(True for _ in m) for _, m in pg.headers)
+    # a refresh keeps a touched row and a dragged slider
+    sr = pg.rows["brightness"]
+    sr.w.setValue(80)
+    sr._touched()
+    pg.get_all()
+    settle(app, pg)
+    assert sr.w.value() == 80 and sr.cur.text() == "unit: 51", (sr.w.value(), sr.cur.text())
+    sr.dirty = False
+    pg.get_all()
+    settle(app, pg)
+    assert sr.w.value() == 51
+    # timer tick refreshes only when idle; limits come from LIMIT_S
+    n = len(fb.calls)
+    pg.refresh_tick()
+    settle(app, pg)
+    assert len(fb.calls) == n + 1 and fb.limits[-1] == MON.LIMIT_S["list"]
+    # unit does not answer / call timed out: banner, never a hang, one log line each
+    fb.fail = (1, "AWT26110003: no bus with that EDID serial (unit off, wedged, or cabled elsewhere)\n")
+    pg.health()
+    settle(app, pg)
+    assert not pg.banner.isHidden() and "does not answer" in pg.banner.text(), pg.banner.text()
+    fb.fail = (124, "limit 13 s expired, process stopped\n")
+    pg.health()
+    settle(app, pg)
+    assert "did not finish in 13 s" in pg.banner.text(), pg.banner.text()
+    pg.health()
+    settle(app, pg)
+    assert pg.banner.isHidden()
+    log = pg.log_path.read_text()
+    assert "NO ANSWER rc 1" in log and "TIMEOUT limit 13 s" in log
+    print("ok quick controls, read-only rows, enum labels, refresh vs drag, limits, error banner")
+
+
+def screens_2bpp_test(app, win):
+    """a 2 bpp glyph rendered by osd_model shows on the Screens page (bit-plane layout, tests/test_osd_model.py)"""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import osd_model as OM
+    import osd_vlc
+    lv = [[(x // 3 + y) % 4 for x in range(12)] for y in range(18)]
+    data = b"".join(osd_vlc.pack_unit([[(v >> (1 - p)) & 1 for v in row] for row in lv], 1) for p in range(2))
+    regs = bytearray(256)
+    regs[0x02], regs[0x0A] = 1, 0
+    regs[0x0C], regs[0x0D], regs[0x0E] = 2, 0x00, 0x10
+    st = OM.OsdState(regs=bytes(regs), font={}, ovl=(1, 0))
+    st.pal[1], st.pal[2], st.pal[3] = (50, 0, 0), (150, 0, 0), (250, 0, 0)
+    for k in range(18):
+        st.font[0x100 + 18 * 3 + k] = list(data[3 * k:3 * k + 3])
+    st.font[0], st.font[1], st.font[2] = [0x80, 17, 1], [0, 0, 0], [0x80 | 0x20 | 0x04 | 0x02, 3, 0x08 | 0x01 | 0x40]
+    img = OM.render(st, 32, 32, bg=(9, 9, 9))
+    d = ROOT / "tmp" / "osdedit" / "catalog_2bpp"
+    d.mkdir(parents=True, exist_ok=True)
+    from PIL import Image
+    Image.fromarray(img).save(d / "glyph2.png")
+    (d / "catalog.tsv").write_text(f"name\twhat\tpng\nglyph2\t2 bpp glyph\t{d / 'glyph2.png'}\n")
+    win.screens.dirs.addItem("smoke 2 bpp", str(d))
+    win.screens.dirs.setCurrentIndex(win.screens.dirs.count() - 1)
+    win.go(1)
+    app.processEvents()
+    assert len(win.screens.rows) == 1 and not win.screens.img.pixmap().isNull()
+    shown = {tuple(int(x) for x in img[y, x]) for y in range(18) for x in range(12)}
+    assert len(shown - {(9, 9, 9)}) >= 2, shown                        # more than one non-background level drawn
+    print("ok screens page shows a 2 bpp glyph rendered by osd_model:", len(shown), "colours")
 
 
 def monitor_test(app, win):
@@ -99,8 +202,9 @@ def monitor_test(app, win):
     log = logf.read_text().splitlines()
     iso = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d unit 3 ")
     assert sum(bool(iso.match(x)) for x in log) >= 8 and any("health: ok, PASS" in x for x in log), log
+    quick_test(app, pg, fb)
     n = len(fb.calls)
-    pg.unit.setCurrentIndex(0)                                     # unit 1: working screen, read-only
+    pg.unit.setCurrentIndex(0)                                    # unit 1: working screen, read-only
     assert not pg.writable() and not pg.rows["brightness"].btn.isEnabled()
     pg.run("probe", ["x"], None)
     assert len(fb.calls) == n
@@ -136,6 +240,7 @@ def main():
     app.processEvents()
     win.grab().save(str(SHOTS / "editor_screens.png"))
     print("screens loaded:", len(win.screens.rows))
+    screens_2bpp_test(app, win)
     monitor_test(app, win)
     print("PASS")
 

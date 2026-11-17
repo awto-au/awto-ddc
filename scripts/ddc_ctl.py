@@ -82,6 +82,9 @@ def getvcp(mon, code):
         return int(f[3]), int(f[4]), out.strip()
     if len(f) >= 4 and f[2] == "SNC":
         return int(f[3].lstrip("x"), 16), None, out.strip()
+    if len(f) >= 7 and f[2] in ("CNC", "NC"):        # VCP 62 CNC x00 x64 x00 x0a  (mh ml sh sl: max = mh:ml, current = sh:sl)
+        v = [int(x.lstrip("x"), 16) for x in f[3:7]]
+        return v[2] << 8 | v[3], v[0] << 8 | v[1], out.strip()
     log.error("unparsed getvcp output: %r", out)
     return None
 

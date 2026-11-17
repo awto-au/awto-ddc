@@ -17,4 +17,4 @@ def vlc_encode(data: bytes) -> bytes:
 
 
 def vlc_decode(blob: bytes) -> bytes:
-    return _enc.decode(blob)
+    return _enc.decode(blob, need_end=False)   # also reads OsdEdit 2523V blobs (no END)
