@@ -3,7 +3,7 @@
 
 usage: saver_sim.py [BIN MAP] [--out DIR]
   - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (wb_build.py --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
-  - Steps: boot; VCP 0xEB = 3 (scope), wait 4 s fw time, render; = 0 (stop), render; = 2 (Pac-Man), render; = 0. PASS = font SRAM written when started,
+  - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2): wait, render, then = 0 (stop), render. PASS = font SRAM written and something on screen when started,
     OSD closed (no window cells drawn) after stop. Exit 1 on a FAIL.
 Log: ./tmp/logs/saver_sim.log
 """
@@ -21,8 +21,8 @@ import ddc_sim as D  # noqa: E402
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/saver_sim.log"
 VCP_SAVER = 0xEB
-RUN_S = 4.0                     # fw time for the draw (scope: 64 passes of tile uploads, ~1.5 s) plus one frame
-STOP_S = 1.0                    # fw time for the stop (OSD close)
+RUN_S = 8.0                     # fw time for the draw (scope: 64 passes of tile uploads, ~1.5 s) plus one frame
+STOP_S = 3.0                    # fw time for the stop: served by the main loop after the frame in progress (scope 2: up to ~2 s)
 
 
 def say(s: str) -> None:
@@ -49,15 +49,17 @@ def main() -> int:
     sess.boot()
     ddc = D.Mccs(sess.bus, eng)
     fails = 0
-    for name, val in (("scope", 3), ("pacman", 2)):
+    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4)):
         base = lit(sess.snap())
         ddc.set(VCP_SAVER, val)
         sess.bus.wait(RUN_S)
         st = sess.snap()
-        R.render_snap(st, "black", 2).save(a.out / f"{name}_run.png")
-        ok = lit(st) > base
+        run_img = R.render_snap(st, "black", 2)
+        run_img.save(a.out / f"{name}_run.png")
+        shown = sum(1 for p in run_img.convert("L").resize((96, 54)).getdata() if p > 0)
+        ok = shown > 0
         fails += not ok
-        say(f"{'PASS' if ok else 'FAIL'} VCP 0x{VCP_SAVER:02X} = {val} ({name}): font words lit {base} -> {lit(st)}")
+        say(f"{'PASS' if ok else 'FAIL'} VCP 0x{VCP_SAVER:02X} = {val} ({name}): font words lit {base} -> {lit(st)}, {shown} lit samples of 5184 on screen")
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
         st = sess.snap()

@@ -69,9 +69,9 @@ static __code int8_t s_tSine[AWTO_SC_SINE_N] = {
     0, -12, -25, -37, -49, -60, -71, -81, -90, -98, -106, -112, -117, -122, -125, -126,
     -127, -126, -125, -122, -117, -112, -106, -98, -90, -81, -71, -60, -49, -37, -25, -12};
 
-static __xdata uint8_t s_aucPix[OSD_BITMAP_BYTES(1, AWTO_SC_BAND_ROWS)];
-static __xdata uint8_t s_aucDirty[OSD_DIRTY_BYTES(1, AWTO_SC_BAND_ROWS)];
-static __xdata osd_canvas s_cv;
+__xdata uint8_t g_aucScPix[OSD_BITMAP_BYTES(1, AWTO_SC_BAND_ROWS)];
+__xdata uint8_t g_aucScDirty[OSD_DIRTY_BYTES(1, AWTO_SC_BAND_ROWS)];
+__xdata osd_canvas g_scCv;           // shared with scope_saver2.c: one saver runs at a time, XDATA floor
 static __xdata BYTE s_ucPhase;
 static __xdata WORD s_usCell0;                                          // first cell (global tile index) of the band being drawn
 
@@ -87,7 +87,7 @@ static void ScUpload(BYTE ucTile)
 {
     BYTE ucK;
     WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_SC_COLS;
-    const uint8_t *pucB = s_aucPix + (WORD)ucTile * OSD_TILE_BYTES;
+    const uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * usCell, _OSD_WITHOUT_DB);
     for(ucK = 0; ucK < AWTO_SC_GLYPH_WORDS; ucK++)                      // canonical bytes c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py)
@@ -116,15 +116,15 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
     int16_t sCur;
     BYTE ucT;
 
-    osd_clear(&s_cv);
-    osd_mark_all_dirty(&s_cv);
+    osd_clear(&g_scCv);
+    osd_mark_all_dirty(&g_scCv);
     for(sY = sOy - (sOy % AWTO_SC_GRID_STEP_Y); sY < sOy + AWTO_SC_BAND_H; sY += AWTO_SC_GRID_STEP_Y)   // dotted horizontal graticule
     {
         if((sY >= sOy) && (sY < AWTO_SC_H))
         {
             for(sX = sOx - (sOx % AWTO_SC_DOT); sX < sOx + AWTO_SC_TILE_W; sX += AWTO_SC_DOT)
             {
-                osd_pixel(&s_cv, sX - sOx, sY - sOy, 1);
+                osd_pixel(&g_scCv, sX - sOx, sY - sOy, 1);
             }
         }
     }
@@ -134,7 +134,7 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
         {
             for(sY = sOy - (sOy % AWTO_SC_DOT); sY < sOy + AWTO_SC_BAND_H; sY += AWTO_SC_DOT)
             {
-                osd_pixel(&s_cv, sX - sOx, sY - sOy, 1);
+                osd_pixel(&g_scCv, sX - sOx, sY - sOy, 1);
             }
         }
     }
@@ -142,29 +142,29 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
     {
         if(ucBand == 0)
         {
-            osd_pixel(&s_cv, sX, 0, 1);
+            osd_pixel(&g_scCv, sX, 0, 1);
         }
         if(ucBand == (AWTO_SC_BANDS - 1))
         {
-            osd_pixel(&s_cv, sX, AWTO_SC_BAND_H - 1, 1);
+            osd_pixel(&g_scCv, sX, AWTO_SC_BAND_H - 1, 1);
         }
     }
     for(sY = 0; sY < AWTO_SC_BAND_H; sY++)                              // left / right edges
     {
         if(ucCol == 0)
         {
-            osd_pixel(&s_cv, 0, sY, 1);
+            osd_pixel(&g_scCv, 0, sY, 1);
         }
         if(ucCol == (AWTO_SC_COLS - 1))
         {
-            osd_pixel(&s_cv, AWTO_SC_TILE_W - 1, sY, 1);
+            osd_pixel(&g_scCv, AWTO_SC_TILE_W - 1, sY, 1);
         }
     }
     sPrev = ScY(sOx - ((sOx > 0) ? 1 : 0), s_ucPhase);                  // the trace: one osd_line per px step; the loop runs one px past the column so the half of a
     for(sX = sOx + ((sOx > 0) ? 0 : 1); sX <= sOx + AWTO_SC_TILE_W; sX++)   // steep segment that lands at x = ox + 12 is drawn here too (the next pass clips its own half)
     {
         sCur = ScY(sX, s_ucPhase);
-        osd_line(&s_cv, sX - 1 - sOx, sPrev - sOy, sX - sOx, sCur - sOy, 1);
+        osd_line(&g_scCv, sX - 1 - sOx, sPrev - sOy, sX - sOx, sCur - sOy, 1);
         sPrev = sCur;
     }
     s_usCell0 = (WORD)ucBand * AWTO_SC_BAND_ROWS * AWTO_SC_COLS + ucCol;
@@ -235,7 +235,7 @@ void AwtoScopeSaver(BYTE ucCmd)
     ScalerOsdScaleUpHorFactor(AWTO_SC_SU_FACTOR);
     ScalerOsdScaleUpBoundaryCodition(_OSD_SCALING_BOUNDARY_NEIGHTBOOR);
     ScalerOsdScaleUpOnOff(_ENABLE);
-    osd_canvas_init(&s_cv, 1, AWTO_SC_BAND_ROWS, s_aucPix, sizeof(s_aucPix), s_aucDirty, sizeof(s_aucDirty));
+    osd_canvas_init(&g_scCv, 1, AWTO_SC_BAND_ROWS, g_aucScPix, sizeof(g_aucScPix), g_aucScDirty, sizeof(g_aucScDirty));
     s_ucPhase = 0;
     AwtoScopeSaver(2);                                                  // first frame before the OSD is shown
     osd_tc_show(1);

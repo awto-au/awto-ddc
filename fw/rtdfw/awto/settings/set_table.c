@@ -116,9 +116,9 @@ static const struct setting __code tab[SET_COUNT] = {
     {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 33, 1755u, 0xFFFFu},  /* ssc */
     {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 33, 1771u, 0xFFFFu},  /* panel_hours */
     {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 33, 1783u, 0xFFFFu},  /* panel_min */
-    {119, 1, 0,  8, 0x03, 0, 3, 1, 0, 0x00, 29, 1797u, 0x0711u},  /* screensaver */
-    {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1837u, 0xFFFFu},  /* screensaver_s */
-    {121, 1, 0,  8, 0x02, 0, 3, 1, 0, 0xEB, 30, 1854u, 0x074Eu},  /* screensaver_now */
+    {119, 1, 0,  8, 0x03, 0, 4, 1, 0, 0x00, 29, 1797u, 0x0711u},  /* screensaver */
+    {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1845u, 0xFFFFu},  /* screensaver_s */
+    {121, 1, 0,  8, 0x02, 0, 4, 1, 0, 0xEB, 30, 1862u, 0x0756u},  /* screensaver_now */
 };
 
 static const uint8_t __code id2idx[122] = {
@@ -156,10 +156,10 @@ static const char __code txt[] =
     "Suspend\0""Off\0""Off hard\0""Factory menu\0""Input\0""D1 DP\0""D2 HDMI\0""D3 HDMI\0""H active\0""V active\0"
     "V freq\0""Mode state\0""Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0"
     "Diagnostic console\0""Off\0""Until signal\0""Always\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0"
-    "Spread spectrum\0""Panel hours\0""Panel minutes\0""Screensaver\0""Off\0""Pac-Man\0""Scope\0""Alternate\0"
-    "Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0""Scope\0""Picture\0""Colour\0"
-    "Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0""Debug\0"
-    "Audio\0""System\0""Service\0""Information\0";
+    "Spread spectrum\0""Panel hours\0""Panel minutes\0""Screensaver\0""Off\0""Pac-Man\0""Scope\0""Scope 2\0"
+    "Alternate\0""Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0""Scope\0""Scope 2\0"
+    "Picture\0""Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0"
+    "Panel timing\0""Debug\0""Audio\0""System\0""Service\0""Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
 static const uint8_t __code vopt[16][3] = {
@@ -181,12 +181,12 @@ static const uint8_t __code vopt[16][3] = {
     {91, 4, 0x05},
 };
 
-/* DDC/CI capabilities (367 chars), from the vcp column; read by set_caps_at only */
+/* DDC/CI capabilities (370 chars), from the vcp column; read by set_caps_at only */
 static const char __code caps[] =
     "(prot(monitor)type(LCD)model(awto-mon)cmds(01 02 03 0C F3)vcp(02 04 08 10 12 14(08 06 05 04 01 0B) 1"
     "6 18 1A 60(0F 11 12) 62 87 8D(02 01) C8 C9 D6(01 02 03 04 05) DF E0 E1 E2 E3 E4 E5 E6 E7 EA EB(00 01"
-    " 02 03) EC ED EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 FA FB FC(00 0"
-    "1 02 03 04 05) FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
+    " 02 03 04) EC ED EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 FA FB FC(0"
+    "0 01 02 03 04 05) FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
 
 static const uint8_t __code vcode[36][2] = {
     {0x04, 89},
@@ -254,7 +254,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {99, 6, 0x0C},  /* Service */
     {105, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1898u, 1906u, 1913u, 1929u, 1937u, 1943u, 1957u, 1964u, 1970u, 1974u, 1987u, 1993u, 1999u, 2006u, 2014u};
+static const uint16_t __code ptitle[SET_PAGES] = {1914u, 1922u, 1929u, 1945u, 1953u, 1959u, 1973u, 1980u, 1986u, 1990u, 2003u, 2009u, 2015u, 2022u, 2030u};
 
 uint8_t set_idx(uint8_t id)
 {
@@ -345,7 +345,7 @@ int16_t set_opt_from_vcp(uint8_t idx, uint8_t vcpv)
 
 uint16_t set_caps_len(void)
 {
-    return 367u;
+    return 370u;
 }
 
 char set_caps_at(uint16_t i)

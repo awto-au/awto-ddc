@@ -1111,6 +1111,7 @@ extern void AwtoSaverActivity(void);
 extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
 extern void AwtoSaverStop(void);
 extern void AwtoScopeSaver(unsigned char ucCmd);
+extern void AwtoScopeSaver2(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
