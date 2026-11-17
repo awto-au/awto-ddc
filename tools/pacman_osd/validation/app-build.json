@@ -1,0 +1,20 @@
+{
+  "bytes": 19930,
+  "sha256": "557efd1aedcf7d314a2f29390fecc1fa8a1b4081ce96bdf340d5d296e243f07e",
+  "labels": {
+    "start": 48,
+    "next": 55,
+    "check_frame": 67,
+    "check_reg": 76,
+    "halt": 85,
+    "idle": 91,
+    "getbyte": 93,
+    "block": 105,
+    "copy": 135,
+    "data_write": 141,
+    "dec_low": 146,
+    "frame": 152,
+    "reg": 167
+  },
+  "status": "8051 display-list diagnostic, NOT an SDCC build of the C renderer"
+}

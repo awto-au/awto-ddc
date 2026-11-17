@@ -1,0 +1,8 @@
+{
+  "frames": 96,
+  "max_map_words_per_frame": 10,
+  "mean_map_words_per_frame": 9.96875,
+  "glyph_writes_after_load": 0,
+  "reference": "awto-ddc ca6b4dc25de155506838e5e503afe387f074628e",
+  "note": "OSD replay of a real 8051 display-list diagnostic; C renderer host-tested separately; no hardware validation"
+}
