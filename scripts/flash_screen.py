@@ -26,6 +26,8 @@ C_SRC = ROOT / "fw/test/flash_screen.c"
 VCP_SAVER = 0xEB
 VCP_FLASH_SCREEN = 5            # screensaver_now value "Flash warning" (registry row 121)
 DRAW_WAIT_S = 0.6               # firmware: the draw is one main-loop pass (~50 ms of data port writes) after the DDC write; 12 x
+DDC_TRIES = 4                   # DDC/CI is back ~0.1 s after the debug link goes off (dev.py log: "DDC/CI 0x37 back after 52..102 ms"); 4 x 0.5 s = 2 s at most
+DDC_RETRY_S = 0.5
 DDC_LIMIT_S = 20                # ddcutil retries a busy unit for up to ~10 s; expiry = the screen is skipped, the flash goes on
 # Values mirrored from fw/test/flash_screen.c (tests/test_flash_screen.py checks them): the char command of the one cell
 MARKER = ROOT / "tmp/flash_screen.shown"   # written by show(), read by tick / clear in the flasher process, removed by clear
@@ -45,12 +47,16 @@ def say(s: str) -> None:
 
 def _vcp_max(bus: int) -> int:
     """Highest value the running firmware accepts for VCP 0xEB (the registry row's max); 0 when it does not answer."""
-    try:
-        r = subprocess.run(["ddcutil", "--bus", str(bus), "getvcp", f"{VCP_SAVER:02X}"], capture_output=True, text=True, timeout=DDC_LIMIT_S)
-    except (OSError, subprocess.TimeoutExpired):
-        return 0
-    m = re.search(r"ml=0x([0-9a-f]+)", r.stdout)
-    return int(m.group(1), 16) if m else 0
+    for _ in range(DDC_TRIES):
+        try:
+            r = subprocess.run(["ddcutil", "--bus", str(bus), "getvcp", f"{VCP_SAVER:02X}"], capture_output=True, text=True, timeout=DDC_LIMIT_S)
+        except (OSError, subprocess.TimeoutExpired):
+            return 0
+        m = re.search(r"ml=0x([0-9a-f]+)", r.stdout)
+        if m:
+            return int(m.group(1), 16)
+        time.sleep(DDC_RETRY_S)
+    return 0
 
 
 def show(bus: int) -> bool:
@@ -109,8 +115,10 @@ def clear(isp) -> None:
 
 def test(bus: int, ticks: int) -> int:
     import rtd_osd as O
+    import rtd_isp_probe as P
     if not show(bus):
         return 1
+    P.LOG = (ROOT / "tmp/logs/flash_screen_isp.log").open("a")          # rtd_osd logs through the probe module
     o = O.Osd(bus)
     o.enter()
     for k in range(ticks):
