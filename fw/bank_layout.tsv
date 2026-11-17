@@ -3327,6 +3327,7 @@ fn	_ScalerOsdScaleUpVerSize	13	0x08dc	152
 fn	_ScalerOsdScaleUpOnOff	13	0x0974	92
 fn	_ScalerGlobalGetIDCode	13	0x09d0	12
 const	_s_tSine	13	0x09dc	72
+fn	_AwtoPmSoundPoll	13	0x0a24	260
 fn	_ScWord	13	0x0b54	56
 fn	_osd_pixel	13	0x0b8c	84
 fn	_set_ap_screensaver	13	0x0be0	12
@@ -3355,7 +3356,6 @@ fn	_PsBase	13	0x1ec0	20
 fn	_PsStop	13	0x1ed4	24
 fn	_osd_canvas_init	13	0x1ef0	552
 fn	_osd_clear	13	0x2118	300
-fn	_AwtoPmSoundPoll	13	0x2244	244
 fn	_PcMaze	13	0x2338	192
 fn	_cursor_y	13	0x2434	216
 fn	_SaverDraw	13	0x2580	120

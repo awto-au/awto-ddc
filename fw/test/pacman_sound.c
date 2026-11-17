@@ -35,6 +35,7 @@ static __xdata WORD s_usPsPos;
 static __xdata WORD s_usPsAt;                   // AwtoMs low word at the current note's start
 static __xdata WORD s_usPsDur;                  // current note length, ms
 static __xdata WORD s_usPsGateAt;               // AwtoMs low word at which the amp opens after a pitch change
+static __xdata BYTE s_ucPsBootOff;               // 1 = the boot-time generator off has run
 static __xdata BYTE s_ucPsGate;                 // 1 = the amp is muted for a pitch change and opens at s_usPsGateAt
 
 static WORD PsBase(void)
@@ -64,12 +65,9 @@ static void PsNote(BYTE ucNote)
 
 static void PsStop(void)
 {
-    if(s_ucPsRun != 0)
-    {
-        s_ucPsRun = 0;
-        s_ucPsGate = 0;
-        SysAudioInternalGenTestProc(_OFF);
-    }
+    s_ucPsRun = 0;
+    s_ucPsGate = 0;
+    SysAudioInternalGenTestProc(_OFF);          // always: the generator registers survive an MCU reset / a reflash, a tone left on by an earlier image must stop too
 }
 
 static void PsStart(BYTE ucTrack)
@@ -96,6 +94,11 @@ void AwtoPmSoundPoll(void)                      // each main pass
 #ifdef _AWTO_AUDIO_TEST
     BYTE ucDur;
 
+    if(s_ucPsBootOff == 0)                      // first pass after boot: a generator left on by an earlier image (or a lock-up) is switched off
+    {
+        s_ucPsBootOff = 1;
+        PsStop();
+    }
     if((s_ucPsGate != 0) && ((WORD)((WORD)AwtoMs() - s_usPsGateAt) < AWTO_PS_MS_HALF))
     {
         s_ucPsGate = 0;
