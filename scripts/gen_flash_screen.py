@@ -110,7 +110,7 @@ def glyph_list():
 
 
 def ids(text):
-    return [FONT_CHARS.index(ch) for ch in text.ljust(COLS)[:COLS]]
+    return [FONT_CHARS.find(ch) if ch in FONT_CHARS else 0 for ch in text.ljust(COLS)[:COLS]]     # a character the font lacks shows blank: text never stops the screen
 
 
 def text() -> str:

@@ -156,7 +156,8 @@ def tick(isp, n: int, info: dict) -> None:
                 _put(o, cell, gid)
                 _prev[cell] = gid
     except Exception as e:                                  # noqa: BLE001 - best effort: never fail a flash for the picture
-        say(f"tick {n}: {e!r}")
+        import traceback
+        say(f"tick {n}: {e!r}: " + " <- ".join(f"{f.name}:{f.lineno}" for f in reversed(traceback.extract_tb(e.__traceback__)[-5:])))
 
 
 def clear(isp) -> None:
