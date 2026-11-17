@@ -362,6 +362,8 @@ def decode_char(w: list[int]) -> dict:
         c0 = (b0 >> 5 & 1) << 3 | (b0 & 1) << 2 | b2 >> 6
         c1 = (b0 >> 4 & 1) << 3 | (b2 & 7)
         return dict(kind=kind, id=b1, width=GW, cols=(c0, c1, b2 >> 3 & 7, b0 >> 1 & 7), fg=c1, bg=c0)
+    if kind == "4bit":                                   # SDK ScalerOsdChange4BitColor: B0 = 0xC0 | background colour, B2 = palette-set flags [SDK]; bg index 0 is drawn (photo, unit 3)
+        return dict(kind=kind, id=b1, width=GW, fg=0, bg=b0 & 0x3F, pset=b2)
     if kind == "blank":                                  # SDK OsdBlankFont: B0 = type, B1 = pixel length, B2 = background colour (6 bit)
         return dict(kind=kind, id=0, width=b1, fg=0, bg=b2 & 0x3F)
     return dict(kind=kind, id=b1 + (256 if kind == "1bit" and b0 & 0x20 else 0), width=b0 & 0x1F, fg=b2 >> 4, bg=b2 & 15)
@@ -624,6 +626,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                 elif ch["kind"] == "4bit":                           # bit planes; palette index = pixel value, 0 transparent [guess, QC palette sets 0]
                     lv = glyph_levels4(st, g, ch["id"])
                     px, py = fx + x * sx, fy + y * sy
+                    paint(px, py, np.kron(lv == 0, np.ones((sy, sx), bool)), st.pal[ch["bg"]], a_cbg, 2)   # background pixels = the command's background colour, index 0 included
                     for v in range(1, 16):
                         paint(px, py, np.kron(lv == v, np.ones((sy, sx), bool)), st.pal[v], a_fg)
                     x += GW
