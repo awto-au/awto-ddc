@@ -45,14 +45,14 @@ static void cursor_y(tile_cursor *p, int8_t step)
 
 static void cursor_plot(osd_canvas *c, const tile_cursor *p, uint8_t ink)
 {
-    uint16_t tile, bit, offset;
+    uint16_t tile, bitpos, offset;
     uint8_t mask, old, value;
     if (p->col < 0 || p->row < 0 || p->col >= c->cols || p->row >= c->rows)
         return;
     tile = (uint16_t)p->row * c->cols + (uint16_t)p->col;
-    bit = (uint16_t)p->y * OSD_TILE_W + p->x;
-    offset = tile * OSD_TILE_BYTES + (bit >> 3);
-    mask = (uint8_t)(0x80u >> (bit & 7u));
+    bitpos = (uint16_t)p->y * OSD_TILE_W + p->x;
+    offset = tile * OSD_TILE_BYTES + (bitpos >> 3);
+    mask = (uint8_t)(0x80u >> (bitpos & 7u));
     old = c->pixels[offset];
     value = ink ? (uint8_t)(old | mask) : (uint8_t)(old & (uint8_t)~mask);
     if (old != value) {
@@ -163,6 +163,7 @@ void osd_line(osd_canvas *c, int16_t x0, int16_t y0,
     }
 }
 
+#ifndef OSD_NO_FLUSH                    /* SDCC mcs51: a call through a 4-argument function pointer needs reentrant; such callers upload tiles themselves */
 uint16_t osd_flush(osd_canvas *c, osd_upload_fn upload, void *user)
 {
     uint16_t tile, done = 0;
@@ -178,3 +179,4 @@ uint16_t osd_flush(osd_canvas *c, osd_upload_fn upload, void *user)
     }
     return done;
 }
+#endif
