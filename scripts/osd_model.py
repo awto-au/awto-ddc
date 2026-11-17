@@ -580,7 +580,10 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                 rect(X1, Y0 + eh, X1 + ew, Y1 + eh, sh, a)
                 rect(X0 + ew, Y1, X1 + ew, Y1 + eh, sh, a)
 
+    late = []
     for w in wins:
+        if w["i"] >= 10 and w["eff_en"] and (st.win.get(win_base(w["i"]) + 3, [0, 0, 0])[0] >> 1 & 1):
+            late.append(w)                                    # ADR3[1] bor_higher_font: border above the font [regdb]
         if not higher.get(w["i"]):
             draw_win(w)
     # fonts
@@ -658,12 +661,39 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
         osd[y0:y0 + h, x0:x0 + w][m] = so[:h, :w][m]
         cov[y0:y0 + h, x0:x0 + w] |= m
         vid[y0:y0 + h, x0:x0 + w][m] = sv[:h, :w][m]
-    rotated(layout_rows(st, g), fx, fy)
-    if g["two"]:                                              # second map: its own origin (hd2 / vd2) and font delay
+    popon = (st.reg(FRAME + 0x18) & 0xC0) == 0xC0             # pop-on (3A18[7] special + [6]): one map shown, [0] picks A (0) / B (1); ScalerOsdPopOn sets [6] even when disabling [SDK]
+    pop_b = st.reg(FRAME + 0x18) & 1
+    if not (popon and pop_b):
+        rotated(layout_rows(st, g), fx, fy)
+    if g["two"] and not (popon and not pop_b):                                              # second map: its own origin (hd2 / vd2) and font delay
         rotated(layout_rows(st, g, g["row_base1"], g["fs_base1"]), g["hd2"] * g["step"] * sx + g["fhb"] * sx, g["vd2"] * sy + g["fvb"] * sy)
     for w in wins:
         if higher.get(w["i"]):
             draw_win(w)
+    for w in late:                                            # redraw the window frame (colour edge only) over the font
+        X0, Y0, X1, Y1 = ox + w["x0"] * sx, oy + w["y0"] * sy, ox + (w["x1"] + 1) * sx, oy + (w["y1"] + 1) * sy
+        bw, bh = w["eff_w"] * sx, w["eff_h"] * sy
+        c = st.pal[w["bor"]]
+        for r_ in ((X0, Y0, X1, Y0 + bh), (X0, Y1 - bh, X1, Y1), (X0, Y0, X0 + bw, Y1), (X1 - bw, Y0, X1, Y1)):
+            rect(*r_, c, 0.0)
+    if st.reg(FRAME + 0x18) & 0x20:                           # vertical boundary: OSD only between the upper and lower line [3A1E / 3A1F / 3A20; units = panel lines, guess]
+        up = (st.reg(FRAME + 0x1E) >> 4 & 7) << 8 | st.reg(FRAME + 0x1F)
+        lo = (st.reg(FRAME + 0x1E) & 7) << 8 | st.reg(FRAME + 0x20)
+        cov[:max(oy + up, 0)] = False
+        cov[oy + lo:] = False
+    if st.reg(FRAME + 0xC0) & 0x80 and cov.any():             # scale-up engine: ratio = 64 / factor (150 % -> 42, 200 % -> 32 in the QC), nearest-neighbour [guess]
+        rh, rv = 64.0 / max(st.reg(FRAME + 0xC3) & 63, 1), 64.0 / max(st.reg(FRAME + 0xC2) & 63, 1)
+        ys_, xs_ = np.nonzero(cov)
+        y0_, x0_ = ys_.min(), xs_.min()
+        h0, w0 = ys_.max() + 1 - y0_, xs_.max() + 1 - x0_
+        h1, w1 = min(int(h0 * rv), H - y0_), min(int(w0 * rh), W - x0_)
+        iy = np.minimum((np.arange(h1) / rv).astype(int), h0 - 1) + y0_
+        ix = np.minimum((np.arange(w1) / rh).astype(int), w0 - 1) + x0_
+        for arr in (osd, cov, vid, kind):
+            sub = arr[np.ix_(iy, ix)].copy()
+            arr[y0_:y0_ + h0, x0_:x0_ + w0] = 0
+            arr[y0_:y0_ + h1, x0_:x0_ + w1] = sub
+
     def rect_of(i):
         w = decode_window(st.win, i)
         return None if not w or not w["en"] else (max(ox + w["x0"] * sx, 0), max(oy + w["y0"] * sy, 0), min(ox + (w["x1"] + 1) * sx, W), min(oy + (w["y1"] + 1) * sy, H))
