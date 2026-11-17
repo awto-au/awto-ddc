@@ -1101,8 +1101,8 @@ extern void AwtoQcOsd(unsigned char ucOn);
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
-#define AWTO_TC_PACMAN_FULL                                     0xB7    // test cmd: 0xB7 full-screen Pac-Man (pacland14 assets, 80 x 60 cells of 24x36 glyphs at 2x), 0xB8 next step, 0xB9 off
-extern void AwtoPacmanFull(unsigned char ucCmd);
+#define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
+extern void AwtoPacmanClassic(unsigned char ucCmd);
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
 extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);

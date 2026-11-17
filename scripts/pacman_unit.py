@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Play the Pac-Man OSD prototype demo on a unit (fw/test/pacman_full.c, test cmds 0xB7 draw / 0xB8 next step / 0xB9 off; the 28 x 36 prototype loader was retired for the full-screen one).
+"""Play the Pac-Man OSD prototype demo on a unit (fw/test/pacman_classic.c, test cmds 0xB7 draw / 0xB8 next step / 0xB9 off).
 
 usage: pacman_unit.py BUS --serial S --map MAP [--loops N] [--fps F] [--keep]
   Sends 0xB4 (maze), then 0xB5 once per frame period, N x 96 frames, then 0xB6 (unless --keep). Debug link on for the run.
@@ -17,10 +17,8 @@ ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.p
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 LOG = ROOT / "tmp/logs/pacman_unit.log"
 TESTCMD_OFF = 0x28           # isr_g_stAwtoDiag.ucTestCmd
-TC_ON, TC_STEP, TC_OFF = 0xB4, 0xB5, 0xB6
-FULL = (0xB7, 0xB8, 0xB9)    # the full-screen demo (fw/test/pacman_full.c)
-FRAMES = 96                  # AWTO_PM_FRAMES
-FULL_FRAMES = 200            # AWTO_PF_STEPS
+TC_ON, TC_STEP, TC_OFF = 0xB7, 0xB8, 0xB9
+FRAMES = 200                 # AWTO_PC_STEPS
 LOAD_S = 1.0                 # the maze + 343 glyphs go through the data port: ~12 k bytes, ~0.2 s on the unit; 5x
 FPS = 8.0                    # demo pace a person can follow; one frame update is ~10 cells (< 5 ms)
 
@@ -42,7 +40,6 @@ def main() -> int:
     ap.add_argument("--fps", type=float, default=FPS)
     ap.add_argument("--factor", type=int, default=None, help="scale-up factor (ratio = 64 / factor, 0 = off); default = the image's")
     ap.add_argument("--pos", type=int, nargs=2, metavar=("H", "V"), default=None, help="OSD position (hd, vd units)")
-    ap.add_argument("--full", action="store_true", help="the full-screen demo (0xB7 / 0xB8 / 0xB9, 200 steps; --pos pokes g_ucAwtoPfPosH / V)")
     ap.add_argument("--keep", action="store_true", help="leave the last frame on screen")
     a = ap.parse_args()
     import dbg_link, i2cbus  # noqa: E401
@@ -54,22 +51,24 @@ def main() -> int:
         sys.exit(f"isr_g_stAwtoDiag not in {a.map}")
     cmd = (int(hit.group(1), 16) & 0xFFFF) + TESTCMD_OFF
     period = 1.0 / a.fps
-    tc_on, tc_step, tc_off = FULL if a.full else (TC_ON, TC_STEP, TC_OFF)
-    frames = FULL_FRAMES if a.full else FRAMES
-    pos_sym = "g_ucAwtoPfPos" if a.full else "g_ucAwtoPmPos"
+    tc_on, tc_step, tc_off = TC_ON, TC_STEP, TC_OFF
+    frames = FRAMES
+    pos_sym = "g_usAwtoPcPos"
     with dbg_link.linked(a.bus, 4):
         io = B.Real(a.bus, allow_write=True, regread=True)
         try:
             def send(c: int) -> bool:
                 return io.write(0x6A, 0x01, bytes([cmd >> 8])) and io.write(0x6A, 0x03, bytes([c])) and io.write(0x6A, 0x3B, bytes([cmd & 0xFF]))
-            def poke(sym: str, v: int) -> None:
+            def poke(sym: str, v: int, width: int = 1) -> None:          # XDATA bytes, big endian for a WORD
                 ad = int(re.search(r"^\S*\s+([0-9A-F]{8})\s+_?" + sym + r"\b", a.map.read_text(errors="replace"), re.M).group(1), 16) & 0xFFFF
-                io.write(0x6A, 0x01, bytes([ad >> 8])) and io.write(0x6A, 0x03, bytes([v])) and io.write(0x6A, 0x3B, bytes([ad & 0xFF]))
-            if a.factor is not None and not a.full:
-                poke("g_ucAwtoPmFactor", a.factor)
+                for k in range(width):
+                    byte = (v >> (8 * (width - 1 - k))) & 0xFF
+                    io.write(0x6A, 0x01, bytes([(ad + k) >> 8])) and io.write(0x6A, 0x03, bytes([byte])) and io.write(0x6A, 0x3B, bytes([(ad + k) & 0xFF]))
+            if a.factor is not None:
+                poke("g_ucAwtoPcFactor", a.factor)
             if a.pos is not None:
-                poke(pos_sym + "H", a.pos[0])
-                poke(pos_sym + "V", a.pos[1])
+                poke(pos_sym + "H", a.pos[0], 2)
+                poke(pos_sym + "V", a.pos[1], 2)
             say(f"maze (0x{tc_on:02X}): {'sent' if send(tc_on) else 'NAK'}")
             time.sleep(LOAD_S)
             nak = 0

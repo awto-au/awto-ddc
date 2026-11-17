@@ -34,7 +34,7 @@ CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20,
             "panel-uniformity": 0x59,
             "osd-sram-probe": 0x0F, "osd-demo-215": 0xA0, "osd-demo-gradient": 0xA1, "osd-demo-grid": 0xA2, "osd-demo-button": 0xA3,
             "osd-demo-saturated": 0xA4, "osd-demo-close": 0xA5,
-            "qc-osd": 0xB0, "qc-osd-off": 0xB1, "dpg": 0xB2, "dpg-off": 0xB3, "pacman-full": 0xB7, "pacman-full-step": 0xB8, "pacman-full-off": 0xB9}   # --cmd only (firmware test byte); freeze is compiled out on this board
+            "qc-osd": 0xB0, "qc-osd-off": 0xB1, "dpg": 0xB2, "dpg-off": 0xB3, "pacman": 0xB7, "pacman-step": 0xB8, "pacman-off": 0xB9}   # --cmd only (firmware test byte); freeze is compiled out on this board
 HOLD_MARK = "_AwtoHoldBlocksDisable"                     # in the map = image understands 0x26 / 0x27 (#28)
 OLD_FALLBACK = {0x26: 0x20}                             # image without holds: timed variant; 0x27 has none
 CONSUME_READS = 8                                      # read-backs (~0.4 s each); main loop clears the byte in one pass, but 0x35 NAKs while it draws the OSD
