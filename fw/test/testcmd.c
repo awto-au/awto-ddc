@@ -243,6 +243,7 @@ void AwtoDiagTestCmd(void)
     }
     AwtoDemoLog();
     AwtoPmSoundPoll();
+    AwtoSaverPoll();
     ucCmd = isr_g_stAwtoDiag.ucTestCmd;
     if(ucCmd == 0)
     {

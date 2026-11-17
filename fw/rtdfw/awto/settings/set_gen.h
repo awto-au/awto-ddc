@@ -3,12 +3,12 @@
 #define AWTO_SET_GEN_H
 #include <stdint.h>
 
-#define SET_COUNT   110u
+#define SET_COUNT   113u
 #define SET_PAGES   15u
-#define SET_SCHEMA  0x501Bu    /* CRC-16 of the NV rows (id, type, min, max) */
-#define SET_NV_COUNT 89u
-#define SET_TEXT_LEN 1925u
-#define SET_AUX_MAX 52u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
+#define SET_SCHEMA  0x3DDFu    /* CRC-16 of the NV rows (id, type, min, max) */
+#define SET_NV_COUNT 91u
+#define SET_TEXT_LEN 2026u
+#define SET_AUX_MAX 55u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u
 #define SET_ID_BLACK_LEVEL          5u
@@ -120,6 +120,9 @@
 #define SET_ID_SSC                  114u
 #define SET_ID_PANEL_HOURS          115u
 #define SET_ID_PANEL_MIN            116u
+#define SET_ID_SCREENSAVER          119u
+#define SET_ID_SCREENSAVER_S        120u
+#define SET_ID_SCREENSAVER_NOW      121u
 
 #define SET_PAGE_PICTURE          0u
 #define SET_PAGE_COLOUR           1u
@@ -165,11 +168,14 @@
 #define AP_POWER                26u
 #define AP_POWER_MODE           27u
 #define AP_ROTATE               28u
-#define AP_SDK_LANGUAGE         29u
-#define AP_SDK_SYS              30u
-#define AP_SEARCH_TIME          31u
-#define AP_USER_RGB             32u
-#define AP_VOLUME               33u
+#define AP_SCREENSAVER          29u
+#define AP_SCREENSAVER_NOW      30u
+#define AP_SCREENSAVER_S        31u
+#define AP_SDK_LANGUAGE         32u
+#define AP_SDK_SYS              33u
+#define AP_SEARCH_TIME          34u
+#define AP_USER_RGB             35u
+#define AP_VOLUME               36u
 
 /* apply functions: integrator (firmware side), one per registry 'apply' name */
 void set_ap_aspect(uint8_t id, int16_t v);
@@ -200,6 +206,9 @@ void set_ap_port(uint8_t id, int16_t v);
 void set_ap_power(uint8_t id, int16_t v);
 void set_ap_power_mode(uint8_t id, int16_t v);
 void set_ap_rotate(uint8_t id, int16_t v);
+void set_ap_screensaver(uint8_t id, int16_t v);
+void set_ap_screensaver_now(uint8_t id, int16_t v);
+void set_ap_screensaver_s(uint8_t id, int16_t v);
 void set_ap_sdk_language(uint8_t id, int16_t v);
 void set_ap_sdk_sys(uint8_t id, int16_t v);
 void set_ap_search_time(uint8_t id, int16_t v);

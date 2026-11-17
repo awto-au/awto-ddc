@@ -1103,8 +1103,13 @@ extern void AwtoOsdTestReset(void);                                             
 extern void AwtoDpgTest(unsigned char ucOn);
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
 extern void AwtoPacmanClassic(unsigned char ucCmd);
+#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 scope
 #define AWTO_TC_SCOPE                                           0xB4    // test cmd: 0xB4 scope screensaver draw (docs/screensaver.md), 0xB5 next frame, 0xB6 off
 #define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop (needs -D _AWTO_AUDIO_TEST)
+extern void AwtoSaverPoll(void);
+extern void AwtoSaverActivity(void);
+extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
+extern void AwtoSaverStop(void);
 extern void AwtoScopeSaver(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);

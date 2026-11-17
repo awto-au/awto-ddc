@@ -239,6 +239,10 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
 #ifdef _AWTO_NEW_SETTINGS
     g_ucAwtoNvDdc = 1;                          // #151 flush gate: DDC/CI busy
 #endif
+    if(!((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_SAVER_VCP)))
+    {
+        AwtoSaverActivity();                    // any DDC/CI command but the screensaver trigger itself ends a screensaver / restarts the idle time
+    }
     pucTx[0] = 0x6E;
 #if(_AUDIO_SUPPORT == _ON)
     // #94 ear-test steps / tone announce (dev.py sound-test): VCP 0x63 is unused by the AWTO registry; before the registry
