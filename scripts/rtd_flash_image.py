@@ -375,6 +375,13 @@ MIXED_SOURCES = ("write-in-progress", "write-failed")  # manifest sources of a s
 COMMON_END = 0x5000                                   # fw_build --common: [0, 0x5000) of every bank = common code + vectors
 
 
+def _phase(i: int) -> str:
+    """Name of the boot_last group sector i belongs to (shown on the flash warning screen)."""
+    per = BANK // SECTOR
+    common = (i % per) * SECTOR < COMMON_END
+    return ("BOOT" if i < per else "COMMON") if common else ("BANK0" if i < per else "BANKED")
+
+
 def boot_last(diff: list[int]) -> list[int]:
     """Order for a stop mid-run: banked sectors of banks 1.. first, then bank 0's banked part (DDR/startup init,
     fw/bank_layout.tsv region 0), then common of banks 1.., bank 0's common (reset vector 0x0000) very last.
@@ -522,8 +529,9 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
             state.sectors[i] = hashes[i]
             RUN.written = k + 1
-            FSCR.tick(isp, k, {"bank": s // BANK, "nbank": FLASH // BANK - 1, "sec": k + 1, "nsec": len(diff), "pct": (k + 1) * 100 // len(diff),
-                               "bad": getattr(isp, "burst_fails", 0), "recov": sum(RECOVERIES.values())})    # #232: progress + mouth on the warning screen, best effort
+            FSCR.tick(isp, k, {"phase": _phase(i), "bank": s // BANK, "nbank": FLASH // BANK - 1, "addr": s, "sec": k + 1, "nsec": len(diff),
+                               "pct": (k + 1) * 100 // len(diff), "bad": getattr(isp, "burst_fails", 0), "recov": sum(RECOVERIES.values()),
+                               "t": time.monotonic() - t0})      # #232: progress + mouth on the warning screen, best effort
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")

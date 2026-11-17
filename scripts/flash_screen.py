@@ -112,11 +112,19 @@ def _osd(isp):
     return o
 
 
+def _mmss(sec: float) -> str:
+    sec = max(0, int(sec))
+    return f"{sec // 60:02d}:{sec % 60:02d}"
+
+
 def rows_text(info: dict) -> list[str]:
-    """The three text rows for a progress dict: bank, nbank, sec, nsec, pct, iface, bad, recov."""
-    return [f"BANK {info['bank']:02d}/{info['nbank']:02d} SEC {info['sec']}/{info['nsec']} {info['pct']}%",
+    """The five text rows for a progress dict: phase, bank, addr, sec, nsec, pct, iface, bad, recov, t (s since the first sector)."""
+    eta = info["t"] * (info["nsec"] - info["sec"]) / info["sec"] if info["sec"] else 0
+    return [f"{info['phase']} BANK {info['bank']:02d}/{info['nbank']:02d}",
+            f"ADDR {info['addr']:05X} SEC {info['sec']}/{info['nsec']} {info['pct']}%",
             info.get("iface") or os.environ.get(ENV_IFACE, ""),
-            f"BURST FAIL {info['bad']} RECOVER {info['recov']}"]
+            f"BURST FAIL {info['bad']} RECOVER {info['recov']}",
+            f"TIME {_mmss(info['t'])} ETA {_mmss(eta)}"]
 
 
 def _cells(info: dict, mouth_open: bool) -> dict[int, int]:
@@ -183,8 +191,8 @@ def test(bus: int, ticks: int) -> int:
     o.enter()
     os.environ.setdefault(ENV_IFACE, "I2C DDC 100KHZ BURST")
     for k in range(ticks):
-        tick(o.isp, k, {"bank": k * 14 // max(1, ticks - 1), "nbank": 14, "sec": k * 10, "nsec": ticks * 10 - 10, "pct": k * 100 // max(1, ticks - 1),
-                        "bad": k // 3, "recov": 0})
+        tick(o.isp, k, {"phase": ("BANKED", "BANK0", "COMMON", "BOOT")[k * 4 // ticks], "bank": k * 14 // max(1, ticks - 1), "nbank": 15, "addr": k * 0x10000 + 0x1000,
+                        "sec": k * 10 + 1, "nsec": ticks * 10, "pct": k * 100 // max(1, ticks - 1), "bad": k // 3, "recov": 0, "t": k * 7.0})
         time.sleep(0.5)                                     # human-visible pacing for the dry run only
     clear(o.isp)
     o.reset()

@@ -41,6 +41,7 @@ def test_vcp_value():
 
 
 def test_text_rows_fit():
-    info = {"bank": 14, "nbank": 14, "sec": 224, "nsec": 224, "pct": 100, "iface": "DP-AUX 1000 KHZ BURST", "bad": 12, "recov": 3}
+    info = {"phase": "BANKED", "bank": 14, "nbank": 15, "addr": 0xFF000, "sec": 224, "nsec": 224, "pct": 100, "iface": "DP-AUX 1000 KHZ BURST", "bad": 12, "recov": 3, "t": 3599}
+    assert len(FS.rows_text(info)) == len(L.ROW_LINES)
     for t in FS.rows_text(info):
         assert len(t) <= L.COLS and all(ch in L.FONT_CHARS for ch in t.upper()), t

@@ -28,7 +28,7 @@ TILE_W, TILE_H = 12, 18
 PM_COLS, PM_ROWS = 6, 4                 # Pac-Man 72 x 72 px
 PM_COL0, PM_ROW0 = 12, 2                # its top-left tile (centred: (30 - 6) / 2)
 ROW_TITLE = 0
-ROW_LINES = (7, 8, 9)                   # bank / percent, interface, errors: rewritten by the host
+ROW_LINES = (6, 7, 8, 9, 10)            # phase + bank, address + sector + percent, interface, errors, time: rewritten by the host
 TITLE = "FLASHING - DO NOT POWER OFF"
 FONT_CHARS = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ%./:-"      # glyph id = index (0 = blank)
 PM_OPEN = len(FONT_CHARS)               # first glyph id of the open-mouth frame (24 tiles), then the closed frame
