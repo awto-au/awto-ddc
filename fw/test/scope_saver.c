@@ -114,8 +114,6 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
     int16_t sY;
     int16_t sPrev;
     int16_t sCur;
-    int16_t sLo;
-    int16_t sHi;
     BYTE ucT;
 
     osd_clear(&s_cv);
@@ -162,21 +160,11 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
             osd_pixel(&s_cv, AWTO_SC_TILE_W - 1, sY, 1);
         }
     }
-    sPrev = ScY(sOx - ((sOx > 0) ? 1 : 0), s_ucPhase);                  // the trace: per px column a vertical run from the previous sample to this one (clipped to the band here:
-    for(sX = sOx; sX < sOx + AWTO_SC_TILE_W; sX++)                      // osd_lines misplaces coordinates below 0, so nothing negative is passed)
+    sPrev = ScY(sOx - ((sOx > 0) ? 1 : 0), s_ucPhase);                  // the trace: one osd_line per px step; the loop runs one px past the column so the half of a
+    for(sX = sOx + ((sOx > 0) ? 0 : 1); sX <= sOx + AWTO_SC_TILE_W; sX++)   // steep segment that lands at x = ox + 12 is drawn here too (the next pass clips its own half)
     {
         sCur = ScY(sX, s_ucPhase);
-        sLo = (sPrev < sCur) ? sPrev : sCur;
-        sHi = (sPrev < sCur) ? sCur : sPrev;
-        if(sX == 0)
-        {
-            sLo = sCur;
-            sHi = sCur;
-        }
-        for(sY = (sLo > sOy) ? sLo : sOy; (sY <= sHi) && (sY < sOy + AWTO_SC_BAND_H); sY++)
-        {
-            osd_pixel(&s_cv, sX - sOx, sY - sOy, 1);
-        }
+        osd_line(&s_cv, sX - 1 - sOx, sPrev - sOy, sX - sOx, sCur - sOy, 1);
         sPrev = sCur;
     }
     s_usCell0 = (WORD)ucBand * AWTO_SC_BAND_ROWS * AWTO_SC_COLS + ucCol;
