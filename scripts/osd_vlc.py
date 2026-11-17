@@ -73,8 +73,9 @@ def vmap_of(blob):
     return v
 
 
-def decode(blob, off=0):
-    """blob -> data bytes. Raises ValueError on a bad code, a missing END or a length mismatch."""
+def decode(blob, off=0, need_end=True):
+    """blob -> data bytes. Raises ValueError on a bad code, a missing END or a length mismatch.
+    need_end=False: OsdEdit 2523V streams have no END (zero padding); stop at the stream length, drop a trailing odd nibble."""
     vm = vmap_of(blob[off:off + 8])
     n = int.from_bytes(blob[off + 8:off + 10], "big")
     table = {c: vm[i] for i, c in enumerate(CODES)}
@@ -92,8 +93,10 @@ def decode(blob, off=0):
                 raise ValueError("bad VLC code")
         if end:
             break
-    if not end:
+    if not end and need_end:
         raise ValueError("no END code within the stream length")
+    if not end:
+        nib = nib[:len(nib) // 2 * 2]
     if len(nib) % 2:
         raise ValueError("odd nibble count")
     return bytes((nib[i] << 4) | nib[i + 1] for i in range(0, len(nib), 2))
