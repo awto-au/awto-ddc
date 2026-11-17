@@ -79,6 +79,7 @@ void AwtoOsdDemo(BYTE ucGroup)
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, 0xFF, 0);
         return;
     }
+    AwtoOsdTestReset();
     AwtoDemoOpen();
     if(ucGroup == 0)                                    // #215: where does a degenerate window end? (x, y in OSD px)
     {

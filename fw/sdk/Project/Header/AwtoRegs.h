@@ -48,6 +48,10 @@
 #define AWTO_R_D_PATTERN_RESET                          0x07FF
 #define AWTO_R_FRAME_CTRL_02                            0x3A02
 #define AWTO_F_FRAME_CTRL_02_OSD_EN                     0x01
+#define AWTO_R_FRAME_CTRL_07                            0x3A07
+#define AWTO_R_FRAME_CTRL_08                            0x3A08
+#define AWTO_R_FRAME_CTRL_09                            0x3A09
+#define AWTO_R_FRAME_CTRL_0A                            0x3A0A
 #define AWTO_R_FRAME_CTRL_0B                            0x3A0B
 #define AWTO_F_FRAME_CTRL_0B_F_DL_SWAP                  0xC0
 #define AWTO_F_FRAME_CTRL_0B_HW_ROTATE_EN               0x04
@@ -63,8 +67,13 @@
 #define AWTO_R_FRAME_CTRL_1B                            0x3A1B
 #define AWTO_F_FRAME_CTRL_1B_FS_BASE0                   0xF0
 #define AWTO_R_FRAME_CTRL_1C                            0x3A1C
+#define AWTO_R_FRAME_CTRL_1E                            0x3A1E
+#define AWTO_R_FRAME_CTRL_21                            0x3A21
 #define AWTO_R_FRAME_CTRL_33                            0x3A33
 #define AWTO_F_FRAME_CTRL_33_SRAM_READ_EN               0x10
+#define AWTO_R_FRAME_CTRL_41                            0x3A41
+#define AWTO_R_FRAME_CTRL_43                            0x3A43
+#define AWTO_R_OSD_SU_CRTL                              0x3AC0
 #define AWTO_R_CAP_M2_FIFO_STATUS                       0x452B
 #define AWTO_R_DISP_M2_FIFO_STATUS                      0x45B0
 #define AWTO_R_PB7_AUX_IRQ_STATUS                       0xB7DC

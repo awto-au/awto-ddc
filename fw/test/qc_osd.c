@@ -96,6 +96,7 @@ void AwtoQcOsd(BYTE ucOn)
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, 0x51, 0);
         return;
     }
+    AwtoOsdTestReset();
     ScalerOsdGlobalDoubleBuffer(_DISABLE);
     ScalerOsdCircuitActivated(_ENABLE);
     ScalerOsdVerticalStartSelect(_OSD_VSYNC_SELECT_DVS);
