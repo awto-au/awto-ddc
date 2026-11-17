@@ -966,6 +966,7 @@ stub	_SysAudioInternalGenTestProc	C	0x3fc4	8
 stub	_AwtoPmSound	C	0x3fcc	8
 stub	_AwtoPmSoundPoll	C	0x3fd4	8
 stub	_PsByte	C	0x3fdc	8
+stub	_PcEvt	C	0x3fe4	8
 fn	_AwtoWaitLog	C	0x4000	244
 fn	_ScalerTimerWaitForEvent	C	0x40f4	392
 fn	_ScalerOsdFontLibraryRotation	0	0x0000	28
@@ -3234,10 +3235,10 @@ fn	_AwtoQcIcon	11	0x02e0	108
 fn	_AwtoQcOsd	11	0x034c	588
 fn	_AwtoDpgTest	11	0x0598	160
 fn	_AwtoOsdTestReset	11	0x0638	64
-const	_g_pcDeltaB	11	0x0678	5632
 fn	_PcDeltaB	11	0x1c78	20
 const	_g_aucPsData	11	0x1c8c	264
 fn	_PsByte	11	0x1d94	20
+const	_g_pcDeltaB	11	0x1da8	7432
 fn	_ScalerOsd2FontFunction	12	0x0000	28
 fn	_ScalerOsdDrawGridLine	12	0x001c	308
 const	_g_qcBrook	12	0x0150	1260
@@ -3250,15 +3251,17 @@ fn	_ScalerOsd2BitFontOffset	12	0x1e90	40
 fn	_ScalerOsdChange2BitColor	12	0x1eb8	240
 fn	_ScalerOsdSramDataValue2Byte	12	0x1fa8	64
 const	_g_pcCell	12	0x1fe8	3124
-const	_g_pcDeltaA	12	0x2c1c	5632
-const	_g_pcGlyph	12	0x421c	2400
-const	_g_pcIdx	12	0x4b7c	420
+const	_g_pcDeltaA	12	0x2c1c	7424
+const	_g_pcEvt	12	0x491c	272
+const	_g_pcIdx	12	0x4a2c	544
+fn	_PcEvt	12	0x4c4c	20
 const	_g_pcPal	12	0x4d20	44
 fn	_PcCell	12	0x4d4c	20
 fn	_PcDeltaA	12	0x4d60	20
 fn	_PcGlyph	12	0x4d74	20
 fn	_PcIdx	12	0x4d88	20
 fn	_PcPal	12	0x4d9c	12
+const	_g_pcGlyph	12	0x4da8	3456
 fn	_ScalerOsdDrawGridLinePanelPitch	13	0x0000	44
 fn	_AwtoDemoPlain	13	0x002c	96
 fn	_AwtoDemoReset	13	0x008c	56
@@ -3270,7 +3273,6 @@ fn	_ScalerOsdScaleUpVerFactor	13	0x08c8	20
 fn	_ScalerOsdScaleUpVerSize	13	0x08dc	152
 fn	_ScalerOsdScaleUpOnOff	13	0x0974	92
 fn	_ScalerGlobalGetIDCode	13	0x09d0	12
-fn	_AwtoPacmanClassic	13	0x09dc	536
 fn	_PcDelta	13	0x0bf4	40
 fn	_PcMaze	13	0x0c1c	72
 fn	_PcStep	13	0x0c64	392
@@ -3281,3 +3283,4 @@ fn	_PsBase	13	0x0f40	20
 fn	_PsNote	13	0x0f54	116
 fn	_PsStart	13	0x0fc8	120
 fn	_PsStop	13	0x1040	24
+fn	_AwtoPacmanClassic	13	0x1058	620

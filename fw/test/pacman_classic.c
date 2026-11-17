@@ -30,11 +30,15 @@ extern void osd_tc_close(void);
 #define AWTO_PC_ZERO                            0x00
 #define AWTO_PC_KICK_MASK                       0x7F                // kick the watchdog every 128 data port bytes: the load is ~14 KB, near the 586 ms bite time
 #define PC_KICK(i)                              do { if(((i) & AWTO_PC_KICK_MASK) == AWTO_PC_ZERO) { AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT; } } while(0)
+#define AWTO_PC_SND_INTRO                       0                   // AwtoPmSound(cmd - AWTO_TC_PACMAN_SND): 0 intro, 1 waka (loops), 2 death, 3 calibration, 4 stop
+#define AWTO_PC_SND_WAKA                        1
+#define AWTO_PC_SND_DEATH                       2
+#define AWTO_PC_SND_STOP                        4
 #define AWTO_PC_ARG_ON                          0x73
 #define AWTO_PC_ARG_STEP                        0x74
 #define AWTO_PC_ARG_OFF                         0x75
 
-static __xdata BYTE s_ucStep;
+static __xdata WORD s_usStep;
 __xdata BYTE g_ucAwtoPcFactor = AWTO_PC_SU_FACTOR;      // scale-up factor (0 = off), host-settable for tuning
 __xdata WORD g_usAwtoPcPosH = AWTO_PC_POS_H;            // WORD: the centred position is above 255
 __xdata WORD g_usAwtoPcPosV;
@@ -67,6 +71,12 @@ static BYTE PcIdx(WORD usK)
 static BYTE PcDeltaA(WORD usK)
 {
     return g_pcDeltaA[usK];
+}
+
+#pragma place bank(12)
+static BYTE PcEvt(WORD usStep)
+{
+    return g_pcEvt[usStep];
 }
 
 #pragma place bank(11)
@@ -102,10 +112,10 @@ static void PcMaze(void)
     }
 }
 
-static void PcStep(BYTE ucStep)
+static void PcStep(WORD usStep)
 {
-    WORD usO = ((WORD)PcIdx(2 * ucStep + 1) << 8) | PcIdx(2 * ucStep);
-    WORD usEnd = ((WORD)PcIdx(2 * ucStep + 3) << 8) | PcIdx(2 * ucStep + 2);
+    WORD usO = ((WORD)PcIdx(2 * usStep + 1) << 8) | PcIdx(2 * usStep);
+    WORD usEnd = ((WORD)PcIdx(2 * usStep + 3) << 8) | PcIdx(2 * usStep + 2);
     WORD usPos;
     BYTE ucB0;
     BYTE ucB1;
@@ -125,24 +135,43 @@ void AwtoPacmanClassic(BYTE ucCmd)
 {
     WORD usI;
     BYTE ucB;
+    BYTE ucEv;
 
     if(ucCmd == 0)
     {
         osd_tc_close();
         ScalerOsdScaleUpOnOff(_DISABLE);
+        AwtoPmSound(AWTO_PC_SND_STOP);
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PC_ARG_OFF, 0);
         return;
     }
     if(ucCmd == 2)                                                          // next step: its cell updates
     {
-        if(s_ucStep >= AWTO_PC_STEPS)
+        if(s_usStep >= AWTO_PC_STEPS)
         {
             PcMaze();                                                       // after the last step: the maze from the start
-            s_ucStep = 0;
+            s_usStep = 0;
         }
-        PcStep(s_ucStep);
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PC_ARG_STEP, s_ucStep);
-        s_ucStep++;
+        PcStep(s_usStep);
+        ucEv = PcEvt(s_usStep);                                             // the sound event of this step (gen_pacman_classic.py): one command of the sound player
+        if(ucEv == AWTO_PC_EV_INTRO)
+        {
+            AwtoPmSound(AWTO_PC_SND_INTRO);
+        }
+        else if(ucEv == AWTO_PC_EV_WAKA_ON)
+        {
+            AwtoPmSound(AWTO_PC_SND_WAKA);
+        }
+        else if(ucEv == AWTO_PC_EV_DEATH)
+        {
+            AwtoPmSound(AWTO_PC_SND_DEATH);
+        }
+        else if((ucEv == AWTO_PC_EV_WAKA_OFF) || (ucEv == AWTO_PC_EV_STOP))
+        {
+            AwtoPmSound(AWTO_PC_SND_STOP);
+        }
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PC_ARG_STEP, (BYTE)s_usStep);
+        s_usStep++;
         return;
     }
     osd_tc_close();                                                         // our own OSD off, windows closed
@@ -185,7 +214,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
         ScalerOsdScaleUpBoundaryCodition(_OSD_SCALING_BOUNDARY_NEIGHTBOOR);
         ScalerOsdScaleUpOnOff(_ENABLE);
     }
-    s_ucStep = 0;
+    s_usStep = 0;
     osd_tc_show(1);
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PC_ARG_ON, 0);
 }

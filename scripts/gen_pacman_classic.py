@@ -22,7 +22,7 @@ LOG = ROOT / "tmp/logs/gen_pacman_classic.log"
 COLS, ROWS = 28, 36
 MAZE_TOP = 3                                  # tile row of maze row 0 (3 score rows above, 2 spare below)
 W, H, VIS = 12, 18, 12                        # glyph 12 x 18, visible 12 x 12
-STEPS = 200
+STEPS = 260
 BANK_A, BANK_B = 12, 11
 
 # Palette: index 0 transparent, 1 opaque black (cell background), then colours.
@@ -121,6 +121,16 @@ def wall_glyph(m, x, y):
                 for xx in range(W):
                     for yy in edge(dy):
                         put(g, xx, yy)
+    for (dx, dy) in ((-1, 0), (1, 0), (0, -1), (0, 1)):                     # second thin line 4 px in, where the wall is thick (the arcade's double line)
+        if o[(dx, dy)] and is_wall(m, x - dx, y - dy) and is_wall(m, x - 2 * dx, y - 2 * dy):
+            if dx:
+                xx = 4 if dx < 0 else 7
+                for yy in range(VIS):
+                    put(g, xx, yy)
+            else:
+                yy = 4 if dy < 0 else 7
+                for xx in range(W):
+                    put(g, xx, yy)
     for (dx, dy) in ((-1, -1), (1, -1), (-1, 1), (1, 1)):                   # concave corner: both neighbours wall, the diagonal open
         if o[(dx, dy)] and not o[(dx, 0)] and not o[(0, dy)]:
             for xx in edge(dx):
@@ -215,6 +225,71 @@ def door_glyph():
     return g
 
 
+def ghost_fright(feet):
+    """2-bit: 1 body, 2 white detail (eyes + zigzag mouth)."""
+    g = ghost_glyph(0, feet)
+    for y in range(VIS):
+        for x in range(W):
+            if g[y][x] in (2, 3):
+                g[y][x] = 1
+    for ex in (3, 8):
+        for yy in (4, 5):
+            for xx in (ex, ex + 1):
+                g[yy][xx] = 2
+    for x in range(1, 11):
+        g[8][x] = 2 if x % 2 else 1
+        g[9][x] = 2 if x % 2 == 0 else 1
+    return g
+
+
+def ghost_eyes(direction):
+    """2-bit: eyes only (1 unused, 2 white, 3 blue pupil)."""
+    g = blank()
+    dx, dy = ((1, 0), (0, 1), (-1, 0), (0, -1))[direction]
+    for ex in (3, 8):
+        for yy in range(3, 8):
+            for xx in range(ex - 1, ex + 2):
+                g[yy][xx] = 2
+        px, py = ex + dx, 5 + dy
+        for yy in range(py, py + 2):
+            for xx in range(px, px + 2):
+                if 0 <= xx < W and 3 <= yy <= 7:
+                    g[yy][xx] = 3
+    return g
+
+
+def pac_death(k):
+    """Frame k = 0..10: the mouth opens upward until nothing is left."""
+    g = blank()
+    frac = k / 10.0
+    half = math.radians(15 + 165 * frac)
+    r = 5.6 * (1.0 if k < 9 else 0.5 if k == 9 else 0.2)
+    for y in range(VIS):
+        for x in range(W):
+            if (x + .5 - 6) ** 2 + (y + .5 - 6) ** 2 <= r * r:
+                a = math.atan2(y + .5 - 6, x + .5 - 6) + math.pi / 2          # 0 = straight up
+                a = (a + math.pi) % (2 * math.pi) - math.pi
+                if abs(a) >= half:
+                    g[y][x] = 1
+    return g
+
+
+def cherry():
+    """2-bit: 1 red cherry, 2 green stem, 3 white highlight."""
+    g = blank()
+    for cx, cy in ((3.5, 8.0), (8.0, 8.5)):
+        for y in range(VIS):
+            for x in range(W):
+                if (x + .5 - cx) ** 2 + (y + .5 - cy) ** 2 <= 3.2 ** 2:
+                    g[y][x] = 1
+    for i in range(6):
+        g[1 + i][4 + i // 2 + 1 if i < 3 else 4 + i // 2] = 2
+    for i in range(6):
+        g[1 + i][9 - i // 3] = 2
+    g[7][2] = g[7][7] = 3
+    return g
+
+
 def pack(g, bits):
     """1 bit: two 12-bit rows per 24-bit word (9 words). 2 bit: two bit planes, MSB plane first, each like a 1-bit glyph (18 words)."""
     def plane(sel):
@@ -270,51 +345,91 @@ def build_set(maze):
             s.add1(f"PAC_{d}_{o}", pac_glyph(d, o), K_YEL)
     for ch in FONT:
         s.add1(f"T_{ch}", text_glyph(ch), K_WHITE)
+    for k in range(11):
+        s.add1(f"DEATH_{k}", pac_death(k), K_YEL)
     for d in range(4):
         for f in range(2):
             s.add2(f"GHOST_{d}_{f}", ghost_glyph(d, f))
+    for f in range(2):
+        s.add2(f"FRIGHT_{f}", ghost_fright(f))
+    for d in range(4):
+        s.add2(f"EYES_{d}", ghost_eyes(d))
+    s.add2("CHERRY", cherry())
     return s
 
 
 # ---------------------------------------------------------------- demo
 DIRS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+EV_INTRO, EV_WAKA_ON, EV_WAKA_OFF, EV_DEATH, EV_STOP = 1, 2, 3, 4, 5      # sound events (firmware: AwtoPmSound)
+READY_STEPS, POWER_STEPS, FLASH_STEPS, DEATH_STEPS, GAMEOVER_STEPS = 14, 26, 8, 14, 10
+PEN_TILE, DOOR_TILE = (14, 14), (13, 10)
+FRUIT_TILE, FRUIT_AT, FRUIT_STEPS = (13, 17), (70, 170), 24
+CARELESS = (120, 235)                          # steps in which the demo Pac-Man ignores the ghosts (so it dies and the game ends)
 
 
 class Demo:
     def __init__(self, maze):
         self.m = maze
-        self.pellet = {(x, y) for y, r in enumerate(maze) for x, c in enumerate(r) if c in ".o"}
-        self.power = {(x, y) for y, r in enumerate(maze) for x, c in enumerate(r) if c == "o"}
-        self.pac, self.pdir = (14, 23), 2
-        self.g = [(14, 11), (14, 14), (12, 14), (16, 14)]
-        self.gdir = [2, 3, 3, 3]
-        self.out = [0, 6, 14, 30]                  # steps until a ghost leaves the house
-        self.t = 0
+        self.rng = 12345
+        self.lives = 3
         self.score = 0
+        self.t = 0
+        self.mode = "ready"                        # ready, play, dying, over
+        self.timer = READY_STEPS
+        self.fruit_t = 0
+        self.eaten = 0
+        self.events = []
+        self.fresh_maze()
+        self.reset_actors()
+
+    def fresh_maze(self):
+        m = self.m
+        self.pellet = {(x, y) for y, r in enumerate(m) for x, c in enumerate(r) if c in ".o"}
+        self.power = {(x, y) for y, r in enumerate(m) for x, c in enumerate(r) if c == "o"}
+        self.eaten = 0
+
+    def reset_actors(self):
+        self.pac, self.pdir = (13, 23), 2
+        self.g = [(13, 11), (13, 14), (11, 14), (15, 14)]
+        self.gdir = [2, 3, 3, 3]
+        self.gst = ["n"] * 4                      # n normal, f frightened, e eyes
+        self.out = [0, 5, 12, 22]
+        self.power_t = 0
+        self.chain = 0
+        self.skip = [0] * 4
+
+    def rand(self, n):
+        self.rng = (self.rng * 1103515245 + 12345) & 0x7FFFFFFF
+        return (self.rng >> 8) % n
 
     def open(self, x, y, ghost=False):
         x %= 28
         if not (0 <= y < len(self.m)):
             return False
         c = self.m[y][x]
-        return c not in "#" and (c != "-" or ghost)
+        return c != "#" and (c != "-" or ghost)
+
+    def neighbours(self, p, ghost=False):
+        return [((p[0] + dx) % 28, p[1] + dy) for dx, dy in DIRS if self.open((p[0] + dx) % 28, p[1] + dy, ghost)]
 
     def pac_move(self):
-        best, bd = None, 10 ** 9
         from collections import deque
+        normal = [self.g[i] for i in range(4) if self.gst[i] == "n" and self.out[i] == 0]
+        scared = [self.g[i] for i in range(4) if self.gst[i] == "f"]
         q = deque([(self.pac, 0, None)])
         seen = {self.pac}
-        danger = {(gx, gy) for gx, gy in self.g}
+        best = None
         while q:
             p, dist, first = q.popleft()
-            if p in self.pellet and dist > 0:
-                best, bd = first, dist
+            if dist > 0 and ((p in self.pellet) or (self.power_t > FLASH_STEPS and p in scared and dist < 9)
+                             or (p == FRUIT_TILE and self.fruit_t > 0)):
+                best = first
                 break
             for d, (dx, dy) in enumerate(DIRS):
                 np_ = ((p[0] + dx) % 28, p[1] + dy)
                 if np_ in seen or not self.open(*np_):
                     continue
-                if dist < 3 and any(abs(np_[0] - gx) + abs(np_[1] - gy) <= 2 for gx, gy in danger):
+                if dist < 3 and not CARELESS[0] <= self.t < CARELESS[1] and any(abs(np_[0] - gx) + abs(np_[1] - gy) <= 1 for gx, gy in normal):
                     continue
                 seen.add(np_)
                 q.append((np_, dist + 1, first if first is not None else d))
@@ -329,69 +444,166 @@ class Demo:
         self.pdir = best
         dx, dy = DIRS[best]
         self.pac = ((self.pac[0] + dx) % 28, self.pac[1] + dy)
+        ate = False
         if self.pac in self.pellet:
             self.pellet.discard(self.pac)
-            self.score += 50 if self.pac in self.power else 10
+            ate = True
+            self.eaten += 1
+            if self.pac in self.power:
+                self.score += 50
+                self.power_t = POWER_STEPS
+                self.chain = 0
+                for i in range(4):
+                    if self.gst[i] == "n":
+                        self.gst[i] = "f"
+                        self.gdir[i] = (self.gdir[i] + 2) % 4
+            else:
+                self.score += 10
+            if self.eaten in FRUIT_AT:
+                self.fruit_t = FRUIT_STEPS
+        if self.pac == FRUIT_TILE and self.fruit_t > 0:
+            self.fruit_t = 0
+            self.score += 100
+        return ate
+
+    def ghost_target(self, i):
+        px, py = self.pac
+        pd = DIRS[self.pdir]
+        if self.gst[i] == "e":
+            return DOOR_TILE
+        if i == 0:
+            return px, py
+        if i == 1:
+            return px + 4 * pd[0], py + 4 * pd[1]
+        if i == 2:
+            bx, by = self.g[0]
+            return 2 * (px + 2 * pd[0]) - bx, 2 * (py + 2 * pd[1]) - by
+        x, y = self.g[i]
+        return (px, py) if abs(px - x) + abs(py - y) > 8 else (0, 33)
 
     def ghost_move(self, i):
         if self.out[i] > 0:
             self.out[i] -= 1
             return
+        if self.gst[i] == "f":
+            self.skip[i] ^= 1
+            if self.skip[i]:
+                return
         x, y = self.g[i]
-        px, py = self.pac
-        pd = DIRS[self.pdir]
-        if i == 0:
-            tx, ty = px, py
-        elif i == 1:
-            tx, ty = px + 4 * pd[0], py + 4 * pd[1]
-        elif i == 2:
-            bx, by = self.g[0]
-            tx, ty = 2 * (px + 2 * pd[0]) - bx, 2 * (py + 2 * pd[1]) - by
-        else:
-            tx, ty = (px, py) if abs(px - x) + abs(py - y) > 8 else (0, 33)
-        if (x, y) in {(14, 14), (12, 14), (16, 14), (13, 14), (15, 14)} or (13 <= x <= 14 and 12 <= y <= 14):
-            tx, ty = 13, 10                                               # leave the house through the door
-        order = [3, 2, 1, 0]                                              # classic tie break: up, left, down, right
-        best, bd = None, 10 ** 9
-        for d in order:
+        if self.gst[i] == "e" and (x, y) == DOOR_TILE:
+            self.g[i], self.gdir[i], self.gst[i] = (13, 14), 1, "n"
+            self.out[i] = 2
+            return
+        inside = (12 <= x <= 15 and 12 <= y <= 14)
+        tx, ty = (DOOR_TILE if inside and self.gst[i] != "e" else self.ghost_target(i))
+        if self.gst[i] == "e" and (x, y) == (13, 10):
+            tx, ty = 13, 14
+        cands = []
+        for d in (3, 2, 1, 0):                                             # classic tie break: up, left, down, right
             if d == (self.gdir[i] + 2) % 4:
                 continue
-            dx, dy = DIRS[d]
-            nx, ny = (x + dx) % 28, y + dy
-            if not self.open(nx, ny, ghost=True):
+            nx, ny = (x + DIRS[d][0]) % 28, y + DIRS[d][1]
+            if self.open(nx, ny, ghost=True):
+                cands.append((d, nx, ny))
+        if not cands:
+            d = (self.gdir[i] + 2) % 4
+            cands = [(d, (x + DIRS[d][0]) % 28, y + DIRS[d][1])]
+        if self.gst[i] == "f":
+            d, nx, ny = cands[self.rand(len(cands))]
+        else:
+            d, nx, ny = min(cands, key=lambda c: (c[1] - tx) ** 2 + (c[2] - ty) ** 2)
+        self.gdir[i] = d
+        self.g[i] = (nx, ny)
+
+    def collide(self, old_pac, old_g):
+        for i in range(4):
+            if self.out[i] > 0 or self.gst[i] == "e":
                 continue
-            dd = (nx - tx) ** 2 + (ny - ty) ** 2
-            if dd < bd:
-                best, bd = d, dd
-        if best is None:
-            best = (self.gdir[i] + 2) % 4
-        self.gdir[i] = best
-        self.g[i] = ((x + DIRS[best][0]) % 28, y + DIRS[best][1])
+            hit = self.g[i] == self.pac or (self.g[i] == old_pac and self.pac == old_g[i])
+            if not hit:
+                continue
+            if self.gst[i] == "f":
+                self.gst[i] = "e"
+                self.chain += 1
+                self.score += 100 * 2 ** self.chain
+            else:
+                return True
+        return False
 
     def step(self):
+        """One step; self.events gets the sound events of this step."""
         self.t += 1
-        self.pac_move()
+        self.events = []
+        if self.mode == "ready":
+            if self.timer == READY_STEPS:
+                self.events.append(EV_INTRO)
+            self.timer -= 1
+            if self.timer == 0:
+                self.mode = "play"
+            return
+        if self.mode == "dying":
+            self.timer -= 1
+            if self.timer == DEATH_STEPS - 1:
+                self.events.append(EV_DEATH)
+            if self.timer == 0:
+                self.lives -= 1
+                self.reset_actors()
+                if self.lives <= 0:
+                    self.mode, self.timer = "over", GAMEOVER_STEPS
+                else:
+                    self.mode, self.timer = "ready", READY_STEPS // 2
+            return
+        if self.mode == "over":
+            self.timer -= 1
+            if self.timer == 0:
+                self.lives, self.score = 3, 0
+                self.fresh_maze()
+                self.reset_actors()
+                self.mode, self.timer = "ready", READY_STEPS
+            return
+        old_pac, old_g = self.pac, list(self.g)
+        ate = self.pac_move()
+        self.events.append(EV_WAKA_ON if ate else EV_WAKA_OFF)
         for i in range(4):
             self.ghost_move(i)
+        if self.power_t > 0:
+            self.power_t -= 1
+            if self.power_t == 0:
+                for i in range(4):
+                    if self.gst[i] == "f":
+                        self.gst[i] = "n"
+        if self.fruit_t > 0:
+            self.fruit_t -= 1
+        if self.collide(old_pac, old_g):
+            self.mode, self.timer = "dying", DEATH_STEPS
+            self.events.append(EV_STOP)
+        if not self.pellet:
+            self.fresh_maze()
+            self.reset_actors()
+            self.mode, self.timer = "ready", READY_STEPS
 
 
 def cells(demo, s, maze):
     """(char command bytes B0, B1, B2) per tile."""
-    out = [(0, 0, 0)] * (COLS * ROWS)
-    blank = s.id1["BLANK"]
-
     def c1(gid, colour):
         return (0x4C | ((gid >> 8) << 5), gid & 0xFF, (colour << 4) | K_BG)
-    cell = [c1(blank, K_WHITE)] * (COLS * ROWS)
-    # score rows
-    for i, (txt, x0) in enumerate((("1UP", 3), ("HIGH SCORE", 9))):
+
+    def c2(gid, body, white, pupil):
+        # 2-bit char: B0 = 0x80 | c0[3]<<5 | c1[3]<<4 | c3[2:0]<<1 | c0[2];  B2 = c0[1:0]<<6 | c2<<3 | c1[2:0]
+        c0 = K_BG
+        b0 = 0x80 | ((c0 >> 3 & 1) << 5) | ((body >> 3 & 1) << 4) | ((pupil & 7) << 1) | (c0 >> 2 & 1)
+        b2 = ((c0 & 3) << 6) | ((white & 7) << 3) | (body & 7)
+        return (b0, gid, b2)
+    cell = [c1(s.id1["BLANK"], K_WHITE)] * (COLS * ROWS)
+
+    def text(txt, x0, y, colour=K_WHITE):
         for k, ch in enumerate(txt):
-            cell[1 * COLS + x0 + k] = c1(s.id1[f"T_{ch}"], K_WHITE)
-    for k, ch in enumerate(f"{demo.score:5d}0".replace(" ", "0")[-6:]):
-        cell[2 * COLS + 2 + k] = c1(s.id1[f"T_{ch}"], K_WHITE)
-    for k, ch in enumerate("000000"):
-        cell[2 * COLS + 10 + k] = c1(s.id1[f"T_{ch}"], K_WHITE)
+            cell[y * COLS + x0 + k] = c1(s.id1[f"T_{ch}"], colour)
     blink = (demo.t // 2) % 2
+    text("1UP" if blink or demo.mode != "play" else "   ", 3, 1)
+    text("HIGH SCORE", 9, 1)
+    text(f"{min(demo.score, 999999):06d}", 2, 2)
+    text("000000", 10, 2)
     for y, row in enumerate(maze):
         for x, c in enumerate(row):
             i = (y + MAZE_TOP) * COLS + x
@@ -404,20 +616,34 @@ def cells(demo, s, maze):
                     cell[i] = c1(s.id1["POWER"], K_WHITE if not blink else K_BG)
                 else:
                     cell[i] = c1(s.id1["DOT"], K_PINK + 4)
-    # lives
-    for k in range(2):
+    for k in range(max(0, demo.lives - 1)):
         cell[(ROWS - 2) * COLS + 2 + 2 * k] = c1(s.id1["PAC_2_2"], K_YEL)
-    # actors
+    fx, fy = FRUIT_TILE
+    if demo.fruit_t > 0:
+        cell[(fy + MAZE_TOP) * COLS + fx] = c2(s.id2["CHERRY"], K_RED, K_DOOR - 3, K_WHITE)
+    cell[(ROWS - 2) * COLS + 25] = c2(s.id2["CHERRY"], K_RED, K_DOOR - 3, K_WHITE)       # level fruit
+    if demo.mode == "ready":
+        text("READY!", 11, MAZE_TOP + 17, K_YEL)
+    if demo.mode == "over":
+        text("GAME  OVER", 9, MAZE_TOP + 17, K_RED)
     px, py = demo.pac
-    cell[(py + MAZE_TOP) * COLS + px] = c1(s.id1[f"PAC_{demo.pdir}_{(demo.t % 3) + 1 if demo.t % 4 != 3 else 0}"], K_YEL)
-    for i in range(4):
-        gx, gy = demo.g[i]
-        gid = s.id2[f"GHOST_{demo.gdir[i]}_{demo.t % 2}"]
-        # 2-bit char: B0 = 0x80 | c0[3]<<5 | c1[3]<<4 | c3[2:0]<<1 | c0[2];  B2 = c0[1:0]<<6 | c2<<3 | c1[2:0]
-        c0, c1_, c2, c3 = K_BG, GHOST_COL[i], K_WHITE, K_BLUE
-        b0 = 0x80 | ((c0 >> 3 & 1) << 5) | ((c1_ >> 3 & 1) << 4) | ((c3 & 7) << 1) | (c0 >> 2 & 1)
-        b2 = ((c0 & 3) << 6) | ((c2 & 7) << 3) | (c1_ & 7)
-        cell[(gy + MAZE_TOP) * COLS + gx] = (b0, gid, b2)
+    if demo.mode == "dying":
+        k = min(10, DEATH_STEPS - demo.timer - 1)
+        if DEATH_STEPS - demo.timer - 1 >= 0:
+            cell[(py + MAZE_TOP) * COLS + px] = c1(s.id1[f"DEATH_{max(0, k)}"], K_YEL)
+    elif demo.mode != "over":
+        op = (demo.t % 3) + 1 if demo.t % 4 != 3 else 0
+        cell[(py + MAZE_TOP) * COLS + px] = c1(s.id1[f"PAC_{demo.pdir}_{op if demo.mode == 'play' else 0}"], K_YEL)
+    if demo.mode in ("play", "ready"):
+        for i in range(4):
+            gx, gy = demo.g[i]
+            if demo.gst[i] == "f":
+                flash = demo.power_t <= FLASH_STEPS and demo.t % 2 == 0
+                cell[(gy + MAZE_TOP) * COLS + gx] = c2(s.id2[f"FRIGHT_{demo.t % 2}"], K_WHITE if flash else K_BLUE, K_RED if flash else K_WHITE, K_WHITE)
+            elif demo.gst[i] == "e":
+                cell[(gy + MAZE_TOP) * COLS + gx] = c2(s.id2[f"EYES_{demo.gdir[i]}"], K_BG, K_WHITE, K_BLUE)
+            else:
+                cell[(gy + MAZE_TOP) * COLS + gx] = c2(s.id2[f"GHOST_{demo.gdir[i]}_{demo.t % 2}"], GHOST_COL[i], K_WHITE, K_BLUE)
     return cell
 
 
@@ -428,13 +654,30 @@ def build(steps):
     demo = Demo(maze)
     cur = cells(demo, s, maze)
     init = cur
-    frames = []
+    frames, events = [], []
     for _ in range(steps):
         demo.step()
         nxt = cells(demo, s, maze)
         frames.append([(p, *n) for p, (n, o) in enumerate(zip(nxt, cur)) if n != o])
+        events.append(demo.events)
         cur = nxt
-    return s, init, frames, demo
+    out, eating, idle = [], False, 0                                     # waka: on at the first pellet, off after 3 steps without one
+    for evs in events:
+        e = 0
+        for v in evs:
+            if v == EV_WAKA_ON:
+                idle = 0
+                if not eating:
+                    eating, e = True, EV_WAKA_ON
+            elif v == EV_WAKA_OFF:
+                idle += 1
+                if eating and idle >= 3:
+                    eating, e = False, EV_WAKA_OFF
+            else:
+                e = v
+                eating = False
+        out.append(e)
+    return s, init, frames, out, demo
 
 
 def arr(name, data, per, bank):
@@ -442,7 +685,7 @@ def arr(name, data, per, bank):
     return f"#pragma place bank({bank})\nstatic const uint8_t __code {name}[{len(data)}] = {{\n" + "\n".join(rows) + "\n};\n"
 
 
-def emit(s, init, frames):
+def emit(s, init, frames, events):
     n1, n2 = len(s.one), len(s.two)
     off2 = (27 * n1 + 53) // 54                                      # 2-bit glyph 0 at font_base + 18 words * off2 (bytes: 54 * off2)
     g1 = b"".join(s.one)
@@ -465,7 +708,9 @@ def emit(s, init, frames):
     return (head + arr("g_pcPal", pal, 3, BANK_A) + arr("g_pcGlyph", glyph, 27, BANK_A) + arr("g_pcCell", cellb, 12, BANK_A)
             + arr("g_pcIdx", idxb, 16, BANK_A) + arr("g_pcDeltaA", bytes(stream[:half]), 15, BANK_A)
             + arr("g_pcDeltaB", bytes(stream[half:]), 15, BANK_B)
-            + f"#define AWTO_PC_HALF_BYTES      {half}\n")
+            + f"#define AWTO_PC_HALF_BYTES      {half}\n"
+            + "".join(f"#define AWTO_PC_EV_{n}  {v}\n" for n, v in (("NONE", 0), ("INTRO", EV_INTRO), ("WAKA_ON", EV_WAKA_ON), ("WAKA_OFF", EV_WAKA_OFF), ("DEATH", EV_DEATH), ("STOP", EV_STOP)))
+            + arr("g_pcEvt", bytes(events), 16, BANK_A))
 
 
 def render_png(s, cellsel, path):
@@ -502,12 +747,12 @@ def main() -> int:
     ap.add_argument("--png", type=Path)
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
-    s, init, frames, demo = build(a.steps)
+    s, init, frames, events, demo = build(a.steps)
     say(f"1-bit glyphs {len(s.one)}, 2-bit glyphs {len(s.two)}, steps {len(frames)}, updates {sum(len(f) for f in frames)}")
     if a.png:
         render_png(s, init, a.png)
         say(f"first frame -> {a.png}")
-    text = emit(s, init, frames)
+    text = emit(s, init, frames, events)
     if a.check:
         ok = OUT.exists() and OUT.read_text() == text
         say(f"{OUT} {'up to date' if ok else 'STALE'}")
