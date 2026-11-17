@@ -757,7 +757,16 @@ def cmd_flash(extra: list[str]) -> int:
             log(f"flash: fw_archive.py failed for {img} (see tmp/logs/fw_archive.log)")
         if keep:
             _settings_restore(u, bus, keep, FW / f"{tag}.map", FW / f"{tag}.settings_table.py")
+        _unit_settings(u, bus, FW / f"{tag}.map")
     return rc
+
+
+def _unit_settings(u: dict, bus: int, m: Path) -> None:
+    """Settings this unit always has (devices.json `settings`, e.g. unit 3: disp_rotate 180, its panel is mounted turned): set after every flash,
+    whatever the snapshot restore did. Other units keep the registry defaults."""
+    for name, value in (u.get("settings") or {}).items():
+        rc = _dbg_py(bus, "settings_cli.py", "--bus", str(bus), "--serial", u["serial"], "--map", str(m), "set", name, str(value))
+        log(f"flash: unit setting {name} = {value}: " + ("ok" if rc == 0 else f"FAILED rc {rc} (set it by hand)"), "INFO" if rc == 0 else "WARN")
 
 
 # whole-flash budget (rtd_flash_image --max-min), projected from a timed dry page BEFORE the first erase; over = refuse
