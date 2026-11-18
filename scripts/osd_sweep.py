@@ -116,7 +116,8 @@ def cases() -> dict[str, list[Case]]:
     g["fff1"] = ([Case(f"fff1_sel{k}", fff1=k) for k in range(16)] + [Case("fff1_int1", fff1=0x80)])
     g["fffb"] = [Case(f"fffb_{k}", fffb=k) for k in (0, 1, 2, 3, 4, 6, 8, 16, 32, 64, 128, 255)]
     g["ffbc"] = [Case(f"ffbc_{k}", ffbc=k) for k in (15, 16, 24, 31, 8, 4, 2, 1, 0)]        # reset value 0x0F first, 0 last (its meaning is not documented)
-    g["burst"] = [Case(f"burst{ch}_gap{k}", M_BURST, fffb=k, chunk=ch) for ch in (GLYPH,) for k in (1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40)]
+    g["burst"] = [Case(f"burst{ch}_gap{k}", M_BURST, fffb=k, chunk=ch) for ch in (GLYPH,) for k in (1, 2, 3, 4, 6, 8, 9, 10, 11, 12, 14, 16, 24, 32, 40)]
+    g["burstrep"] = [Case(f"burstrep{i}_gap{k}", M_BURST, fffb=k, chunk=GLYPH, flags=fl) for k in (9, 10, 11, 12) for i, fl in enumerate((0, 0, F_EA_OFF))]
     g["state"] = ([Case("st_ea_off", flags=F_EA_OFF), Case("st_su_off", flags=F_SU_OFF), Case("st_ovl_off", flags=F_OVL_OFF),
                    Case("st_db_on", flags=F_DB_ON), Case("st_all_off", flags=F_EA_OFF | F_SU_OFF | F_OVL_OFF)]
                   + [Case(f"st_sdk_ea_off", M_SDK, flags=F_EA_OFF), Case("st_burst54_ea_off", M_BURST, chunk=BUF, flags=F_EA_OFF)])
@@ -126,7 +127,7 @@ def cases() -> dict[str, list[Case]]:
     return g
 
 
-GROUPS = list(cases()) + ["combo", "hold", "autorevert"]
+GROUPS = list(cases()) + ["combo", "hold", "holdbc", "autorevert"]
 
 
 def reps_for(c: Case, sim: bool) -> int:
@@ -305,11 +306,10 @@ def wait(dev, s: float) -> None:
         dev.idle()
 
 
-def hold_case(ctx, c: Case) -> dict:
+def hold_case(ctx, c: Case, hold_ms: int = HOLD_FW_MS) -> dict:
     """Setting held while the main loop runs: heartbeat vs the host clock, link reads, Scope 2 frames per second; then restore."""
-    import clk_sweep as C
     row = {"case": c.name, "mode": "held", "fff1": c.fff1, "fffb": c.fffb, "ffbc": c.ffbc, "pass": False}
-    raw = send(ctx, OP_HOLD, LIMIT_S, row["case"], params(c, 1, 0, HOLD_FW_MS))
+    raw = send(ctx, OP_HOLD, LIMIT_S, row["case"], params(c, 1, 0, hold_ms))
     if raw is None or raw[W_STATE] != ST_HELD:
         row["note"] = f"not held: state {raw[W_STATE] if raw else None} refuse {raw[W_REFUSE] if raw else None}"
         say(f"  FAIL {row['case']}: {row['note']}")
@@ -332,7 +332,7 @@ def hold_case(ctx, c: Case) -> dict:
     fps = None
     if not ctx.sim:
         try:
-            fps, _ = C.fps_scope2(types_ctx(ctx))
+            fps = fps_scope2(ctx.dev)
         except (TimeoutError, RuntimeError) as e:
             notes.append(f"scope2 fps: {e}")
     end = send(ctx, OP_RESTORE, LIMIT_S, row["case"] + " restore")
@@ -344,8 +344,8 @@ def hold_case(ctx, c: Case) -> dict:
     return row
 
 
-AUTO_HOLD_MS = 300                                   # autorevert: firmware limit; the host never sends a restore
-AUTO_WAIT_S = 0.9                                    # 3 x the limit: the main loop (<= 20 ms per pass) must have restored by then
+AUTO_HOLD_MS = 1500                                  # autorevert: firmware limit (the status read-back after the op takes up to ~0.5 s on the link); the host never sends a restore
+AUTO_WAIT_S = 3.0                                    # 2 x the limit: the main loop (<= 20 ms per pass) must have restored by then
 
 
 def autorevert_case(ctx, c: Case) -> dict:
@@ -366,9 +366,30 @@ def autorevert_case(ctx, c: Case) -> dict:
     return row
 
 
+FPS_SETTLE_S, FPS_WINDOW_S = 2.5, 6.0                # first Scope 2 frame hidden (clk_sweep.py)
+
+
+def fps_scope2(dev) -> float:
+    """Scope 2 frames per second from the firmware frame counter over a 6 s window; saver off afterwards."""
+    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
+    H.wait_scope2(dev)
+    wait(dev, FPS_SETTLE_S)
+    r0 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame0")
+    t0 = dev.now()
+    wait(dev, FPS_WINDOW_S)
+    r1 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame1")
+    t1 = dev.now()
+    H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=H.SAVER_OFF, label="saver off")
+    return ((r1["frame"] - r0["frame"]) & 0xFFFF) / (t1 - t0)
+
+
 class _CkCtx:
     def __init__(self, dev):
         self.dev = dev
+        self.sim = False
+        self.stock_crc = None
+        self.stock_tick = None
+        self.pll_khz = None
 
 
 def types_ctx(ctx):
@@ -387,8 +408,10 @@ def run(ctx, names: list[str], cont: bool) -> int:
         elif n == "hold":
             best = best_values(read_tsv_rows())
             todo = [Case(f"hold_{k}", **{k: v}) for k, v in best.items()] + ([Case("hold_all", **best)] if len(best) > 1 else [])
+        elif n == "holdbc":
+            todo = [Case(f"holdbc_{k}", ffbc=k) for k in (14, 12, 10, 8, 6, 5)]
         elif n == "autorevert":
-            todo = [Case("autorevert", fff1=0x05, fffb=0x05, ffbc=0x05)]
+            todo = [Case("autorevert", fffb=0x05)]
         elif n in table:
             todo = table[n]
         else:
@@ -397,7 +420,7 @@ def run(ctx, names: list[str], cont: bool) -> int:
                 raise SystemExit(f"unknown group / case {n}; groups {GROUPS}")
         for c in todo:
             try:
-                row = hold_case(ctx, c) if n == "hold" else autorevert_case(ctx, c) if n == "autorevert" else run_case(ctx, c)
+                row = hold_case(ctx, c, 6000 if n == "holdbc" else HOLD_FW_MS) if n in ("hold", "holdbc") else autorevert_case(ctx, c) if n == "autorevert" else run_case(ctx, c)
             except (TimeoutError, RuntimeError) as e:
                 row = {"case": c.name, "pass": False, "note": f"comm: {e}"}
                 say(f"  FAIL comm lost at {c.name}: {e}")
