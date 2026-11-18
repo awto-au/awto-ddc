@@ -203,6 +203,8 @@ Proof per step: `saver_frames_md5.py --saver S --frames N [--rotate]` on main (`
 - Rejected inside step 1: cursor steps / plot as macros (no call per pixel): -3 % instructions, no change in us per pass, +1.7 KB code.
 - Rejected inside step 2: `AwtoOsdTile(canvas, cell0, tile)` (computes cell + pointer itself): +244 B, net worse than the call-site form.
 
+| 7 sound (D-SL1) | `fw/test/pacman_sound.c` -> `fw/test/snd.c`, `pacman_sound_data.inc` -> `snd_data.inc`; `PsOff` / `PsPrio` / `PsLoops` if chains and the `AwtoPmSound` cmd if chain -> track table (4 B per track) + cmd table (3 B per cmd) in `g_aucPsData`, read by `PsByte`; function names unchanged; a cmd > 13 is ignored (was an undefined track) | all 4 savers upright + Rotate 180: IDENTICAL; `saver_sim` audio build 17 PASS, `key_sim_test` 115 PASS (as before) | audio build `snd.c` code 1372 -> 1213 (-159), stubs +8, const 604 -> 714 (+110): net -41 B; XDATA 0 | none (sound only) |
+
 | measure (sim, dw8051) | main `slbase` | after steps 1 + 2 (`sl5`) |
 |---|---|---|
 | Scope 1 frame | 1127 ms (0.89 / s) | 768 ms (1.30 / s) |

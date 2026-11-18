@@ -35,71 +35,12 @@
 #define AWTO_PS_OFF_BOOM_SHIP 546
 #define AWTO_PS_LOOP_BOOM_SHIP 0
 #define AWTO_PS_BYTES 604
-static WORD PsOff(BYTE ucTrack)                 // start of a track in g_aucPsData
-{
-    if(ucTrack == 0) { return AWTO_PS_OFF_INTRO; }
-    if(ucTrack == 1) { return AWTO_PS_OFF_WAKA; }
-    if(ucTrack == 2) { return AWTO_PS_OFF_DEATH; }
-    if(ucTrack == 3) { return AWTO_PS_OFF_ALERT; }
-    if(ucTrack == 4) { return AWTO_PS_OFF_GHOST; }
-    if(ucTrack == 5) { return AWTO_PS_OFF_FRUIT; }
-    if(ucTrack == 6) { return AWTO_PS_OFF_SIREN1; }
-    if(ucTrack == 7) { return AWTO_PS_OFF_SIREN2; }
-    if(ucTrack == 8) { return AWTO_PS_OFF_SIREN3; }
-    if(ucTrack == 9) { return AWTO_PS_OFF_FRIGHT; }
-    if(ucTrack == 10) { return AWTO_PS_OFF_THRUST; }
-    if(ucTrack == 11) { return AWTO_PS_OFF_SAUCER; }
-    if(ucTrack == 12) { return AWTO_PS_OFF_FIRE; }
-    if(ucTrack == 13) { return AWTO_PS_OFF_BOOM_S; }
-    if(ucTrack == 14) { return AWTO_PS_OFF_BOOM_M; }
-    if(ucTrack == 15) { return AWTO_PS_OFF_BOOM_L; }
-    if(ucTrack == 16) { return AWTO_PS_OFF_BOOM_SHIP; }
-    return 0;
-}
-static BYTE PsPrio(BYTE ucTrack)                // priority: higher wins the one tone generator
-{
-    if(ucTrack == 0) { return 7; }
-    if(ucTrack == 1) { return 3; }
-    if(ucTrack == 2) { return 5; }
-    if(ucTrack == 3) { return 7; }
-    if(ucTrack == 4) { return 6; }
-    if(ucTrack == 5) { return 4; }
-    if(ucTrack == 6) { return 1; }
-    if(ucTrack == 7) { return 1; }
-    if(ucTrack == 8) { return 1; }
-    if(ucTrack == 9) { return 2; }
-    if(ucTrack == 10) { return 2; }
-    if(ucTrack == 11) { return 1; }
-    if(ucTrack == 12) { return 3; }
-    if(ucTrack == 13) { return 4; }
-    if(ucTrack == 14) { return 4; }
-    if(ucTrack == 15) { return 5; }
-    if(ucTrack == 16) { return 6; }
-    return AWTO_PS_PRIO_TOP;
-}
-static BYTE PsLoops(BYTE ucTrack)               // 1 = restarts at its end
-{
-    if(ucTrack == 0) { return 0; }
-    if(ucTrack == 1) { return 1; }
-    if(ucTrack == 2) { return 0; }
-    if(ucTrack == 3) { return 0; }
-    if(ucTrack == 4) { return 0; }
-    if(ucTrack == 5) { return 0; }
-    if(ucTrack == 6) { return 1; }
-    if(ucTrack == 7) { return 1; }
-    if(ucTrack == 8) { return 1; }
-    if(ucTrack == 9) { return 1; }
-    if(ucTrack == 10) { return 1; }
-    if(ucTrack == 11) { return 1; }
-    if(ucTrack == 12) { return 0; }
-    if(ucTrack == 13) { return 0; }
-    if(ucTrack == 14) { return 0; }
-    if(ucTrack == 15) { return 0; }
-    if(ucTrack == 16) { return 0; }
-    return 0;
-}
-#pragma place bank(11)                      // data and its reader (PsByte) share the bank
-static const __code BYTE g_aucPsData[AWTO_PS_BYTES] = {
+#pragma place bank(11)                      // data, tables and their reader (PsByte) share the bank
+#define AWTO_PS_TRK 604                       // track table after the note data: {offset lo, offset hi, priority, loops} per track
+#define AWTO_PS_CMD 672                       // cmd table after it: {track, sync event, 1 = event value is the cmd} per cmd
+#define AWTO_PS_TRACKS 17
+#define AWTO_PS_CMDS 14
+static const __code BYTE g_aucPsData[AWTO_PS_BYTES + AWTO_PS_TRACKS * 4 + AWTO_PS_CMDS * 3] = {
     0x61, 0x07, 0x00, 0x01, 0x31, 0x07, 0x00, 0x01, 0x41, 0x07, 0x00, 0x01, 0x4D, 0x07, 0x00, 0x01, 0x31, 0x07, 0x00, 0x01,
     0x41, 0x0F, 0x00, 0x01, 0x4D, 0x17, 0x00, 0x01, 0x5C, 0x07, 0x00, 0x01, 0x2E, 0x07, 0x00, 0x01, 0x3D, 0x07, 0x00, 0x01,
     0x49, 0x07, 0x00, 0x01, 0x2E, 0x07, 0x00, 0x01, 0x3D, 0x0F, 0x00, 0x01, 0x49, 0x17, 0x00, 0x01, 0x61, 0x07, 0x00, 0x01,
@@ -131,4 +72,35 @@ static const __code BYTE g_aucPsData[AWTO_PS_BYTES] = {
     0x39, 0x02, 0x60, 0x02, 0x3E, 0x02, 0x68, 0x02, 0x42, 0x02, 0x70, 0x02, 0x48, 0x02, 0x7B, 0x02, 0x4F, 0x02, 0xC3, 0x02,
     0x57, 0x02, 0xCB, 0x02, 0x62, 0x02, 0xD5, 0x02, 0x6F, 0x02, 0xE0, 0x02, 0xC0, 0x02, 0xF1, 0x02, 0xCB, 0x02, 0xF8, 0x02,
     0xDC, 0x02, 0x00, 0x00,
+    0x00, 0x00, 7, 0,   // intro
+    0x7E, 0x00, 3, 1,   // waka
+    0x90, 0x00, 5, 0,   // death
+    0xFA, 0x00, 7, 0,   // alert
+    0x06, 0x01, 6, 0,   // ghost
+    0x28, 0x01, 4, 0,   // fruit
+    0x4A, 0x01, 1, 1,   // siren1
+    0x6C, 0x01, 1, 1,   // siren2
+    0x8E, 0x01, 1, 1,   // siren3
+    0xB0, 0x01, 2, 1,   // fright
+    0xBE, 0x01, 2, 1,   // thrust
+    0xC8, 0x01, 1, 1,   // saucer
+    0xCE, 0x01, 3, 0,   // fire
+    0xE0, 0x01, 4, 0,   // boom_s
+    0xEE, 0x01, 4, 0,   // boom_m
+    0x04, 0x02, 5, 0,   // boom_l
+    0x22, 0x02, 6, 0,   // boom_ship
+    0, AWTO_PS_EV_START, 0,   // cmd 0
+    1, AWTO_PS_EV_START + 1, 0,   // cmd 1
+    2, AWTO_PS_EV_START + 2, 0,   // cmd 2
+    AWTO_PS_TRACK_NONE, 0, 0,   // cmd 3 (handled by the player)
+    AWTO_PS_TRACK_NONE, 0, 0,   // cmd 4 (handled by the player)
+    3, AWTO_PS_EV_ALERT, 0,   // cmd 5
+    4, AWTO_PS_EV_GHOST, 0,   // cmd 6
+    5, AWTO_PS_EV_FRUIT, 0,   // cmd 7
+    AWTO_PS_TRACK_NONE, 0, 0,   // cmd 8 (handled by the player)
+    12, AWTO_PS_EV_AST, 1,   // cmd 9
+    13, AWTO_PS_EV_AST, 1,   // cmd 10
+    14, AWTO_PS_EV_AST, 1,   // cmd 11
+    15, AWTO_PS_EV_AST, 1,   // cmd 12
+    16, AWTO_PS_EV_AST, 1,   // cmd 13
 };

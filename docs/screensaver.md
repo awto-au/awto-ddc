@@ -5,7 +5,7 @@ Status: design only; nothing built. Prototypes today are test cmds, not screensa
 ## Decisions (Dan, 2026-11-17)
 
 - Two screensavers, run by the scaler firmware itself (no host):
-  - **Pac-Man**: `fw/test/pacman_classic.c` (+ sound `pacman_sound.c`), test cmds 0xB7 / 0xB8 / 0xB9 today.
+  - **Pac-Man**: `fw/test/pacman_classic.c` (+ sound `snd.c`), test cmds 0xB7 / 0xB8 / 0xB9 today.
   - **Scope**: OSD line renderer `tools/osd_lines` (384 x 216, 12 x 18 tiles, `docs/reversing/realtek-rtd/osd-font-download.md`), a waveform screen.
 - **Scope 2** (Dan, 2026-11-17, reference photo of a bench scope): red graticule with minor ticks on the centre axes, green pulse trace, two dotted vertical cursors, 100 / 90 / 10 / 0 % marks on the left, readouts on top (frequency, delta t), scale labels at the bottom (volts per div, time per div). Scope 1 (`scope_saver.c`) stays as is.
   - Built 2026-11-18 (Dan: fill the screen, faster, finer). One raster 480 x 270 px = 40 x 15 tiles of 12 x 18, scaled 8x (factor 64 / 8) to the whole 3840 x 2160 panel; factor and position derive from `_PANEL_DH_WIDTH` / `_PANEL_DV_HEIGHT` (compile error when the raster does not fill the panel exactly: 1920 x 1080 gives factor 16, 2560 x 1440 gives 12). Checked in the sim at the 3840 x 2160 panel only (both 1080p60 and 2160p60 inputs scale to it).

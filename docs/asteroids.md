@@ -46,7 +46,7 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 
 ### Sound
 
-- `pacman_sound.c` tracks 10..16 (`scripts/pacman_sound.py`): thrust (loop, background state 5), saucer (loop, state 6), fire, explosion small / medium / large, ship explosion. `AwtoPmSound` cmds 9..13, `AwtoPmSoundBg` 5 / 6.
+- `snd.c` tracks 10..16 (`scripts/pacman_sound.py`): thrust (loop, background state 5), saucer (loop, state 6), fire, explosion small / medium / large, ship explosion. `AwtoPmSound` cmds 9..13, `AwtoPmSoundBg` 5 / 6.
 - Priorities as Pac-Man (one generator, higher wins, lower dropped, looping background resumes): ship explosion 6, large 5, medium / small 4, fire 3, thrust 2, saucer 1.
 - Only when the user mute is off (`GET_OSD_VOLUME_MUTE`); level = the user's volume (DVC gain). Without `-D _AWTO_AUDIO_TEST`: one sync E9 86 "sound unavailable" at draw, then silent.
 - Sync rows: the logged-row table is full (254), so the saver's own E9 0x90..0x93 and the cmd line 0x8C have no rows (printed raw); row 86 text now names both savers.

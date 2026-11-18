@@ -129,7 +129,7 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_STATE_OVER                     2
 #define AWTO_AST_NONE                           0xFF
 
-// sound: cmds of AwtoPmSound (pacman_sound.c)
+// sound: cmds of AwtoPmSound (snd.c)
 #define AWTO_AST_SND_FIRE                       9
 #define AWTO_AST_SND_BOOM_S                     10
 #define AWTO_AST_SND_BOOM_M                     11
