@@ -5,12 +5,18 @@
 
 // Asteroids screensaver (docs/asteroids.md): the game runs on the chip (rocks split, shots, saucer, autopilot ship, wrap-around),
 // drawn like the scope savers: 30 x 11 tiles of 12 x 18 (360 x 198), 1-bit glyphs, one-tile-column band canvas of scope_saver.c,
-// objects culled per pass, tiles uploaded only while they hold (or just held) ink. One game step per frame (column 0).
+// objects culled per pass; only the tiles under objects that moved / changed are redrawn and uploaded (docs/saver-fps-plan.md). Game ticks at column 0.
 //   AwtoAsteroids(1) draw   (2) next column, returns 1 when a frame is complete   (0) off
 // Shapes: asteroids_data.inc (scripts/gen_asteroids.py: local ROM geometry or own outlines; gitignored).
 extern __xdata uint8_t g_aucScPix[];
 extern __xdata uint8_t g_aucScDirty[];
 extern __xdata osd_canvas g_scCv;
+#ifdef _AWTO_OSD_FAST_PORT                                                          // sim / test only: direct data port stores (scope_saver.c), never the default (docs/osd-hw-tests.md)
+extern void AwtoScFastTile(WORD usAddr, BYTE __xdata *pucB);
+#define AWTO_AST_TILE(c, p)                     AwtoScFastTile(AWTO_AST_ROWS + 1 + AWTO_AST_COLS * AWTO_AST_ROWS + (OSD_TILE_BYTES / 3) * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_AST_COLS * AWTO_AST_ROWS) : (c)), (p))
+#else
+#define AWTO_AST_TILE(c, p)                     AwtoOsdTile((c), (p))
+#endif
 #include "asteroids_data.inc"
 
 #define AWTO_AST_COLS                           30
@@ -130,7 +136,22 @@ typedef char s_tAstPanelCheck[((AWTO_AST_SU_FACTOR * (long)_PANEL_DH_WIDTH == AW
 #define AWTO_AST_HUD_H                          44
 #define AWTO_AST_DEC                            10
 #define AWTO_AST_PASSES                         (AWTO_AST_COLS * AWTO_AST_BANDS)
-#define AWTO_AST_OBJ_BIT                        0x40                                // occupancy bit: the last upload held objects, not only the score / ships
+#define AWTO_AST_PASS_MS                        8                                   // saver work per call (+ one column): the main loop (DDC/CI, keys) runs between calls
+#define AWTO_AST_FRAME_MS                       40                                  // frame schedule: 25 frames/s; game ticks stay at AWTO_AST_TICK_MS, positions interpolated
+#define AWTO_AST_FRAC_BITS                      3                                   // interpolation step: 1/8 of a tick
+#define AWTO_AST_FRAC_MAX                       ((1 << AWTO_AST_FRAC_BITS) - 1)
+#define AWTO_AST_SHIP_SLOT                      AWTO_AST_N_OBJ                      // s_atSeen: objects, then the ship
+#define AWTO_AST_KEY_SUBS                       24                                  // draw key = type * this + shape / age (boom life 22 < 24; 8 * 24 + 23 fits a byte)
+#define AWTO_AST_FLAME_KEY                      0x40                                // ship key: heading (6 bits) | flame
+#define AWTO_AST_DIV_TW_SHIFT                   2                                   // x / 12 = (x >> 2) / 3: byte divides only
+#define AWTO_AST_DIV_TW_REST                    (AWTO_AST_TW >> AWTO_AST_DIV_TW_SHIFT)
+#define AWTO_AST_DIV_TH_SHIFT                   1                                   // y / 18 = (y >> 1) / 9
+#define AWTO_AST_DIV_TH_REST                    (AWTO_AST_TH >> AWTO_AST_DIV_TH_SHIFT)
+#define AWTO_AST_HUD_COLS                       ((AWTO_AST_HUD_W + AWTO_AST_TW - 1) / AWTO_AST_TW)
+#define AWTO_AST_HUD_ROWS                       ((AWTO_AST_HUD_H + AWTO_AST_TH - 1) / AWTO_AST_TH)
+#define AWTO_AST_BYTE_BITS                      3
+#define AWTO_AST_BIT_MASK                       7
+#define AWTO_AST_MUL_TW(v)                      ((BYTE)((BYTE)((v) << 3) + (BYTE)((v) << 2)))   // v * 12 (tile width, checked below) without a multiply
 #define AWTO_AST_STATE_ALIVE                    0
 #define AWTO_AST_STATE_DEAD                     1                                   // waiting to respawn
 #define AWTO_AST_STATE_OVER                     2
@@ -157,10 +178,24 @@ typedef struct
     BYTE ucAux;                                                                     // rock: shape; shots: ttl; saucer: fire timer; boom: age
 } AstObj;
 
+typedef struct                                                                      // an object as drawn (docs/saver-fps-plan.md: incremental redraw)
+{
+    int16_t sX;                                                                     // centre, playfield px
+    BYTE ucY;
+    BYTE ucR;                                                                       // draw radius (AstRad); 0 = nothing drawn
+    BYTE ucKey;                                                                     // shape / heading / age: a change redraws
+} AstSeen;
+
 __xdata WORD g_usAwtoAstStep;                                                       // game steps (also read by scripts/asteroids_speed.py)
 __xdata BYTE g_ucAwtoAstCol;                                                        // next column of the frame being drawn
 static __xdata AstObj s_atObj[AWTO_AST_N_OBJ];
-static __xdata uint8_t s_aucOcc[AWTO_AST_PASSES];                                   // per pass: bit n = tile n held ink at its last upload
+static __xdata AstSeen s_atSeen[AWTO_AST_N_OBJ + 1];                                // last frame as drawn: objects, then the ship
+static __xdata AstSeen s_tNow;                                                      // this frame, the slot being compared
+static __xdata uint8_t s_aucDirty[AWTO_AST_PASSES];                                 // per pass: bit n = tile row n of the band changes this frame
+static __xdata int16_t s_sLx0;                                                      // AstLine endpoints, canvas px
+static __xdata int16_t s_sLy0;
+static __xdata int16_t s_sLx1;
+static __xdata int16_t s_sLy1;
 static __xdata uint8_t s_aucDig[AWTO_AST_DIGITS];
 static __xdata WORD s_usRng;
 static __xdata WORD s_usScore;
@@ -180,6 +215,8 @@ static __xdata BYTE s_ucWaveTimer;
 static __xdata WORD s_usSaucerTimer;
 static __xdata BYTE s_ucShown;
 static __xdata WORD s_usTickAt;                                                     // scheduled time of the next game tick (AwtoMs low word); advances by the period, never restarts from now
+static __xdata WORD s_usFrameAt;                                                    // scheduled start of the next frame
+static __xdata BYTE s_ucFrac;                                                       // this frame's time since the last tick, 1/8 ticks
 static __xdata BYTE s_ucDigN;
 static __xdata int16_t s_sOx;                                                       // origin of the pass being drawn
 static __xdata int16_t s_sOy;
@@ -192,8 +229,8 @@ static __xdata WORD s_usHudScore;                                               
 static __xdata BYTE s_ucHudLives;
 static __xdata BYTE s_ucHudDirty;                                                   // they changed: this frame redraws the HUD passes
 static __xdata BYTE s_ucBandRows;                                                   // tile rows of the pass being drawn (the last band may be shorter)
-static __xdata int16_t s_sBandH;                                                    // their height, px
-static __xdata BYTE s_ucAny;                                                        // the pass being drawn has ink
+static __xdata int16_t s_sBandH;                                                    // clip rows of the pass: s_sClip0 <= y < s_sBandH (canvas px; the changed tiles)
+static __xdata int16_t s_sClip0;
 
 #pragma place bank(8)
 static __code int8_t s_tCos[AWTO_AST_QUARTER + 1] = {127, 126, 125, 122, 117, 112, 106, 98, 90, 81, 71, 60, 49, 37, 25, 12, 0};
@@ -934,6 +971,10 @@ static BYTE AstDue(void)                                                        
     BYTE ucN = 0;
     WORD usNow = (WORD)AwtoMs();
 
+#ifdef _AWTO_AST_FIXED_TICKS                                                        // test build: AWTO_AST_TICKS per frame, unpaced (frame content = frame number: saver_frames_md5.py)
+    usNow = s_usTickAt - 1;                                                         // never due: the schedule stays as it is
+    ucN = AWTO_AST_TICKS;
+#endif
     while((ucN < AWTO_AST_MAX_CATCHUP) && ((WORD)(usNow - s_usTickAt) < AWTO_AST_HALF_MS))
     {
         s_usTickAt += AWTO_AST_TICK_MS;
@@ -961,6 +1002,102 @@ static void AstStep(BYTE ucTicks)                                               
     s_ucHudLives = s_ucLives;
 }
 
+#pragma place bank(8)
+static __code uint8_t s_tAstBit[AWTO_AST_BIT_MASK + 1] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};   // bit index in a byte -> mask (MSB first, osd_lines order)
+#pragma place bank(8)
+static __code uint8_t s_tAstTileOff[AWTO_AST_BAND_ROWS] = {0, OSD_TILE_BYTES, 2 * OSD_TILE_BYTES, 3 * OSD_TILE_BYTES, 4 * OSD_TILE_BYTES, 5 * OSD_TILE_BYTES};   // canvas tile row -> byte offset
+#pragma place bank(8)
+static __code uint8_t s_tAstRowY[AWTO_AST_BAND_ROWS + 1] = {0, AWTO_AST_TH, 2 * AWTO_AST_TH, 3 * AWTO_AST_TH, 4 * AWTO_AST_TH, 5 * AWTO_AST_TH, 6 * AWTO_AST_TH};   // canvas tile row -> y
+typedef char s_tAstLineCheck[((AWTO_AST_TW == 12) && (AWTO_AST_BAND_ROWS == 6)) ? 1 : -1];   // AWTO_AST_MUL_TW and s_tAstTileOff are written for these
+
+#define AWTO_AST_LINE_OFS                       64                                  // byte coordinate offset: endpoints within 64 px of the pass window (lines < 64 px)
+#define AWTO_AST_PLOT()                         {                                                                                   \
+            ucPx = (BYTE)(ucX - AWTO_AST_LINE_OFS);                                                                                 \
+            ucPy = (BYTE)(ucY - AWTO_AST_LINE_OFS);                                                                                 \
+            if((ucPx < AWTO_AST_TW) && ((BYTE)(ucPy - ucC0) < ucH))                                                                 \
+            {                                                                                                                       \
+                ucIn = 1;                                                                                                           \
+                ucT = ucPy / (BYTE)AWTO_AST_TH;                                                                                     \
+                ucPy = ucPy % (BYTE)AWTO_AST_TH;                                                                                    \
+                ucPx = (BYTE)(AWTO_AST_MUL_TW(ucPy) + ucPx);                                                                        \
+                g_aucScPix[s_tAstTileOff[ucT] + (ucPx >> AWTO_AST_BYTE_BITS)] |= s_tAstBit[ucPx & AWTO_AST_BIT_MASK];              \
+            }                                                                                                                       \
+            else if(ucIn != 0)                                                                                                      \
+            {                                                                                                                       \
+                break;                                                                                                              \
+            }                                                                                                                       \
+        }                                                                                                                           // one px; a straight line that left the window never returns
+#pragma place bank(8)
+static void AstLine(void)                                                          // s_sL* (canvas px): osd_line's Bresenham (error = major / 2), every px walked, px inside the pass plotted
+{
+    BYTE ucX = (BYTE)(s_sLx0 + AWTO_AST_LINE_OFS);                                // byte coordinates: lines are < AWTO_AST_LINE_OFS px and touch the pass
+    BYTE ucY = (BYTE)(s_sLy0 + AWTO_AST_LINE_OFS);
+    BYTE ucX1 = (BYTE)(s_sLx1 + AWTO_AST_LINE_OFS);
+    BYTE ucY1 = (BYTE)(s_sLy1 + AWTO_AST_LINE_OFS);
+    BYTE ucC0 = (BYTE)s_sClip0;
+    BYTE ucH = (BYTE)(s_sBandH - s_sClip0);
+    int8_t cSx = (ucX1 >= ucX) ? 1 : -1;
+    int8_t cSy = (ucY1 >= ucY) ? 1 : -1;
+    BYTE ucDx = (cSx > 0) ? (BYTE)(ucX1 - ucX) : (BYTE)(ucX - ucX1);
+    BYTE ucDy = (cSy > 0) ? (BYTE)(ucY1 - ucY) : (BYTE)(ucY - ucY1);
+    BYTE ucErr;
+    BYTE ucN;
+    BYTE ucIn = 0;
+    BYTE ucPx;
+    BYTE ucPy;
+    BYTE ucT;
+
+    if(ucDx >= ucDy)
+    {
+        ucN = ucDx;
+        ucErr = ucDx >> 1;
+        for(;;)
+        {
+            AWTO_AST_PLOT();
+            if(ucN == 0)
+            {
+                break;
+            }
+            ucN--;
+            ucX += cSx;
+            if(ucErr < ucDy)
+            {
+                ucErr += ucDx - ucDy;
+                ucY += cSy;
+            }
+            else
+            {
+                ucErr -= ucDy;
+            }
+        }
+    }
+    else
+    {
+        ucN = ucDy;
+        ucErr = ucDy >> 1;
+        for(;;)
+        {
+            AWTO_AST_PLOT();
+            if(ucN == 0)
+            {
+                break;
+            }
+            ucN--;
+            ucY += cSy;
+            if(ucErr < ucDx)
+            {
+                ucErr += ucDy - ucDx;
+                ucX += cSx;
+            }
+            else
+            {
+                ucErr -= ucDx;
+            }
+        }
+    }
+}
+
+#pragma place bank(8)
 static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                        // polylines of a shape around (s_sRx, s_sRy), y up, turned ucRot quarter turns
 {
     WORD usP = g_tAstOff[ucShape];
@@ -998,9 +1135,13 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
             sX = s_sRx + (sX >> ucShift);
             sY = s_sRy - (sY >> ucShift);
             if((ucI != 0) && !(((sPx < 0) && (sX < 0)) || ((sPx >= AWTO_AST_TW) && (sX >= AWTO_AST_TW)) ||
-                               ((sPy < 0) && (sY < 0)) || ((sPy >= s_sBandH) && (sY >= s_sBandH))))   // osd_line walks every pixel of a line, clipped or not: skip lines wholly outside the pass
+                               ((sPy < s_sClip0) && (sY < s_sClip0)) || ((sPy >= s_sBandH) && (sY >= s_sBandH))))   // AstLine walks every pixel of a line: skip lines wholly outside the clip
             {
-                osd_line(&g_scCv, sPx, sPy, sX, sY, 1);
+                s_sLx0 = sPx;
+                s_sLy0 = sPy;
+                s_sLx1 = sX;
+                s_sLy1 = sY;
+                AstLine();
             }
             sPx = sX;
             sPy = sY;
@@ -1008,6 +1149,7 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
     }
 }
 
+#pragma place bank(8)                                                               // the draw path shares one bank (no trampoline per call) and keeps bank 13 free
 static BYTE AstCull(int16_t sPx, int16_t sPy, BYTE ucR)                             // object centre (playfield px) -> s_sRx / s_sRy; 0 when it misses the pass
 {
     int16_t sT = sPx - s_sOx + ucR;
@@ -1025,7 +1167,7 @@ static BYTE AstCull(int16_t sPx, int16_t sPy, BYTE ucR)                         
         return 0;
     }
     s_sRx = sT - ucR;
-    sT = sPy - s_sOy + ucR;
+    sT = sPy - s_sOy - s_sClip0 + ucR;                                              // against the clip rows of the band (the changed tiles)
     if(sT < 0)
     {
         sT += AWTO_AST_H;
@@ -1034,14 +1176,15 @@ static BYTE AstCull(int16_t sPx, int16_t sPy, BYTE ucR)                         
     {
         sT -= AWTO_AST_H;
     }
-    if(sT >= (s_sBandH + 2 * ucR))
+    if(sT >= (s_sBandH - s_sClip0 + 2 * ucR))
     {
         return 0;
     }
-    s_sRy = sT - ucR;
+    s_sRy = sT - ucR + s_sClip0;
     return 1;
 }
 
+#pragma place bank(8)
 static void AstDrawBoom(BYTE ucSize, BYTE ucAge)
 {
     BYTE ucK;
@@ -1053,11 +1196,15 @@ static void AstDrawBoom(BYTE ucSize, BYTE ucAge)
     {
         AstPoll();
         AstDir((BYTE)(ucK * AWTO_AST_BOOM_STEP + ucAge));
-        osd_line(&g_scCv, s_sRx + (((int16_t)s_cDx * sR0) >> 7), s_sRy + (((int16_t)s_cDy * sR0) >> 7),
-                 s_sRx + (((int16_t)s_cDx * sR) >> 7), s_sRy + (((int16_t)s_cDy * sR) >> 7), 1);
+        s_sLx0 = s_sRx + (((int16_t)s_cDx * sR0) >> 7);
+        s_sLy0 = s_sRy + (((int16_t)s_cDy * sR0) >> 7);
+        s_sLx1 = s_sRx + (((int16_t)s_cDx * sR) >> 7);
+        s_sLy1 = s_sRy + (((int16_t)s_cDy * sR) >> 7);
+        AstLine();
     }
 }
 
+#pragma place bank(8)
 static void AstDrawObj(BYTE ucI)
 {
     BYTE ucT = s_atObj[ucI].ucType;
@@ -1072,10 +1219,16 @@ static void AstDrawObj(BYTE ucI)
     }
     else if(ucT <= AWTO_AST_T_SSHOT)
     {
-        osd_pixel(&g_scCv, s_sRx, s_sRy, 1);
-        osd_pixel(&g_scCv, s_sRx + 1, s_sRy, 1);
-        osd_pixel(&g_scCv, s_sRx, s_sRy + 1, 1);
-        osd_pixel(&g_scCv, s_sRx + 1, s_sRy + 1, 1);
+        s_sLx0 = s_sRx;                                                             // 2 x 2 px: two 2 px lines
+        s_sLy0 = s_sRy;
+        s_sLx1 = s_sRx + 1;
+        s_sLy1 = s_sRy;
+        AstLine();
+        s_sLx0 = s_sRx;
+        s_sLy0 = s_sRy + 1;
+        s_sLx1 = s_sRx + 1;
+        s_sLy1 = s_sRy + 1;
+        AstLine();
     }
     else
     {
@@ -1083,6 +1236,7 @@ static void AstDrawObj(BYTE ucI)
     }
 }
 
+#pragma place bank(8)
 static void AstDrawShip(BYTE ucAng, BYTE ucFlame)                                   // centre in s_sRx / s_sRy
 {
     BYTE ucR = ucAng % AWTO_AST_QUARTER;
@@ -1095,6 +1249,7 @@ static void AstDrawShip(BYTE ucAng, BYTE ucFlame)                               
     }
 }
 
+#pragma place bank(8)
 static void AstHud(void)                                                            // score and spare ships, top left (passes of band 0, columns below AWTO_AST_HUD_W)
 {
     BYTE ucK;
@@ -1117,102 +1272,198 @@ static void AstHud(void)                                                        
     }
 }
 
-static void AstBlank(void)                                                          // blank canvas (the library's dirty flags are unused here)
+#pragma place bank(8)
+static void AstMark(int16_t sX, BYTE ucY, BYTE ucR)                                // tiles of the box around (x, y) +- r, wrap-aware (= AstCull's passes) -> s_aucDirty
 {
-    memset(g_aucScPix, 0, (WORD)s_ucBandRows * OSD_TILE_BYTES);
-}
-
-static void AstInk(void)                                                            // first ink of a pass: start from a blank canvas
-{
-    if(s_ucAny == 0)
-    {
-        AstBlank();
-        s_ucAny = 1;
-    }
-}
-
-static BYTE AstTileInk(BYTE ucTile)                                                 // any pixel set in a tile of the canvas
-{
+    BYTE ucC0 = (BYTE)((WORD)(sX - ucR + AWTO_AST_W) >> AWTO_AST_DIV_TW_SHIFT) / AWTO_AST_DIV_TW_REST;    // + one playfield: never negative
+    BYTE ucNc = (BYTE)((BYTE)((WORD)(sX + ucR + AWTO_AST_W) >> AWTO_AST_DIV_TW_SHIFT) / AWTO_AST_DIV_TW_REST - ucC0 + 1);
+    BYTE ucR0 = (BYTE)((WORD)(ucY - ucR + AWTO_AST_H) >> AWTO_AST_DIV_TH_SHIFT) / AWTO_AST_DIV_TH_REST;
+    BYTE ucNr = (BYTE)((BYTE)((WORD)(ucY + ucR + AWTO_AST_H) >> AWTO_AST_DIV_TH_SHIFT) / AWTO_AST_DIV_TH_REST - ucR0 + 1);
+    BYTE ucC;
     BYTE ucK;
-    BYTE ucOr = 0;
-    const __xdata uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
-
-    for(ucK = 0; ucK < OSD_TILE_BYTES; ucK++)
-    {
-        ucOr |= pucB[ucK];
-    }
-    return ucOr;
-}
-
-static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                        // returns 1 when the pass drew or uploaded anything
-{
-    BYTE ucI;
+    BYTE ucIdx;
     BYTE ucBit;
-    BYTE ucOcc;
-    BYTE ucIdx = (BYTE)(ucBand * AWTO_AST_COLS + ucCol);
-    BYTE ucMask;
 
-    AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
-    s_sOx = (int16_t)ucCol * AWTO_AST_TW;
-    s_sOy = (int16_t)ucBand * AWTO_AST_BAND_H;
-    s_ucBandRows = (ucBand == 0) ? AWTO_AST_BAND_ROWS : (BYTE)(AWTO_AST_ROWS - AWTO_AST_BAND_ROWS);   // 2 bands: the second one holds the rest
-    s_sBandH = (int16_t)s_ucBandRows * AWTO_AST_TH;
-    ucMask = (BYTE)((1 << s_ucBandRows) - 1);
-    s_ucAny = 0;
-    for(ucI = 0; ucI < AWTO_AST_N_OBJ; ucI++)
+    ucNc = (ucNc > AWTO_AST_COLS) ? AWTO_AST_COLS : ucNc;
+    ucNr = (ucNr > AWTO_AST_ROWS) ? AWTO_AST_ROWS : ucNr;
+    while(ucC0 >= AWTO_AST_COLS)
     {
-        AstPoll();
-        if((s_atObj[ucI].ucType != AWTO_AST_T_NONE) && (AstCull(s_atObj[ucI].sX >> AWTO_AST_FP, s_atObj[ucI].sY >> AWTO_AST_FP, AstRad(s_atObj[ucI].ucType)) != 0))
-        {
-            AstInk();
-            AstDrawObj(ucI);
-        }
+        ucC0 -= AWTO_AST_COLS;
     }
-    if((s_ucShState == AWTO_AST_STATE_ALIVE) && (AstCull(s_sShX >> AWTO_AST_FP, s_sShY >> AWTO_AST_FP, AWTO_AST_SHIP_R) != 0))
+    while(ucR0 >= AWTO_AST_ROWS)
     {
-        AstInk();
-        AstDrawShip(s_ucShAng, (BYTE)((s_ucShThrust != 0) && (((g_usAwtoAstStep / AWTO_AST_TICKS) & 1) != 0)));
+        ucR0 -= AWTO_AST_ROWS;
     }
-    ucOcc = s_aucOcc[ucIdx];
-    if((s_sOx < AWTO_AST_HUD_W) && (s_sOy < AWTO_AST_HUD_H))
+    for(; ucNr > 0; ucNr--)
     {
-        if((s_ucAny == 0) && (s_ucHudDirty == 0) && ((ucOcc & AWTO_AST_OBJ_BIT) == 0))
+        if(ucR0 < AWTO_AST_BAND_ROWS)
         {
-            return 0;                                                               // only the unchanged score / ships are here: its glyphs are current
-        }
-        ucOcc = (s_ucAny != 0) ? (BYTE)(ucOcc | AWTO_AST_OBJ_BIT) : (BYTE)(ucOcc & ~AWTO_AST_OBJ_BIT);
-        AstInk();
-        AstHud();
-    }
-    if(s_ucAny == 0)
-    {
-        if((ucOcc & ucMask) == 0)
-        {
-            return 0;                                                               // empty now and at its last upload
-        }
-        AstBlank();                                                                 // tiles that held ink are uploaded blank
-    }
-    s_usCell0 = (WORD)ucBand * AWTO_AST_BAND_ROWS * AWTO_AST_COLS + ucCol;
-    for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS)
-    {
-        ucBit = (BYTE)(1 << ucI);
-        if(AstTileInk(ucI) != 0)
-        {
-            ucOcc |= ucBit;
-        }
-        else if((ucOcc & ucBit) != 0)
-        {
-            ucOcc &= (BYTE)~ucBit;
+            ucIdx = 0;
+            ucBit = (BYTE)(1 << ucR0);
         }
         else
         {
-            continue;                                                               // blank before and now: its glyph is already blank
+            ucIdx = AWTO_AST_COLS;
+            ucBit = (BYTE)(1 << (ucR0 - AWTO_AST_BAND_ROWS));
         }
-        AstPoll();
-        AwtoOsdTile(s_usCell0, g_aucScPix + (WORD)ucI * OSD_TILE_BYTES);
+        for(ucC = ucC0, ucK = ucNc; ucK > 0; ucK--)
+        {
+            s_aucDirty[ucIdx + ucC] |= ucBit;
+            ucC = (ucC == AWTO_AST_COLS - 1) ? 0 : (BYTE)(ucC + 1);
+        }
+        ucR0 = (ucR0 == AWTO_AST_ROWS - 1) ? 0 : (BYTE)(ucR0 + 1);
     }
-    s_aucOcc[ucIdx] = ucOcc;
-    return 1;
+}
+
+#pragma place bank(8)
+static int16_t AstAt(int16_t sP, int8_t cV, int16_t sM)                            // drawn position, px: game position (fp) + velocity x time since the tick, wrapped into sM (fp)
+{
+    sP = (sP + (((int16_t)cV * s_ucFrac) >> AWTO_AST_FRAC_BITS)) >> AWTO_AST_FP;
+    sM = sM >> AWTO_AST_FP;
+    if(sP < 0)
+    {
+        sP += sM;
+    }
+    else if(sP >= sM)
+    {
+        sP -= sM;
+    }
+    return sP;
+}
+
+#pragma place bank(8)
+static BYTE AstFrac(void)                                                           // time since the last tick (the next is at s_usTickAt), 1/8 ticks
+{
+#ifdef _AWTO_AST_FIXED_TICKS
+    return 0;                                                                       // test build: positions as ticked (frames = frame number)
+#else
+    WORD usLeft = (WORD)(s_usTickAt - (WORD)AwtoMs());
+
+    if(usLeft > AWTO_AST_TICK_MS)
+    {
+        return AWTO_AST_FRAC_MAX;                                                   // the tick is due now: the next frame runs it
+    }
+    usLeft = (WORD)(((WORD)(AWTO_AST_TICK_MS - usLeft) << AWTO_AST_FRAC_BITS) / AWTO_AST_TICK_MS);
+    return (usLeft > AWTO_AST_FRAC_MAX) ? AWTO_AST_FRAC_MAX : (BYTE)usLeft;
+#endif
+}
+
+#pragma place bank(8)
+static void AstSee(BYTE ucS)                                                        // s_tNow vs slot ucS as last drawn: a change marks both boxes
+{
+    AstSeen __xdata *pt = &s_atSeen[ucS];
+
+    if((pt->ucR == s_tNow.ucR) && ((pt->ucR == 0) || ((pt->sX == s_tNow.sX) && (pt->ucY == s_tNow.ucY) && (pt->ucKey == s_tNow.ucKey))))
+    {
+        return;
+    }
+    if(pt->ucR != 0)
+    {
+        AstMark(pt->sX, pt->ucY, pt->ucR);
+    }
+    if(s_tNow.ucR != 0)
+    {
+        AstMark(s_tNow.sX, s_tNow.ucY, s_tNow.ucR);
+    }
+    *pt = s_tNow;
+}
+
+#pragma place bank(8)
+static void AstPrepare(void)                                                        // this frame's drawn positions; tiles of what changed -> s_aucDirty
+{
+    BYTE ucI;
+    BYTE ucT;
+    BYTE ucC;
+    BYTE ucR;
+
+    for(ucI = 0; ucI < AWTO_AST_N_OBJ; ucI++)
+    {
+        AstPoll();
+        ucT = s_atObj[ucI].ucType;
+        s_tNow.ucR = 0;
+        if(ucT != AWTO_AST_T_NONE)
+        {
+            s_tNow.sX = AstAt(s_atObj[ucI].sX, s_atObj[ucI].cVx, AWTO_AST_FPW);
+            s_tNow.ucY = (BYTE)AstAt(s_atObj[ucI].sY, s_atObj[ucI].cVy, AWTO_AST_FPH);
+            s_tNow.ucR = AstRad(ucT);
+            s_tNow.ucKey = (BYTE)(ucT * AWTO_AST_KEY_SUBS + ((ucT <= AWTO_AST_T_ROCK_S) ? (s_atObj[ucI].ucAux & (AWTO_AST_SHAPES_PER_ROCK - 1)) :
+                                                            ((ucT == AWTO_AST_T_BOOM) ? s_atObj[ucI].ucAux : 0)));
+        }
+        AstSee(ucI);
+    }
+    s_tNow.ucR = 0;
+    if(s_ucShState == AWTO_AST_STATE_ALIVE)
+    {
+        s_tNow.sX = AstAt(s_sShX, s_cShVx, AWTO_AST_FPW);
+        s_tNow.ucY = (BYTE)AstAt(s_sShY, s_cShVy, AWTO_AST_FPH);
+        s_tNow.ucR = AWTO_AST_SHIP_R;
+        s_tNow.ucKey = (BYTE)(s_ucShAng | (((s_ucShThrust != 0) && (((g_usAwtoAstStep / AWTO_AST_TICKS) & 1) != 0)) ? AWTO_AST_FLAME_KEY : 0));
+    }
+    AstSee(AWTO_AST_SHIP_SLOT);
+    if(s_ucHudDirty != 0)                                                           // score / spare ships changed: their tiles
+    {
+        for(ucR = 0; ucR < AWTO_AST_HUD_ROWS; ucR++)
+        {
+            for(ucC = 0; ucC < AWTO_AST_HUD_COLS; ucC++)
+            {
+                s_aucDirty[ucC] |= (BYTE)(1 << ucR);
+            }
+        }
+    }
+}
+
+#pragma place bank(8)
+static void AstPass(BYTE ucCol, BYTE ucBand)                                        // redraws the band's column if a tile in it changes; uploads only the changed tiles
+{
+    BYTE ucI;
+    BYTE ucIdx = (ucBand == 0) ? ucCol : (BYTE)(AWTO_AST_COLS + ucCol);
+    BYTE ucDirty = s_aucDirty[ucIdx];
+    BYTE ucR0;
+    BYTE ucR1;
+
+    if(ucDirty == 0)
+    {
+        return;
+    }
+    s_aucDirty[ucIdx] = 0;
+    AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+    s_sOx = (int16_t)(((WORD)ucCol << AWTO_AST_BYTE_BITS) + ((WORD)ucCol << AWTO_AST_DIV_TW_SHIFT));   // ucCol * 12, no multiply
+    s_sOy = (ucBand == 0) ? 0 : AWTO_AST_BAND_H;
+    s_ucBandRows = (ucBand == 0) ? AWTO_AST_BAND_ROWS : (BYTE)(AWTO_AST_ROWS - AWTO_AST_BAND_ROWS);   // 2 bands: the second one holds the rest
+    for(ucR0 = 0; (ucDirty & (BYTE)(1 << ucR0)) == 0; ucR0++)                       // clip to the changed rows: objects elsewhere are not drawn
+    {
+    }
+    for(ucR1 = s_ucBandRows - 1; (ucDirty & (BYTE)(1 << ucR1)) == 0; ucR1--)
+    {
+    }
+    s_sClip0 = s_tAstRowY[ucR0];
+    s_sBandH = s_tAstRowY[ucR1 + 1];
+    memset(g_aucScPix + s_tAstTileOff[ucR0], 0, (WORD)(s_tAstTileOff[ucR1] - s_tAstTileOff[ucR0]) + OSD_TILE_BYTES);
+    for(ucI = 0; ucI < AWTO_AST_N_OBJ; ucI++)
+    {
+        AstPoll();
+        if((s_atSeen[ucI].ucR != 0) && (AstCull(s_atSeen[ucI].sX, s_atSeen[ucI].ucY, s_atSeen[ucI].ucR) != 0))
+        {
+            AstDrawObj(ucI);
+        }
+    }
+    if((s_atSeen[AWTO_AST_SHIP_SLOT].ucR != 0) && (AstCull(s_atSeen[AWTO_AST_SHIP_SLOT].sX, s_atSeen[AWTO_AST_SHIP_SLOT].ucY, AWTO_AST_SHIP_R) != 0))
+    {
+        AstDrawShip(s_atSeen[AWTO_AST_SHIP_SLOT].ucKey & (AWTO_AST_ANGLES - 1), s_atSeen[AWTO_AST_SHIP_SLOT].ucKey & AWTO_AST_FLAME_KEY);
+    }
+    if((s_sOx < AWTO_AST_HUD_W) && (s_sOy < AWTO_AST_HUD_H))
+    {
+        AstHud();
+    }
+    s_usCell0 = ((ucBand == 0) ? 0 : (WORD)(AWTO_AST_BAND_ROWS * AWTO_AST_COLS)) + ucCol;
+    for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS)
+    {
+        if((ucDirty & (BYTE)(1 << ucI)) != 0)
+        {
+            AstPoll();
+            AWTO_AST_TILE(s_usCell0, g_aucScPix + s_tAstTileOff[ucI]);
+        }
+    }
 }
 
 BYTE AwtoAsteroids(BYTE ucCmd)
@@ -1231,26 +1482,36 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     }
     if(ucCmd == 2)
     {
-        BYTE ucWork;
+        WORD usStart = (WORD)AwtoMs();
 
-        do                                                                          // empty columns cost ~1 ms: run on until one has drawn something
+        do                                                                          // columns until the time budget is used (clean ones cost a byte test)
         {
-            if(g_ucAwtoAstCol == 0)
+            if(g_ucAwtoAstCol == 0)                                                 // frame start: due ticks (0..), interpolated positions, changed tiles
             {
-                ucWork = (s_ucShown == 0) ? AWTO_AST_TICKS : AstDue();                         // the first frame needs no tick due; later ones wait for one (an unchanged frame is not drawn again)
-                if(ucWork == 0)
+#ifndef _AWTO_AST_FIXED_TICKS
+                if(s_ucShown != 0)                                                  // fixed-rate frames (the first one starts at once)
                 {
-                    return 1;
+                    if((WORD)(usStart - s_usFrameAt) >= AWTO_AST_HALF_MS)
+                    {
+                        return 1;                                                   // not due yet
+                    }
+                    s_usFrameAt += AWTO_AST_FRAME_MS;
+                    if((WORD)(usStart - s_usFrameAt) < AWTO_AST_HALF_MS)
+                    {
+                        s_usFrameAt = usStart + AWTO_AST_FRAME_MS;                  // a frame or more behind: resync, no burst
+                    }
                 }
-                AstStep(ucWork);
+#endif
+                AstStep((s_ucShown == 0) ? AWTO_AST_TICKS : AstDue());
+                s_ucFrac = AstFrac();
+                AstPrepare();
             }
-            ucWork = 0;
             for(ucB = 0; ucB < AWTO_AST_BANDS; ucB++)
             {
-                ucWork |= AstPass(g_ucAwtoAstCol, ucB);
+                AstPass(g_ucAwtoAstCol, ucB);
             }
             g_ucAwtoAstCol++;
-        } while((g_ucAwtoAstCol < AWTO_AST_COLS) && (ucWork == 0));
+        } while((g_ucAwtoAstCol < AWTO_AST_COLS) && ((WORD)((WORD)AwtoMs() - usStart) < AWTO_AST_PASS_MS));
         if(g_ucAwtoAstCol < AWTO_AST_COLS)
         {
             return 0;
@@ -1259,6 +1520,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
         if(s_ucShown == 0)                                                          // the first frame was drawn hidden
         {
             s_ucShown = 1;
+            s_usFrameAt = (WORD)AwtoMs() + AWTO_AST_FRAME_MS;
             osd_tc_show(1);
             AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_AST_ARG_ON, AWTO_AST_FROM_ROM);
         }
@@ -1279,8 +1541,9 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     osd_canvas_init(&g_scCv, 1, AWTO_AST_BAND_ROWS, g_aucScPix, AWTO_AST_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_AST_BAND_ROWS));
     for(ucB = 0; ucB < AWTO_AST_PASSES; ucB++)
     {
-        s_aucOcc[ucB] = (BYTE)((1 << ((ucB < AWTO_AST_COLS) ? AWTO_AST_BAND_ROWS : (AWTO_AST_ROWS - AWTO_AST_BAND_ROWS))) - 1);   // every glyph is uploaded once (blank where nothing is)
+        s_aucDirty[ucB] = (BYTE)((1 << ((ucB < AWTO_AST_COLS) ? AWTO_AST_BAND_ROWS : (AWTO_AST_ROWS - AWTO_AST_BAND_ROWS))) - 1);   // every glyph is uploaded once (blank where nothing is)
     }
+    memset(s_atSeen, 0, sizeof(s_atSeen));                                          // nothing drawn yet
     if(s_usRng == 0)
     {
         s_usRng = AWTO_AST_SEED;
@@ -1291,6 +1554,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     s_ucHudLives = 0;                                                               // AstNewGame sets the lives: the first step redraws the HUD
     s_ucShown = 0;
     s_usTickAt = (WORD)AwtoMs() + AWTO_AST_TICK_MS;
+    s_ucFrac = 0;
     s_ucThrustLeft = 0;
     AstNewGame();
 #ifndef _AWTO_AUDIO_TEST
