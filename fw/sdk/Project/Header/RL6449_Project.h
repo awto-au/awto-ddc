@@ -135,7 +135,7 @@ extern void AwtoNvCommitSel(void);                              // source select
 #define AWTO_NV_BRI                                             0x04
 #define AWTO_NV_CT                                              0x08
 #define AWTO_NV_SIX                                             0x10
-#define AWTO_NV_PANEL                                           0x20    // never opens the gate: rides along, power-down
+#define AWTO_NV_PANEL                                           0x20    // pending only: written at power off / saving entry (#151 I)
 #define AWTO_NV_AUX                                             0x40
 #define AWTO_SAVE_CARD_MS                                       1000    // "Saving to memory" readable once (derived: one glance)
 #define AWTO_NV_ITEM_WR()                                       { g_stAwtoNv.usItemWr++; AWTO_NV_IN_DDC(); }

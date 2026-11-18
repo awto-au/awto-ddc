@@ -139,8 +139,8 @@
 | 17 | SIX.ucSixColorSaturationB | SixColor 9 (8 b) |  | 0..255; def 100 (0x64) | 100 (0x64) | gate: registry six-axis rows | sa_blue_sat |
 | 17 | SIX.ucSixColorHueM | SixColor 10 (8 b) |  | 0..255; def 50 (0x32) | 50 (0x32) | gate: registry six-axis rows | sa_magenta_hue |
 | 17 | SIX.ucSixColorSaturationM | SixColor 11 (8 b) |  | 0..255; def 100 (0x64) | 100 (0x64) | gate: registry six-axis rows | sa_magenta_sat |
-| 18 | TIME.usHour | TimeType 0 (16 b) | panel backlight used time, hours | 0..65535; def 0 | 34 (0x22) | rides along with every flush; power off / saving entry; never on its own (was I, every 20 min) | panel_hours |
-| 18 | TIME.ucMin | TimeType 2 (8 b) | panel backlight used time, minutes | 0..255; def 0 | 29 (0x1D) | rides along with every flush; power off / saving entry; never on its own (was I, every 20 min) | panel_min |
+| 18 | TIME.usHour | TimeType 0 (16 b) | panel backlight used time, hours | 0..65535; def 0 | 34 (0x22) | written only at power off / power-saving entry (#151 I; was every 20 min) | panel_hours |
+| 18 | TIME.ucMin | TimeType 2 (8 b) | panel backlight used time, minutes | 0..255; def 0 | 29 (0x1D) | written only at power off / power-saving entry (#151 I; was every 20 min) | panel_min |
 
 ## Registry rows with the nv flag (stored)
 
@@ -322,3 +322,19 @@
 | ssc | SYS.ucSSC |  | SYS.ucSSC=0 | 0 |
 | panel_hours | TIME.usHour |  | TIME.usHour=34 | 34 |
 | panel_min | TIME.ucMin |  | TIME.ucMin=29 | 29 |
+
+## Write policy (#151, Dan 2026-11-18)
+
+- No unchanged writes: registry equal value = no dirty (`set_put`); the SDK item compare skips equal items; menu close with nothing dirty = log line only; `nv_store` skips a payload equal to the newest slot (`fw/rtdfw/tests/host/test_nvequal.c`).
+- Input switch (selector choice) is written by the gate only: ACTIVE stable `AWTO_NV_STABLE_MS` (3 s), no DDC/CI for `AWTO_NV_DDC_IDLE_MS` (500 ms), forced after `AWTO_NV_FORCE_MS` (30 s), flushed at power-off / saving. KVM / auto search are never stored; the registry record is retired (no duplicate write).
+- Panel used time: written only at power-off / power-saving entry (`AwtoNvWrite` why POWER); the 20 min SDK timer only marks it pending.
+- Flash halts (`g_stAwtoNv.usOps` = page programs + erases), `scripts/nv_policy_sim.py`, fast core, 1080p60, 2026-11-18, image before = 9a0e583 tree e9a3c32, after = this commit:
+
+| scenario | before | after |
+|---|---|---|
+| 10 equal VCP 0x10 sets | 0 | 0 |
+| menu open + close, no change | 0 | 0 |
+| input switch D2 -> D3 (selector, idle commit) | 8 (4 items) | 6 (3 items) |
+| 25 min of backlight | 0 (1 save deferred, rode along with the next flush) | 0 |
+| one changed VCP 0x10 set (gate) | 6 (3 items) | 4 (2 items) |
+| POWER off | 4 | 4 (panel time written here) |
