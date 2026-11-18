@@ -4,7 +4,8 @@
 // Screensavers (docs/screensaver.md): Pac-Man (pacman_classic.c), the scopes (scope_saver.c, scope_saver2.c) and Asteroids (asteroids.c), run from the main loop.
 // Settings 119 screensaver (Off / Pac-Man / Scope / Scope 2 / Alternate / Asteroids), 120 screensaver_s (idle seconds, 0 = none), 121 screensaver_now (DDC/CI VCP 0xEB).
 // Starts: no signal for AWTO_SAVER_NOSIG_MS with a mode set; idle with a picture for screensaver_s; DDC/CI / test cmd now.
-// Stops: a key, a DDC/CI command (not VCP 0xEB), mode no longer the one that started it (no signal: NOSIGNAL, idle: ACTIVE), VCP 0xEB = 0.
+// Stops: a key, a DDC/CI command (ends no-signal / idle, not a "now" or boot saver: D4), mode no longer the one that started it (no signal: NOSIGNAL, idle: ACTIVE), VCP 0xEB = 0.
+// No-signal saver (docs/saver-mode.md D1): replaces the SDK no-signal card, drops SDK pop-ups, runs pwr_l3_s s, then the SDK chain (card, power saving) resumes.
 extern void AwtoPacmanClassic(BYTE ucCmd);
 extern BYTE AwtoScopeSaver(BYTE ucCmd);
 extern BYTE AwtoScopeSaver2(BYTE ucCmd);
@@ -26,9 +27,12 @@ extern BYTE AwtoAsteroids(BYTE ucCmd);
 #define AWTO_SAVER_WHY_BOOT                     4                   // boot splash (docs/flash-screen.md): the flash screen drawing, shown a step per main pass
 #define AWTO_SAVER_SPLASH_DONE                  0xFF                // s_ucMid: all draw steps done
 #define AWTO_SPLASH_MAX_MS                      3000UL              // hard cap: 4x the sim power-on -> ACTIVE (~0.75 s), = console hold AWTO_CON_HOLD_MS; expiry = splash closes
-#define AWTO_SAVER_NOSIG_MS                     10000UL             // no signal this long: the source search has ended (SDK search + hold are ~4 s; start = 2.5x)
+#define AWTO_SAVER_NOSIG_MS                     1800UL              // no signal this long (mode NOSIGNAL): 90 % of the SDK card timer SEC(2), so the saver is up before the card event
+#define AWTO_SAVER_WHY_MASK                     0x7F                // bit 7 of the why = Alternate
 #define AWTO_SAVER_ALT_MS                       120000UL            // Alternate: one saver for 2 min, then the other
-#define AWTO_SAVER_PACMAN_MS                    31UL                // Pac-Man sub-step period: 4 sub-steps = 125 ms per game step (8 game steps/s as pacman_unit.py)
+#define AWTO_SAVER_PACMAN_MS                    31UL                // Pac-Man sub-step period
+#define AWTO_SAVER_PACMAN_SUBS                  4                   // sub-steps per game step
+#define AWTO_SAVER_PACMAN_STEP_MS               125UL               // game step = 8 steps/s as pacman_unit.py: sub-steps 31, 31, 31, 32 ms
 #define AWTO_SAVER_SCOPE2_MS                    1UL                 // pause between scope 2 frames (columns are drawn per main pass within a time budget: scope_saver2.c)
 #define AWTO_SAVER_SCOPE_MS                     100UL               // pause between scope frames
 #define AWTO_SAVER_MS_PER_S                     1000UL
@@ -47,6 +51,7 @@ __xdata BYTE g_ucAwtoSaverMode;
 __xdata WORD g_usAwtoSaverIdleS;
 __xdata BYTE g_ucAwtoSaverRun;                                       // AWTO_SAVER_PACMAN / SCOPE while one runs, else OFF
 __xdata BYTE g_ucAwtoSaverWhy;
+__xdata WORD g_usAwtoSaverNosigS;                                    // settings row 80 pwr_l3_s: seconds the no-signal saver runs before power saving (0 = no no-signal saver)
 #define AWTO_SAVER_REQ_NONE                     0xFF
 static __xdata BYTE s_ucReq = AWTO_SAVER_REQ_NONE;                  // set by the DDC/CI apply, served by AwtoSaverPoll: a draw on the DDC handler's stack overflows IRAM and blocks DDC for its whole length
 static __xdata BYTE s_ucMid;                                        // a scope frame is part drawn
@@ -54,11 +59,13 @@ static __xdata unsigned long s_ulAct;                               // last key 
 static __xdata WORD s_usTick;                                       // last frame (ms, low word: the periods are <= 125 ms)
 static __xdata unsigned long s_ulSwap;                              // run started / last swap (Alternate)
 static __xdata unsigned long s_ulNoSig;                             // no-signal since (0 = not in no-signal)
+static __xdata BYTE s_ucSub;                                        // Pac-Man sub-step 0..AWTO_SAVER_PACMAN_SUBS-1
+static __xdata BYTE s_ucNoSigDone;                                  // the no-signal saver ended in this no-signal episode: it does not restart (no saver -> card -> saver loop)
 
-void AwtoSaverActivity(void)                                        // a DDC/CI command does not end the boot splash (the host talks at power-on); a key does: AwtoSaverKey
+void AwtoSaverActivity(void)                                        // a DDC/CI command does not end a "now" saver (host tools talk to it) or the boot splash; a key does: AwtoSaverKey
 {
     s_ulAct = AwtoMs();
-    if((g_ucAwtoSaverRun != AWTO_SAVER_OFF) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_NOW) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_BOOT))
+    if((g_ucAwtoSaverRun != AWTO_SAVER_OFF) && ((g_ucAwtoSaverWhy & AWTO_SAVER_WHY_MASK) != AWTO_SAVER_WHY_NOW) && ((g_ucAwtoSaverWhy & AWTO_SAVER_WHY_MASK) != AWTO_SAVER_WHY_BOOT))
     {
         AwtoSaverStop();
     }
@@ -122,6 +129,7 @@ static void SaverDraw(BYTE ucRun)
     }
     s_ulSwap = AwtoMs();
     s_usTick = (WORD)s_ulSwap;
+    s_ucSub = 0;
     s_ucMid = 1;                                                    // a scope starts with its first frame, drawn hidden
 }
 
@@ -166,9 +174,31 @@ void AwtoSaverStop(void)
     {
         isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     }
+    if((g_ucAwtoSaverWhy & AWTO_SAVER_WHY_MASK) == AWTO_SAVER_WHY_NOSIG)
+    {
+        s_ucNoSigDone = 1;                                          // until the no-signal state ends
+    }
     SaverDraw(AWTO_SAVER_OFF);
     g_ucAwtoSaverWhy = AWTO_SAVER_WHY_NONE;
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_STOP, 0);
+}
+
+static void SaverNoPopups(void)                                     // the SDK no-signal / power-saving chain is not to run under the no-signal saver
+{
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
+    ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_GO_TO_POWER_SAVING);
+}
+
+BYTE AwtoSaverGuard(void)                                           // RTDOsdEventMsgProc pop-up cases: 1 = the no-signal saver owns the OSD, drop the pop-up
+{
+    if((g_ucAwtoSaverRun == AWTO_SAVER_OFF) || ((g_ucAwtoSaverWhy & AWTO_SAVER_WHY_MASK) != AWTO_SAVER_WHY_NOSIG) || (SysModeGetModeState() != _MODE_STATUS_NOSIGNAL))
+    {
+        return 0;
+    }
+    SaverNoPopups();
+    return 1;
 }
 
 void AwtoSaverPoll(void)                                            // main loop, once per pass
@@ -254,6 +284,11 @@ void AwtoSaverPoll(void)                                            // main loop
             s_ulAct = ulNow;                                        // idle time from here: a new picture is not idle (docs/saver-mode.md)
             return;
         }
+        if(((g_ucAwtoSaverWhy & AWTO_SAVER_WHY_MASK) == AWTO_SAVER_WHY_NOSIG) && ((ulNow - s_ulNoSig) >= (AWTO_SAVER_NOSIG_MS + (unsigned long)g_usAwtoSaverNosigS * AWTO_SAVER_MS_PER_S)))
+        {
+            AwtoSaverStop();                                        // run time over: the SDK chain resumes (card 2 s, power-saving card 3 s, power saving 2 s)
+            return;
+        }
         if((g_ucAwtoSaverWhy & 0x80) && ((ulNow - s_ulSwap) >= AWTO_SAVER_ALT_MS))
         {
             SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE2 :
@@ -277,16 +312,27 @@ void AwtoSaverPoll(void)                                            // main loop
             }
             return;
         }
-        if((WORD)(ulNow - s_usTick) >= AWTO_SAVER_PACMAN_MS)
         {
-            s_usTick = (WORD)ulNow;
-            AwtoPacmanClassic(2);
+            WORD usPeriod = (s_ucSub == (AWTO_SAVER_PACMAN_SUBS - 1)) ? (WORD)(AWTO_SAVER_PACMAN_STEP_MS - (AWTO_SAVER_PACMAN_SUBS - 1) * AWTO_SAVER_PACMAN_MS) : (WORD)AWTO_SAVER_PACMAN_MS;
+            WORD usLate = (WORD)ulNow - s_usTick;                   // s_usTick = last step's scheduled time; it advances by the period, not from now
+
+            if(usLate >= usPeriod)
+            {
+                s_usTick += usPeriod;
+                s_ucSub = (s_ucSub + 1) % AWTO_SAVER_PACMAN_SUBS;
+                if((WORD)((WORD)ulNow - s_usTick) >= AWTO_SAVER_PACMAN_STEP_MS)
+                {
+                    s_usTick = (WORD)ulNow;                         // far behind (a long pass): resync, no burst of catch-up steps
+                }
+                AwtoPacmanClassic(2);
+            }
         }
         return;
     }
     if(g_ucAwtoSaverMode == AWTO_SAVER_OFF)
     {
         s_ulNoSig = 0;
+        s_ucNoSigDone = 0;
         return;
     }
     if(ucMode == _MODE_STATUS_NOSIGNAL)
@@ -295,13 +341,16 @@ void AwtoSaverPoll(void)                                            // main loop
         {
             s_ulNoSig = ulNow;
         }
-        else if((ulNow - s_ulNoSig) >= AWTO_SAVER_NOSIG_MS)
+        else if((s_ucNoSigDone == 0) && (g_usAwtoSaverNosigS != 0) && ((ulNow - s_ulNoSig) >= AWTO_SAVER_NOSIG_MS))
         {
+            UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_NOSIGNAL));      // the no-signal card it replaces would have lit the backlight
             AwtoSaverStart(SAVER_MODE_RUN(g_ucAwtoSaverMode), AWTO_SAVER_WHY_NOSIG);
+            SaverNoPopups();                                        // the start's OSD close re-armed the card timer
         }
         return;
     }
     s_ulNoSig = 0;
+    s_ucNoSigDone = 0;
     if((ucMode == _MODE_STATUS_ACTIVE) && (g_usAwtoSaverIdleS != 0) && ((ulNow - s_ulAct) >= ((unsigned long)g_usAwtoSaverIdleS * AWTO_SAVER_MS_PER_S)))
     {
         AwtoSaverStart(SAVER_MODE_RUN(g_ucAwtoSaverMode), AWTO_SAVER_WHY_IDLE);

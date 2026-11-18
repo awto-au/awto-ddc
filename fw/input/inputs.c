@@ -24,6 +24,9 @@ static __xdata WORD s_usAwtoGpioDraw;
 static __xdata WORD s_usAwtoDbgDraw;
 static __xdata BYTE s_ucVgaSync;
 static __xdata BYTE s_ucVgaCmp;
+static __xdata WORD s_usAwtoInLast;       // AwtoMs of the last poll
+static __xdata BYTE s_ucAwtoInCur;        // next slow row (index into tAwtoInSlow)
+static __xdata WORD s_usAwtoInAcc;        // slow-row share carried over (ms x rows, below the period)
 #define AWTO_DBG_REFRESH_MS    500             // debug panel values (loop rate, clocks) change slowly: twice a second
 #define AWTO_KEY_BAND(v, lo, hi)                (((lo) <= (v)) && ((v) < (hi)))     // key0 / key1 rows: lo <= ADC < hi
 
@@ -61,6 +64,12 @@ static const __code BYTE tAwtoInFlags[AWTO_IN_N] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3,
     3, 3, 3, 3, 1, 1, 1, 3, 3, 3, 3, 3,
     3, 3, 3, 2, 2, 2, 2, 2};
+static const __code BYTE tAwtoInFast[AWTO_IN_FAST_N] = {
+    8, 9, 11, 28, 39, 40, 41, 42, 43};
+static const __code BYTE tAwtoInSlow[AWTO_IN_N - AWTO_IN_FAST_N] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 10, 12, 13, 14,
+    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38};
 // GENERATED-END awto_inputs
 
 static void AwtoVgaDiagPower(bit bOn)
@@ -116,40 +125,74 @@ static void AwtoGpioLogNow(BYTE ucId, BYTE ucVal)   // own function: AwtoInScan 
     AwtoGpioLog(ucId, ucVal, (WORD)AwtoMs());
 }
 
+static void AwtoInRow(BYTE ucI, BYTE ucMode)
+{
+    BYTE ucV = AwtoInRead(ucI);
+    BYTE ucO = g_stAwtoGpio.ucIn[ucI];
+    BYTE ucD;
+
+    if(ucMode == 0)
+    {
+        if(tAwtoInKind[ucI] == 1)
+        {
+            ucD = (ucV > ucO) ? (ucV - ucO) : (ucO - ucV);
+            if(ucD < AWTO_ADC_DEADBAND) return;
+        }
+        else if(ucV == ucO)
+        {
+            return;
+        }
+        if((tAwtoInFlags[ucI] & 2) != 0)
+        {
+            AwtoGpioLogNow(ucI, ucV);
+        }
+        AWTO_PS_COUNT(ucI, ucV);              // #139 selector pulse rates (fw/awto/portsig.tsv cnt rows)
+    }
+    g_stAwtoGpio.ucIn[ucI] = ucV;
+    if(ucMode != 2)
+    {
+        g_stAwtoGpio.ucDirty[ucI >> 3] |= (BYTE)1 << (ucI & 7);
+        g_stAwtoGpio.ucAny = 1;
+    }
+}
+
 // ucMode 0: poll (store, log, mark a change), 1: mark every input changed (console just opened), 2: take the values quietly.
+// Poll: pass rows every call; slow rows one pass-share per call so each is read every AWTO_IN_SLOW_MS (inputs.tsv rate),
+// without a long pass (a long pass would widen the gap between the DPS17 reads, whose 4 ms pulses are counted). Modes 1 / 2: every row.
 static void AwtoInScan(BYTE ucMode)
 {
-    BYTE ucI, ucV, ucO, ucD;
+    BYTE ucI;
+    WORD usNow, usDt;
 
+    if(ucMode == 0)
+    {
+        usNow = (WORD)AwtoMs();
+        usDt = usNow - s_usAwtoInLast;
+        s_usAwtoInLast = usNow;
+        if(usDt > AWTO_IN_SLOW_MS) usDt = AWTO_IN_SLOW_MS;
+        s_usAwtoInAcc += usDt * (AWTO_IN_N - AWTO_IN_FAST_N);           // slow rows due = elapsed / period x slow rows
+        while(s_usAwtoInAcc >= AWTO_IN_SLOW_MS)
+        {
+            s_usAwtoInAcc -= AWTO_IN_SLOW_MS;
+            if(s_ucAwtoInCur == 0)
+            {
+                s_ucVgaSync = ScalerGetByte(AWTO_VGA_SYNC_REG);
+                s_ucVgaCmp = ScalerGetByte(AWTO_VGA_COMPARE_REG);
+            }
+            AwtoInRow(tAwtoInSlow[s_ucAwtoInCur], 0);
+            s_ucAwtoInCur = (s_ucAwtoInCur + 1 >= (AWTO_IN_N - AWTO_IN_FAST_N)) ? 0 : s_ucAwtoInCur + 1;
+        }
+        for(ucI = 0; ucI < AWTO_IN_FAST_N; ucI++)
+        {
+            AwtoInRow(tAwtoInFast[ucI], 0);
+        }
+        return;
+    }
     s_ucVgaSync = ScalerGetByte(AWTO_VGA_SYNC_REG);
     s_ucVgaCmp = ScalerGetByte(AWTO_VGA_COMPARE_REG);
     for(ucI = 0; ucI < AWTO_IN_N; ucI++)
     {
-        ucV = AwtoInRead(ucI);
-        ucO = g_stAwtoGpio.ucIn[ucI];
-        if(ucMode == 0)
-        {
-            if(tAwtoInKind[ucI] == 1)
-            {
-                ucD = (ucV > ucO) ? (ucV - ucO) : (ucO - ucV);
-                if(ucD < AWTO_ADC_DEADBAND) continue;
-            }
-            else if(ucV == ucO)
-            {
-                continue;
-            }
-            if((tAwtoInFlags[ucI] & 2) != 0)
-            {
-                AwtoGpioLogNow(ucI, ucV);
-            }
-            AWTO_PS_COUNT(ucI, ucV);              // #139 selector pulse rates (fw/awto/portsig.tsv cnt rows)
-        }
-        g_stAwtoGpio.ucIn[ucI] = ucV;
-        if(ucMode != 2)
-        {
-            g_stAwtoGpio.ucDirty[ucI >> 3] |= (BYTE)1 << (ucI & 7);
-            g_stAwtoGpio.ucAny = 1;
-        }
+        AwtoInRow(ucI, ucMode);
     }
 }
 

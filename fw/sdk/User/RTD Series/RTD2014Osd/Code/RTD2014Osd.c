@@ -210,18 +210,30 @@ void RTDOsdEventMsgProc(void)
     switch(GET_OSD_EVENT_MESSAGE())
     {
         case _OSDEVENT_SHOW_NOSIGNAL_MSG:
+            if(AwtoSaverGuard() != 0)           // the no-signal saver owns the OSD: dropped
+            {
+                break;
+            }
             OsdDispOsdMessage(_OSD_DISP_NOSIGNAL_MSG);
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_NOSIGNAL));
             ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
             break;
 
         case _OSDEVENT_SHOW_NOCABLE_MSG:
+            if(AwtoSaverGuard() != 0)           // the no-signal saver owns the OSD: dropped
+            {
+                break;
+            }
             OsdDispOsdMessage(_OSD_DISP_NOCABLE_MSG);
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_NOCABLE));
             ScalerTimerActiveTimerEvent(SEC(3), _USER_TIMER_EVENT_OSD_SHOW_POWER_SAVING);
             break;
 
         case _OSDEVENT_SHOW_NOSUPPORT_MSG:
+            if(AwtoSaverGuard() != 0)           // the no-signal saver owns the OSD: dropped
+            {
+                break;
+            }
 
             ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_CABLE);
             ScalerTimerCancelTimerEvent(_USER_TIMER_EVENT_OSD_SHOW_NO_SIGNAL);
@@ -248,6 +260,10 @@ void RTDOsdEventMsgProc(void)
             break;
 
         case _OSDEVENT_SHOW_POWER_SAVING_EVENT_MSG:
+            if(AwtoSaverGuard() != 0)           // the no-signal saver owns the OSD: dropped
+            {
+                break;
+            }
             OsdDispDisableOsd();
             OsdDispOsdMessage(_OSD_DISP_POWER_SAVING_MSG);
             UserCommonInterfacePanelPowerAction(AWTO_PNL_REQ(_BACKLIGHT_ON, AWTO_PNL_BY_OSD_PS));
@@ -255,6 +271,10 @@ void RTDOsdEventMsgProc(void)
             break;
 
         case _OSDEVENT_GO_TO_POWER_SAVING_EVENT_MSG:
+            if(AwtoSaverGuard() != 0)           // the no-signal saver owns the OSD: dropped
+            {
+                break;
+            }
 
             OsdDispDisableOsd();
             SysMachineRequest(_POWER_STATUS_SAVING, AWTO_SYS_BY_OSD_PS);

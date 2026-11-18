@@ -36,18 +36,23 @@ def rows():
     for ln in TSV.read_text().splitlines():
         if not ln.strip() or ln.startswith("#"):
             continue
-        n, pin, kind, src, a, b, text, screen, lg, desc = ln.split("\t")
+        n, pin, kind, src, a, b, text, screen, lg, desc, rate = ln.split("\t")
+        assert rate in ("pass", "slow"), ln
         out.append(dict(name=n, pin=int(pin), kind=KINDS[kind], src=SRCS[src], a=a if src == "xreg" else int(a, 0), b=int(b, 0), text=text,
-                        screen=screen == "y", log=lg == "y", desc=desc, srcname=src, kindname=kind))
+                        screen=screen == "y", log=lg == "y", desc=desc, srcname=src, kindname=kind, fast=rate == "pass"))
     n_screen = sum(r["screen"] for r in out)
     assert all(r["screen"] for r in out[:n_screen]), "screen rows must come first"
     assert len(out) <= 255, "ring id is one byte"
+    for i, x in enumerate(out):                    # a key row decodes the ADC row before it: that row must be read at least as often
+        if x["src"] in (SRCS["key0"], SRCS["key1"]):
+            adc = next(y for y in out if y["src"] == (SRCS["adc0"] if x["src"] == SRCS["key0"] else SRCS["adc1"]))
+            assert x["fast"] and adc["fast"] and out.index(adc) < i, f"{x['name']}: key rows and their ADC row must be rate pass, ADC first"
     return out
 
 
-def arr(name, typ, vals, per_line=12):
+def arr(name, typ, vals, per_line=12, n="AWTO_IN_N"):
     body = ",\n    ".join(", ".join(vals[i:i + per_line]) for i in range(0, len(vals), per_line))
-    return f"static const __code {typ} {name}[AWTO_IN_N] = {{\n    {body}}};"
+    return f"static const __code {typ} {name}[{n}] = {{\n    {body}}};"
 
 
 KEYS = ("SOURCE", "MENU", "DOWN", "UP", "AUTO", "POWER")      # front keys: the key reader (awto_keys.inc) builds its mask from these rows
@@ -60,6 +65,7 @@ def header_block(r):
     return "\n".join([
         f"#define AWTO_IN_N                                               {n}      // inputs in fw/awto/inputs.tsv; also the transition ring id range",
         f"#define AWTO_IN_ROWS                                            {ns}      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)",
+        f"#define AWTO_IN_FAST_N                                          {sum(x['fast'] for x in r)}      // rows read every pass (inputs.tsv rate = pass)",
         f"#define AWTO_IN_ADC0                                            {idx['ADC0']}",
         f"#define AWTO_IN_ADC1                                            {idx['ADC1']}"]
         + [f"#define AWTO_IN_{k:<48}{idx[k]}" for k in KEYS])
@@ -76,10 +82,16 @@ def table_block(r, which, suffix=""):
         "Pin": ("BYTE", [str(x["pin"]) for x in r], 12),
         "Flags": ("BYTE", [str(int(x["screen"]) | int(x["log"]) << 1) for x in r], 12),
     }
+    if "Fast" in which:
+        fast = [str(i) for i, x in enumerate(r) if x["fast"]]
+        slow = [str(i) for i, x in enumerate(r) if not x["fast"]]
+        cols["Fast"] = ("BYTE", fast, 12)
+        cols["Slow"] = ("BYTE", slow, 12)
     L = ["// kind 0 bit, 1 analog (deadband), 2 byte; src: see awto_gpio.inc AwtoInRead; flags bit0 = screen row, bit1 = logged in the ring"]
     for k in which:
         typ, vals, per = cols[k]
-        L.append(arr(f"tAwtoIn{k}{suffix}", typ, vals, per))
+        n = {"Fast": "AWTO_IN_FAST_N", "Slow": "AWTO_IN_N - AWTO_IN_FAST_N"}.get(k, "AWTO_IN_N")
+        L.append(arr(f"tAwtoIn{k}{suffix}", typ, vals, per, n))
     return "\n".join(L)
 
 
@@ -150,7 +162,7 @@ def main():
     a = ap.parse_args()
     r = rows()
     targets = [(ROOT / "fw/sdk/Project/Header/RL6449_Project.h", header_block(r)),
-               (ROOT / "fw/input/inputs.c", table_block(r, ("Kind", "Src", "A", "B", "Addr", "Flags"))),
+               (ROOT / "fw/input/inputs.c", table_block(r, ("Kind", "Src", "A", "B", "Addr", "Flags", "Fast", "Slow"))),
                (ROOT / "fw/osd/console.c", table_block(r, ("Kind", "Pin", "Flags"), "S") + "\n\n" + names_block(r))]
     stale = 0
     for path, blk in targets:

@@ -78,7 +78,7 @@
 77	pwr_l2_en	bool	none	power	nv	0	1	1	1	auto	0xF8	power	L2 panel off	-
 78	pwr_l2_s	int	s	power	nv	0	3600	10	60	auto	0xF9	power	L2 delay	-
 79	pwr_l3_en	bool	none	power	nv	0	1	1	1	auto	0xFA	power	L3 deep sleep	-
-80	pwr_l3_s	int	s	power	nv,inert	0	7200	30	600	auto	0xFB	power	L3 delay	-
+80	pwr_l3_s	int	s	power	nv	0	7200	30	600	auto	0xFB	power	L3 delay	-	seconds the no-signal screensaver runs before power saving (docs/saver-mode.md D1); 0 = power saving as without a saver
 81	wake_d1	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D1	-
 82	wake_d2	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D2	-
 83	wake_d3	bool	none	power	nv,inert	0	1	1	1	auto	-	power	Wake on D3	-

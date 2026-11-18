@@ -504,6 +504,7 @@ extern void AwtoOsdKeyLines(void);
 // GENERATED-BEGIN awto_inputs
 #define AWTO_IN_N                                               44      // inputs in fw/awto/inputs.tsv; also the transition ring id range
 #define AWTO_IN_ROWS                                            39      // inputs shown on the diagnostic console (the first AWTO_IN_ROWS)
+#define AWTO_IN_FAST_N                                          9      // rows read every pass (inputs.tsv rate = pass)
 #define AWTO_IN_ADC0                                            8
 #define AWTO_IN_ADC1                                            9
 #define AWTO_IN_SOURCE                                          39
@@ -515,6 +516,7 @@ extern void AwtoOsdKeyLines(void);
 // GENERATED-END awto_inputs
 #define AWTO_GPIO_LOG_N                                         32
 #define AWTO_GPIO_REFRESH_MS                                    20
+#define AWTO_IN_SLOW_MS                                         AWTO_GPIO_REFRESH_MS   // slow rows (inputs.tsv rate): the console redraws at this rate, so a faster scan is never shown; docs/saver-mode.md
 #define AWTO_ADC_DEADBAND                                       2       // analog inputs: a change smaller than this is noise, not logged
 typedef struct                                  // 5 B, byte-only so LE/BE layout is identical
 {
@@ -1132,6 +1134,7 @@ extern BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep);                          
 extern void AwtoSaverTaken(void);                                                       // OsdDispDisableOsd: the OSD is being reset / reused; a boot splash is over without a redraw
 extern void AwtoFlashScreen(BYTE ucOn);                                                 // fw/test/flash_screen.c: huge Pac-Man shown while the host flashes (VCP 0xEB = 5)
 extern void AwtoSaverPoll(void);
+extern unsigned char AwtoSaverGuard(void);                                               // 1 = the no-signal saver owns the OSD (pop-ups dropped)
 extern void AwtoSaverActivity(void);
 extern void AwtoSaverKey(void);
 extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);

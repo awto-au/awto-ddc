@@ -21,7 +21,7 @@ Status: design only; nothing built. Prototypes today are test cmds, not screensa
 
 ## Hook points (to check, not yet read in detail)
 
-- No signal: mode machine `NOSIGNAL` (`docs/design-162.md`, `docs/power-levels.md`): runs before L1 (backlight off) and L2 / L3; any L1 / L2 / L3 transition or a locking source stops it.
+- No signal (D1, `docs/saver-mode.md`): starts 1.8 s into `NOSIGNAL` (`AWTO_SAVER_NOSIG_MS`, 90 % of the SDK card timer SEC(2)), replaces the card, runs `pwr_l3_s` s (row 80, default 600), then the SDK chain (card, power saving) resumes. Pop-ups and power-saving timers are dropped while it runs. A key, DDC/CI command or a locking source ends it; it does not restart in the same no-signal episode.
 - Idle with picture: key / DDC activity timer (none exists), draws over the live picture, no scaler reconfiguration; any key ends it and restores the OSD state.
 - Settings: registry `fw/rtdfw/settings/registry.tsv` (`scripts/settings_gen.py`), menu card `fw/osd/`.
 - Pac-Man image needs ~24 KB of data across banks 11 / 12 (bank 13 is full); the scope needs its own tile map + per-frame tile uploads; check cost.
