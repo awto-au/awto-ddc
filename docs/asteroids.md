@@ -71,3 +71,16 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 - Measured (`saver_loop_cost.py --case asteroids --window 62`, sim, fw time): 7.94 game ticks/s, 5.03 frames/s; before the pacing 10.23 ticks/s, 5.11 frames/s. `asteroids_speed.py` counts column-0 passes as frames: idle waits inflate it (7.94 steps/s over 30 s).
 - Frames 0..2 of `saver_frames_md5.py` are md5-identical to the unpaced build (same game state at the same tick); later frames differ only by which ticks they land on.
 - Game-over / attract text: none drawn.
+
+## Panel fill (Dan 2026-11-18: "would prefer it to fill the screen"): measured, not built
+
+- Today: raster 384 x 216 (32 x 12 tiles), scale 64 / 7 = 9.14x = 3511 x 1975 of the 3840 x 2160 panel. Sim (`saver_sim.py`, INFO line): box 1755 x 987 of 1920 x 1080 = 91.4 % x 91.4 % (83.6 % of the area).
+- Asked: 480 x 270 = 40 x 15 tiles at 8x (exact, as Scope 2). Does not fit:
+  - Glyph ids: Asteroids maps one 1-bit glyph per cell (id = cell, `AwtoOsdMap1`); 600 cells > 512 ids (9 bit). It would need a slot ring with per-cell id tracking (Scope 2 model: id ring + worst-case proof) = a rewrite of the draw / upload path.
+  - Speed: draw cost follows the raster area (osd_line walk, tile upload, column passes): 1.56x of today's 384 x 216 = about 3 frames/s (now 5.0), passes about 1.5x longer than the 8-10 ms budget unless bands go to 5 rows.
+  - XDATA: occupancy 40 x 3 = 120 B (+56 B), 5-row band canvas 135 B (-27 B): fits (free 996 B, floor 700 B).
+- Alternatives that fit (cell counts below the 512 ids, identity map kept):
+  - A: 360 x 198 = 30 x 11 tiles at 64 / 6 = 10.67x: 3840 x 2112 of 3840 x 2160 = 100 % x 97.8 % (24 px bars top and bottom, centred), 330 ids, objects 17 % larger on screen, area 0.86x of today (faster). Needs bands of 6 + 5 rows (11 is prime) or one band of 11 rows (canvas 297 B, XDATA +135 B, pass about 2x longer).
+  - B: 240 x 135 at 16x with row height 15 (20 x 9 tiles = 180 ids): exact fill, about 3.5x fewer pixels (fast, coarse shapes: a rock of today's size = 13 raster px).
+  - C: 480 x 270 with the slot-ring rewrite (above): exact fill, about 3 frames/s.
+- Recommended: A. Needs Dan's yes (changes geometry constants, game units scale with `AWTO_AST_W` / `AWTO_AST_H` already; the `AstShape` shifts and rock radii are in raster px and stay).
