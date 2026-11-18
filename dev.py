@@ -1258,16 +1258,25 @@ def cmd_osd_hw_test(extra: list[str]) -> int:
 
 
 @command("MCU / flash clock sweep at run time (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP names or all-mcu / all-flash / all-175, --sim runs it in the firmware sim",
-         args="[--unit N] [--map F] [--sim] [--continue-on-fail] STEP...", kind="action")
+         args="[--unit N] [--map F] [--sim] [--continue-on-fail] [--max-m2pll-mhz N] [--keep NAMES] [--override NAME=VAL] [--retry] [--stop-after N] STEP...", kind="action")
 def cmd_clk_sweep(extra: list[str]) -> int:
     n, u = _unit(extra)
     given = _opt(extra, "--map")
     sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
+    pll_opts = []
+    for flag in ("--max-m2pll-mhz", "--keep", "--override", "--stop-after"):
+        v = _opt(extra, flag)
+        if v is True:
+            raise SystemExit(f"clk-sweep: {flag} needs a value; nothing done")
+        if v is not None:
+            pll_opts += [flag, v]
+    if _flag(extra, "--retry"):
+        pll_opts.append("--retry")
     bad = [x for x in extra if x.startswith("-")]
     if bad or not extra:
         raise SystemExit(f"clk-sweep: need STEPs; bad {bad or 'none'}; nothing done")
     m = Path(_fwmap(u, given))
-    opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else [])
+    opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else []) + pll_opts
     return _py("clk_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
