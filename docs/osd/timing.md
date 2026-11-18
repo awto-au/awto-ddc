@@ -13,7 +13,7 @@
   - Status (docs/osd-hw-tests.md, 2026-11-18): the Scope 2 tile garble on unit 3 is display-side and unresolved; a scale-up-off test is planned.
   - Rates measured [hw]: glyph rewrite 3166 / s (`ScalerOsdDataPort`) / 4308 / s (direct); all-map rewrite 45 / s; one glyph per frame 60 / s.
 - The SDK writes map / font SRAM while shown with no vblank wait; `_EVENT_DVS` waits only before window / position register changes and in its read path [sdk-hypothesis].
-- Register-width timing: `SCA_INF_PERIOD`, `SCA_WR_INTRVL`, `CYCLE_GATING` change every register access time [spec]: T-K.
+- Register-width timing: `SCA_INF_PERIOD`, `SCA_WR_INTRVL`, `CYCLE_GATING` change every register access time [spec]: T-K; sweep tool, OSD clock knobs and the DDR plan: [osd-write-sweep.md](../osd-write-sweep.md); per-path cost: [path-cost.md](path-cost.md).
 
 ## Read-back
 Conditions that decide whether a read returns the stored word:
