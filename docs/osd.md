@@ -132,3 +132,11 @@ Never write bare "vendor": say which one.
 - #117, #122: SDK card bodies and hot-key menus still linked.
 - #108: SDK defect list.
 - #111: font loader bank pin.
+
+## Source selector: why DP is not selectable without a DP cable (unit 1, 2026-11-19)
+- SOURCE opens the selector (rows Auto, D1 = DP, D2, D3); SOURCE / UP step, DOWN back, AUTO takes, MENU cancels, 2 s idle after a step takes.
+- The selector does not scan on open: the row state / signal fields are the live cable-detect (`g_stPortCableStatus`), clock and AUX detects, redrawn while it is open.
+- Take of a port with no cable is refused (#84, `AwtoSourceTake`): sync line `input selector:D1 refused, no cable; stays open`; no card text, the highlight just stays.
+- Unit 1 evidence: `g_stPortCableStatus` = 0x20 (only D2 cabled), `isr_g_ucAwtoPortOff` = 0 (no port disabled), D1 = `_D1_DP_PORT` in the board header, priority D2, D1, D3; SOURCE x1 from Auto highlights D1 (item 3), AUTO -> refused.
+- D1 itself works with a cable: `selector_switch_unit.py` D2 -> D1 -> D2 on unit 2 (DP cabled).
+- A console left open (`g_stAwtoGpio.ucOpen` != 0) swallows SOURCE (`AwtoKeyRouteDo`: only MENU closes it unless it opened by itself); clear with test cmd 0x27.
