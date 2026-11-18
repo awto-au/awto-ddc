@@ -6,7 +6,7 @@ Tags: `[hw]` measured on the unit, `[ds]` MX25L8006E datasheet (`/vendors/macron
 Register roles, stock values and per-register results: `re/regmap/regs.tsv` (keys `01E0..01E7 FFED FFEE FFE9 FFBD FF6B FF6C FDA0 FDA1 FDB3..FDC6 FDCC 4006 4007 8006 0022`; tests `T-L`, `T-M`, `C-PLLHW`, `C-NVWR`, `C-SOAK` in `re/regmap/tests.tsv`); query: `python scripts/regmap_query.py FFED`.
 
 ## Status (2026-11-19)
-- Chosen default: MCU 350.8 MHz, flash 70.2 MHz (Dan, 2026-11-19); built in as `AWTO_CLOCK_MHZ` (`docs/delay-audit.md`). **Open defect (2026-11-19, section "Default image at 350.8 MHz"): about 1 boot in 3 on unit 3 finds no HDMI source; cause = the 350.8 MHz MCU clock, not the flash clock; under investigation.**
+- Chosen default: MCU 350.8 MHz, flash 70.2 MHz (Dan, 2026-11-19); built in as `AWTO_CLOCK_MHZ` (`docs/delay-audit.md`). **Boot input detection fails ~1 boot in 2 at 350.8 MHz on unit 3 (175.4 MHz: 20 / 20); cause not found (section "Default image at 350.8 MHz"). Unit 3 runs the 175.4 MHz build until it is fixed.**
 - Flash overclock: ceiling 116.9 MHz at this PLL (section "Flash overclock"); not adopted, only measured.
 - Measured in session 2 (2026-11-18/19): NVRAM / flash write at speed (wrapper mandatory at 350.8), cache meter, 30 min soak, flash overclock grid, temperature proxies. Open: M2PLL steps above 350.8 (Phase B), other units; list in "Not yet measured".
 - Sections: Method, Clock tree, Rated limits, Results, Flash write / erase, Cache meter, Delay check, Flash overclock, Soak, Temperature proxy and probes, Default image boot, Chosen default, M2PLL steps, Not yet measured, External evidence, Links.
@@ -149,18 +149,25 @@ Per run: 14 x (erase + 4096 B program in 128 B calls + read-back) + 1 closing er
 - I2C probe (`./dev.py i2c-probe`, 2026-11-19, HDMI-A-2 bus 11, 4K59.940 active): `i2cdetect -r` ACK at 0x37, 0x4A, 0x4B, 0x50, 0x54 (SCDC); 0x30 does not ACK here. **0x4B ACKs on the HDMI bus** (not DP-AUX only). Firmware running: 0x4A and 0x4B read 0x00 everywhere (regs 0x00..0x0F and 16-byte reads at 0x00 / 0x40 / 0x6F). MCU halted by the ISP link (0x6F bit 7): 0x4B regs 0x00..0x0F = `11 00 00 48 00 00 00 00 b0 f8 f8 f8 f8 04 00 00`, identical on two reads; 0x4A skipped (ISP). The content follows the MCU state and is static: a scaler-side hardware slave (second ISP-style slave), not a board temperature sensor [guess]. 0x54 SCDC regs 0x00..0x0F = `00 01 00 ...` both states.
 - SCDC read-only (input 4K59.940 HDMI active): 01=01 02=00 10=03 20=00 21=01 40=03 50..55=ff 56..5A=00.
 
-## Default image at 350.8 MHz (origin/main b15e45f) on unit 3: boot input detection fails [hw, 2026-11-19]
-- Boots after `dev.py reset` (6 s later, synclog), same unit and cable (`tmp/scratch/boots.py`):
-| image | MCU / SPI | boots with picture | eDP-1 "link training FAIL" lines |
+## Default image at 350.8 MHz on unit 3: boot input detection fails [hw, 2026-11-19]
+Status: reproducible, cause NOT found. `scripts/boot_loop.py` = `./dev.py reset` + sync log per boot (logs `tmp/logs/boot_loop/`), 6 s verdict.
+- Boots with a picture, same unit, cable and host:
+| image | MCU / SPI | boots with picture | eDP-1 "link training FAIL" |
 |---|---|---|---|
-| `-D AWTO_CLOCK_MHZ=87` | 87.7 / 43.85 | 8 / 8 | 0 |
-| `-D AWTO_CLOCK_MHZ=175` | 175.4 / 43.85 | 8 / 8 | 0 |
-| bisect: MCU 175.4 / SPI 70.2 (temporary divider override, not committed) | 175.4 / 70.2 | 8 / 8 | 0 |
-| bisect: MCU 350.8 / SPI 43.85 (temporary override) | 350.8 / 43.85 | 5 / 8 | every boot |
-| default 350 | 350.8 / 70.2 | 4 / 6 (the first boot after the flash failed too) | most boots |
-- Failing boot: `D2 TMDS predetect on (clock not measured yet)`, no `TMDS clock measured`, `SEARCH ... NO SIGNAL: search found no source` after 4.3 s, then power saving; host display on and source present (host DPMS On). Health at 350.8: `mode state POWER_SAVING`, `input timing` 0x0.
-- Cause is the MCU clock (350.8 MHz), not the 70.2 MHz flash. The runtime sweep never saw it because the input was already locked when the clock was raised. Some wait in eDP link training / TMDS clock measurement is still too short at 350.8 MHz (not in the DELAY_* constants). Not found yet.
-- DDC/CI on the default 350.8 image when it did come up: 20 x getvcp 0x10 0 failures (0.49 - 0.58 s each), 20 x setvcp 0x10 + getvcp 0 mismatches, brightness 1 / 50 / 100 / 50 accepted, VCP 0xEB 3 / 4 / 8 / 2 / 0 accepted, alert tone (VCP 0xEB 6) sent. Audio and PWM clocks derive from M2PLL, unchanged at every step (M2PLL 350791 kHz in each step's log). Front keys: not testable without a person. Other inputs: only HDMI D2 is cabled.
+| `AWTO_CLOCK_MHZ=87` | 87.7 / 43.85 | 8 / 8 | 0 |
+| `AWTO_CLOCK_MHZ=175` | 175.4 / 43.85 | 8 / 8, 12 / 12, 20 / 20 | 0 |
+| temporary divider override | 175.4 / 70.2 | 8 / 8 | 0 |
+| temporary divider override | 350.8 / 43.85 | 5 / 8 | every boot |
+| default 350 | 350.8 / 70.2 | 4 / 6, 5 / 12, 5 / 8, 10 / 12, 11 / 16 over the day, 9 / 20 at 02:24 (about 40 - 70 %) | about 90 % of the boots |
+- One window (01:57 - 02:16) in which every image, including 87 and 175, failed (0 of 8 .. 16): the host HDMI output did not start video until a host mode change (`dev.py mode 1080p60`, then `4k5994`); that window is excluded. Runs under `gnome-session-inhibit --inhibit idle`.
+- Failing boot signature: `D2 TMDS predetect on (clock not measured yet)`, no `TMDS clock measured`, `SEARCH ... NO SIGNAL` after 4.3 s, then power saving.
+- Temporary counters (not committed) in a failing boot: `ScalerTMDSRx2TMDSNormalPreDetect` called twice, the DDC-handshake flag (`GET_TMDS_RX2_DDC_DETECTED`, set by `ScalerSyncDdcDetect_EXINT1`) never true (good boot: true once, 3 calls); the TMDS scan runs once and fails at `ScalerTMDSRx2TMDSVideoDetect(_WAIT)` (CDR and DFE pass), the PHY-set ISR fires twice, the second scan never comes. DetectPort is then called ~2700 x with port type DP (4) / none (0) for index 0: XDATA `g_pucSourceSearchPriority` (0xF65B, 10 B, normally `05 04 06 0a ...`) reads `04 00 00 00 00 00 0a 0a 0a 0a` after the failure, and the 14 bytes before it (0xF64D..0xF65A, directly behind `pData[16]`) hold `ff ff ff ff ff ff 00 0a 01 ...` instead of their initial values. Writer not found. A single-byte `0x44` glitch also shows in debug-slave XDATA reads at random places (read artefact).
+- eDP-1 link training: `FFF1[3:0]` (`mcu_wr_sca_intrvl_sel`, minimum cycles between continued scaler writes = 4 + 4 x sel, reset 0 = no limit) written at boot: sel 1 and 3 still show the FAIL line (11 / 16, 13 / 16 boots), sel 7 and 15 show it in 0 / 16 boots; the picture rate does not change (11 / 16 each). A scaler-write pacing problem at 350.8 MHz, 32 cycles between continued writes cure it; not applied to the build.
+- Without effect on the picture rate: `_TMDS_DDC_DEBOUNCE_NORMAL` (measured on hardware: 8053 Timer2 counts = 275 us for count 920, stock formula target 263.6 us); 5 us between the two writes of the frequency-detect reset toggle (14 / 20); `FFF1` as above.
+- DDC/CI on the default 350.8 image when it came up: 20 x getvcp 0x10 0 failures (0.49 - 0.58 s each), 20 x setvcp 0x10 + getvcp 0 mismatches, brightness 1 / 50 / 100 / 50 accepted, VCP 0xEB 3 / 4 / 8 / 2 / 0 accepted, alert tone sent. Audio and PWM clocks derive from the M2PLL (350791 kHz in every step log). Front keys need a person. Only HDMI D2 is cabled.
+- Diag `delay cal` row: the u16 fields (`usDelayXms10`, `usT3Wait64`) held counts >> 2 / >> 6 and wrapped at 350.8 MHz (10 ms = 292 k counts); now `AWTO_DIAG_XMS_SHIFT` 4 / `AWTO_DIAG_T3_SHIFT` 10 (`RL6449_Project.h`, `rtd_diag.XMS_SHIFT / T3_SHIFT`); health 11 / 11 on the 175 default.
+- `AWTO_CLOCK_MHZ=175` default: 20 / 20 boots, 20 / 20 wakes from power saving (`ddc sleep` / `wake`, `tmp/scratch` loop, 1 of 20 failed on the earlier 175 build), health 11 / 11.
+- Open: the writer of the 20-byte block at 0xF64D (a memory watchpoint: Timer2 ISR check of 0xF65C showed nothing usable and changed the timing), why the DDC-handshake flag is missed, and why only 350.8 MHz fails. Next: instrument the EXINT1 / EXINT0 ISR entry times against the Timer2 tick, compare the 175.4 MHz boot of the same counters.
 
 ## Chosen default
 - Dan chose 350.8 MHz MCU / 70.2 MHz flash as the fixed default (2026-11-19): 17.55 Scope 2 frames / s (3.1x stock), every check and soak above passed. The runtime sweep could not see the boot-time failure below (input already locked when the clock rose): the default is not proven until boot statistics pass.
@@ -185,7 +192,7 @@ Phase A (code + sim, no hardware): `./dev.py clk-sweep --unit 3 [--sim] pmNN | p
 - Derived dividers are 4 bit, so above ~495 MHz the sync clock rises with the M2PLL (cap 33 MHz x 15).
 
 ## Recommendation (session 2, 2026-11-19)
-- 350.8 MHz as the default needs the boot failure fixed first (section above); with the bisect 175.4 MHz MCU / 70.2 MHz flash boots 8 / 8.
+- 350.8 MHz as the default needs the boot failure fixed (section above); `AWTO_CLOCK_MHZ=175` boots 20 / 20.
 - 87.7 / 116.9 MHz flash pass with `FF6C[5]` = 1 and delay <= 2 ns on this unit: not a default without a warm / multi-unit window measurement (Dan decides). Flash writes only at the in-spec clock (the sweep op refuses otherwise).
 - Checks left for a person: front keys (SOURCE MENU DOWN UP AUTO POWER) at the fast clock, audio tone by ear, picture by eye during a soak, other inputs.
 
