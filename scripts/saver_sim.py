@@ -4,7 +4,8 @@
 usage: saver_sim.py [BIN MAP] [--out DIR]
   - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
   - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2), 5 (flash), 8 (Asteroids): wait, render, then = 0 (stop), render.
-    Asteroids is deterministic: its frames are compared at the same game tick (frozen where a frame is complete), not at the same time. PASS = font SRAM written and something on screen when started,
+    Asteroids is deterministic: its frames are compared at the same game tick (frozen where a frame is complete), not at the same time;
+    Scope 1 at the same frame number (state at its SCOPE_FRAME-th frame-complete sync line). PASS = font SRAM written and something on screen when started,
     OSD closed (no window cells drawn) after stop. Exit 1 on a FAIL.
 Log: ./tmp/logs/saver_sim.log
 """
@@ -29,9 +30,9 @@ RUN_S = 8.0                     # fw time for the draw (scope: 64 passes of tile
 ROW_DISP_ROTATE = 32            # registry row id of disp_rotate (fw/rtdfw/settings/registry.tsv)
 ROTATE_SETTLE_S = 6.0           # fw time for the display re-set after Rotate changes
 SHRINK = 8                      # box shrink factor before comparing
-ROT_SAMPLES = 4                 # rotated renders per saver, 0.5 s of fw time apart: the best one counts (the scope 1 trace moves 3 table steps per frame, so one fixed instant can sit at a worse phase after any change of code speed)
+ROT_SAMPLES = 4                 # rotated renders (Pac-Man, Scope 2), 0.5 s of fw time apart: the best one counts; Scope 1 / Asteroids compare one frame chosen by its number
 ROT_SAMPLE_S = 0.5
-ROT_MAX_DIFF = 8.0              # mean abs difference allowed between the turned upright render and the rotated render (of 255); the scope 1 trace is animated, its phase differs between the two runs
+ROT_MAX_DIFF = 8.0              # mean abs difference allowed between the turned upright render and the rotated render (of 255)
 ROT_BETTER = 1.5               # the turned comparison must beat the unturned one by this factor
 VCP_ALERT = 6                   # screensaver_now option "Alert tone"
 ALERT_TONE_S = 0.9              # audible time: the 1 s track (pacman_sound.py ALERT) has 100 ms of rests between the notes
@@ -45,6 +46,11 @@ AST_FILL = 0.97                 # Asteroids: full width, 97.8 % of the height (2
 SCOPE2_FILL = 0.99              # scope 2 must cover this share of the panel picture in each direction (it is one raster scaled to the whole panel)
 SCOPE2_MIN_FPS = 5.0            # frames per second of scope 2 (measured 6.7 on the 480 x 270 raster; docs/screensaver.md): a slower draw fails
 SCOPE2_FPS_S = 2.0              # fw time the frame counter is watched
+SYNC_EV_ODEMO = 0xE9            # AWTO_SYNC_EV_ODEMO: the savers' frame-complete sync lines (as saver_frames_md5.py)
+SCOPE_SYNC_ARGS = (0x76, 0x77)  # Scope 1 first frame (shown) / later frames
+SCOPE_FRAME = 12                # Scope 1 is compared at this frame-complete line: content = frame number only (phase 3 x (n + 1)), not wall time
+SCOPE_FRAME_LIMIT_S = 8.0       # 2.5x the expected ~3 s (hidden first frame + 12 frames at ~0.16 s); expiry = FAIL, logged
+SCOPE_POLL_S = 0.05             # fw time between checks for the snapshot (the hook takes it at the sync line itself)
 STOP_S = 3.0                    # fw time for the stop: served by the main loop after the frame in progress (scope 2: up to ~2 s)
 
 
@@ -71,8 +77,31 @@ def shrunk_diff(a, b) -> float:
     return float(np.abs(sa - sb).mean())
 
 
+def frame_hook(sess):
+    """One AwtoSyncPush stub per session (a second stub on the same entry never runs): snapshot at the n-th frame-complete line of the armed saver."""
+    h = {"args": (), "count": 0, "n": -1, "snap": None}
+
+    def hook(m, r):
+        if (r["a1"] & 0xFF) == SYNC_EV_ODEMO and (r["a2"] & 0xFF) in h["args"]:
+            if h["count"] == h["n"]:
+                h["snap"] = sess.snap()
+            h["count"] += 1
+        return None
+
+    sess.bus.m.stub("AwtoSyncPush", hook)
+    sess.frame = h
+
+
 def wait_started(sess, name) -> bool:
-    """Wait for a started saver to show its picture; Asteroids: until the complete frame of game tick AST_FREEZE_TICKS is on screen. False = limit hit."""
+    """Wait for a started saver to show its picture; Asteroids: until the complete frame of game tick AST_FREEZE_TICKS is on screen;
+    Scope 1: until its SCOPE_FRAME-th complete frame (snapshot in sess.frame["snap"]). False = limit hit."""
+    if name == "scope":
+        sess.frame.update(args=SCOPE_SYNC_ARGS, count=0, n=SCOPE_FRAME, snap=None)
+        t_end = sess.bus.now() + SCOPE_FRAME_LIMIT_S
+        while sess.frame["snap"] is None and sess.bus.now() < t_end:
+            sess.bus.wait(SCOPE_POLL_S)
+        sess.frame["args"] = ()
+        return sess.frame["snap"] is not None
     if name != "asteroids":
         sess.bus.wait(RUN_S)
         return True
@@ -94,6 +123,7 @@ def rotated_check(a) -> int:
     eng = D.DdcEngine()
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng])
     sess.boot()
+    frame_hook(sess)
     ddc = D.Mccs(sess.bus, eng)
     ddc.set(0xE0, ROW_DISP_ROTATE)
     ddc.set(0xE1, 1)
@@ -103,13 +133,13 @@ def rotated_check(a) -> int:
         up = bbox_crop(Image.open(a.out / f"{name}_run.png"))
         ddc.set(VCP_SAVER, val)
         if not wait_started(sess, name):
-            say(f"FAIL Rotate 180 {name}: game tick {AST_FREEZE_TICKS} not reached in {AST_FREEZE_LIMIT_S} s")
+            say(f"FAIL Rotate 180 {name}: frame to compare not reached (Asteroids tick {AST_FREEZE_TICKS} in {AST_FREEZE_LIMIT_S} s, Scope 1 frame {SCOPE_FRAME} in {SCOPE_FRAME_LIMIT_S} s)")
             fails += 1
             continue
         best = None
-        n_samples = 1 if name == "asteroids" else ROT_SAMPLES
+        n_samples = 1 if name in ("asteroids", "scope") else ROT_SAMPLES
         for _ in range(n_samples):
-            img = R.render_snap(sess.snap(), "black", 2)
+            img = R.render_snap(sess.frame["snap"] if name == "scope" else sess.snap(), "black", 2)
             rot = bbox_crop(img)
             d = (shrunk_diff(np.rot90(up, 2), rot), shrunk_diff(up, rot)) if rot.shape == up.shape else (float("inf"), 0.0)
             if best is None or d[0] < best[0]:
@@ -170,6 +200,7 @@ def main() -> int:
     eng = D.DdcEngine()
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng])
     sess.boot()
+    frame_hook(sess)
     ddc = D.Mccs(sess.bus, eng)
     ddc.set(0xE0, ROW_DISP_ROTATE)                  # the registry default is Rotate 180: the upright renders need Rotate 0
     ddc.set(0xE1, 0)
@@ -179,9 +210,9 @@ def main() -> int:
         base = lit(sess.snap())
         ddc.set(VCP_SAVER, val)
         if not wait_started(sess, name):
-            say(f"FAIL VCP 0x{VCP_SAVER:02X} = {val} ({name}): game tick {AST_FREEZE_TICKS} not reached in {AST_FREEZE_LIMIT_S} s")
+            say(f"FAIL VCP 0x{VCP_SAVER:02X} = {val} ({name}): frame to compare not reached (Asteroids tick {AST_FREEZE_TICKS} in {AST_FREEZE_LIMIT_S} s, Scope 1 frame {SCOPE_FRAME} in {SCOPE_FRAME_LIMIT_S} s)")
             fails += 1
-        st = sess.snap()
+        st = sess.frame["snap"] if (name == "scope" and sess.frame["snap"] is not None) else sess.snap()
         run_img = R.render_snap(st, "black", 2)
         run_img.save(a.out / f"{name}_run.png")
         shown = sum(1 for p in run_img.convert("L").resize((96, 54)).getdata() if p > 0)
