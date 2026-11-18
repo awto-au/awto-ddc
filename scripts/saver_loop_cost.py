@@ -103,7 +103,9 @@ def measure(a, case: str) -> dict:
     if fn and calls:
         span = calls[-1] - calls[0]
         if case == "pacman":
-            r["rate"] = f"{(len(calls) - 1) / span * 1e6:.1f} sub-steps/s ({(len(calls) - 1) / span * 1e6 / 4:.2f} game steps/s)"
+            iv = [(calls[j] - calls[j - 1]) / 1000 for j in range(1, len(calls))]
+            r["rate"] = (f"{(len(calls) - 1) / span * 1e6:.2f} sub-steps/s ({(len(calls) - 1) / span * 1e6 / 4:.3f} game steps/s) over {span / 1e6:.1f} s; "
+                         f"sub-step interval {min(iv):.1f}..{max(iv):.1f} ms, 5..95 % {sorted(iv)[len(iv) // 20]:.1f}..{sorted(iv)[-1 - len(iv) // 20]:.1f} ms")
         else:
             gaps = [j for j in range(1, len(calls)) if calls[j] - calls[j - 1] > FRAME_GAP_US]
             if len(gaps) >= 2:
