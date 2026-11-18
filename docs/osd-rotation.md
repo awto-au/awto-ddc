@@ -47,5 +47,6 @@ Status 2026-11-18. Code: `fw/osd/osd_rot.c`. Users: Pac-Man (`fw/test/pacman_cla
 - `AwtoOsdScreenBegin()`: close, latch `g_ucAwtoOsdRot`, `AwtoOsdTestReset`, double buffer off, circuit on, DVS. `AwtoOsdScreenOff()`: close + scale-up off.
 - `AwtoOsdWord(addr, b0, b12)`, `AwtoOsdRowCmds(rows, rowH, cols)` (rows + end marker), `AwtoOsdGlyph(addr, xdata ptr, words)` (turns when latched).
 - `AwtoOsdPlaceScaleUp(posH, posV, cols, rows, factor)`: map of 12 x 18 tiles placed, scaled, shown.
+- `AwtoOsdMap1(cols, rows, attr)`: 1-bit map, glyph id = cell, SRAM bases; `AwtoOsdTile(cell, bytes)`: canvas tile into the glyph of its cell, mirrored when turned (`docs/saver-library.md`).
 - At most 3 parameters where it can: the 4th and later go to XDATA (floor 700 B).
 - Users: scope savers, QC pattern; Pac-Man and the flash screen adopt them later.

@@ -67,5 +67,5 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 ## Open
 
 - Hardware: nothing seen on a panel; sound not heard (generator pitch range 189..2000 Hz).
-- Frame rate ~4 / s (scopes ~3 / s): own clipped line drawing would cut ~1/3 of the time.
+- Frame rate: clipped line walk + xdata canvas (`docs/saver-library.md` step 1) took it from 3.98 to 4.73 frames / s in the sim; the game ticks per frame, so it also plays faster (D-SL5).
 - Game-over / attract text: none drawn.

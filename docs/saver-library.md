@@ -1,6 +1,6 @@
 # Saver / game library: shared graphics + sound (Dan's request 2026-11-18)
 
-Status 2026-11-18: inventory + design; first migration steps in "Migration log" below. Savers: `docs/screensaver.md`, `docs/saver-mode.md`.
+Status 2026-11-18: inventory + design; steps 1 (draw core) and 2 (screen) done, "Migration log" below. Savers: `docs/screensaver.md`, `docs/saver-mode.md`.
 
 - Numbers: sim (fast core, dw8051 timing), default image of main b7fa3a8 unless a row says otherwise (`AWT26110003-slbase-be`, audio build `-slbaseav-be`).
 - Sizes: `python scripts/saver_lib_sizes.py MAP` (CH_ area per function / const, ST_ stub, bank; XDATA per module from `sdcc_mem_report.py`).
@@ -172,8 +172,8 @@ BYTE AwtoRnd(void); void AwtoDir(BYTE ucAng);  // -> g_cAwtoDx / g_cAwtoDy
 
 ### Migration order (smallest / safest first, each gated)
 
-1. Draw core: `osd_lines` pixel-identical speed-up (xdata pointers, clipped walk). Host equivalence test + frames md5 Scope 1 / Asteroids.
-2. Screen: `AwtoOsdMap1` + shared tile upload for Scope 1 / Asteroids. Frames md5.
+1. Draw core: `osd_lines` pixel-identical speed-up (xdata pointers, clipped walk). Host equivalence test + frames md5 Scope 1 / Asteroids. Done.
+2. Screen: `AwtoOsdMap1` + shared tile upload for Scope 1 / Asteroids. Frames md5. Done.
 3. Rotation table (256 B) in `AwtoOsdRevByte`; then Scope 2 drops its turned copy. Frames md5 with Rotate 180.
 4. Pac-Man and flash adopt `AwtoOsdScreenBegin` / `AwtoOsdRowCmds` / `AwtoOsdPlaceScaleUp` (WORD position). Frames md5; `splash_sim.py` for the splash timing.
 5. Generators: `scripts/osd_gfx.py`; generated `.inc` byte-identical.
@@ -188,8 +188,30 @@ BYTE AwtoRnd(void); void AwtoDir(BYTE ucAng);  // -> g_cAwtoDx / g_cAwtoDy
 - D-SL2: Scope 2 turned copy (2.3 KB const) traded for a 256 B bit-reverse table and per-byte turning at upload (slower Rotate 180 uploads, measured before deciding)?
 - D-SL3: Pac-Man on chip (sprite layer + game logic, ~20 KB const saved, no longer a fixed recording) or keep the recording?
 - D-SL4: one XDATA overlay for saver state (+270 B free) at the cost of a mechanical rename in every saver file?
-- D-SL5: `tools/osd_lines` becomes firmware-specific (`OSD_MEM`, clipping) or stays a portable copy with a firmware fork?
+- D-SL5: Asteroids game speed now follows the faster draw (9.46 ticks / s vs 7.96): pace the game by time (fixed tick) instead of per frame, or keep "as fast as it draws"?
 
 ## Migration log
 
-(filled per step: what moved, frames md5, bytes, speed)
+Proof per step: `saver_frames_md5.py --saver S --frames N [--rotate]` on main (`slbase`) and the step image, then `--compare`: all frames IDENTICAL. Gates `fw_gates.py` ALL PASS (health `delay cal` known), `saver_sim.py` (audio build) all PASS, `pytest` 323 passed, `magic_lint` 0.
+
+| step | what | frames md5 | code / XDATA | speed (sim) |
+|---|---|---|---|---|
+| 1 draw core (b24b690) | `osd_line` walks only the visible part (closed-form first step: `skip_steps` / `minor_steps`, stop at the first pixel past the far edge); `OSD_MEM` = `__xdata` on SDCC (no `__gptrget`); cursor keeps tile / byte base / bit index incrementally (no `__mulint` per pixel); byte divide in `cursor_init` for 0..255; `AwtoOsdGlyph` writes the data port directly (was a banked `ScalerOsdDataPort` call per byte) | Scope 1, Scope 2, Asteroids, Pac-Man: 12 frames upright + 8 Rotate 180 each; Scope 1 / Asteroids also 40 frames: IDENTICAL | CH_ +395 B, stubs +48 B, XDATA -9 B (1015 -> 1006 free) | below |
+| 2 screen (284834d) | `AwtoOsdMap1(cols, rows, attr)` + `AwtoOsdTile(cell, bytes)` in `osd_screen.c`; Scope 1 / Asteroids drop `ScUpload` / `AstUpload` and their map loops | Scope 1, Asteroids upright + Rotate 180: IDENTICAL | CH_ -77 B, stubs +8 B, XDATA 0 | same |
+
+- Host proof of step 1: `tests/test_osd_lines_clip.py` compiles the original prototype (`docs/osd-prototypes/osd-lines-12x18.zip`) and the new library, > 100 000 random pixel / line / clear calls per tile size (12 x 18, 8 x 8, 5 x 7, 16 x 16, 32 x 32, 1 x 1, 32 x 3), endpoints up to full int16: pixels + dirty flags equal after every call.
+- Rejected inside step 1: cursor steps / plot as macros (no call per pixel): -3 % instructions, no change in us per pass, +1.7 KB code.
+- Rejected inside step 2: `AwtoOsdTile(canvas, cell0, tile)` (computes cell + pointer itself): +244 B, net worse than the call-site form.
+
+| measure (sim, dw8051) | main `slbase` | after steps 1 + 2 (`sl5`) |
+|---|---|---|
+| Scope 1 frame | 1127 ms (0.89 / s) | 768 ms (1.30 / s) |
+| Scope 1 pass mean / worst | 26.7 / 58.0 ms | 14.7 / 40.3 ms |
+| Scope 1 instructions per pass | 147 657 | 75 578 |
+| Asteroids column pass mean / p95 / max (`asteroids_speed.py`) | 9.6 / 20 / 29 ms | 8.0 / 16 / 25 ms |
+| Asteroids game ticks / s | 7.96 (3.98 frames / s) | 9.46 (4.73 frames / s) |
+| Asteroids pass mean / worst (`saver_loop_cost.py`) | 13.6 / 30.4 ms | 11.4 / 33.3 ms |
+| Scope 2, Pac-Man | 152 ms / frame, 33 ms / step | unchanged (do not use `osd_lines`) |
+
+- After the merge with main f34ce75 (saver D1 / D4 / D5, input scan rates D7): frames still IDENTICAL to `slbase` for all four savers; XDATA free 997 B (default), 982 B (audio build).
+- Hot spots left: Scope 1 `cursor_plot` 25 %, `osd_clear` 10 %, `ScPass` 9 %, `cursor_init` 7 % (one per graticule dot: draw the dotted graticule as runs next); Asteroids `AstPass` / `AstShape` / `AstTileInk` 8-9 % each, trampoline 9 %.
