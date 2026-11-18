@@ -76,6 +76,12 @@ def measure(a, case: str) -> dict:
     if fn:
         m.stub(fn, lambda mm, r: on[0] and calls.append(us_now(mm)) and None)
     mode0 = sess.bus.mode_state()
+    frames = []
+    if case == "asteroids" and "_AstStep" in m.sym:
+        m.stub("AstStep", lambda mm, r: on[0] and frames.append(1) and None)
+    step_addr = m.addr("g_usAwtoAstStep") if case == "asteroids" else None
+    step0 = int.from_bytes(m.rd(step_addr, 2), "big") if step_addr else 0
+    t_start = sess.bus.now()
     on[0] = True
     hits = collections.Counter()
     if a.pcprof:
@@ -86,6 +92,7 @@ def measure(a, case: str) -> dict:
     else:
         sess.bus.wait(a.window)
     on[0] = False
+    ticks = (int.from_bytes(m.rd(step_addr, 2), "big") - step0) / (sess.bus.now() - t_start) if step_addr else None
     starts = [i for i, e in enumerate(ev) if e[0] == PASS_FIRST]
     cost, cost_us, n_pass = collections.Counter(), collections.Counter(), 0
     tot_i, tot_us, worst = 0, 0.0, 0.0
@@ -100,6 +107,8 @@ def measure(a, case: str) -> dict:
         worst = max(worst, dt)
     r = {"case": case, "passes": n_pass, "instr": tot_i / max(1, n_pass), "us": tot_us / max(1, n_pass), "worst_us": worst,
          "hits": hits, "cost": {k: v / max(1, n_pass) for k, v in cost.items()}, "cost_us": {k: v / max(1, n_pass) for k, v in cost_us.items()}, "mode": (mode0, sess.bus.mode_state())}
+    if ticks is not None:
+        r["ticks"] = f"{ticks:.2f} game ticks/s, {len(frames) / (sess.bus.now() - t_start):.2f} frames/s over {sess.bus.now() - t_start:.0f} s fw time"
     if fn and calls:
         span = calls[-1] - calls[0]
         if case == "pacman":
@@ -131,7 +140,7 @@ def main() -> int:
     for case in a.case:
         r = measure(a, case)
         say(f"{a.bin.name} {case}: mode {r['mode'][0]}->{r['mode'][1]}, {r['passes']} passes, {r['instr']:.0f} instr/pass, "
-            f"{r['us']:.0f} us/pass mean, {r['worst_us']:.0f} us worst; saver: {r.get('rate', '-')}")
+            f"{r['us']:.0f} us/pass mean, {r['worst_us']:.0f} us worst; saver: {r.get('rate', '-')}{'; ' + r['ticks'] if 'ticks' in r else ''}")
         for k, v in sorted(r["cost"].items(), key=lambda x: -x[1]):
             u = r["cost_us"][k]
             say(f"    {v:9.0f} instr {u:8.0f} us  {100 * u / max(1, r['us']):5.1f} %  {k}")

@@ -43,7 +43,10 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_FPW                            (AWTO_AST_W << AWTO_AST_FP)
 #define AWTO_AST_FPH                            (AWTO_AST_H << AWTO_AST_FP)
 #define AWTO_AST_N_OBJ                          24
-#define AWTO_AST_TICKS                          2                                   // game ticks per drawn frame
+#define AWTO_AST_TICK_MS                        126                                 // game tick period: 1000 / 126 = 7.94 ticks/s (the pace of the first version, 7.96 measured: docs/asteroids.md)
+#define AWTO_AST_TICKS                          2                                   // ticks per frame at the first version's pace: flame blink and frame sync number count in these
+#define AWTO_AST_HALF_MS                        0x8000                              // WORD ms difference below this = the time has passed
+#define AWTO_AST_MAX_CATCHUP                    4                                   // ticks run in one frame at most; further behind = resync (a long pass is not made up in a burst)
 #define AWTO_AST_SEED                           0x2F6B
 #define AWTO_AST_T_NONE                         0
 #define AWTO_AST_T_ROCK_L                       1                                   // rocks L / M / S, saucers L / S: consecutive
@@ -172,6 +175,7 @@ static __xdata BYTE s_ucWave;
 static __xdata BYTE s_ucWaveTimer;
 static __xdata WORD s_usSaucerTimer;
 static __xdata BYTE s_ucShown;
+static __xdata WORD s_usTickAt;                                                     // scheduled time of the next game tick (AwtoMs low word); advances by the period, never restarts from now
 static __xdata BYTE s_ucDigN;
 static __xdata int16_t s_sOx;                                                       // origin of the pass being drawn
 static __xdata int16_t s_sOy;
@@ -919,11 +923,28 @@ static void AstTick(void)
     AstWorld();
 }
 
-static void AstStep(void)                                                           // one frame = AWTO_AST_TICKS game ticks (frames are slow: finer motion and hit tests)
+static BYTE AstDue(void)                                                            // game ticks due now (0..AWTO_AST_MAX_CATCHUP), the schedule advanced by their periods
+{
+    BYTE ucN = 0;
+    WORD usNow = (WORD)AwtoMs();
+
+    while((ucN < AWTO_AST_MAX_CATCHUP) && ((WORD)(usNow - s_usTickAt) < AWTO_AST_HALF_MS))
+    {
+        s_usTickAt += AWTO_AST_TICK_MS;
+        ucN++;
+    }
+    if((WORD)(usNow - s_usTickAt) < AWTO_AST_HALF_MS)
+    {
+        s_usTickAt = usNow + AWTO_AST_TICK_MS;                                      // still behind after the cap: resync
+    }
+    return ucN;
+}
+
+static void AstStep(BYTE ucTicks)                                                   // the frame's game ticks, then the HUD numbers
 {
     BYTE ucK;
 
-    for(ucK = 0; ucK < AWTO_AST_TICKS; ucK++)
+    for(ucK = 0; ucK < ucTicks; ucK++)
     {
         AstPoll();
         AstTick();
@@ -934,7 +955,6 @@ static void AstStep(void)                                                       
     s_ucHudLives = s_ucLives;
 }
 
-#pragma place bank(8)
 static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                        // polylines of a shape around (s_sRx, s_sRy), y up, turned ucRot quarter turns
 {
     WORD usP = g_tAstOff[ucShape];
@@ -1207,7 +1227,12 @@ BYTE AwtoAsteroids(BYTE ucCmd)
         {
             if(g_ucAwtoAstCol == 0)
             {
-                AstStep();
+                ucWork = (s_ucShown == 0) ? AWTO_AST_TICKS : AstDue();                         // the first frame needs no tick due; later ones wait for one (an unchanged frame is not drawn again)
+                if(ucWork == 0)
+                {
+                    return 1;
+                }
+                AstStep(ucWork);
             }
             ucWork = 0;
             for(ucB = 0; ucB < AWTO_AST_BANDS; ucB++)
@@ -1255,6 +1280,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     s_usHudScore = 0;
     s_ucHudLives = 0;                                                               // AstNewGame sets the lives: the first step redraws the HUD
     s_ucShown = 0;
+    s_usTickAt = (WORD)AwtoMs() + AWTO_AST_TICK_MS;
     s_ucThrustLeft = 0;
     AstNewGame();
 #ifndef _AWTO_AUDIO_TEST
