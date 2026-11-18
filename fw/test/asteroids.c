@@ -43,7 +43,10 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_FPW                            (AWTO_AST_W << AWTO_AST_FP)
 #define AWTO_AST_FPH                            (AWTO_AST_H << AWTO_AST_FP)
 #define AWTO_AST_N_OBJ                          24
-#define AWTO_AST_TICKS                          2                                   // game ticks per drawn frame
+#define AWTO_AST_TICK_MS                        126                                 // game tick period: 1000 / 126 = 7.94 ticks/s (the pace of the first version, 7.96 measured: docs/asteroids.md)
+#define AWTO_AST_TICKS                          2                                   // ticks per frame at the first version's pace: flame blink and frame sync number count in these
+#define AWTO_AST_HALF_MS                        0x8000                              // WORD ms difference below this = the time has passed
+#define AWTO_AST_MAX_CATCHUP                    4                                   // ticks run in one frame at most; further behind = resync (a long pass is not made up in a burst)
 #define AWTO_AST_SEED                           0x2F6B
 #define AWTO_AST_T_NONE                         0
 #define AWTO_AST_T_ROCK_L                       1                                   // rocks L / M / S, saucers L / S: consecutive
@@ -129,7 +132,7 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_STATE_OVER                     2
 #define AWTO_AST_NONE                           0xFF
 
-// sound: cmds of AwtoPmSound (pacman_sound.c)
+// sound: cmds of AwtoPmSound (snd.c)
 #define AWTO_AST_SND_FIRE                       9
 #define AWTO_AST_SND_BOOM_S                     10
 #define AWTO_AST_SND_BOOM_M                     11
@@ -172,6 +175,7 @@ static __xdata BYTE s_ucWave;
 static __xdata BYTE s_ucWaveTimer;
 static __xdata WORD s_usSaucerTimer;
 static __xdata BYTE s_ucShown;
+static __xdata WORD s_usTickAt;                                                     // scheduled time of the next game tick (AwtoMs low word); advances by the period, never restarts from now
 static __xdata BYTE s_ucDigN;
 static __xdata int16_t s_sOx;                                                       // origin of the pass being drawn
 static __xdata int16_t s_sOy;
@@ -282,6 +286,11 @@ static void AstBg(BYTE ucState)
 {
     AwtoPmSoundBg((GET_OSD_VOLUME_MUTE() == 0) ? ucState : AWTO_AST_BG_NONE);
 }
+
+static void AstPoll(void)                                                           // the sound sequencer is served between drawing steps, not once per 10-40 ms pass (docs/pacman-sound.md "Timing")
+{
+    AwtoPmSoundPoll();
+}
 #else
 static void AstSnd(BYTE ucCmd)
 {
@@ -292,6 +301,8 @@ static void AstBg(BYTE ucState)
 {
     ucState = ucState;
 }
+
+#define AstPoll()
 #endif
 
 static int16_t AstDiff(int16_t sD, int16_t sM)                                      // shortest signed difference on a ring of sM
@@ -752,6 +763,7 @@ static void AstCollide(void)
         }
         for(ucJ = 0; ucJ < AWTO_AST_N_OBJ; ucJ++)
         {
+            AstPoll();
             ucU = s_atObj[ucJ].ucType;
             if((ucU >= AWTO_AST_T_ROCK_L) && (ucU <= AWTO_AST_T_SAUCER_S) &&
                ((AstNear(s_atObj[ucI].sX, s_atObj[ucI].sY, s_atObj[ucJ].sX, s_atObj[ucJ].sY, AstHit(ucU) + AstHit(AWTO_AST_T_SHOT)) != 0) ||
@@ -899,22 +911,42 @@ static void AstTick(void)
 {
     g_usAwtoAstStep++;
     AstMove();
+    AstPoll();
     s_ucShThrust = 0;
     if(s_ucShState == AWTO_AST_STATE_ALIVE)
     {
         AstShipThink();
         AstShipMove();
     }
+    AstPoll();
     AstCollide();
     AstWorld();
 }
 
-static void AstStep(void)                                                           // one frame = AWTO_AST_TICKS game ticks (frames are slow: finer motion and hit tests)
+static BYTE AstDue(void)                                                            // game ticks due now (0..AWTO_AST_MAX_CATCHUP), the schedule advanced by their periods
+{
+    BYTE ucN = 0;
+    WORD usNow = (WORD)AwtoMs();
+
+    while((ucN < AWTO_AST_MAX_CATCHUP) && ((WORD)(usNow - s_usTickAt) < AWTO_AST_HALF_MS))
+    {
+        s_usTickAt += AWTO_AST_TICK_MS;
+        ucN++;
+    }
+    if((WORD)(usNow - s_usTickAt) < AWTO_AST_HALF_MS)
+    {
+        s_usTickAt = usNow + AWTO_AST_TICK_MS;                                      // still behind after the cap: resync
+    }
+    return ucN;
+}
+
+static void AstStep(BYTE ucTicks)                                                   // the frame's game ticks, then the HUD numbers
 {
     BYTE ucK;
 
-    for(ucK = 0; ucK < AWTO_AST_TICKS; ucK++)
+    for(ucK = 0; ucK < ucTicks; ucK++)
     {
+        AstPoll();
         AstTick();
     }
     AstDigits();
@@ -923,7 +955,6 @@ static void AstStep(void)                                                       
     s_ucHudLives = s_ucLives;
 }
 
-#pragma place bank(8)
 static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                        // polylines of a shape around (s_sRx, s_sRy), y up, turned ucRot quarter turns
 {
     WORD usP = g_tAstOff[ucShape];
@@ -944,6 +975,7 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
         }
         for(ucI = 0; ucI < ucN; ucI++)
         {
+            AstPoll();
             sX = g_tAstData[usP++];
             sY = g_tAstData[usP++];
             if((ucRot & 1) != 0)
@@ -1013,6 +1045,7 @@ static void AstDrawBoom(BYTE ucSize, BYTE ucAge)
 
     for(ucK = 0; ucK < AWTO_AST_BOOM_DOTS; ucK++)
     {
+        AstPoll();
         AstDir((BYTE)(ucK * AWTO_AST_BOOM_STEP + ucAge));
         osd_line(&g_scCv, s_sRx + (((int16_t)s_cDx * sR0) >> 7), s_sRy + (((int16_t)s_cDy * sR0) >> 7),
                  s_sRx + (((int16_t)s_cDx * sR) >> 7), s_sRy + (((int16_t)s_cDy * sR) >> 7), 1);
@@ -1118,6 +1151,7 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
     s_ucAny = 0;
     for(ucI = 0; ucI < AWTO_AST_N_OBJ; ucI++)
     {
+        AstPoll();
         if((s_atObj[ucI].ucType != AWTO_AST_T_NONE) && (AstCull(s_atObj[ucI].sX >> AWTO_AST_FP, s_atObj[ucI].sY >> AWTO_AST_FP, AstRad(s_atObj[ucI].ucType)) != 0))
         {
             AstInk();
@@ -1164,6 +1198,7 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
         {
             continue;                                                               // blank before and now: its glyph is already blank
         }
+        AstPoll();
         AwtoOsdTile(s_usCell0, g_aucScPix + (WORD)ucI * OSD_TILE_BYTES);
     }
     s_aucOcc[ucIdx] = ucOcc;
@@ -1192,7 +1227,12 @@ BYTE AwtoAsteroids(BYTE ucCmd)
         {
             if(g_ucAwtoAstCol == 0)
             {
-                AstStep();
+                ucWork = (s_ucShown == 0) ? AWTO_AST_TICKS : AstDue();                         // the first frame needs no tick due; later ones wait for one (an unchanged frame is not drawn again)
+                if(ucWork == 0)
+                {
+                    return 1;
+                }
+                AstStep(ucWork);
             }
             ucWork = 0;
             for(ucB = 0; ucB < AWTO_AST_BANDS; ucB++)
@@ -1240,6 +1280,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     s_usHudScore = 0;
     s_ucHudLives = 0;                                                               // AstNewGame sets the lives: the first step redraws the HUD
     s_ucShown = 0;
+    s_usTickAt = (WORD)AwtoMs() + AWTO_AST_TICK_MS;
     s_ucThrustLeft = 0;
     AstNewGame();
 #ifndef _AWTO_AUDIO_TEST

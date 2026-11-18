@@ -14,8 +14,8 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 |---|---|
 | `scripts/gen_pacman_classic.py` | game model + glyph / cell / delta generator -> `fw/test/pacman_classic_data.inc` |
 | `fw/test/pacman_classic.c` | loader + step player (`AwtoPacmanClassic`) |
-| `scripts/pacman_sound.py` | note tables -> `fw/test/pacman_sound_data.inc`, WAVs for listening |
-| `fw/test/pacman_sound.c` | non-blocking note player (`AwtoPmSound`, `AwtoPmSoundPoll`) |
+| `scripts/pacman_sound.py` | note tables -> `fw/test/snd_data.inc`, WAVs for listening |
+| `fw/test/snd.c` | non-blocking note player (`AwtoPmSound`, `AwtoPmSoundPoll`) |
 | `fw/test/saver.c` | screensaver manager (starts / stops Pac-Man, scopes) |
 | `scripts/pacman_unit.py` | host stepper for a unit (test cmds over the debug link) |
 | `scripts/pacman_sim.py`, `audio_sim.py` | sim video with sound, audio tap (`docs/pacman-sound.md`, `docs/sim.md`) |
@@ -78,7 +78,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 ### Data and player
 
-- `pacman_sound.py` encodes note names to pairs `{sc | 0x80 octave flag, ticks}`; tick = 10 ms, sc 0 = rest, 0 ticks = end of track. Ten tracks (list: `TRACKS`; ids in `pacman_sound.c` follow its order); one rest tick between notes of a melody.
+- `pacman_sound.py` encodes note names to pairs `{sc | 0x80 octave flag, ticks}`; tick = 10 ms, sc 0 = rest, 0 ticks = end of track. Ten tracks (list: `TRACKS`; ids in `snd.c` follow its order); one rest tick between notes of a melody.
 - `AwtoPmSoundPoll` runs each main-loop pass: on the note schedule (`s_usPsAt += s_usPsDur`, no drift) it calls `PsNote` for the next pair.
 - `PsNote`: rest = mute the amp pin; note = gate the amp, write AFCR (octave flag), SCAPR, CMCR latch, schedule the amp to open 4 ms later (`AWTO_PS_GAP_MS`, by ear: the pitch change clicked with the amp open, Dan 2026-11-18). The poll opens it.
 - `PsStart`: generator on (`SysAudioInternalGenTestProc(_ON)`), `SysAudioMuteProc(_OFF)`, then `AwtoAudioAmp(_OFF)` directly (the SDK call is a no-op once the generator has cleared the DVC mute flag, so P7.4 would stay 0).

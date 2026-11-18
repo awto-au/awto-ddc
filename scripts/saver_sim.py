@@ -189,6 +189,9 @@ def main() -> int:
         say(f"{'PASS' if ok else 'FAIL'} VCP 0x{VCP_SAVER:02X} = {val} ({name}): font words lit {base} -> {lit(st)}, {shown} lit samples of 5184 on screen")
         if name == "scope2":
             fails += scope2_check(sess, run_img)
+        if name == "asteroids":
+            box = bbox_crop(run_img)                # reported, not a gate: the playfield does not fill the panel (docs/asteroids.md "Panel fill")
+            say(f"INFO asteroids panel coverage: box {box.shape[1]} x {box.shape[0]} of {run_img.size[0]} x {run_img.size[1]} ({100 * box.shape[1] / run_img.size[0]:.1f} % x {100 * box.shape[0] / run_img.size[1]:.1f} %)")
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
         st = sess.snap()

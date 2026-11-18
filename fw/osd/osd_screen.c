@@ -36,21 +36,21 @@ void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords)
     BYTE ucK;
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usAddr, _OSD_WITHOUT_DB);
-    for(ucK = 0; ucK < ucWords; ucK++)                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py); port written directly (ScalerOsdDataPort = a banked call per byte)
+    for(ucK = 0; ucK < ucWords; ucK++)                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py)
     {
         if(g_ucAwtoOsdRot != 0)                         // words in reverse order, bits reversed
         {
             BYTE ucW = (BYTE)((ucWords - 1 - ucK) * AWTO_OSDS_WORD_BYTES);
 
-            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AwtoOsdRevByte(pucB[ucW]);
-            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AwtoOsdRevByte(pucB[ucW + 1]);
-            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AwtoOsdRevByte(pucB[ucW + 2]);
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[ucW]));
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[ucW + 1]));
+            ScalerOsdDataPort(AwtoOsdRevByte(pucB[ucW + 2]));
         }
         else
         {
-            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[AWTO_OSDS_WORD_BYTES * ucK + 2];
-            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[AWTO_OSDS_WORD_BYTES * ucK + 1];
-            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[AWTO_OSDS_WORD_BYTES * ucK];
+            ScalerOsdDataPort(pucB[AWTO_OSDS_WORD_BYTES * ucK + 2]);
+            ScalerOsdDataPort(pucB[AWTO_OSDS_WORD_BYTES * ucK + 1]);
+            ScalerOsdDataPort(pucB[AWTO_OSDS_WORD_BYTES * ucK]);
         }
     }
 }
@@ -64,9 +64,9 @@ void AwtoOsdMap1(BYTE ucCols, BYTE ucRows, BYTE ucAttr)
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, ucRows + 1, _OSD_WITHOUT_DB);
     for(usI = 0; usI < s_usOsdsCells; usI++)
     {
-        AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AWTO_OSDS_CHAR1_B0 | OSD_TILE_W | (BYTE)((usI >> 8) << AWTO_OSDS_ID_HI_SHIFT);
-        AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (BYTE)(usI & AWTO_OSDS_ID_LO_MASK);
-        AWTO_XFR(AWTO_R_OSD_DATA_PORT) = ucAttr;
+        ScalerOsdDataPort(AWTO_OSDS_CHAR1_B0 | OSD_TILE_W | (BYTE)((usI >> 8) << AWTO_OSDS_ID_HI_SHIFT));
+        ScalerOsdDataPort((BYTE)(usI & AWTO_OSDS_ID_LO_MASK));
+        ScalerOsdDataPort(ucAttr);
     }
     SET_OSD_MAPA_COL_MAX(ucCols);
     ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, ucRows + 1, s_usOsdsFontBase);

@@ -14,6 +14,7 @@ import math
 import os
 import sys
 import isostamp  # noqa: E402
+import osd_gfx as OG  # noqa: E402
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -83,12 +84,7 @@ FONT = {
 }
 
 
-def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+say = OG.logger(LOG)
 
 
 # ---------------------------------------------------------------- glyph pixels (lists of rows of ints, H rows x W cols)
@@ -293,18 +289,9 @@ def cherry():
 
 def pack(g, bits):
     """1 bit: two 12-bit rows per 24-bit word (9 words). 2 bit: two bit planes, MSB plane first, each like a 1-bit glyph (18 words)."""
-    def plane(sel):
-        out = bytearray()
-        for y in range(0, H, 2):
-            n = 0
-            for row in g[y:y + 2]:
-                for v in row:
-                    n = n * 2 + sel(v)
-            out += n.to_bytes(3, "little")
-        return bytes(out)
     if bits == 1:
-        return plane(lambda v: v & 1)
-    return plane(lambda v: v >> 1 & 1) + plane(lambda v: v & 1)
+        return OG.pack_rows(g[:H], lambda v: v & 1)
+    return OG.pack_rows(g[:H], lambda v: v >> 1 & 1) + OG.pack_rows(g[:H], lambda v: v & 1)
 
 
 # ---------------------------------------------------------------- the glyph set
@@ -315,10 +302,7 @@ class Set:
         self.id1, self.id2, self.k1, self.k2 = {}, {}, {}, {}
 
     def _add(self, lst, key, data):
-        if data not in key:
-            key[data] = len(lst)
-            lst.append(data)
-        return key[data]
+        return OG.add_unique(lst, key, data)
 
     def add1(self, name, g):
         self.id1[name] = self._add(self.one, self.k1, pack(g, 1))
@@ -755,9 +739,7 @@ def build(steps):
     return s, init, frames, out, demo, trace
 
 
-def arr(name, data, per, bank):
-    rows = ["    " + ", ".join(f"0x{b:02X}" for b in data[i:i + per]) + "," for i in range(0, len(data), per)]
-    return f"#pragma place bank({bank})\nstatic const uint8_t __code {name}[{len(data)}] = {{\n" + "\n".join(rows) + "\n};\n"
+arr = OG.arr
 
 
 def delta_rec(p, c):

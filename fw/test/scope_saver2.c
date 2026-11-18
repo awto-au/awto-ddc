@@ -133,14 +133,24 @@ static BYTE S2CellId(WORD usCell)
 }
 
 #pragma place bank(11)
-static void S2Base(BYTE ucId)                                                       // both planes of a static tile -> g_aucScPix (green, then red)
+static void S2BaseCopy(BYTE ucId)
 {
     BYTE ucI;
-    const __code uint8_t *pcS = (g_ucAwtoOsdRot != 0) ? s_tS2BaseRot[ucId] : s_tS2Base[ucId];
+    const __code uint8_t *pcS = s_tS2Base[ucId];
 
     for(ucI = 0; ucI < AWTO_S2_BASE_BYTES; ucI++)
     {
         g_aucScPix[ucI] = pcS[ucI];
+    }
+}
+
+static void S2Base(BYTE ucId)                                                       // both planes of a static tile -> g_aucScPix (green, then red); Rotate 180: each plane turned in place
+{
+    S2BaseCopy(ucId);
+    if(g_ucAwtoOsdRot != 0)
+    {
+        AwtoOsdTurn(g_aucScPix, AWTO_S2_PLANE_BYTES);
+        AwtoOsdTurn(&g_aucScPix[AWTO_S2_PLANE_BYTES], AWTO_S2_PLANE_BYTES);
     }
 }
 

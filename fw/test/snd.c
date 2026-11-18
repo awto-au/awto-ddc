@@ -2,11 +2,11 @@
 #include "UserCommonInclude.h"
 #include "../rtdfw/awto/include/dataport.h"   // the SDK data port calls are macros for dp_wr / dp_rmw (fw/awto/boundary.py)
 
-// Pac-Man + Asteroids sound on the unit (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
+// Sound player of the unit (Pac-Man, Asteroids, alert, key click, calibration; module snd, docs/saver-library.md D-SL1) (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
 // pitch = audio PLL S code per note. Test cmds AWTO_TC_PACMAN_SND + 0 intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert.
 // One generator: priorities (pacman_sound.py PRIORITY); a dropped waka / background sound stays wanted and resumes when the higher one ends.
 // Needs a -D _AWTO_AUDIO_TEST build (SDK generator + SysAudioHandler hold); other builds log "unavailable". Non-blocking: AwtoPmSoundPoll per main pass.
-// Data: pacman_sound_data.inc (scripts/pacman_sound.py).
+// Data: snd_data.inc (scripts/pacman_sound.py): notes, track table (offset, priority, loops), cmd table (track, sync event).
 #define AWTO_PS_OCT_FLAG                        0x80    // note byte bit 7: AFCR tst_i2s_sw = 0 (one octave down)
 #define AWTO_PS_SC_MASK                         0x7F
 #define AWTO_PS_TICK_MS                         10
@@ -51,12 +51,33 @@
 #define AWTO_PS_EV_BG                           0x8A    // value = background state
 #define AWTO_PS_EV_WAKA_OFF                     0x8B
 #define AWTO_PS_EV_AST                          0x8C    // value = cmd
-#include "pacman_sound_data.inc"
+#define AWTO_PS_TRK_SHIFT                       2       // track table row = 4 bytes: offset lo, offset hi, priority, loops
+#define AWTO_PS_TRK_PRIO                        2
+#define AWTO_PS_TRK_LOOPS                       3
+#define AWTO_PS_CMD_ROW                         3       // cmd table row: track, sync event, 1 = event value is the cmd
+#define AWTO_PS_CMD_EV                          1
+#define AWTO_PS_CMD_EVARG                       2
+#include "snd_data.inc"
 
 #pragma place bank(11)                      // leaf reader in the data's bank (a const read in a function that calls banked code trips the link check)
 static BYTE PsByte(WORD usIdx)
 {
     return g_aucPsData[usIdx];
+}
+
+static BYTE PsTrk(BYTE ucTrack, BYTE ucField)
+{
+    return PsByte(AWTO_PS_TRK + ((WORD)ucTrack << AWTO_PS_TRK_SHIFT) + ucField);
+}
+
+static WORD PsOff(BYTE ucTrack)                 // start of a track in g_aucPsData
+{
+    return (WORD)PsTrk(ucTrack, 0) | ((WORD)PsTrk(ucTrack, 1) << 8);
+}
+
+static BYTE PsPrio(BYTE ucTrack)                // priority: higher wins the one tone generator; the calibration tone is a top one
+{
+    return (ucTrack < AWTO_PS_TRACKS) ? PsTrk(ucTrack, AWTO_PS_TRK_PRIO) : AWTO_PS_PRIO_TOP;
 }
 
 #ifdef _AWTO_AUDIO_TEST
@@ -102,18 +123,24 @@ static void PsStop(void)
 
 static void PsStart(BYTE ucTrack)
 {
-    PsStop();
-    SysAudioInternalGenTestProc(_ON);
-    SysAudioMuteProc(_OFF);
-    AwtoAudioAmp(_OFF);                         // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
+    if(s_ucPsTrack == AWTO_PS_TRACK_NONE)       // generator already running (a sound ended or is replaced): no off / on cycle, no click
+    {
+        SysAudioInternalGenTestProc(_ON);
+        SysAudioMuteProc(_OFF);
+        AwtoAudioAmp(_OFF);                     // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
+    }
     s_ucPsTrack = ucTrack;
-    s_usPsPos = PsOff(ucTrack);
     s_usPsAt = (WORD)AwtoMs();
     s_usPsDur = 0;
+    s_usPsPos = 0;
     if(ucTrack == AWTO_PS_TRACK_CAL)
     {
         PsNote(s_ucPsToneSc);
         s_usPsDur = 0xFFFF;                     // held until the stop cmd or AwtoPmSoundTone's length
+    }
+    else
+    {
+        s_usPsPos = PsOff(ucTrack);
     }
 }
 
@@ -175,7 +202,7 @@ void AwtoPmSoundPoll(void)                      // each main pass
     }
     s_usPsAt += s_usPsDur;                      // note boundary on the schedule, not on this pass: no drift
     ucDur = PsByte(s_usPsPos + 1);
-    if((ucDur == 0) && (PsLoops(s_ucPsTrack) != 0))
+    if((ucDur == 0) && (PsTrk(s_ucPsTrack, AWTO_PS_TRK_LOOPS) != 0))
     {
         s_usPsPos = PsOff(s_ucPsTrack);
         ucDur = PsByte(s_usPsPos + 1);
@@ -213,7 +240,13 @@ void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed
 void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 ghost, 7 fruit, 8 waka off (game events)
 {
 #ifdef _AWTO_AUDIO_TEST
-    BYTE ucTrack = ucCmd;                       // cmds 0..2 are the track ids
+    BYTE ucTrack;
+    WORD usRow;
+
+    if(ucCmd >= AWTO_PS_CMDS)
+    {
+        return;
+    }
 
     if(ucCmd == AWTO_PS_CMD_WAKA_OFF)
     {
@@ -247,30 +280,9 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
     {
         s_ucPsFlags &= (BYTE)~AWTO_PS_F_WAKA;   // any other sound ends the eating run; the next pellet starts waka again
     }
-    if(ucCmd == AWTO_PS_CMD_ALERT)
-    {
-        ucTrack = AWTO_PS_TRACK_ALERT;
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_ALERT, 0);
-    }
-    else if(ucCmd == AWTO_PS_CMD_GHOST)
-    {
-        ucTrack = AWTO_PS_TRACK_GHOST;
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_GHOST, 0);
-    }
-    else if(ucCmd == AWTO_PS_CMD_FRUIT)
-    {
-        ucTrack = AWTO_PS_TRACK_FRUIT;
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_FRUIT, 0);
-    }
-    else if((ucCmd >= AWTO_PS_CMD_FIRE) && (ucCmd <= AWTO_PS_CMD_LAST))
-    {
-        ucTrack = AWTO_PS_TRACK_FIRE + ucCmd - AWTO_PS_CMD_FIRE;
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_AST, ucCmd);
-    }
-    else
-    {
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_START + ucCmd, 0);
-    }
+    usRow = AWTO_PS_CMD + ucCmd * AWTO_PS_CMD_ROW;
+    ucTrack = PsByte(usRow);
+    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, PsByte(usRow + AWTO_PS_CMD_EV), (PsByte(usRow + AWTO_PS_CMD_EVARG) != 0) ? ucCmd : 0);
     PsRequest(ucTrack);
 #else
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_NA, ucCmd);

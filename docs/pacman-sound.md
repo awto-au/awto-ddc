@@ -27,8 +27,9 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 - Risks [guess]: audio PLL relock per note may click / drop out; D code untouched so a lock loss is possible at the extremes; the generator is a sine, not a square.
 
 ## Build / run (scripts, firmware)
-- `scripts/pacman_sound.py`: note tables -> `fw/test/pacman_sound_data.inc` (pairs `{sc | 0x80 octave, 10 ms ticks}`, 0 = rest, 0 ticks = end) + `tmp/pacman_sound/{intro,waka,death}.wav` (square by default, `--wave sine` = what the chip plays). Test: `tests/test_pacman_sound.py`.
-- `fw/test/pacman_sound.c`: non-blocking player (`AwtoPmSoundPoll` each main pass, schedule on `AwtoMs`). Test cmds `AWTO_TC_PACMAN_SND` 0xBA intro, 0xBB waka (loops), 0xBC death, 0xBD calibration tone, 0xBE stop. Sync log E9 80..86. Without `-D _AWTO_AUDIO_TEST` the cmds log E9 66.
+- `scripts/pacman_sound.py`: note tables -> `fw/test/snd_data.inc` (pairs `{sc | 0x80 octave, 10 ms ticks}`, 0 = rest, 0 ticks = end) + `tmp/pacman_sound/{intro,waka,death}.wav` (square by default, `--wave sine` = what the chip plays). Test: `tests/test_pacman_sound.py`.
+- `fw/test/snd.c`: non-blocking player (`AwtoPmSoundPoll` each main pass, schedule on `AwtoMs`). Test cmds `AWTO_TC_PACMAN_SND` 0xBA intro, 0xBB waka (loops), 0xBC death, 0xBD calibration tone, 0xBE stop. Sync log E9 80..86. Without `-D _AWTO_AUDIO_TEST` the cmds log E9 66.
+- `snd.c` is the one sound module (Pac-Man, Asteroids, alert, key click, calibration); function names keep `AwtoPmSound*`. `snd_data.inc` holds, after the note data, a track table (offset, priority, loops per track) and a cmd table (track, sync event, event value = cmd per `AwtoPmSound` cmd); both generated from `TRACKS` / `PRIORITY` / `CMDS` in `pacman_sound.py`. A cmd = one table row, no if chain.
 - Extra tracks (2026-11-18): ghost-eat sweep, fruit, siren x 3 speeds (loop), frightened (loop); priorities and resume rules in `docs/pacman.md` "Sounds and priorities". Player entry points: `AwtoPmSound(cmd)` (6 ghost, 7 fruit, 8 waka off), `AwtoPmSoundBg(state)`. Sync log E9 88 ghost, 89 fruit, 8A background state (value), 8B waka off. Lookup functions `PsOff` / `PsPrio` / `PsLoops` are generated into the data include.
 - Spectrum check without listening: `pacman_sound.py --wave sine`, 40 ms FFT windows of `tmp/pacman_sound/*.wav`: ghost 320 -> 1405 Hz rising, fruit 1510 -> 616 Hz then 657 -> 1332, siren1 522 -> 775 -> 557 Hz, fright 514 / 754 Hz (chip Hz after sc quantisation; not heard on a unit).
 - Build: `./dev.py build --tree . --serial AWT26110003 --tag snd1 -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-snd1-be`.
@@ -52,3 +53,20 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 ## Other users of the generator
 
 - `AwtoPmSoundTone(sc, ms)`: one held tone (calibration track), refused while a sound plays. Key click: `docs/keys.md` "Key click" (#229).
+
+## Timing (2026-11-18, Asteroids "sounds are broken up" on unit 3)
+
+- Cause 1: `AwtoPmSoundPoll` ran once per main-loop pass. Asteroids passes are 8-41 ms, notes 8-30 ms. The 4 ms amp gate (`AWTO_PS_GAP_MS`) opened only at the next poll: muted 11 ms median, 34 ms worst per note (thrust notes are 30 ms: about 40 % silence). Note starts were up to a pass late.
+- Cause 2: `PsStart` cycled the generator off and on (`PsStop`, `SysAudioInternalGenTestProc`, `SysAudioMuteProc`, `AwtoAudioAmp`) for every new sound, including each fire during thrust and each resume.
+- Fix: `PsStart` leaves a running generator alone (full set-up only from silence); Asteroids calls `AwtoPmSoundPoll` between drawing steps (per shape vertex, object, tile upload, game tick, collision candidate: `AstPoll`, audio build only). Pac-Man / alert / key click / calibration unchanged.
+- Measure: `python scripts/snd_timing.py BIN --saver asteroids|pacman --seconds 60` (audio build, sim audio tap + poll hook; exit 1 = FAIL). Evidence of the pass over 40 s:
+
+| Asteroids (sim) | before | after |
+|---|---|---|
+| gate latch -> amp open, median / p95 / max | 11 / 21 / 34 ms | 4 / 7 / 8 ms |
+| poll gap median / p99 | 12 / 31 ms | 0 / 2 ms |
+| latches with an unchanged pitch (generator restarts) | 93 | 11 |
+| Pac-Man gate median / max | 5 / 9 ms | 5 / 8 ms (unchanged) |
+
+- Rare long gaps (an NV write, 21 ms) are not polled around.
+- By ear on unit 3: audio build, start Asteroids (screensaver now), thrust loop (autopilot) must hum continuously with a steady 4-note wobble, a shot during thrust must not cut it to silence or restart the loop audibly.

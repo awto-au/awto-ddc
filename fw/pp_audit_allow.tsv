@@ -4,8 +4,8 @@ family	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_HW_DP_AU
 nodef	fw/awto/awto_shim/sdk_boundary.c	_AWTO_NEW_GAMMA	ours: -D_AWTO_NEW_<module> per clean module (fw_compile.py), none named gamma today
 nodef	fw/ddcci/ddcci.c	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test -D
 nodef	fw/test/testcmd.c	_AWTO_PROBES	ours: dev.py build -D _AWTO_PROBES (OSD SRAM + 0xA5 probes, #233)
-nodef	fw/test/pacman_sound.c	_AWTO_AUDIO_TEST	ours: dev.py build -D _AWTO_AUDIO_TEST (SDK internal audio generator)
-nodef	fw/test/asteroids.c	_AWTO_AUDIO_TEST	ours: dev.py build -D _AWTO_AUDIO_TEST (Asteroids sound through pacman_sound.c)
+nodef	fw/test/snd.c	_AWTO_AUDIO_TEST	ours: dev.py build -D _AWTO_AUDIO_TEST (SDK internal audio generator)
+nodef	fw/test/asteroids.c	_AWTO_AUDIO_TEST	ours: dev.py build -D _AWTO_AUDIO_TEST (Asteroids sound through snd.c)
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_FLASH_ACCESS_FUNCTION_SUPPORT	SDK pre-check of a retired option name (#error if set), intended
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_FLASH_TYPE_MX25L3206E_OR_MX25L3233F	SDK pre-check of a retired option name (#error if set), intended
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPEC_FRSWAP_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended

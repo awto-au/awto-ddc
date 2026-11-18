@@ -64,8 +64,9 @@ def test_inc_has_tracks_and_size():
         assert f"AWTO_PS_OFF_{name.upper()}" in t
     n = sum(len(P.encode(name, K)[0]) for name, _ in P.TRACKS)
     assert f"#define AWTO_PS_BYTES {n}" in t
-    for fn in ("PsOff", "PsPrio", "PsLoops"):
-        assert f" {fn}(BYTE ucTrack)" in t
+    for sym in ("AWTO_PS_TRK", "AWTO_PS_CMD", "AWTO_PS_TRACKS", "AWTO_PS_CMDS"):
+        assert f"#define {sym} " in t
+    assert len(re.findall(r"// cmd \d", t)) == len(P.CMDS)
 
 
 def test_new_tracks_present_with_priorities():
@@ -96,7 +97,7 @@ def test_siren_speeds_up_same_pitch_range():
 
 
 def test_firmware_ids_match_track_order():
-    c = (Path(__file__).resolve().parents[1] / "fw/test/pacman_sound.c").read_text()
+    c = (Path(__file__).resolve().parents[1] / "fw/test/snd.c").read_text()
     ids = {n: int(re.search(rf"#define AWTO_PS_TRACK_{n}\s+(\d+)", c).group(1)) for n in ("INTRO", "WAKA", "ALERT", "GHOST", "FRUIT", "BG0", "FIRE")}
     names = [n for n, _ in P.TRACKS]
     assert [ids[n.upper()] for n in ("intro", "waka", "alert", "ghost", "fruit")] == [names.index(n) for n in ("intro", "waka", "alert", "ghost", "fruit")]
