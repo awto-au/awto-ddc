@@ -103,7 +103,7 @@ def main() -> int:
                 chk ^= b
             ok = len(r) >= 11 and r[0] == 0x6E and r[2] == 0x02 and r[4] == 0x10 and chk == r[-1]
             check("Get VCP 0x10 answered, valid frame", ok, r.hex())
-            check("... before the delay ended", eng.t_reply is not None and eng.t_reply <= t_end,   # ticks are whole ms: a reply in the delay's last tick is inside it (real latency ~1.0 ms of the 2 ms)
+            check("... before the delay ended", eng.t_reply is not None and eng.t_reply < t_end,
                   f"reply at {(eng.t_reply or 0) * 1000:.1f} ms, delay ends {t_end * 1000:.1f} ms")
         d.set(0x10, SET_VALUE)
         g = d.get(0x10)
