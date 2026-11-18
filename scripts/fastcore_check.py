@@ -562,6 +562,8 @@ def cmd_timing(a) -> int:
     cases = [({0xFFED: 0xC8, 0xFFEE: 0x04}, XTAL_HZ / 2, "reset: crystal / 2"),
              ({0xFFED: 0x04, 0xFFEE: 0x04}, XTAL_HZ, "ScalerMcuFlashClockGroupSetting(_EXT_XTAL_CLK)"),
              ({0xFFED: (4 << 2) | 0x02, 0xFFEE: 0x04, 0x01E0: 47, 0x01E1: 0}, XTAL_HZ * 49 / 2 / 4, "M2PLL 351 MHz, flash div 4"),
+             ({0xFFED: 0x06, 0xFFEE: 0x04, 0x01E0: 42, 0x01E1: 0, 0x01E7: 0x10}, XTAL_HZ * 300 / 2, "M2PLL M 300 via 0x01E7[5:4] (M[9:8])"),
+             ({0xFFED: 0x06, 0xFFEE: 0x04, 0x01E0: 66, 0x01E1: 0x01, 0x01E7: 0x01}, XTAL_HZ * 68 / 19, "M2PLL N 19 via 0x01E7[3:0] (N[7:4] = 1)"),
              ({0xFFED: 0x04, 0xFFEE: 0x04, 0x0009: 0x08}, IOSC_HZ, "power saving: IOSC, div 1")]
     for regs, want, name in cases:
         cm.update(Cells(regs))

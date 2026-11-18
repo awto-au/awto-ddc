@@ -10,14 +10,15 @@
 XTAL_HZ = 14_318_180
 IOSC_HZ = 28_000_000
 A_CLK_SEL, A_MCU_DIV, A_XTAL_SEL = 0xFFED, 0xFFEE, 0x0009
-A_PLL_M, A_PLL_N = 0x01E0, 0x01E1
+A_PLL_M, A_PLL_N, A_PLL_MSB = 0x01E0, 0x01E1, 0x01E7      # 0x01E7[5:4] = M[9:8], [3:0] = N[7:4]
 A_FLASH2 = 0xFFE9
+A_PLL_WD = 0x01E5                                          # [7] reg_m2pll_wdo: write 1 clears (regdb); the sim never sets it
 
 
 class ClockModel:
     """Dev-protocol object (fw_sim.Dev): hooks the clock registers; .f_cpu is current after every write to them."""
     reads = ()
-    writes = (A_CLK_SEL, A_XTAL_SEL, A_PLL_M, A_PLL_N, A_FLASH2)
+    writes = (A_CLK_SEL, A_XTAL_SEL, A_PLL_M, A_PLL_N, A_PLL_MSB, A_PLL_WD, A_FLASH2)
     shared = (A_MCU_DIV,)                                  # also hooked by fw_sim.ChipReset: the machine calls update() after it
 
     def __init__(self):
@@ -32,15 +33,18 @@ class ClockModel:
         pass
 
     def on_write(self, m, a):
+        if a == A_PLL_WD:
+            m.wr(A_PLL_WD, bytes([m.rd(A_PLL_WD)[0] & 0x7F]))
         self.update(m)
 
     def update(self, m):
         sel, mdiv, xs = m.rd(A_CLK_SEL)[0], m.rd(A_MCU_DIV)[0], m.rd(A_XTAL_SEL)[0]
         xtal = IOSC_HZ if xs & 0x08 else XTAL_HZ
         if sel & 0x02:
-            pm, pn = m.rd(A_PLL_M)[0] + 2, m.rd(A_PLL_N)[0]
+            pm, pn, msb = m.rd(A_PLL_M)[0], m.rd(A_PLL_N)[0], m.rd(A_PLL_MSB)[0]
+            pm += ((msb >> 4) & 3) << 8
             o = ((pn >> 4) & 3) * 2 or 1
-            src, name = XTAL_HZ * pm / (((pn & 0x0F) + 2) * o), "M2PLL"
+            src, name = XTAL_HZ * (pm + 2) / ((((msb & 0x0F) << 4) + (pn & 0x0F) + 2) * o), "M2PLL"
         else:
             src, name = xtal, "iosc" if xs & 0x08 else "crystal"
         md, fd2 = max(1, (mdiv >> 2) & 0x0F), max(1, m.rd(A_FLASH2)[0] & 0x0F)

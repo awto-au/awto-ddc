@@ -659,6 +659,15 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_REF_SPI                        3                   // SPI above the flash's fast-read rating
 #define AWTO_CLK_REF_ORDER                      4                   // no write order keeps every transient inside the limits
 #define AWTO_CLK_REF_RATIO                      5                   // MCU slower than the flash (cache mcu_low_speed mode not used)
+#define AWTO_CLK_REF_PLLMAX                     6                   // M2PLL above the requested envelope (usPllMaxMhz, host --max-m2pll-mhz)
+#define AWTO_CLK_REF_PLLCODE                    7                   // M / N / O outside 2..257 / 2..17 / 1 2 4 8
+#define AWTO_CLK_REF_LOCK                       8                   // M2PLL watchdog flag set after relock, or a bounded wait expired: PLL put back
+#define AWTO_CLK_F_PLL                          0x08                // M2PLL step: ucPllM / N / O, derived dividers retuned
+#define AWTO_CLK_PLL_MAX_DEF_MHZ                490                 // envelope when the host sends 0 (unattended default; a tool guard, not a chip limit)
+#define AWTO_CLK_NDIV                           11                  // retuned divider registers (tAwtoClkDiv + the ADC divider), bit 11 of usKeep = the PWM dividers
+#define AWTO_CLK_DIV_ADC                        10
+#define AWTO_CLK_NPWM                           6
+#define AWTO_CLK_TICK_SPIN                      4000                // spins per Timer2 tick at the crystal clock: ~10 cycles a spin [estimate] x 358 cycles per ms = 3580 per tick, x1.1; expiry sets ucPllTimeout
 #define AWTO_CLK_F_DUAL                         0x01                // READ_INSTRUCTION read_mode 10 (0x3B dual output) during the step
 #define AWTO_CLK_F_CKCON                        0x02
 #define AWTO_CLK_OP_DREAD                       0x3B                // MX25L8006E DREAD (datasheet): FF6B holds the fast-read opcode, also for read_mode 10
@@ -686,7 +695,7 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_DELAY_ITER                     8
 #define AWTO_CLK_DELAY_REPS                     5
 #define AWTO_CLK_PERM                           6
-#define AWTO_CLK_SPI_N_MIN                      5                   // F x F2 >= 5 at 351 MHz keeps the SPI <= 86 MHz
+#define AWTO_CLK_SPI_N_MIN                      5                   // F x F2 >= 5 at 351 MHz keeps the SPI <= 86 MHz (plain steps; PLL steps use ceil(M2PLL / 86 MHz))
 typedef struct
 {
     BYTE ucGo;                                          // host: 1 apply, 2 revert; fw clears
@@ -734,6 +743,24 @@ typedef struct
     BYTE ucRdTune;                                      // request: FF6C[5:2] (latch_so_rise, drive_si_fall, si_dly_sel) while the step is held, 0xFF = keep
     BYTE ucPasses;                                      // request: CRC passes in the checks (0 = AWTO_CLK_CRC_PASSES); more = a longer flash-read stress
     WORD usScFrames;                                    // Scope 1 frames drawn (g_usAwtoScFrames, scope_saver.c)
+    BYTE ucPllM;                                        // request (flag PLL): M2PLL M / N / O, 0x01E0 = M - 2, 0x01E1[3:0] = N - 2, 0x01E1[5:4] = O / 2
+    BYTE ucPllN;
+    BYTE ucPllO;
+    WORD usPllMaxMhz;                                   // request: envelope, 0 = AWTO_CLK_PLL_MAX_DEF_MHZ
+    WORD usKeep;                                        // request: bit k = leave divider k at its stock value (bisect), bit 11 = PWM dividers
+    BYTE ucOvIdx;                                       // request: divider index to override, 0xFF = none
+    BYTE ucOvVal;
+    BYTE ucWdoStock;                                    // 0x01E5[7] M2PLL watchdog flag at the first step / after the relock
+    BYTE ucWdoNow;
+    BYTE ucPllMoved;                                    // 1 while the M2PLL is off its stock setting
+    BYTE ucPllTimeout;                                  // a bounded wait expired
+    BYTE ucE0;                                          // 0x01E0 / 0x01E1 / 0x01E7 now
+    BYTE ucE1;
+    BYTE ucE7;
+    BYTE aucDivOld[AWTO_CLK_NDIV];                      // stock field values (0 = not in use: left alone)
+    BYTE aucDivNew[AWTO_CLK_NDIV];
+    WORD ausPwmOld[AWTO_CLK_NPWM];                      // PWM clock second stage N + 1, 0 = PWM not on the M2PLL
+    WORD ausPwmNew[AWTO_CLK_NPWM];
 } StAwtoClk;
 __xdata StAwtoClk g_stAwtoClk;
 extern __xdata WORD g_usAwtoAstFrames;
@@ -741,6 +768,10 @@ extern __xdata WORD g_usAwtoScFrames;
 static __xdata BYTE s_ucClkSaved;
 static __xdata BYTE s_ucClkStock[11];                   // F, F2, M, CKCON, FF6C, D5, DX, FDA1, P10_C2, P10_81, FF6B
 static __xdata WORD s_usClkStockRcap;
+static __xdata BYTE s_ucClkStockPll[3];                 // 0x01E0, 0x01E1, 0x01E7 as found
+static __xdata unsigned long s_ulClkStockPll;           // kHz
+static __xdata unsigned long s_ulClkNum;                // delay / debounce scale = stock count x NUM / DEN
+static __xdata unsigned long s_ulClkDen;
 static __xdata WORD s_usClkStockDeb;
 static __xdata unsigned long s_ulClkT0;
 #define s_aucClkXd g_stAwtoOsdHw.aucBuf
@@ -752,13 +783,15 @@ static const __code BYTE tAwtoClkPerm[AWTO_CLK_PERM][3] = {{0, 1, 2}, {0, 2, 1},
 static unsigned long AwtoClkPllKhz(void)                // M2PLL = crystal x M / (N x O) (0x01E0 = M - 2, 0x01E1[3:0] = N - 2, [5:4] = O / 2)
 {
     BYTE ucN = ScalerGetByte(P1_E1_M2PLL_N);
+    BYTE ucMsb = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);    // [5:4] = M[9:8], [3:0] = N[7:4]
     BYTE ucO = ((ucN >> 4) & 3) * 2;
+    WORD usM = (WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & (_BIT5 | _BIT4)) << 4);
 
     if(ucO == 0)
     {
         ucO = 1;
     }
-    return ((unsigned long)_EXT_XTAL * ((WORD)ScalerGetByte(P1_E0_M2PLL_M) + 2)) / (((ucN & 0x0F) + 2) * ucO);
+    return ((unsigned long)_EXT_XTAL * (usM + 2)) / ((((WORD)(ucMsb & 0x0F) << 4) + (ucN & 0x0F) + 2) * ucO);
 }
 
 static WORD AwtoClkReload(BYTE ucF, BYTE ucM)           // as _TIMER2_COUNT_NUM: 1 ms of Timer2 (clk / 12)
@@ -1107,6 +1140,10 @@ static void AwtoClkReadback(void)
     g_stAwtoClk.ucFDA1 = MCU_FDA1_CACHE_OPTION;
     g_stAwtoClk.ucCkNow = CKCON;
     g_stAwtoClk.usDdcDeb = isr_g_usDDCDebounceCnt;
+    g_stAwtoClk.ucE0 = ScalerGetByte(P1_E0_M2PLL_M);
+    g_stAwtoClk.ucE1 = ScalerGetByte(P1_E1_M2PLL_N);
+    g_stAwtoClk.ucE7 = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+    g_stAwtoClk.ucWdoNow = (ScalerGetByte(P1_E5_M2PLL_WD) >> 7) & 1;
 }
 
 static void AwtoClkTimers(WORD usRcap)                  // Timer2 reload as ScalerTimerSetTimerCount
@@ -1122,6 +1159,228 @@ static void AwtoClkTimers(WORD usRcap)                  // Timer2 reload as Scal
     TR2 = 1;
 }
 
+typedef struct
+{
+    WORD usReg;                                         // divider field register
+    BYTE ucMask;
+    BYTE ucShift;
+    WORD usEn;                                          // register holding the "on the M2PLL" select
+    BYTE ucEnMask;
+    BYTE ucEnVal;
+    BYTE ucMin;                                         // 2 where the regdb says 0..2 = divide by 2
+    BYTE ucMax;
+} StAwtoClkDiv;
+// Derived clocks (regdb 0x0022 / 0x4006 / 0x4007 / 0x8006 / 0xB773 / 0xBA73 / 0xB7B0 / 0xBAB0 / 0x2AA1 / 0x68A1); index 10 = ADC divider, own access
+static const __code StAwtoClkDiv tAwtoClkDiv[AWTO_CLK_DIV_ADC] = {
+    {P0_22_M1_FIFO_CLOCK_SELECT, 0x78, 3, P0_22_M1_FIFO_CLOCK_SELECT, 0x04, 0x04, 2, 15},
+    {P40_06_SYNCPROC_CLK_DIVIDER, 0x0F, 0, P40_06_SYNCPROC_CLK_DIVIDER, 0x10, 0x10, 2, 15},
+    {P40_07_MEASURE_CLK_DIVIDER, 0x0F, 0, P40_07_MEASURE_CLK_DIVIDER, 0x10, 0x10, 2, 15},
+    {P80_06_GDI_CLK_DIVIDER, 0x0F, 0, P80_06_GDI_CLK_DIVIDER, 0x10, 0x10, 2, 15},
+    {PB7_73_AUX_DIG_PHY3, 0x0F, 0, PB7_73_AUX_DIG_PHY3, 0x00, 0x00, 1, 15},
+    {PBA_73_AUX_DIG_PHY3, 0x0F, 0, PBA_73_AUX_DIG_PHY3, 0x00, 0x00, 1, 15},
+    {PB7_B0_AUX_PAYLOAD_CLEAR, 0x0F, 0, PB7_B0_AUX_PAYLOAD_CLEAR, 0x00, 0x00, 1, 15},
+    {PBA_B0_AUX_PAYLOAD_CLEAR, 0x0F, 0, PBA_B0_AUX_PAYLOAD_CLEAR, 0x00, 0x00, 1, 15},
+    {P2A_A1_CBUS_CTRL_01, 0xE0, 5, P2A_A0_CBUS_CTRL_00, 0x10, 0x00, 1, 7},
+    {P68_A1_CBUS_CTRL_01, 0xE0, 5, P68_A0_CBUS_CTRL_00, 0x10, 0x00, 1, 7},
+};
+
+static BYTE AwtoClkDivGet(BYTE ucK)                     // field value, 0 = not on the M2PLL / no clock
+{
+    BYTE ucV;
+
+    if(ucK == AWTO_CLK_DIV_ADC)
+    {
+        return ((MCU_FF0D_ADC_CLK_DIV & _BIT7) != 0) ? (MCU_FF0D_ADC_CLK_DIV & 0x7F) : 0;
+    }
+    if(ScalerGetBit(tAwtoClkDiv[ucK].usEn, tAwtoClkDiv[ucK].ucEnMask) != tAwtoClkDiv[ucK].ucEnVal)
+    {
+        return 0;
+    }
+    ucV = (ScalerGetByte(tAwtoClkDiv[ucK].usReg) & tAwtoClkDiv[ucK].ucMask) >> tAwtoClkDiv[ucK].ucShift;
+    return (ucV < tAwtoClkDiv[ucK].ucMin) ? tAwtoClkDiv[ucK].ucMin : ucV;
+}
+
+static void AwtoClkDivSet(BYTE ucK, BYTE ucV)
+{
+    if(ucK == AWTO_CLK_DIV_ADC)
+    {
+        MCU_FF0D_ADC_CLK_DIV = (MCU_FF0D_ADC_CLK_DIV & _BIT7) | (ucV & 0x7F);
+        return;
+    }
+    ScalerSetBit(tAwtoClkDiv[ucK].usReg, ~tAwtoClkDiv[ucK].ucMask, (BYTE)(ucV << tAwtoClkDiv[ucK].ucShift));
+}
+
+static WORD AwtoClkPwmGet(BYTE ucI)                     // N + 1; 0 when the PWM runs from the crystal
+{
+    WORD usN;
+
+    if((MCU_FF3A_PWM_CK_SEL & (1 << ucI)) == 0)
+    {
+        return 0;
+    }
+    switch(ucI)
+    {
+        case 0: usN = ((WORD)(MCU_FF3D_PWM01_N_MSB & 0x0F) << 8) | MCU_FF3E_PWM0_N_LSB; break;
+        case 1: usN = ((WORD)(MCU_FF3D_PWM01_N_MSB >> 4) << 8) | MCU_FF3F_PWM1_N_LSB; break;
+        case 2: usN = ((WORD)(MCU_FF40_PWM23_N_MSB & 0x0F) << 8) | MCU_FF41_PWM2_N_LSB; break;
+        case 3: usN = ((WORD)(MCU_FF40_PWM23_N_MSB >> 4) << 8) | MCU_FF42_PWM3_N_LSB; break;
+        case 4: usN = ((WORD)(MCU_FF43_PWM45_N_MSB >> 4) << 8) | MCU_FF44_PWM4_N_LSB; break;
+        default: usN = ((WORD)(MCU_FF43_PWM45_N_MSB & 0x0F) << 8) | MCU_FF45_PWM5_N_LSB; break;
+    }
+    return usN + 1;
+}
+
+static void AwtoClkPwmSet(BYTE ucI, WORD usN1)
+{
+    BYTE ucH = (BYTE)((usN1 - 1) >> 8);
+    BYTE ucL = (BYTE)(usN1 - 1);
+
+    switch(ucI)
+    {
+        case 0: MCU_FF3D_PWM01_N_MSB = (MCU_FF3D_PWM01_N_MSB & 0xF0) | ucH; MCU_FF3E_PWM0_N_LSB = ucL; break;
+        case 1: MCU_FF3D_PWM01_N_MSB = (MCU_FF3D_PWM01_N_MSB & 0x0F) | (ucH << 4); MCU_FF3F_PWM1_N_LSB = ucL; break;
+        case 2: MCU_FF40_PWM23_N_MSB = (MCU_FF40_PWM23_N_MSB & 0xF0) | ucH; MCU_FF41_PWM2_N_LSB = ucL; break;
+        case 3: MCU_FF40_PWM23_N_MSB = (MCU_FF40_PWM23_N_MSB & 0x0F) | (ucH << 4); MCU_FF42_PWM3_N_LSB = ucL; break;
+        case 4: MCU_FF43_PWM45_N_MSB = (MCU_FF43_PWM45_N_MSB & 0x0F) | (ucH << 4); MCU_FF44_PWM4_N_LSB = ucL; break;
+        default: MCU_FF43_PWM45_N_MSB = (MCU_FF43_PWM45_N_MSB & 0xF0) | ucH; MCU_FF45_PWM5_N_LSB = ucL; break;
+    }
+}
+
+static unsigned long AwtoClkRatio(unsigned long ulV, unsigned long ulPll)   // ulV x ulPll / stock M2PLL, rounded
+{
+    return (ulV * ulPll + s_ulClkStockPll / 2) / s_ulClkStockPll;
+}
+
+static void AwtoClkRetuneCalc(unsigned long ulPll)      // new field = stock x (new M2PLL / stock M2PLL), nearest integer, inside the field's range; kept ones stay
+{
+    BYTE ucK;
+    unsigned long ulV;
+
+    for(ucK = 0; ucK < AWTO_CLK_NDIV; ucK++)
+    {
+        g_stAwtoClk.aucDivNew[ucK] = g_stAwtoClk.aucDivOld[ucK];
+        if((g_stAwtoClk.aucDivOld[ucK] == 0) || ((g_stAwtoClk.usKeep & (1 << ucK)) != 0))
+        {
+            continue;
+        }
+        ulV = AwtoClkRatio(g_stAwtoClk.aucDivOld[ucK], ulPll);
+        if(ucK == AWTO_CLK_DIV_ADC)
+        {
+            g_stAwtoClk.aucDivNew[ucK] = (ulV < 1) ? 1 : ((ulV > 127) ? 127 : (BYTE)ulV);
+        }
+        else
+        {
+            g_stAwtoClk.aucDivNew[ucK] = (ulV < tAwtoClkDiv[ucK].ucMin) ? tAwtoClkDiv[ucK].ucMin : ((ulV > tAwtoClkDiv[ucK].ucMax) ? tAwtoClkDiv[ucK].ucMax : (BYTE)ulV);
+        }
+    }
+    if((g_stAwtoClk.ucOvIdx < AWTO_CLK_NDIV) && (g_stAwtoClk.aucDivOld[g_stAwtoClk.ucOvIdx] != 0))
+    {
+        g_stAwtoClk.aucDivNew[g_stAwtoClk.ucOvIdx] = g_stAwtoClk.ucOvVal;
+    }
+    for(ucK = 0; ucK < AWTO_CLK_NPWM; ucK++)
+    {
+        ulV = g_stAwtoClk.ausPwmOld[ucK];
+        if((ulV != 0) && ((g_stAwtoClk.usKeep & (1 << AWTO_CLK_NDIV)) == 0))
+        {
+            ulV = AwtoClkRatio(ulV, ulPll);
+            ulV = (ulV < 1) ? 1 : ((ulV > 4096) ? 4096 : ulV);
+        }
+        g_stAwtoClk.ausPwmNew[ucK] = (WORD)ulV;
+    }
+}
+
+static void AwtoClkRetune(BYTE ucNew)                   // write the new (1) or stock (0) derived dividers
+{
+    BYTE ucK;
+    BYTE ucV;
+    WORD usV;
+
+    for(ucK = 0; ucK < AWTO_CLK_NDIV; ucK++)
+    {
+        ucV = (ucNew != 0) ? g_stAwtoClk.aucDivNew[ucK] : g_stAwtoClk.aucDivOld[ucK];
+        if(ucV != 0)
+        {
+            AwtoClkDivSet(ucK, ucV);
+        }
+    }
+    for(ucK = 0; ucK < AWTO_CLK_NPWM; ucK++)
+    {
+        usV = (ucNew != 0) ? g_stAwtoClk.ausPwmNew[ucK] : g_stAwtoClk.ausPwmOld[ucK];
+        if(usV != 0)
+        {
+            AwtoClkPwmSet(ucK, usV);
+        }
+    }
+}
+
+static BYTE AwtoClkTick(BYTE ucN)                       // wait ucN Timer2 overflows (1 ms each at the crystal clock), EA off; 1 = a bounded wait expired
+{
+    WORD usSpin;
+
+    while(ucN-- > 0)
+    {
+        TF2 = 0;
+        usSpin = AWTO_CLK_TICK_SPIN;
+        while((TF2 == 0) && (usSpin > 0))
+        {
+            usSpin--;
+        }
+        AwtoClkPoke();
+        if(TF2 == 0)
+        {
+            g_stAwtoClk.ucPllTimeout = 1;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Source -> crystal (dividers 1), M2PLL power cycle with the raw M / N codes (SDK ScalerPLLM2PLLPower order), dividers, source -> M2PLL with F / F2 / M.
+// Moving up the derived dividers go first (derived clocks slower than final while the M2PLL is still low), moving down last: no transient is faster than the faster end.
+// 0 = ok, 1 = timeout or watchdog flag. EA off by the caller.
+static BYTE AwtoClkPllMove(BYTE ucE0, BYTE ucE7, BYTE ucE1, BYTE ucNew, BYTE ucF, BYTE ucF2, BYTE ucM)
+{
+    BYTE ucBad;
+
+    if(ucNew != 0)
+    {
+        AwtoClkRetune(1);
+    }
+    MCU_FFED_MCU_CONTROL &= ~_BIT1;                                             // MCU / flash clock source = crystal (regdb FFED: switch to xtal before touching the PLL)
+    AwtoClkSetReg(0, 1);
+    AwtoClkSetReg(1, 1);
+    AwtoClkSetReg(2, 1);
+    AwtoClkTimers(0xFFFF - (WORD)(_EXT_XTAL / 12));                             // Timer2 1 ms at the crystal, divider 1 x 1
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT0, _BIT0);                                // power off
+    ScalerSetByte(P1_E0_M2PLL_M, ucE0);
+    ScalerSetByte(P1_E7_M2PLL_M_N_MSB, ucE7);
+    ScalerSetByte(P1_E1_M2PLL_N, ucE1);                                         // last: latches M / N (double buffer)
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT0, 0x00);                                 // power on
+    ucBad = AwtoClkTick(2);                                                     // >= 1 ms (SDK waits 150 us)
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT7, _BIT7);                                // clear the watchdog flag
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT5, _BIT5);                                // reset PFD / LPF pulse
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT5, 0x00);
+    ucBad |= AwtoClkTick(2);                                                    // >= 1 ms stable (SDK)
+    g_stAwtoClk.ucWdoNow = (ScalerGetByte(P1_E5_M2PLL_WD) >> 7) & 1;
+    if(ucNew == 0)
+    {
+        AwtoClkRetune(0);
+    }
+    AwtoClkSetReg(0, ucF2);
+    AwtoClkSetReg(1, ucF);
+    AwtoClkSetReg(2, ucM);
+    MCU_FFED_MCU_CONTROL |= _BIT1;                                              // back to the M2PLL
+    g_stAwtoClk.ucE0 = ScalerGetByte(P1_E0_M2PLL_M);
+    g_stAwtoClk.ucE1 = ScalerGetByte(P1_E1_M2PLL_N);
+    g_stAwtoClk.ucE7 = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+    return (ucBad != 0) || ((g_stAwtoClk.ucWdoNow != 0) && (g_stAwtoClk.ucWdoStock == 0));
+}
+
+static BYTE AwtoClkScaled(BYTE ucStock)
+{
+    return (BYTE)(((unsigned long)ucStock * s_ulClkNum + s_ulClkDen / 2) / s_ulClkDen);
+}
+
 static void AwtoClkApply(void)
 {
     BYTE ucF = g_stAwtoClk.ucF;
@@ -1129,10 +1388,21 @@ static void AwtoClkApply(void)
     BYTE ucM = g_stAwtoClk.ucM;
     WORD usN;
     BYTE ucMode;
+    BYTE ucK;
+    BYTE ucPll = ((g_stAwtoClk.ucFlags & AWTO_CLK_F_PLL) != 0);
+    BYTE ucO = g_stAwtoClk.ucPllO;
     unsigned long ulPll;
+    unsigned long ulMax = 1000UL * ((g_stAwtoClk.usPllMaxMhz != 0) ? g_stAwtoClk.usPllMaxMhz : AWTO_CLK_PLL_MAX_DEF_MHZ);
 
     g_stAwtoClk.ucRefuse = AWTO_CLK_REF_NONE;
-    ulPll = AwtoClkPllKhz();
+    g_stAwtoClk.ucPllTimeout = 0;
+    if(ucPll && ((g_stAwtoClk.ucPllM < 2) || (g_stAwtoClk.ucPllN < 2) || (g_stAwtoClk.ucPllN > 17) || ((ucO != 1) && (ucO != 2) && (ucO != 4) && (ucO != 8))))
+    {
+        g_stAwtoClk.ucRefuse = AWTO_CLK_REF_PLLCODE;
+        g_stAwtoClk.ucState = AWTO_CLK_ST_REFUSED;
+        return;
+    }
+    ulPll = ucPll ? (((unsigned long)_EXT_XTAL * g_stAwtoClk.ucPllM) / ((WORD)g_stAwtoClk.ucPllN * ucO)) : AwtoClkPllKhz();
     g_stAwtoClk.ulPllKhz = ulPll;
     if((ucF < 1) || (ucF2 < 1) || (ucM < 1) || (ucF > AWTO_CLK_DIV_MAX) || (ucF2 > AWTO_CLK_DIV_MAX) || (ucM > AWTO_CLK_DIV_MAX))
     {
@@ -1149,6 +1419,10 @@ static void AwtoClkApply(void)
     else if(ucM > ucF2)
     {
         g_stAwtoClk.ucRefuse = AWTO_CLK_REF_RATIO;                      // MCU slower than the SPI
+    }
+    else if(ucPll && (ulPll > ulMax))
+    {
+        g_stAwtoClk.ucRefuse = AWTO_CLK_REF_PLLMAX;
     }
     if(g_stAwtoClk.ucRefuse != AWTO_CLK_REF_NONE)
     {
@@ -1169,12 +1443,29 @@ static void AwtoClkApply(void)
         s_ucClkStock[5] = d_isr_g_ucDelay5usN_Base;
         s_ucClkStock[6] = d_isr_g_ucDelayXusN_Base;
         s_ucClkStock[7] = MCU_FDA1_CACHE_OPTION;
+        s_ucClkStockPll[0] = ScalerGetByte(P1_E0_M2PLL_M);
+        s_ucClkStockPll[1] = ScalerGetByte(P1_E1_M2PLL_N);
+        s_ucClkStockPll[2] = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+        s_ulClkStockPll = AwtoClkPllKhz();
+        g_stAwtoClk.ucWdoStock = (ScalerGetByte(P1_E5_M2PLL_WD) >> 7) & 1;
+        for(ucK = 0; ucK < AWTO_CLK_NDIV; ucK++)
+        {
+            g_stAwtoClk.aucDivOld[ucK] = AwtoClkDivGet(ucK);
+        }
+        for(ucK = 0; ucK < AWTO_CLK_NPWM; ucK++)
+        {
+            g_stAwtoClk.ausPwmOld[ucK] = AwtoClkPwmGet(ucK);
+        }
         s_usClkStockRcap = ((WORD)RCAP2H << 8) | RCAP2L;
         s_usClkStockDeb = isr_g_usDDCDebounceCnt;
+        g_stAwtoClk.ulPllKhz = s_ulClkStockPll;
         g_stAwtoClk.ucFormulaOk = (AwtoClkReload(s_ucClkStock[0], s_ucClkStock[2]) == s_usClkStockRcap);
+        g_stAwtoClk.ulPllKhz = ulPll;
         s_ucClkSaved = 1;
     }
     usN = (WORD)ucF * ucM;
+    s_ulClkNum = (unsigned long)s_ucClkStock[0] * s_ucClkStock[2] * ulPll;
+    s_ulClkDen = (unsigned long)usN * s_ulClkStockPll;
     if(g_stAwtoClk.ucDrive != 0xFF)
     {
         ScalerSetByte(P10_C2_PIN_DRIVING_CTRL02__TOPON, (BYTE)(((g_stAwtoClk.ucDrive & 7) << 5) | ((g_stAwtoClk.ucDrive & 7) << 2) | (s_ucClkStock[8] & 0x03)));
@@ -1185,7 +1476,26 @@ static void AwtoClkApply(void)
     }
     s_ucClkWrap = ((g_stAwtoClk.ucFlags & AWTO_CLK_F_NOWRAP) != 0) ? _CKCON_MOVX_DEFAULT_CYCLE : _CKCON_MOVX_9_CYCLE;
     EA = 0;
-    if(AwtoClkWrite(ucF, ucF2, ucM) == 0)
+    if(ucPll)
+    {
+        AwtoClkRetuneCalc(ulPll);
+        ucK = AwtoClkPllMove(g_stAwtoClk.ucPllM - 2, s_ucClkStockPll[2] & 0xC0,
+                             (s_ucClkStockPll[1] & 0xC0) | ((ucO == 1) ? 0x00 : ((ucO == 2) ? 0x10 : ((ucO == 4) ? 0x20 : 0x30))) | (g_stAwtoClk.ucPllN - 2),
+                             1, ucF, ucF2, ucM);
+        g_stAwtoClk.ucPllMoved = 1;
+        if(ucK != 0)                                                    // no lock: put the stock M2PLL back at once
+        {
+            AwtoClkPllMove(s_ucClkStockPll[0], s_ucClkStockPll[2], s_ucClkStockPll[1], 0, s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
+            g_stAwtoClk.ucPllMoved = 0;
+            g_stAwtoClk.ulPllKhz = s_ulClkStockPll;
+            AwtoClkTimers(s_usClkStockRcap);
+            EA = 1;
+            g_stAwtoClk.ucRefuse = AWTO_CLK_REF_LOCK;
+            g_stAwtoClk.ucState = AWTO_CLK_ST_REFUSED;
+            return;
+        }
+    }
+    else if(AwtoClkWrite(ucF, ucF2, ucM) == 0)
     {
         EA = 1;
         g_stAwtoClk.ucRefuse = AWTO_CLK_REF_ORDER;
@@ -1193,9 +1503,9 @@ static void AwtoClkApply(void)
         return;
     }
     AwtoClkTimers(AwtoClkReload(ucF, ucM));
-    d_isr_g_ucDelay5usN_Base = (BYTE)(((WORD)s_ucClkStock[5] * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
-    d_isr_g_ucDelayXusN_Base = (BYTE)(((WORD)s_ucClkStock[6] * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
-    isr_g_usDDCDebounceCnt = (WORD)(((unsigned long)s_usClkStockDeb * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
+    d_isr_g_ucDelay5usN_Base = AwtoClkScaled(s_ucClkStock[5]);
+    d_isr_g_ucDelayXusN_Base = AwtoClkScaled(s_ucClkStock[6]);
+    isr_g_usDDCDebounceCnt = (WORD)(((unsigned long)s_usClkStockDeb * s_ulClkNum + s_ulClkDen / 2) / s_ulClkDen);
     if(((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) || (g_stAwtoClk.ucRdTune != 0xFF))
     {
         AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);                 // warm the cache line with the stock values
@@ -1233,6 +1543,12 @@ static void AwtoClkRevert(BYTE ucState)
     EA = 0;
     AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);
     CKCON = s_ucClkStock[3];
+    if(g_stAwtoClk.ucPllMoved != 0)
+    {
+        AwtoClkPllMove(s_ucClkStockPll[0], s_ucClkStockPll[2], s_ucClkStockPll[1], 0, s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
+        g_stAwtoClk.ucPllMoved = 0;
+        g_stAwtoClk.ulPllKhz = s_ulClkStockPll;
+    }
     AwtoClkWrite(s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
     AwtoClkTimers(s_usClkStockRcap);
     d_isr_g_ucDelay5usN_Base = s_ucClkStock[5];
