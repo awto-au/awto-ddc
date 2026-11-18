@@ -57,11 +57,7 @@ typedef char s_tScShiftCheck[((AWTO_SC_H2_PER_PX == (1 << AWTO_SC_H2_PX_SHIFT)) 
                               (AWTO_SC_TILE_H == (1 << AWTO_SC_TH_SHIFT_A) + (1 << AWTO_SC_TH_SHIFT_B)) && (AWTO_SC_COLS == (1 << AWTO_SC_COLS_SHIFT))) ? 1 : -1];
 #define AWTO_SC_FONT_BASE                       (AWTO_SC_ROWS + 1 + AWTO_SC_COLS * AWTO_SC_ROWS)   // AwtoOsdMap1 layout: row commands, end word, one char command per cell
 #define AWTO_SC_GLYPH_WORDS                     (OSD_TILE_BYTES / 3)
-#ifdef _AWTO_OSD_FAST_PORT                                                  // sim / test only: direct data port stores, never the default (unit-3 garble open: docs/osd-hw-tests.md)
-#define AWTO_SC_TILE(c, p)                      AwtoScFastTile(AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_SC_COLS * AWTO_SC_ROWS) : (c)), (p))
-#else
-#define AWTO_SC_TILE(c, p)                      AwtoOsdTile((c), (p))
-#endif
+#define AWTO_SC_TILE(c, p)                      AwtoScTile(AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_SC_COLS * AWTO_SC_ROWS) : (c)), (p))
 #define AWTO_SC_ARG_ON                          0x76
 #define AWTO_SC_ARG_FRAME                       0x77
 #define AWTO_SC_ARG_OFF                         0x78
@@ -92,24 +88,22 @@ static __xdata BYTE s_ucCol;                                            // next 
 static __xdata BYTE s_ucShown;
 static __xdata WORD s_usFrameAt;                                        // scheduled start of the next frame (AwtoMs low word); advances by the period
 
-#ifdef _AWTO_OSD_FAST_PORT
-void AwtoScFastTile(WORD usAddr, BYTE __xdata *pucB)                    // a 1-bit tile (canonical bytes; turned in place for Rotate 180) by direct port stores: Scope 1, Asteroids
+void AwtoScTile(WORD usAddr, BYTE __xdata *pucB)                    // a 1-bit tile (canonical bytes; turned in place for Rotate 180) by direct port stores: Scope 1, Asteroids
 {
     BYTE ucK;
 
     if(g_ucAwtoOsdRot != 0)
     {
-        AwtoOsdTurn(pucB, OSD_TILE_BYTES);                              // then the upright word order = AwtoOsdGlyph's turned order
+        AwtoOsdTurn(pucB, OSD_TILE_BYTES);                              // then the upright word order = the turned word order
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usAddr, _OSD_WITHOUT_DB);
     for(ucK = 0; ucK < OSD_TILE_BYTES; ucK += 3)
     {
-        AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[ucK + 2];
-        AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[ucK + 1];
-        AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[ucK];
+        AWTO_OSD_PORT(pucB[ucK + 2]);
+        AWTO_OSD_PORT(pucB[ucK + 1]);
+        AWTO_OSD_PORT(pucB[ucK]);
     }
 }
-#endif
 
 #pragma place bank(11)
 static BYTE ScY(int16_t sX, BYTE ucPh)                                  // trace y at raster x (20..196: a byte)

@@ -27,7 +27,7 @@ Status 2026-11-18. Research + measurement only; no production change. Savers: `d
 | cycles per 40 ms | 877 k (175.5 MHz: 1.75 M) | arithmetic |
 | instr per 40 ms | 215 k at the Scope 2 mix (4.07 cycles/instr incl. fetch stall), 450 k cache-resident (1.96-2.08 cycles/instr, fetch model off) | sim |
 | MOVX XRAM | 2 cycles (CKCON MD = 0) | model = unit micro-bench (2.00) |
-| MOVX to scaler registers (OSD port 0x0092) | model 2 cycles; unit port-write loops run 1.64-1.94x the sim (+20-28 cycles per store) | `osd_port_cal.py` vs unit T1 / T2 |
+| MOVX to the OSD data port 0x0092 | 2 + 22 cycles (`dw8051_model.json` `osd_data_port`; from unit T2 direct loop EA off 2.39 us/B); sim direct loops 0.99-1.16x the unit; other scaler registers 2 cycles | `osd_port_cal.py` vs unit T1 / T2 |
 | other instructions | `djnz` 3.65 cycles on the unit vs 3 in the model | `docs/diag-block.md` |
 | MOVC data reads | 3 cycles; cache misses of table reads not modelled | `docs/sim-cpu-model.md` |
 | interrupt load | unit: EA on vs off on the same write loop = +9-13 % time (4K60 DP); sim Timer2 ISR ~2.7 % | T2 rows below; `saver_frame_cost` |
@@ -109,7 +109,7 @@ Measured = sim run of a throw-away image or model what-if; estimate = baseline m
 |---|---|---|---|---|---|
 | 1 | Fewer main-loop passes per frame: whole frame in 1-2 calls, DDC/CI pumped between bands | 192 -> 145 ms measured (band 8 -> 38 ms: 15.2 -> 4.1 passes) | -70 ms est. (18.5 passes x 4.05 ms -> 1) | high | DDC/CI reply latency up to a band (D6, `scope2_ddc_latency.py`); watchdog 586 ms not near |
 | 2 | MCU 175.5 MHz (`_MCU_SPEED_UP_SUPPORT`) | 192 -> 128 measured | 256 -> 200 measured | medium: SDK path for this chip and M2PLL; sim only. Gains < 2x: stall time is flash-clock bound | gates + unit 3: Timer2 / delays / DDC debounce / flash writes (9-cycle MOVX), panel and audio timing; port store rate at 2x unknown |
-| 3 | Direct OSD port stores, DPTR parked on 0x0092; address set as direct stores | sim -20..25 ms (3965 banked calls x ~4.8 us + body); unit port 16.3 -> <= 7.7 ms | -4 ms unit | high: unit T1 / T2 / T7 PASS for direct stores; the photo fault is display-side (`docs/osd-hw-tests.md`) | lifts the 2026-11-18 rule "every byte via `ScalerOsdDataPort`" (`docs/saver-library.md`): Dan's call |
+| 3 | Direct OSD port stores, DPTR parked on 0x0092; address set as direct stores | sim -20..25 ms (3965 banked calls x ~4.8 us + body); unit port 16.3 -> <= 7.7 ms | -4 ms unit | high: unit T1 / T2 / T7 PASS for direct stores; the photo fault is display-side (`docs/osd-hw-tests.md`) | done 2026-11-18 (Dan lifted the port rule): data stores direct in all savers; address set still `ScalerOsdAddrSet` |
 | 4 | Dual data flash read (`FF6C` read_mode 10) | 192 -> 147 what-if | 256 -> 185 what-if | low-medium: needs the unit miss count (perf meter) and flash 0x3B support | read mode is global: boot, ISP, flash writes; test on unit 3 |
 | 2+4 | | 89 ms (11.2 fps) | 139 ms (7.2 fps) | | |
 | 1+2+4 | | 72 ms (13.9 fps) measured / what-if | ~99 ms est. | | |

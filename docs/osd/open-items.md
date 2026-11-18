@@ -45,7 +45,7 @@ Every `[?]` in the manual. Tests only on unit 3 (bus 11); nothing here has been 
 | T-J | masked bit writes | same (firmware op) | |
 | T-K | register access timing | same | |
 | T-L | MCU x2 clock | same | |
-| T10 | write during scan glitch | `./dev.py osd-hw-test --unit 3 cycle`, Dan's look | pending |
+| T10 | write during scan glitch; Scope 2 garble display-side | `./dev.py osd-hw-test --unit 3 cycle`, Dan's look; scale-up-off test planned | pending |
 
 ## Model gaps (for the model owner; the manual shows "not modelled" for these)
 - Window `sha` / `bor` colour bit 4 (`ADR0` B0 [7:6]) is decoded as bit 5; bit 5 (`ADR3` B0 [7:6]) is not read: indices >= 16 decode wrong.
