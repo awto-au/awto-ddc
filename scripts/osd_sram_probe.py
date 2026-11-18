@@ -5,7 +5,7 @@ usage: osd_sram_probe.py BUS --serial S --map MAP
   Sends test cmd 0x0F (AWTO_TC_OSD_SRAM_PROBE) over the debug link, then reads g_stAwtoOsdProbe (fw/test/testcmd.c) and prints per
   address: the words before, and (only where the old content was all zero, so the marker could be written and zeros restored) the
   words after the marker write, for M1 and M2. Marker = <addr hi> <addr lo> A5, written to both memories at once.
-  Needs the OSD off (console_mode Off, no menu): the firmware refuses otherwise (state 3).
+  Needs the OSD off (console_mode Off, no menu): the firmware refuses otherwise (state 3). Image built with -D _AWTO_PROBES.
 Log: ./tmp/logs/osd_sram_probe.log
 """
 import argparse
@@ -45,6 +45,8 @@ def main() -> int:
     import rtd_i2c_bridge as B  # noqa: E402
 
     i2cbus.require_unit(a.bus, a.serial)
+    if "g_stAwtoOsdProbe" not in a.map.read_text(errors="replace"):
+        sys.exit(f"no g_stAwtoOsdProbe in {a.map}: build with -D _AWTO_PROBES")
     res = T.sym(a.map, "g_stAwtoOsdProbe")
     import re
     hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.M)   # listed without the D: prefix

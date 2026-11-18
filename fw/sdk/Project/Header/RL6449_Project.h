@@ -955,7 +955,7 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 // #216 blocking-wait log: every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call, newest last, wraps. Host: scripts/wait_log.py.
-#define AWTO_WAIT_N                                             120     // a cold boot logs ~115 waits >= 1 ms (unit 3, HDMI 4K60); ucTotal counts all
+#define AWTO_WAIT_N                                             64      // newest waits kept (XDATA floor, #233); ucTotal counts all
 #define AWTO_WAIT_DELAY                                         0       // arg = ms asked
 #define AWTO_WAIT_POLL                                          1       // arg = register polled
 #define AWTO_WAIT_EVENT                                         2       // arg = event type
@@ -991,7 +991,7 @@ extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int u
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // fw/input/inputs.c: rising edges per counted input (wraps), read by the selector
-#define AWTO_SYNC_N                                             60      // >= cold boot 38 lines x1.25 (boot_sim, #165) and cold boot + power off 50 lines on the console (con_wrap_sim); divides WRAP
+#define AWTO_SYNC_N                                             48      // >= cold boot 38 lines x1.25 = 47.5 (boot_sim, #165); divides WRAP (#233)
 #define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))

@@ -919,7 +919,6 @@ stub	_AwtoT0EvIsr	C	0x39f0	8
 stub	_AwtoT0EvTest	C	0x39f8	8
 stub	_AwtoT0EvTestIsr	C	0x3a00	8
 stub	_ScalerTimerWDCancelTimerEvent	C	0x3a08	8
-stub	_AwtoA5Probe	C	0x3a10	8
 stub	_AwtoDemoLog	C	0x3a18	8
 stub	_AwtoDiagTestCmd	C	0x3a20	8
 stub	_AwtoFff4Probe	C	0x3a28	8
@@ -1118,6 +1117,8 @@ const	_mn_s6	1	0x0450	24
 const	_mn_s7	1	0x0468	28
 const	_mn_s8	1	0x0484	40
 const	_mn_s9	1	0x04ac	32
+fn	_AwtoA5Probe	1	0x04cc	56
+fn	_AwtoOsdProbeRead	1	0x0504	184
 const	_id2idx	1	0x063c	128
 const	_ptitle	1	0x06bc	36
 const	_tab	1	0x06e0	2160
@@ -1322,8 +1323,7 @@ fn	_ui_port_state	1	0x80cc	140
 fn	_ui_timing	1	0x8158	188
 fn	_AwtoHtSync	1	0x8214	984
 fn	_AwtoDiagTestCmd	1	0x85ec	1004
-fn	_AwtoOsdProbeRead	1	0x89d8	184
-fn	_AwtoOsdSramProbe	1	0x8a90	612
+fn	_AwtoOsdSramProbe	1	0x89d8	612
 fn	_AwtoOsdBlend	1	0x8cf4	20
 fn	_AwtoOsdRoll	1	0x8d08	28
 fn	_osd_tc_bar	1	0x8d24	404
@@ -3243,7 +3243,6 @@ fn	_AwtoSyncInit	10	0x895c	68
 fn	_AwtoSyncPut	10	0x89a0	212
 fn	_AwtoSyncTiming	10	0x8a74	76
 fn	_AwtoT0EvTestIsr	10	0x8ac0	216
-fn	_AwtoA5Probe	10	0x8b98	56
 fn	_AwtoDemoLog	10	0x8bd0	120
 fn	_AwtoFff4Probe	10	0x8c48	88
 fn	_AwtoMemForce	10	0x8ca0	132
