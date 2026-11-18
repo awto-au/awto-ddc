@@ -184,6 +184,9 @@ typedef struct                                                                  
 
 __xdata WORD g_usAwtoAstStep;                                                       // game steps (also read by scripts/asteroids_speed.py)
 __xdata BYTE g_ucAwtoAstCol;                                                        // next column of the frame being drawn
+#ifdef _AWTO_OSD_HWTEST
+__xdata WORD g_usAwtoAstFrames;
+#endif
 static __xdata AstObj s_atObj[AWTO_AST_N_OBJ];
 static __xdata AstSeen s_atSeen[AWTO_AST_N_OBJ + 1];                                // last frame as drawn: objects, then the ship
 static __xdata AstSeen s_tNow;                                                      // this frame, the slot being compared
@@ -1515,6 +1518,9 @@ BYTE AwtoAsteroids(BYTE ucCmd)
             return 0;
         }
         g_ucAwtoAstCol = 0;
+#ifdef _AWTO_OSD_HWTEST
+        g_usAwtoAstFrames++;                                                        // clock sweep (docs/clock-sweep.md): frames drawn
+#endif
         if(s_ucShown == 0)                                                          // the first frame was drawn hidden
         {
             s_ucShown = 1;

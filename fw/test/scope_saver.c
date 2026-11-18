@@ -42,6 +42,9 @@
 #define AWTO_SC_H2_PER_PX                       4                   // second component: table units per px
 #define AWTO_SC_H2_PH                           2                   // second component phase per frame
 #define AWTO_SC_PASS_MS                         8                   // saver work per call (+ one column, <= 12 tiles): the main loop (DDC/CI, keys) runs between calls
+#ifdef _AWTO_OSD_HWTEST
+__xdata WORD g_usAwtoScFrames;
+#endif
 #define AWTO_SC_FRAME_MS                        40                  // frame schedule: 25 frames/s (docs/saver-fps-plan.md)
 #define AWTO_SC_HALF_MS                         0x8000              // WORD ms difference below this = the time has passed
 #define AWTO_SC_BYTE_BITS                       3                   // bit index -> byte: >> 3
@@ -286,6 +289,9 @@ BYTE AwtoScopeSaver(BYTE ucCmd)
             return 0;
         }
         s_ucCol = 0;
+#ifdef _AWTO_OSD_HWTEST
+        g_usAwtoScFrames++;                                             // clock sweep (docs/clock-sweep.md): frames drawn
+#endif
         if(s_ucShown == 0)                                              // the first frame was drawn hidden: show the OSD now
         {
             s_ucShown = 1;
