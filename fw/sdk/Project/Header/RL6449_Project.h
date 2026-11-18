@@ -1101,6 +1101,41 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_TC_OSD_SRAM_PROBE                                  0x0F    // test cmd: write / read back markers in the OSD font + map SRAM (M1 and M2) from the MCU
 #define AWTO_SYNC_EV_ODEMO                                      0xE9    // #226 OSD window demo (test cmds 0xA0..0xA5): arg = case, value = window
 #define AWTO_TC_OSD_DEMO                                        0xA0    // test cmd: + 0..4 = demo group, + 5 = close
+// Health monitor (fw/diag/monitor.c, docs/monitoring.md): a few slow values sampled every AWTO_MON_MS, sync rows + g_stAwtoMon, registry row monitor.
+#define AWTO_SYNC_EV_MON                                        0xEA    // arg AWTO_MON_EV_*, value per arg (fmt mon)
+#define AWTO_MON_EV_ADC                                         1       // value = A0 << 24 | A1 << 16 | A2 << 8 | A3 (raw LSADC results, 5-bit in [7:3])
+#define AWTO_MON_EV_TRIM                                        2       // value = IOSC trim counter (12 bit, temperature proxy)
+#define AWTO_MON_EV_LOOP                                        3       // value = passes/s << 16 | longest watchdog poke gap, ms
+#define AWTO_MON_EV_UP                                          4       // value = uptime s << 8 | stack high-water (SP)
+#define AWTO_MON_MS                                             10000   // sample period: the values drift over minutes (IOSC trim constant 30 min at 350.8 MHz); a key ladder is held, not pulsed, to show
+#define AWTO_MON_BEAT_K                                         30      // heartbeat = every K samples (5 min): all rows again; between them only a changed row
+#define AWTO_MON_ADC_STEP                                       16      // an ADC row changed = a channel moved 2 codes (8 per code)
+#define AWTO_MON_TRIM_STEP                                      4       // IOSC trim counter moved this many counts
+#ifndef AWTO_MON_FLASH_CHECK
+#define AWTO_MON_FLASH_CHECK(beat)                              // hook, every sample (beat != 0 = heartbeat): the flash read-window CRC check (awto-ddc#238) goes here
+#endif
+typedef struct                                  // 21 B, byte-only (LE = BE layout); host: scripts/mon_decode.py, unit_health.py
+{
+    unsigned char ucMagic0;                     // 'M'
+    unsigned char ucMagic1;                     // 'N'
+    unsigned char ucVersion;                    // 1
+    unsigned char ucOn;                         // registry monitor at the last sample
+    unsigned char ucBeat;                       // samples taken (wraps)
+    unsigned char pucAdc[4];                    // A0..A3 raw
+    unsigned char ucTrimHi;                     // IOSC trim counter, 12 bit
+    unsigned char ucTrimLo;
+    unsigned char ucLoopHi;                     // main-loop passes in the last second
+    unsigned char ucLoopLo;
+    unsigned char ucMaxPoke;                    // isr_g_stAwtoWdt.ucMaxPoke (x4.58 ms), this boot
+    unsigned char ucPokeSite;                   // g_ucAwtoPokeSite: the poke that ended it
+    unsigned char ucStack;                      // g_ucAwtoStackHigh (SP high-water)
+    unsigned char ucBoot;                       // AwtoBootReason()
+    unsigned char pucUp[3];                     // uptime s, high byte first
+    unsigned char ucRows;                       // sync rows written by the monitor (saturates)
+} StAwtoMon;
+typedef char AwtoMonSizeCheck[(sizeof(StAwtoMon) == 21) ? 1 : -1];
+extern __xdata StAwtoMon g_stAwtoMon;
+extern void AwtoMonSample(void);
 extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);

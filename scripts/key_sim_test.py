@@ -40,6 +40,7 @@ SET_ID_MUTE, SET_ID_KEY_CLICK = 89, 123          # registry ids mute, key_click 
 CLICK_SC, CLICK_MS, CLICK_TOL_MS = 40, 30, 10    # RL6449_Project.h AWTO_KEY_CLICK_SC / _MS; main-pass resolution (~4 ms) x 2.5
 CLICK_HZ = 48000 // CLICK_SC                     # audio_sim K = 48 kHz sample rate / S code
 SND_WAKA, SND_STOP = 0xBB, 0xBE                  # test cmd AWTO_TC_PACMAN_SND + 1 waka (loops), + 4 stop
+ADC_DEADBAND = 2                                 # RL6449_Project.h AWTO_ADC_DEADBAND: the stored ADC rows may lag a live value by less than this
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
 
@@ -630,6 +631,35 @@ def auto_select(k, how):
     k.wait(1500)
 
 
+def band_edges(k):
+    """#214 edge values: every 5-bit code per ladder + each band's lo - 1 / lo / hi - 1 / hi through the ADC result cells, with the
+    GPIO page open (key actions are off there). The decoded rows of the input monitor (StAwtoGpio.ucIn 39..43) and the debounced mask
+    (g_stAwtoKey.ucMask) must equal what the table (fw/awto/inputs.tsv = Dahua key_scan_adc bands) says; the stored ADC rows follow within the deadband."""
+    import key_bands as KB
+    tab = KB.ours()
+    k.cmd(0x43)
+    k.wait(500)
+    rows = {"SOURCE": 39, "MENU": 40, "DOWN": 41, "UP": 42, "AUTO": 43}
+    bad, n = [], 0
+    for lad, v in KB.edge_values(tab):
+        a0, a1 = (v, IDLE) if lad == "A0" else (IDLE, v)
+        k.adc(a0, a1)
+        k.wait(45)                                              # >= 2 samples AWTO_KEY_SAMPLE_MS apart and one input pass
+        got = {nm for nm, i in rows.items() if k.m.rd(k.gpio + 16 + i)[0] != 0}
+        mask = k.m.rd(k.key + 9)[0]                             # StAwtoKey.ucMask
+        want = KB.keys_for(tab, a0, a1)
+        wmask = sum(KB.KM[x] for x in want)
+        la = k.m.rd(k.gpio + 16 + 8, 2)                         # stored ADC0 / ADC1 rows
+        n += 1
+        if got != want or mask != wmask or abs(la[0] - a0) >= ADC_DEADBAND or abs(la[1] - a1) >= ADC_DEADBAND:
+            bad.append(f"{lad} 0x{v:02X}: rows {sorted(got)} mask 0x{mask:02X} adc {la[0]:02X}/{la[1]:02X}, want {sorted(want)} 0x{wmask:02X}")
+    k.adc()
+    k.wait(300)
+    k.cmd(0x44)
+    k.wait(300)
+    k.check(f"key bands: {n} edge / code values decode as the table (A0 + A1)", not bad, "; ".join(bad[:6]))
+
+
 def run(k):
     s = k.s
     k.wait(1000)                                                # main loop is blocked ~150 ms after ACTIVE (pop-up, panel on): a press then is not sampled
@@ -639,6 +669,7 @@ def run(k):
     k.check("idle: no OSD, menu, console", k.osd_state() == 0 and k.menu() == 0 and k.console() == 0,
             f"osd {k.osd_state()} menu {k.menu()} console {k.console()}")
 
+    band_edges(k)
     sel = selector(k)
     backlight_bar(k, sel)
     timer_restart(k, sel)

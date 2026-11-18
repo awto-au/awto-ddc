@@ -113,6 +113,8 @@ def value(fmt: str, arg: int, v: int) -> str:
         return iso(v, arg - 256 if arg >= 128 else arg)
     if fmt == "sms":                                     # #157 signed ms
         return f"{v - (1 << 32) if v >= 1 << 31 else v:+d}ms"
+    if fmt == "mon":                                     # fw/diag/monitor.c: arg 1 ADC, 2 IOSC trim, 3 loop + watchdog gap, 4 uptime + stack
+        return mon_text(arg, v)
     if fmt == "nvw":                                     # #151 NVRAM flush result
         return nv_flush(v)
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
@@ -121,6 +123,19 @@ def value(fmt: str, arg: int, v: int) -> str:
         sym = SYMBOLIZE(bank, pc) if SYMBOLIZE else ""
         return ("STALL TEST" if c & 0x80 else "STALL") + f", PC {where}" + (f" {sym}" if sym else "")
     return ""
+
+
+def mon_text(arg: int, v: int) -> str:
+    """health monitor rows (firmware copy: fw/osd/console.c case 23); the watchdog gap is already in ms"""
+    if arg == 1:
+        return f"ADC A0 {v >> 24:02X} A1 {(v >> 16) & 0xFF:02X} A2 {(v >> 8) & 0xFF:02X} A3 {v & 0xFF:02X}"
+    if arg == 2:
+        return f"IOSC trim count {v}"
+    if arg == 3:
+        return f"main loop {v >> 16} passes/s, longest watchdog gap {v & 0xFFFF}ms"
+    if arg == 4:
+        return f"uptime {v >> 8} s, stack high {v & 0xFF:02X}"
+    return f"{arg:02X} {v:08X}"
 
 
 NV_GROUPS = ("system data", "OSD data", "colour", "panel time", "awto settings")    # RL6449_Project.h AWTO_NV_LOG_G_* bits 0..4

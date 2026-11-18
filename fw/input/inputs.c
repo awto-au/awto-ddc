@@ -102,8 +102,8 @@ static BYTE AwtoInRead(BYTE ucI)
         case AWTO_IN_VSYNC: return s_ucVgaSync;
         case AWTO_IN_VCMP: return s_ucVgaCmp;
         case AWTO_IN_XREG: return (((*(__xdata volatile BYTE *)tAwtoInAddr[ucI]) & tAwtoInB[ucI]) != 0) ? 1 : 0;
-        case AWTO_IN_KEY0: return AWTO_KEY_BAND(g_stAwtoGpio.ucIn[AWTO_IN_ADC0], tAwtoInA[ucI], tAwtoInB[ucI]) ? 1 : 0;
-        default: return AWTO_KEY_BAND(g_stAwtoGpio.ucIn[AWTO_IN_ADC1], tAwtoInA[ucI], tAwtoInB[ucI]) ? 1 : 0;
+        case AWTO_IN_KEY0: return AWTO_KEY_BAND(PCB_ADKEY1(), tAwtoInA[ucI], tAwtoInB[ucI]) ? 1 : 0;    // the live result, not the deadbanded ADC row:
+        default: return AWTO_KEY_BAND(PCB_ADKEY2(), tAwtoInA[ucI], tAwtoInB[ucI]) ? 1 : 0;      // a change under AWTO_ADC_DEADBAND leaves that row stale
     }
 }
 
