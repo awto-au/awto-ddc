@@ -47,6 +47,10 @@ No other combo. Removed (#132): MENU+DOWN (debug link toggle), MENU+DOWN held at
   - Highlight on a port without a cable: the commit (idle or AUTO) is refused (#84, dead-port line in the sync log); the selector stays open with the highlight on that row (state column "no cable").
   - Highlight on the current input: the commit only closes it.
 - Other OSD screens: the OSD timeout restarts on every key.
+- Hold reset (#132 item 7, Dan 2026-11-18): any front key except POWER held `AWTO_KEY_RESET_MS` (10 s) = every setting to its default (`set_defaults`, incl. rotate / mirror), stored through the NVRAM gate.
+  - Card "RESET TO DEFAULTS, in N s" from `AWTO_KEY_RESET_WARN_MS` (8 s), redrawn at 9 s ("in 1 s"); 2 s = reading + reaction time. Release before 10 s cancels (card closes); an open menu is closed by the card.
+  - After the reset the held key does nothing until released. Per-unit settings (unit 3 Rotate 180) go back to the default; `dev.py flash` re-applies them.
+  - Replaces the HOLD (3 s) event (removed).
 - POWER always works: an open console closes first, then the monitor goes off / on.
 
 ## Stock behaviour (for comparison)

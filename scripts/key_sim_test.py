@@ -31,7 +31,7 @@ A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
 WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
          "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "SysPowerSetTargetPowerStatus", "SysMachineRequest",
-         "AwtoPsField", "AwtoSrcPortFields", "AwtoBlKey", "AwtoSourceIdle", "AwtoSourceAuto", "AwtoNvWrite", "AwtoSaveCard")
+         "AwtoPsField", "AwtoSrcPortFields", "AwtoBlKey", "AwtoResetCard", "set_defaults", "AwtoSourceIdle", "AwtoSourceAuto", "AwtoNvWrite", "AwtoSaveCard")
 PWR = "SysPowerSetTargetPowerStatus"             # power requests: counted from SysMachineRequest (#162 step 3) when the image has it
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
@@ -274,6 +274,52 @@ def timer_restart(k, sel):
     k.wait(4000)                                                # let the NVRAM gate write the changed backlight
 
 
+RESET_WARN_S, RESET_S = 8, 10                                   # RL6449_Project.h AWTO_KEY_RESET_WARN_MS / AWTO_KEY_RESET_MS (#132 item 7)
+
+
+def hold_reset(k):
+    """#132 item 7: any key held 10 s = all settings to defaults; the card (2 s countdown) shows from 8 s; an earlier release cancels."""
+    to = k.m.addr("g_stOSDUserData") + OSD_TIMEOUT_OFF
+    old = k.m.rd(to)[0]
+    k.m.wr(to, bytes([77]))                                     # a changed stored value: the reset must bring it back
+    b = k.snap()
+    k.down("MENU")
+    k.wait((RESET_WARN_S - 1) * 1000)
+    k.check(f"hold: no card and no reset {RESET_WARN_S - 1} s into the hold", k.delta(b, "AwtoResetCard") == 0 and k.delta(b, "set_defaults") == 0)
+    k.wait(1500)
+    k.check(f"hold: card up at {RESET_WARN_S + 0.5} s (2 s left), no reset yet", k.delta(b, "AwtoResetCard") == 1 and k.osd_on()
+            and k.delta(b, "set_defaults") == 0 and k.m.rd(to)[0] == 77, f"cards {k.delta(b, 'AwtoResetCard')} osd {k.osd_on()}")
+    k.shot("reset_card")
+    k.adc()
+    k.wait(600)
+    k.check(f"hold: released at {RESET_WARN_S + 0.5} s cancels (card gone, nothing reset)", k.delta(b, "set_defaults") == 0 and not k.osd_on()
+            and k.m.rd(to)[0] == 77, f"osd {k.osd_on()}")
+    k.tap("MENU")                                               # menu opened by the next press: close it again
+    for _ in range(4):
+        if k.menu() == 0:
+            break
+        k.tap("MENU")
+    b = k.snap()
+    k.down("MENU")
+    k.wait(int((RESET_S - 0.5) * 1000))
+    k.check(f"hold: second card (1 s left) at {RESET_S - 0.5} s", k.delta(b, "AwtoResetCard") == 2 and k.delta(b, "set_defaults") == 0,
+            f"cards {k.delta(b, 'AwtoResetCard')}")
+    k.wait(1000)
+    v = k.m.rd(to)[0]
+    k.check(f"hold: reset at {RESET_S} s (once, settings back to default)", k.delta(b, "set_defaults") == 1 and v != 77, f"stored {v}")
+    k.wait(3000)
+    k.check("hold: still held after the reset: no second reset, no repeats", k.delta(b, "set_defaults") == 1 and k.delta(b, "AwtoResetCard") == 2)
+    k.adc()
+    k.wait(500)
+    k.check("hold: release after the reset: nothing more", k.delta(b, "set_defaults") == 1)
+    k.wait(4000)                                                # the gate stores the defaults
+    for _ in range(4):
+        if k.menu() == 0 and k.osd_state() == 0:
+            break
+        k.tap("MENU")
+    k.m.wr(to, bytes([old]))
+
+
 def selector(k):
     b = k.snap()                                                # SOURCE = selector; SOURCE / UP / DOWN step, no repeat
     k.tap("SOURCE")
@@ -489,6 +535,7 @@ def run(k):
     backlight_bar(k, sel)
     timer_restart(k, sel)
     stay_open(k)
+    hold_reset(k)
     status_rows(k)
 
     b = k.snap()                                                # awto menu: MENU opens, AUTO enters, keys go to menu_key, repeat rate-limited

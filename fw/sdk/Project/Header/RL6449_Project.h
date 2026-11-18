@@ -479,6 +479,9 @@ extern __xdata StAwtoKey g_stAwtoKey;
 #define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
 #define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
+#define AWTO_KEY_RESET_MS                                       10000   // any front key held: reset all settings to defaults (Dan 2026-11-18, #132 item 7)
+#define AWTO_KEY_RESET_WARN_MS                                  8000    // card + countdown from here: 2 s to read it and release (reaction ~1 s x 2)
+#define AWTO_KEY_RESET_STEP_MS                                  1000    // countdown step
 #define AWTO_KEY_RATE_MS                                        100     // then one REPEAT per this: 10 steps / s, a 0..100 slider in 10 s; the SDK repeated every main pass
 #define AWTO_KEY_Q_N                                            4       // injected keys waiting for the next AwtoKeyPoll (one per host write; power of 2)
 extern void AwtoKeyPoll(void);
@@ -717,6 +720,7 @@ extern void AwtoSourceIdle(void);                               // OSD_DISABLE t
 extern void AwtoSourceReset(void);                              // SDK OSD reset (UserInterfaceAdjustOsdResetProc): the open selector's choice
 #define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
 #define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
+extern void AwtoResetCard(unsigned char ucSec);                   // key-hold reset warning card (#132 item 7)
 extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
 extern void AwtoBlClose(void);                                  // close it; the value is stored at the NVRAM gate
 extern void set_nv_commit(unsigned char ucShow);
