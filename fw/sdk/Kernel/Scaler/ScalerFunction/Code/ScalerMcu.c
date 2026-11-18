@@ -89,6 +89,9 @@ void ScalerMcuInitial(void)
     // Select first bank number for XDATA access
     MCU_FFFE_XDATA_BANK_SEL = 0x00; // Xdata_bank_sel: Bank0
 
+    // Scaler register write pacing (re/regmap FFF1[3:0])
+    MCU_FFF1_SCA_WR_INTRVL = (MCU_FFF1_SCA_WR_INTRVL & ~AWTO_SCA_WR_INTRVL_SEL_MASK) | AWTO_SCA_WR_INTRVL_SEL;
+
 
     ///////////////////////////////
     ///   DDCCI Auto Switch     ///

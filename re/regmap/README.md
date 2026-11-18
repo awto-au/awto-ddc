@@ -77,6 +77,7 @@ Hand: `name` (our name when the regdb has none or is wrong), `role`, `status`, `
 
 ## Read-behind (read artifact on the PHY pages, found 2026-11-19)
 - Rule [hw]: on a read-behind page, the first read of an aligned 32-bit dword (address & ~3 differs from the previous read's) can return the byte of the same lane of the previous dword (the old latch). Other bytes of that dword, and a repeat read of the same address, return the settled value. Verdict per page in `read_behind.tsv` (`live` = debug slave 0x35, MCU running; `isp` = ISP F4/F5, MCU halted).
+- Firmware: the one active single read, `PA0_05` in `ScalerRotationSetPictSet`, is read twice (`ScalerRotationGetDcSysPageSel`); `ScalerPLL.c` `P90_13` poll (DDR2 PLL lock, repeats until set) left single.
 - Pages (live): `88 8A 8B 8E 8F 90 A0 A3 A4 A6 A7 A8 AB AC AE AF C8 CA CB CE CF D0`; `A*` only stale-by-latch (repeat reads right), the rest also have registers whose value depends on earlier reads (`yes+other`: e.g. 88C0..88FF read 00 / 0D after a low address, 80 80 .. 10 54 44 C0 .. after a sequential scan).
 - Debug slave byte path: first read of each new dword stale (A0: 93 % of the informative reads, 8E: 90 %, 88: 72 %); repeat read right.
 - Debug slave block path (0x3C): every dword start inside a block and the first byte after another address are stale (targeted test: 8E 16 of 16 in-block dword starts, A0 / A8 8 of 8); lanes 1-3 right. Block reads therefore carry the artifact too.
