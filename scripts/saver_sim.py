@@ -41,6 +41,7 @@ VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept 
 AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
 AST_FREEZE_LIMIT_S = 20.0       # 2.5x the expected 8 s (first hidden frame ~3 s + 20 frames at ~0.25 s); expiry = FAIL, logged
 AST_POLL_S = 0.0005             # a frame is complete from the column wrap until the next main pass (a few ms)
+AST_FILL = 0.97                 # Asteroids: full width, 97.8 % of the height (24 px bars of 2160: 30 x 11 tiles at 64 / 6)
 SCOPE2_FILL = 0.99              # scope 2 must cover this share of the panel picture in each direction (it is one raster scaled to the whole panel)
 SCOPE2_MIN_FPS = 5.0            # frames per second of scope 2 (measured 6.7 on the 480 x 270 raster; docs/screensaver.md): a slower draw fails
 SCOPE2_FPS_S = 2.0              # fw time the frame counter is watched
@@ -190,8 +191,10 @@ def main() -> int:
         if name == "scope2":
             fails += scope2_check(sess, run_img)
         if name == "asteroids":
-            box = bbox_crop(run_img)                # reported, not a gate: the playfield does not fill the panel (docs/asteroids.md "Panel fill")
-            say(f"INFO asteroids panel coverage: box {box.shape[1]} x {box.shape[0]} of {run_img.size[0]} x {run_img.size[1]} ({100 * box.shape[1] / run_img.size[0]:.1f} % x {100 * box.shape[0] / run_img.size[1]:.1f} %)")
+            box = bbox_crop(run_img)
+            ok = box.shape[0] >= AST_FILL * run_img.size[1] and box.shape[1] >= AST_FILL * run_img.size[0]
+            fails += not ok
+            say(f"{'PASS' if ok else 'FAIL'} asteroids fills the panel: box {box.shape[1]} x {box.shape[0]} of {run_img.size[0]} x {run_img.size[1]} ({100 * box.shape[1] / run_img.size[0]:.1f} % x {100 * box.shape[0] / run_img.size[1]:.1f} %, min {100 * AST_FILL:.0f} %)")
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
         st = sess.snap()
