@@ -4,7 +4,7 @@
 
 // Classic-layout Pac-Man demo on the unit (data: scripts/gen_pacman_classic.py): the arcade's 28 x 36 tile grid, 12 x 12 visible tiles
 // (12 x 18 glyphs, row height 12), outline walls, 1-bit Pac-Man / dots / text, 2-bit ghosts (body, white eye, blue pupil), scaled up by
-// the OSD scale-up engine to the panel height (ratio 64 / AWTO_PC_SU_FACTOR); 200 recorded demo steps, host-paced by scripts/pacman_unit.py.
+// the OSD scale-up engine to the panel height (ratio 64 / AWTO_PC_SU_FACTOR); recorded demo (game steps of 2^AWTO_PC_SUB_SHIFT sub-steps: sprites move 12 / that px per call), host-paced by scripts/pacman_unit.py.
 //   test cmd 0xB7: draw the maze   0xB8: next step (after the last one the maze is redrawn)   0xB9: off
 // SRAM layout: row commands from 0, end word, char commands from AWTO_PC_FS_BASE, glyph words from AWTO_PC_FONT_BASE (1-bit glyphs, then the
 // 2-bit glyphs at 18 words * the 2-bit offset). Sync line E9 0x73 (drawn) / 0x74 (value = step) / 0x75 (off).
@@ -21,7 +21,17 @@ extern void osd_tc_close(void);
 #define AWTO_PC_R                               0
 #define AWTO_PC_G                               1
 #define AWTO_PC_B                               2
-#define AWTO_PC_DELTA_BYTES                     5                   // cell index lo, hi, B0, B1, B2
+#define AWTO_PC_DELTA_BYTES                     3                   // cell lo | hi(1:0), kind(2) glyph id bit 8(3) colour(7:4), glyph id lo (gen_pacman_classic.py delta_rec)
+#define AWTO_PC_POS_HI_MASK                     0x03
+#define AWTO_PC_KIND2_BIT                       0x04                // 2-bit glyph: colour = style index
+#define AWTO_PC_ID8_BIT                         0x08
+#define AWTO_PC_COL_SHIFT                       4
+#define AWTO_PC_ID8_SHIFT                       3
+#define AWTO_PC_CHAR1_B0                        0x4C                // 1-bit char command B0 (id bit 8 goes to bit 5)
+#define AWTO_PC_CHAR1_ID8_SHIFT                 5
+#define AWTO_PC_BG                              1                   // palette index of the cell background (K_BG)
+#define AWTO_PC_STYLE_BYTES                     2                   // per style: B0, B2 of the 2-bit char command
+#define AWTO_PC_SUB_MASK                        ((1 << AWTO_PC_SUB_SHIFT) - 1)
 #define AWTO_PC_SU_FACTOR                       13                  // scale-up ratio = 64 / 13 = 4.9: 432 lines -> 2126 of the 2160 panel lines
 #define AWTO_PC_POS_OFFSET_H                    0x3B                // as the QC pattern
 #define AWTO_PC_POS_OFFSET_V                    0x04
@@ -56,6 +66,12 @@ static BYTE PcPal(BYTE ucK)
 static BYTE PcGlyph(WORD usK)
 {
     return g_pcGlyph[usK];
+}
+
+#pragma place bank(12)
+static BYTE PcStyle(BYTE ucK)
+{
+    return g_pcStyle[ucK];
 }
 
 #pragma place bank(12)
@@ -101,6 +117,15 @@ static void PcWord(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
     ScalerOsdDataPort(ucB2);
 }
 
+static void PcCellSet(WORD usPos, BYTE ucB0, BYTE ucB1, BYTE ucB2)
+{
+    if(g_ucAwtoOsdRot != 0)
+    {
+        usPos = AwtoOsdRotCell(usPos, AWTO_PC_CELLS);
+    }
+    PcWord(AWTO_PC_FS_BASE + usPos, ucB0, ucB1, ucB2);
+}
+
 static void PcMaze(void)
 {
     WORD usC;
@@ -130,15 +155,20 @@ static void PcStep(WORD usStep)
 
     for(; usO < usEnd; usO += AWTO_PC_DELTA_BYTES)
     {
-        usPos = ((WORD)PcDelta(usO + 1) << 8) | PcDelta(usO);
-        ucB0 = PcDelta(usO + 2);
-        ucB1 = PcDelta(usO + 3);
-        ucB2 = PcDelta(usO + 4);
-        if(g_ucAwtoOsdRot != 0)
+        ucB1 = PcDelta(usO + 1);
+        usPos = ((WORD)(ucB1 & AWTO_PC_POS_HI_MASK) << 8) | PcDelta(usO);
+        ucB2 = PcDelta(usO + 2);                                            // glyph id lo
+        if((ucB1 & AWTO_PC_KIND2_BIT) != 0)
         {
-            usPos = AwtoOsdRotCell(usPos, AWTO_PC_CELLS);
+            ucB0 = PcStyle((BYTE)((ucB1 >> AWTO_PC_COL_SHIFT) * AWTO_PC_STYLE_BYTES));
+            ucB1 = PcStyle((BYTE)((ucB1 >> AWTO_PC_COL_SHIFT) * AWTO_PC_STYLE_BYTES + 1));
+            PcCellSet(usPos, ucB0, ucB2, ucB1);
         }
-        PcWord(AWTO_PC_FS_BASE + usPos, ucB0, ucB1, ucB2);
+        else
+        {
+            PcCellSet(usPos, AWTO_PC_CHAR1_B0 | (((ucB1 & AWTO_PC_ID8_BIT) >> AWTO_PC_ID8_SHIFT) << AWTO_PC_CHAR1_ID8_SHIFT), ucB2,
+                      ((ucB1 >> AWTO_PC_COL_SHIFT) << AWTO_PC_COL_SHIFT) | AWTO_PC_BG);
+        }
     }
 }
 
@@ -165,7 +195,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
             s_usStep = 0;
         }
         PcStep(s_usStep);
-        ucEv = PcEvt(s_usStep);                                             // the sound event of this step (gen_pacman_classic.py): one command of the sound player
+        ucEv = ((s_usStep & AWTO_PC_SUB_MASK) == 0) ? PcEvt(s_usStep >> AWTO_PC_SUB_SHIFT) : AWTO_PC_EV_NONE;   // sound event of a game step, at its first sub-step
         if(ucEv == AWTO_PC_EV_INTRO)
         {
             AwtoPmSound(AWTO_PC_SND_INTRO);
