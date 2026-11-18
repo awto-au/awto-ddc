@@ -45,7 +45,7 @@ extern void osd_tc_close(void);
 #define AWTO_PC_SND_GHOST                       6                   // 5 = alert (saver.c)
 #define AWTO_PC_SND_FRUIT                       7
 #define AWTO_PC_SND_WAKA_OFF                    8
-#define AWTO_PC_BLOCK_BYTES                     27                  // one glyph plane: 9 words x 3 bytes (1-bit glyph = 1 block, 2-bit glyph = 2 blocks, MSB plane first)
+#define AWTO_PC_BLOCK_BYTES                     27                  // one glyph plane: 9 words x 3 bytes (1-bit glyph = 1 block, 2-bit glyph = 2 blocks, low bit plane first)
 #define AWTO_PC_BLOCK_ROT_BYTES                 18                  // the visible 12 of its 18 rows (6 words); the rest is padding
 #define AWTO_PC_BLOCK_ROT_WORDS                 6
 #define AWTO_PC_PX_PER_HD                       4                   // OSD horizontal position unit: 4 panel px

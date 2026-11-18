@@ -288,10 +288,10 @@ def cherry():
 
 
 def pack(g, bits):
-    """1 bit: two 12-bit rows per 24-bit word (9 words). 2 bit: two bit planes, MSB plane first, each like a 1-bit glyph (18 words)."""
+    """1 bit: two 12-bit rows per 24-bit word (9 words). 2 bit: two bit planes, low bit first (unit 3, docs/osd-hw-tests.md T9), each like a 1-bit glyph (18 words)."""
     if bits == 1:
         return OG.pack_rows(g[:H], lambda v: v & 1)
-    return OG.pack_rows(g[:H], lambda v: v >> 1 & 1) + OG.pack_rows(g[:H], lambda v: v & 1)
+    return OG.pack_rows(g[:H], lambda v: v & 1) + OG.pack_rows(g[:H], lambda v: v >> 1 & 1)
 
 
 # ---------------------------------------------------------------- the glyph set
@@ -803,7 +803,7 @@ def render_cells(s, cells, x0=0, y0=0, w=COLS, h=ROWS):
                 planes = ["".join(f"{int.from_bytes(wd[p * 27 + k:p * 27 + k + 3], 'little'):024b}" for k in range(0, 27, 3)) for p in range(2)]
                 for yy in range(VIS):
                     for xx in range(W):
-                        v = int(planes[0][yy * W + xx]) * 2 + int(planes[1][yy * W + xx])
+                        v = int(planes[1][yy * W + xx]) * 2 + int(planes[0][yy * W + xx])
                         img[ty * VIS + yy, tx * W + xx] = cols[v]
     return img
 

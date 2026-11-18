@@ -200,6 +200,24 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_LD_POS_H                       384                 // (3840 - 16 * 12 * 4) / 2 / 4
 #define AWTO_OHW_LD_POS_V                       504                 // (2160 - 16 * 18 * 4) / 2
 #define AWTO_OHW_SOLID                          0xFF
+#define AWTO_OHW_NO_DIGIT                       0
+#define AWTO_OHW_DIGITS                         6                   // T10 variants 1..6, the digit shown in blue
+#define AWTO_OHW_DG_W                           5
+#define AWTO_OHW_DG_H                           7
+#define AWTO_OHW_DG_ROW                         4
+#define AWTO_OHW_DG_COL                         5
+#define AWTO_OHW_V_STATIC                       1                   // no writes
+#define AWTO_OHW_V_SDK                          2                   // glyphs rewritten (same content) through ScalerOsdDataPort, continuously
+#define AWTO_OHW_V_DIRECT                       3                   // the same with direct stores
+#define AWTO_OHW_V_MAP                          4                   // map words rewritten (same content)
+#define AWTO_OHW_V_VBLANK                       5                   // one glyph per frame, right after DVS
+#define AWTO_OHW_V_ADDR                         6                   // address sets only, no data
+#define AWTO_OHW_V_SCOPE2                       7                   // Scope 2 running (one band per main pass), no digit
+#define AWTO_OHW_CY_MS                          8000                // per variant
+#define AWTO_OHW_CY_S2_START                    1                   // AwtoOhwCycleStep result: Scope 2 cmd 1
+#define AWTO_OHW_CY_S2_STOP                     3                   // ... Scope 2 off + the ladder again
+#define AWTO_OHW_CY_BAND_MS                     8                   // writes per main pass, as Scope 2 (AWTO_S2_PASS_MS)
+#define AWTO_OHW_OP_CYCLE                       11                  // T10 on (usN != 0) / off
 #define AWTO_OHW_LO                             40
 #define AWTO_OHW_MIDC                           90
 #define AWTO_OHW_HI                             230
@@ -223,12 +241,20 @@ typedef struct
     BYTE aucRegs[AWTO_OHW_REGS];                        // 3A02 3A0B 3A17 3A33 3A34 3A41 0093 0094 006C at the start of the op
     BYTE aucBad[AWTO_OHW_BAD];
     BYTE aucBuf[AWTO_OHW_BUF];
+    BYTE ucSaverRun;                                    // g_ucAwtoSaverRun at the op
 } StAwtoOsdHw;
 __xdata StAwtoOsdHw g_stAwtoOsdHw;
 extern __xdata WORD g_usAwtoS2Frame;
 extern __xdata BYTE g_ucAwtoSaverRun;
 extern void set_ap_screensaver_now(BYTE ucId, int iV);
 static __xdata WORD s_usOhwLfsr;
+static __xdata BYTE s_ucOhwCyOn;
+static __xdata BYTE s_ucOhwCyVar;
+static __xdata WORD s_usOhwCyPos;
+static __xdata unsigned long s_ulOhwCyT0;
+static const __code BYTE tAwtoOhwDigit[AWTO_OHW_DIGITS][AWTO_OHW_DG_H] = {        // 5 x 7, bit 4 = left column
+    {0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E}, {0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F}, {0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E},
+    {0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02}, {0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E}, {0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E}};
 static const __code WORD tAwtoOhwRegs[AWTO_OHW_REGS] = {AWTO_R_FRAME_CTRL_02, AWTO_R_FRAME_CTRL_0B, AWTO_R_FRAME_CTRL_17, AWTO_R_FRAME_CTRL_33,
                                                         AWTO_R_FRAME_CTRL_34, AWTO_R_FRAME_CTRL_41, AWTO_R_OSD_MISC_PORT, AWTO_R_OSD_WRITE_OPTION, AWTO_R_OVERLAY_CTRL};
 
@@ -481,12 +507,115 @@ static void AwtoOhwPlanes(void)                         // T6: SOLID = plane A (
     osd_tc_show(1);
 }
 
+static void AwtoOhwLadderMap(BYTE ucDigit)              // map of the ladder: id = cell as the viewer reads it; the cells of a 5 x 7 digit 1..6 in blue
+{
+    WORD usI;
+    WORD usCell;
+    WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
+    BYTE ucC1;
+    BYTE ucR;
+    BYTE ucC;
+
+    for(usI = 0; usI < usCells; usI++)
+    {
+        ucR = (BYTE)(usI / AWTO_OHW_LD_N);
+        ucC = (BYTE)(usI % AWTO_OHW_LD_N);
+        ucC1 = AWTO_OHW_PAL_C1;
+        if((ucDigit >= 1) && (ucDigit <= AWTO_OHW_DIGITS) && (ucR >= AWTO_OHW_DG_ROW) && (ucR < AWTO_OHW_DG_ROW + AWTO_OHW_DG_H) &&
+           (ucC >= AWTO_OHW_DG_COL) && (ucC < AWTO_OHW_DG_COL + AWTO_OHW_DG_W) &&
+           (((tAwtoOhwDigit[ucDigit - 1][ucR - AWTO_OHW_DG_ROW] >> (AWTO_OHW_DG_W - 1 - (ucC - AWTO_OHW_DG_COL))) & 1) != 0))
+        {
+            ucC1 = AWTO_OHW_PAL_C3;                                     // blue
+        }
+        usCell = (g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usI, usCells) : usI;
+        AwtoOsdWord(AWTO_OHW_LD_N + 1 + usCell,
+                    (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_OHW_PAL_BG >> 3) & 1) << 5) | (((ucC1 >> 3) & 1) << 4) | ((AWTO_OHW_PAL_C3 & 7) << 1) | ((AWTO_OHW_PAL_BG >> 2) & 1)),
+                    (usI << AWTO_OHW_BYTE_BITS) | (BYTE)(((AWTO_OHW_PAL_BG & 3) << 6) | ((AWTO_OHW_PAL_C2 & 7) << 3) | (ucC1 & 7)));
+    }
+}
+
+static void AwtoOhwGlyphPut(BYTE ucId, BYTE ucDirect)  // one ladder glyph rewritten with the same content: plane A solid, plane B 0
+{
+    BYTE ucK;
+
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_OHW_LD_FONT + (WORD)ucId * AWTO_OHW_PL_STRIDE, _OSD_WITHOUT_DB);
+    for(ucK = 0; ucK < AWTO_OHW_PL_STRIDE * AWTO_OHW_WORD; ucK++)
+    {
+        if(ucDirect != 0)
+        {
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (ucK < AWTO_OHW_PL_PLANE_W * AWTO_OHW_WORD) ? AWTO_OHW_SOLID : AWTO_OSD_ZERO;
+        }
+        else
+        {
+            ScalerOsdDataPort((ucK < AWTO_OHW_PL_PLANE_W * AWTO_OHW_WORD) ? AWTO_OHW_SOLID : AWTO_OSD_ZERO);
+        }
+    }
+}
+
+static void AwtoOhwLadder(void);
+
+static BYTE AwtoOhwCycleStep(void)                      // T10: one band of the variant; next every AWTO_OHW_CY_MS. Returns the Scope 2 cmd the poll must call (0 none)
+{
+    unsigned long ulT0 = AwtoMs();
+    WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
+
+    if((WORD)(ulT0 - s_ulOhwCyT0) >= AWTO_OHW_CY_MS)
+    {
+        s_ulOhwCyT0 = ulT0;
+        s_ucOhwCyVar = (s_ucOhwCyVar >= AWTO_OHW_V_SCOPE2) ? 1 : (BYTE)(s_ucOhwCyVar + 1);
+        g_stAwtoOsdHw.usFrame = s_ucOhwCyVar;                         // host sees the variant shown
+        if(s_ucOhwCyVar == AWTO_OHW_V_SCOPE2)
+        {
+            return AWTO_OHW_CY_S2_START;                                // the real saver for one variant (no digit: the scope itself)
+        }
+        if(s_ucOhwCyVar == 1)
+        {
+            return AWTO_OHW_CY_S2_STOP;                                 // the poll stops Scope 2 and redraws the ladder
+        }
+        AwtoOhwLadderMap(s_ucOhwCyVar);
+        return 0;
+    }
+    if(s_ucOhwCyVar == AWTO_OHW_V_SCOPE2)
+    {
+        return AWTO_OHW_S2_DRAW;                                        // one band, as the saver poll does
+    }
+    if(s_ucOhwCyVar == AWTO_OHW_V_STATIC)
+    {
+        return 0;
+    }
+    do
+    {
+        if(s_ucOhwCyVar == AWTO_OHW_V_VBLANK)                         // one glyph right after the display vsync, then back to the main loop
+        {
+            ScalerTimerWaitForEvent(_EVENT_DVS);
+            AwtoOhwGlyphPut((BYTE)s_usOhwCyPos, 1);
+            s_usOhwCyPos = (s_usOhwCyPos + 1) % AWTO_OHW_LD_IDS;
+            g_stAwtoOsdHw.usBad++;
+            return 0;
+        }
+        if(s_ucOhwCyVar == AWTO_OHW_V_MAP)
+        {
+            AwtoOhwLadderMap(s_ucOhwCyVar);
+        }
+        else if(s_ucOhwCyVar == AWTO_OHW_V_ADDR)
+        {
+            ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_OHW_LD_FONT + s_usOhwCyPos * AWTO_OHW_PL_STRIDE, _OSD_WITHOUT_DB);
+        }
+        else
+        {
+            AwtoOhwGlyphPut((BYTE)s_usOhwCyPos, (BYTE)(s_ucOhwCyVar == AWTO_OHW_V_DIRECT));
+        }
+        s_usOhwCyPos = (s_usOhwCyPos + 1) % ((s_ucOhwCyVar == AWTO_OHW_V_MAP) ? usCells : AWTO_OHW_LD_IDS);
+        g_stAwtoOsdHw.usBad++;                                          // writes done (glyphs, maps or address sets)
+    }
+    while((WORD)(AwtoMs() - ulT0) < AWTO_OHW_CY_BAND_MS);
+    return 0;
+}
+
 static void AwtoOhwLadder(void)                         // ids >= the first broken cell are fetched from elsewhere; colour = what plane A alone selects
 {
     WORD usI;
     BYTE ucK;
-    WORD usCell;
-    WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
 
     AwtoOsdScreenBegin();
     ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
@@ -505,13 +634,7 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
             ScalerOsdDataPort((ucK < AWTO_OHW_PL_PLANE_W * AWTO_OHW_WORD) ? AWTO_OHW_SOLID : AWTO_OSD_ZERO);
         }
     }
-    for(usI = 0; usI < usCells; usI++)
-    {
-        usCell = (g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usI, usCells) : usI;
-        AwtoOsdWord(AWTO_OHW_LD_N + 1 + usCell,
-                    (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_OHW_PAL_BG >> 3) & 1) << 5) | (((AWTO_OHW_PAL_C1 >> 3) & 1) << 4) | ((AWTO_OHW_PAL_C3 & 7) << 1) | ((AWTO_OHW_PAL_BG >> 2) & 1)),
-                    (usI << AWTO_OHW_BYTE_BITS) | (BYTE)(((AWTO_OHW_PAL_BG & 3) << 6) | ((AWTO_OHW_PAL_C2 & 7) << 3) | (AWTO_OHW_PAL_C1 & 7)));
-    }
+    AwtoOhwLadderMap(AWTO_OHW_NO_DIGIT);
     SET_OSD_MAPA_COL_MAX(AWTO_OHW_LD_N);
     ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_OHW_LD_N + 1, AWTO_OHW_LD_FONT);
     ScalerOsd2BitFontOffset(AWTO_OSD_ZERO);
@@ -519,36 +642,30 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
     osd_tc_show(1);
 }
 
-static void AwtoOhwS2Frames(void)                       // finish the current Scope 2 frame, then usN more; the saver poll is held (F_HOLD)
-{
-    WORD usF;
-    WORD usCalls;
-
-    if(g_ucAwtoSaverRun != AWTO_OHW_RUN_SCOPE2)
-    {
-        g_stAwtoOsdHw.ucState = AWTO_OHW_ST_NO_S2;
-        return;
-    }
-    for(usF = 0; usF <= g_stAwtoOsdHw.usN; usF++)
-    {
-        for(usCalls = 0; AwtoScopeSaver2(AWTO_OHW_S2_DRAW) == 0; usCalls++)
-        {
-            if(usCalls >= AWTO_OHW_S2_CALLS)
-            {
-                g_stAwtoOsdHw.ucState = AWTO_OHW_ST_LIMIT;
-                return;
-            }
-        }
-    }
-}
-
 static void AwtoOsdHwPoll(void)
 {
     BYTE ucOp = g_stAwtoOsdHw.ucGo;
     BYTE ucI;
     BYTE ucSu;
+    WORD usF;
+    WORD usCalls;
     unsigned long ulT0;
 
+    g_stAwtoOsdHw.ucSaverRun = g_ucAwtoSaverRun;
+    if(s_ucOhwCyOn != 0)
+    {
+        ucI = AwtoOhwCycleStep();
+        if(ucI == AWTO_OHW_CY_S2_STOP)
+        {
+            AwtoScopeSaver2(0);
+            AwtoOhwLadder();
+            AwtoOhwLadderMap(1);
+        }
+        else if(ucI != 0)
+        {
+            AwtoScopeSaver2(ucI);                                       // called here, not deeper: the saver poll's stack depth
+        }
+    }
     if(ucOp == 0)
     {
         return;
@@ -605,18 +722,43 @@ static void AwtoOsdHwPoll(void)
     {
         AwtoOhwPlanes();
     }
-    else if(ucOp == AWTO_OHW_OP_S2FRAMES)
+    else if(ucOp == AWTO_OHW_OP_S2FRAMES)                   // finish the current Scope 2 frame + usN more (poll held); inline: the saver poll's stack depth
     {
-        AwtoOhwS2Frames();
+        if(g_ucAwtoSaverRun != AWTO_OHW_RUN_SCOPE2)
+        {
+            g_stAwtoOsdHw.ucState = AWTO_OHW_ST_NO_S2;
+        }
+        for(usF = 0; (g_stAwtoOsdHw.ucState == AWTO_OHW_ST_OK) && (usF <= g_stAwtoOsdHw.usN); usF++)
+        {
+            for(usCalls = 0; AwtoScopeSaver2(AWTO_OHW_S2_DRAW) == 0; usCalls++)
+            {
+                if(usCalls >= AWTO_OHW_S2_CALLS)
+                {
+                    g_stAwtoOsdHw.ucState = AWTO_OHW_ST_LIMIT;
+                    break;
+                }
+            }
+        }
     }
     else if(ucOp == AWTO_OHW_OP_LADDER)
     {
         AwtoOhwLadder();
     }
+    else if(ucOp == AWTO_OHW_OP_CYCLE)
+    {
+        s_ucOhwCyOn = (g_stAwtoOsdHw.usN != 0);
+        if(s_ucOhwCyOn != 0)
+        {
+            AwtoOhwLadder();
+            s_ucOhwCyVar = AWTO_OHW_V_SCOPE2;                           // the first step goes on to variant 1
+            s_ulOhwCyT0 = AwtoMs() - AWTO_OHW_CY_MS;
+            s_usOhwCyPos = 0;
+            g_stAwtoOsdHw.usBad = 0;
+        }
+    }
     else if(ucOp == AWTO_OHW_OP_SAVER)
     {
-        set_ap_screensaver_now(0, (int)g_stAwtoOsdHw.usN);
-        AwtoSaverPoll();                                // served now: a hold set right after must not keep the saver from starting
+        set_ap_screensaver_now(0, (int)g_stAwtoOsdHw.usN);    // served by the next saver poll; the host waits for ucSaverRun before a hold
     }
     else if(ucOp != AWTO_OHW_OP_REGS)
     {

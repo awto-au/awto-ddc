@@ -175,10 +175,10 @@ def test_char_2bit_colours_roundtrip():
 
 def test_render_2bit_pixels_and_vlc_download():
     """A 2-bpp glyph loaded through the VLC data-port path draws its four levels with the char's four colours (bit-plane layout:
-    two 1-bpp planes, MSB plane first, from Realtek's QC icons; not yet seen on a unit)."""
+    two 1-bpp planes, low bit plane first: unit 3 ladder, docs/osd-hw-tests.md T9)."""
     import osd_vlc
     lv = [[(x // 3 + y) % 4 for x in range(12)] for y in range(18)]
-    data = b"".join(osd_vlc.pack_unit([[(v >> (1 - p)) & 1 for v in row] for row in lv], 1) for p in range(2))
+    data = b"".join(osd_vlc.pack_unit([[(v >> p) & 1 for v in row] for row in lv], 1) for p in range(2))
     assert len(data) == 54
     blob = osd_vlc.encode(data)
     m, o = FakeM(), M.OsdModel()
