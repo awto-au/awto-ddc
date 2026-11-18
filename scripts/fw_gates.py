@@ -13,7 +13,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   panel: panel_sim (#162 step 2): panel VDD / backlight pin / PWM / DPTx link only from the panel machine; no blink; backlight
     pin at once after VDD on / the M2PLL switch (Dan 2026-11-13, no T3); T4..T6 kept.
   sysm: sysm_sim (#162 step 3): power status / mode state only from the system machine; transition chain + request lines; --tree lint.
-  delays: delay_sim.py (docs/delay-audit.md): panel_sim scenario at the image's clock (+ the sibling `<stem>-fast` image of `-D AWTO_FAST_CLOCK=1` when built): class A waits vs
+  delays: delay_sim.py (docs/delay-audit.md): panel_sim scenario at the image's clock (+ the sibling `<stem>-clk87` image of `-D AWTO_CLOCK_MHZ=87` when built): class A waits vs
     wall ms, Timer2 / wall = 1, every executed DELAY_5US / DELAY_XUS loop >= nominal, loop counts = AWTO_DELAY_CNT, DDC debounce wall time equal at both clocks; --audit:
     delay_audit.py --check (every linked delay site is in docs/delay-audit.tsv, no FIX / UNKNOWN row).
   magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
@@ -50,7 +50,7 @@ LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpr
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
-CPU_OF = {"wdt": "8052"}      # wdt_test t0_arm_from_isr / prio_t0_vs_exint measure Timer0 events in ucsim cycles (m.ticks); not yet ported to the dw8051 clock (open item #162)
+CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
 NO_SIM = {"link", "pokes", "speed", "magic", "regs", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
@@ -121,9 +121,9 @@ def gates(b: Path, m: Path, ref, tree):
     g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
-    fast = b.with_name(b.name.replace("-be.bin", "-fast-be.bin"))     # `dev.py build --tag <tag>-fast -D AWTO_FAST_CLOCK=1`: measured too when present
+    fast = b.with_name(b.name.replace("-be.bin", "-clk87-be.bin"))    # `dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87` (stock clock): measured too when present
     g["delays"] = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else []),
-                   *(["--fast", fast, fast.with_suffix(".map")] if fast.is_file() and fast != b else [])]     # #delay-audit: every wait vs its intended wall time
+                   *(["--other", fast, fast.with_suffix(".map")] if fast.is_file() and fast != b else [])]     # #delay-audit: every wait vs its intended wall time
     g["nvlog"] = [*PY, f"{s}/nv_test.py", "--sim", b, "--map", m, "--cases", "flushlog"]   # #151: flush lines say what was written
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables

@@ -346,13 +346,13 @@
 //-------------------------------------------------
 // MCU Speed Up Option
 //-------------------------------------------------
-// AWTO_FAST_CLOCK (build -D AWTO_FAST_CLOCK=1) is the single switch for MCU 175.4 MHz (FLASH_CLK_DIV 2); unset = stock 87.7 MHz.
-// Every clock-derived constant (Timer0/1/2, UART, delay loop counts) follows _FLASH_CLK_DIV * _MCU_CLK_DIV, see AwtoClock in ScalerCommonPLLInclude.h.
-#if defined(AWTO_FAST_CLOCK)
-#define _MCU_SPEED_UP_SUPPORT                                   _ON
-#else
-#define _MCU_SPEED_UP_SUPPORT                                   (_LOCAL_DIMMING_SUPPORT == _ON)
+// AWTO_CLOCK_MHZ = the ONE clock switch (build -D AWTO_CLOCK_MHZ=n): 350 = MCU 350.8 MHz, SPI flash 70.2 MHz (F 1, F2 5, M 1; default, unit 3 [hw] docs/clock-sweep.md),
+// 175 = MCU 175.4 / flash 43.85 (F 2, F2 4), 87 = stock MCU 87.7 / flash 43.85 (F 4, F2 2). Every clock-derived constant follows it: dividers (Scaler_Option.h),
+// Timer0/1/2 and UART reloads (ScalerCommonTimerFunction.c), delay loop counts and the DDC debounce (AWTO_CPU_KHZ_*, ScalerCommonPLLInclude.h).
+#ifndef AWTO_CLOCK_MHZ
+#define AWTO_CLOCK_MHZ                                          350
 #endif
+#define _MCU_SPEED_UP_SUPPORT                                   (AWTO_CLOCK_MHZ > 87)
 
 //-------------------------------------------------
 // MCU CKCON Option

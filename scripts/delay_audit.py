@@ -3,7 +3,7 @@
 
 usage: delay_audit.py --write [--tree DIR] [--map MAP]   regenerate docs/delay-audit.tsv from the tree's last build (hand columns kept by key)
        delay_audit.py --check [--tree DIR] [--map MAP]   FAIL on a linked site that is not in the TSV, a TSV verdict FIX / UNKNOWN, a stale count formula
-       delay_audit.py --counts                            the loop-count formula (AWTO_DELAY_CNT) at every clock state, from the header text
+       delay_audit.py --counts                            the loop-count formula (AWTO_DELAY_CNT) at every clock state (350.8 default, 175.4, 87.7, XTAL, IOSC), from the header text
 Source of the sites: scripts/delay_inventory.py (post-link: the SDCC listing of the tree's build, so "linked" is exact).
 Classes: A timer wait (Timer2 ms) | B micro-delay (DELAY_5US / DELAY_XUS loop count, per clock state) | C spin loop / counted loop |
   D hardware-spec minimum (datasheet value - 10 %) | E our own timing constant.
@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
 TSV = ROOT / "docs/delay-audit.tsv"
 LOG = ROOT / "tmp/logs/delay_audit.log"
-COLS = ["key", "id", "class", "file", "line", "function", "kind", "value", "unit", "derivation", "scales_2x", "wall_87_7", "wall_175_4",
+COLS = ["key", "id", "class", "file", "line", "function", "kind", "value", "unit", "derivation", "scales_2x", "wall_87_7", "wall_350_8",
         "spec", "evidence", "verdict", "note", "stmt"]
 CLKS = (87.7, 175.4)
 
@@ -89,7 +89,7 @@ def counts(khz: int):
 
 def clock_states():
     """(name, kHz) per clock state as the SDK constants give it: M2PLL = 350791 / (flash div x MCU div), XTAL 14318, IOSC 28000 / PS dividers."""
-    return [("M2PLL stock 87.7", 350791 // 4), ("M2PLL fast 175.4", 350791 // 2), ("XTAL 14.318", 14318), ("IOSC 28", 28000)]
+    return [("M2PLL 350.8 (default)", 350791), ("M2PLL 175.4", 350791 // 2), ("M2PLL 87.7 (stock)", 350791 // 4), ("XTAL 14.318", 14318), ("IOSC 28", 28000)]
 
 
 # ---------------------------------------------------------------- inventory
@@ -114,7 +114,7 @@ def build_rows(tree: Path, mapp: Path):
 
 def classify(key: str, r: dict) -> dict:
     kind, name = r["kind"], r["file"].split("/")[-1]
-    d = {"class": "", "derivation": "", "scales_2x": "no", "wall_87_7": "", "wall_175_4": "", "spec": "", "evidence": "[emu]", "verdict": "UNKNOWN", "note": ""}
+    d = {"class": "", "derivation": "", "scales_2x": "no", "wall_87_7": "", "wall_350_8": "", "spec": "", "evidence": "[emu]", "verdict": "UNKNOWN", "note": ""}
     v = r["value"] if r["units"] in ("ms", "us") else ""
     if (name, r["function"]) in HAND:
         c, der, sc, ver, note = HAND[(name, r["function"])]
@@ -124,15 +124,15 @@ def classify(key: str, r: dict) -> dict:
         return d
     if kind in ("delay_ms", "poll", "wait_event", "timer_event"):
         d.update({"class": "A", "derivation": {"delay_ms": "Timer2 ms deadline (AwtoMs)", "poll": "Timer2 ticks (timeout + 1)", "wait_event": "Timer2 ticks (event bound + 1)",
-                                               "timer_event": "Timer2 ms event"}[kind], "wall_87_7": v, "wall_175_4": v, "verdict": "OK",
+                                               "timer_event": "Timer2 ms event"}[kind], "wall_87_7": v, "wall_350_8": v, "verdict": "OK",
                   "note": "Timer2 reload is compile time from the clock; sim gate: Timer2 ms per wall ms = 1 at both clocks"})
     elif kind == "delay_us":
-        c5, cx = counts(350791 // 4), counts(350791 // 2)
-        d.update({"class": "B", "derivation": "counted loop, count AWTO_DELAY_CNT per clock state", "wall_87_7": v, "wall_175_4": v, "verdict": "OK",
-                  "note": f"counts 5us/4us: stock {c5[0]}/{c5[1]}, fast {cx[0]}/{cx[1]}; hot loop >= nominal in the sim at both clocks"})
+        c5, cx, c3 = counts(350791 // 4), counts(350791 // 2), counts(350791)
+        d.update({"class": "B", "derivation": "counted loop, count AWTO_DELAY_CNT per clock state", "wall_87_7": v, "wall_350_8": v, "verdict": "OK",
+                  "note": f"counts 5us/4us: 350.8 MHz {c3[0]}/{c3[1]}, 175.4 {cx[0]}/{cx[1]}, 87.7 {c5[0]}/{c5[1]}; hot loop >= nominal in the sim at every clock"})
     elif kind == "param":
         cls = "D" if PARAM_D.search(r["stmt"]) else "E" if PARAM_E.search(r["stmt"]) else "A"
-        d.update({"class": cls, "derivation": "named ms constant, run on Timer2", "wall_87_7": v, "wall_175_4": v, "verdict": "OK", "note": "value and source: docs/delays.md"})
+        d.update({"class": cls, "derivation": "named ms constant, run on Timer2", "wall_87_7": v, "wall_350_8": v, "verdict": "OK", "note": "value and source: docs/delays.md"})
     elif kind in ("status_loop", "busy_loop", "nop"):
         d.update({"class": "C", "verdict": "UNKNOWN", "note": "no hand verdict in delay_audit.HAND: classify it"})
     return d
@@ -172,7 +172,7 @@ def write(tree, mapp):
     out = []
     for i, (k, r) in enumerate(rows_all(tree, mapp), 1):
         if r["kind"] == "const":
-            d = {"class": "E", "derivation": "AwtoMs() deadline / pass budget in Timer2 ms", "scales_2x": "no", "wall_87_7": r["value"], "wall_175_4": r["value"], "spec": "ours",
+            d = {"class": "E", "derivation": "AwtoMs() deadline / pass budget in Timer2 ms", "scales_2x": "no", "wall_87_7": r["value"], "wall_350_8": r["value"], "spec": "ours",
                  "evidence": "[emu]", "verdict": "OK", "note": ""}
         else:
             d = classify(k, r)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Every timed wait of an image measured in the simulator against its intended wall-clock time (docs/delay-audit.md).
 
-usage: delay_sim.py BIN MAP [--tree DIR] [--fast BIN MAP] [--audit] [--report]
+usage: delay_sim.py BIN MAP [--tree DIR] [--other BIN MAP] [--audit] [--report]
   Runs the panel_sim scenario (cold boot, POWER off / on, signal loss, power saving = IOSC clock, wake) on the in-process DW8051 core
   with the clock model (scripts/sim_clock.py: f_cpu from the registers the firmware writes) and records, in wall ms (cycles / f_cpu):
   - class A (timer waits): entry -> return of ScalerTimerDelayXms / ScalerTimerPollingFlagProc / ScalerTimerWaitForEvent
@@ -251,7 +251,7 @@ def main():
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
     ap.add_argument("--tree", default=str(ROOT))
-    ap.add_argument("--fast", nargs=2, type=Path, metavar=("BIN", "MAP"), help="second image (build -D AWTO_FAST_CLOCK=1): measured too, and compared with the first")
+    ap.add_argument("--other", nargs=2, type=Path, metavar=("BIN", "MAP"), help="second image at another clock (build -D AWTO_CLOCK_MHZ=87): measured too, and compared with the first")
     ap.add_argument("--audit", action="store_true", help="also delay_audit.py --check (every linked delay site is in docs/delay-audit.tsv)")
     ap.add_argument("--json", type=Path, help="write the per-image result here")
     ap.add_argument("--mode", default="1080p60")
@@ -259,7 +259,7 @@ def main():
     a = ap.parse_args()
     P.panel_times(a.tree)
     fails, res = 0, []
-    for b, m in [(a.bin, a.map)] + ([tuple(a.fast)] if a.fast else []):
+    for b, m in [(a.bin, a.map)] + ([tuple(a.other)] if a.other else []):
         f, r = measure(b, m, a.tree, a.mode)
         fails += f
         res.append(r)

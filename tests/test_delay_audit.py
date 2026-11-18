@@ -27,9 +27,10 @@ def test_counts_at_every_clock_state():
         assert 4.0 <= wx <= 4.0 + 2 * per * 1000.0 / khz, (name, cx, wx)
 
 
-def test_stock_and_fast_counts_are_what_the_sim_measured():
+def test_counts_are_what_the_sim_measured():
     assert DA.counts(350791 // 4) == (27, 21)       # docs/delay-audit.md, delay_sim.py at 87.7 MHz: hot 101 % / 104 %
     assert DA.counts(350791 // 2) == (54, 43)       # at 175.4 MHz: hot 100 % / 102 %
+    assert DA.counts(350791) == (109, 87)           # at 350.8 MHz (default)
 
 
 def test_no_runtime_calibration_left():

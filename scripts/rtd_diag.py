@@ -45,7 +45,7 @@ STAGES = ["", "BOOT (start of main)", "GPIO init done (in McuInitial)", "McuInit
 STAGES_OLD = ["", "BOOT (start of main)", "GPIO init done (in McuInitial)", "McuInitial done", "pin-share done",
               "main loop first pass", "panel power on", "DPTx link start", "DPTx link done"]
 BOOTING_MS = 2000      # cold boot reaches stage 8 at ~0.5 s (#63, wb-port7); under 2 s uptime a missing stage = still booting
-PERIOD = {0xE3: 7309, 0xC6: 14617, 0xFB: 1194}   # Timer2 counts per 1 ms tick, keyed by RCAP2H: 0xE3 stock 87.7 MHz, 0xC6 AWTO_FAST_CLOCK 175.4 MHz (reload 0xC6E7), 0xFB power saving
+PERIOD = {0xE3: 7309, 0xC6: 14617, 0x8D: 29233, 0xFB: 1194}   # Timer2 counts per 1 ms tick, keyed by RCAP2H: 0x8D AWTO_CLOCK_MHZ=350 default (reload 0x8DCF), 0xC6 175.4 MHz, 0xE3 87.7 MHz, 0xFB power saving
 # Delay calibration rows: (key, label, calls in the measured body, nominal us per call, lo, hi). A busy delay shorter than
 # nominal breaks the minimum waits it stands for (PHY settle, SDK `DELAY_XUS`); longer only costs time. So strict low,
 # loose high: lo 97 % (counts are compile time, AWTO_DELAY_CNT: the hot loop is >= 100 % by ceil, sim), hi 150 % (the cold unrolled 5 us x10 reads 130-138 % in the sim) catches a broken loop, not layout

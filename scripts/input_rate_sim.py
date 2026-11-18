@@ -21,7 +21,7 @@ import osd_render as R  # noqa: E402
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/input_rate_sim.log"
-CAL_S = 3.0                       # calibration window: covers the periodic worst pass (~every second in the idle loop)
+CAL_S = 6.0                       # calibration window: covers the periodic worst pass (~every second in the idle loop; the slowest periodic pass recurs every 3..5 s at 350.8 MHz)
 PULSES = 40                       # start phases per case
 PHASE_STEP_US = 777               # added to the idle gap between pulses: walks the start phase over the scan period
 SETTLE_US = 1_000_000             # before a sweep: the SDK cable / source handling a pin pulse started has finished
@@ -77,7 +77,9 @@ class Rig:
             self.m.stub("AwtoInRow", hook)
         else:
             self.m.stub("AwtoGpioPoll", hook_poll)
-        self.s.bus.wait(CAL_S)
+        for _ in range(int(CAL_S)):                    # a DPS17 pulse per second inside the window: the pass the SDK spends on a pulse is part of the worst gap
+            self.run_us(1_000_000 - PULSE_DPS17_US)
+            self.pulse(PIN_DPS17, 1, 0, PULSE_DPS17_US)
         on[0] = False
         out = {}
         for n, i in ROW.items():
@@ -108,7 +110,7 @@ class Rig:
         self.m.wr(addr, bytes([lo]))
 
     def sweep(self, name: str, addr: int, hi: int, lo: int, width_us: float, ident: int, count: bool, n: int) -> int:
-        seen = 0
+        seen, deltas = 0, []
         self.run_us(SETTLE_US)
         self.pulse(addr, hi, lo, width_us)                 # warm-up pulse, not scored: the first pulse after a settle meets a one-off long pass
         for k in range(n):
@@ -118,10 +120,11 @@ class Rig:
             self.pulse(addr, hi, lo, width_us)
             self.run_us(IDLE_GAP_US)                       # let the scan see the falling edge too
             if count:
-                seen += (self.m.rd(self.cnt, 1)[0] - c0) & 0xFF == 1
+                deltas.append((self.m.rd(self.cnt, 1)[0] - c0) & 0xFF)
+                seen += deltas[-1] == 1
             else:
                 seen += self.ring_new(seq0, ident) == [hi, lo]
-        say(f"  {name}: width {width_us / 1000:.2f} ms, {n} start phases: {seen} seen")
+        say(f"  {name}: width {width_us / 1000:.2f} ms, {n} start phases: {seen} seen" + (f" (edge counter deltas {sorted(set(deltas))}: {[deltas.count(d) for d in sorted(set(deltas))]})" if deltas else ""))
         return seen
 
     def check(self, ok: bool, what: str) -> None:
