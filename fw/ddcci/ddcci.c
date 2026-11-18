@@ -241,7 +241,7 @@ static void AwtoDdcRequest(volatile __xdata BYTE *pucR, BYTE *pucRx, BYTE ucLen)
 #endif
     if(!((pucRx[2] == 0x03) && (ucLen >= 7) && (pucRx[3] == AWTO_SAVER_VCP)))
     {
-        AwtoSaverActivity();                    // any DDC/CI command but the screensaver trigger itself ends a screensaver / restarts the idle time
+        AwtoSaverActivity(0);                    // any DDC/CI command but the screensaver trigger itself ends a screensaver / restarts the idle time
     }
     pucTx[0] = 0x6E;
 #if(_AUDIO_SUPPORT == _ON)

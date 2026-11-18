@@ -19,6 +19,9 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_WHY_NOSIG                    1
 #define AWTO_SAVER_WHY_IDLE                     2
 #define AWTO_SAVER_WHY_NOW                      3
+#define AWTO_SAVER_WHY_BOOT                     4                   // boot splash (docs/flash-screen.md): the flash screen drawing, shown a step per main pass
+#define AWTO_SAVER_SPLASH_DONE                  0xFF                // s_ucMid: all draw steps done
+#define AWTO_SPLASH_MAX_MS                      3000UL              // hard cap: 4x the sim power-on -> ACTIVE (~0.75 s), = console hold AWTO_CON_HOLD_MS; expiry = splash closes
 #define AWTO_SAVER_NOSIG_MS                     10000UL             // no signal this long: the source search has ended (SDK search + hold are ~4 s; start = 2.5x)
 #define AWTO_SAVER_ALT_MS                       120000UL            // Alternate: one saver for 2 min, then the other
 #define AWTO_SAVER_PACMAN_MS                    125UL               // Pac-Man step period (pacman_unit.py: 8 steps/s)
@@ -42,14 +45,14 @@ __xdata BYTE g_ucAwtoSaverWhy;
 static __xdata BYTE s_ucReq = AWTO_SAVER_REQ_NONE;                  // set by the DDC/CI apply, served by AwtoSaverPoll: a draw on the DDC handler's stack overflows IRAM and blocks DDC for its whole length
 static __xdata BYTE s_ucMid;                                        // a scope frame is part drawn
 static __xdata unsigned long s_ulAct;                               // last key / DDC activity
-static __xdata unsigned long s_ulTick;                              // last frame
+static __xdata WORD s_usTick;                                       // last frame (ms, low word: the periods are <= 125 ms)
 static __xdata unsigned long s_ulSwap;                              // run started / last swap (Alternate)
 static __xdata unsigned long s_ulNoSig;                             // no-signal since (0 = not in no-signal)
 
-void AwtoSaverActivity(void)
+void AwtoSaverActivity(BYTE ucKey)                                  // ucKey: a front key (DDC/CI commands do not end the boot splash: the host talks at power-on)
 {
     s_ulAct = AwtoMs();
-    if((g_ucAwtoSaverRun != AWTO_SAVER_OFF) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_NOW))
+    if((g_ucAwtoSaverRun != AWTO_SAVER_OFF) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_NOW) && ((g_ucAwtoSaverWhy != AWTO_SAVER_WHY_BOOT) || (ucKey != 0)))
     {
         AwtoSaverStop();
     }
@@ -90,8 +93,8 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoFlashScreen(1);
     }
-    s_ulTick = AwtoMs();
-    s_ulSwap = s_ulTick;
+    s_ulSwap = AwtoMs();
+    s_usTick = (WORD)s_ulSwap;
     s_ucMid = 1;                                                    // a scope starts with its first frame, drawn hidden
 }
 
@@ -107,6 +110,21 @@ void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: P
         g_ucAwtoSaverWhy |= 0x80;                                            // alternate flag, cleared in AwtoSaverStop
     }
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_START, (BYTE)((ucRun << AWTO_SAVER_RUN_SHIFT) | ucWhy));
+}
+
+static void SplashEnd(void)                                         // the OSD belongs to someone else: no redraw, no close
+{
+    g_ucAwtoSaverRun = AWTO_SAVER_OFF;
+    g_ucAwtoSaverWhy = AWTO_SAVER_WHY_NONE;
+    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_STOP, 0);
+}
+
+void AwtoSaverTaken(void)                                           // OsdDispDisableOsd: the splash's drawing is gone; it is drawn again unless a console / menu took the OSD
+{
+    if(g_ucAwtoSaverWhy == AWTO_SAVER_WHY_BOOT)
+    {
+        s_ucMid = 0;
+    }
 }
 
 void AwtoSaverStop(void)
@@ -125,6 +143,18 @@ void AwtoSaverPoll(void)                                            // main loop
     unsigned long ulNow = AwtoMs();
     BYTE ucMode = SysModeGetModeState();
 
+    if((s_ulSwap == 0) && (g_ucAwtoSaverRun == AWTO_SAVER_OFF) && (s_ucReq == AWTO_SAVER_REQ_NONE))   // first pass after power-on
+    {
+        s_ulSwap = ulNow;
+        if(AWTO_SET(BOOT_SPLASH) != 0)
+        {
+            g_ucAwtoSaverRun = AWTO_SAVER_FLASH;
+            g_ucAwtoSaverWhy = AWTO_SAVER_WHY_BOOT;
+            s_ucMid = 0;                                            // draw step
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_START, (BYTE)((AWTO_SAVER_FLASH << AWTO_SAVER_RUN_SHIFT) | AWTO_SAVER_WHY_BOOT));
+        }
+        return;
+    }
     if(s_ucReq != AWTO_SAVER_REQ_NONE)
     {
         BYTE ucReq = s_ucReq;
@@ -132,7 +162,10 @@ void AwtoSaverPoll(void)                                            // main loop
         s_ucReq = AWTO_SAVER_REQ_NONE;
         if(ucReq == AWTO_SAVER_NOW_STOP)
         {
-            AwtoSaverStop();
+            if(g_ucAwtoSaverWhy != AWTO_SAVER_WHY_BOOT)             // the settings load applies 0 once: the splash has its own end
+            {
+                AwtoSaverStop();
+            }
         }
         else if(ucReq == AWTO_SAVER_NOW_ALERT)
         {
@@ -150,6 +183,22 @@ void AwtoSaverPoll(void)                                            // main loop
     }
     if(g_ucAwtoSaverRun != AWTO_SAVER_OFF)
     {
+        if(g_ucAwtoSaverWhy == AWTO_SAVER_WHY_BOOT)
+        {
+            if((isr_g_stAwtoDiag.ucHold != 0) || (g_ucAwtoMenuOn != 0))
+            {
+                SplashEnd();                                        // a console / menu opened over it: nothing to close
+            }
+            else if(((ulNow - s_ulSwap) >= AWTO_SPLASH_MAX_MS) || (ucMode == _MODE_STATUS_ACTIVE))      // the picture is on: it takes over
+            {
+                AwtoSaverStop();
+            }
+            else if((s_ucMid != AWTO_SAVER_SPLASH_DONE) && (ucMode != _MODE_STATUS_SEARCH) && (ucMode != _MODE_STATUS_DISPLAY_SETTING))   // never a step on the picture's path
+            {
+                s_ucMid = (AwtoFlashDraw(1, s_ucMid) != 0) ? AWTO_SAVER_SPLASH_DONE : (BYTE)(s_ucMid + 1);
+            }
+            return;
+        }
         if(((g_ucAwtoSaverWhy & 0x7F) == AWTO_SAVER_WHY_NOSIG) && (ucMode != _MODE_STATUS_NOSIGNAL))
         {
             AwtoSaverStop();                                        // a source locked
@@ -166,20 +215,20 @@ void AwtoSaverPoll(void)                                            // main loop
         }
         if(g_ucAwtoSaverRun != AWTO_SAVER_PACMAN)                   // scopes: one column per pass until the frame is complete, then a pause
         {
-            if((s_ucMid == 0) && ((ulNow - s_ulTick) < ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE_MS : AWTO_SAVER_SCOPE2_MS)))
+            if((s_ucMid == 0) && ((WORD)(ulNow - s_usTick) < ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE_MS : AWTO_SAVER_SCOPE2_MS)))
             {
                 return;
             }
             s_ucMid = (BYTE)(((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AwtoScopeSaver(2) : AwtoScopeSaver2(2)) == 0);
             if(s_ucMid == 0)
             {
-                s_ulTick = ulNow;
+                s_usTick = (WORD)ulNow;
             }
             return;
         }
-        if((ulNow - s_ulTick) >= AWTO_SAVER_PACMAN_MS)
+        if((WORD)(ulNow - s_usTick) >= AWTO_SAVER_PACMAN_MS)
         {
-            s_ulTick = ulNow;
+            s_usTick = (WORD)ulNow;
             AwtoPacmanClassic(2);
         }
         return;

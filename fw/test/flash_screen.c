@@ -43,6 +43,13 @@ extern void osd_tc_close(void);
 #define AWTO_FS_ZERO                            0x00
 #define AWTO_FS_ARG_ON                          0x7E
 #define AWTO_FS_ARG_OFF                         0x7F
+#define AWTO_FS_CELL_CHUNK                      110                 // cells per draw step (330 cells: 3 steps); the splash draws one step per main pass
+#define AWTO_FS_GLYPH_CHUNK                     30                  // glyphs per step (90: 3 steps)
+#define AWTO_FS_CELL_STEPS                      ((AWTO_FS_CELLS + AWTO_FS_CELL_CHUNK - 1) / AWTO_FS_CELL_CHUNK)
+#define AWTO_FS_GLYPH_STEPS                     ((AWTO_FS_GLYPHS + AWTO_FS_GLYPH_CHUNK - 1) / AWTO_FS_GLYPH_CHUNK)
+#define AWTO_FS_STEP_SETUP                      0
+#define AWTO_FS_STEP_GLYPH0                     (1 + AWTO_FS_CELL_STEPS)
+#define AWTO_FS_STEP_LAST                       (AWTO_FS_STEP_GLYPH0 + AWTO_FS_GLYPH_STEPS)
 
 #pragma place bank(11)                      // leaf readers in the data's bank
 static BYTE FsByte(WORD usIdx)
@@ -56,18 +63,16 @@ static BYTE FsTitle(BYTE ucCol)
     return g_aucFsTitle[ucCol];
 }
 
-static BYTE FsCellId(WORD usCell, BYTE *pucYellow)  // glyph id of the logical cell: Pac-Man tile, title char or blank
+static BYTE FsCellId(WORD usCell, BYTE ucSplash)  // glyph id of the logical cell: Pac-Man tile (id >= AWTO_FS_PM_OPEN), title char or blank
 {
     BYTE ucRow = (BYTE)(usCell / AWTO_FS_COLS);
     BYTE ucCol = (BYTE)(usCell % AWTO_FS_COLS);
 
-    *pucYellow = 0;
     if((ucRow >= AWTO_FS_PM_ROW0) && (ucRow < AWTO_FS_PM_ROW0 + AWTO_FS_PM_ROWS) && (ucCol >= AWTO_FS_PM_COL0) && (ucCol < AWTO_FS_PM_COL0 + AWTO_FS_PM_COLS))
     {
-        *pucYellow = 1;
         return (BYTE)(AWTO_FS_PM_OPEN + (ucRow - AWTO_FS_PM_ROW0) * AWTO_FS_PM_COLS + (ucCol - AWTO_FS_PM_COL0));
     }
-    return (ucRow == AWTO_FS_ROW_TITLE) ? FsTitle(ucCol) : 0;
+    return (ucRow == AWTO_FS_ROW_TITLE) ? FsTitle((BYTE)(ucCol + ((ucSplash != 0) ? AWTO_FS_COLS : 0))) : 0;
 }
 
 static void FsWord(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
@@ -78,61 +83,68 @@ static void FsWord(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
     ScalerOsdDataPort(ucB2);
 }
 
-void AwtoFlashScreen(BYTE ucOn)
+// One draw step (ucSplash: second title text); 0 = more steps follow, 1 = drawn and shown. Steps: set-up, cell chunks, glyph chunks, show.
+BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep)
 {
     WORD usI;
     BYTE ucK;
     BYTE ucB;
-    BYTE ucRot;
-    BYTE ucYel;
 
-    osd_tc_close();
-    if(ucOn == 0)
+    if(ucStep == AWTO_FS_STEP_SETUP)
     {
-        ScalerOsdScaleUpOnOff(_DISABLE);
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_OFF, 0);
-        return;
+        osd_tc_close();
+        AwtoOsdTestReset();
+        g_ucAwtoOsdRot = AwtoOsdRot180();                               // latched for the steps that follow
+        ScalerOsdGlobalDoubleBuffer(_DISABLE);
+        ScalerOsdCircuitActivated(_ENABLE);
+        ScalerOsdVerticalStartSelect(_OSD_VSYNC_SELECT_DVS);
+        ScalerOsdSetColorPalette(AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_ZERO);
+        ScalerOsdSetColorPalette(AWTO_FS_BG, AWTO_FS_BG_R, AWTO_FS_BG_G, AWTO_FS_BG_B);
+        ScalerOsdSetColorPalette(AWTO_FS_YELLOW, AWTO_FS_YEL_R, AWTO_FS_YEL_G, AWTO_FS_YEL_B);
+        ScalerOsdSetColorPalette(AWTO_FS_WHITE, AWTO_FS_WHT_R, AWTO_FS_WHT_G, AWTO_FS_WHT_B);
+        ScalerOsd2FontFunction(_DISABLE);
+        for(usI = 0; usI < AWTO_FS_ROWS; usI++)
+        {
+            FsWord(AWTO_FS_ROW_WORD + usI, AWTO_FS_ROW_B0, AWTO_FS_TILE_H - 1, AWTO_FS_COLS);
+        }
+        FsWord(AWTO_FS_END_WORD, AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_ZERO);
+        return 0;
     }
-    ucRot = AwtoOsdRot180();
-    AwtoOsdTestReset();
-    ScalerOsdGlobalDoubleBuffer(_DISABLE);
-    ScalerOsdCircuitActivated(_ENABLE);
-    ScalerOsdVerticalStartSelect(_OSD_VSYNC_SELECT_DVS);
-    ScalerOsdSetColorPalette(AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_ZERO);
-    ScalerOsdSetColorPalette(AWTO_FS_BG, AWTO_FS_BG_R, AWTO_FS_BG_G, AWTO_FS_BG_B);
-    ScalerOsdSetColorPalette(AWTO_FS_YELLOW, AWTO_FS_YEL_R, AWTO_FS_YEL_G, AWTO_FS_YEL_B);
-    ScalerOsdSetColorPalette(AWTO_FS_WHITE, AWTO_FS_WHT_R, AWTO_FS_WHT_G, AWTO_FS_WHT_B);
-    ScalerOsd2FontFunction(_DISABLE);
-    for(usI = 0; usI < AWTO_FS_ROWS; usI++)
+    if(ucStep < AWTO_FS_STEP_GLYPH0)
     {
-        FsWord(AWTO_FS_ROW_WORD + usI, AWTO_FS_ROW_B0, AWTO_FS_TILE_H - 1, AWTO_FS_COLS);
-    }
-    FsWord(AWTO_FS_END_WORD, AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_ZERO);
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_FS_CHAR_WORD, _OSD_WITHOUT_DB);
-    for(usI = 0; usI < AWTO_FS_CELLS; usI++)                            // physical cell usI shows the logical cell usI, or the mirrored one when turned
-    {
-        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
-        ucB = FsCellId((ucRot != 0) ? AwtoOsdRotCell(usI, AWTO_FS_CELLS) : usI, &ucYel);
-        ScalerOsdDataPort(AWTO_FS_CHAR_B0);
-        ScalerOsdDataPort(ucB);
-        ScalerOsdDataPort((BYTE)((((ucYel != 0) ? AWTO_FS_YELLOW : AWTO_FS_WHITE) << AWTO_FS_FG_SHIFT) | AWTO_FS_BG));
-    }
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_FS_FONT_BASE, _OSD_WITHOUT_DB);
-    for(usI = 0; usI < AWTO_FS_GLYPHS; usI++)
-    {
-        for(ucK = 0; ucK < AWTO_FS_GLYPH_BYTES; ucK++)
+        usI = (WORD)(ucStep - 1) * AWTO_FS_CELL_CHUNK;
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_FS_CHAR_WORD + usI, _OSD_WITHOUT_DB);
+        for(; (usI < (WORD)ucStep * AWTO_FS_CELL_CHUNK) && (usI < AWTO_FS_CELLS); usI++)   // physical cell usI shows the logical cell usI, or the mirrored one when turned
         {
             AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
-            if(ucRot != 0)                                              // turned 180: words reversed, bits reversed (docs/osd-rotation.md)
-            {
-                ucB = AwtoOsdRevByte(FsByte(usI * AWTO_FS_GLYPH_BYTES + AwtoOsdRotSrc(ucK, AWTO_FS_GLYPH_WORDS)));
-            }
-            else
-            {
-                ucB = FsByte(usI * AWTO_FS_GLYPH_BYTES + ucK);
-            }
+            ucB = FsCellId((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usI, AWTO_FS_CELLS) : usI, ucSplash);
+            ScalerOsdDataPort(AWTO_FS_CHAR_B0);
             ScalerOsdDataPort(ucB);
+            ScalerOsdDataPort((BYTE)((((ucB >= AWTO_FS_PM_OPEN) ? AWTO_FS_YELLOW : AWTO_FS_WHITE) << AWTO_FS_FG_SHIFT) | AWTO_FS_BG));
         }
+        return 0;
+    }
+    if(ucStep < AWTO_FS_STEP_LAST)
+    {
+        usI = (WORD)(ucStep - AWTO_FS_STEP_GLYPH0) * AWTO_FS_GLYPH_CHUNK;
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_FS_FONT_BASE + usI * AWTO_FS_GLYPH_WORDS, _OSD_WITHOUT_DB);
+        for(; (usI < (WORD)(ucStep - AWTO_FS_STEP_GLYPH0 + 1) * AWTO_FS_GLYPH_CHUNK) && (usI < AWTO_FS_GLYPHS); usI++)
+        {
+            for(ucK = 0; ucK < AWTO_FS_GLYPH_BYTES; ucK++)
+            {
+                AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+                if(g_ucAwtoOsdRot != 0)                                          // turned 180: words reversed, bits reversed (docs/osd-rotation.md)
+                {
+                    ucB = AwtoOsdRevByte(FsByte(usI * AWTO_FS_GLYPH_BYTES + AwtoOsdRotSrc(ucK, AWTO_FS_GLYPH_WORDS)));
+                }
+                else
+                {
+                    ucB = FsByte(usI * AWTO_FS_GLYPH_BYTES + ucK);
+                }
+                ScalerOsdDataPort(ucB);
+            }
+        }
+        return 0;
     }
     SET_OSD_MAPA_COL_MAX(AWTO_FS_COLS);
     ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_FS_ROW_WORD, AWTO_FS_CHAR_WORD, AWTO_FS_FONT_BASE);
@@ -152,5 +164,21 @@ void AwtoFlashScreen(BYTE ucOn)
     SET_OSD_WINDOW_COLOR(AWTO_FS_BG);
     osd_tc_win_draw(AWTO_FS_WIN, AWTO_FS_ZERO, AWTO_FS_ZERO, AWTO_FS_PANEL_W - 1, AWTO_FS_PANEL_H - 1);
     osd_tc_show(1);
+    return 1;
+}
+
+void AwtoFlashScreen(BYTE ucOn)
+{
+    if(ucOn == 0)
+    {
+        osd_tc_close();
+        ScalerOsdScaleUpOnOff(_DISABLE);
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_OFF, 0);
+        return;
+    }
+    ucOn = 0;                                                           // now the step counter
+    while(AwtoFlashDraw(0, ucOn++) == 0)
+    {
+    }
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_ON, 0);
 }
