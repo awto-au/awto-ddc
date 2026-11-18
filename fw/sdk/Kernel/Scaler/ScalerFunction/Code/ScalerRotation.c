@@ -1053,6 +1053,18 @@ void ScalerRotationSetInfo(WORD usHSize, WORD usVSize)
 }
 
 //--------------------------------------------------
+// Description  : DC-Sys page size select, read twice: page A0 is read-behind (first read of a dword is stale)
+// Input Value  : None
+// Output Value : PA0_05[1:0]
+//--------------------------------------------------
+static BYTE ScalerRotationGetDcSysPageSel(void)
+{
+    ScalerGetBit(PA0_05_DC_SYS_MISC, (_BIT1 | _BIT0)); // re/regmap/README.md "Read-behind"
+
+    return ScalerGetBit(PA0_05_DC_SYS_MISC, (_BIT1 | _BIT0));
+}
+
+//--------------------------------------------------
 // Description  : Set Picture Set for Block Mode
 // Input Value  : usWidth --> Image Width
 // Input Value  : usHeight --> Image Height
@@ -1074,7 +1086,7 @@ void ScalerRotationSetPictSet(WORD usWidth, WORD usHeight)
         ucPictSetNum += 1;
 
         // Get DC-Sys Page size selection, unit: Byte
-        switch(ScalerGetBit(PA0_05_DC_SYS_MISC, (_BIT1 | _BIT0)))
+        switch(ScalerRotationGetDcSysPageSel())
         {
             default:
             case 0x00:
