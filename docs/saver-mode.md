@@ -146,7 +146,9 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 - Sources: input = `GET_INPUT_TIMING_HWIDTH/VHEIGHT` + `g_stAwtoFreq.ulVFreqmHz` (measured pixel clock / totals, 0.1 Hz SDK value as fallback), same as `ui_timing` (menu, console). Blank without an active input (no signal).
 - Draw grid = `AWTO_AST_W x AWTO_AST_H` (tiles x cell px); scale-up = `AWTO_AST_SCALE_64 / AWTO_AST_SU_FACTOR` (the OSD window's scale-up register value, 64 / 6 = 10.7). FPS = frames drawn per period (`g_usAwtoAstFrames`, per-second delta).
 - Switch `AWTO_SAVER_INFO` (`_ON` default, `-D AWTO_SAVER_INFO=_OFF` = no code); corner = `AWTO_AST_INFO_COL0` / `AWTO_AST_INFO_ROW0`. No registry row.
-- Cost (sim, `saver_loop_cost.py --case asteroids`, 20 s fw time, 2026-11-19, on vs off): frames/s 25.05 vs 25.00; instructions +3.3 % (about 1.3 ms per frame averaged, 1 frame per second carries ~30 ms: the box redraw); XDATA free 715 -> 700 B (floor).
+- Cost (sim, `saver_code_profile.py --case asteroids --window 10`, 350.8 MHz, 2026-11-19, on vs off): instr / frame 600476 vs 593290 (+1.2 %), compute 14.56 vs 14.42 ms, saver slot incl. flash stalls 6.9 vs 6.4 ms (+0.5 ms / frame); 25.00 frames/s both; worst main-loop pass 9.93 vs 9.83 ms (no spike). `AstInfoDraw` 0.08 + `AstPutDec` 0.09 ms / frame, the rest is the glyph lines / tile uploads of the redrawn tiles.
+- First version cost +3.3 % instr: 32-bit `/ 1000`, `% 1000` of the refresh evaluated several times per pass, and 16-bit divides per digit. Now: refresh split once per period, digits by subtraction, fps-only change redraws 4 tiles of the last info row (not 18).
+- XDATA free 715 -> 700 B (floor): 10 B statics + locals; no text buffers (line text is built per pass in the free last canvas row of band 1).
 - Scope 1 / Scope 2 / Pac-Man: not built (own canvases, own scale-up; same pattern, but XDATA is at the floor).
 - Frame-compare tools (`saver_frames_md5.py`) build both images with `-D AWTO_SAVER_INFO=_OFF`: the fps digits follow fw time.
 
