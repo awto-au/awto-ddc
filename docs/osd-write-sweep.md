@@ -1,13 +1,24 @@
 # OSD write-rate sweep and OSD clock knobs
 
-Status 2026-11-18: Phase A (firmware op, host tool, sim proof, regdb search) done; Phase B (unit 3 measurements) and Phase C (DDR clock) not run.
+Status 2026-11-19: Phase A (firmware op, host tool, sim proof, regdb search), Phase B (unit 3 sweeps, results below) and Phase C (DDR PLL steps to +5 %, outcome below) done.
 Tags: `[hw]` measured on unit 3, `[regdb]` `re/regdb/RTD2795T-CG.tsv.gz`, `[sdk-hypothesis]` SDK claim, `[sim]` fw_sim, `[?]` unknown.
 Related: [timing.md](osd/timing.md), [saver-fps-hw.md](saver-fps-hw.md) (levers T-H / T-K / T-M), [clock-sweep.md](clock-sweep.md), [path-cost.md](osd/path-cost.md).
 
-## Baseline [hw] (docs/clock-sweep.md, `tmp/logs/clk_sweep.log`)
-- Direct triples: 1.08 us/B at MCU 350.8 MHz, 2.16 at 175.4, 3.79 at stock 87.7; `ScalerOsdDataPort` 3.79 us/B at 175.4.
-- Sim (this image, cycle model, no register effects): direct triples 0.54 us/B at 350.8 MHz, `ScalerOsdDataPort` 1.62 us/B.
-  - Hardware is 2.0x the CPU-cycle model for direct stores: ~0.54 us/B of bus wait is not in the model [?]; Phase B tells which register owns it.
+## Baseline and result [hw]
+- Direct triples were 1.08 us/B at MCU 350.8 MHz with flash 70.2 MHz (docs/clock-sweep.md), 2.16 at 175.4, 3.79 at stock 87.7.
+- Default image since 2026-11-19 (MCU 350.8 / flash 116.9 MHz): direct triples 0.385 us/B, direct loop 0.348, `ScalerOsdDataPort` 1.391, B1-only 0.215 per byte-equivalent (one store per word), `bit_block` on 0.385, address set 4.5 us each; unit 3, 1848 B x 73 passes, read-back clean.
+- Closed: the 2x gap between the sim (0.54 us/B, cycle model) and the old hardware figure (1.08) was flash-fetch bound. Raising the flash clock from 70.2 to 116.9 MHz took hardware to 0.385 us/B, under the sim. None of `FFF1`, `FFFB`, `FFBC` was involved.
+- Register sweep (direct triples, us/B; 0 bad bytes M1 and M2 in every row; no FIFO / STATUS0 flag):
+  - `FFF1` sel 0 0.385, 1..5 0.378, 6..8 0.385, 9..11 0.393, 12..13 0.400, 14 0.408, 15 0.415; `burwr_func_int_sel` 1 0.378. Higher sel only slows.
+  - `FFFB` 0, 1, 2, 3, 4, 6, 8, 16, 32, 64, 128, 255: 0.378 to 0.385 (stock 0x28 = 40): no effect.
+  - `FFBC` 31, 24, 16, 15, 8, 4, 2, 1, 0: 0.378 to 0.385: no effect on a timed write.
+  - State flags (EA off, scale-up off, overlay off, `0x93[7]` on): 0.378 to 0.385. N 1848 / 3696 / 8184: 0.378 / 0.376 / 0.374.
+  - Combinations of the best single values: 0.378 (no gain). No register combination beats stock.
+- Burst XRAM -> port (SDK sequence, one 54 B glyph per burst, setup included), by `FFFB` gap: 40 -> 0.341, 32 -> 0.294, 24 -> 0.247, 16 -> 0.200, 14 -> pass, 12 -> 0.180 (3 of 3 clean), 11 -> 0.167 (3 of 3), 10 -> 0.167 (1 of 3), 9 -> 0.160 (fails 1 to 2 bytes), 8 -> 0.154 (26 bad), 3 -> 0.127 (253 bad). Smallest reliable gap 11 to 12; the SDK formula gives about 18 at 4K60 [sdk-hypothesis]. Best passing: 0.180 us/B at gap 12 = 2.1x direct triples; with EA off at gap 3 it still fails.
+- Held with the savers running (heartbeat vs host clock +-0.3 %, 100 link reads, Scope 2): best values and `FFBC` 14 / 12 healthy, Scope 2 31.1 frames/s unchanged.
+- HAZARD `FFBC`: held at 10 or lower the debug link stops answering (10, 8 no answer; 6, 5 link lost); the firmware restored the register at its hold limit and the unit came back 12/12. Reset value 0x0F: do not lower it. (regmap row FFBC.)
+- Reads of PHY-page registers (0x88xx, 0xC8xx) and the FIFO status pages: a read at a new address returns the previous read's data; the second read of the same address is right (MCU and debug slave). The firmware sweep reads them twice (`AwtoRegRd2`); the FIFO flags of the first OSD sweep run (before 2026-11-19 06:17) were single reads and are not evidence.
+- Nothing adopted into the default build.
 
 ## Tool
 - Firmware: `g_stAwtoOsw`, `AwtoOswRun` / `AwtoOswPoll` in `fw/test/testcmd.c`, `-D _AWTO_OSD_HWTEST` only (build: `./dev.py build --unit 3 --tag T -D _AWTO_OSD_HWTEST "--fw-args=--xdata-floor 0"`; XDATA free 430 B, below the 700 B floor, so the floor is off for this image).
@@ -62,11 +73,15 @@ Related: [timing.md](osd/timing.md), [saver-fps-hw.md](saver-fps-hw.md) (levers 
 - Conclusion: the OSD cannot be overclocked; it has a gate and no divider. Its pixel side follows dclk (display clock), which is off limits. The tunable part is the MCU-to-SRAM write path (this sweep) and the MCU clock (docs/clock-sweep.md).
 - Implication for T10: reads (scan) at dclk, writes at the MCU / scaler bus clock; two different clock domains on one SRAM. Whether the SRAM is dual-port or arbitrated is not in the regdb [?]; T10 plus the sweep's `state` group (scale-up off, overlay off) are the tests.
 
-## Phase C: DDR clock sweep (instruction 2026-11-18; run only after Phase B, needs a separate go to touch the unit)
-- Scope: DDR clock only. No display PLL (DPLL block `0x00F5..0x00FF`), no panel timing, no dclk. Why: scaler memory bandwidth may limit the picture / scale-up path at 4K.
-- Knobs [regdb, `0x88xx` DDR PHY PLL page; channel B mirror at `0xC8xx`]: `PLL_SSC1` `reg_f_code` (`0x8826/27`) and `PLL_SSC2` `reg_n_code` (`0x882B`) set the fractional PLL ratio; `PLL_CTRL3_2` `reg_pdiv`; `0x3780` / `0x37C0` `clken_ddrphi`. The project already builds `_DDR2_MEMORY_CLK_1200M_SUPPORT = _ON` (DDR PLL 1200000 kHz from the code table, `docs/delays.md` "DDR2 freq 2 x 150 us") [sdk-hypothesis].
-- First step (read-only): `scripts/ddr_sweep.py state` + `base` to log the live PLL registers and flags; derive the stock ratio and the step size per `f_code` LSB from the registers, not from the SDK.
-- Sweep: stock +1, +2, +3 % in small steps (hard envelope +3 % absolute unless the named flag `--ddr-override` is given), each step: write the ratio in the SDK's order [sdk-hypothesis] with the two 150 us waits, settle 200 ms (`ddr_sweep.py` SETTLE_S), read VALID_WIN_DET and INT_STATUS1 per channel (A pages 8E / 8F / A0, B CE / CF / A8), FIFO flags, sync-log frame counters, `./dev.py health`; leave a labelled pattern for the later look; revert at the hold limit; WDT backstop.
-- Stop rules: revert at once on any flag change or lost link; retry a failing step once; stop after 3 reproducible failures.
-- No frame-buffer capture path exists (no HDMI capture on the host side of unit 3): integrity = flags + counters + health; the visual check is left for Dan.
-- Firmware op and host tool for this phase are not written yet: they follow Phase B and its go.
+## Phase C: DDR PLL clock steps (Dan 2026-11-18: DDR only, relative steps; run 2026-11-19 on unit 3)
+- Scope: DDR PLL only. Not touched: display PLL (DPLL block `0x00F5..0x00FF`), panel timing, dclk.
+- Model, high confidence for the ratio: `F_pll = F_xtal / (pdiv + 1) x (N + 2 + F / 8192)`.
+  - Sources: regdb text of `reg_n_code_` (0x882B), worked example 13.5 MHz x (116 + 2 + 4247 / 8192) = 1.6 GHz [regdb]; SDK `ScalerPLLSetDDR2PLLFreq` computes N and F the same way [sdk-hypothesis]; live registers, both channels: N 81, F 6639, `reg_pdiv` code 0 (Div1) -> 14.318 x (81 + 2 + 6639 / 8192) = 1200.00 MHz = the project's `_DDR2_MEMORY_CLK_1200M_SUPPORT` option [hw + build option, independent of the formula's source].
+  - One code unit = 1.748 kHz = 0.000146 %; 0.5 % = 3432 units. Whether 1200 MHz is the data rate or the clock does not matter for relative steps.
+  - Would falsify: a PHY or frame-path observable that does not follow the code (see result), or a different pdiv / reference than assumed.
+- Tool: firmware `g_stAwtoDdr` (HWTEST), host `scripts/ddr_clk_sweep.py` (`read`, `run`; log `tmp/logs/ddr_clk_sweep.log` / `.tsv`).
+  - Op sets a signed delta from the stock code on both channels (F first, then N; transient within one N unit = 1.2 %); envelope +-5 %, `AWTO_DDR_F_OVERRIDE` / `--ddr-override` doubles it; refuses when the stock N of A and B differ by more than one; restores by itself 30 s after the last set (host re-arms each rung); sim proof: apply, refuse above the envelope, override, revert, auto-revert at a 400 ms hold.
+  - Per rung: settle 0.5 s, DDR read-path flags (`ddr_sweep.py` `Phy.measure`, VALID_WIN_DET + INT_STATUS1, A and B, worst of 3 clears), FIFO / STATUS0 flags, heartbeat, link reads, `./dev.py health` (12/12). Failing rung: revert, one retry from stock; stop after 3 reproducible failures or at the first lost link / health failure.
+- Result 2026-11-19: stock, -0.5 % (control), +0.5 % to +5.0 % in 0.5 % rungs all PASS; flags at every rung equal to stock (VALID_WIN_DET 1 of 8 on both channels, INT_STATUS1 0 of 8, `cal` bytes `00 05 05 05`); health 12/12 at every rung; heartbeat 0.9997 to 1.0007. Registers read back as written (e.g. +5 %: N 86, F 7 on both channels = 1260.0 MHz modelled). Reverted to stock N 81 / F 6639 at the end.
+- Not validated: no PHY or controller state followed the code. A full `ddr_sweep.py state` diff (74 lines, stock vs +2.5 % vs +5 % held) shows no difference. The PLL may only re-lock through the SDK's reset sequence (`0x8837` `rst_n`, SDK de-asserts reset after writing N / F), or the change is below what the read-path flags and calibration show. There is no clock counter (the DDR PHY speed sensor needs the PHY clock; `docs/clock-sweep.md`) and no frame-buffer capture, so "the DDR clock moved" is not demonstrated; only "the code was accepted and nothing broke".
+- To close it: a PLL reset-sequence step (stop and restart the DDR clock = risk to frame-buffer contents; needs its own go) or a counter on the DDR clock. Not done.

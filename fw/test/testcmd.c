@@ -1940,13 +1940,22 @@ static __xdata BYTE s_ucOswSaved;
 static __xdata WORD s_usOswT0;
 static const __code WORD tAwtoOswFifo[AWTO_OSW_FIFO_N] = {AWTO_R_DISP_M1_FIFO_STATUS, AWTO_R_DISP_M2_FIFO_STATUS, AWTO_R_CAP_M1_FIFO_STATUS, AWTO_R_CAP_M2_FIFO_STATUS, AWTO_R_STATUS0};
 
+// PHY / DDR-side registers: a read at a new address returns the previous read's data; the second read of the same address is right [hw: unit 3, debug slave and MCU]
+static BYTE AwtoRegRd2(WORD usAddr)
+{
+    BYTE ucV = AWTO_XFR(usAddr);
+
+    ucV = *(volatile __xdata BYTE *)((unsigned int)usAddr);
+    return ucV;
+}
+
 static void AwtoOswFifo(BYTE *pucOut)                   // read only: no flag is cleared (outside the register envelope)
 {
     BYTE ucI;
 
     for(ucI = 0; ucI < AWTO_OSW_FIFO_N; ucI++)
     {
-        pucOut[ucI] = ScalerGetByte(tAwtoOswFifo[ucI]);
+        pucOut[ucI] = AwtoRegRd2(tAwtoOswFifo[ucI]);
     }
 }
 
@@ -2259,6 +2268,197 @@ static void AwtoOswPoll(void)
     }
 }
 
+// ---- DDR PLL step (docs/osd-write-sweep.md "Phase C"): memory clock only, never the display PLL / panel timing / dclk ----
+// Model [regdb 0x882B text + SDK ScalerPLLSetDDR2PLLFreq]: Fpll = Fxtal / (pdiv + 1) x (N + 2 + F / 8192); live unit 3: N 81, F 6639 -> 1200.01 MHz = the 1200M option.
+// One op sets a signed delta (units of 8 code units = 0.00117 % of the stock code) from stock, F first then N, on both channels; restore by the hold limit or the host.
+#define AWTO_DDR_OP_SET                         1
+#define AWTO_DDR_OP_REVERT                      2
+#define AWTO_DDR_ST_IDLE                        0
+#define AWTO_DDR_ST_HELD                        1
+#define AWTO_DDR_ST_REFUSED                     2
+#define AWTO_DDR_ST_REVERTED                    3
+#define AWTO_DDR_ST_AUTO                        4
+#define AWTO_DDR_REF_NONE                       0
+#define AWTO_DDR_REF_RANGE                      1                   // |delta| above the envelope, or N outside 4..255
+#define AWTO_DDR_REF_HOLD                       2                   // hold limit 0 or above AWTO_DDR_HOLD_MAX_MS
+#define AWTO_DDR_REF_STOCK                      3                   // stock N of A and B differ by more than one: unknown state, nothing written
+#define AWTO_DDR_F_OVERRIDE                     0x01                // named override: envelope x 2 (10 %)
+#define AWTO_DDR_CODE_BITS                      13
+#define AWTO_DDR_F_MASK                         0x1FFF
+#define AWTO_DDR_F_HI_MASK                      0x1F
+#define AWTO_DDR_UNIT                           8                   // delta resolution in code units
+#define AWTO_DDR_ENVELOPE_DIV                   20                  // 5 % of the stock code
+#define AWTO_DDR_HOLD_MAX_MS                    30000               // host plans <= 10 s per step; restores by itself at the limit (the WDT does not cover a held PLL step)
+#define AWTO_DDR_N_BIAS                         2
+#define AWTO_DDR_N_MIN                          4
+#define AWTO_DDR_N_MAX                          255
+#define AWTO_DDR_PDIV_MASK                      0x03
+typedef struct
+{
+    BYTE ucGo;                                          // 0
+    BYTE ucSeq;                                         // 1
+    BYTE ucState;                                       // 2
+    BYTE ucRefuse;                                      // 3
+    BYTE ucFlags;                                       // 4
+    BYTE ucPdiv;                                        // 5  0x881D[1:0] channel A
+    WORD usDelta8;                                      // 6  signed (two's complement), units of 8 code units
+    WORD usHoldMs;                                      // 8
+    WORD usEnvelope8;                                   // 10 limit in the same units, from the stock code
+    BYTE ucNowNA;                                       // 12
+    BYTE ucNowNB;                                       // 13
+    WORD usNowFA;                                       // 14
+    WORD usNowFB;                                       // 16
+    BYTE ucStockNA;                                     // 18
+    BYTE ucStockNB;                                     // 19
+    WORD usStockFA;                                     // 20
+    WORD usStockFB;                                     // 22
+    BYTE aucFifoPre[AWTO_OSW_FIFO_N];                   // 24
+    BYTE aucFifoPost[AWTO_OSW_FIFO_N];                  // 29
+    WORD usNowMs;                                       // 34
+} StAwtoDdr;
+__xdata StAwtoDdr g_stAwtoDdr;
+static __xdata BYTE s_ucDdrSaved;
+static __xdata WORD s_usDdrT0;
+
+static void AwtoDdrRead(BYTE ucCh, BYTE *pucN, WORD *pusF)
+{
+    if(ucCh == 0)
+    {
+        *pucN = AwtoRegRd2(AWTO_R_P88_PLL_SSC2_4);
+        *pusF = ((WORD)(AwtoRegRd2(AWTO_R_P88_PLL_SSC1_3) & AWTO_DDR_F_HI_MASK) << 8) | AwtoRegRd2(AWTO_R_P88_PLL_SSC1_4);
+    }
+    else
+    {
+        *pucN = AwtoRegRd2(AWTO_R_PC8_PLL_SSC2_4);
+        *pusF = ((WORD)(AwtoRegRd2(AWTO_R_PC8_PLL_SSC1_3) & AWTO_DDR_F_HI_MASK) << 8) | AwtoRegRd2(AWTO_R_PC8_PLL_SSC1_4);
+    }
+}
+
+static void AwtoDdrWrite(BYTE ucCh, BYTE ucN, WORD usF)  // F first, then N: the transient stays within one N unit (1.2 %) of the old / new code
+{
+    if(ucCh == 0)
+    {
+        AWTO_XFR(AWTO_R_P88_PLL_SSC1_3) = (BYTE)(usF >> 8);
+        AWTO_XFR(AWTO_R_P88_PLL_SSC1_4) = (BYTE)usF;
+        AWTO_XFR(AWTO_R_P88_PLL_SSC2_4) = ucN;
+    }
+    else
+    {
+        AWTO_XFR(AWTO_R_PC8_PLL_SSC1_3) = (BYTE)(usF >> 8);
+        AWTO_XFR(AWTO_R_PC8_PLL_SSC1_4) = (BYTE)usF;
+        AWTO_XFR(AWTO_R_PC8_PLL_SSC2_4) = ucN;
+    }
+}
+
+static void AwtoDdrReadAll(void)
+{
+    AwtoDdrRead(0, &g_stAwtoDdr.ucNowNA, &g_stAwtoDdr.usNowFA);
+    AwtoDdrRead(1, &g_stAwtoDdr.ucNowNB, &g_stAwtoDdr.usNowFB);
+}
+
+static void AwtoDdrRevert(BYTE ucState)
+{
+    if(s_ucDdrSaved != 0)
+    {
+        EA = 0;
+        AwtoDdrWrite(0, g_stAwtoDdr.ucStockNA, g_stAwtoDdr.usStockFA);
+        AwtoDdrWrite(1, g_stAwtoDdr.ucStockNB, g_stAwtoDdr.usStockFB);
+        EA = 1;
+    }
+    AwtoOswFifo(g_stAwtoDdr.aucFifoPost);
+    AwtoDdrReadAll();
+    g_stAwtoDdr.ucState = ucState;
+}
+
+static long AwtoDdrCode(BYTE ucN, WORD usF)
+{
+    return ((long)(ucN + AWTO_DDR_N_BIAS) << AWTO_DDR_CODE_BITS) + usF;
+}
+
+static void AwtoDdrSet(void)
+{
+    long lDelta = (long)(int)g_stAwtoDdr.usDelta8 * AWTO_DDR_UNIT;
+    long lEnv;
+    long lNew;
+    BYTE ucCh;
+    BYTE ucN[2];
+    WORD usF[2];
+
+    g_stAwtoDdr.ucRefuse = AWTO_DDR_REF_NONE;
+    if(s_ucDdrSaved == 0)
+    {
+        AwtoDdrRead(0, &g_stAwtoDdr.ucStockNA, &g_stAwtoDdr.usStockFA);
+        AwtoDdrRead(1, &g_stAwtoDdr.ucStockNB, &g_stAwtoDdr.usStockFB);
+        g_stAwtoDdr.ucPdiv = AwtoRegRd2(AWTO_R_P88_PLL_CTRL3_2) & AWTO_DDR_PDIV_MASK;
+        s_ucDdrSaved = 1;
+    }
+    lEnv = AwtoDdrCode(g_stAwtoDdr.ucStockNA, g_stAwtoDdr.usStockFA) / AWTO_DDR_ENVELOPE_DIV * (((g_stAwtoDdr.ucFlags & AWTO_DDR_F_OVERRIDE) != 0) ? 2 : 1);
+    g_stAwtoDdr.usEnvelope8 = (WORD)(lEnv / AWTO_DDR_UNIT);
+    if((g_stAwtoDdr.usHoldMs == 0) || (g_stAwtoDdr.usHoldMs > AWTO_DDR_HOLD_MAX_MS))
+    {
+        g_stAwtoDdr.ucRefuse = AWTO_DDR_REF_HOLD;
+    }
+    else if((g_stAwtoDdr.ucStockNA > (BYTE)(g_stAwtoDdr.ucStockNB + 1)) || (g_stAwtoDdr.ucStockNB > (BYTE)(g_stAwtoDdr.ucStockNA + 1)))
+    {
+        g_stAwtoDdr.ucRefuse = AWTO_DDR_REF_STOCK;
+    }
+    else if((lDelta > lEnv) || (-lDelta > lEnv))
+    {
+        g_stAwtoDdr.ucRefuse = AWTO_DDR_REF_RANGE;
+    }
+    for(ucCh = 0; (ucCh < 2) && (g_stAwtoDdr.ucRefuse == AWTO_DDR_REF_NONE); ucCh++)
+    {
+        lNew = ((ucCh == 0) ? AwtoDdrCode(g_stAwtoDdr.ucStockNA, g_stAwtoDdr.usStockFA) : AwtoDdrCode(g_stAwtoDdr.ucStockNB, g_stAwtoDdr.usStockFB)) + lDelta;
+        if(((lNew >> AWTO_DDR_CODE_BITS) < (AWTO_DDR_N_BIAS + AWTO_DDR_N_MIN)) || ((lNew >> AWTO_DDR_CODE_BITS) > (AWTO_DDR_N_BIAS + AWTO_DDR_N_MAX)))
+        {
+            g_stAwtoDdr.ucRefuse = AWTO_DDR_REF_RANGE;
+        }
+        ucN[ucCh] = (BYTE)((lNew >> AWTO_DDR_CODE_BITS) - AWTO_DDR_N_BIAS);
+        usF[ucCh] = (WORD)(lNew & AWTO_DDR_F_MASK);
+    }
+    if(g_stAwtoDdr.ucRefuse != AWTO_DDR_REF_NONE)
+    {
+        g_stAwtoDdr.ucState = AWTO_DDR_ST_REFUSED;
+        return;
+    }
+    if(g_stAwtoDdr.ucState != AWTO_DDR_ST_HELD)
+    {
+        AwtoOswFifo(g_stAwtoDdr.aucFifoPre);
+    }
+    EA = 0;
+    AwtoDdrWrite(0, ucN[0], usF[0]);
+    AwtoDdrWrite(1, ucN[1], usF[1]);
+    EA = 1;
+    AwtoDdrReadAll();
+    s_usDdrT0 = (WORD)AwtoMs();
+    g_stAwtoDdr.ucState = AWTO_DDR_ST_HELD;
+}
+
+static void AwtoDdrPoll(void)
+{
+    BYTE ucGo = g_stAwtoDdr.ucGo;
+
+    g_stAwtoDdr.usNowMs = (WORD)AwtoMs();
+    if((g_stAwtoDdr.ucState == AWTO_DDR_ST_HELD) && ((ucGo == AWTO_DDR_OP_REVERT) || ((WORD)((WORD)AwtoMs() - s_usDdrT0) >= g_stAwtoDdr.usHoldMs)))
+    {
+        AwtoDdrRevert((ucGo == AWTO_DDR_OP_REVERT) ? AWTO_DDR_ST_REVERTED : AWTO_DDR_ST_AUTO);
+    }
+    else if(ucGo == AWTO_DDR_OP_SET)
+    {
+        AwtoDdrSet();
+    }
+    else if(ucGo == AWTO_DDR_OP_REVERT)
+    {
+        AwtoDdrReadAll();
+        g_stAwtoDdr.ucState = AWTO_DDR_ST_REVERTED;
+    }
+    if(ucGo != 0)
+    {
+        g_stAwtoDdr.ucSeq++;
+        g_stAwtoDdr.ucGo = 0;
+    }
+}
+
 static void AwtoOsdHwPoll(void)
 {
     BYTE ucOp = g_stAwtoOsdHw.ucGo;
@@ -2270,6 +2470,7 @@ static void AwtoOsdHwPoll(void)
 
     AwtoClkPoll();
     AwtoOswPoll();
+    AwtoDdrPoll();
     g_stAwtoOsdHw.ucSaverRun = g_ucAwtoSaverRun;
     if(s_ucOhwCyOn != 0)
     {

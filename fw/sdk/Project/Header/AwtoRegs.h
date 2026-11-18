@@ -91,10 +91,17 @@
 #define AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW         0x80
 #define AWTO_F_PORT_PAGE71_HDMI_CMCR_DBDCB              0x10
 #define AWTO_R_P72_HDMI_AP                              0x72C9
+#define AWTO_R_P88_PLL_CTRL3_2                          0x881D
+#define AWTO_R_P88_PLL_SSC1_3                           0x8826
+#define AWTO_R_P88_PLL_SSC1_4                           0x8827
+#define AWTO_R_P88_PLL_SSC2_4                           0x882B
 #define AWTO_R_PB7_AUX_IRQ_STATUS                       0xB7DC
 #define AWTO_F_PB7_AUX_IRQ_STATUS_AUX_RX_INT            0x01
 #define AWTO_R_PBA_AUX_IRQ_STATUS                       0xBADC
 #define AWTO_F_PBA_AUX_IRQ_STATUS_AUX_RX_INT            0x01
+#define AWTO_R_PC8_PLL_SSC1_3                           0xC826
+#define AWTO_R_PC8_PLL_SSC1_4                           0xC827
+#define AWTO_R_PC8_PLL_SSC2_4                           0xC82B
 #define AWTO_R_PERFORMANCE_METER_CONTROL                0xFDB3
 #define AWTO_F_PERFORMANCE_METER_CONTROL_PM_MTR_EN      0x01
 #define AWTO_F_PERFORMANCE_METER_CONTROL_PM_RST         0x02
