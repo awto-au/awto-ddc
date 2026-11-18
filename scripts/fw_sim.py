@@ -1151,6 +1151,9 @@ class SimBus:
             if d >= 0x8000:                                  # torn read mid-ISR (low byte wrapped, high not yet): skip the sample
                 self.t2_back.append((self.t2_abs, 0x10000 - d))
                 return self.t2_abs
+            if (t & 0xFF) == 0xFF and d >= 0x100:            # torn forward (high bumped, low still FF): skip, never the reference
+                self.t2_back.append((self.t2_abs, -d))       # a real read > 256 ms later ending in FF: taken at the next read
+                return self.t2_abs
             self.t2_abs += d
         self._t2_last = t
         return self.t2_abs
