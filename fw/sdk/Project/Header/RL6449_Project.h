@@ -1117,6 +1117,8 @@ extern void AwtoOsdWord(WORD usAddr, BYTE ucB0, WORD usB12);   // fw/osd/osd_scr
 extern void AwtoOsdRowCmds(BYTE ucRows, BYTE ucRowH, BYTE ucCols);       // ucRows row commands from SRAM 0 + the end marker word
 extern void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords);   // glyph words (canonical c0 c1 c2) at usAddr, turned when g_ucAwtoOsdRot
 extern void AwtoOsdPlaceScaleUp(BYTE ucPosH, BYTE ucPosV, BYTE ucCols, BYTE ucRows, BYTE ucFactor);   // map of 12 x 18 tiles scaled up and shown
+extern void AwtoOsdMap1(BYTE ucCols, BYTE ucRows, BYTE ucAttr);              // 1-bit map, glyph id = cell, one attribute (fg << 4 | bg); SRAM bases set, geometry latched for AwtoOsdTile
+extern void AwtoOsdTile(WORD usCell, const BYTE __xdata *pucB);              // one tile (canonical bytes) into the glyph of map cell usCell (mirrored cell when turned)
 extern void AwtoOsdScreenBegin(void);                                           // screen prologue: close, latch rotation, reset, DVS
 extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)

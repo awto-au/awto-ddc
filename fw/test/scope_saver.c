@@ -18,14 +18,6 @@
 #define AWTO_SC_BANDS                           2
 #define AWTO_SC_BAND_ROWS                       (AWTO_SC_ROWS / AWTO_SC_BANDS)
 #define AWTO_SC_BAND_H                          (AWTO_SC_BAND_ROWS * AWTO_SC_TILE_H)
-#define AWTO_SC_CELLS                           (AWTO_SC_COLS * AWTO_SC_ROWS)
-#define AWTO_SC_FS_BASE                         (AWTO_SC_ROWS + 1)
-#define AWTO_SC_FONT_BASE                       (AWTO_SC_FS_BASE + AWTO_SC_CELLS)
-#define AWTO_SC_GLYPH_WORDS                     9
-#define AWTO_SC_CHAR_B0                         0x40                // 1-bit char command
-#define AWTO_SC_CHAR_W                          AWTO_SC_TILE_W      // B0[4:0] = glyph width
-#define AWTO_SC_ID_HI_SHIFT                     5                   // B0[5] = glyph id bit 8
-#define AWTO_SC_ID_LO_MASK                      0xFF
 #define AWTO_SC_BG                              1                   // palette indexes
 #define AWTO_SC_FG                              2
 #define AWTO_SC_FG_SHIFT                        4
@@ -68,18 +60,6 @@ static __xdata BYTE s_ucPhase;
 static __xdata BYTE s_ucCol;                                            // next column of the frame being drawn
 static __xdata BYTE s_ucShown;
 static __xdata WORD s_usCell0;                                          // first cell (global tile index) of the band being drawn
-
-static void ScUpload(BYTE ucTile)
-{
-    WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_SC_COLS;
-    const __xdata uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
-
-    if(g_ucAwtoOsdRot != 0)                                                    // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
-    {
-        usCell = AwtoOsdRotCell(usCell, AWTO_SC_CELLS);
-    }
-    AwtoOsdGlyph(AWTO_SC_FONT_BASE + AWTO_SC_GLYPH_WORDS * usCell, pucB, AWTO_SC_GLYPH_WORDS);
-}
 
 static int16_t ScY(int16_t sX, BYTE ucPh)
 {
@@ -151,15 +131,14 @@ static void ScPass(BYTE ucCol, BYTE ucBand)
         sPrev = sCur;
     }
     s_usCell0 = (WORD)ucBand * AWTO_SC_BAND_ROWS * AWTO_SC_COLS + ucCol;
-    for(ucT = 0; ucT < AWTO_SC_BAND_ROWS; ucT++)                        // every tile of the band, changed or not (the canvas is reused)
+    for(ucT = 0; ucT < AWTO_SC_BAND_ROWS; ucT++, s_usCell0 += AWTO_SC_COLS)   // every tile of the band, changed or not (the canvas is reused)
     {
-        ScUpload(ucT);
+        AwtoOsdTile(s_usCell0, g_aucScPix + (WORD)ucT * OSD_TILE_BYTES);
     }
 }
 
 BYTE AwtoScopeSaver(BYTE ucCmd)                                         // cmd 2 draws one column (2 bands) and returns 1 when it completed a frame: the saver calls it once per main pass
 {
-    WORD usI;
     BYTE ucB;
 
     if(ucCmd == 0)
@@ -203,15 +182,7 @@ BYTE AwtoScopeSaver(BYTE ucCmd)                                         // cmd 2
     ScalerOsdSetColorPalette(AWTO_SC_FG, AWTO_SC_FG_R, AWTO_SC_FG_G, AWTO_SC_FG_B);
     ScalerOsd2FontFunction(_DISABLE);
     AwtoOsdRowCmds(AWTO_SC_ROWS, AWTO_SC_TILE_H, AWTO_SC_COLS);
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_SC_FS_BASE, _OSD_WITHOUT_DB);   // one char command per cell, glyph id = cell index
-    for(usI = 0; usI < AWTO_SC_CELLS; usI++)
-    {
-        ScalerOsdDataPort(AWTO_SC_CHAR_B0 | AWTO_SC_CHAR_W | (BYTE)((usI >> 8) << AWTO_SC_ID_HI_SHIFT));
-        ScalerOsdDataPort((BYTE)(usI & AWTO_SC_ID_LO_MASK));
-        ScalerOsdDataPort((BYTE)((AWTO_SC_FG << AWTO_SC_FG_SHIFT) | AWTO_SC_BG));
-    }
-    SET_OSD_MAPA_COL_MAX(AWTO_SC_COLS);
-    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_SC_FS_BASE, AWTO_SC_FONT_BASE);
+    AwtoOsdMap1(AWTO_SC_COLS, AWTO_SC_ROWS, (AWTO_SC_FG << AWTO_SC_FG_SHIFT) | AWTO_SC_BG);   // one char command per cell, glyph id = cell index
     AwtoOsdPlaceScaleUp(AWTO_SC_POS_H, AWTO_SC_POS_V, AWTO_SC_COLS, AWTO_SC_ROWS, AWTO_SC_SU_FACTOR);
     osd_canvas_init(&g_scCv, 1, AWTO_SC_BAND_ROWS, g_aucScPix, sizeof(g_aucScPix), g_aucScDirty, sizeof(g_aucScDirty));
     s_ucPhase = 0;

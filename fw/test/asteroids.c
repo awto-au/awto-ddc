@@ -22,13 +22,6 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_BANDS                          2
 #define AWTO_AST_BAND_ROWS                      (AWTO_AST_ROWS / AWTO_AST_BANDS)
 #define AWTO_AST_BAND_H                         (AWTO_AST_BAND_ROWS * AWTO_AST_TH)
-#define AWTO_AST_CELLS                          (AWTO_AST_COLS * AWTO_AST_ROWS)
-#define AWTO_AST_FS_BASE                        (AWTO_AST_ROWS + 1)
-#define AWTO_AST_FONT_BASE                      (AWTO_AST_FS_BASE + AWTO_AST_CELLS)
-#define AWTO_AST_GLYPH_WORDS                    9
-#define AWTO_AST_CHAR_B0                        0x40                                // 1-bit char command
-#define AWTO_AST_ID_HI_SHIFT                    5
-#define AWTO_AST_ID_LO_MASK                     0xFF
 #define AWTO_AST_BG                             1                                   // palette indexes
 #define AWTO_AST_FG                             2
 #define AWTO_AST_FG_SHIFT                       4
@@ -1085,18 +1078,6 @@ static void AstHud(void)                                                        
     }
 }
 
-static void AstUpload(BYTE ucTile)
-{
-    WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_AST_COLS;
-    const __xdata uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
-
-    if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd-rotation.md)
-    {
-        usCell = AwtoOsdRotCell(usCell, AWTO_AST_CELLS);
-    }
-    AwtoOsdGlyph(AWTO_AST_FONT_BASE + AWTO_AST_GLYPH_WORDS * usCell, pucB, AWTO_AST_GLYPH_WORDS);
-}
-
 static void AstBlank(void)                                                          // blank canvas (the library's dirty flags are unused here)
 {
     memset(g_aucScPix, 0, AWTO_AST_BAND_ROWS * OSD_TILE_BYTES);
@@ -1168,7 +1149,7 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
         AstBlank();                                                                 // tiles that held ink are uploaded blank
     }
     s_usCell0 = (WORD)ucBand * AWTO_AST_BAND_ROWS * AWTO_AST_COLS + ucCol;
-    for(ucI = 0; ucI < AWTO_AST_BAND_ROWS; ucI++)
+    for(ucI = 0; ucI < AWTO_AST_BAND_ROWS; ucI++, s_usCell0 += AWTO_AST_COLS)
     {
         ucBit = (BYTE)(1 << ucI);
         if(AstTileInk(ucI) != 0)
@@ -1183,7 +1164,7 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
         {
             continue;                                                               // blank before and now: its glyph is already blank
         }
-        AstUpload(ucI);
+        AwtoOsdTile(s_usCell0, g_aucScPix + (WORD)ucI * OSD_TILE_BYTES);
     }
     s_aucOcc[ucIdx] = ucOcc;
     return 1;
@@ -1191,7 +1172,6 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
 
 BYTE AwtoAsteroids(BYTE ucCmd)
 {
-    WORD usI;
     BYTE ucB;
 
     if(ucCmd == 0)
@@ -1244,15 +1224,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     ScalerOsdSetColorPalette(AWTO_AST_FG, AWTO_AST_FG_R, AWTO_AST_FG_G, AWTO_AST_FG_B);
     ScalerOsd2FontFunction(_DISABLE);
     AwtoOsdRowCmds(AWTO_AST_ROWS, AWTO_AST_TH, AWTO_AST_COLS);
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_AST_FS_BASE, _OSD_WITHOUT_DB);   // one char command per cell, glyph id = cell index
-    for(usI = 0; usI < AWTO_AST_CELLS; usI++)
-    {
-        ScalerOsdDataPort(AWTO_AST_CHAR_B0 | AWTO_AST_TW | (BYTE)((usI >> 8) << AWTO_AST_ID_HI_SHIFT));
-        ScalerOsdDataPort((BYTE)(usI & AWTO_AST_ID_LO_MASK));
-        ScalerOsdDataPort((BYTE)((AWTO_AST_FG << AWTO_AST_FG_SHIFT) | AWTO_AST_BG));
-    }
-    SET_OSD_MAPA_COL_MAX(AWTO_AST_COLS);
-    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_AST_FS_BASE, AWTO_AST_FONT_BASE);
+    AwtoOsdMap1(AWTO_AST_COLS, AWTO_AST_ROWS, (AWTO_AST_FG << AWTO_AST_FG_SHIFT) | AWTO_AST_BG);   // one char command per cell, glyph id = cell index
     AwtoOsdPlaceScaleUp(AWTO_AST_POS_H, AWTO_AST_POS_V, AWTO_AST_COLS, AWTO_AST_ROWS, AWTO_AST_SU_FACTOR);
     osd_canvas_init(&g_scCv, 1, AWTO_AST_BAND_ROWS, g_aucScPix, AWTO_AST_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_AST_BAND_ROWS));
     for(ucB = 0; ucB < AWTO_AST_PASSES; ucB++)
