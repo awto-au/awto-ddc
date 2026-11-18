@@ -1454,7 +1454,9 @@ static void AstPrepare(void)                                                    
 #define AWTO_AST_INFO_TXT                       (g_aucScPix + (AWTO_AST_BAND_ROWS - 1) * OSD_TILE_BYTES)   // band 1 has one tile row less: the canvas's last row is free scratch
 typedef char s_tAstInfoScratch[((AWTO_AST_ROWS - AWTO_AST_BAND_ROWS < AWTO_AST_BAND_ROWS) && (OSD_TILE_BYTES >= AWTO_AST_INFO_CHARS)) ? 1 : -1];
 static __xdata WORD s_usInfoAt;                                                     // scheduled time of the next refresh
-static __xdata BYTE s_ucInfoFrames;                                                 // g_usAwtoAstFrames (low byte) at the last refresh
+#ifdef _AWTO_OSD_HWTEST
+static __xdata BYTE s_ucInfoFrames;                                                 // g_usAwtoAstFrames (low byte) at the last refresh; the default image counts g_usAwtoAstFrames from 0 per period (1 B XDATA less)
+#endif
 static __xdata BYTE s_ucInfoFps;                                                    // 0 = not measured yet
 static __xdata BYTE s_ucInfoHz;                                                     // refresh, whole Hz / mHz part (0 = no active input); set once per period
 static __xdata WORD s_usInfoFrac;
@@ -1534,8 +1536,13 @@ static void AstInfoTick(WORD usNow)                                             
     {
         s_usInfoAt = usNow + AWTO_AST_INFO_PERIOD_MS;                               // behind by a period or more: resync
     }
+#ifdef _AWTO_OSD_HWTEST
     ucFps = (BYTE)((BYTE)g_usAwtoAstFrames - s_ucInfoFrames);
     s_ucInfoFrames = (BYTE)g_usAwtoAstFrames;
+#else
+    ucFps = g_usAwtoAstFrames;
+    g_usAwtoAstFrames = 0;
+#endif
     s_ucInfoHz = 0;
     s_usInfoFrac = 0;
     if(AWTO_AST_INFO_ACTIVE())                                                      // the line's values are set here, once per period (the only 32-bit divides)
@@ -1737,7 +1744,11 @@ BYTE AwtoAsteroids(BYTE ucCmd)
         s_usRng = AWTO_AST_SEED;
     }
 #if(AWTO_SAVER_INFO == _ON)
+#ifdef _AWTO_OSD_HWTEST
     s_ucInfoFrames = (BYTE)g_usAwtoAstFrames;
+#else
+    g_usAwtoAstFrames = 0;
+#endif
     s_ucInfoFps = 0;
     s_usInfoSum = 0;
     s_usInfoAt = (WORD)AwtoMs() + AWTO_AST_INFO_PERIOD_MS;

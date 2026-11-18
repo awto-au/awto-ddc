@@ -423,18 +423,18 @@ void AwtoOsdDebugLines(void)
 #define AWTO_CLK_PLL_MSB_M  0x30                // 0x01E7[5:4] = M[9:8]
 #define AWTO_CLK_PLL_MSB_N  0x0F                // 0x01E7[3:0] = N[7:4], 0x01E1[3:0] = N[3:0]
 #define AWTO_CLK_PLL_CODE   2                   // M and N register codes = value - 2
-#define AWTO_KHZ_PER_TENTH  100                 // kHz per 0.1 MHz
+#define AWTO_PLL_UNIT_KHZ   10                  // s_usAwtoPll unit (WORD: 2 B XDATA less than kHz in a DWORD)
+#define AWTO_UNITS_PER_TENTH 10                 // units per 0.1 MHz
 static __xdata BYTE s_pucConTitleH[AWTO_TITLE_N / 2];
 static __xdata WORD s_usConTitleMs;
-static __xdata DWORD s_ulAwtoK;                 // clock formatters: kHz (XDATA: the title runs on the deep DATA overlay path)
-static __xdata DWORD s_ulAwtoPll;               // M2PLL kHz
+static __xdata WORD s_usAwtoPll;                // M2PLL, 10 kHz units (XDATA: the title runs on the deep DATA overlay path)
 
-static void AwtoPutMhz(BYTE ucDiv)              // s_ulAwtoPll / ucDiv kHz -> "350.8" (0.1 MHz, rounded)
+#define AWTO_MHZ10()        ((s_usAwtoPll / ucDiv + AWTO_UNITS_PER_TENTH / 2) / AWTO_UNITS_PER_TENTH)   // 0.1 MHz, rounded; evaluated twice: no XDATA for the result
+static void AwtoPutMhz(BYTE ucDiv)              // s_usAwtoPll / ucDiv -> "350.8" (0.1 MHz, rounded)
 {
-    s_ulAwtoK = (s_ulAwtoPll / ucDiv + AWTO_KHZ_PER_TENTH / 2) / AWTO_KHZ_PER_TENTH;
-    AwtoPutNum(s_ulAwtoK / 10, 1);
+    AwtoPutNum(AWTO_MHZ10() / 10, 1);
     AwtoPutChar('.');
-    AwtoPutNum(s_ulAwtoK % 10, 1);
+    AwtoPutNum(AWTO_MHZ10() % 10, 1);
 }
 
 static BYTE AwtoClkField(BYTE ucV)              // divider field -> divider
@@ -452,14 +452,14 @@ static void AwtoPutClocks(void)                 // "CPU 350.8 PLL 350.8 SPI 116.
 
     if((MCU_FFED_MCU_CONTROL & AWTO_F_MCU_CONTROL_MCU_CLK_SEL) == 0)
     {
-        s_ulAwtoPll = _EXT_XTAL;
+        s_usAwtoPll = _EXT_XTAL / AWTO_PLL_UNIT_KHZ;
         AwtoPutStr("CPU ");
         AwtoPutMhz(1);
         AwtoPutStr(" PLL off");
         return;
     }
-    s_ulAwtoPll = ((DWORD)_EXT_XTAL * (((WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & AWTO_CLK_PLL_MSB_M) << 4)) + AWTO_CLK_PLL_CODE)) /
-                  ((((WORD)(ucMsb & AWTO_CLK_PLL_MSB_N) << 4) + (ucN & AWTO_CLK_PLL_MSB_N) + AWTO_CLK_PLL_CODE) * (ucO == 0 ? 1 : ucO));
+    s_usAwtoPll = (WORD)(((DWORD)_EXT_XTAL * (((WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & AWTO_CLK_PLL_MSB_M) << 4)) + AWTO_CLK_PLL_CODE)) /
+                  ((((WORD)(ucMsb & AWTO_CLK_PLL_MSB_N) << 4) + (ucN & AWTO_CLK_PLL_MSB_N) + AWTO_CLK_PLL_CODE) * (ucO == 0 ? 1 : ucO)) / AWTO_PLL_UNIT_KHZ);
     AwtoPutStr("CPU ");
     AwtoPutMhz(ucF * AwtoClkField(MCU_FFEE_MCU_CLOCK_CONTROL >> AWTO_CLK_DIV_SHIFT));
     AwtoPutStr(" PLL ");
