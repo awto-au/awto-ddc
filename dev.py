@@ -1281,6 +1281,35 @@ def cmd_clk_sweep(extra: list[str]) -> int:
     return _py("clk_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
+@command("CPU / interrupt / timer / memory conformance suite on its OWN special image (-D _AWTO_CPU_SUITE, docs/cpu-suite.md): --sim runs the 87 / 175 / 350 MHz builds in the firmware sim (--build makes missing images); the unit run (Phase B, test unit only) needs that image flashed",
+         args="[--unit N] [--sim] [--build] [--clocks 87,175,350] [--clock N --map F] [--cases A,B] [--groups T,I,M,R,D] [--allow-scratch-write]", kind="action")
+def cmd_cpu_suite(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    sim, build = _flag(extra, "--sim"), _flag(extra, "--build")
+    write = _flag(extra, "--allow-scratch-write")
+    opts = []
+    for flag in ("--clocks", "--clock", "--cases", "--groups"):
+        v = _opt(extra, flag)
+        if v is True:
+            raise SystemExit(f"cpu-suite: {flag} needs a value; nothing done")
+        if v is not None:
+            opts += [flag, v]
+    given = _opt(extra, "--map")
+    bad = [x for x in extra if x.startswith("-")] + extra
+    if bad:
+        raise SystemExit(f"cpu-suite: unknown arguments {bad}; nothing done")
+    if sim:
+        clocks = [c for c in (opts[opts.index("--clocks") + 1] if "--clocks" in opts else "87,175,350").split(",") if c]
+        for c in clocks:
+            if build or not (FW / f"{u['serial']}-cpusuite-{c}-be.bin").is_file():
+                rc = cmd_build(["--serial", u["serial"], "--tag", f"cpusuite-{c}", "-D", "_AWTO_CPU_SUITE", "-D", f"AWTO_CLOCK_MHZ={c}", "--fw-args=--xdata-floor 0"])
+                if rc:
+                    return rc
+        return _py("cpu_suite.py", "--sim", "--serial", u["serial"], *opts, *(["--allow-scratch-write"] if write else []))
+    m = Path(_fwmap(u, given))
+    return _py("cpu_suite.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *opts, *(["--allow-scratch-write"] if write else []))
+
+
 @command("OSD write-rate sweep (image built with -D _AWTO_OSD_HWTEST; docs/osd-write-sweep.md): groups base fff1 fffb ffbc burst state size combo hold autorevert, --sim runs it in the firmware sim",
          args="[--unit N] [--map F] [--sim] [--continue-on-fail] GROUP...", kind="action")
 def cmd_osd_sweep(extra: list[str]) -> int:

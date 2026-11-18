@@ -60,6 +60,7 @@ void SysUartSerialPortIntProc(void) __interrupt(4);
 //--------------------------------------------------
 void SysEXINT0(void) __interrupt(0)
 {
+    AWTO_CPUS_ISR(0);
     // Backup for Burst Write Bug
     g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();
 

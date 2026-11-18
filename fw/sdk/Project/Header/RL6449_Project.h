@@ -399,6 +399,17 @@ extern void AwtoWdtShow(void);
 #define AWTO_WDT_SHOW()
 #define AwtoOsdWdtLines()
 #endif
+// CPU suite image (-D _AWTO_CPU_SUITE, fw/test/cpu_suite.c, docs/cpu-suite.md): ISR hook at the top of EXINT0 / Timer0 / Timer1.
+#ifdef _AWTO_CPU_SUITE
+extern volatile __xdata unsigned char isr_g_ucCpuIsr;
+extern volatile __xdata unsigned char isr_g_aucCpuSnap[4];
+extern void AwtoCpuIsr(unsigned char ucVec);
+extern void AwtoCpuSuiteMain(void);
+#define AWTO_CPUS_ISR(ucVec)                                    do { if(isr_g_ucCpuIsr != 0) { isr_g_aucCpuSnap[0] = TL0; isr_g_aucCpuSnap[1] = TH0; \
+                                                                     isr_g_aucCpuSnap[2] = TL1; isr_g_aucCpuSnap[3] = TH1; AwtoCpuIsr(ucVec); return; } } while(0)
+#else
+#define AWTO_CPUS_ISR(ucVec)
+#endif
 // #138: WD-timer protocol events on Timer0 (fw/timer/t0ev.c)
 extern void AwtoT0EvIsr(void);
 extern void AwtoT0EvClock(void);
