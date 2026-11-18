@@ -1,5 +1,7 @@
 # Live register scan (MCU running, debug slave 0x35)
 
+- ISP-dump audit (coverage, undocumented counts, scan plan): `docs/register-audit.md`.
+
 - Tool: `scripts/reg_live_scan.py` (one pass = link on, calibrate, scan, link off); analysis: `scripts/reg_live_diff.py`.
 - Data: `tmp/regs/live/<serial>-<label>-<stamp>.json` (untracked); log `tmp/logs/reg_live_scan.log` (one line per read: addr, value, ok/NAK/SLOW, ms; excluded addresses logged as EXCLUDED).
 - Tables: `tmp/scratch/live_*.tsv` (all, changing_AB, undoc_nonzero, neverread_nonzero, unit_diff, highlights, pagesummary).
