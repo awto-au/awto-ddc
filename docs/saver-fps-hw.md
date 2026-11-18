@@ -18,6 +18,15 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 
 - Scope 1 / 2 are bound by per-pixel compute, not by OSD writes: writes are ~5 % (Scope 1: 384 tiles x 27 B x 4.12 us = 43 ms of 854). Only features that remove pixel work reach 25 fps; write-path features matter once the compute is gone.
 
+## Update 2026-11-19 (hardware at the default clock)
+- Measured on unit 3 [hw]: direct OSD port stores cost 3.79 us/B (stock 87.7 MHz), 1.08 us/B at 175.4 / 70.2 and at 350.8 / 70.2 (`docs/clock-sweep.md`); sim predicts 0.54 us/B at 350.8: the factor 2 is unexplained (OSD sweep Phase B, `docs/osd-write-sweep.md`).
+- Scope 2 on unit 3: 5.63 fps stock, 12.4 at 175.4 / 70.2, 17.55 at 350.8 / 70.2; Scope 1 plateau ~6.3 fps up to 175.4 (8.2 at 350.8; not CPU-bound, cause not investigated); Asteroids at its 25 fps schedule from 175.4.
+- OSD port writes are <= 2.7 % of a Scope 2 frame; software 180 turn `AwtoOsdTurn` 2.7 ms of 46.5 ms (5.8 %). Flash stall is 48..76 % of frame time (`docs/saver-code-placement.md`).
+- VLC: our hardware-VLC upload (`text_layer.c` `osd_tc_vlc_begin/put/end`) is used only by `fw/test/qc_osd.c`; savers upload raw glyph words; Dahua firmware used VLC for its boot-logo glyphs. VLC-turn (rotate on download) could replace `AwtoOsdTurn`: test T-I.
+- Run-glyph trace (#1): 171 vertical-run glyphs + blank = 172 1-bit glyphs, per-cell id writes only. T-A (grid windows) and T-C (narrow chars; width field: our layout width [4:0], id bit 8 at [5], type [7:6]) still pending, no run.
+- DDR clock sweep = OSD write-path Phase C only (Dan; no display PLL / panel timing): `docs/osd-write-sweep.md`.
+- Register layouts: OSD manual (`docs/osd/`) and `re/regmap/`; not restated here.
+
 ## Ranked list (score = ms saved per frame x confidence)
 
 | # | feature | savers | est. saved per frame | confidence | cheap to try |

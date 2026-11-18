@@ -25,11 +25,19 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 
 ## Read-only I2C probe (2026-11-04)
 - Bus numbers shift on re-enumeration; `ddcutil detect --brief` then showed i2c-10 (`card0-DP-3`, Intel iGPU), i2c-16 (`card1-HDMI-A-3`), i2c-20 (`card1-DP-4`), all reporting the same monitor
-- `i2cdetect -y -r 10` found 0x30, 0x37, 0x4a, 0x4b, 0x50
-  - 0x30 EDID segment, 0x37 DDC/CI, 0x50 EDID: expected
-  - 0x4a and 0x4b: extra devices; negative controls 0x44 and 0x6e NACK, so the ACKs are real
-- `i2cget` at 0x4a returned 0x00 on buses 10, 16 and 20 (0x4b only seen on bus 10)
-- 0x4a matches the Realtek ISP slave address used by the RTD266x tools (ghent360); unconfirmed for this scaler
+- `i2cdetect -y -r 10` found 0x30, 0x37, 0x4a, 0x4b, 0x50; negative controls 0x44 and 0x6e NACK, so the ACKs are real
+- Roles (established 2026-11-19):
+  - 0x30 E-DDC segment pointer, 0x37 DDC/CI, 0x3A HDCP, 0x50 EDID
+  - 0x54 HDMI 2.0 SCDC (Linux `drm_scdc_helper.c`, `SCDC_I2C_SLAVE_ADDRESS` 0x54); our read `00 01 00..` = SINK_VERSION 1. SCDC regs: 0x01 sink version, 0x02 source version, 0x10 update flags, 0x20 TMDS_CONFIG, 0x21 scrambler status, 0x30 / 0x31 config, 0x40 status flags, 0x50..0x5A error counters, 0xD0.. OUI. Never write SCDC
+  - 0x4A = Realtek ISP slave, no register auto-increment (RTD2660 manual p350; ISP enter = write 0x80 to reg 0x6F; ghent360 / Adafruit RTD266X / KerJoe RTDMultiProg all use 0x4A)
+  - 0x4B = ISP slave WITH auto-increment (`Adafruit_RTD266x_Firmware` `RTD266xISP.h` `ISP_INCREMENT_ADDRESS` 0x4B); reads the `FFxx` window (`FFEC` / `FFED` snapshot); "external registers require ISP mode" (RTD2660 p316)
+  - RTD2660 (older family) `FF23` = slave address (bits 7:1) + CH_SEL bit 0 (0 ADC DDC, 1 DDC2) [third-party source; may not apply to the 2795T]
+- Unit 3 probe 2026-11-19 (bus 11) [hw]:
+  - firmware running: ACK 0x37 0x4A 0x4B 0x50 0x54; 0x4B regs 00..0F all zero
+  - MCU halted (ISP 0x6F reads 0x92): 0x4B regs `11 00 00 48 00 00 00 00 b0 f8 f8 f8 f8 04 00 00` (08..0D = `FF08..FF0D`, the ADC block)
+  - 0x54 reads `00 01 00..` in both states
+- 2026-11-04 scan on the Dahua-firmware monitor saw 0x4B only on the Intel DP bus (AUX), not on HDMI or the other DP bus
+- `i2cget` at 0x4a returned 0x00 on buses 10, 16 and 20 (2026-11-04)
 - Reads only; no writes sent
 - Intel iGPU path (i915 exposes DP AUX as `/dev/i2c-N`) is usable for a Linux-native ISP tool
 - ISP entry (reg 0x6F=0x80) read back 0x92 (bit 7 set); SPI flash JEDEC ID `C2 20 14` (Macronix, 1 MiB). Script: `scripts/rtd_isp_probe.py`
