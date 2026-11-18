@@ -33,7 +33,7 @@ BANK = CM.BANK_SIZE
 NBANKS = CM.CODE_BANKS
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
 # bank 5 s, link 20 s (first runs 2026-11-04). 3x cold worst case per awto-dan#53.
-TIMEOUT = {"port": 60, "edid": 60, "pp": 180, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
+TIMEOUT = {"asteroids": 30, "port": 60, "edid": 60, "pp": 180, "asm": 240, "overlay": 60, "isr": 60, "bank": 60, "link": 120}
 LIB_UV2 = "Kernel/Scaler/RL6449_Series_Scaler/Lib/RL6449_Series_Lib.Uv2"   # Realtek ships it as a .LIB
 WORK_DIR = ROOT / "tmp/sdcc-port"
 ASM = ROOT / "tmp/sdcc-port/asm"
@@ -268,6 +268,7 @@ def main() -> int:
     py = sys.executable
     log(f"byte order: {'BIG-endian (--big-endian, Keil order)' if T.BIG_ENDIAN else 'little-endian (default)'}, lib {T.LIB}")
     if not a.skip_compile:
+        run("asteroids", [py, "scripts/gen_asteroids.py"])    # fw/test/asteroids_data.inc: local ROM geometry or own outlines (gitignored)
         run("port", [py, "scripts/msg_tokenise.py", "port"])
         if a.src_patch:
             apply_src_patch(Path(a.src_patch))

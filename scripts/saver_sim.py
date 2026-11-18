@@ -3,7 +3,8 @@
 
 usage: saver_sim.py [BIN MAP] [--out DIR]
   - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
-  - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2): wait, render, then = 0 (stop), render. PASS = font SRAM written and something on screen when started,
+  - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2), 5 (flash), 8 (Asteroids): wait, render, then = 0 (stop), render.
+    Asteroids is deterministic: its frames are compared at the same game tick (frozen where a frame is complete), not at the same time. PASS = font SRAM written and something on screen when started,
     OSD closed (no window cells drawn) after stop. Exit 1 on a FAIL.
 Log: ./tmp/logs/saver_sim.log
 """
@@ -36,6 +37,10 @@ VCP_ALERT = 6                   # screensaver_now option "Alert tone"
 ALERT_TONE_S = 0.9              # audible time: the 1 s track (pacman_sound.py ALERT) has 100 ms of rests between the notes
 ALERT_TOL_S = 0.15              # one 10 ms tick per note plus the 1 ms firmware timer: well inside
 ALERT_OBSERVE_S = 3.0           # fw time to observe: the tone must end by itself
+VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept free)
+AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
+AST_FREEZE_LIMIT_S = 20.0       # 2.5x the expected 8 s (first hidden frame ~3 s + 20 frames at ~0.25 s); expiry = FAIL, logged
+AST_POLL_S = 0.0005             # a frame is complete from the column wrap until the next main pass (a few ms)
 STOP_S = 3.0                    # fw time for the stop: served by the main loop after the frame in progress (scope 2: up to ~2 s)
 
 
@@ -62,6 +67,20 @@ def shrunk_diff(a, b) -> float:
     return float(np.abs(sa - sb).mean())
 
 
+def wait_started(sess, name) -> bool:
+    """Wait for a started saver to show its picture; Asteroids: until the complete frame of game tick AST_FREEZE_TICKS is on screen. False = limit hit."""
+    if name != "asteroids":
+        sess.bus.wait(RUN_S)
+        return True
+    step, col = sess.bus.m.addr("g_usAwtoAstStep"), sess.bus.m.addr("g_ucAwtoAstCol")
+    t_end = sess.bus.now() + AST_FREEZE_LIMIT_S
+    while sess.bus.now() < t_end:
+        sess.bus.wait(AST_POLL_S)
+        if int.from_bytes(sess.bus.m.rd(step, 2), "big") == AST_FREEZE_TICKS and sess.bus.m.rd(col, 1)[0] == 0:
+            return True
+    return False
+
+
 def lit(st) -> int:
     return sum(1 for w in st.font.values() if any(w))
 
@@ -76,12 +95,16 @@ def rotated_check(a) -> int:
     ddc.set(0xE1, 1)
     sess.bus.wait(ROTATE_SETTLE_S)
     fails = 0
-    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4)):
+    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4), ("asteroids", VCP_ASTEROIDS)):
         up = bbox_crop(Image.open(a.out / f"{name}_run.png"))
         ddc.set(VCP_SAVER, val)
-        sess.bus.wait(RUN_S)
+        if not wait_started(sess, name):
+            say(f"FAIL Rotate 180 {name}: game tick {AST_FREEZE_TICKS} not reached in {AST_FREEZE_LIMIT_S} s")
+            fails += 1
+            continue
         best = None
-        for _ in range(ROT_SAMPLES):
+        n_samples = 1 if name == "asteroids" else ROT_SAMPLES
+        for _ in range(n_samples):
             img = R.render_snap(sess.snap(), "black", 2)
             rot = bbox_crop(img)
             d = (shrunk_diff(np.rot90(up, 2), rot), shrunk_diff(up, rot)) if rot.shape == up.shape else (float("inf"), 0.0)
@@ -92,7 +115,7 @@ def rotated_check(a) -> int:
         d_turned, d_plain = best
         same = d_turned != float("inf") and up.size > 0 and d_turned <= ROT_MAX_DIFF and d_turned * ROT_BETTER <= d_plain
         fails += not same
-        say(f"{'PASS' if same else 'FAIL'} Rotate 180 {name}: box {up.shape[:2]}, best of {ROT_SAMPLES} mean difference to the upright render turned {d_turned:.1f} (limit {ROT_MAX_DIFF}), not turned {d_plain:.1f} (turned must be {ROT_BETTER}x smaller)")
+        say(f"{'PASS' if same else 'FAIL'} Rotate 180 {name}: box {up.shape[:2]}, best of {n_samples} mean difference to the upright render turned {d_turned:.1f} (limit {ROT_MAX_DIFF}), not turned {d_plain:.1f} (turned must be {ROT_BETTER}x smaller)")
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
     sess.bus.close()
@@ -133,10 +156,12 @@ def main() -> int:
     ddc.set(0xE1, 0)
     sess.bus.wait(ROTATE_SETTLE_S)
     fails = 0
-    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4), ("flash", 5)):
+    for name, val in (("scope", 3), ("pacman", 2), ("scope2", 4), ("flash", 5), ("asteroids", VCP_ASTEROIDS)):
         base = lit(sess.snap())
         ddc.set(VCP_SAVER, val)
-        sess.bus.wait(RUN_S)
+        if not wait_started(sess, name):
+            say(f"FAIL VCP 0x{VCP_SAVER:02X} = {val} ({name}): game tick {AST_FREEZE_TICKS} not reached in {AST_FREEZE_LIMIT_S} s")
+            fails += 1
         st = sess.snap()
         run_img = R.render_snap(st, "black", 2)
         run_img.save(a.out / f"{name}_run.png")

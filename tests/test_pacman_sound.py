@@ -97,10 +97,11 @@ def test_siren_speeds_up_same_pitch_range():
 
 def test_firmware_ids_match_track_order():
     c = (Path(__file__).resolve().parents[1] / "fw/test/pacman_sound.c").read_text()
-    ids = {n: int(re.search(rf"#define AWTO_PS_TRACK_{n}\s+(\d+)", c).group(1)) for n in ("INTRO", "WAKA", "ALERT", "GHOST", "FRUIT", "BG0")}
+    ids = {n: int(re.search(rf"#define AWTO_PS_TRACK_{n}\s+(\d+)", c).group(1)) for n in ("INTRO", "WAKA", "ALERT", "GHOST", "FRUIT", "BG0", "FIRE")}
     names = [n for n, _ in P.TRACKS]
     assert [ids[n.upper()] for n in ("intro", "waka", "alert", "ghost", "fruit")] == [names.index(n) for n in ("intro", "waka", "alert", "ghost", "fruit")]
-    assert names[ids["BG0"]:] == ["siren1", "siren2", "siren3", "fright"]
+    assert names[ids["BG0"]:ids["BG0"] + 6] == ["siren1", "siren2", "siren3", "fright", "thrust", "saucer"]   # background states 1..6
+    assert names[ids["FIRE"]:] == ["fire", "boom_s", "boom_m", "boom_l", "boom_ship"]   # cmd AWTO_PS_CMD_FIRE + n
     assert int(re.search(r"#define AWTO_PS_PRIO_TOP\s+(\d+)", c).group(1)) == max(P.PRIORITY.values())
 
 

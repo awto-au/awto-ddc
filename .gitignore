@@ -26,3 +26,4 @@ asteroids*.zip
 **/asteroids/
 **/asteroids_shapes*
 **/asteroids_rom*
+fw/test/asteroids_data.inc

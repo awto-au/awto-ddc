@@ -1123,7 +1123,7 @@ extern void AwtoOsdScreenOff(void);                                             
 extern void AwtoDpgTest(unsigned char ucOn);
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
 extern void AwtoPacmanClassic(unsigned char ucCmd);
-#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 scope
+#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 scope, 4 scope 2, 5 flash warning, 6 alert tone, 8 Asteroids
 #define AWTO_TC_SCOPE                                           0xB4    // test cmd: 0xB4 scope screensaver draw (docs/screensaver.md), 0xB5 next frame, 0xB6 off
 #define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert tone (1 s) (needs -D _AWTO_AUDIO_TEST)
 extern void AwtoFlashScreen(BYTE ucOn);                                                 // fw/test/flash_screen.c: huge Pac-Man shown while the host flashes (VCP 0xEB = 5)
@@ -1133,6 +1133,7 @@ extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
 extern void AwtoSaverStop(void);
 extern unsigned char AwtoScopeSaver(unsigned char ucCmd);
 extern unsigned char AwtoScopeSaver2(unsigned char ucCmd);
+extern unsigned char AwtoAsteroids(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
 extern void AwtoPmSoundBg(unsigned char ucState);                                       // Pac-Man background sound: 0 none, 1..3 siren speed, 4 frightened

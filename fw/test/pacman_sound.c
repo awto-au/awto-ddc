@@ -2,7 +2,7 @@
 #include "UserCommonInclude.h"
 #include "../rtdfw/awto/include/dataport.h"   // the SDK data port calls are macros for dp_wr / dp_rmw (fw/awto/boundary.py)
 
-// Pac-Man sound on the unit (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
+// Pac-Man + Asteroids sound on the unit (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
 // pitch = audio PLL S code per note. Test cmds AWTO_TC_PACMAN_SND + 0 intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert.
 // One generator: priorities (pacman_sound.py PRIORITY); a dropped waka / background sound stays wanted and resumes when the higher one ends.
 // Needs a -D _AWTO_AUDIO_TEST build (SDK generator + SysAudioHandler hold); other builds log "unavailable". Non-blocking: AwtoPmSoundPoll per main pass.
@@ -17,6 +17,8 @@
 #define AWTO_PS_TRACK_GHOST                     4
 #define AWTO_PS_TRACK_FRUIT                     5
 #define AWTO_PS_TRACK_BG0                       6       // siren speed 1..3 = 6..8 (background state 1..3), frightened = 9 (state 4): track = BG0 - 1 + state
+#define AWTO_PS_TRACK_BG_LAST                   11      // saucer: background states 5 (thrust) and 6 (saucer) are the Asteroids ones
+#define AWTO_PS_TRACK_FIRE                      12      // Asteroids one-shots: fire, boom_s, boom_m, boom_l, boom_ship
 #define AWTO_PS_TRACK_NONE                      0xFE    // nothing playing
 #define AWTO_PS_TRACK_CAL                       0xFF    // calibration tone: no data track
 #define AWTO_PS_PRIO_TOP                        7       // intro, alert, calibration: above everything
@@ -27,6 +29,8 @@
 #define AWTO_PS_CMD_GHOST                       6
 #define AWTO_PS_CMD_FRUIT                       7
 #define AWTO_PS_CMD_WAKA_OFF                    8
+#define AWTO_PS_CMD_FIRE                        9       // Asteroids: 9 fire, 10 / 11 / 12 explosion small / medium / large, 13 ship explosion
+#define AWTO_PS_CMD_LAST                        13
 #define AWTO_PS_F_BOOT                          0x01    // flags: the boot-time generator off has run
 #define AWTO_PS_F_GATE                          0x02    // the amp is muted for a pitch change and opens at s_usPsGateAt
 #define AWTO_PS_F_WAKA                          0x04    // eating: waka wanted
@@ -46,6 +50,7 @@
 #define AWTO_PS_EV_FRUIT                        0x89
 #define AWTO_PS_EV_BG                           0x8A    // value = background state
 #define AWTO_PS_EV_WAKA_OFF                     0x8B
+#define AWTO_PS_EV_AST                          0x8C    // value = cmd
 #include "pacman_sound_data.inc"
 
 #pragma place bank(11)                      // leaf reader in the data's bank (a const read in a function that calls banked code trips the link check)
@@ -185,7 +190,7 @@ void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed
     }
     s_ucPsFlags = (s_ucPsFlags & AWTO_PS_F_LOW_MASK) | (BYTE)(ucState << AWTO_PS_F_BG_SHIFT);
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_BG, ucState);
-    if(((s_ucPsTrack == AWTO_PS_TRACK_NONE) || ((s_ucPsTrack >= AWTO_PS_TRACK_BG0) && (s_ucPsTrack != AWTO_PS_TRACK_CAL))))
+    if(((s_ucPsTrack == AWTO_PS_TRACK_NONE) || ((s_ucPsTrack >= AWTO_PS_TRACK_BG0) && (s_ucPsTrack <= AWTO_PS_TRACK_BG_LAST))))
     {
         PsResume();                             // silence or another background sound is playing; a higher sound picks the new state up at its end
     }
@@ -244,6 +249,11 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
     {
         ucTrack = AWTO_PS_TRACK_FRUIT;
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_FRUIT, 0);
+    }
+    else if((ucCmd >= AWTO_PS_CMD_FIRE) && (ucCmd <= AWTO_PS_CMD_LAST))
+    {
+        ucTrack = AWTO_PS_TRACK_FIRE + ucCmd - AWTO_PS_CMD_FIRE;
+        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_AST, ucCmd);
     }
     else
     {

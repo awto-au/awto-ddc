@@ -1,20 +1,22 @@
 #include <stdint.h>
 #include "UserCommonInclude.h"
 
-// Screensavers (docs/screensaver.md): Pac-Man (pacman_classic.c) and the scope (scope_saver.c), run from the main loop.
-// Settings 119 screensaver (Off / Pac-Man / Scope / Scope 2 / Alternate), 120 screensaver_s (idle seconds, 0 = none), 121 screensaver_now (DDC/CI VCP 0xEB).
+// Screensavers (docs/screensaver.md): Pac-Man (pacman_classic.c), the scopes (scope_saver.c, scope_saver2.c) and Asteroids (asteroids.c), run from the main loop.
+// Settings 119 screensaver (Off / Pac-Man / Scope / Scope 2 / Alternate / Asteroids), 120 screensaver_s (idle seconds, 0 = none), 121 screensaver_now (DDC/CI VCP 0xEB).
 // Starts: no signal for AWTO_SAVER_NOSIG_MS with a mode set; idle with a picture for screensaver_s; DDC/CI / test cmd now.
 // Stops: a key, a DDC/CI command (not VCP 0xEB), mode no longer the one that started it, VCP 0xEB = 0.
 extern void AwtoPacmanClassic(BYTE ucCmd);
 extern BYTE AwtoScopeSaver(BYTE ucCmd);
 extern BYTE AwtoScopeSaver2(BYTE ucCmd);
+extern BYTE AwtoAsteroids(BYTE ucCmd);
 
 #define AWTO_SAVER_OFF                          0
 #define AWTO_SAVER_PACMAN                       1
 #define AWTO_SAVER_SCOPE                        2
 #define AWTO_SAVER_SCOPE2                       3
 #define AWTO_SAVER_ALTERNATE                    4
-#define AWTO_SAVER_FLASH                        5                   // flash warning screen (VCP 0xEB = 5 only, never selected / alternated)
+#define AWTO_SAVER_ASTEROIDS                    5                   // = setting 119 value 5
+#define AWTO_SAVER_FLASH                        6                   // flash warning screen (VCP 0xEB = 5 only, never selected / alternated)
 #define AWTO_SAVER_WHY_NONE                     0
 #define AWTO_SAVER_WHY_NOSIG                    1
 #define AWTO_SAVER_WHY_IDLE                     2
@@ -31,6 +33,7 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_NOW_SELECTED                 1
 #define AWTO_SAVER_NOW_FLASH                    5
 #define AWTO_SAVER_NOW_ALERT                    6                   // 1 s alert tone on the speaker (no screen)
+#define AWTO_SAVER_NOW_ASTEROIDS                8                   // 7 is kept free (boot splash preview on another branch)
 #define AWTO_SAVER_SND_ALERT                    5                   // AwtoPmSound(cmd): alert
 #define AWTO_SAVER_RUN_SHIFT                    4
 
@@ -69,6 +72,10 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoScopeSaver2(0);
     }
+    else if(g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS)
+    {
+        AwtoAsteroids(0);
+    }
     else if(g_ucAwtoSaverRun == AWTO_SAVER_FLASH)
     {
         AwtoFlashScreen(0);
@@ -86,6 +93,10 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoScopeSaver2(1);
     }
+    else if(ucRun == AWTO_SAVER_ASTEROIDS)
+    {
+        AwtoAsteroids(1);
+    }
     else if(ucRun == AWTO_SAVER_FLASH)
     {
         AwtoFlashScreen(1);
@@ -95,9 +106,9 @@ static void SaverDraw(BYTE ucRun)
     s_ucMid = 1;                                                    // a scope starts with its first frame, drawn hidden
 }
 
-void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: PACMAN / SCOPE / ALTERNATE
+void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: PACMAN / SCOPE / SCOPE2 / ASTEROIDS / ALTERNATE / FLASH
 {
-    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE) || (ucWhich == AWTO_SAVER_SCOPE2) || (ucWhich == AWTO_SAVER_FLASH)) ? ucWhich : AWTO_SAVER_PACMAN;
+    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE) || (ucWhich == AWTO_SAVER_SCOPE2) || (ucWhich == AWTO_SAVER_ASTEROIDS) || (ucWhich == AWTO_SAVER_FLASH)) ? ucWhich : AWTO_SAVER_PACMAN;
 
     g_ucAwtoSaverWhy = ucWhy;
     SaverDraw(ucRun);
@@ -142,6 +153,14 @@ void AwtoSaverPoll(void)                                            // main loop
         {
             AwtoSaverStart(AWTO_SAVER_FLASH, AWTO_SAVER_WHY_NOW);
         }
+        else if(ucReq == AWTO_SAVER_NOW_ASTEROIDS)
+        {
+            AwtoSaverStart(AWTO_SAVER_ASTEROIDS, AWTO_SAVER_WHY_NOW);
+        }
+        else if(ucReq > AWTO_SAVER_NOW_ALERT)
+        {
+            return;                                                 // unused values (7): ignored
+        }
         else
         {
             AwtoSaverStart((ucReq == AWTO_SAVER_NOW_SELECTED) ? ((g_ucAwtoSaverMode == AWTO_SAVER_OFF) ? AWTO_SAVER_ALTERNATE : g_ucAwtoSaverMode) : (BYTE)(ucReq - 1), AWTO_SAVER_WHY_NOW);
@@ -157,20 +176,21 @@ void AwtoSaverPoll(void)                                            // main loop
         }
         if((g_ucAwtoSaverWhy & 0x80) && ((ulNow - s_ulSwap) >= AWTO_SAVER_ALT_MS))
         {
-            SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE2 : AWTO_SAVER_PACMAN));
+            SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE2 :
+                      ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE2) ? AWTO_SAVER_ASTEROIDS : AWTO_SAVER_PACMAN)));
             return;
         }
         if(g_ucAwtoSaverRun == AWTO_SAVER_FLASH)
         {
             return;                                                 // static: the host flasher swaps the glyph over ISP
         }
-        if(g_ucAwtoSaverRun != AWTO_SAVER_PACMAN)                   // scopes: one column per pass until the frame is complete, then a pause
+        if(g_ucAwtoSaverRun != AWTO_SAVER_PACMAN)                   // scopes, Asteroids: one column per pass until the frame is complete, then a pause (none for Asteroids: frames follow at once)
         {
-            if((s_ucMid == 0) && ((ulNow - s_ulTick) < ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE_MS : AWTO_SAVER_SCOPE2_MS)))
+            if((s_ucMid == 0) && (g_ucAwtoSaverRun != AWTO_SAVER_ASTEROIDS) && ((ulNow - s_ulTick) < ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE_MS : AWTO_SAVER_SCOPE2_MS)))
             {
                 return;
             }
-            s_ucMid = (BYTE)(((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AwtoScopeSaver(2) : AwtoScopeSaver2(2)) == 0);
+            s_ucMid = (BYTE)(((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AwtoScopeSaver(2) : ((g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS) ? AwtoAsteroids(2) : AwtoScopeSaver2(2))) == 0);
             if(s_ucMid == 0)
             {
                 s_ulTick = ulNow;
