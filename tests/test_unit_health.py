@@ -69,7 +69,7 @@ def healthy_mem():
         m[MAPS["g_stMDomainInputData"] + i] = b
     m[0xFE2A], m[0xFE1A] = 0x00, 0x01
     d = MAPS["isr_g_stAwtoDiag"]                                       # delay cal block (fw/diag/delaycal.c), 10 x 5 us, 100 us, 550 ms T3
-    for off, v in ((0x1B, 18273), (0x1D, 365), (0x20, 731), (0x22, 731), (0x24, 365), (0x26, 62812)):
+    for off, v in ((0x1B, 4568), (0x1D, 365), (0x20, 731), (0x22, 731), (0x24, 365), (0x26, 3925)):
         m[d + off], m[d + off + 1] = v >> 8, v & 255
     m[d + 0x1F] = 0xE3                                                 # RCAP2H: M2PLL row, 7309 counts per tick
     return m

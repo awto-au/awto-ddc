@@ -661,12 +661,21 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_REF_SPI                        3                   // SPI above the flash's fast-read rating
 #define AWTO_CLK_REF_ORDER                      4                   // no write order keeps every transient inside the limits
 #define AWTO_CLK_REF_RATIO                      5                   // MCU slower than the flash (cache mcu_low_speed mode not used)
+#define AWTO_CLK_REF_PLLMAX                     6                   // M2PLL above the requested envelope (usPllMaxMhz, host --max-m2pll-mhz)
+#define AWTO_CLK_REF_PLLCODE                    7                   // M / N / O outside 2..257 / 2..17 / 1 2 4 8
+#define AWTO_CLK_REF_LOCK                       8                   // M2PLL watchdog flag set after relock, or a bounded wait expired: PLL put back
+#define AWTO_CLK_F_PLL                          0x08                // M2PLL step: ucPllM / N / O, derived dividers retuned
+#define AWTO_CLK_PLL_MAX_DEF_MHZ                490                 // envelope when the host sends 0 (unattended default; a tool guard, not a chip limit)
+#define AWTO_CLK_NDIV                           11                  // retuned divider registers (tAwtoClkDiv + the ADC divider), bit 11 of usKeep = the PWM dividers
+#define AWTO_CLK_DIV_ADC                        10
+#define AWTO_CLK_NPWM                           6
+#define AWTO_CLK_TICK_SPIN                      4000                // spins per Timer2 tick at the crystal clock: ~10 cycles a spin [estimate] x 358 cycles per ms = 3580 per tick, x1.1; expiry sets ucPllTimeout
 #define AWTO_CLK_F_DUAL                         0x01                // READ_INSTRUCTION read_mode 10 (0x3B dual output) during the step
 #define AWTO_CLK_F_CKCON                        0x02
 #define AWTO_CLK_OP_DREAD                       0x3B                // MX25L8006E DREAD (datasheet): FF6B holds the fast-read opcode, also for read_mode 10
 #define AWTO_CLK_F_NOWRAP                       0x04                // FF6C accessed with the default MOVX cycle (tests the SDK's 9-cycle wrapper claim)                // global MOVX stretch = ucCkcon during the step
-#define AWTO_CLK_F_OVERCLOCK                    0x08                // sweep only (host --allow-overclock-flash): SPI up to AWTO_CLK_SPI_OC_KHZ, above the flash's fast-read rating
-#define AWTO_CLK_F_TUNEFIRST                    0x10                // ucRdTune is written at the stock clock, before the dividers change
+#define AWTO_CLK_F_OVERCLOCK                    0x20                // sweep only (host --allow-overclock-flash): SPI up to AWTO_CLK_SPI_OC_KHZ, above the flash's fast-read rating
+#define AWTO_CLK_F_TUNEFIRST                    0x40                // ucRdTune is written at the stock clock, before the dividers change
 #define AWTO_CLK_SPI_OC_KHZ                     180000UL
 #define AWTO_CLK_SPI_MAX_KHZ                    86000UL             // MX25L8006E fSCLK, FAST_READ (datasheet Table 13)
 #define AWTO_CLK_SPI_DUAL_KHZ                   80000UL             // fTSCLK, DREAD
@@ -691,7 +700,7 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_DELAY_ITER                     8
 #define AWTO_CLK_DELAY_REPS                     5
 #define AWTO_CLK_PERM                           6
-#define AWTO_CLK_SPI_N_MIN                      5                   // F x F2 >= 5 at 351 MHz keeps the SPI <= 86 MHz (a transient is also allowed to be as fast as the old or new step)
+#define AWTO_CLK_SPI_N_MIN                      5                   // F x F2 >= 5 at 351 MHz keeps the SPI <= 86 MHz (plain steps; a transient may be as fast as the old or new step; PLL steps use ceil(M2PLL / 86 MHz))
 typedef struct
 {
     BYTE ucGo;                                          // host: 1 apply, 2 revert; fw clears
@@ -739,6 +748,24 @@ typedef struct
     BYTE ucRdTune;                                      // request: FF6C[5:2] (latch_so_rise, drive_si_fall, si_dly_sel) while the step is held, 0xFF = keep
     BYTE ucPasses;                                      // request: CRC passes in the checks (0 = AWTO_CLK_CRC_PASSES); more = a longer flash-read stress
     WORD usScFrames;                                    // Scope 1 frames drawn (g_usAwtoScFrames, scope_saver.c)
+    BYTE ucPllM;                                        // request (flag PLL): M2PLL M / N / O, 0x01E0 = M - 2, 0x01E1[3:0] = N - 2, 0x01E1[5:4] = O / 2
+    BYTE ucPllN;
+    BYTE ucPllO;
+    WORD usPllMaxMhz;                                   // request: envelope, 0 = AWTO_CLK_PLL_MAX_DEF_MHZ
+    WORD usKeep;                                        // request: bit k = leave divider k at its stock value (bisect), bit 11 = PWM dividers
+    BYTE ucOvIdx;                                       // request: divider index to override, 0xFF = none
+    BYTE ucOvVal;
+    BYTE ucWdoStock;                                    // 0x01E5[7] M2PLL watchdog flag at the first step / after the relock
+    BYTE ucWdoNow;
+    BYTE ucPllMoved;                                    // 1 while the M2PLL is off its stock setting
+    BYTE ucPllTimeout;                                  // a bounded wait expired
+    BYTE ucE0;                                          // 0x01E0 / 0x01E1 / 0x01E7 now
+    BYTE ucE1;
+    BYTE ucE7;
+    BYTE aucDivOld[AWTO_CLK_NDIV];                      // stock field values (0 = not in use: left alone)
+    BYTE aucDivNew[AWTO_CLK_NDIV];
+    WORD ausPwmOld[AWTO_CLK_NPWM];                      // PWM clock second stage N + 1, 0 = PWM not on the M2PLL
+    WORD ausPwmNew[AWTO_CLK_NPWM];
     BYTE ucFlN;                                         // request: flash erase + program + read-back cycles on the spare sector 0xFE000 (0 = none, <= AWTO_CLK_FL_MAX)
     BYTE ucFlCk;                                        // request: MOVX cycles (CKCON[2:0]) around the FF60 writes: 0 = default (2), 7 = the SDK speed-up wrapper (9)
     BYTE ucFlDone;                                      // result: cycles completed
@@ -760,6 +787,10 @@ extern __xdata WORD g_usAwtoScFrames;
 static __xdata BYTE s_ucClkSaved;
 static __xdata BYTE s_ucClkStock[11];                   // F, F2, M, CKCON, FF6C, D5, DX, FDA1, P10_C2, P10_81, FF6B
 static __xdata WORD s_usClkStockRcap;
+static __xdata BYTE s_ucClkStockPll[3];                 // 0x01E0, 0x01E1, 0x01E7 as found
+static __xdata unsigned long s_ulClkStockPll;           // kHz
+static __xdata unsigned long s_ulClkNum;                // delay / debounce scale = stock count x NUM / DEN
+static __xdata unsigned long s_ulClkDen;
 static __xdata WORD s_usClkStockDeb;
 static __xdata unsigned long s_ulClkT0;
 #define s_aucClkXd g_stAwtoOsdHw.aucBuf
@@ -771,13 +802,15 @@ static const __code BYTE tAwtoClkPerm[AWTO_CLK_PERM][3] = {{0, 1, 2}, {0, 2, 1},
 static unsigned long AwtoClkPllKhz(void)                // M2PLL = crystal x M / (N x O) (0x01E0 = M - 2, 0x01E1[3:0] = N - 2, [5:4] = O / 2)
 {
     BYTE ucN = ScalerGetByte(P1_E1_M2PLL_N);
+    BYTE ucMsb = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);    // [5:4] = M[9:8], [3:0] = N[7:4]
     BYTE ucO = ((ucN >> 4) & 3) * 2;
+    WORD usM = (WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & (_BIT5 | _BIT4)) << 4);
 
     if(ucO == 0)
     {
         ucO = 1;
     }
-    return ((unsigned long)_EXT_XTAL * ((WORD)ScalerGetByte(P1_E0_M2PLL_M) + 2)) / (((ucN & 0x0F) + 2) * ucO);
+    return ((unsigned long)_EXT_XTAL * (usM + 2)) / ((((WORD)(ucMsb & 0x0F) << 4) + (ucN & 0x0F) + 2) * ucO);
 }
 
 static WORD AwtoClkReload(BYTE ucF, BYTE ucM)           // as _TIMER2_COUNT_NUM: 1 ms of Timer2 (clk / 12)
@@ -1357,6 +1390,10 @@ static void AwtoClkReadback(void)
     g_stAwtoClk.ucFDA1 = MCU_FDA1_CACHE_OPTION;
     g_stAwtoClk.ucCkNow = CKCON;
     g_stAwtoClk.usDdcDeb = isr_g_usDDCDebounceCnt;
+    g_stAwtoClk.ucE0 = ScalerGetByte(P1_E0_M2PLL_M);
+    g_stAwtoClk.ucE1 = ScalerGetByte(P1_E1_M2PLL_N);
+    g_stAwtoClk.ucE7 = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+    g_stAwtoClk.ucWdoNow = (ScalerGetByte(P1_E5_M2PLL_WD) >> 7) & 1;
 }
 
 static void AwtoClkTimers(WORD usRcap)                  // Timer2 reload as ScalerTimerSetTimerCount
@@ -1372,6 +1409,228 @@ static void AwtoClkTimers(WORD usRcap)                  // Timer2 reload as Scal
     TR2 = 1;
 }
 
+typedef struct
+{
+    WORD usReg;                                         // divider field register
+    BYTE ucMask;
+    BYTE ucShift;
+    WORD usEn;                                          // register holding the "on the M2PLL" select
+    BYTE ucEnMask;
+    BYTE ucEnVal;
+    BYTE ucMin;                                         // 2 where the regdb says 0..2 = divide by 2
+    BYTE ucMax;
+} StAwtoClkDiv;
+// Derived clocks (regdb 0x0022 / 0x4006 / 0x4007 / 0x8006 / 0xB773 / 0xBA73 / 0xB7B0 / 0xBAB0 / 0x2AA1 / 0x68A1); index 10 = ADC divider, own access
+static const __code StAwtoClkDiv tAwtoClkDiv[AWTO_CLK_DIV_ADC] = {
+    {P0_22_M1_FIFO_CLOCK_SELECT, 0x78, 3, P0_22_M1_FIFO_CLOCK_SELECT, 0x04, 0x04, 2, 15},
+    {P40_06_SYNCPROC_CLK_DIVIDER, 0x0F, 0, P40_06_SYNCPROC_CLK_DIVIDER, 0x10, 0x10, 2, 15},
+    {P40_07_MEASURE_CLK_DIVIDER, 0x0F, 0, P40_07_MEASURE_CLK_DIVIDER, 0x10, 0x10, 2, 15},
+    {P80_06_GDI_CLK_DIVIDER, 0x0F, 0, P80_06_GDI_CLK_DIVIDER, 0x10, 0x10, 2, 15},
+    {PB7_73_AUX_DIG_PHY3, 0x0F, 0, PB7_73_AUX_DIG_PHY3, 0x00, 0x00, 1, 15},
+    {PBA_73_AUX_DIG_PHY3, 0x0F, 0, PBA_73_AUX_DIG_PHY3, 0x00, 0x00, 1, 15},
+    {PB7_B0_AUX_PAYLOAD_CLEAR, 0x0F, 0, PB7_B0_AUX_PAYLOAD_CLEAR, 0x00, 0x00, 1, 15},
+    {PBA_B0_AUX_PAYLOAD_CLEAR, 0x0F, 0, PBA_B0_AUX_PAYLOAD_CLEAR, 0x00, 0x00, 1, 15},
+    {P2A_A1_CBUS_CTRL_01, 0xE0, 5, P2A_A0_CBUS_CTRL_00, 0x10, 0x00, 1, 7},
+    {P68_A1_CBUS_CTRL_01, 0xE0, 5, P68_A0_CBUS_CTRL_00, 0x10, 0x00, 1, 7},
+};
+
+static BYTE AwtoClkDivGet(BYTE ucK)                     // field value, 0 = not on the M2PLL / no clock
+{
+    BYTE ucV;
+
+    if(ucK == AWTO_CLK_DIV_ADC)
+    {
+        return ((MCU_FF0D_ADC_CLK_DIV & _BIT7) != 0) ? (MCU_FF0D_ADC_CLK_DIV & 0x7F) : 0;
+    }
+    if(ScalerGetBit(tAwtoClkDiv[ucK].usEn, tAwtoClkDiv[ucK].ucEnMask) != tAwtoClkDiv[ucK].ucEnVal)
+    {
+        return 0;
+    }
+    ucV = (ScalerGetByte(tAwtoClkDiv[ucK].usReg) & tAwtoClkDiv[ucK].ucMask) >> tAwtoClkDiv[ucK].ucShift;
+    return (ucV < tAwtoClkDiv[ucK].ucMin) ? tAwtoClkDiv[ucK].ucMin : ucV;
+}
+
+static void AwtoClkDivSet(BYTE ucK, BYTE ucV)
+{
+    if(ucK == AWTO_CLK_DIV_ADC)
+    {
+        MCU_FF0D_ADC_CLK_DIV = (MCU_FF0D_ADC_CLK_DIV & _BIT7) | (ucV & 0x7F);
+        return;
+    }
+    ScalerSetBit(tAwtoClkDiv[ucK].usReg, ~tAwtoClkDiv[ucK].ucMask, (BYTE)(ucV << tAwtoClkDiv[ucK].ucShift));
+}
+
+static WORD AwtoClkPwmGet(BYTE ucI)                     // N + 1; 0 when the PWM runs from the crystal
+{
+    WORD usN;
+
+    if((MCU_FF3A_PWM_CK_SEL & (1 << ucI)) == 0)
+    {
+        return 0;
+    }
+    switch(ucI)
+    {
+        case 0: usN = ((WORD)(MCU_FF3D_PWM01_N_MSB & 0x0F) << 8) | MCU_FF3E_PWM0_N_LSB; break;
+        case 1: usN = ((WORD)(MCU_FF3D_PWM01_N_MSB >> 4) << 8) | MCU_FF3F_PWM1_N_LSB; break;
+        case 2: usN = ((WORD)(MCU_FF40_PWM23_N_MSB & 0x0F) << 8) | MCU_FF41_PWM2_N_LSB; break;
+        case 3: usN = ((WORD)(MCU_FF40_PWM23_N_MSB >> 4) << 8) | MCU_FF42_PWM3_N_LSB; break;
+        case 4: usN = ((WORD)(MCU_FF43_PWM45_N_MSB >> 4) << 8) | MCU_FF44_PWM4_N_LSB; break;
+        default: usN = ((WORD)(MCU_FF43_PWM45_N_MSB & 0x0F) << 8) | MCU_FF45_PWM5_N_LSB; break;
+    }
+    return usN + 1;
+}
+
+static void AwtoClkPwmSet(BYTE ucI, WORD usN1)
+{
+    BYTE ucH = (BYTE)((usN1 - 1) >> 8);
+    BYTE ucL = (BYTE)(usN1 - 1);
+
+    switch(ucI)
+    {
+        case 0: MCU_FF3D_PWM01_N_MSB = (MCU_FF3D_PWM01_N_MSB & 0xF0) | ucH; MCU_FF3E_PWM0_N_LSB = ucL; break;
+        case 1: MCU_FF3D_PWM01_N_MSB = (MCU_FF3D_PWM01_N_MSB & 0x0F) | (ucH << 4); MCU_FF3F_PWM1_N_LSB = ucL; break;
+        case 2: MCU_FF40_PWM23_N_MSB = (MCU_FF40_PWM23_N_MSB & 0xF0) | ucH; MCU_FF41_PWM2_N_LSB = ucL; break;
+        case 3: MCU_FF40_PWM23_N_MSB = (MCU_FF40_PWM23_N_MSB & 0x0F) | (ucH << 4); MCU_FF42_PWM3_N_LSB = ucL; break;
+        case 4: MCU_FF43_PWM45_N_MSB = (MCU_FF43_PWM45_N_MSB & 0x0F) | (ucH << 4); MCU_FF44_PWM4_N_LSB = ucL; break;
+        default: MCU_FF43_PWM45_N_MSB = (MCU_FF43_PWM45_N_MSB & 0xF0) | ucH; MCU_FF45_PWM5_N_LSB = ucL; break;
+    }
+}
+
+static unsigned long AwtoClkRatio(unsigned long ulV, unsigned long ulPll)   // ulV x ulPll / stock M2PLL, rounded
+{
+    return (ulV * ulPll + s_ulClkStockPll / 2) / s_ulClkStockPll;
+}
+
+static void AwtoClkRetuneCalc(unsigned long ulPll)      // new field = stock x (new M2PLL / stock M2PLL), nearest integer, inside the field's range; kept ones stay
+{
+    BYTE ucK;
+    unsigned long ulV;
+
+    for(ucK = 0; ucK < AWTO_CLK_NDIV; ucK++)
+    {
+        g_stAwtoClk.aucDivNew[ucK] = g_stAwtoClk.aucDivOld[ucK];
+        if((g_stAwtoClk.aucDivOld[ucK] == 0) || ((g_stAwtoClk.usKeep & (1 << ucK)) != 0))
+        {
+            continue;
+        }
+        ulV = AwtoClkRatio(g_stAwtoClk.aucDivOld[ucK], ulPll);
+        if(ucK == AWTO_CLK_DIV_ADC)
+        {
+            g_stAwtoClk.aucDivNew[ucK] = (ulV < 1) ? 1 : ((ulV > 127) ? 127 : (BYTE)ulV);
+        }
+        else
+        {
+            g_stAwtoClk.aucDivNew[ucK] = (ulV < tAwtoClkDiv[ucK].ucMin) ? tAwtoClkDiv[ucK].ucMin : ((ulV > tAwtoClkDiv[ucK].ucMax) ? tAwtoClkDiv[ucK].ucMax : (BYTE)ulV);
+        }
+    }
+    if((g_stAwtoClk.ucOvIdx < AWTO_CLK_NDIV) && (g_stAwtoClk.aucDivOld[g_stAwtoClk.ucOvIdx] != 0))
+    {
+        g_stAwtoClk.aucDivNew[g_stAwtoClk.ucOvIdx] = g_stAwtoClk.ucOvVal;
+    }
+    for(ucK = 0; ucK < AWTO_CLK_NPWM; ucK++)
+    {
+        ulV = g_stAwtoClk.ausPwmOld[ucK];
+        if((ulV != 0) && ((g_stAwtoClk.usKeep & (1 << AWTO_CLK_NDIV)) == 0))
+        {
+            ulV = AwtoClkRatio(ulV, ulPll);
+            ulV = (ulV < 1) ? 1 : ((ulV > 4096) ? 4096 : ulV);
+        }
+        g_stAwtoClk.ausPwmNew[ucK] = (WORD)ulV;
+    }
+}
+
+static void AwtoClkRetune(BYTE ucNew)                   // write the new (1) or stock (0) derived dividers
+{
+    BYTE ucK;
+    BYTE ucV;
+    WORD usV;
+
+    for(ucK = 0; ucK < AWTO_CLK_NDIV; ucK++)
+    {
+        ucV = (ucNew != 0) ? g_stAwtoClk.aucDivNew[ucK] : g_stAwtoClk.aucDivOld[ucK];
+        if(ucV != 0)
+        {
+            AwtoClkDivSet(ucK, ucV);
+        }
+    }
+    for(ucK = 0; ucK < AWTO_CLK_NPWM; ucK++)
+    {
+        usV = (ucNew != 0) ? g_stAwtoClk.ausPwmNew[ucK] : g_stAwtoClk.ausPwmOld[ucK];
+        if(usV != 0)
+        {
+            AwtoClkPwmSet(ucK, usV);
+        }
+    }
+}
+
+static BYTE AwtoClkTick(BYTE ucN)                       // wait ucN Timer2 overflows (1 ms each at the crystal clock), EA off; 1 = a bounded wait expired
+{
+    WORD usSpin;
+
+    while(ucN-- > 0)
+    {
+        TF2 = 0;
+        usSpin = AWTO_CLK_TICK_SPIN;
+        while((TF2 == 0) && (usSpin > 0))
+        {
+            usSpin--;
+        }
+        AwtoClkPoke();
+        if(TF2 == 0)
+        {
+            g_stAwtoClk.ucPllTimeout = 1;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Source -> crystal (dividers 1), M2PLL power cycle with the raw M / N codes (SDK ScalerPLLM2PLLPower order), dividers, source -> M2PLL with F / F2 / M.
+// Moving up the derived dividers go first (derived clocks slower than final while the M2PLL is still low), moving down last: no transient is faster than the faster end.
+// 0 = ok, 1 = timeout or watchdog flag. EA off by the caller.
+static BYTE AwtoClkPllMove(BYTE ucE0, BYTE ucE7, BYTE ucE1, BYTE ucNew, BYTE ucF, BYTE ucF2, BYTE ucM)
+{
+    BYTE ucBad;
+
+    if(ucNew != 0)
+    {
+        AwtoClkRetune(1);
+    }
+    MCU_FFED_MCU_CONTROL &= ~_BIT1;                                             // MCU / flash clock source = crystal (regdb FFED: switch to xtal before touching the PLL)
+    AwtoClkSetReg(0, 1);
+    AwtoClkSetReg(1, 1);
+    AwtoClkSetReg(2, 1);
+    AwtoClkTimers(0xFFFF - (WORD)(_EXT_XTAL / 12));                             // Timer2 1 ms at the crystal, divider 1 x 1
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT0, _BIT0);                                // power off
+    ScalerSetByte(P1_E0_M2PLL_M, ucE0);
+    ScalerSetByte(P1_E7_M2PLL_M_N_MSB, ucE7);
+    ScalerSetByte(P1_E1_M2PLL_N, ucE1);                                         // last: latches M / N (double buffer)
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT0, 0x00);                                 // power on
+    ucBad = AwtoClkTick(2);                                                     // >= 1 ms (SDK waits 150 us)
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT7, _BIT7);                                // clear the watchdog flag
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT5, _BIT5);                                // reset PFD / LPF pulse
+    ScalerSetBit(P1_E5_M2PLL_WD, ~_BIT5, 0x00);
+    ucBad |= AwtoClkTick(2);                                                    // >= 1 ms stable (SDK)
+    g_stAwtoClk.ucWdoNow = (ScalerGetByte(P1_E5_M2PLL_WD) >> 7) & 1;
+    if(ucNew == 0)
+    {
+        AwtoClkRetune(0);
+    }
+    AwtoClkSetReg(0, ucF2);
+    AwtoClkSetReg(1, ucF);
+    AwtoClkSetReg(2, ucM);
+    MCU_FFED_MCU_CONTROL |= _BIT1;                                              // back to the M2PLL
+    g_stAwtoClk.ucE0 = ScalerGetByte(P1_E0_M2PLL_M);
+    g_stAwtoClk.ucE1 = ScalerGetByte(P1_E1_M2PLL_N);
+    g_stAwtoClk.ucE7 = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+    return (ucBad != 0) || ((g_stAwtoClk.ucWdoNow != 0) && (g_stAwtoClk.ucWdoStock == 0));
+}
+
+static BYTE AwtoClkScaled(BYTE ucStock)
+{
+    return (BYTE)(((unsigned long)ucStock * s_ulClkNum + s_ulClkDen / 2) / s_ulClkDen);
+}
+
 static void AwtoClkApply(void)
 {
     BYTE ucF = g_stAwtoClk.ucF;
@@ -1379,10 +1638,21 @@ static void AwtoClkApply(void)
     BYTE ucM = g_stAwtoClk.ucM;
     WORD usN;
     BYTE ucMode;
+    BYTE ucK;
+    BYTE ucPll = ((g_stAwtoClk.ucFlags & AWTO_CLK_F_PLL) != 0);
+    BYTE ucO = g_stAwtoClk.ucPllO;
     unsigned long ulPll;
+    unsigned long ulMax = 1000UL * ((g_stAwtoClk.usPllMaxMhz != 0) ? g_stAwtoClk.usPllMaxMhz : AWTO_CLK_PLL_MAX_DEF_MHZ);
 
     g_stAwtoClk.ucRefuse = AWTO_CLK_REF_NONE;
-    ulPll = AwtoClkPllKhz();
+    g_stAwtoClk.ucPllTimeout = 0;
+    if(ucPll && ((g_stAwtoClk.ucPllM < 2) || (g_stAwtoClk.ucPllN < 2) || (g_stAwtoClk.ucPllN > 17) || ((ucO != 1) && (ucO != 2) && (ucO != 4) && (ucO != 8))))
+    {
+        g_stAwtoClk.ucRefuse = AWTO_CLK_REF_PLLCODE;
+        g_stAwtoClk.ucState = AWTO_CLK_ST_REFUSED;
+        return;
+    }
+    ulPll = ucPll ? (((unsigned long)_EXT_XTAL * g_stAwtoClk.ucPllM) / ((WORD)g_stAwtoClk.ucPllN * ucO)) : AwtoClkPllKhz();
     g_stAwtoClk.ulPllKhz = ulPll;
     if((ucF < 1) || (ucF2 < 1) || (ucM < 1) || (ucF > AWTO_CLK_DIV_MAX) || (ucF2 > AWTO_CLK_DIV_MAX) || (ucM > AWTO_CLK_DIV_MAX))
     {
@@ -1399,6 +1669,10 @@ static void AwtoClkApply(void)
     else if(ucM > ucF2)
     {
         g_stAwtoClk.ucRefuse = AWTO_CLK_REF_RATIO;                      // MCU slower than the SPI
+    }
+    else if(ucPll && (ulPll > ulMax))
+    {
+        g_stAwtoClk.ucRefuse = AWTO_CLK_REF_PLLMAX;
     }
     if(g_stAwtoClk.ucRefuse != AWTO_CLK_REF_NONE)
     {
@@ -1419,13 +1693,30 @@ static void AwtoClkApply(void)
         s_ucClkStock[5] = d_isr_g_ucDelay5usN_Base;
         s_ucClkStock[6] = d_isr_g_ucDelayXusN_Base;
         s_ucClkStock[7] = MCU_FDA1_CACHE_OPTION;
+        s_ucClkStockPll[0] = ScalerGetByte(P1_E0_M2PLL_M);
+        s_ucClkStockPll[1] = ScalerGetByte(P1_E1_M2PLL_N);
+        s_ucClkStockPll[2] = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+        s_ulClkStockPll = AwtoClkPllKhz();
+        g_stAwtoClk.ucWdoStock = (ScalerGetByte(P1_E5_M2PLL_WD) >> 7) & 1;
+        for(ucK = 0; ucK < AWTO_CLK_NDIV; ucK++)
+        {
+            g_stAwtoClk.aucDivOld[ucK] = AwtoClkDivGet(ucK);
+        }
+        for(ucK = 0; ucK < AWTO_CLK_NPWM; ucK++)
+        {
+            g_stAwtoClk.ausPwmOld[ucK] = AwtoClkPwmGet(ucK);
+        }
         s_usClkStockRcap = ((WORD)RCAP2H << 8) | RCAP2L;
         s_usClkStockDeb = isr_g_usDDCDebounceCnt;
+        g_stAwtoClk.ulPllKhz = s_ulClkStockPll;
         g_stAwtoClk.ucFormulaOk = (AwtoClkReload(s_ucClkStock[0], s_ucClkStock[2]) == s_usClkStockRcap);
+        g_stAwtoClk.ulPllKhz = ulPll;
         s_ucClkSaved = 1;
     }
     AwtoClkImgRef();
     usN = (WORD)ucF * ucM;
+    s_ulClkNum = (unsigned long)s_ucClkStock[0] * s_ucClkStock[2] * ulPll;
+    s_ulClkDen = (unsigned long)usN * s_ulClkStockPll;
     if(g_stAwtoClk.ucDrive != 0xFF)
     {
         ScalerSetByte(P10_C2_PIN_DRIVING_CTRL02__TOPON, (BYTE)(((g_stAwtoClk.ucDrive & 7) << 5) | ((g_stAwtoClk.ucDrive & 7) << 2) | (s_ucClkStock[8] & 0x03)));
@@ -1441,7 +1732,26 @@ static void AwtoClkApply(void)
         AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);             // warm the cache line, then the tuned latch / delay at the stock clock
         AwtoClkReadMode(s_ucClkStock[10], (s_ucClkStock[4] & 0xC3) | (g_stAwtoClk.ucRdTune & 0x3C));
     }
-    if(AwtoClkWrite(ucF, ucF2, ucM) == 0)
+    if(ucPll)
+    {
+        AwtoClkRetuneCalc(ulPll);
+        ucK = AwtoClkPllMove(g_stAwtoClk.ucPllM - 2, s_ucClkStockPll[2] & 0xC0,
+                             (s_ucClkStockPll[1] & 0xC0) | ((ucO == 1) ? 0x00 : ((ucO == 2) ? 0x10 : ((ucO == 4) ? 0x20 : 0x30))) | (g_stAwtoClk.ucPllN - 2),
+                             1, ucF, ucF2, ucM);
+        g_stAwtoClk.ucPllMoved = 1;
+        if(ucK != 0)                                                    // no lock: put the stock M2PLL back at once
+        {
+            AwtoClkPllMove(s_ucClkStockPll[0], s_ucClkStockPll[2], s_ucClkStockPll[1], 0, s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
+            g_stAwtoClk.ucPllMoved = 0;
+            g_stAwtoClk.ulPllKhz = s_ulClkStockPll;
+            AwtoClkTimers(s_usClkStockRcap);
+            EA = 1;
+            g_stAwtoClk.ucRefuse = AWTO_CLK_REF_LOCK;
+            g_stAwtoClk.ucState = AWTO_CLK_ST_REFUSED;
+            return;
+        }
+    }
+    else if(AwtoClkWrite(ucF, ucF2, ucM) == 0)
     {
         EA = 1;
         g_stAwtoClk.ucRefuse = AWTO_CLK_REF_ORDER;
@@ -1449,9 +1759,9 @@ static void AwtoClkApply(void)
         return;
     }
     AwtoClkTimers(AwtoClkReload(ucF, ucM));
-    d_isr_g_ucDelay5usN_Base = (BYTE)(((WORD)s_ucClkStock[5] * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
-    d_isr_g_ucDelayXusN_Base = (BYTE)(((WORD)s_ucClkStock[6] * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
-    isr_g_usDDCDebounceCnt = (WORD)(((unsigned long)s_usClkStockDeb * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
+    d_isr_g_ucDelay5usN_Base = AwtoClkScaled(s_ucClkStock[5]);
+    d_isr_g_ucDelayXusN_Base = AwtoClkScaled(s_ucClkStock[6]);
+    isr_g_usDDCDebounceCnt = (WORD)(((unsigned long)s_usClkStockDeb * s_ulClkNum + s_ulClkDen / 2) / s_ulClkDen);
     if(((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) || (((g_stAwtoClk.ucFlags & AWTO_CLK_F_TUNEFIRST) == 0) && (g_stAwtoClk.ucRdTune != 0xFF)))
     {
         AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);                 // warm the cache line with the stock values
@@ -1491,6 +1801,12 @@ static void AwtoClkRevert(BYTE ucState)
     EA = 0;
     AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);
     CKCON = s_ucClkStock[3];
+    if(g_stAwtoClk.ucPllMoved != 0)
+    {
+        AwtoClkPllMove(s_ucClkStockPll[0], s_ucClkStockPll[2], s_ucClkStockPll[1], 0, s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
+        g_stAwtoClk.ucPllMoved = 0;
+        g_stAwtoClk.ulPllKhz = s_ulClkStockPll;
+    }
     AwtoClkWrite(s_ucClkStock[0], s_ucClkStock[1], s_ucClkStock[2]);
     AwtoClkTimers(s_usClkStockRcap);
     d_isr_g_ucDelay5usN_Base = s_ucClkStock[5];
@@ -1542,6 +1858,407 @@ static void AwtoClkPoll(void)
     }
 }
 
+// ---- OSD write-rate sweep (docs/osd-write-sweep.md): the registers that may limit the OSD port write rate, set one op at a time ----
+// Envelope: FFF1 (bit 7, 3:0), FFFB, FFBC[4:0] only; every op restores the three registers before it returns; a stalled main loop = WDT reset.
+#define AWTO_OSW_OP_RUN                         1                   // apply, timed write, restore (one call)
+#define AWTO_OSW_OP_HOLD                        2                   // apply, back to the main loop, restore by itself after usHoldMs (host measures savers / link)
+#define AWTO_OSW_OP_RESTORE                     3
+#define AWTO_OSW_M_SDK                          0                   // ScalerOsdDataPort per byte
+#define AWTO_OSW_M_DIRECT                       1                   // AWTO_OSD_PORT per byte, loop
+#define AWTO_OSW_M_TRIPLE                       2                   // three unrolled stores per map word
+#define AWTO_OSW_M_BURST                        3                   // XRAM -> port burst DMA, usChunk bytes per burst
+#define AWTO_OSW_M_B1                           4                   // bytesel B1 only: one store per word (N / 3 stores)
+#define AWTO_OSW_M_ADDR                         5                   // usN address sets, no data
+#define AWTO_OSW_M_MASK                         6                   // direct triples with bit_block_en on and no bit protected
+#define AWTO_OSW_M_MAX                          6
+#define AWTO_OSW_A_F1                           0x01                // apply FFF1
+#define AWTO_OSW_A_FB                           0x02                // apply FFFB (burst mode: also the burst gap)
+#define AWTO_OSW_A_BC                           0x04                // apply FFBC
+#define AWTO_OSW_A_ALL                          0x07
+#define AWTO_OSW_F_EA_OFF                       0x01                // interrupts off while a chunk is written
+#define AWTO_OSW_F_SU_OFF                       0x02                // scale-up engine off during the write
+#define AWTO_OSW_F_OVL_OFF                      0x04                // overlay off during the write
+#define AWTO_OSW_F_DB_ON                        0x08                // global double buffer on during the write (default off, as every screen helper)
+#define AWTO_OSW_ST_DONE                        1
+#define AWTO_OSW_ST_REFUSED                     2
+#define AWTO_OSW_ST_TIMEOUT                     3                   // the timed section passed AWTO_OSW_MAX_MS: stopped after that pass, registers restored
+#define AWTO_OSW_ST_HELD                        4
+#define AWTO_OSW_ST_AUTO                        5                   // held setting restored by the hold limit
+#define AWTO_OSW_ST_RESTORED                    6
+#define AWTO_OSW_REF_NONE                       0
+#define AWTO_OSW_REF_RANGE                      1                   // mode / FFF1 / FFBC / counts out of range
+#define AWTO_OSW_REF_BUSY                       2                   // a hold is active
+#define AWTO_OSW_REF_ADDR                       3                   // outside the unused top of the OSD SRAM
+#define AWTO_OSW_REF_CHUNK                      4                   // burst chunk not a multiple of a glyph / above the XRAM buffer / N not a multiple
+#define AWTO_OSW_BUF                            162                 // 3 glyphs: XRAM burst source (XDATA is short in this image: 642 B free)
+#define AWTO_OSW_GLYPH                          AWTO_OHW_BUF
+#define AWTO_OSW_N_MAX                          8192
+#define AWTO_OSW_TOP_FIRST                      0x2000              // words: the unused end of the 12288-word SRAM (osd_hw_test RANGES "top")
+#define AWTO_OSW_TOP_END                        0x3000
+#define AWTO_OSW_MAX_MS                         1000                // timed section limit: the host plans <= 300 ms; expiry = state TIMEOUT, passes done + ms logged
+#define AWTO_OSW_HOLD_MAX_MS                    30000
+#define AWTO_OSW_FFF1_MASK                      0x8F                // burwr_func_int_sel + mcu_wr_sca_intrvl_sel; bits 6:4 reserved: kept
+#define AWTO_OSW_FFBC_MASK                      0x1F                // mcurd_max_cycle; bits 7:5 reserved: kept
+#define AWTO_OSW_BURST_GAP                      3                   // FFFB of a burst when the op does not apply FFFB (value left by non-OSD bursts, docs/saver-fps-hw.md)
+#define AWTO_OSW_BURST_RESTARTS                 100                 // restarts after an interrupt released the MCU (the SDK's count [sdk-hypothesis])
+#define AWTO_OSW_PAGE_COMMON                    0x00
+#define AWTO_OSW_FIFO_N                         5
+typedef struct
+{
+    BYTE ucGo;                                          // 0   host: AWTO_OSW_OP_*; fw clears
+    BYTE ucSeq;                                         // 1   + 1 per op
+    BYTE ucState;                                       // 2   AWTO_OSW_ST_*
+    BYTE ucRefuse;                                      // 3   AWTO_OSW_REF_*
+    BYTE ucApply;                                       // 4   AWTO_OSW_A_*
+    BYTE ucFff1;                                        // 5   value for FFF1 (bit 7, bits 3:0)
+    BYTE ucFffb;                                        // 6   value for FFFB
+    BYTE ucFfbc;                                        // 7   value for FFBC (bits 4:0)
+    BYTE ucMode;                                        // 8   AWTO_OSW_M_*
+    BYTE ucFlags;                                       // 9   AWTO_OSW_F_*
+    BYTE ucSeed;                                        // 10  pattern seed (osd_hw_test pattern(), F_REPEAT shape)
+    BYTE ucReps;                                        // 11  passes of usN
+    WORD usAddr;                                        // 12  first word (top of the SRAM only)
+    WORD usN;                                           // 14  bytes per pass (ADDR: address sets per pass)
+    WORD usChunk;                                       // 16  burst bytes per burst
+    WORD usHoldMs;                                      // 18  HOLD: restore after this long
+    WORD usMs;                                          // 20  timed section, all passes
+    BYTE ucNowF1;                                       // 22  registers read back while applied
+    BYTE ucNowFb;                                       // 23
+    BYTE ucNowBc;                                       // 24
+    BYTE ucStockF1;                                     // 25  registers as found
+    BYTE ucStockFb;                                     // 26
+    BYTE ucStockBc;                                     // 27
+    BYTE ucPasses;                                      // 28  passes finished
+    BYTE ucRestartsMax;                                 // 29  burst: most restarts one burst needed
+    BYTE aucFifoPre[AWTO_OSW_FIFO_N];                   // 30  disp M1 / M2, cap M1 / M2 FIFO status, STATUS0 before the timed section
+    BYTE aucFifoPost[AWTO_OSW_FIFO_N];                  // 35  ... after it
+    WORD usNowMs;                                       // 40  AwtoMs low word, every main pass (heartbeat)
+} StAwtoOsw;
+__xdata StAwtoOsw g_stAwtoOsw;
+static __xdata BYTE s_aucOswBuf[AWTO_OSW_BUF];
+static __xdata BYTE s_ucOswSaved;
+static __xdata WORD s_usOswT0;
+static const __code WORD tAwtoOswFifo[AWTO_OSW_FIFO_N] = {AWTO_R_DISP_M1_FIFO_STATUS, AWTO_R_DISP_M2_FIFO_STATUS, AWTO_R_CAP_M1_FIFO_STATUS, AWTO_R_CAP_M2_FIFO_STATUS, AWTO_R_STATUS0};
+
+static void AwtoOswFifo(BYTE *pucOut)                   // read only: no flag is cleared (outside the register envelope)
+{
+    BYTE ucI;
+
+    for(ucI = 0; ucI < AWTO_OSW_FIFO_N; ucI++)
+    {
+        pucOut[ucI] = ScalerGetByte(tAwtoOswFifo[ucI]);
+    }
+}
+
+static void AwtoOswApply(void)
+{
+    if((g_stAwtoOsw.ucApply & AWTO_OSW_A_F1) != 0)
+    {
+        MCU_FFF1_SCA_WR_INTRVL = (BYTE)((MCU_FFF1_SCA_WR_INTRVL & ~AWTO_OSW_FFF1_MASK) | (g_stAwtoOsw.ucFff1 & AWTO_OSW_FFF1_MASK));
+    }
+    if((g_stAwtoOsw.ucApply & AWTO_OSW_A_FB) != 0)
+    {
+        MCU_FFFB_SCA_INF_PERIOD = g_stAwtoOsw.ucFffb;
+    }
+    if((g_stAwtoOsw.ucApply & AWTO_OSW_A_BC) != 0)
+    {
+        MCU_FFBC_CYCLE_GATING = (BYTE)((MCU_FFBC_CYCLE_GATING & ~AWTO_OSW_FFBC_MASK) | (g_stAwtoOsw.ucFfbc & AWTO_OSW_FFBC_MASK));
+    }
+    g_stAwtoOsw.ucNowF1 = MCU_FFF1_SCA_WR_INTRVL;
+    g_stAwtoOsw.ucNowFb = MCU_FFFB_SCA_INF_PERIOD;
+    g_stAwtoOsw.ucNowBc = MCU_FFBC_CYCLE_GATING;
+}
+
+static void AwtoOswRestore(void)
+{
+    if(s_ucOswSaved != 0)
+    {
+        MCU_FFF1_SCA_WR_INTRVL = g_stAwtoOsw.ucStockF1;
+        MCU_FFFB_SCA_INF_PERIOD = g_stAwtoOsw.ucStockFb;
+        MCU_FFBC_CYCLE_GATING = g_stAwtoOsw.ucStockBc;
+    }
+}
+
+static void AwtoOswBurst(WORD usLen)                    // XRAM -> OSD data port, the SDK's ScalerBurstWrite sequence [sdk-hypothesis; behaviour checked by read-back]
+{
+    BYTE ucLeft = AWTO_OSW_BURST_RESTARTS;
+
+    ScalerSetByte(P0_9F_PAGE_SEL, AWTO_OSW_PAGE_COMMON);
+    MCU_FFF3_SCA_INF_CONTROL &= ~(_BIT4 | _BIT3);
+    MCU_FFF3_SCA_INF_CONTROL |= _BIT5;                  // address not incremented: the port is one address
+    MCU_FFF4_SCA_INF_ADDR = LOBYTE(AWTO_R_OSD_DATA_PORT);
+    MCU_FFF6_SCA_INF_BWR_ADRH = 0;
+    MCU_FFF7_SCA_INF_BWR_ADRM = HIBYTE((WORD)s_aucOswBuf);
+    MCU_FFF8_SCA_INF_BWR_ADRL = LOBYTE((WORD)s_aucOswBuf);
+    MCU_FFF9_SCA_INF_BWR_COUNT_H = HIBYTE(usLen);
+    MCU_FFFA_SCA_INF_BWR_COUNT_L = LOBYTE(usLen);
+    MCU_FFFB_SCA_INF_PERIOD = ((g_stAwtoOsw.ucApply & AWTO_OSW_A_FB) != 0) ? g_stAwtoOsw.ucFffb : AWTO_OSW_BURST_GAP;
+    MCU_FFFC_BANK_SWICH_CONTROL |= _BIT5;               // source = internal XRAM
+    MCU_FFF3_SCA_INF_CONTROL = (BYTE)(_BIT5 | _BIT3);
+    while(((MCU_FFF3_SCA_INF_CONTROL & _BIT3) != 0) && (--ucLeft > 0))
+    {
+        MCU_FFF3_SCA_INF_CONTROL |= _BIT3;              // an interrupt released the MCU: restart
+    }
+    MCU_FFFC_BANK_SWICH_CONTROL &= ~_BIT5;
+    if((AWTO_OSW_BURST_RESTARTS - ucLeft) > g_stAwtoOsw.ucRestartsMax)
+    {
+        g_stAwtoOsw.ucRestartsMax = (BYTE)(AWTO_OSW_BURST_RESTARTS - ucLeft);
+    }
+}
+
+static void AwtoOswPass(WORD usN)                       // one timed pass over the repeated 54 B pattern chunk in s_aucOswBuf
+{
+    WORD usI;
+    WORD usStep = AWTO_OSW_GLYPH;
+    BYTE ucJ;
+    BYTE ucN;
+    BYTE ucMode = g_stAwtoOsw.ucMode;
+
+    if(ucMode == AWTO_OSW_M_ADDR)
+    {
+        for(usI = 0; usI < usN; usI++)
+        {
+            ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_stAwtoOsw.usAddr, _OSD_WITHOUT_DB);
+        }
+        return;
+    }
+    if(ucMode == AWTO_OSW_M_BURST)
+    {
+        usStep = g_stAwtoOsw.usChunk;
+    }
+    for(usI = 0; usI < usN; usI += usStep)
+    {
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        ucN = ((usN - usI) > usStep) ? (BYTE)usStep : (BYTE)(usN - usI);
+        if((g_stAwtoOsw.ucFlags & AWTO_OSW_F_EA_OFF) != 0)
+        {
+            EA = 0;
+        }
+        if(ucMode == AWTO_OSW_M_SDK)
+        {
+            for(ucJ = 0; ucJ < ucN; ucJ++)
+            {
+                ScalerOsdDataPort(s_aucOswBuf[ucJ]);
+            }
+        }
+        else if(ucMode == AWTO_OSW_M_BURST)
+        {
+            AwtoOswBurst(usStep);
+        }
+        else if(ucMode == AWTO_OSW_M_B1)
+        {
+            for(ucJ = 0; ucJ < ucN; ucJ += AWTO_OHW_WORD)
+            {
+                AWTO_OSD_PORT(s_aucOswBuf[ucJ + 1]);
+            }
+        }
+        else if((ucMode == AWTO_OSW_M_TRIPLE) || (ucMode == AWTO_OSW_M_MASK))
+        {
+            for(ucJ = 0; ucJ < ucN; ucJ += AWTO_OHW_WORD)
+            {
+                AWTO_OSD_PORT(s_aucOswBuf[ucJ]);
+                AWTO_OSD_PORT(s_aucOswBuf[ucJ + 1]);
+                AWTO_OSD_PORT(s_aucOswBuf[ucJ + 2]);
+            }
+        }
+        else
+        {
+            for(ucJ = 0; ucJ < ucN; ucJ++)
+            {
+                AWTO_OSD_PORT(s_aucOswBuf[ucJ]);
+            }
+        }
+        EA = 1;
+    }
+}
+
+static BYTE AwtoOswCheck(void)                          // AWTO_OSW_REF_*
+{
+    WORD usWords = (g_stAwtoOsw.usN + AWTO_OHW_WORD - 1) / AWTO_OHW_WORD;
+
+    if(g_stAwtoOsw.ucState == AWTO_OSW_ST_HELD)
+    {
+        return AWTO_OSW_REF_BUSY;
+    }
+    if((g_stAwtoOsw.ucApply & ~AWTO_OSW_A_ALL) != 0)
+    {
+        return AWTO_OSW_REF_RANGE;
+    }
+    if(((g_stAwtoOsw.ucApply & AWTO_OSW_A_BC) != 0) && ((g_stAwtoOsw.ucFfbc & ~AWTO_OSW_FFBC_MASK) != 0))
+    {
+        return AWTO_OSW_REF_RANGE;
+    }
+    if(((g_stAwtoOsw.ucApply & AWTO_OSW_A_F1) != 0) && ((g_stAwtoOsw.ucFff1 & ~AWTO_OSW_FFF1_MASK) != 0))
+    {
+        return AWTO_OSW_REF_RANGE;
+    }
+    if(g_stAwtoOsw.ucGo == AWTO_OSW_OP_HOLD)
+    {
+        return ((g_stAwtoOsw.usHoldMs == 0) || (g_stAwtoOsw.usHoldMs > AWTO_OSW_HOLD_MAX_MS)) ? AWTO_OSW_REF_RANGE : AWTO_OSW_REF_NONE;
+    }
+    if((g_stAwtoOsw.ucMode > AWTO_OSW_M_MAX) || (g_stAwtoOsw.ucReps == 0) || (g_stAwtoOsw.usN == 0) || (g_stAwtoOsw.usN > AWTO_OSW_N_MAX))
+    {
+        return AWTO_OSW_REF_RANGE;
+    }
+    if((g_stAwtoOsw.usAddr < AWTO_OSW_TOP_FIRST) || ((g_stAwtoOsw.usAddr + usWords) > AWTO_OSW_TOP_END))
+    {
+        return AWTO_OSW_REF_ADDR;
+    }
+    if((g_stAwtoOsw.ucMode != AWTO_OSW_M_ADDR) && ((g_stAwtoOsw.usN % AWTO_OHW_WORD) != 0))
+    {
+        return AWTO_OSW_REF_CHUNK;
+    }
+    if((g_stAwtoOsw.ucMode == AWTO_OSW_M_BURST) &&
+       ((g_stAwtoOsw.usChunk == 0) || (g_stAwtoOsw.usChunk > AWTO_OSW_BUF) || ((g_stAwtoOsw.usChunk % AWTO_OSW_GLYPH) != 0) || ((g_stAwtoOsw.usN % g_stAwtoOsw.usChunk) != 0)))
+    {
+        return AWTO_OSW_REF_CHUNK;
+    }
+    return AWTO_OSW_REF_NONE;
+}
+
+static void AwtoOswPrefill(void)                        // B1 mode: all planes first with B1 inverted, so the B1-only stores must land for the read-back to match the pattern
+{
+    WORD usI;
+    BYTE ucJ;
+
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_stAwtoOsw.usAddr, _OSD_WITHOUT_DB);
+    for(usI = 0; usI < g_stAwtoOsw.usN; usI += AWTO_OSW_GLYPH)
+    {
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        for(ucJ = 0; (ucJ < AWTO_OSW_GLYPH) && ((usI + ucJ) < g_stAwtoOsw.usN); ucJ++)
+        {
+            AWTO_OSD_PORT(((ucJ % AWTO_OHW_WORD) == 1) ? (BYTE)~s_aucOswBuf[ucJ] : s_aucOswBuf[ucJ]);
+        }
+    }
+}
+
+static void AwtoOswRun(void)
+{
+    BYTE ucI;
+    BYTE ucMisc = ScalerGetByte(AWTO_R_OSD_MISC_PORT);
+    BYTE ucSu = ScalerGetByte(AWTO_R_OSD_SU_CRTL);
+    BYTE ucOvl = ScalerGetBit(AWTO_R_OVERLAY_CTRL, AWTO_F_OVERLAY_CTRL_OVERLAY_PORT_EN);
+    BYTE ucBc33 = ScalerGetByte(AWTO_R_FRAME_CTRL_33);
+    BYTE ucBc34 = ScalerGetByte(AWTO_R_FRAME_CTRL_34);
+    unsigned long ulT0;
+
+    ScalerOsdCircuitActivated(_ENABLE);                 // SRAM access needs the circuit on (docs/osd/timing.md); no-op when on
+    ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_DB_ENABLE, ((g_stAwtoOsw.ucFlags & AWTO_OSW_F_DB_ON) != 0) ? AWTO_F_OSD_MISC_PORT_DB_ENABLE : 0x00);
+    if((g_stAwtoOsw.ucFlags & AWTO_OSW_F_OVL_OFF) != 0)
+    {
+        AwtoOhwOverlay(0);
+    }
+    if((g_stAwtoOsw.ucFlags & AWTO_OSW_F_SU_OFF) != 0)
+    {
+        ScalerSetByte(AWTO_R_OSD_SU_CRTL, AWTO_OSD_ZERO);
+    }
+    g_stAwtoOsdHw.ucSeed = g_stAwtoOsw.ucSeed;
+    AwtoOhwSeed();
+    for(ucI = 0; ucI < AWTO_OSW_GLYPH; ucI++)
+    {
+        s_aucOswBuf[ucI] = AwtoOhwNext();
+    }
+    for(; ucI < AWTO_OSW_BUF; ucI++)
+    {
+        s_aucOswBuf[ucI] = s_aucOswBuf[ucI - AWTO_OSW_GLYPH];
+    }
+    if(g_stAwtoOsw.ucMode == AWTO_OSW_M_B1)
+    {
+        AwtoOswPrefill();
+    }
+    if(g_stAwtoOsw.ucMode == AWTO_OSW_M_MASK)
+    {
+        ScalerSetByte(AWTO_R_FRAME_CTRL_34, AWTO_OSD_ZERO);                                 // no bit protected: data unchanged, only the function on
+        ScalerSetByte(AWTO_R_FRAME_CTRL_33, (BYTE)((ucBc33 & ~(AWTO_F_FRAME_CTRL_33_BIT_BLOCK_BYTE_SEL | AWTO_F_FRAME_CTRL_33_BIT_BLOCK_EN)) | AWTO_F_FRAME_CTRL_33_BIT_BLOCK_EN));
+    }
+    AwtoOswFifo(g_stAwtoOsw.aucFifoPre);
+    g_stAwtoOsw.ucPasses = 0;
+    g_stAwtoOsw.ucRestartsMax = 0;
+    EA = 0;
+    AwtoOswApply();
+    EA = 1;
+    ulT0 = AwtoMs();
+    for(ucI = 0; ucI < g_stAwtoOsw.ucReps; ucI++)
+    {
+        ScalerOsdAddrSet(_OSD_SRAM, (g_stAwtoOsw.ucMode == AWTO_OSW_M_B1) ? _OSD_BYTE1 : _OSD_BYTEALL, g_stAwtoOsw.usAddr, _OSD_WITHOUT_DB);
+        AwtoOswPass(g_stAwtoOsw.usN);
+        g_stAwtoOsw.ucPasses++;
+        if((AwtoMs() - ulT0) > AWTO_OSW_MAX_MS)
+        {
+            g_stAwtoOsw.ucState = AWTO_OSW_ST_TIMEOUT;
+            break;
+        }
+    }
+    g_stAwtoOsw.usMs = (WORD)(AwtoMs() - ulT0);
+    EA = 0;
+    AwtoOswRestore();
+    EA = 1;
+    AwtoOswFifo(g_stAwtoOsw.aucFifoPost);
+    if(g_stAwtoOsw.ucMode == AWTO_OSW_M_MASK)
+    {
+        ScalerSetByte(AWTO_R_FRAME_CTRL_33, ucBc33);
+        ScalerSetByte(AWTO_R_FRAME_CTRL_34, ucBc34);
+    }
+    AwtoOhwOverlay(ucOvl);
+    ScalerSetByte(AWTO_R_OSD_SU_CRTL, ucSu);
+    ScalerSetByte(AWTO_R_OSD_MISC_PORT, ucMisc);
+    ScalerSetBit(AWTO_R_OSD_WRITE_OPTION, ~(AWTO_F_OSD_WRITE_OPTION_BYTESEL | AWTO_F_OSD_WRITE_OPTION_SRAM_SEL), 0x00);
+}
+
+static void AwtoOswPoll(void)
+{
+    BYTE ucGo = g_stAwtoOsw.ucGo;
+
+    g_stAwtoOsw.usNowMs = (WORD)AwtoMs();
+    if((g_stAwtoOsw.ucState == AWTO_OSW_ST_HELD) && ((ucGo == AWTO_OSW_OP_RESTORE) || ((WORD)((WORD)AwtoMs() - s_usOswT0) >= g_stAwtoOsw.usHoldMs)))
+    {
+        EA = 0;
+        AwtoOswRestore();
+        EA = 1;
+        g_stAwtoOsw.ucState = (ucGo == AWTO_OSW_OP_RESTORE) ? AWTO_OSW_ST_RESTORED : AWTO_OSW_ST_AUTO;
+    }
+    else if((ucGo == AWTO_OSW_OP_RUN) || (ucGo == AWTO_OSW_OP_HOLD))
+    {
+        g_stAwtoOsw.ucRefuse = AwtoOswCheck();
+        if(g_stAwtoOsw.ucRefuse != AWTO_OSW_REF_NONE)
+        {
+            g_stAwtoOsw.ucState = AWTO_OSW_ST_REFUSED;
+        }
+        else
+        {
+            if(s_ucOswSaved == 0)
+            {
+                g_stAwtoOsw.ucStockF1 = MCU_FFF1_SCA_WR_INTRVL;
+                g_stAwtoOsw.ucStockFb = MCU_FFFB_SCA_INF_PERIOD;
+                g_stAwtoOsw.ucStockBc = MCU_FFBC_CYCLE_GATING;
+                s_ucOswSaved = 1;
+            }
+            g_stAwtoOsw.ucState = AWTO_OSW_ST_DONE;
+            if(ucGo == AWTO_OSW_OP_RUN)
+            {
+                AwtoOswRun();
+            }
+            else
+            {
+                EA = 0;
+                AwtoOswApply();
+                EA = 1;
+                s_usOswT0 = (WORD)AwtoMs();
+                g_stAwtoOsw.ucState = AWTO_OSW_ST_HELD;
+            }
+        }
+    }
+    else if(ucGo == AWTO_OSW_OP_RESTORE)
+    {
+        g_stAwtoOsw.ucState = AWTO_OSW_ST_RESTORED;
+    }
+    if(ucGo != 0)
+    {
+        g_stAwtoOsw.ucSeq++;
+        g_stAwtoOsw.ucGo = 0;
+    }
+}
+
 static void AwtoOsdHwPoll(void)
 {
     BYTE ucOp = g_stAwtoOsdHw.ucGo;
@@ -1552,6 +2269,7 @@ static void AwtoOsdHwPoll(void)
     unsigned long ulT0;
 
     AwtoClkPoll();
+    AwtoOswPoll();
     g_stAwtoOsdHw.ucSaverRun = g_ucAwtoSaverRun;
     if(s_ucOhwCyOn != 0)
     {

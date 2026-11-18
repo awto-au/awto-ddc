@@ -33,6 +33,12 @@ LOG = ROOT / "tmp/logs/wdt_test.log"
 CNT3_MS = 4096 * 2048 / 14318.18          # regdb CNT3 12 bit x 2048 XTAL clocks
 TICK_MS = 2048 / 14318.18
 N, THR = 2, 0xC00                          # RL6449_Project.h AWTO_WDT_N / AWTO_WDT_THR (read from --header if given)
+# Timer0 event armed from EXINT0 (t0ev.c AWTO_T0EV_ARM, ms = 10): judged in WALL ms (Timer0 ticks are wall-exact: reload = Timer2's, a late tick is caught up),
+# not fw ms (Timer2 ISR count: it loses ticks while the high-priority EXINT0 handler runs, IP 0x81 case up to ~2 ms).
+# Fire = the K-th Timer0 tick after the arm tick, K = ms - (decrement in the arm's own tick) + (id >= Pos) = 9..11; the arm instant lies up to one tick
+# after that tick's overflow (ISR latency, up to 1 tick when EXINT0 holds the CPU) and the fire up to one tick after its overflow: dt in [K_min - 1, K_max + 1] = [8, 12].
+T0_ARM_LO_MS, T0_ARM_HI_MS = 8.0, 12.0
+
 CMD_MS = 100                               # test cmd written -> consumed: one main-loop pass (sim ~0.1 s, crash_sim_test)
 NV_IDLE_MS = 4200                          # boot -> first NVRAM flush done: ACTIVE stable 3 s + flush ~0.3 s, x1.25
 ARM_WAIT_MS = 1400                         # test cmd -> Timer0 event armed: a pass held by a chained NVRAM erase + program ~1.1 s (#150) x1.25
@@ -913,9 +919,9 @@ class Runner:
             self.row(name, "SKIP", "image without the Timer0 scheduler (pre-#138)")
             return False
         if not getattr(self, "_hooked", False):
-            self._hooked, self.fired, self.armed, self.t2_at, self.isr_arm = True, [], [], [], []
+            self._hooked, self.fired, self.armed, self.t2_at, self.isr_arm, self.isr_arm_w = True, [], [], [], [], []
             t = self.t
-            t.watch("AwtoT0EvFire", lambda r: self.fired.append((r["r"][7] if t.m.keil else r["a1"] & 255, t.fw_ms())))
+            t.watch("AwtoT0EvFire", lambda r: self.fired.append((r["r"][7] if t.m.keil else r["a1"] & 255, t.fw_ms(), t.m.wall_ms)))
             t.watch("AwtoT0EvTest", lambda r: self.armed.append(t.fw_ms()))
             self._ip_back = None
             t.watch("AwtoT0EvTestIsr", lambda r: self._on_hook())
@@ -923,6 +929,7 @@ class Runner:
 
     def _on_hook(self):
         self.isr_arm.append(self.t.fw_ms())
+        self.isr_arm_w.append(getattr(self.t.m, "wall_ms", 0.0))
 
     def _ip_restore(self):
         """IP back once no interrupt is active (main context, as the SDK changes it): restoring it inside EXINT0 flips
@@ -1041,15 +1048,15 @@ class Runner:
             if only and not any(label.startswith(x) for x in only.split(",")):
                 return
             self._mode(0x5D, 1)                         # the hook arms once per test cmd
-            self.fired.clear(); self.isr_arm.clear()
+            self.fired.clear(); self.isr_arm.clear(); self.isr_arm_w.clear()
             setup()
             t0 = t.fw_ms()
             while (t.fw_ms() - t0) % 65536 < 40:
                 t.m.run(2_000)
             rr = [f for f in self.fired if f[0] == EVENT_IDS["RX2_HDMI_RR_RETRY"]]
-            dts = [round((rr[k][1] - self.isr_arm[k]) % 65536, 2) for k in range(min(len(rr), len(self.isr_arm)))]
-            lo = 9.0
-            hi = 12.5 if getattr(t.m, "dw", False) else 11.0     # dw8051 model: one Timer0 tick + ISR latency over the 8052 model (9.1..12.3 ms measured at 87.7 and 350.8 MHz)
+            dw = getattr(t.m, "dw", False)
+            dts = [round((rr[k][2] - self.isr_arm_w[k]) if dw else (rr[k][1] - self.isr_arm[k]) % 65536, 2) for k in range(min(len(rr), len(self.isr_arm)))]
+            lo, hi = (T0_ARM_LO_MS, T0_ARM_HI_MS) if dw else (9.0, 11.0)
             ok = len(rr) == len(self.isr_arm) == 1 and all(lo <= d <= hi for d in dts)
             bad += not ok
             txt.append(f"{label}: arms {len(self.isr_arm)} fires {len(rr)} at {dts} ms")

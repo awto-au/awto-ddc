@@ -1,0 +1,20 @@
+key	role	status	test_id	result	evidence	source	notes	issue
+CMD:71	GET_TEMP_SENSOR_PWM factory command: 7-byte reply (temperature, light sensor 2 B, target 2 B, PWM duty 2 B, checksum)	ignore		handler compiled out; Dahua firmware has no 0x71 handler, no GET_* factory replies, no temperature strings	role=sdk-hypothesis;notes=sdk-hypothesis;result=guess	BeaconFactoryInclude.h:666; ScalerCommonMcu.c:536 whole body #if 0	temperature hardcoded 0; live code only SET_SEND_SENSOR_DATA() (ucIICControl3 bit7, never read); not a register: not a temperature source	#206
+I2C:1E	second I2C slave (IIC_1), address set by FE87 = 0x3D	candidate	C-I2CS		role=re	Dahua firmware RE (FE87 write)	FF83..FF88 may be its block	#236
+I2C:30	E-DDC segment pointer	known		ACKs on the monitor DDC bus	role=source-code	DDC standard		
+I2C:35	debug / host I2C slave (IIC_SET_SLAVE FF23 = 0x6A)	known		used for live register scans (units 1..3)	role=re;result=hw	Dahua firmware RE + our scans (read-only debug link, 100 kHz)		
+I2C:37	DDC/CI slave (FF23 = 0x6E)	known		ACKs with firmware running (unit 3, bus 11, 2026-11-19)	role=source-code;result=hw	VESA DDC/CI		
+I2C:3A	HDCP port	ignore		ACKs on the DP/HDMI bus; no HDCP key data read or stored	role=source-code	HDCP		
+I2C:4A	Realtek ISP slave, no register auto-increment; ISP enter = write 0x80 to reg 0x6F	known	C-ISP4B	ACKs with firmware running (unit 3, 2026-11-19); ISP 0x6F reads 0x92 with the MCU halted	role=source-code;result=hw	RTD2660 manual p350; ghent360 / Adafruit RTD266X / KerJoe RTDMultiProg flashers all use 0x4A	ISP address register FFEC (isp_addr); never enter ISP on a unit that must stay up	#236
+I2C:4B	ISP slave WITH register auto-increment; FFEC / FFED snapshot; external registers need ISP mode (RTD2660 p316)	candidate	C-ISP4B	firmware running: regs 00..0F all zero; MCU halted: 11 00 00 48 00 00 00 00 b0 f8 f8 f8 f8 04 00 00 (08..0D = FF08..FF0D ADC block); 2026-11-04 scan of the Dahua-firmware monitor saw 0x4B only on the Intel DP bus (AUX); unit 3 2026-11-19	role=source-code;result=hw	Adafruit_RTD266x_Firmware RTD266xISP.h ISP_INCREMENT_ADDRESS 0x4B	the "extra devices 0x4a 0x4b" in docs/monitors/README.md are this ISP slave pair, not extra hardware	#236
+I2C:50	EDID	known			role=source-code	VESA E-DDC		
+I2C:54	HDMI 2.0 SCDC slave (Linux drm_scdc_helper.c SCDC_I2C_SLAVE_ADDRESS 0x54)	known	C-SCDC	read 00 01 00.. = SINK_VERSION 1 in both states (firmware running and MCU halted)	role=source-code;result=hw	Linux drm_scdc_helper.c	never write SCDC	#236
+SCDC:01	SCDC SINK_VERSION (I2C 0x54)	known		reads 1 (unit 3, 2026-11-19)	role=source-code;result=hw	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:02	SCDC SOURCE_VERSION (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:10	SCDC UPDATE_FLAGS (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:20	SCDC TMDS_CONFIG (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:21	SCDC SCRAMBLER_STATUS (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:30	SCDC config (offset 0x30 / 0x31) (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:40	SCDC STATUS_FLAGS (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:50	SCDC error counters 0x50..0x5A (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		
+SCDC:D0	SCDC OUI block 0xD0.. (I2C 0x54)	candidate	C-SCDC		role=source-code	Linux drm_scdc_helper.c / HDMI 2.0 SCDC		

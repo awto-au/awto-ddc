@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
-menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, nvlog.
+menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, regmap, nvlog.
 
 usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
@@ -18,6 +18,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
     delay_audit.py --check (every linked delay site is in docs/delay-audit.tsv, no FIX / UNKNOWN row).
   magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
   regs: gen_regnames.py --check (AwtoRegs.h matches the names our code uses).
+  regmap: regmap_build.py --check (re/regmap register knowledge base current, hand columns valid; ~4 s; re/regmap/README.md).
   IMAGE_STEM = tmp/fw/<tag> (.bin + .map beside it). link: 0 findings (#66, no baseline).
   --speed LABEL: also append a speed_bench row (docs/speed-bench.tsv) for the image.
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL/SKIP line per gate; exit 1 if any fails.
@@ -45,13 +46,13 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-LIMIT_OF = {"keys": 150, "wdt": 60, "rules": 30, "delays": 150}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
+LIMIT_OF = {"keys": 150, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
-NO_SIM = {"link", "pokes", "speed", "magic", "regs", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
+NO_SIM = {"link", "pokes", "speed", "magic", "regs", "regmap", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -139,6 +140,8 @@ def gates(b: Path, m: Path, ref, tree):
         g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
         g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
         g["regs"] = [*PY, f"{s}/gen_regnames.py", "--tree", tree, "--check"]
+        if (Path(tree) / "scripts/regmap_build.py").is_file():                       # register knowledge base (re/regmap)
+            g["regmap"] = [*PY, f"{tree}/scripts/regmap_build.py", "--check"]
         if (Path(tree) / "scripts/iram_names.py").is_file():                       # #189: d_ / i_ names match IRAM placement
             g["iram"] = [*PY, f"{tree}/scripts/iram_names.py", "check", "--asm", Path(tree) / "tmp/sdcc-port/asm_ovl", "--map", m]
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK

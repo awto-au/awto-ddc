@@ -6,6 +6,10 @@ usage: clk_sweep.py --bus B --serial S --map MAP [--bin BIN] [--sim] [--set NAME
   (FFED / FFEE / FFE9) at run time, redoes Timer2, delay counts and the DDC debounce as the SDK speed-up mode does, runs its own
   checks, then holds the step while the host measures; revert from the host, at the hold limit, or by the WDT reset (586 ms stall).
   MCU = M2PLL / F / M, SPI = M2PLL / F / F2. STEP = a name from STEPS, or `all-mcu`, `all-flash`, `stock`.
+  M2PLL steps: pmNN (M = NN, N 2, O 1; F 1, M-divider 1, F2 = smallest keeping the SPI <= 70.2 MHz), pmNNL = + 200 CRC passes, aliases p372 p401 p430 p487.
+  The firmware moves the M2PLL (MCU / flash on the crystal meanwhile), retunes every derived divider to the nearest integer and reverts at the hold limit.
+  --max-m2pll-mhz N (default 490): steps above are refused by the tool and the firmware; raising it is an explicit, logged decision.
+  --keep NAMES leaves derived dividers at stock (bisect), --override NAME=VAL sets one, --retry repeats a failed step once, --stop-after N stops after N consecutive reproducible failures.
   Pass / fail per check, one line per check; log ./tmp/logs/clk_sweep.log, TSV ./tmp/logs/clk_sweep.tsv.
 """
 from __future__ import annotations
@@ -34,15 +38,27 @@ C_DRIVE, C_SLEW, C_CHIP, C_DRNOW, C_SLNOW = 62, 63, 64, 65, 66
 C_AST = 67
 C_TUNE, C_PASSES = 69, 70
 C_SC = 71
-C_FLN, C_FLCK, C_FLDONE, C_FLFAIL, C_FLBADE, C_FLBADP, C_FLERMS, C_FLPRMS, C_FLMAX = 73, 74, 75, 76, 77, 79, 81, 83, 85
-C_IMGN, C_IMGDONE, C_IMGBAD, C_IMGMASK, C_IMGMS = 87, 88, 89, 91, 93
-C_SIZE = 95
+C_SIZE = 73
+(C_PLLM, C_PLLN, C_PLLO, C_MAXMHZ, C_KEEP, C_OVIDX, C_OVVAL, C_WDOS, C_WDON, C_MOVED, C_PTMO, C_E0, C_E1, C_E7, C_DIVOLD, C_DIVNEW, C_PWMOLD, C_PWMNEW) = \
+    (73, 74, 75, 76, 78, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 100, 111, 123)
+C_SIZE2 = 135
+C_FLN, C_FLCK, C_FLDONE, C_FLFAIL, C_FLBADE, C_FLBADP, C_FLERMS, C_FLPRMS, C_FLMAX = 135, 136, 137, 138, 139, 141, 143, 145, 147
+C_IMGN, C_IMGDONE, C_IMGBAD, C_IMGMASK, C_IMGMS = 149, 150, 151, 153, 155
+C_END = 157                               # end of the struct: crd() reads C_SIZE (the old part) + the flash / image part
 FL_ERR = {0: "none", 1: "erase call failed", 2: "not blank after erase", 3: "write call failed", 4: "read-back differs", 5: "read call failed",
           8: "flash clock above the rating, nothing written", 0xA1: "erase call", 0xA2: "blank check read", 0xA3: "program calls", 0xA4: "read-back", 9: "spare sector holds foreign data, nothing erased"}
+N_DIV, N_PWM = 11, 6
+DIV_NAMES = ["m22", "sync", "meas", "gdi", "aphy0", "aphy1", "amac0", "amac1", "cbus0", "cbus1", "adc", "pwm"]      # bit k of --keep; pwm = bit 11 (all PWM dividers)
+DIV_REGS = ["0x0022[6:3]", "0x4006[3:0]", "0x4007[3:0]", "0x8006[3:0]", "0xB773", "0xBA73", "0xB7B0", "0xBAB0", "0x2AA1[7:5]", "0x68A1[7:5]", "0xFF0D[6:0]"]
+SYNC_CAP_MHZ = 33.0                       # regdb 0x4006 sync_clk_div_m2pll: "The clock should be less than 33M after this divider" (no cap stated for 0x4007 / 0x8006)
+XTAL_KHZ = 14318
+MAX_M2PLL_DEF_MHZ = 490                   # unattended default of --max-m2pll-mhz: a tool guard, not a chip limit
+SPI_TARGET_MHZ = 70.2
 OP_APPLY, OP_REVERT, OP_KEEP, OP_CHECK = 1, 2, 3, 4
 ST_HELD, ST_REVERTED, ST_REFUSED, ST_AUTO = 1, 2, 3, 4
-REFUSE = {0: "none", 1: "divider range", 2: "step already held", 3: "SPI above rating", 4: "no safe write order", 5: "MCU slower than SPI"}
-FL_DUAL, FL_CKCON, FL_NOWRAP, FL_OC, FL_TUNEFIRST = 1, 2, 4, 8, 0x10
+REFUSE = {0: "none", 1: "divider range", 2: "step already held", 3: "SPI above rating", 4: "no safe write order", 5: "MCU slower than SPI",
+          6: "M2PLL above --max-m2pll-mhz", 7: "M / N / O out of range", 8: "M2PLL did not lock (watchdog flag / bounded wait): stock M2PLL put back"}
+FL_DUAL, FL_CKCON, FL_NOWRAP, FL_PLL, FL_OC, FL_TUNEFIRST = 1, 2, 4, 8, 0x20, 0x40
 RATED_OC_MHZ = 180.0                      # firmware cap with FL_OC (AWTO_CLK_SPI_OC_KHZ)
 
 STOCK_MHZ = 87.75
@@ -99,6 +115,28 @@ KEEP = 0xFF
 # FF6C[5:2] = latch_so_rise (bit 5), drive_si_fall (4), si_dly_sel (3:2) while the step is held; PASSES = CRC passes (stress; 0 = 3)
 TUNE = {"s44d_l1": 0x20, "s44d_d1": 0x04, "s44d_d2": 0x08, "s44d_d3": 0x0C, "s44d_f1": 0x10, "s44_l1": 0x20}
 PASSES = {"m351S": 40, "m351L": 200, "f175_70L": 200, "m175S": 40, "f175_58S": 40, "f175_70S": 40, "s70S": 40, "s44dS": 40, "s44d_l1": 40, "s44d_d1": 40, "s44d_d2": 40, "s44d_d3": 40, "s44d_f1": 40, "s44S": 40, "s44_l1": 40}
+PLL = {}                                  # name -> (M, N, O)
+
+
+def pll_khz(m: int, n: int = 2, o: int = 1) -> float:
+    return XTAL_KHZ * m / (n * o)
+
+
+def _pll_steps() -> None:
+    for m in range(40, 131):
+        k = pll_khz(m)
+        f2 = -(-int(k) // int(SPI_TARGET_MHZ * 1000))       # ceil: SPI = M2PLL / F2 <= 70.2 MHz
+        for suffix, passes in (("", 0), ("L", 200)):
+            nm = f"pm{m}{suffix}"
+            STEPS[nm] = (1, f2, 1, FL_PLL)
+            PLL[nm] = (m, 2, 1)
+            if passes:
+                PASSES[nm] = passes
+    for alias, m in (("p372", 52), ("p401", 56), ("p430", 60), ("p487", 68)):
+        STEPS[alias] = STEPS[f"pm{m}"]
+        PLL[alias] = PLL[f"pm{m}"]
+
+
 GROUPS = {"all-mcu": ["stock", "m44", "m58", "m70", "m117", "m175"],
           "all-flash": ["stock", "s22", "s29", "s58", "s70", "s44d", "s58d", "s70d"],
           "all-175": ["m175", "f175_58", "f175_70", "f175_44d", "f175_58d", "f175_70d"],
@@ -136,6 +174,9 @@ for _n, (_f, _f2, _m) in OC_SPEEDS.items():
 GROUPS["oc88"] = [n for n in STEPS if n.startswith("oc88_l") and not n.endswith("L")]
 GROUPS["oc175"] = [n for n in STEPS if n.startswith("oc175_l") and not n.endswith("L")]
 GROUPS["oc117"] = [n for n in STEPS if n.startswith("oc117_l") and not n.endswith("L")]
+_pll_steps()
+GROUPS["all-pll"] = ["p372", "p401", "p430", "p487"]
+GROUPS["pll-fine"] = [f"pm{m}" for m in range(52, 81, 2)]          # +14.3 MHz per step
 
 CRC_FROM, CRC_TO = 0x0100, 0x4000
 TICK_REL_PM = 5                           # per mille of the stock step's value; window 100 ticks, resolution 1 clock in 1.4 M
@@ -169,6 +210,12 @@ class Ctx:
         self.stock_tick = None
         self.sim = False
         self.pll_khz = None
+        self.base = None                      # registers before the first step: what a revert must restore
+        self.stock_pll = None
+        self.stock_e = None
+        self.max_mhz = MAX_M2PLL_DEF_MHZ
+        self.keep = 0
+        self.override = (0xFF, 0)
 
 
 def be(raw: bytes, o: int, n: int) -> int:
@@ -194,7 +241,7 @@ def pace(ck) -> None:
 
 
 def crd(ck, tries: int = 40) -> bytes:
-    return ck.rd(0, C_SIZE)
+    return ck.rd(0, C_END)
 
 
 def mcu_mhz(pll_khz: float, f: int, m: int) -> float:
@@ -215,6 +262,8 @@ def send(ctx, go: int, limit_s: float, f=0, f2=0, m=0, flags=0, hold_s=HOLD_S, l
         ck.wr(C_FLN, bytes(FLASH_TESTS.get(name_, (0, 0))))
         ck.wr(C_IMGN, bytes([IMG_PASSES.get(name_, 0)]))
         ck.wr(C_HOLD, int(hold_s * 1000).to_bytes(2, "big"))
+        pm, pn, po = PLL.get(name_, (0, 0, 0))
+        ck.wr(C_PLLM, bytes([pm, pn, po]) + ctx.max_mhz.to_bytes(2, "big") + ctx.keep.to_bytes(2, "big") + bytes(ctx.override))
     seq0 = ck.rd(C_SEQ, 1)[0]
     ck.wr(C_GO, bytes([go]))
     t0 = ck.now()
@@ -319,6 +368,30 @@ def fps_scope1(ctx) -> tuple[float, int]:
     return n / (t1 - t0), n
 
 
+def pll_checks(ctx, name: str, t: bytes, pll: int, chk) -> None:
+    """M2PLL step: register read-back, lock flag, derived-clock table (stock div -> new div, MHz vs stock)."""
+    m, n, o = PLL[name]
+    e0, e1, e7 = t[C_E0 - C_PLLM], t[C_E1 - C_PLLM], t[C_E7 - C_PLLM]
+    want = ((m - 2) & 0xFF, (ctx.stock_e[1] & 0xC0 if ctx.stock_e else 0) | {1: 0, 2: 1, 4: 2, 8: 3}[o] << 4 | (n - 2), (ctx.stock_e[2] & 0xC0) if ctx.stock_e else 0)
+    chk("pll", (e0, e1, e7) == want and not t[C_PTMO - C_PLLM] and not (t[C_WDON - C_PLLM] and not t[C_WDOS - C_PLLM]),
+        f"M {m} N {n} O {o} -> {pll / 1000:.2f} MHz; 0x01E0/E1/E7 = {e0:02X}/{e1:02X}/{e7:02X} want {want[0]:02X}/{want[1]:02X}/{want[2]:02X}; WD flag stock {t[C_WDOS - C_PLLM]} now {t[C_WDON - C_PLLM]}; bounded wait expired {t[C_PTMO - C_PLLM]}")
+    spll = ctx.stock_pll or 350791
+    old, new = t[C_DIVOLD - C_PLLM:C_DIVOLD - C_PLLM + N_DIV], t[C_DIVNEW - C_PLLM:C_DIVNEW - C_PLLM + N_DIV]
+    say(f"  derived clocks (stock M2PLL {spll / 1000:.1f} MHz -> {pll / 1000:.1f} MHz): register, stock div, new div, MHz stock -> new, error")
+    for k in range(N_DIV):
+        if old[k] == 0:
+            say(f"    {DIV_NAMES[k]:6s} {DIV_REGS[k]:12s} not on the M2PLL / no clock: left alone")
+            continue
+        a, b = spll / 1000 / old[k], pll / 1000 / new[k]
+        say(f"    {DIV_NAMES[k]:6s} {DIV_REGS[k]:12s} {old[k]:3d} -> {new[k]:3d}   {a:7.2f} -> {b:7.2f} MHz  {100 * (b / a - 1):+5.1f} %{'  (kept at stock)' if (ctx.keep >> k) & 1 else ''}")
+    for k in range(N_PWM):
+        a, b = be(t, C_PWMOLD - C_PLLM + 2 * k, 2), be(t, C_PWMNEW - C_PLLM + 2 * k, 2)
+        if a:
+            say(f"    pwm{k}   N+1 {a} -> {b}   frequency {100 * ((pll / b) / (spll / a) - 1):+5.1f} %")
+    if old[1]:
+        c = pll / 1000 / new[1]
+        say(f"  {'!!!! sync processor clock OVER the regdb 0x4006 cap' if c > SYNC_CAP_MHZ else 'info sync processor clock under the regdb 0x4006 cap'}: {c:.2f} MHz vs {SYNC_CAP_MHZ} MHz (divider 4 bit, max 15: above {SYNC_CAP_MHZ * 15:.0f} MHz M2PLL the cap cannot be kept; a documented 'should', not a check)")
+
 OPTS = {"allow_oc": False, "tune_first": False, "fps": True}      # set by main(): --allow-overclock-flash, --tune-first, --no-fps
 IMG_PASS_S = 25.0                          # one whole-image pass (14 banks) at the stock clock, first guess: refined by the first run
 FL_CYCLE_S = 3.0                           # one flash erase + 4 KB program + 2 read-backs, first guess: refined by the first run
@@ -334,7 +407,15 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     dev, ck = ctx.dev, ctx.ck
     res = {"step": name, "F": f, "F2": f2, "M": m, "dual": int(bool(fl & FL_DUAL))}
     iosc(ctx, f"{name} before (stock clock)")
-    scale = max(1.0, STOCK_MHZ / (350.8 / (f * m)), 43.85 / (350.8 / (f * f2)))     # op times follow the MCU clock and the SPI clock (stock 43.85)
+    pllk = pll_khz(*PLL[name]) if name in PLL else 350.8e3
+    pll_step = name in PLL
+    if pll_step and pllk > ctx.max_mhz * 1000:
+        say(f"== {name}: M2PLL {pllk / 1000:.1f} MHz is above --max-m2pll-mhz {ctx.max_mhz}: NOT RUN (tool guard; raise the flag to go beyond)")
+        res["fail"] = "refused by tool: above --max-m2pll-mhz"
+        return res
+    if pll_step and pllk > MAX_M2PLL_DEF_MHZ * 1000:
+        say(f"!!!! {name}: M2PLL {pllk / 1000:.1f} MHz is OUTSIDE the default envelope ({MAX_M2PLL_DEF_MHZ} MHz): explicit --max-m2pll-mhz {ctx.max_mhz}")
+    scale = max(1.0, STOCK_MHZ / (pllk / 1000 / (f * m)), 43.85 / (pllk / 1000 / (f * f2)))     # op times follow the MCU clock and the SPI clock (stock 43.85)
     t_apply = ck.now()
     extra_s = FLASH_TESTS.get(name, (0, 0))[0] * FL_CYCLE_S + ((IMG_PASSES[name] + 1) * IMG_PASS_S if name in IMG_PASSES else 0)
     r = send(ctx, OP_APPLY, (APPLY_LIMIT_S + PASSES.get(name, 0) * 0.45) * scale + extra_s * scale, f, f2, m, fl, label=f"apply {name}", pad=PADS.get(name, (KEEP, KEEP)), name_=name, hold_s=min(65.0, HOLD_S + PASSES.get(name, 0) * 0.4 * scale + extra_s * scale))
@@ -350,7 +431,10 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
         return res
     ctx.pll_khz = pll
     mhz, shz = mcu_mhz(pll, f, m), spi_mhz(pll, f, f2)
-    res.update(mcu=mhz, spi=shz)
+    res.update(mcu=mhz, spi=shz, pll_mhz=pll / 1000)
+    if name == "stock" and ctx.stock_pll is None:
+        ctx.stock_pll = pll
+        ctx.stock_e = tuple(ck.rd(C_E0, 1) + ck.rd(C_E1, 1) + ck.rd(C_E7, 1))
     say(f"== {name}: F {f} F2 {f2} M {m}{' dual-read' if fl & FL_DUAL else ''} -> MCU {mhz:.2f} MHz, SPI {shz:.2f} MHz (M2PLL {pll} kHz)")
     if st != ST_HELD:
         say(f"  REFUSED by the firmware: {REFUSE.get(refuse, refuse)}")
@@ -370,6 +454,9 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     if name == "stock" and ctx.stock_crc is None:
         ctx.stock_crc = crc
     want = ctx.expect_crc
+    if pll_step:
+        t = ck.rd(C_PLLM, C_SIZE2 - C_PLLM)
+        pll_checks(ctx, name, t, pll, chk)
     chk("regs", (r[C_FFED] >> 2) & 15 == f and r[C_FFE9] & 15 == f2 and (r[C_FFEE] >> 2) & 15 == m,
         f"FFED {r[C_FFED]:02X} FFE9 {r[C_FFE9]:02X} FFEE {r[C_FFEE]:02X} FF6C {r[C_FF6C]:02X} FDA1 {r[C_FDA1]:02X} CKCON {r[C_CKNOW]:02X}; chip ID 0x{r[C_CHIP]:02X}; FFEE[6] mcu_peri_non_stop {(r[C_FFEE] >> 6) & 1}; pad drive P10_C2 {r[C_DRNOW]:02X} slew P10_81 {r[C_SLNOW]:02X}")
     chk("formula", r[C_FORM] == 1, f"stock Timer2 reload equals the reload formula; RCAP2 now 0x{be(r, C_RCAP, 2):04X}")
@@ -455,8 +542,12 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     if r is None or r[C_STATE] not in (ST_REVERTED, ST_AUTO):
         chk("revert", False, "no answer / not reverted")
     else:
-        stock_ok = (r[C_FFED] >> 2) & 15 == FFED_STOCK and r[C_FFE9] & 15 == 2 and (r[C_FFEE] >> 2) & 15 == 1
-        chk("revert", stock_ok, f"FFED {r[C_FFED]:02X} FFE9 {r[C_FFE9]:02X} FFEE {r[C_FFEE]:02X} FF6C {r[C_FF6C]:02X} RCAP2 0x{be(r, C_RCAP, 2):04X} state {r[C_STATE]}")
+        b = ctx.base or {}
+        stock_ok = (r[C_FFED], r[C_FFE9] & 15, r[C_FFEE]) == (b.get("ffed", r[C_FFED]), b.get("ffe9", r[C_FFE9] & 15), b.get("ffee", r[C_FFEE]))
+        e = ck.rd(C_E0, 3)
+        stock_ok = stock_ok and (e[0], e[1], e[2]) == (b.get("e0", e[0]), b.get("e1", e[1]), b.get("e7", e[2])) and be(r, C_RCAP, 2) == b.get("rcap", be(r, C_RCAP, 2))
+        chk("revert", stock_ok, f"FFED {r[C_FFED]:02X} FFE9 {r[C_FFE9]:02X} FFEE {r[C_FFEE]:02X} FF6C {r[C_FF6C]:02X} M2PLL E0/E1/E7 {e[0]:02X}/{e[1]:02X}/{e[2]:02X} RCAP2 0x{be(r, C_RCAP, 2):04X} state {r[C_STATE]}; "
+                       f"baseline {', '.join(f'{k} {v:X}' for k, v in b.items())}")
     iosc(ctx, f"{name} after revert (stock clock)")
     res["pass"] = all(ok for _, ok in checks)
     say(f"  {'STEP PASS' if res['pass'] else 'STEP FAIL'} {name}")
@@ -464,7 +555,7 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
 
 
 def tsv(row: dict) -> None:
-    keys = ["step", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "scope1_fps", "fail"]
+    keys = ["step", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "scope1_fps", "fail"]
     TSV.parent.mkdir(parents=True, exist_ok=True)
     new = not TSV.exists()
     with TSV.open("a") as f:
@@ -496,12 +587,29 @@ def main() -> int:
     ap.add_argument("--bin", type=Path)
     ap.add_argument("--sim", action="store_true")
     ap.add_argument("--continue-on-fail", action="store_true", help="go on to the next step after a failed one (default: stop, the rest is slower-to-faster)")
+    ap.add_argument("--max-m2pll-mhz", type=int, default=MAX_M2PLL_DEF_MHZ, help="M2PLL ceiling of this run (default 490: unattended); a step above is refused; a higher value is an explicit decision")
+    ap.add_argument("--keep", default="", help="comma list of derived dividers left at stock: " + ",".join(DIV_NAMES))
+    ap.add_argument("--override", default="", help="NAME=VAL: set one derived divider field to VAL instead of the nearest integer")
+    ap.add_argument("--retry", action="store_true", help="repeat a failed step once with the same settings; only a repeated failure counts")
+    ap.add_argument("--stop-after", type=int, default=1, help="stop after N consecutive reproducible failed steps (default 1)")
     ap.add_argument("--allow-overclock-flash", action="store_true", help="allow the oc* steps: SPI above the MX25L8006E fast-read rating (86 MHz); never write / erase there (the fw refuses)")
     ap.add_argument("--tune-first", action="store_true", help="write the FF6C latch / delay tune at the stock clock, before the dividers change")
     ap.add_argument("--no-fps", action="store_true", help="skip the Scope 2 / Asteroids / Scope 1 frame-rate part")
     ap.add_argument("steps", nargs="+")
     a = ap.parse_args()
     OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, fps=not a.no_fps)
+    keep = 0
+    for nm in [x for x in a.keep.split(",") if x]:
+        if nm not in DIV_NAMES:
+            raise SystemExit(f"--keep: unknown divider {nm}; known {DIV_NAMES}")
+        keep |= 1 << DIV_NAMES.index(nm)
+    ov = (0xFF, 0)
+    if a.override:
+        nm, _, v = a.override.partition("=")
+        if nm not in DIV_NAMES[:N_DIV] or not v.isdigit():
+            raise SystemExit(f"--override: NAME=VAL with NAME in {DIV_NAMES[:N_DIV]}")
+        ov = (DIV_NAMES.index(nm), int(v))
+    a.ctx_opts = (a.max_m2pll_mhz, keep, ov)
     names = []
     for s in a.steps:
         names += GROUPS.get(s, [s])
@@ -518,6 +626,7 @@ def main() -> int:
         dev, ck, rdabs, sync_addr = make_sim(binp, a.map)
         ctx = Ctx(dev, ck, rdabs, sync_addr, want)
         ctx.sim = True
+        ctx.max_mhz, ctx.keep, ctx.override = a.ctx_opts
         run(ctx, names, a)
         return 0
     import dbg_link
@@ -537,6 +646,7 @@ def main() -> int:
                     return r
             return None
         ctx = Ctx(dev, ck, rdabs, sync_addr, want)
+        ctx.max_mhz, ctx.keep, ctx.override = a.ctx_opts
         ctx.relink = lambda: relink(a.bus)
         try:
             fails = run(ctx, names, a)
@@ -568,25 +678,54 @@ def relink(bus: int) -> bool:
     return False
 
 
+def one_step(ctx, n: str) -> dict:
+    say(f"##### step {n}")
+    try:
+        row = run_step(ctx, n)
+    except (TimeoutError, RuntimeError) as e:
+        row = {"step": n, "pass": False, "fail": f"comm: {e}"}
+        say(f"  FAIL comm lost at step {n}: {e}")
+    tsv(row)
+    return row
+
+
+def baseline(ctx) -> None:
+    """Registers before any step (the build's own clock): what every revert must restore. A revert with nothing saved only reads them."""
+    r = send(ctx, OP_REVERT, 2.0, label="baseline")
+    if r is None:
+        raise SystemExit("no answer to the baseline read: nothing done")
+    e = ctx.ck.rd(C_E0, 3)
+    ctx.base = {"ffed": r[C_FFED], "ffe9": r[C_FFE9] & 15, "ffee": r[C_FFEE], "e0": e[0], "e1": e[1], "e7": e[2], "rcap": be(r, C_RCAP, 2)}
+    say(f"baseline: FFED {r[C_FFED]:02X} FFE9 {r[C_FFE9]:02X} FFEE {r[C_FFEE]:02X} M2PLL E0/E1/E7 {e[0]:02X}/{e[1]:02X}/{e[2]:02X} RCAP2 0x{be(r, C_RCAP, 2):04X}")
+
+
 def run(ctx, names, a) -> int:
-    fails = 0
+    fails = consec = 0
+    stop_after = max(1, a.stop_after)
+    baseline(ctx)
     for n in names:
-        say(f"##### step {n}")
-        try:
-            row = run_step(ctx, n)
-        except (TimeoutError, RuntimeError) as e:
-            row = {"step": n, "pass": False, "fail": f"comm: {e}"}
-            say(f"  FAIL comm lost at step {n}: {e}")
-        tsv(row)
+        row = one_step(ctx, n)
+        if not row.get("pass") and a.retry and not str(row.get("fail", "")).startswith("refused"):
+            lost = str(row.get("fail", "")).startswith(("comm", "no answer"))
+            if lost and getattr(ctx, "relink", None) and not ctx.relink():
+                say("unit did not come back: sweep aborted")
+                fails += 1
+                break
+            say(f"  retry {n} once with the same settings (a repeated failure counts, a single one is a flake)")
+            row = one_step(ctx, n)
+            say(f"  retry of {n}: {'PASS (flake, not counted)' if row.get('pass') else 'FAIL again: reproducible'}")
         if not row.get("pass"):
             fails += 1
+            consec += 1
             lost = str(row.get("fail", "")).startswith(("comm", "no answer"))
             if lost and getattr(ctx, "relink", None) and not ctx.relink():
                 say("unit did not come back: sweep aborted")
                 break
-            if not a.continue_on_fail:
-                say(f"stop after the first failed step ({n}); the fw reverts by itself at the hold limit, the WDT resets a stalled main loop")
+            if not a.continue_on_fail and consec >= stop_after:
+                say(f"stop after {consec} consecutive failed step(s) (last {n}); the fw reverts by itself at the hold limit, the WDT resets a stalled main loop")
                 break
+        else:
+            consec = 0
     say(f"sweep done: {len(names)} requested, {fails} failed")
     return fails
 

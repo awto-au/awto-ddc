@@ -15,6 +15,7 @@ import argparse
 import collections
 import csv
 import hashlib
+import os
 import re
 import sys
 import isostamp  # noqa: E402
@@ -106,6 +107,7 @@ def build_rows(tree: Path, mapp: Path):
     for r in rows:
         if r["linked"] != "yes":
             continue
+        r = dict(r, file=os.path.relpath(r["file"], tree) if os.path.isabs(r["file"]) else r["file"])   # keys must not depend on the checkout path
         base = f"{r['file']}|{r['function']}|{r['kind']}|{norm(r['stmt'])}"
         seen[base] += 1
         out.append((f"{base}|{seen[base]}", r))

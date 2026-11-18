@@ -57,6 +57,7 @@ CAL_ROWS = (("d5us10", "DELAY_5US", 10, 5.0, 0.97, 1.50),
 # 10 ticks vs the reload period: catches a lost / extra tick (+-10 %) or a wrong reload. Half a tick: the snapshots follow
 # the Timer2 ISR return, so per-tick ISR length (~50 us, code-dependent) lands in the result (#54)
 CAL_TICK_TOL = 0.05
+XMS_SHIFT, T3_SHIFT = 4, 10   # RL6449_Project.h AWTO_DIAG_XMS_SHIFT / AWTO_DIAG_T3_SHIFT: the u16 fields hold Timer2 counts >> shift (10 ms = 292 k counts at 350.8 MHz)
 CAL_T3_FAST_MAX_MS = 100   # fast boot (#63): 20 ms own-pattern T3 + the ~40 ms delay test inside it, x~1.5
 CAL_T3_MS, CAL_T3_TOL_MS = 550, 1.5  # panel T3 (_PANEL_POWER_ON_T3): ScalerTimerDelayXms granularity 1 tick + 64-count resolution
 IDLE_POLL_S = 0.002   # a status read is ~0.3 ms at 100 kHz; 2 ms bounds the stall added per message (fw halts until fetched)
@@ -121,7 +122,7 @@ def cal_eval(d: dict, sim: bool = False) -> list:
     if per is None:
         return [("run", False, f"RCAP2H 0x{d['rcap2h']:02X} not in the Timer2 table")]
     rows = []
-    ticks = d["xms4"] * 4 / per                           # ms, expected 10
+    ticks = d["xms4"] * (1 << XMS_SHIFT) / per                           # ms, expected 10
     rows.append(("tick", abs(ticks - 10) <= 10 * CAL_TICK_TOL,
                  f"10 ticks = {ticks:.3f} ms (limit +-{CAL_TICK_TOL * 100:.1f} %)"))
     for key, label, calls, nom, lo, hi in CAL_ROWS:
@@ -131,10 +132,10 @@ def cal_eval(d: dict, sim: bool = False) -> list:
             continue
         rows.append((label, nom * lo <= us <= nom * hi,
                      f"{us:.2f} us/call, {us / nom * 100:.0f} % of {nom:g} (limit {lo * 100:.0f}..{hi * 100:.0f} %)"))
-    t3 = d["t3_64"] * 64 / per
+    t3 = d["t3_64"] * (1 << T3_SHIFT) / per
     if sim:                                               # dilated Timer2 (x3): the u16 of counts/64 wraps; compare mod 2^16
-        err = ((d["t3_64"] - CAL_T3_MS * per // 64 + 0x8000) & 0xFFFF) - 0x8000
-        t3 = CAL_T3_MS + err * 64 / per
+        err = ((d["t3_64"] - CAL_T3_MS * per // (1 << T3_SHIFT) + 0x8000) & 0xFFFF) - 0x8000
+        t3 = CAL_T3_MS + err * (1 << T3_SHIFT) / per
     fast = (not sim) and 0 < t3 <= CAL_T3_FAST_MAX_MS      # #63 fast boot: T3 = one frame while the scaler shows its own pattern
     rows.append(("T3 wait", d["t3_64"] != 0 and (fast or abs(t3 - CAL_T3_MS) <= CAL_T3_TOL_MS),
                  f"{t3:.2f} ms incl. the test (limit {CAL_T3_MS} +-{CAL_T3_TOL_MS} ms, or <= {CAL_T3_FAST_MAX_MS} ms own-pattern fast boot)"))

@@ -54,6 +54,7 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
   - `scripts/rtd_flashdb_parse.py <FlashSet.dat|Flash.dat> <out.json>` — the JEDEC→flash-parameters table
     (erase/program/unprotect opcodes per chip); `--diff a.json b.json` compares two tool versions. Output in `re/flashdb/`.
   - `scripts/pe_resources.py <root> <out.tsv>` — GUI dialog/menu/control-ID map from the tool's PE resources.
+  - `re/regmap/` + `scripts/regmap_build.py` / `regmap_import.py` / `regmap_query.py` — register knowledge base: regdb + SDK + our names + observations + status + test per register (`re/regmap/README.md`).
   - `scripts/regdb_query.py <chip> regs|fields|port ...` — query the decoded register tables in `re/regdb/`.
   - `scripts/regdb_pack.py` — pack `~/vendors/.../regdb/*.tsv` into `re/regdb/*.tsv.gz`.
 - `scripts/rtd_identify.py <bus>|--all [--json] [--no-isp]` — read-only full ID report (EDID, DDC VCP C8/C9/DF + caps, scaler product code, SPI flash JEDEC/status + FlashSet programming params); one ISP session, monitor reboots.

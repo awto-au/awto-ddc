@@ -40,7 +40,7 @@ CODE:fb38	SysMainSystemInitial	func	SDK SysMain.c: ScalerMcuInitial (e896), 7 ba
 CODE:fefe	SysMainSytemPowerDetect	func	SDK SysMain.c: returns _TRUE (SETB CY; RET) - power detect stubbed. SDK spelling kept.	[re-agent]	high
 CODE:d778	ScalerMcuHwIICRead	func	SDK ScalerCommonMcu.c: len > 0x18 -> fail, I2CM_* master read with 600-count timeout (dbc4:dbc5 = 0x0258), sub-address lengths 0/1/2, copies I2CM_TD bytes to buffer.	[re-agent]	high
 CODE:f344	ScalerMcuDdcciSendData	func	SDK ScalerCommonMcu.c: IIC_IRQ_CONTROL2|=0x60, load IIC_DATA_OUT while IIC_STATUS2 bit2 clear, banked ScalerTimerDelayXms(2) + timeout 0x01F4 (500), host-write disable.	[re-agent]	high
-CODE:ef94	ScalerMcuDdcciIntGetData_EXINT1	func	Vendor variant of SDK ScalerMcuDdcciIntGetData_EXINT1: IIC_STATUS bit1 (sub addr) / bit2 (data in) drain, 0x80-byte limit, extra custom-command hook (func 0x0A05). Buffer ptr passed as generic ptr R1:R2:R3.	[re-agent]	med
+CODE:ef94	ScalerMcuDdcciIntGetData_EXINT1	func	Vendor variant of SDK ScalerMcuDdcciIntGetData_EXINT1: IIC_STATUS bit1 (sub addr) / bit2 (data in) drain, 0x80-byte limit, call to func 0x0A05 = trampoline to ScalerMcuDdcciHoldScl_EXINT1 (5:f5e7), not a custom-command hook. Buffer ptr passed as generic ptr R1:R2:R3.	[re-agent]	med
 CODE:fe66	ScalerMcuCacheInitial	func	SDK ScalerMcu.c: CACHE_OPTION&=0xFC (reset-bit toggle folded, common-bank off), CACHE_FUNCTION|=1.	[re-agent]	high
 CODE:fe93	ScalerMcuCacheControl	func	SDK ScalerCommonMcu.c: bit arg -> CACHE_FUNCTION bit0 set/clear.	[re-agent]	high
 CODE:fea2	ScalerMcuSarAdcClkSel	func	SDK ScalerCommonMcu.c: ADC_CLK_DIV = 4 (_EXT_XTAL_CLK) else 9.	[re-agent]	high

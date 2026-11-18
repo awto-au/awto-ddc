@@ -69,7 +69,7 @@ static void AwtoDiagDelayCal(void)
     AwtoDiagT2Snap(&s_stSnapA);
     ScalerTimerDelayXms(10);
     AwtoDiagT2Snap(&s_stSnapB);
-    isr_g_stAwtoDiag.usDelayXms10 = (unsigned int)((AwtoDiagT2Diff(&s_stSnapA, &s_stSnapB, usRcap)) >> 2);
+    isr_g_stAwtoDiag.usDelayXms10 = (unsigned int)((AwtoDiagT2Diff(&s_stSnapA, &s_stSnapB, usRcap)) >> AWTO_DIAG_XMS_SHIFT);
 
     EA = 0;
     AwtoDiagT2Snap(&s_stSnapA);
@@ -103,5 +103,5 @@ void AwtoDiagT3Mark(unsigned char ucEnd)
     }
     AwtoDiagT2Snap(&s_stT3B);
     AwtoSwEvent(AWTO_SW_EV_T3, 1);
-    isr_g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, ((unsigned int)RCAP2H << 8) | RCAP2L) >> 6);
+    isr_g_stAwtoDiag.usT3Wait64 = (unsigned int)(AwtoDiagT2Diff(&s_stT3A, &s_stT3B, ((unsigned int)RCAP2H << 8) | RCAP2L) >> AWTO_DIAG_T3_SHIFT);
 }

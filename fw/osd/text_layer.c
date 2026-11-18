@@ -171,18 +171,18 @@ void osd_tc_cells(BYTE ucRow, BYTE ucCell, BYTE __xdata *pucTiles, BYTE ucN, BYT
         pucTiles += ucN;
         while(ucN-- != 0)
         {
-            ScalerOsdDataPort(ucB0);
-            ScalerOsdDataPort(*--pucTiles);
-            ScalerOsdDataPort(ucB2);
+            AWTO_OSD_PORT(ucB0);
+            AWTO_OSD_PORT(*--pucTiles);
+            AWTO_OSD_PORT(ucB2);
         }
         return;
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_usFontSelectStart + (WORD)ucRow * g_ucOsdWidth + ucCell, _OSD_WITHOUT_DB);
     while(ucN-- != 0)                              // one address, then B0 B1 B2 per cell (the word address increments by itself)
     {
-        ScalerOsdDataPort(ucB0);
-        ScalerOsdDataPort(*pucTiles++);
-        ScalerOsdDataPort(ucB2);
+        AWTO_OSD_PORT(ucB0);
+        AWTO_OSD_PORT(*pucTiles++);
+        AWTO_OSD_PORT(ucB2);
     }
 }
 
