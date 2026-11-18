@@ -48,6 +48,8 @@ typedef struct {
     int dw;
     uint8_t dwcyc[256];         /* instruction cycles per opcode (databook table 2-4) */
     uint8_t last_op;
+    uint16_t port_addr;         /* MOVX write address that costs port_extra more cycles (OSD data port) */
+    int port_extra, port_hit;
     int movx_base, irq_cycles, clk_per_cycle, div_slow, div_fast;
     uint32_t tacc[3];           /* clk since the last count of timer 0 / 1 / 2 */
     uint64_t tnow, tclk, tnext; /* dw8051 lazy timers: clk elapsed, clk the timers are counted up to, next TFx deadline */
@@ -233,6 +235,8 @@ static inline void xwrite(core_t *c, uint16_t a, uint8_t v)
     c->xram[a] = v;
     c->cnt[IS_XRAM(a) ? 1 : 3]++;
     c->xacc[a]++;
+    if (c->port_extra && a == c->port_addr)
+        c->port_hit = 1;
     if (a == 0xFFFF)
         c->cnt[4]++, set_bank(c, v & 0x0F);
     if (a == 0xFDA1 && (v & 1) && c->fm_tag)
@@ -893,12 +897,22 @@ core_t *core_new(const uint8_t *img, uint32_t len)
     return c;
 }
 
+/* extra cycles for a MOVX write to one address (the OSD data port: the scaler bus is slower than XRAM) */
+void core_set_port_extra(core_t *c, int addr, int extra)
+{
+    c->port_addr = (uint16_t)addr;
+    c->port_extra = extra;
+    c->port_hit = 0;
+    c->p.max_instr_clk += (uint32_t)extra * c->clk_per_cycle;
+}
+
 /* dw8051 mode (DesignWare DW8051 databook v3.2a): per-opcode instruction cycles, MOVX = movx_base + CKCON[2:0],
  * timers divide clk by div_slow / div_fast, an accepted IRQ costs irq_cycles; reset values CKCON = 1, DPS = 0 */
 void core_set_dw(core_t *c, int on, const uint8_t *cyc, int movx_base, int irq_cycles, int clk_per_cycle, int div_slow, int div_fast)
 {
     int i, mx = 0;
     c->dw = c->p.dw = on;
+    c->port_extra = 0;
     if (!on)
         return;
     memcpy(c->dwcyc, cyc, 256);
@@ -1060,6 +1074,10 @@ static int core_run_(core_t *c, uint64_t n)
             uint8_t op = c->last_op;
             cyc = (op == 0xE0 || op == 0xE2 || op == 0xE3 || op == 0xF0 || op == 0xF2 || op == 0xF3) ?
                   c->movx_base + (CKCON & 7) : c->dwcyc[op];
+            if (c->port_hit) {
+                cyc += c->port_extra;
+                c->port_hit = 0;
+            }
             c->p.cycles += cyc;
             c->cycop[op] += cyc;
             c->p.clk += stall + (uint64_t)cyc * c->clk_per_cycle;

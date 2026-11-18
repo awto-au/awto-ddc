@@ -41,7 +41,7 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 - Scale-up: factor = 64 x `AWTO_AST_W` / `_PANEL_DH_WIDTH` = 6 (ratio 10.67), position from the panel constants as Scope 2; compile error unless the width fills the panel exactly and the height fits with equal bars. Gameplay constants stay in raster px (objects 17 % larger on screen than at 384 x 216).
 - Per pass: cull objects against the 12 x 108 window (wrap-aware), skip lines wholly outside it (`osd_line` walks every pixel of a clipped line), draw, upload only tiles that hold ink or held ink at their last upload (per-pass occupancy byte). Empty passes cost ~1 ms: a main-loop pass runs on through empty columns until one drew something.
 - Score / spare ships (top left) redraw only when they change or an object touches those passes (occupancy bit 6).
-- Rotate 180: `AwtoOsdRotCell` + `AwtoOsdGlyph` as the scopes (`docs/osd-rotation.md`); scale-up window start = OSD position (`AwtoOsdPlaceScaleUp`).
+- Rotate 180: `AwtoOsdRotCell` + `AwtoScTile` (turns the tile, direct port stores) as the scopes (`docs/osd/rotation.md`); scale-up window start = OSD position (`AwtoOsdPlaceScaleUp`).
 - Ship: 16 stored angles x quarter turns (generator bakes the flame at the hull's end point); size = vertex >> shift (rock 1 / 2 / 3, saucer 2 / 3, ship 3).
 - Frames follow at once (no pause); one column per main pass, watchdog kicked per pass.
 

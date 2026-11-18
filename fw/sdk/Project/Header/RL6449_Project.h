@@ -1101,23 +1101,22 @@ extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);
 extern __xdata BYTE g_ucAwtoOsdRot;                                                    // latched copy of AwtoOsdRot180() for the screen being drawn
-extern BYTE AwtoOsdRot180(void);                                                // fw/osd/osd_rot.c (docs/osd-rotation.md): 1 = display Rotate 180, the OSD must be drawn turned
+extern BYTE AwtoOsdRot180(void);                                                // fw/osd/osd_rot.c (docs/osd/rotation.md): 1 = display Rotate 180, the OSD must be drawn turned
 extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
 extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN);                          // turn ucN stream bytes 180 in place (bytes reversed, bits of each reversed)
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_OSD_ZERO                                           0x00
+#define AWTO_OSD_PORT(v)                                        (AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v))   // OSD SRAM data port: direct store (unit 3 T1 / T2 / T5 / T7 byte-exact, docs/osd-hw-tests.md)
 #define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
 #define AWTO_OSD_POS_OFFSET_V                                   0x04
 #define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px
 #define AWTO_OSD_ROW_B0                                         0x80    // row command byte 0
 extern void AwtoOsdWord(WORD usAddr, BYTE ucB0, WORD usB12);   // fw/osd/osd_screen.c: one 3-byte OSD SRAM word (B1 high byte of usB12; 3 params: no XDATA parameter bytes)
 extern void AwtoOsdRowCmds(BYTE ucRows, BYTE ucRowH, BYTE ucCols);       // ucRows row commands from SRAM 0 + the end marker word
-extern void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords);   // glyph words (canonical c0 c1 c2) at usAddr, turned when g_ucAwtoOsdRot
 extern void AwtoOsdPlaceScaleUp(BYTE ucPosH, BYTE ucPosV, BYTE ucCols, BYTE ucRows, BYTE ucFactor);   // map of 12 x 18 tiles scaled up and shown
-extern void AwtoOsdMap1(BYTE ucCols, BYTE ucRows, BYTE ucAttr);              // 1-bit map, glyph id = cell, one attribute (fg << 4 | bg); SRAM bases set, geometry latched for AwtoOsdTile
-extern void AwtoOsdTile(WORD usCell, const BYTE __xdata *pucB);              // one tile (canonical bytes) into the glyph of map cell usCell (mirrored cell when turned)
+extern void AwtoOsdMap1(BYTE ucCols, BYTE ucRows, BYTE ucAttr);              // 1-bit map, glyph id = cell, one attribute (fg << 4 | bg); SRAM bases set
 extern void AwtoOsdScreenBegin(void);                                           // screen prologue: close, latch rotation, reset, DVS
 extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
@@ -1487,7 +1486,7 @@ extern void UserCommonInterfacePanelPowerTick(void);
 extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
-// OSD character command byte 0 (docs/reversing/realtek-rtd/osd-limits.md): [7:6] type 01 = 1-bit font, [4:0] cell width px
+// OSD character command byte 0 (docs/osd/tiles-fonts.md): [7:6] type 01 = 1-bit font, [4:0] cell width px
 #define AWTO_OSD_CHAR_1BIT                                      0x40
 #define AWTO_OSD_CHAR_1BIT_W(w)                                 ((unsigned char)(AWTO_OSD_CHAR_1BIT | (w)))
 #define AWTO_OSD_SDK_CELL_W                                     12      // SDK menu font cell width (OsdFuncApplyMap's blanks)

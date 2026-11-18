@@ -68,7 +68,7 @@ Frames IDENTICAL (`saver_frames_md5.py`, 6-12 frames) to the base for every step
 
 - Kept (k1) vs base, model A: Scope 1 -18 %, Scope 2 -13 %, Asteroids -9 % (noise ~5 % on Asteroids: frames are tick-paced); at 175.5 MHz (image `k1s`): Scope 1 110.0 -> 80.8, Scope 2 114.3 -> 101.3, Asteroids 40.6 -> 39.8 (no change within noise).
 - Model B shows a smaller gain for the kept set (Scope 2 181.8 -> 151.0, Scope 1 237 -> 216): under per-bank common the cross-bank port calls (not kept) dominate.
-- Not kept, c1 port pins: per byte `ScalerOsdDataPort` costs ~4 us [sim, same as unit T1 4.12 us] through the trampoline and ~2 us in common [sim]; the unit runs port loops 1.6-1.9x the sim [hw] and the 2026-11-18 rule (`saver-library.md`: garbled tiles with fast direct stores, diagnosis open) stays Dan's call. Gain if allowed: a further ~16 ms Scope 2 (A), ~19 Scope 1.
+- c1 port pins: superseded by direct port stores (`ScalerOsdDataPort` no longer called by a saver); `ScalerOsdAddrSet` / `ScalerOsdAddrLsb` pins: measured after direct stores: Scope 2 -2 %, Scope 1 / Asteroids 0: not kept (`docs/saver-fps-plan.md`).
 - `__data` locals: Scope 2 -7.6 ms (A), Scope 1 -13 ms, Asteroids -3.9 ms on top of c2: larger than the 3-cycles-per-access estimate (~3.7 ms Scope 1) because 2 code bytes per access also leave the flash fetch. Per-variable table: `saver_code_profile.py --xdata`.
 - Static `__data` variables (6 B free) not tried: top candidates `s_sOy`, `s_tNew`, `s_tOld` (~0.2 ms each); the 6 B holes are the only permanent IRAM left.
 
@@ -83,7 +83,7 @@ Frames IDENTICAL (`saver_frames_md5.py`, 6-12 frames) to the base for every step
 
 - Cache geometry: read the miss / reference counters (`FDB3..FDC4`, regdb) over the debug link during a Scope 2 run; sim predicts 24.6 k fills per frame on the base image (A) vs 36.2 k (2 KB per-bank) / ~15 k (4 KB shared). Separates A from B and fixes every number above.
 - Kept image (k1): Scope 2 / Scope 1 / Asteroids frame rate from the sync log vs sim (153.9 / 137.8 / 46.8 ms A).
-- c1 (port helpers in common) only with a port-rate check (T1 / T2 style, `osd-hw-tests.md`) and a photo of the tiles.
+- Direct port stores: unit 3 port-rate check (T1 / T2 style, `osd-hw-tests.md`) and a photo of the tiles.
 - 175.5 MHz image: stability, then rates (sim: Scope 2 101 ms with k1).
 - Common page mode (`FDA1[1]`) on: sim A vs B difference is the prize (Scope 2 up to 20 %, Asteroids up to 2x).
 

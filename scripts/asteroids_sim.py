@@ -3,7 +3,7 @@
 
 usage: asteroids_sim.py [BIN MAP] [--seconds S] [--out DIR] [--fps F] [--scale N] [--rotate] [--bg black]
   - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST; a default build has no sound).
-  - DDC/CI VCP 0xEB = 8 starts the saver; frame k = OSD state at T0 + k / fps of firmware time. --rotate: display Rotate 180 first (docs/osd-rotation.md).
+  - DDC/CI VCP 0xEB = 8 starts the saver; frame k = OSD state at T0 + k / fps of firmware time. --rotate: display Rotate 180 first (docs/osd/rotation.md).
   - Output: DIR/frames/f%04d.png, DIR/asteroids.mp4 (with the sound when the image has the audio generator), DIR/asteroids.wav, DIR/steps.tsv (game step per frame).
 Log: ./tmp/logs/asteroids_sim.log
 """

@@ -540,7 +540,7 @@ Verdicts are suggestions for the review, not decisions. "R#162" = redesign under
 ## 10.1 The question: OSD vs output timing / DCLK / eDP-1 link
 
 **Facts**
-- The OSD is drawn by the display side from on-chip OSD SRAM, on the scaler's display clock. It uses neither the input clock nor the DDR. [docs/reversing/realtek-rtd/osd.md §"OSD vs the picture path": [guess], consistent with the no-signal screen] [issue #26 #36: faults on the input→display crossing do not affect the OSD or the panel link]
+- The OSD is drawn by the display side from on-chip OSD SRAM, on the scaler's display clock. It uses neither the input clock nor the DDR. [docs/osd/pipeline.md §"OSD vs the picture path": [guess], consistent with the no-signal screen] [issue #26 #36: faults on the input→display crossing do not affect the OSD or the panel link]
 - So the OSD depends on: D-domain timing generator + DCLK (DPLL), the DPTx stream/link, and panel power. It does not depend on the input receiver or the I/M domain.
 - The eDP link is not touched by any mode-flow step. [code]
   - Every caller of `ScalerDisplayDPTx*` (link sequence, PHY init, stream enable, SSC set, analog PHY) is in `UserCommonInterfacePanelPowerAction` or in our `AwtoL2LinkOff/On` (fw/input/fastsw.c). I grepped the port: there are no other callers.

@@ -71,6 +71,11 @@ def model() -> dict:
         "clk_per_cycle": 4,
         "cycles": cycles(),
         "movx": {"base_cycles": 2, "extra_from": "CKCON[2:0] (MD2..0): cycles = base + value (table 2-5)"},
+        "osd_data_port": {
+            "addr": 0x0092, "extra_cycles": 22,
+            "source": "unit 3 direct store loop, EA off, 2.39 us/B vs sim 1.41 us/B at 21.9 M cycles/s (osd_port_cal.py, docs/osd-hw-tests.md T2): "
+                      "a MOVX write to the OSD data port costs extra cycles beyond the databook MOVX",
+        },
         "irq_cycles": 4,
         "irq_note": "accepted interrupt = the LCALL to the vector (databook p. 3-49: 1 detect + 4 LCALL; detect overlaps the last cycle)",
         "timer_clk_div": {"slow": 12, "fast": 4, "ckcon_bits": {"T0M": 3, "T1M": 4, "T2M": 5}},

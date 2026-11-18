@@ -620,6 +620,9 @@ def cmd_build(extra: list[str]) -> int:
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree).returncode else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
     args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
+    for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (--xdata-floor 0 for an opt-in test image)
+        extra.remove(x)
+        args += ["--fw-args", x.split("=", 1)[1]]
     for o in ("--bin", "--src", "--level", "--expect", "--flags", "--fw-args"):     # compiler A/B and layout experiments (fwimage.py options)
         v = _opt(extra, o)
         if isinstance(v, str):
@@ -1252,6 +1255,20 @@ def cmd_osd_hw_test(extra: list[str]) -> int:
         raise SystemExit(f"osd-hw-test: need TESTs; bad {bad or 'none'}; nothing done")
     m = Path(_fwmap(u, given))
     return _py("osd_hw_test.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *opts, *extra)
+
+
+@command("MCU / flash clock sweep at run time (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP names or all-mcu / all-flash / all-175, --sim runs it in the firmware sim",
+         args="[--unit N] [--map F] [--sim] [--continue-on-fail] STEP...", kind="action")
+def cmd_clk_sweep(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
+    bad = [x for x in extra if x.startswith("-")]
+    if bad or not extra:
+        raise SystemExit(f"clk-sweep: need STEPs; bad {bad or 'none'}; nothing done")
+    m = Path(_fwmap(u, given))
+    opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else [])
+    return _py("clk_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
 @command("unused GPIO inputs: snapshot | watch changes | open/close the live OSD screen over I2C",

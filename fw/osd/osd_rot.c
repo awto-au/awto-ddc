@@ -1,6 +1,6 @@
 #include "UserCommonInclude.h"
 
-// OSD 180 degree rotation helpers for full-screen OSD users that draw their own map + glyphs (Pac-Man, scope savers): docs/osd-rotation.md.
+// OSD 180 degree rotation helpers for full-screen OSD users that draw their own map + glyphs (Pac-Man, scope savers): docs/osd/rotation.md.
 // The OSD circuit is not rotated with the picture: with display Rotate 180 (panel mounted turned) an upright map shows upside down.
 // Same rule as the menu text layer (fw/osd/text_layer.c): map cell c -> cells - 1 - c, glyph bitmaps turned 180 degrees.
 

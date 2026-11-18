@@ -20,7 +20,7 @@ options:
   --scale N   1 = 12x18 px cells (default), 2 = firmware's doubled OSD (0x3A0A[1:0])
   --vlc-font  upload the diagnostic font through the RTD hardware VLC decoder instead of raw SRAM writes
 
-Facts: docs/reversing/realtek-rtd/tech-osd.md (draw sequence, char-word format, button map).
+Facts: docs/osd/README.md (ports, window words, char words).
 SDK-confirmed char word: byte0=0x4C (1bpp, width=12px), byte1=glyph index, byte2=colour [sdk-rl64xx-reference.md].
 Log: ./tmp/logs/rtd_tech_osd.log
 """
@@ -37,7 +37,7 @@ import osd_vlc
 
 # ---- char-word format (SDK-confirmed) -----------------------------------------------------------
 CW_BYTE0 = 0x4C                 # 1bpp font, low nibble 12 = cell width in px [sdk-rl64xx-reference.md s2]
-# colour byte = fg[7:4] | bg[3:0]  (4-bit palette indices; bg 0 = transparent) [osd-font-download.md s6]
+# colour byte = fg[7:4] | bg[3:0]  (4-bit palette indices; bg 0 = transparent) [docs/osd/tiles-fonts.md]
 
 # palette indices we load
 PAL_BG     = 0                  # transparent (not loaded; index 0)

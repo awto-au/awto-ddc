@@ -63,13 +63,13 @@ Identify any unit: `scripts/rtd_identify.py <bus>|--all`. Full RE + extraction t
 
 ## Docs
 - `docs/history.md` — superseded beliefs; its last section is the former handover (frozen 2026-11-16). Current state: open issues, `docs/power-levels.md`, `./dev.py --help`.
-- `docs/osd.md` — OSD system overview (layers, fonts, inputs, tools, open work); start here for anything OSD.
+- `docs/osd/README.md` — OSD manual (hardware, registers, every feature with a sim picture, limits, open tests); `docs/osd.md` — OSD system overview (our screens, fonts, inputs, tools, open work).
 - `docs/firmware-proposal.md` — technical OSD design notes.
 - `docs/history.md` — superseded, refuted or wrong claims, one line each.
 - `docs/edid-fix.md` — the EDID rebuild (identity/size/conformance), patch plan, flash procedure + revert.
 - `docs/deployment.md` — one shared firmware image for all monitors, followed by guarded per-monitor EDID programming.
 - `docs/logo/` — awto monitor mark (red, house style) + boot-splash replacement (640x360): `-colour` (primary), plain = black/white fallback.
-- `docs/boot-logo.md`, `docs/reversing/realtek-rtd/{buttons,osd,db-bin-format}.md`, `docs/rtdtool-*.md`, `docs/monitors/`.
+- `docs/boot-logo.md`, `docs/reversing/realtek-rtd/{buttons,osd-font-download,db-bin-format}.md`, `docs/osd/`, `docs/rtdtool-*.md`, `docs/monitors/`.
 - `docs/reversing/8051-reuse-playbook.md` — the compiler/library/Ghidra workflow and a staged plan for another 8051 target such as JMS539.
 
 ## Not in this repo

@@ -90,6 +90,12 @@
 #define AWTO_F_PB7_AUX_IRQ_STATUS_AUX_RX_INT            0x01
 #define AWTO_R_PBA_AUX_IRQ_STATUS                       0xBADC
 #define AWTO_F_PBA_AUX_IRQ_STATUS_AUX_RX_INT            0x01
+#define AWTO_R_PERFORMANCE_METER_CONTROL                0xFDB3
+#define AWTO_F_PERFORMANCE_METER_CONTROL_PM_MTR_EN      0x01
+#define AWTO_F_PERFORMANCE_METER_CONTROL_PM_RST         0x02
+#define AWTO_R_PERFORMANCE_METER_REF_COUNT_H            0xFDB9
+#define AWTO_R_PERFORMANCE_METER_MISS_COUNT_H           0xFDBD
+#define AWTO_R_PERFORMANCE_METER_MEM_RESTART_H          0xFDC1
 #define AWTO_R_PORT42_PIN_REG                           0xFE02
 #define AWTO_R_PORT45_PIN_REG                           0xFE05
 #define AWTO_R_PORT72_PIN_REG                           0xFE1A
@@ -120,6 +126,7 @@
 #define AWTO_R_IIC_3_STATUS                             0xFEA8
 #define AWTO_R_IIC_CH_SEL                               0xFF22
 #define AWTO_F_IIC_CH_SEL_CH_SEL                        0x07
+#define AWTO_R_WATCHDOG_CNT2_VALUE                      0xFFAA
 #define AWTO_R_WATCHDOG_CNT23_VALUE                     0xFFAB
 #define AWTO_R_WATCHDOG_CNT3_VALUE                      0xFFAC
 #define AWTO_F_WATCHDOG_CNT3_VALUE_WDT_CNT3_H_VALUE     0x7F

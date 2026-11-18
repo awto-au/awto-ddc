@@ -11,12 +11,8 @@
 extern __xdata uint8_t g_aucScPix[];
 extern __xdata uint8_t g_aucScDirty[];
 extern __xdata osd_canvas g_scCv;
-#ifdef _AWTO_OSD_FAST_PORT                                                          // sim / test only: direct data port stores (scope_saver.c), never the default (docs/osd-hw-tests.md)
-extern void AwtoScFastTile(WORD usAddr, BYTE __xdata *pucB);
-#define AWTO_AST_TILE(c, p)                     AwtoScFastTile(AWTO_AST_ROWS + 1 + AWTO_AST_COLS * AWTO_AST_ROWS + (OSD_TILE_BYTES / 3) * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_AST_COLS * AWTO_AST_ROWS) : (c)), (p))
-#else
-#define AWTO_AST_TILE(c, p)                     AwtoOsdTile((c), (p))
-#endif
+extern void AwtoScTile(WORD usAddr, BYTE __xdata *pucB);                          // direct data port stores (scope_saver.c)
+#define AWTO_AST_TILE(c, p)                     AwtoScTile(AWTO_AST_ROWS + 1 + AWTO_AST_COLS * AWTO_AST_ROWS + (OSD_TILE_BYTES / 3) * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_AST_COLS * AWTO_AST_ROWS) : (c)), (p))
 #include "asteroids_data.inc"
 
 #define AWTO_AST_COLS                           30
@@ -188,6 +184,9 @@ typedef struct                                                                  
 
 __xdata WORD g_usAwtoAstStep;                                                       // game steps (also read by scripts/asteroids_speed.py)
 __xdata BYTE g_ucAwtoAstCol;                                                        // next column of the frame being drawn
+#ifdef _AWTO_OSD_HWTEST
+__xdata WORD g_usAwtoAstFrames;
+#endif
 static __xdata AstObj s_atObj[AWTO_AST_N_OBJ];
 static __xdata AstSeen s_atSeen[AWTO_AST_N_OBJ + 1];                                // last frame as drawn: objects, then the ship
 static __xdata AstSeen s_tNow;                                                      // this frame, the slot being compared
@@ -1420,6 +1419,7 @@ static void AstPass(BYTE ucCol, BYTE ucBand)                                    
     BYTE ucDirty = s_aucDirty[ucIdx];
     BYTE ucR0;
     BYTE ucR1;
+    BYTE __xdata *pucTile;
 
     if(ucDirty == 0)
     {
@@ -1456,12 +1456,13 @@ static void AstPass(BYTE ucCol, BYTE ucBand)                                    
         AstHud();
     }
     s_usCell0 = ((ucBand == 0) ? 0 : (WORD)(AWTO_AST_BAND_ROWS * AWTO_AST_COLS)) + ucCol;
-    for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS)
+    pucTile = g_aucScPix;                                                           // running tile pointer: no banked const read next to the cross-bank call
+    for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS, pucTile += OSD_TILE_BYTES)
     {
         if((ucDirty & (BYTE)(1 << ucI)) != 0)
         {
             AstPoll();
-            AWTO_AST_TILE(s_usCell0, g_aucScPix + s_tAstTileOff[ucI]);
+            AWTO_AST_TILE(s_usCell0, pucTile);
         }
     }
 }
@@ -1517,6 +1518,9 @@ BYTE AwtoAsteroids(BYTE ucCmd)
             return 0;
         }
         g_ucAwtoAstCol = 0;
+#ifdef _AWTO_OSD_HWTEST
+        g_usAwtoAstFrames++;                                                        // clock sweep (docs/clock-sweep.md): frames drawn
+#endif
         if(s_ucShown == 0)                                                          // the first frame was drawn hidden
         {
             s_ucShown = 1;

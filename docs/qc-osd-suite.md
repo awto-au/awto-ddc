@@ -32,14 +32,14 @@ Status 2026-11-17. Reference is the monitor (unit 3), not the sim.
 ## Findings
 
 - **Pink "5" cells = Realtek's own clear data.** `_CLEAR_DATA` = `4C 06 17` (1-bit, glyph 6, fg 1, bg 7 = pink) in all five series files. Their blank is `4C 00 10`. The harness uses the blank. Unit 3 photo confirmed the pink. Why Realtek chose it: unknown.
-- **2/4 bpp glyph storage = bit planes** (MSB plane first, each stored like a 1 bpp glyph); 2-bit glyph at `font_base + 18 * (off2 + id)`, 4-bit at `font_base + 36 * (off4 + id)`. Unit 3 photo of our port (0xB0): clean Brook and Luffy skulls.
+- **2/4 bpp glyph storage = bit planes**, each stored like a 1 bpp glyph; 2-bit glyph at `font_base + 18 * (off2 + id)`, 4-bit at `font_base + 36 * (off4 + id)`. Plane order: 2-bit first plane = LOW bit [hw] T9 (`docs/osd-hw-tests.md`); 4-bit order unknown (OT-1): the unit-3 photo of our port (0xB0, clean Brook and Luffy skulls) cannot tell, a swapped bit order only recolours.
 - **4-bit char command:** B0 = `0xC0 | background colour`, B2 = palette-set flags; background pixels (value 0) are drawn in that colour, index 0 included. Photo: Luffy sit on a solid box, Brook transparent.
 - **P87 pattern-generator "sub" set does not exist on the 2795T:** wrote 0x5A to 0x07F3 and 0x87F3, read back 5A / 00. Names come from the RTD2797UPM regdb; `gen_regnames.py` merges sibling regdbs.
 - **Harness icons are garbage on the unit** (noise in the 2-bit and 4-bit areas) while our own loader (0xB0) shows them clean: Realtek's `ScalerOsdHardwareVLC` path in the harness image loads them wrong. Cause not found. Frame renders from the sim are therefore not comparable for icon areas. SRAM scan (M1 vs M2) gave inconsistent results; not trusted.
 - Windows, gradients and grid lines on unit 3 match the sim (photo of frames 2 / 3).
 - Photos are washed out by room light; colour is judged by shape, not tint.
 
-## Model coverage (register-doc readings, unverified on the unit unless stated)
+## Model coverage (register-doc readings, unverified on the unit unless stated; per-feature status: [docs/osd/README.md](osd/README.md))
 
 - Done: windows (flat, gradient + level / step extension, saturated / reversed, grid, shadow, 3D, border, chessboard, rounded, gray level), window 6 / 7 functions, special colour mask, highlight (4-1..4-3), specific colour blending, font B / two maps, blank cells, 24x36 mode (layout guessed), rotation (approximation), double size, scale-up (ratio = 64 / factor), pop-on, vertical boundary (units guessed), border priority.
 - Not modelled: roll-up animation, exact rotation anchor, hardware-verified blend direction (alpha level = video share).

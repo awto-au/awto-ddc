@@ -237,7 +237,7 @@ void osd_tc_bar_off(BYTE ucWin)
     ScalerOsdWindowDisable((EnumOsdWindowsType)ucWin);
 }
 
-// VLC font download, osd-font-download.md section 1: value map -> 0x3A0F..0x3A16, 0x3A17[0] = 1, destination word address,
+// VLC font download, docs/osd/glyph-load.md: value map -> 0x3A0F..0x3A16, 0x3A17[0] = 1, destination word address,
 // stream bytes to the data port (3 decoded bytes = one word per 6 symbols, END code stops), 0x3A17[1:0] = 0
 void osd_tc_vlc_begin(BYTE __xdata *pucMap, WORD usTile)
 {

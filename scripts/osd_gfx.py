@@ -46,7 +46,7 @@ def pack_rows(rows, sel=lambda v: v & 1) -> bytes:
 
 
 def turned(rows):
-    """A tile turned 180 inside itself (Rotate 180, docs/osd-rotation.md)."""
+    """A tile turned 180 inside itself (Rotate 180, docs/osd/rotation.md)."""
     return [list(r[::-1]) for r in rows[::-1]]
 
 

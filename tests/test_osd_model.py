@@ -111,7 +111,7 @@ def test_palette_autoincrement():
 
 
 def test_window_decode_boot_values():
-    """osd.md measured firmware WIN0: ADR1 = 00 00 04, ADR2 = 00 9C 50, ADR3 = 00 04 81 -> (0,4)-(156,80), colour 4, win_en + blend."""
+    """docs/osd/windows.md measured Dahua firmware WIN0: ADR1 = 00 00 04, ADR2 = 00 9C 50, ADR3 = 00 04 81 -> (0,4)-(156,80), colour 4, win_en + blend."""
     win = {0x100: [0, 0, 0], 0x101: [0, 0, 4], 0x102: [0, 0x9C, 0x50], 0x103: [0, 4, 0x81]}
     w = M.decode_window(win, 0)
     assert (w["x0"], w["y0"], w["x1"], w["y1"], w["color"], w["en"], w["blend"]) == (0, 4, 156, 80, 4, 1, 1)
@@ -130,7 +130,7 @@ def test_char_and_geometry_decode():
     st = M.OsdState(regs=bytes(regs))
     g = M.frame_geometry(st)
     assert (g["hd"], g["vd"], g["sx"], g["sy"], g["en"]) == (0x21 << 2 | 1, 0x10 << 3 | 1, 2, 2, 1)
-    assert (g["fs_base"], g["font_base"]) == (0x019, 0x3F1)               # osd.md measured firmware boot values
+    assert (g["fs_base"], g["font_base"]) == (0x019, 0x3F1)               # docs/osd/pipeline.md measured Dahua firmware boot values
 
 
 def test_render_pixels():
