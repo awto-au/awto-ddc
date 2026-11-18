@@ -9,7 +9,7 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
   - Same call for "an agent needs Dan": `./dev.py alert --unit 3`.
 - Red full-panel screen with a 72 x 72 px Pac-Man (mouth open / shut) and text rows, from the running firmware (VCP 0xEB = 5), then updated over ISP:
   - title: FLASHING - DO NOT POWER OFF
-  - row 1: phase + bank (BANKED / BANK0 / COMMON / BOOT, `boot_last` order), row 2: address, sector n/N, %
+  - row 1: phase + bank (BANKED / BANK0 / COMMON / BOOT, `boot_last` order) + `SKIP n/N` (image sectors already matching, no need to flash / image sectors; erased = the `SEC n/N` of row 2; totals + registry: `docs/flash-registry.md`), row 2: address, sector n/N, %
   - row 3: interface (bus kind, ISP kHz, write mode), row 4: burst failures + ISP recoveries, row 5: elapsed + ETA
 - OSD off before the exit reset, so the new firmware starts empty.
 - Best effort: a screen / tone failure is logged (`tmp/logs/flash_screen.log`, `alert.log`) and never fails the flash. Firmware that does not know VCP 0xEB = 5 / 6 (max < value) is skipped; `AWTO_FLASH_SCREEN_OFF=1` disables the screen (use it when the running image has a different screen layout).

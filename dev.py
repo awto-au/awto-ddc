@@ -509,7 +509,7 @@ def _record_unit_edid(u: dict, img: Path, sector_addr: int, patched: Path) -> No
         manifest = FW / f"{u['serial']}-flash-state.json"
         fs = flash_state.FlashState.load(manifest, u["serial"], lambda s: log(s, "WARN"))
         if fs is not None:
-            fs.sectors[sector_addr // 4096] = flash_state.sha(patched.read_bytes())
+            fs.mark(sector_addr // 4096, flash_state.sha(patched.read_bytes()), flash_state.HOW_WRITTEN)
             fs.save(source=f"{fs.source}+per-monitor-edid")
     except (OSError, ValueError) as e:
         log(f"deploy: could not update flash-state EDID sector ({e}); next flash will drift-check it", "WARN")
@@ -685,12 +685,13 @@ def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path) -> None:
 
 
 @command("flash an image to a unit over ISP (default: last build); incremental by tmp/fw/<serial>-flash-state.json; GMBUS fallback auto-reset",
-         args="[--unit N] [--full] [--any-image] [--force-ungated] [--verify crc|readback] [--write-mode byte|burst] "
-              "[--max-min M] [image.bin]", kind="action")
+         args="[--unit N] [--full] [--registry-rebuild] [--no-registry] [--verify-all] [--any-image] [--force-ungated] "
+              "[--verify crc|readback] [--write-mode byte|burst] [--max-min M] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     _layout_watch()
     n, u = _unit(extra)
     full = _flag(extra, "--full")
+    reg_flags = [f for f in ("--registry-rebuild", "--no-registry", "--verify-all") if _flag(extra, f)]
     verify = _opt(extra, "--verify", "crc")
     wmode = _opt(extra, "--write-mode")     # default: devices.json write_mode (burst if unset); failed pages redone in byte
     max_min = _opt(extra, "--max-min", str(FLASH_BUDGET_MIN))
@@ -735,7 +736,7 @@ def cmd_flash(extra: list[str]) -> int:
             "--max-min", max_min, *(["--bus-kind", kind] if kind != "unknown" else []),
             *(["--read-chunk", "256"] if not i2cbus.adapter_name(bus).startswith("i915") else []),
             "--tag", tag, "--verify", verify, "--write-mode", wmode, *(["--full"] if full else []),
-            *(["--identity", identity] if identity else [])]
+            *reg_flags, *(["--identity", identity] if identity else [])]
     # rc 5 = read gate refused before any erase: 1 MHz ISP reads corrupt in the low-power state (unit 3, D1
     # NOSIGNAL -> POWER_OFF, #71). rtd_flash_image's exit reset reboots the unit at full clock: retry 1 MHz once, then 100 kHz
     FLASH_RC_INCOMPLETE = 10                # rtd_flash_image.RC_INCOMPLETE

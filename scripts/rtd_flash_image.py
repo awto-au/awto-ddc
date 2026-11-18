@@ -81,6 +81,9 @@ class RunState:
     complete: bool = False                          # every changed sector written + verified (+ final CRC)
     written: int = 0                                # sectors written + verified this session
     total: int = 0                                  # sectors this session set out to write
+    skipped: int = 0                                # image sectors that already match (shown on the warning screen)
+    image: int = 0                                  # sectors in the image
+    erased: int = 0                                 # erase operations (retries and redone sectors count again)
 
     @property
     def mixed(self) -> bool:
@@ -283,6 +286,7 @@ def erase_with_retry(isp, addr, nudge=lambda: None):
 
 
 def erase_sector(isp, addr):
+    RUN.erased += 1
     for ops in ENGINE_OPS:
         isp.write(*ops)
     isp.write_enable()
@@ -344,7 +348,10 @@ class ReadPathUnstable(RuntimeError):
 def read_gate(isp) -> bytes:
     """Before any erase: two readbacks of sector 0 must match. Seen on unit 3 in D1 power saving at 1 MHz: ~60 bad
     bytes per 4 KiB plus a stale first byte per 1 KiB read, while the on-chip CRC stayed right (#71)."""
+    t = time.monotonic()
     r1, r2 = isp.read_flash(0, SECTOR), isp.read_flash(0, SECTOR)
+    S.STATS.sector_reads += 2
+    S.STATS.read_s = (time.monotonic() - t) / 2
     if r1 != r2:
         nd = sum(x != y for x, y in zip(r1, r2))
         raise ReadPathUnstable(f"read path unstable: two readbacks of sector 0 differ in {nd} byte(s)")
@@ -486,7 +493,7 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
         isp.release_wp(); isp.unprotect(sr0)
     nudge()
     for i in diff:
-        state.sectors[i] = None
+        state.mark(i, None)
     state.save(image=tag, image_size=len(img), source="write-in-progress", commit=commit)
     global INCOMPLETE
     INCOMPLETE = True                                 # from the first erase until the final CRC: never reset into this
@@ -527,11 +534,11 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                     _nudge_safe(nudge)
                 _recover_if_stuck(isp, f"0x{s:06x}")
                 write_sector(isp, s, img[s:s + SECTOR], crc_ok, nudge)
-            state.sectors[i] = hashes[i]
+            state.mark(i, hashes[i], S.HOW_WRITTEN)
             RUN.written = k + 1
             FSCR.tick(isp, k, {"phase": _phase(i), "bank": s // BANK, "nbank": FLASH // BANK - 1, "addr": s, "sec": k + 1, "nsec": len(diff),
                                "pct": (k + 1) * 100 // len(diff), "bad": getattr(isp, "burst_fails", 0), "recov": sum(RECOVERIES.values()),
-                               "t": time.monotonic() - t0})      # #232: progress + mouth on the warning screen, best effort
+                               "t": time.monotonic() - t0, "skip": RUN.skipped, "nimg": RUN.image})      # #232: progress + mouth on the warning screen, best effort
             dt = time.monotonic() - ts
             if dt > SLOW_SECTOR_S:
                 log(f"0x{s:06x}: {dt:.1f} s > {SLOW_SECTOR_S} s: host I2C on bit-bang? nudging GMBUS")
@@ -560,9 +567,10 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
                     hw, py = isp.flash_crc(lo, hi - lo), S.crc8(img[lo:hi])
                     if hw != py:
                         for i in range(a, b + 1):
-                            state.sectors[i] = None     # unlocalised: next run reads back
+                            state.mark(i, None)         # unlocalised: next run reads back
                         raise RuntimeError(f"CRC mismatch 0x{lo:06x}-0x{hi:06x} hw 0x{hw:02x} != 0x{py:02x}")
             log(f"final CRC OK over {len(runs)} non-blank run(s)")
+            state.verified(f"final CRC over {len(runs)} run(s) of the image")
     except BaseException:
         state.save(source="write-failed")
         raise
@@ -596,6 +604,20 @@ class Opts:
     per_sector: bool = False
     max_min: float = 0
     seed: int | None = None
+    registry_rebuild: bool = False                  # read the device once, rebuild the registry (docs/flash-registry.md)
+    no_registry: bool = False                       # pre-registry behaviour: every unchanged run CRC-checked, no volatile rule
+    verify_all: bool = False                        # drift guard over every run even with a trusted registry
+
+
+def volatile_map(img: bytes, nimg: int) -> dict:
+    """Runtime-written sectors inside the image (flash_state.VOLATILE_RANGES) + the sector with the per-unit EDID tables."""
+    extra = {}
+    try:
+        from build_fw_edid_sector import edid_offsets
+        extra[edid_offsets(img)[0] // SECTOR] = "per-unit EDID tables (dev.py deploy)"
+    except Exception as e:                           # noqa: BLE001 - an image without EDID tables: no such sector
+        log(f"volatile: no EDID sector found in the image ({e!r})")
+    return S.volatile_sectors(nimg, extra)
 
 
 def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
@@ -617,32 +639,58 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
             log(f"no usable flash-state manifest {o.manifest}: full path")
     else:
         log(f"flash-state manifest: {o.manifest} ({state.image or '?'}, {state.source}, {state.time}, {state.commit})")
+    S.STATS.__init__()
     s0 = read_gate(isp) if o.write else b""          # raises before any erase (#71)
     crc_ok = o.write and o.verify == "crc" and crc_calibrate(isp, s0)
     if o.no_backup and o.write:
         # Dan 2026-11-05: re-dumping our own builds is wasted time; the vendor backup per unit is kept once
         bk = "the unit's vendor backup in ~/vendors/realtek/analysis/dumps"
+        fresh = False                               # registry just read from the device in this session
+        if o.registry_rebuild:
+            state = S.FlashState.empty(o.manifest, o.serial)
+            have_manifest = fresh = True
+            with phase("gate"):
+                S.rebuild(isp, state, crc_ok, log)
+            state.save(image="registry-rebuild", image_size=S.FLASH_SECTORS * SECTOR, source="readback", commit=o.commit)
+        trusted = have_manifest and not o.no_registry and not RUN.mixed_at_start and state.trusted
+        vol = {} if o.no_registry else volatile_map(img, nimg)
         p = S.plan(hashes, state if have_manifest else None, o.full)
-        diff, skipped = list(p.write), len(p.unchanged)
+        diff = list(p.write)
         with phase("gate"):                         # every unchanged sector checked on-chip before any write
+            if have_manifest and not o.full:        # volatile sectors: never from the registry, read from the device
+                v = [i for i in vol if i not in p.unknown and not fresh]
+                p = S.Plan([i for i in p.write if i not in v], [i for i in p.unchanged if i not in v], p.unknown)
+                diff = list(p.write)
+                p.unknown = sorted(set(p.unknown) | set(v))
             if p.unknown:
+                if vol:
+                    log(f"volatile sectors read from the device, not the registry: "
+                        f"{sorted(set(p.unknown) & set(vol))} ({sorted({vol[i] for i in p.unknown if i in vol})})")
                 diff = sorted(set(diff) | set(S.resolve_unknown(isp, img, state, p.unknown, log)))
             # Dan 2026-11-06: a sector that is blank (all FF) in the new image is never checked; erase-only if changed
             check = [i for i in p.unchanged if img[i * SECTOR:(i + 1) * SECTOR] != BLANK]
-            if check:
-                bad = S.drift_check(isp, img, state, check, rng, crc_ok, log)
+            if check and not fresh:
+                sample = S.DRIFT_SAMPLE_RUNS if trusted and not o.verify_all else 0
+                if have_manifest and not trusted and not o.full and not o.no_registry:
+                    log(f"registry not trusted (source {state.source!r}): drift guard covers every run")
+                bad = S.drift_check(isp, img, state, check, rng, crc_ok, log, sample)
                 if bad:
-                    log(f"!!! DRIFT: manifest does not match the flash ({len(bad)} sector(s) {bad[:8]}); "
-                        f"manifest untrusted -> full readback diff of the image region (authoritative, ~1/5 of a full write)")
+                    log(f"!!! DRIFT: registry/manifest does not match the flash ({len(bad)} sector(s) {bad[:8]}); "
+                        f"registry untrusted -> full readback diff of the image region (authoritative, ~1/5 of a full write)")
                     diff = S.readback_diff(isp, img, state, log)
-                    skipped = nimg - len(diff)
+                else:
+                    state.verified(f"hw CRC over {S.STATS.crc_runs} of {S.STATS.crc_runs_total} run(s)" if crc_ok
+                                   else "readback sample")
+        skipped = nimg - len(diff)
+        RUN.skipped, RUN.image = skipped, nimg
         mode = "full" if (o.full or not have_manifest) else "incremental"
         log(f"--no-backup {mode}: writing {len(diff)}/{nimg} sectors, skipping {skipped} unchanged")
         if budget(isp, img, diff, o, crc_ok) is None:
             return 8
         t_prog = time.monotonic()
+        state.image_sha256 = S.sha(img)
         rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, bk, o.tag, o.commit, o.per_sector, o.max_min)
-        summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+        summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all, img)
         return rc
     t0 = time.monotonic()
     d1 = isp.read_flash(0, FLASH)
@@ -657,7 +705,7 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     log(f"two reads identical over the image region ({len(img)} B); backup {bk}")
     t_prog = time.monotonic()
     for i in range(S.FLASH_SECTORS):                  # a full read is the best manifest source there is
-        state.sectors[i] = S.sha(d1[i * SECTOR:(i + 1) * SECTOR])
+        state.mark(i, S.sha(d1[i * SECTOR:(i + 1) * SECTOR]), S.HOW_READ)
     state.save(image=f"flash-readback {bk.name}", image_size=FLASH, source="readback", commit=o.commit)
     diff = list(range(nimg)) if o.full else [i for i in range(nimg) if d1[i * SECTOR:(i + 1) * SECTOR] != img[i * SECTOR:(i + 1) * SECTOR]]
     log(f"{len(diff)}/{nimg} sectors differ: "
@@ -667,23 +715,35 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     if budget(isp, img, diff, o, crc_ok) is None:
         return 8
     rc = program(isp, img, diff, o.reprot, state, hashes, crc_ok, nudge, str(bk), o.tag, o.commit, o.per_sector, o.max_min)
-    summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all)
+    summary(diff, nimg, time.monotonic() - t_prog, time.monotonic() - t_all, img)
     return rc
 
 
 BANK = 0x10000                                        # 8051 code bank = 64 KiB of flash
 
 
-def summary(diff: list[int], nimg: int, t_write: float, t_total: float) -> None:
-    """End-of-run summary: sectors changed/unchanged, which banks, bytes, speed."""
+def summary(diff: list[int], nimg: int, t_write: float, t_total: float, img: bytes = b"") -> None:
+    """End-of-run summary: image / erased / programmed / skipped sectors, pages, bytes, ISP time, reads avoided."""
     per = BANK // SECTOR
     nb = -(-nimg // per)
     by_bank: dict[int, int] = {}
     for i in diff:
         by_bank[i // per] = by_bank.get(i // per, 0) + 1
-    wb = len(diff) * SECTOR
+    skipped = nimg - len(diff)
+    prog = [i for i in diff if img[i * SECTOR:(i + 1) * SECTOR] != BLANK] if img else list(diff)
+    pages = sum(img[i * SECTOR + o:i * SECTOR + o + PAGE] != b"\xff" * PAGE for i in prog for o in range(0, SECTOR, PAGE)) if img else 0
+    wb = len(prog) * SECTOR
     rate = wb / t_write / 1024 if t_write > 0 and wb else 0.0
-    log(f"SUMMARY: {nimg} sectors (4 KiB) in {nb} banks (64 KiB): {len(diff)} changed, {nimg - len(diff)} unchanged")
+    st = S.STATS
+    avoided = max(0, nimg - st.sector_reads)
+    log(f"SUMMARY: sectors: image {nimg}, erased {len(diff)}, programmed {len(prog)} ({pages} pages), "
+        f"skipped {skipped} (already match, no need to flash); erase operations {RUN.erased}")
+    log(f"SUMMARY: bytes: erased {len(diff) * SECTOR // 1024} KiB, programmed {wb // 1024} KiB, skipped {skipped * SECTOR // 1024} KiB; "
+        f"ISP time {t_write:.1f} s writing, {t_total:.1f} s total")
+    log(f"SUMMARY: device reads: {st.sector_reads} of {nimg} image sectors read, {avoided} avoided "
+        f"(~{avoided * st.read_s:.1f} s at the measured {st.read_s * 1e3:.0f} ms per 4 KiB); "
+        f"hw CRC runs {st.crc_runs} of {st.crc_runs_total}")
+    log(f"SUMMARY: {nimg} sectors (4 KiB) in {nb} banks (64 KiB): {len(diff)} changed, {skipped} unchanged")
     log("SUMMARY: changed per bank: " + (", ".join(f"bank {b} {n}/{per}" for b, n in sorted(by_bank.items()))
                                         or "none") + f"; {nb - len(by_bank)} banks untouched")
     log(f"SUMMARY: wrote {wb // 1024} KiB in {t_write:.1f} s = {rate:.1f} KiB/s ({rate / 1024:.3f} MB/s); "
@@ -694,7 +754,8 @@ def summary(diff: list[int], nimg: int, t_write: float, t_total: float) -> None:
     log(f"SUMMARY: time split (s): {split}, other (ISP enter/JEDEC/protect/reset) {other:.1f}; "
         f"sector retries {int(PH.get('retries', 0))}")
     global DONE
-    DONE = f"{len(diff)}/{nimg} sectors changed, {wb / 1e6:.3f} MB at {rate * 1024 / 1e6:.4f} MB/s"
+    DONE = (f"{len(diff)}/{nimg} sectors changed, {wb / 1e6:.3f} MB at {rate * 1024 / 1e6:.4f} MB/s; "
+            f"erased {len(diff)} programmed {len(prog)} skipped {skipped} of {nimg}")
 
 
 DONE = ""                                             # one-line result, logged last by main()
@@ -727,6 +788,11 @@ def main() -> int:
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
                     help="bytes per 0x70 FIFO read (256 = NVIDIA DP-AUX cap; transactions, not bytes, cost the time)")
     ap.add_argument("--tag", default="", help="image tag recorded in the manifest (default: image file stem)")
+    ap.add_argument("--registry-rebuild", action="store_true",
+                    help="read the whole flash once (hw CRC verified), rebuild the per-unit registry from it, then flash incrementally")
+    ap.add_argument("--no-registry", action="store_true",
+                    help="pre-registry behaviour: hw CRC over every run of unchanged sectors, no volatile-sector rule")
+    ap.add_argument("--verify-all", action="store_true", help="registry drift guard over every run, not a sample")
     ap.add_argument("--direct", action="store_true", help="allow --write outside dev.py flash (both #167 failures were direct runs)")
     a = ap.parse_args()
     if a.write and not os.environ.get("AWTO_VIA_DEV") and not a.direct:
@@ -758,9 +824,12 @@ def flash_main(a) -> int:
         a.write_mode = "burst"
     o = Opts(serial=a.serial, write=a.write, no_backup=a.no_backup, full=a.full, verify=a.verify, reprot=reprot, per_sector=a.per_sector, max_min=a.max_min,
              backup_dir=a.backup_dir, manifest=a.manifest or root / "tmp/fw" / f"{a.serial}-flash-state.json",
-             tag=a.tag or a.image.stem, commit=S.git_commit(root))
+             tag=a.tag or a.image.stem, commit=S.git_commit(root),
+             registry_rebuild=a.registry_rebuild, no_registry=a.no_registry, verify_all=a.verify_all)
     prev = S.FlashState.load(o.manifest, o.serial, lambda _m: None)
     RUN.mixed_at_start = prev is not None and prev.source in MIXED_SOURCES   # also guards exits before flash()
+    if a.registry_rebuild and a.no_registry:
+        log("refuse: --registry-rebuild and --no-registry exclude each other"); return 2
     if not 1 <= a.burst_chunk <= PAGE:
         log(f"refuse: --burst-chunk {a.burst_chunk} outside 1..{PAGE}"); return 2
     if a.write:
