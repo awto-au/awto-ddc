@@ -1890,7 +1890,7 @@ static void AwtoClkPoll(void)
 #define AWTO_OSW_REF_BUSY                       2                   // a hold is active
 #define AWTO_OSW_REF_ADDR                       3                   // outside the unused top of the OSD SRAM
 #define AWTO_OSW_REF_CHUNK                      4                   // burst chunk not a multiple of a glyph / above the XRAM buffer / N not a multiple
-#define AWTO_OSW_BUF                            162                 // 3 glyphs: XRAM burst source (XDATA is short in this image: 642 B free)
+#define AWTO_OSW_BUF                            54                  // one glyph: XRAM burst source (XDATA is short in this image)
 #define AWTO_OSW_GLYPH                          AWTO_OHW_BUF
 #define AWTO_OSW_N_MAX                          8192
 #define AWTO_OSW_TOP_FIRST                      0x2000              // words: the unused end of the 12288-word SRAM (osd_hw_test RANGES "top")

@@ -45,7 +45,7 @@ F_EA_OFF, F_SU_OFF, F_OVL_OFF, F_DB_ON = 1, 2, 4, 8
 FFF1_MASK, FFBC_MASK = 0x8F, 0x1F                    # regdb: FFF1 bit 7 + [3:0], FFBC [4:0]; the rest reserved
 ADDR_TOP, ADDR_END = 0x2000, 0x3000                  # words: unused top of the 12288-word SRAM
 N_MAX, N_DEF, N_BURST = 8192, 1848, 1782             # 1848 = 616 words (as clk_sweep); 1782 = 11 x 162 = 33 x 54
-GLYPH, BUF = 54, 162
+GLYPH, BUF = 54, 54                              # XDATA allows one glyph of XRAM burst source
 FIFO_NAMES = ["dispM1", "dispM2", "capM1", "capM2", "status0"]
 FIFO_MASK = [0x03, 0x03, 0x03, 0x03, 0x63]           # underflow / overflow bits; STATUS0 also ivs_error / ihs_error
 # timing: target time of the timed section (ms resolution of AwtoMs: 0.7 % at 150 ms); fw guard AWTO_OSW_MAX_MS
@@ -101,7 +101,7 @@ def check_case(c: Case) -> str | None:
         return f"FFBC outside 0..{FFBC_MASK}"
     if not 0 < c.nbytes <= N_MAX or (c.mode != M_ADDR and c.nbytes % 3):
         return "N out of range / not a multiple of 3"
-    if c.mode == M_BURST and (c.chunk not in (GLYPH, BUF) or c.nbytes % c.chunk):
+    if c.mode == M_BURST and (c.chunk != GLYPH or c.nbytes % c.chunk):
         return "burst chunk must be 54 or 162 and divide N"
     if ADDR_TOP + (c.nbytes + 2) // 3 > ADDR_END:
         return "outside the SRAM top"
@@ -112,16 +112,16 @@ def cases() -> dict[str, list[Case]]:
     g: dict[str, list[Case]] = {}
     g["base"] = ([Case(f"base_{k}", m) for k, m in (("sdk", M_SDK), ("direct", M_DIRECT), ("triple", M_TRIPLE), ("b1", M_B1), ("mask", M_MASK))]
                  + [Case("base_addr", M_ADDR, verify=False, n=N_DEF)]
-                 + [Case("base_burst54", M_BURST, chunk=GLYPH), Case("base_burst162", M_BURST, chunk=BUF)])
+                 + [Case("base_burst54", M_BURST, chunk=GLYPH)])
     g["fff1"] = ([Case(f"fff1_sel{k}", fff1=k) for k in range(16)] + [Case("fff1_int1", fff1=0x80)])
     g["fffb"] = [Case(f"fffb_{k}", fffb=k) for k in (0, 1, 2, 3, 4, 6, 8, 16, 32, 64, 128, 255)]
     g["ffbc"] = [Case(f"ffbc_{k}", ffbc=k) for k in (15, 16, 24, 31, 8, 4, 2, 1, 0)]        # reset value 0x0F first, 0 last (its meaning is not documented)
-    g["burst"] = [Case(f"burst{ch}_gap{k}", M_BURST, fffb=k, chunk=ch) for ch in (GLYPH, BUF) for k in (1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40)]
+    g["burst"] = [Case(f"burst{ch}_gap{k}", M_BURST, fffb=k, chunk=ch) for ch in (GLYPH,) for k in (1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 40)]
     g["state"] = ([Case("st_ea_off", flags=F_EA_OFF), Case("st_su_off", flags=F_SU_OFF), Case("st_ovl_off", flags=F_OVL_OFF),
                    Case("st_db_on", flags=F_DB_ON), Case("st_all_off", flags=F_EA_OFF | F_SU_OFF | F_OVL_OFF)]
-                  + [Case(f"st_sdk_ea_off", M_SDK, flags=F_EA_OFF), Case("st_burst162_ea_off", M_BURST, chunk=BUF, flags=F_EA_OFF)])
+                  + [Case(f"st_sdk_ea_off", M_SDK, flags=F_EA_OFF), Case("st_burst54_ea_off", M_BURST, chunk=BUF, flags=F_EA_OFF)])
     g["size"] = ([Case(f"size_triple_{n}", n=n) for n in (1848, 3696, 8184)] + [Case(f"size_sdk_{n}", M_SDK, n=n) for n in (1848, 8184)]
-                 + [Case(f"size_burst162_{n}", M_BURST, chunk=BUF, n=n) for n in (1782, 8100)]
+                 + [Case(f"size_burst54_{n}", M_BURST, chunk=BUF, n=n) for n in (1782, 8100)]
                  + [Case("size_addr_100", M_ADDR, n=100, verify=False), Case("size_addr_1000", M_ADDR, n=1000, verify=False)])
     return g
 
@@ -295,7 +295,7 @@ def combo_cases(best: dict[str, int]) -> list[Case]:
             out.append(Case(f"combo_{ks[i]}_{ks[j]}", **{ks[i]: best[ks[i]], ks[j]: best[ks[j]]}))
     if len(ks) == 3:
         out.append(Case("combo_all3", **{k: best[k] for k in ks}))
-        out.append(Case("combo_all3_burst162", M_BURST, chunk=BUF, **{k: best[k] for k in ks}))
+        out.append(Case("combo_all3_burst54", M_BURST, chunk=BUF, **{k: best[k] for k in ks}))
     return out
 
 
