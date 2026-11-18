@@ -352,10 +352,14 @@ def build_set(maze):
 
 # ---------------------------------------------------------------- demo
 DIRS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-EV_INTRO, EV_WAKA_ON, EV_WAKA_OFF, EV_DEATH, EV_STOP = 1, 2, 3, 4, 5      # sound events (firmware: AwtoPmSound)
+EV_INTRO, EV_WAKA_ON, EV_WAKA_OFF, EV_DEATH, EV_STOP, EV_GHOST, EV_FRUIT = 1, 2, 3, 4, 5, 6, 7      # sound events (firmware: AwtoPmSound)
+BG_NONE, BG_SIREN_1, BG_SIREN_2, BG_SIREN_3, BG_FRIGHT = 0, 1, 2, 3, 4      # background sound state, high nibble of g_pcEvt (firmware: AwtoPmSoundBg)
+BG_SHIFT = 4
+SIREN_FAST_LEFT, SIREN_MID_LEFT = (1, 3), (2, 3)               # siren speeds up when the remaining pellets fall below 2/3, then 1/3 of the maze (num, den)
 READY_STEPS, POWER_STEPS, FLASH_STEPS, DEATH_STEPS, GAMEOVER_STEPS = 14, 26, 8, 14, 10
 PEN_TILE, DOOR_TILE = (14, 14), (13, 10)
-FRUIT_TILE, FRUIT_AT, FRUIT_STEPS = (13, 17), (70, 170), 24
+FRUIT_TILE, FRUIT_AT, FRUIT_STEPS = (13, 17), (70, 170), 40
+CHASE_DIST = 16                                # demo Pac-Man goes for a frightened ghost up to this many steps away
 CARELESS = (120, 235)                          # steps in which the demo Pac-Man ignores the ghosts (so it dies and the game ends)
 
 
@@ -371,6 +375,8 @@ class Demo:
         self.fruit_t = 0
         self.eaten = 0
         self.events = []
+        self.bg = BG_NONE
+        self.fruit_ate = False
         self.fresh_maze()
         self.reset_actors()
 
@@ -379,6 +385,7 @@ class Demo:
         self.pellet = {(x, y) for y, r in enumerate(m) for x, c in enumerate(r) if c in ".o"}
         self.power = {(x, y) for y, r in enumerate(m) for x, c in enumerate(r) if c == "o"}
         self.eaten = 0
+        self.total = len(self.pellet)
 
     def reset_actors(self):
         self.pac, self.pdir = (13, 23), 2
@@ -408,23 +415,27 @@ class Demo:
         from collections import deque
         normal = [self.g[i] for i in range(4) if self.gst[i] == "n" and self.out[i] == 0]
         scared = [self.g[i] for i in range(4) if self.gst[i] == "f"]
-        q = deque([(self.pac, 0, None)])
-        seen = {self.pac}
+        chase = self.power_t > FLASH_STEPS and bool(scared)
         best = None
-        while q:
-            p, dist, first = q.popleft()
-            if dist > 0 and ((p in self.pellet) or (self.power_t > FLASH_STEPS and p in scared and dist < 9)
-                             or (p == FRUIT_TILE and self.fruit_t > 0)):
-                best = first
+        for pellets in ((False, True) if chase or self.fruit_t > 0 else (True,)):     # ghosts / fruit first, pellets only if they are out of reach
+            q = deque([(self.pac, 0, None)])
+            seen = {self.pac}
+            while q and best is None:
+                p, dist, first = q.popleft()
+                if dist > 0 and ((pellets and p in self.pellet) or (chase and p in scared and dist < CHASE_DIST)
+                                 or (p == FRUIT_TILE and self.fruit_t > dist)):
+                    best = first
+                    break
+                for d, (dx, dy) in enumerate(DIRS):
+                    np_ = ((p[0] + dx) % 28, p[1] + dy)
+                    if np_ in seen or not self.open(*np_):
+                        continue
+                    if dist < 3 and not CARELESS[0] <= self.t < CARELESS[1] and any(abs(np_[0] - gx) + abs(np_[1] - gy) <= 1 for gx, gy in normal):
+                        continue
+                    seen.add(np_)
+                    q.append((np_, dist + 1, first if first is not None else d))
+            if best is not None:
                 break
-            for d, (dx, dy) in enumerate(DIRS):
-                np_ = ((p[0] + dx) % 28, p[1] + dy)
-                if np_ in seen or not self.open(*np_):
-                    continue
-                if dist < 3 and not CARELESS[0] <= self.t < CARELESS[1] and any(abs(np_[0] - gx) + abs(np_[1] - gy) <= 1 for gx, gy in normal):
-                    continue
-                seen.add(np_)
-                q.append((np_, dist + 1, first if first is not None else d))
         if best is None:
             for d, (dx, dy) in enumerate(DIRS):
                 np_ = ((self.pac[0] + dx) % 28, self.pac[1] + dy)
@@ -456,6 +467,7 @@ class Demo:
         if self.pac == FRUIT_TILE and self.fruit_t > 0:
             self.fruit_t = 0
             self.score += 100
+            self.fruit_ate = True
         return ate
 
     def ghost_target(self, i):
@@ -518,6 +530,7 @@ class Demo:
                 self.gst[i] = "e"
                 self.chain += 1
                 self.score += 100 * 2 ** self.chain
+                self.events.append(EV_GHOST)
             else:
                 return True
         return False
@@ -526,6 +539,8 @@ class Demo:
         """One step; self.events gets the sound events of this step."""
         self.t += 1
         self.events = []
+        self.bg = BG_NONE
+        self.fruit_ate = False
         if self.mode == "ready":
             if self.timer == READY_STEPS:
                 self.events.append(EV_INTRO)
@@ -556,6 +571,8 @@ class Demo:
         old_pac, old_g = self.pac, list(self.g)
         ate = self.pac_move()
         self.events.append(EV_WAKA_ON if ate else EV_WAKA_OFF)
+        if self.fruit_ate:
+            self.events.append(EV_FRUIT)
         for i in range(4):
             self.ghost_move(i)
         if self.power_t > 0:
@@ -573,6 +590,11 @@ class Demo:
             self.fresh_maze()
             self.reset_actors()
             self.mode, self.timer = "ready", READY_STEPS
+        if self.mode == "play":
+            left = len(self.pellet) * SIREN_FAST_LEFT[1]
+            self.bg = (BG_FRIGHT if any(g == "f" for g in self.gst) else
+                       BG_SIREN_3 if left <= self.total * SIREN_FAST_LEFT[0] else
+                       BG_SIREN_2 if left <= self.total * SIREN_MID_LEFT[0] else BG_SIREN_1)
 
 
 # Cell = (kind, glyph id, colour): kind 1 = 1-bit glyph (colour = foreground), kind 2 = 2-bit glyph (colour = style index into STYLES).
@@ -701,7 +723,7 @@ def build(steps):
     demo = Demo(maze)
     cur = overlay(base_cells(demo, s, maze), s, sprites(demo, demo.pac, demo.g, SUB))
     init = cur
-    frames, events, trace = [], [], []
+    frames, events, bgs, trace = [], [], [], []
     for _ in range(steps):
         old_pac, old_g = demo.pac, list(demo.g)
         demo.step()
@@ -712,8 +734,9 @@ def build(steps):
             trace.append(sprite_pos(old_pac, demo.pac, k))
             cur = nxt
         events.append(demo.events)
+        bgs.append(demo.bg)
     out, eating, idle = [], False, 0                                     # waka: on at the first pellet, off after 3 steps without one
-    for evs in events:
+    for evs, bg in zip(events, bgs):
         e = 0
         for v in evs:
             if v == EV_WAKA_ON:
@@ -727,7 +750,7 @@ def build(steps):
             else:
                 e = v
                 eating = False
-        out.append(e)
+        out.append(e | (bg << BG_SHIFT))
     assert len(s.one) <= 512 and len(s.two) <= 256, f"glyph ids: {len(s.one)} 1-bit (max 512), {len(s.two)} 2-bit (max 256)"
     return s, init, frames, out, demo, trace
 
@@ -770,7 +793,7 @@ def emit(s, init, frames, events):
             + arr("g_pcIdx", idxb, 16, BANK_A) + arr("g_pcDeltaA", bytes(stream[:half]), 15, BANK_A)
             + arr("g_pcDeltaB", bytes(stream[half:]), 15, BANK_B)
             + f"#define AWTO_PC_HALF_BYTES      {half}\n"
-            + "".join(f"#define AWTO_PC_EV_{n}  {v}\n" for n, v in (("NONE", 0), ("INTRO", EV_INTRO), ("WAKA_ON", EV_WAKA_ON), ("WAKA_OFF", EV_WAKA_OFF), ("DEATH", EV_DEATH), ("STOP", EV_STOP)))
+            + "".join(f"#define AWTO_PC_EV_{n}  {v}\n" for n, v in (("NONE", 0), ("INTRO", EV_INTRO), ("WAKA_ON", EV_WAKA_ON), ("WAKA_OFF", EV_WAKA_OFF), ("DEATH", EV_DEATH), ("STOP", EV_STOP), ("GHOST", EV_GHOST), ("FRUIT", EV_FRUIT), ("BG_MASK", 0xF0), ("BG_SHIFT", BG_SHIFT), ("EV_MASK", 0x0F)))
             + arr("g_pcEvt", bytes(events), 16, BANK_A)), len(glyph), len(stream)
 
 

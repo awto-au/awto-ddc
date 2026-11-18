@@ -696,16 +696,6 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
 #endif
 
 
-#if(_FREESYNC_SUPPORT == _ON)
-        case _USER_TIMER_EVENT_OSD_SHOW_FREESYNC_VFREQ:
-            if((GET_OSD_STATE() == _MENU_INFORMATION) && (ScalerSyncGetFREESYNCEnable() == _TRUE))
-            {
-                g_ucFontPointer1 = GET_FREESYNC_OSD_ADDRESS();
-                OsdPropPutString(ROW(14 + 1), COL(16), _PFONT_PAGE_1, _STRING_NOW_RESOLUTION, COLOR(_CP_BLUE, _CP_BG), _ENGLISH);
-                ScalerTimerActiveTimerEvent(SEC(1), _USER_TIMER_EVENT_OSD_SHOW_FREESYNC_VFREQ);
-            }
-            break;
-#endif
 #if(_FREEZE_SUPPORT == _ON)
         case _USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG:
             OsdFuncDisableOsd();

@@ -84,7 +84,7 @@
 192f	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9931	Get YCC LIMIT RANGE	0
 193d	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8374	Get Pixel Repetition 0	0
 19a0	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:423	Audio D1: WatchDog	0
-1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4245	ucIndex if Drr user define timing 	0
+1a13	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:4235	ucIndex if Drr user define timing 	0
 1a4a	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4332	Pixel Repetition Not Received and not Pixel repetition 0	0
 1ad2	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6516	Get Color Space YUV422	0
 1ada	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7310	Get Colorimetry 709	0
@@ -151,7 +151,7 @@
 2de2	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Rotation.c:68	R-OH	1
 2df4	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:742	FrameTrack-DVT-Error	1
 2df5	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:261	VBIOS_Link_Rate_MST	0
-2e31	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2219	MBR: bLightCtrl	0
+2e31	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2209	MBR: bLightCtrl	0
 2e7c	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7898	Get Colorimetry YCC_SMPTE_170M	0
 2e7c	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7908	Get Colorimetry YCC_SMPTE_170M	0
 2ea5	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:3942	7. DP 8b/10b Decode Error	0
@@ -247,7 +247,7 @@
 43c8	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1897	[Warning]!!!!!! HSD for Memory BW/ size	1
 4487	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8996	Get Pixel Repetition 2	0
 44b2	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1619	_COLORIMETRY_EXT_Y_ONLY_DICOM_PART14	0
-44c8	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3125	Detected by Special Case to _MODE_640x350_70HZ	0
+44c8	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3115	Detected by Special Case to _MODE_640x350_70HZ	0
 44ef	Digital	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:623	6. DPLL SSCG Step	1
 4553	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:378	VBIOS_Link_Rate	0
 456b	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9156	Get Colorimetry INTO_DEFAULT	0
@@ -387,7 +387,7 @@
 6bd1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2163	_Last_line_modify_Dclk	1
 6bd1	FS	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2450	_Last_line_modify_Dclk	1
 6bf6	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:3753	HDMI 2.0 Error Boundary set Low Byte	0
-6c0c	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2220	MBR: VTotal	0
+6c0c	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2210	MBR: VTotal	0
 6c1b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1666	_RGB_QUANTIZATION_LIMIT_RANGE	0
 6c45	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:763	DP Rx1 Dpcd Link Status Reset	0
 6cbf	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4350	Color Depth Has Changed	0
@@ -416,7 +416,7 @@
 72b3	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4164	CDR Unstable!!	0
 72e0	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1910	== DISP_CHECK_END ==	1
 7317	System	Kernel/System/Code/SysJudge.c:775	Input Timing HWidth	1
-73d1	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3103	Detected by Special Case to 640x480-60	0
+73d1	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3093	Detected by Special Case to 640x480-60	0
 7427	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9972	Get RGB DEFAULT RANGE	0
 743e	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:596	DDEN	1
 7561	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:456	Timeout counter	1
@@ -481,12 +481,12 @@
 843b	System	Kernel/System/Code/SysSource.c:1183	7. No Cable Search 5secs	1
 8444	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3031	TMDS clk	0
 8449	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7120	Get Color Space RGB	0
-8469	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3136	Detected by Special Case to _MODE_640x350_85HZ	0
+8469	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3126	Detected by Special Case to _MODE_640x350_85HZ	0
 84a4	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:480	7.ulVFCI	1
 8510	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3026	Rx1 Source Writes 600h = 0x01	0
 852e	System	Kernel/System/Code/SysSource.c:382	bH_Select == 1,bP_Select ==1	1
-8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3983	User Audio Reset Process	0
-8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3997	User Audio Reset Process	0
+8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3973	User Audio Reset Process	0
+8536	Audio	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3987	User Audio Reset Process	0
 8544	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9982	Get RGB RESERVED RANGE	0
 8579	Rx1	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_DPRx1.c:4240	CDR Reset	0
 857c	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9245	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
@@ -513,7 +513,7 @@
 8d7a	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7189	Get Pixel Repetition 6	0
 8db7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7780	Get Pixel Repetition 2	0
 8dd6	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9923	Get YCC FULL RANGE	0
-8dec	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2222	MBR: ucBacklightPos	0
+8dec	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2212	MBR: ucBacklightPos	0
 8e9c	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1218	False : D0 DP Audio Tracking Disable	0
 8eb9	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8423	Get Pixel Repetition 7	0
 8ecd	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:5823	7. DP Link Fail	0
@@ -540,7 +540,7 @@
 959d	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2095	False : D5 HDMI Audio DB Retry	0
 9612	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:3749	HDMI 2.0 Error Boundary set Low Byte	0
 9672	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8130	Get RGB LIMIT RANGE	0
-971e	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3115	Detected by Special Case to 720x480-60	0
+971e	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3105	Detected by Special Case to 720x480-60	0
 9744	System	Kernel/System/Code/SysSource.c:2205	7. Bingo Switch Port!!!!!!!	1
 9744	System	Kernel/System/Code/SysSource.c:2236	7. Bingo Switch Port!!!!!!!	1
 9744	System	Kernel/System/Code/SysSource.c:2457	7. Bingo Switch Port!!!!!!!	1
@@ -568,7 +568,7 @@
 9f50	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1780	Misc change: Ext Colorimetry	0
 9f53	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9346	Get RGB LIMIT RANGE	0
 a0d1	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4128	FREESYNC Mode Enabled!!	0
-a10f	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1609	D Clock Exceed Panel Supported Range	0
+a10f	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1599	D Clock Exceed Panel Supported Range	0
 a14d	Rx0	Kernel/Scaler/ScalerFunction/Code/ScalerDP_SeptPhy.c:394	_D0_HOT_PLUG_LOW	0
 a1c7	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8307	RGB Quantization Range Changed	0
 a2a8	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9762	Get Colorimetry INTO_DEFAULT	0
@@ -651,7 +651,7 @@ b499	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4372	HD
 b499	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:4380	HDMI Freesync Status Change	0
 b4d9	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2065	False : D5 Audio Packet	0
 b4dd	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1376	_COLOR_SPACE_RGB	0
-b4e3	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2221	MBR: ucBacklightDuty	0
+b4e3	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:2211	MBR: ucBacklightDuty	0
 b524	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2480	D5 Aduio Test Off	0
 b553	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1465	_COLORIMETRY_RGB_SRGB_CEA	0
 b5b5	System	Kernel/User Common Function/Code/UserCommonNVRamSystem.c:1300	FlashSaveItem : Retry	1
@@ -719,7 +719,7 @@ c5f1	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:690	eDP Tx1 LT2
 c670	FRC	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Scaling.c:595	IDEN	1
 c6a8	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:684	eDP Tx1 LT2 Pass	1
 c702	System	Kernel/System/Code/SysJudge.c:477	Measured Input HV Changed	1
-c7a8	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1619	FRC only supports dos-mode timing	0
+c7a8	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1609	FRC only supports dos-mode timing	0
 c899	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1210	False : D0 DP Audio Fsm Disable	0
 c964	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4213	MBR: Backlight Control Start	0
 ca4f	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6199	MST FREESYNC Mode Enabled!!	0
@@ -869,7 +869,7 @@ ebe8	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1549	False : 
 ec20	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8444	Get Pixel Repetition Error	0
 ec5e	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8989	Get Pixel Repetition 1	0
 ed72	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1489	DVBG end > DVtotal	0
-ed8d	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3109	Detected by Special Case to 720x480-60_GTF	0
+ed8d	Analog	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:3099	Detected by Special Case to 720x480-60_GTF	0
 ee4e	System	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:577	_Last_line_Dclk_larger	1
 ee53	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:10493	Warning :  VGA DDC2 wait SCL idle timeout	0
 ee7f	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1557	_COLORIMETRY_EXT_YCC_ITUR_BT2020_CL	0

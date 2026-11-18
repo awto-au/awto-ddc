@@ -3082,7 +3082,6 @@ extern void OsdFuncSetHdmiPortVersion(EnumSourceSearchPort enumSearchPort,BYTE u
 
 extern void OsdDispDisableOsd(void);
 
-extern void OsdDispMainSubString(BYTE ucState);
 
 
 extern void OsdDispOsdMessage(EnumOSDDispMsg enumMessage);
@@ -3100,13 +3099,10 @@ extern void OsdDispOsdRotateSwitch(void);
 // Extern functions from OsdFont.c
 //----------------------------------------------------------------------------------------
 // __RTD_OSDFONTVLC__
-extern void OsdFontVLCLoadFont(BYTE ucState);
 
 // __RTD_OSDFONTDYNAMICICON_1__
-extern void OsdFontVLCDynamicLoadIcon(BYTE ucIconPos, WORD usIcon);
 
 // __RTD_OSDFONTDYNAMICICON_2__
-extern void OsdFontVLCLoadMainIcon_2(BYTE ucIconPos, WORD usIcon);
 
 // __RTD_OSDFONTTABLE__
 extern void OsdFontPut1Bit(BYTE ucRow, BYTE ucCol, BYTE ucIcon, BYTE ucColor);
@@ -3116,11 +3112,6 @@ extern void OsdFontPut2Bit(BYTE ucRow, BYTE ucCol, BYTE ucIcon, BYTE ucColor0, B
 extern void OsdFontPut2BitTable(BYTE ucRow, BYTE ucCol, BYTE *pucArray, BYTE ucColor0, BYTE ucColor1, BYTE ucColor2, BYTE ucColor3);
 
 // __RTD_OSDFONTPROP__
-extern void OsdPropPutString(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucString, BYTE ucColor, BYTE ucLanguage);
-extern void OsdPropPutStringCenter(BYTE ucRow, BYTE ucCol, BYTE ucWidth, BYTE ucFptsSelect, BYTE ucString, BYTE ucColor ,BYTE ucLanguage);
-extern void OsdPropShowNumber(BYTE ucRow, BYTE ucCol, DWORD ulValue, BYTE ucPar ,BYTE ucFontPoint, BYTE ucColor);
-extern BYTE OsdPutStringPropFontTable(BYTE ucLanguage, WORD ucFontPoint);
-extern void OsdPropShowFreeSyncVFreqRange(BYTE ucRow, BYTE ucCol, BYTE ucFptsSelect, BYTE ucColor, BYTE ucLanguage);
 
 // __RTD_OSDPALETTE__
 extern void OsdPaletteSelectPalette(BYTE ucValue);
