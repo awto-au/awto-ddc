@@ -71,6 +71,7 @@
 #define _D2_DDC_CHANNEL_SEL                     _DDC2
 #define _D2_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
 #define _D2_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
+#define _D2_HDMI_CEC_PIN                        _HDMI_CEC_0     // docs/cec.md: no scaler pin carries CEC in the pin ledger; on by Dan's request, the pad is a Phase B test
 
 //--------------------------------------------------
 // D3 Input Port
@@ -79,6 +80,7 @@
 #define _D3_DDC_CHANNEL_SEL                     _DDC3
 #define _D3_EMBEDDED_DDCRAM_MAX_SIZE            _EDID_SIZE_256
 #define _D3_EMBEDDED_DDCRAM_LOCATION            _EDID_TABLE_LOCATION_CODE
+#define _D3_HDMI_CEC_PIN                        _HDMI_CEC_0
 
 
 /////////////////////////////

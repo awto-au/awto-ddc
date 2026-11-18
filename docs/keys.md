@@ -7,7 +7,7 @@ Decisions: awto-ddc#132 (Dan, 2026-11-12). Key names are the printed ones, left 
 ## Reader
 
 - Source: ADC ladders A0 (MENU, UP, AUTO) and A1 (SOURCE, DOWN) + P3.0 (POWER); bands in `fw/awto/inputs.tsv` (also read by `scripts/rtd_keywatch.py`).
-- Debounce: two equal samples 10 ms apart (`AWTO_KEY_SAMPLE_MS`).
+- Debounce: two equal samples 10 ms apart (`AWTO_KEY_SAMPLE_MS`). Samples are the pass-rate input rows: a press shorter than a long main-loop pass (OSD draw ~150 ms) is not seen.
 - Repeat: first at 500 ms, then every 100 ms (`AWTO_KEY_REPEAT_MS`, `AWTO_KEY_RATE_MS`).
 - Combo wait: UP and DOWN hold their press 80 ms for the other one (`AWTO_KEY_COMBO_MS`); a lone UP / DOWN then acts. Every other key acts at once.
 - With POWER held nothing else counts. Several keys that are not UP+DOWN: the first key down acts, the rest is ignored until all are up.
@@ -62,6 +62,21 @@ No other combo. Removed (#132): MENU+DOWN (debug link toggle), MENU+DOWN held at
 - Level: the user volume (DVC), as every generator sound. Source: HDMI audio test generator, `AwtoPmSoundTone` (`fw/test/snd.c`); it always stops (`AwtoPmSoundPoll`), the SDK un-mutes the stream path again.
 - Needs `-D _AWTO_AUDIO_TEST` today (#229 makes audio permanent); other builds compile it and log "key click unavailable" per press when the setting is on. Ring lines: sync `E5 50 / 51 / 52`.
 - Sim: `scripts/key_sim_test.py` (`key_click`): request per press, none when off / muted / combo / repeat / POWER; with the audio image the tone from the audio tap (count, length, silent at the end, none while Pac-Man sound plays).
+
+## ADC scan review (2026-11-19)
+
+- Bands: `fw/awto/inputs.tsv` key rows equal the Dahua `key_scan_adc` bands (`scripts/key_bands.py` `DAHUA`, `tests/test_key_bands.py`): `lo <= R < hi`, 4 codes (32 counts) wide, edges on 5-bit codes, no overlap per ladder, idle `F8` and `00` / `FF` decode to no key.
+- Bug fixed: the key rows were decoded from the deadbanded ADC row (`AWTO_ADC_DEADBAND` 2: a change of 1 left the row stale), so a raw value at a band edge decoded one count late (A0 `0x28` read as no key, `0x48` still UP). Real results are multiples of 8, so hardware never hit it; the rows now read the result register (`PCB_ADKEY1()` / `PCB_ADKEY2()`). Found by the edge-value test below.
+- Test: `scripts/key_sim_test.py` `band_edges`: every 5-bit code + each band's lo - 1 / lo / hi - 1 / hi + `FF`, both ladders, through the ADC cells with the GPIO page open; decoded rows and the debounced mask must equal the table (76 values).
+- ADC clock: `FF0D` bit 7 = 0 live = not on the M2PLL; the 350.8 MHz clock does not change it. Key timings run on `AwtoMs`. See `docs/monitoring.md`.
+- Power saving: the main loop keeps running, the ADC clock is switched to IOSC / 9 by `SysPower`; any key wakes (`AwtoKeyRoute`). Not yet checked on hardware.
+- Open (D1, `docs/monitoring.md`): a key stuck down from power-on resets every setting after 10 s, at every boot.
+
+## Key decode without a human (Phase B)
+
+- Bands were measured by Dan on unit 2 (2026-11-08, #85; table above, `fw/awto/inputs.tsv`): no key presses are asked for.
+- Sim: `key_sim_test.py` `band_edges` + `key_sim_test.py` flows push ADC values through the sim bus.
+- Hardware: test cmds 0x01..0x05 / `key_inject` take the front-key route (`AwtoKeyRoute`); the GPIO page shows idle ADC A0..A2 = F8.
 
 ## Stock behaviour (for comparison)
 

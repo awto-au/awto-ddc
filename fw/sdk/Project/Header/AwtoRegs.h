@@ -32,6 +32,9 @@
 #define AWTO_R_DCLK_FINE_TUNE_OFFSET_LSB                0x01C5
 #define AWTO_R_CAP_M1_FIFO_STATUS                       0x052B
 #define AWTO_R_DISP_M1_FIFO_STATUS                      0x05B0
+#define AWTO_R_OSC_TRIM_CNT                             0x06A4
+#define AWTO_R_EMB_BGRES                                0x06A5
+#define AWTO_F_EMB_BGRES_TRIM_CNT_H                     0xF0
 #define AWTO_R_DISP_PG_R_CTRL                           0x07F0
 #define AWTO_R_DISP_PG_G_CTRL                           0x07F1
 #define AWTO_R_DISP_PG_B_CTRL                           0x07F2

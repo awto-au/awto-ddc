@@ -360,6 +360,7 @@ void SysTimerEventProc(EnumScalerTimerEventID enumEventID)
 // dropped pragma (Keil only)
 void SysTimerIntProc0(void) __interrupt(1)
 {
+    AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
     g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr();
 
@@ -393,6 +394,7 @@ void SysTimerIntProc0(void) __interrupt(1)
 // dropped pragma (Keil only)
 void SysTimerIntProc1(void) __interrupt(3)
 {
+    AWTO_CPUS_ISR(3);
     // Backup for Burst Write Bug
     g_ucBackup_TIMER1 = MCU_FFF4_SCA_INF_ADDR;
 

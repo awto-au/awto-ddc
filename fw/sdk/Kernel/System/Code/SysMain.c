@@ -73,6 +73,9 @@ void SysMainStartUserCode(BYTE ucBankAddress);
 //--------------------------------------------------
 void main(void)
 {
+#ifdef _AWTO_CPU_SUITE
+    AwtoCpuSuiteMain();                     // special image (docs/cpu-suite.md): the suite runner replaces the whole main loop
+#endif
     AwtoStackPaint();
     AwtoWdtInit();
     AwtoFlashWindowCheck();
@@ -155,7 +158,10 @@ void main(void)
             SysTMDSRxHandler();
 
 #if(_HDMI_CEC_SUPPORT == _ON)
-            SysCecHandler();
+            if(AWTO_CEC_DUE())
+            {
+                SysCecHandler();
+            }
 #endif
 #endif
 

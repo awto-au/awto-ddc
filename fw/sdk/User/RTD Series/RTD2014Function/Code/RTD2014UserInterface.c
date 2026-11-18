@@ -687,14 +687,6 @@ void UserInterfaceTimerEventProc(EnumScalerTimerEventID enumEventID)
             AWTO_REALTEK_KEYINFO(_KEY_INFO_ALL, _OSD_UNHIGHLIGHT);
             break;
 
-#if(_HDMI_CEC_SUPPORT == _ON)
-        case _USER_TIMER_EVENT_CEC_LA_POLLING:
-
-            g_bCecLaPollingStart = 1;
-            g_ucCecLaCnt = 0;
-            break;
-#endif
-
 
 #if(_FREEZE_SUPPORT == _ON)
         case _USER_TIMER_EVENT_OSD_DISABLE_FREEZE_MSG:

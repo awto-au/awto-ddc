@@ -63,7 +63,6 @@
 //----------------------------------------------------------------------------------------
 #if(_HDMI_CEC_SUPPORT == _ON)
 extern void UserCommonCecReceiveNotify(void);
-extern void UserCommonCecTransmitInfoPrepare(void);
 #endif
 
 //----------------------------------------------------------------------------------------
@@ -677,6 +676,7 @@ extern void UserCommonUsbHubBillboardControl(BYTE ucInputPort, EnumBillboardCtrl
 // Extern functions from RTD2014UserInterfaceCec.c
 //-------------------------------------------------------
 extern bit UserInterfaceCecGetCecActive(void);
+extern void UserInterfaceCecHighLevelFlow(void);
 
 //----------------------------------------------------------------------------------------
 // Extern functions from RTD2014UserTypecInterface.c

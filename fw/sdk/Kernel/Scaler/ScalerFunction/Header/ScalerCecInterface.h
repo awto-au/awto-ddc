@@ -21,17 +21,17 @@
 //****************************************************************************
 // INTERFACE DEFINITIONS / MACROS
 //****************************************************************************
-#define GET_CEC_RX_READ_DONE()                 (g_stCecGeneralCtrl.bReadDone)
-#define SET_CEC_RX_READ_DONE()                 (g_stCecGeneralCtrl.bReadDone = 1)
-#define CLR_CEC_RX_READ_DONE()                 (g_stCecGeneralCtrl.bReadDone = 0)
+#define GET_CEC_RX_READ_DONE()                 (isr_g_stCecGeneralCtrl.bReadDone)
+#define SET_CEC_RX_READ_DONE()                 (isr_g_stCecGeneralCtrl.bReadDone = 1)
+#define CLR_CEC_RX_READ_DONE()                 (isr_g_stCecGeneralCtrl.bReadDone = 0)
 
-#define GET_CEC_TX_START()                     (g_stCecGeneralCtrl.bCecTxStart)
-#define SET_CEC_TX_START()                     (g_stCecGeneralCtrl.bCecTxStart = 1)
-#define CLR_CEC_TX_START()                     (g_stCecGeneralCtrl.bCecTxStart = 0)
+#define GET_CEC_TX_START()                     (isr_g_stCecGeneralCtrl.bCecTxStart)
+#define SET_CEC_TX_START()                     (isr_g_stCecGeneralCtrl.bCecTxStart = 1)
+#define CLR_CEC_TX_START()                     (isr_g_stCecGeneralCtrl.bCecTxStart = 0)
 
-#define GET_CEC_RX_MSG_ANALYZING()             (g_stCecGeneralCtrl.bCecRxInfoAnalyzing)
-#define SET_CEC_RX_MSG_ANALYZING()             (g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 1)
-#define CLR_CEC_RX_MSG_ANALYZING()             (g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 0)
+#define GET_CEC_RX_MSG_ANALYZING()             (isr_g_stCecGeneralCtrl.bCecRxInfoAnalyzing)
+#define SET_CEC_RX_MSG_ANALYZING()             (isr_g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 1)
+#define CLR_CEC_RX_MSG_ANALYZING()             (isr_g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 0)
 
 //----------------------------------------------------------------------------
 // Macro of CEC Opcode
@@ -181,9 +181,15 @@ typedef enum
 //****************************************************************************
 // INTERFACE VARIABLE DECLARATIONS
 //****************************************************************************
-extern volatile StructCecRxReceivedInfo g_stCecRxReceivedInfo;
+extern volatile StructCecRxReceivedInfo isr_g_stCecRxReceivedInfo;
 extern StructCecTxTransmitInfo g_stCecTxTransmitInfo;
-extern volatile StructCecGeneralCtrl g_stCecGeneralCtrl;
+extern volatile StructCecGeneralCtrl isr_g_stCecGeneralCtrl;
+extern volatile BYTE isr_g_ucCecRxBackupFifoWaterLevel;
+extern __xdata BYTE g_ucAwtoCecPass;
+// awto: SysMain runs SysCecHandler only when due: a frame (a frame lasts >= 24 ms, a main pass ~1.7 ms), a reply or an analysis is pending,
+// else every 32nd pass (init, cec_en). The full work every pass was +10 % per pass in the sim (docs/cec.md).
+#define AWTO_CEC_DUE()                          ((((++g_ucAwtoCecPass) & 0x1F) == 0) || (GET_CEC_RX_READ_DONE() == _TRUE) || (isr_g_ucCecRxBackupFifoWaterLevel != 0) || \
+                                                 (GET_CEC_TX_START() == _TRUE) || (isr_g_stCecGeneralCtrl.b2CecTxState != _CEC_TX_IDLE_STATE) || (GET_CEC_RX_MSG_ANALYZING() == _TRUE))
 
 
 //****************************************************************************
@@ -193,6 +199,7 @@ extern void ScalerCecInitial(void);
 extern void ScalerCecRxProcess(void);
 extern void ScalerCecTxProcess(void);
 extern void ScalerCecFunctionEnable(bit bEnable);
+extern void ScalerCecBlockEnable(bit bEnable);
 extern void ScalerCecRxClrIMsgAnalyzingFlag(void);
 extern bit ScalerCecRxGetMsgAnalyzingFlag(void);
 extern EnumCecTxEvent ScalerCecTxGetTransmitResult(void);

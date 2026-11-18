@@ -1,7 +1,7 @@
 """Our firmware source folders by subsystem (#196): fw/<dir>/*.c / *.h. One list for the build and the lints."""
 from pathlib import Path
 
-OUR_DIRS = ("osd", "nvram", "keys", "power", "input", "log", "test", "diag", "dp", "timer", "meas", "ddcci", "net", "audio", "settings")
+OUR_DIRS = ("osd", "nvram", "keys", "power", "input", "log", "test", "diag", "dp", "timer", "meas", "ddcci", "net", "audio", "settings", "cec")
 
 
 def our_dirs(root: Path) -> list:

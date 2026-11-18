@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
-menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, regmap, nvlog.
+menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, regmap, nvlog, monitor.
 
 usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
@@ -47,7 +47,7 @@ from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
-LIMIT_OF = {"keys": 150, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
+LIMIT_OF = {"keys": 150, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90, "monitor": 90}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
@@ -68,6 +68,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "deadport": ("_AwtoDeadPortPoll",),
     "portcfg": ("_isr_g_ucAwtoPortOff",),
     "inputrate": ("_g_pucAwtoInCnt", "_AwtoInRow"),
+    "monitor": ("_g_stAwtoMon",),
     "panel": ("_g_ucAwtoPanelOwn",),
     "sysm": ("_g_ucAwtoSysOwn",),
     "nvlog": ("_g_stAwtoNv", "_AwtoNvLog"),
@@ -132,6 +133,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
     g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed
+    g["monitor"] = [*PY, f"{s}/mon_sim_test.py", b, m]       # health monitor: sample period, rows, change steps, registry switch, heartbeat
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
