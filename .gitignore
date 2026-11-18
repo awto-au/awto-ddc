@@ -14,3 +14,15 @@ tools/gmbus_rate/modules.order
 # built firmware images + maps (fw_archive.py; not tracked: Dan 2026-11-12, image commits were noise)
 /build-debris/
 .claude/worktrees/
+
+# Asteroids ROM set and anything derived from it: never committed (docs/asteroids.md)
+asteroid.zip
+asteroids*.zip
+*.np3
+*.ef2
+*.h2
+*.j2
+*.c8
+**/asteroids/
+**/asteroids_shapes*
+**/asteroids_rom*
