@@ -14,7 +14,7 @@ Pictures come from the simulator (`python scripts/osd_manual.py`, check: `--chec
 | `[sdk-hypothesis]` | Realtek SDK source / comments (Dan, 2026-11-18: the SDK is not reliable; a lead to test, never a fact) |
 | `[?]` | unknown; the test that settles it is named ([open-items.md](open-items.md)) |
 
-Conventions: awto-dan `docs/embedded/reversing/README.md`. Names: say Dahua firmware (factory image of the units), Realtek SDK menu, awto menu; never bare "vendor".
+Register-level facts (roles, observed values, tests, results) are recorded once in `re/regmap/` (`python scripts/regmap_query.py 3AC0`); this manual links keys. Conventions: awto-dan `docs/embedded/reversing/README.md`. Names: say Dahua firmware (factory image of the units), Realtek SDK menu, awto menu; never bare "vendor".
 
 ## The hardware on one page
 - **Draws on the display side** from on-chip OSD SRAM while each pixel goes to the panel; no DDR, no input clock: [pipeline.md](pipeline.md).
