@@ -25,15 +25,15 @@ def test_rows_sane():
 
 
 def test_power_levels_and_recovery_rows_present():
-    for n in ("pwr_l1_en", "pwr_l1_ms", "pwr_l2_s", "pwr_l3_s", "wake_d1", "wake_d3", "debug_link", "panel_t3", "logo_ms"):
+    for n in ("pwr_l1_en", "pwr_l1_ms", "pwr_l2_s", "pwr_l3_s", "wake_d1", "wake_d3", "debug_link", "bl_on_delay"):
         assert n in T.BY_NAME
 
 
 def test_parse_value():
     assert C.parse_value(T.BY_NAME["gamma"], "2.2") == 3
-    assert C.parse_value(T.BY_NAME["logo"], "off") == 0
+    assert C.parse_value(T.BY_NAME["pwr_l1_en"], "off") == 0
     with pytest.raises(SystemExit):
-        C.parse_value(T.BY_NAME["panel_t3"], "10")         # below the validated range
+        C.parse_value(T.BY_NAME["pwr_l1_ms"], "30001")     # above the validated range (0..30000)
 
 
 @pytest.mark.skipif(not (RTDFW / "settings/registry.tsv").exists() or not (RTDFW / "awto/settings/set_table.c").exists(),

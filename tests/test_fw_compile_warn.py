@@ -1,6 +1,6 @@
-"""fw_compile compile_one: cpp and compiler stderr never interleave, so the warn gate sees whole lines (#51.7, #47).
-The fake compiler behaves like sdcc: one run (no -E / --c1mode) writes cpp and compiler stderr interleaved mid-line;
--E and --c1mode runs write only their own stage's lines."""
+"""fw_compile compile_one: the warn gate sees whole warning lines (#51.7, #47).
+The fake compiler is sdcc after awto-sdcc#122: one run, cpp runs to completion before the compiler writes. The
+-E / --c1mode branches are the pre-#122 two-stage path, kept for the fake only (compile_one no longer calls them)."""
 import os
 import stat
 import sys
@@ -24,9 +24,9 @@ elif "--c1mode" in a:
     src = sys.stdin.read().split('"')[1]            # source path from the #line the cpp stage wrote
     CC = f"{src}:9: warning 158: overflow in implicit constant conversion\n"
     open(out, "w").write("asm\n"); sys.stderr.write(CC)
-else:                                   # single run: concurrent writers, cpp line cut by a compiler line
+else:                                   # single run (#122): sequential cpp, then compiler
     open(out, "w").write("asm\n")
-    sys.stderr.write(CPP[:30]); sys.stderr.flush(); sys.stderr.write(CC); sys.stderr.write(CPP[30:])
+    sys.stderr.write(CPP); sys.stderr.write(CC)
 '''
 
 POLICY = ("^object in read-only code space should be const$\t*\t*\tok\tt\n"
@@ -35,9 +35,12 @@ POLICY = ("^object in read-only code space should be const$\t*\t*\tok\tt\n"
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
-    fake = tmp_path / "fakesdcc"
+    (tmp_path / "bin").mkdir()
+    fake = tmp_path / "bin" / "sdcc"                 # ccache_env hashes sdcc, sdcpp, sdas8051 from this dir
     fake.write_text(FAKE)
     fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+    for tool in ("sdcpp", "sdas8051"):
+        (tmp_path / "bin" / tool).write_bytes(b"stub\n")
     src = tmp_path / "work/src"
     (src / "d").mkdir(parents=True)
     (src / "d/x.c").write_text("int x;\n")

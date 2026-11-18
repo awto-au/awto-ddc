@@ -82,8 +82,9 @@ def test_power_cycle_known_relay_cycles(monkeypatch, tmp_path):
 def test_dev_passes_unit_relay(dev, monkeypatch):
     seen = []
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: seen.append((script, a)) or 0)
-    assert dev.cmd_power_cycle(["--unit", "3", "--off"]) == 0
+    assert dev.cmd_power_cycle(["--unit", "2", "--off"]) == 0                 # so-th-1 feeds unit 2 (unit 3: no relay)
     assert seen == [("power_cycle.py", ("--relay", "so-th-1", "--off"))]
+    assert dev.cmd_power_cycle(["--unit", "3", "--off"]) == 1 and len(seen) == 1
 
 
 # --- #52.7 mode: every logical monitor copied, only the target changed --------
@@ -119,7 +120,7 @@ def test_mode_dp_connector_not_in_layout_refused(dev):
 
 
 def test_mode_dp_flag_targets_dp_connector(dev, monkeypatch):
-    shown = SHOW.replace("HDMI-2", "DP-1")
+    shown = SHOW.replace("HDMI-2", "DP-1")                       # unit 2 is the unit with a DP link (connector_dp)
     calls = []
 
     def fake_run(cmd, **kw):
@@ -128,7 +129,7 @@ def test_mode_dp_flag_targets_dp_connector(dev, monkeypatch):
         return R()
     monkeypatch.setattr(dev.subprocess, "run", fake_run)
     monkeypatch.setattr(dev.subprocess, "call", lambda cmd, **kw: calls.append((cmd, kw)) or 0)
-    assert dev.cmd_mode(["--unit", "3", "--dp", "4k30"]) == 0
+    assert dev.cmd_mode(["--unit", "2", "--dp", "4k30"]) == 0
     cmd, kw = calls[0]
     assert kw.get("timeout")
     assert cmd[cmd.index("DP-1") + 2] == "3840x2160@30.000"
@@ -167,6 +168,7 @@ def _flash_main(monkeypatch, tmp_path, extra, require):
     import rtd_flash_image as I
     img = tmp_path / "AWT26110003-x-be.bin"
     img.write_bytes(b"\xff" * 4096)
+    monkeypatch.setenv("AWTO_VIA_DEV", "1")                                      # --write is refused outside dev.py flash (#167)
     monkeypatch.setattr(sys, "argv", ["rtd_flash_image.py", "7", str(img), "--serial", "AWT26110003", *extra])
     monkeypatch.setattr(I.F, "repo_root", lambda: tmp_path)
     monkeypatch.setattr(I.i2cbus, "require_unit", require)
@@ -346,19 +348,9 @@ def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
         return r
     monkeypatch.setattr(dev, "_bus", fake_bus)
     monkeypatch.setattr(dev, "cmd_power_cycle", lambda e: events.append(("relay",)) or 0)
-    monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: events.append(("diag", a, bus)) or 0)
+    monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: pytest.fail("recover no longer holds the unit"))
     monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash", e)) or 0)
-    _flashed_map(dev, "AWT26110003-r-be", with_safe=True)      # default: the flashed image has the safe block
     return img, events
-
-
-def _flashed_map(dev, tag, with_safe):
-    """flashed.json + map fixture for unit 3; with_safe adds the _g_stAwtoSafe symbol line."""
-    dev.FW.mkdir(parents=True, exist_ok=True)
-    (dev.FW / "AWT26110003-flashed.json").write_text(json.dumps({"tag": tag, "image": ""}))
-    safe = "     0000F6B0  _g_stAwtoSafe                      SysMain\n" if with_safe else ""
-    (dev.FW / f"{tag}.map").write_text("     0000EA89  _g_stOsdInfo                       RTD2014Osd\n" + safe
-                                       + "     0000F6D0  _g_stAwtoDiag                      SysMain\n")
 
 
 def test_recover_bad_image_refused_before_relay(dev, tmp_path, monkeypatch):
@@ -373,39 +365,15 @@ def test_recover_bad_image_refused_before_relay(dev, tmp_path, monkeypatch):
 def test_recover_scans_bus_once_before_relay_when_unit_answers(dev, tmp_path, monkeypatch):
     img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
     assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
-    assert [e[0] for e in events] == ["bus", "relay", "diag", "flash"]
-    assert events[2][2] == 11                           # hold gets the resolved bus, no second scan
-    assert events[3][1][events[3][1].index("--bus") + 1] == "11"
+    assert [e[0] for e in events] == ["bus", "relay", "flash"]          # one scan, then the flash
+    assert events[2][1][events[2][1].index("--bus") + 1] == "11"
 
 
 def test_recover_wedged_unit_short_deadline_lookup_after_relay(dev, tmp_path, monkeypatch):
     img, events = _recover_setup(dev, tmp_path, monkeypatch, [SystemExit("silent"), 11])
     assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
-    assert [e[0] for e in events] == ["bus", "relay", "bus", "diag", "flash"]
+    assert [e[0] for e in events] == ["bus", "relay", "bus", "flash"]
     assert 0 < events[2][1] <= 5.0
-
-
-def test_recover_hold_failure_still_flashes(dev, tmp_path, monkeypatch):
-    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
-    monkeypatch.setattr(dev, "_diag", lambda u, *a, bus=None: 1)
-    monkeypatch.setattr(dev, "cmd_flash", lambda e: events.append(("flash",)) or 0)
-    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
-    assert ("flash",) in events
-
-
-def test_recover_skips_hold_without_safe_block_in_map(dev, tmp_path, monkeypatch):
-    """#52: hold writes 0xF6B0, live XDATA on images without _g_stAwtoSafe (working-base line)."""
-    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
-    _flashed_map(dev, "AWT26110003-r-be", with_safe=False)
-    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
-    assert [e[0] for e in events] == ["bus", "relay", "flash"]
-
-
-def test_recover_skips_hold_when_flashed_map_missing(dev, tmp_path, monkeypatch):
-    img, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
-    (dev.FW / "AWT26110003-r-be.map").unlink()
-    assert dev.cmd_recover(["--unit", "3", str(img)]) == 0
-    assert "diag" not in [e[0] for e in events]
 
 
 def test_bus_wait_rescans_until_edid_appears(dev, monkeypatch):
@@ -427,38 +395,6 @@ def test_probe_accepts_bus_without_edid_scan(dev, monkeypatch):
     assert seen == [("rtd_boot_probe.py", (11, "--window", "3"))]
 
 
-def _diag_mod():
-    import rtd_diag
-    return rtd_diag
-
-
-def test_hold_is_bounded_and_closes_one_fd(monkeypatch, tmp_path):
-    D = _diag_mod()
-    assert D.HOLD_WAIT_S <= 5.0
-    made = []
-
-    class FakeReal:
-        def __init__(self, bus, allow_write=False, regread=False):
-            self.closed = False
-            made.append(self)
-        def write(self, *a):
-            return False                                # never ACKs
-        def close(self):
-            self.closed = True
-    clock = [0.0]
-    monkeypatch.setattr(D.B, "Real", FakeReal)
-    monkeypatch.setattr(D.B, "setup_logs", lambda name: type("L", (), {"main": open(os.devnull, "w")})())
-    monkeypatch.setattr(D, "repo_root", lambda: tmp_path)
-    monkeypatch.setattr(D.time, "monotonic", lambda: clock[0])
-    monkeypatch.setattr(D.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
-    monkeypatch.setattr(sys, "argv", ["rtd_diag.py", "11", "--hold"])
-    assert D.main() == 1
-    holders = [m for m in made if m.closed]
-    assert len(made) == 2 and len(holders) == 2          # io (regread) + ONE hold handle, both closed
-    assert clock[0] <= 5.0 + 0.1
-
-
-
 # --- #52.4 / #52.18 diag --messages / --release / extra args ----------------------------------------------------
 
 class FakeDbg:
@@ -478,6 +414,11 @@ class FakeDbg:
 
     def read(self, dev8, sub, n):
         return self.reads.pop(0) if self.reads else bytes([0xFC])
+
+
+def _diag_mod():
+    import rtd_diag
+    return rtd_diag
 
 
 @pytest.fixture()
@@ -555,7 +496,7 @@ def test_messages_mode_installs_sighup_handler(D, monkeypatch, tmp_path):
     monkeypatch.setattr(D.B, "Real", lambda *a, **k: type("R", (), {"close": lambda s: None})())
     monkeypatch.setattr(D.B, "setup_logs", lambda name: type("L", (), {"main": open(os.devnull, "w")})())
     monkeypatch.setattr(D, "repo_root", lambda: tmp_path)
-    monkeypatch.setattr(D, "messages", lambda io, root, secs=None: seen.__setitem__("secs", secs) or 0)
+    monkeypatch.setattr(D, "messages", lambda io, root, secs=None, *a: seen.__setitem__("secs", secs) or 0)
     monkeypatch.setattr(sys, "argv", ["rtd_diag.py", "11", "--messages", "--secs", "7"])
     assert D.main() == 0
     assert signal.SIGHUP in seen and signal.SIGTERM in seen and seen["secs"] == 7
@@ -574,9 +515,9 @@ def test_dev_diag_passes_messages_release_secs(dev, monkeypatch):
 
 @pytest.mark.parametrize("fn,args", [
     ("cmd_diag", ["--bogus"]), ("cmd_diag", ["--messages", "--release"]), ("cmd_diag", ["--secs", "5"]),
-    ("cmd_diag", ["--messages", "--secs", "x"]), ("cmd_safe", ["--watch", "2"]), ("cmd_trace", ["--messages"]),
+    ("cmd_diag", ["--messages", "--secs", "x"]),
 ])
-def test_dev_diag_safe_trace_refuse_extra_args(dev, monkeypatch, fn, args):
+def test_dev_diag_refuses_extra_args(dev, monkeypatch, fn, args):
     monkeypatch.setattr(dev, "_diag", lambda *a, **k: pytest.fail("bus touched"))
     with pytest.raises(SystemExit):
         getattr(dev, fn)(["--unit", "3", *args])
@@ -640,15 +581,15 @@ def test_force_ungated_flashes_and_logs_loudly(dev, tmp_path, monkeypatch):
 
 def test_archived_image_needs_no_gate_record(dev, tmp_path, monkeypatch):
     img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
-    (tmp_path / "fw" / "images").mkdir(parents=True)
-    (tmp_path / "fw" / "images" / img.name).write_bytes(img.read_bytes())
+    (tmp_path / "build-debris" / "images").mkdir(parents=True)                   # fw_archive.py DEST
+    (tmp_path / "build-debris" / "images" / img.name).write_bytes(img.read_bytes())
     assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
 
 
 def test_archived_name_with_other_bytes_is_not_accepted(dev, tmp_path, monkeypatch):
     img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
-    (tmp_path / "fw" / "images").mkdir(parents=True)
-    (tmp_path / "fw" / "images" / img.name).write_bytes(b"different")
+    (tmp_path / "build-debris" / "images").mkdir(parents=True)
+    (tmp_path / "build-debris" / "images" / img.name).write_bytes(b"different")
     with pytest.raises(SystemExit, match="flash refused"):
         dev.cmd_flash(["--unit", "3", str(img)])
 

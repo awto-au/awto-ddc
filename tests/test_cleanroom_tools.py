@@ -1,4 +1,4 @@
-"""Clean-room tooling (#65): facts_regs, cleanroom_lint, trace_equiv, fw_inventory, keil2sdcc module rules, unit_lock. Offline."""
+"""Clean-room tooling (#65): facts_regs, cleanroom_lint, trace_equiv, fw_inventory, unit_lock. Offline."""
 from __future__ import annotations
 
 import gzip
@@ -210,25 +210,6 @@ def test_inventory(tmp_path):
     assert by["ScalerFooSetThing"][:2] == ("Kernel/Scaler drivers", "? unassigned") and by["ScalerFooSetThing"][4] == "fn"
     assert by["tFOO_TABLE"][4] == "const" and by["tFOO_TABLE"][6] == 128
     assert by["AwtoThing"][0] == "Ours: Awto* inserts" and by["AwtoThing"][1] == "15 Awto* port"
-
-
-# ---------------- keil2sdcc per-module rules ----------------
-def test_keil2sdcc_module_rules(tmp_path):
-    import keil2sdcc as K
-    (tmp_path / "reg").mkdir()
-    (tmp_path / "reg/rules.py").write_text(
-        'WRAPS = [("A/b.c", r"^x", r"^y", "_AWTO_NEW_REG")]\nSUBS = [("A/b.c", r"\\bold\\(", "new(")]\n')
-    n_w = len(K.WRAPS)
-    K.load_module_rules(tmp_path)
-    try:
-        assert K.WRAPS[-1][3] == "_AWTO_NEW_REG" and len(K.WRAPS) == n_w + 1
-        from collections import Counter
-        st = Counter()
-        assert K.apply_subs("A/b.c", "old(1); old(2);", st) == "new(1); new(2);" and st["subs"] == 2
-        with pytest.raises(SystemExit):
-            K.apply_subs("A/b.c", "nothing here", Counter())
-    finally:
-        del K.WRAPS[n_w:]; K.SUBS.clear()
 
 
 # ---------------- unit_lock ----------------

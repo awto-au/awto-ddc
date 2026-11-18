@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import unit_health as H  # noqa: E402
 
-MAPS = {"g_stAwtoDiag": 0xF6D0, "g_stModeInfo": 0xF2A5, "g_stPowerInfo": 0xF2B0, "g_stMDomainInputData": 0xF0D9,
+MAPS = {"isr_g_stAwtoDiag": 0xF6D0, "isr_g_stModeInfo": 0xF2A5, "isr_g_stPowerInfo": 0xF2B0, "g_stMDomainInputData": 0xF0D9,
         "g_stOsdInfo": 0xEA89, "g_ulInputActiveRegionBackUp": 0xEE9F, "osd_ofs": {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}}
 TIMING = bytes.fromhex("03 0547 1130 0f00 0226 000b 0259 08ca 0870 004e 0003".replace(" ", ""))
 
@@ -38,7 +38,7 @@ class FakeIo:
         elif sub == 0x3B:
             a = (self.hi << 8) | data[0]
             self.mem[a] = self.val
-            if a in (MAPS["g_stOsdInfo"] + self.osd_ev, MAPS["g_stAwtoDiag"] + 0x28):
+            if a in (MAPS["g_stOsdInfo"] + self.osd_ev, MAPS["isr_g_stAwtoDiag"] + 0x28):
                 self.pending[a] = self.consume_after
                 if a == MAPS["g_stOsdInfo"] + self.osd_ev:
                     self.mem[MAPS["g_stOsdInfo"] + self.osd_ev - 1] = self.mem.get(MAPS["g_stOsdInfo"] + self.osd_ev - 1, 0) ^ 0x01   # osd state moves
@@ -61,13 +61,17 @@ class FakeIo:
 
 def healthy_mem():
     m = {}
-    d = MAPS["g_stAwtoDiag"]
+    d = MAPS["isr_g_stAwtoDiag"]
     m[d], m[d + 1], m[d + 3] = 0x41, 0x44, 8
-    m[MAPS["g_stModeInfo"]] = 0x43
-    m[MAPS["g_stPowerInfo"]] = 0x2F
+    m[MAPS["isr_g_stModeInfo"]] = 0x43
+    m[MAPS["isr_g_stPowerInfo"]] = 0x2F
     for i, b in enumerate(TIMING):
         m[MAPS["g_stMDomainInputData"] + i] = b
     m[0xFE2A], m[0xFE1A] = 0x00, 0x01
+    d = MAPS["isr_g_stAwtoDiag"]                                       # delay cal block (fw/diag/delaycal.c), 10 x 5 us, 100 us, 550 ms T3
+    for off, v in ((0x1B, 18273), (0x1D, 365), (0x20, 731), (0x22, 731), (0x24, 365), (0x26, 62812)):
+        m[d + off], m[d + off + 1] = v >> 8, v & 255
+    m[d + 0x1F] = 0xE3                                                 # RCAP2H: M2PLL row, 7309 counts per tick
     return m
 
 
@@ -80,7 +84,7 @@ class Clock:
         self.sync()
 
     def sync(self):
-        d = MAPS["g_stAwtoDiag"]
+        d = MAPS["isr_g_stAwtoDiag"]
         self.mem[d + 0x14], self.mem[d + 0x15] = self.hb >> 8, self.hb & 255
         self.mem[d + 0x16], self.mem[d + 0x17] = self.t2 >> 8, self.t2 & 255
 
@@ -151,7 +155,7 @@ def test_timing_exact_from_count():
 
 def test_power_saving_fails():
     m = healthy_mem()
-    m[MAPS["g_stModeInfo"]] = 0x46
+    m[MAPS["isr_g_stModeInfo"]] = 0x46
     m[0xFE2A], m[0xFE1A] = 1, 0
     r = names(run_all(m))
     assert not r["mode state"] and not r["backlight en"] and not r["panel power"] and r["power status"]
@@ -180,7 +184,7 @@ def test_slow_loop_fails():
 
 def test_block_path_used_when_version_2():
     mem = healthy_mem()
-    mem[MAPS["g_stAwtoDiag"] + 2] = 2
+    mem[MAPS["isr_g_stAwtoDiag"] + 2] = 2
     clk = Clock(mem)
     io, rep = FakeIo(mem), H.Report()
     H.run(H.Dbg(io), MAPS, (3840, 2160, 60.0), rep, wait=clk.wait)
@@ -191,22 +195,25 @@ def test_block_path_used_when_version_2():
 
 def test_byte_path_when_version_1():
     mem = healthy_mem()
-    mem[MAPS["g_stAwtoDiag"] + 2] = 1
+    mem[MAPS["isr_g_stAwtoDiag"] + 2] = 1
     io, rep = FakeIo(mem), H.Report()
     H.run(H.Dbg(io), MAPS, (3840, 2160, 60.0), rep, wait=Clock(mem).wait)
     assert all(names(rep).values()) and io.blk_reads == 0
 
 
 def test_osd_layout_selfreport_dp_debug():
-    """Image with _DP_DEBUG_MSG: firmware reports offsets +1; the map model (DP-info symbol linked) must say the same (#37)."""
+    """Image with _DP_DEBUG_MSG: g_stOsdInfo is 16 B, offsets +1; the map model (size from the next symbol, #124) must say the same (#37)."""
     import rtd_proto as P
-    assert P.osd_offsets_from_map("CH_OsdPropGetShowDpInfoStringAddress=0x1") == {"usOsdState": 4, "ucOsdEventMsg": 6, "ucOsdKeyMessage": 7}
+    dp_map = "D:  0000EA89  _g_stOsdInfo\nD:  0000EA99  _next\n"
+    legacy_map = "D:  0000EA89  _g_stOsdInfo\nD:  0000EA98  _next\n"
+    assert P.osd_offsets_from_map(dp_map) == {"usOsdState": 4, "ucOsdEventMsg": 6, "ucOsdKeyMessage": 7}
+    assert P.osd_offsets_from_map(legacy_map) == P.OSD_OFS_LEGACY
     assert P.osd_offsets_from_map("nothing") == P.OSD_OFS_LEGACY
     assert P.osd_offsets_from_diag(bytes([0, 0, 0])) is None
     dp = {"usOsdState": 4, "ucOsdEventMsg": 6, "ucOsdKeyMessage": 7}
     mem = healthy_mem()
     for i, b in enumerate((4, 6, 7)):
-        mem[MAPS["g_stAwtoDiag"] + 0x2C + i] = b
+        mem[MAPS["isr_g_stAwtoDiag"] + 0x2C + i] = b
     mp = dict(MAPS, osd_ofs=dp)
     rep = H.Report()
     clk = Clock(mem)

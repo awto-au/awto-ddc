@@ -307,6 +307,7 @@ def test_erase_loop_logs_progress(tmp_path):
 def test_enter_isp_failure_still_sends_reset(monkeypatch, tmp_path):
     img = tmp_path / "AWT0-x.bin"
     img.write_bytes(b"\xff" * SECTOR)
+    monkeypatch.setenv("AWTO_VIA_DEV", "1")                 # --write outside dev.py is refused (#167)
     monkeypatch.setattr(sys, "argv", ["rtd_flash_image.py", "7", str(img), "--serial", "AWT0", "--write"])
     monkeypatch.setattr(I.F, "repo_root", lambda: tmp_path)
     monkeypatch.setattr(I.i2cbus, "require_unit", lambda *a, **k: "AWT0")
