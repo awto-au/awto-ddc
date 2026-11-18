@@ -954,15 +954,12 @@ stub	_AwtoOsdTestReset	C	0x3f64	8
 stub	_ScalerOsdReferenceDelay	C	0x3f6c	8
 stub	_ScalerOsdPositionCorrectSupport	C	0x3f74	8
 stub	_AwtoPacmanClassic	C	0x3f7c	8
-stub	_ScalerOsdScaleUpBoundaryCodition	C	0x3f84	8
 stub	_PcDeltaA	C	0x3f8c	8
 stub	_PcDeltaB	C	0x3f94	8
 stub	_PcGlyph	C	0x3f9c	8
 stub	_PcIdx	C	0x3fa4	8
 stub	_PcPal	C	0x3fac	8
 stub	_PcWord	C	0x3fb4	8
-stub	_ScalerOsdScaleUpVerSize	C	0x3fbc	8
-stub	_ScalerOsdScaleUpOnOff	C	0x3fc4	8
 stub	_AwtoPmSound	C	0x3fcc	8
 stub	_AwtoPmSoundPoll	C	0x3fd4	8
 stub	_PcCellSet	C	0x3fdc	8
@@ -971,7 +968,6 @@ stub	_PcStyle	C	0x3fec	8
 stub	_AwtoOsdPlaceScaleUp	C	0x3ff4	8
 fn	_AwtoWaitLog	C	0x4000	244
 fn	_ScalerTimerWaitForEvent	C	0x40f4	392
-stub	_ScalerOsdScaleUpHorFactor	C	0x427c	8
 stub	_S2Y	C	0x4284	8
 stub	_AstNear	C	0x428c	8
 stub	_AstNewGame	C	0x4294	8
@@ -985,7 +981,6 @@ stub	_AwtoSaverPoll	C	0x42cc	8
 stub	_set_ap_screensaver	C	0x42d4	8
 stub	_set_ap_screensaver_now	C	0x42dc	8
 stub	_set_ap_screensaver_s	C	0x42e4	8
-stub	_ScalerOsdScaleUpHorSize	C	0x42ec	8
 stub	_AwtoOsdRowCmds	C	0x42f4	8
 stub	_AwtoOsdScreenBegin	C	0x42fc	8
 stub	_AwtoOsdRotCell	C	0x4304	8
@@ -999,7 +994,6 @@ stub	_osd_line	C	0x433c	8
 stub	_AstDigits	C	0x4344	8
 stub	_AstDir	C	0x434c	8
 stub	_AwtoScopeSaver2	C	0x4354	8
-stub	_ScalerOsdScaleUpVerFactor	C	0x435c	8
 stub	_S2Params	C	0x4364	8
 stub	_AstPass	C	0x436c	8
 stub	_AstRnd	C	0x4374	8
@@ -1014,10 +1008,8 @@ stub	_AstWorld	C	0x43b4	8
 stub	_AwtoAsteroids	C	0x43bc	8
 stub	_AwtoFlashDraw	C	0x43c4	8
 stub	_AwtoFlashScreen	C	0x43cc	8
-stub	_FsWord	C	0x43d4	8
 stub	_AwtoKeyClick	C	0x43dc	8
 stub	_AwtoOsdRevByte	C	0x43e4	8
-stub	_AwtoOsdRot180	C	0x43ec	8
 stub	_AwtoOsdRotSrc	C	0x43f4	8
 stub	_AwtoOsdTurn	C	0x43fc	8
 stub	_AwtoOsdMap1	C	0x4404	8
@@ -3435,7 +3427,6 @@ fn	_AstShipDie	13	0x22a0	80
 fn	_AstShoot	13	0x22f0	300
 fn	_AstTick	13	0x242c	48
 fn	_AwtoFlashScreen	13	0x245c	800
-fn	_FsWord	13	0x277c	56
 fn	_AwtoDemoPlain	13	0x27b4	96
 fn	_AwtoDemoReset	13	0x2814	56
 fn	_AwtoOsdDemo	13	0x284c	1860

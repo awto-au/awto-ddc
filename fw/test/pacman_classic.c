@@ -14,7 +14,6 @@ extern void osd_tc_close(void);
 #define AWTO_PC_CELLS                           (AWTO_PC_COLS * AWTO_PC_ROWS)
 #define AWTO_PC_FS_BASE                         (AWTO_PC_ROWS + 1)
 #define AWTO_PC_FONT_BASE                       (AWTO_PC_FS_BASE + AWTO_PC_CELLS)
-#define AWTO_PC_ROW_B0                          0x80                // row command: present
 #define AWTO_PC_ROW_H                           12                  // visible tile height (the glyphs are 18 rows, the rest is cut)
 #define AWTO_PC_TILE_W                          12
 #define AWTO_PC_RGB                             3
@@ -234,22 +233,13 @@ void AwtoPacmanClassic(BYTE ucCmd)
         s_usStep++;
         return;
     }
-    osd_tc_close();                                                         // our own OSD off, windows closed
-    g_ucAwtoOsdRot = AwtoOsdRot180();
-    AwtoOsdTestReset();
-    ScalerOsdGlobalDoubleBuffer(_DISABLE);
-    ScalerOsdCircuitActivated(_ENABLE);
-    ScalerOsdVerticalStartSelect(_OSD_VSYNC_SELECT_DVS);
+    AwtoOsdScreenBegin();                                                   // our own OSD off, windows closed, rotation latched, state reset
     for(usI = 0; usI < AWTO_PC_PAL_N; usI++)
     {
         ScalerOsdSetColorPalette((BYTE)usI, PcPal((BYTE)(AWTO_PC_RGB * usI + AWTO_PC_R)), PcPal((BYTE)(AWTO_PC_RGB * usI + AWTO_PC_G)), PcPal((BYTE)(AWTO_PC_RGB * usI + AWTO_PC_B)));
     }
     ScalerOsd2FontFunction(_DISABLE);
-    for(usI = 0; usI < AWTO_PC_ROWS; usI++)                                 // row commands: present, height - 1, tiles per row
-    {
-        PcWord(usI, AWTO_PC_ROW_B0, AWTO_PC_ROW_H - 1, AWTO_PC_COLS);
-    }
-    PcWord(AWTO_PC_ROWS, AWTO_PC_ZERO, AWTO_PC_ZERO, AWTO_PC_ZERO);        // end of the row commands
+    AwtoOsdRowCmds(AWTO_PC_ROWS, AWTO_PC_ROW_H, AWTO_PC_COLS);
     PcMaze();
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_PC_FONT_BASE, _OSD_WITHOUT_DB);
     for(usI = 0; usI < AWTO_PC_GLYPH_BYTES; usI += AWTO_PC_BLOCK_BYTES)             // per glyph plane block

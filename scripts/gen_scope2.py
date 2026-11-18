@@ -13,6 +13,7 @@ import argparse
 import os
 import sys
 import isostamp  # noqa: E402
+import osd_gfx as OG  # noqa: E402
 from pathlib import Path
 
 import numpy as np
@@ -121,20 +122,9 @@ def draw_static(geo):
 
 
 def pack(plane, tx, ty, turned=False):
-    """One 12 x 18 tile -> 27 stream bytes (the byte order of the OSD data port): word w = rows 2w, 2w + 1, pixel p = (y & 1) * 12 + x
-    at bit 23 - p of the 24-bit word, bytes low first. turned: the tile turned 180 inside itself (Rotate 180, docs/osd-rotation.md)."""
-    t = plane[ty * TH:(ty + 1) * TH, tx * TW:(tx + 1) * TW]
-    if turned:
-        t = t[::-1, ::-1]
-    out = bytearray()
-    for w in range(TH // 2):
-        v = 0
-        for y in (2 * w, 2 * w + 1):
-            for x in range(TW):
-                if t[y, x]:
-                    v |= 1 << (23 - ((y & 1) * TW + x))
-        out += bytes((v & 0xFF, (v >> 8) & 0xFF, v >> 16))
-    return bytes(out)
+    """One 12 x 18 tile -> 27 stream bytes (the byte order of the OSD data port, osd_gfx.pack_rows). turned: the tile turned 180 inside itself (Rotate 180, docs/osd-rotation.md)."""
+    rows = [[int(v) for v in r] for r in plane[ty * TH:(ty + 1) * TH, tx * TW:(tx + 1) * TW]]
+    return OG.pack_rows(OG.turned(rows) if turned else rows)
 
 
 def tiles(geo):
@@ -142,11 +132,7 @@ def tiles(geo):
     uniq, ids, cell = {}, [], []
     for ty in range(geo.rows):
         for tx in range(geo.cols):
-            key = (pack(msb, tx, ty), pack(lsb, tx, ty))
-            if key not in uniq:
-                uniq[key] = len(uniq)
-                ids.append(key)
-            cell.append(uniq[key])
+            cell.append(OG.add_unique(ids, uniq, (pack(msb, tx, ty), pack(lsb, tx, ty))))
     return ids, cell
 
 
@@ -252,12 +238,7 @@ def emit(raster: int) -> str:
     return "\n".join(o) + "\n"
 
 
-def say(s: str) -> None:
-    LOG.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{isostamp.now()} {s}"
-    with LOG.open("a") as f:
-        f.write(line + "\n")
-    print(line, flush=True)
+say = OG.logger(LOG)
 
 
 def main() -> int:

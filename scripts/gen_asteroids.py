@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp  # noqa: E402
+import osd_gfx as OG  # noqa: E402
 import asteroids_dvg as D  # noqa: E402
 
 STEPS = 16                      # ship angles per quarter turn
@@ -151,12 +152,7 @@ def preview(sh, path):
     img.save(path)
 
 
-def repo_root():
-    env = os.environ.get("AWTO_DDC_REPO")
-    if env:
-        return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True)
-    return Path(r.stdout.strip()) if r.returncode == 0 and r.stdout.strip() else Path(__file__).resolve().parents[1]
+repo_root = OG.repo_root
 
 
 def main():
@@ -167,6 +163,7 @@ def main():
     ap.add_argument("--fallback", action="store_true", help="own outlines even when the ROM is there")
     ap.add_argument("--zip", default=os.environ.get("ASTEROIDS_ZIP", D.DEFAULT_ZIP))
     ap.add_argument("--png", type=Path)
+    ap.add_argument("--check", action="store_true", help="exit 1 when the file on disk differs (nothing written)")
     a = ap.parse_args()
     (root / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOG = (root / "tmp/logs/gen_asteroids.log").open("a")
@@ -184,7 +181,11 @@ def main():
     for i, d in enumerate(DIGITS):
         sh[ID_DIGIT + i] = [list(pl) for pl in d]
     text, n = inc_text(sh, src)
-    if not a.out.exists() or a.out.read_text() != text:
+    same = a.out.exists() and a.out.read_text() == text
+    if a.check:
+        say(f"{a.out.name}: {'matches' if same else 'DIFFERS'}")
+        return 0 if same else 1
+    if not same:
         a.out.write_text(text)
     say(f"asteroids shapes: {src}, {N_SHAPES} shapes, {n} B -> {a.out}")
     if a.png:
