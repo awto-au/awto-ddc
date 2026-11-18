@@ -1,6 +1,6 @@
 # OSD rotation for our own full-screen OSD screens
 
-Status 2026-11-18. Code: `fw/osd/osd_rot.c`. Users: Pac-Man (`fw/test/pacman_classic.c`), scope savers (`scope_saver.c`, `scope_saver2.c`). The menu / console use the same rule in `fw/osd/text_layer.c`.
+Status 2026-11-18. Code: `fw/osd/osd_rot.c`. Users: Pac-Man (`fw/test/pacman_classic.c`), scope savers (`scope_saver.c`, `scope_saver2.c`), Asteroids (`asteroids.c`). The menu / console use the same rule in `fw/osd/text_layer.c`.
 
 ## Why
 

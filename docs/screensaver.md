@@ -21,6 +21,10 @@ Status: design only; nothing built. Prototypes today are test cmds, not screensa
 - Settings: registry `fw/rtdfw/settings/registry.tsv` (`scripts/settings_gen.py`), menu card `fw/osd/`.
 - Pac-Man image needs ~24 KB of data across banks 11 / 12 (bank 13 is full); the scope needs its own tile map + per-frame tile uploads; check cost.
 
+## Asteroids (2026-11-18)
+
+- Fifth saver, game logic on the chip: `docs/asteroids.md`. Setting 119 value 5, VCP 0xEB = 8, joins Alternate (Pac-Man, Scope, Scope 2, Asteroids), sound through the Pac-Man generator.
+
 ## Open
 
 - Draw-over-picture cost and OSD state restore (pop-on, scale-up, palette are reset by `AwtoOsdTestReset` today).

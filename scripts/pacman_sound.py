@@ -61,6 +61,20 @@ SIREN_STEP_MS = (40, 30, 20)
 # Frightened (power pellet): fast rising saw 400 -> 1000 Hz, 6 steps of 20 ms, repeated.
 FRIGHT = [(400 + 120 * i, 20) for i in range(6)]
 
+# Asteroids screensaver (docs/asteroids.md): fire = falling zap; explosions = falling, jittering tones (alternate x0.8 / x1.3 per step, floor 200 Hz:
+# the octave flag reaches 189 Hz); thrust and saucer = low loops (background states 5 / 6 of AwtoPmSoundBg).
+def boom(n: int, ms: int, f0: int, f1: int):
+    return [(max(200, round((f0 + (f1 - f0) * i / (n - 1)) * (1.3 if i % 2 else 0.8))), ms) for i in range(n)]
+
+
+AST_FIRE = [(1900 - 150 * i, 8) for i in range(8)]
+AST_BOOM_S = boom(6, 18, 600, 260)
+AST_BOOM_M = boom(10, 20, 640, 220)
+AST_BOOM_L = boom(14, 22, 700, 200)
+AST_BOOM_SHIP = boom(28, 25, 800, 200)
+AST_THRUST = [(200, 30), (260, 30), (220, 30), (280, 30)]
+AST_SAUCER = [(660, 60), (880, 60)]
+
 
 def siren(step_ms: int):
     up = [(round(SIREN_LO_HZ + (SIREN_HI_HZ - SIREN_LO_HZ) * i / (SIREN_STEPS - 1)), step_ms) for i in range(SIREN_STEPS)]
@@ -70,8 +84,10 @@ def siren(step_ms: int):
 # (track, loops). One tone generator: a new sound plays only when its priority >= the playing one's; a looping low
 # priority sound is resumed by the player when the higher one ends. intro / alert / calibration are above everything.
 TRACKS = [("intro", False), ("waka", True), ("death", False), ("alert", False), ("ghost", False), ("fruit", False),
-          ("siren1", True), ("siren2", True), ("siren3", True), ("fright", True)]
-PRIORITY = {"intro": 7, "alert": 7, "ghost": 6, "death": 5, "fruit": 4, "waka": 3, "fright": 2, "siren1": 1, "siren2": 1, "siren3": 1}
+          ("siren1", True), ("siren2", True), ("siren3", True), ("fright", True),
+          ("thrust", True), ("saucer", True), ("fire", False), ("boom_s", False), ("boom_m", False), ("boom_l", False), ("boom_ship", False)]
+PRIORITY = {"intro": 7, "alert": 7, "ghost": 6, "death": 5, "fruit": 4, "waka": 3, "fright": 2, "siren1": 1, "siren2": 1, "siren3": 1,
+            "boom_ship": 6, "boom_l": 5, "boom_m": 4, "boom_s": 4, "fire": 3, "thrust": 2, "saucer": 1}
 
 
 def note_hz(name: str) -> float:
@@ -107,7 +123,8 @@ def steps(track: str):
         return out
     if track.startswith("siren"):
         return siren(SIREN_STEP_MS[int(track[5:]) - 1])
-    return {"waka": WAKA, "death": DEATH, "alert": ALERT, "ghost": GHOST, "fruit": FRUIT, "fright": FRIGHT}[track]
+    return {"waka": WAKA, "death": DEATH, "alert": ALERT, "ghost": GHOST, "fruit": FRUIT, "fright": FRIGHT, "thrust": AST_THRUST,
+            "saucer": AST_SAUCER, "fire": AST_FIRE, "boom_s": AST_BOOM_S, "boom_m": AST_BOOM_M, "boom_l": AST_BOOM_L, "boom_ship": AST_BOOM_SHIP}[track]
 
 
 def encode(track: str, k_hz: float):

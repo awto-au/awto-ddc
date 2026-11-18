@@ -116,11 +116,11 @@ static const struct setting __code tab[SET_COUNT] = {
     {114, 2, 0, 13, 0xC1, 0, 15, 1, 0, 0x00, 33, 1755u, 0xFFFFu},  /* ssc */
     {115, 2, 0, 13, 0x81, 0, 32767, 1, 0, 0x00, 33, 1771u, 0xFFFFu},  /* panel_hours */
     {116, 2, 0, 13, 0x81, 0, 59, 1, 0, 0x00, 33, 1783u, 0xFFFFu},  /* panel_min */
-    {119, 1, 0,  8, 0x03, 0, 4, 1, 0, 0x00, 29, 1797u, 0x0711u},  /* screensaver */
-    {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1845u, 0xFFFFu},  /* screensaver_s */
-    {121, 1, 0,  8, 0x02, 0, 7, 1, 0, 0xEB, 30, 1862u, 0x0756u},  /* screensaver_now */
-    {122, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1951u, 0xFFFFu},  /* boot_splash */
-    {123, 0, 0, 11, 0x03, 0, 1, 1, 0, 0x00, 0, 1963u, 0xFFFFu},  /* key_click */
+    {119, 1, 0,  8, 0x03, 0, 5, 1, 0, 0x00, 29, 1797u, 0x0711u},  /* screensaver */
+    {120, 2, 3,  8, 0x03, 0, 3600, 10, 0, 0x00, 31, 1855u, 0xFFFFu},  /* screensaver_s */
+    {121, 1, 0,  8, 0x02, 0, 8, 1, 0, 0xEB, 30, 1872u, 0x0760u},  /* screensaver_now */
+    {122, 0, 0,  8, 0x03, 0, 1, 1, 1, 0x00, 0, 1971u, 0xFFFFu},  /* boot_splash */
+    {123, 0, 0, 11, 0x03, 0, 1, 1, 0, 0x00, 0, 1983u, 0xFFFFu},  /* key_click */
 };
 
 static const uint8_t __code id2idx[124] = {
@@ -159,10 +159,10 @@ static const char __code txt[] =
     "V freq\0""Mode state\0""Loop rate /s\0""Settings schema\0""H freq\0""Pixel clock\0""HDCP\0""Off\0""On\0"
     "Diagnostic console\0""Off\0""Until signal\0""Always\0""Power on\0""DP lanes\0""DP IRQ HPD x10 us\0"
     "Spread spectrum\0""Panel hours\0""Panel minutes\0""Screensaver\0""Off\0""Pac-Man\0""Scope\0""Scope 2\0"
-    "Alternate\0""Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0""Scope\0""Scope 2\0"
-    "Flash warning\0""Alert tone\0""Boot splash\0""Boot splash\0""Key click\0""Picture\0""Colour\0"
-    "Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0""Debug\0"
-    "Audio\0""System\0""Service\0""Information\0";
+    "Alternate\0""Asteroids\0""Screensaver idle\0""Screensaver now\0""Stop\0""Selected\0""Pac-Man\0""Scope\0"
+    "Scope 2\0""Flash warning\0""Alert tone\0""Boot splash\0""Asteroids\0""Boot splash\0""Key click\0""Picture\0"
+    "Colour\0""Six-axis colour\0""Display\0""Input\0""KVM switching\0""Signal\0""Power\0""OSD\0""Panel timing\0"
+    "Debug\0""Audio\0""System\0""Service\0""Information\0";
 
 /* enum rows whose VCP values are not the option index: (row, option, vcp value) */
 static const uint8_t __code vopt[16][3] = {
@@ -184,12 +184,12 @@ static const uint8_t __code vopt[16][3] = {
     {91, 4, 0x05},
 };
 
-/* DDC/CI capabilities (379 chars), from the vcp column; read by set_caps_at only */
+/* DDC/CI capabilities (382 chars), from the vcp column; read by set_caps_at only */
 static const char __code caps[] =
     "(prot(monitor)type(LCD)model(awto-mon)cmds(01 02 03 0C F3)vcp(02 04 08 10 12 14(08 06 05 04 01 0B) 1"
     "6 18 1A 60(0F 11 12) 62 87 8D(02 01) C8 C9 D6(01 02 03 04 05) DF E0 E1 E2 E3 E4 E5 E6 E7 EA EB(00 01"
-    " 02 03 04 05 06 07) EC ED EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F9 F"
-    "A FB FC(00 01 02 03 04 05) FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
+    " 02 03 04 05 06 07 08) EC ED EE EF(00 01) F0 F1(00 01 02) F2(00 01 02 03 04) F3 F4(00 01) F6 F7 F8 F"
+    "9 FA FB FC(00 01 02 03 04 05) FD(00 01 02) FE(00 01 02 03 04 05) FF)mccs_ver(2.2))";
 
 static const uint8_t __code vcode[36][2] = {
     {0x04, 89},
@@ -257,7 +257,7 @@ static const uint8_t __code pinfo[SET_PAGES][3] = {    /* first entry, entries, 
     {101, 6, 0x0C},  /* Service */
     {107, 10, 0xFF},  /* Information */
 };
-static const uint16_t __code ptitle[SET_PAGES] = {1973u, 1981u, 1988u, 2004u, 2012u, 2018u, 2032u, 2039u, 2045u, 2049u, 2062u, 2068u, 2074u, 2081u, 2089u};
+static const uint16_t __code ptitle[SET_PAGES] = {1993u, 2001u, 2008u, 2024u, 2032u, 2038u, 2052u, 2059u, 2065u, 2069u, 2082u, 2088u, 2094u, 2101u, 2109u};
 
 uint8_t set_idx(uint8_t id)
 {
@@ -348,7 +348,7 @@ int16_t set_opt_from_vcp(uint8_t idx, uint8_t vcpv)
 
 uint16_t set_caps_len(void)
 {
-    return 379u;
+    return 382u;
 }
 
 char set_caps_at(uint16_t i)
