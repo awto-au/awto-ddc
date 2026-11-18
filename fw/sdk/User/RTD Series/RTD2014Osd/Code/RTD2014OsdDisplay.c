@@ -213,10 +213,6 @@ BYTE OsdDisplayGetVGAModeString(bit bUserMode);
 
 void OsdDispDisableOsd(void);
 
-#if(_VGA_SUPPORT == _ON)
-void OsdDispMainSubString(BYTE ucState);
-#endif
-
 void OsdDispOsdMessage(EnumOSDDispMsg enumMessage);
 
 #if(_VGA_SUPPORT == _ON)
@@ -288,40 +284,6 @@ void OsdDispDisableOsd(void)
 
 
 
-#if(_VGA_SUPPORT == _ON)
-//--------------------------------------------------
-// Description  :
-// Input Value  :
-// Output Value :
-//--------------------------------------------------
-void OsdDispMainSubString(BYTE ucState)
-{
-    switch(ucState)
-    {
-        case _AUTO_CONFIG_DO:
-            OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_2, ROW(14), COL(17), WIDTH(10), HEIGHT(5), _CP_LIGHTBLUE, _CP_RED, _CP_BG);
-            OsdPropPutString(ROW(14), COL(19), _PFONT_PAGE_1, _STRING_AUTO_ADJUST, COLOR(_CP_BG, _CP_BG), GET_OSD_LANGUAGE());
-            OsdPropPutString(ROW(16), COL(19), _PFONT_PAGE_1, _STRING_PLEASE_WAIT, COLOR(_CP_BG, _CP_BG), GET_OSD_LANGUAGE());
-            break;
-
-        case _AUTO_CONFIG_RESULT:
-            if(g_usAdjustValue != 100)
-            {
-                OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_2, ROW(14), COL(17), WIDTH(10), HEIGHT(5), _CP_LIGHTBLUE, _CP_RED, _CP_BG);
-                OsdPropPutStringCenter(ROW(15), COL(0), WIDTH(_OSD_MAIN_MENU_WIDTH), _PFONT_PAGE_1, _STRING_FAIL, COLOR(_CP_BG, _CP_BG), GET_OSD_LANGUAGE());
-            }
-            else
-            {
-                OsdWindowDrawingByFontHighlight(_OSD_WINDOW_4_2, ROW(14), COL(17), WIDTH(10), HEIGHT(5), _CP_LIGHTBLUE, _CP_GREEN_119, _CP_BG);
-                OsdPropPutStringCenter(ROW(15), COL(0), WIDTH(_OSD_MAIN_MENU_WIDTH), _PFONT_PAGE_1, _STRING_PASS, COLOR(_CP_BG, _CP_BG), GET_OSD_LANGUAGE());
-            }
-            break;
-
-        default:
-            break;
-    }
-}
-#endif
 
 
 
