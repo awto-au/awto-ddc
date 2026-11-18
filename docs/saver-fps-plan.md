@@ -6,6 +6,8 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 - Tools: `scripts/saver_fps_probe.py` (frames/s, port bytes / frame, calls / frame, cost per call in a burst), `scripts/saver_fps_model.py` (Scope 1 tile counts), `saver_loop_cost.py --pcprof` (per-pass split + PC shares), `saver_frames_md5.py` (pixel identity).
 - Asteroids md5 proof needs `-D _AWTO_AST_FIXED_TICKS` on both images (2 ticks per frame, unpaced): a paced frame lands on time-dependent ticks.
 
+- Update 2026-11-19: default clock is now MCU 350.8 / flash 70.2 MHz and OSD stores are direct; measured fps per clock and the open run-glyph tests (T-A, T-C): `docs/saver-fps-hw.md` "Update 2026-11-19", `docs/clock-sweep.md`. Sim numbers below predate that.
+
 ## Frame budget (all savers)
 
 | item | value | source |

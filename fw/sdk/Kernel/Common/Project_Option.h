@@ -388,6 +388,9 @@
 //-------------------------------------------------
 #if(_MCU_SPEED_UP_SUPPORT == _ON)
 #define _CKCON_MCU_SLOW_CYCLE                                   _CKCON_MOVX_9_CYCLE
+#elif defined(_AWTO_OSD_HWTEST)
+extern __xdata unsigned char g_ucAwtoFlCk;                      // 0 = default (2 cycles); set by the clock test op (docs/clock-sweep.md)
+#define _CKCON_MCU_SLOW_CYCLE                                   g_ucAwtoFlCk
 #else
 #define _CKCON_MCU_SLOW_CYCLE                                   _CKCON_MOVX_DEFAULT_CYCLE
 #endif

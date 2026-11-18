@@ -4,6 +4,7 @@
 - Review 2026-11-13 by two read-only agents. Code = main 722e32d / image wb-p14ui-amp2. Panel T6 since then: 900 ms, run at power-down (b70095c).
 - Rule (Dan, 2026-11-13): every delay = **datasheet / spec value - 10 %**, never an added margin. Timeouts (event waits that fail on expiry) = 1.25 x expected worst case. Rule text: awto-dan `docs/agents/agent-rules.md`.
 - Columns: what it waits for, value, where defined, **what decided it**, source value, ratio code/source.
+- Clock decisions, SDK-count error, freed bytes, open decisions, `AwtoMs` tick-loss finding, gate fixes: `docs/delay-audit.md` only. `fw/diag/delaycal.c` (cited below) was removed 2026-11-18; counts are compile-time.
 - Superseded: the older `re/delays.tsv` / `re/delays_reasons.tsv` (image wb-stepB 1100f24; cite a BOE panel datasheet).
 
 # Part 1: inventory

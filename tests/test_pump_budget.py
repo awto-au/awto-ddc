@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import pump_sim as P  # noqa: E402
 
-IMGS = sorted((ROOT / "tmp/fw").glob("AWT26110003-*-be.bin"))
+IMGS = sorted((ROOT / "tmp/fw").glob("AWT26110003-*-clk87-be.bin"))      # the stock-clock build: at 350.8 MHz the old 1 ms stamp check never fails (nothing left to show)
 PHASES = (0.1, 0.5, 0.9)     # fraction of a Timer2 tick left at injection: 0.1 is the phase where the old 1 ms stamp check failed
 IPM = 7500.0                 # order of the measured sim rate; the formula is what is tested here
 

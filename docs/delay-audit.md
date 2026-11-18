@@ -34,6 +34,20 @@
 - Clock switches lose Timer2 time (24 changes in the panel scenario, about 4 ms each on the 7 MHz crystal step): whole-scenario Timer2 / wall = 0.995 [emu]; not a wait error.
 - Delay = spec - 10 % rows (panel T-values etc.): `docs/delays.md`; unchanged.
 
+## Findings and open decisions (2026-11-18/19)
+- Decision: delays are build-time constants from `AWTO_CLOCK_MHZ` (above); boot-time calibration deleted. Freed: code -1135 B, XDATA -2 B (map before / after).
+- Error found: SDK counts 26 / 21 (`_M2PLL_DELAY*_CNT`) at 350.8 MHz would have run at ~24 % of nominal; boot calibration was skipped above `RCAP2H` 0xE3 [sdk-hypothesis wrong at this clock, derived from the count arithmetic and the sim]. IOSC old counts 3 / 6 gave 43 % of nominal.
+- Inventory: 564 linked sites, 0 FIX / UNKNOWN; classes A 303 (timer), B 154 (micro-delay), C 44 (loop count: 29 NOCLOCK, 14 SCALES-BENIGN, 1 OK), D 13, E 50.
+- Finding, not fixed (Dan's call): `AwtoMs()` / Timer2 loses ticks while a high-priority EXINT0 handler runs >= ~1 ms (power-saving priority swap). Sim: 2.0 ms wall = 1.14 ms firmware ms. Timer0 events are unaffected.
+  - Gate `wdt` case `t0_arm_from_isr` now judges the EXINT0-armed Timer0 event in wall ms with derived bounds 8.0..12.0 ms: not a firmware regression.
+- Gate fixes: `delays` inventory keys were absolute worktree paths (now repo-relative); gates `inputrate` and canary timeouts 90 s.
+- Open decisions (listed with ids in `docs/open-decisions.md`):
+  - IOSC tolerance: measure the PS Timer2 period vs host clock once; sets the IOSC counts 8 / 6 and `_TMDS_DDC_DEBOUNCE_PS`.
+  - `_TMDS_DDC_DEBOUNCE_PS` = 55 gives 197 us vs 263 us normal (SDK comment says 300 us) [sdk-hypothesis].
+  - Delete the 807 B diag delay measurement after hardware confirmation of the compile-time counts.
+  - DPS17 pass-row pulse counted in only 45 % of phases (existing, #110).
+  - 9-cycle MOVX wrapper around `FF60..FF6F` kept; NVRAM write / erase above 87.7 MHz untested.
+
 ## Spin loops (class C): 44 rows
 - DDC debounce (`ScalerSyncDdcDetectDebounce_EXINT1`): 100.2..100.5 clk per pass [emu]; count = `AWTO_CPU_KHZ_M2PLL / 381` = 920 (350.8) / 460 (175.4) / 230 (87.7) = 262.7 / 263.0 / 263.5 us. SDK comment says 300 us [sdk-hypothesis]; the stock count never gave 300. Sweep [hw]: debounce 920 at 350.8.
 - `ScalerDebugMessage` / `ScalerDebug`: 5 FIFO reads, about 5 us at 87.7 MHz, 1.3 us at 350.8: a give-up not a wait (the host drains at I2C rate). Not our log path. SCALES-BENIGN.

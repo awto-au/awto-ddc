@@ -10,7 +10,9 @@ usage: regmap_query.py 06A4 [KEY ...]            one register: all columns + its
        regmap_query.py --candidates [sensor]     status candidate (optionally one class)
        regmap_query.py --status unknown | --class counter | --grep TEXT   filters (combine freely)
        regmap_query.py --tests                   status candidate / unknown rows (and fields) whose test is not done, by test id (tests.tsv state; OT / T ids: docs/osd/open-items.md)
-       regmap_query.py --obs 06A4                every observation of a key (source, unit, label, time, method, value)
+       regmap_query.py --i2c [TEXT]              device / command / SCDC rows of i2c.tsv (optionally those containing TEXT)
+       regmap_query.py --no-test                 status candidate / unknown with no test_id (needs a test written)
+       regmap_query.py --obs 06A4               every observation of a key (source, unit, label, time, method, value)
 Options: --tsv (raw rows), --limit N (default 200, 0 = all)
 """
 import argparse
@@ -42,6 +44,8 @@ def main():
     ap.add_argument("--grep")
     ap.add_argument("--tests", action="store_true")
     ap.add_argument("--obs")
+    ap.add_argument("--i2c", nargs="?", const="")
+    ap.add_argument("--no-test", action="store_true")
     ap.add_argument("--tsv", action="store_true")
     ap.add_argument("--limit", type=int, default=200)
     a = ap.parse_args()
@@ -54,6 +58,11 @@ def main():
                 m = o.meta
                 print(f"{k}\t{o.vals[k]:02X}\t{o.sid}\tunit {m.get('unit')}\t{m.get('label')}\t{m.get('state')}\t{m.get('time')}\t{m.get('method')}")
         print(f"{n} observation(s)", file=sys.stderr)
+        return 0
+    if a.i2c is not None:
+        for r in L.read_tsv(L.I2C)[1]:
+            if a.i2c.lower() in " ".join(r.values()).lower():
+                print(f"{r['key']:9} {r['status'] or '-':9} {r['test_id'] or '-':9} {r['role'][:70]}")
         return 0
     _, rows = L.read_tsv(L.REGS)
     _, flds = L.read_tsv(L.FIELDS)
@@ -89,14 +98,19 @@ def main():
     if a.grep:
         g = a.grep.lower()
         sel = [r for r in sel if g in " ".join([r["regdb_name"], r["sdk_name"], r["our_name"], r["role"], r["notes"], r["regdb_fields"]]).lower()]
+    if a.no_test:
+        sel = [r for r in sel if r["status"] in ("candidate", "unknown") and not r["test_id"]]
     if a.tests:
+        for r in L.read_tsv(L.I2C)[1]:
+            if r["status"] in ("candidate", "unknown"):
+                print(f"i2c   {r['key']:9} {r['status']:9} {r['test_id']:8} {r['role'][:60]}")
         done = {t["id"] for t in L.read_tsv(L.TESTS)[1] if t["state"] == "done"}
         sel = [r for r in sel if r["status"] in ("candidate", "unknown") and not (r["test_id"] and set(r["test_id"].replace(",", " ").split()) <= done)]
         sel.sort(key=lambda r: (r["test_id"] or "~", r["key"]))
         for f in flds:
             if f["status"] in ("candidate", "unknown"):
                 print(f"field {f['fkey']:12} {f['name'][:30]:30} {f['status']:9} {f['test_id']:8} {f['role'][:60]}")
-    if not any([a.page, a.undocumented_nonzero, a.changing, a.varying, a.candidates is not None, a.status, a.cls, a.grep, a.tests]):
+    if not any([a.page, a.undocumented_nonzero, a.changing, a.varying, a.candidates is not None, a.status, a.cls, a.grep, a.tests, a.no_test]):
         ap.print_help()
         return 2
     if a.tsv:

@@ -5,6 +5,7 @@ usage: regmap_build.py --write                      regenerate regs.tsv + fields
        regmap_build.py --check                      FAIL on a stale file, a bad hand column, an unknown key / test / tag, a bad observation file
        regmap_build.py --set KEY col=val ...        set hand columns of a register row (KEY = PPAA or PPAA:II), then --write
        regmap_build.py --set-field KEY[hi:lo] col=val ...   same for a field row
+       regmap_build.py --set-i2c KEY col=val ...    set columns of a device / command row of i2c.tsv (KEY = I2C:AA | SCDC:OO | CMD:CC)
        regmap_build.py --stats                      row counts by status / class
 Generated columns come from re/regdb (primary + other chips), the SDK headers, AwtoRegs.h and the observation store re/regmap/obs.
 Log: ./tmp/logs/regmap.log
@@ -109,6 +110,18 @@ def validate(rows, frows, errs):
             errs.append(f"{r['key']}: sdk_status {r['sdk_status']!r}")
     for r in frows:
         errs += L.check_hand(r, r["fkey"], tests)
+    icols, irows = L.read_tsv(L.I2C)
+    if irows and icols != L.I2C_COLS:
+        errs.append(f"i2c.tsv columns {icols}")
+    ikeys = [r["key"] for r in irows]
+    if ikeys != sorted(ikeys) or len(set(ikeys)) != len(ikeys):
+        errs.append("i2c.tsv: keys must be unique and sorted")
+    for r in irows:
+        if not L.I2C_KEY_RE.match(r["key"]):
+            errs.append(f"i2c.tsv: bad key {r['key']!r} (I2C:AA 7-bit address / SCDC:OO offset at 0x54 / CMD:CC command byte)")
+        errs += L.check_hand(r, r["key"], tests)
+    if irows and L.tsv_text(L.I2C_COLS, irows) != L.I2C.read_text():
+        errs.append("i2c.tsv is not in canonical form (column order / trailing cells)")
     cols, trows = L.read_tsv(L.TESTS)
     if trows and cols != L.TEST_COLS:
         errs.append(f"tests.tsv columns {cols}")
@@ -158,6 +171,7 @@ def main():
     g.add_argument("--stats", action="store_true")
     g.add_argument("--set", nargs="+", metavar="KEY col=val")
     g.add_argument("--set-field", nargs="+", metavar="FKEY col=val")
+    g.add_argument("--set-i2c", nargs="+", metavar="KEY col=val")
     a = ap.parse_args()
     old_regs, old_flds = load_old()
     if a.set:
@@ -180,6 +194,19 @@ def main():
             row = {"fkey": a.set_field[0]}
             old_flds.append(row)
         row.update(d)
+    if a.set_i2c:
+        d = parse_kv(a.set_i2c[1:])
+        bad = set(d) - set(L.I2C_COLS[1:])
+        if bad:
+            sys.exit(f"not i2c columns: {sorted(bad)}; columns: {L.I2C_COLS[1:]}")
+        _, irows = L.read_tsv(L.I2C)
+        row = next((r for r in irows if r["key"] == a.set_i2c[0]), None)
+        if row is None:
+            row = {"key": a.set_i2c[0]}
+            irows.append(row)
+        row.update(d)
+        irows.sort(key=lambda r: r["key"])
+        L.I2C.write_text(L.tsv_text(L.I2C_COLS, irows))
     rows, frows, errs = build(old_regs, old_flds)
     errs = validate(rows, frows, errs)
     if a.stats:

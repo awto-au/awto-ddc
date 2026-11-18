@@ -3,6 +3,28 @@
 - Format: date | what was believed or tried | why superseded | link.
 - Live docs and open issues hold current state only. Newest first, sections per area.
 
+## 2026-11-18 / 19 session (decisions and results)
+- Superseded:
+  - 2026-11-18 | stock clock MCU 87.7 / flash 43.85 MHz; boot-time delay calibration (`fw/diag/delaycal.c`) | default now MCU 350.8 / flash 70.2 MHz via `AWTO_CLOCK_MHZ`; counts compile-time, -1135 B code | `docs/clock-sweep.md`, `docs/delay-audit.md`
+  - 2026-11-18 | SDK delay counts 26 / 21 and `_MCU_SPEED_UP_SUPPORT` (175.4 / 43.9) as the speed-up | SDK counts would run at ~24 % of nominal at 350.8; speed-up tied to local dimming without a recorded reason [sdk-hypothesis] | `docs/delay-audit.md`
+  - 2026-11-18 | `ScalerOsdDataPort` rule (OSD port writes through the SDK function) | direct port stores are the default (`AWTO_OSD_PORT`); Dan lifted the rule 2026-11-18 | `docs/osd-write-sweep.md`
+  - 2026-11-19 | #206 "no temperature sensor" | dedicated sensor unknown, not none | `docs/temperature.md`
+  - 2026-11-04 | "0x4a / 0x4b extra devices" | ISP slave without / with auto-increment; 0x54 = SCDC; 0x3A HDCP | `docs/monitors/README.md`
+  - (earlier) | `ghidra_names_bank0.tsv` 0:ef94 "custom-command hook (0x0A05)" | 0x0A05 = trampoline to `ScalerMcuDdcciHoldScl_EXINT1` | `docs/reversing/dahua-fw/register-audit.md`
+- Decisions (Dan):
+  - 2026-11-19: 350.8 MHz fixed default; power saving stays on the slow IOSC clock.
+  - Flash overclock and M2PLL steps approved in small steps, stop after about 3 failures; DDR clock sweep only (no display PLL / panel timing).
+  - Rules: SDK source is not reliable (hypothesis only); any speed-limiting rule needs Dan's ask; read-only register scans on units 1 / 2 allowed (2026-11-19), tests on unit 3 only.
+- Results [hw, unit 3]:
+  - Sweep: Scope 2 5.63 -> 17.55 fps (3.1x) at 350.8 / 70.2; all checks, 200-pass CRC soaks and a 30-minute soak pass (`docs/clock-sweep.md`).
+  - Flash overclock ceiling 116.9 MHz at this PLL (rising-edge latch needed); 175.4 fails; dual-output read unusable.
+  - Delay audit: 564 sites, 0 FIX / UNKNOWN; `AwtoMs` tick-loss finding open (`docs/delay-audit.md`).
+  - Direct OSD stores: Scope 2 sim 182 -> 158 ms at 87.7 MHz; hardware 1.08 us/B vs sim 0.54 unexplained (`docs/saver-fps-hw.md`).
+  - OSD manual `docs/osd/` + sim coverage (62 features: 33 modelled, 18 spec-model, 8 unmodelled, 3 not visible); open tests OT-1..OT-27 (`docs/osd/open-items.md`).
+  - Register map `re/regmap/` (#236); typed register file + retiring docs to debris (#237); ISP-dump audit `docs/register-audit.md`; I2C roles on the DDC bus.
+  - Temperature: DSS one-write attempt failed; three-step retry queued (`docs/temperature.md`).
+- Open items: `docs/open-decisions.md`.
+
 ## 4K60 / display path (#26, #55)
 - 2026-11-07 | DDR read-error bug parked; frame-buffer (FRC) path unusable | DDR frame buffer works: 4K60 frame memory clean, mirror H/V and rotate 180 verified by Dan on unit 3 (2026-11-13, images wb-p14ui-ddrinit, wb-p14ui-rot1) | #26, #165
 - 2026-11-07 | P0_37, DPLL offset (+-10 %), static M-domain/FRC/DPLL config, DDR for the line buffer, memory select (frame-sync line buffer) as cause of 4K60 NOSUPPORT | all equal the vendor in the failing state; M1 FIFO flag returns within a frame with firmware frozen | #26

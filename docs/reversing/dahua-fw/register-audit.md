@@ -102,6 +102,13 @@ Pin numbers from `docs/monitors/gpio-roles.md` / pin-share live dump. "Header" =
 | eDP/DPTX | `ScalerDisplayDPTx*` family, `VBY1_LCLK_SOURCE_CTRL` write: panel link is DPTX (eDP) or V-by-One; our firmware already drives it | [fw] |
 | MHL | `MHL_CTRL_00/12` touched once (5:a52e); no MHL pins (board has none) | [fw] |
 
+## I2C commands, slave addresses, temperature and ADC (2026-11-19, static) [fw]
+- No handler for custom command 0x71 (`GET_TEMP_SENSOR_PWM` in the SDK, `docs/temperature.md`); no `GET_*` factory replies; no temperature strings or path.
+- Slave addresses configured: `IIC_SET_SLAVE` (`FF23`) = 0x6A (7-bit 0x35, debug), 0x6E (0x37, DDC/CI); `IIC_1_SET_SLAVE` (`FE87`) = 0x3D (7-bit 0x1E). `FFEC` ISP_SLAVE_ADDRESS is written only by our firmware.
+- No I2C master traffic of its own: the master engine `FF55..FF5F` is used only for host debug packets.
+- ADC: only A0 / A1 (front-key bands, pins 94 / 95) at `key_scan_adc` (6:3944); A2 / A3 never read.
+- `re/jxc-4k/ghidra_names_bank0.tsv` row `0:ef94`: the "extra custom-command hook (func 0x0A05)" note was wrong; 0x0A05 is the trampoline to `ScalerMcuDdcciHoldScl_EXINT1` (5:f5e7). Fixed.
+
 ## Worth investigating (ranked)
 1. IR remote: decoded in `gpio-ir.md` section 6 (NEC, power 0xB9, menu / input / navigation codes). Open: byte order of RP0-RP3, remote available? wake from standby? Our firmware has no IR init.
 2. Audio DAC / line out (0x06C0-0x06E3 incl. DA_MUTE/GAIN) and the speaker amp P7.4 / jack P4.5: Dahua-only, audio out of scope (Dan). Settles: board photo (speakers, jack), then port `ScalerAudioDACInitial` values from the sim trace.

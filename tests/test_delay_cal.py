@@ -17,9 +17,9 @@ def block(xms=10 * PER, d5us10=10 * 5.0 * PER / 1000, xus=100.0 * PER / 1000, xu
     b[0:4] = b"AD\x02\x08"
     b[26] = 26
     b[31] = 0xE3
-    struct.pack_into(">H", b, 27, int(xms) // 4)
+    struct.pack_into(">H", b, 27, int(xms) >> rtd_diag.XMS_SHIFT)
     struct.pack_into(">H", b, 29, int(d5us10))
-    struct.pack_into(">4H", b, 32, int(xus), int(xusisr), int(d5isr), int(t3) // 64)
+    struct.pack_into(">4H", b, 32, int(xus), int(xusisr), int(d5isr), int(t3) >> rtd_diag.T3_SHIFT)
     return rtd_diag.decode(bytes(b), True)
 
 

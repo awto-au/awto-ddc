@@ -9,6 +9,7 @@
 
 ## Write timing
 - [hw] T7 / T8 (unit 3, 2026-11-18): what the firmware stores (map + glyphs, both memories) equals the sim's byte for byte at frame ends and mid-frame (0 of 5224 words differ; 0 of 600 cells show a tile of neither frame).
+- Port rate at the clock [hw 2026-11-18/19, direct stores, `docs/clock-sweep.md`]: 3.79 us/B at 87.7 MHz, 2.16 at 175.4 / 43.9, 1.08 at 175.4 / 70.2 and at 350.8 / 70.2. Sim: 0.54 us/B at 350.8 (hardware is 2x: unexplained; sweep Phase B `docs/osd-write-sweep.md`). Sim port model: +22 cycles per MOVX write to `0x0092`.
 - [?] T10 cycle (unit 3, 2026-11-18; ladder of 256 red glyphs rewritten with identical content, 8 s per variant): whether the display glitches while the MCU writes during the scan. The look is Dan's; no result is recorded yet. Reading the screen: digits 2 / 3 / 4 glitch and 1 / 5 clean = write-during-scan disturbance (fix: write in vertical blanking or into off-screen slots); all clean = the photo's garbling was the old code.
   - Status (docs/osd-hw-tests.md, 2026-11-18): the Scope 2 tile garble on unit 3 is display-side and unresolved; a scale-up-off test is planned.
   - Rates measured [hw]: glyph rewrite 3166 / s (`ScalerOsdDataPort`) / 4308 / s (direct); all-map rewrite 45 / s; one glyph per frame 60 / s.

@@ -8,6 +8,7 @@ Home issue: #236 (acceptance: regdb name + status + test + result per row; gener
 |---|---|---|
 | `regs.tsv` | one per register address (`PPAA`) + hand-noted port registers (`PPAA:II`) | generated columns: `regmap_build.py`; hand columns: you |
 | `fields.tsv` | one per annotated bit range (`PPAA[hi:lo]`) | same |
+| `i2c.tsv` | I2C devices and commands that are not registers: `I2C:AA` (7-bit address), `SCDC:OO` (offset at 0x54), `CMD:CC` (command byte); columns `key role status test_id result evidence source notes issue`, same values as regs.tsv, hand only | you (`regmap_build.py --set-i2c KEY col=val`) |
 | `tests.tsv` | tests that are not in `docs/osd/open-items.md` (`C-*`) | you |
 | `obs/*.tsv.gz` | observation store, one file per dump / scan | `regmap_import.py` only |
 
@@ -57,8 +58,8 @@ Hand (survive regeneration, merged by key; checked by `--check`):
 
 A `known` / `candidate` row with a role needs `evidence`.
 
-## Evidence tags (order: hw > databook > spec > regdb-other > sdk-hypothesis > guess)
-`hw` measured on our units | `databook` DW8051 v3.2a, MX25L8006E | `spec` regdb text of this chip | `regdb-other` another chip's regdb | `spec-model` simulator reading of a spec claim, not seen on hardware | `emu` our sim only | `sdk-hypothesis` Realtek SDK source or name (not reliable, Dan 2026-11-18) | `guess` | `unknown`.
+## Evidence tags (order: hw > databook > spec > regdb-other > source-code > re > sdk-hypothesis > guess)
+`hw` measured on our units | `databook` DW8051 v3.2a, MX25L8006E | `spec` regdb text of this chip | `regdb-other` another chip's regdb | `source-code` third-party source or a standard (Linux, flasher repos, VESA / HDMI), not Realtek SDK | `re` static reversing of the Dahua firmware image | `spec-model` simulator reading of a spec claim, not seen on hardware | `emu` our sim only | `sdk-hypothesis` Realtek SDK source or name (not reliable, Dan 2026-11-18) | `guess` | `unknown`.
 Same tags as `docs/osd/README.md`; convention: awto-dan `docs/embedded/reversing/README.md`.
 
 ## fields.tsv columns
@@ -100,6 +101,8 @@ Or edit the hand cells in the TSV directly, then `--write`. A new row needs only
 | `regmap_query.py 06A4` | one register: columns, fields |
 | `regmap_query.py --undocumented-nonzero [--changing]` | regdb gives no named field, observed nonzero (and changing inside one state) |
 | `regmap_query.py --candidates [sensor]` | status `candidate`, optionally one class |
+| `regmap_query.py --i2c [TEXT]` | i2c.tsv rows (optionally filtered) |
+| `regmap_query.py --no-test` | candidate / unknown rows with no test_id: tests still to be written |
 | `regmap_query.py --tests` | candidate / unknown rows and fields whose test is not done, by test id |
 | `regmap_query.py --page A7`, `--status`, `--class`, `--grep`, `--varying`, `--tsv`, `--obs KEY` | filters / raw output / every observation of a key |
 

@@ -1258,11 +1258,12 @@ def cmd_osd_hw_test(extra: list[str]) -> int:
 
 
 @command("MCU / flash clock sweep at run time (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP names or all-mcu / all-flash / all-175, --sim runs it in the firmware sim",
-         args="[--unit N] [--map F] [--sim] [--continue-on-fail] [--max-m2pll-mhz N] [--keep NAMES] [--override NAME=VAL] [--retry] [--stop-after N] STEP...", kind="action")
+         args="[--unit N] [--map F] [--sim] [--continue-on-fail] [--max-m2pll-mhz N] [--keep NAMES] [--override NAME=VAL] [--retry] [--stop-after N] [--allow-overclock-flash] [--tune-first] [--no-fps] STEP...", kind="action")
 def cmd_clk_sweep(extra: list[str]) -> int:
     n, u = _unit(extra)
     given = _opt(extra, "--map")
     sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
+    more = [f for f in ("--allow-overclock-flash", "--tune-first", "--no-fps") if _flag(extra, f)]
     pll_opts = []
     for flag in ("--max-m2pll-mhz", "--keep", "--override", "--stop-after"):
         v = _opt(extra, flag)
@@ -1276,7 +1277,7 @@ def cmd_clk_sweep(extra: list[str]) -> int:
     if bad or not extra:
         raise SystemExit(f"clk-sweep: need STEPs; bad {bad or 'none'}; nothing done")
     m = Path(_fwmap(u, given))
-    opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else []) + pll_opts
+    opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else []) + pll_opts + more
     return _py("clk_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
@@ -1292,6 +1293,37 @@ def cmd_osd_sweep(extra: list[str]) -> int:
     m = Path(_fwmap(u, given))
     opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else [])
     return _py("osd_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
+
+
+@command("clock step soak with the savers cycling (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP MINUTES; checks, IOSC trim, resets every 30 s",
+         args="[--unit N] [--map F] [--nvram 0|7] STEP MINUTES", kind="action")
+def cmd_clk_soak(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    nv = _opt(extra, "--nvram")
+    extra = (["--nvram", nv] if nv else []) + extra
+    if len(extra) != (4 if nv else 2) or any(x.startswith("-") for x in extra if x != "--nvram"):
+        raise SystemExit("clk-soak: STEP MINUTES; nothing done")
+    m = Path(_fwmap(u, given))
+    return _py("clk_soak.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *extra)
+
+
+@command("DDR PHY speed sensor (DSS) read next to the IOSC trim counter; writes ONE channel's CTRL_3 and restores it (Dan 2026-11-18; image built with -D _AWTO_OSD_HWTEST for --step)",
+         args="[--unit N] [--map F] [--chan A|B] [--step STEP] [--reps N]", kind="action")
+def cmd_dss_probe(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    m = Path(_fwmap(u, given))
+    return _py("dss_probe.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *extra)
+
+
+@command("read-only I2C address probe of the unit's host bus (i2cdetect -r, then i2cget regs 0..F of every extra ACKing address; no writes)",
+         args="[--unit N] [--reps N] [--halt] [--extras]", kind="action")
+def cmd_i2c_probe(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    if _flag(extra, "--extras"):                                  # multi-byte 0x4A / 0x4B reads + SCDC offsets (i2c_probe2.py)
+        return _py("i2c_probe2.py", "--bus", _live_bus(u), "--serial", u["serial"], *extra)
+    return _py("i2c_probe.py", "--bus", _live_bus(u), "--serial", u["serial"], *extra)
 
 
 @command("unused GPIO inputs: snapshot | watch changes | open/close the live OSD screen over I2C",
