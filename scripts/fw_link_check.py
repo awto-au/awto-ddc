@@ -243,6 +243,20 @@ def short(c):
     return c["name"] if c else "?"
 
 
+def table_hi(nxt):
+    """High byte of an `add a,#lo` table base, or None. #172: the first MOV A,#hh is the gptr tag in store order hi-last.
+    ADDC A,#hh (first ADDC immediate) wins; else the MOV A,#hh nearest before an ADDC A,<op> (old order: mov a,#hi; addc a,b)."""
+    mov = None
+    for y in nxt:
+        if m := re.match(r"ADDC A,#([0-9A-F]{2})h$", y.text):
+            return int(m.group(1), 16)
+        if y.text.startswith("ADDC A,"):
+            return mov
+        if m := re.match(r"MOV A,#([0-9A-F]{2})h$", y.text):
+            mov = int(m.group(1), 16)
+    return None
+
+
 def sweep(code, base):
     """Instructions of a chunk; skips SDCC's inline jump tables (`add a,#k; movc a,@a+pc` lo/hi byte tables
     after `jmp @a+dptr`). Yields ('i', insn) and ('t', addr, [targets])."""
@@ -524,21 +538,16 @@ def check(im, xdata=(), regnames=None, proven=None):
                 if not (base <= i.target < base + c["size"]) and not resid:
                     add("rel_leaves_chunk", src, f"{t}", i.addr)
             if t.startswith("ADD A,#") and not resid and not im.literal(c, i.addr) and im.names_const(c, i.addr) is not False:
-                # table base: add a,#t; mov a,#(t>>8); addc a,b
-                lo = int(t[7:9], 16)
-                for y in ins[k + 1:k + 8]:
-                    m3 = re.match(r"MOV A,#([0-9A-F]{2})h$", y.text)
-                    if m3:
-                        v = int(m3.group(1), 16) << 8 | lo
-                        if v >= im.common and not in_xdata(v) and any(z.text.startswith("ADDC A,") for z in ins[k + 1:k + 10]):
-                            cs = im.consts_at(v)
-                            own = [x for r, x in cs if r == reg]
-                            refs[c["addr"]] += own
-                            if reg == "C" and cs:
-                                other_bank(c, f"arith base 0x{v:04x}: common code, const {cs[0][1]['name']} in bank {cs[0][0]}", i.addr)
-                            elif cs and not own and not im.find(reg, v):
-                                other_bank(c, f"arith base 0x{v:04x}: {cs[0][1]['name']} is in bank {cs[0][0]}, code in bank {reg}", i.addr)
-                        break
+                hi = table_hi(ins[k + 1:k + 10])
+                v = (hi << 8 | int(t[7:9], 16)) if hi is not None else None
+                if v is not None and v >= im.common and not in_xdata(v):
+                    cs = im.consts_at(v)
+                    own = [x for r, x in cs if r == reg]
+                    refs[c["addr"]] += own
+                    if reg == "C" and cs:
+                        other_bank(c, f"arith base 0x{v:04x}: common code, const {cs[0][1]['name']} in bank {cs[0][0]}", i.addr)
+                    elif cs and not own and not im.find(reg, v):
+                        other_bank(c, f"arith base 0x{v:04x}: {cs[0][1]['name']} is in bank {cs[0][0]}, code in bank {reg}", i.addr)
             mr = R2_IMM.match(t)
             if mr and not im.literal(c, i.addr):     # Keil ABI generic pointer argument: R3 tag, R2 hi, R1 lo
                 lo = next((int(m1.group(1), 16) for y in ins[max(0, k - 4):k + 5] if (m1 := R1_IMM.match(y.text))), None)
