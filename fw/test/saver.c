@@ -34,7 +34,7 @@ extern BYTE AwtoAsteroids(BYTE ucCmd);
 #define AWTO_SAVER_PACMAN_SUBS                  4                   // sub-steps per game step
 #define AWTO_SAVER_PACMAN_STEP_MS               125UL               // game step = 8 steps/s as pacman_unit.py: sub-steps 31, 31, 31, 32 ms
 #define AWTO_SAVER_SCOPE2_MS                    1UL                 // pause between scope 2 frames (columns are drawn per main pass within a time budget: scope_saver2.c)
-#define AWTO_SAVER_SCOPE_MS                     100UL               // pause between scope frames
+#define AWTO_SAVER_SCOPE_MS                     1UL                 // pause between scope frames (Scope 1 paces its frames itself: scope_saver.c AWTO_SC_FRAME_MS)
 #define AWTO_SAVER_MS_PER_S                     1000UL
 #define AWTO_SAVER_ARG_START                    0x79                // sync line E9: value = what (run << 4 | why)
 #define AWTO_SAVER_ARG_STOP                     0x79                // same line as the start, value 0
