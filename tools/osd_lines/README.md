@@ -62,11 +62,12 @@ starting tile using division once per axis, then updates the tile cursor using
 increments and boundary checks; there is no division/modulo in the pixel loop.
 Only changed bytes mark a tile dirty. There is no measured FPS claim.
 
-Clipping preserves the raster of the original line by discarding offscreen
-pixels. It is not an intersection-based geometric clip: a crossing line may
-still walk up to 65,536 pixels for full-range int16 endpoints. Entirely rejected
-bounding boxes return immediately. Keep waveform coordinates near the plot area
-for predictable work. Coordinates and tile dimensions fit signed 16-bit cursor
+Clipping preserves the raster of the original line: the walk starts at the
+first Bresenham step inside the canvas (closed form, 32-bit once per line) and
+stops at the first pixel past the far edge, so only visible pixels are walked.
+Entirely rejected bounding boxes return immediately. `tests/test_osd_lines_clip.py`
+(awto-ddc) checks pixels and dirty flags against the original prototype.
+`OSD_MEM` is the canvas address space (`__xdata` on SDCC mcs51, else empty). Coordinates and tile dimensions fit signed 16-bit cursor
 arithmetic; initialization rejects buffers requiring more than 65,535 bytes.
 
 On SDCC/8051, place the large buffers in `__xdata` as shown in the example.

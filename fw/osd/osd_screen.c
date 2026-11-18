@@ -29,21 +29,21 @@ void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords)
     BYTE ucK;
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usAddr, _OSD_WITHOUT_DB);
-    for(ucK = 0; ucK < ucWords; ucK++)                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py)
+    for(ucK = 0; ucK < ucWords; ucK++)                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0 (osd_lines_view.py); port written directly (ScalerOsdDataPort = a banked call per byte)
     {
         if(g_ucAwtoOsdRot != 0)                         // words in reverse order, bits reversed
         {
             BYTE ucW = (BYTE)((ucWords - 1 - ucK) * AWTO_OSDS_WORD_BYTES);
 
-            ScalerOsdDataPort(AwtoOsdRevByte(pucB[ucW]));
-            ScalerOsdDataPort(AwtoOsdRevByte(pucB[ucW + 1]));
-            ScalerOsdDataPort(AwtoOsdRevByte(pucB[ucW + 2]));
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AwtoOsdRevByte(pucB[ucW]);
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AwtoOsdRevByte(pucB[ucW + 1]);
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = AwtoOsdRevByte(pucB[ucW + 2]);
         }
         else
         {
-            ScalerOsdDataPort(pucB[AWTO_OSDS_WORD_BYTES * ucK + 2]);
-            ScalerOsdDataPort(pucB[AWTO_OSDS_WORD_BYTES * ucK + 1]);
-            ScalerOsdDataPort(pucB[AWTO_OSDS_WORD_BYTES * ucK]);
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[AWTO_OSDS_WORD_BYTES * ucK + 2];
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[AWTO_OSDS_WORD_BYTES * ucK + 1];
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = pucB[AWTO_OSDS_WORD_BYTES * ucK];
         }
     }
 }

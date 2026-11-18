@@ -19,9 +19,18 @@
 #define OSD_BITMAP_BYTES(cols, rows) (OSD_TILE_COUNT(cols, rows) * OSD_TILE_BYTES)
 #define OSD_DIRTY_BYTES(cols, rows) ((OSD_TILE_COUNT(cols, rows) + 7u) / 8u)
 
+/* Address space of the canvas, its buffers and the cursor: SDCC mcs51 = __xdata (no generic-pointer calls), else none. */
+#ifndef OSD_MEM
+#if defined(__SDCC_mcs51)
+#define OSD_MEM __xdata
+#else
+#define OSD_MEM
+#endif
+#endif
+
 typedef struct {
-    uint8_t *pixels; /* Caller-owned, preferably __xdata on SDCC/8051. */
-    uint8_t *dirty;
+    uint8_t OSD_MEM *pixels; /* Caller-owned. */
+    uint8_t OSD_MEM *dirty;
     uint8_t cols;
     uint8_t rows;
     uint16_t tile_count;
@@ -31,31 +40,32 @@ typedef struct {
  * tile_id is relative to this canvas, not an absolute hardware font address.
  * Packing is described in README.md; adapt to the hardware at this boundary.
  */
-typedef uint8_t (*osd_upload_fn)(uint16_t tile_id, const uint8_t *bytes,
+typedef uint8_t (*osd_upload_fn)(uint16_t tile_id, const uint8_t OSD_MEM *bytes,
                                uint16_t count, void *user);
 
 /* Return 0 on invalid dimensions/buffer sizes; 1 on success.
  * Initializes a blank canvas and marks every tile dirty.
  * Storage and dirty arrays must be separate, non-overlapping buffers.
  */
-uint8_t osd_canvas_init(osd_canvas *c, uint8_t cols, uint8_t rows,
-                        uint8_t *pixels, uint16_t pixel_bytes,
-                        uint8_t *dirty, uint16_t dirty_bytes);
-void osd_clear(osd_canvas *c);
-void osd_mark_all_dirty(osd_canvas *c);
+uint8_t osd_canvas_init(osd_canvas OSD_MEM *c, uint8_t cols, uint8_t rows,
+                        uint8_t OSD_MEM *pixels, uint16_t pixel_bytes,
+                        uint8_t OSD_MEM *dirty, uint16_t dirty_bytes);
+void osd_clear(osd_canvas OSD_MEM *c);
+void osd_mark_all_dirty(osd_canvas OSD_MEM *c);
 
 /* Coordinates are signed pixels, origin at top left; y increases downwards.
  * Ink 0 erases; any nonzero ink sets pixels. Out-of-bounds pixels are ignored.
  * osd_line includes both endpoints and handles every slope and direction.
+ * It walks only the part of the line inside the canvas (same pixels as a full walk).
  */
-void osd_pixel(osd_canvas *c, int16_t x, int16_t y, uint8_t ink);
-void osd_line(osd_canvas *c, int16_t x0, int16_t y0,
+void osd_pixel(osd_canvas OSD_MEM *c, int16_t x, int16_t y, uint8_t ink);
+void osd_line(osd_canvas OSD_MEM *c, int16_t x0, int16_t y0,
               int16_t x1, int16_t y1, uint8_t ink);
 
 /* Upload dirty tiles in row-major order, clear flags only after success.
  * Stop at the first failed upload. Returns the number uploaded this call.
  * Uploads are synchronous. Do not draw/flush concurrently or from an ISR.
  */
-uint16_t osd_flush(osd_canvas *c, osd_upload_fn upload, void *user);
+uint16_t osd_flush(osd_canvas OSD_MEM *c, osd_upload_fn upload, void *user);
 
 #endif
