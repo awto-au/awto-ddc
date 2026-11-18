@@ -6,7 +6,7 @@ Tags: `[hw]` measured on the unit, `[ds]` MX25L8006E datasheet (`/vendors/macron
 Register roles, stock values and per-register results: `re/regmap/regs.tsv` (keys `01E0..01E7 FFED FFEE FFE9 FFBD FF6B FF6C FDA0 FDA1 FDB3..FDC6 FDCC 4006 4007 8006 0022`; tests `T-L`, `T-M`, `C-PLLHW`, `C-NVWR`, `C-SOAK` in `re/regmap/tests.tsv`); query: `python scripts/regmap_query.py FFED`.
 
 ## Status (2026-11-19)
-- Chosen default: MCU 350.8 MHz, flash 70.2 MHz (Dan, 2026-11-19); built in as `AWTO_CLOCK_MHZ` (`docs/delay-audit.md`). **Boot input detection fails ~1 boot in 2 at 350.8 MHz on unit 3 (175.4 MHz: 20 / 20); cause not found (section "Default image at 350.8 MHz"). Unit 3 runs the 175.4 MHz build until it is fixed.**
+- Chosen default: MCU 350.8 MHz, flash 70.2 MHz (Dan, 2026-11-19); built in as `AWTO_CLOCK_MHZ` (`docs/delay-audit.md`). Boot input detection failed ~1 boot in 2 at 350.8 MHz on unit 3: eDP AUX read over-run, fixed (section "Default image at 350.8 MHz").
 - Flash overclock: ceiling 116.9 MHz at this PLL (section "Flash overclock"); not adopted, only measured.
 - Measured in session 2 (2026-11-18/19): NVRAM / flash write at speed (wrapper mandatory at 350.8), cache meter, 30 min soak, flash overclock grid, temperature proxies. Open: M2PLL steps above 350.8 (Phase B), other units; list in "Not yet measured".
 - Sections: Method, Clock tree, Rated limits, Results, Flash write / erase, Cache meter, Delay check, Flash overclock, Soak, Temperature proxy and probes, Default image boot, Chosen default, M2PLL steps, Not yet measured, External evidence, Links.
@@ -150,27 +150,36 @@ Per run: 14 x (erase + 4096 B program in 128 B calls + read-back) + 1 closing er
 - SCDC read-only (input 4K59.940 HDMI active): 01=01 02=00 10=03 20=00 21=01 40=03 50..55=ff 56..5A=00.
 
 ## Default image at 350.8 MHz on unit 3: boot input detection fails [hw, 2026-11-19]
-Status: reproducible, cause NOT found. `scripts/boot_loop.py` = `./dev.py reset` + sync log per boot (logs `tmp/logs/boot_loop/`), 6 s verdict.
-- Boots with a picture, same unit, cable and host:
-| image | MCU / SPI | boots with picture | eDP-1 "link training FAIL" |
-|---|---|---|---|
-| `AWTO_CLOCK_MHZ=87` | 87.7 / 43.85 | 8 / 8 | 0 |
-| `AWTO_CLOCK_MHZ=175` | 175.4 / 43.85 | 8 / 8, 12 / 12, 20 / 20 | 0 |
-| temporary divider override | 175.4 / 70.2 | 8 / 8 | 0 |
-| temporary divider override | 350.8 / 43.85 | 5 / 8 | every boot |
-| default 350 | 350.8 / 70.2 | 4 / 6, 5 / 12, 5 / 8, 10 / 12, 11 / 16 over the day, 9 / 20 at 02:24 (about 40 - 70 %) | about 90 % of the boots |
-- One window (01:57 - 02:16) in which every image, including 87 and 175, failed (0 of 8 .. 16): the host HDMI output did not start video until a host mode change (`dev.py mode 1080p60`, then `4k5994`); that window is excluded. Runs under `gnome-session-inhibit --inhibit idle`.
-- Failing boot signature: `D2 TMDS predetect on (clock not measured yet)`, no `TMDS clock measured`, `SEARCH ... NO SIGNAL` after 4.3 s, then power saving.
-- Temporary counters (not committed) in a failing boot: `ScalerTMDSRx2TMDSNormalPreDetect` called twice, the DDC-handshake flag (`GET_TMDS_RX2_DDC_DETECTED`, set by `ScalerSyncDdcDetect_EXINT1`) never true (good boot: true once, 3 calls); the TMDS scan runs once and fails at `ScalerTMDSRx2TMDSVideoDetect(_WAIT)` (CDR and DFE pass), the PHY-set ISR fires twice, the second scan never comes. DetectPort is then called ~2700 x with port type DP (4) / none (0) for index 0: XDATA `g_pucSourceSearchPriority` (0xF65B, 10 B, normally `05 04 06 0a ...`) reads `04 00 00 00 00 00 0a 0a 0a 0a` after the failure, and the 14 bytes before it (0xF64D..0xF65A, directly behind `pData[16]`) hold `ff ff ff ff ff ff 00 0a 01 ...` instead of their initial values. Writer not found. A single-byte `0x44` glitch also shows in debug-slave XDATA reads at random places (read artefact).
-- eDP-1 link training: `FFF1[3:0]` (`mcu_wr_sca_intrvl_sel`, minimum cycles between continued scaler writes = 4 + 4 x sel, reset 0 = no limit) written at boot: sel 1 and 3 still show the FAIL line (11 / 16, 13 / 16 boots), sel 7 and 15 show it in 0 / 16 boots; the picture rate does not change (11 / 16 each). A scaler-write pacing problem at 350.8 MHz, 32 cycles between continued writes cure it; not applied to the build.
-- Without effect on the picture rate: `_TMDS_DDC_DEBOUNCE_NORMAL` (measured on hardware: 8053 Timer2 counts = 275 us for count 920, stock formula target 263.6 us); 5 us between the two writes of the frequency-detect reset toggle (14 / 20); `FFF1` as above.
+Status: cause found and fixed (eDP AUX read over-run); the `AWTO_CLOCK_MHZ=350` default boots 40 / 40 on unit 3. `scripts/boot_loop.py` = `./dev.py reset` + sync log per boot (logs `tmp/logs/boot_loop/`), 6 s verdict; excluded: one window (01:57 - 02:16) in which the host HDMI output had not started video (every image failed).
+- Root cause: `ScalerDisplayDPTx1AuxRead` (`ScalerDisplayDPTx.c`, SDK code, also the Tx2 copy) copied `FIFO_WR_PTR[4:0]` bytes (up to 31) into the caller's buffer without checking them against the request.
+  - Callers pass `pData` (XDATA 0xF63D, 16 B): a reply longer than the request overran it into 0xF64D.. (`g_ucDpRx0LTStatus` ... `g_pucSourceSearchPriority`, 0xF65B). The search priority table then read `04 00 00 ..`, so `SysSourceDetectPort` stopped calling `ScalerTMDSRx2TMDSNormalPreDetect` for D2 (2 calls instead of 3): "no TMDS clock measured", NO SIGNAL after 4.3 s.
+  - A partial reply made the loop subtract the running offset from an already reduced `ucLength` (underflow -> 16-byte request again), also feeding wrong lane status to link training (the eDP "link training FAIL" line, retry succeeds).
+- Evidence (DDCDBG temp build, not committed):
+  - Canary on `g_pucSourceSearchPriority[1]` checked at every Timer2 / EXINT0 / EXINT1 entry and exit: first detection always at a Timer2 entry (never an ISR exit), main-loop mark = `UserCommonInterfacePanelPowerTick` (link training), 270 - 390 ms after `main()`.
+  - Priority table correct at `main()` entry and in the first loop pass in every boot (not a startup / flash-read fault).
+  - AUX read counters at 350.8 MHz: reply length > remaining request in 28 / 32 boots (up to 9 per boot, e.g. FIFO 5 for a 1-byte remainder, 4 for 2); right after the FIFO reset the pointer reads 0, the flags at done read `0x20`, reply cmd 0. At 175.4 MHz: 0 of 160 reads (16 boots x 10).
+- Fix (production, no build option): remaining request = total - offset; a reply longer than the remaining request is retried like a NACK; done = offset == total. Speed cost: none measured (only the link-training AUX reads).
+- Why the FIFO pointer is wrong at 350.8 MHz only: not found [?]. Not scaler write pacing (FFF1 sel 7 leaves the over-reads), not the start-bit pulse width (5 us between the two start-bit writes leaves them).
+- Boots with a picture (unit 3, same cable and host, 16 - 40 boots per row):
+| image | picture | eDP "link training FAIL" |
+|---|---|---|
+| default 350.8 / 70.2 (before) | 6 / 12 .. 11 / 16 (40 - 70 %) | about 90 % |
+| `AWTO_CLOCK_MHZ=175` | 20 / 20, 16 / 16 | 0 |
+| 350.8 + global MOVX stretch 7 (`CKCON[2:0]` = 7 at `main()`) | 9 / 16 | all |
+| 350.8 + wait pump off (`AWTO_WAIT_PUMP` empty) | 30 / 40 | all |
+| 350.8 + over-run clamp only | 32 / 32, 24 / 24 | all |
+| 350.8 + clamp + 5 us between the AUX start-bit writes | 24 / 24 | all |
+| 350.8 + clamp + `FFF1` sel 7 | 24 / 24 | 0 |
+| 350.8 + retry of over-long replies (instrumented) | 24 / 24 | 2 / 24 |
+| 350.8 + retry of over-long replies (the fix, default build) | 40 / 40 | 19 / 40 |
+- Hypotheses: H1 (MOVX stretch for the whole firmware): no effect, costs loop rate (485 vs 586 passes/s, different unit state); H2 (DDC/CI ISR overrun): the DDC detect ISR ran with the D2 port flag set in every boot, bad boots included, and a quiet loop (one DDC read per boot, 7 / 16) failed as often: ruled out; H3 (scaler write pacing): `FFF1` changes the FAIL line only, not the over-reads; H4 (EXINT order): predetect was not called a third time because the search index port type changed, not an ordering race.
+- Open: why the AUX FIFO reports a longer / stale reply at 350.8 MHz (needs the AUX lines on a scope); the FAIL line in about half of the boots (retry succeeds; `FFF1` sel 7 clears it, costs scaler write rate: Dan decides); the stale read data of the retried replies is dropped, not examined.
 - DDC/CI on the default 350.8 image when it came up: 20 x getvcp 0x10 0 failures (0.49 - 0.58 s each), 20 x setvcp 0x10 + getvcp 0 mismatches, brightness 1 / 50 / 100 / 50 accepted, VCP 0xEB 3 / 4 / 8 / 2 / 0 accepted, alert tone sent. Audio and PWM clocks derive from the M2PLL (350791 kHz in every step log). Front keys need a person. Only HDMI D2 is cabled.
-- Diag `delay cal` row: the u16 fields (`usDelayXms10`, `usT3Wait64`) held counts >> 2 / >> 6 and wrapped at 350.8 MHz (10 ms = 292 k counts); now `AWTO_DIAG_XMS_SHIFT` 4 / `AWTO_DIAG_T3_SHIFT` 10 (`RL6449_Project.h`, `rtd_diag.XMS_SHIFT / T3_SHIFT`); health 11 / 11 on the 175 default.
-- `AWTO_CLOCK_MHZ=175` default: 20 / 20 boots, 20 / 20 wakes from power saving (`ddc sleep` / `wake`, `tmp/scratch` loop, 1 of 20 failed on the earlier 175 build), health 11 / 11.
-- Open: the writer of the 20-byte block at 0xF64D (a memory watchpoint: Timer2 ISR check of 0xF65C showed nothing usable and changed the timing), why the DDC-handshake flag is missed, and why only 350.8 MHz fails. Next: instrument the EXINT1 / EXINT0 ISR entry times against the Timer2 tick, compare the 175.4 MHz boot of the same counters.
+- Diag `delay cal` row: the u16 fields held counts >> 2 / >> 6 and wrapped at 350.8 MHz; now `AWTO_DIAG_XMS_SHIFT` 4 / `AWTO_DIAG_T3_SHIFT` 10 (`RL6449_Project.h`, `rtd_diag.XMS_SHIFT / T3_SHIFT`).
+- `AWTO_CLOCK_MHZ=175` default: 20 / 20 boots, 20 / 20 wakes from power saving (`ddc sleep` / `wake`), health 11 / 11.
 
 ## Chosen default
-- Dan chose 350.8 MHz MCU / 70.2 MHz flash as the fixed default (2026-11-19): 17.55 Scope 2 frames / s (3.1x stock), every check and soak above passed. The runtime sweep could not see the boot-time failure below (input already locked when the clock rose): the default is not proven until boot statistics pass.
+- Dan chose 350.8 MHz MCU / 70.2 MHz flash as the fixed default (2026-11-19): 17.55 Scope 2 frames / s (3.1x stock), every check and soak above passed. The runtime sweep could not see the boot-time failure (input already locked when the clock rose); boot statistics: section "Default image at 350.8 MHz" (40 / 40 after the fix).
 - Without the 9-cycle MOVX wrapper the unit resets at the first flash write at 350.8 MHz (section Flash write / erase): the wrapper stays.
 - Earlier candidate 175.4 / 70.2 (2.2x) stays as `AWTO_CLOCK_MHZ=175`; 87 = stock.
 - Adoption in code = compile-time constants (`_FLASH_CLK_DIV`, `_FLASH_2_CLK_DIV`, `_MCU_CLK_DIV`, Timer2 / delay / debounce): `docs/delay-audit.md`.
@@ -192,7 +201,7 @@ Phase A (code + sim, no hardware): `./dev.py clk-sweep --unit 3 [--sim] pmNN | p
 - Derived dividers are 4 bit, so above ~495 MHz the sync clock rises with the M2PLL (cap 33 MHz x 15).
 
 ## Recommendation (session 2, 2026-11-19)
-- 350.8 MHz as the default needs the boot failure fixed (section above); `AWTO_CLOCK_MHZ=175` boots 20 / 20.
+- 350.8 MHz default: boot failure fixed (section above, 40 / 40); `AWTO_CLOCK_MHZ=175` boots 20 / 20.
 - 87.7 / 116.9 MHz flash pass with `FF6C[5]` = 1 and delay <= 2 ns on this unit: not a default without a warm / multi-unit window measurement (Dan decides). Flash writes only at the in-spec clock (the sweep op refuses otherwise).
 - Checks left for a person: front keys (SOURCE MENU DOWN UP AUTO POWER) at the fast clock, audio tone by ear, picture by eye during a soak, other inputs.
 

@@ -2728,7 +2728,6 @@ fn	_ScalerDpRx1Initial	9	0x4fdc	108
 fn	_ScalerDpRx1SetDpLaneMapping	9	0x5048	196
 fn	_ScalerDpInitial	9	0x510c	32
 fn	_ScalerDpLowPowerProc	9	0x512c	112
-fn	_ScalerDisplayDPTx1AuxRead	9	0x519c	492
 fn	_ScalerDisplayDPTx1AuxWrite	9	0x5388	412
 fn	_ScalerDisplayDPTx1DisplayFormatSetting	9	0x5524	916
 fn	_ScalerDisplayDPTx1DisplayMSASetting	9	0x58b8	288
@@ -2816,6 +2815,7 @@ fn	_AwtoT0EvTest	9	0x96cc	1112
 fn	_ScalerTimerWDInitial	9	0x9b24	100
 fn	_AwtoWdtProbe	9	0x9b88	156
 fn	_AwtoT0EvClock	9	0x9c24	216
+fn	_ScalerDisplayDPTx1AuxRead	9	0x9cfc	528
 const	_font_blob_spleen	10	0x0000	1300
 const	_font_blob_spleen5	10	0x0514	916
 const	_font_blob_spleen6	10	0x08a8	1000

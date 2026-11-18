@@ -29,7 +29,7 @@
 0986	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8117	Get YCC RANGE Error	0
 0990	System	Kernel/System/Code/SysSource.c:2337	7. Bingo Eeprom Fix Port!!!!!!!	1
 09da	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9952	Get RGB LIMIT RANGE	0
-0a99	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2772	eDP Tx2 Link Config Fail	1
+0a99	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2775	eDP Tx2 Link Config Fail	1
 0b15	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7808	Get Pixel Repetition 6	0
 0c94	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9376	Get RGB RESERVED RANGE	0
 0cd8	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7699	RGB Quantization Range Changed	0
@@ -203,7 +203,7 @@
 36cf	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9624	Get Pixel Repetition 5	0
 36d8	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1961	Accuracy IVF	0
 36ec	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1852	FrameSync Line Buffer	1
-36ed	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2757	eDP Tx2 LTend Pass	1
+36ed	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2760	eDP Tx2 LTend Pass	1
 377e	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9882	Get Colorimetry EXT_RGB_ADOBERGB	0
 37db	FS	Kernel/Scaler/ScalerFunction/Code/ScalerMemory.c:569	7. Target Dt Value	1
 37df	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9024	Get Pixel Repetition 6	0
@@ -283,10 +283,10 @@
 498e	HDCP2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3479	HDCP2 Urgent	0
 49f5	Rx2	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx2.c:4325	No Quantization Range Specified	0
 4a2b	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:353	Cec Rx Read: HB (load to backup)	0
-4a6b	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2721	eDP Tx2 LT1 Freq Fail	1
+4a6b	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2724	eDP Tx2 LT1 Freq Fail	1
 4b06	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:277	7. Fifo Overflow --> nVidia Case	0
 4c0e	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:3015	Rx0 Source Writes 600h = 0x01	0
-4c0f	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2734	eDP Tx2 LT2 Pass	1
+4c0f	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2737	eDP Tx2 LT2 Pass	1
 4d79	FS	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Memory.c:263	Target IVS to DVS Delay Value	1
 4e23	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4331	MBR: User Backlight Mode	0
 4ea4	Rx3	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8668	Get Colorimetry EXT_RGB_ADOBERGB	0
@@ -366,7 +366,7 @@
 61b5	Rx3	Kernel/Scaler/ScalerFunction/Code/ScalerTMDSRx3_SeptPhy.c:709	7. PowerSaving D3 DDC	0
 61d7	Rx3	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_TMDSRx3.c:2694	G Channel CDR Unstable	0
 61df	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:2611	MST ####Calculated usVTotal####	0
-6233	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2751	eDP Tx2 LTend Fail	1
+6233	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2754	eDP Tx2 LTend Fail	1
 6247	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:574	DP RX1 VGIP VS Bypass Mode	0
 62a0	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9386	Get RGB RANGE Error	0
 6367	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:1570	False : D4 HDMI Audio FIFO	0
@@ -409,7 +409,7 @@
 6d7b	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1527	_COLORIMETRY_EXT_YCC_ITUR_BT601	0
 6db7	FRC	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1624	4.OD use BW	1
 6df3	Scaler	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c:2583	- IIC Write Time Out: Burst Mode	0
-6dfd	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2740	eDP Tx2 LT2 Lane or PN Fail	1
+6dfd	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2743	eDP Tx2 LT2 Lane or PN Fail	1
 6e46	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:4208	7. IIIIIInterLace Vtotal	0
 6e77	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:798	False : D2 HDMI Audio Tracking Disable	0
 6eb6	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:758	D2 Audio Tracking Disable	0
@@ -907,7 +907,7 @@ f152	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1616	DP Lane Bu
 f172	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:1693	7. Valid Video Check	0
 f1d2	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1502	_COLORIMETRY_Y_ONLY	0
 f1e6	Rx2	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:8013	Get Colorimetry EXT_YCC_SYCC601	0
-f214	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2715	eDP Tx2 LT1 Pass	1
+f214	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:2718	eDP Tx2 LT1 Pass	1
 f2a3	Rx5	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9568	Get Color Space YUV422	0
 f313	Rx4	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:9010	Get Pixel Repetition 4	0
 f316	Measure	Kernel/Scaler/ScalerFunction/Code/ScalerMeasure.c:228	Interlace: detect by full line	0

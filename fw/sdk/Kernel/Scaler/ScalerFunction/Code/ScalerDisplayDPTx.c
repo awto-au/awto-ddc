@@ -1875,6 +1875,7 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
     BYTE ucReadRetryNum = 0;
     BYTE ucCheckLength = 0;
     BYTE ucOffsetLength = 0;
+    BYTE ucTotal = ((ucLength == 0) ? 1 : ucLength);    // ucLength below is the rest of this request
 
     // Enable AUX FW Handle Mode
     ScalerSetBit(P9D_A3_AUXTX_TRAN_CTRL, ~(_BIT7 | _BIT5), _BIT5);
@@ -1903,7 +1904,7 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
         ScalerSetByte(P9D_A5_AUXTX_REQ_ADDR_M, ucAddrM);
         ScalerSetByte(P9D_A6_AUXTX_REQ_ADDR_L, (ucAddrL + ucOffsetLength));
 
-        ucLength = ucLength - ucOffsetLength;
+        ucLength = ucTotal - ucOffsetLength;
 
         if(ucLength == 0)
         {
@@ -1936,7 +1937,9 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
                 if(ScalerGetBit(P9D_B1_AUX_IRQ_EVENT, _BIT5) == _BIT5)
                 {
                     // Reply Error or Nack or Command is not ACK
-                    if((ScalerGetBit(P9D_B1_AUX_IRQ_EVENT, _BIT2) != 0x00) || (ScalerGetBit(P9D_A9_AUX_REPLY_CMD, (_BIT5 | _BIT4)) != 0x00))
+                    // A reply longer than the request is a stale FIFO (seen at 350.8 MHz): it would overrun the caller's buffer, so it is retried
+                    if((ScalerGetBit(P9D_B1_AUX_IRQ_EVENT, _BIT2) != 0x00) || (ScalerGetBit(P9D_A9_AUX_REPLY_CMD, (_BIT5 | _BIT4)) != 0x00) ||
+                       (ScalerGetBit(P9D_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) > ucLength))
                     {
                         // CLR Flag
                         ScalerSetByte(P9D_B1_AUX_IRQ_EVENT, 0x3F);
@@ -1962,7 +1965,7 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
                             pucReadArray++;
                         }
 
-                        if(ucCheckLength == ucLength)
+                        if(ucOffsetLength == ucTotal)
                         {
                             // Disable Timeout Retry
                             ScalerSetBit(P9D_B0_AUX_RETRY_2, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
@@ -2003,7 +2006,7 @@ bit ScalerDisplayDPTx1AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
         }
         while((ucReadRetryNum < 7) && (ScalerGetBit(P9D_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) == 0x00));
     }
-    while((ucCheckLength != ucLength) && (ucReadRetryNum < 7));
+    while((ucOffsetLength != ucTotal) && (ucReadRetryNum < 7));
 
     // Disable Timeout Retry
     ScalerSetBit(P9D_B0_AUX_RETRY_2, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
@@ -3927,6 +3930,7 @@ bit ScalerDisplayDPTx2AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
     BYTE ucReadRetryNum = 0;
     BYTE ucCheckLength = 0;
     BYTE ucOffsetLength = 0;
+    BYTE ucTotal = ((ucLength == 0) ? 1 : ucLength);    // ucLength below is the rest of this request
 
     // Enable AUX FW Handle Mode
     ScalerSetBit(P9F_A3_AUXTX_TRAN_CTRL, ~(_BIT7 | _BIT5), _BIT5);
@@ -3955,7 +3959,7 @@ bit ScalerDisplayDPTx2AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
         ScalerSetByte(P9F_A5_AUXTX_REQ_ADDR_M, ucAddrM);
         ScalerSetByte(P9F_A6_AUXTX_REQ_ADDR_L, (ucAddrL + ucOffsetLength));
 
-        ucLength = ucLength - ucOffsetLength;
+        ucLength = ucTotal - ucOffsetLength;
 
         if(ucLength == 0)
         {
@@ -3988,7 +3992,9 @@ bit ScalerDisplayDPTx2AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
                 if(ScalerGetBit(P9F_B1_AUX_IRQ_EVENT, _BIT5) == _BIT5)
                 {
                     // Reply Error or Nack or Command is not ACK
-                    if((ScalerGetBit(P9F_B1_AUX_IRQ_EVENT, _BIT2) != 0x00) || (ScalerGetBit(P9F_A9_AUX_REPLY_CMD, (_BIT5 | _BIT4)) != 0x00))
+                    // A reply longer than the request is a stale FIFO (seen at 350.8 MHz): it would overrun the caller's buffer, so it is retried
+                    if((ScalerGetBit(P9F_B1_AUX_IRQ_EVENT, _BIT2) != 0x00) || (ScalerGetBit(P9F_A9_AUX_REPLY_CMD, (_BIT5 | _BIT4)) != 0x00) ||
+                       (ScalerGetBit(P9F_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) > ucLength))
                     {
                         // CLR Flag
                         ScalerSetByte(P9F_B1_AUX_IRQ_EVENT, 0x3F);
@@ -4014,7 +4020,7 @@ bit ScalerDisplayDPTx2AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
                             pucReadArray++;
                         }
 
-                        if(ucCheckLength == ucLength)
+                        if(ucOffsetLength == ucTotal)
                         {
                             // Disable Timeout Retry
                             ScalerSetBit(P9F_B0_AUX_RETRY_2, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
@@ -4055,7 +4061,7 @@ bit ScalerDisplayDPTx2AuxRead(BYTE ucCommandAddrH, BYTE ucAddrM, BYTE ucAddrL, B
         }
         while((ucReadRetryNum < 7) && (ScalerGetBit(P9F_AE_AUX_FIFO_WR_PTR, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) == 0x00));
     }
-    while((ucCheckLength != ucLength) && (ucReadRetryNum < 7));
+    while((ucOffsetLength != ucTotal) && (ucReadRetryNum < 7));
 
     // Disable Timeout Retry
     ScalerSetBit(P9F_B0_AUX_RETRY_2, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3), 0x00);
