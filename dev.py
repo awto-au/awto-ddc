@@ -1233,6 +1233,27 @@ def cmd_dbg_read(extra: list[str]) -> int:
     return _dbg_py(b, "rtd_dbg_read.py", b, "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
 
 
+@command("OSD SRAM hardware tests (image built with -D _AWTO_OSD_HWTEST; docs/osd-hw-tests.md): regs t1 t2 t3 t4 t6 t7 stop",
+         args="[--unit N] [--map F] [--frames N] [--free-s S] [--cal] TEST...", kind="action")
+def cmd_osd_hw_test(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    opts = []
+    for flag in ("--frames", "--free-s"):
+        v = _opt(extra, flag)
+        if v is True:
+            raise SystemExit(f"osd-hw-test: {flag} needs a value; nothing done")
+        if v is not None:
+            opts += [flag, v]
+    if _flag(extra, "--cal"):
+        opts.append("--cal")
+    bad = [x for x in extra if x.startswith("-")]
+    if bad or not extra:
+        raise SystemExit(f"osd-hw-test: need TESTs; bad {bad or 'none'}; nothing done")
+    m = Path(_fwmap(u, given))
+    return _py("osd_hw_test.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *opts, *extra)
+
+
 @command("unused GPIO inputs: snapshot | watch changes | open/close the live OSD screen over I2C",
          args="[--unit N] [--map F] [--secs S] snapshot|watch|open|close", kind="action")
 def cmd_gpio(extra: list[str]) -> int:

@@ -49,3 +49,4 @@ undef	fw/sdk/Kernel/User Common Function/Header/UserCommonInterface.h	_SIGNAL_GP
 undef	fw/sdk/Panel/RTDColorDefaultTable/ColorTableInclude.h	_USER_ADJUST_GAMMA_FOR_BEACON	Beacon gamma option, absent: off (normal gamma tables), intended
 value	fw/sdk/Kernel/Common/Pcb_Config_Check.h	PCB_EMBEDDED_LDO_DETECT	RL6369-only check, outer #if false for RL6449: never evaluated
 family	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c	_BACKLIGHT_PWM_INVERSE == _ENABLE	_ON vs _ENABLE: both 1 by design; factory backlight-sensor blocks, not compiled here
+nodef	fw/test/testcmd.c	_AWTO_OSD_HWTEST	ours: dev.py build -D _AWTO_OSD_HWTEST (OSD SRAM write / read-back tests, docs/osd-hw-tests.md)
