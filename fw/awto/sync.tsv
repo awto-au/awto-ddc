@@ -176,6 +176,10 @@ E9	84	-	Pac-Man sound stopped
 E9	85	-	Pac-Man sound track done
 E9	86	n	Pac-Man sound unavailable (no -D _AWTO_AUDIO_TEST build), cmd %
 E9	87	-	alert tone (1 s, HDMI audio test generator)
+E9	88	-	Pac-Man sound:ghost eaten (rising sweep)
+E9	89	-	Pac-Man sound:fruit eaten
+E9	8A	n	Pac-Man sound:background state %, 0 none, 1..3 siren speed, 4 frightened
+E9	8B	-	Pac-Man sound:waka off (eating stopped)
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake

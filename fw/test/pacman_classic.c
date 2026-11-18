@@ -33,6 +33,9 @@ extern void osd_tc_close(void);
 #define AWTO_PC_SND_WAKA                        1
 #define AWTO_PC_SND_DEATH                       2
 #define AWTO_PC_SND_STOP                        4
+#define AWTO_PC_SND_GHOST                       6                   // 5 = alert (saver.c)
+#define AWTO_PC_SND_FRUIT                       7
+#define AWTO_PC_SND_WAKA_OFF                    8
 #define AWTO_PC_BLOCK_BYTES                     27                  // one glyph plane: 9 words x 3 bytes (1-bit glyph = 1 block, 2-bit glyph = 2 blocks, MSB plane first)
 #define AWTO_PC_BLOCK_ROT_BYTES                 18                  // the visible 12 of its 18 rows (6 words); the rest is padding
 #define AWTO_PC_BLOCK_ROT_WORDS                 6
@@ -165,7 +168,9 @@ void AwtoPacmanClassic(BYTE ucCmd)
             s_usStep = 0;
         }
         PcStep(s_usStep);
-        ucEv = PcEvt(s_usStep);                                             // the sound event of this step (gen_pacman_classic.py): one command of the sound player
+        ucEv = PcEvt(s_usStep);                                             // low nibble: the sound event of this step, high nibble: background state (gen_pacman_classic.py)
+        ucB = ucEv >> AWTO_PC_EV_BG_SHIFT;
+        ucEv &= AWTO_PC_EV_EV_MASK;
         if(ucEv == AWTO_PC_EV_INTRO)
         {
             AwtoPmSound(AWTO_PC_SND_INTRO);
@@ -178,10 +183,23 @@ void AwtoPacmanClassic(BYTE ucCmd)
         {
             AwtoPmSound(AWTO_PC_SND_DEATH);
         }
-        else if((ucEv == AWTO_PC_EV_WAKA_OFF) || (ucEv == AWTO_PC_EV_STOP))
+        else if(ucEv == AWTO_PC_EV_GHOST)
+        {
+            AwtoPmSound(AWTO_PC_SND_GHOST);
+        }
+        else if(ucEv == AWTO_PC_EV_FRUIT)
+        {
+            AwtoPmSound(AWTO_PC_SND_FRUIT);
+        }
+        else if(ucEv == AWTO_PC_EV_WAKA_OFF)
+        {
+            AwtoPmSound(AWTO_PC_SND_WAKA_OFF);
+        }
+        else if(ucEv == AWTO_PC_EV_STOP)
         {
             AwtoPmSound(AWTO_PC_SND_STOP);
         }
+        AwtoPmSoundBg(ucB);                                                 // siren / frightened state; the player acts on a change
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PC_ARG_STEP, (BYTE)s_usStep);
         s_usStep++;
         return;
