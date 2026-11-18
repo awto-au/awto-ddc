@@ -4,7 +4,7 @@
 // Screensavers (docs/screensaver.md): Pac-Man (pacman_classic.c) and the scope (scope_saver.c), run from the main loop.
 // Settings 119 screensaver (Off / Pac-Man / Scope / Scope 2 / Alternate), 120 screensaver_s (idle seconds, 0 = none), 121 screensaver_now (DDC/CI VCP 0xEB).
 // Starts: no signal for AWTO_SAVER_NOSIG_MS with a mode set; idle with a picture for screensaver_s; DDC/CI / test cmd now.
-// Stops: a key, a DDC/CI command (not VCP 0xEB), mode no longer the one that started it, VCP 0xEB = 0.
+// Stops: a key, a DDC/CI command (not VCP 0xEB), mode no longer the one that started it (no signal: NOSIGNAL, idle: ACTIVE), VCP 0xEB = 0.
 extern void AwtoPacmanClassic(BYTE ucCmd);
 extern BYTE AwtoScopeSaver(BYTE ucCmd);
 extern BYTE AwtoScopeSaver2(BYTE ucCmd);
@@ -225,9 +225,11 @@ void AwtoSaverPoll(void)                                            // main loop
             }
             return;
         }
-        if(((g_ucAwtoSaverWhy & 0x7F) == AWTO_SAVER_WHY_NOSIG) && (ucMode != _MODE_STATUS_NOSIGNAL))
+        if((((g_ucAwtoSaverWhy & 0x7F) == AWTO_SAVER_WHY_NOSIG) && (ucMode != _MODE_STATUS_NOSIGNAL)) ||
+           (((g_ucAwtoSaverWhy & 0x7F) == AWTO_SAVER_WHY_IDLE) && (ucMode != _MODE_STATUS_ACTIVE)))
         {
-            AwtoSaverStop();                                        // a source locked
+            AwtoSaverStop();                                        // the state that started it is gone: a source locked / the picture was lost
+            s_ulAct = ulNow;                                        // idle time from here: a new picture is not idle (docs/saver-mode.md)
             return;
         }
         if((g_ucAwtoSaverWhy & 0x80) && ((ulNow - s_ulSwap) >= AWTO_SAVER_ALT_MS))
