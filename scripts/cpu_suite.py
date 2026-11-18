@@ -71,7 +71,7 @@ CASES = [
     Case("T_RELOAD", 3, "T", "reload edge values 0xFFFF 0xFFFE 0xFFFC 0xFFF0 0xFF00: overflow flag sets, later = not sooner, 256 vs 16 counts ratio", "Mode 1 p3-6", 5),
     Case("T_FULL", 4, "T", "load 0x0000: 65536 counts = 65536 / (65536 - RCAP2) ticks", "Mode 1 p3-6", 40),
     Case("T_AUTORELOAD", 5, "T", "Timer1 mode 2: 20 periods of 128 counts, TL1 reloaded from TH1", "Mode 2 p3-7", 10),
-    Case("T_TORN", 6, "T", "16-bit timer read while it counts: naive pair (torn count, information) vs high-low-high (must be 0)", "Mode 1 p3-6; no hardware read protection in the databook", 20,
+    Case("T_TORN", 6, "T", "16-bit timer read while it counts: naive pair (torn count, information) vs high-low-high (must be 0)", "Mode 1 p3-6; no hardware read protection in the databook", 150,
          hw_note="naive torn count differs by timing (sim 4 %)"),
     Case("T_MS16", 7, "T", "deadline forms (now - deadline) < 0x8000 across 65535 -> 0; the real 1 ms counter injected 5 ticks before the wrap", "software; Timer2 auto-reload p3-14", 40),
     Case("T_MS32", 8, "T", "AwtoMs() across 2^32 -> 0: every tick +1 (hi word bumped by the ISR at lo wrap)", "software; Timer2 auto-reload p3-14", 40),
@@ -128,7 +128,7 @@ class Sim:
 
     def __init__(self, binp: Path, mapp: Path, tag: str, khz: int):
         import fw_sim as S
-        self.bus = S.SimBus(binp, mapp, tag, None, boot=False)
+        self.bus = S.SimBus(binp, mapp, tag, None, boot=False, devs=[S.ChipReset()])       # ChipReset = chip reset + hardware watchdog model
         self.m = self.bus.m
         self.base = self.m.addr("g_stAwtoCpu")
         self.khz = khz
