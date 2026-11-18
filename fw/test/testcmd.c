@@ -648,6 +648,8 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #include "ScalerCommonFunctionInclude.h"                       // DELAY_5US / DELAY_XUS
 #define AWTO_CLK_OP_APPLY                       1
 #define AWTO_CLK_OP_REVERT                      2
+#define AWTO_CLK_OP_KEEP                        3                   // held step: restart the hold timer (a soak keeps it alive; the host's silence = revert after usHoldMs)
+#define AWTO_CLK_OP_CHECK                       4                   // held step: run the checks again (CRC passes, XDATA, delays)
 #define AWTO_CLK_ST_IDLE                        0
 #define AWTO_CLK_ST_HELD                        1
 #define AWTO_CLK_ST_REVERTED                    2
@@ -663,6 +665,9 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_F_CKCON                        0x02
 #define AWTO_CLK_OP_DREAD                       0x3B                // MX25L8006E DREAD (datasheet): FF6B holds the fast-read opcode, also for read_mode 10
 #define AWTO_CLK_F_NOWRAP                       0x04                // FF6C accessed with the default MOVX cycle (tests the SDK's 9-cycle wrapper claim)                // global MOVX stretch = ucCkcon during the step
+#define AWTO_CLK_F_OVERCLOCK                    0x08                // sweep only (host --allow-overclock-flash): SPI up to AWTO_CLK_SPI_OC_KHZ, above the flash's fast-read rating
+#define AWTO_CLK_F_TUNEFIRST                    0x10                // ucRdTune is written at the stock clock, before the dividers change
+#define AWTO_CLK_SPI_OC_KHZ                     120000UL
 #define AWTO_CLK_SPI_MAX_KHZ                    86000UL             // MX25L8006E fSCLK, FAST_READ (datasheet Table 13)
 #define AWTO_CLK_SPI_DUAL_KHZ                   80000UL             // fTSCLK, DREAD
 #define AWTO_CLK_CRC_FROM                       0x0100              // code region read with MOVC (common area, the code that runs)
@@ -685,7 +690,7 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_DELAY_ITER                     8
 #define AWTO_CLK_DELAY_REPS                     5
 #define AWTO_CLK_PERM                           6
-#define AWTO_CLK_SPI_N_MIN                      5                   // F x F2 >= 5 at 351 MHz keeps the SPI <= 86 MHz
+#define AWTO_CLK_SPI_N_MIN                      5                   // F x F2 >= 5 at 351 MHz keeps the SPI <= 86 MHz (a transient is also allowed to be as fast as the old or new step)
 typedef struct
 {
     BYTE ucGo;                                          // host: 1 apply, 2 revert; fw clears
@@ -733,6 +738,20 @@ typedef struct
     BYTE ucRdTune;                                      // request: FF6C[5:2] (latch_so_rise, drive_si_fall, si_dly_sel) while the step is held, 0xFF = keep
     BYTE ucPasses;                                      // request: CRC passes in the checks (0 = AWTO_CLK_CRC_PASSES); more = a longer flash-read stress
     WORD usScFrames;                                    // Scope 1 frames drawn (g_usAwtoScFrames, scope_saver.c)
+    BYTE ucFlN;                                         // request: flash erase + program + read-back cycles on the spare sector 0xFE000 (0 = none, <= AWTO_CLK_FL_MAX)
+    BYTE ucFlCk;                                        // request: MOVX cycles (CKCON[2:0]) around the FF60 writes: 0 = default (2), 7 = the SDK speed-up wrapper (9)
+    BYTE ucFlDone;                                      // result: cycles completed
+    BYTE ucFlFail;                                      // result: AWTO_CLK_FL_ERR_*
+    WORD usFlBadE;                                      // result: bytes not 0xFF after an erase
+    WORD usFlBadP;                                      // result: bytes differing from the pattern after a program
+    WORD usFlEraseMs;                                   // result: total erase ms (erase call incl. its WREN / WRDis)
+    WORD usFlProgMs;                                    // result: total program ms (32 calls of 128 B)
+    WORD usFlMaxEraseMs;
+    BYTE ucImgN;                                        // request: passes of the whole-image read (banks 0..13 through the flash data port FF7B), 0 = none (<= AWTO_CLK_IMG_MAX)
+    BYTE ucImgDone;                                     // result: passes done
+    WORD usImgBad;                                      // result: bank CRCs differing from the stock-clock reference pass, summed over the passes
+    WORD usImgMask;                                     // result: banks that differed at least once (bit n = bank n)
+    WORD usImgMs;                                       // result: ms of the last pass
 } StAwtoClk;
 __xdata StAwtoClk g_stAwtoClk;
 extern __xdata WORD g_usAwtoAstFrames;
@@ -816,11 +835,17 @@ static BYTE AwtoClkWrite(BYTE ucF, BYTE ucF2, BYTE ucM)
     BYTE aucCur[3];
     BYTE aucNew[3];
     BYTE ucOk;
+    BYTE ucNMin;
     WORD usFast;
     WORD usOld = (WORD)(MCU_FFED_MCU_CONTROL >> 2 & 0x0F) * ((MCU_FFEE_MCU_CLOCK_CONTROL >> 2) & 0x0F);
     WORD usNew = (WORD)ucF * ucM;
 
     usFast = (usOld < usNew) ? usOld : usNew;
+    ucNMin = AWTO_CLK_SPI_N_MIN;
+    usOld = (WORD)(MCU_FFED_MCU_CONTROL >> 2 & 0x0F) * (MCU_FFE9_MCU_CLK_CONTROL_1 & 0x0F);
+    usNew = (WORD)ucF * ucF2;
+    ucNMin = (usOld < ucNMin) ? (BYTE)usOld : ucNMin;
+    ucNMin = (usNew < ucNMin) ? (BYTE)usNew : ucNMin;
     aucNew[0] = ucF2;
     aucNew[1] = ucF;
     aucNew[2] = ucM;
@@ -833,7 +858,7 @@ static BYTE AwtoClkWrite(BYTE ucF, BYTE ucF2, BYTE ucM)
         for(ucS = 0; ucS < 3; ucS++)
         {
             aucCur[tAwtoClkPerm[ucP][ucS]] = aucNew[tAwtoClkPerm[ucP][ucS]];
-            if(((WORD)aucCur[1] * aucCur[0] < AWTO_CLK_SPI_N_MIN) || ((WORD)aucCur[1] * aucCur[2] < usFast))
+            if(((WORD)aucCur[1] * aucCur[0] < ucNMin) || ((WORD)aucCur[1] * aucCur[2] < usFast))
             {
                 ucOk = 0;
             }
@@ -1094,6 +1119,225 @@ static void AwtoClkChecks(void)
     AwtoClkDelayCal();
 }
 
+// ---- flash write / erase test: the spare sector 0xFE000 only (docs/flash-registry.md), fixed here, never host-set.
+// Each cycle: erase, check 0xFF, program 4096 B in 128 B calls, read back; ends with an erase (sector left blank).
+// Writes go through UserCommonFlashErasePage / UserCommonFlashWrite (the production path); g_ucAwtoFlCk sets the MOVX stretch the SDK macro uses.
+#define AWTO_CLK_FL_BANK                        15
+#define AWTO_CLK_FL_PAGE                        14                  // page x 0x1000 = 0xE000
+#define AWTO_CLK_FL_SIZE                        4096
+#define AWTO_CLK_FL_CHUNK                       128
+#define AWTO_CLK_FL_MAX                         20                  // wear limit: <= 100 erases in total (Dan), N + 1 erases per call
+#define AWTO_CLK_FL_ERR_NONE                    0
+#define AWTO_CLK_FL_ERR_ERASE                   1                   // erase call returned false
+#define AWTO_CLK_FL_ERR_BLANK                   2                   // erase done, bytes not 0xFF
+#define AWTO_CLK_FL_ERR_WRITE                   3                   // write call returned false
+#define AWTO_CLK_FL_ERR_VERIFY                  4                   // read-back differs
+#define AWTO_CLK_FL_ERR_READ                    5                   // read call returned false
+#define AWTO_CLK_FL_ERR_RATING                  8                   // flash clock above the rating: nothing written
+#define AWTO_CLK_FL_STAGE                       0xA0                // ucFlFail = STAGE + n while a call runs (the host reads it after a reset): 1 erase, 2 blank check, 3 program, 4 verify
+#define AWTO_CLK_FL_ERR_SPARE                   9                   // spare holds foreign data: nothing erased
+__xdata BYTE g_ucAwtoFlCk;                                          // read by _CKCON_MCU_SLOW_CYCLE in HWTEST builds (Project_Option.h)
+static __xdata BYTE s_aucClkFl[AWTO_CLK_FL_CHUNK];
+
+static BYTE AwtoClkFlPat(WORD usA, BYTE ucC)
+{
+    if(usA < 2)
+    {
+        return (usA == 0) ? 0xA5 : 0x5A;                            // signature: our own data
+    }
+    return (BYTE)((usA * 7) ^ (usA >> 8) ^ (BYTE)(ucC * 0x2D) ^ 0x6B);
+}
+
+static WORD AwtoClkFlCheck(BYTE ucC, BYTE ucBlank)                  // bytes wrong (blank: not 0xFF, else: not the pattern); 0xFFFF = a read failed
+{
+    WORD usA;
+    WORD usI;
+    WORD usBad = 0;
+
+    for(usA = 0; usA < AWTO_CLK_FL_SIZE; usA += AWTO_CLK_FL_CHUNK)
+    {
+        AwtoClkPoke();
+        if(UserCommonFlashRead(AWTO_CLK_FL_BANK, ((WORD)AWTO_CLK_FL_PAGE << 12) + usA, AWTO_CLK_FL_CHUNK, s_aucClkFl) == _FALSE)
+        {
+            return 0xFFFF;
+        }
+        for(usI = 0; usI < AWTO_CLK_FL_CHUNK; usI++)
+        {
+            usBad += (s_aucClkFl[usI] != ((ucBlank != 0) ? 0xFF : AwtoClkFlPat(usA + usI, ucC)));
+        }
+    }
+    return usBad;
+}
+
+static void AwtoClkFlashTest(void)
+{
+    BYTE ucC;
+    WORD usA;
+    WORD usI;
+    WORD usT;
+    unsigned long ulT0;
+
+    g_stAwtoClk.ucFlDone = 0;
+    g_stAwtoClk.ucFlFail = AWTO_CLK_FL_ERR_NONE;
+    g_stAwtoClk.usFlBadE = 0;
+    g_stAwtoClk.usFlBadP = 0;
+    g_stAwtoClk.usFlEraseMs = 0;
+    g_stAwtoClk.usFlProgMs = 0;
+    g_stAwtoClk.usFlMaxEraseMs = 0;
+    if((g_stAwtoClk.ucFlN == 0) || (g_stAwtoClk.ucFlN > AWTO_CLK_FL_MAX))
+    {
+        return;
+    }
+    if(g_stAwtoClk.ulPllKhz / ((WORD)g_stAwtoClk.ucF * g_stAwtoClk.ucF2) > AWTO_CLK_SPI_MAX_KHZ)
+    {
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_ERR_RATING;                // never erase / program with the flash clock above its rating
+        return;
+    }
+    usA = AwtoClkFlCheck(0, 1);                                     // blank, or our own signature from an aborted run
+    if((usA != 0) && (UserCommonFlashRead(AWTO_CLK_FL_BANK, (WORD)AWTO_CLK_FL_PAGE << 12, 2, s_aucClkFl) == _FALSE || s_aucClkFl[0] != 0xA5 || s_aucClkFl[1] != 0x5A))
+    {
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_ERR_SPARE;
+        return;
+    }
+    g_ucAwtoFlCk = g_stAwtoClk.ucFlCk & 7;
+    for(ucC = 0; ucC <= g_stAwtoClk.ucFlN; ucC++)                   // the last pass only erases
+    {
+        ulT0 = AwtoMs();
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_STAGE + 1;
+        if(UserCommonFlashErasePage(AWTO_CLK_FL_BANK, AWTO_CLK_FL_PAGE) == _FALSE)
+        {
+            g_stAwtoClk.ucFlFail = AWTO_CLK_FL_ERR_ERASE;
+            break;
+        }
+        usT = (WORD)(AwtoMs() - ulT0);
+        g_stAwtoClk.usFlEraseMs += usT;
+        g_stAwtoClk.usFlMaxEraseMs = (usT > g_stAwtoClk.usFlMaxEraseMs) ? usT : g_stAwtoClk.usFlMaxEraseMs;
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_STAGE + 2;
+        usA = AwtoClkFlCheck(0, 1);
+        if(usA != 0)
+        {
+            g_stAwtoClk.usFlBadE += usA;
+            g_stAwtoClk.ucFlFail = (usA == 0xFFFF) ? AWTO_CLK_FL_ERR_READ : AWTO_CLK_FL_ERR_BLANK;
+            break;
+        }
+        if(ucC == g_stAwtoClk.ucFlN)
+        {
+            break;
+        }
+        ulT0 = AwtoMs();
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_STAGE + 3;
+        for(usA = 0; usA < AWTO_CLK_FL_SIZE; usA += AWTO_CLK_FL_CHUNK)
+        {
+            for(usI = 0; usI < AWTO_CLK_FL_CHUNK; usI++)
+            {
+                s_aucClkFl[usI] = AwtoClkFlPat(usA + usI, ucC);
+            }
+            AwtoClkPoke();
+            if(UserCommonFlashWrite(AWTO_CLK_FL_BANK, ((WORD)AWTO_CLK_FL_PAGE << 12) + usA, AWTO_CLK_FL_CHUNK, s_aucClkFl) == _FALSE)
+            {
+                g_stAwtoClk.ucFlFail = AWTO_CLK_FL_ERR_WRITE;
+                break;
+            }
+        }
+        g_stAwtoClk.usFlProgMs += (WORD)(AwtoMs() - ulT0);
+        if(g_stAwtoClk.ucFlFail != AWTO_CLK_FL_ERR_NONE)
+        {
+            break;
+        }
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_STAGE + 4;
+        usA = AwtoClkFlCheck(ucC, 0);
+        if(usA != 0)
+        {
+            g_stAwtoClk.usFlBadP += usA;
+            g_stAwtoClk.ucFlFail = (usA == 0xFFFF) ? AWTO_CLK_FL_ERR_READ : AWTO_CLK_FL_ERR_VERIFY;
+            break;
+        }
+        g_stAwtoClk.ucFlDone = ucC + 1;
+    }
+    if((g_stAwtoClk.ucFlFail >= AWTO_CLK_FL_STAGE) && (g_stAwtoClk.ucFlFail < AWTO_CLK_FL_STAGE + 0x10))
+    {
+        g_stAwtoClk.ucFlFail = AWTO_CLK_FL_ERR_NONE;                // finished (a break sets a real error)
+    }
+    g_ucAwtoFlCk = _CKCON_MOVX_DEFAULT_CYCLE;
+}
+
+// ---- whole-image read: CRC-32 of banks 0..13 (the code image) through the flash data port, one reference pass at the stock clock, N passes at the step.
+#define AWTO_CLK_IMG_BANKS                      14
+#define AWTO_CLK_IMG_MAX                        20
+static __xdata unsigned long s_aulClkImgRef[AWTO_CLK_IMG_BANKS];
+
+static unsigned long AwtoClkImgBank(BYTE ucBank)                    // 0 = a read failed (a CRC of 0 is not expected for 64 KB of code)
+{
+    unsigned long ulCrc = 0xFFFFFFFFUL;
+    WORD usA;
+    BYTE ucI;
+    BYTE ucB;
+
+    usA = 0;
+    do                                                              // 64 KB: the WORD address wraps to 0 at the end
+    {
+        AwtoClkPoke();
+        if(UserCommonFlashRead(ucBank, usA, AWTO_CLK_FL_CHUNK, s_aucClkFl) == _FALSE)
+        {
+            return 0;
+        }
+        for(ucI = 0; ucI < AWTO_CLK_FL_CHUNK; ucI++)
+        {
+            ucB = s_aucClkFl[ucI];
+            ulCrc = (ulCrc >> 4) ^ tAwtoClkCrc[(BYTE)(ulCrc ^ ucB) & 0x0F];
+            ulCrc = (ulCrc >> 4) ^ tAwtoClkCrc[(BYTE)(ulCrc ^ (ucB >> 4)) & 0x0F];
+        }
+        usA += AWTO_CLK_FL_CHUNK;
+    }
+    while(usA != 0);
+    return ~ulCrc;
+}
+
+static void AwtoClkImgRef(void)                                     // stock clock, before the step
+{
+    BYTE ucK;
+
+    g_stAwtoClk.ucImgDone = 0;
+    g_stAwtoClk.usImgBad = 0;
+    g_stAwtoClk.usImgMask = 0;
+    if((g_stAwtoClk.ucImgN == 0) || (g_stAwtoClk.ucImgN > AWTO_CLK_IMG_MAX))
+    {
+        return;
+    }
+    for(ucK = 0; ucK < AWTO_CLK_IMG_BANKS; ucK++)
+    {
+        s_aulClkImgRef[ucK] = AwtoClkImgBank(ucK);
+    }
+}
+
+static void AwtoClkImgPasses(void)
+{
+    BYTE ucP;
+    BYTE ucK;
+    unsigned long ulT0;
+    unsigned long ulC;
+
+    if((g_stAwtoClk.ucImgN == 0) || (g_stAwtoClk.ucImgN > AWTO_CLK_IMG_MAX))
+    {
+        return;
+    }
+    for(ucP = 0; ucP < g_stAwtoClk.ucImgN; ucP++)
+    {
+        ulT0 = AwtoMs();
+        for(ucK = 0; ucK < AWTO_CLK_IMG_BANKS; ucK++)
+        {
+            ulC = AwtoClkImgBank(ucK);
+            if((ulC != s_aulClkImgRef[ucK]) || (ulC == 0))
+            {
+                g_stAwtoClk.usImgBad++;
+                g_stAwtoClk.usImgMask |= (WORD)1 << ucK;
+            }
+        }
+        g_stAwtoClk.usImgMs = (WORD)(AwtoMs() - ulT0);
+        g_stAwtoClk.ucImgDone = ucP + 1;
+    }
+}
+
 static void AwtoClkReadback(void)
 {
     g_stAwtoClk.usRcap = ((WORD)RCAP2H << 8) | RCAP2L;
@@ -1141,7 +1385,7 @@ static void AwtoClkApply(void)
     {
         g_stAwtoClk.ucRefuse = AWTO_CLK_REF_BUSY;
     }
-    else if(ulPll / ((WORD)ucF * ucF2) > (((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) ? AWTO_CLK_SPI_DUAL_KHZ : AWTO_CLK_SPI_MAX_KHZ))
+    else if(ulPll / ((WORD)ucF * ucF2) > (((g_stAwtoClk.ucFlags & AWTO_CLK_F_OVERCLOCK) != 0) ? AWTO_CLK_SPI_OC_KHZ : (((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) ? AWTO_CLK_SPI_DUAL_KHZ : AWTO_CLK_SPI_MAX_KHZ)))
     {
         g_stAwtoClk.ucRefuse = AWTO_CLK_REF_SPI;
     }
@@ -1173,6 +1417,7 @@ static void AwtoClkApply(void)
         g_stAwtoClk.ucFormulaOk = (AwtoClkReload(s_ucClkStock[0], s_ucClkStock[2]) == s_usClkStockRcap);
         s_ucClkSaved = 1;
     }
+    AwtoClkImgRef();
     usN = (WORD)ucF * ucM;
     if(g_stAwtoClk.ucDrive != 0xFF)
     {
@@ -1184,6 +1429,11 @@ static void AwtoClkApply(void)
     }
     s_ucClkWrap = ((g_stAwtoClk.ucFlags & AWTO_CLK_F_NOWRAP) != 0) ? _CKCON_MOVX_DEFAULT_CYCLE : _CKCON_MOVX_9_CYCLE;
     EA = 0;
+    if(((g_stAwtoClk.ucFlags & AWTO_CLK_F_TUNEFIRST) != 0) && (g_stAwtoClk.ucRdTune != 0xFF))
+    {
+        AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);             // warm the cache line, then the tuned latch / delay at the stock clock
+        AwtoClkReadMode(s_ucClkStock[10], (s_ucClkStock[4] & 0xC3) | (g_stAwtoClk.ucRdTune & 0x3C));
+    }
     if(AwtoClkWrite(ucF, ucF2, ucM) == 0)
     {
         EA = 1;
@@ -1195,7 +1445,7 @@ static void AwtoClkApply(void)
     d_isr_g_ucDelay5usN_Base = (BYTE)(((WORD)s_ucClkStock[5] * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
     d_isr_g_ucDelayXusN_Base = (BYTE)(((WORD)s_ucClkStock[6] * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
     isr_g_usDDCDebounceCnt = (WORD)(((unsigned long)s_usClkStockDeb * (s_ucClkStock[0] * s_ucClkStock[2]) + usN / 2) / usN);
-    if(((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) || (g_stAwtoClk.ucRdTune != 0xFF))
+    if(((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) || (((g_stAwtoClk.ucFlags & AWTO_CLK_F_TUNEFIRST) == 0) && (g_stAwtoClk.ucRdTune != 0xFF)))
     {
         AwtoClkReadMode(s_ucClkStock[10], s_ucClkStock[4]);                 // warm the cache line with the stock values
         ucMode = (s_ucClkStock[4] & 0xC3) | (((g_stAwtoClk.ucFlags & AWTO_CLK_F_DUAL) != 0) ? 0x80 : 0x00);
@@ -1220,6 +1470,8 @@ static void AwtoClkApply(void)
     s_ulClkT0 = AwtoMs();
     g_stAwtoClk.ucState = AWTO_CLK_ST_HELD;
     AwtoClkChecks();
+    AwtoClkImgPasses();
+    AwtoClkFlashTest();
     AwtoClkReadback();
 }
 
@@ -1251,7 +1503,19 @@ static void AwtoClkPoll(void)
     g_stAwtoClk.usNowMs = (WORD)AwtoMs();
     g_stAwtoClk.usAstFrames = g_usAwtoAstFrames;
     g_stAwtoClk.usScFrames = g_usAwtoScFrames;
-    if((g_stAwtoClk.ucState == AWTO_CLK_ST_HELD) && ((ucGo == AWTO_CLK_OP_REVERT) || ((WORD)((WORD)AwtoMs() - (WORD)s_ulClkT0) >= g_stAwtoClk.usHoldMs)))
+    if((ucGo == AWTO_CLK_OP_KEEP) || (ucGo == AWTO_CLK_OP_CHECK))
+    {
+        if(g_stAwtoClk.ucState == AWTO_CLK_ST_HELD)
+        {
+            s_ulClkT0 = AwtoMs();
+            if(ucGo == AWTO_CLK_OP_CHECK)
+            {
+                AwtoClkChecks();
+                AwtoClkReadback();
+            }
+        }
+    }
+    else if((g_stAwtoClk.ucState == AWTO_CLK_ST_HELD) && ((ucGo == AWTO_CLK_OP_REVERT) || ((WORD)((WORD)AwtoMs() - (WORD)s_ulClkT0) >= g_stAwtoClk.usHoldMs)))
     {
         AwtoClkRevert((ucGo == AWTO_CLK_OP_REVERT) ? AWTO_CLK_ST_REVERTED : AWTO_CLK_ST_AUTO_REVERTED);
     }

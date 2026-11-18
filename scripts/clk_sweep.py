@@ -34,11 +34,16 @@ C_DRIVE, C_SLEW, C_CHIP, C_DRNOW, C_SLNOW = 62, 63, 64, 65, 66
 C_AST = 67
 C_TUNE, C_PASSES = 69, 70
 C_SC = 71
-C_SIZE = 73
-OP_APPLY, OP_REVERT = 1, 2
+C_FLN, C_FLCK, C_FLDONE, C_FLFAIL, C_FLBADE, C_FLBADP, C_FLERMS, C_FLPRMS, C_FLMAX = 73, 74, 75, 76, 77, 79, 81, 83, 85
+C_IMGN, C_IMGDONE, C_IMGBAD, C_IMGMASK, C_IMGMS = 87, 88, 89, 91, 93
+C_SIZE = 95
+FL_ERR = {0: "none", 1: "erase call failed", 2: "not blank after erase", 3: "write call failed", 4: "read-back differs", 5: "read call failed",
+          8: "flash clock above the rating, nothing written", 0xA1: "erase call", 0xA2: "blank check read", 0xA3: "program calls", 0xA4: "read-back", 9: "spare sector holds foreign data, nothing erased"}
+OP_APPLY, OP_REVERT, OP_KEEP, OP_CHECK = 1, 2, 3, 4
 ST_HELD, ST_REVERTED, ST_REFUSED, ST_AUTO = 1, 2, 3, 4
 REFUSE = {0: "none", 1: "divider range", 2: "step already held", 3: "SPI above rating", 4: "no safe write order", 5: "MCU slower than SPI"}
-FL_DUAL, FL_CKCON, FL_NOWRAP = 1, 2, 4
+FL_DUAL, FL_CKCON, FL_NOWRAP, FL_OC, FL_TUNEFIRST = 1, 2, 4, 8, 0x10
+RATED_OC_MHZ = 120.0                      # firmware cap with FL_OC (AWTO_CLK_SPI_OC_KHZ)
 
 STOCK_MHZ = 87.75
 RATED_FAST_MHZ, RATED_DUAL_MHZ, RATED_READ_MHZ = 86.0, 80.0, 33.0       # MX25L8006E Table 13: fSCLK (0x0B), fTSCLK (0x3B), fRSCLK (0x03)
@@ -98,6 +103,38 @@ GROUPS = {"all-mcu": ["stock", "m44", "m58", "m70", "m117", "m175"],
           "all-flash": ["stock", "s22", "s29", "s58", "s70", "s44d", "s58d", "s70d"],
           "all-175": ["m175", "f175_58", "f175_70", "f175_44d", "f175_58d", "f175_70d"],
           "all-pad": ["s58p", "s70p", "s70dp", "f175_58p", "f175_70p", "f175_70dp"]}
+
+# flash write / erase test on the spare sector 0xFE000 (fw AwtoClkFlashTest): name -> (cycles, MOVX cycles around FF60: 0 default, 7 = SDK wrapper)
+FL_CYCLES = 14                            # N + 1 erases per apply; 6 conditions = 90 erases (limit ~100 on that sector, Dan)
+FLASH_TESTS = {}
+for _b in ("stock", "f175_70", "m351"):
+    for _ck in (0, 7):
+        STEPS[f"{_b}_fl{_ck}"] = STEPS[_b]
+        FLASH_TESTS[f"{_b}_fl{_ck}"] = (FL_CYCLES, _ck)
+for _n, _c in (("m351_fl0s", 3), ("m351_fl7s", 3)):                    # short variants (3 cycles = 4 erases): wear
+    STEPS[_n] = STEPS["m351"]
+    FLASH_TESTS[_n] = (_c, 7 if _n.endswith("7s") else 0)
+# whole-image read through the flash data port (banks 0..13): name -> passes
+IMG_PASSES = {"stock_img": 2, "m351_img": 3, "f175_70_img": 3}
+for _n in IMG_PASSES:
+    STEPS[_n] = STEPS[_n.rsplit("_img", 1)[0]]
+# overclocked flash, F = 1: SPI 87.7 (F2 4) and 116.9 (F2 3) at MCU 350.8; FF6C[5:2] latch_so_rise / drive_si_fall / si_dly_sel per combination
+OC_SPEEDS = {"oc88": (1, 4, 1), "oc117": (1, 3, 1)}
+OC_L_PASSES, OC_L_IMG = 200, 5
+for _n, (_f, _f2, _m) in OC_SPEEDS.items():
+    for _l in (0, 1):
+        for _fl in (0, 1):
+            for _d in range(4):
+                _name = f"{_n}_l{_l}_f{_fl}_d{_d}"
+                STEPS[_name] = (_f, _f2, _m, FL_OC)
+                TUNE[_name] = (_l << 5) | (_fl << 4) | (_d << 2)
+                PASSES[_name + "L"] = OC_L_PASSES
+                IMG_PASSES[_name] = 1
+                IMG_PASSES[_name + "L"] = OC_L_IMG
+                STEPS[_name + "L"] = (_f, _f2, _m, FL_OC)
+                TUNE[_name + "L"] = TUNE[_name]
+GROUPS["oc88"] = [n for n in STEPS if n.startswith("oc88_l") and not n.endswith("L")]
+GROUPS["oc117"] = [n for n in STEPS if n.startswith("oc117_l") and not n.endswith("L")]
 
 CRC_FROM, CRC_TO = 0x0100, 0x4000
 TICK_REL_PM = 5                           # per mille of the stock step's value; window 100 ticks, resolution 1 clock in 1.4 M
@@ -174,21 +211,59 @@ def send(ctx, go: int, limit_s: float, f=0, f2=0, m=0, flags=0, hold_s=HOLD_S, l
         ck.wr(C_F, bytes([f, f2, m, 0, flags]))
         ck.wr(C_DRIVE, bytes(pad))
         ck.wr(C_TUNE, bytes([TUNE.get(name_, 0xFF), PASSES.get(name_, 0)]))
+        ck.wr(C_FLN, bytes(FLASH_TESTS.get(name_, (0, 0))))
+        ck.wr(C_IMGN, bytes([IMG_PASSES.get(name_, 0)]))
         ck.wr(C_HOLD, int(hold_s * 1000).to_bytes(2, "big"))
     seq0 = ck.rd(C_SEQ, 1)[0]
     ck.wr(C_GO, bytes([go]))
     t0 = ck.now()
+    ctx.progress = None
     while True:
         pace(ck)
         try:
             h = ck.rd(C_GO, 2)
         except RuntimeError:
             h = None
+        if go == OP_APPLY:
+            try:
+                ctx.progress = (round(ck.now() - t0, 1), ck.rd(C_FLDONE, 2).hex(), ck.rd(C_IMGDONE, 1).hex())     # last (s, FlDone+FlFail, ImgDone) seen before a reset
+            except RuntimeError:
+                pass
         if h is not None and h[0] == 0 and h[1] != seq0:
             return crd(ck)
         if ck.now() - t0 > limit_s:
-            say(f"  FAIL {label}: no answer after {ck.now() - t0:.2f} s (limit {limit_s:.2f} s)")
+            say(f"  FAIL {label}: no answer after {ck.now() - t0:.2f} s (limit {limit_s:.2f} s); last progress seen (s, flash cycles + stage, image passes): {ctx.progress}")
             return None
+
+
+PM_CTRL, PM_REF, PM_MISS, PM_RST = 0xFDB3, 0xFDB9, 0xFDBD, 0xFDC1      # flash-cache performance meter (regdb FDB3..FDC6): control, program reads, misses, memory restarts
+PM_EN_BIT, PM_RESET_BIT = 0x01, 0x02
+IOSC_FROM, IOSC_N = 0x06A0, 7                                             # IOSC trim block (regdb OSC_TRIM_CTRL0..EMB_BGRES): read-only temperature proxy
+
+
+def xwr(ctx, addr: int, val: int) -> None:
+    ctx.dev.wr(addr - ctx.dev.base, bytes([val]))
+
+
+def iosc(ctx, tag: str) -> dict | None:
+    """IOSC trim registers over the debug link (read-only): trim_cnt = 0x06A5[7:4] x 256 + 0x06A4, vc / mos result 0x06A2."""
+    if ctx.sim:
+        return None
+    try:
+        b = ctx.rdabs(IOSC_FROM, IOSC_N)
+    except Exception as e:  # noqa: BLE001
+        say(f"  info iosc {tag}: read failed {e}")
+        return None
+    if b is None:
+        say(f"  info iosc {tag}: read failed")
+        return None
+    cnt = ((b[5] >> 4) << 8) | b[4]
+    say(f"  info iosc {tag}: 06A0.. = {b.hex(' ')}; trim_cnt {cnt}, vc {(b[2] >> 3) & 7}, mos {b[2] & 7}, lt {(b[2] >> 6) & 1}, trim_done {(b[0] >> 6) & 1}")
+    return {"cnt": cnt, "raw": b.hex()}
+
+
+def meter_read(ctx) -> tuple[int, int, int]:
+    return tuple(int.from_bytes(ctx.rdabs(a, 4), "big") for a in (PM_REF, PM_MISS, PM_RST))
 
 
 def fps_scope2(ctx) -> tuple[float, int]:
@@ -198,9 +273,20 @@ def fps_scope2(ctx) -> tuple[float, int]:
     wait(dev, FPS_SETTLE_S)
     r0 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame0")
     t0 = dev.now()
+    if not ctx.sim:
+        xwr(ctx, PM_CTRL, PM_RESET_BIT)
+        xwr(ctx, PM_CTRL, PM_EN_BIT)
     wait(dev, FPS_WINDOW_S)
+    if not ctx.sim:
+        xwr(ctx, PM_CTRL, 0)
+        ctx.scope2_meter = meter_read(ctx)
     r1 = H.op(dev, H.OP_REGS, H.lim_read(0), label="frame1")
     t1 = dev.now()
+    if not ctx.sim:
+        nf = max((r1["frame"] - r0["frame"]) & 0xFFFF, 1)
+        ref, mis, rst = ctx.scope2_meter
+        say(f"  info cache meter during Scope 2: {nf} frames in the window: {ref / nf:.0f} program reads, {mis / nf:.0f} misses ({100 * mis / max(ref, 1):.2f} %), {rst / nf:.0f} memory restarts per frame; totals {ref} / {mis} / {rst}")
+        ctx.scope2_miss_per_frame = mis / nf
     H.op(dev, H.OP_SAVER, H.lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
     n = (r1["frame"] - r0["frame"]) & 0xFFFF
     return n / (t1 - t0), n
@@ -232,17 +318,35 @@ def fps_scope1(ctx) -> tuple[float, int]:
     return n / (t1 - t0), n
 
 
+OPTS = {"allow_oc": False, "tune_first": False, "fps": True}      # set by main(): --allow-overclock-flash, --tune-first, --no-fps
+IMG_PASS_S = 25.0                          # one whole-image pass (14 banks) at the stock clock, first guess: refined by the first run
+FL_CYCLE_S = 3.0                           # one flash erase + 4 KB program + 2 read-backs, first guess: refined by the first run
+
+
 def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     f, f2, m, fl = STEPS[name]
+    if fl & FL_OC and not OPTS["allow_oc"]:
+        say(f"== {name}: SPI above the flash rating: needs --allow-overclock-flash")
+        return {"step": name, "pass": False, "fail": "refused: overclock not allowed (--allow-overclock-flash)"}
+    if OPTS["tune_first"] and name in TUNE:
+        fl |= FL_TUNEFIRST
     dev, ck = ctx.dev, ctx.ck
     res = {"step": name, "F": f, "F2": f2, "M": m, "dual": int(bool(fl & FL_DUAL))}
+    iosc(ctx, f"{name} before (stock clock)")
     scale = max(1.0, STOCK_MHZ / (350.8 / (f * m)), 43.85 / (350.8 / (f * f2)))     # op times follow the MCU clock and the SPI clock (stock 43.85)
-    r = send(ctx, OP_APPLY, (APPLY_LIMIT_S + PASSES.get(name, 0) * 0.45) * scale, f, f2, m, fl, label=f"apply {name}", pad=PADS.get(name, (KEEP, KEEP)), name_=name, hold_s=min(65.0, HOLD_S + PASSES.get(name, 0) * 0.4 * scale))
+    t_apply = ck.now()
+    extra_s = FLASH_TESTS.get(name, (0, 0))[0] * FL_CYCLE_S + ((IMG_PASSES[name] + 1) * IMG_PASS_S if name in IMG_PASSES else 0)
+    r = send(ctx, OP_APPLY, (APPLY_LIMIT_S + PASSES.get(name, 0) * 0.45) * scale + extra_s * scale, f, f2, m, fl, label=f"apply {name}", pad=PADS.get(name, (KEEP, KEEP)), name_=name, hold_s=min(65.0, HOLD_S + PASSES.get(name, 0) * 0.4 * scale + extra_s * scale))
     if r is None:
         res["fail"] = "no answer to apply (hung or reset)"
         return res
+    say(f"  apply op took {ck.now() - t_apply:.1f} s (host clock)")
     st, refuse = r[C_STATE], r[C_REFUSE]
     pll = be(r, C_PLL, 4)
+    if pll == 0 and st == 0:
+        say(f"  FAIL {name}: the unit RESET during the apply op (struct back to zero after {ck.now() - t_apply:.1f} s); last progress seen (s, flash cycles + error, image passes): {ctx.progress}")
+        res["fail"] = f"comm: unit reset during apply, last progress {ctx.progress}"
+        return res
     ctx.pll_khz = pll
     mhz, shz = mcu_mhz(pll, f, m), spi_mhz(pll, f, f2)
     res.update(mcu=mhz, spi=shz)
@@ -284,18 +388,33 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     say(f"  info cpu loop {alu} ms (196608 it) = {196608 / max(alu, 1):.0f} kit/s; cache-miss reads {miss} ms for 16384 = {miss * 1000 / 16.384:.0f} ns each; "
         f"cache meter over the CRC pass: {ref} reads, {mis} misses ({100 * mis / max(ref, 1):.1f} %), {rst} memory restarts; DDC debounce {be(r, C_DEB, 2)}")
     res.update(alu_ms=alu, miss_ms=miss, ref=ref, misses=mis, crc_ms=be(r, C_CRCMS, 2))
+    if name in FLASH_TESTS:
+        n_fl, ck_fl = FLASH_TESTS[name]
+        done, fail, be_, bp_ = r[C_FLDONE], r[C_FLFAIL], be(r, C_FLBADE, 2), be(r, C_FLBADP, 2)
+        chk("flash-rw", fail == 0 and done == n_fl and be_ == 0 and bp_ == 0,
+            f"spare 0xFE000, {n_fl} x (erase + 4096 B program in 128 B calls + read-back), MOVX cycles {'9 (SDK wrapper)' if ck_fl == 7 else '2 (default, no wrapper)'}: "
+            f"{done} cycles done, fail {FL_ERR.get(fail, fail)}, not-blank bytes {be_}, wrong bytes {bp_}; erase {be(r, C_FLERMS, 2)} ms total (max {be(r, C_FLMAX, 2)} ms), program {be(r, C_FLPRMS, 2)} ms total")
+        res.update(fl_done=done, fl_fail=fail, fl_bad=be_ + bp_, fl_erase_ms=be(r, C_FLERMS, 2), fl_prog_ms=be(r, C_FLPRMS, 2))
+    if name in IMG_PASSES:
+        n_im = IMG_PASSES[name]
+        chk("image-read", r[C_IMGDONE] == n_im and be(r, C_IMGBAD, 2) == 0,
+            f"banks 0..13 through the flash data port, CRC-32 per bank vs the stock-clock pass: {r[C_IMGDONE]} of {n_im} passes, {be(r, C_IMGBAD, 2)} bank CRCs differ (banks mask 0x{be(r, C_IMGMASK, 2):04X}), {be(r, C_IMGMS, 2)} ms last pass")
+        res.update(img_bad=be(r, C_IMGBAD, 2), img_ms=be(r, C_IMGMS, 2))
     # host side, at the step clock
-    n_bad, ref_blk = 0, None
+    n_fail, laps, seen = 0, [], {}
     t0 = ck.now()
-    for _ in range(RT_READS):
+    for i in range(RT_READS):
+        if i % 50 == 49:
+            laps.append(round(ck.now() - t0, 2))
         try:
             b = ck.rd(C_CRC, 24)
         except RuntimeError:
-            n_bad += 1
+            n_fail += 1
             continue
-        ref_blk = ref_blk or b
-        n_bad += b != ref_blk
-    chk("link", n_bad == 0, f"{RT_READS} block reads of 24 B in {ck.now() - t0:.2f} s, {n_bad} failed / differing")
+        seen[b] = seen.get(b, 0) + 1
+    n_bad = n_fail + sum(seen.values()) - max(seen.values(), default=0)          # failed reads + blocks differing from the commonest block
+    say(f"  info link blocks: {len(seen)} distinct, counts {sorted(seen.values(), reverse=True)[:4]}, {n_fail} reads failed; first {[k.hex() for k in list(seen)[:3]]}")
+    chk("link", n_bad == 0, f"{RT_READS} block reads of 24 B in {ck.now() - t0:.2f} s, {n_bad} failed / differing; elapsed at every 50th read {laps}")
     a0, t0 = be(ck.rd(C_NOW, 2), 0, 2), ck.now()
     wait(ck, WALL_S)
     a1, t1 = be(ck.rd(C_NOW, 2), 0, 2), ck.now()
@@ -315,15 +434,20 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     except (TimeoutError, RuntimeError) as e:
         chk("osd-port", False, str(e))
     try:
+        if not OPTS["fps"]:
+            raise StopIteration
         fps2, n2 = fps_scope2(ctx)
         say(f"  info Scope 2: {n2} frames in {FPS_WINDOW_S:.0f} s = {fps2:.2f} frames/s ({1000 / max(fps2, 1e-9):.0f} ms/frame)")
         res["scope2_fps"] = fps2
+        res["s2_miss_frame"] = getattr(ctx, "scope2_miss_per_frame", "")
         fpsa, na = fps_ast(ctx)
         say(f"  info Asteroids: {na} frames in {FPS_WINDOW_S:.0f} s = {fpsa:.2f} frames/s ({1000 / max(fpsa, 1e-9):.0f} ms/frame)")
         res["ast_fps"] = fpsa
         fps1, n1 = fps_scope1(ctx)
         say(f"  info Scope 1: {n1} frames in {FPS_WINDOW_S:.0f} s = {fps1:.2f} frames/s ({1000 / max(fps1, 1e-9):.0f} ms/frame)")
         res["scope1_fps"] = fps1
+    except StopIteration:
+        pass
     except (TimeoutError, RuntimeError) as e:
         chk("saver", False, str(e))
     r = send(ctx, OP_REVERT, 2.0, label=f"revert {name}")
@@ -332,13 +456,14 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     else:
         stock_ok = (r[C_FFED] >> 2) & 15 == FFED_STOCK and r[C_FFE9] & 15 == 2 and (r[C_FFEE] >> 2) & 15 == 1
         chk("revert", stock_ok, f"FFED {r[C_FFED]:02X} FFE9 {r[C_FFE9]:02X} FFEE {r[C_FFEE]:02X} FF6C {r[C_FF6C]:02X} RCAP2 0x{be(r, C_RCAP, 2):04X} state {r[C_STATE]}")
+    iosc(ctx, f"{name} after revert (stock clock)")
     res["pass"] = all(ok for _, ok in checks)
     say(f"  {'STEP PASS' if res['pass'] else 'STEP FAIL'} {name}")
     return res
 
 
 def tsv(row: dict) -> None:
-    keys = ["step", "mcu", "spi", "dual", "pass", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "ast_fps", "scope1_fps", "fail"]
+    keys = ["step", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "scope1_fps", "fail"]
     TSV.parent.mkdir(parents=True, exist_ok=True)
     new = not TSV.exists()
     with TSV.open("a") as f:
@@ -370,8 +495,12 @@ def main() -> int:
     ap.add_argument("--bin", type=Path)
     ap.add_argument("--sim", action="store_true")
     ap.add_argument("--continue-on-fail", action="store_true", help="go on to the next step after a failed one (default: stop, the rest is slower-to-faster)")
+    ap.add_argument("--allow-overclock-flash", action="store_true", help="allow the oc* steps: SPI above the MX25L8006E fast-read rating (86 MHz); never write / erase there (the fw refuses)")
+    ap.add_argument("--tune-first", action="store_true", help="write the FF6C latch / delay tune at the stock clock, before the dividers change")
+    ap.add_argument("--no-fps", action="store_true", help="skip the Scope 2 / Asteroids / Scope 1 frame-rate part")
     ap.add_argument("steps", nargs="+")
     a = ap.parse_args()
+    OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, fps=not a.no_fps)
     names = []
     for s in a.steps:
         names += GROUPS.get(s, [s])
