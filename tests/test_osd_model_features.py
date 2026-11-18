@@ -358,3 +358,12 @@ def test_bands_geometry_decode():
     i = D.Img().place(300, 200, font=(10, 6))
     g = M.frame_geometry(i.state())
     assert (g["hd"], g["vd"], g["fh"], g["fv"], g["step"]) == (300, 200, 10, 6, 1)
+
+
+def test_font_24x36_mode():
+    i = D.Img()
+    for k in range(36):
+        i.font[D.FONT_BASE + 36 * 3 + k] = [255, 255, 255]                # glyph 3 solid in the 36-word layout [layout of other data guessed]
+    i.reg(0x43, 0x40)
+    i.map([(36, [i.c1(3, 1, 4, 24)])])
+    assert px(i, 23, 35) == P[1] and px(i, 24, 0) == BLACK and px(i, 0, 36) == BLACK

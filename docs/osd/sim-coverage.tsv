@@ -1,0 +1,63 @@
+feature	registers	modelled	evidence	test	status	settle_test	demo	note
+osd_en	FRAME_CTRL_02[0], 0x006C[0]	yes	hw	test_palette_and_overlay_off	modelled		palette	circuit off or overlay off = picture only; SRAM kept
+ports_write	OSD_ADR_PORT_MSB/LSB, OSD_DATA_PORT, OSD_WRITE_OPTION	yes	hw	test_plain_word_write_all_planes_and_single_plane	modelled			bytesel planes, sram_sel, address auto-increment
+ports_plane_order	OSD_WRITE_OPTION[7:5]	yes	hw	test_two_plane_write_order_and_protection	modelled			bytesel order
+bit_block_protect	FRAME_CTRL_33[2:0], FRAME_CTRL_34	yes	databook	test_two_plane_write_order_and_protection	modelled			bits kept per byte select
+burst_dma	0xFFF3..FFFC	yes	sdk-hypothesis	test_render_2bit_pixels_and_vlc_download	modelled			data burst only; command bursts (bit4) not modelled
+sram_size_limit	OSD_ADR_PORT_MSB	no	unknown		unmodelled	OT-3		12288 words in the SDK; model stores any 15-bit address; map fetch past word 8192 unexplained
+sram_read_back	FRAME_CTRL_33[4], FRAME_CTRL_02[0], OSD_SU_CRTL[7]	yes	hw	test_sram_read_back_conditions,test_sram_read_back_single_byte_select	modelled	OT-4		2 passes: first stale, second right; junk 48 11 30 with circuit / scale-up / overlay on
+palette_lut	0x006E/0x006F	yes	hw	test_palette_autoincrement	modelled	OT-5	palette	64 x RGB, auto-increment
+vlc_download	FRAME_CTRL_0F..16, FRAME_CTRL_17[2:0]	yes	hw	test_vlc_download_matches_glyph_decode	modelled			compressed stream, end code 1111_1111
+vlc_noncompressed	FRAME_CTRL_17[1]	yes	databook	test_plain_word_write_all_planes_and_single_plane	modelled			bit set = plain writes
+download_turn	FRAME_CTRL_0B[7:6,2,0], FRAME_CTRL_17[2]	no	unknown		unmodelled			VLC-decoder turn is applied by the firmware while loading (docs/osd/rotation.md); engine turn not modelled
+triple_engine	0xFF03..FF07	yes	sdk-hypothesis	test_render_pixels	modelled			proportional glyph builder
+win_basic	WINn_ADR1..3	yes	hw	test_win_basic	modelled		window_flat	inclusive end
+win_index_map	WIN0..9, WIN4_1..8, WIN5_1..8	yes	databook	test_win_all_indices	modelled			26 windows
+win_colour_6bit	WINn_ADR3	yes	databook	test_win_colour_index_6bit	modelled			bit 5 in ADR3 LSB
+win_zero_width	WINn_ADR1..2	no	hw		unmodelled	OT-14		photo #215: runs to the edge; sim draws an empty window
+win_effect_geometry	WINn_ADR0/3 eff_opt	option	unknown	test_win_effect_3d	spec-model	OT-9;C-EFF	window_shadow	shadow 1..4 as one geometry, 3D edges inside
+win_effect_colour_idx	WINn_ADR0/3 sha / bor	yes	databook	test_win_effect_colour_index	modelled			bit 5 ADR3, bit 4 ADR0 (was decoded as bit 5)
+win_gradient	WINn_ADR0/3/6/8/9 (windows 0, 5..9)	option	databook	test_win_gradient,test_win_gradient_vertical	spec-model	C-GRAD	window_gradient	levels per step, saturated / reversed bounce guessed
+win_chessboard	WIN8/9 ADR5, WIN4_x/5_x ADR4, ADR9 pix_step	option	databook	test_win_chessboard	spec-model	C-CHESS	window_chess	square = pix_step px; 4_x / 5_x have no step register: 1 px
+win_gray	WINn_ADR9[1]	option	databook	test_win_gray_level	spec-model	OT-11		luma formula guessed
+win_colour_mask	WINn_ADR9[3:2]	option	databook	test_win_color_mask	spec-model	OT-12		AND / OR with the picture
+win_round	WINn_ADR10, FRAME_CTRL_60..8B	option	databook	test_win_round_patterns,test_win_round_size_and_circle	spec-model	OT-10;C-ROUND	window_round	size 8/16/32 [databook]; table value = visible px per corner line [spec-model]
+win_grid	WIN2..4 ADR7/8, FRAME_CTRL_35..37	option	databook	test_win_grid	spec-model	C-GRID	window_grid	px = pitch um / (panel pitch / 4)
+win_rotate_en	WINn_ADR9[0]	option	unknown	test_auto_rotate_180_and_window_option	spec-model	OT-13;C-ROTWIN		option win_rotate: windows turn with the font block
+win_delay_sel	WINn_ADR3[2]	yes	databook	test_win_delay_select	modelled	OT-6;C-DSEL		second OSD delay set
+win_font_priority	FRAME_CTRL_07[1:0], FRAME_CTRL_08[7:5], ADR3[1]	yes	databook	test_win_font_priority	modelled	OT-15;C-PRIO		windows 0,1,5,6,7 always under the font [?]
+win_en_mirror	FRAME_CTRL_57..5A	no	unknown		unmodelled	C-FCWIN		R/W enable mirrors; the SRAM word enable is used
+win_blend_en	WINn_ADR3[7], FRAME_CTRL_0A[3:2]	yes	hw	test_blend_window_alpha_type1	modelled	OT-25	window_blend	types 01 / 10 / 11 per element
+blend_level_direction	0x006C[4:2], 0x008F[7:3]	option	sdk-hypothesis	test_blend_font_types	spec-model	OT-25;C-BLEND		level = video share
+blend_specific_colour	FRAME_CTRL_08[4:2], FRAME_CTRL_09[7,3:0]	yes	databook	test_specific_colour_blend_nibble_match	modelled	OT-19		bit4 = 0 matches index [3:0] only
+win6_win7_blend	FRAME_CTRL_21[6:2], FRAME_CTRL_09[6:5]	yes	sdk-hypothesis	test_window7_mask_and_window6_function	modelled	OT-16		window 6 blend types, window 7 mask
+highlight_4_1_to_4_8	FRAME_CTRL_2A..56	yes	databook	test_highlight_windows_4_1_to_4_8	modelled	OT-17	highlight	fg / bg colours inside windows 4_1..4_8
+hlw_video_highlight	0x0060, 0x0061, 0x006C[6]	no	spec		unmodelled	OT-18		RGB rectangle border; over / under OSD unknown (not a character-layer feature)
+font_1bit	char B0[7:6]=01	yes	hw	test_font_1bit,test_render_pixels	modelled		font_1bit	bg index 0 = transparent
+font_width_zone	char B0[4:0], FRAME_CTRL_02[2:1]	yes	databook	test_font_width_and_zone	modelled	C-NARROW	font_width	minimum width < 4 px unknown
+font_2bit	char B0[7:6]=10, FRAME_CTRL_21..22	yes	hw	test_font_2bit_plane_order,test_font_2bit_offset,test_char_2bit_colours_roundtrip	modelled		font_2bit	plane A = low bit
+font_4bit	char B0[7:6]=11, FRAME_CTRL_21[0], FRAME_CTRL_23	option	sdk-hypothesis	test_font_4bit_planes	spec-model	OT-1		option plane4_lsb for the plane order
+font_4bit_bg_select	FRAME_CTRL_07[2]	no	unknown		unmodelled	C-F4B		regdb default byte2[1:0] contradicts the SDK byte0 + photo; model uses byte0
+font_blank	char B0[7:6]=00, FRAME_CTRL_33[5]	yes	databook	test_font_blank_and_blank_color_enable	modelled	OT-7	font_blank	blank_color_en clears colour bits 5:4
+font_24x36	FRAME_CTRL_43[6]	option	unknown	test_font_24x36_mode	spec-model	OT-8;C-24X36		layout guessed, decodes jumbled on the QC data
+font_two_maps	FRAME_CTRL_18[3:1], FRAME_CTRL_1A..1D, 24..29	yes	databook	test_font_delay_select_and_two_maps	modelled	C-DSEL	two_fonts	font A / B on delay 1 or 2 per 3A18[2:1]
+font_mask	FRAME_CTRL_45..4C	option	databook	test_font_mask_region	spec-model	OT-20;C-FMASK	font_mask	rows / cols = map row / cell index
+font_row_total	FRAME_CTRL_3E..40	option	unknown	test_row_total_option	spec-model	OT-23;C-ROWTOT		option row_total; default off
+osd_area	FRAME_CTRL_38..3D	option	unknown	test_area_clip_option	spec-model	OT-23;C-AREA		option area_clip; default off
+pop_on_roll_up	FRAME_CTRL_18[7:6,0]	option	sdk-hypothesis	test_render_pixels	spec-model	C-POPON		pop-on shows map A or B; roll-up scroll is firmware driven
+vertical_boundary	FRAME_CTRL_18[5], FRAME_CTRL_1E..20	option	unknown	test_vertical_boundary	spec-model	OT-21;C-VBND		units = panel lines
+font_win_v_align	FRAME_CTRL_18[4]	no	unknown		unmodelled	C-VBND		alignment of font and window boundaries
+double_size	FRAME_CTRL_0A[1:0]	yes	hw	test_double_size	modelled		double_size	all windows and characters doubled
+position_delay	FRAME_CTRL_00..06	yes	hw	test_bands_geometry_decode	modelled	OT-26		delay x step
+position_offsets	FRAME_CTRL_2C, 2F, 32, 1E[7,3]	option	unknown	test_osd_position_offsets	spec-model	OT-6;C-OFFS		option osd_offsets; default off
+scale_up_factor	OSD_SU_CRTL[7], OSD_VER_FACTOR, OSD_HOR_FACTOR	yes	hw	test_scale_up_factor_and_enable	modelled	OT-22	scale_up	bit 7 = on (regdb text inverted); ratio 64 / factor
+scale_up_region	OSD_SU_VER_ST_H..OSD_SU_HOR_SIZE_L	option	unknown	test_scale_up_region_option	spec-model	OT-26;C-SUREG		option su_region
+scale_up_filter	OSD_SU_CRTL[1:0], OSD_SU_INITIAL_PHASE	no	unknown		unmodelled	OT-22;C-SUBD		nearest neighbour only
+auto_rotate	FRAME_CTRL_41, FRAME_CTRL_42	option	unknown	test_auto_rotate_180_and_window_option	spec-model	T-G		font block turned about its bounding box; remap / lib rotation not modelled
+panel_pitch	FRAME_CTRL_35..37	yes	databook	test_win_grid	modelled			used by the grid
+pattern_generator	DISP_PG_R_CTRL..DISP_PG_DELTA_L	option	databook	test_pattern_generator	spec-model	C-PG	pattern_gen	replaces the picture; random mode unmodelled
+bist_regs	OSD_LUT_BIST_CTRL, OSD_SU_BIST_CTRL	n/a	databook		not-visible			no picture effect
+font_align_disable	FRAME_CTRL_33[6]	n/a	databook		not-visible			debug bit
+ven_sel	FRAME_CTRL_09[4]	n/a	databook		not-visible			timing source of the OSD vsync
+rotate_3byte	FRAME_CTRL_17[2]	n/a	databook		not-visible			download speed-up
+robustness	all	yes	databook	test_random_register_images_do_not_crash,test_full_panel_render_time_budget	modelled			random images do not crash; 4K busy render time budget

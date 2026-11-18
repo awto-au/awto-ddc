@@ -104,6 +104,7 @@ class Scene:
         self.regs[0x02] = 1                                   # osd_en; delay 0 = origin at the canvas corner
         self.ids: dict = {}
         self.gbase = 0
+        self.pg = bytearray(16)                               # page 7 0x07F0.. pattern generator
         base = {0: (0, 0, 0), 1: (255, 255, 255), 2: (220, 40, 40), 3: (40, 200, 60), 4: (50, 90, 230), 5: (240, 200, 30),
                 6: (40, 200, 220), 7: (200, 60, 200), 8: (128, 128, 128), 9: (255, 140, 0), 10: (10, 10, 60), 11: (250, 250, 160)}
         for i in range(12, 64):
@@ -173,7 +174,7 @@ class Scene:
         yy, xx = np.mgrid[0:H, 0:W]
         c = np.where(((yy // 12) + (xx // 12)) % 2, BG_LIGHT, BG_DARK)
         bg = np.stack([c, c, c + 24], axis=2).astype(np.uint8)
-        st = M.OsdState(self.st.win, self.st.font, self.st.pal, bytes(self.regs), tuple(self.ovl))
+        st = M.OsdState(self.st.win, self.st.font, self.st.pal, bytes(self.regs), tuple(self.ovl), 0.0, 0, bytes(self.pg))
         img = np.kron(M.render(st, W, H, bg=bg), np.ones((K, K, 1), np.uint8))
         return np.concatenate([img, caption(f"{self.title}  {self.tag}", img.shape[1])], axis=0)
 
@@ -303,6 +304,40 @@ def f_win_gray():
     return s
 
 
+def f_win_round():
+    s = Scene("window rounded corners", "ADR10, 3A60..8B [spec-model]")
+    for k in range(4):                                          # SDK QC tables: line k = value k (visible px of the line)
+        s.r(0x60 + k, (2 * k + 1) << 4 | 2 * k)
+    for k in range(8):
+        s.r(0x64 + k, (2 * k + 1) << 4 | 2 * k)
+    for k in range(32):
+        s.r(0x6C + k, k)
+    s.win(0, 10, 10, 69, 69, 2, extra={10: [0x78 | 1, 0, 0]})
+    s.win(5, 90, 10, 169, 69, 3, extra={10: [0x78 | 3, 0, 0]})
+    s.win(10, 190, 10, 289, 89, 4, extra={10: [0x78 | 5, 0, 0]})
+    return s
+
+
+def f_font_mask():
+    s = text(["ROW ZERO TEXT", "ROW ONE MASKED", "ROW TWO TEXT"], fg=1, bg=4, title="font mask region", tag="3A45..4C: row 1, cols 4..7 [spec-model]")
+    s.r(0x45, 0x81).r(0x46, 1).r(0x49, 4).r(0x4A, 7)
+    return s
+
+
+def f_vertical_boundary():
+    s = text(["BOUNDARY ROW A", "BOUNDARY ROW B", "BOUNDARY ROW C"], fg=1, bg=4, title="vertical boundary", tag="3A18[5], 3A1E..20: lines 20..40 [spec-model]")
+    s.win(0, 4, 4, 150, 70, 2)
+    s.r(0x18, 0x20).r(0x1E, 0).r(0x1F, 20).r(0x20, 40)
+    return s
+
+
+def f_pattern_gen():
+    s = Scene("display pattern generator", "page 7 0x07F0.. [spec-model]")
+    for a, v in ((0, 0x81), (1, 0x88), (2, 0x20), (6, 0x08), (7, 0x08), (8, 0x04), (9, 0x08)):
+        s.pg[a] = v
+    return s
+
+
 def f_win_chess():
     s = Scene("window chessboard", "WIN8 ADR5/9 [spec-model]")
     s.win(8, 30, 20, 160, 88, 0, extra={5: [0x80, 2, 5], 9: [0, 8, 0]})
@@ -312,8 +347,9 @@ def f_win_chess():
 def f_win_grid():
     s = Scene("window grid lines", "WIN2 ADR7/8 [spec-model]")
     s.win(2, 20, 12, 172, 96, 10)
-    s.st.win[0x183] = [1 << 6 | 5, 0xC0, 16]                  # width 2, colour 5, H + V, offset 0, pitch low byte
-    s.st.win[0x184] = [62 << 1 | 1, 0, 0]                     # pitch 62 x 256 + 16 um / 993 = 16 px (panel pitch 993 assumed), grid_en
+    s.st.win[0x183] = [1 << 6 | 5, 0xC0, 0xD0]                # width 2, colour 5, H + V, offset 0, pitch low byte
+    s.st.win[0x184] = [7 << 1 | 1, 0, 0]                      # pitch 0x7D0 = 2000 um, grid_en
+    s.r(0x35, 0x11).r(0x36, 0xF4).r(0x37, 0xF4)               # panel pitch U(9.2) 500 = 125 um per px -> 16 px
     return s
 
 
@@ -398,7 +434,7 @@ def _two(popon):
     s.r(0x19, 0).r(0x1A, 2).r(0x1B, (fa >> 8) << 4 | fb >> 8).r(0x1C, fa).r(0x1D, fb)
     s.r(0x0D, s.gbase & 15).r(0x0E, s.gbase >> 4).r(0x17, (s.gbase >> 12 & 7) << 3)
     if popon is None:
-        s.r(0x18, 0x08).r(0x03, 5).r(0x04, 1).r(0x05, 0x40)    # B origin delay2: hd 5 x 4 = 20 px, vd 40 lines
+        s.r(0x18, 0x0A).r(0x03, 5).r(0x04, 1).r(0x05, 0x40)    # B origin delay2: hd 5 x 4 = 20 px, vd 40 lines
         s.r(0x24, 0).r(0x25, 3).r(0x26, 6)
     else:
         s.r(0x18, 0xC8 | popon)
@@ -474,9 +510,12 @@ FEATURES: list[tuple] = [
     ("win_shadow", "window shadow", "ADR0/3 eff_opt 0..3", "spec-model", f_win_shadow),
     ("win_3d", "window 3D button", "ADR0/3 eff_opt 4,5", "spec-model", f_win_3d),
     ("win_border", "window border", "ADR0/3 eff_opt 7", "spec-model", f_win_border),
-    ("win_round", "window rounded corners", "ADR10, 3A60..8B", "spec", None),
+    ("win_round", "window rounded corners", "ADR10, 3A60..8B", "spec-model", f_win_round),
     ("win_gradient", "window gradient", "ADR0/3/6/8/9", "hw", f_win_gradient),
     ("win_gray", "window gray level", "ADR9[1]", "spec-model", f_win_gray),
+    ("font_mask", "font mask regions", "3A45..4C", "spec-model", f_font_mask),
+    ("vertical_boundary", "vertical boundary", "3A18[5], 3A1E..20", "spec-model", f_vertical_boundary),
+    ("pattern_gen", "display pattern generator", "DISP_PG_* 0x07F0..FE", "spec-model", f_pattern_gen),
     ("win_chess", "window chessboard", "ADR5/ADR9", "spec-model", f_win_chess),
     ("win_grid", "window grid lines", "WIN2..4 ADR7/8, 3A35..37", "hw", f_win_grid),
     ("win_mask_colour", "special colour mask", "ADR9[2:3]", "spec-model", f_win_mask_colour),

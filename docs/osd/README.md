@@ -48,7 +48,7 @@ Status = best evidence for the behaviour shown. Gaps are visible here: a row wit
 | shadow (4 types) | `ADR0/3` eff_opt 0..3 | [win_shadow](img/win_shadow.png) | [spec-model] OT-9 |
 | 3D button | eff_opt 4, 5 | [win_3d](img/win_3d.png) | [spec-model] OT-9 |
 | border | eff_opt 7 | [win_border](img/win_border.png) | [spec-model] OT-9 |
-| rounded corners 8 / 16 / 32 px | `ADR10`, `0x3A60..0x3A8B` | not modelled: model radius differs from the regdb size codes | [spec] OT-10 |
+| rounded corners 8 / 16 / 32 px | `ADR10`, `0x3A60..0x3A8B` | [win_round](img/win_round.png) | [spec-model] tables read as visible px per corner line (QC ramp = chamfer); zero tables = quarter circle; OT-10 |
 | gradient, level, step | `ADR0/3/4/6/8/9` | [win_gradient](img/win_gradient.png) | [hw] photo of QC frame 2 / 3 (qc-osd-suite) |
 | gray level | `ADR9[1]` | [win_gray](img/win_gray.png) | [spec-model] OT-11 |
 | chessboard | `ADR5` (8, 9), `ADR4` (4_x, 5_x), `ADR9` step | [win_chess](img/win_chess.png) (WIN8) | [spec-model] T-B |
@@ -65,11 +65,11 @@ Status = best evidence for the behaviour shown. Gaps are visible here: a row wit
 | alpha: all | `=10` | [blend_10](img/blend_10.png) | [spec-model] |
 | alpha: window + char bg | `=11` | [blend_11](img/blend_11.png) | [hw] unit 1 2026-11-13 (#176) |
 | specific colour blending | `0x3A08`, `0x3A09[7,3:0]` | [blend_colour](img/blend_colour.png) | [spec-model] OT-19 |
-| font mask regions A / B | `0x3A45..4C` | not modelled | [spec] OT-20 |
+| font mask regions A / B | `0x3A45..4C` | [font_mask](img/font_mask.png) | [spec-model] rows / cols = map row / cell index, inclusive; OT-20 |
 | second map (font B), delay set 2 | `0x3A18[3:1]`, `0x3A19..1D`, `0x3A27..29`, `0x3A03..05` | [font_b](img/font_b.png) | [spec-model] T-D (#195) |
 | pop-on page flip | `0x3A18[7:6,0]` | [pop-on 0](img/pop_on_0.png) [pop-on 1](img/pop_on_1.png) | [spec-model] T-E |
 | roll-up scroll | `0x3A18[7:6]`, `0x3A19`, `0x3A1B/1C` | not modelled | [hw] console scroll (`osd_tc_scroll`) |
-| vertical boundary | `0x3A18[5:4]`, `0x3A1E..20` | not modelled: units unknown | [?] OT-21 |
+| vertical boundary | `0x3A18[5:4]`, `0x3A1E..20` | [vertical_boundary](img/vertical_boundary.png) | [spec-model] units = panel lines (alignment bit 4 unmodelled); OT-21 |
 | double size (x2) | `0x3A0A[1:0]` | [double_size](img/double_size.png) | [hw] console |
 | scale-up x2 / x8 (integer) | `0x3AC0..CB` | [scale_up_2](img/scale_up_2.png) | [hw] x8 savers; polarity bit7 = 1 on |
 | scale-up non-integer | `0x3AC2/3` | [scale_up_1p5](img/scale_up_1p5.png) | [spec-model] OT-22 |
@@ -79,7 +79,7 @@ Status = best evidence for the behaviour shown. Gaps are visible here: a row wit
 | hardware auto rotation | `0x3A41`, `0x3A42` | not modelled | [?] T-G; excludes double size [hw] |
 | write timing, double buffer | `0x0093[7]`, RW4 fields | - | [hw] T7 / T8 stored data exact; T10 glitch look pending |
 | read-back | `0x3A33[4]`, `0x0093[5]` | - | [hw] recipe in [timing.md](timing.md) |
-| display pattern generator | `DISP_PG_*` `0x07F0..FE` | not modelled | [hw] test cmd 0xB2 runs it (#228) |
+| display pattern generator | `DISP_PG_*` `0x07F0..FE` | [pattern_gen](img/pattern_gen.png) | [spec-model] register text; toggle = init / init + delta; random mode unmodelled; [hw] test cmd 0xB2 runs it (#228) |
 
 ## Chapters
 - [pipeline.md](pipeline.md): clocking, enable, position, delay sets, zone, boundary.

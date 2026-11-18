@@ -117,6 +117,7 @@ class Opt:
     win_rotate: bool = False         # windows with ADR9[0] follow the auto rotation of the font block
     pg_toggle: str = "delta"         # pattern generator toggle: alternate between init and init + delta
     fontmask_unit: str = "cell"      # 3A45..4C row / column unit: map row index / character cell index
+    plane4_lsb: bool = False         # 4-bit glyph plane order: False = first plane is the MSB (QC icons), True = LSB as measured for 2-bit (OT-1)
     round_circle: bool = True        # round-corner pattern tables all zero: quarter circle of the pattern size
 
 
@@ -539,10 +540,10 @@ def glyph_levels2(st: OsdState, g: dict, gid: int) -> np.ndarray:
     return _planes(st, g["font_base"] + 18 * (off2 + gid), 2, lsb_first=True)
 
 
-def glyph_levels4(st: OsdState, g: dict, gid: int) -> np.ndarray:
+def glyph_levels4(st: OsdState, g: dict, gid: int, lsb_first: bool = False) -> np.ndarray:
     """4-bit glyph: 36 words at font_base + 36 * (char_sel_4bit_offset + id) [QC: offset 0, ICON_4BIT(0) = 38]."""
     off4 = (st.reg(FRAME + 0x21) & 1) << 8 | st.reg(FRAME + 0x23)
-    return _planes(st, g["font_base"] + 36 * (off4 + gid), 4)
+    return _planes(st, g["font_base"] + 36 * (off4 + gid), 4, lsb_first)
 
 
 def layout_rows(st: OsdState, g: dict, rb: int | None = None, cb: int | None = None) -> list[dict]:
@@ -796,7 +797,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                         paint(fx + x * sx, fy + y * sy, np.ones((row["h"] * sy, bw * sx), bool), st.pal[bcol], a_cbg, 2)
                     x += bw
                 elif ch["kind"] == "4bit":                           # bit planes; palette index = pixel value, 0 transparent [guess, QC palette sets 0]
-                    lv = memo(("g4", ch["id"]), lambda: glyph_levels4(st, g, ch["id"]))
+                    lv = memo(("g4", ch["id"]), lambda: glyph_levels4(st, g, ch["id"], opt.plane4_lsb))
                     px, py = fx + x * sx, fy + y * sy
                     paint(px, py, up(lv == 0), st.pal[ch["bg"]], a_cbg, 2)   # background pixels = the command's background colour, index 0 included
                     for v in range(1, 16):
