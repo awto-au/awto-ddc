@@ -43,7 +43,7 @@ void    osd_tc_bar_off(uint8_t win);
 void    osd_tc_place(uint8_t hpos_pct, uint8_t vpos_pct, uint8_t big);   /* position 0..100 %, big = 2x size */
 void    osd_tc_show(uint8_t on);
 void    osd_tc_close(void);                          /* OSD off; the Realtek SDK menu may draw again */
-/* VLC font download (osd-font-download.md): begin(map8 = the blob's 8 value-map bytes, tile = first tile id), put stream, end. */
+/* VLC font download (docs/osd/glyph-load.md): begin(map8 = the blob's 8 value-map bytes, tile = first tile id), put stream, end. */
 void    osd_tc_vlc_begin(const uint8_t __xdata *map8, uint16_t tile);
 void    osd_tc_vlc_put(const uint8_t __xdata *p, uint8_t n);
 void    osd_tc_vlc_end(void);

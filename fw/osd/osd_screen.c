@@ -1,7 +1,7 @@
 #include "UserCommonInclude.h"
 #include "../../tools/osd_lines/osd_lines.h"
 
-// Shared helpers of the full-screen OSD users that draw their own map + glyphs (scope savers, QC pattern): docs/osd-rotation.md.
+// Shared helpers of the full-screen OSD users that draw their own map + glyphs (scope savers, QC pattern): docs/osd/rotation.md.
 
 #define AWTO_OSDS_WORD_BYTES                    3
 #define AWTO_OSDS_GLYPH_WORDS                   (OSD_TILE_BYTES / AWTO_OSDS_WORD_BYTES)
@@ -74,7 +74,7 @@ void AwtoOsdMap1(BYTE ucCols, BYTE ucRows, BYTE ucAttr)
 
 void AwtoOsdTile(WORD usCell, const BYTE __xdata *pucB)
 {
-    if(g_ucAwtoOsdRot != 0)                                             // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell
+    if(g_ucAwtoOsdRot != 0)                                             // turned 180 (docs/osd/rotation.md): the glyph slot of the mirrored cell
     {
         usCell = AwtoOsdRotCell(usCell, s_usOsdsCells);
     }

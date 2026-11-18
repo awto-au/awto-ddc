@@ -1105,7 +1105,7 @@ extern void AwtoOsdDemo(unsigned char ucGroup);
 #define AWTO_TC_QC_OSD                                          0xB0    // test cmd: 0xB0 Realtek QC OSD test pattern on, 0xB1 off (#227)
 extern void AwtoQcOsd(unsigned char ucOn);
 extern __xdata BYTE g_ucAwtoOsdRot;                                                    // latched copy of AwtoOsdRot180() for the screen being drawn
-extern BYTE AwtoOsdRot180(void);                                                // fw/osd/osd_rot.c (docs/osd-rotation.md): 1 = display Rotate 180, the OSD must be drawn turned
+extern BYTE AwtoOsdRot180(void);                                                // fw/osd/osd_rot.c (docs/osd/rotation.md): 1 = display Rotate 180, the OSD must be drawn turned
 extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
 extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
@@ -1491,7 +1491,7 @@ extern void UserCommonInterfacePanelPowerTick(void);
 extern bit UserCommonInterfacePanelPowerDown(bit bDown, bit bUp);
 extern void UserCommonInterfacePanelPwm(unsigned int usDuty);
 extern void AwtoPanelForeign(unsigned char ucWhat);
-// OSD character command byte 0 (docs/reversing/realtek-rtd/osd-limits.md): [7:6] type 01 = 1-bit font, [4:0] cell width px
+// OSD character command byte 0 (docs/osd/tiles-fonts.md): [7:6] type 01 = 1-bit font, [4:0] cell width px
 #define AWTO_OSD_CHAR_1BIT                                      0x40
 #define AWTO_OSD_CHAR_1BIT_W(w)                                 ((unsigned char)(AWTO_OSD_CHAR_1BIT | (w)))
 #define AWTO_OSD_SDK_CELL_W                                     12      // SDK menu font cell width (OsdFuncApplyMap's blanks)

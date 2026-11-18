@@ -100,7 +100,7 @@ static void S2Run(BYTE ucX, BYTE ucLo, BYTE ucHi)                               
     BYTE ucOffO;
     BYTE ucMaskO;
 
-    if(g_ucAwtoOsdRot != 0)                                                         // the tile is drawn turned 180 (docs/osd-rotation.md)
+    if(g_ucAwtoOsdRot != 0)                                                         // the tile is drawn turned 180 (docs/osd/rotation.md)
     {
         ucX = AWTO_S2_TW - 1 - ucX;
         ucTmp = AWTO_S2_TH - 1 - ucHi;
@@ -268,7 +268,7 @@ static void S2Uint(unsigned long ulV, BYTE ucDigits, BYTE ucPos)                
 
 static void S2MapWord(WORD usCell, BYTE ucId)                                       // char command: glyph id, colours c0 bg, c1 green (plane A = low bit, docs/osd-hw-tests.md T9), c2 red, c3 green
 {
-    if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd-rotation.md): the mirrored cell
+    if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd/rotation.md): the mirrored cell
     {
         usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }

@@ -3,7 +3,7 @@
 
 usage: gen_scope2.py [--check] [--raster W] [--model]
   Raster 480 x 270 px = 40 x 15 tiles of 12 x 18 (scaled 8x to 3840 x 2160; other panels: factor 64 * 480 / panel width in the firmware).
-  2-bit glyphs: plane A (first 9 words, low bit on the unit) = green (trace, readouts), plane B = red (graticule, level marks); 9 words = 27 bytes per plane, bytes in data port order (docs/osd-rotation.md).
+  2-bit glyphs: plane A (first 9 words, low bit on the unit) = green (trace, readouts), plane B = red (graticule, level marks); 9 words = 27 bytes per plane, bytes in data port order (docs/osd/rotation.md).
   Static tiles (deduped) get ids 0..N-1; the rest of the 256 ids are dynamic slots the firmware allocates in a ring (trace, cursor and readout tiles).
   --model: worst-case dynamic tiles per frame over all pulse positions / speeds, against the slots available.
   --check: exit 1 when the file on disk differs.
@@ -24,7 +24,7 @@ LOG = ROOT / "tmp/logs/gen_scope2.log"
 
 TW, TH = 12, 18
 BASE_RASTER = 480                       # 480 x 270: 40 x 15 tiles
-IDS = 256                               # 2-bit char command: 8 id bits (docs/reversing/realtek-rtd/osd-limits.md)
+IDS = 256                               # 2-bit char command: 8 id bits (docs/osd/tiles-fonts.md)
 DIV_COUNT_X, DIV_COUNT_Y = 8, 6         # graticule divisions
 MINOR_PER_DIV = 5                       # minor ticks per division on the centre axes
 BASE_DIV = 4                            # 0 % level: 4 divisions down; 100 % = 3 divisions above it
@@ -122,7 +122,7 @@ def draw_static(geo):
 
 
 def pack(plane, tx, ty, turned=False):
-    """One 12 x 18 tile -> 27 stream bytes (the byte order of the OSD data port, osd_gfx.pack_rows). turned: the tile turned 180 inside itself (Rotate 180, docs/osd-rotation.md)."""
+    """One 12 x 18 tile -> 27 stream bytes (the byte order of the OSD data port, osd_gfx.pack_rows). turned: the tile turned 180 inside itself (Rotate 180, docs/osd/rotation.md)."""
     rows = [[int(v) for v in r] for r in plane[ty * TH:(ty + 1) * TH, tx * TW:(tx + 1) * TW]]
     return OG.pack_rows(OG.turned(rows) if turned else rows)
 

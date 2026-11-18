@@ -1,6 +1,6 @@
 # OSD SRAM hardware tests (Scope 2 garbling on unit 3)
 
-Started 2026-11-18. Unit 3 (AWT26110003, bus 11, Rotate 180 stored). Trigger: Dan's photo of Scope 2 on unit 3 (garbled tile runs, red / green swapped vs the sim) with image `f2` (c50dc38, direct back-to-back `0x0092` stores in `S2Glyph` / `S2MapWord`).
+Reference for the registers and limits mentioned here: [OSD manual](osd/README.md). Started 2026-11-18. Unit 3 (AWT26110003, bus 11, Rotate 180 stored). Trigger: Dan's photo of Scope 2 on unit 3 (garbled tile runs, red / green swapped vs the sim) with image `f2` (c50dc38, direct back-to-back `0x0092` stores in `S2Glyph` / `S2MapWord`).
 
 ## Tools
 

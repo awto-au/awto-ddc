@@ -3,6 +3,7 @@
 Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Scope: hardware features only; per-saver redesign and CPU budgets live in their own docs (`docs/saver-fps-budget.md`, per-saver docs). Nothing flashed, no production firmware change.
 
 - Tags: `[spec]` regdb `re/regdb/RTD2795T-CG.tsv.gz`; `[sdk]` Realtek SDK source in `fw/sdk`; `[hw]` measured on our units; `[emu]` fw_sim / `osd_model.py`; `[guess]`; `[?]` unknown (says what resolves it). Conventions: awto-dan `docs/embedded/reversing/README.md`.
+- Register and limit reference (one place per fact): [OSD manual](osd/README.md); this file keeps the ranking and the test plan.
 - Numbers script: `python scripts/saver_hw_budget.py` (burst byte time, tile upload cost, run-glyph budget); log `tmp/logs/saver_hw_budget.log`.
 - Target: 25 fps = 40 ms per frame, shared with the main loop (DDC/CI, keys).
 
@@ -25,7 +26,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 | 2 | MCU clock x2 (`_MCU_SPEED_UP_SUPPORT`) | all | Scope 2 -64.6 ms (-36 %), Scope 1 -186 ms (-22 %), Asteroids pass -2.5 ms (-21 %) [emu] | medium-high: SDK option for RL6449 [sdk], sim run [emu], no hardware run | build flag + flash unit 3 (T-L) |
 | 3 | Window grid lines (WIN2/3/4) for the graticule + chessboard windows for dotted cursors | Scope 1, Scope 2 | Scope 1 ~60-90 ms (graticule dots: `cursor_init` 7 % + part of `cursor_plot`), Scope 2 ~10-25 ms (base copies, cursor-only tiles) [guess] | medium: windows [hw], grid / chessboard [spec+sdk+emu] | yes: host-only T-A, T-B |
 | 4 | Burst DMA XRAM -> data port, one burst per column of contiguous glyph slots | all tile savers | Scope 1 ~37 ms, Scope 2 ~15 ms, Asteroids ~60 us per tile [guess from SDK gap formula] | medium-high: in use for SDK pop-up text [sdk+hw], speed [?] | firmware test op T-H |
-| 5 | Direct port stores instead of `ScalerOsdDataPort` (4.12 -> 2.39 us / B) | all | Scope 1 ~18 ms, Scope 2 ~8 ms, Asteroids ~46 us per tile | high [hw: T1 / T2 / T5 PASS, `docs/osd-hw-tests.md`] | no test needed: reverse the 2026-11-18 rule in `saver-library.md` |
+| 5 | Direct port stores instead of `ScalerOsdDataPort` (4.12 -> 2.39 us / B) | all | Scope 1 ~18 ms, Scope 2 ~8 ms, Asteroids ~46 us per tile | high [hw: T1 / T2 / T5 PASS, `docs/osd-hw-tests.md`] | done: direct stores are the default (Dan, 2026-11-18) |
 | 6 | Hardware 180 turn on download (decoder raw path) | all, Rotate 180 (unit 3) | Scope 2 ~20 ms (176.0 vs 155.8 ms Rotate 180 vs upright, saver-library step 3) | medium: SDK does exactly this [sdk], VLC + 180 runs on unit 3 [hw]; raw 2-bit planes [?] | firmware test op T-I |
 | 7 | SPI dual-output read (`READ_INSTRUCTION` read_mode 10) + cache common page | all | 10-25 % of fetch stalls, more at 2x clock [guess] | low-medium [spec] | runtime poke, reset recovers (T-M) |
 | 8 | Palette animation, 1-bit per-cell colour ageing (phosphor), blink | Scope 2, Pac-Man | ~0 CPU today; new effects at ~12 us per palette entry | high [hw: palette port in use] | yes |
@@ -43,7 +44,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 
 ### Windows as moving rectangles
 - 26 windows: WIN0..9, WIN4_1..4_8, WIN5_1..5_8 [spec]. Each: solid colour (64-LUT index), border / shadow / 3D button (1-8 px), rounded corners (WIN0, 4_x, 5_x), gradient (WIN0, 5..9), chessboard (WIN8, 9, 4_x, 5_x), grid lines (WIN2, 3, 4) [spec].
-- Registers (window SRAM, `OSD_WRITE_OPTION` sram_sel 00, word `0x100 + 4n` for WIN0..9): `WINn_ADR1` hor_sta / ver_sta, `WINn_ADR2` hor_end / ver_end (12 bit each), `WINn_ADR3` win_color / blend_en / win_en [spec]; field layout confirmed on the boot window [hw, `reversing/realtek-rtd/osd.md`].
+- Registers (window SRAM, `OSD_WRITE_OPTION` sram_sel 00, word `0x100 + 4n` for WIN0..9): `WINn_ADR1` hor_sta / ver_sta, `WINn_ADR2` hor_end / ver_end (12 bit each), `WINn_ADR3` win_color / blend_en / win_en [spec]; field layout confirmed on the boot window [hw, `docs/osd/windows.md`].
 - Move = 2 words (6 data bytes + address) ~ 20 us. Position fields are "effective at Vsync rising, cross-byte double buffer" with global double buffer on (`OSD_MISC_PORT` db_enable) [spec]; `win_en` is never double-buffered [spec]. Our screens switch global double buffer off (`AwtoOsdScreenBegin`): window moves then apply immediately (tear risk only).
 - Priority vs font: `FRAME_CTRL_07` win3 / win4_higher_font, `FRAME_CTRL_08` win2 / win8 / win9_higher_font, `WIN4_x ADR3` bor_higher_font [spec]. Other windows sit below the font.
 - No bitmap in a window: sprites of arbitrary shape need a font map (font B below) or tiles.
@@ -69,7 +70,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 - Font mask regions `FRAME_CTRL_45..4C` (row / column start / end per font) hide cells [spec].
 
 ### Scale-up engine: global, not per window
-- `OSD_SU_CRTL` (osd_su_en, boundary mode), `OSD_VER_FACTOR` / `OSD_HOR_FACTOR` (6 bit, Xi / Xo x 64), region start / size 12 bit (`OSD_SU_VER_ST_*`, `OSD_SU_HOR_ST_*`, `OSD_SU_*_SIZE_*`) [spec]; region in display coordinates [hw, `osd-rotation.md`].
+- `OSD_SU_CRTL` (osd_su_en, boundary mode), `OSD_VER_FACTOR` / `OSD_HOR_FACTOR` (6 bit, Xi / Xo x 64), region start / size 12 bit (`OSD_SU_VER_ST_*`, `OSD_SU_HOR_ST_*`, `OSD_SU_*_SIZE_*`) [spec]; region in display coordinates [hw, `docs/osd/scale-up.md`].
 - One region, one factor pair: no per-window or per-map scale [spec: no second register set].
 - Whole-OSD x2: `FRAME_CTRL_0A` db_width / db_height [spec].
 - Row commands: height 1..64 per row (`ScalerOsdRowHeight`) [sdk]; no per-row double width / height on this chip [sdk: only global `_OSD_DOUBLE_*`]; per-row 2x bits are an ORTD2662 feature [oss], not seen here. Taller rows add blank lines, they do not scale glyphs.
@@ -77,7 +78,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 ### Character width (basis of #1)
 - 1-bit char word B0[4:0] = displayed width in px; 2-bit / 4-bit chars have no width field (12 px) [sdk `ScalerOsdCharacterWidth`, `osd_model` layout]. `FRAME_CTRL_02` disp_zone picks which part of the 12-px glyph a narrow char shows (middle / left / right) [spec].
 - Proportional widths render on hardware (SDK message-card text) [hw]; widths below 4 px [?]; blank command 4..255 px [sdk].
-- Row command char count 8 bit: <= 255 chars per row [spec]; 160 chars per row measured clean [hw, unit 2, `osd.md`]; display fetch below map word 8192 [hw].
+- Row command char count 8 bit: <= 255 chars per row [spec]; 160 chars per row measured clean [hw, unit 2, `docs/osd/tiles-fonts.md`]; display fetch below map word 8192 [hw].
 
 ### Run-glyph trace (#1)
 - Glyph set: every vertical run [a, b] inside an 18-row cell, drawn across the full 12 columns: 171 runs + blank = 172 1-bit glyphs = 1548 words [arith]. Char width CW px, fg colour per cell (B2 = fg << 4 | bg, bg 0 = transparent).
@@ -96,7 +97,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 - Asteroids: lines at any angle are per-column runs too, but overlapping objects in one cell lose segments: not a fit; Asteroids keeps tiles.
 
 ### Scroll
-- Vertical roll-up: `FRAME_CTRL_18` osd_special_en, `FRAME_CTRL_19` row_base0, `FRAME_CTRL_1B` / `1C` fs_base0 [spec]; used by the console on hardware (`osd_tc_scroll`) [hw]; 12-bit base wraps at 4095 [hw, `osd.md`].
+- Vertical roll-up: `FRAME_CTRL_18` osd_special_en, `FRAME_CTRL_19` row_base0, `FRAME_CTRL_1B` / `1C` fs_base0 [spec]; used by the console on hardware (`osd_tc_scroll`) [hw]; 12-bit base wraps at 4095 [hw, `docs/osd/tiles-fonts.md`].
 - Horizontal: fs_base + 1 shifts every row one cell left, wrapping each row's first cell onto the previous row [guess]; fine shift by `FRAME_CTRL_24..26` font_a_hori_delay (1 px with `FRAME_CTRL_06` hori_delay_step_sel) [spec]. Mask the wrapped column with the font mask region [spec]. T-F.
 
 ### Page flip (pop-on)
@@ -129,9 +130,9 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
   - Gap: g = 12109500 / dclk_khz - 2 (x2 with db_width): the port takes one byte per ~276 display clocks [sdk-derived]. Hard ceiling for any write path ~0.4-0.5 us / B [guess]; MCU stores at 1.95 us / B are below it [hw: T2 PASS].
   - Per-tile bursts gain little (setup ~ 38 us vs 27-54 data bytes); gain comes from one burst per column: dynamic glyph slots allocated contiguously, tiles staged contiguously in XRAM (Scope 2 column <= 9 tiles = 486 B).
 - VLC hardware decoder (`FRAME_CTRL_0F..17`) [spec+hw (fonts)]: compressed glyph upload; sparse trace tiles shrink ~3x on the wire, but the MCU must VLC-encode them first: no net gain once bursts are cheap [guess].
-- Decoder raw path + rotation (#6): `FRAME_CTRL_17` osd_compression_en + decode_nocom_data, `FRAME_CTRL_0B` f_dl_swap 01 (180) + hw_rotate_en: the SDK sends uncompressed glyphs through it to turn them (`ScalerOsdHardwareCompression`, burst source, 2 ms wait after) [sdk]; poll `FRAME_CTRL_0B` buf_empty / buf_valid instead of the 2 ms [spec]. Removes `AwtoOsdTurn` / `AwtoOsdRevByte` per byte. `osd-rotation.md` says f_dl_swap needs the compressed path: the SDK raw mode is that path with decode_nocom_data = 1. Map mirroring stays in software.
+- Decoder raw path + rotation (#6): `FRAME_CTRL_17` osd_compression_en + decode_nocom_data, `FRAME_CTRL_0B` f_dl_swap 01 (180) + hw_rotate_en: the SDK sends uncompressed glyphs through it to turn them (`ScalerOsdHardwareCompression`, burst source, 2 ms wait after) [sdk]; poll `FRAME_CTRL_0B` buf_empty / buf_valid instead of the 2 ms [spec]. Removes `AwtoOsdTurn` / `AwtoOsdRevByte` per byte. `docs/osd/rotation.md` says f_dl_swap needs the compressed path: the SDK raw mode is that path with decode_nocom_data = 1. Map mirroring stays in software.
 - Auto rotation `FRAME_CTRL_41` (auto_rotate_en, dir 10 = 180, rotate_flib engine turns the font library in SRAM, char remap LUT) [spec]: would turn map and glyphs in hardware; behaviour at 180 [?] (T-G).
-- Block copy inside SRAM: none in the regdb [spec: no copy / fill engine on page 3A or the 0x90-0x94 port]; no glyph-repeat command [sdk, `osd-limits.md`].
+- Block copy inside SRAM: none in the regdb [spec: no copy / fill engine on page 3A or the 0x90-0x94 port]; no glyph-repeat command [sdk, `docs/osd/tiles-fonts.md`].
 - Masked writes (#13): `FRAME_CTRL_33` bit_block_en + bit_block_byte_sel, `FRAME_CTRL_34` per-bit protect mask: unprotected bits of the selected byte change, others keep their value [spec]; SDK uses it on map B0 [sdk]. Set one pixel = bytesel one plane, mask all but its bit, address, write 0xFF.
 - Vblank-only writes: not required, writes while shown and scaled read back exact [hw, T2]; window / frame registers marked RW4 latch at Vsync when double buffered [spec]; SRAM words never latch (use pop-on for tear-free maps).
 
@@ -156,7 +157,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 - No line or shape engine for the OSD [spec: page 3A + window words list none]. What exists: windows (rectangles, borders, rounded corners, gradients, chessboard), grid lines (WIN2-4), font mask / window 7 mask regions [spec].
 - Graticule: grid windows (#3) do the major lines; minor ticks on the centre axes stay glyph cells (static) or thin windows (26 windows total).
 - Display pattern generator `DISP_PG_*` (page 07) and input pattern generator `I_PG_*` (page 00): per-pixel / per-line increment or toggle with step counts, random mode [spec]: video-path backgrounds (stripes, ramps, noise) behind a transparent OSD; no thin lines, and they replace the picture [guess].
-- Overlay / PIP: the OSD blends over the picture by the alpha settings in (b); the video highlight window (`HLW_*`) only switches picture processing per region [spec]. Nothing draws for the OSD.
+- Overlay / PIP: the OSD blends over the picture by the alpha settings in (b); the video highlight window (`HLW_*`, page 0) switches picture processing per region and draws a coloured RGB border around the region (width, colour, per-side disable; `0x006C[6]` hides it) [spec]; not part of the OSD SRAM ([docs/osd/windows.md](osd/windows.md), OT-18).
 
 ## Minimal hardware tests (unit 3; NOT run: agent a5cec59bb6f242e33 owns unit 3)
 

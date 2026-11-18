@@ -33,7 +33,7 @@ What the OSD + display hardware supports for a boot image:
 | Placement | fully positionable: window geometry (WINn ADR1/ADR2) + OSD origin `0x3A00/0x3A01` | [spec] |
 | Tool logo feature | NONE — RTDCustomerTool V3.8 has no logo/splash upload (`CSplashScreenEx` = the PC tool's own GUI splash); no FlashSet logo param | [tool] |
 
-- Firmware boot OSD state [measured, osd.md]: WIN0 start (0,4) end (156,80), colour 4, win_en+blend; fs_base=0x019, font_base=0x3F1; db_width+db_height on (2×), alpha type 10. (Small window = a menu/indicator; the full-screen Dahua splash is the glyph grid below, 2× scaled.)
+- Firmware boot OSD state [measured, docs/osd/windows.md]: WIN0 start (0,4) end (156,80), colour 4, win_en+blend; fs_base=0x019, font_base=0x3F1; db_width+db_height on (2×), alpha type 10. (Small window = a menu/indicator; the full-screen Dahua splash is the glyph grid below, 2× scaled.)
 
 ## Bank 14 is gamma, not the logo [fw, this session]
 `0xE0000-0xE2864`:

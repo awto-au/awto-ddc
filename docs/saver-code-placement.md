@@ -68,7 +68,7 @@ Frames IDENTICAL (`saver_frames_md5.py`, 6-12 frames) to the base for every step
 
 - Kept (k1) vs base, model A: Scope 1 -18 %, Scope 2 -13 %, Asteroids -9 % (noise ~5 % on Asteroids: frames are tick-paced); at 175.5 MHz (image `k1s`): Scope 1 110.0 -> 80.8, Scope 2 114.3 -> 101.3, Asteroids 40.6 -> 39.8 (no change within noise).
 - Model B shows a smaller gain for the kept set (Scope 2 181.8 -> 151.0, Scope 1 237 -> 216): under per-bank common the cross-bank port calls (not kept) dominate.
-- Not kept, c1 port pins: per byte `ScalerOsdDataPort` costs ~4 us [sim, same as unit T1 4.12 us] through the trampoline and ~2 us in common [sim]; the unit runs port loops 1.6-1.9x the sim [hw] and the 2026-11-18 rule (`saver-library.md`: garbled tiles with fast direct stores, diagnosis open) stays Dan's call. Gain if allowed: a further ~16 ms Scope 2 (A), ~19 Scope 1.
+- Not kept, c1 port pins: per byte `ScalerOsdDataPort` costs ~4 us [sim, same as unit T1 4.12 us] through the trampoline and ~2 us in common [sim]; the unit runs port loops 1.6-1.9x the sim [hw]; direct stores are the default since 2026-11-18 (`docs/osd/glyph-load.md`).
 - `__data` locals: Scope 2 -7.6 ms (A), Scope 1 -13 ms, Asteroids -3.9 ms on top of c2: larger than the 3-cycles-per-access estimate (~3.7 ms Scope 1) because 2 code bytes per access also leave the flash fetch. Per-variable table: `saver_code_profile.py --xdata`.
 - Static `__data` variables (6 B free) not tried: top candidates `s_sOy`, `s_tNew`, `s_tOld` (~0.2 ms each); the 6 B holes are the only permanent IRAM left.
 

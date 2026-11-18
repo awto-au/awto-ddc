@@ -6,7 +6,7 @@
 // Red over the whole panel (window 0), a 72 x 72 px Pac-Man (6 x 4 tiles, mouth open / shut) and text rows; the map is 30 x 11 tiles of 12 x 18 px
 // scaled 64 / 6 = 10.67 (3840 px wide). The OSD circuit keeps drawing while the MCU is held in ISP: scripts/flash_screen.py rewrites map words over ISP
 // (mouth frame, progress text). Layout constants come from scripts/gen_flash_screen.py (flash_screen_data.inc); the rest is mirrored in
-// scripts/flash_screen.py and checked by tests/test_flash_screen.py. Turned 180 when the display is (docs/osd-rotation.md): map cells mirrored, glyphs turned.
+// scripts/flash_screen.py and checked by tests/test_flash_screen.py. Turned 180 when the display is (docs/osd/rotation.md): map cells mirrored, glyphs turned.
 extern void osd_tc_show(BYTE ucOn);
 extern void osd_tc_close(void);
 
@@ -110,7 +110,7 @@ BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep)
             for(ucK = 0; ucK < AWTO_FS_GLYPH_BYTES; ucK++)
             {
                 AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
-                if(g_ucAwtoOsdRot != 0)                                          // turned 180: words reversed, bits reversed (docs/osd-rotation.md)
+                if(g_ucAwtoOsdRot != 0)                                          // turned 180: words reversed, bits reversed (docs/osd/rotation.md)
                 {
                     ucB = AwtoOsdRevByte(FsByte(usI * AWTO_FS_GLYPH_BYTES + AwtoOsdRotSrc(ucK, AWTO_FS_GLYPH_WORDS)));
                 }

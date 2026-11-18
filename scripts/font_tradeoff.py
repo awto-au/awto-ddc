@@ -251,7 +251,7 @@ def main():
     # table.tsv
     cols = list(rows[0].keys()) + ["notes"]
     note = ("[measured] units, words, bytes, VLC (real encoder, round-trip tested); [derived] 2/4-bpp "
-            "words per tile (18/36) and bit packing, 24x36-mode packing/36 words (osd-font-download.md "
+            "words per tile (18/36) and bit packing, 24x36-mode packing/36 words (docs/osd/tiles-fonts.md "
             "sections 5, open item); SRAM size 12288 is the SDK constant, not read back")
     with (OUT / "table.tsv").open("w") as f:
         f.write("\t".join(cols) + "\n")

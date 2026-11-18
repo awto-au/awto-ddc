@@ -1,6 +1,6 @@
 # OSD editor: feature spec (from studying Realtek OsdEdit v2.66)
 
-Own words. Source of facts: running the vendor GUI under Wine (2026-11-08), its form definitions, the three how-to PDFs. No vendor code or resources copied. Tracking: awto-ddc#89 (design system), editor issue linked there. Tool: `tools/osd_editor/`.
+Own words. Source of facts: running Realtek's OsdEdit GUI under Wine (2026-11-08), its form definitions, the three how-to PDFs. No Realtek code or resources copied. Tracking: awto-ddc#89 (design system), editor issue linked there. Tool: `tools/osd_editor/`.
 
 ## 1. What OsdEdit is
 - Windows GUI (Borland C++ Builder), "GMI RTD2523 OSD Edit", for the RTD2523 generation OSD. Works with the RL6449 tile format for 1 bpp (docs/boot-logo flow).
@@ -59,9 +59,9 @@ Own words. Source of facts: running the vendor GUI under Wine (2026-11-08), its 
 | PNG / SVG import | editor: sheet sliced into tiles; `make_logo.py` / `osd_logo_big.py` do logo art |
 | export C arrays | editor: `.inc` with VLC blobs + header; budget numbers per export |
 | import SDK / OsdEdit arrays | editor: our `.inc`, OsdEdit 2523V `.txt`; SDK `tiICON_*` parse in `osd_logo_encode.py` |
-| palette (16 RGB, .pal) | not done; palette is a red ramp in the editor; hardware LUT is 64 entries (`osd.md`) |
+| palette (16 RGB, .pal) | not done; palette is a red ramp in the editor; hardware LUT is 64 entries (`docs/osd/palette-blend.md`) |
 | logo flow with char-map de-dup | have: `make_logo.py`, `osd_logo_encode.py`, `osd_logo_big.py` (branches); one shared module pending (#87) |
-| font SRAM budget | have: `H + 1 + W*H + 9*U <= 12288` (osd-limits.md); editor shows tiles x words and flash raw vs VLC |
+| font SRAM budget | have: `H + 1 + W*H + 9*U <= 12288` (`docs/osd/limits.md`); editor shows tiles x words and flash raw vs VLC |
 | screen layout / char-map editing, windows, rows, page code | not done; screens-as-data is #89 order step 1 |
 | view rendered screens | have: `osd_render.py`, `osd_catalog.py`; editor pages the catalogue |
 | other vendors (MST, Novatek, Myson, HZK12) | out of scope |

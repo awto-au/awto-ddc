@@ -19,7 +19,7 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 - Firmware: `fw/test/flash_screen.c` draws the screen (window 0 red, 30 x 11 tiles scaled 64 / 6 = 10.67, 1-bit glyphs); `fw/test/saver.c` serves VCP 0xEB in the main loop; sound: `fw/test/snd.c` track `alert`.
 - The OSD circuit keeps drawing while the MCU is held in ISP. The flasher (`scripts/rtd_flash_image.py`) calls `flash_screen.tick(isp, k, info)` per sector: it rewrites only changed char commands over the ISP F4 / F5 window (`rtd_osd.Osd`), the mouth every 2 sectors.
 - Layout source `scripts/gen_flash_screen.py` (-> `fw/test/flash_screen_data.inc`); host `scripts/flash_screen.py`; `tests/test_flash_screen.py` keeps them equal.
-- Rotate 180: the firmware turns map and glyphs, the host writes the mirrored cell (`docs/osd-rotation.md`); the marker file `tmp/flash_screen.shown` carries the rotate flag from `show` to the flasher process.
+- Rotate 180: the firmware turns map and glyphs, the host writes the mirrored cell (`docs/osd/rotation.md`); the marker file `tmp/flash_screen.shown` carries the rotate flag from `show` to the flasher process.
 - Dry run of the screen without a flash: `python scripts/flash_screen.py test --bus 11`.
 
 ## 1 MHz ISP
