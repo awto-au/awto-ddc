@@ -15,11 +15,11 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 | saver slice per call | 8 ms (+ one unit of work) | D6: DDC/CI reply latency = a pass; Scope 2 `AWTO_S2_PASS_MS` model |
 | passes per frame at 8 ms slices | 40 / 12.1 = 3.3 | |
 | saver CPU per frame | **<= 26 ms (sim)** | 3.3 x 8 ms |
-| 1-bit tile upload (27 B, `AwtoOsdTile` via `ScalerOsdDataPort`) | 250 us sim = 9.3 us/B | probe: gap between back-to-back calls, base Scope 1 |
-| same on unit 3 | `ScalerOsdDataPort` 4.12 us/B, direct stores 2.4..2.6 us/B, unrolled 1.95 | `docs/osd-hw-tests.md` T1 / T2 |
+| 1-bit tile upload (27 B, `AwtoOsdTile` incl. its word loop / rotation / banked port calls) | 250 us sim | probe: gap between back-to-back calls, base Scope 1 |
+| port byte alone | sim 2.39 us (`ScalerOsdDataPort`), 1.46 (direct); unit 3: 4.12, 2.39..2.60, 1.95 unrolled | `docs/saver-fps-budget.md`, `docs/osd-hw-tests.md` T1 / T2 |
 
-- The sim charges ~2x the hardware per port byte: port-bound sim figures are pessimistic (budget doc reconciles).
-- Fixed per frame: whatever is drawn, port bytes x us/B. 26 ms / 9.3 us = **2.8 KB per frame in the sim**, 6.3 KB at hw `ScalerOsdDataPort`, ~10 KB with direct stores.
+- The unit runs port-write loops ~1.7x slower than the sim (budget doc): port-heavy savers lose more on the unit than compute-heavy ones.
+- Fewer, longer slices buy saver time at the cost of DDC/CI latency (D6): 16 ms slices -> 2 passes -> ~32 ms (budget doc lever 1).
 
 ## Per saver: what 25 frames/s means, work per frame, verdict
 
@@ -35,15 +35,16 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 - 25 frames/s: the trace redrawn per frame (phase + 3 table units = 3 px of the slow sine); smoothness = small phase step x 25/s (`AWTO_SC_PH_STEP` 3 = 75 px/s; 1 = 25 px/s).
 - Model (`saver_fps_model.py`): trace 2874 px / frame, touches 151 of 384 tiles; incremental (now | last frame) 170 tiles; 18 distinct graticule tiles.
 - Base work: all 384 tiles drawn (`osd_line` per px step, `osd_pixel` per graticule dot: 986 + 2324 calls / frame) and uploaded (12312 port B / frame); 854 ms / frame.
-- Limit: port bytes. 170 x 27 B = 4.6 KB / frame = 43 ms sim, 19 ms hw (`ScalerOsdDataPort`), 11 ms hw (direct).
-- Verdict: **YES-WITH-HW-FEATURE**: a faster port path (direct / burst stores, or hardware glyph decode) is needed; the drawing itself fits.
+- Limit: ~168 trace tiles per frame. Prototype: per tile ~0.28 ms compose (sim, C, XDATA locals) + upload; 4.5 KB port / frame = 18.5 ms unit SDK path, ~11 ms direct.
+- Verdict: **NO in C at 87.7 MHz** (prototype 6.3 / s, 9.0 / s fast port); **YES-WITH-HW-FEATURE**: run-glyph trace (`docs/saver-fps-hw.md` #1: frame = map writes only), or MCU x2 + direct port + asm compose (est. 15-20 / s, not 25).
 
 ### Scope 2 (480 x 270, 40 x 15 tiles, 2-bit)
 
 - 25 frames/s: the pulse drifts `X0_STEP` 2 px per frame = 50 px/s.
 - Base work (probe): 65 dynamic 2-bit tiles (`S2Fill` 1.9 ms each in a burst) + 87 map words = 3770 port B / frame; 174 ms / frame (5.7 / s). PC: `S2Run` 12 %, trampoline 9 %, `S2Trace` 9 %, `S2BaseCopy` 8 %, `S2ColBegin` 7 %, port 7 %.
-- Floor per tile after the levers below: upload 54 B (0.5 ms sim) + base copy + runs (~0.15 ms) = ~0.7 ms -> 65 tiles = 46 ms sim; with unchanged-column skip (flat baseline / tail: est. -30..40 %) ~30 ms. Port share at hw rates: 3.8 KB = 15.5 ms (`ScalerOsdDataPort`), 9 ms direct.
-- Verdict: **YES-WITH-HW-FEATURE**: algorithm alone reaches ~13-15 frames/s (sim); 25 needs the faster port, or a 1-bit trace layer over the static 2-bit graticule (halves bytes, drops the base copy). Not touched here (Scope 2 / plane order are being changed by another agent).
+- Port share at unit rates: 3.8 KB = 15.5 ms (`ScalerOsdDataPort`), 9 ms direct.
+- Code levers (budget doc 1 + 3 + 5 + 8): ~11 / s at 87.7 MHz; + MCU x2 + dual read: est. ~28 / s. Add here: skip columns whose trace y values did not change (flat baseline / tail).
+- Verdict: **YES-WITH-HW-FEATURE** (MCU x2, direct port; or run-glyph trace). Not prototyped: Scope 2 / plane order are another agent's.
 
 ### Asteroids (360 x 198, 30 x 11 tiles, 1-bit)
 
@@ -51,7 +52,7 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 - Motion per frame at 25/s: rocks 0.2..0.6 px, shots 1.9 px, ship <= 0.8 px: most objects keep their pixel position from one frame to the next.
 - Base work (probe): 41 tile uploads + 58 `AstPass` (24-object cull each, 204 us when empty) + 84 `osd_line` (~0.9 ms each incl. 32-bit clip set-up) per frame; 205 ms / frame (5.0 / s), saver 67 % of the pass.
 - Levers: only tiles under objects whose pixels changed (old box | new box), clean passes skipped without culling, specialised line walk. Result below.
-- Verdict: see "Prototype results".
+- Verdict: **YES** (prototype 20.0 / s default, 22.2 / s fast port; 632 port B / frame, so the unit's slower port adds ~1 ms). Remaining gap: pre-rendered rock / saucer sprites (remove most of `AstShape` + `AstLine`, ~28 % of samples) or MCU x2.
 
 ## Levers (cost from the sim, not guesses)
 
@@ -72,6 +73,38 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 | smaller raster / larger scale factor | all | fewer tiles; coarser picture | not proposed (Dan asked for fill + finer) |
 | skip unchanged trace columns | Scope 2 | flat baseline / tail columns keep their tiles | design |
 
-## Prototype results
+## Prototype results (sim, 2026-11-18)
 
-(filled below)
+Images: `fpsbase` (main 6df194c), `fps2` / `fpsfinal` (this branch, default), `fps2fast` (`-D _AWTO_OSD_FAST_PORT`: direct port stores for Scope 1 / Asteroids tiles, never default: unit-3 garble open).
+
+| measure | base | prototype default | + fast port |
+|---|---|---|---|
+| Scope 1 frames/s (ms / frame) | 1.17 (854) | 6.25 (162) | 9.0 (110) |
+| Scope 1 tiles / port B per frame | 384 / 12 312 | 168 / 4 532 | 172 / direct |
+| Asteroids frames/s | 5.0 (4.35 in `saver_loop_cost`, tick-paced) | 20.0..20.8 | 22.2..22.7 |
+| Asteroids tiles / port B per frame | 41 / 1 110 | 23 / 632 | 22 / direct |
+| Asteroids game ticks/s | 7.90 | 7.95 | 7.95 |
+| Asteroids unpaced 2-tick frame (`_AWTO_AST_FIXED_TICKS`) | 234 ms | 94 ms | |
+| XDATA free (default image) | 997 B | 840 B (audio build 826) | |
+| code | `scope_saver.c` 2023, `asteroids.c` 10286 | 1774, 11844 | |
+| CH_ free bank 8 / 13 | 11166 / 27601 | 8331 / 32298 | |
+
+- Steps (Asteroids, unpaced 2-tick frames): dirty boxes + time slices 234 -> 108 ms; byte line walk 95; clip to changed rows 94. Scope 1: first incremental 6.0 / s; bank pin + shifts 6.25.
+- Pixel identity: Scope 1 md5 IDENTICAL to main, 24 upright + 12 Rotate 180, default and fast port. Asteroids with `_AWTO_AST_FIXED_TICKS` on both images (frac 0): IDENTICAL 150 upright + 16 Rotate 180, every step. Scope 2 / Pac-Man: IDENTICAL to a main build (12 upright + 8 Rotate 180 each).
+- Gates on `fpsfinal`: `fw_gates.py` ALL PASS (health `delay cal` known), `saver_sim.py` (audio build `fpsav`) all PASS (Scope 2 5.50 / s), `pytest` 349 passed, `magic_lint` 0.
+- Interpolation (Asteroids at 25 / s): looked at sim frames (`asteroids_sim.py --fps 25`): no trails, wrap clean. Rocks move 0.2..0.6 raster px per frame: each 1-px step is shown (1 raster px = 10.7 panel px); before, shots jumped 6 px per tick.
+- Rejected: Scope 1 tile as 18 16-bit row words (OR runs, pack): 8.0 / s vs 9.0 (SDCC 16-bit XDATA ops cost more than byte bit ops).
+- Left in the profiles: Scope 1 `ScRun` 22 %, `ScRuns` 21 %, `ScTile` 16 % (fast port); Asteroids `AstShape` 14 %, `AstLine` 14 %, trampoline 11 % (mostly `ScalerOsdDataPort` per byte), `AstPass` 7 %.
+- `tools/osd_lines` line / pixel / cursor code (3.9 KB) is now called by no saver (only `osd_canvas_init`): drop from the image in a follow-up; the host library and its test stay.
+- Asteroids saver CPU at 20 / s: 5.25 ms saver per pass x 110 passes/s = 29 ms per frame vs the 26 ms budget.
+
+## Recommended order
+
+1. Asteroids prototype as the production path (pixel-identical drawing proven; interpolation changes frames by design). Unit 3: frames/s from the sync log, tearing.
+2. Scope 1 incremental (pixel-identical, 5.3x).
+3. Dan's call on the port rule (direct stores: budget lever 3, hw #5): `_AWTO_OSD_FAST_PORT` becomes the default; Scope 2 gets the same.
+4. MCU 175.5 MHz trial on unit 3 (budget lever 2, hw T-L): likely closes Asteroids to 25.
+5. Asteroids pre-rendered sprites if 3 + 4 fall short.
+6. Scope 2 code levers (budget doc 1 + 3 + 5 + 8) after the plane-order work lands.
+7. Scope 1 / 2 run-glyph trace after hw tests T-C (narrow chars) and T-A (grid windows).
+8. Remove the unused `osd_lines` draw code from the image.
