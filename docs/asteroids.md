@@ -65,6 +65,10 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 - Time (`scripts/asteroids_speed.py`): column pass mean 9.5 ms, p95 20, max 31; pass with the game step max 41 ms; 7.94 ticks/s (paced). Largest costs: `osd_line` / `cursor_plot` (~1/3), main-loop base (~15 %).
 - Checks: `scripts/asteroids_sim.py` (frames + mp4 + wav), `scripts/saver_sim.py` (VCP 0xEB = 8 start / stop, Rotate 180 at the same game tick: mean difference 0.4 turned vs 3.1 unturned), `python scripts/fw_gates.py` ALL PASS.
 
+## Colour and info overlay (Dan, 2026-11-19)
+- All drawing is the diagnostic console's phosphor green: palette `AWTO_PAL_DIAG_TEXT` (index 1) = `AWTO_RGB_PHOSPHOR_GREEN` (0, 255, 65); background `AWTO_PAL_DIAG_BG` (index 3) = near black (2, 2, 6). Same indices the console uses (it sets its own when it opens); none other needed.
+- Info overlay lower left (3 lines: input resolution + refresh, draw grid + scale-up, fps): `docs/saver-mode.md` "Info overlay". Glyphs: digits + x . F P S, 4 x 6 px (`gen_asteroids.py` shapes >> 1), drawn after the objects. Sim: `scripts/saver_sim.py` `asteroids_info_check` (green only, text in the lower-left box); picture `tmp/saver_sim/asteroids_run.png`.
+
 ## Open
 
 - Hardware: nothing seen on a panel; sound not heard (generator pitch range 189..2000 Hz).
