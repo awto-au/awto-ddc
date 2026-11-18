@@ -733,29 +733,7 @@ typedef enum
     _MCU_CLK_IN_DIV = _DIV_1,
 } EnumMcuClkDiv;
 
-typedef enum
-{
-    _IOSC_DELAY6US_CNT = 3, // Using IOSC/XTAL/M2PLL CLK To Get base 6us delay on the counter
-    _IOSC_DELAY4US_CNT = 6, // Using IOSC/XTAL/M2PLL CLK To Get base Xus delay on the counter
-    _XTAL_DELAY6US_CNT = 2,
-    _XTAL_DELAY4US_CNT = 2,
-
-#if(_M2PLL_FREQ_SEL == _M2PLL_FREQ_243M)
-    _M2PLL_DELAY6US_CNT = 23,
-    _M2PLL_DELAY4US_CNT = 19,
-#elif(_M2PLL_FREQ_SEL == _M2PLL_FREQ_351M)
-#if(_MCU_SPEED_UP_SUPPORT == _ON)
-    _M2PLL_DELAY6US_CNT = 53,
-    _M2PLL_DELAY4US_CNT = 44,
-#else
-    _M2PLL_DELAY6US_CNT = 26,
-    _M2PLL_DELAY4US_CNT = 21,
-#endif
-#elif(_M2PLL_FREQ_SEL == _M2PLL_FREQ_372M)
-    _M2PLL_DELAY6US_CNT = 28,
-    _M2PLL_DELAY4US_CNT = 22,
-#endif
-}EnumDelay5usTuneCnt;
+// Delay loop counts: AWTO_DELAY_CNT in ScalerCommonPLLInclude.h (compile time from the clock; docs/delay-audit.md)
 
 //--------------------------------------------------
 // Timer 0/1 Max Delay Timer(MS)

@@ -600,7 +600,8 @@
 //-------------------------------------------------
 // FW TMDS DDC Debounce Counter
 //-------------------------------------------------
-#define _TMDS_DDC_DEBOUNCE_NORMAL                               ((_MCU_SPEED_UP_SUPPORT == _ON) ? 230 * 2 : 230)
+// one pass = 100.5 clk (sim, docs/delay-audit.md): 263.6 us at every clock; 381 kHz per count = 100.5 clk / 263.6 us
+#define _TMDS_DDC_DEBOUNCE_NORMAL                               (AWTO_CPU_KHZ_M2PLL / 381UL)
 #define _TMDS_DDC_DEBOUNCE_PS                                   55
 
 //--------------------------------------------------
