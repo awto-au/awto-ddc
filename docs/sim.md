@@ -33,6 +33,7 @@ Status 2026-11-17. The only simulator is ours; no ucsim in any flow except the c
 | `scripts/boot_sim.py`, `wake_sim.py`, `sync_sim.py`, `wdt_sim.py`, `key_sim_test.py` | boot, wake, sync log, watchdog, keys |
 | `scripts/card_shot.py`, `qc_frames_shot.py` | menu cards, Realtek QC OSD frames |
 | `scripts/pacman_sim.py`, `scope_sim.py`, `saver_sim.py` | Pac-Man + sound video, scope frames, screensaver start / stop by DDC/CI VCP 0xEB |
+| `scripts/asteroids_sim.py`, `asteroids_speed.py` | Asteroids frames + mp4 + wav (`--rotate`), ms per column pass / frame (audio image `-D _AWTO_AUDIO_TEST`) |
 | `scripts/nv_policy_sim.py` | flash halts per scenario (#151): equal VCP sets, menu close, input switch, backlight minutes, changed set, POWER off |
 | `scripts/fw_gates.py <stem>` | the gate set (boot, isr, link, h1080, h2160, ...) run before a flash |
 

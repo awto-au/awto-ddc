@@ -258,7 +258,7 @@ void AwtoSaverPoll(void)                                            // main loop
                       ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE2) ? AWTO_SAVER_ASTEROIDS : AWTO_SAVER_PACMAN)));
             return;
         }
-        if(g_ucAwtoSaverRun >= AWTO_SAVER_FLASH)
+        if((g_ucAwtoSaverRun == AWTO_SAVER_FLASH) || (g_ucAwtoSaverRun == AWTO_SAVER_SPLASH))
         {
             return;                                                 // static: the host flasher swaps the glyph over ISP
         }

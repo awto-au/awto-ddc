@@ -70,6 +70,8 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_ANGLES                         64                                  // ship heading steps, 0 = right, counter-clockwise
 #define AWTO_AST_QUARTER                        16
 #define AWTO_AST_UP                             16
+#define AWTO_AST_RAD_ROCK_L                     17                                  // large rock draw radius, px (64 units >> 1 = 32 px wide); smaller sizes halve
+#define AWTO_AST_RAD_SAUCER_L                   11
 #define AWTO_AST_SHIP_R                         9                                   // draw radius, px
 #define AWTO_AST_SHIP_HIT                       5
 #define AWTO_AST_SHOT_SPEED                     48                                  // fp units per step
@@ -192,21 +194,48 @@ static __xdata BYTE s_ucAny;                                                    
 
 #pragma place bank(8)
 static __code int8_t s_tCos[AWTO_AST_QUARTER + 1] = {127, 126, 125, 122, 117, 112, 106, 98, 90, 81, 71, 60, 49, 37, 25, 12, 0};
-#pragma place bank(8)
-static __code uint8_t s_tRad[AWTO_AST_N_TYPES] = {0, 17, 9, 5, 11, 6, 2, 2, 21};   // draw radius, px
-#pragma place bank(8)
-static __code uint8_t s_tHit[AWTO_AST_N_TYPES] = {0, 14, 7, 4, 9, 5, 1, 1, 0};     // hit radius, px
-
-#pragma place bank(8)
-static BYTE AstRad(BYTE ucT)
+static BYTE AstRad(BYTE ucT)                                                        // draw radius, px (no table: a const chunk near the top of a bank trips the link gate's arithmetic-base heuristic)
 {
-    return s_tRad[ucT];
+    switch(ucT)
+    {
+        case AWTO_AST_T_ROCK_L:
+            return AWTO_AST_RAD_ROCK_L;
+        case AWTO_AST_T_ROCK_M:
+            return AWTO_AST_RAD_ROCK_L / 2 + 1;
+        case AWTO_AST_T_ROCK_S:
+            return AWTO_AST_RAD_ROCK_L / 4 + 1;
+        case AWTO_AST_T_SAUCER_L:
+            return AWTO_AST_RAD_SAUCER_L;
+        case AWTO_AST_T_SAUCER_S:
+            return AWTO_AST_RAD_SAUCER_L / 2 + 1;
+        case AWTO_AST_T_SHOT:
+        case AWTO_AST_T_SSHOT:
+            return 2;
+        default:
+            return AWTO_AST_BOOM_SHIP_SIZE + 1;
+    }
 }
 
-#pragma place bank(8)
-static BYTE AstHit(BYTE ucT)
+static BYTE AstHit(BYTE ucT)                                                        // hit radius, px
 {
-    return s_tHit[ucT];
+    switch(ucT)
+    {
+        case AWTO_AST_T_ROCK_L:
+            return AWTO_AST_RAD_ROCK_L - 3;
+        case AWTO_AST_T_ROCK_M:
+            return AWTO_AST_RAD_ROCK_L / 2 - 1;
+        case AWTO_AST_T_ROCK_S:
+            return AWTO_AST_RAD_ROCK_L / 4;
+        case AWTO_AST_T_SAUCER_L:
+            return AWTO_AST_RAD_SAUCER_L - 2;
+        case AWTO_AST_T_SAUCER_S:
+            return AWTO_AST_RAD_SAUCER_L / 2;
+        case AWTO_AST_T_SHOT:
+        case AWTO_AST_T_SSHOT:
+            return 1;
+        default:
+            return 0;
+    }
 }
 
 #pragma place bank(8)

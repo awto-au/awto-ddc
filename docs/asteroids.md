@@ -1,13 +1,15 @@
-# Asteroids screensaver (stage 1: host tool + design)
+# Asteroids screensaver
 
-Status 2026-11-18. Stage 1 = host side only. No firmware written, nothing flashed. Third DDC-triggered saver after Pac-Man / Scope (`docs/screensaver.md`).
+Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing flashed). Fifth saver after Pac-Man / Scope / Scope 2 (`docs/screensaver.md`).
 
-## Licence boundary (decision needed, see Open)
+## Licence boundary (Dan, 2026-11-18)
 
-- The Asteroids ROM set is Atari's; it stays in `/vendors/atari/asteroids-mame/` (manifest there). Never in this repo.
-- ROM-derived data (shape tables, PNGs, `shapes.json`) lives only in `tmp/asteroids/`. `.gitignore` blocks ROM files, `asteroids/` dirs and `asteroids_shapes*`; `tests/test_asteroids_dvg.py` fails if any such file is tracked.
-- The tool is clean-room: DVG semantics from the public hardware documentation and MAME's `avgdvg.cpp` (read to confirm the model, not copied).
-- Firmware shapes must not be generated from the ROM into committed files. Plan: our own outlines, using the ROM decode only as a size / proportion reference.
+- The ROM set is Atari's: it stays in `/vendors/atari/asteroids-mame/` (manifest there). Never in this repo.
+- Shapes are generated from the local ROM at build time (`scripts/gen_asteroids.py` via `asteroids_dvg.py`) into `fw/test/asteroids_data.inc`: gitignored, never committed. An image built with the ROM carries Atari-derived geometry; images are not committed either.
+- No ROM: the same script writes our own outlines (4 rocks, saucer, ship + flame at 16 angles) into the same include, same shape ids. Log line `asteroids shapes: rom|fallback`; the saver pushes sync E9 0x90 with value 1 (ROM) / 0 (own).
+- Digits are always our own strokes (`DIGITS` in the script).
+- `fw_build.py` runs the generator first. Tests: `tests/test_asteroids_gen.py`, `tests/test_asteroids_dvg.py` (fails if a ROM-derived file is tracked).
+- The decoder is clean-room: DVG semantics from public hardware documentation and MAME's `avgdvg.cpp` (read to confirm the model, not copied).
 
 ## Host tool `scripts/asteroids_dvg.py`
 
@@ -23,51 +25,47 @@ Status 2026-11-18. Stage 1 = host side only. No firmware written, nothing flashe
 - Rendered shapes inspected visually: all 37 characters, rocks, saucer and ship read correctly.
 - Not verified: the ship's step 15 vs 16 pairing (both point up; 15 is the mirrored variant), where the thrust flame is anchored (assumed: end point of the closed hull), the in-game global scale per object (needs the 6502 display-list code).
 
-## Firmware design (stage 2)
+## Firmware (`fw/test/asteroids.c`)
+
+### Game (runs on the chip)
+
+- Pool of 24 objects (rock L / M / S, saucer L / S, ship shot, saucer shot, explosion), ship separate. Units 1/8 px, playfield 384 x 216, wrap-around (saucers leave the screen).
+- One frame = 2 game ticks (finer motion and hit tests; frames are slow). Tick: move, autopilot, collisions, waves / saucer timer / respawn, score.
+- Rocks split L -> 2 M -> 2 S; scores 20 / 50 / 100, saucer 200 / 1000. Wave n: 4 + n rocks (max 7). Saucer every 150..350 ticks while rocks exist; small saucer (25 %) aims.
+- Autopilot: nearest rock / saucer, lead by relative velocity, turn 1 or 2 heading steps (64 headings), fire when within ~4 deg and 90 px (max 4 shots, cooldown 3), wander thrust bursts, flee when a rock is close behind. 3 lives, respawn when the centre is clear, game over -> new game after 60 ticks. No text (no GAME OVER).
+- Shot hit test also halfway back along the step (no tunnelling).
 
 ### Rendering
 
-- Same path as Scope 1 / 2: OSD tile map 32 x 12 tiles (384 x 216), 1-bit glyphs, one glyph per cell, `tools/osd_lines` `osd_line` into a one-tile-column band canvas shared with the scope savers (`g_aucScPix`, `g_scCv`; never two savers at once), band redrawn per column and per band, scale-up as `scope_saver.c`.
-- Per pass: cull whole objects by bounding box first (about 10 objects x 128 passes), then draw only intersecting lines. Playfield = full 384 x 216, wrap-around.
-- Upload only tiles touched this frame or last frame (object boxes at t and t-1 are recomputable, no stored previous frame): about 60 tiles x 27 B = 1.6 KB per frame instead of 10.4 KB for all 384 tiles.
-- Rotate 180: flip x / y at draw time (`docs/osd-rotation.md`).
+- OSD 32 x 12 tiles (384 x 216), 1-bit glyph per cell, band canvas `g_aucScPix` / `g_scCv` shared with Scope 1 (1 tile column x 6 rows, 2 bands per column); `scope_saver.c` scale-up numbers.
+- Per pass: cull objects against the 12 x 108 window (wrap-aware), skip lines wholly outside it (`osd_line` walks every pixel of a clipped line), draw, upload only tiles that hold ink or held ink at their last upload (per-pass occupancy byte). Empty passes cost ~1 ms: a main-loop pass runs on through empty columns until one drew something.
+- Score / spare ships (top left) redraw only when they change or an object touches those passes (occupancy bit 6).
+- Rotate 180: `AwtoOsdRotCell` + `AwtoOsdGlyph` as the scopes (`docs/osd-rotation.md`); scale-up window start = OSD position (`AwtoOsdPlaceScaleUp`).
+- Ship: 16 stored angles x quarter turns (generator bakes the flame at the hull's end point); size = vertex >> shift (rock 1 / 2 / 3, saucer 2 / 3, ship 3).
+- Frames follow at once (no pause); one column per main pass, watchdog kicked per pass.
 
-### Scale and rotation
+### Sound
 
-- Shapes stored as int8 vertex pairs in 64-unit boxes; sprite size by arithmetic shift, no multiply: large rock /2 (32 px), medium /4 (16 px), small /8 (8 px). Ship /8 (~12 px, ratio to a large rock about 1 : 2.7 as in the original).
-- Ship: 17 stored angles over 90 degrees (5.6 degree steps) plus x / y mirroring = 64 steps around the circle; step per frame chosen by the script. Thrust flame only on thrust frames.
-- Characters: digits and the few letters used (score, GAME OVER), about 8 x 12 units, drawn /1 or /2.
+- `pacman_sound.c` tracks 10..16 (`scripts/pacman_sound.py`): thrust (loop, background state 5), saucer (loop, state 6), fire, explosion small / medium / large, ship explosion. `AwtoPmSound` cmds 9..13, `AwtoPmSoundBg` 5 / 6.
+- Priorities as Pac-Man (one generator, higher wins, lower dropped, looping background resumes): ship explosion 6, large 5, medium / small 4, fire 3, thrust 2, saucer 1.
+- Only when the user mute is off (`GET_OSD_VOLUME_MUTE`); level = the user's volume (DVC gain). Without `-D _AWTO_AUDIO_TEST`: one sync E9 86 "sound unavailable" at draw, then silent.
+- Sync rows: the logged-row table is full (254), so the saver's own E9 0x90..0x93 and the cmd line 0x8C have no rows (printed raw); row 86 text now names both savers.
 
-### State without XDATA
+### Integration
 
-- XDATA floor is 700 B: no new XDATA. Game state is not kept; like Pac-Man the host plays the game once and the firmware replays it.
-- Host generator `scripts/gen_asteroids.py` (stage 2): Python game with an autopilot (rock motion, ship turn / thrust / shots, saucer, splits, score), emits a timeline of objects: shape, size, start t, end t, x0, y0, vx, vy (fixed point), plus ship angle / thrust keyframes. Position = closed-form function of t, so no per-object runtime state.
-- t derives from the run-start time the saver already keeps (`s_ulSwap`) and `AwtoMs()`: zero new variables, frame skips are harmless.
-- Loop: about 60 s of play, then restart.
+- `saver.c`: run id `AWTO_SAVER_ASTEROIDS` 7; setting 119 value 5 (`SAVER_MODE_RUN` maps it, 5 is also the flash run id). Alternate: Pac-Man -> Scope -> Scope 2 -> Asteroids.
+- DDC/CI VCP 0xEB = 8 starts it (7 = Boot splash, 6 alert, 5 flash). Registry rows 119 (`Asteroids`, value 5) and 121 (`Asteroids=8`); schema CRC changed with the row 119 range (records are id-tagged: values kept).
+- Test only on unit 3; nothing flashed yet.
 
-### Budget (estimates, to be measured)
+## Numbers (our side, sim, 2026-11-18)
 
-| item | bytes (banked code space) |
-|---|---|
-| shape data, our own outlines (about 400 vertices x 2 B + per-polyline headers + index) | ~1.2 K |
-| timeline (about 60 objects x 8 B + ship keyframes) | ~1.5 K |
-| renderer glue, object culling, mirror / shift transforms, timeline walker | ~2 K |
-| saver hook + strings | ~0.2 K |
-| total | ~5 K of the 20-30 K free in banks 11-13 |
-
-- Data and its reader in the same bank (`#pragma place bank(N)`), as `scope_saver2.c`.
-- XDATA: +0 B target. Any byte added must be paid for from the 700 B floor and recorded.
-- Frame cost: 128 band passes (32 columns x 4 bands of 3 tile rows) per frame; measure sim cycles per pass and unit-3 frame rate before / after (`scripts/saver_sim.py`). Watchdog: kick per band pass.
-
-### Saver integration
-
-- `fw/test/saver.c`: new `AWTO_SAVER_ASTEROIDS` run id, `AwtoAsteroids(cmd)` with the same (1 draw, 2 next, 0 off) contract as the scopes; Alternate cycles all four savers.
-- DDC/CI VCP 0xEB: next free value 7 = Asteroids (0 stop, 1 selected, 2 Pac-Man, 3 Scope, 4 Scope 2, 5 Flash, 6 alert tone). `docs/osd-editor-spec.md` and `docs/settings.md` row 121 list gets "Asteroids".
-- Settings row 119 `screensaver`: add choice Asteroids (registry `fw/rtdfw/settings/registry.tsv`, `scripts/settings_gen.py`).
-- Test only on unit 3; `saver_sim.py` extended for 0xEB = 7.
+- XDATA free 1541 B -> 1173 B (default image): -368 B for state, 24 objects, per-pass occupancy (64 B) and function locals; audio image 1158 B. Floor 700 B.
+- Code: bank 8 +5.8 KB, bank 11 +4.0 KB (incl. sound data), bank 1 +0.9 KB; the data and its readers are pinned to bank 8 (bank 13 has only ~3 KB left: message-table reserve). Shapes: 612 B (ROM) / 584 B (own) + 94 B offsets.
+- Time (`scripts/asteroids_speed.py`): column pass mean 9.5 ms, p95 20, max 31; pass with the game step max 41 ms; 7.6 ticks/s = 3.8 frames/s. Largest costs: `osd_line` / `cursor_plot` (~1/3), main-loop base (~15 %).
+- Checks: `scripts/asteroids_sim.py` (frames + mp4 + wav), `scripts/saver_sim.py` (VCP 0xEB = 8 start / stop, Rotate 180 at the same game tick: mean difference 0.4 turned vs 3.1 unturned), `python scripts/fw_gates.py` ALL PASS.
 
 ## Open
 
-- Shape source: own outlines (planned) or generate from the ROM into an ignored include (then the firmware build needs the ROM and the image carries Atari-derived geometry).
-- Sound: none planned (Pac-Man only has it).
-- Game-over / attract text: wording for the loop end.
+- Hardware: nothing seen on a panel; sound not heard (generator pitch range 189..2000 Hz).
+- Frame rate ~4 / s (scopes ~3 / s): own clipped line drawing would cut ~1/3 of the time.
+- Game-over / attract text: none drawn.
