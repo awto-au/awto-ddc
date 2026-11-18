@@ -134,11 +134,11 @@ static void SplashEnd(void)                                         // the OSD b
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_STOP, 0);
 }
 
-void AwtoSaverTaken(void)                                           // OsdDispDisableOsd: the splash's drawing is gone; it is drawn again unless a console / menu took the OSD
+void AwtoSaverTaken(void)                                           // OsdDispDisableOsd got past the hold: the console / a test command took the OSD
 {
     if(g_ucAwtoSaverWhy == AWTO_SAVER_WHY_BOOT)
     {
-        s_ucMid = 0;
+        SplashEnd();
     }
 }
 
@@ -147,6 +147,10 @@ void AwtoSaverStop(void)
     if(g_ucAwtoSaverRun == AWTO_SAVER_OFF)
     {
         return;
+    }
+    if(g_ucAwtoSaverWhy == AWTO_SAVER_WHY_BOOT)
+    {
+        isr_g_stAwtoDiag.ucHold &= ~AWTO_HOLD_POPUP;
     }
     SaverDraw(AWTO_SAVER_OFF);
     g_ucAwtoSaverWhy = AWTO_SAVER_WHY_NONE;
@@ -161,11 +165,11 @@ void AwtoSaverPoll(void)                                            // main loop
     if((s_ulSwap == 0) && (g_ucAwtoSaverRun == AWTO_SAVER_OFF) && (s_ucReq == AWTO_SAVER_REQ_NONE))   // first pass after power-on
     {
         s_ulSwap = ulNow;
-        if(AWTO_SET(BOOT_SPLASH) != 0)
+        if((AWTO_SET(BOOT_SPLASH) != 0) && (AwtoBootReason() == AWTO_BOOT_COLD))     // cold power-up only: a warm reset (ISP, watchdog) shows nothing
         {
             g_ucAwtoSaverRun = AWTO_SAVER_SPLASH;
             g_ucAwtoSaverWhy = AWTO_SAVER_WHY_BOOT;
-            s_ucMid = 0;                                            // draw step
+            s_ucMid = 0;                                            // drawn at the first pass in mode INITIAL: before it, the SDK's power-on OSD init would wipe it
             AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_START, (BYTE)((AWTO_SAVER_SPLASH << AWTO_SAVER_RUN_SHIFT) | AWTO_SAVER_WHY_BOOT));
         }
         return;
@@ -198,23 +202,26 @@ void AwtoSaverPoll(void)                                            // main loop
         {
             AwtoSaverStart((ucReq == AWTO_SAVER_NOW_SELECTED) ? ((g_ucAwtoSaverMode == AWTO_SAVER_OFF) ? AWTO_SAVER_ALTERNATE : g_ucAwtoSaverMode) : (BYTE)(ucReq - 1), AWTO_SAVER_WHY_NOW);
         }
-        return;
+        if(g_ucAwtoSaverWhy != AWTO_SAVER_WHY_BOOT)                 // the settings load's stop of 0 leaves a boot splash running: this pass may draw it
+        {
+            return;
+        }
     }
     if(g_ucAwtoSaverRun != AWTO_SAVER_OFF)
     {
         if(g_ucAwtoSaverWhy == AWTO_SAVER_WHY_BOOT)
         {
-            if((isr_g_stAwtoDiag.ucHold != 0) || (g_ucAwtoMenuOn != 0))
-            {
-                SplashEnd();                                        // a console / menu opened over it: nothing to close
-            }
-            else if(((ulNow - s_ulSwap) >= AWTO_SPLASH_MAX_MS) || (ucMode == _MODE_STATUS_ACTIVE))      // the picture is on: it takes over
+            if(((ulNow - s_ulSwap) >= AWTO_SPLASH_MAX_MS) || (ucMode == _MODE_STATUS_ACTIVE))      // the picture is on: it takes over
             {
                 AwtoSaverStop();
             }
-            else if((s_ucMid != AWTO_SAVER_SPLASH_DONE) && (ucMode != _MODE_STATUS_SEARCH) && (ucMode != _MODE_STATUS_DISPLAY_SETTING))   // never a step on the picture's path
+            else if((s_ucMid != AWTO_SAVER_SPLASH_DONE) && (ucMode == _MODE_STATUS_INITIAL))
             {
-                s_ucMid = (AwtoFlashDraw(1, s_ucMid) != 0) ? AWTO_SAVER_SPLASH_DONE : (BYTE)(s_ucMid + 1);
+                for(s_ucMid = 0; AwtoFlashDraw(1, s_ucMid) == 0; s_ucMid++)     // all steps in one pass (Dan 2026-11-18: ACTIVE +54 ms accepted)
+                {
+                }
+                s_ucMid = AWTO_SAVER_SPLASH_DONE;
+                isr_g_stAwtoDiag.ucHold |= AWTO_HOLD_POPUP;         // the SDK's OSD resets (display setting, mode changes) cannot wipe it; Stop / the console release it
             }
             return;
         }

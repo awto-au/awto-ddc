@@ -61,7 +61,7 @@ Never write bare "vendor": say which one.
   - Power-on in the sim: `scripts/boot_sim.py` (PNGs at set times, console survives display setting).
   - Inputs panel: rows from `fw/awto/inputs.tsv` through `scripts/gen_awto_inputs.py` (generated `AWTO_IN_*`); unlogged inputs red with a legend.
   - Owns the OSD only while its map is in place: an SDK pop-up or mode reset releases it (`AwtoConLost`).
-- Boot splash: registry `boot_splash` (default On): big Pac-Man (flash screen drawing, title AWTO) from the first main pass until console / menu / key / ACTIVE / 3 s, never on the picture's path: [flash-screen.md](flash-screen.md) "Boot splash".
+- Boot splash: registry `boot_splash` (default On): big Pac-Man (flash screen drawing, title AWTO) on a cold power-up only, drawn in the first INITIAL main pass until ACTIVE / key / console / 3 s: [flash-screen.md](flash-screen.md) "Boot splash".
 - Boot logo: removed (#144); the console shows the power-on log instead. Dahua splash RE notes: [boot-logo.md](boot-logo.md).
 - Registry menu (#67)
   - Code: `/mnt/2tb/git/awto-rtdfw/awto/settings/menu.c`, `ui.c`, `set_table.c` (generated), `settings.c`, `vcp.c`; header `awto/include/menu.h`; registry `/mnt/2tb/git/awto-rtdfw/settings/registry.tsv` + `pages.tsv`.

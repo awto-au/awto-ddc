@@ -32,26 +32,27 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 
 Status 2026-11-18, sim only (no hardware run).
 
+- Cold power-up only (Dan, 2026-11-18): `AwtoBootReason() == AWTO_BOOT_COLD`. Warm resets (host ISP 0xEE, watchdog bite, probe / hardware watchdog reset, any warm start) show nothing.
 - Registry `boot_splash` (id 122, bool, group osd, default On, no VCP code; menu OSD page / DDC paged pair 0xE0 / 0xE1). Off = no splash.
-- Drawing: the flash screen's (red window, 72 x 72 px Pac-Man mouth open, rotate 180 turned) with the title row "AWTO" (second row of `g_aucFsTitle`, `gen_flash_screen.py` `TITLE_SPLASH`); `AwtoFlashDraw(ucSplash, ucStep)` draws one step (set-up, 3 cell steps, 3 glyph steps, show); `AwtoFlashScreen(1 | 2)` runs all steps at once (flash / preview).
-- Preview: DDC/CI VCP 0xEB = 7 ("Boot splash", screensaver_now option); stays until VCP 0xEB = 0.
-- Start: first main-loop pass (`AwtoSaverPoll`, `fw/test/saver.c`), run SPLASH / why BOOT, then one draw step per main pass.
-- Draw steps never run in mode SEARCH or DISPLAY SETTING (the picture's path).
-- Ends (no redraw, nothing closed when someone else owns the OSD):
-  - console / menu opened (their hold flag): OSD left to them
+- Drawing: the flash screen's (red window, 72 x 72 px Pac-Man mouth open, rotate 180 turned) with the title row "AWTO" (second row of `g_aucFsTitle`, `gen_flash_screen.py` `TITLE_SPLASH`). `AwtoFlashDraw(ucSplash, ucStep)` = one step; `AwtoFlashScreen(1 | 2)` runs all steps (flash / preview).
+- Preview: DDC/CI VCP 0xEB = 7 ("Boot splash"); stays until VCP 0xEB = 0.
+- Start: first main pass (`AwtoSaverPoll`, `fw/test/saver.c`) arms it (run SPLASH / why BOOT, sync line E9 79); all draw steps run in the first pass in mode INITIAL.
+  - Earlier passes are mode POWER_OFF: the SDK's INITIAL OSD init wipes anything drawn there (white fill seen in the sim).
+  - A hold (`AWTO_HOLD_POPUP`) is set after the draw so SDK OSD resets cannot wipe it; Stop / the console release it.
+- Ends:
+  - mode ACTIVE: `AwtoSaverStop` closes it (the console auto-open waits for the hold)
   - first front key (`AwtoSaverKey`); DDC/CI commands do not end it (the host talks at power-on)
-  - mode ACTIVE: the picture takes over
-  - hard maximum `AWTO_SPLASH_MAX_MS` 3 s from the start: 4x power-on -> ACTIVE in the sim (~0.75 s), equal to the console hold `AWTO_CON_HOLD_MS`; expiry closes the OSD
-  - an SDK OSD reset (`OsdDispDisableOsd` -> `AwtoSaverTaken`) wipes the drawing: the splash starts drawing again from step 0 while the run lasts; a mode reset never leaves a half drawing shown
-- Check: `scripts/splash_sim.py BIN MAP --base BIN0 MAP0` (boot times against an image without the splash, key end, setting off, upright / Rotate 180 frames in `tmp/splash_sim/`).
+  - console / test command taking the OSD (`OsdDispDisableOsd` past the hold -> `AwtoSaverTaken`): ends, nothing closed
+  - hard maximum `AWTO_SPLASH_MAX_MS` 3 s from the arming pass: ~4x power-on -> ACTIVE in the sim (0.75 s), = console hold `AWTO_CON_HOLD_MS`; expiry closes the OSD
+- Check: `scripts/splash_sim.py BIN MAP` (cold boot vs the same image at boot_splash = 0, key end, warm reset + watchdog bite show none, setting off, preview frames upright / Rotate 180 in `tmp/splash_sim/`).
 
-### Where it can show (measured in the sim, `boot_sim.py`, unit-3 image, 1080p60, 2026-11-18)
+### Cold boot timeline (sim, `splash_sim.py`, unit-3 image, 1080p60, 2026-11-18, fw ms)
 
-- Ring times: first main-loop pass 166 ms; next pass ~584 ms (the first pass holds INITIAL: panel T1, HPD, link training, video 542 ms); SEARCH 587; DISPLAY SETTING 602; the SDK resets the OSD ~650 ms; ACTIVE 747; console 777.
-- Pass 1 is the only draw point before the picture's path; the draw does not finish there, so a boot with a signal shows no splash.
-- Draw all steps in pass 1: ACTIVE +54 ms (801 vs 747), rejected. Draw 22 small steps in DISPLAY SETTING passes: ACTIVE +7 ms, lost to the OSD reset at ~650 ms, rejected.
-- As shipped: ACTIVE 747 ms, console 777 ms, first OSD 786 ms with / 785 ms without the splash (+1 ms, one pass of the saver poll).
-- A splash visible at power-on needs the panel path to give passes (or the draw to move into the first pass at a cost of ~54 ms to ACTIVE).
+- Main pass 1 at 162 (mode POWER_OFF); pass 2 at ~585 in mode INITIAL (pass 1 holds INITIAL: panel T1, HPD, link training, video 542).
+- 585: splash drawn (OSD on), visible until the display-setting panel cycle blanks the OSD (~750).
+- 780: ACTIVE; 816: console opens, splash released (823).
+- Cost against the same image at boot_splash = 0: ACTIVE +45 ms (780 vs 735), console +51 ms (accepted by Dan: the draw is ~45 ms of main-loop work in pass 2).
+- Black between the OSD blank (~750) and the console (~816).
 
 ## Open
 

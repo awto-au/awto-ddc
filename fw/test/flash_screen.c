@@ -41,8 +41,6 @@ extern void osd_tc_close(void);
 #define AWTO_FS_POS_OFFSET_V                    0x04
 #define AWTO_FS_WIN                             0                   // full-panel red window behind everything
 #define AWTO_FS_ZERO                            0x00
-#define AWTO_FS_ARG_ON                          0x7E
-#define AWTO_FS_ARG_OFF                         0x7F
 #define AWTO_FS_CELL_CHUNK                      110                 // cells per draw step (330 cells: 3 steps); the splash draws one step per main pass
 #define AWTO_FS_GLYPH_CHUNK                     30                  // glyphs per step (90: 3 steps)
 #define AWTO_FS_CELL_STEPS                      ((AWTO_FS_CELLS + AWTO_FS_CELL_CHUNK - 1) / AWTO_FS_CELL_CHUNK)
@@ -175,11 +173,9 @@ void AwtoFlashScreen(BYTE ucOn)                                         // 0 off
     {
         osd_tc_close();
         ScalerOsdScaleUpOnOff(_DISABLE);
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_OFF, 0);
         return;
     }
     while(AwtoFlashDraw((BYTE)(ucOn - 1), ucStep++) == 0)
     {
     }
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_ON, 0);
 }
