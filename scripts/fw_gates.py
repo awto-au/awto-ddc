@@ -62,6 +62,7 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
     "conwrap": ("_AwtoConWrapLine",),
     "deadport": ("_AwtoDeadPortPoll",),
     "portcfg": ("_isr_g_ucAwtoPortOff",),
+    "inputrate": ("_g_pucAwtoInCnt", "_AwtoInRow"),
     "panel": ("_g_ucAwtoPanelOwn",),
     "sysm": ("_g_ucAwtoSysOwn",),
     "nvlog": ("_g_stAwtoNv", "_AwtoNvLog"),
@@ -120,6 +121,7 @@ def gates(b: Path, m: Path, ref, tree):
     g["nvlog"] = [*PY, f"{s}/nv_test.py", "--sim", b, "--map", m, "--cases", "flushlog"]   # #151: flush lines say what was written
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
+    g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
