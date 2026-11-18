@@ -47,7 +47,6 @@
 // FUNCTION DECLARATIONS
 //****************************************************************************
 void UserCommonCecReceiveNotify(void);
-void UserCommonCecTransmitInfoPrepare(void);
 
 
 //****************************************************************************
@@ -62,45 +61,17 @@ void UserCommonCecReceiveNotify(void)
 {
     if(GET_CEC_RX_READ_DONE() == _TRUE)
     {
-        StructCecRxReceivedInfo stCecRxInfo;
-        memcpy(&stCecRxInfo, &isr_g_stCecRxReceivedInfo, sizeof(StructCecRxReceivedInfo));
-
         DebugMessageCEC("CEC RX Read: HB ", isr_g_stCecRxReceivedInfo.ucReceivedHb);
-        for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
-        {
-            DebugMessageCEC("CEC RX Read: DB ", isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
-        }
 
-        // Pass Cec Rx Info to User
-        UserInterfaceCecReceivedNotify(&stCecRxInfo);
-
+        // awto: analysing flag first (the interrupt then fills the backup FIFO, not this struct); the frame is handled in place,
+        // no local copy (XDATA floor, docs/cec.md); the reply goes straight into g_stCecTxTransmitInfo
         SET_CEC_RX_MSG_ANALYZING();
-
         CLR_CEC_RX_READ_DONE();
+        UserInterfaceCecReceivedNotify((StructCecRxReceivedInfo *)&isr_g_stCecRxReceivedInfo);
 
         // reset Cec rx struct
         memset(&isr_g_stCecRxReceivedInfo, 0, sizeof(isr_g_stCecRxReceivedInfo));
     }
 }
 
-//--------------------------------------------------
-// Description  : Catch Cec Tx
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserCommonCecTransmitInfoPrepare(void)
-{
-    if(ScalerCecGetTxState() == _CEC_TX_IDLE_STATE)
-    {
-        StructCecTxTransmitInfo stCecTxInfo;
-        memset(&stCecTxInfo, 0, sizeof(StructCecTxTransmitInfo));
-
-        if(UserInterfaceCecTransmitInfoPrepare(&stCecTxInfo) == _TRUE)
-        {
-            memcpy(&g_stCecTxTransmitInfo, &stCecTxInfo, sizeof(StructCecTxTransmitInfo));
-
-            SET_CEC_TX_START();
-        }
-    }
-}
 #endif

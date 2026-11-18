@@ -310,7 +310,7 @@
 566c	CheckMDomain	Kernel/Scaler/ScalerFunction/Code/ScalerMDomain.c:1864	MN FrameSync Frame Buffer	1
 5670	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:7421	Get Colorimetry EXT_YCC_ITUR_BT2020_CL	0
 567b	Audio	Kernel/Scaler/ScalerFunction/Code/ScalerAudio_SeptPhy.c:2455	D5 Audio Test On	0
-568c	CEC	Kernel/User Common Function/Code/UserCommonCec.c:68	CEC RX Read: HB 	0
+568c	CEC	Kernel/User Common Function/Code/UserCommonCec.c:64	CEC RX Read: HB 	0
 569c	Rx0	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonSync.c:6775	Get Colorimetry EXT_YCC_XVYCC709	0
 56a4	Rx1	Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonDPRx1.c:1728	Misc change: Color Format, _COLOR_SPACE_RAW	0
 56c0	Scaler	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c:2174	Dclk fine tune	0
@@ -739,7 +739,6 @@ c6a8	Check	Kernel/Scaler/ScalerFunction/Code/ScalerDisplayDPTx.c:684	eDP Tx1 LT2
 c702	System	Kernel/System/Code/SysJudge.c:477	Measured Input HV Changed	1
 c7a8	Scaler	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c:1601	FRC only supports dos-mode timing	0
 c899	Audio	Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_Audio.c:1210	False : D0 DP Audio Fsm Disable	0
-c8ef	CEC	Kernel/User Common Function/Code/UserCommonCec.c:71	CEC RX Read: DB 	0
 c964	Scaler	Kernel/User Common Function/Code/UserCommonInterface.c:4209	MBR: Backlight Control Start	0
 ca4f	Rx1	Kernel/Scaler/ScalerFunction/Code/ScalerDPRx1_SeptPhy.c:6199	MST FREESYNC Mode Enabled!!	0
 ca5e	CEC	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c:666	CEC TX is Busy	0

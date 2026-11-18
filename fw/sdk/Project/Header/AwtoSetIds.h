@@ -117,8 +117,9 @@
 #define AWTO_SET_SCREENSAVER_NOW      121
 #define AWTO_SET_BOOT_SPLASH          122
 #define AWTO_SET_KEY_CLICK            123
-#define AWTO_SET_CEC_EN               124
-#define AWTO_SET_CEC_CTL              125
+#define AWTO_SET_MONITOR              124
+#define AWTO_SET_CEC_EN               125
+#define AWTO_SET_CEC_CTL              126
 #define AWTO_PCT_TO_255(p)           ((BYTE)(((WORD)(p) * 255) / 100))   // SDK store field of a percent row: 0..255
 #define AWTO_SET_DEF_BRIGHTNESS       50
 #define AWTO_SET_DEF_BLACK_LEVEL      50
@@ -172,6 +173,6 @@
 #define AWTO_SET_DEF_SSC              0
 #define AWTO_SET_DEF_PANEL_HOURS      0
 #define AWTO_SET_DEF_PANEL_MIN        0
-#define AWTO_SET_SCHEMA              0x0E9E
-#define AWTO_SET_AUX_MAX             59
+#define AWTO_SET_SCHEMA              0x4BAF
+#define AWTO_SET_AUX_MAX             60
 #endif

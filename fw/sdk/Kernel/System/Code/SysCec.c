@@ -89,7 +89,6 @@ void SysCecHandler(void)
     UserCommonCecReceiveNotify();
 
     // Transmit part
-    UserCommonCecTransmitInfoPrepare();
     ScalerCecTxProcess();
     UserInterfaceCecHighLevelFlow();            // result of the last reply, release the RX path (was called from the OSD handler)
 }

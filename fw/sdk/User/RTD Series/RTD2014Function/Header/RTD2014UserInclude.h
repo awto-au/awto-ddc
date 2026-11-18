@@ -671,7 +671,6 @@ extern EnumRtkAdvMbrUserStatus UserInterfaceGetRtkAdvMbrSetting(void);
 // RTD2014UserInterfaceCec.c
 //-------------------------------------------------------
 extern void UserInterfaceCecReceivedNotify(StructCecRxReceivedInfo *pstCecRxInfo);
-extern bit UserInterfaceCecTransmitInfoPrepare(StructCecTxTransmitInfo *pstCecTxInfo);
 extern void UserInterfaceCecHighLevelFlow(void);
 
 //-------------------------------------------------------

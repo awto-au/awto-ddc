@@ -3,7 +3,7 @@
 
 usage: cec_sim.py BIN MAP [--mode 1080p60]
   Boot to ACTIVE (HDMI D2), check the block came up (registry cec_en default 1), then send frames from a playback device
-  (logical address 4) and compare the reply frames and the decoded sync-log lines (fw/awto/sync.tsv row EA, fmt cec).
+  (logical address 4) and compare the reply frames and the decoded sync-log lines (fw/awto/sync.tsv row EB, fmt cec).
 - Register model [sdk-hypothesis]: names and bit meanings are from the SDK header / ScalerCec.c, none is confirmed on a unit
   (re/regmap tests C-CEC*). Page 18: B0 rx control (bit4 rx IRQ enable, bit6 reset, low nibble = initiator of the frame),
   B1 (bit7 rx EOM, bit6 rx IRQ flag w1c, 4:0 data length), B2 bit7 header EOM, D3.. rx data, B4 (bit2 tx enable, bit1 reset, 6:3 initiator),
@@ -28,7 +28,7 @@ CR0, RXCR0_1, RXCR0_2, RTCR0_RSV_1 = 0x18A0, 0x18B0, 0x18B1, 0x18B2          # P
 TXCR0_1, TXCR0_2, TXDR0, TXDR1, RXDR1 = 0x18B4, 0x18B5, 0x18B9, 0x18C0, 0x18D3
 IE0_BIT = 0x89                                                                  # TCON.1: external interrupt 0 flag
 PLAYBACK, TV, BCAST = 4, 0, 15
-SET_CEC_EN, SET_CEC_CTL = 124, 125                                              # registry ids (AwtoSetIds.h)
+SET_CEC_EN, SET_CEC_CTL = 125, 126                                              # registry ids (AwtoSetIds.h)
 
 
 def say(s):

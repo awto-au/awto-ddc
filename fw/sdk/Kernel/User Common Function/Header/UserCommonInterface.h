@@ -63,7 +63,6 @@
 //----------------------------------------------------------------------------------------
 #if(_HDMI_CEC_SUPPORT == _ON)
 extern void UserCommonCecReceiveNotify(void);
-extern void UserCommonCecTransmitInfoPrepare(void);
 #endif
 
 //----------------------------------------------------------------------------------------

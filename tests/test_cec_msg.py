@@ -46,7 +46,7 @@ def test_physical_address_is_a_broadcast_with_device_type_tv(lib):
 
 def test_vendor_id_is_the_awto_oui(lib):
     assert rx(lib, 4, b"\x8c") == (BCAST, b"\x87\xa7\x70\xd0", 0)
-    assert b"A7-70-D0" in (ROOT / "scripts/make_edid.py").read_text().encode() or "0xA770D0" in (ROOT / "scripts/make_edid.py").read_text()
+    assert "AWTO_OUI = 0xA770D0" in (ROOT / "scripts/make_edid.py").read_text()
 
 
 def test_version_name_power(lib):
@@ -140,7 +140,7 @@ def test_firmware_cec_sim_when_an_image_exists():
     if not img:
         pytest.skip("no firmware image in tmp/fw")
     mp = img[-1].with_suffix(".map")
-    if " _SysCecHandler" not in mp.read_text(errors="replace") and "_SysCecHandler" not in mp.read_text(errors="replace"):
+    if "_SysCecHandler" not in mp.read_text(errors="replace"):
         pytest.skip("newest image has no CEC code")
     r = subprocess.run([sys.executable, str(ROOT / "scripts/cec_sim.py"), str(img[-1]), str(mp)], capture_output=True, text=True, timeout=240,
                        env={**__import__("os").environ, "AWTO_SIM_CORE": "fast"})

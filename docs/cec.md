@@ -40,8 +40,8 @@ Tags: [hw] measured on a unit, [spec] regdb / datasheet text, [sdk-hypothesis] S
 ## Registry (`fw/rtdfw/settings/registry.tsv`, menu page Signal)
 | id | name | default | meaning |
 |---|---|---|---|
-| 124 | `cec_en` | on (Dan 2026-11-19) | CEC block + replies; off clears the block enable bits (`18A0[7:6]`) within ~32 passes |
-| 125 | `cec_ctl` | off | CEC may act on Standby / Image View On / Text View On / Active Source / Set Stream Path / Routing / User Control. Today: no action; on = an extra log row per hook |
+| 125 | `cec_en` | on (Dan 2026-11-19) | CEC block + replies; off clears the block enable bits (`18A0[7:6]`) within ~32 passes |
+| 126 | `cec_ctl` | off | CEC may act on Standby / Image View On / Text View On / Active Source / Set Stream Path / Routing / User Control. Today: no action; on = an extra log row per hook |
 
 ## Messages (HDMI 1.4b CEC; names as `cec-ctl`)
 | received | reply | notes |
@@ -61,8 +61,8 @@ Tags: [hw] measured on a unit, [spec] regdb / datasheet text, [sdk-hypothesis] S
 - Logic and tests: `fw/cec/cec_msg.c`, `tests/test_cec_msg.py` (compiled on the host, every row above).
 - Not implemented: Get Menu Language, Set Menu Language, System Audio, ARC, Deck / Tuner, Vendor Command (answered with Feature Abort), Standby from the monitor's own power key, CEC wake from power saving.
 
-## Log (sync ring row `EA`, fmt `cec`; `./dev.py synclog`, the on-screen console and the host print the same text)
-- Row: `fw/awto/sync.tsv` `EA * cec CEC %`. arg = flags | length << 3 | kind; value = header << 24 | opcode << 16 | operand 1 << 8 | operand 2. Decoder: `scripts/sync_log.py cec_line` (host), `AwtoPutCec` in `fw/osd/console.c` (screen); opcode names `fw/cec/opcodes.tsv` (a test keeps the firmware table in step).
+## Log (sync ring row `EB`, fmt `cec`; `./dev.py synclog`, the on-screen console and the host print the same text)
+- Row: `fw/awto/sync.tsv` `EB * cec CEC %`. arg = flags | length << 3 | kind; value = header << 24 | opcode << 16 | operand 1 << 8 | operand 2. Decoder: `scripts/sync_log.py cec_line` (host), `AwtoPutCec` in `fw/osd/console.c` (screen); opcode names `fw/cec/opcodes.tsv` (a test keeps the firmware table in step).
 - Every frame and every reply is a row, repeats included (never dropped):
   - `CEC rx 4>? Give Physical Address`: `4` initiator, `?` destination unknown (gen type 0 has no register for it)
   - `CEC tx 0>F Report Physical Address 00 00+`: first two operands, `+` = more
@@ -76,14 +76,15 @@ Tags: [hw] measured on a unit, [spec] regdb / datasheet text, [sdk-hypothesis] S
   - TX result is `acked` when 18B5 bit2 (tx EOM) is set, else `no ack (header)`; a lost or collided frame is not distinguished [?].
 - Clock: IOSC 28 MHz (18A1 bit7 = 0), dividers 18A3 / 18A4 = 0x19 / 0x1C, bit timings 18E5.., 18EF..: the SDK values.
 - Receive: EXINT0 -> `ScalerCecIntHandler_EXINT0` -> frame into `isr_g_stCecRxReceivedInfo` (or the 20-byte backup FIFO while one is analysed) -> main loop -> `UserInterfaceCecReceivedNotify` (log + `CecMsgRx` + queue reply). Changes to the SDK code: no `memset` in the ISR path (library helper not ISR-safe), byte count clamped to 16 (5-bit field), backup FIFO 30 -> 20 bytes (XDATA floor).
-- Transmit: one reply slot; a second request while a reply is in flight is not answered (logged `dropped`), the initiator asks again. 3 retransmissions (SDK value).
-- Known SDK races kept: RX struct clear after the notify and the backup-FIFO shift run in the main loop while the ISR can fill them (frames come >= 24 ms apart; one pass ~1.7 ms).
+- Transmit: the reply is composed straight into `g_stCecTxTransmitInfo` (no second copy) and `SET_CEC_TX_START`; one reply at a time: a second request while a reply is in flight is not answered (logged `dropped`), the initiator asks again. 3 retransmissions (SDK value).
+- RX handoff: the analysing flag is set before the frame is handled (the ISR then fills the backup FIFO, not the RX struct); the SDK's backup-FIFO shift in the main loop still runs while the ISR can append (frames come >= 24 ms apart; a flash write can block the loop longer) [?].
+- `UserCommonCecTransmitInfoPrepare` and the LA-polling glue are gone.
 - No delays added (`docs/delay-audit.tsv` unchanged): nothing waits, every step is a register access in the main loop or the ISR.
 
 ## Cost (sim, image tag af46ad6+, 2026-11-19; baseline = af46ad6 without CEC)
-- XDATA free: 901 B -> 734 B (floor 700 B). The first version (extra RX / TX / reply copies) left 676 B and failed the floor.
+- XDATA free: 901 B -> 734 B (floor 700 B; after merging the health monitor of #245 the same tree without the copy removals would have left 697 B). Copies removed: local RX / TX structs in `UserCommonCec.c`, the reply slot, backup FIFO 30 -> 20 B.
 - Code + constants in banked space: ~4.9 KB (SDK CEC 2.0 KB, `cec_msg` 1.1 KB, glue 0.9 KB, console names + printer 0.5 KB, sync row). Gate `link` / bank layout pass.
-- Main loop (sim bench: main-loop heartbeat passes in 2 fw seconds after ACTIVE + 1 s settle, `AWTO_SIM_CORE=fast`; not a committed script): 1201 passes -> 1191 passes (8428 -> 8501 instr/pass, +0.9 %). Running the CEC work every pass was +10 % (9275 instr/pass): the due-gate removed it.
+- Main loop (sim bench: main-loop heartbeat passes in 2 fw seconds after ACTIVE + 1 s settle, `AWTO_SIM_CORE=fast`; not a committed script): 1201 passes -> 1191 passes (8428 -> 8501 instr/pass, +0.9 %; measured before the #245 merge, which adds its own monitor work). Running the CEC work every pass was +10 % (9275 instr/pass): the due-gate removed it.
 - ISR: `ScalerCecIntHandler_EXINT0` adds one register read + compare per EXINT0 while idle (6 instructions, `18B0` bit4 clear before init); a frame costs ~300 instructions once per >= 24 ms. `fw_stack`: worst ISR path is still the DP training path through `SysEXINT0` (32 B); the CEC path is shallower. Gates `isr`, `canary` pass.
 - On a unit the same numbers need `./dev.py health` loop rate before / after (Phase B).
 
