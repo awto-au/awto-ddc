@@ -1171,7 +1171,9 @@ extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN);                          // turn ucN stream bytes 180 in place (bytes reversed, bits of each reversed)
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_OSD_ZERO                                           0x00
-#define AWTO_OSD_PORT(v)                                        (AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v))   // OSD SRAM data port: direct store (unit 3 T1 / T2 / T5 / T7 byte-exact, docs/osd-hw-tests.md)
+// OSD SRAM data port: direct store + 24 nops of store spacing (map words corrupt below 16 at 350.8 MHz; docs/scope-corruption.md)
+#define AWTO_NOP8                                               __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
+#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); AWTO_NOP8 AWTO_NOP8 AWTO_NOP8 } while(0)
 #define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
 #define AWTO_OSD_POS_OFFSET_V                                   0x04
 #define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px
