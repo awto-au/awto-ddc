@@ -121,3 +121,12 @@
 4. Compare with the boot-failure signature (docs/clock-sweep.md, section "Default image at 350.8 MHz"): a failing case at 350.8 MHz only = candidate cause.
 5. Replace the sim-derived limits (latency, tolerances) by 1.25 x the measured values; fill the last column above.
 6. Flash the best default image back; unit 3 rest state (4K59.940, 10/10 image).
+
+## Phase B log
+
+- 2026-11-19 unit 1 (AWT26110001, NVIDIA HDMI, bus 18, was running `rd0`, settings listed in `tmp/logs/unit1_settings_before.txt`: disp_rotate 0, brightness 64, input D2 HDMI):
+  - Flashed `cpusuite-350` with `dev.py flash --unit 1 --force --force-ungated` (VERIFY OK, 205 sectors, 140 s). Debug slave 0x35 answered on bus 18 (the suite image serves no EDID: `--bus 18 --identity ...`).
+  - T group run: T_RELOAD, T_FULL, T_AUTORELOAD pass; T_RATE0 / T_RATE1 worst window error 125 / 112 counts (sim 8) with the host polling during the case.
+  - The next poll (during T_TORN, EA off ~7 ms) failed; afterwards bus 18 answers nothing (0x35, 0x4A, 0x37, 0x50 all silent), HPD still connected.
+  - Cause not established. Hypothesis: host reads while EA is off leave the IIC slave engine in a state the suite image never clears. Host runner now waits a quiet period (bound / 3) before polling and `dev.py cpu-suite` takes `--bus N --identity HOW`.
+  - Unit 1 has no relay: a mains cycle is needed before ISP works again.

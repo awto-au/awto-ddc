@@ -166,12 +166,12 @@ class Sim:
 class Unit:
     """Real unit over debug slave 0x35 (Phase B: the suite image flashed on the test unit)."""
 
-    def __init__(self, bus: int, serial: str, mapp: Path):
+    def __init__(self, bus: int, serial: str, mapp: Path, identity: str | None = None):
         import rtd_i2c_bridge as B
         import sw_timeline as T
         import dbg_xdata as X
         import i2cbus
-        i2cbus.require_unit(bus, serial)
+        i2cbus.require_unit(bus, serial, identity)       # the suite image serves no EDID: identity = how the caller proved the bus
         self.X = X
         self.io = B.Real(bus, allow_write=True, regread=True)
         self.base = T.sym(mapp, "g_stAwtoCpu")
@@ -191,6 +191,7 @@ class Unit:
         raise RuntimeError(f"debug read failed at 0x{self.base + off:04X}")
 
     def wait_done(self, bound_ms: int) -> bool:
+        time.sleep(bound_ms / 3000.0)                      # quiet first: debug-slave traffic during a case disturbs timing cases and a read while EA is off fails (unit 1 2026-11-19)
         t0 = time.monotonic()
         limit = bound_ms * 3 / 1000 + 2.0                  # host bound: 3x the fw bound + the I2C round trips
         while time.monotonic() - t0 < limit:
@@ -366,6 +367,7 @@ def main() -> int:
     ap.add_argument("--bin", type=Path)
     ap.add_argument("--map", type=Path)
     ap.add_argument("--clock", type=int, default=350, help="unit: AWTO_CLOCK_MHZ of the flashed image")
+    ap.add_argument("--identity", help="unit: how the bus was proven (the suite image serves no EDID, so the serial check cannot)")
     ap.add_argument("--cases")
     ap.add_argument("--groups", help="comma list of T I M R D")
     ap.add_argument("--allow-scratch-write", action="store_true", help="R_WRITE: write the generated scratch candidates (opt-in)")
@@ -397,7 +399,7 @@ def main() -> int:
             raise SystemExit("unit: --bus and --map needed (dev.py cpu-suite adds them); nothing done")
         binp = a.bin or a.map.with_suffix(".bin")
         ctx = {"crc": crc16(binp.read_bytes()[CRC_FROM:CRC_TO])} if binp.exists() else {}
-        dev = Unit(a.bus, a.serial, a.map)
+        dev = Unit(a.bus, a.serial, a.map, a.identity)
         dev.khz = CLOCKS.get(a.clock, 0)
         try:
             if dev.rd(O_READY, 1)[0] != READY_MAGIC:
