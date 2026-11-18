@@ -51,7 +51,6 @@ typedef char s_tS2PanelCheck[((AWTO_S2_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO
 #define AWTO_S2_FONT_ADV                        6
 #define AWTO_S2_TRACE_PTS                       14                                  // columns x = ox - 1 .. ox + 12 of a tile column
 #define AWTO_S2_CACHE_N                         8                                   // cursor-only tiles per column pass: distinct static bases
-#define AWTO_S2_DATA_PORT                       0x0092                              // OSD data port (regdb osd data port = SDK P0_92_OSD_DATA_PORT): ScalerOsdDataPort without the call
 #define AWTO_S2_BIT_SHIFT                       3                                   // bits per byte = 1 << 3
 #define AWTO_S2_BIT_MASK                        7
 #define AWTO_S2_WORD_BITS                       24
@@ -273,9 +272,9 @@ static void S2MapWord(WORD usCell, BYTE ucId)                                   
         usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FS_BASE + usCell, _OSD_WITHOUT_DB);
-    AWTO_XFR(AWTO_S2_DATA_PORT) = (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1));
-    AWTO_XFR(AWTO_S2_DATA_PORT) = ucId;
-    AWTO_XFR(AWTO_S2_DATA_PORT) = (BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_GREEN & 7) << 3) | (AWTO_S2_PAL_RED & 7));
+    ScalerOsdDataPort((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
+    ScalerOsdDataPort(ucId);
+    ScalerOsdDataPort((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_GREEN & 7) << 3) | (AWTO_S2_PAL_RED & 7)));
 }
 
 static void S2Glyph(BYTE ucId)                                                      // g_aucScPix (green plane, red plane; data port order, already turned) -> glyph slot
@@ -283,9 +282,9 @@ static void S2Glyph(BYTE ucId)                                                  
     BYTE ucI;
 
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FONT_BASE + (WORD)ucId * AWTO_S2_GLYPH_STRIDE, _OSD_WITHOUT_DB);
-    for(ucI = 0; ucI < AWTO_S2_BASE_BYTES; ucI++)                                   // the port takes one byte per write; its address counter advances per word
+    for(ucI = 0; ucI < AWTO_S2_BASE_BYTES; ucI++)                                   // SDK call like every other saver: direct back-to-back port writes are the suspect of the unit photo 2026-11-18
     {
-        AWTO_XFR(AWTO_S2_DATA_PORT) = g_aucScPix[ucI];
+        ScalerOsdDataPort(g_aucScPix[ucI]);
     }
 }
 
