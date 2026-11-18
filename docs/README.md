@@ -3,5 +3,6 @@
 - Clock and delays: `clock-sweep.md`, `delay-audit.md` (owner of the delay decisions), `delays.md` (SDK constants, sources).
 - Hardware investigations: `temperature.md`, `register-audit.md`, `monitors/README.md` (I2C roles), `reversing/dahua-fw/register-audit.md`.
 - OSD / savers: `osd/` (manual), `osd-write-sweep.md`, `saver-fps-hw.md`, `saver-fps-plan.md`.
+- Interfaces: `cec.md` (HDMI CEC sink, RPi5 test plan).
 - Registers: `../re/regmap/README.md` (one row per register; docs link by key `PPAA`).
 - Open items: `open-decisions.md`. Superseded one-liners: `history.md`.

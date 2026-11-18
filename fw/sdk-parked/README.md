@@ -18,7 +18,7 @@
 | hdcp2 | 11 | HDCP 2.2 Rx (common, DP Rx0 / Rx1, TMDS Rx1..5) | HDCP 2.2 parked (#44); bring back D1 / D2 / D3 files with `_TMDS_/_DP_HDCP_2_2_SUPPORT` |
 | freesync | 1 | ScalerCommonFreeSync | FreeSync planned (#21), off today |
 | typec | 22 | Type-C, PMIC drivers, port controllers, USB hub / retimer, seamless charge | no Type-C port |
-| cec | 4 | HDMI CEC | `_HDMI_CEC_SUPPORT` off |
+| cec | 0 | HDMI CEC | brought back 2026-11-19 (docs/cec.md): `_HDMI_CEC_SUPPORT` on |
 | hdr | 2 | HDR10 user / common | `_HDR10_SUPPORT` off |
 | vga | 11 | VGA / ADC / auto adjust / mode search / sync processor / LC tank / autotest | no VGA port (`_A0_NO_PORT`) |
 | dvi | 10 | DP Rx0 (D0), TMDS Rx1 / Rx4 / Rx5, dual-link DVI | ports this board does not have (D1 DP, D2 / D3 HDMI only) |

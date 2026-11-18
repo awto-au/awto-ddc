@@ -1,0 +1,26 @@
+# CEC opcodes the monitor names in its log (docs/cec.md). Single source for the host decoder (scripts/sync_log.py); the firmware copy is
+# fw/osd/console.c tAwtoCecOp / tAwtoCecNameS, kept in step by tests/test_cec_msg.py. Opcode values: HDMI 1.4b CEC spec, linux/cec.h.
+# opcode	name
+00	Feature Abort
+04	Image View On
+0D	Text View On
+36	Standby
+44	User Control Pressed
+45	User Control Released
+46	Give OSD Name
+47	Set OSD Name
+80	Routing Change
+81	Routing Information
+82	Active Source
+83	Give Physical Address
+84	Report Physical Address
+85	Request Active Source
+86	Set Stream Path
+87	Device Vendor ID
+8C	Give Device Vendor ID
+8F	Give Device Power Status
+90	Report Power Status
+9D	Inactive Source
+9E	CEC Version
+9F	Get CEC Version
+FF	Abort

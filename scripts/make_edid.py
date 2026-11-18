@@ -145,8 +145,8 @@ def cta_block(port):
         d += bytes([(7 << 5) | 3, 0x06, 0x01, 0x01])
     d += bytes([(7 << 5) | 2, 0x00, 0xCA])                 # VCDB: QY+QS (YCC/RGB quant selectable), IT/CE underscan
     if port.startswith("hdmi"):
-        # HDMI 1.4 VSDB: PA 1.0.0.0, DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
-        d += bytes([(3 << 5) | 7, 0x03, 0x0C, 0x00, 0x10, 0x00, 0x18, 0x44])
+        # HDMI 1.4 VSDB: PA 1.0.0.0 (D2) / 2.0.0.0 (D3: input 2 of the CEC root, docs/cec.md), DC_30bit+DC_Y444, legacy max TMDS 340 MHz (0x44 x 5 MHz)
+        d += bytes([(3 << 5) | 7, 0x03, 0x0C, 0x00, 0x20 if port == "hdmi-d3" else 0x10, 0x00, 0x18, 0x44])
         # HF-VSDB: v1, max TMDS char rate 600 MHz (0x78 x 5; i915 rejects the 533.12 MHz DTD as CLOCK_RANGE with 540), SCDC present + LTE_340Mcsc scrambling
         d += bytes([(3 << 5) | 7, 0xD8, 0x5D, 0xC4, 0x01, 0x78, 0x88, 0x00])
         # AMD FreeSync VSDB removed (business monitor, fixed 60 Hz; firmware FreeSync is off): re-add tracked in an issue

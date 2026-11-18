@@ -2161,6 +2161,16 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_OUT_DEFAULT                                  _AUDIO_DAC_OUTPUT_SPEAKER
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_SYNC_EV_DEMO                                       0xE6    // test cmd 0x3A demo log: 01..03 'line N test ...' short / medium / long
+#define AWTO_SYNC_EV_CEC                                        0xEA    // CEC (docs/cec.md): arg = flags | len << 3 | kind, value = header << 24 | opcode << 16 | operand 1 << 8 | operand 2
+#define AWTO_CEC_K_RX                                           0       // frame received (header low nibble = destination, flag DEST_UNKNOWN: the block does not tell)
+#define AWTO_CEC_K_TX                                           1       // reply queued
+#define AWTO_CEC_K_TXRES                                        2       // result of the last reply: value = EnumCecTxEvent
+#define AWTO_CEC_K_STATE                                        3       // block initialised / switched: value = cec_en
+#define AWTO_CEC_K_HOOK                                         4       // cec_ctl on, message would act: value = CEC_HOOK_* (no action yet)
+#define AWTO_CEC_K_DROP                                         5       // frame needs a reply while the last one is not sent: no reply (the initiator asks again)
+#define AWTO_CEC_K_MASK                                         0x07
+#define AWTO_CEC_LEN_SHIFT                                      3
+#define AWTO_CEC_F_DEST_UNKNOWN                                 0x80
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, P7.3 AMP_MUTE = 0
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step

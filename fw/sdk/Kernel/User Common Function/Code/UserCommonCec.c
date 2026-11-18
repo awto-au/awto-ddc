@@ -13,53 +13,94 @@
 /********************************************************************************/
 
 //----------------------------------------------------------------------------------------------------
-// ID Code      : SysCec.c No.0000
+// ID Code      : UserCommonCec.c No.0000
 // Update Note  :
 //----------------------------------------------------------------------------------------------------
 
-#define __SYSTEM_CEC__
+#define __USER_COMMON_CEC__
 
-#include "SysInclude.h"
+#include "UserCommonInclude.h"
 
 #if(_HDMI_CEC_SUPPORT == _ON)
+
 //****************************************************************************
 // DEFINITIONS / MACROS
 //****************************************************************************
+
 
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
 //****************************************************************************
 
+
 //****************************************************************************
 // CODE TABLES
 //****************************************************************************
+
 
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
 
+
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-void SysCecHandler(void);
+void UserCommonCecReceiveNotify(void);
+void UserCommonCecTransmitInfoPrepare(void);
+
 
 //****************************************************************************
 // FUNCTION DEFINITIONS
 //****************************************************************************
 //--------------------------------------------------
-// Description  : System Cec Handler
+// Description  : Received CEC RX INFO bypass to User
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void SysCecHandler(void)
+void UserCommonCecReceiveNotify(void)
 {
-    // Receive part
-    ScalerCecRxProcess();
-    UserCommonCecReceiveNotify();
+    if(GET_CEC_RX_READ_DONE() == _TRUE)
+    {
+        StructCecRxReceivedInfo stCecRxInfo;
+        memcpy(&stCecRxInfo, &isr_g_stCecRxReceivedInfo, sizeof(StructCecRxReceivedInfo));
 
-    // Transmit part
-    UserCommonCecTransmitInfoPrepare();
-    ScalerCecTxProcess();
+        DebugMessageCEC("CEC RX Read: HB ", isr_g_stCecRxReceivedInfo.ucReceivedHb);
+        for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
+        {
+            DebugMessageCEC("CEC RX Read: DB ", isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
+        }
+
+        // Pass Cec Rx Info to User
+        UserInterfaceCecReceivedNotify(&stCecRxInfo);
+
+        SET_CEC_RX_MSG_ANALYZING();
+
+        CLR_CEC_RX_READ_DONE();
+
+        // reset Cec rx struct
+        memset(&isr_g_stCecRxReceivedInfo, 0, sizeof(isr_g_stCecRxReceivedInfo));
+    }
 }
 
+//--------------------------------------------------
+// Description  : Catch Cec Tx
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void UserCommonCecTransmitInfoPrepare(void)
+{
+    if(ScalerCecGetTxState() == _CEC_TX_IDLE_STATE)
+    {
+        StructCecTxTransmitInfo stCecTxInfo;
+        memset(&stCecTxInfo, 0, sizeof(StructCecTxTransmitInfo));
+
+        if(UserInterfaceCecTransmitInfoPrepare(&stCecTxInfo) == _TRUE)
+        {
+            memcpy(&g_stCecTxTransmitInfo, &stCecTxInfo, sizeof(StructCecTxTransmitInfo));
+
+            SET_CEC_TX_START();
+        }
+    }
+}
 #endif

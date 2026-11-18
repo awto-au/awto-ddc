@@ -13,94 +13,85 @@
 /********************************************************************************/
 
 //----------------------------------------------------------------------------------------------------
-// ID Code      : UserCommonCec.c No.0000
+// ID Code      : SysCec.c No.0000
 // Update Note  :
 //----------------------------------------------------------------------------------------------------
 
-#define __USER_COMMON_CEC__
+#define __SYSTEM_CEC__
 
-#include "UserCommonInclude.h"
+#include "SysInclude.h"
 
 #if(_HDMI_CEC_SUPPORT == _ON)
-
 //****************************************************************************
 // DEFINITIONS / MACROS
 //****************************************************************************
-
 
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
 //****************************************************************************
 
-
 //****************************************************************************
 // CODE TABLES
 //****************************************************************************
-
 
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
 
-
 //****************************************************************************
 // FUNCTION DECLARATIONS
 //****************************************************************************
-void UserCommonCecReceiveNotify(void);
-void UserCommonCecTransmitInfoPrepare(void);
-
+void SysCecHandler(void);
+__xdata BYTE g_ucAwtoCecPass;                   // pass counter of AWTO_CEC_DUE (ScalerCecInterface.h)
+static __bit d_s_bCecInit;                        // ScalerCecInitial done since the last power-off
+static __bit d_s_bCecOn;                          // registry cec_en as applied to the block
 
 //****************************************************************************
 // FUNCTION DEFINITIONS
 //****************************************************************************
 //--------------------------------------------------
-// Description  : Received CEC RX INFO bypass to User
+// Description  : System Cec Handler
 // Input Value  : None
 // Output Value : None
 //--------------------------------------------------
-void UserCommonCecReceiveNotify(void)
+void SysCecHandler(void)
 {
-    if(GET_CEC_RX_READ_DONE() == _TRUE)
+    // awto (docs/cec.md): called when AWTO_CEC_DUE (ScalerCecInterface.h): a frame / reply / analysis is pending, else every 32nd pass.
+    // Init after the display path is up (power NORMAL, mode settled), never in the power-on path; registry cec_en live
+    if(GET_POWER_STATUS() == _POWER_STATUS_OFF)
     {
-        StructCecRxReceivedInfo stCecRxInfo;
-        memcpy(&stCecRxInfo, &g_stCecRxReceivedInfo, sizeof(StructCecRxReceivedInfo));
-
-        DebugMessageCEC("CEC RX Read: HB ", g_stCecRxReceivedInfo.ucReceivedHb);
-        for(pData[0] = 0; pData[0] < g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
-        {
-            DebugMessageCEC("CEC RX Read: DB ", g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
-        }
-
-        // Pass Cec Rx Info to User
-        UserInterfaceCecReceivedNotify(&stCecRxInfo);
-
-        SET_CEC_RX_MSG_ANALYZING();
-
-        CLR_CEC_RX_READ_DONE();
-
-        // reset Cec rx struct
-        memset(&g_stCecRxReceivedInfo, 0, sizeof(g_stCecRxReceivedInfo));
+        d_s_bCecInit = 0;
     }
+    if(d_s_bCecInit == 0)
+    {
+        if((GET_POWER_STATUS() != _POWER_STATUS_NORMAL) ||
+           ((GET_MODE_STATE() != _MODE_STATUS_ACTIVE) && (GET_MODE_STATE() != _MODE_STATUS_NOSIGNAL) && (GET_MODE_STATE() != _MODE_STATUS_NOSUPPORT)))
+        {
+            return;
+        }
+        ScalerCecInitial();
+        d_s_bCecOn = UserInterfaceCecGetCecActive();
+        ScalerCecFunctionEnable(d_s_bCecOn);
+        ScalerCecBlockEnable(d_s_bCecOn);
+        d_s_bCecInit = 1;
+        AwtoSyncPush(AWTO_SYNC_EV_CEC, AWTO_CEC_K_STATE, d_s_bCecOn);
+    }
+    else if(d_s_bCecOn != UserInterfaceCecGetCecActive())
+    {
+        d_s_bCecOn = UserInterfaceCecGetCecActive();
+        ScalerCecFunctionEnable(d_s_bCecOn);
+        ScalerCecBlockEnable(d_s_bCecOn);
+        AwtoSyncPush(AWTO_SYNC_EV_CEC, AWTO_CEC_K_STATE, d_s_bCecOn);
+    }
+
+    // Receive part
+    ScalerCecRxProcess();
+    UserCommonCecReceiveNotify();
+
+    // Transmit part
+    UserCommonCecTransmitInfoPrepare();
+    ScalerCecTxProcess();
+    UserInterfaceCecHighLevelFlow();            // result of the last reply, release the RX path (was called from the OSD handler)
 }
 
-//--------------------------------------------------
-// Description  : Catch Cec Tx
-// Input Value  : None
-// Output Value : None
-//--------------------------------------------------
-void UserCommonCecTransmitInfoPrepare(void)
-{
-    if(ScalerCecGetTxState() == _CEC_TX_IDLE_STATE)
-    {
-        StructCecTxTransmitInfo stCecTxInfo;
-        memset(&stCecTxInfo, 0, sizeof(StructCecTxTransmitInfo));
-
-        if(UserInterfaceCecTransmitInfoPrepare(&stCecTxInfo) == _TRUE)
-        {
-            memcpy(&g_stCecTxTransmitInfo, &stCecTxInfo, sizeof(StructCecTxTransmitInfo));
-
-            SET_CEC_TX_START();
-        }
-    }
-}
 #endif

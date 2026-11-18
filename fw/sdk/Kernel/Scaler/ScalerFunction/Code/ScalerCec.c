@@ -26,7 +26,7 @@
 // DEFINITIONS / MACROS
 //****************************************************************************
 #define _CEC_BOARDCAST_LA                      0xF
-#define _CEC_RX_BACKUP_FIFO_SIZE               30
+#define _CEC_RX_BACKUP_FIFO_SIZE               20      // awto: one 16-byte frame + header (XDATA floor)
 
 // CEC receiver duration setting
 #define _CEC_RX_START_LOW_TIME                 0x74
@@ -49,41 +49,41 @@
 #define _CEC_LANG_CHINESE                      "chi"
 #define _CEC_LANG_JAPANESE                     "jpn"
 
-#define GET_CEC_TX_EVENT()                     (g_stCecGeneralCtrl.ucCecTxEvent)
-#define SET_CEC_TX_EVENT(x)                    (g_stCecGeneralCtrl.ucCecTxEvent = (x))
-#define CLR_CEC_TX_EVENT()                     (g_stCecGeneralCtrl.ucCecTxEvent = _CEC_TX_NONE_EVENT)
+#define GET_CEC_TX_EVENT()                     (isr_g_stCecGeneralCtrl.ucCecTxEvent)
+#define SET_CEC_TX_EVENT(x)                    (isr_g_stCecGeneralCtrl.ucCecTxEvent = (x))
+#define CLR_CEC_TX_EVENT()                     (isr_g_stCecGeneralCtrl.ucCecTxEvent = _CEC_TX_NONE_EVENT)
 
-#define GET_CEC_TX_STATE()                     (g_stCecGeneralCtrl.b2CecTxState)
-#define SET_CEC_TX_STATE(x)                    (g_stCecGeneralCtrl.b2CecTxState = (x))
+#define GET_CEC_TX_STATE()                     (isr_g_stCecGeneralCtrl.b2CecTxState)
+#define SET_CEC_TX_STATE(x)                    (isr_g_stCecGeneralCtrl.b2CecTxState = (x))
 
-#define GET_CEC_TX_START()                     (g_stCecGeneralCtrl.bCecTxStart)
-#define SET_CEC_TX_START()                     (g_stCecGeneralCtrl.bCecTxStart = 1)
-#define CLR_CEC_TX_START()                     (g_stCecGeneralCtrl.bCecTxStart = 0)
+#define GET_CEC_TX_START()                     (isr_g_stCecGeneralCtrl.bCecTxStart)
+#define SET_CEC_TX_START()                     (isr_g_stCecGeneralCtrl.bCecTxStart = 1)
+#define CLR_CEC_TX_START()                     (isr_g_stCecGeneralCtrl.bCecTxStart = 0)
 
-#define GET_CEC_RX_MSG_ANALYZING()             (g_stCecGeneralCtrl.bCecRxInfoAnalyzing)
-#define SET_CEC_RX_MSG_ANALYZING()             (g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 1)
-#define CLR_CEC_RX_MSG_ANALYZING()             (g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 0)
+#define GET_CEC_RX_MSG_ANALYZING()             (isr_g_stCecGeneralCtrl.bCecRxInfoAnalyzing)
+#define SET_CEC_RX_MSG_ANALYZING()             (isr_g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 1)
+#define CLR_CEC_RX_MSG_ANALYZING()             (isr_g_stCecGeneralCtrl.bCecRxInfoAnalyzing = 0)
 
-#define GET_CEC_RX_READ_FROM_BACKUP_FIFO()     (g_stCecGeneralCtrl.bReadFromBackupFifo)
-#define SET_CEC_RX_READ_FROM_BACKUP_FIFO()     (g_stCecGeneralCtrl.bReadFromBackupFifo = _TRUE)
-#define CLR_CEC_RX_READ_FROM_BACKUP_FIFO()     (g_stCecGeneralCtrl.bReadFromBackupFifo = _FALSE)
-
-#define GET_CEC_TX_DEST_LA_TO_SEND()           ((g_stCecTxTransmitInfo.ucTransmitHb) & 0x0F)
-#define GET_CEC_TX_INIT_LA_TO_SEND()           (((g_stCecTxTransmitInfo.ucTransmitHb) & 0xF0) >> 4)
-
-#define GET_CEC_FUNCTION_ENABLE()              (g_stCecGeneralCtrl.bCecFxEnable)
-#define SET_CEC_FUNCTION_ENABLE()              (g_stCecGeneralCtrl.bCecFxEnable = 1)
-#define CLR_CEC_FUNCTION_ENABLE()              (g_stCecGeneralCtrl.bCecFxEnable = 0)
+#define GET_CEC_RX_READ_FROM_BACKUP_FIFO()     (isr_g_stCecGeneralCtrl.bReadFromBackupFifo)
+#define SET_CEC_RX_READ_FROM_BACKUP_FIFO()     (isr_g_stCecGeneralCtrl.bReadFromBackupFifo = _TRUE)
+#define CLR_CEC_RX_READ_FROM_BACKUP_FIFO()     (isr_g_stCecGeneralCtrl.bReadFromBackupFifo = _FALSE)
 
 #define GET_CEC_TX_DEST_LA_TO_SEND()           ((g_stCecTxTransmitInfo.ucTransmitHb) & 0x0F)
 #define GET_CEC_TX_INIT_LA_TO_SEND()           (((g_stCecTxTransmitInfo.ucTransmitHb) & 0xF0) >> 4)
 
-#define GET_EDID_CEC_PHY_ADDRESS()             (g_stCecGeneralCtrl.usCecPhyAddr)
-#define SET_EDID_CEC_PHY_ADDRESS(x)            (g_stCecGeneralCtrl.usCecPhyAddr = (x))
+#define GET_CEC_FUNCTION_ENABLE()              (isr_g_stCecGeneralCtrl.bCecFxEnable)
+#define SET_CEC_FUNCTION_ENABLE()              (isr_g_stCecGeneralCtrl.bCecFxEnable = 1)
+#define CLR_CEC_FUNCTION_ENABLE()              (isr_g_stCecGeneralCtrl.bCecFxEnable = 0)
 
-#define GET_CEC_RX_READ_DONE()                 (g_stCecGeneralCtrl.bReadDone)
-#define SET_CEC_RX_READ_DONE()                 (g_stCecGeneralCtrl.bReadDone = 1)
-#define CLR_CEC_RX_READ_DONE()                 (g_stCecGeneralCtrl.bReadDone = 0)
+#define GET_CEC_TX_DEST_LA_TO_SEND()           ((g_stCecTxTransmitInfo.ucTransmitHb) & 0x0F)
+#define GET_CEC_TX_INIT_LA_TO_SEND()           (((g_stCecTxTransmitInfo.ucTransmitHb) & 0xF0) >> 4)
+
+#define GET_EDID_CEC_PHY_ADDRESS()             (isr_g_stCecGeneralCtrl.usCecPhyAddr)
+#define SET_EDID_CEC_PHY_ADDRESS(x)            (isr_g_stCecGeneralCtrl.usCecPhyAddr = (x))
+
+#define GET_CEC_RX_READ_DONE()                 (isr_g_stCecGeneralCtrl.bReadDone)
+#define SET_CEC_RX_READ_DONE()                 (isr_g_stCecGeneralCtrl.bReadDone = 1)
+#define CLR_CEC_RX_READ_DONE()                 (isr_g_stCecGeneralCtrl.bReadDone = 0)
 
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
@@ -98,12 +98,12 @@
 //****************************************************************************
 // VARIABLE DECLARATIONS
 //****************************************************************************
-volatile StructCecRxReceivedInfo g_stCecRxReceivedInfo;
+volatile StructCecRxReceivedInfo isr_g_stCecRxReceivedInfo;
 StructCecTxTransmitInfo g_stCecTxTransmitInfo;
-volatile StructCecGeneralCtrl g_stCecGeneralCtrl;
+volatile StructCecGeneralCtrl isr_g_stCecGeneralCtrl;
 
-volatile BYTE g_ucCecRxBackupFifoWaterLevel;
-BYTE g_pucCecRxBackupFifo[_CEC_RX_BACKUP_FIFO_SIZE];
+volatile BYTE isr_g_ucCecRxBackupFifoWaterLevel;
+BYTE isr_g_pucCecRxBackupFifo[_CEC_RX_BACKUP_FIFO_SIZE];
 
 //****************************************************************************
 // FUNCTION DECLARATIONS
@@ -113,6 +113,7 @@ void ScalerCecRxProcess(void);
 
 void ScalerCecRxReadOutFromBackupFifo(void);
 void ScalerCecFunctionEnable(bit bEnable);
+void ScalerCecBlockEnable(bit bEnable);
 void ScalerCecRxWriteIntoBackupFifo(void);
 void ScalerCecRxClrIMsgAnalyzingFlag(void);
 bit ScalerCecRxGetMsgAnalyzingFlag(void);
@@ -265,21 +266,21 @@ void ScalerCecRxReadOutFromBackupFifo(void)
     CLR_CEC_RX_READ_FROM_BACKUP_FIFO();
 
     // Polling Backup Buffer
-    if((GET_CEC_RX_MSG_ANALYZING() == _FALSE) && (g_ucCecRxBackupFifoWaterLevel != 0x00))
+    if((GET_CEC_RX_MSG_ANALYZING() == _FALSE) && (isr_g_ucCecRxBackupFifoWaterLevel != 0x00))
     {
         BYTE pucBackupFifoTemp[_CEC_RX_BACKUP_FIFO_SIZE];
 
         // Fill CEC RX Info into xdata
-        g_stCecRxReceivedInfo.ucDbLength = g_pucCecRxBackupFifo[0];
-        g_stCecRxReceivedInfo.ucReceivedHb = g_pucCecRxBackupFifo[1];
+        isr_g_stCecRxReceivedInfo.ucDbLength = isr_g_pucCecRxBackupFifo[0];
+        isr_g_stCecRxReceivedInfo.ucReceivedHb = isr_g_pucCecRxBackupFifo[1];
 
-        DebugMessageCEC("<= Cec0 Rx Backup Fifo: HB ", g_stCecRxReceivedInfo.ucReceivedHb);
+        DebugMessageCEC("<= Cec0 Rx Backup Fifo: HB ", isr_g_stCecRxReceivedInfo.ucReceivedHb);
 
-        memset(g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
-        for(pData[0] = 0; pData[0] < g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
+        memset(isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
+        for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
         {
-            g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = g_pucCecRxBackupFifo[2 + pData[0]];
-            DebugMessageCEC("<= Cec0 Rx Backup Fifo: DB ", g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
+            isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = isr_g_pucCecRxBackupFifo[2 + pData[0]];
+            DebugMessageCEC("<= Cec0 Rx Backup Fifo: DB ", isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
         }
 
         DebugMessageCEC("CEC0 RX Backup Fifo Finished", 0x00);
@@ -287,10 +288,10 @@ void ScalerCecRxReadOutFromBackupFifo(void)
 
         // Shift Cec Rx Backup buffer
         memset(pucBackupFifoTemp, 0, _CEC_RX_BACKUP_FIFO_SIZE);
-        memcpy(pucBackupFifoTemp, &g_pucCecRxBackupFifo[g_stCecRxReceivedInfo.ucDbLength + 2], (_CEC_RX_BACKUP_FIFO_SIZE - (g_stCecRxReceivedInfo.ucDbLength + 2)));
-        memcpy(g_pucCecRxBackupFifo, &pucBackupFifoTemp, _CEC_RX_BACKUP_FIFO_SIZE);
+        memcpy(pucBackupFifoTemp, &isr_g_pucCecRxBackupFifo[isr_g_stCecRxReceivedInfo.ucDbLength + 2], (_CEC_RX_BACKUP_FIFO_SIZE - (isr_g_stCecRxReceivedInfo.ucDbLength + 2)));
+        memcpy(isr_g_pucCecRxBackupFifo, &pucBackupFifoTemp, _CEC_RX_BACKUP_FIFO_SIZE);
 
-        g_ucCecRxBackupFifoWaterLevel -= (g_stCecRxReceivedInfo.ucDbLength + 2);
+        isr_g_ucCecRxBackupFifoWaterLevel -= (isr_g_stCecRxReceivedInfo.ucDbLength + 2);
 
         SET_CEC_RX_READ_FROM_BACKUP_FIFO();
     }
@@ -314,6 +315,16 @@ void ScalerCecFunctionEnable(bit bEnable)
 }
 
 //--------------------------------------------------
+// Description  : CEC block on / off (the same bits as ScalerCecInitial: off = 00, on = 01)
+// Input Value  : bEnable
+// Output Value : None
+//--------------------------------------------------
+void ScalerCecBlockEnable(bit bEnable)
+{
+    ScalerSetBit(P18_A0_CEC1_CR0_1, ~(_BIT7 | _BIT6), (bEnable == _ENABLE) ? _BIT6 : 0x00);
+}
+
+//--------------------------------------------------
 // Description  : Write Cec Rx Received Msg to Cec Rx BackupUp Fifo
 // Input Value  : None
 // Output Value : Bit
@@ -327,7 +338,7 @@ void ScalerCecRxWriteIntoBackupFifo(void)
 #endif
 
     // Backup fifo size check
-    if((_CEC_RX_BACKUP_FIFO_SIZE - g_ucCecRxBackupFifoWaterLevel) < (ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2))
+    if((_CEC_RX_BACKUP_FIFO_SIZE - isr_g_ucCecRxBackupFifoWaterLevel) < (ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2))
     {
         // Set CEC Rx force Nack/ Negative Ack
         ScalerSetBit(P18_A6_CEC1_CR0_7, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2), (_BIT7 | _BIT5 | _BIT4));
@@ -336,18 +347,18 @@ void ScalerCecRxWriteIntoBackupFifo(void)
     }
 
     // Fill CEC RX Info into Backup buffer
-    g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel] = ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
-    g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel + 1] = ucHbInfo;
+    isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel] = ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
+    isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 1] = ucHbInfo;
 
-    DebugMessageCEC("Cec Rx Read: HB (load to backup)", g_stCecRxReceivedInfo.ucReceivedHb);
+    DebugMessageCEC("Cec Rx Read: HB (load to backup)", isr_g_stCecRxReceivedInfo.ucReceivedHb);
 
-    for(pData[0] = 0; pData[0] < g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel]; pData[0]++)
+    for(pData[0] = 0; pData[0] < isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel]; pData[0]++)
     {
-        g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]] = ScalerGetByte(P18_D3_CEC1_RXDR1_1 + pData[0]);
-        DebugMessageCEC("Cec Rx Read: DB (load to backup)", g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]]);
+        isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]] = ScalerGetByte(P18_D3_CEC1_RXDR1_1 + pData[0]);
+        DebugMessageCEC("Cec Rx Read: DB (load to backup)", isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]]);
     }
 
-    g_ucCecRxBackupFifoWaterLevel += (ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2);
+    isr_g_ucCecRxBackupFifoWaterLevel += (ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2);
 }
 
 //--------------------------------------------------
@@ -400,7 +411,7 @@ void ScalerCecRxMsgReceiving(void)
             else
             {
                 // Check no CEC msg will be sent to RX DPCD from Cec Rx backup fifo
-                if((g_ucCecRxBackupFifoWaterLevel == 0x00) && (GET_CEC_RX_READ_FROM_BACKUP_FIFO() == _FALSE))
+                if((isr_g_ucCecRxBackupFifoWaterLevel == 0x00) && (GET_CEC_RX_READ_FROM_BACKUP_FIFO() == _FALSE))
                 {
                     // Load Cec Rx Received MSG to RxInfo struct
                     ScalerCecRxWriteIntoRxInfoStruct();
@@ -480,7 +491,7 @@ void ScalerCecPollingMsgReceiving(void)
                 else
                 {
                     // Check no CEC msg will be sent to RX DPCD from Cec Rx backup fifo
-                    if((g_ucCecRxBackupFifoWaterLevel == 0x00) && (GET_CEC_RX_READ_FROM_BACKUP_FIFO() == _FALSE))
+                    if((isr_g_ucCecRxBackupFifoWaterLevel == 0x00) && (GET_CEC_RX_READ_FROM_BACKUP_FIFO() == _FALSE))
                     {
                         // Load Cec Rx Received MSG to RxInfo struct
                         ScalerCecRxWriteIntoRxInfoStruct();
@@ -556,7 +567,7 @@ void ScalerCecRxMsgReceiving_EXINT0(void)
         else
         {
             // Check no CEC msg will be sent to RX DPCD from Cec Rx backup fifo
-            if((g_ucCecRxBackupFifoWaterLevel == 0x00) && (GET_CEC_RX_READ_FROM_BACKUP_FIFO() == _FALSE))
+            if((isr_g_ucCecRxBackupFifoWaterLevel == 0x00) && (GET_CEC_RX_READ_FROM_BACKUP_FIFO() == _FALSE))
             {
                 // Load Cec Rx Received MSG to RxInfo struct
                 ScalerCecRxWriteIntoRxInfoStruct_EXINT0();
@@ -584,7 +595,7 @@ void ScalerCecRxWriteIntoBackupFifo_EXINT0(void)
 #endif
 
     // Backup fifo size check
-    if((_CEC_RX_BACKUP_FIFO_SIZE - g_ucCecRxBackupFifoWaterLevel) < (ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2))
+    if((_CEC_RX_BACKUP_FIFO_SIZE - isr_g_ucCecRxBackupFifoWaterLevel) < (ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2))
     {
         // Set CEC Rx force Nack/ Negative Ack
         ScalerSetBit_EXINT(P18_A6_CEC1_CR0_7, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT2), (_BIT7 | _BIT5 | _BIT4));
@@ -593,15 +604,15 @@ void ScalerCecRxWriteIntoBackupFifo_EXINT0(void)
     }
 
     // Fill CEC RX Info into Backup buffer
-    g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel] = ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
-    g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel + 1] = ucHbInfo;
+    isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel] = ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
+    isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 1] = ucHbInfo;
 
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel]; pData_EXINT[0]++)
+    for(pData_EXINT[0] = 0; pData_EXINT[0] < isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel]; pData_EXINT[0]++)
     {
-        g_pucCecRxBackupFifo[g_ucCecRxBackupFifoWaterLevel + 2 + pData_EXINT[0]] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + pData_EXINT[0]);
+        isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData_EXINT[0]] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + pData_EXINT[0]);
     }
 
-    g_ucCecRxBackupFifoWaterLevel += (ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2);
+    isr_g_ucCecRxBackupFifoWaterLevel += (ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 2);
 }
 
 
@@ -613,18 +624,22 @@ void ScalerCecRxWriteIntoBackupFifo_EXINT0(void)
 void ScalerCecRxWriteIntoRxInfoStruct_EXINT0(void)
 {
     // Fill CEC RX Info into xdata
-    g_stCecRxReceivedInfo.ucDbLength = ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
+    isr_g_stCecRxReceivedInfo.ucDbLength = ScalerGetBit_EXINT(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
 
 #if(_HW_HDMI_CEC_GEN == _HW_CEC_GEN_TYPE_2)
-    g_stCecRxReceivedInfo.ucReceivedHb = ScalerGetByte_EXINT(P18_E3_CEC_RX_FIFO_RSV_0);
+    isr_g_stCecRxReceivedInfo.ucReceivedHb = ScalerGetByte_EXINT(P18_E3_CEC_RX_FIFO_RSV_0);
 #else
-    g_stCecRxReceivedInfo.ucReceivedHb = ((ScalerGetByte_EXINT(P18_B0_CEC1_RXCR0_1) & 0x0F) << 4);
+    isr_g_stCecRxReceivedInfo.ucReceivedHb = ((ScalerGetByte_EXINT(P18_B0_CEC1_RXCR0_1) & 0x0F) << 4);
 #endif
 
-    memset(g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
-    for(pData_EXINT[0] = 0; pData_EXINT[0] < g_stCecRxReceivedInfo.ucDbLength; pData_EXINT[0]++)
+    // awto: no memset (library helper not ISR-safe); length clamped to the 16 RX bytes (5-bit field); bytes past the length are not used
+    if(isr_g_stCecRxReceivedInfo.ucDbLength > 16)
     {
-        g_stCecRxReceivedInfo.pucReceivedDb[pData_EXINT[0]] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + pData_EXINT[0]);
+        isr_g_stCecRxReceivedInfo.ucDbLength = 16;
+    }
+    for(pData_EXINT[0] = 0; pData_EXINT[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData_EXINT[0]++)
+    {
+        isr_g_stCecRxReceivedInfo.pucReceivedDb[pData_EXINT[0]] = ScalerGetByte_EXINT(P18_D3_CEC1_RXDR1_1 + pData_EXINT[0]);
     }
 
     SET_CEC_RX_READ_DONE();
@@ -758,16 +773,16 @@ void ScalerCecRxWriteIntoRxInfoStruct(void)
 #endif
 
     // Fill CEC RX Info into xdata
-    g_stCecRxReceivedInfo.ucDbLength = ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
-    g_stCecRxReceivedInfo.ucReceivedHb = ucHbInfo;
+    isr_g_stCecRxReceivedInfo.ucDbLength = ScalerGetBit(P18_B1_CEC1_RXCR0_2, (_BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0));
+    isr_g_stCecRxReceivedInfo.ucReceivedHb = ucHbInfo;
 
-    DebugMessageCEC("<= Cec Rx Read: HB", g_stCecRxReceivedInfo.ucReceivedHb);
+    DebugMessageCEC("<= Cec Rx Read: HB", isr_g_stCecRxReceivedInfo.ucReceivedHb);
 
-    memset(g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
-    for(pData[0] = 0; pData[0] < g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
+    memset(isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
+    for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
     {
-        g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = ScalerGetByte(P18_D3_CEC1_RXDR1_1 + pData[0]);
-        DebugMessageCEC("<= Cec Rx Read: DB", g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
+        isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = ScalerGetByte(P18_D3_CEC1_RXDR1_1 + pData[0]);
+        DebugMessageCEC("<= Cec Rx Read: DB", isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
     }
 
     SET_CEC_RX_READ_DONE();
@@ -782,7 +797,7 @@ void ScalerCecRxWriteIntoRxInfoStruct(void)
 void ScalerCecReset(void)
 {
     // Cec rx/ tx xdata reset
-    memset(&g_stCecRxReceivedInfo, 0, sizeof(g_stCecRxReceivedInfo));
+    memset(&isr_g_stCecRxReceivedInfo, 0, sizeof(isr_g_stCecRxReceivedInfo));
     memset(&g_stCecTxTransmitInfo, 0, sizeof(g_stCecTxTransmitInfo));
 
     // FW flag reset
@@ -796,8 +811,8 @@ void ScalerCecReset(void)
     CLR_CEC_RX_READ_FROM_BACKUP_FIFO();
 
     // Cec Rx backup fifo reset
-    g_ucCecRxBackupFifoWaterLevel = 0x00;
-    memset(g_pucCecRxBackupFifo, 0, _CEC_RX_BACKUP_FIFO_SIZE);
+    isr_g_ucCecRxBackupFifoWaterLevel = 0x00;
+    memset(isr_g_pucCecRxBackupFifo, 0, _CEC_RX_BACKUP_FIFO_SIZE);
 
     // CEC RX/ TX LA Reset
     ScalerSetBit(P18_A0_CEC1_CR0_1, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), _CEC_LA_TV);

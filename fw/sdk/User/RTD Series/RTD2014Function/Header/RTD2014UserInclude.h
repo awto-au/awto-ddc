@@ -144,11 +144,6 @@ extern bit g_bTypeCPortControllerPowerOffFlag;
 #endif
 #endif
 
-#if(_HDMI_CEC_SUPPORT == _ON)
-extern bit g_bCecLaPollingStart;
-extern BYTE g_ucCecLaCnt;
-#endif
-
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
 //****************************************************************************

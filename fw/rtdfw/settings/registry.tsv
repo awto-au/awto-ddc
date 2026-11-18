@@ -133,3 +133,5 @@
 121	screensaver_now	enum	none	osd	live	0	8	1	0	auto	0xEB	screensaver_now	Screensaver now	Stop|Selected|Pac-Man|Scope|Scope 2|Flash warning|Alert tone|Boot splash|Asteroids=8	DDC/CI VCP 0xEB starts / stops now (an action row cannot carry a value): Selected = the screensaver row, Off counts as Alternate; not saved
 122	boot_splash	bool	none	osd	nv,live	0	1	1	1	auto	-	-	Boot splash	-	big Pac-Man at power-on until the console / picture OSD opens, a key, or AWTO_SPLASH_MAX_MS (docs/flash-screen.md); apply - : the splash start reads it
 123	key_click	bool	none	audio	nv,live	0	1	1	0	auto	-	-	Key click	-	30 ms tone on a front-key press (not POWER), only unmuted and with no other sound; fw/keys/key_click.c, docs/keys.md (awto-ddc#229)
+124	cec_en	bool	none	signal	nv,live	0	1	1	1	auto	-	-	CEC	-	HDMI CEC sink on (default on, Dan 2026-11-19): block + replies in fw/cec; the board has no proven CEC pad, docs/cec.md (awto-ddc#101)
+125	cec_ctl	bool	none	signal	nv,live	0	1	1	0	auto	-	-	CEC control	-	CEC may act on Standby / Image View On / Active Source / User Control; off = logged only; on = hook rows logged, no action yet (docs/cec.md)

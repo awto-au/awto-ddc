@@ -115,12 +115,41 @@ def value(fmt: str, arg: int, v: int) -> str:
         return f"{v - (1 << 32) if v >= 1 << 31 else v:+d}ms"
     if fmt == "nvw":                                     # #151 NVRAM flush result
         return nv_flush(v)
+    if fmt == "cec":                                     # docs/cec.md (firmware copy: fw/osd/console.c AwtoPutCec)
+        return cec_line(arg, v)
     if fmt == "pc":                                      # #29 boot reason: cause << 24 | bank << 16 | PC
         c, bank, pc = v >> 24, (v >> 16) & 0xFF, v & 0xFFFF
         where = f"{bank:02X}:{pc:04X}" if pc >= 0x5000 else f"C:{pc:04X}"
         sym = SYMBOLIZE(bank, pc) if SYMBOLIZE else ""
         return ("STALL TEST" if c & 0x80 else "STALL") + f", PC {where}" + (f" {sym}" if sym else "")
     return ""
+
+
+CEC_NAMES = {int(ln.split("\t")[0], 16): ln.split("\t")[1] for ln in
+             (Path(__file__).resolve().parents[1] / "fw/cec/opcodes.tsv").read_text().splitlines() if ln.strip() and not ln.startswith("#")}
+CEC_TXRES = {1: "acked", 2: "line error", 3: "no ack (header)", 4: "no ack (data)"}
+CEC_HOOKS = {1: "Standby", 2: "wake", 3: "Active Source", 4: "User Control"}
+
+
+def cec_line(arg: int, v: int) -> str:
+    """arg = flags | len << 3 | kind (RL6449_Project.h AWTO_CEC_*), v = header << 24 | opcode << 16 | operand 1 << 8 | operand 2"""
+    kind, n = arg & 7, (arg >> 3) & 15
+    if kind == 2:
+        return "tx result:" + CEC_TXRES.get(v & 0xFF, "line error")
+    if kind == 3:
+        return "block on" if v & 0xFF else "block off"
+    if kind == 4:
+        return f"hook:{CEC_HOOKS.get(v & 0xFF, v & 0xFF)} (no action)"
+    if kind == 5:
+        return "rx reply dropped, the last reply is not sent"
+    hdr = (v >> 24) & 0xFF
+    dest = "?" if arg & 0x80 else f"{hdr & 15:X}"
+    head = f"{'rx' if kind == 0 else 'tx'} {hdr >> 4:X}>{dest} "
+    if n == 0:
+        return head + "poll"
+    op = (v >> 16) & 0xFF
+    ops = [(v >> 8) & 0xFF, v & 0xFF][:max(0, min(n - 1, 2))]
+    return head + CEC_NAMES.get(op, f"op {op:02X}") + "".join(f" {b:02X}" for b in ops) + ("+" if n > 3 else "")
 
 
 NV_GROUPS = ("system data", "OSD data", "colour", "panel time", "awto settings")    # RL6449_Project.h AWTO_NV_LOG_G_* bits 0..4
