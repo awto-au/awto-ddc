@@ -1,0 +1,29 @@
+"""fw/awto/savers.tsv feeds both the C defines (gen_awto_savers.py) and the host names (saver_names.py)."""
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+import saver_names  # noqa: E402
+
+
+def test_c_block_current():
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/gen_awto_savers.py"), "--check"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_vcp_rule_matches_firmware():
+    # saver.c: value 1 = selected saver, 2.. = run id + 1 for Pac-Man / Scope 1 / Scope 2
+    for name in ("pacman", "scope1", "scope2"):
+        row = next(r for r in saver_names.SAVERS if r["name"] == name)
+        assert row["vcp"] == row["run"] + 1
+    assert saver_names.vcp("selected") == 1 and saver_names.vcp("stop") == 0
+
+
+def test_unknown_name_refused():
+    try:
+        saver_names.vcp("nosuch")
+    except KeyError:
+        return
+    raise AssertionError("expected KeyError")

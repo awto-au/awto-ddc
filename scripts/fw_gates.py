@@ -150,7 +150,7 @@ def gates(b: Path, m: Path, ref, tree):
         if (Path(tree) / "scripts/iram_names.py").is_file():                       # #189: d_ / i_ names match IRAM placement
             g["iram"] = [*PY, f"{tree}/scripts/iram_names.py", "check", "--asm", Path(tree) / "tmp/sdcc-port/asm_ovl", "--map", m]
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
-        for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py")):      # #162: generated C tables current
+        for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py"), ("gensavers", "gen_awto_savers.py")):      # #162: generated C tables current
             if (Path(tree) / "scripts" / sc).is_file():
                 g[nm] = [*PY, f"{tree}/scripts/{sc}", "--check"]
     g["dwmodel"] = [*PY, f"{s}/dw8051_model.py", "--check"]                            # #162: CPU timing tables current

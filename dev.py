@@ -1102,6 +1102,20 @@ def cmd_synclog(extra: list[str]) -> int:
     return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
 
 
+@command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope1 scope2 flash splash alert "
+         "asteroids) or `tour` = every saver 10 s each with the alert tone, volume 50 % then restored",
+         args="[--unit N] NAME | tour [--hold S] [--volume PCT]", kind="action")
+def cmd_saver(extra: list[str]) -> int:
+    import saver_names
+    n, u = _unit(extra)
+    hold, vol = _opt(extra, "--hold"), _opt(extra, "--volume")
+    rest = [x for i, x in enumerate(extra) if not x.startswith("-") and (i == 0 or extra[i - 1] not in ("--unit", "--hold", "--volume"))]
+    if len(rest) != 1 or (rest[0] != "tour" and rest[0] not in saver_names.names()):
+        raise SystemExit(f"saver: one of {saver_names.names()} or tour; got {rest}; nothing done")
+    more = [*(["--hold", hold] if hold else []), *(["--volume", vol] if vol else [])]
+    return _py("saver_ctl.py", _live_bus(u), rest[0], *more)
+
+
 @command("our OSD menu over I2C (#67): keyboard uses the computer arrows; state | key K | hold KEYS MS | open PAGE | "
          "select ITEM | set ITEM V | get ITEM | back | close | walk (every page + item checked against the registry; "
          "--png DIR renders pages in the sim)",

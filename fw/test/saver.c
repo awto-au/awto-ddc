@@ -11,14 +11,25 @@ extern BYTE AwtoScopeSaver(BYTE ucCmd);
 extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 extern BYTE AwtoAsteroids(BYTE ucCmd);
 
-#define AWTO_SAVER_OFF                          0
-#define AWTO_SAVER_PACMAN                       1
-#define AWTO_SAVER_SCOPE                        2
-#define AWTO_SAVER_SCOPE2                       3
-#define AWTO_SAVER_ALTERNATE                    4
-#define AWTO_SAVER_FLASH                        5                   // flash warning screen (VCP 0xEB = 5 only, never selected / alternated)
-#define AWTO_SAVER_SPLASH                       6                   // boot splash screen (flash drawing, splash title): preview by VCP 0xEB = 7, and the power-on run (why = boot)
-#define AWTO_SAVER_ASTEROIDS                    7                   // run id; the setting 119 choice is AWTO_SAVER_SET_ASTEROIDS
+// GENERATED-BEGIN awto_savers (fw/awto/savers.tsv; edit the TSV, not this block)
+#define AWTO_SAVER_OFF                  0
+#define AWTO_SAVER_PACMAN               1
+#define AWTO_SAVER_SCOPE                2
+#define AWTO_SAVER_SCOPE2               3
+#define AWTO_SAVER_ALTERNATE            4
+#define AWTO_SAVER_FLASH                5
+#define AWTO_SAVER_SPLASH               6
+#define AWTO_SAVER_ASTEROIDS            7
+#define AWTO_SAVER_NOW_STOP             0
+#define AWTO_SAVER_NOW_SELECTED         1
+#define AWTO_SAVER_NOW_PACMAN           2
+#define AWTO_SAVER_NOW_SCOPE            3
+#define AWTO_SAVER_NOW_SCOPE2           4
+#define AWTO_SAVER_NOW_FLASH            5
+#define AWTO_SAVER_NOW_SPLASH           7
+#define AWTO_SAVER_NOW_ALERT            6
+#define AWTO_SAVER_NOW_ASTEROIDS        8
+// GENERATED-END awto_savers
 #define AWTO_SAVER_SET_ASTEROIDS                5                   // setting 119 value (5 is the flash run id: mapped by SAVER_MODE_RUN)
 #define AWTO_SAVER_WHY_NONE                     0
 #define AWTO_SAVER_WHY_NOSIG                    1
@@ -38,12 +49,6 @@ extern BYTE AwtoAsteroids(BYTE ucCmd);
 #define AWTO_SAVER_MS_PER_S                     1000UL
 #define AWTO_SAVER_ARG_START                    0x79                // sync line E9: value = what (run << 4 | why)
 #define AWTO_SAVER_ARG_STOP                     0x79                // same line as the start, value 0
-#define AWTO_SAVER_NOW_STOP                     0
-#define AWTO_SAVER_NOW_SELECTED                 1
-#define AWTO_SAVER_NOW_FLASH                    5
-#define AWTO_SAVER_NOW_ALERT                    6                   // 1 s alert tone on the speaker (no screen)
-#define AWTO_SAVER_NOW_SPLASH                   7                   // preview of the boot splash
-#define AWTO_SAVER_NOW_ASTEROIDS                8
 #define AWTO_SAVER_SND_ALERT                    5                   // AwtoPmSound(cmd): alert
 #define AWTO_SAVER_RUN_SHIFT                    4
 
