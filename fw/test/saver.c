@@ -15,6 +15,7 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_SCOPE2                       3
 #define AWTO_SAVER_ALTERNATE                    4
 #define AWTO_SAVER_FLASH                        5                   // flash warning screen (VCP 0xEB = 5 only, never selected / alternated)
+#define AWTO_SAVER_SPLASH                       6                   // boot splash screen (flash drawing, splash title): preview by VCP 0xEB = 7, and the power-on run (why = boot)
 #define AWTO_SAVER_WHY_NONE                     0
 #define AWTO_SAVER_WHY_NOSIG                    1
 #define AWTO_SAVER_WHY_IDLE                     2
@@ -34,6 +35,7 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_NOW_SELECTED                 1
 #define AWTO_SAVER_NOW_FLASH                    5
 #define AWTO_SAVER_NOW_ALERT                    6                   // 1 s alert tone on the speaker (no screen)
+#define AWTO_SAVER_NOW_SPLASH                   7                   // preview of the boot splash
 #define AWTO_SAVER_SND_ALERT                    5                   // AwtoPmSound(cmd): alert
 #define AWTO_SAVER_RUN_SHIFT                    4
 
@@ -72,7 +74,7 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoScopeSaver2(0);
     }
-    else if(g_ucAwtoSaverRun == AWTO_SAVER_FLASH)
+    else if((g_ucAwtoSaverRun == AWTO_SAVER_FLASH) || (g_ucAwtoSaverRun == AWTO_SAVER_SPLASH))
     {
         AwtoFlashScreen(0);
     }
@@ -93,6 +95,10 @@ static void SaverDraw(BYTE ucRun)
     {
         AwtoFlashScreen(1);
     }
+    else if(ucRun == AWTO_SAVER_SPLASH)
+    {
+        AwtoFlashScreen(2);
+    }
     s_ulSwap = AwtoMs();
     s_usTick = (WORD)s_ulSwap;
     s_ucMid = 1;                                                    // a scope starts with its first frame, drawn hidden
@@ -100,7 +106,7 @@ static void SaverDraw(BYTE ucRun)
 
 void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: PACMAN / SCOPE / ALTERNATE
 {
-    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE) || (ucWhich == AWTO_SAVER_SCOPE2) || (ucWhich == AWTO_SAVER_FLASH)) ? ucWhich : AWTO_SAVER_PACMAN;
+    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE) || (ucWhich == AWTO_SAVER_SCOPE2) || (ucWhich == AWTO_SAVER_FLASH) || (ucWhich == AWTO_SAVER_SPLASH)) ? ucWhich : AWTO_SAVER_PACMAN;
 
     g_ucAwtoSaverWhy = ucWhy;
     SaverDraw(ucRun);
@@ -148,10 +154,10 @@ void AwtoSaverPoll(void)                                            // main loop
         s_ulSwap = ulNow;
         if(AWTO_SET(BOOT_SPLASH) != 0)
         {
-            g_ucAwtoSaverRun = AWTO_SAVER_FLASH;
+            g_ucAwtoSaverRun = AWTO_SAVER_SPLASH;
             g_ucAwtoSaverWhy = AWTO_SAVER_WHY_BOOT;
             s_ucMid = 0;                                            // draw step
-            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_START, (BYTE)((AWTO_SAVER_FLASH << AWTO_SAVER_RUN_SHIFT) | AWTO_SAVER_WHY_BOOT));
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_SAVER_ARG_START, (BYTE)((AWTO_SAVER_SPLASH << AWTO_SAVER_RUN_SHIFT) | AWTO_SAVER_WHY_BOOT));
         }
         return;
     }
@@ -170,6 +176,10 @@ void AwtoSaverPoll(void)                                            // main loop
         else if(ucReq == AWTO_SAVER_NOW_ALERT)
         {
             AwtoPmSound(AWTO_SAVER_SND_ALERT);
+        }
+        else if(ucReq == AWTO_SAVER_NOW_SPLASH)
+        {
+            AwtoSaverStart(AWTO_SAVER_SPLASH, AWTO_SAVER_WHY_NOW);
         }
         else if(ucReq == AWTO_SAVER_NOW_FLASH)
         {
@@ -209,7 +219,7 @@ void AwtoSaverPoll(void)                                            // main loop
             SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE) ? AWTO_SAVER_SCOPE2 : AWTO_SAVER_PACMAN));
             return;
         }
-        if(g_ucAwtoSaverRun == AWTO_SAVER_FLASH)
+        if(g_ucAwtoSaverRun >= AWTO_SAVER_FLASH)
         {
             return;                                                 // static: the host flasher swaps the glyph over ISP
         }

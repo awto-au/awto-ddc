@@ -167,8 +167,10 @@ BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep)
     return 1;
 }
 
-void AwtoFlashScreen(BYTE ucOn)
+void AwtoFlashScreen(BYTE ucOn)                                         // 0 off, 1 flash warning, 2 boot splash (all steps at once)
 {
+    BYTE ucStep = 0;
+
     if(ucOn == 0)
     {
         osd_tc_close();
@@ -176,8 +178,7 @@ void AwtoFlashScreen(BYTE ucOn)
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_OFF, 0);
         return;
     }
-    ucOn = 0;                                                           // now the step counter
-    while(AwtoFlashDraw(0, ucOn++) == 0)
+    while(AwtoFlashDraw((BYTE)(ucOn - 1), ucStep++) == 0)
     {
     }
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_FS_ARG_ON, 0);

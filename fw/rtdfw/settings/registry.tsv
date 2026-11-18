@@ -130,5 +130,5 @@
 116	panel_min	int	none	service	nv,sdk	0	59	1	0	auto	-	sdk_sys	Panel minutes	-
 119	screensaver	enum	none	osd	nv,live	0	4	1	0	auto	-	screensaver	Screensaver	Off|Pac-Man|Scope|Scope 2|Alternate	which screensaver runs on no signal / idle (docs/screensaver.md); Alternate switches every AWTO_SAVER_ALT_S
 120	screensaver_s	int	s	osd	nv,live	0	3600	10	0	auto	-	screensaver_s	Screensaver idle	-	seconds without a key or DDC/CI command before the screensaver covers a live picture; 0 = no idle start (no-signal start stays)
-121	screensaver_now	enum	none	osd	live	0	6	1	0	auto	0xEB	screensaver_now	Screensaver now	Stop|Selected|Pac-Man|Scope|Scope 2|Flash warning|Alert tone	DDC/CI VCP 0xEB starts / stops now (an action row cannot carry a value): Selected = the screensaver row, Off counts as Alternate; not saved
+121	screensaver_now	enum	none	osd	live	0	7	1	0	auto	0xEB	screensaver_now	Screensaver now	Stop|Selected|Pac-Man|Scope|Scope 2|Flash warning|Alert tone|Boot splash	DDC/CI VCP 0xEB starts / stops now (an action row cannot carry a value): Selected = the screensaver row, Off counts as Alternate; not saved
 122	boot_splash	bool	none	osd	nv,live	0	1	1	1	auto	-	-	Boot splash	-	big Pac-Man at power-on until the console / picture OSD opens, a key, or AWTO_SPLASH_MAX_MS (docs/flash-screen.md); apply - : the splash start reads it
