@@ -91,27 +91,29 @@ def run_case(a, case: str, say) -> bool:
             tap(bus, KEY_AUTO)
         else:
             bus.m.wr(TESTCMD, bytes([0x32]))
-        t0, seen = bus.now(), []
+        t0, seen, early = bus.now(), [], None
         while bus.now() - t0 < a.secs:
             bus.wait(0.25)
             st = (bus.mode_state(), port_now(bus))
+            if early is None and st[0] != 3 and st[0] != 0:
+                early = synclog(a, bus, lambda _s: None)       # the ring wraps by the end (power-saving episode): keep the take's lines
             if not seen or seen[-1][1:] != st:
                 seen.append((round(bus.now() - t0, 2), *st))
         ms, port = bus.mode_state(), port_now(bus)
         say("  timeline: " + " -> ".join(f"{S.MODE_NAMES[m] if m < len(S.MODE_NAMES) else m}/0x{p:02X}@{t}s" for t, m, p in seen))
         sw = swlog(bus, say)
-        sl = synclog(a, bus, say)
+        sl = (early or []) + synclog(a, bus, say)
         want = {"cmd": 3, "sel": 4, "selhold": 4}.get(case, 1)  # switch-log 0xB8 arg; sync.tsv DF row (vcp, cmd), E0 06 (sel, #132)
         text = {"vcp": "refused:no cable on D2", "sel": "input selector:D2 taken, no cable: no-signal card, dead-port auto search held off",
                 "selhold": "input selector:D2 taken, no cable: no-signal card, dead-port auto search held off"}.get(case)
-        lines = (not any(ln.endswith(text) for ln in sl)) if text else (not any("auto search" in ln for ln in sl))
+        lines = (not any(ln.endswith(text) for ln in sl)) if text else (not any(ln.endswith("another port cabled:auto search") for ln in sl))
         if case == "selhold":
-            lines = lines or not any("auto search" in ln for ln in sl)
+            lines = lines or not any(ln.endswith("another port cabled:auto search") for ln in sl)
         if (0xB8, want) not in sw or lines:
             say(f"{case}: FAIL log line missing (switch-log 0xB8 arg {want}, sync log {text or 'auto search'})")
             return False
         if case == "sel":
-            ok = ms != 3 and port == D2 and not any("auto search" in ln for ln in sl)
+            ok = ms != 3 and port == D2 and not any(ln.endswith("another port cabled:auto search") for ln in sl)
             say(f"{case}: {'PASS' if ok else 'FAIL'} {a.bin.name}: end {S.MODE_NAMES[ms] if ms < len(S.MODE_NAMES) else ms} "
                 f"port 0x{port:02X} (want no picture on D2 0x{D2:02X} inside the hold) after {a.secs:g} s")
             return ok

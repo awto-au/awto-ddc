@@ -133,10 +133,12 @@ Never write bare "vendor": say which one.
 - #108: SDK defect list.
 - #111: font loader bank pin.
 
-## Source selector: why DP is not selectable without a DP cable (unit 1, 2026-11-19)
+## Source selector: take of a port with no cable (Dan 2026-11-19, replaces the #84 refusal for the selector)
 - SOURCE opens the selector (rows Auto, D1 = DP, D2, D3); SOURCE / UP step, DOWN back, AUTO takes, MENU cancels, 2 s idle after a step takes.
-- The selector does not scan on open: the row state / signal fields are the live cable-detect (`g_stPortCableStatus`), clock and AUX detects, redrawn while it is open.
-- Take of a port with no cable is refused (#84, `AwtoSourceTake`): sync line `input selector:D1 refused, no cable; stays open`; no card text, the highlight just stays.
-- Unit 1 evidence: `g_stPortCableStatus` = 0x20 (only D2 cabled), `isr_g_ucAwtoPortOff` = 0 (no port disabled), D1 = `_D1_DP_PORT` in the board header, priority D2, D1, D3; SOURCE x1 from Auto highlights D1 (item 3), AUTO -> refused.
-- D1 itself works with a cable: `selector_switch_unit.py` D2 -> D1 -> D2 on unit 2 (DP cabled).
-- A console left open (`g_stAwtoGpio.ucOpen` != 0) swallows SOURCE (`AwtoKeyRouteDo`: only MENU closes it unless it opened by itself); clear with test cmd 0x27.
+- The rows show the live cable / clock / AUX detects; the selector does not scan on open.
+- Take of a port with no cable: switched anyway, sync line `input selector:% taken, no cable: no-signal card, dead-port auto search held off`, switch log 0xB8 arg 4. The SDK no-cable / no-signal card for that port shows.
+- `AwtoDeadPortPoll` (fixed port, no cable, no signal, another port cabled -> auto search) is held off `AWTO_SRC_NOCABLE_HOLD_MS` (30 s) for that port: waits for the user to cable it; human-time value, Dan to tune.
+- Expiry: the poll's auto search back to a cabled port (`no cable on %, no signal, another port cabled:auto search`). Cabling the port in time = normal signal path, hold unused. Any other selection clears the hold.
+- Still refused: VCP 0x60 / DDC menu row to a cable-less port (#84, `AwtoInputSelect`); test cmds go. A disabled port is enabled by the take (#81).
+- Sims: `deadport_sim.py --case sel` (D2 held, no picture) and `selhold` (held ~30 s, then ACTIVE on D3). Gate `deadport` limit 80 s.
+- An open diag console (`g_stAwtoGpio.ucOpen` != 0) swallows SOURCE (`AwtoKeyRouteDo`: only MENU closes it unless it opened by itself); clear with test cmd 0x27. Not changed.
