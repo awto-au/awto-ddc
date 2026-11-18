@@ -1,4 +1,5 @@
 """sdcc_layout / sdcc_bank layout-file guards (#51.3, #51.4). Run: python3 -m pytest tests/test_sdcc_layout.py"""
+import shutil
 import sys
 from pathlib import Path
 
@@ -8,6 +9,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import sdcc_layout as L  # noqa: E402
 
 ROW = "fn\tFoo\tC\t0x0c00\t64\n"
+
+
+def _chip(tmp_path):
+    """chip_mem reads <AWTO_DDC_REPO>/fw/rl6449_memory.toml: the subprocess repo gets the tracked chip file."""
+    (tmp_path / "fw").mkdir(exist_ok=True)
+    shutil.copy(Path(L.__file__).resolve().parent.parent / "fw/rl6449_memory.toml", tmp_path / "fw/rl6449_memory.toml")
 
 
 def _file(tmp_path, header):
@@ -39,6 +46,7 @@ def test_sdcc_bank_cli_refuses_mismatched_layout(tmp_path):
     import subprocess
     (tmp_path / "asm").mkdir()
     lay = _file(tmp_path, "#common 0x5000\n#resid_end 0xc00\n")
+    _chip(tmp_path)
     env = dict(os.environ, AWTO_DDC_REPO=str(tmp_path))
     r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
                         "--out", str(tmp_path / "out"), "--common-max", "0x6000", "--layout", str(lay)],
@@ -57,6 +65,7 @@ def test_sdcc_bank_writes_layout_out_not_tracked_file(tmp_path):
     lay = _file(tmp_path, "#common 0x6000\n#resid_end 0xc00\n")
     before = lay.read_text()
     new = tmp_path / "new.tsv"
+    _chip(tmp_path)
     env = dict(os.environ, AWTO_DDC_REPO=str(tmp_path))
     r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
                         "--out", str(tmp_path / "out"), "--layout", str(lay), "--layout-out", str(new)],
@@ -107,6 +116,7 @@ def test_sdcc_bank_cluster_refused_with_existing_layout(tmp_path):
     import os
     import subprocess
     (tmp_path / "asm").mkdir()
+    _chip(tmp_path)
     lay = _file(tmp_path, "#common 0x6000\n#resid_end 0xc00\n")
     r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
                         "--out", str(tmp_path / "out"), "--layout", str(lay), "--cluster", "fn"],
