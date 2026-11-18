@@ -26,7 +26,7 @@ extern BYTE AwtoScopeSaver2(BYTE ucCmd);
 #define AWTO_SAVER_NOSIG_MS                     10000UL             // no signal this long: the source search has ended (SDK search + hold are ~4 s; start = 2.5x)
 #define AWTO_SAVER_ALT_MS                       120000UL            // Alternate: one saver for 2 min, then the other
 #define AWTO_SAVER_PACMAN_MS                    31UL                // Pac-Man sub-step period: 4 sub-steps = 125 ms per game step (8 game steps/s as pacman_unit.py)
-#define AWTO_SAVER_SCOPE2_MS                    100UL               // pause between scope 2 frames (a frame is drawn one column per main pass)
+#define AWTO_SAVER_SCOPE2_MS                    1UL                 // pause between scope 2 frames (columns are drawn per main pass within a time budget: scope_saver2.c)
 #define AWTO_SAVER_SCOPE_MS                     100UL               // pause between scope frames
 #define AWTO_SAVER_MS_PER_S                     1000UL
 #define AWTO_SAVER_ARG_START                    0x79                // sync line E9: value = what (run << 4 | why)
