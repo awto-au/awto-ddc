@@ -29,7 +29,7 @@ MODE_NAMES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NO
 POWER_NAMES = ["AC_ON", "OFF", "NORMAL", "SAVING"]
 MODE_ACTIVE, POWER_NORMAL = 3, 2
 PIN_BACKLIGHT_N, PIN_PANEL = 0xFE2A, 0xFE1A    # P9.2 active low enable, P7.2 panel power; bit 0 = pin level
-EVENT_INFO, TESTCMD_DEBUG = 10, 0x20           # EnumOsdEvent info pop-up; ucTestCmd 0x20 = debug pop-up (#34)
+EVENT_INFO, TESTCMD_DEBUG = 9, 0x20            # EnumOSDEvenMassage _OSDEVENT_ACTIVE_DO_ONE_TIME_MSG (info pop-up); 0x20 = debug pop-up (#34)
 # Loop-rate window: 1 s of Timer2 ticks gives ~170 loop counts per window (+-1 %); bus idle in the window.
 RATE_WINDOW_S, RATE_REPEATS = 1.0, 3
 SIM_RATE_WINDOW_S = 1.0          # 0.1 s windows read 0 / 30 / 1549 right after ACTIVE (OSD pop-up drawing blocks the loop): kept at 1 s
