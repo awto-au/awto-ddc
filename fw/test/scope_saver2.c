@@ -226,6 +226,7 @@ static int16_t S2Y(WORD usX)
     return AWTO_S2_BASE_Y - (int16_t)(((WORD)S2Pulse(usX) * AWTO_S2_AMP) / AWTO_S2_PULSE_PEAK);
 }
 
+#pragma place bank(12)                      // calls S2Text with pointers to the bank 12 strings: same bank
 static void S2Grid(BYTE ucCol, BYTE ucBand)                                         // graticule layer of one pass
 {
     int16_t sX;
@@ -273,6 +274,7 @@ static void S2Grid(BYTE ucCol, BYTE ucBand)                                     
     (void)ucBand;
 }
 
+#pragma place bank(12)
 static void S2Trace(void)                                                           // trace layer of one pass
 {
     int16_t sX;
