@@ -991,20 +991,6 @@ def cmd_diag(extra: list[str]) -> int:
     return _diag(u, *args)
 
 
-@command("read the safe-boot / canary / bus-watchdog block", args="[--unit N]", kind="action")
-def cmd_safe(extra: list[str]) -> int:
-    u = _unit(extra)[1]
-    _done(extra, "safe")
-    return _diag(u, "--safe")
-
-
-@command("poll the function-entry trace ring until the unit stops answering", args="[--unit N]", kind="action")
-def cmd_trace(extra: list[str]) -> int:
-    u = _unit(extra)[1]
-    _done(extra, "trace")
-    return _diag(u, "--trace")
-
-
 @command("log which I2C slaves answer through the first seconds after power-on", args="[--unit N] [--bus N] [--window S]",
          kind="action")
 def cmd_probe(extra: list[str]) -> int:
@@ -1297,15 +1283,6 @@ def cmd_bench(extra: list[str]) -> int:
     return _py("i2c_bench.py", _bus(u))
 
 
-def _flashed_has_safe_block(u: dict) -> bool:
-    """True only if the map of the image on the unit (flashed tag) defines _g_stAwtoSafe; no map = no hold (#52)."""
-    m = FW / f"{_flashed(u).get('tag', '')}.map"
-    try:
-        return re.search(r"^\s+[0-9A-Fa-f]{8}\s+_g_stAwtoSafe\b", m.read_text(errors="replace"), re.M) is not None
-    except OSError:
-        return False
-
-
 RECOVER_BUS_WAIT_S = 5.0   # EDID returns ~1-2 s after the relay closes; 5 s = 2.5x; expiry: SystemExit, unit left powered
 
 
@@ -1350,12 +1327,7 @@ def cmd_recover(extra: list[str]) -> int:
             log(f"recover: EDID silent after the relay cycle; bus {bus} = "
                 + ("--bus" if given_bus else f"connector {u['connector']}'s ddc link (devices.json)")
                 + "; identity from this unit's own relay", "WARN")
-    if _flashed_has_safe_block(u):          # --hold writes the marker at 0xF6B0: ordinary XDATA on images without the block (#52)
-        hrc = _diag(u, "--hold", bus=bus)   # best effort: a failed hold still flashes over ISP
-        if hrc:
-            log(f"recover: hold not set (rc={hrc}); flashing over ISP anyway", "WARN")
-    else:
-        log("recover: flashed image has no _g_stAwtoSafe in its map; hold skipped, flashing over ISP", "WARN")
+    # no safe-window hold in the current firmware (StAwtoSafe retired; 0xF6B0 is the WDT record, #131): flash over ISP
     return cmd_flash(["--unit", n, "--bus", str(bus), *wm, *(["--any-image"] if any_image else []),
                           *(["--force-ungated"] if ungated else []), *img])
 
