@@ -218,19 +218,19 @@ def emit(raster: int) -> str:
     d("FONT_N", len(DYN_CHARS))
     o.append(f"// model: worst case {t} live dynamic tiles + largest column {kmax} of {slots} slots")
     o.append("")
-    o.append("#pragma place bank(11)                      // data and its readers share a bank (docs/banking)")
+    o.append("#pragma place bank(12)                      // data and its readers share a bank (docs/banking)")
     o.append(f"static __code uint8_t s_tS2Pulse[{len(PULSE)}] = {{" + ", ".join(map(str, PULSE)) + "};")
     o.append("#pragma place bank(11)")
     o.append(f"static __code uint8_t s_tS2Font[{len(DYN_CHARS)}][6] = {{")
     for ch in DYN_CHARS:
         o.append(f"    {{'{ch}', " + ", ".join(f"0x{b:02X}" for b in FONT[ch]) + "},")
     o.append("};")
-    o.append("#pragma place bank(11)")
+    o.append("#pragma place bank(12)")
     o.append(f"static __code uint8_t s_tS2Cell[{len(cell)}] = {{")
     for i in range(0, len(cell), geo.cols):
         o.append("    " + ", ".join(str(v) for v in cell[i:i + geo.cols]) + ",")
     o.append("};")
-    o.append("#pragma place bank(11)")
+    o.append("#pragma place bank(12)")
     o.append(f"static __code uint8_t s_tS2Base[{ns}][54] = {{        // per id: green plane 27 bytes, red plane 27 bytes, in data port byte order (turned on use for Rotate 180)")
     for k in ids:
         o.append("    {" + ", ".join(f"0x{b:02X}" for b in k[0] + k[1]) + "},")

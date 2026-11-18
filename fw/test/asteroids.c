@@ -1030,19 +1030,19 @@ typedef char s_tAstLineCheck[((AWTO_AST_TW == 12) && (AWTO_AST_BAND_ROWS == 6)) 
 #pragma place bank(8)
 static void AstLine(void)                                                          // s_sL* (canvas px): osd_line's Bresenham (error = major / 2), every px walked, px inside the pass plotted
 {
-    BYTE ucX = (BYTE)(s_sLx0 + AWTO_AST_LINE_OFS);                                // byte coordinates: lines are < AWTO_AST_LINE_OFS px and touch the pass
-    BYTE ucY = (BYTE)(s_sLy0 + AWTO_AST_LINE_OFS);
+    __data BYTE ucX = (BYTE)(s_sLx0 + AWTO_AST_LINE_OFS);                                // byte coordinates: lines are < AWTO_AST_LINE_OFS px and touch the pass
+    __data BYTE ucY = (BYTE)(s_sLy0 + AWTO_AST_LINE_OFS);
     BYTE ucX1 = (BYTE)(s_sLx1 + AWTO_AST_LINE_OFS);
     BYTE ucY1 = (BYTE)(s_sLy1 + AWTO_AST_LINE_OFS);
-    BYTE ucC0 = (BYTE)s_sClip0;
-    BYTE ucH = (BYTE)(s_sBandH - s_sClip0);
+    __data BYTE ucC0 = (BYTE)s_sClip0;
+    __data BYTE ucH = (BYTE)(s_sBandH - s_sClip0);
     int8_t cSx = (ucX1 >= ucX) ? 1 : -1;
     int8_t cSy = (ucY1 >= ucY) ? 1 : -1;
     BYTE ucDx = (cSx > 0) ? (BYTE)(ucX1 - ucX) : (BYTE)(ucX - ucX1);
     BYTE ucDy = (cSy > 0) ? (BYTE)(ucY1 - ucY) : (BYTE)(ucY - ucY1);
-    BYTE ucErr;
+    __data BYTE ucErr;
     BYTE ucN;
-    BYTE ucIn = 0;
+    __data BYTE ucIn = 0;
     BYTE ucPx;
     BYTE ucPy;
     BYTE ucT;
@@ -1100,14 +1100,14 @@ static void AstLine(void)                                                       
 #pragma place bank(8)
 static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                        // polylines of a shape around (s_sRx, s_sRy), y up, turned ucRot quarter turns
 {
-    WORD usP = g_tAstOff[ucShape];
+    __data WORD usP = g_tAstOff[ucShape];
     BYTE ucN;
     BYTE ucI;
-    int16_t sX;
-    int16_t sY;
+    __data int16_t sX;
+    __data int16_t sY;
     int16_t sT;
-    int16_t sPx = 0;
-    int16_t sPy = 0;
+    __data int16_t sPx = 0;
+    __data int16_t sPy = 0;
 
     for(;;)
     {
@@ -1152,7 +1152,7 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
 #pragma place bank(8)                                                               // the draw path shares one bank (no trampoline per call) and keeps bank 13 free
 static BYTE AstCull(int16_t sPx, int16_t sPy, BYTE ucR)                             // object centre (playfield px) -> s_sRx / s_sRy; 0 when it misses the pass
 {
-    int16_t sT = sPx - s_sOx + ucR;
+    __data int16_t sT = sPx - s_sOx + ucR;
 
     if(sT < 0)
     {

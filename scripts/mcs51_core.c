@@ -42,6 +42,8 @@ typedef struct {
     uint8_t was_reti, exf2_active, t2mode, t2ex_bit;
     uint32_t t0_edge, t1_edge, t2_edge, t2ex_edge;
     uint64_t opcount[256];      /* instructions executed per opcode (test coverage) */
+    uint64_t cycop[256];        /* dw8051: instruction cycles per opcode (tools: cycle split by opcode class) */
+    uint64_t cnt[8];            /* tools: MOVX XRAM rd / wr, MOVX outside the XRAM pool (registers, OSD port) rd / wr, writes to 0xFFFF (bank) */
     /* dw8051 timing model (tables: scripts/dw8051_model.json, loaded by fastmachine.py via core_set_dw) */
     int dw;
     uint8_t dwcyc[256];         /* instruction cycles per opcode (databook table 2-4) */
@@ -56,7 +58,11 @@ typedef struct {
     uint32_t fm_last;           /* physical address of the last fetched byte + 1 (sequential read continues the command) */
     uint32_t *fm_tag;           /* [sets * ways], 0xFFFFFFFF = empty; way 0 = most recently used */
     uint8_t oplen[256];         /* instruction bytes per opcode */
+    uint32_t xacc[0x10000];     /* tools: MOVX accesses per XDATA address (rd + wr) */
+    uint32_t *fm_lacc, *fm_lmiss;   /* tools: per physical line (FM_NLINES): cached fetches / line fills */
 } core_t;
+#define FM_NLINES 131072
+#define IS_XRAM(a) ((a) >= 0xD000 && (a) < 0xF800)   /* the build's XDATA pool is 0xD700..0xF6xx (map); everything else is scaler registers */
 
 #define S(a) c->sfr[(a) - 0x80]
 #define ACC S(0xE0)
@@ -217,14 +223,18 @@ static inline void bit_write(core_t *c, uint8_t b, int v)
 static inline uint8_t xread(core_t *c, uint16_t a)
 {
     ev(c, EV_XR, a);
+    c->cnt[IS_XRAM(a) ? 0 : 2]++;
+    c->xacc[a]++;
     return c->xram[a];
 }
 
 static inline void xwrite(core_t *c, uint16_t a, uint8_t v)
 {
     c->xram[a] = v;
+    c->cnt[IS_XRAM(a) ? 1 : 3]++;
+    c->xacc[a]++;
     if (a == 0xFFFF)
-        set_bank(c, v & 0x0F);
+        c->cnt[4]++, set_bank(c, v & 0x0F);
     if (a == 0xFDA1 && (v & 1) && c->fm_tag)
         memset(c->fm_tag, 0xFF, (size_t)c->fm_sets * c->fm_ways * sizeof(uint32_t));      /* cache_reset */
     ev(c, EV_XW, a);
@@ -935,6 +945,7 @@ static uint32_t fetch_stall(core_t *c, uint32_t pc, int len)
             uint32_t line = ph / c->fm_line, set = line % c->fm_sets, *t = c->fm_tag + (size_t)set * c->fm_ways;
             int w;
             for (w = 0; w < c->fm_ways && t[w] != line; w++) ;
+            if (c->fm_lacc && line < FM_NLINES) { c->fm_lacc[line]++; if (w == c->fm_ways) c->fm_lmiss[line]++; }
             if (w == c->fm_ways) {                    /* miss: fill the line (LRU way out), then the byte is there */
                 flash += c->fm_cmd + c->fm_byte * c->fm_line;
                 c->p.fm_miss++;
@@ -959,6 +970,8 @@ void core_free(core_t *c)
     if (c) {
         free(c->code);
         free(c->fm_tag);
+        free(c->fm_lacc);
+        free(c->fm_lmiss);
         free(c);
     }
 }
@@ -998,6 +1011,11 @@ uint8_t *core_mem(core_t *c, int space)
 uint16_t *core_pchooks(core_t *c) { return c->pch; }
 
 uint64_t *core_opcount(core_t *c) { return c->opcount; }
+uint32_t *core_lacc(core_t *c) { if (!c->fm_lacc) { c->fm_lacc = calloc(FM_NLINES, 4); c->fm_lmiss = calloc(FM_NLINES, 4); } return c->fm_lacc; }
+uint32_t *core_lmiss(core_t *c) { core_lacc(c); return c->fm_lmiss; }
+uint32_t *core_xacc(core_t *c) { return c->xacc; }
+uint64_t *core_cycop(core_t *c) { return c->cycop; }
+uint64_t *core_cnt(core_t *c) { return c->cnt; }
 
 void core_set_bank(core_t *c, unsigned b) { set_bank(c, b); }
 
@@ -1043,6 +1061,7 @@ static int core_run_(core_t *c, uint64_t n)
             cyc = (op == 0xE0 || op == 0xE2 || op == 0xE3 || op == 0xF0 || op == 0xF2 || op == 0xF3) ?
                   c->movx_base + (CKCON & 7) : c->dwcyc[op];
             c->p.cycles += cyc;
+            c->cycop[op] += cyc;
             c->p.clk += stall + (uint64_t)cyc * c->clk_per_cycle;
             if (c->tslow) {
                 timers_advance(c, stall);

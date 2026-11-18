@@ -126,13 +126,13 @@ static void S2Run(BYTE ucX, BYTE ucLo, BYTE ucHi)                               
     }
 }
 
-#pragma place bank(11)                      // data and its reader share a bank (docs/banking: movc reads the running bank)
+#pragma place bank(12)                      // data and its reader share a bank (docs/banking: movc reads the running bank)
 static BYTE S2CellId(WORD usCell)
 {
     return s_tS2Cell[usCell];
 }
 
-#pragma place bank(11)
+#pragma place bank(12)
 static void S2BaseCopy(BYTE ucId)
 {
     BYTE ucI;
@@ -154,7 +154,7 @@ static void S2Base(BYTE ucId)                                                   
     }
 }
 
-#pragma place bank(11)
+#pragma place bank(12)
 static BYTE S2Pulse(WORD usX)                                                       // 0..255 pulse height at raster x, linear between table steps
 {
     WORD usD;
@@ -249,6 +249,7 @@ static void S2Text(const __xdata char *pcS, int16_t sX, int16_t sY, BYTE ucScale
     }
 }
 
+#pragma place bank(12)
 static int16_t S2Y(WORD usX)
 {
     return AWTO_S2_BASE_Y - (int16_t)(((WORD)S2Pulse(usX) * AWTO_S2_AMP) / AWTO_S2_PULSE_PEAK);
@@ -298,11 +299,11 @@ static BYTE S2Alloc(void)
 
 static void S2Trace(void)                                                           // the trace of the column into the tile (green plane): per pixel column the run from y(x - 1) to y(x), plus THICK
 {
-    BYTE ucX;
-    int16_t sA;
-    int16_t sB;
-    int16_t sLo;
-    int16_t sHi;
+    __data BYTE ucX;
+    __data int16_t sA;
+    __data int16_t sB;
+    __data int16_t sLo;
+    __data int16_t sHi;
 
     for(ucX = 0; ucX < AWTO_S2_TW; ucX++)
     {
@@ -380,13 +381,13 @@ static void S2NumDraw(void)                                                     
 
 static void S2ColBegin(BYTE ucCol)                                                  // trace points and dynamic rows of a column; the rows follow in S2ColRows
 {
-    WORD usOx = (WORD)ucCol * AWTO_S2_TW;
-    int16_t sMin;
-    int16_t sMax;
-    AWTO_S2_MASK_T tNew = 0;
-    AWTO_S2_MASK_T tBit;
-    BYTE ucJ;
-    BYTE ucR;
+    __data WORD usOx = (WORD)ucCol * AWTO_S2_TW;
+    __data int16_t sMin;
+    __data int16_t sMax;
+    __data AWTO_S2_MASK_T tNew = 0;
+    __data AWTO_S2_MASK_T tBit;
+    __data BYTE ucJ;
+    __data BYTE ucR;
 
     if((ucCol > 0) && (s_ucYsCol == ucCol - 1))                                     // the two points the previous column ended with
     {
@@ -430,14 +431,14 @@ static void S2ColBegin(BYTE ucCol)                                              
 
 static BYTE S2ColRows(BYTE ucCol, unsigned long ulStart)                           // rows from s_ucRow on until the time budget is used; 1 = column done
 {
-    BYTE ucR;
-    BYTE ucK;
-    BYTE ucBase;
-    BYTE ucId;
-    BYTE ucBusy;
-    BYTE ucDrew;
-    WORD usCell;
-    AWTO_S2_MASK_T tBit;
+    __data BYTE ucR;
+    __data BYTE ucK;
+    __data BYTE ucBase;
+    __data BYTE ucId;
+    __data BYTE ucBusy;
+    __data BYTE ucDrew;
+    __data WORD usCell;
+    __data AWTO_S2_MASK_T tBit;
 
     for(ucR = s_ucRow, tBit = (AWTO_S2_MASK_T)1 << ucR, usCell = (WORD)ucR * AWTO_S2_COLS + ucCol; ucR < AWTO_S2_ROWS; ucR++, tBit <<= 1, usCell += AWTO_S2_COLS)
     {

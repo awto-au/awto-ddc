@@ -120,17 +120,17 @@ static BYTE ScY(int16_t sX, BYTE ucPh)                                  // trace
 #pragma place bank(11)
 static WORD ScRuns(BYTE ucCol, BYTE ucPh)                               // the column's 12 vertical runs (osd_line per px step: x - 1 keeps the first half + 1) -> rows mask
 {
-    int16_t sX = (int16_t)AWTO_SC_MUL_TW((WORD)ucCol);
-    BYTE ucJ;
-    BYTE ucPrev = ScY(sX - 1, ucPh);
-    BYTE ucCur = ScY(sX, ucPh);
-    BYTE ucNext;
-    BYTE ucNext2;                                                       // end of the previous segment's second half
-    BYTE ucLo;
-    BYTE ucHi;
-    BYTE ucMin = AWTO_SC_H - 1;
-    BYTE ucMax = 0;
-    WORD usMask = 0;
+    __data int16_t sX = (int16_t)AWTO_SC_MUL_TW((WORD)ucCol);
+    __data BYTE ucJ;
+    __data BYTE ucPrev = ScY(sX - 1, ucPh);
+    __data BYTE ucCur = ScY(sX, ucPh);
+    __data BYTE ucNext;
+    __data BYTE ucNext2;                                                       // end of the previous segment's second half
+    __data BYTE ucLo;
+    __data BYTE ucHi;
+    __data BYTE ucMin = AWTO_SC_H - 1;
+    __data BYTE ucMax = 0;
+    __data WORD usMask = 0;
 
     for(ucJ = 0; ucJ < AWTO_SC_TILE_W; ucJ++, sX++)
     {
@@ -175,7 +175,7 @@ static WORD ScRuns(BYTE ucCol, BYTE ucPh)                               // the c
 #pragma place bank(11)
 static void ScRun(BYTE ucX, BYTE ucLo, BYTE ucHi)                      // vertical run in the tile buffer, tile coords, ucLo <= ucHi < tile height
 {
-    BYTE ucP = (BYTE)(AWTO_SC_MUL_TW(ucLo) + ucX);
+    __data BYTE ucP = (BYTE)(AWTO_SC_MUL_TW(ucLo) + ucX);
 
     for(; ucLo <= ucHi; ucLo++, ucP += AWTO_SC_TILE_W)
     {
@@ -186,10 +186,10 @@ static void ScRun(BYTE ucX, BYTE ucLo, BYTE ucHi)                      // vertic
 #pragma place bank(11)
 static void ScTile(BYTE ucCol, BYTE ucRow)                              // graticule + trace of one tile (runs of the column already in AWTO_SC_RUN_*) -> its glyph
 {
-    BYTE ucY0 = (BYTE)(((BYTE)(ucRow << AWTO_SC_TH_SHIFT_A)) + (BYTE)(ucRow << AWTO_SC_TH_SHIFT_B));   // ucRow * 18
-    BYTE ucJ;
-    BYTE ucLo;
-    BYTE ucHi;
+    __data BYTE ucY0 = (BYTE)(((BYTE)(ucRow << AWTO_SC_TH_SHIFT_A)) + (BYTE)(ucRow << AWTO_SC_TH_SHIFT_B));   // ucRow * 18
+    __data BYTE ucJ;
+    __data BYTE ucLo;
+    __data BYTE ucHi;
 
     memset(g_aucScPix, 0, OSD_TILE_BYTES);
     ucJ = (BYTE)((AWTO_SC_GRID_STEP_Y - ucY0 % AWTO_SC_GRID_STEP_Y) % AWTO_SC_GRID_STEP_Y);   // dotted horizontal graticule (y = 0, 54, 108, 162)

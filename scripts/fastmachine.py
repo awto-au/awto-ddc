@@ -52,6 +52,7 @@ BANK = 0x10000
 R_DONE, R_EVENT, R_PC, R_BADOP = 0, 1, 2, 3
 EV_KIND = ("read", "write", "sread", "swrite")
 EV_SW = 3                   # EV_KIND index of an SFR write
+FM_NLINES = 131072
 GCC_TIMEOUT_S = 60          # gcc -O2 of one 600-line file: < 2 s; 60 s = project host-process stall limit
 
 
@@ -89,6 +90,11 @@ def lib():
     L.core_mem.restype, L.core_mem.argtypes = vp, [vp, ctypes.c_int]
     L.core_pchooks.restype, L.core_pchooks.argtypes = vp, [vp]
     L.core_opcount.restype, L.core_opcount.argtypes = vp, [vp]
+    L.core_cycop.restype, L.core_cycop.argtypes = vp, [vp]
+    L.core_lacc.restype, L.core_lacc.argtypes = vp, [vp]
+    L.core_lmiss.restype, L.core_lmiss.argtypes = vp, [vp]
+    L.core_xacc.restype, L.core_xacc.argtypes = vp, [vp]
+    L.core_cnt.restype, L.core_cnt.argtypes = vp, [vp]
     L.core_set_bank.argtypes = [vp, ctypes.c_uint]
     L.core_sfr_write.argtypes = [vp, ctypes.c_int, ctypes.c_int]
     L.core_set_dw.argtypes = [vp, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
@@ -135,6 +141,11 @@ class Core:
         self.hooks = mv(4, 4 * 8192)
         self.pch = memoryview((ctypes.c_uint16 * 65536).from_address(L.core_pchooks(self.h))).cast("B").cast("H")
         self.opcount = (ctypes.c_uint64 * 256).from_address(L.core_opcount(self.h))
+        self.cycop = (ctypes.c_uint64 * 256).from_address(L.core_cycop(self.h))
+        self.lacc = (ctypes.c_uint32 * FM_NLINES).from_address(L.core_lacc(self.h))      # cached fetches per physical 16 B line (bank << 12 | addr >> 4 above common_end)
+        self.lmiss = (ctypes.c_uint32 * FM_NLINES).from_address(L.core_lmiss(self.h))     # line fills per physical line
+        self.xacc = (ctypes.c_uint32 * 0x10000).from_address(L.core_xacc(self.h))      # MOVX accesses per XRAM address
+        self.cnt = (ctypes.c_uint64 * 8).from_address(L.core_cnt(self.h))      # MOVX xram rd / wr, MOVX outside 0xD000-0xF7FF rd / wr, bank writes
 
     def set_dw(self, mdl: dict | None):
         """CPU timing mode: mdl = scripts/dw8051_model.json (DW8051, default) or None (8052: ucsim -t 52 classic cycles)."""
@@ -153,7 +164,7 @@ class Core:
             ff = mdl["flash_fetch"]
             sets = int(os.environ.get("AWTO_SIM_FETCH_SETS", ff["sets"]))      # sensitivity runs only; the default is the JSON
             self.L.core_set_fetch(self.h, ff["line_bytes"], sets, ff["ways"], ff["cmd_flash_clk"], ff["byte_flash_clk"],
-                                  ff["common_end"], bytes(mdl["oplen"]))
+                                  int(os.environ.get("AWTO_SIM_FETCH_COMMON", ff["common_end"])), bytes(mdl["oplen"]))     # sensitivity runs only: 0 = common cached per bank (no common_page_en)
 
     def reset(self):
         self.L.core_reset(self.h)
