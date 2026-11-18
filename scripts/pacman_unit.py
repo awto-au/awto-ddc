@@ -18,9 +18,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 LOG = ROOT / "tmp/logs/pacman_unit.log"
 TESTCMD_OFF = 0x28           # isr_g_stAwtoDiag.ucTestCmd
 TC_ON, TC_STEP, TC_OFF = 0xB7, 0xB8, 0xB9
-FRAMES = 260                 # AWTO_PC_STEPS
+FRAMES = 1040                # AWTO_PC_STEPS (sub-steps: 4 per game step)
 LOAD_S = 1.0                 # the maze + 343 glyphs go through the data port: ~12 k bytes, ~0.2 s on the unit; 5x
-FPS = 8.0                    # demo pace a person can follow; one frame update is ~10 cells (< 5 ms)
+FPS = 32.0                   # 4 sub-steps per 125 ms game step (the saver pace); one sub-step is ~8 cells
 
 
 def say(s: str) -> None:

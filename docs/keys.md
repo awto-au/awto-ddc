@@ -38,7 +38,7 @@ No other combo. Removed (#132): MENU+DOWN (debug link toggle), MENU+DOWN held at
 - `-` = nothing happens. UP+DOWN toggles the console from every row; in power saving it wakes and opens it (whatever `sync_console` says).
 - Other modes (INITIAL, SEARCH, DISPLAY SETTING): AUTO / MENU / UP / DOWN do nothing; SOURCE opens the selector.
 - Auto source select (AUTO): the selector's Auto row (`AwtoSourceAuto`): scan type auto, search again through `SysMachineRequest` (request line "requested by AUTO key: auto source select"); the SDK auto search takes the first input with a signal and the mode lines name it. The scan type is stored at the NVRAM gate with "Saving to memory".
-- Backlight bar: registry row `brightness` (Backlight, 0..100 %), step `AWTO_BL_KEY_STEP` per press / repeat, applied live. Closes on the OSD timeout (`osd_timeout`; 10 s or less = never) or on another key. Stored by the NVRAM gate like a menu change: written `AWTO_NV_SAVE_MS` after the last change; still dirty at the close = "Saving to memory".
+- Backlight bar: registry row `brightness` (Backlight, 0..100 %), step `AWTO_BL_KEY_STEP` per press / repeat, applied live. Closes `osd_timeout` seconds after the last key (every key restarts the timer, any value above 0; 0 = never) or on another key. Stored by the NVRAM gate like a menu change: written `AWTO_NV_SAVE_MS` after the last change; still dirty at the close = "Saving to memory".
 - Input info pop-up on DOWN: removed (#132). Input details: menu Information page.
 - awto menu: inert rows (registry flag `inert`) are dimmed with `*` after the label and cannot be changed from the menu (AUTO does nothing; status line "* not active: stored only"); DDC/CI still stores them. SOURCE closes with the save rule of `menu_close` ("Saving to memory" if something changed).
 - Selector:
@@ -47,6 +47,10 @@ No other combo. Removed (#132): MENU+DOWN (debug link toggle), MENU+DOWN held at
   - Highlight on a port without a cable: the commit (idle or AUTO) is refused (#84, dead-port line in the sync log); the selector stays open with the highlight on that row (state column "no cable").
   - Highlight on the current input: the commit only closes it.
 - Other OSD screens: the OSD timeout restarts on every key.
+- Hold reset (#132 item 7, Dan 2026-11-18): any front key except POWER held `AWTO_KEY_RESET_MS` (10 s) = every setting to its default (`set_defaults`, incl. rotate / mirror), stored through the NVRAM gate.
+  - Card "RESET TO DEFAULTS, in N s" from `AWTO_KEY_RESET_WARN_MS` (8 s), redrawn at 9 s ("in 1 s"); 2 s = reading + reaction time. Release before 10 s cancels (card closes); an open menu is closed by the card.
+  - After the reset the held key does nothing until released. Per-unit settings (unit 3 Rotate 180) go back to the default; `dev.py flash` re-applies them.
+  - Replaces the HOLD (3 s) event (removed).
 - POWER always works: an open console closes first, then the monitor goes off / on.
 
 ## Stock behaviour (for comparison)

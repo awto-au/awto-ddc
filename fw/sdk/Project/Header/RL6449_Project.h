@@ -135,7 +135,7 @@ extern void AwtoNvCommitSel(void);                              // source select
 #define AWTO_NV_BRI                                             0x04
 #define AWTO_NV_CT                                              0x08
 #define AWTO_NV_SIX                                             0x10
-#define AWTO_NV_PANEL                                           0x20    // never opens the gate: rides along, power-down
+#define AWTO_NV_PANEL                                           0x20    // pending only: written at power off / saving entry (#151 I)
 #define AWTO_NV_AUX                                             0x40
 #define AWTO_SAVE_CARD_MS                                       1000    // "Saving to memory" readable once (derived: one glance)
 #define AWTO_NV_ITEM_WR()                                       { g_stAwtoNv.usItemWr++; AWTO_NV_IN_DDC(); }
@@ -479,6 +479,9 @@ extern __xdata StAwtoKey g_stAwtoKey;
 #define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
 #define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
+#define AWTO_KEY_RESET_MS                                       10000   // any front key held: reset all settings to defaults (Dan 2026-11-18, #132 item 7)
+#define AWTO_KEY_RESET_WARN_MS                                  8000    // card + countdown from here: 2 s to read it and release (reaction ~1 s x 2)
+#define AWTO_KEY_RESET_STEP_MS                                  1000    // countdown step
 #define AWTO_KEY_RATE_MS                                        100     // then one REPEAT per this: 10 steps / s, a 0..100 slider in 10 s; the SDK repeated every main pass
 #define AWTO_KEY_Q_N                                            4       // injected keys waiting for the next AwtoKeyPoll (one per host write; power of 2)
 extern void AwtoKeyPoll(void);
@@ -717,6 +720,7 @@ extern void AwtoSourceIdle(void);                               // OSD_DISABLE t
 extern void AwtoSourceReset(void);                              // SDK OSD reset (UserInterfaceAdjustOsdResetProc): the open selector's choice
 #define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
 #define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
+extern void AwtoResetCard(unsigned char ucSec);                   // key-hold reset warning card (#132 item 7)
 extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
 extern void AwtoBlClose(void);                                  // close it; the value is stored at the NVRAM gate
 extern void set_nv_commit(unsigned char ucShow);
@@ -955,7 +959,7 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 // #216 blocking-wait log: every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call, newest last, wraps. Host: scripts/wait_log.py.
-#define AWTO_WAIT_N                                             120     // a cold boot logs ~115 waits >= 1 ms (unit 3, HDMI 4K60); ucTotal counts all
+#define AWTO_WAIT_N                                             64      // newest waits kept (XDATA floor, #233); ucTotal counts all
 #define AWTO_WAIT_DELAY                                         0       // arg = ms asked
 #define AWTO_WAIT_POLL                                          1       // arg = register polled
 #define AWTO_WAIT_EVENT                                         2       // arg = event type
@@ -991,7 +995,7 @@ extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int u
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // fw/input/inputs.c: rising edges per counted input (wraps), read by the selector
-#define AWTO_SYNC_N                                             60      // >= cold boot 38 lines x1.25 (boot_sim, #165) and cold boot + power off 50 lines on the console (con_wrap_sim); divides WRAP
+#define AWTO_SYNC_N                                             48      // >= cold boot 38 lines x1.25 = 47.5 (boot_sim, #165); divides WRAP (#233)
 #define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
@@ -1104,6 +1108,17 @@ extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
 extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
+#define AWTO_OSD_ZERO                                           0x00
+#define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
+#define AWTO_OSD_POS_OFFSET_V                                   0x04
+#define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px
+#define AWTO_OSD_ROW_B0                                         0x80    // row command byte 0
+extern void AwtoOsdWord(WORD usAddr, BYTE ucB0, WORD usB12);   // fw/osd/osd_screen.c: one 3-byte OSD SRAM word (B1 high byte of usB12; 3 params: no XDATA parameter bytes)
+extern void AwtoOsdRowCmds(BYTE ucRows, BYTE ucRowH, BYTE ucCols);       // ucRows row commands from SRAM 0 + the end marker word
+extern void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords);   // glyph words (canonical c0 c1 c2) at usAddr, turned when g_ucAwtoOsdRot
+extern void AwtoOsdPlaceScaleUp(BYTE ucPosH, BYTE ucPosV, BYTE ucCols, BYTE ucRows, BYTE ucFactor);   // map of 12 x 18 tiles scaled up and shown
+extern void AwtoOsdScreenBegin(void);                                           // screen prologue: close, latch rotation, reset, DVS
+extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
@@ -1123,6 +1138,7 @@ extern unsigned char AwtoScopeSaver(unsigned char ucCmd);
 extern unsigned char AwtoScopeSaver2(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
+extern void AwtoPmSoundBg(unsigned char ucState);                                       // Pac-Man background sound: 0 none, 1..3 siren speed, 4 frightened
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
 extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);

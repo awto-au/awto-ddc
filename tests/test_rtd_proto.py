@@ -51,28 +51,29 @@ def r(dev, sub, *data):
 
 def test_diag_block_is_one_line():
     lines = decode_file("diag_block.raw.log").splitlines()
-    assert len(lines) == 1 and "read XDATA 0xF6D0..0xF6FF (48 B)  g_stAwtoDiag" in lines[0]
+    assert len(lines) == 1 and "read XDATA 0xF6D0..0xF6FF (48 B)  isr_g_stAwtoDiag" in lines[0]
 
 
 def test_test_cmd_write_named():
     (line,) = decode_file("dbg_write.raw.log").splitlines()
-    assert "write XDATA 0xF6F8 <- 0x1A = test cmd: raise event info" in line
+    assert "write XDATA 0xF6F8 <- 0x1A = test cmd: cmd 0x1A" in line       # 0x1A = OSD event 10, unnamed since 8bb4670
+    assert P.testcmd_name(0x19) == "raise event info"
 
 
 def test_osd_info_fields_and_values():
     base = 0xEA89
-    out = run([w(0x35, 1, base >> 8), w(0x35, 3, 10), w(0x35, 0x3B, (base + 5) & 0xFF),
+    out = run([w(0x35, 1, base >> 8), w(0x35, 3, 9), w(0x35, 0x3B, (base + 5) & 0xFF),
                w(0x35, 3, 1), w(0x35, 0x3B, (base + 6) & 0xFF)])
-    assert out == ["dbg write XDATA 0xEA8E..0xEA8F (2 B)  g_stOsdInfo.ucOsdEventMsg..g_stOsdInfo.ucOsdKeyMessage <- 0a 01"]
-    out = run([w(0x35, 1, base >> 8), w(0x35, 3, 10), w(0x35, 0x3B, (base + 5) & 0xFF)])
-    assert out == ["dbg write XDATA 0xEA8E <- 0x0A = event info  g_stOsdInfo.ucOsdEventMsg"]
+    assert out == ["dbg write XDATA 0xEA8E..0xEA8F (2 B)  g_stOsdInfo.ucOsdEventMsg..g_stOsdInfo.ucOsdKeyMessage <- 09 01"]
+    out = run([w(0x35, 1, base >> 8), w(0x35, 3, 9), w(0x35, 0x3B, (base + 5) & 0xFF)])
+    assert out == ["dbg write XDATA 0xEA8E <- 0x09 = event info  g_stOsdInfo.ucOsdEventMsg"]
 
 
 def test_struct_fields_from_header():
     s = P.Symbols.load(ROOT, DATA / "mini.map")
-    assert s.name(0xF6D3) == "g_stAwtoDiag.ucStage"
-    assert s.name(0xF6D4 + 1) == "g_stAwtoDiag.usStageMs[0]+1"
-    assert s.range_name(0xF6B0, 0xF6CF) == "g_stAwtoSafe"
+    assert s.name(0xF6D3) == "isr_g_stAwtoDiag.ucStage"
+    assert s.name(0xF6D4 + 1) == "isr_g_stAwtoDiag.usStageMs[0]+1"
+    assert s.range_name(0xF6B0, 0xF6CF) == "isr_g_stAwtoWdt"
 
 
 def test_page_select_and_write_coalesce():

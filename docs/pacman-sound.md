@@ -29,6 +29,8 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 ## Build / run (scripts, firmware)
 - `scripts/pacman_sound.py`: note tables -> `fw/test/pacman_sound_data.inc` (pairs `{sc | 0x80 octave, 10 ms ticks}`, 0 = rest, 0 ticks = end) + `tmp/pacman_sound/{intro,waka,death}.wav` (square by default, `--wave sine` = what the chip plays). Test: `tests/test_pacman_sound.py`.
 - `fw/test/pacman_sound.c`: non-blocking player (`AwtoPmSoundPoll` each main pass, schedule on `AwtoMs`). Test cmds `AWTO_TC_PACMAN_SND` 0xBA intro, 0xBB waka (loops), 0xBC death, 0xBD calibration tone, 0xBE stop. Sync log E9 80..86. Without `-D _AWTO_AUDIO_TEST` the cmds log E9 66.
+- Extra tracks (2026-11-18): ghost-eat sweep, fruit, siren x 3 speeds (loop), frightened (loop); priorities and resume rules in `docs/pacman.md` "Sounds and priorities". Player entry points: `AwtoPmSound(cmd)` (6 ghost, 7 fruit, 8 waka off), `AwtoPmSoundBg(state)`. Sync log E9 88 ghost, 89 fruit, 8A background state (value), 8B waka off. Lookup functions `PsOff` / `PsPrio` / `PsLoops` are generated into the data include.
+- Spectrum check without listening: `pacman_sound.py --wave sine`, 40 ms FFT windows of `tmp/pacman_sound/*.wav`: ghost 320 -> 1405 Hz rising, fruit 1510 -> 616 Hz then 657 -> 1332, siren1 522 -> 775 -> 557 Hz, fright 514 / 754 Hz (chip Hz after sc quantisation; not heard on a unit).
 - Build: `./dev.py build --tree . --serial AWT26110003 --tag snd1 -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-snd1-be`.
 - Simulator (`scripts/fw_sim.py`) models no audio hardware (`docs/audio.md`): the gates prove build, link and boot only.
 

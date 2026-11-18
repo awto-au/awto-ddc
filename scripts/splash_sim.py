@@ -79,7 +79,7 @@ def run_boot(a, bin_, map_, splash=True, key_at=None):
             break
     h, lines = r.episode()
     txt = "\n".join(lines)
-    ring = {"start": any("boot splash started" in ln for ln in lines), "end": any("boot splash ended" in ln for ln in lines)}
+    ring = {"start": any("boot splash:run << 4 | why = 100" in ln for ln in lines), "end": any("boot splash:run << 4 | why = 0, 0 = ended" in ln for ln in lines)}
     ms = lambda key: next((int(ln.split(":", 1)[0]) for ln in lines if key in ln), None)  # noqa: E731
     out = dict(r=r, start=start, end=end, key_t=key_t, first_osd=first_osd, ring=ring, txt=txt,
                active=ms("->ACTIVE:"), console=ms("console opened"))

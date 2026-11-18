@@ -219,7 +219,7 @@ def parse_structs(header: str) -> tuple[dict, dict]:
                 fields.append((off, sz, fm[2])); off += sz
         structs[m[2]] = fields
     syms = {}
-    for m in re.finditer(r"__at\(0x([0-9A-Fa-f]+)\)\s+(\w+)\s+(g_\w+)\s*;", header):
+    for m in re.finditer(r"__at\(0x([0-9A-Fa-f]+)\)\s+(\w+)\s+((?:isr_)?g_\w+)\s*;", header):
         syms[m[3]] = (int(m[1], 16), m[2])
     return structs, syms
 

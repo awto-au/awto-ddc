@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import re
 import sys
 import wave
 from pathlib import Path
@@ -63,3 +64,50 @@ def test_inc_has_tracks_and_size():
         assert f"AWTO_PS_OFF_{name.upper()}" in t
     n = sum(len(P.encode(name, K)[0]) for name, _ in P.TRACKS)
     assert f"#define AWTO_PS_BYTES {n}" in t
+    for fn in ("PsOff", "PsPrio", "PsLoops"):
+        assert f" {fn}(BYTE ucTrack)" in t
+
+
+def test_new_tracks_present_with_priorities():
+    names = [n for n, _ in P.TRACKS]
+    assert names[:4] == ["intro", "waka", "death", "alert"]
+    pr = P.PRIORITY
+    assert pr["ghost"] > pr["death"] > pr["fruit"] > pr["waka"] > pr["fright"] > pr["siren1"]
+    assert pr["intro"] == pr["alert"] == max(pr.values())
+    assert set(pr) == set(names)
+
+
+def test_ghost_sweep_rises_and_fruit_falls_then_rises():
+    ghost = [hz for hz, _ in P.decode(P.encode("ghost", K)[0], K)]
+    assert all(b > a for a, b in zip(ghost, ghost[1:])) and ghost[0] < 400 and ghost[-1] > 1500
+    fruit = [hz for hz, _ in P.decode(P.encode("fruit", K)[0], K) if hz > 0]
+    assert fruit[0] > fruit[11] and fruit[-1] > fruit[12]
+
+
+def test_siren_speeds_up_same_pitch_range():
+    loops = dict(P.TRACKS)
+    cycle = [sum(ms for _, ms in P.decode(P.encode(f"siren{i}", K)[0], K)) for i in (1, 2, 3)]
+    assert cycle[0] > cycle[1] > cycle[2]
+    for i in (1, 2, 3):
+        hz = [h for h, _ in P.decode(P.encode(f"siren{i}", K)[0], K)]
+        assert 500 < min(hz) < 540 and 760 < max(hz) < 800
+        assert loops[f"siren{i}"]
+    assert loops["fright"] and loops["waka"] and not loops["ghost"] and not loops["fruit"]
+
+
+def test_firmware_ids_match_track_order():
+    c = (Path(__file__).resolve().parents[1] / "fw/test/pacman_sound.c").read_text()
+    ids = {n: int(re.search(rf"#define AWTO_PS_TRACK_{n}\s+(\d+)", c).group(1)) for n in ("INTRO", "WAKA", "ALERT", "GHOST", "FRUIT", "BG0")}
+    names = [n for n, _ in P.TRACKS]
+    assert [ids[n.upper()] for n in ("intro", "waka", "alert", "ghost", "fruit")] == [names.index(n) for n in ("intro", "waka", "alert", "ghost", "fruit")]
+    assert names[ids["BG0"]:] == ["siren1", "siren2", "siren3", "fright"]
+    assert int(re.search(r"#define AWTO_PS_PRIO_TOP\s+(\d+)", c).group(1)) == max(P.PRIORITY.values())
+
+
+def test_game_events_include_ghost_fruit_and_siren_speeds():
+    import gen_pacman_classic as G
+    ev = G.build(260)[3]
+    assert G.EV_GHOST in [e & 0x0F for e in ev] and G.EV_FRUIT in [e & 0x0F for e in ev]
+    bg = [e >> G.BG_SHIFT for e in ev]
+    assert {G.BG_SIREN_1, G.BG_SIREN_2, G.BG_FRIGHT} <= set(bg)
+    assert all(bg[i] == 0 for i, e in enumerate(ev) if (e & 0x0F) in (G.EV_INTRO, G.EV_DEATH, G.EV_STOP))

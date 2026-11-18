@@ -36,6 +36,8 @@
 #define AWTO_KS_LATCH                           3       // combo or several keys: nothing until all are up
 #define AWTO_KF_REPEAT                          0x01    // g_stAwtoKey.ucFlags (key panel R1 / R2)
 #define AWTO_KF_LATCH                           0x02
+#define AWTO_KF_RST2                            0x04    // reset card shown, 2 s left
+#define AWTO_KF_RST1                            0x08    // card redrawn, 1 s left
 
 extern void RTDFactoryMenuOperation(void);
 
@@ -83,6 +85,45 @@ static void AwtoKeyOsdTimeout(void)             // RTDOsdSystemFlowProc after a 
         {
             ScalerTimerReactiveTimerEvent(SEC(GET_OSD_TIME_OUT()), _USER_TIMER_EVENT_OSD_DISABLE);
         }
+    }
+}
+
+extern void set_defaults(void);
+extern void set_nv_commit(BYTE ucShow);
+
+static void AwtoKeyResetCancel(void)            // released (or another key) before the reset: the warning card goes
+{
+    if((s_ucKeyFlags & (AWTO_KF_RST2 | AWTO_KF_RST1)) != 0)
+    {
+        OsdDispDisableOsd();
+    }
+}
+
+static void AwtoKeyResetHold(WORD usNow)        // #132 item 7: one key held AWTO_KEY_RESET_MS = every setting to its default
+{
+    WORD usEl = usNow - s_usKeyT0;
+
+    if(usEl >= AWTO_KEY_RESET_MS)
+    {
+        s_ucKeyFlags = AWTO_KF_LATCH;           // the held key does nothing more
+        s_ucKeyState = AWTO_KS_LATCH;
+        OsdDispDisableOsd();
+        set_defaults();                         // all rows incl. rotate / mirror, applied; the NVRAM gate stores them
+        set_nv_commit(1);
+    }
+    else if((usEl >= (AWTO_KEY_RESET_MS - AWTO_KEY_RESET_STEP_MS)) && ((s_ucKeyFlags & AWTO_KF_RST1) == 0))
+    {
+        s_ucKeyFlags |= AWTO_KF_RST1;
+        AwtoResetCard(1);
+    }
+    else if((usEl >= AWTO_KEY_RESET_WARN_MS) && ((s_ucKeyFlags & AWTO_KF_RST2) == 0))
+    {
+        if(menu_active() != 0)
+        {
+            menu_close();                       // the card replaces the menu
+        }
+        s_ucKeyFlags |= AWTO_KF_RST2;
+        AwtoResetCard((AWTO_KEY_RESET_MS - AWTO_KEY_RESET_WARN_MS) / AWTO_KEY_RESET_STEP_MS);
     }
 }
 
@@ -300,6 +341,7 @@ static void AwtoKeyStep(WORD usNow)             // every sample: debounced mask 
             AwtoKeyRoute(s_ucKeyId, AWTO_KEV_RELEASE);
         }
         s_ucKeyState = AWTO_KS_IDLE;
+        AwtoKeyResetCancel();
         s_ucKeyFlags = 0;
         return;
     }
@@ -316,6 +358,11 @@ static void AwtoKeyStep(WORD usNow)             // every sample: debounced mask 
                 AwtoKeyPress();
             }
             return;
+        }
+        AwtoKeyResetHold(usNow);
+        if((s_ucKeyState != AWTO_KS_DOWN) || ((s_ucKeyFlags & (AWTO_KF_RST2 | AWTO_KF_RST1)) != 0))
+        {
+            return;                             // reset done, or its card is up: no repeats under it
         }
         if(((s_ucKeyFlags & AWTO_KF_REPEAT) != 0) ? ((WORD)(usNow - s_usKeyRep) >= AWTO_KEY_RATE_MS) :
            ((WORD)(usNow - s_usKeyT0) >= AWTO_KEY_REPEAT_MS))
@@ -335,6 +382,7 @@ static void AwtoKeyStep(WORD usNow)             // every sample: debounced mask 
     {
         AwtoKeyRoute(s_ucKeyId, AWTO_KEV_RELEASE);
     }
+    AwtoKeyResetCancel();
     s_ucKeyFlags = 0;
     if(ucId < AWTO_K_POWER)                     // one key: combo keys wait for a partner, the others press now
     {

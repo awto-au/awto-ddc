@@ -2,7 +2,7 @@
 """Pac-Man sound sequencer: note tables -> firmware data (fw/test/pacman_sound_data.inc) + WAV preview. Docs: docs/pacman-sound.md
 
 usage: pacman_sound.py [--k-hz HZ] [--inc PATH] [--wav-dir DIR] [--wave square|sine] [--no-inc] [--no-wav]
-  - Tracks: intro jingle, waka (loops), death glissando.
+  - Tracks: intro jingle, waka (loops), death glissando, alert, ghost-eat sweep, fruit, siren x 3 speeds (loop), frightened (loop).
   - Chip tone = HDMI audio test generator (AFCR audio_test_enable); pitch = audio PLL S code (SCAPR sc, 7 bit): f = K / sc,
     octave flag = AFCR tst_i2s_sw = 0 (f / 2). K = --k-hz, default AWTO_PS_K_DEFAULT_HZ (derived, calibrate with test cmd 0xBD).
   - Firmware data: byte pairs {sc | AWTO_PS_OCT_FLAG, duration in AWTO_PS_TICK_MS ticks}; sc 0 = rest; duration 0 = end of track.
@@ -52,7 +52,26 @@ DEATH = ([(1000 - 30 * i, 20) for i in range(18)]
 # Alert (flash warning / "I need you"): rising bip - bip - long beep, 1000 ms. (Hz, ms) steps
 ALERT = [(880, 150), (0, 50), (1175, 150), (0, 50), (1568, 600)]
 
-TRACKS = [("intro", False), ("waka", True), ("death", False), ("alert", False)]
+# Ghost eaten: rising sweep 300 -> 1800 Hz, 18 ms per step. Fruit eaten: falling sweep then a rising blip. (Hz, ms) steps
+GHOST = [(round(300 * 6 ** (i / 15)), 18) for i in range(16)]
+FRUIT = [(round(1600 - 90 * i), 16) for i in range(12)] + [(0, 20), (660, 40), (880, 40), (1320, 60)]
+# Siren: two-tone wail, up 520 -> 780 Hz then down, 8 steps each way; step ms per speed (faster as pellets run out).
+SIREN_LO_HZ, SIREN_HI_HZ, SIREN_STEPS = 520, 780, 8
+SIREN_STEP_MS = (40, 30, 20)
+# Frightened (power pellet): fast rising saw 400 -> 1000 Hz, 6 steps of 20 ms, repeated.
+FRIGHT = [(400 + 120 * i, 20) for i in range(6)]
+
+
+def siren(step_ms: int):
+    up = [(round(SIREN_LO_HZ + (SIREN_HI_HZ - SIREN_LO_HZ) * i / (SIREN_STEPS - 1)), step_ms) for i in range(SIREN_STEPS)]
+    return up + up[::-1]
+
+
+# (track, loops). One tone generator: a new sound plays only when its priority >= the playing one's; a looping low
+# priority sound is resumed by the player when the higher one ends. intro / alert / calibration are above everything.
+TRACKS = [("intro", False), ("waka", True), ("death", False), ("alert", False), ("ghost", False), ("fruit", False),
+          ("siren1", True), ("siren2", True), ("siren3", True), ("fright", True)]
+PRIORITY = {"intro": 7, "alert": 7, "ghost": 6, "death": 5, "fruit": 4, "waka": 3, "fright": 2, "siren1": 1, "siren2": 1, "siren3": 1}
 
 
 def note_hz(name: str) -> float:
@@ -86,7 +105,9 @@ def steps(track: str):
             ms = n16 * SIXTEENTH_MS
             out += [(note_hz(name), ms - PS_GAP_TICKS * PS_TICK_MS), (0, PS_GAP_TICKS * PS_TICK_MS)]
         return out
-    return {"waka": WAKA, "death": DEATH, "alert": ALERT}[track]
+    if track.startswith("siren"):
+        return siren(SIREN_STEP_MS[int(track[5:]) - 1])
+    return {"waka": WAKA, "death": DEATH, "alert": ALERT, "ghost": GHOST, "fruit": FRUIT, "fright": FRIGHT}[track]
 
 
 def encode(track: str, k_hz: float):
@@ -151,6 +172,18 @@ def inc_text(k_hz: float) -> str:
         lines.append(f"#define AWTO_PS_OFF_{name.upper()} {off}")
         lines.append(f"#define AWTO_PS_LOOP_{name.upper()} {1 if loop else 0}")
     lines.append(f"#define AWTO_PS_BYTES {len(blob)}")
+    lines.append("static WORD PsOff(BYTE ucTrack)                 // start of a track in g_aucPsData")
+    lines.append("{")
+    lines += [f"    if(ucTrack == {i}) {{ return AWTO_PS_OFF_{n.upper()}; }}" for i, (n, _) in enumerate(TRACKS)]
+    lines += ["    return 0;", "}"]
+    lines.append("static BYTE PsPrio(BYTE ucTrack)                // priority: higher wins the one tone generator")
+    lines.append("{")
+    lines += [f"    if(ucTrack == {i}) {{ return {PRIORITY[n]}; }}" for i, (n, _) in enumerate(TRACKS)]
+    lines += ["    return AWTO_PS_PRIO_TOP;", "}"]
+    lines.append("static BYTE PsLoops(BYTE ucTrack)               // 1 = restarts at its end")
+    lines.append("{")
+    lines += [f"    if(ucTrack == {i}) {{ return {1 if loop else 0}; }}" for i, (n, loop) in enumerate(TRACKS)]
+    lines += ["    return 0;", "}"]
     lines.append("#pragma place bank(11)                      // data and its reader (PsByte) share the bank")
     per_line = 20
     wrapped = [", ".join(f"0x{b:02X}" for b in blob[i:i + per_line]) + "," for i in range(0, len(blob), per_line)]

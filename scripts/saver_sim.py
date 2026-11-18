@@ -28,6 +28,8 @@ RUN_S = 8.0                     # fw time for the draw (scope: 64 passes of tile
 ROW_DISP_ROTATE = 32            # registry row id of disp_rotate (fw/rtdfw/settings/registry.tsv)
 ROTATE_SETTLE_S = 6.0           # fw time for the display re-set after Rotate changes
 SHRINK = 8                      # box shrink factor before comparing
+ROT_SAMPLES = 4                 # rotated renders per saver, 0.5 s of fw time apart: the best one counts (the scope 1 trace moves 3 table steps per frame, so one fixed instant can sit at a worse phase after any change of code speed)
+ROT_SAMPLE_S = 0.5
 ROT_MAX_DIFF = 8.0              # mean abs difference allowed between the turned upright render and the rotated render (of 255); the scope 1 trace is animated, its phase differs between the two runs
 ROT_BETTER = 1.5               # the turned comparison must beat the unturned one by this factor
 VCP_ALERT = 6                   # screensaver_now option "Alert tone"
@@ -78,13 +80,19 @@ def rotated_check(a) -> int:
         up = bbox_crop(Image.open(a.out / f"{name}_run.png"))
         ddc.set(VCP_SAVER, val)
         sess.bus.wait(RUN_S)
-        img = R.render_snap(sess.snap(), "black", 2)
-        img.save(a.out / f"{name}_run_rot.png")
-        rot = bbox_crop(img)
-        d_turned, d_plain = shrunk_diff(np.rot90(up, 2), rot), shrunk_diff(up, rot)
-        same = up.shape == rot.shape and up.size > 0 and d_turned <= ROT_MAX_DIFF and d_turned * ROT_BETTER <= d_plain
+        best = None
+        for _ in range(ROT_SAMPLES):
+            img = R.render_snap(sess.snap(), "black", 2)
+            rot = bbox_crop(img)
+            d = (shrunk_diff(np.rot90(up, 2), rot), shrunk_diff(up, rot)) if rot.shape == up.shape else (float("inf"), 0.0)
+            if best is None or d[0] < best[0]:
+                best = d
+                img.save(a.out / f"{name}_run_rot.png")
+            sess.bus.wait(ROT_SAMPLE_S)
+        d_turned, d_plain = best
+        same = d_turned != float("inf") and up.size > 0 and d_turned <= ROT_MAX_DIFF and d_turned * ROT_BETTER <= d_plain
         fails += not same
-        say(f"{'PASS' if same else 'FAIL'} Rotate 180 {name}: box {up.shape[:2]}, mean difference to the upright render turned {d_turned:.1f} (limit {ROT_MAX_DIFF}), not turned {d_plain:.1f} (turned must be {ROT_BETTER}x smaller)")
+        say(f"{'PASS' if same else 'FAIL'} Rotate 180 {name}: box {up.shape[:2]}, best of {ROT_SAMPLES} mean difference to the upright render turned {d_turned:.1f} (limit {ROT_MAX_DIFF}), not turned {d_plain:.1f} (turned must be {ROT_BETTER}x smaller)")
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
     sess.bus.close()

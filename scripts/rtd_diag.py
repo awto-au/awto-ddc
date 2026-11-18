@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read and decode the firmware boot-stage / timing diag block (48 B at XDATA 0xF6D0) over debug slave 0x35.
 
-usage: rtd_diag.py <bus> [--watch N | --messages [--secs S] | --release | --trace]
+usage: rtd_diag.py <bus> [--watch N | --messages [--secs S] | --release | --sync --map MAP]
   Reads only: stage hi byte (cmd 0x01), then per byte cmd 0x3A [lo] + 1-byte read (SDK ScalerCommonDebug.c
   ScalerDebug: 0x01 -> data[2] = hi, 0x3A -> ScalerGetByte(hi << 8 | lo) into IIC data-out). Writes pass
   rtd_i2c_bridge.Real.regread_ok (staging + read cmds only). 65 transfers per block.
@@ -82,7 +82,7 @@ def decode(b: bytes, be: bool = False) -> dict:
     d5, xms, d5us10 = b[26], *struct.unpack_from(e + "2H", b, 27)
     xus100, xusisr100, d5isr10, t3_64 = struct.unpack_from(e + "4H", b, 32)
     return {"xus100": xus100, "xusisr100": xusisr100, "d5isr10": d5isr10, "t3_64": t3_64, "magic_ok": (m0, m1) == (0x41, 0x44), "ver": ver, "stage": stage, "ts": ts, "hb": hb, "t2": t2,
-            "ex1": ex1, "d5": d5, "xms4": xms, "d5us10": d5us10, "rcap2h": b[31], "wdt": b[0x29]}
+            "ex1": ex1, "d5": d5, "xms4": xms, "d5us10": d5us10, "rcap2h": b[31]}
 
 
 def report(d: dict, prev: dict | None, dt: float | None) -> str:
@@ -93,8 +93,7 @@ def report(d: dict, prev: dict | None, dt: float | None) -> str:
     names = STAGES if d.get("new_stages", True) else STAGES_OLD
     booting = st < 8 and d["t2"] < BOOTING_MS
     L.append(f"version {d['ver']}  stage {st}: {names[st] if st < len(names) else '?'}"
-             + (f"  (boot in progress, uptime {d['t2']} ms)" if booting else "")
-             + f"  WDT_TEST at boot 0x{d['wdt']:02x}{' (WATCHDOG RESET)' if d['wdt'] & 0x80 else ''}")
+             + (f"  (boot in progress, uptime {d['t2']} ms)" if booting else ""))
     for n in range(1, 9):
         reached = n <= st or d["ts"][n - 1]
         L.append(f"  stage {n} {names[n]:32s} " + (f"{d['ts'][n - 1]:6d} ms" if reached else
@@ -248,10 +247,6 @@ def messages(io, root: Path, secs: float | None = MSG_SECS, serial=None, table=N
         _release(io)                          # every exit path: a halted firmware wedges the unit (#37)
 
 
-TRACE_OFF = 0x28                    # ucTraceSeq, ucSpare, usTrace[3] (RL6449_Project.h StAwtoDiag)
-TRACE_DEAD = 20                     # consecutive failed reads = chip gone (~20 x 2 transfers, well past any ISR latency)
-
-
 _BLOCK = None                       # firmware answers the 0x3C block read (diag version >= 2), probed once per run
 
 
@@ -288,89 +283,6 @@ def timing_line(io, root: Path, map_path: str | None) -> str | None:
     return f"input {P.fmt_timing(t, x)}" + (f"; {note}" if note else "") + f"  [map {Path(mp).name}]"
 
 
-SAFE = 0xF6B0                       # StAwtoSafe, 32 B (RL6449_Project.h): survives a warm reset
-SAFE_HOLD, SAFE_MARKER = 0xA55A, 0x5AFE
-# --hold follows a relay power-on that dev.py has already verified: scaler answers 0x35 ~1-2 s after power and the safe
-# window ends 2 s later (_AWTO_SAFE_BOOT_MS). 5 s = 2.5x the window; expiry: "hold: no ACK", rc 1 (flash goes on over ISP).
-HOLD_WAIT_S = 5.0
-HOLD_POLL_S = 0.05                  # 40 tries inside the 2 s safe window (_AWTO_SAFE_BOOT_MS)
-
-
-def read_safe(io, be: bool) -> dict | None:
-    b = read_bytes(io, SAFE - BASE, 32)
-    if b is None:
-        return None
-    e = ">" if be else "<"
-    hold, marker = struct.unpack_from(e + "2H", b, 0)
-    return {"hold": hold, "marker": marker, "flags": b[4], "prev_seq": b[5],
-            "prev_trace": struct.unpack_from(e + "3H", b, 6), "prev_last": struct.unpack_from(e + "H", b, 12)[0],
-            "last": struct.unpack_from(e + "H", b, 14)[0], "max": struct.unpack_from(e + "H", b, 16)[0],
-            "prev_max": struct.unpack_from(e + "H", b, 18)[0], "wdt": b[20], "key_rst": b[21], "prev_key_rst": b[22],
-            "bus_resets": b[27], "prev_bus_resets": b[28]}
-
-
-def safe_report(s: dict, names: dict) -> str:
-    warm = s["flags"] & 2
-    L = [f"hold 0x{s['hold']:04x}{' (HELD in safe mode)' if s['hold'] == SAFE_HOLD else ''}  "
-         f"in safe window: {'yes' if s['flags'] & 1 else 'no'}  marker {'ok' if s['marker'] == SAFE_MARKER else 'BAD'}",
-         f"this boot: longest main-loop pass {s['max']} ms, last pass at {s['last']} ms; WDT_TEST at boot 0x{s['wdt']:02x}",
-         f"bus-watchdog releases this boot: {s['bus_resets']}",
-         f"last reset: {'WARM (WDT, power-key hold or ISP 0xEE)' if warm else 'power-on'}"]
-    if warm:
-        L.append(f"previous boot: {'ENDED BY POWER-KEY RESET, ' if s['prev_key_rst'] else ''}bus releases {s['prev_bus_resets']}, "
-                 f"last pass at {s['prev_last']} ms, longest pass {s['prev_max']} ms, trace seq {s['prev_seq']}: "
-                 + " > ".join(names.get(i, f"#{i:04X}") for i in s["prev_trace"]))
-    return "\n".join(L)
-
-
-def set_hold(w, value: int, be: bool) -> bool:
-    """usHold at SAFE via debug cmds 0x01 [hi] (stage), 0x03 [val] (stage), 0x3B [lo] -> ScalerSetByte. Only this write.
-    `w` = one open B.Real(allow_write=True), reused across tries (a new fd per 50 ms try hit EMFILE, #52.1)."""
-    for off, val in ((0, value >> 8), (1, value & 0xFF)) if be else ((0, value & 0xFF), (1, value >> 8)):
-        if not (w.write(DEV8, 0x01, bytes([SAFE >> 8])) and w.write(DEV8, 0x03, bytes([val]))
-                and w.write(DEV8, 0x3B, bytes([(SAFE + off) & 0xFF]))):
-            return False
-    return True
-
-
-def load_trace_names(root: Path, ids: str | None) -> dict:
-    names = {}
-    f = Path(ids) if ids else root / "tmp/sdcc-port/trace_ids.tsv"
-    if f.exists():
-        for line in f.read_text().splitlines():
-            i, path, fn = line.split("\t")
-            names[int(i, 16)] = f"{fn} ({Path(path).name})"
-    return names
-
-
-def trace(io, root: Path, be: bool, ids: str | None) -> int:
-    """Poll the function-entry trace ring until Ctrl-C or TRACE_DEAD failed reads; print each new entry."""
-    names = load_trace_names(root, ids)
-    last, fails, n = None, 0, 0
-    try:
-        while True:
-            b = read_bytes(io, TRACE_OFF, 8)
-            if b is None:
-                if n == 0:
-                    continue                    # not up yet (rebooting / ISP): only count fails after a good read
-                fails += 1
-                if fails == 1:
-                    log(f"trace read failed after {n} reads; last ring {last}")
-                if fails >= TRACE_DEAD:
-                    line = f"{isostamp.now()} chip stopped answering ({fails} failed reads); last ring: {last}"
-                    print(line, flush=True); log(line); return 1
-                continue
-            fails, n = 0, n + 1
-            seq, ids = b[0], struct.unpack_from((">" if be else "<") + "3H", b, 2)
-            ring = (seq, tuple(names.get(i, f"#{i:04X}") for i in ids))
-            if ring != last:
-                line = f"{isostamp.now()} seq {seq:3d}  " + " > ".join(ring[1])
-                print(line, flush=True); log(line)
-                last = ring
-    except KeyboardInterrupt:
-        return 0
-
-
 IO = None                           # the read handle of this run, closed by main()
 
 
@@ -394,14 +306,6 @@ def _main() -> int:
                     help=f"--messages stops after S seconds (default {MSG_SECS:g}; 0 = until interrupted)")
     ap.add_argument("--serial", help="--messages: take the id table from this unit's flashed image (tmp/fw/<serial>-flashed.json)")
     ap.add_argument("--table", type=Path, help="--messages: id table block or firmware image (scripts/msg_table.py)")
-    ap.add_argument("--trace", action="store_true", help="poll the function-entry trace ring (fw/trace_files.txt)")
-    ap.add_argument("--ids", help="trace id TSV of the flashed image (default tmp/sdcc-port/trace_ids.tsv)")
-    ap.add_argument("--safe", action="store_true", help="read the safe-boot/WDT-canary block (0xF6B0)")
-    ap.add_argument("--hold", action="store_true",
-                    help="poll until the fw answers, then hold it in the safe window (no inputs/display)")
-    ap.add_argument("--hold-wait", type=float, default=HOLD_WAIT_S, metavar="S",
-                    help=f"--hold gives up after S seconds (default {HOLD_WAIT_S:g}: 2.5x the 2 s safe window)")
-    ap.add_argument("--unhold", action="store_true", help="release the safe-window hold (fw continues booting)")
     ap.add_argument("--map", help="image .map: also print the input timing with exact frequencies (default $AWTO_DDC_MAP, else the newest tmp/fw/*/fw.map)")
     ap.add_argument("--be", action="store_true", default=os.environ.get("AWTO_SDCC_BE") == "1",
                     help="block written by a --big-endian build (u16 MSB first); default from $AWTO_SDCC_BE")
@@ -441,31 +345,6 @@ def _main() -> int:
         for sig in (signal.SIGTERM, signal.SIGHUP):             # terminal closed / killed: run the finally (release)
             signal.signal(sig, lambda *_: sys.exit(0))
         return messages(io, root, a.secs or None, a.serial, a.table)
-    if a.trace:
-        return trace(io, root, a.be, a.ids)
-    if a.hold or a.unhold:
-        val = SAFE_HOLD if a.hold else 0
-        t0 = time.monotonic()
-        w = B.Real(a.bus, allow_write=True)
-        try:
-            # --hold races the 2 s safe window after power-on: retry every write attempt until it lands
-            while not set_hold(w, val, a.be):
-                if not a.hold or time.monotonic() - t0 > a.hold_wait:
-                    el = time.monotonic() - t0
-                    print(f"{'hold' if a.hold else 'unhold'}: no ACK from 0x35 after {el:.1f} s (limit {a.hold_wait:g} s)")
-                    return 1
-                time.sleep(HOLD_POLL_S)
-        finally:
-            w.close()
-        line = f"{'hold set' if a.hold else 'hold released'} after {time.monotonic() - t0:.1f} s"
-        print(line); log(line)
-    if a.safe or a.hold or a.unhold:
-        s = read_safe(io, a.be)
-        if s is None:
-            print("safe block read failed (no ACK from 0x35)"); return 1
-        txt = safe_report(s, load_trace_names(root, a.ids))
-        print(txt); log(txt)
-        return 0
     prev, tprev = None, None
     while True:
         t = time.monotonic()

@@ -1,7 +1,7 @@
 # Boards: main (scaler) board and power supply (photos 2026-11-13)
 
 - Source: 25 photos by Dan, 2026-11-13 08:45–10:18 (+11:00).
-  - Full size: [photos/full/](photos/full/) (all 25, pixels unchanged, GPS EXIF removed: `scripts/doc_photos.py --full`).
+  - Full size: [photos/full/](photos/full/) (all 25 originals, byte for byte, GPS EXIF kept: Dan 2026-11-18; `scripts/doc_photos.py --full`).
   - Reduced copies used inline here: `photos/` (`scripts/doc_photos.py`); full-size source per reduced copy in [Photo index](#photo-index).
 - Unit photographed: not recorded [?].
 - Tags: [photo] = read clearly; [photo?] = partly readable, best guess; not visible = says so.

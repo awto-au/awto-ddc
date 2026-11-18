@@ -22,8 +22,6 @@
 #define AWTO_QC_CHARCMD_A                       23
 #define AWTO_QC_ROWCMD_B                        15
 #define AWTO_QC_CHARCMD_B                       471
-#define AWTO_QC_POS_OFFSET_H                    0x3B                // _QC_OSD_POSITION_OFFSET_H / _V (their test panel)
-#define AWTO_QC_POS_OFFSET_V                    0x04
 #define AWTO_QC_POS_B_Y                         505
 #define AWTO_QC_PAL_N                           64
 #define AWTO_QC_RGB                             3                   // bytes per palette entry: R, G, B
@@ -89,17 +87,14 @@ void AwtoQcOsd(BYTE ucOn)
 {
     BYTE ucI;
 
-    osd_tc_close();                                                         // our own OSD off, windows closed
     if(ucOn == 0)
     {
+        osd_tc_close();                                                     // our own OSD off, windows closed
         ScalerOsd2FontFunction(_DISABLE);
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, 0x51, 0);
         return;
     }
-    AwtoOsdTestReset();
-    ScalerOsdGlobalDoubleBuffer(_DISABLE);
-    ScalerOsdCircuitActivated(_ENABLE);
-    ScalerOsdVerticalStartSelect(_OSD_VSYNC_SELECT_DVS);
+    AwtoOsdScreenBegin();                                                   // our own OSD off, windows closed, state reset
     for(ucI = 0; ucI < AWTO_QC_PAL_N; ucI++)                                // ScalerQC_OSDTablePaletteAdjust
     {
         ScalerOsdSetColorPalette(ucI, g_qcPal[AWTO_QC_RGB * ucI + AWTO_QC_R], g_qcPal[AWTO_QC_RGB * ucI + AWTO_QC_G], g_qcPal[AWTO_QC_RGB * ucI + AWTO_QC_B]);
@@ -114,7 +109,7 @@ void AwtoQcOsd(BYTE ucOn)
     SET_OSD_MAPB_COL_MAX(AWTO_QC_MAPB_COL);
     ScalerOsdSramBaseAddressSet(_OSD_B, AWTO_QC_ROWCMD_B, AWTO_QC_CHARCMD_B, AWTO_QC_MAP_WORDS);
     ScalerOsdFontWindowVericalAlignemnt(_ENABLE);                           // positions (ScalerQC_OSDTestProc)
-    ScalerOsdPositionOffset(_OSD_POSITION_OFFSET_GLOBAL, AWTO_QC_POS_OFFSET_H, AWTO_QC_POS_OFFSET_V);
+    ScalerOsdPositionOffset(_OSD_POSITION_OFFSET_GLOBAL, AWTO_OSD_POS_OFFSET_H, AWTO_OSD_POS_OFFSET_V);
     ScalerOsdPosition(_OSD_POSITION_GLOBAL_A, 0, 0);
     ScalerOsdPosition(_OSD_POSITION_GLOBAL_B, 0, AWTO_QC_POS_B_Y);
     ScalerOsdReferenceDelay(_OSD_A, _OSD_FIRST_DELAY);

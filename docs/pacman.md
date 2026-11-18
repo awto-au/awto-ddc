@@ -33,17 +33,29 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 ## How a frame is made
 
 - Draw (test cmd 0xB7 / saver start): `AwtoOsdTestReset`, palette, row commands, maze cells (`PcMaze`), glyph stream (`PcGlyph`), map base, scale-up, `osd_tc_show(1)`.
-- Step (0xB8, one per 125 ms in the saver): `PcStep(n)` applies the cell deltas of step n: `g_pcIdx` gives start / end offsets, `g_pcDeltaA` / `g_pcDeltaB` hold 5-byte records (cell index lo, hi, B0, B1, B2). After step 260 the maze is redrawn from the start.
+- Step (0xB8, one per 31 ms in the saver = 4 sub-steps per 125 ms game step): `PcStep(n)` applies the cell deltas of sub-step n: `g_pcIdx` gives start / end offsets, `g_pcDeltaA` / `g_pcDeltaB` hold 3-byte records (`delta_rec` in the generator: cell index 10 bits, 1-bit / 2-bit kind, glyph id 9 bits, colour or style index; 2-bit styles from `g_pcStyle`). After sub-step 1040 the maze is redrawn from the start.
 - Off (0xB9): close the OSD, scale-up off, stop the sound.
 - The game (`Demo` in the generator): READY!, play, power pellets (frightened ghosts, eaten ghosts), fruit at 70 / 170 pellets eaten, death animation + lives, GAME OVER.
-- Not done: smooth sub-tile motion, bigger sprites, score popups, siren, steering.
+- Not done: smooth sub-tile motion, bigger sprites, score popups, steering.
+
+## Sub-tile motion (2026-11-18)
+
+- The OSD has tiles, no sprites: Pac-Man, the 4 ghosts, the lives icons and the fruit are cut into 12 x 12 glyph pieces. A sprite at pixel position (px, py) overlaps up to 4 tiles; each tile shows the piece of the sprite inside it (`overlay`).
+- Each game step = `SUB` 4 sub-steps; a sprite moves 3 px per sub-step (`STEP_PX`), so a tile move takes 4 sub-steps. Teleports (ghost reset, eyes into the pen) are not interpolated.
+- Pieces are deduplicated by content as the game plays: 106 1-bit glyphs (max 512), 73 2-bit glyphs (max 256). Piece colour = per-cell colour: pieces carry no dot / wall of the tile under them (a sprite covers its tiles).
+- Mouth cycles per sub-step (`MOUTH`), ghost feet every 2 sub-steps. Where two sprites share a tile, the later one (ghost over Pac-Man) wins the whole tile.
+- Sound events: one per game step, fired at its first sub-step (`g_pcEvt` is per game step, index `step >> AWTO_PC_SUB_SHIFT`); the background state is applied every sub-step.
+- Data (2026-11-18): glyphs 6804 B, delta records 24702 B (8234 records), index 2082 B, cells 3024 B; before: 3348 + 14395 + 522 + 3024. Delta split: bank 11 7200 B (its old slot; a larger const in bank 11 covers the scope S2 strings' addresses and fails the `link` gate), rest in bank 12.
+- Check render: `python scripts/gen_pacman_classic.py --strip OUT.png --frame N --count 8` (same window, consecutive sub-frames); `--png OUT.png --frame N` for a whole screen.
+- Speed (sim, `python scripts/pacman_speed.py BIN`, 2026-11-18, dw8051 model): firmware time from the end of the cmd write to the step counter change, 1 ms resolution: before 4.7 ms mean (8 ms max) per game step, after 4.4 ms mean (7 ms max) per sub-step (min 2 ms = main loop pickup). Sub-steps are as cheap as the old whole steps: mean 7.9, max 19 records per sub-step (3 data port bytes each). The saver pace is 31 ms per sub-step (32 / s); the sim measures ~230 steps / s incl. the pickup pass (this tracks the sim loop pass, not hardware: a hardware figure is not measured).
+- Not smooth: the dots and power pellets blink / vanish per game step; ghost-eaten and death animations run at game-step speed (frames repeat for 4 sub-steps); the pen exit teleports.
 
 ## Firmware constraints that shaped it
 
 - Data and its reader share a code bank: `#pragma place bank(N)` pins only the next definition; arrays sit in banks 11 / 12 (~24 KB) with leaf reader functions (`PcCell`, `PcGlyph`, ...). Bank 13 is nearly full.
 - Watchdog bites after 586 ms: long loops kick `CLR_WDT` (`PC_KICK`, every 128 data port bytes).
 - No magic numbers (`scripts/magic_lint.py`): colours, timings, ids are named.
-- XDATA floor 700 B: the player keeps a handful of bytes (`s_usStep`).
+- XDATA floor 700 B: the player keeps a handful of bytes (`s_usStep`); free 701 B before, 703 B after the sub-tile change.
 - Sync log lines: E9 0x73 drawn, 0x74 step (value = step), 0x75 off.
 
 ## Audio
@@ -66,7 +78,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 ### Data and player
 
-- `pacman_sound.py` encodes note names to pairs `{sc | 0x80 octave flag, ticks}`; tick = 10 ms, sc 0 = rest, 0 ticks = end of track. Three tracks: intro (once), waka (loops), death (once); one rest tick between notes of a melody.
+- `pacman_sound.py` encodes note names to pairs `{sc | 0x80 octave flag, ticks}`; tick = 10 ms, sc 0 = rest, 0 ticks = end of track. Ten tracks (list: `TRACKS`; ids in `pacman_sound.c` follow its order); one rest tick between notes of a melody.
 - `AwtoPmSoundPoll` runs each main-loop pass: on the note schedule (`s_usPsAt += s_usPsDur`, no drift) it calls `PsNote` for the next pair.
 - `PsNote`: rest = mute the amp pin; note = gate the amp, write AFCR (octave flag), SCAPR, CMCR latch, schedule the amp to open 4 ms later (`AWTO_PS_GAP_MS`, by ear: the pitch change clicked with the amp open, Dan 2026-11-18). The poll opens it.
 - `PsStart`: generator on (`SysAudioInternalGenTestProc(_ON)`), `SysAudioMuteProc(_OFF)`, then `AwtoAudioAmp(_OFF)` directly (the SDK call is a no-op once the generator has cleared the DVC mute flag, so P7.4 would stay 0).
@@ -75,9 +87,30 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 ### Game events
 
-- The generator emits one event per step where something happens (`EV_INTRO`, `EV_WAKA_ON`, `EV_WAKA_OFF`, `EV_DEATH`, `EV_STOP`): `g_pcEvt[step]`.
-- `AwtoPacmanClassic(2)` dispatches them to `AwtoPmSound` (intro / waka / death / stop) after the cell update.
-- Test cmds: 0xBA intro, 0xBB waka, 0xBC death, 0xBD calibration tone, 0xBE stop. Sync E9 0x80..0x86.
+- `g_pcEvt[step]`: low nibble = one sound event (`EV_INTRO`, `EV_WAKA_ON`, `EV_WAKA_OFF`, `EV_DEATH`, `EV_STOP`, `EV_GHOST`, `EV_FRUIT`), high nibble = background state of that step (0 none, 1..3 siren speed, 4 frightened).
+- Siren speed from pellets left: > 2/3 speed 1, <= 2/3 speed 2, <= 1/3 speed 3. Frightened while any ghost is blue. Background 0 in ready / dying / game over.
+- `AwtoPacmanClassic(2)` dispatches after the cell update: event -> `AwtoPmSound` (intro 0, waka 1, death 2, stop 4, ghost 6, fruit 7, waka off 8), background -> `AwtoPmSoundBg` (acts on a change).
+- Test cmds: 0xBA intro, 0xBB waka, 0xBC death, 0xBD calibration tone, 0xBE stop. Sync E9 0x80..0x8B.
+
+### Sounds and priorities
+
+- One tone generator: sounds cannot overlap. A new sound plays only if its priority >= the playing one's; else it is dropped. Table: `pacman_sound.py` `PRIORITY` (emitted as `PsPrio`).
+
+| sound | priority | pitch plan (K = 48000, [guess]) | loops |
+|---|---|---|---|
+| intro, alert, calibration | 7 | jingle / bip-bip-beep / 1500 Hz | no |
+| ghost eaten | 6 | rising sweep 300 -> 1800 Hz, 16 steps x 18 ms | no |
+| death | 5 | falling glissando 1000 -> 380 Hz | no |
+| fruit eaten | 4 | falling sweep 1600 -> 580 Hz, rest, blip 660 / 880 / 1320 Hz | no |
+| waka | 3 | 392..784 Hz up / down, 28 ms steps | while eating |
+| frightened | 2 | rising saw 400 -> 1000 Hz, 6 x 20 ms | yes |
+| siren 1 / 2 / 3 | 1 | wail 520 -> 780 -> 520 Hz, 8 steps each way, 40 / 30 / 20 ms per step (640 / 480 / 320 ms cycle) | yes |
+
+- Resume: waka and the background state are "wanted" state in `s_ucPsFlags` (one byte: boot, amp gate, waka, background in bits 7:4). When a sound ends (or waka off) `PsResume` starts waka if eating, else the background sound, else silence.
+- Any non-waka sound clears the waka flag (the generator re-sends `EV_WAKA_ON` at the next pellet). Stop clears everything.
+- A background change replaces the playing sound only if that is silence or a background sound; a higher sound picks the new state up at its end.
+- Not done: extra-life jingle (arcade: at 10000 points; the demo score never gets there), the arcade's 5 siren speeds (3 used), eyes-returning sound (ghost eyes running home).
+- Sim 2026-11-18 (`pacman_sim.py --game --steps 260`): ghost at step 63, fruit at 122, siren 1 -> 2 at step 158, frightened 57..82; the demo Pac-Man now chases frightened ghosts and the fruit (`CHASE_DIST`, fruit stays 40 steps) so these events happen in the recording.
 
 ### Hardware status
 
@@ -90,7 +123,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 - Build: `./dev.py build --tree . --serial AWT26110003 --tag pc -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-pc-be`.
 - Unit 3: `./dev.py flash --unit 3 tmp/fw/AWT26110003-pc-be.bin`; start `ddcutil --bus 11 setvcp EB 2`, stop `setvcp EB 0` (`docs/screensaver.md`); or test cmds 0xB7 / 0xB8 / 0xB9 (`scripts/pacman_unit.py`).
-- Sim: `python scripts/pacman_sim.py --game --steps 260` -> `tmp/pacman_sim/pacman.mp4`; `python scripts/saver_sim.py` for the DDC start / stop check.
+- Sim: `python scripts/pacman_sim.py --game --steps 1040 --fps 32` -> `tmp/pacman_sim/pacman.mp4`; `python scripts/saver_sim.py` for the DDC start / stop check.
 
 ## Open
 

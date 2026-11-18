@@ -263,7 +263,7 @@ WRITERS = {
     "BRI": f"{GATE}: registry black_level / contrast (current source); J factory",
     "CT": f"{GATE}: registry user RGB at colour temp User; J factory",
     "SIX": f"{GATE}: registry six-axis rows",
-    "TIME": "rides along with every flush; power off / saving entry; never on its own (was I, every 20 min)",
+    "TIME": "written only at power off / power-saving entry (#151 I; was every 20 min)",
 }
 FIELD_WRITERS = {
     "SYS.b4SearchPort": "source selector choice only (KVM / search keep it in RAM: F no longer saves)",

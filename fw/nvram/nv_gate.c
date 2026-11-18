@@ -6,7 +6,7 @@
 // - Registry rows without one (aux block, settings.c set_aux_*): items AWTO_NV_AUX_ID.. in the same store.
 // - Every SDK item save is deferred (UserCommonFlashSaveItem hook): item dirty; the flush gate writes it.
 // Gate: stable >= AWTO_NV_STABLE_MS, DDC/CI idle >= AWTO_NV_DDC_IDLE_MS, AWTO_NV_SAVE_MS since the last change (none after a commit);
-// forced after AWTO_NV_FORCE_MS; power-off / power-saving entry writes at once. Panel time never opens the gate.
+// forced after AWTO_NV_FORCE_MS; power-off / power-saving entry writes at once. Panel used time (#151 I): written only there.
 #ifdef _AWTO_NEW_SETTINGS
 __xdata StAwtoNv g_stAwtoNv;
 __xdata BYTE g_ucAwtoNvDdc;
@@ -179,8 +179,11 @@ static void AwtoNvWrite(BYTE ucWhy)
         RTDNVRamSaveSixColorData();
     }
     AwtoNvGroup(AWTO_NV_LOG_G_COLOUR);
-    RTDNVRamSavePanelUsedTimeData();                // rides along with every flush (the SDK skips it when unchanged)
-    AwtoNvGroup(AWTO_NV_LOG_G_PANEL);
+    if(ucWhy == AWTO_NV_WHY_POWER)
+    {
+        RTDNVRamSavePanelUsedTimeData();            // #151 I: only at power-off / saving entry (the SDK skips it when unchanged)
+        AwtoNvGroup(AWTO_NV_LOG_G_PANEL);
+    }
     if((s_ucNvMaskW & AWTO_NV_AUX) != 0)
     {
         s_ucNvLen = set_aux_pack();
@@ -197,6 +200,10 @@ static void AwtoNvWrite(BYTE ucWhy)
         AwtoNvGroup(AWTO_NV_LOG_G_AUX);
     }
     s_ucNvFlushing = 0;
+    if(ucWhy != AWTO_NV_WHY_POWER)
+    {
+        g_stAwtoNv.ucMask |= (s_ucNvMaskW & AWTO_NV_PANEL);     // panel time stays pending until power-down
+    }
     AwtoNvLog(ucWhy);
 }
 

@@ -151,6 +151,9 @@ def names_block(r):
         arr("tAwtoSyncNameRow", [str(v) for v in tab], 32)])
 
 
+TXT_BANK = 11                                        # 27 KB free there (bank 8: 660 B; bank 13 holds the debug-message block)
+
+
 def text_block(r):
     blob = ""
     for x in r:
@@ -161,9 +164,13 @@ def text_block(r):
         pos += len(x["text"]) + 1
     assert pos < 65536
     return "\n".join([
+        f"#pragma place bank({TXT_BANK})                  // text tables + reader: one bank, off the full bank 8 (movc reads the running bank)",
         arr("tAwtoSyncFmt", [f"0x{x['fmt']:02X}" for x in r]),
+        f"#pragma place bank({TXT_BANK})",
         f'static const __code char tAwtoSyncTxtS[] = "{blob}";',
+        f"#pragma place bank({TXT_BANK})",
         f"static const __code WORD tAwtoSyncTxtOff[{len(r)}] = {{" + ", ".join(str(o) for o in real) + "};",
+        f"#pragma place bank({TXT_BANK})",
         "static BYTE AwtoSyncTxt(WORD usRow, BYTE ucPart)   // text after ucPart (0..2) value marks, 0xFF = none; returns the fmt",
         "{                                                  // usRow: logged row, or AWTO_SYNC_NAME_ROW0 + name row",
         "    const __code char *pc = &tAwtoSyncTxtS[tAwtoSyncTxtOff[usRow]];",

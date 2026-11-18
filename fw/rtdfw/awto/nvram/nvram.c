@@ -176,6 +176,19 @@ uint8_t nv_store(uint8_t rec, const uint8_t __xdata *src, uint16_t len)
         return 0;
     if (!scanned)
         nv_scan(rec, buf, 0);
+    if (cur != 0xFF && nv_read_hdr(cur, rec) && nv_hdr_len() == len) {   /* #151: equal to the newest slot = no write */
+        for (s = 0; (uint16_t)s * sizeof buf < len; s++) {
+            k = (uint8_t)((len - (uint16_t)s * sizeof buf) < sizeof buf ? (len - (uint16_t)s * sizeof buf) : sizeof buf);
+            if (!fl_read(nv_slot_a(cur) + NV_HDR + (uint16_t)s * sizeof buf, buf, k))
+                break;
+            while (k != 0 && buf[k - 1] == src[(uint16_t)s * sizeof buf + k - 1])
+                k--;
+            if (k != 0)
+                break;                           /* a byte differs */
+        }
+        if ((uint16_t)s * sizeof buf >= len)
+            return 1;
+    }
     s = (cur == 0xFF) ? NV_SLOTS - 1 : cur;
     for (k = 0; k < NV_SLOTS; k++) {
         s = (uint8_t)((s + 1) % NV_SLOTS);
