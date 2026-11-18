@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Per-unit flash-state manifest + incremental diff + drift guard for rtd_flash_image.py (#12). Pure logic, no hardware.
 
-Manifest = the per-unit REGISTRY (docs/flash-registry.md): tmp/fw/<serial>-flash-state.json
-  {version, serial, sector_size, image, image_size, image_sha256, time, git_commit, source,
-   verified_time, verified_how, sectors: [sha256-hex | null] x 256, how: ["w" | "r" | null] x 256}
+Manifest: tmp/fw/<serial>-flash-state.json
+  {version, serial, sector_size, image, image_size, time, git_commit, source, sectors: [sha256-hex | null] x 256}
   - sectors[i] = SHA-256 of what is KNOWN to be in flash sector i; null = unknown (never read, or a write was
     in flight / failed). Entries beyond the last image are kept: those sectors are never touched (banks 14-15, #8).
-  - how[i]: w = written + verified by us, r = read back from the device, null = unknown.
 Writers: after every verified sector (saved every SAVE_EVERY and at exit), after any full flash read.
 Hardware CRC8 (FF75, poly 0x07 init 0): docs/flash-crc.md.
 """
@@ -18,20 +16,19 @@ from pathlib import Path
 SECTOR = 4096
 FLASH_SECTORS = 256            # 1 MiB (JEDEC c22014)
 SAVE_EVERY = 16                # sectors between manifest saves while writing (~2 s of flashing each)
-VERSION = 2
-HOW_WRITTEN, HOW_READ = "w", "r"
-DRIFT_SAMPLE_RUNS = 3          # trusted registry: hardware CRC over this many runs of unchanged sectors (--verify-all: all)
-# Sectors the firmware / tools write at runtime: the registry is never trusted for them (always read from the device).
-VOLATILE_RANGES = ((0xE0000, 0xE3000, "gamma"), (0xFB000, 0xFF000, "nvram settings + retired registry"))
-CLEAN_SOURCES_BAD = ("write-in-progress", "write-failed")
+VERSION = 1
+# Sectors the firmware / tools write at runtime: never skipped on the manifest's word, read and compared every flash.
+# NVRAM store 0xFB000-0xFCFFF, gamma 0xE0000-0xE2FFF, spare 0xFE000 (the manifest sector 0xFD000 is its own rule).
+VOLATILE_RANGES = ((0xE0000, 0xE3000, "gamma"), (0xFB000, 0xFD000, "nvram settings"), (0xFE000, 0xFF000, "spare sector"))
 
 
 class Stats:
-    """Device traffic of one flash run, for the SUMMARY (reads avoided)."""
+    """Device traffic of one flash run, for the SUMMARY."""
     def __init__(self):
         self.sector_reads = 0      # 4 KiB sectors read back from the device
-        self.crc_runs = 0          # hardware CRC runs of the drift guard
-        self.crc_runs_total = 0    # runs the guard would cover with --verify-all
+        self.crc_runs = 0          # hardware CRC runs of the truth check
+        self.crc_sectors = 0       # sectors those runs covered
+        self.crc_s = 0.0           # seconds spent in the truth check
         self.read_s = 0.0          # measured seconds per 4 KiB read (read gate)
 
 
@@ -101,20 +98,6 @@ class FlashState:
     source: str = ""
     commit: str = ""
     time: str = ""
-    image_sha256: str = ""
-    verified_time: str = ""
-    verified_how: str = ""
-    how: list = field(default_factory=lambda: [None] * FLASH_SECTORS)
-
-    def mark(self, i: int, h, how=None) -> None:
-        """Record sector i: hash h learned how (w / r); h None = unknown."""
-        self.sectors[i] = h
-        self.how[i] = how if h is not None else None
-
-    @property
-    def trusted(self) -> bool:
-        """A clean session ended it: no write in flight / failed. Individual sectors may still be null."""
-        return bool(self.source) and self.source not in CLEAN_SOURCES_BAD
 
     @classmethod
     def load(cls, path: Path, serial: str, log=print):
@@ -125,7 +108,6 @@ class FlashState:
             d = json.loads(path.read_text())
             ok = (d["version"] == VERSION and d["serial"] == serial and d["sector_size"] == SECTOR
                   and len(d["sectors"]) == FLASH_SECTORS
-                  and len(d["how"]) == FLASH_SECTORS
                   and all(s is None or (isinstance(s, str) and len(s) == 64) for s in d["sectors"]))
             if not ok:
                 raise ValueError("version/serial/geometry mismatch")
@@ -133,28 +115,21 @@ class FlashState:
             log(f"flash-state {path}: unusable ({e}); ignoring it")
             return None
         return cls(path, serial, d["sectors"], d.get("image", ""), d.get("image_size", 0),
-                   d.get("source", ""), d.get("git_commit", ""), d.get("time", ""), d.get("image_sha256", ""),
-                   d.get("verified_time", ""), d.get("verified_how", ""), d["how"])
+                   d.get("source", ""), d.get("git_commit", ""), d.get("time", ""))
 
     @classmethod
     def empty(cls, path: Path, serial: str):
         return cls(path, serial)
 
-    def verified(self, how: str) -> None:
-        """The device itself confirmed the registry (hardware CRC / readback): when + by what."""
-        self.verified_time, self.verified_how = now_iso(), how
-
-    def save(self, image=None, image_size=None, source=None, commit=None, image_sha256=None):
-        if image_sha256 is not None: self.image_sha256 = image_sha256
+    def save(self, image=None, image_size=None, source=None, commit=None):
         if image is not None: self.image = image
         if image_size is not None: self.image_size = image_size
         if source is not None: self.source = source
         if commit is not None: self.commit = commit
         self.time = now_iso()
         d = {"version": VERSION, "serial": self.serial, "sector_size": SECTOR, "image": self.image,
-             "image_size": self.image_size, "image_sha256": self.image_sha256, "time": self.time,
-             "git_commit": self.commit, "source": self.source, "verified_time": self.verified_time,
-             "verified_how": self.verified_how, "sectors": self.sectors, "how": self.how}
+             "image_size": self.image_size, "time": self.time, "git_commit": self.commit,
+             "source": self.source, "sectors": self.sectors}
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(d, indent=0))
@@ -190,19 +165,17 @@ def pick_sample(unchanged: list, rng: random.Random) -> list:
     return sorted({unchanged[0], unchanged[-1], *rng.sample(mid, 2)})
 
 
-def drift_check(isp, img: bytes, state, unchanged: list, rng: random.Random, crc_ok: bool, log=print,
-                sample_runs: int = 0) -> list:
+def drift_check(isp, img: bytes, state, unchanged: list, rng: random.Random, crc_ok: bool, log=print) -> list:
     """Sectors whose flash content differs from the manifest.
     CRC engine validated: one hardware CRC8 per contiguous run of unchanged sectors (Dan 2026-11-06: cheap, just
     work); a run mismatch is localised per sector. Otherwise readback+SHA of a sample."""
     if crc_ok:
-        return _drift_runs(isp, img, unchanged, log, rng, sample_runs)
+        return _drift_runs(isp, img, unchanged, log)
     bad = []
     sample = pick_sample(unchanged, rng)
     for i in sample:
         a = i * SECTOR
         got = sha(isp.read_flash(a, SECTOR))
-        STATS.sector_reads += 1
         if got != state.sectors[i]:
             log(f"DRIFT: sector {i} (0x{a:06x}) readback sha {got[:12]} != manifest {state.sectors[i][:12]}")
             bad.append(i)
@@ -232,21 +205,10 @@ def _runs(idx: list) -> list:
     return out
 
 
-def pick_runs(runs: list, rng: random.Random, n: int) -> list:
-    """All runs when n <= 0 or len <= n; else first + last + random middle ones (a wholesale swap hits first/last)."""
-    if n <= 0 or len(runs) <= n:
-        return runs
-    mid = runs[1:-1]
-    return sorted([runs[0], runs[-1], *rng.sample(mid, n - 2)] if n >= 2 else [runs[0]])
-
-
-def _drift_runs(isp, img: bytes, unchanged: list, log=print, rng=None, sample_runs: int = 0) -> list:
+def _drift_runs(isp, img: bytes, unchanged: list, log=print) -> list:
     bad = []
     runs = _runs(unchanged)
-    STATS.crc_runs_total += len(runs)
-    todo = pick_runs(runs, rng or random.Random(0), sample_runs)
-    STATS.crc_runs += len(todo)
-    for a, b in todo:
+    for a, b in runs:
         lo, hi = a * SECTOR, (b + 1) * SECTOR
         if isp.flash_crc(lo, hi - lo) == crc8(img[lo:hi]):
             continue
@@ -255,8 +217,7 @@ def _drift_runs(isp, img: bytes, unchanged: list, log=print, rng=None, sample_ru
             if isp.flash_crc(s, SECTOR) != crc8(img[s:s + SECTOR]):
                 log(f"DRIFT: sector {i} (0x{s:06x}) hw crc != image crc")
                 bad.append(i)
-    part = f"{len(todo)} of {len(runs)}" if len(todo) != len(runs) else f"{len(runs)}"
-    log(f"drift guard: CRC over {part} run(s) of {len(unchanged)} unchanged sectors: "
+    log(f"drift guard: CRC over {len(runs)} run(s) of {len(unchanged)} unchanged sectors: "
         f"{'OK' if not bad else f'{len(bad)} MISMATCH'}")
     return bad
 
@@ -268,10 +229,9 @@ def readback_diff(isp, img: bytes, state, log=print, chunk=16 * SECTOR) -> list:
     for off in range(0, len(img), chunk):
         n = min(chunk, len(img) - off)
         data = isp.read_flash(off, n)
-        STATS.sector_reads += n // SECTOR
         for j in range(0, n, SECTOR):
             i = (off + j) // SECTOR
-            state.mark(i, sha(data[j:j + SECTOR]), HOW_READ)
+            state.sectors[i] = sha(data[j:j + SECTOR])
             if data[j:j + SECTOR] != img[off + j:off + j + SECTOR]:
                 diff.append(i)
         log(f"readback diff {min(off + n, len(img)) // SECTOR}/{len(img) // SECTOR} sectors")
@@ -284,8 +244,7 @@ def resolve_unknown(isp, img: bytes, state, unknown: list, log=print) -> list:
     for i in unknown:
         a = i * SECTOR
         cur = isp.read_flash(a, SECTOR)
-        STATS.sector_reads += 1
-        state.mark(i, sha(cur), HOW_READ)
+        state.sectors[i] = sha(cur)
         if cur != img[a:a + SECTOR]:
             diff.append(i)
     if unknown:
@@ -293,20 +252,50 @@ def resolve_unknown(isp, img: bytes, state, unknown: list, log=print) -> list:
     return diff
 
 
-def rebuild(isp, state, crc_ok: bool, log=print, chunk=16 * SECTOR) -> None:
-    """--registry-rebuild: read the whole flash once into the registry. Verified by the hardware CRC per chunk
-    (crc_ok) else by a second read of every chunk; a mismatch raises (nothing is written before this returns)."""
-    for off in range(0, FLASH_SECTORS * SECTOR, chunk):
-        data = isp.read_flash(off, chunk)
-        STATS.sector_reads += chunk // SECTOR
+def truth_check(isp, img: bytes, skip: list, crc_ok: bool, log=print, chunk=16 * SECTOR) -> list:
+    """Sectors of `skip` (planned: already match) whose flash content differs from img; every one is checked, every flash.
+    CRC engine ok: one hardware CRC8 per run of sectors (no data transfer), a bad run is localised per sector.
+    Otherwise: readback of the runs."""
+    t = time.monotonic()
+    bad = []
+    for a, b in _runs(skip):
+        STATS.crc_runs += 1
+        STATS.crc_sectors += b - a + 1
+        lo, hi = a * SECTOR, (b + 1) * SECTOR
         if crc_ok:
-            ok = isp.flash_crc(off, chunk) == crc8(data)
+            if isp.flash_crc(lo, hi - lo) == crc8(img[lo:hi]):
+                continue
+            sec_bad = [i for i in range(a, b + 1) if isp.flash_crc(i * SECTOR, SECTOR) != crc8(img[i * SECTOR:(i + 1) * SECTOR])]
         else:
-            ok = isp.read_flash(off, chunk) == data
-            STATS.sector_reads += chunk // SECTOR
-        if not ok:
-            raise RuntimeError(f"registry rebuild: read of 0x{off:06x}+0x{chunk:x} does not verify ({'hw CRC' if crc_ok else 'second read'})")
-        for j in range(0, chunk, SECTOR):
-            state.mark((off + j) // SECTOR, sha(data[j:j + SECTOR]), HOW_READ)
-    state.verified("rebuild: full read, " + ("hw CRC per chunk" if crc_ok else "second read"))
-    log(f"registry rebuilt from a full flash read ({state.verified_how})")
+            sec_bad = []
+            for off in range(lo, hi, chunk):
+                n = min(chunk, hi - off)
+                data = isp.read_flash(off, n)
+                STATS.sector_reads += n // SECTOR
+                sec_bad += [(off + j) // SECTOR for j in range(0, n, SECTOR) if data[j:j + SECTOR] != img[off + j:off + j + SECTOR]]
+        log(f"manifest stale at run sectors {a}-{b} (0x{lo:06x}-0x{hi - 1:06x}): {len(sec_bad)} sector(s) differ {sec_bad[:8]}")
+        bad += sec_bad
+    STATS.crc_s += time.monotonic() - t
+    log(f"truth check: {'hardware CRC' if crc_ok else 'readback'} over {STATS.crc_runs} run(s) of {len(skip)} skipped sectors: "
+        f"{'OK' if not bad else f'{len(bad)} STALE'}")
+    return bad
+
+
+CRC_PARTS = 4                  # no-manifest diff: CRC8 per quarter sector, a changed sector hides with p = 2^-32, not 2^-8
+
+
+def device_diff(isp, img: bytes, crc_ok: bool, log=print) -> list:
+    """No usable manifest: sectors of img that differ from the flash (hardware CRC per sector, else readback)."""
+    diff = []
+    for i in range(len(img) // SECTOR):
+        lo = i * SECTOR
+        if crc_ok:
+            part = SECTOR // CRC_PARTS
+            same = all(isp.flash_crc(lo + k, part) == crc8(img[lo + k:lo + k + part]) for k in range(0, SECTOR, part))
+        else:
+            same = isp.read_flash(lo, SECTOR) == img[lo:lo + SECTOR]
+            STATS.sector_reads += 1
+        if not same:
+            diff.append(i)
+    log(f"no manifest: {'hardware CRC (x{CRC_PARTS} per sector)' if crc_ok else 'readback'} of all {len(img) // SECTOR} image sectors: {len(diff)} differ")
+    return diff

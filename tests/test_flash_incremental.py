@@ -142,7 +142,7 @@ def test_foreign_or_corrupt_manifest_is_ignored(tmp_path):
     assert S.FlashState.load(p, "AWT0") is None
     isp.erased.clear()
     I.flash(isp, img, opts(tmp_path))
-    assert len(isp.erased) == NIMG                  # missing manifest = current behaviour: write all
+    assert isp.erased == []                         # the local file is not a diff source: the device is compared
 
 
 def test_drift_in_sampled_sector_detected_by_readback(tmp_path):
@@ -171,8 +171,8 @@ def test_drift_check_cost_is_small(tmp_path):
     I.flash(isp, img, opts(tmp_path))
     isp.reads = 0
     I.flash(isp, img, opts(tmp_path))
-    # calibration 2 reads only: the gate is hardware CRC per unchanged run, no readback
-    assert isp.reads == 2
+    # read gate 2 + the manifest sector 1; the rest is hardware CRC, no readback
+    assert isp.reads == 3
 
 
 def test_pick_sample():
@@ -194,8 +194,6 @@ def test_unknown_sectors_are_read_and_only_differing_written(tmp_path):
     isp.erased.clear()
     assert I.flash(isp, img, opts(tmp_path)) == 0
     assert sector_set(isp.erased) == [4]
-    st = S.FlashState.load(tmp_path / "AWT0-flash-state.json", "AWT0")
-    assert st.sectors[3] == S.sha(img[3 * SECTOR:4 * SECTOR])
 
 
 def test_bigger_image_than_manifest_reads_the_extra_sectors(tmp_path):
@@ -274,7 +272,7 @@ class FlakyIsp(FakeIsp):
     ("erase_sector", 1, OSError(6, "ENXIO")),
     ("program_page", 20, OSError(6, "ENXIO")),                  # mid-sector, sector 1 page 4
     ("program_page", 5, TimeoutError("engine busy")),
-    ("flash_crc", 12, TimeoutError("crc_done")),                # verify of a sector (after calibration/drift CRCs)
+    ("flash_crc", 100, TimeoutError("crc_done")),               # verify of a sector (after the calibration + 24 x 4 diff CRCs)
 ])
 def test_timeout_and_oserror_mid_sector_are_retried(tmp_path, method, nth, exc):
     img = image()

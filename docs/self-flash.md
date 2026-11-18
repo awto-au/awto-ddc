@@ -28,7 +28,7 @@ Tags (awto-dan `docs/embedded/reversing/README.md`): [confirmed] read in our sou
   - Unit's flash MX25L8006E: WREN case sets block protect so only banks above the target stay protected (target 0-7 -> protect 8-15 = SR 0x12; 8-11 -> 0x0E; 12-13 -> 0x0A; 14 -> 0x06) [confirmed, `ScalerCommonNVRam.c:1671`]. Every bank 0-15 is covered by the switch.
 - WP#: `PCB_FLASH_WRITE_PROTECT(x)` = P8.6 = `MCU_FE26_PORT86_PIN_REG` on the awto board header (`RL6449_AWTO_JXC4K.h:366`); `ScalerFlashSetWRSR` releases it around each WRSR and re-asserts [confirmed]. Same pin the host flasher releases (`docs/flash-unprotect.md`, sys[0xFE26]) [confirmed]. So WP# is controllable from firmware.
 - Bank guard: `ucBank < MCU_FFFD_XDATA_BANK_START` returns false; we set FFFD = 0 (`ScalerMcu.c:87`) so no bank is excluded [confirmed].
-- Our NVRAM sits in bank 15 pages 11-12 (0xFB000-0xFCFFF); retired registry record 0xFD000-0xFEFFF (never written now) [`docs/nvram-settings.md`].
+- Our NVRAM sits in bank 15 pages 11-12 (0xFB000-0xFCFFF); retired registry record 0xFD000-0xFEFFF (never written now) [`docs/nvram-settings.md`]; since 2026-11-18 `0xFD000` holds the host flasher's device manifest (CRC32 per image sector, valid word last), `0xFE000` stays the spare [`docs/flash-registry.md`].
 - Watchdog pokes are inside WREN / WRDis (`AWTO_WDT_FEED`) and the page loop (`AwtoWdtLibPoke(10)`) [confirmed].
 - Writes through the debug slave (0x3A / 0x3B) are `ScalerGetByte / SetByte` on xdata, not flash programming [confirmed, `ScalerCommonDebug.c:619`].
 
@@ -125,8 +125,9 @@ Rejected:
 Preconditions: debug link off (`scripts/dbg_link.py off 11`); known-good image archived (`build-debris/images/`) and its manifest; HDMI DDC cable + `./dev.py flash --unit 3 --bus 11` (burst, 1 MHz) ready as ISP recovery; relay does not feed unit 3 (`hass_power.py cycle`); rest mode after each step (unit 3 at 4K60). Hardware flashes of the test image through the normal gated path.
 
 - T0 read-only: firmware reads a code sector through FF7B and returns CRC over DDC/CI; compare with the ISP dump CRC. Measures read path and CRC-16 speed.
-- T1 spare sectors: erase + program + verify the two retired sectors 0xFD000-0xFEFFF with a pattern; check SR = 0x9C afterwards; time each halt (Timer2 ticks, FFEA pokes); screen shown and animated during the loop; DDC/CI behaviour during halts (NAK pattern).
+- T1 spare sector: erase + program + verify the retired sector 0xFE000 with a pattern (0xFD000 is the device manifest, do not touch); check SR = 0x9C afterwards; time each halt (Timer2 ticks, FFEA pokes); screen shown and animated during the loop; DDC/CI behaviour during halts (NAK pattern).
 - T2 non-running code bank, identical content: rewrite one banked sector (bank != running, e.g. 12) with the bytes already there; boot, gates, health 11/11. Repeat for a common sector of a non-running bank.
+- Follow-up (not built): firmware boot self-check of its own sectors against the device manifest (`docs/flash-registry.md`: CRC-32/ISO-HDLC, 16-entry table); a self-flash update rewrites the manifest the same way (body pages, commit page last).
 - T3 changed content: one-sector edit via a sticky build (1 sector changes, `flash_layout_measure.py`); update by the firmware; reboot; verify against the host manifest.
 - T4 hop: update the running bank through the second hop (run from bank Y); updater at the pinned address in both images.
 - T5 interruption: after erasing a sector, force `sof_rst` (0xFFEE[1]) from a test command; expect the stub / resume path (needs layer 1); then recover with the host flasher. Real power-cut tests only with Dan's go (no relay on unit 3).
