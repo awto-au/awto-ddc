@@ -72,6 +72,8 @@
 #define AWTO_R_FRAME_CTRL_1E                            0x3A1E
 #define AWTO_R_FRAME_CTRL_21                            0x3A21
 #define AWTO_R_FRAME_CTRL_33                            0x3A33
+#define AWTO_F_FRAME_CTRL_33_BIT_BLOCK_BYTE_SEL         0x06
+#define AWTO_F_FRAME_CTRL_33_BIT_BLOCK_EN               0x01
 #define AWTO_F_FRAME_CTRL_33_SRAM_READ_EN               0x10
 #define AWTO_R_FRAME_CTRL_34                            0x3A34
 #define AWTO_R_FRAME_CTRL_41                            0x3A41
