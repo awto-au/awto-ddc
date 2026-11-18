@@ -77,7 +77,7 @@ static BYTE PcStyle(BYTE ucK)
     return g_pcStyle[ucK];
 }
 
-#pragma place bank(12)
+#pragma place bank(13)
 static BYTE PcCell(WORD usK)
 {
     return g_pcCell[usK];

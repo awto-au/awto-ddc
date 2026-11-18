@@ -769,13 +769,15 @@ static const __code BYTE tAwtoSrcType[] = {
 #define AWTO_CT_SAVING      57
 #define AWTO_CT_BACKLIGHT   58
 #define AWTO_CT_DISABLED    59                  // selector state of a port off by setting (#81; ui_port_state 4)
+#define AWTO_CT_RESET       60                  // key-hold reset card (#132 item 7): title, then "in " N " s"
+#define AWTO_CT_IN          61                  // + 1 = " s"
 static const __code char tAwtoCardS[] =
     "Input\0Auto select\0DP-1\0HDMI-\0Input D\0no cable\0no signal\0ready\0ACTIVE\0"
     "AWTO\0No signal\0No cable\0Not supported\0Auto adjust\0Auto colour\0DDC/CI on \0Power saving\0Panel uniformity\0On\0Off\0"
     "Information\0Resolution\0Refresh\0H frequency\0Pixel clock\0HDCP\0DP link\0Swing/pre\0Status\0"
     " Hz\0 kHz\0 MHz\0off\0 sink\0 repeater\0 lanes \0RBR\0HBR\0HBR2\0"
     "idle\0search\0scan\0stable\0measure\0timing ok\0display set\0active\0no signal\0no support\0sleep\0off\0fast path\0init\0"
-    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0Backlight\0disabled\0";
+    "HBR3\0Sync log\0no link\0TMDS \0Saving to memory\0Backlight\0disabled\0RESET TO DEFAULTS\0in \0 s\0";
 
 static void AwtoCardTxt(BYTE ucI)               // appends text ucI to the composed row (AwtoPut*)
 {
@@ -1812,6 +1814,18 @@ void AwtoBlKey(BYTE ucKey)                      // UP = brighter, DOWN = darker;
     set_put(AWTO_SET_BRIGHTNESS, AWTO_SET(BRIGHTNESS) + ((ucKey == _RIGHT_KEY_MESSAGE) ? AWTO_BL_KEY_STEP : -AWTO_BL_KEY_STEP), 1);
     AwtoBlDraw();
     AwtoCardShow();
+}
+
+void AwtoResetCard(BYTE ucSec)                  // #132 item 7: a key held AWTO_KEY_RESET_WARN_MS; ucSec = seconds left
+{
+    OsdDispDisableOsd();
+    AwtoCardOpen(AWTO_CARD_ROW0 + 2, AWTO_CT_RESET);
+    AwtoCardTxt(AWTO_CT_IN);
+    AwtoPutNum(ucSec, 1);
+    AwtoCardTxt(AWTO_CT_IN + 1);
+    AwtoCardCentre(AWTO_CARD_ROW0, AWTO_T_STYLE_TEXT);
+    AwtoCardShow();
+    SET_OSD_STATE(_MENU_NONE);
 }
 
 void AwtoBlClose(void)                          // another key: the bar goes first (OsdDispDisableOsd commits the value)

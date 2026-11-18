@@ -23,7 +23,7 @@ COLS, ROWS = 28, 36
 MAZE_TOP = 3                                  # tile row of maze row 0 (3 score rows above, 2 spare below)
 W, H, VIS = 12, 18, 12                        # glyph 12 x 18, visible 12 x 12
 STEPS = 260
-BANK_A, BANK_B = 12, 11
+BANK_A, BANK_B, BANK_C = 12, 11, 13       # C: cell table, off bank 12 so no bank 12 const covers xdata 0xF0xx (fw_link_check gptr_const_xbank)
 DELTA_B_MAX = 7200                            # bytes of delta stream in bank 11 (multiple of the record size)
 
 # Palette: index 0 transparent, 1 opaque black (cell background), then colours.
@@ -789,7 +789,7 @@ def emit(s, init, frames, events):
             f"#define AWTO_PC_GLYPH_BYTES     {len(glyph)}\n")
     half = len(stream) - DELTA_B_MAX                              # bank 11 keeps the tail: it must fit its old slot (0x1da8..) so no bank 11 const covers the scope S2 strings (fw_link_check gptr_const_xbank)
     return (head + arr("g_pcPal", pal, 3, BANK_A) + arr("g_pcStyle", style, 2, BANK_A) + arr("g_pcGlyph", glyph, 27, BANK_A)
-            + arr("g_pcCell", cellb, 12, BANK_A)
+            + arr("g_pcCell", cellb, 12, BANK_C)
             + arr("g_pcIdx", idxb, 16, BANK_A) + arr("g_pcDeltaA", bytes(stream[:half]), 15, BANK_A)
             + arr("g_pcDeltaB", bytes(stream[half:]), 15, BANK_B)
             + f"#define AWTO_PC_HALF_BYTES      {half}\n"
