@@ -980,6 +980,7 @@ stub	_AwtoSaverPoll	C	0x42cc	8
 stub	_set_ap_screensaver	C	0x42d4	8
 stub	_set_ap_screensaver_now	C	0x42dc	8
 stub	_set_ap_screensaver_s	C	0x42e4	8
+stub	_AwtoFlashWindowCheck	C	0x42ec	8
 stub	_AwtoOsdRowCmds	C	0x42f4	8
 stub	_AwtoOsdScreenBegin	C	0x42fc	8
 stub	_AwtoOsdRotCell	C	0x4304	8
@@ -989,9 +990,11 @@ stub	_AwtoOsdScreenOff	C	0x431c	8
 stub	_AwtoSyncTxt	C	0x4324	8
 stub	_AstCount	C	0x432c	8
 stub	_AstDiff	C	0x4334	8
+stub	_AwtoFlashWrBegin	C	0x433c	8
 stub	_AstDigits	C	0x4344	8
 stub	_AstDir	C	0x434c	8
 stub	_AwtoScopeSaver2	C	0x4354	8
+stub	_AwtoFlashWrEnd	C	0x435c	8
 stub	_S2Params	C	0x4364	8
 stub	_AstRnd	C	0x4374	8
 stub	_AstSaucerAct	C	0x437c	8
@@ -1949,6 +1952,7 @@ fn	_ScalerFlashSet2ndWRSR	5	0x1fbc	96
 fn	_ScalerFlashSet3rdWRSR	5	0x201c	96
 fn	_ScalerFlashSet4thWRSR	5	0x207c	96
 fn	_ScalerFlashSetWRSR	5	0x20dc	96
+fn	_ScalerFlashErasePage	5	0x213c	180
 fn	_RTDFlashRestoreBriCon	5	0x2264	96
 fn	_RTDFlashRestoreColorSetting	5	0x22c4	96
 fn	_RTDFlashRestoreOSDData	5	0x2324	84
@@ -2062,7 +2066,6 @@ fn	_nv_hdr_seq	5	0x945c	24
 fn	_nv_read_hdr	5	0x9474	92
 fn	_nv_scan	5	0x94d0	452
 fn	_nv_slot_a	5	0x9694	28
-fn	_ScalerFlashErasePage	5	0x96b0	164
 fn	_ScalerFlashSet2ByteWRSRonebyone	5	0x9754	168
 fn	_ScalerFlashSetWREN	5	0x97fc	48
 fn	_set_aux_buf	5	0x9850	12
@@ -2084,7 +2087,7 @@ const	_tLUTGAMMA_18_TABLE	6	0x0164	6352
 const	_tLUTGAMMA_20_TABLE	6	0x1a34	6352
 const	_tLUTGAMMA_22_TABLE	6	0x3304	6352
 const	_tLUTGAMMA_24_TABLE	6	0x4bd4	6352
-const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1314	6	0x64a4	92
+const	_UserInterfaceGetOverScanStatus_tusOverscanEnTable_10000_1317	6	0x64a4	92
 const	_OperationFactoryTable	6	0x6500	756
 const	_tCOLOR_CONV_RGB2YUV_ITU709	6	0x67f4	32
 const	_tCOLOR_CONV_YUV2RGB_ITU601	6	0x6814	32
@@ -2613,7 +2616,7 @@ const	_tDISPLAY_DPTX_DRV_HBR2_TABLE	9	0x0000	56
 const	_tEDID_TABLE_D1	9	0x0038	268
 const	_tEDID_TABLE_D2	9	0x0144	268
 const	_tEDID_TABLE_D3	9	0x0250	268
-const	_set_ap_rotate_tFlipToSdk_10000_1337	9	0x035c	8
+const	_set_ap_rotate_tFlipToSdk_10000_1340	9	0x035c	8
 fn	_ScalerColor420To422D2D3Enable	9	0x0364	60
 fn	_ScalerDpPowerSwitch	9	0x03a0	120
 fn	_ScalerDpRx1AuxIntInitial	9	0x0418	116
@@ -2728,6 +2731,7 @@ fn	_ScalerDpRx1Initial	9	0x4fdc	108
 fn	_ScalerDpRx1SetDpLaneMapping	9	0x5048	196
 fn	_ScalerDpInitial	9	0x510c	32
 fn	_ScalerDpLowPowerProc	9	0x512c	112
+fn	_ScalerMcuFlashClockGroupSetting	9	0x519c	188
 fn	_ScalerDisplayDPTx1AuxWrite	9	0x5388	412
 fn	_ScalerDisplayDPTx1DisplayFormatSetting	9	0x5524	916
 fn	_ScalerDisplayDPTx1DisplayMSASetting	9	0x58b8	288
@@ -2765,7 +2769,6 @@ fn	_ScalerIDomainFineTuneHCaptureStart	9	0x7b78	40
 fn	_ScalerMDomainDisplayTimingGenCheck	9	0x7ba0	8
 fn	_ScalerMDomainGetFrameSyncMode	9	0x7ba8	28
 fn	_ScalerMcuCacheInitial	9	0x7bc4	40
-fn	_ScalerMcuFlashClockGroupSetting	9	0x7bec	124
 fn	_ScalerMcuInitial	9	0x7c68	264
 fn	_ScalerMcuSetISPSlaveAddr	9	0x7d70	24
 fn	_ScalerMeasureAutoFuncWaitFinish	9	0x7d88	88
@@ -3421,6 +3424,7 @@ const	_s_tS2Base	12	0x9f08	2400
 const	_s_aucRev	13	0x0000	268
 const	_g_pcCell	13	0x010c	3124
 fn	_AwtoMonMoved	13	0x0d40	64
+fn	_AwtoFlashWindowCheck	13	0x0d80	8
 fn	_ScalerOsdDrawGridLinePanelPitch	13	0x0d88	44
 fn	_ScalerOsdScaleUpBoundaryCodition	13	0x0db4	20
 fn	_ScalerOsdScaleUpHorFactor	13	0x0dc8	20
@@ -3508,5 +3512,7 @@ fn	_SysCecHandler	13	0x4d54	204
 fn	_UserCommonCecReceiveNotify	13	0x4e20	56
 fn	_CecAbort	13	0x4e58	104
 fn	_CecBcastOp	13	0x4ec0	28
+fn	_AwtoFlashWrBegin	13	0x4edc	88
+fn	_AwtoFlashWrEnd	13	0x4f34	72
 fn	_AstDue	13	0x4f7c	120
 fn	_ScalerCecTxGetTransmitResult	13	0x4ff4	12

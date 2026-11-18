@@ -236,3 +236,11 @@ Decision (Dan 2026-11-19): flash / SPI at the maximum speed that passes on hardw
 
 ## Links
 - Delay constants at the default clock: `docs/delay-audit.md`; OSD / saver costs: `docs/saver-fps-hw.md`, `docs/osd/path-cost.md`; registers: `re/regmap/`; log `tmp/logs/clk_sweep.log` / `.tsv`.
+
+### Default flash clock, Phase B [hw] 2026-11-19, unit 3, image = branch worktree-agent-a663d6fe6737c885b (main f6dba6f merged), `scripts/flash_soak.py`, `scripts/boot_loop.py`
+- Boot loop, 20 resets each, MCU 350.8 MHz: flash 116.9 MHz 20 / 20 with picture; flash 70.2 MHz 20 / 20. eDP "link training FAIL x1" lines: 13 boots at 116.9, 12 at 70.2 (same behaviour).
+- Health 12 / 12 at 116.9; 30-minute soak (30 periods, savers Scope 1 / 2 / Asteroids / Pac-Man cycling, health + uptime check): 0 failed, no reset. Monitor row present in health.
+- Registry writes through the 70.2 MHz switch: brightness changed and restored x20 (flush gate), read back 20 / 20, items programmed 27 -> 66 (39), flash ops +39, bytes +624, 0 erases (no erase on hardware: the page did not fill; sector erase path run in the sim only, 14 sessions per boot).
+- Scope 2 frames / s: 31.4 at 116.9, 21.0 at 70.2 (same image otherwise); Asteroids steps 7.9 / s both (paced). Scope 1 and cache-miss ns: no counter in the production image (HWTEST step `oc117`: 1099 ns).
+- 20 wakes from power saving (host DPMS off 6 s, on): 116.9 MHz 2 failed (stay POWER_SAVING after 16 s), 70.2 MHz 3 failed (2 POWER_SAVING, 1 NOSIGNAL): not caused by the flash clock; cause not investigated.
+- Sim gate `inputrate` fails at 116.9 (pass row DPS17: 35 of 40 pulses of the calibrated worst gap seen, 6 s and 14 s calibration) and passes at 70.2; not examined further.
