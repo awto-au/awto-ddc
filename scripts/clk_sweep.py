@@ -43,7 +43,7 @@ OP_APPLY, OP_REVERT, OP_KEEP, OP_CHECK = 1, 2, 3, 4
 ST_HELD, ST_REVERTED, ST_REFUSED, ST_AUTO = 1, 2, 3, 4
 REFUSE = {0: "none", 1: "divider range", 2: "step already held", 3: "SPI above rating", 4: "no safe write order", 5: "MCU slower than SPI"}
 FL_DUAL, FL_CKCON, FL_NOWRAP, FL_OC, FL_TUNEFIRST = 1, 2, 4, 8, 0x10
-RATED_OC_MHZ = 120.0                      # firmware cap with FL_OC (AWTO_CLK_SPI_OC_KHZ)
+RATED_OC_MHZ = 180.0                      # firmware cap with FL_OC (AWTO_CLK_SPI_OC_KHZ)
 
 STOCK_MHZ = 87.75
 RATED_FAST_MHZ, RATED_DUAL_MHZ, RATED_READ_MHZ = 86.0, 80.0, 33.0       # MX25L8006E Table 13: fSCLK (0x0B), fTSCLK (0x3B), fRSCLK (0x03)
@@ -119,7 +119,7 @@ IMG_PASSES = {"stock_img": 2, "m351_img": 3, "f175_70_img": 3}
 for _n in IMG_PASSES:
     STEPS[_n] = STEPS[_n.rsplit("_img", 1)[0]]
 # overclocked flash, F = 1: SPI 87.7 (F2 4) and 116.9 (F2 3) at MCU 350.8; FF6C[5:2] latch_so_rise / drive_si_fall / si_dly_sel per combination
-OC_SPEEDS = {"oc88": (1, 4, 1), "oc117": (1, 3, 1)}
+OC_SPEEDS = {"oc88": (1, 4, 1), "oc117": (1, 3, 1), "oc175": (1, 2, 1)}
 OC_L_PASSES, OC_L_IMG = 200, 5
 for _n, (_f, _f2, _m) in OC_SPEEDS.items():
     for _l in (0, 1):
@@ -134,6 +134,7 @@ for _n, (_f, _f2, _m) in OC_SPEEDS.items():
                 STEPS[_name + "L"] = (_f, _f2, _m, FL_OC)
                 TUNE[_name + "L"] = TUNE[_name]
 GROUPS["oc88"] = [n for n in STEPS if n.startswith("oc88_l") and not n.endswith("L")]
+GROUPS["oc175"] = [n for n in STEPS if n.startswith("oc175_l") and not n.endswith("L")]
 GROUPS["oc117"] = [n for n in STEPS if n.startswith("oc117_l") and not n.endswith("L")]
 
 CRC_FROM, CRC_TO = 0x0100, 0x4000

@@ -667,7 +667,7 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_F_NOWRAP                       0x04                // FF6C accessed with the default MOVX cycle (tests the SDK's 9-cycle wrapper claim)                // global MOVX stretch = ucCkcon during the step
 #define AWTO_CLK_F_OVERCLOCK                    0x08                // sweep only (host --allow-overclock-flash): SPI up to AWTO_CLK_SPI_OC_KHZ, above the flash's fast-read rating
 #define AWTO_CLK_F_TUNEFIRST                    0x10                // ucRdTune is written at the stock clock, before the dividers change
-#define AWTO_CLK_SPI_OC_KHZ                     120000UL
+#define AWTO_CLK_SPI_OC_KHZ                     180000UL
 #define AWTO_CLK_SPI_MAX_KHZ                    86000UL             // MX25L8006E fSCLK, FAST_READ (datasheet Table 13)
 #define AWTO_CLK_SPI_DUAL_KHZ                   80000UL             // fTSCLK, DREAD
 #define AWTO_CLK_CRC_FROM                       0x0100              // code region read with MOVC (common area, the code that runs)
@@ -1266,6 +1266,7 @@ static void AwtoClkFlashTest(void)
 #define AWTO_CLK_IMG_BANKS                      14
 #define AWTO_CLK_IMG_MAX                        20
 static __xdata unsigned long s_aulClkImgRef[AWTO_CLK_IMG_BANKS];
+static __xdata BYTE s_ucClkImgRef;
 
 static unsigned long AwtoClkImgBank(BYTE ucBank)                    // 0 = a read failed (a CRC of 0 is not expected for 64 KB of code)
 {
@@ -1305,10 +1306,15 @@ static void AwtoClkImgRef(void)                                     // stock clo
     {
         return;
     }
+    if(s_ucClkImgRef != 0)
+    {
+        return;                                                     // taken once per boot (the image does not change under a sweep)
+    }
     for(ucK = 0; ucK < AWTO_CLK_IMG_BANKS; ucK++)
     {
         s_aulClkImgRef[ucK] = AwtoClkImgBank(ucK);
     }
+    s_ucClkImgRef = 1;
 }
 
 static void AwtoClkImgPasses(void)
