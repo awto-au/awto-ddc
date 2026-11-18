@@ -266,7 +266,7 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
 static void AwtoKeyPress(void)                  // the single key down is a press (not the first key of a combo)
 {
     s_ucKeyState = AWTO_KS_DOWN;
-    AwtoSaverActivity(1);                        // a key ends a screensaver and restarts the idle time
+    AwtoSaverKey();                        // a key ends a screensaver and restarts the idle time
     AwtoKeyMsgNote(s_ucKeyId);
     AwtoKeyRoute(s_ucKeyId, AWTO_KEV_PRESS);
 }

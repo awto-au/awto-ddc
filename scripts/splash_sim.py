@@ -79,7 +79,7 @@ def run_boot(a, bin_, map_, splash=True, key_at=None):
             break
     h, lines = r.episode()
     txt = "\n".join(lines)
-    ring = {"start": any(ln.endswith("event E9 79") for ln in lines), "end": any(ln.endswith("event E9 7A") for ln in lines)}
+    ring = {"start": any("boot splash started" in ln for ln in lines), "end": any("boot splash ended" in ln for ln in lines)}
     ms = lambda key: next((int(ln.split(":", 1)[0]) for ln in lines if key in ln), None)  # noqa: E731
     out = dict(r=r, start=start, end=end, key_t=key_t, first_osd=first_osd, ring=ring, txt=txt,
                active=ms("->ACTIVE:"), console=ms("console opened"))
@@ -135,8 +135,8 @@ def main() -> int:
     say(f"splash_sim {a.bin.name}")
     n = run_boot(a, a.bin, a.map)
     say(f"  splash on {n['start']} -> {n['end']} ms (fw), first OSD {n['first_osd']} ms, ACTIVE {n['active']} ms, console {n['console']} ms")
-    fails += check(n["start"] is not None and n["ring"]["start"], "splash starts at power-on (run = splash, why = boot, ring E9 79)", f"{n['start']}")
-    fails += check(n["end"] is not None and n["ring"]["end"], "splash ends before the console / after ACTIVE (ring E9 7A)", f"{n['end']}")
+    fails += check(n["start"] is not None and n["ring"]["start"], "splash starts at power-on (run = splash, why = boot, ring line boot splash started)", f"{n['start']}")
+    fails += check(n["end"] is not None and n["ring"]["end"], "splash ends before the console / after ACTIVE (ring line boot splash ended)", f"{n['end']}")
     fails += check(n["console"] is not None and n["txt"].count("console opened") == 1, "console opens once, over / after the splash", f"{n['console']}")
     if a.base:
         b = run_boot(a, *a.base)

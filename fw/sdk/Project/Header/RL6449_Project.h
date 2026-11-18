@@ -1115,7 +1115,8 @@ extern BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep);                          
 extern void AwtoSaverTaken(void);                                                       // OsdDispDisableOsd: the OSD is being reset / reused; a boot splash is over without a redraw
 extern void AwtoFlashScreen(BYTE ucOn);                                                 // fw/test/flash_screen.c: huge Pac-Man shown while the host flashes (VCP 0xEB = 5)
 extern void AwtoSaverPoll(void);
-extern void AwtoSaverActivity(unsigned char ucKey);
+extern void AwtoSaverActivity(void);
+extern void AwtoSaverKey(void);
 extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
 extern void AwtoSaverStop(void);
 extern unsigned char AwtoScopeSaver(unsigned char ucCmd);

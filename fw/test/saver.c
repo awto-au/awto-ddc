@@ -51,10 +51,19 @@ static __xdata WORD s_usTick;                                       // last fram
 static __xdata unsigned long s_ulSwap;                              // run started / last swap (Alternate)
 static __xdata unsigned long s_ulNoSig;                             // no-signal since (0 = not in no-signal)
 
-void AwtoSaverActivity(BYTE ucKey)                                  // ucKey: a front key (DDC/CI commands do not end the boot splash: the host talks at power-on)
+void AwtoSaverActivity(void)                                        // a DDC/CI command does not end the boot splash (the host talks at power-on); a key does: AwtoSaverKey
 {
     s_ulAct = AwtoMs();
-    if((g_ucAwtoSaverRun != AWTO_SAVER_OFF) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_NOW) && ((g_ucAwtoSaverWhy != AWTO_SAVER_WHY_BOOT) || (ucKey != 0)))
+    if((g_ucAwtoSaverRun != AWTO_SAVER_OFF) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_NOW) && (g_ucAwtoSaverWhy != AWTO_SAVER_WHY_BOOT))
+    {
+        AwtoSaverStop();
+    }
+}
+
+void AwtoSaverKey(void)                                             // a front key: also ends the boot splash
+{
+    AwtoSaverActivity();
+    if(g_ucAwtoSaverWhy == AWTO_SAVER_WHY_BOOT)
     {
         AwtoSaverStop();
     }

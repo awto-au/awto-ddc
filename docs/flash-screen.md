@@ -39,7 +39,7 @@ Status 2026-11-18, sim only (no hardware run).
 - Draw steps never run in mode SEARCH or DISPLAY SETTING (the picture's path).
 - Ends (no redraw, nothing closed when someone else owns the OSD):
   - console / menu opened (their hold flag): OSD left to them
-  - first front key (`AwtoSaverActivity(1)`); DDC/CI commands do not end it (the host talks at power-on)
+  - first front key (`AwtoSaverKey`); DDC/CI commands do not end it (the host talks at power-on)
   - mode ACTIVE: the picture takes over
   - hard maximum `AWTO_SPLASH_MAX_MS` 3 s from the start: 4x power-on -> ACTIVE in the sim (~0.75 s), equal to the console hold `AWTO_CON_HOLD_MS`; expiry closes the OSD
   - an SDK OSD reset (`OsdDispDisableOsd` -> `AwtoSaverTaken`) wipes the drawing: the splash starts drawing again from step 0 while the run lasts; a mode reset never leaves a half drawing shown

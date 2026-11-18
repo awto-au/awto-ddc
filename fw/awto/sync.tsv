@@ -160,7 +160,6 @@ E9	41	n	OSD demo gradient window %:R + G, plain
 E9	42	n	OSD demo gradient window %:R + G, saturated colour mode
 E9	43	n	OSD demo gradient window %:R + G, reversed colour mode
 E9	44	n	OSD demo overlap windows %:4, 5, 6 drawn in that order, overlapping
-E9	FF	-	OSD demo closed
 E9	50	-	Realtek QC OSD pattern on:digits, 2-bit skull x 4 (map A), 4-bit skull x 5 (map B)
 E9	51	-	Realtek QC OSD pattern off
 E9	60	-	Realtek QC D-domain pattern generator on (12-bit ramp, #228)
@@ -168,6 +167,10 @@ E9	61	-	Realtek QC D-domain pattern generator off
 E9	73	-	Pac-Man drawn (classic 28 x 36 tile layout, scaled up)
 E9	74	n	Pac-Man step %:cell updates applied
 E9	75	-	Pac-Man off
+E9	79	n	Screensaver / boot splash started:run << 4 | why %
+E9	7A	-	Screensaver / boot splash ended
+E9	7E	-	Flash screen / boot splash drawn
+E9	7F	-	Flash screen / boot splash off
 E9	80	-	Pac-Man sound:intro jingle (HDMI audio test generator)
 E9	81	-	Pac-Man sound:waka-waka (loops)
 E9	82	-	Pac-Man sound:death glissando
@@ -176,6 +179,7 @@ E9	84	-	Pac-Man sound stopped
 E9	85	-	Pac-Man sound track done
 E9	86	n	Pac-Man sound unavailable (no -D _AWTO_AUDIO_TEST build), cmd %
 E9	87	-	alert tone (1 s, HDMI audio test generator)
+E9	FF	-	OSD demo closed
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake
