@@ -8,8 +8,6 @@
 // layer; pixel value 1 = red, 2 and 3 = green. 252 glyph ids (the 2-bit char command has 8 id bits). Canvas = the 1-tile-wide band of
 // scope_saver.c (XDATA floor), 3 tiles high, redrawn per column and band; the graticule plane is uploaded once, the trace plane per frame.
 //   AwtoScopeSaver2(1) draw   (2) next frame   (0) off
-extern void osd_tc_show(BYTE ucOn);
-extern void osd_tc_close(void);
 extern __xdata uint8_t g_aucScPix[];
 extern __xdata uint8_t g_aucScDirty[];
 extern __xdata osd_canvas g_scCv;
@@ -28,12 +26,8 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_FONT_BASE                       (AWTO_S2_FS_BASE + AWTO_S2_CELLS)
 #define AWTO_S2_GLYPH_WORDS                     9                                   // per plane
 #define AWTO_S2_PLANES                          2
-#define AWTO_S2_WORD_BYTES                      3
-#define AWTO_S2_PX_PER_HD                       4                                   // OSD horizontal position unit: 4 panel px
 #define AWTO_S2_PLANE_TRACE                     0                                   // MSB plane first
 #define AWTO_S2_PLANE_GRID                      1
-#define AWTO_S2_ROW_B0                          0x80
-#define AWTO_S2_ZERO                            0x00
 #define AWTO_S2_PAL_BG                          1                                   // palette indexes (all < 8: the 2-bit char command carries 3 bits for c2 / c3)
 #define AWTO_S2_PAL_RED                         2
 #define AWTO_S2_PAL_GREEN                       3
@@ -47,8 +41,6 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_GRN_G                           235
 #define AWTO_S2_GRN_B                           170
 #define AWTO_S2_SU_FACTOR                       6                                   // ratio 64 / 6 = 10.67: 336 x 162 -> 3584 x 1728 of 3840 x 2160
-#define AWTO_S2_POS_OFFSET_H                    0x3B
-#define AWTO_S2_POS_OFFSET_V                    0x04
 #define AWTO_S2_POS_H                           32                                  // hd units of 4 panel px: (3840 - 3584) / 2 / 4
 #define AWTO_S2_POS_V                           216                                 // (2160 - 1728) / 2
 #define AWTO_S2_DIV_X                           42                                  // 8 divisions across
@@ -60,7 +52,6 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_AMP                             81                                  // 100 % = 3 divisions above the baseline
 #define AWTO_S2_P10                             8                                   // 10 % / 90 % of the amplitude
 #define AWTO_S2_P90                             73
-#define AWTO_S2_NS_PER_DIV                      1                                   // time base label: 1 ns / div
 #define AWTO_S2_PS_PER_DIV                      1000
 #define AWTO_S2_PULSE_N                         64                                  // pulse shape table length
 #define AWTO_S2_PULSE_PEAK                      255
@@ -73,7 +64,6 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_FONT_W                          5
 #define AWTO_S2_FONT_H                          7
 #define AWTO_S2_FONT_ADV                        6
-#define AWTO_S2_COUNTER0                        1129500UL                           // counter readout start (Hz-ish, shown as xxxx.xxx kHz)
 #define AWTO_S2_STAGE_GRID                      0
 #define AWTO_S2_STAGE_FIRST                     1
 #define AWTO_S2_STAGE_RUN                       2
@@ -129,42 +119,16 @@ static __xdata WORD s_usCell0;
 static __xdata BYTE s_ucPlane;
 static __xdata char s_acNum[12];
 
-static void S2Word(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
-{
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usAddr, _OSD_WITHOUT_DB);
-    ScalerOsdDataPort(ucB0);
-    ScalerOsdDataPort(ucB1);
-    ScalerOsdDataPort(ucB2);
-}
-
 static void S2Upload(BYTE ucTile)
 {
-    BYTE ucK;
     WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_S2_COLS;
-    const uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
+    const __xdata uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
 
     if(g_ucAwtoOsdRot != 0)                                                                // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
     {
         usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FONT_BASE + (WORD)usCell * (AWTO_S2_PLANES * AWTO_S2_GLYPH_WORDS) + (WORD)s_ucPlane * AWTO_S2_GLYPH_WORDS, _OSD_WITHOUT_DB);
-    for(ucK = 0; ucK < AWTO_S2_GLYPH_WORDS; ucK++)                                  // canonical c0 c1 c2 -> stored B0 B1 B2 = c2 c1 c0
-    {
-        if(g_ucAwtoOsdRot != 0)
-        {
-            WORD usW = (WORD)(AWTO_S2_GLYPH_WORDS - 1 - ucK) * AWTO_S2_WORD_BYTES;
-
-            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW]));
-            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW + 1]));
-            ScalerOsdDataPort(AwtoOsdRevByte(pucB[usW + 2]));
-        }
-        else
-        {
-            ScalerOsdDataPort(pucB[AWTO_S2_WORD_BYTES * ucK + 2]);
-            ScalerOsdDataPort(pucB[AWTO_S2_WORD_BYTES * ucK + 1]);
-            ScalerOsdDataPort(pucB[AWTO_S2_WORD_BYTES * ucK]);
-        }
-    }
+    AwtoOsdGlyph(AWTO_S2_FONT_BASE + (WORD)usCell * (AWTO_S2_PLANES * AWTO_S2_GLYPH_WORDS) + (WORD)s_ucPlane * AWTO_S2_GLYPH_WORDS, pucB, AWTO_S2_GLYPH_WORDS);
 }
 
 static __xdata int16_t s_sOx;                                                       // origin of the pass being drawn
@@ -406,8 +370,7 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
 
     if(ucCmd == 0)
     {
-        osd_tc_close();
-        ScalerOsdScaleUpOnOff(_DISABLE);
+        AwtoOsdScreenOff();
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_OFF, 0);
         return 1;
     }
@@ -445,43 +408,24 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
         }
         return 1;
     }
-    osd_tc_close();
-    g_ucAwtoOsdRot = AwtoOsdRot180();
-    AwtoOsdTestReset();
-    ScalerOsdGlobalDoubleBuffer(_DISABLE);
-    ScalerOsdCircuitActivated(_ENABLE);
-    ScalerOsdVerticalStartSelect(_OSD_VSYNC_SELECT_DVS);
-    ScalerOsdSetColorPalette(AWTO_S2_ZERO, AWTO_S2_ZERO, AWTO_S2_ZERO, AWTO_S2_ZERO);
+    AwtoOsdScreenBegin();
+    ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
     ScalerOsdSetColorPalette(AWTO_S2_PAL_BG, AWTO_S2_BG_R, AWTO_S2_BG_G, AWTO_S2_BG_B);
     ScalerOsdSetColorPalette(AWTO_S2_PAL_RED, AWTO_S2_RED_R, AWTO_S2_RED_G, AWTO_S2_RED_B);
     ScalerOsdSetColorPalette(AWTO_S2_PAL_GREEN, AWTO_S2_GRN_R, AWTO_S2_GRN_G, AWTO_S2_GRN_B);
     ScalerOsd2FontFunction(_DISABLE);
-    for(usI = 0; usI < AWTO_S2_ROWS; usI++)
-    {
-        S2Word(usI, AWTO_S2_ROW_B0, AWTO_S2_TH - 1, AWTO_S2_COLS);
-    }
-    S2Word(AWTO_S2_ROWS, AWTO_S2_ZERO, AWTO_S2_ZERO, AWTO_S2_ZERO);
+    AwtoOsdRowCmds(AWTO_S2_ROWS, AWTO_S2_TH, AWTO_S2_COLS);
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FS_BASE, _OSD_WITHOUT_DB);    // 2-bit char per cell, glyph id = cell index; value 0 bg, 1 red, 2 / 3 green
     for(usI = 0; usI < AWTO_S2_CELLS; usI++)
     {
-        ScalerOsdDataPort((BYTE)(AWTO_S2_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
+        ScalerOsdDataPort((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
         ScalerOsdDataPort((BYTE)usI);
         ScalerOsdDataPort((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_GREEN & 7) << 3) | (AWTO_S2_PAL_RED & 7)));
     }
     SET_OSD_MAPA_COL_MAX(AWTO_S2_COLS);
-    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_S2_ZERO, AWTO_S2_FS_BASE, AWTO_S2_FONT_BASE);
-    ScalerOsd2BitFontOffset(AWTO_S2_ZERO);
-    ScalerOsdFontWindowVericalAlignemnt(_ENABLE);
-    ScalerOsdPositionOffset(_OSD_POSITION_OFFSET_GLOBAL, AWTO_S2_POS_OFFSET_H, AWTO_S2_POS_OFFSET_V);
-    ScalerOsdPosition(_OSD_POSITION_GLOBAL_A, AWTO_S2_POS_H, AWTO_S2_POS_V);
-    ScalerOsdReferenceDelay(_OSD_A, _OSD_FIRST_DELAY);
-    ScalerOsdPosition(_OSD_POSITION_FONT_A, AWTO_S2_ZERO, AWTO_S2_ZERO);
-    ScalerOsdScaleUpHorSize(AWTO_S2_POS_H * AWTO_S2_PX_PER_HD, AWTO_S2_W);          // the window is in display coordinates: it starts where the OSD starts
-    ScalerOsdScaleUpVerSize(AWTO_S2_POS_V, AWTO_S2_H);
-    ScalerOsdScaleUpVerFactor(AWTO_S2_SU_FACTOR);
-    ScalerOsdScaleUpHorFactor(AWTO_S2_SU_FACTOR);
-    ScalerOsdScaleUpBoundaryCodition(_OSD_SCALING_BOUNDARY_NEIGHTBOOR);
-    ScalerOsdScaleUpOnOff(_ENABLE);
+    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_S2_FS_BASE, AWTO_S2_FONT_BASE);
+    ScalerOsd2BitFontOffset(AWTO_OSD_ZERO);
+    AwtoOsdPlaceScaleUp(AWTO_S2_POS_H, AWTO_S2_POS_V, AWTO_S2_COLS, AWTO_S2_ROWS, AWTO_S2_SU_FACTOR);
     osd_canvas_init(&g_scCv, 1, AWTO_S2_BAND_ROWS, g_aucScPix, AWTO_S2_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_S2_BAND_ROWS));
     s_usFrame = 0;
     s_ucCol = 0;

@@ -1104,6 +1104,17 @@ extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
 extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
+#define AWTO_OSD_ZERO                                           0x00
+#define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
+#define AWTO_OSD_POS_OFFSET_V                                   0x04
+#define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px
+#define AWTO_OSD_ROW_B0                                         0x80    // row command byte 0
+extern void AwtoOsdWord(WORD usAddr, BYTE ucB0, WORD usB12);   // fw/osd/osd_screen.c: one 3-byte OSD SRAM word (B1 high byte of usB12; 3 params: no XDATA parameter bytes)
+extern void AwtoOsdRowCmds(BYTE ucRows, BYTE ucRowH, BYTE ucCols);       // ucRows row commands from SRAM 0 + the end marker word
+extern void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords);   // glyph words (canonical c0 c1 c2) at usAddr, turned when g_ucAwtoOsdRot
+extern void AwtoOsdPlaceScaleUp(BYTE ucPosH, BYTE ucPosV, BYTE ucCols, BYTE ucRows, BYTE ucFactor);   // map of 12 x 18 tiles scaled up and shown
+extern void AwtoOsdScreenBegin(void);                                           // screen prologue: close, latch rotation, reset, DVS
+extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
