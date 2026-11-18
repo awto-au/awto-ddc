@@ -10,6 +10,8 @@ usage: AWTO_SIM_CORE=fast key_sim_test.py BIN MAP [--mode 1080p60] [--shots DIR]
   - awto menu: AUTO = enter (menu_key 0), DOWN moves, held DOWN repeats at the rate limit, MENU = back / close.
   - console: UP+DOWN opens (no single-key leak); main page only MENU / POWER act; GPIO page DOWN scrolls + repeats.
   - injected test cmd keys (0x01..0x05 = AUTO UP DOWN MENU SOURCE) under the same rules; MENU+DOWN no combo; POWER off / on.
+- Key click (#229, registry key_click): the call to AwtoPmSoundTone per press (all builds); in a -D _AWTO_AUDIO_TEST image the 1200 Hz tone from the
+  audio tap: ~30 ms, once per press (no repeat), none for POWER / muted / default off / while Pac-Man sound plays, generator off at the end.
 - Physical key = ADC_A0 (0xFF09) / ADC_A1 (0xFF0A) cell value in a fw/awto/inputs.tsv band; idle = regdb reset 0xF8; POWER = P3.0 low.
 - Actions are counted with call watches (fw_sim Machine.watch): the assertions name the function that must / must not run.
 - --shots DIR: PNG renders of the screens (menu, inert row, backlight bar, selector, auto select result).
@@ -24,15 +26,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R  # noqa: E402
 import osd_test as T  # noqa: E402
+import audio_sim as A  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/key_sim_test.log"
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
-WATCH = ("AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
+WATCH = ("AwtoPmSoundTone", "AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
          "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "SysPowerSetTargetPowerStatus", "SysMachineRequest",
          "AwtoPsField", "AwtoSrcPortFields", "AwtoBlKey", "AwtoResetCard", "set_defaults", "AwtoSourceIdle", "AwtoSourceAuto", "AwtoNvWrite", "AwtoSaveCard")
 PWR = "SysPowerSetTargetPowerStatus"             # power requests: counted from SysMachineRequest (#162 step 3) when the image has it
+SET_ID_MUTE, SET_ID_KEY_CLICK = 89, 123          # registry ids mute, key_click (AwtoSetIds.h)
+CLICK_SC, CLICK_MS, CLICK_TOL_MS = 40, 30, 10    # RL6449_Project.h AWTO_KEY_CLICK_SC / _MS; main-pass resolution (~4 ms) x 2.5
+CLICK_HZ = 48000 // CLICK_SC                     # audio_sim K = 48 kHz sample rate / S code
+SND_WAKA, SND_STOP = 0xBB, 0xBE                  # test cmd AWTO_TC_PACMAN_SND + 1 waka (loops), + 4 stop
 REPEAT_MS, RATE_MS = 500, 100                    # RL6449_Project.h AWTO_KEY_REPEAT_MS / AWTO_KEY_RATE_MS
 
 
@@ -406,6 +413,107 @@ def live_ports(k, ports):
         m.wr(a, bytes([v]))
 
 
+def clicks(k, t0):
+    """(audible lengths ms of the 1200 Hz tone segments since t0, generator silent at the end) from the audio tap"""
+    out, start = [], None
+    for t, hz in A.segments(k.audio.events, k.s.bus.now() + 1):
+        if t < t0:
+            continue
+        if abs(hz - CLICK_HZ) < 1:
+            start = t
+        elif start is not None:
+            out.append((t - start) * 1000)
+            start = None
+    return out, start is None
+
+
+def key_click(k):
+    """#229: key click only when enabled and not muted, once per press, not POWER, not while another sound plays, never stuck."""
+    st = k.st = {SET_ID_KEY_CLICK: 1, SET_ID_MUTE: 0}
+    audio = "_PsStart" in k.m.sym                              # -D _AWTO_AUDIO_TEST image (static names are in the map)
+    k.m.stub("set_get", lambda m_, q: {"val": st[q["a1"] & 0xFF]} if (q["a1"] & 0xFF) in st else None)
+    seq = ("DOWN", "UP", "MENU", "MENU", "SOURCE", "AUTO")        # bar, bar, closes it + menu, menu back, selector, take
+    st[SET_ID_KEY_CLICK] = 0
+    b, t0 = k.snap(), k.s.bus.now()
+    for key in ("DOWN", "MENU", "MENU", "SOURCE", "MENU"):
+        k.tap(key)
+    k.check("key click off (default): no tone request, no tone", k.delta(b, "AwtoPmSoundTone") == 0 and not clicks(k, t0)[0],
+            f"requests {k.delta(b, 'AwtoPmSoundTone')}")
+    for _ in range(4):
+        if k.osd_state() == 0 and k.menu() == 0:
+            break
+        k.tap("MENU")
+    st[SET_ID_KEY_CLICK] = 1
+    b = k.snap()
+    for key in seq:
+        k.tap(key)
+    k.check(f"key click on: one tone request per front-key press ({'/'.join(seq)})", k.delta(b, "AwtoPmSoundTone") == len(seq),
+            f"{k.delta(b, 'AwtoPmSoundTone')} of {len(seq)}")
+    for _ in range(4):
+        if k.osd_state() == 0 and k.menu() == 0:
+            break
+        k.tap("MENU")
+    b, t0 = k.snap(), k.s.bus.now()
+    k.down("UP")
+    k.wait(REPEAT_MS + 4 * RATE_MS + 300)
+    k.adc()
+    k.wait(300)
+    k.check("key click: a held key clicks once (no repeat click)", k.delta(b, "AwtoPmSoundTone") == 1, f"{k.delta(b, 'AwtoPmSoundTone')}")
+    k.tap("DOWN")
+    for _ in range(4):
+        if k.osd_state() == 0 and k.menu() == 0:
+            break
+        k.tap("MENU")
+    b, t0 = k.snap(), k.s.bus.now()
+    k.cmd(0x04)
+    k.cmd(0x04)                                                # injected keys take the same route: a press = a click
+    k.check("key click: injected keys click too", k.delta(b, "AwtoPmSoundTone") == 2, f"{k.delta(b, 'AwtoPmSoundTone')}")
+    st[SET_ID_MUTE] = 1
+    b, t0 = k.snap(), k.s.bus.now()
+    for key in ("SOURCE", "MENU"):
+        k.tap(key)
+    k.check("key click on, muted: nothing (no request, no tone)", k.delta(b, "AwtoPmSoundTone") == 0 and not clicks(k, t0)[0],
+            f"requests {k.delta(b, 'AwtoPmSoundTone')}")
+    st[SET_ID_MUTE] = 0
+    b, t0 = k.snap(), k.s.bus.now()
+    k.tap("UP", "DOWN", ms=300)                                # combo: console opens, no click
+    k.tap("UP", "DOWN", ms=300)
+    k.check("key click: the UP+DOWN combo does not click", k.delta(b, "AwtoPmSoundTone") == 0, f"{k.delta(b, 'AwtoPmSoundTone')}")
+    lines = ring(k)
+    if not audio:
+        st[SET_ID_KEY_CLICK] = 0
+        k.check("key click, no audio image: 'unavailable' logged, no tone", any("key click unavailable" in x for x in lines) and not clicks(k, 0)[0],
+                "ring line missing")
+        return
+    b, t0 = k.snap(), k.s.bus.now()
+    for key in seq:
+        k.tap(key)
+    ln, silent = clicks(k, t0)
+    k.check(f"key click audio: {len(seq)} presses -> {len(seq)} tones of {CLICK_HZ} Hz", len(ln) == len(seq), f"{len(ln)} tones")
+    k.check(f"key click audio: each tone {CLICK_MS} ms +- {CLICK_TOL_MS}", bool(ln) and all(abs(x - CLICK_MS) <= CLICK_TOL_MS for x in ln),
+            " ".join(f"{x:.1f}" for x in ln))
+    k.check("key click audio: generator off after the last click (no stuck tone)", silent)
+    for _ in range(4):
+        if k.osd_state() == 0 and k.menu() == 0:
+            break
+        k.tap("MENU")
+    k.cmd(SND_WAKA)
+    b, t0 = k.snap(), k.s.bus.now()
+    k.tap("SOURCE")
+    k.tap("MENU")
+    n_busy = len([x for x in ring(k) if "key click skipped" in x])
+    k.cmd(SND_STOP)
+    k.wait(200)
+    ln, silent = clicks(k, t0)
+    st[SET_ID_KEY_CLICK] = 0
+    k.check("key click audio: no click while the Pac-Man sound plays (skipped lines logged), generator off after its stop",
+            not ln and silent and n_busy >= 2, f"tones {len(ln)}, skipped lines {n_busy}")
+    for _ in range(4):
+        if k.osd_state() == 0 and k.menu() == 0:
+            break
+        k.tap("MENU")
+
+
 def ring(k):
     """every line still in the sync ring, decoded (sync.tsv beside the map)"""
     import sync_log as SL
@@ -537,6 +645,7 @@ def run(k):
     stay_open(k)
     hold_reset(k)
     status_rows(k)
+    key_click(k)
 
     b = k.snap()                                                # awto menu: MENU opens, AUTO enters, keys go to menu_key, repeat rate-limited
     k.tap("MENU")
@@ -656,12 +765,14 @@ def run(k):
     s.bus.dbg_link_on()
 
     b = k.snap()                                                # POWER: off, then on
+    k.st[SET_ID_KEY_CLICK] = 1                                  # key_click on: POWER must still not click
     k.power(True)
     k.wait(150)
     k.power(False)
     k.wait(500)
     a = k.args.get("SysPowerSetTargetPowerStatus", [])[-1:] if k.delta(b, "SysPowerSetTargetPowerStatus") else []
     k.check("POWER -> power off requested", bool(a), f"SysPowerSetTargetPowerStatus args {a}")
+    k.check("key click on: POWER does not click", k.delta(b, "AwtoPmSoundTone") == 0, f"{k.delta(b, 'AwtoPmSoundTone')}")
     k.power(True)
     k.wait(150)
     k.power(False)
@@ -679,9 +790,11 @@ def main():
     ap.add_argument("--only", choices=("switch",), help="one section: switch = selector takes another input (idle commit / AUTO)")
     a = ap.parse_args()
     say(f"key_sim_test {a.bin.name}")
-    s = R.Session(a.bin, a.map, a.mode)
+    tap = A.AudioTap(lambda: s.bus.now())
+    s = R.Session(a.bin, a.map, a.mode, devs=[tap])
     s.boot()
     k = Keys(s)
+    k.audio = tap
     if a.shots:
         a.shots.mkdir(parents=True, exist_ok=True)
         k.shots = a.shots

@@ -1139,6 +1139,10 @@ extern unsigned char AwtoScopeSaver2(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
 extern void AwtoPmSoundBg(unsigned char ucState);                                       // Pac-Man background sound: 0 none, 1..3 siren speed, 4 frightened
+extern unsigned char AwtoPmSoundTone(unsigned char ucSc, unsigned int usMs);                  // one tone (S code, audible ms): AWTO_TONE_* result
+#define AWTO_TONE_BUSY                                          0       // another sound plays
+#define AWTO_TONE_PLAYED                                        1
+#define AWTO_TONE_NA                                            2       // no -D _AWTO_AUDIO_TEST build
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
 extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);
@@ -2154,6 +2158,11 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, P7.3 AMP_MUTE = 0
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step
+#define AWTO_AUDIO_EV_CLICK                                     0x50    // key click played
+#define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound plays
+#define AWTO_AUDIO_EV_CLICK_NA                                  0x52    // key click wanted, no -D _AWTO_AUDIO_TEST build
+#define AWTO_KEY_CLICK_SC                                       40      // key click pitch: audio PLL S code 40 = 48 kHz / 40 = 1200 Hz (docs/keys.md)
+#define AWTO_KEY_CLICK_MS                                       30      // key click audible length (Dan 2026-11-18, #229)
 extern void AwtoAudioAmpBoot(void);                             // fw/audio/amp.c: the one owner of P7.3 AMP_MUTE / P7.4
 extern void AwtoAudioAmp(bit bMute);
 #define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST builds)

@@ -3,3 +3,4 @@ void AwtoKeyEnsure(void);
 void AwtoKeyLog(BYTE ucMask, BYTE ucMsg, BYTE ucFlags);
 void AwtoKeyMsgNote(BYTE ucMsg);
 void AwtoKeyShow(void);
+void AwtoKeyClick(void);
