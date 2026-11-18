@@ -57,6 +57,7 @@ typedef struct {
     /* code fetch from the SPI flash (dw8051 mode): uncached while FDA0.0 = 0, else a set-associative line cache */
     int fm, fm_line, fm_sets, fm_ways, fm_cmd, fm_byte, fm_common;
     uint32_t fm_ratio;          /* CPU clk per flash clk, x256 (set from the clock registers by the host) */
+    int fm_fill;                /* flash clk per cached line fill (measured); <= 0: fm_cmd + fm_byte * fm_line */
     uint32_t fm_last;           /* physical address of the last fetched byte + 1 (sequential read continues the command) */
     uint32_t *fm_tag;           /* [sets * ways], 0xFFFFFFFF = empty; way 0 = most recently used */
     uint8_t oplen[256];         /* instruction bytes per opcode */
@@ -936,12 +937,14 @@ void core_set_fetch(core_t *c, int line, int sets, int ways, int cmd, int byte, 
     c->fm = line > 0;
     c->fm_line = line; c->fm_sets = sets; c->fm_ways = ways; c->fm_cmd = cmd; c->fm_byte = byte; c->fm_common = common_end;
     c->fm_ratio = 256;
+    c->fm_fill = 0;
     c->fm_last = 0xFFFFFFFF;
     c->fm_tag = c->fm ? malloc((size_t)sets * ways * sizeof(uint32_t)) : NULL;
     if (c->fm_tag) memset(c->fm_tag, 0xFF, (size_t)sets * ways * sizeof(uint32_t));
     if (lens) memcpy(c->oplen, lens, 256);
 }
 
+void core_set_fill(core_t *c, int fill_flash_clk) { c->fm_fill = fill_flash_clk; }
 void core_set_fetch_ratio(core_t *c, uint32_t ratio_x256) { c->fm_ratio = ratio_x256; }
 
 /* CPU clk lost fetching `len` code bytes at pc: the base instruction cycles already hold one byte per cycle */
@@ -961,7 +964,7 @@ static uint32_t fetch_stall(core_t *c, uint32_t pc, int len)
             for (w = 0; w < c->fm_ways && t[w] != line; w++) ;
             if (c->fm_lacc && line < FM_NLINES) { c->fm_lacc[line]++; if (w == c->fm_ways) c->fm_lmiss[line]++; }
             if (w == c->fm_ways) {                    /* miss: fill the line (LRU way out), then the byte is there */
-                flash += c->fm_cmd + c->fm_byte * c->fm_line;
+                flash += c->fm_fill > 0 ? (uint32_t)c->fm_fill : (uint32_t)(c->fm_cmd + c->fm_byte * c->fm_line);
                 c->p.fm_miss++;
                 w = c->fm_ways - 1;
             }

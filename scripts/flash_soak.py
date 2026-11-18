@@ -141,6 +141,8 @@ def main() -> int:
             d = ""
             while time.time() - t0 < WAKE_S and not ok:
                 ok, d = health(a.unit, a.map)
+            if not ok:
+                (LOG.parent / f"wake_fail_{a.tag}_{n}.txt").write_text(dev("synclog", "--unit", a.unit)[1])    # last events of the failing wake
             bad += not ok
             say(f"{a.tag} wake {n}: {'PASS' if ok else 'FAIL'} after {time.time() - t0:.1f} s {d}")
             row("wake", n, int(ok), d)

@@ -557,6 +557,8 @@
   "cmd_flash_clk": 40,
   "cmd_source": "fast read 0x0B (SDK ScalerMcu: FF6C[6] fast read mode): 8 opcode + 24 address + 8 dummy clocks, 1 bit per clock",
   "byte_flash_clk": 8,
+  "fill_flash_clk": 68,
+  "fill_source": "least squares over the 11 cache-meter rows of unit 3 (docs/clock-sweep.md Results + Flash overclock: m44 .. m351, oc88 1343 ns, oc117 1099 ns, 2026-11-18/19): miss ns = 176 CPU cycles (the meter loop) + 68 flash clocks per line fill, residual <= 5 %; cmd / byte still model the uncached path",
   "sets": 64,
   "ways": 2,
   "cache_source": "ASSUMED 2 KB: regdb FDA1 size_div says 'minimum 128x2 cache size' at 1/8; two ways, 16 B lines; real geometry unverified"

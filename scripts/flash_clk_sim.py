@@ -12,6 +12,7 @@ Exit 1 on a failed check. Log: ./tmp/logs/flash_clk_sim.log
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import isostamp  # noqa: E402
 from pathlib import Path
@@ -26,7 +27,7 @@ AWTO_SLOW = 0x20                        # stock tune: latch_so_rise 1, drive_si_
 WR_F2 = 5                               # flash writes / erases: 350.8 / 5 = 70.2 MHz
 PROVEN = {(3, 0x34), (3, 0x20), (4, 0x34), (4, 0x20), (5, 0x20)}   # (F2, FF6C[5:2]) pairs passed on unit 3 (clk_sweep.tsv oc117 / oc88 l1_f1_d1 + l1_f0_d0; stock tune at 70.2)
 M2PLL_KHZ = 350790                      # 14318 kHz x 49 / 2
-FILL_FLASH_CLK = 40 + 16 * 8            # dw8051_model.json flash_fetch: cmd 40 + 16 bytes x 8 clocks
+FILL_FLASH_CLK = json.loads((Path(__file__).resolve().parent / "dw8051_model.json").read_text())["flash_fetch"]["fill_flash_clk"]   # measured, see the model's fill_source
 
 
 def say(s: str):
@@ -93,7 +94,7 @@ def main() -> int:
         check("fast tune written before the M2PLL is the CPU clock", first_pll is not None and fast is not None and fast < first_pll, f"tune row {fast}, first M2PLL row {first_pll}")
         flash_khz = M2PLL_KHZ / max(1, f2)
         say(f"INFO sim cache line fill = {FILL_FLASH_CLK} flash clocks = {FILL_FLASH_CLK * 1e6 / flash_khz:.0f} ns at {flash_khz / 1000:.1f} MHz "
-            f"(ratio_x256 {bus.m.clock.ratio_x256 if hasattr(bus.m, 'clock') else '?'}); unit 3 measured 1404 ns at 70.2 MHz, 1099 ns at 116.9 MHz (clk_sweep.tsv oc117)")
+            f"(ratio_x256 {bus.m.clock.ratio_x256 if hasattr(bus.m, 'clock') else '?'}); unit 3 meter (176 CPU cycles + the fill) 1404 ns at 350.8 / 70.2, 1099 ns at 350.8 / 116.9")
     finally:
         bus.close()
     say(f"{'PASS' if not fails else 'FAIL'} flash_clk_sim {a.bin.name}: {fails} failed")

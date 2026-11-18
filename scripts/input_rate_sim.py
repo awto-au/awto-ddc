@@ -2,11 +2,11 @@
 """Input-monitor scan rates in the firmware sim (fw/awto/inputs.tsv `rate`, docs/saver-mode.md D7).
 
 usage: input_rate_sim.py BIN [MAP] [--pulses N]
-  - Calibrates: reads of each tested row (hook on AwtoInRow) over CAL_S; the worst gap between two reads is that row's minimum pulse width.
-  - Drives a pulse of exactly that width at N start phases and checks every one is seen:
+  - Calibrates: reads of each tested row (hook on AwtoInRow) over CAL_S; the worst gap between two reads (idle window + DPS17 pulses at the sweep's phases) x WIDTH_MARGIN is the test pulse width.
+  - Drives a pulse of that width at N start phases and checks every one is seen:
     slow row GPIO65 (ring entry), pass row DPS17 (edge counter, the #139 selector pulse rate), pass row ADC0 (ring entry, a key-ladder spike
     shorter than the key debounce, so no key action).
-  - Also: the DPS17 pulse of #110 (PULSE_DPS17_US) and a pulse of half the minimum width on the slow row (informational: slow rows may miss it).
+  - Also: the DPS17 pulse of #110 (PULSE_DPS17_US) and a pulse of half that width on the slow row (informational: slow rows may miss it).
 Log: tmp/logs/input_rate_sim.log
 """
 import argparse
@@ -25,8 +25,10 @@ CAL_S = 6.0                       # calibration window: covers the periodic wors
 PULSES = 40                       # start phases per case
 PHASE_STEP_US = 777               # added to the idle gap between pulses: walks the start phase over the scan period
 SETTLE_US = 1_000_000             # before a sweep: the SDK cable / source handling a pin pulse started has finished
-IDLE_GAP_US = 60_000              # between pulses (> any minimum width)
+IDLE_GAP_US = 60_000              # between pulses (> any worst gap x 1.25)
 RUN_CHUNK = 100                   # instructions per step while timing a pulse (~30 us)
+# The next gap exceeds the max of N calibration gaps with p = 1 / (N + 1): 40 test pulses meet one in 63 % of runs. Width = worst gap x 1.25 (repo timeout rule).
+WIDTH_MARGIN = 1.25
 PULSE_DPS17_US = 4000             # DPS17 pulse measured on unit 2 (#110, fw/awto/portsig.tsv)
 ROW = {"GPIO65": 0, "DPS17": 28, "ADC0": 8}
 PIN_GPIO65, PIN_DPS17, ADC0 = 0xFFE2, 0xFE33, 0xFF09      # GPIO65 = P1.2 (bit 2 of 0xFFE2): a spare pad, no SDK consumer
@@ -77,8 +79,9 @@ class Rig:
             self.m.stub("AwtoInRow", hook)
         else:
             self.m.stub("AwtoGpioPoll", hook_poll)
-        for _ in range(int(CAL_S)):                    # a DPS17 pulse per second inside the window: the pass the SDK spends on a pulse is part of the worst gap
-            self.run_us(1_000_000 - PULSE_DPS17_US)
+        self.run_us(CAL_S * 1_000_000)                 # idle: the periodic worst pass
+        for k in range(PULSES):                        # a DPS17 pulse walks the start phase like the sweep: the pass a pulse starts is part of the worst gap, at every phase
+            self.run_us(IDLE_GAP_US + k * PHASE_STEP_US)
             self.pulse(PIN_DPS17, 1, 0, PULSE_DPS17_US)
         on[0] = False
         out = {}
@@ -146,14 +149,14 @@ def main() -> int:
         r.s.bus.close()
         r = Rig(a)                    # fresh boot without the hook: a breakpoint on AwtoInRow disturbs the pulse timing
         n = a.pulses
-        w = cal["DPS17"][1]
-        r.check(r.sweep("pass row DPS17, minimum width", PIN_DPS17, 1, 0, w, ROW["DPS17"], True, n) == n, "pass row DPS17: a pulse of the worst read gap is counted at every phase")
+        w = cal["DPS17"][1] * WIDTH_MARGIN
+        r.check(r.sweep("pass row DPS17, worst gap x 1.25", PIN_DPS17, 1, 0, w, ROW["DPS17"], True, n) == n, "pass row DPS17: a pulse of 1.25 x the worst read gap is counted at every phase")
         r.sweep("pass row DPS17, the #110 pulse (informational)", PIN_DPS17, 1, 0, PULSE_DPS17_US, ROW["DPS17"], True, n)
-        w = cal["ADC0"][1]
-        r.check(r.sweep("pass row ADC0, minimum width", ADC0, ADC_UP, ADC_IDLE, w, ROW["ADC0"], False, n) == n, "pass row ADC0: a pulse of the worst read gap is logged at every phase")
-        w = cal["GPIO65"][1]
-        r.check(r.sweep("slow row GPIO65, minimum width", PIN_GPIO65, 1, 0, w, ROW["GPIO65"], False, n) == n, "slow row: a pulse of the worst read gap is seen at every phase")
-        r.sweep("slow row GPIO65, half the minimum width (informational)", PIN_GPIO65, 1, 0, w / 2, ROW["GPIO65"], False, n)
+        w = cal["ADC0"][1] * WIDTH_MARGIN
+        r.check(r.sweep("pass row ADC0, worst gap x 1.25", ADC0, ADC_UP, ADC_IDLE, w, ROW["ADC0"], False, n) == n, "pass row ADC0: a pulse of 1.25 x the worst read gap is logged at every phase")
+        w = cal["GPIO65"][1] * WIDTH_MARGIN
+        r.check(r.sweep("slow row GPIO65, worst gap x 1.25", PIN_GPIO65, 1, 0, w, ROW["GPIO65"], False, n) == n, "slow row: a pulse of 1.25 x the worst read gap is seen at every phase")
+        r.sweep("slow row GPIO65, half the worst gap (informational)", PIN_GPIO65, 1, 0, w / 2, ROW["GPIO65"], False, n)
         r.check(r.m.rd(r.gpio + 16 + ROW["ADC0"], 1)[0] == ADC_IDLE, "ADC0 back at idle")
     finally:
         r.s.bus.close()

@@ -101,6 +101,7 @@ def lib():
     L.core_set_port_extra.argtypes = [vp, ctypes.c_int, ctypes.c_int]
     L.core_set_fetch.argtypes = [vp, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_char_p]
     L.core_set_fetch_ratio.argtypes = [vp, ctypes.c_uint32]
+    L.core_set_fill.argtypes = [vp, ctypes.c_int]
     L.core_level.restype, L.core_level.argtypes = ctypes.c_int, [vp, ctypes.c_int]
     L.core_run.restype, L.core_run.argtypes = ctypes.c_int, [vp, ctypes.c_uint64]
     _LIB = L
@@ -168,6 +169,7 @@ class Core:
             sets = int(os.environ.get("AWTO_SIM_FETCH_SETS", ff["sets"]))      # sensitivity runs only; the default is the JSON
             self.L.core_set_fetch(self.h, ff["line_bytes"], sets, ff["ways"], ff["cmd_flash_clk"], ff["byte_flash_clk"],
                                   int(os.environ.get("AWTO_SIM_FETCH_COMMON", ff["common_end"])), bytes(mdl["oplen"]))     # sensitivity runs only: 0 = common cached per bank (no common_page_en)
+            self.L.core_set_fill(self.h, int(os.environ.get("AWTO_SIM_FETCH_FILL", ff.get("fill_flash_clk", 0))))      # sensitivity runs only; the default is the JSON
 
     def reset(self):
         self.L.core_reset(self.h)

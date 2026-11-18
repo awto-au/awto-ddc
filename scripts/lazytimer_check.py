@@ -152,6 +152,8 @@ class Core:
             ff = MODEL["flash_fetch"]
             L.core_set_fetch(self.h, ff["line_bytes"], ff["sets"], ff["ways"], ff["cmd_flash_clk"], ff["byte_flash_clk"],
                              ff["common_end"], bytes(MODEL["oplen"]))
+            L.core_set_fill.argtypes = [ctypes.c_void_p, ctypes.c_int]
+            L.core_set_fill(self.h, ff.get("fill_flash_clk", 0))
         L.core_reset(self.h)
         self.p = L.core_pub(self.h).contents
         mv = lambda sp, n: (ctypes.c_uint8 * n).from_address(L.core_mem(self.h, sp))
