@@ -10,6 +10,7 @@
 
 ## Read-behind correction (2026-11-19)
 - Passes A / B / C below (units 1 / 2, block path, no fix) read pages `88 8A 8B 8E 8F 90 A0 A3 A4 A6 A7 A8 AB AC AE AF C8 CA CB CE CF D0` with the artifact: the first byte of every dword (and the first byte after another address) can be the previous dword's byte (`re/regmap/README.md` "Read-behind", `re/regmap/read_behind.tsv`). Their values on those pages are not trusted and were removed from `re/regmap/obs/`; everything else in the tables stands.
+- Cause: per-page one-dword read cache, no time dependence, any first lane stale; candidate fix `FFBC` > 0x0F (untested): `re/regmap/README.md` "Read-behind" / Cause. Experiments: `scripts/reg_behind_cause.py`.
 - Fixed tool: byte path with a discarded first read of each new dword on those pages (`DISCARD` lines in the log, JSON `read_fix`). Unit 1 is dark (not rescanned): its values on those pages are gone from the store.
 - Fixed scans (2026-11-19, 100 kHz, MCU running, 8624 reads each, 0 failed): unit 3 C1 07:16:01 (17 s) and C2 07:21:05 (17 s), unit 2 R1 07:16:31 (31 s), all awake (host displays woken, DPM on); S1 on both units 07:14 in standby (host displays asleep, DPM off, PHY regs read 0).
 - Unit 3 C1 vs C2 (4 min 47 s apart): 243 addresses differ, 147 in firmware RAM D0-FC, 96 registers: counters (22AC/AF, 22BE/C1, B712..B737, 9DAD/9FAD, BDAD, FDC8/C9, 72CD), 0045, 3007, 300B, 38D8/D9, FF79, FFAA/AB, 8F9B..8FBB / CF1E..CFCE pattern bytes, DC PHY regs in A06x A0Ax A64x..A66x A76x A86x A8Ax AE4A..AE6D (61 of the 96 are on read-behind pages).
