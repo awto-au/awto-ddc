@@ -959,7 +959,7 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 // #216 blocking-wait log: every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call, newest last, wraps. Host: scripts/wait_log.py.
-#define AWTO_WAIT_N                                             120     // a cold boot logs ~115 waits >= 1 ms (unit 3, HDMI 4K60); ucTotal counts all
+#define AWTO_WAIT_N                                             64      // newest waits kept (XDATA floor, #233); ucTotal counts all
 #define AWTO_WAIT_DELAY                                         0       // arg = ms asked
 #define AWTO_WAIT_POLL                                          1       // arg = register polled
 #define AWTO_WAIT_EVENT                                         2       // arg = event type
@@ -995,7 +995,7 @@ extern void AwtoWaitLog(unsigned char ucKind, unsigned int usArg, unsigned int u
 #define AWTO_PS_COUNT(i, v)                                     { if((v) != 0) { if(i == 28) { g_pucAwtoInCnt[0]++; } } }
 // GENERATED-END awto_port_cnt
 extern __xdata unsigned char g_pucAwtoInCnt[];   // fw/input/inputs.c: rising edges per counted input (wraps), read by the selector
-#define AWTO_SYNC_N                                             60      // >= cold boot 38 lines x1.25 (boot_sim, #165) and cold boot + power off 50 lines on the console (con_wrap_sim); divides WRAP
+#define AWTO_SYNC_N                                             48      // >= cold boot 38 lines x1.25 = 47.5 (boot_sim, #165); divides WRAP (#233)
 #define AWTO_SYNC_WRAP                                          240     // seq counts 0..239 (a multiple of AWTO_SYNC_N): entry = seq % N
 #define AWTO_SYNC_IDX(s)                                        ((unsigned char)((s) % AWTO_SYNC_N))
 #define AWTO_SYNC_NEXT(s)                                       ((unsigned char)((((s) + 1) >= AWTO_SYNC_WRAP) ? 0 : ((s) + 1)))
@@ -1108,6 +1108,17 @@ extern BYTE AwtoOsdRevByte(BYTE ucB);
 extern WORD AwtoOsdRotCell(WORD usCell, WORD usCells);
 extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
+#define AWTO_OSD_ZERO                                           0x00
+#define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
+#define AWTO_OSD_POS_OFFSET_V                                   0x04
+#define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px
+#define AWTO_OSD_ROW_B0                                         0x80    // row command byte 0
+extern void AwtoOsdWord(WORD usAddr, BYTE ucB0, WORD usB12);   // fw/osd/osd_screen.c: one 3-byte OSD SRAM word (B1 high byte of usB12; 3 params: no XDATA parameter bytes)
+extern void AwtoOsdRowCmds(BYTE ucRows, BYTE ucRowH, BYTE ucCols);       // ucRows row commands from SRAM 0 + the end marker word
+extern void AwtoOsdGlyph(WORD usAddr, const BYTE __xdata *pucB, BYTE ucWords);   // glyph words (canonical c0 c1 c2) at usAddr, turned when g_ucAwtoOsdRot
+extern void AwtoOsdPlaceScaleUp(BYTE ucPosH, BYTE ucPosV, BYTE ucCols, BYTE ucRows, BYTE ucFactor);   // map of 12 x 18 tiles scaled up and shown
+extern void AwtoOsdScreenBegin(void);                                           // screen prologue: close, latch rotation, reset, DVS
+extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off

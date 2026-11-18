@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/wait_log.log"
-N = 120                     # AWTO_WAIT_N
+N = 64                      # AWTO_WAIT_N
 HDR = 3                     # ucTotal, ucQuick, ucSpMax
 EV = 8                      # sizeof StAwtoWaitEv: usMs(2) ucKind(1) usArg(2) ucDur(1) usPc(2), big-endian image
 KINDS = {0: "delay", 1: "poll", 2: "event"}

@@ -32,6 +32,7 @@ bit AwtoHoldBlocksDisable(void)                  // top of OsdDispDisableOsd: th
     return _TRUE;
 }
 
+#ifdef _AWTO_PROBES                             // -D _AWTO_PROBES: OSD SRAM + 0xA5 probes (~280 B XDATA, #233); host: scripts/osd_sram_probe.py
 // #226 OSD SRAM probe, on the MCU through the SDK write path (not over I2C): per address read M1 and M2 (0x0093[5] sram_read_select),
 // write the marker <addr hi>, <addr lo>, B2 to both, read M1 / M2 again, put zeros back. An address that is not all zero before
 // (live OSD data) is only read. OSD must be off (0x3A33[4] sram_read_en reads only with the OSD off; the 2nd read is the right one).
@@ -128,6 +129,7 @@ static void AwtoOsdSramProbe(void)
     g_stAwtoOsdProbe.ucCircuit = bCircuit;
     AwtoSyncPush(AWTO_SYNC_EV_OSDP, 1, ucWrote);
 }
+#endif
 
 // #165 step 2: memory work mode for the current timing; one sync line per request (E3), one per resulting select change
 static void AwtoMemForce(BYTE ucOn)
@@ -192,6 +194,7 @@ static void AwtoFff4Probe(void)
     g_pucAwtoFff4Probe[6] = AWTO_FFF4_DONE;
 }
 
+#ifdef _AWTO_PROBES
 // Reserved opcode 0xA5 on the DW8051 (fw/sdcc/a5_probe.asm): 4 cases x 20 B capture + the two bytes DPTR0 / DPTR1 point at
 #define AWTO_TC_A5_PROBE                        0x21
 #define AWTO_A5_MARK0                           80      // a5_probe.asm MARK0 / MARK1
@@ -220,6 +223,7 @@ static void AwtoA5Probe(void)
     AwtoA5Run3();
     EA = 1;
 }
+#endif
 
 static void AwtoDemoLog(void)                   // each main pass while lines are left
 {
@@ -447,6 +451,7 @@ void AwtoDiagTestCmd(void)
         extern void AwtoStackDeepTest(void);
         AwtoStackDeepTest();
     }
+#ifdef _AWTO_PROBES
     else if(ucCmd == AWTO_TC_OSD_SRAM_PROBE)            // #226 OSD SRAM markers from the MCU
     {
         AwtoOsdSramProbe();
@@ -455,6 +460,7 @@ void AwtoDiagTestCmd(void)
     {
         AwtoA5Probe();
     }
+#endif
     else if(ucCmd == AWTO_TC_FFF4_PROBE)                // FFF4 vs direct scaler access
     {
         AwtoFff4Probe();

@@ -317,7 +317,7 @@ class Run:
                 miss.append(f"{w}={v}@{t}")
             else:
                 used.add(k)
-        extra = [f"11 {a:02X}@{ms}" for j, (ms, a) in enumerate(lines) if j not in used and ((ms - t_first) & 0xFFFF) < 0x8000]
+        extra = [f"11 {a:02X}@{ms}" for j, (ms, a) in enumerate(lines) if j not in used and 0 < ((ms - t_first) & 0xFFFF) < 0x8000]   # strictly after the first recorded edge: the boot VDD line can share its ms (its edge is before the record)
         self.check(edges and not miss, f"every machine pin edge has its transition line within {LINE_SLACK_MS} ms "
                    f"({len(edges)} edges)", "missing: " + ", ".join(miss[:6]))
         self.check(not extra, "no pin transition line without a pin edge", ", ".join(extra[:6]))

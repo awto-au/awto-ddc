@@ -296,7 +296,8 @@ def main() -> int:
                  *(["--resid-end", a.resid_end] if a.resid_end else [])])
     bank_dir = ROOT / "tmp/sdcc-port/asm_bank"
     # / % * memcpy: library only (#204); % by 0 = Keil's result via the _keil entries (--keil-div)
-    for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm", ROOT / "fw/sdcc/a5_probe.asm",
+    for extra in (ROOT / "fw/sdcc/bank.asm", ROOT / "fw/sdcc/crt_xinit.asm", ROOT / "fw/sdcc/crt_rtd_startup.asm",
+                  *([ROOT / "fw/sdcc/a5_probe.asm"] if "_AWTO_PROBES" in os.environ.get("K2S_SDCC_EXTRA", "") else []),   # needs the C buffer: -D _AWTO_PROBES (#233)
                   ROOT / "tmp/sdcc-port/asm_ovl/__ovl.asm",
                   *sorted((ROOT / "tmp/sdcc-port/isr_libs").glob("*_isr*.asm"))):
         (bank_dir / extra.name).write_text(extra.read_text())

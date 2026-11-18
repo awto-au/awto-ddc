@@ -40,3 +40,11 @@ Status 2026-11-18. Code: `fw/osd/osd_rot.c`. Users: Pac-Man (`fw/test/pacman_cla
 
 - `python scripts/saver_sim.py <image>`: starts each saver by DDC/CI VCP 0xEB, sets Rotate 180 (registry row 32 through VCP 0xE0 / 0xE1), compares the OSD box with the upright render turned 180 (shrunk 8x, mean difference <= 8, at least 1.5x closer than the unturned render).
 - Unit 3: Rotate 180 is the stored setting; the screens should look upright to the viewer.
+
+## Shared screen helpers (`fw/osd/osd_screen.c`)
+
+- `AwtoOsdScreenBegin()`: close, latch `g_ucAwtoOsdRot`, `AwtoOsdTestReset`, double buffer off, circuit on, DVS. `AwtoOsdScreenOff()`: close + scale-up off.
+- `AwtoOsdWord(addr, b0, b12)`, `AwtoOsdRowCmds(rows, rowH, cols)` (rows + end marker), `AwtoOsdGlyph(addr, xdata ptr, words)` (turns when latched).
+- `AwtoOsdPlaceScaleUp(posH, posV, cols, rows, factor)`: map of 12 x 18 tiles placed, scaled, shown.
+- At most 3 parameters where it can: the 4th and later go to XDATA (floor 700 B).
+- Users: scope savers, QC pattern; Pac-Man and the flash screen adopt them later.
