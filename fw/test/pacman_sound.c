@@ -189,6 +189,8 @@ void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed
     {
         PsResume();                             // silence or another background sound is playing; a higher sound picks the new state up at its end
     }
+#else
+    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_NA, ucState);
 #endif
 }
 
