@@ -98,6 +98,7 @@ def lib():
     L.core_set_bank.argtypes = [vp, ctypes.c_uint]
     L.core_sfr_write.argtypes = [vp, ctypes.c_int, ctypes.c_int]
     L.core_set_dw.argtypes = [vp, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    L.core_set_port_extra.argtypes = [vp, ctypes.c_int, ctypes.c_int]
     L.core_set_fetch.argtypes = [vp, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_char_p]
     L.core_set_fetch_ratio.argtypes = [vp, ctypes.c_uint32]
     L.core_level.restype, L.core_level.argtypes = ctypes.c_int, [vp, ctypes.c_int]
@@ -155,6 +156,8 @@ class Core:
             td = mdl["timer_clk_div"]
             self.L.core_set_dw(self.h, 1, bytes(mdl["cycles"]), mdl["movx"]["base_cycles"], mdl["irq_cycles"], mdl["clk_per_cycle"],
                                td["slow"], td["fast"])
+            if "osd_data_port" in mdl:
+                self.L.core_set_port_extra(self.h, mdl["osd_data_port"]["addr"], mdl["osd_data_port"]["extra_cycles"])
 
     def set_fetch(self, mdl: dict | None):
         """Flash code-fetch stall model (mdl["flash_fetch"]) or none."""

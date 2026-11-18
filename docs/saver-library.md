@@ -27,7 +27,7 @@ Bytes = CH_ area (code incl. its local consts); B = bank. `-` = not used.
 | row commands | `PcWord` 48 B loop, row h 12 (dup) | `AwtoOsdRowCmds` | same | same | `FsWord` 48 B loop (dup) | in VLC blob |
 | char map | `PcMaze` 183 B from `g_pcCell` 3024 B (3 B / cell), rot on read | identity loop in `AwtoScopeSaver` (dup) | `S2MapWord` 56 B per cell, 2-bit attrs, rot | identity loop in `AwtoAsteroids` (dup) | `FsCellId` 98 B computed, rot | VLC blob |
 | cell write later (rot) | `PcCellSet` 43 B (step deltas) | - | `S2MapWord` | - | host over ISP | - |
-| glyph upload | `__code` stream turned per byte (`PcGlyph` + `AwtoOsdRotSrc` + `AwtoOsdRevByte`) | `ScUpload` 147 B -> `AwtoOsdGlyph` 344 B (turns xdata) | `S2Glyph` 62 B (pre-turned table `s_tS2BaseRot` 2322 B) | `AstUpload` 147 B (= `ScUpload`) | `__code` stream turned per byte (dup of Pac-Man's) | VLC hardware decode |
+| glyph upload | `__code` stream turned per byte (`PcGlyph` + `AwtoOsdRotSrc` + `AwtoOsdRevByte`) | `ScUpload` 147 B -> `AwtoScTile` (turns xdata, direct stores) | `S2Glyph` 62 B (pre-turned table `s_tS2BaseRot` 2322 B) | `AstUpload` 147 B (= `ScUpload`) | `__code` stream turned per byte (dup of Pac-Man's) | VLC hardware decode |
 | placement + scale-up | inline (WORD position > 255) (dup) | `AwtoOsdPlaceScaleUp` 199 B | same | same | inline, position 0 (dup) | own (2 maps) |
 | canvas | - | `osd_lines` band 1 x 6 tiles, `g_aucScPix` 162 B + dirty 1 B + `g_scCv` 10 B | `g_aucScPix` as one 2-plane tile buffer (54 B) | `osd_lines` band (shared with Scope 1) + occupancy `s_aucOcc` 64 B | - | - |
 | pixel | - | `osd_pixel` 75 B (graticule dots: `cursor_init` divides per dot) | `S2Run` 259 B vertical run, rot-aware | `osd_pixel` (shots) | - | - |
@@ -95,7 +95,7 @@ Bytes = CH_ area (code incl. its local consts); B = bank. `-` = not used.
 | layer | today | shared form | users |
 |---|---|---|---|
 | screen | `osd_screen.c` used by scopes / Asteroids / QC; Pac-Man and flash inline copies | + `AwtoOsdMap1` (identity 1-bit map + bases), `AwtoOsdPlaceScaleUp` with WORD position, row height parameter already there | all 6 |
-| canvas | band canvas in `osd_lines`, uploads in `ScUpload` / `AstUpload` / `S2Glyph`, occupancy in Asteroids only | band canvas + `AwtoOsdTile` (rot cell + glyph slot) + occupancy bits (skip blank-to-blank uploads) for every band user; per-call ms budget (`AWTO_S2_PASS_MS` model) | Scope 1, Asteroids, Scope 2 tile buffer |
+| canvas | band canvas in `osd_lines`, uploads in `ScUpload` / `AstUpload` / `S2Glyph`, occupancy in Asteroids only | band canvas + `AwtoScTile` (rot cell + glyph slot at the call site) + occupancy bits (skip blank-to-blank uploads) for every band user; per-call ms budget (`AWTO_S2_PASS_MS` model) | Scope 1, Asteroids, Scope 2 tile buffer |
 | draw | `osd_line` (no clip), `osd_pixel` (div per dot), `S2Run`, `S2Char` | `osd_line` clipped to the canvas (same pixels), `osd_hrun` / `osd_vrun`, `osd_polyline` (int8 vertex lists, shift, quarter turn: `AstShape`'s core), `osd_circle` / `osd_arc` (midpoint, int16), `osd_bezier2` (quadratic, forward differences, n segments of `osd_line`), `osd_text5x7` (one font table, scale, clip: `S2Char`'s core) | Scope 1 / 2, Asteroids, future games |
 | sprite | generator-made pieces (Pac-Man), vector objects (Asteroids) | on-chip: sprite = (glyph set, px, py); per tile compose pieces over the static tile (priority = draw order, later wins, as the generator's `overlay`), dedup by content in a small slot ring (Scope 2's ring + cache model), only changed tiles uploaded (occupancy) | Pac-Man on chip (new), Asteroids HUD ships |
 | sound | `pacman_sound.c` | `snd.c`: same player; per game a generated table {cmd -> track, prio, loops, offset}; no per-game if chain; game ids in the generated header | Pac-Man, Asteroids, alert, key click |
@@ -112,7 +112,7 @@ void AwtoOsdScreenBegin(void);                                    // exists
 void AwtoOsdRowCmds(BYTE ucRows, BYTE ucRowH, BYTE ucCols);       // exists
 void AwtoOsdMap1(BYTE ucCols, BYTE ucRows, BYTE ucAttr);           // identity map, glyph id = cell; + col max + SRAM bases
 void AwtoOsdPlaceScaleUp(WORD usPosH, BYTE ucPosV, BYTE ucCols, BYTE ucRows, BYTE ucFactor);   // WORD for Pac-Man
-void AwtoOsdTile(WORD usCell, const BYTE __xdata *pucB);            // geometry latched by AwtoOsdMap1: rot cell, font base, glyph words
+void AwtoScTile(WORD usAddr, BYTE __xdata *pucB);                   // scope_saver.c: one 1-bit tile (turned in place when Rotate 180) by direct port stores; the caller computes the glyph word address
 // tools/osd_lines (canvas + draw); OSD_MEM = __xdata on SDCC mcs51
 void osd_line(osd_canvas OSD_MEM *c, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t ink);   // clipped walk, same pixels
 void osd_polyline(osd_canvas OSD_MEM *c, const int8_t __code *v, int16_t cx, int16_t cy, uint8_t shift, uint8_t quarter);
@@ -196,7 +196,7 @@ Proof per step: `saver_frames_md5.py --saver S --frames N [--rotate]` on main (`
 
 | step | what | frames md5 | code / XDATA | speed (sim) |
 |---|---|---|---|---|
-| 1 draw core (b24b690) | `osd_line` walks only the visible part (closed-form first step: `skip_steps` / `minor_steps`, stop at the first pixel past the far edge); `OSD_MEM` = `__xdata` on SDCC (no `__gptrget`); cursor keeps tile / byte base / bit index incrementally (no `__mulint` per pixel); byte divide in `cursor_init` for 0..255; `AwtoOsdGlyph` writes the data port directly (was a banked `ScalerOsdDataPort` call per byte) | Scope 1, Scope 2, Asteroids, Pac-Man: 12 frames upright + 8 Rotate 180 each; Scope 1 / Asteroids also 40 frames: IDENTICAL | CH_ +395 B, stubs +48 B, XDATA -9 B (1015 -> 1006 free) | below |
+| 1 draw core (b24b690) | `osd_line` walks only the visible part (closed-form first step: `skip_steps` / `minor_steps`, stop at the first pixel past the far edge); `OSD_MEM` = `__xdata` on SDCC (no `__gptrget`); cursor keeps tile / byte base / bit index incrementally (no `__mulint` per pixel); byte divide in `cursor_init` for 0..255; glyph upload writes the data port directly (was a banked `ScalerOsdDataPort` call per byte) | Scope 1, Scope 2, Asteroids, Pac-Man: 12 frames upright + 8 Rotate 180 each; Scope 1 / Asteroids also 40 frames: IDENTICAL | CH_ +395 B, stubs +48 B, XDATA -9 B (1015 -> 1006 free) | below |
 | 2 screen (284834d) | `AwtoOsdMap1(cols, rows, attr)` + `AwtoOsdTile(cell, bytes)` in `osd_screen.c`; Scope 1 / Asteroids drop `ScUpload` / `AstUpload` and their map loops | Scope 1, Asteroids upright + Rotate 180: IDENTICAL | CH_ -77 B, stubs +8 B, XDATA 0 | same |
 
 - Host proof of step 1: `tests/test_osd_lines_clip.py` compiles the original prototype (`docs/osd-prototypes/osd-lines-12x18.zip`) and the new library, > 100 000 random pixel / line / clear calls per tile size (12 x 18, 8 x 8, 5 x 7, 16 x 16, 32 x 32, 1 x 1, 32 x 3), endpoints up to full int16: pixels + dirty flags equal after every call.
@@ -220,5 +220,5 @@ Proof per step: `saver_frames_md5.py --saver S --frames N [--rotate]` on main (`
 
 - After the merge with main f34ce75 (saver D1 / D4 / D5, input scan rates D7): frames still IDENTICAL to `slbase` for all four savers; XDATA free 997 B (default), 982 B (audio build).
 - Hot spots left: Scope 1 `cursor_plot` 25 %, `osd_clear` 10 %, `ScPass` 9 %, `cursor_init` 7 % (one per graticule dot: draw the dotted graticule as runs next); Asteroids `AstPass` / `AstShape` / `AstTileInk` 8-9 % each, trampoline 9 %.
-- OSD data port rule (2026-11-18): every byte goes through `ScalerOsdDataPort()` (a banked `ScalerSetByte(0x92)`), never back-to-back `AWTO_XFR(AWTO_R_OSD_DATA_PORT) = v` (unit-3 Scope 2 photo showed garbled tiles with direct writes; sim has no write-rate model). `AwtoOsdGlyph` / `AwtoOsdMap1` reverted; frames IDENTICAL to `slbase`; cost (sim): Scope 1 763 -> 923 ms / frame (1.31 -> 1.08 / s), Asteroids pass mean 11.6 -> 12.8 ms. New helpers keep it.
+- OSD data port: direct stores (`AWTO_OSD_PORT(v)`) in every saver and `osd_screen.c`; lifted by Dan 2026-11-18 (T1 / T2 / T5 / T7 byte-exact on unit 3, `docs/osd-hw-tests.md`). Open: Scope 2 tile garble on unit 3 is display-side (T10 cycle verdict pending, scale-up-off test planned).
 - Not adopted in step 4: Pac-Man placement (WORD position, optional scale-up, 2-bit font offset in between: `AwtoOsdPlaceScaleUp` would take WORD arguments and +2 XDATA); the 5 x 7 fonts (glyph shapes differ per screen: output would change); Pac-Man / flash glyph upload (`__code` source, not xdata: a leaf reader per bank).

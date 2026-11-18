@@ -13,6 +13,6 @@ Extract an archive and read its own README before building or running it. The Pa
 
 The Pacman archive includes a standalone diagnostic binary for an 8051 emulator. **It is not a flashable monitor image.**
 
-Prototype README statements and captured validation results describe their original snapshots. Current hardware facts, corrections, limitations and integration work are tracked in [#226](https://github.com/awto-au/awto-ddc/issues/226) and the [OSD overview](../osd.md). In particular, the map-address limit remains under investigation; archived estimates do not settle it.
+Prototype README statements and captured validation results describe their original snapshots. Current hardware facts, corrections, limitations and integration work are tracked in [#226](https://github.com/awto-au/awto-ddc/issues/226) the [OSD overview](../osd.md) and the [OSD manual](../osd/README.md). In particular, the map-address limit (display fetch across word 8192) is not settled; archived estimates do not settle it ([limits](../osd/limits.md), OT-3).
 
 Archive integrity/CRC and embedded paths were checked on import. Git blob IDs were checked against the original ZIP bytes. No monitor was accessed or firmware build changed by this archival import.

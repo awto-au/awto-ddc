@@ -26,9 +26,9 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 - Map: 28 x 36 tiles, 12 x 18 glyphs, row height 12 (6 px of each glyph cut), maze = the classic 31 rows from tile row 3 (3 score rows above, 2 spare below).
 - Glyphs (`gen_pacman_classic.py`): 1-bit walls (autotiled, double-line rule), dots, power pellet, text, Pac-Man frames and death frames 0..10; 2-bit ghosts (body, eye white, pupil), frightened, eyes, cherry.
 - One char command per cell: 1-bit = `0x4C | id bit 8 << 5`, id, `fg << 4 | bg`; 2-bit = type `0x80` + four colours packed over B0 / B2 (see `osd_model.py` `decode_char`). Palette 12 entries.
-- SRAM: row commands from 0, end word, char commands from `AWTO_PC_FS_BASE`, glyph words from `AWTO_PC_FONT_BASE`; 2-bit glyphs at 18 words x (2-bit offset + id), MSB plane first.
-- Scale-up: ratio 64 / `AWTO_PC_SU_FACTOR` (13 -> 4.9): 432 lines -> 2126 of 2160; the scale-up window start = the OSD position (`docs/osd-rotation.md`). Position `g_usAwtoPcPosH` (WORD, hd units of 4 panel px) / `g_usAwtoPcPosV`.
-- Rotation: display Rotate 180 does not turn the OSD; the loader turns map and glyphs itself (`docs/osd-rotation.md`).
+- SRAM: row commands from 0, end word, char commands from `AWTO_PC_FS_BASE`, glyph words from `AWTO_PC_FONT_BASE`; 2-bit glyphs at 18 words x (2-bit offset + id), low bit plane first ([hw] T9, `docs/osd/tiles-fonts.md`).
+- Scale-up: ratio 64 / `AWTO_PC_SU_FACTOR` (13 -> 4.9): 432 lines -> 2126 of 2160; the scale-up window start = the OSD position (`docs/osd/rotation.md`). Position `g_usAwtoPcPosH` (WORD, hd units of 4 panel px) / `g_usAwtoPcPosV`.
+- Rotation: display Rotate 180 does not turn the OSD; the loader turns map and glyphs itself (`docs/osd/rotation.md`).
 
 ## How a frame is made
 

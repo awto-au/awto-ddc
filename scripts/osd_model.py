@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """RTD2795T OSD model for fw_sim: captures what the firmware writes into the OSD and renders what the panel shows (#46, #63).
 
-Library (no CLI; CLI = osd_render.py). Facts: docs/reversing/realtek-rtd/osd.md, osd-font-download.md, regdb re/regdb/.
+Library (no CLI; CLI = osd_render.py). Facts: docs/osd/README.md (the OSD manual), regdb re/regdb/.
 - OsdModel (fw_sim.Dev): taps scaler regs 0x90 addr MSB, 0x91 addr LSB, 0x92 data, 0x94 write option (bytesel/sram_sel),
   0x6E/0x6F palette LUT. Keeps window SRAM (sram_sel 00) and font-select/font SRAM (10) as {word: [B0, B1, B2]}.
   VLC font download (0x3A17[0]) is decoded on the fly (map 0x3A0F..16); write protection 0x3A33/34 applied.

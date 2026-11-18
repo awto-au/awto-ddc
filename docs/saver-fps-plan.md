@@ -67,7 +67,7 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 | time-sliced passes (8 ms + one column), multiple columns per call | Scope 1, Asteroids | frames no longer bound to one column per main pass (4 ms main loop each) | prototyped |
 | hot draw path in one bank (pragma) | Scope 1, Asteroids | trampoline 10-16 % of saver PC samples | partly (Asteroids) |
 | pre-rendered sprites (rock / saucer / ship bitmaps, shifted blit) | Asteroids | pixel-identical to the line walk (integer vertices); ~1 KB const rocks / saucer + 1.9 KB ship (64 headings); blit 12-bit window per row | design only: line walk first |
-| faster port write (direct / unrolled / asm, ~2x) | all | Scope 1 / 2 port-bound | needs the garble diagnosis (`docs/osd-hw-tests.md`); switchable only |
+| faster port write (direct / unrolled / asm, ~2x) | all | Scope 1 / 2 port-bound | direct stores are the default since 2026-11-18 (data port only; unit port-rate check pending) |
 | 2-bit planes as layers (static plane uploaded once) | Scope 2 | done for the graticule today; trace tiles still carry both planes | HW agent: 1-bit layer over 2-bit |
 | hardware glyph decode (VLC) for sparse trace tiles | Scope 1 / 2 | fewer port bytes per tile | HW agent |
 | smaller raster / larger scale factor | all | fewer tiles; coarser picture | not proposed (Dan asked for fill + finer) |
@@ -75,7 +75,7 @@ Status 2026-11-18: design + sim prototypes (Scope 1, Asteroids). Companion docs 
 
 ## Prototype results (sim, 2026-11-18)
 
-Images: `fpsbase` (main 6df194c), `fps2` / `fpsfinal` (this branch, default), `fps2fast` (`-D _AWTO_OSD_FAST_PORT`: direct port stores for Scope 1 / Asteroids tiles, never default: unit-3 garble open).
+Images: `fpsbase` (main 6df194c), `fps2` / `fpsfinal` (this branch, default), `fps2fast` (`-D _AWTO_OSD_FAST_PORT`, flag since removed: direct port stores for Scope 1 / Asteroids tiles).
 
 | measure | base | prototype default | + fast port |
 |---|---|---|---|
@@ -98,11 +98,29 @@ Images: `fpsbase` (main 6df194c), `fps2` / `fpsfinal` (this branch, default), `f
 - `tools/osd_lines` line / pixel / cursor code (3.9 KB) is now called by no saver (only `osd_canvas_init`): drop from the image in a follow-up; the host library and its test stay.
 - Asteroids saver CPU at 20 / s: 5.25 ms saver per pass x 110 passes/s = 29 ms per frame vs the 26 ms budget.
 
+## Direct port stores as default (sim, 2026-11-18, Rotate 180, ms / frame by `saver_port_ab.py`)
+
+- Change: `AWTO_OSD_PORT(v)` (direct `0x0092` store) in `osd_screen.c`, Scope 1 / 2, Asteroids, Pac-Man; `AwtoOsdGlyph` / `AwtoOsdTile` removed (`AwtoScTile` is the one tile path); `_AWTO_OSD_FAST_PORT` gone. Address set stays `ScalerOsdAddrSet`.
+- Sim port model: MOVX write to `0x0092` = 2 + 22 cycles (`dw8051_model.json`); `osd_port_cal.py` direct loops 0.99-1.16x the unit (T2). Base numbers below use the same model.
+
+| clock | saver | base 465cb97 | direct stores |
+|---|---|---|---|
+| 87.7 MHz | Scope 1 | 152 | 117 |
+| 87.7 MHz | Scope 2 | 182 | 158 |
+| 87.7 MHz | Asteroids (paced 40 ms; saver CPU per frame 32.2 -> 29.3; unpaced 2-tick frame 97 -> 92) | 42 | 44 |
+| 87.7 MHz | Pac-Man (per sub-step) | 31 | 31 |
+| 175.5 MHz | Scope 1 | 95 | 71 |
+| 175.5 MHz | Scope 2 | 115 | 101 |
+| 175.5 MHz | Asteroids (paced) | 41 | 40 |
+
+- Frames md5 IDENTICAL, 40 frames upright + Rotate 180, all four savers (Asteroids on `_AWTO_AST_FIXED_TICKS` images).
+- c1 (`ScalerOsdAddrSet` / `ScalerOsdAddrLsb` in common): Scope 2 158 -> 155, Scope 1 117 -> 119, Asteroids 44 -> 44: not kept. `ScalerOsdDataPort` is no longer called by a saver: nothing to pin.
+
 ## Recommended order
 
 1. Asteroids prototype as the production path (pixel-identical drawing proven; interpolation changes frames by design). Unit 3: frames/s from the sync log, tearing.
 2. Scope 1 incremental (pixel-identical, 5.3x).
-3. Dan's call on the port rule (direct stores: budget lever 3, hw #5): `_AWTO_OSD_FAST_PORT` becomes the default; Scope 2 gets the same.
+3. Direct port stores (budget lever 3, hw #5): done 2026-11-18, default in every saver (Scope 2, Pac-Man included).
 4. MCU 175.5 MHz trial on unit 3 (budget lever 2, hw T-L): likely closes Asteroids to 25.
 5. Asteroids pre-rendered sprites if 3 + 4 fall short.
 6. Scope 2 code levers (budget doc 1 + 3 + 5 + 8) after the plane-order work lands.

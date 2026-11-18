@@ -680,7 +680,7 @@ static void AwtoOsdHwPoll(void)
     ulT0 = AwtoMs();
     if((ucOp == AWTO_OHW_OP_WRITE) || (ucOp == AWTO_OHW_OP_WRBUF) || (ucOp == AWTO_OHW_OP_VERIFY) || (ucOp == AWTO_OHW_OP_READ) || (ucOp == AWTO_OHW_OP_CRC))
     {
-        ScalerOsdCircuitActivated(_ENABLE);             // SRAM access needs the OSD circuit on (docs/reversing/realtek-rtd/osd-limits.md); no-op when on
+        ScalerOsdCircuitActivated(_ENABLE);             // SRAM access needs the OSD circuit on (docs/osd/timing.md); no-op when on
         ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_DB_ENABLE, 0x00);
         if((ucOp != AWTO_OHW_OP_WRITE) && (ucOp != AWTO_OHW_OP_WRBUF))
         {

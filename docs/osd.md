@@ -15,8 +15,7 @@ Never write bare "vendor": say which one.
 
 ## 1. Layers
 ### Hardware (RL6449 / RTD2795T)
-- OSD SRAM (12288 x 24 bit words), row / char command layout, windows, palette, x2 scale: [reversing/realtek-rtd/osd.md](reversing/realtek-rtd/osd.md), [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
-- Font download (VLC decode, char words, burst DMA from flash): [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md).
+- Registers, SRAM layout, windows, palette, scale-up, limits, tests: the [OSD manual](osd/README.md) (limits table: [osd/limits.md](osd/limits.md)).
 - No framebuffer: everything (menus, pop-ups, console) is glyph cells + windows.
 
 ### Text layer (`osd_tc_*`): the one text path for our screens
@@ -28,11 +27,9 @@ Never write bare "vendor": say which one.
 - Menu bars in `ui.c` assume 8x18 cells (`OSD_CHAR_W` / `OSD_CHAR_H`, `osd.h`): smaller fonts misplace them (#128).
 
 ### Limits
-- Measured SDK limit: `OsdDispSetPosition` wraps above the panel height at 2x (60+ rows): #108, row 1 (unit 2, 2026-11-11).
-- Roll-up font-select base is 12 bit (0x3A1B / 0x3A1C); `osd_tc_scroll` stops the view where the base would pass 4095. Register width: [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
-- Cell map: the OSD reads cells only below map address 8192 (13 bit). Measured 2026-11-11, unit 2, limit probe at 5x8: 160 x 48 lines clean; 160 x 63 lines correct up to map row 50 (address 65 + 50 x 160 = 8065), corrupt and wrapped from address 8192; 160 x 72 / 90 show nothing. Rule: cols x rows + rows + 1 < 8192.
-- Roll-up base wrap, measured the same day: 46 scroll steps at 160 columns corrupt the lower half once the 12-bit font-select base passes 4095 (about step 25).
-- Font SRAM size (12288 words) is the SDK constant, not read back from hardware; see [osd-limits.md](reversing/realtek-rtd/osd-limits.md).
+- Hardware limits (map fetch below word 8192, roll-up base wrap at 4095, SRAM 12288 words, ids): [osd/limits.md](osd/limits.md).
+- `OsdDispSetPosition` wraps above the panel height at 2x (60+ rows): #108, row 1 (unit 2, 2026-11-11) [hw]; `osd_tc_place` is our own placement.
+- Console rule: grid cols x rows + rows + 1 < 8192 (#157).
 
 ### Realtek SDK engine (RTD2014 demo OSD, compiled into our image)
 - Ours on the text layer (`fw/osd/console.c`): message cards and the input-info card (`OsdDispOsdMessage`, SDK body removed, #124), source selector (`AwtoSourceOpen` / `AwtoSourceKey`, SDK hot-key source menu removed, #134). SDK timers and OSD states still drive them.
@@ -92,9 +89,9 @@ Never write bare "vendor": say which one.
 - Tile = 9 OSD words (27 bytes); VLC-downloaded (`osd_tc_vlc_*`).
 - Menu font setting `osd_font` (registry id 106): Spleen | Tamzen. Console: font 0 (Spleen 8x16) by default (#144); limit probe: font 3 (Spleen 5x8).
 - Blob bank pin: font loader and constants in different ROM banks (#111, build workaround).
-- Realtek SDK pop-ups: SDK font tables from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph set descriptors per [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0]). Our message cards still use the SDK proportional font (#89).
+- Realtek SDK pop-ups: SDK font tables from flash, VLC-compressed (`0x3A17[0]`), 1-/2-/4-bit modes; glyph blobs of the Dahua firmware: [osd-font-download.md](reversing/realtek-rtd/osd-font-download.md). Proportional widths come from the char command width field (B0 [4:0], [osd/tiles-fonts.md](osd/tiles-fonts.md)). Our message cards still use the SDK proportional font (#89).
 - Diagnostic tables, register views, pin ledgers, and similar dense data screens use fixed-cell text. The SDK-backed diagnostic renderer may reuse the normal Realtek glyph shapes, but must emit one glyph per OSD cell; normal menus, labels, and message cards remain proportional.
-- Font SRAM budget: `H + 1 + W*H + 9*U <= 12288` words (U = unique tiles, H rows, W cols); 512 1-bit ids max: [osd-limits.md](reversing/realtek-rtd/osd-limits.md). SRAM size on hardware not yet read back.
+- Font SRAM budget and id limits: [osd/limits.md](osd/limits.md).
 
 ## 3. Inputs to the OSD
 - Front keys: physical order SOURCE, MENU, DOWN, UP, AUTO, POWER (POWER = digital P3.0, others on ADC A0 / A1). Decode, ADC bands: [reversing/realtek-rtd/buttons.md](reversing/realtek-rtd/buttons.md). #85: firmware uses the SDK reference decode, not the JXC ladder; fix open. #129: one input poller and one dispatcher (in progress).
@@ -108,10 +105,10 @@ Never write bare "vendor": say which one.
   - 0x31..0x33 = input D1..D3 (#60).
   - 0x0C = frame buffer forced at the current timing (memory work mode, display setting re-run; FRC image only, else a "refused" line), 0x0D = back to the SDK choice (#165). RAM only. Sync log E3: one line per request and per memory-select change. Host: `scripts/mem_mode.py` (tools-frc) reads the DDR PHY flags before / after.
 - Menu mailbox (`_vcp_box`, debug slave 0x35) and DDC/CI VCP 0xE0..0xE5 (0xE4 = menu command / state): [settings.md](settings.md), host `scripts/menu_cli.py`, `./dev.py settings|menu`.
-- VCP 0xCA (OSD button control) may inject keys via the vendor path [?, buttons.md].
+- VCP 0xCA (OSD button control) may inject keys via the Dahua firmware's path [?, buttons.md].
 
 ## 4. Tools
-- `scripts/osd_render.py` + `scripts/osd_model.py`: simulator render of OSD frames (key actions, PNGs).
+- `scripts/osd_render.py` + `scripts/osd_model.py`: simulator render of OSD frames (key actions, PNGs); `scripts/osd_manual.py`: the manual's pictures.
 - `scripts/osd_catalog.py`: renders every layout, writes `sheet.png` + index.html.
 - `scripts/asset_sheet.py` (awto-ddc-ui): contact sheets of every screen and font (SDK and awto).
 - `scripts/menu_cli.py`: drive / read our menu (state, key, hold, open, select, set, get, back, close, walk); `--sim BIN` or `--bus N --serial S`.

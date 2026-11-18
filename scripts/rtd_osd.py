@@ -13,7 +13,7 @@ usage: rtd_osd.py <bus> [--keep] [--pack N] [--text STR] [--no-reset] OP [OP ...
   draw-test                    full sequence: palette, font, map, WIN0, enable (text + window)
   clear                        disable OSD (0x94=0x00 -> osd_en=0)
 Ends with scaler reset (0xEE=0x02, monitor reboots) unless --keep/--no-reset.
-Facts: docs/reversing/realtek-rtd/osd.md. Log: ./tmp/logs/rtd_osd.log
+Facts: docs/osd/README.md. Log: ./tmp/logs/rtd_osd.log
 """
 import sys
 from pathlib import Path

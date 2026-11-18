@@ -100,7 +100,7 @@ static void S2Run(BYTE ucX, BYTE ucLo, BYTE ucHi)                               
     BYTE ucOffO;
     BYTE ucMaskO;
 
-    if(g_ucAwtoOsdRot != 0)                                                         // the tile is drawn turned 180 (docs/osd-rotation.md)
+    if(g_ucAwtoOsdRot != 0)                                                         // the tile is drawn turned 180 (docs/osd/rotation.md)
     {
         ucX = AWTO_S2_TW - 1 - ucX;
         ucTmp = AWTO_S2_TH - 1 - ucHi;
@@ -268,14 +268,14 @@ static void S2Uint(unsigned long ulV, BYTE ucDigits, BYTE ucPos)                
 
 static void S2MapWord(WORD usCell, BYTE ucId)                                       // char command: glyph id, colours c0 bg, c1 green (plane A = low bit, docs/osd-hw-tests.md T9), c2 red, c3 green
 {
-    if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd-rotation.md): the mirrored cell
+    if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd/rotation.md): the mirrored cell
     {
         usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FS_BASE + usCell, _OSD_WITHOUT_DB);
-    ScalerOsdDataPort((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_GREEN >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
-    ScalerOsdDataPort(ucId);
-    ScalerOsdDataPort((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_RED & 7) << 3) | (AWTO_S2_PAL_GREEN & 7)));
+    AWTO_OSD_PORT((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_GREEN >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
+    AWTO_OSD_PORT(ucId);
+    AWTO_OSD_PORT((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_RED & 7) << 3) | (AWTO_S2_PAL_GREEN & 7)));
 }
 
 static void S2Glyph(BYTE ucId)                                                      // g_aucScPix (green plane, red plane; data port order, already turned) -> glyph slot
@@ -285,7 +285,7 @@ static void S2Glyph(BYTE ucId)                                                  
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FONT_BASE + (WORD)ucId * AWTO_S2_GLYPH_STRIDE, _OSD_WITHOUT_DB);
     for(ucI = 0; ucI < AWTO_S2_BASE_BYTES; ucI++)                                   // SDK call like every other saver: direct back-to-back port writes are the suspect of the unit photo 2026-11-18
     {
-        ScalerOsdDataPort(g_aucScPix[ucI]);
+        AWTO_OSD_PORT(g_aucScPix[ucI]);
     }
 }
 

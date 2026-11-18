@@ -45,7 +45,7 @@ compiled source tree (tmp/sdcc-port/src of the p14sc3 line). Every row here is a
 | Advance | Clone | on/off | | off | no DP TX |
 | Input | Auto / D1 DP / D2 HDMI / D3 HDMI | | | Auto, port D2 | scan type + fixed port |
 | Audio | Volume 0-100, mute, stand-alone, source analog/digital | | | 50, off, off, analog | stored only (no audio) |
-| Other | Reset | action | | | all vendor records to defaults |
+| Other | Reset | action | | | all Realtek SDK menu records to defaults |
 | Other | Menu time | 10-60 s | | 10 (= never) | OSD timeout |
 | Other | OSD H / V pos | 0-100 | | 50 / 50 | position |
 | Other | Language | English / Chinese-T | | English | strings |

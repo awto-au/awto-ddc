@@ -114,9 +114,9 @@ static BYTE PcDelta(WORD usK)
 static void PcWord(WORD usAddr, BYTE ucB0, BYTE ucB1, BYTE ucB2)
 {
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usAddr, _OSD_WITHOUT_DB);
-    ScalerOsdDataPort(ucB0);
-    ScalerOsdDataPort(ucB1);
-    ScalerOsdDataPort(ucB2);
+    AWTO_OSD_PORT(ucB0);
+    AWTO_OSD_PORT(ucB1);
+    AWTO_OSD_PORT(ucB2);
 }
 
 static void PcCellSet(WORD usPos, BYTE ucB0, BYTE ucB1, BYTE ucB2)
@@ -141,7 +141,7 @@ static void PcMaze(void)
         usSrc = (g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usC, AWTO_PC_CELLS) : usC;            // turned map: the cell at the mirrored place
         for(ucB = 0; ucB < AWTO_PC_RGB; ucB++)
         {
-            ScalerOsdDataPort(PcCell((WORD)AWTO_PC_RGB * usSrc + ucB));
+            AWTO_OSD_PORT(PcCell((WORD)AWTO_PC_RGB * usSrc + ucB));
         }
     }
 }
@@ -255,7 +255,7 @@ void AwtoPacmanClassic(BYTE ucCmd)
             {
                 ucB = PcGlyph(usI + ucK);
             }
-            ScalerOsdDataPort(ucB);
+            AWTO_OSD_PORT(ucB);
         }
     }
     SET_OSD_MAPA_COL_MAX(AWTO_PC_COLS);
