@@ -131,6 +131,507 @@ static void AwtoOsdSramProbe(void)
 }
 #endif
 
+#ifdef _AWTO_OSD_HWTEST                         // -D _AWTO_OSD_HWTEST: OSD SRAM write / read-back tests on the unit (docs/osd-hw-tests.md); host: scripts/osd_hw_test.py
+// The host fills g_stAwtoOsdHw over the debug link, then writes ucGo = op; the main loop runs it and clears ucGo. No test cmd number.
+#include "../../tools/osd_lines/osd_lines.h"                // tile geometry only
+#define AWTO_OHW_BUF                            54                  // one 2-bit glyph (18 words): the chunk a direct write streams back-to-back
+#define AWTO_OHW_REGS                           9
+#define AWTO_OHW_BAD                            8                   // first 4 mismatches: got, want
+#define AWTO_OHW_WORD                           3
+#define AWTO_OHW_OP_WRITE                       1                   // usN pattern bytes from usAddr
+#define AWTO_OHW_OP_VERIFY                      2                   // read usN bytes back, compare with the pattern
+#define AWTO_OHW_OP_READ                        3                   // usN words (<= 18) into aucBuf
+#define AWTO_OHW_OP_CRC                         4                   // CRC-16 of usN words read back
+#define AWTO_OHW_OP_WRBUF                       5                   // aucBuf (usN bytes) to usAddr
+#define AWTO_OHW_OP_PLANES                      6                   // the plane / colour screen (T6)
+#define AWTO_OHW_OP_S2FRAMES                    7                   // Scope 2: finish the current frame + usN more (saver poll held)
+#define AWTO_OHW_OP_REGS                        8                   // register snapshot only
+#define AWTO_OHW_OP_LADDER                      10                  // 2-bit glyph id ladder: ids 0..255 in a 16 x 16 grid, all plane A solid
+#define AWTO_OHW_OP_SAVER                       9                   // saver request usN (as DDC/CI VCP 0xEB), served by one saver poll in the op
+#define AWTO_OHW_M_SDK                          0                   // ScalerOsdDataPort per byte
+#define AWTO_OHW_M_DIRECT                       1                   // AWTO_XFR stores back-to-back (loop over the chunk)
+#define AWTO_OHW_M_GAP                          2                   // direct + ucGap delay-loop passes before each store
+#define AWTO_OHW_M_TRIPLE                       3                   // direct, three stores per word unrolled (the map write shape)
+#define AWTO_OHW_F_EA_OFF                       0x01                // interrupts off while writing
+#define AWTO_OHW_F_M2                           0x02                // read M2 (else M1)
+#define AWTO_OHW_F_HIDE                         0x04                // overlay off while writing
+#define AWTO_OHW_F_HOLD                         0x08                // hold the saver poll (frozen screen) until cleared
+#define AWTO_OHW_F_REPEAT                       0x10                // the first chunk repeated (no refill: pure port-write time); verify likewise
+#define AWTO_OHW_F_RD_OVL                       0x20                // read-back: leave the overlay on (default: off for the read)
+#define AWTO_OHW_F_RD_SU                        0x40                // read-back: scale-up engine off for the read
+#define AWTO_OHW_ST_OK                          1
+#define AWTO_OHW_ST_BAD_OP                      2
+#define AWTO_OHW_ST_LIMIT                       3                   // S2FRAMES: call limit reached
+#define AWTO_OHW_ST_NO_S2                       4                   // S2FRAMES: Scope 2 is not the running saver (cmd 2 without its start draws garbage)
+#define AWTO_OHW_RUN_SCOPE2                     3                   // g_ucAwtoSaverRun of Scope 2 (saver.c AWTO_SAVER_SCOPE2)
+#define AWTO_OHW_LFSR_POLY                      0xB400              // 16-bit Galois LFSR (x^16 + x^14 + x^13 + x^11 + 1)
+#define AWTO_OHW_LFSR_LOW                       0x5A                // low byte of the start state (never all zero)
+#define AWTO_OHW_LFSR_STEPS                     8                   // steps per output byte: no shifted copy between neighbours
+#define AWTO_OHW_CRC_POLY                       0x1021              // CRC-16/CCITT-FALSE
+#define AWTO_OHW_CRC_INIT                       0xFFFF
+#define AWTO_OHW_BYTE_BITS                      8
+#define AWTO_OHW_S2_CALLS                       60000               // S2FRAMES: cmd-2 calls per frame at most (one call = <= 8 ms band)
+#define AWTO_OHW_S2_DRAW                        2
+#define AWTO_OHW_PL_ROWS                        3                   // plane screen: 3 x 3 cells per shape, one gap column
+#define AWTO_OHW_PL_COLS                        11
+#define AWTO_OHW_PL_SHAPE                       4                   // shape column pitch (3 cells + gap)
+#define AWTO_OHW_PL_FONT                        (AWTO_OHW_PL_ROWS + 1 + AWTO_OHW_PL_ROWS * AWTO_OHW_PL_COLS)
+#define AWTO_OHW_PL_STRIDE                      18                  // words per 2-bit glyph
+#define AWTO_OHW_PL_PLANE_W                     9
+#define AWTO_OHW_PL_FACTOR                      16                  // scale-up 64 / 16 = 4x
+#define AWTO_OHW_PL_POS_H                       200                 // x 4 px
+#define AWTO_OHW_PL_POS_V                       600
+#define AWTO_OHW_ROW_FULL                       0x0FFF              // 12 px row masks, bit 11 = px 0
+#define AWTO_OHW_ROW_EDGE                       0x0C03
+#define AWTO_OHW_ROW_MID                        0x0060
+#define AWTO_OHW_ROW_NONE                       0x0000
+#define AWTO_OHW_EDGE_ROWS                      2
+#define AWTO_OHW_MID_ROW0                       8
+#define AWTO_OHW_MID_ROW1                       9
+#define AWTO_OHW_HALF                           12                  // bits per row in a word
+#define AWTO_OHW_GLYPH_N                        4                   // 0 blank, 1 SOLID (plane A), 2 BOXES (plane B), 3 PLUSES (both)
+#define AWTO_OHW_PAL_BG                         1
+#define AWTO_OHW_PAL_C1                         2
+#define AWTO_OHW_PAL_C2                         3
+#define AWTO_OHW_PAL_C3                         4
+#define AWTO_OHW_LD_N                           16                  // ladder: 16 x 16 cells, glyph id = row * 16 + col (as the viewer reads it)
+#define AWTO_OHW_LD_IDS                         256
+#define AWTO_OHW_LD_FONT                        616                 // = Scope 2 font base: the same glyph word addresses
+#define AWTO_OHW_LD_POS_H                       384                 // (3840 - 16 * 12 * 4) / 2 / 4
+#define AWTO_OHW_LD_POS_V                       504                 // (2160 - 16 * 18 * 4) / 2
+#define AWTO_OHW_SOLID                          0xFF
+#define AWTO_OHW_LO                             40
+#define AWTO_OHW_MIDC                           90
+#define AWTO_OHW_HI                             230
+typedef struct
+{
+    BYTE ucGo;                                          // host: op; fw: 0 when done
+    BYTE ucSeq;                                         // fw: + 1 per finished op
+    BYTE ucState;                                       // AWTO_OHW_ST_*
+    BYTE ucMode;                                        // AWTO_OHW_M_*
+    BYTE ucGap;
+    BYTE ucFlags;                                       // AWTO_OHW_F_*
+    BYTE ucSeed;
+    BYTE ucOverlay;                                     // overlay enable seen at the start of the op
+    WORD usAddr;
+    WORD usN;
+    WORD usBad;
+    WORD usFirst;                                       // first bad byte index (0xFFFF none)
+    WORD usCrc;
+    WORD usMs;                                          // write / op time (AwtoMs)
+    WORD usFrame;                                       // g_usAwtoS2Frame at the end of the op
+    BYTE aucRegs[AWTO_OHW_REGS];                        // 3A02 3A0B 3A17 3A33 3A34 3A41 0093 0094 006C at the start of the op
+    BYTE aucBad[AWTO_OHW_BAD];
+    BYTE aucBuf[AWTO_OHW_BUF];
+} StAwtoOsdHw;
+__xdata StAwtoOsdHw g_stAwtoOsdHw;
+extern __xdata WORD g_usAwtoS2Frame;
+extern __xdata BYTE g_ucAwtoSaverRun;
+extern void set_ap_screensaver_now(BYTE ucId, int iV);
+static __xdata WORD s_usOhwLfsr;
+static const __code WORD tAwtoOhwRegs[AWTO_OHW_REGS] = {AWTO_R_FRAME_CTRL_02, AWTO_R_FRAME_CTRL_0B, AWTO_R_FRAME_CTRL_17, AWTO_R_FRAME_CTRL_33,
+                                                        AWTO_R_FRAME_CTRL_34, AWTO_R_FRAME_CTRL_41, AWTO_R_OSD_MISC_PORT, AWTO_R_OSD_WRITE_OPTION, AWTO_R_OVERLAY_CTRL};
+
+static BYTE AwtoOhwNext(void)                           // pattern byte (scripts/osd_hw_test.py pattern())
+{
+    BYTE ucK;
+
+    for(ucK = 0; ucK < AWTO_OHW_LFSR_STEPS; ucK++)
+    {
+        s_usOhwLfsr = (s_usOhwLfsr & 1) ? ((s_usOhwLfsr >> 1) ^ AWTO_OHW_LFSR_POLY) : (s_usOhwLfsr >> 1);
+    }
+    return LOBYTE(s_usOhwLfsr);
+}
+
+static void AwtoOhwSeed(void)
+{
+    s_usOhwLfsr = ((WORD)g_stAwtoOsdHw.ucSeed << AWTO_OHW_BYTE_BITS) | AWTO_OHW_LFSR_LOW;
+}
+
+static void AwtoOhwOverlay(BYTE ucOn)
+{
+    ScalerSetBit(AWTO_R_OVERLAY_CTRL, ~AWTO_F_OVERLAY_CTRL_OVERLAY_PORT_EN, (ucOn != 0) ? AWTO_F_OVERLAY_CTRL_OVERLAY_PORT_EN : 0x00);
+}
+
+static void AwtoOhwPut(BYTE ucN)                        // aucBuf[0..ucN) to the data port in the selected mode
+{
+    BYTE ucI;
+    BYTE ucG;
+    BYTE ucMode = g_stAwtoOsdHw.ucMode;
+
+    if(ucMode == AWTO_OHW_M_SDK)
+    {
+        for(ucI = 0; ucI < ucN; ucI++)
+        {
+            ScalerOsdDataPort(g_stAwtoOsdHw.aucBuf[ucI]);
+        }
+    }
+    else if(ucMode == AWTO_OHW_M_GAP)
+    {
+        for(ucI = 0; ucI < ucN; ucI++)
+        {
+            for(ucG = g_stAwtoOsdHw.ucGap; ucG != 0; ucG--)
+            {
+                __asm nop __endasm;
+            }
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = g_stAwtoOsdHw.aucBuf[ucI];
+        }
+    }
+    else if((ucMode == AWTO_OHW_M_TRIPLE) && ((ucN % AWTO_OHW_WORD) == 0))
+    {
+        for(ucI = 0; ucI < ucN; ucI += AWTO_OHW_WORD)
+        {
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = g_stAwtoOsdHw.aucBuf[ucI];
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = g_stAwtoOsdHw.aucBuf[ucI + 1];
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = g_stAwtoOsdHw.aucBuf[ucI + 2];
+        }
+    }
+    else
+    {
+        for(ucI = 0; ucI < ucN; ucI++)
+        {
+            AWTO_XFR(AWTO_R_OSD_DATA_PORT) = g_stAwtoOsdHw.aucBuf[ucI];
+        }
+    }
+}
+
+static __xdata BYTE s_aucOhwWord[AWTO_OHW_WORD];
+
+static void AwtoOhwRead(WORD usWord)                   // one stored word, as ScalerOsdSramGetData (circuit off, sram_read_en): all 3 bytes read twice, the 2nd is right
+{
+    BYTE ucK;
+
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, usWord, _OSD_WITHOUT_DB);
+    for(ucK = 0; ucK < AWTO_OHW_WORD; ucK++)
+    {
+        s_aucOhwWord[ucK] = ScalerGetByte(AWTO_R_OSD_DATA_PORT);
+    }
+    for(ucK = 0; ucK < AWTO_OHW_WORD; ucK++)
+    {
+        s_aucOhwWord[ucK] = ScalerGetByte(AWTO_R_OSD_DATA_PORT);
+    }
+}
+
+static WORD AwtoOhwCrc(WORD usCrc, BYTE ucB)
+{
+    BYTE ucK;
+
+    usCrc ^= (WORD)ucB << AWTO_OHW_BYTE_BITS;
+    for(ucK = 0; ucK < AWTO_OHW_BYTE_BITS; ucK++)
+    {
+        usCrc = (usCrc & 0x8000) ? ((usCrc << 1) ^ AWTO_OHW_CRC_POLY) : (usCrc << 1);
+    }
+    return usCrc;
+}
+
+static void AwtoOhwWrite(void)                          // pattern in chunks of AWTO_OHW_BUF: refill, then one burst; one address set
+{
+    WORD usLeft = g_stAwtoOsdHw.usN;
+    BYTE ucN;
+    BYTE ucI;
+    unsigned long ulT0;
+
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_stAwtoOsdHw.usAddr, _OSD_WITHOUT_DB);
+    ulT0 = AwtoMs();
+    while(usLeft != 0)
+    {
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        ucN = (usLeft > AWTO_OHW_BUF) ? AWTO_OHW_BUF : (BYTE)usLeft;
+        for(ucI = 0; (ucI < ucN) && ((usLeft == g_stAwtoOsdHw.usN) || ((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_REPEAT) == 0)); ucI++)
+        {
+            g_stAwtoOsdHw.aucBuf[ucI] = AwtoOhwNext();
+        }
+        if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_EA_OFF) != 0)
+        {
+            EA = 0;
+        }
+        AwtoOhwPut(ucN);
+        EA = 1;
+        usLeft -= ucN;
+    }
+    g_stAwtoOsdHw.usMs = (WORD)(AwtoMs() - ulT0);
+}
+
+static void AwtoOhwVerify(BYTE ucOp)                    // VERIFY (pattern bytes), READ (words into aucBuf) or CRC (words)
+{
+    WORD usI;
+    WORD usBytes = (ucOp == AWTO_OHW_OP_VERIFY) ? g_stAwtoOsdHw.usN : g_stAwtoOsdHw.usN * AWTO_OHW_WORD;
+    BYTE ucGot;
+    BYTE ucWant;
+    BYTE ucNb = 0;
+    WORD usCrc = AWTO_OHW_CRC_INIT;
+
+    ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_SRAM_READ_SELECT, ((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_M2) != 0) ? AWTO_F_OSD_MISC_PORT_SRAM_READ_SELECT : 0x00);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_33, ~AWTO_F_FRAME_CTRL_33_SRAM_READ_EN, AWTO_F_FRAME_CTRL_33_SRAM_READ_EN);
+    g_stAwtoOsdHw.usBad = 0;
+    g_stAwtoOsdHw.usFirst = 0xFFFF;
+    for(usI = 0; usI < usBytes; usI++)
+    {
+        if((usI & 0xFF) == 0)
+        {
+            AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        }
+        if((usI % AWTO_OHW_WORD) == 0)
+        {
+            AwtoOhwRead(g_stAwtoOsdHw.usAddr + usI / AWTO_OHW_WORD);
+        }
+        ucGot = s_aucOhwWord[usI % AWTO_OHW_WORD];
+        usCrc = AwtoOhwCrc(usCrc, ucGot);
+        if(ucOp == AWTO_OHW_OP_READ)
+        {
+            if(usI < AWTO_OHW_BUF)
+            {
+                g_stAwtoOsdHw.aucBuf[usI] = ucGot;
+            }
+            continue;
+        }
+        if(ucOp != AWTO_OHW_OP_VERIFY)
+        {
+            continue;
+        }
+        if(((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_REPEAT) != 0) && ((usI % AWTO_OHW_BUF) == 0))
+        {
+            AwtoOhwSeed();
+        }
+        ucWant = AwtoOhwNext();
+        if(ucGot != ucWant)
+        {
+            if(g_stAwtoOsdHw.usBad == 0)
+            {
+                g_stAwtoOsdHw.usFirst = usI;
+            }
+            g_stAwtoOsdHw.usBad++;
+            if(ucNb < AWTO_OHW_BAD)
+            {
+                g_stAwtoOsdHw.aucBad[ucNb] = ucGot;
+                g_stAwtoOsdHw.aucBad[ucNb + 1] = ucWant;
+                ucNb += 2;
+            }
+        }
+    }
+    g_stAwtoOsdHw.usCrc = usCrc;
+    ScalerSetBit(AWTO_R_FRAME_CTRL_33, ~AWTO_F_FRAME_CTRL_33_SRAM_READ_EN, 0x00);
+    ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_SRAM_READ_SELECT, 0x00);
+}
+
+static WORD AwtoOhwRow(BYTE ucGlyph, BYTE ucPlane, BYTE ucRow)   // 12 px row mask of the plane screen glyphs
+{
+    BYTE ucEdge = (BYTE)((ucRow < AWTO_OHW_EDGE_ROWS) || (ucRow >= OSD_TILE_H - AWTO_OHW_EDGE_ROWS));
+
+    if((ucGlyph == 1) && (ucPlane == 0))
+    {
+        return AWTO_OHW_ROW_FULL;                                   // SOLID: plane A only
+    }
+    if((ucGlyph == 2) && (ucPlane == 1))
+    {
+        return (ucEdge != 0) ? AWTO_OHW_ROW_FULL : AWTO_OHW_ROW_EDGE;   // BOXES: plane B only
+    }
+    if(ucGlyph == 3)
+    {
+        return ((ucRow == AWTO_OHW_MID_ROW0) || (ucRow == AWTO_OHW_MID_ROW1)) ? AWTO_OHW_ROW_FULL : AWTO_OHW_ROW_MID;   // PLUSES: both planes
+    }
+    return AWTO_OHW_ROW_NONE;
+}
+
+static void AwtoOhwPlanes(void)                         // T6: SOLID = plane A (first 9 words) only, BOXES = plane B only, PLUSES = both; c1 red, c2 green, c3 blue
+{
+    BYTE ucG;
+    BYTE ucP;
+    BYTE ucW;
+    BYTE ucR;
+    BYTE ucC;
+    WORD usRow;
+
+    AwtoOsdScreenBegin();
+    ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_BG, AWTO_OHW_MIDC, AWTO_OHW_MIDC, AWTO_OHW_MIDC);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C1, AWTO_OHW_HI, AWTO_OHW_LO, AWTO_OHW_LO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C2, AWTO_OHW_LO, AWTO_OHW_HI, AWTO_OHW_LO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C3, AWTO_OHW_LO, AWTO_OHW_LO, AWTO_OHW_HI);
+    ScalerOsd2FontFunction(_DISABLE);
+    AwtoOsdRowCmds(AWTO_OHW_PL_ROWS, OSD_TILE_H, AWTO_OHW_PL_COLS);
+    for(ucG = 0; ucG < AWTO_OHW_GLYPH_N; ucG++)
+    {
+        ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_OHW_PL_FONT + (WORD)ucG * AWTO_OHW_PL_STRIDE, _OSD_WITHOUT_DB);
+        for(ucP = 0; ucP < 2; ucP++)
+        {
+            for(ucW = 0; ucW < AWTO_OHW_PL_PLANE_W; ucW++)          // word = row 2w (bits 23..12) | row 2w + 1; port order low byte first
+            {
+                usRow = AwtoOhwRow(ucG, ucP, (BYTE)(2 * ucW + 1));
+                ScalerOsdDataPort(LOBYTE(usRow));
+                ScalerOsdDataPort((BYTE)((HIBYTE(usRow)) | (BYTE)(AwtoOhwRow(ucG, ucP, (BYTE)(2 * ucW)) << (AWTO_OHW_HALF - AWTO_OHW_BYTE_BITS))));
+                ScalerOsdDataPort((BYTE)(AwtoOhwRow(ucG, ucP, (BYTE)(2 * ucW)) >> (AWTO_OHW_HALF - AWTO_OHW_BYTE_BITS)));
+            }
+        }
+    }
+    for(ucR = 0; ucR < AWTO_OHW_PL_ROWS; ucR++)
+    {
+        for(ucC = 0; ucC < AWTO_OHW_PL_COLS; ucC++)
+        {
+            ucG = ((ucC % AWTO_OHW_PL_SHAPE) == (AWTO_OHW_PL_SHAPE - 1)) ? 0 : (BYTE)(ucC / AWTO_OHW_PL_SHAPE + 1);
+            AwtoOsdWord(AWTO_OHW_PL_ROWS + 1 + (WORD)ucR * AWTO_OHW_PL_COLS + ucC,
+                        (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_OHW_PAL_BG >> 3) & 1) << 5) | (((AWTO_OHW_PAL_C1 >> 3) & 1) << 4) | ((AWTO_OHW_PAL_C3 & 7) << 1) | ((AWTO_OHW_PAL_BG >> 2) & 1)),
+                        ((WORD)ucG << AWTO_OHW_BYTE_BITS) | (BYTE)(((AWTO_OHW_PAL_BG & 3) << 6) | ((AWTO_OHW_PAL_C2 & 7) << 3) | (AWTO_OHW_PAL_C1 & 7)));
+        }
+    }
+    SET_OSD_MAPA_COL_MAX(AWTO_OHW_PL_COLS);
+    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_OHW_PL_ROWS + 1, AWTO_OHW_PL_FONT);
+    ScalerOsd2BitFontOffset(AWTO_OSD_ZERO);
+    AwtoOsdPlaceScaleUp(AWTO_OHW_PL_POS_H, AWTO_OHW_PL_POS_V, AWTO_OHW_PL_COLS, AWTO_OHW_PL_ROWS, AWTO_OHW_PL_FACTOR);
+    osd_tc_show(1);
+}
+
+static void AwtoOhwLadder(void)                         // ids >= the first broken cell are fetched from elsewhere; colour = what plane A alone selects
+{
+    WORD usI;
+    BYTE ucK;
+    WORD usCell;
+    WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
+
+    AwtoOsdScreenBegin();
+    ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_BG, AWTO_OHW_MIDC, AWTO_OHW_MIDC, AWTO_OHW_MIDC);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C1, AWTO_OHW_HI, AWTO_OHW_LO, AWTO_OHW_LO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C2, AWTO_OHW_LO, AWTO_OHW_HI, AWTO_OHW_LO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C3, AWTO_OHW_LO, AWTO_OHW_LO, AWTO_OHW_HI);
+    ScalerOsd2FontFunction(_DISABLE);
+    AwtoOsdRowCmds(AWTO_OHW_LD_N, OSD_TILE_H, AWTO_OHW_LD_N);
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_OHW_LD_FONT, _OSD_WITHOUT_DB);
+    for(usI = 0; usI < AWTO_OHW_LD_IDS; usI++)
+    {
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        for(ucK = 0; ucK < AWTO_OHW_PL_STRIDE * AWTO_OHW_WORD; ucK++)
+        {
+            ScalerOsdDataPort((ucK < AWTO_OHW_PL_PLANE_W * AWTO_OHW_WORD) ? AWTO_OHW_SOLID : AWTO_OSD_ZERO);
+        }
+    }
+    for(usI = 0; usI < usCells; usI++)
+    {
+        usCell = (g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usI, usCells) : usI;
+        AwtoOsdWord(AWTO_OHW_LD_N + 1 + usCell,
+                    (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_OHW_PAL_BG >> 3) & 1) << 5) | (((AWTO_OHW_PAL_C1 >> 3) & 1) << 4) | ((AWTO_OHW_PAL_C3 & 7) << 1) | ((AWTO_OHW_PAL_BG >> 2) & 1)),
+                    (usI << AWTO_OHW_BYTE_BITS) | (BYTE)(((AWTO_OHW_PAL_BG & 3) << 6) | ((AWTO_OHW_PAL_C2 & 7) << 3) | (AWTO_OHW_PAL_C1 & 7)));
+    }
+    SET_OSD_MAPA_COL_MAX(AWTO_OHW_LD_N);
+    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_OHW_LD_N + 1, AWTO_OHW_LD_FONT);
+    ScalerOsd2BitFontOffset(AWTO_OSD_ZERO);
+    AwtoOsdPlaceScaleUp(AWTO_OHW_LD_POS_H, AWTO_OHW_LD_POS_V, AWTO_OHW_LD_N, AWTO_OHW_LD_N, AWTO_OHW_PL_FACTOR);
+    osd_tc_show(1);
+}
+
+static void AwtoOhwS2Frames(void)                       // finish the current Scope 2 frame, then usN more; the saver poll is held (F_HOLD)
+{
+    WORD usF;
+    WORD usCalls;
+
+    if(g_ucAwtoSaverRun != AWTO_OHW_RUN_SCOPE2)
+    {
+        g_stAwtoOsdHw.ucState = AWTO_OHW_ST_NO_S2;
+        return;
+    }
+    for(usF = 0; usF <= g_stAwtoOsdHw.usN; usF++)
+    {
+        for(usCalls = 0; AwtoScopeSaver2(AWTO_OHW_S2_DRAW) == 0; usCalls++)
+        {
+            if(usCalls >= AWTO_OHW_S2_CALLS)
+            {
+                g_stAwtoOsdHw.ucState = AWTO_OHW_ST_LIMIT;
+                return;
+            }
+        }
+    }
+}
+
+static void AwtoOsdHwPoll(void)
+{
+    BYTE ucOp = g_stAwtoOsdHw.ucGo;
+    BYTE ucI;
+    BYTE ucSu;
+    unsigned long ulT0;
+
+    if(ucOp == 0)
+    {
+        return;
+    }
+    g_stAwtoOsdHw.ucState = AWTO_OHW_ST_OK;
+    for(ucI = 0; ucI < AWTO_OHW_REGS; ucI++)
+    {
+        g_stAwtoOsdHw.aucRegs[ucI] = ScalerGetByte(tAwtoOhwRegs[ucI]);
+    }
+    g_stAwtoOsdHw.ucOverlay = ScalerGetBit(AWTO_R_OVERLAY_CTRL, AWTO_F_OVERLAY_CTRL_OVERLAY_PORT_EN);
+    AwtoOhwSeed();
+    ulT0 = AwtoMs();
+    if((ucOp == AWTO_OHW_OP_WRITE) || (ucOp == AWTO_OHW_OP_WRBUF) || (ucOp == AWTO_OHW_OP_VERIFY) || (ucOp == AWTO_OHW_OP_READ) || (ucOp == AWTO_OHW_OP_CRC))
+    {
+        ScalerOsdCircuitActivated(_ENABLE);             // SRAM access needs the OSD circuit on (docs/reversing/realtek-rtd/osd-limits.md); no-op when on
+        ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_DB_ENABLE, 0x00);
+        if((ucOp != AWTO_OHW_OP_WRITE) && (ucOp != AWTO_OHW_OP_WRBUF))
+        {
+            ucSu = ScalerGetByte(AWTO_R_OSD_SU_CRTL);
+            if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_RD_OVL) == 0)
+            {
+                AwtoOhwOverlay(0);
+            }
+            if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_RD_SU) != 0)
+            {
+                ScalerSetByte(AWTO_R_OSD_SU_CRTL, AWTO_OSD_ZERO);
+            }
+            ScalerOsdCircuitActivated(_DISABLE);        // as ScalerOsdSramGetData: circuit off, one DVS, then read
+            ScalerTimerWaitForEvent(_EVENT_DVS);
+            AwtoOhwVerify(ucOp);
+            ScalerOsdCircuitActivated(_ENABLE);
+            ScalerSetByte(AWTO_R_OSD_SU_CRTL, ucSu);
+        }
+        else
+        {
+            if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_HIDE) != 0)
+            {
+                AwtoOhwOverlay(0);
+            }
+            if(ucOp == AWTO_OHW_OP_WRITE)
+            {
+                AwtoOhwWrite();
+            }
+            else
+            {
+                ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_stAwtoOsdHw.usAddr, _OSD_WITHOUT_DB);
+                AwtoOhwPut((g_stAwtoOsdHw.usN > AWTO_OHW_BUF) ? AWTO_OHW_BUF : (BYTE)g_stAwtoOsdHw.usN);
+            }
+        }
+        AwtoOhwOverlay(g_stAwtoOsdHw.ucOverlay);
+        ScalerSetBit(AWTO_R_OSD_WRITE_OPTION, ~(AWTO_F_OSD_WRITE_OPTION_BYTESEL | AWTO_F_OSD_WRITE_OPTION_SRAM_SEL), 0x00);
+    }
+    else if(ucOp == AWTO_OHW_OP_PLANES)
+    {
+        AwtoOhwPlanes();
+    }
+    else if(ucOp == AWTO_OHW_OP_S2FRAMES)
+    {
+        AwtoOhwS2Frames();
+    }
+    else if(ucOp == AWTO_OHW_OP_LADDER)
+    {
+        AwtoOhwLadder();
+    }
+    else if(ucOp == AWTO_OHW_OP_SAVER)
+    {
+        set_ap_screensaver_now(0, (int)g_stAwtoOsdHw.usN);
+        AwtoSaverPoll();                                // served now: a hold set right after must not keep the saver from starting
+    }
+    else if(ucOp != AWTO_OHW_OP_REGS)
+    {
+        g_stAwtoOsdHw.ucState = AWTO_OHW_ST_BAD_OP;
+    }
+    if(ucOp != AWTO_OHW_OP_WRITE)
+    {
+        g_stAwtoOsdHw.usMs = (WORD)(AwtoMs() - ulT0);
+    }
+    g_stAwtoOsdHw.usFrame = g_usAwtoS2Frame;
+    g_stAwtoOsdHw.ucSeq++;
+    g_stAwtoOsdHw.ucGo = 0;
+}
+#endif
+
 // #165 step 2: memory work mode for the current timing; one sync line per request (E3), one per resulting select change
 static void AwtoMemForce(BYTE ucOn)
 {
@@ -247,6 +748,10 @@ void AwtoDiagTestCmd(void)
     }
     AwtoDemoLog();
     AwtoPmSoundPoll();
+#ifdef _AWTO_OSD_HWTEST
+    AwtoOsdHwPoll();
+    if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_HOLD) == 0)
+#endif
     AwtoSaverPoll();
     ucCmd = isr_g_stAwtoDiag.ucTestCmd;
     if(ucCmd == 0)

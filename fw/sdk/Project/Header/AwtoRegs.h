@@ -15,6 +15,8 @@
 #define AWTO_R_IVS2DVS_DLY_TUNE_ODD                     0x0041
 #define AWTO_R_LAST_LINE_L                              0x0045
 #define AWTO_R_HSYNC_TYPE_DETECTION_FLAG                0x004E
+#define AWTO_R_OVERLAY_CTRL                             0x006C
+#define AWTO_F_OVERLAY_CTRL_OVERLAY_PORT_EN             0x01
 #define AWTO_R_OSD_DATA_PORT                            0x0092
 #define AWTO_R_OSD_MISC_PORT                            0x0093
 #define AWTO_F_OSD_MISC_PORT_DB_ENABLE                  0x80
@@ -71,6 +73,7 @@
 #define AWTO_R_FRAME_CTRL_21                            0x3A21
 #define AWTO_R_FRAME_CTRL_33                            0x3A33
 #define AWTO_F_FRAME_CTRL_33_SRAM_READ_EN               0x10
+#define AWTO_R_FRAME_CTRL_34                            0x3A34
 #define AWTO_R_FRAME_CTRL_41                            0x3A41
 #define AWTO_R_FRAME_CTRL_43                            0x3A43
 #define AWTO_R_OSD_SU_CRTL                              0x3AC0
