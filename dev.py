@@ -1233,7 +1233,7 @@ def cmd_dbg_read(extra: list[str]) -> int:
     return _dbg_py(b, "rtd_dbg_read.py", b, "--map", _fwmap(u, given), *(["--halt"] if halt else []), *extra)
 
 
-@command("OSD SRAM hardware tests (image built with -D _AWTO_OSD_HWTEST; docs/osd-hw-tests.md): regs t1 t2 t3 t4 t6 t7 stop",
+@command("OSD SRAM hardware tests (image built with -D _AWTO_OSD_HWTEST; docs/osd-hw-tests.md): regs t1 t2 t3 t4 t7 t8 rd freeze ladder t6 stop",
          args="[--unit N] [--map F] [--frames N] [--free-s S] [--cal] TEST...", kind="action")
 def cmd_osd_hw_test(extra: list[str]) -> int:
     n, u = _unit(extra)

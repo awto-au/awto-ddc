@@ -146,6 +146,7 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_OP_PLANES                      6                   // the plane / colour screen (T6)
 #define AWTO_OHW_OP_S2FRAMES                    7                   // Scope 2: finish the current frame + usN more (saver poll held)
 #define AWTO_OHW_OP_REGS                        8                   // register snapshot only
+#define AWTO_OHW_OP_LADDER                      10                  // 2-bit glyph id ladder: ids 0..255 in a 16 x 16 grid, all plane A solid
 #define AWTO_OHW_OP_SAVER                       9                   // saver request usN (as DDC/CI VCP 0xEB), served by one saver poll in the op
 #define AWTO_OHW_M_SDK                          0                   // ScalerOsdDataPort per byte
 #define AWTO_OHW_M_DIRECT                       1                   // AWTO_XFR stores back-to-back (loop over the chunk)
@@ -156,6 +157,8 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_F_HIDE                         0x04                // overlay off while writing
 #define AWTO_OHW_F_HOLD                         0x08                // hold the saver poll (frozen screen) until cleared
 #define AWTO_OHW_F_REPEAT                       0x10                // the first chunk repeated (no refill: pure port-write time); verify likewise
+#define AWTO_OHW_F_RD_OVL                       0x20                // read-back: leave the overlay on (default: off for the read)
+#define AWTO_OHW_F_RD_SU                        0x40                // read-back: scale-up engine off for the read
 #define AWTO_OHW_ST_OK                          1
 #define AWTO_OHW_ST_BAD_OP                      2
 #define AWTO_OHW_ST_LIMIT                       3                   // S2FRAMES: call limit reached
@@ -191,6 +194,12 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_PAL_C1                         2
 #define AWTO_OHW_PAL_C2                         3
 #define AWTO_OHW_PAL_C3                         4
+#define AWTO_OHW_LD_N                           16                  // ladder: 16 x 16 cells, glyph id = row * 16 + col (as the viewer reads it)
+#define AWTO_OHW_LD_IDS                         256
+#define AWTO_OHW_LD_FONT                        616                 // = Scope 2 font base: the same glyph word addresses
+#define AWTO_OHW_LD_POS_H                       384                 // (3840 - 16 * 12 * 4) / 2 / 4
+#define AWTO_OHW_LD_POS_V                       504                 // (2160 - 16 * 18 * 4) / 2
+#define AWTO_OHW_SOLID                          0xFF
 #define AWTO_OHW_LO                             40
 #define AWTO_OHW_MIDC                           90
 #define AWTO_OHW_HI                             230
@@ -472,6 +481,44 @@ static void AwtoOhwPlanes(void)                         // T6: SOLID = plane A (
     osd_tc_show(1);
 }
 
+static void AwtoOhwLadder(void)                         // ids >= the first broken cell are fetched from elsewhere; colour = what plane A alone selects
+{
+    WORD usI;
+    BYTE ucK;
+    WORD usCell;
+    WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
+
+    AwtoOsdScreenBegin();
+    ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_BG, AWTO_OHW_MIDC, AWTO_OHW_MIDC, AWTO_OHW_MIDC);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C1, AWTO_OHW_HI, AWTO_OHW_LO, AWTO_OHW_LO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C2, AWTO_OHW_LO, AWTO_OHW_HI, AWTO_OHW_LO);
+    ScalerOsdSetColorPalette(AWTO_OHW_PAL_C3, AWTO_OHW_LO, AWTO_OHW_LO, AWTO_OHW_HI);
+    ScalerOsd2FontFunction(_DISABLE);
+    AwtoOsdRowCmds(AWTO_OHW_LD_N, OSD_TILE_H, AWTO_OHW_LD_N);
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_OHW_LD_FONT, _OSD_WITHOUT_DB);
+    for(usI = 0; usI < AWTO_OHW_LD_IDS; usI++)
+    {
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        for(ucK = 0; ucK < AWTO_OHW_PL_STRIDE * AWTO_OHW_WORD; ucK++)
+        {
+            ScalerOsdDataPort((ucK < AWTO_OHW_PL_PLANE_W * AWTO_OHW_WORD) ? AWTO_OHW_SOLID : AWTO_OSD_ZERO);
+        }
+    }
+    for(usI = 0; usI < usCells; usI++)
+    {
+        usCell = (g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usI, usCells) : usI;
+        AwtoOsdWord(AWTO_OHW_LD_N + 1 + usCell,
+                    (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_OHW_PAL_BG >> 3) & 1) << 5) | (((AWTO_OHW_PAL_C1 >> 3) & 1) << 4) | ((AWTO_OHW_PAL_C3 & 7) << 1) | ((AWTO_OHW_PAL_BG >> 2) & 1)),
+                    (usI << AWTO_OHW_BYTE_BITS) | (BYTE)(((AWTO_OHW_PAL_BG & 3) << 6) | ((AWTO_OHW_PAL_C2 & 7) << 3) | (AWTO_OHW_PAL_C1 & 7)));
+    }
+    SET_OSD_MAPA_COL_MAX(AWTO_OHW_LD_N);
+    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_OHW_LD_N + 1, AWTO_OHW_LD_FONT);
+    ScalerOsd2BitFontOffset(AWTO_OSD_ZERO);
+    AwtoOsdPlaceScaleUp(AWTO_OHW_LD_POS_H, AWTO_OHW_LD_POS_V, AWTO_OHW_LD_N, AWTO_OHW_LD_N, AWTO_OHW_PL_FACTOR);
+    osd_tc_show(1);
+}
+
 static void AwtoOhwS2Frames(void)                       // finish the current Scope 2 frame, then usN more; the saver poll is held (F_HOLD)
 {
     WORD usF;
@@ -499,6 +546,7 @@ static void AwtoOsdHwPoll(void)
 {
     BYTE ucOp = g_stAwtoOsdHw.ucGo;
     BYTE ucI;
+    BYTE ucSu;
     unsigned long ulT0;
 
     if(ucOp == 0)
@@ -519,10 +567,20 @@ static void AwtoOsdHwPoll(void)
         ScalerSetBit(AWTO_R_OSD_MISC_PORT, ~AWTO_F_OSD_MISC_PORT_DB_ENABLE, 0x00);
         if((ucOp != AWTO_OHW_OP_WRITE) && (ucOp != AWTO_OHW_OP_WRBUF))
         {
+            ucSu = ScalerGetByte(AWTO_R_OSD_SU_CRTL);
+            if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_RD_OVL) == 0)
+            {
+                AwtoOhwOverlay(0);
+            }
+            if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_RD_SU) != 0)
+            {
+                ScalerSetByte(AWTO_R_OSD_SU_CRTL, AWTO_OSD_ZERO);
+            }
             ScalerOsdCircuitActivated(_DISABLE);        // as ScalerOsdSramGetData: circuit off, one DVS, then read
             ScalerTimerWaitForEvent(_EVENT_DVS);
             AwtoOhwVerify(ucOp);
             ScalerOsdCircuitActivated(_ENABLE);
+            ScalerSetByte(AWTO_R_OSD_SU_CRTL, ucSu);
         }
         else
         {
@@ -550,6 +608,10 @@ static void AwtoOsdHwPoll(void)
     else if(ucOp == AWTO_OHW_OP_S2FRAMES)
     {
         AwtoOhwS2Frames();
+    }
+    else if(ucOp == AWTO_OHW_OP_LADDER)
+    {
+        AwtoOhwLadder();
     }
     else if(ucOp == AWTO_OHW_OP_SAVER)
     {
