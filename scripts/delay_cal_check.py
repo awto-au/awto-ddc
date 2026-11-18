@@ -65,7 +65,7 @@ def static_cycles(code: bytes) -> int:
 def var_addrs(map_text: str) -> dict:
     out = {}
     for k, name in DELAY_VARS.items():
-        m = re.search(rf"^\s+([0-9A-F]{{8}})\s+_{name}\s", map_text, re.M)
+        m = re.search(rf"^\s+([0-9A-F]{{8}})\s+_{name[:31]}\w*\s", map_text, re.M)      # the map cuts the symbol at 32 chars incl. the underscore
         if not m:
             raise SystemExit(f"_{name} not in the map")
         out[k] = int(m.group(1), 16)

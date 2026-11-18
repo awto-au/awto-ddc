@@ -1743,18 +1743,18 @@ void ScalerMcu5usDelayCalc(EnumClkSel enumClock)
 
     if(enumClock == _M2PLL_CLK)
     {
-        d_isr_g_ucDelay5usN_Base = (g_ucAwtoCal5 != 0) ? g_ucAwtoCal5 : _M2PLL_DELAY6US_CNT;
-        d_isr_g_ucDelayXusN_Base = (g_ucAwtoCalX != 0) ? g_ucAwtoCalX : _M2PLL_DELAY4US_CNT;
+        d_isr_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_M2PLL, 5UL, AWTO_DELAY5US_OVH_CLK);
+        d_isr_g_ucDelayXusN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_M2PLL, 4UL, AWTO_DELAYXUS_OVH_CLK);
     }
     else if(enumClock == _IOSC_CLK)
     {
-        d_isr_g_ucDelay5usN_Base = _IOSC_DELAY6US_CNT;
-        d_isr_g_ucDelayXusN_Base = _IOSC_DELAY4US_CNT;
+        d_isr_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_IOSC, 5UL, AWTO_DELAY5US_OVH_CLK);
+        d_isr_g_ucDelayXusN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_IOSC, 4UL, AWTO_DELAYXUS_OVH_CLK);
     }
     else // For Xtal
     {
-        d_isr_g_ucDelay5usN_Base = _XTAL_DELAY6US_CNT;
-        d_isr_g_ucDelayXusN_Base = _XTAL_DELAY4US_CNT;
+        d_isr_g_ucDelay5usN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_XTAL, 5UL, AWTO_DELAY5US_OVH_CLK);
+        d_isr_g_ucDelayXusN_Base = AWTO_DELAY_CNT(AWTO_CPU_KHZ_XTAL, 4UL, AWTO_DELAYXUS_OVH_CLK);
     }
 }
 

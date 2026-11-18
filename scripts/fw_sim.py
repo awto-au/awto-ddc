@@ -1105,6 +1105,8 @@ class SimBus:
 
     def boot(self, passes: int = 3, max_instr: int = 60_000_000, chunk: int = 1_000_000):
         hb0, used = None, 0
+        if os.environ.get("AWTO_SIM_CPU", "dw8051") == "8052":      # no clock model: a 1 ms Timer2 tick is 12 clk per count x the reload, 4x the instructions at 350.8 MHz (AWTO_CLOCK_MHZ) than at 87.7
+            max_instr *= 4
         while used < max_instr:
             self.m.run(chunk); used += chunk
             d = self.diag()

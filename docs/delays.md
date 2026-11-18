@@ -1,5 +1,6 @@
 # Delays, waits and timeouts in the firmware (#54)
 
+- Per-site audit of every delay at both clocks, the single clock option and the gate: `docs/delay-audit.md` (typed inventory `docs/delay-audit.tsv`). This file keeps the sources and rationale of the SDK constants.
 - Review 2026-11-13 by two read-only agents. Code = main 722e32d / image wb-p14ui-amp2. Panel T6 since then: 900 ms, run at power-down (b70095c).
 - Rule (Dan, 2026-11-13): every delay = **datasheet / spec value - 10 %**, never an added margin. Timeouts (event waits that fail on expiry) = 1.25 x expected worst case. Rule text: awto-dan `docs/agents/agent-rules.md`.
 - Columns: what it waits for, value, where defined, **what decided it**, source value, ratio code/source.

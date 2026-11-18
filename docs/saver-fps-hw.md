@@ -151,7 +151,7 @@ Status 2026-11-18 (Dan: "get some agents to sort out how to get to 25 fps"). Sco
 
 - Measured on unit 3 (2026-11-18): `docs/clock-sweep.md` (MCU 43.9 .. 350.8 MHz and SPI 21.9 .. 70.2 MHz at run time; Scope 2 5.6 -> 8.3 / s at 175.4, 12.4 / s with SPI 70.2, 17.6 / s at 350.8).
 - Sim experiment (2026-11-18, not kept): `Project_Option.h` `_MCU_SPEED_UP_SUPPORT` forced `_ON`, image `hwspd`, same commit as `hwbase`; `scope2_sim.py --frames 6`: 178.8 -> 114.2 ms / frame (5.59 -> 8.76 / s); `saver_loop_cost.py --case scope`: 854 -> 668 ms / frame; `--case asteroids`: pass mean 11.9 -> 9.4 ms. Logs `tmp/logs/hw_s2*.log`, `hw_loop*.log`. Gain < 2x: the sim charges flash-fetch stalls at the unchanged SPI clock (cache model sizes assumed, `docs/sim-cpu-model.md`).
-- Risks of x2: our own delay calibrations (`g_ucAwtoCal5`, `docs/delays.md`), DDC debounce (`_TMDS_DDC_DEBOUNCE_NORMAL` doubles in the SDK), WDT counts real time (unchanged), power / heat [?], `hb_osd_gap` assumes the 87.75 MHz system clock (recompute).
+- Risks of x2: the delay loop counts (compile time since the delay audit, `docs/delay-audit.md`), DDC debounce (`_TMDS_DDC_DEBOUNCE_NORMAL` doubles in the SDK), WDT counts real time (unchanged), power / heat [?], `hb_osd_gap` assumes the 87.75 MHz system clock (recompute).
 
 ## (e) Hardware pattern / line drawing
 

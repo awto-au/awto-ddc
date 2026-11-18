@@ -686,6 +686,7 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
 #define AWTO_CLK_DIV_MAX                        15
 #define AWTO_CLK_DELAY5_N                       10
 #define AWTO_CLK_DELAYX_US                      100
+#define AWTO_DELAY_TARGET_PCT                   105                 // sweep search target only; the image's own counts are compile time (AWTO_DELAY_CNT, docs/delay-audit.md)
 #define AWTO_CLK_DELAY_BAND                     5                   // % around AWTO_DELAY_TARGET_PCT
 #define AWTO_CLK_DELAY_ITER                     8
 #define AWTO_CLK_DELAY_REPS                     5

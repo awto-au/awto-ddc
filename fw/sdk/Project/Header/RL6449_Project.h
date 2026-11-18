@@ -188,11 +188,7 @@ extern unsigned char AwtoKeyHold(void);
 // _AWTO_FLASH_ALL: RL6449_Gen_Option.h (the Lib flash code sees it there too)
 // Boot-stage + timing diag block (#23): 48 B at 0xF6D0, outside the linker's XDATA range (fw_build.py XRAM end).
 // Layout (SDCC little-endian: low byte first): docs/diag-block.md, scripts/rtd_diag.py. Read over debug slave 0x35.
-// #54: busy-loop counts from the T3 measurement (the SDK constants are 112..127 % depending on __code placement)
-#define AWTO_DELAY_TARGET_PCT                                   105     // shorter copy of each pair; health limit 90..125 %
-#define AWTO_DELAY_CAL_RCAP2H                                   0xE3    // M2PLL Timer2 reload (rtd_diag PERIOD); others keep the SDK counts
-extern unsigned char g_ucAwtoCal5;
-extern unsigned char g_ucAwtoCalX;
+// Delay measurement (health check of the compile-time loop counts, docs/delay-audit.md)
 typedef struct
 {
     unsigned char ucMagic0;                     // 'A'
