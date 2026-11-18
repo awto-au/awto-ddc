@@ -42,6 +42,13 @@ VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept 
 AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
 AST_FREEZE_LIMIT_S = 20.0       # 2.5x the expected 8 s (first hidden frame ~3 s + 20 frames at ~0.25 s); expiry = FAIL, logged
 AST_POLL_S = 0.0005             # a frame is complete from the column wrap until the next main pass (a few ms)
+AST_GREEN = (0, 255, 65)        # diagnostic console text colour (AWTO_RGB_PHOSPHOR_GREEN, palette AWTO_PAL_DIAG_TEXT): every lit pixel of Asteroids
+GREEN_TOL = 40                  # R / B channel excess allowed over the diagnostic green (scale-up blends edges with the background)
+INK_MIN = 128                   # channel value above which a pixel is ink (the background is ~(2, 2, 6))
+AST_INFO_COLS = 9               # info overlay width in tile columns (AWTO_AST_INFO_COLS, lower left), of 30
+AST_INFO_ROWS = 2               # its height in tile rows (AWTO_AST_INFO_ROWS), of 11
+AST_GRID = (30, 11)             # Asteroids tile grid (AWTO_AST_COLS, AWTO_AST_ROWS)
+AST_INFO_MIN_SHARE = 0.03       # lit share of the info box: 3 lines of 4 x 6 glyphs fill 8-15 %, the empty box is 0
 AST_FILL = 0.97                 # Asteroids: full width, 97.8 % of the height (24 px bars of 2160: 30 x 11 tiles at 64 / 6)
 SCOPE2_FILL = 0.99              # scope 2 must cover this share of the panel picture in each direction (it is one raster scaled to the whole panel)
 SCOPE2_MIN_FPS = 5.0            # frames per second of scope 2 (measured 6.7 on the 480 x 270 raster; docs/screensaver.md): a slower draw fails
@@ -171,6 +178,21 @@ def scope2_check(sess, img) -> int:
     return int(not fill_ok) + int(fps < SCOPE2_MIN_FPS)
 
 
+def asteroids_info_check(img) -> int:
+    """Asteroids: all lit pixels are the diagnostic green, and the info overlay (lower left tile box) has text while the mirrored box does not."""
+    a = np.asarray(img.convert("RGB"))
+    box = bbox_crop(img)
+    lit = box[box.max(axis=2) > INK_MIN]
+    off = int(np.sum((lit[:, 0] > GREEN_TOL) | (lit[:, 2] > GREEN_TOL + AST_GREEN[2])))
+    h, w = box.shape[:2]
+    ih, iw = h * AST_INFO_ROWS // AST_GRID[1], w * AST_INFO_COLS // AST_GRID[0]
+    share = lambda b: float((b.max(axis=2) > INK_MIN).mean())
+    s_info, s_far = share(box[h - ih:, :iw]), share(box[h - ih:, w - iw:])
+    ok = off <= 0.02 * len(lit) and s_info >= AST_INFO_MIN_SHARE and s_info > 2 * s_far
+    say(f"{'PASS' if ok else 'FAIL'} asteroids info overlay: {len(lit)} lit px, {off} not diagnostic green {AST_GREEN}; lower-left box {100 * s_info:.1f} % lit (min {100 * AST_INFO_MIN_SHARE:.0f} %), lower-right box {100 * s_far:.1f} %")
+    return int(not ok)
+
+
 def alert_check(a) -> int:
     """VCP 0xEB = 6 plays the 1 s alert tone: the audio tap hears ~1 s of tone, and the generator is off afterwards."""
     eng = D.DdcEngine()
@@ -226,6 +248,8 @@ def main() -> int:
             ok = box.shape[0] >= AST_FILL * run_img.size[1] and box.shape[1] >= AST_FILL * run_img.size[0]
             fails += not ok
             say(f"{'PASS' if ok else 'FAIL'} asteroids fills the panel: box {box.shape[1]} x {box.shape[0]} of {run_img.size[0]} x {run_img.size[1]} ({100 * box.shape[1] / run_img.size[0]:.1f} % x {100 * box.shape[0] / run_img.size[1]:.1f} %, min {100 * AST_FILL:.0f} %)")
+        if name == "asteroids":
+            fails += asteroids_info_check(run_img)
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
         st = sess.snap()

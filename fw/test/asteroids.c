@@ -24,15 +24,12 @@ extern void AwtoScTile(WORD usAddr, BYTE __xdata *pucB);                        
 #define AWTO_AST_BANDS                          2                                   // rows split unequally when odd: band 0 gets the extra row
 #define AWTO_AST_BAND_ROWS                      ((AWTO_AST_ROWS + AWTO_AST_BANDS - 1) / AWTO_AST_BANDS)   // canvas rows = the tallest band
 #define AWTO_AST_BAND_H                         (AWTO_AST_BAND_ROWS * AWTO_AST_TH)
-#define AWTO_AST_BG                             1                                   // palette indexes
-#define AWTO_AST_FG                             2
+#define AWTO_AST_BG                             AWTO_PAL_DIAG_BG                    // palette indexes: the diagnostic console's (text 1, background 3; the console sets them again when it opens)
+#define AWTO_AST_FG                             AWTO_PAL_DIAG_TEXT
 #define AWTO_AST_FG_SHIFT                       4
 #define AWTO_AST_BG_R                           2
 #define AWTO_AST_BG_G                           2
 #define AWTO_AST_BG_B                           6
-#define AWTO_AST_FG_R                           235
-#define AWTO_AST_FG_G                           235
-#define AWTO_AST_FG_B                           225
 #define AWTO_AST_SCALE_64                       64                                  // scale-up factor unit: ratio = 64 / factor
 #define AWTO_AST_SCALED_W                       (AWTO_AST_SCALE_64 * (long)AWTO_AST_W)
 #define AWTO_AST_SCALED_H                       (AWTO_AST_SCALE_64 * (long)AWTO_AST_H)
@@ -131,6 +128,44 @@ typedef char s_tAstPanelCheck[((AWTO_AST_SU_FACTOR * (long)_PANEL_DH_WIDTH == AW
 #define AWTO_AST_HUD_W                          (AWTO_AST_HUD_X + AWTO_AST_DIGITS * AWTO_AST_DIGIT_ADV)
 #define AWTO_AST_HUD_H                          44
 #define AWTO_AST_DEC                            10
+#ifndef AWTO_SAVER_INFO
+#define AWTO_SAVER_INFO                         _ON                                 // info overlay (docs/saver-mode.md "Info overlay"); _OFF = none, no code
+#endif
+#define AWTO_AST_CH_X                           10                                  // info glyphs after the digits (scripts/gen_asteroids.py DIGITS order)
+#define AWTO_AST_CH_DOT                         11
+#define AWTO_AST_CH_F                           12
+#define AWTO_AST_CH_P                           13
+#define AWTO_AST_CH_S                           14
+#define AWTO_AST_CH_SPACE                       0xFF
+#define AWTO_AST_INFO_COL0                      0                                   // corner: lower left of the picture (first column; the tile map is turned by Rotate 180 with the game)
+#define AWTO_AST_INFO_ROWS                      2                                   // tile rows, the last ones of the field
+#define AWTO_AST_INFO_ROW0                      (AWTO_AST_ROWS - AWTO_AST_INFO_ROWS)
+#define AWTO_AST_INFO_LINES                     3                                   // input + refresh / draw grid + scale / frames per second
+#define AWTO_AST_INFO_CHARS                     16
+#define AWTO_AST_INFO_SHIFT                     1                                   // digit shapes 8 x 12 >> 1 = 4 x 6 px
+#define AWTO_AST_INFO_ADV                       6
+#define AWTO_AST_INFO_GH                        6                                   // glyph height px (12 >> shift)
+#define AWTO_AST_INFO_GW                        4
+#define AWTO_AST_INFO_X                         3                                   // px from the column edge
+#define AWTO_AST_INFO_BASE0                     12                                  // first baseline below the top of the info rows
+#define AWTO_AST_INFO_LINE_STEP                 8
+#define AWTO_AST_INFO_COLS                      ((AWTO_AST_INFO_X + AWTO_AST_INFO_CHARS * AWTO_AST_INFO_ADV + AWTO_AST_TW - 1) / AWTO_AST_TW)
+#define AWTO_AST_INFO_Y                         ((AWTO_AST_INFO_ROW0 - AWTO_AST_BAND_ROWS) * AWTO_AST_TH)   // top of the info rows in the band-1 canvas
+#define AWTO_AST_INFO_FPS_CHARS                 7                                   // `NNN FPS`
+#define AWTO_AST_INFO_FPS_COLS                  ((AWTO_AST_INFO_X + AWTO_AST_INFO_FPS_CHARS * AWTO_AST_INFO_ADV + AWTO_AST_TW - 1) / AWTO_AST_TW)
+#define AWTO_AST_INFO_FPS_BITS                  (1 << (AWTO_AST_INFO_ROWS - 1))     // the fps line sits in the last info tile row
+typedef char s_tAstInfoFpsCheck[(AWTO_AST_INFO_BASE0 + (AWTO_AST_INFO_LINES - 1) * AWTO_AST_INFO_LINE_STEP - AWTO_AST_INFO_GH >= (AWTO_AST_INFO_ROWS - 1) * AWTO_AST_TH) ? 1 : -1];   // line 3's glyph top is inside the last row
+#define AWTO_AST_INFO_BITS                      ((1 << AWTO_AST_INFO_ROWS) - 1)
+#define AWTO_AST_INFO_PERIOD_MS                 1000                                // numbers refresh once a second: the fps count is per this period
+#define AWTO_AST_INFO_TENTHS                    10
+#define AWTO_AST_DEC_TOP                        10000                               // WORD values: 5 digits
+#define AWTO_AST_INFO_DEC_DIGITS                5
+#define AWTO_AST_INFO_SCALE_TENTHS              ((WORD)((AWTO_AST_SCALE_64 * AWTO_AST_INFO_TENTHS + AWTO_AST_SU_FACTOR / 2) / AWTO_AST_SU_FACTOR))   // scale-up factor x 10
+#define AWTO_AST_INFO_WORD_BITS                 16
+#define AWTO_AST_THOUSAND                       1000
+#define AWTO_AST_INFO_VF_UNIT_MHZ               100                                 // SDK vertical frequency unit 0.1 Hz = 100 mHz
+typedef char s_tAstShapesCheck[(AWTO_AST_N_SHAPES == AWTO_AST_SH_DIGIT + AWTO_AST_DEC + 5) ? 1 : -1];   // digits then the five info glyphs
+typedef char s_tAstInfoCheck[((AWTO_AST_INFO_ROW0 >= AWTO_AST_BAND_ROWS) && (AWTO_AST_INFO_LINE_STEP * AWTO_AST_INFO_LINES + AWTO_AST_INFO_BASE0 <= AWTO_AST_INFO_ROWS * AWTO_AST_TH)) ? 1 : -1];   // rows inside band 1, text inside them
 #define AWTO_AST_PASSES                         (AWTO_AST_COLS * AWTO_AST_BANDS)
 #define AWTO_AST_PASS_MS                        8                                   // saver work per call (+ one column): the main loop (DDC/CI, keys) runs between calls
 #define AWTO_AST_FRAME_MS                       40                                  // frame schedule: 25 frames/s; game ticks stay at AWTO_AST_TICK_MS, positions interpolated
@@ -186,6 +221,8 @@ __xdata WORD g_usAwtoAstStep;                                                   
 __xdata BYTE g_ucAwtoAstCol;                                                        // next column of the frame being drawn
 #ifdef _AWTO_OSD_HWTEST
 __xdata WORD g_usAwtoAstFrames;
+#elif(AWTO_SAVER_INFO == _ON)
+__xdata BYTE g_usAwtoAstFrames;                                                     // low byte is enough for the per-second count
 #endif
 static __xdata AstObj s_atObj[AWTO_AST_N_OBJ];
 static __xdata AstSeen s_atSeen[AWTO_AST_N_OBJ + 1];                                // last frame as drawn: objects, then the ship
@@ -1411,6 +1448,141 @@ static void AstPrepare(void)                                                    
     }
 }
 
+#if(AWTO_SAVER_INFO == _ON)
+#define AWTO_AST_INFO_ACTIVE()                  (SysModeGetModeState() == _MODE_STATUS_ACTIVE)   // as ui_timing (fw/settings/settings_glue.c): the active input's timing
+#define AWTO_AST_INFO_VM()                      ((g_stAwtoFreq.ucValid != 0) ? g_stAwtoFreq.ulVFreqmHz : ((DWORD)GET_INPUT_TIMING_VFREQ() * AWTO_AST_INFO_VF_UNIT_MHZ))
+#define AWTO_AST_INFO_TXT                       (g_aucScPix + (AWTO_AST_BAND_ROWS - 1) * OSD_TILE_BYTES)   // band 1 has one tile row less: the canvas's last row is free scratch
+typedef char s_tAstInfoScratch[((AWTO_AST_ROWS - AWTO_AST_BAND_ROWS < AWTO_AST_BAND_ROWS) && (OSD_TILE_BYTES >= AWTO_AST_INFO_CHARS)) ? 1 : -1];
+static __xdata WORD s_usInfoAt;                                                     // scheduled time of the next refresh
+static __xdata BYTE s_ucInfoFrames;                                                 // g_usAwtoAstFrames (low byte) at the last refresh
+static __xdata BYTE s_ucInfoFps;                                                    // 0 = not measured yet
+static __xdata BYTE s_ucInfoHz;                                                     // refresh, whole Hz / mHz part (0 = no active input); set once per period
+static __xdata WORD s_usInfoFrac;
+static __xdata WORD s_usInfoSum;                                                    // checksum of the shown input values: a change redraws
+
+static BYTE AstPutDec(BYTE __xdata *pucL, BYTE ucPos, WORD usV, BYTE ucMin)         // decimal digits (at least ucMin) at ucPos; returns the next position; subtraction per digit: no 16-bit divide
+{
+    WORD usD;
+    BYTE ucK;
+    BYTE ucDig;
+    BYTE ucOn = 0;
+
+    for(ucK = AWTO_AST_INFO_DEC_DIGITS; ucK > 0; ucK--)
+    {
+        usD = (ucK == 5) ? AWTO_AST_DEC_TOP : (ucK == 4) ? AWTO_AST_DEC_TOP / AWTO_AST_DEC : (ucK == 3) ? AWTO_AST_DEC * AWTO_AST_DEC : (ucK == 2) ? AWTO_AST_DEC : 1;
+        for(ucDig = 0; usV >= usD; ucDig++)
+        {
+            usV -= usD;
+        }
+        ucOn |= (BYTE)((ucDig != 0) || (ucK <= ucMin));                             // leading zeros trimmed
+        if(ucOn != 0)
+        {
+            pucL[ucPos++] = ucDig;
+        }
+    }
+    return ucPos;
+}
+
+static void AstInfoLine(BYTE __xdata *pucL, BYTE ucLine)                            // glyph ids of one line (AWTO_AST_CH_SPACE = blank)
+{
+    BYTE ucP;
+
+    memset(pucL, AWTO_AST_CH_SPACE, AWTO_AST_INFO_CHARS);
+    if(ucLine == 0)
+    {
+        if(s_ucInfoHz != 0)
+        {
+            ucP = AstPutDec(pucL, 0, GET_INPUT_TIMING_HWIDTH(), 1);
+            pucL[ucP++] = AWTO_AST_CH_X;
+            ucP = AstPutDec(pucL, ucP, GET_INPUT_TIMING_VHEIGHT(), 1);
+            ucP = AstPutDec(pucL, ucP + 1, s_ucInfoHz, 1);
+            pucL[ucP++] = AWTO_AST_CH_DOT;
+            AstPutDec(pucL, ucP, s_usInfoFrac, 3);
+        }
+    }
+    else if(ucLine == 1)                                                            // the game's grid: tiles x cell px, and the scale-up factor of its OSD window
+    {
+        ucP = AstPutDec(pucL, 0, AWTO_AST_W, 1);
+        pucL[ucP++] = AWTO_AST_CH_X;
+        ucP = AstPutDec(pucL, ucP, AWTO_AST_H, 1);
+        pucL[ucP + 1] = AWTO_AST_CH_X;
+        ucP = AstPutDec(pucL, ucP + 2, AWTO_AST_INFO_SCALE_TENTHS / AWTO_AST_INFO_TENTHS, 1);
+        pucL[ucP++] = AWTO_AST_CH_DOT;
+        AstPutDec(pucL, ucP, AWTO_AST_INFO_SCALE_TENTHS % AWTO_AST_INFO_TENTHS, 1);
+    }
+    else if(s_ucInfoFps != 0)
+    {
+        ucP = AstPutDec(pucL, 0, s_ucInfoFps, 1);
+        pucL[ucP + 1] = AWTO_AST_CH_F;
+        pucL[ucP + 2] = AWTO_AST_CH_P;
+        pucL[ucP + 3] = AWTO_AST_CH_S;
+    }
+}
+
+static void AstInfoTick(WORD usNow)                                                 // once per AWTO_AST_INFO_PERIOD_MS: frames drawn since the last refresh = fps; marks the tiles when a value changed
+{
+    WORD usSum = 0;
+    BYTE ucFps;
+    BYTE ucN;
+
+    if((WORD)(usNow - s_usInfoAt) >= AWTO_AST_HALF_MS)
+    {
+        return;
+    }
+    s_usInfoAt += AWTO_AST_INFO_PERIOD_MS;
+    if((WORD)(usNow - s_usInfoAt) < AWTO_AST_HALF_MS)
+    {
+        s_usInfoAt = usNow + AWTO_AST_INFO_PERIOD_MS;                               // behind by a period or more: resync
+    }
+    ucFps = (BYTE)((BYTE)g_usAwtoAstFrames - s_ucInfoFrames);
+    s_ucInfoFrames = (BYTE)g_usAwtoAstFrames;
+    s_ucInfoHz = 0;
+    s_usInfoFrac = 0;
+    if(AWTO_AST_INFO_ACTIVE())                                                      // the line's values are set here, once per period (the only 32-bit divides)
+    {
+        s_ucInfoHz = (BYTE)(AWTO_AST_INFO_VM() / AWTO_AST_THOUSAND);
+        s_usInfoFrac = (WORD)(AWTO_AST_INFO_VM() % AWTO_AST_THOUSAND);
+        usSum = GET_INPUT_TIMING_HWIDTH() ^ (GET_INPUT_TIMING_VHEIGHT() << AWTO_AST_BYTE_BITS) ^ ((WORD)s_ucInfoHz << AWTO_AST_BYTE_BITS) ^ s_usInfoFrac;
+    }
+    if((ucFps == s_ucInfoFps) && (usSum == s_usInfoSum))
+    {
+        return;
+    }
+    ucN = (usSum == s_usInfoSum) ? AWTO_AST_INFO_FPS_COLS : AWTO_AST_INFO_COLS;     // only the fps changed: its tile row and columns, not the box
+    s_ucInfoFps = ucFps;
+    while(ucN-- > 0)
+    {
+        s_aucDirty[AWTO_AST_COLS + AWTO_AST_INFO_COL0 + ucN] |= (BYTE)(((usSum == s_usInfoSum) ? AWTO_AST_INFO_FPS_BITS : AWTO_AST_INFO_BITS) << (AWTO_AST_INFO_ROW0 - AWTO_AST_BAND_ROWS));
+    }
+    s_usInfoSum = usSum;
+}
+
+#pragma place bank(8)
+static void AstInfoDraw(void)                                                       // text of the info rows for the pass at (s_sOx, band 1)
+{
+    BYTE ucL;
+    BYTE ucK;
+    BYTE ucG;
+    BYTE __xdata *aucTxt = AWTO_AST_INFO_TXT;
+
+    for(ucL = 0; ucL < AWTO_AST_INFO_LINES; ucL++)
+    {
+        AstInfoLine(aucTxt, ucL);
+        for(ucK = 0; ucK < AWTO_AST_INFO_CHARS; ucK++)
+        {
+            ucG = aucTxt[ucK];
+            s_sRx = AWTO_AST_INFO_COL0 * AWTO_AST_TW + AWTO_AST_INFO_X + ucK * AWTO_AST_INFO_ADV - s_sOx;
+            if((ucG == AWTO_AST_CH_SPACE) || (s_sRx + AWTO_AST_INFO_GW < 0) || (s_sRx >= AWTO_AST_TW))
+            {
+                continue;
+            }
+            s_sRy = AWTO_AST_INFO_Y + AWTO_AST_INFO_BASE0 + ucL * AWTO_AST_INFO_LINE_STEP;
+            AstShape(AWTO_AST_SH_DIGIT + ucG, AWTO_AST_INFO_SHIFT, 0);
+        }
+    }
+}
+#endif
+
 #pragma place bank(8)
 static void AstPass(BYTE ucCol, BYTE ucBand)                                        // redraws the band's column if a tile in it changes; uploads only the changed tiles
 {
@@ -1455,6 +1627,12 @@ static void AstPass(BYTE ucCol, BYTE ucBand)                                    
     {
         AstHud();
     }
+#if(AWTO_SAVER_INFO == _ON)
+    if((ucBand != 0) && ((BYTE)(ucCol - AWTO_AST_INFO_COL0) < AWTO_AST_INFO_COLS))
+    {
+        AstInfoDraw();
+    }
+#endif
     s_usCell0 = ((ucBand == 0) ? 0 : (WORD)(AWTO_AST_BAND_ROWS * AWTO_AST_COLS)) + ucCol;
     pucTile = g_aucScPix;                                                           // running tile pointer: no banked const read next to the cross-bank call
     for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS, pucTile += OSD_TILE_BYTES)
@@ -1503,6 +1681,12 @@ BYTE AwtoAsteroids(BYTE ucCmd)
                     }
                 }
 #endif
+#if(AWTO_SAVER_INFO == _ON)
+                if(s_ucShown != 0)
+                {
+                    AstInfoTick(usStart);
+                }
+#endif
                 AstStep((s_ucShown == 0) ? AWTO_AST_TICKS : AstDue());
                 s_ucFrac = AstFrac();
                 AstPrepare();
@@ -1518,8 +1702,8 @@ BYTE AwtoAsteroids(BYTE ucCmd)
             return 0;
         }
         g_ucAwtoAstCol = 0;
-#ifdef _AWTO_OSD_HWTEST
-        g_usAwtoAstFrames++;                                                        // clock sweep (docs/clock-sweep.md): frames drawn
+#if(defined(_AWTO_OSD_HWTEST) || (AWTO_SAVER_INFO == _ON))
+        g_usAwtoAstFrames++;                                                        // frames drawn: clock sweep (docs/clock-sweep.md) and the info overlay
 #endif
         if(s_ucShown == 0)                                                          // the first frame was drawn hidden
         {
@@ -1537,7 +1721,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     AwtoOsdScreenBegin();
     ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
     ScalerOsdSetColorPalette(AWTO_AST_BG, AWTO_AST_BG_R, AWTO_AST_BG_G, AWTO_AST_BG_B);
-    ScalerOsdSetColorPalette(AWTO_AST_FG, AWTO_AST_FG_R, AWTO_AST_FG_G, AWTO_AST_FG_B);
+    ScalerOsdSetColorPalette(AWTO_AST_FG, AWTO_RGB_PHOSPHOR_GREEN);                 // same green as the diagnostic console text
     ScalerOsd2FontFunction(_DISABLE);
     AwtoOsdRowCmds(AWTO_AST_ROWS, AWTO_AST_TH, AWTO_AST_COLS);
     AwtoOsdMap1(AWTO_AST_COLS, AWTO_AST_ROWS, (AWTO_AST_FG << AWTO_AST_FG_SHIFT) | AWTO_AST_BG);   // one char command per cell, glyph id = cell index
@@ -1552,6 +1736,12 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     {
         s_usRng = AWTO_AST_SEED;
     }
+#if(AWTO_SAVER_INFO == _ON)
+    s_ucInfoFrames = (BYTE)g_usAwtoAstFrames;
+    s_ucInfoFps = 0;
+    s_usInfoSum = 0;
+    s_usInfoAt = (WORD)AwtoMs() + AWTO_AST_INFO_PERIOD_MS;
+#endif
     g_usAwtoAstStep = 0;
     g_ucAwtoAstCol = 0;
     s_usHudScore = 0;

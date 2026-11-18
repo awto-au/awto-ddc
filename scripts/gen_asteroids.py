@@ -27,7 +27,8 @@ ID_SAUCER = N_ROCKS
 ID_HULL = ID_SAUCER + 1
 ID_FLAME = ID_HULL + STEPS
 ID_DIGIT = ID_FLAME + STEPS
-N_SHAPES = ID_DIGIT + 10
+N_CHARS = 5                     # info-line letters after the digits: x . F P S (fw/test/asteroids.c AWTO_AST_CH_*)
+N_SHAPES = ID_DIGIT + 10 + N_CHARS
 INT8_MAX = 127
 CODE_BANK = 8                   # data and its readers (fw/test/asteroids.c) share this bank; bank 8 had the most room, bank 13 only ~3 KB (message table reserve)
 
@@ -50,6 +51,11 @@ DIGITS = (
     (((0, 12), (8, 12), (8, 0)),),
     (((0, 0), (0, 12), (8, 12), (8, 0), (0, 0)), ((0, 6), (8, 6))),
     (((8, 6), (0, 6), (0, 12), (8, 12), (8, 0), (0, 0)),),
+    (((0, 0), (8, 12)), ((0, 12), (8, 0))),                                          # x
+    (((3, 0), (5, 0)),),                                                             # .
+    (((8, 12), (0, 12), (0, 0)), ((0, 6), (6, 6))),                                  # F
+    (((0, 0), (0, 12), (8, 12), (8, 6), (0, 6)),),                                   # P
+    (((8, 12), (0, 12), (0, 6), (8, 6), (8, 0), (0, 0)),),                           # S
 )
 
 LOG = None

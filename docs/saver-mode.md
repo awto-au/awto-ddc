@@ -139,6 +139,19 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 - **D4 Alternate flag: decided, implemented as: a DDC/CI command ends neither "now" saver** (plain 0x03 and Alternate 0x83 behave the same). Reason: the code excluded now savers on purpose (explicit host request; `scope2_ddc_latency.py` and the sims talk DDC/CI to a running now saver); the bug was only the unmasked bit 7. Not read as "end both": it would break those tools. Open and unchanged: a front key does not end a plain "now" saver either (`AwtoSaverKey` -> `AwtoSaverActivity`), although the table above says "all".
 - **D5 Pac-Man pacing: decided, implemented.** Fixed-rate schedule: `s_usTick += period`, 31 / 31 / 31 / 32 ms = 125 ms per game step; resync to now when more than a game step behind (no catch-up burst). `saver_loop_cost.py --case pacman --window 62` prints rate and interval spread.
 
+## Info overlay (Dan, 2026-11-19): Asteroids built, Scope 1 / Scope 2 / Pac-Man not
+- Lower left of the picture, 3 lines, drawn as tiles of the saver's own canvas (so Rotate 180 turns it with the game, nothing else to do; docs/osd/rotation.md):
+  - line 1: input `W x H` + refresh (`3840x2160 59.995`); line 2: draw grid + scale-up (`360x198 x10.7`); line 3: `25 FPS`.
+  - Numbers once a second (`AWTO_AST_INFO_PERIOD_MS`), tiles only when a value changed (6-12 tiles x 27 B).
+- Sources: input = `GET_INPUT_TIMING_HWIDTH/VHEIGHT` + `g_stAwtoFreq.ulVFreqmHz` (measured pixel clock / totals, 0.1 Hz SDK value as fallback), same as `ui_timing` (menu, console). Blank without an active input (no signal).
+- Draw grid = `AWTO_AST_W x AWTO_AST_H` (tiles x cell px); scale-up = `AWTO_AST_SCALE_64 / AWTO_AST_SU_FACTOR` (the OSD window's scale-up register value, 64 / 6 = 10.7). FPS = frames drawn per period (`g_usAwtoAstFrames`, per-second delta).
+- Switch `AWTO_SAVER_INFO` (`_ON` default, `-D AWTO_SAVER_INFO=_OFF` = no code); corner = `AWTO_AST_INFO_COL0` / `AWTO_AST_INFO_ROW0`. No registry row.
+- Cost (sim, `saver_code_profile.py --case asteroids --window 10`, 350.8 MHz, 2026-11-19, on vs off): instr / frame 600476 vs 593290 (+1.2 %), compute 14.56 vs 14.42 ms, saver slot incl. flash stalls 6.9 vs 6.4 ms (+0.5 ms / frame); 25.00 frames/s both; worst main-loop pass 9.93 vs 9.83 ms (no spike). `AstInfoDraw` 0.08 + `AstPutDec` 0.09 ms / frame, the rest is the glyph lines / tile uploads of the redrawn tiles.
+- First version cost +3.3 % instr: 32-bit `/ 1000`, `% 1000` of the refresh evaluated several times per pass, and 16-bit divides per digit. Now: refresh split once per period, digits by subtraction, fps-only change redraws 4 tiles of the last info row (not 18).
+- XDATA free 715 -> 700 B (floor): 10 B statics + locals; no text buffers (line text is built per pass in the free last canvas row of band 1).
+- Scope 1 / Scope 2 / Pac-Man: not built (own canvases, own scale-up; same pattern, but XDATA is at the floor).
+- Frame-compare tools (`saver_frames_md5.py`) build both images with `-D AWTO_SAVER_INFO=_OFF`: the fps digits follow fw time.
+
 ## Open decisions
 
 - **D2 the key that ends a saver:** also does its action today (MENU opens the menu, SOURCE the selector). Swallow it?
