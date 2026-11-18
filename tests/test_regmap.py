@@ -187,3 +187,42 @@ def test_query(capsys):
     assert "FF83" in c.out
     rc, c = run("--obs", "06A4")
     assert "AWT26110003" in c.out
+    rc, c = run("--i2c", "isp")
+    assert "I2C:4B" in c.out and "I2C:54" not in c.out
+    rc, c = run("--no-test")
+    assert rc == 0
+
+
+def test_i2c_table():
+    cols, rows = L.read_tsv(L.I2C)
+    assert cols == L.I2C_COLS
+    by = {r["key"]: r for r in rows}
+    assert {"I2C:4A", "I2C:4B", "I2C:54", "SCDC:01", "CMD:71", "I2C:35", "I2C:37"} <= set(by)
+    assert all(L.I2C_KEY_RE.match(k) for k in by)
+    assert by["CMD:71"]["status"] == "ignore" and "#if 0" in by["CMD:71"]["source"]
+    assert "auto-increment" in by["I2C:4B"]["role"] and by["I2C:4B"]["test_id"] == "C-ISP4B"
+    assert not [e for e in B.validate([], [], []) if "i2c" in e]
+
+
+def test_i2c_check_rejects_bad_rows(tmp_path, monkeypatch):
+    bad = L.tsv_text(L.I2C_COLS, [{"key": "I2C:4B", "role": "x", "status": "maybe"}, {"key": "I2C:4A", "role": "y", "evidence": "role=bogus"}])
+    p = tmp_path / "i2c.tsv"
+    p.write_text(bad)
+    monkeypatch.setattr(L, "I2C", p)
+    text = " ".join(B.validate([], [], []))
+    assert "status 'maybe'" in text and "bogus" in text and "sorted" in text
+
+
+def test_digest_seed_facts(committed):
+    rows, flds = committed
+    by = {r["key"]: r for r in rows}
+    fb = {f["fkey"]: f for f in flds}
+    assert by["3AC0"]["status"] == "known" and "inverted" in by["3AC0"]["notes"]
+    assert "C-FLASHOC" in fb["FF6C[5:5]"]["test_id"] and "175.4" in fb["FF6C[5:5]"]["result"]
+    assert "never ready" in by["A753"]["result"] and "C-DSS3" in by["A753"]["test_id"]
+    assert by["410C"]["status"] == "unknown" and by["008E"]["status"] == "candidate"
+    for k in ("FFED", "FFEE", "FFE9", "FFBD", "FF76", "01DC", "FF83", "21D8"):
+        assert k in by and by[k]["evidence"], k
+    ids = {t["id"] for t in L.read_tsv(L.TESTS)[1]}
+    assert {"C-DSS3", "C-PLLWD", "C-FLASHOC", "C-CACHE", "C-OSDGATE", "C-TSENS", "C-ISP4B", "C-SCDC"} <= ids
+    assert "source-code" in L.TAGS and "re" in L.TAGS
