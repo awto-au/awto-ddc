@@ -217,6 +217,16 @@ def main():
             b, m, asm = im.files(d)
             _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)
         assert {f["kind"] for f in F} == want, (sym, F)
+    # #172 store order hi-last: add a,#lo; mov a,#80h (gptr tag); addc a,#hi. Tag must not form base 0x8010.
+    for base, want in ((0x8010, set()), (0xF510, {"const_other_bank"})):
+        im = Img()
+        im.add(f"_t{base:x}", base, [(b"\x01\x02", "")], data=True)
+        im.add("_f", 0x16000, [(b"\x24\x10", f"add a,#_t{base:x}"), (b"\x74\x80", "mov a,#0x80"),
+                               (b"\x34\xf5", "addc a,#(_t%x >> 8)" % base), (b"\x22", "ret")])
+        with tempfile.TemporaryDirectory() as d:
+            b, m, asm = im.files(d)
+            _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)
+        assert {f["kind"] for f in F} == want, (hex(base), F)
     print("PASS fw_link_check_test")
     return 0
 
