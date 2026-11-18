@@ -160,7 +160,6 @@ E9	41	n	OSD demo gradient window %:R + G, plain
 E9	42	n	OSD demo gradient window %:R + G, saturated colour mode
 E9	43	n	OSD demo gradient window %:R + G, reversed colour mode
 E9	44	n	OSD demo overlap windows %:4, 5, 6 drawn in that order, overlapping
-E9	FF	-	OSD demo closed
 E9	50	-	Realtek QC OSD pattern on:digits, 2-bit skull x 4 (map A), 4-bit skull x 5 (map B)
 E9	51	-	Realtek QC OSD pattern off
 E9	60	-	Realtek QC D-domain pattern generator on (12-bit ramp, #228)
@@ -168,6 +167,7 @@ E9	61	-	Realtek QC D-domain pattern generator off
 E9	73	-	Pac-Man drawn (classic 28 x 36 tile layout, scaled up)
 E9	74	n	Pac-Man step %:cell updates applied
 E9	75	-	Pac-Man off
+E9	79	n	Screensaver / boot splash:run << 4 | why = %, 0 = ended
 E9	80	-	Pac-Man sound:intro jingle (HDMI audio test generator)
 E9	81	-	Pac-Man sound:waka-waka (loops)
 E9	82	-	Pac-Man sound:death glissando
@@ -180,6 +180,7 @@ E9	88	-	Pac-Man sound:ghost eaten (rising sweep)
 E9	89	-	Pac-Man sound:fruit eaten
 E9	8A	n	Pac-Man sound:background state %, 0 none, 1..3 siren speed, 4 frightened
 E9	8B	-	Pac-Man sound:waka off (eating stopped)
+E9	FF	-	OSD demo closed
 CD	*	port	AUX command from source:wake
 CE	*	port	DPCD 600h = D0 (source powers the link):wake
 D3	*	port	cable unplugged:wake
@@ -224,12 +225,7 @@ E5	13	-	audio test 3/6:aout, P7.4 on, P7.3 low, -16.5dB (Dahua default)
 E5	14	-	audio test 4/6:aout, P7.4 on, P7.3 low, -3dB
 E5	15	-	audio test 5/6:aout, P7.4 on, P7.3 low, 0dB
 E5	16	-	audio test 6/6:aout, P7.4 on, P7.3 HIGH (AMP_MUTE check), -6dB
-E5	31	-	audio test 1/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	32	-	audio test 2/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	33	-	audio test 3/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	34	-	audio test 4/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	35	-	audio test 5/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	36	-	audio test 6/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
+E5	30	n	audio test %/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
 E5	40	n	audio test (no step):% Hz
 E5	41	n	audio test 1:% Hz
 E5	42	n	audio test 2:% Hz
@@ -237,6 +233,9 @@ E5	43	n	audio test 3:% Hz
 E5	44	n	audio test 4:% Hz
 E5	45	n	audio test 5:% Hz
 E5	46	n	audio test 6:% Hz
+E5	50	-	key click:tone played
+E5	51	-	key click skipped:another sound plays
+E5	52	-	key click unavailable (no -D _AWTO_AUDIO_TEST build)
 E2	01	-	M-domain set-up:start
 E2	09	-	M-domain set-up:IVS wait 1
 E2	0B	n	M-domain set-up:memory check (WD ctrl0 x 256 + status0 = %)

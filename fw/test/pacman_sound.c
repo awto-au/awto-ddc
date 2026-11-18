@@ -66,6 +66,7 @@ static __xdata WORD s_usPsAt;                   // AwtoMs low word at the curren
 static __xdata WORD s_usPsDur;                  // current note length, ms
 static __xdata WORD s_usPsGateAt;               // AwtoMs low word at which the amp opens after a pitch change
 static __xdata BYTE s_ucPsFlags;                // AWTO_PS_F_*
+static __xdata BYTE s_ucPsToneSc;               // held tone's S code (calibration, key click)
 
 static WORD PsBase(void)
 {
@@ -111,8 +112,8 @@ static void PsStart(BYTE ucTrack)
     s_usPsDur = 0;
     if(ucTrack == AWTO_PS_TRACK_CAL)
     {
-        PsNote(AWTO_PS_CAL_SC);
-        s_usPsDur = 0xFFFF;                     // held until the stop cmd
+        PsNote(s_ucPsToneSc);
+        s_usPsDur = 0xFFFF;                     // held until the stop cmd or AwtoPmSoundTone's length
     }
 }
 
@@ -157,9 +158,19 @@ void AwtoPmSoundPoll(void)                      // each main pass
     {
         s_ucPsFlags &= (BYTE)~AWTO_PS_F_GATE;
         bAMP_MUTE = 0;
+        if((s_ucPsTrack == AWTO_PS_TRACK_CAL) && (s_usPsDur != 0xFFFF))
+        {
+            s_usPsAt = (WORD)AwtoMs();          // a tone's length counts from the amp opening: a blocked main pass does not eat it
+            s_usPsDur -= AWTO_PS_GAP_MS;
+        }
     }
     if((s_ucPsTrack == AWTO_PS_TRACK_NONE) || ((WORD)((WORD)AwtoMs() - s_usPsAt) < s_usPsDur))
     {
+        return;
+    }
+    if(s_ucPsTrack == AWTO_PS_TRACK_CAL)        // a held tone ran its length: always stops
+    {
+        PsStop();
         return;
     }
     s_usPsAt += s_usPsDur;                      // note boundary on the schedule, not on this pass: no drift
@@ -223,6 +234,7 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
     }
     if(ucCmd == AWTO_PS_CMD_CAL)
     {
+        s_ucPsToneSc = AWTO_PS_CAL_SC;
         PsStart(AWTO_PS_TRACK_CAL);
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_CAL, 0);
         return;
@@ -262,5 +274,23 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
     PsRequest(ucTrack);
 #else
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_NA, ucCmd);
+#endif
+}
+
+BYTE AwtoPmSoundTone(BYTE ucSc, WORD usMs)      // one tone of S code ucSc, usMs audible (key click, fw/keys/key_click.c); AWTO_TONE_* (RL6449_Project.h)
+{
+#ifdef _AWTO_AUDIO_TEST
+    if(s_ucPsTrack != AWTO_PS_TRACK_NONE)
+    {
+        return AWTO_TONE_BUSY;               // another sound plays: it keeps the generator
+    }
+    s_ucPsToneSc = ucSc;
+    PsStart(AWTO_PS_TRACK_CAL);
+    s_usPsDur = usMs + AWTO_PS_GAP_MS;          // the amp opens after the pitch gap
+    return AWTO_TONE_PLAYED;
+#else
+    (void)ucSc;
+    (void)usMs;
+    return AWTO_TONE_NA;
 #endif
 }

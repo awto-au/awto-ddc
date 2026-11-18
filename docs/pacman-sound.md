@@ -48,3 +48,7 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 - Guessed (`MODEL` dict in `audio_sim.py`): K, pitch change at the CMCR.dbdcb write (no PLL relock delay, no click), sine level 0.3, no DVC gain / DAC / amp response, SCAPR slc ignored, P7.4 assumed 1.
 - P7.4 assumption: the sim has no audio stream, so the SDK never reaches playback and `SysAudioMuteProc(_OFF)` is a no-op (`SysAudioInternalGenTestProc(_ON)` already clears the DVC mute flag): P7.4 stays 0 in the sim. On the unit it is 1 only if normal playback unmuted earlier [unverified].
 - Not modelled: the real generator's period / PLL behaviour (see Unverified above); the video shows the OSD model's render, not the panel.
+
+## Other users of the generator
+
+- `AwtoPmSoundTone(sc, ms)`: one held tone (calibration track), refused while a sound plays. Key click: `docs/keys.md` "Key click" (#229).

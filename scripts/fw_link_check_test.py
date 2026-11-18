@@ -155,6 +155,21 @@ def bank_image(table_bank=1, literal=False, callee_movc=False, isr_push_all=True
     return {f["kind"] for f in F}, [p for p in proven if p.startswith("proven")]
 
 
+def r2_pair(sym):
+    """bank-1 fn: `mov r1,#00h; mov r2,#60h` (= 0x6000, the bank-1 const _k) with the .rst operand naming `sym`, then a stub to bank 0."""
+    im = Img()
+    switch(im)
+    im.add("_k", 0x16000, [(b"\x01\x02\x03\x04", "")], data=True)
+    stub(im, "v", 0x300, 0x5100, 0)
+    im.add("_r", 0x15000, [(b"\x79\x00", "mov r1,#0"), (b"\x7a\x60", f"mov r2,#({sym} >> 8)"),
+                           (b"\x12\x03\x00", "lcall __bs_v"), (b"\x22", "ret")])
+    im.add("_v", 0x5100, [(b"\x22", "ret")])
+    with tempfile.TemporaryDirectory() as d:
+        b, m, asm = im.files(d)
+        _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)
+    return {f["kind"] for f in F}
+
+
 def main():
     ok = run(bytes([0x12, 0x50, 0x00, 0x22]))                # common calls banked 0x5000 directly
     assert "call_common_to_banked" in ok, ok
@@ -227,6 +242,9 @@ def main():
             b, m, asm = im.files(d)
             _, F = L.run(b, m, "", 0x5000, log=lambda s: None, asm_dir=asm)
         assert {f["kind"] for f in F} == want, (hex(base), F)
+    # R1/R2 pair = address of an XDATA var (.rst names only non-const): not a bank-1 const pointer
+    assert "gptr_const_xbank" not in r2_pair("_g_scCv"), r2_pair("_g_scCv")
+    assert "gptr_const_xbank" in r2_pair("_k"), r2_pair("_k")       # real bank-1 const pointer through a bank-0 stub
     print("PASS fw_link_check_test")
     return 0
 

@@ -139,7 +139,7 @@ static void AwtoKeyNoOsd(BYTE ucK)              // nothing open, a picture: UP /
 #define AWTO_KEY_SDK(k, fn)                     { SET_KEYMESSAGE(k); fn(); SET_KEYMESSAGE(_NONE_KEY_MESSAGE); }
 
 // The one dispatcher. ucEv = AWTO_KEV_* (| AWTO_KEV_INJ). Contexts in priority order; the first that applies takes the key.
-static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
+static void AwtoKeyRouteDo(BYTE ucK, BYTE ucEv)
 {
     BYTE ucMode;
     _Bool bRep = ((ucEv & 0x7F) == AWTO_KEV_REPEAT);
@@ -304,10 +304,21 @@ static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
     AwtoKeyOsdTimeout();
 }
 
+static void AwtoKeyRoute(BYTE ucK, BYTE ucEv)
+{
+    BYTE ucClick = ((ucK != AWTO_K_POWER) && ((ucEv & 0x7F) == AWTO_KEV_PRESS) && (SysPowerGetPowerStatus() == _POWER_STATUS_NORMAL));
+
+    AwtoKeyRouteDo(ucK, ucEv);
+    if(ucClick != 0)
+    {
+        AwtoKeyClick();                         // #229: after the action (its OSD draw blocks the main loop), not for POWER / combo / repeat / wake
+    }
+}
+
 static void AwtoKeyPress(void)                  // the single key down is a press (not the first key of a combo)
 {
     s_ucKeyState = AWTO_KS_DOWN;
-    AwtoSaverActivity();                        // a key ends a screensaver and restarts the idle time
+    AwtoSaverKey();                        // a key ends a screensaver and restarts the idle time
     AwtoKeyMsgNote(s_ucKeyId);
     AwtoKeyRoute(s_ucKeyId, AWTO_KEV_PRESS);
 }
