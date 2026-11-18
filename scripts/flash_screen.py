@@ -104,9 +104,10 @@ def _mmss(sec: float) -> str:
 
 
 def rows_text(info: dict) -> list[str]:
-    """The five text rows for a progress dict: phase, bank, addr, sec, nsec, pct, iface, bad, recov, t (s since the first sector)."""
+    """The five text rows for a progress dict: phase, bank, addr, sec, nsec, pct, iface, bad, recov, t (s since the first sector); optional skip + nimg."""
     eta = info["t"] * (info["nsec"] - info["sec"]) / info["sec"] if info["sec"] else 0
-    return [f"{info['phase']} BANK {info['bank']:02d}/{info['nbank']:02d}",
+    skip = f" SKIP {info['skip']}/{info['nimg']}" if info.get("nimg") else ""     # sectors already matching / image sectors
+    return [f"{info['phase']} BANK {info['bank']:02d}/{info['nbank']:02d}{skip}",
             f"ADDR {info['addr']:05X} SEC {info['sec']}/{info['nsec']} {info['pct']}%",
             info.get("iface") or os.environ.get(ENV_IFACE, ""),
             f"BURST FAIL {info['bad']} RECOVER {info['recov']}",
