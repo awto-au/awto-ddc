@@ -43,3 +43,12 @@ Status 2026-11-17. The only simulator is ours; no ucsim in any flow except the c
 - Firmware time is not wall time: a scope frame (64 passes of tile uploads) takes ~1 fw second; wait for the draw before a snapshot.
 - Watchdog bites after 586 ms fw time without a CLR_WDT kick; long loops must kick.
 - The sim has no audio stream: the SDK never unmutes the amp (P7.4 stays 0); `audio_sim` assumes it enabled (`assume_amp_en`).
+
+## Timing checks count instructions, not ticks
+
+- `bus.now()` / Timer2 stamps are 1 ms ticks; a check that compares two stamps flips with the tick phase (a ~0.5 ms path crosses a tick boundary or not).
+- Gate `pump` (`scripts/pump_sim.py`): reply must start inside the delay by instruction count, not stamps.
+  - Measure: `bus.m.instr` at request injection -> at the first DOUT write of the reply (~3.5 k instr).
+  - Limit: `(1 - REPLY_MARGIN) x N_ms x instr_per_ms` = 0.75 x N x measured rate (~7.5 k instr/ms in the sim, measured over a 100 ms window after the check, +-1 %). N = the delay's argument (2).
+  - Fail message: `<actual> instr from request to first reply byte, limit <L> (0.75 x N ms x R instr/ms)`.
+  - `pump_sim.py --phase F` sets Timer2 to F of a tick left at injection; `tests/test_pump_budget.py` sweeps phases and feeds extra instructions to show a slow path fails (old stamp check fails for F < ~0.2, new one never flips).
