@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Make reduced copies of board photos for docs (EXIF stripped, long edge capped, JPEG q82).
 
---full: copy all originals at full size, GPS tags removed (lossless). Otherwise: reduced copies of the picks.
+--full: copy all originals at full size, unchanged (GPS tags kept: Dan 2026-11-18 wants the full-resolution originals with GPS in the repo). Otherwise: reduced copies of the picks (EXIF stripped).
 """
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -41,7 +42,7 @@ def main() -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--edge", type=int, default=1600, help="max long edge, px")
     ap.add_argument("--full", action="store_true",
-                    help="copy every *.jpg in --src at full size; only GPS tags removed (lossless, public repo)")
+                    help="copy every *.jpg in --src at full size, byte for byte (GPS kept, Dan 2026-11-18)")
     ap.add_argument("pick", nargs="*", help="SRC_NAME=OUT_NAME (OUT_NAME without extension)")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
@@ -49,12 +50,10 @@ def main() -> int:
     if a.full:
         for src in sorted(a.src.glob("*.jpg")):
             dst = a.out / src.name
-            r = subprocess.run(["exiftool", "-q", "-gps:all=", "-o", str(dst), str(src)],
-                               capture_output=True, text=True)
-            bad += r.returncode != 0
-            gps = subprocess.run(["exiftool", "-q", "-gps:all", str(dst)], capture_output=True, text=True).stdout
-            bad += bool(gps.strip())
-            log(f"{src.name} -> {dst}: rc {r.returncode}, gps left: {gps.strip() or 'none'} {r.stderr.strip()[:120]}")
+            shutil.copyfile(src, dst)
+            same = dst.stat().st_size == src.stat().st_size
+            bad += not same
+            log(f"{src.name} -> {dst}: {'copied' if same else 'SIZE MISMATCH'}")
         return 1 if bad else 0
     for p in a.pick:
         src, name = p.split("=", 1)
