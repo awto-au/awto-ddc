@@ -205,7 +205,8 @@ def status_rows(k):
 
 
 SRC_IDLE_MS = 2000          # RL6449_Project.h AWTO_SRC_IDLE_COMMIT_MS (#132)
-OSD_TIMEOUT_BAR_S = 11      # smallest SDK OSD timeout that closes (<= 10 = never)
+OSD_TIMEOUT_BAR_S = 11      # a timeout above the SDK's old "<= 10 = never" rule
+OSD_TIMEOUT_SHORT_S = 6     # <= 10 s: closes too (#132 item 6, Dan 2026-11-18)
 SYS_BY_KEY_AUTO, SYS_BY_SELECTOR, SYS_BY_SELECTOR_IDLE = 0x1C, 0x06, 0x1E    # RL6449_Project.h AWTO_SYS_BY_*
 REQ_SEARCH = 0x10 | 0x01    # AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH
 
@@ -251,6 +252,26 @@ def backlight_bar(k, sel):
     k.check("bar: SOURCE closes it and opens the selector", k.osd_state() == sel and k.delta(b, "AwtoSourceOpen") == 1, f"osd {k.osd_state()}")
     k.tap("MENU")
     k.m.wr(to, bytes([old]))
+
+
+def timer_restart(k, sel):
+    """#132 item 6: a key restarts the OSD timer (does not cancel it); the bar closes TIMEOUT after the LAST key, timeout <= 10 s too."""
+    bar = sel + 1
+    to = k.m.addr("g_stOSDUserData") + OSD_TIMEOUT_OFF
+    old = k.m.rd(to)[0]
+    s = OSD_TIMEOUT_SHORT_S
+    k.m.wr(to, bytes([s]))
+    k.tap("UP")
+    k.wait((s - 2) * 1000)
+    k.check(f"timeout {s} s: bar open {s - 2} s after the first key", k.osd_state() == bar, f"osd {k.osd_state()}")
+    k.tap("UP")
+    k.wait((s - 2) * 1000)                                      # {2 * (s - 2)} s after the first key, {s - 2} after the last
+    k.check(f"timeout {s} s: second key restarted the timer (still open {2 * (s - 2)} s after the first key)", k.osd_state() == bar,
+            f"osd {k.osd_state()}")
+    k.wait(3000)
+    k.check(f"timeout {s} s: closed {s} s after the last key", k.osd_state() == 0 and not k.osd_on(), f"osd {k.osd_state()}")
+    k.m.wr(to, bytes([old]))
+    k.wait(4000)                                                # let the NVRAM gate write the changed backlight
 
 
 def selector(k):
@@ -466,6 +487,7 @@ def run(k):
 
     sel = selector(k)
     backlight_bar(k, sel)
+    timer_restart(k, sel)
     stay_open(k)
     status_rows(k)
 
