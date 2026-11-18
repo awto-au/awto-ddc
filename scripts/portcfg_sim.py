@@ -49,6 +49,8 @@ class HpdWatch(S.Dev):
         self.log.append(m.rd(HPD_D1)[0] & 1)
 
 
+CONSOLE_OPEN_WAIT_S = 0.1              # 2 x the ACTIVE -> console open gap probed in the sim (<= 50 ms)
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
@@ -97,8 +99,14 @@ def main() -> int:
         m.wr(key[0], bytes([key[1]])); bus.wait(ms / 1000.0)
         m.wr(key[0], bytes([IDLE])); bus.wait(gap)
 
+    def console_open():
+        return bus.m.rd(bus.addr("g_stAwtoGpio") + 3)[0] | bus.m.rd(bus.addr("g_stAwtoKey") + 3)[0]
+
     def close_console():
-        if bus.m.rd(bus.addr("g_stAwtoGpio") + 3)[0] | bus.m.rd(bus.addr("g_stAwtoKey") + 3)[0]:
+        t0 = bus.now()
+        while not console_open() and bus.now() - t0 < CONSOLE_OPEN_WAIT_S:
+            bus.wait(0.025)                     # it opens by itself within ~50 ms of ACTIVE (probed 2026-11-18): a key sent before swallows AUTO
+        if console_open():
             tap(KEY_MENU)                       # the sync console opened by itself: MENU closes it (deadport_sim.py)
 
     def port_now():
