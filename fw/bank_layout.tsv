@@ -2472,8 +2472,8 @@ const	_g_tAstData	8	0x0e88	636
 fn	_AstSaucerAct	8	0x1104	612
 fn	_AstShipThink	8	0x1368	1576
 fn	_AwtoPmSoundTone	8	0x1990	60
+fn	_AwtoOsdMap1	8	0x19cc	256
 fn	_AwtoAsteroids	8	0x1ae4	432
-fn	_AwtoOsdMap1	8	0x1c94	196
 fn	_AwtoSaverPoll	8	0x1d58	1332
 fn	_cursor_init	8	0x228c	476
 fn	_skip_steps	8	0x2468	388

@@ -218,3 +218,4 @@ Proof per step: `saver_frames_md5.py --saver S --frames N [--rotate]` on main (`
 
 - After the merge with main f34ce75 (saver D1 / D4 / D5, input scan rates D7): frames still IDENTICAL to `slbase` for all four savers; XDATA free 997 B (default), 982 B (audio build).
 - Hot spots left: Scope 1 `cursor_plot` 25 %, `osd_clear` 10 %, `ScPass` 9 %, `cursor_init` 7 % (one per graticule dot: draw the dotted graticule as runs next); Asteroids `AstPass` / `AstShape` / `AstTileInk` 8-9 % each, trampoline 9 %.
+- OSD data port rule (2026-11-18): every byte goes through `ScalerOsdDataPort()` (a banked `ScalerSetByte(0x92)`), never back-to-back `AWTO_XFR(AWTO_R_OSD_DATA_PORT) = v` (unit-3 Scope 2 photo showed garbled tiles with direct writes; sim has no write-rate model). `AwtoOsdGlyph` / `AwtoOsdMap1` reverted; frames IDENTICAL to `slbase`; cost (sim): Scope 1 763 -> 923 ms / frame (1.31 -> 1.08 / s), Asteroids pass mean 11.6 -> 12.8 ms. New helpers keep it.
