@@ -56,7 +56,7 @@ typedef char s_tS2PanelCheck[((AWTO_S2_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO
 #define AWTO_S2_BIT_MASK                        7
 #define AWTO_S2_WORD_BITS                       24
 #define AWTO_S2_WORD_BYTES                      3
-#define AWTO_S2_PASS_MS                         10                                  // time budget of one call: the main loop (DDC/CI, keys) runs between calls; a column is 3..25 ms
+#define AWTO_S2_PASS_MS                         8                                   // time budget of one call (+ at most one tile, ~3 ms): the main loop (DDC/CI, keys) runs between calls
 #define AWTO_S2_NUM_CHARS                       8
 #define AWTO_S2_ARG_ON                          0x7B
 #define AWTO_S2_ARG_FRAME                       0x7C
@@ -81,6 +81,12 @@ static __xdata AWTO_S2_MASK_T s_aMask[AWTO_S2_COLS];                            
 static __xdata BYTE s_aucCacheBase[AWTO_S2_CACHE_N];
 static __xdata BYTE s_aucCacheSlot[AWTO_S2_CACHE_N];
 static __xdata BYTE s_ucCacheN;
+static __xdata AWTO_S2_MASK_T s_tNew;                                               // rows of the column in progress: to draw now / drawn last frame
+static __xdata AWTO_S2_MASK_T s_tOld;
+static __xdata BYTE s_ucRow;                                                        // next row of the column in progress
+static __xdata BYTE s_ucFrameOn;                                                    // the frame's parameters are set
+static __xdata BYTE s_ucInCol;                                                      // 1 = a column is part drawn
+static __xdata BYTE s_ucNumLeft;                                                    // readout tiles still to redraw
 static __xdata BYTE s_ucYsCol;                                                      // column s_asYs belongs to
 static __xdata BYTE s_ucNumDirty;                                                   // readout tiles need a redraw
 static __xdata char s_acNum[AWTO_S2_NUM_CHARS];
@@ -345,43 +351,33 @@ static void S2Fill(BYTE ucCol, BYTE ucRow, BYTE ucBase, BYTE ucId)              
     S2Glyph(ucId);
 }
 
-static void S2NumDraw(void)                                                         // the readout tiles (own slots): redrawn when the number changes
+static void S2NumDraw(void)                                                         // one readout tile (own slot), the next of s_ucNumLeft: redrawn when the number changes
 {
-    BYTE ucC;
-    BYTE ucR;
     BYTE ucC10 = s_ucCur10;
     BYTE ucC90 = s_ucCur90;
+    BYTE ucK = AWTO_S2_NUM_N - s_ucNumLeft;
+    BYTE ucC = AWTO_S2_NUM_COL0 + ucK % AWTO_S2_NUM_W;
+    BYTE ucR = AWTO_S2_NUM_ROW0 + ucK / AWTO_S2_NUM_W;
 
+    s_ucNumLeft--;
     s_ucCur10 = AWTO_S2_COLS;                                                       // no cursor in these tiles (a cursor column composes its own)
     s_ucCur90 = AWTO_S2_COLS;
     s_ucR0 = AWTO_S2_ROWS;
     s_ucR1 = 0;
-    for(ucR = AWTO_S2_NUM_ROW0; ucR <= AWTO_S2_NUM_ROW1; ucR++)
-    {
-        for(ucC = AWTO_S2_NUM_COL0; ucC <= AWTO_S2_NUM_COL1; ucC++)
-        {
-            S2Fill(ucC, ucR, S2CellId((WORD)ucR * AWTO_S2_COLS + ucC), S2Home(ucC, ucR, 0));
-        }
-    }
+    S2Fill(ucC, ucR, S2CellId((WORD)ucR * AWTO_S2_COLS + ucC), S2Home(ucC, ucR, 0));
     s_ucCur10 = ucC10;
     s_ucCur90 = ucC90;
 }
 
-static void S2Column(BYTE ucCol)
+static void S2ColBegin(BYTE ucCol)                                                  // trace points and dynamic rows of a column; the rows follow in S2ColRows
 {
     WORD usOx = (WORD)ucCol * AWTO_S2_TW;
     int16_t sMin;
     int16_t sMax;
     AWTO_S2_MASK_T tNew = 0;
-    AWTO_S2_MASK_T tOld;
     AWTO_S2_MASK_T tBit;
     BYTE ucJ;
     BYTE ucR;
-    BYTE ucK;
-    BYTE ucBase;
-    BYTE ucId;
-    WORD usCell;
-    BYTE ucBusy;
 
     if((ucCol > 0) && (s_ucYsCol == ucCol - 1))                                     // the two points the previous column ended with
     {
@@ -418,11 +414,26 @@ static void S2Column(BYTE ucCol)
         tNew = ~(AWTO_S2_MASK_T)0;
     }
     s_ucCacheN = 0;
-    tOld = s_aMask[ucCol];
-    usCell = ucCol;
-    for(ucR = 0, tBit = 1; ucR < AWTO_S2_ROWS; ucR++, tBit <<= 1, usCell += AWTO_S2_COLS)
+    s_tNew = tNew;
+    s_tOld = s_aMask[ucCol];
+    s_ucRow = 0;
+}
+
+static BYTE S2ColRows(BYTE ucCol, unsigned long ulStart)                           // rows from s_ucRow on until the time budget is used; 1 = column done
+{
+    BYTE ucR;
+    BYTE ucK;
+    BYTE ucBase;
+    BYTE ucId;
+    BYTE ucBusy;
+    BYTE ucDrew;
+    WORD usCell;
+    AWTO_S2_MASK_T tBit;
+
+    for(ucR = s_ucRow, tBit = (AWTO_S2_MASK_T)1 << ucR, usCell = (WORD)ucR * AWTO_S2_COLS + ucCol; ucR < AWTO_S2_ROWS; ucR++, tBit <<= 1, usCell += AWTO_S2_COLS)
     {
-        if(tNew & tBit)
+        ucDrew = 0;
+        if(s_tNew & tBit)
         {
             ucBase = S2CellId(usCell);
             ucBusy = (BYTE)(((ucR >= s_ucR0) && (ucR <= s_ucR1)) || S2IsNum(ucCol, ucR));
@@ -442,6 +453,7 @@ static void S2Column(BYTE ucCol)
             {
                 ucId = S2Alloc();
                 S2Fill(ucCol, ucR, ucBase, ucId);
+                ucDrew = 1;
                 if(!ucBusy)
                 {
                     s_aucCacheBase[s_ucCacheN] = ucBase;
@@ -451,12 +463,22 @@ static void S2Column(BYTE ucCol)
             }
             S2MapWord(usCell, ucId);
         }
-        else if(tOld & tBit)                                                        // drawn last frame, not now: back to the static tile
+        else if(s_tOld & tBit)                                                      // drawn last frame, not now: back to the static tile
         {
             S2MapWord(usCell, S2Home(ucCol, ucR, usCell));
         }
+        if((ucDrew != 0) && ((WORD)(AwtoMs() - ulStart) >= AWTO_S2_PASS_MS))
+        {
+            s_ucRow = ucR + 1;                                                      // band full: the next call goes on with the next row
+            if(s_ucRow < AWTO_S2_ROWS)
+            {
+                return 0;
+            }
+            break;
+        }
     }
-    s_aMask[ucCol] = tNew;
+    s_aMask[ucCol] = s_tNew;
+    return 1;
 }
 
 static void S2Params(void)                                                          // pulse position / edge speed of this frame, cursors on its 10 % / 90 % points, delta t text
@@ -490,7 +512,7 @@ static void S2Params(void)                                                      
     if(s_ucNumDirty != 0)
     {
         s_ucNumDirty = 0;
-        S2NumDraw();
+        s_ucNumLeft = AWTO_S2_NUM_N;                                                // drawn one tile per step before the columns go on
     }
 }
 
@@ -509,16 +531,30 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
     if(ucCmd == 2)
     {
         ulStart = AwtoMs();
-        do                                                              // as many columns as fit the budget: the main loop pass itself costs ~3 ms
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        do                                                              // bands: up to the budget per call, then back to the main loop (DDC/CI, keys, watchdog)
         {
-            AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
-            if(s_ucCol == 0)
+            if(s_ucFrameOn == 0)
             {
+                s_ucFrameOn = 1;
                 g_usAwtoS2Frame++;
                 S2Params();
             }
-            S2Column(s_ucCol);
-            s_ucCol++;
+            if(s_ucNumLeft != 0)
+            {
+                S2NumDraw();
+                continue;
+            }
+            if(s_ucInCol == 0)
+            {
+                S2ColBegin(s_ucCol);
+                s_ucInCol = 1;
+            }
+            if(S2ColRows(s_ucCol, ulStart) != 0)
+            {
+                s_ucInCol = 0;
+                s_ucCol++;
+            }
         }
         while((s_ucCol < AWTO_S2_COLS) && ((WORD)(AwtoMs() - ulStart) < AWTO_S2_PASS_MS));
         if(s_ucCol < AWTO_S2_COLS)
@@ -526,6 +562,7 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
             return 0;
         }
         s_ucCol = 0;
+        s_ucFrameOn = 0;
         if(s_ucShown == 0)                                              // the first frame was drawn hidden
         {
             s_ucShown = 1;
@@ -573,6 +610,10 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
     s_ucNext = AWTO_S2_RING0;
     s_ucYsCol = AWTO_S2_COLS;                                           // no previous column
     s_ucNumDirty = 1;                                                   // the first S2Params draws the readout tiles
+    s_ucNumLeft = 0;
+    s_ucFrameOn = 0;
+    s_ucInCol = 0;
+    s_ucRow = 0;
     s_ucSpread = AWTO_S2_SPREAD_MIN;
     s_usDrift = 0;
     return 0;
