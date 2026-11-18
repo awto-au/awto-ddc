@@ -41,6 +41,9 @@ VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept 
 AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
 AST_FREEZE_LIMIT_S = 20.0       # 2.5x the expected 8 s (first hidden frame ~3 s + 20 frames at ~0.25 s); expiry = FAIL, logged
 AST_POLL_S = 0.0005             # a frame is complete from the column wrap until the next main pass (a few ms)
+SCOPE2_FILL = 0.99              # scope 2 must cover this share of the panel picture in each direction (it is one raster scaled to the whole panel)
+SCOPE2_MIN_FPS = 5.0            # frames per second of scope 2 (measured 6.7 on the 480 x 270 raster; docs/screensaver.md): a slower draw fails
+SCOPE2_FPS_S = 2.0              # fw time the frame counter is watched
 STOP_S = 3.0                    # fw time for the stop: served by the main loop after the frame in progress (scope 2: up to ~2 s)
 
 
@@ -122,6 +125,21 @@ def rotated_check(a) -> int:
     return fails
 
 
+def scope2_check(sess, img) -> int:
+    """Scope 2: the picture covers the whole panel (bounding box of the lit pixels) and the frame counter runs at >= SCOPE2_MIN_FPS."""
+    box = bbox_crop(img)
+    h, w = img.size[1], img.size[0]
+    fill_ok = box.shape[0] >= SCOPE2_FILL * h and box.shape[1] >= SCOPE2_FILL * w
+    addr = sess.bus.m.addr("g_usAwtoS2Frame")
+    rd = lambda: int.from_bytes(sess.bus.m.rd(addr, 2), "big")
+    f0, t0 = rd(), sess.bus.now()
+    sess.bus.wait(SCOPE2_FPS_S)
+    fps = (rd() - f0) / (sess.bus.now() - t0)
+    say(f"{'PASS' if fill_ok else 'FAIL'} scope 2 fills the panel: box {box.shape[1]} x {box.shape[0]} of {w} x {h}")
+    say(f"{'PASS' if fps >= SCOPE2_MIN_FPS else 'FAIL'} scope 2 speed: {fps:.2f} frames/s (min {SCOPE2_MIN_FPS})")
+    return int(not fill_ok) + int(fps < SCOPE2_MIN_FPS)
+
+
 def alert_check(a) -> int:
     """VCP 0xEB = 6 plays the 1 s alert tone: the audio tap hears ~1 s of tone, and the generator is off afterwards."""
     eng = D.DdcEngine()
@@ -169,6 +187,8 @@ def main() -> int:
         ok = shown > 0
         fails += not ok
         say(f"{'PASS' if ok else 'FAIL'} VCP 0x{VCP_SAVER:02X} = {val} ({name}): font words lit {base} -> {lit(st)}, {shown} lit samples of 5184 on screen")
+        if name == "scope2":
+            fails += scope2_check(sess, run_img)
         ddc.set(VCP_SAVER, 0)
         sess.bus.wait(STOP_S)
         st = sess.snap()

@@ -1,33 +1,31 @@
 #include <stdint.h>
 #include "UserCommonInclude.h"
-#include "../../tools/osd_lines/osd_lines.h"
+#include "../../tools/osd_lines/osd_lines.h"                                // tile geometry only
 
-// Scope screensaver 2 (docs/screensaver.md, Dan's bench-scope photo): red graticule with centre ticks and 100 / 90 / 10 / 0 % marks,
-// green pulse trace with two dotted cursors on its 10 % and 90 % points, readouts on top (counter, delta t from the cursors) and
-// scale labels at the bottom. 28 x 9 tiles of 12 x 18 (336 x 162 px), 2-bit glyphs: plane 0 (MSB) = trace layer, plane 1 (LSB) = graticule
-// layer; pixel value 1 = red, 2 and 3 = green. 252 glyph ids (the 2-bit char command has 8 id bits). Canvas = the 1-tile-wide band of
-// scope_saver.c (XDATA floor), 3 tiles high, redrawn per column and band; the graticule plane is uploaded once, the trace plane per frame.
-//   AwtoScopeSaver2(1) draw   (2) next frame   (0) off
-extern __xdata uint8_t g_aucScPix[];
-extern __xdata uint8_t g_aucScDirty[];
-extern __xdata osd_canvas g_scCv;
+// Scope screensaver 2 (docs/screensaver.md): red graticule with minor ticks, green pulse trace, two dotted cursors on its 10 % / 90 % points,
+// level marks, readouts. The whole panel is one raster (scope2_data.inc: 480 x 270 = 40 x 15 tiles of 12 x 18, 2-bit glyphs) scaled up by the OSD engine.
+// Static tiles (graticule, labels) are generated (scripts/gen_scope2.py) and uploaded once; per frame only the tiles the trace, the cursors
+// and the delta t number touch are drawn, one column per call, into slots of a ring above the static ids.
+//   AwtoScopeSaver2(1) draw   (2) next column (returns 1 at the end of a frame)   (0) off
+extern __xdata uint8_t g_aucScPix[];                                                // tile buffer shared with scope_saver.c (one saver at a time): green plane, red plane
 
-#define AWTO_S2_COLS                            28
-#define AWTO_S2_ROWS                            9
+#include "scope2_data.inc"
+
 #define AWTO_S2_TW                              OSD_TILE_W
 #define AWTO_S2_TH                              OSD_TILE_H
-#define AWTO_S2_W                               (AWTO_S2_COLS * AWTO_S2_TW)         // 336
-#define AWTO_S2_H                               (AWTO_S2_ROWS * AWTO_S2_TH)         // 162
-#define AWTO_S2_BAND_ROWS                       3
-#define AWTO_S2_BANDS                           (AWTO_S2_ROWS / AWTO_S2_BAND_ROWS)
-#define AWTO_S2_BAND_H                          (AWTO_S2_BAND_ROWS * AWTO_S2_TH)
 #define AWTO_S2_CELLS                           (AWTO_S2_COLS * AWTO_S2_ROWS)
 #define AWTO_S2_FS_BASE                         (AWTO_S2_ROWS + 1)
 #define AWTO_S2_FONT_BASE                       (AWTO_S2_FS_BASE + AWTO_S2_CELLS)
 #define AWTO_S2_GLYPH_WORDS                     9                                   // per plane
 #define AWTO_S2_PLANES                          2
-#define AWTO_S2_PLANE_TRACE                     0                                   // MSB plane first
-#define AWTO_S2_PLANE_GRID                      1
+#define AWTO_S2_GLYPH_STRIDE                    (AWTO_S2_PLANES * AWTO_S2_GLYPH_WORDS)
+#define AWTO_S2_PLANE_BYTES                     OSD_TILE_BYTES
+#define AWTO_S2_BASE_BYTES                      (AWTO_S2_PLANES * AWTO_S2_PLANE_BYTES)
+#define AWTO_S2_ID_LAST                         255
+#define AWTO_S2_NUM_W                           (AWTO_S2_NUM_COL1 - AWTO_S2_NUM_COL0 + 1)
+#define AWTO_S2_NUM_N                           (AWTO_S2_NUM_W * (AWTO_S2_NUM_ROW1 - AWTO_S2_NUM_ROW0 + 1))
+#define AWTO_S2_RING0                           (AWTO_S2_STATIC_N + AWTO_S2_NUM_N)    // first dynamic slot
+#define AWTO_S2_WDT_EVERY                       64                                  // cells between watchdog kicks in the map loop (power of 2)
 #define AWTO_S2_PAL_BG                          1                                   // palette indexes (all < 8: the 2-bit char command carries 3 bits for c2 / c3)
 #define AWTO_S2_PAL_RED                         2
 #define AWTO_S2_PAL_GREEN                       3
@@ -40,153 +38,199 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_S2_GRN_R                           70
 #define AWTO_S2_GRN_G                           235
 #define AWTO_S2_GRN_B                           170
-#define AWTO_S2_SU_FACTOR                       6                                   // ratio 64 / 6 = 10.67: 336 x 162 -> 3584 x 1728 of 3840 x 2160
-#define AWTO_S2_POS_H                           32                                  // hd units of 4 panel px: (3840 - 3584) / 2 / 4
-#define AWTO_S2_POS_V                           216                                 // (2160 - 1728) / 2
-#define AWTO_S2_DIV_X                           42                                  // 8 divisions across
-#define AWTO_S2_DIV_Y                           27                                  // 6 divisions down
-#define AWTO_S2_TICK_LEN                        3                                   // minor tick half length
-#define AWTO_S2_TICK_X                          8                                   // minor tick spacing on the horizontal axis
-#define AWTO_S2_TICK_Y                          5                                   // on the vertical axis
-#define AWTO_S2_BASE_Y                          108                                 // 0 % level (4 divisions down)
-#define AWTO_S2_AMP                             81                                  // 100 % = 3 divisions above the baseline
-#define AWTO_S2_P10                             8                                   // 10 % / 90 % of the amplitude
-#define AWTO_S2_P90                             73
-#define AWTO_S2_PS_PER_DIV                      1000
-#define AWTO_S2_PULSE_N                         64                                  // pulse shape table length
-#define AWTO_S2_PULSE_PEAK                      255
-#define AWTO_S2_SPREAD_MIN                      3                                   // px per table step (slowest edge) .. + range
-#define AWTO_S2_SPREAD_RANGE                    4
-#define AWTO_S2_X0_MIN                          70                                  // pulse start x range
-#define AWTO_S2_X0_RANGE                        90
-#define AWTO_S2_FRAME_SLOW                      3                                   // frames per px of pulse drift
-#define AWTO_S2_THICK                           1                                   // trace drawn twice, 1 px apart
+#define AWTO_S2_SCALE_64                        64                                  // scale-up factor unit: ratio = 64 / factor
+#define AWTO_S2_SCALED_W                        (AWTO_S2_SCALE_64 * (long)AWTO_S2_W)  // long: 64 x 960 overflows a 16-bit int
+#define AWTO_S2_SCALED_H                        (AWTO_S2_SCALE_64 * (long)AWTO_S2_H)
+#define AWTO_S2_SU_FACTOR                       ((BYTE)(AWTO_S2_SCALED_W / _PANEL_DH_WIDTH))
+#define AWTO_S2_POS_H                           ((BYTE)((_PANEL_DH_WIDTH - AWTO_S2_SCALED_W / AWTO_S2_SU_FACTOR) / 2 / AWTO_OSD_PX_PER_HD))
+#define AWTO_S2_POS_V                           ((BYTE)((_PANEL_DV_HEIGHT - AWTO_S2_SCALED_H / AWTO_S2_SU_FACTOR) / 2))
+typedef char s_tS2PanelCheck[((AWTO_S2_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO_S2_SCALED_W) && (AWTO_S2_SU_FACTOR * (long)_PANEL_DV_HEIGHT == AWTO_S2_SCALED_H)) ? 1 : -1];   // the raster must fill the panel exactly
+#define AWTO_S2_CURSOR_STEP                     2                                   // cursor dots: every 2nd row
 #define AWTO_S2_FONT_W                          5
 #define AWTO_S2_FONT_H                          7
 #define AWTO_S2_FONT_ADV                        6
-#define AWTO_S2_STAGE_GRID                      0
-#define AWTO_S2_STAGE_FIRST                     1
-#define AWTO_S2_STAGE_RUN                       2
+#define AWTO_S2_TRACE_PTS                       14                                  // columns x = ox - 1 .. ox + 12 of a tile column
+#define AWTO_S2_CACHE_N                         8                                   // cursor-only tiles per column pass: distinct static bases
+#define AWTO_S2_DATA_PORT                       0x0092                              // OSD data port (regdb osd data port = SDK P0_92_OSD_DATA_PORT): ScalerOsdDataPort without the call
+#define AWTO_S2_BIT_SHIFT                       3                                   // bits per byte = 1 << 3
+#define AWTO_S2_BIT_MASK                        7
+#define AWTO_S2_WORD_BITS                       24
+#define AWTO_S2_WORD_BYTES                      3
+#define AWTO_S2_PASS_MS                         8                                   // time budget of one call (+ at most one tile, ~3 ms): the main loop (DDC/CI, keys) runs between calls
+#define AWTO_S2_NUM_CHARS                       8
 #define AWTO_S2_ARG_ON                          0x7B
 #define AWTO_S2_ARG_FRAME                       0x7C
 #define AWTO_S2_ARG_OFF                         0x7D
 
-// pulse shape: rise then a slower fall (255 = peak), 64 entries
-#pragma place bank(12)                      // data and its reader share a bank (docs/banking: movc reads the running bank)
-static __code uint8_t s_tPulse[AWTO_S2_PULSE_N] = {
-    0, 0, 0, 1, 2, 3, 5, 8, 12, 18, 26, 36, 49, 65, 84, 106,
-    130, 154, 176, 196, 213, 227, 238, 246, 251, 254, 255, 254, 251, 246, 239, 230,
-    220, 209, 198, 186, 174, 162, 150, 139, 128, 118, 108, 99, 90, 82, 75, 68,
-    62, 56, 50, 45, 40, 36, 32, 28, 25, 22, 19, 16, 13, 10, 7, 4};
-
-// 5 x 7 font, one byte per column (bit 0 = top row)
-#define AWTO_S2_GL_DELTA                        'D'
-#pragma place bank(12)
-static __code uint8_t s_tFont[][AWTO_S2_FONT_W + 1] = {
-    {'0', 0x3E, 0x51, 0x49, 0x45, 0x3E}, {'1', 0x00, 0x42, 0x7F, 0x40, 0x00}, {'2', 0x42, 0x61, 0x51, 0x49, 0x46},
-    {'3', 0x21, 0x41, 0x45, 0x4B, 0x31}, {'4', 0x18, 0x14, 0x12, 0x7F, 0x10}, {'5', 0x27, 0x45, 0x45, 0x45, 0x39},
-    {'6', 0x3C, 0x4A, 0x49, 0x49, 0x30}, {'7', 0x01, 0x71, 0x09, 0x05, 0x03}, {'8', 0x36, 0x49, 0x49, 0x49, 0x36},
-    {'9', 0x06, 0x49, 0x49, 0x29, 0x1E}, {'.', 0x00, 0x60, 0x60, 0x00, 0x00}, {'>', 0x00, 0x41, 0x22, 0x14, 0x08},
-    {'k', 0x7F, 0x10, 0x28, 0x44, 0x00}, {'H', 0x7F, 0x08, 0x08, 0x08, 0x7F}, {'z', 0x44, 0x64, 0x54, 0x4C, 0x44},
-    {'n', 0x7C, 0x08, 0x04, 0x04, 0x78}, {'s', 0x48, 0x54, 0x54, 0x54, 0x20}, {'m', 0x7C, 0x04, 0x18, 0x04, 0x78},
-    {'V', 0x1F, 0x20, 0x40, 0x20, 0x1F}, {'t', 0x04, 0x3F, 0x44, 0x40, 0x20}, {AWTO_S2_GL_DELTA, 0x60, 0x58, 0x46, 0x58, 0x60}};
-#define AWTO_S2_FONT_N                          21                                  // glyphs in s_tFont
-typedef char s_tFontCountCheck[(sizeof(s_tFont) == AWTO_S2_FONT_N * (AWTO_S2_FONT_W + 1)) ? 1 : -1];
-
-#pragma place bank(12)
-static __code char s_cS100[] = "100";
-#pragma place bank(12)
-static __code char s_cS90[] = "90";
-#pragma place bank(12)
-static __code char s_cS10[] = "10";
-#pragma place bank(12)
-static __code char s_cS0[] = "0";
-#pragma place bank(12)
-static __code char s_cSFreq[] = "1129.500 kHz";
-#pragma place bank(12)
-static __code char s_cSVolt[] = ">200mV";
-#pragma place bank(12)
-static __code char s_cSTime[] = "1ns";
-
-static __xdata WORD s_usFrame;
+__xdata WORD g_usAwtoS2Frame;                                                       // frame counter (scripts/scope2_sim.py)
 static __xdata BYTE s_ucCol;
-static __xdata BYTE s_ucStage;
-static __xdata WORD s_usX0;                                                         // pulse start x
-static __xdata BYTE s_ucSpread;                                                     // px per table step
+static __xdata BYTE s_ucShown;
+static __xdata BYTE s_ucNext;                                                       // next dynamic slot id (ring STATIC_N .. 255)
+static __xdata BYTE s_ucSpread;                                                     // px per pulse table step
+static __xdata WORD s_usDrift;                                                      // pulse start offset
+static __xdata WORD s_usX0;
 static __xdata WORD s_usX10;                                                        // cursor x positions (10 % / 90 % points of the rising edge)
 static __xdata WORD s_usX90;
-static __xdata WORD s_usCell0;
-static __xdata BYTE s_ucPlane;
-static __xdata char s_acNum[12];
+static __xdata BYTE s_ucCur10;                                                      // their tile columns
+static __xdata BYTE s_ucCur90;
+static __xdata BYTE s_ucR0;                                                         // trace rows of the column being drawn
+static __xdata BYTE s_ucR1;
+static __xdata int16_t s_sOy;                                                       // tile origin y of the tile being drawn
+static __xdata int16_t s_asYs[AWTO_S2_TRACE_PTS];                                   // trace y at x = ox - 1 + j
+static __xdata AWTO_S2_MASK_T s_aMask[AWTO_S2_COLS];                                // rows drawn dynamically per column, last frame
+static __xdata BYTE s_aucCacheBase[AWTO_S2_CACHE_N];
+static __xdata BYTE s_aucCacheSlot[AWTO_S2_CACHE_N];
+static __xdata BYTE s_ucCacheN;
+static __xdata AWTO_S2_MASK_T s_tNew;                                               // rows of the column in progress: to draw now / drawn last frame
+static __xdata AWTO_S2_MASK_T s_tOld;
+static __xdata BYTE s_ucRow;                                                        // next row of the column in progress
+static __xdata BYTE s_ucFrameOn;                                                    // the frame's parameters are set
+static __xdata BYTE s_ucInCol;                                                      // 1 = a column is part drawn
+static __xdata BYTE s_ucNumLeft;                                                    // readout tiles still to redraw
+static __xdata BYTE s_ucYsCol;                                                      // column s_asYs belongs to
+static __xdata BYTE s_ucNumDirty;                                                   // readout tiles need a redraw
+static __xdata char s_acNum[AWTO_S2_NUM_CHARS];
 
-static void S2Upload(BYTE ucTile)
+static void S2Run(BYTE ucX, BYTE ucLo, BYTE ucHi)                                   // vertical run (tile coords, both ends inside the tile) in the green plane
 {
-    WORD usCell = s_usCell0 + (WORD)ucTile * AWTO_S2_COLS;
-    const __xdata uint8_t *pucB = g_aucScPix + (WORD)ucTile * OSD_TILE_BYTES;
+    BYTE ucY;
+    BYTE ucQ;
+    BYTE ucTmp;
+    BYTE ucOffE;
+    BYTE ucMaskE;
+    BYTE ucOffO;
+    BYTE ucMaskO;
 
-    if(g_ucAwtoOsdRot != 0)                                                                // turned 180 (docs/osd-rotation.md): the glyph slot of the mirrored cell, words in reverse order, bits reversed
+    if(g_ucAwtoOsdRot != 0)                                                         // the tile is drawn turned 180 (docs/osd-rotation.md)
     {
-        usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
+        ucX = AWTO_S2_TW - 1 - ucX;
+        ucTmp = AWTO_S2_TH - 1 - ucHi;
+        ucHi = AWTO_S2_TH - 1 - ucLo;
+        ucLo = ucTmp;
     }
-    AwtoOsdGlyph(AWTO_S2_FONT_BASE + (WORD)usCell * (AWTO_S2_PLANES * AWTO_S2_GLYPH_WORDS) + (WORD)s_ucPlane * AWTO_S2_GLYPH_WORDS, pucB, AWTO_S2_GLYPH_WORDS);
+    ucQ = AWTO_S2_WORD_BITS - 1 - ucX;                                              // pixel p of a word (two rows, row-major) = bit 23 - p of its 24 bits, bytes low first
+    ucOffE = ucQ >> AWTO_S2_BIT_SHIFT;                                              // even row: p = x
+    ucMaskE = (BYTE)(1 << (ucQ & AWTO_S2_BIT_MASK));
+    ucQ = AWTO_S2_WORD_BITS - 1 - (AWTO_S2_TW + ucX);                               // odd row: p = 12 + x
+    ucOffO = ucQ >> AWTO_S2_BIT_SHIFT;
+    ucMaskO = (BYTE)(1 << (ucQ & AWTO_S2_BIT_MASK));
+    for(ucY = ucLo; ucY <= ucHi; ucY++)
+    {
+        if(ucY & 1)
+        {
+            g_aucScPix[(ucY >> 1) * AWTO_S2_WORD_BYTES + ucOffO] |= ucMaskO;
+        }
+        else
+        {
+            g_aucScPix[(ucY >> 1) * AWTO_S2_WORD_BYTES + ucOffE] |= ucMaskE;
+        }
+    }
 }
 
-static __xdata int16_t s_sOx;                                                       // origin of the pass being drawn
-static __xdata int16_t s_sOy;
-
-static void S2Px(int16_t sX, int16_t sY)                                            // absolute screen px -> canvas (osd_pixel clips)
+#pragma place bank(11)                      // data and its reader share a bank (docs/banking: movc reads the running bank)
+static BYTE S2CellId(WORD usCell)
 {
-    osd_pixel(&g_scCv, sX - s_sOx, sY - s_sOy, 1);
+    return s_tS2Cell[usCell];
 }
 
-#pragma place bank(12)
-static void S2Char(char cC, int16_t sX, int16_t sY, BYTE ucScale)
+#pragma place bank(11)
+static void S2Base(BYTE ucId)                                                       // both planes of a static tile -> g_aucScPix (green, then red)
+{
+    BYTE ucI;
+    const __code uint8_t *pcS = (g_ucAwtoOsdRot != 0) ? s_tS2BaseRot[ucId] : s_tS2Base[ucId];
+
+    for(ucI = 0; ucI < AWTO_S2_BASE_BYTES; ucI++)
+    {
+        g_aucScPix[ucI] = pcS[ucI];
+    }
+}
+
+#pragma place bank(11)
+static BYTE S2Pulse(WORD usX)                                                       // 0..255 pulse height at raster x, linear between table steps
+{
+    WORD usD;
+    WORD usI;
+    BYTE ucA;
+    BYTE ucB;
+    BYTE ucR;
+
+    if(usX < s_usX0)
+    {
+        return 0;
+    }
+    usD = usX - s_usX0;
+    usI = usD / s_ucSpread;
+    if(usI >= AWTO_S2_PULSE_N)
+    {
+        return 0;
+    }
+    ucR = (BYTE)(usD - usI * s_ucSpread);
+    ucA = s_tS2Pulse[usI];
+    ucB = (usI + 1 < AWTO_S2_PULSE_N) ? s_tS2Pulse[usI + 1] : 0;
+    return (BYTE)((int16_t)ucA + ((int16_t)ucB - (int16_t)ucA) * ucR / s_ucSpread);
+}
+
+#pragma place bank(11)
+static void S2Char(char cC, int16_t sX, int16_t sY, BYTE ucScale)                   // into the tile buffer, clipped to the tile
 {
     BYTE ucI;
     BYTE ucCol;
     BYTE ucRow;
     BYTE ucBits;
     BYTE ucDx;
-    BYTE ucDy;
+    BYTE ucStart;
+    int16_t sXs;
+    int16_t sLo;
+    int16_t sHi;
 
-    AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
     for(ucI = 0; ucI < AWTO_S2_FONT_N; ucI++)
     {
-        if(s_tFont[ucI][0] == (BYTE)cC)
+        if(s_tS2Font[ucI][0] == (BYTE)cC)
         {
             break;
         }
     }
-    if(ucI == AWTO_S2_FONT_N)
+    if((ucI == AWTO_S2_FONT_N) || ((int16_t)(sX + AWTO_S2_FONT_W * ucScale) <= 0) || (sX >= AWTO_S2_TW) ||
+       ((int16_t)(sY + AWTO_S2_FONT_H * ucScale) <= 0) || (sY >= AWTO_S2_TH))
     {
-        return;
-    }
-    if(((int16_t)(sX + AWTO_S2_FONT_W * ucScale) <= s_sOx) || (sX >= s_sOx + AWTO_S2_TW) ||
-       ((int16_t)(sY + AWTO_S2_FONT_H * ucScale) <= s_sOy) || (sY >= s_sOy + AWTO_S2_BAND_H))
-    {
-        return;                                                                     // outside this pass
+        return;                                                                     // not a glyph of the number, or outside this tile
     }
     for(ucCol = 0; ucCol < AWTO_S2_FONT_W; ucCol++)
     {
-        ucBits = s_tFont[ucI][1 + ucCol];
-        for(ucRow = 0; ucRow < AWTO_S2_FONT_H; ucRow++)
+        ucBits = s_tS2Font[ucI][1 + ucCol];
+        ucStart = 0;
+        for(ucRow = 0; ucRow <= AWTO_S2_FONT_H; ucRow++)                            // one run per stretch of set rows (the row after the last is clear)
         {
-            if((ucBits & (1 << ucRow)) != 0)
+            if((ucRow < AWTO_S2_FONT_H) && ((ucBits >> ucRow) & 1))
             {
-                for(ucDy = 0; ucDy < ucScale; ucDy++)
+                if((ucRow == 0) || !((ucBits >> (ucRow - 1)) & 1))
                 {
-                    for(ucDx = 0; ucDx < ucScale; ucDx++)
-                    {
-                        S2Px(sX + (int16_t)ucCol * ucScale + ucDx, sY + (int16_t)ucRow * ucScale + ucDy);
-                    }
+                    ucStart = ucRow;
+                }
+                continue;
+            }
+            if((ucRow == 0) || !((ucBits >> (ucRow - 1)) & 1))
+            {
+                continue;
+            }
+            sLo = sY + (int16_t)ucStart * ucScale;
+            sHi = sY + (int16_t)ucRow * ucScale - 1;
+            sLo = (sLo < 0) ? 0 : sLo;
+            sHi = (sHi >= AWTO_S2_TH) ? AWTO_S2_TH - 1 : sHi;
+            for(ucDx = 0; (sLo <= sHi) && (ucDx < ucScale); ucDx++)
+            {
+                sXs = sX + (int16_t)ucCol * ucScale + ucDx;
+                if((sXs >= 0) && (sXs < AWTO_S2_TW))
+                {
+                    S2Run((BYTE)sXs, (BYTE)sLo, (BYTE)sHi);
                 }
             }
         }
     }
 }
 
-#pragma place bank(12)
-static void S2Text(const char *pcS, int16_t sX, int16_t sY, BYTE ucScale)
+#pragma place bank(11)
+static void S2Text(const __xdata char *pcS, int16_t sX, int16_t sY, BYTE ucScale)
 {
     while(*pcS != 0)
     {
@@ -196,7 +240,12 @@ static void S2Text(const char *pcS, int16_t sX, int16_t sY, BYTE ucScale)
     }
 }
 
-static BYTE S2Uint(unsigned long ulV, BYTE ucDigits, BYTE ucPos)                    // zero padded decimal into s_acNum from ucPos
+static int16_t S2Y(WORD usX)
+{
+    return AWTO_S2_BASE_Y - (int16_t)(((WORD)S2Pulse(usX) * AWTO_S2_AMP) / AWTO_S2_PULSE_PEAK);
+}
+
+static void S2Uint(unsigned long ulV, BYTE ucDigits, BYTE ucPos)                    // zero padded decimal into s_acNum from ucPos
 {
     BYTE ucK;
 
@@ -205,170 +254,273 @@ static BYTE S2Uint(unsigned long ulV, BYTE ucDigits, BYTE ucPos)                
         s_acNum[ucPos + ucK - 1] = (char)('0' + (ulV % 10));
         ulV /= 10;
     }
-    return ucPos + ucDigits;
 }
 
-#pragma place bank(12)
-static BYTE S2Pulse(WORD usX)                                                       // 0..255 pulse height at screen x
+static void S2MapWord(WORD usCell, BYTE ucId)                                       // char command of one cell: glyph id, 2-bit colours (value 0 bg, 1 red, 2 / 3 green)
 {
-    WORD usI;
-
-    if(usX < s_usX0)
+    if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd-rotation.md): the mirrored cell
     {
-        return 0;
+        usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }
-    usI = (usX - s_usX0) / s_ucSpread;
-    return (usI < AWTO_S2_PULSE_N) ? s_tPulse[usI] : 0;
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FS_BASE + usCell, _OSD_WITHOUT_DB);
+    AWTO_XFR(AWTO_S2_DATA_PORT) = (BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1));
+    AWTO_XFR(AWTO_S2_DATA_PORT) = ucId;
+    AWTO_XFR(AWTO_S2_DATA_PORT) = (BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_GREEN & 7) << 3) | (AWTO_S2_PAL_RED & 7));
 }
 
-static int16_t S2Y(WORD usX)
+static void S2Glyph(BYTE ucId)                                                      // g_aucScPix (green plane, red plane; data port order, already turned) -> glyph slot
 {
-    return AWTO_S2_BASE_Y - (int16_t)(((WORD)S2Pulse(usX) * AWTO_S2_AMP) / AWTO_S2_PULSE_PEAK);
-}
+    BYTE ucI;
 
-#pragma place bank(12)                      // calls S2Text with pointers to the bank 12 strings: same bank
-static void S2Grid(BYTE ucCol, BYTE ucBand)                                         // graticule layer of one pass
-{
-    int16_t sX;
-    int16_t sY;
-
-    for(sX = s_sOx; sX < s_sOx + AWTO_S2_TW; sX++)
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FONT_BASE + (WORD)ucId * AWTO_S2_GLYPH_STRIDE, _OSD_WITHOUT_DB);
+    for(ucI = 0; ucI < AWTO_S2_BASE_BYTES; ucI++)                                   // the port takes one byte per write; its address counter advances per word
     {
-        if(((sX % AWTO_S2_DIV_X) == 0) || (sX == AWTO_S2_W - 1))
+        AWTO_XFR(AWTO_S2_DATA_PORT) = g_aucScPix[ucI];
+    }
+}
+
+static BYTE S2Alloc(void)
+{
+    BYTE ucId = s_ucNext;
+
+    s_ucNext = (ucId == AWTO_S2_ID_LAST) ? AWTO_S2_RING0 : (BYTE)(ucId + 1);
+    return ucId;
+}
+
+static void S2Trace(void)                                                           // the trace of the column into the tile (green plane): per pixel column the run from y(x - 1) to y(x), plus THICK
+{
+    BYTE ucX;
+    int16_t sA;
+    int16_t sB;
+    int16_t sLo;
+    int16_t sHi;
+
+    for(ucX = 0; ucX < AWTO_S2_TW; ucX++)
+    {
+        sA = s_asYs[ucX] - s_sOy;
+        sB = s_asYs[ucX + 1] - s_sOy;
+        sLo = (sA < sB) ? sA : sB;
+        sHi = ((sA > sB) ? sA : sB) + AWTO_S2_THICK;
+        if((sHi < 0) || (sLo >= AWTO_S2_TH))
         {
-            osd_line(&g_scCv, sX - s_sOx, 0, sX - s_sOx, AWTO_S2_BAND_H - 1, 1);    // vertical division line
+            continue;
+        }
+        sLo = (sLo < 0) ? 0 : sLo;
+        sHi = (sHi >= AWTO_S2_TH) ? AWTO_S2_TH - 1 : sHi;
+        S2Run(ucX, (BYTE)sLo, (BYTE)sHi);
+    }
+}
+
+static BYTE S2IsNum(BYTE ucCol, BYTE ucRow)
+{
+    return (BYTE)((ucCol >= AWTO_S2_NUM_COL0) && (ucCol <= AWTO_S2_NUM_COL1) && (ucRow >= AWTO_S2_NUM_ROW0) && (ucRow <= AWTO_S2_NUM_ROW1));
+}
+
+static BYTE S2Home(BYTE ucCol, BYTE ucRow, WORD usCell)                             // glyph id of a cell at rest: its readout slot, else its static tile
+{
+    if(S2IsNum(ucCol, ucRow))
+    {
+        return (BYTE)(AWTO_S2_STATIC_N + (ucRow - AWTO_S2_NUM_ROW0) * AWTO_S2_NUM_W + (ucCol - AWTO_S2_NUM_COL0));
+    }
+    return S2CellId(usCell);
+}
+
+static void S2Fill(BYTE ucCol, BYTE ucRow, BYTE ucBase, BYTE ucId)                  // draw one dynamic tile on its static base and upload it
+{
+    BYTE ucY;
+    BYTE ucXo;
+
+    S2Base(ucBase);
+    s_sOy = (int16_t)ucRow * AWTO_S2_TH;
+    if((ucRow >= s_ucR0) && (ucRow <= s_ucR1))
+    {
+        S2Trace();
+    }
+    if((ucCol == s_ucCur10) || (ucCol == s_ucCur90))                                // dotted cursor
+    {
+        ucXo = (BYTE)(((ucCol == s_ucCur10) ? s_usX10 : s_usX90) - (WORD)ucCol * AWTO_S2_TW);
+        for(ucY = 0; ucY < AWTO_S2_TH; ucY += AWTO_S2_CURSOR_STEP)
+        {
+            S2Run(ucXo, ucY, ucY);
         }
     }
-    for(sY = s_sOy; sY < s_sOy + AWTO_S2_BAND_H; sY++)
+    if(S2IsNum(ucCol, ucRow))
     {
-        if(((sY % AWTO_S2_DIV_Y) == 0) || (sY == AWTO_S2_H - 1))
-        {
-            osd_line(&g_scCv, 0, sY - s_sOy, AWTO_S2_TW - 1, sY - s_sOy, 1);        // horizontal division line
-        }
+        S2Text(s_acNum, (int16_t)AWTO_S2_NUM_X - (int16_t)ucCol * AWTO_S2_TW, (int16_t)AWTO_S2_NUM_Y - s_sOy, AWTO_S2_TS_NUM);
     }
-    for(sX = s_sOx; sX < s_sOx + AWTO_S2_TW; sX++)                                  // minor ticks on the centre horizontal axis (y = 81)
+    S2Glyph(ucId);
+}
+
+static void S2NumDraw(void)                                                         // one readout tile (own slot), the next of s_ucNumLeft: redrawn when the number changes
+{
+    BYTE ucC10 = s_ucCur10;
+    BYTE ucC90 = s_ucCur90;
+    BYTE ucK = AWTO_S2_NUM_N - s_ucNumLeft;
+    BYTE ucC = AWTO_S2_NUM_COL0 + ucK % AWTO_S2_NUM_W;
+    BYTE ucR = AWTO_S2_NUM_ROW0 + ucK / AWTO_S2_NUM_W;
+
+    s_ucNumLeft--;
+    s_ucCur10 = AWTO_S2_COLS;                                                       // no cursor in these tiles (a cursor column composes its own)
+    s_ucCur90 = AWTO_S2_COLS;
+    s_ucR0 = AWTO_S2_ROWS;
+    s_ucR1 = 0;
+    S2Fill(ucC, ucR, S2CellId((WORD)ucR * AWTO_S2_COLS + ucC), S2Home(ucC, ucR, 0));
+    s_ucCur10 = ucC10;
+    s_ucCur90 = ucC90;
+}
+
+static void S2ColBegin(BYTE ucCol)                                                  // trace points and dynamic rows of a column; the rows follow in S2ColRows
+{
+    WORD usOx = (WORD)ucCol * AWTO_S2_TW;
+    int16_t sMin;
+    int16_t sMax;
+    AWTO_S2_MASK_T tNew = 0;
+    AWTO_S2_MASK_T tBit;
+    BYTE ucJ;
+    BYTE ucR;
+
+    if((ucCol > 0) && (s_ucYsCol == ucCol - 1))                                     // the two points the previous column ended with
     {
-        if((sX % AWTO_S2_TICK_X) == 0)
+        s_asYs[0] = s_asYs[AWTO_S2_TRACE_PTS - 2];
+        s_asYs[1] = s_asYs[AWTO_S2_TRACE_PTS - 1];
+        ucJ = 2;
+    }
+    else
+    {
+        s_asYs[0] = S2Y((usOx > 0) ? usOx - 1 : 0);
+        ucJ = 1;
+    }
+    s_ucYsCol = ucCol;
+    for(; ucJ < AWTO_S2_TRACE_PTS; ucJ++)
+    {
+        s_asYs[ucJ] = S2Y(usOx - 1 + ucJ);
+    }
+    sMin = s_asYs[0];
+    sMax = sMin;
+    for(ucJ = 1; ucJ < AWTO_S2_TRACE_PTS; ucJ++)
+    {
+        sMin = (s_asYs[ucJ] < sMin) ? s_asYs[ucJ] : sMin;
+        sMax = (s_asYs[ucJ] > sMax) ? s_asYs[ucJ] : sMax;
+    }
+    s_ucR0 = (BYTE)(sMin / AWTO_S2_TH);
+    s_ucR1 = (BYTE)((sMax + AWTO_S2_THICK) / AWTO_S2_TH);
+    s_ucR1 = (s_ucR1 >= AWTO_S2_ROWS) ? AWTO_S2_ROWS - 1 : s_ucR1;
+    for(ucR = s_ucR0, tBit = (AWTO_S2_MASK_T)1 << s_ucR0; ucR <= s_ucR1; ucR++, tBit <<= 1)
+    {
+        tNew |= tBit;
+    }
+    if((ucCol == s_ucCur10) || (ucCol == s_ucCur90))
+    {
+        tNew = ~(AWTO_S2_MASK_T)0;
+    }
+    s_ucCacheN = 0;
+    s_tNew = tNew;
+    s_tOld = s_aMask[ucCol];
+    s_ucRow = 0;
+}
+
+static BYTE S2ColRows(BYTE ucCol, unsigned long ulStart)                           // rows from s_ucRow on until the time budget is used; 1 = column done
+{
+    BYTE ucR;
+    BYTE ucK;
+    BYTE ucBase;
+    BYTE ucId;
+    BYTE ucBusy;
+    BYTE ucDrew;
+    WORD usCell;
+    AWTO_S2_MASK_T tBit;
+
+    for(ucR = s_ucRow, tBit = (AWTO_S2_MASK_T)1 << ucR, usCell = (WORD)ucR * AWTO_S2_COLS + ucCol; ucR < AWTO_S2_ROWS; ucR++, tBit <<= 1, usCell += AWTO_S2_COLS)
+    {
+        ucDrew = 0;
+        if(s_tNew & tBit)
         {
-            for(sY = AWTO_S2_H / 2 - AWTO_S2_TICK_LEN; sY <= AWTO_S2_H / 2 + AWTO_S2_TICK_LEN; sY++)
+            ucBase = S2CellId(usCell);
+            ucBusy = (BYTE)(((ucR >= s_ucR0) && (ucR <= s_ucR1)) || S2IsNum(ucCol, ucR));
+            ucId = 0;
+            if(!ucBusy)                                                             // cursor only: one slot per static base within the column
             {
-                S2Px(sX, sY);
+                for(ucK = 0; ucK < s_ucCacheN; ucK++)
+                {
+                    if(s_aucCacheBase[ucK] == ucBase)
+                    {
+                        ucId = s_aucCacheSlot[ucK];
+                        break;
+                    }
+                }
             }
-        }
-    }
-    for(sY = s_sOy; sY < s_sOy + AWTO_S2_BAND_H; sY++)                              // and on the centre vertical axis (x = 168)
-    {
-        if((sY % AWTO_S2_TICK_Y) == 0)
-        {
-            for(sX = AWTO_S2_W / 2 - AWTO_S2_TICK_LEN; sX <= AWTO_S2_W / 2 + AWTO_S2_TICK_LEN; sX++)
+            if(ucId == 0)                                                           // dynamic ids start at STATIC_N > 0
             {
-                S2Px(sX, sY);
+                ucId = S2Alloc();
+                S2Fill(ucCol, ucR, ucBase, ucId);
+                ucDrew = 1;
+                if(!ucBusy)
+                {
+                    s_aucCacheBase[s_ucCacheN] = ucBase;
+                    s_aucCacheSlot[s_ucCacheN] = ucId;
+                    s_ucCacheN++;
+                }
             }
+            S2MapWord(usCell, ucId);
+        }
+        else if(s_tOld & tBit)                                                      // drawn last frame, not now: back to the static tile
+        {
+            S2MapWord(usCell, S2Home(ucCol, ucR, usCell));
+        }
+        if((ucDrew != 0) && ((WORD)(AwtoMs() - ulStart) >= AWTO_S2_PASS_MS))
+        {
+            s_ucRow = ucR + 1;                                                      // band full: the next call goes on with the next row
+            if(s_ucRow < AWTO_S2_ROWS)
+            {
+                return 0;
+            }
+            break;
         }
     }
-    S2Text(s_cS100, 2, AWTO_S2_BASE_Y - AWTO_S2_AMP - 3, 1);                          // levels of the pulse, left edge
-    S2Text(s_cS90, 2, AWTO_S2_BASE_Y - AWTO_S2_P90 - 3, 1);
-    S2Text(s_cS10, 2, AWTO_S2_BASE_Y - AWTO_S2_P10 - 3, 1);
-    S2Text(s_cS0, 2, AWTO_S2_BASE_Y - 3, 1);
-    (void)ucCol;
-    (void)ucBand;
+    s_aMask[ucCol] = s_tNew;
+    return 1;
 }
 
-#pragma place bank(12)
-static void S2Trace(void)                                                           // trace layer of one pass
+static void S2Params(void)                                                          // pulse position / edge speed of this frame, cursors on its 10 % / 90 % points, delta t text
 {
-    int16_t sX;
-    int16_t sY;
-    int16_t sPrev;
-    int16_t sCur;
-    WORD usPs;
+    unsigned long ulPs;
 
-    sPrev = S2Y((WORD)((s_sOx > 0) ? s_sOx - 1 : 0));
-    for(sX = s_sOx + ((s_sOx > 0) ? 0 : 1); sX <= s_sOx + AWTO_S2_TW; sX++)         // one px past the column (the next pass clips its half)
+    s_usDrift += AWTO_S2_X0_STEP;
+    if(s_usDrift >= AWTO_S2_X0_RANGE)
     {
-        sCur = S2Y((WORD)sX);
-        osd_line(&g_scCv, sX - 1 - s_sOx, sPrev - s_sOy, sX - s_sOx, sCur - s_sOy, 1);
-        osd_line(&g_scCv, sX - 1 - s_sOx, sPrev - s_sOy + AWTO_S2_THICK, sX - s_sOx, sCur - s_sOy + AWTO_S2_THICK, 1);
-        sPrev = sCur;
+        s_usDrift -= AWTO_S2_X0_RANGE;
+        s_ucSpread++;
+        if(s_ucSpread >= AWTO_S2_SPREAD_MIN + AWTO_S2_SPREAD_RANGE)
+        {
+            s_ucSpread = AWTO_S2_SPREAD_MIN;
+        }
+        s_ucNumDirty = 1;                                                           // the delta t number changed
     }
-    for(sY = s_sOy; sY < s_sOy + AWTO_S2_BAND_H; sY += 2)                           // dotted cursors
-    {
-        S2Px(s_usX10, sY);
-        S2Px(s_usX90, sY);
-    }
-    usPs = (WORD)(((unsigned long)(s_usX90 - s_usX10) * AWTO_S2_PS_PER_DIV) / AWTO_S2_DIV_X);   // delta t in ps from the cursors
-    S2Text(s_cSFreq, 6, 4, 1);                                                // counter readout: placeholder digits, replaced per frame below
-    s_acNum[0] = AWTO_S2_GL_DELTA;
-    s_acNum[1] = 't';
-    s_acNum[2] = 0;
-    S2Text(s_acNum, 196, 4, 1);
-    S2Uint(usPs / 1000, 1, 0);
+    s_usX0 = AWTO_S2_X0_MIN + s_usDrift;
+    s_usX10 = s_usX0 + (WORD)AWTO_S2_I10 * s_ucSpread;
+    s_usX90 = s_usX0 + (WORD)AWTO_S2_I90 * s_ucSpread;
+    s_ucCur10 = (BYTE)(s_usX10 / AWTO_S2_TW);
+    s_ucCur90 = (BYTE)(s_usX90 / AWTO_S2_TW);
+    ulPs = ((unsigned long)(s_usX90 - s_usX10) * AWTO_S2_PS_PER_DIV) / AWTO_S2_DIV_X;   // delta t in ps from the cursors
+    S2Uint(ulPs / 1000, 1, 0);
     s_acNum[1] = '.';
-    S2Uint(usPs % 1000 / 10, 2, 2);
+    S2Uint(ulPs % 1000 / 10, 2, 2);
     s_acNum[4] = ' ';
     s_acNum[5] = 'n';
     s_acNum[6] = 's';
     s_acNum[7] = 0;
-    S2Text(s_acNum, 214, 14, 2);
-    S2Text(s_cSVolt, 6, 150, 1);
-    S2Text(s_cSTime, 170, 150, 1);
-}
-
-static void S2Pass(BYTE ucCol, BYTE ucBand, BYTE ucPlane)
-{
-    BYTE ucT;
-
-    AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;               // a text-heavy pass is long: kick per pass
-    s_sOx = (int16_t)ucCol * AWTO_S2_TW;
-    s_sOy = (int16_t)ucBand * AWTO_S2_BAND_H;
-    osd_clear(&g_scCv);
-    osd_mark_all_dirty(&g_scCv);
-    if(ucPlane == AWTO_S2_PLANE_GRID)
+    if(s_ucNumDirty != 0)
     {
-        S2Grid(ucCol, ucBand);
-    }
-    else
-    {
-        S2Trace();
-    }
-    s_usCell0 = (WORD)ucBand * AWTO_S2_BAND_ROWS * AWTO_S2_COLS + ucCol;
-    s_ucPlane = ucPlane;
-    for(ucT = 0; ucT < AWTO_S2_BAND_ROWS; ucT++)
-    {
-        S2Upload(ucT);
+        s_ucNumDirty = 0;
+        s_ucNumLeft = AWTO_S2_NUM_N;                                                // drawn one tile per step before the columns go on
     }
 }
 
-static void S2Params(void)                                                          // pulse position / edge speed of this frame, cursors on its 10 % / 90 % points
-{
-    WORD usX;
-
-    s_usX0 = AWTO_S2_X0_MIN + (s_usFrame / AWTO_S2_FRAME_SLOW) % AWTO_S2_X0_RANGE;
-    s_ucSpread = AWTO_S2_SPREAD_MIN + (BYTE)((s_usFrame / (AWTO_S2_FRAME_SLOW * AWTO_S2_X0_RANGE)) % AWTO_S2_SPREAD_RANGE);
-    s_usX10 = s_usX0;
-    s_usX90 = s_usX0;
-    for(usX = s_usX0; usX < AWTO_S2_W; usX++)
-    {
-        if((WORD)((WORD)S2Pulse(usX) * AWTO_S2_AMP / AWTO_S2_PULSE_PEAK) >= AWTO_S2_P10)
-        {
-            s_usX10 = usX;
-            break;
-        }
-    }
-    for(usX = s_usX10; usX < AWTO_S2_W; usX++)
-    {
-        if((WORD)((WORD)S2Pulse(usX) * AWTO_S2_AMP / AWTO_S2_PULSE_PEAK) >= AWTO_S2_P90)
-        {
-            s_usX90 = usX;
-            break;
-        }
-    }
-}
-
-BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2 draws one column (3 bands) of the current plane, returns 1 when a trace frame is complete
+BYTE AwtoScopeSaver2(BYTE ucCmd)
 {
     WORD usI;
-    BYTE ucB;
+    BYTE ucI;
+    unsigned long ulStart;
 
     if(ucCmd == 0)
     {
@@ -378,35 +530,48 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
     }
     if(ucCmd == 2)
     {
-        if((s_ucStage != AWTO_S2_STAGE_GRID) && (s_ucCol == 0))
+        ulStart = AwtoMs();
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        do                                                              // bands: up to the budget per call, then back to the main loop (DDC/CI, keys, watchdog)
         {
-            s_usFrame++;
-            S2Params();
+            if(s_ucFrameOn == 0)
+            {
+                s_ucFrameOn = 1;
+                g_usAwtoS2Frame++;
+                S2Params();
+            }
+            if(s_ucNumLeft != 0)
+            {
+                S2NumDraw();
+                continue;
+            }
+            if(s_ucInCol == 0)
+            {
+                S2ColBegin(s_ucCol);
+                s_ucInCol = 1;
+            }
+            if(S2ColRows(s_ucCol, ulStart) != 0)
+            {
+                s_ucInCol = 0;
+                s_ucCol++;
+            }
         }
-        for(ucB = 0; ucB < AWTO_S2_BANDS; ucB++)
-        {
-            S2Pass(s_ucCol, ucB, (s_ucStage == AWTO_S2_STAGE_GRID) ? AWTO_S2_PLANE_GRID : AWTO_S2_PLANE_TRACE);
-        }
-        s_ucCol++;
+        while((s_ucCol < AWTO_S2_COLS) && ((WORD)(AwtoMs() - ulStart) < AWTO_S2_PASS_MS));
         if(s_ucCol < AWTO_S2_COLS)
         {
             return 0;
         }
         s_ucCol = 0;
-        if(s_ucStage == AWTO_S2_STAGE_GRID)                             // graticule plane done (once): the first trace frame is drawn hidden
+        s_ucFrameOn = 0;
+        if(s_ucShown == 0)                                              // the first frame was drawn hidden
         {
-            s_ucStage = AWTO_S2_STAGE_FIRST;
-            return 0;
-        }
-        if(s_ucStage == AWTO_S2_STAGE_FIRST)
-        {
-            s_ucStage = AWTO_S2_STAGE_RUN;
+            s_ucShown = 1;
             osd_tc_show(1);
             AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_ON, 0);
         }
         else
         {
-            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_FRAME, (BYTE)s_usFrame);
+            AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_S2_ARG_FRAME, (BYTE)g_usAwtoS2Frame);
         }
         return 1;
     }
@@ -417,20 +582,39 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)                                        // cmd 2
     ScalerOsdSetColorPalette(AWTO_S2_PAL_GREEN, AWTO_S2_GRN_R, AWTO_S2_GRN_G, AWTO_S2_GRN_B);
     ScalerOsd2FontFunction(_DISABLE);
     AwtoOsdRowCmds(AWTO_S2_ROWS, AWTO_S2_TH, AWTO_S2_COLS);
-    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FS_BASE, _OSD_WITHOUT_DB);    // 2-bit char per cell, glyph id = cell index; value 0 bg, 1 red, 2 / 3 green
-    for(usI = 0; usI < AWTO_S2_CELLS; usI++)
+    for(ucI = 0; ucI < AWTO_S2_STATIC_N; ucI++)                         // static tiles: both planes
     {
-        ScalerOsdDataPort((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
-        ScalerOsdDataPort((BYTE)usI);
-        ScalerOsdDataPort((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_GREEN & 7) << 3) | (AWTO_S2_PAL_RED & 7)));
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        S2Base(ucI);
+        S2Glyph(ucI);
+    }
+    for(usI = 0; usI < AWTO_S2_CELLS; usI++)                            // the map: every cell its static tile
+    {
+        if((usI & (AWTO_S2_WDT_EVERY - 1)) == 0)
+        {
+            AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        }
+        S2MapWord(usI, S2Home((BYTE)(usI % AWTO_S2_COLS), (BYTE)(usI / AWTO_S2_COLS), usI));
     }
     SET_OSD_MAPA_COL_MAX(AWTO_S2_COLS);
     ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_S2_FS_BASE, AWTO_S2_FONT_BASE);
     ScalerOsd2BitFontOffset(AWTO_OSD_ZERO);
     AwtoOsdPlaceScaleUp(AWTO_S2_POS_H, AWTO_S2_POS_V, AWTO_S2_COLS, AWTO_S2_ROWS, AWTO_S2_SU_FACTOR);
-    osd_canvas_init(&g_scCv, 1, AWTO_S2_BAND_ROWS, g_aucScPix, AWTO_S2_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_S2_BAND_ROWS));
-    s_usFrame = 0;
+    for(ucI = 0; ucI < AWTO_S2_COLS; ucI++)
+    {
+        s_aMask[ucI] = 0;
+    }
+    g_usAwtoS2Frame = 0;
     s_ucCol = 0;
-    s_ucStage = AWTO_S2_STAGE_GRID;                                     // drawn column by column (cmd 2): graticule plane, first trace frame, then shown
+    s_ucShown = 0;                                                      // the first frame is drawn hidden, column by column (cmd 2), then shown
+    s_ucNext = AWTO_S2_RING0;
+    s_ucYsCol = AWTO_S2_COLS;                                           // no previous column
+    s_ucNumDirty = 1;                                                   // the first S2Params draws the readout tiles
+    s_ucNumLeft = 0;
+    s_ucFrameOn = 0;
+    s_ucInCol = 0;
+    s_ucRow = 0;
+    s_ucSpread = AWTO_S2_SPREAD_MIN;
+    s_usDrift = 0;
     return 0;
 }

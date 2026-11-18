@@ -30,6 +30,7 @@ Status 2026-11-18. Code: `fw/osd/osd_rot.c`. Users: Pac-Man (`fw/test/pacman_cla
 
 - Scope savers upload tiles from the `osd_lines` canvas (canonical bytes c0 c1 c2, stored B0 B1 B2 = c2 c1 c0): turned, each word is written as `RevByte(c0), RevByte(c1), RevByte(c2)` of the mirrored word, into the glyph slot of the mirrored cell.
 - No extra RAM: the rotation reads the source in a different order while streaming.
+- Scope 2 turns its tiles with a second generated table (`s_tS2BaseRot`) and flipped plot coordinates instead of per-byte reversal (`scope_saver2.c`).
 
 ## Scale-up window (found with the same photo)
 
