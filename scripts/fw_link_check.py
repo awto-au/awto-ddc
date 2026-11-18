@@ -549,7 +549,7 @@ def check(im, xdata=(), regnames=None, proven=None):
                     elif cs and not own and not im.find(reg, v):
                         other_bank(c, f"arith base 0x{v:04x}: {cs[0][1]['name']} is in bank {cs[0][0]}, code in bank {reg}", i.addr)
             mr = R2_IMM.match(t)
-            if mr and not im.literal(c, i.addr):     # Keil ABI generic pointer argument: R3 tag, R2 hi, R1 lo
+            if mr and not im.literal(c, i.addr) and im.names_const(c, i.addr) is not False:     # Keil ABI generic pointer: R3 tag, R2 hi, R1 lo
                 lo = next((int(m1.group(1), 16) for y in ins[max(0, k - 4):k + 5] if (m1 := R1_IMM.match(y.text))), None)
                 v = int(mr.group(1), 16) << 8 | (lo or 0)
                 if lo is not None and v >= im.common:
