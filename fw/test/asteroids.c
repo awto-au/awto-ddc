@@ -4,7 +4,7 @@
 #include "../../tools/osd_lines/osd_lines.h"
 
 // Asteroids screensaver (docs/asteroids.md): the game runs on the chip (rocks split, shots, saucer, autopilot ship, wrap-around),
-// drawn like the scope savers: 32 x 12 tiles of 12 x 18 (384 x 216), 1-bit glyphs, one-tile-column band canvas of scope_saver.c,
+// drawn like the scope savers: 30 x 11 tiles of 12 x 18 (360 x 198), 1-bit glyphs, one-tile-column band canvas of scope_saver.c,
 // objects culled per pass, tiles uploaded only while they hold (or just held) ink. One game step per frame (column 0).
 //   AwtoAsteroids(1) draw   (2) next column, returns 1 when a frame is complete   (0) off
 // Shapes: asteroids_data.inc (scripts/gen_asteroids.py: local ROM geometry or own outlines; gitignored).
@@ -13,14 +13,14 @@ extern __xdata uint8_t g_aucScDirty[];
 extern __xdata osd_canvas g_scCv;
 #include "asteroids_data.inc"
 
-#define AWTO_AST_COLS                           32
-#define AWTO_AST_ROWS                           12
+#define AWTO_AST_COLS                           30
+#define AWTO_AST_ROWS                           11
 #define AWTO_AST_TW                             OSD_TILE_W
 #define AWTO_AST_TH                             OSD_TILE_H
-#define AWTO_AST_W                              (AWTO_AST_COLS * AWTO_AST_TW)       // 384
-#define AWTO_AST_H                              (AWTO_AST_ROWS * AWTO_AST_TH)       // 216
-#define AWTO_AST_BANDS                          2
-#define AWTO_AST_BAND_ROWS                      (AWTO_AST_ROWS / AWTO_AST_BANDS)
+#define AWTO_AST_W                              (AWTO_AST_COLS * AWTO_AST_TW)
+#define AWTO_AST_H                              (AWTO_AST_ROWS * AWTO_AST_TH)
+#define AWTO_AST_BANDS                          2                                   // rows split unequally when odd: band 0 gets the extra row
+#define AWTO_AST_BAND_ROWS                      ((AWTO_AST_ROWS + AWTO_AST_BANDS - 1) / AWTO_AST_BANDS)   // canvas rows = the tallest band
 #define AWTO_AST_BAND_H                         (AWTO_AST_BAND_ROWS * AWTO_AST_TH)
 #define AWTO_AST_BG                             1                                   // palette indexes
 #define AWTO_AST_FG                             2
@@ -31,9 +31,14 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_FG_R                           235
 #define AWTO_AST_FG_G                           235
 #define AWTO_AST_FG_B                           225
-#define AWTO_AST_SU_FACTOR                      7                                   // as scope_saver.c: 384 x 216 -> 3511 x 1975
-#define AWTO_AST_POS_H                          41
-#define AWTO_AST_POS_V                          92
+#define AWTO_AST_SCALE_64                       64                                  // scale-up factor unit: ratio = 64 / factor
+#define AWTO_AST_SCALED_W                       (AWTO_AST_SCALE_64 * (long)AWTO_AST_W)
+#define AWTO_AST_SCALED_H                       (AWTO_AST_SCALE_64 * (long)AWTO_AST_H)
+#define AWTO_AST_SU_FACTOR                      ((BYTE)(AWTO_AST_SCALED_W / _PANEL_DH_WIDTH))   // the width fills the panel exactly
+#define AWTO_AST_POS_H                          ((BYTE)((_PANEL_DH_WIDTH - AWTO_AST_SCALED_W / AWTO_AST_SU_FACTOR) / 2 / AWTO_OSD_PX_PER_HD))
+#define AWTO_AST_POS_V                          ((BYTE)((_PANEL_DV_HEIGHT - AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR) / 2))   // equal bars top and bottom: Rotate 180 keeps the picture in place
+typedef char s_tAstPanelCheck[((AWTO_AST_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO_AST_SCALED_W) && (AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR <= _PANEL_DV_HEIGHT) &&
+                               (((_PANEL_DV_HEIGHT - AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR) % 2) == 0)) ? 1 : -1];   // full width, height inside the panel, even bars
 #define AWTO_AST_ARG_ON                         0x90                                // sync E9 (no rows: the table is full): value = shape source (AWTO_AST_FROM_ROM)
 #define AWTO_AST_ARG_FRAME                      0x91
 #define AWTO_AST_ARG_OFF                        0x92
@@ -125,7 +130,6 @@ extern __xdata osd_canvas g_scCv;
 #define AWTO_AST_HUD_H                          44
 #define AWTO_AST_DEC                            10
 #define AWTO_AST_PASSES                         (AWTO_AST_COLS * AWTO_AST_BANDS)
-#define AWTO_AST_TILE_MASK                      ((1 << AWTO_AST_BAND_ROWS) - 1)
 #define AWTO_AST_OBJ_BIT                        0x40                                // occupancy bit: the last upload held objects, not only the score / ships
 #define AWTO_AST_STATE_ALIVE                    0
 #define AWTO_AST_STATE_DEAD                     1                                   // waiting to respawn
@@ -187,6 +191,8 @@ static __xdata WORD s_usCell0;
 static __xdata WORD s_usHudScore;                                                   // score / lives as last drawn
 static __xdata BYTE s_ucHudLives;
 static __xdata BYTE s_ucHudDirty;                                                   // they changed: this frame redraws the HUD passes
+static __xdata BYTE s_ucBandRows;                                                   // tile rows of the pass being drawn (the last band may be shorter)
+static __xdata int16_t s_sBandH;                                                    // their height, px
 static __xdata BYTE s_ucAny;                                                        // the pass being drawn has ink
 
 #pragma place bank(8)
@@ -992,7 +998,7 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
             sX = s_sRx + (sX >> ucShift);
             sY = s_sRy - (sY >> ucShift);
             if((ucI != 0) && !(((sPx < 0) && (sX < 0)) || ((sPx >= AWTO_AST_TW) && (sX >= AWTO_AST_TW)) ||
-                               ((sPy < 0) && (sY < 0)) || ((sPy >= AWTO_AST_BAND_H) && (sY >= AWTO_AST_BAND_H))))   // osd_line walks every pixel of a line, clipped or not: skip lines wholly outside the pass
+                               ((sPy < 0) && (sY < 0)) || ((sPy >= s_sBandH) && (sY >= s_sBandH))))   // osd_line walks every pixel of a line, clipped or not: skip lines wholly outside the pass
             {
                 osd_line(&g_scCv, sPx, sPy, sX, sY, 1);
             }
@@ -1028,7 +1034,7 @@ static BYTE AstCull(int16_t sPx, int16_t sPy, BYTE ucR)                         
     {
         sT -= AWTO_AST_H;
     }
-    if(sT >= (AWTO_AST_BAND_H + 2 * ucR))
+    if(sT >= (s_sBandH + 2 * ucR))
     {
         return 0;
     }
@@ -1113,7 +1119,7 @@ static void AstHud(void)                                                        
 
 static void AstBlank(void)                                                          // blank canvas (the library's dirty flags are unused here)
 {
-    memset(g_aucScPix, 0, AWTO_AST_BAND_ROWS * OSD_TILE_BYTES);
+    memset(g_aucScPix, 0, (WORD)s_ucBandRows * OSD_TILE_BYTES);
 }
 
 static void AstInk(void)                                                            // first ink of a pass: start from a blank canvas
@@ -1144,10 +1150,14 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
     BYTE ucBit;
     BYTE ucOcc;
     BYTE ucIdx = (BYTE)(ucBand * AWTO_AST_COLS + ucCol);
+    BYTE ucMask;
 
     AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
     s_sOx = (int16_t)ucCol * AWTO_AST_TW;
     s_sOy = (int16_t)ucBand * AWTO_AST_BAND_H;
+    s_ucBandRows = (ucBand == 0) ? AWTO_AST_BAND_ROWS : (BYTE)(AWTO_AST_ROWS - AWTO_AST_BAND_ROWS);   // 2 bands: the second one holds the rest
+    s_sBandH = (int16_t)s_ucBandRows * AWTO_AST_TH;
+    ucMask = (BYTE)((1 << s_ucBandRows) - 1);
     s_ucAny = 0;
     for(ucI = 0; ucI < AWTO_AST_N_OBJ; ucI++)
     {
@@ -1176,14 +1186,14 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
     }
     if(s_ucAny == 0)
     {
-        if((ucOcc & AWTO_AST_TILE_MASK) == 0)
+        if((ucOcc & ucMask) == 0)
         {
             return 0;                                                               // empty now and at its last upload
         }
         AstBlank();                                                                 // tiles that held ink are uploaded blank
     }
     s_usCell0 = (WORD)ucBand * AWTO_AST_BAND_ROWS * AWTO_AST_COLS + ucCol;
-    for(ucI = 0; ucI < AWTO_AST_BAND_ROWS; ucI++, s_usCell0 += AWTO_AST_COLS)
+    for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS)
     {
         ucBit = (BYTE)(1 << ucI);
         if(AstTileInk(ucI) != 0)
@@ -1269,7 +1279,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     osd_canvas_init(&g_scCv, 1, AWTO_AST_BAND_ROWS, g_aucScPix, AWTO_AST_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_AST_BAND_ROWS));
     for(ucB = 0; ucB < AWTO_AST_PASSES; ucB++)
     {
-        s_aucOcc[ucB] = AWTO_AST_TILE_MASK;                                         // every glyph is uploaded once (blank where nothing is)
+        s_aucOcc[ucB] = (BYTE)((1 << ((ucB < AWTO_AST_COLS) ? AWTO_AST_BAND_ROWS : (AWTO_AST_ROWS - AWTO_AST_BAND_ROWS))) - 1);   // every glyph is uploaded once (blank where nothing is)
     }
     if(s_usRng == 0)
     {
