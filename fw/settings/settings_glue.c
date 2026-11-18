@@ -16,6 +16,7 @@ extern int set_put(BYTE ucId, int iV, BYTE ucNow);
 extern int set_get(BYTE ucId);
 extern BYTE set_in_boot(void);
 extern void set_defaults(void);
+extern __xdata WORD g_usAwtoSaverNosigS;                 // fw/test/saver.c: pwr_l3_s, the no-signal saver run time
 extern void menu_open(void);
 extern void menu_close(void);
 extern void menu_key(BYTE ucKey);
@@ -510,7 +511,7 @@ void set_ap_power(BYTE ucId, int iV)               // placeholder store (see StA
         case AWTO_SET_PWR_L3_EN: g_stAwtoPwrCfg.ucL3En = (BYTE)iV; g_ucAwtoSleepOk = (iV != 0); break;
         case AWTO_SET_PWR_L1_MS: g_stAwtoPwrCfg.usL1Ms = (WORD)iV; break;
         case AWTO_SET_PWR_L2_S: g_stAwtoPwrCfg.usL2S = (WORD)iV; AWTO_PWR_L2S(iV); break;
-        case AWTO_SET_PWR_L3_S: g_stAwtoPwrCfg.usL3S = (WORD)iV; break;
+        case AWTO_SET_PWR_L3_S: g_stAwtoPwrCfg.usL3S = (WORD)iV; g_usAwtoSaverNosigS = (WORD)iV; break;
         default:
             if((ucId >= AWTO_SET_WAKE_D1) && (ucId <= AWTO_SET_WAKE_D3))
             {
