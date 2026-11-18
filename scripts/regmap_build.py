@@ -137,6 +137,9 @@ def validate(rows, frows, errs):
                 errs.append(f"{o.sid}: header #{need}= missing")
         if o.meta.get("method") not in ("isp", "live", "regdump"):
             errs.append(f"{o.sid}: method {o.meta.get('method')!r}")
+        _, n = L.strip_behind(dict(o.meta), o.vals)
+        if n:
+            errs.append(f"{o.sid}: {n} known-wrong read-behind values (run regmap_strip_behind.py; README Read-behind)")
         bad = sorted(k for k in o.vals if k.partition(":")[0] in L.EXCLUDE_KEYS)
         if bad:
             errs.append(f"{o.sid}: excluded (HDCP) keys present: {bad[:3]}")

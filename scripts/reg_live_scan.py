@@ -8,6 +8,7 @@ usage: reg_live_scan.py --unit N --pass-label A [--pages all|00,38-3A,..] [--out
   test cmd 0x3B over 0x35 (off) (scripts/dbg_link.py).
   Excluded addresses (EXCLUDE, reason per entry) are never read. Data: JSON in tmp/regs/live/, log: tmp/logs/reg_live_scan.log.
   Abort (link off, JSON kept with what was read): 3 consecutive failed reads, a failed heartbeat (0x0000 != 0xCF), wall bound.
+  Read-behind pages (dbg_xdata.BEHIND_PAGES, re/regmap/README.md): byte path, first read of every new dword discarded (DISCARD lines).
   Page order: pages seen in ISP dumps / regdb / SDK first, never-read pages last (heartbeat every 64 B instead of 256 B).
 """
 from __future__ import annotations
@@ -117,12 +118,14 @@ class Reader:
     def __init__(self, io, block: bool, log, clock=time.monotonic):
         self.io, self.block, self.log, self.clock = io, block, log, clock
         self.hi: int | None = None          # staged hi byte of the byte path
+        self.last: int | None = None        # address of the previous byte-path read (read-behind: new dword = stale-prone)
         self.limit_ms: float | None = None  # per-read limit once calibrated
         self.consec_fail = 0
         self.ok = self.failed = self.slow = 0
+        self.discards = 0
         self.max_ms = 0.0
 
-    def _byte(self, addr: int) -> bytes | None:
+    def _byte1(self, addr: int) -> bytes | None:
         if addr >> 8 != self.hi:
             self.hi = None
             if not self.io.write(X.DEV8, X.CMD_HI, bytes([addr >> 8])):
@@ -136,23 +139,35 @@ class Reader:
             self.hi = None
         return r
 
+    def _byte(self, addr: int) -> bytes | None:
+        """Read-behind pages: the first read of a new dword is a discarded read (logged DISCARD), the second is the value."""
+        if X.stale_prone(addr, self.last):
+            d = self._byte1(addr)
+            self.log(f"{addr:04X} {'--' if d is None else f'{d[0]:02X}'} DISCARD (read-behind page {addr >> 8:02X}, new dword)")
+            self.discards += 1
+        self.last = addr
+        return self._byte1(addr)
+
     def read(self, addr: int, n: int) -> list[int | None]:
         """n contiguous addresses (n > 1 only on the block path, one transaction). None entries = failed."""
         t0 = self.clock()
-        if self.block:
+        d0 = self.discards
+        if self.block and (addr >> 8) not in X.BEHIND_PAGES:
             data = X.read_chunk(self.io, addr, n, tries=1)
+            self.last = None                # a block read leaves the byte-path history unknown
         else:
             data = self._byte(addr)
         ms = (self.clock() - t0) * 1000
         self.max_ms = max(self.max_ms, ms)
         good = data is not None and len(data) == n
-        slow = good and self.limit_ms is not None and ms > self.limit_ms
+        lim = None if self.limit_ms is None else self.limit_ms * (1 + self.discards - d0)     # a discarded read doubles the transaction
+        slow = good and lim is not None and ms > lim
         for i in range(n):
             v = data[i] if good else None
             state = "SLOW" if slow else ("ok" if good else "NAK")
             self.log(f"{addr + i:04X} {'--' if v is None else f'{v:02X}'} {state} {ms:.2f}ms" + (f" blk{n}" if n > 1 else ""))
         self.slow += slow
-        if good and not (slow and ms > SLOW_ABORT_X * self.limit_ms):
+        if good and not (slow and ms > SLOW_ABORT_X * lim):
             self.consec_fail = 0
             self.ok += 1
         else:
@@ -191,6 +206,9 @@ def heartbeat(rd: Reader, tag: str, beats: list, log, clock=time.monotonic) -> N
     ms = (clock() - t0) * 1000
     beats.append({"tag": tag, "value": r, "ms": round(ms, 2)})
     log(f"HB {tag} {'--' if r is None else f'{r:02X}'} {ms:.2f}ms")
+    if r != ID_VALUE:                       # a stale read after a page change gave 0x00 once in 4112 (re/regmap/README.md read-behind): confirm
+        r = rd.read(ID_ADDR, 1)[0]
+        log(f"HB {tag} confirm {'--' if r is None else f'{r:02X}'}")
     if r != ID_VALUE:
         raise Aborted(f"heartbeat {tag}: ID_REG read {r!r}, want 0x{ID_VALUE:02X}")
 
@@ -215,13 +233,14 @@ def run_pass(io, pages: list[int], block: bool, log, save, wall_s: float | None 
              clock=time.monotonic) -> dict:
     """Calibrate, scan, heartbeat. save(result) after every page. Returns the result dict (result 'ok' | 'aborted')."""
     rd = Reader(io, block, log, clock)
-    res: dict = {"path": "block" if block else "byte", "pages": {}, "heartbeats": [], "result": "ok", "abort": None}
+    res: dict = {"path": "block" if block else "byte", "pages": {}, "heartbeats": [], "result": "ok", "abort": None,
+                 "read_fix": "dword-discard", "behind_pages": [f"{p:02X}" for p in sorted(X.BEHIND_PAGES)]}
     t_start = clock()
     try:
         heartbeat(rd, "before", res["heartbeats"], log, clock)
         res["calibration"] = cal = calibrate(rd, log)
         maxlen = X.BLK_MAX if block else 1
-        total = sum(len(runs(p, maxlen=maxlen)) for p in pages)
+        total = sum(len(runs(p, maxlen=1 if p in X.BEHIND_PAGES else maxlen)) for p in pages)
         expect_s = total * cal["worst_ms"] / 1000      # calibration mean under-estimates (first pass: 8.8 s planned, 12 s real)
         res["wall_s"] = wall_s if wall_s is not None else round(max(expect_s * LIMIT_MARGIN, WALL_FLOOR_S), 1)
         res["expected_s"] = round(expect_s, 1)
@@ -233,7 +252,7 @@ def run_pass(io, pages: list[int], block: bool, log, save, wall_s: float | None 
             vals: list[int | None] = [None] * 256
             res["pages"][f"{p:02X}"] = vals
             log_excluded(p, log)
-            for a, n in runs(p, maxlen=maxlen):
+            for a, n in runs(p, maxlen=1 if p in X.BEHIND_PAGES else maxlen):
                 if clock() - t_start > res["wall_s"]:
                     raise Aborted(f"wall bound {res['wall_s']} s exceeded at 0x{a:04X}")
                 for i, v in enumerate(rd.read(a, n)):
@@ -247,7 +266,7 @@ def run_pass(io, pages: list[int], block: bool, log, save, wall_s: float | None 
     except Aborted as e:
         res["result"], res["abort"] = "aborted", e.reason
         log(f"ABORT {e.reason}")
-    res.update(reads_ok=rd.ok, reads_failed=rd.failed, reads_slow=rd.slow, max_ms=round(rd.max_ms, 3),
+    res.update(reads_ok=rd.ok, reads_failed=rd.failed, reads_slow=rd.slow, discards=rd.discards, max_ms=round(rd.max_ms, 3),
                elapsed_s=round(clock() - t_start, 2))
     return res
 

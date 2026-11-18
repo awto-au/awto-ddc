@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from rtd_i2c_bridge import Real  # noqa: E402
 import i2cbus  # noqa: E402
+from dbg_xdata import BEHIND_PAGES  # noqa: E402
 
 DBG = 0x35 << 1
 ROOT = Path(__file__).resolve().parent.parent
@@ -20,9 +21,11 @@ LOGF = ROOT / "tmp/logs/p037_test.log"
 
 
 def rd(d, a):
-    if not (d.write(DBG, 0x01, bytes([a >> 8])) and d.write(DBG, 0x3A, bytes([a & 0xFF]))):
-        return None
-    r = d.read(DBG, 0x08, 1)
+    """One byte via 0x3A. Read-behind pages (dbg_xdata.BEHIND_PAGES): read twice, the second is right."""
+    for _ in range(2 if (a >> 8) in BEHIND_PAGES else 1):
+        if not (d.write(DBG, 0x01, bytes([a >> 8])) and d.write(DBG, 0x3A, bytes([a & 0xFF]))):
+            return None
+        r = d.read(DBG, 0x08, 1)
     return r[0] if r else None
 
 

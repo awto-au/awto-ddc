@@ -4,6 +4,7 @@ Used by regmap_build.py, regmap_import.py, regmap_query.py. Log: ./tmp/logs/regm
 """
 import collections
 import csv
+import functools
 import gzip
 import os
 import re
@@ -53,6 +54,8 @@ RESERVED = re.compile(r"^(reserved|dummy|rsvd|res|resv|reserve|unused)\w*$", re.
 
 # keys that never enter the store: HDCP key / HDCP port registers (secret material)
 EXCLUDE_KEYS = {"71C4", "72C4", "71C9", "71CA", "72C9", "72CA"}
+READ_BEHIND = REGMAP / "read_behind.tsv"
+READ_BEHIND_COLS = ["page", "live", "isp", "live_byte", "live_block", "isp_byte", "wrong_by_lane", "tool", "date"]
 
 
 def log(msg):
@@ -208,6 +211,47 @@ class Obs:
     @property
     def sid(self):
         return Path(self.path).name.split(".")[0]
+
+
+ISP_LATCH_OTHER = {"8F", "CF"}       # isp verdict 'other', but 13 of 28 wrong reads are the latch: treated as affected
+
+
+@functools.lru_cache(maxsize=None)
+def read_behind_pages(col):
+    """Pages whose `live` (debug slave) / `isp` verdict contains the read-behind latch (yes, yes+other; isp also 8F / CF)."""
+    if not READ_BEHIND.exists():
+        return set()
+    _, rows = read_tsv(READ_BEHIND)
+    return {int(r["page"], 16) for r in rows
+            if r[col] in ("yes", "yes+other") or (col == "isp" and r["page"] in ISP_LATCH_OTHER and r[col] == "other")}
+
+
+def behind_drop(meta, key):
+    """True if the value comes from an old (unfixed) read of a read-behind page: the whole page is dropped (README Read-behind).
+    Lanes 1-3 are right in the probe, but old scans also read page windows (offsets C0..FF of 88 / 8A / 8B / 8E) that fixed scans
+    do not reproduce; the old values cannot be sorted into right and wrong. Port keys never; live / regdump use the live set, isp the isp set."""
+    if meta.get("read_fix") or ":" in key:
+        return False
+    page = int(key[:2], 16)
+    if f"{page:02X}" in stripped_pages(meta):
+        return False
+    return page in read_behind_pages("isp" if meta.get("method") == "isp" else "live")
+
+
+def stripped_pages(meta):
+    """Pages a file's #read_behind_stripped= header says were handled (`pages=88,8A,..; N values ...`)."""
+    h = meta.get("read_behind_stripped", "")
+    return set(h.split("pages=")[1].split(";")[0].split(",")) if "pages=" in h else set()
+
+
+def strip_behind(meta, vals):
+    """-> (vals without the known-wrong read-behind values, count); stamps meta['read_behind_stripped'] when anything went."""
+    drop = [k for k in vals if behind_drop(meta, k)]
+    if not drop:
+        return vals, 0
+    pages = sorted(stripped_pages(meta) | {k[:2] for k in drop})
+    meta["read_behind_stripped"] = f"pages={','.join(pages)}; {len(drop)} values"
+    return {k: v for k, v in vals.items() if k not in set(drop)}, len(drop)
 
 
 def obs_text(meta, vals):

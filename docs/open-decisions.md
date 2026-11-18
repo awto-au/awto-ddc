@@ -26,7 +26,7 @@
 | 19 | OSD open tests OT-1..OT-27 | listed; OT-4 read-back disagreement | `docs/osd/open-items.md` | no | A | #226 |
 | 20 | Live register scan units 1 / 2 | read-only, running; results to `re/regmap/obs/` | `docs/register-audit.md` | no | A | #236 / #237 |
 | 21 | Debris cleanup (#237) | retire docs that only link; list in the session report, not moved | #237 | no | D | #237 |
-| 22 | Undocumented registers that vary | 10 listed (`21D8`, `7607[1]`, `A7E0..`, `8F9D..`, `FF88`) | `docs/register-audit.md` | no | A | #236 |
+| 22 | Undocumented registers that vary | 6 listed (`21D8`, `7607[1]`, `A7E0..A7E2`, `AFE2`; `8F9D..` changes between passes C1 / C2) | `docs/register-audit.md` | no | A | #236 |
 | 24 | Stuck-key guard (D1) | a key / ladder stuck from power-on resets every setting after 10 s, every boot; latch a key already down at the first sample | `docs/monitoring.md` | no | D | #245 |
 | 25 | Cache meter in the monitor (D2) | enable `FDB3[0]` at boot, log miss rate; check speed at 350.8 MHz first | `docs/monitoring.md` | no | D | #245 |
 | 26 | HDMI RX error counter (D3) | regdb search before any monitor row | `docs/monitoring.md` | no | A | #245 |

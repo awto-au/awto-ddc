@@ -148,3 +148,80 @@ def test_moderately_slow_reads_are_logged_but_do_not_abort():
     lines = []
     res = S.run_pass(bus, [0x10], False, lines.append, lambda r: None, 1000.0, {0x10}, clock=lambda: t[0])
     assert res["result"] == "ok" and res["reads_slow"] > 100 and res["reads_failed"] == 0
+
+
+class BehindBusScan(FakeBus):
+    """XDATA = addr & 0xFF; on read-behind pages the first read of a new dword returns the previous read's dword byte of the same lane
+    (byte path), and every dword start of a block read does (block path)."""
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.last = None
+        self.behind = frozenset(X.BEHIND_PAGES)           # the hardware, whatever the scan believes
+
+    def _val(self, a, prev):
+        if (a >> 8) in self.behind and prev is not None and (a >> 2) != (prev >> 2):
+            return self.mem((prev & ~3) | (a & 3))
+        return self.mem(a)
+
+    def write(self, dev8, sub, data):
+        if sub == X.CMD_READ:
+            a = (self.hi << 8) | data[0]
+            v = self._val(a, self.last)
+            self.last = a
+            self.reads.append(a)
+            self.reply = bytes([v])
+            return True
+        if sub == X.CMD_BLOCK:
+            lo, hi, n, seq = data
+            a = lo | hi << 8
+            self.reads += range(a, a + n)
+            d = bytes(self._val(a + i, self.last if i == 0 else a + i - 1) for i in range(n))
+            self.last = a + n - 1
+            self.reply = d + bytes([(seq + lo + hi + sum(d)) & 0xFF])
+            return True
+        return super().write(dev8, sub, data)
+
+
+def test_read_behind_pages_are_discard_read_and_come_out_right_on_both_paths():
+    for block in (False, True):
+        bus = BehindBusScan(block=block)
+        res, lines, _ = run(bus, [0x8E, 0xA0, 0x20], block)
+        assert res["result"] == "ok" and res["read_fix"] == "dword-discard" and "8E" in res["behind_pages"]
+        for pg in ("8E", "A0", "20"):
+            assert all(v == i for i, v in enumerate(res["pages"][pg])), (block, pg)
+        assert res["discards"] >= 64 * 2 and sum(1 for ln in lines if "DISCARD" in ln) == res["discards"]
+        if block:                                           # clean pages keep the 24-byte transactions
+            assert any(ln.endswith("blk24") for ln in lines if ln.startswith("20"))
+            assert not any("blk" in ln for ln in lines if ln[:2] in ("8E", "A0"))
+
+
+def test_without_the_fix_the_fake_bus_corrupts_lane0(monkeypatch):
+    bus = BehindBusScan(block=False)
+    monkeypatch.setattr(X, "BEHIND_PAGES", frozenset())          # a scan that does not know the page
+    rd = S.Reader(bus, False, lambda s: None)
+    got = [rd.read(0x8E00 + i, 1)[0] for i in range(8)]
+    assert got != list(range(8)) and got[1:4] == [1, 2, 3] and got[4] != 4
+
+
+def test_heartbeat_is_confirmed_once_before_it_aborts():
+    calls = []
+
+    class Hb(FakeBus):
+        def write(self, dev8, sub, data):
+            ok = super().write(dev8, sub, data)
+            if sub == X.CMD_READ and self.hi == 0 and data[0] == 0:
+                calls.append(1)
+                if len(calls) == 1:
+                    self.reply = bytes([0])               # one stale read, the confirm is right
+            return ok
+    res, lines, _ = run(Hb(block=False), [0x10], False)
+    assert res["result"] == "ok" and any("confirm" in ln for ln in lines)
+
+
+def test_dbg_xdata_read_blocks_uses_the_byte_path_inside_read_behind_pages():
+    bus = BehindBusScan(block=True)
+    got = X.read_blocks(bus, 0x8DF0, 0x40)                  # crosses 8D -> 8E
+    assert got == bytes((0x8DF0 + i) & 0xFF for i in range(0x40))
+    assert X.read_bytes(BehindBusScan(), 0x8E10, 16) == bytes(range(0x10, 0x20))
+    assert X.read_byte(BehindBusScan(), 0x8E13) == bytes([0x13])

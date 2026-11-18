@@ -8,6 +8,13 @@
 - Conditions (2026-11-19, 00:13-00:47 +11:00): units 1 (HDMI-1, 4K60, brightness 64) and 2 (DisplayPort-1, brightness 32) in normal use, own firmware (diag version 2 = block path), 100 kHz, host state read before/after with ddcutil getvcp 60/10/D6: unchanged.
 - Passes: A at t0, B 4+ min later, C 30+ min after A; same input and mode throughout.
 
+## Read-behind correction (2026-11-19)
+- Passes A / B / C below (units 1 / 2, block path, no fix) read pages `88 8A 8B 8E 8F 90 A0 A3 A4 A6 A7 A8 AB AC AE AF C8 CA CB CE CF D0` with the artifact: the first byte of every dword (and the first byte after another address) can be the previous dword's byte (`re/regmap/README.md` "Read-behind", `re/regmap/read_behind.tsv`). Their values on those pages are not trusted and were removed from `re/regmap/obs/`; everything else in the tables stands.
+- Fixed tool: byte path with a discarded first read of each new dword on those pages (`DISCARD` lines in the log, JSON `read_fix`). Unit 1 is dark (not rescanned): its values on those pages are gone from the store.
+- Fixed scans (2026-11-19, 100 kHz, MCU running, 8624 reads each, 0 failed): unit 3 C1 07:16:01 (17 s) and C2 07:21:05 (17 s), unit 2 R1 07:16:31 (31 s), all awake (host displays woken, DPM on); S1 on both units 07:14 in standby (host displays asleep, DPM off, PHY regs read 0).
+- Unit 3 C1 vs C2 (4 min 47 s apart): 243 addresses differ, 147 in firmware RAM D0-FC, 96 registers: counters (22AC/AF, 22BE/C1, B712..B737, 9DAD/9FAD, BDAD, FDC8/C9, 72CD), 0045, 3007, 300B, 38D8/D9, FF79, FFAA/AB, 8F9B..8FBB / CF1E..CFCE pattern bytes, DC PHY regs in A06x A0Ax A64x..A66x A76x A86x A8Ax AE4A..AE6D (61 of the 96 are on read-behind pages).
+- Unit 3 C1 vs unit 2 R1: 615 registers differ (4747 RAM addresses).
+
 ## Reads and timing
 | unit | pass | path | result | reads | elapsed |
 |---|---|---|---|---|---|
@@ -44,9 +51,9 @@
 | 06A4 | OSC_TRIM_CNT | C8 C8 C8 | A8 A8 A8 | C8 CB CF D0 |
 | 06A5 | EMB_BGRES | 77 77 77 | 77 77 77 | 77 |
 | FF09-FF0C | ADC_A0..A3_CONVERT_RESULT | F8 F8 F8 x4 | F8 F8 F8 x4 | 00 F8 |
-| A750-A757, AF50-AF57 | DC_PHY speed sensor ctrl/status | identical, STATUS 00 | identical, STATUS 00 | 00 (A753/AF53 = 01) |
-| A7E0-A7E3 | DC_PHY BIST_DETAIL (A) | 5F CD B0 83 const | 63 5B B8 2F const | 56/5E/5F, 14/54/8D ... |
-| AFE0-AFE3 | DC_PHY BIST_DETAIL (B) | 87 D3 EE 5F const | 7F E9 2D 06 const | 87/EE ... |
+| A750-A757, AF50-AF57 | DC_PHY speed sensor ctrl/status | identical, STATUS 00 | identical, STATUS 00; fixed scans R1 / C1 / C2: A753 / AF53 = 01 awake, 00 standby, STATUS 00 | 00 (A753/AF53 = 01) |
+| A7E0-A7E3 | DC_PHY BIST_DETAIL (A) | (old, first byte wrong) | fixed scans: 00 FF 10 08 = 00E0..00E3 (standby 00 FF 00 00) | ISP after reset 5E 14 BE 8D |
+| AFE0-AFE3 | DC_PHY BIST_DETAIL (B) | (old, first byte wrong) | fixed scans: 00 FF 10 08 = 00E0..00E3 | ISP: 87/EE ... |
 | FFAA / FFAB | WATCHDOG_CNT2 / CNT23_VALUE | 16 43 E9 / 73 55 52 | 67 AA D1 / 60 62 6E | 00 08 / 00 65 (halted) |
 | FF79 | ACCESS_FLASH_ADDR_1 | B0 B6 BC (+6 per pass) | C6 CC D2 (+6 per pass) | 00 B0 |
 | 0045 | LAST_LINE_L | 85 85 87 | AD B1 AB | 37 5C AE CA CC CD DD |
@@ -54,7 +61,7 @@
 | B996-B998 | AUD_TRND_4..6 | 00 | 3E 4C 4F / 3E 4C 4F / 0F 00 00 | 00 |
 - Trim counter: constant over 30+ min on both units; units differ by 0x20 [sdk-hypothesis: per-chip trim, not temperature].
 - ADC: all four channels read F8 on both units = no key pressed / pulled high; no channel floats or drifts [sdk-hypothesis: key ladder reads high when idle].
-- DSS status all 00 and BIST_DETAIL constant per unit, different between units, within the ISP-dump value sets of the other unit.
+- DSS status all 00 (also in the fixed scans: STATUS_3 `A757` is read inside a block, so "never ready" (docs/temperature.md) is not the artifact). BIST_DETAIL is state dependent (table above), not a per-unit constant: the old per-unit values (5F CD B0 83 / 63 5B B8 2F) were not reproduced in 3 fixed scans of 2 units, and its first byte was a read-behind value.
 - Counters that step +1 per pass (SPI_S0/S1_RX_BUF_READ_ADR 22AC/22BE, MSG_RX_BUF0/1_RDPTR B712/B716/B732/B736, AUX_FIFO_RD_PTR 9DAD/9FAD/BDAD, HDMI_PSAP 72CD, CACHE_CONTENT_ADDRESS_L FDC8, BDDC): follow the number of scan sessions [sdk-hypothesis: advanced by the link-on DDC/CI message / host getvcp traffic, i.e. self-induced].
 - WATCHDOG_CNT2/CNT23 values are live free-running counts (different every pass; the halted ISP dumps show 00/08/65); FF79 steps +6 per pass on both units.
 - Sensor-like (drifting, small): 0045 LAST_LINE_L (measured line count, mode related), DPTX_CMU8/9 (PLL calibration code), AUD_TRND/SUMC (audio PLL trend), B8BC MN_SCLKG_SDM_SUMC_L: all documented, none monotonic over A/B/C beyond noise. Unit 1 never changes in B901/B922/B996 (audio/DP regs inactive on HDMI).

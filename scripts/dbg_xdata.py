@@ -14,11 +14,24 @@ BLK_MAX = 24                                # RL6449_Project.h _AWTO_DBGISR_BLK_
 VERSION_BLOCK = 2                           # diag block byte 2 (ucVersion): firmware answers 0x3C
 
 
+# Read-behind (re/regmap/README.md, re/regmap/read_behind.tsv): on these pages the first read of a 32-bit dword can return the
+# previous dword's byte of that lane; a second read of the same address is right. Byte path and block path (every dword start).
+BEHIND_PAGES = frozenset({0x88, 0x8A, 0x8B, 0x8E, 0x8F, 0x90, 0xA0, 0xA3, 0xA4, 0xA6, 0xA7, 0xA8, 0xAB, 0xAC, 0xAE, 0xAF,
+                          0xC8, 0xCA, 0xCB, 0xCE, 0xCF, 0xD0})
+
+
+def stale_prone(addr: int, last: int | None) -> bool:
+    """A read of `addr` right after a read of `last` (None = unknown) can be stale: read-behind page, new dword."""
+    return (addr >> 8) in BEHIND_PAGES and (last is None or (addr >> 2) != (last >> 2))
+
+
 def read_byte(io, addr: int) -> bytes | None:
-    """One byte, both stage writes + the read (self-contained: no state from an earlier call)."""
-    if not (io.write(DEV8, CMD_HI, bytes([addr >> 8])) and io.write(DEV8, CMD_READ, bytes([addr & 0xFF]))):
-        return None
-    return io.read(DEV8, READ_SUB, 1)
+    """One byte, both stage writes + the read (self-contained: no state from an earlier call). Read-behind pages: read twice."""
+    for _ in range(2 if (addr >> 8) in BEHIND_PAGES else 1):
+        if not (io.write(DEV8, CMD_HI, bytes([addr >> 8])) and io.write(DEV8, CMD_READ, bytes([addr & 0xFF]))):
+            return None
+        r = io.read(DEV8, READ_SUB, 1)
+    return r
 
 
 _seq = 0
@@ -51,30 +64,42 @@ def read_chunk(io, addr: int, n: int, tries: int = CHUNK_TRIES) -> bytes | None:
 
 
 def read_bytes(io, addr: int, n: int) -> bytes | None:
-    """Byte path: hi staged once per 256-byte page (rtd_diag protocol), 0x3A + read per byte."""
-    out, hi = bytearray(), None
+    """Byte path: hi staged once per 256-byte page (rtd_diag protocol), 0x3A + read per byte.
+    Read-behind pages: the first read of each new dword is repeated and the second result kept."""
+    out, hi, last = bytearray(), None, None
     for i in range(n):
         a = (addr + i) & 0xFFFF
         if a >> 8 != hi:
             hi = a >> 8
             if not io.write(DEV8, CMD_HI, bytes([hi])):
                 return None
-        if not io.write(DEV8, CMD_READ, bytes([a & 0xFF])):
-            return None
-        r = io.read(DEV8, READ_SUB, 1)
-        if r is None:
-            return None
+        for _ in range(2 if stale_prone(a, last) else 1):
+            if not io.write(DEV8, CMD_READ, bytes([a & 0xFF])):
+                return None
+            r = io.read(DEV8, READ_SUB, 1)
+            if r is None:
+                return None
+        last = a
         out.append(r[0])
     return bytes(out)
 
 
 def read_blocks(io, addr: int, n: int) -> bytes | None:
+    """Block path in 24-byte chunks; the parts inside read-behind pages go over the byte path (a block has a stale byte at every dword start)."""
     out = bytearray()
-    for off in range(0, n, BLK_MAX):
-        c = read_chunk(io, (addr + off) & 0xFFFF, min(BLK_MAX, n - off))
+    off = 0
+    while off < n:
+        a = (addr + off) & 0xFFFF
+        if (a >> 8) in BEHIND_PAGES:
+            m = min(n - off, 256 - (a & 0xFF))
+            c = read_bytes(io, a, m)
+        else:
+            m = min(BLK_MAX, n - off, 256 - (a & 0xFF))
+            c = read_chunk(io, a, m)
         if c is None:
             return None
         out += c
+        off += m
     return bytes(out)
 
 

@@ -3,7 +3,8 @@
 
 usage: cpu_suite_regs.py [--check]
   RD table  = per scaler page up to 2 registers that read one constant value in every live observation (obs_n >= 10, obs_const set),
-              no side effect in the map, not in reg_live_scan.EXCLUDE, access without W1C / RC, name without port / FIFO / status words.
+              no side effect in the map, not in reg_live_scan.EXCLUDE, access without W1C / RC, name without port / FIFO / status words,
+              not on a read-behind page (dbg_xdata.BEHIND_PAGES: a first read of a dword is stale = false garbled read), not on RAM pages D1..FC.
               The suite reads each one back-to-back at a MOVX stretch and compares with the constant: a mismatch is a garbled read.
   WR table  = per page up to 1 blank-reserved DUMMY / RESERVED register the SDK does not use (sdk_uses 0) that read 00 in every
               observation: candidate scratch registers for write-then-read-back. The firmware writes them only with the host's
@@ -19,11 +20,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import reg_live_scan as L  # noqa: E402
+import dbg_xdata as X  # noqa: E402
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/cpu_suite_regs.inc"
 MIN_OBS = 10                    # observations a constant must hold over (live reads on 3 units, several states)
 MIN_OBS_WR = 20
+RAM_PAGES = range(0xD1, 0xFD)   # firmware XDATA RAM (docs/live-register-scan.md): constants there are image facts, not registers
 MAX_PAGE = 0xFD                 # pages FE / FF are the MCU's own registers (DDC, IIC, flash controller): not in the table
 RD_PER_PAGE = 2
 BAD_WORDS = ("PORT", "FIFO", "STATUS", "FLAG", "RESULT", "DATA", "INT_", "IRQ", "READ", "KEY", "HDCP", "SRAM", "TABLE")
@@ -37,7 +40,7 @@ def rows() -> list[dict]:
 
 def safe_read(r: dict) -> bool:
     a = int(r["key"], 16)
-    return (a >> 8) <= MAX_PAGE and not r["side_effects"] and not L.excluded(a) and not any(b in r["access"] for b in BAD_ACCESS) \
+    return (a >> 8) <= MAX_PAGE and (a >> 8) not in X.BEHIND_PAGES and (a >> 8) not in RAM_PAGES and not r["side_effects"] and not L.excluded(a) and not any(b in r["access"] for b in BAD_ACCESS) \
         and not any(w in r["regdb_name"].upper() for w in BAD_WORDS) and r["class"] != "status"
 
 

@@ -10,6 +10,7 @@ Home issue: #236 (acceptance: regdb name + status + test + result per row; gener
 | `fields.tsv` | one per annotated bit range (`PPAA[hi:lo]`) | same |
 | `i2c.tsv` | I2C devices and commands that are not registers: `I2C:AA` (7-bit address), `SCDC:OO` (offset at 0x54), `CMD:CC` (command byte); columns `key role status test_id result evidence source notes issue`, same values as regs.tsv, hand only | you (`regmap_build.py --set-i2c KEY col=val`) |
 | `tests.tsv` | tests that are not in `docs/osd/open-items.md` (`C-*`) | you |
+| `read_behind.tsv` | per page: does a first read of a dword return stale data (debug slave / ISP); see "Read-behind" | `scripts/reg_behind_probe.py --tsv` |
 | `obs/*.tsv.gz` | observation store, one file per dump / scan | `regmap_import.py` only |
 
 Format: TSV, UTF-8, header line, LF, no quoting (no tab / newline inside a cell), sorted by key. Stdlib reader: `regmap_lib.read_tsv`. Greppable: `grep -P '^FFED\t' re/regmap/regs.tsv`.
@@ -73,6 +74,17 @@ Hand: `name` (our name when the regdb has none or is wrong), `role`, `status`, `
 - Only unique (serial, label, time): an existing file is kept. Never stored: HDCP key / port registers (`71C4 72C4 71C9 71CA 72C9 72CA`, `regmap_lib.EXCLUDE_KEYS`); the check fails if one appears. No firmware bytes, no flash content.
 - ISP dumps read `FFxx` (MCU registers) as 00: not the running value; use live scans for `FF00..FFFF`. Compare observations by `method`.
 - Size budget: `obs/` <= 1.5 MB, `regs.tsv` <= 4 MB (`--check` fails above). Register values of our own units are fine in the public repo.
+
+## Read-behind (read artifact on the PHY pages, found 2026-11-19)
+- Rule [hw]: on a read-behind page, the first read of an aligned 32-bit dword (address & ~3 differs from the previous read's) can return the byte of the same lane of the previous dword (the old latch). Other bytes of that dword, and a repeat read of the same address, return the settled value. Verdict per page in `read_behind.tsv` (`live` = debug slave 0x35, MCU running; `isp` = ISP F4/F5, MCU halted).
+- Pages (live): `88 8A 8B 8E 8F 90 A0 A3 A4 A6 A7 A8 AB AC AE AF C8 CA CB CE CF D0`; `A*` only stale-by-latch (repeat reads right), the rest also have registers whose value depends on earlier reads (`yes+other`: e.g. 88C0..88FF read 00 / 0D after a low address, 80 80 .. 10 54 44 C0 .. after a sequential scan).
+- Debug slave byte path: first read of each new dword stale (A0: 93 % of the informative reads, 8E: 90 %, 88: 72 %); repeat read right.
+- Debug slave block path (0x3C): every dword start inside a block and the first byte after another address are stale (targeted test: 8E 16 of 16 in-block dword starts, A0 / A8 8 of 8); lanes 1-3 right. Block reads therefore carry the artifact too.
+- ISP path: 88 8A 8B 8E 8F 90 C8 CA CB CE CF D0 show it at a lower rate (8E 25 wrong of 385 new-dword reads vs 217 live); A0 A3 A4 A6 A7 A8 AB AC AE AF read clean (0 wrong).
+- Tool rule: read twice on a first read in a dword (`dbg_xdata.BEHIND_PAGES`, `stale_prone`): `reg_live_scan.py` (byte path + DISCARD lines on those pages), `dbg_xdata.read_byte / read_bytes / read_blocks`, `p037_test.rd`, `rtd_dbg_read.py`. Scans with it carry `#read_fix=dword-discard`.
+- Store rule: old (unfixed) observations of the affected pages are removed whole (live / regdump: the live set; isp: the isp set): lanes 1-3 are right in the probe, but old scans also read page windows (offsets C0..FF of 88 / 8A / 8B / 8E read as 00C0..00FF in fixed scans) that the old values do not match, so right and wrong cannot be separated. `regmap_strip_behind.py` applied it once (header `#read_behind_stripped=pages=..; N values`), `regmap_import.py` applies it to any JSON without `read_fix`, `regmap_build.py --check` fails on a file that still holds such values. Time-varying registers on those pages stay time-varying.
+- Not the latch (`other` in `read_behind.tsv`: 23 50 67 8C 94 C1 CC): a read at another address changes the value read; port-like or read-sensitive registers.
+- Probe: `reg_behind_probe.py --unit 3 [--isp]` (read-only; ISP halts + resets the unit: test unit only). Probe data stays in `tmp/regs/live/`.
 
 ## Add an observation
 ```

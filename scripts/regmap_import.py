@@ -8,6 +8,7 @@ Formats (detected):
   live    scripts/reg_live_scan.py output: {"serial","unit","label","start","pages":{"PP":[256 ints|null]},"excluded":[...],"link_off":..}
 Skipped with a message: gpio / power-state / DPCD JSON (no register pages).
 Defaults: isp dump -> state halted+reset; live scan -> state running; a dump carrying a "note" (debug-link read) -> method regdump, state running.
+Old (unfixed) reads of read-behind pages lose the known-wrong values on import (README "Read-behind"); scans carrying "read_fix" are kept whole.
 Never stored: HDCP key / port registers (regmap_lib.EXCLUDE_KEYS). Existing (serial,label,time) files are kept unless --force.
 Log: ./tmp/logs/regmap.log
 """
@@ -73,6 +74,8 @@ def convert(path, a):
     meta = {"source": Path(path).name, "serial": serial, "unit": str(d.get("unit") or serial[-1]), "label": re.sub(r"[^A-Za-z0-9+_.-]", "_", label),
             "state": state, "method": method, "time": t, "uptime_s": a.uptime or "", "bus": str(d.get("bus", "")),
             "image": d.get("image", ""), "note": note.replace("\t", " ").replace("\n", " ")}
+    meta["read_fix"] = d.get("read_fix", "")       # reg_live_scan.py passes with dword-discard reads: nothing to strip
+    vals, _ = L.strip_behind(meta, vals)
     stamp = re.sub(r"[^0-9T]", "", t[:19]).replace("T", "-")
     return (f"{serial}-{meta['label']}-{stamp}", meta, vals), ""
 
