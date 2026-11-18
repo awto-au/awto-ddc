@@ -112,6 +112,7 @@
 #define AWTO_SET_SSC                  114
 #define AWTO_SET_PANEL_HOURS          115
 #define AWTO_SET_PANEL_MIN            116
+#define AWTO_SET_BOOT_SPLASH          122
 #define AWTO_PCT_TO_255(p)           ((BYTE)(((WORD)(p) * 255) / 100))   // SDK store field of a percent row: 0..255
 #define AWTO_SET_DEF_BRIGHTNESS       50
 #define AWTO_SET_DEF_BLACK_LEVEL      50

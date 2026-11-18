@@ -28,6 +28,32 @@ Status 2026-11-18. Seen on unit 3 (Dan: "looked great").
 - A kernel update left the module built for the old kernel; the load failed and every flash ran at 100 kHz without saying so. `scripts/gmbus_rate.py` now rebuilds when the module is missing or its vermagic differs from `uname -r` (needs `/usr/src/kernels/<release>`).
 - Measured 2026-11-18 on unit 3, full image 896 KiB, burst, 224 sectors: 109 s at 100 kHz, 26 s at 1 MHz, 0 burst failures, 0 ISP recoveries, final CRC OK (2 runs).
 
+## Boot splash (Dan's idea: big Pac-Man at power-on)
+
+Status 2026-11-18, sim only (no hardware run).
+
+- Cold power-up only (Dan, 2026-11-18): `AwtoBootReason() == AWTO_BOOT_COLD`. Warm resets (host ISP 0xEE, watchdog bite, probe / hardware watchdog reset, any warm start) show nothing.
+- Registry `boot_splash` (id 122, bool, group osd, default On, no VCP code; menu OSD page / DDC paged pair 0xE0 / 0xE1). Off = no splash.
+- Drawing: the flash screen's (red window, 72 x 72 px Pac-Man mouth open, rotate 180 turned) with the title row "AWTO" (second row of `g_aucFsTitle`, `gen_flash_screen.py` `TITLE_SPLASH`). `AwtoFlashDraw(ucSplash, ucStep)` = one step; `AwtoFlashScreen(1 | 2)` runs all steps (flash / preview).
+- Preview: DDC/CI VCP 0xEB = 7 ("Boot splash"); stays until VCP 0xEB = 0.
+- Start: first main pass (`AwtoSaverPoll`, `fw/test/saver.c`) arms it (run SPLASH / why BOOT, sync line E9 79); all draw steps run in the first pass in mode INITIAL.
+  - Earlier passes are mode POWER_OFF: the SDK's INITIAL OSD init wipes anything drawn there (white fill seen in the sim).
+  - A hold (`AWTO_HOLD_POPUP`) is set after the draw so SDK OSD resets cannot wipe it; Stop / the console release it.
+- Ends:
+  - mode ACTIVE: `AwtoSaverStop` closes it (the console auto-open waits for the hold)
+  - first front key (`AwtoSaverKey`); DDC/CI commands do not end it (the host talks at power-on)
+  - console / test command taking the OSD (`OsdDispDisableOsd` past the hold -> `AwtoSaverTaken`): ends, nothing closed
+  - hard maximum `AWTO_SPLASH_MAX_MS` 3 s from the arming pass: ~4x power-on -> ACTIVE in the sim (0.75 s), = console hold `AWTO_CON_HOLD_MS`; expiry closes the OSD
+- Check: `scripts/splash_sim.py BIN MAP` (cold boot vs the same image at boot_splash = 0, key end, warm reset + watchdog bite show none, setting off, preview frames upright / Rotate 180 in `tmp/splash_sim/`).
+
+### Cold boot timeline (sim, `splash_sim.py`, unit-3 image, 1080p60, 2026-11-18, fw ms)
+
+- Main pass 1 at 162 (mode POWER_OFF); pass 2 at ~585 in mode INITIAL (pass 1 holds INITIAL: panel T1, HPD, link training, video 542).
+- 585: splash drawn (OSD on), visible until the display-setting panel cycle blanks the OSD (~750).
+- 780: ACTIVE; 816: console opens, splash released (823).
+- Cost against the same image at boot_splash = 0: ACTIVE +45 ms (780 vs 735), console +51 ms (accepted by Dan: the draw is ~45 ms of main-loop work in pass 2).
+- Black between the OSD blank (~750) and the console (~816).
+
 ## Open
 
 - Self-flashing from firmware: #232 part 2.
