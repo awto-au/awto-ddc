@@ -1280,6 +1280,20 @@ def cmd_clk_sweep(extra: list[str]) -> int:
     return _py("clk_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
+@command("OSD write-rate sweep (image built with -D _AWTO_OSD_HWTEST; docs/osd-write-sweep.md): groups base fff1 fffb ffbc burst state size combo hold autorevert, --sim runs it in the firmware sim",
+         args="[--unit N] [--map F] [--sim] [--continue-on-fail] GROUP...", kind="action")
+def cmd_osd_sweep(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
+    bad = [x for x in extra if x.startswith("-")]
+    if bad or not extra:
+        raise SystemExit(f"osd-sweep: need GROUPs; bad {bad or 'none'}; nothing done")
+    m = Path(_fwmap(u, given))
+    opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else [])
+    return _py("osd_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
+
+
 @command("unused GPIO inputs: snapshot | watch changes | open/close the live OSD screen over I2C",
          args="[--unit N] [--map F] [--secs S] snapshot|watch|open|close", kind="action")
 def cmd_gpio(extra: list[str]) -> int:

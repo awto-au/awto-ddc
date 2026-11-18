@@ -95,9 +95,9 @@ BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep)
         {
             AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
             ucB = FsCellId((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell(usI, AWTO_FS_CELLS) : usI, ucSplash);
-            ScalerOsdDataPort(AWTO_FS_CHAR_B0);
-            ScalerOsdDataPort(ucB);
-            ScalerOsdDataPort((BYTE)((((ucB >= AWTO_FS_PM_OPEN) ? AWTO_FS_YELLOW : AWTO_FS_WHITE) << AWTO_FS_FG_SHIFT) | AWTO_FS_BG));
+            AWTO_OSD_PORT(AWTO_FS_CHAR_B0);
+            AWTO_OSD_PORT(ucB);
+            AWTO_OSD_PORT((BYTE)((((ucB >= AWTO_FS_PM_OPEN) ? AWTO_FS_YELLOW : AWTO_FS_WHITE) << AWTO_FS_FG_SHIFT) | AWTO_FS_BG));
         }
         return 0;
     }
@@ -118,7 +118,7 @@ BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep)
                 {
                     ucB = FsByte(usI * AWTO_FS_GLYPH_BYTES + ucK);
                 }
-                ScalerOsdDataPort(ucB);
+                AWTO_OSD_PORT(ucB);
             }
         }
         return 0;

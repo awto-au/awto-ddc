@@ -1,0 +1,11 @@
+id	question	method	doc	state	issue
+C-PLLHW	does the M2PLL move to 372..487 MHz lock and keep every check passing; where does the MCU stop	./dev.py clk-sweep --unit 3 pmNN / p372 p401 p430 p487 (Phase B; needs Dan's go)	docs/clock-sweep.md	pending	#236
+C-NVWR	do NVRAM flash write / erase (FF60..FF6F common instruction) work above 87.7 MHz without the 9-cycle MOVX wrapper	clk-sweep step + NVRAM write / erase round trip with the SDK wrapper removed	docs/clock-sweep.md	pending	#236
+C-SOAK	does 175.4 / 350.8 MHz hold for hours, on other units, over temperature	soak run (CRC passes + savers), unit temperature logged	docs/clock-sweep.md	pending	#236
+C-IOSC	does the oscillator trim counter (06A4, 06A5[7:4]) track die temperature or clock	read 06A4 / 06A5 live at cold boot vs after a long soak at stock and at 175.4 MHz	docs/clock-sweep.md	proposed	#206
+C-DSS	does the DC PHY speed sensor (A750..A757 / AF50..AF57) count when speed_en is set, and does the count move with temperature	set A753[6], read A755..A757 live, repeat cold / warm	docs/clock-sweep.md	proposed	#236
+C-I2CS	is FF83..FF88 a second I2C slave block: which address, which pins, does it answer	read FF83..FF88 live at rest and during DDC/CI traffic; probe the bus for a second address	docs/clock-sweep.md	proposed	#236
+C-LSADC	can LSADC A2 (FF0B) read a temperature through an external NTC on pin 96	hardware mod + FF0B reads	docs/clock-sweep.md	proposed	#206
+C-PCBANK	does 21D8 report the code bank of the running MCU	poll 21D8 live during a loop with a known bank sequence (linker map)	docs/clock-sweep.md	proposed	#236
+C-LIVE	which undocumented registers change with a controlled state change (input switch, signal loss, sleep / wake)	two live scans (scripts/reg_live_scan.py) per state, diff with regmap_query.py --changing	docs/clock-sweep.md	proposed	#236
+C-BIST	what do the DC PHY BIST detail registers (A7E0..A7E2 / AFE0..AFE2) report	run the Realtek BIST sequence (#228), read the detail registers	docs/clock-sweep.md	proposed	#228

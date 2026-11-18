@@ -3,6 +3,8 @@
 Measured 2026-11-18 on unit 3 (AWT26110003, chip ID reads 0x23, M2PLL 350.79 MHz = 14318 kHz x 49 / 2), image = commit 465cb97 + `-D _AWTO_OSD_HWTEST` (tag clk10), 4K60 DP input, Rotate 180, ambient temperature not logged.
 Tags: `[hw]` measured on the unit, `[ds]` MX25L8006E datasheet (`/vendors/macronix/MX25L8006E_v1.6.pdf`, 57 pages, Table 13), `[regdb]` `re/regdb/RTD2795T-CG.tsv.gz`, `[sdk-hypothesis]` Realtek SDK claim, `[sim]` fw_sim only.
 
+Register roles, stock values and per-register results: `re/regmap/regs.tsv` (keys `01E0..01E7 FFED FFEE FFE9 FFBD FF6B FF6C FDA0 FDA1 FDB3..FDC6 FDCC 4006 4007 8006 0022`; tests `T-L`, `T-M`, `C-PLLHW`, `C-NVWR`, `C-SOAK` in `re/regmap/tests.tsv`); query: `python scripts/regmap_query.py FFED`.
+
 ## Tool
 - `./dev.py clk-sweep --unit 3 [--sim] [--continue-on-fail] STEP...` -> `scripts/clk_sweep.py`; firmware op `AwtoClkApply` in `fw/test/testcmd.c` (struct `g_stAwtoClk`, HWTEST builds only). Logs `tmp/logs/clk_sweep.log` / `.tsv`.
 - Runtime step = dividers `FFED[5:2]` F, `FFEE[5:2]` M, `FFE9[3:0]` F2 (MCU = M2PLL / F / M, SPI = M2PLL / F / F2), written in an order whose every transient keeps SPI <= rating and MCU <= the faster end; then Timer2 reload (same formula as `_TIMER2_COUNT_NUM`; formula checked against the stock `RCAP2` = 0xE373 on every run), `DELAY_5US` / `DELAY_XUS` counts (scaled, then secant-calibrated to 105 % +-5 against Timer2), DDC debounce counter scaled with the clock, pad drive / slew optional.
@@ -57,7 +59,7 @@ Stress (CRC passes of 15.6 KB through the cache, 0 passes differing): stock 40, 
 - Delay counts 26 / 21 -> 53 / 44 at 175.5 (SDK): our calibrated stock counts differ (28 / 24 here), the calibrated counts scale ~1 / clock (e.g. 36 / 39 at 175.4, 116 / 90 at 350.8).
 - Timer0 / 1 step 8 -> 4 ms: Timer0 / 1 events are off in our build (`_INSTANT_TIMER_EVENT_0/1 = _OFF`), `t0ev.c` ticks from `RCAP2`; no step needed.
 - "WDT counts crystal time": the WDT counter / Timer2 ratio read 1.000, 1.082, 1.068 on different runs: not a fixed reference; the host clock is the reference.
-- `FFEE[6]` mcu_peri_non_stop reads 1 at every step. Chip-ID register read returned 0x23 (rev E) mostly, 0x02 once: unreliable read, not used.
+- `FFEE[6]` mcu_peri_non_stop: `re/regmap/fields.tsv` key `FFEE[6:6]`. Chip-ID register read returned 0x23 (rev E) mostly, 0x02 once: unreliable read, not used.
 - Pad drive (`P10_C2` 5.5 mA vs 4 mA) and slew: no failure without it at 70.2 MHz, so no effect measurable.
 
 ## Recommendation

@@ -562,4 +562,6 @@ fw/test/snd.c|-|const|AWTO_PS_TICK_MS|1	W0560	E	fw/test/snd.c	12	-	const	10	ms	A
 fw/test/snd.c|-|const|AWTO_PS_GAP_MS|1	W0561	E	fw/test/snd.c	40	-	const	4	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	4	4	ours	[emu]	OK		AWTO_PS_GAP_MS
 fw/test/testcmd.c|-|const|AWTO_OHW_CY_MS|1	W0562	E	fw/test/testcmd.c	216	-	const	8000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8000	8000	ours	[emu]	OK		AWTO_OHW_CY_MS
 fw/test/testcmd.c|-|const|AWTO_OHW_CY_BAND_MS|1	W0563	E	fw/test/testcmd.c	219	-	const	8	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8	8	ours	[emu]	OK		AWTO_OHW_CY_BAND_MS
-fw/test/testcmd.c|-|const|AWTO_DEMO_MS|1	W0564	E	fw/test/testcmd.c	1439	-	const	5	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	5	5	ours	[emu]	OK		AWTO_DEMO_MS
+fw/test/testcmd.c|-|const|AWTO_OSW_MAX_MS|1	W0564	E	fw/test/testcmd.c	1628	-	const	1000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	1000	1000	ours	[emu]	OK		AWTO_OSW_MAX_MS
+fw/test/testcmd.c|-|const|AWTO_OSW_HOLD_MAX_MS|1	W0565	E	fw/test/testcmd.c	1629	-	const	30000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	30000	30000	ours	[emu]	OK		AWTO_OSW_HOLD_MAX_MS
+fw/test/testcmd.c|-|const|AWTO_DEMO_MS|1	W0566	E	fw/test/testcmd.c	2157	-	const	5	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	5	5	ours	[emu]	OK		AWTO_DEMO_MS
