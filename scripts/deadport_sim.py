@@ -4,7 +4,9 @@
 usage: deadport_sim.py BIN MAP [--case vcp|sel|cmd|all] [--mode 1080p60] [--secs 16]
   Board: HDMI source on D3 (the only cable; D1 / D2 cable pins read unplugged), boot to ACTIVE on D3.
   vcp  DDC/CI set VCP 0x60 = 0x11 (D2) over the spare IIC engine. PASS: refused, still ACTIVE on D3 after --secs.
-  sel  front keys: SOURCE opens the selector (on Auto), 2x DOWN steps to D2, AUTO takes it. PASS: refused, still ACTIVE on D3.
+  sel  front keys: SOURCE opens the selector (on Auto), 2x DOWN steps to D2, AUTO takes it (no cable on D2, Dan 2026-11-19:
+       taken anyway). PASS: still on D2 without a picture after --secs (inside AWTO_SRC_NOCABLE_HOLD_MS), "taken, no cable" line.
+  selhold  as sel, --secs past AWTO_SRC_NOCABLE_HOLD_MS: PASS: D2 held, then the dead-port auto search is back ACTIVE on D3.
   cmd  test cmd 0x32 (switch to D2, fixed port; test cmds are not refused).
        PASS: back to ACTIVE on D3 within --secs (guard: fixed port, no cable, no signal -> auto search).
   Each case also needs its log line: switch-log 0xB8 (vcp / sel: arg 1, cmd: arg 3) and the sync-log line (sync.tsv DF; sel: E0 06).
@@ -22,6 +24,7 @@ import ddc_sim as DD  # noqa: E402
 import sync_log as SL  # noqa: E402
 
 D3 = 6                                  # Global.h _D3_INPUT_PORT
+D2 = 5
 TESTCMD = 0xF6F8                        # isr_g_stAwtoDiag + 0x28
 A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8     # key ADC cells (key_sim_test.py KEY_ADC band centres below)
 KEY_SOURCE, KEY_DOWN, KEY_UP, KEY_AUTO, KEY_MENU = (A1, 0x80), (A1, 0x38), (A0, 0x38), (A0, 0x80), (A0, 0xD0)
@@ -79,7 +82,7 @@ def run_case(a, case: str, say) -> bool:
         bus.wait(1.0)
         if case == "vcp":
             DD.Mccs(bus, eng).set(0x60, 0x11)
-        elif case == "sel":
+        elif case in ("sel", "selhold"):
             if bus.m.rd(bus.addr("g_stAwtoGpio") + 3)[0] | bus.m.rd(bus.addr("g_stAwtoKey") + 3)[0]:
                 tap(bus, KEY_MENU)                  # the sync console opened by itself at ACTIVE: MENU closes it, the rest is swallowed
             tap(bus, KEY_SOURCE)
@@ -98,12 +101,20 @@ def run_case(a, case: str, say) -> bool:
         say("  timeline: " + " -> ".join(f"{S.MODE_NAMES[m] if m < len(S.MODE_NAMES) else m}/0x{p:02X}@{t}s" for t, m, p in seen))
         sw = swlog(bus, say)
         sl = synclog(a, bus, say)
-        want = 3 if case == "cmd" else 1                       # switch-log 0xB8 arg; sync.tsv DF row (vcp, cmd), E0 06 (sel, #132)
-        text = {"vcp": "refused:no cable on D2", "sel": "input selector:D2 refused, no cable; stays open"}.get(case)
+        want = {"cmd": 3, "sel": 4, "selhold": 4}.get(case, 1)  # switch-log 0xB8 arg; sync.tsv DF row (vcp, cmd), E0 06 (sel, #132)
+        text = {"vcp": "refused:no cable on D2", "sel": "input selector:D2 taken, no cable: no-signal card, dead-port auto search held off",
+                "selhold": "input selector:D2 taken, no cable: no-signal card, dead-port auto search held off"}.get(case)
         lines = (not any(ln.endswith(text) for ln in sl)) if text else (not any("auto search" in ln for ln in sl))
+        if case == "selhold":
+            lines = lines or not any("auto search" in ln for ln in sl)
         if (0xB8, want) not in sw or lines:
             say(f"{case}: FAIL log line missing (switch-log 0xB8 arg {want}, sync log {text or 'auto search'})")
             return False
+        if case == "sel":
+            ok = ms != 3 and port == D2 and not any("auto search" in ln for ln in sl)
+            say(f"{case}: {'PASS' if ok else 'FAIL'} {a.bin.name}: end {S.MODE_NAMES[ms] if ms < len(S.MODE_NAMES) else ms} "
+                f"port 0x{port:02X} (want no picture on D2 0x{D2:02X} inside the hold) after {a.secs:g} s")
+            return ok
         ok = ms == 3 and port == D3
         say(f"{case}: {'PASS' if ok else 'FAIL'} {a.bin.name}: end {S.MODE_NAMES[ms] if ms < len(S.MODE_NAMES) else ms} "
             f"port 0x{port:02X} (want ACTIVE on D3 0x{D3:02X}) after {a.secs:g} s")
@@ -116,10 +127,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
-    ap.add_argument("--case", choices=["vcp", "sel", "cmd", "all"], default="all")
+    ap.add_argument("--case", choices=["vcp", "sel", "selhold", "cmd", "all"], default="all")
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--sync-tsv", dest="sync_tsv", type=Path, help="default: the .sync.tsv beside the map / $AWTO_SYNC_TSV")
-    ap.add_argument("--secs", type=float, default=16.0, help="NOSIGNAL ~2 s + PS ~10 s after a switch (#84 log), then margin")
+    ap.add_argument("--secs", type=float, default=16.0, help="NOSIGNAL ~2 s + PS ~10 s after a switch (#84 log), then margin; selhold: hold 30 s x1.25 + margin")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (S.ROOT / "tmp/logs/deadport_sim.log").open("a", buffering=1)
@@ -128,7 +139,9 @@ def main() -> int:
         print(s); log.write(s + "\n")
 
     rc = 0
-    for case in (["vcp", "sel", "cmd"] if a.case == "all" else [a.case]):
+    for case in (["vcp", "sel", "selhold", "cmd"] if a.case == "all" else [a.case]):
+        if case == "selhold" and a.secs < 40:
+            a.secs = 40.0                       # AWTO_SRC_NOCABLE_HOLD_MS 30 s + the search after it
         rc |= 0 if run_case(a, case, say) else 1
     return rc
 

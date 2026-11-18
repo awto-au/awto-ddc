@@ -106,7 +106,8 @@ def name(ev_id: int, arg: int) -> str:
                           9: "auto search: another port has a signal, released", 0x10: "SDK reset the mode meanwhile"}.get(arg, str(arg))
     if ev_id == 0xB8:
         return "DEAD PORT (#84) " + {1: "key / VCP 0x60 to a port with no cable: refused", 2: "key next input: no other cabled port",
-                                     3: "fixed port, no cable, no signal: back to auto search"}.get(arg, str(arg))
+                                     3: "fixed port, no cable, no signal: back to auto search",
+                                     4: "selector took a port with no cable: auto search held off"}.get(arg, str(arg))
     if ev_id == 0xB9:
         return "PREFILL (#83) D1 " + {1: "filled (cache valid 2)", 2: "pre-detect false", 3: "scan not DP", 4: "not stable",
                                       5: "pixel clock differs > 1 %"}.get(arg, str(arg))

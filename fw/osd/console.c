@@ -1719,6 +1719,7 @@ static void AwtoSourceClose(void)
 void AwtoSourceAuto(BYTE ucWho)
 {
     SET_OSD_INPUT_PORT_OSD_ITEM(_OSD_INPUT_AUTO);
+    AwtoNoCableHold(0);
     AwtoSyncBegin(AWTO_SYNC_K_SWITCH, 0xFF);
     SysSourceSetScanType(_SOURCE_SWITCH_AUTO_IN_GROUP);
     SysMachineRequest(AWTO_SYS_REQ_MODE | _MODE_ACTION_RESET_TO_SEARCH, ucWho);
@@ -1756,9 +1757,13 @@ static void AwtoSourceTake(BYTE ucWho)
         }
         if(AwtoPortCable(ucPort) == _FALSE)
         {
-            AwtoSwEvent(AWTO_SW_EV_DEADPORT, 1);    // #84: no cable on the chosen port: refused, the selector stays up
+            AwtoSwEvent(AWTO_SW_EV_DEADPORT, 4);    // no cable on the chosen port: taken anyway (Dan 2026-11-19), auto search held off
             AwtoSrcRing(AWTO_SEL_EV_NOCABLE, ucItem);
-            return;
+            AwtoNoCableHold(ucPort);
+        }
+        else
+        {
+            AwtoNoCableHold(0);
         }
         AwtoPortSelect(ucPort, AWTO_PORT_WHY_SELECTOR);     // #81: a disabled port is enabled (stored), then the switch
         SET_FORCE_POW_SAV_STATUS(_FALSE);
