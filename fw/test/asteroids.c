@@ -282,6 +282,11 @@ static void AstBg(BYTE ucState)
 {
     AwtoPmSoundBg((GET_OSD_VOLUME_MUTE() == 0) ? ucState : AWTO_AST_BG_NONE);
 }
+
+static void AstPoll(void)                                                           // the sound sequencer is served between drawing steps, not once per 10-40 ms pass (docs/pacman-sound.md "Timing")
+{
+    AwtoPmSoundPoll();
+}
 #else
 static void AstSnd(BYTE ucCmd)
 {
@@ -292,6 +297,8 @@ static void AstBg(BYTE ucState)
 {
     ucState = ucState;
 }
+
+#define AstPoll()
 #endif
 
 static int16_t AstDiff(int16_t sD, int16_t sM)                                      // shortest signed difference on a ring of sM
@@ -752,6 +759,7 @@ static void AstCollide(void)
         }
         for(ucJ = 0; ucJ < AWTO_AST_N_OBJ; ucJ++)
         {
+            AstPoll();
             ucU = s_atObj[ucJ].ucType;
             if((ucU >= AWTO_AST_T_ROCK_L) && (ucU <= AWTO_AST_T_SAUCER_S) &&
                ((AstNear(s_atObj[ucI].sX, s_atObj[ucI].sY, s_atObj[ucJ].sX, s_atObj[ucJ].sY, AstHit(ucU) + AstHit(AWTO_AST_T_SHOT)) != 0) ||
@@ -899,12 +907,14 @@ static void AstTick(void)
 {
     g_usAwtoAstStep++;
     AstMove();
+    AstPoll();
     s_ucShThrust = 0;
     if(s_ucShState == AWTO_AST_STATE_ALIVE)
     {
         AstShipThink();
         AstShipMove();
     }
+    AstPoll();
     AstCollide();
     AstWorld();
 }
@@ -915,6 +925,7 @@ static void AstStep(void)                                                       
 
     for(ucK = 0; ucK < AWTO_AST_TICKS; ucK++)
     {
+        AstPoll();
         AstTick();
     }
     AstDigits();
@@ -944,6 +955,7 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
         }
         for(ucI = 0; ucI < ucN; ucI++)
         {
+            AstPoll();
             sX = g_tAstData[usP++];
             sY = g_tAstData[usP++];
             if((ucRot & 1) != 0)
@@ -1013,6 +1025,7 @@ static void AstDrawBoom(BYTE ucSize, BYTE ucAge)
 
     for(ucK = 0; ucK < AWTO_AST_BOOM_DOTS; ucK++)
     {
+        AstPoll();
         AstDir((BYTE)(ucK * AWTO_AST_BOOM_STEP + ucAge));
         osd_line(&g_scCv, s_sRx + (((int16_t)s_cDx * sR0) >> 7), s_sRy + (((int16_t)s_cDy * sR0) >> 7),
                  s_sRx + (((int16_t)s_cDx * sR) >> 7), s_sRy + (((int16_t)s_cDy * sR) >> 7), 1);
@@ -1118,6 +1131,7 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
     s_ucAny = 0;
     for(ucI = 0; ucI < AWTO_AST_N_OBJ; ucI++)
     {
+        AstPoll();
         if((s_atObj[ucI].ucType != AWTO_AST_T_NONE) && (AstCull(s_atObj[ucI].sX >> AWTO_AST_FP, s_atObj[ucI].sY >> AWTO_AST_FP, AstRad(s_atObj[ucI].ucType)) != 0))
         {
             AstInk();
@@ -1164,6 +1178,7 @@ static BYTE AstPass(BYTE ucCol, BYTE ucBand)                                    
         {
             continue;                                                               // blank before and now: its glyph is already blank
         }
+        AstPoll();
         AwtoOsdTile(s_usCell0, g_aucScPix + (WORD)ucI * OSD_TILE_BYTES);
     }
     s_aucOcc[ucIdx] = ucOcc;

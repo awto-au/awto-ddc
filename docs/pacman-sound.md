@@ -53,3 +53,20 @@ Tags: [spec] = SDK source / regdb (`re/regdb/RTD2795T-CG.tsv.gz`); [derived] = a
 ## Other users of the generator
 
 - `AwtoPmSoundTone(sc, ms)`: one held tone (calibration track), refused while a sound plays. Key click: `docs/keys.md` "Key click" (#229).
+
+## Timing (2026-11-18, Asteroids "sounds are broken up" on unit 3)
+
+- Cause 1: `AwtoPmSoundPoll` ran once per main-loop pass. Asteroids passes are 8-41 ms, notes 8-30 ms. The 4 ms amp gate (`AWTO_PS_GAP_MS`) opened only at the next poll: muted 11 ms median, 34 ms worst per note (thrust notes are 30 ms: about 40 % silence). Note starts were up to a pass late.
+- Cause 2: `PsStart` cycled the generator off and on (`PsStop`, `SysAudioInternalGenTestProc`, `SysAudioMuteProc`, `AwtoAudioAmp`) for every new sound, including each fire during thrust and each resume.
+- Fix: `PsStart` leaves a running generator alone (full set-up only from silence); Asteroids calls `AwtoPmSoundPoll` between drawing steps (per shape vertex, object, tile upload, game tick, collision candidate: `AstPoll`, audio build only). Pac-Man / alert / key click / calibration unchanged.
+- Measure: `python scripts/snd_timing.py BIN --saver asteroids|pacman --seconds 60` (audio build, sim audio tap + poll hook; exit 1 = FAIL). Evidence of the pass over 40 s:
+
+| Asteroids (sim) | before | after |
+|---|---|---|
+| gate latch -> amp open, median / p95 / max | 11 / 21 / 34 ms | 4 / 7 / 8 ms |
+| poll gap median / p99 | 12 / 31 ms | 0 / 2 ms |
+| latches with an unchanged pitch (generator restarts) | 93 | 11 |
+| Pac-Man gate median / max | 5 / 9 ms | 5 / 8 ms (unchanged) |
+
+- Rare long gaps (an NV write, 21 ms) are not polled around.
+- By ear on unit 3: audio build, start Asteroids (screensaver now), thrust loop (autopilot) must hum continuously with a steady 4-note wobble, a shot during thrust must not cut it to silence or restart the loop audibly.

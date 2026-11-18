@@ -123,10 +123,12 @@ static void PsStop(void)
 
 static void PsStart(BYTE ucTrack)
 {
-    PsStop();
-    SysAudioInternalGenTestProc(_ON);
-    SysAudioMuteProc(_OFF);
-    AwtoAudioAmp(_OFF);                         // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
+    if(s_ucPsTrack == AWTO_PS_TRACK_NONE)       // generator already running (a sound ended or is replaced): no off / on cycle, no click
+    {
+        SysAudioInternalGenTestProc(_ON);
+        SysAudioMuteProc(_OFF);
+        AwtoAudioAmp(_OFF);                     // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
+    }
     s_ucPsTrack = ucTrack;
     s_usPsAt = (WORD)AwtoMs();
     s_usPsDur = 0;
