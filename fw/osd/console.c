@@ -1,5 +1,6 @@
 #include "UserCommonInclude.h"
 #include <stddef.h>
+#include "ScalerCommonFunctionInclude.h"                       // M2PLL / MCU clock registers (title clocks)
 
 // awto OSD screens on the text layer: diagnostic console, debug pop-up (#34), message cards (#124), source selector (#134),
 // backlight bar (#132), key test (#39), GPIO table (#139), watchdog panel (#131), NVRAM flush line (#151).
@@ -411,11 +412,85 @@ void AwtoOsdDebugLines(void)
     s_ucDbgAll = 0;
 }
 
-// #157 title row live part: "PANEL 0027.25h  UP 0000.42h  HOST 08:45:10" (+ " STALE"); s_pucConTitleH = hash per 2 cells on screen.
+// #157 title row live part: "CPU 350.8 PLL 350.8 SPI 116.9  3840x2160 59.940Hz HOST 08:45:10" (HOST -> STALE); s_pucConTitleH = hash per 2 cells on screen.
+// Clocks in MHz from the live registers: PLL = M2PLL M / N / O, CPU = PLL / FFED[5:2] / FFEE[5:2], SPI = PLL / FFED[5:2] / FFE9[3:0] (docs/clock-sweep.md).
 #define AWTO_TITLE_COL      70                  // after " AWTO DIAGNOSTICS  FW <tag>  <port>  SN <serial>" (tags up to ~21 characters)
-#define AWTO_TITLE_N        48
+#define AWTO_TITLE_N        (AWTO_T_MAXCOLS - AWTO_TITLE_COL)   // to the right end of the title bar window
+#define AWTO_CLK_DIV_SHIFT  2                   // FFED / FFEE divider field [5:2]
+#define AWTO_CLK_DIV_MASK   0x0F                // FFED[5:2], FFEE[5:2], FFE9[3:0]: 4 bit dividers, 0 reads as 1
+#define AWTO_CLK_PLL_O_SHIFT 4                  // 0x01E1[5:4] = O / 2
+#define AWTO_CLK_PLL_O_MASK 0x03
+#define AWTO_CLK_PLL_MSB_M  0x30                // 0x01E7[5:4] = M[9:8]
+#define AWTO_CLK_PLL_MSB_N  0x0F                // 0x01E7[3:0] = N[7:4], 0x01E1[3:0] = N[3:0]
+#define AWTO_CLK_PLL_CODE   2                   // M and N register codes = value - 2
+#define AWTO_KHZ_PER_TENTH  100                 // kHz per 0.1 MHz
 static __xdata BYTE s_pucConTitleH[AWTO_TITLE_N / 2];
 static __xdata WORD s_usConTitleMs;
+static __xdata DWORD s_ulAwtoK;                 // clock formatters: kHz (XDATA: the title runs on the deep DATA overlay path)
+static __xdata DWORD s_ulAwtoPll;               // M2PLL kHz
+
+static void AwtoPutMhz(BYTE ucDiv)              // s_ulAwtoPll / ucDiv kHz -> "350.8" (0.1 MHz, rounded)
+{
+    s_ulAwtoK = (s_ulAwtoPll / ucDiv + AWTO_KHZ_PER_TENTH / 2) / AWTO_KHZ_PER_TENTH;
+    AwtoPutNum(s_ulAwtoK / 10, 1);
+    AwtoPutChar('.');
+    AwtoPutNum(s_ulAwtoK % 10, 1);
+}
+
+static BYTE AwtoClkField(BYTE ucV)              // divider field -> divider
+{
+    ucV &= AWTO_CLK_DIV_MASK;
+    return (ucV == 0) ? 1 : ucV;
+}
+
+static void AwtoPutClocks(void)                 // "CPU 350.8 PLL 350.8 SPI 116.9"; on the crystal clock "CPU 14.3 PLL off"
+{
+    BYTE ucN = ScalerGetByte(P1_E1_M2PLL_N);
+    BYTE ucMsb = ScalerGetByte(P1_E7_M2PLL_M_N_MSB);
+    BYTE ucO = ((ucN >> AWTO_CLK_PLL_O_SHIFT) & AWTO_CLK_PLL_O_MASK) * 2;
+    BYTE ucF = AwtoClkField(MCU_FFED_MCU_CONTROL >> AWTO_CLK_DIV_SHIFT);
+
+    if((MCU_FFED_MCU_CONTROL & AWTO_F_MCU_CONTROL_MCU_CLK_SEL) == 0)
+    {
+        s_ulAwtoPll = _EXT_XTAL;
+        AwtoPutStr("CPU ");
+        AwtoPutMhz(1);
+        AwtoPutStr(" PLL off");
+        return;
+    }
+    s_ulAwtoPll = ((DWORD)_EXT_XTAL * (((WORD)ScalerGetByte(P1_E0_M2PLL_M) | ((WORD)(ucMsb & AWTO_CLK_PLL_MSB_M) << 4)) + AWTO_CLK_PLL_CODE)) /
+                  ((((WORD)(ucMsb & AWTO_CLK_PLL_MSB_N) << 4) + (ucN & AWTO_CLK_PLL_MSB_N) + AWTO_CLK_PLL_CODE) * (ucO == 0 ? 1 : ucO));
+    AwtoPutStr("CPU ");
+    AwtoPutMhz(ucF * AwtoClkField(MCU_FFEE_MCU_CLOCK_CONTROL >> AWTO_CLK_DIV_SHIFT));
+    AwtoPutStr(" PLL ");
+    AwtoPutMhz(1);
+    AwtoPutStr(" SPI ");
+    AwtoPutMhz(ucF * AwtoClkField(MCU_FFE9_MCU_CLK_CONTROL_1));
+}
+
+static void AwtoPutInput(void)                  // "3840x2160 59.940Hz": the active input's timing, exact refresh when counted (as AwtoSrcRate / health)
+{
+    if(SysModeGetModeState() != _MODE_STATUS_ACTIVE)
+    {
+        AwtoPutStr("NO INPUT");
+        return;
+    }
+    AwtoPutNum(GET_INPUT_TIMING_HWIDTH(), 1);
+    AwtoPutChar('x');
+    AwtoPutNum(GET_INPUT_TIMING_VHEIGHT(), 1);
+    AwtoPutChar(' ');
+    if(g_stAwtoFreq.ucValid != 0)
+    {
+        AwtoPutMilli(g_stAwtoFreq.ulVFreqmHz);
+    }
+    else
+    {
+        AwtoPutNum(GET_INPUT_TIMING_VFREQ() / 10, 1);
+        AwtoPutChar('.');
+        AwtoPutNum(GET_INPUT_TIMING_VFREQ() % 10, 1);
+    }
+    AwtoPutStr("Hz");
+}
 
 // Time formatters keep their values in XDATA: they sit on the deepest DATA overlay path (flash save -> sync line).
 static __xdata DWORD s_ulAwtoT;                 // AwtoPutClock input: seconds of the day
@@ -429,14 +504,6 @@ static void AwtoPutClock(void)                  // s_ulAwtoT -> hh:mm:ss
     AwtoPutNum(s_ulAwtoT % 60, 2);
 }
 
-static void AwtoPutHours(DWORD ulH100)          // hundredths of an hour -> hour meter "0027.25h"
-{
-    AwtoPutNum(ulH100 / 100, 4);
-    AwtoPutChar('.');
-    AwtoPutNum(ulH100 % 100, 2);
-    AwtoPutChar('h');
-}
-
 static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-cell groups that changed (ucAll: every cell)
 {
     DWORD ulUp = AwtoMs();
@@ -445,11 +512,10 @@ static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-c
     s_usConTitleMs = (WORD)ulUp;
     s_ucAwtoCols = AWTO_TITLE_N;
     AwtoFieldBegin();
-    AwtoPutStr("PANEL ");
-    AwtoPutHours((DWORD)GET_PANEL_TIME_HOUR() * 100 + (WORD)GET_PANEL_TIME_MIN() * 100 / 60);
-    AwtoPutStr("  UP ");
-    AwtoPutHours(ulUp / 36000);
-    AwtoPutStr("  HOST ");
+    AwtoPutClocks();
+    AwtoPutStr("  ");
+    AwtoPutInput();
+    AwtoPutStr(((isr_g_stAwtoHt.ucSyncs != 0) && ((ulUp - isr_g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)) ? " STALE " : " HOST ");
     if(isr_g_stAwtoHt.ucSyncs == 0)
     {
         AwtoPutStr("--:--:--");
@@ -458,10 +524,6 @@ static void AwtoConTitle(BYTE ucAll)            // compose; draw the runs of 2-c
     {
         s_ulAwtoT = (isr_g_stAwtoHt.ulEpoch + (long)isr_g_stAwtoHt.cOfs * 900 + (ulUp - isr_g_stAwtoHt.ulFwMs + isr_g_stAwtoHt.usFrac) / 1000) % 86400;
         AwtoPutClock();
-        if((ulUp - isr_g_stAwtoHt.ulFwMs) > AWTO_HT_STALE_MS)
-        {
-            AwtoPutStr(" STALE");
-        }
     }
     AwtoPutCol(AWTO_TITLE_N);
     for(ucI = 0; ucI < AWTO_TITLE_N; ucI = ucJ)

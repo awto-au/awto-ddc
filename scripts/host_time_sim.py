@@ -3,12 +3,12 @@
 
 usage: AWTO_SIM_CORE=fast host_time_sim.py BIN [--map MAP]
 - Boot 1080p60 with the console auto-open (firmware default); the ring header must be the firmware's own ('SY', #158).
-- Title row (map row 0): "AWTO DIAGNOSTICS  FW <tag>" + "PANEL nnnn.nnh  UP nnnn.nnh  HOST --:--:--" before a sync.
+- Title row (map row 0): "AWTO DIAGNOSTICS  FW <tag>" + "CPU nnn.n PLL nnn.n SPI nnn.n  WxH nn.nnnHz  HOST --:--:--" before a sync (clocks from the live registers).
 - Sync 1 (2026-11-12T08:45:10.250+11:00): HOST ticks from it; ring D7 "host time ..." + D8 "(fw +N ms, first ...)"; the
   console log pane shows the line; get VCP E9 = syncs 1, drift 0; sync_log.stamp puts the host time on the lines.
 - Sync 2 on time: no ring line, syncs 2, |drift| small. Sync 3 5 s ahead: D7 + D8 (drift) + D9 "drift +5xxx ms".
 - Changed cells only: OSD writes of one idle title tick vs the full title draw; no other row written in that second.
-  STALE: last sync moved 200 s back. UP: wrap count + 32 (2 097 152 ms) shows as 0000.58h.
+  STALE: last sync moved 200 s back.
 - Pages (images with AWTO_CON_GPIO, map symbol _AwtoConLogTail): main = event log, host time + fw ms on one row, no GPIO table;
   test cmd 0x43 = GPIO page (table + input changes, no sync lines); text + PNG of both: --out (default tmp/console_pages).
 Exit 1 on a failed check. Log: tmp/logs/host_time_sim.log
@@ -40,6 +40,8 @@ OFS = 44                                                    # +11:00 in 15 min u
 T0 = dt.datetime(2026, 11, 12, 8, 45, 10, 250000, dt.timezone(dt.timedelta(hours=11)))
 CMD_S = 1.0         # test cmd -> console page drawn: one full draw (~0.3 s sim, boot_sim) x ~3
 CON_S = 4.0         # console auto-open after ACTIVE: settled + one pass (sync_sim sees it within 1 s) x4 for the boot console
+TITLE_RE = re.compile(r"CPU (\d+\.\d) PLL (\d+\.\d) SPI (\d+\.\d)  (\d+x\d+ \d+\.\d{3}Hz|NO INPUT) (?:HOST|STALE) (\S+)")
+CON_COLS = 136      # map columns per row (AWTO_CON_COLS, fw/osd/console.c)
 TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25
 
 
@@ -149,9 +151,12 @@ def main() -> int:
     ti = s.title()
     say(f"title: {ti!r}")
     s.check("AWTO DIAGNOSTICS  FW " in ti, "console open, title FW tag")
-    m = re.search(r"PANEL (\d{4}\.\d{2})h  UP (\d{4}\.\d{2})h  HOST (\S+)", ti)
-    s.check(bool(m), "title live fields", m.group(0) if m else ti)
-    s.check(bool(m) and m.group(3) == "--:--:--", "HOST before the first sync = --:--:--")
+    m = TITLE_RE.search(ti)
+    s.check(bool(m), "title live fields (CPU / PLL / SPI MHz, input timing, HOST)", m.group(0) if m else ti)
+    s.check(bool(m) and m.group(5) == "--:--:--", "HOST before the first sync = --:--:--")
+    s.check("PANEL" not in ti and " UP " not in ti, "panel hours / uptime are not in the title (menu Service page: panel_hours)")
+    s.check(bool(m) and abs(float(m.group(1)) - float(m.group(2))) < 0.05 * float(m.group(2)) and float(m.group(3)) <= float(m.group(2)),
+            "clocks: CPU <= PLL, SPI <= PLL", m.group(0) if m else ti)
     raw, (h, _) = s.ring()
     s.check(raw[0:2] == b"SY" and raw[2] == 3 and raw[12] * SL.EV + SL.HDR == len(raw), "ring header written by the firmware (#158)", raw[:SL.HDR].hex(" "))
     g = s.get()
@@ -232,8 +237,8 @@ def main() -> int:
     s.model.trace, s.model.trace_on = [], True
     s.bus.wait(1.0)
     s.model.trace_on = False
-    cells = sorted({ad - fs for w, ad, _ in s.model.trace if (w >> 2) & 3 == M.SRAM_FONT and fs <= ad < fs + 120})
-    rows = collections.Counter((ad - fs) // 120 for w, ad, _ in s.model.trace if (w >> 2) & 3 == M.SRAM_FONT and ad >= fs)
+    cells = sorted({ad - fs for w, ad, _ in s.model.trace if (w >> 2) & 3 == M.SRAM_FONT and fs <= ad < fs + CON_COLS})
+    rows = collections.Counter((ad - fs) // CON_COLS for w, ad, _ in s.model.trace if (w >> 2) & 3 == M.SRAM_FONT and ad >= fs)
     say(f"title cells written in 1 s idle (one tick): {cells} ({len(s.model.trace)} OSD data writes in all, per map row "
         f"{dict(sorted(rows.items()))})")
     s.check(0 < len(cells) <= 8 and all(c >= 60 for c in cells), "idle tick redraws only changed title cells (not 48)", str(cells))
@@ -248,14 +253,6 @@ def main() -> int:
     ti = s.title()
     s.check("STALE" in ti, "HOST marked STALE after 3 min without a sync", ti[60:])
 
-    # UP from the 32-bit count: + 32 wraps
-    ht = s.ht()
-    s.m.wr(s.a_ht + 14, (ht["up_hi"] + 32).to_bytes(2, "big"))
-    s.bus.wait(TICK_S)
-    fw = s.fw32()
-    exp = f"UP {fw // 36000 // 100:04d}.{fw // 36000 % 100:02d}h"
-    ti = s.title()
-    s.check(exp in ti, f"UP hour meter from the 32-bit ms count ({fw} ms)", ti[60:])
     say(f"title: {ti!r}")
 
     if pages:                                           # both pages: text + PNG; the GPIO page has no sync lines
