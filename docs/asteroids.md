@@ -29,7 +29,7 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 
 ### Game (runs on the chip)
 
-- Pool of 24 objects (rock L / M / S, saucer L / S, ship shot, saucer shot, explosion), ship separate. Units 1/8 px, playfield 384 x 216, wrap-around (saucers leave the screen).
+- Pool of 24 objects (rock L / M / S, saucer L / S, ship shot, saucer shot, explosion), ship separate. Units 1/8 px, playfield 360 x 198 (`AWTO_AST_COLS` 30 x `AWTO_AST_ROWS` 11 tiles; `AWTO_AST_W` / `_H` derive from them), wrap-around (saucers leave the screen).
 - One frame = 2 game ticks (finer motion and hit tests; frames are slow). Tick: move, autopilot, collisions, waves / saucer timer / respawn, score.
 - Rocks split L -> 2 M -> 2 S; scores 20 / 50 / 100, saucer 200 / 1000. Wave n: 4 + n rocks (max 7). Saucer every 150..350 ticks while rocks exist; small saucer (25 %) aims.
 - Autopilot: nearest rock / saucer, lead by relative velocity, turn 1 or 2 heading steps (64 headings), fire when within ~4 deg and 90 px (max 4 shots, cooldown 3), wander thrust bursts, flee when a rock is close behind. 3 lives, respawn when the centre is clear, game over -> new game after 60 ticks. No text (no GAME OVER).
@@ -37,7 +37,8 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 
 ### Rendering
 
-- OSD 32 x 12 tiles (384 x 216), 1-bit glyph per cell, band canvas `g_aucScPix` / `g_scCv` shared with Scope 1 (1 tile column x 6 rows, 2 bands per column); `scope_saver.c` scale-up numbers.
+- OSD 30 x 11 tiles (360 x 198), 1-bit glyph per cell (330 of 512 ids, identity map), band canvas `g_aucScPix` / `g_scCv` shared with Scope 1 (1 tile column x 6 rows); 2 bands per column of 6 + 5 rows (11 is prime; `s_ucBandRows` / `s_sBandH` per pass), the saver pump `AstPoll` runs between drawing steps as before.
+- Scale-up: factor = 64 x `AWTO_AST_W` / `_PANEL_DH_WIDTH` = 6 (ratio 10.67), position from the panel constants as Scope 2; compile error unless the width fills the panel exactly and the height fits with equal bars. Gameplay constants stay in raster px (objects 17 % larger on screen than at 384 x 216).
 - Per pass: cull objects against the 12 x 108 window (wrap-aware), skip lines wholly outside it (`osd_line` walks every pixel of a clipped line), draw, upload only tiles that hold ink or held ink at their last upload (per-pass occupancy byte). Empty passes cost ~1 ms: a main-loop pass runs on through empty columns until one drew something.
 - Score / spare ships (top left) redraw only when they change or an object touches those passes (occupancy bit 6).
 - Rotate 180: `AwtoOsdRotCell` + `AwtoOsdGlyph` as the scopes (`docs/osd-rotation.md`); scale-up window start = OSD position (`AwtoOsdPlaceScaleUp`).
@@ -72,15 +73,9 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 - Frames 0..2 of `saver_frames_md5.py` are md5-identical to the unpaced build (same game state at the same tick); later frames differ only by which ticks they land on.
 - Game-over / attract text: none drawn.
 
-## Panel fill (Dan 2026-11-18: "would prefer it to fill the screen"): measured, not built
+## Panel fill (Dan 2026-11-18, option A approved): built
 
-- Today: raster 384 x 216 (32 x 12 tiles), scale 64 / 7 = 9.14x = 3511 x 1975 of the 3840 x 2160 panel. Sim (`saver_sim.py`, INFO line): box 1755 x 987 of 1920 x 1080 = 91.4 % x 91.4 % (83.6 % of the area).
-- Asked: 480 x 270 = 40 x 15 tiles at 8x (exact, as Scope 2). Does not fit:
-  - Glyph ids: Asteroids maps one 1-bit glyph per cell (id = cell, `AwtoOsdMap1`); 600 cells > 512 ids (9 bit). It would need a slot ring with per-cell id tracking (Scope 2 model: id ring + worst-case proof) = a rewrite of the draw / upload path.
-  - Speed: draw cost follows the raster area (osd_line walk, tile upload, column passes): 1.56x of today's 384 x 216 = about 3 frames/s (now 5.0), passes about 1.5x longer than the 8-10 ms budget unless bands go to 5 rows.
-  - XDATA: occupancy 40 x 3 = 120 B (+56 B), 5-row band canvas 135 B (-27 B): fits (free 996 B, floor 700 B).
-- Alternatives that fit (cell counts below the 512 ids, identity map kept):
-  - A: 360 x 198 = 30 x 11 tiles at 64 / 6 = 10.67x: 3840 x 2112 of 3840 x 2160 = 100 % x 97.8 % (24 px bars top and bottom, centred), 330 ids, objects 17 % larger on screen, area 0.86x of today (faster). Needs bands of 6 + 5 rows (11 is prime) or one band of 11 rows (canvas 297 B, XDATA +135 B, pass about 2x longer).
-  - B: 240 x 135 at 16x with row height 15 (20 x 9 tiles = 180 ids): exact fill, about 3.5x fewer pixels (fast, coarse shapes: a rock of today's size = 13 raster px).
-  - C: 480 x 270 with the slot-ring rewrite (above): exact fill, about 3 frames/s.
-- Recommended: A. Needs Dan's yes (changes geometry constants, game units scale with `AWTO_AST_W` / `AWTO_AST_H` already; the `AstShape` shifts and rock radii are in raster px and stay).
+- Raster 360 x 198 px = 30 x 11 tiles at 64 / 6 = 10.67x: 3840 x 2112 of the 3840 x 2160 panel = 100 % x 97.8 % (24 px bars top and bottom, symmetric: Rotate 180 keeps the picture in place). Was 384 x 216 at 9.14x = 91.4 % x 91.4 %.
+- Check: `saver_sim.py` "asteroids fills the panel" >= 97 % in each direction; sim 1080p60 render box 1920 x 1056 of 1920 x 1080 (100.0 % x 97.8 %), Rotate 180 box 1920 x 1056. 2160p60 input scales to the same panel (not rendered separately).
+- Measured 2026-11-18 (sim, same pacing code, before -> after): column pass mean 8.5 -> 8.6 ms, p95 18 -> 20, max 28 -> 39 (`asteroids_speed.py`, 30 s); frames/s 5.36 -> 5.51 over 180 s (`saver_loop_cost.py --case asteroids`; 5.03 -> 4.76 over 62 s: game-state noise); ticks/s 7.94 / 7.93 unchanged; frame = 30 columns instead of 32. XDATA free 996 -> 997 B (default), audio 983 B.
+- Other options (480 x 270 slot ring, 240 x 135) were not built: Option A fits the 512 glyph ids and the 8-10 ms pass budget.
