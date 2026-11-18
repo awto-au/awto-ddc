@@ -3,7 +3,7 @@
 
 usage: saver_loop_cost.py BIN [MAP] [--window S] [--case NAME ...] [--tsv PATH]
   - Hooks the entry of every per-pass call in main() (SysMain.c); a slot = instructions from its entry to the next hooked entry.
-  - Cases: active (picture, no saver), pacman / scope / scope2 (VCP 0xEB = 2 / 3 / 4 over the picture),
+  - Cases: active (picture, no saver), pacman / scope / scope2 / asteroids (VCP 0xEB = 2 / 3 / 4 / 8 over the picture),
     nosig (test cmd 0x33: D3 fixed, no source), nosig_scope2 (scope 2 started by VCP 0xEB in no signal).
   - Per case: passes, mean instr and fw us per pass, slot table (instr per pass, share), saver rate (Pac-Man sub-steps/s,
     scope frames/s from the gaps between column calls).
@@ -38,7 +38,7 @@ SLOTS = ["AwtoStackCheck", "AwtoSwPoll", "AwtoDiagMainPass", "AwtoGpioPoll", "Aw
          "SysTimerHandler", "SysSourceHandler", "SysMachineWork", "SysDpRxHandler", "SysTMDSRxHandler", "ScalerHdcp2Handler",
          "AwtoSetLoop", "UserCommonInterfaceOsdHandler", "AwtoDdcciPoll", "AwtoNetPoll", "UserCommonDdcciHandler",
          "SysColorHandler", "ScalerDebug"]
-SAVER_FN = {"pacman": "AwtoPacmanClassic", "scope": "AwtoScopeSaver", "scope2": "AwtoScopeSaver2", "nosig_scope2": "AwtoScopeSaver2"}
+SAVER_FN = {"pacman": "AwtoPacmanClassic", "scope": "AwtoScopeSaver", "scope2": "AwtoScopeSaver2", "nosig_scope2": "AwtoScopeSaver2", "asteroids": "AwtoAsteroids"}
 
 
 def say(s: str) -> None:
@@ -63,7 +63,7 @@ def measure(a, case: str) -> dict:
         m.wr(D3_PIN, b"\x00")                       # D3 cabled, no source there (as wake_sim)
         P.send(sess, TC_D3_FIXED)
         sess.bus.wait(NOSIG_S)
-    vcp = {"pacman": 2, "scope": 3, "scope2": 4, "nosig_scope2": 4}.get(case)
+    vcp = {"pacman": 2, "scope": 3, "scope2": 4, "nosig_scope2": 4, "asteroids": 8}.get(case)
     if vcp:
         ddc.set(VCP_SAVER, vcp)
     sess.bus.wait(SETTLE_S)
