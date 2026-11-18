@@ -58,7 +58,8 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
     {
         return;
     }
-    AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ucLo, 0);          // "audio test n/6: <settings>" / "... end, back to default"
+    AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? ucLo : AWTO_AUDIO_TEST_DONE,
+                 ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? 0 : ucN);   // "audio test n/6: <settings>" / "... end, back to default" (one row, n = value)
     g_ucAwtoAudioTestN = ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? ucN : 0;
     if(UserInterfaceGetAudioReadyToPlayStatus() == _TRUE)   // playing: now; else the SDK unmute applies them
     {

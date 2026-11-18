@@ -225,12 +225,7 @@ E5	13	-	audio test 3/6:aout, P7.4 on, P7.3 low, -16.5dB (Dahua default)
 E5	14	-	audio test 4/6:aout, P7.4 on, P7.3 low, -3dB
 E5	15	-	audio test 5/6:aout, P7.4 on, P7.3 low, 0dB
 E5	16	-	audio test 6/6:aout, P7.4 on, P7.3 HIGH (AMP_MUTE check), -6dB
-E5	31	-	audio test 1/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	32	-	audio test 2/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	33	-	audio test 3/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	34	-	audio test 4/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	35	-	audio test 5/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
-E5	36	-	audio test 6/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
+E5	30	n	audio test %/6 end, back to default:aout, P7.4 on, P7.3 low, your volume
 E5	40	n	audio test (no step):% Hz
 E5	41	n	audio test 1:% Hz
 E5	42	n	audio test 2:% Hz
@@ -238,6 +233,9 @@ E5	43	n	audio test 3:% Hz
 E5	44	n	audio test 4:% Hz
 E5	45	n	audio test 5:% Hz
 E5	46	n	audio test 6:% Hz
+E5	50	-	key click:tone played
+E5	51	-	key click skipped:another sound plays
+E5	52	-	key click unavailable (no -D _AWTO_AUDIO_TEST build)
 E2	01	-	M-domain set-up:start
 E2	09	-	M-domain set-up:IVS wait 1
 E2	0B	n	M-domain set-up:memory check (WD ctrl0 x 256 + status0 = %)
