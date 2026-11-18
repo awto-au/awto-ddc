@@ -26,6 +26,7 @@ Started 2026-11-18. Unit 3 (AWT26110003, bus 11, Rotate 180 stored). Trigger: Da
 | T4 | T7 started on top of Asteroids (no stop) | 0 differing words |
 | T8 | Scope 2 held mid-frame (running, shown): every cell's tile = its tile at the end of frame F-1 or F (sim) | 0 cells otherwise |
 | T9 | ladder: 2-bit ids 0..255, 16 x 16, plane A solid (Scope 2's font base) | human: all cells one solid colour; which colour |
+| T10 | cycle: the ladder with digit 1..6 = write variants (same content rewritten), then Scope 2 running; 8 s each | human: which digits / the scope show glitches; machine: glyphs unchanged after a round |
 
 ## Results 2026-11-18 (unit 3, images `ohw3`..`ohw6` = main 2a290fb + `-D _AWTO_OSD_HWTEST`, 4K60 DP input, Rotate 180)
 
@@ -56,18 +57,44 @@ Commands: `./dev.py osd-hw-test --unit 3 [--cal] t1 t2 t4 t7 t8 rd freeze`; logs
 - T8 held mid-frame while running (frames 31, 37): 0 of 600 cells show a tile of neither frame end. **Killed: ring slot reuse while a cell still points at it** (sim mid-frame checks at 5 instants: 0 too).
 - So: what the firmware stores (map + glyphs, both memories) is byte-exact the simulator's, at frame ends and mid-frame. **Killed: glyph-id / map / SRAM-region overlaps in the stored data.**
 
-### What is left (needs the screen)
-- The photo's faults are therefore in how the display engine shows correct SRAM:
-  - colour: sim plane A (first 9 words) = MSB -> c2/c3 (green), plane B -> c1 (red). Photo: trace (plane A) red, graticule (plane B) green = the hardware takes plane A as the LSB (or c1 / c2 swapped; the same picture). T6 screen decides it in one look.
-  - garbled runs: photo shows extra cursor dots / axis-tick tiles in wrong columns, dark / grey / striped cells. Candidates, not decided: (a) display fetch disturbed while the MCU writes the SRAM (the scale-up engine shares the read path: reads return the word the display fetched) = transient, gone on a frozen frame; (b) display addressing of 2-bit glyphs differs from the sim (e.g. a 4096-word wrap: ids >= 193 end past word 4096) = also on a frozen frame.
-  - `freeze`: Scope 2 held at a frame end on the unit (SRAM checked == sim) + the sim render of that frame as the viewer sees it (`tmp/osd_hw/freeze_sim_f<N>_viewer.png`). Same picture (colours aside) = (a); garbled = (b).
+### What was left after T1..T8 (display side)
+- Colour swap: decided by T9 (below). Garbled runs: the 4096-wrap candidate killed by T9; write-during-scan disturbance is T10 (below).
+- `freeze`: Scope 2 held at a frame end on the unit (SRAM checked == sim) + the sim render of that frame (`tmp/osd_hw/freeze_sim_f<N>_viewer.png`) for a photo comparison.
 
-### T9 ladder (screen for Dan, left on unit 3 at the end of the run)
-- `./dev.py osd-hw-test --unit 3 ladder`: 16 x 16 cells, 2-bit glyph id = row x 16 + col as the viewer reads it (map turned for Rotate 180), every glyph plane A solid, plane B 0, Scope 2's font base 616 (same glyph word addresses). c0 grey, c1 red, c2 green, c3 blue. Stored words read back as written (unit, 2026-11-18).
-- Expected as the sim models it: all 256 cells solid GREEN (`tmp/osd_hw/ladder_sim_viewer.png`; the sim draws it off-centre, its known scale-up offset).
-- Plane order: all cells RED = the hardware takes plane A as the LSB (colour swap of the photo).
-- Address wrap: the cells from some id on striped / other colours. At a 4096-word wrap the first broken id is 193 (row 12, col 1): `ladder_sim_viewer_if_wrap4096.png`.
-- Support for the wrap from the photo: Scope 2 frame 33 rendered with a 4096 wrap (`freeze_sim_f33_viewer_if_wrap4096.png`) shows the same kinds of fault as the photo: striped blocks (map words fetched as pixels), stray axis-tick / cursor-dot / text fragments in other cells, and a broken "1ns" label read as "1r" at the bottom centre as in the photo. At frame 31 the ring uses ids 54..122 only and the wrap render is clean: the faults come and go with the ring position.
+### T9 ladder: RESULT (Dan's photo, 2026-11-18): one uniform red rectangle, all 16 x 16 cells
+- **2-bit plane order: the first 9 words (plane A) are the LOW bit** (c1 red shown; the sim had it as the high bit -> green).
+- **No address wrap**: ids 193..255 (glyph words past 4096) show the same solid red. The 4096-wrap hypothesis is killed.
+- Screen: 16 x 16 cells, glyph id = row x 16 + col as the viewer reads it, every glyph plane A solid, Scope 2's font base 616; c0 grey, c1 red, c2 green, c3 blue. Stored words read back as written.
+- Position: asked for posH 384 (x 4 px) / posV 504 = centred; the photo shows it right of centre and low (panel position roughly (324, 250) px from the photo, turned 180). Position units with the scale-up on are not what `AwtoOsdPlaceScaleUp` assumes for a non-zero position; all full-screen savers use position 0 and are not affected. Not measured further.
+
+### Colour fix (from T9)
+- Sim: `scripts/osd_model.py` `_planes(..., lsb_first=True)` for 2-bit glyphs (4-bit order unmeasured, left MSB first); `tests/test_osd_model.py` follows.
+- Scope 2: `S2MapWord` colour fields swapped: c1 = green (plane A: trace, readouts), c2 = red (plane B: graticule), c3 = green. Glyph data unchanged.
+- Pac-Man: `gen_pacman_classic.py` packs the low bit plane first (ghost body = 1, white = 2 as designed); `pacman_classic_data.inc` regenerated.
+- Proof in the sim (`saver_frames_md5.py --rotate --frames 6`, before = main 2a290fb model + code, after = both fixed): render md5 of frames 0..5 identical for Scope 2 and Pac-Man; state md5 differs (map colour fields / plane order), as intended. Scope 1, Asteroids, the flash screen: 1-bit only, unaffected. Realtek QC pattern (2-bit icons, Realtek's own data): its sim render now follows the hardware order.
+- Unit: Scope 2 SRAM == sim (T7, frames 3 and 33) on image `ohw10` (colour fix + test code).
+
+### Stack canary: the main-loop stalls of the test runs
+- The "main loop stops, WDT kicked" stalls were the stack canary (`g_ucAwtoPokeLast` = 15 = `AWTO_WDT_S_STACK`, read while stalled): test ops that started / drew Scope 2 one or two calls deeper than the saver poll (`OP_SAVER` calling `AwtoSaverPoll`, `S2FRAMES` in a helper).
+- Fixed in the test code: Scope 2 calls only at the saver poll's depth (inline in `AwtoOsdHwPoll`), the saver request served by the normal poll (host waits for `ucSaverRun`). Stack high water after T7 + T10: 0xE5 (guard 0xF0), same in repeated runs.
+- Production saver poll path not changed; its own depth margin: 11 bytes at 0xE5 (includes the test ops' depth).
+
+### T10 write-disturbance cycle (screen for Dan, left running on unit 3)
+- Question: does the display show glitches while the MCU writes OSD SRAM during the scan (the photo's garbled runs, with SRAM content proven right)?
+- `./dev.py osd-hw-test --unit 3 cycle` (stop: `cyclestop`, which also checks the 256 glyphs in SRAM). The ladder (solid red, 16 x 16) with a blue digit, 8 s per variant, looping; every write rewrites the SAME content, so any visible glitch is the write itself:
+  | digit | variant | measured rate (unit 3, 50 s round) |
+  |---|---|---|
+  | 1 | static, no writes | 0 |
+  | 2 | glyphs rewritten via `ScalerOsdDataPort`, 8 ms bands per main pass (Scope 2's band) | 3166 glyphs/s (171 KB/s) |
+  | 3 | glyphs rewritten with direct stores | 4308 glyphs/s (233 KB/s) |
+  | 4 | all 256 map words rewritten | 45 maps/s (11.5 k words/s) |
+  | 5 | one glyph per frame, right after DVS (vertical blanking) | 60 glyphs/s (one per frame) |
+  | 6 | address sets only, no data | 21653 /s |
+  | (no digit) | Scope 2 itself, running | ~5 frames/s |
+- Scope 2's own write load: ~70 glyphs + ~600 map words per frame at ~5 frames/s, well below variants 2..4.
+- Machine side: after full rounds the 256 ladder glyphs read back unchanged (`cyclestop` PASS, 2 runs; one earlier run had 1 differing byte that read back correct on re-read = a read glitch; dumps now read each chunk until two reads agree and count disagreements).
+- SDK (b): the SDK writes map / font SRAM while the OSD is shown with no vblank wait or circuit-off (`OsdFontPut*`, `ScalerOsdDataPort`); `_EVENT_DVS` waits only before window / position register changes (`RTD2014OsdWindow.c`, `RTD2014OsdFunc.c`) and in the read path (`ScalerOsdSramGetData`, circuit off). Write protection `0x3A33[0]`/`0x3A34` is bit masking, not a scan interlock. No double-buffer switch for SRAM areas found.
+- Decision by Dan's look: digits 2/3/4 glitch and 1/5 clean = write-during-scan disturbance confirmed -> fix = Scope 2 writes in vertical blanking (variant 5 shape) or into off-screen slots; all digits clean and the scope clean = the photo's garbling is gone with the current code (image `f2` differed: rotated static tiles from the separate `s_tS2BaseRot` table, replaced since by `AwtoOsdTurn`).
 
 ### Unresolved
-- Twice the main loop stopped (heartbeat 0/s, WDT kicked, unit alive on the debug ISR) right after `S2FRAMES` + the next op (once Scope 2 not started: test bug, fixed by guard `AWTO_OHW_ST_NO_S2`; once a READ with the scale-up engine on, before `F_RD_SU`). Not reproduced in 6 later runs. Recovery: `./dev.py reset --unit 3`.
+- Read-back: one 1-byte glitch in ~60 k bytes read (cycle run 2026-11-18); handled by double reads, cause not known.

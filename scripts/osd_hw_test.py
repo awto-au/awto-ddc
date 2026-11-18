@@ -14,6 +14,8 @@ usage: osd_hw_test.py --bus B --serial S --map MAP [--bin BIN] TEST [TEST ...]
     t8     Scope 2 held mid-frame: every cell shows its tile of the frame before or of the frame in progress
     rd     read-back with Scope 2 shown: overlay off / on / scale-up off (rows 0..14 are known)
     freeze Scope 2 held at a frame end (left on screen) + the sim render of that frame for a photo (+ the 4096-wrap render)
+    cycle  T10 for a human: the ladder with a blue digit 1..6, variants 8 s each, looping until `cyclestop` (docs/osd-hw-tests.md)
+    cyclestop  stop the cycle; check the ladder glyphs in SRAM are still as written
     ladder 2-bit ids 0..255 as a 16 x 16 grid, plane A solid (left on screen) + sim renders (as built, if the fetch wraps at 4096)
     t6     plane / colour screen for a human (left on screen)
     stop   saver off, OSD closed
@@ -38,9 +40,11 @@ DEV8 = 0x6A
 O_GO, O_SEQ, O_STATE, O_MODE, O_GAP, O_FLAGS, O_SEED, O_OVL, O_ADDR, O_N = 0, 1, 2, 3, 4, 5, 6, 7, 8, 10
 O_BAD, O_FIRST, O_CRC, O_MS, O_FRAME, O_REGS, O_BADB, O_BUF = 12, 14, 16, 18, 20, 22, 31, 39
 N_REGS, BUF = 9, 54
-SIZE = O_BUF + BUF
+O_RUN = O_BUF + BUF
+SIZE = O_RUN + 1
+RUN_SCOPE2 = 3                            # g_ucAwtoSaverRun of Scope 2 (saver.c AWTO_SAVER_SCOPE2)
 REG_NAMES = ["3A02", "3A0B", "3A17", "3A33", "3A34", "3A41", "0093", "0094", "006C"]
-OP_WRITE, OP_VERIFY, OP_READ, OP_CRC, OP_WRBUF, OP_PLANES, OP_S2FRAMES, OP_REGS, OP_SAVER, OP_LADDER = range(1, 11)
+OP_WRITE, OP_VERIFY, OP_READ, OP_CRC, OP_WRBUF, OP_PLANES, OP_S2FRAMES, OP_REGS, OP_SAVER, OP_LADDER, OP_CYCLE = range(1, 12)
 M_SDK, M_DIRECT, M_GAP, M_TRIPLE = 0, 1, 2, 3
 MODE_NAMES = {M_SDK: "ScalerOsdDataPort", M_DIRECT: "direct loop", M_GAP: "direct+gap", M_TRIPLE: "direct triples"}
 F_EA_OFF, F_M2, F_HIDE, F_HOLD, F_REPEAT, F_RD_OVL, F_RD_SU = 1, 2, 4, 8, 16, 32, 64
@@ -64,6 +68,10 @@ SAVER_OP_S = 0.25                         # saver request served in the op: Scop
 OP_FIXED_S = 0.25                         # one main-loop pass (max gap 20 ms, health) + the I2C of param write + polls
 S2_FRAME_S = 0.26                         # Scope 2 frame with the poll held: 228 ms worst (end of frame 1 incl. the first show)
 MARGIN = 1.25
+SIM_SAVER_S = 5.0                         # sim: fw seconds for a saver start (the sim runs slower than the unit, not faster)
+CYCLE_LOOK_S = 58.0                       # cycle: 7 variants x 8 s, then the write counter is read
+CYCLE_BAND_S = 0.02                       # cycle: a main pass may hold one 8 ms band or one DVS wait (16.7 ms at 60 Hz)
+LADDER_GLYPH = bytes([0xFF]) * 27 + bytes(27)   # plane A solid, plane B 0
 CAL = 1.0                                 # --cal: limits x 20 for a calibration run that measures the op times above
 
 
@@ -119,7 +127,7 @@ class Unit:
                     and self.io.write(DEV8, 0x3B, bytes([a & 0xFF]))):
                 raise RuntimeError(f"debug write NAK at 0x{a:04X}")
 
-    RD_TRIES = 12                             # a block read fails while the main loop is busy; 12 x 3 chunk tries > the 20 ms max pass gap (health)
+    RD_TRIES = 40                             # a block read fails while the main loop is busy (cycle map variant: ~1 map rewrite per pass)
 
     def rd(self, off: int, n: int) -> bytes:
         r = None
@@ -201,7 +209,7 @@ def op(dev, code: int, limit_s: float, *, mode=M_SDK, gap=0, flags=None, seed=0,
     raw = dev.rd(0, SIZE)
     be = lambda o: int.from_bytes(raw[o:o + 2], "big")
     return dict(state=raw[O_STATE], ovl=raw[O_OVL], bad=be(O_BAD), first=be(O_FIRST), crc=be(O_CRC), ms=be(O_MS), frame=be(O_FRAME),
-                regs=dict(zip(REG_NAMES, raw[O_REGS:O_REGS + N_REGS])), badb=raw[O_BADB:O_BADB + 8], buf=raw[O_BUF:O_BUF + BUF],
+                regs=dict(zip(REG_NAMES, raw[O_REGS:O_REGS + N_REGS])), badb=raw[O_BADB:O_BADB + 8], buf=raw[O_BUF:O_BUF + BUF], run=raw[O_RUN],
                 host_s=dev.now() - t0)
 
 
@@ -256,13 +264,24 @@ def shift_report(dev, addr: int, seed: int, first: int, flags: int) -> None:
     say(f"    window words 0x{w0:04X}+18: want {want[:BUF].hex()}  pattern shift that matches the whole window: {shifts or 'none'}")
 
 
+READ_GLITCHES = [0]                       # chunks whose two reads differed (a 1-byte read glitch was seen once, 2026-11-18 cycle run)
+READ_TRIES = 4                            # reads of a chunk until two agree
+
+
 def dump(dev, start: int, words: int, hold: int) -> bytes:
+    """Each 18-word chunk read until two reads agree (read-back is not glitch-free; counted in READ_GLITCHES)."""
     out = bytearray()
     per = BUF // WORD_B
     for a in range(start, start + words, per):
         k = min(per, start + words - a)
-        r = op(dev, OP_READ, lim_read(k * WORD_B), flags=hold, addr=a, n=k, label="dump")
-        out += r["buf"][:k * WORD_B]
+        rd = lambda: op(dev, OP_READ, lim_read(k * WORD_B), flags=hold, addr=a, n=k, label="dump")["buf"][:k * WORD_B]
+        got = [rd(), rd()]
+        while got[-1] != got[-2] and len(got) < READ_TRIES:
+            got.append(rd())
+        if got[-1] != got[-2]:
+            raise RuntimeError(f"words 0x{a:04X}+{k}: {READ_TRIES} reads, no two in a row agree")
+        READ_GLITCHES[0] += len(got) > 2
+        out += got[-1]
     return bytes(out)
 
 
@@ -270,9 +289,19 @@ def sim_image(font: dict, start: int, words: int) -> bytes:
     return b"".join(bytes(font.get(a, [0, 0, 0])) for a in range(start, start + words))
 
 
+def wait_scope2(dev) -> None:
+    """The saver poll serves the request on its next pass (Scope 2 start ~214 ms): wait for it before a hold."""
+    t0 = dev.now()
+    lim = lim_saver() if isinstance(dev, Unit) else SIM_SAVER_S
+    while op(dev, OP_REGS, lim, label="saver run?")["run"] != RUN_SCOPE2:
+        if dev.now() - t0 > lim:
+            raise TimeoutError(f"Scope 2 not running after {dev.now() - t0:.2f} s (limit {lim_saver():.2f} s)")
+
+
 def run_frames(dev, frames: int, free_s: float) -> int:
     """Scope 2 on (saver request), free run free_s (0 = hold at once), hold, finish the current frame + `frames` more."""
     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
+    wait_scope2(dev)
     t0 = dev.now()
     while dev.now() - t0 < free_s:
         dev.idle()
@@ -308,6 +337,7 @@ def t7_compare(unit_dev, a, frame: int, tag: str, prior: int | None, rotate: boo
             op(sim, OP_SAVER, 5.0, flags=0, n=prior, label="sim prior")
             sim.sess.bus.wait(4.0)
         op(sim, OP_SAVER, 5.0, flags=0, n=SAVER_SCOPE2, label="sim scope2 on")
+        wait_scope2(sim)
         set_flags(sim, F_HOLD)
         got = op(sim, OP_S2FRAMES, 600.0, n=0, label="sim frames")["frame"]
         while got < frame:
@@ -344,6 +374,7 @@ def sim_frame_end(a, frame: int, rotate: bool) -> bytes:
     sim = Sim(a.bin, a.map, rotate)
     try:
         op(sim, OP_SAVER, 5.0, flags=0, n=SAVER_SCOPE2, label="sim scope2 on")
+        wait_scope2(sim)
         set_flags(sim, F_HOLD)
         got = 0
         while got < frame:
@@ -358,6 +389,7 @@ def t8_midframe(dev, a, free_s: float, rotate: bool) -> bool:
     set_flags(dev, 0)
     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_SCOPE2, label="scope2 on")
+    wait_scope2(dev)
     t0 = dev.now()
     while dev.now() - t0 < free_s:
         dev.idle()
@@ -475,6 +507,7 @@ def main() -> int:
                     sim = Sim(a.bin, a.map, not a.no_rotate)
                     try:
                         op(sim, OP_SAVER, 5.0, flags=0, n=SAVER_SCOPE2, label="sim scope2 on")
+                        wait_scope2(sim)
                         set_flags(sim, F_HOLD)
                         got = 0
                         while got < fr:
@@ -491,6 +524,23 @@ def main() -> int:
                     finally:
                         sim.close()
                     say(f"  frozen at the end of frame {fr} (shown, saver poll held); unit SRAM {'==' if same else '!='} sim SRAM; sim render as the viewer sees it: {png}")
+                elif t == "cycle":
+                    set_flags(dev, 0)
+                    op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
+                    op(dev, OP_CYCLE, lim_write(M_SDK, S2_IDS * BUF + 2 * BUF), n=1, label="cycle on")
+                    t0 = dev.now()
+                    while dev.now() - t0 < CYCLE_LOOK_S:            # one full round: writes per variant
+                        dev.idle()
+                    r = op(dev, OP_REGS, lim_read(0) + CYCLE_BAND_S, label="regs")
+                    say(f"  cycle running: {r['bad']} writes after {CYCLE_LOOK_S:.0f} s (variants 2, 3, 4, 6 count glyphs / map passes / address sets)")
+                elif t == "cyclestop":
+                    op(dev, OP_CYCLE, lim_read(0) + CYCLE_BAND_S, n=0, label="cycle off")
+                    img = dump(dev, 0, S2_END, 0)
+                    bad = [g for g in range(S2_IDS) if img[(S2_FONT + S2_STRIDE * g) * WORD_B:(S2_FONT + S2_STRIDE * g + S2_STRIDE) * WORD_B] != LADDER_GLYPH]
+                    fails += bool(bad)
+                    say(f"  {'PASS' if not bad else 'FAIL'} cycle stopped; ladder glyphs in SRAM: {len(bad)} of {S2_IDS} differ {bad[:20]}")
+                    for g in bad[:3]:
+                        say(f"    glyph {g}: {img[(S2_FONT + S2_STRIDE * g) * WORD_B:(S2_FONT + S2_STRIDE * g + S2_STRIDE) * WORD_B].hex()}")
                 elif t == "ladder":                             # T9 for a human: 2-bit ids 0..255 (16 x 16), plane A solid; left on screen
                     set_flags(dev, 0)
                     op(dev, OP_SAVER, lim_saver(), flags=0, n=SAVER_OFF, label="saver off")
@@ -526,7 +576,7 @@ def main() -> int:
                     fails += 1
         finally:
             dev.close()
-    say(f"done: {fails} failing case(s)")
+    say(f"done: {fails} failing case(s); dump chunks whose first two reads differed: {READ_GLITCHES[0]}")
     return 1 if fails else 0
 
 

@@ -265,16 +265,16 @@ static void S2Uint(unsigned long ulV, BYTE ucDigits, BYTE ucPos)                
     }
 }
 
-static void S2MapWord(WORD usCell, BYTE ucId)                                       // char command of one cell: glyph id, 2-bit colours (value 0 bg, 1 red, 2 / 3 green)
+static void S2MapWord(WORD usCell, BYTE ucId)                                       // char command: glyph id, colours c0 bg, c1 green (plane A = low bit, docs/osd-hw-tests.md T9), c2 red, c3 green
 {
     if(g_ucAwtoOsdRot != 0)                                                         // turned 180 (docs/osd-rotation.md): the mirrored cell
     {
         usCell = AwtoOsdRotCell(usCell, AWTO_S2_CELLS);
     }
     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_S2_FS_BASE + usCell, _OSD_WITHOUT_DB);
-    ScalerOsdDataPort((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_RED >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
+    ScalerOsdDataPort((BYTE)(AWTO_OSD_ROW_B0 | (((AWTO_S2_PAL_BG >> 3) & 1) << 5) | (((AWTO_S2_PAL_GREEN >> 3) & 1) << 4) | ((AWTO_S2_PAL_GREEN & 7) << 1) | ((AWTO_S2_PAL_BG >> 2) & 1)));
     ScalerOsdDataPort(ucId);
-    ScalerOsdDataPort((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_GREEN & 7) << 3) | (AWTO_S2_PAL_RED & 7)));
+    ScalerOsdDataPort((BYTE)(((AWTO_S2_PAL_BG & 3) << 6) | ((AWTO_S2_PAL_RED & 7) << 3) | (AWTO_S2_PAL_GREEN & 7)));
 }
 
 static void S2Glyph(BYTE ucId)                                                      // g_aucScPix (green plane, red plane; data port order, already turned) -> glyph slot

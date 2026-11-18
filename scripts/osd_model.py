@@ -396,20 +396,21 @@ def glyph_bits(st: OsdState, g: dict, gid: int) -> np.ndarray:
     return tile(by, 0)
 
 
-def _planes(st: OsdState, base: int, n: int) -> np.ndarray:
-    """n bit planes, each stored like a 1 bpp glyph (9 words), MSB plane first; pixel value = planes read MSB-first.
-    Evidence: Realtek's own QC 2 / 4 bpp icons (awto-ddc#227, docs/reversing/realtek-rtd/osd-font-download.md); not yet seen on a unit."""
+def _planes(st: OsdState, base: int, n: int, lsb_first: bool = False) -> np.ndarray:
+    """n bit planes, each stored like a 1 bpp glyph (9 words). lsb_first: plane k = bit k (2-bit, unit 3 ladder, docs/osd-hw-tests.md T9);
+    else MSB plane first (4-bit: from Realtek's QC icons only, awto-ddc#227, not seen on a unit)."""
     v = np.zeros((GH, GW), np.uint8)
     for k in range(n):
         by = bytes(b for w in range(9) for b in st.font.get(base + 9 * k + w, [0, 0, 0]))
-        v = (v << 1) | tile(by, 0).astype(np.uint8)
+        bit = tile(by, 0).astype(np.uint8)
+        v = (v | (bit << k)) if lsb_first else ((v << 1) | bit)
     return v
 
 
 def glyph_levels2(st: OsdState, g: dict, gid: int) -> np.ndarray:
     """2-bit glyph: 18 words at font_base + 18 * (char_sel_2bit_offset + id) [QC: offset 16, id 0 = tile 32]."""
     off2 = (st.reg(FRAME + 0x21) >> 1 & 1) << 8 | st.reg(FRAME + 0x22)
-    return _planes(st, g["font_base"] + 18 * (off2 + gid), 2)
+    return _planes(st, g["font_base"] + 18 * (off2 + gid), 2, lsb_first=True)
 
 
 def glyph_levels4(st: OsdState, g: dict, gid: int) -> np.ndarray:

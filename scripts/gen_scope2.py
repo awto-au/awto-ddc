@@ -3,7 +3,7 @@
 
 usage: gen_scope2.py [--check] [--raster W] [--model]
   Raster 480 x 270 px = 40 x 15 tiles of 12 x 18 (scaled 8x to 3840 x 2160; other panels: factor 64 * 480 / panel width in the firmware).
-  2-bit glyphs: plane MSB = green (trace, readouts), plane LSB = red (graticule, level marks); 9 words = 27 bytes per plane, bytes in data port order (docs/osd-rotation.md).
+  2-bit glyphs: plane A (first 9 words, low bit on the unit) = green (trace, readouts), plane B = red (graticule, level marks); 9 words = 27 bytes per plane, bytes in data port order (docs/osd-rotation.md).
   Static tiles (deduped) get ids 0..N-1; the rest of the 256 ids are dynamic slots the firmware allocates in a ring (trace, cursor and readout tiles).
   --model: worst-case dynamic tiles per frame over all pulse positions / speeds, against the slots available.
   --check: exit 1 when the file on disk differs.
