@@ -126,21 +126,21 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1018	ok	OK-CONFIG: bForceFreqDown only set under _IMD_DOMAIN_ULTRA_HIGH_SPEED_SUPPORT (off); local stays _FALSE
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerPLL.c	1021	ok	OK-CONFIG: freq-down arm dead for same reason (bForceFreqDown always _FALSE)
 ^conditional flow changed by optimizer	Kernel/System/Code/SysColor.c	65	ok	OK-CONFIG: _COLOR_IP_DCC_HISTOGRAM/_DCR/seamless/MBR off: ACTIVE case empty equals default
-^unreachable code$	Kernel/System/Code/SysPower.c	754	ok	OK-HARMLESS: trailing return after a switch in which all cases return
+^unreachable code$	Kernel/System/Code/SysPower.c	751	ok	OK-HARMLESS: trailing return after a switch in which all cases return
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	542	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	581	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^unreachable code$	Kernel/User Common Function/Code/UserCommonInterface.c	745	ok	OK-HARMLESS: PCB_BACKLIGHT_POWER(const) macro contains if((x)==_LIGHT_CONTROL_ON); the other arm is dead for a constant argument, correct arm still emitted
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2815	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^unreachable code$	User/RTD Factory/Code/RTDFactoryFunction.c	2814	ok	OK-HARMLESS: SDK bug: (bit)(ucPar&_BIT1)==(1<<1) is always false (bit is 0/1, compared to 2); Keil promotes the same way so also never true; factory-menu only
 ^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	635	ok	OK-HARMLESS: timer-event switch: cases sharing code merged by the optimizer (#162 removed the two panel timer events)
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1361	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1367	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2486	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3448	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3511	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3515	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4004	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
-^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4009	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1353	ok	OK-HARMLESS: bUncall local =_FALSE: SDK uncall block, never meant to run
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	1359	ok	OK-HARMLESS: body of SDK uncall block, intentionally dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	2478	ok	OK-HARMLESS: switch where FULL_RANGE/RESERVED/default share the return; same result
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3440	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3503	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^unreachable code$	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3507	ok	OK-CONFIG: _DP_MST_SUPPORT==_OFF: UserInterfaceGetDpMSTCapablePort returns _DP_MST_NO_PORT at the top; rest dead
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	3996	ok	OK-HARMLESS: audio-test-only power NORMAL branch is an empty SDK user hook
+^conditional flow changed by optimizer	User/RTD Series/RTD2014Function/Code/RTD2014UserInterface.c	4001	ok	OK-HARMLESS: audio-test-only power SAVING branch is an empty SDK user hook
 # Reviewed 2026-11-05 (#26): FRC-off build sites (-D _AWTO_FRC=_OFF since FRC is the default, 2026-11-13)
 # Reviewed 2026-11-13 (#165): FRC sites (default build, ScalerFRC.c unparked)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerFRC.c	192	ok	OK-HARMLESS: switch(GET_MEMORY_SELECT()) in ScalerFRCIVS2DVSDelay: `default:` shares the _MN_FRAME_SYNC_MEMORY body, jump table reshaped
@@ -170,3 +170,16 @@
 ^#warning "_FRC_SUPPORT Should Be _ON!!!"$	Kernel/Common/Project_Config_Check.h	98	ok	TEMP KNOWN WRONG: _ASPECT_ORIGINAL_MODE_SUPPORT needs FRC; FRC ON wedged unit 3, fix pending (#26)	_AWTO_FRC=_OFF
 ^conditional flow changed by optimizer	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: rotation off -> ucWant is always upright, the 180 / upright ternary is constant	_AWTO_FRC=_OFF
 ^unreachable code$	*/fw/osd/text_layer.c	50	ok	OK-CONFIG: same line, the 180 branch of the constant ternary	_AWTO_FRC=_OFF
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	489	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	494	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	497	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	502	ok	OK-CONFIG: CEC gen type 0 has no destination register (ucDestLa = 0xFF): the main-loop polling receive body is dead, the interrupt path receives (docs/cec.md)
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	558	ok	OK-HARMLESS: CEC gen type 0: ucDestLa is the constant _CEC_LA_TV, the || is always true
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	559	ok	OK-HARMLESS: CEC gen type 0: ucDestLa is the constant _CEC_LA_TV, the || is always true
+^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	781	ok	OK-HARMLESS: memset / memcpy of CEC state the interrupt fills only while the analysing flag is clear (SDK handshake)
+^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	848	ok	OK-HARMLESS: memset / memcpy of CEC state the interrupt fills only while the analysing flag is clear (SDK handshake)
+^pointer target lost volatile qualifier	Kernel/User Common Function/Code/UserCommonCec.c	73	ok	OK-HARMLESS: clear of the CEC RX struct after its frame was handled; the analysing flag is set first, so the interrupt writes the backup FIFO meanwhile (see the ScalerCec.c rows)
+^pointer target lost volatile qualifier	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	279	ok	OK-HARMLESS: same handshake: the backup FIFO is read out into the RX struct while the analysing flag is clear and the interrupt is not writing it
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	481	ok	OK-CONFIG: CEC gen type 0: ucDestLa = 0xFF makes the polling-mode receive dead, the interrupt path receives (docs/cec.md)
+^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	483	ok	OK-CONFIG: same dead polling-mode receive
+^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	486	ok	OK-CONFIG: same dead polling-mode receive

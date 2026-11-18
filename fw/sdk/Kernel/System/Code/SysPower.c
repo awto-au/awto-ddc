@@ -150,10 +150,7 @@ void SysPowerInitial(void)
     //////////////////////////
     // CEC Initial Setting //
     //////////////////////////
-#if(_HDMI_CEC_SUPPORT == _ON)
-    ScalerCecInitial();
-    ScalerCecFunctionEnable(UserInterfaceCecGetCecActive());
-#endif
+    // awto: ScalerCecInitial moved to SysCecHandler (after the display path is up, docs/cec.md)
 
     /////////////////////////////////////
     // DP Aux and DPCD Initial Setting //

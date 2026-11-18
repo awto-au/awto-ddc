@@ -3580,10 +3580,6 @@ void UserCommonInterfaceOsdHandler(void)
 #endif
     }
 
-#if(_HDMI_CEC_SUPPORT == _ON)
-    UserInterfaceCecHighLevelFlow();
-#endif
-
 #if(_PANEL_STYLE == _PANEL_VBO)
     ScalerDisplayVboPanelBacklightReTurnOn();
 #endif

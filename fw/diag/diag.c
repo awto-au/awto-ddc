@@ -41,6 +41,7 @@ void AwtoDiagMainPass(void)
 {
     static unsigned int usLastMs;
     static unsigned int usLastHb;
+    static unsigned int usLastMon;
     unsigned int usNow;
 
     isr_g_stAwtoDiag.usHeartbeat++;
@@ -56,6 +57,13 @@ void AwtoDiagMainPass(void)
         usLastHb = isr_g_stAwtoDiag.usHeartbeat;
         usLastMs = usNow;
     }
+#if(_AWTO_WDT == _ON)
+    if((unsigned int)(usNow - usLastMon) >= AWTO_MON_MS)       // monitor: one subtract + compare per pass, the sample every AWTO_MON_MS
+    {
+        usLastMon = usNow;
+        AwtoMonSample();
+    }
+#endif
     AwtoDiagStage(6);                                  // first main-loop pass (#63 order: 5 = panel VDD comes first)
     AWTO_WDT_SHOW();
 }

@@ -144,11 +144,6 @@ extern bit g_bTypeCPortControllerPowerOffFlag;
 #endif
 #endif
 
-#if(_HDMI_CEC_SUPPORT == _ON)
-extern bit g_bCecLaPollingStart;
-extern BYTE g_ucCecLaCnt;
-#endif
-
 //****************************************************************************
 // STRUCT / TYPE / ENUM DEFINITTIONS
 //****************************************************************************
@@ -676,7 +671,6 @@ extern EnumRtkAdvMbrUserStatus UserInterfaceGetRtkAdvMbrSetting(void);
 // RTD2014UserInterfaceCec.c
 //-------------------------------------------------------
 extern void UserInterfaceCecReceivedNotify(StructCecRxReceivedInfo *pstCecRxInfo);
-extern bit UserInterfaceCecTransmitInfoPrepare(StructCecTxTransmitInfo *pstCecTxInfo);
 extern void UserInterfaceCecHighLevelFlow(void);
 
 //-------------------------------------------------------

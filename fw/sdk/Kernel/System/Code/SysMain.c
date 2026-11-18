@@ -154,7 +154,10 @@ void main(void)
             SysTMDSRxHandler();
 
 #if(_HDMI_CEC_SUPPORT == _ON)
-            SysCecHandler();
+            if(AWTO_CEC_DUE())
+            {
+                SysCecHandler();
+            }
 #endif
 #endif
 

@@ -38,7 +38,7 @@ Status: flashed to units 1-3 (2026-11-04, table below). `make_edid.py` now emits
 | CTA ext | no VSDBs | + HDMI VSDB, HF-VSDB, AMD VSDB |
 - HDMI copy is 1.3 because edid-decode 1.32 FAILS an HDMI VSDB inside an EDID 1.4 base ("HDMI Specification requires EDID 1.3"). This is why the original HDMI copies were 1.3.
 - DP copy carries no HDMI/HF VSDB (meaningless on DP); everything else (identity, DTD, VICs, audio, VCDB) is shared.
-- Both HDMI slots share physical address 1.0.0.0 as before; a source-side CEC address is not meaningful on this panel.
+- CEC physical address (docs/cec.md, 2026-11-19): D2 HDMI slot 1.0.0.0, D3 HDMI slot 2.0.0.0 (`scripts/make_edid.py`); before, both slots were 1.0.0.0. The monitor itself is the CEC root 0.0.0.0. DP slot: no VSDB.
 
 ## Identity
 - PnP vendor `AWT`: `((A-64)<<10)|((W-64)<<5)|(T-64)` = `0x06F4`, bytes `06 F4`. Not a registered PnP ID (3-letter limit); edid-decode did not warn.
