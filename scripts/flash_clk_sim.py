@@ -25,7 +25,7 @@ A_TUNE, A_F2, A_SRC = 0xFF6C, 0xFFE9, 0xFFED
 TUNE_MASK = 0x3C
 AWTO_SLOW = 0x20                        # stock tune: latch_so_rise 1, drive_si_fall 0, si_dly_sel 0
 WR_F2 = 5                               # flash writes / erases: 350.8 / 5 = 70.2 MHz
-PROVEN = {(3, 0x34), (3, 0x20), (4, 0x34), (4, 0x20), (5, 0x20)}   # (F2, FF6C[5:2]) pairs passed on unit 3 (clk_sweep.tsv oc117 / oc88 l1_f1_d1 + l1_f0_d0; stock tune at 70.2)
+PROVEN = {(2, 0x20), (3, 0x34), (3, 0x20), (4, 0x34), (4, 0x20), (5, 0x20)}   # (F2, FF6C[5:2]) pairs passed on unit 3 (clk_sweep.tsv oc117 / oc88 l1_f1_d1 + l1_f0_d0; stock tune at 70.2)
 M2PLL_KHZ = 350790                      # 14318 kHz x 49 / 2
 FILL_FLASH_CLK = json.loads((Path(__file__).resolve().parent / "dw8051_model.json").read_text())["flash_fetch"]["fill_flash_clk"]   # measured, see the model's fill_source
 
@@ -52,7 +52,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bin", type=Path)
     ap.add_argument("--map", type=Path)
-    ap.add_argument("--f2", type=int, default=None, help="expected FFE9[3:0] (default: whatever the build set; the tune is then 0x34 below F2 5, else 0x20)")
+    ap.add_argument("--f2", type=int, default=None, help="expected FFE9[3:0] (default: whatever the build set; the tune is then 0x34 with the write switch in the image, else 0x20)")
     ap.add_argument("--tune", type=lambda s: int(s, 16), default=None)
     a = ap.parse_args()
     a.map = a.map or a.bin.with_suffix(".map")
@@ -70,7 +70,9 @@ def main() -> int:
         m = bus.m
         f2, tune = m.rd(A_F2)[0] & 0x0F, m.rd(A_TUNE)[0] & TUNE_MASK
         a.f2 = f2 if a.f2 is None else a.f2
-        a.tune = (0x34 if a.f2 < WR_F2 else AWTO_SLOW) if a.tune is None else a.tune
+        f2s = [f for _, f, p in m.clock.f2_log if p]
+        fast_build = a.f2 < WR_F2 and WR_F2 in f2s        # write sessions seen = the 350 build with flash above 70 MHz: fast tune; otherwise the stock tune
+        a.tune = (0x34 if fast_build else AWTO_SLOW) if a.tune is None else a.tune
         check("end state FFE9[3:0] = F2", f2 == a.f2, f"{f2} (want {a.f2})")
         check("end state FF6C[5:2] = fast tune", tune == a.tune, f"0x{tune:02X} (want 0x{a.tune:02X})")
         # flash-write sessions on the M2PLL: slow tune -> F2 5 ... F2 back -> fast tune (every transient pair is a proven one)
@@ -87,8 +89,7 @@ def main() -> int:
             if pll and cur_f2 is not None and cur_tune is not None and (cur_f2, cur_tune) not in PROVEN:
                 bad.append((cur_f2, cur_tune))
         check("every (F2, tune) state on the M2PLL is a proven pair", not bad, f"{sorted(set(bad))}; seen {sorted(pairs)}")
-        f2s = [f for _, f, p in m.clock.f2_log if p]
-        check("write sessions run F2 5 and return to the fast F2 (none when the build is in spec)", bool(f2s) and f2s[-1] == a.f2 and ((WR_F2 in f2s) if a.f2 < WR_F2 else set(f2s) == {a.f2}), f"{sessions} sessions, F2 on M2PLL {f2s[:6]}... last {f2s[-1] if f2s else None}")
+        check("write sessions run F2 5 and return to the fast F2 (none when the build is in spec)", bool(f2s) and f2s[-1] == a.f2 and ((WR_F2 in f2s) if fast_build else set(f2s) == {a.f2}), f"{sessions} sessions, F2 on M2PLL {f2s[:6]}... last {f2s[-1] if f2s else None}")
         first_pll = next((i for i, r in enumerate(tap.rows) if r[3]), None)
         fast = next((i for i, r in enumerate(tap.rows) if r[1] == A_TUNE and (r[2] & TUNE_MASK) == a.tune), None)
         check("fast tune written before the M2PLL is the CPU clock", first_pll is not None and fast is not None and fast < first_pll, f"tune row {fast}, first M2PLL row {first_pll}")

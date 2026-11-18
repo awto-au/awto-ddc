@@ -360,7 +360,7 @@
 #define AWTO_FLASH_MHZ                                          117
 #endif
 // FF6C[5:2] read tune, indexes = regdb fields latch_so_rise (bit value), drive_si_fall (bit value), si_dly_sel (0..3 = 0 / 2 / 4 / 6 ns); [hw] unit 3
-#if(AWTO_FLASH_MHZ > 70)
+#if((AWTO_CLOCK_MHZ == 350) && (AWTO_FLASH_MHZ > 70))
 #define AWTO_FLASH_LATCH_RISE                                   1
 #define AWTO_FLASH_DRIVE                                        1
 #define AWTO_FLASH_DELAY                                        1
