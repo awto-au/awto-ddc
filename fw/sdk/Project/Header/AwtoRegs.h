@@ -128,6 +128,9 @@
 #define AWTO_R_IIC_3_STATUS                             0xFEA8
 #define AWTO_R_IIC_CH_SEL                               0xFF22
 #define AWTO_F_IIC_CH_SEL_CH_SEL                        0x07
+#define AWTO_F_READ_INSTRUCTION_DRIVE_SI_FALL           0x10
+#define AWTO_F_READ_INSTRUCTION_LATCH_SO_RISE           0x20
+#define AWTO_F_READ_INSTRUCTION_SI_DLY_SEL              0x0C
 #define AWTO_R_WATCHDOG_CNT2_VALUE                      0xFFAA
 #define AWTO_R_WATCHDOG_CNT23_VALUE                     0xFFAB
 #define AWTO_R_WATCHDOG_CNT3_VALUE                      0xFFAC
@@ -140,7 +143,9 @@
 #define AWTO_F_WATCHDOG_TIMER_H_THRESHOLD_MASK_WDT_CNT_THRESHOLD_H_VALUE 0xF0
 #define AWTO_R_PORT1_PIN_REG                            0xFFE2
 #define AWTO_R_DDC1_EDID_IRQ                            0xFFE5
+#define AWTO_F_MCU_CLK_CONTROL_1_FLASH_CLK_DIV2         0x0F
 #define AWTO_R_WATCHDOG_TIMER                           0xFFEA
 #define AWTO_F_WATCHDOG_TIMER_CLR_WDT                   0x40
+#define AWTO_F_MCU_CONTROL_MCU_CLK_SEL                  0x02
 
 #endif

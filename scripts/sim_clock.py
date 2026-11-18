@@ -25,6 +25,7 @@ class ClockModel:
         self.f_cpu, self.src = float(XTAL_HZ), "crystal"
         self.ratio_x256 = 256                         # CPU clk per flash clk x 256 (flash fetch stall model)
         self.log = []                                     # (wall ms, f_cpu Hz, source name) per change
+        self.f2_log = []                                  # (instr, FFE9[3:0], source is M2PLL) per change of the flash second divider
 
     def init(self, m):
         self.update(m)
@@ -49,6 +50,8 @@ class ClockModel:
             src, name = xtal, "iosc" if xs & 0x08 else "crystal"
         md, fd2 = max(1, (mdiv >> 2) & 0x0F), max(1, m.rd(A_FLASH2)[0] & 0x0F)
         f = src / max(1, (sel >> 2) & 0x0F) / md
+        if not self.f2_log or self.f2_log[-1][1:] != (fd2, name == "M2PLL"):
+            self.f2_log.append((m.instr, fd2, name == "M2PLL"))
         self.ratio_x256 = int(round(256.0 * fd2 / md))       # f_flash = source / FLASH_CLK_DIV / FLASH_CLK_DIV2, f_cpu = source / FLASH_CLK_DIV / MCU_CLK_DIV
         if f != self.f_cpu or name != self.src:
             self.f_cpu, self.src = f, name

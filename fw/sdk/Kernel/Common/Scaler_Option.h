@@ -701,7 +701,13 @@ typedef enum
     _FLASH_2_CLK_IN_DIV = _DIV_1,
 
 #if(AWTO_CLOCK_MHZ == 350)
-    _FLASH_2_CLK_DIV = _DIV_5,      // SPI = M2PLL / F / F2 = 70.2 MHz (rated 86 MHz, MX25L8006E; unit 3 [hw])
+#if(AWTO_FLASH_MHZ == 117)
+    _FLASH_2_CLK_DIV = _DIV_3,      // SPI = M2PLL / F / F2 = 116.9 MHz (rated 86 MHz, MX25L8006E; unit 3 [hw] with the FF6C tune, docs/clock-sweep.md)
+#elif(AWTO_FLASH_MHZ == 87)
+    _FLASH_2_CLK_DIV = _DIV_4,      // 87.7 MHz
+#else
+    _FLASH_2_CLK_DIV = _DIV_5,      // 70.2 MHz
+#endif
 #elif(_MCU_SPEED_UP_SUPPORT == _ON)
     _FLASH_2_CLK_DIV = _DIV_4,
 #else

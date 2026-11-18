@@ -242,13 +242,8 @@ void ScalerMcuInitial(void)
     // Set Flash fast read mode
     MCU_FF6C_READ_INSTRUCTION |= _BIT6;
 
-#if(_PCB_FLASH_LATCH_SO_DATA_IN_RISING_EDGE == _ON)
-    // Set latch Flash SO __data in Rising edge
-    MCU_FF6C_READ_INSTRUCTION &= ~_BIT5;
-#else
-    // Set latch Flash SO __data in falling edge
-    MCU_FF6C_READ_INSTRUCTION |= _BIT5;
-#endif
+    // Read tune for the crystal clock (still the CPU clock here); GroupSetting(_M2PLL_CLK) sets the fast tune before its dividers
+    AWTO_FLASH_TUNE_SET(AWTO_FLASH_TUNE_SLOW);
 
     ////////////////
     //PWM Settings//
@@ -378,6 +373,9 @@ void ScalerMcuFlashClockGroupSetting(EnumClkSel enumClock)
 {
     if(enumClock == _M2PLL_CLK)
     {
+        // Read tune first: the CPU still runs from the crystal, so no transient at the fast flash clock
+        AWTO_FLASH_TUNE_SET(AWTO_FLASH_TUNE_FAST);
+
         // Both Mcu/Flash first stage divider
         MCU_FFED_MCU_CONTROL = ((_FLASH_CLK_DIV & 0x0F) << 2) | (MCU_FFED_MCU_CONTROL & 0xC3);
 
@@ -403,6 +401,8 @@ void ScalerMcuFlashClockGroupSetting(EnumClkSel enumClock)
 
         // Mcu second stage divider
         MCU_FFEE_MCU_CLOCK_CONTROL = ((_MCU_CLK_PS_DIV & 0x0F) << 2) | (MCU_FFEE_MCU_CLOCK_CONTROL & 0xC3);
+
+        AWTO_FLASH_TUNE_SET(AWTO_FLASH_TUNE_SLOW);
     }
     else if(enumClock == _EXT_XTAL_CLK)
     {
@@ -417,6 +417,8 @@ void ScalerMcuFlashClockGroupSetting(EnumClkSel enumClock)
 
         // Mcu second stage divider
         MCU_FFEE_MCU_CLOCK_CONTROL = ((_MCU_CLK_IN_DIV & 0x0F) << 2) | (MCU_FFEE_MCU_CLOCK_CONTROL & 0xC3);
+
+        AWTO_FLASH_TUNE_SET(AWTO_FLASH_TUNE_SLOW);
     }
 }
 

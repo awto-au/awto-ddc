@@ -4273,6 +4273,9 @@ bit ScalerFlashErasePage(BYTE ucBank, BYTE ucPage)
         return _FALSE;
     }
 
+    // Flash commands (ID, WREN, WRSR, SE, WRDis) run at the in-spec flash clock
+    AwtoFlashWrBegin();
+
     if(g_ucFlashType == _FLASH_UNDETECT)
     {
         ScalerFlashDetectFlashType();
@@ -4295,6 +4298,8 @@ bit ScalerFlashErasePage(BYTE ucBank, BYTE ucPage)
     MCU_FF61_COMMON_OP_CODE = 0xFF; AWTO_NV_EV(4);
 
     ScalerFlashWRDis();
+
+    AwtoFlashWrEnd();
 
     return _TRUE;
 }

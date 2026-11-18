@@ -41,6 +41,8 @@
 // FUNCTION DECLARATIONS
 //****************************************************************************
 bit ScalerFlashWrite(BYTE ucBank, WORD usAddr, WORD usLength, BYTE *pucData);
+extern void AwtoFlashWrBegin(void);                                // fw/nvram/flash_clk.c
+extern void AwtoFlashWrEnd(void);
 
 //****************************************************************************
 // FUNCTION DEFINITIONS
@@ -76,6 +78,9 @@ bit ScalerFlashWrite(BYTE ucBank, WORD usAddr, WORD usLength, BYTE *pucData)
     {
         return _FALSE;
     }
+
+    // Flash commands (ID, WREN, WRSR, PP, RDSR) run at the in-spec flash clock
+    AwtoFlashWrBegin();
 
     // Need detect flash type when never detected
     if(g_ucFlashType == _FLASH_UNDETECT)
@@ -311,6 +316,7 @@ bit ScalerFlashWrite(BYTE ucBank, WORD usAddr, WORD usLength, BYTE *pucData)
     }
 #endif
 
+    AwtoFlashWrEnd();
+
     return _TRUE;
 }
-

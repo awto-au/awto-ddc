@@ -16,6 +16,7 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   delays: delay_sim.py (docs/delay-audit.md): panel_sim scenario at the image's clock (+ the sibling `<stem>-clk87` image of `-D AWTO_CLOCK_MHZ=87` when built): class A waits vs
     wall ms, Timer2 / wall = 1, every executed DELAY_5US / DELAY_XUS loop >= nominal, loop counts = AWTO_DELAY_CNT, DDC debounce wall time equal at both clocks; --audit:
     delay_audit.py --check (every linked delay site is in docs/delay-audit.tsv, no FIX / UNKNOWN row).
+  flashclk: flash_clk_sim.py (FF6C read tune / FFE9 F2 order at boot, flash write sessions F2 5 and back, only proven (F2, tune) pairs on the M2PLL).
   magic: magic_lint.py TREE (#161: no raw register address / palette value in our code; allow-list scripts/magic_allow.tsv).
   regs: gen_regnames.py --check (AwtoRegs.h matches the names our code uses).
   regmap: regmap_build.py --check (re/regmap register knowledge base current, hand columns valid; ~4 s; re/regmap/README.md).
@@ -126,6 +127,8 @@ def gates(b: Path, m: Path, ref, tree):
     g["delays"] = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else []),
                    *(["--other", fast, fast.with_suffix(".map")] if fast.is_file() and fast != b else [])]     # #delay-audit: every wait vs its intended wall time
     g["nvlog"] = [*PY, f"{s}/nv_test.py", "--sim", b, "--map", m, "--cases", "flushlog"]   # #151: flush lines say what was written
+    if " _AwtoFlashWrBegin" in mt:                          # flash clock default: FF6C / F2 order at boot, write sessions at F2 5
+        g["flashclk"] = [*PY, f"{s}/flash_clk_sim.py", b, "--map", m]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
     g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed

@@ -75,6 +75,7 @@ void main(void)
 {
     AwtoStackPaint();
     AwtoWdtInit();
+    AwtoFlashWindowCheck();
     do
     {
         AwtoDiagInit();

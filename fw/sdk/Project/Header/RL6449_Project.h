@@ -329,6 +329,19 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_PROBE_MS                                       1500    // probe: reset expected by 586 ms; N + 1 wraps (1172) x 1.25 -> 1.5 s
 #define AWTO_WDT_FRAME                                          16      // WDT / Timer2 ISR: 2 B PC + 14 pushes (crash_sim_test checks)
 #define AWTO_XFR(a)                                             (*(volatile __xdata unsigned char *)(a))
+// SPI flash read tune FF6C[5:2] (AWTO_FLASH_* in Project_Option.h); FFE9 F2 divider (flash second stage)
+#define AWTO_FLASH_DLY_LSB                                      (AWTO_F_READ_INSTRUCTION_SI_DLY_SEL & -AWTO_F_READ_INSTRUCTION_SI_DLY_SEL)
+#define AWTO_FLASH_TUNE_MASK                                    (AWTO_F_READ_INSTRUCTION_LATCH_SO_RISE | AWTO_F_READ_INSTRUCTION_DRIVE_SI_FALL | AWTO_F_READ_INSTRUCTION_SI_DLY_SEL)
+#define AWTO_FLASH_TUNE(rise, drive, dly)                       ((((rise) != 0) ? AWTO_F_READ_INSTRUCTION_LATCH_SO_RISE : 0) | (((drive) != 0) ? AWTO_F_READ_INSTRUCTION_DRIVE_SI_FALL : 0) | ((dly) * AWTO_FLASH_DLY_LSB))
+#define AWTO_FLASH_TUNE_FAST                                    AWTO_FLASH_TUNE(AWTO_FLASH_LATCH_RISE, AWTO_FLASH_DRIVE, AWTO_FLASH_DELAY)
+#define AWTO_FLASH_TUNE_SLOW                                    AWTO_FLASH_TUNE(AWTO_FLASH_SLOW_LATCH_RISE, AWTO_FLASH_SLOW_DRIVE, AWTO_FLASH_SLOW_DELAY)
+// FF6C written with the slow MOVX cycle (SDK flash-register rule, harmless at stock clocks)
+#define AWTO_FLASH_TUNE_SET(v)                                  do { CKCON = ((CKCON & ~(_BIT2 | _BIT1 | _BIT0)) | _CKCON_MOVX_9_CYCLE); \
+                                                                     MCU_FF6C_READ_INSTRUCTION = ((MCU_FF6C_READ_INSTRUCTION & ~AWTO_FLASH_TUNE_MASK) | (v)); \
+                                                                     CKCON = ((CKCON & ~(_BIT2 | _BIT1 | _BIT0)) | _CKCON_MOVX_DEFAULT_CYCLE); } while(0)
+extern void AwtoFlashWrBegin(void);
+extern void AwtoFlashWrEnd(void);
+extern void AwtoFlashWindowCheck(void);
 #if(_AWTO_WDT == _ON)
 extern __data unsigned char d_isr_bs_cur;           // fw/sdcc/bank.asm bank shadow
 extern void AwtoWdtInit(void);

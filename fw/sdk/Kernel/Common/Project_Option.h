@@ -346,13 +346,42 @@
 //-------------------------------------------------
 // MCU Speed Up Option
 //-------------------------------------------------
-// AWTO_CLOCK_MHZ = the ONE clock switch (build -D AWTO_CLOCK_MHZ=n): 350 = MCU 350.8 MHz, SPI flash 70.2 MHz (F 1, F2 5, M 1; default, unit 3 [hw] docs/clock-sweep.md),
+// AWTO_CLOCK_MHZ = the ONE clock switch (build -D AWTO_CLOCK_MHZ=n): 350 = MCU 350.8 MHz, SPI flash per AWTO_FLASH_MHZ below (F 1, M 1; default, unit 3 [hw] docs/clock-sweep.md),
 // 175 = MCU 175.4 / flash 43.85 (F 2, F2 4), 87 = stock MCU 87.7 / flash 43.85 (F 4, F2 2). Every clock-derived constant follows it: dividers (Scaler_Option.h),
 // Timer0/1/2 and UART reloads (ScalerCommonTimerFunction.c), delay loop counts and the DDC debounce (AWTO_CPU_KHZ_*, ScalerCommonPLLInclude.h).
 #ifndef AWTO_CLOCK_MHZ
 #define AWTO_CLOCK_MHZ                                          350
 #endif
 #define _MCU_SPEED_UP_SUPPORT                                   (AWTO_CLOCK_MHZ > 87)
+
+// AWTO_FLASH_MHZ = SPI flash clock of the 350 build (build -D AWTO_FLASH_MHZ=n): 117 (F2 3, default) | 87 (F2 4) | 70 (F2 5, in spec); ignored for AWTO_CLOCK_MHZ 175 / 87.
+// Rated 86 MHz (MX25L8006E); 117 / 87 run above it with the FF6C read tune below. Flash writes / erases always run at <= 70.2 MHz (fw/nvram/flash_clk.c). docs/clock-sweep.md
+#ifndef AWTO_FLASH_MHZ
+#define AWTO_FLASH_MHZ                                          117
+#endif
+// FF6C[5:2] read tune, indexes = regdb fields latch_so_rise (bit value), drive_si_fall (bit value), si_dly_sel (0..3 = 0 / 2 / 4 / 6 ns); [hw] unit 3
+#if(AWTO_FLASH_MHZ > 70)
+#define AWTO_FLASH_LATCH_RISE                                   1
+#define AWTO_FLASH_DRIVE                                        1
+#define AWTO_FLASH_DELAY                                        1
+#else
+#define AWTO_FLASH_LATCH_RISE                                   1
+#define AWTO_FLASH_DRIVE                                        0
+#define AWTO_FLASH_DELAY                                        0
+#endif
+#if((AWTO_FLASH_MHZ != 117) && (AWTO_FLASH_MHZ != 87) && (AWTO_FLASH_MHZ != 70))
+#error "AWTO_FLASH_MHZ must be 117, 87 or 70"
+#endif
+// writes / erases at SPI 70.2 MHz = M2PLL / F / F2 with F2 5, switched in only when the build runs the flash faster (AwtoFlashWrBegin / End)
+#if((AWTO_CLOCK_MHZ == 350) && (AWTO_FLASH_MHZ > 70))
+#define AWTO_FLASH_WR_SWITCH                                    1
+#else
+#define AWTO_FLASH_WR_SWITCH                                    0
+#endif
+// tune for flash writes / erases / the slow crystal and IOSC states = the stock tune (passes at <= 70.2 MHz)
+#define AWTO_FLASH_SLOW_LATCH_RISE                              1
+#define AWTO_FLASH_SLOW_DRIVE                                   0
+#define AWTO_FLASH_SLOW_DELAY                                   0
 
 //-------------------------------------------------
 // MCU CKCON Option

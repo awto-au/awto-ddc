@@ -1,13 +1,13 @@
 # Delay audit: every wait at 350.8 MHz (default) and 87.7 MHz
 
-- Decision (Dan 2026-11-18): fixed clock MCU 350.8 MHz, flash 70.2 MHz (F 1, F2 5, M 1, M2PLL 350.79 MHz), [hw] stable on unit 3 (`docs/clock-sweep.md`). Every delay is a compile-time constant from that clock; no run-time calibration, no division at run time.
+- Decision (Dan 2026-11-18): fixed clock MCU 350.8 MHz, flash 116.9 MHz default (F 1, F2 3 = `AWTO_FLASH_MHZ` 117; 87 / 70 selectable), M 1, M2PLL 350.79 MHz, [hw] stable on unit 3 (`docs/clock-sweep.md`). F2 is in no timer / delay / debounce product (`_FLASH_CLK_DIV` x `_MCU_CLK_DIV` only), so no constant changed with the flash clock; gate `delays` passes at F2 3. Every delay is a compile-time constant from that clock; no run-time calibration, no division at run time.
 - Rule (Dan 2026-11-13): delay = datasheet / spec value minus 10 %, never a margin. Timeouts: global timeout rule (what, expected + source, multiplier, expiry).
 - Evidence tags: [hw] unit 3, [emu] sim with the clock model (`scripts/sim_clock.py`), [databook], [spec], [sdk-hypothesis], [?].
 - Inventory (typed): `docs/delay-audit.tsv`, 564 linked sites + our `..._MS` constants. Sources and value rationale of the SDK constants: `docs/delays.md`. Generated from the post-link listing (`scripts/delay_inventory.py`).
 
 ## One clock switch: `AWTO_CLOCK_MHZ`
 - `fw/sdk/Kernel/Common/Project_Option.h`: `350` (default) | `175` | `87` (stock). Build: `./dev.py build -D AWTO_CLOCK_MHZ=87 --tag <tag>-clk87`.
-- Dividers (`Scaler_Option.h`): 350 = F 1 / F2 5 / M 1; 175 = F 2 / F2 4 / M 1; 87 = F 4 / F2 2 / M 1. MCU = M2PLL / F / M, SPI = M2PLL / F / F2.
+- Dividers (`Scaler_Option.h`): 350 = F 1 / F2 3 (4 / 5 with `AWTO_FLASH_MHZ` 87 / 70) / M 1; 175 = F 2 / F2 4 / M 1; 87 = F 4 / F2 2 / M 1. MCU = M2PLL / F / M, SPI = M2PLL / F / F2.
 - Derived at build time from `_FLASH_CLK_DIV * _MCU_CLK_DIV`: Timer2 / Timer0 / UART reloads (`ScalerCommonTimerFunction.c`; Timer2 reload 0x8DCF = 29233 counts per ms at 350.8, 0xC6E7 at 175.4, 0xE373 at 87.7), delay loop counts and DDC debounce (below).
 - `_MCU_SPEED_UP_SUPPORT` = clock above 87: keeps the SDK 9-cycle MOVX wrapper (`_CKCON_MCU_SLOW_CYCLE`) around the NVRAM flash-controller writes (FF60..FF6F); scaler registers and the OSD port need no wrapper at 350.8 MHz [hw]. `_TIMER01_STEP_TIME_MS` is not linked (`t0ev.c` ticks from RCAP2).
 - Not clock-derived and unchanged: power-saving (IOSC 28 MHz) and boot (crystal 14.318 MHz) states; their loop counts come from the same formula with their own clock (below).
