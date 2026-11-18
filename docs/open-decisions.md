@@ -14,7 +14,7 @@
 | 7 | Temperature | DSS three-step sequence; IOSC / ADC proxies; #206 verdict unknown | `docs/temperature.md` | no | A runs, D on calibration | #206 |
 | 8 | Other units / HDMI input / audio-PWM at 350.8 | sweep ran DP on unit 3 only | `docs/clock-sweep.md` | no | D approves unit 1 / 2 tests | #240 |
 | 9 | M2PLL Phase B | steps past 350.8 (p372..p487, beyond 487 in small steps, stop after ~3 failures); retune table; `01E5[7]` lock untested | `docs/clock-sweep.md` | no | D go per run | #240 |
-| 10 | Flash overclock adoption | ceiling 116.9 MHz; hot / cold, boot CRC, margin ~10 % not done; not adopted | `docs/clock-sweep.md` | no | D | #238 / #240 |
+| 10 | Flash 116.9 MHz default: open items | default since 2026-11-19 (Dan); not yet measured: hot / cold, other units, #238 boot CRC guard | `docs/clock-sweep.md` | no | D | #238 / #240 |
 | 11 | Dual-output flash read | unusable, cause unknown (SIO1 wiring?) | `docs/clock-sweep.md` | no | D (park or investigate) | #241 |
 | 12 | Scope 1 6.3 fps plateau | not CPU-bound up to 175.4; cause not investigated | `docs/clock-sweep.md` | no | A | #240 |
 | 13 | OSD port 0.54 us/B unexplained | hardware 1.08 vs sim 0.54 at 350.8; sweep Phase B | `docs/osd-write-sweep.md` | no | A | #242 |

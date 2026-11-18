@@ -11,6 +11,13 @@ Register roles, stock values and per-register results: `re/regmap/regs.tsv` (key
 - Measured in session 2 (2026-11-18/19): NVRAM / flash write at speed (wrapper mandatory at 350.8), cache meter, 30 min soak, flash overclock grid, temperature proxies. Open: M2PLL steps above 350.8 (Phase B), other units; list in "Not yet measured".
 - Sections: Method, Clock tree, Rated limits, Results, Flash write / erase, Cache meter, Delay check, Flash overclock, Soak, Temperature proxy and probes, Default image boot, Chosen default, M2PLL steps, Not yet measured, External evidence, Links.
 
+## Flash
+- Default: 116.9 MHz at MCU 350.8 MHz (+36 % over the 86 MHz rating) (section "Default flash clock").
+- Window table (latch edge x drive x delay): "Default flash clock", Window bullet; ceiling and grid: "Flash overclock"; wake vs clock: Links.
+- Writes / erases at 70.2 MHz (F2 5, stock tune) via `AwtoFlashWrBegin` / `AwtoFlashWrEnd`.
+- Risk: no boot fallback yet; a unit with a narrower window does not boot the default image. Recovery `./dev.py recover`; hook = awto-ddc#238.
+- Not yet measured: hot / cold window, other units (section "Not yet measured").
+
 ## Method
 - `./dev.py clk-sweep --unit 3 [--sim] [--continue-on-fail] STEP...` -> `scripts/clk_sweep.py`; firmware op `AwtoClkApply` in `fw/test/testcmd.c` (struct `g_stAwtoClk`, HWTEST builds only). Logs `tmp/logs/clk_sweep.log` / `.tsv`.
 - Runtime step = dividers `FFED[5:2]` F, `FFEE[5:2]` M, `FFE9[3:0]` F2 (MCU = M2PLL / F / M, SPI = M2PLL / F / F2), written in an order whose every transient keeps SPI <= rating and MCU <= the faster end; then Timer2 reload (same formula as `_TIMER2_COUNT_NUM`; formula checked against the stock `RCAP2` = 0xE373 on every run), `DELAY_5US` / `DELAY_XUS` counts (scaled, then secant-calibrated to 105 % +-5 against Timer2), DDC debounce counter scaled with the clock, pad drive / slew optional.
@@ -179,10 +186,10 @@ Status: cause found and fixed (eDP AUX read over-run); the `AWTO_CLOCK_MHZ=350` 
 - `AWTO_CLOCK_MHZ=175` default: 20 / 20 boots, 20 / 20 wakes from power saving (`ddc sleep` / `wake`), health 11 / 11.
 
 ## Chosen default
-- Dan chose 350.8 MHz MCU / 70.2 MHz flash as the fixed default (2026-11-19): 17.55 Scope 2 frames / s (3.1x stock), every check and soak above passed. The runtime sweep could not see the boot-time failure (input already locked when the clock rose); boot statistics: section "Default image at 350.8 MHz" (40 / 40 after the fix).
+- Decision (Dan 2026-11-19): MCU fixed at the fastest stable clock, 350.8 MHz; flash at the max passing speed, 116.9 MHz (section "Default flash clock"). Scope 2 17.55 frames / s at 350.8 / 70.2 (3.1x stock) `[hw]`. The runtime sweep could not see the boot-time failure (input already locked when the clock rose); boot statistics: section "Default image at 350.8 MHz" (40 / 40 after the fix).
 - Without the 9-cycle MOVX wrapper the unit resets at the first flash write at 350.8 MHz (section Flash write / erase): the wrapper stays.
-- Earlier candidate 175.4 / 70.2 (2.2x) stays as `AWTO_CLOCK_MHZ=175`; 87 = stock.
-- Adoption in code = compile-time constants (`_FLASH_CLK_DIV`, `_FLASH_2_CLK_DIV`, `_MCU_CLK_DIV`, Timer2 / delay / debounce): `docs/delay-audit.md`.
+- `AWTO_CLOCK_MHZ=175` (175.4 / 70.2, 2.2x) and 87 (stock) stay as build options.
+- In code: compile-time constants (`_FLASH_CLK_DIV`, `_FLASH_2_CLK_DIV`, `_MCU_CLK_DIV`, Timer2 / delay / debounce): `docs/delay-audit.md`.
 - Power saving stays on the slow IOSC clock (Dan).
 
 ## M2PLL steps (above 350.8 MHz)
@@ -195,7 +202,7 @@ Phase A (code + sim, no hardware): `./dev.py clk-sweep --unit 3 [--sim] pmNN | p
 - Regdb limits on the derived dividers: only 0x4006 states a cap: "The clock should be less than 33M after this divider" (sync processor, APLL, DDS, VGA auto) -> the 4-bit divider (max 15) keeps it up to 495 MHz M2PLL; above, the tool logs `!!!!` (not a check). 0x4007 measure and 0x8006 GDI: no limit stated (GDI: GDI Tx / Rx, CBUS, HDMI measure, DP, audio DAC, depop, DP Tx AUX; measure: all on-line and off-line measure). Not retuned: 0x6392[7] rsa_clk_div (1 bit), 0x37A0 M-domain gate.
 - Sim (`--sim`): `sim_clock.py` follows `0x01E0` / `0x01E1` / `0x01E7` (M[9:8], N[7:4]) and clears `0x01E5[7]` on write (W1C); the sim has no lock timing, no flash cache. Sim run p372 / p487 / pm72: lock, retune table, timer / delay / debounce rescale and revert to the baseline registers pass (sim cell values for the AUX / CBUS dividers are reset values, not the unit's).
 - Revert check compares with the registers read before the first step (the build's own clock), not a fixed 87.7 MHz.
-- Measured on hardware: nothing yet (Phase B).
+- PLL steps above 350.8 MHz: not yet run on hardware; see `docs/open-decisions.md`.
 
 ## Default flash clock (build option AWTO_FLASH_MHZ)
 Decision (Dan 2026-11-19): flash / SPI at the maximum speed that passes on hardware. Tags as above; Phase A = code + sim, Phase B = unit 3 (results below when run).
@@ -209,15 +216,14 @@ Decision (Dan 2026-11-19): flash / SPI at the maximum speed that passes on hardw
 - Hook for awto-ddc#238 (not implemented): `AwtoFlashWindowCheck()` (`fw/nvram/flash_clk.c`), called first in `main()` (`SysMain.c`): boot CRC at the fast clock + fallback to the stock tune / F2 5, 30-minute window check.
 - Risk: no fallback yet. A unit whose window is narrower than unit 3's does not boot with the default image. Recovery: `./dev.py recover --unit N [image]` (mains cycle, hold in the ISP safe window, reflash) with an image built `-D AWTO_FLASH_MHZ=70`. ISP is the scaler's DDC / AUX hardware path with the MCU halted and the clock registers at their reset values (regdb FFE9 0x81, FFED 0xC8, FF6C 0x00), so independent of the firmware's FF6C / F2 `[regdb]`; not exercised on a unit that failed to boot.
 
-- Measured on hardware: nothing yet. Phase B (hardware) not run: Dan approved going past 487 MHz in small steps, stop after about 3 failures.
+- M2PLL steps above 350.8 MHz: not yet run on hardware (Dan approved going past 487 MHz in small steps, stop after about 3 failures); status in `docs/open-decisions.md`. Flash results at 350.8 MHz are in the sections above.
 - Derived-divider retune table (integer divider of the stock divider x new / stock M2PLL; stock 13 unless noted; the tool prints it per step): 13 -> 14 at 372 MHz (-1.5 % off the stock clock), 15 at 401 (-0.9 %), 15 at 430 (+6.1 %), 15 at 487 (+20.3 %); no divider set keeps every derived clock within +-3 % above 401.
 - PLL register detail (`[01E0] [01E1] [01E4] [01E5] [01E6] [01E7]`, derived dividers `[4006] [4007] [8006] [0022]` in `re/regmap/regs.tsv`); `0x01E5[7]` as lock indicator untested. RL6463 family uses a 372 MHz N.F PLL (page 41): not this die.
 - Derived dividers are 4 bit, so above ~495 MHz the sync clock rises with the M2PLL (cap 33 MHz x 15).
 
-## Recommendation (session 2, 2026-11-19)
-- 350.8 MHz default: boot failure fixed (section above, 40 / 40); `AWTO_CLOCK_MHZ=175` boots 20 / 20.
-- 87.7 / 116.9 MHz flash: adopted as the default (Dan 2026-11-19) without a warm / multi-unit window measurement: section "Default flash clock" (risk, recovery, #238).
-- Checks left for a person: front keys (SOURCE MENU DOWN UP AUTO POWER) at the fast clock, audio tone by ear, picture by eye during a soak, other inputs.
+## Decision summary (2026-11-19)
+- MCU 350.8 MHz, flash 116.9 MHz, writes / erases 70.2 MHz (Dan): sections "Chosen default", "Default flash clock".
+- Checks needing a person: front keys (SOURCE MENU DOWN UP AUTO POWER), audio tone by ear, picture by eye, other inputs.
 
 ## Not yet measured
 - Temperature (no known sensor: `docs/temperature.md`), other units / die revisions, soaks of hours.
