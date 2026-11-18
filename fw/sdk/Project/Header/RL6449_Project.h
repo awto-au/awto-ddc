@@ -25,7 +25,9 @@
 #define AWTO_IIC_ATTN                                           (AWTO_F_IIC_1_STATUS_IIC_1_SUB_I | AWTO_F_IIC_1_STATUS_IIC_1_D_IN_I)
 #define AWTO_DDCCI_WR_ADDR                                      0x6E    // DDC/CI slave 0x37 as the 8-bit write address
 #define AWTO_SCA_WR_INTRVL_SEL_MASK                             0x0F    // FFF1[3:0] mcu_wr_sca_intrvl_sel (regdb SCA_WR_INTRVL)
+#ifndef AWTO_SCA_WR_INTRVL_SEL
 #define AWTO_SCA_WR_INTRVL_SEL                                  7       // min 7h04 + 4 x 7 = 32 CPU cycles between scaler writes; clears the eDP link training FAIL line (docs/clock-sweep.md)
+#endif
 //--------------------------------------------------
 // OSD palette: indices (1-based, ScalerOsdSetColorPalette) and RGB triples (R, G, B)
 //--------------------------------------------------
