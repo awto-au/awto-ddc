@@ -9,6 +9,7 @@
 |---|---|---|
 | instruction cycle | 4 clk; cycles per opcode from table | table 2-4, p. 2-23 |
 | MOVX | 2 + CKCON[2:0] cycles (reset CKCON = 1) | table 2-5, p. 2-25 |
+| MOVX write to the OSD data port 0x0092 | + 22 cycles (`osd_data_port` in the JSON; scaler bus, not in the databook) | unit 3 T2 direct loop vs `osd_port_cal.py` |
 | timers | clk / 12, or clk / 4 with CKCON T0M / T1M / T2M | p. 3-9 |
 | IRQ entry | 4 cycles (the LCALL) | p. 3-49 |
 | dual DPTR | DPS (86h).0 selects DPL1 / DPH1 (84h / 85h) for all DPTR instructions | p. 2-26 |
