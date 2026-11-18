@@ -224,11 +224,13 @@ class Run:
         self.bus.wait(POLL_WINDOW_MS / 1000.0)
         n1, t1 = int.from_bytes(self.m.rd(pa, 2), "big"), self.t2()
         gap, ms = int.from_bytes(self.m.rd(ga, 2), "big"), (t1 - t0) & 0xFFFF
-        per = ms / (n1 - n0) if n1 > n0 else None
-        say(f"  measured, power-saving wake poll: {n1 - n0} polls in {ms} ms (period {per and round(per, 2)} ms), "
-            f"longest gap {gap} ms since power saving")
-        self.check(per is not None and PS_POLL_MS <= per <= BOUND_POLL_GAP_MS, f"poll period {PS_POLL_MS}..{BOUND_POLL_GAP_MS} ms",
-                   f"{per and round(per, 2)} ms")
+        n = n1 - n0
+        # n polls inside the window: (n-1) P <= ms <= (n+1) P, so P lies in [ms/(n+1), ms/(n-1)]; fail only if the whole range is out
+        per_max, per_min = (ms / (n - 1), ms / (n + 1)) if n > 1 else (None, None)
+        say(f"  measured, power-saving wake poll: {n} polls in {ms} ms (period {per_min and round(per_min, 2)}.."
+            f"{per_max and round(per_max, 2)} ms), longest gap {gap} ms since power saving")
+        self.check(per_max is not None and per_max >= PS_POLL_MS and per_min <= BOUND_POLL_GAP_MS,
+                   f"poll period {PS_POLL_MS}..{BOUND_POLL_GAP_MS} ms", f"{per_min and round(per_min, 2)}..{per_max and round(per_max, 2)} ms")
         self.check(gap <= BOUND_POLL_GAP_MS, f"longest poll gap <= {BOUND_POLL_GAP_MS} ms", f"{gap} ms")
 
     def wake_case(self, name, inject, want, bound):
