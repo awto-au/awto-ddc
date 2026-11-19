@@ -956,7 +956,7 @@ def flash_main(a) -> int:
                                   else "flash unchanged by this session (old image), reset sent"))
             unit_log(a.serial, f"ISP exit (reset) after {time.monotonic() - t_isp:.1f} s")
         log(f"DONE: {time.monotonic() - t_main:.1f} s total, " + (DONE or "nothing written (see above)")
-            + f", bus {i2cbus.rate_khz()} kHz")
+            + (", DP AUX (I2C speed n/a)" if kind == "dp-aux" else f", bus {i2cbus.rate_khz()} kHz"))
 
 
 if __name__ == "__main__":
