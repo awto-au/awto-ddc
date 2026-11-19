@@ -739,6 +739,10 @@ extern void AwtoPortSkipSearch(void);
 extern void AwtoPortBoot(void);                                 // AwtoSetInit: stored enables -> mask, boot lines
 #define AWTO_PORT_SEARCH_GATE(idx)                              { if(AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)))) { AwtoPortSkipSearch(); } }
 extern void AwtoDeadPortPoll(void);
+extern void AwtoNoCableHold(unsigned char ucPort);               // selector take of a cable-less port: dead-port auto search held off
+// Waits for: the user to cable the port just chosen (no-signal card up meanwhile). 30 s = a plug-in plus card read, a human-time
+// choice (Dan to tune), not a measured value. Expiry: AwtoDeadPortPoll's auto search back to a cabled port, as before.
+#define AWTO_SRC_NOCABLE_HOLD_MS                                30000
 #define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
                                                                      (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF
 extern void AwtoSourceOpen(unsigned char ucWhy);                // ucWhy = AWTO_SEL_EV_OPEN_KEY / _OPEN_CARD (its ring line)
@@ -1080,7 +1084,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SEL_EV_KEPT_IDLE                                   0x03    // idle commit on the input it opened on: closed, no switch
 #define AWTO_SEL_EV_KEPT_AUTO                                   0x04    // AUTO on the input it opened on: closed, no switch
 #define AWTO_SEL_EV_CANCEL                                      0x05    // MENU: closed, the input it opened on kept
-#define AWTO_SEL_EV_NOCABLE                                     0x06    // #84 take refused: no cable on the item; stays open
+#define AWTO_SEL_EV_NOCABLE                                     0x06    // take of a port with no cable: switched, dead-port auto search held off
 #define AWTO_SEL_EV_DPVER                                       0x07    // take ignored: DP version pop-up up
 #define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
 #define AWTO_SEL_EV_RESET                                       0x09    // closed by the SDK OSD reset (mode reset / signal back), nothing to take

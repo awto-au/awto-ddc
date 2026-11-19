@@ -21,6 +21,7 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
         AwtoSyncPush(AWTO_SYNC_EV_DEADPORT, 1, ucPort);
         return;
     }
+    AwtoNoCableHold(0);
     AwtoPortSelect(ucPort, AWTO_PORT_WHY_SELECT);   // #81: selecting a disabled port enables it (stored), then the switch
     if((ucWhy == 0x60) && (ucPort == SysSourceGetInputPort()) && (SysModeGetModeState() == _MODE_STATUS_ACTIVE))
     {
@@ -44,10 +45,27 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     }
 }
 
+static __xdata WORD s_usNoCableHoldMs;           // AwtoMs() of the selector take of a cable-less port
+static __xdata BYTE s_ucNoCableHoldPort;         // that port, 0 = no hold
+
+void AwtoNoCableHold(BYTE ucPort)               // selector take of a port with no cable (Dan 2026-11-19): 0 clears
+{
+    s_ucNoCableHoldPort = ucPort;
+    s_usNoCableHoldMs = ((WORD)AwtoMs());
+}
+
 void AwtoDeadPortPoll(void)                     // #84: fixed port, no cable on it, no signal, another port cabled: auto search
 {
     BYTE ucCur = SysSourceGetInputPort();
 
+    if((s_ucNoCableHoldPort != 0) && ((s_ucNoCableHoldPort != ucCur) || ((WORD)(((WORD)AwtoMs()) - s_usNoCableHoldMs) >= AWTO_SRC_NOCABLE_HOLD_MS)))
+    {
+        s_ucNoCableHoldPort = 0;                // expired (or another port now): the auto search below runs
+    }
+    if(s_ucNoCableHoldPort != 0)
+    {
+        return;
+    }
     if((SysSourceGetScanType() != _SOURCE_SWITCH_FIXED_PORT) ||
        ((SysModeGetModeState() != _MODE_STATUS_NOSIGNAL) && (SysModeGetModeState() != _MODE_STATUS_POWER_SAVING)) ||
        (AwtoPortCable(ucCur) == _TRUE) ||
