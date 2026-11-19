@@ -182,3 +182,21 @@ extern __xdata BYTE isr_g_ucAwtoLtIdx;
 #define AWTO_LT_LOG_M(id)
 #define AWTO_LT_LOG_V(id, v)
 #endif
+
+#ifndef AWTO_DPCD_PROBE
+#define AWTO_DPCD_PROBE 0
+#endif
+#if(AWTO_DPCD_PROBE != 0)
+// main-loop DPCD port probe (test): g_pucAwtoProbe[0..8] = 0x000 / 0x001 normal getter, 0x000 after DELAY_5US + repeat read, C3 read-back + 0x001 after C3 = 1, PBA_C0, C2 read-back, run count
+extern __xdata BYTE g_pucAwtoProbe[9];
+#define AWTO_PROBE_DEF __xdata BYTE g_pucAwtoProbe[9];
+#define AWTO_DPCD_PROBE_RUN()       {EX0 = 0;\
+                                     g_pucAwtoProbe[0] = ScalerDpRx1GetDpcdInfo(0x00, 0x00, 0x00); g_pucAwtoProbe[1] = ScalerDpRx1GetDpcdInfo(0x00, 0x00, 0x01);\
+                                     ScalerSetByte(PBA_C1_DPCD_ADDR_PORT_H, 0x00); ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, 0x00); ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, 0x00);\
+                                     DELAY_5US(); g_pucAwtoProbe[2] = ScalerGetByte(PBA_C4_DPCD_DATA_PORT); g_pucAwtoProbe[3] = ScalerGetByte(PBA_C4_DPCD_DATA_PORT);\
+                                     ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, 0x01); g_pucAwtoProbe[4] = ScalerGetByte(PBA_C3_DPCD_ADDR_PORT_L); g_pucAwtoProbe[5] = ScalerGetByte(PBA_C4_DPCD_DATA_PORT);\
+                                     g_pucAwtoProbe[6] = ScalerGetByte(PBA_C0_DPCD_CTRL); g_pucAwtoProbe[7] = ScalerGetByte(PBA_C2_DPCD_ADDR_PORT_M); g_pucAwtoProbe[8]++; EX0 = 1;}
+#else
+#define AWTO_PROBE_DEF
+#define AWTO_DPCD_PROBE_RUN()
+#endif

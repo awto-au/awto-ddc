@@ -1163,7 +1163,7 @@ EnumDpHotPlugTime ScalerDpRx1BeforeHpdToggleProc(EnumDpHotPlugAssertType enumHpd
 void ScalerDpRx1AfterHpdToggleProc(void)
 {
     // Release Aux Phy
-    ScalerSetBit(PBA_65_AUX_5, ~_BIT7, _BIT7); AWTO_LT_LOG_M(0x20)
+    ScalerSetBit(PBA_65_AUX_5, ~_BIT7, _BIT7); AWTO_LT_LOG_M(0x20) AWTO_DPCD_PROBE_RUN()
 
     SET_DP_RX1_AUX_MANUAL_MODE();
 
