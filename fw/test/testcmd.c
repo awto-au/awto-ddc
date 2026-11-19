@@ -747,7 +747,7 @@ typedef struct
     WORD usAstFrames;                                   // Asteroids frames drawn (g_usAwtoAstFrames, asteroids.c)
     BYTE ucRdTune;                                      // request: FF6C[5:2] (latch_so_rise, drive_si_fall, si_dly_sel) while the step is held, 0xFF = keep
     BYTE ucPasses;                                      // request: CRC passes in the checks (0 = AWTO_CLK_CRC_PASSES); more = a longer flash-read stress
-    WORD usScFrames;                                    // Scope 1 frames drawn (g_usAwtoScFrames, scope_saver.c)
+    WORD usS2Frames;                                    // Scope 2 frames drawn (g_usAwtoS2Frame); the slot held the Scope 1 count
     BYTE ucPllM;                                        // request (flag PLL): M2PLL M / N / O, 0x01E0 = M - 2, 0x01E1[3:0] = N - 2, 0x01E1[5:4] = O / 2
     BYTE ucPllN;
     BYTE ucPllO;
@@ -783,7 +783,6 @@ typedef struct
 } StAwtoClk;
 __xdata StAwtoClk g_stAwtoClk;
 extern __xdata WORD g_usAwtoAstFrames;
-extern __xdata WORD g_usAwtoScFrames;
 static __xdata BYTE s_ucClkSaved;
 static __xdata BYTE s_ucClkStock[11];                   // F, F2, M, CKCON, FF6C, D5, DX, FDA1, P10_C2, P10_81, FF6B
 static __xdata WORD s_usClkStockRcap;
@@ -1825,7 +1824,7 @@ static void AwtoClkPoll(void)
 
     g_stAwtoClk.usNowMs = (WORD)AwtoMs();
     g_stAwtoClk.usAstFrames = g_usAwtoAstFrames;
-    g_stAwtoClk.usScFrames = g_usAwtoScFrames;
+    g_stAwtoClk.usS2Frames = g_usAwtoS2Frame;
     if((ucGo == AWTO_CLK_OP_KEEP) || (ucGo == AWTO_CLK_OP_CHECK))
     {
         if(g_stAwtoClk.ucState == AWTO_CLK_ST_HELD)
@@ -2732,10 +2731,6 @@ void AwtoDiagTestCmd(void)
     else if((ucCmd >= AWTO_TC_PACMAN) && (ucCmd <= AWTO_TC_PACMAN + 2))
     {
         AwtoPacmanClassic((ucCmd == AWTO_TC_PACMAN) ? 1 : ((ucCmd == AWTO_TC_PACMAN + 1) ? 2 : 0));
-    }
-    else if((ucCmd >= AWTO_TC_SCOPE) && (ucCmd <= AWTO_TC_SCOPE + 2))
-    {
-        AwtoScopeSaver((ucCmd == AWTO_TC_SCOPE) ? 1 : ((ucCmd == AWTO_TC_SCOPE + 1) ? 2 : 0));
     }
     else if((ucCmd >= AWTO_TC_PACMAN_SND) && (ucCmd <= AWTO_TC_PACMAN_SND + 5))   // Pac-Man sound (0xB7..0xB9 are the full-screen Pac-Man)
     {

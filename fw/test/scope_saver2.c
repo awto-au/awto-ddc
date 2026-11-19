@@ -7,7 +7,7 @@
 // Static tiles (graticule, labels) are generated (scripts/gen_scope2.py) and uploaded once; per frame only the tiles the trace, the cursors
 // and the delta t number touch are drawn, one column per call, into slots of a ring above the static ids.
 //   AwtoScopeSaver2(1) draw   (2) next column (returns 1 at the end of a frame)   (0) off
-extern __xdata uint8_t g_aucScPix[];                                                // tile buffer shared with scope_saver.c (one saver at a time): green plane, red plane
+extern __xdata uint8_t g_aucScPix[];                                                // tile buffer shared with Asteroids, saver_canvas.c (one saver at a time): green plane, red plane
 
 #include "scope2_data.inc"
 

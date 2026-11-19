@@ -1,12 +1,12 @@
 # Screensavers in the scaler firmware (design, Dan 2026-11-17)
 
-Status 2026-11-18: Pac-Man, Scope 1, Scope 2 and Asteroids are built (`docs/saver-mode.md`, `docs/saver-library.md`); this file keeps the design decisions.
+Status 2026-11-19: Pac-Man, Scope 2 and Asteroids are built; Scope 1 retired (Dan, 2026-11-19: Scope 2 looks better; see `docs/saver-mode.md` Scope 1 retired) (`docs/saver-mode.md`, `docs/saver-library.md`); this file keeps the design decisions.
 
 ## Decisions (Dan, 2026-11-17)
 
 - Two screensavers, run by the scaler firmware itself (no host):
   - **Pac-Man**: `fw/test/pacman_classic.c` (+ sound `snd.c`), test cmds 0xB7 / 0xB8 / 0xB9 today.
-  - **Scope**: OSD line renderer `tools/osd_lines` (384 x 216, 12 x 18 tiles, `docs/osd/tiles-fonts.md`), a waveform screen.
+  - **Scope 1 (retired 2026-11-19)**: OSD line renderer `tools/osd_lines` (384 x 216, 12 x 18 tiles, `docs/osd/tiles-fonts.md`), a waveform screen.
 - **Scope 2** (Dan, 2026-11-17, reference photo of a bench scope): red graticule with minor ticks on the centre axes, green pulse trace, two dotted vertical cursors, 100 / 90 / 10 / 0 % marks on the left, readouts on top (frequency, delta t), scale labels at the bottom (volts per div, time per div). Scope 1 (`scope_saver.c`) stays as is.
   - Built 2026-11-18 (Dan: fill the screen, faster, finer). One raster 480 x 270 px = 40 x 15 tiles of 12 x 18, scaled 8x (factor 64 / 8) to the whole 3840 x 2160 panel; factor and position derive from `_PANEL_DH_WIDTH` / `_PANEL_DV_HEIGHT` (compile error when the raster does not fill the panel exactly: 1920 x 1080 gives factor 16, 2560 x 1440 gives 12). Checked in the sim at the 3840 x 2160 panel only (both 1080p60 and 2160p60 inputs scale to it).
   - Before: 28 x 9 tiles (336 x 162 px), 10.67x, 3584 x 1728 of the panel, 0.67 frames/s. Now 6.6 frames/s, trace linearly interpolated between the 64 pulse steps, graticule 8 divisions x 6 on tile-aligned lines.
@@ -15,9 +15,9 @@ Status 2026-11-18: Pac-Man, Scope 1, Scope 2 and Asteroids are built (`docs/save
   - Limits: 2-bit char id = 8 bits = 256 ids (id bit 8 is a colour bit); OSD SRAM 12288 words (map 1 word per cell + 18 words per 2-bit glyph) (`docs/osd/limits.md`); fs_base 12 bit; scale-up factor 6 bit (ratio 64 / n), region size 12 bit. The ids bind, not the SRAM (4x raster 960 x 540 = 80 x 30 tiles: 67 static + 161 dynamic ids, worst case exactly full, 2.9 frames/s: `gen_scope2.py --raster 960`).
   - XDATA ~172 B (was ~30 B); const + code in banks 11 / 12 (data 5.9 KB incl. the turned copy).
   - Tools: `scripts/scope2_sim.py` (frames, fps), `scripts/scope2_ddc_latency.py` (DDC/CI reply latency, longest pass), `scripts/saver_sim.py` (fill + >= 5 frames/s + Rotate 180).
-  - Mode enum gets a `Scope 2` entry; Alternate cycles all three.
+  - Mode enum gets a `Scope 2` entry; Alternate cycles Pac-Man / Scope 2 / Asteroids.
 - Trigger: **both** no signal and idle timeout with a live picture.
-- Selection: **both** a settings-menu choice (Off / Pac-Man / Scope) and an Alternate choice (switch every few minutes).
+- Selection: **both** a settings-menu choice (Off / Pac-Man / Scope 2 / Asteroids) and an Alternate choice (switch every few minutes).
 
 ## Hook points (to check, not yet read in detail)
 
@@ -28,7 +28,7 @@ Status 2026-11-18: Pac-Man, Scope 1, Scope 2 and Asteroids are built (`docs/save
 
 ## Asteroids (2026-11-18)
 
-- Fifth saver, game logic on the chip: `docs/asteroids.md`. Setting 119 value 5, VCP 0xEB = 8, joins Alternate (Pac-Man, Scope, Scope 2, Asteroids), sound through the Pac-Man generator.
+- Fifth saver, game logic on the chip: `docs/asteroids.md`. Setting 119 value 5, VCP 0xEB = 8, joins Alternate (Pac-Man, Scope 2, Asteroids), sound through the Pac-Man generator.
 
 ## Open
 

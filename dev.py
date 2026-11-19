@@ -1102,7 +1102,7 @@ def cmd_synclog(extra: list[str]) -> int:
     return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
 
 
-@command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope1 scope2 flash splash alert "
+@command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope2 flash splash alert "
          "asteroids) or `tour` = every saver 10 s each with the alert tone, volume 50 % then restored",
          args="[--unit N] NAME | tour [--hold S] [--volume PCT]", kind="action")
 def cmd_saver(extra: list[str]) -> int:

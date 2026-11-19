@@ -18,14 +18,14 @@ Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4
 
 | var | file:line | values |
 |---|---|---|
-| `g_ucAwtoSaverRun` | `saver.c:44` | 0 off, 1 Pac-Man, 2 Scope, 3 Scope 2, 5 flash warning, 6 boot splash |
+| `g_ucAwtoSaverRun` | `saver.c:44` | 0 off, 1 Pac-Man, 3 Scope 2, 5 flash warning, 6 boot splash, 7 Asteroids (2 = retired Scope 1, never set) |
 | `g_ucAwtoSaverWhy` | `saver.c:45` | 0 none, 1 no signal, 2 idle, 3 now (VCP 0xEB / test), 4 boot; bit 7 = Alternate |
 | `g_ucAwtoSaverMode` / `g_usAwtoSaverIdleS` | `saver.c:42-43` | settings rows 119 / 120 |
 | `s_ucReq` | `saver.c:47` | VCP 0xEB request, served by the next `AwtoSaverPoll` |
 | `isr_g_stAwtoDiag.ucHold` bit `AWTO_HOLD_POPUP` | `saver.c:224`, `console.c:556-643` | boot splash and console: blocks `OsdDispDisableOsd` (`testcmd.c:18`) |
 
 - Poll: `AwtoSaverPoll` once per pass from `AwtoDiagTestCmd` (`testcmd.c:250`), slot 0 of the pass (after keys).
-- Test cmds 0xB7-0xB9 / 0xBA.. draw Pac-Man / Scope directly: not saver mode (no state, no exits).
+- Test cmds 0xB7-0xB9 / 0xBA.. draw Pac-Man directly: not saver mode (no state, no exits).
 
 ### Entries
 
@@ -103,7 +103,6 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 | saver | rate | per pass |
 |---|---|---|
 | Pac-Man | 32.00 sub-steps/s = 7.999 game steps/s over 62 s fw (D5; was 7.78: the schedule restarted from 'now'); sub-step 31, 31, 31, 32 ms, 5..95 % of intervals 29.3..33.7 ms (pass jitter), worst 22.6..38.5 | 3.1 ms |
-| Scope | 0.90 frames/s: 32 column passes x 27.3 ms + 100 ms pause = 1115 ms | saver 23.1 of 27.3 ms |
 | Scope 2 | 0.66 frames/s: 28 column passes x 34.3 ms + 100 ms pause = 1510 ms | saver 30.2 of 34.3 ms |
 | `pacman_speed.py` (test cmd step) | 4.17 (smb) -> 4.19 (smj) ms per step, 240 -> 239 steps/s: unchanged | - |
 
@@ -139,7 +138,7 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 - **D4 Alternate flag: decided, implemented as: a DDC/CI command ends neither "now" saver** (plain 0x03 and Alternate 0x83 behave the same). Reason: the code excluded now savers on purpose (explicit host request; `scope2_ddc_latency.py` and the sims talk DDC/CI to a running now saver); the bug was only the unmasked bit 7. Not read as "end both": it would break those tools. Open and unchanged: a front key does not end a plain "now" saver either (`AwtoSaverKey` -> `AwtoSaverActivity`), although the table above says "all".
 - **D5 Pac-Man pacing: decided, implemented.** Fixed-rate schedule: `s_usTick += period`, 31 / 31 / 31 / 32 ms = 125 ms per game step; resync to now when more than a game step behind (no catch-up burst). `saver_loop_cost.py --case pacman --window 62` prints rate and interval spread.
 
-## Info overlay (Dan, 2026-11-19): Asteroids built, Scope 1 / Scope 2 / Pac-Man not
+## Info overlay (Dan, 2026-11-19): Asteroids built, Scope 2 / Pac-Man not
 - Lower left of the picture, 3 lines, drawn as tiles of the saver's own canvas (so Rotate 180 turns it with the game, nothing else to do; docs/osd/rotation.md):
   - line 1: input `W x H` + refresh (`3840x2160 59.995`); line 2: draw grid + scale-up (`360x198 x10.7`); line 3: `25 FPS`.
   - Numbers once a second (`AWTO_AST_INFO_PERIOD_MS`), tiles only when a value changed (6-12 tiles x 27 B).
@@ -149,8 +148,21 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 - Cost (sim, `saver_code_profile.py --case asteroids --window 10`, 350.8 MHz, 2026-11-19, on vs off): instr / frame 600476 vs 593290 (+1.2 %), compute 14.56 vs 14.42 ms, saver slot incl. flash stalls 6.9 vs 6.4 ms (+0.5 ms / frame); 25.00 frames/s both; worst main-loop pass 9.93 vs 9.83 ms (no spike). `AstInfoDraw` 0.08 + `AstPutDec` 0.09 ms / frame, the rest is the glyph lines / tile uploads of the redrawn tiles.
 - First version cost +3.3 % instr: 32-bit `/ 1000`, `% 1000` of the refresh evaluated several times per pass, and 16-bit divides per digit. Now: refresh split once per period, digits by subtraction, fps-only change redraws 4 tiles of the last info row (not 18).
 - XDATA free 715 -> 700 B (floor): 10 B statics + locals; no text buffers (line text is built per pass in the free last canvas row of band 1).
-- Scope 1 / Scope 2 / Pac-Man: not built (own canvases, own scale-up; same pattern, but XDATA is at the floor).
+- Scope 2 / Pac-Man: not built (own canvases, own scale-up; same pattern, but XDATA is at the floor).
 - Frame-compare tools (`saver_frames_md5.py`) build both images with `-D AWTO_SAVER_INFO=_OFF`: the fps digits follow fw time.
+
+## Scope 1 retired (Dan, 2026-11-19)
+
+- Scope 2 stays as the scope (looks better). Gone: `fw/test/scope_saver.c`, run id 2, VCP 0xEB = 3 (ignored), `AWTO_TC_SCOPE` test cmds 0xB4..0xB6, `scripts/scope_sim.py`, `saver_fps_model.py`. Ids are not reused (`fw/awto/savers.tsv`).
+- Shared parts moved to `fw/test/saver_canvas.c`: osd_lines, band canvas (`g_aucScPix` / `g_aucScDirty` / `g_scCv`), `AwtoScTile` (Asteroids, Scope 2 tile buffer).
+- Stored setting 119 = 2 (Scope 1) runs Scope 2 (`SAVER_MODE_RUN`); the menu shows it as "(old) Scope 2"; schema CRC unchanged, no NVRAM reset. VCP 0xEB option 3 shows "(retired)", does nothing.
+- Alternate: Pac-Man -> Scope 2 -> Asteroids -> Pac-Man, 2 min each (`AWTO_SAVER_ALT_MS`).
+- What made Scope 1 smooth (scope_saver.c, deleted; `git log -- fw/test/scope_saver.c`):
+  - fixed frame schedule `AWTO_SC_FRAME_MS` = 40 ms: `s_usFrameAt += 40`, a frame not due returns at once, resync to now when a frame or more behind (no burst);
+  - fixed phase step per frame (3 table units), so the animation speed is constant whatever the draw time;
+  - per column only the tiles the trace touches now or touched last frame; 8 ms budget per call.
+- Scope 2: same dirty-tile columns and 8 ms budget, but no schedule: frames follow at once (compute-bound), the drift step is per frame, the column sweep shows.
+- Pacing for Scope 2 (sim `saver_code_profile.py --case scope2`, 350.8 MHz, 2026-11-19): 20.8 ms / frame (48 / s) in the sim, 31 / s measured on unit 3 (Dan). A fixed 40 ms schedule caps it at 25 / s: costs speed, not done. Options for Dan: schedule at the natural period (no cost, no smoothing); 32 ms (31 / s) schedule. Perf-rule question, `docs/scope-realism.md` if merged.
 
 ## Open decisions
 

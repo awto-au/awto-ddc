@@ -37,7 +37,7 @@ TRACE_S, TRACE_STEP_S = 6.0, 0.25                                # after the inp
 LOCK_S = 5.0                                                     # D2 search + display setting to ACTIVE (boot ~0.75 s, x6)
 TC_D2, TC_D3 = 0x32, 0x33
 D3_PIN = 0xFE2C                                                  # wake_sim D3_PIN: D3 cabled, no source
-RUN_NAMES = {0: "off", 1: "pacman", 2: "scope", 3: "scope2", 5: "flash", 6: "splash"}
+RUN_NAMES = {0: "off", 1: "pacman", 3: "scope2", 5: "flash", 6: "splash"}
 
 
 def say(s: str) -> None:
