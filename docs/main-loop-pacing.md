@@ -1,11 +1,11 @@
 # Main-loop pacing and headroom (Dan 2026-11-19)
 
-Status 2026-11-19. Study + prototype behind `AWTO_LOOP_PACING` (default 0 = off, default image unchanged). Nothing ran on a unit.
-Tags: [measured] sim / repo scan, [databook], [sdk-hypothesis], [guess]. Decision, speed / latency trade-off and any default change: Dan.
+Status 2026-11-19. Decision (Dan 2026-11-19): 4 ms paced loop is the DEFAULT; felt on unit 3, "fine". `-D AWTO_LOOP_PACING=0` builds the free-running loop.
+Tags: [measured] sim / repo scan, [databook], [sdk-hypothesis], [guess]. Decision: Dan.
 
 ## 0. Implemented 2026-11-19 (Dan: GO, pop-up 2026-11-19)
 
-`AWTO_LOOP_PACING` = N ms, default 0 (default image unchanged). Build: `./dev.py build -D AWTO_LOOP_PACING=4`. Sleep = `AwtoLoopPace()` at the end of every pass (`fw/diag/diag.c`).
+`AWTO_LOOP_PACING` = N ms, default 4; 0 = free-run (`./dev.py build -D AWTO_LOOP_PACING=0`). Sleep = `AwtoLoopPace()` at the end of every pass (`fw/diag/diag.c`).
 - Wakes at the first of:
   - N ms since the previous pass.
   - A wake bit: `d_isr_g_bWkEx0 / Ex1 / T0` set by the EXINT0, EXINT1, Timer0 ISRs; `d_g_bWkSw` for software (`AWTO_WAKE_SW()`). Timer1 / serial ISRs are empty / unused: no bit.
@@ -147,5 +147,5 @@ Prototype (`fw/diag/diag.c`, only with `AWTO_LOOP_PACING > 0`): `g_stAwtoHead` (
 
 - Adopt (a): tick-paced loop with a wake flag and a busy hook, 4 ms (250/s) as the first target (key sampling is the binding deadline; 120/s needs key sampling off the pass first). Add the earliest-event wake so timer events keep 1 ms resolution, and wake on key ADC activity if it ever gets an ISR.
 - Do the ISR diet in order: TMDS PHY block, DP non-status work, then the DPCD race fix inside the ISR.
-- Prototype stays off by default; nothing changes in the default image. Needs from Dan: go / no-go on pacing, 4 ms vs 8 ms, unit power measurement, savers busy-hook design, time-based `SimBus.wait` in the harness.
-- Files: `fw/diag/diag.c`, `fw/sdk/Kernel/System/Code/{SysMain,SysInt,SysTimer}.c`, `fw/sdk/Project/Header/RL6449_Project.h`, `scripts/mcs51_core.c`, `scripts/fastmachine.py`, `scripts/loop_pacing_sim.py`. Build: `./dev.py build -D AWTO_LOOP_PACING=4`.
+- Default 4 ms decided (Dan 2026-11-19). Still open: 8 ms vs 4 ms power measurement, savers busy-hook design, time-based `SimBus.wait` in the harness.
+- Files: `fw/diag/diag.c`, `fw/sdk/Kernel/System/Code/{SysMain,SysInt,SysTimer}.c`, `fw/sdk/Project/Header/RL6449_Project.h`, `scripts/mcs51_core.c`, `scripts/fastmachine.py`, `scripts/loop_pacing_sim.py`. Build: `./dev.py build` (default 4), `-D AWTO_LOOP_PACING=0` free-run.

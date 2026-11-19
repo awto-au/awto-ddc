@@ -41,7 +41,6 @@ RTD2014Osd	0xd700	2335	20
 awto_shim_sdk_boundary	0xd700	2355	20
 RL6449_Series_Memory	0xd700	2375	19
 ScalerCommonDPRx1	0xd700	2394	19
-keys	0xd700	2413	19
 awto_reg_reg	0xd700	2432	18
 osd_demo	0xd700	2450	18
 RL6449_Series_Measure	0xd700	2468	15
@@ -69,7 +68,6 @@ wdt	0xd700	2693	7
 OsdChange2BitColor	0xd700	2700	6
 RL6449_Series_OsdHardwareVLC	0xd700	2706	6
 ScalerCommonFlashWrite	0xd700	2712	6
-diag	0xd700	2718	6
 led	0xd700	2724	6
 RL6449_Series_Sync	0xd700	2730	5
 RTD2014OsdWindow	0xd700	2735	5
@@ -84,7 +82,6 @@ ScalerAudio_SeptPhy	0xd700	2772	4
 ScalerTMDSRx2_SeptPhy	0xd700	2776	4
 ScalerTMDSRx3_SeptPhy	0xd700	2780	4
 ScalerVGIP	0xd700	2784	4
-SysTimer	0xd700	2788	4
 flash_clk	0xd700	2792	4
 OsdChange4BitColor	0xd700	2796	3
 OsdCharCommandAllByteSeries	0xd700	2799	3
@@ -132,7 +129,10 @@ awto_settings_settings	0xe780	2057	325
 console	0xe780	2382	310
 swlog	0xe780	2692	308
 scope_saver2	0xe780	3000	188
+SysTimer	0xe780	3188	6
 inputs	0xe780	3204	232
 text_layer	0xe780	3436	46
+diag	0xe780	3482	54
+keys	0xe780	3536	20
 awto_settings_menu	0xe780	3622	135
 UserCommonInterface	0xe780	3757	17
