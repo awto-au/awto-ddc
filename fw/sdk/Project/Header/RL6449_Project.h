@@ -2292,6 +2292,7 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_CEC_F_DEST_UNKNOWN                                 0x80
 #define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, then P7.3 AMP_MUTE = 0
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.3 AMP_MUTE = 1, then P7.4 = 0
+#define AWTO_AUDIO_EV_DVC_SLOW                                  7       // tone gate closed before the DVC ramp to 0 finished
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step
 #define AWTO_AUDIO_EV_CLICK                                     0x50    // key click played
 #define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound

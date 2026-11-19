@@ -127,6 +127,7 @@ def write_wav(path: Path, events, t0: float, t1: float, rate: int = WAV_RATE, mo
 ORDER = {
     "amp_mute_s": 0.002,    # AWTO_AMP_MUTE_MS: P7.3 high must have held this long before P7.4 low / a generator change
     "amp_wake_s": 0.020,    # AWTO_AMP_WAKE_MS: P7.4 high must have held this long before P7.3 low
+    "dvc_ramp_s": 0.001,    # AWTO_DVC_RAMP_POLL_MS: a gain write of 0 holds at least one DONE poll before P7.3 high (the sim reads DONE set; real wait <= 2 polls)
 }
 
 
@@ -135,10 +136,11 @@ def order_violations(events, order: dict | None = None) -> list[str]:
       1. P7.4 (amp enable) rises only while the signal is zero: generator off, DVC gain 0, or P7.3 muted.
       2. P7.3 (unmute) falls only with the amp enabled for at least amp_wake_s.
       3. P7.4 falls only while muted (P7.3 high for at least amp_mute_s) or the signal is zero (generator off / gain 0).
-      4. The generator is switched or its pitch changed only with the amp disabled, or muted for at least amp_mute_s."""
+      4. The generator is switched or its pitch changed only with the amp disabled, or muted for at least amp_mute_s.
+      5. P7.3 (MUTE) changes only with the DVC at zero while the generator runs: high after a gain-0 write held dvc_ramp_s, low before the ramp up."""
     o = {**ORDER, **(order or {})}
     afcr, gain, en, mute = RESET[IDX_AFCR] & ~AFCR_AUDIO_TEST_ENABLE, 0, 0, 1
-    t_en, t_mute = None, float("-inf")                # the reset state (amp off, muted) has settled
+    t_en, t_mute, t_gain0 = None, float("-inf"), float("-inf")                # the reset state (amp off, muted) has settled
     out = []
     eps = 1e-9
 
@@ -150,6 +152,8 @@ def order_violations(events, order: dict | None = None) -> list[str]:
 
     for t, kind, a, v in sorted(events, key=lambda e: e[0]):
         if kind == "dvc":
+            if v == 0 and gain != 0:
+                t_gain0 = t
             gain = v
         elif kind == "pin" and a == "amp_en" and v != en:
             if v == 1 and not (silent() or mute == 1):
@@ -158,6 +162,8 @@ def order_violations(events, order: dict | None = None) -> list[str]:
                 out.append(f"{t:.4f} s amp disabled before the mute settled ({o['amp_mute_s'] * 1e3:g} ms) with signal non-zero")
             en, t_en = v, t
         elif kind == "pin" and a == "amp_mute" and v != mute:
+            if (afcr & AFCR_AUDIO_TEST_ENABLE) and (gain != 0 or (v == 1 and t - t_gain0 < o["dvc_ramp_s"] - eps)):
+                out.append(f"{t:.4f} s MUTE pin {'high' if v else 'low'} with the DVC not at zero (gain {gain}, ramp {o['dvc_ramp_s'] * 1e3:g} ms)")
             if v == 0 and not (en == 1 and t_en is not None and t - t_en >= o["amp_wake_s"] - eps):
                 out.append(f"{t:.4f} s unmuted {'with the amp disabled' if en == 0 else 'less than ' + format(o['amp_wake_s'] * 1e3, 'g') + ' ms after the amp enable'}")
             mute = v

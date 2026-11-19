@@ -32,6 +32,7 @@
 //****************************************************************************
 extern void ScalerAudioInitial(void);
 extern void ScalerAudioDigitalAdjustVolume(WORD usVolume);
+extern void ScalerAudioDVCAdjustVolume(WORD usVolume);
 extern void ScalerAudioMuteProc(bit bMute, WORD usVolume);
 extern void ScalerAudioDigitalVolumeMute(bit bMute, WORD usVolume);
 extern void ScalerAudioDisable(void);

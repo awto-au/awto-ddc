@@ -98,12 +98,18 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 | Boot | EN 0, MUTE 1 | MUTE 1, then EN 0 (pins Hi-Z until `ScalerPinshareInitial`; board pulls unknown) |
 | Stream / user mute (VCP 0x8D, mode change, power save) | EN 0 + MUTE 1 together, then DVC ramp (up to 400 ms, silent) | DVC ramp to 0, MUTE 1, 2 ms, EN 0 |
 | Stream / user unmute | DVC ramp up, then EN 1 + MUTE 0 together | EN 1, 20 ms, MUTE 0, then DVC ramp up |
-| Tone start | DVC up with amp off, then EN 1 + MUTE 0 together | generator on (DVC 0), EN 1 (MUTE stays 1), DVC ramp up, MUTE 0 after the first pitch + 4 ms |
-| Pitch change | MUTE 1, divider at once, 4 ms, MUTE 0 | MUTE 1, 2 ms, divider, 4 ms (`AWTO_PS_GAP_MS`, by ear), MUTE 0 |
-| Tone end | EN 0 + MUTE 1 with the tone running, DVC ramp, generator off | MUTE 1, DVC ramp, generator off, EN 0 |
+| Tone start | DVC up with amp off, then EN 1 + MUTE 0 together | generator on (DVC 0), EN 1 (MUTE stays 1), first pitch, 4 ms, MUTE 0, then DVC ramp up (short) |
+| Pitch change / rest | MUTE 1, divider at once, 4 ms, MUTE 0 | DVC ramp to 0 (short), MUTE 1, 2 ms, divider, 4 ms (`AWTO_PS_GAP_MS`, by ear), MUTE 0, DVC ramp up (short) |
+| Tone end | EN 0 + MUTE 1 with the tone running, DVC ramp, generator off | DVC ramp to 0 (short), MUTE 1, 2 ms, generator off, EN 0 |
 | Power down / PS | mute (old order), `ScalerAudioDisable` | mute (new order): amp is off before the DAC powers down; no wait for the 100 ms depop transition (amp already disabled) |
 - Console / ring log (sync.tsv E5 01 / 02): one line per transition after both pins are set, worded in the real order: `audio off:AMP_MUTE P7.3 = 1, then amp P7.4 = 0`, `audio on:amp P7.4 = 1, then AMP_MUTE P7.3 = 0` (it read amp first on off, Dan 2026-11-19). Repeats stay logged as `already`.
-- Not done, needs Dan: a short DVC ramp for tones (`dvc_down_db` / `DVC_ZC_WIN` changes) would remove the remaining hard-gate edge at note changes; the MUTE-pin gate at non-zero signal still switches the class-D output.
+- Tone DVC ramp (Dan 2026-11-19; `DvcRamp` in `fw/audio/audio.c`): MUTE only switches a zero signal. Tones use their own ramp fields; the SDK mute / unmute rewrites them (`ScalerAudioDVCVolumeAdjustType` / `SetMuteZCDTimeout`), user volume and the SDK mute path are unchanged.
+  - `AWTO_DVC_STEP_1DB` 0: `DVC_EN` dvc_down_db / dvc_up_db = 00, gain x 7/8 down, x 9/8 up per step [spec: regdb]. 1/8 dB (the SDK default) needs ~512 steps = 10.7 ms at best; 1 dB needs ~68.
+  - `AWTO_DVC_ZC_SAMPLES` 1: `DVC_ZC_WIN` = samples a step waits for a zero crossing before it applies anyway. Down ramp worst case: 68 steps (ln 8191 / ln 8/7, from -6 dB) x 1 sample / 48 kHz = 1.4 ms [calc; 48 kHz generator rate: guess].
+  - `AWTO_DVC_RAMP_POLL_MS` 1 x `AWTO_DVC_RAMP_POLLS` 2: bounded wait on `DVC_GAIN_DONE` bit 7. 2 ms = 1.4 ms x 1.25 rounded up to the 1 ms timer step. On expiry the gate closes anyway and the console logs `audio tone:DVC ramp to 0 not done in time` (sync E5 07).
+  - Ramp up is not waited for (hardware, behind the call); the next ramp down starts from wherever it is. A skipped ramp (DVC already down, flag `AWTO_PS_F_DVC_UP`) costs no wait.
+  - Sim: `audio_sim.order_violations` rule 5 (MUTE changes only with DVC gain 0, high after a gain-0 write); the sim reads DONE set, so it only proves the order and the one-poll minimum, not the real ramp time.
+  - Up ramp from gain 0 with a multiplicative step: the databook does not say how the hardware leaves 0 [?]; listen test.
 - #249 reboot pop: before `ScalerPinshareInitial` P7.3 / P7.4 are Hi-Z inputs (regdb pin-share default); firmware cannot act. A board pull-up on MUTE (P7.3, high = muted) and pull-down on EN (P7.4, low = shutdown) would hold the amp off through every reset. Board pulls are not known; probe pins 160 / 161 at reset.
 
 ## Our volume mapping (`AwtoAudioGain`, fw/settings/settings_glue.c)
