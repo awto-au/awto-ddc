@@ -21,10 +21,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
-import isostamp  # noqa: E402
-from dbg_xdata import BEHIND_PAGES, read_chunk, read_bytes, DEV8  # noqa: E402
-from rtd_i2c_bridge import Real  # noqa: E402
+import i2cbus
+import isostamp
+from dbg_xdata import BEHIND_PAGES, DEV8, read_bytes, read_chunk
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/ddr_frame_test.log"
@@ -33,13 +33,13 @@ SERIALS = {1: "AWT26110001", 3: "AWT26110003"}   # test units (units-test-policy
 
 # regdb RTD2795T-CG names -> addresses (re/regdb/RTD2795T-CG.tsv.gz)
 HLW_ADDR, HLW_DATA = 0x0060, 0x0061
-HLW_IDX = dict(hs_h=0, hs_l=1, he_h=2, he_l=3, vs_h=4, vs_l=5, ve_h=6, ve_l=7, border_en=0x0C, ctl1=0x0D)
+HLW_IDX = {"hs_h": 0, "hs_l": 1, "he_h": 2, "he_l": 3, "vs_h": 4, "vs_l": 5, "ve_h": 6, "ve_l": 7, "border_en": 0x0C, "ctl1": 0x0D}
 DCR_ADDR, DCR_DATA, DCR_CTRL = 0x07D8, 0x07D9, 0x07DA
-DCR_IDX = dict(th1_1=0, th2_1=1, th1_num=2, th1_val=5, th2_num=9, th2_val=12, hi_r=16, lo_r=18, hi_g=22, lo_g=24, hi_b=28, lo_b=30,
-               ymax_1=40, ymin_1=41, th_val_5=42, th_val_0=43, th1_0=56, th2_0=57)
+DCR_IDX = {"th1_1": 0, "th2_1": 1, "th1_num": 2, "th1_val": 5, "th2_num": 9, "th2_val": 12, "hi_r": 16, "lo_r": 18, "hi_g": 22, "lo_g": 24, "hi_b": 28, "lo_b": 30,
+               "ymax_1": 40, "ymin_1": 41, "th_val_5": 42, "th_val_0": 43, "th1_0": 56, "th2_0": 57}
 CAP_M1, CAP_M2 = 0x0500, 0x4500
-MCU_DC = {"a": dict(cmd=0x3700, len=0x3701, addr=0x3704, wbuf=0x3710, rbuf=0x3720, wmask=0x3730, flag=0x3734),
-          "b": dict(cmd=0x3740, len=0x3741, addr=0x3744, wbuf=0x3750, rbuf=0x3760, wmask=0x3770, flag=0x3774)}
+MCU_DC = {"a": {"cmd": 0x3700, "len": 0x3701, "addr": 0x3704, "wbuf": 0x3710, "rbuf": 0x3720, "wmask": 0x3730, "flag": 0x3734},
+          "b": {"cmd": 0x3740, "len": 0x3741, "addr": 0x3744, "wbuf": 0x3750, "rbuf": 0x3760, "wmask": 0x3770, "flag": 0x3774}}
 DC_CMD_WRITE, DC_CMD_READ = 0x80, 0xA0   # [7:5] 100 = write, 101 = read
 
 _t0 = time.monotonic()
@@ -76,23 +76,23 @@ class Dbg:
     def rd(self, a: int) -> int:
         for _ in range(2 if (a >> 8) in BEHIND_PAGES else 1):
             if not (self.io.write(DEV8, 0x01, bytes([a >> 8])) and self.io.write(DEV8, 0x3A, bytes([a & 0xFF]))):
-                raise IOError(f"rd {a:04X} write NAK")
+                raise OSError(f"rd {a:04X} write NAK")
             r = self.io.read(DEV8, 0x08, 1)
         if r is None:
-            raise IOError(f"rd {a:04X} read NAK")
+            raise OSError(f"rd {a:04X} read NAK")
         self._raw(f"rd {a:04X} -> {r[0]:02X}")
         return r[0]
 
     def wr(self, a: int, v: int) -> None:
         if not (self.io.write(DEV8, 0x01, bytes([a >> 8])) and self.io.write(DEV8, 0x03, bytes([v]))
                 and self.io.write(DEV8, 0x3B, bytes([a & 0xFF]))):
-            raise IOError(f"wr {a:04X} NAK")
+            raise OSError(f"wr {a:04X} NAK")
         self._raw(f"wr {a:04X} <- {v:02X}")
 
     def block(self, a: int, n: int) -> bytes:
         r = read_chunk(self.io, a, n) if (a >> 8) not in BEHIND_PAGES else read_bytes(self.io, a, n)
         if r is None:
-            raise IOError(f"block {a:04X}+{n} failed")
+            raise OSError(f"block {a:04X}+{n} failed")
         self._raw(f"blk {a:04X}+{n} -> {r.hex()}")
         return r
 

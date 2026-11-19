@@ -18,9 +18,9 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ddr_frame_test as T  # noqa: E402
-import ddr_freeze_test as F  # noqa: E402
-from p037_test import rd as prd  # noqa: E402
+import ddr_frame_test as T
+import ddr_freeze_test as F
+from p037_test import rd as prd
 
 ROOT = T.ROOT
 SW = 3840

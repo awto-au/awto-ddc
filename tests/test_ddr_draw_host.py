@@ -13,7 +13,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import ddr_draw as D  # noqa: E402
+import ddr_draw as D
 
 SW, SH, LINE_BYTES, UNITS = 3840, 2160, 3840 * 3, 3110400
 MEM = UNITS * 8
@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc missing
 @pytest.fixture(scope="module")
 def exe(tmp_path_factory):
     out = tmp_path_factory.mktemp("ddr") / "ddr_draw_host"
-    r = subprocess.run(["gcc", "-O1", "-Wall", "-Wextra", "-Wno-unused-function", "-o", str(out), str(ROOT / "tests/ddr_draw_host.c")], capture_output=True, text=True)
+    r = subprocess.run(["gcc", "-O1", "-Wall", "-Wextra", "-Wno-unused-function", "-o", str(out), str(ROOT / "tests/ddr_draw_host.c")], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr
     return out
 
@@ -33,7 +33,7 @@ def exe(tmp_path_factory):
 def run(exe, tmp_path, cmds, busy=2):
     dump = tmp_path / "mem.bin"
     inp = "".join(f"{D.OPS[op]} {x} {y} {w} {h} {rgb[0]} {rgb[1]} {rgb[2]} {n}\n" for op, x, y, w, h, rgb, n in cmds) + f"dump {dump}\n"
-    r = subprocess.run([str(exe), str(busy)], input=inp, capture_output=True, text=True, timeout=120)
+    r = subprocess.run([str(exe), str(busy)], input=inp, capture_output=True, text=True, timeout=120, check=False)
     assert r.returncode == 0, r.stderr
     st = [dict(zip(l.split()[::2], map(int, l.split()[1::2]))) for l in r.stdout.splitlines()]
     return bytearray(dump.read_bytes()), st
@@ -107,7 +107,7 @@ def test_op_codes_match_c():
 
 def test_c_layout_constants():
     def c(name):
-        return eval(re.search(rf"#define {name}\s+(\(?[^/\n]*?)\s*(?://|$)", SRC, re.M).group(1).strip().rstrip("UL"), {"AWTO_DRW_SCREEN_W": 3840})
+        return eval(re.search(rf"#define {name}\s+(\(?[^/\n]*?)\s*(?://|$)", SRC, re.MULTILINE).group(1).strip().rstrip("UL"), {"AWTO_DRW_SCREEN_W": 3840})
     assert c("AWTO_DRW_SCREEN_W") == SW and c("AWTO_DRW_SCREEN_H") == SH and c("AWTO_DRW_BPP") == 3
     assert (D.SCREEN_W, D.SCREEN_H, D.LINE_DOUBLE, D.BPP, D.BURST) == (SW, SH, 2, 3, 16)
 
@@ -153,7 +153,7 @@ def test_grid_and_figure(exe, tmp_path):
 
 def test_figure_grid_matches_ddr_grid100(exe, tmp_path):
     import ddr_grid100 as G
-    mem, st = run(exe, tmp_path, [cmd("figure", 1700, 1000)])
+    mem, _st = run(exe, tmp_path, [cmd("figure", 1700, 1000)])
     for (x, m), c in G.compose(1700, 1000).items():
         if c != G.CIRCLE:                                     # the host script's circle is a 1440-step sampling: lines only
             o = m * LINE_BYTES + 3 * x
@@ -200,7 +200,7 @@ def test_refused(exe, tmp_path):
 
 
 def test_stall_aborts(exe, tmp_path):
-    mem, st = run(exe, tmp_path, [cmd("fill", 0, 0, 3840, 2160, (5, 5, 5))], busy=-1)
+    _mem, st = run(exe, tmp_path, [cmd("fill", 0, 0, 3840, 2160, (5, 5, 5))], busy=-1)
     assert st[0]["state"] == 4 and st[0]["bursts"] < 100
 
 

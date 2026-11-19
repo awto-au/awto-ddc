@@ -22,8 +22,9 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ddr_frame_test as T  # noqa: E402
-from p037_test import rd as prd, wr as pwr  # noqa: E402
+import ddr_frame_test as T
+from p037_test import rd as prd
+from p037_test import wr as pwr
 
 ROOT = T.ROOT
 FIFO = ROOT / "tmp/scratch/pat.fifo"
@@ -204,7 +205,7 @@ def do_write(d, waddr: int, n: int) -> None:
     c0 = T.dcr_measure(d, 32, 768, 0)
     T.log(f"DCR before: ABOVE_TH1_NUM={c0.get('th1_num')}")
     for i in range(n):
-        T.cmd_ddr_write(d, type("A", (), dict(yes_hang_risk=True, port="a", hex="ff" * 16, mask=MASK[0], len=2, addr=waddr + 2 * i))())
+        T.cmd_ddr_write(d, type("A", (), {"yes_hang_risk": True, "port": "a", "hex": "ff" * 16, "mask": MASK[0], "len": 2, "addr": waddr + 2 * i})())
     c1 = T.dcr_measure(d, 32, 768, 0)
     T.log(f"DCR after {n} burst(s) at {waddr}: ABOVE_TH1_NUM={c1.get('th1_num')} (delta {(c1.get('th1_num') or 0) - (c0.get('th1_num') or 0)})")
     for i in range(n):

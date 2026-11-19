@@ -15,9 +15,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Gdk, GLib, Gtk  # noqa: E402
-
-import cairo  # noqa: E402
+import cairo
+from gi.repository import Gdk, GLib, Gtk
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/host_pattern.log"

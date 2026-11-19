@@ -17,9 +17,9 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ddr_frame_test as T  # noqa: E402
-import ddr_freeze_test as F  # noqa: E402
-import sw_timeline as SW  # noqa: E402
+import ddr_frame_test as T
+import ddr_freeze_test as F
+import sw_timeline as SW
 
 OPS = {"fill": 1, "hline": 2, "vline": 3, "grid": 4, "circle": 5, "figure": 6, "bars": 7, "frame": 8, "gradh": 9, "gradv": 10, "masktest": 11}
 # StAwtoDraw (fw/test/ddr_draw.c), big endian
@@ -61,9 +61,9 @@ class Draw:
         for _ in range(POLL_RETRY):
             try:
                 return self.d.rd(self.base + off)
-            except IOError:
+            except OSError:
                 pass
-        raise IOError(f"debug read at +{off} failed {POLL_RETRY} times")
+        raise OSError(f"debug read at +{off} failed {POLL_RETRY} times")
 
     def rd_n(self, off: int, n: int) -> int:
         return int.from_bytes(bytes(self.rd(off + i) for i in range(n)), "big")
