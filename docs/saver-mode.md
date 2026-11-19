@@ -35,7 +35,7 @@ Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4
 | no signal | nosig | `AwtoSaverPoll` | mode NOSIGNAL for `AWTO_SAVER_NOSIG_MS` 1.8 s, row 119 != Off, `pwr_l3_s` != 0, not ended earlier in this no-signal episode |
 | idle | idle | `saver.c:282` | mode ACTIVE, row 120 != 0, no key / DDC/CI for row 120 s |
 | VCP 0xEB 1-5, 7 | now | `saver.c:177-203`, `set_ap_screensaver_now` | any mode |
-| VCP 0xEB = 6 (alert) | no saver: `AwtoPmSound(alert)`, 1 s Pac-Man-style tone, every build (#229); skipped while a host audio stream plays (sync E9 86) | `saver.c` `AWTO_SAVER_NOW_ALERT`, `fw/audio/audio.c`; `dev.py alert` | any mode |
+| VCP 0xEB = 6 (alert) | no saver: `AwtoPmSound(alert)`, 1 s Pac-Man-style tone, every build (#229) | `saver.c` `AWTO_SAVER_NOW_ALERT`, `fw/audio/audio.c`; `dev.py alert` | any mode |
 
 ### Exits
 

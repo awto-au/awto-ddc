@@ -662,7 +662,6 @@ const	___str_121	C	0x298c	44
 stub	_PsResume	C	0x29b8	8
 stub	_PsStart	C	0x29c0	8
 stub	_PsStop	C	0x29c8	8
-stub	_PsStreamBusy	C	0x29d0	8
 stub	_PsTrk	C	0x29d8	8
 stub	_SysModeClrModeStateChange	C	0x2a5c	8
 stub	_SysModeDisplaySetting	C	0x2a64	8
@@ -1908,7 +1907,6 @@ fn	_PsNote	4	0x9f20	152
 fn	_PsRequest	4	0x9fb8	52
 fn	_PsResume	4	0x9fec	40
 fn	_PsStart	4	0xa014	112
-fn	_PsStreamBusy	4	0xa084	32
 fn	_PsTrk	4	0xa0a4	44
 const	_g_stOSDDefaultData	5	0x0000	28
 const	_g_stSixColorDefaultData	5	0x001c	16

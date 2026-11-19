@@ -77,7 +77,7 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
 // Sound player of the unit (Pac-Man, Asteroids, alert, key click, calibration; module snd, docs/saver-library.md D-SL1) (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
 // pitch = audio PLL S code per note. Test cmds AWTO_TC_PACMAN_SND + 0 intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert.
 // One generator: priorities (pacman_sound.py PRIORITY); a dropped waka / background sound stays wanted and resumes when the higher one ends.
-// Every build (#229): SDK generator + SysAudioHandler hold are always compiled. Not while a real audio stream plays (E9 86). Non-blocking: AwtoPmSoundPoll per main pass.
+// Every build (#229): SDK generator + SysAudioHandler hold are always compiled. No host-stream gate: state PLAYBACK = stream present, not audible (a PC host is always there). Non-blocking: AwtoPmSoundPoll per main pass.
 // Data: snd_data.inc (scripts/pacman_sound.py): notes, track table (offset, priority, loops), cmd table (track, sync event).
 #define AWTO_PS_OCT_FLAG                        0x80    // note byte bit 7: AFCR tst_i2s_sw = 0 (one octave down)
 #define AWTO_PS_SC_MASK                         0x7F
@@ -116,7 +116,6 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
 #define AWTO_PS_EV_CAL                          0x83
 #define AWTO_PS_EV_STOP                         0x84
 #define AWTO_PS_EV_DONE                         0x85
-#define AWTO_PS_EV_STREAM                       0x86    // skipped: a real audio stream plays
 #define AWTO_PS_EV_ALERT                        0x87
 #define AWTO_PS_EV_GHOST                        0x88
 #define AWTO_PS_EV_FRUIT                        0x89
@@ -233,11 +232,6 @@ static void PsResume(void)                      // after a sound ended: waka if 
     }
 }
 
-static BYTE PsStreamBusy(void)                  // a host audio stream plays and the generator is idle: the tone would cut it (the SDK handler stops while the generator runs)
-{
-    return (s_ucPsTrack == AWTO_PS_TRACK_NONE) && (SysAudioGetAudioState() == _AUDIO_STATUS_PLAYBACK);
-}
-
 static void PsRequest(BYTE ucTrack)             // plays when its priority >= the playing sound's, else dropped (waka / background stay wanted)
 {
     if((s_ucPsTrack == AWTO_PS_TRACK_NONE) || (PsPrio(ucTrack) >= PsPrio(s_ucPsTrack)))
@@ -300,7 +294,7 @@ void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed
     }
     s_ucPsFlags = (s_ucPsFlags & AWTO_PS_F_LOW_MASK) | (BYTE)(ucState << AWTO_PS_F_BG_SHIFT);
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_BG, ucState);
-    if(!PsStreamBusy() && ((s_ucPsTrack == AWTO_PS_TRACK_NONE) || ((s_ucPsTrack >= AWTO_PS_TRACK_BG0) && (s_ucPsTrack <= AWTO_PS_TRACK_BG_LAST))))
+    if(((s_ucPsTrack == AWTO_PS_TRACK_NONE) || ((s_ucPsTrack >= AWTO_PS_TRACK_BG0) && (s_ucPsTrack <= AWTO_PS_TRACK_BG_LAST))))
     {
         PsResume();                             // silence or another background sound is playing; a higher sound picks the new state up at its end
     }
@@ -333,11 +327,6 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_STOP, 0);
         return;
     }
-    if(PsStreamBusy())
-    {
-        AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_STREAM, ucCmd);
-        return;
-    }
     if(ucCmd == AWTO_PS_CMD_CAL)
     {
         s_ucPsToneSc = AWTO_PS_CAL_SC;
@@ -361,7 +350,7 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
 
 BYTE AwtoPmSoundTone(BYTE ucSc, WORD usMs)      // one tone of S code ucSc, usMs audible (key click, fw/keys/key_click.c); AWTO_TONE_* (RL6449_Project.h)
 {
-    if((s_ucPsTrack != AWTO_PS_TRACK_NONE) || PsStreamBusy())
+    if(s_ucPsTrack != AWTO_PS_TRACK_NONE)
     {
         return AWTO_TONE_BUSY;               // another sound plays: it keeps the generator
     }

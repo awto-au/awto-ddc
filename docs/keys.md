@@ -60,7 +60,7 @@ No other combo. Removed (#132): MENU+DOWN (debug link toggle), MENU+DOWN held at
 - No click: POWER, UP+DOWN combo, repeats, a key that wakes from power saving, `mute` on (`AWTO_SET(MUTE)`), another sound playing (Pac-Man / alert / saver sounds hold the generator).
 - Tone: `AWTO_KEY_CLICK_SC` 40 = 48 kHz / 40 = 1200 Hz, `AWTO_KEY_CLICK_MS` 30 ms audible, counted from the amp opening (the 4 ms pitch gate of `audio.c` comes first). Dan 2026-11-18.
 - Level: the user volume (DVC), as every generator sound. Source: HDMI audio test generator, `AwtoPmSoundTone` (`fw/audio/audio.c`); it always stops (`AwtoPmSoundPoll`), the SDK un-mutes the stream path again.
-- Every build (#229, no flag). No click while a host audio stream plays (generator would cut it). Ring lines: sync `E5 50` played, `E5 51` skipped (another sound / host stream).
+- Every build (#229, no flag). Ring lines: sync `E5 50` played, `E5 51` skipped (another sound).
 - Sim: `scripts/key_sim_test.py` (`key_click`): request per press, none when off / muted / combo / repeat / POWER; the tone from the audio tap (count, length, silent at the end, none while Pac-Man sound plays).
 
 ## ADC scan review (2026-11-19)

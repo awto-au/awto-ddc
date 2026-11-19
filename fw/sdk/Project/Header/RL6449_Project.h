@@ -1215,7 +1215,7 @@ extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
 extern void AwtoPmSoundBg(unsigned char ucState);                                       // Pac-Man background sound: 0 none, 1..3 siren speed, 4 frightened
 extern unsigned char AwtoPmSoundTone(unsigned char ucSc, unsigned int usMs);                  // one tone (S code, audible ms): AWTO_TONE_* result
-#define AWTO_TONE_BUSY                                          0       // another sound or a host audio stream plays
+#define AWTO_TONE_BUSY                                          0       // another sound
 #define AWTO_TONE_PLAYED                                        1
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
@@ -2243,7 +2243,7 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step
 #define AWTO_AUDIO_EV_CLICK                                     0x50    // key click played
-#define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound or a host audio stream plays
+#define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound
 #define AWTO_KEY_CLICK_SC                                       40      // key click pitch: audio PLL S code 40 = 48 kHz / 40 = 1200 Hz (docs/keys.md)
 #define AWTO_KEY_CLICK_MS                                       30      // key click audible length (Dan 2026-11-18, #229)
 extern void AwtoAudioAmpBoot(void);                             // fw/audio/audio.c: the one owner of P7.3 AMP_MUTE / P7.4
