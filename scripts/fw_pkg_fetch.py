@@ -14,6 +14,7 @@ Log: tmp/logs/fw_pkg_fetch.log
 Timeouts: connect/read 30 s per socket op (stall guard; downloads are < 50 MB on a LAN-class link).
 """
 import hashlib
+import http.client
 import json
 import os
 import shutil
@@ -97,7 +98,7 @@ def main():
                         if len(head) < 8:
                             head += c[:8]
                         f.write(c); h.update(c); n += len(c)
-        except Exception as e:
+        except (OSError, ValueError, http.client.HTTPException) as e:
             out(f"FAIL {vendor}/{pkg} {url}: {e}"); dest.unlink(missing_ok=True); continue
         ext = dest.suffix.lower()
         ok = n > 0 and (ext not in MAGIC or head.startswith(MAGIC[ext]))

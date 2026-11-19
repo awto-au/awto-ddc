@@ -151,7 +151,7 @@ def preview(sh, path):
     dr = ImageDraw.Draw(img)
     for i in range(N_SHAPES):
         cx, cy = (i % cols) * cell + cell // 2, (i // cols) * cell + cell // 2
-        k = 0.9 if i >= ID_DIGIT else 0.9
+        k = 0.9
         for pl in sh[i]:
             dr.line([(cx + x * k, cy - y * k) for x, y in pl], fill=(230, 230, 230))
     img.save(path)

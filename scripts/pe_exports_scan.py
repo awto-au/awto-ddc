@@ -88,7 +88,7 @@ def main():
                 try:
                     for k, v in scan(p):
                         rows.append((a.version, rel, k, v))
-                except Exception as e:  # malformed PE: record and continue
+                except (struct.error, IndexError, ValueError, KeyError, OSError) as e:  # malformed PE: record and continue
                     rows.append((a.version, rel, "error", repr(e)))
     with open(a.out, "w") as fh:
         fh.writelines("\t".join(r) + "\n" for r in sorted(rows))

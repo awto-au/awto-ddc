@@ -231,7 +231,7 @@ def main() -> int:
         for f in futs:
             try:
                 n, bus, v, ms, bus_ms, err, got = f.result(timeout=limit)
-            except Exception as e:      # TimeoutError: a hung bus; the pool shuts down with the others' results kept
+            except (TimeoutError, OSError, subprocess.SubprocessError, ValueError, KeyError) as e:      # TimeoutError: a hung bus; the pool shuts down with the others' results kept
                 log(f"FAIL worker: {e!r} (limit {limit:.2f} s)")
                 rc = 1
                 continue

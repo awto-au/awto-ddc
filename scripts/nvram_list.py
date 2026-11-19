@@ -66,7 +66,7 @@ def cond(expr: str) -> bool:
     e = re.sub(r"!(?!=)", " not ", e)
     try:
         return bool(eval(e, {"F": lambda k: FLAGS.get(k, "_OFF")}))
-    except Exception:
+    except (SyntaxError, NameError, TypeError, ValueError, ZeroDivisionError):
         return False
 
 
@@ -119,7 +119,7 @@ def resolve(v: str, defs: dict, depth: int = 0):
     if re.fullmatch(r"[0-9a-fA-Fx<>\s()+\-*/|]+", v) and re.search(r"\d", v):
         try:
             return int(eval(v, {"__builtins__": {}}))
-        except Exception:
+        except (SyntaxError, NameError, TypeError, ValueError, ZeroDivisionError):
             pass
     return v
 

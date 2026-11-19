@@ -253,7 +253,7 @@ class Eval:
         try:
             v = eval(s.replace("/", "//") if "." not in s else s, {"__builtins__": {}}, {})
             return float(v) if isinstance(v, float) else int(v)
-        except Exception:
+        except (SyntaxError, NameError, TypeError, ValueError, ZeroDivisionError):
             return None
 
 

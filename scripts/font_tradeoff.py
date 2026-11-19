@@ -36,7 +36,7 @@ def repo():
     try:
         return Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True,
                                             cwd=Path(__file__).parent).strip())
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         return Path(__file__).resolve().parent.parent
 
 

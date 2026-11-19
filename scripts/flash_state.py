@@ -90,7 +90,7 @@ def git_commit(repo: Path) -> str:
         c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=repo, capture_output=True, text=True, timeout=5).stdout.strip()
         d = subprocess.run(["git", "diff", "--quiet"], cwd=repo, timeout=5).returncode
         return c + ("+" if d else "")
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         return "unknown"
 
 
@@ -117,7 +117,7 @@ class FlashState:
                   and all(s is None or (isinstance(s, str) and len(s) == 64) for s in d["sectors"]))
             if not ok:
                 raise ValueError("version/serial/geometry mismatch")
-        except Exception as e:
+        except (OSError, ValueError, KeyError, TypeError) as e:
             log(f"flash-state {path}: unusable ({e}); ignoring it")
             return None
         return cls(path, serial, d["sectors"], d.get("image", ""), d.get("image_size", 0),

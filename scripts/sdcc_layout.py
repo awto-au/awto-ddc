@@ -196,7 +196,7 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
 
 def stats(placed, nbanks, common_lo, common_hi, bank_cap, reserve=None):
     used = defaultdict(int)
-    for k, (rid, o, s) in placed.items():
+    for rid, o, s in placed.values():
         used[rid] += s
     out = {"C": (used["C"], common_hi - common_lo)}
     for b in range(nbanks):

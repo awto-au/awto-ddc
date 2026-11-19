@@ -19,6 +19,7 @@ import socket
 import struct
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
@@ -138,8 +139,8 @@ class Real:
         self.f4 = None          # last scaler index written to ISP 0xF4
 
     # Firmware debug slave 0x35 (SDK ScalerCommonDebug.c ScalerDebug): first byte = command.
-    DBG_READ = {0x80, 0x41, 0x44, 0x45, 0x3A, 0x3C, 0xBB, 0x55, 0x20, 0x25, 0x2A, 0x2F}   # run ctl, reads, msg
-    DBG_STAGE = {0x1, 0x2, 0x3, 0x5, 0x6}       # low nibble: parameter staging only
+    DBG_READ: ClassVar = {0x80, 0x41, 0x44, 0x45, 0x3A, 0x3C, 0xBB, 0x55, 0x20, 0x25, 0x2A, 0x2F}   # run ctl, reads, msg
+    DBG_STAGE: ClassVar = {0x1, 0x2, 0x3, 0x5, 0x6}       # low nibble: parameter staging only
 
     def close(self) -> None:
         self.bus.close()

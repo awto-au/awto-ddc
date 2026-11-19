@@ -227,7 +227,7 @@ def process(path, root, out, log):
     counts = {}
     try:
         res = list(walk_resources(d))
-    except Exception as e:
+    except (struct.error, IndexError, ValueError, KeyError, OSError) as e:
         log("%s: resource walk failed: %r" % (src, e))
         return {}
     for t, n, lang, data in res:
@@ -264,7 +264,7 @@ def process(path, root, out, log):
             if t == 16:
                 for k, c, v in parse_version(data):
                     out.append((src, "VERSION", k, c, v))
-        except Exception as e:
+        except (struct.error, IndexError, ValueError, KeyError, OSError) as e:
             log("%s: %s %s parse error %r" % (src, tn, n, e))
     return counts
 

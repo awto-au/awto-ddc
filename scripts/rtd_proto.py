@@ -314,7 +314,7 @@ def regdb_namer(chip: str = "RTD2795T-CG"):
                 for r in Q.load(chip):
                     if r["kind"] == "REG" and not r["port_idx"]:
                         tab.setdefault(int(r["address"], 0), r["register"])
-            except (SystemExit, Exception):
+            except (SystemExit, OSError, ValueError, KeyError):
                 tab[-1] = ""
         return tab.get(a)
     return f
@@ -920,7 +920,7 @@ def setup_logs(name: str, map=None, raw: bool | None = None, merge_pages: bool =
             rf.write(f"{t.ts} {raw_line(t)}\n")
         try:
             dec.feed(t)
-        except Exception as e:                       # a decoder bug must never break a tool
+        except (ArithmeticError, LookupError, TypeError, ValueError, AttributeError) as e:   # a decoder bug must never break a tool
             if not err:
                 err.append(e); f.write(f"{t.ts} proto decoder error: {e!r}\n")
 

@@ -79,8 +79,8 @@ class Rig:
 
         def hook_poll(mm, r):                          # images before the rate column: every row is read in every AwtoGpioPoll
             if on[0]:
-                for i in reads:
-                    reads[i].append(self.us())
+                for rd in reads.values():
+                    rd.append(self.us())
 
         if "_AwtoInRow" in self.m.sym:
             self.m.stub("AwtoInRow", hook)

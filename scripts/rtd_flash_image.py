@@ -390,7 +390,7 @@ def crc_calibrate(isp, s0: bytes) -> bool:
                 log(f"CRC calibration FAILED 0x0+{n}: hw 0x{hw:02x} != py 0x{py:02x} "
                     f"(py excl-end 0x{S.crc8(data[:-1]):02x}, py skip-first 0x{S.crc8(data[1:]):02x}); verifying by readback")
                 return False
-    except Exception as e:
+    except (OSError, RuntimeError, ValueError) as e:
         log(f"CRC calibration error ({e}); verifying by readback")
         return False
     log("CRC calibration OK: hw CRC == crc8(readback) over 0x0+4096 and 0x0+1024")
@@ -933,7 +933,7 @@ def flash_main(a) -> int:
         log(f"refuse: {e}; nothing erased or programmed. Unit in power saving / low flash clock? "
             f"Bring it to an active input, or rerun at 100 kHz (#71)")
         return 5
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  last resort: logged with the rerun command; finally re-protects / resets
         again = f"./dev.py flash --unit <n> {a.image}" if a.no_backup else f"rtd_flash_image.py {a.bus} <backup> --serial {a.serial} --write"
         if INCOMPLETE:
             log(f"ERROR: {e!r}. Image INCOMPLETE: MCU left halted in ISP (no reset into a partial image). Rerun: {again}")

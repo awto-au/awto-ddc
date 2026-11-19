@@ -711,7 +711,7 @@ class FastMachine:
             log.parent.mkdir(parents=True, exist_ok=True)
             with log.open("a") as f:
                 f.write(f"{self.tag} {Path(sys.argv[0]).name} sp_max 0x{p.sp_max:02X} sp_wrap {p.sp_wrap} instr {p.instr}\n")
-        except Exception:
+        except (OSError, AttributeError):
             pass                                    # report only; never fail a sim run over it
 
     def close(self):

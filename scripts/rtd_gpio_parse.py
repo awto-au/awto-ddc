@@ -39,7 +39,7 @@ def repo_root():
         out = subprocess.run(["git", "-C", here, "rev-parse", "--show-toplevel"],
                              capture_output=True, text=True, check=True)
         return out.stdout.strip()
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         return os.path.dirname(here)
 
 

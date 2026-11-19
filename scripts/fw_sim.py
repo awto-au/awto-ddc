@@ -29,6 +29,7 @@ import sys
 import time
 from collections import Counter
 from pathlib import Path
+from typing import ClassVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sdcc_tools as T
@@ -270,7 +271,7 @@ class IicSlave(Dev):
     write 0 clears), FF29 STATUS2 (bit1 rx empty, bit2 tx full), FF2A IRQ_CONTROL2 (bit6 reset FIFO), DDCn_CONTROL_2 bit0
     SCL hold (SCL: FF22 channel -> register, regdb). The host bus sits on one channel (SimBus ddc): FF22 elsewhere = NAK."""
     SUB, DIN, DOUT, STAT, STAT2, IRQ2, CHSEL = 0xFF24, 0xFF25, 0xFF26, 0xFF27, 0xFF29, 0xFF2A, 0xFF22
-    SCL = {1: 0xFF20, 2: 0xFF2E, 3: 0xFE66, 4: 0xFE6F}          # DDC0..DDC3 CONTROL_2
+    SCL: ClassVar = {1: 0xFF20, 2: 0xFF2E, 3: 0xFE66, 4: 0xFE6F}          # DDC0..DDC3 CONTROL_2
     SUB_I, D_IN_I, STOP_I = 0x02, 0x04, 0x10
     reads, writes = (DIN,), (DOUT, STAT, IRQ2, *SCL.values())
 
@@ -508,8 +509,8 @@ class FlashHalt(Dev):
     "8051 will halt when common instruction executes"). The sim CPU does not stop; the halt is added to the ChipReset WDT
     clock, and to its count unless FFEA[5] sf_hlt_wdt_en stops it. Durations: MX25L8006E typ (MAX = datasheet max, p. 49)."""
     writes = (0xFF60,)
-    TYP = {0x20: 40.0, 0xD8: 400.0, 0x01: 5.0, 0x02: 0.6}         # sector erase, block erase, WRSR, page program (ms)
-    MAX = {0x20: 200.0, 0xD8: 2000.0, 0x01: 40.0, 0x02: 3.0}
+    TYP: ClassVar = {0x20: 40.0, 0xD8: 400.0, 0x01: 5.0, 0x02: 0.6}         # sector erase, block erase, WRSR, page program (ms)
+    MAX: ClassVar = {0x20: 200.0, 0xD8: 2000.0, 0x01: 40.0, 0x02: 3.0}
     use_max = False
 
     def __init__(self):
@@ -554,12 +555,12 @@ class HdmiInput(Dev):
     function) as the SDK ScalerMeasure* code decodes them. F-to-P (P31_06 bit7) halves the auto-function V window as the
     hardware does (the code doubles it back). MODES: name -> (htotal, hact, hstart, vtotal, vact, vstart, pclk 0.1 MHz).
     RATE: pixel clock factor (x1000/1001 for the NTSC-rate presets; totals unchanged)."""
-    MODES = {"1080p60": (2200, 1920, 192, 1125, 1080, 41, 1485), "2160p60": (4400, 3840, 384, 2250, 2160, 82, 5940),
+    MODES: ClassVar = {"1080p60": (2200, 1920, 192, 1125, 1080, 41, 1485), "2160p60": (4400, 3840, 384, 2250, 2160, 82, 5940),
              "2160p59.94": (4400, 3840, 384, 2250, 2160, 82, 5940),
              "1080p24": (2750, 1920, 192, 1125, 1080, 41, 742), "2160p30": (4400, 3840, 384, 2250, 2160, 82, 2970),
              "1080p50": (2640, 1920, 192, 1125, 1080, 41, 1485), "2160p50": (5280, 3840, 384, 2250, 2160, 82, 5940),
              "1080p30": (2200, 1920, 192, 1125, 1080, 41, 742)}       # CEA-861 VIC 31 / 96 / 34
-    RATE = {"2160p59.94": 1000 / 1001}
+    RATE: ClassVar = {"2160p59.94": 1000 / 1001}
     XTAL_KHZ = 14_318.18       # 4x NTSC colour burst; the SDK's _XTAL14318K is 14318 (-13 ppm)
     MEAS_KHZ = XTAL_KHZ * 49 / 2 / 4     # _MEASURE_CLK: M2PLL (M 49, N 2, O 1) / _M2PLL_MEASURE_DIV 4
     DATA_PATH_LIMIT = 3000     # RL6449_Series_IDomainInclude.h _DATA_PATH_SPEED_LIMIT (0.1 MHz)
@@ -1008,7 +1009,7 @@ class Machine:
     def close(self):
         try:
             self.s.send("quit"); self.s.p.wait(5)
-        except Exception:
+        except (OSError, subprocess.TimeoutExpired):
             self.s.p.kill()
         import shutil
         shutil.rmtree(self.simdir, ignore_errors=True)
@@ -1504,7 +1505,7 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
         rawf = ROOT / "tmp/logs" / f"meas4k_{binp.stem}_{mode}.raw"
         rawf.write_bytes(raw)
         lines.append(f"meas4k ring -> {rawf.relative_to(ROOT)} (decode: scripts/meas4k_dump.py --file)")
-    except Exception:
+    except (SimError, OSError, IndexError):                             # image without the ring
         pass
     m.close()
     for ln in lines:

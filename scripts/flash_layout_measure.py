@@ -76,7 +76,7 @@ def stack_total(tag):
     r = subprocess.run([sys.executable, "scripts/fw_stack.py"], cwd=ROOT, capture_output=True, text=True, timeout=120)
     try:
         return json.loads(r.stdout)["total"]
-    except Exception:
+    except (KeyError, ValueError):
         return None
 
 

@@ -42,9 +42,15 @@ def main() -> int:
     calls = {"OsdFuncDisableOsd": 0, "OsdDispDisableOsd": 0}
     armed = [False]
     where = []
+    def make_hook(fn):
+        def hook(m, r):
+            calls[fn] += armed[0]
+            if armed[0]:
+                where.append((fn, bus.mode_state(), round(bus.now(), 3)))
+        return hook
+
     for fn in calls:
-        bus.m.stub(fn, lambda m, r, fn=fn: (calls.__setitem__(fn, calls[fn] + armed[0]),
-                                             where.append((fn, bus.mode_state(), round(bus.now(), 3))) if armed[0] else None) and None)
+        bus.m.stub(fn, make_hook(fn))
     try:
         if not bus.run_until_mode(3):
             say(f"FAIL {a.bin.name}: no ACTIVE"); return 1
@@ -58,14 +64,13 @@ def main() -> int:
         bus.wait(a.secs)
         hold = bus.xdata(HOLD)[0]
         blocks, evs = -1, []
-        if "_isr_g_stAwtoSw" in bus.m.sym or True:
-            try:
-                sw = bus.addr("isr_g_stAwtoSw")
-                raw = bus.xdata(sw, 12 + 4 * 40)
-                blocks = raw[11]
-                evs = [(raw[12 + 4 * i], raw[13 + 4 * i], int.from_bytes(raw[14 + 4 * i:16 + 4 * i], "big")) for i in range(min(raw[3], 40))]
-            except Exception as e:                             # image without the #60 log
-                say(f"no isr_g_stAwtoSw: {e!r}")
+        try:
+            sw = bus.addr("isr_g_stAwtoSw")
+            raw = bus.xdata(sw, 12 + 4 * 40)
+            blocks = raw[11]
+            evs = [(raw[12 + 4 * i], raw[13 + 4 * i], int.from_bytes(raw[14 + 4 * i:16 + 4 * i], "big")) for i in range(min(raw[3], 40))]
+        except (S.SimError, IndexError) as e:                  # image without the #60 log
+            say(f"no isr_g_stAwtoSw: {e!r}")
         say("events (id arg ms): " + " ".join(f"{i:02x}/{g:02x}@{t}" for i, g, t in evs[-16:]))
         say(f"disable calls at: {where}")
         want = 0x01 if cmd == 0x24 else 0x02

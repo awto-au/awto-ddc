@@ -21,6 +21,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 import isostamp
 
@@ -61,7 +62,7 @@ def say(s):
 
 class StateWatch(S.Dev):
     """Firmware writes to the SDK power / mode views: a change of the watched bits is recorded with the owner flag."""
-    MASK = {0: 0xFF, 1: 0x1F, 2: 0xF0}          # isr_g_stPowerInfo byte 0 (target | status); isr_g_stModeInfo byte 0 bits 4..0, byte 1 bits 7..4
+    MASK: ClassVar = {0: 0xFF, 1: 0x1F, 2: 0xF0}          # isr_g_stPowerInfo byte 0 (target | status); isr_g_stModeInfo byte 0 bits 4..0, byte 1 bits 7..4
 
     def __init__(self, run, pwr, mode):
         self.run, self.cell = run, {pwr: ("power", 0), mode: ("mode", 1), mode + 1: ("reset", 2)}

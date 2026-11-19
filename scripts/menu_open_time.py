@@ -30,7 +30,7 @@ def main():
             hits.setdefault(name, bus.now())
         try:
             bus.m.stub(name, f)
-        except Exception:
+        except fw_sim.SimError:                    # image without that function
             pass
     for n in ("osd_font_load", "osd_tc_bar", "osd_tc_place", "osd_tc_show"):
         w(n)

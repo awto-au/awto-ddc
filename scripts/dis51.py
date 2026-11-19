@@ -62,9 +62,9 @@ def dis(buf, pc, base=0):
     while i < len(out):
         c = out[i]
         nxt = out[i+1] if i+1 < len(out) else ""
-        if c in "di" and (i == 0 or out[i-1] in " ,#@/") and not nxt.isalpha() and not (c == "d" and False):
+        if c in "di" and (i == 0 or out[i-1] in " ,#@/") and not nxt.isalpha():
             if c == "i" and i > 0 and out[i-1] == "#" or c == "d" and (i == 0 or out[i-1] in " ,"):
-                res += f"{vals[k]:02X}h" if c == "d" else f"{vals[k]:02X}h"; k += 1; i += 1; continue
+                res += f"{vals[k]:02X}h"; k += 1; i += 1; continue
         if c == "I" and out[i-1] == "#":
             res += f"{(vals[k] << 8 | vals[k+1]):04X}h"; k += 2; i += 1; continue
         if c == "a" and out[i-1] == " ":
@@ -96,7 +96,7 @@ def main():
     while pc < start + ln and pc < len(buf):
         try:
             s, n = dis(buf, pc, base)
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             s, n = "??", 1
         print(f"{base+pc:06X}: {buf[pc:pc+n].hex():8s} {s}")
         pc += n

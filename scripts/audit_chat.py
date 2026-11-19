@@ -13,7 +13,7 @@ def repo():
     r = os.environ.get("AWTO_DDC_REPO")
     if r: return r
     try: return subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
-    except Exception: return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    except (subprocess.CalledProcessError, OSError): return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SKIP = ("[SYSTEM NOTIFICATION", "<system-reminder", "Another Claude session sent a message",
         "<task-notification", "Full Settings JSON", "Hooks Configuration", "Constructing a Hook", "Settings Schema Reference", "Base directory for this skill", "<command-", "<local-command", "<browser_instruction", "Caveat:", "[Request interrupted")
@@ -32,7 +32,7 @@ def main():
     for line in open(src, errors="replace"):
         n += 1
         try: e = json.loads(line)
-        except Exception: continue
+        except json.JSONDecodeError: continue
         t = e.get("type"); ts = e.get("timestamp", "")
         if t == "user" and not e.get("isSidechain"):
             m = e.get("message", {})

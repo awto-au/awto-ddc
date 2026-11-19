@@ -25,8 +25,7 @@ for b in range(7):
     names = {l.split("\t")[1] for l in take.values()}
     keep = [l for l in lines if not ((e := ent(l)) and len(e) > 4 and e[4] in ("[auto-sdk]", "[lib]")
                                      and (e[0].lower() in take or e[1] in names))]
-    have = {e[0].lower() for l in keep if (e := ent(l))}
-    add = [l for a, l in take.items() if a not in have or True]
+    add = list(take.values())
     out = keep + [l for l in add if l.split("\t")[0].lower() not in {e[0].lower() for x in keep if (e := ent(x))}]
     p.write_text("\n".join(out) + "\n")
     log.append(f"bank{b}: {len(new)} lib names, {len(take)} merged ({len(new)-len(take)} blocked by hand names)")

@@ -236,16 +236,20 @@ def cpu_ticks(pid: int) -> float:
     """CPU seconds used so far by the process tree under pid (0 if gone)."""
     try:
         import psutil
+    except ImportError:
+        return 0.0
+    try:
         ps = psutil.Process(pid)
         return sum(sum(x.cpu_times()[:2]) for x in [ps, *ps.children(recursive=True)] if _alive(x))
-    except Exception:
+    except psutil.Error:
         return 0.0
 
 
 def _alive(x) -> bool:
+    import psutil
     try:
         return x.is_running()
-    except Exception:
+    except psutil.Error:
         return False
 
 

@@ -97,7 +97,7 @@ def a_is_code(a):
 def regen_thunks(allm):
     """allm: bank -> merged dict. Rewrites bcall_* names in place from final target names."""
     changed = 0
-    for b, m in allm.items():
+    for m in allm.values():
         for a, r in m.items():
             if not r["name"].startswith("bcall_"):
                 continue

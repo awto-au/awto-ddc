@@ -150,8 +150,7 @@ def main() -> int:
             (ben if b else rel).append((k, e, b))
         sections[lab] = (rel, ben)
         P(f"\n## {lab}: {len(keys)} total, {len(rel)} relevant, {len(ben)} known-benign")
-    for lab in sections:
-        rel, ben = sections[lab]
+    for lab, (rel, ben) in sections.items():
         P(f"\n## {lab} - relevant, by class")
         byc = defaultdict(list)
         for k, e, _ in rel:

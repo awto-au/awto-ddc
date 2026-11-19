@@ -138,7 +138,7 @@ class Flow:
                     self.calls.setdefault((tgt if tgt < COMMON else bank, tgt), {})[(bank, pc)] = (st, entry)
             try:
                 nexts, nst, is_ret = self._step(buf, pc, st, bank, depth)
-            except Exception:
+            except (IndexError, KeyError, ValueError, TypeError):
                 continue
             if is_ret:
                 rets.append(nst)

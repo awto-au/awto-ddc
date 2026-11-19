@@ -285,7 +285,7 @@ class Rtd(Isp):
         # 0x4B RDUID: not on this part; the engine 0x67-0x69 path gives at most 3 bytes. Report what comes back.
         try:
             rduid = self.common(T_READ, 0x4B, nr=3).to_bytes(3, "big")
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError) as e:
             rduid = None
             log(f"RDUID 0x4B: no response ({e})")
         # Secured-OTP ESN via ENSO -> READ@0 (16 B) -> EXSO. Array access is blocked while in OTP mode,
@@ -399,7 +399,7 @@ class Rtd(Isp):
                 self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
                 if not self.dry:
                     self._start_page(addr)
-            except Exception as e2:
+            except (OSError, RuntimeError, ValueError) as e2:
                 log(f"page 0x{addr:06x}: flush after aux-fast failure also failed: {e2}")
             raise RuntimeError(f"page 0x{addr:06x} aux-fast write failed: {e}") from e
         finally:
@@ -497,7 +497,7 @@ class Rtd(Isp):
                 self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
                 if not self.dry:                     # the flush programs stale SRAM: only into a sector about to be redone
                     self._start_page(addr)
-            except Exception as e2:
+            except (OSError, RuntimeError, ValueError) as e2:
                 log(f"page 0x{addr:06x}: flush after burst failure also failed: {e2}")
             raise RuntimeError(f"page 0x{addr:06x} burst failed at +0x{i:02x}: {e}") from e
         finally:
@@ -540,7 +540,7 @@ def do_write(isp, addr, new, sr0, reprotect, nd, bk):
         log("--reprotect none: leaving status reg as is"); return 0
     try:
         isp.reprotect(reprotect)
-    except Exception as e:
+    except (OSError, RuntimeError, ValueError) as e:
         log(f"ERROR: re-protect to 0x{reprotect:02x} failed: {e}"); return 8
     return 0
 

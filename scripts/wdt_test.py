@@ -23,6 +23,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from typing import ClassVar
 
 import isostamp
 
@@ -395,7 +396,7 @@ class UnitTarget:
     def close(self):
         try:
             self.dbg_link.off(self.bus_n)
-        except (Exception, SystemExit) as e:             # the summary is already out; a link left on times out by itself
+        except (OSError, SystemExit) as e:               # the summary is already out; a link left on times out by itself
             self.say(f"  debug link off failed: {e!r}")
         finally:
             self.io.close()
@@ -423,7 +424,7 @@ class Runner:
             self.t.wait(0.3)
         raise OSError("record read failed (0x35 silent)")
 
-    WANT = {"cold": "cold", "stall": "watchdog bite", "ea_off": "no capture", "probe": "probe",
+    WANT: ClassVar = {"cold": "cold", "stall": "watchdog bite", "ea_off": "no capture", "probe": "probe",
             "clear": "cold", "prio": "watchdog bite"}            # cause words, not the exact text
 
     def after_reset(self, label: str):
@@ -1211,7 +1212,7 @@ class Runner:
                     if n not in late:
                         self.settle()
                     getattr(self, "c_" + n)()
-                except (Exception, SystemExit) as e:        # one case's failure never ends the run
+                except (Exception, SystemExit) as e:  # noqa: BLE001  # one case's failure never ends the run
                     self.row(n, "FAIL", f"exception: {e!r}")
         except KeyboardInterrupt:
             self.row("run", "FAIL", "interrupted")

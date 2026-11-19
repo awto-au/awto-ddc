@@ -653,8 +653,8 @@ def relink(bus: int) -> bool:
             if dbg_link.dbg_ok(bus):
                 say(f"  relinked after {time.monotonic() - t0:.1f} s (fw had reset: step failed, unit back on the stock clock)")
                 return True
-        except (Exception, SystemExit):  # noqa: BLE001  dbg_link.on exits when neither slave answers (unit still booting)
-            pass
+        except (OSError, SystemExit) as e:  # dbg_link.on exits when neither slave answers (unit still booting)
+            say(f"  relink attempt: {e!r}")
     say(f"  RELINK FAIL: no debug slave after {RELINK_S:.0f} s")
     return False
 

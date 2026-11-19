@@ -33,7 +33,7 @@ def main():
         try:
             connect.download(url, path=str(f))
             z = f.read_text(errors="replace").strip().splitlines()[0].strip()
-        except Exception as e:
+        except (OSError, RuntimeError, ValueError, IndexError) as e:
             msg = f"FAIL {url}: {str(e)[:120]}"; print(msg); log.write(msg + "\n"); continue
         if not z or "<" in z or " " in z or not z.lower().endswith(".zip"):
             msg = f"BAD {url}: {z[:80]!r}"; print(msg); log.write(msg + "\n"); continue

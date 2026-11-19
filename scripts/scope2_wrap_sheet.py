@@ -111,7 +111,7 @@ def main() -> int:
     sheet = Image.new("RGB", (cols * cw + (cols + 1) * 6, rows * ch + (rows + 1) * 6 + 30), (20, 20, 20))
     font = ImageFont.load_default(size=22)
     ImageDraw.Draw(sheet).text((6, 4), f"Scope 2, frames {sel[0][0]}..{sel[-1][0]}, wrap at frame {wf}" + (" - FIXED (constant spread)" if a.fixed else " - current firmware"), font=font, fill=(255, 255, 255))
-    prev, table = None, []
+    prev, prev_ps, table = None, 0, []
     for k, s in enumerate(sel):
         im, text = frame(geo, s, base)
         tile = Image.new("RGB", (cw, ch), (0, 0, 0))

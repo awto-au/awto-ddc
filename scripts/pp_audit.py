@@ -248,7 +248,7 @@ def int_value(name, table, depth=0):
         return None
     try:
         return int(eval(expr.replace("/", "//"), {"__builtins__": {}}))
-    except Exception:
+    except (SyntaxError, NameError, TypeError, ValueError, ZeroDivisionError):
         return None
 
 

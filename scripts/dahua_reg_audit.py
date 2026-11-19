@@ -32,13 +32,17 @@ BANKS = SRC.parent / "banks"
 COMMON = DF.COMMON
 
 
-def log(msg, fh=[None]):
-    if fh[0] is None:
+_log_fh = None
+
+
+def log(msg):
+    global _log_fh
+    if _log_fh is None:
         LOG.parent.mkdir(parents=True, exist_ok=True)
-        fh[0] = open(LOG, "w")
+        _log_fh = open(LOG, "w")
     print(msg)
-    fh[0].write(msg + "\n")
-    fh[0].flush()
+    _log_fh.write(msg + "\n")
+    _log_fh.flush()
 
 
 def load_db():
