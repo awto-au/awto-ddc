@@ -2280,6 +2280,9 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_OUT_DEFAULT                                  _AUDIO_DAC_OUTPUT_SPEAKER
 #define AWTO_SYNC_EV_AUDIO                                      0xE5    // speaker amp pins: arg AWTO_AUDIO_EV_*, value 0
 #define AWTO_SYNC_EV_DEMO                                       0xE6    // test cmd 0x3A demo log: 01..03 'line N test ...' short / medium / long
+#define AWTO_SYNC_EV_CARD                                       0xED    // pop-up card opened (#266, opens only): arg = AWTO_CT_* text id of the card, 0x80 | AWTO_CARD_SUP_* = not opened (value = message)
+#define AWTO_CARD_SUP_SEL                                       0x01    // the input selector is open and keeps the screen
+#define AWTO_CARD_SUP_CON                                       0x02    // the open console keeps the screen
 #define AWTO_SYNC_EV_CEC                                        0xEB    // CEC (docs/cec.md): arg = flags | len << 3 | kind, value = header << 24 | opcode << 16 | operand 1 << 8 | operand 2
 #define AWTO_CEC_K_RX                                           0       // frame received (header low nibble = destination, flag DEST_UNKNOWN: the block does not tell)
 #define AWTO_CEC_K_TX                                           1       // reply queued
