@@ -37,9 +37,10 @@
 //--------------------------------------------------
 // Macros of 5us Delay
 //--------------------------------------------------
+// Main context: one routine (fw/timer/delay.c, common area, same djnz loop); the EXINT variants stay inline (no call in an ISR)
+// (inline lcall: both routines touch only the IRAM counters, so SDCC must not spill registers around the call)
 #define DELAY_5US()                         {\
-                                                d_isr_g_ucDelay5usI = (d_isr_g_ucDelay5usN_Base);\
-                                                while(--d_isr_g_ucDelay5usI) {};\
+                                                __asm lcall _AwtoDelayLoops __endasm;\
                                             }
 
 #define DELAY_5US_EXINT()                   {\
@@ -196,11 +197,7 @@
 // Delay 50~1000 us
 #define DELAY_XUS(N)                        {\
                                                 d_isr_g_ucDelayXus_Counter = (N) >> 2;\
-                                                do\
-                                                {\
-                                                    DELAY_XUS_BASE();\
-                                                }\
-                                                while(--d_isr_g_ucDelayXus_Counter);\
+                                                __asm lcall _AwtoDelayXus __endasm;\
                                             }
 
 #define DELAY_XUS_EXINT(N)                  {\

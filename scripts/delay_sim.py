@@ -82,6 +82,8 @@ def class_b_sites(im, mapp):
     out = []
     for tag, lst in sites.items():
         for c, addr, imm, endoff in lst:
+            if c["name"].lstrip("_") in B_FUNCS:         # the routines' own loops: judged as routines (F probes)
+                continue
             nom = 5.0 if tag.startswith("5us") else (imm * 4.0 if tag.startswith("xus") and "base" not in tag else 4.0)
             out.append((tag, c["name"].lstrip("_"), chunk_bank(im, c), addr, addr + endoff, nom))
     return out
@@ -106,8 +108,27 @@ def attach(run, im, mapp):
             continue
         pr.range(("A", fn, 0, 0, 0), chunk_bank(im, c), c["addr"] & 0xFFFF, rets(im, c), extra=lambda m, r: r["a1"])
         na += 1
-    say(f"probes: {nb} class B loop sites, {na} class A functions")
+    nf = 0
+    for fn in B_FUNCS:                                       # main-context micro-delays run in one routine each (fw/timer/delay.c)
+        c = chunks.get(fn)
+        if c is None:
+            continue
+        cnt = D.var_addrs(mapp.read_text(errors="replace"))["cx"]         # d_isr_g_ucDelayXus_Counter: the outer passes, set by the caller
+        pr.range(("F", fn, 0, 0, 0), chunk_bank(im, c), c["addr"] & 0xFFFF, rets(im, c),
+                 extra=(lambda m, r, cnt=cnt: m.core.iram[cnt]) if fn == "AwtoDelayXus" else (lambda m, r: 0))
+        nf += 1
+    say(f"probes: {nb} inline class B loop sites, {nf} class B routines, {na} class A functions")
     return pr
+
+
+B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # neither takes an argument: Loops runs d_isr_g_ucDelay5usN_Call (Base - 2); Xus runs d_isr_g_ucDelayXus_Counter outer passes of the 4 us base
+HOT_CALLS = 20                    # a routine group is judged against the upper bound from this many calls on (fewer = cold code fetch after another state)
+
+
+def call_clk() -> int:
+    """clk the probe window leaves out: the caller's lcall and the routine's ret"""
+    mdl = json.loads((ROOT / "scripts/dw8051_model.json").read_text())
+    return sum(mdl["cycles"][op] for op in (0x12, 0x22)) * mdl["clk_per_cycle"]
 
 
 RET_PAD = 0x0006     # code address never executed in the replay: the hook there stops the run (the replayed function returns to it)
@@ -154,6 +175,36 @@ def replays(run, im, mapp, fails):
     return fails, out
 
 
+def replay_sites(run, im, mapp, fails):
+    """Every inline class B loop site, executed or not, run alone and hot at the finished sim's clock state (interrupts off, 3 passes,
+    the last timed): [99 %, nominal + HI_PASS_CLK per pass]. Replaces 'the fastest executed site of the shape' (a loop that only an
+    ISR ran, cold, in the scenario could not be judged that way)."""
+    m, c, p = run.m, run.m.core, run.m.p
+    ie = c.sfr[0x28]
+    c.sfr[0x28] = 0
+    mhz, bad, n = m.clock.f_cpu / 1e6, [], 0
+    for tag, fn, bank, a, e, nom in class_b_sites(im, mapp):
+        m.stubs[e] = [(None, "replay", lambda m_, r: m_.request_stop())]
+        c.pch[e] |= 0xFFFF
+        last = 0
+        for _ in range(3):
+            c.set_bank((bank or 0) & 15)
+            p.pc = a
+            k0 = p.clk
+            m.run(50_000_000)
+            last = p.clk - k0
+        m.stubs.pop(e, None)
+        c.pch[e] = 0
+        us = last / mhz
+        passes = max(1, round(nom / 4.0)) if tag.startswith("xus") and "base" not in tag else 1
+        n += 1
+        if not (LO * nom <= us <= nom + passes * HI_PASS_CLK / mhz):
+            bad.append(f"{tag} {fn} 0x{a:04x}: {us:.2f} us (nominal {nom:g})")
+    c.sfr[0x28] = ie
+    say(f"  {'PASS' if not bad else 'FAIL'} B replay: {n} inline loop sites alone and hot at {m.clock.src} {mhz:.2f} MHz in [{LO * 100:.0f} %, nominal + {HI_PASS_CLK} clk per pass]" + (": " + "; ".join(bad[:6]) if bad else ""))
+    return fails + (1 if bad else 0)
+
+
 def judge(pr, run, fails):
     f = []
     wall = run.m.wall_ms
@@ -181,6 +232,21 @@ def judge(pr, run, fails):
     f.append(("A PollingFlagProc wall ms <= timeout + 1 + %g" % A_SLACK_MS, not bad, f"{len(a.get('ScalerTimerPollingFlagProc', []))} calls; outside (timeout, ms): {bad[:6]}"))
     bad = [round(d, 3) for d, _ in a.get("ScalerTimerWaitForEvent", []) if d > A_EVENT_BOUND_MS + A_SLACK_MS]
     f.append(("A WaitForEvent wall ms <= %d + %g" % (A_EVENT_BOUND_MS, A_SLACK_MS), not bad, f"{len(a.get('ScalerTimerWaitForEvent', []))} calls; outside: {bad[:6]}"))
+    # class B routines (main-context DELAY_5US / DELAY_XUS): hot min per (clock state, routine, argument) against the nominal of the argument
+    grp = collections.defaultdict(list)
+    for k, v in pr.dur.items():
+        if k[0] == "F":
+            for d, fh, src, arg in v:
+                grp[(src, round(fh / 1e6, 2), k[1], arg)].append(d * 1000.0)
+    wrong, ovh = [], call_clk()
+    for (src, mhz, fn, arg), us in sorted(grp.items()):
+        nom, passes = (5.0, 1) if fn == "AwtoDelayLoops" else (arg * 4.0, max(arg, 1))
+        tot = [u + ovh / mhz for u in us]                  # + the call's own clk: what a call site waits
+        lo, hi = LO * nom, nom + (ovh + passes * HI_PASS_CLK) / mhz
+        say(f"  F {fn}({arg}) {src:8s} {mhz:7.2f} MHz: {len(us):6d} calls, hot min {min(tot):.2f} us incl. the call = {min(tot) / nom * 100:.0f} % of {nom:g} us (allowed {lo:.2f}..{hi:.2f})")
+        if min(tot) < lo or (len(us) >= HOT_CALLS and min(tot) > hi):
+            wrong.append(f"{fn}({arg}) {src} {mhz:g} MHz: {min(tot):.2f} us not in {lo:.2f}..{hi:.2f}")
+    f.append((f"B routines: {sum(len(v) for v in grp.values())} calls in {len(grp)} (state, routine, argument) groups, hot min in [{LO * 100:.0f} %, nominal + call + {HI_PASS_CLK} clk per pass]", not wrong and bool(grp), "; ".join(wrong[:6]) or ("" if grp else "no call ran")))
     # class B: per site min, judged at the clock state of the shortest pass
     rows, worst, grp = [], [], collections.defaultdict(list)
     by_state = collections.defaultdict(list)
@@ -198,11 +264,6 @@ def judge(pr, run, fails):
         rows.append((tag, fn, addr, nom, us, len(v), src, fh, ok))
         if not ok:
             worst.append(f"{tag} {fn} 0x{addr:04x} {us:.2f} us (nominal {nom:g}, {src} {fh / 1e6:.2f} MHz, {len(v)} runs)")
-    for (src, mhz, tag, nom), us in sorted(grp.items()):     # per shape / clock state / nominal: the fastest site is the hot loop; a site that ran cold (first fetch, ISR) is not an over-delay
-        passes = max(1, round(nom / 4.0)) if tag.startswith("xus") and "base" not in tag else 1
-        hi = nom + passes * HI_PASS_CLK / mhz
-        if min(us) > hi:
-            worst.append(f"{tag} {src} {mhz:.2f} MHz nominal {nom:g}: fastest site {min(us):.2f} us > {hi:.2f}")
     for (src, mhz, tag), r in sorted(by_state.items()):
         say(f"  B {tag:14s} {src:8s} {mhz:7.2f} MHz: {len(r):3d} sites, hot min/median/max = {min(r) * 100:.0f} / {statistics.median(r) * 100:.0f} / {max(r) * 100:.0f} % of nominal")
     f.append((f"B {len(rows)} executed loop sites in [{LO * 100:.0f} %, nominal + {HI_PASS_CLK} clk per pass]", not worst, "; ".join(worst[:6])))
@@ -240,6 +301,7 @@ def measure(binp, mapp, tree, mode):
         fails, rows, ratio = judge(pr, run, 0)
         mhz = run.m.clock.f_cpu / 1e6
         fails, crows = replays(run, im, mapp, fails)
+        fails = replay_sites(run, im, mapp, fails)
     finally:
         run.bus.close()
     say(f"{'PASS' if fails == 0 else 'FAIL'} delay_sim {binp.name}: {fails} failed")
