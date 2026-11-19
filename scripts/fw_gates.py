@@ -60,16 +60,19 @@ SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
 # Tiers (Dan 2026-11-19): normal = every build / flash (a complete normal record is the flash gate); extensive = normal + these long
 # scenario sweeps (on request, before a merge to main, nightly). A gate not listed here is normal. Move a gate by editing this set.
+WDT_NORMAL_CASES = "stall,pass,reason,t0_timing"
 EXTENSIVE = {
     "menu": "16 pages / 133 entries walk",
-    "keys": "80 checks, ~250 simulated s of OSD timeouts and holds",
+    "keys_full": "80 checks, ~250 simulated s of OSD timeouts and holds (normal: the selector section)",
     "deadport": "4 cases, up to 40 simulated s each",
     "inputrate": "40 start phases x 3 rows",
-    "monitor": "30-sample heartbeat = 300 simulated s",
-    "wdt": "21 watchdog cases",
-    "wake": "wake paths, several power cycles",
-    "crash": "crash / bite handling, long boots",
+    "monitor_full": "30-sample heartbeat = 300 simulated s (normal: --no-beat)",
+    "wdt_full": "21 watchdog cases (normal: stall, pass, reason, t0_timing)",
+    "wake_full": "all wake paths incl. UP+DOWN, DPCD, TMDS clock, burst (normal: --quick)",
+    "crash_full": "workload / stall / hw / probe (normal: stall)",
+    "conwrap_full": "real power off / on / saving / wake phases 1-5 (normal: injected lines)",
     "canary": "stack canary, long boot + fatal path",
+    "delays_full": "both clocks (350 + the sibling -clk87 image); clock matrix: scripts/gate_matrix.py",
     "bootsim_always": "second boot_sim variant (console at power-on)",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
@@ -96,6 +99,14 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
 }
 
 
+for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap"):       # the extensive twin of a gate has its limit and its image requirements
+    SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING[_k] if _k in SKIP_IF_MISSING else ()
+    LIMIT_OF[_k + "_full"] = LIMIT_OF.get(_k, LIMIT_S)
+LIMIT_OF["crash"] = LIMIT_OF["crash_full"] = 60
+LIMIT_OF["delays_full"] = LIMIT_OF["delays"]
+SKIP_IF_MISSING = {k: v for k, v in SKIP_IF_MISSING.items() if v}
+
+
 def header(tree):
     h = Path(tree) / "fw/sdk/Project/Header/RL6449_Project.h" if tree else None
     return h if h and h.is_file() else None
@@ -111,6 +122,7 @@ def skips(b: Path, m: Path, tree) -> dict:
           for k, v in SKIP_IF_MISSING.items() if not all(has(x) for x in v)}
     if not header(tree):
         sk.setdefault("crash", "needs --tree with fw/sdk/Project/Header/RL6449_Project.h")
+        sk.setdefault("crash_full", sk["crash"])
     if not (tree and Path(tree).is_dir()):
         sk["pokes"] = "needs --tree (static check of the worktree's sources)"
         sk["magic"] = sk["regs"] = sk["rules"] = "needs --tree (static check of the worktree's sources)"
@@ -137,31 +149,39 @@ def gates(b: Path, m: Path, ref, tree):
         if " _AwtoWaitPump" in mt:                 # #216: Get-VCP answered inside a blocking wait, Set left to the main loop
             g["pump"] = [*PY, f"{s}/pump_sim.py", b, "--map", m]
     out = ROOT / "tmp/fw_gates" / b.stem             # own PNG/json dir per image (gates run in parallel)
-    g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m]
-    g["wdt"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
+    g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m, "--only", "switch"]             # NORMAL: the selector takes another input; keys_full = every screen (extensive)
+    g["keys_full"] = [*PY, f"{s}/key_sim_test.py", b, m]
+    g["wdt_full"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
+    g["wdt"] = [*g["wdt_full"], "--cases", WDT_NORMAL_CASES]                          # NORMAL: bite + no false reset + reason line + Timer0 timing
     g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["bootsim_always"] = [*PY, f"{s}/boot_sim.py", b, m, "--console", "always", "--no-bite", "--out", out / "boot_always"]   # #144: console at power-on
-    g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    g["wake_full"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    g["wake"] = [*g["wake_full"], "--quick"]                                          # NORMAL: cable / EDID / AUX / SOURCE-key wakes
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     fast = b.with_name(b.name.replace("-be.bin", "-clk87-be.bin"))    # `dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87` (stock clock): measured too when present
-    g["delays"] = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else []),
-                   *(["--other", fast, fast.with_suffix(".map")] if fast.is_file() and fast != b else [])]     # #delay-audit: every wait vs its intended wall time
+    base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else [])]
+    g["delays"] = base                                                                # NORMAL: the image's own clock + the delay audit
+    if fast.is_file() and fast != b:                                                  # extensive: + the sibling -clk87 image, DDC debounce equal at both clocks
+        g["delays_full"] = [*base, "--other", fast, fast.with_suffix(".map")]
     g["nvlog"] = [*PY, f"{s}/nv_test.py", "--sim", b, "--map", m, "--cases", "flushlog"]   # #151: flush lines say what was written
     if " _AwtoFlashWrBegin" in mt:                          # flash clock default: FF6C / F2 order at boot, write sessions at F2 5
         g["flashclk"] = [*PY, f"{s}/flash_clk_sim.py", b, "--map", m]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
     g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed
-    g["monitor"] = [*PY, f"{s}/mon_sim_test.py", b, m]       # health monitor: sample period, rows, change steps, registry switch, heartbeat
+    g["monitor_full"] = [*PY, f"{s}/mon_sim_test.py", b, m]     # health monitor: sample period, rows, change steps, registry switch, heartbeat (300 simulated s)
+    g["monitor"] = [*g["monitor_full"], "--no-beat"]            # NORMAL: all but the 30-sample heartbeat
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
         g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]
-    g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", *(["--tree", tree] if tree else [])]   # no line clipped
+    g["conwrap_full"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap_full", *(["--tree", tree] if tree else [])]   # no line clipped, real events
+    g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", "--scope", "inject", *(["--tree", tree] if tree else [])]    # NORMAL: injected widest lines
     if header(tree):
-        g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
+        g["crash_full"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
+        g["crash"] = [*g["crash_full"], "--tests", "stall"]                            # NORMAL: the 0x4C stall -> bite -> record
     if tree and Path(tree).is_dir():
         g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
         g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
@@ -322,7 +342,7 @@ def main() -> int:
         ok = rc == 0 or (k.startswith("h") and last.endswith("FAIL: delay cal"))   # delay cal needs wb-delaycal (#54)
         bad += not ok
         note = last[:150]
-        if k == "wdt":
+        if k in ("wdt", "wdt_full"):
             n = sum(1 for ln in (ROOT / "tmp/logs/fw_gates" / f"{b.stem}.{k}.log").read_text(errors="replace").splitlines()
                     if re.match(r"\s+SKIP\s", ln))
             note = f"{n} case(s) SKIP; {note}" if n else note

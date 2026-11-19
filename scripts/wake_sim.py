@@ -334,6 +334,7 @@ def main():
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/boot")
     ap.add_argument("--trace", action="store_true", help="log power / mode / OSD changes after each wake")
+    ap.add_argument("--quick", action="store_true", help="NORMAL tier: the cable, EDID, AUX and SOURCE-key wakes with their suppression rules; the extensive run adds UP+DOWN, DPCD, poll period, TMDS clock, burst")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     say(f"wake_sim {a.bin.name}")
@@ -378,6 +379,11 @@ def main():
         r.check(woke, "injected SOURCE wakes the monitor (front-key rule)", f"{ms} ms")
         r.watch(1500)
         r.check(r.power() == PWR_NORMAL and r.bus.mode_state() != 0, "injected SOURCE: awake afterwards", f"power {r.power()}")
+        if a.quick:
+            say("  quick: UP+DOWN, DPCD, poll period, TMDS cases left to the extensive run")
+            r.check(r.cr.resets == 0, "no chip reset (watchdog)", f"resets {r.cr.resets}")
+            say(f"{'PASS' if r.fails == 0 else 'FAIL'} wake_sim --quick {a.bin.name}: {r.fails} failed")
+            return 1 if r.fails else 0
         r.updown_case()
         r.wake_case("DPCD 600h = D0", lambda: r.dpcd.mem.__setitem__(DPCD_600, 0x01), "D1 DPCD 600h = D0", BOUND_LATCH_MS)
         r.poll_period()

@@ -77,3 +77,31 @@ def test_inputrate_fails_when_the_gpio_scan_never_runs(tmp_path):
     b = patched(tmp_path, "AwtoGpioPoll")
     rc, out = gate("input_rate_sim.py", b, IMG.with_suffix(".map"))
     assert rc != 0 and "FAIL" in out, out[-800:]
+
+
+# ---- NORMAL-tier minimal variants (fw_gates.gates names): a function RET'd in the image must fail the variant; the clean image passes
+sys.path.insert(0, str(ROOT / "scripts"))
+import fw_gates as G  # noqa: E402
+
+NORMAL_FAULTS = [("wake", "AwtoPsWakeFire"), ("wdt", "AwtoWdtHang"), ("crash", "AwtoWdtHang"), ("conwrap", "AwtoConLogSync"),
+                 ("monitor", "AwtoMonSample"), ("keys", "AwtoSourceKey")]
+
+
+def normal_cmd(name, binp):
+    return [str(x) for x in G.gates(binp, IMG.with_suffix(".map"), None, ROOT)[name]]
+
+
+def run_normal(name, binp):
+    return subprocess.run(normal_cmd(name, binp), capture_output=True, text=True, env={**ENV, "PYTHONHASHSEED": "0"}, timeout=STALL_S, cwd=ROOT)
+
+
+@pytest.mark.parametrize("name,fn", NORMAL_FAULTS)
+def test_normal_variant_fails_with_a_dead_function(tmp_path, name, fn):
+    r = run_normal(name, patched(tmp_path, fn))
+    assert r.returncode != 0, f"{name} with {fn} RET'd still passes:\n" + (r.stdout + r.stderr)[-600:]
+
+
+@pytest.mark.parametrize("name", ["wake", "wdt", "crash", "conwrap", "monitor", "keys"])
+def test_normal_variant_passes_clean(name):
+    r = run_normal(name, IMG.with_suffix(".bin"))
+    assert r.returncode == 0, (r.stdout + r.stderr)[-600:]
