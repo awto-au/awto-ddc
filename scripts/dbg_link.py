@@ -19,11 +19,12 @@ import argparse
 import contextlib
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
+import i2cbus
 
 LOG = i2cbus.ROOT / "tmp/logs/dbg_link.log"
 DBG, DDCCI = 0x35, 0x37

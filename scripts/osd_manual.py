@@ -16,10 +16,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-import isostamp  # noqa: E402
-import osd_model as M  # noqa: E402
+import isostamp
+import numpy as np
+import osd_model as M
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 IMG = ROOT / "docs/osd/img"
@@ -112,16 +112,16 @@ class Scene:
         for i, c in base.items():
             self.st.pal[i] = c
 
-    def r(self, off: int, v: int) -> "Scene":
+    def r(self, off: int, v: int) -> Scene:
         self.regs[off] = v & 255
         return self
 
-    def alpha(self, level: int, typ: int) -> "Scene":
+    def alpha(self, level: int, typ: int) -> Scene:
         self.ovl = [1 | (level >> 5) << 2, (level & 31) << 3]
         self.regs[0x0A] = self.regs[0x0A] & ~0x0C | typ << 2
         return self
 
-    def win(self, i: int, x0: int, y0: int, x1: int, y1: int, color: int, blend: int = 0, eff=None, grad=None, extra=None) -> "Scene":
+    def win(self, i: int, x0: int, y0: int, x1: int, y1: int, color: int, blend: int = 0, eff=None, grad=None, extra=None) -> Scene:
         """eff = (opt, width, height, sha, bor); grad = dict(dir, pol, en, step); extra = {adr_no: [b0, b1, b2]}."""
         b, w = M.win_base(i), self.st.win
         w[b + 1] = [(x0 >> 8) << 4 | (y0 >> 8), x0 & 255, y0 & 255]
@@ -146,7 +146,7 @@ class Scene:
             out.append([0x40 | width, self.ids[ch], fg << 4 | bg])
         return out
 
-    def map(self, rows, row_h: int = GH, row_base: int = 0, load_text: bool = True) -> "Scene":
+    def map(self, rows, row_h: int = GH, row_base: int = 0, load_text: bool = True) -> Scene:
         """Row commands from row_base, end marker, char words, then the glyph area; map A registers set."""
         n = len(rows)
         for k, row in enumerate(rows):

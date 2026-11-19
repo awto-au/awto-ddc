@@ -6,12 +6,15 @@ For each bus, address (0x50 EDID, 0x4A ISP reg 0x70) and read size, runs a fixed
 Window: 3 s per combo = >=60 transactions at the ~50 ms/64 B seen on DP AUX; enough for a stable mean.
 Stops a combo after 3 consecutive errors (logs errno). Log: ./tmp/logs/i2c_bench.log
 """
-import os, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
+import i2cbus
 
 WINDOW_S = 3.0
 SIZES = (16, 32, 64, 128, 255)

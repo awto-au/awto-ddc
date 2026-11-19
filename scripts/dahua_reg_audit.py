@@ -12,12 +12,16 @@ usage: dahua_reg_audit.py [--src DIR] [--out FILE]
   (write site pc-1 == export insn). Extra sites go to columns extra_r / extra_w (unique sites; common code counted once).
 Output: re/jxc-4k/reg_audit.tsv, reg_audit_resolved.tsv (site, address, via), reg_audit_unresolved.tsv (remaining '?' sites + reason); log: ./tmp/logs/dahua_reg_audit.log
 """
-import argparse, csv, gzip, os, sys
+import argparse
+import csv
+import gzip
+import os
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dahua_dptr_flow as DF  # noqa: E402
+import dahua_dptr_flow as DF
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 SRC = Path("/mnt/2tb/vendors/realtek/analysis/jxc-4k")

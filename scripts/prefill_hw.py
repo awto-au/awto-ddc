@@ -15,13 +15,14 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_link  # noqa: E402
-import dbg_xdata as X  # noqa: E402
-import rtd_i2c_bridge as B  # noqa: E402
+import dbg_link
+import dbg_xdata as X
+import rtd_i2c_bridge as B
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/prefill_hw.log"
@@ -40,7 +41,7 @@ def log(s: str) -> None:
 
 
 def sym(mp: str, name: str) -> int:
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", mp, re.M)
+    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", mp, re.MULTILINE)
     if not m:
         sys.exit(f"{name} not in the map: image without #83 pre-fill")
     return int(m.group(1), 16) & 0xFFFF

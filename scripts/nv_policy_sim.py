@@ -10,14 +10,15 @@ Exit 1 on a failed check. Log: ./tmp/logs/nv_policy_sim.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import key_sim_test as K  # noqa: E402
+import ddc_sim as D
+import key_sim_test as K
+import osd_render as R
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/nv_policy_sim.log"

@@ -27,13 +27,14 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_compile as FC  # noqa: E402
+import fw_compile as FC
 
 ROOT, SRC = FC.ROOT, FC.SRC
 SDK = ROOT / "fw/sdk"
@@ -156,7 +157,7 @@ def strip_comments(s, in_comment):
     return "".join(out), in_comment
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def file_lines(path):
     try:
         return Path(path).read_text(errors="replace").splitlines()
@@ -246,7 +247,7 @@ def int_value(name, table, depth=0):
     if not re.fullmatch(r"[\d\s()+\-*/%<>=&|^~andortn!]*", expr) or not expr.strip():
         return None
     try:
-        return int(eval(expr.replace("/", "//"), {"__builtins__": {}}))   # noqa: S307 (digits and operators only)
+        return int(eval(expr.replace("/", "//"), {"__builtins__": {}}))
     except Exception:
         return None
 
@@ -304,13 +305,13 @@ def main() -> int:
     for base in (SDK, ROOT / "fw/sdk-parked", ROOT / "fw/sdcc", SRC, ROOT / "fw/awto", *fw_dirs.our_dirs(ROOT)):   # parked sources count (#165)
         for p in base.rglob("*"):
             if p.suffix.lower() in (".c", ".h", ".inc") and p.is_file():
-                defined |= set(re.findall(r"^\s*#\s*define\s+(\w+)", p.read_text(errors="replace"), re.M))
+                defined |= set(re.findall(r"^\s*#\s*define\s+(\w+)", p.read_text(errors="replace"), re.MULTILINE))
     cmdline = set()
     for _, cmd in js:
         cmdline |= {x[2:].split("=")[0] for x in cmd if x.startswith("-D")}
     defined |= cmdline
     pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True)
-    defined |= set(re.findall(r"^#define (\w+)", pre.stdout, re.M))
+    defined |= set(re.findall(r"^#define (\w+)", pre.stdout, re.MULTILINE))
     for (_, defs) in [(0, d) for *_, d, _o in tu_info]:
         defined |= {d[1] for d in defs if d[0] == "define"}
 

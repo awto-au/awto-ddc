@@ -10,12 +10,13 @@ Model: fw_sim.video_devs (regdb reset, D2 cable, DPCD access port PBA_C1..C4, me
 Report: mode timeline, active port, DPCD 0x00000..0x0000F from the access-port model, IIC_CH_SEL (FF22 bits 2:0 = DDC n).
 Log: tmp/logs/fw_sim_dp.log
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import unit_health as H  # noqa: E402
+import fw_sim as S
+import unit_health as H
 
 D1, D2 = 4, 5                       # Global.h _D1_INPUT_PORT / _D2_INPUT_PORT
 SOURCE_HDMI, SOURCE_DP, SOURCE_NONE = 3, 4, 5

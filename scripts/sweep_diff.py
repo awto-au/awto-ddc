@@ -26,7 +26,7 @@ def main() -> int:
     b, c = load(Path(a[0])), load(Path(a[1]))
     off = sys.argv[sys.argv.index("--offered") + 1].split(",") if "--offered" in sys.argv else None
     a = [x for x in a if off is None or x != ",".join(off)]
-    gone = lambda m: "not run" if off is not None and m in off else "not offered"     # noqa: E731
+    gone = lambda m: "not run" if off is not None and m in off else "not offered"
     modes = list(b) + [m for m in c if m not in b]
     rows = [(m, b.get(m, "not offered"), c.get(m) or gone(m)) for m in modes]
     rows.sort(key=lambda r: r[1] == r[2])                 # changed first, host order kept inside each group

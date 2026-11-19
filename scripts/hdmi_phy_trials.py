@@ -6,14 +6,19 @@ usage: hdmi_phy_trials.py --unit N --bus B --serial S [--only P1,P2] [--n 12]
   clear on read: rate = count / elapsed since the previous read. Per trial: baseline rate, write group, rate, P0_02 burst,
   restore. Log: tmp/logs/hdmi_phy_trials.log; frozen PHY pages 7A-7C: tmp/regs/<serial>-<ts>-phy-frozen.json
 """
-import argparse, json, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, wr, DBG  # noqa: E402
+import i2cbus
+from p037_test import DBG, rd, wr
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 f2 = lambda v: "--" if v is None else format(v, "02x")

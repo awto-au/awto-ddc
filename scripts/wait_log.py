@@ -8,9 +8,14 @@ usage: wait_log.py BUS --serial S --map MAP [--min-ms N]
   event expired. Callers per argument: scripts/sim_waits.py (offline, return addresses).
 Log: ./tmp/logs/wait_log.log
 """
-import argparse, bisect, os, re, sys
-import isostamp  # noqa: E402
+import argparse
+import bisect
+import os
+import re
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/wait_log.log"
@@ -71,8 +76,11 @@ def main() -> int:
     ap.add_argument("--min-ms", type=int, default=0)
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import dbg_link, dbg_xdata as X, i2cbus, sw_timeline as T  # noqa: E401
-    import rtd_i2c_bridge as B  # noqa: E402
+    import dbg_link
+    import dbg_xdata as X
+    import i2cbus
+    import rtd_i2c_bridge as B
+    import sw_timeline as T
 
     i2cbus.require_unit(a.bus, a.serial)
     base, raw = T.sym(a.map, "g_stAwtoWait"), None

@@ -14,9 +14,12 @@ Reads only; no writes except the F4 index byte. Bands: fw/awto/inputs.tsv key0 /
 key masks: RL6449_Project.h AWTO_KM_<name>.
 Log: ./tmp/logs/rtd_keywatch.log
 """
-import os, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P
@@ -70,11 +73,12 @@ def band_hint(a0, a1):
 def log_mode(a, root, io=None):
     """io = an already open bus (fw_sim SimBus in keys_sim.py); default: the real unit on <bus>."""
     import re
+
     import dbg_xdata as X
     import i2cbus
     import rtd_i2c_bridge as B
     mp = Path(a[a.index("--map") + 1]).read_text(errors="replace")
-    m = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoKey\b", mp, re.M)
+    m = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoKey\b", mp, re.MULTILINE)
     if not m:
         sys.exit("_g_stAwtoKey not in the map: image without the #39 key log")
     base = int(m.group(1), 16)
@@ -95,7 +99,7 @@ def log_mode(a, root, io=None):
     if wr:
         v = 0x41 if "--open" in a else 0x42
         d = X.diag_base if hasattr(X, "diag_base") else None
-        mdiag = re.search(r"^D:\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", mp, re.M)
+        mdiag = re.search(r"^D:\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", mp, re.MULTILINE)
         tc = (int(mdiag.group(1), 16) if mdiag else 0xF6D0) + 0x28
         ok = io.write(X.DEV8, 0x01, bytes([tc >> 8])) and io.write(X.DEV8, 0x03, bytes([v])) and io.write(X.DEV8, 0x3B, bytes([tc & 0xFF]))
         say(f"test cmd 0x{v:02X} (key test screen {'open' if v == 0x41 else 'close'}) {'sent' if ok else 'NAK'}")

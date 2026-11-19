@@ -14,14 +14,15 @@ import io
 import sys
 import threading
 import time
-import isostamp  # noqa: E402
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import isostamp
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
+import osd_render as R
+import osd_test as T
 
 ROOT = HERE.parent
 LOG = ROOT / "tmp/logs/sim_live.log"

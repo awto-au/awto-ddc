@@ -6,11 +6,12 @@ usage: rtd_log.py FILE [FILE ...] [--map fw.map] [--chip RTD2795T-CG] [--merge-p
   passed through unchanged, so old mixed logs (rtd_diag.log, rtd_dbg_read.log) read top to bottom.
   `-` reads stdin. Output: stdout, or -o OUT (e.g. tmp/logs/<name>.decoded.log). Reads files only, no bus access.
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto as P  # noqa: E402
+import rtd_proto as P
 
 
 def decode_lines(lines, out, map_path=None, chip="RTD2795T-CG", merge_pages=False, root=None):

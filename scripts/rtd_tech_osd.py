@@ -24,16 +24,25 @@ Facts: docs/osd/README.md (ports, window words, char words).
 SDK-confirmed char word: byte0=0x4C (1bpp, width=12px), byte1=glyph index, byte2=colour [sdk-rl64xx-reference.md].
 Log: ./tmp/logs/rtd_tech_osd.log
 """
-import re, sys, time
+import re
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import osd_vlc
+import rtd_font5x7 as FNT
+import rtd_identify as ID
 import rtd_isp_probe as P
 import rtd_proto
-import rtd_font5x7 as FNT
-from rtd_osd import Osd, PAGE_SEL, OSD_WOPT, FRAME_BASE, SRAM_WIN, SRAM_FONT, WIN_BASE, WORDS_PER_GLYPH
-import rtd_identify as ID
-import osd_vlc
+from rtd_osd import (
+    FRAME_BASE,
+    SRAM_FONT,
+    SRAM_WIN,
+    WIN_BASE,
+    WORDS_PER_GLYPH,
+    Osd,
+)
 
 # ---- char-word format (SDK-confirmed) -----------------------------------------------------------
 CW_BYTE0 = 0x4C                 # 1bpp font, low nibble 12 = cell width in px [sdk-rl64xx-reference.md s2]

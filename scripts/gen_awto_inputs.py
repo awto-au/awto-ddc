@@ -11,9 +11,9 @@ Log: tmp/logs/gen_awto_inputs.log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 TSV = ROOT / "fw/awto/inputs.tsv"

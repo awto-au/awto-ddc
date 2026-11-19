@@ -22,7 +22,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
-import rtd_gate  # noqa: E402
+import rtd_gate
 
 MAGIC = 0x99552277
 PIN_REC = 376
@@ -370,8 +370,7 @@ def main():
     rows, st = build_rows(g, db)
     with open(a.out, "w", encoding="utf-8", newline="") as fo:
         fo.write("\t".join(COLS) + "\n")
-        for r in rows:
-            fo.write("\t".join(str(r.get(c, "")) for c in COLS) + "\n")
+        fo.writelines("\t".join(str(r.get(c, "")) for c in COLS) + "\n" for r in rows)
     logging.info("wrote %d rows (%d pins); regdb field match: %s", len(rows), len(g["pins"]), st)
     print("%s pins=%d rows=%d db_exact=%d/%d db_names_pin=%d/%d" % (
         chip, len(g["pins"]), len(rows), st["exact"], st["n"], st["said"], st["said_n"]))

@@ -45,8 +45,9 @@ import subprocess
 import sys
 import threading
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root

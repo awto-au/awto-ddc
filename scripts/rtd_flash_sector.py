@@ -45,14 +45,18 @@ Protocol: docs/reversing/realtek-rtd/README.md; SPI-engine common cmd after ghen
 Monitor MCU is stopped while in ISP; the final 0xEE=0x02 resets the scaler (as rtd_isp_probe --resume).
 Log: ./tmp/logs/rtd_flash_sector.log
 """
-import argparse, os, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402
-import i2cbus  # noqa: E402
-from rtd_isp_probe import Isp, ISP_ADDR, repo_root  # noqa: E402
+import i2cbus
+import rtd_proto
+from rtd_isp_probe import ISP_ADDR, Isp, repo_root
 
 ISP_ADDR_INC = 0x4B        # same registers as 0x4A, address auto-increments per byte (docs/monitors/README.md)
 
@@ -134,7 +138,6 @@ class Rtd(Isp):
         while self.read(0x60) & 1:
             if time.monotonic() - t0 > limit:
                 raise TimeoutError(f"SPI engine busy after {time.monotonic()-t0:.3f}s ({what}), reg60=0x{self.read(0x60):02x}")
-        return
 
     def poll_reg(self, reg, mask, expected, what, limit):
         # Poll `reg` until (value & mask) == (expected & mask). Time-based; on expiry log reg + elapsed.

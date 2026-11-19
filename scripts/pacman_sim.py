@@ -15,15 +15,16 @@ import os
 import shutil
 import subprocess
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import card_shot as C  # noqa: E402
-import audio_sim as A  # noqa: E402
-import pacman_sound as PS  # noqa: E402
+import audio_sim as A
+import card_shot as C
+import osd_render as R
+import pacman_sound as PS
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/pacman_sim.log"

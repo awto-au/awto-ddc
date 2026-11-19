@@ -21,8 +21,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_hw_test as H  # noqa: E402
+import isostamp
+import osd_hw_test as H
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_sweep.log"
@@ -120,7 +120,7 @@ def cases() -> dict[str, list[Case]]:
     g["burstrep"] = [Case(f"burstrep{i}_gap{k}", M_BURST, fffb=k, chunk=GLYPH, flags=fl) for k in (9, 10, 11, 12) for i, fl in enumerate((0, 0, F_EA_OFF))]
     g["state"] = ([Case("st_ea_off", flags=F_EA_OFF), Case("st_su_off", flags=F_SU_OFF), Case("st_ovl_off", flags=F_OVL_OFF),
                    Case("st_db_on", flags=F_DB_ON), Case("st_all_off", flags=F_EA_OFF | F_SU_OFF | F_OVL_OFF)]
-                  + [Case(f"st_sdk_ea_off", M_SDK, flags=F_EA_OFF), Case("st_burst54_ea_off", M_BURST, chunk=BUF, flags=F_EA_OFF)])
+                  + [Case("st_sdk_ea_off", M_SDK, flags=F_EA_OFF), Case("st_burst54_ea_off", M_BURST, chunk=BUF, flags=F_EA_OFF)])
     g["size"] = ([Case(f"size_triple_{n}", n=n) for n in (1848, 3696, 8184)] + [Case(f"size_sdk_{n}", M_SDK, n=n) for n in (1848, 8184)]
                  + [Case(f"size_burst54_{n}", M_BURST, chunk=BUF, n=n) for n in (1782, 8100)]
                  + [Case("size_addr_100", M_ADDR, n=100, verify=False), Case("size_addr_1000", M_ADDR, n=1000, verify=False)])

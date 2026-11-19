@@ -21,13 +21,13 @@ Log: tmp/logs/nv_test.log (one line per step), unit I2C bytes in tmp/logs/nv_tes
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -53,7 +53,7 @@ class Log:
 
 
 def sym(map_text: str, name: str) -> int | None:
-    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_text, re.M)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_text, re.MULTILINE)
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 
@@ -76,8 +76,8 @@ class Sim:
     name = "sim"
 
     def __init__(self, binp: Path, mapp: Path):
-        import fw_sim as S
         import ddc_sim as D
+        import fw_sim as S
         import settings_cli as SC
         self.eng = D.DdcEngine()
         self.bus = S.SimBus(binp, mapp, devs=[self.eng], video="1080p60")
@@ -122,8 +122,8 @@ class Unit:
     name = "unit"
 
     def __init__(self, unit: str, mapp: Path, say):
-        import wdt_test as W
         import settings_cli as SC
+        import wdt_test as W
         self.say, self.mapp = say, mapp
         self.u = W.UnitTarget(unit, mapp, say)
         self.map_text = self.u.map_text

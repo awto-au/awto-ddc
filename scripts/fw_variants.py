@@ -9,9 +9,16 @@ usage: fw_variants.py [--serial AWT26110002] [--only NAME,...] [--keep]
 - One PASS / FAIL line per variant with XDATA free; exit 1 if any fails. --keep leaves the worktrees (default: removed).
 Log: ./tmp/logs/fw_variants.log (+ tmp/logs/fw_variants_<name>.out = fw_build output)
 """
-import argparse, os, re, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:

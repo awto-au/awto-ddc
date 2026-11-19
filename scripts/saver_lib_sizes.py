@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-from sdcc_overlay import repo_root  # noqa: E402
+import isostamp
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 LOG = ROOT / "tmp/logs/saver_lib_sizes.log"
@@ -23,10 +23,10 @@ FILES = ["fw/test/saver_canvas.c", "tools/osd_lines/osd_lines.c", "fw/test/scope
          "fw/audio/audio.c", "fw/test/flash_screen.c", "fw/test/qc_osd.c", "fw/test/osd_demo.c", "fw/test/saver.c",
          "fw/osd/osd_screen.c", "fw/osd/osd_rot.c", "fw/keys/key_click.c"]
 MODULE = {"tools/osd_lines/osd_lines.c": "saver_canvas"}             # compiled into this module (#include)
-AREA = re.compile(r"^(CH|ST)_(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes", re.M)
-FUNC = re.compile(r"^(?:static\s+)?[A-Za-z_][\w \*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*(?:__\w+\s*)*$", re.M)
-CONST = re.compile(r"__code[^=;\[]*?\b([A-Za-z_]\w*)\s*\[", re.M)
-INC = re.compile(r'^#include\s+"([^"]+\.inc)"', re.M)
+AREA = re.compile(r"^(CH|ST)_(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes", re.MULTILINE)
+FUNC = re.compile(r"^(?:static\s+)?[A-Za-z_][\w \*]*?\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*(?:__\w+\s*)*$", re.MULTILINE)
+CONST = re.compile(r"__code[^=;\[]*?\b([A-Za-z_]\w*)\s*\[", re.MULTILINE)
+INC = re.compile(r'^#include\s+"([^"]+\.inc)"', re.MULTILINE)
 MAP_NAME_MAX = 32                                                   # sdld cuts area names (CH_ + 29 chars)
 BANK_WINDOW = 0x10000 - 0x5000                                      # banked code window 0x5000..0xFFFF (fw build: common 0x0000..0x4FFF)
 

@@ -6,14 +6,18 @@ usage: freeze_trials.py --unit N --bus B --serial S [--only T1,T2] [--n 30]
   clear P0_02 (write FF), read P0_02 x n; then restore the originals. A baseline burst (no write) precedes each trial.
   Candidates = registers that differ from the vendor 4K60 dump and are config (regs_diff4k.py). Log: tmp/logs/freeze_trials.log
 """
-import argparse, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, wr, DBG  # noqa: E402
+import i2cbus
+from p037_test import DBG, rd, wr
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 f2 = lambda v: "--" if v is None else format(v, "02x")

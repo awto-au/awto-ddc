@@ -4,11 +4,12 @@
 usage: regs_diff4k.py A.json B.json [--pages 00,31,...] [--skip-pages FD,FE,FF,9F]
   Prints `PPRR a b name` per differing register (-1 = unread). Skips pages absent from either dump.
 """
-import json, sys
+import json
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import regdb_query as Q  # noqa: E402
+import regdb_query as Q
 
 
 def main() -> int:

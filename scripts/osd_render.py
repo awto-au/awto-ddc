@@ -19,16 +19,16 @@ import json
 import shutil
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-import fw_sim as S  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_test as T  # noqa: E402
+import fw_sim as S
+import numpy as np
+import osd_model as M
+import osd_test as T
+from PIL import Image
 
 ROOT = S.ROOT
 LOG = ROOT / "tmp/logs/osd_render.log"

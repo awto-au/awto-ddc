@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import unit_health as H  # noqa: E402
+import unit_health as H
 
 MAPS = {"isr_g_stAwtoDiag": 0xF6D0, "isr_g_stModeInfo": 0xF2A5, "isr_g_stPowerInfo": 0xF2B0, "g_stMDomainInputData": 0xF0D9,
         "g_stOsdInfo": 0xEA89, "g_ulInputActiveRegionBackUp": 0xEE9F, "osd_ofs": {"usOsdState": 3, "ucOsdEventMsg": 5, "ucOsdKeyMessage": 6}}

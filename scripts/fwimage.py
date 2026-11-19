@@ -12,9 +12,16 @@ usage: ./dev.py build [--unit N | --serial S] [--tree DIR] --tag T [-D NAME=VAL 
   extra flags, stamp prefix; --expect '' skips the stamp check, for unstamped installs).
 Log: ./tmp/logs/fwimage.log (+ <tree>/tmp/logs/build_<tag>_<serial>.out = fw_build output)
 """
-import argparse, json, os, re, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 SDCC_INSTALL = Path("/usr/local")
 SDCC_COMMIT = "977817123a"

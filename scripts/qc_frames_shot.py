@@ -12,16 +12,17 @@ Log: ./tmp/logs/qc_frames_shot.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
-import card_shot as C  # noqa: E402
+import card_shot as C
+import numpy as np
+import osd_model as M
+import osd_render as R
+from PIL import Image, ImageDraw
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/qc_frames_shot.log"

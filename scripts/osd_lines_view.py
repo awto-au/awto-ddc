@@ -12,14 +12,14 @@ import argparse
 import os
 import subprocess
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
 import numpy as np
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_model as M  # noqa: E402
+import osd_model as M
 
 LOG = ROOT / "tmp/logs/osd_lines_view.log"
 SRC = ROOT / "tools/osd_lines"

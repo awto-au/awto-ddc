@@ -9,7 +9,10 @@ usage: make_edid.py [--out DIR] [--serial AWT26110001] [--no-decode]
   port (the host keys monitor identity on them: mutter layout, dev.py serial guard); only the tag tells D1/D2/D3 apart.
 Design + per-port rationale: docs/edid-fix.md.  Log: ./tmp/logs/make_edid.log
 """
-import os, shutil, subprocess, sys
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 OUT_DEFAULT = Path("/mnt/2tb/vendors/realtek/analysis/edid")

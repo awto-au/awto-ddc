@@ -15,12 +15,13 @@ Log: tmp/logs/cec_sim.log
 import argparse
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import sync_log as SL  # noqa: E402
+import fw_sim as S
+import sync_log as SL
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/cec_sim.log"

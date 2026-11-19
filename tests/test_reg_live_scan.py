@@ -4,8 +4,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import dbg_xdata as X  # noqa: E402
-import reg_live_scan as S  # noqa: E402
+import dbg_xdata as X
+import reg_live_scan as S
 
 
 class FakeBus:

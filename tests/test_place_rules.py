@@ -1,14 +1,15 @@
 """#pragma place: asm normalising, ;@place markers, group placement (#149). Run: python3 -m pytest tests/test_place_rules.py"""
-import io, sys
+import io
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import place_rules as PR  # noqa: E402
-import sdcc_bank as SB  # noqa: E402
-import sdcc_layout as L  # noqa: E402
+import place_rules as PR
+import sdcc_bank as SB
+import sdcc_layout as L
 
 SB.LOG = io.StringIO()
 

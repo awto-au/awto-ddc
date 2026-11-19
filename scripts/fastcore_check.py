@@ -27,13 +27,14 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import fw_sim as S  # noqa: E402
-import fastmachine as F  # noqa: E402
+import fastmachine as F
+import fw_sim as S
 
 ROOT = S.ROOT
 LOG = ROOT / "tmp/logs/fastcore_check.log"
@@ -58,8 +59,8 @@ class UcState:
         """addr -> byte from dump rows; a row holds `width` bytes (None: up to the next row's address; the ASCII column
         after the hex can look like hex)."""
         rows = [(int(m.group(1), 16), m.group(2).split())
-                for m in re.finditer(r"^0x([0-9a-f]{2,6})\s{2,}((?:[0-9a-f]{2} )+)", out, re.M)]
-        named = sorted(int(m.group(1), 16) for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b", out, re.M))
+                for m in re.finditer(r"^0x([0-9a-f]{2,6})\s{2,}((?:[0-9a-f]{2} )+)", out, re.MULTILINE)]
+        named = sorted(int(m.group(1), 16) for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b", out, re.MULTILINE))
         got = {}
         for base, toks in rows:
             nxt = min([b for b, _ in rows if b > base] + [b for b in named if b > base] + [base + 256])
@@ -72,7 +73,7 @@ class UcState:
         iram = self.rows(self.cmd("dump iram 0 0xff 8"), 8)
         so = self.cmd("dump sfr 0x80 0xff")
         sfr = self.rows(so, None)
-        for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b[01]{8} 0x([0-9a-f]{2})", so, re.M):
+        for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b[01]{8} 0x([0-9a-f]{2})", so, re.MULTILINE):
             sfr[int(m.group(1), 16)] = int(m.group(2), 16)
         xf = self.rows(self.cmd("dump xram 0xffff 0xffff"), 1).get(0xFFFF, -1)
         st = {"instr": int(re.search(r"Inst= (\d+)", out).group(1)),
@@ -550,7 +551,7 @@ def cmd_timing(a) -> int:
         fails.append("dual DPTR: DPS = 0 does not select DPTR0")
     say("timing: dual DPTR checked")
     # clock model: f_cpu from register cells (reset, crystal IN_DIV 1, M2PLL 351 MHz / 4, IOSC 28 MHz / 1)
-    from sim_clock import ClockModel, XTAL_HZ, IOSC_HZ
+    from sim_clock import IOSC_HZ, XTAL_HZ, ClockModel
 
     class Cells:
         def __init__(self, v):

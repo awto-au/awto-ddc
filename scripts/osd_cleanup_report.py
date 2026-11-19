@@ -10,9 +10,9 @@ Writes OUT/report.md and OUT/report.tsv (default tmp/osd_cleanup/). Log: tmp/log
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = Path("/mnt/2tb/git/awto-ddc-ui")
@@ -71,7 +71,7 @@ def log(s):
 def map_areas(path):
     """area name (without CH_) -> bytes."""
     out = {}
-    for m in re.finditer(r"^CH_(\S+)\s+[0-9A-F]{8}\s+([0-9A-F]{8}) =", path.read_text(errors="replace"), re.M):
+    for m in re.finditer(r"^CH_(\S+)\s+[0-9A-F]{8}\s+([0-9A-F]{8}) =", path.read_text(errors="replace"), re.MULTILINE):
         out[m.group(1)] = int(m.group(2), 16)
     return out
 

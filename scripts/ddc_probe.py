@@ -7,9 +7,14 @@ usage: ddc_probe.py BUS --serial S [--secs 3] [--vcp 0x10] [--cycle]
   in a 130 ms delay or a 190 ms run of frame waits is answered late or not at all.
 Log: ./tmp/logs/ddc_probe.log
 """
-import argparse, os, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/ddc_probe.log"
@@ -26,7 +31,7 @@ def main() -> int:
     ap.add_argument("--cycle", action="store_true", help="DPM off, wait OFF_S, DPM on, then probe from the on write")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import i2cbus  # noqa: E402
+    import i2cbus
 
     i2cbus.require_unit(a.bus, a.serial)
     if a.cycle:

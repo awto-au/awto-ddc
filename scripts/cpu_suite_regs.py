@@ -19,8 +19,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import reg_live_scan as L  # noqa: E402
-import dbg_xdata as X  # noqa: E402
+import dbg_xdata as X
+import reg_live_scan as L
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/cpu_suite_regs.inc"

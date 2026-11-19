@@ -14,12 +14,13 @@ import argparse
 import collections
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 ROOT = S.ROOT
 LOG = ROOT / "tmp/logs/idle_passes.log"
@@ -61,7 +62,6 @@ def main() -> int:
                                [("i", k) for k in range(256) if i[k] != last["i"][k]])
                 passes.append((ch, m.p.instr - last["instr"], m.wall_ms - last["ms"]))
             last.update(x=x, i=i, instr=m.p.instr, ms=m.wall_ms)
-            return None
         m.stub("AwtoDiagMainPass", hit)
         bus.wait(a.secs)
     finally:

@@ -23,9 +23,9 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import isostamp  # noqa: E402
-import reg_live_scan as S  # noqa: E402
+import dbg_xdata as X
+import isostamp
+import reg_live_scan as S
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/reg_behind_probe.log"
@@ -89,7 +89,6 @@ class Probe:
         self.last = a
         if self.consec >= MAX_CONSEC_FAIL:
             raise S.Aborted(f"{MAX_CONSEC_FAIL} consecutive failed reads ending at 0x{a:04X}")
-        return None
 
     def heartbeat(self, tag: str) -> None:
         v = self.byte(S.ID_ADDR, f"HB-{tag}")

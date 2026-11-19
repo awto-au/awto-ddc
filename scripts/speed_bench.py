@@ -9,13 +9,15 @@ usage: speed_bench.py IMAGE_STEM [IMAGE_STEM ...] [--passes 12] [--label TEXT] [
   Compare `work` and `stub_cyc` between images; absolute values are sim machine cycles, not hardware time.
 Log: tmp/logs/speed_bench.log
 """
-import argparse, subprocess, sys, json
+import argparse
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_profile as P  # noqa: E402
-import fw_sim as F  # noqa: E402
+import fw_profile as P
+import fw_sim as F
 
 TSV = F.ROOT / "docs/speed-bench.tsv"
 COLS = ["date", "commit", "image", "label", "passes", "cycles_pass", "work", "stub_entries", "stub_cyc", "instr_pass", "movc", "compiler", "abi", "code_bytes", "xdata_free", "unit_loop"]

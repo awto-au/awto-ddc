@@ -6,7 +6,11 @@ usage: regdb_query.py <chip> regs  [--name REGEX] [--addr 0xLO-0xHI] [--page 00]
        regdb_query.py <chip> port  --addr 0x92           (indexed port registers behind an address)
 <chip> e.g. RTD2795T-CG. Prints one line per register: page addr[port_idx] name reset.
 """
-import csv, gzip, os, re, sys
+import csv
+import gzip
+import os
+import re
+import sys
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -28,7 +32,7 @@ def main():
     rows = load(chip)
     limit = int(opt("--limit", 60))
     if cmd == "regs":
-        rx = re.compile(opt("--name", "."), re.I)
+        rx = re.compile(opt("--name", "."), re.IGNORECASE)
         lo, hi = (int(x, 0) for x in opt("--addr", "0-0xffff").split("-"))
         n = 0
         for r in rows:

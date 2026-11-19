@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Offline tests for fw_link_check.py on synthetic 2-bank images (no firmware build needed)."""
-import sys, tempfile
+import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_link_check as L  # noqa: E402
+import fw_link_check as L
 
 MAP = """Area                                    Addr        Size        Decimal Bytes (Attributes)
 --------------------------------        ----        ----        ------- ----- ------------

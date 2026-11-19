@@ -13,8 +13,9 @@ import os
 import struct
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_sram_probe.log"
@@ -41,15 +42,18 @@ def main() -> int:
     ap.add_argument("--map", required=True, type=Path)
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import dbg_link, dbg_xdata as X, i2cbus, sw_timeline as T  # noqa: E401
-    import rtd_i2c_bridge as B  # noqa: E402
+    import dbg_link
+    import dbg_xdata as X
+    import i2cbus
+    import rtd_i2c_bridge as B
+    import sw_timeline as T
 
     i2cbus.require_unit(a.bus, a.serial)
     if "g_stAwtoOsdProbe" not in a.map.read_text(errors="replace"):
         sys.exit(f"no g_stAwtoOsdProbe in {a.map}: build with -D _AWTO_PROBES")
     res = T.sym(a.map, "g_stAwtoOsdProbe")
     import re
-    hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.M)   # listed without the D: prefix
+    hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.MULTILINE)   # listed without the D: prefix
     if not hit:
         sys.exit(f"isr_g_stAwtoDiag not in {a.map}")
     cmd = (int(hit.group(1), 16) & 0xFFFF) + TESTCMD_OFF

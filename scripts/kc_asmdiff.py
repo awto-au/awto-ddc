@@ -6,7 +6,11 @@ usage: kc_asmdiff.py RUN_A RUN_B [--show FN ...] [--tsv OUT]
   Prints changed functions (file, function, lines A/B, +/- line count); --show prints the unified diff of the named ones.
 Log: tmp/logs/kc_asmdiff.log
 """
-import argparse, difflib, os, re, sys
+import argparse
+import difflib
+import os
+import re
+import sys
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)

@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import osd_demo as D  # noqa: E402
-import osd_model as M  # noqa: E402
+import osd_demo as D
+import osd_model as M
 
 P = D.PAL16
 BLACK = (0, 0, 0)

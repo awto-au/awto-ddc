@@ -17,7 +17,12 @@ NEAR = best placement >= 90% of non-wildcard bytes; SHORT = < 12 bytes or < 8 fi
 (placements listed, never counted as evidence); else ABSENT.
 Logs: ./tmp/logs/rtk_libsig.log. Repo root: $AWTO_DDC_REPO -> file-relative.
 """
-import argparse, collections, json, os, re, sys
+import argparse
+import collections
+import json
+import os
+import re
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -193,12 +198,12 @@ def match(image, labels, outdir):
 
 def srccheck(lib, srcdirs):
     """Compare .LIB code publics with C functions defined in the given source trees."""
-    pat = re.compile(r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)[ \t]*\([^;{}]*\)[ \t]*(?:(?:using|reentrant)[ \t]*\d*[ \t]*)*(?://[^\n]*)?\n?[ \t]*\{", re.M)
+    pat = re.compile(r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)[ \t]*\([^;{}]*\)[ \t]*(?:(?:using|reentrant)[ \t]*\d*[ \t]*)*(?://[^\n]*)?\n?[ \t]*\{", re.MULTILINE)
     defs = set()
     for d in srcdirs:
         for f in Path(d).rglob("*.c"):
             t = re.sub(r"//[^\n]*", "", f.read_text(errors="replace"))  # line comments first: a '/*' inside one must not open a block
-            t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+            t = re.sub(r"/\*.*?\*/", "", t, flags=re.DOTALL)
             defs |= {m.group(1) for m in pat.finditer(t) if m.group(1) not in ("if", "while", "for", "switch")}
     libfn = {omf.display_name(m, n) for m in omf.parse_lib(lib) for n, *_ in m.functions()}
     log(f"srccheck {lib}: lib {len(libfn)} functions, sources define {len(defs)}")

@@ -6,7 +6,10 @@ usage: gmbus_rate.py build | load <kHz> [--adapter N] | unload | status
   status: live reg0 from /sys/module/gmbus_rate/parameters/reg0 (rate bits 10:8: 0=100k 1=50k 2=400k 3=1M).
 Log: ./tmp/logs/gmbus_rate.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, os, subprocess, sys
+import argparse
+import os
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 

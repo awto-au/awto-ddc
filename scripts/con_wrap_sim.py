@@ -17,24 +17,24 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ddc_sim as D  # noqa: E402
-import fw_sim as S  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
-import sync_log as SL  # noqa: E402
+import ddc_sim as D
+import fw_sim as S
+import osd_model as M
+import osd_render as R
+import osd_test as T
+import sync_log as SL
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/con_wrap_sim.log"
 LOG_COL = 1            # fw/osd/console.c AWTO_LOG_COL (main page)
 TXT0 = 11              # text column (fw/osd/console.c AWTO_LOG_TXT0): continuation rows start here; checked against the tree below
 _CON = (ROOT / "fw/osd/console.c").read_text()
-ROW_W = int(re.search(r"^#define AWTO_CON_COLS\s+(\d+)", _CON, re.M).group(1)) - 3   # AWTO_LOG_W_MAIN = COLS - 3 cells
+ROW_W = int(re.search(r"^#define AWTO_CON_COLS\s+(\d+)", _CON, re.MULTILINE).group(1)) - 3   # AWTO_LOG_W_MAIN = COLS - 3 cells
 POWER_KEY, K_SOURCE = 0x3E, 0x05
 PWR_OFF, PWR_NORMAL, PWR_SAVING = 1, 2, 3
 MODE_ACTIVE = 3
@@ -184,7 +184,7 @@ def main() -> int:
     global TXT0
     if a.tree:
         sys.path.insert(0, str(a.tree / "scripts"))
-        import gen_awto_sync as G                       # noqa: E402
+        import gen_awto_sync as G
         TXT0 = G.c_int("AWTO_LOG_TXT0", a.tree / "fw/osd/console.c")
     mapp = a.map or a.bin.with_suffix(".map")
     say(f"=== con_wrap_sim {a.bin.name} (text column {TXT0}) ===")

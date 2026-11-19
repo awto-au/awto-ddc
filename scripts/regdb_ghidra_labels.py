@@ -11,7 +11,10 @@ usage: regdb_ghidra_labels.py [--chip RTD2795T-CG|consensus] [--exclude names.ts
   port_addr<TAB>data_addr<TAB>index<TAB>name<TAB>type   (port_addr = data_addr-1, the address-port register).
 Log: ./tmp/logs/regdb_ghidra_labels.log
 """
-import csv, gzip, os, sys
+import csv
+import gzip
+import os
+import sys
 from collections import defaultdict
 from pathlib import Path
 

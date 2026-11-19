@@ -8,12 +8,17 @@ Exit 1 if a row is unused (without --prune; only reported when K2S_SDCC_EXTRA is
   Optional 6th column `build` = a -D option (e.g. _AWTO_FRC): the row's site exists only in that build; the default build
   does not count it unused (#165). Log: tmp/logs/warn_policy_check.log
 """
-import argparse, fnmatch, os, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import fnmatch
+import os
+import re
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 WARN_RE = re.compile(r"^(.+?):(\d+)(?::\d+)?: warning(?: (\d+))?: (.*)$")   # same as fw_compile.WARN_RE

@@ -12,9 +12,9 @@ import os
 import re
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 TREE = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc"))

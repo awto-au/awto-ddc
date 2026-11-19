@@ -58,8 +58,9 @@ def _repo_root() -> Path:
 
 REPO = _repo_root()
 sys.path.insert(0, str(REPO / "scripts"))
-import i2cbus  # noqa: E402  (the only module that touches /dev/i2c-N, #48)
-import disk_guard  # noqa: E402  (free-space refusal + tmp/fw pruning, #77)
+import disk_guard
+import i2cbus
+
 TMP = REPO / "tmp"           # scratch, pidfiles
 LOGS = TMP / "logs"          # logs, per the ./tmp/logs/ rule
 LOG = LOGS / "dev.log"
@@ -1635,7 +1636,7 @@ def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
     """Dan's layout with DP-1 added to (on) or removed from (off) the HDMI connector's logical monitor, at the HDMI mode:
     same slot, same position, nothing else moves (#60 input-switch tests)."""
     hdmi, dp = _units()[u["_n"]]["gdctl"], u["gdctl"]
-    cur = re.search(rf"Monitor {re.escape(hdmi)} .*?Current mode\s*\n[│├└─\s]*(\S+@\S+)", show, re.S)
+    cur = re.search(rf"Monitor {re.escape(hdmi)} .*?Current mode\s*\n[│├└─\s]*(\S+@\S+)", show, re.DOTALL)
     if not cur:
         raise SystemExit(f"mode --dp: no current mode for {hdmi}; nothing changed")
     m = cur.group(1)
@@ -1727,7 +1728,7 @@ _register_steps()
 
 def usage() -> int:
     print(__doc__.split("Scaffold usage:")[0].rstrip())
-    print(f"\nUsage: ./dev.py <command> [args]\n")
+    print("\nUsage: ./dev.py <command> [args]\n")
     # Iterate the kinds actually present, ordered - a hardcoded list silently
     # drops any new kind from --help (selftest catches this).
     order = ["aggregate", "step", "action", "meta"]

@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import osd_sweep as S  # noqa: E402
+import osd_sweep as S
 
 
 def test_every_case_is_inside_the_envelope():

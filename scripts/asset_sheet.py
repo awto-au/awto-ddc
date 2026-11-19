@@ -17,16 +17,15 @@ import html
 import re
 import shutil
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import glyph_decode as GD  # noqa: E402
-import font_compare as FC  # noqa: E402
+import font_compare as FC
+import glyph_decode as GD
 
 ROOT = HERE.parent
 LOG = ROOT / "tmp/logs/asset_sheet.log"
@@ -56,12 +55,12 @@ def log(s):
 def parse_blobs():
     """(name, source file, bytes) for each `BYTE __code NAME[] = { 0x.. }` array in the SDK OSD font sources."""
     out = []
-    pat = re.compile(r"BYTE\s+__code\s+(t[A-Za-z0-9_]+)\s*\[\s*\]\s*=\s*\{(.*?)\};", re.S)
+    pat = re.compile(r"BYTE\s+__code\s+(t[A-Za-z0-9_]+)\s*\[\s*\]\s*=\s*\{(.*?)\};", re.DOTALL)
     for f in BLOB_FILES:
         if not f.exists():
             log(f"missing source {f}")
             continue
-        text = re.sub(r"//[^\n]*|/\*.*?\*/", "", f.read_text(errors="replace"), flags=re.S)
+        text = re.sub(r"//[^\n]*|/\*.*?\*/", "", f.read_text(errors="replace"), flags=re.DOTALL)
         for m in pat.finditer(text):
             by = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(2)))
             out.append((m.group(1), f.name, by))

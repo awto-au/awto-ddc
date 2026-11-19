@@ -12,18 +12,19 @@ Log: ./tmp/logs/splash_sim.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 from types import SimpleNamespace
 
+import isostamp
+
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-import boot_sim as B  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import key_sim_test as K  # noqa: E402
-import osd_render as R  # noqa: E402
-import saver_sim as V  # noqa: E402
+import boot_sim as B
+import ddc_sim as D
+import key_sim_test as K
+import numpy as np
+import osd_render as R
+import saver_sim as V
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/splash_sim.log"
@@ -90,7 +91,7 @@ def run_boot(a, bin_, map_, splash=True, key_at=None, shots=False, tag="boot", r
     h, lines = r.episode()
     txt = "\n".join(lines)
     ring = {"start": any("boot splash:run << 4 | why = 100" in ln for ln in lines), "end": any("boot splash:run << 4 | why = 0, 0 = ended" in ln for ln in lines)}
-    ms = lambda key: next((int(ln.split(":", 1)[0]) for ln in lines if key in ln), None)  # noqa: E731
+    ms = lambda key: next((int(ln.split(":", 1)[0]) for ln in lines if key in ln), None)
     out = dict(r=r, start=start, end=end, key_t=key_t, first_osd=first_osd, ring=ring, txt=txt,
                active=ms("->ACTIVE:"), console=ms("console opened"))
     return out

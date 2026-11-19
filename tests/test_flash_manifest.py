@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import test_flash_incremental as T  # noqa: E402
-from test_flash_incremental import FakeIsp, SECTOR, NIMG  # noqa: E402
-import flash_manifest as FM  # noqa: E402
-import flash_state as S  # noqa: E402
-import rtd_flash_image as I  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
+import flash_manifest as FM
+import flash_state as S
+import rtd_flash_image as I
+import rtd_flash_sector as F
+import test_flash_incremental as T
+from test_flash_incremental import NIMG, SECTOR, FakeIsp
 
 BLANK_AT = (3, 6, 9, 12, 15, 18, 21)       # blank image sectors: checked like any skipped sector
 MAN = FM.MANIFEST_ADDR

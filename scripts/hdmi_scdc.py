@@ -7,12 +7,16 @@ usage: hdmi_scdc.py <bus>
   0x40 status flags 0 (b0 clock detected, b1-3 ch0-2 locked) | 0x50-0x55 ch0-2 char error count (15 bit, b15 valid)
 Log: ./tmp/logs/hdmi_scdc.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, os, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import subprocess
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
+import i2cbus
 
 SCDC = 0x54
 

@@ -12,8 +12,9 @@ import os
 import re
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -41,12 +42,13 @@ def main() -> int:
     ap.add_argument("--last", type=int, default=23)
     ap.add_argument("--hold-s", type=float, default=HOLD_S)
     a = ap.parse_args()
-    import dbg_link, i2cbus  # noqa: E401
+    import dbg_link
+    import i2cbus
     import rtd_i2c_bridge as B
     from qc_frames_shot import NAMES
 
     i2cbus.require_unit(a.bus, a.serial)
-    hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.M)
+    hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.MULTILINE)
     if not hit:
         sys.exit(f"isr_g_stAwtoDiag not in {a.map}")
     cmd = (int(hit.group(1), 16) & 0xFFFF) + TESTCMD_OFF

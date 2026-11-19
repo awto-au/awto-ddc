@@ -12,8 +12,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import osd_demo as D  # noqa: E402
-import osd_model as M  # noqa: E402
+import osd_demo as D
+import osd_model as M
 
 ALL_OPTS = M.Opt(osd_offsets=True, area_clip=True, row_total=True, su_region=True, win_rotate=True, round_circle=False, pg_toggle="invert")
 
@@ -30,8 +30,8 @@ def random_state(seed: int) -> M.OsdState:
             win[M.win_base(i) + k][2] |= 1 if k == 3 and rng.random() < 0.7 else 0
     for a in list(range(330, 460)) + list(range(660, 760)):
         win[a] = [int(v) for v in rng.integers(0, 256, 3)]
-    font = {a: [int(v) for v in rng.integers(0, 256, 3)] for a in range(0, 3000)}
-    for a in range(0, 40):
+    font = {a: [int(v) for v in rng.integers(0, 256, 3)] for a in range(3000)}
+    for a in range(40):
         font[a][0] |= 0x80
         font[a][2] = int(rng.integers(0, 40))
     pal = [tuple(int(v) for v in rng.integers(0, 256, 3)) for _ in range(64)]
@@ -173,7 +173,7 @@ def test_coverage_table_columns_and_values():
 def test_coverage_table_tests_exist():
     names = set()
     for p in (ROOT / "tests").glob("test_*.py"):
-        names |= set(re.findall(r"^def (test_\w+)", p.read_text(), re.M))
+        names |= set(re.findall(r"^def (test_\w+)", p.read_text(), re.MULTILINE))
     for r in _rows():
         for t in filter(None, r["test"].split(",")):
             assert t.strip() in names, f"{r['feature']}: test {t} missing"

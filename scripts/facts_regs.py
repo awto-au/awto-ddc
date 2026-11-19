@@ -15,10 +15,20 @@ Log: ./tmp/logs/facts_regs.log
 """
 from __future__ import annotations
 
-import argparse, csv, filecmp, gzip, hashlib, os, re, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import csv
+import filecmp
+import gzip
+import hashlib
+import os
+import re
+import shutil
+import subprocess
+import sys
 from collections import OrderedDict
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:
@@ -62,7 +72,7 @@ def idx_width(rows) -> dict:
     return w
 
 
-def build(rows) -> "OrderedDict[str, dict]":
+def build(rows) -> OrderedDict[str, dict]:
     """-> page -> ordered {base positional name: reg dict}. Vendor names are used only to split bytes at one index."""
     widths = idx_width(rows)
     regs: OrderedDict = OrderedDict()
@@ -87,7 +97,7 @@ def build(rows) -> "OrderedDict[str, dict]":
         elif r["kind"] == "FIELD":
             if r["access"] and r["access"] not in b["acc"]:
                 b["acc"].append(r["access"])
-            if re.match(r"reserved", r["field"], re.I):
+            if re.match(r"reserved", r["field"], re.IGNORECASE):
                 continue
             wide = f"{r['wide_hi']}:{r['wide_lo']}" if r["wide_lo"] and r["wide_hi"] else ""
             b["fields"].append((int(r["bit_high"]), int(r["bit_low"]), r["access"], wide))

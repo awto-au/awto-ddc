@@ -12,9 +12,12 @@ usage: sdk_park.py list            candidates -> tmp/audit/park.tsv (group, path
 - After `move`: the build must give the same image (byte-identical apart from the build tag): check with a rebuild.
 Log: ./tmp/logs/sdk_park.log
 """
-import re, subprocess, sys, time
-import isostamp  # noqa: E402
+import re
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parent.parent
 SDK, PARK = ROOT / "fw/sdk", ROOT / "fw/sdk-parked"
@@ -22,7 +25,7 @@ SIZE = ROOT / "tmp/sdcc-port/asm_bank/_size"
 CHIP = re.compile(r"RL6(193|369|410|432|463|492)|RLE0779")
 KEEP_AREAS = {"REG_BANK_0", "SSEG"}
 GROUPS = [                                   # (group, regex on the path): README groups
-    ("chip", CHIP), ("mhl", re.compile(r"MHL", re.I)), ("od", re.compile(r"(^|/)(ScalerOD|RL6449_Series_OD|RL6449_Series_QC_OD)")),
+    ("chip", CHIP), ("mhl", re.compile(r"MHL", re.IGNORECASE)), ("od", re.compile(r"(^|/)(ScalerOD|RL6449_Series_OD|RL6449_Series_QC_OD)")),
     ("uniformity", re.compile(r"Uniformity|DisplayCalibration")), ("dimming", re.compile(r"Dimming")),
     ("dptx", re.compile(r"DPTx|DPRxMST|DpTx")), ("hdcp2", re.compile(r"HDCP2")), ("freesync", re.compile(r"FreeSync")),
     ("typec", re.compile(r"TypeC|Typec|PortController|UsbHub|USB3|Pmic|SeamlessChg")), ("cec", re.compile(r"Cec")),
@@ -42,7 +45,7 @@ def zero_modules():
     out = []
     for f in sorted(SIZE.glob("*.rel")):
         sizes = [(m.group(1), int(m.group(2), 16)) for m in
-                 re.finditer(r"^A (\w+) size ([0-9A-Fa-f]+)", f.read_text(errors="replace"), re.M)]
+                 re.finditer(r"^A (\w+) size ([0-9A-Fa-f]+)", f.read_text(errors="replace"), re.MULTILINE)]
         if all(n in KEEP_AREAS or s == 0 for n, s in sizes):
             out.append(f.stem)
     return out
@@ -98,7 +101,7 @@ def main() -> int:
         (PARK / r).parent.mkdir(parents=True, exist_ok=True)
         git("mv", str(SDK / r), str(PARK / r))
     names = {Path(r).name for _, r, _ in rows if r.endswith(".h")}
-    inc = re.compile(r'^[ \t]*#[ \t]*include[ \t]+"([^"]+)"[^\n]*\n', re.M)
+    inc = re.compile(r'^[ \t]*#[ \t]*include[ \t]+"([^"]+)"[^\n]*\n', re.MULTILINE)
     for p in sorted(SDK.rglob("*")):
         if not p.is_file() or p.suffix.lower() not in (".h", ".c"):
             continue

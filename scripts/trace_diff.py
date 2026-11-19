@@ -7,7 +7,9 @@ usage: trace_diff.py A.tsv B.tsv [--noise-regs ...]   -> stdout + tmp/logs/trace
   Reports: key-event order/time (first write per marker register, CALL markers), registers only in A / only in B,
   final-value differences, first divergence of the ordered streams (difflib).
 """
-import argparse, difflib, sys
+import argparse
+import difflib
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

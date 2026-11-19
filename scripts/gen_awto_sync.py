@@ -19,9 +19,9 @@ import os
 import re
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:
@@ -60,7 +60,7 @@ TOKEN = re.compile(r"\{([A-Za-z0-9_]+)(?:/(\d+))?\}")
 
 
 def define_value(name: str, header: Path = HEADER) -> int:
-    m = re.search(rf"^#define\s+{re.escape(name)}\s+\(?(0x[0-9A-Fa-f]+|\d+)", header.read_text(), re.M)
+    m = re.search(rf"^#define\s+{re.escape(name)}\s+\(?(0x[0-9A-Fa-f]+|\d+)", header.read_text(), re.MULTILINE)
     if not m:
         raise SystemExit(f"sync.tsv: {{{name}}} is not an integer #define in {header.name}")
     return int(m.group(1), 0)
@@ -302,7 +302,7 @@ def cnt_block(cnts):
 # ---- console line width (Dan 2026-11-12: no line clipped): worst case per row vs the console log row ---------------------
 DBGPOP = OSDCARD = ROOT / "fw/osd/console.c"
 GLOBAL_H = ROOT / "fw/sdk/Kernel/Common/Global.h"
-DEF_RE = re.compile(r"^#define[ \t]+(\w+)[ \t]+([^/\n]+?)[ \t]*(?://.*)?$", re.M)
+DEF_RE = re.compile(r"^#define[ \t]+(\w+)[ \t]+([^/\n]+?)[ \t]*(?://.*)?$", re.MULTILINE)
 DW = 10                                              # digits of a 32-bit ring value (every value field is a DWORD)
 
 
@@ -317,7 +317,7 @@ def c_int(name: str, path: Path) -> int:
         e = re.sub(r"\b[A-Za-z_]\w*\b", lambda m: str(ev(m.group(0), depth + 1)), e)
         if not re.fullmatch(r"[\d\s()+\-*/]+", e):
             raise SystemExit(f"{n} = {defs[n]}: not a plain integer expression")
-        return int(eval(e.replace("/", "//")))       # noqa: S307 (digits and + - * / only)
+        return int(eval(e.replace("/", "//")))
     return ev(name)
 
 
@@ -373,7 +373,7 @@ def value_segs(f: str, r: list, port: list) -> list:
 
 def segments(x: dict, r: list, port: list) -> list:
     """a row's console line as segments: leading space + time column, port prefix, text with each % expanded"""
-    f = x["f"][4:] if x["f"].startswith("port") else x["f"]
+    f = x["f"].removeprefix("port")
     seg = [[" +99999 ms "]] + ([[p + " " for p in port]] if x["f"].startswith("port") else [])
     parts = x["text"].split("%")
     for k, p in enumerate(parts):
@@ -416,7 +416,7 @@ def line_check(r: list, wraps: bool = False) -> int:
     """every row's worst-case line in at most 2 rows of the main-page log; the host time line + its fw tail in one row
     (AwtoConLogTail moves cells, no wrap there). Returns the number of failures; widths read from the firmware."""
     w, txt0 = c_int("AWTO_LOG_W_MAIN", DBGPOP), c_int("AWTO_LOG_TXT0", DBGPOP)
-    dmax = max(int(n) for n in re.findall(r"^#define\s+_D(\d)_INPUT_PORT\b", GLOBAL_H.read_text(), re.M))
+    dmax = max(int(n) for n in re.findall(r"^#define\s+_D(\d)_INPUT_PORT\b", GLOBAL_H.read_text(), re.MULTILINE))
     port = [card("DP"), card("HDMI") + str(dmax), card("PORT") + str(dmax)]
     bad, rep = 0, []
     for x in r:

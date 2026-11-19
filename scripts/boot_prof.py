@@ -15,8 +15,9 @@ import argparse
 import os
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/boot_prof.log"
@@ -54,11 +55,11 @@ def main() -> int:
     ap.add_argument("--main", type=Path, default=Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")))
     a = ap.parse_args()
     sys.path.insert(0, str(a.main / "scripts"))
-    import dbg_link  # noqa: E402
-    import dbg_xdata as X  # noqa: E402
-    import i2cbus  # noqa: E402
-    import rtd_i2c_bridge as B  # noqa: E402
-    import sw_timeline as T  # noqa: E402
+    import dbg_link
+    import dbg_xdata as X
+    import i2cbus
+    import rtd_i2c_bridge as B
+    import sw_timeline as T
 
     i2cbus.require_unit(a.bus, a.serial)
     base = T.sym(a.map, "isr_g_stAwtoSw")

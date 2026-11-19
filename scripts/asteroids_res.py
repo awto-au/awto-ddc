@@ -19,7 +19,7 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/asteroids_res.log"
@@ -89,10 +89,10 @@ def cost(names, window: float) -> int:
 
 
 def render(names, seconds: float) -> int:
-    from PIL import Image
+    import ddc_sim as D
     import numpy as np
     import osd_render as R
-    import ddc_sim as D
+    from PIL import Image
     OUT.mkdir(parents=True, exist_ok=True)
     for n in names:
         cols, rws, res = VARIANTS[n]
@@ -147,8 +147,8 @@ def scale_to_panel(canvas):
 
 
 def compare(names, crop: int) -> int:
-    from PIL import Image, ImageDraw
     import numpy as np
+    from PIL import Image, ImageDraw
     from scipy import ndimage
     imgs = []
     for n in names:

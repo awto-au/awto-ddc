@@ -9,13 +9,14 @@ Log: ./tmp/logs/pacman_speed.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import pacman_sim as P  # noqa: E402
+import osd_render as R
+import pacman_sim as P
 
 LOG = R.ROOT / "tmp/logs/pacman_speed.log"
 POLL_S = 0.0002                 # firmware time between counter reads: resolution of the result (0.2 ms)

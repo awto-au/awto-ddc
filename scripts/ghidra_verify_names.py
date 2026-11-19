@@ -11,8 +11,10 @@ For every merged `func` row whose name is an SDK function (RL6449 series + commo
 Verdict hint (the final verdict in re/jxc-4k/phase2_verification.tsv also needs register/constant evidence):
   call-confirmed = match >= 2 and conflict == 0; call-conflict = conflict > match; weak = otherwise.
 """
-import os, re, sys
+import re
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ghidra_names_merge as M
 
@@ -54,7 +56,7 @@ def sdk_funcs():
         if OTHER.search(str(p)):
             continue
         t = p.read_text(errors="replace")
-        t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+        t = re.sub(r"/\*.*?\*/", "", t, flags=re.DOTALL)
         t = re.sub(r"//[^\n]*", "", t)
         for m in deffn.finditer(t):
             i, d = m.end(), 1
@@ -128,7 +130,7 @@ def main():
                 if not m:
                     continue
                 tn = names.get(m.group(2), "")
-                tn = tn[6:] if tn.startswith("bcall_") else tn
+                tn = tn.removeprefix("bcall_")
                 if tn and tn != me:
                     callees_of.setdefault((b, me), set()).add(tn)
                     callers_of.setdefault(tn, set()).add(me)

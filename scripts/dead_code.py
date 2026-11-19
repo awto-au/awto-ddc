@@ -7,10 +7,14 @@ usage: dead_code.py MAP [VARIANT.map ...] [--asm DIR] [--tsv OUT]
   Per source module: functions compiled, not linked anywhere.
 Log: ./tmp/logs/dead_code.log
 """
-import argparse, os, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/dead_code.log"
@@ -31,13 +35,13 @@ def main() -> int:
     a = ap.parse_args()
     linked = set()
     for mp in a.map:                                     # linked in any build (default + variants) = used
-        linked |= set(re.findall(r"^(CH_\w+)\s+[0-9A-F]{8}\s+[0-9A-F]{8} =", mp.read_text(errors="replace"), re.M))
+        linked |= set(re.findall(r"^(CH_\w+)\s+[0-9A-F]{8}\s+[0-9A-F]{8} =", mp.read_text(errors="replace"), re.MULTILINE))
     per = defaultdict(lambda: [0, []])                   # module -> functions compiled, names not linked
     for p in sorted(a.asm.glob("*.asm")):
         t = p.read_text(errors="replace")
-        src = re.search(r"^;\s+(/\S.*?\.c):\d+:", t, re.M)
+        src = re.search(r"^;\s+(/\S.*?\.c):\d+:", t, re.MULTILINE)
         mod = src.group(1).split("/sdcc-port/src/")[-1].split("/awto-ddc/")[-1] if src else p.stem
-        for f in re.findall(r"^;\s+function\s+(\w+)", t, re.M):
+        for f in re.findall(r"^;\s+function\s+(\w+)", t, re.MULTILINE):
             per[mod][0] += 1
             if ("CH_" + f)[:32] not in linked:            # the map cuts area names to 32 characters
                 per[mod][1].append(f)

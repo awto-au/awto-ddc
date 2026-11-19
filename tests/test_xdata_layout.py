@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import xdata_layout as XL  # noqa: E402
+import xdata_layout as XL
 
 HOLES = [(0x1000, 0x1100), (0x2000, 0x2200)]
 

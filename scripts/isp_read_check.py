@@ -10,14 +10,15 @@ usage: isp_read_check.py <bus> --serial AWT2611000N [--kib 64] [--chunk 256]
 import argparse
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import flash_state as S
 import i2cbus
 import rtd_isp_probe as P
 import rtd_proto
-import flash_state as S
 from rtd_flash_sector import Rtd
 
 

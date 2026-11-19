@@ -5,14 +5,16 @@ usage: ddr_flags_probe.py --unit N --bus B --serial S [--n 20] [--clear]
   Reads pages 8F/CF flag regs (VALID_WIN_DET*, INT_STATUS*), optionally clears them (write 00), re-reads n times.
   Run only at steady ACTIVE, never during a modeset. Log: tmp/logs/ddr_flags_probe.log
 """
-import argparse, sys, time
-import isostamp  # noqa: E402
+import argparse
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, wr  # noqa: E402
+import i2cbus
+from p037_test import rd, wr
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 f2 = lambda v: "--" if v is None else format(v, "02x")

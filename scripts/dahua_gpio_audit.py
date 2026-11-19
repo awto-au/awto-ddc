@@ -9,7 +9,11 @@ usage: dahua_gpio_audit.py [--header FILE] [--out FILE]
 - Header = our board header (fw/overlay/Pcb/RL6449/LQFP_216/RL6449_AWTO_JXC4K.h in the awto-ddc-keys checkout, $AWTO_DDC_KEYS_REPO).
 Output: re/jxc-4k/gpio_audit.tsv ; log: ./tmp/logs/dahua_gpio_audit.log
 """
-import argparse, csv, os, re, sys
+import argparse
+import csv
+import os
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -108,7 +112,7 @@ def main():
         w.writerow(["pin", "port", "dahua_writes", "dahua_reads", "in_our_header", "header_line"])
         for port in sorted(acc, key=lambda p: (PIN.get(p, 999), p)):
             e = acc[port]
-            m = re.search(rf"^#define\s+\w+\s+\((?:MCU_FE\w+_PORT{port[1]}{port[3]}_PIN_REG|P{port[1]}_{port[3]})\).*$", hdr, re.M)
+            m = re.search(rf"^#define\s+\w+\s+\((?:MCU_FE\w+_PORT{port[1]}{port[3]}_PIN_REG|P{port[1]}_{port[3]})\).*$", hdr, re.MULTILINE)
             w.writerow([PIN.get(port, "?"), port, "; ".join(sorted(e["w"])), "; ".join(sorted(e["r"])), "yes" if m else "NO", m.group(0).strip() if m else ""])
             log(f"{PIN.get(port, '?'):>4} {port:5} writes {len(e['w']):2} reads {len(e['r']):2} header {'yes' if m else 'NO'}")
     log(f"wrote {out}")

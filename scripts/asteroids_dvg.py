@@ -7,7 +7,6 @@ Logs: ./tmp/logs/asteroids_dvg.log
 """
 import argparse
 import hashlib
-import io
 import json
 import logging
 import os

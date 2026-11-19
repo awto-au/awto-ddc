@@ -15,12 +15,12 @@ Log: tmp/logs/wdt_sim.log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wdt_sim.log"

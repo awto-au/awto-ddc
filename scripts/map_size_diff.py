@@ -9,14 +9,14 @@ Log: tmp/logs/map_size_diff.log
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+import isostamp
 
-AREA = re.compile(r"^([A-Za-z_][\w]*)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes", re.M)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from sdcc_overlay import repo_root
+
+AREA = re.compile(r"^([A-Za-z_][\w]*)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes", re.MULTILINE)
 
 
 def areas(path: Path) -> dict:

@@ -10,7 +10,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import isostamp  # noqa: E402
+import isostamp
 from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]

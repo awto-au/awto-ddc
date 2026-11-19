@@ -27,7 +27,7 @@ def main() -> int:
     while not hit and used < 50_000_000:
         m.run(1_000_000); used += 1_000_000
     m.close()
-    sizes = {n: int(sz, 16) for n, sz in re.findall(r"^(XINIT|XISEG|XINIT_\w*|XISEG_\w*)\s+[0-9A-F]{8}\s+([0-9A-F]{8})", mp, re.M)}
+    sizes = {n: int(sz, 16) for n, sz in re.findall(r"^(XINIT|XISEG|XINIT_\w*|XISEG_\w*)\s+[0-9A-F]{8}\s+([0-9A-F]{8})", mp, re.MULTILINE)}
     lines = [f"{binp.name}: reset -> main " + (f"{hit[0][0]} instr, {hit[0][1]} ticks = {hit[0][1] / XTAL_HZ * 1000:.1f} ms at the "
              f"14.318 MHz reset clock (ucsim tick = 1 oscillator clock)" if hit else "main not reached"),
              f"initialised XDATA (map): {sizes}"]

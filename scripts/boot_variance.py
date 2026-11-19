@@ -7,9 +7,15 @@ usage: boot_variance.py TAG [TAG ...] [--runs 3] [--unit 2]      (TAG = tmp/fw/A
 - Flap count = 'D2 signal lost' lines (each repeat of the predetect pair collapsed into '(the 2 lines above repeated N more times)': + N).
 Log: tmp/logs/boot_variance.log
 """
-import argparse, re, statistics, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import statistics
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_variance.log"

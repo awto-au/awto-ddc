@@ -8,12 +8,16 @@ Log: tmp/logs/cleanroom_brief.log
 """
 from __future__ import annotations
 
-import argparse, re, sys, tempfile, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import sys
+import tempfile
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import cleanroom_lint as CL  # noqa: E402
+import cleanroom_lint as CL
 
 ROOT = CL.ROOT
 SPECS = ROOT / "specs"
@@ -21,7 +25,7 @@ SPECS = ROOT / "specs"
 
 def assemble(mod: str) -> str:
     spec = (SPECS / f"{mod}.md").read_text()
-    if re.search(r"^Status: TO WRITE", spec, re.M):
+    if re.search(r"^Status: TO WRITE", spec, re.MULTILINE):
         sys.exit(f"spec {mod} is not written yet")
     vec = []
     for name in sorted(set(re.findall(r"specs/vectors/([\w.-]+\.tsv)", spec))):

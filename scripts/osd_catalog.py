@@ -6,9 +6,16 @@ usage: osd_catalog.py BIN [--menu-dir DIR] [--out DIR] [--mode 1080p60|2160p60]
 - Writes OUT/index.html (contact sheet, opens rendered in code-insiders) and OUT/catalog.tsv (the list).
 Log: ./tmp/logs/osd_catalog.log
 """
-import argparse, html, os, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import html
+import os
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 

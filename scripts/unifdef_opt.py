@@ -10,9 +10,9 @@ Log: ./tmp/logs/unifdef_opt.log (one line per file: directives resolved / simpli
 """
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = None
@@ -106,7 +106,7 @@ def process(text: str, vals: dict):
         while raw[-1].endswith("\\") and i + 1 < len(lines):
             i += 1; raw.append(lines[i])
         i += 1
-        full = " ".join(r[:-1] if r.endswith("\\") else r for r in raw)
+        full = " ".join(r.removesuffix("\\") for r in raw)
         m = DIR.match(full)
         if not m:
             if keep():

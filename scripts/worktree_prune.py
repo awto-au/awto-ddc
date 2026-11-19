@@ -8,7 +8,10 @@ usage: worktree_prune.py [--remove] [--keep NAME ...]
   Without --remove: report only.
 Log: ./tmp/logs/worktree_prune.log
 """
-import argparse, os, subprocess, sys
+import argparse
+import os
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 

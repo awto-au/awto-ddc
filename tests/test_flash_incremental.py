@@ -13,9 +13,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import flash_state as S  # noqa: E402
-import rtd_flash_image as I  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
+import flash_state as S
+import rtd_flash_image as I
+import rtd_flash_sector as F
 
 SECTOR = 4096
 NIMG = 24

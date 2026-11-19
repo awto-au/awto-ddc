@@ -15,13 +15,19 @@ usage: osd_test.py <bus> --serial AWT2611000N --map tmp/fw/<image>.map ACTION [A
     Held state: isr_g_stAwtoDiag + 0x2F (bit1 pop-up). Works for keys (the direct key write is overwritten).
 Log: ./tmp/logs/rtd_dbg_write.log
 """
-import argparse, re, subprocess, sys
+import argparse
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TESTCMD_OFF = 0x28
 sys.path.insert(0, str(HERE))
-from rtd_proto import OSD_EVENTS as EVENTS, event_cmd, OSD_KEYS as KEYS, osd_offsets_from_map  # noqa: E402  (one table, also decodes the log)
+from rtd_proto import OSD_EVENTS as EVENTS
+from rtd_proto import OSD_KEYS as KEYS
+from rtd_proto import event_cmd, osd_offsets_from_map
+
 CMD_ONLY = {"debug": 0x26, "debug-6s": 0x20,
             "clear": 0x27, "msglog-on": 0x22, "msglog-off": 0x23, "demo-log": 0x3A, "fff4-probe": 0x35, "a5-probe": 0x21, "stack-deep": 0x3F,
             "msg-on": 0x28, "msg-off": 0x29, "auto-search": 0x30, "defaults": 0x40,

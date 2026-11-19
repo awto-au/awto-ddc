@@ -16,8 +16,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(__file__).parent / "data"
 sys.path.insert(0, str(ROOT / "scripts"))
-import rtd_log as L  # noqa: E402
-import rtd_proto as P  # noqa: E402
+import rtd_log as L
+import rtd_proto as P
 
 
 def decode_file(name: str) -> str:

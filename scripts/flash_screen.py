@@ -15,15 +15,15 @@ import argparse
 import json
 import os
 import re
-import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
-from ddcutil_run import ddc as _ddc  # noqa: E402
 from pathlib import Path
 
+import isostamp
+from ddcutil_run import ddc as _ddc
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import gen_flash_screen as L  # noqa: E402
+import gen_flash_screen as L
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/flash_screen.log"
@@ -130,7 +130,6 @@ def _cells(info: dict, mouth_open: bool) -> dict[int, int]:
 
 
 def _put(o, cell: int, gid: int) -> None:
-    import rtd_osd as O
     yellow = L.PM_OPEN <= gid
     phys = CELLS - 1 - cell if _rot else cell
     o.write_word(CHAR_WORD + phys, CHAR_B0, gid, ((YELLOW if yellow else WHITE) << FG_SHIFT) | BG)
@@ -177,8 +176,8 @@ def clear(isp) -> None:
 
 
 def test(bus: int, ticks: int) -> int:
-    import rtd_osd as O
     import rtd_isp_probe as P
+    import rtd_osd as O
     if not show(bus):
         return 1
     P.LOG = (ROOT / "tmp/logs/flash_screen_isp.log").open("a")          # rtd_osd logs through the probe module

@@ -10,18 +10,19 @@ Log: ./tmp/logs/unit_health.log (+ .raw.log)
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
-import os
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import rtd_proto as P  # noqa: E402
-import unit_lock  # noqa: E402
+import dbg_xdata as X
+import rtd_proto as P
+import unit_lock
 
 DEV8 = 0x6A                                   # 7-bit 0x35
 DIAG_OFF = {"magic": 0, "stage": 3, "hb": 0x14, "t2": 0x16, "testcmd": 0x28}

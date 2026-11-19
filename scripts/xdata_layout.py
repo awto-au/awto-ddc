@@ -8,7 +8,9 @@ usage (library): place(old, sizes, holes, reserved, compact=False) -> (rows, inf
 - Explicit compaction: fw_build.py --xdata-compact (full-churn build).
 Log: ./tmp/logs/xdata_layout.log
 """
-import argparse, re, sys
+import argparse
+import re
+import sys
 from pathlib import Path
 
 PREFIX = "XS_"           # area name = XS_<module>; the map prints area names cut to 32 chars
@@ -109,7 +111,7 @@ def check(layout: Path, mp: str) -> list:
     """Problems between the tracked layout and the linked map (empty = current)."""
     want = load(layout)
     got = {}
-    for m in re.finditer(r"^(XS_\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =", mp, re.M):
+    for m in re.finditer(r"^(XS_\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =", mp, re.MULTILINE):
         if int(m.group(3), 16):
             got.setdefault(m.group(1), (int(m.group(2), 16), int(m.group(3), 16)))
     bad = []

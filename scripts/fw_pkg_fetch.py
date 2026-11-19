@@ -13,9 +13,17 @@ usage: fw_pkg_fetch.py [list.tsv] [--min-free-gb 100] [--playwrong]
 Log: tmp/logs/fw_pkg_fetch.log
 Timeouts: connect/read 30 s per socket op (stall guard; downloads are < 50 MB on a LAN-class link).
 """
-import hashlib, json, os, shutil, subprocess, sys, time, urllib.request
-import isostamp  # noqa: E402
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
 from pathlib import Path
+
+import isostamp
 
 PW_REPO = "/mnt/2tb/git/awto-play"
 

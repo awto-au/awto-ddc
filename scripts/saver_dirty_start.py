@@ -14,9 +14,9 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
+import ddc_sim as D
+import isostamp
+import osd_render as R
 
 LOG = R.ROOT / "tmp/logs/saver_dirty_start.log"
 SYNC_EV_ODEMO = 0xE9
@@ -53,7 +53,6 @@ def frames(a, prior, target, n, rotate):
     def hook(m, r):
         if live[0] and (r["a1"] & 0xFF) == SYNC_EV_ODEMO and (r["a2"] & 0xFF) in args and len(rows) < n:
             rows.append(hashlib.md5(R.render_snap(sess.snap(), "black", 4).tobytes()).hexdigest())
-        return None
 
     sess.bus.m.stub("AwtoSyncPush", hook)
     live[0] = True

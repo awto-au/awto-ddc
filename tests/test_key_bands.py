@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import key_bands as B  # noqa: E402
+import key_bands as B
 
 
 def test_table_equals_dahua():
@@ -36,7 +36,7 @@ def test_one_key_per_code_and_edges():
         want = {k for k, (l, lo, hi) in t.items() if l == lad and lo <= v < hi}
         assert hit == want and len(hit) <= 1, (lad, v, hit)
     for k, (lad, lo, hi) in t.items():           # min / min - 1 / max / max + 1 of every band
-        v = lambda x: (x, B.IDLE) if lad == "A0" else (B.IDLE, x)    # noqa: E731
+        v = lambda x: (x, B.IDLE) if lad == "A0" else (B.IDLE, x)
         assert B.keys_for(t, *v(lo)) == {k}
         assert B.keys_for(t, *v(lo - 1)) == set()
         assert B.keys_for(t, *v(hi - 1)) == {k}

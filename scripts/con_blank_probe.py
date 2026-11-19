@@ -17,10 +17,10 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_link as L  # noqa: E402
-import dbg_xdata as X  # noqa: E402
-import i2cbus  # noqa: E402
-import rtd_i2c_bridge as B  # noqa: E402
+import dbg_link as L
+import dbg_xdata as X
+import i2cbus
+import rtd_i2c_bridge as B
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp" / "logs" / "con_blank_probe.log"
@@ -38,7 +38,7 @@ def log(msg: str) -> None:
 
 
 def sym(mt: str, name: str) -> int | None:
-    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", mt, re.M)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", mt, re.MULTILINE)
     return int(m[1], 16) & 0xFFFF if m else None
 
 

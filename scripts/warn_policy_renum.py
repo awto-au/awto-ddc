@@ -10,9 +10,9 @@ Log: tmp/logs/warn_policy_renum.log
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/warn_policy_renum.log"

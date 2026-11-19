@@ -12,8 +12,11 @@ Method (details: docs/re-full-reversal.md):
  4. Hand rows (re/jxc-4k/ghidra_globals_hand.tsv, same columns) are appended and win on name/address clashes.
 Vendor side: ~/vendors/realtek/analysis/jxc-4k/bank<N>/disassembly.asm + names TSVs. Log: ./tmp/logs/ghidra_globals_map.log
 """
-import math, os, re, sys
-from collections import defaultdict, Counter
+import math
+import os
+import re
+import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))

@@ -11,9 +11,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import card_shot as C  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
+import card_shot as C
+import osd_render as R
 
 CARDS = [("nosignal", 0x50), ("nocable", 0x51), ("nosupport", 0x52), ("autoadjust", 0x54), ("info", 0x55), ("autocolour", 0x56),
          ("ddcci_port", 0x57), ("powersaving", 0x58), ("panel", 0x59), ("backlight", C.K_UP), ("selector", C.K_SOURCE)]

@@ -6,6 +6,7 @@ Code table [spec from regdb]: 0,100,1010,1011,1100,11010,11011,11100,111010,1110
 Symbol value for each code is programmable (vlc_0..vlc_f); the identity map here is a guess [?].
 """
 import sys
+
 CODES = ["0","100","1010","1011","1100","11010","11011","11100","111010","111011","111100","111101","1111100","1111101","1111110","11111110"]
 DEC = {c: i for i, c in enumerate(CODES)}
 

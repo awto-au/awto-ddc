@@ -43,7 +43,7 @@ def cpu_mode() -> str:
         raise SystemExit(f"AWTO_SIM_CPU={m!r}: want one of {CPU_MODES}")
     return m
 sys.path.insert(0, str(HERE))
-from sdcc_overlay import repo_root  # noqa: E402
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 SRC = HERE / "mcs51_core.c"
@@ -260,6 +260,7 @@ class FastMachine:
         self.clock = None
         if self.dw:
             import json
+
             from sim_clock import ClockModel
             mdl = json.loads(MODEL_JSON.read_text())
             self.core.set_dw(mdl)
@@ -626,7 +627,7 @@ class FastMachine:
 
         def hook(m, r):
             if not m.dw or m.clock is None or not getattr(m, "_ff_on", True):
-                return None
+                return
             if kind == "djnz":
                 v = c.iram[ctr]
                 per_clk, per_cyc, per_ins = d * cpc, d, 1
@@ -634,7 +635,7 @@ class FastMachine:
             else:
                 base_var, cnt_var, ivar = extra
                 if c.iram[ivar] != c.iram[base_var]:             # not the first iteration of a pass
-                    return None
+                    return
                 b = c.iram[base_var]
                 v = c.iram[cnt_var]
                 n_left = v if v else 256
@@ -643,10 +644,10 @@ class FastMachine:
             prev_ok = (p.clk - state["clk"]) == per_clk
             state["clk"] = p.clk
             if not prev_ok or n_left < 4:                       # the first iteration of a call runs interpreted (it fills the code cache line)
-                return None
+                return
             n = min(n_left - 2, room_ok(0) // per_clk)
             if n < 2:
-                return None
+                return
             c.ffwd(n * per_clk, n * per_cyc, n * per_ins, 0xD5)
             if kind == "djnz":
                 c.iram[ctr] = (v - n) & 0xFF
@@ -656,7 +657,7 @@ class FastMachine:
             m.ticks += n * per_cyc * 12
             m.instr += n * per_ins
             state["clk"] = p.clk
-            return None
+            return
         self.stubs.setdefault(pc, []).append((None, f"ffwd_{kind}", hook))
         self.core.pch[pc] |= 0xFFFF
 

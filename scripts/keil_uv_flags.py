@@ -96,7 +96,7 @@ def decode(root: Path, tree: Path, c51fl: int, group, log) -> str:
     build = (work / "build.txt").read_text(errors="replace") if (work / "build.txt").exists() else ""
     log.write(f"== C51FL={c51fl} group={group} rc={rc}\n{build}\n")
     lst = work / "Output" / "t.lst"
-    m = re.search(r"COMPILER INVOKED BY: \S+ t\.c (.*?)\n\s*\n", lst.read_text(errors="replace"), re.S) if lst.exists() else None
+    m = re.search(r"COMPILER INVOKED BY: \S+ t\.c (.*?)\n\s*\n", lst.read_text(errors="replace"), re.DOTALL) if lst.exists() else None
     if not m:
         return f"no listing header (rc={rc}); build.txt: {build.strip()[-300:]}"
     txt = re.sub(r"\r?\n\s*-", "", m.group(1)).strip()   # listing wraps at a fixed column, "-" starts the continuation

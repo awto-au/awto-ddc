@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import gmbus_rate as G  # noqa: E402
+import gmbus_rate as G
 
 
 def test_vermagic_release():

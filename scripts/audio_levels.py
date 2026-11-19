@@ -9,8 +9,9 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 
 def _repo() -> Path:

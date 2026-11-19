@@ -8,7 +8,11 @@ usage: dead_code_maps.py [--serial AWT26110003] [--skip-build]
   --skip-build: rerun dead_code.py on the maps already in tmp/dc/.
 Log: ./tmp/logs/dead_code_maps.log (each build: tmp/logs/dead_code_maps.<tag>.out)
 """
-import argparse, os, shutil, subprocess, sys
+import argparse
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import isostamp

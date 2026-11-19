@@ -5,7 +5,9 @@ usage: regdb_pack.py            (all chips found in ~/vendors/realtek/analysis/r
 Source TSVs come from scripts/rtd_db_parse.py. Repo must stay PRIVATE (see CLAUDE.md exception).
 Log: ./tmp/logs/regdb_pack.log
 """
-import gzip, os, shutil
+import gzip
+import os
+import shutil
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)

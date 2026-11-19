@@ -97,7 +97,7 @@ def test_opcode_name_table_matches_the_firmware_console():
     src = (ROOT / "fw/osd/console.c").read_text()
     ops = re.search(r"tAwtoCecOp\[\] = \{([^}]*)\}", src).group(1)
     assert [int(x, 16) for x in re.findall(r"0x[0-9A-Fa-f]+", ops)] == [int(o, 16) for o, _ in tsv]
-    names = re.search(r"tAwtoCecNameS\[\] =(.*?);", src, re.S).group(1)
+    names = re.search(r"tAwtoCecNameS\[\] =(.*?);", src, re.DOTALL).group(1)
     names = "".join(re.findall(r'"([^"]*)"', names)).split("\\0")
     assert names[:len(tsv)] == [n for _, n in tsv]
     assert names[len(tsv):len(tsv) + 4] == ["acked", "line error", "no ack (header)", "no ack (data)"]

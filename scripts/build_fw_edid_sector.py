@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from make_edid import build  # noqa: E402
+from make_edid import build
 
 EDID_HEADER = bytes.fromhex("00ffffffffffff00")
 EDID_SIZE = 256

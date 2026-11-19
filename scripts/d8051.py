@@ -8,7 +8,10 @@ reloc (True if any byte is a link-time fixup site), note (register name for DPTR
 CLI: d8051.py <file> <start-hex> <len-hex> [--base 0xNNNN]   (linear sweep; data decodes as garbage)
 Scaler registers are XDATA at (page<<8)|reg; names from re/regdb/RTD2795T-CG.tsv.gz.
 """
-import csv, gzip, os, sys
+import csv
+import gzip
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 

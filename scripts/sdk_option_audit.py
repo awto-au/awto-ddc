@@ -15,12 +15,17 @@ usage: sdk_option_audit.py opts            -> tmp/audit/options.tsv (name, value
 - Toggle deltas include the image tag string: compare toggles with each other, not with a dev.py build image.
 Needs a built tree (fw_build.py) in this checkout. Log: tmp/logs/sdk_option_audit.log
 """
-import os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import os
+import re
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_compile as FC  # noqa: E402
+import fw_compile as FC
 
 ROOT = FC.ROOT
 OUT = ROOT / "tmp/audit"
@@ -93,7 +98,7 @@ def cmd_modules():
     rows, tot = [], [0, 0]
     for f in sorted((ROOT / "tmp/sdcc-port/asm_bank/_size").glob("*.rel")):
         code = xd = 0
-        for m in re.finditer(r"^A (\w+) size ([0-9A-Fa-f]+) flags ([0-9A-Fa-f]+)", f.read_text(errors="replace"), re.M):
+        for m in re.finditer(r"^A (\w+) size ([0-9A-Fa-f]+) flags ([0-9A-Fa-f]+)", f.read_text(errors="replace"), re.MULTILINE):
             size, flags = int(m.group(2), 16), int(m.group(3), 16)
             if m.group(1) in ("XSEG", "XISEG"):
                 xd += size
@@ -109,7 +114,7 @@ def measure(serial="AWT26110002"):
     """(code, xdata) bytes of the linked image: unique map areas by CODE / XDATA attribute (common counted once)."""
     t = (ROOT / f"tmp/fw/{serial}/fw.map").read_text(errors="replace")
     seen = {}
-    for m in re.finditer(r"^(\S+)\s+([0-9A-F]{8})\s+[0-9A-F]{8} =\s+(\d+)\. bytes \(([^)]*)\)", t, re.M):
+    for m in re.finditer(r"^(\S+)\s+([0-9A-F]{8})\s+[0-9A-F]{8} =\s+(\d+)\. bytes \(([^)]*)\)", t, re.MULTILINE):
         seen[(m.group(1), m.group(2))] = (int(m.group(3)), m.group(4))
     code = sum(s for s, at in seen.values() if "CODE" in at)
     xd = sum(s for s, at in seen.values() if "XDATA" in at)
@@ -120,12 +125,12 @@ def cmd_linked():
     """Linked code bytes per module: map areas (CODE) -> the asm_bank/*.rel that defines them; -> tmp/audit/linked.tsv."""
     owner = {}
     for f in (ROOT / "tmp/sdcc-port/asm_bank").glob("*.rel"):
-        for m in re.finditer(r"^A (\w+) size ([0-9A-Fa-f]+)", f.read_text(errors="replace"), re.M):
+        for m in re.finditer(r"^A (\w+) size ([0-9A-Fa-f]+)", f.read_text(errors="replace"), re.MULTILINE):
             if int(m.group(2), 16):
                 owner.setdefault(m.group(1)[:32], f.stem)        # map prints area names cut to 32 chars
     t = (ROOT / "tmp/fw/AWT26110002/fw.map").read_text(errors="replace")
     seen = {}
-    for m in re.finditer(r"^(\S+)\s+([0-9A-F]{8})\s+[0-9A-F]{8} =\s+(\d+)\. bytes \(([^)]*)\)", t, re.M):
+    for m in re.finditer(r"^(\S+)\s+([0-9A-F]{8})\s+[0-9A-F]{8} =\s+(\d+)\. bytes \(([^)]*)\)", t, re.MULTILINE):
         if "CODE" in m.group(4):
             seen[(m.group(1), m.group(2))] = int(m.group(3))
     per = {}
@@ -151,7 +156,7 @@ def cmd_toggle(names, tag, patch_file=None):
         f = opts[n][2].rsplit(":", 1)[0]
         src = next((FC.SRC).rglob(f))
         rel = src.relative_to(FC.SRC).as_posix()
-        hits = re.findall(rf"^[ \t]*#define[ \t]+{n}[ \t]+_ON\b.*$", src.read_text(errors="replace"), re.M)
+        hits = re.findall(rf"^[ \t]*#define[ \t]+{n}[ \t]+_ON\b.*$", src.read_text(errors="replace"), re.MULTILINE)
         if len(hits) != 1:
             log(f"toggle {tag}: {n} in {rel}: {len(hits)} '#define {n} _ON' lines, skipped"); return
         patch.append({"file": rel, "old": hits[0], "new": hits[0].replace("_ON", "_OFF", 1)})

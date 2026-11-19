@@ -23,12 +23,13 @@ import os
 import select
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import settings_cli as C  # noqa: E402
-import settings_table as T  # noqa: E402
+import settings_cli as C
+import settings_table as T
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/menu_cli.log"
@@ -296,7 +297,7 @@ def main() -> int:
         session = R.Session(a.sim, Path(a.map), "1080p60")
         session.boot()
         bus = session.bus
-        render = (lambda out: R.save(session.snap(), out, "grey", 2)) if a.png else None       # noqa: E731
+        render = (lambda out: R.save(session.snap(), out, "grey", 2)) if a.png else None
         if a.png:
             a.png.mkdir(parents=True, exist_ok=True)
     elif a.sim:

@@ -43,7 +43,7 @@ ROWS = [
     ("user-control-released (logged only)", ["--to", "0", "--user-control-released"], [r"Transmit"]),
     ("standby (logged only; monitor must stay on)", ["--to", "0", "--standby"], [r"Transmit"]),
 ]
-BAD = re.compile(r"Not Acknowledged|Timed out|Max Retries|Arbitration Lost|Low Drive|TIMEOUT|not found", re.I)
+BAD = re.compile(r"Not Acknowledged|Timed out|Max Retries|Arbitration Lost|Low Drive|TIMEOUT|not found", re.IGNORECASE)
 
 
 def say(s, f=None):
@@ -111,7 +111,7 @@ def main():
                 out = run(["cec-compliance", "-d", a.dev, m.group(1), "0"], COMPLIANCE_TIMEOUT_S, raw)
                 tot = re.findall(r"Total.*", out)
                 say("compliance: " + (tot[-1] if tot else "no Total line, see the raw log"), log)
-                fails += bool(re.search(r"Failures?: *[1-9]|fail: *[1-9]", out, re.I))
+                fails += bool(re.search(r"Failures?: *[1-9]|fail: *[1-9]", out, re.IGNORECASE))
     say(f"{'PASS' if fails == 0 else 'FAIL'} cec_pi_test: {fails} failed", log)
     return 1 if fails else 0
 

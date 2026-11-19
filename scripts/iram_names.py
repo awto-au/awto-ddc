@@ -10,13 +10,16 @@ usage: iram_names.py report|check|rename [--asm DIR] [--map FILE]
 - rename: adds the prefix in fw/ (not fw/sdk-parked) and scripts/; function statics only inside their function.
 Log: tmp/logs/iram_names.log
 """
-import argparse, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 PREFIX = {"DSEG": "d_", "BSEG": "d_", "ISEG": "i_", "XSEG": "", "XISEG": "", "XABS": ""}
@@ -113,13 +116,12 @@ def shared_refs(asm_dir: Path) -> set:
 
 def base_of(cn: str) -> str:
     for pre in ("d_", "i_"):
-        if cn.startswith(pre):
-            cn = cn[len(pre):]
-    return cn[len(ISR):] if cn.startswith(ISR) else cn
+        cn = cn.removeprefix(pre)
+    return cn.removeprefix(ISR)
 
 
 def addr_of(map_text: str) -> dict:
-    return {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^\s+([0-9A-F]{8})\s+(_\w+)\s", map_text, re.M)}
+    return {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^\s+([0-9A-F]{8})\s+(_\w+)\s", map_text, re.MULTILINE)}
 
 
 def src_files():
@@ -188,7 +190,7 @@ def main() -> int:
             hot = "ISR" if any(r == lab or r.startswith(lab + "_") for r in isr) else "   "
             log(f"{area:5} {('0x%02X' % ad) if ad is not None else '  -  '} {size:3} {hot} {mod:32} {(fn + ':') if fn else ''}{cn}")
             tot[area] += size
-        for blk in re.findall(r"^(DDOVL\w*|SSEG|BSEG_BYTES|BIT_BANK|DSEG|ISEG)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
+        for blk in re.findall(r"^(DDOVL\w*|SSEG|BSEG_BYTES|BIT_BANK|DSEG|ISEG)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.MULTILINE):
             log(f"area {blk[0]:10} at 0x{int(blk[1], 16):02X} size {int(blk[2], 16)}")
         log(f"totals (BSEG in bits): {dict(tot)}")
         return 0
@@ -201,7 +203,7 @@ def main() -> int:
             lab = ("_" + cn) if fn is None else f"_{fn}_{cn}"
             if area != "BSEG" or not named or any(r == lab or r.startswith(lab + "_") for r in isr):
                 continue
-            base = cn[len(PREFIX[area]):] if cn.startswith(PREFIX[area]) else cn
+            base = cn.removeprefix(PREFIX[area])
             hit = False
             for p, t in files.items():
                 if fn is None:

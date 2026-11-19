@@ -12,15 +12,21 @@ Every step waits for its condition (sim time, polled every POLL_MS) up to a boun
 Last line: RESULT PASS | RESULT FAIL <check names>. Needs the main tree's sim tools: AWTO_DDC_MAIN (default /mnt/2tb/git/awto-ddc).
 Log: ./tmp/logs/keys_sim.log
 """
-import argparse, contextlib, importlib.util, io as _io, os, sys, time
-import isostamp  # noqa: E402
+import argparse
+import contextlib
+import importlib.util
+import io as _io
+import os
+import sys
 from pathlib import Path
+
+import isostamp
 
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts"
 sys.path.insert(0, str(MAIN))
 sys.path.insert(1, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import osd_model as M  # noqa: E402
+import osd_model as M
+import osd_render as R
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/keys_sim.log"
@@ -338,7 +344,7 @@ def main():
         chk("keys swallowed while open", st["open"] == 1, f"mode {st['mode']}")
         a.png_dir.mkdir(parents=True, exist_ok=True)
         R.save(s.snap(), a.png_dir / "keytest.png", "grey", 1)
-        for e in st["log"][:st["count"] if st["count"] < 16 else 16]:
+        for e in st["log"][:min(16, st["count"])]:
             say(f"log seq {e['seq']:3d} tick {e['tick']:5d} A0={e['a0']:02X} A1={e['a1']:02X} flags {e['flags']:02X} mask {e['mask']:02X} msg {e['msg']:02X}")
         # 2b. the debug pop-up (#34) rows, same fit check (held by test cmd 0x26 on top of the closed key screen is not possible: close first)
         k.cmd(0x42)

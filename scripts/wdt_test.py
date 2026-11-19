@@ -22,11 +22,12 @@ import os
 import re
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_crash as C  # noqa: E402
+import rtd_crash as C
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wdt_test.log"
@@ -262,10 +263,10 @@ class UnitTarget:
     name = "unit"
 
     def __init__(self, unit: str, mapp: Path, say):
+        import dbg_link
         import i2cbus
         import kvm
         import rtd_i2c_bridge as B
-        import dbg_link
         self.say, self.i2cbus, self.dbg_link, self.B = say, i2cbus, dbg_link, B
         u = json.loads((ROOT / "scripts/devices.json").read_text())["units"][unit]
         if not u.get("test"):
@@ -278,7 +279,7 @@ class UnitTarget:
             raise SystemExit(f"bus rate {i2cbus.rate_khz()} kHz; 0x35 runs at 100 kHz only")
         self.logs = B.setup_logs("wdt_test", map=str(mapp), detail=True)   # decoded I2C -> wdt_test.detail.log, bytes -> .raw.log
         self.map_text = mapp.read_text(errors="replace")
-        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stAwtoDiag\b", self.map_text, re.M)
+        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stAwtoDiag\b", self.map_text, re.MULTILINE)
         self.diag = int(m.group(1), 16) & 0xFFFF if m else 0xF6D0
         self.serial = u["serial"]
         self.link()
@@ -324,7 +325,7 @@ class UnitTarget:
 
     def mode(self) -> int | None:
         import dbg_xdata as X
-        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stModeInfo\b", self.map_text, re.M)
+        m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stModeInfo\b", self.map_text, re.MULTILINE)
         b = X.read_bytes(self.io, int(m.group(1), 16) & 0xFFFF, 1) if m else None
         return b[0] & 0x1F if b else None
 
@@ -434,12 +435,12 @@ class Runner:
             self.snaps = getattr(self, "snaps", []) + [(label, s)]
             self.say(f"  snapshot after {label}: {C.snap_line(s)}")
         if self.has("AwtoBootReason"):
-            import sync_log as SL
             import dbg_xdata as X
+            import sync_log as SL
             SL.set_map(self.a.map_path)
-            ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+            ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.MULTILINE).group(1), 16) & 0xFFFF
             rows = SL.load_rows(SL.tsv_for(self.a.map_path))
-            pa = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSyncPin\b", self.t.map_text, re.M)
+            pa = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSyncPin\b", self.t.map_text, re.MULTILINE)
             pin = SL.pin_line(X.read_blocks(self.t.io, int(pa.group(1), 16) & 0xFFFF, SL.EV), rows) if pa else None
             raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
             _, lines = SL.decode(raw, rows) if raw else ({}, [])
@@ -552,9 +553,9 @@ class Runner:
         """#150 sync lines of the NVRAM saves (ms since the last poke at each step)"""
         if not self.has("AwtoNvEv"):
             return "n/a"
-        import sync_log as SL
         import dbg_xdata as X
-        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+        import sync_log as SL
+        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.MULTILINE).group(1), 16) & 0xFFFF
         raw = None
         for _ in range(5):                               # flash-op silences: retry
             raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
@@ -586,7 +587,7 @@ class Runner:
 
     def host_dpms(self, on: bool) -> str:
         """host outputs on / off (Mutter PowerSaveMode 0 / 3, approved autonomous test); returns the connector dpms state"""
-        import host_dpms as H                  # off arms a detached guard: a hung / killed test can't leave the screens off (#159)
+        import host_dpms as H  # off arms a detached guard: a hung / killed test can't leave the screens off (#159)
         H.on() if on else H.off(HOST_OFF_GUARD_S)
         end = time.monotonic() + DPMS_S
         st = ""
@@ -691,9 +692,9 @@ class Runner:
         self.row("host_sleep", "PASS" if ok else "FAIL", "; ".join(txt))
 
     def ring_raw(self):
-        import sync_log as SL
         import dbg_xdata as X
-        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+        import sync_log as SL
+        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.MULTILINE).group(1), 16) & 0xFFFF
         return SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
 
     def ps_syms(self) -> dict:
@@ -716,6 +717,7 @@ class Runner:
         if self.t.name != "unit":
             return self.row("hold", "SKIP", "unit only (host outputs)")
         import subprocess
+
         import sync_log as SL
         SL.set_map(self.a.map_path)
         rows = SL.load_rows(SL.tsv_for(self.a.map_path))
@@ -815,9 +817,9 @@ class Runner:
         self.row("hold", "PASS" if ok else "FAIL", "; ".join(txt))
 
     def ring_lines(self) -> list:
-        import sync_log as SL
         import dbg_xdata as X
-        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.M).group(1), 16) & 0xFFFF
+        import sync_log as SL
+        ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", self.t.map_text, re.MULTILINE).group(1), 16) & 0xFFFF
         raw = SL.read_ring(lambda ad, n: X.read_blocks(self.t.io, ad, n), ring)
         return SL.decode(raw, SL.load_rows(SL.tsv_for(self.a.map_path)), whole=True)[1] if raw else []
 

@@ -10,13 +10,15 @@ usage: mem_mode.py --bus 11 --serial AWT26110003 read|frame|sdk
 - Run at steady ACTIVE only (ddr_flags_probe.py rule). Main is not paused.
 Log: ./tmp/logs/mem_mode.log
 """
-import argparse, sys, time
+import argparse
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, wr  # noqa: E402
+import i2cbus
+from p037_test import rd, wr
+from rtd_i2c_bridge import Real
 
 TESTCMD = 0xF6F8                     # g_stAwtoDiag (0xF6D0) + 0x28 (docs/diag-block.md)
 CMD = {"frame": 0x0C, "sdk": 0x0D}  # RL6449_Project.h AWTO_TC_MEM_FRAME / _SDK

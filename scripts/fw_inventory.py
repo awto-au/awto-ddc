@@ -12,10 +12,15 @@ Log: tmp/logs/fw_inventory.log
 """
 from __future__ import annotations
 
-import argparse, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import subprocess
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:
@@ -31,8 +36,8 @@ def repo_root() -> Path:
 
 ROOT = repo_root()
 SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))
-AREA = re.compile(r"^(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes \(([^)]*)\)", re.M)
-GLOBAL = re.compile(r"^C:\s+([0-9A-F]{8})\s+(\S+)\s*(\S*)\s*$", re.M)
+AREA = re.compile(r"^(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes \(([^)]*)\)", re.MULTILINE)
+GLOBAL = re.compile(r"^C:\s+([0-9A-F]{8})\s+(\S+)\s*(\S*)\s*$", re.MULTILINE)
 LIB_DIR = "/Lib/"
 ORIGINS = [      # (origin, regex on the SDK-relative source path), first match wins
     ("FunctionLib (built from source)", r"/Lib/"),
@@ -100,7 +105,7 @@ def source_index(sdk: Path) -> dict:
 
 
 def linked_modules(txt: str) -> list[str]:
-    return [Path(m).stem for m in re.findall(r"^(/\S+\.rel)\s*$", txt, re.M)]
+    return [Path(m).stem for m in re.findall(r"^(/\S+\.rel)\s*$", txt, re.MULTILINE)]
 
 
 def areas(txt: str):

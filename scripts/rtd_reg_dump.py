@@ -13,15 +13,19 @@ usage: rtd_reg_dump.py <bus> --serial AWT2611000N [--pages 00,01,38,39,9C,9E] [-
   page-select (0x9F), index registers of the ports read, and the final reset (0xEE).
 Log: ./tmp/logs/rtd_reg_dump.log
 """
-import argparse, json, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus
+import regdb_query as Q
 import rtd_isp_probe as P
 import rtd_proto
-import regdb_query as Q
 from rtd_osd import Osd
 
 # data reg16 -> index/address reg16s (high..low); only ports whose ADDR reg the regdb names.

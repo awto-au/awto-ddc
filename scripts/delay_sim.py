@@ -19,13 +19,14 @@ import collections
 import json
 import statistics
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import delay_cal_check as D  # noqa: E402
-import fw_link_check as L  # noqa: E402
-import panel_sim as P  # noqa: E402
+import delay_cal_check as D
+import fw_link_check as L
+import panel_sim as P
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/delay_sim.log"

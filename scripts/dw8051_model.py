@@ -7,7 +7,8 @@ usage: dw8051_model.py --write | --check
 - JSON is the only copy of the tables: fastmachine.py loads it into mcs51_core.c (core_set_dw); an RL6449 ucsim can load the same file.
 - Opcode classes below are the databook rows; cycles[op] = instruction cycles (1 cycle = 4 clk). MOVX rows are base + CKCON[2:0].
 """
-import json, sys
+import json
+import sys
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "dw8051_model.json"

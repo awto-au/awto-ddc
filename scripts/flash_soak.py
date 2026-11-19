@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/flash_soak.log"
@@ -70,7 +70,7 @@ GATE_S = 6.5             # nv_test.py: gate = debounce 2 s + stable 3 s, x1.25
 
 def nv_counters(unit: str, mp: str) -> dict | None:
     rc, out = dev("dbg-read", "--unit", unit, "--map", mp, f"{NV}:20")
-    m = re.search(rf"{NV} @0x[0-9a-f]+: ((?:[0-9a-f]{{2}} ?){{20}})", out, re.I)
+    m = re.search(rf"{NV} @0x[0-9a-f]+: ((?:[0-9a-f]{{2}} ?){{20}})", out, re.IGNORECASE)
     if not m:
         return None
     b = bytes(int(x, 16) for x in m.group(1).split())

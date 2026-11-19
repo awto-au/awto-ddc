@@ -7,10 +7,13 @@ usage: xdata_churn_probe.py [--unit 3] FILE[:BYTES] ... [--max N]
 - Runs ./dev.py builds (~40 s each); fw/xdata_layout.tsv restored after each probe; fw/bank_layout.tsv left as built (git checkout it to discard).
 Log: tmp/logs/xdata_churn_probe.log
 """
-import argparse, re, subprocess, sys
+import argparse
+import re
+import subprocess
+import sys
 from pathlib import Path
 
-import isostamp  # noqa: E402
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/xdata_churn_probe.log"

@@ -8,12 +8,17 @@ usage: sim_waits.py BIN MAP [--mode 1080p60|2160p60] [--until-active] [--top 25]
   resolved to a function with the current bank (a common-code callee runs in the caller's bank).
 Log: ./tmp/logs/sim_waits.log
 """
-import argparse, bisect, collections, re, sys
-import isostamp  # noqa: E402
+import argparse
+import bisect
+import collections
+import re
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/sim_waits.log"
 SFR_SP = 0x81
@@ -21,13 +26,13 @@ COMMON_END = 0x5000       # fw/rl6449_memory.toml common_end: below it the addre
 BANK_SIZE = 0x10000
 
 
-from wait_log import chunk_table  # noqa: E402
+from wait_log import chunk_table
 
 
 def check_ring(bus, map_path, starts, names, rows):
     """g_stAwtoWait (the firmware's own log: caller pc + bank per wait >= 1 ms) against the callers watched here"""
     import wait_log as W
-    hit = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoWait\b", map_path.read_text(errors="replace"), re.M)
+    hit = re.search(r"^D:\s+([0-9A-F]{8})\s+_g_stAwtoWait\b", map_path.read_text(errors="replace"), re.MULTILINE)
     sym = int(hit.group(1), 16) if hit else None
     if sym is None:
         return ["ring check: no g_stAwtoWait in the map; skipped"]
@@ -65,7 +70,7 @@ def main() -> int:
             sp = m.rd(SFR_SP, 1, "sfr")[0]
             lo, hi = m.rd(sp - 1, 2, "iram")               # LCALL pushes PCL then PCH
             rows.append((bus.now() * 1000, kind, r["a1"] & 0xFFFF, caller(m.p.bank, hi << 8 | lo)))
-            return None                                    # watch only: the function runs
+            # watch only: the function runs
         return fn
 
     for name in ("ScalerTimerDelayXms", "ScalerTimerPollingFlagProc", "ScalerTimerWaitForEvent"):

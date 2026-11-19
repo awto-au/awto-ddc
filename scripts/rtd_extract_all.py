@@ -28,7 +28,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)  # -I drops script dir
-import rtd_gate  # noqa: E402
+import rtd_gate
 
 WANT = {"db.bin", "gpio.bin", "dpcddb.bin", "ipdb.bin", "flashset.dat", "flash.dat",
         "swren.dat", "readall.txt", "version.txt"}

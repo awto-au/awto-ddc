@@ -6,14 +6,14 @@ usage: menu_open_time.py BIN MAP
   layer, osd_tc_place in the 12x18 menu). Sim ms of the T2 tick. Log: tmp/logs/menu_open_time.log
 """
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim  # noqa: E402
-import menu_cli as MC  # noqa: E402
-import settings_cli as C  # noqa: E402
+import fw_sim
+import menu_cli as MC
+import settings_cli as C
 
 LOG = Path(__file__).resolve().parents[1] / "tmp/logs/menu_open_time.log"
 
@@ -28,7 +28,6 @@ def main():
     def w(name):
         def f(m_, r):
             hits.setdefault(name, bus.now())
-            return None
         try:
             bus.m.stub(name, f)
         except Exception:

@@ -6,14 +6,19 @@ usage: freeze_dump.py --unit N --bus B --serial S [--pages 00,01,...|vendor]
   read 256 regs/page with ScalerGetByte (0xPPRR, ~3 ms each, no ISP halt/reset), resume main.
   Out: tmp/regs/<serial>-<ts>-4k-frozen.json (same layout as rtd_reg_dump.py; unread regs = -1). Log: tmp/logs/freeze_dump.log
 """
-import argparse, json, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, DBG  # noqa: E402
+import i2cbus
+from p037_test import DBG, rd
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 VENDOR = ROOT / "tmp/regs/AWT26110003-20261105-180523.json"

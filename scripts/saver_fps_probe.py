@@ -18,10 +18,10 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import saver_frames_md5 as F  # noqa: E402
+import ddc_sim as D
+import isostamp
+import osd_render as R
+import saver_frames_md5 as F
 
 LOG = R.ROOT / "tmp/logs/saver_fps_probe.log"
 SETTLE_S = 3.0                  # fw time after the start: the hidden first frame is drawn (Scope 2, Asteroids ~2 s)
@@ -67,7 +67,6 @@ def main() -> int:
     def sync(mm, r):
         if on[0] and (r["a1"] & 0xFF) == F.SYNC_EV_ODEMO and (r["a2"] & 0xFF) in args:
             frames.append(mm.wall_ms * 1000.0)
-        return None
 
     m.stub("AwtoSyncPush", sync)
     for n in a.fn:

@@ -9,9 +9,15 @@ usage: cleanroom_audit.py [--projects ~/.claude/projects] [--match -mnt-2tb-git-
 """
 from __future__ import annotations
 
-import argparse, json, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 FORBIDDEN_PATHS = ["/mnt/2tb/git_mirror", "RTD-Scaler", "Kingdomwhisky", "/mnt/2tb/git/awto-ddc", "awto-au/awto-ddc",
                    "vendors/realtek", "/mnt/2tb/git/awto-sdcc", "-mnt-2tb-git-awto-ddc", "asmlib",

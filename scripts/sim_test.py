@@ -12,13 +12,20 @@ usage: sim_test.py [name ...]     (no names = all tests; all run even after a fa
 - Overlay pass runs with AWTO_DDC_REPO=<scratch> so its log/overlay.json don't touch the real tmp/sdcc-port.
 Log: tmp/logs/sim_test.log; scratch: tmp/simtest/<name>/{A,B}.  Exit 0 only if every test PASSes.
 """
-import json, os, re, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sdcc_link  # noqa: E402
-import sdcc_tools as T  # noqa: E402
+import sdcc_link
+import sdcc_tools as T
 
 
 def repo_root():
@@ -83,7 +90,7 @@ def assemble_link(asm_dir, obj_dir, ihx):
 
 
 def simulate(ihx, outdir):
-    m = re.search(r"^C:\s+([0-9A-Fa-f]{8})\s+_sim_halt\b", ihx.with_suffix(".map").read_text(), re.M)
+    m = re.search(r"^C:\s+([0-9A-Fa-f]{8})\s+_sim_halt\b", ihx.with_suffix(".map").read_text(), re.MULTILINE)
     if not m:
         return None, "no _sim_halt in map", 0
     ser = outdir / "serial.txt"

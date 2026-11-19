@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # -I drops script dir
-import rtd_gate  # noqa: E402
+import rtd_gate
 
 TYPES = {1: "CURSOR", 2: "BITMAP", 3: "ICON", 4: "MENU", 5: "DIALOG", 6: "STRING", 9: "ACCEL",
          14: "GROUP_ICON", 16: "VERSION", 240: "DLGINIT"}

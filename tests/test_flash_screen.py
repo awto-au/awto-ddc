@@ -1,13 +1,14 @@
 """scripts/flash_screen.py and scripts/gen_flash_screen.py mirror constants of fw/test/flash_screen.c (#232): they must agree."""
-import pytest
 import re
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import flash_screen as FS  # noqa: E402
-import gen_flash_screen as L  # noqa: E402
+import flash_screen as FS
+import gen_flash_screen as L
 
 
 def c_define(name: str, text: str | None = None) -> int:

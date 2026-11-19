@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 SDK_HDR = ROOT / "fw/sdk/Kernel/Scaler/RL6449_Series_Common/Header/RL6449_Series_Common_RegCommonInclude.h"
-RESERVED = re.compile(r"^(reserved|dummy|rsvd|res|resv|reserve|unused)\w*$", re.I)
+RESERVED = re.compile(r"^(reserved|dummy|rsvd|res|resv|reserve|unused)\w*$", re.IGNORECASE)
 
 # name, lo, hi inclusive
 HIGHLIGHTS = [("ADC results", 0xFF09, 0xFF0C), ("IOSC trim counter", 0x06A4, 0x06A5), ("DSS status A", 0xA750, 0xA757),

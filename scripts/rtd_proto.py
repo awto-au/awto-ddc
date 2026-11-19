@@ -15,11 +15,15 @@ Raw line format (parse_raw): `<ts> REAL write dev=0x35 reg 0x3b f8` / `REAL read
 """
 from __future__ import annotations
 
-import atexit, os, re, sys, time
-import isostamp  # noqa: E402
+import atexit
+import os
+import re
+import sys
 from pathlib import Path
 from types import SimpleNamespace as NS
 from typing import NamedTuple
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 
@@ -173,11 +177,11 @@ OSD_INFO_SIZE_LEGACY = 15                                       # sizeof(StructO
 
 def osd_offsets_from_map(map_text: str) -> dict:
     """Size = gap to the next higher XDATA symbol address (sorted: the symbol after it in the listing may be in another section)."""
-    m = re.search(r"^\w:\s+([0-9A-F]{8})\s+_g_stOsdInfo\s", map_text, re.M)
+    m = re.search(r"^\w:\s+([0-9A-F]{8})\s+_g_stOsdInfo\s", map_text, re.MULTILINE)
     if not m:
         return dict(OSD_OFS_LEGACY)
     at = int(m[1], 16)
-    nxt = min((a for a in (int(x, 16) for x in re.findall(r"^D:\s+([0-9A-F]{8})\s+_\w+", map_text, re.M)) if a > at), default=None)
+    nxt = min((a for a in (int(x, 16) for x in re.findall(r"^D:\s+([0-9A-F]{8})\s+_\w+", map_text, re.MULTILINE)) if a > at), default=None)
     shift = 1 if nxt is not None and nxt - at > OSD_INFO_SIZE_LEGACY else 0
     return {k: v + shift for k, v in OSD_OFS_LEGACY.items()}
 
@@ -208,9 +212,9 @@ def testcmd_name(v: int) -> str:
 def parse_structs(header: str) -> tuple[dict, dict]:
     """-> ({type: [(off, size, name)]}, {symbol: (addr, type)}) from `typedef struct {...} T;` and `__at(0x..) T g_x;`."""
     structs = {}
-    for m in re.finditer(r"typedef struct\s*\{(.*?)\}\s*(\w+);", header, re.S):
+    for m in re.finditer(r"typedef struct\s*\{(.*?)\}\s*(\w+);", header, re.DOTALL):
         off, fields = 0, []
-        for fm in re.finditer(r"^\s*(unsigned (?:char|int|long)|char|int)\s+(\w+)(?:\[(\d+)\])?\s*;", m[1], re.M):
+        for fm in re.finditer(r"^\s*(unsigned (?:char|int|long)|char|int)\s+(\w+)(?:\[(\d+)\])?\s*;", m[1], re.MULTILINE):
             sz, cnt = _CTYPE[fm[1]], int(fm[3] or 0)
             if cnt:
                 for i in range(cnt):
@@ -232,7 +236,7 @@ class Symbols:
         self.osd_ofs = dict(OSD_OFS_LEGACY)
 
     @classmethod
-    def load(cls, root: Path | None = None, map_path: Path | str | None = None) -> "Symbols":
+    def load(cls, root: Path | None = None, map_path: Path | str | None = None) -> Symbols:
         s, root = cls(), root or repo_root()
         mp = Path(map_path) if map_path else default_map(root)
         if mp and Path(mp).exists():

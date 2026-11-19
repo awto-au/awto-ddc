@@ -5,6 +5,7 @@ same address or with the same name; hand-named addresses/names are never touched
 """
 import os
 from pathlib import Path
+
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 SRC = Path.home() / "vendors/realtek/analysis"
 log = []

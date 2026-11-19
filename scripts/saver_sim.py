@@ -12,16 +12,17 @@ Log: ./tmp/logs/saver_sim.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 from PIL import Image
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import audio_sim as A  # noqa: E402
+import audio_sim as A
+import ddc_sim as D
+import numpy as np
+import osd_render as R
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/saver_sim.log"
@@ -107,7 +108,6 @@ def frame_hook(sess):
             if h["count"] == h["n"]:
                 h["snap"] = sess.snap()
             h["count"] += 1
-        return None
 
     sess.bus.m.stub("AwtoSyncPush", hook)
     sess.frame = h

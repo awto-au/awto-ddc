@@ -16,15 +16,20 @@ Cycle model [likely, docs/reversing/realtek-rtd/mcu-8051.md]: DW8051, 4 clocks p
   instruction bytes (djnz d,r = 3 as in the SDK delay formula 12 clocks per iteration), MOVX = 2, LCALL/RET = 4.
 Log: tmp/logs/delay_cal_check.log   Exit 1 on any FAIL.
 """
-import argparse, os, re, select, struct, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import select
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import d8051  # noqa: E402
-import fw_link_check as L  # noqa: E402
-import fw_sim as F  # noqa: E402
+import d8051
+import fw_link_check as L
+import fw_sim as F
 
 ROOT = F.ROOT
 VENDOR = Path.home() / "vendors/realtek/analysis/dumps/jxc-4k-flash-AWT26110003-20261104-201610.bin"
@@ -65,7 +70,7 @@ def static_cycles(code: bytes) -> int:
 def var_addrs(map_text: str) -> dict:
     out = {}
     for k, name in DELAY_VARS.items():
-        m = re.search(rf"^\s+([0-9A-F]{{8}})\s+_{name[:31]}\w*\s", map_text, re.M)      # the map cuts the symbol at 32 chars incl. the underscore
+        m = re.search(rf"^\s+([0-9A-F]{{8}})\s+_{name[:31]}\w*\s", map_text, re.MULTILINE)      # the map cuts the symbol at 32 chars incl. the underscore
         if not m:
             raise SystemExit(f"_{name} not in the map")
         out[k] = int(m.group(1), 16)
@@ -77,21 +82,21 @@ def shapes(v: dict) -> dict:
     h = lambda x: re.escape(bytes([x]))
     S = {}
     for tag, base, cnt in (("5us", "base5", "i5"), ("5us_exint", "base5", "i5e"), ("xus_base", "basex", "i5"), ("xus_base_exint", "basex", "i5e")):
-        S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd", re.S)
+        S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd", re.DOTALL)
     for tag, base, cnt in (("5us_dec", "base5", "i5"), ("5us_dec_exint", "base5", "i5e"), ("xus_base_dec", "basex", "i5"), ("xus_base_dec_exint", "basex", "i5e")):
         # SDCC form inside a polling `while(flag && ...)`: mov v,base; L: dec v; mov a,v; jz out; sjmp L  (8 cycles/iteration)
-        S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\x15" + h(v[cnt]) + b"\xe5" + h(v[cnt]) + b"\x60(.)\x80\xf8", re.S)
+        S[tag] = re.compile(b"\x85" + h(v[base]) + h(v[cnt]) + b"\x15" + h(v[cnt]) + b"\xe5" + h(v[cnt]) + b"\x60(.)\x80\xf8", re.DOTALL)
     for tag, outer, cnt in (("xus", "cx", "i5"), ("xus_exint", "cxe", "i5e")):
-        S[tag] = re.compile(b"\x75" + h(v[outer]) + b"(.)\x85" + h(v["basex"]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd\xd5" + h(v[outer]) + b"\xf7", re.S)
+        S[tag] = re.compile(b"\x75" + h(v[outer]) + b"(.)\x85" + h(v["basex"]) + h(v[cnt]) + b"\xd5" + h(v[cnt]) + b"\xfd\xd5" + h(v[outer]) + b"\xf7", re.DOTALL)
     return S
 
 
 def vendor_shapes(img: bytes) -> Counter:
     """Keil's loops in the vendor image: same shapes with its own addresses. Counter of (kind, imm)."""
     c = Counter()
-    for m in re.finditer(rb"\x75(.)(.)\x85(.)(.)\xd5\4\xfd\xd5\1\xf7", img, re.S):
+    for m in re.finditer(rb"\x75(.)(.)\x85(.)(.)\xd5\4\xfd\xd5\1\xf7", img, re.DOTALL):
         c[("xus", m.group(2)[0])] += 1
-    for m in re.finditer(rb"\x85(.)(.)\xd5\2\xfd", img, re.S):
+    for m in re.finditer(rb"\x85(.)(.)\xd5\2\xfd", img, re.DOTALL):
         c[("single", 0)] += 1
     return c
 

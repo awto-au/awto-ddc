@@ -6,9 +6,14 @@ usage: sw_table.py --hdmi-bus 11 --dp-bus 15 --serial S --map MAP [--runs 5] [--
 - Each switch = one scripts/sw_timeline.py run (its fixed 8 s settle), the log read on the new port's bus.
 - Ends on D2; send 0x30 (auto search) afterwards. Log: ./tmp/logs/sw_table.log; one TSV row per run in tmp/logs/sw_table.tsv.
 """
-import argparse, re, statistics, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import statistics
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parent.parent
 ACTIVE = re.compile(r"\+\s*(\d+) ms\s+mode ACTIVE")

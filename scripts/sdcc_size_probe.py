@@ -7,13 +7,17 @@ usage: sdcc_size_probe.py [--n 40] [--jobs 16] [--sdcc BIN] VARIANT=FLAGS ...
   FLAGS are appended after fw_compile's flags (last --model wins). Modules failing in any variant are dropped.
 Log: tmp/logs/sdcc_size_probe.log; objects in tmp/sizeprobe/<variant>/
 """
-import argparse, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_compile as K  # noqa: E402
+import fw_compile as K
 
 UV2, TARGET = "STD_FW_1P.Uv2", "RL6449_Project"
 # one large module compiles in ~60 s cold under 16 jobs; 3x backstop per global host-process rule
@@ -22,7 +26,7 @@ TIMEOUT = 200
 
 def size_of(rel: Path):
     t = rel.read_text(errors="replace")
-    return sum(int(m.group(2), 16) for m in re.finditer(r"^A (CSEG|CONST) size ([0-9A-Fa-f]+)", t, re.M))
+    return sum(int(m.group(2), 16) for m in re.finditer(r"^A (CSEG|CONST) size ([0-9A-Fa-f]+)", t, re.MULTILINE))
 
 
 def main() -> int:

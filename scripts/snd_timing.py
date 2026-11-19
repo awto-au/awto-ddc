@@ -15,10 +15,10 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import audio_sim as A  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
+import audio_sim as A
+import ddc_sim as D
+import isostamp
+import osd_render as R
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/snd_timing.log"

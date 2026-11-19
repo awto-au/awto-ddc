@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import delay_inventory as DI  # noqa: E402
+import delay_inventory as DI
 
 DEFS = {
     "MS(x)": "((x) * 1000)", "SEC(t)": "(MS(t) * 1)", "TWICE(a,b)": "(a + b)", "AB": "7", "A": "3", "ABC(z)": "(z + AB)",

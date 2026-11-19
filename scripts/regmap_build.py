@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import regmap_lib as L  # noqa: E402
+import regmap_lib as L
 
 OBS_BUDGET = 1_500_000      # bytes, whole obs/ directory (README: size budget)
 REGS_BUDGET = 4_000_000     # bytes, regs.tsv

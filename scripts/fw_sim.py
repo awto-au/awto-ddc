@@ -19,13 +19,20 @@ usage: fw_sim.py --serial AWT26110003 [--budget 3000000] [--max-switches 2000]
   Native-mode histogram runs stop after --samples interrupts (~300k instr): that, not hardware, ended at stage 4.
 Log: tmp/logs/fw_sim.log; per-bank ihx in tmp/fwsim/<serial>/ (boot/isr check: tmp/fwsim/<bin stem>/)
 """
-import argparse, bisect, os, re, select, subprocess, sys, time
+import argparse
+import bisect
+import os
+import re
+import select
+import subprocess
+import sys
+import time
 from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
-import sdcc_tools as T  # noqa: E402
+import sdcc_tools as T
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 BANK = 0x10000
@@ -83,7 +90,7 @@ def print_diag(s):
     s.send("dump xram 0xf6d0 0xf6ff")
     out = s.read_until(rb"0xf6f8 [^\n]*\n", 120)
     rows = {int(m.group(1), 16): bytes.fromhex(m.group(2).replace(" ", ""))
-            for m in re.finditer(r"^0x([0-9a-f]{4})\s+((?:[0-9a-f]{2} ){8})", out or "", re.M)}
+            for m in re.finditer(r"^0x([0-9a-f]{4})\s+((?:[0-9a-f]{2} ){8})", out or "", re.MULTILINE)}
     blk = b"".join(rows.get(a, b"") for a in range(0xF6D0, 0xF700, 8))
     if len(blk) != 48:
         print("diag block: not read from sim XRAM"); return
@@ -153,8 +160,8 @@ def open_native(img: bytes, d: Path, log, flash: FlashPort | None = None, extra_
 def parse_map(mp: str, img: bytes, ncode: int | None = None):
     """(sym dict, where(bank, pc)). Common area = leading bytes identical in every code bank (no build.json for loose
     images); ncode = number of code banks (vendor image: 7 of 16, the rest is 0xFF / settings)."""
-    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
-    for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", mp, re.M):      # full-length names (the C: lines cut at 32 chars)
+    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.MULTILINE)}
+    for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", mp, re.MULTILINE):      # full-length names (the C: lines cut at 32 chars)
         sym["_" + m.group(1)] = int(m.group(2), 16)
     funcs = sorted((v, k) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_"))
     keys = [v for v, _ in funcs]
@@ -328,7 +335,7 @@ class RegTrace(Dev):
     def init(self, m):
         m.flush()
         out = m.cmd("info breakpoints")
-        for g in re.finditer(r"^(\d+)\s+event\s+keep\s+\d+\s+\d+\s+0x([0-9a-f]+)\s+(read|write)", out, re.M):
+        for g in re.finditer(r"^(\d+)\s+event\s+keep\s+\d+\s+\d+\s+0x([0-9a-f]+)\s+(read|write)", out, re.MULTILINE):
             self.nr[(g.group(3), int(g.group(2), 16))] = int(g.group(1))
 
     def _hit(self, m, kind, a):
@@ -869,7 +876,7 @@ class Machine:
         out = self.cmd(f"dump {space} 0x{a:x} 0x{a + n - 1:x} 16")
         got = {}
         if space == "sfr":                           # one line per register: 0xca RCAP2L: 0b00000000 0x00 '.' 0
-            for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b[01]{8} 0x([0-9a-f]{2})", out, re.M):
+            for m in re.finditer(r"^0x([0-9a-f]{2})\s+\w+:\s+0b[01]{8} 0x([0-9a-f]{2})", out, re.MULTILINE):
                 got[int(m.group(1), 16)] = int(m.group(2), 16)
             if len(got) < n:
                 raise SimError(f"dump sfr 0x{a:x}+{n} returned {len(got)} bytes")
@@ -1043,7 +1050,7 @@ class SimBus:
         self.diag_base = self.m.sym.get("_isr_g_stAwtoDiag", 0xF6D0)
         self.ffwd_ms = 0
         if ffwd:
-            mt = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_g_usTimerCounter\s", self.m.map_text, re.M)    # DATA (IRAM) global
+            mt = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_g_usTimerCounter\s", self.m.map_text, re.MULTILINE)    # DATA (IRAM) global
             if mt:
                 self._tc_addr = int(mt.group(1), 16)
                 self.m.stub("ScalerTimerDelayXms", self._delay_ffwd)
@@ -1200,7 +1207,7 @@ def read_diag(s):
     s.send("dump xram 0xf6d0 0xf6ff")
     out = s.read_until(rb"0xf6f8 [^\n]*\n", 30)
     rows = {int(m.group(1), 16): bytes.fromhex(m.group(2).replace(" ", ""))
-            for m in re.finditer(r"^0x([0-9a-f]{4})\s+((?:[0-9a-f]{2} ){8})", out or "", re.M)}
+            for m in re.finditer(r"^0x([0-9a-f]{4})\s+((?:[0-9a-f]{2} ){8})", out or "", re.MULTILINE)}
     blk = b"".join(rows.get(a, b"") for a in range(0xF6D0, 0xF700, 8))
     return blk if len(blk) == 48 else None
 
@@ -1295,7 +1302,7 @@ def panel_consts() -> dict:
     """Panel / project limits the checks compare against (fw/overlay, same names as the SDK macros)."""
     out = {}
     for f in ("Panel/AWTO_M280DCA_E3B.h", "Project/Header/RL6449_Project.h"):
-        for mt in re.finditer(r"^#define\s+(_PANEL_\w+|_OOR_\w+|_INPUTCLOCK_RANG_HDMI|_FAIL_SAVE_\w+)\s+\(?(\d+)\)?", (ROOT / "fw/sdk" / f).read_text(), re.M):
+        for mt in re.finditer(r"^#define\s+(_PANEL_\w+|_OOR_\w+|_INPUTCLOCK_RANG_HDMI|_FAIL_SAVE_\w+)\s+\(?(\d+)\)?", (ROOT / "fw/sdk" / f).read_text(), re.MULTILINE):
             out[mt.group(1)] = int(mt.group(2))
     return out
 
@@ -1438,7 +1445,7 @@ def ddr_trace(binp: Path, mapp: Path, mode: str, max_instr: int, log, vendor: Pa
 def msg_source(mid: int) -> str:
     """AwtoMsg0/AwtoMsgV(0xID...) call site in the SDK sources (tmp/sdcc-port/src), first RL6449-relevant match."""
     root = ROOT / "tmp/sdcc-port/src/Kernel"
-    pat = re.compile(r"AwtoMsg[0V]\(0x%04X\b" % mid, re.I)
+    pat = re.compile(r"AwtoMsg[0V]\(0x%04X\b" % mid, re.IGNORECASE)
     for f in sorted(root.rglob("*.c")):
         if any(x in f.parts for x in ("RL6492_Series_Scaler", "RL6463_Series_Scaler", "RL6432_Series_Scaler", "RL6410_Series_Scaler",
                                       "RL6369_Series_Scaler")):
@@ -1517,7 +1524,7 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
     img = binp.read_bytes()
     mp = mapp.read_text(errors="replace")
     sym, where = parse_map(mp, img)
-    m = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_bs_cur\s", mp, re.M)
+    m = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_bs_cur\s", mp, re.MULTILINE)
     if not m:
         print("FAIL isr-check: _d_isr_bs_cur not in map"); return 1
     cur = int(m.group(1), 16)
@@ -1700,7 +1707,7 @@ def main() -> int:
     fw = ROOT / "tmp/fw" / a.serial
     img = (fw / "fw.bin").read_bytes()
     mp = (fw / "fw.map").read_text(errors="replace")
-    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
+    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.MULTILINE)}
     funcs = sorted((v, k) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_"))
     keys = [v for v, _ in funcs]
     common_end = int(re.search(r'"common_end":\s*(\d+)', (fw / "build.json").read_text()).group(1))
@@ -1771,7 +1778,7 @@ def main() -> int:
             s.send(f"step {a.budget}")
             continue
         if out is None or "Breakpoint" not in out:
-            pcs = re.findall(r"^0x([0-9a-f]{4,6}) ", out or "", re.M)
+            pcs = re.findall(r"^0x([0-9a-f]{4,6}) ", out or "", re.MULTILINE)
             pc = int(pcs[-1], 16) if pcs else -1
             print(f"STALL ({a.budget} instr without a bank switch) after {n} switches: bank {bank} "
                   f"pc 0x{pc:04x} in {where(bank, pc)}")

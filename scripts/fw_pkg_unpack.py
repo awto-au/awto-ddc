@@ -13,7 +13,11 @@ usage: fw_pkg_unpack.py <vendor> <package|*> [file ...] [--depth 6] [--force]
   (depth, path, size, kind, tool, result, children).
 - Backstop per extractor call: 120 s (largest seen package 80 MB unpacks in < 10 s; stall guard rule).
 """
-import os, shutil, subprocess, sys, time
+import os
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 MAX_DEPTH = 6

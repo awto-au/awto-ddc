@@ -8,9 +8,13 @@ usage: warn_rekey.py [--base REV] [--policy fw/warn_policy.tsv] [--write]
   Without --write: report only. Files: <glob> under fw/sdk/, else under the repo root (src-relative, as fw_compile).
 Log: ./tmp/logs/warn_rekey.log
 """
-import argparse, os, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/warn_rekey.log"

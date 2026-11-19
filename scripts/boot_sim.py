@@ -16,22 +16,22 @@ Log: tmp/logs/boot_sim.log
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
-import rtd_crash as C  # noqa: E402
-import sync_log as S  # noqa: E402
+import numpy as np
+import osd_model as M
+import osd_render as R
+import rtd_crash as C
+import sync_log as S
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_sim.log"
 def _con_int(name: str) -> int:
-    m = re.search(rf"^#define {name}\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.M)
+    m = re.search(rf"^#define {name}\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.MULTILINE)
     return int(m.group(1))
 
 

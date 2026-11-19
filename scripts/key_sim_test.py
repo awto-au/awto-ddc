@@ -19,14 +19,14 @@ Log: tmp/logs/key_sim_test.log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
-import audio_sim as A  # noqa: E402
+import audio_sim as A
+import osd_render as R
+import osd_test as T
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/key_sim_test.log"
@@ -77,13 +77,13 @@ class Keys:
             if n == "SysMachineRequest":             # #162 step 3: the one request entry; power targets are < 0x10
                 self.who.append((a, r["a2"] & 0xFF))            # (request, who): AWTO_SYS_BY_* of the request line
                 if a >= 0x10:
-                    return None
+                    return
                 n2 = PWR
             else:
                 n2 = n
             self.hits[n2] = self.hits.get(n2, 0) + 1
             self.args.setdefault(n2, []).append(a)
-            return None
+            return
         return f
 
     def wait(self, ms):

@@ -10,14 +10,18 @@ Channel A = pages 8E/8F/A0, B = CE/CF/A8. Flags: VW = VALID_WIN_DET_SLIC0/1 (8F0
 Settle 200 ms after each step: flags returned within ~0.5 s of a clear (#26), 200 ms is a 2.5x margin on 80 ms observed re-set.
 Log: tmp/logs/ddr_sweep.log; maps: tmp/ddr_sweep/<cmd>-<name>-<ts>.json
 """
-import argparse, json, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, wr  # noqa: E402
+import i2cbus
+from p037_test import rd, wr
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 PG = {"A": (0x8E, 0x8F), "B": (0xCE, 0xCF)}
@@ -46,7 +50,7 @@ class Phy:
         return wr(self.d, PG[ch][page_sel] << 8 | reg, v)
 
     def clear(self, ch):
-        for a in range(0x00, 0x14):
+        for a in range(0x14):
             self.w(ch, 1, a, 0)
         for a in range(0xEC, 0x100):
             self.w(ch, 1, a, 0)
@@ -84,11 +88,11 @@ def worst(ms):
 def controls():
     taps_all = [(0, b + i) for b in RD_TAPS for i in range(4)]
     return {
-        "rd_dly_all": (taps_all, range(0, 0x20), APPLY_RD_DLY, "read DQ delay tap, all DQ rise+fall, slice0/1 (8E B8..EF)"),
-        "rd_dly_rise": ([(0, b + i) for b in (0xB8, 0xBC, 0xC8, 0xCC) for i in range(4)], range(0, 0x20), APPLY_RD_DLY, "rise taps only"),
-        "rd_dly_fall": ([(0, b + i) for b in (0xD8, 0xDC, 0xE8, 0xEC) for i in range(4)], range(0, 0x20), APPLY_RD_DLY, "fall taps only"),
-        "vw_sel": ([(1, 0x14), (1, 0x15), (1, 0x16), (1, 0x17)], range(0, 0x20), APPLY_RD_DET, "VALID_WIN_SEL_ODD 3..0 (8F14-17), reset 0a/33/0a/33"),
-        "vw_ph": ([(1, 0x18), (1, 0x19), (1, 0x1A), (1, 0x1B)], range(0, 0x20), APPLY_RD_DET, "VALID_WIN_PH_ODD 3..0 (8F18-1B), reset 0"),
+        "rd_dly_all": (taps_all, range(0x20), APPLY_RD_DLY, "read DQ delay tap, all DQ rise+fall, slice0/1 (8E B8..EF)"),
+        "rd_dly_rise": ([(0, b + i) for b in (0xB8, 0xBC, 0xC8, 0xCC) for i in range(4)], range(0x20), APPLY_RD_DLY, "rise taps only"),
+        "rd_dly_fall": ([(0, b + i) for b in (0xD8, 0xDC, 0xE8, 0xEC) for i in range(4)], range(0x20), APPLY_RD_DLY, "fall taps only"),
+        "vw_sel": ([(1, 0x14), (1, 0x15), (1, 0x16), (1, 0x17)], range(0x20), APPLY_RD_DET, "VALID_WIN_SEL_ODD 3..0 (8F14-17), reset 0a/33/0a/33"),
+        "vw_ph": ([(1, 0x18), (1, 0x19), (1, 0x1A), (1, 0x1B)], range(0x20), APPLY_RD_DET, "VALID_WIN_PH_ODD 3..0 (8F18-1B), reset 0"),
         "dqs_en": ([(0, 0x57), (0, 0x5B)], range(0x04, 0x12), None, "READ_CTRL0 SET0/1 RDQS enable latency (0.5 cycle units), SDK 0x0B"),
         "rx_fifo": ([(0, 0x67)], range(0x04, 0x12), None, "READ_CTRL1 Rx FIFO latency (cycles), SDK 0x0A"),
         "odt_en": ([(0, 0x6B), (0, 0x6F)], [0x00, 0x0F, 0x1F, 0x3F, 0x7F, 0xFC, 0xFE, 0xFF], None, "READ_CTRL2 SET0/1 ODT enable interval, SDK 0xFC"),

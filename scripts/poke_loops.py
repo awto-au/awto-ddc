@@ -17,22 +17,22 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from collections import defaultdict
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/poke_loops.log"
 POKE_RX = re.compile(r"\bAWTO_WDT_(?:FEED|POKE|PASS)\s*\(")
-FN_RX = re.compile(r"^(?:[A-Za-z_][\w \*]*?)\b([A-Za-z_]\w*)\s*\(([^;{}]*)\)\s*(?:__\w+(?:\(\w*\))?\s*)*\n?\{", re.M)
+FN_RX = re.compile(r"^(?:[A-Za-z_][\w \*]*?)\b([A-Za-z_]\w*)\s*\(([^;{}]*)\)\s*(?:__\w+(?:\(\w*\))?\s*)*\n?\{", re.MULTILINE)
 CALL_RX = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
 KEYW = {"if", "for", "while", "switch", "return", "sizeof", "do", "else", "case"}
 TRUE_RX = re.compile(r"^\s*\(\s*(?:1|_TRUE|TRUE|0x01)\s*\)\s*$")
 
 
 def strip_comments(t: str) -> str:
-    t = re.sub(r"/\*.*?\*/", lambda m: re.sub(r"[^\n]", " ", m.group(0)), t, flags=re.S)
+    t = re.sub(r"/\*.*?\*/", lambda m: re.sub(r"[^\n]", " ", m.group(0)), t, flags=re.DOTALL)
     return re.sub(r"//[^\n]*", "", t)
 
 
@@ -156,7 +156,7 @@ def main() -> int:
     stems = {q.stem for q in asm.glob("*.asm")}           # compiled files only (other chip families share names)
     files = [q for q in sorted(src.rglob("*.c")) if q.stem in stems] + sorted(src.rglob("Code/*.h"))
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import fw_dirs                                        # our fw/<subsystem>/*.c and the remaining fw/sdcc/*.inc (#196)
+    import fw_dirs  # our fw/<subsystem>/*.c and the remaining fw/sdcc/*.inc (#196)
     files += [q for q in fw_dirs.our_files(a.tree, ("*.c",)) if q.stem in stems] + sorted((a.tree / "fw/sdcc").glob("*.inc"))
     for p in files:
         t = strip_pp_off(strip_comments(p.read_text(errors="replace")))

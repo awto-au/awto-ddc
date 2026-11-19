@@ -39,7 +39,7 @@ def gate(script, binp, mapp, *args):
 
 def patched(tmp_path, fn):
     """copy of the image with `fn` returning at once (RET at its entry)"""
-    m = re.search(rf"^C:\s+([0-9A-F]{{8}})\s+_{fn}\b", IMG.with_suffix(".map").read_text(errors="replace"), re.M)
+    m = re.search(rf"^C:\s+([0-9A-F]{{8}})\s+_{fn}\b", IMG.with_suffix(".map").read_text(errors="replace"), re.MULTILINE)
     assert m, f"{fn} not in the map"
     img = bytearray(IMG.with_suffix(".bin").read_bytes())
     img[int(m.group(1), 16)] = 0x22
@@ -81,7 +81,7 @@ def test_inputrate_fails_when_the_gpio_scan_never_runs(tmp_path):
 
 # ---- NORMAL-tier minimal variants (fw_gates.gates names): a function RET'd in the image must fail the variant; the clean image passes
 sys.path.insert(0, str(ROOT / "scripts"))
-import fw_gates as G  # noqa: E402
+import fw_gates as G
 
 NORMAL_FAULTS = [("wake", "AwtoPsWakeFire"), ("wdt", "AwtoWdtHang"), ("crash", "AwtoWdtHang"), ("conwrap", "AwtoConLogSync"),
                  ("monitor", "AwtoMonSample"), ("keys", "AwtoSourceKey"), ("menu", "menu_open")]

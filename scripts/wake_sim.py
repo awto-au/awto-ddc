@@ -20,20 +20,20 @@ PNG: <out>/wake_cable_console.png (console after the cable wake), wake_updown_co
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-import fw_sim as S  # noqa: E402
-from boot_sim import CON_COLS  # noqa: E402  (fw/osd/console.c AWTO_CON_COLS)
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
-import rtd_crash as C  # noqa: E402
-import sync_log as L  # noqa: E402
+import fw_sim as S
+import numpy as np
+import osd_model as M
+import osd_render as R
+import osd_test as T
+import rtd_crash as C
+import sync_log as L
+from boot_sim import CON_COLS
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/wake_sim.log"

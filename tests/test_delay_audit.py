@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import delay_audit as DA  # noqa: E402
+import delay_audit as DA
 
 
 def test_tsv_typed_and_resolved():

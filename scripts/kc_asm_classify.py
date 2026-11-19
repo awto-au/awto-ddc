@@ -6,13 +6,17 @@ usage: kc_asm_classify.py RUN_A RUN_B [--rename '_keil'] [--show N]
   every --rename substring from B (e.g. __divulong_keil -> __divulong); else `code`, listed with its +/- line counts.
 Log: tmp/logs/kc_asm_classify.log
 """
-import argparse, difflib, os, sys, time
-import isostamp  # noqa: E402
+import argparse
+import difflib
+import os
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import kc_asmdiff as K  # noqa: E402  (per-function normaliser)
+import kc_asmdiff as K
 
 
 def load(run: Path) -> dict:

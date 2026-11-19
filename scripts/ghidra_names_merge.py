@@ -14,7 +14,8 @@ Rules (append-only source files, newest row wins):
   its bank> (target and bank parsed from the row comment: `DPTR=0xXXXX ... bank N`), `bcall_b<N>_<hex>` when the target is unnamed.
 - Confidence goes into the comment prefix (`[high] `) so the 5-column format ApplyNames/ExportAll read stays unchanged.
 """
-import os, re, sys
+import os
+import re
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)

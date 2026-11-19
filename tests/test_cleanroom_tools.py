@@ -10,11 +10,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import cleanroom_lint as CL  # noqa: E402
-import facts_regs as FR  # noqa: E402
-import fw_inventory as INV  # noqa: E402
-import trace_equiv as TE  # noqa: E402
-import unit_lock as UL  # noqa: E402
+import cleanroom_lint as CL
+import facts_regs as FR
+import fw_inventory as INV
+import trace_equiv as TE
+import unit_lock as UL
 
 
 # ---------------- facts_regs ----------------
@@ -252,6 +252,7 @@ def test_brief_assembles():
 
 def test_audit(tmp_path):
     import json
+
     import cleanroom_audit as A
     rec = lambda c: json.dumps({"message": {"content": [c]}})
     f = tmp_path / "s.jsonl"

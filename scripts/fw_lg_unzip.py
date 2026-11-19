@@ -8,7 +8,11 @@ usage: python3 -I fw_lg_unzip.py [package ...]   (default: every ~/vendors/lg/so
 Log: tmp/logs/fw_lg_unzip.log
 Timeout: 7z call 120 s backstop (largest zip < 10 MB).
 """
-import os, re, subprocess, sys, time
+import os
+import re
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 HOME = Path.home()

@@ -18,10 +18,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import sw_timeline as T  # noqa: E402
-import ddc_sim as DD  # noqa: E402
-import sync_log as SL  # noqa: E402
+import ddc_sim as DD
+import fw_sim as S
+import sw_timeline as T
+import sync_log as SL
 
 D3 = 6                                  # Global.h _D3_INPUT_PORT
 D2 = 5

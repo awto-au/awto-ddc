@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/cpu_suite.log"
@@ -167,10 +167,10 @@ class Unit:
     """Real unit over debug slave 0x35 (Phase B: the suite image flashed on the test unit)."""
 
     def __init__(self, bus: int, serial: str, mapp: Path, identity: str | None = None):
-        import rtd_i2c_bridge as B
-        import sw_timeline as T
         import dbg_xdata as X
         import i2cbus
+        import rtd_i2c_bridge as B
+        import sw_timeline as T
         i2cbus.require_unit(bus, serial, identity)       # the suite image serves no EDID: identity = how the caller proved the bus
         self.X = X
         self.io = B.Real(bus, allow_write=True, regread=True)

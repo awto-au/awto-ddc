@@ -4,13 +4,14 @@
 usage: i2c_shapes.py <bus>   (a sane result starts 41 44 02 'AD' v2; 6e 6e.. = slave not serving the read)
 Reads: the staging writes are 0x01/0x3A/0x3C read commands only. Log: ./tmp/logs/i2c_shapes.log
 """
-import sys, time
-import isostamp  # noqa: E402
+import sys
 from pathlib import Path
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import i2cbus  # noqa: E402
+import i2cbus
 
 A, BASE = 0x35, 0xF6D0          # BASE = isr_g_stAwtoDiag (docs/diag-block.md)
 

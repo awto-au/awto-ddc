@@ -22,10 +22,10 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import saver_frame_cost as F  # noqa: E402
+import ddc_sim as D
+import isostamp
+import osd_render as R
+import saver_frame_cost as F
 
 LOG = R.ROOT / "tmp/logs/saver_code_profile.log"
 LINE = 16
@@ -66,13 +66,13 @@ def func_table(m):
     """(sorted starts, [(end, name)]) of the physical code map: key = bank << 16 | addr (bank 0 / common = addr).
     Chunks (CH_ / ST_) end at their size (map l_CH_ / l_ST_); a line past every end is `(const / gap)`."""
     txt = m.map_text
-    size = {mm.group(2): int(mm.group(1), 16) for mm in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(l_(?:CH|ST)_\w+)", txt, re.M)}
+    size = {mm.group(2): int(mm.group(1), 16) for mm in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(l_(?:CH|ST)_\w+)", txt, re.MULTILINE)}
     ents = {}
     for k, v in m.sym.items():
         if v >= 0x200000 or not k.startswith("_"):
             continue
         ents[v] = (None, k[1:])
-    for mm in re.finditer(r"^(CH|ST)_(\w+?)\s+([0-9A-F]{8})\s+([0-9A-F]{8})\s*=", txt, re.M):
+    for mm in re.finditer(r"^(CH|ST)_(\w+?)\s+([0-9A-F]{8})\s+([0-9A-F]{8})\s*=", txt, re.MULTILINE):
         a_, n_ = int(mm.group(3), 16), int(mm.group(4), 16)
         ents[a_] = (a_ + n_, ("_bs_" if mm.group(1) == "ST" else "") + mm.group(2))
     keys = sorted(ents)

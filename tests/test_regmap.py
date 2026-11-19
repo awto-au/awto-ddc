@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import regmap_build as B  # noqa: E402
-import regmap_import as I  # noqa: E402
-import regmap_lib as L  # noqa: E402
-import regmap_query as Q  # noqa: E402
+import regmap_build as B
+import regmap_import as I
+import regmap_lib as L
+import regmap_query as Q
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +84,7 @@ def test_validate_rejects_bad_hand_columns(committed):
 def test_check_mode(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(L, "REGS", tmp_path / "regs.tsv")
     monkeypatch.setattr(L, "FIELDS", tmp_path / "fields.tsv")
-    argv = lambda *a: monkeypatch.setattr(sys, "argv", ["regmap_build.py", *a])  # noqa: E731
+    argv = lambda *a: monkeypatch.setattr(sys, "argv", ["regmap_build.py", *a])
     argv("--check")
     assert B.main() == 1, "missing files are stale"
     argv("--set", "01E0", "role=pll m", "status=known", "evidence=role=spec")
@@ -141,7 +141,7 @@ def test_importer_fixture(tmp_path, capsys):
 
 
 def test_summarise():
-    mk = lambda unit, label, t, vals: L.Obs("x", {"unit": unit, "label": label, "state": "s", "method": "isp", "time": t}, vals)  # noqa: E731
+    mk = lambda unit, label, t, vals: L.Obs("x", {"unit": unit, "label": label, "state": "s", "method": "isp", "time": t}, vals)
     s = L.summarise([mk("1", "A", "2026-11-01T00:00:00+11:00", {"0001": 0, "0002": 5, "0003": 0}),
                      mk("1", "A", "2026-11-02T00:00:00+11:00", {"0001": 0, "0002": 6, "0003": 0}),
                      mk("2", "B", "2026-11-03T00:00:00+11:00", {"0001": 0, "0003": 9})])

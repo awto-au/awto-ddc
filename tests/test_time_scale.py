@@ -14,7 +14,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import sim_time_scale as TS  # noqa: E402
+import sim_time_scale as TS
 
 
 def _image():

@@ -8,14 +8,17 @@ register banks; pass 2 fits DDOVL* (largest first) into the remaining direct hol
 stack after it (sdld).
 usage (library): link(cmd, ihx, rels) -> (CompletedProcess, layout dict)
 """
-import re, subprocess, sys
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sdcc_tools as T  # noqa: E402
+import sdcc_tools as T
 
 LINK_TIMEOUT = 120          # full firmware link ~20 s (2026-11-04); stall guard, awto-dan#53
-import chip_mem as CM  # noqa: E402
+import chip_mem as CM
+
 DIRECT_END = CM.DIRECT_END
 ISEG_BASE = CM.ISEG_BASE
 
@@ -23,7 +26,7 @@ ISEG_BASE = CM.ISEG_BASE
 def rel_sizes(rels):
     tot, ovr, ddovl = {}, {}, {}
     for r in rels:
-        for m in re.finditer(r"^A (\w+) size (\w+) flags (\w+)", Path(r).read_text(errors="replace"), re.M):
+        for m in re.finditer(r"^A (\w+) size (\w+) flags (\w+)", Path(r).read_text(errors="replace"), re.MULTILINE):
             name, size, flags = m.group(1), int(m.group(2), 16), int(m.group(3), 16)
             if name.startswith("DDOVL"):
                 ddovl[name] = ddovl.get(name, 0) + size
@@ -52,11 +55,11 @@ def check_lk(lk: Path):
 def banked_rom_ok(lk: Path, mapf: Path):
     """'' if every CODE area of a banked link ends below -C and stays inside its own 64 KiB bank: the check that
     sdld's -M ROM summary cannot make (fixed 64 KiB, lkmem.c summary())."""
-    cs = re.search(r"^-C (0x[0-9a-fA-F]+)$", lk.read_text(), re.M)
+    cs = re.search(r"^-C (0x[0-9a-fA-F]+)$", lk.read_text(), re.MULTILINE)
     if not cs or not mapf.exists():
         return f"no -C in {lk.name} or no map"
     code, bad = int(cs.group(1), 16), []
-    for name, a, n in re.findall(r"^(\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =.*\bCODE\b", mapf.read_text(errors="replace"), re.M):
+    for name, a, n in re.findall(r"^(\S+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =.*\bCODE\b", mapf.read_text(errors="replace"), re.MULTILINE):
         a, n = int(a, 16), int(n, 16)
         if n and (a + n > code or a >> 16 != (a + n - 1) >> 16):
             bad.append(f"{name} 0x{a:06x}+{n}")
@@ -85,13 +88,13 @@ def _sdld(cmd, ihx: Path):
     return r
 
 
-MAP_AREA = re.compile(r"^(REG_BANK_\d|DSEG|OSEG|BSEG_BYTES|BIT_BANK)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", re.M)
+MAP_AREA = re.compile(r"^(REG_BANK_\d|DSEG|OSEG|BSEG_BYTES|BIT_BANK)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", re.MULTILINE)
 
 
 def dseg_extent(map_text, rels):
     """Real DSEG (lo, hi): sdld reports a synthetic total from 0x00; real = lowest DSEG symbol + .rel size sum."""
-    dsec = re.search(r"^DSEG\s+[0-9A-F]{8}[^\n]*\n(.*?)(?=^Area|\Z)", map_text, re.M | re.S)
-    dsyms = [int(a, 16) for a in re.findall(r"^\s+([0-9A-F]{8})\s+\w+", dsec.group(1), re.M)] if dsec else []
+    dsec = re.search(r"^DSEG\s+[0-9A-F]{8}[^\n]*\n(.*?)(?=^Area|\Z)", map_text, re.MULTILINE | re.DOTALL)
+    dsyms = [int(a, 16) for a in re.findall(r"^\s+([0-9A-F]{8})\s+\w+", dsec.group(1), re.MULTILINE)] if dsec else []
     dtot = rel_sizes(rels)[0].get("DSEG", 0)
     return (min(dsyms), min(dsyms) + dtot) if dsyms and dtot else None
 
@@ -104,7 +107,7 @@ def dseg_runs(map_text, rels, mem: Path | None = None):
       (__ovl.asm), shown at sdld's own first fit, not their -b address: trailing letters sized like a DDOVL area drop."""
     if mem is not None and mem.exists():
         g = {}
-        for m in re.finditer(r"^0x([0-9a-f]{2}):((?:\|.){16})\|", mem.read_text(errors="replace"), re.M):
+        for m in re.finditer(r"^0x([0-9a-f]{2}):((?:\|.){16})\|", mem.read_text(errors="replace"), re.MULTILINE):
             for i, ch in enumerate(m.group(2)[1::2]):
                 g[int(m.group(1), 16) + i] = ch
         letters = sorted({ch for ch in g.values() if ch.islower()})
@@ -173,11 +176,11 @@ def link(cmd, ihx: Path, rels):
     if r.returncode:
         return r, {}
     mt = mapf.read_text(errors="replace")
-    m = re.search(r"^\s+([0-9A-F]{8})\s+__start__stack\b", mt, re.M)
+    m = re.search(r"^\s+([0-9A-F]{8})\s+__start__stack\b", mt, re.MULTILINE)
     stack = int(m.group(1), 16) if m else None
     # own overlap check (the -M summary that would do it is skipped for banked links)
     iram = [(int(a, 16), int(a, 16) + int(n, 16), k) for k, a, n in
-            re.findall(r"^(REG_BANK_\d|DSEG|OSEG|ISEG|BSEG_BYTES|BIT_BANK|DDOVL\w*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mt, re.M)
+            re.findall(r"^(REG_BANK_\d|DSEG|OSEG|ISEG|BSEG_BYTES|BIT_BANK|DDOVL\w*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mt, re.MULTILINE)
             if int(n, 16)]
     iram = [x for x in iram if x[2] != "DSEG"] + [(*d, "DSEG") for d in dseg_runs(mt, rels, memf)]
     iram = sorted(set(iram))

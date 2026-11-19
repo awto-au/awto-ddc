@@ -9,11 +9,13 @@ usage: fw_sim_vfreq.py BIN MAP [--modes 2160p60 2160p59.94] [--max-instr 2000000
   Events are aligned by order (difflib on name) and every row whose values differ is listed.
 Log: tmp/logs/fw_sim_vfreq_<bin>.log (full traces per mode + diff)
 """
-import argparse, difflib, sys
+import argparse
+import difflib
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 ROOT = S.ROOT
 MODE_ACTIVE, MODE_NOSUPPORT, MODE_POWER_SAVING = 3, 4, 6
@@ -85,9 +87,9 @@ def run_mode(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> tuple[li
             if name == "ScalerMDomainControl":
                 seen_md[0] = True
             if name in ("ScalerComputeDwordMulDiv", "ScalerPLLGetNewCount") and not seen_md[0]:
-                return None                                   # OSD / timer users before the first mode set: noise
+                return                                   # OSD / timer users before the first mode set: noise
             ev.append(("call", m_.instr, name, args_(m_, name, kind, r), globals_(m_)))
-            return None
+            return
         return fn
     for name, kind in WATCH.items():
         if "_" + name in m.sym:

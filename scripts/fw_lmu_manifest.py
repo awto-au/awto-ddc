@@ -7,11 +7,13 @@ usage: python3 -I fw_lmu_manifest.py <lmu_urls.txt> <out.tsv>
 - Output TSV (vendor, package, url, notes) feeds `fw_pkg_fetch.py <out.tsv> --playwrong`.
 Log: tmp/logs/fw_lmu_manifest.log
 """
-import os, sys, time
+import os
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, "/mnt/2tb/git/awto-play")
-from engine import connect  # noqa: E402
+from engine import connect
 
 STALL = 30  # s: one small text file; connect.download has its own socket timeouts
 

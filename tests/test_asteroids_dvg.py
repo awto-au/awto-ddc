@@ -7,7 +7,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import asteroids_dvg as D  # noqa: E402
+import asteroids_dvg as D
 
 ZIP = Path(D.DEFAULT_ZIP)
 needs_rom = pytest.mark.skipif(not ZIP.exists(), reason="Asteroids ROM set not present (local only)")

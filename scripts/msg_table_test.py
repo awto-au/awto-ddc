@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Offline tests for scripts/msg_table.py (#56): encode/decode, stability, image lookup, fallback. Run: python3 scripts/msg_table_test.py"""
-import json, sys, tempfile, unittest
+import json
+import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import msg_table as M  # noqa: E402
+import msg_table as M
 
 TSV = ("0101\tSystem\tKernel/A.c:10\tPower on\t1\n"
        "0110\tRx0\tKernel/B.c:20\tVSC change\t0\n"

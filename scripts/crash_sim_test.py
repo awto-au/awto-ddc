@@ -16,14 +16,14 @@ Log: tmp/logs/crash_sim_test.log; PNG + json: <out>/crash_panel.png
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
-import rtd_crash as C  # noqa: E402
+import osd_render as R
+import osd_test as T
+import rtd_crash as C
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/crash_sim_test.log"

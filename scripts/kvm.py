@@ -19,12 +19,13 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
+import i2cbus
 
 
 def _repo() -> Path:

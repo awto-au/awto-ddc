@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import sdcc_layout as L  # noqa: E402
+import sdcc_layout as L
 
 ROW = "fn\tFoo\tC\t0x0c00\t64\n"
 
@@ -126,6 +126,7 @@ def test_sdcc_bank_cluster_refused_with_existing_layout(tmp_path):
 
 def test_fw_tag_env_override_and_no_dirty(tmp_path, monkeypatch):
     import subprocess
+
     import msg_tokenise
     monkeypatch.setenv("AWTO_FW_TAG", "fixed-1")
     assert msg_tokenise.fw_tag(tmp_path) == "fixed-1"

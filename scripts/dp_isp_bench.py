@@ -8,14 +8,15 @@ Log: ./tmp/logs/dp_isp_bench.log
 """
 from __future__ import annotations
 
-import argparse, sys, time
+import argparse
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
-import rtd_flash_image as R  # noqa: E402
-from rtd_flash_sector import Rtd, SECTOR, PAGE, ENGINE_OPS  # noqa: E402
+import i2cbus
+import rtd_flash_sector as F
+from rtd_flash_sector import ENGINE_OPS, PAGE, SECTOR, Rtd
 
 ISP = 0x4A
 LOG = None
@@ -47,14 +48,14 @@ def main() -> int:
     log(f"bench bus {a.bus} {i2cbus.adapter_name(a.bus)} kind {i2cbus.bus_kind(a.bus)}")
     i2cbus.require_unit(a.bus, a.serial, None)
     isp = Rtd(a.bus)
-    run = lambda ops, addr=ISP: i2cbus.run_ops(isp._xfer, addr, ops)  # noqa: E731
+    run = lambda ops, addr=ISP: i2cbus.run_ops(isp._xfer, addr, ops)
     isp.write(0x6F, 0x80)
     if not isp.read(0x6F) & 0x80:
         log("ISP not entered"); return 3
     try:
         for ops in ENGINE_OPS:
             isp.write(*ops)
-        ms = lambda s: f"{s * 1e3:.3f} ms"  # noqa: E731
+        ms = lambda s: f"{s * 1e3:.3f} ms"
         log(f"single write 0x64: {ms(timeit(lambda: isp.write(0x64, 0), 30))}")
         log(f"single read 0x6F: {ms(timeit(lambda: isp.read(0x6F), 30))}")
         for n in (2, 4, 8, 16):

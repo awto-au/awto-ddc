@@ -50,7 +50,7 @@ KEY_RE = re.compile(r"^[0-9A-F]{4}(:[0-9A-F]{2,3})?$")
 FKEY_RE = re.compile(r"^[0-9A-F]{4}(:[0-9A-F]{2,3})?\[[0-7]:[0-7]\]$")
 ISSUE_RE = re.compile(r"^#\d+(,#\d+)*$")
 TEST_DOCS = ["docs/osd/open-items.md", "docs/saver-fps-hw.md", "docs/osd-hw-tests.md"]
-RESERVED = re.compile(r"^(reserved|dummy|rsvd|res|resv|reserve|unused)\w*$", re.I)
+RESERVED = re.compile(r"^(reserved|dummy|rsvd|res|resv|reserve|unused)\w*$", re.IGNORECASE)
 
 # keys that never enter the store: HDCP key / HDCP port registers (secret material)
 EXCLUDE_KEYS = {"71C4", "72C4", "71C9", "71CA", "72C9", "72CA"}
@@ -216,7 +216,7 @@ class Obs:
 ISP_LATCH_OTHER = {"8F", "CF"}       # isp verdict 'other', but 13 of 28 wrong reads are the latch: treated as affected
 
 
-@functools.lru_cache(maxsize=None)
+@functools.cache
 def read_behind_pages(col):
     """Pages whose `live` (debug slave) / `isp` verdict contains the read-behind latch (yes, yes+other; isp also 8F / CF)."""
     if not READ_BEHIND.exists():
@@ -271,7 +271,7 @@ def obs_text(meta, vals):
         lines.append(f"p\t{p}{lo:02X}\t" + " ".join(f"{d[i]:02X}" if i in d else ".." for i in range(lo, hi + 1)))
     for b in sorted(ports):
         d = ports[b]
-        lines.append(f"q\t{b}\t" + " ".join(f"{d[i]:02X}" if i in d else ".." for i in range(0, max(d) + 1)))
+        lines.append(f"q\t{b}\t" + " ".join(f"{d[i]:02X}" if i in d else ".." for i in range(max(d) + 1)))
     return "\n".join(lines) + "\n"
 
 
@@ -348,7 +348,7 @@ def known_test_ids():
     for d in TEST_DOCS:
         p = ROOT / d
         if p.is_file():
-            ids |= set(re.findall(r"^\| (OT-\d+|T-[A-M]|T\d{1,2}) ", p.read_text(), re.M))
+            ids |= set(re.findall(r"^\| (OT-\d+|T-[A-M]|T\d{1,2}) ", p.read_text(), re.MULTILINE))
     ids |= {r["id"] for r in read_tsv(TESTS)[1]}
     return ids
 

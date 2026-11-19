@@ -8,12 +8,15 @@ usage: sim_pcprofile.py BIN MAP --from MS --to MS [--mode 1080p60|2160p60] [--ev
   (OSD draws, flash reads, loops) are real. A function that dominates a window the unit also spends is where to look.
 Log: ./tmp/logs/sim_pcprofile.log
 """
-import argparse, collections, sys
-import isostamp  # noqa: E402
+import argparse
+import collections
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/sim_pcprofile.log"
 STEP = 20_000            # instructions between clock checks while skipping to --from (1.6 ms of fw time)

@@ -12,16 +12,16 @@ Log: tmp/logs/card_shot.log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
+import numpy as np
+import osd_model as M
+import osd_render as R
+import osd_test as T
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/card_shot.log"

@@ -26,9 +26,19 @@ Log: ./tmp/logs/audio_test.log (every step, ISO time).
 """
 from __future__ import annotations
 
-import argparse, gzip, math, os, re, struct, subprocess, sys, time, wave
-import isostamp  # noqa: E402
+import argparse
+import gzip
+import math
+import os
+import re
+import struct
+import subprocess
+import sys
+import time
+import wave
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:

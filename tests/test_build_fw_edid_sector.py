@@ -1,11 +1,11 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from build_fw_edid_sector import EDID_HEADER, build_sectors, edid_offsets  # noqa: E402
-from make_edid import build  # noqa: E402
+from build_fw_edid_sector import EDID_HEADER, build_sectors, edid_offsets
+from make_edid import build
 
 
 def image_with_tables(serial="AWT26110002"):

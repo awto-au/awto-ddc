@@ -27,7 +27,7 @@ def test_good_image_boots_to_main_loop():
 
 def test_trap_in_banked_function_fails(tmp_path):
     img = bytearray(GOOD.with_suffix(".bin").read_bytes())
-    m = re.search(r"^C:\s+([0-9A-F]{8})\s+_ScalerDisplayDPTx1VideoStreamOu\b", GOOD.with_suffix(".map").read_text(errors="replace"), re.M)
+    m = re.search(r"^C:\s+([0-9A-F]{8})\s+_ScalerDisplayDPTx1VideoStreamOu\b", GOOD.with_suffix(".map").read_text(errors="replace"), re.MULTILINE)
     assert m
     off = int(m.group(1), 16)
     img[off:off + 2] = b"\x80\xfe"                      # SJMP $ at the function entry

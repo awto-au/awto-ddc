@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sdcc_bank as B  # noqa: E402
+import sdcc_bank as B
 
 
 def chunk(body):

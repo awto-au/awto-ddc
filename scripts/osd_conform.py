@@ -15,14 +15,14 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-import osd_demo as D  # noqa: E402
-import osd_model as M  # noqa: E402
+import numpy as np
+import osd_demo as D
+import osd_model as M
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/osd_conform.log"

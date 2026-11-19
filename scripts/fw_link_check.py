@@ -39,15 +39,20 @@ Proofs (one `proven` log line each, no finding), all from this image + its .rst:
   literal imm   `#0x566c` written as a number in the .rst is a value (message id, register), not a const/fn address
 Exit 1 if any finding. Logs: tmp/logs/fw_link_check.log
 """
-import argparse, bisect, os, re, sys
+import argparse
+import bisect
+import os
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import d8051  # noqa: E402
+import d8051
 
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
-import chip_mem as CM  # noqa: E402
+import chip_mem as CM
+
 BANK = CM.BANK_SIZE
 TERM = ("RET", "RETI", "LJMP", "SJMP", "AJMP", "JMP @A+DPTR")
 BANK_REG = CM.BANK_REG
@@ -76,7 +81,7 @@ def parse_map(path):
 # .rst line: addr, bytes, [cycles], source line number, source text
 RST_LINE = re.compile(r"^ {6}([0-9A-F]{6})?(?: [0-9A-F]{2})*\s*(?:\[\s*\d+\])?\s*\d+ (.*)$")
 RST_CONT = re.compile(r"^\s+(?:[0-9A-F]{2} ?)+$")   # continuation of a long .db/.ascii: bytes only (RST_LINE read "63 33" as line 63)
-DATA_DIR = re.compile(r"^\.(db|byte|dw|word|ascii|asciz|ascis|ds|blkb|blkw|str|strz|strs)\b", re.I)
+DATA_DIR = re.compile(r"^\.(db|byte|dw|word|ascii|asciz|ascis|ds|blkb|blkw|str|strz|strs)\b", re.IGNORECASE)
 LIT_IMM = re.compile(r"#\s*\(?\s*(?:0x[0-9a-fA-F]+|\d+)\s*\)?\s*$")
 SIG = re.compile(r"^;\s+\S.*\.c:\d+: [\w\s\*]*?\b(\w+)\s*\((.*)\)\s*$")
 

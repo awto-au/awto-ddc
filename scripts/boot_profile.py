@@ -7,12 +7,20 @@ usage: boot_profile.py BUS --serial S --map MAP [--table T]
   Waits up to 5 s for the unit to answer (the repo's monitor-wait limit; it answers ~1.5 s after the reset).
 Log: ./tmp/logs/boot_profile.log
 """
-import argparse, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_link, dbg_xdata as X, i2cbus, loop_prof as L, rtd_i2c_bridge as B  # noqa: E402
+import dbg_link
+import dbg_xdata as X
+import i2cbus
+import loop_prof as L
+import rtd_i2c_bridge as B
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_profile.log"

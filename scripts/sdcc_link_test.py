@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Offline test for sdcc_link.dseg_runs: DSEG split around the bit bytes (sdld -M grid), no false IRAM overlap."""
-import sys, tempfile
+import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sdcc_link as L  # noqa: E402
+import sdcc_link as L
 
 ROWS = ["|0|0|0|0|0|0|0|0|a|a|b|b|b|d|d|d|", "|d|e| | | | | | | | | | | | | | |",
         "|B|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|", "|c|c|c|c|c|c|c|c|c|c|c|c|c|c| | |"]

@@ -4,7 +4,10 @@
 Use: layout_diff.py OLD.tsv NEW.tsv [--names a,b,...]   (old/new may be `git show REV:fw/bank_layout.tsv` exports)
 Log: tmp/logs/layout_diff.log
 """
-import argparse, os, subprocess, sys
+import argparse
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 

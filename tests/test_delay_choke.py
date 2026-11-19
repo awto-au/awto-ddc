@@ -31,7 +31,7 @@ pytestmark = [pytest.mark.slow, pytest.mark.skipif(IMG is None, reason="no image
 
 
 def sym(name):
-    return int(re.search(rf"^C:\s+([0-9A-F]{{8}})\s+_{name}\b", IMG.with_suffix(".map").read_text(errors="replace"), re.M).group(1), 16)
+    return int(re.search(rf"^C:\s+([0-9A-F]{{8}})\s+_{name}\b", IMG.with_suffix(".map").read_text(errors="replace"), re.MULTILINE).group(1), 16)
 
 
 def run_gate(binp):

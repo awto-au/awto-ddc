@@ -43,7 +43,7 @@ def creds() -> tuple[str, str]:
     srv, tok = os.environ.get("HASS_SERVER"), os.environ.get("HASS_TOKEN")
     f = Path.home() / ".config/hass-cli/env"
     if (not srv or not tok) and f.exists():
-        for m in re.finditer(r"^(?:export\s+)?(HASS_SERVER|HASS_TOKEN)=['\"]?([^'\"\n]+)", f.read_text(), re.M):
+        for m in re.finditer(r"^(?:export\s+)?(HASS_SERVER|HASS_TOKEN)=['\"]?([^'\"\n]+)", f.read_text(), re.MULTILINE):
             if m[1] == "HASS_SERVER":
                 srv = srv or m[2]
             else:

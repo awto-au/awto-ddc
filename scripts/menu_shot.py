@@ -9,14 +9,14 @@ Log: tmp/logs/menu_shot.log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import menu_cli as MC  # noqa: E402
-import osd_render as R  # noqa: E402
-import settings_cli as C  # noqa: E402
+import menu_cli as MC
+import osd_render as R
+import settings_cli as C
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/menu_shot.log"

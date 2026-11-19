@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import ddc_sim as D  # noqa: E402
-import dbg_xdata  # noqa: E402
+import dbg_xdata
+import ddc_sim as D
+import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/swap_sim.log"
 DEV8 = 0x6A

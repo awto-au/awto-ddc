@@ -1,7 +1,6 @@
 """fw_compile compile_one: the warn gate sees whole warning lines (#51.7, #47).
 The fake compiler is sdcc after awto-sdcc#122: one run, cpp runs to completion before the compiler writes. The
 -E / --c1mode branches are the pre-#122 two-stage path, kept for the fake only (compile_one no longer calls them)."""
-import os
 import stat
 import sys
 from pathlib import Path
@@ -9,7 +8,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import fw_compile as K  # noqa: E402
+import fw_compile as K
 
 FAKE = r'''#!/usr/bin/env python3
 import sys

@@ -5,11 +5,13 @@ usage: rtd_reg_decode.py <dump.json> [--chip RTD2795T-CG] [--pages 9E,38] [--all
   --fields  also print bit-field breakdown (field=value) for each listed register
 Log: ./tmp/logs/rtd_reg_decode.log
 """
-import argparse, json, sys
+import argparse
+import json
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import regdb_query as Q  # noqa: E402
+import regdb_query as Q
 
 
 def main() -> int:

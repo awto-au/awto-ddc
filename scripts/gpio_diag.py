@@ -5,9 +5,14 @@
 names and pins) and a 32-entry change ring (5 B: seq, tick, input id, value). `snapshot` prints all values; `watch` follows the ring,
 reading the 16-byte header and the ring only when its sequence moves. `open`/`close` drive the console through the test-command byte.
 """
-import argparse, os, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
@@ -32,7 +37,7 @@ def load_inputs(path: Path = INPUTS_TSV) -> list:
 def symbol(text: str, name: str) -> int:
     # SDCC emits some absolute XDATA symbols without the leading ``D:`` that
     # it uses for relocatable data symbols.  Both forms are data addresses.
-    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{re.escape(name)}\b", text, re.M)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{re.escape(name)}\b", text, re.MULTILINE)
     if not m:
         raise SystemExit(f"_{name} is not present in this image map")
     return int(m.group(1), 16)

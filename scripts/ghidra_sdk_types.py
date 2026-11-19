@@ -17,14 +17,17 @@ sdk_types.tsv format (tab separated):
   S name size / U name size, then  F offset fieldname typeref dim comment   (dim = array count, 1 if scalar)
   typeref = u8 s8 u16 s16 u32 s32 f32 ptr1 ptr2 ptr3 or another type name; blank line ends a type
 """
-import os, re, subprocess, sys
+import os
+import re
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)
 sys.path.insert(0, str(HERE))
-import fw_compile as K  # noqa: E402
+import fw_compile as K
 
 TMP = ROOT / "tmp" / "ghidra_types"
 LOG = ROOT / "tmp" / "logs" / "ghidra_sdk_types.log"

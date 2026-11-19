@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_hw_test.log"
@@ -113,9 +113,9 @@ class Unit:
     """Real unit over debug slave 0x35 (dbg_link must be on)."""
 
     def __init__(self, bus: int, map_path: Path):
+        import dbg_xdata as X
         import rtd_i2c_bridge as B
         import sw_timeline as T
-        import dbg_xdata as X
         self.X = X
         self.io = B.Real(bus, allow_write=True, regread=True)
         self.base = T.sym(map_path, "g_stAwtoOsdHw")
@@ -154,8 +154,8 @@ class Sim:
     STEP_S = 0.005                            # sim time per poll
 
     def __init__(self, binp: Path, map_path: Path, rotate: bool):
-        import osd_render as R
         import ddc_sim as D
+        import osd_render as R
         self.eng = D.DdcEngine()
         self.sess = R.Session(binp, map_path, "2160p60", devs=[self.eng])
         self.sess.boot()

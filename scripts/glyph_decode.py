@@ -20,6 +20,7 @@ Log: tmp/logs/glyph_decode.log
 """
 import sys
 from pathlib import Path
+
 import numpy as np
 from PIL import Image
 

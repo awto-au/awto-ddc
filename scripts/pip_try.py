@@ -8,13 +8,16 @@ usage: pip_try.py BUS --serial AWT26110003 snap LABEL        read the PIP-releva
   ADDR/VAL hex. Debug link must be on (dbg_link.py on BUS). Test unit only (unit 3).
 Log: ./tmp/logs/pip_try.log (one line per read / write with time, old, new, readback)
 """
-import argparse, json, sys, time
+import argparse
+import json
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_i2c_bridge as B  # noqa: E402
-import i2cbus  # noqa: E402
-from sdcc_overlay import repo_root  # noqa: E402
+import i2cbus
+import rtd_i2c_bridge as B
+from sdcc_overlay import repo_root
 
 DBG = 0x35 << 1
 # [regdb] RTD2795T-CG: P31 input select / E-O split, M1 + M2 VGIP, P30 measure select, M2 capture / display counts

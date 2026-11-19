@@ -9,13 +9,19 @@ usage: flash_layout_measure.py [--serial AWT26110003] [--layout fw/bank_layout.t
   Counts: all changed sectors; of which common-area sectors (copied into every bank); banks touched.
 Log: tmp/logs/flash_layout_measure.log, result tmp/meas/result.json, images tmp/meas/<mode>_<edit>.bin
 """
-import argparse, hashlib, json, os, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import hashlib
+import json
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
-import sdcc_layout as L  # noqa: E402
+import sdcc_layout as L
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 SECTOR, BANK = 4096, 0x10000

@@ -5,7 +5,8 @@ usage: rtd_settings_diff.py <dump_a> <dump_b> [<dump_c> ...] [--start 0xFB000 --
 Prints offset and the value in each dump. Use dumps taken with known differing settings
 (e.g. brightness 80 vs 100) to locate the settings bytes. Log: ./tmp/logs/rtd_settings_diff.log
 """
-import os, sys
+import os
+import sys
 from pathlib import Path
 
 args = [a for a in sys.argv[1:] if not a.startswith("--")]

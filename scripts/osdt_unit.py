@@ -11,15 +11,15 @@ Register addresses by regdb name (re/regdb). Keys / reads: keymap_unit.Unit. Log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import keymap_unit as K  # noqa: E402
-import regdb_query as Q  # noqa: E402
-import settings_cli as C  # noqa: E402
+import keymap_unit as K
+import regdb_query as Q
+import settings_cli as C
 
 LOG = ROOT / "tmp/logs/osdt_unit.log"
 CHIP = "RTD2795T-CG"

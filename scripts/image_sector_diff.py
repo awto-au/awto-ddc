@@ -18,7 +18,12 @@ usage: scripts/image_sector_diff.py OLD.bin NEW.bin [--old-map M] [--new-map M] 
 - Free flash: all-0xFF sectors and 0xFF bytes per bank.
 Log: ./tmp/logs/image_sector_diff.log
 """
-import argparse, bisect, collections, json, re, sys
+import argparse
+import bisect
+import collections
+import json
+import re
+import sys
 from pathlib import Path
 
 SECTOR = 4096

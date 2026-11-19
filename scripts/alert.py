@@ -10,12 +10,12 @@ Log: ./tmp/logs/alert.log
 import argparse
 import os
 import re
-import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
-from ddcutil_run import ddc as _ddc  # noqa: E402
 from pathlib import Path
+
+import isostamp
+from ddcutil_run import ddc as _ddc
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/alert.log"

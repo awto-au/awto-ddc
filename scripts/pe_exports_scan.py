@@ -91,8 +91,7 @@ def main():
                 except Exception as e:  # malformed PE: record and continue
                     rows.append((a.version, rel, "error", repr(e)))
     with open(a.out, "w") as fh:
-        for r in sorted(rows):
-            fh.write("\t".join(r) + "\n")
+        fh.writelines("\t".join(r) + "\n" for r in sorted(rows))
     os.makedirs("tmp/logs", exist_ok=True)
     with open("tmp/logs/pe_exports_scan.log", "a") as lg:
         lg.write(f"{a.version} {a.tree}: {len(rows)} rows -> {a.out}\n")

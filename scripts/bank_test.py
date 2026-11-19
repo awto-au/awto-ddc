@@ -8,13 +8,17 @@ usage: bank_test.py [--common 0x4000]      honours AWTO_SDCCCALL / AWTO_SDCC_BE 
   needs < 0.3M (uart polls), ucsim ~9M instr/s, so a hang costs < 1 s. Subprocess timeouts are backstops (30 s).
 Log: tmp/logs/bank_test.log; scratch tmp/banktest/
 """
-import os, re, shutil, subprocess, sys
+import os
+import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_build  # noqa: E402  (parse_ihx)
-import sdcc_link  # noqa: E402
-import sdcc_tools as T  # noqa: E402
+import fw_build
+import sdcc_link
+import sdcc_tools as T
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 SRC = ROOT / "fw/simtests/banked"
@@ -54,7 +58,7 @@ def main() -> int:
     for a in sorted(bank.glob("*.asm")):
         run([T.tool("sdas8051"), "-plosgffw", bank / (a.stem + ".rel"), a])
         rels.append(bank / (a.stem + ".rel"))
-    used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.M)})
+    used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.MULTILINE)})
     wl = [f"-Wl-aBANK{n}=0x{n * BANK + common:x}" for n in used]
     ihx = W / "out.ihx"
     r, _ = sdcc_link.link([T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",

@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import osd_model as M  # noqa: E402
-from glyph_decode import decode_blob, tile  # noqa: E402
+import osd_model as M
+from glyph_decode import decode_blob, tile
 
 
 class FakeM:

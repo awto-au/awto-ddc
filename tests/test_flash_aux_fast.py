@@ -16,9 +16,9 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import i2cbus  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
-from i2cbus import I2C_M_RD  # noqa: E402
+import i2cbus
+import rtd_flash_sector as F
+from i2cbus import I2C_M_RD
 
 SECTOR, PAGE, BASE = F.SECTOR, F.PAGE, 0x13000
 

@@ -229,11 +229,11 @@ def _flashset_derived(d, name_off):
 def _readall_derived(d):
     t = d.decode("latin1")
     kv = dict(re.findall(r"^(ScalerName|ScalerID|ScalerFileVersion|IcType|PageCount|PageSelect)="
-                         r"(.*?)\r?$", t, re.M))
+                         r"(.*?)\r?$", t, re.MULTILINE))
     out = {"has_ScalerInfor": int("[ScalerInfor]" in t), "has_PageInfor": int("[PageInfor]" in t)}
     out.update({k: v for k, v in kv.items()})
-    out["page_sections"] = len(re.findall(r"^\[PG[0-9A-Fa-f]{2}\]", t, re.M))
-    out["page_name_lines"] = len(re.findall(r"^PG[0-9A-Fa-f]{2}_Name=", t, re.M))
+    out["page_sections"] = len(re.findall(r"^\[PG[0-9A-Fa-f]{2}\]", t, re.MULTILINE))
+    out["page_name_lines"] = len(re.findall(r"^PG[0-9A-Fa-f]{2}_Name=", t, re.MULTILINE))
     return out
 
 
@@ -262,7 +262,7 @@ def _pe_derived(d):
 
 def _version_txt_derived(d):
     t = d.decode("latin1")
-    kv = dict(re.findall(r"^(SpecRevision|StatusFileRevision)=(\d+)", t, re.M))
+    kv = dict(re.findall(r"^(SpecRevision|StatusFileRevision)=(\d+)", t, re.MULTILINE))
     out = {"has_SVNInfo": int("[SVNInfo]" in t)}
     out.update(kv)
     return out

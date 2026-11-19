@@ -14,9 +14,9 @@ usage: reg_live_scan.py --unit N --pass-label A [--pages all|00,38-3A,..] [--out
 from __future__ import annotations
 
 import argparse
+import csv
 import glob
 import gzip
-import csv
 import json
 import os
 import re
@@ -25,8 +25,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import isostamp  # noqa: E402
+import dbg_xdata as X
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/reg_live_scan.log"

@@ -15,15 +15,20 @@ Method:
 Priority: EXINT0 (IP=0x81) and Timer2 (IP=0xA0) are each high in one IP state, so they get `_isr1` / `_isr2` copies
 where another class reaches the same helper; all other ISRs share `_isr`.
 """
-import argparse, json, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import re
+import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
-from sdcc_bank import Module, render  # noqa: E402
-import sdcc_tools as T  # noqa: E402
+import sdcc_tools as T
+from sdcc_bank import Module, render
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 LIBSRC = T.LIBSRC
@@ -53,7 +58,7 @@ def isr_name(n: str, sfx: str = "_isr") -> str:
 def lib_dirs() -> list:
     """Source dirs in the linked library's build order: VPATH of LIBSRC/<lib>/Makefile.in, then device/lib (awto-sdcc#80)."""
     mk, dirs = LIBSRC / T.LIB.name / "Makefile.in", []
-    m = re.search(r"^VPATH\s*=\s*(.*)$", mk.read_text(), re.M) if mk.exists() else None
+    m = re.search(r"^VPATH\s*=\s*(.*)$", mk.read_text(), re.MULTILINE) if mk.exists() else None
     for d in (m.group(1).split(":") if m else []):
         d = d.strip().replace("$(srcdir)", str(LIBSRC / T.LIB.name)).replace("$(std_lib_dirs)", str(LIBSRC))
         if "$(" not in d:
@@ -95,8 +100,8 @@ def compile_lib(src: Path, out: Path) -> str:
 
 
 def defined_globals(asm: str) -> set:
-    g = set(re.findall(r"^\s+\.globl\s+(\w+)", asm, re.M))
-    return g & set(re.findall(r"^(\w+)::?\s*$", asm, re.M))
+    g = set(re.findall(r"^\s+\.globl\s+(\w+)", asm, re.MULTILINE))
+    return g & set(re.findall(r"^(\w+)::?\s*$", asm, re.MULTILINE))
 
 
 def stateful(asm: str) -> bool:
@@ -168,7 +173,7 @@ def main() -> int:
             got.add(src.stem)
             if src.stem not in done:
                 done[src.stem] = compile_lib(src, out / f"{src.stem}.asm")
-                deps[src.stem] = set(re.findall(r"^\s+(?:lcall|ljmp)\s+(\w+)", done[src.stem], re.M))
+                deps[src.stem] = set(re.findall(r"^\s+(?:lcall|ljmp)\s+(\w+)", done[src.stem], re.MULTILINE))
             pending += sorted(deps[src.stem])
         return got
     need = {k: stems_for({t for r in isr_roots if cls_of(r) == k for c in reach_c[r.name].values()
@@ -191,7 +196,7 @@ def main() -> int:
             txt = TOKEN.sub(lambda x: maps[k].get(x.group(0), x.group(0)), done[st])
             txt = re.sub(r"\.area\s+OSEG\s+\(OVR,DATA\)", ".area DSEG    (DATA)", txt)   # OVR would share IRAM with the original
             txt = re.sub(r"\.area XSEG \(XDATA\)", ".area XSEG    (XDATA)", txt)   # inline-asm spelling; fw_build.split_xseg
-            txt = re.sub(r"^(\s+\.module\s+)(\S+)", lambda x: f"{x.group(1)}{x.group(2)}{sfx}", txt, flags=re.M)
+            txt = re.sub(r"^(\s+\.module\s+)(\S+)", lambda x: f"{x.group(1)}{x.group(2)}{sfx}", txt, flags=re.MULTILINE)
             (out / f"{st}{sfx}.asm").write_text(txt)
             log(f"clone {st}{sfx}.asm (priority class '{k or 'low'}'; reached by {[o or 'low' for o in owners[st]]})")
     log(f"cloned helper files: {live}; skipped (no state): {keep}")

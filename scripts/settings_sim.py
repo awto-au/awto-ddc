@@ -15,9 +15,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import osd_render as R

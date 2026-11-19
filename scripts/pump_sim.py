@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import argparse
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ddc_sim as D  # noqa: E402
-import fw_sim as S  # noqa: E402
+import ddc_sim as D
+import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/pump_sim.log"
 MIN_DELAY_MS = 2         # the boot path has no longer delay once the engine is ours (45 ms ones come while the SDK still parks it at 0x3D)
@@ -94,7 +95,6 @@ def run(binp: Path, mapp: Path, mode: str = "1080p60", phase: float = 0.0, extra
                 m.wr(0xCC, bytes([(0x10000 - left) & 0xFF, (0x10000 - left) >> 8]), "sfr")      # TL2 TH2
             eng.arm()
             eng.request(m, pkt(bytes([0x01, 0x10])))
-        return None
 
     bus.m.stub("ScalerTimerDelayXms", on_delay)
     try:

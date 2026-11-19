@@ -13,10 +13,15 @@ Log: tmp/logs/unit_lock.log
 """
 from __future__ import annotations
 
-import argparse, os, socket, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import socket
+import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:

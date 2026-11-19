@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import regmap_lib as L  # noqa: E402
+import regmap_lib as L
 
 
 def iso(t):

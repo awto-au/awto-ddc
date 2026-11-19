@@ -6,13 +6,14 @@ usage: rtd_reset.py <bus> --serial AWT2611000N [--identity TEXT]
   Does not help when 0x4A itself is silent (hard wedge): use `./dev.py power-cycle`.
 Log: ./tmp/logs/rtd_reset.log (decoded) + rtd_reset.raw.log
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
-import rtd_proto  # noqa: E402
-from rtd_flash_sector import Rtd  # noqa: E402
+import i2cbus
+import rtd_proto
+from rtd_flash_sector import Rtd
 
 ISP_EN, ISP_EN_VAL = 0x6F, 0x80
 RESET, RESET_VAL = 0xEE, 0x02

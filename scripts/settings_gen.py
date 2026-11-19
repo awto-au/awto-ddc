@@ -20,9 +20,9 @@ import argparse
 import os
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 TYPES = {"bool": 0, "enum": 1, "int": 2, "action": 3}
 UNITS = {"none": 0, "percent": 1, "ms": 2, "s": 3, "step": 4, "hz": 5, "dhz": 6}
@@ -288,7 +288,7 @@ def gen_c(rows, pages, tree, sch):
           "    for (i = 0; i < sizeof vopt / 3; i++) {", "        if (vo_at(i, 0) != idx)", "            continue;",
           "        mapped = 1;", "        if (vo_at(i, 2) == vcpv)", "            return vo_at(i, 1);", "    }",
           "    return mapped ? -1 : (int16_t)vcpv;", "}", "",
-          f"uint16_t set_caps_len(void)", "{", f"    return {len(caps)}u;", "}", "",
+          "uint16_t set_caps_len(void)", "{", f"    return {len(caps)}u;", "}", "",
           "char set_caps_at(uint16_t i)", "{", "    return caps[i];", "}", "",
           "uint8_t set_vcp_row(uint8_t vcp)", "{", "    uint8_t i;", "",
           "    for (i = 0; i < sizeof vcode / 2; i++)", "        if (vcode[i][0] == vcp)", "            return vcode[i][1];",

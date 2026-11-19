@@ -12,9 +12,8 @@ from __future__ import annotations
 import wave
 from pathlib import Path
 
-import numpy as np
-
 import fw_sim as S
+import numpy as np
 
 # --- regdb (RTD2795T-CG.tsv.gz): D2 block = page 71, D3 = page 72; address port 0x7xC9, data port 0x7xCA, idx = port_idx column
 AP_D2, AP_D3 = 0x71C9, 0x72C9

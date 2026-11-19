@@ -12,15 +12,24 @@ usage: fw_compile.py compile <uv2> [--target T] [--jobs N] [--only SUBSTR] [--as
 - Output: tmp/sdcc-port/{obj,asm,logs}, report.json. Log: tmp/logs/fw_compile.log
 - Called by fw_build.py; edits to the SDK sources go in fw/sdk, never here.
 """
-import fnmatch, hashlib, json, os, re, subprocess, sys, threading, time
-import isostamp  # noqa: E402
-import place_rules as PR  # noqa: E402
+import fnmatch
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import isostamp
+import place_rules as PR
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import sdcc_tools as T  # noqa: E402
+import sdcc_tools as T
 
 
 def repo_root():
@@ -61,10 +70,8 @@ def _resolve_clean():
 CLEAN = _resolve_clean()
 # SDK name -> clean symbol macros and functions kept in common memory: fw/awto/boundary.py
 sys.path.insert(0, str(ROOT / "fw" / "awto"))
-from boundary import ALIASES, PIN_COMMON  # noqa: E402
-import fw_dirs as FD  # noqa: E402
-
-
+import fw_dirs as FD
+from boundary import ALIASES, PIN_COMMON
 
 # ---------------- uVision2 project ----------------
 SDK_DROP = ROOT / "fw/sdk_drop.txt"
@@ -83,8 +90,8 @@ def parse_uv2(uv2: Path, target=None):
     txt = uv2.read_bytes().decode("latin-1")
     blocks = {(int(m.group(1)), int(m.group(2)), int(m.group(3))): m.group(5)
               for m in re.finditer(r"^Options (\d+),(\d+),(\d+)\s*// (Target|Group|File)[^\n]*\n(.*?)^EndOpt",
-                                   txt, re.M | re.S)}
-    tnames = {int(m.group(1)): m.group(2) for m in re.finditer(r"^Options (\d+),0,0\s*// Target '([^']+)'", txt, re.M)}
+                                   txt, re.MULTILINE | re.DOTALL)}
+    tnames = {int(m.group(1)): m.group(2) for m in re.finditer(r"^Options (\d+),0,0\s*// Target '([^']+)'", txt, re.MULTILINE)}
     if target is None:
         if len(tnames) > 1:
             sys.exit(f"{uv2.name} has targets {sorted(tnames.values())}: pass --target")
@@ -98,12 +105,12 @@ def parse_uv2(uv2: Path, target=None):
     def excluded(g, f):
         for key in ((t, g, 0), (t, g, f)):
             b = blocks.get(key)
-            if b and re.search(r"^\s*IncBld=0", b, re.M):
+            if b and re.search(r"^\s*IncBld=0", b, re.MULTILINE):
                 return True
         return False
     drop = sdk_drop()
     files, nth = [], Counter()
-    for m in re.finditer(r"^File (\d+),(\d+),<([^>]+)>", txt, re.M):
+    for m in re.finditer(r"^File (\d+),(\d+),<([^>]+)>", txt, re.MULTILINE):
         g = int(m.group(1)); nth[g] += 1
         f = m.group(3).replace("\\", "/")
         if m.group(2) == "1" and not excluded(g, nth[g]) and f.removeprefix("./") not in drop:
@@ -322,7 +329,7 @@ def cmd_awto(jobs):
             log(f"awto {c.name}: {l}")
     # fw_build passes this to sdcc_bank --pin-common: names defined in the shim or in a clean module (#68: aliased hot leaves)
     sh = "\n".join(p.read_text(errors="replace") for p in sorted((WORK / "asm").glob("awto_*.asm")))
-    (WORK / "pin_common.txt").write_text(",".join("_" + n for n in PIN_COMMON if re.search(rf"^_{n}:", sh, re.M)))
+    (WORK / "pin_common.txt").write_text(",".join("_" + n for n in PIN_COMMON if re.search(rf"^_{n}:", sh, re.MULTILINE)))
     bad = [c for c, rc, _ in res if rc]
     log(f"awto: modules {', '.join(awto_modules())}; {len(res) - len(bad)}/{len(res)} files ok")
     return 1 if bad else 0
@@ -384,7 +391,7 @@ def cmd_compile(uv2_rel, jobs, only, target):
                     seg[f"{area}_{kind}"] += int(line.split()[1], 0)
             continue
         rel = WORK / "obj" / uv2.parent.relative_to(SRC) / (Path(f).stem + ".rel")
-        for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
+        for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.MULTILINE):
             seg[m.group(1)] += int(m.group(2), 16)
     rep = {"uv2": uv2_rel, "when": isostamp.now(), "ok": len(ok), "fail": len(bad),
            "missing": [str(m) for m in missing], "segments": dict(seg), "hist": hist.most_common(),

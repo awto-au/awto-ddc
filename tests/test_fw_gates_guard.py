@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import fw_gates as G  # noqa: E402
+import fw_gates as G
 
 
 def test_verdict_quiet_is_a_stall():

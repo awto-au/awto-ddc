@@ -5,13 +5,16 @@ usage: fw_boot_reg.py BIN MAP ADDR[,ADDR...] [--expect ADDR=VAL ...]   ADDR/VAL 
 Registers are plain XDATA in this model (no peripheral side effects): the value is the last firmware write.
 Log: tmp/logs/fw_boot_reg.log
 """
-import argparse, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import re
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim  # noqa: E402
-import rtd_diag  # noqa: E402
+import fw_sim
+import rtd_diag
 
 ROOT = fw_sim.ROOT
 CHUNK, MAX_INSTR = 1_000_000, 40_000_000     # boot-check passes at ~16 M instr; 2.5x
@@ -45,7 +48,7 @@ def main() -> int:
             n = int(ad, 16)
             s.send(f"dump xram 0x{n:x} 0x{n:x}")
             out = s.read_until(rb"(?m)^0x%04x +[0-9a-f]{2}[^\n]*\n" % n, 30)
-            m = re.search(r"^0x%04x\s+([0-9a-f]{2})" % n, out or "", re.M)
+            m = re.search(r"^0x%04x\s+([0-9a-f]{2})" % n, out or "", re.MULTILINE)
             vals[n] = int(m.group(1), 16) if m else None
     s.send("quit")
     rc = 0 if ok else 1

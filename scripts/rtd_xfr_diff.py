@@ -6,7 +6,8 @@ usage: rtd_xfr_diff.py <bus>[=label] [<bus>[=label] ...] [--ranges FF1B-FF39,FFB
   Prints one row per address with any difference marked '*'. Names: RL6449 SDK ScalerMcu XFR decls (#8).
 Log: ./tmp/logs/rtd_xfr_diff.log
 """
-import argparse, re, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))

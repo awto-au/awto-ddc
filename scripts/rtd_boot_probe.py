@@ -6,13 +6,16 @@ usage: rtd_boot_probe.py <bus>|all [--window S]   (all = every i915/NVIDIA/AUX d
   Shows whether the slaves stay up through the firmware's safe-boot window (#26).
 Log: ./tmp/logs/rtd_boot_probe.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, sys, time
-import isostamp  # noqa: E402
+import argparse
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
-import i2cbus  # noqa: E402
+import i2cbus
+from sdcc_overlay import repo_root
 
 ADDRS = (0x35, 0x4A, 0x50, 0x54)
 POLL_S = 0.05            # 20 samples/s: resolves the 2 s safe window (_AWTO_SAFE_BOOT_MS) into 40 rows

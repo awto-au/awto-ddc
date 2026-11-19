@@ -25,14 +25,20 @@ Timer2 constants (SDK ScalerCommonTimerFunction.c, 351 MHz M2PLL, flash div 4, M
   -> reload 0xFB56, 1194 counts per tick. RCAP2H in the block selects the row.
 Log: ./tmp/logs/rtd_diag.log (decoded), ./tmp/logs/rtd_diag.raw.log (I2C trace). Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, os, signal, struct, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import signal
+import struct
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import rtd_i2c_bridge as B  # noqa: E402
-from sdcc_overlay import repo_root  # noqa: E402
+import dbg_xdata as X
+import rtd_i2c_bridge as B
+from sdcc_overlay import repo_root
 
 DEV8 = 0x6A                         # 7-bit 0x35
 BASE = 0xF6D0

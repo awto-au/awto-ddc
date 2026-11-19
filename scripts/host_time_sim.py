@@ -20,18 +20,18 @@ import collections
 import datetime as dt
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import ddc_sim as D  # noqa: E402
-import fw_sim as S  # noqa: E402
-import host_time as HT  # noqa: E402
-import osd_model as M  # noqa: E402
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
-import sync_log as SL  # noqa: E402
+import ddc_sim as D
+import fw_sim as S
+import host_time as HT
+import osd_model as M
+import osd_render as R
+import osd_test as T
+import sync_log as SL
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/host_time_sim.log"
@@ -41,7 +41,7 @@ T0 = dt.datetime(2026, 11, 12, 8, 45, 10, 250000, dt.timezone(dt.timedelta(hours
 CMD_S = 1.0         # test cmd -> console page drawn: one full draw (~0.3 s sim, boot_sim) x ~3
 CON_S = 4.0         # console auto-open after ACTIVE: settled + one pass (sync_sim sees it within 1 s) x4 for the boot console
 TITLE_RE = re.compile(r"CPU (\d+\.\d) PLL (\d+\.\d) SPI (\d+\.\d)  (\d+x\d+ \d+\.\d{3}Hz|NO INPUT) (?:HOST|STALE) (\S+)")
-VIEW_ROWS = int(re.search(r"^#define AWTO_VIEW_ROWS\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.M).group(1))   # rows shown at a time
+VIEW_ROWS = int(re.search(r"^#define AWTO_VIEW_ROWS\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.MULTILINE).group(1))   # rows shown at a time
 CON_COLS = 136      # map columns per row (AWTO_CON_COLS, fw/osd/console.c)
 TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25
 

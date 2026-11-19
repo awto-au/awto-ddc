@@ -144,7 +144,7 @@ def parse_lib(path):
 def display_name(m, pub):
     """Original-case C name for an uppercase PUBDEF (leading '_' = register-passed args, dropped)."""
     n = m.casemap.get(pub, pub)
-    return n[1:] if n.startswith("_") else n
+    return n.removeprefix("_")
 
 
 def main():

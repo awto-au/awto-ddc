@@ -6,12 +6,15 @@ usage: fw_edid_tables.py --serial AWT26110003 [--out DIR]
   (D1 = DP, D2 = HDMI, D3 = HDMI with port tag 3: awto_edid_hdmi_d3.h). Default DIR: the ported tree's Kernel/User Common Function/Header/EDID.
   Run after `msg_tokenise.py port` (port regenerates the tree). Log: ./tmp/logs/fw_edid_tables.log
 """
-import argparse, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import subprocess
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 MAKE_EDID_TIMEOUT = 60      # make_edid + edid-decode run in ~1 s; stall guard only

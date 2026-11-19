@@ -10,9 +10,13 @@ usage: rtd_panel_aux.py <bus> --serial AWT2611000N [--edid-blocks 2]
   A9 reply cmd|len, AA reply data, AB fifo ctrl, AC fifo status.
 Log: ./tmp/logs/rtd_panel_aux.log
 """
-import argparse, json, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P

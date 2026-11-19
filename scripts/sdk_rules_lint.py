@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 ONE_OFF = {"sdk_import.py", "sdk_own.py", "sdk_rules_lint.py"}
-DEF = re.compile(r"^\s*(INSERTS|SUBS|WRAPS|RULES|DROP_WRAPS|DROP_SUBS)\s*(\+?=|:)", re.M)
+DEF = re.compile(r"^\s*(INSERTS|SUBS|WRAPS|RULES|DROP_WRAPS|DROP_SUBS)\s*(\+?=|:)", re.MULTILINE)
 
 
 def lint(tree: Path):

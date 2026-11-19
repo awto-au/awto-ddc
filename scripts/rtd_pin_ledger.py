@@ -329,7 +329,7 @@ ROLE = {
     215: ("HDMI-2 DDC data", "confirmed", "live DDC3 function + working HDMI-2"),
 }
 
-POWER_RE = re.compile(r"(?:^|[/_ ])(?:VDD|VSS|VCC|PVCC|PGND|GND|AVDD|33V|11V|18)(?:$|[/_ 0-9])", re.I)
+POWER_RE = re.compile(r"(?:^|[/_ ])(?:VDD|VSS|VCC|PVCC|PGND|GND|AVDD|33V|11V|18)(?:$|[/_ 0-9])", re.IGNORECASE)
 
 
 def bus_groups(signal: str) -> list[str]:

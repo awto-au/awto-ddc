@@ -18,15 +18,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
+import dbg_xdata as X
 
 DEV8, SIZE, REC_N, SEED = 0x6A, 32, 25, 0xA5
 COMMON_END = 0x5000                                  # banked code from 0x5000 (docs/reversing/realtek-rtd/mcu-8051.md)
 CAUSE = {0: "none", 1: "STALL"}
 BOOT = ((0x01, "HW-WDT"), (0x02, "BITE-PENDING"), (0x04, "TEST-ARMED"), (0x08, "NEW"), (0x10, "WARM"), (0x20, "COLD"),
         (0x40, "AFTER-BITE"), (0x80, "AFTER-PROBE"))       # RL6449_Project.h AWTO_WDT_B_* (record v2, #138)
-FIELDS = ("m0 m1 ver cause bites warm pch pcl bank sp psw acc b dph dpl reth retl stage mode hbh hbl uph upl "
-          "agh agl check boot passh passl max_pass max_poke probe").split()
+FIELDS = ["m0", "m1", "ver", "cause", "bites", "warm", "pch", "pcl", "bank", "sp", "psw", "acc", "b", "dph", "dpl", "reth", "retl", "stage", "mode", "hbh", "hbl", "uph", "upl", "agh", "agl", "check", "boot", "passh", "passl", "max_pass", "max_poke", "probe"]
 PROBE = ((0x01, "TIMER-MODE"), (0x02, "ARMED"), (0x04, "IRQ"), (0x08, "RESET"), (0x10, "NO-RESET"), (0x20, "WDTI"), (0x40, "EARLY"))
 POKE_MS = 32 * 2048 / 14318.18                       # ucMaxPoke unit: 32 CNT3 counts (RL6449_Project.h)
 SITES = {0: "-", 1: "main pass", 2: "DelayXms", 3: "PollingFlagProc", 4: "WaitForEvent", 5: "AwtoMsgWait", 6: "FlashWREN",
@@ -34,7 +33,7 @@ SITES = {0: "-", 1: "main pass", 2: "DelayXms", 3: "PollingFlagProc", 4: "WaitFo
 
 
 def site_addr(map_text: str, name: str = "g_ucAwtoPokeSite") -> int | None:
-    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_text, re.M)
+    m = re.search(rf"^(?:D:\s+|\s+)([0-9A-Fa-f]{{8}})\s+_{name}\b", map_text, re.MULTILINE)
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 
@@ -55,8 +54,8 @@ def decode(b: bytes) -> dict:
 def load_syms(map_text: str) -> tuple[list, list, tuple]:
     """Sorted (address, name) of code symbols (bank << 16 | addr for banked code, addr for common) + the bank-return table
     range of fw/sdcc/bank.asm (__bs_call_sw + 1 .. __bs_ret: 16 entries of 4 B, entry k returns into bank k)."""
-    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.M)}
-    for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", map_text, re.M):      # full-length names (C: lines cut at 32 chars)
+    sym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", map_text, re.MULTILINE)}
+    for m in re.finditer(r"^CH_(\w+)=0x([0-9a-fA-F]+)\s*$", map_text, re.MULTILINE):      # full-length names (C: lines cut at 32 chars)
         sym["_" + m.group(1)] = int(m.group(2), 16)
     f = sorted((v, k[1:]) for k, v in sym.items() if k.startswith("_") and not k.startswith("__bs_") and not k.startswith("__str_"))
     rtab = (sym["__bs_call_sw"] + 1, sym["__bs_ret"]) if "__bs_call_sw" in sym and "__bs_ret" in sym else (0, 0)
@@ -109,7 +108,7 @@ SNAP_RESET = {"EICON D8": 0x40, "PCON 87": 0x30, "EXIF 91": 0x08, "CKCON 8E": 0x
 
 
 def snap_addr(map_text: str) -> int | None:
-    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSnap\b", map_text, re.M)
+    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSnap\b", map_text, re.MULTILINE)
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 
@@ -142,7 +141,7 @@ def clear(io, addr: int) -> bool:
 
 
 def map_addr(map_text: str) -> int:
-    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stAwtoWdt\b", map_text, re.M)
+    m = re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_isr_g_stAwtoWdt\b", map_text, re.MULTILINE)
     if not m:
         raise SystemExit("_isr_g_stAwtoWdt not in this map: image without the #131 watchdog")
     return int(m.group(1), 16) & 0xFFFF

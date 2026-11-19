@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Build Comm_LinuxI2C.dll and rtd_gui.exe (32-bit, mingw) next to this script. Log: ./tmp/logs/rtd_shim_build.log"""
-import os, subprocess, sys
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 here = Path(__file__).resolve().parent

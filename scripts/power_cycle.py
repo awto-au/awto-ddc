@@ -7,15 +7,18 @@ usage: power_cycle.py --relay NAME [--on | --off] [--off-s S]
   Off time: the monitor PSU holds the scaler's standby rail after the relay opens; RAM (safe-block marker) must decay.
 Log: ./tmp/logs/power_cycle.log. Repo root: $AWTO_DDC_REPO -> git -> file-relative.
 """
-import argparse, sys, time
-import isostamp  # noqa: E402
+import argparse
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+from sdcc_overlay import repo_root
 
 sys.path.insert(0, "/mnt/2tb/git/awto-unvr/scripts")
-from _power import power_set_verified  # noqa: E402
+from _power import power_set_verified
 
 # relay name -> driver; awto-unvr _power.py drives so-th-1 only. Another name is refused, never mapped to it.
 OUTLETS = {"so-th-1": power_set_verified}

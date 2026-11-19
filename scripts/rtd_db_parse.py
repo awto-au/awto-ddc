@@ -22,7 +22,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # -I drops script dir
-import rtd_gate  # noqa: E402
+import rtd_gate
 
 MAGIC = 0x99552277
 FIELD_LEN = 36

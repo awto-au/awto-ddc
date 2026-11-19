@@ -7,7 +7,8 @@ Seeds = the 7 interrupt vectors + LCALL targets (opcode 0x12) that land in the b
 false functions; they are harmless entries, not names. Existing seed files are never overwritten.
 Log: ./tmp/logs/ghidra_seeds.log
 """
-import os, sys
+import os
+import sys
 from collections import Counter
 from pathlib import Path
 

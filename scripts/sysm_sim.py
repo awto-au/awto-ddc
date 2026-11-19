@@ -20,16 +20,16 @@ FAIL (gate):
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import osd_test as T  # noqa: E402
-import sync_log as L  # noqa: E402
-import led_check as LED  # noqa: E402
-from ddc_sim import DdcEngine, Mccs  # noqa: E402
+import fw_sim as S
+import led_check as LED
+import osd_test as T
+import sync_log as L
+from ddc_sim import DdcEngine, Mccs
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sysm_sim.log"

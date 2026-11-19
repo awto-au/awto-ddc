@@ -6,13 +6,15 @@ usage: nv_boot_sim.py BIN MAP PAGE11.bin PAGE12.bin [NAME:HEXADDR:LEN ...]   (ex
   _SYSTEM_EEPROM_EMULATION_FLASH_BANK 15, pages 11-12). Prints the SDK page tables, the NV gate counters and disp_rotate.
 Log: ./tmp/logs/nv_boot_sim.log
 """
-import os, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = ROOT / "tmp/logs/nv_boot_sim.log"
 PAGE11, PAGE12, FLASH = 0xFB000, 0xFC000, 0x100000

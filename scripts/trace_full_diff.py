@@ -7,7 +7,12 @@ usage: trace_full_diff.py VENDOR.tsv.gz OURS.tsv.gz [--out tmp/logs/full_diff_<t
   common registers, difflib blocks). Known-benign registers are listed in their own section, not dropped.
   Ranking: keyword score on the regdb register/field names (M1 line buffer / FIFO / D-domain / DDR / clock / power / path).
 """
-import argparse, csv, difflib, gzip, re, sys
+import argparse
+import csv
+import difflib
+import gzip
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -15,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BENIGN_ADDR = {0x0002: "status/W1C", 0x000C: "status/W1C", 0x1603: "status/W1C", 0x1616: "status/W1C", 0x3003: "status/W1C",
                0x3016: "status/W1C", 0x0037: "P0_37 (ruled out)"}
 ROT = {0x20F0, 0x0549, 0x4549, 0x05AE, 0x0026, 0x4026, 0x01DC, 0x37B0}
-BENIGN_NAME = re.compile(r"HDMI|DPRX|DP_RX|_RX|RX_|AUX|MHL|CBUS|SCDC|EDID|PORT_PAGE7|PHY_RX|TMDS|CDR|DFE|IIC_|SCA_INF|AAR_|DPCD|HPD|TIMER|WATCH|\bIR_|_IR_|AUDIO|I2S|SPDIF|OSD|ACCESS_FLASH|FLASH_|DEBUG|UART|PWM|ADC|HDCP|DDC|CEC|EEPROM", re.I)
-RANK = [(re.compile(r"M1|M2|FIFO|LINE_?BUF|SD_|FRC|MEM_?|MBIST|DDR|DCLK|DPLL|MPLL|M2PLL|CLK|CLOCK|ISO|POWER|PWR|LDO|GATE|DOMAIN|SPLIT|TWO|2P|PATH|BW|BANDWIDTH|MAIN_DOWN|DISPLAY_FORMAT|DEN|DVTOTAL|HTOTAL|DHTOTAL|SCALING|CAPTURE|DISP", re.I), 3)]
+BENIGN_NAME = re.compile(r"HDMI|DPRX|DP_RX|_RX|RX_|AUX|MHL|CBUS|SCDC|EDID|PORT_PAGE7|PHY_RX|TMDS|CDR|DFE|IIC_|SCA_INF|AAR_|DPCD|HPD|TIMER|WATCH|\bIR_|_IR_|AUDIO|I2S|SPDIF|OSD|ACCESS_FLASH|FLASH_|DEBUG|UART|PWM|ADC|HDCP|DDC|CEC|EEPROM", re.IGNORECASE)
+RANK = [(re.compile(r"M1|M2|FIFO|LINE_?BUF|SD_|FRC|MEM_?|MBIST|DDR|DCLK|DPLL|MPLL|M2PLL|CLK|CLOCK|ISO|POWER|PWR|LDO|GATE|DOMAIN|SPLIT|TWO|2P|PATH|BW|BANDWIDTH|MAIN_DOWN|DISPLAY_FORMAT|DEN|DVTOTAL|HTOTAL|DHTOTAL|SCALING|CAPTURE|DISP", re.IGNORECASE), 3)]
 CLASS = [("line buffer / FIFO / M-domain", r"FIFO|LINE_?BUF|\bM1\b|_M1|M1_|M2_|MEM|SD_|MDOMAIN|FRC|MBIST"),
          ("DDR client / bandwidth", r"DDR|BW|BANDWIDTH|DDR_CLIENT|PHY"),
          ("D-domain / display format / timing gen", r"DISPLAY_FORMAT|DEN_|DVTOTAL|DHTOTAL|DH_|DV_|DCLK|DDOMAIN|D_DOMAIN|DISP"),
@@ -70,7 +75,7 @@ def bitdiff(fields, a, v1, v2):
 def klass(name, key, fields):
     txt = name
     for c, rx in CLASS:
-        if re.search(rx, txt, re.I):
+        if re.search(rx, txt, re.IGNORECASE):
             return c
     return "other"
 

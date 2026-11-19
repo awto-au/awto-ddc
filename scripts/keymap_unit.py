@@ -10,12 +10,12 @@ usage: keymap_unit.py MAP            (MAP = tmp/fw/<image>.map of the image on u
 Log: tmp/logs/keymap_unit.log
 """
 import argparse
-import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -54,7 +54,7 @@ class Unit:
         self.mp, self.mt = mp, mp.read_text(errors="replace")
         self.io = Real(BUS, allow_write=True)
         self.box = C.Box(self.io, self.mt)
-        x = lambda n: C.xaddr(self.mt, n)                       # noqa: E731
+        x = lambda n: C.xaddr(self.mt, n)
         self.diag, self.osdi, self.md = x("isr_g_stAwtoDiag"), x("g_stOsdInfo"), x("menu_diag")
         self.gpio, self.key_a, self.ud = x("g_stAwtoGpio"), x("g_stAwtoKey"), x("g_stOSDUserData")
         self.mode_a, self.pwr_a, self.menu_on = x("isr_g_stModeInfo"), x("isr_g_stPowerInfo"), x("g_ucAwtoMenuOn")

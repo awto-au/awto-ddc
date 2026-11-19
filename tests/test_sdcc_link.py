@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import sdcc_link as SL  # noqa: E402
-import sdcc_tools as T  # noqa: E402
+import sdcc_link as SL
+import sdcc_tools as T
 
 DUP = "?ASlink-Warning-Definition of public symbol '_abs' found more than once:"
 

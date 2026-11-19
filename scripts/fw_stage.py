@@ -7,9 +7,9 @@ Log: ./tmp/logs/fw_stage.log
 import shutil
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 REPO = Path(__file__).resolve().parents[1]
 GATES_LIMIT_S = 90          # boot+isr+link take ~6 s (2026-11-08); 15x margin is the backstop only, fw_gates has its own

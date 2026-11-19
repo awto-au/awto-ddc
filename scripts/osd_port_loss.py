@@ -19,9 +19,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_hw_test as H  # noqa: E402
-import osd_sweep as W  # noqa: E402
+import isostamp
+import osd_hw_test as H
+import osd_sweep as W
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/osd_port_loss.log"

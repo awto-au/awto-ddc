@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import fw_sim  # noqa: E402
+import fw_sim
 
 IMG = ROOT / "tmp/fw/AWT26110003-wb-clu3-be"
 needs_img = pytest.mark.skipif(not IMG.with_suffix(".bin").exists() or not IMG.with_suffix(".map").exists(),

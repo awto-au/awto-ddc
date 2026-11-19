@@ -17,11 +17,16 @@ Shared scripts (ApplyNames.java, ExportAll.java) are used from awto-2000 by path
 Project + firmware bytes stay out of git: ~/vendors/realtek/analysis/. Log: ./tmp/logs/re_<cmd>_<bank>.log
 Process: awto-dan docs/embedded/reversing/README.md
 """
-import os, subprocess, sys, threading, time
+import os
+import subprocess
+import sys
+import threading
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import regdb_ghidra_labels, ghidra_names_merge
+import ghidra_names_merge
+import regdb_ghidra_labels
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)

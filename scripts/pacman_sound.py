@@ -18,7 +18,7 @@ import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
+import isostamp
 
 PS_K_DEFAULT_HZ = 48000.0       # sc 32 = 48 kHz sample rate (SDK S code 0xA0), 32 samples per sine period: derived, not measured
 PS_SC_MIN = 24                  # sample rate <= 64 kHz: the DAC clock divider (06D4 bits 7:6) stays at its 48 kHz setting

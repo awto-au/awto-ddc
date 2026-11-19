@@ -6,9 +6,15 @@ Use: loop_rate.py --unit 3 [--runs 3] [--boots 1] [--label TEXT]
 - --boots K: `dev.py reset` before each group of runs (steady rate differs per boot); first run after a reset discarded.
 - Log: tmp/logs/loop_rate.log; one TSV row per call in tmp/logs/loop_rate.tsv.
 """
-import argparse, os, re, statistics, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import statistics
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root() -> Path:

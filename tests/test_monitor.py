@@ -5,8 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import mon_decode as D  # noqa: E402
-import sync_log as SL  # noqa: E402
+import mon_decode as D
+import sync_log as SL
 
 BLOCK = bytes([ord("M"), ord("N"), 1, 1, 7, 0xF8, 0xF8, 0x58, 0x20, 0x07, 0xCF, 0x02, 0xBC, 0x0F, 3, 0xBC, 1, 0, 0x0E, 0x10, 9])
 

@@ -8,14 +8,15 @@ usage: rtd_reg_poke.py <bus> --serial AWT2611000N ADDR=VAL [ADDR=VAL ...] [--res
   --reset: ISP reset (0xEE) at the end = monitor reboots and the pokes are lost.
 Log: ./tmp/logs/rtd_reg_poke.log
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
-import rtd_isp_probe as P  # noqa: E402
-import rtd_proto  # noqa: E402
-from rtd_osd import Osd  # noqa: E402
+import i2cbus
+import rtd_isp_probe as P
+import rtd_proto
+from rtd_osd import Osd
 
 
 def main() -> int:

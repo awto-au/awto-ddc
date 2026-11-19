@@ -13,7 +13,11 @@ usage: branch_prune.py [--apply] [--contained-only] [--worktrees] [--keep NAME .
   Without --apply: report only. Writes via gh_claudia (agent identity). Report of commits outside the base: branch_status.py.
 Log: ./tmp/logs/branch_prune.log
 """
-import argparse, os, shutil, subprocess, sys
+import argparse
+import os
+import shutil
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 

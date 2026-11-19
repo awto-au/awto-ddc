@@ -9,7 +9,8 @@ Access path: ISP F4/F5 with page select 0x9F reaches the MCU XDATA bus (proven: 
 Facts: regdb scaler register pages end at 0xD0 (0xD000-0xD0FF INT_STATUS3); MCU XFRs start 0xFB00;
 SDK RL6449 _XRAM_ADDR_START/END = 0xD700/0xF6FF. Tracking: awto-ddc#8. Log: tmp/logs/rtd_xram_probe.log
 """
-import sys, time
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))

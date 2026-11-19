@@ -9,13 +9,17 @@ inside __bs_call (fw/sdcc/bank.asm); per fn: peak of a linear push/pop balance (
 ISR entry = 2 (PC) + its pushes. Indirect calls (__sdcc_call_dptr) -> any address-taken fn (stub, 5 B).
 Recursion/cycles reported, not followed. Log: tmp/logs/fw_stack.log
 """
-import argparse, json, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 FUNC = re.compile(r"^;\s+function (\w+)\s*$")

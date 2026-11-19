@@ -6,7 +6,11 @@ Per dump: sha256, 64 KB bank usage (non-0xFF %), last used offset, 8051 vector c
 EDID blocks (header + 'JXC' monitor-name text), DDC caps strings. For >1 dump: pairwise diff.
 Log: ./tmp/logs/rtd_dump_info.log
 """
-import hashlib, itertools, os, re, sys
+import hashlib
+import itertools
+import os
+import re
+import sys
 from pathlib import Path
 
 BANK = 0x10000

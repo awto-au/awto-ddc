@@ -22,7 +22,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import osd_vlc  # noqa: E402
+import osd_vlc
 
 PANEL_W, PANEL_H = 3840, 2160
 MODEL_DIV = 2                         # 1920x1080 model; Pygame scales the window
@@ -32,8 +32,8 @@ PAC_FIRST, GHOST = 19, 27
 
 
 def symbol(map_text: str, name: str) -> tuple[int, int]:
-    a = re.search(rf"^CH_{re.escape(name)}=0x([0-9a-fA-F]+)$", map_text, re.M)
-    n = re.search(rf"^C:\s+([0-9a-fA-F]+)\s+l_CH_{re.escape(name)}\s*$", map_text, re.M)
+    a = re.search(rf"^CH_{re.escape(name)}=0x([0-9a-fA-F]+)$", map_text, re.MULTILINE)
+    n = re.search(rf"^C:\s+([0-9a-fA-F]+)\s+l_CH_{re.escape(name)}\s*$", map_text, re.MULTILINE)
     if not a or not n:
         raise SystemExit(f"{name}: address/length not found in map")
     return int(a.group(1), 16), int(n.group(1), 16)

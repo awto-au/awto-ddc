@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import delay_inventory as D  # noqa: E402
+import delay_inventory as D
 
 SRC = "{b}/tmp/sdcc-port/src/Foo/Bar.c"
 RST = """\

@@ -17,7 +17,7 @@ import sys
 import time
 from pathlib import Path
 
-import isostamp  # noqa: E402
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/host_output_drop.log"

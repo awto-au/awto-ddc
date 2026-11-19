@@ -9,7 +9,10 @@ usage: strip_funcs.py FILE.c [--from-tsv tmp/logs/dead_code.tsv | NAME ...] [--h
   Then: scripts/warn_rekey.py --write, build, gates (dead code only: the build proves nothing live referenced it).
 Log: ./tmp/logs/strip_funcs.log
 """
-import argparse, os, re, sys
+import argparse
+import os
+import re
+import sys
 from pathlib import Path
 
 import isostamp
@@ -50,7 +53,7 @@ def code_only(text: str) -> str:
 
 def find_def(text: str, code: str, name: str):
     """(start, end) of NAME's definition incl. the // block above, or None."""
-    for m in re.finditer(rf"^[A-Za-z_][^\n;{{}}]*\b{re.escape(name)}\s*\(", code, re.M):
+    for m in re.finditer(rf"^[A-Za-z_][^\n;{{}}]*\b{re.escape(name)}\s*\(", code, re.MULTILINE):
         brace = code.find("{", m.end())
         semi = code.find(";", m.end())
         if brace < 0 or (0 <= semi < brace):
@@ -77,7 +80,7 @@ def find_def(text: str, code: str, name: str):
 
 
 def strip_protos(text: str, names: set) -> tuple[str, int]:
-    pat = re.compile(r"^[ \t]*(?:extern[ \t]+)?[A-Za-z_][^\n;(){}]*\b(" + "|".join(map(re.escape, names)) + r")\s*\([^;{}]*\)\s*;[^\n]*\n", re.M)
+    pat = re.compile(r"^[ \t]*(?:extern[ \t]+)?[A-Za-z_][^\n;(){}]*\b(" + "|".join(map(re.escape, names)) + r")\s*\([^;{}]*\)\s*;[^\n]*\n", re.MULTILINE)
     return pat.subn("", text)
 
 

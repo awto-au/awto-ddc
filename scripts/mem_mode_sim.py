@@ -9,13 +9,15 @@ usage: AWTO_SIM_CORE=fast mem_mode_sim.py BIN MAP [--mode 2160p60] [--no-frc]
 - DDR status polls are not modelled in the sim (#26): this checks the firmware path, not the DDR.
 Log: tmp/logs/mem_mode_sim.log
 """
-import argparse, sys, time
+import argparse
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import osd_test as T  # noqa: E402
-import sync_log as S  # noqa: E402
+import osd_render as R
+import osd_test as T
+import sync_log as S
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/mem_mode_sim.log"

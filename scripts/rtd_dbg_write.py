@@ -8,14 +8,16 @@ usage: rtd_dbg_write.py <bus> --serial AWT2611000N ADDR=VAL [ADDR=VAL ...]
 Log: ./tmp/logs/rtd_dbg_write.log (decoded I2C lines + one --label line per write)
      ./tmp/logs/rtd_dbg_write.raw.log (I2C byte trace)
 """
-import argparse, sys, time
-import isostamp  # noqa: E402
+import argparse
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_i2c_bridge as B  # noqa: E402
-import i2cbus  # noqa: E402
-from sdcc_overlay import repo_root  # noqa: E402
+import i2cbus
+import rtd_i2c_bridge as B
+from sdcc_overlay import repo_root
 
 DEV8 = 0x6A                                   # 7-bit 0x35
 

@@ -10,9 +10,14 @@ usage: settings_keep.py snapshot --bus B --serial S --map MAP [--table T] --out 
   dev.py flash runs both around every flash; a failure here only warns, it never fails the flash.
 Log: ./tmp/logs/settings_keep.log (one line per row that changed)
 """
-import argparse, json, os, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import os
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 

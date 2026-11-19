@@ -5,12 +5,13 @@ usage: AWTO_SIM_CORE=fast startup_clear_cost.py BIN MAP [--mhz 350.8]
 - Prints instructions, CPU clocks and microseconds at --mhz (flash fetch stalls modelled). Used for flash-sector-churn rec 1.
 Log: tmp/logs/startup_clear_cost.log
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import fw_sim as S  # noqa: E402
+import fw_sim as S
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/startup_clear_cost.log"

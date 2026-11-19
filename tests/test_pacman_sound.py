@@ -8,7 +8,7 @@ import wave
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import pacman_sound as P  # noqa: E402
+import pacman_sound as P
 
 K = P.PS_K_DEFAULT_HZ
 

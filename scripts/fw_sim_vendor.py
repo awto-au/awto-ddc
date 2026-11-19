@@ -9,11 +9,14 @@ usage: fw_sim_vendor.py IMG [--mode 2160p60] [--max-instr 150000000] [--trace-wr
 Library: vendor_machine(img_path, mode) -> Machine with the same register models as ours (regdb reset values, Flash port, HdmiInput).
 Log: tmp/logs/fw_sim_vendor_<mode>.log
 """
-import argparse, re, subprocess, sys
+import argparse
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 ROOT, NCODE, COMMON_END = S.ROOT, 7, 0x28C6
 POWER_NORMAL = 2                # vendor isr_g_stPowerInfo high nibble: 2 = NORMAL, 3 = SAVING (SysSourceDetectPort cae0/cad2 branches)

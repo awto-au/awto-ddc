@@ -9,14 +9,20 @@ usage: rtd_identify.py <bus>|--all [--json] [--no-isp]
 Reuses rtd_isp_probe.Isp / rtd_flash_sector.Rtd for the ISP engine. Flash DB: re/flashdb/FlashSet_v3.8.json.
 Log: ./tmp/logs/rtd_identify.log
 """
-import argparse, glob, json, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import glob
+import json
+import re
+import subprocess
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus                                              # noqa: E402
-import rtd_isp_probe as P                                   # noqa: E402
-from rtd_flash_sector import Rtd, T_READ, OP_RDSR, SR_PROT  # noqa: E402
+import i2cbus
+import rtd_isp_probe as P
+from rtd_flash_sector import OP_RDSR, SR_PROT, T_READ, Rtd
 
 # Product code = (reg0x00 << 4) | (reg0x0F >> 4). Only values we have seen are listed.
 SCALER_TABLE = {0xCF2: "RTD2795T-family (exact suffix unconfirmed)"}
@@ -94,7 +100,7 @@ def edid_report(bus):
     else:
         tail = re.split(r"\n(?=EDID conformity)", out)[-1].strip() if "EDID conformity" in out else out.strip()[-300:]
         o["conformity"] = tail.splitlines()[0] if tail else out[-200:]
-        k = re.search(r"^(Warnings|Failures):", out, re.M)
+        k = re.search(r"^(Warnings|Failures):", out, re.MULTILINE)
         o["conformity_detail"] = [l.strip() for l in out[k.start():].splitlines()[:-1] if l.strip()][:20] if k else []
     return o
 
@@ -117,7 +123,7 @@ def ddc_report(bus):
         o["capabilities"] = {"error": out.strip()[-200:]}
     else:
         mm = re.search(r"MCCS version:\s*(\S+)", out); md = re.search(r"Model:\s*(.+)", out)
-        feats = re.findall(r"^\s+Feature: ([0-9A-F]{2}) \((.*?)\)", out, re.M)
+        feats = re.findall(r"^\s+Feature: ([0-9A-F]{2}) \((.*?)\)", out, re.MULTILINE)
         o["capabilities"] = {"model": md.group(1).strip() if md else None, "mccs": mm.group(1) if mm else None,
                              "features": {c: n for c, n in feats}}
     return o

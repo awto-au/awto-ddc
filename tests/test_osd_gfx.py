@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import osd_gfx as OG  # noqa: E402
+import osd_gfx as OG
 
 
 def test_pack_rows_word_layout():

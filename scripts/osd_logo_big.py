@@ -13,9 +13,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image, ImageDraw  # noqa: E402
-import osd_logo_encode as E  # noqa: E402
+import numpy as np
+import osd_logo_encode as E
+from PIL import Image, ImageDraw
 
 TW, TH, TB = E.TW, E.TH, E.TB
 SPLIT = 80                      # LOGO0 loads at font id 0, LOGO1 at _Logo1_0x00 = 80

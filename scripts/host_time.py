@@ -23,8 +23,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import i2cbus  # noqa: E402
-import kvm  # noqa: E402
+import i2cbus
+import kvm
 
 ROOT = kvm.REPO
 LOG = ROOT / "tmp/logs/host_time.log"
@@ -111,9 +111,9 @@ def dbg_bus(u: dict) -> int | None:
 
 def send_dbg(u: dict, bus: int) -> bool:
     """Host time over the debug link: payload into aucPend, then the apply command; confirmed by the sync count."""
-    import dbg_xdata as X        # noqa: E402
-    import rtd_i2c_bridge as B   # noqa: E402
-    from sync_log import sym     # noqa: E402
+    import dbg_xdata as X
+    import rtd_i2c_bridge as B
+    from sync_log import sym
     st = json.loads((ROOT / f"tmp/fw/{u['serial']}-flash-state.json").read_text())
     ht = sym(ROOT / f"tmp/fw/{st['image']}.map", "isr_g_stAwtoHt")
     i2cbus.require_unit(bus, u["serial"])

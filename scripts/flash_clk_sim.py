@@ -14,11 +14,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/flash_clk_sim.log"
 A_TUNE, A_F2, A_SRC = 0xFF6C, 0xFFE9, 0xFFED

@@ -22,8 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import sync_log as SL  # noqa: E402
+import fw_sim as S
 
 D1, D2, D3 = 4, 5, 6                    # Global.h _D1.._D3_INPUT_PORT
 SET_D1_ENABLE = 36                      # registry id d1_enable (AwtoSetIds.h)
@@ -84,12 +83,10 @@ def main() -> int:
     def push(m_, r):
         if (r["a1"] & 0xFF) == EV_PORT:
             lines.append((r["a2"], round(bus.now(), 3)))
-        return None
 
     def scan(m_, r):
         pri = m_.rd(m_.addr("g_pucSourceSearchPriority"), 10)
         scans.append(pri[(r["a1"] & 0xFF) % 10])
-        return None
 
     m.stub("set_get", set_get)
     m.stub("AwtoSyncPush", push)

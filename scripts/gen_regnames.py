@@ -20,7 +20,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from magic_lint import our_files, ACCESS_RE
+from magic_lint import ACCESS_RE, our_files
 
 HEADER = "fw/sdk/Project/Header/AwtoRegs.h"
 REGDB = "re/regdb/RTD2795T-CG.tsv.gz"

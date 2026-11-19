@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import ddr_clk_sweep as D  # noqa: E402
+import ddr_clk_sweep as D
 
 STOCK_N, STOCK_F = 81, 6639          # unit 3, both channels, 2026-11-19
 
@@ -20,7 +20,7 @@ def test_half_percent_step_is_3432_units():
 
 def test_steps_never_exceed_half_percent_and_carry_into_n():
     sc = D.code(STOCK_N, STOCK_F)
-    lv = [k * 0.5 for k in range(0, 11)]
+    lv = [k * 0.5 for k in range(11)]
     d8 = [D.delta8_for(x, sc) for x in lv]
     assert all((b - a) * D.UNIT <= 3440 for a, b in zip(d8, d8[1:]))
     top = sc + d8[-1] * D.UNIT

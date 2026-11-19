@@ -18,10 +18,10 @@ import os
 import re
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from collections import Counter
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.run(
     ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, capture_output=True, text=True).stdout.strip())
@@ -37,17 +37,17 @@ def log(s):
     LOG.write(line + "\n"); LOG.flush()
 
 
-COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.S)
+COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.DOTALL)
 RULES = [
     (re.compile(r"\bdata(\s+pData(?:_EXINT)?\s*\[)"), r"xdata\1"),
     # Storage-first pointer decls: Keil `code BYTE *t[]` places t in code; SDCC reads it as pointer-to-code
     (re.compile(r"^(\s*(?:extern\s+|static\s+)*)(code|xdata|idata|data|pdata)\s+([A-Za-z_][\w ]*?)\s*(\*+)\s*"
-                r"([A-Za-z_]\w*)(?=\s*[\[=;,])", re.M),
+                r"([A-Za-z_]\w*)(?=\s*[\[=;,])", re.MULTILINE),
      lambda m: (f"{m.group(1)}{m.group(3)} {m.group(4)} {m.group(2)} {m.group(5)}"
                 if re.search(r"\b(code|xdata|idata|data|pdata)\b", m.group(3)) else
                 f"{m.group(1)}{m.group(3)} {m.group(2)} {m.group(4)} {m.group(2)} {m.group(5)}")),
     (re.compile(r"^(\s*(?:extern\s+|static\s+)*)(code|xdata|idata|data|pdata)\s+([A-Za-z_][\w ]*?)\s*\(\s*\*\s*"
-                r"([A-Za-z_]\w*)", re.M), r"\1\3 (* \2 \4"),
+                r"([A-Za-z_]\w*)", re.MULTILINE), r"\1\3 (* \2 \4"),
     # ISR-written flags polled in main code: non-volatile -> SDCC folds the re-check (warning 110/126, #26)
     (re.compile(r"\bbit(\s+g_b(?:NotifyTimer2Int|WDTimer2Update)\b)"), r"volatile bit\1"),
     (re.compile(r"\bcode(?=\s+[\*A-Za-z_])"), "__code"),
@@ -58,13 +58,13 @@ RULES = [
      r") __interrupt(\1)" if DROP_USING else r") __interrupt(\1) __using(\2)"),
     (re.compile(r"\)\s*interrupt\s+(\w+)(?=\s*[{;\n])"), r") __interrupt(\1)"),
     (re.compile(r"\)\s*using\s+(\d)(?=\s*[{;\n])"), r")" if DROP_USING else r") __using(\1)"),
-    (re.compile(r"^(\s*)([^;\n]*?)\b(\w+(?:\s*\[[^\]\n]*\])?)\s+_at_\s+([^;]+);", re.M), r"\1__at(\4) \2\3;"),
+    (re.compile(r"^(\s*)([^;\n]*?)\b(\w+(?:\s*\[[^\]\n]*\])?)\s+_at_\s+([^;]+);", re.MULTILINE), r"\1__at(\4) \2\3;"),
     (re.compile(r"^\s*#\s*pragma\s+(OT|OPTIMIZE|NOAREGS|AREGS|REGPARMS|NOREGPARMS|SRC|ASM|ENDASM|"
                 r"LARGE|SMALL|COMPACT|ROM|CODE|DEBUG|OBJECTEXTEND|SYMBOLS|NOINTVECTOR|INTVECTOR)\b.*$",
-                re.M | re.I), r"// dropped pragma (Keil only)"),
+                re.MULTILINE | re.IGNORECASE), r"// dropped pragma (Keil only)"),
 ]
 SBIT = re.compile(r"\bsbit\s+(\w+)\s*=\s*([\w]+)\s*\^\s*(\d)\s*;")
-INCLUDE = re.compile(r'^(\s*#\s*include\s*[<"])([^>"]+)([>"])', re.M)
+INCLUDE = re.compile(r'^(\s*#\s*include\s*[<"])([^>"]+)([>"])', re.MULTILINE)
 USING_DEF = re.compile(r"\b(\w+)\s*\([^;{)]*\)\s*using\s+(\d)\s*\n?\s*\{")
 INT_DEF = re.compile(r"\b(\w+)\s*\([^;{)]*\)\s*interrupt\s+(\w+)(?:\s+using\s+(\d))?\s*\n?\s*\{")
 AT_DEF = re.compile(r"\b(\w+)(?:\s*\[[^\]\n]*\])?\s+_at_\s+([^;]+);")
@@ -126,7 +126,7 @@ def add_using_to_protos(text, using, stats):
             return m.group(0)
         stats["proto attrs added"] += 1
         return f"{m.group(1)}{m.group(2)}({m.group(3)}){attrs};"
-    return re.sub(r"^(\s*(?:extern\s+)?(?:\w+\s+)+\**\s*)(\w+)\s*\(([^;{()]*)\)\s*;", sub, text, flags=re.M)
+    return re.sub(r"^(\s*(?:extern\s+)?(?:\w+\s+)+\**\s*)(\w+)\s*\(([^;{()]*)\)\s*;", sub, text, flags=re.MULTILINE)
 
 
 def add_at_to_externs(text, stats):

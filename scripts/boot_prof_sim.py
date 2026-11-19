@@ -6,14 +6,16 @@ usage: AWTO_SIM_CORE=fast boot_prof_sim.py BIN MAP [--mode 1080p60|2160p60] [--u
 - --unit-ref: prints the unit-2 m15 cold boot (tmp/logs/coldboot-m15.txt milestones) next to the sim values.
 Log: tmp/logs/boot_prof_sim.log
 """
-import argparse, sys, time
-import isostamp  # noqa: E402
+import argparse
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import sw_timeline as T  # noqa: E402
-import sync_log as S  # noqa: E402
+import osd_render as R
+import sw_timeline as T
+import sync_log as S
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/boot_prof_sim.log"

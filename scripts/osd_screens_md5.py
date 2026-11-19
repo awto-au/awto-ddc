@@ -7,17 +7,16 @@ usage: osd_screens_md5.py BIN MAP [--rotate] [--tsv OUT]      osd_screens_md5.py
 Log: ./tmp/logs/osd_screens_md5.log
 """
 import argparse
-import hashlib
 import os
 import sys
 from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
-from saver_frames_md5 import state_md5, ROW_DISP_ROTATE, ROTATE_SETTLE_S, VCP_SAVER  # noqa: E402
+import ddc_sim as D
+import isostamp
+import osd_render as R
+from saver_frames_md5 import ROTATE_SETTLE_S, ROW_DISP_ROTATE, VCP_SAVER, state_md5
 
 LOG = R.ROOT / "tmp/logs/osd_screens_md5.log"
 VCP_FLASH_PREVIEW = 7

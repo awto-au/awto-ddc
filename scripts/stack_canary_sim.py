@@ -5,13 +5,15 @@ zone; the next main pass must flag it (g_ucAwtoStackFatal = 1, high-water >= gua
 usage: stack_canary_sim.py BIN [MAP]
 Log: tmp/logs/stack_canary_sim.log
 """
-import os, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = ROOT / "tmp/logs/stack_canary_sim.log"
 BOOT_INSTR = 160_000_000            # boot to ACTIVE budget, as boot_sim

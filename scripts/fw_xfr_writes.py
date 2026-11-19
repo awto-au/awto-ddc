@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dis51  # noqa: E402
-from sdcc_overlay import repo_root  # noqa: E402
+import dis51
+from sdcc_overlay import repo_root
 
 
 def main() -> int:

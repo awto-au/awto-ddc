@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import delay_cal_check as D  # noqa: E402
-import rtd_diag  # noqa: E402
+import delay_cal_check as D
+import rtd_diag
 
 PER = 7309
 

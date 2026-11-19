@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402
+import rtd_proto
 
 ROOT = rtd_proto.repo_root()
 F_ACC, F_FULL, F_BAD, F_RESET, F_ECHO, F_MORE, F_UP = 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x80

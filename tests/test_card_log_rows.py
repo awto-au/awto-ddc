@@ -12,7 +12,7 @@ CT = {"input selector": "INPUT", "information": "INFO", "backlight": "BACKLIGHT"
 
 def test_args_match_console_defines():
     src = (ROOT / "fw/osd/console.c").read_text()
-    ids = {m.group(1): int(m.group(2)) for m in re.finditer(r"^#define AWTO_CT_(\w+)\s+(\d+)", src, re.M)}
+    ids = {m.group(1): int(m.group(2)) for m in re.finditer(r"^#define AWTO_CT_(\w+)\s+(\d+)", src, re.MULTILINE)}
     seen = set()
     for ln in (ROOT / "fw/awto/sync.tsv").read_text().splitlines():
         f = ln.split("\t")

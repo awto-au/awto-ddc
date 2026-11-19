@@ -16,10 +16,16 @@ Method (awto-ddc#8):
 - Rewrite: storage lines removed; every use becomes `(__xovl + off)` / `(__dovl + off)`; __ovl.asm reserves blocks.
 Log: tmp/logs/sdcc_overlay.log, report tmp/sdcc-port/overlay.json
 """
-import json, os, re, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root():
@@ -66,7 +72,7 @@ class Module:
 
     def parse(self):
         area, cur, pending, alloc_fn = None, None, None, None
-        globl = set(re.findall(r"^\s+\.globl\s+(\w+)", "\n".join(self.lines), re.M))   # SDCC fns: `_f:` + .globl
+        globl = set(re.findall(r"^\s+\.globl\s+(\w+)", "\n".join(self.lines), re.MULTILINE))   # SDCC fns: `_f:` + .globl
         for i, line in enumerate(self.lines):
             if line.startswith("\t.area"):
                 area = line.split()[1]

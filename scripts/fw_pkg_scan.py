@@ -16,7 +16,17 @@ usage: python3 -I fw_pkg_scan.py <vendor> <package|*> [--copy] [--model NAME]
 - Patterns catalog: scripts/fw_pkg_patterns.json (package layouts); matched pattern id goes in evidence.
 Log: tmp/logs/fw_pkg_scan-<package>.log
 """
-import collections, fnmatch, gzip, hashlib, json, math, os, re, shutil, subprocess, sys
+import collections
+import fnmatch
+import gzip
+import hashlib
+import json
+import math
+import os
+import re
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 HOME = Path.home()
@@ -34,9 +44,9 @@ TRANSPORT_KEYS = {
     "I2C-string": b"i2c", "DDC-string": b"ddc", "DP-AUX": b"aux", "CH341": b"ch341", "FTDI": b"ftd2xx",
     "serial": b"\\\\.\\COM", "Realtek-ISP": b"RFlash", "Realtek-HID": b"RtHIDlib"}
 ADDR_RES = {  # (label, regex on ASCII strings)
-    "ddcci-0x37/0x6E": re.compile(rb"\b(?:0x)?(?:37|6E|6F|6e|6f)\b[^\n]{0,20}(?:DDC|I2C|slave|addr)", re.I),
-    "isp-0x4A": re.compile(rb"\b(?:0x)?4[Aa]\b[^\n]{0,20}(?:ISP|slave|I2C)", re.I),
-    "debug-0x35": re.compile(rb"\b(?:0x)?35\b[^\n]{0,20}(?:debug|slave)", re.I)}
+    "ddcci-0x37/0x6E": re.compile(rb"\b(?:0x)?(?:37|6E|6F|6e|6f)\b[^\n]{0,20}(?:DDC|I2C|slave|addr)", re.IGNORECASE),
+    "isp-0x4A": re.compile(rb"\b(?:0x)?4[Aa]\b[^\n]{0,20}(?:ISP|slave|I2C)", re.IGNORECASE),
+    "debug-0x35": re.compile(rb"\b(?:0x)?35\b[^\n]{0,20}(?:debug|slave)", re.IGNORECASE)}
 
 
 def repo_root():
@@ -155,7 +165,7 @@ def sim_ours(d, w=32, step=4):
         return ""
     if not _REF:
         r = REF.read_bytes()
-        _REF["s"] = {r[i:i + w] for i in range(0, len(r) - w) if len(set(r[i:i + w])) > 6}
+        _REF["s"] = {r[i:i + w] for i in range(len(r) - w) if len(set(r[i:i + w])) > 6}
     ref = _REF["s"]
     n = hit = 0
     for i in range(0, min(len(d), 4 << 20) - w, step):
@@ -247,7 +257,7 @@ def scan(vendor, pkg, copy, model, regsets, patterns):
         upd = f.with_name("upd.xml")
         if upd.exists():  # Gigabyte/Realtek updater pack manifest: <model>, <fw>, <fw_ver>
             t = upd.read_text(errors="replace")
-            for m in re.finditer(r"<model>([^<]*)</model>.*?<fw>([^<]*)</fw>.*?<fw_ver>([^<]*)</fw_ver>", t, re.S):
+            for m in re.finditer(r"<model>([^<]*)</model>.*?<fw>([^<]*)</fw>.*?<fw_ver>([^<]*)</fw_ver>", t, re.DOTALL):
                 if m.group(2) == f.name:
                     ver.append(f"upd.xml:{m.group(1)}/{m.group(3)}")
         edids = parse_edids(d)
@@ -303,9 +313,9 @@ def main():
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     for pk in pkgs:
         imgs, syms, apps = scan(vendor, pk, copy, model, regsets, patterns)
-        replace_rows(adir / "found_images.tsv", "vendor model package file size family_guess evidence fw_version build_date model_strings caps edid c51_sigs entropy sim_ours_2795t sha256_16".split(), 2, pk, imgs)
-        replace_rows(adir / "found_symbols.tsv", "vendor package file kind family_guess names".split(), 1, pk, syms)
-        replace_rows(adir / "found_hostapps.tsv", "vendor package app version transport addresses_opcodes evidence".split(), 1, pk, apps)
+        replace_rows(adir / "found_images.tsv", ["vendor", "model", "package", "file", "size", "family_guess", "evidence", "fw_version", "build_date", "model_strings", "caps", "edid", "c51_sigs", "entropy", "sim_ours_2795t", "sha256_16"], 2, pk, imgs)
+        replace_rows(adir / "found_symbols.tsv", ["vendor", "package", "file", "kind", "family_guess", "names"], 1, pk, syms)
+        replace_rows(adir / "found_hostapps.tsv", ["vendor", "package", "app", "version", "transport", "addresses_opcodes", "evidence"], 1, pk, apps)
         msg = f"{vendor}/{pk}: images={len(imgs)} symbols={len(syms)} hostapps={len(apps)}"
         print(msg)
         with (ROOT / f"tmp/logs/fw_pkg_scan-{pk}.log").open("w") as lf:

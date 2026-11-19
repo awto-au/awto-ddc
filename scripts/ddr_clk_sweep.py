@@ -21,8 +21,8 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_hw_test as H  # noqa: E402
+import isostamp
+import osd_hw_test as H
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/ddr_clk_sweep.log"
@@ -340,9 +340,9 @@ def main() -> int:
     if a.max_pct > limit:
         raise SystemExit(f"--max-pct {a.max_pct} above the envelope {limit} % (--ddr-override raises it to {OVERRIDE_PCT} %); nothing done")
     import dbg_link
+    import ddr_sweep as DS
     import i2cbus
     import sync_log as S
-    import ddr_sweep as DS
     i2cbus.require_unit(a.bus, a.serial)
     with dbg_link.linked(a.bus, 15):
         dev = H.Unit(a.bus, a.map)

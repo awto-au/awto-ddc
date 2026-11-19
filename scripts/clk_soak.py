@@ -19,9 +19,9 @@ import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import clk_sweep as C  # noqa: E402
-import isostamp  # noqa: E402
-import osd_hw_test as H  # noqa: E402
+import clk_sweep as C
+import isostamp
+import osd_hw_test as H
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/clk_soak.log"

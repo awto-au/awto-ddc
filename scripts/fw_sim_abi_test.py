@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as F  # noqa: E402
+import fw_sim as F
 
 OLD_SW = bytes([0x8D, 0x82, 0x8E, 0x83, 0xEC, 0x22])         # old __bs_call_sw: mov dpl,r5; mov dph,r6; mov a,r4; ret
 KEIL_SW = bytes([0x22, 0x74, 0x00])                           # Keil __bs_call_sw: ret (then __bs_rtab)

@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import clk_sweep as C  # noqa: E402
+import clk_sweep as C
 
 BASE = {"A": 0xA750, "B": 0xAF50}
 CTRL3, STAT1, STAT2, STAT3 = 3, 5, 6, 7                    # offsets from BASE

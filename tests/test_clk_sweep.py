@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import clk_sweep as C  # noqa: E402
+import clk_sweep as C
 
 PLL_KHZ = 350_791                       # M2PLL of the unit: 14318 kHz x 49 / 2
 

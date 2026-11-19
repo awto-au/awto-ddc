@@ -9,12 +9,13 @@ usage: fw_sim_mdomain.py BIN MAP [--mode 2160p60] [--max-instr 200000000] [--ven
   (vendor dump = ACTIVE at 4K60; status/measure registers differ by nature).
 Log: tmp/logs/fw_sim_mdomain_<bin>_<mode>.log
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import fw_regs  # noqa: E402
+import fw_regs
+import fw_sim as S
 
 ROOT = S.ROOT
 PAGES = (0x00, 0x01, 0x05, 0x45, 0x20, 0x30, 0x31, 0x37, 0x40)

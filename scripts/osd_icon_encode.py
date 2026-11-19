@@ -10,10 +10,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-import osd_logo_encode as L  # noqa: E402
-from glyph_decode import decode_blob  # noqa: E402
+import numpy as np
+import osd_logo_encode as L
+from glyph_decode import decode_blob
+from PIL import Image
 
 W, H = 6 * L.TW, 4 * L.TH          # 72 x 72 px
 SDK_SRC = L.OSD / "RTD2014OsdFontDynamicIcon_1.c"
@@ -21,7 +21,7 @@ SLOT = 388                          # layout slot of _tFONT1_ICON_INFORMATION (f
 
 
 def sdk_icon(name="INFORMATION"):
-    m = re.search(r"tFONT1_ICON_%s\[\]=\s*\{(.*?)\n\};" % name, SDK_SRC.read_text(), re.S)
+    m = re.search(r"tFONT1_ICON_%s\[\]=\s*\{(.*?)\n\};" % name, SDK_SRC.read_text(), re.DOTALL)
     return bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
 
 

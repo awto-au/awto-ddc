@@ -9,12 +9,14 @@ usage: sim_regs.py BIN MAP [--mode 1080p60|2160p60] ADDR[:N] ...    (ADDR hex, N
   program are the sim's, not the image's; read those on the unit (rtd_dbg_read.py) instead.
 Log: ./tmp/logs/sim_regs.log
 """
-import argparse, sys
-import isostamp  # noqa: E402
+import argparse
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
+import osd_render as R
 
 LOG = R.ROOT / "tmp/logs/sim_regs.log"
 

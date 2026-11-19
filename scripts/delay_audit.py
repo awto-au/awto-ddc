@@ -14,12 +14,12 @@ Key = file | function | kind | normalised statement | ordinal (no line numbers: 
 import argparse
 import collections
 import csv
-import hashlib
 import os
 import re
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
@@ -108,6 +108,7 @@ def norm(stmt: str) -> str:
 
 def build_rows(tree: Path, mapp: Path):
     import types
+
     import delay_inventory as DI
     a = types.SimpleNamespace(build=str(tree), map=str(mapp))
     rows, _, _ = DI.build_rows(a)
@@ -154,7 +155,7 @@ def classify(key: str, r: dict) -> dict:
 
 def our_constants():
     """Class E: #define ..._MS style constants in our own code (fw/, not the SDK)."""
-    pat = re.compile(r"^\s*#define\s+(\w*(?:_MS|_SEC|_TIME_MS|DEBOUNCE\w*|_TICK_MS|_PERIOD)\w*)\s+\(?(\d+)u?U?L?\b", re.M)
+    pat = re.compile(r"^\s*#define\s+(\w*(?:_MS|_SEC|_TIME_MS|DEBOUNCE\w*|_TICK_MS|_PERIOD)\w*)\s+\(?(\d+)u?U?L?\b", re.MULTILINE)
     out = []
     for f in sorted((ROOT / "fw").rglob("*")):
         if f.suffix not in (".c", ".h", ".inc") or any(x in f.parts for x in ("sdk", "sdk-parked", "third_party", "tests", "simtests")):

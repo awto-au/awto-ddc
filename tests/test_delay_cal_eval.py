@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import rtd_diag as R  # noqa: E402
+import rtd_diag as R
 
 PER = R.PERIOD[0x8D]                                            # 350 MHz: Timer2 counts per ms
 

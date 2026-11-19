@@ -5,9 +5,15 @@ usage: regcall_build.py LEVEL [--bin DIR] [--serial S] [--tag NAME] [--layout fw
   LEVEL  0|1|2|3 (AWTO_SDCCCALL); --bin = compiler install whose lib matches LEVEL (REQUIRED; one install holds the libs of all levels)
 Result: tmp/runs/<tag>/{fw.bin,fw.map,fw.ihx,build.json,sdcc_bank.log tail,size.txt}. Log: tmp/logs/regcall_build.log
 """
-import argparse, os, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.check_output(
     ["git", "rev-parse", "--show-toplevel"], text=True).strip())

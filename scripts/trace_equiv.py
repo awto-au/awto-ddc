@@ -24,13 +24,18 @@ Report: tmp/logs/trace_equiv_<tag>.txt (log line per run in tmp/logs/trace_equiv
 """
 from __future__ import annotations
 
-import argparse, csv, gzip, re, sys, time
-import isostamp  # noqa: E402
+import argparse
+import csv
+import gzip
+import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from trace_full_diff import load, ROOT  # noqa: E402
+from trace_full_diff import ROOT, load
 
 PHASES = ("boot", "search", "ds", "active")
 # data port -> its index register(s); same map as fw_sim_trace.PORTS (kept here: fw_sim_trace imports the simulator)

@@ -18,13 +18,14 @@ import random
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from sdcc_overlay import repo_root  # noqa: E402
-from fastmachine import Pub  # noqa: E402
+from fastmachine import Pub
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 LOG = ROOT / "tmp/logs/lazytimer_check.log"

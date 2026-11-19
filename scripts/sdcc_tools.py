@@ -3,7 +3,8 @@
 $AWTO_SDCC_BIN, else /usr/local/bin (awto-sdcc main, installed by the sdcc session; stamp + library sources in share/sdcc).
 Distro sdcc changes under us on OS upgrades (Fedora 45: 4.5.0 -> 4.6.0, 2026-11-05) -> not used.
 """
-import os, sys
+import os
+import sys
 from pathlib import Path
 
 BIN = Path(os.environ.get("AWTO_SDCC_BIN") or "/usr/local/bin")

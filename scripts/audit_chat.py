@@ -2,7 +2,12 @@
 """Extract genuine human messages, pop-up answers, assistant text and compaction summaries from a session JSONL.
 Usage: audit_chat.py <session.jsonl> [outdir]   (default outdir tmp/scratch)
 Logs to tmp/logs/audit_chat.log."""
-import json, os, re, sys, subprocess
+import json
+import os
+import re
+import subprocess
+import sys
+
 
 def repo():
     r = os.environ.get("AWTO_DDC_REPO")

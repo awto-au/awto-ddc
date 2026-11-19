@@ -10,14 +10,17 @@ usage: rtd_isp_probe.py <bus> [--enter-isp [--dump out.bin [--block N]]]   (dump
 Protocol + tags: docs/reversing/realtek-rtd/README.md
 Log: ./tmp/logs/rtd_isp_probe.log
 """
-import os, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402  (trace tap: decoded + raw logs, see rtd_proto.setup_logs)
-import i2cbus  # noqa: E402
-from i2cbus import Msg, I2C_M_RD  # noqa: E402,F401  (re-export for rtd_flash_sector)
+import i2cbus
+import rtd_proto
+from i2cbus import I2C_M_RD, Msg  # noqa: F401  (re-export for rtd_flash_sector)
 
 ISP_ADDR = 0x4A
 # SPI-engine poll: 3-byte JEDEC at >=1 MHz SPI ~ 30 us; one poll = 2 I2C msgs ~ 0.5 ms

@@ -8,9 +8,14 @@ usage: rtd_gpio_live.py <bus> --serial AWT2611000N --label on|standby
   Out: tmp/regs/<serial>-gpio-<label>-<YYYYMMDD-HHMMSS>.json ; diff: rtd_gpio_live.py --diff a.json b.json
 Log: ./tmp/logs/rtd_gpio_live.log
 """
-import argparse, csv, json, sys, time
-import isostamp  # noqa: E402
+import argparse
+import csv
+import json
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import rtd_isp_probe as P

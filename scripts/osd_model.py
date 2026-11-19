@@ -18,10 +18,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-import fw_sim as S  # noqa: E402
-from glyph_decode import CODES, tile  # noqa: E402
-import osd_vlc  # noqa: E402
+import fw_sim as S
+import numpy as np
+import osd_vlc
+from glyph_decode import CODES, tile
 
 ADR_MSB, ADR_LSB, DATA, MISC, WOPT = 0x90, 0x91, 0x92, 0x93, 0x94
 LUT_ADDR, LUT_PORT = 0x6E, 0x6F
@@ -410,7 +410,7 @@ def window_extras(st: OsdState, i: int) -> dict:
     return dict(cb=cb, pix=max(a9[1], 1), gray=a9[0] >> 1 & 1, round=rd, mask=mk, rot=a9[0] & 1)
 
 
-def round_cuts(st: OsdState, n: int, opt: "Opt") -> list[int]:
+def round_cuts(st: OsdState, n: int, opt: Opt) -> list[int]:
     """Pixels hidden per corner line (line 0 = the window edge) for a rounded window of size n (8 / 16 / 32).
     Pattern registers 0x3A60.. hold one value per line (3 / 4 / 5 bit). [spec-model] value = visible pixels of that line inside the
     corner square, so the SDK QC ramp (line k = k) is a chamfer; all-zero table = quarter circle (opt.round_circle)."""
@@ -426,7 +426,7 @@ def round_cuts(st: OsdState, n: int, opt: "Opt") -> list[int]:
     return [n - x for x in v]
 
 
-def round_mask(st: OsdState, wl: int, hl: int, n: int, corners, opt: "Opt") -> np.ndarray:
+def round_mask(st: OsdState, wl: int, hl: int, n: int, corners, opt: Opt) -> np.ndarray:
     """Visible mask (hl x wl, logical px) of a window with the four corners (UL, LL, UR, LR) rounded by the pattern of size n."""
     mk = np.ones((hl, wl), bool)
     cuts = round_cuts(st, n, opt)
@@ -445,7 +445,7 @@ def round_mask(st: OsdState, wl: int, hl: int, n: int, corners, opt: "Opt") -> n
     return mk
 
 
-def pg_image(pg: bytes, W: int, H: int, opt: "Opt | None" = None) -> np.ndarray | None:
+def pg_image(pg: bytes, W: int, H: int, opt: Opt | None = None) -> np.ndarray | None:
     """Display pattern generator (page 7 0x07F0..FF) as an (H, W, 3) picture, None when off. Per channel (R, G, B = CTRL 0xF0 / F1 / F2,
     init F3..F5 = value[11:4]): increment / toggle per pixel step and per line step by the delta (12 bit), clamp or wrap, invert.
     [databook] register text; [spec-model] toggle = alternate init / init + delta; random mode (pg_mode) = flat init value."""
@@ -568,9 +568,7 @@ def ink_cells(st: OsdState) -> list[list[int]]:
     for row in layout_rows(st, g):
         cols = []
         for k, ch in enumerate(row["chars"]):
-            if ch["kind"] == "1bit" and glyph_bits(st, g, ch["id"]).any():
-                cols.append(k)
-            elif ch["kind"] == "2bit" and glyph_levels2(st, g, ch["id"]).any():
+            if ch["kind"] == "1bit" and glyph_bits(st, g, ch["id"]).any() or ch["kind"] == "2bit" and glyph_levels2(st, g, ch["id"]).any():
                 cols.append(k)
         out.append(cols)
     return out

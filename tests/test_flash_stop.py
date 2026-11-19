@@ -16,11 +16,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import flash_state as S  # noqa: E402
-import i2cbus  # noqa: E402
-import rtd_flash_image as I  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
-from test_flash_incremental import NIMG, SECTOR, FakeIsp, image, opts  # noqa: E402
+import flash_state as S
+import i2cbus
+import rtd_flash_image as I
+import rtd_flash_sector as F
+from test_flash_incremental import NIMG, SECTOR, FakeIsp, image, opts
 
 T_WR, T_RD = 0.021, 0.042                   # NVIDIA DP AUX per message (#71)
 PAGE_S = {"byte": 256 * T_WR + 7 * T_WR, "burst": 0.33}

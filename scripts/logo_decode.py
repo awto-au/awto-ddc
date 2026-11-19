@@ -6,7 +6,9 @@ Default tile = 12x9 px, 2 bpp, MSB-first row-major = 27 bytes (bank0 font at 0x2
 Pixel value -> grey: 0 black, 1 dark, 2 light, 3 white.
 """
 import sys
+
 from PIL import Image
+
 
 def tile_px(b, w, h, bpp):
     px, mask = [], (1 << bpp) - 1

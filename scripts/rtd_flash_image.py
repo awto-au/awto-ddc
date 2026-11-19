@@ -35,22 +35,37 @@ Log: ./tmp/logs/rtd_flash_image.log
 """
 from __future__ import annotations
 
-import argparse, os, random, signal, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import random
+import signal
+import sys
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402
-import rtd_flash_sector as F  # noqa: E402
-import flash_state as S  # noqa: E402
-import flash_manifest as FM  # noqa: E402
-import i2cbus  # noqa: E402
-import unit_lock  # noqa: E402
-import disk_guard  # noqa: E402
-import flash_screen as FSCR  # noqa: E402
-from rtd_flash_sector import Rtd, SECTOR, PAGE, JEDEC_OK, SR_PROT, T_READ, T_ERASE_LIMIT, ENGINE_OPS  # noqa: E402
+import disk_guard
+import flash_manifest as FM
+import flash_screen as FSCR
+import flash_state as S
+import i2cbus
+import rtd_flash_sector as F
+import rtd_proto
+import unit_lock
+from rtd_flash_sector import (
+    ENGINE_OPS,
+    JEDEC_OK,
+    PAGE,
+    SECTOR,
+    SR_PROT,
+    T_ERASE_LIMIT,
+    T_READ,
+    Rtd,
+)
 
 FLASH = 1 << 20
 SCREEN_DUTY_AUX = 0.10      # flash-screen time share on DP AUX (redraws are AUX-bound; docs/flash-dp-aux.md)

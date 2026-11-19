@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import fw_link_check as L  # noqa: E402
+import fw_link_check as L
 
 CALLER = """\
 _load:

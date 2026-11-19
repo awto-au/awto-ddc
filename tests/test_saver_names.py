@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import saver_names  # noqa: E402
+import saver_names
 
 
 def test_c_block_current():

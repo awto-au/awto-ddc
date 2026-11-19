@@ -9,9 +9,14 @@ Log: tmp/logs/spec_vectors.log
 """
 from __future__ import annotations
 
-import argparse, os, random, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import random
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 M32 = 0xFFFFFFFF
 

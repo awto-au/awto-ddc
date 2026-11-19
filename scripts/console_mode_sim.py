@@ -7,12 +7,15 @@ usage: console_mode_sim.py BIN MAP
   Always: still open long after the hold, no close event.   Off: never opens.
 Exit 1 on any failed check. Log: ./tmp/logs/console_mode_sim.log
 """
-import argparse, re, sys
-import isostamp  # noqa: E402
+import argparse
+import re
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = S.ROOT / "tmp/logs/console_mode_sim.log"
 SET_ID_CONSOLE_MODE = 110
@@ -26,7 +29,7 @@ SRC = (S.ROOT / "fw/osd/console.c", S.ROOT / "fw/sdk/Project/Header/RL6449_Proje
 
 def const(name: str) -> int:
     for f in SRC:
-        m = re.search(rf"^#define {name}\s+(\d+)", f.read_text(), re.M)
+        m = re.search(rf"^#define {name}\s+(\d+)", f.read_text(), re.MULTILINE)
         if m:
             return int(m.group(1))
     raise SystemExit(f"{name} not found in {[p.name for p in SRC]}")
@@ -65,7 +68,6 @@ def main() -> int:
         def push(m_, r):
             if (r["a1"] & 0xFF) == EV_SEL:
                 evs.append(((r["a2"] & 0xFF), round(bus.now(), 3)))
-            return None
 
         m.stub("set_get", set_get)
         m.stub("AwtoSyncPush", push)

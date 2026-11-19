@@ -16,12 +16,13 @@ import argparse
 import json
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import wdt_test as W  # noqa: E402
+import dbg_xdata as X
+import wdt_test as W
 
 ROOT = W.ROOT
 LOG = ROOT / "tmp/logs/ps_probe.log"
@@ -113,7 +114,7 @@ def main() -> int:
         return rows
 
     def dpms(on):
-        import host_dpms as H                  # off arms the guard (#159)
+        import host_dpms as H  # off arms the guard (#159)
         H.on() if on else H.off(W.HOST_OFF_GUARD_S)
 
     out = {"serial": t.serial, "time": isostamp.now(), "map": str(a.map)}
@@ -152,8 +153,9 @@ def main() -> int:
             if md == 6:
                 out["ps"] = [sample(f"PS{i}") for i in range(a.ps_n)]
                 import re
+
                 import sync_log as SL
-                ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", t.map_text, re.M).group(1), 16) & 0xFFFF
+                ring = int(re.search(r"^(?:D:\s+|\s+)([0-9A-Fa-f]{8})\s+_g_stAwtoSync\b", t.map_text, re.MULTILINE).group(1), 16) & 0xFFFF
                 raw = SL.read_ring(lambda ad, n: X.read_blocks(t.io, ad, n), ring)
                 out["ring"] = SL.decode(raw, SL.load_rows(SL.tsv_for(a.map)), whole=True)[1] if raw else []
                 for ln in out["ring"]:

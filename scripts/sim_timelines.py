@@ -8,9 +8,14 @@ usage: sim_timelines.py BIN_A BIN_B [--tol-ms 1] [--sims boot_sim wake_sim ...] 
   a milestone table (first line matching each MILESTONES pattern, ms) A vs B is printed.
 Log: tmp/logs/sim_timelines.log
 """
-import argparse, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import re
+import subprocess
+import sys
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/sim_timelines.log"

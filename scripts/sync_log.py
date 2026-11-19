@@ -21,9 +21,9 @@ import json
 import os
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sync_log.log"
@@ -354,7 +354,7 @@ def pin_line(raw8: bytes, rows: list[dict]) -> str | None:
 
 
 def sym(map_path: Path, name: str) -> int:
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.M)
+    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.MULTILINE)
     if not m:
         raise SystemExit(f"{name} not in {map_path}: image without the #139 sync log")
     return int(m.group(1), 16) & 0xFFFF
@@ -370,9 +370,9 @@ def main() -> int:
     ap.add_argument("--delta", action="store_true", help="add a +ms column: time since the previous line (#216 boot timing)")
     a = ap.parse_args()
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import dbg_xdata as X        # noqa: E402
-    import i2cbus                # noqa: E402
-    import rtd_i2c_bridge as B   # noqa: E402
+    import dbg_xdata as X
+    import i2cbus
+    import rtd_i2c_bridge as B
     if a.serial:
         i2cbus.require_unit(a.bus, a.serial)
     rows = load_rows(a.tsv or tsv_for(a.map))

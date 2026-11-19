@@ -15,14 +15,19 @@ Block (big-endian multi-byte, sorted by id; changes only when the enabled set / 
 Host lookup order (load_ids): table in the flashed image (tmp/fw/<serial>-flashed.json) -> cache tmp/msgtable/<hash>.bin
 -> fw/msgids.tsv. Log: ./tmp/logs/msg_table.log
 """
-import argparse, hashlib, json, struct, sys, time
-import isostamp  # noqa: E402
+import argparse
+import hashlib
+import json
+import struct
+import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
+import isostamp
 
-import chip_mem as CM  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import chip_mem as CM
+from sdcc_overlay import repo_root
+
 MSG_ADDR, MSG_SIZE = CM.RESERVED["msg"]       # fw/rl6449_memory.toml (#56, #149 a)
 MSG_BANK = MSG_ADDR // CM.BANK_SIZE
 MAGIC, VERSION, HDR = b"AMSG", 1, 32

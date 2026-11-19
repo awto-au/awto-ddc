@@ -8,7 +8,10 @@ usage: ddr_init_diff.py VENDOR.tsv.gz OURS.tsv.gz [--until-ms 400] [--out tmp/lo
   fw_ms is sim time (instr / 12.6 k): relative step spacing, not hardware time; polls never see lock in the sim.
 Log: tmp/logs/ddr_init_diff.log (+ --out)
 """
-import argparse, difflib, gzip, sys
+import argparse
+import difflib
+import gzip
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -9,8 +9,9 @@ usage: isp_write_probe.py <bus> --serial S [--sizes 64,128,255,256]
 import argparse
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus

@@ -10,13 +10,14 @@ Log: ./tmp/logs/asteroids_speed.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
+import ddc_sim as D
+import osd_render as R
 
 LOG = R.ROOT / "tmp/logs/asteroids_speed.log"
 VCP_SAVER, VCP_ASTEROIDS = 0xEB, 8

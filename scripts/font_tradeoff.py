@@ -18,9 +18,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_vlc  # noqa: E402  (the one VLC codec)
+import osd_vlc
+from osd_model import SRAM_WORDS
 
-from osd_model import SRAM_WORDS  # noqa: E402  (one source: _OSD_SRAM_SIZE)
 TILE_W, TILE_H = 12, 18                 # [spec/oss] 1-bpp cell
 FONTS = {
     "fixed": "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",

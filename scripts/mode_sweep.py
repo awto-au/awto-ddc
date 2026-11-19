@@ -15,16 +15,18 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import dev  # noqa: E402  (gdctl_set_args, _bus, _fwmap, cmd_recover: the same code paths as dev.py mode/recover)
-import dbg_xdata as X  # noqa: E402
-import i2cbus  # noqa: E402
-import rtd_proto as P  # noqa: E402
-import unit_health as H  # noqa: E402
+import dbg_xdata as X
+import i2cbus
+import rtd_proto as P
+import unit_health as H
+
+import dev
 
 REST = "3840x2160@60.000"     # Dan 2026-11-07: units rest at 4K60.000 (was 1080p60)
 REST_W = int(REST.split("x")[0])

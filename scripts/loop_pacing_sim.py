@@ -19,7 +19,7 @@ import isostamp
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = ROOT / "tmp/logs/loop_pacing_sim.log"
 
@@ -50,7 +50,7 @@ def main() -> int:
     p = bus.m.p
     d0, c0, i0, k0, n0, t0 = bus.diag(), p.clk, p.instr, p.idle_clk, p.nidle, time.perf_counter()
     q0 = p.nirq
-    m = re.search(r"^[XD]:\s+([0-9A-Fa-f]+)\s+_?g_stAwtoHead\b", Path(mapp).read_text(), re.M)
+    m = re.search(r"^[XD]:\s+([0-9A-Fa-f]+)\s+_?g_stAwtoHead\b", Path(mapp).read_text(), re.MULTILINE)
     for _ in range(int(a.window)):                      # per-second headroom rows of the window
         bus.wait(1.0)
         if m:

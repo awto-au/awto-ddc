@@ -15,16 +15,16 @@ usage: selector_switch_unit.py MAP [--how idle|auto|both] [--keep-link]
 - Unit 2 only (keymap_unit.Unit checks the serial). Ends on D2 fixed (settings_cli set input 1), debug link off.
 Log: tmp/logs/selector_switch_unit.log
 """
-import re
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import keymap_unit as K  # noqa: E402
+import keymap_unit as K
 
 K.ROOT = Path(os.environ.get("AWTO_DDC_REPO") or K.ROOT)  # repo with tmp/fw (images), tmp/logs
 K.LOG = K.ROOT / "tmp/logs/selector_switch_unit.log"
@@ -53,8 +53,8 @@ class Unit(K.Unit):
     def follow(self):
         """reads on the bus whose 0x35 answers (the debug slave moves with the port that has a signal); True = moved"""
         import dbg_link
-        from rtd_i2c_bridge import Real
         import settings_cli as C
+        from rtd_i2c_bridge import Real
         if dbg_link.dbg_ok(K.BUS):
             return False
         for b in BUSES:

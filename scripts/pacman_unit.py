@@ -10,8 +10,9 @@ import os
 import re
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,11 +43,12 @@ def main() -> int:
     ap.add_argument("--pos", type=int, nargs=2, metavar=("H", "V"), default=None, help="OSD position (hd, vd units)")
     ap.add_argument("--keep", action="store_true", help="leave the last frame on screen")
     a = ap.parse_args()
-    import dbg_link, i2cbus  # noqa: E401
+    import dbg_link
+    import i2cbus
     import rtd_i2c_bridge as B
 
     i2cbus.require_unit(a.bus, a.serial)
-    hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.M)
+    hit = re.search(r"^\S*\s+([0-9A-F]{8})\s+_isr_g_stAwtoDiag\b", a.map.read_text(errors="replace"), re.MULTILINE)
     if not hit:
         sys.exit(f"isr_g_stAwtoDiag not in {a.map}")
     cmd = (int(hit.group(1), 16) & 0xFFFF) + TESTCMD_OFF
@@ -60,7 +62,7 @@ def main() -> int:
             def send(c: int) -> bool:
                 return io.write(0x6A, 0x01, bytes([cmd >> 8])) and io.write(0x6A, 0x03, bytes([c])) and io.write(0x6A, 0x3B, bytes([cmd & 0xFF]))
             def poke(sym: str, v: int, width: int = 1) -> None:          # XDATA bytes, big endian for a WORD
-                ad = int(re.search(r"^\S*\s+([0-9A-F]{8})\s+_?" + sym + r"\b", a.map.read_text(errors="replace"), re.M).group(1), 16) & 0xFFFF
+                ad = int(re.search(r"^\S*\s+([0-9A-F]{8})\s+_?" + sym + r"\b", a.map.read_text(errors="replace"), re.MULTILINE).group(1), 16) & 0xFFFF
                 for k in range(width):
                     byte = (v >> (8 * (width - 1 - k))) & 0xFF
                     io.write(0x6A, 0x01, bytes([(ad + k) >> 8])) and io.write(0x6A, 0x03, bytes([byte])) and io.write(0x6A, 0x3B, bytes([(ad + k) & 0xFF]))

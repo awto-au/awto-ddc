@@ -7,14 +7,18 @@ usage: dpll_hold.py --unit N --bus B --serial S [--values 0x7F8,0x7F0,...] [--fu
   Finally restores the original C4/C5, resumes main. Offset format: SDK ScalerPLL.c (12-bit, C4[4]=1 FreqDn, C6[2] apply).
 Paths: debug slave 0x35 ScalerSetByte/GetByte (as p037_test.py). Log: ./tmp/logs/dpll_hold.log
 """
-import argparse, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from p037_test import rd, wr, DBG  # noqa: E402
+import i2cbus
+from p037_test import DBG, rd, wr
+from rtd_i2c_bridge import Real
 
 ROOT = Path(__file__).resolve().parent.parent
 LOGF = ROOT / "tmp/logs/dpll_hold.log"

@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import sw_timeline as T  # noqa: E402
+import fw_sim as S
+import sw_timeline as T
 
 D1, D2 = 4, 5
 SOURCE_DP = 4

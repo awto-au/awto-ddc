@@ -8,10 +8,13 @@ usage: fw_xdata_map.py <image.bin> [--banks N] [--bucket 0x100]
   densely-used RAM address. Question answered: how much XRAM does the shipped firmware actually use (#8).
 Log: tmp/logs/fw_xdata_map.log
 """
-import os, subprocess, sys, time
-import isostamp  # noqa: E402
+import os
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root():

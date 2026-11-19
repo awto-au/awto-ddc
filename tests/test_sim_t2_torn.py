@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 
 def bus(samples):

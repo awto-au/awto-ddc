@@ -5,10 +5,12 @@ usage: nv_items.py PAGE.bin [PAGE.bin ...]     (dump: rtd_flash_sector.py <bus> 
 Item = 16 B (_DATA_ITEM_LENGTH): id, 14 data, checksum. Per page: item count per id, newest copy (highest address) of each.
 Log: ./tmp/logs/nv_items.log
 """
-import os, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
 from collections import Counter
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/nv_items.log"

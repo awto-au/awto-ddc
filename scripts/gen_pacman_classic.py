@@ -13,9 +13,9 @@ import argparse
 import math
 import os
 import sys
-import isostamp  # noqa: E402
-import osd_gfx as OG  # noqa: E402
 from pathlib import Path
+
+import osd_gfx as OG
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/pacman_classic_data.inc"
@@ -107,7 +107,7 @@ def wall_glyph(m, x, y):
     """Outline of the wall region: a 2 px line along every edge towards an open tile, joined at concave corners, rounded at convex ones."""
     g = blank()
     o = {(dx, dy): not is_wall(m, x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1) if (dx, dy) != (0, 0)}
-    edge = lambda p: range(0, 2) if p < 0 else range(10, 12)
+    edge = lambda p: range(2) if p < 0 else range(10, 12)
     for (dx, dy) in ((-1, 0), (1, 0), (0, -1), (0, 1)):
         if o[(dx, dy)]:
             if dx:

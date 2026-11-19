@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dis51  # noqa: E402
+import dis51
 
 COMMON = 0x2586          # bank-private code starts here; below it every bank holds the same bytes
 MAXSTEP = 6000           # per function walk; the largest Keil function here is ~2000 insns

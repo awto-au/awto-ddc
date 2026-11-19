@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402
+import rtd_proto
 
 I2C_RETRIES, I2C_TIMEOUT, I2C_SLAVE, I2C_RDWR = 0x0701, 0x0702, 0x0703, 0x0707   # linux/i2c-dev.h
 I2C_SMBUS = 0x0720

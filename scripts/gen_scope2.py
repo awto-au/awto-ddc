@@ -12,11 +12,10 @@ Log: ./tmp/logs/gen_scope2.log
 import argparse
 import os
 import sys
-import isostamp  # noqa: E402
-import osd_gfx as OG  # noqa: E402
 from pathlib import Path
 
 import numpy as np
+import osd_gfx as OG
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/scope2_data.inc"

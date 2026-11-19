@@ -23,8 +23,8 @@ import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_hw_test as H  # noqa: E402
+import isostamp
+import osd_hw_test as H
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/clk_sweep.log"
@@ -546,8 +546,8 @@ def tsv(row: dict) -> None:
 
 
 def make_sim(binp: Path, map_path: Path):
-    import osd_render as R
     import ddc_sim as D
+    import osd_render as R
     eng = D.DdcEngine()
     sess = R.Session(binp, map_path, "2160p60", devs=[eng])
     sess.boot()
@@ -611,8 +611,8 @@ def main() -> int:
         run(ctx, names, a)
         return 0
     import dbg_link
-    import i2cbus
     import dbg_xdata
+    import i2cbus
     i2cbus.require_unit(a.bus, a.serial)
     with dbg_link.linked(a.bus, 10):
         dev = H.Unit(a.bus, a.map)

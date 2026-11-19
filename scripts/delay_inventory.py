@@ -20,7 +20,6 @@ Log: tmp/logs/delay_inventory.log
 from __future__ import annotations
 
 import argparse
-import bisect
 import collections
 import glob
 import json
@@ -29,8 +28,9 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -76,7 +76,7 @@ LAB = re.compile(r"^\s+([0-9A-F]{6})\s+\d+ (_\w+|\d+\$):\s*$")
 
 
 class Fn:
-    __slots__ = ("name", "addr", "module", "stmts", "ins", "calls", "reti", "labels")
+    __slots__ = ("addr", "calls", "ins", "labels", "module", "name", "reti", "stmts")
 
     def __init__(self, name, addr, module):
         self.name, self.addr, self.module = name, addr, module
@@ -347,7 +347,7 @@ def interp(ins, upto: int) -> tuple[dict, dict]:
         m = re.match(r"(setb|clr)\s+\(?__bovl", t)
         if m:
             bits["last"] = 1 if m.group(1) == "setb" else 0
-    return st, {**parm, **{"_bit": bits.get("last")}}
+    return st, {**parm, "_bit": bits.get("last")}
 
 
 def dptr_val(st):
@@ -700,7 +700,6 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
                 s["hooked"] = True
                 m.stubs.setdefault(pc, []).append((None if pc < cend else bank, "ret:" + key, on_exit(key)))
                 m.s.send(f"break 0x{pc:x}")
-            return None
         return fn
 
     def on_exit(key):
@@ -713,7 +712,6 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
                     hits.append((t0, t2() - t0, key))
                 if kind != "delay_ms" and not (mm.rd(0xD0, 1, "sfr")[0] & 0x80):
                     s[ph + "expired"] += 1
-            return None
         return fn
 
     events: list = []                                  # deferred timer events armed: (fw ms, period ms, event id, reactive)
@@ -721,7 +719,6 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
     def on_event(react):
         def fn(mm, regs):
             events.append((t2(), regs["a1"], regs["a2"], react, phase["p"] == "act_"))
-            return None
         return fn
 
     for kind, nm in targets.items():

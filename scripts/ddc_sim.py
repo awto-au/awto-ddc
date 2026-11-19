@@ -13,13 +13,13 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import settings_table as T  # noqa: E402
+import fw_sim as S
+import settings_table as T
 
 ROOT = S.ROOT
 LOG = ROOT / "tmp/logs/ddc_sim.log"

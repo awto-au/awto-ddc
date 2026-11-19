@@ -10,7 +10,11 @@ Prints pin | reg | live | reference value | live meaning.
 Paired regs (value 8 = dedicated function): DDC pairs select DDC with bit7=0, IIC/UART pairs with bit7=1
 (Kernel RL6449_Series_Pinshare.c ScalerPinshareInitial). Log: ./tmp/logs/rtd_pinshare_decode.log
 """
-import argparse, os, re, subprocess, sys
+import argparse
+import os
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 

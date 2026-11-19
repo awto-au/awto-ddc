@@ -8,14 +8,17 @@ usage: fw_ram_report.py --img STEM [--build build.json] [--asm DIR] [--stack fw_
   XDATA window = firmware RAM 0xE780..0xF6D0 (diag block above, fw_build xdata_holes[0]).
 Output: markdown table to stdout. Log: tmp/logs/fw_ram_report.log
 """
-import argparse, json, re, sys
+import argparse
+import json
+import re
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as F  # noqa: E402
+import fw_sim as F
 
 XRAM = (0xE780, 0xF6D0)
-AREA = re.compile(r"^(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+\d+\. bytes \(([^)]*)\)", re.M)
+AREA = re.compile(r"^(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+\d+\. bytes \(([^)]*)\)", re.MULTILINE)
 
 
 def areas(mp: str) -> dict:

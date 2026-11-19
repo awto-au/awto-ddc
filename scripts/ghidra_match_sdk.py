@@ -12,8 +12,12 @@ function has >= min-regs distinct registers, and the best SDK name leads the run
 (existing entries of any status are never changed; one name per address, one address per name per bank).
 Report: ./tmp/logs/ghidra_match_sdk.log (match rate per bank), candidates: ./tmp/match_bank<N>.tsv
 """
-import csv, math, os, re, sys
-from collections import defaultdict, Counter
+import csv
+import math
+import os
+import re
+import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)

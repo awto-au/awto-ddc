@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from make_edid import build  # noqa: E402
+from make_edid import build
 
 VENDORS = Path("/mnt/2tb/vendors/realtek/analysis/edid")
 TEMPLATE_DEFAULT = VENDORS / "patched_sector_13000.bin"

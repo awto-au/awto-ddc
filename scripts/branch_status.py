@@ -8,9 +8,9 @@ Log: tmp/logs/branch_status.log
 """
 import argparse
 import subprocess
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 
 def _repo() -> Path:

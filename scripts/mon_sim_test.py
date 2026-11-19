@@ -13,12 +13,13 @@ Log: tmp/logs/mon_sim_test.log
 import argparse
 import re
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_render as R  # noqa: E402
-import sync_log as SL  # noqa: E402
+import osd_render as R
+import sync_log as SL
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "tmp/logs/mon_sim_test.log"
@@ -35,7 +36,7 @@ def say(s):
 
 
 def define(name):
-    return int(re.search(rf"^#define\s+{name}\s+(\d+)", HDR.read_text(), re.M).group(1))
+    return int(re.search(rf"^#define\s+{name}\s+(\d+)", HDR.read_text(), re.MULTILINE).group(1))
 
 
 class Rig:
@@ -55,7 +56,6 @@ class Rig:
 
     def _count(self, m, r):
         self.calls += 1
-        return None
 
     def wait(self, s):
         self.s.bus.wait(s)

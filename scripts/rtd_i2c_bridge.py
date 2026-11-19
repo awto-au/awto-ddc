@@ -15,13 +15,15 @@ Protocol/regs: docs/reversing/realtek-rtd/README.md.
 Logs: ./tmp/logs/rtd_i2c_bridge.log (decoded by rtd_proto.py), ./tmp/logs/rtd_i2c_bridge.raw.log (byte trace).
 Tools using Real get the same split with `B.setup_logs("<tool>", map=None)` (= rtd_proto.setup_logs).
 """
-import socket, struct, sys
+import socket
+import struct
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import rtd_proto  # noqa: E402
-import i2cbus  # noqa: E402
-from rtd_proto import setup_logs  # noqa: E402,F401  (re-export: B.setup_logs)
+import i2cbus
+import rtd_proto
+from rtd_proto import setup_logs
 
 PORT = 17420
 JEDEC = bytes([0xC2, 0x20, 0x14])

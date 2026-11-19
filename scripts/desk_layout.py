@@ -34,8 +34,9 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 
 def _repo() -> Path:
@@ -87,7 +88,7 @@ def specs() -> dict[str, tuple[str, str, str]]:
     """connector -> (vendor, product, serial) from gdctl show."""
     out = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=SHOW_S, check=True).stdout
     res = {}
-    for m in re.finditer(r"Monitor (\S+) \(.*?\n.*?Vendor: (.*?)\n.*?Product: (.*?)\n.*?Serial: (.*?)\n", out, re.S):
+    for m in re.finditer(r"Monitor (\S+) \(.*?\n.*?Vendor: (.*?)\n.*?Product: (.*?)\n.*?Serial: (.*?)\n", out, re.DOTALL):
         res[m.group(1)] = (m.group(2).strip(), m.group(3).strip(), m.group(4).strip())
     return res
 
@@ -292,7 +293,7 @@ def main() -> int:
         modes = {m["connector"]: m["mode"] for m in cfg["monitors"]}
         cur = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=SHOW_S, check=True).stdout
         for c in pos:
-            mm = re.search(rf"Monitor {re.escape(c)} \(.*?Current mode\s*\n\W*(\d+x\d+@[\d.]+)", cur, re.S)
+            mm = re.search(rf"Monitor {re.escape(c)} \(.*?Current mode\s*\n\W*(\d+x\d+@[\d.]+)", cur, re.DOTALL)
             if mm:
                 modes[c] = mm.group(1)
         cfg["monitors"] = [{"connector": c, "serial": sp.get(c, ("", "", ""))[2], "mode": modes.get(c, "3840x2160@60.000"),

@@ -19,8 +19,8 @@ import isostamp
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
-import fw_sim as S  # noqa: E402
-import unit_health as H  # noqa: E402
+import fw_sim as S
+import unit_health as H
 
 LOG = ROOT / "tmp/logs/loop_pacing_test.log"
 A0, IDLE, UP_BAND = 0xFF09, 0xF8, 0x38        # ADC_A0 cell, idle value, centre of the UP band (fw/awto/inputs.tsv)
@@ -75,12 +75,10 @@ def t_race(bus):
             st["armed"] = False
             m_.wr(0x88, bytes([m_.rd(0x88, 1, "sfr")[0] | 0x20]), "sfr")      # TCON.TF0: the Timer0 ISR runs before the IDL instruction
             st["t2"], st["nidle"] = bus.diag()["t2"], p.nidle
-        return None
 
     def nxt(m_, r):                              # the next pass starts: the pace loop was left
         if not st["armed"] and st["next"] is None:
             st["next"], st["nidle2"] = bus.diag()["t2"], p.nidle
-        return None
 
     m.stub("AwtoLoopIdle", inj)
     m.stub("SysTimerHandler", nxt)

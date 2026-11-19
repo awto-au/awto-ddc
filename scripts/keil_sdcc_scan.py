@@ -10,10 +10,14 @@ Method: comment/string-stripped token scan + declaration table (per file, then g
 macro bodies for bit-typed macros, regex call graph for ISR reachability. Not a full C parse: macro-expanded and
 typedef'd-through-struct types are unknown -> those operands are skipped (under-count, never over-claimed as handled).
 """
-import os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import os
+import re
+import subprocess
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root():
@@ -194,7 +198,7 @@ def parse_decls(src):
 def parse_macros(files):
     """name -> (params, body). Includes function-like and object-like."""
     mac = {}
-    rx = re.compile(r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)(\([^)]*\))?[ \t]*(.*)$", re.M)
+    rx = re.compile(r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)(\([^)]*\))?[ \t]*(.*)$", re.MULTILINE)
     for s in files:
         for m in rx.finditer(strip_cpp_comments(s.raw)):
             mac.setdefault(m.group(1), (m.group(2), m.group(3).strip()))
@@ -202,7 +206,7 @@ def parse_macros(files):
 
 
 def strip_cpp_comments(raw):
-    return re.sub(r"/\*.*?\*/|//[^\n]*", " ", raw, flags=re.S)
+    return re.sub(r"/\*.*?\*/|//[^\n]*", " ", raw, flags=re.DOTALL)
 
 
 # ---------------- reporting ----------------
@@ -480,7 +484,7 @@ def main():
 
     # ---- ~ on bit operands inside macro bodies (the token pass skips # lines) ----
     for s in files:
-        for m in re.finditer(r"^[ \t]*#[ \t]*define[ \t]+(\w+)[^\n]*", s.raw, re.M):
+        for m in re.finditer(r"^[ \t]*#[ \t]*define[ \t]+(\w+)[^\n]*", s.raw, re.MULTILINE):
             line = m.group(0)
             if "~" not in line:
                 continue
@@ -494,7 +498,7 @@ def main():
     call_re = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
     log("call graph for ISR reachability")
     funcdef = re.compile(r"^(?:[A-Za-z_][\w \t\*]*?)\b([A-Za-z_]\w*)\s*\(([^;{}()]*)\)\s*(?:interrupt\s+\w+)?(?:\s+using\s+\d+)?\s*(?:\n\s*)?\{",
-                         re.M)
+                         re.MULTILINE)
     bodies, isr_roots = {}, set()
     for s in files:
         if not s.in_build:
@@ -537,7 +541,7 @@ def main():
     for s in files:
         v, _ = per[s.rel]
         for m in re.finditer(r"^(?:extern\s+|static\s+)*(volatile\s+)?(bit|BYTE|WORD|DWORD|SBYTE|SWORD|unsigned\s+\w+)\s+(?:xdata\s+|data\s+|idata\s+|pdata\s+|bdata\s+)?([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*(?:=[^;]*)?;",
-                             s.clean, re.M):
+                             s.clean, re.MULTILINE):
             if not m.group(1) and m.group(3).startswith("g_"):
                 gdecl.setdefault(m.group(3), (s, s.clean.count("\n", 0, m.start()) + 1, m.group(2)))
     vol_rule = re.compile(r"g_b(?:NotifyTimer2Int|WDTimer2Update)\b")

@@ -11,8 +11,9 @@ import argparse
 import os
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 LOG = ROOT / "tmp/logs/sim_loop_speed.log"
@@ -55,7 +56,7 @@ def main() -> int:
     core = (a.repo or ROOT).resolve()
     sys.path.insert(0, str(core / "scripts"))
     os.environ["AWTO_SIM_CORE"] = "fast"
-    import fw_sim as S                                    # noqa: E402  (the measured checkout's core)
+    import fw_sim as S
     say(f"=== {binp.name}: core {core}, window {a.window} s sim, {a.runs} runs")
     for n in range(a.runs):
         host, ins, sim, cnt = one(S, binp, mapp, a.window)

@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 from pathlib import Path
 
-import json
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
@@ -195,7 +195,6 @@ def test_flasher_passes_identity_to_guard(monkeypatch, tmp_path):
 
     def require(bus, serial, identity=None):
         seen.append((bus, serial, identity))
-        return None
     I, opened = _flash_main(monkeypatch, tmp_path, ["--identity", "relay cycle"], require)
     with pytest.raises(AssertionError):             # guard passed, reached Rtd()
         I.main()

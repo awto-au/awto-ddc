@@ -14,7 +14,7 @@ import os
 import re
 import shutil
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 MIN_FREE_MB = 200       # one flash run writes < 20 MB of logs; a build ~300 MB in its worktree tmp/
@@ -29,7 +29,7 @@ def _repo() -> Path:
 
 def _log(msg: str) -> None:
     p = _repo() / "tmp/logs/disk_guard.log"
-    line = f"{datetime.now(timezone.utc).isoformat(timespec='seconds')} {msg}"
+    line = f"{datetime.now(UTC).isoformat(timespec='seconds')} {msg}"
     print(line)
     try:
         p.parent.mkdir(parents=True, exist_ok=True)

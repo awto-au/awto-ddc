@@ -13,20 +13,27 @@ Memory (SDK + board, awto-ddc#8):
 - Code: common [0, COMMON) copied into every bank; BANK<n> linked at n*0x10000 + COMMON.
 Log: ./tmp/logs/fw_build.log
 """
-import argparse, json, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
-import sdcc_link  # noqa: E402
-import sdcc_tools as T  # noqa: E402
-import msg_table as MT  # noqa: E402
-import xdata_layout as XL  # noqa: E402
+import msg_table as MT
+import sdcc_link
+import sdcc_tools as T
+import xdata_layout as XL
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 LOG = None
-import chip_mem as CM  # noqa: E402
+import chip_mem as CM
+
 XRAM = CM.XRAM                                                # fw/rl6449_memory.toml (#149 a)
 EDID_RAM = CM.DDC_RAM
 BANK = CM.BANK_SIZE
@@ -90,7 +97,7 @@ def xclear_asm():
 
 def area_sizes(rel: Path) -> dict:
     s = {}
-    for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
+    for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.MULTILINE):
         s[m.group(1)] = s.get(m.group(1), 0) + int(m.group(2), 16)
     return s
 
@@ -102,12 +109,12 @@ LIB_XSEG_MARGIN = 37      # SDCC lib XSEG (_mullong/_divulong params) x1.25, mea
 def check_xdata(mp: str, hs):
     """Every XDATA area must lie inside one hole (EDID DDC RAM between holes is hardware-owned)."""
     bad = []
-    for m in re.finditer(r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
+    for m in re.finditer(r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.MULTILINE):
         a, n = int(m.group(2), 16), int(m.group(3), 16)
         if n and not any(lo <= a and a + n <= hi for lo, hi in hs):
             bad.append(f"{m.group(1)} 0x{a:04x}+{n}")
     spans = sorted((int(m.group(2), 16), int(m.group(3), 16), m.group(1)) for m in re.finditer(
-        r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M) if int(m.group(3), 16))
+        r"^(X\w*SEG\d*|XS_\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.MULTILINE) if int(m.group(3), 16))
     bad += [f"{p[2]} overlaps {q[2]}" for p, q in zip(spans, spans[1:]) if p[0] + p[1] > q[0] and p[0] != q[0]]
     if bad:
         sys.exit(f"XDATA outside holes {[(hex(a), hex(b)) for a, b in hs]}: {sorted(set(bad))}")
@@ -116,7 +123,7 @@ def check_xdata(mp: str, hs):
 def check_layout(mp: str, pins: dict, layout: str):
     """Every pinned area sits at its slot; residual areas (vectors/HOME/GSINIT/library/XINIT) end below resid_end."""
     got, want = {}, {}                                       # the map prints area names cut to 32 chars
-    for m in re.finditer(r"^((?:CH|ST)\S*)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =", mp, re.M):
+    for m in re.finditer(r"^((?:CH|ST)\S*)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =", mp, re.MULTILINE):
         got.setdefault(m.group(1)[:32], []).append(int(m.group(2), 16))
     for n, v in pins.items():
         want.setdefault(n[:32], []).append(v)
@@ -124,7 +131,7 @@ def check_layout(mp: str, pins: dict, layout: str):
     if bad:
         sys.exit(f"layout: {len(bad)} areas not at their slot in the map: {bad[:5]}")
     end = 0
-    for m in re.finditer(r"^(HOME|GSINIT\d*|GSFINAL|CSEG|CONST|XINIT)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.M):
+    for m in re.finditer(r"^(HOME|GSINIT\d*|GSFINAL|CSEG|CONST|XINIT)\s+([0-9A-F]{8})\s+([0-9A-F]{8})", mp, re.MULTILINE):
         lo, n = int(m.group(2), 16), int(m.group(3), 16)
         if n and lo < BANK:
             end = max(end, lo + n)
@@ -159,7 +166,7 @@ def split_xseg(asm_dir: Path, compact: bool = False):
         sys.exit("xdata layout: two module names share their first 29 characters (the map cuts area names to 32)")
     for r in rels:
         if r.stem in rows:
-            r.write_text(re.sub(r"^A XSEG size", f"A {XL.PREFIX}{r.stem} size", r.read_text(errors="replace"), count=1, flags=re.M))
+            r.write_text(re.sub(r"^A XSEG size", f"A {XL.PREFIX}{r.stem} size", r.read_text(errors="replace"), count=1, flags=re.MULTILINE))
     new = ROOT / "tmp/sdcc-port/xdata_layout.new.tsv"
     new.write_text(XL.dump(rows))
     log(f"XDATA holes {[(hex(a), hex(b)) for a, b in hs]}; {len(rows)} modules, kept {info['kept']}, re-homed {len(info['moved'])} {info['moved'] if len(info['moved']) <= 12 else ''}"
@@ -180,11 +187,11 @@ def select_lib():
     SEL.mkdir(parents=True)
     proj = sorted(ASM.glob("*.asm"))
     lib = sorted((ASM / Path(LIB_UV2).parent).rglob("*.asm"))
-    globl = lambda t: set(re.findall(r"^\s+\.globl\s+(\w+)", t, re.M))
-    defs = lambda t: globl(t) & set(re.findall(r"^(\w+)::?\s*$", t, re.M))     # SDCC: `_f:` + .globl
+    globl = lambda t: set(re.findall(r"^\s+\.globl\s+(\w+)", t, re.MULTILINE))
+    defs = lambda t: globl(t) & set(re.findall(r"^(\w+)::?\s*$", t, re.MULTILINE))     # SDCC: `_f:` + .globl
     # sdcc emits no .globl for an extern only used as an operand (`mov dptr,#_g_ucColAMax`): those count as refs too
     ops = lambda t: set(re.findall(r"\b(_[A-Za-z]\w*)\b", "\n".join(l for l in t.splitlines() if not l.lstrip().startswith(";"))))
-    labels = lambda t: set(re.findall(r"^(\w+)::?", t, re.M))
+    labels = lambda t: set(re.findall(r"^(\w+)::?", t, re.MULTILINE))
     refs = lambda t: (globl(t) | ops(t)) - defs(t) - labels(t)
     lib_def = {}
     for p in lib:
@@ -218,7 +225,7 @@ def write_vectors(bank_dir: Path):
     reset + ljmp per ISR found in the banked asm, reti elsewhere; HOME is based after the table."""
     isr = {}
     for asm in bank_dir.glob("*.asm"):
-        for name, n in re.findall(r"^;\s+\S+:\d+: void (\w+)\s*\(void\)\s*__interrupt\s*\(\s*(\d+)\s*\)", asm.read_text(errors="replace"), re.M):
+        for name, n in re.findall(r"^;\s+\S+:\d+: void (\w+)\s*\(void\)\s*__interrupt\s*\(\s*(\d+)\s*\)", asm.read_text(errors="replace"), re.MULTILINE):
             isr[int(n)] = "_" + name
     lines = ["\t.module awto_vectors", "\t.globl __sdcc_gsinit_startup"] + [f"\t.globl {v}" for v in isr.values()]
     lines += ["\t.area VECTORS (ABS,CODE)", "\t.org 0x0000", "\tljmp __sdcc_gsinit_startup"]
@@ -322,7 +329,7 @@ def main() -> int:
     out = ROOT / "tmp/fw" / a.serial
     out.mkdir(parents=True, exist_ok=True)
     rels = sorted(bank_dir.glob("*.rel"))
-    used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.M)})
+    used = sorted({int(m) for r in rels for m in re.findall(r"^A BANK(\d+) ", r.read_text(errors="replace"), re.MULTILINE)})
     pins = {}
     if a.layout:                                             # one area per chunk/stub, each pinned to its slot
         ab = json.loads((ROOT / "tmp/sdcc-port/area_bases.json").read_text())
@@ -335,7 +342,7 @@ def main() -> int:
     wl += [f"-Wl-aXISEG=0x{hs[0][1] - xis:x}"] if xis else []
     wl += [f"-Wl-aHOME=0x{VEC_END:x}"]
     if pins and a.resid_end:    # XINIT floats to the first module that declares it, which can be after the stubs: pin it
-        xi = sum(int(m, 16) for r in rels for m in re.findall(r"^A XINIT size (\w+)", r.read_text(errors="replace"), re.M))
+        xi = sum(int(m, 16) for r in rels for m in re.findall(r"^A XINIT size (\w+)", r.read_text(errors="replace"), re.MULTILINE))
         wl += [f"-Wl-aXINIT=0x{(int(a.resid_end, 0) - xi) & ~3:x}"]       # last bytes of the residual area (#209)
     cmd = [T.tool("sdcc"), "-mmcs51", "--model-large", *T.CFLAGS_EXTRA, "--code-loc", "0", "--code-size", "0x100000",
            # --xram-size = all holes: sdld's -M summary sums every XDATA area (check_xdata checks each hole); libs: sdcc_link

@@ -9,9 +9,9 @@ Exit 0 = tagged port found, 1 = no tag / no EDID. Log: ./tmp/logs/edid_port.log
 """
 import argparse
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import i2cbus

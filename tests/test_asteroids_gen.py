@@ -8,8 +8,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
-import gen_asteroids as G  # noqa: E402
-import asteroids_dvg as D  # noqa: E402
+import asteroids_dvg as D
+import gen_asteroids as G
 
 needs_rom = pytest.mark.skipif(not Path(D.DEFAULT_ZIP).exists(), reason="Asteroids ROM set not present (local only)")
 C_SRC = (ROOT / "fw/test/asteroids.c").read_text()

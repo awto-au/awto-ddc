@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import dbg_xdata as X  # noqa: E402
-import rtd_proto as P  # noqa: E402
+import dbg_xdata as X
+import rtd_proto as P
 
 MEM = {0xF6D0 + i: (i * 7 + 3) & 0xFF for i in range(48)}
 MEM[0xF6D0], MEM[0xF6D1], MEM[0xF6D2] = 0x41, 0x44, 2

@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
-import settings_keep as K  # noqa: E402
+import settings_keep as K
 
 ROWS = {"disp_rotate": {"name": "disp_rotate", "min": 0, "max": 1}, "osd_font": {"name": "osd_font", "min": 0, "max": 1},
         "console_mode": {"name": "console_mode", "min": 0, "max": 2}, "contrast": {"name": "contrast", "min": 0, "max": 100}}

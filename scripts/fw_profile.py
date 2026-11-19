@@ -9,22 +9,26 @@ usage: fw_profile.py BIN MAP [--passes 12] [--top 15] [--json OUT]
   Peripherals are not modelled (XDATA reads return RAM): hardware waits (polls, timer delays) differ from the sim.
 Log: tmp/logs/fw_profile.log
 """
-import argparse, bisect, json, re, sys
+import argparse
+import bisect
+import json
+import re
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as F  # noqa: E402
-import rtd_diag  # noqa: E402
+import fw_sim as F
+import rtd_diag
 
 BRANCH = {"LJMP", "AJMP", "SJMP", "JMP", "LCALL", "ACALL", "RET", "RETI", "JZ", "JNZ", "JC", "JNC", "JB", "JNB", "JBC",
           "CJNE", "DJNZ"}
 HB = 0xF6D0 + 0x14          # diag block: u16 heartbeat (BE: high byte first)
-LINE = re.compile(r"^0x([0-9a-f]+)\s+((?:[0-9a-f]{2} )+)\s*(\w+)", re.M)
+LINE = re.compile(r"^0x([0-9a-f]+)\s+((?:[0-9a-f]{2} )+)\s*(\w+)", re.MULTILINE)
 
 
 def parse_syms(mp: str):
-    allsym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.M)}
+    allsym = {m.group(2): int(m.group(1), 16) for m in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(\w+)", mp, re.MULTILINE)}
     stubs = sorted((v, k) for k, v in allsym.items() if k.startswith("__bs_") and k not in F.BS_TRAMP)
     return allsym, stubs
 
@@ -53,7 +57,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
     mp = mapp.read_text(errors="replace")
     s, sym, where = boot(img, mapp, be, log)
     if search_index is not None:
-        a = int(re.search(r"^D:\s+([0-9A-F]{8})\s+_g_ucSearchIndex\b", mp, re.M).group(1), 16)
+        a = int(re.search(r"^D:\s+([0-9A-F]{8})\s+_g_ucSearchIndex\b", mp, re.MULTILINE).group(1), 16)
         s.send(f"set memory xram 0x{a:x} 0x{search_index:x}")
     allsym, stubs = parse_syms(mp)
     stub_starts = [v for v, _ in stubs]
@@ -78,7 +82,8 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
     s.send(f"break xram w 0x{HB + (1 if be else 0):x}")
     bank = F.cur_bank(s)
 
-    import os, select
+    import os
+    import select
     queue = []                                   # parsed steps not yet consumed
     raw = [b""]
     BATCH = 3000                                 # step commands pipelined per write: one at a time costs ~100 ms each

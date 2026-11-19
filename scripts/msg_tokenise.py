@@ -14,10 +14,10 @@ import re
 import shutil
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from collections import Counter
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root():
@@ -59,7 +59,7 @@ MSG_IDS = {}                                   # (category, text) -> id, filled 
 _STR = r'"(?:[^"\\\n]|\\.)*"'
 MSG_CALL = re.compile(r"\bDebugMessage(\w+)\s*\(")
 MSG_LIT = re.compile(rf"\s*((?:{_STR}\s*)+),")
-COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.S)
+COMMENT = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:[^"\\\n]|\\.)*"', re.DOTALL)
 ESC = {"n": 10, "t": 9, "r": 13, "a": 7, "b": 8, "f": 12, "v": 11, "\\": 92, '"': 34, "'": 39, "?": 63}
 # side effects: a call to a mixed-case function, ++/--, assignment (ALL-CAPS macros are the SDK's GET_*/PDATA_* reads)
 SIDE_EFFECT = re.compile(r"\b\w*[a-z]\w*\s*\(|\+\+|--|(?<![=!<>])=(?!=)")
@@ -71,7 +71,7 @@ def c_unescape(lit: str) -> str:
         c = lit[i]
         if c != "\\":
             out.append(c); i += 1; continue
-        m = re.match(r"\\(x[0-9A-Fa-f]+|[0-7]{1,3}|.)", lit[i:], re.S)
+        m = re.match(r"\\(x[0-9A-Fa-f]+|[0-7]{1,3}|.)", lit[i:], re.DOTALL)
         e = m.group(1)
         out.append(chr((int(e[1:], 16) if e[0] == "x" else int(e, 8) if e[0] in "01234567" else ESC.get(e, ord(e))) & 0xFF))
         i += len(m.group(0))

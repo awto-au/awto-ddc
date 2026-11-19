@@ -8,10 +8,16 @@ Manifest: tmp/fw/<serial>-flash-state.json
 Writers: after every verified sector (saved every SAVE_EVERY and at exit), after any full flash read.
 Hardware CRC8 (FF75, poly 0x07 init 0): docs/flash-crc.md.
 """
-import hashlib, json, os, random, subprocess, time
-import isostamp  # noqa: E402
+import hashlib
+import json
+import os
+import random
+import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import isostamp
 
 SECTOR = 4096
 FLASH_SECTORS = 256            # 1 MiB (JEDEC c22014)

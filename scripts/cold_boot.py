@@ -16,8 +16,9 @@ import re
 import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dbg_xdata as X
@@ -32,7 +33,7 @@ MODES = ["INITIAL", "SEARCH", "DISPLAY_SETTING", "ACTIVE", "NOSUPPORT", "NOSIGNA
 
 
 def mapsym(mp: str, name: str) -> int | None:
-    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", mp, re.M)
+    m = re.search(rf"^D:\s+([0-9A-F]{{8}})\s+_{name}\b", mp, re.MULTILINE)
     return int(m.group(1), 16) & 0xFFFF if m else None
 
 
@@ -107,7 +108,7 @@ def main() -> int:
             io.close()
         udev.terminate()
         ue = [ln for ln in udev.communicate(timeout=2)[0].splitlines() if "change" in ln]
-        ev = lambda i, g=None: next((t for e, arg, t in evs if e == i and (g is None or arg == g)), None)   # noqa: E731
+        ev = lambda i, g=None: next((t for e, arg, t in evs if e == i and (g is None or arg == g)), None)
         logo = (ev(0x60, 0), ev(0x60, 1))
         say(f"run {run} {a.map.stem}: EDID {res.get('edid', -1):.3f} s, 0x35 {res.get('dbg', -1):.3f} s, stage 8 {res.get('stage8', -1):.3f} s, "
             f"ACTIVE {res.get('active', -1):.3f} s after relay on; fw stages ms {stages}; logo draw {logo} ms (T2 ticks), "

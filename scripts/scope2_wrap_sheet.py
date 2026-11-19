@@ -8,7 +8,6 @@ usage: scope2_wrap_sheet.py [--before 12] [--after 6] [--wrap 1] [--fixed] [--ou
 Log: ./tmp/logs/scope2_wrap_sheet.log
 """
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -16,8 +15,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import gen_scope2 as G  # noqa: E402
-import isostamp  # noqa: E402
+import gen_scope2 as G
+import isostamp
 
 ROOT = G.ROOT
 LOG = ROOT / "tmp/logs/scope2_wrap_sheet.log"

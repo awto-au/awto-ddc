@@ -7,13 +7,18 @@ Output quotes Realtek disassembly: allowed only under re/lib-review/ (repo is PR
   lib_review.py unsourced [--src DIR]...   -> markdown table of .LIB functions with no C source
 Logs: ./tmp/logs/lib_review.log. Repo root: $AWTO_DDC_REPO -> file-relative.
 """
-import argparse, difflib, json, os, re, sys
+import argparse
+import difflib
+import os
+import re
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import d8051
 import omf51_lib as omf
 import rtk_libsig as sig
-import d8051
+
 log = sig.log
 
 REPO = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
@@ -150,7 +155,7 @@ SDK = Path("/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST/Kernel/Scaler")
 SRC_TREES = ["RL6449_Series_Scaler", "RL6449_Series_Common", "ScalerFunction", "ScalerCommonFunction"]
 PRIMARY = ("RL6449_Series_Scaler/Lib/Code", "ScalerCommonFunction/Lib/Code")  # the two trees srccheck was run on (169 unsourced)
 SERIES_SKIP = re.compile(r"RL6(369|410|432|463|492)_")
-DEF_RE = re.compile(r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)[ \t]*\([^;{}]*\)[ \t]*(?:(?:using|reentrant)[ \t]*\d*[ \t]*)*(?://[^\n]*)?\n?[ \t]*\{", re.M)
+DEF_RE = re.compile(r"^[A-Za-z_][\w \t\*]*?\b([A-Za-z_]\w*)[ \t]*\([^;{}]*\)[ \t]*(?:(?:using|reentrant)[ \t]*\d*[ \t]*)*(?://[^\n]*)?\n?[ \t]*\{", re.MULTILINE)
 
 CATEGORIES = [
     ("OSD", r"Osd|Reference4Bit"), ("MBR (motion blur reduction)", r"Mbr"), ("TCON", r"Tcon"),
@@ -321,7 +326,7 @@ def readme(head):
         out.append(f"| ScalerTcon{i}Enable | {b[17]:02X} (port {NAMES.get(b[21] << 8 | b[19], '?')}) | no (vendor index 25h, port DISPLAY_FORMAT_ADDR_PORT) |")
     out += ["", unsourced_md()[0]]
     Path(REPO / "re/lib-review/README.md").write_text("\n".join(out))
-    log(f"wrote re/lib-review/README.md")
+    log("wrote re/lib-review/README.md")
 
 
 def main():

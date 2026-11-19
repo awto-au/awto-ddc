@@ -15,12 +15,13 @@ usage: fw_sim_trace.py vendor [IMG] [--mode 2160p60]            vendor Keil imag
          client mux) + DDR_CALLS watches; for the DRAM init sequence diff (scripts/ddr_init_diff.py).
 Log: tmp/logs/trace_<tag>.tsv.gz (+ tmp/logs/fw_sim_trace_<tag>.log)
 """
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_sim as S  # noqa: E402
-import fw_regs  # noqa: E402
+import fw_regs
+import fw_sim as S
 
 ROOT = S.ROOT
 RAM = range(0xD700, 0xF700)                  # firmware XDATA RAM (fw_sim.regdb_cells)
@@ -136,7 +137,8 @@ def reg_space(img: bytes) -> set[int]:
     """XDATA addresses to tap: every regdb register with a writable field (outside firmware RAM) + constant-address MOVX
     writes found in the image + indexed-port registers. ucsim takes at most ~8 k event breakpoints (more hangs it), so
     read-only registers are not tapped. The bank register 0xFFFF is the banker's."""
-    import csv, gzip
+    import csv
+    import gzip
     s = set()
     with gzip.open(ROOT / "re/regdb/RTD2795T-CG.tsv.gz", "rt", newline="") as f:
         for r in csv.DictReader(f, delimiter="\t"):
@@ -151,7 +153,8 @@ def reg_space(img: bytes) -> set[int]:
 def run(kind: str, img_path: Path, map_path: Path | None, mode: str, max_instr: int, tail: int, tag: str, ddr: bool = False):
     img = img_path.read_bytes()
     names = fw_regs.names()
-    import csv, gzip
+    import csv
+    import gzip
     with gzip.open(ROOT / "re/regdb/RTD2795T-CG.tsv.gz", "rt", newline="") as f:
         for r in csv.DictReader(f, delimiter="\t"):
             if r["kind"] == "REG" and r["address"].startswith("0x"):

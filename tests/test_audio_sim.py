@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import audio_sim as A  # noqa: E402
+import audio_sim as A
 
 K = A.MODEL["k_hz"]
 RATE = A.WAV_RATE

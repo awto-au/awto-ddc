@@ -16,11 +16,17 @@ usage: cleanroom_lint.py [--tree fw/rtdfw] [--rebuild] [--where] [--structural]
 """
 from __future__ import annotations
 
-import argparse, hashlib, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import hashlib
+import os
+import re
+import subprocess
+import sys
+import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
+import isostamp
 import numpy as np
 
 
@@ -38,7 +44,8 @@ def repo_root() -> Path:
 ROOT = repo_root()
 SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_dirs  # noqa: E402
+import fw_dirs
+
 TAINTED = [ROOT / "fw" / "sdk", ROOT / "fw" / "sdcc", *fw_dirs.our_dirs(ROOT)]
 CLEAN = Path(os.environ.get("AWTO_RTDFW_REPO") or ROOT / "fw/rtdfw")
 CACHE = ROOT / "tmp" / "cleanroom" / "sdk_index.npz"
@@ -52,15 +59,7 @@ N_STRUCT = 20
 MUL = np.uint64(0x9E3779B97F4A7C15)
 LOG = None
 
-KEYWORDS = set("""
-auto break case char const continue default do double else enum extern float for goto if inline int long register
-restrict return short signed sizeof static struct switch typedef union unsigned void volatile while _Bool _Static_assert
-define include ifdef ifndef endif elif undef pragma defined line error
-__xdata __code __data __idata __pdata __near __far __bit __sbit __sfr __sfr16 __at __interrupt __using __reentrant
-__critical __naked __banked __nonbanked __asm __endasm __sdcc_external_startup
-uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t size_t NULL true false bool stdint stdbool string
-memcpy memset memcmp strlen
-""".split())
+KEYWORDS = set(["auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "_Bool", "_Static_assert", "define", "include", "ifdef", "ifndef", "endif", "elif", "undef", "pragma", "defined", "line", "error", "__xdata", "__code", "__data", "__idata", "__pdata", "__near", "__far", "__bit", "__sbit", "__sfr", "__sfr16", "__at", "__interrupt", "__using", "__reentrant", "__critical", "__naked", "__banked", "__nonbanked", "__asm", "__endasm", "__sdcc_external_startup", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t", "size_t", "NULL", "true", "false", "bool", "stdint", "stdbool", "string", "memcpy", "memset", "memcmp", "strlen"])
 TOKEN = re.compile(r"""
   (?P<ws>\s+)
 | (?P<lc>//[^\n]*)
@@ -70,7 +69,7 @@ TOKEN = re.compile(r"""
 | (?P<num>0[xX][0-9A-Fa-f]+[uUlL]*|\d+[uUlL]*|[0-9A-Fa-f]+[hH]\b)
 | (?P<id>[A-Za-z_$]\w*)
 | (?P<op>->|\+\+|--|<<=?|>>=?|[<>!=]=|&&|\|\||[-+*/%&|^]=|\S)
-""", re.S | re.X)
+""", re.DOTALL | re.VERBOSE)
 ASM_COMMENT = re.compile(r";[^\n]*")
 WORD = re.compile(r"[A-Za-z][A-Za-z0-9']*")
 _H = {}
@@ -238,7 +237,7 @@ def load_allow() -> dict:
 def facts_names(tree: Path) -> set:
     names = set()
     for p in (tree / "facts").rglob("*.h") if (tree / "facts").exists() else []:
-        names |= set(re.findall(r"^#define\s+(\w+)", p.read_text(errors="replace"), re.M))
+        names |= set(re.findall(r"^#define\s+(\w+)", p.read_text(errors="replace"), re.MULTILINE))
     return names
 
 

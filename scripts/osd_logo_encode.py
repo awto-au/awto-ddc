@@ -21,9 +21,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-from glyph_decode import CODES, decode_blob, tile  # noqa: E402
+import numpy as np
+from glyph_decode import CODES, decode_blob, tile
+from PIL import Image
 
 
 def repo_root() -> Path:
@@ -56,14 +56,14 @@ def log(s):
 # ---- SDK source parsing -------------------------------------------------------------------------
 def sdk_blob(name):
     src = (OSD / "RTD2014OsdFontVLC.c").read_text()
-    m = re.search(r"tICON_REALTEK_1BIT_%s\[\]=\s*\{(.*?)\n\};" % name, src, re.S)
+    m = re.search(r"tICON_REALTEK_1BIT_%s\[\]=\s*\{(.*?)\n\};" % name, src, re.DOTALL)
     return bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
 
 
 def sdk_map(name):
     """tiOSD_REALTEK_1BIT_<name> -> list of rows of tile ids (suffix of _Logo[1]_0xNN)."""
     src = (OSD / "RTD2014OsdFontTable.c").read_text()
-    m = re.search(r"tiOSD_REALTEK_1BIT_%s\[\]=\s*\{(.*?)\n\};" % name, src, re.S)
+    m = re.search(r"tiOSD_REALTEK_1BIT_%s\[\]=\s*\{(.*?)\n\};" % name, src, re.DOTALL)
     rows, cur = [], []
     for t in re.findall(r"_Logo1?_0x[0-9a-f]{2}|_NEXT_|_END_", m.group(1)):
         if t == "_NEXT_":

@@ -6,9 +6,14 @@ usage: kvm_demo.py [--unit 2] [--rounds 3] [--hold-s 4]
 - Switch: scripts/kvm.py (monitor side, VCP 0x60; no host output changes). Pop-up: dev.py osd info.
 Log: ./tmp/logs/kvm_demo.log
 """
-import argparse, os, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or HERE.parent)

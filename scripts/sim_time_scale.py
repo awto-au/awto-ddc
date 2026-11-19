@@ -21,14 +21,14 @@ FN_SPAN = 0x150          # bytes searched from the function entry (the function 
 
 
 def define(name: str) -> int:
-    return int(re.search(rf"^#define\s+{name}\s+(\d+)", HDR.read_text(), re.M).group(1))
+    return int(re.search(rf"^#define\s+{name}\s+(\d+)", HDR.read_text(), re.MULTILINE).group(1))
 
 
 def patch_monitor(img: bytes, map_text: str, scale: int) -> tuple[bytes, int]:
     """-> (patched image, new period ms). Big-endian image (subb a,#lo first, then subb a,#hi)."""
     ms = define("AWTO_MON_MS")
     new = max(1, ms // scale)
-    m = re.search(rf"^C:\s+([0-9A-F]{{8}})\s+_{FN}\b", map_text, re.M)
+    m = re.search(rf"^C:\s+([0-9A-F]{{8}})\s+_{FN}\b", map_text, re.MULTILINE)
     if not m:
         raise SystemExit(f"{FN} not in the map")
     a = int(m.group(1), 16)

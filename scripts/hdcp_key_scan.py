@@ -97,7 +97,7 @@ def sdk_tables(errata: int) -> dict:
                           "-D_HDCP_2_2_TX_RRMODN_BY_HW=0", str(SDK_KEYS)],
                          capture_output=True, text=True, check=True).stdout
     return {m.group(1): bytes(int(x, 16) for x in re.findall(r"0x([0-9A-Fa-f]{2})", m.group(2)))
-            for m in re.finditer(r"(\w+)\[\]\s*=\s*\{(.*?)\};", cpp, re.S)}
+            for m in re.finditer(r"(\w+)\[\]\s*=\s*\{(.*?)\};", cpp, re.DOTALL)}
 
 
 def find_all(d: bytes, needle: bytes):

@@ -10,7 +10,7 @@ SDK = ROOT / "fw/sdk"
 
 def test_rotation_page_size_read_twice():
     src = (SDK / "Kernel/Scaler/ScalerFunction/Code/ScalerRotation.c").read_text()
-    body = re.search(r"static BYTE ScalerRotationGetDcSysPageSel\(void\)\s*\{(.*?)\n\}", src, re.S).group(1)
+    body = re.search(r"static BYTE ScalerRotationGetDcSysPageSel\(void\)\s*\{(.*?)\n\}", src, re.DOTALL).group(1)
     assert len(re.findall(r"ScalerGetBit\(PA0_05_DC_SYS_MISC", body)) == 2
     assert "switch(ScalerRotationGetDcSysPageSel())" in src
     assert "ScalerGetBit(PA0_05_DC_SYS_MISC" not in src.replace(body, "")

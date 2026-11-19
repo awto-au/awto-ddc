@@ -21,9 +21,9 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
+import ddc_sim as D
+import isostamp
+import osd_render as R
 
 LOG = R.ROOT / "tmp/logs/saver_frame_cost.log"
 VCP_SAVER = 0xEB

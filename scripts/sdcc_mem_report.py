@@ -8,10 +8,15 @@ usage: sdcc_mem_report.py [--asm DIR] [--top N] [--kind global|local|all]
   found in any module (movx @dptr,a after mov dptr,#sym) -> likely read-only -> move to flash.
 Output: table to stdout + tmp/sdcc-port/mem_report.json. Log: tmp/logs/sdcc_mem_report.log. Tracking: #8.
 """
-import json, os, re, subprocess, sys, time
-import isostamp  # noqa: E402
+import json
+import os
+import re
+import subprocess
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+import isostamp
 
 
 def repo_root():

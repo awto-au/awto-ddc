@@ -19,18 +19,24 @@ Method (awto-ddc#8):
 - Fails on: CONST referenced from a bank it is not in (after the common rule), a module larger than a bank.
 Log: tmp/logs/sdcc_bank.log, report tmp/sdcc-port/bank.json
 """
-import argparse, json, os, re, shutil, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import json
+import re
+import shutil
+import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sdcc_overlay import repo_root  # noqa: E402
-import sdcc_tools as T  # noqa: E402
-import sdcc_layout as L  # noqa: E402
-import sdcc_cluster as SC  # noqa: E402
-import msg_table as MT  # noqa: E402
-import place_rules as PR  # noqa: E402   (the ;@place marker format)
+import msg_table as MT
+import place_rules as PR
+import sdcc_cluster as SC
+import sdcc_layout as L
+import sdcc_tools as T
+from sdcc_overlay import repo_root
 
 ROOT = repo_root()
 LOG = None
@@ -212,7 +218,7 @@ class Module:
             c.finish()
 
     def globls(self):
-        return set(re.findall(r"^\s+\.globl\s+(\w+)", "\n".join(self.head + self.tail), re.M))
+        return set(re.findall(r"^\s+\.globl\s+(\w+)", "\n".join(self.head + self.tail), re.MULTILINE))
 
 
 def assemble(asm: Path) -> dict:
@@ -222,7 +228,7 @@ def assemble(asm: Path) -> dict:
     if r.returncode:
         sys.exit(f"sdas8051 failed on {asm}:\n{r.stdout}{r.stderr}")
     sizes = {}
-    for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.M):
+    for m in re.finditer(r"^A (\w+) size (\w+)", rel.read_text(errors="replace"), re.MULTILINE):
         sizes[m.group(1)] = sizes.get(m.group(1), 0) + int(m.group(2), 16)
     return sizes
 

@@ -12,8 +12,9 @@ import os
 import re
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -42,14 +43,18 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--pre-cmd", type=lambda x: int(x, 0), default=None, help="test cmd sent first (0xB2 = QC pattern); its run settles for PRE_S")
     a = ap.parse_args()
-    import dbg_link, dbg_xdata as X, i2cbus, qc_osd_patterns as Q, osd_vlc as V  # noqa: E401
+    import dbg_link
+    import dbg_xdata as X
+    import i2cbus
+    import osd_vlc as V
+    import qc_osd_patterns as Q
     import rtd_i2c_bridge as B
 
     i2cbus.require_unit(a.bus, a.serial)
     txt = a.map.read_text(errors="replace")
 
     def sym(n):
-        return int(re.search(r"^\S*\s+([0-9A-F]{8})\s+_?" + n + r"\b", txt, re.M).group(1), 16) & 0xFFFF
+        return int(re.search(r"^\S*\s+([0-9A-F]{8})\s+_?" + n + r"\b", txt, re.MULTILINE).group(1), 16) & 0xFFFF
     diag, dump, addr, selad = sym("isr_g_stAwtoDiag") + 0x28, sym("g_aucQcDump"), sym("g_usQcDumpAddr"), sym("g_ucQcDumpSel")
     mem = bytearray()
     with dbg_link.linked(a.bus, 8):

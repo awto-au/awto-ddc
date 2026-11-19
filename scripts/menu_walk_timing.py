@@ -7,15 +7,18 @@ usage: menu_walk_timing.py BIN MAP [--polls 300]
   a held key (old PCB_KEY_STATE: ADC 0 = POWER + LEFT) walks a powered-off monitor.
 Needs the main tree's sim tools: AWTO_DDC_MAIN (default /mnt/2tb/git/awto-ddc). Log: ./tmp/logs/menu_walk_timing.log
 """
-import argparse, os, sys, time
-import isostamp  # noqa: E402
+import argparse
+import os
+import sys
 from pathlib import Path
+
+import isostamp
 
 MAIN = Path(os.environ.get("AWTO_DDC_MAIN", "/mnt/2tb/git/awto-ddc")) / "scripts"
 sys.path.insert(0, str(MAIN))
-import fw_sim  # noqa: E402
-import menu_cli  # noqa: E402
-import settings_cli as C  # noqa: E402
+import fw_sim
+import menu_cli
+import settings_cli as C
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/menu_walk_timing.log"

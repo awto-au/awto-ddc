@@ -12,13 +12,19 @@ usage: i2c_rate_test.py [--bus 11] [--unit AWT26110003] [--n 300] [--rates 100,1
 Refuses to run while another tool owns the unit (rtd_flash_image/osd_test/rtd_diag/dev.py).
 Log: ./tmp/logs/i2c_rate_test.log (one line per batch), ./tmp/logs/i2c_rate_test.raw.log (every failure).
 """
-import argparse, errno, os, statistics, sys, time
-import isostamp  # noqa: E402
+import argparse
+import errno
+import os
+import statistics
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import i2cbus  # noqa: E402
+import dbg_xdata as X
+import i2cbus
 
 ROOT = i2cbus.ROOT
 SLAVE, BASE, SIZE = 0x35, 0xF6D0, 48

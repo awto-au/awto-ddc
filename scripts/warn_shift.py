@@ -10,10 +10,10 @@ usage: warn_shift.py --tree WORKTREE [--write]
 import argparse
 import re
 import sys
-import time
-import isostamp  # noqa: E402
 from collections import Counter, defaultdict
 from pathlib import Path
+
+import isostamp
 
 WARN = re.compile(r"/tmp/sdcc-port/src/(.+?):(\d+): warning \d+: (.*)$")
 

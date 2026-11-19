@@ -8,7 +8,9 @@ Named = merged `func` rows of the bank program (scripts/ghidra_names_merge.py: o
 Typed globals = unique EXTMEM addresses of ghidra_globals*.tsv plus `var:<Type>` rows of the merged names (same map in every bank).
 Verdicts = re/jxc-4k/phase2_verification.tsv (rows of the bank program).
 """
-import os, re, sys
+import os
+import re
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -40,7 +42,7 @@ def main():
     out = ["bank  total  named  " + "  ".join(f"{t:>10}" for t in tags) + "  CONFIRMED  PLAUSIBLE  REFUTED"]
     tot, vt = Counter(), Counter()
     for b in range(7):
-        heads = re.findall(r"^/\* @ 0x([0-9a-f]+)", (VEND / f"bank{b}" / "decompiled_named.c").read_text(errors="replace"), re.M)
+        heads = re.findall(r"^/\* @ 0x([0-9a-f]+)", (VEND / f"bank{b}" / "decompiled_named.c").read_text(errors="replace"), re.MULTILINE)
         n = sum(1 for h in heads if not (b == 3 and DATA_REGION[0] <= int(h, 16) <= DATA_REGION[1]))
         c, v = Counter(), Counter()
         for a, r in NM.merged(b).items():

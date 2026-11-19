@@ -7,7 +7,10 @@ usage: dp_aux_probe.py <unit> info | read | loop [N] | dump | speed <kbps-code-h
 - speed: writes DPCD 0x109 (only if 0x00C bit0..3 non-zero), prints old value; restore = same command with the old value
 Log: ./tmp/logs/dp_aux_probe.log (decoded); raw bytes: ./tmp/logs/dp_aux_probe.raw.log
 """
-import json, os, sys, time
+import json
+import os
+import sys
+import time
 from pathlib import Path
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)

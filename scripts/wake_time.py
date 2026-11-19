@@ -9,17 +9,17 @@ usage: wake_time.py <bus> --serial S --map MAP [--off-s 3] [--runs N] [--label L
 Log: ./tmp/logs/wake_time.log (decoded lines)
 """
 import argparse
-import subprocess
 import sys
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import dbg_xdata as X  # noqa: E402
-import i2cbus  # noqa: E402
-import rtd_i2c_bridge as B  # noqa: E402
-import sw_timeline as T  # noqa: E402
+import dbg_xdata as X
+import i2cbus
+import rtd_i2c_bridge as B
+import sw_timeline as T
 
 DIAG_T2 = 22                # StAwtoDiag.usT2Isr offset (RL6449_Project.h)
 WAKE_LIMIT_S = 6.0          # full-path wake: 1.0-1.2 s mode ACTIVE at cold boot (#63) + search 3 s worst; expiry = logged FAIL
@@ -29,7 +29,7 @@ PICTURE = {(0x80, 0)}                    # UNBLANK (blank event arg 0); the SDK 
 
 def sym(map_path: Path, name: str) -> int:
     import re
-    m = re.search(rf"^(?:D:)?\s+([0-9A-F]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.M)
+    m = re.search(rf"^(?:D:)?\s+([0-9A-F]{{8}})\s+_{name}\b", map_path.read_text(errors="replace"), re.MULTILINE)
     if not m:
         raise SystemExit(f"{name} not in {map_path}")
     return int(m.group(1), 16) & 0xFFFF

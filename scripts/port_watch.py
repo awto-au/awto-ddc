@@ -24,12 +24,13 @@ import queue
 import sys
 import threading
 import time
-import isostamp  # noqa: E402
 from pathlib import Path
+
+import isostamp
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import dbg_xdata as X  # noqa: E402
+import dbg_xdata as X
 
 STALL_S = 2.0              # no successful chunk read for this long = wedged debug slave
 RATE_WINDOW_S = 1.0        # edges/s window for mode=rate bits (DPS17 pulses every 60-100 ms -> ~10-16 edges/s)

@@ -13,16 +13,15 @@ import argparse
 import html
 import subprocess
 import sys
-import time
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import asset_sheet as AS  # noqa: E402  (SDK blob decoder)
+import asset_sheet as AS
 
 ROOT = HERE.parent
 LOG = ROOT / "tmp/logs/icon_raster.log"

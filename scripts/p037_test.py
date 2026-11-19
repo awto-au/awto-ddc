@@ -6,14 +6,18 @@ usage: p037_test.py --unit N hold  [--secs S] [--period-ms P]   # re-arm ring, s
 Paths: debug slave 0x35 ScalerGetByte (0x3A) / ScalerSetByte (0x3B) with 0xPPRR addresses; MCU not halted.
 Log: ./tmp/logs/p037_test.log (one line per P0_02 change / P0_37 write burst)
 """
-import argparse, subprocess, sys, time
-import isostamp  # noqa: E402
+import argparse
+import subprocess
+import sys
+import time
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from rtd_i2c_bridge import Real  # noqa: E402
-import i2cbus  # noqa: E402
-from dbg_xdata import BEHIND_PAGES  # noqa: E402
+import i2cbus
+from dbg_xdata import BEHIND_PAGES
+from rtd_i2c_bridge import Real
 
 DBG = 0x35 << 1
 ROOT = Path(__file__).resolve().parent.parent

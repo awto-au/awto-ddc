@@ -17,9 +17,9 @@ from pathlib import Path
 
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import isostamp  # noqa: E402
-import osd_render as R  # noqa: E402
-import ddc_sim as D  # noqa: E402
+import ddc_sim as D
+import isostamp
+import osd_render as R
 
 ROOT = R.ROOT
 LOG = ROOT / "tmp/logs/saver_frames_md5.log"
@@ -73,7 +73,6 @@ def run(a) -> int:
             st = sess.snap()
             img = R.render_snap(st, "black", RENDER_SHRINK)
             rows.append((len(rows), state_md5(st), hashlib.md5(img.tobytes()).hexdigest(), round(sess.ms())))
-        return None
 
     sess.bus.m.stub("AwtoSyncPush", hook)
     t0 = sess.bus.now()

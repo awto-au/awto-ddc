@@ -11,7 +11,7 @@ The OSD is drawn by hardware, so an OSD already on screen stays visible while th
 Register names/addresses: public RTD2660 SDK (ScalerDef.h: 0x90 OSD addr MSB, 0x91 LSB, 0x92 data port) [oss];
 unverified on this scaler. Log: ./tmp/logs/rtd_scaler.log
 """
-import os, sys
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))

@@ -13,11 +13,12 @@ import argparse
 import subprocess
 import sys
 import threading
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import fw_gates as G  # noqa: E402
+import fw_gates as G
 
 ROOT = G.ROOT
 TIMING = ["delays", "wdt_full", "wake_full", "inputrate", "monitor_full", "deadport", "panel", "sysm", "htime", "keys_full"]

@@ -7,16 +7,17 @@ usage: msg_nohost_sim.py BIN MAP   (needs a build with DebugMessage on; reuses f
           the firmware drops the host after AWTO_MSG_HOST_MS (d_isr_g_bDebugMessageEven off), later messages go to the ring only.
 Log: ./tmp/logs/msg_nohost_sim.log
 """
-import struct, sys, time
-import isostamp  # noqa: E402
+import os
+import sys
 from pathlib import Path
 
-import os
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 if os.environ.get("AWTO_FWSIM_DIR"):      # branches older than fw_sim.SimBus: point at a checkout that has it
     sys.path.insert(0, os.environ["AWTO_FWSIM_DIR"])
-import fw_sim as S  # noqa: E402
-from sdcc_overlay import repo_root  # noqa: E402
+import fw_sim as S
+from sdcc_overlay import repo_root
 
 
 def ring_seq(b) -> int:

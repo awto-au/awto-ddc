@@ -9,7 +9,12 @@ usage: fw_archive.py [--commit] [image.bin ...]
   --commit: retired (accepted, ignored). dev.py flash calls this after every successful flash.
 Log: ./tmp/logs/fw_archive.log
 """
-import argparse, hashlib, os, shutil, subprocess, sys
+import argparse
+import hashlib
+import os
+import shutil
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 

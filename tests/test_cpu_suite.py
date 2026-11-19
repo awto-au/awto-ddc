@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-import cpu_suite as C  # noqa: E402
+import cpu_suite as C
 
 FW = ROOT / "fw/test/cpu_suite.c"
 
@@ -24,7 +24,7 @@ def fw_offsets() -> dict:
     body = body[:body.index("} StAwtoCpu;")]
     size = {"BYTE": 1, "WORD": 2, "unsigned long": 4}
     off, out = 0, {}
-    for m in re.finditer(r"^\s+(BYTE|WORD|unsigned long)\s+(\w+);", body, re.M):
+    for m in re.finditer(r"^\s+(BYTE|WORD|unsigned long)\s+(\w+);", body, re.MULTILINE):
         out[m.group(2)] = off
         off += size[m.group(1)]
     out["_end"] = off

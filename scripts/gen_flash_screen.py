@@ -13,11 +13,12 @@ import argparse
 import math
 import os
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import gen_pacman_classic as G  # noqa: E402
+import gen_pacman_classic as G
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 OUT = ROOT / "fw/test/flash_screen_data.inc"

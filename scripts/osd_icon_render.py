@@ -8,16 +8,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
-from glyph_decode import decode_blob, tile  # noqa: E402
+import numpy as np
+from glyph_decode import decode_blob, tile
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "tmp/sdcc-port/src/User/RTD Series/RTD2014Osd/Code/RTD2014OsdFontDynamicIcon_1.c"
 
 
 def render(name):
-    m = re.search(r"tFONT1_ICON_%s\[\]=\s*\{(.*?)\n\};" % name, SRC.read_text(), re.S)
+    m = re.search(r"tFONT1_ICON_%s\[\]=\s*\{(.*?)\n\};" % name, SRC.read_text(), re.DOTALL)
     blob = bytes(int(x, 16) for x in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
     _, _, by = decode_blob(blob, 0)
     n = len(by) // 27

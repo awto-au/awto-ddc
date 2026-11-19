@@ -15,14 +15,14 @@ import argparse
 import os
 import re
 import sys
-import isostamp  # noqa: E402
 from pathlib import Path
 
+import isostamp
 import numpy as np
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import osd_vlc as V  # noqa: E402
+import osd_vlc as V
 
 LOG = ROOT / "tmp/logs/qc_osd_patterns.log"
 QC = Path("/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST/Kernel/Scaler/RL6449_Series_Scaler/Code/RL6449_Series_QC_OSD.c")
@@ -39,7 +39,7 @@ def say(s: str) -> None:
 
 def tables(src: str) -> dict:
     out = {}
-    for m in re.finditer(r"BYTE code (\w+)\[\]\s*=\s*\{(.*?)\};", src, re.S):
+    for m in re.finditer(r"BYTE code (\w+)\[\]\s*=\s*\{(.*?)\};", src, re.DOTALL):
         body = m.group(2)
         if re.search(r"ICON_|_NEXT_|_CLEAR|_END_", body):
             continue
