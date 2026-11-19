@@ -90,15 +90,24 @@ def main():
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path)
     ap.add_argument("--mode", default="1080p60")
+    ap.add_argument("--scale", type=int, default=1, help="sim-only: run a copy of the image with the sample period 1/N (scripts/sim_time_scale.py); the checks are the same, the durations shorter")
     ap.add_argument("--no-beat", action="store_true", help="skip the heartbeat case (AWTO_MON_BEAT_K x AWTO_MON_MS of sim time)")
     a = ap.parse_args()
     ms, k = define("AWTO_MON_MS"), define("AWTO_MON_BEAT_K")
+    pad = 1.0                                   # s of margin after a period: a main-loop pass + the sample
+    if a.scale > 1:
+        import sim_time_scale as TS
+        img, ms = TS.patch_monitor(a.bin.read_bytes(), a.map.read_text(errors="replace"), a.scale)
+        a.bin = ROOT / "tmp/scratch" / f"{a.bin.stem}-ts{a.scale}-be.bin"
+        a.bin.parent.mkdir(parents=True, exist_ok=True)
+        a.bin.write_bytes(img)
+        pad = 0.3
     say(f"mon_sim_test {a.bin.name}: period {ms} ms, heartbeat every {k} samples")
     r = Rig(a)
     try:
         r.adc(0xF8, 0xF8, 0x58, 0x20)
         t0 = r.s.bus.now()
-        while r.beat() == 0 and r.s.bus.now() - t0 < ms / 1000.0 * 1.5:
+        while r.beat() == 0 and r.s.bus.now() - t0 < ms / 1000.0 * 1.5 + pad:
             r.wait(0.5)
         magic = bytes(r.m.rd(r.mon, 2))
         first = r.new()
@@ -110,24 +119,24 @@ def main():
         r.check("first sample: loop rate > 0 and a watchdog gap are in the row",
                 any(re.search(r"main loop [1-9]\d* passes/s, longest watchdog gap \d+ms", x) for x in first))
         c0 = r.calls
-        r.wait(ms / 1000.0 + 1)
+        r.wait(ms / 1000.0 + pad)
         r.check("one sample period, nothing changed: no new row", r.new() == [] or kinds(r.new()) == [], f"{r.new()}")
         r.seen = len(r.lines())
         r.adc(0xF8, 0xF8, 0x60, 0x20)
-        r.wait(ms / 1000.0 + 1)
+        r.wait(ms / 1000.0 + pad)
         r.check("A2 moved one code (8 < AWTO_MON_ADC_STEP): no row", r.new() == [])
         r.adc(0xF8, 0xF8, 0x78, 0x20)
-        r.wait(ms / 1000.0 + 1)
+        r.wait(ms / 1000.0 + pad)
         n = r.new()
         r.check("A2 moved two codes from the last row: exactly the ADC row, with the new value", kinds(n) == ["ADC"] and "A2 78" in n[0], str(n))
-        r.check(f"sample calls: one per {ms} ms (not per pass)", 3 <= r.calls - c0 <= 5, f"{r.calls - c0} in ~{3 * (ms / 1000 + 1):.0f} s")
+        r.check(f"sample calls: one per {ms} ms (not per pass)", 3 <= r.calls - c0 <= 5, f"{r.calls - c0} in ~{3 * (ms / 1000 + pad):.0f} s")
         r.on[SET_ID_MONITOR] = 0
         b = r.beat()
         r.adc(0xF8, 0xF8, 0x20, 0x20)
-        r.wait(2 * ms / 1000.0 + 2)
+        r.wait(2 * ms / 1000.0 + 2 * pad)
         r.check("registry monitor off: no sample, no row", r.beat() == b and r.new() == [] and r.m.rd(r.mon + 3)[0] == 0)
         r.on[SET_ID_MONITOR] = 1
-        r.wait(ms / 1000.0 + 1)
+        r.wait(ms / 1000.0 + pad)
         n = r.new()
         r.check("monitor on again: the first sample is a heartbeat (four rows)", kinds(n) == ["ADC", "IOSC", "main loop", "uptime"], str(n))
         if not a.no_beat:
