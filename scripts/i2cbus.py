@@ -40,17 +40,20 @@ class RdWr(ctypes.Structure):
 
 
 def run_ops(xfer, addr: int, ops) -> list[bytes]:
-    """Build Msg structs for ops (bytes = write msg, int n = read msg), call xfer(msgs), return the read buffers.
-    xfer is a parameter so a fake bus (tests) can sit below the message construction."""
+    """Build Msg structs for ops (bytes = write msg, int n = read msg, (addr, op) = op to another address),
+    call xfer(msgs), return the read buffers. xfer is a parameter so a fake bus (tests) can sit below it."""
     keep, msgs, reads = [], [], []
     for op in ops:
+        a = addr
+        if isinstance(op, tuple):
+            a, op = op
         if isinstance(op, int):
             b = ctypes.create_string_buffer(op)
-            msgs.append(Msg(addr, I2C_M_RD, op, ctypes.addressof(b)))
+            msgs.append(Msg(a, I2C_M_RD, op, ctypes.addressof(b)))
             reads.append(b)
         else:
             b = ctypes.create_string_buffer(bytes(op), len(op))
-            msgs.append(Msg(addr, 0, len(op), ctypes.addressof(b)))
+            msgs.append(Msg(a, 0, len(op), ctypes.addressof(b)))
         keep.append(b)
     xfer(msgs)
     return [b.raw for b in reads]

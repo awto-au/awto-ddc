@@ -54,6 +54,8 @@ import rtd_proto  # noqa: E402
 import i2cbus  # noqa: E402
 from rtd_isp_probe import Isp, ISP_ADDR, repo_root  # noqa: E402
 
+ISP_ADDR_INC = 0x4B        # same registers as 0x4A, address auto-increments per byte (docs/monitors/README.md)
+
 SECTOR = 4096
 PAGE = 256
 JEDEC_OK = bytes.fromhex("c22014")      # Macronix 1 MiB, seen on all dumped units (docs/monitors/README.md)
@@ -258,9 +260,9 @@ class Rtd(Isp):
         Limit: worst-case flash clock 1 MHz (reads at >=5 MHz expected) -> n*8 us x1.25 + 20 ms for the poll
         granularity; on expiry TimeoutError names op/limit/elapsed (poll_reg)."""
         end = addr + n - 1
-        for r, v in zip((0x64, 0x65, 0x66, 0x72, 0x73, 0x74),
-                        (addr >> 16, addr >> 8, addr, end >> 16, end >> 8, end)):
-            self.write(r, v & 0xFF)
+        self.write_regs(0x64, [(addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
+        self.write_regs(0x72, [(end >> 16) & 0xFF, (end >> 8) & 0xFF, end & 0xFF])
+        self._rdy = None                              # 0x6F is rewritten below
         self.write(0x6F, 0x84)                        # isp_en | crc_start; crc_done (bit1) drops, then rises
         self.poll_reg(0x6F, 0x02, 0x02, f"crc 0x{addr:06x}+{n}", n * 8e-6 * 1.25 + 0.02)
         return self.read(0x75)
@@ -324,13 +326,93 @@ class Rtd(Isp):
     def erase_sector(self, addr):
         # rtdflash flash_erase_sector_prepared: 64<-A23:16, 65<-A15:8, 66<-00, 60<-B8, 61<-ERASE(0x20), 60<-B9,
         # poll 60.0==0. (0xB8 = engine erase setup with 3 addr bytes staged; 0xB9 = | execute.)
-        self.write(0x64, (addr >> 16) & 0xFF); self.write(0x65, (addr >> 8) & 0xFF); self.write(0x66, addr & 0xFF)
+        self.write_regs(0x64, [(addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF])
         self.write(0x60, 0xB8); self.write(0x61, OP_ERASE_4K); self.write(0x60, 0xB9)
         self.wait_engine(f"erase 0x{addr:06x}", T_ERASE_LIMIT)
 
     def program_setup(self):
         # ONCE before the page loop (rtdflash flash_write_sector): program opcode, program size-1, low addr byte.
         self.write(0x6D, OP_PROG); self.write(0x71, PAGE - 1); self.write(0x66, 0x00)
+        self._rdy = None
+
+    # DP-AUX fast path (#254): ISP slave 0x4B auto-increments the register address, so 0x64..0x66 go in one message;
+    # a whole page (address, 256 B, start, first poll) is one I2C_RDWR. Set by enable_aux_fast(), AUX adapters only.
+    aux_fast = False
+    _rdy = None                    # 0x6F as of the last page-done poll (buffer ready, engine idle); None = read it
+    _legacy_sector = None          # sector base redone on the proven burst path after an aux-fast failure
+    aux_pages = aux_polls = 0
+
+    def enable_aux_fast(self) -> bool:
+        """True (and aux_fast set) when the adapter is a DRM AUX one and 0x4B really auto-increments (0x64 <- 12, 0x65 <- 34)."""
+        self.aux_fast = False
+        if not (hasattr(self.bus, "bus") and i2cbus.adapter_name(self.bus.bus).startswith("AUX")):
+            return False
+        try:
+            i2cbus.run_ops(self._xfer, ISP_ADDR_INC, [bytes([0x64, 0x12, 0x34])])
+            got = bytes(self.read(r) for r in (0x64, 0x65))
+        except OSError as e:
+            log(f"aux fast path off: 0x4B probe failed ({e!r})"); return False
+        self.aux_fast = got == b"\x12\x34"
+        log(f"aux fast path {'on' if self.aux_fast else 'off'}: 0x4B auto-increment probe read {got.hex()}")
+        return self.aux_fast
+
+    def write_regs(self, reg, data):
+        """Consecutive registers reg.. <- data: one 0x4B message on the aux fast path, else one message per register."""
+        if not self.aux_fast:
+            for i, b in enumerate(data):
+                self.write(reg + i, b)
+            return
+        try:
+            i2cbus.run_ops(self._xfer, ISP_ADDR_INC, [bytes([reg]) + bytes(data)])
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR_INC, "w", reg, bytes(data), 0, str(e)); raise
+        rtd_proto.trace(ISP_ADDR_INC, "w", reg, bytes(data))
+
+    def _aux_page(self, addr, data, v):
+        """Two I2C_RDWR: [0x4B 64 hi mid][70 + 256 B], then [6F <- v|start]. Start in the SAME transfer as the data leaves
+        6F.4 (buffer ready) low and the poll read returns 0xFF (measured, #254), so the start is its own transfer."""
+        ops = [(ISP_ADDR_INC, bytes([0x64, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF])), bytes([0x70]) + bytes(data)]
+        try:
+            i2cbus.run_ops(self._xfer, ISP_ADDR, ops)
+        except OSError as e:
+            rtd_proto.trace(ISP_ADDR, "w", 0x70, bytes(data), 0, str(e)); raise
+        rtd_proto.trace(ISP_ADDR, "w", 0x70, bytes(data))
+        self.write(0x6F, (v | PROG_BUSY) & 0xFF)
+
+    def program_page_aux(self, addr, data):
+        """Stage + load in one transfer, start in a second; polls until the engine is idle AND the buffer is ready, so the
+        next page's load only follows a ready buffer.
+        Any bus error: flush the half-loaded page, redo the sector on the burst path (`_legacy_sector`), raise RuntimeError."""
+        v = self._rdy
+        if v is None:
+            v = self.poll_reg(0x6F, PROG_BUSY | PROG_BUF_RDY, PROG_BUF_RDY, f"page 0x{addr:06x} buffer-ready", T_BUFRDY_LIMIT)
+        self.set_retries(0)
+        try:
+            self._aux_page(addr, data, v)
+        except OSError as e:
+            self.burst_fails += 1
+            self._legacy_sector, self._rdy = addr & ~(SECTOR - 1), None
+            try:
+                self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
+                if not self.dry:
+                    self._start_page(addr)
+            except Exception as e2:
+                log(f"page 0x{addr:06x}: flush after aux-fast failure also failed: {e2}")
+            raise RuntimeError(f"page 0x{addr:06x} aux-fast write failed: {e}") from e
+        finally:
+            self.set_retries(i2cbus.I2C_RETRIES_DEFAULT)
+        self.aux_pages += 1
+        t0 = time.monotonic()
+        while True:
+            r = self.read(0x6F)
+            self.aux_polls += 1
+            if (r & (PROG_BUSY | PROG_BUF_RDY)) == PROG_BUF_RDY:
+                break
+            if time.monotonic() - t0 > T_PROG_LIMIT:
+                self._rdy = None
+                raise TimeoutError(f"page 0x{addr:06x} program: reg 0x6F = 0x{r:02x} after {time.monotonic() - t0:.3f}s (limit {T_PROG_LIMIT}s)")
+        self._rdy = r
+
 
     write_mode = "byte"            # "byte" = one data byte per I2C message (#12 safe path), "burst" = BURST_CHUNK
     burst_chunk = BURST_CHUNK
@@ -374,7 +456,10 @@ class Rtd(Isp):
         # rtdflash flash_program_page_prepared: stage high addr bytes, wait buffer ready (6F.4==1),
         # write 256 B to 0x70, start (6F |= 0x20), wait done (6F.5==0). Engine issues its own per-page WREN.
         assert len(data) == PAGE
-        if self.write_mode == "burst" and (addr & ~(SECTOR - 1)) != self._byte_sector:
+        sec = addr & ~(SECTOR - 1)
+        if self.aux_fast and self.write_mode == "burst" and sec != self._legacy_sector and sec != self._byte_sector:
+            return self.program_page_aux(addr, data)
+        if self.write_mode == "burst" and sec != self._byte_sector:
             return self.program_page_burst(addr, data)
         self._stage_page(addr)
         # 0x70 is a FIFO: a resent chunk duplicates bytes (#12). Block the i2c-core resend on GMBUS timeout

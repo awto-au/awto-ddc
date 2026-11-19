@@ -638,7 +638,8 @@ def program(isp, img, diff, reprot, state, hashes, crc_ok, nudge, bk="the unit's
         log("stop request deferred to the end of the run (erase-all mode: erased sectors must be written first)")
     state.save(image=tag, image_size=len(img), source="write", commit=commit)
     INCOMPLETE = False
-    log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}; ISP recoveries {RECOVERIES}")
+    log(f"burst failures redone in byte mode: {getattr(isp, 'burst_fails', 0)}; ISP recoveries {RECOVERIES}; "
+        f"aux-fast pages {getattr(isp, 'aux_pages', 0)}, done-polls {getattr(isp, 'aux_polls', 0)}")
     RUN.complete = True
     FSCR.clear(isp)                                     # #232: OSD off, the new firmware starts with an empty OSD
     log(f"VERIFY OK: {len(diff)} sectors written ({time.monotonic() - t0:.0f}s); revert = rerun with {bk}")
@@ -838,6 +839,8 @@ def main() -> int:
                     "timed dry page (0 = off); never stops a run that has started writing")
     ap.add_argument("--bus-kind", choices=("auto", *i2cbus.BUS_KINDS), default="auto",
                     help="ddc / dp-aux (devices.json); auto = from the adapter name / connector link")
+    ap.add_argument("--aux-fast", choices=("auto", "off"), default="auto",
+                    help="DP-AUX only: 0x4B auto-increment address writes + 2-transfer pages (#254); off = the 0x4A burst path")
     ap.add_argument("--per-sector", action="store_true",
                     help="erase+program+verify one sector at a time, boot/common sectors last (units without a relay)")
     ap.add_argument("--read-chunk", type=int, default=64, choices=(64, 128, 256),
@@ -903,6 +906,8 @@ def flash_main(a) -> int:
         log(f"JEDEC {jid.hex()}")
         if jid != JEDEC_OK:
             log(f"refuse: JEDEC != {JEDEC_OK.hex()}"); return 4
+        if kind == "dp-aux" and a.aux_fast == "auto" and a.write_mode == "burst":
+            isp.enable_aux_fast()
         return flash(isp, img, o, nudge=lambda: i2cbus.gmbus_nudge(a.bus))
     except ReadPathUnstable as e:
         log(f"refuse: {e}; nothing erased or programmed. Unit in power saving / low flash clock? "

@@ -30,12 +30,16 @@ def _log():
 
 class FakeIsp:
     """1 MiB NOR flash behind the Rtd method names that rtd_flash_image uses."""
+    def enable_aux_fast(self):
+        return False
+
     def __init__(self, tail=SENTINEL, crc_broken=False, sr=0x9C):
         self.flash = bytearray(b"\xff" * (1 << 20))
         for s in range(NIMG, 256):
             self.flash[s * SECTOR:(s + 1) * SECTOR] = tail
         self.crc_broken = crc_broken
         self.sr = sr
+        self.aux_fast = False
         self.erased: list[int] = []
         self.reads = 0                 # read_flash calls
         self.crcs = 0
