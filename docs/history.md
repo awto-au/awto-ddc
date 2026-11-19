@@ -33,6 +33,12 @@
 - 2026-11-06 | safe-window / `dev.py recover --hold` available on every image | the safe block (0xF6B0) exists only on the main line; on working-base 0xF6B0.. is live firmware XDATA, so the hold corrupts globals; recover must hold only when the map has `_g_stAwtoSafe` | #52, #48
 - 2026-11-05 | debug slave 0x35 usable at 1 MHz | NAKs intermittently (2 of 4 diag reads failed); 100 kHz only. ISP slave 0x4A is clean at 1 MHz | `docs/flash-burst.md`, #12
 
+## Data channels (#250, #251, #253)
+- 2026-11-19 | no MCU-readable pixel or sample data on the RL6449; audio PCM row eliminated | MCU reads DCR / DCC statistics and the DDR frame buffer through `MCU_DC_*`; audio samples are on the test-out bus and I2S / S/PDIF pins, the peak detector is MCU-readable (not yet run on hardware) | #251, #250, `docs/data-channels.md`
+- 2026-11-19 | InfoFrame row 1.6-27 KB/s as a practical range | 27 B per frame per slot is a ceiling; a GPU repeats the same packet each frame, so the rate is the host update rate (unmeasured); min dropped | #250
+- 2026-11-19 | DP I2C limited by 100 kHz | 26.1 KB/s measured on bus 20 exceeds the 100 kHz ceiling; per-transaction latency dominates | #254, `docs/monitors/README.md`
+- 2026-11-08 | 0x35 NAKs at 1 MHz = another process on the bus (Dan) vs a firmware ISR / main-loop fault fixed per `docs/diag-block.md` | both recorded, not reconciled | #12, #61
+
 ## Docs retired
 - 2026-11-13 | panel = 27" (597 x 336 mm, BOE MV270QUM-N20 / Samsung LTM270FL01); input EDID size 597 x 336 mm + sRGB primaries | panel label (Dan's photo): Innolux M280DCA-E3B rev C1, 28"; the 597 x 336 mm was ours (copied from the TCON template EDID); EDID now 621 x 341 mm + datasheet primaries | #3
 - 2026-11-04 | panel = Samsung LTM270FL01 (closest by size) | panel EDID read over eDP AUX (MST/AGERA, 2018); best candidate BOE MV270QUM-N20, unconfirmed | #3

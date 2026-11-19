@@ -60,3 +60,19 @@ DP carries rows 3-5, 18, 19, 22, 25 and 26 as well (same scaler path after the r
 - Monitor-initiated: HPD, SCDC read request, CEC.
 - Packet and CRC rates scale with frame rate, not link speed (tiny high-refresh mode is the lever, #250).
 - Link capacity is never the limit. Pixel readback exists (dimming statistics, MCU DDR port); the open question is its measured rate and picture impact (#251).
+
+## Issues and next tests (state lives in the issues)
+- #250: channel inventory (InfoFrames, AUX, audio, CEC, overclock options); comments hold the dated findings.
+- #251: pixel path (dimming statistics, MCU DDR port, freeze-frame staging, redundancy and CRC).
+- #253: link error counters in the diag log + pixel-clock sweep (1080p as the safe reference mode, find where errors start; Dan has seen none).
+- #254 Test 1: DP faster than I2C-over-AUX (raw AUX DPCD, DPCD 0x00C / 0x109 speed select, DPCD mailbox). Needs a DP cable decision from Dan (label needs-dan).
+- #255 Test 2: read and edit actual frame data (DCR statistics, DDR read / write via `MCU_DC_*`, frozen frame, marker frame).
+- #80: IP over DDC (built; supersedes #61, closed 2026-11-11). awto-dan#110: permission rules for agent GitHub writes (installer script drafted, never run: auto mode blocks agents editing their own settings).
+
+## Session record 2026-11-19 (decisions, corrections, open points)
+- Dan: #250 stays open even though #80 works at 1 MHz; InfoFrames to be investigated.
+- Dan: monitor is a dumb byte mailbox; host does all routing and IP. Bus contention only causes errors (CRC, sequence numbers, retries); exclusive bus access is not required.
+- Dan: the 0x35 NAKs at 1 MHz were "another process on the bus". `docs/diag-block.md` records a firmware cause (ISR latched the command, `ScalerDebug()` loaded the reply a main-loop pass later), fixed. Both are noted; which one was the whole story is not settled.
+- Corrections made: audio PCM row restored (samples exist on the test-out bus, I2S / S/PDIF pins and the peak detector; no MCU snapshot register found); "no MCU pixel readback" was premature (DCR / DCC statistics, `MCU_DC_*` DDR port); InfoFrame / SDP min dropped (ceiling only, host update rate unmeasured); DDC at 100 kHz on DP is not the binding limit (26.1 KB/s measured on bus 20).
+- Not examined: board UART / ISP pins, monitor USB, I2S / S/PDIF pins, DDR clock, VGA connector presence, CEC / SCDC read-request registers.
+- Rules of the work: tests on unit 3 only; every number carries a basis tag; measurements replace estimates in this file.
