@@ -103,7 +103,7 @@ def consumed(a, addr: str) -> int:
     for k in range(CONSUME_READS):
         out = subprocess.run([sys.executable, str(HERE / "rtd_dbg_read.py"), str(a.bus),      # read-only; the write was serial-guarded
                               "--map", str(a.map), "0x" + addr], capture_output=True, text=True,
-                             timeout=5).stdout       # 1-byte read ~0.4 s incl. interpreter start; 5 s = hung bus, raises
+                             timeout=5, check=False).stdout       # 1-byte read ~0.4 s incl. interpreter start; 5 s = hung bus, raises
         m = re.search(r"@0x[0-9a-f]+: ([0-9a-f]{2}|--)", out)
         if m and m.group(1) == "00":
             print(f"osd_test: test byte 0x{addr} consumed (read {k + 1})")

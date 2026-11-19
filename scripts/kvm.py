@@ -149,7 +149,7 @@ def raw_get(bus: int, vcp: int) -> int:
 
 
 def ddcutil(bus: int, *args: str) -> str:
-    r = subprocess.run(["ddcutil", "--bus", str(bus), *args], capture_output=True, text=True, timeout=DDCUTIL_LIMIT_S)
+    r = subprocess.run(["ddcutil", "--bus", str(bus), *args], capture_output=True, text=True, timeout=DDCUTIL_LIMIT_S, check=False)
     if r.returncode:
         raise OSError(f"ddcutil rc={r.returncode}: {(r.stderr or r.stdout).strip()[:120]}")
     return r.stdout

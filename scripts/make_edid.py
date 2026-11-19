@@ -187,7 +187,7 @@ def main():
         p.write_bytes(e)
         print(f"== {p} ({len(e)} B)")
         if "--no-decode" not in sys.argv and shutil.which("edid-decode"):
-            r = subprocess.run(["edid-decode", "-c", str(p)], capture_output=True, text=True)
+            r = subprocess.run(["edid-decode", "-c", str(p)], capture_output=True, text=True, check=False)
             print(r.stdout, r.stderr)
             rc |= r.returncode
     return rc

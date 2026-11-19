@@ -53,7 +53,7 @@ def say(lf, s: str) -> None:
 
 def host_modes(connector: str) -> list[str]:
     """Mode strings WxH@HZ.HHH of `Monitor <connector>` from `gdctl show --verbose` (49 for HDMI-2 on unit 3)."""
-    r = subprocess.run(["gdctl", "show", "--verbose"], capture_output=True, text=True, timeout=GDCTL_SHOW_V_S)
+    r = subprocess.run(["gdctl", "show", "--verbose"], capture_output=True, text=True, timeout=GDCTL_SHOW_V_S, check=False)
     if r.returncode:
         raise SystemExit(f"sweep: gdctl show --verbose rc={r.returncode}; nothing done")
     out, inside = [], False
@@ -69,7 +69,7 @@ def host_modes(connector: str) -> list[str]:
 
 
 def gdctl_show() -> str:
-    r = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=dev.GDCTL_SHOW_S)
+    r = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=dev.GDCTL_SHOW_S, check=False)
     if r.returncode:
         raise SystemExit(f"sweep: gdctl show rc={r.returncode}; nothing changed")
     return r.stdout
@@ -93,7 +93,7 @@ def set_mode(u: dict, mode: str) -> tuple[bool, str]:
         if x is not None:
             a2 = normalise(set_block_val(a2, t, "--x", x))
         try:
-            r = subprocess.run(["gdctl", "set", *a2], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
+            r = subprocess.run(["gdctl", "set", *a2], capture_output=True, text=True, timeout=dev.GDCTL_SET_S, check=False)
         except subprocess.TimeoutExpired:
             return False, f"gdctl set timed out after {dev.GDCTL_SET_S} s"
         if r.returncode == 0:
@@ -264,7 +264,7 @@ def main() -> int:
         swap = list(home)
         i = swap.index(hdmi_g)
         swap[i], swap[i + 2] = u["gdctl"], REST
-        r = subprocess.run(["gdctl", "set", *swap], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
+        r = subprocess.run(["gdctl", "set", *swap], capture_output=True, text=True, timeout=dev.GDCTL_SET_S, check=False)
         if r.returncode:
             raise SystemExit(f"sweep --dp: swapping DP-1 into {hdmi_g}'s slot failed: {r.stderr.strip()}; nothing changed")
         say(lf, f"DP-1 in {hdmi_g}'s slot at {REST}; settle {SETTLE_S:g} s")
@@ -272,7 +272,7 @@ def main() -> int:
         try:
             return sweep(a, u, lf, modes, swap, home)
         finally:
-            r = subprocess.run(["gdctl", "set", *home], capture_output=True, text=True, timeout=dev.GDCTL_SET_S)
+            r = subprocess.run(["gdctl", "set", *home], capture_output=True, text=True, timeout=dev.GDCTL_SET_S, check=False)
             say(lf, f"layout restored ({hdmi_g} back, DP-1 off): rc={r.returncode} {r.stderr.strip()}")
     return sweep(a, u, lf, modes, dev.gdctl_set_args(gdctl_show(), u["gdctl"], REST), None)
 

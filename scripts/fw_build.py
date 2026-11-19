@@ -55,7 +55,7 @@ def log(s):
 def run(step, cmd):
     log(f"[{step}] {' '.join(map(str, cmd))}")
     env = dict(os.environ, PYTHONHASHSEED="0")              # set iteration order -> reproducible bank packing
-    r = subprocess.run(list(map(str, cmd)), capture_output=True, text=True, timeout=TIMEOUT[step], cwd=ROOT, env=env)
+    r = subprocess.run(list(map(str, cmd)), capture_output=True, text=True, timeout=TIMEOUT[step], cwd=ROOT, env=env, check=False)
     LOG.write(r.stdout + r.stderr); LOG.flush()
     if r.returncode:
         print((r.stdout + r.stderr)[-3000:])

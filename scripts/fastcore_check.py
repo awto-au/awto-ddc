@@ -487,7 +487,7 @@ def run_proc(args: list[str], fast: bool, tag: str) -> tuple[int, str, float]:
     t0 = time.monotonic()
     try:
         r = subprocess.run([sys.executable, *args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env, cwd=ROOT,
-                           text=True, timeout=TOOL_LIMIT_S)
+                           text=True, timeout=TOOL_LIMIT_S, check=False)
         rc, out = r.returncode, r.stdout
     except subprocess.TimeoutExpired as e:
         rc, out = -9, (e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes) else (e.stdout or "")

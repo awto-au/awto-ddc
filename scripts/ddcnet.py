@@ -532,7 +532,7 @@ BRIDGE = "ddcbr0"
 
 
 def sh(*cmd: str) -> None:
-    r = subprocess.run(["sudo", "-n", *cmd], capture_output=True, text=True, timeout=5)
+    r = subprocess.run(["sudo", "-n", *cmd], capture_output=True, text=True, timeout=5, check=False)
     say(f"  $ {' '.join(cmd)}" + (f"  -> rc {r.returncode}: {r.stderr.strip()}" if r.returncode else ""))
 
 

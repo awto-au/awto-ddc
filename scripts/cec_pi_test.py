@@ -56,7 +56,7 @@ def run(cmd, timeout, raw):
     raw.write(f"$ {' '.join(cmd)}\n")
     t = time.time()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
         out = r.stdout + r.stderr
     except subprocess.TimeoutExpired as e:
         out = (e.stdout or "") + (e.stderr or "") + f"\nTIMEOUT after {timeout} s: {' '.join(cmd)}\n"

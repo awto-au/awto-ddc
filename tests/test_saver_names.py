@@ -9,7 +9,7 @@ import saver_names
 
 
 def test_c_block_current():
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/gen_awto_savers.py"), "--check"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/gen_awto_savers.py"), "--check"], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
 
 

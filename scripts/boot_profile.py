@@ -68,7 +68,7 @@ def main() -> int:
         say(f"  {c / per:7.0f} ms  {name}")
     import subprocess
     out = subprocess.run([sys.executable, str(ROOT / "scripts/sync_log.py"), str(a.bus), "--map", str(a.map), "--serial", a.serial],
-                         capture_output=True, text=True).stdout
+                         capture_output=True, text=True, check=False).stdout
     for l in out.splitlines():
         if re.search(r"system:in (INITIAL|SEARCH|DISPLAY SETTING) for", l):
             say("  " + re.sub(r"^\S+ +", "", l.strip())[:130])

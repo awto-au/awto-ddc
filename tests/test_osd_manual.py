@@ -12,7 +12,7 @@ DOCS = ROOT / "docs/osd"
 
 
 def test_pictures_match_the_model():
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/osd_manual.py"), "--check"], capture_output=True, text=True, cwd=ROOT)
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/osd_manual.py"), "--check"], capture_output=True, text=True, cwd=ROOT, check=False)
     assert r.returncode == 0, r.stdout + r.stderr
 
 

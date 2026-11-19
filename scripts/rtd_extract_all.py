@@ -67,7 +67,7 @@ def gzip_to(src, dst):
 def run(cmd, what):
     t = time.time()
     p = subprocess.run([sys.executable, "-I"] + cmd, capture_output=True, text=True, cwd=rtd_gate.repo_root(),
-                       timeout=PARSER_LIMIT_S)
+                       timeout=PARSER_LIMIT_S, check=False)
     logging.info("%s: rc=%d %.1fs %s", what, p.returncode, time.time() - t,
                  (p.stdout.strip().splitlines() or [""])[-1])
     if p.returncode:

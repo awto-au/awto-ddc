@@ -42,7 +42,7 @@ def log(msg: str) -> None:
 def ddc(bus: int, *args: str) -> str:
     t0 = time.monotonic()
     try:
-        r = subprocess.run(["ddcutil", "--bus", str(bus), "--noverify", *args], capture_output=True, text=True, timeout=DDC_S)
+        r = subprocess.run(["ddcutil", "--bus", str(bus), "--noverify", *args], capture_output=True, text=True, timeout=DDC_S, check=False)
     except subprocess.TimeoutExpired:
         log(f"ddcutil {' '.join(args)}: no answer in {DDC_S:.0f} s (elapsed {time.monotonic() - t0:.1f} s)")
         sys.exit(1)
@@ -83,7 +83,7 @@ def main() -> int:
             log(f"VOLUME {v} START {time.strftime('%H:%M:%S')} (read back {getvol(a.bus)})")
             for hz in freqs:
                 ddc(a.bus, "setvcp", "63", f"0x{HZ_FLAG | hz:04X}")
-                r = subprocess.run([*tone, "--hz", str(hz)], capture_output=True, text=True)
+                r = subprocess.run([*tone, "--hz", str(hz)], capture_output=True, text=True, check=False)
                 bad += r.returncode != 0
                 log(f"  VOLUME {v} TONE {hz} Hz END {time.strftime('%H:%M:%S')} rc {r.returncode}")
     finally:

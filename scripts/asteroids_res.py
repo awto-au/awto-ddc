@@ -60,7 +60,7 @@ def build(names) -> int:
                "-D", f"AWTO_AST_COLS={c}", "-D", f"AWTO_AST_ROWS={r}", "-D", f"AWTO_AST_RES={res}", "-D", "AWTO_SAVER_INFO=_OFF", "-D", "AWTO_AST_ODD_BAR_OK=1",
                "--savers", "asteroids", "--fw-args=--xdata-floor 0"]       # Asteroids-only image (docs/saver-mode.md "Selecting savers"): the XDATA the other savers freed
         say(f"build {n}: {' '.join(cmd[2:])}")
-        p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=BUILD_LIMIT_S)
+        p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=BUILD_LIMIT_S, check=False)
         say(f"build {n}: rc {p.returncode} {(p.stdout + p.stderr).strip().splitlines()[-1:]}")
         if p.returncode != 0:
             return p.returncode
@@ -72,7 +72,7 @@ def cost(names, window: float) -> int:
     for n in names:
         cmd = [sys.executable, "scripts/saver_frame_cost.py", str(binp(n)), "--case", "asteroids", "--window", str(window), "--top", "0"]
         say(f"cost {n}: window {window} s")
-        p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=FRAME_COST_LIMIT_S)
+        p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=FRAME_COST_LIMIT_S, check=False)
         txt = p.stdout + p.stderr
         m1 = re.search(r"frames -> ([\d.]+) /s, ([\d.]+) ms each; (\d+) instr, (\d+) cycles", txt)
         m2 = re.search(r"saver slot ([\d.]+) ms, rest of the main loop ([\d.]+) ms.*?port (\d+) B \(glyph (\d+) B in ([\d.]+) uploads, map (\d+) B = ([\d.]+) words\), (\d+) address sets; flash fetch stall ([\d.]+) ms", txt)

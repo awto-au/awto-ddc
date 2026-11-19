@@ -36,7 +36,7 @@ def log(s):   # file only: stdout is reserved for the report / JSON
 
 def run(cmd, timeout, data=None):
     try:
-        r = subprocess.run(cmd, input=data, capture_output=True, timeout=timeout)
+        r = subprocess.run(cmd, input=data, capture_output=True, timeout=timeout, check=False)
         return r.returncode, r.stdout.decode(errors="replace") + r.stderr.decode(errors="replace")
     except FileNotFoundError:
         return 127, "not installed"

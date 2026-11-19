@@ -255,7 +255,7 @@ def rate_khz() -> int:
 def _gmbus(*args, timeout) -> int:
     cmd = [sys.executable, str(Path(__file__).resolve().parent / "gmbus_rate.py"), *map(str, args)]
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).returncode
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False).returncode
     except subprocess.TimeoutExpired:
         print(f"gmbus_rate {' '.join(map(str, args))}: timeout {timeout}s", file=sys.stderr)
         return 124

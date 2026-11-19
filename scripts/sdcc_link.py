@@ -69,13 +69,13 @@ def banked_rom_ok(lk: Path, mapf: Path):
 def _sdld(cmd, ihx: Path):
     """sdcc link. Fails on any linker warning. A banked image (code > 64 KiB) trips sdld's -M ROM summary: when that
     is the only error, relink with sdld directly without -M and prove the ROM with banked_rom_ok instead."""
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=LINK_TIMEOUT)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=LINK_TIMEOUT, check=False)
     lk = ihx.with_suffix(".lk")
     errs = [l for l in (r.stdout + r.stderr).splitlines() if "Error" in l or "ERROR" in l]
     if r.returncode and errs and all("Insufficient ROM" in l for l in errs) and lk.exists():
         nolk = ihx.with_name(ihx.stem + "_nom.lk")
         nolk.write_text("\n".join(l for l in lk.read_text().splitlines() if l.strip() != "-M") + "\n")
-        r = subprocess.run([T.tool("sdld"), "-nf", str(nolk)], capture_output=True, text=True, timeout=LINK_TIMEOUT)
+        r = subprocess.run([T.tool("sdld"), "-nf", str(nolk)], capture_output=True, text=True, timeout=LINK_TIMEOUT, check=False)
         if not r.returncode:
             why = banked_rom_ok(nolk, ihx.with_suffix(".map"))
             if why:

@@ -387,7 +387,7 @@ def main() -> int:
 def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal") -> None:
     """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL)."""
     def git(*x):
-        return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True, check=False).stdout.strip()
     doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
            "date": isostamp.now(), "complete": complete, "tier": tier, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),

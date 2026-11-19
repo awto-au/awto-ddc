@@ -124,7 +124,7 @@ def main() -> int:
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", f"{a.fps:g}", "-i", str(frames_dir / "f%04d.png"), "-i", str(wav),
            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(mp4)]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=FFMPEG_LIMIT_S)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=FFMPEG_LIMIT_S, check=False)
     except subprocess.TimeoutExpired:
         say(f"ffmpeg: no result within {FFMPEG_LIMIT_S} s (expected < 30 s)")
         return 1

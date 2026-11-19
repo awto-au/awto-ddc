@@ -197,7 +197,7 @@ def main() -> int:
             if udev is not None:
                 say(f"  host drm uevents: {len(ue)}" + "".join(f"\n    {u}" for u in ue[:8]))
                 j = subprocess.run(["journalctl", "--user", "-b", "--since", f"@{int(t_host)}", "-o", "short-iso", "--no-pager",
-                                    "-t", "gnome-shell"], capture_output=True, text=True, timeout=10).stdout.strip().splitlines()
+                                    "-t", "gnome-shell"], capture_output=True, text=True, timeout=10, check=False).stdout.strip().splitlines()
                 say(f"  mutter journal lines: {len(j)}" + "".join(f"\n    {x}" for x in j[:6]))
     finally:
         io.close()

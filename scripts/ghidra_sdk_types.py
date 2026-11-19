@@ -61,7 +61,7 @@ def preprocess(use_cache):
         if use_cache and out.exists():
             return out
         r = subprocess.run(K.sdcc_cmd(c, uv2.parent, defines, incs, model) + ["-E", str(c)],
-                           capture_output=True, text=True, errors="replace", timeout=120)
+                           capture_output=True, text=True, errors="replace", timeout=120, check=False)
         out.write_text(r.stdout)
         return out
     with ThreadPoolExecutor(os.cpu_count() or 4) as ex:

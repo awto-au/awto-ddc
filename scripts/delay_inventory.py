@@ -198,7 +198,7 @@ def macro_dump(build: Path, cache: Path) -> dict[str, str]:
             if not c:
                 continue
             r = subprocess.run(k.sdcc_cmd(c, uv2.parent, defines, incs, model) + ["-Wp-dM", "-E", str(c)], capture_output=True,
-                               text=True, errors="replace", timeout=200)
+                               text=True, errors="replace", timeout=200, check=False)
             out.append(r.stdout)
             log(f"macro dump {key}: {len(r.stdout)} chars")
         cache.parent.mkdir(parents=True, exist_ok=True)

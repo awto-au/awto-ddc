@@ -33,7 +33,7 @@ def say(s: str) -> None:
 
 def run(cmd: list[str]) -> str:
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=I2C_S * 20).stdout
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=I2C_S * 20, check=False).stdout
     except subprocess.TimeoutExpired:
         return ""
 

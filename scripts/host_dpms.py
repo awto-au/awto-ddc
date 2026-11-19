@@ -48,7 +48,7 @@ def set_mode(mode: int) -> bool:
         r = subprocess.run(["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.DisplayConfig", "--object-path",
                             "/org/gnome/Mutter/DisplayConfig", "--method", "org.freedesktop.DBus.Properties.Set",
                             "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", f"<int32 {mode}>"],
-                           capture_output=True, text=True, timeout=GDBUS_S)
+                           capture_output=True, text=True, timeout=GDBUS_S, check=False)
     except subprocess.TimeoutExpired:
         log(f"PowerSaveMode {mode}: gdbus timed out after {GDBUS_S} s")
         return False
@@ -66,7 +66,7 @@ def idle_s() -> float | None:
     try:
         r = subprocess.run(["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.IdleMonitor", "--object-path",
                             "/org/gnome/Mutter/IdleMonitor/Core", "--method", "org.gnome.Mutter.IdleMonitor.GetIdletime"],
-                           capture_output=True, text=True, timeout=GDBUS_S)
+                           capture_output=True, text=True, timeout=GDBUS_S, check=False)
         return int(r.stdout.split()[1].rstrip(",)")) / 1000 if r.returncode == 0 else None
     except (subprocess.TimeoutExpired, IndexError, ValueError):
         return None

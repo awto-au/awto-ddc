@@ -47,7 +47,7 @@ def log(s):
 def fw_tag(root) -> str:
     """No --dirty, fixed abbrev: rebuilding one commit gives identical bytes (#51.5); AWTO_FW_TAG overrides."""
     return os.environ.get("AWTO_FW_TAG") or subprocess.run(
-        ["git", "describe", "--always", "--abbrev=7"], cwd=root, capture_output=True, text=True).stdout.strip() or "nogit"
+        ["git", "describe", "--always", "--abbrev=7"], cwd=root, capture_output=True, text=True, check=False).stdout.strip() or "nogit"
 
 
 MSG_TSV = ROOT / "fw" / "msgids.tsv"

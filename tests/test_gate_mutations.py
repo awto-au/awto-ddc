@@ -33,7 +33,7 @@ pytestmark = [pytest.mark.slow, pytest.mark.skipif(IMG is None or not IMG.with_s
 
 def gate(script, binp, mapp, *args):
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / script), str(binp), str(mapp), *args], capture_output=True, text=True,
-                       env=ENV, timeout=STALL_S)
+                       env=ENV, timeout=STALL_S, check=False)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -92,7 +92,7 @@ def normal_cmd(name, binp):
 
 
 def run_normal(name, binp):
-    return subprocess.run(normal_cmd(name, binp), capture_output=True, text=True, env={**ENV, "PYTHONHASHSEED": "0"}, timeout=STALL_S, cwd=ROOT)
+    return subprocess.run(normal_cmd(name, binp), capture_output=True, text=True, env={**ENV, "PYTHONHASHSEED": "0"}, timeout=STALL_S, cwd=ROOT, check=False)
 
 
 @pytest.mark.parametrize("name,fn", NORMAL_FAULTS)

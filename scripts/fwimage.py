@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
         f"defs {a.defs or 'none'} -> {out}")
     with out.open("w") as fh:
         rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, *a.fw_args.split()], cwd=a.tree, env=env,
-                            stdout=fh, stderr=subprocess.STDOUT).returncode
+                            stdout=fh, stderr=subprocess.STDOUT, check=False).returncode
     head = out.read_text().splitlines()[:1]
     say(f"rc={rc}; {head[0][25:] if head else 'no output'}")
     if rc:

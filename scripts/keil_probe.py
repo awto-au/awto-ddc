@@ -29,7 +29,7 @@ def main() -> int:
     env = dict(os.environ, WINEPREFIX=str(wk / "prefix"), WINEDEBUG="-all")
     # stall guard: C51 compiles a probe in <2 s under Wine; 60 s = hung
     r = subprocess.run(["wine", str(tree / "C51" / "BIN" / "C51.exe"), src.name, *ctl],
-                       cwd=src.parent, env=env, capture_output=True, text=True, timeout=60)
+                       cwd=src.parent, env=env, capture_output=True, text=True, timeout=60, check=False)
     out = "\n".join(l for l in r.stdout.splitlines() if l.strip())
     log = root / "tmp" / "logs" / "keil_probe.log"
     log.parent.mkdir(parents=True, exist_ok=True)

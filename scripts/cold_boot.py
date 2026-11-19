@@ -62,7 +62,7 @@ def main() -> int:
 
     def pc(*args):
         return subprocess.run([sys.executable, str(ROOT / "scripts/power_cycle.py"), "--relay", u["relay"], *args],
-                              capture_output=True, text=True, timeout=60).returncode
+                              capture_output=True, text=True, timeout=60, check=False).returncode
 
     bus = None
     for run in range(1, a.runs + 1):

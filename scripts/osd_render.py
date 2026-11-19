@@ -137,7 +137,7 @@ def video(frames: list, out: Path, fps: int):
         im.save(d / f"f{i:04d}.png")
     if shutil.which("ffmpeg"):
         r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(d / "f%04d.png"),
-                            "-pix_fmt", "yuv420p", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", str(out)], capture_output=True, text=True, timeout=300)
+                            "-pix_fmt", "yuv420p", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", str(out)], capture_output=True, text=True, timeout=300, check=False)
         if r.returncode == 0:
             shutil.rmtree(d)
             say(f"video {out} ({len(frames)} frames @ {fps} fps)")

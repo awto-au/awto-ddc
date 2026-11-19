@@ -30,7 +30,7 @@ def say(s):
 
 def build(unit, tag) -> Path:
     r = subprocess.run([str(ROOT / "dev.py"), "build", "--unit", str(unit), "--tag", tag], capture_output=True, text=True,
-                       timeout=BUILD_LIMIT, cwd=ROOT)
+                       timeout=BUILD_LIMIT, cwd=ROOT, check=False)
     if r.returncode:
         sys.exit(f"build {tag} failed:\n{(r.stdout + r.stderr)[-2000:]}")
     return next((ROOT / "tmp/fw").glob(f"*-{tag}-be.bin"))
@@ -58,7 +58,7 @@ def main() -> int:
             p.write_text(orig)
             xl.write_text(xl0)
         out = subprocess.run([sys.executable, str(ROOT / "scripts/image_sector_diff.py"), str(base), str(img)], capture_output=True, text=True,
-                             timeout=60).stdout
+                             timeout=60, check=False).stdout
         ch = int(re.search(r"changed (\d+) / \d+", out).group(1))
         mv = re.search(r"data symbols: \d+ / \d+, moved (\d+)", out).group(1)
         say(f"{f} +{n or 7} B: {ch} sectors changed ({mv} data symbols moved){'' if ch <= a.max else f'  FAIL > {a.max}'}")

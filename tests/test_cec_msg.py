@@ -143,5 +143,5 @@ def test_firmware_cec_sim_when_an_image_exists():
     if "_SysCecHandler" not in mp.read_text(errors="replace"):
         pytest.skip("newest image has no CEC code")
     r = subprocess.run([sys.executable, str(ROOT / "scripts/cec_sim.py"), str(img[-1]), str(mp)], capture_output=True, text=True, timeout=240,
-                       env={**__import__("os").environ, "AWTO_SIM_CORE": "fast"})
+                       env={**__import__("os").environ, "AWTO_SIM_CORE": "fast"}, check=False)
     assert r.returncode == 0 and "FAIL" not in r.stdout, r.stdout[-2000:]

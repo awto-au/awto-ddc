@@ -36,7 +36,7 @@ def repo_root():
 
 
 def run(cmd):
-    p = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=CALL_TIMEOUT)
+    p = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=CALL_TIMEOUT, check=False)
     return p.returncode, (p.stdout + p.stderr)
 
 

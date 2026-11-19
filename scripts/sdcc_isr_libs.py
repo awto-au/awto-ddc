@@ -93,7 +93,7 @@ def compile_lib(src: Path, out: Path) -> str:
     out.parent.mkdir(parents=True, exist_ok=True)
     cmd = [T.tool("sdcc"), *LIBFLAGS, f"-I{LIBSRC.parent / 'include'}", f"-I{LIBSRC.parent / 'include/mcs51'}",
            "-S", "-o", str(out), str(src)]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=CC_TIMEOUT)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=CC_TIMEOUT, check=False)
     if r.returncode:
         sys.exit(f"compile {src} failed:\n{r.stdout}{r.stderr}")
     return out.read_text()

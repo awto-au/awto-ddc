@@ -63,7 +63,7 @@ def main() -> int:
         for to, bus, rbus in legs:
             out = subprocess.run([sys.executable, str(ROOT / "scripts/sw_timeline.py"), str(bus), "--serial", a.serial,
                                   "--map", a.map, "--to", to, "--read-bus", str(rbus)],
-                                 capture_output=True, text=True).stdout
+                                 capture_output=True, text=True, check=False).stdout
             m, u = ACTIVE.findall(out), UNBLANK.findall(out)
             ms = int(m[-1]) if m else None
             ub = int(u[-1]) if u else None

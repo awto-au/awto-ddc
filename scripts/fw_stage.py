@@ -29,7 +29,7 @@ def main() -> int:
     if ids.is_file():
         shutil.copy2(ids, f"{stem}.ids.tsv")
     r = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(stem), "--tree", str(tree),
-                        "--only", "boot,isr,link"], capture_output=True, text=True, timeout=GATES_LIMIT_S)
+                        "--only", "boot,isr,link"], capture_output=True, text=True, timeout=GATES_LIMIT_S, check=False)
     out = r.stdout.strip().splitlines()[-4:]
     with (REPO / "tmp/logs/fw_stage.log").open("a") as f:
         f.write(f"{isostamp.now()} {stem.name} gates rc={r.returncode}\n" + "\n".join(out) + "\n")

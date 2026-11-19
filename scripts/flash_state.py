@@ -87,8 +87,8 @@ def now_iso() -> str:
 
 def git_commit(repo: Path) -> str:
     try:
-        c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=repo, capture_output=True, text=True, timeout=5).stdout.strip()
-        d = subprocess.run(["git", "diff", "--quiet"], cwd=repo, timeout=5).returncode
+        c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=repo, capture_output=True, text=True, timeout=5, check=False).stdout.strip()
+        d = subprocess.run(["git", "diff", "--quiet"], cwd=repo, timeout=5, check=False).returncode
         return c + ("+" if d else "")
     except (OSError, subprocess.SubprocessError):
         return "unknown"

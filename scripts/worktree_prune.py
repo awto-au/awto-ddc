@@ -27,7 +27,7 @@ def log(msg: str) -> None:
 
 
 def git(cwd: Path, *a: str) -> str:
-    return subprocess.run(["git", "-C", str(cwd), *a], capture_output=True, text=True).stdout.strip()
+    return subprocess.run(["git", "-C", str(cwd), *a], capture_output=True, text=True, check=False).stdout.strip()
 
 
 def worktrees() -> list[dict]:
@@ -63,7 +63,7 @@ def main() -> int:
             bins = [str(b) for b in (p / "tmp/fw").glob("*.bin")]
             if bins:                                            # no args would make fw_archive scan every worktree
                 subprocess.run([sys.executable, str(REPO / "scripts/fw_archive.py"), *bins], cwd=REPO, check=True)
-            r = subprocess.run(["git", "-C", str(REPO), "worktree", "remove", "--force", str(p)], capture_output=True, text=True)
+            r = subprocess.run(["git", "-C", str(REPO), "worktree", "remove", "--force", str(p)], capture_output=True, text=True, check=False)
             gone += r.returncode == 0
             log(f"removed {p} ({br})" if r.returncode == 0 else f"FAILED remove {p}: {r.stderr.strip()}")
     for r in rows:

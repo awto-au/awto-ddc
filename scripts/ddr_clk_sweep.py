@@ -158,7 +158,7 @@ def health(ctx) -> bool:
     """./dev.py health switches the debug link off at its end: switch it on again."""
     if not ctx.health:
         return True
-    r = subprocess.run(["./dev.py", "health", "--unit", "3"], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(["./dev.py", "health", "--unit", "3"], cwd=ROOT, capture_output=True, text=True, check=False)
     import dbg_link
     try:
         dbg_link.on(ctx.bus, 10)

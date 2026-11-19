@@ -158,7 +158,7 @@ class Unit:
 
     def ddcutil(self, *args) -> str:
         r = subprocess.run(["ddcutil", "--bus", str(self.u.bus_n), "--noverify", *args], capture_output=True, text=True,
-                           timeout=10)                       # one ddcutil call ~0.2 s; 10 s = a stuck bus, case FAILs
+                           timeout=10, check=False)                       # one ddcutil call ~0.2 s; 10 s = a stuck bus, case FAILs
         return r.stdout + r.stderr
 
     def vcp_set(self, code: int, v: int):
@@ -340,7 +340,7 @@ class Run:
             cmd = [sys.executable, str(ROOT / "dev.py"), "power-cycle", "--unit", "2"]
         else:                                            # ISP 0xEE reboot: RAM rebuilt, the SDK store read back from flash
             cmd = [sys.executable, str(ROOT / "dev.py"), "reset", "--unit", "2"]
-        rc = subprocess.run(cmd, capture_output=True, text=True, timeout=60).returncode
+        rc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False).returncode
         self.say(f"  {how} reboot rc={rc}")
         self.t.wait(5.0)                                 # monitor back: 5 s max (memory rule)
         self.t = Unit("2", self.t.mapp, self.say)        # bus number may change after a cycle

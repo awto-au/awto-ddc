@@ -39,7 +39,7 @@ def say(s: str):
 def run(runner: Path, repo: Path, ihx: Path) -> tuple[bytes, float]:
     t0 = time.perf_counter()
     r = subprocess.run([sys.executable, str(runner), str(ihx)], stdin=subprocess.DEVNULL, capture_output=True,
-                       timeout=RUN_TMO_S, env={**os.environ, "AWTO_DDC_REPO": str(repo)})
+                       timeout=RUN_TMO_S, env={**os.environ, "AWTO_DDC_REPO": str(repo)}, check=False)
     return r.stdout + b"\n--stderr--\n" + r.stderr + f"\nrc {r.returncode}".encode(), time.perf_counter() - t0
 
 

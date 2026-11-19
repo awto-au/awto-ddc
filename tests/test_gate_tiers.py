@@ -24,7 +24,7 @@ def _merge_check(tmp_path, **doc):
     img.write_bytes(b"image")
     (tmp_path / "t-be.gates.json").write_text(json.dumps({"sha256": hashlib.sha256(b"image").hexdigest(), "complete": True,
                                                           "gates": {"boot": {"result": "PASS"}}, **doc}))
-    return subprocess.run([sys.executable, str(ROOT / "dev.py"), "merge-check", str(img)], capture_output=True, text=True, cwd=ROOT)
+    return subprocess.run([sys.executable, str(ROOT / "dev.py"), "merge-check", str(img)], capture_output=True, text=True, cwd=ROOT, check=False)
 
 
 def test_merge_check_refuses_a_normal_record(tmp_path):

@@ -34,7 +34,7 @@ def say(s: str) -> None:
 
 
 def dev(*a: str) -> str:
-    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, cwd=ROOT)
+    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, cwd=ROOT, check=False)
     return r.stdout + r.stderr
 
 

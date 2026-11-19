@@ -93,7 +93,7 @@ def tus():
 def preprocess(job):
     c, cmd = job
     r = subprocess.run(cmd + ["-Wp-Wundef", "-Wp-dD", "-E", str(c)], capture_output=True, text=True, errors="replace",
-                       timeout=FC.COMPILE_TIMEOUT)
+                       timeout=FC.COMPILE_TIMEOUT, check=False)
     return c, r.returncode, r.stdout, r.stderr
 
 
@@ -310,7 +310,7 @@ def main() -> int:
     for _, cmd in js:
         cmdline |= {x[2:].split("=")[0] for x in cmd if x.startswith("-D")}
     defined |= cmdline
-    pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True)
+    pre = subprocess.run(js[0][1] + ["-Wp-dM", "-E", "-"], input="", capture_output=True, text=True, check=False)
     defined |= set(re.findall(r"^#define (\w+)", pre.stdout, re.MULTILINE))
     for (_, defs) in [(0, d) for *_, d, _o in tu_info]:
         defined |= {d[1] for d in defs if d[0] == "define"}

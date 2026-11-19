@@ -74,7 +74,7 @@ def candidates():
 
 
 def git(*a):
-    r = subprocess.run(["python3", "/mnt/2tb/git/awto-dan/scripts/gh_claudia.py", "git", *a], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(["python3", "/mnt/2tb/git/awto-dan/scripts/gh_claudia.py", "git", *a], cwd=ROOT, capture_output=True, text=True, check=False)
     if r.returncode:
         sys.exit(f"git {' '.join(a[:2])}: {r.stderr.strip()[-300:]}")
 

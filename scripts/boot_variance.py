@@ -32,7 +32,7 @@ def say(s):
 
 
 def run(*a, limit=120):
-    return subprocess.run([sys.executable, *map(str, a)], capture_output=True, text=True, cwd=ROOT, timeout=limit)
+    return subprocess.run([sys.executable, *map(str, a)], capture_output=True, text=True, cwd=ROOT, timeout=limit, check=False)
 
 
 def one(mp: Path):

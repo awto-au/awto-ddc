@@ -47,7 +47,7 @@ def log(s):
 
 def render_hi(svg, png):
     r = subprocess.run(["inkscape", str(svg), "-o", str(png), "-w", str(HI), "-h", str(HI), "--export-background-opacity=0"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, check=False)
     if r.returncode:
         raise RuntimeError(f"inkscape {svg.name}: {r.stderr[-200:]}")
     a = np.asarray(Image.open(png).convert("RGBA"))[:, :, 3]

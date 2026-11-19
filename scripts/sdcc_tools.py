@@ -35,7 +35,7 @@ def stamp() -> dict:
     """Which compiler built an image: install path, `sdcc --version`, fork commit (<install>/awto-sdcc-commit.txt, written by awto-sdcc scripts/build.py)."""
     import subprocess
     f = next((x for x in (SHARE / "awto-sdcc-commit.txt", BIN.parent / "awto-sdcc-commit.txt") if x.exists()), SHARE / "awto-sdcc-commit.txt")
-    ver = subprocess.run([tool("sdcc"), "--version"], capture_output=True, text=True, timeout=10).stdout.splitlines()
+    ver = subprocess.run([tool("sdcc"), "--version"], capture_output=True, text=True, timeout=10, check=False).stdout.splitlines()
     return {"install": str(BIN.parent), "version": ver[0] if ver else "?", "commit": f.read_text().strip() if f.exists() else "unstamped"}
 
 
@@ -57,7 +57,7 @@ def check_install() -> dict:
     if not (src / ".git").exists():                         # the install's own source copy (share/sdcc/awto-src) is the stamped commit
         return st
     sha = st["commit"].split()[0]
-    r = subprocess.run(["git", "-C", str(src), "diff", "--quiet", sha, "HEAD", "--", "src", "device"], capture_output=True, timeout=30)
+    r = subprocess.run(["git", "-C", str(src), "diff", "--quiet", sha, "HEAD", "--", "src", "device"], capture_output=True, timeout=30, check=False)
     if r.returncode:
         sys.exit(f"compiler install {st['install']} ({sha[:10]}) differs from the fork HEAD in {src} (src/, device/): rebuild it "
                  f"(scripts/build.py --prefix <new dir>) and pass that dir as --bin / AWTO_SDCC_BIN")

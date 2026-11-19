@@ -22,7 +22,7 @@ def repo():
 
 
 def run(args):
-    p = subprocess.run(args, capture_output=True, text=True)
+    p = subprocess.run(args, capture_output=True, text=True, check=False)
     return p.returncode, p.stdout + p.stderr
 
 

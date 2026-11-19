@@ -37,7 +37,7 @@ def repo():
 
 def find_bus():
     out = subprocess.run(
-        ["ddcutil", "detect", "--brief"], capture_output=True, text=True
+        ["ddcutil", "detect", "--brief"], capture_output=True, text=True, check=False
     ).stdout
     for blk in out.split("Display "):
         if SERIAL in blk:

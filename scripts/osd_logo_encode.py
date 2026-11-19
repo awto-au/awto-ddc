@@ -30,7 +30,7 @@ def repo_root() -> Path:
     if os.environ.get("AWTO_DDC_REPO"):
         return Path(os.environ["AWTO_DDC_REPO"])
     r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).resolve().parent)
+                       cwd=Path(__file__).resolve().parent, check=False)
     return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
 
 

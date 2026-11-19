@@ -57,7 +57,7 @@ def build(serial, tag, layout=None, edit=None):
         pf.write_text(json.dumps(EDITS[edit]))
         cmd += ["--src-patch", str(pf)]
     log(f"build {tag}: {' '.join(cmd[1:])}")
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=BUILD_TIMEOUT)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=BUILD_TIMEOUT, check=False)
     (meas / f"{tag}.build.log").write_text(r.stdout + r.stderr)
     if r.returncode:
         sys.exit(f"build {tag} failed rc={r.returncode}: {(r.stdout + r.stderr)[-1500:]}")
@@ -73,7 +73,7 @@ def rows_changed(a: Path, b: Path):
 
 
 def stack_total(tag):
-    r = subprocess.run([sys.executable, "scripts/fw_stack.py"], cwd=ROOT, capture_output=True, text=True, timeout=120)
+    r = subprocess.run([sys.executable, "scripts/fw_stack.py"], cwd=ROOT, capture_output=True, text=True, timeout=120, check=False)
     try:
         return json.loads(r.stdout)["total"]
     except (KeyError, ValueError):

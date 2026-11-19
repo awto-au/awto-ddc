@@ -126,11 +126,11 @@ def main() -> int:
     finally:
         io.close()
     pre = subprocess.run([sys.executable, str(ROOT / "scripts/sw_timeline.py"), str(a.hdmi_bus), "--serial", a.serial,
-                          "--map", a.map, "--read-only"], capture_output=True, text=True, timeout=30).stdout
+                          "--map", a.map, "--read-only"], capture_output=True, text=True, timeout=30, check=False).stdout
     log("boot log before the switch:\n" + pre.rstrip())
     out = subprocess.run([sys.executable, str(ROOT / "scripts/sw_timeline.py"), str(a.hdmi_bus), "--serial", a.serial,
                           "--map", a.map, "--to", "D1", "--read-bus", str(a.dp_bus), "--settle-s", "4"],
-                         capture_output=True, text=True, timeout=60).stdout
+                         capture_output=True, text=True, timeout=60, check=False).stdout
     log("first switch to D1:\n" + out.rstrip())
     return 0 if "FAST path taken" in out else 2
 

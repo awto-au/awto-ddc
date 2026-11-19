@@ -24,7 +24,7 @@ LOGS = os.path.join(ROOT, "tmp/logs")
 
 
 def sh(args, **kw):
-    return subprocess.run(args, **kw)
+    return subprocess.run(args, **kw, check=False)
 
 
 def prepare():

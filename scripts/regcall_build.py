@@ -63,7 +63,7 @@ def main() -> int:
     for f in ("fw.bin", "fw.map", "fw.ihx", "build.json"):
         shutil.copy(ROOT / "tmp/fw" / a.serial / f, out / f)
     shutil.copy(ROOT / "tmp/sdcc-port/bank.json", out / "bank.json")
-    r = subprocess.run([sys.executable, "scripts/fw_stack.py"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
+    r = subprocess.run([sys.executable, "scripts/fw_stack.py"], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60, check=False)
     (out / "fw_stack.txt").write_text(r.stdout + r.stderr)
     print(f"{tag}: ok in {time.monotonic() - t0:.0f}s -> {out}")
     return 0

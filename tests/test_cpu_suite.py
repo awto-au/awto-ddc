@@ -73,7 +73,7 @@ def test_judge_flags_bound_limit_and_crc():
 
 
 def test_register_tables_are_current():
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/cpu_suite_regs.py"), "--check"])
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/cpu_suite_regs.py"), "--check"], check=False)
     assert r.returncode == 0, "fw/test/cpu_suite_regs.inc is stale: run scripts/cpu_suite_regs.py"
 
 
@@ -90,5 +90,5 @@ def test_sim_run(clock):
     img = ROOT / f"tmp/fw/AWT26110003-cpusuite-{clock}-be.bin"
     if not img.exists():
         pytest.skip(f"{img.name} not built (./dev.py cpu-suite --sim --build)")
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/cpu_suite.py"), "--sim", "--clocks", str(clock), "--bin", str(img)], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/cpu_suite.py"), "--sim", "--clocks", str(clock), "--bin", str(img)], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stdout[-3000:]

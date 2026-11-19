@@ -64,7 +64,7 @@ int main(void)
 def build(src: Path, tag: str, tw: int, th: int) -> Path:
     exe = WORK / f"{tag}_{tw}x{th}"
     r = subprocess.run(["gcc", "-std=c99", "-O1", "-Wall", "-Werror", f"-DOSD_TILE_W={tw}", f"-DOSD_TILE_H={th}", f"-I{src}",
-                        str(src / "osd_lines.c"), str(WORK / "harness.c"), "-o", str(exe)], capture_output=True, text=True)
+                        str(src / "osd_lines.c"), str(WORK / "harness.c"), "-o", str(exe)], capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr
     return exe
 
@@ -80,7 +80,7 @@ def test_same_pixels_as_prototype(tw, th):
     (WORK / "harness.c").write_text(HARNESS)
     out = []
     for src, tag in ((ref, "ref"), (NEW, "new")):
-        r = subprocess.run([str(build(src, tag, tw, th))], capture_output=True, text=True, timeout=RUN_LIMIT_S)
+        r = subprocess.run([str(build(src, tag, tw, th))], capture_output=True, text=True, timeout=RUN_LIMIT_S, check=False)
         assert r.returncode == 0
         out.append(r.stdout.splitlines())
     assert len(out[0]) == len(out[1]) > 100000

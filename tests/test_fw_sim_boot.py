@@ -17,7 +17,7 @@ pytestmark = pytest.mark.skipif(not GOOD.with_suffix(".bin").exists() or not GOO
 def run(mode, binp, mapp):
     # 120 s = stall backstop, ~10x the ~10 s measured cold run
     return subprocess.run([sys.executable, str(ROOT / "scripts/fw_sim.py"), mode, str(binp), str(mapp)],
-                          capture_output=True, text=True, timeout=120)
+                          capture_output=True, text=True, timeout=120, check=False)
 
 
 def test_good_image_boots_to_main_loop():

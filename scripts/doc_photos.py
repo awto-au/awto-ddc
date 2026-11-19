@@ -59,7 +59,7 @@ def main() -> int:
         src, name = p.split("=", 1)
         dst = a.out / f"{name}.jpg"
         r = subprocess.run(["magick", str(a.src / src), "-auto-orient", "-strip", "-resize", f"{a.edge}x{a.edge}>",
-                            "-quality", "82", str(dst)], capture_output=True, text=True)
+                            "-quality", "82", str(dst)], capture_output=True, text=True, check=False)
         bad += r.returncode != 0
         size = dst.stat().st_size if dst.exists() else 0
         log(f"{src} -> {dst.relative_to(REPO) if dst.is_relative_to(REPO) else dst}: rc {r.returncode}, "

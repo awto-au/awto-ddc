@@ -41,7 +41,7 @@ def say(s: str) -> None:
 
 
 def dev(*a: str, timeout: float = 90) -> tuple[int, str]:
-    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run([str(ROOT / "dev.py"), *a], capture_output=True, text=True, timeout=timeout, check=False)
     return r.returncode, r.stdout + r.stderr
 
 
@@ -89,7 +89,7 @@ def vcp(unit: str, code: str, v: int) -> bool:
 
 def dpms(mode: int) -> bool:
     r = subprocess.run(["busctl", "--user", "set-property", "org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig",
-                        "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", "i", str(mode)], capture_output=True, text=True)
+                        "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", "i", str(mode)], capture_output=True, text=True, check=False)
     return r.returncode == 0
 
 

@@ -48,7 +48,7 @@ def _repo_root() -> Path:
         # local .git read, ~1 ms warm; 0.25 s covers a cold first exec.
         # On expiry/absence: file-relative fallback below.
         out = subprocess.run(["git", "-C", str(here), "rev-parse", "--show-toplevel"],
-                             capture_output=True, text=True, timeout=0.25)
+                             capture_output=True, text=True, timeout=0.25, check=False)
         if out.returncode == 0 and out.stdout.strip():
             return Path(out.stdout.strip()).resolve()
     except (OSError, subprocess.SubprocessError):
@@ -242,7 +242,7 @@ def cmd_gate(extra: list[str]) -> int:
         if not imgs:
             log("GATE: --extensive needs a built image in tmp/fw", "FATAL")
             return 1
-        rc = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(imgs[-1].with_suffix("")), "--tier", "extensive"]).returncode
+        rc = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(imgs[-1].with_suffix("")), "--tier", "extensive"], check=False).returncode
         if rc:
             log(f"GATE FAILED at fw_gates --tier extensive ({imgs[-1].name})", "FATAL")
             return rc
@@ -306,7 +306,7 @@ def cmd_selftest(_extra: list[str]) -> int:
             failures.append(label)
 
     out = subprocess.run([sys.executable, __file__, "describe"],
-                         capture_output=True, text=True, cwd=REPO)
+                         capture_output=True, text=True, cwd=REPO, check=False)
     check("describe exits 0", out.returncode == 0)
     try:
         doc = json.loads(out.stdout)
@@ -318,7 +318,7 @@ def cmd_selftest(_extra: list[str]) -> int:
         check("describe emits valid JSON", False)
 
     h = subprocess.run([sys.executable, __file__, "--help"],
-                       capture_output=True, text=True, cwd=REPO)
+                       capture_output=True, text=True, cwd=REPO, check=False)
     check("--help exits 2 (usage)", h.returncode == 2)
     check("--help lists commands", all(c in h.stdout for c in COMMANDS))
 
@@ -326,11 +326,11 @@ def cmd_selftest(_extra: list[str]) -> int:
     # timeout: help prints in <1 s; 30 s only stops a handler that ran anyway (raises -> selftest fails loudly)
     bad = [n for n, m in COMMANDS.items() if m["kind"] != "step" and n != "selftest"
            and subprocess.run([sys.executable, __file__, n, "--help"], capture_output=True, text=True,
-                              cwd=REPO, timeout=30).returncode != 0]
+                              cwd=REPO, timeout=30, check=False).returncode != 0]
     check(f"action --help exits 0 without running ({', '.join(bad) or 'all'})", not bad)
 
     u = subprocess.run([sys.executable, __file__, "no-such-command"],
-                       capture_output=True, text=True, cwd=REPO)
+                       capture_output=True, text=True, cwd=REPO, check=False)
     check("unknown command exits 2", u.returncode == 2)
 
     check("registry has no duplicate handlers",
@@ -662,8 +662,8 @@ def cmd_build(extra: list[str]) -> int:
         defs += [f"{o}=_OFF" for k, o in opts.items() if k not in keep.split(",")]
         opt += "-sv-" + keep.replace(",", "-")
     tree = Path(_opt(extra, "--tree") or REPO)
-    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True).stdout.strip()
-    dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree).returncode else ""
+    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True, check=False).stdout.strip()
+    dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree, check=False).returncode else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
     args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
     for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (extra fw_build args)
@@ -1664,7 +1664,7 @@ def _dp_mirror_args(show: str, u: dict, on: bool) -> list[str]:
 def cmd_mode(extra: list[str]) -> int:
     n, u = _unit(extra)
     if u.get("input") == "DP" and len(extra) == 1 and extra[0] in ("mirror", "off"):
-        show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S).stdout
+        show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S, check=False).stdout
         on = extra[0] == "mirror"
         args = _dp_mirror_args(show, {**u, "_n": n}, on)
         if on:                                        # layout watcher: the mirror is allowed, not mutter's fallback
@@ -1679,7 +1679,7 @@ def cmd_mode(extra: list[str]) -> int:
         log(f"mode: one of {', '.join(MODES)}", "ERROR")
         return 2
     try:
-        show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S)
+        show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=GDCTL_SHOW_S, check=False)
     except subprocess.TimeoutExpired:
         log(f"mode: gdctl show timed out after {GDCTL_SHOW_S} s; nothing changed", "ERROR")
         return 1

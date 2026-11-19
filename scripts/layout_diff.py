@@ -15,7 +15,7 @@ def repo_root():
     env = os.environ.get("AWTO_DDC_REPO")
     if env:
         return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, cwd=Path(__file__).parent)
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, cwd=Path(__file__).parent, check=False)
     return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
 
 

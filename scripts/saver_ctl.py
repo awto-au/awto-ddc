@@ -36,7 +36,7 @@ def say(msg):
 def ddc_set(bus, code, val):
     for attempt in range(1, TRIES + 1):
         r = subprocess.run([sys.executable, str(ROOT / "scripts/ddc_ctl.py"), "--bus", str(bus), "set", code, str(val)],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, check=False)
         say(f"set {code} {val} rc={r.returncode} try {attempt}")
         if r.returncode == 0:
             return True
@@ -44,7 +44,7 @@ def ddc_set(bus, code, val):
 
 
 def alert(bus):
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/alert.py"), "--bus", str(bus), "--wait"], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/alert.py"), "--bus", str(bus), "--wait"], capture_output=True, text=True, check=False)
     say(f"alert rc={r.returncode}")
 
 

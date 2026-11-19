@@ -37,7 +37,7 @@ def resolve(glob: str) -> Path | None:
 def old_lines(rev: str, p: Path, cache: dict) -> list[str] | None:
     rel = p.relative_to(ROOT).as_posix()
     if rel not in cache:
-        r = subprocess.run(["git", "show", f"{rev}:{rel}"], cwd=ROOT, capture_output=True, timeout=30)
+        r = subprocess.run(["git", "show", f"{rev}:{rel}"], cwd=ROOT, capture_output=True, timeout=30, check=False)
         cache[rel] = r.stdout.decode(errors="replace").splitlines() if r.returncode == 0 else None
     return cache[rel]
 

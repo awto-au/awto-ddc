@@ -24,7 +24,7 @@ from pathlib import Path
 import isostamp
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or subprocess.run(
-    ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, capture_output=True, text=True).stdout.strip())
+    ["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).parent, capture_output=True, text=True, check=False).stdout.strip())
 SDK = Path(os.environ.get("RTD_SDK", "/mnt/2tb/git_mirror/Kingdomwhisky/RTD-Scaler-TEST"))
 SRC_EXT = {".c", ".h"}
 DROP_USING = True            # IRAM is the binding limit (#8): ISR register banks 1-3 dropped

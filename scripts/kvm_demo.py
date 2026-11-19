@@ -31,7 +31,7 @@ def log(s: str):
 def run(cmd: list) -> tuple[int, float, str]:
     t0 = time.monotonic()
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=STEP_LIMIT_S)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=STEP_LIMIT_S, check=False)
     except subprocess.TimeoutExpired:
         return -1, time.monotonic() - t0, f"timeout after {STEP_LIMIT_S} s"
     return r.returncode, time.monotonic() - t0, (r.stdout + r.stderr).strip().splitlines()[-1:][0] if (r.stdout + r.stderr).strip() else ""

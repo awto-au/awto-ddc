@@ -30,7 +30,7 @@ CFLAGS = ["-mmcs51", "--model-large", "--std-sdcc11", "--opt-code-size", "--noov
 
 
 def run(cmd, **kw):
-    r = subprocess.run(list(map(str, cmd)), capture_output=True, text=True, timeout=30, **kw)
+    r = subprocess.run(list(map(str, cmd)), capture_output=True, text=True, timeout=30, **kw, check=False)
     with (ROOT / "tmp/logs/bank_test.log").open("a") as f:
         f.write(f"$ {' '.join(map(str, cmd))} -> {r.returncode}\n{r.stdout[-1500:]}{r.stderr[-1500:]}\n")
     if r.returncode:
@@ -88,7 +88,7 @@ def main() -> int:
         cmds += [f"set memory xram 0xffff {k}", f'file "{W / f"bank{k}.ihx"}"']
     cmds += ["set memory xram 0xffff 0", "reset", f"step {STEP_CAP}", "quit"]
     r = subprocess.run([T.tool("ucsim_51"), "-t", "52", "-S", f"uart=0,out={ser}"], input="\n".join(cmds) + "\n",
-                       capture_output=True, text=True, timeout=30)
+                       capture_output=True, text=True, timeout=30, check=False)
     (W / "sim.log").write_text(r.stdout + r.stderr)
     out = ser.read_text(errors="replace") if ser.exists() else ""
     ok = "ALL-OK" in out and "SIM-DONE" in out and "FAIL" not in out

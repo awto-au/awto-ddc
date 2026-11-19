@@ -48,7 +48,7 @@ def test_patch_refuses_an_image_that_does_not_have_the_compare():
 
 def run(scale):
     r = subprocess.run([sys.executable, str(ROOT / "scripts/mon_sim_test.py"), str(IMG.with_suffix(".bin")), str(IMG.with_suffix(".map")),
-                        "--no-beat", "--scale", str(scale)], capture_output=True, text=True, env={**os.environ, "AWTO_SIM_CORE": "fast"}, timeout=300)
+                        "--no-beat", "--scale", str(scale)], capture_output=True, text=True, env={**os.environ, "AWTO_SIM_CORE": "fast"}, timeout=300, check=False)
     checks = [re.sub(r"\d+", "#", x.split(": ", 1)[0]) for x in r.stdout.splitlines() if x.startswith(("PASS ", "FAIL "))]
     return r.returncode, checks
 

@@ -27,7 +27,7 @@ def main() -> int:
     i2cbus.require_unit(a.bus, a.serial)
     for ad in (0x4A, 0x4B):
         for off in (0x00, 0x40, 0x6F):
-            out = subprocess.run(["i2ctransfer", "-y", str(a.bus), f"w1@0x{ad:02X}", f"0x{off:02X}", "r16"], capture_output=True, text=True, timeout=P.I2C_S).stdout.strip()
+            out = subprocess.run(["i2ctransfer", "-y", str(a.bus), f"w1@0x{ad:02X}", f"0x{off:02X}", "r16"], capture_output=True, text=True, timeout=P.I2C_S, check=False).stdout.strip()
             P.say(f"bus {a.bus} 0x{ad:02X} offset 0x{off:02X} 16-byte read: {out or 'no answer'}")
     vals = []
     for off in SCDC_OFFS:

@@ -38,7 +38,7 @@ def run(args, op):
     cmd = ["ddcutil", *args]
     t0 = time.monotonic()
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT_S)
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT_S, check=False)
     except subprocess.TimeoutExpired:
         log.error("TIMEOUT op=%s limit=%.1fs elapsed=%.2fs cmd=%s", op, TIMEOUT_S, time.monotonic() - t0, " ".join(cmd))
         return None

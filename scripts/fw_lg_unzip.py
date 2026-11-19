@@ -43,7 +43,7 @@ def main():
         done = False
         for pw in cands:
             out.mkdir(parents=True, exist_ok=True)
-            r = subprocess.run(["7z", "x", "-y", f"-p{pw}", f"-o{out}", str(z)], capture_output=True, text=True, timeout=120)
+            r = subprocess.run(["7z", "x", "-y", f"-p{pw}", f"-o{out}", str(z)], capture_output=True, text=True, timeout=120, check=False)
             if r.returncode == 0:
                 done = True; break
         msg = f"{'ok' if done else 'FAIL'} {p} (model {model}, {len(cands)} candidates)"

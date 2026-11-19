@@ -224,7 +224,7 @@ class Module:
 def assemble(asm: Path) -> dict:
     rel = asm.with_suffix(".rel")
     r = subprocess.run([T.tool("sdas8051"), "-plosgffw", str(rel), str(asm)],
-                       capture_output=True, text=True, timeout=ASM_TIMEOUT)
+                       capture_output=True, text=True, timeout=ASM_TIMEOUT, check=False)
     if r.returncode:
         sys.exit(f"sdas8051 failed on {asm}:\n{r.stdout}{r.stderr}")
     sizes = {}

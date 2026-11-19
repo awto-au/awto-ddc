@@ -22,7 +22,7 @@ VCP_PAGED_ID, VCP_PAGED_VAL = 0xE0, 0xE1
 def ddc(bus: int, *args: str, tries: int = DDC_TRIES):
     for k in range(tries):
         try:
-            r = subprocess.run(["ddcutil", "--bus", str(bus), *args], capture_output=True, text=True, timeout=DDC_LIMIT_S)
+            r = subprocess.run(["ddcutil", "--bus", str(bus), *args], capture_output=True, text=True, timeout=DDC_LIMIT_S, check=False)
         except (OSError, subprocess.TimeoutExpired):
             return None
         if r.returncode == 0:

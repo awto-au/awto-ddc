@@ -34,7 +34,7 @@ def say(msg):
 
 def dev(*args):
     for attempt in range(1, TRIES + 1):  # bus 11 is shared with agents: a set can fail transiently
-        r = subprocess.run([sys.executable, str(DEV), *args], capture_output=True, text=True)
+        r = subprocess.run([sys.executable, str(DEV), *args], capture_output=True, text=True, check=False)
         say(f"dev.py {' '.join(args)} rc={r.returncode} try {attempt}")
         if r.returncode == 0:
             break

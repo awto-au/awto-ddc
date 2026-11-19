@@ -47,7 +47,7 @@ def cpp(probe: Path, extra):
     _files, defines, incs, model = FC.parse_uv2(UV2, TARGET)
     sysdir = FC.SRC / "Kernel/System/Code"
     cmd = FC.sdcc_cmd(sysdir / "SysMain.c", UV2.parent, defines, incs, model) + [f"-I{sysdir}"] + extra + ["-E", str(probe)]
-    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=PP_TIMEOUT)
+    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=PP_TIMEOUT, check=False)
     if r.stderr.strip():
         LOG.write(r.stderr[-4000:] + "\n")
     return r.stdout
@@ -167,7 +167,7 @@ def cmd_toggle(names, tag, patch_file=None):
     t0 = time.monotonic()
     with out.open("w") as fh:
         rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", "AWT26110002", "--src-patch", str(pf)],
-                            cwd=ROOT, env=env, stdout=fh, stderr=subprocess.STDOUT, timeout=BUILD_TIMEOUT).returncode
+                            cwd=ROOT, env=env, stdout=fh, stderr=subprocess.STDOUT, timeout=BUILD_TIMEOUT, check=False).returncode
     el = time.monotonic() - t0
     tail = [l for l in out.read_text(errors="replace").splitlines() if "unused row" not in l][-3:]
     code, xd = measure() if rc == 0 else (-1, -1)

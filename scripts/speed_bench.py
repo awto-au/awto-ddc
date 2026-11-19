@@ -36,7 +36,7 @@ def main():
     a = ap.parse_args()
     (F.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     log = (F.ROOT / "tmp/logs/speed_bench.log").open("a", buffering=1)
-    commit = subprocess.run(["git", "-C", str(F.ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    commit = subprocess.run(["git", "-C", str(F.ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=False).stdout.strip()
     rows = []
     for stem in a.stems:
         b = Path(stem).with_suffix(".bin") if Path(stem).suffix != ".bin" else Path(stem)

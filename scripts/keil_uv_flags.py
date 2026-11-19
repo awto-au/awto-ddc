@@ -89,7 +89,7 @@ def decode(root: Path, tree: Path, c51fl: int, group, log) -> str:
     # stall guard: a one-file build takes a few s under Wine; 90 s = a modal dialog (uVision has no headless mode)
     try:
         r = subprocess.run(["wine", str(tree / "UV4" / "UV4.exe"), "-b", "t.Uv2", "-j0", "-o", "build.txt"],
-                           cwd=work, env=env, capture_output=True, text=True, timeout=90)
+                           cwd=work, env=env, capture_output=True, text=True, timeout=90, check=False)
         rc = r.returncode
     except subprocess.TimeoutExpired:
         rc = "timeout 90 s (dialog?)"

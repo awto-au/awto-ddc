@@ -19,7 +19,7 @@ def run_check(tmp_path, warn_lines):
     env["AWTO_DDC_REPO"] = str(tmp_path)
     r = subprocess.run([sys.executable, str(SCRIPTS / "warn_policy_check.py"), str(w),
                         "--policy", str(tmp_path / "fw" / "warn_policy.tsv")],
-                       env=env, capture_output=True, text=True)
+                       env=env, capture_output=True, text=True, check=False)
     return r.returncode, r.stdout
 
 

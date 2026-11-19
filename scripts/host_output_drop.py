@@ -47,7 +47,7 @@ def main() -> int:
     dev = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dev)
     target = dev._units()[a.unit]["gdctl"]
-    show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=SHOW_S).stdout
+    show = subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=SHOW_S, check=False).stdout
     restore = dev.gdctl_set_args(show, target, _current_mode(show, target))
     drop = _normalise(dev.gdctl_set_args(show, target, "off"))
 

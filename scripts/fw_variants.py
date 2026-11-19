@@ -25,7 +25,7 @@ def repo_root() -> Path:
     env = os.environ.get("AWTO_DDC_REPO")
     if env:
         return Path(env)
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True)
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, check=False)
     return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parents[1]
 
 
@@ -42,7 +42,7 @@ def say(s):
 
 
 def git(*a, cwd=ROOT):
-    return subprocess.run(["git", *a], cwd=cwd, capture_output=True, text=True)
+    return subprocess.run(["git", *a], cwd=cwd, capture_output=True, text=True, check=False)
 
 
 def main() -> int:
@@ -73,7 +73,7 @@ def main() -> int:
         try:
             with out.open("w") as fh:
                 rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial],
-                                    cwd=wt, env=env, stdout=fh, stderr=subprocess.STDOUT, timeout=BUILD_TIMEOUT).returncode
+                                    cwd=wt, env=env, stdout=fh, stderr=subprocess.STDOUT, timeout=BUILD_TIMEOUT, check=False).returncode
         except subprocess.TimeoutExpired:
             rc = "timeout"
         txt = out.read_text(errors="replace")

@@ -57,7 +57,7 @@ def main() -> int:
         cmd = K.sdcc_cmd(c, uv2.parent, defines, incs, model) + flags.split() + ["-c", "-o", str(out), str(c)]
         cmd[0] = a.sdcc
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=TIMEOUT)
+            r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=TIMEOUT, check=False)
             ok = r.returncode == 0 and out.exists()
         except subprocess.TimeoutExpired:
             log(f"TIMEOUT {TIMEOUT}s: {name} {c.name}"); ok = False

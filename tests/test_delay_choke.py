@@ -36,7 +36,7 @@ def sym(name):
 
 def run_gate(binp):
     r = subprocess.run([sys.executable, str(ROOT / "scripts/delay_sim.py"), str(binp), str(IMG.with_suffix(".map")), "--tree", str(ROOT)],
-                       capture_output=True, text=True, env=ENV, timeout=300)
+                       capture_output=True, text=True, env=ENV, timeout=300, check=False)
     return r.returncode, r.stdout + r.stderr
 
 

@@ -53,11 +53,11 @@ def test_data_bank_is_the_banks_of_the_readers_in_c():
 
 def test_no_rom_falls_back_and_include_is_ignored_not_tracked(tmp_path):
     out = tmp_path / "a.inc"
-    r = subprocess.run([sys.executable, str(ROOT / "scripts/gen_asteroids.py"), "--out", str(out), "--zip", str(tmp_path / "none.zip")], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, str(ROOT / "scripts/gen_asteroids.py"), "--out", str(out), "--zip", str(tmp_path / "none.zip")], capture_output=True, text=True, check=False)
     assert r.returncode == 0 and "fallback" in r.stdout
     assert "#define AWTO_AST_FROM_ROM 0" in out.read_text()
-    assert subprocess.run(["git", "check-ignore", "-q", "fw/test/asteroids_data.inc"], cwd=ROOT).returncode == 0
-    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True).stdout.split("\n")
+    assert subprocess.run(["git", "check-ignore", "-q", "fw/test/asteroids_data.inc"], cwd=ROOT, check=False).returncode == 0
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=False).stdout.split("\n")
     assert "fw/test/asteroids_data.inc" not in tracked
 
 

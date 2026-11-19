@@ -22,7 +22,7 @@ GIT_S = 20          # one git status on the largest tree takes ~2 s (2026-11-16)
 
 def git(cwd: str, *a: str) -> tuple[int, str]:
     try:
-        p = subprocess.run(["git", "-C", cwd, *a], capture_output=True, text=True, timeout=GIT_S)
+        p = subprocess.run(["git", "-C", cwd, *a], capture_output=True, text=True, timeout=GIT_S, check=False)
     except subprocess.TimeoutExpired:
         return 124, ""
     return p.returncode, p.stdout.strip()

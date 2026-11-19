@@ -42,7 +42,7 @@ def say(s: str) -> None:
 def build_and_run() -> tuple[dict, list]:
     EXE.parent.mkdir(parents=True, exist_ok=True)
     r = subprocess.run(["gcc", "-O2", "-Wall", f"-I{SRC}", str(SRC / "osd_lines.c"), str(SRC / "scope_dump.c"), "-o", str(EXE), "-lm"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, check=False)
     if r.returncode:
         sys.exit(f"gcc failed:\n{r.stderr}")
     out = subprocess.run([str(EXE)], capture_output=True, text=True, check=True).stdout.splitlines()

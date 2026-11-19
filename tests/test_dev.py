@@ -27,7 +27,7 @@ pytestmark = pytest.mark.skipif(not DEV.exists(), reason="no dev.py in this repo
 
 def run(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(DEV), *args],
-                          capture_output=True, text=True, cwd=REPO)
+                          capture_output=True, text=True, cwd=REPO, check=False)
 
 
 @pytest.fixture(scope="module")

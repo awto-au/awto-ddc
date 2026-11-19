@@ -119,7 +119,7 @@ def ddc_vcp(code: int, val: int, what: str = "") -> bool:
 
 def ddc_get(code: int) -> int | None:
     r = subprocess.run(["ddcutil", "--bus", str(BUS), "getvcp", f"{code:02X}", "--terse"], capture_output=True, text=True,
-                       timeout=DDC_LIMIT_S)
+                       timeout=DDC_LIMIT_S, check=False)
     m = re.search(r"VCP \S+ C (\d+) \d+", r.stdout)                     # continuous: current, max
     v = int(m.group(1)) if m else None
     if m is None and (m := re.search(r"VCP \S+ CNC x\S+ x\S+ x([0-9a-fA-F]+) x([0-9a-fA-F]+)", r.stdout)):
@@ -174,7 +174,7 @@ def hdmi_pcm() -> tuple[str, int, int]:
     conn = unit_connector()
     vendor = Path(f"/sys/class/drm/{conn.split('-')[0]}/device/vendor").read_text().strip()
     want = 1 if "-DP-" in conn else 0           # ELD byte 5 bits 3:2 conn_type: 0 = HDMI, 1 = DP
-    lst = subprocess.run(["aplay", "-l"], capture_output=True, text=True).stdout
+    lst = subprocess.run(["aplay", "-l"], capture_output=True, text=True, check=False).stdout
     for cdir in sorted(Path("/proc/asound").glob("card[0-9]*")):
         card = int(cdir.name[4:])
         vf = Path(f"/sys/class/sound/card{card}/device/vendor")
@@ -183,7 +183,7 @@ def hdmi_pcm() -> tuple[str, int, int]:
         cid = (cdir / "id").read_text().strip()
         for m in re.finditer(rf"card {card}: \S+ \[[^]]*\], device (\d+): HDMI \d+ \[{MON_NAME}\]", lst):
             dev = int(m.group(1))
-            out = subprocess.run(["amixer", "-c", cid, "cget", f"iface=PCM,name=ELD,device={dev}"], capture_output=True, text=True).stdout
+            out = subprocess.run(["amixer", "-c", cid, "cget", f"iface=PCM,name=ELD,device={dev}"], capture_output=True, text=True, check=False).stdout
             v = re.search(r": values=(\S+)", out)
             eld = [int(x, 16) for x in v.group(1).split(",")] if v else []
             if len(eld) > 5 and (eld[5] >> 2) & 3 == want:
@@ -207,14 +207,14 @@ def host(unmute: bool) -> str:
                 say(f"host: ELD {e.name} {' '.join(ln.split())}")
     # IEC958 Playback Switch index n belongs to the n-th HDMI pcm of the card (HDMI 0 -> index 0)
     hdmi_n = [int(m.group(2)) for m in re.finditer(rf"card {card}: \S+ \[[^]]*\], device (\d+): HDMI (\d+)",
-                                                   subprocess.run(["aplay", "-l"], capture_output=True, text=True).stdout)
+                                                   subprocess.run(["aplay", "-l"], capture_output=True, text=True, check=False).stdout)
               if int(m.group(1)) == dev][0]
     ctl = f"IEC958 Playback Switch',index={hdmi_n}"
-    cur = subprocess.run(["amixer", "-c", cid, "cget", f"iface=MIXER,name='{ctl}"], capture_output=True, text=True).stdout
+    cur = subprocess.run(["amixer", "-c", cid, "cget", f"iface=MIXER,name='{ctl}"], capture_output=True, text=True, check=False).stdout
     state = "on" if "values=on" in cur else "off"
     say(f"host: IEC958 Playback Switch index {hdmi_n} (HDMI {hdmi_n} = device {dev}) is {state}")
     if unmute and state != "on":
-        r = subprocess.run(["amixer", "-c", cid, "cset", f"iface=MIXER,name='{ctl}", "on"], capture_output=True, text=True)
+        r = subprocess.run(["amixer", "-c", cid, "cset", f"iface=MIXER,name='{ctl}", "on"], capture_output=True, text=True, check=False)
         say(f"host: IEC958 index {hdmi_n} -> on: rc {r.returncode}")
     elif unmute:
         say(f"host: IEC958 index {hdmi_n} already on")
@@ -358,7 +358,7 @@ def main() -> int:
         ch = {"left": (1, 0), "right": (0, 1), "both": (1, 1), "silence": (0, 0)}[a.chan]
         p = tone_wav(a.chan, a.hz, ch, a.secs)
         say(f"TONE {a.chan.upper()} {a.hz} Hz START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s) -> {dev}")
-        r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
+        r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2, check=False)
         say(f"TONE {a.chan.upper()} {a.hz} Hz END {time.strftime('%H:%M:%S')} rc {r.returncode} {r.stderr.strip()[:160]}")
         return r.returncode
     if not a.map:
@@ -434,7 +434,7 @@ def main() -> int:
         osd = [sys.executable, str(ROOT / "scripts/osd_test.py"), str(BUS), "--serial", SERIAL, "--map", str(a.map), "--cmd"]
         import dbg_link
         with dbg_link.linked(BUS, 2):
-            r = subprocess.run(osd + ["debug"], capture_output=True, text=True, timeout=DDC_LIMIT_S)
+            r = subprocess.run(osd + ["debug"], capture_output=True, text=True, timeout=DDC_LIMIT_S, check=False)
         say(f"console open (test cmd 0x26, held): rc {r.returncode} {r.stderr.strip()[:120]}")
         say(f"STEPS START {time.strftime('%H:%M:%S')}: steps {','.join(map(str, only))} of {STEPS}, tones {freqs} Hz, "
             f"{a.secs:g} s each, {GEN_GAP_S:.0f} s gap between steps")
@@ -452,7 +452,7 @@ def main() -> int:
                     ddc_vcp(GEN_VCP, HZ_FLAG | hz, f"announce {hz} Hz")
                     say(f"  STEP {n} TONE {hz} Hz START {time.strftime('%H:%M:%S')} (console 'audio test {n}: {hz} Hz')")
                     r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True,
-                                       timeout=a.secs * APLAY_LIMIT_S + 2)
+                                       timeout=a.secs * APLAY_LIMIT_S + 2, check=False)
                     bad += r.returncode != 0
                     say(f"  STEP {n} TONE {hz} Hz END {time.strftime('%H:%M:%S')} aplay rc {r.returncode} {r.stderr.strip()[:120]}")
                 ddc_vcp(GEN_VCP, STEP_DONE + n, f"step {n} done")
@@ -480,7 +480,7 @@ def main() -> int:
                 rb = u.session(lambda rio: [u.rd(rio, x) for x in (AOUT_CTRL, HPOUT_CTRL, amp)])
                 say(f"OUT {k + 1} START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s, {a.hz} Hz both channels): {what}; "
                     f"read back 06C6 {rb[0].hex() if rb[0] else '?'} 06C7 {rb[1].hex() if rb[1] else '?'} P7.4 {rb[2][0] & 1 if rb[2] else '?'}")
-                r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2)
+                r = subprocess.run(["aplay", "-q", "-D", dev, str(p)], capture_output=True, text=True, timeout=a.secs * APLAY_LIMIT_S + 2, check=False)
                 say(f"OUT {k + 1} END {time.strftime('%H:%M:%S')} rc {r.returncode}")
         finally:
             u.session(lambda rio: (u.wr(rio, AOUT_CTRL, OUT_ON), u.wr(rio, HPOUT_CTRL, OUT_ON), u.wr(rio, amp, 1)))

@@ -44,7 +44,7 @@ def build(serial: str, tag: str, defines: list[str], fw_args: str | None) -> Pat
     out = ROOT / f"tmp/logs/dead_code_maps.{tag}.out"
     say(f"build {tag}: {' '.join(defines) or 'default'} -> {out.relative_to(ROOT)}")
     with out.open("w") as f:                           # dev.py build has its own stall guard
-        rc = subprocess.run(cmd, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT).returncode
+        rc = subprocess.run(cmd, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT, check=False).returncode
     if rc:
         raise SystemExit(f"build {tag} failed rc={rc}: see {out}")
     return ROOT / f"tmp/fw/{serial}-{tag}-be.map"
@@ -70,7 +70,7 @@ def main() -> int:
         shutil.copytree(ROOT / "tmp/sdcc-port/asm", DC / "asm_default")
     maps = [str(DC / "default.map")] + [str(DC / f"{n}.map") for n in VARIANTS]
     return subprocess.run([sys.executable, str(ROOT / "scripts/dead_code.py"), *maps, "--asm", str(DC / "asm_default")],
-                          cwd=ROOT).returncode
+                          cwd=ROOT, check=False).returncode
 
 
 if __name__ == "__main__":

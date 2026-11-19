@@ -20,7 +20,7 @@ log = logging.getLogger("ddc_idle")
 
 def ctl(action):
     try:
-        p = subprocess.run([sys.executable, str(CTL), action], capture_output=True, text=True, timeout=CTL_TIMEOUT_S)
+        p = subprocess.run([sys.executable, str(CTL), action], capture_output=True, text=True, timeout=CTL_TIMEOUT_S, check=False)
         log.info("ddc_ctl %s rc=%d", action, p.returncode)
     except subprocess.TimeoutExpired:
         log.error("TIMEOUT ddc_ctl %s limit=%.0fs", action, CTL_TIMEOUT_S)

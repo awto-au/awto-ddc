@@ -50,7 +50,7 @@ def test_sdcc_bank_cli_refuses_mismatched_layout(tmp_path):
     env = dict(os.environ, AWTO_DDC_REPO=str(tmp_path))
     r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
                         "--out", str(tmp_path / "out"), "--common-max", "0x6000", "--layout", str(lay)],
-                       env=env, capture_output=True, text=True, timeout=30)   # 30 s: stall backstop, run takes ~0.1 s
+                       env=env, capture_output=True, text=True, timeout=30, check=False)   # 30 s: stall backstop, run takes ~0.1 s
     assert r.returncode != 0 and "refusing" in r.stderr
     assert lay.read_text().startswith("#common 0x5000")
 
@@ -69,7 +69,7 @@ def test_sdcc_bank_writes_layout_out_not_tracked_file(tmp_path):
     env = dict(os.environ, AWTO_DDC_REPO=str(tmp_path))
     r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
                         "--out", str(tmp_path / "out"), "--layout", str(lay), "--layout-out", str(new)],
-                       env=env, capture_output=True, text=True, timeout=30)   # 30 s: stall backstop, run takes ~0.1 s
+                       env=env, capture_output=True, text=True, timeout=30, check=False)   # 30 s: stall backstop, run takes ~0.1 s
     assert r.returncode == 0, r.stderr
     assert new.exists() and lay.read_text() == before
 
@@ -120,7 +120,7 @@ def test_sdcc_bank_cluster_refused_with_existing_layout(tmp_path):
     lay = _file(tmp_path, "#common 0x6000\n#resid_end 0xc00\n")
     r = subprocess.run([sys.executable, str(Path(L.__file__).parent / "sdcc_bank.py"), "--asm", str(tmp_path / "asm"),
                         "--out", str(tmp_path / "out"), "--layout", str(lay), "--cluster", "fn"],
-                       env=dict(os.environ, AWTO_DDC_REPO=str(tmp_path)), capture_output=True, text=True, timeout=30)
+                       env=dict(os.environ, AWTO_DDC_REPO=str(tmp_path)), capture_output=True, text=True, timeout=30, check=False)
     assert r.returncode != 0 and "--cluster" in r.stderr
 
 

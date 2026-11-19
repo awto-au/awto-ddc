@@ -399,7 +399,7 @@ def health_hw(a) -> int:
     host = None
     mode = a.host_mode
     if not mode and a.gdctl:
-        mode = gdctl_mode(subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=10).stdout, a.gdctl)
+        mode = gdctl_mode(subprocess.run(["gdctl", "show"], capture_output=True, text=True, timeout=10, check=False).stdout, a.gdctl)
     if mode:
         host = parse_host_mode(mode)
     rep.add("bus rate", True, f"100 kHz; map {a.map.name}; host mode {mode or 'unknown'}")

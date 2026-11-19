@@ -22,7 +22,7 @@ def test_no_rom_derived_files_tracked():
 
 @pytest.mark.parametrize("path", ["tmp/asteroids/shapes.json", "asteroid.zip", "x/035127-02.np3", "docs/asteroids_shapes.json"])
 def test_gitignore_covers(path):
-    r = subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT)
+    r = subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT, check=False)
     assert r.returncode == 0, path
 
 

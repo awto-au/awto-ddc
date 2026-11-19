@@ -30,7 +30,7 @@ def main() -> int:
     work = ROOT / "tmp/fw-edid" / a.serial
     work.mkdir(parents=True, exist_ok=True)
     r = subprocess.run([sys.executable, str(ROOT / "scripts/make_edid.py"), "--out", str(work), "--serial", a.serial],
-                       capture_output=True, text=True, timeout=MAKE_EDID_TIMEOUT)
+                       capture_output=True, text=True, timeout=MAKE_EDID_TIMEOUT, check=False)
     log.write(f"{isostamp.now()} make_edid {a.serial} rc={r.returncode}\n{r.stdout}{r.stderr}\n")
     if r.returncode:
         sys.exit(f"make_edid.py failed:\n{r.stdout}{r.stderr}")

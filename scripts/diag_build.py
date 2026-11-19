@@ -36,7 +36,7 @@ def build(tag) -> int:
     return subprocess.run([sys.executable, "dev.py", "build", "--tree", str(TREE), "--serial", "AWT26110002", "--tag", tag,
                            "-D", "_AWTO_AUDIO_TEST",
                            *[x for d in os.environ.get("AWTO_DIAG_DEFS", "").split() for x in ("-D", d)]], cwd=MAIN, env=env,
-                          capture_output=True, text=True).returncode
+                          capture_output=True, text=True, check=False).returncode
 
 
 def main() -> int:
@@ -50,7 +50,7 @@ def main() -> int:
         if rc == 0 or not unrev or attempt == 2:
             break
         r = subprocess.run([sys.executable, "scripts/warn_shift.py", "--tree", str(TREE), "--write"], cwd=TREE,
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, check=False)
         say("warn_shift: " + (r.stdout.strip().splitlines() or ["(no output)"])[-1])
     for pat in (r"free after placement \[[^\]]*\]", r"IRAM layout: .*", r"\[link\] failed", r"image tmp/fw/\S+"):
         for m in re.findall(pat, txt):

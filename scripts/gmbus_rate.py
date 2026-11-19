@@ -19,7 +19,7 @@ def repo_root():
     if e:
         return Path(e)
     r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
-                       cwd=Path(__file__).resolve().parent)
+                       cwd=Path(__file__).resolve().parent, check=False)
     return Path(r.stdout.strip()) if r.returncode == 0 else Path(__file__).resolve().parent.parent
 
 
@@ -43,7 +43,7 @@ def log(msg):
 
 def run(cmd, timeout):
     log("$ " + " ".join(cmd))
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
     for l in (r.stdout + r.stderr).splitlines():
         log("  " + l)
     return r
@@ -67,7 +67,7 @@ def ko_matches_kernel() -> bool:
     """False when the built module is missing or was built for another kernel (insmod then fails with 'Invalid module format')."""
     if not KO.exists():
         return False
-    r = subprocess.run(["modinfo", "-F", "vermagic", str(KO)], capture_output=True, text=True, timeout=T_SUDO)
+    r = subprocess.run(["modinfo", "-F", "vermagic", str(KO)], capture_output=True, text=True, timeout=T_SUDO, check=False)
     return r.returncode == 0 and vermagic_release(r.stdout) == os.uname().release
 
 

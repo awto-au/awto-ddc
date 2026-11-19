@@ -101,7 +101,7 @@ class Unit:
 
 
 def ddc(vcp: str, val: str):
-    r = subprocess.run(["ddcutil", "--bus", str(BUS), "setvcp", vcp, val], capture_output=True, text=True, timeout=DDC_LIMIT_S)
+    r = subprocess.run(["ddcutil", "--bus", str(BUS), "setvcp", vcp, val], capture_output=True, text=True, timeout=DDC_LIMIT_S, check=False)
     say(f"  ddcutil --bus {BUS} setvcp {vcp} {val}: rc {r.returncode} {r.stderr.strip()[:120]}")
 
 
@@ -139,7 +139,7 @@ def main():
     import dbg_link
     dbg_link.on(BUS, 2)
     txt = subprocess.run([sys.executable, str(ROOT / "scripts/sync_log.py"), str(BUS), "--serial", SERIAL, "--map", str(mp), "--whole"],
-                         capture_output=True, text=True, timeout=30).stdout
+                         capture_output=True, text=True, timeout=30, check=False).stdout
     dbg_link.off(BUS)
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / f"{a.tag}.txt").write_text(txt)

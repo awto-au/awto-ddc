@@ -58,7 +58,7 @@ def log(s, echo=False):
 
 def run(cmd, **kw):
     """Run, log failures; returns CompletedProcess (never raises on non-zero)."""
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=kw.pop("timeout", BUILD_TMO), **kw)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=kw.pop("timeout", BUILD_TMO), **kw, check=False)
     log(f"$ {' '.join(map(str, cmd))} -> {r.returncode}")
     if r.returncode:
         log((r.stdout + r.stderr)[-2000:])
@@ -97,7 +97,7 @@ def simulate(ihx, outdir):
     ser.unlink(missing_ok=True)
     cmds = f"break 0x{m.group(1)}\nstep {STEP_CAP}\nquit\n"
     r = subprocess.run([T.tool("ucsim_51"), "-t", "52", "-S", f"uart=0,out={ser}", str(ihx)],
-                       input=cmds, capture_output=True, text=True, timeout=SIM_TMO)
+                       input=cmds, capture_output=True, text=True, timeout=SIM_TMO, check=False)
     (outdir / "sim.log").write_text(r.stdout + r.stderr)
     ticks = re.search(r"Simulated (\d+) ticks", r.stdout)
     out = ser.read_text(errors="replace") if ser.exists() else ""

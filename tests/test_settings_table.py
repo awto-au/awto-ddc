@@ -40,5 +40,5 @@ def test_parse_value():
                     reason="clean tree without the settings module")
 def test_generated_files_current():
     r = subprocess.run([sys.executable, str(ROOT / "scripts/settings_gen.py"), "--rtdfw", str(RTDFW), "--check"],
-                       capture_output=True, text=True, timeout=60)
+                       capture_output=True, text=True, timeout=60, check=False)
     assert r.returncode == 0, r.stdout + r.stderr

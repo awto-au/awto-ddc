@@ -17,7 +17,7 @@ JOB_LIMIT_S = 900          # one saver run: 40 frames of Scope 2 at ~0.17 s fw e
 
 
 def run(cmd):
-    return subprocess.run([sys.executable, *cmd], cwd=ROOT, capture_output=True, text=True, timeout=JOB_LIMIT_S)
+    return subprocess.run([sys.executable, *cmd], cwd=ROOT, capture_output=True, text=True, timeout=JOB_LIMIT_S, check=False)
 
 
 def job(args):

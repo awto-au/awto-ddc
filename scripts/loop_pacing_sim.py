@@ -69,7 +69,7 @@ def main() -> int:
             f"free-run (busy hook) {w[3] / 10:.1f} % of passes, {w[4]} IDL exits, {w[5]} passes by wake bit")
     if a.bench and m:
         import subprocess
-        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip()
+        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT, check=False).stdout.strip()
         period = re.search(r"-lp(\d+)-", a.bin.name)
         row = [isostamp.now(), sha, a.bin.stem, a.bench] + [""] * 12 + [period.group(1) if period else "0", str(w[0]), f"{100 - w[1] / 10:.1f}", f"{w[2] / 16:.2f}"]
         with (ROOT / "docs/speed-bench.tsv").open("a") as f:

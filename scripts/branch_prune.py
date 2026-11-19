@@ -44,7 +44,7 @@ def out(*a: str) -> list[str]:
 
 
 def gh(*a: str) -> bool:
-    r = subprocess.run([GH, "git", *a], cwd=REPO, capture_output=True, text=True)
+    r = subprocess.run([GH, "git", *a], cwd=REPO, capture_output=True, text=True, check=False)
     if r.returncode:
         log(f"  FAILED git {' '.join(a)}: {r.stderr.strip()}")
     return r.returncode == 0

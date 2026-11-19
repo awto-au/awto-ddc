@@ -90,7 +90,7 @@ def main() -> int:
     cmd += (["-i", str(a.out / "asteroids.wav"), "-c:a", "aac", "-shortest"] if info["tone_s"] > 0 else [])
     cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", str(mp4)]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=FFMPEG_LIMIT_S)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=FFMPEG_LIMIT_S, check=False)
     except subprocess.TimeoutExpired:
         say(f"ffmpeg: no result within {FFMPEG_LIMIT_S} s (expected < 60 s)")
         return 1

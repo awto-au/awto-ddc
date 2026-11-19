@@ -147,7 +147,7 @@ def keil_compat():
     """--keil-compat, refusing a compiler without it: sdcc only warns on an unknown option, and the ~bit rule is gone."""
     global _KC
     if _KC is None:
-        r = subprocess.run([SDCC, "--help"], capture_output=True, text=True, timeout=30)
+        r = subprocess.run([SDCC, "--help"], capture_output=True, text=True, timeout=30, check=False)
         if "--keil-compat" not in r.stdout + r.stderr:
             sys.exit(f"{SDCC} has no --keil-compat (awto-sdcc#25): Keil ~bit semantics would be lost")
         _KC = ["--keil-compat"]
@@ -204,7 +204,7 @@ ASM_MODE = False                               # compile --asm: emit .asm (-S) f
 def _run_stage(cmd, **kw):
     """One compiler stage; returns (stdout + stderr, rc). Stages never share a stderr pipe, so lines never interleave."""
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT, **kw)
+        r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT, **kw, check=False)
         return r.stdout + r.stderr, r.returncode
     except subprocess.TimeoutExpired:
         return f"TIMEOUT after {COMPILE_TIMEOUT}s", 124
@@ -225,7 +225,7 @@ def ccache_env() -> dict:
             h = hashlib.sha256()
             for tool in ("sdcc", "sdcpp", "sdas8051"):
                 h.update((Path(SDCC).resolve().parent / tool).read_bytes())
-            r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True)
+            r = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT, capture_output=True, text=True, check=False)
             top = Path(r.stdout.strip()).parent if r.returncode == 0 else ROOT
             env = dict(os.environ, CCACHE_DIR=os.environ.get("CCACHE_DIR", str(top / "tmp/ccache")),
                        CCACHE_COMPILERTYPE="other", CCACHE_COMPILERCHECK=f"string:{h.hexdigest()}",
@@ -312,7 +312,7 @@ def cmd_awto(jobs):
         try:
             off = os.environ.get("AWTO_SDCC_CACHE") == "off"
             r = subprocess.run(([] if off else ["ccache"]) + cmd + ["-S", "-o", str(out), str(c)], capture_output=True,
-                               text=True, errors="replace", timeout=COMPILE_TIMEOUT, env=None if off else ccache_env())
+                               text=True, errors="replace", timeout=COMPILE_TIMEOUT, env=None if off else ccache_env(), check=False)
             if r.returncode == 0:
                 PR.normalise(out)                            # #pragma place sections -> CSEG / CONST + marker (awto-ddc#149)
             return c, r.returncode, r.stdout + r.stderr
@@ -507,7 +507,7 @@ def main():
         out.parent.mkdir(parents=True, exist_ok=True)
         extra = ["-Wp-dM"] if "--macros" in a else []           # --macros: dump #defines instead
         r = subprocess.run(sdcc_cmd(c, uv2.parent, defines, incs, model) + extra + ["-E", str(c)],
-                           capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT)
+                           capture_output=True, text=True, errors="replace", timeout=COMPILE_TIMEOUT, check=False)
         out.write_text(r.stdout)
         log(f"pp {c.name} -> {out} ({len(r.stdout)} chars) {r.stderr[-300:]}"); return r.returncode
     if a[0] == "report":
