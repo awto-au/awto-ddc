@@ -61,6 +61,7 @@ void SysUartSerialPortIntProc(void) __interrupt(4);
 void SysEXINT0(void) __interrupt(0)
 {
     AWTO_CPUS_ISR(0);
+    AWTO_ISR_WAKE();
     // Backup for Burst Write Bug
     g_ucBackup_EXINT0 = MCU_FFF4_SCA_INF_ADDR; AWTO_T0EV_EXINT0();
 
@@ -162,6 +163,7 @@ void SysEXINT1(void) __interrupt(2)
 {
     // Backup for Burst Write Bug
     AWTO_DIAG_EX1ISR();
+    AWTO_ISR_WAKE();
     g_ucBackup_EXINT1 = MCU_FFF4_SCA_INF_ADDR;
 
 #if((_DVI_SUPPORT == _ON) || (_HDMI_SUPPORT == _ON))

@@ -362,7 +362,7 @@ void SysTimerIntProc0(void) __interrupt(1)
 {
     AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
-    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr();
+    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE();
 
 #if(_INSTANT_TIMER_EVENT_0 == _ON)
     // Clear Timer0 flag

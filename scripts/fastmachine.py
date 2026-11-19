@@ -17,7 +17,7 @@ API differences vs Machine:
   info breakpoints; anything else raises SimError
 - start state: XDATA zero (as Machine), IRAM = ucsim's fixed power-on pattern (ucsim_iram), SFRs as ucsim reset
 - a stub PC right after an event stop is still hooked (ucsim skips the breakpoint check on the first step instruction)
-Not modelled (both cores, or ucsim only): serial port (SCON/SBUF writes counted in .p.serial_wr), PCON idle/power-down,
+Not modelled (both cores, or ucsim only): serial port (SCON/SBUF writes counted in .p.serial_wr), power-down (PCON.IDL is modelled in dw8051 mode: exact fast-forward, p.idle_clk),
   0xA5 (run stops: "invalid instruction"); a bank number >= image banks keeps the old code bank
 Stay on ucsim: fw_sim --isr-check, --serial (raw ucsim sessions, not Machine)
 Verification: scripts/fastcore_check.py (differential vs ucsim + fw_sim gates), log tmp/logs/fastcore_check.log.
@@ -64,7 +64,8 @@ class Pub(ctypes.Structure):
                 ("irq_tail", ctypes.c_uint32), ("_pad", ctypes.c_uint32),
                 ("clk", ctypes.c_uint64), ("fm_miss", ctypes.c_uint64), ("fm_stall", ctypes.c_uint64),
                 ("dw", ctypes.c_uint32), ("max_instr_clk", ctypes.c_uint32),
-                ("sp_max", ctypes.c_uint32), ("sp_wrap", ctypes.c_uint32)]
+                ("sp_max", ctypes.c_uint32), ("sp_wrap", ctypes.c_uint32),
+                ("idle_clk", ctypes.c_uint64), ("nidle", ctypes.c_uint64)]
 
 
 _LIB = None

@@ -215,6 +215,7 @@ void main(void)
             AWTO_PS_POLL_SITE();
             SysColorHandler();
             ScalerDebug();
+            AWTO_LOOP_PACE();
 
         }
     }
