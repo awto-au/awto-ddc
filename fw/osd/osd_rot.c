@@ -6,7 +6,7 @@
 
 #define AWTO_ROT_BYTES_PER_WORD                 3       // a glyph word = 24 bits = two 12 px rows
 
-__xdata BYTE g_ucAwtoOsdRot;                            // latched by the screen being drawn (one full-screen OSD screen at a time): XDATA floor
+__xdata BYTE g_ucAwtoOsdRot;                            // latched by the screen being drawn (one full-screen OSD screen at a time): XDATA is scarce
 
 BYTE AwtoOsdRot180(void)                                // 1 = draw the OSD turned (display Rotate 180), 0 = upright
 {

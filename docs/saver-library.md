@@ -125,7 +125,7 @@ void AwtoSnd(BYTE ucCmd); void AwtoSndBg(BYTE ucState); void AwtoSndPoll(void); 
 BYTE AwtoRnd(void); void AwtoDir(BYTE ucAng);  // -> g_cAwtoDx / g_cAwtoDy
 ```
 
-- At most 3 parameters where possible: the 4th and later go to XDATA `_PARM_` bytes (floor 700 B) and cost a store per call.
+- At most 3 parameters where possible: the 4th and later go to XDATA `_PARM_` bytes (XDATA is scarce) and cost a store per call.
 - Generic (library): pixel / run / line / polyline / circle / curve / text into a canvas; tile upload with rotation; screen set-up; sound player; rng / pool / tables.
 - Per game: shapes, palettes, maps, tracks, priorities, game rules, layout constants: generated headers and the game file.
 
@@ -164,7 +164,7 @@ BYTE AwtoRnd(void); void AwtoDir(BYTE ucAng);  // -> g_cAwtoDx / g_cAwtoDy
 ### Risks
 
 - Bank layout: moving code changes CH_ placement; the link gate (`gptr_const_xbank`) has failed on such moves before. One module per step, gate each.
-- XDATA floor: new `_PARM_` bytes and locals; check `fw_gates.py` / free bytes per step.
+- XDATA: new `_PARM_` bytes and locals; check `fw_gates.py` / free bytes per step.
 - Speed regressions from extra banked calls on per-pixel paths.
 - Behaviour drift: every step must keep frames md5-identical (`saver_frames_md5.py`, upright and Rotate 180) until a step is meant to change pixels.
 - Parallel edits: `saver.c` is being changed by other work; migrations stay out of it.

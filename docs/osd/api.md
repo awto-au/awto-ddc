@@ -13,7 +13,7 @@ Code is the reference; this lists what exists and who owns what. Hardware facts 
 | `AwtoOsdMap1(cols, rows, attr)` | 1-bit map, glyph id = cell; sets bases |
 | `AwtoOsdTile(cell, bytes)` | canvas tile into the glyph of its cell (mirrored when turned) |
 | `AwtoOsdPlaceScaleUp(posH, posV, cols, rows, factor)` | position, scale-up window = OSD position, factor, boundary neighbourhood, on |
-- At most 3 parameters where possible: the 4th and later go to XDATA (floor 700 B).
+- At most 3 parameters where possible: the 4th and later go to XDATA (scarce).
 - Users: scope savers, Asteroids, Pac-Man, QC pattern, flash screen (adopting). Library of the savers: `docs/saver-library.md`; their budgets and frame rates: `docs/saver-fps-*.md`.
 
 ## Rotation helpers: `fw/osd/osd_rot.c`

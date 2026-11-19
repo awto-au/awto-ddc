@@ -64,7 +64,7 @@ void UserCommonCecReceiveNotify(void)
         DebugMessageCEC("CEC RX Read: HB ", isr_g_stCecRxReceivedInfo.ucReceivedHb);
 
         // awto: analysing flag first (the interrupt then fills the backup FIFO, not this struct); the frame is handled in place,
-        // no local copy (XDATA floor, docs/cec.md); the reply goes straight into g_stCecTxTransmitInfo
+        // no local copy (XDATA is scarce, docs/cec.md); the reply goes straight into g_stCecTxTransmitInfo
         SET_CEC_RX_MSG_ANALYZING();
         CLR_CEC_RX_READ_DONE();
         UserInterfaceCecReceivedNotify((StructCecRxReceivedInfo *)&isr_g_stCecRxReceivedInfo);
