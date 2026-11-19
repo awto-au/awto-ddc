@@ -177,7 +177,6 @@ E9	82	-	Pac-Man sound:death glissando
 E9	83	-	Pac-Man sound:calibration tone, S code 32
 E9	84	-	Pac-Man sound stopped
 E9	85	-	Pac-Man sound track done
-E9	86	n	Pac-Man / Asteroids sound unavailable (no -D _AWTO_AUDIO_TEST build), cmd %
 E9	87	-	alert tone (1 s, HDMI audio test generator)
 E9	88	-	Pac-Man sound:ghost eaten (rising sweep)
 E9	89	-	Pac-Man sound:fruit eaten
@@ -237,8 +236,7 @@ E5	44	n	audio test 4:% Hz
 E5	45	n	audio test 5:% Hz
 E5	46	n	audio test 6:% Hz
 E5	50	-	key click:tone played
-E5	51	-	key click skipped:another sound plays
-E5	52	-	key click unavailable (no -D _AWTO_AUDIO_TEST build)
+E5	51	-	key click skipped:another sound
 E2	01	-	M-domain set-up:start
 E2	09	-	M-domain set-up:IVS wait 1
 E2	0B	n	M-domain set-up:memory check (WD ctrl0 x 256 + status0 = %)

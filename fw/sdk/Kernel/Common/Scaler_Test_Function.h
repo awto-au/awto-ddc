@@ -121,11 +121,7 @@
 //--------------------------------------------------
 // Audio Test by Internal Audio Generator
 //--------------------------------------------------
-#ifdef _AWTO_AUDIO_TEST
-#define _INTERNAL_AUDIO_TEST_SUPPORT _ON
-#else
-#define _INTERNAL_AUDIO_TEST_SUPPORT _OFF
-#endif /* awto: audio test build (-D_AWTO_AUDIO_TEST) */
+#define _INTERNAL_AUDIO_TEST_SUPPORT _ON  /* awto: always on, fw/audio owns the generator (#229) */
 
 // awto: no #warning for the opt-in test build (the build tag names it; warn gate rows follow the default build)
 

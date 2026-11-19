@@ -27,7 +27,7 @@ def _repo() -> Path:
 REPO = _repo()
 LOG = REPO / "tmp/logs/audio_levels.log"
 DDC_S = 5.0          # one ddcutil set/get: ~0.2 s typical on bus 11 at 1 MHz; 5 s = hung bus, logged + exit 1
-HZ_FLAG = 0x8000     # VCP 0x63 high bit = tone announce (fw/audio/amp.c AWTO_AUDIO_TEST_HZ_FLAG)
+HZ_FLAG = 0x8000     # VCP 0x63 high bit = tone announce (fw/audio/audio.c AWTO_AUDIO_TEST_HZ_FLAG)
 
 
 def log(msg: str) -> None:

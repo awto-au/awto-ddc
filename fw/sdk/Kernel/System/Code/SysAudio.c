@@ -236,18 +236,20 @@ void SysAudioMuteProc(bit bMute)
     {
         if(ScalerAudioDVCGetVolumeMuteStatus() == _OFF)
         {
-            UserInterfaceAdjustAudioAmpMuteProc(_ON);
-
+            // awto (#249): ramp the DVC to 0 first, then mute and disable the amp (never cut the amp with signal)
             ScalerAudioMuteProc(_ON, UserInterfaceGetAudioVolume());
+
+            UserInterfaceAdjustAudioAmpMuteProc(_ON);
         }
     }
     else
     {
         if(ScalerAudioDVCGetVolumeMuteStatus() == _ON)
         {
-            ScalerAudioMuteProc(_OFF, UserInterfaceGetAudioVolume());
-
+            // awto (#249): enable the amp and unmute it while the DVC is still at 0, then ramp the volume up
             UserInterfaceAdjustAudioAmpMuteProc(_OFF);
+
+            ScalerAudioMuteProc(_OFF, UserInterfaceGetAudioVolume());
         }
     }
 }
@@ -580,20 +582,30 @@ bit SysAudioGetSleepAudioStatusForLineIn(void)
 //--------------------------------------------------
 void SysAudioInternalGenTestProc(bit bOn)
 {
-    SysAudioMuteProc(_ON);
-
+    // awto (#249): ON leaves DVC at 0 and the amp muted; the caller enables the amp, then ramps the DVC up (fw/audio/audio.c PsStart)
     if(bOn == _ON)
     {
+        SysAudioMuteProc(_ON);
+
         ScalerAudioWatchDogProc(_OFF, ScalerAudioGetDigitalAudioPortMapping());
 
         ScalerAudioSourceInputSwitch(_DIGITAL_AUDIO, SysSourceGetInputPort());
         ScalerAudioInternalAudioGenSwitch(_ON, SysSourceGetInputPort());
-
-        ScalerAudioDigitalVolumeMute(_OFF, UserInterfaceGetAudioVolume());
     }
     else
     {
+        // DVC ramp down, then generator off, then amp disabled (the caller has already closed the gate)
+        bit bWasOn = (ScalerAudioDVCGetVolumeMuteStatus() == _OFF);
+
+        if(bWasOn == _TRUE)
+        {
+            ScalerAudioMuteProc(_ON, UserInterfaceGetAudioVolume());
+        }
         ScalerAudioInternalAudioGenSwitch(_OFF, SysSourceGetInputPort());
+        if(bWasOn == _TRUE)
+        {
+            UserInterfaceAdjustAudioAmpMuteProc(_ON);
+        }
         SysAudioChangeAudioState(_AUDIO_STATUS_PREPARING);
     }
 }

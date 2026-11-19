@@ -23,5 +23,5 @@ def test_default_off_bool_stored_live():
 
 def test_sync_rows_exist():
     t = (ROOT / "fw/awto/sync.tsv").read_text()
-    for a in ("50", "51", "52"):
+    for a in ("50", "51"):
         assert f"E5\t{a}\t" in t
