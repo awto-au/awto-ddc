@@ -14,7 +14,7 @@ import bisect
 import json
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,7 +39,7 @@ def boot(img, mapp, be, log):
     s = F.open_native(img, F.ROOT / "tmp/fwsim" / mapp.stem, log, flash, [])
     hb0 = None
     for _ in range(80):
-        out = F.run_chunk(s, flash, 1_000_000)
+        F.run_chunk(s, flash, 1_000_000)
         blk = F.read_diag(s)
         d = rtd_diag.decode(blk, be) if blk else None
         if d and d["stage"] >= 8:
@@ -55,7 +55,7 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
     detect paths, not comparable. Pinned to the same index, every image measures the same pass."""
     img = binp.read_bytes()
     mp = mapp.read_text(errors="replace")
-    s, sym, where = boot(img, mapp, be, log)
+    s, _sym, where = boot(img, mapp, be, log)
     if search_index is not None:
         a = int(re.search(r"^D:\s+([0-9A-F]{8})\s+_g_ucSearchIndex\b", mp, re.MULTILINE).group(1), 16)
         s.send(f"set memory xram 0x{a:x} 0x{search_index:x}")
@@ -99,7 +99,6 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
             got = len(re.findall(rb"\nF 0x[0-9a-f]+", raw[0]))
         txt = raw[0].decode(errors="replace")
         blocks = re.split(r"\nStop at 0x", txt)[1:]
-        tail = ""
         for blk in blocks:
             m = LINE.search(blk)
             if not m or "\nF 0x" not in blk:
@@ -123,15 +122,12 @@ def profile(binp: Path, mapp: Path, passes: int, be: bool, log, search_index: in
     r2_ok = lambda a: region(a) == ""          # direct call to a real function (stub entries are counted at the trampoline)
     per_pass = []
     stackf = ["_main"]               # shadow call stack of names (the sampled window starts inside main()'s loop)
-    acc = defaultdict(int)           # per-pass accumulators
-    hbs, t_pass, n_instr = 0, 0, 0
-    pending_total = 0
+    t_pass, n_instr = 0, 0
     passes_done = -1                 # first hb event only marks the start
     while passes_done < passes:
         pc, mn, ln = cur
         nxt, ticks, ev, acc_v = step()
         npc = nxt[0] if nxt else -1
-        name = None
         r = region(pc)
         sym_pc = where(bank, pc)
         if passes_done >= 0:

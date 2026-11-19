@@ -117,7 +117,7 @@ def run_mode(binp: Path, mapp: Path, mode: str, max_instr: int, log) -> tuple[li
 
 
 def fmt(e) -> str:
-    kind, ins, name, a, g = e
+    _kind, ins, name, a, g = e
     av = " ".join(f"{k}={v}" for k, v in a.items())
     gv = " ".join(f"{k}={v}" for k, v in g.items())
     return f"{ins:>10} {name:<44} {av:<60} {gv}"

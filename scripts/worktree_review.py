@@ -51,7 +51,7 @@ def review(repo: str) -> list[list[str]]:
         if not Path(path).is_dir():
             rows.append([Path(repo).name, path, branch, "", "", "", "", "", "", "MISSING"])
             continue
-        rc, date = git(path, "log", "-1", "--format=%cs|%s")
+        _rc, date = git(path, "log", "-1", "--format=%cs|%s")
         d, subj = (date.split("|", 1) + [""])[:2]
         _, cher = git(path, "cherry", "main", "HEAD")
         ahead = sum(1 for ln in cher.splitlines() if ln.startswith("+"))

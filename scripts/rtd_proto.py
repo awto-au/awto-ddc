@@ -688,7 +688,6 @@ class Decoder:
             self.put(t, "isp", f"write reg 0x{s:02X} (no data)")
 
     def _isp_w(self, t: Txn, r: int, v: int) -> None:
-        old = self.reg.get(r)
         self.reg[r] = v
         if r == 0xF4:
             self.f4 = v; self.keep("sr", "sw"); return

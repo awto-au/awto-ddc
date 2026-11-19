@@ -129,7 +129,7 @@ def selftest():
     ok = True
     for n in ("LOGO0", "LOGO1"):
         blob = sdk_blob(n)
-        mh, N, by = decode_blob(blob, 0)
+        _mh, N, by = decode_blob(blob, 0)
         vm = decode_map_header(blob)
         assert len(blob) == 10 + N, (n, len(blob), N)
         # tile bytes -> bit array -> bytes (tile codec)
@@ -235,7 +235,7 @@ def sdk_grid(name0="LOGO0", name1="LOGO1"):
 
 def preview(out):
     g = sdk_grid()
-    t0, m0, t1, m1, bm, start = build_awto()
+    _t0, _m0, _t1, _m1, bm, start = build_awto()
     full = np.ones_like(g)
     x0 = (COLS0 + start) * TW
     full[:, x0:x0 + bm.shape[1]] = bm

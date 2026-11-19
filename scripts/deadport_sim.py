@@ -56,7 +56,7 @@ def tap(bus, key, ms=150, gap=0.4):
 
 def swlog(bus, say):
     raw = bus.xdata(bus.addr("isr_g_stAwtoSw"), 12 + 4 * T.N_EV)
-    hdr, evs = T.decode(raw, bus.be) if hasattr(T, "decode") else (None, [])
+    _hdr, evs = T.decode(raw, bus.be) if hasattr(T, "decode") else (None, [])
     for ms, i, g in evs[-40:]:
         say(f"  +{ms:6d} ms  {T.name(i, g)}")
     return [(i, g) for _, i, g in evs]

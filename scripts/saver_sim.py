@@ -187,7 +187,6 @@ def scope2_check(sess, img) -> int:
 
 def asteroids_info_check(img) -> int:
     """Asteroids: all lit pixels are the diagnostic green, and the info overlay (lower left tile box) has text while the mirrored box does not."""
-    a = np.asarray(img.convert("RGB"))
     box = bbox_crop(img)
     lit = box[box.max(axis=2) > INK_MIN]
     off = int(np.sum((lit[:, 0] > GREEN_TOL) | (lit[:, 2] > GREEN_TOL + AST_GREEN[2])))

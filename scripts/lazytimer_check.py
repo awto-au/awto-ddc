@@ -214,7 +214,7 @@ def main() -> int:
     old = subprocess.run(["git", "-C", str(ROOT), "show", f"{a.old}:scripts/mcs51_core.c"], check=True, capture_output=True).stdout
     Lo, Ln = build(old, "old"), build((HERE / "mcs51_core.c").read_bytes(), "new")
     say(f"=== lazytimer_check {a.cpu} old {a.old} vs working tree: seeds {a.seed0}..{a.seed0 + a.seeds - 1}, {a.chunks} chunks")
-    t0, bad, instr = time.time(), 0, 0
+    t0, bad = time.time(), 0
     for s in range(a.seed0, a.seed0 + a.seeds):
         e = one(Lo, Ln, s, a.chunks, a.cpu == "dw8051")
         if e:

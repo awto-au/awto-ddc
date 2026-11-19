@@ -29,10 +29,9 @@ def run(binp, mapp, enable_early: bool):
     if enable_early:
         b.m.run(300_000)
         b.write(b.DEV8, 0x55, b"\x5a")
-    d = b.boot(passes=5)
+    b.boot(passes=5)
     ok = b.run_until_mode(3)
     d2 = b.diag()
-    hb = (d2["hb"] - d["hb"]) & 0xFFFF
     for _ in range(3):                      # one m.run(n) can return early on a device event: loop
         b.m.run(1_000_000)
     d3 = b.diag()

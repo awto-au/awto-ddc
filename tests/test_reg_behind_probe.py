@@ -105,7 +105,7 @@ def test_excluded_addresses_are_never_read_and_heartbeat_aborts():
 
 
 def test_every_read_is_logged():
-    res, lines = run(BehindBus(), [0x12], block=False)
+    _res, lines = run(BehindBus(), [0x12], block=False)
     assert sum(1 for ln in lines if " d1 prev=" in ln) == 256
     assert any("farpre" in ln for ln in lines)
 

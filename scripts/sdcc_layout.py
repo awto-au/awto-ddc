@@ -149,7 +149,7 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
     extended = 0
     for it in grow:                         # grown chunk: extend in place if the bytes after the slot are free
         r = regs[it.region]
-        off, slot = r.placed[it.key]
+        off, _slot = r.placed[it.key]
         del r.placed[it.key]
         want = it.slot
         if all(not (a < off + want and b > off) for a, b in r.spans()) and off + want <= r.hi:

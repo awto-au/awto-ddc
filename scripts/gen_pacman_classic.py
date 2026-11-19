@@ -749,7 +749,7 @@ def delta_rec(p, c):
 
 
 def emit(s, init, frames, events):
-    n1, n2 = len(s.one), len(s.two)
+    n1 = len(s.one)
     off2 = (27 * n1 + 53) // 54                                      # 2-bit glyph 0 at font_base + 18 words * off2 (bytes: 54 * off2)
     g1 = b"".join(s.one)
     g2 = b"".join(s.two)
@@ -846,7 +846,7 @@ def main() -> int:
     ap.add_argument("--count", type=int, default=12)
     ap.add_argument("--check", action="store_true")
     a = ap.parse_args()
-    s, init, frames, events, demo, trace = build(a.steps)
+    s, init, frames, events, _demo, trace = build(a.steps)
     say(f"1-bit glyphs {len(s.one)}, 2-bit glyphs {len(s.two)}, game steps {len(events)}, sub-frames {len(frames)}, updates {sum(len(f) for f in frames)}")
     if a.png:
         save_png(render_cells(s, cells_at(init, frames, a.frame)), a.png)

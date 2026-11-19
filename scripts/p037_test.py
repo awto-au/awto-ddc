@@ -61,10 +61,9 @@ def main() -> int:
         log("re-arm ring F052=00: " + str(wr(d, 0xF052, 0x00)))
         proc = subprocess.Popen(["./dev.py", "mode", "--unit", str(a.unit), "4k60"], cwd=ROOT)
         t0 = time.monotonic()
-        end, last, nwr, nrd, p02_last, nfail = t0 + a.secs, None, 0, 0, None, 0
+        end, nwr, nrd, p02_last, nfail = t0 + a.secs, 0, 0, None, 0
         hist37 = {}
         while time.monotonic() < end:
-            c = None
             if wr(d, 0x0037, 0x00):             # blind write: a read-modify-write costs 2 more transactions
                 nwr += 1
             else:
@@ -73,7 +72,7 @@ def main() -> int:
             r37 = rd(d, 0x0037)
             hist37[r37] = hist37.get(r37, 0) + 1
             if p != p02_last:
-                log(f"P0_02={p if p is None else format(p, '02x')} P0_37_seen={c if c is None else format(c, '02x')}")
+                log(f"P0_02={p if p is None else format(p, '02x')} P0_37_seen={r37 if r37 is None else format(r37, '02x')}")
                 p02_last = p
             dt = a.period_ms / 1000 - 0.0
             nxt = time.monotonic() + dt

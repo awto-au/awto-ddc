@@ -75,7 +75,7 @@ def sniff(path):
     if head[257:262] == b"ustar":
         return "tar"
     if head[:2] == b"MZ":
-        rc, o = run(["7z", "l", "-slt", "-bd", str(path)])
+        _rc, o = run(["7z", "l", "-slt", "-bd", str(path)])
         types = [l.split("=", 1)[1].strip() for l in o.splitlines() if l.startswith("Type = ")]
         # PE-only listings are plain executables; anything else is an SFX/installer 7z understands
         extra = [t for t in types if t != "PE"]

@@ -148,7 +148,7 @@ def run_step(name: str, extra: list[str] | None = None) -> int:
     """Run one STEPS entry (or a project command by name). Returns its exit code, or SKIPPED."""
     if name not in STEPS:
         return COMMANDS[name]["fn"](list(extra or []))
-    summary, argv, takes_extra = STEPS[name]
+    _summary, argv, takes_extra = STEPS[name]
     if not argv:
         log(f"{name}: not configured for this project - skipped", "WARN")
         return SKIPPED
@@ -738,7 +738,7 @@ def _settings_restore(u: dict, bus: int, snap, m: Path, tbl: Path) -> None:
               "[--verify crc|readback] [--write-mode byte|burst] [--aux-fast auto|off] [--max-min M] [image.bin]", kind="action")
 def cmd_flash(extra: list[str]) -> int:
     _layout_watch()
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     full = _flag(extra, "--full")
     verify = _opt(extra, "--verify", "crc")
     aux_fast = _opt(extra, "--aux-fast", "auto")     # DP-AUX fast page path (#254); off = the old 0x4A burst path
@@ -1023,7 +1023,7 @@ def cmd_link(extra: list[str]) -> int:
          "--release un-halts a firmware left stopped by a killed --messages; --watch N re-reads",
          args="[--unit N] [--messages [--secs S] | --release | --watch N]", kind="action")
 def cmd_diag(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     args = [f for f in ("--messages", "--release") if _flag(extra, f)]
     if len(args) > 1:
         raise SystemExit("diag: --messages and --release are exclusive; nothing done")
@@ -1081,7 +1081,7 @@ def _fwmap(u: dict, given) -> str:
          args="[--unit N] [--cmd] [--map F] ACTION...", kind="action")
 def cmd_osd(extra: list[str]) -> int:
     import osd_test
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     cmdmode, given = _flag(extra, "--cmd"), _opt(extra, "--map")
     ok = set(osd_test.EVENTS) | set(osd_test.KEYS) | set(osd_test.CMD_ONLY)
     bad = [x for x in extra if x not in ok]
@@ -1104,7 +1104,7 @@ def cmd_diag_clear(extra: list[str]) -> int:
          "times in tmp/logs/audio_test.log",
          args="[--unit N] [--only 1,2,..] [--freqs 200,1000,4000] [--secs S] [--map F]", kind="action")
 def cmd_sound_test(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     more = []
     for flag, pat in (("--only", r"\d+(,\d+)*"), ("--freqs", r"\d+(,\d+)*"), ("--secs", r"\d+(\.\d+)?")):
@@ -1129,7 +1129,7 @@ def cmd_settings(extra: list[str]) -> int:
     if sim:
         mp = given or str(Path(sim).with_suffix(".map"))
         return _py("settings_cli.py", "--sim", sim, "--map", mp, *extra)
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     b = _live_bus(u)
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
@@ -1137,7 +1137,7 @@ def cmd_settings(extra: list[str]) -> int:
 @command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone; every image, volume = the monitor VCP 0x62",
          args="[--unit N] [--wait]", kind="action")
 def cmd_alert(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     return _py("alert.py", "--bus", str(_live_bus(u)), *(["--wait"] if _flag(extra, "--wait") else []))
 
 
@@ -1146,7 +1146,7 @@ def cmd_alert(extra: list[str]) -> int:
 def cmd_synclog(extra: list[str]) -> int:
     flags = [f for f in ("--whole", "--delta") if _flag(extra, f)]
     given = _opt(extra, "--map")
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     b = _live_bus(u)
     return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
 
@@ -1156,7 +1156,7 @@ def cmd_synclog(extra: list[str]) -> int:
          args="[--unit N] NAME | tour [--hold S] [--volume PCT]", kind="action")
 def cmd_saver(extra: list[str]) -> int:
     import saver_names
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     hold, vol = _opt(extra, "--hold"), _opt(extra, "--volume")
     rest = [x for i, x in enumerate(extra) if not x.startswith("-") and (i == 0 or extra[i - 1] not in ("--unit", "--hold", "--volume"))]
     if len(rest) != 1 or (rest[0] != "tour" and rest[0] not in saver_names.names()):
@@ -1174,7 +1174,7 @@ def cmd_menu(extra: list[str]) -> int:
     pa = ["--png", png] if png else []
     if sim:
         return _py("menu_cli.py", "--sim", sim, "--map", given or str(Path(sim).with_suffix(".map")), *pa, *extra)
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     b = _live_bus(u)
     return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra,
                    keep_console=True)
@@ -1183,7 +1183,7 @@ def cmd_menu(extra: list[str]) -> int:
 @command("full-screen landscape Pac-Man demo: computer arrow keys steer; Escape/Q closes",
          args="[--unit N] [--map F]", kind="action")
 def cmd_pacman(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     _done(extra, "pacman")
     b = _live_bus(u)
@@ -1238,7 +1238,7 @@ def cmd_health(extra: list[str]) -> int:
             raise SystemExit("health --sim BIN: needs an image path with BIN's .map beside it; nothing done")
         _done(extra, "health --sim")
         return _py("unit_health.py", "--sim", Path(str(sim)).resolve(), Path(str(sim)).resolve().with_suffix(".map"))
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given, hm = _opt(extra, "--map"), _opt(extra, "--host-mode")
     if given is True or hm is True:
         raise SystemExit("health: --map/--host-mode need a value; nothing done")
@@ -1252,7 +1252,7 @@ def cmd_health(extra: list[str]) -> int:
 @command("write scaler registers over ISP (MCU halted), read back; --reset reboots", args="[--unit N] [--reset] ADDR=VAL...",
          kind="action")
 def cmd_poke(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     reset = _flag(extra, "--reset")
     pokes = _pairs(extra, "poke")
     return _py("rtd_reg_poke.py", _bus(u), "--serial", u["serial"], *pokes, *(["--reset"] if reset else []))
@@ -1261,7 +1261,7 @@ def cmd_poke(extra: list[str]) -> int:
 @command("read scaler register pages / ports over ISP into tmp/regs/ (halts the MCU, resets after)",
          args="[--unit N] [--pages 00,01|all] [--port A:D:N] [--ports all] [--resume F]", kind="action")
 def cmd_dump(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     opts = []
     for flag in ("--pages", "--ports", "--resume"):
         v = _opt(extra, flag)
@@ -1281,7 +1281,7 @@ def cmd_dump(extra: list[str]) -> int:
 @command("write XDATA bytes in the running firmware over debug slave 0x35", args="[--unit N] [--map F] [--label L] ADDR=VAL...",
          kind="action")
 def cmd_dbg_write(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given, label = _opt(extra, "--map"), _opt(extra, "--label", "")
     if label is True:
         raise SystemExit("dbg-write: --label needs a value; nothing done")
@@ -1293,7 +1293,7 @@ def cmd_dbg_write(extra: list[str]) -> int:
 @command("read live XDATA via debug slave 0x35 (addr|symbol[:len])", args="[--unit N] [--map F] [--halt] ITEM...",
          kind="action")
 def cmd_dbg_read(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given, halt = _opt(extra, "--map"), _flag(extra, "--halt")
     bad = [x for x in extra if x.startswith("-")]
     if bad or not extra:
@@ -1305,7 +1305,7 @@ def cmd_dbg_read(extra: list[str]) -> int:
 @command("OSD SRAM hardware tests (image built with -D _AWTO_OSD_HWTEST; docs/osd-hw-tests.md): regs t1 t2 t3 t4 t7 t8 rd freeze ladder cycle cyclestop t6 stop",
          args="[--unit N] [--map F] [--frames N] [--free-s S] [--cal] TEST...", kind="action")
 def cmd_osd_hw_test(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     opts = []
     for flag in ("--frames", "--free-s"):
@@ -1326,7 +1326,7 @@ def cmd_osd_hw_test(extra: list[str]) -> int:
 @command("MCU / flash clock sweep at run time (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP names or all-mcu / all-flash / all-175, --sim runs it in the firmware sim",
          args="[--unit N] [--map F] [--sim] [--continue-on-fail] [--max-m2pll-mhz N] [--keep NAMES] [--override NAME=VAL] [--retry] [--stop-after N] [--allow-overclock-flash] [--tune-first] [--no-fps] STEP...", kind="action")
 def cmd_clk_sweep(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
     more = [f for f in ("--allow-overclock-flash", "--tune-first", "--no-fps") if _flag(extra, f)]
@@ -1350,7 +1350,7 @@ def cmd_clk_sweep(extra: list[str]) -> int:
 @command("CPU / interrupt / timer / memory conformance suite on its OWN special image (-D _AWTO_CPU_SUITE, docs/cpu-suite.md): --sim runs the 87 / 175 / 350 MHz builds in the firmware sim (--build makes missing images); the unit run (Phase B, test unit only) needs that image flashed",
          args="[--unit N] [--sim] [--build] [--clocks 87,175,350] [--clock N --map F] [--bus N --identity HOW] [--cases A,B] [--groups T,I,M,R,D] [--allow-scratch-write]", kind="action")
 def cmd_cpu_suite(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     sim, build = _flag(extra, "--sim"), _flag(extra, "--build")
     write = _flag(extra, "--allow-scratch-write")
     opts = []
@@ -1381,7 +1381,7 @@ def cmd_cpu_suite(extra: list[str]) -> int:
 @command("OSD write-rate sweep (image built with -D _AWTO_OSD_HWTEST; docs/osd-write-sweep.md): groups base fff1 fffb ffbc burst state size combo hold autorevert, --sim runs it in the firmware sim",
          args="[--unit N] [--map F] [--sim] [--continue-on-fail] GROUP...", kind="action")
 def cmd_osd_sweep(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
     bad = [x for x in extra if x.startswith("-")]
@@ -1395,7 +1395,7 @@ def cmd_osd_sweep(extra: list[str]) -> int:
 @command("OSD data port byte-loss experiments (image built with -D _AWTO_OSD_HWTEST; docs/osd-port-loss.md): groups base gap gapcont pos hidden fff1 fffb ea sync, --sim runs them in the firmware sim",
          args="[--unit N] [--map F] [--sim] GROUP...", kind="action")
 def cmd_osd_port_loss(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     sim = _flag(extra, "--sim")
     bad = [x for x in extra if x.startswith("-")]
@@ -1409,7 +1409,7 @@ def cmd_osd_port_loss(extra: list[str]) -> int:
 @command("clock step soak with the savers cycling (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP MINUTES; checks, IOSC trim, resets every 30 s",
          args="[--unit N] [--map F] [--nvram 0|7] STEP MINUTES", kind="action")
 def cmd_clk_soak(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     nv = _opt(extra, "--nvram")
     extra = (["--nvram", nv] if nv else []) + extra
@@ -1422,7 +1422,7 @@ def cmd_clk_soak(extra: list[str]) -> int:
 @command("DDR PHY speed sensor (DSS) read next to the IOSC trim counter; writes ONE channel's CTRL_3 and restores it (Dan 2026-11-18; image built with -D _AWTO_OSD_HWTEST for --step)",
          args="[--unit N] [--map F] [--chan A|B] [--step STEP] [--reps N]", kind="action")
 def cmd_dss_probe(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given = _opt(extra, "--map")
     m = Path(_fwmap(u, given))
     return _py("dss_probe.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *extra)
@@ -1431,7 +1431,7 @@ def cmd_dss_probe(extra: list[str]) -> int:
 @command("read-only I2C address probe of the unit's host bus (i2cdetect -r, then i2cget regs 0..F of every extra ACKing address; no writes)",
          args="[--unit N] [--reps N] [--halt] [--extras]", kind="action")
 def cmd_i2c_probe(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     if _flag(extra, "--extras"):                                  # multi-byte 0x4A / 0x4B reads + SCDC offsets (i2c_probe2.py)
         return _py("i2c_probe2.py", "--bus", _live_bus(u), "--serial", u["serial"], *extra)
     return _py("i2c_probe.py", "--bus", _live_bus(u), "--serial", u["serial"], *extra)
@@ -1440,7 +1440,7 @@ def cmd_i2c_probe(extra: list[str]) -> int:
 @command("unused GPIO inputs: snapshot | watch changes | open/close the live OSD screen over I2C",
          args="[--unit N] [--map F] [--secs S] snapshot|watch|open|close", kind="action")
 def cmd_gpio(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     given, secs = _opt(extra, "--map"), _opt(extra, "--secs")
     if len(extra) != 1 or extra[0] not in ("snapshot", "watch", "open", "close"):
         raise SystemExit("gpio: snapshot|watch|open|close [--secs S]; nothing done")
@@ -1453,7 +1453,7 @@ def cmd_gpio(extra: list[str]) -> int:
 
 @command("read the sink's HDMI SCDC registers (0x54), read-only", args="[--unit N]", kind="action")
 def cmd_scdc(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     _done(extra, "scdc")
     return _py("hdmi_scdc.py", _bus(u))
 
@@ -1464,7 +1464,7 @@ DDC_SUBS = {"list": 0, "get": 1, "set": 2, "sleep": 0, "wake": 0, "brightness": 
 @command("DDC/CI via ddcutil on the unit's own bus: list | get CODE | set CODE VALUE | sleep | wake | brightness N",
          args="[--unit N] list|get CODE|set CODE VALUE|sleep|wake|brightness N", kind="action")
 def cmd_ddc(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     if not extra or extra[0] not in DDC_SUBS or len(extra) != 1 + DDC_SUBS[extra[0]] \
             or any(x.startswith("-") for x in extra):
         raise SystemExit(f"ddc: one of {DDC_SUBS} (arg counts {list(DDC_SUBS.values())}); got {extra}; nothing done")
@@ -1474,7 +1474,7 @@ def cmd_ddc(extra: list[str]) -> int:
 @command("identify the unit: EDID, DDC caps, scaler chip, flash params (ISP session halts the MCU, reboots after)",
          args="[--unit N] [--no-isp] [--json]", kind="action")
 def cmd_identify(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     flags = [f for f in ("--no-isp", "--json") if _flag(extra, f)]
     _done(extra, "identify")
     return _py("rtd_identify.py", _bus(u), *flags)
@@ -1482,7 +1482,7 @@ def cmd_identify(extra: list[str]) -> int:
 
 @command("read-throughput benchmark of the unit's bus (EDID 0x50 + ISP 0x4A reads)", args="[--unit N]", kind="action")
 def cmd_bench(extra: list[str]) -> int:
-    n, u = _unit(extra)
+    _n, u = _unit(extra)
     _done(extra, "bench")
     return _py("i2c_bench.py", _bus(u))
 

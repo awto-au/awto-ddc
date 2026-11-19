@@ -146,7 +146,7 @@ def parse(d, db):
     r.p = 0x6C
     hdr_a, hdr_b = struct.unpack_from("<II", d, 0x6C)
     r.p = 0x7C
-    rows, warn = [], {"tail": 0, "bits": 0, "db_miss": 0}
+    warn = {"tail": 0, "bits": 0, "db_miss": 0}
 
     # ---- S1: pin table -----------------------------------------------------
     n = r.u16()
@@ -335,7 +335,7 @@ def build_rows(g, db):
                         reg_field=nm, description=esc(ds)))
     for i, (nm_, ref, ex) in enumerate(g["ports"]):
         reg, bt = fmt_ref(ref)
-        nm, ds, e = db.look(ref)
+        nm, ds, _e = db.look(ref)
         out.append(dict(table="PORT", idx=i, port=nm_, reg=reg, bits=bt, reg_field=nm, raw=ex,
                         description=esc(ds)))
     for i, (tn, pn) in enumerate(g["timers"]):
@@ -343,7 +343,7 @@ def build_rows(g, db):
     for rid, items in g["pwm"]:
         for k, ref in enumerate(items):
             reg, bt = fmt_ref(ref)
-            nm, ds, e = db.look(ref)
+            nm, ds, _e = db.look(ref)
             out.append(dict(table="PWM", idx=rid - 1, signal=k, reg=reg, bits=bt,
                             reg_field=nm, description=esc(ds)))
     for i, a in enumerate(g["schmitt"]):

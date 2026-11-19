@@ -103,7 +103,7 @@ def main() -> int:
     try:
         for run in range(a.runs):
             t_arm = arm(io, sw, diag)
-            t_off = dpms(a.conn, False, guard_s=1.25 * (a.off_s + WAKE_LIMIT_S) + 10)   # +10: arm + decode reads
+            dpms(a.conn, False, guard_s=1.25 * (a.off_s + WAKE_LIMIT_S) + 10)   # +10: arm + decode reads
             time.sleep(a.off_s)     # the off period under test (no-signal / power-saving depth)
             t_cmd = time.monotonic()
             t_on = dpms(a.conn, True)

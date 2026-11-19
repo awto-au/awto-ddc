@@ -106,7 +106,7 @@ def main() -> int:
     sel = a.only.split(",") if a.only else list(TRIALS)
     for name in sel:
         regs = TRIALS[name]
-        b = rate(f"{name} baseline")
+        rate(f"{name} baseline")
         orig = [(ad, rd(d, ad)) for ad, _ in regs if ad != "reload"]
         for ad, v in regs:
             if ad == "reload":
@@ -116,7 +116,7 @@ def main() -> int:
             if not any(wr(d, ad, v) for _ in range(3)):
                 log(f"  write {ad:04X} failed")
         log("  wrote " + " ".join(f"{ad:04X}={f2(rd(d, ad))}" for ad, _ in regs if ad != "reload"))
-        c = rate(f"{name} candidate")
+        rate(f"{name} candidate")
         burst(f"{name}")
         for ad, v in orig:
             if v is not None:

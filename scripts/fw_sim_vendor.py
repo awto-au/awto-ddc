@@ -116,7 +116,7 @@ def main() -> int:
     log = (ROOT / f"tmp/logs/fw_sim_vendor_{a.mode}.log").open("w", buffering=1)
     m, _ = vendor_machine(Path(a.img), a.mode, log)
     ma = m.addr("isr_g_stModeInfo")
-    done, last = 0, None
+    done = 0
     while done < a.max_instr:
         m.run(1_000_000); done += 1_000_000
         ms = m.rd(ma)[0] & 0x1F

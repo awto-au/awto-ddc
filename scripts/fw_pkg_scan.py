@@ -146,7 +146,6 @@ def classify_fp(d, regsets):
     for i in range(len(d) - 2):
         if d[i] == 0x90:
             hits.add(d[i + 1] << 8 | d[i + 2])
-    allr = list(regsets.values())
     best = []
     for k, v in regsets.items():
         excl = v - set().union(*[w for kk, w in regsets.items() if kk != k])

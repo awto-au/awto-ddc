@@ -88,7 +88,7 @@ def run_boot(a, bin_, map_, splash=True, key_at=None, shots=False, tag="boot", r
             active = t
         if active is not None and t >= active + B.AFTER_MS:
             break
-    h, lines = r.episode()
+    _h, lines = r.episode()
     txt = "\n".join(lines)
     ring = {"start": any("boot splash:run << 4 | why = 100" in ln for ln in lines), "end": any("boot splash:run << 4 | why = 0, 0 = ended" in ln for ln in lines)}
     ms = lambda key: next((int(ln.split(":", 1)[0]) for ln in lines if key in ln), None)

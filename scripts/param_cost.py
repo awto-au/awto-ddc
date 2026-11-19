@@ -120,7 +120,7 @@ def analyse(fn, parm_by_addr, parm_defs):
     state = None  # ("parm", addr) / ("local",)
     i = 0
     while i < len(ins):
-        addr, nb, mn, ops, text = ins[i]
+        _addr, nb, mn, ops, text = ins[i]
         if mn == "mov" and ops and ops[0] == "dptr":
             state = None
             pm = PARM_SYM.search(text)

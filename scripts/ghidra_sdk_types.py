@@ -194,7 +194,7 @@ class Types:
             d = self.parse_decl(m.group(1))
             if not d:
                 return
-            base, stars, name, dims, bits, sp = d
+            base, stars, name, dims, _bits, sp = d
             if base == "fnptr":
                 self.td[name] = ("prim", "ptr2", 2); return
             if stars:
@@ -375,7 +375,7 @@ def main():
             d = T.parse_decl(head.split("=")[0]) if head else None
             if not d:
                 continue
-            base, stars, name, dims, bits, sp = d
+            base, stars, name, dims, _bits, sp = d
             if not re.match(r"^(g_|pData|_?[A-Za-z]\w*)$", name) or "bit" in sp or "sfr" in sp or "code" in sp:
                 continue
             if base == "fnptr" or not base:

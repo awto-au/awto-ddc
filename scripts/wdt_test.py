@@ -680,7 +680,7 @@ class Runner:
             ok &= t_act is not None
             wake = [ln for ln in self.ring_lines() if ":wake" in ln or "wake by" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
-            same, why = self.same_boot(d0, None, time.monotonic())
+            same, _why = self.same_boot(d0, None, time.monotonic())
             d1 = self.rec()
             ok &= same
             txt.append(self.ages(d1))
@@ -804,7 +804,7 @@ class Runner:
             step[0] = "ring + record"
             wake = [ln for ln in self.ring_lines() if ":wake" in ln or "wake by" in ln]
             txt.append(f"wake line {wake[-1] if wake else 'none'}")
-            same, why = self.same_boot(d0, None, time.monotonic())
+            same, _why = self.same_boot(d0, None, time.monotonic())
             d1 = self.rec()
             ok &= same and d1["bites"] == d0["bites"]
             txt.append(f"bites {d0['bites']} -> {d1['bites']}; " + self.ages(d1))
@@ -1174,7 +1174,6 @@ class Runner:
         """machine cycles of n calls / interrupts of _name: entry stub -> SP back below the stacked return address
         (RET / RETI, nested higher-priority interrupts included). Single-steps the fast core."""
         m = self.t.m
-        v = m.sym["_" + name] & 0xFFFF
         out, cur = [], [None]
         m.stub(name, lambda m_, r: cur.__setitem__(0, (m_.p.cycles, m_.core.sfr[0x01])) or m_.request_stop() or None)
         while len(out) < n:

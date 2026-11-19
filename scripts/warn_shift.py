@@ -51,7 +51,7 @@ def main() -> int:
         votes = Counter(wl - int(parsed[i][2]) for i in stale for wl, wt in unrev if re.search(parsed[i][0], wt))
         if not votes:
             continue
-        d, n = votes.most_common(1)[0]
+        d, _n = votes.most_common(1)[0]
         for i in stale:
             new = int(parsed[i][2]) + d
             if any(wl == new and re.search(parsed[i][0], wt) for wl, wt in unrev):

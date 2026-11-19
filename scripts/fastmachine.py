@@ -604,7 +604,7 @@ class FastMachine:
             if shape == "loops":
                 if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0x22):
                     raise S.SimError(f"{name}: unexpected code {b.hex()}")
-                ctr, djnz_pc, per_pass = b[2], a + 3, None
+                ctr, djnz_pc = b[2], a + 3
                 self._ff_hook(djnz_pc, "djnz", ctr, None, cpc, cyc)
             else:
                 if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0xD5 and b[8] == 0xF7 and b[9] == 0x22):

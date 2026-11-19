@@ -353,7 +353,7 @@ def _recover_setup(dev, tmp_path, monkeypatch, bus_results):
 
 
 def test_recover_bad_image_refused_before_relay(dev, tmp_path, monkeypatch):
-    _img_, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
+    _image, events = _recover_setup(dev, tmp_path, monkeypatch, [11])
     with pytest.raises(SystemExit):
         dev.cmd_recover(["--unit", "3"])                # no flashed.json, no image
     with pytest.raises(SystemExit):
@@ -526,7 +526,7 @@ def test_dev_diag_refuses_extra_args(dev, monkeypatch, fn, args):
 
 def _gated_setup(dev, tmp_path, monkeypatch, gates=None, sha_of=None, complete=True, write=True):
     import hashlib
-    img, fj = _flash_setup(dev, tmp_path, monkeypatch)
+    img, _fj = _flash_setup(dev, tmp_path, monkeypatch)
     ran = []
     monkeypatch.setattr(dev, "_py", lambda script, *a, env=None, shield=False: ran.append(script) or 0)
     if write:
@@ -559,7 +559,7 @@ def test_flash_refuses_failed_gate(dev, tmp_path, monkeypatch):
 
 
 def test_flash_refuses_partial_gate_record(dev, tmp_path, monkeypatch):
-    img, ran = _gated_setup(dev, tmp_path, monkeypatch, complete=False)
+    img, _ran = _gated_setup(dev, tmp_path, monkeypatch, complete=False)
     with pytest.raises(SystemExit, match="partial"):
         dev.cmd_flash(["--unit", "3", str(img)])
 
@@ -571,7 +571,7 @@ def test_flash_accepts_pass_and_skip(dev, tmp_path, monkeypatch):
 
 
 def test_force_ungated_flashes_and_logs_loudly(dev, tmp_path, monkeypatch):
-    img, ran = _gated_setup(dev, tmp_path, monkeypatch, gates={"link": {"result": "FAIL"}})
+    img, _ran = _gated_setup(dev, tmp_path, monkeypatch, gates={"link": {"result": "FAIL"}})
     lines = []
     monkeypatch.setattr(dev, "log", lambda msg, level="INFO": lines.append((level, msg)))
     assert dev.cmd_flash(["--unit", "3", "--force-ungated", str(img)]) == 0
@@ -579,14 +579,14 @@ def test_force_ungated_flashes_and_logs_loudly(dev, tmp_path, monkeypatch):
 
 
 def test_archived_image_needs_no_gate_record(dev, tmp_path, monkeypatch):
-    img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
+    img, _ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
     (tmp_path / "build-debris" / "images").mkdir(parents=True)                   # fw_archive.py DEST
     (tmp_path / "build-debris" / "images" / img.name).write_bytes(img.read_bytes())
     assert dev.cmd_flash(["--unit", "3", str(img)]) == 0
 
 
 def test_archived_name_with_other_bytes_is_not_accepted(dev, tmp_path, monkeypatch):
-    img, ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
+    img, _ran = _gated_setup(dev, tmp_path, monkeypatch, write=False)
     (tmp_path / "build-debris" / "images").mkdir(parents=True)
     (tmp_path / "build-debris" / "images" / img.name).write_bytes(b"different")
     with pytest.raises(SystemExit, match="flash refused"):

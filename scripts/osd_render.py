@@ -169,7 +169,7 @@ def main() -> int:
     try:
         s.boot()
         marks = sorted({float(w) for w in whens if w != "end"} | {t for t, _ in acts})
-        frames, vt = [], 0.0
+        frames = []
         timeline = sorted(set(marks) | (set(np.arange(0, a.until + 1e-9, a.every).tolist()) if a.video else set()))
         snaps = {}
         for t in timeline:

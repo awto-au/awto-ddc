@@ -37,7 +37,7 @@ def check_ring(bus, map_path, starts, names, rows):
     if sym is None:
         return ["ring check: no g_stAwtoWait in the map; skipped"]
     raw = bytes(bus.m.rd(sym, W.HDR + W.EV * W.N, "xram"))
-    total, quick, ring = W.decode(raw)
+    _total, _quick, ring = W.decode(raw)
     got = collections.Counter()
     for end, kind, tmo, arg, dur, pc, bank in ring:
         flat = pc if pc < COMMON_END else bank * BANK_SIZE + pc

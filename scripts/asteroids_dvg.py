@@ -114,7 +114,7 @@ class Dvg:
                 pc = w0 & 0xFFF
                 ops.append(("JMP", pc))
                 continue
-            kind, dx, dy, s, br = ops[-1]
+            _kind, dx, dy, s, br = ops[-1]
             sc = 2.0 ** s / 512.0 if s <= 9 else 0.0  # scale 9 = x1; >= 10 gives no motion
             nx, ny = x + dx * sc, y + dy * sc
             if br:

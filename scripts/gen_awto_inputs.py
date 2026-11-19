@@ -123,7 +123,6 @@ def text_table(r):
     for t in texts:
         offs.append(len(blob))
         blob += t + "\\0"
-    lens = [o for o in offs]
     L = [f"#define {n:<22} {len(r) + i}" for i, (n, _) in enumerate(UI_TEXT)]
     uniq, real, pos = {}, [], 0                   # identical texts share one copy
     for t in texts:

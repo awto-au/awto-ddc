@@ -310,7 +310,6 @@ def main():
         return cls_of(s, name) == "bit" or name in bitfns and cls_of(s, name) is None or name in bitmac
 
     HANDLED_NOT_BIT = re.compile(r"~(\s*\(?\s*)(b[A-Z]\w*)\b")           # keil2sdcc.py rule (wb-vfreq 2d9835b)
-    reg_cmp_hits = Counter()
 
     cast_members = set()
     for s in files:
@@ -324,20 +323,17 @@ def main():
                             "<=", ">=", "+", "-", "*", "/", "%", "{", ";", "|=", "&=", "^=", "!", "~")
             # ---- ~ on a bit / unsigned-char operand ----
             if tok == "~" and unary:
-                j = i + 1
                 core = nxt
                 if nxt == "(":                                # ~(x) , ~((BYTE)x)
                     k = i + 2
                     while k < n and t[k][0] in ("(", "BYTE", "bit", ")", "unsigned", "char"):
                         k += 1
                     core = t[k][0] if k < n else ""
-                    j = k
                 op = ""
                 if re.match(r"[A-Za-z_]\w*$", core or ""):
                     op = core
                 if op:
                     c = cls_of(s, op)
-                    snippet_ln = ln
                     text = s.snip(ln, 400)
                     hand = "yes" if HANDLED_NOT_BIT.search(text) and re.match(r"b[A-Z]", op) else "no"
                     if is_bitish(s, op):
@@ -386,7 +382,6 @@ def main():
                     or rhs.startswith("_") or rhs in ("sizeof",)
                 if not isconst and (re.match(r"[A-Za-z_]", rhs)):
                     c = cls_of(s, rhs)
-                    big = c in ("u32", "s32", "u16", "s16", "u8", "s8", None)
                     risk = "MED" if c in ("u32", "s32", "u16", "s16", None) else "LOW"
                     add("DIV_VAR", s, ln, risk, "partly (library --keil-div: Keil y == 0 results; 8-bit DIV AB inline as Keil)", "library (crt)", None)
             # ---- pragmas handled elsewhere ----

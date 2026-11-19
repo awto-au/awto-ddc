@@ -104,8 +104,6 @@ def fmt_lines(info: dict) -> list:
     d = info.get("ddc", {})
     isp = info.get("isp", {})
     t = e.get("timing", {}) if isinstance(e, dict) else {}
-    caps = d.get("capabilities", {}) if isinstance(d, dict) else {}
-    feats = caps.get("features", {}) if isinstance(caps, dict) else {}
 
     def vcp(key):
         v = d.get(key, {}) if isinstance(d, dict) else {}
@@ -150,8 +148,6 @@ def fmt_lines(info: dict) -> list:
     ctv = ct.get("current") if isinstance(ct, dict) else None
     L.append(("kv", f"FIRMWARE|{('0X%04X' % fwv) if fwv is not None else '?'}"))
     L.append(("kv", f"CONTROLLER|{('0X%04X' % ctv) if ctv is not None else '?'}"))
-    bri = vcp("brightness"); con = vcp("contrast")
-    # brightness/contrast not pre-gathered -> show label with VCP hint if absent
     scaler = isp.get("scaler", {}) if isinstance(isp, dict) else {}
     if scaler:
         L.append(("kv", f"SCALER|{scaler.get('name', '?')[:24]}"))
@@ -387,13 +383,13 @@ def host_info(bus):
     if p:
         out["connector"] = p.parent.name
         if p.exists():
-            rc, txt = ID.run(["edid-decode"], ID.EDID_TIMEOUT, p.read_bytes())
+            _rc, txt = ID.run(["edid-decode"], ID.EDID_TIMEOUT, p.read_bytes())
             by_res = {}
             for w, h, hz in re.findall(r"(\d{3,4})x(\d{3,4})\s+([\d.]+) Hz", txt):
                 by_res.setdefault((int(w), int(h)), set()).add(round(float(hz)))
             out["modes"] = [(f"{w}x{h}", [str(r) for r in sorted(rs, reverse=True)])
                             for (w, h), rs in sorted(by_res.items(), key=lambda kv: -kv[0][0] * kv[0][1])]
-    rc, txt = ID.run(["ddcutil", "--bus", str(bus), "getvcp", "60"], ID.DDC_TIMEOUT)
+    _rc, txt = ID.run(["ddcutil", "--bus", str(bus), "getvcp", "60"], ID.DDC_TIMEOUT)
     m = re.search(r"sl=(0x[0-9a-f]{2})", txt)
     out["vcp60"] = m.group(1) if m else None
     return out

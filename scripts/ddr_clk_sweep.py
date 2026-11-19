@@ -233,7 +233,7 @@ def measure_level(ctx, pct: float, label: str) -> dict:
     link_ok = True
     for _ in range(LINK_READS):
         try:
-            end = ctx.sw.rd(0, D_SIZE)
+            ctx.sw.rd(0, D_SIZE)
         except RuntimeError:
             link_ok = False
             break

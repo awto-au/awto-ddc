@@ -63,7 +63,7 @@ def pulse(geo, x, x0, spread):
 
 
 def frame(geo, st, base):
-    n, x0, spread, x10, x90, ps, _ = st
+    _n, x0, spread, x10, x90, ps, _ = st
     msb, lsb = base
     im = np.zeros((geo.h, geo.w, 3), np.uint8)
     im[lsb == 1] = RED

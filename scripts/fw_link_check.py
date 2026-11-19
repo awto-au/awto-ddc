@@ -472,7 +472,7 @@ def check(im, xdata=(), regnames=None, proven=None):
                 break
             if x.text.startswith("LCALL"):               # the first call takes the pointer; a later call does not (it was a direct
                 if x.target is not None and x.target in stub_lo:     # common call, then a byte-arg stub: false finding, 2026-11-13)
-                    tgt, bank, tc = stubs[stub_lo[x.target]]
+                    _tgt, bank, tc = stubs[stub_lo[x.target]]
                     if bank != reg:
                         gx.append((c, own[0], tc, bank, at))
                 break
@@ -784,7 +784,6 @@ def asm_const_ptr(im, asm_dir):
             elif cur and re.match(r"^\s+movc\s+a,\s*@a\+dptr", l):
                 creader.add(cur)
     imm = re.compile(r"^\s+mov\s+(?:a|dptr|r[0-7]|ar[0-7]),\s*#\(?(_\w+)")
-    call = re.compile(r"^\s+[lj]call\s+(?:__bs)?(_\w+)|^\s+ljmp\s+(?:__bs)?(_\w+)")
     for f, ls in texts.items():
         cur = None
         for i, l in enumerate(ls):

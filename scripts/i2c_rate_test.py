@@ -145,7 +145,6 @@ def stable_reference(bus: i2cbus.Bus) -> tuple[bytes, set]:
 
 def batch(bus, khz: int, n: int, ref: bytes, vol: set, gap_s: float, raw) -> dict:
     ok, times, fails, classes = 0, [], [], {}
-    prev_val = None
     for k in range(n):
         t = time.monotonic()
         try:

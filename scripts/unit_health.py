@@ -247,7 +247,7 @@ def check_headroom(rep, d: Dbg, head: int | None, wait=time.sleep) -> bool:
 
 def check_state(rep, d, mode_addr, power_addr) -> bool:
     ms = decode_mode(d.read(mode_addr, 1))
-    pa, ps = decode_power(d.read(power_addr, 1))
+    _pa, ps = decode_power(d.read(power_addr, 1))
     ok1 = rep.add("mode state", ms == MODE_ACTIVE, f"{ms} {MODE_NAMES[ms] if ms < len(MODE_NAMES) else '?'} (want ACTIVE 3)")
     ok2 = rep.add("power status", ps == POWER_NORMAL, f"{ps} {POWER_NAMES[ps] if ps < len(POWER_NAMES) else '?'} (want NORMAL 2)")
     return ok1 and ok2
@@ -414,7 +414,7 @@ def run_sim(a) -> int:
     binp, mapp = a.sim
     mode = a.host_mode or "1920x1080@60"
     rep = Report()
-    w, h, hz = parse_host_mode(mode)
+    _w, h, hz = parse_host_mode(mode)
     video = "1080p60" if h == 1080 else ("2160p59.94" if hz < 59.97 else "2160p60")   # fw_sim.HdmiInput preset for the host mode
     bus = fw_sim.SimBus(binp, mapp, video=video, port=a.sim_port, ffwd=a.ffwd)
     bus.run_until_mode(MODE_ACTIVE)                 # the unit under test is already up: let the display setup finish

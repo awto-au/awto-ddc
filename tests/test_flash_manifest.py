@@ -82,7 +82,7 @@ def test_crc32_is_iso_hdlc():
 def test_build_parse_roundtrip_and_layout():
     img = img_runs()
     sec = FM.build(img)
-    m, why = FM.parse(sec)
+    m, _why = FM.parse(sec)
     assert m is not None and m.count == NIMG and m.matches(img) == list(range(NIMG))
     assert sec[0] != LEGACY_MAGIC and sec[LEGACY_SLOT] == 0xFF       # the old record log scans 512 B slots for 0xA7
     assert sec[FM.SKIP_AT:FM.SKIP_AT + 4] == b"\xff" * 4

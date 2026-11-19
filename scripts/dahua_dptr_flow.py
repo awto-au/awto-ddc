@@ -120,7 +120,7 @@ class Flow:
 
     def walk(self, bank, entry, init, depth=0, record=False):
         """dataflow from entry; returns ({insn_addr: state_before}, [ret states])"""
-        key, buf = self._img(bank, entry)
+        _key, buf = self._img(bank, entry)
         states = {entry: init}
         work = [entry]
         rets = []

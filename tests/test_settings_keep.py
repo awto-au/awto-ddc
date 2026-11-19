@@ -17,7 +17,7 @@ def test_wiped_rows_are_restored():
 
 
 def test_unchanged_flash_does_nothing():
-    todo, notes, kept = K.plan({"disp_rotate": 1, "contrast": 40}, {"disp_rotate": 1, "contrast": 40, "osd_font": 0, "console_mode": 1}, ROWS)
+    todo, _notes, kept = K.plan({"disp_rotate": 1, "contrast": 40}, {"disp_rotate": 1, "contrast": 40, "osd_font": 0, "console_mode": 1}, ROWS)
     assert todo == [] and kept == 2
 
 

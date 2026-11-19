@@ -46,15 +46,13 @@ def main() -> int:
             stats["breakpoint stops"] += 1
         return out
     m.cmd = cmd
-    hist = Counter()
     phase = {}
     for name, until in (("boot->ACTIVE", None), (f"+{a.secs:g}s fw time", a.secs)):
         t1, i1 = time.monotonic(), m.instr
         if until is None:
             used = 0
             while bus.mode_state() != 3 and used < 150_000_000:
-                out = m.run(200_000); used += 200_000
-                mt = re.search(r"0x([0-9a-f]{4,6}) ", out or "")
+                m.run(200_000); used += 200_000
         else:
             bus.wait(until)
         phase[name] = (time.monotonic() - t1, m.instr - i1)

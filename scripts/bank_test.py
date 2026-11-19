@@ -91,7 +91,6 @@ def main() -> int:
                        capture_output=True, text=True, timeout=30)
     (W / "sim.log").write_text(r.stdout + r.stderr)
     out = ser.read_text(errors="replace") if ser.exists() else ""
-    sw = sum(1 for k in range(nb))
     ok = "ALL-OK" in out and "SIM-DONE" in out and "FAIL" not in out
     print(f"{'PASS' if ok else 'FAIL'} banked: {nb} banks (common {cend} B), {len(re.findall('__bs_', ''.join(p.read_text() for p in bank.glob('*.asm'))))} stub refs; "
           f"serial: {out.strip()[:200]!r}")

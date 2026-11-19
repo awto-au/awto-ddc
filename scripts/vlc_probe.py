@@ -12,7 +12,7 @@ DEC = {c: i for i, c in enumerate(CODES)}
 
 def decode(buf):
     bits = "".join(f"{b:08b}" for b in buf)
-    out, cur, i = [], [], 0
+    out, cur = [], []
     code = ""
     for ch in bits:
         code += ch

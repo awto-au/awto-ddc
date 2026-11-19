@@ -66,7 +66,6 @@ def func_table(m):
     """(sorted starts, [(end, name)]) of the physical code map: key = bank << 16 | addr (bank 0 / common = addr).
     Chunks (CH_ / ST_) end at their size (map l_CH_ / l_ST_); a line past every end is `(const / gap)`."""
     txt = m.map_text
-    size = {mm.group(2): int(mm.group(1), 16) for mm in re.finditer(r"^C:\s+([0-9A-F]{8})\s+(l_(?:CH|ST)_\w+)", txt, re.MULTILINE)}
     ents = {}
     for k, v in m.sym.items():
         if v >= 0x200000 or not k.startswith("_"):

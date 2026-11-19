@@ -170,7 +170,6 @@ class Unit:
             self.u.link()
 
     def vcp_get(self, code: int) -> int | None:
-        r = {0x10: "brightness", 0x12: "contrast"}
         import settings_table as T
         row = next((x for x in T.ROWS if x["vcp"] == code), None)
         return self.box.get_row(row) if row else None
@@ -228,7 +227,7 @@ class Run:
         self.t.vcp_set(0x10, new)
         d1 = self.t.nv()
         deferred = d1["mask"] & 0x02 and d1["item_wr"] == d0["item_wr"] and d1["in_ddc"] == 0
-        busy, dt_busy = self.wait_write(d0, 2.5, poll=lambda: self.t.vcp_get(0x10))
+        _busy, dt_busy = self.wait_write(d0, 2.5, poll=lambda: self.t.vcp_get(0x10))
         d, dt = self.wait_write(d0, GATE_S)
         ok = bool(deferred) and dt_busy is None and dt is not None and d["why"] == 1 and d["in_ddc"] == 0 and d["item_wr"] > d0["item_wr"]
         self.row("vcp", "PASS" if ok else "FAIL",
@@ -253,7 +252,7 @@ class Run:
         for c, s in steps:
             self.t.cmd(c)
             self.t.wait(s)
-        d, dt = self.wait_write(d0, FORCE_S if self.t.name == "unit" else GATE_S)
+        d, _dt = self.wait_write(d0, FORCE_S if self.t.name == "unit" else GATE_S)
         ok = d["item_wr"] == d0["item_wr"] and d["flush"] == d0["flush"] and d["ops"] == d0["ops"]
         self.row("switch", "PASS" if ok else "FAIL", f"KVM D3 / D1 / D2 + auto search: items written "
                  f"{d0['item_wr']} -> {d['item_wr']}, flushes {d0['flush']} -> {d['flush']}, flash ops {d0['ops']} -> {d['ops']}; {show(d)}")

@@ -44,7 +44,7 @@ def log(s):
 
 
 def cpp(probe: Path, extra):
-    files, defines, incs, model = FC.parse_uv2(UV2, TARGET)
+    _files, defines, incs, model = FC.parse_uv2(UV2, TARGET)
     sysdir = FC.SRC / "Kernel/System/Code"
     cmd = FC.sdcc_cmd(sysdir / "SysMain.c", UV2.parent, defines, incs, model) + [f"-I{sysdir}"] + extra + ["-E", str(probe)]
     r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=PP_TIMEOUT)

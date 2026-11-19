@@ -367,7 +367,7 @@ def main() -> int:
         return ID_RE.findall(e)
 
     for f in sorted(scans):
-        dirs, groups = scans[f]
+        dirs, _groups = scans[f]
         for ln, kind, text in dirs:
             if kind in ("ifdef", "ifndef") or (kind in ("if", "elif") and "defined" in text):
                 names = [text.split()[0]] if kind in ("ifdef", "ifndef") and text.split() else \

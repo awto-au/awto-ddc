@@ -240,11 +240,11 @@ def test_scale_up_factor_and_enable():
     assert px(i, 100, 50) == P[2]
     # bounding box of the OSD: text + window start at (12, 12); factor 42 -> 64 / 42 = 1.52
     a = grid_img(i)
-    ys, xs = np.nonzero((a != 0).any(axis=2))
+    _ys, xs = np.nonzero((a != 0).any(axis=2))
     w_on = xs.max() - xs.min() + 1
     i.reg(0xC0, 0x00)                                                      # bit 7 = 0: engine off (SDK ScalerOsdScaleUpOnOff: bit 7 = on)
     b = grid_img(i)
-    ys, xs = np.nonzero((b != 0).any(axis=2))
+    _ys, xs = np.nonzero((b != 0).any(axis=2))
     w_off = xs.max() - xs.min() + 1
     assert abs(w_on / w_off - 64 / 42) < 0.02
     assert M.frame_geometry(i.state())["su_on"] == 0

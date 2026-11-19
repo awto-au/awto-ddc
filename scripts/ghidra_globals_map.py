@@ -208,7 +208,7 @@ def const_matches(regs, bank, S, idf, inv, cand, T=0.30, MG=0.10):
 def main():
     a = sys.argv[1:]
     min_score = float(a[a.index("--min-score") + 1]) if "--min-score" in a else 1.0
-    glob, funcs, mods = sdk()
+    glob, funcs, _mods = sdk()
     log(f"SDK globals {len(glob)} ({Counter(v[0] for v in glob.values())}), functions {len(funcs)}, with global refs {sum(1 for v in funcs.values() if v)}")
     regs = reg_set()
     S = sdk_feats(regs)

@@ -41,7 +41,7 @@ def say(s: str) -> None:
 def analyse(events, t0: float, t1: float):
     """-> dict of note spacing / gate statistics from tap events in [t0, t1)."""
     starts, gates, redundant = [], [], 0
-    sc, last_sc, mute, mute_at, pending = 0, None, 1, None, None
+    sc, last_sc, mute, pending = 0, None, 1, None
     for t, kind, a, v in sorted(events, key=lambda e: e[0]):
         if not t0 <= t < t1:
             continue

@@ -170,7 +170,7 @@ def render_screen(v, lines):
     canvas = np.zeros((len(lines) * v.uh, max(wmax, 1)), np.uint8)
     for i, t in enumerate(lines):
         if t:
-            arr, n = v.line_units(t)
+            arr, _n = v.line_units(t)
             canvas[i * v.uh:(i + 1) * v.uh, :arr.shape[1]] = arr
     lv = canvas.astype(np.float32) / ((1 << v.bpp) - 1)
     rgb = np.zeros(canvas.shape + (3,), np.uint8)

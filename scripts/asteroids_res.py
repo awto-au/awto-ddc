@@ -95,7 +95,7 @@ def render(names, seconds: float) -> int:
     from PIL import Image
     OUT.mkdir(parents=True, exist_ok=True)
     for n in names:
-        cols, rws, res = VARIANTS[n]
+        cols, rws, _res = VARIANTS[n]
         eng = D.DdcEngine()
         sess = R.Session(binp(n), binp(n).with_suffix(".map"), "1080p60", devs=[eng])
         sess.boot()

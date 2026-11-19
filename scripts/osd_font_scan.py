@@ -96,7 +96,7 @@ def main() -> int:
         hits = []
         for i in range(len(words) - 8):
             if words[i] == key[0]:
-                j, k = i, 0
+                j = i
                 ok = 0
                 for w in src[:40]:
                     if j < len(words) and words[j] == w:

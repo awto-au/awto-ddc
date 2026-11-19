@@ -135,7 +135,7 @@ def main():
                     callees_of.setdefault((b, me), set()).add(tn)
                     callers_of.setdefault(tn, set()).add(me)
         info[b] = (names, blk, vendor_regs(b))
-    rows, vrows = [], []
+    vrows = []
     for b in range(7):
         names, blk, vr = info[b]
         for a, r in sorted(allm[b].items()):

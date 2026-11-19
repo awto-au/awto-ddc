@@ -118,7 +118,7 @@ def parse_lib(path):
                 if not pend:
                     m.unresolved_fixups += 1
                     continue
-                sid, coff, clen = pend[-1]  # off is relative to the preceding CONTENT record
+                sid, coff, _clen = pend[-1]  # off is relative to the preceding CONTENT record
                 s = m.segs[sid]
                 s.fixups.append((coff + off, ty, kind, ref, add))
                 for k in range(PATCH_LEN.get(ty, 1)):

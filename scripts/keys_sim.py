@@ -140,9 +140,9 @@ class Keys:
     def press(self, what, a0, a1, want):
         """Hold until the debounced mask == want, then release until mask == 0."""
         self.put(a0, a1, 1)
-        st, el = self.until("KEY", lambda s: s["mask"] == want, KEY_MS)
+        _st, el = self.until("KEY", lambda s: s["mask"] == want, KEY_MS)
         self.put(*IDLE)
-        st2, el2 = self.until("KEY", lambda s: s["mask"] == 0, KEY_MS)
+        _st2, el2 = self.until("KEY", lambda s: s["mask"] == 0, KEY_MS)
         return el is not None and el2 is not None
 
 

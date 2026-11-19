@@ -115,7 +115,6 @@ def resolve(v: str, defs: dict, depth: int = 0):
         return CONST[v]
     if v in defs and depth < 6:
         return resolve(defs[v], defs, depth + 1)
-    e = v.strip("()")
     if re.fullmatch(r"[0-9a-fA-Fx<>\s()+\-*/|]+", v) and re.search(r"\d", v):
         try:
             return int(eval(v, {"__builtins__": {}}))

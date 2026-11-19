@@ -723,7 +723,7 @@ def main() -> int:
                     extra[m.name].add(f"__bs{x}")
     log(f"stubs: {len(stubs)}")
 
-    aname, bases, stub_slot = {}, {}, {}
+    aname, bases = {}, {}
     if sticky:                                               # pass B: every slot (chunks, consts, stubs), no re-homing
         its = slot_items(True)
         for it in its:

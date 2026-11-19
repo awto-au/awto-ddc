@@ -51,7 +51,7 @@ def main() -> int:
         if r:
             line = p.stdout.readline()
             if line:
-                log.write(line); log.flush(); t_last = time.monotonic(); last = line
+                log.write(line); log.flush(); t_last = time.monotonic()
         if time.monotonic() - t_last > STALL:       # fw_build steps are silent while a child runs (asm up to 70 s)
             p.kill(); log.write(f"STALL: no output {time.monotonic() - t_last:.0f}s, loadavg {os.getloadavg()}\n")
             return 2

@@ -102,7 +102,7 @@ def pad(s):
 
 def generate(root, db, files):
     regs, fields = load(db)
-    by_name, by_key = name_maps(regs)
+    by_name, _by_key = name_maps(regs)
     uses = scan_uses(files)
     lines, err = {}, []
 
@@ -146,7 +146,7 @@ def generate(root, db, files):
 
 def migrate(root, db, files):
     regs, _ = load(db)
-    by_name, by_key = name_maps(regs)
+    _by_name, by_key = name_maps(regs)
     by_addr = {}
     for (a, port), full in by_key.items():
         if regs[(a, port)]["port"] == "":

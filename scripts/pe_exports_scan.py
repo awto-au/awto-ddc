@@ -68,7 +68,7 @@ def scan(path):
         for i in range(size // 28):
             typ, = struct.unpack_from("<I", d, o + 28 * i + 12)
             fo, = struct.unpack_from("<I", d, o + 28 * i + 24)
-            sz, = struct.unpack_from("<I", d, o + 28 * i + 16)
+            _sz, = struct.unpack_from("<I", d, o + 28 * i + 16)
             if typ == 2 and d[fo:fo + 4] == b"RSDS":
                 yield "pdb", cstr(d, fo + 24)
 

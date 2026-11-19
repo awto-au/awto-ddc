@@ -151,7 +151,7 @@ def events(rows, rules: Rules, w1c: set, full: bool):
 
 
 def is_barrier(ev, rules: Rules) -> bool:
-    _, kind, (k, a, idx), v, *_ = ev
+    _, kind, (_k, a, idx), v, *_ = ev
     return kind == "W" and any(a == ba and (not bi or bi == idx) and (bv is None or bv == v) for (ba, bi), bv in rules.barrier)
 
 

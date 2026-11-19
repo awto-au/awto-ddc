@@ -59,7 +59,7 @@ def uptime_ms(unit: str) -> int | None:
 
 
 def word(unit: str, mp: str, addr: str) -> int | None:
-    rc, out = dev("dbg-read", "--unit", unit, "--map", mp, f"{addr}:2")
+    _rc, out = dev("dbg-read", "--unit", unit, "--map", mp, f"{addr}:2")
     m = re.search(rf"{addr} @0x[0-9a-f]+: ([0-9a-f]{{2}}) ([0-9a-f]{{2}})", out)
     return int(m.group(1) + m.group(2), 16) if m else None
 
@@ -69,7 +69,7 @@ GATE_S = 6.5             # nv_test.py: gate = debounce 2 s + stable 3 s, x1.25
 
 
 def nv_counters(unit: str, mp: str) -> dict | None:
-    rc, out = dev("dbg-read", "--unit", unit, "--map", mp, f"{NV}:20")
+    _rc, out = dev("dbg-read", "--unit", unit, "--map", mp, f"{NV}:20")
     m = re.search(rf"{NV} @0x[0-9a-f]+: ((?:[0-9a-f]{{2}} ?){{20}})", out, re.IGNORECASE)
     if not m:
         return None

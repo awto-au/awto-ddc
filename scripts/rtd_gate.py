@@ -357,7 +357,6 @@ def gate(path, kind=None, warn_only=False, tool_version=None, reg=None):
     res.version = sig["version"]
     fatal, warn = res.fatal, res.warnings
     c = spec["container"]
-    label = "%s %s" % (kind, os.path.basename(os.path.dirname(os.path.abspath(path))))
     if c == "rtd-magic" and sig["magic"] != "0x%08X" % MAGIC:
         fatal.append("%s: bad magic %s (expected 0x%08X); refusing to parse - not an RTD "
                      "container or the format changed" % (kind, sig["magic"], MAGIC))

@@ -48,7 +48,7 @@ def main():
         while used < BUDGET_INSTR and bus.mode_state() != 3:
             m.run(STEP); used += STEP
         bus.wait(0.3)
-        h, lines = S.decode(S.read_ring(m.rd, S.sym(a.map, "g_stAwtoSync")), S.load_rows(S.tsv_for(a.map)))
+        _h, lines = S.decode(S.read_ring(m.rd, S.sym(a.map, "g_stAwtoSync")), S.load_rows(S.tsv_for(a.map)))
         for ln in lines:
             say(f"  {ln}")
         t2 = next((int(ln[1:].split("ms")[0]) for ln in lines if "Timer2 1 ms tick" in ln), 0)

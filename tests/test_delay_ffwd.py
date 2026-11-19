@@ -85,7 +85,6 @@ def test_every_count_of_both_routines_state_identical():
     cnt = c.code[xus + 7]                # djnz Counter,rel at xus + 6
     snap = bus.snapshot()
     m.install_delay_ffwd()
-    skipped = 0
     for n in range(256):
         for name, entry, setup in (("Loops", loops, lambda cc, n=n: cc.iram.__setitem__(callv, n)),
                                    ("Xus", xus, lambda cc, n=n: cc.iram.__setitem__(cnt, n))):

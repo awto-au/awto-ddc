@@ -78,7 +78,7 @@ def rows_of(build):
 
 
 def test_functions_stubs_and_graph(build):
-    fns, ctx, live, ev, rows = rows_of(build)
+    fns, ctx, live, _ev, _rows = rows_of(build)
     assert set(fns) == {"_Fn", "_Isr", "_Dead"} and fns["_Fn"].addr == 0x100
     assert "_Isr" in live and "_Fn" in live and "_Dead" not in live      # reti function = ISR root; Fn reached from it
     assert ctx["_Fn"] == ["isr"]
@@ -113,7 +113,7 @@ def test_macro_evaluator():
 
 def test_compiled_out_rows(build):
     b, _ = build
-    fns, ctx, live, ev, rows = rows_of(build)
+    fns, ctx, _live, ev, _rows = rows_of(build)
     out = D.compiled_out(fns, b, ev, ctx)
     kinds = {(r["kind"], r["line"], r["value"]) for r in out}
     assert ("delay_ms", 25, 5) in kinds and all(r["linked"].startswith("no") for r in out)

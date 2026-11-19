@@ -321,7 +321,7 @@ def readme(head):
             "| function | index byte (R5) / port | vendor 2:FCE7 same? |", "|---|---|---|"]
     fns = lib_functions()
     for i in range(14):
-        m, seg, off, size = fns[f"ScalerTcon{i}Enable"]
+        _m, seg, off, size = fns[f"ScalerTcon{i}Enable"]
         b = bytes(seg.data[off:off + size])
         out.append(f"| ScalerTcon{i}Enable | {b[17]:02X} (port {NAMES.get(b[21] << 8 | b[19], '?')}) | no (vendor index 25h, port DISPLAY_FORMAT_ADDR_PORT) |")
     out += ["", unsourced_md()[0]]

@@ -63,7 +63,6 @@ def render(d: dict, tag: str) -> list[str]:
     out.append(f"{'#':>2} {'t_ms':>5} {'mode':<15} 0_02 0_0C  5_B0 45_B0 5_2B 45_2B  3D 3E 40 41 45  C4C5  0_28  flags")
     for i, s in enumerate(d["samples"]):
         mode = MODE[s["mode"]] if s["mode"] < len(MODE) else str(s["mode"])
-        off = ((s["P1_C4"] & 0x1F) << 8) | s["P1_C5"]
         out.append(f"{i:>2} {(s['ms'] - t0) & 0xFFFF:>5} {mode:<15} {s['P0_02']:02x}   {s['P0_0C']:02x}    {s['P5_B0']:02x}   {s['P45_B0']:02x}    "
                    f"{s['P5_2B']:02x}   {s['P45_2B']:02x}    {s['P0_3D']:02x} {s['P0_3E']:02x} {s['P0_40']:02x} {s['P0_41']:02x} {s['P0_45']:02x}  "
                    f"{s['P1_C4']:02x}{s['P1_C5']:02x}  {s['P0_28']:02x}    {p0_02_flags(s['P0_02'])}")

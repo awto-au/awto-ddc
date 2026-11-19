@@ -28,17 +28,17 @@ def _run(tmp_path, code, monkeypatch, stall=2):
 
 
 def test_hang_without_load_is_killed_and_rerun_once(tmp_path, monkeypatch):
-    (rc, dt, last), lines = _run(tmp_path, "import time; print('x', flush=True); time.sleep(60)", monkeypatch)
+    (rc, dt, _last), lines = _run(tmp_path, "import time; print('x', flush=True); time.sleep(60)", monkeypatch)
     assert rc != 0 and dt < 30
     kills = [l for l in lines if "KILL (stall)" in l]
     assert len(kills) == 2 and any("failing" in l for l in lines) and all("loadavg" in l for l in kills)
 
 
 def test_own_failure_not_rerun(tmp_path, monkeypatch):
-    (rc, dt, last), lines = _run(tmp_path, "import sys; sys.exit(3)", monkeypatch)
+    (rc, _dt, _last), lines = _run(tmp_path, "import sys; sys.exit(3)", monkeypatch)
     assert rc == 3 and not lines
 
 
 def test_pass_first_time(tmp_path, monkeypatch):
-    (rc, dt, last), lines = _run(tmp_path, "print('ok')", monkeypatch)
+    (rc, _dt, last), _lines = _run(tmp_path, "print('ok')", monkeypatch)
     assert rc == 0 and last == "ok"

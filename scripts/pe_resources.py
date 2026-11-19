@@ -30,7 +30,7 @@ def walk_resources(d):
     opt = pe + 24
     magic = u16(d, opt)
     ddoff = opt + (96 if magic == 0x10B else 112)
-    rva, size = struct.unpack_from("<II", d, ddoff + 16)
+    rva, _size = struct.unpack_from("<II", d, ddoff + 16)
     if not rva:
         return
     secs = []
@@ -153,7 +153,7 @@ def parse_menu(d):
         def items(o, path):
             while True:
                 o = (o + 3) & ~3
-                typ, st, cid = struct.unpack_from("<III", d, o)
+                _typ, _st, cid = struct.unpack_from("<III", d, o)
                 fl = u16(d, o + 12)
                 o += 14
                 txt, o = wstr(d, o)

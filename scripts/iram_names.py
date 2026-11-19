@@ -235,7 +235,6 @@ def main() -> int:
         if named and cn != want:
             bad.append((area, mod, fn, cn, want))
     if a.mode == "check":
-        placed = {r[3] for r in rows}
         for p in src_files():
             if p.suffix == ".py":
                 continue

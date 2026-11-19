@@ -91,7 +91,7 @@ def parse_rst(build: Path, syms) -> dict[str, Fn]:
     fns: dict[str, Fn] = {}
     parse_rst.stubs = {}                                  # bank stub address -> function name (for tail calls seen in the sim)
     for f in sorted(glob.glob(str(build / "tmp/sdcc-port/asm_bank/*.rst"))):
-        cur, st, labels = None, None, {}
+        cur, st = None, None
         for l in open(f, errors="replace"):
             m = LAB.match(l)
             if m:
@@ -705,7 +705,7 @@ def sim_measure(binp: Path, mapp: Path, rows, out: Path, stub_names: dict, fn_na
     def on_exit(key):
         def fn(mm, regs):
             if key in pend:
-                t0, kind, arg, ph = pend.pop(key)
+                t0, kind, _arg, ph = pend.pop(key)
                 s = sites[key]
                 s[ph + "ms"] += t2() - t0
                 if not ph:
@@ -960,7 +960,7 @@ def main():
     a = ap.parse_args()
     (ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
     LOGF = (ROOT / "tmp/logs/delay_inventory.log").open("a")
-    rows, fns, g = build_rows(a)
+    rows, fns, _g = build_rows(a)
     sim = None
     sj = Path(a.sim_json)
     if a.sim:

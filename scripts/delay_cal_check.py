@@ -160,7 +160,7 @@ def scan(im: "L.Image", v: dict, S: dict):
 def boot(img: bytes, mapp: Path, be: bool, tag: str, cal: bool = True):
     """ucsim booted to diag stage 8 and, with cal, past the panel T3 wait (usT3Wait64 set). Returns (session, diag dict, iram bases)."""
     import rtd_diag
-    sym, where = F.parse_map(mapp.read_text(errors="replace"), img)
+    _sym, _where = F.parse_map(mapp.read_text(errors="replace"), img)
     flash = F.FlashPort(img)
     s = F.open_native(img, ROOT / "tmp/fwsim" / tag, F._Null(), flash, [])
     d = None
@@ -260,7 +260,7 @@ def check_shapes(im, img, mapp, be, vend: bytes, rep) -> bool:
             nest = tag.startswith("xus") and "base" not in tag
             setup = {v["base5" if five else "basex"]: N}
             steps = imm * (N + 2) + 2 if nest else (N + 2) * (3 if "dec" in tag else 1)
-            cyc, nst = run_site(s, img, bank, addr, addr + endoff, setup, steps)
+            cyc, _nst = run_site(s, img, bank, addr, addr + endoff, setup, steps)
             ref = pattern_cycles("nest" if nest else "single", N, N, imm)
             simple = not nest and "dec" not in tag
             stat = static_cycles(im.img[bank * F.BANK + addr: bank * F.BANK + addr + endoff]) + 3 * (N - 1) if simple else None
@@ -298,7 +298,7 @@ def sim_times(binp: Path, mapp: Path):
 
 
 def check_stages(binp: Path, mapp: Path, refb: Path, refm: Path) -> bool:
-    a, ta, da = sim_times(binp, mapp)
+    a, ta, _da = sim_times(binp, mapp)
     b, tb, _ = sim_times(refb, refm)
     ok = True
     log(f"{'sim ms':>8s} {binp.name[:34]:>36s} {refb.name[:34]:>36s}  diff (limit {TOL_STAGE} ms)")

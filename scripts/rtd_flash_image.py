@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import random
 import signal
 import sys
 import time
@@ -700,14 +699,12 @@ def flash(isp, img: bytes, o: Opts, nudge=lambda: None) -> int:
     t_all = time.monotonic()
     hashes = S.sector_hashes(img)
     nimg = len(hashes)
-    rng = random.Random(o.seed)
     RUN.__init__()
     prev = S.FlashState.load(o.manifest, o.serial, log)
     if prev is not None and prev.source in MIXED_SOURCES:
         RUN.mixed_at_start = True
         log(f"manifest source {prev.source!r} ({prev.image}): the flash holds a MIXED image from an earlier session")
     state = None if o.full else prev
-    have_manifest = state is not None
     if state is None:
         state = S.FlashState.empty(o.manifest, o.serial)
         if not o.full:

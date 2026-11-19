@@ -1524,7 +1524,7 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
     Flow: vector stop -> note (_d_isr_bs_cur, SP, return PC) -> tbreak at the return PC -> compare."""
     img = binp.read_bytes()
     mp = mapp.read_text(errors="replace")
-    sym, where = parse_map(mp, img)
+    sym, _where = parse_map(mp, img)
     m = re.search(r"^\s+([0-9A-F]{8})\s+_d_isr_bs_cur\s", mp, re.MULTILINE)
     if not m:
         print("FAIL isr-check: _d_isr_bs_cur not in map"); return 1
