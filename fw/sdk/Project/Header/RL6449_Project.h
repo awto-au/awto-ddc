@@ -310,7 +310,7 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
                                                                         // stopped > 439 ms); kept over the reset: hardware-WDT evidence
 // Main-loop pacing (docs/main-loop-pacing.md): 0 = free-running loop. N > 0 (default 4): after a pass, idle (PCON.IDL) until the first of:
 // N ms since the previous pass, a wake bit (EXINT0 / EXINT1 / Timer0 ISR, software), the earliest timer-event deadline, the next key
-// sample, the next settings-loop service. AwtoLoopBusy() != 0 (saver, OSD / console up, key down, DDC/CI deferred, mode / power steps): no sleep.
+// sample, the next settings-loop service. AwtoLoopBusy() != 0 (saver, OSD / console drawing, key down, DDC/CI deferred, mode / power steps): no sleep.
 // Idle wakes on every IRQ (Timer2 1 ms at most): a wake bit set between the check and the IDL write waits for that tick (<= 1 ms).
 #ifndef AWTO_LOOP_PACING
 #define AWTO_LOOP_PACING                                        4
@@ -325,6 +325,7 @@ typedef struct { unsigned int usPasses; unsigned int usSleepPm; unsigned int usW
 extern __xdata StAwtoHead g_stAwtoHead;
 extern void AwtoLoopPace(void);
 extern unsigned char AwtoLoopBusy(void);
+extern unsigned char AwtoConBusy(void);
 extern unsigned int SysTimerNextEventMs(void);
 extern unsigned int AwtoKeyDueMs(void);
 #define AWTO_LOOP_PACE()                                        AwtoLoopPace()

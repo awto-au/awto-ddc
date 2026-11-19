@@ -480,7 +480,9 @@ unsigned char AwtoLoopBusy(void)
         return 1;                               // power sequencing (AC on)
     }
     return (g_ucAwtoSaverRun != 0)              // saver draw passes (Scope 2 / Asteroids / Pac-Man / splash / flash screen)
-        || AWTO_KEY_TEST_ON()                   // console / key test / GPIO page: redraws
+        || (g_stAwtoKey.ucOpen != 0)            // key test screen
+        || (g_stAwtoGpio.ucOpen == AWTO_CON_GPIO)   // GPIO page (input table)
+        || AwtoConBusy()                        // console log with lines to draw; an idle open console sleeps
         || (g_stAwtoSync.ucOpenReq != 0)
         || (g_ucAwtoMenuOn != 0)                // our menu: serviced every pass
         || (GET_OSD_STATE() != _MENU_NONE)      // OSD up (selector, backlight bar, cards): draws, its counters

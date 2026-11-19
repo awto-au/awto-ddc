@@ -2934,7 +2934,16 @@ void AwtoConLogSync(void)                       // #139: new sync ring lines, on
         s_bAwtoOver = 0;
     }
 }
+
+unsigned char AwtoConBusy(void)                 // loop pacing: the open log has lines it can draw now (one per pass); an idle open console sleeps
+{
+    return (s_ucConOpen == AWTO_CON_MAIN) && (s_ucConSyncSeq != g_stAwtoSync.ucSeq) && (AWTO_CON_LIVE() != _FALSE) && (AwtoConLost() == 0) && (AwtoConLogRoom() != 0);
+}
 #else
+unsigned char AwtoConBusy(void)
+{
+    return 0;
+}
 void AwtoOsdGpioLines(void)
 {
 }

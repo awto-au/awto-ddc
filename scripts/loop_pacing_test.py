@@ -7,6 +7,8 @@ usage: loop_pacing_test.py BIN [MAP] --period MS      (BIN built with -D AWTO_LO
             IDL instruction). Catches: a lost wake sleeping longer than one Timer2 tick (1 ms).
 - keys:     ADC press -> debounced mask, 3 phases from idle, ms. Catches: key sampling slower than 2 x AWTO_KEY_SAMPLE_MS + a pass at any period.
 - stuck:    a stuck busy producer (AwtoLoopBusy stubbed to 1): pacing off, and the health `headroom` row says FAIL. Catches: a silent stuck hook.
+- console:  the diagnostic console opened by test cmd (as `dev.py note --open-console`) and left open, log drained: pacing engages (busy hook 0 %).
+            Catches: an open idle console holding the loop off (seen on unit 2: 842 passes/s, busy 94 %).
 Log: tmp/logs/loop_pacing_test.log
 """
 import argparse
@@ -20,6 +22,7 @@ ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[
 sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
 import fw_sim as S
+import host_note as N
 import unit_health as H
 
 LOG = ROOT / "tmp/logs/loop_pacing_test.log"
@@ -108,6 +111,16 @@ def t_keys(bus, kaddr, period):
     check("keys", max(lat) <= lim, f"press -> debounced mask {', '.join(f'{x:.1f}' for x in lat)} ms (limit {lim} = two samples + a pass)")
 
 
+def t_console(bus, addr, period):
+    isr = bus.m.addr("isr_g_stAwtoDiag")
+    bus.m.wr(isr + N.TESTCMD_OFF, bytes([N.TC_CONSOLE]))
+    bus.wait(3.1)                                # draw + log backlog (one line per pass) + two windows
+    passes, sleep_pm, _worst, hold_pm, _idles, _wk = head(bus, addr)
+    busy = 100 - sleep_pm / 10
+    check("console", hold_pm == 0 and busy < H.HEAD_BUSY_MAX_PCT and passes >= 1000 / period * 0.8,
+          f"console open and idle: {passes} passes/s, busy {busy:.1f} % (< {H.HEAD_BUSY_MAX_PCT}), busy hook {hold_pm / 10:.1f} % (must be 0)")
+
+
 def t_stuck(bus, addr):
     bus.m.stub("AwtoLoopBusy", lambda m, r: {"val": 1})      # a producer that never lets go
     bus.wait(2.1)                                # two windows: the first straddles the start
@@ -122,7 +135,7 @@ def main() -> int:
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path, nargs="?")
     ap.add_argument("--period", type=int, required=True)
-    ap.add_argument("--only", default="headroom,race,keys,stuck")
+    ap.add_argument("--only", default="headroom,race,keys,console,stuck")
     a = ap.parse_args()
     mapp = a.map or a.bin.with_suffix(".map")
     bus = S.SimBus(a.bin, mapp, "lpt-" + a.bin.stem, None, video="1080p60")
@@ -140,6 +153,8 @@ def main() -> int:
         t_race(bus)
     if "keys" in only:
         t_keys(bus, bus.m.addr("g_stAwtoKey"), a.period)
+    if "console" in only:
+        t_console(bus, head_a, a.period)
     if "stuck" in only:
         t_stuck(bus, head_a)
     say(f"{'FAIL' if fails else 'PASS'} loop_pacing_test {a.bin.name}: {fails} failed")
