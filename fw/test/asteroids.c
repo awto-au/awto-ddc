@@ -50,8 +50,11 @@ typedef BYTE AstY;
 #define AWTO_AST_SU_FACTOR                      ((BYTE)(AWTO_AST_SCALED_W / _PANEL_DH_WIDTH))   // the width fills the panel exactly
 #define AWTO_AST_POS_H                          ((BYTE)((_PANEL_DH_WIDTH - AWTO_AST_SCALED_W / AWTO_AST_SU_FACTOR) / 2 / AWTO_OSD_PX_PER_HD))
 #define AWTO_AST_POS_V                          ((BYTE)((_PANEL_DV_HEIGHT - AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR) / 2))   // equal bars top and bottom: Rotate 180 keeps the picture in place
+#ifndef AWTO_AST_ODD_BAR_OK
+#define AWTO_AST_ODD_BAR_OK                     0                                   // 1 (variant builds): an odd bar pair is accepted, Rotate 180 then moves the picture 1 px (35 x 13: bars 21 + 20 px)
+#endif
 typedef char s_tAstPanelCheck[((AWTO_AST_SU_FACTOR * (long)_PANEL_DH_WIDTH == AWTO_AST_SCALED_W) && (AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR <= _PANEL_DV_HEIGHT) &&
-                               (((_PANEL_DV_HEIGHT - AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR) % 2) == 0)) ? 1 : -1];   // full width, height inside the panel, even bars
+                               (((_PANEL_DV_HEIGHT - AWTO_AST_SCALED_H / AWTO_AST_SU_FACTOR) % 2) == 0 || AWTO_AST_ODD_BAR_OK)) ? 1 : -1];   // full width, height inside the panel, even bars
 #define AWTO_AST_ARG_ON                         0x90                                // sync E9 (no rows: the table is full): value = shape source (AWTO_AST_FROM_ROM)
 #define AWTO_AST_ARG_FRAME                      0x91
 #define AWTO_AST_ARG_OFF                        0x92

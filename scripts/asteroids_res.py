@@ -30,6 +30,7 @@ TILE_W, TILE_H, TILE_B = 12, 18, 27
 PANEL_W, PANEL_H = 3840, 2160
 VARIANTS = {                                   # name: (cols, rows, res)
     "c30x11": (30, 11, 0),                     # today, info overlay off
+    "c35x13": (35, 13, 0),                     # 420 x 234, scale 7, identity glyph map (455 of 512 ids): fits as is
     "c40x15": (40, 15, 0),                     # 480 x 270, scale 8 (as Scope 2)
     "c60x22": (60, 22, 0),                     # 720 x 396, same px objects (smaller on screen)
     "c80x30": (80, 30, 0),                     # 960 x 540
@@ -56,8 +57,8 @@ def build(names) -> int:
     for n in names:
         c, r, res = VARIANTS[n]
         cmd = [sys.executable, "dev.py", "build", "--unit", "3", "--tag", f"ar-{n}", "--force",
-               "-D", f"AWTO_AST_COLS={c}", "-D", f"AWTO_AST_ROWS={r}", "-D", f"AWTO_AST_RES={res}", "-D", "AWTO_SAVER_INFO=_OFF",
-               "--fw-args=--xdata-floor 0"]
+               "-D", f"AWTO_AST_COLS={c}", "-D", f"AWTO_AST_ROWS={r}", "-D", f"AWTO_AST_RES={res}", "-D", "AWTO_SAVER_INFO=_OFF", "-D", "AWTO_AST_ODD_BAR_OK=1",
+               "--savers", "asteroids", "--fw-args=--xdata-floor 0"]       # Asteroids-only image (docs/saver-mode.md "Selecting savers"): the XDATA the other savers freed
         say(f"build {n}: {' '.join(cmd[2:])}")
         p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=BUILD_LIMIT_S)
         say(f"build {n}: rc {p.returncode} {(p.stdout + p.stderr).strip().splitlines()[-1:]}")

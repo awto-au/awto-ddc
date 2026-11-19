@@ -2507,14 +2507,13 @@ fn	_AstDrawObj	8	0x329c	236
 fn	_AstDrawShip	8	0x3388	76
 fn	_AstFrac	8	0x33d4	80
 fn	_AstHud	8	0x3424	308
-fn	_AstInfoDraw	8	0x3558	192
-fn	_AstInfoLine	8	0x3618	752
-fn	_AstInfoTick	8	0x3908	524
+fn	_AstInfoLine	8	0x3558	448
+fn	_AstInfoTick	8	0x3718	516
 fn	_AstLine	8	0x3b14	512
 fn	_AstMark	8	0x3d14	356
 fn	_AstPass	8	0x3e78	804
 fn	_AstPrepare	8	0x41a4	432
-fn	_AstPutDec	8	0x4354	240
+fn	_AstInfoDraw	8	0x4354	192
 fn	_AstSaucerAct	8	0x4444	612
 fn	_AstSee	8	0x46a8	220
 fn	_AstShape	8	0x4784	632
@@ -2607,6 +2606,7 @@ fn	_SplashEnd	8	0xa400	32
 fn	_AwtoScopeSaver2	8	0xa420	728
 fn	_AwtoPmSoundPoll	8	0xa6f8	364
 fn	_AwtoPmSoundTone	8	0xa864	60
+fn	_AstPutDec	8	0xa8a0	176
 fn	_AwtoDdcLive	8	0xa9ec	140
 fn	_AwtoPsWakeReset	8	0xaa78	28
 fn	_AwtoSyncRow	8	0xaa94	64

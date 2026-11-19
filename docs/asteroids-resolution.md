@@ -81,3 +81,20 @@ Nothing flashed. Default build unchanged: 12 frame md5s identical to the unmodif
 - `scripts/asteroids_res.py build|cost|render|compare` (log `tmp/logs/asteroids_res.log`, TSV `tmp/logs/asteroids_res.tsv`).
 - Firmware knobs (default values unchanged): `-D AWTO_AST_COLS=`, `-D AWTO_AST_ROWS=`, `-D AWTO_AST_RES=0|1` in `fw/test/asteroids.c`; bands = ceil(rows / 6); variant builds need `-D AWTO_SAVER_INFO=_OFF --fw-args="--xdata-floor 0"`.
 - Variants beyond 512 cells write tile glyphs the hardware could not address; they measure cost only (render reads the uploads, not the OSD model).
+
+## Addendum (2026-11-19): Asteroids-only image
+- Question (Dan): with Pac-Man / Scope 2 dropped (`./dev.py build --savers asteroids`, `docs/saver-mode.md` "Selecting savers"), how much finer does Asteroids fit? Sim builds, info overlay off (variants need it), `--xdata-floor 0` to read the number, floor 700.
+- XDATA free, Asteroids-only: 917 B at 360 x 198 (all-on: 720). Spare over the floor: 217 B (203 with the overlay on).
+| variant | canvas | XDATA free | fits floor 700 | frames/s | saver ms | note |
+|---|---|---|---|---|---|---|
+| c30x11 today | 360 x 198 | 917 | yes | 25.00 | 5.8 | control |
+| c35x13 identity map | 420 x 234 | 842 | yes, 142 spare | 25.00 | 6.2 | 455 of 512 ids, real build; bars 21 + 20 px: `-D AWTO_AST_ODD_BAR_OK=1` |
+| c40x15 | 480 x 270 | 827 | geometry yes | 25.00 | 6.3 | 600 cells > 512 ids: cost only |
+| c60x22 | 720 x 396 | 707 | geometry yes, 7 spare | 25.00 | 4.8 | 1320 cells > 512 ids: cost only |
+| r2x40x15 objects 2x | 480 x 270 | 827 | geometry yes | 24.92 | 9.7 | cost only |
+| r2x60x22 objects 2x | 720 x 396 | 707 | geometry yes | 25.00 | 7.3 | cost only |
+- 35 x 13 (1.17x finer) fits with 142 B spare. In an all-on image it did not: 720 - 75 = 645 < 700.
+- Shared ids (slot ring) do not fit, [calc] from the table: 720 x 396 needs 1320 B of slots on top of 707 free; 480 x 270 needs 600 B on top of 827 (227 left < 700). A sparse cell -> slot list (about 100 live tiles x 3 B = 300 B) is more than the 217 B spare.
+- 24 x 36 mode (OT-8, layout unproven, not built): ids stay, canvas 3 rows x 108 B (+162 B) + word y (+26 B) = about +190 B [calc] <= 217 B: the only 720 x 396 route that fits the XDATA; needs the hardware test first.
+- Frames: `asteroids_res.py render` of c35x13 uploads 455 of 455 tiles; picture `tmp/asteroids_res/compare.png` (c30x11 | c35x13 | r2x60x22, panel crop).
+- Tools: `scripts/asteroids_res.py build` now builds Asteroids-only images (`--savers asteroids`).
