@@ -218,6 +218,12 @@
 #define AWTO_TP1_WAIT()
 #endif
 
+#ifdef AWTO_PULSE_WAIT_TEST
+#define AWTO_PULSE_WAIT() DELAY_5US_EXINT()
+#else
+#define AWTO_PULSE_WAIT()
+#endif
+
 //--------------------------------------------------
 // Macros of MCU Watch Dog
 //--------------------------------------------------

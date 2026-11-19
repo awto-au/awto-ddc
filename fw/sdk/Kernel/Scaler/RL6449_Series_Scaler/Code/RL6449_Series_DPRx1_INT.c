@@ -394,7 +394,7 @@ void ScalerDpRx1Tp1SetPhy_EXINT0(EnumDpNFCodeRef enumDpNFCodeRef)
 
     // [7:4] RST_N = 4'b0000 = 4'b1111 --> Digital Circuit Reset Toggle
     // [3:0] CDR_RST_N = 4'b0000 --> Disable DCDR
-    ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0x00);
+    ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0x00); AWTO_PULSE_WAIT()
     ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0xF0);
 
 
@@ -477,8 +477,8 @@ void ScalerDpRx1Tp1SetPhy_EXINT0(EnumDpNFCodeRef enumDpNFCodeRef)
     ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT5, _BIT5);
 
     // [6] en_fore_offset --> Toggle Foreground Calibration
-    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, _BIT6);
-    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, 0x00);
+    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, _BIT6); AWTO_PULSE_WAIT()
+    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, 0x00); AWTO_PULSE_WAIT()
     ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, _BIT6);
 
     // Delay Time us [85,x] Waiting for K Offset
@@ -688,7 +688,7 @@ void ScalerDpRx1Tp2SetPhy_EXINT0(void)
 
     // [7:4] RST_N = 4'b0000 = 4'b1111 -->Digital Circuit Reset Toggle
     // [3:0] CDR_RST_N = 4'b0000 --> Disable DCDR
-    ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0x00);
+    ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0x00); AWTO_PULSE_WAIT()
     ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0xF0);
 
     // [4] en_sumamp_highgain = 0 --> Disable Sumamp High Gain Mode
@@ -1004,7 +1004,7 @@ void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate)
 
     // [7:4] RST_N = 4'b0000 = 4'b1111 --> Digital Circuit Reset Toggle
     // [3:0] CDR_RST_N = 4'b0000 --> Disable DCDR
-    ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0x00);
+    ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0x00); AWTO_PULSE_WAIT()
     ScalerSetByte_EXINT(P7A_3A_TMDS_RESET, 0xF0);
 
     ucIcp = (ScalerGetByte_EXINT(P7A_31_ANA_CDR_06) & 0x0F);
@@ -1057,8 +1057,8 @@ void ScalerDpRx1RebuildPhy_WDINT(BYTE ucDpLinkRate)
     ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT5, _BIT5);
 
     // [6] en_fore_offset --> Toggle Foreground Calibration
-    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, _BIT6);
-    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, 0x00);
+    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, _BIT6); AWTO_PULSE_WAIT()
+    ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, 0x00); AWTO_PULSE_WAIT()
     ScalerSetBit_EXINT(P7A_24_KOFFSET_00, ~_BIT6, _BIT6);
 
     // Delay Time us [85,x] Waiting for K Offset
