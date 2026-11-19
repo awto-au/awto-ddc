@@ -34,6 +34,7 @@ SCREEN_CAP_S = 4.5               # pattern on screen: 5 s hard cap minus margin
 MARK_WAIT_S = 2.0                # pattern arrives within ~2 frames of the draw; the window draw takes ~0.3 s
 PERIOD_U = 24                    # xbits 3: 64 px * 3 B / 8 B
 WRITES_MAX = 3
+NOSTAGE = [False]
 MASK = [0xFFFF]             # WMASK value written (set by --mask)
 
 
@@ -271,7 +272,7 @@ def do_bar(d, w_px: int, h_px: int, dry: bool = False) -> None:
     """Big visible run: a white bar w_px x h_px centred on the 3840x2160 frame, written burst by burst on a frozen black frame.
     Address = (y * 3840 + x) * 3 / 8 units (line step 1440 units); only changed address bytes are rewritten (~3 register writes per burst)."""
     frame_mode(d.io)
-    if not wait_osd_off(d):                                           # the pop-up must be gone before the test pattern is up
+    if not NOSTAGE[0] and not wait_osd_off(d):                        # the pop-up must be gone before the test pattern is up (cards are top right since 3b26690)
         return
     ovl = Counter()
     t_on = time.monotonic()
@@ -324,11 +325,13 @@ def main() -> int:
     ap.add_argument("--waddr", type=lambda x: int(x, 0), default=0x100000)
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--nostage", action="store_true")
     ap.add_argument("--w", type=int, default=96)
     ap.add_argument("--h", type=int, default=16)
     ap.add_argument("--mask", type=lambda x: int(x, 0), default=0xFFFF)
     a = ap.parse_args()
     MASK[0] = a.mask
+    NOSTAGE[0] = a.nostage
     d = T.Dbg(a.unit, a.bus)
     try:
         if a.op == "map":
