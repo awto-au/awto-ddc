@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""awto-ddc#267: firmware-side DDR draw ops (fw/test/ddr_draw.c, freeze image only): one command from the host, the monitor draws.
+
+usage: ./dev.py ddr-draw [--unit N] [--map F] [--no-prep] [--hold S] [--count] OP:key=val,... [OP:...]
+  OPs (keys; SCREEN pixels, rgb = R/G/B 0..255): fill x y w h rgb | hline x y w rgb | vline x y h rgb | grid x y w n | circle x y w rgb
+        figure x y | bars x y w h | frame rgb | gradh | gradv | masktest x y        e.g. fill:x=100,y=100,w=2000,h=1000,rgb=255/0/0
+  Session (default): frame mode (0x0C), black host window, wait for it, freeze, the ops in order (each: fw ms, bursts, MB/s),
+  hold (--hold S, default SCREEN_CAP_S), freeze off, window off, 0x0D, 0x27. --no-prep: only the ops (set-up done by hand).
+  The ops run in the firmware main pass: params into g_stAwtoDraw (map symbol), ucGo last, poll ucGo == 0 (limit = 3 x est + margin).
+Log: ./tmp/logs/ddr_frame_test.log
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ddr_frame_test as T  # noqa: E402
+import ddr_freeze_test as F  # noqa: E402
+
+OPS = {"fill": 1, "hline": 2, "vline": 3, "grid": 4, "circle": 5, "figure": 6, "bars": 7, "frame": 8, "gradh": 9, "gradv": 10, "masktest": 11}
+# StAwtoDraw (fw/test/ddr_draw.c), big endian
+O_GO, O_SEQ, O_STATE, O_FROZEN, O_X, O_Y, O_W, O_H, O_R, O_G, O_B, O_N, O_MS, O_BURSTS, O_SLOW = 0, 1, 2, 3, 4, 6, 8, 10, 12, 13, 14, 15, 16, 18, 22
+STATES = {0: "idle", 2: "ok", 3: "REFUSED (op unknown / empty / off screen)", 4: "STALL (CMD busy > 50 ms, aborted)"}
+SCREEN_W, SCREEN_H, LINE_DOUBLE, BPP, BURST = 3840, 2160, 2, 3, 16
+MCU_MHZ = 87.7                           # 351 MHz PLL / 4 (docs/diag-block.md)
+EST_BURST_S = 1.7e-6                     # the issue's pessimistic per-burst figure (docs/data-channels.md row 3): limits only, not a result
+EST_SPAN_S = 20e-6                       # per DrwSpan call (address maths, mask), generous
+LIMIT_MULT, LIMIT_MARGIN_S = 3.0, 0.5    # stall guard: 3 x the estimate (no measurement yet) + one main pass / I2C polls
+POLL_RETRY = 40                          # a debug-link read NAKs while the main pass is busy drawing
+
+
+def est_s(op: str, p: dict) -> float:
+    w, h = p.get("w", 0), p.get("h", 0)
+    lines = (min(h, SCREEN_H) + 1) // LINE_DOUBLE + 1
+    if op == "fill":
+        return lines * (EST_SPAN_S + EST_BURST_S * w * BPP / BURST)
+    if op == "frame":
+        return (SCREEN_H // LINE_DOUBLE) * (EST_SPAN_S + EST_BURST_S * SCREEN_W * BPP / BURST)
+    if op == "gradh":
+        return 240 * (SCREEN_H // LINE_DOUBLE) * (EST_SPAN_S + 3 * EST_BURST_S)
+    if op == "gradv":
+        return (SCREEN_H // LINE_DOUBLE) * (EST_SPAN_S + EST_BURST_S * SCREEN_W * BPP / BURST)
+    return 0.3                           # lines, circle, grid, figure, bars, masktest: a few hundred bursts
+
+
+class Draw:
+    def __init__(self, d: T.Dbg, base: int):
+        self.d, self.base = d, base
+
+    def wr16(self, off: int, v: int) -> None:
+        self.d.wr(self.base + off, v >> 8)
+        self.d.wr(self.base + off + 1, v & 0xFF)
+
+    def rd(self, off: int) -> int:
+        for _ in range(POLL_RETRY):
+            try:
+                return self.d.rd(self.base + off)
+            except IOError:
+                pass
+        raise IOError(f"debug read at +{off} failed {POLL_RETRY} times")
+
+    def rd_n(self, off: int, n: int) -> int:
+        return int.from_bytes(bytes(self.rd(off + i) for i in range(n)), "big")
+
+    def run(self, op: str, p: dict) -> dict:
+        d, b = self.d, self.base
+        seq0 = self.rd(O_SEQ)
+        for off, k in ((O_X, "x"), (O_Y, "y"), (O_W, "w"), (O_H, "h")):
+            if k in p:
+                self.wr16(off, p[k])
+        r, g, bl = p.get("rgb", (0, 0, 0))
+        for off, v in ((O_R, r), (O_G, g), (O_B, bl), (O_N, p.get("n", 0))):
+            d.wr(b + off, v)
+        t0 = time.monotonic()
+        d.wr(b + O_GO, OPS[op])
+        limit = LIMIT_MULT * est_s(op, p) + LIMIT_MARGIN_S
+        while self.rd(O_GO) != 0:
+            if time.monotonic() - t0 > limit:
+                T.log(f"{op}: ucGo still set after {time.monotonic() - t0:.2f} s (limit {limit:.2f} s = {LIMIT_MULT:g} x est {est_s(op, p):.2f} s + {LIMIT_MARGIN_S} s)")
+                raise TimeoutError(op)
+        wall = time.monotonic() - t0
+        st, ms, bursts, slow = self.rd(O_STATE), self.rd_n(O_MS, 2), self.rd_n(O_BURSTS, 4), self.rd(O_SLOW)
+        mbs = bursts * BURST / ms / 1000 if ms else float("nan")
+        T.log(f"{op} {p}: state {STATES.get(st, st)}, seq {seq0} -> {self.rd(O_SEQ)}, frozen {self.rd(O_FROZEN)}, fw {ms} ms, {bursts} bursts "
+              f"= {bursts * BURST} B -> {mbs:.2f} MB/s (fw ms tick 1 ms), slow CMD polls {slow}, host wall {wall * 1000:.0f} ms")
+        return {"state": st, "ms": ms, "bursts": bursts, "mbs": mbs, "slow": slow}
+
+
+def parse_op(tok: str) -> tuple[str, dict]:
+    name, _, kv = tok.partition(":")
+    if name not in OPS:
+        raise SystemExit(f"unknown op {name!r}: {sorted(OPS)}")
+    p: dict = {}
+    for item in filter(None, kv.split(",")):
+        k, _, v = item.partition("=")
+        p[k] = tuple(int(c) for c in v.split("/")) if k == "rgb" else int(v, 0)
+    return name, p
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--unit", type=int, default=1)
+    ap.add_argument("--bus", type=int, default=None)
+    ap.add_argument("--serial", default=None)
+    ap.add_argument("--map", type=Path, required=True)
+    ap.add_argument("--no-prep", action="store_true")
+    ap.add_argument("--hold", type=float, default=F.SCREEN_CAP_S)
+    ap.add_argument("--count", action="store_true", help="DCR above-threshold count (sel 0, TH1 32) after the ops: lit pixels = hit-count check")
+    ap.add_argument("ops", nargs="+")
+    a = ap.parse_args()
+    ops = [parse_op(t) for t in a.ops]
+    if a.hold > F.HOLD_MAX_S:
+        raise SystemExit(f"--hold {a.hold}: above the backstop {F.HOLD_MAX_S:.0f} s")
+    d = T.Dbg(a.unit, a.bus)
+    proc, t_on = None, time.monotonic()
+    try:
+        dr = Draw(d, T.sym(a.map, "g_stAwtoDraw"))
+        if not a.no_prep:
+            F.frame_mode(d.io)
+            proc = F.pattern_start("solid 0 0 0")
+            t_on = time.monotonic()
+            F.wait_marker(d, 0, bytes([0] * 16))
+            F.freeze(d.io, True)
+        for op, p in ops:
+            dr.run(op, p)
+        if a.count:
+            r = T.dcr_measure(d, 32, 768, 0)
+            T.log(f"DCR above TH1 32: {r.get('th1_num') if r else 'no result'}")
+        if not a.no_prep:
+            t_h = time.monotonic()
+            while time.monotonic() - t_h < a.hold:
+                F.prd(d.io, F.OVERLAY)
+    finally:
+        if proc is not None:
+            F.finish(d, proc, t_on)
+        d.io.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
