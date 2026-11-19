@@ -1979,13 +1979,10 @@ static __xdata BYTE s_ucOswSaved;
 static __xdata WORD s_usOswT0;
 static const __code WORD tAwtoOswFifo[AWTO_OSW_FIFO_N] = {AWTO_R_DISP_M1_FIFO_STATUS, AWTO_R_DISP_M2_FIFO_STATUS, AWTO_R_CAP_M1_FIFO_STATUS, AWTO_R_CAP_M2_FIFO_STATUS, AWTO_R_STATUS0};
 
-// PHY / DDR-side registers: a read at a new address returns the previous read's data; the second read of the same address is right [hw: unit 3, debug slave and MCU]
+// PHY / DDR-side registers: ScalerGetByte primes the read-behind pages (fw/diag/rbehind.c)
 static BYTE AwtoRegRd2(WORD usAddr)
 {
-    BYTE ucV = AWTO_XFR(usAddr);
-
-    ucV = *(volatile __xdata BYTE *)((unsigned int)usAddr);
-    return ucV;
+    return ScalerGetByte(usAddr);
 }
 
 static void AwtoOswFifo(BYTE *pucOut)                   // read only: no flag is cleared (outside the register envelope)
