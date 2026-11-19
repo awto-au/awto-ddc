@@ -2,7 +2,7 @@
 """Host-side known pattern: borderless fullscreen GTK4 window on ONE connector, no layout change (awto-ddc#255).
 
 usage: /usr/bin/python3 scripts/host_pattern.py --connector HDMI-3 --fifo tmp/scratch/pat.fifo [--initial "solid 255 0 0"]
-Commands (one per line, written to the FIFO): solid R G B | box X Y W H R G B (on black) | hgrad (R ramp left->right, G ramp top->bottom,
+Commands (one per line, written to the FIFO): code (R=y&255 G=y>>8 B=(x//16)&255) | solid R G B | box X Y W H R G B (on black) | hgrad (R ramp left->right, G ramp top->bottom,
 B = 0x80) | quit. Coordinates are logical = physical pixels (scale 1.0 on this desk). Cairo antialiasing off.
 Needs the system python (gi); the repo venv has no gi. Log: ./tmp/logs/host_pattern.log
 """
@@ -45,6 +45,20 @@ def draw(area, cr, w, h):
         cr.set_source_rgb(r / 255, g / 255, b / 255)
         cr.rectangle(x, y, bw, bh)
         cr.fill()
+    elif op == "code":
+        # R = y & 255, G = y >> 8, B = (x // 16) & 255: row and column position readable from one pixel
+        surf = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
+        buf = surf.get_data()
+        stride = surf.get_stride()
+        row = bytearray(stride)
+        row[0::4] = bytes((x // 16) & 255 for x in range(stride // 4))
+        for y in range(h):
+            row[1::4] = bytes([y >> 8]) * (stride // 4)
+            row[2::4] = bytes([y & 255]) * (stride // 4)
+            buf[y * stride:(y + 1) * stride] = bytes(row)
+        surf.mark_dirty()
+        cr.set_source_surface(surf, 0, 0)
+        cr.paint()
     elif op == "hgrad":
         surf = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
         buf = surf.get_data()
