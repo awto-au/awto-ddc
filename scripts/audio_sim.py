@@ -138,7 +138,7 @@ def order_violations(events, order: dict | None = None) -> list[str]:
       4. The generator is switched or its pitch changed only with the amp disabled, or muted for at least amp_mute_s."""
     o = {**ORDER, **(order or {})}
     afcr, gain, en, mute = RESET[IDX_AFCR] & ~AFCR_AUDIO_TEST_ENABLE, 0, 0, 1
-    t_en = t_mute = None
+    t_en, t_mute = None, float("-inf")                # the reset state (amp off, muted) has settled
     out = []
     eps = 1e-9
 
