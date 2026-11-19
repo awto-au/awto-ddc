@@ -75,6 +75,10 @@ Analysis only, no hardware (2026-11-19, Dan's question). Tool: `scripts/image_se
 | 2 | ~1.1 s | ~0.25 s |
 
 ## Open
+- Fragmentation: a module growing past the gaps (74-256 B; sync +100 B) evicts a neighbour or compacts; 76 sectors for sync +100 B. Needs more free XDATA.
+- `l_XINIT` (init-data size) is an immediate in common sector 0: changes x14 only when initialised XDATA changes.
+- Main's tracked `fw/bank_layout.tsv` is stale against its own code: every fresh build promotes a different layout (not committed from this work).
+- Two module names sharing their first 29 characters collide in the map's 32-char area names: the build fails with a message (none today).
 - Source diffs of the pairs (tags only): fix with a commit id in the build log per tag if the table is to be reproduced.
 - Rec 2 needs `sdld` area per module with `-a`: `bank_layout` already passes thousands of `-a`; check the `s_`/`l_` symbol use of `XSEG1..4` in startup first (rec 1 removes that dependency).
 

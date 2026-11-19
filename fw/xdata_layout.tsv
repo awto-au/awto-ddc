@@ -23,7 +23,6 @@ awto_arith_arith	0xd700	1733	50
 ScalerSync	0xd700	1783	48
 qc_osd	0xd700	1831	39
 awto_settings_vcp	0xd700	1870	38
-text_layer	0xd700	1908	38
 ScalerDPRx1_SeptPhy	0xd700	1946	37
 awto_osd_font	0xd700	1983	36
 freq	0xd700	2019	34
@@ -134,5 +133,6 @@ console	0xe780	2382	310
 swlog	0xe780	2692	308
 scope_saver2	0xe780	3000	188
 inputs	0xe780	3204	232
+text_layer	0xe780	3436	46
 awto_settings_menu	0xe780	3622	135
 UserCommonInterface	0xe780	3757	17
