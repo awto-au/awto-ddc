@@ -1891,7 +1891,7 @@ void ScalerDpRx1SetDpcdValue(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM, BYT
     ScalerSetByte(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
-    ScalerSetByte(PBA_C4_DPCD_DATA_PORT, ucDpcdValue);
+    AWTO_DPCD_SETTLE() ScalerSetByte(PBA_C4_DPCD_DATA_PORT, ucDpcdValue);
 }
 //--------------------------------------------------
 // Description  : DP Sink Status Setting

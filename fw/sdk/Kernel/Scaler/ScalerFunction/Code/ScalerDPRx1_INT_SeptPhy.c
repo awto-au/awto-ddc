@@ -141,7 +141,7 @@ void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPor
     ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
-    ScalerSetByte_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdValue);
+    AWTO_DPCD_SETTLE_E() ScalerSetByte_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdValue);
 }
 //--------------------------------------------------
 // Description  : DP Sink Status Setting in EXINT
