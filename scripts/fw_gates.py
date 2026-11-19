@@ -197,6 +197,8 @@ def gates(b: Path, m: Path, ref, tree):
     g["monitor_full"] = [*g["monitor_real"], "--scale", "10"]   # extensive: the same with the sample period / 10 (sim_time_scale.py), heartbeat included
     g["monitor"] = [*g["monitor_full"], "--no-beat"]            # NORMAL: all but the 30-sample heartbeat, period / 10
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
+    if " _isr_g_ucTMDSRx2PhyPend" in mt:                     # #256: TMDS PHY set-up deferred out of EXINT0 (flag handshake)
+        g["tmdsphy"] = [*PY, f"{s}/tmds_phy_defer_test.py", b, m]
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
         g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]

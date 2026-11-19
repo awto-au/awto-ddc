@@ -49,6 +49,9 @@
 //****************************************************************************
 StructTMDSCtrlInfo isr_g_stTMDSRx2CtrlInfo;
 WORD isr_g_usTMDSRx2ClkCount;
+WORD isr_g_usTMDSRx2PhyCount;
+WORD isr_g_usTMDSRx2PhyClk;
+BYTE isr_g_ucTMDSRx2PhyPend;
 
 BYTE g_pucTMDSRx2LEMax[3];
 BYTE g_pucTMDSRx2LEMin[3];
@@ -76,6 +79,7 @@ void ScalerTMDSRx2InterruptInitial(void);
 void ScalerTMDSRx2SetDFEInitial_EXINT0(void);
 void ScalerTMDSRx2FLDBandFineTune_EXINT0(void);
 void ScalerTMDSRx2SetPhy_EXINT0(void);
+void ScalerTMDSRx2PhySetDeferred(void);
 void ScalerTMDSRx2IntHandler_EXINT0(void);
 bit ScalerTMDSRx2CheckCDRStable(WORD usClkCount);
 BYTE ScalerTMDSRx2CheckCDRStable_EXINT0(WORD usClkCount);
@@ -1959,6 +1963,181 @@ void ScalerTMDSRx2SetPhy_EXINT0(void)
 }
 
 //--------------------------------------------------
+// Description  : Freq. stable PHY set-up, run from the main loop with EX0 masked (was inside the EXINT0 handler)
+// Input Value  : None
+// Output Value : None
+//--------------------------------------------------
+void ScalerTMDSRx2PhySetDeferred(void)
+{
+    BYTE ucEx0 = EX0;
+    BYTE ucAp;
+    BYTE ucApc;
+#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
+    bit bMHLFail = _FALSE;
+#endif
+
+    EX0 = 0;
+
+    if(isr_g_ucTMDSRx2PhyPend == _FALSE)
+    {
+        EX0 = ucEx0;
+        return;
+    }
+
+    isr_g_ucTMDSRx2PhyPend = _FALSE;
+    ucAp = ScalerGetByte_EXINT(P71_C9_HDMI_AP);
+    ucApc = ScalerGetByte_EXINT(P71_C8_HDMI_APC);
+    ScalerSetBit_EXINT(P71_C8_HDMI_APC, ~_BIT0, 0x00);
+
+    // The other port's handler may have overwritten the shared pixel clock since
+    SET_INPUT_PIXEL_CLK(isr_g_usTMDSRx2PhyClk);
+
+    // Enable Freq unstable IRQ
+    ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
+
+    if((GET_TMDS_RX2_PHY_SET() == _FALSE) || ((bit)ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE))
+    {
+        isr_g_usTMDSRx2ClkCount = ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS);
+
+        // If Measure Divider = /2 then CLK x 2
+        ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
+        if(ScalerGetBit_EXINT(P71_CA_HDMI_DP, _BIT6) == _BIT6)
+        {
+            // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 * 2 / isr_g_usTMDSRx2ClkCount
+            SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) * 2 / 100) / isr_g_usTMDSRx2ClkCount);
+        }
+        else
+        {
+            // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 / isr_g_usTMDSRx2ClkCount
+            SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) / 100) / isr_g_usTMDSRx2ClkCount);
+        }
+
+#if(_D2_HDMI_2_0_SUPPORT == _ON)
+        if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
+        {
+            SET_TMDS_OFFLINE_MEASURE_CLK((GET_TMDS_OFFLINE_MEASURE_CLK() * 4));
+        }
+#endif
+
+#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
+        if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
+        {
+            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
+
+#if(_MHL_DEBUG_WITHOUT_CBUS_MODE == _ON)
+            // Set HDMI/DVI switch to Auto Mode
+            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
+#else
+            // Set HDMI/DVI switch to Manual Mode and Forced to HDMI
+            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
+#endif
+
+            if((GET_INPUT_PIXEL_CLK() >= 730) && (GET_INPUT_PIXEL_CLK() <= 770))
+            {
+                SET_TMDS_RX2_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING);
+
+                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 4);
+                ScalerTMDSRx2SetPhy_EXINT0();
+                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 4);
+
+                // Enable Packed Pixel Mode
+                ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, _BIT1);
+
+                // Check CDR Stable
+                if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL mode need modify
+                {
+                    SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
+
+                    // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
+                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
+                    ScalerTMDSRx2SetPhy_EXINT0();
+                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
+
+                    // Disable Packed Pixel Mode
+                    ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
+
+                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
+                    {
+                        bMHLFail = _TRUE;
+                    }
+                }
+            }
+            else
+            {
+                SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
+
+                // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
+                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
+                ScalerTMDSRx2SetPhy_EXINT0();
+                SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
+
+                // Disable Packed Pixel Mode
+                ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
+
+                if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
+                {
+                    bMHLFail = _TRUE;
+                }
+            }
+        }
+        else
+        {
+            SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
+
+            ScalerTMDSRx2SetPhy_EXINT0();
+
+            // Disable Packed Pixel Mode
+            ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
+
+            // Set HDMI/DVI switch to Auto Mode
+            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
+            ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
+        }
+#else
+        ScalerTMDSRx2SetPhy_EXINT0();
+#endif
+    }
+
+#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
+    if(bMHLFail == _FALSE)
+#endif
+    {
+        // Set Upper Bound (allow 1/64 freq shift)
+        ScalerSetByte_EXINT(P71_E8_HDMI_FREQDET_UPPER_M, (HIBYTE(isr_g_usTMDSRx2PhyCount + (isr_g_usTMDSRx2PhyCount >> 6)) & 0x7F));
+        ScalerSetByte_EXINT(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(isr_g_usTMDSRx2PhyCount + (isr_g_usTMDSRx2PhyCount >> 6)));
+
+        // Set Lower bound
+        ScalerSetByte_EXINT(P71_EA_HDMI_FREQDET_LOWER_M, (HIBYTE(isr_g_usTMDSRx2PhyCount - (isr_g_usTMDSRx2PhyCount >> 6)) & 0x7F));
+        ScalerSetByte_EXINT(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(isr_g_usTMDSRx2PhyCount - (isr_g_usTMDSRx2PhyCount >> 6)));
+
+        // Reset Color Depth to 8 Bits
+        SET_COLOR_DEPTH(_COLOR_DEPTH_8_BITS);
+
+        SET_TMDS_RX2_PHY_SET();
+    }
+
+#if(_D2_HDMI_2_0_SUPPORT == _ON)
+    // Clear CED Lock Transition Flag
+    ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+
+    // Set HDMI 2.0 Character Error Detection Function Lock Transition Error Boundary
+    ScalerSetBit_EXINT(P71_14_HDMI_CTRL_14, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (GET_INPUT_PIXEL_CLK() / 10) >> 8);
+    ScalerSetByte_EXINT(P71_15_HDMI_CTRL_15, (GET_INPUT_PIXEL_CLK() / 10));
+
+    // Enable Character Error Detection Function & Valid Flag
+    ScalerSetBit_EXINT(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2));
+
+    // Enable Character Error Detction Function Lock Transition IRQ
+    ScalerSetBit_EXINT(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
+#endif
+
+
+    ScalerSetByte_EXINT(P71_C8_HDMI_APC, ucApc);
+    ScalerSetByte_EXINT(P71_C9_HDMI_AP, ucAp);
+    EX0 = ucEx0;
+}
+
+//--------------------------------------------------
 // Description  : TMDS Interrupt Process (EXINT0 Only)
 // Input Value  : None
 // Output Value : None
@@ -1972,10 +2151,6 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
 #endif
 
     WORD usCount = 0;
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-    bit bMHLFail = _FALSE;
-#endif
 
     pucBackUp[0] = ScalerGetByte_EXINT(P71_C9_HDMI_AP);
     pucBackUp[1] = ScalerGetByte_EXINT(P71_C8_HDMI_APC);
@@ -2020,9 +2195,6 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
         }
 #endif
 
-        // Enable Freq unstable IRQ
-        ScalerSetBit_EXINT(P71_E6_HDMI_FREQDET_CTRL, ~(_BIT2 | _BIT1), (_BIT2 | _BIT1));
-
         // Pop up Counter Value
         ScalerSetBit_EXINT(P71_EC_HDMI_FREQDET_STABLE, ~_BIT7, _BIT7);
 
@@ -2063,141 +2235,10 @@ void ScalerTMDSRx2IntHandler_EXINT0(void)
             ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~_BIT6, 0x00);
         }
 
-        if((GET_TMDS_RX2_PHY_SET() == _FALSE) || ((bit)ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE))
-        {
-            isr_g_usTMDSRx2ClkCount = ScalerTMDSRx2MeasureClk_EXINT0(_CLK_SOURCE_TMDS);
-
-            // If Measure Divider = /2 then CLK x 2
-            ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_28_PORT_PAGE71_HDMI_NTX1024TR0);
-            if(ScalerGetBit_EXINT(P71_CA_HDMI_DP, _BIT6) == _BIT6)
-            {
-                // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 * 2 / isr_g_usTMDSRx2ClkCount
-                SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) * 2 / 100) / isr_g_usTMDSRx2ClkCount);
-            }
-            else
-            {
-                // TMDS_OFFLine Measure FREQ(MHz) = GDI_CLK(MHz) * 1024 / isr_g_usTMDSRx2ClkCount
-                SET_TMDS_OFFLINE_MEASURE_CLK(((DWORD)(_GDI_CLK_KHZ * 1024) / 100) / isr_g_usTMDSRx2ClkCount);
-            }
-
-#if(_D2_HDMI_2_0_SUPPORT == _ON)
-            if(GET_TMDS_RX2_HIGH_SPEED_MODE() == _TRUE)
-            {
-                SET_TMDS_OFFLINE_MEASURE_CLK((GET_TMDS_OFFLINE_MEASURE_CLK() * 4));
-            }
-#endif
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-            if(GET_D2_TMDS_MODE() == _TMDS_MHL_MODE)
-            {
-                ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
-
-#if(_MHL_DEBUG_WITHOUT_CBUS_MODE == _ON)
-                // Set HDMI/DVI switch to Auto Mode
-                ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
-#else
-                // Set HDMI/DVI switch to Manual Mode and Forced to HDMI
-                ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3 | _BIT2), (_BIT3 | _BIT2));
-#endif
-
-                if((GET_INPUT_PIXEL_CLK() >= 730) && (GET_INPUT_PIXEL_CLK() <= 770))
-                {
-                    SET_TMDS_RX2_CLK_MODE(_TMDS_MHL_PPMODE_PHY_SETTING);
-
-                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 4);
-                    ScalerTMDSRx2SetPhy_EXINT0();
-                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 4);
-
-                    // Enable Packed Pixel Mode
-                    ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, _BIT1);
-
-                    // Check CDR Stable
-                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL mode need modify
-                    {
-                        SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
-
-                        // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
-                        SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
-                        ScalerTMDSRx2SetPhy_EXINT0();
-                        SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
-
-                        // Disable Packed Pixel Mode
-                        ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
-
-                        if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
-                        {
-                            bMHLFail = _TRUE;
-                        }
-                    }
-                }
-                else
-                {
-                    SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
-
-                    // TMDS_FREQ(MHz) = GDI_CLK(MHz) * 1024 / CLK_COUNT = GDI_CLK(KHz) * 1024 / (CLK_COUNT * 1024)
-                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() * 3);
-                    ScalerTMDSRx2SetPhy_EXINT0();
-                    SET_INPUT_PIXEL_CLK(GET_INPUT_PIXEL_CLK() / 3);
-
-                    // Disable Packed Pixel Mode
-                    ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
-
-                    if((ScalerTMDSRx2CheckCDRStable_EXINT0(isr_g_usTMDSRx2ClkCount) == _FALSE) || (ScalerMHLRx2DetectClkMode_EXINT0() == _FALSE))// MHL Need modify
-                    {
-                        bMHLFail = _TRUE;
-                    }
-                }
-            }
-            else
-            {
-                SET_TMDS_RX2_CLK_MODE(_TMDS_24BIT_PHY_SETTING);
-
-                ScalerTMDSRx2SetPhy_EXINT0();
-
-                // Disable Packed Pixel Mode
-                ScalerSetBit_EXINT(P76_A0_MHL_CTRL_00, ~_BIT1, 0x00);
-
-                // Set HDMI/DVI switch to Auto Mode
-                ScalerSetByte_EXINT(P71_C9_HDMI_AP, _P71_CA_PT_00_PORT_PAGE71_HDMI_SCR);
-                ScalerSetBit_EXINT(P71_CA_HDMI_DP, ~(_BIT7 | _BIT6 | _BIT3), 0x00);
-            }
-#else
-            ScalerTMDSRx2SetPhy_EXINT0();
-#endif
-        }
-
-#if(_D2_INPUT_PORT_TYPE == _D2_MHL_PORT)
-        if(bMHLFail == _FALSE)
-#endif
-        {
-            // Set Upper Bound (allow 1/64 freq shift)
-            ScalerSetByte_EXINT(P71_E8_HDMI_FREQDET_UPPER_M, (HIBYTE(usCount + (usCount >> 6)) & 0x7F));
-            ScalerSetByte_EXINT(P71_E9_HDMI_FREQDET_UPPER_L, LOBYTE(usCount + (usCount >> 6)));
-
-            // Set Lower bound
-            ScalerSetByte_EXINT(P71_EA_HDMI_FREQDET_LOWER_M, (HIBYTE(usCount - (usCount >> 6)) & 0x7F));
-            ScalerSetByte_EXINT(P71_EB_HDMI_FREQDET_LOWER_L, LOBYTE(usCount - (usCount >> 6)));
-
-            // Reset Color Depth to 8 Bits
-            SET_COLOR_DEPTH(_COLOR_DEPTH_8_BITS);
-
-            SET_TMDS_RX2_PHY_SET();
-        }
-
-#if(_D2_HDMI_2_0_SUPPORT == _ON)
-        // Clear CED Lock Transition Flag
-        ScalerSetBit_EXINT(P71_17_HDMI_CTRL_17, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
-
-        // Set HDMI 2.0 Character Error Detection Function Lock Transition Error Boundary
-        ScalerSetBit_EXINT(P71_14_HDMI_CTRL_14, ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (GET_INPUT_PIXEL_CLK() / 10) >> 8);
-        ScalerSetByte_EXINT(P71_15_HDMI_CTRL_15, (GET_INPUT_PIXEL_CLK() / 10));
-
-        // Enable Character Error Detection Function & Valid Flag
-        ScalerSetBit_EXINT(P71_0B_HDMI_CTRL_0B, ~(_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2), (_BIT7 | _BIT6 | _BIT5 | _BIT4 | _BIT3 | _BIT2));
-
-        // Enable Character Error Detction Function Lock Transition IRQ
-        ScalerSetBit_EXINT(P71_18_HDMI_CTRL_18, ~(_BIT2 | _BIT1 | _BIT0), (_BIT2 | _BIT1 | _BIT0));
-#endif
+        // Deferred to ScalerTMDSRx2PhySetDeferred(): the 5.5 ms PHY set-up runs from the main loop
+        isr_g_usTMDSRx2PhyCount = usCount;
+        isr_g_usTMDSRx2PhyClk = GET_INPUT_PIXEL_CLK();
+        isr_g_ucTMDSRx2PhyPend = _TRUE;
     }
 
     // Freq. Unstable Into IRQ
@@ -3566,7 +3607,8 @@ void ScalerTMDSRx2FreqDetectDisable(void)
     // Clear TMDS Clk Count
     isr_g_usTMDSRx2ClkCount = 0;
 
-    // Clear PHY SET flag
+    // Clear PHY SET flag and a pending deferred set-up (IRQ already disabled above)
+    isr_g_ucTMDSRx2PhyPend = _FALSE;
     CLR_TMDS_RX2_PHY_SET();
 
     // Disable HDMI MAC Power
@@ -3615,6 +3657,9 @@ BYTE ScalerTMDSRx2TMDSScanInputPort(BYTE ucInputType)
         AWTO_SCAN_STAGE(AWTO_SCAN_TMDS_HPD);
         return _SOURCE_NONE;
     }
+
+    // Run the freq. stable PHY set-up the EXINT0 handler left pending
+    ScalerTMDSRx2PhySetDeferred();
 
     if(GET_TMDS_RX2_PHY_SET() == _TRUE)
     {
