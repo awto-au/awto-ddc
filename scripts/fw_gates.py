@@ -66,7 +66,8 @@ EXTENSIVE = {
     "keys_full": "80 checks, ~250 simulated s of OSD timeouts and holds (normal: the selector section)",
     "deadport": "4 cases, up to 40 simulated s each",
     "inputrate": "40 start phases x 3 rows",
-    "monitor_full": "30-sample heartbeat = 300 simulated s (normal: --no-beat)",
+    "monitor_full": "heartbeat (30 samples) at period / 10 (normal: --no-beat, same scale)",
+    "monitor_real": "production period, 300 simulated s",
     "wdt_full": "21 watchdog cases (normal: stall, pass, reason, t0_timing)",
     "wake_full": "all wake paths incl. UP+DOWN, DPCD, TMDS clock, burst (normal: --quick)",
     "crash_full": "workload / stall / hw / probe (normal: stall)",
@@ -79,7 +80,6 @@ EXTENSIVE = {
     # their quick variants (keys --only switch, monitor --no-beat, wake --quick, crash --tests stall, conwrap --scope inject) run
     # with --only and in the extensive tier only until a test-timing scale cuts their simulated seconds.
     "keys": "quick variant, ~20 s CPU (OSD-timeout / hold simulated seconds)",
-    "monitor": "quick variant, ~19 s CPU (10 s sample period x several samples)",
     "wake": "quick variant, ~9 s CPU",
     "crash": "stall variant, ~10 s CPU",
     "conwrap": "inject variant, ~9 s CPU (boot + NVRAM flush wait + console redraws)",
@@ -115,6 +115,9 @@ for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap"):       # the ex
     SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING[_k] if _k in SKIP_IF_MISSING else ()
     LIMIT_OF[_k + "_full"] = LIMIT_OF.get(_k, LIMIT_S)
 LIMIT_OF["crash"] = LIMIT_OF["crash_full"] = 60
+SKIP_IF_MISSING["monitor_real"] = SKIP_IF_MISSING["monitor"]
+LIMIT_OF["monitor_real"] = 90
+LIMIT_OF["monitor"] = LIMIT_OF["monitor_full"] = 30
 LIMIT_OF["delays_full"] = LIMIT_OF["delays_sim"] = LIMIT_OF["delays"]
 SKIP_IF_MISSING = {k: v for k, v in SKIP_IF_MISSING.items() if v}
 
@@ -185,8 +188,9 @@ def gates(b: Path, m: Path, ref, tree):
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
     g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed
-    g["monitor_full"] = [*PY, f"{s}/mon_sim_test.py", b, m]     # health monitor: sample period, rows, change steps, registry switch, heartbeat (300 simulated s)
-    g["monitor"] = [*g["monitor_full"], "--no-beat"]            # NORMAL: all but the 30-sample heartbeat
+    g["monitor_real"] = [*PY, f"{s}/mon_sim_test.py", b, m]     # health monitor at the production period: rows, change steps, registry switch, heartbeat (300 simulated s)
+    g["monitor_full"] = [*g["monitor_real"], "--scale", "10"]   # extensive: the same with the sample period / 10 (sim_time_scale.py), heartbeat included
+    g["monitor"] = [*g["monitor_full"], "--no-beat"]            # NORMAL: all but the 30-sample heartbeat, period / 10
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
