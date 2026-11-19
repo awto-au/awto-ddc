@@ -162,7 +162,7 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
   - fixed phase step per frame (3 table units), so the animation speed is constant whatever the draw time;
   - per column only the tiles the trace touches now or touched last frame; 8 ms budget per call.
 - Scope 2: same dirty-tile columns and 8 ms budget, but no schedule: frames follow at once (compute-bound), the drift step is per frame, the column sweep shows.
-- Pacing for Scope 2 (sim `saver_code_profile.py --case scope2`, 350.8 MHz, 2026-11-19): 20.8 ms / frame (48 / s) in the sim, 31 / s measured on unit 3 (Dan). A fixed 40 ms schedule caps it at 25 / s: costs speed, not done. Options for Dan: schedule at the natural period (no cost, no smoothing); 32 ms (31 / s) schedule. Perf-rule question, `docs/scope-realism.md` if merged.
+- Scope 2 pacing (Dan 2026-11-19: 25 fps is the cap): fixed `AWTO_S2_FRAME_MS` = 40 ms schedule as Scope 1 had (`s_usFrameAt`, resync when behind, no burst; the hidden first frame starts at once). Sim 350.8 MHz, 60 frames (`scope2_sim.py`, `saver_loop_cost.py --case scope2`), before -> after: 20.8 ms (min 20, max 22) = 48 / s -> 40.0 ms (min 39, max 41) = 25.00 / s; worst main-loop pass 12.0 -> 12.4 ms; mean pass 7.0 -> 0.97 ms (idle between frames). Unit 3 ran 31 / s before: the cap lowers it to 25 / s by decision.
 
 ## Open decisions
 
