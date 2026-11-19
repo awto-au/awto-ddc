@@ -71,15 +71,35 @@ def synclog(a, bus, say):
     return lines
 
 
-def run_case(a, case: str, say) -> bool:
-    eng = DD.DdcEngine()
-    bus = S.SimBus(a.bin, a.map, video=a.mode, port="D3", devs=[Pins(NOCABLE_D1), eng])
+class Rig:
+    """One booted unit (ACTIVE on D3 + 1 s) kept as a snapshot: each case starts from it, as from a fresh boot (tests/test_sim_snapshot.py)."""
+
+    def __init__(self, a):
+        self.eng = DD.DdcEngine()
+        cells = {**NOCABLE_D1, **({0xFE32: 0} if a.d2_cabled else {})}
+        self.bus = S.SimBus(a.bin, a.map, video=a.mode, port="D3", devs=[Pins(cells), self.eng])
+        self.up = self.bus.run_until_mode(3)
+        self.pre = ""
+        if self.up:
+            self.pre = (f"ACTIVE on port 0x{port_now(self.bus):02X}, cable status 0x{self.bus.xdata(self.bus.addr('g_stPortCableStatus'))[0]:02X} "
+                        "(bit4 D1, bit5 D2, bit6 D3)")
+            self.bus.wait(1.0)
+            self.snap = self.bus.snapshot()
+        self.fresh = True
+
+    def start(self):
+        if not self.fresh:
+            self.bus.restore(self.snap)
+        self.fresh = False
+        return self.bus, self.eng
+
+
+def run_case(a, case: str, say, rig) -> bool:
+    bus, eng = rig.start()
     try:
-        if not bus.run_until_mode(3):
+        if not rig.up:
             say(f"{case}: FAIL no ACTIVE at boot"); return False
-        say(f"{case}: ACTIVE on port 0x{port_now(bus):02X}, cable status 0x{bus.xdata(bus.addr('g_stPortCableStatus'))[0]:02X} "
-            "(bit4 D1, bit5 D2, bit6 D3)")
-        bus.wait(1.0)
+        say(f"{case}: {rig.pre}")
         if case == "vcp":
             DD.Mccs(bus, eng).set(0x60, 0x11)
         elif case in ("sel", "selhold"):
@@ -122,7 +142,7 @@ def run_case(a, case: str, say) -> bool:
             f"port 0x{port:02X} (want ACTIVE on D3 0x{D3:02X}) after {a.secs:g} s")
         return ok
     finally:
-        bus.close()
+        pass                                    # the rig owns the bus
 
 
 def main() -> int:
@@ -132,6 +152,7 @@ def main() -> int:
     ap.add_argument("--case", choices=["vcp", "sel", "selhold", "cmd", "all"], default="all")
     ap.add_argument("--mode", default="1080p60")
     ap.add_argument("--sync-tsv", dest="sync_tsv", type=Path, help="default: the .sync.tsv beside the map / $AWTO_SYNC_TSV")
+    ap.add_argument("--d2-cabled", action="store_true", help="test hook (tests/test_gate_mutations.py): a cable on D2, so a switch to it is allowed and the gate must FAIL")
     ap.add_argument("--secs", type=float, default=16.0, help="NOSIGNAL ~2 s + PS ~10 s after a switch (#84 log), then margin; selhold: hold 30 s x1.25 + margin")
     a = ap.parse_args()
     (S.ROOT / "tmp/logs").mkdir(parents=True, exist_ok=True)
@@ -140,11 +161,13 @@ def main() -> int:
     def say(s):
         print(s); log.write(s + "\n")
 
-    rc = 0
-    for case in (["vcp", "sel", "selhold", "cmd"] if a.case == "all" else [a.case]):
-        if case == "selhold" and a.secs < 40:
-            a.secs = 40.0                       # AWTO_SRC_NOCABLE_HOLD_MS 30 s + the search after it
-        rc |= 0 if run_case(a, case, say) else 1
+    rc, secs, rig = 0, a.secs, Rig(a)
+    try:
+        for case in (["vcp", "sel", "selhold", "cmd"] if a.case == "all" else [a.case]):
+            a.secs = max(secs, 40.0) if case == "selhold" else secs      # selhold: AWTO_SRC_NOCABLE_HOLD_MS 30 s + the search after it; the others keep --secs
+            rc |= 0 if run_case(a, case, say, rig) else 1
+    finally:
+        rig.bus.close()
     return rc
 
 

@@ -1105,3 +1105,35 @@ static int core_run_(core_t *c, uint64_t n)
     }
     return R_DONE;
 }
+
+/* ---- snapshot / restore of one core (same process, same image): fm cache, counters and all. Pointers keep their own values. ---- */
+size_t core_snap_size(core_t *c)
+{
+    size_t tag = c->fm_tag ? (size_t)c->fm_sets * c->fm_ways * 4 : 0;
+    return sizeof *c + tag;
+}
+
+void core_snap(core_t *c, uint8_t *buf)
+{
+    memcpy(buf, c, sizeof *c);
+    if (c->fm_tag)
+        memcpy(buf + sizeof *c, c->fm_tag, (size_t)c->fm_sets * c->fm_ways * 4);
+}
+
+void core_restore(core_t *c, const uint8_t *buf)
+{
+    uint8_t *code = c->code, *cur = c->cur;
+    uint32_t *tag = c->fm_tag, *la = c->fm_lacc, *lm = c->fm_lmiss;
+    static uint8_t hk[4][8192];
+    static uint16_t pc_[65536];
+    (void)cur;
+    memcpy(hk, c->hook, sizeof hk);                  /* event / PC hooks are host configuration, not machine state: kept as they are now */
+    memcpy(pc_, c->pch, sizeof pc_);
+    memcpy(c, buf, sizeof *c);
+    memcpy(c->hook, hk, sizeof hk);
+    memcpy(c->pch, pc_, sizeof pc_);
+    c->code = code; c->fm_tag = tag; c->fm_lacc = la; c->fm_lmiss = lm;
+    c->cur = code + (((core_t *)buf)->cur - ((core_t *)buf)->code);     /* cur points into code */
+    if (tag)
+        memcpy(tag, buf + sizeof *c, (size_t)c->fm_sets * c->fm_ways * 4);
+}
