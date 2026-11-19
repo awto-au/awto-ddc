@@ -52,7 +52,7 @@
 BYTE xdata pData_EXINT[6];
 __xdata _Bool g_bPsWakeupHpd;
 WORD isr_g_usInputPixelClk;
-WORD g_usTmdsOffLineMeasureClk;
+WORD isr_g_usTmdsOffLineMeasureClk;
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
 BYTE isr_g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE; AWTO_LT_RING_DEF AWTO_PROBE_DEF
