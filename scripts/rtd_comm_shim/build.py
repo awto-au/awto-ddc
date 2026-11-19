@@ -16,7 +16,7 @@ cmds = [
 ]
 log, rc = [], 0
 for cmd in cmds:
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)  # compile ~1 s; 60 s backstop
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)  # compile ~1 s; 60 s backstop
     log.append(" ".join(cmd) + "\n" + r.stdout + r.stderr)
     rc = rc or r.returncode
 (root / "tmp" / "logs" / "rtd_shim_build.log").write_text("\n".join(log))
