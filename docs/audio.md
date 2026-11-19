@@ -89,6 +89,22 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 - Gain at ACTIVE in the Dahua sim: DVC_GAIN = 0x098C (P8_A5/A6) = 0.149 = -16.5 dB. [fw, unverified] Its volume mapping constants (user bank) are not identified. [?]
 - Samples-per-ramp is derived from the detected sampling rate (`ScalerAudioDVCSetMuteZCDTimeout`); rate detect writes `DA_CLK_CTRL` 92 (no audio) / 12 / 52 depending on rate. [fw, unverified]
 
+## Sequence (pop-free order, awto-ddc#249; code: `SysAudioMuteProc`, `SysAudioInternalGenTestProc`, `fw/audio/audio.c`)
+- Rule: the PAM8006A MUTE pin cuts the outputs without a fade, and class-D switch-on / off is what is heard (`/vendors/diodes/PAM8006A.pdf`, "MUTE operation", V2P5 text; no MUTE / SD timing given). Amp enable / disable and mute change only with the DAC input at zero.
+- Delays (`AWTO_AMP_MUTE_MS` 2, `AWTO_AMP_WAKE_MS` 20) are by ear: no datasheet value exists. Both blocking, skipped when the pin already has the value. Invariants: `scripts/audio_sim.py order_violations`, `tests/test_audio_order.py`, `saver_sim.py --only-alert`.
+
+| Event | Before (#249) | Now |
+|---|---|---|
+| Boot | EN 0, MUTE 1 | MUTE 1, then EN 0 (pins Hi-Z until `ScalerPinshareInitial`; board pulls unknown) |
+| Stream / user mute (VCP 0x8D, mode change, power save) | EN 0 + MUTE 1 together, then DVC ramp (up to 400 ms, silent) | DVC ramp to 0, MUTE 1, 2 ms, EN 0 |
+| Stream / user unmute | DVC ramp up, then EN 1 + MUTE 0 together | EN 1, 20 ms, MUTE 0, then DVC ramp up |
+| Tone start | DVC up with amp off, then EN 1 + MUTE 0 together | generator on (DVC 0), EN 1 (MUTE stays 1), DVC ramp up, MUTE 0 after the first pitch + 4 ms |
+| Pitch change | MUTE 1, divider at once, 4 ms, MUTE 0 | MUTE 1, 2 ms, divider, 4 ms (`AWTO_PS_GAP_MS`, by ear), MUTE 0 |
+| Tone end | EN 0 + MUTE 1 with the tone running, DVC ramp, generator off | MUTE 1, DVC ramp, generator off, EN 0 |
+| Power down / PS | mute (old order), `ScalerAudioDisable` | mute (new order): amp is off before the DAC powers down; no wait for the 100 ms depop transition (amp already disabled) |
+- Not done, needs Dan: a short DVC ramp for tones (`dvc_down_db` / `DVC_ZC_WIN` changes) would remove the remaining hard-gate edge at note changes; the MUTE-pin gate at non-zero signal still switches the class-D output.
+- #249 reboot pop: before `ScalerPinshareInitial` P7.3 / P7.4 are Hi-Z inputs (regdb pin-share default); firmware cannot act. A board pull-up on MUTE (P7.3, high = muted) and pull-down on EN (P7.4, low = shutdown) would hold the amp off through every reset. Board pulls are not known; probe pins 160 / 161 at reset.
+
 ## Our volume mapping (`AwtoAudioGain`, fw/settings/settings_glue.c)
 - Registry `volume` 0..100 % -> DVC_GAIN (14 bit, linear, 0x3FFF = 0 dB, 1/16384 steps [spec]).
 - Dahua-like (Dan 2026-11-13): 50 % = `AWTO_AUDIO_GAIN_DAHUA_50` 0x098C (-16.5 dB, the Dahua default) [fw, unverified]; 100 % = `AWTO_AUDIO_GAIN_MAX`, now -6 dB (0x1FFF): cap until the ear test (steps 4-6) shows a cleaner maximum.

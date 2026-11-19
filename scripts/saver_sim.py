@@ -225,6 +225,10 @@ def alert_check(a, stream: bool = False) -> int:
     sess.bus.wait(ALERT_OBSERVE_S)
     info = A.write_wav(a.out / ("alert_stream.wav" if stream else "alert.wav"), tap.events, t0, sess.bus.now(), model={"assume_amp_en": False})
     ok = abs(info["tone_s"] - ALERT_TONE_S) <= ALERT_TOL_S
+    order = A.order_violations(tap.events)          # pop-free order (#249): amp / mute / generator / DVC sequence
+    for v in order:
+        say(f"FAIL alert amp order: {v}")
+    ok = ok and not order
     say(f"{'PASS' if ok else 'FAIL'} VCP 0xEB = {VCP_ALERT} (alert{', host stream state PLAYBACK' if stream else ''}): tone {info['tone_s']:.2f} s, amp driven by the firmware (expect {ALERT_TONE_S} +- {ALERT_TOL_S})")
     sess.bus.close()
     return 0 if ok else 1
@@ -235,8 +239,11 @@ def main() -> int:
     ap.add_argument("bin", type=Path, nargs="?", default=ROOT / "tmp/fw/AWT26110003-sv1-be.bin")
     ap.add_argument("map", type=Path, nargs="?")
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/saver_sim")
+    ap.add_argument("--only-alert", action="store_true", help="just the alert tone + amp order check (the stream case is the same code path)")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
+    if a.only_alert:
+        return alert_check(a)
     eng = D.DdcEngine()
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng])
     sess.boot()

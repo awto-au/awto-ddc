@@ -16,26 +16,53 @@ static __code BYTE tAwtoAudioTestMute[AWTO_AUDIO_TEST_STEPS] = {0, 0, 0, 0, 0, 1
 static __code WORD tAwtoAudioTestGain[AWTO_AUDIO_TEST_STEPS] = {AWTO_AUDIO_GAIN_M6DB, AWTO_AUDIO_GAIN_M6DB, AWTO_AUDIO_GAIN_DAHUA_50,
                                                                 AWTO_AUDIO_GAIN_M3DB, AWTO_AUDIO_GAIN_0DB, AWTO_AUDIO_GAIN_M6DB};
 
+// Pop-free order (#249, docs/audio.md "Sequence"): the PAM8006A MUTE pin cuts the outputs without a fade and its switch-on / off is the pop,
+// so both happen with the DAC input at zero (DVC ramped) and in this order: unmute = EN, wake, MUTE low; mute = MUTE high, settle, EN low.
+// By ear: the datasheet (/vendors/diodes/PAM8006A.pdf) gives no MUTE / SD timing. Both waits are blocking and skipped when nothing changes.
+#define AWTO_AMP_MUTE_MS                        2       // P7.3 high -> P7.4 low / generator change; scripts/audio_sim.py ORDER
+#define AWTO_AMP_WAKE_MS                        20      // P7.4 high -> P7.3 low
+
+static void AmpSet(BYTE ucEn, BYTE ucMute)
+{
+    if((ucMute != 0) && (bAMP_MUTE == 0))
+    {
+        bAMP_MUTE = 1;
+        ScalerTimerDelayXms(AWTO_AMP_MUTE_MS);
+    }
+    if(bAMP_EN != ucEn)
+    {
+        bAMP_EN = ucEn;
+        if(ucEn != 0)
+        {
+            ScalerTimerDelayXms(AWTO_AMP_WAKE_MS);
+        }
+    }
+    bAMP_MUTE = ucMute;
+}
+
 void AwtoAudioAmpBoot(void)
 {
+    bAMP_MUTE = 1;                              // muted first, then disabled: the pins are still driven after a warm reset
     bAMP_EN = 0;
-    bAMP_MUTE = 1;                              // muted until the SDK's first unmute
     g_ucAwtoAudioTestN = 0;
+}
+
+void AwtoAudioAmpEnable(void)                   // P7.4 on, P7.3 stays high: the tone player opens the gate after the pitch is set
+{
+    AmpSet(1, 1);
 }
 
 void AwtoAudioAmp(bit bMute)
 {
     if((bMute == _OFF) && (g_ucAwtoAudioTestN != 0))
     {
-        bAMP_EN = tAwtoAudioTestAmp[g_ucAwtoAudioTestN - 1];
-        bAMP_MUTE = tAwtoAudioTestMute[g_ucAwtoAudioTestN - 1];
+        AmpSet(tAwtoAudioTestAmp[g_ucAwtoAudioTestN - 1], tAwtoAudioTestMute[g_ucAwtoAudioTestN - 1]);
         AwtoSyncPush(AWTO_SYNC_EV_AUDIO, AWTO_AUDIO_EV_AMP_TEST, g_ucAwtoAudioTestN);
         return;
     }
     BYTE ucSame = (bAMP_EN == ((bMute == _ON) ? 0 : 1)) && (bAMP_MUTE == ((bMute == _ON) ? 1 : 0));
 
-    bAMP_EN = (bMute == _ON) ? 0 : 1;
-    bAMP_MUTE = (bMute == _ON) ? 1 : 0;
+    AmpSet((bMute == _ON) ? 0 : 1, (bMute == _ON) ? 1 : 0);
     AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ((bMute == _ON) ? AWTO_AUDIO_EV_AMP_OFF : AWTO_AUDIO_EV_AMP_ON) + ((ucSame != 0) ? 4 : 0), 0);   // repeat = "already", never dropped
 }
 
@@ -66,8 +93,7 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
     g_ucAwtoAudioTestN = ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? ucN : 0;
     if(UserInterfaceGetAudioReadyToPlayStatus() == _TRUE)   // playing: now; else the SDK unmute applies them
     {
-        bAMP_EN = (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestAmp[ucN - 1] : 1;
-        bAMP_MUTE = (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestMute[ucN - 1] : 0;
+        AmpSet((g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestAmp[ucN - 1] : 1, (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestMute[ucN - 1] : 0);
         ScalerAudioDigitalAdjustVolume(UserInterfaceGetAudioVolume());
     }
 }
@@ -176,6 +202,7 @@ static void PsNote(BYTE ucNote)
         return;
     }
     bAMP_MUTE = 1;                              // gate the amp: the divider change and the PLL relock are not heard
+    ScalerTimerDelayXms(AWTO_AMP_MUTE_MS);      // the gate has closed before the divider moves
     ScalerSetDataPortBit(usBase, AWTO_I_PORT_PAGE71_HDMI_AFCR, (BYTE)~AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW,
                          ((ucNote & AWTO_PS_OCT_FLAG) != 0) ? 0x00 : AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW);
     ScalerSetDataPortByte(usBase, AWTO_I_PORT_PAGE71_HDMI_SCAPR, AWTO_PS_SCAPR_SLC | ucSc);
@@ -188,6 +215,7 @@ static void PsStop(void)
 {
     s_ucPsTrack = AWTO_PS_TRACK_NONE;
     s_ucPsFlags &= (BYTE)~AWTO_PS_F_GATE;
+    AmpSet(bAMP_EN, 1);                         // gate first, then the DVC ramp, the generator and the amp enable (SysAudioInternalGenTestProc)
     SysAudioInternalGenTestProc(_OFF);          // always: the generator registers survive an MCU reset / a reflash, a tone left on by an earlier image must stop too
 }
 
@@ -195,9 +223,9 @@ static void PsStart(BYTE ucTrack)
 {
     if(s_ucPsTrack == AWTO_PS_TRACK_NONE)       // generator already running (a sound ended or is replaced): no off / on cycle, no click
     {
-        SysAudioInternalGenTestProc(_ON);
-        SysAudioMuteProc(_OFF);
-        AwtoAudioAmp(_OFF);                     // P7.4 + P7.3 set directly: the test generator clears the DVC mute flag, so the call above can be a no-op
+        SysAudioInternalGenTestProc(_ON);       // generator on, DVC at 0, amp disabled and muted
+        AwtoAudioAmpEnable();                   // P7.4 on while the input is silent; P7.3 opens after the first pitch
+        ScalerAudioMuteProc(_OFF, UserInterfaceGetAudioVolume());   // DVC ramps up (hardware, zero-crossing) behind the closed gate
     }
     s_ucPsTrack = ucTrack;
     s_usPsAt = (WORD)AwtoMs();
