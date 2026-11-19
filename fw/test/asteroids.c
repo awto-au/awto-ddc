@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "UserCommonInclude.h"
+#if(_AWTO_SAVER_ASTEROIDS == _ON)                                        // saver not in the image when _OFF (RL6449_Project.h)
 #include "../../tools/osd_lines/osd_lines.h"
 
 // Asteroids screensaver (docs/asteroids.md): the game runs on the chip (rocks split, shots, saucer, autopilot ship, wrap-around),
@@ -1767,3 +1768,4 @@ BYTE AwtoAsteroids(BYTE ucCmd)
 #endif
     return 0;
 }
+#endif                                                         // _AWTO_SAVER_ASTEROIDS

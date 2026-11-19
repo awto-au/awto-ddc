@@ -39,10 +39,13 @@ ALERT_TONE_S = 0.9              # audible time: the 1 s track (pacman_sound.py A
 ALERT_TOL_S = 0.15              # one 10 ms tick per note plus the 1 ms firmware timer: well inside
 ALERT_OBSERVE_S = 3.0           # fw time to observe: the tone must end by itself
 ROW_SCREENSAVER = 119           # registry row id of screensaver
+SET_VALUE = {"pacman": 1, "scope2": 3, "asteroids": 5}   # setting 119 values (registry.tsv)
 SET_RETIRED = 2                 # its stored value of the retired Scope 1
 VCP_RETIRED = 3                 # screensaver_now option of the retired Scope 1
 VCP_SELECTED = 1                # screensaver_now option "Selected"
 RUN_OFF, RUN_SCOPE2 = 0, 3      # g_ucAwtoSaverRun (fw/awto/savers.tsv)
+SAVER_ROWS = (("pacman", 2, 1, "AwtoPacmanClassic"), ("scope2", 4, 3, "AwtoScopeSaver2"), ("asteroids", 8, 7, "AwtoAsteroids"))   # name, VCP 0xEB, run id, entry (fw/awto/savers.tsv)
+IN_IMAGE = []                   # names of the savers this image has (build option _AWTO_SAVER_*, docs/saver-mode.md): found by their entry in the map
 RETIRED_S = 1.0                 # fw time for the main loop to serve the request (a pass is < 75 ms; Scope 2 starts hidden)
 VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept free)
 AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
@@ -61,6 +64,11 @@ SCOPE2_MIN_FPS = 5.0            # frames per second of scope 2 (measured 6.7 on 
 SCOPE2_FPS_S = 2.0              # fw time the frame counter is watched
 SYNC_EV_ODEMO = 0xE9            # AWTO_SYNC_EV_ODEMO: the savers' frame-complete sync lines (as saver_frames_md5.py)
 STOP_S = 3.0                    # fw time for the stop: served by the main loop after the frame in progress (scope 2: up to ~2 s)
+
+
+def image_savers(mp: Path) -> list:
+    txt = mp.read_text(errors="replace")
+    return [n for n, _, _, sym in SAVER_ROWS if f" _{sym}" in txt or f"CH_{sym} " in txt]
 
 
 def say(s: str) -> None:
@@ -131,7 +139,7 @@ def rotated_check(a) -> int:
     ddc.set(0xE1, 1)
     sess.bus.wait(ROTATE_SETTLE_S)
     fails = 0
-    for name, val in (("pacman", 2), ("scope2", 4), ("asteroids", VCP_ASTEROIDS)):
+    for name, val in ((n, v) for n, v, _, _ in SAVER_ROWS if n in IN_IMAGE):
         up = bbox_crop(Image.open(a.out / f"{name}_run.png"))
         ddc.set(VCP_SAVER, val)
         if not wait_started(sess, name):
@@ -205,12 +213,39 @@ def retired_check(sess, ddc) -> int:
     ddc.set(VCP_SAVER, VCP_SELECTED)
     sess.bus.wait(RETIRED_S)
     run = saver_run(sess)
-    fails += run != RUN_SCOPE2
-    say(f"{'PASS' if run == RUN_SCOPE2 else 'FAIL'} setting 119 = {SET_RETIRED} + VCP 0x{VCP_SAVER:02X} = {VCP_SELECTED}: run id {run}, want {RUN_SCOPE2} (Scope 2)")
+    want = RUN_SCOPE2 if "scope2" in IN_IMAGE else next(r for n, _, r, _ in SAVER_ROWS if n in IN_IMAGE)    # a saver left out of the image runs the first one that is in
+    fails += run != want
+    say(f"{'PASS' if run == want else 'FAIL'} setting 119 = {SET_RETIRED} + VCP 0x{VCP_SAVER:02X} = {VCP_SELECTED}: run id {run}, want {want} ({'Scope 2' if want == RUN_SCOPE2 else 'first saver in the image'})")
     ddc.set(VCP_SAVER, 0)
     ddc.set(0xE0, ROW_SCREENSAVER)
     ddc.set(0xE1, 0)
     sess.bus.wait(STOP_S)
+    return fails
+
+
+def absent_check(sess, ddc) -> int:
+    """A saver left out of the image: its VCP 0xEB value starts nothing (run id stays off), the stored setting 119 of it runs the first saver that is in."""
+    fails = 0
+    first = next(r for n, _, r, _ in SAVER_ROWS if n in IN_IMAGE)
+    for name, vcp, _, _ in SAVER_ROWS:
+        if name in IN_IMAGE:
+            continue
+        ddc.set(VCP_SAVER, vcp)
+        sess.bus.wait(RETIRED_S)
+        run = saver_run(sess)
+        fails += run != RUN_OFF
+        say(f"{'PASS' if run == RUN_OFF else 'FAIL'} VCP 0x{VCP_SAVER:02X} = {vcp} ({name}, not in the image): run id {run}, want {RUN_OFF}")
+        ddc.set(0xE0, ROW_SCREENSAVER)
+        ddc.set(0xE1, next(m for n, m in SET_VALUE.items() if n == name))
+        ddc.set(VCP_SAVER, VCP_SELECTED)
+        sess.bus.wait(RETIRED_S)
+        run = saver_run(sess)
+        fails += run != first
+        say(f"{'PASS' if run == first else 'FAIL'} setting 119 = {SET_VALUE[name]} ({name}, not in the image) + VCP 0x{VCP_SAVER:02X} = {VCP_SELECTED}: run id {run}, want {first} (first saver in the image)")
+        ddc.set(VCP_SAVER, 0)
+        ddc.set(0xE0, ROW_SCREENSAVER)
+        ddc.set(0xE1, 0)
+        sess.bus.wait(STOP_S)
     return fails
 
 
@@ -240,6 +275,8 @@ def main() -> int:
     ap.add_argument("--out", type=Path, default=ROOT / "tmp/saver_sim")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
+    IN_IMAGE[:] = image_savers(a.map or a.bin.with_suffix(".map"))
+    say(f"savers in the image: {IN_IMAGE}")
     eng = D.DdcEngine()
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng])
     sess.boot()
@@ -249,7 +286,7 @@ def main() -> int:
     ddc.set(0xE1, 0)
     sess.bus.wait(ROTATE_SETTLE_S)
     fails = 0
-    for name, val in (("pacman", 2), ("scope2", 4), ("flash", 5), ("asteroids", VCP_ASTEROIDS)):
+    for name, val in [x for x in (("pacman", 2), ("scope2", 4), ("flash", 5), ("asteroids", VCP_ASTEROIDS)) if x[0] in IN_IMAGE or x[0] == "flash"]:
         base = lit(sess.snap())
         ddc.set(VCP_SAVER, val)
         if not wait_started(sess, name):
@@ -281,6 +318,7 @@ def main() -> int:
         fails += not ok
         say(f"{'PASS' if ok else 'FAIL'} VCP 0x{VCP_SAVER:02X} = 0: screen after stop has {bright} lit samples of 5184")
     fails += retired_check(sess, ddc)
+    fails += absent_check(sess, ddc)
     sess.bus.close()
     fails += rotated_check(a)
     fails += alert_check(a)
