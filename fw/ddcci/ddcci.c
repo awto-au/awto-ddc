@@ -45,24 +45,29 @@ void AwtoInputSelect(BYTE ucPort, BYTE ucWhy)  // main-loop context only; ucWhy 
     }
 }
 
-static __xdata WORD s_usNoCableHoldMs;           // AwtoMs() of the selector take of a cable-less port
-static __xdata BYTE s_ucNoCableHoldPort;         // that port, 0 = no hold
+#define AWTO_NCH_T_SHIFT                        10                  // hold time unit 1.024 s; 5 bits wrap at 32.8 s > AWTO_SRC_NOCABLE_HOLD_MS
+#define AWTO_NCH_T_MASK                         0x1F
+#define AWTO_NCH_PORT_SHIFT                     5                   // (port - _D0_INPUT_PORT + 1) in the top 3 bits (_D0.._D6), 0 = no hold
+static __xdata BYTE s_ucNoCableHold;            // port field + AwtoMs() >> 10 of the selector take of a cable-less port
+
+#define AWTO_NCH_NOW()                          ((BYTE)((WORD)AwtoMs() >> AWTO_NCH_T_SHIFT) & AWTO_NCH_T_MASK)
 
 void AwtoNoCableHold(BYTE ucPort)               // selector take of a port with no cable (Dan 2026-11-19): 0 clears
 {
-    s_ucNoCableHoldPort = ucPort;
-    s_usNoCableHoldMs = ((WORD)AwtoMs());
+    s_ucNoCableHold = (ucPort == 0) ? 0 : ((BYTE)((ucPort - _D0_INPUT_PORT + 1) << AWTO_NCH_PORT_SHIFT) | AWTO_NCH_NOW());
 }
 
 void AwtoDeadPortPoll(void)                     // #84: fixed port, no cable on it, no signal, another port cabled: auto search
 {
     BYTE ucCur = SysSourceGetInputPort();
+    BYTE ucHoldPort = (BYTE)(s_ucNoCableHold >> AWTO_NCH_PORT_SHIFT);
 
-    if((s_ucNoCableHoldPort != 0) && ((s_ucNoCableHoldPort != ucCur) || ((WORD)(((WORD)AwtoMs()) - s_usNoCableHoldMs) >= AWTO_SRC_NOCABLE_HOLD_MS)))
+    if((ucHoldPort != 0) && (((BYTE)(ucHoldPort + _D0_INPUT_PORT - 1) != ucCur) || (((AWTO_NCH_NOW() - s_ucNoCableHold) & AWTO_NCH_T_MASK) >= (AWTO_SRC_NOCABLE_HOLD_MS >> AWTO_NCH_T_SHIFT))))
     {
-        s_ucNoCableHoldPort = 0;                // expired (or another port now): the auto search below runs
+        s_ucNoCableHold = 0;                    // expired (or another port now): the auto search below runs
+        ucHoldPort = 0;
     }
-    if(s_ucNoCableHoldPort != 0)
+    if(ucHoldPort != 0)
     {
         return;
     }

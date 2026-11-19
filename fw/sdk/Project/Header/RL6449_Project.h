@@ -26,7 +26,7 @@
 #define AWTO_DDCCI_WR_ADDR                                      0x6E    // DDC/CI slave 0x37 as the 8-bit write address
 #define AWTO_SCA_WR_INTRVL_SEL_MASK                             0x0F    // FFF1[3:0] mcu_wr_sca_intrvl_sel (regdb SCA_WR_INTRVL)
 #ifndef AWTO_SCA_WR_INTRVL_SEL
-#define AWTO_SCA_WR_INTRVL_SEL                                  7       // min 7h04 + 4 x 7 = 32 CPU cycles between scaler writes; clears the eDP link training FAIL line (docs/clock-sweep.md)
+#define AWTO_SCA_WR_INTRVL_SEL                                  12      // hardware write pace, same sel at every AWTO_CLOCK_MHZ; eDP FAIL line + OSD port spacing (docs/osd-port-loss.md)
 #endif
 //--------------------------------------------------
 // OSD palette: indices (1-based, ScalerOsdSetColorPalette) and RGB triples (R, G, B)
@@ -1179,9 +1179,8 @@ extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN);                          // turn ucN stream bytes 180 in place (bytes reversed, bits of each reversed)
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_OSD_ZERO                                           0x00
-// OSD SRAM data port: direct store + 24 nops of store spacing (map words corrupt below 16 at 350.8 MHz; docs/scope-corruption.md)
-#define AWTO_NOP8                                               __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); AWTO_NOP8 AWTO_NOP8 AWTO_NOP8 } while(0)
+// OSD SRAM data port: direct store; spacing is the FFF1 write interval (AWTO_SCA_WR_INTRVL_SEL), no nops (docs/osd-port-loss.md)
+#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); } while(0)
 #define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
 #define AWTO_OSD_POS_OFFSET_V                                   0x04
 #define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px

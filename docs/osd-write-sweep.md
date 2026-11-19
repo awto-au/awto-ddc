@@ -9,7 +9,7 @@ Related: [timing.md](osd/timing.md), [saver-fps-hw.md](saver-fps-hw.md) (levers 
 - Default image since 2026-11-19 (MCU 350.8 / flash 116.9 MHz): direct triples 0.385 us/B, direct loop 0.348, `ScalerOsdDataPort` 1.391, B1-only 0.215 per byte-equivalent (one store per word), `bit_block` on 0.385, address set 4.5 us each; unit 3, 1848 B x 73 passes, read-back clean.
 - Closed: the 2x gap between the sim (0.54 us/B, cycle model) and the old hardware figure (1.08) was flash-fetch bound. Raising the flash clock from 70.2 to 116.9 MHz took hardware to 0.385 us/B, under the sim. None of `FFF1`, `FFFB`, `FFBC` was involved.
 - Register sweep (direct triples, us/B; 0 bad bytes M1 and M2 in every row; no FIFO / STATUS0 flag):
-  - `FFF1` sel 0 0.385, 1..5 0.378, 6..8 0.385, 9..11 0.393, 12..13 0.400, 14 0.408, 15 0.415; `burwr_func_int_sel` 1 0.378. Higher sel only slows.
+  - `FFF1` sel 0 0.385, 1..5 0.378, 6..8 0.385, 9..11 0.393, 12..13 0.400, 14 0.408, 15 0.415; `burwr_func_int_sel` 1 0.378. Higher sel only slows. Default sel 12 and no port nops: `docs/osd-port-loss.md`.
   - `FFFB` 0, 1, 2, 3, 4, 6, 8, 16, 32, 64, 128, 255: 0.378 to 0.385 (stock 0x28 = 40): no effect.
   - `FFBC` 31, 24, 16, 15, 8, 4, 2, 1, 0: 0.378 to 0.385: no effect on a timed write.
   - State flags (EA off, scale-up off, overlay off, `0x93[7]` on): 0.378 to 0.385. N 1848 / 3696 / 8184: 0.378 / 0.376 / 0.374.
