@@ -24,6 +24,7 @@ from pathlib import Path
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import image_variant as IV
 import msg_table as MT
 import sdcc_link
 import sdcc_tools as T
@@ -359,7 +360,7 @@ def main() -> int:
     check_xdata((out / "fw.map").read_text(errors="replace"), hs)
     if bad := XL.check(xnew, (out / "fw.map").read_text(errors="replace")):
         sys.exit(f"xdata layout: areas not at their slot in the map: {bad[:5]}")
-    variant = "_AWTO_OSD_HWTEST" in os.environ.get("K2S_SDCC_EXTRA", "")   # test image: never rewrites the tracked layouts (#268)
+    variant = IV.parse_defines(os.environ.get("K2S_SDCC_EXTRA", "").split())["variant"]   # test / other-clock image: never rewrites the tracked layouts (#268)
     if not variant and (not (ROOT / XLAYOUT).exists() or xnew.read_text() != (ROOT / XLAYOUT).read_text()):
         (ROOT / XLAYOUT).write_text(xnew.read_text())      # promoted only after link + checks passed
         log(f"xdata layout promoted: {XLAYOUT}")

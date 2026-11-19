@@ -47,6 +47,7 @@ import threading
 import time
 from pathlib import Path
 
+import image_variant as IV
 import isostamp
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -154,6 +155,7 @@ def gates(b: Path, m: Path, ref, tree):
     if tree:
         link += ["--layout", Path(tree) / "fw/bank_layout.tsv", "--asm", Path(tree) / "tmp/sdcc-port/asm_bank"]
     g = {}
+    V = IV.of_image(b)
     mt = Path(m).read_text(errors="replace")
     if " _menu_diag" in mt:                    # #67 images: menu walk + MCCS over the spare DDC engine
         # with video (osd_render session, 1080p60 ACTIVE): without it the main loop sits in the SDK's DP RX PHY CTS routine (sim: the
@@ -178,9 +180,10 @@ def gates(b: Path, m: Path, ref, tree):
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     fast = b.with_name(b.name.replace("-be.bin", "-clk87-be.bin"))    # `dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87` (stock clock): measured too when present
-    base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else [])]
+    base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit", *(["--variant", "hwtest"] if V["hwtest"] else [])] if tree else [])]
     if tree:
-        g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m]      # NORMAL: every linked delay site is in docs/delay-audit.tsv (~1 s)
+        g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m,
+                       *(["--variant", "hwtest"] if V["hwtest"] else [])]      # NORMAL: every linked delay site is in docs/delay-audit.tsv (+ -hwtest.tsv for the test image) (~1 s)
     g["delays_sim"] = base                                                            # extensive: panel_sim scenario at the image's clock vs wall ms
     if fast.is_file() and fast != b:                                                  # extensive: + the sibling -clk87 image, DDC debounce equal at both clocks
         g["delays_full"] = [*base, "--other", fast, fast.with_suffix(".map")]
@@ -211,7 +214,8 @@ def gates(b: Path, m: Path, ref, tree):
         if (Path(tree) / "scripts/iram_names.py").is_file():                       # #189: d_ / i_ names match IRAM placement
             g["iram"] = [*PY, f"{tree}/scripts/iram_names.py", "check", "--asm", Path(tree) / "tmp/sdcc-port/asm_ovl", "--map", m]
         if (Path(tree) / "scripts/xdata_layout.py").is_file():                        # pinned XDATA slots match the linked map
-            g["xlayout"] = [*PY, f"{tree}/scripts/xdata_layout.py", "check", "--tree", tree, "--map", m]
+            g["xlayout"] = [*PY, f"{tree}/scripts/xdata_layout.py", "check", "--tree", tree, "--map", m,
+                            *(["--layout", V["layout"]] if V["layout"] else [])]   # a variant never promotes the tracked layout (#268): its own
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
         for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py"), ("gensavers", "gen_awto_savers.py")):      # #162: generated C tables current
             if (Path(tree) / "scripts" / sc).is_file():

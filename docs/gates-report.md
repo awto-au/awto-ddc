@@ -89,3 +89,13 @@ Clock matrix (350 / 175 / 87 MHz, timing gates, extensive): 0 FAIL cells, 176 s 
 - Cuts that lose normal-tier coverage (Dan approved): keys, monitor, wake, crash, conwrap, conmode, sysm, sync, canary, menu, deadport, inputrate, bootsim_always and the long wdt cases are extensive-only.
 - 'delay cal' is a real check now; the sim result is judged like the unit's.
 - Open: test-timing scale (shorter OSD timeouts / holds / sample periods in test images) to bring the moved gates back into normal at ~1 s each; isr / ddc / menu minimal sweeps; delay choke point (design in the report, firmware timing change: branch + unit 3 check); pre-build cut (`pp_audit --check`, 24-32 s of every build); firmware pacing (separate agent) for exact fast-forward; `tests/test_pump_budget.py` image selection.
+
+## Variant images (-D _AWTO_OSD_HWTEST, -D AWTO_CLOCK_MHZ=N)
+- `dev.py build` writes `tmp/fw/<stem>.build.json` (defines) and `<stem>.xdata_layout.tsv` (the XDATA layout the image linked with); `scripts/image_variant.py` reads them (no file: map symbol `_g_stAwtoOsdHw` = hwtest, default clock).
+- Variant = hwtest or clock != 350: the build never promotes the tracked bank / XDATA layouts (#268).
+- Expectation per variant:
+  - `xlayout`: the map is checked against the image's own layout file, not the tracked `fw/xdata_layout.tsv`.
+  - `delays`: sites must be in `docs/delay-audit.tsv` or, for hwtest, `docs/delay-audit-hwtest.tsv`; a site in neither fails; FIX / UNKNOWN verdicts fail.
+  - Every other gate: same thresholds as the default image.
+- HWTEST XDATA is full (#268): `AWTO_MSG_RING` 32 (default 40) in HWTEST, OSD / Osw / flash-clk test ops share `g_stAwtoOsdHw.aucBuf`.
+- Tests: `tests/test_gate_variants.py`.

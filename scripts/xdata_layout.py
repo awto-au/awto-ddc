@@ -2,7 +2,7 @@
 """Pinned XDATA layout: fw/xdata_layout.tsv = one fixed slot per module (module, hole, offset, slot), like fw/bank_layout.tsv for code.
 
 usage (library): place(old, sizes, holes, reserved, compact=False) -> (rows, info)
-       xdata_layout.py check --tree T --map fw.map     the tracked file matches the linked map (gate xlayout)
+       xdata_layout.py check --tree T --map fw.map [--layout F]   the tracked file (or the variant image's own layout F) matches the linked map (gate xlayout)
 - Slot kept while the module's XDATA size <= slot and the slot is still free; else the module alone is re-homed (first fit in the gaps).
 - Fragmented (free bytes enough, no single gap) -> compaction (every module moves) with a loud log; none fit -> error.
 - Explicit compaction: fw_build.py --xdata-compact (full-churn build).
@@ -94,8 +94,8 @@ def place(old: dict, sizes: dict, holes, reserved, compact: bool = False, best: 
                 continue
         if g is None:
             free = sum(hi - lo for lo, hi in gaps(holes, taken))
-            if not compact and free >= sizes[m]:
-                log(f"XDATA fragmented: {m} needs {sizes[m]} B, {free} B free in no single gap -> compaction (every module moves, full-churn flash)")
+            if not compact:                                  # stuck: kept slots may hold slack the sizes do not need, so every module is re-placed
+                log(f"XDATA stuck: {m} needs {sizes[m]} B, {free} B free in gaps -> compaction (every module moves, full-churn flash)")
                 try:
                     rows, info = place(old, sizes, holes, reserved, compact=True)
                 except SystemExit:               # first-fit leaves unusable 1 B gaps: best-fit packs tighter (#268)
@@ -104,7 +104,7 @@ def place(old: dict, sizes: dict, holes, reserved, compact: bool = False, best: 
                 info["compacted"] = True
                 return rows, info
             sys.exit(f"XDATA does not fit holes {[(hex(a), hex(b)) for a, b in holes]}: {m} needs {sizes[m]} B, "
-                     f"free {free} B in gaps {[hi - lo for lo, hi in gaps(holes, taken)]}")
+                     f"free {free} B in gaps {[hi - lo for lo, hi in gaps(holes, taken)]}; modules {sum(sizes.values())} B, holes - reserved {sum(b - a for a, b in holes) - sum(hi - lo for lo, hi in reserved)} B")
         put(m, g, taken)
     gp = gaps(holes, taken)
     per = [(a, b - a, sum(hi - lo for lo, hi in gp if a <= lo < b), max([hi - lo for lo, hi in gp if a <= lo < b], default=0)) for a, b in holes]
@@ -148,8 +148,9 @@ def main() -> int:
     ap.add_argument("cmd", choices=["check"])
     ap.add_argument("--tree", default=str(Path(__file__).resolve().parents[1]))
     ap.add_argument("--map", required=True)
+    ap.add_argument("--layout", help="layout the image was linked with (a variant image: tmp/fw/<stem>.xdata_layout.tsv); default the tree's tracked file")
     a = ap.parse_args()
-    bad = check(Path(a.tree) / "fw/xdata_layout.tsv", Path(a.map).read_text(errors="replace"))
+    bad = check(Path(a.layout) if a.layout else Path(a.tree) / "fw/xdata_layout.tsv", Path(a.map).read_text(errors="replace"))
     for b in bad[:20]:
         log(f"xlayout FAIL: {b}")
     log(f"xlayout: {'FAIL, ' + str(len(bad)) + ' problems' if bad else 'PASS, layout matches the map'}")

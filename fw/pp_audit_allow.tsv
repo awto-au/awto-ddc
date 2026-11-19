@@ -48,6 +48,7 @@ value	fw/sdk/Kernel/Common/Pcb_Config_Check.h	PCB_EMBEDDED_LDO_DETECT	RL6369-onl
 family	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Code/ScalerCommonMcu.c	_BACKLIGHT_PWM_INVERSE == _ENABLE	_ON vs _ENABLE: both 1 by design; factory backlight-sensor blocks, not compiled here
 nodef	fw/test/testcmd.c	_AWTO_OSD_HWTEST	ours: dev.py build -D _AWTO_OSD_HWTEST (OSD SRAM write / read-back tests, docs/osd-hw-tests.md)
 nodef	fw/test/asteroids.c	_AWTO_OSD_HWTEST	ours: dev.py build -D _AWTO_OSD_HWTEST (frame counters for the clock sweep, docs/clock-sweep.md)
+nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_OSD_HWTEST	ours: dev.py build -D _AWTO_OSD_HWTEST (message ring 32: XDATA for the test ops, #268)
 nodef	fw/test/asteroids.c	_AWTO_AST_FIXED_TICKS	ours: dev.py build -D _AWTO_AST_FIXED_TICKS (unpaced fixed ticks per frame for saver_frames_md5.py, docs/saver-fps-plan.md)
 nodef	fw/sdk/Kernel/Common/Project_Option.h	_AWTO_OSD_HWTEST	ours: dev.py build -D _AWTO_OSD_HWTEST (MOVX cycle of the FF60 writes set at run time by the clock test op, docs/clock-sweep.md)
 nodef	fw/test/cpu_suite.c	_AWTO_CPU_SUITE	ours: dev.py build -D _AWTO_CPU_SUITE (the CPU suite image, docs/cpu-suite.md)

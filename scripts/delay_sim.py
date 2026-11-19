@@ -315,6 +315,7 @@ def main():
     ap.add_argument("map", type=Path)
     ap.add_argument("--tree", default=str(ROOT))
     ap.add_argument("--other", nargs=2, type=Path, metavar=("BIN", "MAP"), help="second image at another clock (build -D AWTO_CLOCK_MHZ=87): measured too, and compared with the first")
+    ap.add_argument("--variant", choices=("", "hwtest"), default="", help="with --audit: the image's variant (docs/delay-audit-<variant>.tsv holds its extra sites)")
     ap.add_argument("--audit", action="store_true", help="also delay_audit.py --check (every linked delay site is in docs/delay-audit.tsv)")
     ap.add_argument("--json", type=Path, help="write the per-image result here")
     ap.add_argument("--mode", default="1080p60")
@@ -335,7 +336,7 @@ def main():
     if a.audit:
         import delay_audit as DA
         say("delay_audit --check")
-        fails += DA.check(Path(a.tree), a.map)
+        fails += DA.check(Path(a.tree), a.map, a.variant)
     if a.json:
         a.json.write_text(json.dumps([{k: v for k, v in r.items() if k != "rows"} for r in res]))
     say(f"{'PASS' if fails == 0 else 'FAIL'} delay_sim total: {fails} failed")

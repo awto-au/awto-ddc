@@ -256,7 +256,7 @@ static __xdata WORD s_usOhwLfsr;
 static __xdata BYTE s_ucOhwCyOn;
 static __xdata BYTE s_ucOhwCyVar;
 static __xdata WORD s_usOhwCyPos;
-static __xdata unsigned long s_ulOhwCyT0;
+static __xdata WORD s_usOhwCyT0;
 static const __code BYTE tAwtoOhwDigit[AWTO_OHW_DIGITS][AWTO_OHW_DG_H] = {        // 5 x 7, bit 4 = left column
     {0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E}, {0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F}, {0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E},
     {0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02}, {0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E}, {0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E}};
@@ -580,9 +580,9 @@ static BYTE AwtoOhwCycleStep(void)                      // T10: one band of the 
     unsigned long ulT0 = AwtoMs();
     WORD usCells = (WORD)AWTO_OHW_LD_N * AWTO_OHW_LD_N;
 
-    if((WORD)(ulT0 - s_ulOhwCyT0) >= AWTO_OHW_CY_MS)
+    if((WORD)((WORD)ulT0 - s_usOhwCyT0) >= AWTO_OHW_CY_MS)
     {
-        s_ulOhwCyT0 = ulT0;
+        s_usOhwCyT0 = (WORD)ulT0;
         s_ucOhwCyVar = (s_ucOhwCyVar >= AWTO_OHW_V_SCOPE2) ? 1 : (BYTE)(s_ucOhwCyVar + 1);
         g_stAwtoOsdHw.usFrame = s_ucOhwCyVar;                         // host sees the variant shown
         if(s_ucOhwCyVar == AWTO_OHW_V_SCOPE2)
@@ -812,7 +812,7 @@ static __xdata unsigned long s_ulClkStockPll;           // kHz
 static __xdata unsigned long s_ulClkNum;                // delay / debounce scale = stock count x NUM / DEN
 static __xdata unsigned long s_ulClkDen;
 static __xdata WORD s_usClkStockDeb;
-static __xdata unsigned long s_ulClkT0;
+static __xdata WORD s_usClkT0;
 #define s_aucClkXd g_stAwtoOsdHw.aucBuf
 static __xdata BYTE s_ucClkSink;
 static const __code unsigned long tAwtoClkCrc[16] = {0x00000000UL, 0x1DB71064UL, 0x3B6E20C8UL, 0x26D930ACUL, 0x76DC4190UL, 0x6B6B51F4UL, 0x4DB26158UL, 0x5005713CUL,
@@ -1179,7 +1179,7 @@ static void AwtoClkChecks(void)
 #define AWTO_CLK_FL_BANK                        15
 #define AWTO_CLK_FL_PAGE                        14                  // page x 0x1000 = 0xE000
 #define AWTO_CLK_FL_SIZE                        4096
-#define AWTO_CLK_FL_CHUNK                       16                  // flash call size and XDATA buffer: HWTEST XDATA is full (#268)
+#define AWTO_CLK_FL_CHUNK                       16                  // flash call size, <= AWTO_OHW_BUF (shared buffer)
 #define AWTO_CLK_FL_MAX                         20                  // wear limit: <= 100 erases in total (Dan), N + 1 erases per call
 #define AWTO_CLK_FL_ERR_NONE                    0
 #define AWTO_CLK_FL_ERR_ERASE                   1                   // erase call returned false
@@ -1191,7 +1191,7 @@ static void AwtoClkChecks(void)
 #define AWTO_CLK_FL_STAGE                       0xA0                // ucFlFail = STAGE + n while a call runs (the host reads it after a reset): 1 erase, 2 blank check, 3 program, 4 verify
 #define AWTO_CLK_FL_ERR_SPARE                   9                   // spare holds foreign data: nothing erased
 __xdata BYTE g_ucAwtoFlCk;                                          // read by _CKCON_MCU_SLOW_CYCLE in HWTEST builds (Project_Option.h)
-static __xdata BYTE s_aucClkFl[AWTO_CLK_FL_CHUNK];
+#define s_aucClkFl g_stAwtoOsdHw.aucBuf                                // the OSD test op's scratch buffer, idle while the clock op runs (like s_aucClkXd)
 
 static BYTE AwtoClkFlPat(WORD usA, BYTE ucC)
 {
@@ -1804,7 +1804,7 @@ static void AwtoClkApply(void)
         CKCON = (CKCON & ~0x07) | (g_stAwtoClk.ucCkcon & 0x07);
     }
     EA = 1;
-    s_ulClkT0 = AwtoMs();
+    s_usClkT0 = (WORD)AwtoMs();
     g_stAwtoClk.ucState = AWTO_CLK_ST_HELD;
     AwtoClkChecks();
     AwtoClkImgPasses();
@@ -1850,7 +1850,7 @@ static void AwtoClkPoll(void)
     {
         if(g_stAwtoClk.ucState == AWTO_CLK_ST_HELD)
         {
-            s_ulClkT0 = AwtoMs();
+            s_usClkT0 = (WORD)AwtoMs();
             if(ucGo == AWTO_CLK_OP_CHECK)
             {
                 AwtoClkChecks();
@@ -1858,7 +1858,7 @@ static void AwtoClkPoll(void)
             }
         }
     }
-    else if((g_stAwtoClk.ucState == AWTO_CLK_ST_HELD) && ((ucGo == AWTO_CLK_OP_REVERT) || ((WORD)((WORD)AwtoMs() - (WORD)s_ulClkT0) >= g_stAwtoClk.usHoldMs)))
+    else if((g_stAwtoClk.ucState == AWTO_CLK_ST_HELD) && ((ucGo == AWTO_CLK_OP_REVERT) || ((WORD)((WORD)AwtoMs() - s_usClkT0) >= g_stAwtoClk.usHoldMs)))
     {
         AwtoClkRevert((ucGo == AWTO_CLK_OP_REVERT) ? AWTO_CLK_ST_REVERTED : AWTO_CLK_ST_AUTO_REVERTED);
     }
@@ -1968,7 +1968,7 @@ typedef struct
     BYTE ucNops;                                        // 47  M_GAP raw shape: nops between the stores (0..6), all K = 0xFF
 } StAwtoOsw;
 __xdata StAwtoOsw g_stAwtoOsw;
-static __xdata BYTE s_aucOswBuf[AWTO_OSW_BUF];
+#define s_aucOswBuf g_stAwtoOsdHw.aucBuf                       // shares the OSD test op's buffer (HWTEST XDATA is full, #268): ops run one at a time
 static __data BYTE d_s_ucOplB0;                           // M_GAP word bytes and delays (internal RAM: the asm reads them without a DPTR reload)
 static __data BYTE d_s_ucOplB1;
 static __data BYTE d_s_ucOplB2;
@@ -2956,7 +2956,7 @@ static void AwtoOsdHwPoll(void)
         {
             AwtoOhwLadder();
             s_ucOhwCyVar = AWTO_OHW_V_SCOPE2;                           // the first step goes on to variant 1
-            s_ulOhwCyT0 = AwtoMs() - AWTO_OHW_CY_MS;
+            s_usOhwCyT0 = (WORD)AwtoMs() - AWTO_OHW_CY_MS;
             s_usOhwCyPos = 0;
             g_stAwtoOsdHw.usBad = 0;
         }

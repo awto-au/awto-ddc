@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Typed inventory of every delay / wait / poll / timeout in the linked firmware, and the gate that keeps it complete (docs/delay-audit.md).
 
-usage: delay_audit.py --write [--tree DIR] [--map MAP]   regenerate docs/delay-audit.tsv from the tree's last build (hand columns kept by key)
-       delay_audit.py --check [--tree DIR] [--map MAP]   FAIL on a linked site that is not in the TSV, a TSV verdict FIX / UNKNOWN, a stale count formula
+usage: delay_audit.py --write [--tree DIR] [--map MAP] [--variant hwtest]   regenerate docs/delay-audit.tsv from the tree's last build (hand columns kept by key)
+       delay_audit.py --check [--tree DIR] [--map MAP] [--variant hwtest]   FAIL on a linked site that is not in the TSV, a TSV verdict FIX / UNKNOWN, a stale count formula
        delay_audit.py --counts                            the loop-count formula (AWTO_DELAY_CNT) at every clock state (350.8 default, 175.4, 87.7, XTAL, IOSC), from the header text
 Source of the sites: scripts/delay_inventory.py (post-link: the SDCC listing of the tree's build, so "linked" is exact).
 Classes: A timer wait (Timer2 ms) | B micro-delay (DELAY_5US / DELAY_XUS loop count, per clock state) | C spin loop / counted loop |
   D hardware-spec minimum (datasheet value - 10 %) | E our own timing constant.
 Verdicts: OK (wall time equal at 87.7 and 175.4 MHz by construction + sim gate) | NOCLOCK (hardware-bound, no timed bound) | SCALES-BENIGN (halves at 2x, harmless: stated why)
   | FIXED (was wrong at 2x, fixed: note) | FIX | UNKNOWN (both fail the gate).
+--variant hwtest: the image's sites must be in docs/delay-audit.tsv or docs/delay-audit-hwtest.tsv (write: the second file holds only the sites the first lacks);
+  a default image still needs every site in the first file.
 Key = file | function | kind | normalised statement | ordinal (no line numbers: lines move). Log: ./tmp/logs/delay_audit.log
 """
 import argparse
@@ -24,6 +26,7 @@ import isostamp
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
 TSV = ROOT / "docs/delay-audit.tsv"
+VARIANT_TSV = {"hwtest": ROOT / "docs/delay-audit-hwtest.tsv"}   # sites only in that variant's image (-D _AWTO_OSD_HWTEST test ops); same columns + verdict rule
 LOG = ROOT / "tmp/logs/delay_audit.log"
 COLS = ["key", "id", "class", "file", "line", "function", "kind", "value", "unit", "derivation", "scales_2x", "wall_87_7", "wall_350_8",
         "spec", "evidence", "verdict", "note", "stmt"]
@@ -177,17 +180,26 @@ def rows_all(tree, mapp):
     return rr
 
 
-def load_tsv():
-    if not TSV.exists():
+def load_tsv(path=TSV):
+    if not path.exists():
         return {}
-    return {r["key"]: r for r in csv.DictReader(TSV.open(), delimiter="\t")}
+    return {r["key"]: r for r in csv.DictReader(path.open(), delimiter="\t")}
 
 
-def write(tree, mapp):
-    old = load_tsv()
+def load_all(variant=""):
+    """Main rows + the variant's extra rows."""
+    return {**load_tsv(VARIANT_TSV[variant]), **load_tsv()} if variant else load_tsv()
+
+
+def write(tree, mapp, variant=""):
+    base = load_tsv()
+    dst = VARIANT_TSV[variant] if variant else TSV
+    old = load_tsv(dst)
     out = []
-    nxt = max((int(r["id"][1:]) for r in old.values()), default=0) + 1       # ids of existing rows stay; new rows append
+    nxt = max((int(r["id"][1:]) for r in {**base, **old}.values()), default=0) + 1       # ids of existing rows stay; new rows append
     for k, r in rows_all(tree, mapp):
+        if variant and k in base:                                            # the main file already holds it
+            continue
         if k in old:
             i = int(old[k]["id"][1:])
         else:
@@ -203,13 +215,13 @@ def write(tree, mapp):
             for c in ("class", "derivation", "scales_2x", "spec", "evidence", "verdict", "note"):
                 row[c] = old[k][c]
         out.append(row)
-    TSV.parent.mkdir(parents=True, exist_ok=True)
-    with TSV.open("w", newline="") as f:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with dst.open("w", newline="") as f:
         w = csv.DictWriter(f, COLS, delimiter="\t", lineterminator="\n")
         w.writeheader()
         w.writerows(out)
     summary(out)
-    say(f"wrote {TSV} ({len(out)} rows)")
+    say(f"wrote {dst} ({len(out)} rows)")
     return 0
 
 
@@ -219,8 +231,8 @@ def summary(rows):
         say(f"  class {cl or '-'} {ver}: {n}")
 
 
-def check(tree, mapp):
-    old = load_tsv()
+def check(tree, mapp, variant=""):
+    old = load_all(variant)
     rr = rows_all(tree, mapp)
     keys = {k for k, _ in rr}
     new = [k for k in keys if k not in old]
@@ -228,7 +240,7 @@ def check(tree, mapp):
     bad = [k for k, r in old.items() if r["verdict"] in ("FIX", "UNKNOWN", "")]
     fails = 0
     for n, (ok, what, det) in enumerate([
-        (not new, f"{len(rr)} linked delay sites, none missing from docs/delay-audit.tsv", "; ".join(sorted(new)[:5])),
+        (not new, f"{len(rr)} linked delay sites, none missing from docs/delay-audit.tsv{'' if not variant else ' / delay-audit-' + variant + '.tsv'}", "; ".join(sorted(new)[:5])),
         (not bad, "no inventory row with verdict FIX / UNKNOWN", "; ".join(sorted(bad)[:5])),
     ]):
         say(f"  {'PASS' if ok else 'FAIL'} {what}{(': ' + det) if det else ''}")
@@ -253,6 +265,7 @@ def main():
     ap.add_argument("--counts", action="store_true")
     ap.add_argument("--tree", type=Path, default=ROOT)
     ap.add_argument("--map", type=Path)
+    ap.add_argument("--variant", choices=sorted(VARIANT_TSV), default="")
     a = ap.parse_args()
     if a.counts:
         for name, khz in clock_states():
@@ -260,7 +273,7 @@ def main():
         return 0
     mapp = a.map or sorted((a.tree / "tmp/fw").glob("*-be.map"), key=lambda p: p.stat().st_mtime)[-1]
     say(f"delay_audit tree {a.tree} map {mapp.name}")
-    return write(a.tree, mapp) if a.write else check(a.tree, mapp)
+    return write(a.tree, mapp, a.variant) if a.write else check(a.tree, mapp, a.variant)
 
 
 if __name__ == "__main__":

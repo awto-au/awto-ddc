@@ -95,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     (root / "tmp/fw" / f"{a.serial}-{a.tag}-be.xdata.json").write_text(
         json.dumps({k: bj.get(k) for k in ("xdata_free", "xdata_pool")}) + "\n")     # shown in the gates record; no build fails on it
+    (root / "tmp/fw" / f"{a.serial}-{a.tag}-be.build.json").write_text(            # variant + clock of this image (scripts/image_variant.py)
+        json.dumps({"defines": [*a.defs, *(f for f in a.flags.split() if f.startswith("-D"))], "xdata_free": bj.get("xdata_free")}) + "\n")
+    shutil.copy2(a.tree / "tmp/sdcc-port/xdata_layout.new.tsv", root / "tmp/fw" / f"{a.serial}-{a.tag}-be.xdata_layout.tsv")
     for ext in ("bin", "map"):
         dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.{ext}"
         shutil.copy2(a.tree / f"tmp/fw/{a.serial}/fw.{ext}", dst)

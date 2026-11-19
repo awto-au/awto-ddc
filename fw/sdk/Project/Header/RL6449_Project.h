@@ -462,7 +462,11 @@ extern void AwtoT0EvTest(unsigned char ucHow);
 extern void AwtoT0EvTestIsr(void);
 extern volatile __xdata unsigned char isr_g_ucAwtoT0Test;
 #define AWTO_T0EV_EXINT0()                                      do { if(isr_g_ucAwtoT0Test != 0) { AwtoT0EvTestIsr(); } } while(0)
+#ifdef _AWTO_OSD_HWTEST
+#define AWTO_MSG_RING                                           32      // test image: 48 B less XDATA for its test ops (#268)
+#else
 #define AWTO_MSG_RING                                           40      // on-screen message log entries (#56)
+#endif
 typedef struct
 {
     unsigned int usId;
