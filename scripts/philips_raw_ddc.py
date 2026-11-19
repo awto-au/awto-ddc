@@ -5,16 +5,17 @@ Sends only Get-VCP frames (opcode 01) and the SmartControl support probe (opcode
 No set / save / write opcodes: the frame table below is the whole list.
 Output: tmp/philips/<date>-rawddc.txt, log tmp/logs/philips_raw_ddc.log.
 """
+
 import datetime
-import fcntl
 import os
 import re
 import subprocess
 import sys
 import time
 
+import i2cbus
+
 SERIAL = "UK52307000611"
-I2C_SLAVE = 0x0703
 # DDC/CI spec: >= 40 ms between request and reply read; coded at spec minus 10 % (house delay rule).
 REPLY_DELAY_S = 0.036
 FRAMES = [  # (label, payload after 0x51/len: opcode + data), reads only
@@ -29,11 +30,15 @@ FRAMES = [  # (label, payload after 0x51/len: opcode + data), reads only
 
 
 def repo():
-    return os.environ.get("AWTO_DDC_REPO") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.environ.get("AWTO_DDC_REPO") or os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
 
 
 def find_bus():
-    out = subprocess.run(["ddcutil", "detect", "--brief"], capture_output=True, text=True).stdout
+    out = subprocess.run(
+        ["ddcutil", "detect", "--brief"], capture_output=True, text=True
+    ).stdout
     for blk in out.split("Display "):
         if SERIAL in blk:
             m = re.search(r"/dev/i2c-(\d+)", blk)
@@ -56,22 +61,26 @@ def main():
     os.makedirs(os.path.join(root, "tmp/philips"), exist_ok=True)
     os.makedirs(os.path.join(root, "tmp/logs"), exist_ok=True)
     bus = find_bus()
-    fd = os.open("/dev/i2c-%d" % bus, os.O_RDWR)
-    fcntl.ioctl(fd, I2C_SLAVE, 0x37)
+    dev = i2cbus.Bus(bus)
     lines = ["bus /dev/i2c-%d serial %s" % (bus, SERIAL)]
     for label, payload in FRAMES:
         req = frame(payload)
-        os.write(fd, req)
+        dev.raw_write(0x37, req)
         time.sleep(REPLY_DELAY_S)
         try:
-            rep = os.read(fd, 40)
+            rep = dev.raw_read(0x37, 40)
         except OSError as e:
             rep = b""
-            lines.append("# read error %s" % e)
-        lines.append("%s | req %s | rep %s" % (label, req.hex(" "), rep.hex(" ")))
+            lines.append(f"# read error {e}")
+        lines.append("{} | req {} | rep {}".format(label, req.hex(" "), rep.hex(" ")))
         time.sleep(REPLY_DELAY_S)  # spacing between requests
-    open(os.path.join(root, "tmp/philips/%s-rawddc.txt" % day), "a").write("\n".join(lines) + "\n")
-    open(os.path.join(root, "tmp/logs/philips_raw_ddc.log"), "a").write("\n".join(lines) + "\n")
+    dev.close()
+    open(os.path.join(root, f"tmp/philips/{day}-rawddc.txt"), "a").write(
+        "\n".join(lines) + "\n"
+    )
+    open(os.path.join(root, "tmp/logs/philips_raw_ddc.log"), "a").write(
+        "\n".join(lines) + "\n"
+    )
     print("\n".join(lines))
 
 

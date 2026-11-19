@@ -6,6 +6,7 @@ Output: tmp/wine/monitor_profile.txt (caps / edid / vcp lines read by tools/smar
 Optional: --model NAME renames the monitor (EDID name + caps model()) to a model the app lists.
 Log: tmp/logs/smartcontrol_profile.log. No hardware access.
 """
+
 import binascii
 import glob
 import os
@@ -43,16 +44,43 @@ def vcp_values(scan):
             a = [int(x, 16) for x in mh.groups()]
             out[code] = (1, a[2] << 8 | a[3], a[0] << 8 | a[1])
         elif sl:
-            out[code] = (1, (int(sh.group(1), 16) if sh else 0) << 8 | int(sl.group(1), 16), 0xFF)
+            out[code] = (
+                1,
+                (int(sh.group(1), 16) if sh else 0) << 8 | int(sl.group(1), 16),
+                0xFF,
+            )
     # text-only replies, values read off the same scan lines
     over = {
-        0x02: (1, 0x02, 0xFF), 0x0B: (0, 100, 0xFF), 0x0C: (0, 0x0000, 0xFF),
-        0x1E: (1, 0, 1), 0x52: (1, 0, 0xFF), 0x62: (0, 0x54, 100), 0x72: (1, 0x78, 0xFF),
-        0xAC: (0, 2228, 0xFFFF), 0xAE: (0, 5999, 0xFFFF), 0xC6: (0, 0x006F, 0xFFFF),
-        0xC9: (0, 0x0100, 0xFFFF), 0x14: (1, 0x05, 0xFF), 0xDF: (1, 0x0202, 0xFFFF),
+        0x02: (1, 0x02, 0xFF),
+        0x0B: (0, 100, 0xFF),
+        0x0C: (0, 0x0000, 0xFF),
+        0x1E: (1, 0, 1),
+        0x52: (1, 0, 0xFF),
+        0x62: (0, 0x54, 100),
+        0x72: (1, 0x78, 0xFF),
+        0xAC: (0, 2228, 0xFFFF),
+        0xAE: (0, 5999, 0xFFFF),
+        0xC6: (0, 0x006F, 0xFFFF),
+        0xC9: (0, 0x0100, 0xFFFF),
+        0x14: (1, 0x05, 0xFF),
+        0xDF: (1, 0x0202, 0xFFFF),
     }
     for c, v in over.items():
-        if c in out and c not in (0x02, 0x0B, 0x0C, 0x14, 0x1E, 0x52, 0x62, 0x72, 0xAC, 0xAE, 0xC6, 0xC9, 0xDF):
+        if c in out and c not in (
+            0x02,
+            0x0B,
+            0x0C,
+            0x14,
+            0x1E,
+            0x52,
+            0x62,
+            0x72,
+            0xAC,
+            0xAE,
+            0xC6,
+            0xC9,
+            0xDF,
+        ):
             continue
         out[c] = v
     return out
@@ -62,15 +90,19 @@ def patch_model(edid, caps, model):
     """Rename the monitor-name descriptor (0xFC) + caps model(): SmartControl only lists 288E2UAE."""
     b = bytearray(edid)
     for off in (54, 72, 90, 108):
-        if b[off:off + 4] == b"\x00\x00\x00\xfc":
-            b[off + 5:off + 18] = ("PHL " + model + "\n").ljust(13).encode()[:13]
+        if b[off : off + 4] == b"\x00\x00\x00\xfc":
+            b[off + 5 : off + 18] = ("PHL " + model + "\n").ljust(13).encode()[:13]
     b[127] = (-sum(b[:127])) & 0xFF
-    return bytes(b), re.sub(r"model\([^)]*\)", "model(%s)" % model, caps)
+    return bytes(b), re.sub(r"model\([^)]*\)", f"model({model})", caps)
 
 
 def main():
     root = repo()
-    caps = [ln for ln in open(latest(root, "caps-verbose.txt")) if ln.startswith("Unparsed capabilities string:")]
+    caps = [
+        ln
+        for ln in open(latest(root, "caps-verbose.txt"))
+        if ln.startswith("Unparsed capabilities string:")
+    ]
     capstr = caps[0].split(":", 1)[1].strip()
     raw = open(latest(root, "edid.bin"), "rb").read()
     if len(sys.argv) > 2 and sys.argv[1] == "--model":
@@ -86,7 +118,12 @@ def main():
         for c in sorted(vals):
             t, cur, mx = vals[c]
             f.write("vcp %02X %d %d %d\n" % (c, t, cur, mx))
-    msg = "profile %s: caps %d chars, edid %d bytes, %d vcp codes" % (p, len(capstr), len(edid) // 2, len(vals))
+    msg = "profile %s: caps %d chars, edid %d bytes, %d vcp codes" % (
+        p,
+        len(capstr),
+        len(edid) // 2,
+        len(vals),
+    )
     open(os.path.join(root, "tmp/logs/smartcontrol_profile.log"), "a").write(msg + "\n")
     print(msg)
 

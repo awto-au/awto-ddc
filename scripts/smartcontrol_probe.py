@@ -7,6 +7,7 @@ Each call has a 90 s limit (Start reads every feature at ~150 ms per I2C transac
 Logs: tmp/logs/smartcontrol_probe.log (calls + replies), tmp/logs/smartcontrol_ddc.log (shim),
 tmp/logs/smartcontrol_backend.log (copy of the app's own NLog). Real hardware is never touched.
 """
+
 import glob
 import os
 import shutil
@@ -15,7 +16,9 @@ import sys
 import time
 import urllib.request
 
-ROOT = os.environ.get("AWTO_DDC_REPO") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.environ.get("AWTO_DDC_REPO") or os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
 PORT = 19400
 BASE = "http://127.0.0.1:%d/Main/" % PORT
 HERE = os.path.join(ROOT, "scripts/smartcontrol_wine.py")
@@ -23,7 +26,7 @@ LOG = open(os.path.join(ROOT, "tmp/logs/smartcontrol_probe.log"), "a")
 
 
 def say(msg):
-    line = "%s %s" % (time.strftime("%Y-%m-%dT%H:%M:%S%z"), msg)
+    line = "{} {}".format(time.strftime("%Y-%m-%dT%H:%M:%S%z"), msg)
     LOG.write(line + "\n")
     LOG.flush()
     print(line)
@@ -34,7 +37,7 @@ def get(path, limit):
         with urllib.request.urlopen(BASE + path, timeout=limit) as r:
             return r.read().decode("utf-8", "replace")
     except Exception as e:  # noqa: BLE001 - logged, caller decides
-        return "ERR %s" % e
+        return f"ERR {e}"
 
 
 def wait_up():
@@ -49,7 +52,9 @@ def wait_up():
 
 def get_swagger():
     try:
-        urllib.request.urlopen("http://127.0.0.1:%d/swagger/v1/swagger.json" % PORT, timeout=2).read(10)
+        urllib.request.urlopen(
+            "http://127.0.0.1:%d/swagger/v1/swagger.json" % PORT, timeout=2
+        ).read(10)
         return True
     except Exception:  # noqa: BLE001
         return False
@@ -58,7 +63,9 @@ def get_swagger():
 def main():
     calls = sys.argv[1:]
     env = dict(os.environ)
-    backend = subprocess.Popen([sys.executable, "-I", HERE, "backend", "--urls", "http://127.0.0.1:%d" % PORT])
+    backend = subprocess.Popen(
+        [sys.executable, "-I", HERE, "backend", "--urls", "http://127.0.0.1:%d" % PORT]
+    )
     try:
         if not wait_up():
             say("backend did not come up in 30 s")
@@ -70,8 +77,13 @@ def main():
         say("Rescan(2) %d bytes; EDID name present: %s" % (len(r), "PHL 288E2" in r))
         for c in calls:
             r = get(c, 90)
-            open(os.path.join(ROOT, "tmp/logs/smartcontrol_reply_%s.json" % c.split("?")[0]), "w").write(r)
-            say("CALL %s -> %s" % (c, r[:300].replace("\n", " ")))
+            open(
+                os.path.join(
+                    ROOT, "tmp/logs/smartcontrol_reply_{}.json".format(c.split("?")[0])
+                ),
+                "w",
+            ).write(r)
+            say("CALL {} -> {}".format(c, r[:300].replace("\n", " ")))
             if r.startswith("ERR"):
                 say("call timed out/failed; stopping (backend may be spinning)")
                 break
@@ -79,7 +91,12 @@ def main():
         env["WINEPREFIX"] = os.path.join(ROOT, "tmp/wine/prefix")
         subprocess.run(["wineserver", "-k"], env=env)
         backend.wait()
-        for f in glob.glob(os.path.join(ROOT, "tmp/wine/prefix/drive_c/users/*/AppData/Roaming/SmartControlData/backserver/logs/*.log")):
+        for f in glob.glob(
+            os.path.join(
+                ROOT,
+                "tmp/wine/prefix/drive_c/users/*/AppData/Roaming/SmartControlData/backserver/logs/*.log",
+            )
+        ):
             if os.path.getsize(f) < 50_000_000:
                 shutil.copy(f, os.path.join(ROOT, "tmp/logs/smartcontrol_backend.log"))
             os.remove(f)
