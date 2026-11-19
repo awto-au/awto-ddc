@@ -308,6 +308,22 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_P_WDTI                                         0x20    // DW8051 EICON[3] WDTI set: Realtek's WDT also drives the core wdti
 #define AWTO_WDT_P_EARLY                                        0x40    // a threshold IRQ before the warning since the last main pass (pokes
                                                                         // stopped > 439 ms); kept over the reset: hardware-WDT evidence
+// Main-loop pacing (docs/main-loop-pacing.md): 0 = free-running loop (default). N > 0: after a pass, idle (PCON.IDL) until N ms
+// since the previous pass or until an ISR (EXINT0 / EXINT1 / Timer0) sets d_isr_g_bAwtoWake. Idle wakes on every IRQ (Timer2 1 ms at most).
+#ifndef AWTO_LOOP_PACING
+#define AWTO_LOOP_PACING                                        0
+#endif
+#if(AWTO_LOOP_PACING > 0)
+extern volatile bit d_isr_g_bAwtoWake;
+typedef struct { unsigned int usPasses; unsigned int usSleepPm; unsigned int usWorstQ4; } StAwtoHead;   // last 1 s: passes, sleep per mille, worst busy pass in 1/16 ms
+extern __xdata StAwtoHead g_stAwtoHead;
+extern void AwtoLoopPace(void);
+#define AWTO_LOOP_PACE()                                        AwtoLoopPace()
+#define AWTO_ISR_WAKE()                                         (d_isr_g_bAwtoWake = 1)
+#else
+#define AWTO_LOOP_PACE()
+#define AWTO_ISR_WAKE()
+#endif
 // One hardware watchdog (#138). Counters: CNT2 / 2048 XTAL -> CNT3 (143.0 us, wraps 585.9 ms) -> CNT1 (wraps).
 // Poke = FFEA[6] clr_wdt: every main-loop pass and inside bounded loops only (rule: no unbounded loop around a poking wait).
 // Warning = threshold IRQ at CNT1 = N - 1, CNT3 = THR (earlier matches return): capture, then sof_rst. Reset = CNT1 = N.
