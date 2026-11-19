@@ -132,10 +132,15 @@ void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
 #define AWTO_PS_F_BOOT                          0x01    // flags: the boot-time generator off has run
 #define AWTO_PS_F_GATE                          0x02    // the amp is muted for a pitch change and opens at s_usPsGateAt
 #define AWTO_PS_F_WAKA                          0x04    // eating: waka wanted
+#define AWTO_PS_F_DVC_UP                        0x08    // the DVC has been ramped up (gain written); cleared by the ramp down
 #define AWTO_PS_F_LOW_MASK                      0x0F    // flags bits 3:0; bits 7:4 = background state wanted (siren speed / frightened)
 #define AWTO_PS_F_BG_SHIFT                      4
 #define AWTO_PS_NOTE_BYTES                      2
 #define AWTO_PS_GAP_MS                          4       // amp muted while the audio PLL divider changes (the pitch step was a click): by ear, not measured; Dan 2026-11-18 "a bit clicky at the change of sounds"
+#define AWTO_DVC_STEP_1DB                       0x00    // DVC_EN dvc_down_db / dvc_up_db = 00: +-1 dB per step (gain * 7/8 down, 9/8 up)
+#define AWTO_DVC_ZC_SAMPLES                     1       // DVC_ZC_WIN: samples a step waits for a zero crossing before it applies anyway
+#define AWTO_DVC_RAMP_POLL_MS                   1       // DVC_GAIN_DONE poll period = ScalerTimerDelayXms granularity
+#define AWTO_DVC_RAMP_POLLS                     2       // ramp down 68 steps (ln 8191 / ln 8/7) x 1 sample / 48 kHz = 1.4 ms, x1.25 = 1.8 ms -> 2 polls of 1 ms
 #define AWTO_PS_MS_HALF                         0x8000  // WORD ms difference below this = the time has passed
 #define AWTO_PS_SCAPR_SLC                       0x80    // SCAPR bit 7 = S1 div 2, as the SDK 48 kHz code 0xA0
 #define AWTO_PS_EV_START                        0x80    // sync E9: + track
@@ -190,6 +195,42 @@ static WORD PsBase(void)
     return (SysSourceGetInputPort() == _D3_INPUT_PORT) ? AWTO_R_P72_HDMI_AP : AWTO_R_P71_HDMI_AP;   // generator lives in the input port's HDMI audio block
 }
 
+// Short DVC ramp (hardware, steps at zero crossings) so the MUTE pin only ever switches a zero signal; the SDK mute / unmute rewrites these fields.
+static void DvcRamp(WORD usGain)
+{
+    BYTE ucPolls = 0;
+
+    ScalerSetBit(AWTO_R_DVC_EN, (BYTE)~(AWTO_F_DVC_EN_DVC_DOWN_DB | AWTO_F_DVC_EN_DVC_UP_DB), AWTO_DVC_STEP_1DB);
+    ScalerSetBit(AWTO_R_DVC_ZC_WIN_CTRL_0, (BYTE)~AWTO_F_DVC_ZC_WIN_CTRL_0_DVC_ZC_WIN, HIBYTE(AWTO_DVC_ZC_SAMPLES));
+    ScalerSetByte(AWTO_R_DVC_ZC_WIN_CTRL_1, LOBYTE(AWTO_DVC_ZC_SAMPLES));
+    ScalerAudioDVCAdjustVolume(usGain);
+    if(usGain != 0)
+    {
+        s_ucPsFlags |= AWTO_PS_F_DVC_UP;        // up: the hardware ramps behind this call, nothing to wait for
+        return;
+    }
+    s_ucPsFlags &= (BYTE)~AWTO_PS_F_DVC_UP;
+    do
+    {
+        ScalerTimerDelayXms(AWTO_DVC_RAMP_POLL_MS);
+        ucPolls++;
+    }
+    while((ScalerGetBit(AWTO_R_DVC_GAIN_DONE, AWTO_F_DVC_GAIN_DONE_DVC_DONE) == 0) && (ucPolls < AWTO_DVC_RAMP_POLLS));
+    if(ScalerGetBit(AWTO_R_DVC_GAIN_DONE, AWTO_F_DVC_GAIN_DONE_DVC_DONE) == 0)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_AUDIO, AWTO_AUDIO_EV_DVC_SLOW, 0);   // gate closes anyway
+    }
+}
+
+static void PsGateClose(void)                   // DVC to 0 first (only if it was up), then the MUTE pin, then the settle
+{
+    if((s_ucPsFlags & AWTO_PS_F_DVC_UP) != 0)
+    {
+        DvcRamp(0);
+    }
+    AmpSet(bAMP_EN, 1);                         // MUTE high + settle only when it was low
+}
+
 static void PsNote(BYTE ucNote)
 {
     WORD usBase = PsBase();
@@ -197,12 +238,11 @@ static void PsNote(BYTE ucNote)
 
     if(ucSc == 0)
     {
-        bAMP_MUTE = 1;                          // rest: gate at the amp, no DVC ramp (that blocks up to 400 ms)
+        PsGateClose();                          // rest: ramp to 0, then the gate
         s_ucPsFlags &= (BYTE)~AWTO_PS_F_GATE;
         return;
     }
-    bAMP_MUTE = 1;                              // gate the amp: the divider change and the PLL relock are not heard
-    ScalerTimerDelayXms(AWTO_AMP_MUTE_MS);      // the gate has closed before the divider moves
+    PsGateClose();                              // the divider change and the PLL relock are not heard; the gate has closed before the divider moves
     ScalerSetDataPortBit(usBase, AWTO_I_PORT_PAGE71_HDMI_AFCR, (BYTE)~AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW,
                          ((ucNote & AWTO_PS_OCT_FLAG) != 0) ? 0x00 : AWTO_F_PORT_PAGE71_HDMI_AFCR_TST_I2S_SW);
     ScalerSetDataPortByte(usBase, AWTO_I_PORT_PAGE71_HDMI_SCAPR, AWTO_PS_SCAPR_SLC | ucSc);
@@ -215,7 +255,7 @@ static void PsStop(void)
 {
     s_ucPsTrack = AWTO_PS_TRACK_NONE;
     s_ucPsFlags &= (BYTE)~AWTO_PS_F_GATE;
-    AmpSet(bAMP_EN, 1);                         // gate first, then the DVC ramp, the generator and the amp enable (SysAudioInternalGenTestProc)
+    PsGateClose();                              // DVC ramp, gate, then the generator and the amp enable (SysAudioInternalGenTestProc)
     SysAudioInternalGenTestProc(_OFF);          // always: the generator registers survive an MCU reset / a reflash, a tone left on by an earlier image must stop too
 }
 
@@ -225,7 +265,7 @@ static void PsStart(BYTE ucTrack)
     {
         SysAudioInternalGenTestProc(_ON);       // generator on, DVC at 0, amp disabled and muted
         AwtoAudioAmpEnable();                   // P7.4 on while the input is silent; P7.3 opens after the first pitch
-        ScalerAudioMuteProc(_OFF, UserInterfaceGetAudioVolume());   // DVC ramps up (hardware, zero-crossing) behind the closed gate
+        ScalerAudioMuteProc(_OFF, 0);           // DVC mute status off, gain stays 0: the ramp up follows the gate opening (AwtoPmSoundPoll)
     }
     s_ucPsTrack = ucTrack;
     s_usPsAt = (WORD)AwtoMs();
@@ -281,6 +321,7 @@ void AwtoPmSoundPoll(void)                      // each main pass
     {
         s_ucPsFlags &= (BYTE)~AWTO_PS_F_GATE;
         bAMP_MUTE = 0;
+        DvcRamp(UserInterfaceGetAudioVolume());
         if((s_ucPsTrack == AWTO_PS_TRACK_CAL) && (s_usPsDur != 0xFFFF))
         {
             s_usPsAt = (WORD)AwtoMs();          // a tone's length counts from the amp opening: a blocked main pass does not eat it
