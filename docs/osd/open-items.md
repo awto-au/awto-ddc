@@ -13,7 +13,7 @@ Every `[?]` in the manual. Tests only on unit 3 (bus 11); nothing here has been 
 | OT-5 | palette write pointer auto-increment | `0x6E = 0x80 + 10`, 9 bytes to `0x6F`, window colours 10 / 11 / 12 | three distinct colours as written = auto-increment |
 | OT-6 | delay set 2, fine tune `0x3A1E` | window with `osd_delay_sel` 1, set 2 moved | window moves by the set-2 amount only |
 | OT-7 | blank word | map row: char, blank 40 px bg colour 2, char | blank width 40 px, colour 2 |
-| OT-8 | 24 x 36 layout | `0x3A43[6]`, 36-word glyph with marked rows | pixel order read from the photo |
+| OT-8 | 24 x 36 layout | `0x3A43[6]`, 36-word glyph with marked rows: `osd-hw-test ot8` (prepared, `docs/osd-hw-tests.md` OT-8) | pixel order read from the photo |
 | OT-9 | shadow types 1..4, 3D 1 / 2, border placement | window with `eff_opt` 0..5, 7, 6 px | edge placement equals the sim picture |
 | OT-10 | rounded corners | `ADR10` size 00 / 01 / 10, tables `0x3A60..8B` loaded | radius 8 / 16 / 32 px, shape from tables |
 | OT-11 | gray level | `ADR9[1]` on a colour window | grey value vs luma formula |

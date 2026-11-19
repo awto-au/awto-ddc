@@ -221,6 +221,45 @@ static void AwtoOsdSramProbe(void)
 #define AWTO_OHW_CY_S2_STOP                     3                   // ... Scope 2 off + the ladder again
 #define AWTO_OHW_CY_BAND_MS                     8                   // writes per main pass, as Scope 2 (AWTO_S2_PASS_MS)
 #define AWTO_OHW_OP_CYCLE                       11                  // T10 on (usN != 0) / off
+#define AWTO_OHW_OP_BIG                         12                  // OT-8: 24 x 36 cell mode on (usN != 0) or off (control): test glyphs + coded map (docs/osd-hw-tests.md)
+#define AWTO_OHW_BG_ROWS                        4                   // OT-8 rows: 0 ids 0..7 width 24, 1 the same width 12, 2 high ids vs low ids, 3 colour bars
+#define AWTO_OHW_BG_COLS                        8
+#define AWTO_OHW_BG_CELLS                       (AWTO_OHW_BG_ROWS * AWTO_OHW_BG_COLS)
+#define AWTO_OHW_BG_TILE_W                      24                  // px per cell in 24 x 36 mode
+#define AWTO_OHW_BG_TILE_H                      36
+#define AWTO_OHW_BG_WORDS                       36                  // words per 1-bit glyph in this mode
+#define AWTO_OHW_BG_FONT                        (AWTO_OHW_BG_ROWS + 1 + AWTO_OHW_BG_CELLS)
+#define AWTO_OHW_BG_NARROW_W                    12                  // row 1 char width: which half of the cell shows
+#define AWTO_OHW_BG_FACTOR                      8                   // scale-up 64 / 8 = 8x (factor proven on units: 6, 7, 8, 13)
+#define AWTO_OHW_BG_POS_H                       288                 // (3840 - 8 * 24 * 8) / 2 / 4
+#define AWTO_OHW_BG_POS_V                       504                 // (2160 - 4 * 36 * 8) / 2
+#define AWTO_OHW_BG_ID_LAST                     329                 // the 330th glyph id: 37 + 36 * 330 = 11917 words, past the 8192 map-fetch limit
+#define AWTO_OHW_BG_ID_STRADDLE                 226                 // glyph words 8161 + 37 .. + 36: crosses word 8192
+#define AWTO_OHW_BG_PAT_N                       8
+#define AWTO_OHW_BG_HI_N                        4
+#define AWTO_OHW_BG_MASK                        0x00FFFFFFUL
+#define AWTO_OHW_BG_LEFT                        0x00800000UL        // px 0 = bit 23
+#define AWTO_OHW_BG_CORNERS                     0x00C00003UL
+#define AWTO_OHW_BG_LAST_WORD                   35
+#define AWTO_OHW_BG_QUARTER                     9                   // words 0..8 lit = a quarter (a row-major top strip; a 12 x 18 sub-tile in a quadrant layout)
+#define AWTO_OHW_BG_TRI_FULL                    23
+#define AWTO_OHW_BG_WORD_BITS                   24
+#define AWTO_OHW_BG_IDX_BITS                    0x3F                // pattern 7: word index in binary in the top 6 px, px 23 as a marker
+#define AWTO_OHW_BG_IDX_SHIFT                   18
+#define AWTO_OHW_BG_PAL_N                       8                   // fg palette 1..8, bg palette 9
+#define AWTO_OHW_BG_C_RED                         1
+#define AWTO_OHW_BG_C_GREEN                       2
+#define AWTO_OHW_BG_C_BLUE                        3
+#define AWTO_OHW_BG_C_YELLOW                      4
+#define AWTO_OHW_BG_C_CYAN                        5
+#define AWTO_OHW_BG_C_MAGENTA                     6
+#define AWTO_OHW_BG_C_WHITE                       7
+#define AWTO_OHW_BG_C_GREY                        8
+#define AWTO_OHW_BG_PAL_BG                      9
+#define AWTO_OHW_BG_BG_LEVEL                    20
+#define AWTO_OHW_F_24X36                        0x40                // 3A43[6]
+#define AWTO_OHW_CHAR1_B0                       0x40                // 1-bit char command, B0[4:0] = width, B0[5] = id bit 8
+#define AWTO_OHW_ID_HI_SHIFT                    5
 #define AWTO_OHW_LO                             40
 #define AWTO_OHW_MIDC                           90
 #define AWTO_OHW_HI                             230
@@ -663,10 +702,104 @@ static void AwtoOhwLadder(void)                         // ids >= the first brok
     osd_tc_show(1);
 }
 
+static unsigned long AwtoOhwBigWord(BYTE ucP, BYTE ucK)        // OT-8 glyph pattern ucP, word ucK (bit 23 = px 0 if row-major); host twin scripts/osd_hw_test.py big_word()
+{
+    switch(ucP)
+    {
+        case 0:  return ((ucK == 0) || (ucK == AWTO_OHW_BG_LAST_WORD)) ? AWTO_OHW_BG_CORNERS : 0UL;
+        case 1:  return (ucK < AWTO_OHW_BG_QUARTER) ? AWTO_OHW_BG_MASK : 0UL;
+        case 2:  return AWTO_OHW_BG_LEFT;
+        case 3:  return 1UL << (AWTO_OHW_BG_TRI_FULL - (ucK % AWTO_OHW_BG_WORD_BITS));
+        case 4:  return ((ucK & 1) == 0) ? AWTO_OHW_BG_MASK : 0UL;
+        case 5:  return (ucK >= AWTO_OHW_BG_TRI_FULL) ? AWTO_OHW_BG_MASK : ((AWTO_OHW_BG_MASK << (AWTO_OHW_BG_TRI_FULL - ucK)) & AWTO_OHW_BG_MASK);
+        case 6:  return AWTO_OHW_BG_MASK;
+        default: return ((unsigned long)(ucK & AWTO_OHW_BG_IDX_BITS) << AWTO_OHW_BG_IDX_SHIFT) | 1UL;
+    }
+}
+
+static BYTE AwtoOhwBigPat(WORD usId)                    // pattern of a glyph id that is uploaded (0xFF none)
+{
+    if(usId < AWTO_OHW_BG_PAT_N)
+    {
+        return (BYTE)usId;
+    }
+    switch(usId)
+    {
+        case AWTO_OHW_BG_ID_STRADDLE:     return 3;
+        case AWTO_OHW_BG_ID_STRADDLE + 1: return 5;
+        case AWTO_OHW_BG_ID_LAST - 1:     return 2;
+        case AWTO_OHW_BG_ID_LAST:         return 0;
+        default:                          return 0xFF;
+    }
+}
+
+// Scratch of the OT-8 op lives in g_stAwtoOsdHw (aucBuf / usAddr are idle in this op): the HWTEST image has no XDATA to spare (7324 B pool).
+#define AWTO_OHW_BG_K                           g_stAwtoOsdHw.aucBuf[0]
+#define AWTO_OHW_BG_P                           g_stAwtoOsdHw.aucBuf[1]
+#define AWTO_OHW_BG_R                           g_stAwtoOsdHw.aucBuf[2]
+#define AWTO_OHW_BG_C                           g_stAwtoOsdHw.aucBuf[3]
+#define AWTO_OHW_BG_I                           g_stAwtoOsdHw.aucBuf[4]
+#define AWTO_OHW_BG_ID                          g_stAwtoOsdHw.usAddr
+
+static void AwtoOhwBigGlyph(void)                       // glyph AWTO_OHW_BG_ID with pattern AWTO_OHW_BG_P
+{
+    ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, AWTO_OHW_BG_FONT + (WORD)AWTO_OHW_BG_WORDS * AWTO_OHW_BG_ID, _OSD_WITHOUT_DB);
+    for(AWTO_OHW_BG_K = 0; AWTO_OHW_BG_K < AWTO_OHW_BG_WORDS; AWTO_OHW_BG_K++)
+    {
+        AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
+        ScalerOsdDataPort((BYTE)AwtoOhwBigWord(AWTO_OHW_BG_P, AWTO_OHW_BG_K));                                          // low byte first, as every glyph word (T6)
+        ScalerOsdDataPort((BYTE)(AwtoOhwBigWord(AWTO_OHW_BG_P, AWTO_OHW_BG_K) >> AWTO_OHW_BYTE_BITS));
+        ScalerOsdDataPort((BYTE)(AwtoOhwBigWord(AWTO_OHW_BG_P, AWTO_OHW_BG_K) >> (2 * AWTO_OHW_BYTE_BITS)));
+    }
+}
+
+static void AwtoOhwBig(void)                            // OT-8: 4 x 8 cells of 24 x 36 px, mode on when usN != 0; the host reads the SRAM back and compares with big_word()
+{
+    static const __code BYTE tPal[AWTO_OHW_BG_PAL_N][4] = {{AWTO_OHW_BG_C_RED, AWTO_OHW_HI, AWTO_OHW_LO, AWTO_OHW_LO}, {AWTO_OHW_BG_C_GREEN, AWTO_OHW_LO, AWTO_OHW_HI, AWTO_OHW_LO},
+                                                           {AWTO_OHW_BG_C_BLUE, AWTO_OHW_LO, AWTO_OHW_LO, AWTO_OHW_HI}, {AWTO_OHW_BG_C_YELLOW, AWTO_OHW_HI, AWTO_OHW_HI, AWTO_OHW_LO},
+                                                           {AWTO_OHW_BG_C_CYAN, AWTO_OHW_LO, AWTO_OHW_HI, AWTO_OHW_HI}, {AWTO_OHW_BG_C_MAGENTA, AWTO_OHW_HI, AWTO_OHW_LO, AWTO_OHW_HI},
+                                                           {AWTO_OHW_BG_C_WHITE, AWTO_OHW_HI, AWTO_OHW_HI, AWTO_OHW_HI}, {AWTO_OHW_BG_C_GREY, AWTO_OHW_MIDC, AWTO_OHW_MIDC, AWTO_OHW_MIDC}};
+    static const __code WORD tHi[AWTO_OHW_BG_COLS] = {AWTO_OHW_BG_ID_STRADDLE, AWTO_OHW_BG_ID_STRADDLE + 1, AWTO_OHW_BG_ID_LAST - 1, AWTO_OHW_BG_ID_LAST, 3, 5, 2, 0};   // row 2: cells 0..3 must equal cells 4..7
+
+    AwtoOsdScreenBegin();
+    ScalerOsdSetColorPalette(AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO, AWTO_OSD_ZERO);
+    for(AWTO_OHW_BG_I = 0; AWTO_OHW_BG_I < AWTO_OHW_BG_PAL_N; AWTO_OHW_BG_I++)
+    {
+        ScalerOsdSetColorPalette(tPal[AWTO_OHW_BG_I][0], tPal[AWTO_OHW_BG_I][1], tPal[AWTO_OHW_BG_I][2], tPal[AWTO_OHW_BG_I][3]);
+    }
+    ScalerOsdSetColorPalette(AWTO_OHW_BG_PAL_BG, AWTO_OHW_BG_BG_LEVEL, AWTO_OHW_BG_BG_LEVEL, AWTO_OHW_BG_BG_LEVEL);
+    ScalerOsd2FontFunction(_DISABLE);
+    AwtoOsdRowCmds(AWTO_OHW_BG_ROWS, AWTO_OHW_BG_TILE_H, AWTO_OHW_BG_COLS);
+    for(AWTO_OHW_BG_ID = 0; AWTO_OHW_BG_ID <= AWTO_OHW_BG_ID_LAST; AWTO_OHW_BG_ID++)
+    {
+        AWTO_OHW_BG_P = AwtoOhwBigPat(AWTO_OHW_BG_ID);
+        if(AWTO_OHW_BG_P != 0xFF)
+        {
+            AwtoOhwBigGlyph();
+        }
+    }
+    for(AWTO_OHW_BG_R = 0; AWTO_OHW_BG_R < AWTO_OHW_BG_ROWS; AWTO_OHW_BG_R++)
+    {
+        for(AWTO_OHW_BG_C = 0; AWTO_OHW_BG_C < AWTO_OHW_BG_COLS; AWTO_OHW_BG_C++)
+        {
+            AWTO_OHW_BG_ID = (AWTO_OHW_BG_R == 2) ? tHi[AWTO_OHW_BG_C] : ((AWTO_OHW_BG_R == 3) ? 4 : AWTO_OHW_BG_C);
+            AwtoOsdWord(AWTO_OHW_BG_ROWS + 1 + (WORD)AWTO_OHW_BG_R * AWTO_OHW_BG_COLS + AWTO_OHW_BG_C,
+                        (BYTE)(AWTO_OHW_CHAR1_B0 | ((AWTO_OHW_BG_R == 1) ? AWTO_OHW_BG_NARROW_W : AWTO_OHW_BG_TILE_W) | ((BYTE)(AWTO_OHW_BG_ID >> AWTO_OHW_BYTE_BITS) << AWTO_OHW_ID_HI_SHIFT)),
+                        (AWTO_OHW_BG_ID << AWTO_OHW_BYTE_BITS) | (BYTE)((((AWTO_OHW_BG_R == 3) ? (AWTO_OHW_BG_C + 1) : AWTO_OHW_PAL_C1) << 4) | AWTO_OHW_BG_PAL_BG));
+        }
+    }
+    SET_OSD_MAPA_COL_MAX(AWTO_OHW_BG_COLS);
+    ScalerSetBit(AWTO_R_FRAME_CTRL_43, ~AWTO_OHW_F_24X36, (g_stAwtoOsdHw.usN != 0) ? AWTO_OHW_F_24X36 : 0x00);
+    ScalerOsdSramBaseAddressSet(_OSD_A, AWTO_OSD_ZERO, AWTO_OHW_BG_ROWS + 1, AWTO_OHW_BG_FONT);
+    AwtoOsdPlaceScaleUp(AWTO_OHW_BG_POS_H, AWTO_OHW_BG_POS_V, 2 * AWTO_OHW_BG_COLS, 2 * AWTO_OHW_BG_ROWS, AWTO_OHW_BG_FACTOR);   // region = cols x 12 by rows x 18: doubled = 24 x 36 cells
+    osd_tc_show(1);
+}
+
+#include "ScalerCommonFunctionInclude.h"                       // DELAY_5US / DELAY_XUS
+#ifndef AWTO_OHW_NO_CLK                                 // -D AWTO_OHW_NO_CLK: image without the clock sweep (frees ~450 B XDATA: HWTEST no longer fits otherwise)
 // ---- MCU / flash clock sweep (docs/clock-sweep.md; host scripts/clk_sweep.py). MCU = M2PLL / F / M, SPI = M2PLL / F / F2 (FFED, FFEE, FFE9).
 // Apply = dividers + everything derived from them as the SDK speed-up mode does, then the checks; held until revert / hold limit.
 // Fallbacks: revert from the main loop at the hold limit; a stalled main loop = WDT reset (586 ms) = stock clock again.
-#include "ScalerCommonFunctionInclude.h"                       // DELAY_5US / DELAY_XUS
 #define AWTO_CLK_OP_APPLY                       1
 #define AWTO_CLK_OP_REVERT                      2
 #define AWTO_CLK_OP_KEEP                        3                   // held step: restart the hold timer (a soak keeps it alive; the host's silence = revert after usHoldMs)
@@ -1958,6 +2091,8 @@ static void AwtoClkPoll(void)
     }
 }
 
+#endif
+
 // ---- OSD write-rate sweep (docs/osd-write-sweep.md): the registers that may limit the OSD port write rate, set one op at a time ----
 // Envelope: FFF1 (bit 7, 3:0), FFFB, FFBC[4:0] only; every op restores the three registers before it returns; a stalled main loop = WDT reset.
 #define AWTO_OSW_OP_RUN                         1                   // apply, timed write, restore (one call)
@@ -2930,7 +3065,9 @@ static void AwtoOsdHwPoll(void)
     WORD usCalls;
     unsigned long ulT0;
 
+#ifndef AWTO_OHW_NO_CLK
     AwtoClkPoll();
+#endif
     AwtoOswPoll();
     AwtoDdrPoll();
     g_stAwtoOsdHw.ucSaverRun = g_ucAwtoSaverRun;
@@ -3025,6 +3162,10 @@ static void AwtoOsdHwPoll(void)
     else if(ucOp == AWTO_OHW_OP_LADDER)
     {
         AwtoOhwLadder();
+    }
+    else if(ucOp == AWTO_OHW_OP_BIG)
+    {
+        AwtoOhwBig();
     }
     else if(ucOp == AWTO_OHW_OP_CYCLE)
     {

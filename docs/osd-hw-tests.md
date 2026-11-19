@@ -100,3 +100,35 @@ Commands: `./dev.py osd-hw-test --unit 3 [--cal] t1 t2 t4 t7 t8 rd freeze`; logs
 
 ### Unresolved
 - Read-back: one 1-byte glitch in ~60 k bytes read (cycle run 2026-11-18); handled by double reads, cause not known.
+
+## OT-8: 24 x 36 cell mode (prepared 2026-11-19, not run)
+
+- Question (Dan, 2026-11-19): does `0x3A43[6]` give 24 x 36 px cells so Asteroids can draw 720 x 396 (30 x 11 cells, scale 12 on the 4K panel) with the same 330 glyph ids = 330 x 36 + 342 = 12222 of 12288 words (`docs/asteroids-resolution.md`, option 2)?
+- Registers [spec / sdk]: `0x3A43[6]` font 24 x 36 (`ScalerOsdFont24x36OnOff`); char word B0[4:0] width (<= 31), row command B1 = height - 1 (6 bit, 36 fits); scale-up region = cols x 24 by rows x 36 (`AwtoOsdPlaceScaleUp` multiplies by 12 / 18, so the test passes 2 x cols / 2 x rows). No other cell-size register is known; 2- / 4-bit offset bits 8 / 7 must be 0 [spec].
+- Firmware: op 12 `AwtoOhwBig` (`fw/test/testcmd.c`, `-D _AWTO_OSD_HWTEST`), `usN` 1 = mode on, 0 = control (mode off, same SRAM). Host: `./dev.py osd-hw-test --unit 3 ot8full ot8` (then `ot8off` for the control).
+- Screen (4 x 8 cells, scale 8, centred, unit 3 shows it turned 180; glyph word = 24 bit, port order low byte first; px 0 = bit 23 under the row-major reading):
+  | row | cells |
+  |---|---|
+  | 0 | ids 0..7 = patterns P0..P7, char width 24 |
+  | 1 | the same, char width 12 (which half of the cell shows) |
+  | 2 | ids 226, 227, 328, 329 (glyph words cross 8192 / top of the 330) then ids 3, 5, 2, 0: cells 0..3 must look like cells 4..7 |
+  | 3 | pattern P4 in 8 colours (red, green, blue, yellow, cyan, magenta, white, grey) on dark grey |
+  | pattern | row-major reading (the sim's guess, `osd_model.glyph_bits`) |
+  |---|---|
+  | P0 | 2 px dots at the four corners of the 24 x 36 cell (words 0 and 35) |
+  | P1 | top 9 rows solid (words 0..8); in a quadrant layout it would be the top-left 12 x 18 block |
+  | P2 | 1 px left column, 36 tall |
+  | P3 | diagonal from the top left, wrapping to the left edge at row 24 |
+  | P4 | every other row solid (18 stripes) |
+  | P5 | staircase: row k has k + 1 px lit from the left up to row 22, full width below |
+  | P6 | solid 24 x 36 (all-ones words) |
+  | P7 | row index in binary in the 6 left px (MSB left) + a marker column on the right |
+- SRAM compare (machine): `ot8` reads map words 0..36, glyph ids 0..7, 226..227, 328..329 back (read-back recipe above) and compares with the host twin `osd_hw_test.big_word()` and with the same op in fw_sim (same image): 0 differing words. `ot8full`: LFSR pattern over words 0..12221 via direct stores, M1 + M2 read-back, 0 bad bytes (capacity of 330 glyphs of 36 words incl. words past 8192).
+- Pictures: `tmp/osd_hw/ot8_sim.png` (as the OSD circuit draws) and `ot8_sim_as_seen_unit3.png` (turned 180, what unit 3 shows) = the row-major reading.
+- PASS 1 (layout = sim guess): SRAM compare 0 differing; every 24 x 36 cell in the photo equals the sim picture (turned 180); row 2 cells 0..3 = cells 4..7; row 1 shows the half the sim shows.
+- PASS 2 (mode works, other layout): cells are 24 x 36 px (3x the area of `ot8off`'s 12 x 18 cells) and the same pattern ids can be told apart but their pixels sit elsewhere: the layout is read off P0 / P1 / P7 in the photo (file as the OT-8 result, fix `osd_model.glyph_bits`).
+- FAIL: SRAM compare differs; cells stay 12 x 18 (picture = `ot8off`); blank / garbled screen; row 2 high ids differ from the low ids (fetch past 8192 or at the top); screen shifted so the region clips (position units, T9 note) is not a FAIL, re-place.
+- Sim cannot check: the true pixel layout (guess only), the narrow-char slice rule in this mode, whether the scale-up region and fetch timing hold at 24 x 36, fetch past word 8192 for 36-word glyphs, the 12222-word budget on the real SRAM. Only the stored words, the map and the op logic are compared.
+- Image (tag `ot8`): `./dev.py build --unit 3 --tag ot8 -D _AWTO_OSD_HWTEST -D AWTO_OHW_NO_CLK "--fw-args=--xdata-floor 0"`.
+  - `AWTO_OHW_NO_CLK` compiles the clock sweep out of the HWTEST image: HWTEST on main fe592b7 no longer fits XDATA (over by 28 B even with the floor off); without the sweep 417 B are free, below the 700 B floor (hence `--xdata-floor 0`, local hack, never a production image).
+  - The OT-8 op keeps its scratch in `g_stAwtoOsdHw` (no new XDATA).
