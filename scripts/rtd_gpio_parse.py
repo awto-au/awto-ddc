@@ -330,7 +330,7 @@ def build_rows(g, db):
                         peer_pin=g["pin_of"](b), signal=fn))
     for rid, a, ref in g["adc"]:
         reg, bt = fmt_ref(ref)
-        nm, ds, e = db.look(ref)
+        nm, ds, _e = db.look(ref)
         out.append(dict(table="ADC", idx=rid, pin=g["pin_of"](a), port=a, reg=reg, bits=bt,
                         reg_field=nm, description=esc(ds)))
     for i, (nm_, ref, ex) in enumerate(g["ports"]):
