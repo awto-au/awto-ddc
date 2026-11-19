@@ -33,7 +33,6 @@ SysSource	0xd700	2146	26
 flash_io	0xd700	2172	25
 saver	0xd700	2197	25
 ScalerMemory	0xd700	2222	24
-delaycal	0xd700	2246	23
 t0ev	0xd700	2269	23
 loopsplit	0xd700	2292	22
 OsdDrawWindow	0xd700	2314	21
@@ -134,5 +133,6 @@ swlog	0xe780	2692	308
 scope_saver2	0xe780	3000	188
 inputs	0xe780	3204	232
 text_layer	0xe780	3436	46
+delaycal	0xe780	3482	27
 awto_settings_menu	0xe780	3622	135
 UserCommonInterface	0xe780	3757	17
