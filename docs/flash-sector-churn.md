@@ -1,4 +1,6 @@
-# Why a rebuild rewrites ~190 of 224 flash sectors
+# Why a rebuild rewrote ~190 of 224 flash sectors (fixed: recs 1, 2)
+
+Status: rec 1 + rec 2 implemented (section "Implemented" at the end); the analysis below is the state before.
 
 Analysis only, no hardware (2026-11-19, Dan's question). Tool: `scripts/image_sector_diff.py OLD.bin NEW.bin [--grid]` (reads the `.map` beside each image). Background: `docs/flash-layout.md` (sticky code layout, #12), `docs/flash-registry.md` (manifest diff).
 
@@ -73,5 +75,32 @@ Analysis only, no hardware (2026-11-19, Dan's question). Tool: `scripts/image_se
 | 2 | ~1.1 s | ~0.25 s |
 
 ## Open
+- Fragmentation: a module growing past the gaps (74-256 B; sync +100 B) evicts a neighbour or compacts; 76 sectors for sync +100 B. Needs more free XDATA.
+- `l_XINIT` (init-data size) is an immediate in common sector 0: changes x14 only when initialised XDATA changes.
+- Main's tracked `fw/bank_layout.tsv` is stale against its own code: every fresh build promotes a different layout (not committed from this work).
+- Two module names sharing their first 29 characters collide in the map's 32-char area names: the build fails with a message (none today).
 - Source diffs of the pairs (tags only): fix with a commit id in the build log per tag if the table is to be reproduced.
 - Rec 2 needs `sdld` area per module with `-a`: `bank_layout` already passes thousands of `-a`; check the `s_`/`l_` symbol use of `XSEG1..4` in startup first (rec 1 removes that dependency).
+
+## Implemented [measured 2026-11-19, sim + built images, serial AWT26110003, `scripts/xdata_churn_probe.py`]
+- Rec 1: startup clears each XDATA hole at the fixed bounds (`fw_build.py xclear_asm()`, `fw/rl6449_memory.toml`); library `crtxclear` (l_XSEG) replaced by an empty label; XISEG pinned to the tail of hole 0 (`s_XISEG` no longer moves with XSEG). DDC RAM windows E280/E480/E680 are not in any hole, not cleared. Clear runs before the XINIT copy (XISEG lies inside hole 0).
+  - Common sector 0 identical in all 14 banks across a +7 B XDATA change (was rewritten x14).
+  - Cost: `scripts/startup_clear_cost.py` reset -> `_sdcc_program_startup`: 21578 -> 23968 instr, +73240 CPU clocks = +209 us at 350.8 MHz (hole total 7324 B vs 6527 B of module XSEG before). Startup actually runs on the slower reset clock (before M2PLL); WDT period ~4.7 s.
+- Rec 2: `fw/xdata_layout.tsv` (module, hole, offset, slot); `split_xseg()` renames each module's XSEG to `XS_<module>` in its `.rel` and `-a` pins it. Library XSEG (37 B reserve) at hole 0 start, XISEG at its tail.
+  - Slot kept while size <= slot; growth/new module -> first fit in the gaps; else evict one smaller module; else compaction (log line, full churn); `--xdata-compact` forces it. Fails only when the bytes do not fit.
+  - Free XDATA logged per hole + largest gap (fw_build.log); gate `xlayout` (tracked file == linked map), `tests/test_xdata_layout.py`.
+  - Rebuild with no change: 1 sector (tag).
+- Probes (after = branch before the origin/main merge, before = origin/main + same settled bank layout; one `volatile __xdata unsigned char g_ucChurnProbe[N]` added as the first line after line 1 of one module, vs the clean build, changed sectors of 224):
+
+| module | +B | before | after |
+|---|---|---|---|
+| `fw/log/sync.c` (hole 0, 1042 B module) | 100 | 147 | 76 |
+| `fw/log/swlog.c` | 30 | 188 | 23 |
+| `fw/test/testcmd.c` | 11 | 62 | 3 |
+| `fw/power/led.c` | 7 | 102 | 18 |
+- Free XDATA after the merged tip build: 559 B of 7324 B; hole E780 202 B (largest gap 186), D700 74 B, E380 27 B, E580 256 B
+- Large growth with no gap (sync +100 B: its slot + one evicted neighbour) still touches many sectors because XDATA is ~92 % used and gaps are 74-256 B.
+
+## Rec 5: not done
+- Common holds 991 stubs (8 B each) + 53 `fn` chunks; the chunks are ISR / `--pin-common` / call-graph forced (SDK DB-apply, timer / EXINT procs, `_AwtoPutStr`, `_AwtoMs`...), edits to them are rare; moving the few awto ones needs per-function ISR reachability analysis for ~2 sectors x14 gain. Open.
+- Another common dependency: `l_XINIT` (init-data size) is an immediate in common sector 0; changes only when initialised XDATA changes.
