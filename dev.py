@@ -1296,13 +1296,13 @@ def cmd_clk_sweep(extra: list[str]) -> int:
 
 
 @command("CPU / interrupt / timer / memory conformance suite on its OWN special image (-D _AWTO_CPU_SUITE, docs/cpu-suite.md): --sim runs the 87 / 175 / 350 MHz builds in the firmware sim (--build makes missing images); the unit run (Phase B, test unit only) needs that image flashed",
-         args="[--unit N] [--sim] [--build] [--clocks 87,175,350] [--clock N --map F] [--cases A,B] [--groups T,I,M,R,D] [--allow-scratch-write]", kind="action")
+         args="[--unit N] [--sim] [--build] [--clocks 87,175,350] [--clock N --map F] [--bus N --identity HOW] [--cases A,B] [--groups T,I,M,R,D] [--allow-scratch-write]", kind="action")
 def cmd_cpu_suite(extra: list[str]) -> int:
     n, u = _unit(extra)
     sim, build = _flag(extra, "--sim"), _flag(extra, "--build")
     write = _flag(extra, "--allow-scratch-write")
     opts = []
-    for flag in ("--clocks", "--clock", "--cases", "--groups"):
+    for flag in ("--clocks", "--clock", "--cases", "--groups", "--bus", "--identity"):
         v = _opt(extra, flag)
         if v is True:
             raise SystemExit(f"cpu-suite: {flag} needs a value; nothing done")
@@ -1321,6 +1321,8 @@ def cmd_cpu_suite(extra: list[str]) -> int:
                     return rc
         return _py("cpu_suite.py", "--sim", "--serial", u["serial"], *opts, *(["--allow-scratch-write"] if write else []))
     m = Path(_fwmap(u, given))
+    if "--bus" in opts:                                 # the suite image serves no EDID: the caller names the bus and how it was proven (--identity)
+        return _py("cpu_suite.py", "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *opts, *(["--allow-scratch-write"] if write else []))
     return _py("cpu_suite.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *opts, *(["--allow-scratch-write"] if write else []))
 
 
@@ -1336,6 +1338,20 @@ def cmd_osd_sweep(extra: list[str]) -> int:
     m = Path(_fwmap(u, given))
     opts = (["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]) + (["--continue-on-fail"] if cont else [])
     return _py("osd_sweep.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
+
+
+@command("OSD data port byte-loss experiments (image built with -D _AWTO_OSD_HWTEST; docs/osd-port-loss.md): groups base gap gapcont pos hidden fff1 fffb ea sync, --sim runs them in the firmware sim",
+         args="[--unit N] [--map F] [--sim] GROUP...", kind="action")
+def cmd_osd_port_loss(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    sim = _flag(extra, "--sim")
+    bad = [x for x in extra if x.startswith("-")]
+    if bad or not extra:
+        raise SystemExit(f"osd-port-loss: need GROUPs; bad {bad or 'none'}; nothing done")
+    m = Path(_fwmap(u, given))
+    opts = ["--sim"] if sim else ["--bus", _live_bus(u), "--serial", u["serial"]]
+    return _py("osd_port_loss.py", *opts, "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
 @command("clock step soak with the savers cycling (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP MINUTES; checks, IOSC trim, resets every 30 s",

@@ -155,8 +155,8 @@ def main() -> int:
     s.check(bool(m), "title live fields (CPU / PLL / SPI MHz, input timing, HOST)", m.group(0) if m else ti)
     s.check(bool(m) and m.group(5) == "--:--:--", "HOST before the first sync = --:--:--")
     s.check("PANEL" not in ti and " UP " not in ti, "panel hours / uptime are not in the title (menu Service page: panel_hours)")
-    s.check(bool(m) and abs(float(m.group(1)) - float(m.group(2))) < 0.05 * float(m.group(2)) and float(m.group(3)) <= float(m.group(2)),
-            "clocks: CPU <= PLL, SPI <= PLL", m.group(0) if m else ti)
+    s.check(bool(m) and 0 < float(m.group(1)) <= float(m.group(2)) and 0 < float(m.group(3)) <= float(m.group(2)),
+            "clocks: 0 < CPU <= PLL, 0 < SPI <= PLL", m.group(0) if m else ti)
     raw, (h, _) = s.ring()
     s.check(raw[0:2] == b"SY" and raw[2] == 3 and raw[12] * SL.EV + SL.HDR == len(raw), "ring header written by the firmware (#158)", raw[:SL.HDR].hex(" "))
     g = s.get()

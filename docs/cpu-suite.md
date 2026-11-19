@@ -17,14 +17,14 @@
 
 - Startup: crt / XINIT, `AwtoStackPaint`, `AwtoWdtInit`, `AwtoDiagInit` / `AwtoMeasInit` / `AwtoSyncInit` (diag block, Timer2 time base behind `AwtoMs()`).
 - Clock: `ScalerMcuInitial` (clock tree per `AWTO_CLOCK_MHZ`, Timer0/1/2, WDT start, debug slave 0x35 + EXINT1), `SysPowerMcuClock(M2PLL)`, `ScalerPinshareInitial`, `ScalerTimerInitialTimerEvent`, `ScalerMcuDdcRamEnable`, `AwtoDbgLinkSet(0xFF)` (debug slave on the active port's DDC; no DDC/CI here to switch it on).
-- ISRs that run: Timer2 (1 ms tick `d_isr_g_usTimerCounter`, hardware WDT clear), WD warning IRQ (backstop), EXINT1 (debug slave). EXINT0 / Timer0 / Timer1: hook `AWTO_CPUS_ISR` (RL6449_Project.h) at the top of each vector function, active only while a case sets `isr_g_ucCpuIsr`.
+- ISRs that run: Timer2 (1 ms tick `d_isr_g_usTimerCounter`; does not feed the WDT), WD warning IRQ (backstop), EXINT1 (debug slave). EXINT0 / Timer0 / Timer1: hook `AWTO_CPUS_ISR` (RL6449_Project.h) at the top of each vector function, active only while a case sets `isr_g_ucCpuIsr`.
 - Not run: SysMain loop, source search, panel, display, OSD, CEC, monitor, settings, DDC/CI. They stay linked (SDCC links whole objects: no function-level drop); nothing calls them.
 - Size (build 2026-11-19, 350 build): suite code ~12.6 KB in the banks (`l_CH_*` of Case* / Cpu* / AwtoCpu*; far locals), common area +3 B (0x46e3 vs 0x46e0); XDATA ~500 B (mailbox 38, buffer 320, guard 48, ISR state ~60), free XDATA 35 B vs 734 B in the default image: the suite needs `--xdata-floor 0`. IRAM: no new bytes (flags in XDATA; IRAM was full).
 - Unverified until Phase B: panel pins / VDD / backlight stay at the reset + `ScalerPinshareInitial` state; debug slave reachable from the host without a source.
 
 ## Safety
 
-- Every case is bounded (table below); long loops feed the WDT (`AWTO_WDT_PASS`); Timer2 keeps clearing the hardware watchdog. A stalled case = WDT reset = suite image restarts.
+- Every case is bounded (table below); long loops and the main pass feed the WDT (`AWTO_WDT_PASS`); Timer2 does not (`docs/clock-scaling-review.md`). A stalled case = WDT reset = suite image restarts.
 - Case frame saves / restores IE, IP, TMOD, TCON, CKCON; the SDK interrupts are off while a case runs (ET0 ET1 EX0 = 0 except the one under test).
 - Never writes flash. Register tier writes only on the generated scratch list and only with `--allow-scratch-write`. DDC / I2C slave registers FF22..FF2F, EDID RAM FE60..FE6F, OSD ports, HDCP key ports: excluded (`reg_live_scan.EXCLUDE`, pages FE / FF out of the table).
 - Unit 3 is returned to the default image after Phase B.
@@ -121,3 +121,17 @@
 4. Compare with the boot-failure signature (docs/clock-sweep.md, section "Default image at 350.8 MHz"): a failing case at 350.8 MHz only = candidate cause.
 5. Replace the sim-derived limits (latency, tolerances) by 1.25 x the measured values; fill the last column above.
 6. Flash the best default image back; unit 3 rest state (4K59.940, 10/10 image).
+
+## Phase B log
+
+- 2026-11-19 unit 1 (AWT26110001, NVIDIA HDMI, bus 18, was running `rd0`, settings listed in `tmp/logs/unit1_settings_before.txt`: disp_rotate 0, brightness 64, input D2 HDMI):
+  - Flashed `cpusuite-350` with `dev.py flash --unit 1 --force --force-ungated` (VERIFY OK, 205 sectors, 140 s). Debug slave 0x35 answered on bus 18 (the suite image serves no EDID: `--bus 18 --identity ...`).
+  - T group run: T_RELOAD, T_FULL, T_AUTORELOAD pass; T_RATE0 / T_RATE1 worst window error 125 / 112 counts (sim 8) with the host polling during the case.
+  - The next poll (during T_TORN, EA off ~7 ms) failed; afterwards bus 18 answers nothing (0x35, 0x4A, 0x37, 0x50 all silent), HPD still connected.
+  - Cause not established. Hypothesis: host reads while EA is off leave the IIC slave engine in a state the suite image never clears. Host runner now waits a quiet period (bound / 3) before polling and `dev.py cpu-suite` takes `--bus N --identity HOW`.
+  - Unit 1 has no relay: a mains cycle is needed before ISP works again.
+- Unit 1 wedge, analysis (2026-11-19, before any further hardware):
+  - The hardware watchdog is enabled in the suite image (`ScalerMcuInitial` -> `ScalerTimerWDInitial`) but only the mailbox loop passes (`AWTO_WDT_PASS`) feed it (warning 200.1 ms, reset 585.9 ms, crystal time base), so a live CPU never bites. A wedged IIC engine is a peripheral state, not a CPU hang: no reset follows.
+  - T_TORN held EA off for ~7 ms per run (all 4096 reads in one window) while the host polled: an EXINT1 request waited behind the long EA-off window. Hypothesis (not proven): the master gave up, the slave engine was left half-way and nothing in the suite loop clears it (the monitor loop's `ScalerDebug()` / DDC/CI poll are absent).
+  - Fixes in the image: EA off only in windows <= ~0.8 ms (T_TORN per 64 reads, T_AUTORELOAD 23 periods); host quiet period before polling; `AWTO_CPU_IDLE_MS` 30 s without a request = `AwtoWdtHang` (EA off, 586 ms bite) so a stuck engine is cleared by a chip reset. Sim proof: `tests/test_cpu_suite_idle.py` (reset at 30025 ms uptime with the ChipReset / WDT model, loop answers again).
+  - Sim flakiness found on the way and fixed in the suite: cold flash-cache misses inside a sample (~80 counts at 350.8 MHz) -> sample code warmed by a first pass; the 1 ms Timer2 ISR (~1000 counts) swallows Timer1 overflow flags -> auto-reload loop runs with EA off for 0.8 ms.

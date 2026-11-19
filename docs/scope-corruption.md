@@ -27,8 +27,7 @@ Draft issue text: `tmp/scratch/issue-scope-corrupt.md` (not posted; public repo)
 - Smallest passing spacing 16 nops (about 16 machine cycles = 0.18 us at 350.8 MHz); 12 fails. Fix uses 24 (1.5x).
 
 ## Fix (in this branch, not merged)
-- `AWTO_OSD_PORT(v)` = store + 24 nops (`RL6449_Project.h`); every saver (Scope 1 / 2, Asteroids, Pac-Man, flash screen, text layer) goes through it.
-- Cost: 24 cycles per byte (~0.27 us at 350.8 MHz) on top of the store; the SDK call path is slower.
+- Superseded: `AWTO_OSD_PORT(v)` is a single store; spacing = `FFF1` sel 12 set at MCU init (`docs/osd-port-loss.md`). Every saver goes through the macro.
 
 ## Not covered
 - Scope 1, Asteroids, Pac-Man: no SRAM-vs-sim check exists for them (T4 only checks Scope 2 after Asteroids); they share the macro and word-write shape, so the same loss is expected before the fix; fixed by the same macro.

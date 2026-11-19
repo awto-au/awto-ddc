@@ -25,7 +25,9 @@
 #define AWTO_IIC_ATTN                                           (AWTO_F_IIC_1_STATUS_IIC_1_SUB_I | AWTO_F_IIC_1_STATUS_IIC_1_D_IN_I)
 #define AWTO_DDCCI_WR_ADDR                                      0x6E    // DDC/CI slave 0x37 as the 8-bit write address
 #define AWTO_SCA_WR_INTRVL_SEL_MASK                             0x0F    // FFF1[3:0] mcu_wr_sca_intrvl_sel (regdb SCA_WR_INTRVL)
-#define AWTO_SCA_WR_INTRVL_SEL                                  7       // min 7h04 + 4 x 7 = 32 CPU cycles between scaler writes; clears the eDP link training FAIL line (docs/clock-sweep.md)
+#ifndef AWTO_SCA_WR_INTRVL_SEL
+#define AWTO_SCA_WR_INTRVL_SEL                                  12      // hardware write pace, same sel at every AWTO_CLOCK_MHZ; eDP FAIL line + OSD port spacing (docs/osd-port-loss.md)
+#endif
 //--------------------------------------------------
 // OSD palette: indices (1-based, ScalerOsdSetColorPalette) and RGB triples (R, G, B)
 //--------------------------------------------------
@@ -737,6 +739,10 @@ extern void AwtoPortSkipSearch(void);
 extern void AwtoPortBoot(void);                                 // AwtoSetInit: stored enables -> mask, boot lines
 #define AWTO_PORT_SEARCH_GATE(idx)                              { if(AWTO_PORT_OFF(GET_INPUT_PORT(GET_INPUTPORT_TYPE(idx)))) { AwtoPortSkipSearch(); } }
 extern void AwtoDeadPortPoll(void);
+extern void AwtoNoCableHold(unsigned char ucPort);               // selector take of a cable-less port: dead-port auto search held off
+// Waits for: the user to cable the port just chosen (no-signal card up meanwhile). 30 s = a plug-in plus card read, a human-time
+// choice (Dan to tune), not a measured value. Expiry: AwtoDeadPortPoll's auto search back to a cabled port, as before.
+#define AWTO_SRC_NOCABLE_HOLD_MS                                30000
 #define AWTO_DEAD_PORT_POLL()                                   { if((GET_SOURCE_SCAN_TYPE() == _SOURCE_SWITCH_FIXED_PORT) && \
                                                                      (GET_MODE_STATE() >= _MODE_STATUS_NOSIGNAL)) { AwtoDeadPortPoll(); } }   // NOSIGNAL / PS / OFF
 extern void AwtoSourceOpen(unsigned char ucWhy);                // ucWhy = AWTO_SEL_EV_OPEN_KEY / _OPEN_CARD (its ring line)
@@ -1078,7 +1084,7 @@ extern __xdata StAwtoSyncEv g_stAwtoSyncPin;  // #150: this boot's reason line, 
 #define AWTO_SEL_EV_KEPT_IDLE                                   0x03    // idle commit on the input it opened on: closed, no switch
 #define AWTO_SEL_EV_KEPT_AUTO                                   0x04    // AUTO on the input it opened on: closed, no switch
 #define AWTO_SEL_EV_CANCEL                                      0x05    // MENU: closed, the input it opened on kept
-#define AWTO_SEL_EV_NOCABLE                                     0x06    // #84 take refused: no cable on the item; stays open
+#define AWTO_SEL_EV_NOCABLE                                     0x06    // take of a port with no cable: switched, dead-port auto search held off
 #define AWTO_SEL_EV_DPVER                                       0x07    // take ignored: DP version pop-up up
 #define AWTO_SEL_EV_NOPORT                                      0x08    // take ignored: the item is no port of this board (value = item)
 #define AWTO_SEL_EV_RESET                                       0x09    // closed by the SDK OSD reset (mode reset / signal back), nothing to take
@@ -1173,9 +1179,8 @@ extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN);                          // turn ucN stream bytes 180 in place (bytes reversed, bits of each reversed)
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_OSD_ZERO                                           0x00
-// OSD SRAM data port: direct store + 24 nops of store spacing (map words corrupt below 16 at 350.8 MHz; docs/scope-corruption.md)
-#define AWTO_NOP8                                               __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); AWTO_NOP8 AWTO_NOP8 AWTO_NOP8 } while(0)
+// OSD SRAM data port: direct store; spacing is the FFF1 write interval (AWTO_SCA_WR_INTRVL_SEL), no nops (docs/osd-port-loss.md)
+#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); } while(0)
 #define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
 #define AWTO_OSD_POS_OFFSET_V                                   0x04
 #define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px

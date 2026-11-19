@@ -5,4 +5,10 @@
 - OSD / savers: `osd/` (manual), `osd-write-sweep.md`, `saver-fps-hw.md`, `saver-fps-plan.md`.
 - Interfaces: `cec.md` (HDMI CEC sink, RPi5 test plan).
 - Registers: `../re/regmap/README.md` (one row per register; docs link by key `PPAA`).
+- Reports (research, no hardware):
+  - `scope-realism.md` (2026-11-19): scope savers vs real scopes without a trigger.
+  - `clock-scaling-review.md` (2026-11-19): what depends on the MCU / flash / timer clock at 350.8 / 116.9 MHz.
+  - `read-behind-research.md` (2026-11-19): read-behind latch, internet + SDK + local research.
+  - `monitors/mstar-vs-realtek.md` (2026-11-19): MStar vs Realtek monitor scalers.
+  - Read-behind cause tooling: `../scripts/reg_behind_cause.py`, `reg_behind_fix.py`, `reg_behind_indirect.py` (notes in `../re/regmap/README.md`, `live-register-scan.md`).
 - Open items: `open-decisions.md`. Superseded one-liners: `history.md`.

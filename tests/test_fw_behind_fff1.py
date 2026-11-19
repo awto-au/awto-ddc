@@ -18,6 +18,9 @@ def test_rotation_page_size_read_twice():
 
 def test_fff1_default_set_at_mcu_init():
     proj = (SDK / "Project/Header/RL6449_Project.h").read_text()
-    assert re.search(r"AWTO_SCA_WR_INTRVL_SEL\s+7\b", proj)
+    assert re.search(r"AWTO_SCA_WR_INTRVL_SEL\s+12\b", proj)
     mcu = (SDK / "Kernel/Scaler/ScalerFunction/Code/ScalerMcu.c").read_text()
     assert "MCU_FFF1_SCA_WR_INTRVL = (MCU_FFF1_SCA_WR_INTRVL & ~AWTO_SCA_WR_INTRVL_SEL_MASK) | AWTO_SCA_WR_INTRVL_SEL;" in mcu
+    body = mcu.split("void ScalerMcuInitial(void)\n{", 1)[1]
+    assert body.lstrip().split("\n", 2)[1].lstrip().startswith("MCU_FFF1_SCA_WR_INTRVL")
+    assert "AWTO_NOP8" not in proj

@@ -352,6 +352,9 @@
 #ifndef AWTO_CLOCK_MHZ
 #define AWTO_CLOCK_MHZ                                          350
 #endif
+#if((AWTO_CLOCK_MHZ != 350) && (AWTO_CLOCK_MHZ != 175) && (AWTO_CLOCK_MHZ != 87))
+#error "AWTO_CLOCK_MHZ must be 350, 175 or 87"
+#endif
 #define _MCU_SPEED_UP_SUPPORT                                   (AWTO_CLOCK_MHZ > 87)
 
 // AWTO_FLASH_MHZ = SPI flash clock of the 350 build (build -D AWTO_FLASH_MHZ=n): 117 (F2 3, default) | 87 (F2 4) | 70 (F2 5, in spec); ignored for AWTO_CLOCK_MHZ 175 / 87.

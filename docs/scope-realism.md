@@ -1,7 +1,7 @@
 # Scope screensavers vs real scopes without a trigger (2026-11-19)
 
 Tags: `[web]` cited source (list at the end), `[code]` read in `fw/test/` / `scripts/` on this branch, `[hw]` unit 3 measurement (`docs/saver-fps-hw.md`), `[guess]` not checked.
-Scope 1 was retired 2026-11-19 (`docs/saver-mode.md` Scope 1 retired: smoothness, pacing question); Scope 1 rows below are history. Code read: `fw/test/scope_saver.c` (Scope 1, deleted), `fw/test/scope_saver2.c` + `scripts/gen_scope2.py` + `scripts/scope2_sim.py` (Scope 2).
+Scope 1 was retired 2026-11-19 (`docs/saver-mode.md` Scope 1 retired: smoothness, pacing); Scope 1 rows below are history. Code read: `fw/test/scope_saver.c` (Scope 1, deleted), `fw/test/scope_saver2.c` + `scripts/gen_scope2.py` + `scripts/scope2_sim.py` (Scope 2).
 Not in this worktree: `docs/scope-corruption.md` (branch `worktree-agent-ae2a966dd9a939cf6`).
 
 ## 1. Real scope without a trigger
