@@ -2,7 +2,7 @@
 
 Status 2026-11-18. D1, D4, D5 decided (Dan, 2026-11-18) and implemented (below); D2, D3, D6, D7 open. Code: `fw/test/saver.c`, main loop `fw/sdk/Kernel/System/Code/SysMain.c` `main()`. Design: `docs/screensaver.md`.
 Tools: `scripts/saver_loop_cost.py` (per-pass cost by handler, saver rates), `scripts/saver_mode_sim.py` (exit paths).
-Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4b25631 + `-D _AWTO_AUDIO_TEST`), 3 s fw windows.
+Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4b25631 + `-D _AWTO_AUDIO_TEST`; audio is in every build since #229), 3 s fw windows.
 
 ## Answer in short
 
@@ -35,6 +35,7 @@ Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4
 | no signal | nosig | `AwtoSaverPoll` | mode NOSIGNAL for `AWTO_SAVER_NOSIG_MS` 1.8 s, row 119 != Off, `pwr_l3_s` != 0, not ended earlier in this no-signal episode |
 | idle | idle | `saver.c:282` | mode ACTIVE, row 120 != 0, no key / DDC/CI for row 120 s |
 | VCP 0xEB 1-5, 7 | now | `saver.c:177-203`, `set_ap_screensaver_now` | any mode |
+| VCP 0xEB = 6 (alert) | no saver: `AwtoPmSound(alert)`, 1 s Pac-Man-style tone, every build (#229); skipped while a host audio stream plays (sync E9 86) | `saver.c` `AWTO_SAVER_NOW_ALERT`, `fw/audio/audio.c`; `dev.py alert` | any mode |
 
 ### Exits
 

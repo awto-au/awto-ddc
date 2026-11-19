@@ -352,7 +352,6 @@ static BYTE AstRnd(void)
     return (BYTE)(s_usRng >> 4);
 }
 
-#ifdef _AWTO_AUDIO_TEST
 static void AstSnd(BYTE ucCmd)
 {
     if(GET_OSD_VOLUME_MUTE() == 0)                                                  // muted by the user: silent (volume = the user's DVC gain)
@@ -370,19 +369,6 @@ static void AstPoll(void)                                                       
 {
     AwtoPmSoundPoll();
 }
-#else
-static void AstSnd(BYTE ucCmd)
-{
-    ucCmd = ucCmd;
-}
-
-static void AstBg(BYTE ucState)
-{
-    ucState = ucState;
-}
-
-#define AstPoll()
-#endif
 
 static int16_t AstDiff(int16_t sD, int16_t sM)                                      // shortest signed difference on a ring of sM
 {
@@ -894,9 +880,7 @@ static void AstWorld(void)                                                      
 {
     BYTE ucI;
     BYTE ucFree = 1;
-#ifdef _AWTO_AUDIO_TEST
     BYTE ucBg = AWTO_AST_BG_NONE;
-#endif
 
     if(AstCount(AWTO_AST_T_ROCK_L, AWTO_AST_T_ROCK_S) == 0)
     {
@@ -956,7 +940,6 @@ static void AstWorld(void)                                                      
             AstNewGame();
         }
     }
-#ifdef _AWTO_AUDIO_TEST
     if(AstCount(AWTO_AST_T_SAUCER_L, AWTO_AST_T_SAUCER_S) != 0)
     {
         ucBg = AWTO_AST_BG_SAUCER;
@@ -966,7 +949,6 @@ static void AstWorld(void)                                                      
         ucBg = AWTO_AST_BG_THRUST;                                                  // the ship's engine wins over the saucer's siren
     }
     AstBg(ucBg);
-#endif
 }
 
 static void AstDigits(void)
@@ -1659,9 +1641,7 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     if(ucCmd == 0)
     {
         AstBg(AWTO_AST_BG_NONE);
-#ifdef _AWTO_AUDIO_TEST
         AwtoPmSound(AWTO_AST_SND_STOP);
-#endif
         AwtoOsdScreenOff();
         AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_AST_ARG_OFF, 0);
         return 1;
@@ -1762,8 +1742,5 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     s_ucFrac = 0;
     s_ucThrustLeft = 0;
     AstNewGame();
-#ifndef _AWTO_AUDIO_TEST
-    AwtoPmSound(AWTO_AST_SND_FIRE);                                                 // logs "sound unavailable" once (sync E9 86); the game then plays silent
-#endif
     return 0;
 }

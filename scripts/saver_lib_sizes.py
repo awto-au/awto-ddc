@@ -20,7 +20,7 @@ from sdcc_overlay import repo_root  # noqa: E402
 ROOT = repo_root()
 LOG = ROOT / "tmp/logs/saver_lib_sizes.log"
 FILES = ["fw/test/scope_saver.c", "tools/osd_lines/osd_lines.c", "fw/test/scope_saver2.c", "fw/test/asteroids.c", "fw/test/pacman_classic.c",
-         "fw/test/snd.c", "fw/test/flash_screen.c", "fw/test/qc_osd.c", "fw/test/osd_demo.c", "fw/test/saver.c",
+         "fw/audio/audio.c", "fw/test/flash_screen.c", "fw/test/qc_osd.c", "fw/test/osd_demo.c", "fw/test/saver.c",
          "fw/osd/osd_screen.c", "fw/osd/osd_rot.c", "fw/keys/key_click.c"]
 MODULE = {"tools/osd_lines/osd_lines.c": "scope_saver"}             # compiled into this module (#include)
 AREA = re.compile(r"^(CH|ST)_(\w+)\s+([0-9A-F]{8})\s+([0-9A-F]{8}) =\s+(\d+)\. bytes", re.M)

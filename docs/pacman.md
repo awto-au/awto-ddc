@@ -15,7 +15,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 | `scripts/gen_pacman_classic.py` | game model + glyph / cell / delta generator -> `fw/test/pacman_classic_data.inc` |
 | `fw/test/pacman_classic.c` | loader + step player (`AwtoPacmanClassic`) |
 | `scripts/pacman_sound.py` | note tables -> `fw/test/snd_data.inc`, WAVs for listening |
-| `fw/test/snd.c` | non-blocking note player (`AwtoPmSound`, `AwtoPmSoundPoll`) |
+| `fw/audio/audio.c` | non-blocking note player (`AwtoPmSound`, `AwtoPmSoundPoll`) |
 | `fw/test/saver.c` | screensaver manager (starts / stops Pac-Man, scopes) |
 | `scripts/pacman_unit.py` | host stepper for a unit (test cmds over the debug link) |
 | `scripts/pacman_sim.py`, `audio_sim.py` | sim video with sound, audio tap (`docs/pacman-sound.md`, `docs/sim.md`) |
@@ -65,8 +65,8 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 - Tone source: the HDMI audio block's test generator (`AFCR.audio_test_enable`, a sine "to IIS / SPDIF") [spec]. It needs no incoming audio stream.
 - The generator has no frequency register: the tone is the sample rate divided by the sine's sample count (32 or 64, `AFCR.tst_i2s_sw`) [spec]. Pitch is set by the audio PLL divider.
 - Chain: generator -> audio PLL -> DVC (digital volume, VCP 0x62) -> DAC -> analogue out -> speaker amp [spec, `docs/audio.md`].
-- Amp pins: P7.4 `bAMP_EN` (1 = on), P7.3 `bAMP_MUTE` (1 = muted), owned by `fw/audio/amp.c` (`AwtoAudioAmp`).
-- The SDK handler (`SysAudioHandler`) returns early while the generator is on, so no re-mute and no sample-rate detect. That is why the build needs `-D _AWTO_AUDIO_TEST` (also defines `_INTERNAL_AUDIO_TEST_SUPPORT`). Making it permanent: #229.
+- Amp pins: P7.4 `bAMP_EN` (1 = on), P7.3 `bAMP_MUTE` (1 = muted), owned by `fw/audio/audio.c` (`AwtoAudioAmp`).
+- The SDK handler (`SysAudioHandler`) returns early while the generator is on, so no re-mute and no sample-rate detect. `_INTERNAL_AUDIO_TEST_SUPPORT` is always `_ON` (#229): audio is in every build, no flag.
 - The generator runs on the current input's HDMI block: D2 (page 71) or D3 (page 72); D1 (DP) has none. Unit 3 on HDMI-A-2 = D2.
 
 ### Pitch
@@ -121,7 +121,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 
 ## Run
 
-- Build: `./dev.py build --tree . --serial AWT26110003 --tag pc -D _AWTO_AUDIO_TEST`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-pc-be`.
+- Build: `./dev.py build --tree . --serial AWT26110003 --tag pc`, gates `python scripts/fw_gates.py tmp/fw/AWT26110003-pc-be`.
 - Unit 3: `./dev.py flash --unit 3 tmp/fw/AWT26110003-pc-be.bin`; start `ddcutil --bus 11 setvcp EB 2`, stop `setvcp EB 0` (`docs/screensaver.md`); or test cmds 0xB7 / 0xB8 / 0xB9 (`scripts/pacman_unit.py`).
 - Sim: `python scripts/pacman_sim.py --game --steps 1040 --fps 32` -> `tmp/pacman_sim/pacman.mp4`; `python scripts/saver_sim.py` for the DDC start / stop check.
 

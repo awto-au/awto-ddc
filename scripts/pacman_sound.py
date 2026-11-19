@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pac-Man sound sequencer: note tables -> firmware data (fw/test/snd_data.inc) + WAV preview. Docs: docs/pacman-sound.md
+"""Pac-Man sound sequencer: note tables -> firmware data (fw/audio/snd_data.inc) + WAV preview. Docs: docs/pacman-sound.md
 
 usage: pacman_sound.py [--k-hz HZ] [--inc PATH] [--wav-dir DIR] [--wave square|sine] [--no-inc] [--no-wav]
   - Tracks: intro jingle, waka (loops), death glissando, alert, ghost-eat sweep, fruit, siren x 3 speeds (loop), frightened (loop).
@@ -226,7 +226,7 @@ def main():
     root = repo_root()
     ap = argparse.ArgumentParser()
     ap.add_argument("--k-hz", type=float, default=PS_K_DEFAULT_HZ)
-    ap.add_argument("--inc", type=Path, default=root / "fw/test/snd_data.inc")
+    ap.add_argument("--inc", type=Path, default=root / "fw/audio/snd_data.inc")
     ap.add_argument("--wav-dir", type=Path, default=root / "tmp/pacman_sound")
     ap.add_argument("--wave", choices=("square", "sine"), default="square", help="WAV timbre (the chip plays a sine)")
     ap.add_argument("--no-inc", action="store_true")

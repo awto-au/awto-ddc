@@ -28,7 +28,7 @@ LOG = None
 import chip_mem as CM  # noqa: E402
 XRAM = CM.XRAM                                                # fw/rl6449_memory.toml (#149 a)
 EDID_RAM = CM.DDC_RAM
-XDATA_FLOOR = 700         # free XDATA kept after placement: 10 % of the 7324 B pool, headroom for #162 work (Dan 2026-11-12, #165)
+XDATA_FLOOR = 0           # no floor: the build fails only if XDATA does not fit; free XDATA is logged (Dan 2026-11-19, replaces the 700 B floor of #165)
 BANK = CM.BANK_SIZE
 NBANKS = CM.CODE_BANKS
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,

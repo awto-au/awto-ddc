@@ -1087,7 +1087,7 @@ def cmd_settings(extra: list[str]) -> int:
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
-@command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone",
+@command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone; every image, volume = the monitor VCP 0x62, silent while host audio plays",
          args="[--unit N] [--wait]", kind="action")
 def cmd_alert(extra: list[str]) -> int:
     n, u = _unit(extra)

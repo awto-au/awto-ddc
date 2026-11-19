@@ -2,7 +2,7 @@
 #include "keys.h"
 
 // #229 key click: AWTO_KEY_CLICK_MS tone on a front-key press (not POWER, combo, repeat); setting key_click, default off.
-// Not when the monitor is muted (user mute) or another sound plays (AwtoPmSoundTone, fw/test/snd.c). User volume.
+// Not when the monitor is muted (user mute) or another sound or a host audio stream plays (AwtoPmSoundTone, fw/audio/audio.c). User volume.
 void AwtoKeyClick(void)
 {
     BYTE ucRes;
@@ -18,6 +18,6 @@ void AwtoKeyClick(void)
     }
     else
     {
-        AwtoSyncPush(AWTO_SYNC_EV_AUDIO, (ucRes == AWTO_TONE_BUSY) ? AWTO_AUDIO_EV_CLICK_BUSY : AWTO_AUDIO_EV_CLICK_NA, 0);
+        AwtoSyncPush(AWTO_SYNC_EV_AUDIO, AWTO_AUDIO_EV_CLICK_BUSY, 0);
     }
 }

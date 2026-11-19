@@ -58,10 +58,10 @@ No other combo. Removed (#132): MENU+DOWN (debug link toggle), MENU+DOWN held at
 - Registry row `key_click` (id 123, bool, default Off, group Audio = menu page Audio; VCP only through the paged pair 0xE0 / 0xE1). Code: `fw/keys/key_click.c` (`AwtoKeyClick`), called by `AwtoKeyRoute` after the key's action.
 - Plays on: a front-key press SOURCE / MENU / DOWN / UP / AUTO, front or injected, with the monitor on (`_POWER_STATUS_NORMAL`).
 - No click: POWER, UP+DOWN combo, repeats, a key that wakes from power saving, `mute` on (`AWTO_SET(MUTE)`), another sound playing (Pac-Man / alert / saver sounds hold the generator).
-- Tone: `AWTO_KEY_CLICK_SC` 40 = 48 kHz / 40 = 1200 Hz, `AWTO_KEY_CLICK_MS` 30 ms audible, counted from the amp opening (the 4 ms pitch gate of `snd.c` comes first). Dan 2026-11-18.
-- Level: the user volume (DVC), as every generator sound. Source: HDMI audio test generator, `AwtoPmSoundTone` (`fw/test/snd.c`); it always stops (`AwtoPmSoundPoll`), the SDK un-mutes the stream path again.
-- Needs `-D _AWTO_AUDIO_TEST` today (#229 makes audio permanent); other builds compile it and log "key click unavailable" per press when the setting is on. Ring lines: sync `E5 50 / 51 / 52`.
-- Sim: `scripts/key_sim_test.py` (`key_click`): request per press, none when off / muted / combo / repeat / POWER; with the audio image the tone from the audio tap (count, length, silent at the end, none while Pac-Man sound plays).
+- Tone: `AWTO_KEY_CLICK_SC` 40 = 48 kHz / 40 = 1200 Hz, `AWTO_KEY_CLICK_MS` 30 ms audible, counted from the amp opening (the 4 ms pitch gate of `audio.c` comes first). Dan 2026-11-18.
+- Level: the user volume (DVC), as every generator sound. Source: HDMI audio test generator, `AwtoPmSoundTone` (`fw/audio/audio.c`); it always stops (`AwtoPmSoundPoll`), the SDK un-mutes the stream path again.
+- Every build (#229, no flag). No click while a host audio stream plays (generator would cut it). Ring lines: sync `E5 50` played, `E5 51` skipped (another sound / host stream).
+- Sim: `scripts/key_sim_test.py` (`key_click`): request per press, none when off / muted / combo / repeat / POWER; the tone from the audio tap (count, length, silent at the end, none while Pac-Man sound plays).
 
 ## ADC scan review (2026-11-19)
 

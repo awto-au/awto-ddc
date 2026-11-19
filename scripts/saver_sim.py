@@ -2,7 +2,7 @@
 """Screensaver check in the firmware simulator (docs/screensaver.md): DDC/CI VCP 0xEB starts / stops Pac-Man and the scope; PNGs of each.
 
 usage: saver_sim.py [BIN MAP] [--out DIR]
-  - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
+  - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1; audio is in every build, #229).
   - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2), 5 (flash), 8 (Asteroids): wait, render, then = 0 (stop), render.
     Asteroids is deterministic: its frames are compared at the same game tick (frozen where a frame is complete), not at the same time;
     Scope 1 at the same frame number (state at its SCOPE_FRAME-th frame-complete sync line). PASS = font SRAM written and something on screen when started,
@@ -37,6 +37,7 @@ ROT_BETTER = 1.5               # the turned comparison must beat the unturned on
 VCP_ALERT = 6                   # screensaver_now option "Alert tone"
 ALERT_TONE_S = 0.9              # audible time: the 1 s track (pacman_sound.py ALERT) has 100 ms of rests between the notes
 ALERT_TOL_S = 0.15              # one 10 ms tick per note plus the 1 ms firmware timer: well inside
+ALERT_SETTLE_S = 3.0            # fw time after boot before the alert: the SDK's first HDMI audio init (it clears the generator) must have run
 ALERT_OBSERVE_S = 3.0           # fw time to observe: the tone must end by itself
 VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept free)
 AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
@@ -201,6 +202,7 @@ def alert_check(a) -> int:
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng, tap])
     sess.boot()
     ddc = D.Mccs(sess.bus, eng)
+    sess.bus.wait(ALERT_SETTLE_S)
     tap.armed = True
     t0 = sess.bus.now()
     ddc.set(VCP_SAVER, VCP_ALERT)
