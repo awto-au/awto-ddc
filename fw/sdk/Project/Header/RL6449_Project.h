@@ -308,12 +308,12 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_P_WDTI                                         0x20    // DW8051 EICON[3] WDTI set: Realtek's WDT also drives the core wdti
 #define AWTO_WDT_P_EARLY                                        0x40    // a threshold IRQ before the warning since the last main pass (pokes
                                                                         // stopped > 439 ms); kept over the reset: hardware-WDT evidence
-// Main-loop pacing (docs/main-loop-pacing.md): 0 = free-running loop (default). N > 0: after a pass, idle (PCON.IDL) until the first of:
+// Main-loop pacing (docs/main-loop-pacing.md): 0 = free-running loop. N > 0 (default 4): after a pass, idle (PCON.IDL) until the first of:
 // N ms since the previous pass, a wake bit (EXINT0 / EXINT1 / Timer0 ISR, software), the earliest timer-event deadline, the next key
 // sample, the next settings-loop service. AwtoLoopBusy() != 0 (saver, OSD / console up, key down, DDC/CI deferred, mode / power steps): no sleep.
 // Idle wakes on every IRQ (Timer2 1 ms at most): a wake bit set between the check and the IDL write waits for that tick (<= 1 ms).
 #ifndef AWTO_LOOP_PACING
-#define AWTO_LOOP_PACING                                        0
+#define AWTO_LOOP_PACING                                        4
 #endif
 #if(AWTO_LOOP_PACING > 0)
 extern volatile bit d_isr_g_bWkEx0;

@@ -1160,3 +1160,22 @@ void core_restore(core_t *c, const uint8_t *buf)
     if (tag)
         memcpy(tag, buf + sizeof *c, (size_t)c->fm_sets * c->fm_ways * 4);
 }
+
+/* ---- exact fast-forward of a counted `djnz` loop (host hook, fastmachine.install_delay_ffwd): the loop's own clk / cycles / instructions
+ * are added without executing it, as long as no timer deadline falls inside (then an IRQ arrives at the same iteration as interpreted). ---- */
+uint64_t core_ffwd_room(core_t *c)    /* clk that can be skipped; 0 = none (per-instruction timers, code cache off, or a deadline due) */
+{
+    if (!c->dw || c->tslow || !(c->xram[0xFDA0] & 1) || c->tnext <= c->tnow)
+        return 0;
+    return c->tnext - c->tnow - 1;
+}
+
+void core_ffwd(core_t *c, uint64_t clk, uint64_t cycles, uint64_t instr, int op)
+{
+    c->tnow += clk;
+    c->p.clk += clk;
+    c->p.cycles += cycles;
+    c->p.instr += instr;
+    c->opcount[op & 255] += instr;
+    c->cycop[op & 255] += cycles;
+}

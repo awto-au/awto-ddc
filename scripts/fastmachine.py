@@ -105,6 +105,8 @@ def lib():
     L.core_set_fill.argtypes = [vp, ctypes.c_int]
     L.core_level.restype, L.core_level.argtypes = ctypes.c_int, [vp, ctypes.c_int]
     L.core_run.restype, L.core_run.argtypes = ctypes.c_int, [vp, ctypes.c_uint64]
+    L.core_ffwd_room.restype, L.core_ffwd_room.argtypes = ctypes.c_uint64, [vp]
+    L.core_ffwd.argtypes = [vp, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_uint64, ctypes.c_int]
     L.core_snap_size.restype, L.core_snap_size.argtypes = ctypes.c_size_t, [vp]
     L.core_snap.argtypes = [vp, ctypes.c_char_p]
     L.core_restore.argtypes = [vp, ctypes.c_char_p]
@@ -195,6 +197,12 @@ class Core:
         s, rs = self.sfr, self.sfr[0x50] & 0x18
         return {"pc": self.p.pc, "acc": s[0x60], "b": s[0x70], "psw": s[0x50], "sp": s[0x01], "dptr": s[0x03] << 8 | s[0x02],
                 "r": list(self.iram[rs:rs + 8]), "bank": self.p.bank}
+
+    def ffwd_room(self) -> int:
+        return self.L.core_ffwd_room(self.h)
+
+    def ffwd(self, clk: int, cycles: int, instr: int, op: int):
+        self.L.core_ffwd(self.h, clk, cycles, instr, op)
 
     def snap(self) -> bytes:
         """The whole core state (memories, timers, fetch cache, counters); not the PC / event hooks."""
@@ -573,6 +581,84 @@ class FastMachine:
                 return out
             self.last_out = out = self._out("step done")
             return out
+
+    def install_delay_ffwd(self):
+        """Exact fast-forward of the two delay routines (fw/timer/delay.c, scripts/delay_sim.py): at the loop of AwtoDelayLoops (one djnz per
+        count) and at the pass start of AwtoDelayXus (mov base, djnz, djnz outer) all but the last iterations are added in one step:
+        clk / cycles / instructions as the dw8051 model counts them, wall_ms, ticks, the loop counter. Skips only inside the window the
+        core says is free of timer deadlines (an IRQ then comes at the same iteration as interpreted) and the model tickers' deadlines;
+        needs the flash code cache on (a loop already fetched once costs no stall). tests/test_delay_ffwd.py proves state equality.
+        The routine's code is read from the image: anything but the expected shape refuses (SimError)."""
+        S = self._S()
+        import json
+        j = json.loads(MODEL_JSON.read_text())
+        cpc, cyc = j["clk_per_cycle"], j["cycles"]
+        c = self.core
+        for name, shape in (("AwtoDelayLoops", "loops"), ("AwtoDelayXus", "xus")):
+            v = self.sym.get("_" + name)
+            if v is None:
+                continue
+            a = v & 0xFFFF
+            b = bytes(c.code[a:a + 10])
+            if shape == "loops":
+                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0x22):
+                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
+                ctr, djnz_pc, per_pass = b[2], a + 3, None
+                self._ff_hook(djnz_pc, "djnz", ctr, None, cpc, cyc)
+            else:
+                if not (b[0] == 0x85 and b[3] == 0xD5 and b[4] == b[2] and b[5] == 0xFD and b[6] == 0xD5 and b[8] == 0xF7 and b[9] == 0x22):
+                    raise S.SimError(f"{name}: unexpected code {b.hex()}")
+                self._ff_hook(a + 3, "xus", b[2], (b[1], b[7], b[2]), cpc, cyc)     # first djnz of a pass (I = Base): mov I,Base ; djnz I ; djnz Counter
+
+    def _ff_hook(self, pc, kind, ctr, extra, cpc, cyc):
+        c, p = self.core, self.p
+        state = {"clk": -1}
+        d, mv = cyc[0xD5], cyc[0x85]
+
+        def room_ok(s_clk):
+            room = c.ffwd_room()
+            for t in self._tickers:
+                if self.dw:
+                    left = (getattr(t, "deadline", 0) - self.wall_ms) * self.clock.f_cpu / 1000.0
+                    if getattr(t, "deadline", 0) > 0:
+                        room = min(room, int(left) - 1) if left > 0 else 0
+            return room
+
+        def hook(m, r):
+            if not m.dw or m.clock is None or not getattr(m, "_ff_on", True):
+                return None
+            if kind == "djnz":
+                v = c.iram[ctr]
+                per_clk, per_cyc, per_ins = d * cpc, d, 1
+                n_left = v if v else 256
+            else:
+                base_var, cnt_var, ivar = extra
+                if c.iram[ivar] != c.iram[base_var]:             # not the first iteration of a pass
+                    return None
+                b = c.iram[base_var]
+                v = c.iram[cnt_var]
+                n_left = v if v else 256
+                per_cyc = mv + (b if b else 256) * d + d
+                per_clk, per_ins = per_cyc * cpc, 2 + (b if b else 256)
+            prev_ok = (p.clk - state["clk"]) == per_clk
+            state["clk"] = p.clk
+            if not prev_ok or n_left < 4:                       # the first iteration of a call runs interpreted (it fills the code cache line)
+                return None
+            n = min(n_left - 2, room_ok(0) // per_clk)
+            if n < 2:
+                return None
+            c.ffwd(n * per_clk, n * per_cyc, n * per_ins, 0xD5)
+            if kind == "djnz":
+                c.iram[ctr] = (v - n) & 0xFF
+            else:
+                c.iram[cnt_var] = (v - n) & 0xFF
+            m.wall_ms += n * per_clk * 1000.0 / m.clock.f_cpu
+            m.ticks += n * per_cyc * 12
+            m.instr += n * per_ins
+            state["clk"] = p.clk
+            return None
+        self.stubs.setdefault(pc, []).append((None, f"ffwd_{kind}", hook))
+        self.core.pch[pc] |= 0xFFFF
 
     _SCALARS = ("ticks", "instr", "_stop", "last_out", "_avg_clk", "wall_ms", "_t2_set", "_t2_at")
 

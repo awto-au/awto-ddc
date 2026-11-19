@@ -41,6 +41,7 @@ T0 = dt.datetime(2026, 11, 12, 8, 45, 10, 250000, dt.timezone(dt.timedelta(hours
 CMD_S = 1.0         # test cmd -> console page drawn: one full draw (~0.3 s sim, boot_sim) x ~3
 CON_S = 4.0         # console auto-open after ACTIVE: settled + one pass (sync_sim sees it within 1 s) x4 for the boot console
 TITLE_RE = re.compile(r"CPU (\d+\.\d) PLL (\d+\.\d) SPI (\d+\.\d)  (\d+x\d+ \d+\.\d{3}Hz|NO INPUT) (?:HOST|STALE) (\S+)")
+VIEW_ROWS = int(re.search(r"^#define AWTO_VIEW_ROWS\s+(\d+)", (ROOT / "fw/osd/console.c").read_text(), re.M).group(1))   # rows shown at a time
 CON_COLS = 136      # map columns per row (AWTO_CON_COLS, fw/osd/console.c)
 TICK_S = 1.25       # title refresh AWTO_TITLE_MS 1 s x1.25
 
@@ -257,7 +258,9 @@ def main() -> int:
 
     if pages:                                           # both pages: text + PNG; the GPIO page has no sync lines
         main_t = s.dump(a.out, f"{a.bin.stem}.main")
-        s.check(any("EVENT LOG" in r for r in main_t[:4]), "main page: event log heading")
+        full = len([r for r in main_t if r.strip()]) >= VIEW_ROWS          # a log that fills the view scrolls the heading out (one more ring line is enough)
+        s.check(any("EVENT LOG" in r for r in main_t[:4]) or (full and re.match(r"\s*\d+:", main_t[1] if len(main_t) > 1 else "") is not None),
+                "main page: event log heading (or the view full of log lines, heading scrolled out)")
         s.cmd(0x43)
         g = s.dump(a.out, f"{a.bin.stem}.gpio")
         s.check(any("GPIO INPUT DIAGNOSTICS" in r for r in g[:4]) and any("INPUT CHANGES" in r for r in g[:4]),
