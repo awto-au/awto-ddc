@@ -27,7 +27,6 @@ VCP_SAVER = 0xEB
 SYNC_EV_ODEMO = 0xE9                    # AWTO_SYNC_EV_ODEMO
 SAVERS = {                              # VCP 0xEB value, sync args that close a frame (ON = first frame, FRAME = later ones)
     "pacman": (2, (0x74,)),
-    "scope": (3, (0x76, 0x77)),
     "scope2": (4, (0x7B, 0x7C)),
     "asteroids": (8, (0x90, 0x91)),
 }
@@ -35,7 +34,7 @@ ROW_DISP_ROTATE = 32                    # registry row id of disp_rotate
 ROTATE_SETTLE_S = 6.0                   # fw time for the display re-set after Rotate changes (saver_sim.py)
 RENDER_SHRINK = 4
 WAIT_CHUNK_S = 0.25                     # fw time per wait between frame-count checks
-LIMIT_S_PER_FRAME = 3.0                 # slowest saver frame ~1.5 s (scope 1, saver-mode.md) x 2: expiry = logged FAIL
+LIMIT_S_PER_FRAME = 3.0                 # slowest saver frame ~1.5 s (Scope 2, saver-mode.md) x 2: expiry = logged FAIL
 MIN_SHARED = 5
 
 

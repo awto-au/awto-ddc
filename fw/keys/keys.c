@@ -42,6 +42,9 @@ static __xdata BYTE s_ucKeyRaw;                 // last sample
 static __xdata BYTE s_ucKeyMask;                // debounced mask (two equal samples)
 static __xdata BYTE s_ucKeyPrev;                // debounced mask at the last step
 static __xdata WORD s_usKeySample;
+#if(AWTO_KEY_PASS_N > 1)
+static __xdata BYTE s_ucKeyPass;                // passes since the last sample
+#endif
 static __xdata BYTE s_ucKeyState;               // AWTO_KS_*
 static __xdata BYTE s_ucKeyBit;                 // the one key down (WAIT / DOWN): mask bit and id
 static __xdata BYTE s_ucKeyId;
@@ -444,6 +447,48 @@ void AwtoKeyInject(BYTE ucMsg)                  // test cmd 0x01..0x05 / key_inj
     s_ucKeyQN++;
 }
 
+#if(AWTO_LOOP_PACING > 0)
+unsigned int AwtoKeyDueMs(void)                 // paced loop: ms to the next sample (10 ms, whatever the pass period); a key down: no sleep (AwtoLoopBusy)
+{
+    WORD usEl = (WORD)AwtoMs() - s_usKeySample;
+
+    return (usEl >= AWTO_KEY_SAMPLE_MS) ? 0 : (AWTO_KEY_SAMPLE_MS - usEl);
+}
+unsigned char AwtoKeyBusy(void)                 // a key is down (combo wait, repeat, reset hold), a mask change or an injected key is pending
+{
+    return (s_ucKeyState != AWTO_KS_IDLE) || (s_ucKeyMask != 0) || (s_ucKeyQN != 0);
+}
+
+extern __xdata unsigned char g_ucAwtoSaverRun;
+// The one place that says "do not sleep now": work that runs a pass at a time with no timer deadline of its own.
+// Deadline work (timer events, key sample, settings loop, panel / power steps on timer events) is not listed: the sleep wakes for it.
+unsigned char AwtoLoopBusy(void)
+{
+    switch(SysModeGetModeState())
+    {
+        case _MODE_STATUS_ACTIVE:
+        case _MODE_STATUS_NOSUPPORT:
+        case _MODE_STATUS_NOSIGNAL:
+        case _MODE_STATUS_POWER_SAVING:
+        case _MODE_STATUS_POWER_OFF:
+            break;
+        default:
+            return 1;                           // initial / source search / display setting: scan and link-training steps, one per pass
+    }
+    if((SysPowerGetPowerStatus() != _POWER_STATUS_NORMAL) && (SysPowerGetPowerStatus() != _POWER_STATUS_SAVING) && (SysPowerGetPowerStatus() != _POWER_STATUS_OFF))
+    {
+        return 1;                               // power sequencing (AC on)
+    }
+    return (g_ucAwtoSaverRun != 0)              // saver draw passes (Scope 2 / Asteroids / Pac-Man / splash / flash screen)
+        || AWTO_KEY_TEST_ON()                   // console / key test / GPIO page: redraws
+        || (g_stAwtoSync.ucOpenReq != 0)
+        || (g_ucAwtoMenuOn != 0)                // our menu: serviced every pass
+        || (GET_OSD_STATE() != _MENU_NONE)      // OSD up (selector, backlight bar, cards): draws, its counters
+        || AwtoKeyBusy()                        // a key down (repeat / reset hold) or an injected key waiting
+        || (g_ucAwtoDdcDef != 0);               // a deferred DDC/CI reply in flight
+}
+#endif
+
 void AwtoKeyPoll(void)                          // main loop, right after AwtoGpioPoll (the values it reads)
 {
     WORD usNow = ((WORD)AwtoMs());
@@ -460,8 +505,16 @@ void AwtoKeyPoll(void)                          // main loop, right after AwtoGp
         s_ucKeyQN--;
         AwtoKeyRoute(ucM, AWTO_KEV_PRESS | AWTO_KEV_INJ);           // the front-key rules: power saving wakes only, console page rules
     }
+#if(AWTO_KEY_PASS_N > 1)
+    s_ucKeyPass++;                              // paced loop: a cheap pass count first, the tick compare below is the exact gate (early wake / free-run passes)
+    if((s_ucKeyPass >= AWTO_KEY_PASS_N) && ((WORD)(usNow - s_usKeySample) >= AWTO_KEY_SAMPLE_MS))
+#else
     if((WORD)(usNow - s_usKeySample) >= AWTO_KEY_SAMPLE_MS)
+#endif
     {
+#if(AWTO_KEY_PASS_N > 1)
+        s_ucKeyPass = 0;
+#endif
         s_usKeySample = usNow;
         ucM = AwtoKeyMaskNow() | AWTO_KEY_HOLD();
         if(ucM == s_ucKeyRaw)

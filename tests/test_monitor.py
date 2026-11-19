@@ -26,6 +26,7 @@ def test_sync_row_text():
     assert SL.mon_text(1, 0xF8F85820) == "ADC A0 F8 A1 F8 A2 58 A3 20"
     assert SL.mon_text(2, 1999) == "IOSC trim count 1999"
     assert SL.mon_text(3, 700 << 16 | 18) == "main loop 700 passes/s, longest watchdog gap 18ms"
+    assert SL.mon_text(5, 15 << 24 | 11 << 12 | 300) == "headroom 300 passes/s, busy 15 %, worst pass 0.687ms"
     assert SL.mon_text(4, 3600 << 8 | 0xBC) == "uptime 3600 s, stack high BC"
     rows = SL.load_rows(ROOT / "fw/awto/sync.tsv")
     ev = (0xEA, 2, 0, 1999)

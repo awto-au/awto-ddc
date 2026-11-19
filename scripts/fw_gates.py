@@ -62,7 +62,7 @@ PY = [sys.executable, "-u"]
 # scenario sweeps (on request, before a merge to main, nightly). A gate not listed here is normal. Move a gate by editing this set.
 WDT_NORMAL_CASES = "stall,pass,reason,t0_timing"
 EXTENSIVE = {
-    "menu": "16 pages / 133 entries walk",
+    "menu_full": "16 pages, all 133 entries, a PNG per page (normal: every page, one entry per class)",
     "keys_full": "80 checks, ~250 simulated s of OSD timeouts and holds (normal: the selector section)",
     "deadport": "4 cases, up to 40 simulated s each",
     "inputrate": "40 start phases x 3 rows",
@@ -89,7 +89,7 @@ EXTENSIVE = {
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
-NO_SIM = {"link", "pokes", "speed", "magic", "regs", "regmap", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
+NO_SIM = {"link", "xlayout", "pokes", "speed", "magic", "regs", "regmap", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
 SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP (the script would FAIL on an older image)
     "keys": ("_AwtoSourceOpen",),
     "crash": ("_AwtoWdtHang",),
@@ -158,7 +158,8 @@ def gates(b: Path, m: Path, ref, tree):
         # with video (osd_render session, 1080p60 ACTIVE): without it the main loop sits in the SDK's DP RX PHY CTS routine (sim: the
         # PHY registers read 0) and the mailbox goes silent after a few seconds (#88); earlier images only passed because the
         # sim image was powered off by a phantom POWER key (ADC 0 under the old decode)
-        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]
+        g["menu_full"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "walk", "--png", ROOT / "tmp/osd67/gate" / b.stem]    # extensive: every entry + a PNG per page
+        g["menu"] = [*PY, f"{s}/menu_cli.py", "--sim", b, "--map", m, "--video", "walk", "--quick"]         # NORMAL: every page, one entry per class + first / last
     if " _vcp_box" in mt and " _AwtoDdcciPoll" in mt:
         g["ddc"] = [*PY, f"{s}/ddc_sim.py", b, "--map", m]
         if " _AwtoWaitPump" in mt:                 # #216: Get-VCP answered inside a blocking wait, Set left to the main loop
@@ -208,6 +209,8 @@ def gates(b: Path, m: Path, ref, tree):
             g["regmap"] = [*PY, f"{tree}/scripts/regmap_build.py", "--check"]
         if (Path(tree) / "scripts/iram_names.py").is_file():                       # #189: d_ / i_ names match IRAM placement
             g["iram"] = [*PY, f"{tree}/scripts/iram_names.py", "check", "--asm", Path(tree) / "tmp/sdcc-port/asm_ovl", "--map", m]
+        if (Path(tree) / "scripts/xdata_layout.py").is_file():                        # pinned XDATA slots match the linked map
+            g["xlayout"] = [*PY, f"{tree}/scripts/xdata_layout.py", "check", "--tree", tree, "--map", m]
         g["rules"] = [*PY, f"{tree}/scripts/sdk_rules_lint.py", "--tree", tree]     # #162: no build step patches the SDK
         for nm, sc in (("gensync", "gen_awto_sync.py"), ("geninputs", "gen_awto_inputs.py"), ("gensavers", "gen_awto_savers.py")):      # #162: generated C tables current
             if (Path(tree) / "scripts" / sc).is_file():

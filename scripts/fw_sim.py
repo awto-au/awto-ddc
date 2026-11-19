@@ -1170,8 +1170,14 @@ class SimBus:
     def wait(self, sec: float):
         t0 = self._t2()
         goal = max(1, int(sec * 1000))
+        ipms = getattr(self, "_ipms", 4200.0)           # instructions per fw ms seen in the last chunk: a paced loop idles (idle clk skips), 10x fewer per ms
         while self._t2() - t0 < goal:
-            self.m.run(min(200_000, 4200 * max(1, goal - (self.t2_abs - t0))))
+            rem = max(1, goal - (self.t2_abs - t0))
+            n0, a0 = getattr(self.m, "p", None) and self.m.p.instr, self.t2_abs
+            self.m.run(min(200_000, max(500, int(ipms * 0.9 * rem))))
+            if n0 is not None and self._t2() > a0:
+                ipms = max(100.0, (self.m.p.instr - n0) / (self.t2_abs - a0))
+        self._ipms = ipms
 
     def snapshot(self):
         """Machine + bus state (core, models, Timer2 bookkeeping); stubs and hooks set later stay. See FastMachine.snapshot."""
@@ -1500,7 +1506,11 @@ def video_check(binp: Path, mapp: Path, mode: str, max_instr: int, log, fault: s
     return 0 if last == H.MODE_ACTIVE else 1
 
 
-def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_instr: int = 60_000_000) -> int:
+ISR_QUIET_IRQS = 100      # minimal sweep (AWTO_ISR_MIN=1, off by default): stop once this many interrupts in a row add no new (bank, vector) pair; measured 2026-11-19: stops at 200 with 14 of the 16 pairs (bank 10 first seen at interrupt 473), so NOT used by the gate
+ISR_MIN_IRQS = 200        # ... and at least this many returned (every bank's first EXINT1 is forced once per bank seen: ~10 banks x 2 vectors)
+
+
+def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_instr: int = 60_000_000, minimal: bool = False) -> int:
     """An interrupt taken with logical bank k (= _d_isr_bs_cur, the bank the code thinks it is in) returns with bank register
     == _d_isr_bs_cur == k and SP as before. Timer2 comes by itself; EXINT1 (IE1) is forced once per bank seen.
     Flow: vector stop -> note (_d_isr_bs_cur, SP, return PC) -> tbreak at the return PC -> compare."""
@@ -1528,8 +1538,11 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
         return int(g.group(1), 16) if g else -1
 
     seen, bad, injected, irqs, done = Counter(), [], set(), 0, 0
+    pairs, last_new = set(), 0                      # (logical bank, vector) pairs covered; irq count at the last new pair
     waited, chunk, pending = 0, 1_000_000, None                   # pending = (logical bank, SP before the IRQ, return PC, vector)
     while irqs < want_irqs and done < max_instr:
+        if minimal and irqs >= ISR_MIN_IRQS and irqs - last_new >= ISR_QUIET_IRQS:
+            break                                        # every pair this image reaches is covered; more of the same adds nothing
         out = run_chunk(s, flash, chunk)
         if out is None:
             print("FAIL isr-check: ucsim did not answer"); return 1
@@ -1549,7 +1562,10 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
             if not (bank == lg == pending[0]) or spv != pending[1]:
                 bad.append(f"vector 0x{pending[3]:02x} in logical bank {pending[0]}: back with bank reg {bank}, _d_isr_bs_cur {lg}, "
                            f"SP 0x{spv:02x} (was 0x{pending[1]:02x}) at pc 0x{pc:04x}")
-            seen[pending[0]] += 1; pending = None; irqs += 1
+            seen[pending[0]] += 1
+            if (pending[0], pending[3]) not in pairs:
+                pairs.add((pending[0], pending[3])); last_new = irqs
+            pending = None; irqs += 1
             if lg not in injected:                      # main-context point in this bank: force EXINT1 once
                 injected.add(lg)
                 s.send("set bit 0x8b 1")
@@ -1567,7 +1583,7 @@ def isr_check(binp: Path, mapp: Path, be: bool, log, want_irqs: int = 1500, max_
             s.send(f"tbreak 0x{ret:x}")
     s.send("quit")
     print(f"isr-check {binp.name}: {irqs} interrupts returned, banks covered {sorted(seen)} of {len(img) // BANK}, "
-          f"~{done} instr")
+          f"{len(pairs)} (bank, vector) pairs, last new at interrupt {last_new}, ~{done} instr")
     for b in bad[:10]:
         print("FAIL", b)
     return 1 if bad or not irqs else 0
@@ -1670,7 +1686,7 @@ def main() -> int:
             be = a.be or "-be" in b.name or T.BIG_ENDIAN
             if mode == "boot_check" and fast:
                 return fastmachine.boot_check(b, m, be, a.passes, a.max_instr, lg, sys.modules[__name__])
-            return (boot_check(b, m, be, a.passes, a.max_instr, lg) if mode == "boot_check" else isr_check(b, m, be, lg))
+            return (boot_check(b, m, be, a.passes, a.max_instr, lg) if mode == "boot_check" else isr_check(b, m, be, lg, minimal=bool(os.environ.get("AWTO_ISR_MIN"))))
     if a.video_check:
         b, mp_ = map(Path, a.video_check)
         return video_check(b, mp_, a.mode, a.max_instr if a.max_instr != 60_000_000 else 60_000_000,

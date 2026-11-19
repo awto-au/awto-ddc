@@ -33,7 +33,7 @@ SLOW_BRUSH = QBrush(QColor("#ff5050"))
 INPUTS = ("D1", "D2", "D3")                              # scripts/kvm.py port names
 VCP_VOLUME, VCP_MUTE, VCP_SAVER = "0x62", "0x8D", "0xEB"
 # VCP 0xEB start / stop values; the registry row screensaver_now lists 0..4, 5 = flash warning
-SAVER_NOW = (("Stop", 0), ("Selected", 1), ("Pac-Man", 2), ("Scope", 3), ("Scope 2", 4), ("Flash warning", 5), ("Boot splash", 7), ("Asteroids", 8))
+SAVER_NOW = (("Stop", 0), ("Selected", 1), ("Pac-Man", 2), ("Scope 2", 4), ("Flash warning", 5), ("Boot splash", 7), ("Asteroids", 8))
 QUICK_ROWS = ("volume", "mute", "disp_rotate")           # registry rows reused as widgets in the Quick group
 VCP_ROW = {"volume": VCP_VOLUME, "mute": VCP_MUTE}       # quick rows written through DDC/CI, the rest through the mailbox
 VALUE_RE = re.compile(r"(?:^|\s)(\w+) = .* \(raw (-?\d+)\)\s*$")

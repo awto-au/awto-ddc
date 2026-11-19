@@ -24,7 +24,7 @@ import ddc_sim as D  # noqa: E402
 import saver_frames_md5 as F  # noqa: E402
 
 LOG = R.ROOT / "tmp/logs/saver_fps_probe.log"
-SETTLE_S = 3.0                  # fw time after the start: the hidden first frame is drawn (Scope 1 ~1 s, Asteroids ~2 s)
+SETTLE_S = 3.0                  # fw time after the start: the hidden first frame is drawn (Scope 2, Asteroids ~2 s)
 BURST_US = 3000                 # consecutive calls closer than this belong to one loop (a tile upload is ~0.1-0.5 ms)
 PORT_FN = "ScalerOsdDataPort"
 ROW_DISP_ROTATE = 32

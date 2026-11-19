@@ -635,7 +635,7 @@ def _flashed(u: dict) -> dict:
 
 
 @command("build firmware (the only build entry; engine scripts/fwimage.py): FRC + rotation by default; frozen to tmp/fw/<serial>-<tag>-be.{bin,map,sync.tsv,settings_table.py}; tag = <commit>[+][-freeze|-nofrc][-audio-test] unless --tag",
-         args="[--unit N | --serial S] [--tree DIR] [--freeze | --no-frc] [--audio-test] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
+         args="[--unit N | --serial S] [--tree DIR] [--freeze | --no-frc] [--audio-test] [--savers pacman,scope2,asteroids] [-D NAME[=VAL] ...] [--tag T] [--force] [--bin DIR --src DIR --level N --expect STAMP --flags F --fw-args A]",
          kind="action")
 def cmd_build(extra: list[str]) -> int:
     serial = _opt(extra, "--serial")
@@ -651,6 +651,15 @@ def cmd_build(extra: list[str]) -> int:
     if audio_test:
         defs.append("_AWTO_AUDIO_TEST")
     defs += [extra[i + 1] for i, x in enumerate(extra) if x == "-D" and i + 1 < len(extra)]
+    keep = _opt(extra, "--savers")                                   # savers in the image (fw/awto/savers.tsv option column); the rest are _OFF
+    if isinstance(keep, str):
+        import saver_names
+        opts = saver_names.options()
+        bad = [k for k in keep.split(",") if k not in opts]
+        if bad:
+            raise SystemExit(f"build: --savers takes a comma list of {sorted(opts)}; got {bad}; nothing done")
+        defs += [f"{o}=_OFF" for k, o in opts.items() if k not in keep.split(",")]
+        opt += "-sv-" + keep.replace(",", "-")
     tree = Path(_opt(extra, "--tree") or REPO)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=tree, capture_output=True, text=True).stdout.strip()
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree).returncode else ""
@@ -1140,7 +1149,7 @@ def cmd_synclog(extra: list[str]) -> int:
     return _dbg_py(b, "sync_log.py", b, "--serial", u["serial"], "--map", _fwmap(u, given), *flags)
 
 
-@command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope1 scope2 flash splash alert "
+@command("start / stop a saver by name (VCP 0xEB from fw/awto/savers.tsv: off stop selected pacman scope2 flash splash alert "
          "asteroids) or `tour` = every saver 10 s each with the alert tone, volume 50 % then restored",
          args="[--unit N] NAME | tour [--hold S] [--volume PCT]", kind="action")
 def cmd_saver(extra: list[str]) -> int:

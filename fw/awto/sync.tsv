@@ -216,8 +216,8 @@ E1	08	vport	wake on % suppressed:input disabled (once per trigger per sleep)
 E1	09	vport	disable % requested:already disabled
 E1	0A	vport	enable % requested:already enabled
 E1	0B	vport	fixed search on disabled %:auto search
-E5	01	-	audio on:amp P7.4 = 1, AMP_MUTE P7.3 = 0
-E5	02	-	audio off:amp P7.4 = 0, AMP_MUTE P7.3 = 1
+E5	01	-	audio on:amp P7.4 = 1, then AMP_MUTE P7.3 = 0
+E5	02	-	audio off:AMP_MUTE P7.3 = 1, then amp P7.4 = 0
 E5	05	-	audio on:already on, no change (SDK unmute again)
 E5	06	-	audio off:already off, no change (SDK mute again)
 E5	04	n	unmute while audio test step % is held:P7.4 / AMP_MUTE P7.3 as that step sets them

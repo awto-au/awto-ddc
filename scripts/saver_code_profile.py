@@ -28,7 +28,6 @@ import ddc_sim as D  # noqa: E402
 import saver_frame_cost as F  # noqa: E402
 
 LOG = R.ROOT / "tmp/logs/saver_code_profile.log"
-SC1_COLS = 32                   # Scope 1: one ScColumn call per column, AWTO_SC_COLS columns per frame (scope_saver.c)
 LINE = 16
 COMMON_END = 0x5000
 WAYS = 2
@@ -178,9 +177,7 @@ def measure(a, case: str) -> dict:
             v = rd8("g_ucAwtoAstCol")
             frames += v == 0 and last != 0
             last = v
-    if case == "scope":
-        frames = calls["ScColumn"] / SC1_COLS if calls["ScColumn"] else calls["ScPass"] / F.SC1_PASSES_PER_FRAME
-    elif case == "pacman":
+    if case == "pacman":
         frames = calls["AwtoPacmanClassic"]
     r = {"case": case, "frames": max(frames, 1e-9), "wall": m.wall_ms - w0, "instr": m.p.instr - i0, "cycles": m.p.cycles - c0,
          "stall_clk": m.p.fm_stall - s0, "fills": m.p.fm_miss - f0, "clk": clk, "stall": stall, "saver_clk": saver_clk,
@@ -287,7 +284,7 @@ def report(a, r: dict) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bin", type=Path)
-    ap.add_argument("--case", nargs="*", default=["scope", "scope2", "asteroids", "pacman"])
+    ap.add_argument("--case", nargs="*", default=["scope2", "asteroids", "pacman"])
     ap.add_argument("--window", type=float, default=10.0, help="fw seconds measured")
     ap.add_argument("--rotate", action="store_true")
     ap.add_argument("--every", type=int, default=200, help="instructions between PC samples")

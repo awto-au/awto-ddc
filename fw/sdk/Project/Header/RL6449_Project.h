@@ -308,6 +308,33 @@ extern volatile __xdata __at(0xF69C) unsigned char g_stAwtoSnap[20];
 #define AWTO_WDT_P_WDTI                                         0x20    // DW8051 EICON[3] WDTI set: Realtek's WDT also drives the core wdti
 #define AWTO_WDT_P_EARLY                                        0x40    // a threshold IRQ before the warning since the last main pass (pokes
                                                                         // stopped > 439 ms); kept over the reset: hardware-WDT evidence
+// Main-loop pacing (docs/main-loop-pacing.md): 0 = free-running loop (default). N > 0: after a pass, idle (PCON.IDL) until the first of:
+// N ms since the previous pass, a wake bit (EXINT0 / EXINT1 / Timer0 ISR, software), the earliest timer-event deadline, the next key
+// sample, the next settings-loop service. AwtoLoopBusy() != 0 (saver, OSD / console up, key down, DDC/CI deferred, mode / power steps): no sleep.
+// Idle wakes on every IRQ (Timer2 1 ms at most): a wake bit set between the check and the IDL write waits for that tick (<= 1 ms).
+#ifndef AWTO_LOOP_PACING
+#define AWTO_LOOP_PACING                                        0
+#endif
+#if(AWTO_LOOP_PACING > 0)
+extern volatile bit d_isr_g_bWkEx0;
+extern volatile bit d_isr_g_bWkEx1;
+extern volatile bit d_isr_g_bWkT0;
+extern volatile bit d_g_bWkSw;
+// last 1 s window: passes, sleep per mille, worst busy pass in 1/16 ms, passes without sleep (busy hook) per mille, IDL exits, passes ended by a wake bit
+typedef struct { unsigned int usPasses; unsigned int usSleepPm; unsigned int usWorstQ4; unsigned int usHoldPm; unsigned int usIdles; unsigned int usWkIsr; } StAwtoHead;
+extern __xdata StAwtoHead g_stAwtoHead;
+extern void AwtoLoopPace(void);
+extern unsigned char AwtoLoopBusy(void);
+extern unsigned int SysTimerNextEventMs(void);
+extern unsigned int AwtoKeyDueMs(void);
+#define AWTO_LOOP_PACE()                                        AwtoLoopPace()
+#define AWTO_ISR_WAKE(src)                                      (d_isr_g_bWk##src = 1)
+#define AWTO_WAKE_SW()                                          (d_g_bWkSw = 1)
+#else
+#define AWTO_LOOP_PACE()
+#define AWTO_ISR_WAKE(src)
+#define AWTO_WAKE_SW()
+#endif
 // One hardware watchdog (#138). Counters: CNT2 / 2048 XTAL -> CNT3 (143.0 us, wraps 585.9 ms) -> CNT1 (wraps).
 // Poke = FFEA[6] clr_wdt: every main-loop pass and inside bounded loops only (rule: no unbounded loop around a poking wait).
 // Warning = threshold IRQ at CNT1 = N - 1, CNT3 = THR (earlier matches return): capture, then sof_rst. Reset = CNT1 = N.
@@ -505,6 +532,13 @@ typedef struct
 extern __xdata StAwtoKey g_stAwtoKey;
 // #129 keys (fw/keys/keys.c): input monitor values -> AwtoKeyPoll (debounce, combos, repeat) -> AwtoKeyRoute (one dispatcher)
 #define AWTO_KEY_SAMPLE_MS                                      10      // debounce: a change counts after two equal samples this far apart (SDK key scan: SEC(0.01))
+// Paced loop: pass count N = floor(AWTO_KEY_SAMPLE_MS / AWTO_LOOP_PACING) (4 ms -> 2, 8 ms -> 1): the pass count only skips cheap, the tick compare decides.
+// Floor, not round: the sleep also wakes at the key sample due time, so at least N passes always fit in a sample period; free-run (0): tick compare only.
+#if(AWTO_LOOP_PACING > 0)
+#define AWTO_KEY_PASS_N                                         (AWTO_KEY_SAMPLE_MS / AWTO_LOOP_PACING)
+#else
+#define AWTO_KEY_PASS_N                                         1
+#endif
 #define AWTO_KEY_COMBO_MS                                       80      // UP / DOWN wait this long for a combo partner (UP+DOWN) before PRESS (two-finger press skew; longer feels slow)
 #define AWTO_KEY_REPEAT_MS                                      500     // first REPEAT of a held key (SDK: SEC(0.5))
 #define AWTO_KEY_RESET_MS                                       10000   // any front key held: reset all settings to defaults (Dan 2026-11-18, #132 item 7)
@@ -753,7 +787,12 @@ extern void AwtoSourceAuto(unsigned char ucWho);                // auto source s
 extern void AwtoSourceIdle(void);                               // OSD_DISABLE timer with the selector open: idle commit
 extern void AwtoSourceReset(void);                              // SDK OSD reset (UserInterfaceAdjustOsdResetProc): the open selector's choice
 #define AWTO_BL_KEY_STEP                                        1       // UP / DOWN backlight change per press / repeat, % (= registry brightness step)
-#define AWTO_BL_VPOS_PCT                                        85      // backlight bar card: vertical position, % (lower screen, off the picture centre)
+#define AWTO_POPUP_MARGIN_MM                                    10      // small cards: top right corner, this far from the top and right panel edges (Dan 2026-11-19)
+#define AWTO_PANEL_IMAGE_W_MM                                   621     // EDID image size of the panel (docs/edid-fix.md, scripts/make_edid.py)
+#define AWTO_PANEL_IMAGE_H_MM                                   341
+#define AWTO_POPUP_MARGIN_X_PX                                  ((unsigned int)((AWTO_POPUP_MARGIN_MM * (unsigned long)_PANEL_DH_WIDTH) / AWTO_PANEL_IMAGE_W_MM))
+#define AWTO_POPUP_MARGIN_Y_PX                                  ((unsigned int)((AWTO_POPUP_MARGIN_MM * (unsigned long)_PANEL_DV_HEIGHT) / AWTO_PANEL_IMAGE_H_MM))
+extern void osd_tc_place_top_right(unsigned int usRight, unsigned int usTop, unsigned char ucBig);
 extern void AwtoResetCard(unsigned char ucSec);                   // key-hold reset warning card (#132 item 7)
 extern void AwtoBlKey(unsigned char ucKey);                     // backlight bar (#132): open on UP / DOWN, step
 extern void AwtoBlClose(void);                                  // close it; the value is stored at the NVRAM gate
@@ -1138,6 +1177,7 @@ extern __xdata unsigned char g_ucAwtoMemForce;  // 1 = ScalerMDomainMemoryConfig
 #define AWTO_MON_EV_ADC                                         1       // value = A0 << 24 | A1 << 16 | A2 << 8 | A3 (raw LSADC results, 5-bit in [7:3])
 #define AWTO_MON_EV_TRIM                                        2       // value = IOSC trim counter (12 bit, temperature proxy)
 #define AWTO_MON_EV_LOOP                                        3       // value = passes/s << 16 | longest watchdog poke gap, ms
+#define AWTO_MON_EV_HEAD                                        5       // paced loop only (AWTO_LOOP_PACING > 0), on the beat: value = busy % << 24 | worst busy pass (1/16 ms) << 12 | passes/s (12 bit each, clamped)
 #define AWTO_MON_EV_UP                                          4       // value = uptime s << 8 | stack high-water (SP)
 #define AWTO_MON_MS                                             10000   // sample period: the values drift over minutes (IOSC trim constant 30 min at 350.8 MHz); a key ladder is held, not pulsed, to show
 #define AWTO_MON_BEAT_K                                         30      // heartbeat = every K samples (5 min): all rows again; between them only a changed row
@@ -1194,10 +1234,22 @@ extern void AwtoOsdScreenBegin(void);                                           
 extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
+// Screensavers in the image (fw/awto/savers.tsv option column; docs/saver-mode.md "Selecting savers"): -D _AWTO_SAVER_<X>=_OFF drops one, default all _ON
+#ifndef _AWTO_SAVER_PACMAN
+#define _AWTO_SAVER_PACMAN                                      _ON
+#endif
+#ifndef _AWTO_SAVER_SCOPE2
+#define _AWTO_SAVER_SCOPE2                                      _ON
+#endif
+#ifndef _AWTO_SAVER_ASTEROIDS
+#define _AWTO_SAVER_ASTEROIDS                                   _ON
+#endif
+#if((_AWTO_SAVER_PACMAN != _ON) && (_AWTO_SAVER_SCOPE2 != _ON) && (_AWTO_SAVER_ASTEROIDS != _ON))
+#error "at least one of _AWTO_SAVER_PACMAN / _AWTO_SAVER_SCOPE2 / _AWTO_SAVER_ASTEROIDS must be _ON"
+#endif
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
 extern void AwtoPacmanClassic(unsigned char ucCmd);
-#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 scope, 4 scope 2, 5 flash warning, 6 alert tone, 8 Asteroids
-#define AWTO_TC_SCOPE                                           0xB4    // test cmd: 0xB4 scope screensaver draw (docs/screensaver.md), 0xB5 next frame, 0xB6 off
+#define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 retired (was scope 1, ignored), 4 scope 2, 5 flash warning, 6 alert tone, 8 Asteroids
 #define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert tone (1 s) 
 extern BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep);                                 // one step of the same drawing (boot splash: ucSplash = 1); 1 when shown
 extern void AwtoSaverTaken(void);                                                       // OsdDispDisableOsd: the OSD is being reset / reused; a boot splash is over without a redraw
@@ -1208,7 +1260,6 @@ extern void AwtoSaverActivity(void);
 extern void AwtoSaverKey(void);
 extern void AwtoSaverStart(unsigned char ucWhich, unsigned char ucWhy);
 extern void AwtoSaverStop(void);
-extern unsigned char AwtoScopeSaver(unsigned char ucCmd);
 extern unsigned char AwtoScopeSaver2(unsigned char ucCmd);
 extern unsigned char AwtoAsteroids(unsigned char ucCmd);
 extern void AwtoPmSound(unsigned char ucCmd);
@@ -2246,8 +2297,8 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_CEC_K_MASK                                         0x07
 #define AWTO_CEC_LEN_SHIFT                                      3
 #define AWTO_CEC_F_DEST_UNKNOWN                                 0x80
-#define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, P7.3 AMP_MUTE = 0
-#define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
+#define AWTO_AUDIO_EV_AMP_ON                                    1       // unmute: P7.4 = 1, then P7.3 AMP_MUTE = 0
+#define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.3 AMP_MUTE = 1, then P7.4 = 0
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step
 #define AWTO_AUDIO_EV_CLICK                                     0x50    // key click played
 #define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound
