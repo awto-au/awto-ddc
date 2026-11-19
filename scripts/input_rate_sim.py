@@ -58,9 +58,15 @@ class Rig:
         return self.m.wall_ms * 1000.0
 
     def run_us(self, us: float) -> None:
+        """Run to wall time +us: big steps while far from the target (a step is a fixed instruction count, same machine state at any
+        step size), RUN_CHUNK instructions near it, so the end lands within one RUN_CHUNK of the target as before."""
         t = self.us() + us
-        while self.us() < t:
-            self.m.run(RUN_CHUNK)
+        while True:
+            left_clk = (t - self.us()) * self.m.clock.f_cpu / 1e6
+            if left_clk <= 0:
+                return
+            far = int(left_clk / self.m._avg_clk * 0.5)
+            self.m.run(far if far > 4 * RUN_CHUNK else RUN_CHUNK)
 
     def calibrate(self) -> dict:
         reads = {k: [] for k in ROW.values()}
@@ -140,6 +146,8 @@ def main() -> int:
     ap.add_argument("bin", type=Path)
     ap.add_argument("map", type=Path, nargs="?")
     ap.add_argument("--pulses", type=int, default=PULSES)
+    ap.add_argument("--info", action="store_true", help="also the two informational sweeps (the #110 pulse on DPS17, half the worst gap on the slow row): they assert nothing")
+    ap.add_argument("--margin", type=float, default=WIDTH_MARGIN, help="test pulse width = worst gap x this (default 1.25; below 1 the gate must FAIL: tests/test_gate_mutations.py)")
     a = ap.parse_args()
     a.map = a.map or a.bin.with_suffix(".map")
     say(f"input_rate_sim {a.bin.name}")
@@ -149,14 +157,16 @@ def main() -> int:
         r.s.bus.close()
         r = Rig(a)                    # fresh boot without the hook: a breakpoint on AwtoInRow disturbs the pulse timing
         n = a.pulses
-        w = cal["DPS17"][1] * WIDTH_MARGIN
+        w = cal["DPS17"][1] * a.margin
         r.check(r.sweep("pass row DPS17, worst gap x 1.25", PIN_DPS17, 1, 0, w, ROW["DPS17"], True, n) == n, "pass row DPS17: a pulse of 1.25 x the worst read gap is counted at every phase")
-        r.sweep("pass row DPS17, the #110 pulse (informational)", PIN_DPS17, 1, 0, PULSE_DPS17_US, ROW["DPS17"], True, n)
-        w = cal["ADC0"][1] * WIDTH_MARGIN
+        if a.info:
+            r.sweep("pass row DPS17, the #110 pulse (informational)", PIN_DPS17, 1, 0, PULSE_DPS17_US, ROW["DPS17"], True, n)
+        w = cal["ADC0"][1] * a.margin
         r.check(r.sweep("pass row ADC0, worst gap x 1.25", ADC0, ADC_UP, ADC_IDLE, w, ROW["ADC0"], False, n) == n, "pass row ADC0: a pulse of 1.25 x the worst read gap is logged at every phase")
-        w = cal["GPIO65"][1] * WIDTH_MARGIN
+        w = cal["GPIO65"][1] * a.margin
         r.check(r.sweep("slow row GPIO65, worst gap x 1.25", PIN_GPIO65, 1, 0, w, ROW["GPIO65"], False, n) == n, "slow row: a pulse of 1.25 x the worst read gap is seen at every phase")
-        r.sweep("slow row GPIO65, half the worst gap (informational)", PIN_GPIO65, 1, 0, w / 2, ROW["GPIO65"], False, n)
+        if a.info:
+            r.sweep("slow row GPIO65, half the worst gap (informational)", PIN_GPIO65, 1, 0, w / 2, ROW["GPIO65"], False, n)
         r.check(r.m.rd(r.gpio + 16 + ROW["ADC0"], 1)[0] == ADC_IDLE, "ADC0 back at idle")
     finally:
         r.s.bus.close()

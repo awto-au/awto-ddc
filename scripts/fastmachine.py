@@ -104,6 +104,9 @@ def lib():
     L.core_set_fill.argtypes = [vp, ctypes.c_int]
     L.core_level.restype, L.core_level.argtypes = ctypes.c_int, [vp, ctypes.c_int]
     L.core_run.restype, L.core_run.argtypes = ctypes.c_int, [vp, ctypes.c_uint64]
+    L.core_snap_size.restype, L.core_snap_size.argtypes = ctypes.c_size_t, [vp]
+    L.core_snap.argtypes = [vp, ctypes.c_char_p]
+    L.core_restore.argtypes = [vp, ctypes.c_char_p]
     _LIB = L
     return L
 
@@ -191,6 +194,15 @@ class Core:
         s, rs = self.sfr, self.sfr[0x50] & 0x18
         return {"pc": self.p.pc, "acc": s[0x60], "b": s[0x70], "psw": s[0x50], "sp": s[0x01], "dptr": s[0x03] << 8 | s[0x02],
                 "r": list(self.iram[rs:rs + 8]), "bank": self.p.bank}
+
+    def snap(self) -> bytes:
+        """The whole core state (memories, timers, fetch cache, counters); not the PC / event hooks."""
+        buf = ctypes.create_string_buffer(self.L.core_snap_size(self.h))
+        self.L.core_snap(self.h, buf)
+        return buf.raw
+
+    def restore(self, blob: bytes):
+        self.L.core_restore(self.h, blob)
 
     def free(self):
         if self.h:
@@ -560,6 +572,40 @@ class FastMachine:
                 return out
             self.last_out = out = self._out("step done")
             return out
+
+    _SCALARS = ("ticks", "instr", "_stop", "last_out", "_avg_clk", "wall_ms", "_t2_set", "_t2_at")
+
+    @staticmethod
+    def _plain(o):
+        import types
+        return {k: v for k, v in vars(o).items() if not isinstance(v, types.ModuleType)}
+
+    def snapshot(self, extra=()):
+        """State of this machine to come back to with restore(): the core, the models (their attributes, copied together so shared
+        objects stay shared), the machine counters. `extra` = more objects (SimBus ...) whose attributes belong to the state.
+        Not in it: stubs, watches, PC hooks (host configuration) and objects a test keeps outside the models."""
+        import copy
+        objs = [*self.devs, *extra]
+        memo = {id(self): self, id(self.core): self.core, **{id(o): o for o in objs}}
+        dicts = copy.deepcopy([self._plain(o) for o in objs], {**memo})
+        return (self.core.snap(), dicts, {k: getattr(self, k) for k in self._SCALARS}, dict(self.stub_hits), set(self._tbrk))
+
+    def restore(self, snap, extra=()):
+        import copy
+        blob, dicts, sc, hits, tbrk = snap
+        objs = [*self.devs, *extra]
+        memo = {id(self): self, id(self.core): self.core, **{id(o): o for o in objs}}
+        fresh = copy.deepcopy(dicts, memo)             # a second restore must not see the first run's objects
+        self.core.restore(blob)
+        for o, d in zip(objs, fresh):
+            for k in [k for k, v in vars(o).items() if not isinstance(v, __import__("types").ModuleType)]:
+                del o.__dict__[k]
+            o.__dict__.update(d)
+        for k, v in sc.items():
+            setattr(self, k, v)
+        self.stub_hits.clear()
+        self.stub_hits.update(hits)
+        self._tbrk = set(tbrk)
 
     def _restub(self, pc: int):
         """PC hook mask after a temporary break at pc is gone: the stubs and plain breaks still there."""
