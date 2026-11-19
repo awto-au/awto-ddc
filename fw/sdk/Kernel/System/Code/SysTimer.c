@@ -92,6 +92,33 @@ void SysTimerHandler(void)
     }
 }
 
+#if(AWTO_LOOP_PACING > 0)
+//--------------------------------------------------
+// Description  : ms until the earliest valid timer event fires (SysTimerHandler fires at counter > time); 0xFFFF = none
+//--------------------------------------------------
+unsigned int SysTimerNextEventMs(void)
+{
+    BYTE ucI;
+    WORD usNow = ScalerTimerGetTimerCounter();
+    WORD usBest = 0xFFFF;
+    WORD usD;
+
+    for(ucI = 0; ucI < _TIMER_EVENT_COUNT; ucI++)
+    {
+        if(ScalerTimerCheckEventValid(ucI) == _TRUE)
+        {
+            usD = ScalerTimerGetEventTime(ucI);
+            usD = (usD >= usNow) ? (usD - usNow + 1) : 0;
+            if(usD < usBest)
+            {
+                usBest = usD;
+            }
+        }
+    }
+    return usBest;
+}
+#endif
+
 //--------------------------------------------------
 // Description  : Timer Event Process
 // Input Value  : enumEventID --> Event to be processed
@@ -362,7 +389,7 @@ void SysTimerIntProc0(void) __interrupt(1)
 {
     AWTO_CPUS_ISR(1);
     // Backup for Burst Write Bug
-    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE();
+    g_ucBackup_TIMER0 = MCU_FFF4_SCA_INF_ADDR; AwtoT0EvIsr(); AWTO_ISR_WAKE(T0);
 
 #if(_INSTANT_TIMER_EVENT_0 == _ON)
     // Clear Timer0 flag

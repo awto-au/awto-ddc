@@ -3,6 +3,44 @@
 Status 2026-11-19. Study + prototype behind `AWTO_LOOP_PACING` (default 0 = off, default image unchanged). Nothing ran on a unit.
 Tags: [measured] sim / repo scan, [databook], [sdk-hypothesis], [guess]. Decision, speed / latency trade-off and any default change: Dan.
 
+## 0. Implemented 2026-11-19 (Dan: GO, pop-up 2026-11-19)
+
+`AWTO_LOOP_PACING` = N ms, default 0 (default image unchanged). Build: `./dev.py build -D AWTO_LOOP_PACING=4`. Sleep = `AwtoLoopPace()` at the end of every pass (`fw/diag/diag.c`).
+- Wakes at the first of:
+  - N ms since the previous pass.
+  - A wake bit: `d_isr_g_bWkEx0 / Ex1 / T0` set by the EXINT0, EXINT1, Timer0 ISRs; `d_g_bWkSw` for software (`AWTO_WAKE_SW()`). Timer1 / serial ISRs are empty / unused: no bit.
+  - The earliest valid timer event: `SysTimerNextEventMs()` (`SysTimer.c`; fires at counter > time as `SysTimerHandler`): event resolution stays 1 ms.
+  - The next key sample (`AwtoKeyDueMs()`, 10 ms) and the next settings-loop service (`AWTO_SET_LOOP_MS`, 20 ms).
+- Lost wake: a wake bit set between the flag check and the IDL write sleeps until the next IRQ. Worst case 1 Timer2 tick (1 ms). No EA trick: a halted 8051 cannot run `EA = 1`, databook says wake needs an enabled IRQ. Test `race`: next pass 1 tick after the injection.
+- Busy hook `AwtoLoopBusy()` (`fw/keys/keys.c`, the one list): no sleep while any of
+  - mode state initial / search / display setting, power status AC on (source scan, link training, boot / power steps);
+  - a saver runs (`g_ucAwtoSaverRun`), console / key test / GPIO page open, console auto-open pending, our menu on, any OSD state other than none (selector, backlight bar, cards: they also count pulses per pass, DPS17), a key down or injected key queued, a deferred DDC/CI reply.
+  - NVRAM flush and panel / power steps run from timer events or the 20 ms settings loop: deadlines, not listed.
+- Keys: decisions were already time-based (`AwtoMs` compares: 10 ms sample, 2 equal samples, 80 ms combo, 500 ms repeat, 100 ms rate, 10 s reset). Added: pass-count prefilter `AWTO_KEY_PASS_N = floor(10 / N)` (4 ms: 2, 8 ms: 1) in front of the tick compare. Tick compare stays the exact gate (early wake passes, free-run busy passes at 2300 /s); floor (not round) because the sleep also wakes at the sample deadline, so at least N passes fit in 10 ms.
+- Headroom (last 1 s window, `g_stAwtoHead`, 12 B, read by symbol: the 48 B diag block is full): passes, sleep per mille, worst busy pass (1/16 ms), passes with the busy hook on (per mille), IDL exits, passes ended by a wake bit.
+  - Shown in: monitor sync row `headroom N passes/s, busy P %, worst pass X ms` (arg 5, on the heartbeat), console LOOP row ` busy P%`, `./dev.py health` row `headroom`, `docs/speed-bench.tsv` columns `pacing_ms passes_s_idle busy_pct_idle worst_ms_idle` (`loop_pacing_sim.py --bench LABEL`).
+  - Health rule: idle ACTIVE (busy hook < 10 % of passes, re-read up to 4 windows while it is on): busy < 50 %, worst pass < 10 ms; busy hook still on after 4.8 s = FAIL (stuck producer).
+
+Sim numbers (350.8 MHz, ACTIVE 1080p60, idle, 5 s after ACTIVE, `scripts/loop_pacing_sim.py`; dw8051 core with exact idle):
+
+| image | passes/s | busy % (not asleep) | CPU duty % | worst pass | IRQ/s | key press -> mask |
+|---|---|---|---|---|---|---|
+| free run (0) | 2436 | 100 | 100 | n/a | n/a | 18 / 16 / 12 ms |
+| 4 ms | 300 | 15.4 | 18.8 | 0.69 ms | 1000 | 13 / 12 / 17 ms |
+| 8 ms | 200 | 11.0 | 13.5 | 0.62 ms | 1000 | 18 / 13 / 13 ms |
+
+- Passes are 300 / 200, not 250 / 125: the key-sample deadline (10 ms) adds a pass per sample. Dropping that wake at 4 ms gives ~250 /s and a key sample at 12 ms (debounce window 12 instead of 10 ms): not done, debounce window kept.
+- Key latency = three presses at different phases against the 10 ms grid; limit 2 samples + a pass (21-28 ms). Free run and paced agree: key timing no longer depends on the pass period, 8 ms is as good as 4 ms for keys. Sampling code cost per pass not measured separately (a byte increment + compare per pass at N > 1).
+- 1000 IRQ/s in idle = the Timer2 tick (1 per ms); EXINT0 / EXINT1 / Timer0 add none in idle ACTIVE with nothing connected moving (passes ended by a wake bit: 0 per window).
+- Timer2 tick ISR (`SysTimerIntProc2`): about 173 machine cycles = 2.0 us at 350.8 MHz [measured: `clock-scaling-review.md`] x 1000 = 0.2 % CPU. Runs per tick: ms counter (`d_isr_g_usTimerCounter`), diag count, LED / measure hooks, watchdog clear (`CLR_MCU_WATCH_DOG` when the WD timer interrupt is off), DP HPD IRQ timer hook; timer events and key debounce run in the pass, not in the ISR. Tickless judgement: not worth it (0.2 % CPU; the IDL wake per tick costs 5-13 cycles of IRQ entry); not investigated further (Dan).
+- Power: DW8051 does not gate the clock in idle (databook 3-54..3-56): the saving is CPU duty, sim speed (sim / host 26.6 at 4 ms, 36.3 at 8 ms, 5.6 free run) and headroom, not a clock-gated current drop. Expected power change unknown until measured on the unit power meter (`docs/power-levels.md`); the flash fetch / cache fill traffic that stops with the CPU is the likely part [guess].
+- Gates on the 4 ms image: all PASS except `delays` (same FAIL on the free-run image) and the `delay cal` row inside `h1080` / `h2160` (accepted by `fw_gates.py`, needs the wb-delaycal image). 8 ms: `sysm`, `wake`, `sync`, `keys` PASS since `SimBus.wait` sizes its chunk by the instructions per ms of the last chunk (a paced loop executes 10x fewer per ms, the old fixed 4200 per ms overshot).
+- Tests (`scripts/loop_pacing_test.py BIN --period N`, ~1 s of sim each): `headroom` (pacing engages, no long pass), `race` (Timer0 IRQ between the flag check and the IDL: <= 1 tick), `keys` (press -> mask within 2 samples + a pass), `stuck` (AwtoLoopBusy forced on: hook 100 %, health row FAIL).
+- ISR diet step 1 (TMDS `SetPhy_EXINT0` out of EXINT0): NOT implemented, no change to the HDMI lock path without the unit.
+  - Where: `ScalerTMDSRx2IntHandler_EXINT0` / `Rx3` (`RL6449_Series_TMDSRx2.c:1966`), branch "Freq. Stable Into IRQ": the block after the pixel clock read (divider, measure + `SetPhy_EXINT0` + `CheckCDRStable_EXINT0`, freq bounds, HDMI 2.0 CED set-up) is the 5.5 ms part.
+  - Why not blind: the main loop reads `GET_TMDS_RX2_PHY_SET()` in `ScalerTMDSRx2TMDSScanInputPort` and `FreqDetectDisable`; the "Freq. Unstable" ISR branch compares against `isr_g_usTMDSRx2ClkCount` that the block writes. A deferred block needs: a pending flag per port set by the ISR (stable IRQ already acknowledged, unstable IRQ held off until the block ran), the block run from `SysTMDSRxHandler` before the scan, the scan treating "pending" as not locked yet. The TMDS PHY / freq-detect IRQs are not modelled in the sim (lock time before / after cannot be measured there).
+  - Needs from the unit (HDMI, unit 3): lock time before / after, Timer2 tick loss (AwtoMs vs wall) across a lock, no re-lock loop.
+
 ## 1. What stock does
 
 - Realtek SDK `SysMain.c main()`: `while(SysMainSytemPowerDetect())` runs every handler then `SysTimerHandler()`; no pacing in the loop [measured: source].

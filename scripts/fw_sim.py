@@ -1170,8 +1170,14 @@ class SimBus:
     def wait(self, sec: float):
         t0 = self._t2()
         goal = max(1, int(sec * 1000))
+        ipms = getattr(self, "_ipms", 4200.0)           # instructions per fw ms seen in the last chunk: a paced loop idles (idle clk skips), 10x fewer per ms
         while self._t2() - t0 < goal:
-            self.m.run(min(200_000, 4200 * max(1, goal - (self.t2_abs - t0))))
+            rem = max(1, goal - (self.t2_abs - t0))
+            n0, a0 = getattr(self.m, "p", None) and self.m.p.instr, self.t2_abs
+            self.m.run(min(200_000, max(500, int(ipms * 0.9 * rem))))
+            if n0 is not None and self._t2() > a0:
+                ipms = max(100.0, (self.m.p.instr - n0) / (self.t2_abs - a0))
+        self._ipms = ipms
 
     def snapshot(self):
         """Machine + bus state (core, models, Timer2 bookkeeping); stubs and hooks set later stay. See FastMachine.snapshot."""
