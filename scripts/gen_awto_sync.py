@@ -81,11 +81,14 @@ def rows(path: Path = TSV):
         out.append(dict(id=int(i, 16), arg=0xFF if a == "*" else int(a, 16), a=a, f=f, fmt=parse_fmt(f), text=resolve(t)))
     out = [x for x in out if x["id"] not in NAME_IDS] + [x for x in out if x["id"] in NAME_IDS]   # logged rows first, names after
     n = logged(out)
-    assert n < 255 and len(out) - n < 255, "row index is one byte per part (0 = no row): logged rows, name rows"
+    assert n < ROW_MAX and len(out) - n < 255, "logged rows are a WORD index (0 = no row, cap ROW_MAX); name rows a byte index (cap 254)"
     for t in out:                                    # one value per line; ms2 has two
         n, two = t["text"].count("%"), (t["fmt"] & 0x7F) == FMTS["ms2"]
         assert (n == 2) if two else (n <= 1), f"{t['id']:02X} {t['arg']:02X}: {n} % marks"
     return out
+
+
+ROW_MAX = 1023                                       # tAwtoSyncIdRow holds row + 1 as a WORD; text offsets are WORDs too
 
 
 def logged(r) -> int:
@@ -93,9 +96,12 @@ def logged(r) -> int:
     return sum(x["id"] not in NAME_IDS for x in r)
 
 
-def arr(name, vals, per=16):
+def arr(name, vals, per=16, typ="BYTE"):
     body = ",\n    ".join(", ".join(vals[i:i + per]) for i in range(0, len(vals), per))
-    return f"static const __code BYTE {name}[{len(vals)}] = {{\n    {body}}};"
+    return f"static const __code {typ} {name}[{len(vals)}] = {{\n    {body}}};"
+
+
+TXT_BANK = 11                                        # 27 KB free there (bank 8: 660 B; bank 13 holds the debug-message block)
 
 
 def rows_block(r):
@@ -107,24 +113,26 @@ def rows_block(r):
     for k, i in enumerate(ids):
         if first[i] == 0:
             first[i] = k + 1
+    pl = f"#pragma place bank({TXT_BANK})"            # tables + reader in one bank (bank 8 is full; movc reads the running bank)
     return "\n".join([
         f"#define AWTO_SYNC_ROWS {n}",
-        arr("tAwtoSyncRowId", [f"0x{x['id']:02X}" for x in r]),
-        arr("tAwtoSyncRowArg", [f"0x{x['arg']:02X}" for x in r]),
-        arr("tAwtoSyncIdRow", [str(v) for v in first], 32),
-        "BYTE AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged",
+        pl, arr("tAwtoSyncRowId", [f"0x{x['id']:02X}" for x in r]),
+        pl, arr("tAwtoSyncRowArg", [f"0x{x['arg']:02X}" for x in r]),
+        pl, arr("tAwtoSyncIdRow", [str(v) for v in first], 16, "WORD"),
+        pl,
+        "WORD AwtoSyncRow(BYTE ucId, BYTE ucArg)           // row + 1 of the first match (arg 0xFF = any), 0 = not logged",
         "{",
-        "    BYTE ucI = tAwtoSyncIdRow[ucId];",
+        "    WORD usI = tAwtoSyncIdRow[ucId];",
         "",
-        "    if(ucI == 0)",
+        "    if(usI == 0)",
         "    {",
         "        return 0;",
         "    }",
-        "    for(ucI--; (ucI < AWTO_SYNC_ROWS) && (tAwtoSyncRowId[ucI] == ucId); ucI++)",
+        "    for(usI--; (usI < AWTO_SYNC_ROWS) && (tAwtoSyncRowId[usI] == ucId); usI++)",
         "    {",
-        "        if((tAwtoSyncRowArg[ucI] == 0xFF) || (tAwtoSyncRowArg[ucI] == ucArg))",
+        "        if((tAwtoSyncRowArg[usI] == 0xFF) || (tAwtoSyncRowArg[usI] == ucArg))",
         "        {",
-        "            return ucI + 1;",
+        "            return usI + 1;",
         "        }",
         "    }",
         "    return 0;",
@@ -151,7 +159,6 @@ def names_block(r):
         arr("tAwtoSyncNameRow", [str(v) for v in tab], 32)])
 
 
-TXT_BANK = 11                                        # 27 KB free there (bank 8: 660 B; bank 13 holds the debug-message block)
 
 
 def text_block(r):

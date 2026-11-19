@@ -408,3 +408,18 @@ E6	01	n	line % test 1234567890
 E6	02	n	line % test 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890
 E6	03	n	line % test 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890
 EB	*	cec	CEC %
+ED	00	-	pop-up opened: input selector card
+ED	14	-	pop-up opened: information card
+ED	3A	-	pop-up opened: backlight card
+ED	3C	-	pop-up opened: reset to defaults (key held) card
+ED	0A	-	pop-up opened: no signal card
+ED	0B	-	pop-up opened: no cable card
+ED	0C	-	pop-up opened: no support card
+ED	0D	-	pop-up opened: auto adjust card
+ED	0E	-	pop-up opened: auto colour card
+ED	0F	-	pop-up opened: DDC/CI port switch card
+ED	10	-	pop-up opened: power saving card
+ED	11	-	pop-up opened: panel uniformity card
+ED	39	-	pop-up opened: saving to memory card
+ED	81	n	pop-up suppressed: the input selector is open and keeps the screen (message %)
+ED	82	n	pop-up suppressed: the console is open and keeps the screen (message %)

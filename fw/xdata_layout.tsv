@@ -125,8 +125,8 @@ sync	0xe780	37	1142
 asteroids	0xe780	1179	515
 ScalerCommonDebug	0xe780	1694	363
 awto_settings_settings	0xe780	2057	325
-console	0xe780	2382	310
-swlog	0xe780	2692	308
+console	0xe780	2382	311
+swlog	0xe780	2693	278
 scope_saver2	0xe780	3000	188
 SysTimer	0xe780	3188	6
 inputs	0xe780	3204	232
