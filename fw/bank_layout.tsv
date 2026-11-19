@@ -570,6 +570,8 @@ stub	_ScalerDpRx1ChangeHdcpDpcdCapability	C	0x1ffc	8
 stub	_ScalerDpRx1DpcdLinkStatusReset	C	0x2004	8
 stub	_ScalerDpRx1FifoCheck	C	0x200c	8
 stub	_ScalerDpRx1GetDpcdBitInfo	C	0x2014	8
+fn	_AwtoDelayLoops	C	0x201c	12
+fn	_AwtoDelayXus	C	0x2028	16
 stub	_ScalerDpRx1GetVideoStream	C	0x2038	8
 stub	_ScalerDpRx1HDCPBlockReset	C	0x2040	8
 stub	_ScalerDpRx1HSActiveTrackingMode	C	0x2048	8
