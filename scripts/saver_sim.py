@@ -2,7 +2,7 @@
 """Screensaver check in the firmware simulator (docs/screensaver.md): DDC/CI VCP 0xEB starts / stops Pac-Man and the scope; PNGs of each.
 
 usage: saver_sim.py [BIN MAP] [--out DIR]
-  - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1 -D _AWTO_AUDIO_TEST).
+  - BIN / MAP default: tmp/fw/AWT26110003-sv1-be.{bin,map} (dev.py build --tree . --serial AWT26110003 --tag sv1; audio is in every build, #229).
   - Steps: boot; VCP 0xEB = 3 (scope), 2 (Pac-Man), 4 (scope 2), 5 (flash), 8 (Asteroids): wait, render, then = 0 (stop), render.
     Asteroids is deterministic: its frames are compared at the same game tick (frozen where a frame is complete), not at the same time;
     Scope 1 at the same frame number (state at its SCOPE_FRAME-th frame-complete sync line). PASS = font SRAM written and something on screen when started,
@@ -37,7 +37,10 @@ ROT_BETTER = 1.5               # the turned comparison must beat the unturned on
 VCP_ALERT = 6                   # screensaver_now option "Alert tone"
 ALERT_TONE_S = 0.9              # audible time: the 1 s track (pacman_sound.py ALERT) has 100 ms of rests between the notes
 ALERT_TOL_S = 0.15              # one 10 ms tick per note plus the 1 ms firmware timer: well inside
-ALERT_OBSERVE_S = 3.0           # fw time to observe: the tone must end by itself
+ALERT_SETTLE_S = 3.0            # fw time after boot before the alert: the SDK's first HDMI audio init (it clears the generator) must have run
+AUDIO_STATE_PLAYBACK = 2        # _AUDIO_STATUS_PLAYBACK (Global.h); g_stAudioInfo byte 0 bits 5:4 = b2AudioState
+AUDIO_STATE_PLAYBACK_BYTE = AUDIO_STATE_PLAYBACK << 4
+ALERT_OBSERVE_S = 3.0          # fw time to observe: the tone must end by itself
 VCP_ASTEROIDS = 8               # screensaver_now option "Asteroids" (7 is kept free)
 AST_FREEZE_TICKS = 40           # game tick (g_usAwtoAstStep) whose complete frame is rendered: ~20 frames, ~8 s of fw time after the start
 AST_FREEZE_LIMIT_S = 20.0       # 2.5x the expected 8 s (first hidden frame ~3 s + 20 frames at ~0.25 s); expiry = FAIL, logged
@@ -193,21 +196,36 @@ def asteroids_info_check(img) -> int:
     return int(not ok)
 
 
-def alert_check(a) -> int:
-    """VCP 0xEB = 6 plays the 1 s alert tone: the audio tap hears ~1 s of tone, and the generator is off afterwards."""
+def alert_check(a, stream: bool = False) -> int:
+    """VCP 0xEB = 6 plays the 1 s alert tone: the audio tap hears ~1 s of tone, and the generator is off afterwards.
+    Amp model: P7.4 must be driven by the firmware (no assume_amp_en). stream: SysAudio state held at PLAYBACK (a PC host's HDMI audio, Dan 2026-11-19: the tone was skipped)."""
     eng = D.DdcEngine()
     tap = A.AudioTap(lambda: sess.bus.now() if tap.armed else 0.0)
     tap.armed = False
     sess = R.Session(a.bin, a.map or a.bin.with_suffix(".map"), "1080p60", devs=[eng, tap])
     sess.boot()
     ddc = D.Mccs(sess.bus, eng)
+    sess.bus.wait(ALERT_SETTLE_S)
     tap.armed = True
     t0 = sess.bus.now()
+    st = sess.bus.m.addr("g_stAudioInfo")
+
+    def hold():
+        sess.bus.m.put(f"set memory xram 0x{st:x} 0x{AUDIO_STATE_PLAYBACK_BYTE:x}")
+        sess.bus.m.flush()
+
+    if stream:
+        hold()
     ddc.set(VCP_SAVER, VCP_ALERT)
+    held = (sess.bus.m.rd(st, 1)[0] >> 4) & 3
+    if stream and held != AUDIO_STATE_PLAYBACK:
+        say(f"FAIL alert stream precondition: SysAudio state {held} after the alert command, not PLAYBACK ({AUDIO_STATE_PLAYBACK}): the host-stream case is not exercised")
+        sess.bus.close()
+        return 1
     sess.bus.wait(ALERT_OBSERVE_S)
-    info = A.write_wav(a.out / "alert.wav", tap.events, t0, sess.bus.now())
+    info = A.write_wav(a.out / ("alert_stream.wav" if stream else "alert.wav"), tap.events, t0, sess.bus.now(), model={"assume_amp_en": False})
     ok = abs(info["tone_s"] - ALERT_TONE_S) <= ALERT_TOL_S
-    say(f"{'PASS' if ok else 'FAIL'} VCP 0xEB = {VCP_ALERT} (alert): tone {info['tone_s']:.2f} s (expect {ALERT_TONE_S} +- {ALERT_TOL_S})")
+    say(f"{'PASS' if ok else 'FAIL'} VCP 0xEB = {VCP_ALERT} (alert{', host stream state PLAYBACK' if stream else ''}): tone {info['tone_s']:.2f} s, amp driven by the firmware (expect {ALERT_TONE_S} +- {ALERT_TOL_S})")
     sess.bus.close()
     return 0 if ok else 1
 
@@ -262,6 +280,7 @@ def main() -> int:
     sess.bus.close()
     fails += rotated_check(a)
     fails += alert_check(a)
+    fails += alert_check(a, stream=True)
     return 1 if fails else 0
 
 

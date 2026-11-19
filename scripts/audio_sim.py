@@ -29,7 +29,7 @@ PIN_AMP_EN, PIN_AMP_MUTE = 0xFE1C, 0xFE1B                       # PORT74_PIN_REG
 MODEL = {
     "k_hz": 48000.0,        # tone f = k_hz / sc; = pacman_sound.PS_K_DEFAULT_HZ (sc 32 = 48 kHz sample rate, 32 samples per period)
     "latch_s": 0.0,         # delay from the CMCR.dbdcb write to the new pitch (hardware: after the current audio PLL cycle)
-    "amp_en_reset": 0,      # pin values before the first firmware write (amp.c: EN 0, MUTE 1 at start)
+    "amp_en_reset": 0,      # pin values before the first firmware write (audio.c: EN 0, MUTE 1 at start)
     "amp_mute_reset": 1,
     "assume_amp_en": True,  # P7.4 treated as 1: on the unit the SDK's first playback unmute sets it; the sim has no audio stream, so it stays 0
     "level": 0.3,           # sine amplitude, fraction of full scale (DVC gain / amp response not modelled)

@@ -110,7 +110,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 | 6 | on | **high** (mute check) | -6 dB |
 - End: back to default (aout, P7.4 on, P7.3 low, user volume).
 - DVC gain pokes: 08A5 / 08A6 are double-buffered; `audio_test.py poke` now latches them (08A7 bit 6, as `ScalerAudioDVCAdjustVolume`). Read back = the applied gain, 00 00 while the SDK holds the DVC muted (no stream). The 14:17-14:18 pokes read 00 for that reason (P7.4 = 0 at the time: muted).
-- In every image (VCP 0x63 is unused by the registry); the chip sine generator (VCP 0x63 = 0 / 1) stays in `-D _AWTO_AUDIO_TEST` builds.
+- In every image (VCP 0x63 is unused by the registry); only the chip sine generator on VCP 0x63 = 0 / 1 (ear test) stays behind `-D _AWTO_AUDIO_TEST` (`dev.py build --audio-test`); the generator itself, the `SysAudioHandler` hold, the amp path and every tone (Pac-Man, alert, key click) are in every build (#229, `fw/audio/audio.c` = the one owner).
 
 ## Firmware wiring (what is where)
 | Item | Where |

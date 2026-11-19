@@ -2,10 +2,82 @@
 #include "UserCommonInclude.h"
 #include "../rtdfw/awto/include/dataport.h"   // the SDK data port calls are macros for dp_wr / dp_rmw (fw/awto/boundary.py)
 
+// fw/audio = the one owner of the speaker path (#229): amp pins + ear tests (docs/audio.md), then the tone player below (docs/pacman-sound.md).
+// awto speaker amp pins (awto-ddc#94, docs/audio.md): the one owner of P7.4 (amp enable) and P7.3 (AMP_MUTE, high = muted).
+// aout 116/117 feeds the amp; P7.4 = !mute as Dahua 1:ea99 (evidence: docs/audio.md).
+// Callers: PCB_ON_REGION_GPIO_SETTING_POWER_AC_ON (boot), PCB_AMP_MUTE (SysAudioMuteProc), VCP 0x63 (ear tests).
+#if(_AUDIO_SUPPORT == _ON)
+__xdata BYTE g_ucAwtoAudioTestN;                // ear-test step 1..AWTO_AUDIO_TEST_STEPS in force, 0 = none (RAM only)
+
+// #94 ear-test steps (dev.py sound-test, VCP 0x63): aout; P7.4, DVC gain, P7.3 per step. Held until the step's DONE:
+// the SDK unmute (AwtoAudioAmp) and volume mapping (AwtoAudioGain) apply them too.
+static __code BYTE tAwtoAudioTestAmp[AWTO_AUDIO_TEST_STEPS] = {1, 0, 1, 1, 1, 1};
+static __code BYTE tAwtoAudioTestMute[AWTO_AUDIO_TEST_STEPS] = {0, 0, 0, 0, 0, 1};    // P7.3 AMP_MUTE
+static __code WORD tAwtoAudioTestGain[AWTO_AUDIO_TEST_STEPS] = {AWTO_AUDIO_GAIN_M6DB, AWTO_AUDIO_GAIN_M6DB, AWTO_AUDIO_GAIN_DAHUA_50,
+                                                                AWTO_AUDIO_GAIN_M3DB, AWTO_AUDIO_GAIN_0DB, AWTO_AUDIO_GAIN_M6DB};
+
+void AwtoAudioAmpBoot(void)
+{
+    bAMP_EN = 0;
+    bAMP_MUTE = 1;                              // muted until the SDK's first unmute
+    g_ucAwtoAudioTestN = 0;
+}
+
+void AwtoAudioAmp(bit bMute)
+{
+    if((bMute == _OFF) && (g_ucAwtoAudioTestN != 0))
+    {
+        bAMP_EN = tAwtoAudioTestAmp[g_ucAwtoAudioTestN - 1];
+        bAMP_MUTE = tAwtoAudioTestMute[g_ucAwtoAudioTestN - 1];
+        AwtoSyncPush(AWTO_SYNC_EV_AUDIO, AWTO_AUDIO_EV_AMP_TEST, g_ucAwtoAudioTestN);
+        return;
+    }
+    BYTE ucSame = (bAMP_EN == ((bMute == _ON) ? 0 : 1)) && (bAMP_MUTE == ((bMute == _ON) ? 1 : 0));
+
+    bAMP_EN = (bMute == _ON) ? 0 : 1;
+    bAMP_MUTE = (bMute == _ON) ? 1 : 0;
+    AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ((bMute == _ON) ? AWTO_AUDIO_EV_AMP_OFF : AWTO_AUDIO_EV_AMP_ON) + ((ucSame != 0) ? 4 : 0), 0);   // repeat = "already", never dropped
+}
+
+// Ear-test gain while a step is held, else 0 (AwtoAudioGain: user volume)
+WORD AwtoAudioTestGain(void)
+{
+    return (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestGain[g_ucAwtoAudioTestN - 1] : 0;
+}
+
+// VCP 0x63 = AWTO_AUDIO_TEST_START + n: step n set up (pins + gain at once when playing, else at the SDK unmute);
+// AWTO_AUDIO_TEST_DONE + n: back to default (amp on, unmuted, user volume); high byte AWTO_AUDIO_TEST_HZ_FLAG: tone
+// frequency (15 bit Hz) announced. One console line each (sync.tsv E5).
+void AwtoAudioTestStep(BYTE ucHi, BYTE ucLo)
+{
+    BYTE ucN = (ucLo & 0x0F);
+
+    if((ucHi & AWTO_AUDIO_TEST_HZ_FLAG) != 0)
+    {
+        AwtoSyncPush(AWTO_SYNC_EV_AUDIO, AWTO_AUDIO_TEST_HZ + g_ucAwtoAudioTestN, ((WORD)(ucHi & 0x7F) << 8) | ucLo);
+        return;
+    }
+    if((ucN == 0) || (ucN > AWTO_AUDIO_TEST_STEPS) || (((ucLo & 0xF0) != AWTO_AUDIO_TEST_START) && ((ucLo & 0xF0) != AWTO_AUDIO_TEST_DONE)))
+    {
+        return;
+    }
+    AwtoSyncPush(AWTO_SYNC_EV_AUDIO, ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? ucLo : AWTO_AUDIO_TEST_DONE,
+                 ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? 0 : ucN);   // "audio test n/6: <settings>" / "... end, back to default" (one row, n = value)
+    g_ucAwtoAudioTestN = ((ucLo & 0xF0) == AWTO_AUDIO_TEST_START) ? ucN : 0;
+    if(UserInterfaceGetAudioReadyToPlayStatus() == _TRUE)   // playing: now; else the SDK unmute applies them
+    {
+        bAMP_EN = (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestAmp[ucN - 1] : 1;
+        bAMP_MUTE = (g_ucAwtoAudioTestN != 0) ? tAwtoAudioTestMute[ucN - 1] : 0;
+        ScalerAudioDigitalAdjustVolume(UserInterfaceGetAudioVolume());
+    }
+}
+#endif
+
+
 // Sound player of the unit (Pac-Man, Asteroids, alert, key click, calibration; module snd, docs/saver-library.md D-SL1) (docs/pacman-sound.md): the HDMI audio test generator (AFCR audio_test_enable) as the tone source,
 // pitch = audio PLL S code per note. Test cmds AWTO_TC_PACMAN_SND + 0 intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert.
 // One generator: priorities (pacman_sound.py PRIORITY); a dropped waka / background sound stays wanted and resumes when the higher one ends.
-// Needs a -D _AWTO_AUDIO_TEST build (SDK generator + SysAudioHandler hold); other builds log "unavailable". Non-blocking: AwtoPmSoundPoll per main pass.
+// Every build (#229): SDK generator + SysAudioHandler hold are always compiled. No host-stream gate: state PLAYBACK = stream present, not audible (a PC host is always there). Non-blocking: AwtoPmSoundPoll per main pass.
 // Data: snd_data.inc (scripts/pacman_sound.py): notes, track table (offset, priority, loops), cmd table (track, sync event).
 #define AWTO_PS_OCT_FLAG                        0x80    // note byte bit 7: AFCR tst_i2s_sw = 0 (one octave down)
 #define AWTO_PS_SC_MASK                         0x7F
@@ -44,7 +116,6 @@
 #define AWTO_PS_EV_CAL                          0x83
 #define AWTO_PS_EV_STOP                         0x84
 #define AWTO_PS_EV_DONE                         0x85
-#define AWTO_PS_EV_NA                           0x86
 #define AWTO_PS_EV_ALERT                        0x87
 #define AWTO_PS_EV_GHOST                        0x88
 #define AWTO_PS_EV_FRUIT                        0x89
@@ -80,7 +151,6 @@ static BYTE PsPrio(BYTE ucTrack)                // priority: higher wins the one
     return (ucTrack < AWTO_PS_TRACKS) ? PsTrk(ucTrack, AWTO_PS_TRK_PRIO) : AWTO_PS_PRIO_TOP;
 }
 
-#ifdef _AWTO_AUDIO_TEST
 static __xdata BYTE s_ucPsTrack;                // playing track, AWTO_PS_TRACK_NONE = off
 static __xdata WORD s_usPsPos;
 static __xdata WORD s_usPsAt;                   // AwtoMs low word at the current note's start
@@ -169,11 +239,9 @@ static void PsRequest(BYTE ucTrack)             // plays when its priority >= th
         PsStart(ucTrack);
     }
 }
-#endif
 
 void AwtoPmSoundPoll(void)                      // each main pass
 {
-#ifdef _AWTO_AUDIO_TEST
     BYTE ucDur;
 
     if((s_ucPsFlags & AWTO_PS_F_BOOT) == 0)     // first pass after boot: a generator left on by an earlier image (or a lock-up) is switched off
@@ -216,12 +284,10 @@ void AwtoPmSoundPoll(void)                      // each main pass
     PsNote(PsByte(s_usPsPos));
     s_usPsDur = (WORD)ucDur * AWTO_PS_TICK_MS;
     s_usPsPos += AWTO_PS_NOTE_BYTES;
-#endif
 }
 
 void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed 1..3, frightened 4, 0 none): acts on a change only
 {
-#ifdef _AWTO_AUDIO_TEST
     if((s_ucPsFlags >> AWTO_PS_F_BG_SHIFT) == ucState)
     {
         return;
@@ -232,14 +298,10 @@ void AwtoPmSoundBg(BYTE ucState)                // background state (siren speed
     {
         PsResume();                             // silence or another background sound is playing; a higher sound picks the new state up at its end
     }
-#else
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_NA, ucState);
-#endif
 }
 
 void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 ghost, 7 fruit, 8 waka off (game events)
 {
-#ifdef _AWTO_AUDIO_TEST
     BYTE ucTrack;
     WORD usRow;
 
@@ -284,14 +346,10 @@ void AwtoPmSound(BYTE ucCmd)                    // AWTO_TC_PACMAN_SND + 0..5; 6 
     ucTrack = PsByte(usRow);
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, PsByte(usRow + AWTO_PS_CMD_EV), (PsByte(usRow + AWTO_PS_CMD_EVARG) != 0) ? ucCmd : 0);
     PsRequest(ucTrack);
-#else
-    AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PS_EV_NA, ucCmd);
-#endif
 }
 
 BYTE AwtoPmSoundTone(BYTE ucSc, WORD usMs)      // one tone of S code ucSc, usMs audible (key click, fw/keys/key_click.c); AWTO_TONE_* (RL6449_Project.h)
 {
-#ifdef _AWTO_AUDIO_TEST
     if(s_ucPsTrack != AWTO_PS_TRACK_NONE)
     {
         return AWTO_TONE_BUSY;               // another sound plays: it keeps the generator
@@ -300,9 +358,4 @@ BYTE AwtoPmSoundTone(BYTE ucSc, WORD usMs)      // one tone of S code ucSc, usMs
     PsStart(AWTO_PS_TRACK_CAL);
     s_usPsDur = usMs + AWTO_PS_GAP_MS;          // the amp opens after the pitch gap
     return AWTO_TONE_PLAYED;
-#else
-    (void)ucSc;
-    (void)usMs;
-    return AWTO_TONE_NA;
-#endif
 }

@@ -2,10 +2,8 @@
 # undef rows are also the allow list of the build's -Wundef error (fw_compile.py undef_gate).
 family	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_HW_DP_AUX_SINGLE_ENDED_MODE_SUPPORT == _TRUE	_ON vs _TRUE: both 1 by design (on/true families share 1), branch correct
 nodef	fw/awto/awto_shim/sdk_boundary.c	_AWTO_NEW_GAMMA	ours: -D_AWTO_NEW_<module> per clean module (fw_compile.py), none named gamma today
-nodef	fw/ddcci/ddcci.c	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test -D
+nodef	fw/ddcci/ddcci.c	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test = test only: VCP 0x63 internal sine (ear test)
 nodef	fw/test/testcmd.c	_AWTO_PROBES	ours: dev.py build -D _AWTO_PROBES (OSD SRAM + 0xA5 probes, #233)
-nodef	fw/test/snd.c	_AWTO_AUDIO_TEST	ours: dev.py build -D _AWTO_AUDIO_TEST (SDK internal audio generator)
-nodef	fw/test/asteroids.c	_AWTO_AUDIO_TEST	ours: dev.py build -D _AWTO_AUDIO_TEST (Asteroids sound through snd.c)
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_FLASH_ACCESS_FUNCTION_SUPPORT	SDK pre-check of a retired option name (#error if set), intended
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_FLASH_TYPE_MX25L3206E_OR_MX25L3233F	SDK pre-check of a retired option name (#error if set), intended
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPEC_FRSWAP_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended
@@ -18,7 +16,6 @@ nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_PD3_PPS_SUPPORT	SD
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_PD_VERSION	SDK pre-check of a retired Type-C option name (#error if set), intended
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_TYPE_C_PORT_ROLE	SDK pre-check of a retired Type-C option name (#error if set), intended
 nodef	fw/sdk/Kernel/Common/Project_Config_Pre_Check.h	_USB3_RETIMER_CTS_FLOW_SUPPORT	SDK pre-check of a retired Type-C option name (#error if set), intended
-nodef	fw/sdk/Kernel/Common/Scaler_Test_Function.h	_AWTO_AUDIO_TEST	ours: dev.py build --audio-test -D
 nodef	fw/sdk/Kernel/User Common Function/Code/UserCommonNVRamSystem.c	_CUSTOM_SYSTEM_DEFAULT_DATA	SDK hook for a customer default-data table, unset: SDK defaults, intended
 nodef	fw/sdk/Kernel/User Common Function/Header/UserCommonInclude.h	_CUSTOM_CLOCK_BIAS_VALUE	SDK hook, unset: SDK default bias, intended
 nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_REALTEK_MENU	ours: Realtek SDK menu icons, off unless -D; RL6449_Project.h:466 errors if set (#129)
