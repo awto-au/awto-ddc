@@ -29,7 +29,7 @@ Record: tmp/fw/<stem>.gates.json = image SHA-256, date, per-gate result + second
   `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
 Stall guard (awto-dan#53): waits for a gate's next output line or CPU progress of its process tree; expected: output at least
   every few s, 3x margin at 60 s (STALL_S). A gate with neither for STALL_S is hung: killed. Backstop LIMIT_S per gate (3x the cold
-  run) times the load factor (1-min loadavg / cores, 1..LOAD_CAP) since a starved gate is slow, not hung. A guard kill is rerun
+  run) times the load factor (1 + 1-min loadavg / cores, 1..LOAD_CAP) since a starved gate is slow, not hung. A guard kill is rerun
   once (second log `<gate>.rerun.log`, both runs in fw_gates.log); two kills = FAIL. Every kill logs gate, reason, elapsed,
   last line, loadavg, CPU seconds. Logic: guard_verdict(), tests/test_fw_gates_guard.py.
 Log: ./tmp/logs/fw_gates.log
@@ -170,8 +170,8 @@ def gates(b: Path, m: Path, ref, tree):
 
 
 def load_factor() -> float:
-    """1-minute loadavg / cores, clamped to [1, LOAD_CAP]: how much slower than a quiet box a gate may run."""
-    return max(1.0, min(LOAD_CAP, os.getloadavg()[0] / (os.cpu_count() or 1)))
+    """1 + 1-minute loadavg / cores, clamped to [1, LOAD_CAP]: a gate sharing every core with another job runs ~2x slower."""
+    return max(1.0, min(LOAD_CAP, 1.0 + os.getloadavg()[0] / (os.cpu_count() or 1)))
 
 
 def cpu_ticks(pid: int) -> float:
@@ -248,7 +248,7 @@ def run_once(name, cmd, out: Path, log):
             f.write(line); f.flush()
             last[0], last[1] = time.monotonic(), line.strip()
         rc = p.wait()
-    return rc, time.monotonic() - t0, last[1], killed[0]
+    return rc, time.monotonic() - t0, last[1], killed[0] and rc != 0     # a gate that finished cleanly as the guard fired is a pass
 
 
 def main() -> int:
