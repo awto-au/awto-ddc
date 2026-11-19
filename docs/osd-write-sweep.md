@@ -21,7 +21,7 @@ Related: [timing.md](osd/timing.md), [saver-fps-hw.md](saver-fps-hw.md) (levers 
 - Nothing adopted into the default build.
 
 ## Tool
-- Firmware: `g_stAwtoOsw`, `AwtoOswRun` / `AwtoOswPoll` in `fw/test/testcmd.c`, `-D _AWTO_OSD_HWTEST` only (build: `./dev.py build --unit 3 --tag T -D _AWTO_OSD_HWTEST "--fw-args=--xdata-floor 0"`; XDATA free 430 B, below the 700 B floor, so the floor is off for this image).
+- Firmware: `g_stAwtoOsw`, `AwtoOswRun` / `AwtoOswPoll` in `fw/test/testcmd.c`, `-D _AWTO_OSD_HWTEST` only (build: `./dev.py build --unit 3 --tag T -D _AWTO_OSD_HWTEST`).
 - Host: `./dev.py osd-sweep --unit 3 [--sim] [--continue-on-fail] GROUP...` -> `scripts/osd_sweep.py`; log `tmp/logs/osd_sweep.log`, TSV `tmp/logs/osd_sweep.tsv` (`--sim`: `osd_sweep_sim.tsv`). Tests `tests/test_osd_sweep.py`.
 - One case = one fw op: apply FFF1 / FFFB / FFBC, time `ucReps` passes of N bytes with one write path (AwtoMs, target 150 ms), restore the three registers, return. The host then reads M1 and M2 back (recipe: circuit off, scale-up off, overlay off, `0x3A33[4]`, two reads) at the restored values and compares with the pattern (54 B LFSR chunk repeated, `F_REPEAT` shape).
 - Pass = 0 bad bytes M1 and M2, registers read back as requested, registers restored (checked by a no-apply op after every case), no new FIFO / sync flag, op inside its limit.

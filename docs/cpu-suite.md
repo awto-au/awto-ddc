@@ -8,7 +8,7 @@
 ## Run
 
 - `./dev.py cpu-suite --sim --build` builds `tmp/fw/<serial>-cpusuite-{87,175,350}-be` and runs all cases in fw_sim (dw8051 core): 153 runs, 2.4 s host wall.
-- One image: `./dev.py build --serial AWT26110003 --tag cpusuite-350 -D _AWTO_CPU_SUITE -D AWTO_CLOCK_MHZ=350 --fw-args="--xdata-floor 0"`.
+- One image: `./dev.py build --serial AWT26110003 --tag cpusuite-350 -D _AWTO_CPU_SUITE -D AWTO_CLOCK_MHZ=350`.
 - Filters: `--cases T_RATE0,D_XMS`, `--groups T,I,M,R,D`, `--clocks 175`. `--allow-scratch-write` enables R_WRITE (default off).
 - Output: PASS / FAIL line per run + matrix; `./tmp/logs/cpu_suite.log`, `./tmp/logs/cpu_suite.tsv`.
 - Unit (Phase B, test unit only, suite image flashed): `./dev.py cpu-suite --unit 3 [--clock 350] [--map F]`. Not run yet.
@@ -19,7 +19,7 @@
 - Clock: `ScalerMcuInitial` (clock tree per `AWTO_CLOCK_MHZ`, Timer0/1/2, WDT start, debug slave 0x35 + EXINT1), `SysPowerMcuClock(M2PLL)`, `ScalerPinshareInitial`, `ScalerTimerInitialTimerEvent`, `ScalerMcuDdcRamEnable`, `AwtoDbgLinkSet(0xFF)` (debug slave on the active port's DDC; no DDC/CI here to switch it on).
 - ISRs that run: Timer2 (1 ms tick `d_isr_g_usTimerCounter`; does not feed the WDT), WD warning IRQ (backstop), EXINT1 (debug slave). EXINT0 / Timer0 / Timer1: hook `AWTO_CPUS_ISR` (RL6449_Project.h) at the top of each vector function, active only while a case sets `isr_g_ucCpuIsr`.
 - Not run: SysMain loop, source search, panel, display, OSD, CEC, monitor, settings, DDC/CI. They stay linked (SDCC links whole objects: no function-level drop); nothing calls them.
-- Size (build 2026-11-19, 350 build): suite code ~12.6 KB in the banks (`l_CH_*` of Case* / Cpu* / AwtoCpu*; far locals), common area +3 B (0x46e3 vs 0x46e0); XDATA ~500 B (mailbox 38, buffer 320, guard 48, ISR state ~60), free XDATA 35 B vs 734 B in the default image: the suite needs `--xdata-floor 0`. IRAM: no new bytes (flags in XDATA; IRAM was full).
+- Size (build 2026-11-19, 350 build): suite code ~12.6 KB in the banks (`l_CH_*` of Case* / Cpu* / AwtoCpu*; far locals), common area +3 B (0x46e3 vs 0x46e0); XDATA ~500 B (mailbox 38, buffer 320, guard 48, ISR state ~60), free XDATA 35 B vs 734 B in the default image. IRAM: no new bytes (flags in XDATA; IRAM was full).
 - Unverified until Phase B: panel pins / VDD / backlight stay at the reset + `ScalerPinshareInitial` state; debug slave reachable from the host without a source.
 
 ## Safety

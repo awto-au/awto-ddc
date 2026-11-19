@@ -82,7 +82,7 @@ Tags: [hw] measured on a unit, [spec] regdb / datasheet text, [sdk-hypothesis] S
 - No delays added (`docs/delay-audit.tsv` unchanged): nothing waits, every step is a register access in the main loop or the ISR.
 
 ## Cost (sim, image tag af46ad6+, 2026-11-19; baseline = af46ad6 without CEC)
-- XDATA free: 901 B -> 734 B (floor 700 B; after merging the health monitor of #245 the same tree without the copy removals would have left 697 B). Copies removed: local RX / TX structs in `UserCommonCec.c`, the reply slot, backup FIFO 30 -> 20 B.
+- XDATA free: 901 B -> 734 B (after merging the health monitor of #245 the same tree without the copy removals would have left 697 B). Copies removed: local RX / TX structs in `UserCommonCec.c`, the reply slot, backup FIFO 30 -> 20 B.
 - Code + constants in banked space: ~4.9 KB (SDK CEC 2.0 KB, `cec_msg` 1.1 KB, glue 0.9 KB, console names + printer 0.5 KB, sync row). Gate `link` / bank layout pass.
 - Main loop (sim bench: main-loop heartbeat passes in 2 fw seconds after ACTIVE + 1 s settle, `AWTO_SIM_CORE=fast`; not a committed script): 1201 passes -> 1191 passes (8428 -> 8501 instr/pass, +0.9 %; measured before the #245 merge, which adds its own monitor work). Running the CEC work every pass was +10 % (9275 instr/pass): the due-gate removed it.
 - ISR: `ScalerCecIntHandler_EXINT0` adds one register read + compare per EXINT0 while idle (6 instructions, `18B0` bit4 clear before init); a frame costs ~300 instructions once per >= 24 ms. `fw_stack`: worst ISR path is still the DP training path through `SysEXINT0` (32 B); the CEC path is shallower. Gates `isr`, `canary` pass.

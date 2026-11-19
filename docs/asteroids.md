@@ -60,7 +60,7 @@ Status 2026-11-18. Stage 1 = host decoder, stage 2 = firmware (sim only, nothing
 
 ## Numbers (our side, sim, 2026-11-18)
 
-- XDATA free 1541 B -> 1173 B (default image): -368 B for state, 24 objects, per-pass occupancy (64 B) and function locals; audio image 1158 B. Floor 700 B.
+- XDATA free 1541 B -> 1173 B (default image): -368 B for state, 24 objects, per-pass occupancy (64 B) and function locals; audio image 1158 B.
 - Code: bank 8 +5.8 KB, bank 11 +4.0 KB (incl. sound data), bank 1 +0.9 KB; the data and its readers are pinned to bank 8 (bank 13 has only ~3 KB left: message-table reserve). Shapes: 612 B (ROM) / 584 B (own) + 94 B offsets.
 - Time (`scripts/asteroids_speed.py`): column pass mean 9.5 ms, p95 20, max 31; pass with the game step max 41 ms; 7.94 ticks/s (paced). Largest costs: `osd_line` / `cursor_plot` (~1/3), main-loop base (~15 %).
 - Checks: `scripts/asteroids_sim.py` (frames + mp4 + wav), `scripts/saver_sim.py` (VCP 0xEB = 8 start / stop, Rotate 180 at the same game tick: mean difference 0.4 turned vs 3.1 unturned), `python scripts/fw_gates.py` ALL PASS.

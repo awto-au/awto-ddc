@@ -113,9 +113,9 @@ Rejected:
 
 ## 7. Size / XDATA estimate [guess until built]
 
-- XDATA: 1541 B free, floor 700 B (project rule).
+- XDATA: 1541 B free.
   - page buffer 256 B + header / seq / state ~24 B + CRC-16 state ~4 B + session cursor ~8 B = ~300 B.
-  - Leaves ~1240 B above the floor margin (floor 700 B: ~540 B headroom). Do not buffer a 4 KiB sector (impossible: free XDATA 1541 B).
+  - Leaves ~1240 B of the free XDATA. Do not buffer a 4 KiB sector (impossible: free XDATA 1541 B).
 - IRAM: ~10 B direct (22 B free, `mcu-8051.md`); stack: updater is a leaf loop, one extra frame.
 - Code: updater (erase, page program via FF7B, readback, CRC-16 table-less ~100 B, state machine) ~1.5-2.5 KB; transport command ~0.5 KB; recovery stub 2-4 KB (target well under 16 KiB, #102). Updater in common = 14 bank copies of the same sector content only when it lands in a sector; pinned slot costs one common sector per bank (host flasher writes it only when it changes).
 - Time (firmware side, datasheet maxima): full image 224 erases x 200 ms = 44.8 s + 3584 pages x 3 ms = 10.8 s ~ 56 s, plus transfer (rate unknown; ~2 KB/s over DDC/CI would be ~7.5 min) [measure]. Incremental sticky edits are 1-14 sectors (`docs/flash-layout.md`).
