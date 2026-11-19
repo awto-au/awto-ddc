@@ -62,7 +62,9 @@ static __xdata unsigned long s_ulAct;                               // last key 
 static __xdata WORD s_usTick;                                       // last frame (ms, low word: the periods are <= 125 ms)
 static __xdata unsigned long s_ulSwap;                              // run started / last swap (Alternate)
 static __xdata unsigned long s_ulNoSig;                             // no-signal since (0 = not in no-signal)
+#if(_AWTO_SAVER_PACMAN == _ON)
 static __xdata BYTE s_ucSub;                                        // Pac-Man sub-step 0..AWTO_SAVER_PACMAN_SUBS-1
+#endif
 static __xdata BYTE s_ucNoSigDone;                                  // the no-signal saver ended in this no-signal episode: it does not restart (no saver -> card -> saver loop)
 
 void AwtoSaverActivity(void)                                        // a DDC/CI command does not end a "now" saver (host tools talk to it) or the boot splash; a key does: AwtoSaverKey
@@ -85,36 +87,54 @@ void AwtoSaverKey(void)                                             // a front k
 
 static void SaverDraw(BYTE ucRun)
 {
+#if(_AWTO_SAVER_PACMAN == _ON)
     if(g_ucAwtoSaverRun == AWTO_SAVER_PACMAN)
     {
         AwtoPacmanClassic(0);
     }
-    else if(g_ucAwtoSaverRun == AWTO_SAVER_SCOPE2)
+    else
+#endif
+#if(_AWTO_SAVER_SCOPE2 == _ON)
+    if(g_ucAwtoSaverRun == AWTO_SAVER_SCOPE2)
     {
         AwtoScopeSaver2(0);
     }
-    else if(g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS)
+    else
+#endif
+#if(_AWTO_SAVER_ASTEROIDS == _ON)
+    if(g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS)
     {
         AwtoAsteroids(0);
     }
-    else if((g_ucAwtoSaverRun == AWTO_SAVER_FLASH) || (g_ucAwtoSaverRun == AWTO_SAVER_SPLASH))
+    else
+#endif
+    if((g_ucAwtoSaverRun == AWTO_SAVER_FLASH) || (g_ucAwtoSaverRun == AWTO_SAVER_SPLASH))
     {
         AwtoFlashScreen(0);
     }
     g_ucAwtoSaverRun = ucRun;
+#if(_AWTO_SAVER_PACMAN == _ON)
     if(ucRun == AWTO_SAVER_PACMAN)
     {
         AwtoPacmanClassic(1);
     }
-    else if(ucRun == AWTO_SAVER_SCOPE2)
+    else
+#endif
+#if(_AWTO_SAVER_SCOPE2 == _ON)
+    if(ucRun == AWTO_SAVER_SCOPE2)
     {
         AwtoScopeSaver2(1);
     }
-    else if(ucRun == AWTO_SAVER_ASTEROIDS)
+    else
+#endif
+#if(_AWTO_SAVER_ASTEROIDS == _ON)
+    if(ucRun == AWTO_SAVER_ASTEROIDS)
     {
         AwtoAsteroids(1);
     }
-    else if(ucRun == AWTO_SAVER_FLASH)
+    else
+#endif
+    if(ucRun == AWTO_SAVER_FLASH)
     {
         AwtoFlashScreen(1);
     }
@@ -124,15 +144,94 @@ static void SaverDraw(BYTE ucRun)
     }
     s_ulSwap = AwtoMs();
     s_usTick = (WORD)s_ulSwap;
+#if(_AWTO_SAVER_PACMAN == _ON)
     s_ucSub = 0;
+#endif
     s_ucMid = 1;                                                    // Scope 2 starts with its first frame, drawn hidden
 }
 
+#if((_AWTO_SAVER_PACMAN == _ON) && (_AWTO_SAVER_SCOPE2 == _ON) && (_AWTO_SAVER_ASTEROIDS == _ON))
 #define SAVER_MODE_RUN(m)                      (((m) == AWTO_SAVER_SET_ASTEROIDS) ? AWTO_SAVER_ASTEROIDS : (((m) == AWTO_SAVER_SET_SCOPE_RETIRED) ? AWTO_SAVER_SCOPE2 : (m)))
+#define SAVER_RUN_PICK(w)                      ((((w) == AWTO_SAVER_SCOPE2) || ((w) == AWTO_SAVER_ASTEROIDS) || ((w) == AWTO_SAVER_FLASH) || ((w) == AWTO_SAVER_SPLASH)) ? (w) : AWTO_SAVER_PACMAN)
+#define SAVER_FRAME()                          ((g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS) ? AwtoAsteroids(2) : AwtoScopeSaver2(2))
+#define SAVER_NEXT(r)                          (((r) == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE2 : (((r) == AWTO_SAVER_SCOPE2) ? AWTO_SAVER_ASTEROIDS : AWTO_SAVER_PACMAN))
+#else
+// a saver left out of the image: a stored setting 119 / a run id of it maps to the first one that is in; Alternate cycles the ones that are in
+#if(_AWTO_SAVER_PACMAN == _ON)
+#define AWTO_SAVER_FIRST                       AWTO_SAVER_PACMAN
+#elif(_AWTO_SAVER_SCOPE2 == _ON)
+#define AWTO_SAVER_FIRST                       AWTO_SAVER_SCOPE2
+#else
+#define AWTO_SAVER_FIRST                       AWTO_SAVER_ASTEROIDS
+#endif
+#define SAVER_MODE_RUN(m)                      SaverModeRun(m)
+#define SAVER_RUN_PICK(w)                      SaverRunPick(w)
+#if(_AWTO_SAVER_SCOPE2 != _ON)
+#define SAVER_FRAME()                          AwtoAsteroids(2)
+#elif(_AWTO_SAVER_ASTEROIDS != _ON)
+#define SAVER_FRAME()                          AwtoScopeSaver2(2)
+#else
+#define SAVER_FRAME()                          ((g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS) ? AwtoAsteroids(2) : AwtoScopeSaver2(2))
+#endif
+#define SAVER_NEXT(r)                          SaverNext(r)
+static BYTE SaverIn(BYTE ucR)                                       // 1 = a saver that is in the image
+{
+#if(_AWTO_SAVER_PACMAN == _ON)
+    if(ucR == AWTO_SAVER_PACMAN)
+    {
+        return 1;
+    }
+#endif
+#if(_AWTO_SAVER_SCOPE2 == _ON)
+    if(ucR == AWTO_SAVER_SCOPE2)
+    {
+        return 1;
+    }
+#endif
+#if(_AWTO_SAVER_ASTEROIDS == _ON)
+    if(ucR == AWTO_SAVER_ASTEROIDS)
+    {
+        return 1;
+    }
+#endif
+    return 0;
+}
+
+static BYTE SaverRunPick(BYTE ucW)
+{
+    return (SaverIn(ucW) || (ucW == AWTO_SAVER_FLASH) || (ucW == AWTO_SAVER_SPLASH)) ? ucW : AWTO_SAVER_FIRST;
+}
+
+static BYTE SaverModeRun(BYTE ucM)                                  // setting 119 value -> run id; Alternate passes through
+{
+    BYTE ucR = (ucM == AWTO_SAVER_SET_ASTEROIDS) ? AWTO_SAVER_ASTEROIDS : ((ucM == AWTO_SAVER_SET_SCOPE_RETIRED) ? AWTO_SAVER_SCOPE2 : ucM);
+
+    return (SaverIn(ucR) || (ucR == AWTO_SAVER_ALTERNATE)) ? ucR : AWTO_SAVER_FIRST;
+}
+
+#if((_AWTO_SAVER_PACMAN == _ON) + (_AWTO_SAVER_SCOPE2 == _ON) + (_AWTO_SAVER_ASTEROIDS == _ON) > 1)
+static BYTE SaverNext(BYTE ucR)                                     // the next saver that is in the image (run ids rise in this order), wrapping
+{
+#if(_AWTO_SAVER_SCOPE2 == _ON)
+    if(ucR < AWTO_SAVER_SCOPE2)
+    {
+        return AWTO_SAVER_SCOPE2;
+    }
+#endif
+#if(_AWTO_SAVER_ASTEROIDS == _ON)
+    if(ucR < AWTO_SAVER_ASTEROIDS)
+    {
+        return AWTO_SAVER_ASTEROIDS;
+    }
+#endif
+    return AWTO_SAVER_FIRST;
+}
+#endif
+#endif
 
 void AwtoSaverStart(BYTE ucWhich, BYTE ucWhy)                      // ucWhich: PACMAN / SCOPE2 / ASTEROIDS / ALTERNATE / FLASH
 {
-    BYTE ucRun = ((ucWhich == AWTO_SAVER_SCOPE2) || (ucWhich == AWTO_SAVER_ASTEROIDS) || (ucWhich == AWTO_SAVER_FLASH) || (ucWhich == AWTO_SAVER_SPLASH)) ? ucWhich : AWTO_SAVER_PACMAN;
+    BYTE ucRun = SAVER_RUN_PICK(ucWhich);
 
     g_ucAwtoSaverWhy = ucWhy;
     SaverDraw(ucRun);
@@ -237,10 +336,24 @@ void AwtoSaverPoll(void)                                            // main loop
         {
             AwtoSaverStart(AWTO_SAVER_FLASH, AWTO_SAVER_WHY_NOW);
         }
+#if(_AWTO_SAVER_ASTEROIDS == _ON)
         else if(ucReq == AWTO_SAVER_NOW_ASTEROIDS)
         {
             AwtoSaverStart(AWTO_SAVER_ASTEROIDS, AWTO_SAVER_WHY_NOW);
         }
+#endif
+#if(_AWTO_SAVER_PACMAN != _ON)
+        else if(ucReq == AWTO_SAVER_NOW_PACMAN)
+        {
+            return;                                                 // not in the image: ignored, like the retired value
+        }
+#endif
+#if(_AWTO_SAVER_SCOPE2 != _ON)
+        else if(ucReq == AWTO_SAVER_NOW_SCOPE2)
+        {
+            return;
+        }
+#endif
         else if((ucReq > AWTO_SAVER_NOW_ALERT) || (ucReq == AWTO_SAVER_NOW_RETIRED))
         {
             return;                                                 // retired (3) and unused (7) values: ignored
@@ -284,28 +397,33 @@ void AwtoSaverPoll(void)                                            // main loop
             AwtoSaverStop();                                        // run time over: the SDK chain resumes (card 2 s, power-saving card 3 s, power saving 2 s)
             return;
         }
+#if((_AWTO_SAVER_PACMAN == _ON) + (_AWTO_SAVER_SCOPE2 == _ON) + (_AWTO_SAVER_ASTEROIDS == _ON) > 1)   // with one saver Alternate has nothing to swap to
         if((g_ucAwtoSaverWhy & 0x80) && ((ulNow - s_ulSwap) >= AWTO_SAVER_ALT_MS))
         {
-            SaverDraw((g_ucAwtoSaverRun == AWTO_SAVER_PACMAN) ? AWTO_SAVER_SCOPE2 : ((g_ucAwtoSaverRun == AWTO_SAVER_SCOPE2) ? AWTO_SAVER_ASTEROIDS : AWTO_SAVER_PACMAN));
+            SaverDraw(SAVER_NEXT(g_ucAwtoSaverRun));
             return;
         }
+#endif
         if((g_ucAwtoSaverRun == AWTO_SAVER_FLASH) || (g_ucAwtoSaverRun == AWTO_SAVER_SPLASH))
         {
             return;                                                 // static: the host flasher swaps the glyph over ISP
         }
+#if((_AWTO_SAVER_SCOPE2 == _ON) || (_AWTO_SAVER_ASTEROIDS == _ON))
         if(g_ucAwtoSaverRun != AWTO_SAVER_PACMAN)                   // Scope 2, Asteroids: one column per pass until the frame is complete, then a pause (none for Asteroids: frames follow at once)
         {
             if((s_ucMid == 0) && (g_ucAwtoSaverRun != AWTO_SAVER_ASTEROIDS) && ((WORD)(ulNow - s_usTick) < AWTO_SAVER_SCOPE2_MS))
             {
                 return;
             }
-            s_ucMid = (BYTE)(((g_ucAwtoSaverRun == AWTO_SAVER_ASTEROIDS) ? AwtoAsteroids(2) : AwtoScopeSaver2(2)) == 0);
+            s_ucMid = (BYTE)(SAVER_FRAME() == 0);
             if(s_ucMid == 0)
             {
                 s_usTick = (WORD)ulNow;
             }
             return;
         }
+#endif
+#if(_AWTO_SAVER_PACMAN == _ON)
         {
             WORD usPeriod = (s_ucSub == (AWTO_SAVER_PACMAN_SUBS - 1)) ? (WORD)(AWTO_SAVER_PACMAN_STEP_MS - (AWTO_SAVER_PACMAN_SUBS - 1) * AWTO_SAVER_PACMAN_MS) : (WORD)AWTO_SAVER_PACMAN_MS;
             WORD usLate = (WORD)ulNow - s_usTick;                   // s_usTick = last step's scheduled time; it advances by the period, not from now
@@ -321,6 +439,7 @@ void AwtoSaverPoll(void)                                            // main loop
                 AwtoPacmanClassic(2);
             }
         }
+#endif
         return;
     }
     if(g_ucAwtoSaverMode == AWTO_SAVER_OFF)

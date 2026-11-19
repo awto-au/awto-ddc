@@ -25,6 +25,15 @@ def test_retired_scope1_gone():
     assert all(r["name"] != "scope1" and r["run"] != 2 and r["vcp"] != 3 for r in saver_names.SAVERS)
 
 
+def test_build_options_in_header():
+    # each saver that can be left out has a default _ON option in the project header (dev.py build --savers)
+    hdr = (ROOT / "fw/sdk/Project/Header/RL6449_Project.h").read_text()
+    opts = saver_names.options()
+    assert set(opts) == {"pacman", "scope2", "asteroids"}
+    for o in opts.values():
+        assert f"#ifndef {o}\n#define {o}" in hdr
+
+
 def test_unknown_name_refused():
     try:
         saver_names.vcp("nosuch")

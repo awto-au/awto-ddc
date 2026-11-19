@@ -1194,6 +1194,19 @@ extern void AwtoOsdScreenBegin(void);                                           
 extern void AwtoOsdScreenOff(void);                                             // close + scale-up off
 #define AWTO_TC_DPG                                             0xB2    // test cmd: 0xB2 Realtek QC D-domain pattern generator on, 0xB3 off (#228)
 extern void AwtoDpgTest(unsigned char ucOn);
+// Screensavers in the image (fw/awto/savers.tsv option column; docs/saver-mode.md "Selecting savers"): -D _AWTO_SAVER_<X>=_OFF drops one, default all _ON
+#ifndef _AWTO_SAVER_PACMAN
+#define _AWTO_SAVER_PACMAN                                      _ON
+#endif
+#ifndef _AWTO_SAVER_SCOPE2
+#define _AWTO_SAVER_SCOPE2                                      _ON
+#endif
+#ifndef _AWTO_SAVER_ASTEROIDS
+#define _AWTO_SAVER_ASTEROIDS                                   _ON
+#endif
+#if((_AWTO_SAVER_PACMAN != _ON) && (_AWTO_SAVER_SCOPE2 != _ON) && (_AWTO_SAVER_ASTEROIDS != _ON))
+#error "at least one of _AWTO_SAVER_PACMAN / _AWTO_SAVER_SCOPE2 / _AWTO_SAVER_ASTEROIDS must be _ON"
+#endif
 #define AWTO_TC_PACMAN                                          0xB7    // test cmd: 0xB7 classic-layout Pac-Man (28 x 36 tiles, scaled to the panel), 0xB8 next step, 0xB9 off
 extern void AwtoPacmanClassic(unsigned char ucCmd);
 #define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 retired (was scope 1, ignored), 4 scope 2, 5 flash warning, 6 alert tone, 8 Asteroids

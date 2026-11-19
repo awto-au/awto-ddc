@@ -165,6 +165,25 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 - Scope 2: same dirty-tile columns and 8 ms budget, but no schedule: frames follow at once (compute-bound), the drift step is per frame, the column sweep shows.
 - Scope 2 pacing (Dan 2026-11-19: 25 fps is the cap): fixed `AWTO_S2_FRAME_MS` = 40 ms schedule as Scope 1 had (`s_usFrameAt`, resync when behind, no burst; the hidden first frame starts at once). Sim 350.8 MHz, 60 frames (`scope2_sim.py`, `saver_loop_cost.py --case scope2`), before -> after: 20.8 ms (min 20, max 22) = 48 / s -> 40.0 ms (min 39, max 41) = 25.00 / s; worst main-loop pass 12.0 -> 12.4 ms; mean pass 7.0 -> 0.97 ms (idle between frames). Unit 3 ran 31 / s before: the cap lowers it to 25 / s by decision.
 
+## Selecting savers (Dan, 2026-11-19)
+
+- Build option per saver, default all `_ON` (default image md5 f0941741... identical to the build of 6987190, checked at commit 2eefbd6, 2026-11-19): `-D _AWTO_SAVER_PACMAN=_OFF` / `_AWTO_SAVER_SCOPE2=_OFF` / `_AWTO_SAVER_ASTEROIDS=_OFF` (`RL6449_Project.h`; all three off = `#error`).
+  - `./dev.py build --savers asteroids` (comma list of the savers that stay in; names and option names: `fw/awto/savers.tsv` column `option`, the one source).
+  - A build with a saver `_OFF` does not promote `fw/bank_layout.tsv` (`scripts/fw_build.py`).
+- Dropped with the saver: its `.c` (whole file `#if`), statics, `saver_canvas.c` when neither Scope 2 nor Asteroids is in, the `SaverDraw` / poll branches, test cmd 0xB7..0xB9 (Pac-Man). `-D _AWTO_OSD_HWTEST` needs Scope 2 + Asteroids (`#error` otherwise).
+- Kept (schema CRC unchanged): setting 119 / 121 min, max and labels; the label of a dropped saver stays in the table.
+  - Stored setting 119 of a dropped saver, and Alternate's first run, map to the first saver in the image (order Pac-Man, Scope 2, Asteroids); Alternate swaps only among the savers in the image, with one saver it never swaps.
+  - VCP 0xEB of a dropped saver is ignored (like the retired 3); run ids and VCP values are not renumbered.
+- Checks: `saver_sim.py` finds the savers of the image by their map entry, checks the dropped ones (VCP ignored, setting maps to the first), skips their steps. Passed for all-on, Asteroids, Asteroids + Scope 2, Pac-Man, Pac-Man + Asteroids (only the alert tone FAIL 0.00 s, as before); `fw_gates.py` on all-on, Asteroids, Asteroids + Scope 2.
+- Asteroids-only image vs all-on (sim builds, 2026-11-19, `-D AWTO_SAVER_INFO` on / off):
+  - XDATA free 706 -> 903 B (info on), 720 -> 917 B (off); floor 700. Scope 2 statics 186 B, Pac-Man 11 B (audio-test builds: 692 -> 878 with Scope 2 gone, 703 with Pac-Man gone, 1622 Pac-Man only).
+  - Code + const freed (CH bytes per bank, info off): bank 1 39, bank 8 907, bank 11 8686, bank 12 32438, bank 13 4672 = 46742 B. Pac-Man 1732 code + 36924 const, Scope 2 4683 + 3064.
+  - Not freed: band canvas `g_aucScPix` 162 B (Asteroids uses it), `AwtoScTile`, osd_lines (785 B code).
+  - OSD SRAM: nothing is reserved per saver, the 12288-word pool is claimed when a saver draws (Scope 2 peak 5224 words, Asteroids 3312) and free again at stop; dropping a saver frees no SRAM, it only removes what Alternate could show.
+  - Glyph ids: no static table; Asteroids' 330 ids are its own (identity map), unchanged.
+  - Speed: Asteroids 25.00 frames/s (`asteroids_res.py cost c30x11`), same as all-on; 12 frame md5s (`saver_frames_md5.py`, info off) identical to the all-on image.
+  - Higher resolution on the freed XDATA: `docs/asteroids-resolution.md` "Addendum".
+
 ## Open decisions
 
 - **D2 the key that ends a saver:** also does its action today (MENU opens the menu, SOURCE the selector). Swallow it?

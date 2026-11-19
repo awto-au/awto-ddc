@@ -133,6 +133,9 @@ static void AwtoOsdSramProbe(void)
 
 #ifdef _AWTO_OSD_HWTEST                         // -D _AWTO_OSD_HWTEST: OSD SRAM write / read-back tests on the unit (docs/osd-hw-tests.md); host: scripts/osd_hw_test.py
 // The host fills g_stAwtoOsdHw over the debug link, then writes ucGo = op; the main loop runs it and clears ucGo. No test cmd number.
+#if((_AWTO_SAVER_SCOPE2 != _ON) || (_AWTO_SAVER_ASTEROIDS != _ON))
+#error "_AWTO_OSD_HWTEST uses Scope 2 and Asteroids: all savers _ON"
+#endif
 #include "../../tools/osd_lines/osd_lines.h"                // tile geometry only
 #define AWTO_OHW_BUF                            54                  // one 2-bit glyph (18 words): the chunk a direct write streams back-to-back
 #define AWTO_OHW_REGS                           9
@@ -3111,10 +3114,12 @@ void AwtoDiagTestCmd(void)
     {
         AwtoDpgTest(ucCmd == AWTO_TC_DPG);
     }
+#if(_AWTO_SAVER_PACMAN == _ON)
     else if((ucCmd >= AWTO_TC_PACMAN) && (ucCmd <= AWTO_TC_PACMAN + 2))
     {
         AwtoPacmanClassic((ucCmd == AWTO_TC_PACMAN) ? 1 : ((ucCmd == AWTO_TC_PACMAN + 1) ? 2 : 0));
     }
+#endif
     else if((ucCmd >= AWTO_TC_PACMAN_SND) && (ucCmd <= AWTO_TC_PACMAN_SND + 5))   // Pac-Man sound (0xB7..0xB9 are the full-screen Pac-Man)
     {
         AwtoPmSound(ucCmd - AWTO_TC_PACMAN_SND);

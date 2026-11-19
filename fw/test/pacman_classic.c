@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "UserCommonInclude.h"
+#if(_AWTO_SAVER_PACMAN == _ON)                                        // saver not in the image when _OFF (RL6449_Project.h)
 #include "pacman_classic_data.inc"
 
 // Classic-layout Pac-Man demo on the unit (data: scripts/gen_pacman_classic.py): the arcade's 28 x 36 tile grid, 12 x 12 visible tiles
@@ -279,3 +280,4 @@ void AwtoPacmanClassic(BYTE ucCmd)
     osd_tc_show(1);
     AwtoSyncPush(AWTO_SYNC_EV_ODEMO, AWTO_PC_ARG_ON, 0);
 }
+#endif                                                         // _AWTO_SAVER_PACMAN

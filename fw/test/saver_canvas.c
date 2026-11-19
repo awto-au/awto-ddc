@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "UserCommonInclude.h"
+#if((_AWTO_SAVER_SCOPE2 == _ON) || (_AWTO_SAVER_ASTEROIDS == _ON))             // the canvas serves Scope 2 and Asteroids only
 #define OSD_NO_FLUSH
 #include "../../tools/osd_lines/osd_lines.c"
 
@@ -31,3 +32,4 @@ void AwtoScTile(WORD usAddr, BYTE __xdata *pucB)                    // a 1-bit t
         AWTO_OSD_PORT(pucB[ucK]);
     }
 }
+#endif

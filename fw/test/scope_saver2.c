@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "UserCommonInclude.h"
+#if(_AWTO_SAVER_SCOPE2 == _ON)                                        // saver not in the image when _OFF (RL6449_Project.h)
 #include "../../tools/osd_lines/osd_lines.h"                                // tile geometry only
 
 // Scope screensaver 2 (docs/screensaver.md): red graticule with minor ticks, green pulse trace, two dotted cursors on its 10 % / 90 % points,
@@ -644,3 +645,4 @@ BYTE AwtoScopeSaver2(BYTE ucCmd)
     s_usDrift = 0;
     return 0;
 }
+#endif                                                         // _AWTO_SAVER_SCOPE2
