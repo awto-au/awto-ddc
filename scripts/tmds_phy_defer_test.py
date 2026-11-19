@@ -18,7 +18,7 @@ import isostamp
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parents[1])
 sys.path.insert(0, str(ROOT / "scripts"))
 os.environ.setdefault("AWTO_SIM_CORE", "fast")
-import fw_sim as S  # noqa: E402
+import fw_sim as S
 
 LOG = ROOT / "tmp/logs/tmds_phy_defer_test.log"
 EF, E6, E8, E9, EA_, EB = 0x71EF, 0x71E6, 0x71E8, 0x71E9, 0x71EA, 0x71EB

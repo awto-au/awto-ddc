@@ -2575,6 +2575,7 @@ void ScalerTimerDelayXms(WORD usNum)
         {
             AWTO_WDT_FEED(AWTO_WDT_S_DELAY);
             AWTO_WAIT_PUMP();
+            AWTO_TMDS_PHY_PUMP();
         }
         AwtoWaitLog(AWTO_WAIT_DELAY | (ucBk << AWTO_WAIT_BANK_SHIFT), usNum, usT0, usPc);
     }

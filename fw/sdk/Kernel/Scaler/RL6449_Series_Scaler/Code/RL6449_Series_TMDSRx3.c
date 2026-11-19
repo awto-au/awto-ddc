@@ -3662,8 +3662,11 @@ BYTE ScalerTMDSRx3TMDSScanInputPort(BYTE ucInputType)
         return _SOURCE_NONE;
     }
 
-    // Run the freq. stable PHY set-up the EXINT0 handler left pending
-    ScalerTMDSRx3PhySetDeferred();
+    // Set-up still pending: SysTMDSRxHandler runs it next pass; scanning now would check CDR with no settle time
+    if(isr_g_ucTMDSRx3PhyPend == _TRUE)
+    {
+        return _SOURCE_NONE;
+    }
 
     if(GET_TMDS_RX3_PHY_SET() == _TRUE)
     {

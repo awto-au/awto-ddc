@@ -837,6 +837,9 @@ extern void AwtoDdcciPoll(void);
 extern __xdata unsigned char g_ucAwtoDdcDef;
 extern void AwtoWaitPump(void);       // #216: Get-VCP / capabilities answered inside a blocking wait (fw/ddcci/ddcci.c)
 #define AWTO_PUMP_SP_MAX                                        0xB0    // pump runs only with SP at or below; its Get path peaked 0xED from 0xBE (47 B), so 0xB0 stays under the 0xDB the rest of the firmware reaches (waits seen up to 0xA5)
+extern unsigned char isr_g_ucTMDSRx2PhyPend, isr_g_ucTMDSRx3PhyPend;
+extern void ScalerTMDSPhySetDeferred(void);
+#define AWTO_TMDS_PHY_PUMP()                                    { if(((isr_g_ucTMDSRx2PhyPend | isr_g_ucTMDSRx3PhyPend) != 0) && (SP <= AWTO_PUMP_SP_MAX)) { ScalerTMDSPhySetDeferred(); } }
 #if(_AWTO_DDCCI_NOPOLL == 1)
 #define AWTO_DDCCI_POLL()                                       // bisect: engine __code linked, never called
 #define AWTO_WAIT_PUMP()
