@@ -69,7 +69,7 @@ void ScalerRead(WORD usAddr, WORD usLength, BYTE *pucArray, bit bAutoInc)
 
             for(usIndex = 0; usIndex < usLength; usIndex++)
             {
-                pucArray[usIndex] = ScalerGetByte(usAddr);
+                pucArray[usIndex] = ScalerGetByteVar(usAddr);
             }
         }
     }

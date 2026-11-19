@@ -668,10 +668,10 @@ BYTE ScalerSyncDDRResultCRC(void)
     // Read I-domain CRC (First 6 Bytes of M1 and M2 CRC)
     for(ucCRCRegOffset = 0; ucCRCRegOffset < sizeof(pucIDomainM1CRCValue); ucCRCRegOffset++)
     {
-        pucIDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_01_I_MAIN1_CRC_1 + ucCRCRegOffset);
+        pucIDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_01_I_MAIN1_CRC_1 + ucCRCRegOffset);
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
-        pucIDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_07_I_MAIN2_CRC_1 + ucCRCRegOffset);
+        pucIDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_07_I_MAIN2_CRC_1 + ucCRCRegOffset);
 #endif
     }
 
@@ -685,10 +685,10 @@ BYTE ScalerSyncDDRResultCRC(void)
     // Read M-domain CRC (First 6 Bytes of M1 and M2 CRC)
     for(ucCRCRegOffset = 0; ucCRCRegOffset < sizeof(pucMDomainM1CRCValue); ucCRCRegOffset++)
     {
-        pucMDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_41_M_M1_CRC_1 + ucCRCRegOffset);
+        pucMDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_41_M_M1_CRC_1 + ucCRCRegOffset);
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
-        pucMDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_47_M_M2_CRC_1 + ucCRCRegOffset);
+        pucMDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_47_M_M2_CRC_1 + ucCRCRegOffset);
 #endif
     }
 
@@ -704,10 +704,10 @@ BYTE ScalerSyncDDRResultCRC(void)
         // Read First D-domain CRC (First 6 Bytes of M1 and M2 CRC)
         for(ucCRCRegOffset = 0; ucCRCRegOffset < sizeof(g_pucDDRDDomainM1CRCValue); ucCRCRegOffset++)
         {
-            g_pucDDRDDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_2D_D_MAIN1_CRC_1 + ucCRCRegOffset);
+            g_pucDDRDDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_2D_D_MAIN1_CRC_1 + ucCRCRegOffset);
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
-            g_pucDDRDDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_33_D_MAIN2_CRC_1 + ucCRCRegOffset);
+            g_pucDDRDDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_33_D_MAIN2_CRC_1 + ucCRCRegOffset);
 #endif
         }
 
@@ -717,10 +717,10 @@ BYTE ScalerSyncDDRResultCRC(void)
     // Read D-domain CRC (First 3 Bytes of M1 and M2 CRC)
     for(ucCRCRegOffset = 0; ucCRCRegOffset < sizeof(pucDDomainM1CRCValue); ucCRCRegOffset++)
     {
-        pucDDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_2D_D_MAIN1_CRC_1 + ucCRCRegOffset);
+        pucDDomainM1CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_2D_D_MAIN1_CRC_1 + ucCRCRegOffset);
 
 #if(_FORMAT_CONVERSION_SUPPORT == _ON)
-        pucDDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByte(P36_33_D_MAIN2_CRC_1 + ucCRCRegOffset);
+        pucDDomainM2CRCValue[ucCRCRegOffset] = ScalerGetByteVar(P36_33_D_MAIN2_CRC_1 + ucCRCRegOffset);
 #endif
     }
 

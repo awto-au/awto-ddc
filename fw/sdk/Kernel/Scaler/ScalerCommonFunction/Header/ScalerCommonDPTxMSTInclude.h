@@ -92,8 +92,8 @@
 #define SET_REG_DP_TX_SHA_INPUT_2(x)                                (ScalerSetByte(PBB_5E_DP_HDCP_TX_SHA_DATA_1, (x)))
 #define SET_REG_DP_TX_SHA_INPUT_3(x)                                (ScalerSetByte(PBB_5F_DP_HDCP_TX_SHA_DATA_0, (x)))
 #define SET_REG_DP_TX_SHA_INPUT_DB()                                (ScalerSetBit(PBB_5B_DP_HDCP_TX_SHA_CTRL, ~_BIT0, _BIT0))
-#define GET_REG_DP_TX_HDCP_AN(x)                                    (ScalerGetByte(PBB_3B_AN_BYTE_0 - (x)))
-#define GET_REG_DP_TX_HDCP_BKSV(x)                                  (ScalerGetByte(PBB_4F_BKSV_0 + (x)))
+#define GET_REG_DP_TX_HDCP_AN(x)                                    (ScalerGetByteVar(PBB_3B_AN_BYTE_0 - (x)))
+#define GET_REG_DP_TX_HDCP_BKSV(x)                                  (ScalerGetByteVar(PBB_4F_BKSV_0 + (x)))
 
 #define GET_DP_TX_HDCP_ENCRYPTION_ENABLE()                          (ScalerGetBit(PBB_30_DPTX_HDCP_CTRL1, (_BIT1 | _BIT0)) == (_BIT1 | _BIT0))
 #define GET_DP_TX_HDCP_AUTH_PROC_PASS()                             (GET_DP_TX_HDCP_AUTH_STATE() == _DP_TX_HDCP_STATE_AUTH_PASS)
@@ -109,8 +109,8 @@
 //--------------------------------------------------
 #define GET_DP_TX_MST_ENABLE()                                      (ScalerGetBit(PBB_00_DP_PHY_CTRL, _BIT1) == _BIT1)
 
-#define GET_DP_TX_STX_TIMESLOT_LENGTH(x)                            (ScalerGetBit(GET_DP_TX_STX_END_ADDRESS(x), (_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) -\
-                                                                     ScalerGetBit(GET_DP_TX_STX_START_ADDRESS(x), (_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 1)
+#define GET_DP_TX_STX_TIMESLOT_LENGTH(x)                            (ScalerGetBitVar(GET_DP_TX_STX_END_ADDRESS(x), (_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) -\
+                                                                     ScalerGetBitVar(GET_DP_TX_STX_START_ADDRESS(x), (_BIT5 | _BIT4 | _BIT3 | _BIT2 | _BIT1 | _BIT0)) + 1)
 //--------------------------------------------------
 // Macro of Message Function Action info
 //--------------------------------------------------

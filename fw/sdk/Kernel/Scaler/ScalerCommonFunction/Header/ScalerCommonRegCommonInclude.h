@@ -31,16 +31,33 @@
 #define AWTO_RB_LAST_PAGE                           0xD0
 #define AWTO_RB_PAGE(usAddr)                        ((BYTE)((WORD)(usAddr) >> 8))
 #define AWTO_RB_IN(usAddr, ucFirst, ucLast)         (((BYTE)(AWTO_RB_PAGE(usAddr) - (ucFirst))) <= ((ucLast) - (ucFirst)))
-#define AWTO_RB_LISTED(usAddr)                      (AWTO_RB_IN(usAddr, 0x88, 0x90) || AWTO_RB_IN(usAddr, 0xA0, 0xAF) || AWTO_RB_IN(usAddr, 0xC8, 0xD0)) // page clusters, exact list in AwtoRbPrime
 #ifndef AWTO_RB_RAW
 #define AWTO_RB_RAW 0 // -D AWTO_RB_RAW=1: reads stay raw (hardware A/B image)
 #endif
 #if(AWTO_RB_RAW != 0)
+#define AWTO_RB_LISTED(usAddr)                      0
 #define AWTO_RB_PRIME(usAddr)                       ((void)0)
 #else
+#define AWTO_RB_LISTED(usAddr)                      (AWTO_RB_IN(usAddr, 0x88, 0x90) || AWTO_RB_IN(usAddr, 0xA0, 0xAF) || AWTO_RB_IN(usAddr, 0xC8, 0xD0)) // page clusters, exact list in AwtoRbPrime
 #define AWTO_RB_PRIME(usAddr)                       (AWTO_RB_LISTED(usAddr) ? AwtoRbPrime((WORD)(usAddr)) : (void)0)
 #endif
 extern void AwtoRbPrime(WORD usAddr);
+extern BYTE AwtoRbGetByte(WORD usAddr);
+extern BYTE AwtoRbGetBit(WORD usAddr, BYTE ucAnd);
+extern WORD AwtoRbGetWord(WORD usAddr);
+extern DWORD AwtoRbGetDWord(WORD usAddr);
+// Variable-address reads: one call, check and read inside the helper (constant addresses fold the page test away instead)
+#if(AWTO_RB_RAW != 0)
+#define ScalerGetByteVar(usAddr)                    (*((volatile BYTE xdata *)(usAddr)))
+#define ScalerGetBitVar(usAddr, ucAnd)              (*((volatile BYTE xdata *)(usAddr)) & (ucAnd))
+#define ScalerGetWordVar(usAddr)                    (*((volatile WORD xdata *)(usAddr)))
+#define ScalerGetDWordVar(usAddr)                   (*((volatile DWORD xdata *)(usAddr)))
+#else
+#define ScalerGetByteVar(usAddr)                    AwtoRbGetByte((WORD)(usAddr))
+#define ScalerGetBitVar(usAddr, ucAnd)              AwtoRbGetBit((WORD)(usAddr), (ucAnd))
+#define ScalerGetWordVar(usAddr)                    AwtoRbGetWord((WORD)(usAddr))
+#define ScalerGetDWordVar(usAddr)                   AwtoRbGetDWord((WORD)(usAddr))
+#endif
 extern volatile BYTE xdata isr_g_ucAwtoRbDirty;
 
 //--------------------------------------------------

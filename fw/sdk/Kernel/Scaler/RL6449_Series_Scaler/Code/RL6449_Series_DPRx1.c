@@ -4051,9 +4051,9 @@ void ScalerDpRx1PhyCTS(void)
         {
             ScalerDebug();
 
-            DebugMessageRx1("7. PHY CTS Loop", ScalerGetByte(ScalerDpRx1PhyCtsAction()));
+            DebugMessageRx1("7. PHY CTS Loop", ScalerGetByteVar(ScalerDpRx1PhyCtsAction()));
 
-            switch(ScalerGetByte(ScalerDpRx1PhyCtsAction()) & 0x30)
+            switch(ScalerGetByteVar(ScalerDpRx1PhyCtsAction()) & 0x30)
             {
                 default:
                 case 0x00: // Source Lane0
@@ -4291,24 +4291,24 @@ void ScalerDpRx1PhyCTS(void)
 
             if((g_ucDpRx1PhyCtsCtrl & 0x07) != 0x05)
             {
-                if(((ScalerGetByte(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE0) // Source Lane0
+                if(((ScalerGetByteVar(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE0) // Source Lane0
                 {
                     ScalerSetBit(ScalerDpRx1PhyCtsAction(), ~(_BIT5 | _BIT4), _DP_SCALER_LANE0 << 4);
                 }
-                else if(((ScalerGetByte(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE1) // Source Lane1
+                else if(((ScalerGetByteVar(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE1) // Source Lane1
                 {
                     ScalerSetBit(ScalerDpRx1PhyCtsAction(), ~(_BIT5 | _BIT4), _DP_SCALER_LANE1 << 4);
                 }
-                else if(((ScalerGetByte(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE2) // Source Lane2
+                else if(((ScalerGetByteVar(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE2) // Source Lane2
                 {
                     ScalerSetBit(ScalerDpRx1PhyCtsAction(), ~(_BIT5 | _BIT4), _DP_SCALER_LANE2 << 4);
                 }
-                else if(((ScalerGetByte(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE3) // Source Lane3
+                else if(((ScalerGetByteVar(ScalerDpRx1PhyCtsAction()) & 0x30) >> 4) == _D1_DP_LANE3) // Source Lane3
                 {
                     ScalerSetBit(ScalerDpRx1PhyCtsAction(), ~(_BIT5 | _BIT4), _DP_SCALER_LANE3 << 4);
                 }
 
-                DebugMessageRx1("7. PHY CTS Loop (Swap Back)", ScalerGetByte(ScalerDpRx1PhyCtsAction()));
+                DebugMessageRx1("7. PHY CTS Loop (Swap Back)", ScalerGetByteVar(ScalerDpRx1PhyCtsAction()));
             }
             else
             {

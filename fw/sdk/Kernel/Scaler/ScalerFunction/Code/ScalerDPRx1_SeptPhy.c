@@ -2313,7 +2313,7 @@ void ScalerDpRx1HDCPFakeAuthenProc(void)
     // Load M0'
     for(pData[0] = 0; pData[0] < 8; pData[0]++)
     {
-        pucSHAInput[7 + pData[0]] = ScalerGetByte(PB0_2F_M0_BYTE_0 - pData[0]);
+        pucSHAInput[7 + pData[0]] = ScalerGetByteVar(PB0_2F_M0_BYTE_0 - pData[0]);
     }
 
     memset(&pucSHAInput[15], 0, 49);
@@ -2725,7 +2725,7 @@ void ScalerDpRx1HDCPLoadShaToDpcd(void)
     {
         for(pData[1] = 0; pData[1] < 4; pData[1]++)
         {
-            ScalerDpRx1SetDpcdValue(0x06, 0x80, (0x14 + (pData[0] * 4) + pData[1]), ScalerGetByte(PB0_39_SHA_3 + (pData[0] * 4) - pData[1]));
+            ScalerDpRx1SetDpcdValue(0x06, 0x80, (0x14 + (pData[0] * 4) + pData[1]), ScalerGetByteVar(PB0_39_SHA_3 + (pData[0] * 4) - pData[1]));
         }
     }
 

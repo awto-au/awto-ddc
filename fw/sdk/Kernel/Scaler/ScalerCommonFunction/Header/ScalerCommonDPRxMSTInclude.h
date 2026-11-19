@@ -90,7 +90,7 @@
 //--------------------------------------------------
 // Definitions of Rx MAC MST Enable Macro
 //--------------------------------------------------
-#define GET_REG_DP_RX_MST_ENABLE()                                                              ((bit)ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_01_PHY_DIG_RESET_CTRL : PB0_01_PHY_DIG_RESET_CTRL), _BIT7))
+#define GET_REG_DP_RX_MST_ENABLE()                                                              ((bit)ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_01_PHY_DIG_RESET_CTRL : PB0_01_PHY_DIG_RESET_CTRL), _BIT7))
 #define SET_REG_DP_RX_MST_ENABLE()                                                              (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_01_PHY_DIG_RESET_CTRL : PB0_01_PHY_DIG_RESET_CTRL), ~_BIT7, _BIT7))
 #define CLR_REG_DP_RX_MST_ENABLE()                                                              (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_01_PHY_DIG_RESET_CTRL : PB0_01_PHY_DIG_RESET_CTRL), ~_BIT7, 0x00))
 
@@ -337,23 +337,23 @@
 //--------------------------------------------------
 // Definitions of MST Stream Related Macro
 //--------------------------------------------------
-#define GET_DP_RX_MST_STREAM_TIME_SLOT(x)                                                       ((ScalerGetByte((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_04_STHD_CTRL_3 : PB8_04_STHD_CTRL_3) + ((x) << 1)))) -\
-                                                                                                 (ScalerGetByte((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_03_STHD_CTRL_2 : PB8_03_STHD_CTRL_2) + ((x) << 1)))) + 1)
+#define GET_DP_RX_MST_STREAM_TIME_SLOT(x)                                                       ((ScalerGetByteVar((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_04_STHD_CTRL_3 : PB8_04_STHD_CTRL_3) + ((x) << 1)))) -\
+                                                                                                 (ScalerGetByteVar((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_03_STHD_CTRL_2 : PB8_03_STHD_CTRL_2) + ((x) << 1)))) + 1)
 
-#define GET_DP_RX_MST_ST_START_POSITION(x)                                                      (ScalerGetBit((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_03_STHD_CTRL_2 : PB8_03_STHD_CTRL_2) + ((x) << 1)), 0x3F))
+#define GET_DP_RX_MST_ST_START_POSITION(x)                                                      (ScalerGetBitVar((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_03_STHD_CTRL_2 : PB8_03_STHD_CTRL_2) + ((x) << 1)), 0x3F))
 #define SET_DP_RX_MST_ST_START_POSITION(x, y)                                                   (ScalerSetByte((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_03_STHD_CTRL_2 : PB8_03_STHD_CTRL_2) + (((x) << 1))), (y)))
 #define SET_DP_RX_MST_ST_END_POSITION(x, y)                                                     (ScalerSetByte((((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_04_STHD_CTRL_3 : PB8_04_STHD_CTRL_3) + (((x) << 1))), (y)))
 
 
-#define GET_REG_DP_RX_MST_ST1_SOURCE_STATUS()                                                   (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), (_BIT6 | _BIT5 | _BIT4)) >> 4)
+#define GET_REG_DP_RX_MST_ST1_SOURCE_STATUS()                                                   (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), (_BIT6 | _BIT5 | _BIT4)) >> 4)
 #define SET_REG_DP_RX_MST_ST1_SOURCE_STATUS(x)                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), ~(_BIT6 | _BIT5 | _BIT4), ((x) << 4)))
-#define GET_REG_DP_RX_MST_ST2_SOURCE_STATUS()                                                   (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), (_BIT2 | _BIT1 | _BIT0)))
+#define GET_REG_DP_RX_MST_ST2_SOURCE_STATUS()                                                   (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), (_BIT2 | _BIT1 | _BIT0)))
 #define SET_REG_DP_RX_MST_ST2_SOURCE_STATUS(x)                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), ~(_BIT2 | _BIT1 | _BIT0), (x)))
-#define GET_REG_DP_RX_MST_ST3_SOURCE_STATUS()                                                   (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0E_SOURCE_SEL_1 : PB8_0E_SOURCE_SEL_1), (_BIT6 | _BIT5 | _BIT4)) >> 4)
+#define GET_REG_DP_RX_MST_ST3_SOURCE_STATUS()                                                   (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0E_SOURCE_SEL_1 : PB8_0E_SOURCE_SEL_1), (_BIT6 | _BIT5 | _BIT4)) >> 4)
 #define SET_REG_DP_RX_MST_ST3_SOURCE_STATUS(x)                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0E_SOURCE_SEL_1 : PB8_0E_SOURCE_SEL_1), ~(_BIT6 | _BIT5 | _BIT4), ((x) << 4)))
-#define GET_REG_DP_RX_MST_ST4_SOURCE_STATUS()                                                   (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0E_SOURCE_SEL_1 : PB8_0E_SOURCE_SEL_1), (_BIT2 | _BIT1 | _BIT0)))
+#define GET_REG_DP_RX_MST_ST4_SOURCE_STATUS()                                                   (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0E_SOURCE_SEL_1 : PB8_0E_SOURCE_SEL_1), (_BIT2 | _BIT1 | _BIT0)))
 #define SET_REG_DP_RX_MST_ST4_SOURCE_STATUS(x)                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0E_SOURCE_SEL_1 : PB8_0E_SOURCE_SEL_1), ~(_BIT2 | _BIT1 | _BIT0), (x)))
-#define GET_REG_DP_RX_MST_ST5_SOURCE_STATUS()                                                   (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0F_SOURCE_SEL_2 : PB8_0F_SOURCE_SEL_2), (_BIT2 | _BIT1 | _BIT0)))
+#define GET_REG_DP_RX_MST_ST5_SOURCE_STATUS()                                                   (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0F_SOURCE_SEL_2 : PB8_0F_SOURCE_SEL_2), (_BIT2 | _BIT1 | _BIT0)))
 #define SET_REG_DP_RX_MST_ST5_SOURCE_STATUS(x)                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0F_SOURCE_SEL_2 : PB8_0F_SOURCE_SEL_2), ~(_BIT2 | _BIT1 | _BIT0), (x)))
 
 #define GET_REG_DP_RX_MST_ST1_SOURCE_STATUS_EXINT()                                             (ScalerGetBit_EXINT(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB5_0D_SOURCE_SEL_0 : PB8_0D_SOURCE_SEL_0), (_BIT6 | _BIT5 | _BIT4)) >> 4)
@@ -374,8 +374,8 @@
 #define SET_DP_RX_MST_ST_SOURCE_CHANGE()                                                        (g_bDpRxMstStreamMuxChange = _TRUE)
 #define GET_DP_RX_MST_ST_SOURCE_CHANGE()                                                        (g_bDpRxMstStreamMuxChange)
 
-#define GET_REG_DP_RX_HDCP_SHA_RESULT(x)                                                        (ScalerGetByte(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_36_SHA_0 : PB0_36_SHA_0) + (x)))
-#define GET_REG_DP_RX_HDCP_SHA256_RESULT(x)                                                     (ScalerGetByte(P63_35_HDCP_SHA_0 + (x)))
+#define GET_REG_DP_RX_HDCP_SHA_RESULT(x)                                                        (ScalerGetByteVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_36_SHA_0 : PB0_36_SHA_0) + (x)))
+#define GET_REG_DP_RX_HDCP_SHA256_RESULT(x)                                                     (ScalerGetByteVar(P63_35_HDCP_SHA_0 + (x)))
 
 #define SET_REG_DP_RX_SHA_ENABLE()                                                              (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_30_SHA_CONTRL : PB0_30_SHA_CONTRL), ~_BIT3, 0x00))
 #define CLR_REG_DP_RX_SHA_ENABLE()                                                              (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB_30_SHA_CONTRL : PB0_30_SHA_CONTRL), ~_BIT3, _BIT3))
@@ -392,26 +392,26 @@
 
 #define SET_REG_DP_RX_CLEAR_PAYLOAD_ID_TABLE()                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B0_AUX_PAYLOAD_CLEAR : PBA_B0_AUX_PAYLOAD_CLEAR), ~_BIT6, _BIT6))
 #define CLR_REG_DP_RX_CLEAR_PAYLOAD_ID_TABLE()                                                  (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B0_AUX_PAYLOAD_CLEAR : PBA_B0_AUX_PAYLOAD_CLEAR), ~_BIT6, 0x00))
-#define GET_REG_DP_RX_111_IRQ()                                                                 ((bit)ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), _BIT7))
+#define GET_REG_DP_RX_111_IRQ()                                                                 ((bit)ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), _BIT7))
 #define SET_REG_DP_RX_111_IRQ()                                                                 (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT7, _BIT7))
 #define CLR_REG_DP_RX_111_IRQ()                                                                 (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT7, 0x00))
-#define GET_REG_DP_RX_111_IRQ_FLAG()                                                            ((bit)ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), _BIT7))
+#define GET_REG_DP_RX_111_IRQ_FLAG()                                                            ((bit)ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), _BIT7))
 #define CLR_REG_DP_RX_111_IRQ_FLAG()                                                            (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), ~(_BIT7 | _BIT4 | _BIT3), _BIT7))
-#define GET_REG_DP_RX_1C2_IRQ()                                                                 ((bit)ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), _BIT4))
+#define GET_REG_DP_RX_1C2_IRQ()                                                                 ((bit)ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), _BIT4))
 #define SET_REG_DP_RX_1C2_IRQ()                                                                 (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT4, _BIT4))
 #define CLR_REG_DP_RX_1C2_IRQ()                                                                 (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT4, 0x00))
-#define GET_REG_DP_RX_1C2_IRQ_FLAG()                                                            (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), _BIT4) >> 4)
+#define GET_REG_DP_RX_1C2_IRQ_FLAG()                                                            (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), _BIT4) >> 4)
 #define CLR_REG_DP_RX_1C2_IRQ_FLAG()                                                            (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), ~(_BIT7 | _BIT4 | _BIT3), _BIT4))
-#define GET_REG_DP_RX_2C0_IRQ()                                                                 ((bit)ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), _BIT3))
+#define GET_REG_DP_RX_2C0_IRQ()                                                                 ((bit)ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), _BIT3))
 #define SET_REG_DP_RX_2C0_IRQ()                                                                 (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT3, _BIT3))
 #define CLR_REG_DP_RX_2C0_IRQ()                                                                 (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT3, 0x00))
 #define CLR_REG_DP_RX_2C0_IRQ_EXINT()                                                           (ScalerSetBit_EXINT(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B2_AUX_SPECIAL_IRQ_EN : PBA_B2_AUX_SPECIAL_IRQ_EN), ~_BIT3, 0x00))
-#define GET_REG_DP_RX_2C0_IRQ_FLAG()                                                            (ScalerGetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), _BIT3) >> 3)
+#define GET_REG_DP_RX_2C0_IRQ_FLAG()                                                            (ScalerGetBitVar(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), _BIT3) >> 3)
 #define CLR_REG_DP_RX_2C0_IRQ_FLAG()                                                            (ScalerSetBit(((g_enumDpMSTCapablePort == _DP_MST_RX0_PORT) ? PB7_B3_AUX_SPECIAL_IRQ_FLAG : PBA_B3_AUX_SPECIAL_IRQ_FLAG), ~(_BIT7 | _BIT4 | _BIT3), _BIT3))
 #define SET_REG_DP_RX_REPLY_RAD_MSB(x, y)                                                       (ScalerSetBit((x), ~(_BIT7 | _BIT6 | _BIT5 | _BIT4), (y)))
 #define SET_REG_DP_RX_REPLY_RAD_LSB(x, y)                                                       (ScalerSetBit((x), ~(_BIT3 | _BIT2 | _BIT1 | _BIT0), (y)))
-#define GET_REG_DP_RX_BYPASS_RAD_MSB(x)                                                         ((ScalerGetBit((x), (_BIT7 | _BIT6 | _BIT5 | _BIT4)) >> 4))
-#define GET_REG_DP_RX_BYPASS_RAD_LSB(x)                                                         (ScalerGetBit((x), (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4)
+#define GET_REG_DP_RX_BYPASS_RAD_MSB(x)                                                         ((ScalerGetBitVar((x), (_BIT7 | _BIT6 | _BIT5 | _BIT4)) >> 4))
+#define GET_REG_DP_RX_BYPASS_RAD_LSB(x)                                                         (ScalerGetBitVar((x), (_BIT3 | _BIT2 | _BIT1 | _BIT0)) << 4)
 
 //--------------------------------------------------
 // Definitions of MST Mode Status Macro
@@ -989,8 +989,8 @@
 #define GET_REG_DP_RX_DOWN_REQUEST_MSG_LCT()                                                    (ScalerGetBit(PB7_05_MSG_RX_DATA0, (_BIT7 | _BIT6 | _BIT5 | _BIT4)) >> 4)
 #define GET_REG_DP_RX_DOWN_REQUEST_MSG_LCR()                                                    (ScalerGetBit(PB7_05_MSG_RX_DATA0, (_BIT3 | _BIT2 | _BIT1 | _BIT0)))
 #define GET_REG_DP_RX_DOWN_REQUEST_MSG_BYPASS_PORT_NUM()                                        ((ScalerGetBit(PB7_06_MSG_RX_DATA1, (_BIT7 | _BIT6 | _BIT5 | _BIT4))) >> 4)
-#define GET_REG_DP_RX_DOWN_REQUEST_RAD_MSB(x)                                                   (ScalerGetBit((PB7_06_MSG_RX_DATA1 + (x)), (_BIT7 | _BIT6 | _BIT5 | _BIT4)))
-#define GET_REG_DP_RX_DOWN_REQUEST_RAD_LSB(x)                                                   (ScalerGetBit((PB7_06_MSG_RX_DATA1 + (x)), (_BIT3 | _BIT2 | _BIT1 | _BIT0)))
+#define GET_REG_DP_RX_DOWN_REQUEST_RAD_MSB(x)                                                   (ScalerGetBitVar((PB7_06_MSG_RX_DATA1 + (x)), (_BIT7 | _BIT6 | _BIT5 | _BIT4)))
+#define GET_REG_DP_RX_DOWN_REQUEST_RAD_LSB(x)                                                   (ScalerGetBitVar((PB7_06_MSG_RX_DATA1 + (x)), (_BIT3 | _BIT2 | _BIT1 | _BIT0)))
 #define GET_REG_DP_RX_DOWN_REQUEST_RAD0()                                                       (ScalerGetBit(PB7_06_MSG_RX_DATA1, (_BIT7 | _BIT6 | _BIT5 | _BIT4)))
 #define GET_REG_DP_RX_DOWN_REQUEST_RAD1()                                                       (ScalerGetBit(PB7_06_MSG_RX_DATA1, (_BIT3 | _BIT2 | _BIT1 | _BIT0)))
 #define GET_REG_DP_RX_DOWN_REQUEST_RAD2()                                                       (ScalerGetBit(PB7_07_MSG_RX_DATA2, (_BIT7 | _BIT6 | _BIT5 | _BIT4)))

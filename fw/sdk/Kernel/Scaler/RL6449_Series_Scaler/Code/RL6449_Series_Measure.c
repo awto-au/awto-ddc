@@ -733,13 +733,13 @@ void ScalerMeasureUpdateInputTimingPolarity(EnumSourceTypeDef enumSourceType, En
 
             usHdmiPage = ScalerMeasureGetTmdsPageOffset(enumSourceSearchPort);
 
-            if(ScalerGetBit((usHdmiPage + P71_A7_TMDS_PWDCTL), _BIT7) == _BIT7)
+            if(ScalerGetBitVar((usHdmiPage + P71_A7_TMDS_PWDCTL), _BIT7) == _BIT7)
             {
-                if(ScalerGetBit((usHdmiPage + P71_A4_TMDS_CTRL), (_BIT4 | _BIT3)) == (_BIT4 | _BIT3))
+                if(ScalerGetBitVar((usHdmiPage + P71_A4_TMDS_CTRL), (_BIT4 | _BIT3)) == (_BIT4 | _BIT3))
                 {
                     // Read HS/VS polarity from MAC
-                    g_stInputTimingData.b1HSP = (ScalerGetBit((usHdmiPage + P71_C0_HDCP_CR), _BIT6) == 0x00);
-                    g_stInputTimingData.b1VSP = (ScalerGetBit((usHdmiPage + P71_C0_HDCP_CR), _BIT5) == 0x00);
+                    g_stInputTimingData.b1HSP = (ScalerGetBitVar((usHdmiPage + P71_C0_HDCP_CR), _BIT6) == 0x00);
+                    g_stInputTimingData.b1VSP = (ScalerGetBitVar((usHdmiPage + P71_C0_HDCP_CR), _BIT5) == 0x00);
                 }
                 else
                 {
@@ -881,8 +881,8 @@ void ScalerMeasureCheckFirstLineShift(EnumSourceSearchPort enumSourceSearchPort,
     WORD usHdmiPage = ScalerMeasureGetTmdsPageOffset(enumSourceSearchPort);
 
     // Check under DE-only mode with raw HS/VS
-    if((ScalerGetBit((usHdmiPage + P71_A7_TMDS_PWDCTL), _BIT7) == _BIT7) &&
-       (ScalerGetBit((usHdmiPage + P71_A4_TMDS_CTRL), (_BIT4 | _BIT3)) == (_BIT4 | _BIT3)))
+    if((ScalerGetBitVar((usHdmiPage + P71_A7_TMDS_PWDCTL), _BIT7) == _BIT7) &&
+       (ScalerGetBitVar((usHdmiPage + P71_A4_TMDS_CTRL), (_BIT4 | _BIT3)) == (_BIT4 | _BIT3)))
     {
         // Stop auto-function
         ScalerSetBit(P0_7D_AUTO_ADJ_CTRL1, ~_BIT0, _BIT0);
@@ -1081,10 +1081,10 @@ bit ScalerMeasureInterlaceCheck(BYTE ucSourceType, EnumSourceSearchPort enumSour
             }
 
 #if(_DVI_DE_ONLY_SUPPORT == _ON)
-            if(ScalerGetBit((usHdmiPage + P71_A4_TMDS_CTRL), (_BIT4 | _BIT3)) != (_BIT4 | _BIT3))
+            if(ScalerGetBitVar((usHdmiPage + P71_A4_TMDS_CTRL), (_BIT4 | _BIT3)) != (_BIT4 | _BIT3))
             {
                 // Detect by Vtotal
-                if(ScalerGetBit((usHdmiPage + P71_72_IVHS_CTRL_2), _BIT6) == _BIT6)
+                if(ScalerGetBitVar((usHdmiPage + P71_72_IVHS_CTRL_2), _BIT6) == _BIT6)
                 {
                     if(GET_INPUT_TIMING_DOUBLE_CHECK() == _FALSE)
                     {

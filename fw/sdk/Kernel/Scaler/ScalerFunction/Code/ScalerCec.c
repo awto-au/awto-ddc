@@ -354,7 +354,7 @@ void ScalerCecRxWriteIntoBackupFifo(void)
 
     for(pData[0] = 0; pData[0] < isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel]; pData[0]++)
     {
-        isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]] = ScalerGetByte(P18_D3_CEC1_RXDR1_1 + pData[0]);
+        isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]] = ScalerGetByteVar(P18_D3_CEC1_RXDR1_1 + pData[0]);
         DebugMessageCEC("Cec Rx Read: DB (load to backup)", isr_g_pucCecRxBackupFifo[isr_g_ucCecRxBackupFifoWaterLevel + 2 + pData[0]]);
     }
 
@@ -781,7 +781,7 @@ void ScalerCecRxWriteIntoRxInfoStruct(void)
     memset(isr_g_stCecRxReceivedInfo.pucReceivedDb, 0, 16);
     for(pData[0] = 0; pData[0] < isr_g_stCecRxReceivedInfo.ucDbLength; pData[0]++)
     {
-        isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = ScalerGetByte(P18_D3_CEC1_RXDR1_1 + pData[0]);
+        isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]] = ScalerGetByteVar(P18_D3_CEC1_RXDR1_1 + pData[0]);
         DebugMessageCEC("<= Cec Rx Read: DB", isr_g_stCecRxReceivedInfo.pucReceivedDb[pData[0]]);
     }
 

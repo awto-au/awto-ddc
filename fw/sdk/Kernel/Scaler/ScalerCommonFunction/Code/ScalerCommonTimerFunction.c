@@ -2621,7 +2621,7 @@ bit ScalerTimerPollingFlagProc(WORD usTimeout, WORD usRegister, BYTE ucBit, bit 
 
     do
     {
-        if(((bit)ScalerGetBit(usRegister, ucBit) ^ bSuccess) == _FALSE)
+        if(((bit)ScalerGetBitVar(usRegister, ucBit) ^ bSuccess) == _FALSE)
         {
             AwtoWaitLog(AWTO_WAIT_POLL | (ucBk << AWTO_WAIT_BANK_SHIFT), usRegister, usT0, usPc);
             return _TRUE;

@@ -117,7 +117,7 @@ void ScalerGetDataPortByte(WORD usAddr, BYTE ucValue, WORD usLength, BYTE *pucAr
                 ScalerSetByte(usAddr, ucAccessValue);
             }
 
-            pucArray[usIndex] = ScalerGetByte(usAddr + 1);
+            pucArray[usIndex] = ScalerGetByteVar(usAddr + 1);
         }
 
         ScalerDisableAccessPort(usAddr);
@@ -137,7 +137,7 @@ void ScalerSetDataPortBit(WORD usAddr, BYTE ucValue, BYTE ucAnd, BYTE ucOr)
     BYTE ucValueTemp = 0;
 
     ScalerSetByte(usAddr, ScalerEnableAccessPort(usAddr, ucValue));
-    ucValueTemp = ScalerGetByte(usAddr + 1);
+    ucValueTemp = ScalerGetByteVar(usAddr + 1);
 
     ucValueTemp = (ucValueTemp & ucAnd) | ucOr;
 
@@ -159,7 +159,7 @@ BYTE ScalerGetDataPortBit(WORD usAddr, BYTE ucValue, BYTE ucAnd)
     BYTE ucValueTemp = 0;
 
     ScalerSetByte(usAddr, ScalerEnableAccessPort(usAddr, ucValue));
-    ucValueTemp = (ScalerGetByte(usAddr + 1) & ucAnd);
+    ucValueTemp = (ScalerGetByteVar(usAddr + 1) & ucAnd);
     ScalerDisableAccessPort(usAddr);
 
     return ucValueTemp;

@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import isostamp
 import osd_hw_test as H
+import rb_stale_probe as RB
 
 ROOT = Path(os.environ.get("AWTO_DDC_REPO") or Path(__file__).resolve().parent.parent)
 LOG = ROOT / "tmp/logs/clk_sweep.log"
@@ -376,7 +377,7 @@ def pll_checks(ctx, name: str, t: bytes, pll: int, chk) -> None:
         c = pll / 1000 / new[1]
         say(f"  {'!!!! sync processor clock OVER the regdb 0x4006 cap' if c > SYNC_CAP_MHZ else 'info sync processor clock under the regdb 0x4006 cap'}: {c:.2f} MHz vs {SYNC_CAP_MHZ} MHz (divider 4 bit, max 15: above {SYNC_CAP_MHZ * 15:.0f} MHz M2PLL the cap cannot be kept; a documented 'should', not a check)")
 
-OPTS = {"allow_oc": False, "tune_first": False, "fps": True}      # set by main(): --allow-overclock-flash, --tune-first, --no-fps
+OPTS = {"allow_oc": False, "tune_first": False, "fps": True, "rb": False}      # set by main(): --allow-overclock-flash, --tune-first, --no-fps
 IMG_PASS_S = 25.0                          # one whole-image pass (14 banks) at the stock clock, first guess: refined by the first run
 FL_CYCLE_S = 3.0                           # one flash erase + 4 KB program + 2 read-backs, first guess: refined by the first run
 
@@ -487,6 +488,8 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
     n_bad = n_fail + sum(seen.values()) - max(seen.values(), default=0)          # failed reads + blocks differing from the commonest block
     say(f"  info link blocks: {len(seen)} distinct, counts {sorted(seen.values(), reverse=True)[:4]}, {n_fail} reads failed; first {[k.hex() for k in list(seen)[:3]]}")
     chk("link", n_bad == 0, f"{RT_READS} block reads of 24 B in {ck.now() - t0:.2f} s, {n_bad} failed / differing; elapsed at every 50th read {laps}")
+    if OPTS["rb"] and not ctx.sim:
+        RB.probe(ctx.dev.io, name, res, say)
     a0, t0 = be(ck.rd(C_NOW, 2), 0, 2), ck.now()
     wait(ck, WALL_S)
     a1, t1 = be(ck.rd(C_NOW, 2), 0, 2), ck.now()
@@ -536,7 +539,7 @@ def run_step(ctx, name: str, ck_checks: bool = True) -> dict | None:
 
 
 def tsv(row: dict) -> None:
-    keys = ["step", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "fail"]
+    keys = ["step", "rb_stale", "rb_elig", "rb_bad", "pll_mhz", "mcu", "spi", "dual", "pass", "fl_done", "fl_fail", "fl_bad", "fl_erase_ms", "fl_prog_ms", "img_bad", "img_ms", "crc_ms", "alu_ms", "miss_ms", "ref", "misses", "scope2_fps", "s2_miss_frame", "ast_fps", "fail"]
     TSV.parent.mkdir(parents=True, exist_ok=True)
     new = not TSV.exists()
     with TSV.open("a") as f:
@@ -576,9 +579,10 @@ def main() -> int:
     ap.add_argument("--allow-overclock-flash", action="store_true", help="allow the oc* steps: SPI above the MX25L8006E fast-read rating (86 MHz); never write / erase there (the fw refuses)")
     ap.add_argument("--tune-first", action="store_true", help="write the FF6C latch / delay tune at the stock clock, before the dividers change")
     ap.add_argument("--no-fps", action="store_true", help="skip the Scope 2 / Asteroids frame-rate part")
+    ap.add_argument("--rb-probe", action="store_true", help="per step: count stale first reads of new dwords on the read-behind pages (debug slave byte path)")
     ap.add_argument("steps", nargs="+")
     a = ap.parse_args()
-    OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, fps=not a.no_fps)
+    OPTS.update(allow_oc=a.allow_overclock_flash, tune_first=a.tune_first, fps=not a.no_fps, rb=a.rb_probe)
     keep = 0
     for nm in [x for x in a.keep.split(",") if x]:
         if nm not in DIV_NAMES:

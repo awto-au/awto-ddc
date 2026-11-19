@@ -1338,12 +1338,12 @@ def cmd_osd_hw_test(extra: list[str]) -> int:
 
 
 @command("MCU / flash clock sweep at run time (image built with -D _AWTO_OSD_HWTEST; docs/clock-sweep.md): STEP names or all-mcu / all-flash / all-175, --sim runs it in the firmware sim",
-         args="[--unit N] [--map F] [--sim] [--continue-on-fail] [--max-m2pll-mhz N] [--keep NAMES] [--override NAME=VAL] [--retry] [--stop-after N] [--allow-overclock-flash] [--tune-first] [--no-fps] STEP...", kind="action")
+         args="[--unit N] [--map F] [--sim] [--continue-on-fail] [--max-m2pll-mhz N] [--keep NAMES] [--override NAME=VAL] [--retry] [--stop-after N] [--allow-overclock-flash] [--tune-first] [--no-fps] [--rb-probe] STEP...", kind="action")
 def cmd_clk_sweep(extra: list[str]) -> int:
     _n, u = _unit(extra)
     given = _opt(extra, "--map")
     sim, cont = _flag(extra, "--sim"), _flag(extra, "--continue-on-fail")
-    more = [f for f in ("--allow-overclock-flash", "--tune-first", "--no-fps") if _flag(extra, f)]
+    more = [f for f in ("--allow-overclock-flash", "--tune-first", "--no-fps", "--rb-probe") if _flag(extra, f)]
     pll_opts = []
     for flag in ("--max-m2pll-mhz", "--keep", "--override", "--stop-after"):
         v = _opt(extra, flag)
