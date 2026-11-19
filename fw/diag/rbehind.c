@@ -15,14 +15,14 @@ static const __code BYTE tAwtoRbSlot[AWTO_RB_LAST_PAGE - AWTO_RB_FIRST_PAGE + 1]
 
 static __xdata WORD s_ausAwtoRbLast[AWTO_RB_SLOTS]; // last dword index (addr >> 2) read per page
 __xdata BYTE g_aucAwtoRbCount[2];                   // [0] dummy reads done, [1] dummy != re-read (the artifact seen from the firmware; dbg-read g_aucAwtoRbCount)
-volatile __xdata BYTE g_ucAwtoRbDirty = 1;          // set by the debug slave ISR: its reads move the page cache
+volatile __xdata BYTE isr_g_ucAwtoRbDirty = 1;          // set by the debug slave ISR: its reads move the page cache
 
 void AwtoRbPrime(WORD usAddr)
 {
     BYTE ucStale;
     BYTE ucSlot = tAwtoRbSlot[(BYTE)(usAddr >> 8) - AWTO_RB_FIRST_PAGE];
 
-    if(g_ucAwtoRbDirty != 0)
+    if(isr_g_ucAwtoRbDirty != 0)
     {
         BYTE ucI;
 
@@ -30,7 +30,7 @@ void AwtoRbPrime(WORD usAddr)
         {
             s_ausAwtoRbLast[ucI] = AWTO_RB_NO_DWORD;
         }
-        g_ucAwtoRbDirty = 0;
+        isr_g_ucAwtoRbDirty = 0;
     }
     if(ucSlot != 0)
     {

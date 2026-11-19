@@ -35,7 +35,7 @@
 #define AWTO_RB_PRIME(usAddr)                       (AWTO_RB_LISTED(usAddr) ? AwtoRbPrime((WORD)(usAddr)) : (void)0)
 #endif
 extern void AwtoRbPrime(WORD usAddr);
-extern volatile BYTE xdata g_ucAwtoRbDirty;
+extern volatile BYTE xdata isr_g_ucAwtoRbDirty;
 #define ScalerSetBit(usAddr, ucAnd, ucOr)           (*((volatile BYTE xdata *)(usAddr)) = (*((volatile BYTE xdata *)(usAddr)) & (ucAnd)) | (ucOr))
 #define ScalerGetBit(usAddr, ucAnd)                 (AWTO_RB_PRIME(usAddr), (*((volatile BYTE xdata *)(usAddr)) & (ucAnd)))
 #define ScalerGetByte(usAddr)                       (AWTO_RB_PRIME(usAddr), (*((volatile BYTE xdata *)(usAddr))))
