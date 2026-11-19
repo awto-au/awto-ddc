@@ -78,7 +78,16 @@ static void ddc_request(const BYTE *b, int n) /* b = full message from 0x51 on *
     len = b[1] & 0x7F;
     if (len == 0) { lg("DDC/CI null message"); g_replylen = 0; return; }
     switch (b[2]) {
-    case 0x01: { /* get VCP */
+    case 0x01: { /* get VCP, or the factory-serial probe FE EF 13 00 00 20 (real 288E2 reply: 6E 8D <13 ASCII> chk) */
+        if (len == 7 && b[3] == 0xFE && b[4] == 0xEF && b[5] == 0x13) {
+            int k; BYTE c = 0x50;
+            g_reply[0] = 0x6E; g_reply[1] = 0x80 | 13;
+            for (k = 0; k < 13; k++) g_reply[2 + k] = g_edid[0x4D + k]; /* EDID serial descriptor text */
+            for (k = 0; k < 15; k++) c ^= g_reply[k];
+            g_reply[15] = c; g_replylen = 16;
+            lg("DDC/CI serial probe -> 13 ASCII bytes from EDID descriptor");
+            break;
+        }
         BYTE c = b[3]; body[0] = 0x02;
         if (!g_vcp[c].present) { body[1] = 1; body[2] = c; body[3] = 0; memset(body + 4, 0, 4); lg("DDC/CI GetVCP 0x%02X -> unsupported", c); }
         else { body[1] = 0; body[2] = c; body[3] = (BYTE)g_vcp[c].type;
