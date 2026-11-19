@@ -28,7 +28,7 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - `i2cdetect -y -r 10` found 0x30, 0x37, 0x4a, 0x4b, 0x50; negative controls 0x44 and 0x6e NACK, so the ACKs are real
 - Roles (established 2026-11-19):
   - 0x30 E-DDC segment pointer, 0x37 DDC/CI, 0x3A HDCP, 0x50 EDID
-  - 0x54 HDMI 2.0 SCDC (Linux `drm_scdc_helper.c`, `SCDC_I2C_SLAVE_ADDRESS` 0x54); our read `00 01 00..` = SINK_VERSION 1. SCDC regs: 0x01 sink version, 0x02 source version, 0x10 update flags, 0x20 TMDS_CONFIG, 0x21 scrambler status, 0x30 / 0x31 config, 0x40 status flags, 0x50..0x5A error counters, 0xD0.. OUI. Never write SCDC
+  - 0x54 HDMI 2.0 SCDC (Linux `drm_scdc_helper.c`, `SCDC_I2C_SLAVE_ADDRESS` 0x54); our read `00 01 00..` = SINK_VERSION 1. SCDC regs: 0x01 sink version, 0x02 source version, 0x10 update flags, 0x20 TMDS_CONFIG, 0x21 scrambler status, 0x30 / 0x31 config, 0x40 status flags, 0x50..0x5A error counters, 0xD0.. OUI. SCDC writes: deliberate only, with Dan's word
   - 0x4A = Realtek ISP slave, no register auto-increment (RTD2660 manual p350; ISP enter = write 0x80 to reg 0x6F; ghent360 / Adafruit RTD266X / KerJoe RTDMultiProg all use 0x4A)
   - 0x4B = ISP slave WITH auto-increment (`Adafruit_RTD266x_Firmware` `RTD266xISP.h` `ISP_INCREMENT_ADDRESS` 0x4B); reads the `FFxx` window (`FFEC` / `FFED` snapshot); "external registers require ISP mode" (RTD2660 p316)
   - RTD2660 (older family) `FF23` = slave address (bits 7:1) + CH_SEL bit 0 (0 ADC DDC, 1 DDC2) [third-party source; may not apply to the 2795T]
@@ -95,8 +95,21 @@ Tracking issue: https://github.com/awto-au/awto-ddc/issues/1
 - [ ] Try DDC/AUX ISP read with the vendor tool (Windows, outside this box)
 - [ ] Dump flash before any write
 
-## Philips 288E2 (the PC's other monitor, `card2-DP-2`, checked 2026-11-05)
-- Not Realtek: DDC/CI VCP 0xC8 (display controller type) reports MStar, controller 0x16, firmware 1.0; its capabilities string has no `RTK` model [measured, ddcutil].
-- Debug port: not determinable from the PC side. On DP the I2C runs over AUX, which acknowledged every address (same reply for 0x4A, 0x35 and a nonsense address), so probing says nothing [measured]. The Realtek ISP/debug protocol would not apply to an MStar chip anyway.
-- Identity: Philips 288E2, serial UK52307000611, week 7/2023, 4K60 native. EDID saved at `tmp/philips/edid.bin` (not tracked).
-- Never touch it with our tools: it is Dan's own display. Excluded from all flash/DDC test scripts by EDID serial.
+## Philips 288E2 (the PC's other monitor, `card2-DP-2`, probed read-only 2026-11-19)
+- Read-only probes allowed any time (Dan, 2026-11-19); writes, hidden/factory codes, ISP/flash, power commands still need his word. Raw output: `tmp/philips/20261119-*` (untracked); scan script `scripts/philips_probe.py`.
+- Identity [measured]: EDID model 0xC231 (49713), name `PHL 288E2`, serial `UK52307000611`, week 7/2023, 4K60 native (533.25 MHz DTD), also 2560x1440 / 1920x2160 DTDs in CTA block; EDID 1.4, 10 bpc, DP; CTA-861 rev 3, 2ch LPCM audio; no DisplayID, no HDR static metadata block, no VRR (range 40-60 Hz). Identical to the 2026-11-05 `edid.bin`. No panel-EDID comparison done (panel-edid.md covers our panels only).
+- Chip [measured, DDC]: VCP 0xC8 = Mstar (sl=0x05), controller mh=0xff ml=0x16; 0xC9 firmware 1.0; MCCS 2.2 (0xDF); caps `model(288E2)`, `asset_eep(40)`, `mswhql(1)`. No RTK model, so not Realtek. Same `0xFF16` as another MStar monitor in [web] github.com/memues/mstar-monitor-firmware-dumper. Exact part (TSUM/MST/MSD/MT9xxx) [unknown].
+- VCP scan 0x00..0xFF, 2026-11-19, ddcutil 1 transaction each, 0 errors, all first-try [measured]:
+  - Standard readable: 0B 0C 10 (100/100) 12 (50/100) 14 (6500K) 16/18/1A (100) 1E 20 30 52 54 60 (DP-1 0x0F) 62 (84) 6C/6E/70 (50) 72 (0x78) 86 (0x02) 8D 95-98 A5 AA AC (2228 Hz) AE (59.99) B6 (LCD) C0 (13769 h) C6 (0x006f) C8 C9 CA CC D6 DA DC DF.
+  - Write-only (not readable): 01 04 05 06 08 0A 76 8B A2 B0 CF.
+  - Manufacturer-specific readable (mh ml sh sl): E0 00 04 00 03 | E6 00 01 00 01 | E7 00 64 00 32 | E9 00 02 00 02 | EB 00 03 00 00 | EC 04 03 00 00 | EF 00 FF 00 FF | F0 00 01 00 00 | F7 00 42 00 42 | FA FF FF 00 00 | FB 00 FF 00 05 | FC 00 FF 00 02 | FD 00 FF 00 02 | FE FF FF 00 00. Also readable but absent from the capabilities string: 0x68 (00 05 00 00), 0xA8 (00 03 00 00), 0xE6.
+  - Everything else: Unsupported feature code. F6 and FF are in the capabilities but not readable (not scanned as supported).
+- DDC/CI timing [measured]: ddcutil `--stats` 4 write-read exchanges, all succeeded on try 1, 0 IO errors. Reply delay itself not isolated (ddcutil sleeps per spec).
+- DPCD / AUX identity [unknown]: host GPU for DP-2 is the NVIDIA proprietary driver; `/sys/kernel/debug/dri/2/DP-2` has no DPCD node and the only `/dev/drm_dp_aux0` belongs to the Intel i915 DP-1 (AWT26110002), not the Philips. Branch/sink OUI and device string not readable from this host without another GPU or a DP AUX sniffer.
+- Debug port: not determinable from the PC side. DP I2C-over-AUX acknowledged every address (2026-11-05), so address probes say nothing [measured]. Candidates [web/guess]:
+  - MStar scaler ISP/debug is I2C address 0x49 on the DDC channel, entered with the "MSTAR" magic string; flashrom `mstarddc_spi` reads the SPI flash over it [web, memues dumper: tested on HDMI]. Whether it is reachable through the DP AUX path of this monitor [unknown].
+  - A UART/ISP header on the board is the usual MStar bring-up route [guess]; no teardown or board photos of the 288E2 found.
+- Hidden VCP codes [web]: none documented for 288E2. TPV/MMD support states they do not document VCP codes (ddcutil discussion #642, Philips Evnia, 2026-09). Method (the plan, in progress: `docs/monitors/smartcontrol-wine.md`): run Philips SmartControl under Wine against an emulated monitor and log DDC/CI / VCP calls; rockowitz "Reverse Engineering Proprietary DDC Extensions" (rockowitz "Reverse Engineering Proprietary DDC Extensions"). Service menu on AOC (TPV brand): unplug, hold MENU, plug in [web, reddit r/ultrawidemasterrace, unverified for this model].
+- Firmware [web]: no 288E2 firmware updater found in the search; Philips offers SmartControl-based updates for some models (tv-sound-monitors.philips.com article "firmware update via SmartControl") [unverified for 288E2].
+- Still unknown: exact scaler part, DPCD identity, board photos, flash chip, UART pins, whether the ISP address answers over DP.
+- It is Dan's own display. Excluded from all flash/DDC test scripts by EDID serial. Issue #136.

@@ -10,5 +10,8 @@
   - `clock-scaling-review.md` (2026-11-19): what depends on the MCU / flash / timer clock at 350.8 / 116.9 MHz.
   - `read-behind-research.md` (2026-11-19): read-behind latch, internet + SDK + local research.
   - `monitors/mstar-vs-realtek.md` (2026-11-19): MStar vs Realtek monitor scalers.
+  - `monitors/mstar-scaler-capabilities.md`: MStar scaler capabilities.
+  - `monitors/smartcontrol-wine.md`: Philips SmartControl emulation under Wine (dxva2/nvapi shims, `../tools/smartcontrol_dxva2/`).
+  - Philips probe: `../scripts/philips_probe.py`, `philips_raw_ddc.py`, `smartcontrol_probe.py` (section in `monitors/README.md`).
   - Read-behind cause tooling: `../scripts/reg_behind_cause.py`, `reg_behind_fix.py`, `reg_behind_indirect.py` (notes in `../re/regmap/README.md`, `live-register-scan.md`).
 - Open items: `open-decisions.md`. Superseded one-liners: `history.md`.
