@@ -121,7 +121,7 @@ def attach(run, im, mapp):
     return pr
 
 
-B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # neither takes an argument: Loops runs d_isr_g_ucDelay5usN_Call (Base - 2); Xus runs d_isr_g_ucDelayXus_Counter outer passes of the 4 us base
+B_FUNCS = ("AwtoDelayLoops", "AwtoDelayXus")      # neither takes an argument: Loops runs d_g_ucDelay5usN_Call (Base - 2); Xus runs d_isr_g_ucDelayXus_Counter outer passes of the 4 us base
 HOT_CALLS = 20                    # a routine group is judged against the upper bound from this many calls on (fewer = cold code fetch after another state)
 
 
