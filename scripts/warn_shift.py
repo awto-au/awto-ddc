@@ -42,7 +42,7 @@ def main() -> int:
     for f, ws in warns.items():
         idx = [i for i, p in enumerate(parsed) if len(p) > 3 and p[1] == f and p[2].isdigit()]
 
-        def hit(i, line):
+        def hit(i, line, ws=ws):
             return any(w_line == line and re.search(parsed[i][0], w_txt) for w_line, w_txt in ws)
         stale = [i for i in idx if not hit(i, int(parsed[i][2]))]
         unrev = [(wl, wt) for wl, wt in ws if not any(int(parsed[i][2]) == wl and re.search(parsed[i][0], wt) for i in idx)]

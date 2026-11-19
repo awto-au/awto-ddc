@@ -424,7 +424,7 @@ def main() -> int:
     for m in mods:
         idx = {id(c): i for i, c in enumerate(m.chunks)}
         p = tmp / f"{m.name}.asm"
-        p.write_text(render(m, lambda c: f"S{idx[id(c)]}", {}, {}))
+        p.write_text(render(m, lambda c, idx=idx: f"S{idx[id(c)]}", {}, {}))
         sz = assemble(p)
         for c in m.chunks:
             c.size = sz.get(f"S{idx[id(c)]}", 0)

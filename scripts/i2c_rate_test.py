@@ -80,8 +80,8 @@ def read_block_chunks(bus: i2cbus.Bus) -> bytes:
         a = BASE + off
         X._seq = (X._seq + 1) & 0xFF
         seq, rep = X._seq, []
-        for what, fn in (("write", lambda: bus.write(SLAVE, X.CMD_BLOCK, X.chunk_cmd(a, n, seq))),
-                         ("read", lambda: rep.append(bus.read(SLAVE, READ_SUB, n + 1)))):
+        for what, fn in (("write", lambda a=a, n=n, seq=seq: bus.write(SLAVE, X.CMD_BLOCK, X.chunk_cmd(a, n, seq))),
+                         ("read", lambda rep=rep, n=n: rep.append(bus.read(SLAVE, READ_SUB, n + 1)))):
             try:
                 fn()
             except OSError as e:

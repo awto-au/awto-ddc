@@ -23,6 +23,7 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
+from types import SimpleNamespace
 
 import isostamp
 
@@ -83,9 +84,7 @@ def main():
         try:
             if use_pw:
                 n, hx, head = pw_download(url, dest)
-                class _H:  # same .hexdigest() interface as hashlib
-                    def hexdigest(self): return hx
-                h = _H()
+                h = SimpleNamespace(hexdigest=lambda hx=hx: hx)   # same .hexdigest() interface as hashlib
             else:
                 req = urllib.request.Request(url, headers={"User-Agent": UA})
                 h = hashlib.sha256(); n = 0

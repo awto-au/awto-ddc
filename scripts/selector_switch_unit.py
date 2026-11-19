@@ -123,7 +123,7 @@ def case(u, frm, to, how, seen):
         if u.item() == ITEM[to]:
             break
         i0 = u.item()
-        u.press(K.K_SOURCE, "SOURCE (step)", lambda: u.item() != i0)
+        u.press(K.K_SOURCE, "SOURCE (step)", lambda i0=i0: u.item() != i0)
     if u.item() != ITEM[to]:
         u.check(f"{frm} -> {to} by {how}: highlight reaches {to}", False, f"item {u.item()}")
         return seen

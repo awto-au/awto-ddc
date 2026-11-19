@@ -208,14 +208,14 @@ def main() -> int:
             for p, t in files.items():
                 if fn is None:
                     t2 = re.sub(r"\b((?:static|extern)\s+)?((?:volatile\s+)?)bit(\s+)" + re.escape(cn) + r"\b",
-                                lambda m: f"{m.group(1) or ''}{m.group(2)}__xdata _Bool{m.group(3)}{base}", t) if p.suffix != ".py" else t
+                                lambda m, base=base: f"{m.group(1) or ''}{m.group(2)}__xdata _Bool{m.group(3)}{base}", t) if p.suffix != ".py" else t
                     t2 = word(cn).sub(base, t2) if p.suffix != ".asm" else t2
                     t2 = word("_" + cn).sub("_" + base, t2) if p.suffix in (".asm", ".py") else t2
                 else:
                     sp = body_span(t, fn) if p.suffix in (".c", ".inc") else None
                     if not sp:
                         continue
-                    body = re.sub(r"\bbit(\s+)" + re.escape(cn) + r"\b", lambda m: f"_Bool{m.group(1)}{base}", t[sp[0]:sp[1]])
+                    body = re.sub(r"\bbit(\s+)" + re.escape(cn) + r"\b", lambda m, base=base: f"_Bool{m.group(1)}{base}", t[sp[0]:sp[1]])
                     t2 = t[:sp[0]] + word(cn).sub(base, body) + t[sp[1]:]
                 if t2 != t:
                     files[p] = t2; hit = True

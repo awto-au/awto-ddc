@@ -777,7 +777,7 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                 cw = {"1bit": ch["width"] if 0 < ch["width"] < gw else gw, "2bit": GW}.get(ch["kind"], ch["width"] or GW)   # = the advance below
                 cell(fx + x * sx, fy + y * sy, cw, row["h"])
                 if ch["kind"] == "1bit":
-                    bits = memo(("g1", ch["id"]), lambda: glyph_bits(st, g, ch["id"]))
+                    bits = memo(("g1", ch["id"]), lambda ch=ch: glyph_bits(st, g, ch["id"]))
                     w = ch["width"] if 0 < ch["width"] < gw else gw
                     c0 = {0: (gw - w + 1) // 2, 1: 0, 2: gw - w}.get(g["zone"], 0)
                     bits = bits[:, c0:c0 + w]
@@ -795,14 +795,14 @@ def render(st: OsdState, W: int = 3840, H: int = 2160, bg=(128, 128, 128), alpha
                         paint(fx + x * sx, fy + y * sy, np.ones((row["h"] * sy, bw * sx), bool), st.pal[bcol], a_cbg, 2)
                     x += bw
                 elif ch["kind"] == "4bit":                           # bit planes; palette index = pixel value, 0 transparent [guess, QC palette sets 0]
-                    lv = memo(("g4", ch["id"]), lambda: glyph_levels4(st, g, ch["id"], opt.plane4_lsb))
+                    lv = memo(("g4", ch["id"]), lambda ch=ch: glyph_levels4(st, g, ch["id"], opt.plane4_lsb))
                     px, py = fx + x * sx, fy + y * sy
                     paint(px, py, up(lv == 0), st.pal[ch["bg"]], a_cbg, 2)   # background pixels = the command's background colour, index 0 included
                     for v in range(1, 16):
                         paint(px, py, up(lv == v), st.pal[v], a_fg)
                     x += GW
                 elif ch["kind"] == "2bit":
-                    lv = memo(("g2", ch["id"]), lambda: glyph_levels2(st, g, ch["id"]))
+                    lv = memo(("g2", ch["id"]), lambda ch=ch: glyph_levels2(st, g, ch["id"]))
                     px, py = fx + x * sx, fy + y * sy
                     for v in range(4):
                         ci = ch["cols"][v]

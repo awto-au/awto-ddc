@@ -188,7 +188,7 @@ def check_decode(k):
             continue                                            # POWER would power the sim off: decode of P3.0 is checked on the open screen
         want = model(a0, a1, p3)
         k.put(a0, a1, p3)
-        st, el = k.until("KEY", lambda s: s["a0"] == a0 and s["a1"] == a1 and s["mask"] == want, KEY_MS)
+        st, el = k.until("KEY", lambda s, a0=a0, a1=a1, want=want: s["a0"] == a0 and s["a1"] == a1 and s["mask"] == want, KEY_MS)
         k.dwell(STABLE_MS)                                      # an out-of-band value must not hit late
         st = k.state(False)
         chk(f"decode A0={a0:02X} A1={a1:02X} P3.0={p3}", el is not None and st["mask"] == want and st["a0"] == a0 and st["a1"] == a1,
@@ -461,7 +461,7 @@ def main():
             st, el = k.until("PS", lambda st: st["mode"] == MODE_PS, PS_MS)
             chk(f"D6 off -> power saving (before {what})", el is not None, f"mode {st['mode']} in {el} ms")
             k.put(a0, a1, p3)
-            k.until("KEY", lambda st: st["mask"] == mask, KEY_MS)
+            k.until("KEY", lambda st, mask=mask: st["mask"] == mask, KEY_MS)
             st, el = k.until("WAKE", lambda st: st["mode"] == MODE_ACTIVE, WAKE_MS)
             k.put(*IDLE)
             k.until("KEY", lambda st: st["mask"] == 0, KEY_MS)

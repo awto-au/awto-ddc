@@ -60,7 +60,7 @@ def main() -> int:
         log(f"single read 0x6F: {ms(timeit(lambda: isp.read(0x6F), 30))}")
         for n in (2, 4, 8, 16):
             ops = [bytes([0x64 + (i & 1), i]) for i in range(n)]
-            t = timeit(lambda: run(ops), 10)
+            t = timeit(lambda ops=ops: run(ops), 10)
             log(f"{n} writes in one ioctl: {ms(t)} total, {ms(t / n)} per message")
         # auto-increment: write [0x64, AA, BB], read back 0x64, 0x65 on 0x4A and 0x4B
         for addr in (0x4A, 0x4B):

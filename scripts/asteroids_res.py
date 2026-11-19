@@ -109,7 +109,7 @@ def render(names, seconds: float) -> int:
         base = rws + 1 + cells
         tiles = {}
 
-        def tap(mm, r):
+        def tap(mm, r, base=base, cols=cols, tiles=tiles, pix=pix):
             cell = (r["a1"] - base) // 9
             row = cell // cols % 6                                  # canvas tile row of the band
             tiles[cell] = bytes(mm.rd(pix + row * TILE_B, TILE_B))

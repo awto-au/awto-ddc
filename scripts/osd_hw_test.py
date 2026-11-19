@@ -274,7 +274,7 @@ def dump(dev, start: int, words: int, hold: int) -> bytes:
     per = BUF // WORD_B
     for a in range(start, start + words, per):
         k = min(per, start + words - a)
-        rd = lambda: op(dev, OP_READ, lim_read(k * WORD_B), flags=hold, addr=a, n=k, label="dump")["buf"][:k * WORD_B]
+        rd = lambda k=k, a=a: op(dev, OP_READ, lim_read(k * WORD_B), flags=hold, addr=a, n=k, label="dump")["buf"][:k * WORD_B]
         got = [rd(), rd()]
         while got[-1] != got[-2] and len(got) < READ_TRIES:
             got.append(rd())

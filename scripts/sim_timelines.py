@@ -67,7 +67,7 @@ def table(sim, pa: Path, la, pb: Path, lb):
             f = lambda ls: sum(1 for _, x in ls if PIN_EDGE.search(x))
             say(f"    {name:22s} {f(la):>6} | {f(lb):>6}")
             continue
-        f = lambda ls: next((t for t, x in ls if _re.search(pat, x)), None)
+        f = lambda ls, pat=pat: next((t for t, x in ls if _re.search(pat, x)), None)
         va, vb = f(la), f(lb)
         say(f"    {name:22s} {'-' if va is None else va:>6} | {'-' if vb is None else vb:>6}")
 

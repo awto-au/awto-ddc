@@ -691,7 +691,7 @@ def equiv(good, bad):
                     if gb[o:o + 2] == bb[o:o + 2]:
                         continue
                     for order in ("BE", "LE"):
-                        f = (lambda d: d[o] << 8 | d[o + 1]) if order == "BE" else (lambda d: d[o + 1] << 8 | d[o])
+                        f = (lambda d, o=o: d[o] << 8 | d[o + 1]) if order == "BE" else (lambda d, o=o: d[o + 1] << 8 | d[o])
                         x = symbolize(good, gs, g["reg"], f(gb))
                         y = symbolize(bad, bs, b["reg"], f(bb))
                         if x and y and x == y:

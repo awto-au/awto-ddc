@@ -159,7 +159,7 @@ def parse(d, db):
         if t[3] != PAD or t[75] != PAD or t[72] not in (0, 0xFF):
             warn["tail"] += 1
         p = dict(idx=i, pin=name, port=port, volt=volt, T=t)
-        u16 = lambda o: t[o] | t[o + 1] << 8
+        u16 = lambda o, t=t: t[o] | t[o + 1] << 8
         p["prio"] = bits(u16(4), t[6], t[7])
         p["prio_sel"] = [j for j in range(9) if t[8 + j]]
         p["caps"] = t[20]

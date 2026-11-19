@@ -400,7 +400,7 @@ def main():
             if g and g.group(1) in gsub:
                 continue                                    # symbol no longer exists
             if rx and not line.lstrip().startswith(";"):
-                line2 = rx.sub(lambda mm: table[mm.group(1)], line)
+                line2 = rx.sub(lambda mm, table=table: table[mm.group(1)], line)
                 used |= line2 != line
                 line = line2
             new.append(line)

@@ -320,7 +320,7 @@ def tones(a, u: Unit) -> int:
         pr = subprocess.Popen(["aplay", "-q", "-D", dev, str(p)], stderr=subprocess.PIPE, text=True)
         if nm == "both":
             time.sleep(min(1.0, a.secs / 3))   # stream running and DVC unmuted before the readback
-            u.session(lambda rio: u.regs(rio, f"during {nm} tone"))
+            u.session(lambda rio, nm=nm: u.regs(rio, f"during {nm} tone"))
         try:
             _, err = pr.communicate(timeout=a.secs * APLAY_LIMIT_S + 2)
         except subprocess.TimeoutExpired:
@@ -476,7 +476,7 @@ def main() -> int:
             for k, (what, ao, hp, en) in enumerate(OUTS):
                 if k:
                     time.sleep(GEN_GAP_S)
-                u.session(lambda rio: (u.wr(rio, AOUT_CTRL, ao), u.wr(rio, HPOUT_CTRL, hp), u.wr(rio, amp, en)))
+                u.session(lambda rio, ao=ao, hp=hp, en=en: (u.wr(rio, AOUT_CTRL, ao), u.wr(rio, HPOUT_CTRL, hp), u.wr(rio, amp, en)))
                 rb = u.session(lambda rio: [u.rd(rio, x) for x in (AOUT_CTRL, HPOUT_CTRL, amp)])
                 say(f"OUT {k + 1} START {time.strftime('%H:%M:%S')} ({a.secs:.0f} s, {a.hz} Hz both channels): {what}; "
                     f"read back 06C6 {rb[0].hex() if rb[0] else '?'} 06C7 {rb[1].hex() if rb[1] else '?'} P7.4 {rb[2][0] & 1 if rb[2] else '?'}")
@@ -492,7 +492,7 @@ def main() -> int:
             for k, x in enumerate(a.pokes):
                 if k:
                     time.sleep(GEN_GAP_S)
-                u.session(lambda rio: u.wr(rio, MUX_ANA_OUT, int(x, 16)))
+                u.session(lambda rio, x=x: u.wr(rio, MUX_ANA_OUT, int(x, 16)))
                 ddc_vcp(GEN_VCP, 1)
                 t_amp = u.session(lambda rio: amp_wait(u, rio))
                 note = f"amp on {t_amp * 1000:.0f} ms after the VCP" if t_amp is not None else ""
@@ -502,7 +502,7 @@ def main() -> int:
                     note = f"amp NOT on within {AMP_WAIT_S} s: P7.4 forced 1 by debug poke ({'ok' if ok else 'FAILED'})"
                 say(f"GEN sine (chip generator) START {time.strftime('%H:%M:%S')}, 06E0 = {x.upper()} ({a.secs:.0f} s), {note}")
                 time.sleep(min(1.0, a.secs / 3))
-                u.session(lambda rio: u.regs(rio, f"generator on, 06E0 = {x}"))
+                u.session(lambda rio, x=x: u.regs(rio, f"generator on, 06E0 = {x}"))
                 time.sleep(max(0.0, a.secs - min(1.0, a.secs / 3) - REGS_READ_S))
                 ddc_vcp(GEN_VCP, 0)
                 say(f"GEN sine END {time.strftime('%H:%M:%S')}")

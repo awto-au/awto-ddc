@@ -193,10 +193,10 @@ def main() -> int:
             sfx = suffix(st, k)
             if (out / f"{st}{sfx}.asm").exists():
                 continue                                    # one-owner stems share the plain name
-            txt = TOKEN.sub(lambda x: maps[k].get(x.group(0), x.group(0)), done[st])
+            txt = TOKEN.sub(lambda x, k=k: maps[k].get(x.group(0), x.group(0)), done[st])
             txt = re.sub(r"\.area\s+OSEG\s+\(OVR,DATA\)", ".area DSEG    (DATA)", txt)   # OVR would share IRAM with the original
             txt = re.sub(r"\.area XSEG \(XDATA\)", ".area XSEG    (XDATA)", txt)   # inline-asm spelling; fw_build.split_xseg
-            txt = re.sub(r"^(\s+\.module\s+)(\S+)", lambda x: f"{x.group(1)}{x.group(2)}{sfx}", txt, flags=re.MULTILINE)
+            txt = re.sub(r"^(\s+\.module\s+)(\S+)", lambda x, sfx=sfx: f"{x.group(1)}{x.group(2)}{sfx}", txt, flags=re.MULTILINE)
             (out / f"{st}{sfx}.asm").write_text(txt)
             log(f"clone {st}{sfx}.asm (priority class '{k or 'low'}'; reached by {[o or 'low' for o in owners[st]]})")
     log(f"cloned helper files: {live}; skipped (no state): {keep}")
@@ -223,7 +223,7 @@ def main() -> int:
             new = []
             for l in c.lines:
                 code, sep, cmt = l.partition(";")
-                new.append(TOKEN.sub(lambda x: mapping.get(x.group(0), x.group(0)), code) + sep + cmt)
+                new.append(TOKEN.sub(lambda x, mapping=mapping: mapping.get(x.group(0), x.group(0)), code) + sep + cmt)
             c.lines = new
             changed[m.name].add(c.name)
             used[m.name] |= {mapping[h] for h in hit}

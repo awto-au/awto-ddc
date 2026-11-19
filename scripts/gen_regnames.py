@@ -155,7 +155,7 @@ def migrate(root, db, files):
     for p in files:
         txt = p.read_text(errors="replace")
 
-        def sub(m):
+        def sub(m, p=p):
             nonlocal n
             a = int(m.group(2), 16)
             if a not in by_addr:
