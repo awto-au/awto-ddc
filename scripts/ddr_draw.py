@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ddr_frame_test as T  # noqa: E402
 import ddr_freeze_test as F  # noqa: E402
+import sw_timeline as SW  # noqa: E402
 
 OPS = {"fill": 1, "hline": 2, "vline": 3, "grid": 4, "circle": 5, "figure": 6, "bars": 7, "frame": 8, "gradh": 9, "gradv": 10, "masktest": 11}
 # StAwtoDraw (fw/test/ddr_draw.c), big endian
@@ -117,7 +118,7 @@ def main() -> int:
     d = T.Dbg(a.unit, a.bus)
     proc, t_on = None, time.monotonic()
     try:
-        dr = Draw(d, T.sym(a.map, "g_stAwtoDraw"))
+        dr = Draw(d, SW.sym(a.map, "g_stAwtoDraw"))
         if not a.no_prep:
             F.frame_mode(d.io)
             proc = F.pattern_start("solid 0 0 0")
