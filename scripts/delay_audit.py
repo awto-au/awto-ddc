@@ -60,6 +60,14 @@ HAND = {
     ("ScalerCommonSync.c", "ScalerSyncDdcDetectDebounce_EXINT1"): ("C", "counted for loop: _TMDS_DDC_DEBOUNCE_NORMAL passes of 100.5 clk", "yes, count follows the clock", "OK",
                                                                  "count = AWTO_CPU_KHZ_M2PLL / 381: 263.6 us at both clocks [emu] (SDK comment says 300 us [sdk-hypothesis]); _PS = 55 unchanged"),
 }
+# HWTEST-only loops (fw/test/testcmd.c, -D _AWTO_OSD_HWTEST / clock sweep): the inventory attributes them to one function, so keyed by (file, statement)
+HAND_STMT = {
+    ("testcmd.c", "while(ucH != TH2);"): ("C", "re-read of Timer2 high byte, at most 2 passes (rollover between the two reads)", "no", "NOCLOCK", "test op; bounded by the counter, not a wait"),
+    ("testcmd.c", "while((TF2 == 0) && (usSpin > 0))"): ("C", "wait for Timer2 overflow, bound AWTO_CLK_TICK_SPIN passes", "yes", "SCALES-BENIGN",
+                                                       "clock-sweep test op: the bound only ends a dead timer; the caller reports the tick missing; production unaffected"),
+    ("testcmd.c", "while(((MCU_FFF3_SCA_INF_CONTROL & _BIT3) != 0) && (--ucLeft > 0))"): ("C", "burst-write restart, at most AWTO_OSW_BURST_RESTARTS passes, each ended by the hardware", "no", "NOCLOCK",
+                                                                                          "OSD write-sweep test op: the hardware ends the burst; the restart count is reported to the host"),
+}
 PARAM_D = re.compile(r"PANEL|VCCK|DDR_POWER|DEPOP|HPD|ZCD|AUX_REPLY|_POWER_OFF|WAITING_FOR_PANEL")
 PARAM_E = re.compile(r"AWTO|OSD_TIMEOUT|DDCCI_TIMEOUT|SEARCH_TIME|WAIT_TIME_TO_ACTIVE|_SOURCE_")
 
@@ -118,6 +126,10 @@ def classify(key: str, r: dict) -> dict:
     kind, name = r["kind"], r["file"].split("/")[-1]
     d = {"class": "", "derivation": "", "scales_2x": "no", "wall_87_7": "", "wall_350_8": "", "spec": "", "evidence": "[emu]", "verdict": "UNKNOWN", "note": ""}
     v = r["value"] if r["units"] in ("ms", "us") else ""
+    if (name, norm(r["stmt"])) in HAND_STMT:
+        c, der, sc, ver, note = HAND_STMT[(name, norm(r["stmt"]))]
+        d.update({"class": c, "derivation": der, "scales_2x": sc, "verdict": ver, "note": note, "evidence": "[sdk-hypothesis]" if ver == "SCALES-BENIGN" else "[?]"})
+        return d
     if (name, r["function"]) in HAND:
         c, der, sc, ver, note = HAND[(name, r["function"])]
         d.update({"class": c, "derivation": der, "scales_2x": sc, "verdict": ver, "note": note, "evidence": "[emu]" if ver == "OK" else "[?]"})
@@ -172,7 +184,12 @@ def load_tsv():
 def write(tree, mapp):
     old = load_tsv()
     out = []
-    for i, (k, r) in enumerate(rows_all(tree, mapp), 1):
+    nxt = max((int(r["id"][1:]) for r in old.values()), default=0) + 1       # ids of existing rows stay; new rows append
+    for k, r in rows_all(tree, mapp):
+        if k in old:
+            i = int(old[k]["id"][1:])
+        else:
+            i, nxt = nxt, nxt + 1
         if r["kind"] == "const":
             d = {"class": "E", "derivation": "AwtoMs() deadline / pass budget in Timer2 ms", "scales_2x": "no", "wall_87_7": r["value"], "wall_350_8": r["value"], "spec": "ours",
                  "evidence": "[emu]", "verdict": "OK", "note": ""}

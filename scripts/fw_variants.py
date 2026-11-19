@@ -3,7 +3,7 @@
 
 usage: fw_variants.py [--serial AWT26110002] [--only NAME,...] [--keep]
 - Each variant: a detached git worktree of HEAD in tmp/variants/<name> (compile cache shared through the git common dir),
-  fw_build.py with K2S_SDCC_EXTRA = its -D flags and --xdata-floor 0 (an opt-in build must fit, not keep the floor).
+  fw_build.py with K2S_SDCC_EXTRA = its -D flags (an opt-in build must fit).
 - Variants (VARIANTS): meas4k (-D_AWTO_MEAS4K=_ON), net (-D_AWTO_NET=_ON), both.
 - Compiler = the rolled one (dev.py build): awto-sdcc /usr/local, BE, --sdcccall 3. Commit first: uncommitted edits are not built.
 - One PASS / FAIL line per variant with XDATA free; exit 1 if any fails. --keep leaves the worktrees (default: removed).
@@ -65,7 +65,7 @@ def main() -> int:
         t0 = time.monotonic()
         try:
             with out.open("w") as fh:
-                rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial, "--xdata-floor", "0"],
+                rc = subprocess.run([sys.executable, "scripts/fw_build.py", "--serial", a.serial],
                                     cwd=wt, env=env, stdout=fh, stderr=subprocess.STDOUT, timeout=BUILD_TIMEOUT).returncode
         except subprocess.TimeoutExpired:
             rc = "timeout"

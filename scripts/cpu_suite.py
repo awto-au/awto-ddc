@@ -3,7 +3,7 @@
 
 usage: cpu_suite.py --sim [--clocks 87,175,350] [--bin F --map F] [--cases NAME,...] [--groups T,I,M,R,D] [--allow-scratch-write]
        cpu_suite.py --bus B --serial S --map MAP [--bin BIN] ...        (unit; Phase B, test unit only, the suite image must be flashed)
-  The suite image is its own build: ./dev.py build --serial S --tag cpusuite-350 -D _AWTO_CPU_SUITE -D AWTO_CLOCK_MHZ=350 --fw-args="--xdata-floor 0"
+  The suite image is its own build: ./dev.py build --serial S --tag cpusuite-350 -D _AWTO_CPU_SUITE -D AWTO_CLOCK_MHZ=350
   (fw/test/cpu_suite.c: main() = a mailbox loop, nothing of the monitor runs). --sim runs tmp/fw/<serial>-cpusuite-<clock>-be per clock in fw_sim (dw8051 core).
   Per run: one line PASS / FAIL with the measured numbers; log ./tmp/logs/cpu_suite.log, TSV ./tmp/logs/cpu_suite.tsv, matrix at the end.
 """

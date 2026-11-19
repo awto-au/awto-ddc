@@ -3,7 +3,7 @@
 
 usage: dead_code_maps.py [--serial AWT26110003] [--skip-build]
   Variants first (no-FRC, audio test, meas4k+net), each on a fresh layout fw/bank_layout.dc-<name>.tsv, deleted after,
-  XDATA floor 0 (maps only). Default last, committed layout: tmp/sdcc-port is then the default build (gates read it);
+  (maps only). Default last, committed layout: tmp/sdcc-port is then the default build (gates read it);
   its compiler output is snapshotted to tmp/dc/asm_default. Freeze variant: keys.c #error, skipped.
   --skip-build: rerun dead_code.py on the maps already in tmp/dc/.
 Log: ./tmp/logs/dead_code_maps.log (each build: tmp/logs/dead_code_maps.<tag>.out)
@@ -21,7 +21,7 @@ VARIANTS = {                                           # map name -> -D defines
     "audio": ["_AWTO_AUDIO_TEST"],
     "mn": ["_AWTO_MEAS4K=_ON", "_AWTO_NET=_ON"],
 }
-FRESH = "--cluster fn --cluster-weights fw/cluster_weights.json --xdata-floor 0"  # maps only, never flashed; resid_end from fw/rl6449_memory.toml
+FRESH = "--cluster fn --cluster-weights fw/cluster_weights.json"  # maps only, never flashed; resid_end from fw/rl6449_memory.toml
 
 
 def say(s):

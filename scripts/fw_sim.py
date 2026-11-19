@@ -1173,6 +1173,13 @@ class SimBus:
         while self._t2() - t0 < goal:
             self.m.run(min(200_000, 4200 * max(1, goal - (self.t2_abs - t0))))
 
+    def snapshot(self):
+        """Machine + bus state (core, models, Timer2 bookkeeping); stubs and hooks set later stay. See FastMachine.snapshot."""
+        return self.m.snapshot(extra=(self,))
+
+    def restore(self, snap):
+        self.m.restore(snap, extra=(self,))
+
     def close(self):
         self.m.close()
 

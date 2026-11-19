@@ -23,4 +23,4 @@ def test_fff1_default_set_at_mcu_init():
     assert "MCU_FFF1_SCA_WR_INTRVL = (MCU_FFF1_SCA_WR_INTRVL & ~AWTO_SCA_WR_INTRVL_SEL_MASK) | AWTO_SCA_WR_INTRVL_SEL;" in mcu
     body = mcu.split("void ScalerMcuInitial(void)\n{", 1)[1]
     assert body.lstrip().split("\n", 2)[1].lstrip().startswith("MCU_FFF1_SCA_WR_INTRVL")
-    assert "AWTO_NOP8" not in proj
+    assert "AWTO_NOP8 AWTO_NOP8 AWTO_NOP8" in proj  # 24 nops kept with sel 12 (docs/osd-port-loss.md)
