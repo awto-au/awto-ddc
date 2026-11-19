@@ -50,6 +50,44 @@ def units(half: bytes) -> list[int]:
     return [u for u in range(PERIOD_U) if STREAM[8 * u:8 * u + 8] == half]
 
 
+def freeze(io, on: bool) -> None:
+    """Capture freeze = P5_27 / P45_27 bit2 (what ScalerFRCDisplayFreeze writes): works on the default FRC image too (#255)."""
+    for a in (0x0527, 0x4527):
+        v = prd(io, a)
+        pwr(io, a, (v | 0x04) if on else (v & ~0x04 & 0xFF))
+
+
+def debruijn(k: int = 8, n: int = 2) -> list[int]:
+    a, seq = [0] * k * n, []
+
+    def db(t, p):
+        if t > n:
+            if n % p == 0:
+                seq.extend(a[1:p + 1])
+        else:
+            a[t] = a[t - p]
+            db(t + 1, p)
+            for j in range(a[t - p] + 1, k):
+                a[t] = j
+                db(t + 1, t)
+    db(1, 1)
+    return seq
+
+
+DB = debruijn()                  # 64 symbols, every ordered pair once
+ROW_SHIFT = 7                    # symbol of pixel (x, y) = DB[(x + 7 y) % 64]
+
+
+def px_bytes(p: int) -> bytes:
+    x, y = p % 3840, p // 3840
+    v = DB[(x + ROW_SHIFT * y) % 64]
+    return bytes([255 * ((v >> 2) & 1), 255 * ((v >> 1) & 1), 255 * (v & 1)])      # memory order B, G, R
+
+
+def unit_bytes(u: int) -> bytes:
+    return bytes(px_bytes((8 * u + i) // 3)[(8 * u + i) % 3] for i in range(8))
+
+
 def cmd(io, c: int) -> None:
     pwr(io, TESTCMD, c)
     t = time.monotonic()
@@ -89,12 +127,42 @@ def wait_marker(d, addr: int, want: bytes) -> bool:
 
 def finish(d, proc, t_on: float) -> None:
     pattern_cmd("quit")
-    cmd(d.io, TC_FREEZE_OFF)
+    freeze(d.io, False)
     T.log(f"pattern on screen {time.monotonic() - t_on:.2f} s")
     proc.wait(timeout=3)
     cmd(d.io, TC_SDK)
     cmd(d.io, TC_CLEAR)
     T.log(f"hold byte (diag+0x2F) {prd(d.io, 0xF6FF):02x} P5_AC {prd(d.io, P5_AC):02x}")
+
+
+def do_map2(d, reads: int) -> None:
+    """Hypothesis test: a burst at address a returns unit a + k (k per 8 B half); histogram of k, timed-out bursts dropped."""
+    frame_mode(d.io)
+    t_on = time.monotonic()
+    proc = pattern_start("debruijn")
+    t = time.monotonic()
+    while time.monotonic() - t < MARK_WAIT_S:                         # marker: unit 3 of the pattern decodes once drawn
+        b = T.dc_burst_read(d, "a", 3, 2)
+        if b is not None and (b[:8] == unit_bytes(3) or b[8:] == unit_bytes(3) or b[:8] == unit_bytes(4) or b[8:] == unit_bytes(4)):
+            break
+    T.log(f"marker after {time.monotonic() - t_on:.2f} s")
+    freeze(d.io, True)
+    for port in "ab":
+        for a in (0, 1, 5, 100, 1440, 1441, 7203, 0x100000, 0x2F0000):
+            hist = [Counter(), Counter()]
+            bad = 0
+            for _ in range(reads):
+                if time.monotonic() - t_on > SCREEN_CAP_S:
+                    break
+                x = T.dc_burst_read(d, port, a, 2)
+                if x is None:
+                    bad += 1
+                    continue
+                for h in (0, 1):
+                    half = x[8 * h:8 * h + 8]
+                    hist[h][tuple(k for k in range(-1500, 1501) if a + k >= 0 and unit_bytes(a + k) == half) or ("none",)] += 1
+            T.log(f"port {port} a={a}: k first half {dict(hist[0])} | second half {dict(hist[1])} | timeouts {bad}")
+    finish(d, proc, t_on)
 
 
 def do_map(d, reads: int) -> None:
@@ -103,7 +171,7 @@ def do_map(d, reads: int) -> None:
     proc = pattern_start("xbits 3")
     ok = wait_marker(d, 3, bytes([0, 0, 255]))                         # x = 8..: v = 1: R on
     T.log(f"marker {'seen' if ok else 'NOT seen'} after {time.monotonic() - t_on:.2f} s")
-    cmd(d.io, TC_FREEZE_ON)
+    freeze(d.io, True)
     for port in "ab":
         for a in (0, 1, 2, 3, 24, 1440, 1441, 2880):
             res = Counter()
@@ -129,7 +197,7 @@ def do_write(d, waddr: int, n: int) -> None:
     t_on = time.monotonic()
     proc = pattern_start("solid 0 0 0")
     wait_marker(d, 0, bytes([0] * 16))
-    cmd(d.io, TC_FREEZE_ON)
+    freeze(d.io, True)
     c0 = T.dcr_measure(d, 32, 768, 0)
     T.log(f"DCR before: ABOVE_TH1_NUM={c0.get('th1_num')}")
     for i in range(n):
@@ -142,11 +210,46 @@ def do_write(d, waddr: int, n: int) -> None:
     finish(d, proc, t_on)
 
 
+def do_block(d, waddr: int) -> None:
+    """Visible run: 16 white bursts (4 rows x 4 bursts) on a frozen black frame, held HOLD_S with DCR counts, then released."""
+    frame_mode(d.io)
+    t_on = time.monotonic()
+    proc = pattern_start("solid 0 0 0")
+    wait_marker(d, 0, bytes([0] * 16))
+    freeze(d.io, True)
+    r = T.MCU_DC["a"]
+    d.wr(r["len"], 2)
+    for i in range(16):
+        d.wr(r["wbuf"] + i, 0xFF)
+    d.wr(r["wmask"], 0)
+    d.wr(r["wmask"] + 1, 0)
+    c0 = T.dcr_measure(d, 32, 768, 0)
+    n = 0
+    for row in range(4):
+        for k in range(4):
+            a = waddr + row * 1440 + 2 * k
+            for i, sh in enumerate((24, 16, 8, 0)):
+                d.wr(r["addr"] + i, (a >> sh) & 0xFF)
+            d.wr(r["cmd"], T.DC_CMD_WRITE)
+            t = time.monotonic()
+            while time.monotonic() - t < 0.05 and (d.rd(r["cmd"]) & 0xE0) != 0:
+                pass
+            n += 1
+    T.log(f"{n} bursts written at {waddr}+row*1440+2k, rows 0..3, k 0..3")
+    T.log(f"DCR before {c0.get('th1_num')}")
+    t_hold = time.monotonic()
+    while time.monotonic() - t_on < SCREEN_CAP_S - 0.4:               # hold: DCR counts are the wait (one per frame)
+        c = T.dcr_measure(d, 32, 768, 0)
+        last = c.get("th1_num")
+    T.log(f"DCR during hold {last} after {time.monotonic() - t_hold:.1f} s")
+    finish(d, proc, t_on)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--unit", type=int, required=True)
     ap.add_argument("--bus", type=int, required=True)
-    ap.add_argument("op", choices=["map", "write"])
+    ap.add_argument("op", choices=["map", "map2", "write", "block"])
     ap.add_argument("--reads", type=int, default=6)
     ap.add_argument("--waddr", type=lambda x: int(x, 0), default=0x100000)
     ap.add_argument("--n", type=int, default=1)
@@ -157,6 +260,10 @@ def main() -> int:
     try:
         if a.op == "map":
             do_map(d, a.reads)
+        elif a.op == "map2":
+            do_map2(d, a.reads)
+        elif a.op == "block":
+            do_block(d, a.waddr)
         else:
             do_write(d, a.waddr, a.n)
     finally:

@@ -77,6 +77,38 @@ def draw(area, cr, w, h):
         surf.mark_dirty()
         cr.set_source_surface(surf, 0, 0)
         cr.paint()
+    elif op == "debruijn":
+        # symbol of pixel (x, y) = DB[(x + 7 y) % 64], DB = de Bruijn B(8, 2): any two neighbouring pixels name their position mod 64
+        a, seq = [0] * 16, []
+
+        def db(t, p):
+            if t > 2:
+                if 2 % p == 0:
+                    seq.extend(a[1:p + 1])
+            else:
+                a[t] = a[t - p]
+                db(t + 1, p)
+                for j in range(a[t - p] + 1, 8):
+                    a[t] = j
+                    db(t + 1, t)
+        db(1, 1)
+        surf = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
+        buf = surf.get_data()
+        stride = surf.get_stride()
+        rows = []
+        for sh in range(64):                                    # row variants: the symbol phase (7 y) % 64
+            row = bytearray(stride)
+            for x in range(w):
+                v = seq[(x + sh) % 64]
+                row[4 * x] = 255 * ((v >> 2) & 1)
+                row[4 * x + 1] = 255 * ((v >> 1) & 1)
+                row[4 * x + 2] = 255 * (v & 1)
+            rows.append(bytes(row))
+        for y in range(h):
+            buf[y * stride:(y + 1) * stride] = rows[(7 * y) % 64]
+        surf.mark_dirty()
+        cr.set_source_surface(surf, 0, 0)
+        cr.paint()
     elif op == "hgrad":
         surf = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
         buf = surf.get_data()
