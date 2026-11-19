@@ -15,7 +15,7 @@ import fw_gates as G  # noqa: E402
 def test_extensive_names_are_real_gates_and_the_core_stays_normal():
     names = set(G.gates(Path("x-be.bin"), Path("tests/conftest.py"), None, ROOT))     # the map is only read for the menu / ddc keys
     assert set(G.EXTENSIVE) <= names | {"menu", "delays_full", "canary"}      # image-dependent: registry, a -clk87 sibling, the canary symbol
-    for core in ("boot", "isr", "link", "panel", "sysm", "sync", "delays", "conwrap", "conmode", "htime", "nvlog"):
+    for core in ("boot", "isr", "link", "panel", "delays", "htime", "nvlog", "bootsim", "pump", "ddc"):
         assert core not in G.EXTENSIVE
 
 

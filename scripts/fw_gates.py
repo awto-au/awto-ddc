@@ -72,8 +72,20 @@ EXTENSIVE = {
     "crash_full": "workload / stall / hw / probe (normal: stall)",
     "conwrap_full": "real power off / on / saving / wake phases 1-5 (normal: injected lines)",
     "canary": "stack canary, long boot + fatal path",
+    "delays_sim": "panel scenario at the image's clock: class A waits, Timer2 / wall, DELAY loops, loop counts (~10 s CPU)",
     "delays_full": "both clocks (350 + the sibling -clk87 image); clock matrix: scripts/gate_matrix.py",
     "bootsim_always": "second boot_sim variant (console at power-on)",
+    # Dan 2026-11-19: a normal gate is ~1 s, a few s at most. These cost 9-20 s CPU even as minimal variants (measured 2026-11-19):
+    # their quick variants (keys --only switch, monitor --no-beat, wake --quick, crash --tests stall, conwrap --scope inject) run
+    # with --only and in the extensive tier only until a test-timing scale cuts their simulated seconds.
+    "keys": "quick variant, ~20 s CPU (OSD-timeout / hold simulated seconds)",
+    "monitor": "quick variant, ~19 s CPU (10 s sample period x several samples)",
+    "wake": "quick variant, ~9 s CPU",
+    "crash": "stall variant, ~10 s CPU",
+    "conwrap": "inject variant, ~9 s CPU (boot + NVRAM flush wait + console redraws)",
+    "conmode": "~9 s CPU (3 s console timers x 3 modes)",
+    "sysm": "~10 s CPU (power / mode machine chain)",
+    "sync": "~11 s CPU (sync-log sim boots)",
 }
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
@@ -103,7 +115,7 @@ for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap"):       # the ex
     SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING[_k] if _k in SKIP_IF_MISSING else ()
     LIMIT_OF[_k + "_full"] = LIMIT_OF.get(_k, LIMIT_S)
 LIMIT_OF["crash"] = LIMIT_OF["crash_full"] = 60
-LIMIT_OF["delays_full"] = LIMIT_OF["delays"]
+LIMIT_OF["delays_full"] = LIMIT_OF["delays_sim"] = LIMIT_OF["delays"]
 SKIP_IF_MISSING = {k: v for k, v in SKIP_IF_MISSING.items() if v}
 
 
@@ -162,7 +174,9 @@ def gates(b: Path, m: Path, ref, tree):
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     fast = b.with_name(b.name.replace("-be.bin", "-clk87-be.bin"))    # `dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87` (stock clock): measured too when present
     base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else [])]
-    g["delays"] = base                                                                # NORMAL: the image's own clock + the delay audit
+    if tree:
+        g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m]      # NORMAL: every linked delay site is in docs/delay-audit.tsv (~1 s)
+    g["delays_sim"] = base                                                            # extensive: panel_sim scenario at the image's clock vs wall ms
     if fast.is_file() and fast != b:                                                  # extensive: + the sibling -clk87 image, DDC debounce equal at both clocks
         g["delays_full"] = [*base, "--other", fast, fast.with_suffix(".map")]
     g["nvlog"] = [*PY, f"{s}/nv_test.py", "--sim", b, "--map", m, "--cases", "flushlog"]   # #151: flush lines say what was written
@@ -318,6 +332,8 @@ def main() -> int:
         g = {k: v for k, v in g.items() if k in a.only.split(",")}
     elif a.tier == "normal":
         g = {k: v for k, v in g.items() if k not in EXTENSIVE}
+    else:                                           # extensive: a full twin replaces its quick variant
+        g = {k: v for k, v in g.items() if k + "_full" not in g}
     sk = {k: v for k, v in sk.items() if k in g}
     g = {k: v for k, v in g.items() if k not in sk}
     if a.speed:
