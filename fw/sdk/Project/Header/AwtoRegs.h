@@ -51,6 +51,14 @@
 #define AWTO_R_D_PG_INITIAL_L_CTRL                      0x07FD
 #define AWTO_R_DISP_PG_DELTA_L                          0x07FE
 #define AWTO_R_D_PATTERN_RESET                          0x07FF
+#define AWTO_R_DVC_EN                                   0x08A0
+#define AWTO_F_DVC_EN_DVC_DOWN_DB                       0x0C
+#define AWTO_F_DVC_EN_DVC_UP_DB                         0x03
+#define AWTO_R_DVC_ZC_WIN_CTRL_0                        0x08A3
+#define AWTO_F_DVC_ZC_WIN_CTRL_0_DVC_ZC_WIN             0x0F
+#define AWTO_R_DVC_ZC_WIN_CTRL_1                        0x08A4
+#define AWTO_R_DVC_GAIN_DONE                            0x08A9
+#define AWTO_F_DVC_GAIN_DONE_DVC_DONE                   0x80
 #define AWTO_R_MCU_DC_CMD_A                             0x3700
 #define AWTO_F_MCU_DC_CMD_A_DDR_A_CMD                   0xE0
 #define AWTO_R_MCU_DC_LEN_A                             0x3701
