@@ -41,6 +41,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("bin", type=Path)
     ap.add_argument("--map", type=Path)
+    ap.add_argument("--out", type=Path, default=ROOT / "tmp/console_pages", help="text + PNG of the console with the notes (sim render)")
     a = ap.parse_args()
     mapp = a.map or a.bin.with_suffix(".map")
     if " _g_aucAwtoNote " not in mapp.read_text(errors="replace"):
@@ -95,6 +96,7 @@ def main() -> int:
     for off, v in HN.slot_bytes((seq() + 5) & 0xFFFF, body, d):
         s.m.wr(slot + off, bytes([v]))                     # slot taken by a note that has no entry yet
     s.check(lines()[-1].endswith("text overwritten"), "host decoder: a slot with a newer tag says text overwritten", lines()[-1][-40:])
+    s.dump(a.out, "host_note")
     say("FAILED" if s.fails else "all checks passed")
     return 1 if s.fails else 0
 
