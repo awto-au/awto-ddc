@@ -356,7 +356,7 @@ def value_segs(f: str, r: list, port: list) -> list:
         "sname": [names(r, 0x15)],
         "cec": [["tx result:no ack (header)", "block off", "hook:User Control (no action)", "rx F>? Give Device Power Status FF FF +",
                  "tx F>0 Report Physical Address FF FF +"]],
-        "mon": [["ADC A0 FF A1 FF A2 FF A3 FF", "IOSC trim count 9999", "main loop 99999 passes/s, longest watchdog gap 9999 ms",
+        "mon": [["ADC A0 FF A1 FF A2 FF A3 FF", "IOSC trim count 9999", "main loop 99999 passes/s, longest watchdog gap 9999 ms", "headroom 4095 passes/s, busy 100 %, worst pass 255.937ms",
                  "uptime 9999999 s, stack high FF"]],
         "nvw": [["nothing changed, no flash write (", "wrote "], ["511+", "1023+"], ["ms)", "B"],
                 ["", " (system data, OSD data, colour, panel time, awto settings)"], [" in "], ["63+"], [" programs, "],

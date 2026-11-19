@@ -42,7 +42,7 @@ TIMING_EXACT_TOL_MHZ = 10
 TIMING_EXACT_TOL_REL = 0.0025
 HDIAG_STAGE = 8
 MAP_SYMS = ("isr_g_stAwtoDiag", "isr_g_stModeInfo", "isr_g_stPowerInfo", "g_stMDomainInputData", "g_stOsdInfo", "g_ulInputActiveRegionBackUp")
-MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop", "g_stAwtoMon")   # fw/meas/freq.c (#34); fw/diag/loopsplit.c (#75)
+MAP_SYMS_OPT = (P.AWTO_FREQ_SYM, "g_stAwtoLoop", "g_stAwtoMon", "g_stAwtoHead")   # fw/meas/freq.c (#34); fw/diag/loopsplit.c (#75)
 RETRY_TRIES = 2
 
 
@@ -216,6 +216,33 @@ def check_rate(rep, d, base, wait=time.sleep, min_rate=50.0, window: float = RAT
                    f"{mean:.1f}/s mean of {len(rates)} x {window:g} s windows ({', '.join(f'{r:.1f}' for r in rates)})" + slow)
 
 
+HEAD_BUSY_MAX_PCT = 50       # idle ACTIVE: the loop sleeps at least half the time (paced image; measurements: docs/main-loop-pacing.md)
+HEAD_WORST_MAX_MS = 10       # idle ACTIVE: no pass longer than 10 ms (OSD / saver draws are long passes by design)
+HEAD_TRIES = 4               # windows re-read while the hook is on (4 x 1.2 s > the 3 s boot console)
+HEAD_HOLD_MAX_PM = 100       # passes with the busy hook on, per mille, idle ACTIVE: above this the hook is on in a state that should sleep (a stuck producer)
+
+
+def check_headroom(rep, d: Dbg, head: int | None, wait=time.sleep) -> bool:
+    """Paced loop headroom (fw/diag/diag.c g_stAwtoHead, last 1 s): busy < 50 %, worst pass < 10 ms, busy hook not stuck. Free-run image: note only.
+    The hook is legitimately on while the boot console / an OSD / a saver is up: re-read up to HEAD_TRIES windows (1.2 s apart, boot console closes after 3 s)."""
+    if head is None:
+        return rep.add("headroom", True, "free-running image (AWTO_LOOP_PACING 0): no headroom counters")
+    for _ in range(HEAD_TRIES):
+        b = d.read(head, 12)
+        passes, sleep_pm, worst_q4, hold_pm, idles, wk = (be16(b, 2 * i) for i in range(6))
+        if hold_pm <= HEAD_HOLD_MAX_PM:
+            break
+        wait(1.2)
+    if passes == 0:
+        return rep.add("headroom", True, "no 1 s window yet")
+    busy, worst = 100 - sleep_pm / 10, worst_q4 / 16
+    why = [t for t, bad in ((f"busy {busy:.1f} % >= {HEAD_BUSY_MAX_PCT}", busy >= HEAD_BUSY_MAX_PCT),
+                            (f"worst pass {worst:.2f} ms >= {HEAD_WORST_MAX_MS}", worst >= HEAD_WORST_MAX_MS),
+                            (f"pacing held off {hold_pm / 10:.0f} % of passes for {HEAD_TRIES * 1.2:.1f} s (busy hook stuck?)", hold_pm > HEAD_HOLD_MAX_PM)) if bad]
+    return rep.add("headroom", not why, f"{passes} passes/s, busy {busy:.1f} %, worst pass {worst:.2f} ms, pacing off {hold_pm / 10:.1f} % of passes, "
+                   f"{idles} idle exits, {wk} wake-bit passes" + (f"  [FAIL: {'; '.join(why)}]" if why else ""))
+
+
 def check_state(rep, d, mode_addr, power_addr) -> bool:
     ms = decode_mode(d.read(mode_addr, 1))
     pa, ps = decode_power(d.read(power_addr, 1))
@@ -317,6 +344,7 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = Fals
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
              ("main loop", lambda: check_rate(rep, d, base, wait, window=SIM_RATE_WINDOW_S if sim else RATE_WINDOW_S,
                                               loop_addr=maps.get("g_stAwtoLoop"))),
+             ("headroom", lambda: check_headroom(rep, d, maps.get("g_stAwtoHead"), wait)),
              ("mode state", lambda: check_state(rep, d, maps["isr_g_stModeInfo"], maps["isr_g_stPowerInfo"])),
              ("input timing", lambda: check_timing(rep, d, maps, host)),
              ("pins", lambda: check_pins(rep, d)),

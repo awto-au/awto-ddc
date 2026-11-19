@@ -162,6 +162,8 @@ def mon_text(arg: int, v: int) -> str:
         return f"IOSC trim count {v}"
     if arg == 3:
         return f"main loop {v >> 16} passes/s, longest watchdog gap {v & 0xFFFF}ms"
+    if arg == 5:
+        return f"headroom {v & 0xFFF} passes/s, busy {v >> 24} %, worst pass {(((v >> 12) & 0xFFF) * 1000 // 16) / 1000:.3f}ms"
     if arg == 4:
         return f"uptime {v >> 8} s, stack high {v & 0xFF:02X}"
     return f"{arg:02X} {v:08X}"

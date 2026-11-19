@@ -398,6 +398,9 @@ void AwtoOsdDebugLines(void)
     AwtoPutStr("LOOP ");
     AwtoPutNum(isr_g_stAwtoDiag.usLoopRate, 1);
     AwtoPutStr("/s");
+#if(AWTO_LOOP_PACING > 0)
+    AwtoPutStr(" busy "); AwtoPutNum((1005 - g_stAwtoHead.usSleepPm) / 10, 1); AwtoPutStr("%");
+#endif
     if(g_stAwtoFreq.ucValid != 0)
     {
         AwtoPutStr("  H ");
@@ -3179,6 +3182,12 @@ static void AwtoPutMon(BYTE ucArg)              // fmt mon (fw/diag/monitor.c; h
     {
         AwtoPutStr("main loop "); AwtoPutNum(s_ulAwtoLnV >> 16, 1);
         AwtoPutStr(" passes/s, longest watchdog gap "); AwtoPutNum(s_ulAwtoLnV & 0xFFFF, 1); AwtoPutStr("ms");
+    }
+    else if(ucArg == AWTO_MON_EV_HEAD)
+    {
+        AwtoPutStr("headroom "); AwtoPutNum(s_ulAwtoLnV & 0xFFF, 1);
+        AwtoPutStr(" passes/s, busy "); AwtoPutNum(s_ulAwtoLnV >> 24, 1);
+        AwtoPutStr(" %, worst pass "); AwtoPutMilli(((s_ulAwtoLnV >> 12) & 0xFFF) * 1000 / 16); AwtoPutStr("ms");
     }
     else
     {
