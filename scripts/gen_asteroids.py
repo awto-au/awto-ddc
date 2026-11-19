@@ -135,7 +135,7 @@ def inc_text(sh, src):
            f"#define AWTO_AST_FROM_ROM {1 if src == 'rom' else 0}",
            f"#define AWTO_AST_N_SHAPES {N_SHAPES}", f"#define AWTO_AST_SH_ROCK0 0", f"#define AWTO_AST_SH_SAUCER {ID_SAUCER}",
            f"#define AWTO_AST_SH_HULL {ID_HULL}", f"#define AWTO_AST_SH_FLAME {ID_FLAME}", f"#define AWTO_AST_SH_DIGIT {ID_DIGIT}",
-           f"#define AWTO_AST_DATA_BYTES {len(blob)}", f"#pragma place bank({CODE_BANK})",
+           f"#define AWTO_AST_DATA_BYTES {len(blob)}", f"#define AWTO_AST_MAX_POLYS {max(len(v) for v in sh.values())}", f"#pragma place bank({CODE_BANK})",
            "static __code int8_t g_tAstData[AWTO_AST_DATA_BYTES] = {"]
     s = [str(b - 256 if b > 127 else b) for b in blob]
     out += ["    " + ", ".join(s[i:i + 24]) + "," for i in range(0, len(s), 24)]

@@ -993,7 +993,7 @@ extern void AwtoSwRec(unsigned char ucId, unsigned char ucArg);
 extern void AwtoSysLog(unsigned char ucArg, unsigned char ucWhy, unsigned long ulMs);
 extern void AwtoSwMode(unsigned char ucMode);
 // #216 blocking-wait log: every ScalerTimerDelayXms / PollingFlagProc / WaitForEvent call, newest last, wraps. Host: scripts/wait_log.py.
-#define AWTO_WAIT_N                                             64      // newest waits kept (XDATA floor, #233); ucTotal counts all
+#define AWTO_WAIT_N                                             64      // newest waits kept (XDATA is scarce, #233); ucTotal counts all
 #define AWTO_WAIT_DELAY                                         0       // arg = ms asked
 #define AWTO_WAIT_POLL                                          1       // arg = register polled
 #define AWTO_WAIT_EVENT                                         2       // arg = event type
@@ -1179,8 +1179,9 @@ extern BYTE AwtoOsdRotSrc(BYTE ucOut, BYTE ucWords);
 extern void AwtoOsdTurn(BYTE __xdata *pucB, BYTE ucN);                          // turn ucN stream bytes 180 in place (bytes reversed, bits of each reversed)
 extern void AwtoOsdTestReset(void);                                                 // fw/test/osd_reset.c: clear the OSD state an earlier image left, for test screens
 #define AWTO_OSD_ZERO                                           0x00
-// OSD SRAM data port: direct store; spacing is the FFF1 write interval (AWTO_SCA_WR_INTRVL_SEL), no nops (docs/osd-port-loss.md)
-#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); } while(0)
+// OSD SRAM data port: direct store + 24 nops of store spacing on top of FFF1 sel 12 (sel 12 alone corrupts the savers on unit 3; docs/osd-port-loss.md)
+#define AWTO_NOP8                                               __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
+#define AWTO_OSD_PORT(v)                                        do { AWTO_XFR(AWTO_R_OSD_DATA_PORT) = (v); AWTO_NOP8 AWTO_NOP8 AWTO_NOP8 } while(0)
 #define AWTO_OSD_POS_OFFSET_H                                   0x3B    // global position offset, as the QC pattern
 #define AWTO_OSD_POS_OFFSET_V                                   0x04
 #define AWTO_OSD_PX_PER_HD                                      4       // OSD horizontal position unit: 4 panel px
@@ -1197,7 +1198,7 @@ extern void AwtoDpgTest(unsigned char ucOn);
 extern void AwtoPacmanClassic(unsigned char ucCmd);
 #define AWTO_SAVER_VCP                                          0xEB    // DDC/CI: screensaver now (registry row 121 screensaver_now): 0 stop, 1 selected, 2 Pac-Man, 3 scope, 4 scope 2, 5 flash warning, 6 alert tone, 8 Asteroids
 #define AWTO_TC_SCOPE                                           0xB4    // test cmd: 0xB4 scope screensaver draw (docs/screensaver.md), 0xB5 next frame, 0xB6 off
-#define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert tone (1 s) (needs -D _AWTO_AUDIO_TEST)
+#define AWTO_TC_PACMAN_SND                                     0xBA    // test cmd: + 0 Pac-Man intro, + 1 waka (loops), + 2 death, + 3 calibration tone, + 4 stop, + 5 alert tone (1 s) 
 extern BYTE AwtoFlashDraw(BYTE ucSplash, BYTE ucStep);                                 // one step of the same drawing (boot splash: ucSplash = 1); 1 when shown
 extern void AwtoSaverTaken(void);                                                       // OsdDispDisableOsd: the OSD is being reset / reused; a boot splash is over without a redraw
 extern void AwtoFlashScreen(BYTE ucOn);                                                 // fw/test/flash_screen.c: huge Pac-Man shown while the host flashes (VCP 0xEB = 5)
@@ -1214,9 +1215,8 @@ extern void AwtoPmSound(unsigned char ucCmd);
 extern void AwtoPmSoundPoll(void);
 extern void AwtoPmSoundBg(unsigned char ucState);                                       // Pac-Man background sound: 0 none, 1..3 siren speed, 4 frightened
 extern unsigned char AwtoPmSoundTone(unsigned char ucSc, unsigned int usMs);                  // one tone (S code, audible ms): AWTO_TONE_* result
-#define AWTO_TONE_BUSY                                          0       // another sound plays
+#define AWTO_TONE_BUSY                                          0       // another sound
 #define AWTO_TONE_PLAYED                                        1
-#define AWTO_TONE_NA                                            2       // no -D _AWTO_AUDIO_TEST build
 extern void osd_tc_win_draw(unsigned char ucWin, unsigned int usX0, unsigned int usY0, unsigned int usX1, unsigned int usY1);
 extern void osd_tc_open(unsigned char ucChars, unsigned char ucLines, unsigned char ucFont);   // fw/osd/text_layer.c: shared by the test files
 extern void osd_tc_place(unsigned char ucH, unsigned char ucV, unsigned char ucBig);
@@ -2250,14 +2250,14 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_AUDIO_EV_AMP_OFF                                   2       // mute: P7.4 = 0, P7.3 AMP_MUTE = 1
 #define AWTO_AUDIO_EV_AMP_TEST                                  4       // unmute while an ear-test step is held: its pins; value = step
 #define AWTO_AUDIO_EV_CLICK                                     0x50    // key click played
-#define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound plays
-#define AWTO_AUDIO_EV_CLICK_NA                                  0x52    // key click wanted, no -D _AWTO_AUDIO_TEST build
+#define AWTO_AUDIO_EV_CLICK_BUSY                                0x51    // key click skipped: another sound
 #define AWTO_KEY_CLICK_SC                                       40      // key click pitch: audio PLL S code 40 = 48 kHz / 40 = 1200 Hz (docs/keys.md)
 #define AWTO_KEY_CLICK_MS                                       30      // key click audible length (Dan 2026-11-18, #229)
-extern void AwtoAudioAmpBoot(void);                             // fw/audio/amp.c: the one owner of P7.3 AMP_MUTE / P7.4
+extern void AwtoAudioAmpBoot(void);                             // fw/audio/audio.c: the one owner of P7.3 AMP_MUTE / P7.4
 extern void AwtoAudioAmp(bit bMute);
-#define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST builds)
-#define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (fw/audio/amp.c), VCP 0x63 (dev.py sound-test)
+extern void AwtoAudioAmpEnable(void);                            // P7.4 on, P7.3 stays muted (tone start)
+#define AWTO_AUDIO_TEST_VCP                                     0x63    // VCP code: ear-test steps (+ the internal sine in -D _AWTO_AUDIO_TEST test builds)
+#define AWTO_AUDIO_TEST_STEPS                                   6       // ear-test steps (fw/audio/audio.c), VCP 0x63 (dev.py sound-test)
 #define AWTO_AUDIO_TEST_START                                   0x10    // VCP 0x63 value + n (1..6): step n set up; E5 arg = value
 #define AWTO_AUDIO_TEST_DONE                                    0x30    // + n: step n end: amp on, unmuted, user volume
 #define AWTO_AUDIO_TEST_HZ                                      0x40    // E5 arg + n: "audio test n: <Hz> Hz" (VCP 0x63 = 0x8000 | Hz)

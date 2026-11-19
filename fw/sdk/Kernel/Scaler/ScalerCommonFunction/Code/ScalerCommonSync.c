@@ -55,7 +55,7 @@ WORD isr_g_usInputPixelClk;
 WORD g_usTmdsOffLineMeasureClk;
 
 BYTE g_ucDpRx0LTStatus = _DP_LINK_TRAINING_NONE;
-BYTE isr_g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE;
+BYTE isr_g_ucDpRx1LTStatus = _DP_LINK_TRAINING_NONE; AWTO_LT_RING_DEF AWTO_PROBE_DEF
 __xdata _Bool g_bDpRx0NormalLTSetPhyFinish = _FALSE;
 bit d_isr_g_bDpRx1NormalLTSetPhyFinish = _FALSE;
 

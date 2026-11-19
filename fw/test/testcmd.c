@@ -1172,12 +1172,12 @@ static void AwtoClkChecks(void)
 }
 
 // ---- flash write / erase test: the spare sector 0xFE000 only (docs/flash-registry.md), fixed here, never host-set.
-// Each cycle: erase, check 0xFF, program 4096 B in 128 B calls, read back; ends with an erase (sector left blank).
+// Each cycle: erase, check 0xFF, program 4096 B in AWTO_CLK_FL_CHUNK calls, read back; ends with an erase (sector left blank).
 // Writes go through UserCommonFlashErasePage / UserCommonFlashWrite (the production path); g_ucAwtoFlCk sets the MOVX stretch the SDK macro uses.
 #define AWTO_CLK_FL_BANK                        15
 #define AWTO_CLK_FL_PAGE                        14                  // page x 0x1000 = 0xE000
 #define AWTO_CLK_FL_SIZE                        4096
-#define AWTO_CLK_FL_CHUNK                       128
+#define AWTO_CLK_FL_CHUNK                       64                  // flash call size and XDATA buffer: 128 does not fit the HWTEST image
 #define AWTO_CLK_FL_MAX                         20                  // wear limit: <= 100 erases in total (Dan), N + 1 erases per call
 #define AWTO_CLK_FL_ERR_NONE                    0
 #define AWTO_CLK_FL_ERR_ERASE                   1                   // erase call returned false
@@ -1967,12 +1967,12 @@ typedef struct
 } StAwtoOsw;
 __xdata StAwtoOsw g_stAwtoOsw;
 static __xdata BYTE s_aucOswBuf[AWTO_OSW_BUF];
-static __data BYTE s_ucOplB0;                           // M_GAP word bytes and delays (internal RAM: the asm reads them without a DPTR reload)
-static __data BYTE s_ucOplB1;
-static __data BYTE s_ucOplB2;
-static __data BYTE s_ucOplKa;
-static __data BYTE s_ucOplK0;
-static __data BYTE s_ucOplK1;
+static __data BYTE d_s_ucOplB0;                           // M_GAP word bytes and delays (internal RAM: the asm reads them without a DPTR reload)
+static __data BYTE d_s_ucOplB1;
+static __data BYTE d_s_ucOplB2;
+static __data BYTE d_s_ucOplKa;
+static __data BYTE d_s_ucOplK0;
+static __data BYTE d_s_ucOplK1;
 static __xdata BYTE s_ucOswSaved;
 static __xdata WORD s_usOswT0;
 static const __code WORD tAwtoOswFifo[AWTO_OSW_FIFO_N] = {AWTO_R_DISP_M1_FIFO_STATUS, AWTO_R_DISP_M2_FIFO_STATUS, AWTO_R_CAP_M1_FIFO_STATUS, AWTO_R_CAP_M2_FIFO_STATUS, AWTO_R_STATUS0};
@@ -2056,7 +2056,7 @@ static void AwtoOplWord(void)                           // 3 stores to the OSD d
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplKa
+        mov  a,_d_s_ucOplKa
         cjne a,#0xFF,1$
         sjmp 3$
     1$:
@@ -2064,9 +2064,9 @@ static void AwtoOplWord(void)                           // 3 stores to the OSD d
     2$:
         djnz r7,2$
     3$:
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
-        mov  a,_s_ucOplK0
+        mov  a,_d_s_ucOplK0
         cjne a,#0xFF,4$
         sjmp 6$
     4$:
@@ -2074,9 +2074,9 @@ static void AwtoOplWord(void)                           // 3 stores to the OSD d
     5$:
         djnz r7,5$
     6$:
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
-        mov  a,_s_ucOplK1
+        mov  a,_d_s_ucOplK1
         cjne a,#0xFF,7$
         sjmp 9$
     7$:
@@ -2084,7 +2084,7 @@ static void AwtoOplWord(void)                           // 3 stores to the OSD d
     8$:
         djnz r7,8$
     9$:
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2093,11 +2093,11 @@ static void AwtoOplWordRaw(void)                        // the same three stores
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2106,13 +2106,13 @@ static void AwtoOplWordNop1(void)                       // raw shape with 1 nop(
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
         nop
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
         nop
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2121,15 +2121,15 @@ static void AwtoOplWordNop2(void)                       // raw shape with 2 nop(
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
         nop
         nop
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
         nop
         nop
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2138,17 +2138,17 @@ static void AwtoOplWordNop3(void)                       // raw shape with 3 nop(
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
         nop
         nop
         nop
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
         nop
         nop
         nop
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2157,19 +2157,19 @@ static void AwtoOplWordNop4(void)                       // raw shape with 4 nop(
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
         nop
         nop
         nop
         nop
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
         nop
         nop
         nop
         nop
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2178,21 +2178,21 @@ static void AwtoOplWordNop5(void)                       // raw shape with 5 nop(
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
         nop
         nop
         nop
         nop
         nop
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
         nop
         nop
         nop
         nop
         nop
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
@@ -2201,7 +2201,7 @@ static void AwtoOplWordNop6(void)                       // raw shape with 6 nop(
 {
     __asm
         mov  dptr,#0x0092
-        mov  a,_s_ucOplB0
+        mov  a,_d_s_ucOplB0
         movx @dptr,a
         nop
         nop
@@ -2209,7 +2209,7 @@ static void AwtoOplWordNop6(void)                       // raw shape with 6 nop(
         nop
         nop
         nop
-        mov  a,_s_ucOplB1
+        mov  a,_d_s_ucOplB1
         movx @dptr,a
         nop
         nop
@@ -2217,117 +2217,117 @@ static void AwtoOplWordNop6(void)                       // raw shape with 6 nop(
         nop
         nop
         nop
-        mov  a,_s_ucOplB2
+        mov  a,_d_s_ucOplB2
         movx @dptr,a
     __endasm;
 }
 
 static void AwtoOplC8(void)                             // C store shape (as AWTO_OSD_PORT) with 8 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC10(void)                             // C store shape (as AWTO_OSD_PORT) with 10 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC12(void)                             // C store shape (as AWTO_OSD_PORT) with 12 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC14(void)                             // C store shape (as AWTO_OSD_PORT) with 14 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC16(void)                             // C store shape (as AWTO_OSD_PORT) with 16 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC18(void)                             // C store shape (as AWTO_OSD_PORT) with 18 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC20(void)                             // C store shape (as AWTO_OSD_PORT) with 20 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC22(void)                             // C store shape (as AWTO_OSD_PORT) with 22 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC24(void)                             // C store shape (as AWTO_OSD_PORT) with 24 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC28(void)                             // C store shape (as AWTO_OSD_PORT) with 28 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC32(void)                             // C store shape (as AWTO_OSD_PORT) with 32 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOplC40(void)                             // C store shape (as AWTO_OSD_PORT) with 40 nops after each of the first two stores
 {
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB0;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB0;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB1;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB1;
     __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm; __asm nop __endasm;
-    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = s_ucOplB2;
+    AWTO_XFR(AWTO_R_OSD_DATA_PORT) = d_s_ucOplB2;
 }
 
 static void AwtoOswPass(WORD usN)                       // one timed pass over the repeated 54 B pattern chunk in s_aucOswBuf
@@ -2391,9 +2391,9 @@ static void AwtoOswPass(WORD usN)                       // one timed pass over t
         }
         else if(ucMode == AWTO_OSW_M_GAP)
         {
-            s_ucOplKa = g_stAwtoOsw.ucKa;
-            s_ucOplK0 = g_stAwtoOsw.ucK0;
-            s_ucOplK1 = g_stAwtoOsw.ucK1;
+            d_s_ucOplKa = g_stAwtoOsw.ucKa;
+            d_s_ucOplK0 = g_stAwtoOsw.ucK0;
+            d_s_ucOplK1 = g_stAwtoOsw.ucK1;
             for(ucJ = 0; ucJ < ucN; ucJ += AWTO_OHW_WORD)
             {
                 BYTE ucW = ucJ;                             // byte offset of the word written now (data and address)
@@ -2402,14 +2402,14 @@ static void AwtoOswPass(WORD usN)                       // one timed pass over t
                 {
                     ucW = (BYTE)((((ucJ / AWTO_OHW_WORD) * 7) % (AWTO_OHW_BUF / AWTO_OHW_WORD)) * AWTO_OHW_WORD);
                 }
-                s_ucOplB0 = s_aucOswBuf[ucW];
-                s_ucOplB1 = s_aucOswBuf[ucW + 1];
-                s_ucOplB2 = s_aucOswBuf[ucW + 2];
+                d_s_ucOplB0 = s_aucOswBuf[ucW];
+                d_s_ucOplB1 = s_aucOswBuf[ucW + 1];
+                d_s_ucOplB2 = s_aucOswBuf[ucW + 2];
                 if((g_stAwtoOsw.ucFlags & AWTO_OSW_F_READDR) != 0)
                 {
                     ScalerOsdAddrSet(_OSD_SRAM, _OSD_BYTEALL, g_stAwtoOsw.usAddr + (WORD)(usI / AWTO_OHW_WORD) + (WORD)(ucW / AWTO_OHW_WORD), _OSD_WITHOUT_DB);
                 }
-                if((s_ucOplKa == AWTO_OSW_K_NONE) && (s_ucOplK0 == AWTO_OSW_K_NONE) && (s_ucOplK1 == AWTO_OSW_K_NONE))
+                if((d_s_ucOplKa == AWTO_OSW_K_NONE) && (d_s_ucOplK0 == AWTO_OSW_K_NONE) && (d_s_ucOplK1 == AWTO_OSW_K_NONE))
                 {
                     switch(g_stAwtoOsw.ucNops)
                     {

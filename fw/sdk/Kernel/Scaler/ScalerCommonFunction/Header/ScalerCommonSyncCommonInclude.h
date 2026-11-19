@@ -163,3 +163,41 @@ extern bit ScalerSyncVGAUseEmbeddedEDID(void);
 extern void ScalerSyncVGADdcCheckBusyAndForceNack(void);
 #endif
 
+#ifndef AWTO_LT_RING
+#define AWTO_LT_RING 0
+#endif
+#if(AWTO_LT_RING != 0)
+// test ring (default off): 32 x {id, LT status, a, b}; idx = next slot; read with dbg-read
+extern __xdata BYTE isr_g_pucAwtoLtRing[128];
+extern __xdata BYTE isr_g_ucAwtoLtIdx;
+#define AWTO_LT_PUT(id, a, b)       {isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx] = (id); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 1] = isr_g_ucDpRx1LTStatus; isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 2] = (a); isr_g_pucAwtoLtRing[isr_g_ucAwtoLtIdx + 3] = (b); isr_g_ucAwtoLtIdx = (isr_g_ucAwtoLtIdx + 4) & 0x7F;}
+#define AWTO_LT_LOG_I(id)           AWTO_LT_PUT((id), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x02, 0x02))
+#define AWTO_LT_LOG_M(id)           AWTO_LT_PUT((id), ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00), ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02))
+#define AWTO_LT_LOG_V(id, v)        AWTO_LT_PUT((id), (v), ScalerDpRx1GetDpcdInfo(0x00, 0x02, 0x02))
+#define AWTO_LT_RING_DEF __xdata BYTE isr_g_pucAwtoLtRing[128]; __xdata BYTE isr_g_ucAwtoLtIdx;
+#else
+#define AWTO_LT_RING_DEF
+#define AWTO_LT_PUT(id, a, b)
+#define AWTO_LT_LOG_I(id)
+#define AWTO_LT_LOG_M(id)
+#define AWTO_LT_LOG_V(id, v)
+#endif
+
+#ifndef AWTO_DPCD_PROBE
+#define AWTO_DPCD_PROBE 0
+#endif
+#if(AWTO_DPCD_PROBE != 0)
+// main-loop DPCD port probe (test), g_pucAwtoProbe[0..8]: after a read at 0x100 (C2 1 -> 0) the read of 0x000 (expect 12) with gap 0 / 0.25 / 1 / 5 us; after a read at 0x200 (C2 2 -> 0, C3 0 -> 1) the read of 0x001 (expect 14) with the same gaps; [8] = run count
+extern __xdata BYTE g_pucAwtoProbe[9];
+#define AWTO_PROBE_DEF __xdata BYTE g_pucAwtoProbe[9];
+#define AWTO_PROBE_ONE(slot, preC2, postL, gapstmt)  {ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, (preC2)); ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, 0x00); g_pucAwtoProbe[8] ^= ScalerGetByte(PBA_C4_DPCD_DATA_PORT);\
+                                     ScalerSetByte(PBA_C2_DPCD_ADDR_PORT_M, 0x00); ScalerSetByte(PBA_C3_DPCD_ADDR_PORT_L, (postL)); gapstmt g_pucAwtoProbe[slot] = ScalerGetByte(PBA_C4_DPCD_DATA_PORT);}
+#define AWTO_GAP_RUN(n)             {d_isr_g_ucDelay5usI = (n); while(--d_isr_g_ucDelay5usI) {};}
+#define AWTO_DPCD_PROBE_RUN()       {EX0 = 0; ScalerSetByte(PBA_C1_DPCD_ADDR_PORT_H, 0x00); g_pucAwtoProbe[8] = 0;\
+                                     AWTO_PROBE_ONE(0, 0x01, 0x00,) AWTO_PROBE_ONE(1, 0x01, 0x00, AWTO_GAP_RUN(AWTO_GAP_025US)) AWTO_PROBE_ONE(2, 0x01, 0x00, AWTO_GAP_RUN(AWTO_GAP_1US)) AWTO_PROBE_ONE(3, 0x01, 0x00, DELAY_5US();)\
+                                     AWTO_PROBE_ONE(4, 0x02, 0x01,) AWTO_PROBE_ONE(5, 0x02, 0x01, AWTO_GAP_RUN(AWTO_GAP_025US)) AWTO_PROBE_ONE(6, 0x02, 0x01, AWTO_GAP_RUN(AWTO_GAP_1US)) AWTO_PROBE_ONE(7, 0x02, 0x01, DELAY_5US();)\
+                                     EX0 = 1;}
+#else
+#define AWTO_PROBE_DEF
+#define AWTO_DPCD_PROBE_RUN()
+#endif

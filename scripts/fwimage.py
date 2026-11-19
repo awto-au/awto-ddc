@@ -86,6 +86,8 @@ def main(argv: list[str] | None = None) -> int:
     if a.expect and not got.startswith(a.expect):
         say(f"REFUSED: build.json compiler {got!r}, expected {a.expect} (tree without the stamp in build.json?)")
         return 2
+    (root / "tmp/fw" / f"{a.serial}-{a.tag}-be.xdata.json").write_text(
+        json.dumps({k: bj.get(k) for k in ("xdata_free", "xdata_pool")}) + "\n")     # shown in the gates record; no build fails on it
     for ext in ("bin", "map"):
         dst = root / "tmp/fw" / f"{a.serial}-{a.tag}-be.{ext}"
         shutil.copy2(a.tree / f"tmp/fw/{a.serial}/fw.{ext}", dst)

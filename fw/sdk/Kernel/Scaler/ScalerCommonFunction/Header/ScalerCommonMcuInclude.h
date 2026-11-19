@@ -218,6 +218,43 @@
 #define AWTO_TP1_WAIT()
 #endif
 
+// DPCD index / data port: the first C4 access after an address change reads stale data at 350.8 MHz; gap = loop counts (16 clk each, ~15 clk entry), 0 = off
+#define AWTO_GAP_025US 6
+#define AWTO_GAP_1US 23
+#define AWTO_GAP_5US 109
+#ifndef AWTO_DPCD_SETTLE_RD
+#if(AWTO_CLOCK_MHZ == 350)
+#define AWTO_DPCD_SETTLE_RD AWTO_GAP_025US // smallest gap that locks D1 on unit 2 5 / 5 boots (0.25 us); docs/clock-sweep.md
+#else
+#define AWTO_DPCD_SETTLE_RD 0
+#endif
+#endif
+#if(AWTO_DPCD_SETTLE_RD != 0)
+#define AWTO_DPCD_SETTLE_E() {d_isr_g_ucDelay5usI_EXINT = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI_EXINT) {};}
+#define AWTO_DPCD_SETTLE() {d_isr_g_ucDelay5usI = (AWTO_DPCD_SETTLE_RD); while(--d_isr_g_ucDelay5usI) {};}
+#else
+#define AWTO_DPCD_SETTLE_E()
+#define AWTO_DPCD_SETTLE()
+#endif
+
+#ifndef AWTO_LTWR_WAIT_US
+#define AWTO_LTWR_WAIT_US 0
+#endif
+#if(AWTO_LTWR_WAIT_US > 0)
+#define AWTO_LTWR_WAIT() DELAY_XUS_EXINT(AWTO_LTWR_WAIT_US)
+#else
+#define AWTO_LTWR_WAIT()
+#endif
+
+#ifndef AWTO_PULSE_WAIT_TEST
+#define AWTO_PULSE_WAIT_TEST 0
+#endif
+#if(AWTO_PULSE_WAIT_TEST != 0)
+#define AWTO_PULSE_WAIT() DELAY_5US_EXINT()
+#else
+#define AWTO_PULSE_WAIT()
+#endif
+
 //--------------------------------------------------
 // Macros of MCU Watch Dog
 //--------------------------------------------------

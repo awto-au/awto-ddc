@@ -674,7 +674,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
 
         if((ScalerGetByte_EXINT(PBA_DD_AUX_DPCD_IRQ) & (_BIT7 | _BIT6 | _BIT5)) != 0x00)  // Write Link Config Field into INT0
         {
-            g_ucDpRx1TrainingPatternSet = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x02) & 0x03);
+            AWTO_LTWR_WAIT() g_ucDpRx1TrainingPatternSet = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x02) & 0x03);
 
             // Backup Source Write Continous 0x102 and 0x103
             g_ucDpRx1LTPatternSet = ScalerGetByte_EXINT(PBA_DD_AUX_DPCD_IRQ);
@@ -695,7 +695,7 @@ BYTE ScalerDpAuxJudgeHandler_EXINT0(void)
             g_ucDpRx1LaneCount = (ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x01) & 0x1F);
 
             // Clear Flag
-            ScalerSetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5));
+            ScalerSetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, ~(_BIT7 | _BIT6 | _BIT5), (_BIT7 | _BIT6 | _BIT5)); AWTO_LT_LOG_I(0x10 | g_ucDpRx1TrainingPatternSet)
 
             switch(g_ucDpRx1TrainingPatternSet)
             {

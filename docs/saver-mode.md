@@ -2,7 +2,7 @@
 
 Status 2026-11-18. D1, D4, D5 decided (Dan, 2026-11-18) and implemented (below); D2, D3, D6, D7 open. Code: `fw/test/saver.c`, main loop `fw/sdk/Kernel/System/Code/SysMain.c` `main()`. Design: `docs/screensaver.md`.
 Tools: `scripts/saver_loop_cost.py` (per-pass cost by handler, saver rates), `scripts/saver_mode_sim.py` (exit paths).
-Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4b25631 + `-D _AWTO_AUDIO_TEST`), 3 s fw windows.
+Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4b25631 + `-D _AWTO_AUDIO_TEST`; audio is in every build since #229), 3 s fw windows.
 
 ## Answer in short
 
@@ -35,6 +35,7 @@ Numbers below: sim, fast core, dw8051 timing, image `AWT26110003-smb-be` (main 4
 | no signal | nosig | `AwtoSaverPoll` | mode NOSIGNAL for `AWTO_SAVER_NOSIG_MS` 1.8 s, row 119 != Off, `pwr_l3_s` != 0, not ended earlier in this no-signal episode |
 | idle | idle | `saver.c:282` | mode ACTIVE, row 120 != 0, no key / DDC/CI for row 120 s |
 | VCP 0xEB 1-5, 7 | now | `saver.c:177-203`, `set_ap_screensaver_now` | any mode |
+| VCP 0xEB = 6 (alert) | no saver: `AwtoPmSound(alert)`, 1 s Pac-Man-style tone, every build (#229) | `saver.c` `AWTO_SAVER_NOW_ALERT`, `fw/audio/audio.c`; `dev.py alert` | any mode |
 
 ### Exits
 
@@ -148,7 +149,7 @@ Slot = from the call's entry to the next hooked call (macro polls like `AWTO_PS_
 - Switch `AWTO_SAVER_INFO` (`_ON` default, `-D AWTO_SAVER_INFO=_OFF` = no code); corner = `AWTO_AST_INFO_COL0` / `AWTO_AST_INFO_ROW0`. No registry row.
 - Cost (sim, `saver_code_profile.py --case asteroids --window 10`, 350.8 MHz, 2026-11-19, on vs off): instr / frame 600476 vs 593290 (+1.2 %), compute 14.56 vs 14.42 ms, saver slot incl. flash stalls 6.9 vs 6.4 ms (+0.5 ms / frame); 25.00 frames/s both; worst main-loop pass 9.93 vs 9.83 ms (no spike). `AstInfoDraw` 0.08 + `AstPutDec` 0.09 ms / frame, the rest is the glyph lines / tile uploads of the redrawn tiles.
 - First version cost +3.3 % instr: 32-bit `/ 1000`, `% 1000` of the refresh evaluated several times per pass, and 16-bit divides per digit. Now: refresh split once per period, digits by subtraction, fps-only change redraws 4 tiles of the last info row (not 18).
-- XDATA free 715 -> 700 B (floor): 10 B statics + locals; no text buffers (line text is built per pass in the free last canvas row of band 1).
+- XDATA free 715 -> 700 B: 10 B statics + locals; no text buffers (line text is built per pass in the free last canvas row of band 1).
 - Scope 1 / Scope 2 / Pac-Man: not built (own canvases, own scale-up; same pattern, but XDATA is at the floor).
 - Frame-compare tools (`saver_frames_md5.py`) build both images with `-D AWTO_SAVER_INFO=_OFF`: the fps digits follow fw time.
 

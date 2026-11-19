@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import re
 import subprocess
+import os
 import sys
 import time
 import isostamp  # noqa: E402
@@ -292,7 +293,8 @@ def check_delaycal(rep, d: Dbg, base: int, sim: bool = False) -> bool:
     blk = bytearray(48)
     blk[0x1A:0x28] = d.read(base + 0x1A, 14)          # ucDelay5usN .. usT3Wait64 only
     cal = rtd_diag.decode(bytes(blk), True)
-    rows = rtd_diag.cal_eval(cal, sim)
+    # the dw8051 sim core keeps real time (clock model, Timer2 exact): its numbers are judged like the unit's; only the ucsim-compatible 8052 mode counts machine cycles
+    rows = rtd_diag.cal_eval(cal, sim and os.environ.get("AWTO_SIM_CPU", "dw8051") == "8052")
     bad = [n for n, ok, _ in rows if ok is False]
     return rep.add("delay cal", not bad, "; ".join(f"{n} {det}" for n, ok, det in rows) + (f"  [FAIL: {', '.join(bad)}]" if bad else ""))
 
@@ -311,7 +313,7 @@ def check_monitor(rep, d: Dbg, mon: int | None) -> bool:
     return rep.add("monitor", not hit, mon_decode.text(m) + (f"  [FAIL: ladder reads a key band: {sorted(hit)}]" if hit else ""))
 
 
-def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = False) -> int:
+def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = False, osd: bool = True) -> int:
     """All checks, each independent: a failed read marks that check FAIL and the rest still run."""
     base = maps["isr_g_stAwtoDiag"]
     steps = [("diag stage", lambda: check_diag(rep, d, base, wait)),
@@ -324,6 +326,8 @@ def run(d: Dbg, maps: dict, host, rep: Report, wait=time.sleep, sim: bool = Fals
              ("delay cal", lambda: check_delaycal(rep, d, base, sim)),
              ("monitor", lambda: check_monitor(rep, d, maps.get("g_stAwtoMon")))]
     for name, fn in steps:
+        if name == "osd" and not osd:
+            continue                                # --no-osd: the info card + debug pop-up would cover a visual test
         guarded(rep, name, fn)
     return 0
 
@@ -337,6 +341,7 @@ def main() -> int:
     ap.add_argument("--host-mode", help="WxH@HZ instead of gdctl")
     ap.add_argument("--sim", nargs=2, type=Path, metavar=("BIN", "MAP"),
                     help="run against the firmware simulator (fw_sim.SimBus), no hardware; host mode defaults to 1920x1080@60")
+    ap.add_argument("--no-osd", action="store_true", help="skip the OSD round-trip (info card + debug pop-up): a visual test is on screen")
     ap.add_argument("--ffwd", action="store_true", help="sim: fast-forward ScalerTimerDelayXms spins (off: it moves d_isr_g_usTimerCounter "
                     "without Timer2, so the delay-cal T3 check reads 593 vs 550 ms)")
     ap.add_argument("--sim-port", default="D2", choices=("D2", "D3"),
@@ -370,7 +375,7 @@ def health_hw(a) -> int:
         host = parse_host_mode(mode)
     rep.add("bus rate", True, f"100 kHz; map {a.map.name}; host mode {mode or 'unknown'}")
     dbg = Dbg(B.Real(a.bus, allow_write=True))
-    run(dbg, maps, host, rep)
+    run(dbg, maps, host, rep, osd=not a.no_osd)
     return rep.summary(a.serial, dbg.retries)
 
 

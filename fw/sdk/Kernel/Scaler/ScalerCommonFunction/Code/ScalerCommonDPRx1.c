@@ -218,7 +218,7 @@ void ScalerDpRx1DecodeErrorCountReset(void)
 void ScalerDpRx1ValidSignalDetection(void)
 {
     BYTE ucDpLinkRate = 0;
-    BYTE ucDpLaneCount = _DP_FOUR_LANE;
+    BYTE ucDpLaneCount = _DP_FOUR_LANE; AWTO_LT_LOG_M(0x30)
 
 #if(_DP_MST_SUPPORT == _ON)
 
@@ -230,7 +230,7 @@ void ScalerDpRx1ValidSignalDetection(void)
            (ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00) == 0x00) &&
            (ScalerDpRx1GetDpcdBitInfo(0x00, 0x01, 0x11, _BIT1) != _BIT1))
         {
-            ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x00, g_stDpRx1MiscInfo.ucDpRxLinkRateBackup);
+            ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x00, g_stDpRx1MiscInfo.ucDpRxLinkRateBackup); AWTO_LT_LOG_V(0x32, g_stDpRx1MiscInfo.ucDpRxLinkRateBackup)
             ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x01, ((ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0x60) | (g_stDpRx1MiscInfo.ucDpRxLaneCountBackup | _BIT7)));
 
             if(g_stDpRx1MiscInfo.ucDpRxLaneCountBackup == _DP_FOUR_LANE)
@@ -346,7 +346,7 @@ void ScalerDpRx1ValidSignalDetection(void)
                (ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x00) == 0x00))
 #endif
             {
-                ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x00, ucDpLinkRate);
+                ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x00, ucDpLinkRate); AWTO_LT_LOG_V(0x31, ucDpLinkRate)
                 ScalerDpRx1SetDpcdValue(0x00, 0x01, 0x01, ((ScalerDpRx1GetDpcdInfo(0x00, 0x01, 0x01) & 0x60) | (ucDpLaneCount | _BIT7)));
 
                 if(ucDpLaneCount == _DP_FOUR_LANE)

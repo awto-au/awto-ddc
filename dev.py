@@ -228,14 +228,50 @@ def cmd_clean(_extra: list[str]) -> int:
     return 0
 
 
-@command("fail-fast pre-commit gate: " + " + ".join(GATE), kind="aggregate")
-def cmd_gate(_extra: list[str]) -> int:
+@command("fail-fast pre-commit gate: " + " + ".join(GATE) + "; --extensive also runs the EXTENSIVE firmware gate tier on the newest image (fw_gates --tier extensive)",
+         args="[--extensive]", kind="aggregate")
+def cmd_gate(extra: list[str]) -> int:
     for name in GATE:
         rc = run_step(name)
         if rc not in (0, SKIPPED):
             log(f"GATE FAILED at {name} (rc={rc})", "FATAL")
             return rc
+    if _flag(extra, "--extensive"):
+        imgs = sorted(FW.glob("*-be.bin"), key=lambda p: p.stat().st_mtime)
+        if not imgs:
+            log("GATE: --extensive needs a built image in tmp/fw", "FATAL")
+            return 1
+        rc = subprocess.run([sys.executable, str(REPO / "scripts/fw_gates.py"), str(imgs[-1].with_suffix("")), "--tier", "extensive"]).returncode
+        if rc:
+            log(f"GATE FAILED at fw_gates --tier extensive ({imgs[-1].name})", "FATAL")
+            return rc
     log("GATE PASSED", "ALERT")
+    return 0
+
+
+@command("merge-to-main check: the image's record is for this .bin, complete, tier extensive, no FAIL (a normal record is enough for flash only)",
+         args="IMAGE.bin")
+def cmd_merge_check(extra: list[str]) -> int:
+    img = Path(extra[0]) if extra else None
+    if img is None or not img.is_file():
+        raise SystemExit("merge-check: IMAGE.bin required")
+    rec = next((r for r in (FW / f"{img.stem}.gates.json", img.with_suffix(".gates.json")) if r.is_file()), None)
+    if rec is None:
+        raise SystemExit(f"merge-check: no record for {img.name}; run scripts/fw_gates.py {img.with_suffix('')} --tier extensive")
+    d = json.loads(rec.read_text())
+    failed = sorted(k for k, v in d["gates"].items() if v.get("result") == "FAIL")
+    why = None
+    if d.get("sha256") != hashlib.sha256(img.read_bytes()).hexdigest():
+        why = "record is for another build"
+    elif d.get("tier") != "extensive":
+        why = f"tier is {d.get('tier', 'normal')}, extensive required"
+    elif not d.get("complete"):
+        why = "partial record"
+    elif failed:
+        why = "FAIL: " + ", ".join(failed)
+    if why:
+        raise SystemExit(f"merge-check: {img.name}: {why}")
+    log(f"merge-check: {img.name} extensive record ok ({d.get('date')})")
     return 0
 
 
@@ -620,7 +656,7 @@ def cmd_build(extra: list[str]) -> int:
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree).returncode else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
     args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
-    for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (--xdata-floor 0 for an opt-in test image)
+    for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (extra fw_build args)
         extra.remove(x)
         args += ["--fw-args", x.split("=", 1)[1]]
     for o in ("--bin", "--src", "--level", "--expect", "--flags", "--fw-args"):     # compiler A/B and layout experiments (fwimage.py options)
@@ -945,11 +981,12 @@ def cmd_reset(extra: list[str]) -> int:
     return _py("rtd_reset.py", _bus(u), "--serial", u["serial"])
 
 
-def _dbg_py(bus: int, script: str, *args, **kw) -> int:
+def _dbg_py(bus: int, script: str, *args, keep_console: bool = False, **kw) -> int:
     """_py with debug slave 0x35 on the unit's DDC for the run (#79 runtime swap: DDC/CI owns it by default); swapped
-    back afterwards only if this call swapped it (scripts/dbg_link.py)."""
+    back afterwards only if this call swapped it (scripts/dbg_link.py). A console / pop-up the run opened is closed
+    again unless keep_console (osd, gpio, menu, pacman: the pop-up is the point)."""
     import dbg_link
-    with dbg_link.linked(int(bus)):
+    with dbg_link.linked(int(bus), keep_console=keep_console):
         return _py(script, *args, **kw)
 
 
@@ -1042,7 +1079,8 @@ def cmd_osd(extra: list[str]) -> int:
     cmdmode = cmdmode or any(x in osd_test.CMD_ONLY for x in extra)       # popup-only actions imply --cmd
     mp = _fwmap(u, given)
     b = _live_bus(u)
-    return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra)
+    return _dbg_py(b, "osd_test.py", b, "--serial", u["serial"], "--map", mp, *(["--cmd"] if cmdmode else []), *extra,
+                   keep_console=True)
 
 
 @command("clear the OSD diagnostics console (= osd clear, test cmd 0x27)", args="[--unit N] [--map F]", kind="action")
@@ -1085,7 +1123,7 @@ def cmd_settings(extra: list[str]) -> int:
     return _dbg_py(b, "settings_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *extra)
 
 
-@command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone",
+@command("1 s alert tone on the unit's speaker (VCP 0xEB = 6): flash warning, or an agent calling Dan; --wait returns after the tone; every image, volume = the monitor VCP 0x62",
          args="[--unit N] [--wait]", kind="action")
 def cmd_alert(extra: list[str]) -> int:
     n, u = _unit(extra)
@@ -1127,7 +1165,8 @@ def cmd_menu(extra: list[str]) -> int:
         return _py("menu_cli.py", "--sim", sim, "--map", given or str(Path(sim).with_suffix(".map")), *pa, *extra)
     n, u = _unit(extra)
     b = _live_bus(u)
-    return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra)
+    return _dbg_py(b, "menu_cli.py", "--bus", str(b), "--serial", u["serial"], "--map", _fwmap(u, given), *pa, *extra,
+                   keep_console=True)
 
 
 @command("full-screen landscape Pac-Man demo: computer arrow keys steer; Escape/Q closes",
@@ -1137,7 +1176,8 @@ def cmd_pacman(extra: list[str]) -> int:
     given = _opt(extra, "--map")
     _done(extra, "pacman")
     b = _live_bus(u)
-    return _dbg_py(b, "pacman_cli.py", b, "--serial", u["serial"], "--map", _fwmap(u, given))
+    return _dbg_py(b, "pacman_cli.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
+                   keep_console=True)
 
 
 @command("Pygame RTD OSD emulator using the linked firmware's actual glyph/map/palette bytes",
@@ -1179,7 +1219,7 @@ def cmd_pacman_sim(extra: list[str]) -> int:
 
 @command("eyes-free health of a running unit (debug slave 0x35, 100 kHz): diag stage, loop rate, mode/power state, "
          "input timing vs host, backlight/panel pins, OSD round-trips; PASS/FAIL + exit code",
-         args="[--unit N] [--map F] [--host-mode WxH@HZ] | --sim BIN", kind="action")
+         args="[--unit N] [--map F] [--host-mode WxH@HZ] [--no-osd] | --sim BIN", kind="action")
 def cmd_health(extra: list[str]) -> int:
     sim = _opt(extra, "--sim")
     if sim:                                                  # firmware simulator, no hardware (#38); map = BIN with .map
@@ -1191,10 +1231,11 @@ def cmd_health(extra: list[str]) -> int:
     given, hm = _opt(extra, "--map"), _opt(extra, "--host-mode")
     if given is True or hm is True:
         raise SystemExit("health: --map/--host-mode need a value; nothing done")
+    no_osd = _flag(extra, "--no-osd")
     _done(extra, "health")
     b = _live_bus(u)
     return _dbg_py(b, "unit_health.py", b, "--serial", u["serial"], "--map", _fwmap(u, given),
-               *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]))
+               *(["--host-mode", hm] if hm else ["--gdctl", u["gdctl"]]), *(["--no-osd"] if no_osd else []))
 
 
 @command("write scaler registers over ISP (MCU halted), read back; --reset reboots", args="[--unit N] [--reset] ADDR=VAL...",
@@ -1316,7 +1357,7 @@ def cmd_cpu_suite(extra: list[str]) -> int:
         clocks = [c for c in (opts[opts.index("--clocks") + 1] if "--clocks" in opts else "87,175,350").split(",") if c]
         for c in clocks:
             if build or not (FW / f"{u['serial']}-cpusuite-{c}-be.bin").is_file():
-                rc = cmd_build(["--serial", u["serial"], "--tag", f"cpusuite-{c}", "-D", "_AWTO_CPU_SUITE", "-D", f"AWTO_CLOCK_MHZ={c}", "--fw-args=--xdata-floor 0"])
+                rc = cmd_build(["--serial", u["serial"], "--tag", f"cpusuite-{c}", "-D", "_AWTO_CPU_SUITE", "-D", f"AWTO_CLOCK_MHZ={c}"])
                 if rc:
                     return rc
         return _py("cpu_suite.py", "--sim", "--serial", u["serial"], *opts, *(["--allow-scratch-write"] if write else []))
@@ -1396,7 +1437,7 @@ def cmd_gpio(extra: list[str]) -> int:
         raise SystemExit("gpio: --secs needs a number; nothing done")
     b = _live_bus(u)
     return _dbg_py(b, "gpio_diag.py", b, extra[0], "--serial", u["serial"], "--map", _fwmap(u, given),
-                   *(["--secs", secs] if secs else []))
+                   *(["--secs", secs] if secs else []), keep_console=True)
 
 
 @command("read the sink's HDMI SCDC registers (0x54), read-only", args="[--unit N]", kind="action")

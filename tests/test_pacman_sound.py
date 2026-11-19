@@ -97,7 +97,7 @@ def test_siren_speeds_up_same_pitch_range():
 
 
 def test_firmware_ids_match_track_order():
-    c = (Path(__file__).resolve().parents[1] / "fw/test/snd.c").read_text()
+    c = (Path(__file__).resolve().parents[1] / "fw/audio/audio.c").read_text()
     ids = {n: int(re.search(rf"#define AWTO_PS_TRACK_{n}\s+(\d+)", c).group(1)) for n in ("INTRO", "WAKA", "ALERT", "GHOST", "FRUIT", "BG0", "FIRE")}
     names = [n for n, _ in P.TRACKS]
     assert [ids[n.upper()] for n in ("intro", "waka", "alert", "ghost", "fruit")] == [names.index(n) for n in ("intro", "waka", "alert", "ghost", "fruit")]

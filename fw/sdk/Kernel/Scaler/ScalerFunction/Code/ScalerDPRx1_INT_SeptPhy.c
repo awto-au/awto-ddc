@@ -96,7 +96,7 @@ BYTE ScalerDpRx1GetDpcdBitInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessP
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
 
-    return ScalerGetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
+    AWTO_DPCD_SETTLE_E() return ScalerGetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
 }
 //--------------------------------------------------
 // Description  : Get DPCD Table Information in INT0
@@ -111,7 +111,7 @@ BYTE ScalerDpRx1GetDpcdInfo_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPort
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
 
-    return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
+    AWTO_DPCD_SETTLE_E() return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
 }
 //--------------------------------------------------
 // Description  : Set DPCD Table Information in INT0
@@ -126,7 +126,7 @@ void ScalerDpRx1SetDpcdBitValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccess
     ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
-    ScalerSetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ~(~ucNotDpcdBit), ucDpcdBit);
+    AWTO_DPCD_SETTLE_E() ScalerSetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ~(~ucNotDpcdBit), ucDpcdBit);
 }
 //--------------------------------------------------
 // Description  : Set DPCD Table Information in INT0
@@ -141,7 +141,7 @@ void ScalerDpRx1SetDpcdValue_EXINT0(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPor
     ScalerSetByte_EXINT(PBA_C1_DPCD_ADDR_PORT_H, ucDpcdAccessPortH);
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
-    ScalerSetByte_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdValue);
+    AWTO_DPCD_SETTLE_E() ScalerSetByte_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdValue);
 }
 //--------------------------------------------------
 // Description  : DP Sink Status Setting in EXINT
@@ -412,7 +412,7 @@ BYTE ScalerDpRx1GetDpcdInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPortM
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
 
-    return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
+    AWTO_DPCD_SETTLE_E() return ScalerGetByte_EXINT(PBA_C4_DPCD_DATA_PORT);
 }
 #if(_DP_HDCP_2_2_SUPPORT == _ON)
 //--------------------------------------------------
@@ -428,7 +428,7 @@ BYTE ScalerDpRx1GetDpcdBitInfo_WDINT(BYTE ucDpcdAccessPortH, BYTE ucDpcdAccessPo
     ScalerSetByte_EXINT(PBA_C2_DPCD_ADDR_PORT_M, ucDpcdAccessPortM);
     ScalerSetByte_EXINT(PBA_C3_DPCD_ADDR_PORT_L, ucDpcdAccessPortL);
 
-    return ScalerGetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
+    AWTO_DPCD_SETTLE_E() return ScalerGetBit_EXINT(PBA_C4_DPCD_DATA_PORT, ucDpcdBit);
 }
 #endif
 #endif
@@ -2098,7 +2098,7 @@ void ScalerDpRx1IntHandler_EXINT0(void)
         if(ScalerGetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, _BIT0) == _BIT0) // Write 00600h into INT0
         {
             // Clear Flag
-            ScalerSetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, ~_BIT0, _BIT0);
+            ScalerSetBit_EXINT(PBA_DD_AUX_DPCD_IRQ, ~_BIT0, _BIT0); AWTO_LT_PUT(0x40, ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x06, 0x00), ScalerDpRx1GetDpcdInfo_EXINT0(0x00, 0x01, 0x00))
 
             if((ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == _BIT1) ||
                (ScalerDpRx1GetDpcdBitInfo_EXINT0(0x00, 0x06, 0x00, (_BIT2 | _BIT1 | _BIT0)) == (_BIT2 | _BIT0)))

@@ -26,7 +26,7 @@
 // DEFINITIONS / MACROS
 //****************************************************************************
 #define _CEC_BOARDCAST_LA                      0xF
-#define _CEC_RX_BACKUP_FIFO_SIZE               20      // awto: one 16-byte frame + header (XDATA floor)
+#define _CEC_RX_BACKUP_FIFO_SIZE               20      // awto: one 16-byte frame + header (XDATA is scarce)
 
 // CEC receiver duration setting
 #define _CEC_RX_START_LOW_TIME                 0x74

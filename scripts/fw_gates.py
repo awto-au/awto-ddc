@@ -2,7 +2,7 @@
 """Offline gates for one firmware image (sims in parallel): boot-check, isr-check, link check, health --sim 1080p60 + 2160p60,
 menu, ddc, keys, crash, wdt, sync, bootsim, wake, panel, delays, sysm, pokes, htime, magic, regs, regmap, nvlog, monitor.
 
-usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
+usage: fw_gates.py IMAGE_STEM [--tier normal|extensive] [--tree WORKTREE] [--speed LABEL] [--only boot,isr,link,h1080,h2160,menu,ddc,keys,crash,wdt,sync,bootsim,wake,pokes,htime,magic,regs]
   menu, ddc: only for images with the settings registry (#67): menu_cli walk + ddc_sim (MCCS) in fw_sim.
   keys: key_sim_test (#129). crash: crash_sim_test --header TREE/... (#131, #138). wdt: wdt_test --sim, all cases.
   htime: host_time_sim (#157: DDC/CI host time, console title row, ring lines).
@@ -25,9 +25,15 @@ usage: fw_gates.py IMAGE_STEM [--tree WORKTREE] [--speed LABEL] [--only boot,isr
   Each gate's output -> tmp/logs/fw_gates/<stem>.<gate>.log; one PASS/FAIL/SKIP line per gate; exit 1 if any fails.
 SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbols), or the gate needs a tree (--tree, default this repo) without the file.
   wdt cases the image does not implement report SKIP inside wdt_test; they are counted in the gate's note.
-Record: tmp/fw/<stem>.gates.json = image SHA-256, date, per-gate result + seconds, fw_gates git commit, complete (no --only).
+Tiers: normal (default) skips the EXTENSIVE gates (table in this file); --tier extensive runs all. Record: tier + complete.
+  A complete normal record is what `dev.py flash` needs; `dev.py merge-check` (merge to main) needs tier extensive.
+Record: tmp/fw/<stem>.gates.json = image SHA-256, date, tier, per-gate result + seconds, fw_gates git commit, complete (no --only).
   `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
-Stall guard (awto-dan#53): a gate silent for STALL_S is killed and FAILs; backstop LIMIT_S per gate.
+Stall guard (awto-dan#53): waits for a gate's next output line or CPU progress of its process tree; expected: output at least
+  every few s, 3x margin at 60 s (STALL_S). A gate with neither for STALL_S is hung: killed. Backstop LIMIT_S per gate (3x the cold
+  run) times the load factor (1 + 1-min loadavg / cores, 1..LOAD_CAP) since a starved gate is slow, not hung. A guard kill is rerun
+  once (second log `<gate>.rerun.log`, both runs in fw_gates.log); two kills = FAIL. Every kill logs gate, reason, elapsed,
+  last line, loadavg, CPU seconds. Logic: guard_verdict(), tests/test_fw_gates_guard.py.
 Log: ./tmp/logs/fw_gates.log
 """
 import argparse
@@ -46,11 +52,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root
 
 ROOT = repo_root()
-STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
+STALL_S = 60          # no output line and no CPU progress for 60 s = hung (awto-dan#53)
+LOAD_CAP = 4.0        # backstop limit scales with load / cores up to 4x: the box has been seen at load 45 on 28 cores = 1.6x
 LIMIT_OF = {"keys": 150, "deadport": 80, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90, "monitor": 90}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
 PY = [sys.executable, "-u"]
+# Tiers (Dan 2026-11-19): normal = every build / flash (a complete normal record is the flash gate); extensive = normal + these long
+# scenario sweeps (on request, before a merge to main, nightly). A gate not listed here is normal. Move a gate by editing this set.
+WDT_NORMAL_CASES = "stall,pass,reason,t0_timing"
+EXTENSIVE = {
+    "menu": "16 pages / 133 entries walk",
+    "keys_full": "80 checks, ~250 simulated s of OSD timeouts and holds (normal: the selector section)",
+    "deadport": "4 cases, up to 40 simulated s each",
+    "inputrate": "40 start phases x 3 rows",
+    "monitor_full": "heartbeat (30 samples) at period / 10 (normal: --no-beat, same scale)",
+    "monitor_real": "production period, 300 simulated s",
+    "wdt_full": "21 watchdog cases (normal: stall, pass, reason, t0_timing)",
+    "wake_full": "all wake paths incl. UP+DOWN, DPCD, TMDS clock, burst (normal: --quick)",
+    "crash_full": "workload / stall / hw / probe (normal: stall)",
+    "conwrap_full": "real power off / on / saving / wake phases 1-5 (normal: injected lines)",
+    "canary": "stack canary, long boot + fatal path",
+    "delays_sim": "panel scenario at the image's clock: class A waits, Timer2 / wall, DELAY loops, loop counts (~10 s CPU)",
+    "delays_full": "both clocks (350 + the sibling -clk87 image); clock matrix: scripts/gate_matrix.py",
+    "bootsim_always": "second boot_sim variant (console at power-on)",
+    # Dan 2026-11-19: a normal gate is ~1 s, a few s at most. These cost 9-20 s CPU even as minimal variants (measured 2026-11-19):
+    # their quick variants (keys --only switch, monitor --no-beat, wake --quick, crash --tests stall, conwrap --scope inject) run
+    # with --only and in the extensive tier only until a test-timing scale cuts their simulated seconds.
+    "keys": "quick variant, ~20 s CPU (OSD-timeout / hold simulated seconds)",
+    "wake": "quick variant, ~9 s CPU",
+    "crash": "stall variant, ~10 s CPU",
+    "conwrap": "inject variant, ~9 s CPU (boot + NVRAM flush wait + console redraws)",
+    "conmode": "~9 s CPU (3 s console timers x 3 modes)",
+    "sysm": "~10 s CPU (power / mode machine chain)",
+    "sync": "~11 s CPU (sync-log sim boots)",
+}
 SIM_CPU = os.environ.get("AWTO_SIM_CPU", "dw8051")   # fast-core CPU model of the sims (#162 step 1); results are comparable only at the same model
 CPU_OF = {}      # per-gate CPU model override; wdt runs on dw8051 since the Timer0 cases use wall ms (the 8052 model has no clock: the 350.8 MHz boot never reaches stage 8 in wdt_test)
 NO_SIM = {"link", "pokes", "speed", "magic", "regs", "regmap", "rules"}   # every other gate runs a sim on the in-process DW8051 core (fw_sim default; ucsim is a cross-check only)
@@ -75,6 +111,17 @@ SKIP_IF_MISSING = {      # gate -> map symbols the image must define, else SKIP 
 }
 
 
+for _k in ("keys", "wdt", "wake", "crash", "monitor", "conwrap"):       # the extensive twin of a gate has its limit and its image requirements
+    SKIP_IF_MISSING[_k + "_full"] = SKIP_IF_MISSING[_k] if _k in SKIP_IF_MISSING else ()
+    LIMIT_OF[_k + "_full"] = LIMIT_OF.get(_k, LIMIT_S)
+LIMIT_OF["crash"] = LIMIT_OF["crash_full"] = 60
+SKIP_IF_MISSING["monitor_real"] = SKIP_IF_MISSING["monitor"]
+LIMIT_OF["monitor_real"] = 90
+LIMIT_OF["monitor"] = LIMIT_OF["monitor_full"] = 30
+LIMIT_OF["delays_full"] = LIMIT_OF["delays_sim"] = LIMIT_OF["delays"]
+SKIP_IF_MISSING = {k: v for k, v in SKIP_IF_MISSING.items() if v}
+
+
 def header(tree):
     h = Path(tree) / "fw/sdk/Project/Header/RL6449_Project.h" if tree else None
     return h if h and h.is_file() else None
@@ -90,6 +137,7 @@ def skips(b: Path, m: Path, tree) -> dict:
           for k, v in SKIP_IF_MISSING.items() if not all(has(x) for x in v)}
     if not header(tree):
         sk.setdefault("crash", "needs --tree with fw/sdk/Project/Header/RL6449_Project.h")
+        sk.setdefault("crash_full", sk["crash"])
     if not (tree and Path(tree).is_dir()):
         sk["pokes"] = "needs --tree (static check of the worktree's sources)"
         sk["magic"] = sk["regs"] = sk["rules"] = "needs --tree (static check of the worktree's sources)"
@@ -116,31 +164,42 @@ def gates(b: Path, m: Path, ref, tree):
         if " _AwtoWaitPump" in mt:                 # #216: Get-VCP answered inside a blocking wait, Set left to the main loop
             g["pump"] = [*PY, f"{s}/pump_sim.py", b, "--map", m]
     out = ROOT / "tmp/fw_gates" / b.stem             # own PNG/json dir per image (gates run in parallel)
-    g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m]
-    g["wdt"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
+    g["keys"] = [*PY, f"{s}/key_sim_test.py", b, m, "--only", "switch"]             # NORMAL: the selector takes another input; keys_full = every screen (extensive)
+    g["keys_full"] = [*PY, f"{s}/key_sim_test.py", b, m]
+    g["wdt_full"] = [*PY, f"{s}/wdt_test.py", "--sim", b, m, *(["--header", hdr] if (hdr := header(tree)) else [])]
+    g["wdt"] = [*g["wdt_full"], "--cases", WDT_NORMAL_CASES]                          # NORMAL: bite + no false reset + reason line + Timer0 timing
     g["sync"] = [*PY, f"{s}/sync_sim.py", b, m, "--out", out / "sync"]
     g["bootsim"] = [*PY, f"{s}/boot_sim.py", b, m, "--out", out / "boot"]
     g["bootsim_always"] = [*PY, f"{s}/boot_sim.py", b, m, "--console", "always", "--no-bite", "--out", out / "boot_always"]   # #144: console at power-on
-    g["wake"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    g["wake_full"] = [*PY, f"{s}/wake_sim.py", b, m, "--out", out / "wake"]
+    g["wake"] = [*g["wake_full"], "--quick"]                                          # NORMAL: cable / EDID / AUX / SOURCE-key wakes
     g["panel"] = [*PY, f"{s}/panel_sim.py", b, m, *(["--tree", tree] if tree else [])]
     g["sysm"] = [*PY, f"{s}/sysm_sim.py", b, m, *(["--tree", tree] if tree else [])]
     fast = b.with_name(b.name.replace("-be.bin", "-clk87-be.bin"))    # `dev.py build --tag <tag>-clk87 -D AWTO_CLOCK_MHZ=87` (stock clock): measured too when present
-    g["delays"] = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else []),
-                   *(["--other", fast, fast.with_suffix(".map")] if fast.is_file() and fast != b else [])]     # #delay-audit: every wait vs its intended wall time
+    base = [*PY, f"{s}/delay_sim.py", b, m, *(["--tree", tree, "--audit"] if tree else [])]
+    if tree:
+        g["delays"] = [*PY, f"{s}/delay_audit.py", "--check", "--tree", tree, "--map", m]      # NORMAL: every linked delay site is in docs/delay-audit.tsv (~1 s)
+    g["delays_sim"] = base                                                            # extensive: panel_sim scenario at the image's clock vs wall ms
+    if fast.is_file() and fast != b:                                                  # extensive: + the sibling -clk87 image, DDC debounce equal at both clocks
+        g["delays_full"] = [*base, "--other", fast, fast.with_suffix(".map")]
     g["nvlog"] = [*PY, f"{s}/nv_test.py", "--sim", b, "--map", m, "--cases", "flushlog"]   # #151: flush lines say what was written
     if " _AwtoFlashWrBegin" in mt:                          # flash clock default: FF6C / F2 order at boot, write sessions at F2 5
         g["flashclk"] = [*PY, f"{s}/flash_clk_sim.py", b, "--map", m]
     g["deadport"] = [*PY, f"{s}/deadport_sim.py", b, m]       # #84: VCP 0x60 / selector refuse a port with no cable, guard back to auto
     g["portcfg"] = [*PY, f"{s}/portcfg_sim.py", b, m]         # #81: disabled port: HPD never high, never searched, selector re-enables
     g["inputrate"] = [*PY, f"{s}/input_rate_sim.py", b, m]    # D7: pass / slow input rows: a pulse of the worst read gap is never missed
-    g["monitor"] = [*PY, f"{s}/mon_sim_test.py", b, m]       # health monitor: sample period, rows, change steps, registry switch, heartbeat
+    g["monitor_real"] = [*PY, f"{s}/mon_sim_test.py", b, m]     # health monitor at the production period: rows, change steps, registry switch, heartbeat (300 simulated s)
+    g["monitor_full"] = [*g["monitor_real"], "--scale", "10"]   # extensive: the same with the sample period / 10 (sim_time_scale.py), heartbeat included
+    g["monitor"] = [*g["monitor_full"], "--no-beat"]            # NORMAL: all but the 30-sample heartbeat, period / 10
     g["htime"] = [*PY, f"{s}/host_time_sim.py", b, "--map", m]
     g["conmode"] = [*PY, f"{s}/console_mode_sim.py", b, m]    # #218: Off / Until signal (3 s close, key dismiss) / Always
     if " _g_ucAwtoStackFatal" in mt:                       # #203 stack canary: quiet at ACTIVE, fatal + halt on 0x3F
         g["canary"] = [*PY, f"{s}/stack_canary_sim.py", b, m]
-    g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", *(["--tree", tree] if tree else [])]   # no line clipped
+    g["conwrap_full"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap_full", *(["--tree", tree] if tree else [])]   # no line clipped, real events
+    g["conwrap"] = [*PY, f"{s}/con_wrap_sim.py", b, "--map", m, "--out", out / "conwrap", "--scope", "inject", *(["--tree", tree] if tree else [])]    # NORMAL: injected widest lines
     if header(tree):
-        g["crash"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
+        g["crash_full"] = [*PY, f"{s}/crash_sim_test.py", "--header", header(tree), "--out", out / "wdt", b, m]
+        g["crash"] = [*g["crash_full"], "--tests", "stall"]                            # NORMAL: the 0x4C stall -> bite -> record
     if tree and Path(tree).is_dir():
         g["pokes"] = [*PY, f"{s}/poke_loops.py", tree, "--out", out / "poke_loops.tsv"]
         g["magic"] = [*PY, f"{s}/magic_lint.py", "--tree", tree]
@@ -164,9 +223,58 @@ def gates(b: Path, m: Path, ref, tree):
     }
 
 
+def load_factor() -> float:
+    """1 + 1-minute loadavg / cores, clamped to [1, LOAD_CAP]: a gate sharing every core with another job runs ~2x slower."""
+    return max(1.0, min(LOAD_CAP, 1.0 + os.getloadavg()[0] / (os.cpu_count() or 1)))
+
+
+def cpu_ticks(pid: int) -> float:
+    """CPU seconds used so far by the process tree under pid (0 if gone)."""
+    try:
+        import psutil
+        ps = psutil.Process(pid)
+        return sum(sum(x.cpu_times()[:2]) for x in [ps, *ps.children(recursive=True)] if _alive(x))
+    except Exception:
+        return 0.0
+
+
+def _alive(x) -> bool:
+    try:
+        return x.is_running()
+    except Exception:
+        return False
+
+
+def guard_verdict(now, t0, last_out, last_cpu, limit, stall=None, factor=1.0):
+    stall = STALL_S if stall is None else stall
+    """None while fine, else ("stall" | "limit", text). Stall = no output line AND no CPU progress for `stall` s
+    (a child starved of CPU on a loaded box still advances its CPU clock; a deadlock / sleep does not).
+    The backstop `limit` is scaled by `factor` (load / cores, capped)."""
+    quiet = now - max(last_out, last_cpu)
+    if quiet > stall:
+        return "stall", f"silent {now - last_out:.0f}s, no CPU progress for {now - last_cpu:.0f}s > {stall}s"
+    if now - t0 > limit * factor:
+        return "limit", f"{now - t0:.0f}s > {limit}s x load factor {factor:.2f}"
+    return None
+
+
 def run(name, cmd, out: Path, res: dict, log):
+    """One gate, at most two attempts: a guard kill (stall / limit) is rerun once, both runs logged; two kills = real failure.
+    A gate that fails by its own exit code is not rerun."""
+    for attempt in (1, 2):
+        rc, dt, last, killed = run_once(name, cmd, out if attempt == 1 else out.with_suffix(".rerun.log"), log)
+        if not killed:
+            break
+        log(f"{name}: guard kill on attempt {attempt}" + (", rerunning once" if attempt == 1 else ", failing"))
+    res[name] = (rc, dt, last)
+
+
+def run_once(name, cmd, out: Path, log):
     t0 = time.monotonic()
     last = [t0, ""]
+    cpu = [t0, 0.0]                              # [time of last CPU progress, CPU seconds seen]
+    killed = [False]
+    limit = LIMIT_OF.get(name, SPEED_LIMIT_S if name == "speed" else LIMIT_S)
     with out.open("w") as f:
         p = subprocess.Popen(list(map(str, cmd)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT,
                              env=dict(os.environ, PYTHONHASHSEED="0", **({"AWTO_SIM_CORE": "fast", "AWTO_SIM_CPU": CPU_OF.get(name, SIM_CPU)} if name not in NO_SIM else {})))
@@ -174,10 +282,14 @@ def run(name, cmd, out: Path, res: dict, log):
         def watch():
             while p.poll() is None:
                 now = time.monotonic()
-                if now - last[0] > STALL_S or now - t0 > LIMIT_OF.get(name, SPEED_LIMIT_S if name == "speed" else LIMIT_S):
-                    why = "stall" if now - last[0] > STALL_S else "limit"
-                    log(f"{name}: KILL ({why}) after {now - t0:.0f}s, silent {now - last[0]:.0f}s, last: {last[1][:160]!r}, "
-                        f"loadavg {os.getloadavg()[0]:.1f}")
+                c = cpu_ticks(p.pid)
+                if c > cpu[1]:
+                    cpu[0], cpu[1] = now, c
+                v = guard_verdict(now, t0, last[0], cpu[0], limit, factor=load_factor())
+                if v:
+                    log(f"{name}: KILL ({v[0]}) after {now - t0:.0f}s: {v[1]}, last: {last[1][:160]!r}, "
+                        f"loadavg {os.getloadavg()[0]:.1f} on {os.cpu_count()} cores, cpu {cpu[1]:.1f}s")
+                    killed[0] = True
                     p.kill()
                     return
                 try:
@@ -190,7 +302,7 @@ def run(name, cmd, out: Path, res: dict, log):
             f.write(line); f.flush()
             last[0], last[1] = time.monotonic(), line.strip()
         rc = p.wait()
-    res[name] = (rc, time.monotonic() - t0, last[1])
+    return rc, time.monotonic() - t0, last[1], killed[0] and rc != 0     # a gate that finished cleanly as the guard fired is a pass
 
 
 def main() -> int:
@@ -199,6 +311,8 @@ def main() -> int:
     ap.add_argument("--against", default="", help="ignored (#66: link findings must be 0, no baseline)")
     ap.add_argument("--speed", default="")
     ap.add_argument("--only", default="")
+    ap.add_argument("--tier", choices=("normal", "extensive"), default="normal",
+                    help="normal (default, the flash gate): all gates but EXTENSIVE; extensive: every gate (normal + the long sweeps)")
     # default = this repo: without a tree, wdt / conwrap use stale built-in constants and the static gates drop out
     ap.add_argument("--tree", default=str(ROOT), help="worktree the image was built in (its bank_layout.tsv + asm_bank); default this repo")
     a = ap.parse_args()
@@ -220,6 +334,10 @@ def main() -> int:
     sk = skips(b, m, a.tree)
     if a.only:
         g = {k: v for k, v in g.items() if k in a.only.split(",")}
+    elif a.tier == "normal":
+        g = {k: v for k, v in g.items() if k not in EXTENSIVE}
+    else:                                           # extensive: a full twin replaces its quick variant
+        g = {k: v for k, v in g.items() if k + "_full" not in g}
     sk = {k: v for k, v in sk.items() if k in g}
     g = {k: v for k, v in g.items() if k not in sk}
     if a.speed:
@@ -241,10 +359,10 @@ def main() -> int:
     bad, rec = 0, {}
     for k in g:
         rc, dt, last = res[k]
-        ok = rc == 0 or (k.startswith("h") and last.endswith("FAIL: delay cal"))   # delay cal needs wb-delaycal (#54)
+        ok = rc == 0
         bad += not ok
         note = last[:150]
-        if k == "wdt":
+        if k in ("wdt", "wdt_full"):
             n = sum(1 for ln in (ROOT / "tmp/logs/fw_gates" / f"{b.stem}.{k}.log").read_text(errors="replace").splitlines()
                     if re.match(r"\s+SKIP\s", ln))
             note = f"{n} case(s) SKIP; {note}" if n else note
@@ -253,18 +371,19 @@ def main() -> int:
     for k, why in sk.items():
         rec[k] = {"result": "SKIP", "rc": None, "seconds": 0, "note": why}
         log(f"SKIP {k:6s} {why}")
-    write_record(b, rec, a.tree, complete=not a.only)
+    write_record(b, rec, a.tree, complete=not a.only, tier=a.tier)
     log(f"=== {b.name}: {'ALL PASS' if not bad else f'{bad} FAIL'}, {len(sk)} SKIP ===")
     return 1 if bad else 0
 
 
-def write_record(b: Path, rec: dict, tree, complete: bool) -> None:
+def write_record(b: Path, rec: dict, tree, complete: bool, tier: str = "normal") -> None:
     """tmp/fw/<stem>.gates.json: what `dev.py flash` checks (SHA-256 of the .bin, complete, no FAIL)."""
     def git(*x):
         return subprocess.run(["git", "-C", str(ROOT), *x], capture_output=True, text=True).stdout.strip()
     doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
-           "date": isostamp.now(), "complete": complete, "tree": str(tree or ""),
+           "date": isostamp.now(), "complete": complete, "tier": tier, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
+           "xdata": (json.loads(xj.read_text()) if (xj := b.with_suffix(".xdata.json")).is_file() else None),
            "gates": rec}
     out = b.with_suffix(".gates.json")
     tmp = out.with_suffix(".json.tmp")

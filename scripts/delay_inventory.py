@@ -218,6 +218,7 @@ class Eval:
     def __init__(self, defs):
         self.obj = {k: v for k, v in defs.items() if "(" not in k}
         self.fn = {k.split("(")[0]: (re.findall(r"\w+", k.split("(", 1)[1]), v) for k, v in defs.items() if "(" in k}
+        self.fn_rx = {name: re.compile(rf"\b{name}\s*\(([^()]*)\)") for name in self.fn}      # compiled once: expand() ran ~2400 compiles per call
 
     def expand(self, s: str, depth=0) -> str:
         if depth > 12:
@@ -231,7 +232,8 @@ class Eval:
                 break
             prev = s
             for name, (params, body) in self.fn.items():
-                s = re.sub(rf"\b{name}\s*\(([^()]*)\)", lambda m, p=params, b=body: self._call(p, b, m.group(1)), s)
+                if name in s:                                  # the pattern needs the name as a substring
+                    s = self.fn_rx[name].sub(lambda m, p=params, b=body: self._call(p, b, m.group(1)), s)
             s = re.sub(r"\b[A-Za-z_]\w*\b", sub, s)
         return s
 

@@ -10,7 +10,7 @@ usage: AWTO_SIM_CORE=fast key_sim_test.py BIN MAP [--mode 1080p60] [--shots DIR]
   - awto menu: AUTO = enter (menu_key 0), DOWN moves, held DOWN repeats at the rate limit, MENU = back / close.
   - console: UP+DOWN opens (no single-key leak); main page only MENU / POWER act; GPIO page DOWN scrolls + repeats.
   - injected test cmd keys (0x01..0x05 = AUTO UP DOWN MENU SOURCE) under the same rules; MENU+DOWN no combo; POWER off / on.
-- Key click (#229, registry key_click): the call to AwtoPmSoundTone per press (all builds); in a -D _AWTO_AUDIO_TEST image the 1200 Hz tone from the
+- Key click (#229, registry key_click): the call to AwtoPmSoundTone per press (every build); the 1200 Hz tone from the
   audio tap: ~30 ms, once per press (no repeat), none for POWER / muted / default off / while Pac-Man sound plays, generator off at the end.
 - Physical key = ADC_A0 (0xFF09) / ADC_A1 (0xFF0A) cell value in a fw/awto/inputs.tsv band; idle = regdb reset 0xF8; POWER = P3.0 low.
 - Actions are counted with call watches (fw_sim Machine.watch): the assertions name the function that must / must not run.
@@ -432,7 +432,7 @@ def clicks(k, t0):
 def key_click(k):
     """#229: key click only when enabled and not muted, once per press, not POWER, not while another sound plays, never stuck."""
     st = k.st = {SET_ID_KEY_CLICK: 1, SET_ID_MUTE: 0}
-    audio = "_PsStart" in k.m.sym                              # -D _AWTO_AUDIO_TEST image (static names are in the map)
+    audio = "_PsStart" in k.m.sym                              # static names are in the map; true in every build since #229
     k.m.stub("set_get", lambda m_, q: {"val": st[q["a1"] & 0xFF]} if (q["a1"] & 0xFF) in st else None)
     seq = ("DOWN", "UP", "MENU", "MENU", "SOURCE", "AUTO")        # bar, bar, closes it + menu, menu back, selector, take
     st[SET_ID_KEY_CLICK] = 0
