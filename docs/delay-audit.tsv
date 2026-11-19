@@ -568,8 +568,8 @@ fw/test/saver.c|-|const|AWTO_SAVER_MS_PER_S|1	W0566	E	fw/test/saver.c	49	-	const
 fw/test/scope_saver.c|-|const|AWTO_SC_PASS_MS|1	W0567	E	fw/test/scope_saver.c	44	-	const	8	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8	8	ours	[emu]	OK		AWTO_SC_PASS_MS
 fw/test/scope_saver.c|-|const|AWTO_SC_FRAME_MS|1	W0568	E	fw/test/scope_saver.c	48	-	const	40	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	40	40	ours	[emu]	OK		AWTO_SC_FRAME_MS
 fw/test/scope_saver2.c|-|const|AWTO_S2_PASS_MS|1	W0569	E	fw/test/scope_saver2.c	58	-	const	8	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8	8	ours	[emu]	OK		AWTO_S2_PASS_MS
-fw/test/snd.c|-|const|AWTO_PS_TICK_MS|1	W0570	E	fw/test/snd.c	12	-	const	10	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	10	10	ours	[emu]	OK		AWTO_PS_TICK_MS
-fw/test/snd.c|-|const|AWTO_PS_GAP_MS|1	W0571	E	fw/test/snd.c	40	-	const	4	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	4	4	ours	[emu]	OK		AWTO_PS_GAP_MS
+fw/audio/audio.c|-|const|AWTO_PS_TICK_MS|1	W0570	E	fw/audio/audio.c	12	-	const	10	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	10	10	ours	[emu]	OK		AWTO_PS_TICK_MS
+fw/audio/audio.c|-|const|AWTO_PS_GAP_MS|1	W0571	E	fw/audio/audio.c	40	-	const	4	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	4	4	ours	[emu]	OK		AWTO_PS_GAP_MS
 fw/test/testcmd.c|-|const|AWTO_OHW_CY_MS|1	W0572	E	fw/test/testcmd.c	216	-	const	8000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8000	8000	ours	[emu]	OK		AWTO_OHW_CY_MS
 fw/test/testcmd.c|-|const|AWTO_OHW_CY_BAND_MS|1	W0573	E	fw/test/testcmd.c	219	-	const	8	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	8	8	ours	[emu]	OK		AWTO_OHW_CY_BAND_MS
 fw/test/testcmd.c|-|const|AWTO_OSW_MAX_MS|1	W0574	E	fw/test/testcmd.c	1923	-	const	1000	ms	AwtoMs() deadline / pass budget in Timer2 ms	no	1000	1000	ours	[emu]	OK		AWTO_OSW_MAX_MS

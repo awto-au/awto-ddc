@@ -1126,8 +1126,9 @@ static void AstShape(BYTE ucShape, BYTE ucShift, BYTE ucRot)                    
     int16_t sT;
     __data int16_t sPx = 0;
     __data int16_t sPy = 0;
+    BYTE ucPoly;
 
-    for(;;)
+    for(ucPoly = 0; ucPoly < AWTO_AST_MAX_POLYS; ucPoly++)                          // walks const data: bound = the most polylines of any shape (generated), the 0 count ends a shape earlier
     {
         ucN = (BYTE)g_tAstData[usP++];
         if(ucN == 0)
