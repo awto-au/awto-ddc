@@ -595,12 +595,17 @@ void SysAudioInternalGenTestProc(bit bOn)
     else
     {
         // DVC ramp down, then generator off, then amp disabled (the caller has already closed the gate)
-        if(ScalerAudioDVCGetVolumeMuteStatus() == _OFF)
+        bit bWasOn = (ScalerAudioDVCGetVolumeMuteStatus() == _OFF);
+
+        if(bWasOn == _TRUE)
         {
             ScalerAudioMuteProc(_ON, UserInterfaceGetAudioVolume());
         }
         ScalerAudioInternalAudioGenSwitch(_OFF, SysSourceGetInputPort());
-        UserInterfaceAdjustAudioAmpMuteProc(_ON);
+        if(bWasOn == _TRUE)
+        {
+            UserInterfaceAdjustAudioAmpMuteProc(_ON);
+        }
         SysAudioChangeAudioState(_AUDIO_STATUS_PREPARING);
     }
 }
