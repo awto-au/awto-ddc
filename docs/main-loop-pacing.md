@@ -19,7 +19,7 @@ Tags: [measured] sim / repo scan, [databook], [sdk-hypothesis], [guess]. Decisio
 - Keys: decisions were already time-based (`AwtoMs` compares: 10 ms sample, 2 equal samples, 80 ms combo, 500 ms repeat, 100 ms rate, 10 s reset). Added: pass-count prefilter `AWTO_KEY_PASS_N = floor(10 / N)` (4 ms: 2, 8 ms: 1) in front of the tick compare. Tick compare stays the exact gate (early wake passes, free-run busy passes at 2300 /s); floor (not round) because the sleep also wakes at the sample deadline, so at least N passes fit in 10 ms.
 - Headroom (last 1 s window, `g_stAwtoHead`, 12 B, read by symbol: the 48 B diag block is full): passes, sleep per mille, worst busy pass (1/16 ms), passes with the busy hook on (per mille), IDL exits, passes ended by a wake bit.
   - Shown in: monitor sync row `headroom N passes/s, busy P %, worst pass X ms` (arg 5, on the heartbeat), console LOOP row ` busy P%`, `./dev.py health` row `headroom`, `docs/speed-bench.tsv` columns `pacing_ms passes_s_idle busy_pct_idle worst_ms_idle` (`loop_pacing_sim.py --bench LABEL`).
-  - Health rule: idle ACTIVE (busy hook < 10 % of passes, re-read up to 4 windows while it is on): busy < 50 %, worst pass < 10 ms; busy hook still on after 4.8 s = FAIL (stuck producer).
+  - Health rule: idle ACTIVE (busy hook < 10 % of passes, re-read up to 4 windows while it is on): busy < 50 % x (350 / image clock MHz), capped at 95 % (Dan 2026-11-20; clock from the image's build.json), worst pass < 10 ms; busy hook still on after 4.8 s = FAIL (stuck producer).
 
 Sim numbers (350.8 MHz, ACTIVE 1080p60, idle, 5 s after ACTIVE, `scripts/loop_pacing_sim.py`; dw8051 core with exact idle):
 

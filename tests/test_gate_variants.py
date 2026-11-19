@@ -121,3 +121,11 @@ def test_xdata_slot_slack_is_reclaimed_by_compaction():
 def test_xdata_over_capacity_names_the_totals():
     with pytest.raises(SystemExit, match=r"modules 80 B, holes - reserved 64 B"):
         XL.place({}, {"a": 40, "b": 40}, [(0x1000, 0x1040)], [])
+
+
+def test_headroom_busy_limit_scales_with_clock():
+    import unit_health as H
+    assert H.busy_limit_pct(350) == 50
+    assert H.busy_limit_pct(175) == H.HEAD_BUSY_CEIL_PCT       # 100 % scaled, capped
+    assert H.busy_limit_pct(700) == 25
+    assert H.busy_limit_pct(87) == H.HEAD_BUSY_CEIL_PCT
