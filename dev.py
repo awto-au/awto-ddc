@@ -1428,6 +1428,15 @@ def cmd_dss_probe(extra: list[str]) -> int:
     return _py("dss_probe.py", "--bus", _live_bus(u), "--serial", u["serial"], "--map", m, "--bin", m.with_suffix(".bin"), *extra)
 
 
+@command("DDR draw ops in the monitor (freeze image, -D _AWTO_FREEZE=_ON; docs/ddr-draw.md): fill hline vline grid circle figure bars frame gradh gradv masktest, each timed (fw ms, MB/s)",
+         args="[--unit N] [--map F] [--no-prep] [--hold S] [--count] OP:key=val,... [OP:...]", kind="action")
+def cmd_ddr_draw(extra: list[str]) -> int:
+    n, u = _unit(extra)
+    given = _opt(extra, "--map")
+    m = Path(_fwmap(u, given))
+    return _py("ddr_draw.py", "--unit", n, "--bus", _live_bus(u), "--map", m, *extra)
+
+
 @command("read-only I2C address probe of the unit's host bus (i2cdetect -r, then i2cget regs 0..F of every extra ACKing address; no writes)",
          args="[--unit N] [--reps N] [--halt] [--extras]", kind="action")
 def cmd_i2c_probe(extra: list[str]) -> int:

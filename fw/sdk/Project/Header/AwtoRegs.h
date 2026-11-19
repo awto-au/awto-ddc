@@ -51,6 +51,16 @@
 #define AWTO_R_D_PG_INITIAL_L_CTRL                      0x07FD
 #define AWTO_R_DISP_PG_DELTA_L                          0x07FE
 #define AWTO_R_D_PATTERN_RESET                          0x07FF
+#define AWTO_R_MCU_DC_CMD_A                             0x3700
+#define AWTO_F_MCU_DC_CMD_A_DDR_A_CMD                   0xE0
+#define AWTO_R_MCU_DC_LEN_A                             0x3701
+#define AWTO_R_MCU_DC_ADDR_H_A                          0x3704
+#define AWTO_R_MCU_DC_ADDR_M_A                          0x3705
+#define AWTO_R_MCU_DC_ADDR_L_A                          0x3706
+#define AWTO_R_MCU_DC_ADDR_A                            0x3707
+#define AWTO_R_MCU_DC_DATABUF_W_00_A                    0x3710
+#define AWTO_R_MCU_DC_WMASK_H_A                         0x3730
+#define AWTO_R_MCU_DC_WMASK_L_A                         0x3731
 #define AWTO_R_FRAME_CTRL_02                            0x3A02
 #define AWTO_F_FRAME_CTRL_02_OSD_EN                     0x01
 #define AWTO_R_FRAME_CTRL_07                            0x3A07

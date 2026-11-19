@@ -54,3 +54,4 @@ nodef	fw/test/cpu_suite.c	_AWTO_CPU_SUITE	ours: dev.py build -D _AWTO_CPU_SUITE 
 nodef	fw/sdk/Kernel/System/Code/SysMain.c	_AWTO_CPU_SUITE	ours: dev.py build -D _AWTO_CPU_SUITE (main() = the suite runner, docs/cpu-suite.md)
 nodef	fw/sdk/Project/Header/RL6449_Project.h	_AWTO_CPU_SUITE	ours: dev.py build -D _AWTO_CPU_SUITE (ISR hook macro, docs/cpu-suite.md)
 nodef	fw/sdk/Kernel/Scaler/ScalerCommonFunction/Header/ScalerCommonMcuInclude.h	AWTO_TP1_WAIT_US	ours: test hook, build -D AWTO_TP1_WAIT_US=n (default off, docs/clock-sweep.md)
+nodef	fw/test/ddr_draw.c	AWTO_DRW_HOST	ours: host build only (tests/ddr_draw_host.c compiles this file against a MCU_DC model), never defined in the firmware

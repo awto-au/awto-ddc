@@ -3084,6 +3084,9 @@ static void AwtoDemoLog(void)                   // each main pass while lines ar
     AwtoSyncPush(AWTO_SYNC_EV_DEMO, 1 + (s_ucAwtoDemoN % 3), AWTO_DEMO_LINES - s_ucAwtoDemoN);     // line 1..100
 }
 
+#if(_AWTO_FREEZE == _ON)
+extern void AwtoDrwPoll(void);
+#endif
 void AwtoDiagTestCmd(void)
 {
     unsigned char ucCmd = isr_g_stAwtoDiag.ucHold;
@@ -3095,6 +3098,9 @@ void AwtoDiagTestCmd(void)
     }
     AwtoDemoLog();
     AwtoPmSoundPoll();
+#if(_AWTO_FREEZE == _ON)
+    AwtoDrwPoll();                              // #267 DDR draw ops (fw/test/ddr_draw.c)
+#endif
 #ifdef _AWTO_OSD_HWTEST
     AwtoOsdHwPoll();
     if((g_stAwtoOsdHw.ucFlags & AWTO_OHW_F_HOLD) == 0)
