@@ -36,7 +36,7 @@ PERIOD_U = 24                    # xbits 3: 64 px * 3 B / 8 B
 WRITES_MAX = 3
 NOSTAGE = [False]
 HOLD = [False]
-HOLD_MAX_S = 600.0              # hard backstop: Dan's hold approval, 10 min
+HOLD_MAX_S = 3600.0             # hard backstop: Dan's hold approval, 60 min (2026-11-19: leave the test image up until he says release)
 MASK = [0xFFFF]             # WMASK value written (set by --mask)
 
 
