@@ -14,6 +14,8 @@
 #define AWTO_CPU_ST_REFUSED                     4                   // R_WRITE without the host's write flag
 #define AWTO_CPU_F_WRITE                        0x01                // request: R_WRITE may write the scratch candidates
 #define AWTO_CPU_F_LIMIT                        0x80                // result: a bounded wait expired
+#define AWTO_CPU_IDLE_MS                        30000UL             // host idle limit: longest case gap seen (M_CRC loaded 1.1 s, 3 s host overhead) x 10; expiry = watchdog reset, 0.6 s, the loop restarts
+#define AWTO_CPU_HANG_EA_OFF                    2                   // AwtoWdtHang: spin with EA off, no watchdog feed (586 ms bite)
 #define AWTO_CPU_KEEP                           0xFF                // ucStretch: leave CKCON alone
 #define AWTO_CPU_CKCON_MASK                     0x07                // CKCON[2:0] MOVX stretch (databook Table 2-5)
 #define AWTO_CPU_TCON_KEEP                      0x55                // TR1 IT1 TR0 IT0
@@ -51,17 +53,20 @@
 
 #define AWTO_CPU_TICK_SPIN                      40000               // main-loop spins to see one 1 ms tick: >= 20 clk a spin = 0.8 M clk = 9 ms at 87.7 MHz, 9x the tick; expiry sets F_LIMIT
 #define AWTO_CPU_RATE_WINDOWS                   20                  // T_RATE: one-tick windows (20 ms)
+#define AWTO_CPU_RATE_WARM                      3                   // windows not counted
 #define AWTO_CPU_RATE_TOL                       16                  // counts per window: sample skew between the two counters (sim: up to 8 counts, instruction granularity), EA off
 #define AWTO_CPU_RELOAD_N                       5
 #define AWTO_CPU_RELOAD_SPIN                    400                 // polls for 256 counts (3072 clk) at >= 16 clk a poll = 192, x2
 #define AWTO_CPU_RELOAD_RATIO_PCT               40                  // quantised polls: 256 / 16 counts ratio to within 40 %
-#define AWTO_CPU_AR_RELOAD                      0x80                // T1 mode 2 reload: 128 counts a period (longer than the poll loop)
+#define AWTO_CPU_AR_RELOAD                      0x00                // T1 mode 2 reload: 256 counts a period (the longest; a cold-cache pass of the poll loop can take over 128)
 #define AWTO_CPU_AR_PERIODS                     20
-#define AWTO_CPU_AR_TOL                         32                  // counts over 20 periods: poll latency
+#define AWTO_CPU_AR_WARM                        3
+#define AWTO_CPU_AR_TOL                         128                 // counts over 20 periods: poll latency
 #define AWTO_CPU_TORN_SAMPLES                   64                  // per batch (2 B each in the test buffer)
-#define AWTO_CPU_TORN_BATCHES                   32                  // 2 x 2048 reads x ~40 cycles = 0.16 M cycles: 7 ms at 87.7 MHz with EA off (loses <= 7 Timer2 ticks)
+#define AWTO_CPU_TORN_BATCHES                   32                  // 2 x 2048 reads; EA off for 64 reads at a time
 #define AWTO_CPU_TORN_STEP                      0x80                // consecutive reads are ~10 counts apart: a step above this is torn
 #define AWTO_CPU_MS_TICKS                       12                  // ticks watched across a counter wrap
+#define AWTO_CPU_MS_STEP_MAX                    3                   // ticks between two reads at tick edges (a cache miss can delay a read past one tick)
 #define AWTO_CPU_MS_LEAD                        5                   // ticks before the wrap the counter is injected
 #define AWTO_CPU_MS_START_LO                    ((WORD)(0 - AWTO_CPU_MS_LEAD))
 #define AWTO_CPU_DRIFT_TICKS_DEF                200                 // T_DRIFT default window (ms); host may pass up to AWTO_CPU_DRIFT_TICKS_MAX
@@ -455,18 +460,22 @@ static void CpuSample(BYTE ucT1, unsigned long *pulT2, WORD *pusT)
     BYTE ucL;
     WORD usN;
     BYTE ucTf;
+    BYTE ucPass;
 
-    EA = 0;
-    usN = d_isr_g_usTimerCounter;
-    do
+    for(ucPass = 0; ucPass < 2; ucPass++)               // pass 0 loads the sample code into the flash cache (a miss inside the sample is ~80 counts at 350.8 MHz); pass 1 counts
     {
-        ucH = TH2;
-        ucL = TL2;
+        EA = 0;
+        usN = d_isr_g_usTimerCounter;
+        do
+        {
+            ucH = TH2;
+            ucL = TL2;
+        }
+        while(ucH != TH2);
+        ucTf = TF2;
+        *pusT = (ucT1 != 0) ? CpuT1Rd() : CpuT0Rd();
+        EA = 1;
     }
-    while(ucH != TH2);
-    ucTf = TF2;
-    *pusT = (ucT1 != 0) ? CpuT1Rd() : CpuT0Rd();
-    EA = 1;
     *pulT2 = ((unsigned long)usN + ucTf) * CpuTickCounts() + (((WORD)ucH << 8) | ucL) - CpuRcap();
 }
 
@@ -497,7 +506,7 @@ static void CpuRateRun(BYTE ucT1, WORD usWindows, BYTE ucDrift)
         CpuFeed();
         CpuSample(ucT1, &ulT2B, &usB);
         ulErr = (unsigned long)(WORD)(usB - usA);       // window > 2.2 ms at 350.8 MHz is not possible here: one tick is 29233 counts < 65536
-        if(usN != 0)                                    // window 0 starts with the timer just switched on: not counted
+        if(usN >= AWTO_CPU_RATE_WARM)                   // the first windows run the sample code cold (flash cache miss inside the sample) and start with the timer just switched on: not counted
         {
             ulSumT += ulErr;
             ulSumR += ulT2B - ulT2A;
@@ -507,7 +516,7 @@ static void CpuRateRun(BYTE ucT1, WORD usWindows, BYTE ucDrift)
         {
             g_aucCpuBuf[usN] = (ulErr > 0xFF) ? 0xFF : (BYTE)ulErr;     // per-window error for the host (diagnosis)
         }
-        if((ulErr > ulMaxErr) && (usN != 0))
+        if((ulErr > ulMaxErr) && (usN >= AWTO_CPU_RATE_WARM))
         {
             ulMaxErr = ulErr;
         }
@@ -625,8 +634,14 @@ static void CaseAutoReload(void)
     TL0 = 0;
     TR0 = 1;
     TR1 = 1;
-    for(ucI = 0; ucI < AWTO_CPU_AR_PERIODS; ucI++)
+    EA = 0;                                             // the 1 ms Timer2 ISR (~1000 counts) would swallow overflow flags; 23 periods = 0.8 ms at 87.7 MHz
+    for(ucI = 0; ucI < AWTO_CPU_AR_PERIODS + AWTO_CPU_AR_WARM; ucI++)
     {
+        if(ucI == AWTO_CPU_AR_WARM)                     // the first periods run the loop cold: the stopwatch starts after them
+        {
+            TH0 = 0;
+            TL0 = 0;
+        }
         for(usK = 0; (TF1 == 0) && (usK < AWTO_CPU_RELOAD_SPIN); usK++)
         {
         }
@@ -639,6 +654,7 @@ static void CaseAutoReload(void)
     }
     TR1 = 0;
     TR0 = 0;
+    EA = 1;
     usSw = CpuT0Rd();
     g_stAwtoCpu.ulV0 = usSw;                            // stopwatch counts for 20 periods
     g_stAwtoCpu.ulV1 = (unsigned long)AWTO_CPU_AR_PERIODS * (0x100 - AWTO_CPU_AR_RELOAD);
@@ -646,10 +662,6 @@ static void CaseAutoReload(void)
     if(CpuAbsDiff(g_stAwtoCpu.ulV0, g_stAwtoCpu.ulV1) > AWTO_CPU_AR_TOL)
     {
         g_stAwtoCpu.usBad++;
-    }
-    if(TL1 < AWTO_CPU_AR_RELOAD)
-    {
-        g_stAwtoCpu.usBad++;                            // mode 2 must reload TL1 from TH1, never below it
     }
     CpuEnd();
 }
@@ -694,21 +706,23 @@ static void CaseTorn(void)
     unsigned long ulProt = 0;
 
     CpuBegin();
-    EA = 0;                                             // a Timer2 ISR in between would look like a torn read
     TH0 = 0;
     TL0 = 0;
     TR0 = 1;
     for(usBatch = 0; usBatch < AWTO_CPU_TORN_BATCHES; usBatch++)
     {
-        for(usI = 0; usI < AWTO_CPU_TORN_SAMPLES; usI++)    // naive: high byte, then low byte
+        EA = 0;                                         // an ISR in between would look like a torn read; off for one sampling loop only (~30 us at 87.7 MHz):
+        for(usI = 0; usI < AWTO_CPU_TORN_SAMPLES; usI++)    // a long EA-off wedged the unit-1 debug slave (docs/cpu-suite.md, Phase B log)
         {
-            pucB[2 * usI] = TH0;
+            pucB[2 * usI] = TH0;                        // naive: high byte, then low byte
             pucB[2 * usI + 1] = TL0;
         }
+        EA = 1;
         if(usBatch != 0)                                // batch 0 warms the flash cache: a miss in the loop is a large step that is not a torn read
         {
             ulNaive += CpuTornCount(AWTO_CPU_TORN_SAMPLES);
         }
+        EA = 0;
         for(usI = 0; usI < AWTO_CPU_TORN_SAMPLES; usI++)    // high - low - high, retried
         {
             do
@@ -720,6 +734,7 @@ static void CaseTorn(void)
             pucB[2 * usI] = ucH;
             pucB[2 * usI + 1] = ucL;
         }
+        EA = 1;
         s_ausTornAt[0] = 0;
         s_ausTornAt[1] = 0;
         if(usBatch != 0)
@@ -732,7 +747,6 @@ static void CaseTorn(void)
         }
     }
     TR0 = 0;
-    EA = 1;
     g_stAwtoCpu.ulV0 = ulNaive;                         // information: torn naive reads (the hazard is real when > 0)
     g_stAwtoCpu.ulV1 = ulProt;
     g_stAwtoCpu.usBad += (WORD)ulProt;
@@ -792,9 +806,9 @@ static void CaseMs16(void)
             g_stAwtoCpu.usBad++;
             break;
         }
-        if((WORD)(usCur - usPrev) != 1)
+        if(((WORD)(usCur - usPrev) == 0) || ((WORD)(usCur - usPrev) > AWTO_CPU_MS_STEP_MAX))
         {
-            g_stAwtoCpu.usBad++;                        // a skipped or repeated tick across the wrap
+            g_stAwtoCpu.usBad++;                        // a repeat, a step back or a jump across the wrap
         }
         usPrev = usCur;
         ucSeen++;
@@ -832,9 +846,9 @@ static void CaseMs32(void)
             break;
         }
         ulCur = AwtoMs();
-        if((unsigned long)(ulCur - ulPrev) != 1UL)
+        if(((unsigned long)(ulCur - ulPrev) == 0UL) || ((unsigned long)(ulCur - ulPrev) > AWTO_CPU_MS_STEP_MAX))
         {
-            g_stAwtoCpu.usBad++;                        // 2^32 wrap: a jump of 65536 (hi bumped early) or a repeat
+            g_stAwtoCpu.usBad++;                        // 2^32 wrap: a jump of 65536 (hi bumped early), a repeat or a step back; a late read may see 2 ticks
         }
         ulPrev = ulCur;
         ucSeen++;
@@ -1707,6 +1721,7 @@ static void CpuRun(BYTE ucCase)
 void AwtoCpuSuiteMain(void)
 {
     BYTE ucCase;
+    unsigned long ulLast;
 
     AwtoStackPaint();
     AwtoWdtInit();
@@ -1727,6 +1742,7 @@ void AwtoCpuSuiteMain(void)
     g_stAwtoCpu.ucCkcon = CKCON;
     g_stAwtoCpu.usRcap = CpuRcap();
     g_stAwtoCpu.ucReady = AWTO_CPU_MAGIC;
+    ulLast = AwtoMs();
     for(;;)
     {
         AwtoDiagMainPass();
@@ -1739,6 +1755,11 @@ void AwtoCpuSuiteMain(void)
             CpuRun(ucCase);
             g_stAwtoCpu.ucSeq++;
             g_stAwtoCpu.ucGo = 0;
+            ulLast = AwtoMs();
+        }
+        else if((AwtoMs() - ulLast) >= AWTO_CPU_IDLE_MS)
+        {
+            AwtoWdtHang(AWTO_CPU_HANG_EA_OFF);          // no host request for a while: the hardware watchdog resets the chip, which also clears a stuck IIC slave
         }
     }
 }

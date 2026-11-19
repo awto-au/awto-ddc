@@ -121,3 +121,17 @@
 4. Compare with the boot-failure signature (docs/clock-sweep.md, section "Default image at 350.8 MHz"): a failing case at 350.8 MHz only = candidate cause.
 5. Replace the sim-derived limits (latency, tolerances) by 1.25 x the measured values; fill the last column above.
 6. Flash the best default image back; unit 3 rest state (4K59.940, 10/10 image).
+
+## Phase B log
+
+- 2026-11-19 unit 1 (AWT26110001, NVIDIA HDMI, bus 18, was running `rd0`, settings listed in `tmp/logs/unit1_settings_before.txt`: disp_rotate 0, brightness 64, input D2 HDMI):
+  - Flashed `cpusuite-350` with `dev.py flash --unit 1 --force --force-ungated` (VERIFY OK, 205 sectors, 140 s). Debug slave 0x35 answered on bus 18 (the suite image serves no EDID: `--bus 18 --identity ...`).
+  - T group run: T_RELOAD, T_FULL, T_AUTORELOAD pass; T_RATE0 / T_RATE1 worst window error 125 / 112 counts (sim 8) with the host polling during the case.
+  - The next poll (during T_TORN, EA off ~7 ms) failed; afterwards bus 18 answers nothing (0x35, 0x4A, 0x37, 0x50 all silent), HPD still connected.
+  - Cause not established. Hypothesis: host reads while EA is off leave the IIC slave engine in a state the suite image never clears. Host runner now waits a quiet period (bound / 3) before polling and `dev.py cpu-suite` takes `--bus N --identity HOW`.
+  - Unit 1 has no relay: a mains cycle is needed before ISP works again.
+- Unit 1 wedge, analysis (2026-11-19, before any further hardware):
+  - The hardware watchdog is enabled in the suite image (`ScalerMcuInitial` -> `ScalerTimerWDInitial`) but Timer2 feeds it and the mailbox loop passes the awto watchdog, so a live CPU never bites. A wedged IIC engine is a peripheral state, not a CPU hang: no reset follows.
+  - T_TORN held EA off for ~7 ms per run (all 4096 reads in one window) while the host polled: an EXINT1 request waited behind the long EA-off window. Hypothesis (not proven): the master gave up, the slave engine was left half-way and nothing in the suite loop clears it (the monitor loop's `ScalerDebug()` / DDC/CI poll are absent).
+  - Fixes in the image: EA off only in windows <= ~0.8 ms (T_TORN per 64 reads, T_AUTORELOAD 23 periods); host quiet period before polling; `AWTO_CPU_IDLE_MS` 30 s without a request = `AwtoWdtHang` (EA off, 586 ms bite) so a stuck engine is cleared by a chip reset. Sim proof: `tests/test_cpu_suite_idle.py` (reset at 30025 ms uptime with the ChipReset / WDT model, loop answers again).
+  - Sim flakiness found on the way and fixed in the suite: cold flash-cache misses inside a sample (~80 counts at 350.8 MHz) -> sample code warmed by a first pass; the 1 ms Timer2 ISR (~1000 counts) swallows Timer1 overflow flags -> auto-reload loop runs with EA off for 0.8 ms.
