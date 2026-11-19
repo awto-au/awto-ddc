@@ -55,7 +55,7 @@ Status 2026-11-18. Runs on unit 3 as a screensaver (`docs/screensaver.md`) and f
 - Data and its reader share a code bank: `#pragma place bank(N)` pins only the next definition; arrays sit in banks 11 / 12 (~24 KB) with leaf reader functions (`PcCell`, `PcGlyph`, ...). Bank 13 is nearly full.
 - Watchdog bites after 586 ms: long loops kick `CLR_WDT` (`PC_KICK`, every 128 data port bytes).
 - No magic numbers (`scripts/magic_lint.py`): colours, timings, ids are named.
-- XDATA floor 700 B: the player keeps a handful of bytes (`s_usStep`); free 701 B before, 703 B after the sub-tile change.
+- XDATA is scarce: the player keeps a handful of bytes (`s_usStep`); free 701 B before, 703 B after the sub-tile change.
 - Sync log lines: E9 0x73 drawn, 0x74 step (value = step), 0x75 off.
 
 ## Audio

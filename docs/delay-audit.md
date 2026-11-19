@@ -3,7 +3,7 @@
 - Decision (Dan 2026-11-18): fixed clock MCU 350.8 MHz, flash 116.9 MHz default (F 1, F2 3 = `AWTO_FLASH_MHZ` 117; 87 / 70 selectable), M 1, M2PLL 350.79 MHz, [hw] stable on unit 3 (`docs/clock-sweep.md`). F2 is in no timer / delay / debounce product (`_FLASH_CLK_DIV` x `_MCU_CLK_DIV` only), so no constant changed with the flash clock; gate `delays` passes at F2 3. Every delay is a compile-time constant from that clock; no run-time calibration, no division at run time.
 - Rule (Dan 2026-11-13): delay = datasheet / spec value minus 10 %, never a margin. Timeouts: global timeout rule (what, expected + source, multiplier, expiry).
 - Evidence tags: [hw] unit 3, [emu] sim with the clock model (`scripts/sim_clock.py`), [databook], [spec], [sdk-hypothesis], [?].
-- Inventory (typed): `docs/delay-audit.tsv`, 564 linked sites + our `..._MS` constants. Sources and value rationale of the SDK constants: `docs/delays.md`. Generated from the post-link listing (`scripts/delay_inventory.py`).
+- Inventory (typed): `docs/delay-audit.tsv`, 586 linked sites of the HWTEST image (superset of the default image: the HWTEST-only test ops are rows too) + our `..._MS` constants. Sources and value rationale of the SDK constants: `docs/delays.md`. Generated from the post-link listing (`scripts/delay_inventory.py`).
 
 ## One clock switch: `AWTO_CLOCK_MHZ`
 - `fw/sdk/Kernel/Common/Project_Option.h`: `350` (default) | `175` | `87` (stock). Build: `./dev.py build -D AWTO_CLOCK_MHZ=87 --tag <tag>-clk87`.
@@ -37,7 +37,7 @@
 ## Findings and open decisions (2026-11-18/19)
 - Decision: delays are build-time constants from `AWTO_CLOCK_MHZ` (above); boot-time calibration deleted. Freed: code -1135 B, XDATA -2 B (map before / after).
 - Error found: SDK counts 26 / 21 (`_M2PLL_DELAY*_CNT`) at 350.8 MHz would have run at ~24 % of nominal; boot calibration was skipped above `RCAP2H` 0xE3 [sdk-hypothesis wrong at this clock, derived from the count arithmetic and the sim]. IOSC old counts 3 / 6 gave 43 % of nominal.
-- Inventory: 564 linked sites, 0 FIX / UNKNOWN; classes A 303 (timer), B 154 (micro-delay), C 44 (loop count: 29 NOCLOCK, 14 SCALES-BENIGN, 1 OK), D 13, E 50.
+- Inventory: 586 linked sites, 0 FIX / UNKNOWN; classes A 306 (timer), B 157 (micro-delay), C 47 (loop count: 31 NOCLOCK, 15 SCALES-BENIGN, 1 OK), D 13, E 63.
 - Finding, not fixed (Dan's call): `AwtoMs()` / Timer2 loses ticks while a high-priority EXINT0 handler runs >= ~1 ms (power-saving priority swap). Sim: 2.0 ms wall = 1.14 ms firmware ms. Timer0 events are unaffected.
   - Gate `wdt` case `t0_arm_from_isr` now judges the EXINT0-armed Timer0 event in wall ms with derived bounds 8.0..12.0 ms: not a firmware regression.
 - Gate fixes: `delays` inventory keys were absolute worktree paths (now repo-relative); gates `inputrate` and canary timeouts 90 s.
@@ -77,7 +77,7 @@
 
 ## Add a delay
 - Use a Timer2 wait (`ScalerTimerDelayXms`, timer event, `AwtoMs()` deadline), or `DELAY_5US` / `DELAY_XUS` for <= 1 ms: never a counted loop of your own.
-- Build, run `scripts/delay_audit.py --write`, set the new row's verdict (OK / NOCLOCK / SCALES-BENIGN with the reason), commit the TSV. The gate fails on a linked site that is not in it.
+- Build, run `scripts/delay_audit.py --write --map <HWTEST image .map>` (the HWTEST build links every site; the default image links a subset, extra rows only show as `info`), set the new row's verdict (OK / NOCLOCK / SCALES-BENIGN with the reason), commit the TSV. The gate fails on a linked site that is not in it.
 - Spec minimum: value = datasheet - 10 %, source in the row `spec`; timeout: 1.25 x expected worst case (host processes: stall rule), expiry logged.
 
 ## Hardware verification plan (unit 3, one session at the default 350.8 MHz image, not run)

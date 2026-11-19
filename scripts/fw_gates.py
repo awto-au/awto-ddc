@@ -27,7 +27,11 @@ SKIP (counted, printed): the image lacks the feature (SKIP_IF_MISSING: map symbo
   wdt cases the image does not implement report SKIP inside wdt_test; they are counted in the gate's note.
 Record: tmp/fw/<stem>.gates.json = image SHA-256, date, per-gate result + seconds, fw_gates git commit, complete (no --only).
   `dev.py flash` refuses an image without a record whose SHA-256 matches, complete, and with no FAIL (--force-ungated overrides).
-Stall guard (awto-dan#53): a gate silent for STALL_S is killed and FAILs; backstop LIMIT_S per gate.
+Stall guard (awto-dan#53): waits for a gate's next output line or CPU progress of its process tree; expected: output at least
+  every few s, 3x margin at 60 s (STALL_S). A gate with neither for STALL_S is hung: killed. Backstop LIMIT_S per gate (3x the cold
+  run) times the load factor (1-min loadavg / cores, 1..LOAD_CAP) since a starved gate is slow, not hung. A guard kill is rerun
+  once (second log `<gate>.rerun.log`, both runs in fw_gates.log); two kills = FAIL. Every kill logs gate, reason, elapsed,
+  last line, loadavg, CPU seconds. Logic: guard_verdict(), tests/test_fw_gates_guard.py.
 Log: ./tmp/logs/fw_gates.log
 """
 import argparse
@@ -46,7 +50,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sdcc_overlay import repo_root
 
 ROOT = repo_root()
-STALL_S = 60          # no output line for 60 s = hung (awto-dan#53)
+STALL_S = 60          # no output line and no CPU progress for 60 s = hung (awto-dan#53)
+LOAD_CAP = 4.0        # backstop limit scales with load / cores up to 4x: the box has been seen at load 45 on 28 cores = 1.6x
 LIMIT_OF = {"keys": 150, "deadport": 80, "wdt": 60, "rules": 30, "delays": 150, "inputrate": 90, "canary": 90, "monitor": 90}   # 3x the cold run (keys 50 s in a full gate run with the #132 switch cases 2026-11-12, wdt 18 s; fast core); table of all gates: commit message
 LIMIT_S = 30          # 3x the cold run of the rest (all <= 9 s), 30 s = interpreter start + a loaded box; `speed` is the exception
 SPEED_LIMIT_S = 900   # speed_bench: not measured
@@ -164,9 +169,58 @@ def gates(b: Path, m: Path, ref, tree):
     }
 
 
+def load_factor() -> float:
+    """1-minute loadavg / cores, clamped to [1, LOAD_CAP]: how much slower than a quiet box a gate may run."""
+    return max(1.0, min(LOAD_CAP, os.getloadavg()[0] / (os.cpu_count() or 1)))
+
+
+def cpu_ticks(pid: int) -> float:
+    """CPU seconds used so far by the process tree under pid (0 if gone)."""
+    try:
+        import psutil
+        ps = psutil.Process(pid)
+        return sum(sum(x.cpu_times()[:2]) for x in [ps, *ps.children(recursive=True)] if _alive(x))
+    except Exception:
+        return 0.0
+
+
+def _alive(x) -> bool:
+    try:
+        return x.is_running()
+    except Exception:
+        return False
+
+
+def guard_verdict(now, t0, last_out, last_cpu, limit, stall=None, factor=1.0):
+    stall = STALL_S if stall is None else stall
+    """None while fine, else ("stall" | "limit", text). Stall = no output line AND no CPU progress for `stall` s
+    (a child starved of CPU on a loaded box still advances its CPU clock; a deadlock / sleep does not).
+    The backstop `limit` is scaled by `factor` (load / cores, capped)."""
+    quiet = now - max(last_out, last_cpu)
+    if quiet > stall:
+        return "stall", f"silent {now - last_out:.0f}s, no CPU progress for {now - last_cpu:.0f}s > {stall}s"
+    if now - t0 > limit * factor:
+        return "limit", f"{now - t0:.0f}s > {limit}s x load factor {factor:.2f}"
+    return None
+
+
 def run(name, cmd, out: Path, res: dict, log):
+    """One gate, at most two attempts: a guard kill (stall / limit) is rerun once, both runs logged; two kills = real failure.
+    A gate that fails by its own exit code is not rerun."""
+    for attempt in (1, 2):
+        rc, dt, last, killed = run_once(name, cmd, out if attempt == 1 else out.with_suffix(".rerun.log"), log)
+        if not killed:
+            break
+        log(f"{name}: guard kill on attempt {attempt}" + (", rerunning once" if attempt == 1 else ", failing"))
+    res[name] = (rc, dt, last)
+
+
+def run_once(name, cmd, out: Path, log):
     t0 = time.monotonic()
     last = [t0, ""]
+    cpu = [t0, 0.0]                              # [time of last CPU progress, CPU seconds seen]
+    killed = [False]
+    limit = LIMIT_OF.get(name, SPEED_LIMIT_S if name == "speed" else LIMIT_S)
     with out.open("w") as f:
         p = subprocess.Popen(list(map(str, cmd)), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=ROOT,
                              env=dict(os.environ, PYTHONHASHSEED="0", **({"AWTO_SIM_CORE": "fast", "AWTO_SIM_CPU": CPU_OF.get(name, SIM_CPU)} if name not in NO_SIM else {})))
@@ -174,10 +228,14 @@ def run(name, cmd, out: Path, res: dict, log):
         def watch():
             while p.poll() is None:
                 now = time.monotonic()
-                if now - last[0] > STALL_S or now - t0 > LIMIT_OF.get(name, SPEED_LIMIT_S if name == "speed" else LIMIT_S):
-                    why = "stall" if now - last[0] > STALL_S else "limit"
-                    log(f"{name}: KILL ({why}) after {now - t0:.0f}s, silent {now - last[0]:.0f}s, last: {last[1][:160]!r}, "
-                        f"loadavg {os.getloadavg()[0]:.1f}")
+                c = cpu_ticks(p.pid)
+                if c > cpu[1]:
+                    cpu[0], cpu[1] = now, c
+                v = guard_verdict(now, t0, last[0], cpu[0], limit, factor=load_factor())
+                if v:
+                    log(f"{name}: KILL ({v[0]}) after {now - t0:.0f}s: {v[1]}, last: {last[1][:160]!r}, "
+                        f"loadavg {os.getloadavg()[0]:.1f} on {os.cpu_count()} cores, cpu {cpu[1]:.1f}s")
+                    killed[0] = True
                     p.kill()
                     return
                 try:
@@ -190,7 +248,7 @@ def run(name, cmd, out: Path, res: dict, log):
             f.write(line); f.flush()
             last[0], last[1] = time.monotonic(), line.strip()
         rc = p.wait()
-    res[name] = (rc, time.monotonic() - t0, last[1])
+    return rc, time.monotonic() - t0, last[1], killed[0]
 
 
 def main() -> int:
@@ -265,6 +323,7 @@ def write_record(b: Path, rec: dict, tree, complete: bool) -> None:
     doc = {"image": b.name, "sha256": hashlib.sha256(b.read_bytes()).hexdigest(),
            "date": isostamp.now(), "complete": complete, "tree": str(tree or ""),
            "fw_gates_commit": git("rev-parse", "HEAD") + ("+dirty" if git("status", "--porcelain", "--", "scripts/fw_gates.py") else ""),
+           "xdata": (json.loads(xj.read_text()) if (xj := b.with_suffix(".xdata.json")).is_file() else None),
            "gates": rec}
     out = b.with_suffix(".gates.json")
     tmp = out.with_suffix(".json.tmp")
