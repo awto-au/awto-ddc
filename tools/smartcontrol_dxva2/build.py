@@ -21,7 +21,15 @@ open(os.path.join(root, "tmp/logs/smartcontrol_build.log"), "a").write(" ".join(
 sys.stderr.write(r.stderr)
 if r.returncode:
     sys.exit(r.returncode)
+cmd2 = ["i686-w64-mingw32-gcc", "-shared", "-static", "-static-libgcc", "-O2", "-Wall", "-o", os.path.join(out, "nvapi.dll"),
+        os.path.join(here, "nvapi_shim.c"), os.path.join(here, "nvapi.def"), "-Wl,--kill-at", "-lkernel32"]
+r2 = subprocess.run(cmd2, capture_output=True, text=True)
+open(os.path.join(root, "tmp/logs/smartcontrol_build.log"), "a").write(" ".join(cmd2) + "\n" + r2.stdout + r2.stderr)
+sys.stderr.write(r2.stderr)
+if r2.returncode:
+    sys.exit(r2.returncode)
 dst = os.path.join(root, "tmp/wine/app/resources/bin")
 if os.path.isdir(dst):
     shutil.copy(os.path.join(out, "dxva2.dll"), dst)
+    shutil.copy(os.path.join(out, "nvapi.dll"), dst)
 print("built", os.path.join(out, "dxva2.dll"))

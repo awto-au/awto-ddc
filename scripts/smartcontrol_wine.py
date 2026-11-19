@@ -42,7 +42,7 @@ def env():
     e.pop("ELECTRON_RUN_AS_NODE", None)  # set by the VS Code host; makes Electron act as plain node
     e["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "1"  # Wine has no usable icu.dll for .NET 9
     e["WINEPREFIX"] = os.path.join(WINE, "prefix")
-    e["WINEDLLOVERRIDES"] = "dxva2=n;winemenubuilder.exe=d"
+    e["WINEDLLOVERRIDES"] = "dxva2=n;nvapi=n;winemenubuilder.exe=d"
     e["WINEDEBUG"] = os.environ.get("WINEDEBUG", "-all")
     e["SC_PROFILE"] = "Z:" + os.path.join(WINE, "monitor_profile.txt").replace("/", "\\")
     e["SC_DDC_LOG"] = "Z:" + os.path.join(LOGS, "smartcontrol_ddc.log").replace("/", "\\")

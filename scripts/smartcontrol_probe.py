@@ -3,7 +3,7 @@
 
 Sequence: start backend -> Rescan (Wine wipes its EDID keys on the first enumeration) -> inject EDID
 -> Rescan -> calls given on the command line (METHOD?query, e.g. "GetStandardDDC?eVCPOpCode_e=16").
-Each call has a 5 s limit (the backend spins when it has no usable monitor). Kills wine at the end.
+Each call has a 90 s limit (Start reads every feature at ~150 ms per I2C transaction) (the backend spins when it has no usable monitor). Kills wine at the end.
 Logs: tmp/logs/smartcontrol_probe.log (calls + replies), tmp/logs/smartcontrol_ddc.log (shim),
 tmp/logs/smartcontrol_backend.log (copy of the app's own NLog). Real hardware is never touched.
 """
@@ -69,7 +69,8 @@ def main():
         r = get("Rescan", 15)
         say("Rescan(2) %d bytes; EDID name present: %s" % (len(r), "PHL 288E2" in r))
         for c in calls:
-            r = get(c, 5)
+            r = get(c, 90)
+            open(os.path.join(ROOT, "tmp/logs/smartcontrol_reply_%s.json" % c.split("?")[0]), "w").write(r)
             say("CALL %s -> %s" % (c, r[:300].replace("\n", " ")))
             if r.startswith("ERR"):
                 say("call timed out/failed; stopping (backend may be spinning)")
