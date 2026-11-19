@@ -20,10 +20,10 @@ import ddc_sim as D  # noqa: E402
 
 LOG = R.ROOT / "tmp/logs/saver_dirty_start.log"
 SYNC_EV_ODEMO = 0xE9
-SAVERS = {"pacman": (2, (0x74,)), "scope": (3, (0x76, 0x77)), "scope2": (4, (0x7B, 0x7C)), "asteroids": (8, (0x90, 0x91))}
+SAVERS = {"pacman": (2, (0x74,)), "scope2": (4, (0x7B, 0x7C)), "asteroids": (8, (0x90, 0x91))}
 ROW_DISP_ROTATE = 32
 SETTLE_S = 6.0
-PRIOR_RUN_S = 4.0               # fw time the prior saver runs (scope 1 frame ~1.5 s)
+PRIOR_RUN_S = 4.0               # fw time the prior saver runs (Scope 2 frame ~1.5 s)
 CHUNK_S = 0.25
 LIMIT_S = 60.0                  # per target: expiry = FAIL logged
 

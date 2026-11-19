@@ -14,11 +14,15 @@ def test_c_block_current():
 
 
 def test_vcp_rule_matches_firmware():
-    # saver.c: value 1 = selected saver, 2.. = run id + 1 for Pac-Man / Scope 1 / Scope 2
-    for name in ("pacman", "scope1", "scope2"):
+    # saver.c: value 1 = selected saver, 2.. = run id + 1 for Pac-Man / Scope 2 (VCP 3 = retired Scope 1, not in the TSV)
+    for name in ("pacman", "scope2"):
         row = next(r for r in saver_names.SAVERS if r["name"] == name)
         assert row["vcp"] == row["run"] + 1
     assert saver_names.vcp("selected") == 1 and saver_names.vcp("stop") == 0
+
+
+def test_retired_scope1_gone():
+    assert all(r["name"] != "scope1" and r["run"] != 2 and r["vcp"] != 3 for r in saver_names.SAVERS)
 
 
 def test_unknown_name_refused():

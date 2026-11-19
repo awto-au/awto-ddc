@@ -1,10 +1,10 @@
 # Saver / game library: shared graphics + sound (Dan's request 2026-11-18)
 
-Status 2026-11-18: inventory + design; steps 1 (draw core) and 2 (screen) done, "Migration log" below. Savers: `docs/screensaver.md`, `docs/saver-mode.md`.
+Status 2026-11-18: inventory + design (Scope 1 retired 2026-11-19: its rows below are history; `scope_saver.c` is now `saver_canvas.c` = osd_lines + band canvas + `AwtoScTile`, shared by Asteroids and Scope 2); steps 1 (draw core) and 2 (screen) done, "Migration log" below. Savers: `docs/screensaver.md`, `docs/saver-mode.md`.
 
 - Numbers: sim (fast core, dw8051 timing), default image of main b7fa3a8 unless a row says otherwise (`AWT26110003-slbase-be`, audio build `-slbaseav-be`).
 - Sizes: `python scripts/saver_lib_sizes.py MAP` (CH_ area per function / const, ST_ stub, bank; XDATA per module from `sdcc_mem_report.py`).
-- Speed: `saver_loop_cost.py --case scope|asteroids|scope2|pacman --pcprof`, `asteroids_speed.py`, `pacman_speed.py`, `scope2_sim.py`.
+- Speed: `saver_loop_cost.py --case asteroids|scope2|pacman --pcprof`, `asteroids_speed.py`, `pacman_speed.py`, `scope2_sim.py`.
 - Proof of no change: `scripts/saver_frames_md5.py` (md5 of OSD state + render at every "frame complete" sync line, `--compare A B`).
 
 ## Conclusions

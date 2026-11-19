@@ -7,7 +7,7 @@
 #define SET_PAGES   15u
 #define SET_SCHEMA  0x4BAFu    /* CRC-16 of the NV rows (id, type, min, max) */
 #define SET_NV_COUNT 96u
-#define SET_TEXT_LEN 2152u
+#define SET_TEXT_LEN 2164u
 #define SET_AUX_MAX 60u    /* aux block: check byte + stored rows without an SDK field (awto-ddc#151) */
 
 #define SET_ID_BRIGHTNESS           1u

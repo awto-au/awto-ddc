@@ -4,7 +4,7 @@
 usage: saver_frame_cost.py BIN [--case scope|scope2|asteroids|pacman ...] [--window S] [--rotate] [--every N] [--top K] [--count FN ...]
   Starts the saver by DDC/CI VCP 0xEB (as saver_loop_cost.py), lets the first (hidden) frame finish, then over --window
   fw seconds:
-  - frames: Scope 2 g_usAwtoS2Frame, Asteroids g_ucAwtoAstCol wraps, Scope 1 ScPass calls / 64, Pac-Man sub-steps
+  - frames: Scope 2 g_usAwtoS2Frame, Asteroids g_ucAwtoAstCol wraps, Pac-Man sub-steps
   - CPU clk per function: the PC every --every instr, weighted by the clk since the last sample (fetch stalls, MOVX
     included); grouped into stages (STAGES); samples split by main-loop slot: inside AwtoSaverPoll = saver, else main loop
   - OSD port traffic: data-port bytes per address-set burst; burst of 3 B = map word, longer = glyph
@@ -27,11 +27,10 @@ import ddc_sim as D  # noqa: E402
 
 LOG = R.ROOT / "tmp/logs/saver_frame_cost.log"
 VCP_SAVER = 0xEB
-VCP = {"scope": 3, "scope2": 4, "asteroids": 8, "pacman": 2}
-SETTLE_S = {"scope": 2.5, "scope2": 2.5, "asteroids": 8.0, "pacman": 2.5}   # first frame hidden (asteroids_speed SETTLE_S 8)
+VCP = {"scope2": 4, "asteroids": 8, "pacman": 2}
+SETTLE_S = {"scope2": 2.5, "asteroids": 8.0, "pacman": 2.5}   # first frame hidden (asteroids_speed SETTLE_S 8)
 ROW_DISP_ROTATE = 32
 ROTATE_SETTLE_S = 6.0                                     # as scope2_sim.py
-SC1_PASSES_PER_FRAME = 64                                 # Scope 1: 32 columns x 2 bands (scope_saver.c)
 ADR_LSB, DATA = 0x91, 0x92                                # osd_model taps
 MAP_BURST = 3                                             # one char command
 # stage = first matching pattern (function names from the map; `__bs_*` = banked-call trampoline)
@@ -42,7 +41,7 @@ STAGES = [
     ("draw (lines / runs / text / clear)", r"^osd_|^cursor_|^S2(Run|Trace|Char|Text|Base|BaseCopy)$|^Ast(Shape|TileInk|Draw\w*|Digits)$|^ScPass$|^ScY$"),
     ("compiler helpers (mul / div / gptr)", r"^_(mul|div|mod|gptr|sdcc|mcs51|memcpy|memset)"),
     ("time (AwtoMs)", r"^AwtoMs$"),
-    ("saver frame logic", r"^S2|^Ast|^Pc|^AwtoScopeSaver|^AwtoAsteroids|^AwtoPacman|^AwtoSaver|^Saver"),
+    ("saver frame logic", r"^S2|^Ast|^Pc|^AwtoScopeSaver2|^AwtoAsteroids|^AwtoPacman|^AwtoSaver|^Saver"),
     ("ISR", r"_EXINT|_TIMER|Isr|_isr|IntProc"),
 ]
 
@@ -139,9 +138,7 @@ def measure(a, case: str) -> None:
             last = v
     on[0] = False
     close_burst()
-    if case == "scope":
-        frames = calls["ScPass"] / SC1_PASSES_PER_FRAME
-    elif case == "pacman":
+    if case == "pacman":
         frames = calls["AwtoPacmanClassic"]
     instr, kclk, wall = m.p.instr - i0, m.p.clk - k0, m.wall_ms - w0
     f = max(frames, 1e-9)
@@ -173,7 +170,7 @@ def measure(a, case: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bin", type=Path)
-    ap.add_argument("--case", nargs="*", default=["scope", "scope2", "asteroids", "pacman"])
+    ap.add_argument("--case", nargs="*", default=["scope2", "asteroids", "pacman"])
     ap.add_argument("--window", type=float, default=10.0, help="fw seconds measured")
     ap.add_argument("--rotate", action="store_true")
     ap.add_argument("--every", type=int, default=200, help="instructions between PC samples")

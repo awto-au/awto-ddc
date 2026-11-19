@@ -2,7 +2,7 @@
 """Start / stop a saver by name on a unit (VCP 0xEB from fw/awto/savers.tsv), or tour them all. Entry point: ./dev.py saver.
 
 usage (via dev.py): saver [--unit N] NAME | tour [--hold S] [--volume PCT]
-  NAME = a name in fw/awto/savers.tsv with a VCP value (off, selected, pacman, scope1, scope2, flash, splash, alert, asteroids, stop).
+  NAME = a name in fw/awto/savers.tsv with a VCP value (off, selected, pacman, scope2, flash, splash, alert, asteroids, stop).
   tour: each tour saver for HOLD_S s with the alert tone at the start; volume (VCP 0x62) set first, restored at the end.
 Log: ./tmp/logs/saver_ctl.log
 """
@@ -17,7 +17,7 @@ import saver_names
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "tmp/logs/saver_ctl.log"
-TOUR = ("pacman", "scope1", "scope2", "asteroids")
+TOUR = ("pacman", "scope2", "asteroids")
 HOLD_S = 10.0  # Dan's viewing time per saver (2026-11-19)
 VOLUME_PCT = 50  # Dan's request for the tour
 REST_VOLUME_PCT = 10  # the monitor's usual volume (alert-dan memory)

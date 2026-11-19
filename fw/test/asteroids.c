@@ -4,14 +4,14 @@
 #include "../../tools/osd_lines/osd_lines.h"
 
 // Asteroids screensaver (docs/asteroids.md): the game runs on the chip (rocks split, shots, saucer, autopilot ship, wrap-around),
-// drawn like the scope savers: 30 x 11 tiles of 12 x 18 (360 x 198), 1-bit glyphs, one-tile-column band canvas of scope_saver.c,
+// drawn like Scope 2: 30 x 11 tiles of 12 x 18 (360 x 198), 1-bit glyphs, one-tile-column band canvas of saver_canvas.c,
 // objects culled per pass; only the tiles under objects that moved / changed are redrawn and uploaded (docs/saver-fps-plan.md). Game ticks at column 0.
 //   AwtoAsteroids(1) draw   (2) next column, returns 1 when a frame is complete   (0) off
 // Shapes: asteroids_data.inc (scripts/gen_asteroids.py: local ROM geometry or own outlines; gitignored).
 extern __xdata uint8_t g_aucScPix[];
 extern __xdata uint8_t g_aucScDirty[];
 extern __xdata osd_canvas g_scCv;
-extern void AwtoScTile(WORD usAddr, BYTE __xdata *pucB);                          // direct data port stores (scope_saver.c)
+extern void AwtoScTile(WORD usAddr, BYTE __xdata *pucB);                          // direct data port stores (saver_canvas.c)
 #define AWTO_AST_TILE(c, p)                     AwtoScTile(AWTO_AST_ROWS + 1 + AWTO_AST_COLS * AWTO_AST_ROWS + (OSD_TILE_BYTES / 3) * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_AST_COLS * AWTO_AST_ROWS) : (c)), (p))
 #include "asteroids_data.inc"
 
