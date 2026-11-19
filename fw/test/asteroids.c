@@ -15,14 +15,27 @@ extern void AwtoScTile(WORD usAddr, BYTE __xdata *pucB);                        
 #define AWTO_AST_TILE(c, p)                     AwtoScTile(AWTO_AST_ROWS + 1 + AWTO_AST_COLS * AWTO_AST_ROWS + (OSD_TILE_BYTES / 3) * ((g_ucAwtoOsdRot != 0) ? AwtoOsdRotCell((c), AWTO_AST_COLS * AWTO_AST_ROWS) : (c)), (p))
 #include "asteroids_data.inc"
 
-#define AWTO_AST_COLS                           30
+#ifndef AWTO_AST_COLS
+#define AWTO_AST_COLS                           30                                  // canvas size variants (-D, docs/asteroids-resolution.md): ids = cells <= 512 on the hardware map
+#endif
+#ifndef AWTO_AST_ROWS
 #define AWTO_AST_ROWS                           11
+#endif
+#ifndef AWTO_AST_RES
+#define AWTO_AST_RES                            0                                   // 1 = objects 2 x larger in px (finer pixels at the same screen size): shape shifts and radii only
+#endif
 #define AWTO_AST_TW                             OSD_TILE_W
 #define AWTO_AST_TH                             OSD_TILE_H
 #define AWTO_AST_W                              (AWTO_AST_COLS * AWTO_AST_TW)
 #define AWTO_AST_H                              (AWTO_AST_ROWS * AWTO_AST_TH)
-#define AWTO_AST_BANDS                          2                                   // rows split unequally when odd: band 0 gets the extra row
-#define AWTO_AST_BAND_ROWS                      ((AWTO_AST_ROWS + AWTO_AST_BANDS - 1) / AWTO_AST_BANDS)   // canvas rows = the tallest band
+#define AWTO_AST_BAND_ROWS                      6                                   // canvas rows = the tallest band (the line walker's byte window: 6 rows + 64 px margins)
+#define AWTO_AST_BANDS                          ((AWTO_AST_ROWS + AWTO_AST_BAND_ROWS - 1) / AWTO_AST_BAND_ROWS)   // 11 rows: 6 + 5
+#define AWTO_AST_WIDE                           ((AWTO_AST_W > 360) || (AWTO_AST_H > 198))   // coordinates beyond a byte after the + one playfield
+#if(AWTO_AST_WIDE)
+typedef WORD AstY;
+#else
+typedef BYTE AstY;
+#endif
 #define AWTO_AST_BAND_H                         (AWTO_AST_BAND_ROWS * AWTO_AST_TH)
 #define AWTO_AST_BG                             AWTO_PAL_DIAG_BG                    // palette indexes: the diagnostic console's (text 1, background 3; the console sets them again when it opens)
 #define AWTO_AST_FG                             AWTO_PAL_DIAG_TEXT
@@ -63,17 +76,17 @@ typedef char s_tAstPanelCheck[((AWTO_AST_SU_FACTOR * (long)_PANEL_DH_WIDTH == AW
 #define AWTO_AST_T_BOOM                         8                                   // aux = age, cVx = size (px)
 #define AWTO_AST_N_TYPES                        9
 #define AWTO_AST_SHAPES_PER_ROCK                4
-#define AWTO_AST_SHIFT_ROCK_L                   1                                   // shape units >> shift = px: rock 64 -> 32 / 16 / 8 px
-#define AWTO_AST_SHIFT_SAUCER_L                 2
-#define AWTO_AST_SHIFT_SAUCER_S                 3
-#define AWTO_AST_SHIFT_SHIP                     3                                   // hull tip radius 56 -> 7 px
+#define AWTO_AST_SHIFT_ROCK_L                   (1 - AWTO_AST_RES)                                  // shape units >> shift = px: rock 64 -> 32 / 16 / 8 px
+#define AWTO_AST_SHIFT_SAUCER_L                 (2 - AWTO_AST_RES)
+#define AWTO_AST_SHIFT_SAUCER_S                 (3 - AWTO_AST_RES)
+#define AWTO_AST_SHIFT_SHIP                     (3 - AWTO_AST_RES)                                  // hull tip radius 56 -> 7 px
 #define AWTO_AST_ANGLES                         64                                  // ship heading steps, 0 = right, counter-clockwise
 #define AWTO_AST_QUARTER                        16
 #define AWTO_AST_UP                             16
-#define AWTO_AST_RAD_ROCK_L                     17                                  // large rock draw radius, px (64 units >> 1 = 32 px wide); smaller sizes halve
-#define AWTO_AST_RAD_SAUCER_L                   11
-#define AWTO_AST_SHIP_R                         9                                   // draw radius, px
-#define AWTO_AST_SHIP_HIT                       5
+#define AWTO_AST_RAD_ROCK_L                     (17 << AWTO_AST_RES)                                 // large rock draw radius, px (64 units >> 1 = 32 px wide); smaller sizes halve
+#define AWTO_AST_RAD_SAUCER_L                   (11 << AWTO_AST_RES)
+#define AWTO_AST_SHIP_R                         (9 << AWTO_AST_RES)                                  // draw radius, px
+#define AWTO_AST_SHIP_HIT                       (5 << AWTO_AST_RES)
 #define AWTO_AST_SHOT_SPEED                     48                                  // fp units per step
 #define AWTO_AST_SSHOT_SPEED                    36
 #define AWTO_AST_SHOT_TTL                       15
@@ -101,8 +114,8 @@ typedef char s_tAstPanelCheck[((AWTO_AST_SU_FACTOR * (long)_PANEL_DH_WIDTH == AW
 #define AWTO_AST_EDGE_PX                        80                                  // wave rocks start within this of the left / right edge
 #define AWTO_AST_BOOM_LIFE                      12
 #define AWTO_AST_BOOM_SHIP_LIFE                 22
-#define AWTO_AST_BOOM_BIG                       17                                  // boom size above this = the ship's (longer life)
-#define AWTO_AST_BOOM_SHIP_SIZE                 20
+#define AWTO_AST_BOOM_BIG                       (17 << AWTO_AST_RES)                                 // boom size above this = the ship's (longer life)
+#define AWTO_AST_BOOM_SHIP_SIZE                 (20 << AWTO_AST_RES)
 #define AWTO_AST_BOOM_DOTS                      8
 #define AWTO_AST_BOOM_STEP                      8                                   // heading steps between dashes (64 / 8)
 #define AWTO_AST_SAUCER_MIN                     150                                 // steps until the next saucer: min + rnd % range
@@ -212,7 +225,7 @@ typedef struct
 typedef struct                                                                      // an object as drawn (docs/saver-fps-plan.md: incremental redraw)
 {
     int16_t sX;                                                                     // centre, playfield px
-    BYTE ucY;
+    AstY ucY;
     BYTE ucR;                                                                       // draw radius (AstRad); 0 = nothing drawn
     BYTE ucKey;                                                                     // shape / heading / age: a change redraws
 } AstSeen;
@@ -1309,8 +1322,40 @@ static void AstHud(void)                                                        
 }
 
 #pragma place bank(8)
-static void AstMark(int16_t sX, BYTE ucY, BYTE ucR)                                // tiles of the box around (x, y) +- r, wrap-aware (= AstCull's passes) -> s_aucDirty
+static void AstMark(int16_t sX, AstY ucY, BYTE ucR)                                // tiles of the box around (x, y) +- r, wrap-aware (= AstCull's passes) -> s_aucDirty
 {
+#if(AWTO_AST_WIDE)                                                                  // canvas beyond 360 x 198: word coordinates, any band count (variants, docs/asteroids-resolution.md)
+    WORD usC0 = (WORD)(sX - ucR + AWTO_AST_W) / AWTO_AST_TW;
+    WORD usNc = (WORD)(sX + ucR + AWTO_AST_W) / AWTO_AST_TW - usC0 + 1;
+    WORD usR0 = (WORD)(ucY - ucR + AWTO_AST_H) / AWTO_AST_TH;
+    WORD usNr = (WORD)(ucY + ucR + AWTO_AST_H) / AWTO_AST_TH - usR0 + 1;
+    WORD usC;
+    WORD usK;
+    WORD usIdx;
+    BYTE ucBit;
+
+    usNc = (usNc > AWTO_AST_COLS) ? AWTO_AST_COLS : usNc;
+    usNr = (usNr > AWTO_AST_ROWS) ? AWTO_AST_ROWS : usNr;
+    while(usC0 >= AWTO_AST_COLS)
+    {
+        usC0 -= AWTO_AST_COLS;
+    }
+    while(usR0 >= AWTO_AST_ROWS)
+    {
+        usR0 -= AWTO_AST_ROWS;
+    }
+    for(; usNr > 0; usNr--)
+    {
+        usIdx = (usR0 / AWTO_AST_BAND_ROWS) * AWTO_AST_COLS;
+        ucBit = (BYTE)(1 << (usR0 % AWTO_AST_BAND_ROWS));
+        for(usC = usC0, usK = usNc; usK > 0; usK--)
+        {
+            s_aucDirty[usIdx + usC] |= ucBit;
+            usC = (usC == AWTO_AST_COLS - 1) ? 0 : (usC + 1);
+        }
+        usR0 = (usR0 == AWTO_AST_ROWS - 1) ? 0 : (usR0 + 1);
+    }
+#else
     BYTE ucC0 = (BYTE)((WORD)(sX - ucR + AWTO_AST_W) >> AWTO_AST_DIV_TW_SHIFT) / AWTO_AST_DIV_TW_REST;    // + one playfield: never negative
     BYTE ucNc = (BYTE)((BYTE)((WORD)(sX + ucR + AWTO_AST_W) >> AWTO_AST_DIV_TW_SHIFT) / AWTO_AST_DIV_TW_REST - ucC0 + 1);
     BYTE ucR0 = (BYTE)((WORD)(ucY - ucR + AWTO_AST_H) >> AWTO_AST_DIV_TH_SHIFT) / AWTO_AST_DIV_TH_REST;
@@ -1349,6 +1394,7 @@ static void AstMark(int16_t sX, BYTE ucY, BYTE ucR)                             
         }
         ucR0 = (ucR0 == AWTO_AST_ROWS - 1) ? 0 : (BYTE)(ucR0 + 1);
     }
+#endif
 }
 
 #pragma place bank(8)
@@ -1420,7 +1466,7 @@ static void AstPrepare(void)                                                    
         if(ucT != AWTO_AST_T_NONE)
         {
             s_tNow.sX = AstAt(s_atObj[ucI].sX, s_atObj[ucI].cVx, AWTO_AST_FPW);
-            s_tNow.ucY = (BYTE)AstAt(s_atObj[ucI].sY, s_atObj[ucI].cVy, AWTO_AST_FPH);
+            s_tNow.ucY = (AstY)AstAt(s_atObj[ucI].sY, s_atObj[ucI].cVy, AWTO_AST_FPH);
             s_tNow.ucR = AstRad(ucT);
             s_tNow.ucKey = (BYTE)(ucT * AWTO_AST_KEY_SUBS + ((ucT <= AWTO_AST_T_ROCK_S) ? (s_atObj[ucI].ucAux & (AWTO_AST_SHAPES_PER_ROCK - 1)) :
                                                             ((ucT == AWTO_AST_T_BOOM) ? s_atObj[ucI].ucAux : 0)));
@@ -1431,7 +1477,7 @@ static void AstPrepare(void)                                                    
     if(s_ucShState == AWTO_AST_STATE_ALIVE)
     {
         s_tNow.sX = AstAt(s_sShX, s_cShVx, AWTO_AST_FPW);
-        s_tNow.ucY = (BYTE)AstAt(s_sShY, s_cShVy, AWTO_AST_FPH);
+        s_tNow.ucY = (AstY)AstAt(s_sShY, s_cShVy, AWTO_AST_FPH);
         s_tNow.ucR = AWTO_AST_SHIP_R;
         s_tNow.ucKey = (BYTE)(s_ucShAng | (((s_ucShThrust != 0) && (((g_usAwtoAstStep / AWTO_AST_TICKS) & 1) != 0)) ? AWTO_AST_FLAME_KEY : 0));
     }
@@ -1448,6 +1494,9 @@ static void AstPrepare(void)                                                    
     }
 }
 
+#if((AWTO_SAVER_INFO == _ON) && (AWTO_AST_BANDS != 2))
+#error "info overlay is written for two bands: build variants with -D AWTO_SAVER_INFO=_OFF"
+#endif
 #if(AWTO_SAVER_INFO == _ON)
 #define AWTO_AST_INFO_ACTIVE()                  (SysModeGetModeState() == _MODE_STATUS_ACTIVE)   // as ui_timing (fw/settings/settings_glue.c): the active input's timing
 #define AWTO_AST_INFO_VM()                      ((g_stAwtoFreq.ucValid != 0) ? g_stAwtoFreq.ulVFreqmHz : ((DWORD)GET_INPUT_TIMING_VFREQ() * AWTO_AST_INFO_VF_UNIT_MHZ))
@@ -1594,7 +1643,11 @@ static void AstInfoDraw(void)                                                   
 static void AstPass(BYTE ucCol, BYTE ucBand)                                        // redraws the band's column if a tile in it changes; uploads only the changed tiles
 {
     BYTE ucI;
+#if(AWTO_AST_BANDS == 2)
     BYTE ucIdx = (ucBand == 0) ? ucCol : (BYTE)(AWTO_AST_COLS + ucCol);
+#else
+    WORD ucIdx = (WORD)ucBand * AWTO_AST_COLS + ucCol;
+#endif
     BYTE ucDirty = s_aucDirty[ucIdx];
     BYTE ucR0;
     BYTE ucR1;
@@ -1607,8 +1660,13 @@ static void AstPass(BYTE ucCol, BYTE ucBand)                                    
     s_aucDirty[ucIdx] = 0;
     AWTO_XFR(AWTO_R_WATCHDOG_TIMER) |= AWTO_F_WATCHDOG_TIMER_CLR_WDT;
     s_sOx = (int16_t)(((WORD)ucCol << AWTO_AST_BYTE_BITS) + ((WORD)ucCol << AWTO_AST_DIV_TW_SHIFT));   // ucCol * 12, no multiply
+#if(AWTO_AST_BANDS == 2)
     s_sOy = (ucBand == 0) ? 0 : AWTO_AST_BAND_H;
     s_ucBandRows = (ucBand == 0) ? AWTO_AST_BAND_ROWS : (BYTE)(AWTO_AST_ROWS - AWTO_AST_BAND_ROWS);   // 2 bands: the second one holds the rest
+#else
+    s_sOy = (int16_t)ucBand * AWTO_AST_BAND_H;
+    s_ucBandRows = (ucBand == AWTO_AST_BANDS - 1) ? (BYTE)(AWTO_AST_ROWS - (AWTO_AST_BANDS - 1) * AWTO_AST_BAND_ROWS) : AWTO_AST_BAND_ROWS;
+#endif
     for(ucR0 = 0; (ucDirty & (BYTE)(1 << ucR0)) == 0; ucR0++)                       // clip to the changed rows: objects elsewhere are not drawn
     {
     }
@@ -1640,7 +1698,11 @@ static void AstPass(BYTE ucCol, BYTE ucBand)                                    
         AstInfoDraw();
     }
 #endif
+#if(AWTO_AST_BANDS == 2)
     s_usCell0 = ((ucBand == 0) ? 0 : (WORD)(AWTO_AST_BAND_ROWS * AWTO_AST_COLS)) + ucCol;
+#else
+    s_usCell0 = (WORD)ucBand * (AWTO_AST_BAND_ROWS * AWTO_AST_COLS) + ucCol;
+#endif
     pucTile = g_aucScPix;                                                           // running tile pointer: no banked const read next to the cross-bank call
     for(ucI = 0; ucI < s_ucBandRows; ucI++, s_usCell0 += AWTO_AST_COLS, pucTile += OSD_TILE_BYTES)
     {
@@ -1734,10 +1796,22 @@ BYTE AwtoAsteroids(BYTE ucCmd)
     AwtoOsdMap1(AWTO_AST_COLS, AWTO_AST_ROWS, (AWTO_AST_FG << AWTO_AST_FG_SHIFT) | AWTO_AST_BG);   // one char command per cell, glyph id = cell index
     AwtoOsdPlaceScaleUp(AWTO_AST_POS_H, AWTO_AST_POS_V, AWTO_AST_COLS, AWTO_AST_ROWS, AWTO_AST_SU_FACTOR);
     osd_canvas_init(&g_scCv, 1, AWTO_AST_BAND_ROWS, g_aucScPix, AWTO_AST_BAND_ROWS * OSD_TILE_BYTES, g_aucScDirty, OSD_DIRTY_BYTES(1, AWTO_AST_BAND_ROWS));
+#if(AWTO_AST_BANDS == 2)
     for(ucB = 0; ucB < AWTO_AST_PASSES; ucB++)
     {
         s_aucDirty[ucB] = (BYTE)((1 << ((ucB < AWTO_AST_COLS) ? AWTO_AST_BAND_ROWS : (AWTO_AST_ROWS - AWTO_AST_BAND_ROWS))) - 1);   // every glyph is uploaded once (blank where nothing is)
     }
+#else
+    {
+        WORD usP;
+
+        for(usP = 0; usP < AWTO_AST_PASSES; usP++)
+        {
+            ucB = (BYTE)(usP / AWTO_AST_COLS);
+            s_aucDirty[usP] = (BYTE)((1 << ((ucB == AWTO_AST_BANDS - 1) ? (AWTO_AST_ROWS - (AWTO_AST_BANDS - 1) * AWTO_AST_BAND_ROWS) : AWTO_AST_BAND_ROWS)) - 1);
+        }
+    }
+#endif
     memset(s_atSeen, 0, sizeof(s_atSeen));                                          // nothing drawn yet
     if(s_usRng == 0)
     {
