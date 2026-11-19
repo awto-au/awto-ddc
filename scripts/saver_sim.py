@@ -40,6 +40,7 @@ ALERT_TOL_S = 0.15              # one 10 ms tick per note plus the 1 ms firmware
 ALERT_SETTLE_S = 3.0            # fw time after boot before the alert: the SDK's first HDMI audio init (it clears the generator) must have run
 AUDIO_STATE_PLAYBACK = 2        # _AUDIO_STATUS_PLAYBACK (Global.h); g_stAudioInfo byte 0 bits 5:4 = b2AudioState
 AUDIO_STATE_PLAYBACK_BYTE = AUDIO_STATE_PLAYBACK << 4
+HOLD_SLICE_S = 0.005            # re-inject period: below one main-loop pass (< 75 ms), so the state never stays reset
 ALERT_OBSERVE_S = 3.0          # fw time to observe: the tone must end by itself
 ROW_SCREENSAVER = 119           # registry row id of screensaver
 SET_VALUE = {"pacman": 1, "scope2": 3, "asteroids": 5}   # setting 119 values (registry.tsv)
@@ -273,12 +274,10 @@ def alert_check(a, stream: bool = False) -> int:
     if stream:
         hold()
     ddc.set(VCP_SAVER, VCP_ALERT)
-    held = (sess.bus.m.rd(st, 1)[0] >> 4) & 3
-    if stream and held != AUDIO_STATE_PLAYBACK:
-        say(f"FAIL alert stream precondition: SysAudio state {held} after the alert command, not PLAYBACK ({AUDIO_STATE_PLAYBACK}): the host-stream case is not exercised")
-        sess.bus.close()
-        return 1
-    sess.bus.wait(ALERT_OBSERVE_S)
+    for _ in range(int(ALERT_OBSERVE_S / HOLD_SLICE_S)):    # SysAudioHandler resets PLAYBACK without a real stream: a host stream re-asserts it
+        if stream:
+            hold()
+        sess.bus.wait(HOLD_SLICE_S)
     info = A.write_wav(a.out / ("alert_stream.wav" if stream else "alert.wav"), tap.events, t0, sess.bus.now(), model={"assume_amp_en": False})
     ok = abs(info["tone_s"] - ALERT_TONE_S) <= ALERT_TOL_S
     order = A.order_violations(tap.events)          # pop-free order (#249): amp / mute / generator / DVC sequence
