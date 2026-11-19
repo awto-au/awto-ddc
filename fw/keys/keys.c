@@ -4,9 +4,6 @@
 // #129 front keys: ONE reader (input monitor, fw/input/inputs.c AwtoKeyMaskNow) -> AwtoKeyPoll (debounce, combos, repeat,
 // injected keys) -> ONE dispatcher AwtoKeyRoute (context by priority). Replaces the SDK key scan / key message / OperationTable path.
 // AwtoKeyPoll runs where UserInterfaceKeyHandler ran.
-#if(_FREEZE_SUPPORT == _ON)
-#error "AwtoKeyRoute does not port the SDK freeze checks of RTDOsdSystemFlowProc"
-#endif
 #ifndef AWTO_KEY_HOLD
 #define AWTO_KEY_HOLD()                         0
 #endif
@@ -186,6 +183,25 @@ static void AwtoKeyRouteDo(BYTE ucK, BYTE ucEv)
         }
         return;
     }
+#if(_FREEZE_SUPPORT == _ON)
+    if(GET_OSD_FREEZE_STATUS() == _ON)          // frozen picture: MENU releases it, every other key is dropped (POWER above works)
+    {
+        if(bRep == 0)
+        {
+            if(ucK == AWTO_K_MENU)
+            {
+                SET_OSD_FREEZE_STATUS(_OFF);
+                UserCommonAdjustDisplayFreeze(_OFF);
+                AwtoSyncPush(AWTO_SYNC_EV_FRZ, AWTO_FRZ_EV_KEY_RELEASE, 0);
+            }
+            else
+            {
+                AwtoSyncPush(AWTO_SYNC_EV_FRZ, AWTO_FRZ_EV_KEY_IGNORED, ucK);
+            }
+        }
+        return;
+    }
+#endif
     if((ucEv & 0x7F) == AWTO_KEV_COMBO)
     {
         AwtoKeyTestSet(2);                      // UP+DOWN: diagnostic console

@@ -183,3 +183,6 @@
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	481	ok	OK-CONFIG: CEC gen type 0: ucDestLa = 0xFF makes the polling-mode receive dead, the interrupt path receives (docs/cec.md)
 ^conditional flow changed by optimizer	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	483	ok	OK-CONFIG: same dead polling-mode receive
 ^unreachable code$	Kernel/Scaler/ScalerFunction/Code/ScalerCec.c	486	ok	OK-CONFIG: same dead polling-mode receive
+^conditional flow changed by optimizer	*/fw/osd/text_layer.c	51	ok	OK-CONFIG: freeze build has rotation off -> ucWant is always upright, the 180 / upright ternary is constant (#255)	_AWTO_FREEZE=_ON
+^unreachable code$	*/fw/osd/text_layer.c	51	ok	OK-CONFIG: same line, the 180 branch of the constant ternary (#255)	_AWTO_FREEZE=_ON
+^#warning "_FRAME_SYNC_LINE_BUFFER_SUPPORT Should Be _OFF!!!"$	Kernel/Common/Project_Config_Check.h	152	ok	freeze test build keeps the SDK line buffer choice (4K60 line buffer, frame buffer by test cmd 0x0C); the SDK note asks for the frame buffer always (#255)	_AWTO_FREEZE=_ON

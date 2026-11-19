@@ -2283,6 +2283,13 @@ extern bit SysMachineOffOrGoing(void);
 #define AWTO_SYNC_EV_CARD                                       0xED    // pop-up card opened (#266, opens only): arg = AWTO_CT_* text id of the card, 0x80 | AWTO_CARD_SUP_* = not opened (value = message)
 #define AWTO_CARD_SUP_SEL                                       0x01    // the input selector is open and keeps the screen
 #define AWTO_CARD_SUP_CON                                       0x02    // the open console keeps the screen
+#define AWTO_SYNC_EV_FRZ                                        0xEC    // #255 picture freeze (_AWTO_FREEZE build): arg AWTO_FRZ_EV_*
+#define AWTO_FRZ_EV_ON                                          0x01    // test cmd AWTO_TC_FREEZE_ON: capture frozen
+#define AWTO_FRZ_EV_OFF                                         0x02    // test cmd AWTO_TC_FREEZE_OFF: capture running again
+#define AWTO_FRZ_EV_KEY_RELEASE                                 0x03    // MENU key released the freeze
+#define AWTO_FRZ_EV_KEY_IGNORED                                 0x04    // other key dropped while frozen (value = key id)
+#define AWTO_TC_FREEZE_ON                                       0xFE    // test cmd: freeze the picture (_FREEZE_SUPPORT builds only; first in the chain, 0xC0.. is the probe range)
+#define AWTO_TC_FREEZE_OFF                                      0xFF    // test cmd: release it
 #define AWTO_SYNC_EV_CEC                                        0xEB    // CEC (docs/cec.md): arg = flags | len << 3 | kind, value = header << 24 | opcode << 16 | operand 1 << 8 | operand 2
 #define AWTO_CEC_K_RX                                           0       // frame received (header low nibble = destination, flag DEST_UNKNOWN: the block does not tell)
 #define AWTO_CEC_K_TX                                           1       // reply queued

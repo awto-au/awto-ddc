@@ -34,7 +34,8 @@ A0, A1, IDLE = 0xFF09, 0xFF0A, 0xF8
 KEY_ADC = {"MENU": (A0, 0xD0), "AUTO": (A0, 0x80), "UP": (A0, 0x38), "SOURCE": (A1, 0x80), "DOWN": (A1, 0x38)}   # band centres
 WATCH = ("AwtoPmSoundTone", "AwtoKeyNoOsd", "OsdDispOsdMessage", "AwtoSourceOpen", "AwtoSourceRows", "AwtoSrcSet", "AwtoSourceKey", "AwtoSourceStep",
          "menu_open", "menu_key", "AwtoKeyTestSet", "AwtoConScroll", "SysPowerSetTargetPowerStatus", "SysMachineRequest",
-         "AwtoPsField", "AwtoSrcPortFields", "AwtoBlKey", "AwtoResetCard", "set_defaults", "AwtoSourceIdle", "AwtoSourceAuto", "AwtoNvWrite", "AwtoSaveCard")
+         "AwtoPsField", "AwtoSrcPortFields", "AwtoBlKey", "AwtoResetCard", "set_defaults", "AwtoSourceIdle", "AwtoSourceAuto", "AwtoNvWrite", "AwtoSaveCard",
+         "ScalerFRCDisplayFreeze")
 PWR = "SysPowerSetTargetPowerStatus"             # power requests: counted from SysMachineRequest (#162 step 3) when the image has it
 SET_ID_MUTE, SET_ID_KEY_CLICK = 89, 123          # registry ids mute, key_click (AwtoSetIds.h)
 CLICK_SC, CLICK_MS, CLICK_TOL_MS = 40, 30, 10    # RL6449_Project.h AWTO_KEY_CLICK_SC / _MS; main-pass resolution (~4 ms) x 2.5
@@ -660,6 +661,35 @@ def band_edges(k):
     k.check(f"key bands: {n} edge / code values decode as the table (A0 + A1)", not bad, "; ".join(bad[:6]))
 
 
+TC_FREEZE_ON, TC_FREEZE_OFF = 0xFE, 0xFF          # RL6449_Project.h AWTO_TC_FREEZE_ON / _OFF (_AWTO_FREEZE images only)
+
+
+def freeze(k):
+    """#255 freeze build: while frozen every key but MENU / POWER is dropped, MENU releases it; keys work again after."""
+    if "_ScalerFRCDisplayFreeze" not in k.m.sym:
+        say("SKIP freeze keys: image without _AWTO_FREEZE")
+        return
+    b = k.snap()
+    k.cmd(TC_FREEZE_ON)
+    k.check("freeze: test cmd 0xFE -> ScalerFRCDisplayFreeze(on)", k.delta(b, "ScalerFRCDisplayFreeze") == 1,
+            str(k.n("ScalerFRCDisplayFreeze")))
+    for key in ("AUTO", "UP", "DOWN", "SOURCE"):
+        b = k.snap()
+        k.tap(key)
+        k.check(f"frozen: {key} dropped (no menu, no selector, no backlight bar, no freeze change)",
+                k.delta(b, "menu_open") == 0 and k.delta(b, "AwtoSourceOpen") == 0 and k.delta(b, "AwtoBlKey") == 0
+                and k.delta(b, "ScalerFRCDisplayFreeze") == 0 and k.menu() == 0,
+                f"menu_open {k.delta(b, 'menu_open')} src {k.delta(b, 'AwtoSourceOpen')} bl {k.delta(b, 'AwtoBlKey')} frz {k.delta(b, 'ScalerFRCDisplayFreeze')} menu {k.menu()}")
+    b = k.snap()
+    k.tap("MENU")
+    k.check("frozen: MENU releases the freeze, no menu opens", k.delta(b, "ScalerFRCDisplayFreeze") == 1
+            and k.delta(b, "menu_open") == 0, f"frz {k.delta(b, 'ScalerFRCDisplayFreeze')} menu_open {k.delta(b, 'menu_open')}")
+    b = k.snap()
+    k.tap("UP")
+    k.check("released: UP works again (backlight bar)", k.delta(b, "AwtoBlKey") == 1, str(k.delta(b, "AwtoBlKey")))
+    k.cmd(TC_FREEZE_OFF)
+
+
 def run(k):
     s = k.s
     k.wait(1000)                                                # main loop is blocked ~150 ms after ACTIVE (pop-up, panel on): a press then is not sampled
@@ -677,6 +707,7 @@ def run(k):
     hold_reset(k)
     status_rows(k)
     key_click(k)
+    freeze(k)
 
     b = k.snap()                                                # awto menu: MENU opens, AUTO enters, keys go to menu_key, repeat rate-limited
     k.tap("MENU")
