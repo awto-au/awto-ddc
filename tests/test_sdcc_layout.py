@@ -136,3 +136,15 @@ def test_fw_tag_env_override_and_no_dirty(tmp_path, monkeypatch):
     clean = msg_tokenise.fw_tag(tmp_path)
     (tmp_path / "f").write_text("x"); g("add", "f")                            # staged change: --dirty would append
     assert msg_tokenise.fw_tag(tmp_path) == clean and "dirty" not in clean and len(clean) == 7
+
+
+def test_new_item_beats_slack_rule():
+    """Every foreign bank would drop below the slack reserve, the item still fits: placed, not an error (#268)."""
+    cap = 1000
+    lay = L.Layout()
+    it = L.Item("fn", "Big", 40, 0, "m")
+    fill = [L.Item("const", f"Pad{b}", 1, b, "m", slot=cap - it.slot - 5) for b in (0, 1)]
+    for f in fill:
+        f.fixed = True
+    placed, _ = L.assign(fill + [it], lay, 0, 0, 2, cap, log=lambda *_: None)
+    assert placed[("fn", "Big")][0] in (0, 1)

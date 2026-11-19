@@ -1179,7 +1179,7 @@ static void AwtoClkChecks(void)
 #define AWTO_CLK_FL_BANK                        15
 #define AWTO_CLK_FL_PAGE                        14                  // page x 0x1000 = 0xE000
 #define AWTO_CLK_FL_SIZE                        4096
-#define AWTO_CLK_FL_CHUNK                       64                  // flash call size and XDATA buffer: 128 does not fit the HWTEST image
+#define AWTO_CLK_FL_CHUNK                       16                  // flash call size and XDATA buffer: HWTEST XDATA is full (#268)
 #define AWTO_CLK_FL_MAX                         20                  // wear limit: <= 100 erases in total (Dan), N + 1 erases per call
 #define AWTO_CLK_FL_ERR_NONE                    0
 #define AWTO_CLK_FL_ERR_ERASE                   1                   // erase call returned false

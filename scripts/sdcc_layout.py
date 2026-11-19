@@ -164,18 +164,21 @@ def assign(items, layout, common_lo, common_hi, nbanks, bank_cap, log=print, fil
         cands = [it.region] if (it.region == "C" or it.fixed) else [it.region] + sorted(
             (b for b in regs if b not in ("C", it.region)), key=lambda b: -regs[b].free())
         done = None
-        for rid in cands:
-            r = regs[rid]
-            if rid != it.region and rid != "C" and r.free() - it.slot < (1 - fill_target) * bank_cap * 0.25:
-                continue                    # foreign bank: keep some slack there too
-            off = r.place(it.key, it.slot)
-            if off is None and r.free() >= it.slot and rid not in repacked:
-                r.compact(korder)
-                repacked.add(rid)
-                log(f"layout: compacted region {rid} (fragmented) for {it.key[1]} ({it.slot} B)")
+        for slack in (True, False):         # second pass drops the foreign-bank slack rule: a fit beats headroom (#268)
+            for rid in cands:
+                r = regs[rid]
+                if slack and rid != it.region and rid != "C" and r.free() - it.slot < (1 - fill_target) * bank_cap * 0.25:
+                    continue                # foreign bank: keep some slack there too
                 off = r.place(it.key, it.slot)
-            if off is not None:
-                done = rid
+                if off is None and r.free() >= it.slot and rid not in repacked:
+                    r.compact(korder)
+                    repacked.add(rid)
+                    log(f"layout: compacted region {rid} (fragmented) for {it.key[1]} ({it.slot} B)")
+                    off = r.place(it.key, it.slot)
+                if off is not None:
+                    done = rid
+                    break
+            if done is not None:
                 break
         if done is None and (labels or {}).get(it.key):
             raise SystemExit(f"{labels[it.key]}: no room for {it.key[1]} ({it.slot} B) in "

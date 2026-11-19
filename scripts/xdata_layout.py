@@ -50,7 +50,7 @@ def gaps(holes, taken):
     return out
 
 
-def place(old: dict, sizes: dict, holes, reserved, compact: bool = False):
+def place(old: dict, sizes: dict, holes, reserved, compact: bool = False, best: bool = False):
     """-> (rows {mod: (hole, offset, slot)}, info {moved, kept, compacted, free, largest, per_hole}); SystemExit if it does not fit."""
     taken = list(reserved)
     rows, moved = {}, []
@@ -66,7 +66,8 @@ def place(old: dict, sizes: dict, holes, reserved, compact: bool = False):
                 taken.append((lo, hi))
     todo = sorted((m for m in sizes if m not in rows), key=lambda m: (-sizes[m], m))
     def find(tk, n):
-        return next(((lo, hi) for lo, hi in gaps(holes, tk) if hi - lo >= n), None)
+        fit = [g for g in gaps(holes, tk) if g[1] - g[0] >= n]
+        return min(fit, key=lambda g: g[1] - g[0]) if (best and fit) else (fit[0] if fit else None)
 
     def put(m, g, tk):
         h = next(a for a, b in holes if a <= g[0] < b)
@@ -95,7 +96,11 @@ def place(old: dict, sizes: dict, holes, reserved, compact: bool = False):
             free = sum(hi - lo for lo, hi in gaps(holes, taken))
             if not compact and free >= sizes[m]:
                 log(f"XDATA fragmented: {m} needs {sizes[m]} B, {free} B free in no single gap -> compaction (every module moves, full-churn flash)")
-                rows, info = place(old, sizes, holes, reserved, compact=True)
+                try:
+                    rows, info = place(old, sizes, holes, reserved, compact=True)
+                except SystemExit:               # first-fit leaves unusable 1 B gaps: best-fit packs tighter (#268)
+                    log("XDATA: first-fit compaction failed, retrying best-fit")
+                    rows, info = place(old, sizes, holes, reserved, compact=True, best=True)
                 info["compacted"] = True
                 return rows, info
             sys.exit(f"XDATA does not fit holes {[(hex(a), hex(b)) for a, b in holes]}: {m} needs {sizes[m]} B, "
