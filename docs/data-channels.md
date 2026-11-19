@@ -10,7 +10,7 @@ Compiled 2026-11-19. One table, sorted by Max KB/s, fastest first (ties: higher 
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | DP | Main link capacity | host -> monitor | n/a | 2700000 | 162 | 540 | unverified | HBR2 21.6 Gbit/s raw (RBR 162 MHz -> HBR2 540 MHz symbol clock); not the limit |
 | 2 | HDMI | TMDS link capacity | host -> monitor | n/a | 2250000 | 25 | 600 | unverified | 18 Gbit/s (HDMI 2.0, 600 MHz character clock); not the limit |
-| 3 | HDMI/DP | MCU DDR write | host -> monitor | 700 | 9000 | 87.7 | 87.7 | estimate | `MCU_DC_*` page 37, cmd 100, per-byte `WMASK`, 16 B per burst; 4K RGB888 = 1 555 200 bursts, so partial edits only; see "MCU DDR estimate" |
+| 3 | HDMI/DP | MCU DDR write | host -> monitor | 700 | 9000 | 87.7 | 87.7 | estimate | `MCU_DC_*` page 37, cmd 100, per-byte `WMASK`, 16 B per burst; 4K RGB888 = 1 555 200 bursts, so partial edits only; see "MCU DDR estimate"; firmware draw ops: `docs/ddr-draw.md` (#267) |
 | 4 | HDMI/DP | MCU DDR read | host -> monitor | 800 | 7000 | 87.7 | 87.7 | estimate | cmd 101, 16 B per burst; see "MCU DDR estimate"; not measured |
 | 5 | HDMI/DP | Audio PCM | host -> monitor | 192 | 4600 | 3.07 | 49.2 | calc | stereo 48 kHz 16-bit -> 8 ch 192 kHz 24-bit; I2S bit clock 2x32x48 kHz / 8x32x192 kHz; wire rate; samples are not MCU-readable: 24-bit DAC PCM, DVC and final outputs are on the 40-bit test-out bus (`AUD_TEST_PIN.aud_test_sel` 0x06E8, `MUX_TST_OUT` 0x6F03) and the I2S / S/PDIF out pins; no readback register found; pins on this board not checked (#250) |
 | 6 | I2C/DDC | Bus 3.4 MHz | both | n/a | 380 | 3.4 | 3.4 | calc | i915 GMBUS has nothing above 1 MHz; 8051 slave tolerance untested |

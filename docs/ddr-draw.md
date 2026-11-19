@@ -29,7 +29,9 @@
 
 States: 2 ok, 3 refused (unknown op, empty / off-screen rectangle, bad grid), 4 stall (`CMD` busy > 50 ms = 3 frames, op aborted).
 
-## Cost
-- Hot loop (`DrwFull`): per burst 1 `CMD` read, `ADDR_L`, `ADDR`, `CMD` write; the write buffer is loaded once per burst phase (3 phases, bursts p, p + 3, ...) per line, `WMASK` and the upper address bytes only on edges / carries.
-- Static cycle count, XDATA and code delta: see the issue comment (#267); throughput on hardware: not measured yet.
-- Host check: `tests/test_ddr_draw_host.py` builds the firmware file on the host against a port-A model (CMD busy / write-while-busy hazards, swap, mask) and compares every op with a per-pixel spec. The sim has no MCU DDR port model.
+## Cost (static, from the compiled asm of `DrwFull`, 87.7 MHz = 11.4 ns per cycle; not measured on hardware)
+- Hot loop (`DrwFull`): per burst 1 `CMD` read, `ADDR_L`, `ADDR`, `CMD` write = 4 MOVX, 44 cycles = 0.50 us = ~32 MB/s MCU-side ceiling, if the DCU takes a write every 0.5 us (DDR completion time not known: `CMD` busy at the next burst shows up as extra polls).
+- Per line: the write buffer is loaded once per burst phase (3 x ~110 cycles; none for grey), `WMASK` and the upper address bytes only on edges / carries: ~1.5 k cycles on top of 720 x 44 = 32 k.
+- Estimates: fill 2000 x 1000 px = 500 lines x 375 bursts = 187 500 bursts = 3.0 MB: ~95 ms; `frame` (1080 lines, 12.4 MB): ~0.40 s; the host-driven path was ~6 ms per burst (#255). The issue's 1.7 us / 25 MOVX estimate assumed re-writing the buffer every burst.
+- Image delta: default image 0 B (byte-identical but the commit string); freeze image +5027 B banked code, +58 B XDATA (free XDATA 551 B default, 495 B freeze).
+- Host check: `tests/test_ddr_draw_host.py` builds the firmware file on the host against a port-A model (CMD busy and write-while-busy hazards, swap, mask) and compares every op with a per-pixel spec. The sim has no MCU DDR port model.
