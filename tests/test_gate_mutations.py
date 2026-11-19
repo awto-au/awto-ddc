@@ -84,7 +84,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import fw_gates as G  # noqa: E402
 
 NORMAL_FAULTS = [("wake", "AwtoPsWakeFire"), ("wdt", "AwtoWdtHang"), ("crash", "AwtoWdtHang"), ("conwrap", "AwtoConLogSync"),
-                 ("monitor", "AwtoMonSample"), ("keys", "AwtoSourceKey")]
+                 ("monitor", "AwtoMonSample"), ("keys", "AwtoSourceKey"), ("menu", "menu_open")]
 
 
 def normal_cmd(name, binp):
@@ -101,7 +101,7 @@ def test_normal_variant_fails_with_a_dead_function(tmp_path, name, fn):
     assert r.returncode != 0, f"{name} with {fn} RET'd still passes:\n" + (r.stdout + r.stderr)[-600:]
 
 
-@pytest.mark.parametrize("name", ["wake", "wdt", "crash", "conwrap", "monitor", "keys"])
+@pytest.mark.parametrize("name", ["wake", "wdt", "crash", "conwrap", "monitor", "keys", "menu"])
 def test_normal_variant_passes_clean(name):
     r = run_normal(name, IMG.with_suffix(".bin"))
     assert r.returncode == 0, (r.stdout + r.stderr)[-600:]

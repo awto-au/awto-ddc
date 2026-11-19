@@ -102,6 +102,7 @@ All values are the trace of `trace_vendor_2160p60.tsv.gz`; function names are Da
 | Pitch change | MUTE 1, divider at once, 4 ms, MUTE 0 | MUTE 1, 2 ms, divider, 4 ms (`AWTO_PS_GAP_MS`, by ear), MUTE 0 |
 | Tone end | EN 0 + MUTE 1 with the tone running, DVC ramp, generator off | MUTE 1, DVC ramp, generator off, EN 0 |
 | Power down / PS | mute (old order), `ScalerAudioDisable` | mute (new order): amp is off before the DAC powers down; no wait for the 100 ms depop transition (amp already disabled) |
+- Console / ring log (sync.tsv E5 01 / 02): one line per transition after both pins are set, worded in the real order: `audio off:AMP_MUTE P7.3 = 1, then amp P7.4 = 0`, `audio on:amp P7.4 = 1, then AMP_MUTE P7.3 = 0` (it read amp first on off, Dan 2026-11-19). Repeats stay logged as `already`.
 - Not done, needs Dan: a short DVC ramp for tones (`dvc_down_db` / `DVC_ZC_WIN` changes) would remove the remaining hard-gate edge at note changes; the MUTE-pin gate at non-zero signal still switches the class-D output.
 - #249 reboot pop: before `ScalerPinshareInitial` P7.3 / P7.4 are Hi-Z inputs (regdb pin-share default); firmware cannot act. A board pull-up on MUTE (P7.3, high = muted) and pull-down on EN (P7.4, low = shutdown) would hold the amp off through every reset. Board pulls are not known; probe pins 160 / 161 at reset.
 
