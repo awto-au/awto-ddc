@@ -620,7 +620,7 @@ def cmd_build(extra: list[str]) -> int:
     dirty = "+" if subprocess.run(["git", "diff", "--quiet"], cwd=tree).returncode else ""
     tag = _opt(extra, "--tag") or f"{commit}{dirty}{opt}{'-audio-test' if audio_test else ''}"
     args = ["--tree", str(tree), "--serial", u["serial"], "--tag", tag, *[x for d in defs for x in ("-D", d)]]
-    for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (--xdata-floor 0 for an opt-in test image)
+    for x in [x for x in extra if x.startswith("--fw-args=")]:      # a value that starts with -- (extra fw_build args)
         extra.remove(x)
         args += ["--fw-args", x.split("=", 1)[1]]
     for o in ("--bin", "--src", "--level", "--expect", "--flags", "--fw-args"):     # compiler A/B and layout experiments (fwimage.py options)
@@ -1321,7 +1321,7 @@ def cmd_cpu_suite(extra: list[str]) -> int:
         clocks = [c for c in (opts[opts.index("--clocks") + 1] if "--clocks" in opts else "87,175,350").split(",") if c]
         for c in clocks:
             if build or not (FW / f"{u['serial']}-cpusuite-{c}-be.bin").is_file():
-                rc = cmd_build(["--serial", u["serial"], "--tag", f"cpusuite-{c}", "-D", "_AWTO_CPU_SUITE", "-D", f"AWTO_CLOCK_MHZ={c}", "--fw-args=--xdata-floor 0"])
+                rc = cmd_build(["--serial", u["serial"], "--tag", f"cpusuite-{c}", "-D", "_AWTO_CPU_SUITE", "-D", f"AWTO_CLOCK_MHZ={c}"])
                 if rc:
                     return rc
         return _py("cpu_suite.py", "--sim", "--serial", u["serial"], *opts, *(["--allow-scratch-write"] if write else []))

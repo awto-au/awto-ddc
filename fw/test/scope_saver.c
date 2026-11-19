@@ -83,7 +83,7 @@ static __code uint8_t s_tScBit[AWTO_SC_BIT_MASK + 1] = {0x80, 0x40, 0x20, 0x10, 
 
 __xdata uint8_t g_aucScPix[OSD_BITMAP_BYTES(1, AWTO_SC_BAND_ROWS)];
 __xdata uint8_t g_aucScDirty[OSD_DIRTY_BYTES(1, AWTO_SC_BAND_ROWS)];
-__xdata osd_canvas g_scCv;           // shared with scope_saver2.c: one saver runs at a time, XDATA floor
+__xdata osd_canvas g_scCv;           // shared with scope_saver2.c: one saver runs at a time, XDATA is scarce
 #define AWTO_SC_RUN_LO                          (g_aucScPix + OSD_TILE_BYTES)                       // Scope 1 uses the shared canvas: tile buffer, then the column's runs
 #define AWTO_SC_RUN_HI                          (g_aucScPix + OSD_TILE_BYTES + AWTO_SC_TILE_W)
 static __xdata BYTE s_ucPhase;

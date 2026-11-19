@@ -28,7 +28,6 @@ LOG = None
 import chip_mem as CM  # noqa: E402
 XRAM = CM.XRAM                                                # fw/rl6449_memory.toml (#149 a)
 EDID_RAM = CM.DDC_RAM
-XDATA_FLOOR = 700         # free XDATA kept after placement: 10 % of the 7324 B pool, headroom for #162 work (Dan 2026-11-12, #165)
 BANK = CM.BANK_SIZE
 NBANKS = CM.CODE_BANKS
 # Step timeouts = stall guards; measured: port 15 s, compile --asm 64 s worst file (whole run ~70 s), overlay 10 s,
@@ -128,7 +127,10 @@ def promote_layout(new: Path, tracked: Path):
         log(f"layout promoted: {tracked}")
 
 
-def split_xseg(asm_dir: Path, floor: int = XDATA_FLOOR):
+XDATA_STAT = {}
+
+
+def split_xseg(asm_dir: Path):
     """Rename each module's XSEG to XSEG<k> so each hole gets a set of modules (first fit, largest first)."""
     hs = sorted(holes(), key=lambda h: h[0] - h[1])           # largest hole first = default XSEG/XISEG
     free = [b - a for a, b in hs]
@@ -152,9 +154,8 @@ def split_xseg(asm_dir: Path, floor: int = XDATA_FLOOR):
             moved.append(asm)
     log(f"XDATA holes {[(hex(a), hex(b)) for a, b in hs]}; free after placement {free}")
     pool = sum(b - a for a, b in hs)
-    log(f"XDATA free {sum(free)} B of {pool} B (floor {floor} B{'' if floor == XDATA_FLOOR else ', --xdata-floor'})")
-    if sum(free) < floor:
-        sys.exit(f"XDATA free {sum(free)} B < floor {floor} B (pool {pool} B, per hole {free}): free XDATA first (#165)")
+    log(f"XDATA free {sum(free)} B of {pool} B")
+    XDATA_STAT.update(free=sum(free), pool=pool)
     return hs, moved
 
 
@@ -244,8 +245,7 @@ def parse_args(argv=None):
                     help="passed to sdcc_bank (comma list of fns forced into common; OSD string helper: callers pass bank-local literals; stack canary fns read SP: no trampoline bytes in between; the EXINT1 debug reply: no banked call in the ISR; ScalerTimerWaitForEvent reads its caller's return address (#216): no stub; AwtoWaitLog / AwtoWaitPump read SP)")
     ap.add_argument("--src-patch", default="")
     # 0xc38: the --keil-compat /0 wrappers (_divulong_keil etc.) end the library at 0xc12 (awto-sdcc#36)
-    ap.add_argument("--xdata-floor", type=int, default=XDATA_FLOOR, help="free XDATA required after placement (opt-in "
-                    "variant builds: 0 = must fit only)")
+    ap.add_argument("--xdata-floor", type=int, default=0, help="no-op, kept one release for old callers (the floor was removed)")
     ap.add_argument("--resid-end", default=hex(CM.RESID_END), help="passed to sdcc_bank: common bytes kept for vectors/library before "
                     "the chunk slots; a different value needs a new layout file")
     a = ap.parse_args(argv)
@@ -304,7 +304,7 @@ def main() -> int:
         (bank_dir / extra.name).write_text(extra.read_text())
         run("bank", [T.tool("sdas8051"), "-plosgffw", bank_dir / extra.with_suffix(".rel").name, bank_dir / extra.name])
     write_vectors(bank_dir)
-    hs, moved = split_xseg(bank_dir, a.xdata_floor)
+    hs, moved = split_xseg(bank_dir)
     if len(hs) - 1 > 4:                                      # crt_xinit.asm declares/clears XSEG1..4 only
         sys.exit(f"{len(hs)} XDATA holes: extend XSEG1..4 in fw/sdcc/crt_xinit.asm")
     for asm in moved:                                        # re-assemble modules whose XSEG was renamed
@@ -364,7 +364,7 @@ def main() -> int:
     (out / "fw.bin").write_bytes(img)
     rep = {"serial": a.serial, "common_end": common_end, "common_max": a.common, "banks": used,
            "bin_bytes": len(img),
-           "msgtable": {"addr": MT.MSG_ADDR, "bytes": len(blk), "ids": minfo["count"], "hash": minfo["hash"]}, "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram,
+           "msgtable": {"addr": MT.MSG_ADDR, "bytes": len(blk), "ids": minfo["count"], "hash": minfo["hash"]}, "xdata_free": XDATA_STAT.get("free"), "xdata_pool": XDATA_STAT.get("pool"), "xdata_holes": [(hex(x), hex(y)) for x, y in hs], "iram": iram,
            "sdcccall": int(T.SDCCCALL), "compiler": T.stamp()}
     (out / "build.json").write_text(json.dumps(rep, indent=1))
     log(f"image {out / 'fw.bin'}: {nb} banks, common 0x{common_end:x}/0x{a.common:x}")
